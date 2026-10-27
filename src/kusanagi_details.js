@@ -47,20 +47,25 @@ export function kusanagiPartMesh(index, isBlade, shape, color, opts, look, tier)
   const group = new THREE.Group();
   const gold = metalMat(KUSANAGI_COLORS.gold, { rough: 0.4 });
   if (index === 0) {
-    const grip = add(group, new THREE.CylinderGeometry(0.014, 0.015, 0.30, 8),
+    // 자루 길이는 콜라이더 상자(shape)에서 읽는다 — 10/25 한 손 반 쥠으로 30 → 25 cm (weapons.js kusanagi)
+    const hy = shape[0] === 'box' ? shape[2] : 0.15;
+    const grip = add(group, new THREE.CylinderGeometry(0.014, 0.015, 2 * hy, 8),
       new THREE.MeshStandardMaterial({ color: KUSANAGI_COLORS.grip, roughness: 0.88 }));
     grip.scale.z = 1.15;
     // 교차 끈은 양면에서 읽히되 자루를 굵게 만들지 않는다.
     const silk = new THREE.MeshStandardMaterial({ color: 0x316c63, roughness: 0.92 });
-    for (const side of [-1, 1]) for (let y = -0.13; y < 0.14; y += 0.025) for (const sign of [-1, 1]) {
+    for (const side of [-1, 1]) for (let y = -hy + 0.02; y < hy - 0.01; y += 0.025) for (const sign of [-1, 1]) {
       const strip = add(group, new THREE.BoxGeometry(0.004, 0.034, 0.001), silk, 0, y, side * 0.0173);
       strip.rotation.z = sign * 0.8;
     }
-    for (const y of [-0.15, 0.15]) {
+    for (const y of [-hy, hy]) {
       const collar = add(group, new THREE.CylinderGeometry(0.017, 0.017, 0.012, 8), gold, 0, y);
       collar.scale.z = 1.12;
     }
-  } else if (index === 1) bead(group, gold);
+  } else if (index === 1) {
+    bead(group, gold);
+    if (shape[0] === 'ball') group.scale.setScalar(shape[1] / 0.024); // 머리 구슬 크기도 콜라이더 공을 따른다 (10/25 0.024 → 0.026 m)
+  }
   else if (index === 2) {
     const leaf = [[0.008,-0.012],[0.029,-0.010],[0.045,0.004],[0.06,0.028],
       [0.065,0.036],[0.045,0.024],[0.025,0.020],[0.011,0.008]];

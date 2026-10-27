@@ -673,7 +673,7 @@ export class Fighter {
     for (const [shape, y, [pm, pc, pIe, pIt], color, isBlade, pose] of parts) {
       // pose(선택): 칼 축에서 비켜 놓거나 기울인 부품 — { x: 옆으로(m), rotZ: z 축 회전(rad), I: {x,y,z} 부품 기준 관성 }.
       //  권총 손잡이처럼 총신에서 꺾여 내려오는 부품만 쓴다 (없으면 예전 그대로 칼 축 위, 기울임 없음)
-      const cd = shapeDesc(RAPIER, shape)
+      const cd = (spec.partCollider?.(RAPIER, partIdx, isBlade, shape) ?? shapeDesc(RAPIER, shape))
         .setTranslation(pose?.x ?? 0, y, 0)
         .setMassProperties(pm, { x: 0, y: pc, z: 0 }, pose?.I ?? { x: pIe, y: pIt, z: pIe }, { x: 0, y: 0, z: 0, w: 1 })
         .setFriction(0.4)
@@ -689,7 +689,7 @@ export class Fighter {
       const col = world.createCollider(cd, sword);
       this.swordColliders.push(col);
       colliderInfo.set(col.handle, { fighter: this, kind: 'weapon', part: isBlade ? 'blade' : 'hilt', body: sword });
-      // 부품 콜라이더는 늘 상자·공 모양이지만(물리 판정은 그대로), 보이는 모양은 두 가지 방식으로 바꿀 수 있다:
+      // 부품 콜라이더는 기본 상자·공, partCollider가 있으면 전용 볼록 모양(적소검). 보이는 모양은 두 가지 방식으로 바꿀 수 있다:
       //  · spec.partMesh(idx, ...)가 있으면 그 부품만 곡도·외날 단면·휘어진 몸통 등으로 그린다 (없으면 상자·공 그대로)
       //  · 색이 null 이면 물리 파트만 두고 아예 그리지 않는다 — decorate 가 진짜 모양(곡도·반달칼)을 그리고
       //    group.userData.bladeMesh 로 알려 준다 (연구 세션 세이버·팔쉬온 방식)
@@ -2242,7 +2242,9 @@ export class Fighter {
       // 휘두르는 축 관성: 무기 제원(pIe)과 이 밀도 모델의 비를 그대로 옮긴다 (단면 두께 몫 등이 함께 따라온다)
       const Ie2 = (pIe / (pm * L * L * whole.var)) * m2 * L * L * kept.var;
       const hy2 = (f * L) / 2;
-      col.setHalfExtents({ x: hx, y: hy2, z: hz });
+      const custom = this.weapon.partCollider?.(this.R, i, parts[i][4], shape, f);
+      if (custom) col.setShape(custom.shape);
+      else col.setHalfExtents({ x: hx, y: hy2, z: hz });
       col.setTranslationWrtParent({ x: 0, y: lo + hy2, z: 0 });
       col.setMassProperties(m2, { x: 0, y: kept.com * L - hy2, z: 0 }, { x: Ie2, y: pIt * (kept.m / whole.m), z: Ie2 }, { x: 0, y: 0, z: 0, w: 1 });
     });

@@ -48,7 +48,7 @@ test('book off / wrong school / low proficiency: no passive', () => {
 test('switches: SCHOOL_PASSIVE.on and per-school on turn it off', () => {
   const fx = fixture('uchigatana');
   try {
-    tick(fx, 1.5);
+    tick(fx, SP.japanese.full); // 10/25 23:1x 켄타이 2 s (전 1.5)
     assert.ok(Math.abs(fx.sp.charge - SP.japanese.gain) < 1e-9);
     SP.on = false; assert.equal(fx.sp.charge, 0);
     SP.on = true; SP.japanese.on = false; assert.equal(fx.sp.charge, 0);
@@ -106,12 +106,13 @@ test('italian: no correction for parry-thrust (opposition), secret, or non-thrus
 });
 
 // ── 일본 켄타이 ──
-test('kentai: linear ramp to +30% over 1.5 s of no attack, capped', () => {
+test('kentai: linear ramp to +30% over SP.japanese.full s (10/25 23:1x 2 s · 전 1.5) of no attack, capped', () => {
   const fx = fixture('uchigatana');
   try {
     const { sp } = fx;
-    tick(fx, 0.75); assert.ok(Math.abs(sp.charge - 0.15) < 0.01, `half ${sp.charge}`);
-    tick(fx, 0.75); assert.ok(Math.abs(sp.charge - 0.3) < 0.01, `full ${sp.charge}`);
+    const half = SP.japanese.full / 2;
+    tick(fx, half); assert.ok(Math.abs(sp.charge - 0.15) < 0.01, `half ${sp.charge}`);
+    tick(fx, half); assert.ok(Math.abs(sp.charge - 0.3) < 0.01, `full ${sp.charge}`);
     tick(fx, 2); assert.ok(Math.abs(sp.charge - SP.japanese.gain) < 1e-9, 'capped');
   } finally { fx.g.world.free(); }
 });

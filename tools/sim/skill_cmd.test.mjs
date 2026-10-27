@@ -213,8 +213,16 @@ test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · confi
   assert.ok(fighter.includes('const idle = this.stickY <= 0;') && fighter.includes('else if (idle) this.closeArmed = true;'), 'fighter.js closeStep 걸쇠 = 붙은 거리에서 멈춤');
   assert.equal(sec('german').cmd, `붙은 채 멈췄다 앞으로 이동(↑), 느낌표(!)가 뜨면 ${slot(de)}`);
   const it = playerSecretDef('italian');
-  assert.ok(SECRET.itSecret === 'risoluto' && it.when === 'risoluto' && it.do.tapOnly, '이탈리아 = 덮인 채 나아가기 → 탭만');
-  assert.equal(sec('italian').cmd, `칼을 맞댄 채 앞으로 이동(↑), 느낌표(!)가 뜨면 ${slot(it)}`);
+  // 10/25 21:0x 사장님 '앞을 향하고 있을 때 -> 앞이나 뒤를 향하고 있을 때' · '찌르기(탭)로 발동 -> 공격하면 발동' → 조건은 바뀜(SECRET.risolutoStick 'both' · risolutoTap 0 — 끌기도 비기).
+  //  I4 글(NODE_CMD)은 사장님 확인 전이라 옛 글 그대로 — 옛 조건(?risoStick=fwd · ?risoTap=1)에 맞는 글. 새 글 제안 = 확인표 2569 (사장님이 고르시면 이 두 줄을 새 조건 · 새 글로)
+  assert.ok(SECRET.itSecret === 'risoluto' && it.when === 'risoluto' && !it.do.tapOnly && SECRET.risolutoStick === 'both', '이탈리아 = 덮인 채(스틱 앞이나 뒤) 나아가기 → 공격(탭 · 끌기)');
+  const old = { ...SECRET };
+  try {
+    Object.assign(SECRET, { risolutoTap: 1, risolutoStick: 'fwd' });
+    assert.equal(sec('italian').cmd, `칼을 맞댄 채 앞으로 이동(↑), 느낌표(!)가 뜨면 ${slot(it)}`, 'I4 글 = 옛 조건 (사장님 확인 전 — 확인표 2569)');
+  } finally {
+    Object.assign(SECRET, { risolutoTap: old.risolutoTap, risolutoStick: old.risolutoStick });
+  }
   const ib = playerSecretDef('iberian');
   assert.ok(SECRET.iberianSecret === 'spin' && ib.do.spin && SECRET.ibSpin.input === 'attackCircle', '이베리아 = 무장 → 긋기로 원 한 바퀴');
   assert.equal(sec('iberian').cmd, `거리 밖에서 버티다 느낌표(!)가 뜨면 ${slot(ib)}`);
