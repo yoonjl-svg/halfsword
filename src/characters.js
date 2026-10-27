@@ -585,8 +585,9 @@ export function aiAtProficiency(c, p) {
   }
   return { level, persona };
 }
-/** 시트의 숙련도로 ai.level·ai.persona 를 채운다 (모듈을 읽을 때 한 번) */
+/** 시트의 숙련도로 ai.level·ai.persona 를 채운다 (모듈을 읽을 때 한 번). proficiencyFixed 가 있는 시트(광기의 병마용 — 사장님 10/27 23:3x)는 그 숙련도로 못 박는다 */
 function finishAI(c) {
+  if (c.proficiencyFixed != null) c.ai.proficiency = c.proficiencyFixed;
   const { level, persona } = aiAtProficiency(c, c.ai.proficiency);
   c.ai.level = level;
   c.ai.persona = persona;
@@ -936,10 +937,19 @@ for(const id of ['chanda','renji']){
  finishAI(alter);CHARACTER_VARIANTS.push(alter);
 }
 
-// 밤 여섯째 (철불 절벽 — 오·월 망령): 채색 갑옷 · 창백한 사람 얼굴 · 흰 망토. 외양만 — 원래 몸 · 전투 그대로
+// 밤 여섯째 (철불 절벽 — 오·월 망령): 채색 갑옷 · 창백한 사람 얼굴 · 흰 망토 (겉모습 그대로). 무대(dunhuang_night) · 방랑 모두 이 시트 하나를 쓴다
+//  몸 · 피 · 소리 (사장님 10/27 23:2x — 샛별 저장소 6821e98c 와 같은 꼴, docs/decisions.md 10/27 23:2x · 확인표 2650 ~ 2655): 머리가 떨어져야만 죽는 흙 몸 대신
+//   사람 몸(출혈 · 의식 · 치명상 — fighter.js HUMAN_BODY 그대로) + 흰 피(physiology.blood 'white' → blood_palette.js: 튀는 피 · 핏방울 · 바닥 얼룩 · 상처 자국 · 칼에 묻는 피 · 단면).
+//   맞는 소리는 사람 살 소리(body 'human' — main.js onWound · sound.js BodySounds 사람 길) · 목소리 없음(voice 'silent' — 병마용 시트와 같음, 여기 다시 적어 둠)
+//  숙련도 5 (사장님 10/27 23:3x "5로 하자. … 병마용과 병마용 얼터의 관계는 완전 다르기 때문에(토우릉 매개로 한 월인의 부활) 예외로 둬도 되겠어."):
+//   토우를 매개로 되살아난 월인이라 다른 얼터(원본 +1)와 관계가 달라 아래 '얼터 숙련도 맞춤'의 예외 — proficiencyFixed 로 못 박는다(finishAI · 맞춤 둘 다 이 값을 따른다).
+//   실력 숫자 +20 % 는 받지 않는다(retainBaseStats — 전 '외양만'일 때와 같은 실력 숫자 계산)
 const terracottaBase=CHARACTER_GUESTS.find(c=>c.id==='terracotta');
-const terracottaAlter={...terracottaBase,id:'terracotta_mad',variantOf:'terracotta',mad:true,appearanceOnly:true,
+const terracottaAlter={...terracottaBase,id:'terracotta_mad',variantOf:'terracotta',mad:true,appearanceOnly:false,retainBaseStats:true,proficiencyFixed:5,
  name:`광기의 ${terracottaBase.name}`,ai:JSON.parse(JSON.stringify(terracottaBase.ai)),
+ voice:'silent',physiology:{body:'human',bleeds:true,deathRequiresHeadDetachment:false,blood:'white'},
+ movementNotes:'기존 성인 체격과 한손 칼의 걸음·팔다리 부상·래그돌 동작을 쓴다. 사람처럼 피를 흘리고 다쳐 쓰러지며, 피는 희다. 목소리가 없다.',
+ weaknesses:'사람처럼 출혈과 치명상으로 쓰러진다. 목이 떨어져야만 죽는 흙 몸의 규칙은 없다. 잘린 팔다리는 돌아오지 않는다.',
  look:alterLook(terracottaBase.look,'terracotta'),lookVersion:terracottaBase.lookVersion+'-alter2',eyes:'madGlow'};
 finishAI(terracottaAlter);CHARACTER_VARIANTS.push(terracottaAlter);
 
@@ -964,9 +974,10 @@ for(const id of ['samira','artoria']){
 
 // 얼터 숙련도 맞춤 (사장님 10/16 22:3x "모든 얼터에 숙련도+1을 잊지 말고 적용해 두도록 해"): 변형(variantOf)은 모두 원본 숙련도 +1(상한 AI_PROFICIENCY.max).
 //  시트를 복사해 만든 새 얼터가 +1 을 빠뜨려도 여기서 맞추고 실력 숫자·유파 표를 다시 채운다 (이미 맞으면 손대지 않음 — 광기의 하인리히 등)
+//  예외 하나: proficiencyFixed 를 적은 시트는 그 값 그대로 — 광기의 병마용 5 (사장님 10/27 23:3x — 토우를 매개로 한 월인의 부활이라 다른 얼터와 관계가 다름, 위 시트 주석)
 for (const c of CHARACTER_VARIANTS) {
   const base = [...CHARACTERS, ...CHARACTER_GUESTS].find((x) => x.id === c.variantOf);
-  const want = base ? Math.min(AI_PROFICIENCY.max, base.ai.proficiency + VARIANT_PLUS) : c.ai.proficiency;
+  const want = c.proficiencyFixed ?? (base ? Math.min(AI_PROFICIENCY.max, base.ai.proficiency + VARIANT_PLUS) : c.ai.proficiency);
   if (c.ai.proficiency !== want) {
     c.ai.proficiency = want;
     finishAI(c);

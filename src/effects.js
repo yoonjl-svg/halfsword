@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
+import { BLOOD_RED } from './blood_palette.js';
 
 const MAX = 500;
 
@@ -32,11 +33,11 @@ export class Particles {
 
   /**
    * 피(또는 피 끄기 설정이면 먼지). dir = 칼이 지나간 방향(단위벡터), amount = 세기, speed = 칼 속도
-   * 피는 칼이 지나간 방향으로 흩뿌려진다.
+   * 피는 칼이 지나간 방향으로 흩뿌려진다. bloodColor = 맞은 몸의 피 색(blood_palette.js — 안 주면 붉은 피 그대로 · 광기의 병마용은 흰 피)
    */
-  blood(point, dir, amount, speed = 4) {
+  blood(point, dir, amount, speed = 4, bloodColor = BLOOD_RED.splash) {
     const n = Math.min(60, Math.round(4 + amount));
-    const color = this.bloodOn ? 0x8a0000 : 0xb3b0a9; // 피 끄기면 회색 모래 먼지
+    const color = this.bloodOn ? bloodColor : 0xb3b0a9; // 피 끄기면 회색 모래 먼지 (흰 피도 같음)
     for (let i = 0; i < n; i++) {
       const k = 0.15 + Math.random() * 0.45;
       const v = new THREE.Vector3(
@@ -61,11 +62,11 @@ export class Particles {
     }
   }
 
-  /** 상처에서 뚝뚝 떨어지는 핏방울 */
-  drip(point) {
+  /** 상처에서 뚝뚝 떨어지는 핏방울 (color = 맞은 몸의 핏방울 색 — blood_palette.js drip, 안 주면 붉은 피 그대로) */
+  drip(point, color = BLOOD_RED.drip) {
     if (!this.bloodOn) return;
     const v = new THREE.Vector3((Math.random() - 0.5) * 0.2, -0.2, (Math.random() - 0.5) * 0.2);
-    this.add(point, v, 0x7a0000, 0.012 + Math.random() * 0.01, 6, true);
+    this.add(point, v, color, 0.012 + Math.random() * 0.01, 6, true);
   }
 
   sparks(point, amount) {
@@ -239,8 +240,10 @@ function rand(seed) {
   let x = seed;
   return () => ((x = (x * 16807) % 2147483647) / 2147483647);
 }
-function texture(kind) {
-  if (texCache[kind]) return texCache[kind];
+/** 자국 그림 하나. palette = 피 색 갈래(blood_palette.js key): 'red'(기본)는 예전 그림 · 같은 열쇠 그대로, 'white'(광기의 병마용)는 같은 그림을 흰 피로 다시 칠한 것 */
+function texture(kind, palette = 'red') {
+  const key = palette === 'red' ? kind : `${kind}:${palette}`;
+  if (texCache[key]) return texCache[key];
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const g = c.getContext('2d');
@@ -308,11 +311,26 @@ function texture(kind) {
     blob(64, 64, 50, 'rgba(20,22,25,0.75)');
     blob(52, 52, 16, 'rgba(230,235,240,0.5)');
   }
+  if (palette === 'white' && WHITE_KINDS.has(kind)) {
+    // 흰 피 (사장님 10/27 23:2x — 샛별 저장소 6821e98c 와 같은 다시 칠하기 · 값 샛별 그대로, 확인표 2653 · 2654 '사장님 확인 전'):
+    //  모양 · 투명도는 붉은 그림 그대로 두고 색만 — 피 · 번짐은 옅은 흰빛(192 ~ 238), 벌어진 틈(아주 어두운 칸)은 짙은 회색 68, 멍은 회색 112. 붉은 테가 남지 않는다
+    const img = g.getImageData(0, 0, 128, 128);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (!d[i + 3]) continue;
+      const light = kind === 'bruise' ? 112 : d[i] < 35 ? 68 : Math.min(238, 192 + d[i] * 0.3);
+      d[i] = light;
+      d[i + 1] = Math.min(255, light + 7);
+      d[i + 2] = light + 2;
+    }
+    g.putImageData(img, 0, 0);
+  }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
-  texCache[kind] = t;
+  texCache[key] = t;
   return t;
 }
+const WHITE_KINDS = new Set(['soak', 'cut', 'tear', 'stab', 'bruise']); // 흰 피로 다시 칠하는 자국 (살 · 피 자국만 — 흙 잔금 · 쇠 긁힘 · 찌그러짐은 그대로)
 const decalMats = new WeakSet(); // 자국마다 새로 만든 재질 (판이 끝나면 푼다 — 그림(texCache)은 종류별로 같이 써서 두고)
 function decalMaterial(kind, map = texture(kind)) {
   const metal = kind === 'scratch' || kind === 'dent';
@@ -377,8 +395,9 @@ const _mw = new THREE.Matrix4();
  * @param {THREE.Vector3} p  메쉬 기준 위치
  * @param {THREE.Vector3|null} along 메쉬 기준 방향 — 베인 자국이 이 방향으로 길게 남는다
  * @param {number} w,h 크기(m)
+ * @param {string} palette 피 색 갈래 (blood_palette.js key — 'red' 기본 · 'white' 광기의 병마용)
  */
-export function stickDecal(mesh, p, along, kind, w, h) {
+export function stickDecal(mesh, p, along, kind, w, h, palette = 'red') {
   const n = surfaceNormal(mesh, p);
   const q = new THREE.Quaternion().setFromUnitVectors(_Z, n);
   if (along) {
@@ -387,7 +406,7 @@ export function stickDecal(mesh, p, along, kind, w, h) {
     const b = along.clone().addScaledVector(n, -along.dot(n));
     if (b.lengthSq() > 1e-6) q.multiply(new THREE.Quaternion().setFromAxisAngle(_Z, Math.atan2(-b.dot(xA), b.dot(yA))));
   }
-  const decal = new THREE.Mesh(new THREE.BufferGeometry(), decalMaterial(kind));
+  const decal = new THREE.Mesh(new THREE.BufferGeometry(), decalMaterial(kind, texture(kind, palette)));
   decal.userData = { mesh, p: p.clone(), rot: new THREE.Euler().setFromQuaternion(q), kind, w, h };
   rebuildDecal(decal, w, h);
   mesh.add(decal);

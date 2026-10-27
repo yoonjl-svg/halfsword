@@ -24,6 +24,7 @@ import { vitalHand, vitalAim, playerVitalUpdate } from './vital_target.js'; // �
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
 import { breakWeaponLook } from './weapon_looks.js';
 import { attachDruidWhip } from './druid_whip.js'; // 휘는 마디 무기(드루이드의 채찍 — spec.flexible, 샛별 저장소 69ef7dac8)
+import { BLOOD_RED } from './blood_palette.js'; // 피 색 (10/27 — 칼에 묻는 피: 맞은 몸의 피 색, 광기의 병마용은 흰 피)
 import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩어지는 조각: 부러진 칼날 끝과 부서진 투구·판금을 한 모듈이 띄우고 치운다
 // 방어구 겉모습(찌그러짐·금): 전투 쪽이 투구·판금 내구도가 바뀔 때마다 부른다
 import { decorateOutfit, polishOutfit, setHelmetWear, setPlateWear } from './outfits.js';
@@ -63,6 +64,7 @@ export const LIMB_SEVER_COUNT = { events: [] };
 //  인물 시트 physiology 가 이 위에 덮인다. 없으면 이 값 그대로(사람) — 아래 갈래는 모두 이 값을 보고, 사람은 예전 길을 한 줄도 다르게 돌지 않는다.
 //   body: 'human' | 'clay' — 겉모습·소리 갈래 표식(흙 알갱이·잔금·마른 타격음·흙 단면·부서지는 소리 — main.js · effects.js · decap_fx.js · limb_fx.js · sound.js)
 //   bleeds: false 면 출혈 0 · 혈액 1 고정 · deathRequiresHeadDetachment: true 면 목 관절이 떨어지기 전에는 죽지 않는다(die 거부 — 부활보다 먼저 본다)
+//   blood: 'white' 면 피 겉모습만 흰 피(blood_palette.js — 광기의 병마용, 사장님 10/27 23:2x). 없으면 붉은 피 — 몸 규칙(출혈 · 죽음)과는 상관없다
 export const HUMAN_BODY = Object.freeze({ body: 'human', bleeds: true, deathRequiresHeadDetachment: false });
 export const GROUND_GROUPS = groups(BIT.ground, 0xffff);
 
@@ -1991,11 +1993,14 @@ export class Fighter {
     }
   }
 
-  /** 칼날에 피가 묻는다 */
-  bloodyBlade(amount) {
+  /**
+   * 칼날에 피가 묻는다. color = 벤 몸의 칼에 묻는 피 색(blood_palette.js blade — 안 주면 붉은 피 그대로).
+   *  묻은 피 전체를 지금 벤 몸의 색으로 칠한다(샛별 저장소 6821e98c 와 같음 — 한 판에 벨 몸은 하나라 섞이지 않는다)
+   */
+  bloodyBlade(amount, color = BLOOD_RED.blade) {
     if (!this.bladeMesh) return;
     this.bladeBlood = Math.min(0.65, (this.bladeBlood || 0) + amount);
-    this.bladeMesh.material.color.copy(this.bladeBaseColor).lerp(_bloodColor, this.bladeBlood);
+    this.bladeMesh.material.color.copy(this.bladeBaseColor).lerp(_bloodColor.setHex(color), this.bladeBlood);
   }
 
   dropSword() {
@@ -4491,7 +4496,7 @@ const _jq3 = new THREE.Quaternion();
 const _jq4 = new THREE.Quaternion();
 const _qk = new THREE.Quaternion();
 const _eu = new THREE.Euler();
-const _bloodColor = new THREE.Color(0x5a0808);
+const _bloodColor = new THREE.Color(BLOOD_RED.blade); // bloodyBlade 가 그때그때 벤 몸의 색으로 바꿔 쓴다 (붉은 피 = 0x5a0808 그대로)
 const _paleColor = new THREE.Color(0xb8b4a8);
 const _v4 = new THREE.Vector3();
 const _tiltUp = new THREE.Vector3(); // tiltDeg 전용 (driveBalance 의 _v1 과 겹치지 않게)

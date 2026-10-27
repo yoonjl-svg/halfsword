@@ -7,8 +7,10 @@
 //  main.js: const limbFx = createLimbFx(particles); 프레임마다 limbFx.update([player, enemy], dt * scale)
 //   · 흙 몸(병마용 — fighter.physiology.body 'clay', 샛별 901b1f39): 회갈색 흙 단면 · 뼈 단면 없음 · 분출 없음. 재질은 사람 것과 따로 —
 //     사람 단면 재질은 '피 표현' 켬/끔에 따라 프레임마다 색이 바뀌므로, 같이 쓰면 같은 판에서 두 몸의 단면 색이 서로 섞인다 (decap_fx 와 같은 까닭)
+//   · 흰 피(광기의 병마용 — fighter.physiology.blood 'white', 사장님 10/27 23:2x · 샛별 저장소 6821e98c): 사람 단면 그대로(뼈 있음)에 살 · 테만 흰 피 색 · 분출도 흰 피 (재질 따로 — decap_fx 와 같음)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { BLOOD_WHITE, bloodPalette } from './blood_palette.js';
 
 const PARENT_T = 0.6; // 초: 몸 쪽 단면의 분출
 const CHILD_T = 0.35; // 초: 떨어진 부위 쪽 몇 방울
@@ -24,14 +26,16 @@ const matRing = new THREE.MeshStandardMaterial({ color: 0x6a1a18, roughness: 0.6
 const matBone = new THREE.MeshStandardMaterial({ color: BONE, roughness: 0.8, side: THREE.DoubleSide });
 const matClay = new THREE.MeshStandardMaterial({ color: 0x8b887a, roughness: 1, side: THREE.DoubleSide }); // 흙 몸 전용 단면 (샛별 값 — decap_fx 와 같은 색), 피 표현과 상관없이 늘 이 색
 const matClayRim = new THREE.MeshStandardMaterial({ color: 0xaaa697, roughness: 1, side: THREE.DoubleSide });
+const matWhiteFlesh = new THREE.MeshStandardMaterial({ color: BLOOD_WHITE.flesh, roughness: 0.55, side: THREE.DoubleSide }); // 흰 피 몸 전용 단면 (decap_fx 와 같은 색)
+const matWhiteRing = new THREE.MeshStandardMaterial({ color: BLOOD_WHITE.rim, roughness: 0.6, side: THREE.DoubleSide });
 const geos = new Map();
 const geo = (r) => { if (!geos.has(r)) geos.set(r, { flesh: new THREE.CircleGeometry(r, 14), ring: new THREE.RingGeometry(r * 0.8, r, 14), bone: new THREE.CircleGeometry(r * 0.3, 8) }); return geos.get(r); };
 
-function stumpDisc(group, pos, n, r, clay = false) {
+function stumpDisc(group, pos, n, r, clay = false, white = false) {
   const g = new THREE.Group();
   const G = geo(r);
-  const flesh = new THREE.Mesh(G.flesh, clay ? matClay : matFlesh);
-  const ring = new THREE.Mesh(G.ring, clay ? matClayRim : matRing);
+  const flesh = new THREE.Mesh(G.flesh, clay ? matClay : white ? matWhiteFlesh : matFlesh);
+  const ring = new THREE.Mesh(G.ring, clay ? matClayRim : white ? matWhiteRing : matRing);
   ring.position.z = 0.0005;
   g.add(flesh, ring);
   if (!clay) { // 흙 몸: 뼈 단면 없음
@@ -62,9 +66,11 @@ export function createLimbFx(particles) {
     const cLocal = new THREE.Vector3(s.childLocal.x, s.childLocal.y, s.childLocal.z);
     const cN = cLocal.lengthSq() > 1e-6 ? cLocal.clone().normalize() : new THREE.Vector3(0, 1, 0);
     const clay = f.physiology?.body === 'clay';
-    if (pg) stumpDisc(pg, pLocal, pN, RADIUS[rp] ?? 0.045, clay);
-    if (cg) stumpDisc(cg, cLocal, cN, RADIUS[rc] ?? 0.04, clay);
-    if (!clay) live.push({ f, t: 0, pg, pLocal, pN, cg, cLocal, acc: 0, cacc: 0 }); // 흙 몸은 분출이 없어 분출 목록에 넣지 않는다
+    const palette = bloodPalette(f); // 피 색 (붉은 피 = 예전 RED 그대로)
+    const white = palette === BLOOD_WHITE;
+    if (pg) stumpDisc(pg, pLocal, pN, RADIUS[rp] ?? 0.045, clay, white);
+    if (cg) stumpDisc(cg, cLocal, cN, RADIUS[rc] ?? 0.04, clay, white);
+    if (!clay) live.push({ f, t: 0, pg, pLocal, pN, cg, cLocal, acc: 0, cacc: 0, splash: white ? palette.splash : RED }); // 흙 몸은 분출이 없어 분출 목록에 넣지 않는다
   };
   const update = (fighters, dt) => {
     for (const f of fighters) {
@@ -76,7 +82,12 @@ export function createLimbFx(particles) {
     }
     const blood = particles.bloodOn;
     const col = blood ? FLESH : FLESH_OFF;
-    if (matFlesh.color.getHex() !== col) { matFlesh.color.setHex(col); matRing.color.setHex(blood ? 0x6a1a18 : 0x4a4644); }
+    if (matFlesh.color.getHex() !== col) {
+      matFlesh.color.setHex(col);
+      matRing.color.setHex(blood ? 0x6a1a18 : 0x4a4644);
+      matWhiteFlesh.color.setHex(blood ? BLOOD_WHITE.flesh : FLESH_OFF); // 흰 피 단면도 '피 표현' 끔이면 같은 회색
+      matWhiteRing.color.setHex(blood ? BLOOD_WHITE.rim : 0x4a4644);
+    }
     if (dt <= 0) return;
     for (let i = live.length - 1; i >= 0; i--) {
       const st = live[i];
@@ -92,7 +103,7 @@ export function createLimbFx(particles) {
         while (st.acc >= 1) {
           st.acc -= 1;
           const sp = (1.0 + 2.0 * kk) * (0.7 + 0.5 * rnd());
-          particles.add(_p, new THREE.Vector3(_n.x * sp + (rnd() - 0.5) * 0.8, _n.y * sp + (rnd() - 0.5) * 0.6, _n.z * sp + (rnd() - 0.5) * 0.8), RED, 0.01 + rnd() * 0.016, 3 + rnd() * 2, true);
+          particles.add(_p, new THREE.Vector3(_n.x * sp + (rnd() - 0.5) * 0.8, _n.y * sp + (rnd() - 0.5) * 0.6, _n.z * sp + (rnd() - 0.5) * 0.8), st.splash, 0.01 + rnd() * 0.016, 3 + rnd() * 2, true);
         }
       }
       if (st.cg && st.t < CHILD_T) {
@@ -100,7 +111,7 @@ export function createLimbFx(particles) {
         while (st.cacc >= 1) {
           st.cacc -= 1;
           st.cg.localToWorld(_p.copy(st.cLocal));
-          particles.add(_p, new THREE.Vector3((rnd() - 0.5) * 0.6, -0.2 - rnd() * 0.4, (rnd() - 0.5) * 0.6), RED, 0.01 + rnd() * 0.012, 3, true);
+          particles.add(_p, new THREE.Vector3((rnd() - 0.5) * 0.6, -0.2 - rnd() * 0.4, (rnd() - 0.5) * 0.6), st.splash, 0.01 + rnd() * 0.012, 3, true);
         }
       }
     }
