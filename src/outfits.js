@@ -82,7 +82,7 @@ function addMerged(parent, pieces, color, matOpts) {
 
 const STEEL_OPTS = { metalness: 0.7, roughness: 0.35, steel: 1 };
 
-// ═══════════════════════════════════ 오소리 브란: 화전민 농부 ═══════════════════════════════════
+// ═══════════════════════════════════ 브론 오소리: 화전민 농부 ═══════════════════════════════════
 const APRON = 0xcdbb92;
 const APRON_DARK = 0xa89468;
 const CUFF_BRAN = 0x6b5637;

@@ -55,7 +55,7 @@ const BUILDERS = {
   temple: buildTemple, // 한국의 산 속 절 (stage_temple.js)
   castle: buildCastle, // 눈 내리는 중세 성의 안뜰, 해 질 녘 (stage_castle.js)
   cathedral: buildCathedral, // 무너진 고딕 대성당의 안 (stage_cathedral.js)
-  clearing: buildClearingB, // 검은숲 변두리의 화전 터, 봄비 내리는 새벽 (stage_clearing_b.js, 오너가 고른 2안) — 브란의 고향
+  clearing: buildClearingB, // 검은숲 변두리의 화전 터, 봄비 내리는 새벽 (stage_clearing_b.js, 오너가 고른 2안) — 브론의 고향
   clearing_a: buildClearing, // 1안 (stage_clearing.js: 오두막·염소·숯가마·밭돌 결투 자리). 보관용, ?stage=clearing_a 로만 본다
   clearing_a_dry: (scene, lights) => buildClearing(scene, lights, { rain: false }), // 1안의 비 없는 처음 모습 (보관용: ?stage=clearing_a_dry)
   poseidon_night: buildPoseidonNight, // 밤의 포세이돈 신전 — 하인리히 재등장·흑화 (stage_poseidon_night.js). 오너 결정으로 성 안뜰 뒤, 대성당 앞
@@ -79,7 +79,7 @@ const BUILDERS = {
 export const STAGE_IDS = Object.keys(BUILDERS);
 const DEFAULT_SUN_OFFSET = { x: 4, y: 9, z: 3 }; // sunOffset 을 안 주는 배경(포세이돈)의 해 방향
 
-// 판마다 나오는 순서 (오너 결정: 하인리히 → 브란 → 랴오 → 이졸데 → 밤의 포세이돈(하인리히 재등장·흑화) → 마르그레테 의 고향 순).
+// 판마다 나오는 순서 (오너 결정: 하인리히 → 브론 → 랴오 → 이졸데 → 밤의 포세이돈(하인리히 재등장·흑화) → 마르그레테 의 고향 순).
 //  이졸데는 한 번 쓰러져도 젊은 수련생의 투지로 다시 일어선다(오너 결정: 약한 게 아니다). 대성당 다음 판은 다시 포세이돈부터
 //  10/10 사장님 지시로 샛별 저장소의 세 무대를 대성당 뒤에 이었다(기존 여섯 순서는 그대로): 붉은 회랑(토메 비달) → 산호 항구(오마리) → 신목의 숲(미나미)
 //  10/10 20:4x 두 무대를 그 뒤에 더 이었다(앞 아홉 순서·자리는 그대로): 얼어붙은 만(투야나) → 청람잔도(김씨). 까닭: 이미 있는 판 순서를 하나도 안 밀고,

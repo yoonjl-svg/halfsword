@@ -224,7 +224,7 @@ async function before(o) {
   }
   await page.context().close();
 
-  // 8) 겹침: 개울가 브란(분노로 시작) 판의 시작 — Battle + 안내 + 소개 + 감정 + 상대 패시브 + 자세 이름이 한꺼번에
+  // 8) 겹침: 개울가 브론(분노로 시작) 판의 시작 — Battle + 안내 + 소개 + 감정 + 상대 패시브 + 자세 이름이 한꺼번에
   page = await openFight(o, '?stage=clearing&weapon=longsword');
   await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
@@ -232,12 +232,12 @@ async function before(o) {
   await page.evaluate(([nach, tagP]) => {
     for (const id of ['toast', 'hint', 'foeIntro', 'emoMsg']) __pin(id);
     const em = document.getElementById('emoMsg');
-    if (!em.classList.contains('show')) { em.textContent = '오소리 브란의 분노가 폭발한다'; em.dataset.emotion = 'anger'; em.classList.add('show'); }
+    if (!em.classList.contains('show')) { em.textContent = '브론 오소리의 분노가 폭발한다'; em.dataset.emotion = 'anger'; em.classList.add('show'); }
     __cue('passive', nach, tagP);
     __guard(window.game.player.swordArt.names[0]);
   }, [TXT.nach, TXT.tagP]);
   await page.waitForTimeout(400);
-  await shot(page, o, 'overlap', 'real: toast·hint·foeIntro(시작) · injected: emoMsg(브란 시작 분노와 같은 글), techCue passive, guardName');
+  await shot(page, o, 'overlap', 'real: toast·hint·foeIntro(시작) · injected: emoMsg(브론 시작 분노와 같은 글), techCue passive, guardName');
   await page.context().close();
 }
 
@@ -285,16 +285,16 @@ async function v2(o) {
   await page.waitForTimeout(400);
   await snap(page, 'state', 'real: ② 상대 패시브·비기 · injected: ③ 경직(상대) + 분노(나), 자세 글');
   await page.context().close();
-  // 5) 겹침: 개울가 브란(분노로 시작) 판의 시작 — 실제 경로로 ③ 에 '분노 / 상대 · 오소리 브란'
+  // 5) 겹침: 개울가 브론(분노로 시작) 판의 시작 — 실제 경로로 ③ 에 '분노 / 상대 · 브론 오소리'
   page = await openFight(o, '?stage=clearing&weapon=longsword');
   await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
   await page.evaluate(PIN);
   await page.evaluate(() => { for (const id of ['toast', 'hint', 'foeIntro']) __pin(id); });
-  await page.waitForFunction(() => document.querySelector('#stateCue .slot.show'), null, { timeout: 60000 }).catch(() => console.log('NOTE: 브란 분노가 아직 안 떴다'));
+  await page.waitForFunction(() => document.querySelector('#stateCue .slot.show'), null, { timeout: 60000 }).catch(() => console.log('NOTE: 브론 분노가 아직 안 떴다'));
   await page.evaluate(() => { document.querySelectorAll('#stateCue .slot').forEach((el) => (el.classList.remove = () => {})); });
   await page.waitForTimeout(400);
-  await snap(page, 'overlap', 'real: 판 시작 toast·hint·foeIntro + ③ 브란 분노(실제 경로)');
+  await snap(page, 'overlap', 'real: 판 시작 toast·hint·foeIntro + ③ 브론 분노(실제 경로)');
   await page.context().close();
   // 6) 색 후보 견본 (실제 배경 hud_bg_<방향>.png 위, 외곽선 있음)
   page = await newPage(o);
@@ -344,16 +344,16 @@ async function v3(o) {
   await page.waitForTimeout(500);
   await snap(page, 'foe_tech', 'real: 상대 패시브 → 상대 비기 (② 줄 하나, 바꿔 끼움) · injected: 자세 글');
   await page.context().close();
-  // 4) 감정 줄: 개울가 브란(분노로 시작) 판의 시작 — 실제 경로로 아래 가운데 '오소리 브란의 분노가 폭발한다'
+  // 4) 감정 줄: 개울가 브론(분노로 시작) 판의 시작 — 실제 경로로 아래 가운데 '브론 오소리의 분노가 폭발한다'
   page = await openFight(o, '?stage=clearing&weapon=longsword');
   await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 90000 });
   await page.evaluate(PIN);
   await page.evaluate(() => { for (const id of ['toast', 'hint', 'foeIntro']) __pin(id); });
-  await page.waitForFunction(() => document.querySelector('#emoMsg.show'), null, { timeout: 60000 }).catch(() => console.log('NOTE: 브란 분노가 아직 안 떴다'));
+  await page.waitForFunction(() => document.querySelector('#emoMsg.show'), null, { timeout: 60000 }).catch(() => console.log('NOTE: 브론 분노가 아직 안 떴다'));
   await page.evaluate(() => __pin('emoMsg'));
   await page.waitForTimeout(400);
-  await snap(page, 'emo', 'real: 판 시작 toast·hint·foeIntro + 감정 줄 브란 분노(실제 경로)');
+  await snap(page, 'emo', 'real: 판 시작 toast·hint·foeIntro + 감정 줄 브론 분노(실제 경로)');
   await page.context().close();
 }
 

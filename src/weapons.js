@@ -1020,7 +1020,7 @@ const UCHIGATANA_SPEC = {
   frame: 'two', // 경계 고정 (제안서 §0-3: 카타나 가족이 무게 몇십 g 차이로 앞무게로 넘어가지 않게)
   style: 'versatile', // 두루 (제안서 §7-2 권고) — 자동 판정도 두루지만 가족 안에서 묶으려고 적는다
   tier: 'common',
-  strayPick: false, // 브란이 '주워 온 커먼 칼'(characters.js shortest_common) 후보에서 뺀다 — 칼날 0.71 m 로 가장 짧아 팔쉬온 자리를 빼앗기 때문 (사장님 확인 전)
+  strayPick: false, // 브론이 '주워 온 커먼 칼'(characters.js shortest_common) 후보에서 뺀다 — 칼날 0.71 m 로 가장 짧아 팔쉬온 자리를 빼앗기 때문 (사장님 확인 전)
   // 쥠 고침 A안 (사장님 10/21 '뒷손이 손잡이를 넘어간다면 고쳐야' → A안 승인 · '베기 배율은 바꾸지 마'): 전엔 모노호시자오 자루 자리(hiltLength 0.25 · 츠바 0.24)를 그대로 써
   //  오른손 주먹이 츠바 아래 0.235 m(츠카 한가운데)에 있고 왼손 주먹(gripAlong −0.2)은 카시라 끝(−0.16)보다 4 cm 밖 — 주먹 폭 10 cm 중 9 cm 가 허공을 쥐었다.
   //  이제 칼날 · 츠바를 통째로 손 쪽으로 0.175 m 내려 츠바 아랫면이 오른손 주먹 바로 위(0.065), 카시라가 왼손 주먹 끝(−0.245)에 오게 했다 —
@@ -2033,7 +2033,7 @@ export const DEFAULT_WEAPON = 'longsword';
 
 export const WEAPON_LIST = Object.values(WEAPONS);
 // 빼 둔 무기 (사장님 10/13 23:2x '독일 무기가 너무 많으니까 쓸데없는 걸 빼자 — 롱소드가 기본 양손 무기인데 에스톡·세이버·팔쉬온은 애매하고 별 특색도 없다'):
-//  주인공 무기 카드(main.js PLAYER_WEAPON_POOL)와 테스트 고르기 화면(test_pick.js)에서만 뺀다. 정의·코드는 남겨 되살리기 쉽게 — 시뮬·무기 점검(weapon_smoke)·브란의 '주워 온 칼'(characters.js shortest_common)은 그대로
+//  주인공 무기 카드(main.js PLAYER_WEAPON_POOL)와 테스트 고르기 화면(test_pick.js)에서만 뺀다. 정의·코드는 남겨 되살리기 쉽게 — 시뮬·무기 점검(weapon_smoke)·브론의 '주워 온 칼'(characters.js shortest_common)은 그대로
 // 간장 · 막야는 적소검이 대신한다(사장님 10/27 18:3x '적소검은 간장막야를 대신하는 것') — 카드 뽑기에서만 빠지고, 막야를 쓰는 인물 · 이미 가진 칼은 그대로.
 export const RETIRED_WEAPONS = new Set(['estoc', 'sabre', 'falchion', 'ganjiang', 'moye']);
 
