@@ -182,14 +182,19 @@ function standoff(id, vals) {
     const ps = new PlayerSecretWatch(p, G.enemy);
     const L = gnsEnterLine(ps.view());
     const out = { creep: 0, ready: 0, W: null };
-    let prev = null;
+    let prev = null, wasOut = false;
     G.before = () => {
       ps.update(DT, !!p.skill.sec);
       p.move.set(0, 0);
       const W = G.ai.gnsW;
       if (W?.ready) out.ready++;
       const d = p.foeDistance();
-      if (prev != null && prev > L && d <= L && ps.iaiArm.armed && (!W || W.ready) && G.ai.mode === 'watch') out.creep++;
+      // 넘음 = 준비된 뒤 선 밖 지킴 띠(선 + 최소 여유 0.08 — ai.js holdDist 와 같은 수)에 한 번 섰다가 간 보기로 선 안에 듦.
+      //  10/27: 선 안에서 준비가 켜져 물러나던 AI 가 띠에 닿기 전 선 끝에서 몇 mm 오가는 것은 넘음이 아님(위 '이미 안에 있을 때 준비된 것' 과 같은 경우 — 웅크린 사람에게 낮게 치기 뒤 토메 판에서 나옴)
+      if (!ps.iaiArm.armed) wasOut = false;
+      else if (d > L + 0.08) wasOut = true;
+      if (prev != null && prev > L && d <= L && wasOut && ps.iaiArm.armed && (!W || W.ready) && G.ai.mode === 'watch') out.creep++;
+      if (d <= L) wasOut = false;
       prev = d;
     };
     for (let i = 0; i < 16 / DT && p.alive && G.enemy.alive; i++) G.step();
