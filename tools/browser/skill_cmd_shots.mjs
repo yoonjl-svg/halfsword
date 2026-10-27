@@ -37,8 +37,9 @@ const readCard = () => {
   const shown = [...box.querySelectorAll('*')].filter((k) => !k.closest('[hidden]') && !k.classList.contains('detail-close') && k.getBoundingClientRect().height > 0);
   const lowest = shown.reduce((a, k) => (k.getBoundingClientRect().bottom > (a?.getBoundingClientRect().bottom ?? -1) + 0.5 ? k : a), null);
   // room = 한 줄일 때 글 끝에서 줄 오른쪽 끝까지 남는 폭(px) — 가장 긴 줄이 어느 화면에서 얼마나 남는지
+  // lines = 줄 수 — 조각 사각형의 서로 다른 윗변 수(10/25 괄호 화살표 낱말을 한 덩이 span 으로 감싸며 한 줄에도 사각형이 여럿 — skill_tree.js cmd-nb)
   const room = cmd.hidden ? null : Math.round(cmd.getBoundingClientRect().right - parseFloat(getComputedStyle(cmd).paddingRight) - txt.getBoundingClientRect().right);
-  return { state: box.dataset.state, title: r.getElementById('nodeTitle').textContent, cmd: cmd.hidden ? null : cmd.textContent, text: txt.textContent, lines: cmd.hidden ? 0 : txt.getClientRects().length, room, wide: cmd.scrollWidth > cmd.clientWidth + 0.5, last: !cmd.hidden && (lowest === cmd || cmd.contains(lowest)), over: box.scrollHeight - box.clientHeight };
+  return { state: box.dataset.state, title: r.getElementById('nodeTitle').textContent, cmd: cmd.hidden ? null : cmd.textContent, text: txt.textContent, lines: cmd.hidden ? 0 : new Set([...txt.getClientRects()].map((q) => Math.round(q.top))).size, room, wide: cmd.scrollWidth > cmd.clientWidth + 0.5, last: !cmd.hidden && (lowest === cmd || cmd.contains(lowest)), over: box.scrollHeight - box.clientHeight };
 };
 // 입력 줄을 실제로 그린 글꼴 (크롬 개발 도구 — 글자 수 · 글꼴 이름). 화살표 · 느낌표가 프리텐다드에 있어 시스템 글꼴(두부 상자 · 다른 꼴)로 넘어가지 않는지 본다
 const platformFonts = async (p, cdp, id) => {
@@ -87,7 +88,8 @@ for (const { w, h, must, shots } of SIZES) {
       await p.evaluate(() => document.fonts.ready);
       await cdp.send('DOM.getDocument', { depth: -1, pierce: true });
       C.fonts = await platformFonts(p, cdp, id);
-      const other = Object.keys(C.fonts).filter((k) => !/^Pretendard/.test(k));
+      // ↻ · ↺ 는 프리텐다드에 없어 보충 조각 Noto Sans Math 가 그린다(10/25 싱지르 입력 줄 — index.html 글꼴 줄 · docs/ui/webfont_2026-10-14.md) — 그 글자가 있는 줄만 받음
+      const other = Object.keys(C.fonts).filter((k) => !/^Pretendard/.test(k) && !(k === 'Noto Sans Math' && /[↻↺]/.test(C.cmd ?? '')));
       if (other.length) errors.push(`${size} ${id} 입력 줄을 프리텐다드 밖 글꼴로 그림: ${JSON.stringify(C.fonts)}`);
     }
     report.push({ size, id, ...C });

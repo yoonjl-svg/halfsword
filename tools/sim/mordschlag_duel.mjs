@@ -8,6 +8,7 @@
 //   일격이 준 피해(심각도 합 · 둔타 에너지 합) · 가장 긴 누르기 · 판 결과.
 //  실행: node tools/sim/mordschlag_duel.mjs [플레이어 무기=longsword] [누르기 초 — 없으면 SECRET.mordPress] [판 수=3]
 //   10/25 23:3x: DRIVE=hold — 걸어 들어와 스틱을 앞으로 쥔 채 계속 밂(놓았다 밀지 않음 — 밀치기 걸쇠 CLOSE.latch 0 판 · 옛 판에선 밀치기가 안 남) · 끝에 합 줄(창 / 30 s · 낸 · 맞힘 · 막힘 · 헛침 · 낼 때 가슴 사이)
+//    DRIVE=wobble — hold 와 같고 닿는 거리 안에서 1 s 마다 0.1 s 스틱이 가운데로 빠짐(엄지가 미끄러지는 사람 — 끊김 너그러움 SECRET.mordGrace 견줌)
 //   환경 변수: FOES=german,italian,iberian,japanese,chinese(유파별 첫 인물 — 인물표 차례) · MORD_JSON='{"tech":"zornhau"}' · OVER=1 · GRIP=hilt · DUR=30 · JSON=1(판마다 한 줄)
 //   10/22 밤 고칠 안 (문서 §11): MORD_JSON='{"kin":0.6,"aim":"pull","at":0.5,"power":"finish"}' · HELM=kettle|horned(상대 머리에 그 투구를 씌움 — ARMOR.helmets) ·
 //    SUM=1(끝에 일격 하나하나의 셈 한 줄 JSON — 입력 → 굳음 끝 s · 머리 맞음 J(투구 배율 곱한 값) · 45 J 넘는 몫 · 넘어짐 · 비틀거림 · 기절 · 막힘)
@@ -91,6 +92,7 @@ for (const school of FOES) {
       let y = 0;
       if (!P.alive || P.skill.sec?.stage === 'stiff') y = 0;
       else if (DRIVE === 'hold') y = 1; // 쥔 채 계속 밂
+      else if (DRIVE === 'wobble') y = d <= reach && t % 1.0 < 0.1 ? 0 : 1; // 쥔 채 밀다 닿는 거리 안에서 1 s 마다 0.1 s 엄지가 빠짐 (너그러움 mordGrace 견줌 — 운전 값 · 게임 값 아님)
       else if (d > reach) { phase = 'approach'; y = 1; }
       else if (phase === 'approach' || (phase === 'push' && !P.barge && t > tRel + REL + 0.05)) { phase = 'release'; tRel = t; y = 0; }
       else if (phase === 'release') { y = 0; if (t >= tRel + REL) phase = 'push'; }

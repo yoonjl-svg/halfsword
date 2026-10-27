@@ -164,7 +164,7 @@ test('사람 몸: 무장 창이 열린 동안 원 한 바퀴 → 참 · 톡 · �
   W.spinTick(DT, 9, V0, false, false);
   assert.equal(W.spinArm.armed, false);
   // 다시 무장 → 원 (그리는 동안 휘둘러도 안 풀림) → 참 · 시계로 그리면 turnDir −1
-  for (let i = 0; i < Math.round(1.6 / DT); i++) G.step();
+  for (let i = 0; i < Math.round((SECRET.ibSpin.armTime + 0.1) / DT); i++) G.step(); // 무장 시간 + 0.1 s (10/25 22:3x 사장님 1.5 → 2.0 — 전 1.6 s 고정)
   assert.equal(W.open?.ctx?.ev, 'spin');
   assert.equal(feed(arc(0.3, 0, 300), 0.5, false), false); // 낼 수 없음 — 셈 비움
   let go = false;
