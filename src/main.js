@@ -83,7 +83,7 @@ const staminaHud = createStaminaHud(document.getElementById('staminaHud')); // �
 const screenTint = createScreenTint(); // 출혈·감정 화면 물들임을 게임 캔버스에 합성 (샛별 저장소 2f593ba6 — 전엔 #vignette · #emotion CSS 층. 기력 스위치와 상관없이 늘 이 길)
 // 주인공은 판마다 무기 카드 세 장 중 하나를 골라 받는다 (아래 "무기 뽑기"). 주소에 ?weapon=을 적으면 뽑기 없이 그 무기로 고정.
 //  진짜 엑스칼리버는 주인공만 받을 수 있고, 복제품은 하인리히 몫이라 뽑기에서 뺀다
-const PLAYER_WEAPON_POOL = WEAPON_LIST.map((w) => w.id).filter((id) => id !== 'excalibur_replica' && !RETIRED_WEAPONS.has(id)); // 빼 둔 무기(에스톡·세이버·팔쉬온 — 사장님 10/13 23:2x)는 카드에 안 나온다
+const PLAYER_WEAPON_POOL = WEAPON_LIST.map((w) => w.id).filter((id) => id !== 'excalibur_replica' && !RETIRED_WEAPONS.has(id)); // 빼 둔 무기(에스톡·세이버·팔쉬온 — 사장님 10/13 23:2x · 간장·막야 — 적소검이 대신함, 사장님 10/27)는 카드에 안 나온다
 const FIXED_WEAPON = params.get('weapon');
 const testRoute = createTestRoute(params); // 인자가 없으면 아무것도 바꾸지 않는다
 // 이미 받은 인장 → 금화 (사장님 10/16 04:2x · 08:1x '인장 제도 없애' — seal_coins.js): 이 판을 처음 연 때 한 번, 첫 화면 · 옛 메뉴 · 주소 판 어느 길이든(테스트 경로만 빼고).
@@ -286,6 +286,8 @@ if (params.has('schielPath')) CONFIG.UNIQUE_ASSIST.schielPath = +params.get('sch
 if (params.has('schielPlayer')) CONFIG.UNIQUE_ASSIST.schielPlayer = +params.get('schielPlayer') ? 1 : 0; // 사람 곁눈 베기 같은 길 (사장님 10/25 18:0x '같은 길 입혀' — 기본 1 · `?schielPlayer=0` = 사람은 옛 길 잣대 · 덧칸 없음 · unique_assist.js uniqueDef · planStep)
 if (params.has('schielPlayerK') && Number.isFinite(+params.get('schielPlayerK'))) CONFIG.UNIQUE_ASSIST.schielPlayerK = +params.get('schielPlayerK'); // 사람 곁눈 베기 세기 손잡이 (사장님 10/25 20:2x 결정 — 기본 1 = 세기 100 % · `?schielPlayerK=0.5` = 시험용 50 % · combat.js analyze)
 if (params.has('schielPlayerTip')) CONFIG.UNIQUE_ASSIST.schielPlayerTip = +params.get('schielPlayerTip') ? 1 : 0; // 사람 곁눈 베기 칼끝 들기 (사장님 10/25 20:2x 결정 '칼끝 들기 빼지 마' — 기본 1 = AI 와 같은 덧칸 셋 · `?schielPlayerTip=0` = 시험용 칼끝 들기 없음 · unique_assist.js planStep)
+for (const k of ['tsuRuler', 'tsuSnap', 'tsuAim']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 제비 베기 세 해법 (사장님 10/25 21:1x '해법 1~3 좋아' — 기본 1 · 0 = 그 해법만 끔 · unique_assist.js)
+if (params.has('tsuSnapShare') && +params.get('tsuSnapShare') > 0) CONFIG.UNIQUE_ASSIST.tsuSnapShare = +params.get('tsuSnapShare'); // 제비 베기 되돌림 칼끝 빠르기 몫 (기본 0.6 — 고노센 발도 칼끝 빠르기의 몫)
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
 if (params.has('koteDrop')) CONFIG.UNIQUE_ASSIST.koteDrop.p = +params.get('koteDrop') || 0; // 손목 치기 칼 떨구기 확률(10/24 J8 — 판 값 0.5 · `?koteDrop=0` 끔)

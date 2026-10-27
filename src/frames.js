@@ -233,6 +233,7 @@ export const LIB_PARRY = {
   dartagnan: { highL: [0.52, 0.03], highR: [-0.52, 0.03], highC: [0.42, 0.42], lowL: [0.55, -0.26], lowR: [-0.4, -0.42], thrust: [-0.22, 0.26] }, // 레이피어 막기 자리를 빌림 (10/21 23:xx 제 몸으로 나눈 뒤 — 날 0.85 m · 같은 컵 힐트 한손 — 다시 찾지 않음)
   balisarda: { highL: [0.52, 0.03], highR: [-0.52, 0.03], highC: [0.42, 0.42], lowL: [0.55, -0.26], lowR: [-0.4, -0.42], thrust: [-0.22, 0.26] }, // 레이피어 막기 자리 재사용 (같은 단면 · 칼날만 4 cm 김 — 샛별 저장소 c89e827c6)
   qinggang: { highL: [-0.4, -0.42], highR: [-0.22, 0.26], highC: [0.42, 0.42], lowL: [0.42, 0.42], lowR: [-0.4, -0.42], thrust: [-0.4, -0.42] },
+  chixiao: { highL: [-0.4, -0.42], highR: [-0.22, 0.26], highC: [0.42, 0.42], lowL: [0.42, 0.42], lowR: [-0.4, -0.42], thrust: [-0.4, -0.42] }, // 기존 동방 한손검의 막기 자리.
   tree_branch: { highL: [-0.18, -0.28], highR: [0, 0.03], highC: [0.18, -0.28], lowL: [0.52, 0.03], lowR: [-0.4, 0.42], thrust: [-0.52, 0.03] },
 };
 
@@ -245,7 +246,7 @@ export const HAND_GRIPS = {
   monohoshizao: { a: 0, b: 20, t: 0, off: 'grip' },
   uchigatana: { a: 0, b: 20, t: 0, off: 'grip' }, // 打刀 (제안 가지): 모노호시자오와 같은 츠카 쥠
   muramasa: { a: 0, b: 20, t: 0, off: 'grip' }, // 우치가타나와 같은 일본 양손 쥠 (샛별 저장소 29e543555)
-  kusanagi: { a: 0, b: 20, t: 0, off: 'grip' }, // 기존 일본 유파 양손 쥠을 재사용.
+  kusanagi: { a: 0, b: 20, t: 0, off: 'grip' }, // 기존 일본 유파 양손 쥠을 재사용. 10/25 한 손 반 쥠(손 간격 0.17 — 뒷손이 자루 끝 · 머리 구슬)도 같은 손 모양
   frozen_tuna: { a: 0, b: 0, t: 0, off: 'grip' }, // 몽둥이 망치 쥠
   sabre: { a: 0, b: 15, t: 60, off: 'fist' }, // 엄지를 칼등에
   falchion: { a: 0, b: 5, t: 0, off: 'fist' },
@@ -254,6 +255,7 @@ export const HAND_GRIPS = {
   dartagnan: { a: 0, b: 25, t: 70, off: 'open', turn: 'posture' }, // 동일한 이탈리아 집게 쥠
   balisarda: { a: 0, b: 25, t: 70, off: 'open', turn: 'posture' }, // 이탈리아 집게 쥠 · 자세별 돌림 재사용 (샛별 저장소 c89e827c6)
   qinggang: { a: 0, b: 15, t: 0, off: 'fist' },
+  chixiao: { a: 0, b: 15, t: 0, off: 'fist' }, // 기존 동방 한손검 쥠.
   tree_branch: { a: 0, b: 0, t: 0, off: 'fist' },
   rubber_chicken: { a: 0, b: 0, t: 0, off: 'fist' },
   morgenstern: { a: 0, b: 0, t: 0, off: 'fist' },

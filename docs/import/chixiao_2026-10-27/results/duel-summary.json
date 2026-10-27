@@ -1,0 +1,83 @@
+{
+  "duel-box-release": {
+    "n": 12,
+    "wins": 2,
+    "losses": 3,
+    "meanDealt": 1.17,
+    "meanReceived": 2.5416666666666665,
+    "cutContacts": 33,
+    "NaN": 0
+  },
+  "duel-final-release-exploration": {
+    "n": 9,
+    "wins": 1,
+    "losses": 2,
+    "meanDealt": 1.0811111111111111,
+    "meanReceived": 1.8377777777777777,
+    "cutContacts": 27,
+    "NaN": 0
+  },
+  "duel-final-release": {
+    "n": 12,
+    "wins": 1,
+    "losses": 7,
+    "meanDealt": 0.48166666666666663,
+    "meanReceived": 2.6075,
+    "cutContacts": 15,
+    "NaN": 0
+  },
+  "duel-final": {
+    "n": 9,
+    "wins": 0,
+    "losses": 2,
+    "meanDealt": 1.7366666666666668,
+    "meanReceived": 2.27,
+    "cutContacts": 35,
+    "NaN": 0
+  },
+  "duel-forward-release": {
+    "n": 12,
+    "wins": 0,
+    "losses": 4,
+    "meanDealt": 0.7466666666666667,
+    "meanReceived": 2.779166666666667,
+    "cutContacts": 33,
+    "NaN": 0
+  },
+  "duel-forward": {
+    "n": 9,
+    "wins": 1,
+    "losses": 2,
+    "meanDealt": 1.0055555555555555,
+    "meanReceived": 1.5222222222222221,
+    "cutContacts": 23,
+    "NaN": 0
+  },
+  "duel-legacy-release-exploration": {
+    "n": 9,
+    "wins": 0,
+    "losses": 2,
+    "meanDealt": 0.8266666666666667,
+    "meanReceived": 1.48,
+    "cutContacts": 19,
+    "NaN": 0
+  },
+  "duel-legacy-release": {
+    "n": 12,
+    "wins": 0,
+    "losses": 3,
+    "meanDealt": 0.44333333333333336,
+    "meanReceived": 1.8116666666666668,
+    "cutContacts": 25,
+    "NaN": 0
+  },
+  "duel-legacy": {
+    "n": 9,
+    "wins": 1,
+    "losses": 4,
+    "meanDealt": 0.8711111111111112,
+    "meanReceived": 3.2133333333333334,
+    "cutContacts": 25,
+    "NaN": 0
+  }
+}

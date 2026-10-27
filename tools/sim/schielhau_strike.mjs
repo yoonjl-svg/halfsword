@@ -13,6 +13,8 @@
 //            고른 견줌(10/25 18:5x — §15): --immortal --dur=14 --first=5 --seeds=18
 //   fight  = 사람 싸움 (playerFight — 손가락 봇 대 치고 막는 AI · --opps · --fseeds · --delays · --prof · --share · --move=tsubame 제비 베기 판(打刀))
 //   제비 베기 견줌(10/25 20:3x): player --move=tsubame [--w=uchigatana] [--trad=japanese] [--ghostDown 아래 칼 빗나감 치기] — 한 벌 = 정수리 내려베기 → 곧장 위로(tsubameRun) · player --w=uchigatana --trad=german = 打刀로 곁눈 베기
+//   제비 베기 세 해법(10/25 21:1x '해법 1~3 좋아' — docs/strike/tsubame_snap_2026-10-25.md): 끄기 --set=UNIQUE_ASSIST.tsuRuler=0 · tsuSnap=0 · tsuAim=0 · 시험 길 --tsuPath='x,y;…'(꺾은 자리 다음 점부터) · --tsuPlan='들기,뻗기,돌리기;…'([꺾은 자리, ...길])
+//            묶음 snapHits = 위 칼 첫 맞음 가운데 끌고 가는 칼(운동학 — f.iai)이 낸 것
 //   duel · fights · player 묶음에 rollT = 맞는 스텝 앞뒤(−8 ~ +8 스텝) 아래팔 굴림 ≥ 78 몫 · plan = 맞는 순간 길 덧칸
 //  사용법: node tools/sim/schielhau_strike.mjs duel|fights|player [--set=JOINTS.wristGuard=0,…] [--seeds=6] [--seed0=1] [--dur=40] [--foe=ai|still] [--schools=italian,japanese,german,chinese] [--json=파일]
 //          시험 길: --path='x,y;x,y;…'(from 부터) · --plan='들기,뻗기,돌리기;…'(점마다) · --reach= · --tech=zornhau(다른 기술만 — 견줌)
@@ -22,7 +24,7 @@ import { writeFileSync } from 'node:fs';
 import { newRound, DT, CONFIG, AI } from './harness_m.mjs';
 import { applyWeaponMeasure } from './weapon_measures.mjs';
 import { wristSample, outOfRange, REV, FE_IN, OOR_EPS, OOR_X, ROLL_AT, ELBOW_UP_X } from './wrist_audit.mjs';
-import { strokeTechOf, PlayerUniqueAssist } from '../../src/unique_assist.js';
+import { strokeTechOf, PlayerUniqueAssist, TSU_AIM } from '../../src/unique_assist.js';
 import { TECH, TECH_BY_NAME } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { MEASURED } from '../../src/weapon_measured.js';
@@ -405,26 +407,31 @@ export function tsubameRun(seed, { dur = 40, foe = 'still', spd = [3, 5.5], jit 
     if (att !== P || vic !== D || !open()) return;
     const sv = r.type === 'blunt' ? 0 : r.severity ?? 0;
     cur.sevAll += sv;
-    const rec = { type: r.type, zone: r.zone, sev: r.severity ?? 0, energy: r.energy, t: +(G.t - cur.t0).toFixed(3), s: wristSample(P), fix: P.wristFixDeg ?? 0, plan: null, ...hitPhys(r, P) };
+    const rec = { type: r.type, zone: r.zone, part: rest[1]?.v?.part ?? null, sev: r.severity ?? 0, energy: r.energy, t: +(G.t - cur.t0).toFixed(3), s: wristSample(P), fix: P.wristFixDeg ?? 0, plan: null, ...hitPhys(r, P) };
     if (strokeTechOf(P) === 'tsubameGaeshi') {
       cur.fired = true;
       cur.sevUp += sv;
-      if (!cur.hit) cur.hit = { ...rec, tip: cur.tip, ...rollPre(cur) };
+      if (!cur.hit) cur.hit = { ...rec, tip: cur.tip, snap: !!P.iai, ...rollPre(cur) };
     } else {
       cur.sevDown += sv;
       if (!cur.down) cur.down = rec;
     }
   };
+  let falls = 0;
+  let wasDown = false;
   try {
     while (G.t < dur && D.alive && P.alive) {
       if (foe !== 'ai') holdLow(D, low);
       G.step();
+      const down = P.state !== 'stand';
+      if (down && !wasDown) falls++; // 내 몸이 쓰러짐 (끌고 가는 칼이 몸을 흔드나 — 10/25)
+      wasDown = down;
       if (cur && uq.r?.e.name === 'tsubameGaeshi') cur.fired = true;
       if (cur && strokeTechOf(P) === 'tsubameGaeshi') cur.tip = Math.max(cur.tip, P.tipVel.length());
       if (cur && !queue.length && closeT == null) closeT = G.t;
       if (cur) rollTrack(cur, P);
     }
-    return { rows, dead: !D.alive, t: G.t, drawn, fired: uq.stats.fired.tsubameGaeshi ?? 0 };
+    return { rows, dead: !D.alive, t: G.t, drawn, fired: uq.stats.fired.tsubameGaeshi ?? 0, falls, meDead: !P.alive };
   } finally {
     G.world.free();
   }
@@ -434,7 +441,9 @@ export function tsubameSummary(runs) {
   const R = runs.flatMap((r) => r.rows);
   const n = R.length || 1;
   const sum = (f) => R.reduce((a, r) => a + f(r), 0);
-  return { ...duelSummary(runs), combos: R.length, firedCombos: R.filter((r) => r.fired).length, downContacts: R.filter((r) => r.down).length, downPerAtk: +(sum((r) => r.down?.sev ?? 0) / n).toFixed(3), downSevPerAtk: +(sum((r) => r.sevDown) / n).toFixed(3), upSevPerAtk: +(sum((r) => r.sevUp) / n).toFixed(3), comboSevPerAtk: +(sum((r) => r.sevAll) / n).toFixed(3), downPhys: physP50(R.map((r) => r.down).filter(Boolean)) };
+  const parts = {};
+  for (const r of R) if (r.hit?.part) parts[r.hit.part] = (parts[r.hit.part] ?? 0) + 1;
+  return { ...duelSummary(runs), snapHits: R.filter((r) => r.hit?.snap).length, parts, combos: R.length, firedCombos: R.filter((r) => r.fired).length, downContacts: R.filter((r) => r.down).length, downPerAtk: +(sum((r) => r.down?.sev ?? 0) / n).toFixed(3), downSevPerAtk: +(sum((r) => r.sevDown) / n).toFixed(3), upSevPerAtk: +(sum((r) => r.sevUp) / n).toFixed(3), comboSevPerAtk: +(sum((r) => r.sevAll) / n).toFixed(3), downPhys: physP50(R.map((r) => r.down).filter(Boolean)) };
 }
 
 /**
@@ -786,6 +795,10 @@ if (isMain(import.meta.url)) {
   }
   if (args.plan) PATCH = { ...PATCH, plan: String(args.plan).split(';').map((p) => p.split(',').map(Number)) };
   if (args.reach != null) PATCH = { ...PATCH, reach: +args.reach };
+  // 제비 베기 시험 길 · 덧칸 (사람 표 TSU_AIM 을 덮음 — 강화가 붙기 전에)
+  if (args.tsuPath) TSU_AIM.path = String(args.tsuPath).split(';').map((p) => p.split(',').map(Number));
+  if (args.tsuPlan) TSU_AIM.plan = String(args.tsuPlan).split(';').map((p) => p.split(',').map(Number));
+  if (args.tsuPath && !args.tsuPlan) TSU_AIM.plan = Array.from({ length: TSU_AIM.path.length + 1 }, () => [0, 0, 0]);
   const mode = args._[0] ?? 'duel';
   let res;
   if (mode === 'duel') {
@@ -810,8 +823,8 @@ if (isMain(import.meta.url)) {
     for (let s = S0; s < S0 + seeds; s++) runs.push(args.move === 'tsubame' ? tsubameRun(s, o) : playerRun(s, { ...o, finger: args.finger ?? 'zornhau', sjit: +(args.sjit ?? 0) }));
     const first = args.first ? +args.first : 0;
     const cut = first ? runs.map((r) => ({ ...r, rows: r.rows.slice(0, first) })) : runs;
-    res = { ...(args.move === 'tsubame' ? tsubameSummary(cut) : duelSummary(cut)), drawn: runs.reduce((a, r) => a + r.drawn, 0), fired: runs.reduce((a, r) => a + r.fired, 0), power: runs.reduce((a, r) => a + r.power, 0) };
-    console.log(`사람 곁눈 베기 (손가락 ${args.finger ?? 'zornhau'} · 상대 ${args.foe ?? 'still'})${args.set ? ` · set ${args.set}` : ''}${args.plan ? ` · 덧칸 ${args.plan}` : ''}: ${JSON.stringify(res)}`);
+    res = { ...(args.move === 'tsubame' ? tsubameSummary(cut) : duelSummary(cut)), falls: runs.reduce((a, r) => a + (r.falls ?? 0), 0), meDead: runs.filter((r) => r.meDead).length, drawn: runs.reduce((a, r) => a + r.drawn, 0), fired: runs.reduce((a, r) => a + r.fired, 0), power: runs.reduce((a, r) => a + r.power, 0) };
+    console.log(`사람 ${args.move === 'tsubame' ? '제비 베기' : '곁눈 베기'} (손가락 ${args.move === 'tsubame' ? '정수리 → 위' : args.finger ?? 'zornhau'} · 상대 ${args.foe ?? 'still'})${args.set ? ` · set ${args.set}` : ''}${args.plan ? ` · 덧칸 ${args.plan}` : ''}: ${JSON.stringify(res)}`);
   } else if (mode === 'fight') {
     if (PATCH) {
       const u = TRADITIONS.german.unique.find((x) => x.name === 'schielhau');
