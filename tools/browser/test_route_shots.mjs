@@ -25,8 +25,8 @@ function watch(page) {
     if (r.status() >= 400) errors.push(`http ${r.status()} ${r.url()}`);
   });
 }
-// 인물마다 드는 무기 (characters.js weapon — 브란은 10% 확률로 주운 커먼 칼)
-const OWN = { '오소리 브란': 'tree_branch', '이졸데 반 아커러': 'longsword', '랴오 쓰위엔': 'qinggang', '하인리히 도른': 'excalibur_replica', '마르그레테 슈바르츠': 'longsword', '토메 비달': 'rapier', 오마리: 'zweihander', 미나미: 'monohoshizao' };
+// 인물마다 드는 무기 (characters.js weapon — 브론은 10% 확률로 주운 커먼 칼)
+const OWN = { '브론 오소리': 'tree_branch', '이졸데 반 아커러': 'longsword', '랴오 쓰위엔': 'qinggang', '하인리히 도른': 'excalibur_replica', '마르그레테 슈바르츠': 'longsword', '토메 비달': 'rapier', 오마리: 'zweihander', 미나미: 'monohoshizao' };
 const shot = (page, name, full = false) => page.screenshot({ path: `${dir}/test_route_${name}.png`, fullPage: full });
 
 // ── 1. test.html: 세로 390×844 · 가로 844×390 ──
@@ -111,7 +111,7 @@ const m2 = await endRound('z_round2_result_lose', 'player');
 rounds.push(await fightOnce('z_round3'));
 for (const [i, r] of rounds.entries()) {
   check(r.pw === 'zweihander' && r.pname === '토메 비달' && r.helm === null, `판 ${i + 1}: 플레이어 츠바이핸더 · 이름 토메 비달 · 투구 없음 (${r.pw} ${r.pname} ${r.helm})`);
-  check(r.foe !== '토메 비달' && OWN[r.foe] && (OWN[r.foe] === r.fw || (r.foe === '오소리 브란' && r.fw !== 'zweihander')), `판 ${i + 1}: 상대 ${r.foe} 는 자기 무기 ${r.fw}`);
+  check(r.foe !== '토메 비달' && OWN[r.foe] && (OWN[r.foe] === r.fw || (r.foe === '브론 오소리' && r.fw !== 'zweihander')), `판 ${i + 1}: 상대 ${r.foe} 는 자기 무기 ${r.fw}`);
   check(r.pinned === null, `판 ${i + 1}: 무대 ${r.stage} (고정 아님)`);
 }
 check(rounds[1].stage !== rounds[0].stage && rounds[2].stage !== rounds[1].stage, `무대가 판마다 바뀜 (이겨도·져도): ${rounds.map((r) => r.stage).join(' → ')}`);
@@ -135,7 +135,7 @@ await page.click('#btnGo');
 await page.waitForURL(/index\.html\?/, { timeout: WAIT });
 const u = await fightOnce('u_round1');
 check(u.pw === 'uchigatana' && u.pname === '마르그레테 슈바르츠' && u.helm === 'horned' && u.plate > 0, `우치가타나 · 마르그레테 겉모습(뿔 투구·판금 ${u.plate}곳)`);
-check(u.foe !== '마르그레테 슈바르츠' && (OWN[u.foe] === u.fw || u.foe === '오소리 브란'), `상대 ${u.foe} 는 자기 무기 ${u.fw}`);
+check(u.foe !== '마르그레테 슈바르츠' && (OWN[u.foe] === u.fw || u.foe === '브론 오소리'), `상대 ${u.foe} 는 자기 무기 ${u.fw}`);
 await ctx.close();
 
 // ── 4. 인자 없는 본판: 지금 그대로 ──

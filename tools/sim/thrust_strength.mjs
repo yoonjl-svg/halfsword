@@ -1,5 +1,5 @@
 // 근력별 AI 찌르기 — 기본 AI('normal')가 가만히 칼을 겨눈 더미를 상대로 낸 찌르기·베기 상처를 센다
-//  AI 근력만 0.85 / 1.0 / 1.3 (이졸데 / 기본 / 브란)으로 바꾸고 나머지 실력은 같다 → 근력이 찌르기에 주는 차이만 본다
+//  AI 근력만 0.85 / 1.0 / 1.3 (이졸데 / 기본 / 브론)으로 바꾸고 나머지 실력은 같다 → 근력이 찌르기에 주는 차이만 본다
 //  찌르기 무기(thrustStyle)의 AI 는 찌르기 기술을 탭 찌르기와 같은 칼끝 찌르기로 한다 (ai.js startStrike)
 //  사용법: node tools/sim/thrust_strength.mjs [판 수] [무기id...] [--emo=off] [--secs=40]
 import { newRound, DT } from './harness_m.mjs';

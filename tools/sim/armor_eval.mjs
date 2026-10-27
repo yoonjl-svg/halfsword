@@ -417,7 +417,7 @@ function main() {
       }
       const nb = others.filter((a) => a.weapon !== 'tree_branch');
       const m = (on, list) => mean(list.flatMap((a) => res[on][a.id].map((r) => r.ttk)));
-      console.log(`[평균] 전체 ${f1(mean(allOff))} → ${f1(mean(allOn))} (${f1((100 * (mean(allOn) - mean(allOff))) / mean(allOff))}%) · 나뭇가지 브란 빼고 ${f1(m(false, nb))} → ${f1(m(true, nb))} (${f1((100 * (m(true, nb) - m(false, nb))) / m(false, nb))}%)`);
+      console.log(`[평균] 전체 ${f1(mean(allOff))} → ${f1(mean(allOn))} (${f1((100 * (mean(allOn) - mean(allOff))) / mean(allOff))}%) · 나뭇가지 브론 빼고 ${f1(m(false, nb))} → ${f1(m(true, nb))} (${f1((100 * (m(true, nb) - m(false, nb))) / m(false, nb))}%)`);
       const dOn = others.flatMap((a) => res[true][a.id]);
       const anyD = (f) => dOn.filter((r) => Object.values(r.pieces).some(f)).length / dOn.length;
       const vis = (P) => P.visAt != null;
@@ -455,7 +455,7 @@ function main() {
         const shedAny = onr.filter((r) => Object.values(r.pieces).some((P) => P.visAt != null)).length / onr.length;
         console.log(`${o.id}, ${a.toFixed(0)}, ${b.toFixed(0)}, ${(b - a).toFixed(0)}, ${f1(mean(dOff.map((r) => r.tDied)))}·${dOff.length}, ${f1(mean(dOn.map((r) => r.tDied)))}·${dOn.length}, ${pct(brokeAny)}, ${nBroke.toFixed(2)}, ${pct(shedAny)}`);
       }
-      console.log(`[평균, 나뭇가지 브란 빼고] 승률 ${mean(wOff).toFixed(1)} → ${mean(wOn).toFixed(1)} (${(mean(wOn) - mean(wOff)).toFixed(1)}%p)`);
+      console.log(`[평균, 나뭇가지 브론 빼고] 승률 ${mean(wOff).toFixed(1)} → ${mean(wOn).toFixed(1)} (${(mean(wOn) - mean(wOff)).toFixed(1)}%p)`);
       // 죽기까지 걸린 시간(모든 상대를 합쳐서): 죽은 판만 / 살아남은 판은 대결 길이(DUEL_S)로 쳐서
       const ttd = (on, capped) => {
         const rs = others.flatMap((o) => res[on][o.id]);

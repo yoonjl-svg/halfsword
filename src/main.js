@@ -638,7 +638,7 @@ let foeWeaponId = 'longsword'; // 이번 판 상대 무기 (prepareRound 가 정
  */
 function prepareRound() {
   currentFoe = pickFoe();
-  // 상대 무기: 주소에 foeWeapon/weapon을 직접 적었으면 그것, 아니면 캐릭터가 쓰는 무기 (브란은 10% 확률로 주워 온 커먼 칼)
+  // 상대 무기: 주소에 foeWeapon/weapon을 직접 적었으면 그것, 아니면 캐릭터가 쓰는 무기 (브론은 10% 확률로 주워 온 커먼 칼)
   foeWeaponId = params.get('foeWeapon') || testRoute.foeWeapon(currentFoe) || FIXED_WEAPON || (currentFoe ? pickCharacterWeapon(currentFoe) : 'longsword');
   // 이번 판에 나오는 목소리만 미리 만든다 (시작 단추를 누르기 전에는 소리 장치가 없어 그냥 넘어간다)
   sound.prepareVoices(['player', voiceOf(currentFoe)]);
@@ -1853,7 +1853,7 @@ function beginFight() {
   state = 'fight';
   input.enabled = true;
   if (wanderSaves() && WANDER.quitAsLoss) markWanderFighting(true); // 도중에 그만두기 켬: 지금부터 판을 버리면 다음에 패배로 셈한다
-  emoSeen.player = emoSeen.enemy = null; // 감정 알림은 판마다 새로 (시작 감정도 알린다 — 브란은 분노로 시작한다)
+  emoSeen.player = emoSeen.enemy = null; // 감정 알림은 판마다 새로 (시작 감정도 알린다 — 브론은 분노로 시작한다)
   mudNoticeShown = false; // 진흙 알림도 판마다 한 번
   clearEmoMsg();
   techClear();
@@ -2018,7 +2018,7 @@ window.addEventListener('blur', () => {
 
 // ── 감정이 켜지는 순간 한 줄 알림 (아래 가운데 감정 줄 #emoMsg) ──
 //  10/10 20:3x 사장님 '상태 3종은 전처럼 화면 중앙에 뜨게 · 감정 문장 가운데로 복귀' (docs/ui/hud_type_system_2026-10-10.md §14) — v2 의 오른쪽 위 ③ 경직·상태 묶음은 없앴다.
-//  상대: "오소리 브란이 공포에 잠식된다" / 주인공: 주어 없이 "공포에 잠식된다" (10/10 문구 정리: 다른 감정 줄과 같은 현재형) (집념은 주어 없이: 상대 "집념을 보인다", 주인공 "집념이 생긴다")
+//  상대: "브론 오소리이 공포에 잠식된다" / 주인공: 주어 없이 "공포에 잠식된다" (10/10 문구 정리: 다른 감정 줄과 같은 현재형) (집념은 주어 없이: 상대 "집념을 보인다", 주인공 "집념이 생긴다")
 //  색은 상태 3종 한 색(사장님 19:2x '상태 3종은 모두 같은 색으로 통일' — 10/14 글자 색 넷의 '상태·상대' --c-alert)
 const EMO_TEXT = {
   fear: (who) => (who ? `${who}${josa(who, '이', '가')} ` : '') + '공포에 잠식된다',

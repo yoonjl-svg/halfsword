@@ -172,7 +172,7 @@ test('빠르기 몫 (10/24 share): 한 바퀴 = ramp + 2π · 칼끝 거리 ÷ (
     assert.ok(Math.abs(p.v - share * v0) < 1e-9, w);
     assert.ok(Math.abs(p.w - p.v / P.swordArt.measure.reach) < 1e-9, w);
     assert.ok(Math.abs(p.T - (0.2 + (2 * Math.PI) / p.w)) < 1e-9, w);
-    assert.ok(p.T > 0.6 && p.T < 0.7, `${w} ${p.T}`); // 0.6 s 보다 느림 (0.7 몫 — 0.62 ~ 0.66 s)
+    assert.ok(p.T > 0.6 && p.T < 0.75, `${w} ${p.T}`); // 0.6 s 보다 느림 (0.7 몫 — 0.62 ~ 0.65 s · 10/25 손맛 뒤 플랑베르주 0.72 s: 칼날 1.30 m · 간격 reach 2.57)
     SECRET.ibSpin.share = 0;
     try {
       const q = spinPlan(P);

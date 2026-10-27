@@ -302,7 +302,7 @@ export const VOICES = {
   //  신음(hurt)·죽음(death)·숨은 내지 않고, 몸이 땅에 닿는 "쿵"과 흙 몸 소리(clay · clayBreak — 머리·팔다리가 떨어질 때 부서지는 소리)만 난다
   silent: { mute: true },
   // ── 10/13 목소리 갱신 (사장님 지시로 샛별 저장소 3f330f7·87c8e77·b728e34·b75013b·7b6b079·9d1b56a 의 최종본을 가져옴 — docs/import/saetbyeol_voice3_2026-10-13.md) ──
-  //  상대는 피격2·기절2·출혈2, 피격과 기절은 서로 다른 녹음. 플레이어만 예외(조용한 사망음 하나 + 이명). 브란·하인리히·광기의 하인리히는 그대로
+  //  상대는 피격2·기절2·출혈2, 피격과 기절은 서로 다른 녹음. 플레이어만 예외(조용한 사망음 하나 + 이명). 브론·하인리히·광기의 하인리히는 그대로
   //  maya: 마야 라토르 전용 — AuraVoice(CC0). 출혈 1·2는 한 호흡 조각, 피격1은 원래 출혈1 뒤 조각, 출혈2만 350Hz -1dB. 음높이 그대로
   maya: { f0: 210, tract: 1.13, breath: 0.4, rough: 0.2, style: 'exhale', rec: { hurt: ['voice/maya_hurt1_single', 'voice/maya_hurt2'], ko: 2, bleed: ['voice/maya_bleed1_single', 'voice/maya_bleed2_light'], gain: 1, rate: 1 } },
   // ── 10/12 목소리 묶음 갱신 (사장님 지시로 샛별 저장소 77db8c5·1ea73c5·11860b0·04311ff·200269d 를 가져옴 — docs/import/saetbyeol_round2_2026-10-12.md) ──
@@ -1687,7 +1687,7 @@ const STAGE_SOUND = {
   castle: { step: 'stepSnow', grit: 'stepSnow', room: { dur: 0.8, rt: 0.55, e0: 0.04, e1: 0.11, lp: 4000, metal: 0.22, flesh: 0.08 } }, // 성벽에 짧게 튕기는 메아리
   cathedral: { step: 'stepStone', grit: 'stepStone', room: { dur: 2.8, rt: 2.5, e0: 0.03, e1: 0.14, lp: 3500, metal: 0.4, flesh: 0.16 } }, // 돌 성당의 긴 울림
   darkhall: { step: 'stepStone', room: { dur: 1.6, rt: 1.3, e0: 0.02, e1: 0.08, lp: 3000, metal: 0.28, flesh: 0.12 } }, // 휘장·카펫이 있어 성당보다 짧고 어둡다
-  clearing: { step: 'stepMud', grit: 'stepMud', rain: true }, // 화전 터 2안 (브란의 고향, 오너 선택): 봄비 내리는 탄 흙 비탈. 바깥이라 울림 없음
+  clearing: { step: 'stepMud', grit: 'stepMud', rain: true }, // 화전 터 2안 (브론의 고향, 오너 선택): 봄비 내리는 탄 흙 비탈. 바깥이라 울림 없음
   clearing_a: { step: 'stepMud', grit: 'stepMud', rain: true }, // 같은 컨셉의 1안 (보관용, ?stage=clearing_a — 오너는 2안을 골랐다)
   clearing_a_dry: { step: 'stepMud', grit: 'stepMud', rain: false }, // 1안의 비 없는 판: 비만 뺀다
 };
@@ -3193,7 +3193,7 @@ export class Sound {
   }
 
   /**
-   * 화전 터의 이른 아침 (브란의 고향): 잔잔한 봄비가 탄 흙과 솔숲에 내린다. 숲을 지나는 옅은 바람 + 아주 낮은 바닥 + 빗발 두 겹(좌우, 되풀이 속도를
+   * 화전 터의 이른 아침 (브론의 고향): 잔잔한 봄비가 탄 흙과 솔숲에 내린다. 숲을 지나는 옅은 바람 + 아주 낮은 바닥 + 빗발 두 겹(좌우, 되풀이 속도를
    * 달리해 겹치지 않게) + 20~55초마다 먼 까마귀 한 마리. 사장님 컨셉("적막하고 고독한 대결")대로 가볍고 단순하게, 크게 튀는 소리는 없다.
    * `clearing_a_dry`는 비만 뺀다 (STAGE_SOUND.rain). 노드 몇 개와 되풀이 조각 둘뿐이라 폰 부담은 거의 없다
    */
