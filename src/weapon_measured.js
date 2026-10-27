@@ -125,7 +125,7 @@ export const MEASURED = {
   chixiao: [1.40, 1.68, 1.11, 0.42], // 10/27 새 질량/볼록 날, 같은 실행 롱소드 비율. docs/import/chixiao_2026-10-27/results/measured.json
 };
 
-// 유파 꾸러미의 베는 시간 (롱소드 0.30 기준) — 나뭇가지·청강검·복제품 줄은 전 schools.js 인물 꾸러미(브란·랴오·하인리히)의 measure 값
+// 유파 꾸러미의 베는 시간 (롱소드 0.30 기준) — 나뭇가지·청강검·복제품 줄은 전 schools.js 인물 꾸러미(브론·랴오·하인리히)의 measure 값
 export const CUT_TIME_30 = {
   hwando: 0.26, // 10/21 날 0.68 뒤 다시 잼: 0.30 × 0.24/0.28 (그대로)
   kriegsmesser: 0.30,

@@ -1,4 +1,4 @@
-// 브란 대체 무기(팔쉬온) 간이 측정: 더미 처치 + 캐릭터별 맞대결 몇 판 (나뭇가지와 비교)
+// 브론 대체 무기(팔쉬온) 간이 측정: 더미 처치 + 캐릭터별 맞대결 몇 판 (나뭇가지와 비교)
 // 실행: node tools/sim/bran_falchion_probe.mjs [weapon] [seeds]
 import { newRound, DT } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
@@ -28,5 +28,5 @@ for (const B_ of CHARACTERS.filter((c) => c.id !== 'bran')) {
     for (let i = 0; i < 45 / DT; i++) { G.step(); if (!A.alive || !B.alive) break; }
     if (A.alive && !B.alive) w++; else if (!A.alive && B.alive) l++; else d++;
   }
-  console.log(`  브란(${wid}) vs ${B_.name}(${B_.weapon}): 승 ${w} 패 ${l} 무/시간초과 ${d}`);
+  console.log(`  브론(${wid}) vs ${B_.name}(${B_.weapon}): 승 ${w} 패 ${l} 무/시간초과 ${d}`);
 }
