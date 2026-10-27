@@ -261,17 +261,6 @@ const withSpin = async (vals, fn) => {
     Object.assign(SECRET.ibSpin, old);
   }
 };
-// 10/24 기록 장면 (표준 시간 전 판의 게임 초 — 싱지르 무장 ibSpin.armTime 1.5): 아래 '땅' 시험의 옛 결함 판(손목 옛 판 · 땅 끔)은 원을 다 그려 내는 때가 10/24 그림 판과 같아야
-//  칼끝이 땅을 스친다 — 표준 시간(무장 게임 1.65)으로는 그 때가 0.15 s 늦어 막히지 않는다(옛 결함 재현만의 장면 · docs/strike/time_standard_2026-10-25.md §4). 고친 판(땅 · 발디딤)은 표준 시간 그대로 본다
-const withScene1024 = async (fn) => {
-  const a = SECRET.ibSpin.armTime;
-  SECRET.ibSpin.armTime = 1.5;
-  try {
-    return await fn();
-  } finally {
-    SECRET.ibSpin.armTime = a;
-  }
-};
 const HEAD = 0.45; // 시험 눈금 — 칼 가장 높은 점이 가슴 점 + 0.45 m(머리 꼭대기 언저리)를 넘으면 '허공' (판 값 아님)
 const spinTop = (r) => Math.max(...['ramp', 'wind', 'free', 'settle', 'follow'].filter((p) => r.ph[p].n).map((p) => r.ph[p].top));
 
@@ -327,6 +316,17 @@ test('몸통 뚜껑 (10/24 lid): 놓은 칼끝이 몸통 위 끝 쪽으로 오�
   }
 });
 
+// 10/24 기록 장면 (표준 시간 전 판의 게임 초 — 싱지르 무장 ibSpin.armTime 1.5): 옛 결함 재현 판 둘(아래 '칼 높이' 의 고침 끈 판 · '땅' 의 손목 옛 판 · 땅 끔)은 원을 다 그려 내는 때가 10/24 그림 판과 같아야
+//  칼이 솟고(본판 10/27 대검 몸 뒤 — 표준 시간으론 셋 중 하나만 솟음) · 칼끝이 땅을 스친다 — 표준 시간(무장 게임 1.65)으로는 그 때가 0.15 s 늦어 옛 결함이 안 보인다(옛 결함 재현만의 장면 · docs/strike/time_standard_2026-10-25.md §4). 고친 판(땅 · 발디딤)은 표준 시간 그대로 본다
+const withScene1024 = async (fn) => {
+  const a = SECRET.ibSpin.armTime;
+  SECRET.ibSpin.armTime = 1.5;
+  try {
+    return await fn();
+  } finally {
+    SECRET.ibSpin.armTime = a;
+  }
+};
 test('원 입력 싱지르 칼 높이 (10/24): 전에 머리 위로 솟던 큰 원 셋 — 고친 판은 한 바퀴 다 돌고 칼 가장 높은 점 ≤ 가슴 + 0.45 m · 고침을 끄면 솟음', async () => {
   const { runCircle } = await import('./iberian_spin_circle.mjs');
   const cases = [
@@ -341,7 +341,7 @@ test('원 입력 싱지르 칼 높이 (10/24): 전에 머리 위로 솟던 큰 �
     assert.equal(r.why, 'done', `${w} ${s} 한 바퀴`);
     assert.ok(!r.fell, `${w} ${s} 넘어짐`);
     assert.ok(spinTop(r) <= HEAD, `${w} ${s} 칼 가장 높은 점 − 가슴 ${spinTop(r).toFixed(2)}`);
-    const b = await withSpin({ handRest: 0, lid: 0, floor: 0 }, () => runCircle(w, s, 'circle', c));
+    const b = await withScene1024(() => withSpin({ handRest: 0, lid: 0, floor: 0 }, () => runCircle(w, s, 'circle', c))); // 옛 결함 재현 = 10/24 장면 (아래 withScene1024)
     if (spinTop(b) > HEAD) highOff++;
   }
   assert.ok(highOff >= 2, `고침을 끈 판 솟음 ${highOff} / 3`);
