@@ -10,8 +10,8 @@ import { newRound, RAPIER, DT } from './harness_m.mjs';
 const base = new URL('../../docs/import/chixiao_2026-10-27/', import.meta.url);
 const w = WEAPONS.chixiao;
 const phys = weaponPhysics(w), parts = w.buildParts({}), p = parts.find(p => p[4]);
-assert(Math.abs(phys.mass - 1.30) < 1e-10); assert.equal(w.bladeLength, .80);
-assert(phys.com > .29 && phys.com < .30); assert(phys.I > .18 && phys.I < .20);
+assert(Math.abs(phys.mass - 1.26) < 1e-10); assert.equal(w.bladeLength, .80); // 1.30 → 1.26 kg (사장님 10/27 −40 g)
+assert(phys.com > .29 && phys.com < .31); assert(phys.I > .18 && phys.I < .20); // 자루 쪽 −40 g 뒤 중심 0.295 → 0.304
 assert(phys.I > weaponPhysics(WEAPONS.qinggang).I * 1.5); // 새 한손검의 묵직한 차이 보존
 assert.equal(w.fragility, 0); assert.equal(w.tier, 'legend');
 const art = resolveSwordArt(w), q = resolveSwordArt(WEAPONS.qinggang);
@@ -44,7 +44,7 @@ const bm = chixiaoBladeMass(1, p[0]), density = 1 / bm.volume;
 assert(density > 7800 && density < 8000);
 const g = newRound({ weapon: 'chixiao', weapon2: 'longsword', seed: 17 });
 assert.equal(g.player.bladeColliders[0].shapeType(), RAPIER.ShapeType.ConvexPolyhedron);
-assert(Math.abs(g.player.sword.mass() - 1.3) < 1e-6);
+assert(Math.abs(g.player.sword.mass() - 1.26) < 1e-6);
 assert(Math.abs(g.player.sword.localCom().y - phys.com) < 1e-6);
 g.player.bloodyBlade(.3); assert(g.player.bladeBlood > 0);
 for (let i = 0; i < 120; i++) g.step();
