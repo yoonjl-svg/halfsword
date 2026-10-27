@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Vector2, Vector3 } from 'three';
 import { Stamina, spendAweDrain, applyAweStart } from '../../src/stamina.js';
-import { STAMINA, WEAPON_ABILITY, UNIQUE_ASSIST } from '../../src/config.js';
+import { STAMINA, WEAPON_ABILITY, UNIQUE_ASSIST, realS } from '../../src/config.js'; // realS: 표준 시간(10/25) — 위세 틈 1.5 s 는 실제 초
 import { getWeapon, WEAPONS, WEAPON_ALIASES } from '../../src/weapons.js';
 import { Skill } from '../../src/skill.js';
 import { newRound, DT, AI } from './harness_m.mjs';
@@ -26,7 +26,7 @@ const oldDrain = (fn) => () => { const was = WEAPON_ABILITY.aweDrain; WEAPON_ABI
 test('값 · 카드 · 몸: 막힘 깎음 끔 · 판 시작 15 · 티소나만 능력 · 카드 능력 줄 · 사장님 설명 그대로 · 칼날 1.05 m · 2.3 kg · 앞무게 이베리아 · 츠바이핸더 그대로', () => {
   assert.equal(WEAPON_ABILITY.aweDrain, 0); // 10/24 사장님 — 막힘마다 깎던 몫 끔(옛 판 8)
   assert.equal(WEAPON_ABILITY.aweStart, 15); // 판 시작 최대 기력 − 15 (고정 — 사장님 11:4x)
-  assert.equal(WEAPON_ABILITY.aweGap, 1.5);
+  assert.equal(WEAPON_ABILITY.aweGap, realS(1.5)); // 실제 1.5 s (표준 시간 10/25 — 게임 1.65)
   const T = tizona();
   assert.equal(T.id, 'tizona'); assert.equal(T.tier, 'epic'); assert.equal(T.awe, true);
   assert.equal(T.ability, '위세: 상대 기력 감소'); // 사장님 10/24 11:2x
@@ -48,8 +48,8 @@ test('spendAweDrain: 막은 쪽 −8 · 1.5 s 안엔 다시 안 깎음(1.5 s 지
   assert.ok(e); near(V.stamina.value, v0 - 8); near(e.actual, 8); assert.equal(V.stamina.counts.awe, 1); near(V.stamina.spent.awe, 8);
   assert.equal(V.lastAwe, e); assert.equal(e.attacker, 1);
   assert.equal(spendAweDrain(A, V), null); // 같은 때 (한 공격에 두 번 불려도)
-  A.stamina.time += 1.49; assert.equal(spendAweDrain(A, V), null); near(V.stamina.value, v0 - 8); // 1.5 s 안
-  A.stamina.time += 0.01; assert.ok(spendAweDrain(A, V)); near(V.stamina.value, v0 - 16); // 1.5 s 지남
+  A.stamina.time += realS(1.49); assert.equal(spendAweDrain(A, V), null); near(V.stamina.value, v0 - 8); // 1.5 s 안
+  A.stamina.time += realS(0.01); assert.ok(spendAweDrain(A, V)); near(V.stamina.value, v0 - 16); // 1.5 s 지남
   // 능력 없는 칼 · 부러진 칼 · 빈손 — 아무 일 없음 (기록 칸도 안 생김)
   for (const extra of [{ weapon: getWeapon('zweihander') }, { weapon: tizona(), weaponBroken: true }, { weapon: tizona(), armed: false }]) {
     const a = actor({ index: 1, ...extra }), v = actor();
@@ -131,7 +131,7 @@ test('AI 가 든 티소나 (상대 자리 · 플레이어 자리 모두): 막힘
     near(aiStrikeEnd(other), 0); // 롱소드의 막힌 공격
     near(aiStrikeEnd(wielder), 8); // 막힘
     near(aiStrikeEnd(wielder), 0); // 1.5 s 안
-    wielder.me.stamina.time += 1.5;
+    wielder.me.stamina.time += realS(1.5); // 실제 1.5 s
     near(aiStrikeEnd(wielder), 8); // 1.5 s 지남
     assert.equal(wielder.foe.stamina.counts.awe, 2);
   }
@@ -151,7 +151,8 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
     //  씨앗을 따로 돌린 결과와 다를 수 있다 — 고를 때는 이 파일째 돌려 본다
     //  (10/24 17:2x 팔꿈치 돌림 켬 · 손목 교정으로 상대 자리 씨앗을 다시 고름 — 전 씨앗 9: 10.1 · 10.7 s · 10/27 손맛 티소나 몸(칼날 질량 분포를 그림 꼴에서) 뒤
     //   상대 자리 씨앗 1 → 6 · 플레이어 자리 씨앗 9 · 7.5 s → 씨앗 1 · 11 s — 전 씨앗은 그 시간 안에 막힘이 없어짐)
-    for (const [w1, w2, seed, secs, minDrains, minSkipped] of [['longsword', 'tizona', 6, 11, 1, 1], ['tizona', 'longsword', 1, 11, 1, 0]]) {
+    //  (10/27 표준 시간 — AI 판단 박자 · 반응 · 위세 틈이 실제 초가 되어 판이 바뀜: 상대 자리 씨앗 6 은 건너뜀 0 · 플레이어 자리 씨앗 1 은 깎음 0 → 이 파일째 돌려 다시 고름 — 상대 자리 씨앗 27 · 플레이어 자리 씨앗 10)
+    for (const [w1, w2, seed, secs, minDrains, minSkipped] of [['longsword', 'tizona', 27, 11, 1, 1], ['tizona', 'longsword', 10, 11, 1, 0]]) {
       log.length = 0;
       const G = newRound({ walls: true, weapon: w1, weapon2: w2, seed, AI2Class: AI });
       for (let i = 0; i < secs / DT; i++) G.step();

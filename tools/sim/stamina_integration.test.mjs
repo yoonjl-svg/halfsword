@@ -5,14 +5,17 @@ import { newRound, DT } from './harness_m.mjs';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { requestIai } from '../../src/secret_instant.js';
-import { STAMINA, SECRET } from '../../src/config.js';
+import { STAMINA, SECRET, realS } from '../../src/config.js'; // realS: 표준 시간(10/25) — 0.6 s 기다림 · 초당 21 · 15 · 탈진 시간은 실제 초
 const near=(a,b,e=1e-5)=>assert.ok(Math.abs(a-b)<e,`${a} != ${b}`);
 function game(fn,weapon='longsword'){const g=newRound({weapon,seed:7});try{return fn(g);}finally{g.world.free();}}
 test('실제 사람/AI는0.6초 뒤 각각21/s·15/s 회복하며100을 넘지 않음',()=>game(g=>{
  g.ai.update=()=>{};for(let i=0;i<240;i++)g.step();
  for(const f of [g.player,g.enemy]){f.stamina.value=20;f.stamina.rest=0;}
- for(let i=0;i<72;i++)g.step();near(g.player.stamina.value,20);near(g.enemy.stamina.value,20);
- for(let i=0;i<240;i++)g.step();near(g.player.stamina.value,62);near(g.enemy.stamina.value,50);
+ const s=(sec)=>Math.round(realS(sec)/DT); // 실제 초 → 물리 스텝
+ for(let i=0;i<s(0.6);i++)g.step();near(g.player.stamina.value,20);near(g.enemy.stamina.value,20);
+ const T=(s(0.6)+s(2))*DT-STAMINA.recoverDelay; // 기다림 뒤 게임 초 (실제 약 2 초)
+ for(let i=0;i<s(2);i++)g.step();near(g.player.stamina.value,20+STAMINA.playerRecoverPerSecond*T);near(g.enemy.stamina.value,20+STAMINA.recoverPerSecond*T);
+ assert.ok(Math.abs(g.player.stamina.value-62)<0.1&&Math.abs(g.enemy.stamina.value-50)<0.1); // 실제 2 초 × 21 · 15
  for(let i=0;i<480;i++)g.step();near(g.player.stamina.value,100);near(g.enemy.stamina.value,100);
 }));
 test('실제 파손 전 강체 질량을 고정',()=>{for(const id of ['rapier','zweihander'])game(g=>{const p=g.player;const k=p.stamina.weight;p.breakWeapon();assert.ok(p.swordMass<p.stamina.originalMass);p.stamina.attack();near(p.stamina.spent.attack,12*k);},id);});
@@ -37,7 +40,7 @@ test('AI 실제 공격은 기술당 한 번, 기력 부족 시 휴식 결심',()
 test('탈진 중 이동·찌르기·막기·비기 예약 차단, 자연 회복 1.667초 뒤 −35 · 심한 지침으로 복귀 (옛 규칙 2.5초 뒤 0)',()=>{for(const natural of [true,false]){const was=STAMINA.exhaustNatural;STAMINA.exhaustNatural=natural;try{game(g=>{
  g.ai.update=()=>{};const p=g.player;const guard=new PlayerParryGuard(p,g.enemy);p.stamina.controller=guard;guard.held=true;p.stamina.spend('attack',STAMINA.max-STAMINA.floor);
  p.instantReq={};p.iaiReq={};p.move.set(1,1);assert.equal(p.skill.thrust(),false);
- const N=Math.round((natural?(STAMINA.severeAt-STAMINA.floor)/STAMINA.playerRecoverPerSecond:STAMINA.exhaustSeconds)/DT);assert.equal(N,natural?200:300);
+ const N=Math.round((natural?(STAMINA.severeAt-STAMINA.floor)/STAMINA.playerRecoverPerSecond:STAMINA.exhaustSeconds)/DT);assert.equal(N,Math.round(realS(natural?35/21:2.5)/DT)); // 실제 1.667 · 2.5 초 (게임 220 · 330 스텝)
  for(let i=0;i<N;i++){p.move.set(1,1);guard.step(DT);g.step();if(i<N-1){assert.ok(p.feetHeld);near(p.move.length(),0);assert.equal(guard.active,false);assert.equal(p.skill.swinging,false);}}
  near(p.stamina.value,natural?STAMINA.severeAt:0);assert.equal(p.stamina.exhausted,false);assert.equal(p.stamina.level,natural?2:1);assert.equal(p.instantReq,null);assert.equal(p.iaiReq,null);assert.equal(p.state,'stand');
 });}finally{STAMINA.exhaustNatural=was;}}});

@@ -2,14 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Vector2 } from 'three';
 import { Stamina } from '../../src/stamina.js';
-import { STAMINA } from '../../src/config.js';
+import { STAMINA, TIME, realS } from '../../src/config.js';
+// 표준 시간 (10/25 22:3x — config.js TIME): 회복 초당 21 · 15 · 0.6 s 기다림 · 탈진 2.5 s · 긋기 끊김 0.12 s 는 실제 초 — tick(…, 초)는 실제 초를 받아 게임 초(× TIME.k)만큼 물리 dt 로 돌린다 (swing 은 손 움직임이라 게임 초 그대로)
 const near = (a,b,e=1e-7) => assert.ok(Math.abs(a-b)<e, `${a} != ${b}`);
 function actor(extra={}) {
  const pos={x:0,y:1,z:0};
  const f={ alive:true, armed:true, state:'stand', heading:0, swordMass:1.6, move:new Vector2(), handOffset:new Vector2(), skill:{vel:new Vector2(),swinging:false}, bodies:{pelvis:{translation:()=>pos}}, ...extra };
  f.stamina=new Stamina(f); f.pos=pos; return f;
 }
-const tick=(f,seconds,dt=1/120)=>{for(let t=0;t<seconds-1e-9;t+=dt)f.stamina.step(Math.min(dt,seconds-t));};
+const tick=(f,sec,dt=1/120)=>{const seconds=realS(sec);for(let t=0;t<seconds-1e-9;t+=dt)f.stamina.step(Math.min(dt,seconds-t));};
 const swing=(f,seconds,x,y=0)=>{f.skill.swinging=true;f.skill.vel.set(x,y);for(let t=0;t<seconds-1e-9;t+=1/120){const dt=Math.min(1/120,seconds-t);f.handOffset.x+=x*dt;f.handOffset.y+=y*dt;f.stamina.step(dt);}};
 test('공격은 한 번에 베기12/찌르기10, 막기3; 무게는 원래 질량으로 고정',()=>{
  const f=actor(); f.stamina.attack(); f.stamina.attack('thrust');near(f.stamina.value,78);
@@ -53,7 +54,7 @@ test('비기는35 한 번, 구성 공격/걷기와 이중 청구하지 않음',(
 });
 test('사람/AI 걷기는0.62m당 동방0.7·일반1.4·일본2.1, 걷는 중 회복·제자리 무료',()=>{
  for(const aiControlled of [false,true])for(const [trad,cost] of [['chinese',.7],['german',1.4],['italian',1.4],['iberian',1.4],['japanese',2.1],['none',1.4]]) {
-  const f=actor({aiControlled,swordArt:{tradition:trad}});f.stamina.value=20;f.stamina.rest=.6;f.move.y=1;f.stamina.step(1/120);
+  const f=actor({aiControlled,swordArt:{tradition:trad}});f.stamina.value=20;f.stamina.rest=realS(.6);f.move.y=1;f.stamina.step(1/120);
   for(let i=0;i<123;i++){f.pos.x+=.01;f.stamina.step(1/120);}near(f.stamina.spent.move,cost);
   f.pos.x+=.01;f.stamina.step(1/120);
   near(f.stamina.spent.move,2*cost);assert.ok(f.stamina.value>30);
@@ -97,7 +98,7 @@ test('movement and attack use the separately approved fatigue rates',()=>{
 const fixedExhaust=(fn)=>{const was=STAMINA.exhaustNatural;STAMINA.exhaustNatural=false;try{fn();}finally{STAMINA.exhaustNatural=was;}};
 test('옛 탈진(?exhaust=fixed) 2.5초: 막기를 누르고 있어도 회복,0/지침으로 해제,추가비용없음',()=>fixedExhaust(()=>{
  const f=actor();f.stamina.controller={held:true};f.stamina.spend('attack',180);near(f.stamina.value,STAMINA.floor);near(f.stamina.speed,0);
- f.stamina.attack();near(f.stamina.spent.attack,180);tick(f,2);near(f.stamina.value,STAMINA.floor+2*STAMINA.exhaustRecover);assert.ok(f.stamina.exhausted);
+ f.stamina.attack();near(f.stamina.spent.attack,180);tick(f,2);near(f.stamina.value,STAMINA.floor+realS(2)*STAMINA.exhaustRecover);assert.ok(f.stamina.exhausted);
  tick(f,.5);near(f.stamina.value,0);near(f.stamina.speed,.7);assert.equal(f.stamina.exhausted,false);
  f.stamina.controller.held=false;tick(f,1);near(f.stamina.value,21);near(f.stamina.speed,1);
 }));
@@ -107,17 +108,17 @@ test('옛 탈진(?exhaust=fixed): 회복/탈진은 dt 분할과 무관, 일시�
 test('자연 회복 탈진(사장님 10/18 22:1x 기본): 막기를 누르고 있어도 플레이어21/초로 −35까지 1.667초, 심한 지침으로 해제, 추가비용없음, 해제 뒤 막기 쥐면 회복 멈춤',()=>{
  assert.equal(STAMINA.exhaustNatural,true);
  const f=actor();f.stamina.controller={held:true};f.stamina.spend('attack',180);near(f.stamina.value,STAMINA.floor);near(f.stamina.speed,0);
- const T=(STAMINA.severeAt-STAMINA.floor)/STAMINA.playerRecoverPerSecond;near(f.stamina.exhaustLeft,T);near(T,35/21);
- f.stamina.attack();near(f.stamina.spent.attack,180);tick(f,1);near(f.stamina.value,STAMINA.floor+STAMINA.playerRecoverPerSecond);assert.ok(f.stamina.exhausted);near(f.stamina.speed,0);near(f.stamina.progress,21/35);
- tick(f,T-1);near(f.stamina.value,STAMINA.severeAt);assert.equal(f.stamina.exhausted,false);assert.equal(f.stamina.level,2);near(f.stamina.speed,STAMINA.moveSevere);near(f.stamina.progress,0);
+ const T=(STAMINA.severeAt-STAMINA.floor)/STAMINA.playerRecoverPerSecond;near(f.stamina.exhaustLeft,T);near(T,realS(35/21));
+ f.stamina.attack();near(f.stamina.spent.attack,180);tick(f,1);near(f.stamina.value,STAMINA.floor+21);assert.ok(f.stamina.exhausted);near(f.stamina.speed,0);near(f.stamina.progress,21/35);
+ tick(f,T/TIME.k-1);near(f.stamina.value,STAMINA.severeAt);assert.equal(f.stamina.exhausted,false);assert.equal(f.stamina.level,2);near(f.stamina.speed,STAMINA.moveSevere);near(f.stamina.progress,0);
  tick(f,1);near(f.stamina.value,STAMINA.severeAt); // 막기를 쥔 채 — 보통 회복은 다시 멈춤
  f.stamina.controller.held=false;tick(f,1);near(f.stamina.value,STAMINA.severeAt+21);assert.equal(f.stamina.level,1); // −14: 되돌림 −20 넘음 → 지침
 });
 test('자연 회복 탈진: AI는 15/초로 2.333초, 탈진 중 값은 dt 분할과 무관, 일시정지 dt0은 진행하지 않음',()=>{
  for(const aiControlled of [false,true])for(const dt of [1/120,1/60,.1]){
   const f=actor({aiControlled});f.stamina.spend('attack',STAMINA.max-STAMINA.floor);const rate=aiControlled?STAMINA.recoverPerSecond:STAMINA.playerRecoverPerSecond;
-  tick(f,1,dt);near(f.stamina.value,STAMINA.floor+rate,1e-6);assert.ok(f.stamina.exhausted);f.stamina.step(0);near(f.stamina.value,STAMINA.floor+rate,1e-6);
-  let t=1;while(f.stamina.exhausted&&t<5){f.stamina.step(dt);t+=dt;}
+  tick(f,1,dt);near(f.stamina.value,STAMINA.floor+rate*TIME.k,1e-6);assert.ok(f.stamina.exhausted);f.stamina.step(0);near(f.stamina.value,STAMINA.floor+rate*TIME.k,1e-6); // 실제 1 초 = 게임 rate × k
+  let t=realS(1);while(f.stamina.exhausted&&t<5){f.stamina.step(dt);t+=dt;}
   near(f.stamina.value,STAMINA.severeAt);assert.equal(f.stamina.level,2);assert.ok(Math.abs(t-(STAMINA.severeAt-STAMINA.floor)/rate)<dt+1e-9,`${aiControlled} ${dt} ${t}`);
  }
 });

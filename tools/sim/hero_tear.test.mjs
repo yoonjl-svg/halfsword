@@ -6,7 +6,7 @@ import { Vector2 } from 'three';
 const storage = new Map();
 globalThis.localStorage = { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, String(v)), removeItem: (k) => storage.delete(k) };
 const { Stamina } = await import('../../src/stamina.js');
-const { STAMINA } = await import('../../src/config.js');
+const { STAMINA, realS } = await import('../../src/config.js'); // realS: 표준 시간(10/25) — 초당 10 은 실제 초당
 const { LOBBY_ARMOR, LOBBY_ARMORS, HERO_TEAR, armorSlot, readLobbyArmor, saveLobbyArmor, readLobbyNeck, saveLobbyNeck } = await import('../../src/lobby_equipment.js');
 const { newRound, DT } = await import('./harness_m.mjs');
 const { AI } = await import('../../src/ai.js');
@@ -104,7 +104,7 @@ test('클린치: 기력 무한 쪽은 0 · 상대는 전처럼 초당 10 (스텝
     [fs[0].foe, fs[1].foe] = [fs[1], fs[0]];
     fs[0].stamina.setInfinite(true);
     const order = reverse ? [fs[1], fs[0]] : fs;
-    for (let i = 0; i < 240; i++) for (const f of order) f.stamina.step(1 / 120);
+    for (let i = 0; i < Math.round(realS(2) * 120); i++) for (const f of order) f.stamina.step(1 / 120); // 실제 2 초
     near(fs[0].stamina.value, 100); near(fs[0].stamina.spent.clinch, 0);
     near(fs[1].stamina.value, 60, 1e-6); near(fs[1].stamina.spent.clinch, 20, 1e-6); // 2 초 × 10
     for (let i = 0; i < 1800 && !fs[1].stamina.exhausted; i++) for (const f of order) f.stamina.step(1 / 120);

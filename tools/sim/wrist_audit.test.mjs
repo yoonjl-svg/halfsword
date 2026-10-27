@@ -48,9 +48,13 @@ test('값: 운동학 겨눈 찌름 팔 뻗음 SECRET.thrustArm 1 · 팔꿈치 �
   assert.equal(ULNAR, -30);
 });
 
+// 10/24 런지 굳음 길이(게임 0.6 s — 표준 시간 전 판)로 본다: 뻗은 팔은 굳음이 시작되고 게임 약 0.45 s(54 스텝) 뒤부터 돌아오기 시작한다 — 옛 판 · 표준 시간 판 같은 스텝(굳음 · 붙잡기 길이와
+//  상관없는 몫 — 까닭은 따로 볼 일). 굳음이 실제 0.6 s(게임 0.66 — 80 스텝)가 되면 돌아오는 몫이 평균에 더 들어가 달타냥 '굳음 손 앞 평균' 0.90 → 0.845
+//  (docs/strike/time_standard_2026-10-25.md §4 — 사장님 · 감독께 여쭘). 팔 · 손목 규칙 시험이라 10/24 굳음 길이로 본다
+const withLunge1024 = (fn) => withSets([[SECRET, 'risolutoStiff', 0.6], [SECRET, 'risolutoArmSlow', 0.6]], fn);
 test('10/24 런지 손목: 맞힌 자세 아래팔-칼 ≤ 135° · 손이 어깨 앞 팔 길이 0.8 이상 · 새끼 쪽 아님 · 굳음 동안 뻗은 채 (레이피어 · 달타냥 · 2.2 m)', () => {
   for (const w of ['rapier', 'dartagnan']) {
-    const r = lungeRun(w, { gap: 2.2 });
+    const r = withLunge1024(() => lungeRun(w, { gap: 2.2 }));
     assert.ok(r.fired && r.res?.ok, `${w} 런지`);
     assert.ok(r.res.hit, `${w} 맞힘`);
     const h = r.hit;
@@ -127,7 +131,8 @@ test('10/24 17:2x 뒤 탭 찌르기 (롱소드 황소 → 칼 내린 상대 · 1
   };
   const old = withSets(OLD, run);
   const now = run();
-  const v17 = withSets([[JOINTS, 'swivelThrust', 0]], run);
+  // 17:2x 판(옛 결함) 재현은 그때 걷기 빠르기(게임 1.8 m/s)로 — 표준 시간 걷기 실제 2.0(게임 1.818)이면 탭 찌르기 디딤이 1 % 더 나가 1.5 m 판 하나가 찌름 1 (docs/strike/time_standard_2026-10-25.md §4)
+  const v17 = withSets([[JOINTS, 'swivelThrust', 0], [CONFIG.GAIT, 'moveSpeed', 1.8]], run);
   assert.ok(old.stab >= 1, `전 판 찌름 ${old.stab} / 5`);
   assert.ok(now.stab >= old.stab, `기본 찌름 ${now.stab} ≥ 전 판 ${old.stab}`);
   assert.ok(now.dev >= ULNAR - 5, `기본 머묾 손 면 dev 평균 ${now.dev.toFixed(0)}° (전 판 ${old.dev.toFixed(0)}°)`);

@@ -20,7 +20,10 @@ const withSets = (L, fn) => {
     L.forEach(([o, k], i) => (o[k] = old[i]));
   }
 };
-const HOLD0 = [[ARENA, 'startHold', 0]]; // 생성기 실행과 같은 조건 (with_config ARENA.startHold=0)
+// 생성기 실행과 같은 조건 (with_config ARENA.startHold=0) · 줄을 잰 10/25 판의 과녁 몸 AI 반응(AI_REACT.face) 게임 0.2 s —
+//  표준 시간(10/25 22:3x) 뒤 그 값이 실제 0.2 s(게임 0.22)라 서 있는 과녁 몸이 도는 늦음이 달라져 롱소드 잣대가 5 mm 짧게 재진다(비율 0.35 %).
+//  잰 값(ITALIAN_THRUST 줄)은 그대로 두고(docs/strike/time_standard_2026-10-25.md §2 '잰 값') 이 시험은 잰 때의 조건으로 생성기를 돌린다
+const HOLD0 = [[ARENA, 'startHold', 0], [CONFIG.AI_REACT, 'face', 0.2]];
 const IT = ['rapier', 'dartagnan', 'balisarda', 'pappenheimer'];
 
 test('잣대 고르기: 이탈리아 유파 무기(파펜하이머 포함)만 찌르기 · 나머지는 분노의 베기 · 강제 둘', () => {

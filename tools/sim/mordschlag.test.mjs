@@ -32,9 +32,9 @@ const wristGap = (P) => {
 
 test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 1.5 s · 창 0.6 s · 굳음 0.4 s) · 사람 비기 열림에 독일 · AI 도 독일 (10/24)', () => {
   assert.equal(SECRET.deMord, 1);
-  assert.equal(SECRET.mordPress, 1.5);
-  assert.equal(SECRET.playerWindow, 0.6);
-  assert.equal(SECRET.stiff.german, 0.4);
+  assert.equal(SECRET.mordPress, CONFIG.realS(1.5)); // 표준 시간(10/25): 적힌 수는 실제 초 — 게임 값 = × 1.1
+  assert.equal(SECRET.playerWindow, CONFIG.realS(0.6));
+  assert.equal(SECRET.stiff.german, CONFIG.realS(0.4));
   assert.equal(SECRET.mordOver, 0); // 넘어 들어감 규칙 — 사장님 확인 전 · 기본 끔
   assert.ok(SECRET.openSchools.includes('german') && SECRET.openSchools.includes('japanese'));
   assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german']); // 10/24 이베리아 싱지르 · 독일 모르트슐라크 AI 열림 (사장님 12:0x 'ai도 비기 쓰게 해')
@@ -68,7 +68,7 @@ test('조건: 밀치기 누르기가 끊기지 않고 1.5 s 이어지면 창 · 
   try {
     const w = new PlayerSecretWatch(P, E);
     assert.equal(w.S.name, 'mordschlag');
-    const steps = (sec) => Math.round(sec / DT);
+    const steps = (sec) => Math.round(CONFIG.realS(sec) / DT); // 실제 초 → 물리 스텝 (표준 시간 10/25)
     const press = (n, on = true) => { for (let i = 0; i < n; i++) { P.barge = on ? { phase: 'press' } : null; w.update(DT, false); } };
     press(steps(1.5) - 2);
     assert.equal(w.open, null, '1.5 s 전에는 창 없음');
@@ -83,13 +83,13 @@ test('조건: 밀치기 누르기가 끊기지 않고 1.5 s 이어지면 창 · 
     P.barge = { phase: 'step' }; // 딛는 동안은 누르기가 아님
     w.update(DT, false);
     assert.equal(w.pressT, 0);
-    SECRET.mordPress = 0.6;
+    SECRET.mordPress = CONFIG.realS(0.6);
     try {
       const w2 = new PlayerSecretWatch(P, E);
       press.call(null, 0);
       for (let i = 0; i < steps(0.6) + 2; i++) { P.barge = { phase: 'press' }; w2.update(DT, false); }
       assert.ok(w2.open, '0.6 s 판');
-    } finally { SECRET.mordPress = 1.5; }
+    } finally { SECRET.mordPress = CONFIG.realS(1.5); }
     const w3 = new PlayerSecretWatch(P, E);
     for (let i = 0; i < steps(2); i++) { P.barge = { phase: 'press' }; w3.update(DT, true); } // 비기 실행 · 굳음 동안은 세지 않음
     assert.equal(w3.open, null);
@@ -141,7 +141,7 @@ test('비기 흐름: 준비 → 베기 길 → 따라 지나감 → 다시 세�
     }
     assert.equal(P.skill.sec, null);
     for (const s of ['chamber', 'strike', 'follow', 'mordBack', 'stiff']) assert.ok(seen.has(s), s);
-    assert.equal(stiffT, 0.4);
+    assert.equal(stiffT, CONFIG.realS(0.4));
     assert.equal(P.mordGrip, null);
     assert.equal(P.mordAim, false);
     assert.equal(P.mordHold, null);

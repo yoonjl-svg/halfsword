@@ -5,6 +5,31 @@
 //  단위: 미터(m), 킬로그램(kg), 초(s), 뉴턴(N)
 // ─────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────
+//  표준 시간 (사장님 10/25 22:3x '지금 이 속도를 표준 시간으로 보는 게 맞아. 게임 시간으로 도는 모든 숫자를 찾아서 절대적 시간이 맞게끔 고치는 작업을 진행해'
+//   — 기록 docs/strike/time_standard_2026-10-25.md · 확인표 2590 ~ 2599)
+//  게임은 템포(main.js `?tempo` — 기본 1.1)만큼 빨리 돈다: 실제 1 초에 물리가 1.1 초를 간다. 몸 · 칼이 움직이는 빠르기는 지금 그대로가 표준이고,
+//  사람이 시간으로 느끼는 규칙 수(창 · 굳음 · 기다림 · 반응 · 걸쇠 · 무장 · 초당 몫)와 규칙 빠르기 문턱(m/s)은 실제(벽시계) 값으로 적는다:
+//   realS(실제 초) → 게임 초 = × std · realV(실제 m/s) → 게임 m/s = ÷ std · realRate(실제 초당 몫) → 게임 초당 몫 = ÷ std
+//  이 파일을 읽을 때 한 번 바꾼다(코드에 적힌 규칙 시간도 같은 함수로 감싼다). std = 그 판 템포(브라우저 `?tempo` 를 따라감 — 템포를 바꿔도 적힌 수는 실제 시간) ·
+//  시뮬 도구 = 1.1(기본 템포 — 시뮬은 게임 시간으로 돈다). 감싸지 않는 것: 물리 · 관절 힘 · 서보 · 감쇠 시간 상수 · 걸음 기계 · 동작 대본 빠르기 · 잰 값(무기 간격 · CUT_TIME_30).
+//  옛 판: `?timeStd=0` · 시뮬 TIME_STD=0 = 적힌 수가 게임 시간(걷기 1.8 · 달려듦 1.2 게임 m/s — 관문 해시 바이트 같음)
+// ─────────────────────────────────────────────────────────────
+const urlParam = (k) => (typeof location !== 'undefined' && location.search ? new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')).get(k) : null); // main.js params 와 같은 읽기 (? 두 번도)
+const envParam = (k) => (typeof process !== 'undefined' && process.env?.[k] != null ? process.env[k] : null);
+export const TIME = (() => {
+  const tempo = Math.min(2, Math.max(0.5, +(urlParam('tempo') ?? 1.1) || 1.1)); // main.js TEMPO 가 이 값을 쓴다 (한 곳 — 기본 1.1 · 사장님 10/10 05:1x)
+  const sw = urlParam('timeStd') ?? envParam('TIME_STD');
+  const on = sw == null || sw === '' ? 1 : +sw ? 1 : 0; // 기본 켬 · 0 = 옛 판
+  return { on, tempo, std: tempo, k: on ? tempo : 1 }; // k = 실제 초 → 게임 초 배율 (옛 판 1)
+})();
+/** 실제 초 → 게임 초 (규칙 시간: 창 · 굳음 · 기다림 · 반응 · 걸쇠 · 무장 · 효과 시간) */
+export const realS = (s) => s * TIME.k;
+/** 실제 m/s → 게임 m/s (규칙 빠르기: 걷기 목표 · 달려듦 문턱처럼 사람이 m/s 로 정한 수) */
+export const realV = (v) => v / TIME.k;
+/** 실제 초당 몫 → 게임 초당 몫 (기력 회복 초당 15 · 출혈 초당 몫처럼 '초당' 규칙 수) */
+export const realRate = (r) => r / TIME.k;
+
 export const PHYSICS = {
   gravity: -9.81,
   timestep: 1 / 120, // 물리 한 스텝 길이. 작을수록 안정적이지만 무겁다.
@@ -26,19 +51,19 @@ export const STAMINA = {
   // 비용: 베기 12 · 찌르기 10(사장님 10/24 12:5x '모든 찌르기 10으로' — 전 7 · 이탈리아 거의 무한 공격 · docs/strike/thrust_stamina_2026-10-24.md) · 막아 받기 3(상대 공격 한 번에 한 번) — × 무게 · 비기 35 · 첫 걸음 박차기 12(우리 본판 gait.js fastBegin — 독일 뒤 · 이베리아 옆) — 무게 없음.
   //  shotCost: 권총 한 발 2 × 무게(샛별 저장소 첫 판부터 — 설계안에 없음, 사장님 확인 전)
   cutCost: 12, thrustCost: 10, blockCost: 3, secretCost: 35, pushCost: 12, shotCost: 2,
-  clinchPerSecond: 10, // 붙어 밀고 버티는 동안(밀치기 누르기 + 팔·칼 닿음) 두 몸 각각 초당 10 · 회복 멈춤(샛별 저장소 ba14a6f8 — 설계안에 없음, 사장님 확인 전)
+  clinchPerSecond: realRate(10), // 붙어 밀고 버티는 동안(밀치기 누르기 + 팔·칼 닿음) 두 몸 각각 초당 10 · 회복 멈춤(샛별 저장소 ba14a6f8 — 설계안에 없음, 사장님 확인 전)
   // 사람 긋기 청구(샛별 저장소 f933bc07): 끊김 0.12 s 넘으면 새 긋기(설계안은 고유 동작의 onsetQuiet 0.06) · 손이 0.06 m 넘게 움직여야 · 겨눔 가운데 0.22 m 를 가르는 긋기는 바로 확정
-  strokeQuiet: 0.12, strokeTravel: 0.06, strokeCenter: 0.22,
+  strokeQuiet: realS(0.12), strokeTravel: 0.06, strokeCenter: 0.22,
   weaponReferenceMass: 1.6, // 무게 = √(처음 쥔 칼 질량 ÷ 1.6 kg) 0.75 ~ 1.5 — 칼이 부러져도 처음 질량(사장님 결정)
   // 걷기: 골반 수평 이동 0.62 m 마다 보통 1.4 · 동방 0.7 · 일본 2.1(사장님 결정 §0 15 · 16 — 유파 열쇠 swordArt.tradition · docs/strike/school_kit_map.md 보법 칸) · 한 스텝 거리 상한 3 m/s(튐 막기)
   stepDistance: 0.62, stepCosts: { default: 1.4, chinese: 0.7, japanese: 2.1 }, maxWalkSpeed: 3,
   // 회복: 0.6 s 동안 공격·막아 받기·박차기·비기·클린치를 안 쓰면 AI 초당 15 · 사람 21(샛별 저장소 c76b4a6f — 설계안은 모두 15, 사장님 확인 전) · 막기 유지 중엔 멈춤
-  recoverPerSecond: 15, playerRecoverPerSecond: 21, recoverDelay: 0.6,
+  recoverPerSecond: realRate(15), playerRecoverPerSecond: realRate(21), recoverDelay: realS(0.6), // 표준 시간: 실제 초당 · 실제 초 (10/25)
   // 탈진 규칙 (사장님 10/18 22:1x '탈진 규칙은 샛별 것이 맞음' — 원문 '새벽'은 오타, 23:3x 정정 · 샛별 연구 규칙 · docs/strike/japanese_flow_adopt_2026-10-18.md): 바닥(floor −70)에서 이동 · 공격 불가 ·
   //  막기를 누르고 있어도 자연 회복 빠르기(플레이어 playerRecoverPerSecond 21 · AI recoverPerSecond 15 /s)로 강제로 차서 severeAt(−35)에서 풀림(심한 지침 단계) —
   //  플레이어 1.667 s · AI 2.333 s. 풀린 뒤는 보통 규칙(되돌림 +15 · 막기 쥐면 회복 멈춤). `?exhaust=fixed` = 옛 규칙(아래 exhaustSeconds · exhaustRecover)
   exhaustNatural: true,
-  exhaustSeconds: 2.5, exhaustRecover: 28, // (옛 규칙 · `?exhaust=fixed`) 탈진: 2.5 s 제자리 숨 고르기(사장님 결정) · 끝에서 0(지침 단계)으로. 초당 28 = −floor ÷ 2.5 — 2.5 s 끝에 0 에 닿게(같은 규칙 — 10/16 −80 ÷ 2.5 = 32 · 10/17 탈진 −70 에 맞춤 · 탈진 중 값은 막대에 안 보이고(진행은 시간) 끝에서 0 으로 맞추므로 게임 차이 없음)
+  exhaustSeconds: realS(2.5), exhaustRecover: realRate(28), // (옛 규칙 · `?exhaust=fixed`) 탈진: 2.5 s 제자리 숨 고르기(사장님 결정) · 끝에서 0(지침 단계)으로. 초당 28 = −floor ÷ 2.5 — 2.5 s 끝에 0 에 닿게(같은 규칙 — 10/16 −80 ÷ 2.5 = 32 · 10/17 탈진 −70 에 맞춤 · 탈진 중 값은 막대에 안 보이고(진행은 시간) 끝에서 0 으로 맞추므로 게임 차이 없음)
   // 실제 접촉 시간 보정 (attackTempo false = 공격 시계에 attackTired · attackSevere 를 그대로 곱함 · 안쪽 계수 없음). 아래 값은 샛별 저장소 19 무기 266 조건 고정 표적 측정에서 정한 것 — 사장님 확인 전
   //  tempoPower*: 공격 중 지친 팔·손목 힘(막는 동안은 아래 tiredPower · severePower 그대로) · tempoRate*: 베기 · 비기 명령 시계 · tempoThrust*: 찌르기(원래 질량 tempoHeavyMass 2.5 kg 넘거나 찌르기 특성 무기는 tempoRate*) · tempoPommel*: 손잡이 찍기
   //  tempoBody: 몸 돌림도 같은 시계 · tempoCaps: 관절 빠르기 한계도 같은 배율(motorSpeed) · tempoInput: 사람 손길을 순서 그대로 늦게 보냄(고유 동작 · 긋기 청구는 원래 손길로 읽음 — src/attack_tempo.js)
@@ -62,7 +87,7 @@ export const STAMINA = {
 //   막힘마다 깎던 몫은 끔(aweDrain 0 — 옛 판 스위치로 남김). 계산 stamina.js applyAweStart · 판을 세울 때 main.js newRound(사람 · AI 두 쪽 모두)
 //   aweStart 15 (사장님 11:4x '10-20 사이로 추천해달라고 한거야 랜덤적용 x' → 감독 추천 고정 15: 베기 한 번 12(× 무게 0.75 ~ 1.5)라
 //    생생한 채 지치기(0 아래) 전까지 베기를 한 번쯤 덜 하게 됨 · 10 은 베기 한 번도 안 됨 · 20 은 두 번 가까이)
-export const WEAPON_ABILITY = { aweDrain: 0, aweGap: 1.5, aweStart: 15 };
+export const WEAPON_ABILITY = { aweDrain: 0, aweGap: realS(1.5), aweStart: 15 };
 // 달타냥 '총사의 결투' — 사장님 10/25 결정 (01:4x '달타냥은 B로 하고 배율 1.15로 해' · B = 한손검 상대): 칼 주인이 한손검(weapons.js isOneHandSword —
 //  한손 쥠 · 날 있음)을 쥔 상대를 치면 그 칼의 공격력(등급 power — 판정 에너지 배율, 와신상담과 같은 자리 · combat.js duelOneHandMult)이 × duelOneHand.
 //  사람 · AI 같이 · 물리(속도 · 질량)는 그대로. 1 = 끔(`?dartagnanAbility=0`) · 한손검 목록은 사장님 10/25 결정 — 가름 규칙 그대로 (확인표 2491 · 2492 · 10/25 파펜하이머가 들며 11 → 12 개)
@@ -71,14 +96,14 @@ WEAPON_ABILITY.duelOneHand = 1.15; // 사장님 10/25 결정
 //  곁눈 베기 무릎 꺾기(UNIQUE_ASSIST.buckle · combat.js buckleCheck)와 같은 틀: 맞은 쪽 knockDown(false) · 꿇는 시간 kneel 초 · 맞는 쪽 버티기(fighter.swayScale)를 확률에 곱함 · 친 쪽 전용 난수 · 잔상(artFlash).
 //  다른 점: 부위 · 판정 종류(둔타 · 멍 · 상처)를 가리지 않는다 · 굴림은 한 획(휘두름 · 톡)에 한 번 — 그 획의 첫 맞음에서만(마디가 여러 번 닿아도) · 무기 칸 kneelHit 이 있는 무기만(채찍).
 //  p · kneel 은 곁눈 베기 값 그대로(0.5 · 0.4 s) · ai 기본 끔(사람 먼저 — `?whipKneelAi=1`) · `?whipKneel=0` 끔
-export const WHIP_KNEEL = { p: 0.5, kneel: 0.4, ai: false };
+export const WHIP_KNEEL = { p: 0.5, kneel: realS(0.4), ai: false };
 
 // 바닥 면적 2배: 길이는 √2배. 인물·무기·시작 간격은 확대하지 않는다.
 export const ARENA_SCALE = Math.SQRT2;
 export const ARENA = {
   radius: 6.5 * ARENA_SCALE, // 원형 경기장 반지름 (대리석 경계 테두리 위치)
   startGap: 5.6, // 시작할 때 두 검투사 사이 거리. 사장님 9/30 "멀리 떨어트려 맵을 보게"(4.2 → 7.0) → 09:10 "너무 떨어져 있어, 조금만 붙이자, 그래도 초기보다는 멀게"(→ 5.6, 롱소드 닿는 거리 밖 3.6 m)
-  startHold: 2.0, // 판 시작 뒤 이 시간(초) 동안 둘 다 발만 묶는다 (팔·칼은 자유). 사장님 값 (fighter.js feetHeld)
+  startHold: 2.0, // 판 시작 뒤 이 시간(초) 동안 둘 다 발만 묶는다 (팔·칼은 자유). 사장님 값 (fighter.js feetHeld) · 표준 시간(10/25): 이 수는 시뮬 · 도구 판의 게임 초(도구 장면 시각의 바탕 — 그대로) · 브라우저는 판마다 카메라 실제 초 × 템포로 덮고(main.js planOpening) `?openSweep=0` 판도 실제 2.0 s(realS)
 };
 
 export const CAMERA = {
@@ -136,7 +161,7 @@ export const BODY = {
   moveAccel: 11, // 걷기 가속 정도 (클수록 발놀림이 민첩)
   maxAccel: 4.5, // 발로 땅을 밀어 낼 수 있는 최대 가속(m/s²). 사람은 대략 중력의 0.4~0.5배
   fallTiltDeg: 55, // 몸이 이 각도 이상 기울면 넘어진다
-  fallDuration: 2.2, // 넘어진 뒤 일어나기 시작할 때까지 (초)
+  fallDuration: realS(2.2), // 넘어진 뒤 일어나기 시작할 때까지 (초)
   getupLead: 1, // **기본 1 — 사장님 10/8 18:26 '0.5로 켜'**(확인표 194): 일어서기 다리 차례. 1 = 앞다리(딛은 다리 F)가 먼저 펴고 뒷다리 B 는 riseTime 의 getupLag 몫만큼 접힌 채 기다렸다가 남은 시간에 편다(뒷발을 떼어 뒤따라 딛는 차례 — 사람이 한쪽 무릎에서 일어서는 모습). 0 = 전 물리(두 다리 관절 목표가 한 비율 kneelAmount 로 함께 펴져 두 다리로 동시에 일어남, `?getupLead=0`). 받침·시간표·넘어짐 판정은 그대로. 기록 docs/strike/getup_lead_2026-10-08.md
   getupLag: 0.5, // 뒷다리가 기다리는 몫(riseTime 0.9 s 의 비율 → 0.45 s). 12 씨앗: 0.4 는 뒷발이 3 cm 도 안 뜨는 판 4/12, 0.6 은 39 cm 까지 듦 → 0.5(7~32 cm, 뒷무릎 지연 0.20~0.27 s). `?getupLag=`
   shoveForce: 320, // 바짝 붙었을 때 빈손으로 상대를 밀쳐내는 힘(N). 같은 힘이 나에게도 반대로 걸린다
@@ -341,7 +366,7 @@ export const GAIT = {
   sideFactor: 0.4, // 옆걸음 최고 속도 = moveSpeed × 이 값 (발이 서로 지나가지 못해 옆으로는 빨리 못 간다). 10/15 사장님 '옆걸음은 1.8의 40%인 0.72로'(전 0.31 × 2.3 ≈ 0.71) · 확인표 1602. `?walk=old` = 전 값
   backFactor: 0.7, // 뒷걸음 = 앞걸음 × 이 값. 10/15 15:1x 사장님 '뒤로 걷기 속도는 앞면 걷기의 70%로 하자. 치고 빠지는 플레이가 너무 안 나와'(13:0x 0.6 · 그 전 0.45 — 1.8 × 0.7 ≈ 1.26 m/s) · 확인표 1601. 실제 뒤로 걷기의 걷기→달리기 전환 ≈ 1.6 m/s(앞 ≈ 2.0 의 8 할) — 60 % 는 그보다 조심스러운 값
   sideStride: 0.5, // 옆걸음에서 한 발이 한 번에 옮기는 최대 거리(m). 넘으면 박자가 빨라진다
-  moveSpeed: 1.8, // 걷는 최고 속도(m/s). 1.7 m/s를 넘으면 무릎을 굽힌 채 잦은 걸음으로 종종 뛰듯 간다 (runDrop). 10/15 사장님 '기본 앞걸음을 1.8로 하고 템포 1.1의 영향을 받아 최종적으로는 1.98 정도'(전 2.3 — 걷기→달리기 전환 ≈ 2.0 m/s 보다 빨랐다) · 확인표 1600
+  moveSpeed: TIME.on ? realV(2.0) : 1.8, // 걷는 최고 속도(m/s) — **실제 2.0 m/s(사장님 10/25 22:3x '걷기 2.0도 진행' — 표준 속도 · 확인표 2591)** · 옛 판(`?timeStd=0`) 1.8 게임 m/s(= 실제 1.98). 이하 옛 설명: 1.7 m/s를 넘으면 무릎을 굽힌 채 잦은 걸음으로 종종 뛰듯 간다 (runDrop). 10/15 사장님 '기본 앞걸음을 1.8로 하고 템포 1.1의 영향을 받아 최종적으로는 1.98 정도'(전 2.3 — 걷기→달리기 전환 ≈ 2.0 m/s 보다 빨랐다) · 확인표 1600
   liftSettle: 0.05, // 자세를 고칠 때
   slipReset: 0.1, // 딛은 발이 이만큼(m) 끌려가면 그 자리에서 다시 딛는다 (세게 맞음)
   stanceGain: 2, // 딛은 다리 관절 근육 강도 배율 (체중을 받치며 자세를 지킨다)
@@ -440,7 +465,7 @@ export const STRIKE = {
 //   ② 받는 쪽이 받는 충격(손 흔들림 · 무기 닳음)을 joltCut 만큼 덜 · ③ 받는 쪽 몸꼴을 poseT 동안 우케나가시로 (막기 줄 읽기와 상관없이 — 읽기는 손 목표를 봐 정수리를 놓친다 §9)
 //  moveDown = 상대 칼이 '내려온다'로 보는 아래 빠르기 (secret.js threatNow 의 '움직이는 칼' 3.5 m/s 와 같은 값) · zoneHy = 받는 자리 높이 문턱(threatNow 위·아래 가름 가슴 −0.1 m 와 같은 값).
 //  on 0 = 없음. slideK · joltCut · poseT 는 새 값 — 사장님 확인 전(확인표 2014)
-export const NAGASHI = { on: 1, slideK: 0.8, joltCut: 0.5, poseT: 0.35, moveDown: 3.5, zoneHy: -0.1 };
+export const NAGASHI = { on: 1, slideK: 0.8, joltCut: 0.5, poseT: realS(0.35), moveDown: 3.5, zoneHy: -0.1 };
 // 우케나가시 판정 개편 (샛별 저장소 연구 들여옴 — src/nagashi_redesign.js · docs/strike/japanese_flow_adopt_2026-10-18.md):
 //  사장님 10/18 22:1x "흘림으로 나에게 손해가 발생하지 않으면서 상대의 기력을 뺏을 수 있기 때문 … 판정 개편이든 뭐든 흘림 빈도를 높일 수 있는 방안이 있다면 그렇게 개편 ·
 //   팔을 0.36초 늦추는 효과와 흘림당한 상대 기력을 40 빼앗는 효과 모두 적용"
@@ -452,15 +477,15 @@ export const NAGASHI = { on: 1, slideK: 0.8, joltCut: 0.5, poseT: 0.35, moveDown
 //  flowDmgCut = 흘린 공격의 피해 감소 (사장님 10/18 23:4x '흘린 공격의 피해 80% 줄여'): 받는 쪽이 흘린 그 공격(공격 번호)이 몸에 닿으면 칼날 상처 심각도 · 둔타 에너지 × (1 − 0.8) —
 //   사람 · AI 같게(흘린 쪽 누구나) · 다음 공격(새 번호)부터는 그대로 · `?flowDmgCut=0` = 끔 (combat.js analyze · 흘림 표시 flowShield)
 export const FLOW_REDESIGN = {
-  on: true, window: 0.2, /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' · '흘림 접촉도 그냥 0.2로 통일' — 0.12 → 0.2 (반응 칸) */ penalty: 40, threatEnd: true, flowDmgCut: 0.8,
+  on: true, window: realS(0.2), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' · '흘림 접촉도 그냥 0.2로 통일' — 0.12 → 0.2 (반응 칸) */ penalty: 40, threatEnd: true, flowDmgCut: 0.8,
   minSpeed: 2.5, minApproach: 0.5, minSweep: 1.5, minSweepRatio: 0.4,
   minImpact: 0.5, upperHeight: -0.15, maxHeight: 0.85,
   minTangent: 0.25, exitDistance: 0.30, exitGain: 0.015, sideGain: 0.06, frontClearance: 0.10,
 };
 // 흘림당한 쪽 팔 늦춤 (샛별 저장소 연구 들여옴 — src/nagashi_recovery.js): seconds 동안 두 팔 근육 · 손목 힘 × (floor → 1) — 사장님 10/18 22:1x 0.36 s · `?flowArm=0` = 끔
 //  release = 옛 판정(`?flowJudge=0`)에서 받는 몸꼴(NAGASHI.poseT)을 쥔 동안 막기를 풀고 치면 그 몸꼴을 놓는다 (frames.js — 샛별 연구 그대로)
-export const FLOW_RECOVERY = { seconds: 0.4, /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.36 → 0.4 (짧은 효과 칸) */ floor: 0.25, release: true, hold: null, recover: null };
-// 시험 (사장님 10/19 03:5x): hold · recover 를 주면 '처음 hold 초는 floor 로 유지 → recover 초 동안 부드럽게 회복'(합 hold + recover) — null 이면 위 seconds · floor 옛 꼴
+export const FLOW_RECOVERY = { seconds: realS(0.4), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.36 → 0.4 (짧은 효과 칸) */ floor: 0.25, release: true, hold: null, recover: null };
+// 시험 (사장님 10/19 03:5x): hold · recover 를 주면 '처음 hold 초는 floor 로 유지 → recover 초 동안 부드럽게 회복'(합 hold + recover) — null 이면 위 seconds · floor 옛 꼴 (줄 때는 realS(초)로 — 표준 시간)
 // 이베리아 탈류 · 레베스 쳐내기에 흘림과 같은 팔 늦춤 (사장님 10/19 03:5x 시험 — 기본 끔): 쳐내기 자세로 들어오는 칼을 받으면 공격자 팔에 FLOW_RECOVERY 를 건다
 export const IB_PARRY_ARM = { on: false };
 // 이베리아 탈류 · 레베스 쳐내기 튕김 (사장님 10/19 08:4x '튕겨나가는 힘을 인위적으로 추가' → 10/20 00:4x '탈류레베스에 쳐내기튕김 1.6 적용해' — 판 값 · `?ibBeat=0` 끔):
@@ -507,14 +532,14 @@ export const SCHOOL_PASSIVE = {
   on: true,
   at: 4,
   iberian: { on: true, wrist: 1.3 },
-  italian: { on: true, tipMax: 12, tipRate: 60, aiK: 0.5 }, // 사장님 10/21 '최대 12° · 초당 60° · AI는 약하게'(절반)
-  japanese: { on: true, full: 2.0, gain: 0.3 }, // 사장님 10/25 23:1x '1.5초에 걸쳐 -> 2초에 걸쳐' (전 10/21 '1.5초에 +30%') · 곧은 오름은 감독
+  italian: { on: true, tipMax: 12, tipRate: realRate(60), aiK: 0.5 }, // 사장님 10/21 '최대 12° · 초당 60° · AI는 약하게'(절반)
+  japanese: { on: true, full: realS(2.0), gain: 0.3 }, // 사장님 10/25 23:1x '1.5초에 걸쳐 -> 2초에 걸쳐' (전 10/21 '1.5초에 +30%') · 곧은 오름은 감독
   german: { on: true, gain: 0.3, aiK: 1 }, // 사장님 10/21 '+30% · 창 0.6초(afterWindow)' · aiK 1 은 감독(반으로 줄일 자리)
   chinese: { on: true, clot: 2 }, // 숨 바꾸기 (토납) — 사장님 10/21 '휘두르지 않을 때 출혈 굳기 2배'
 };
 // AI 반응 시간 (10/21 사장님 '당장해' — 옆 공략: 박찬 직후 짧게 옆이 열리고 그때 치는 플레이): AI 는 상대 쪽으로 몸을 돌릴 때 face s 전의 상대 자리를 본다
 //  (사람처럼 보고 알아채는 시간 — 서 있는 상대는 같은 자리라 그대로). AI 만(플레이어 몸은 그대로) · 감독 값 0.2 s — 사장님 확인 전. `?aiReact=0` = 끔 · `?aiReact=0.25`
-export const AI_REACT = { on: true, face: 0.2 };
+export const AI_REACT = { on: true, face: realS(0.2) };
 
 export const STEEL = {
   // 칼(칼날·코등이·손잡이·폼멜) 재질의 반발 값. 둘이 만나면 곱해진다(Multiply): 칼끼리 = 이 값², 몸·땅(0)과는 0.
@@ -555,9 +580,9 @@ export const BIND = {
   // ② 닿은 뒤에도 미는 뜻 (ai.js): 치던 칼이 막히면 베기 길을 이 손 빠르기(m/s)로만 노리던 자리(길의 가운데 점 — 상대 빈틈)까지 밀고 거기서 멈춰 민다
   pressSpeed: 0.2,
   // 밀다가 이 초 동안 풀리지 않으면 그만 밀고 길을 마저 간다 (뗌 — 서로 버티기만 하는 그림 상한)
-  holdMax: 1.5,
+  holdMax: realS(1.5),
   // ③ 느낌 (Fühlen): 독일 AI 가 맞닿은 뒤 이 초 지나 느낌으로 정한다 — 상대가 세면(누르는 힘 ≥ strongN 이고 내 칼 약한 쪽 at ≥ 0.5) 감아 돌아감, 약하면(내 강한 쪽 at < 0.5) 밀고 들어감
-  feelT: 0.12,
+  feelT: realS(0.12),
   strongN: 150,
 };
 
@@ -680,7 +705,7 @@ export const ARMOR = {
   //   Q13 값 제안 1-2 그대로 [추정] — 확인표 줄 140. combat.js 가 plateBlunt 로 돌려주고 몸통·팔다리 둔타 효과표(줄 141, R3)만 곱한다. 아픔·균형·판 닳음은 E 전체(지금 그대로)
   plate: { cut: 70, stab: 47, limb: 0.65, guardMin: 0.25, fullUntil: 0.5, wear: 700, perHit: 0.26, coverMargin: 0.02, shedBelow: 0.9, trim: 0.4, blunt: 0.5 },
   // 부서진 투구·판금 조각이 흩어졌다가 사라지는 시간(초): 최소 ~ 최대 (전용 난수로 고른다, 겉모습만)
-  debrisLife: [1.1, 1.7],
+  debrisLife: [realS(1.1), realS(1.7)],
   // 사장님 9/30, 판금을 입은 검객의 걷는 최고 속도 ×0.8 ("갑옷 입은 사람은 느려지게 하자. 이동 속도 -20%").
   //  몸통·다리 판(가슴판·배 판띠·골반 자락·허벅지·정강이·쇠신)이 하나라도 남아 있는 동안만. 팔 판(견갑 등)만 남거나
   //  다 부서지면 느려짐도 사라진다 (fighter.js wearsPlate). 무기 moveMul(권총 ×1.4)과 곱해진다. 플레이어·AI 같다
@@ -756,7 +781,7 @@ export const SKILL = {
   lungeTime: 0.3, // 내딛는 시간(초)
   lungeMove: 0.9, // 내딛는 세기 (조이스틱 앞으로 민 정도와 같은 단위)
   homeGuard: [0.18, -0.28], // 베고 나서 돌아갈 기본 자세의 패드 위치 (쟁기 Pflug: 칼끝이 상대 얼굴을 겨눈다)
-  recoverDelay: 0.25, // 손가락을 떼고(또는 멈추고) 이만큼 지나면 자세로 돌아간다 (초)
+  recoverDelay: realS(0.25), // 손가락을 떼고(또는 멈추고) 이만큼 지나면 자세로 돌아간다 (초)
   recoverSpeed: 1.2, // 자세로 돌아가는 손 빠르기 (m/s, 휘두르기 기준 swingSpeed보다 느리게)
   // ── 검술 보정 방식 (docs/strike/correction_v2_design_2026-10-01.md). 'old' = 옛 보정(바이트까지 그대로), 'v2' = 휘두르는 동안
   //  자세 당김 없음 + 마지막 궤적의 날 맞춤 ① · 되돌아옴 ③ · 사람 관절 한도 · 몸통 돌기 결합 (세기 s = level 선형). with_config.mjs 로 뒤집는다 ──
@@ -782,7 +807,7 @@ export const SKILL = {
   flow: false,
   flowTurn: 2.2, // 끌기 방향이 휘어 돈 각도(rad)가 이보다 크면 흐름으로 본다 (멈추지 않은 채)
   flowFollow: 1.6, // 흐르는 동안 이어 베기(followGain·followMax) 배율
-  flowBreak: 0.4, // 칼이 막혀 흐름이 끊긴 뒤 다시 흐를 수 있기까지 (초)
+  flowBreak: realS(0.4), // 칼이 막혀 흐름이 끊긴 뒤 다시 흐를 수 있기까지 (초)
   flowChain: 1, // AI 가 한 번에 이어 흐르는 베기 수 (처음 베기 빼고). 3이면 풍차처럼 부딪히기만 해 판이 안 끝났다(96판 사망 32, 1이면 63)
   motionLib: 1, // **기본 1 — 사장님 10/8 18:50 '굳이 안 쳐봐도 적용'**(확인표 34 답): 무기 PM 동작 라이브러리(src/motion_library.js — 몸 틀 자세표(앞무게 상단·팔상·중단·협, 한손 3번·2번 자세), 새 기술(몬탄테 탈류→레베스·손목 베기), 찌르기 무기 런지·앞무게 흐름 덧씌우기)를 본판에 켠다. 생성자(fighter.js)가 자세표·덧씌우기를 입히고 AI 생성자가 유파 꾸러미에 기술을 더한다(libSchool). 롱소드류(두손 두루)·총은 바뀌는 것 없음. 0 = 전 물리(바이트 동일, `?motionLib=0`)
   oneVersatileTable: 'mixed', // 한손 두루 무기(청강검) 자세표 손잡이(10/9, **사장님 확인 전** — 10/1 승인 표는 '찌르기 표: 레이피어·청강검'): 'mixed' = 섞은 표(찌르기 표의 겨눔 6 곳 + 세이버 표의 감는 8 곳 — guards.js ONE_HAND_VERSATILE, 안 A) · 'thrust' = 그 전 판(찌르기 표, 바이트 동일) · 'cut' = 세이버 표 통째(안 B). 레이피어·세이버·팔쉬온·날 없는 한손 무기는 바뀌지 않는다. AI·플레이어 둘 다 (`?oneVersatile=`, docs/strike/qinggang_floor_2026-10-09.md)
@@ -801,14 +826,14 @@ export const SKILL = {
   //   stick = 뒤로 미는 크기(0~1 — 걸음 길이는 박자 걸음 짧은 디딤 그대로) · maxT = 두 디딤을 이 안(s)에 못 하면 놓음 · room = 뒤로 이만큼(m) 결투장 안(반지름 − 0.3)이어야 · cool = 물러서기가 끝나고 이만큼(s) 지나야 다시
   //  itParryBeat 1 = 물러서지 않은 막기도 짧은 박자로 셈(짧은 디딤 둘을 막 마친 셈 — rhythmBeat 'parry') → 막은 뒤 첫 나아가는 한 짝이 긴 디딤. **사장님 승인 전 제안**, `?itParryBeat=1` · 꼴 beat
   itRetreat: 0,
-  itRetreatVals: { gap: 1.35, low: 0, stick: 1, maxT: 1.2, room: 1.0, cool: 1.2 },
+  itRetreatVals: { gap: 1.35, low: 0, stick: 1, maxT: realS(1.2), room: 1.0, cool: realS(1.2) },
   itParryBeat: 0,
   itOpposition: 1, // 10/20 사장님 직접 적용 지시: 플레이어 레이피어 막아찌르기. 비교/되돌림 ?itOpposition=0
   // 10/21 사장님 '입력형 50% 0.6초로 넣어' — 막기 단추 새 누름 = 바로 약한 찌르기 한 번 (src/italian_opposition.js · 확인표 2124~2126).
   //  shield 누른 때부터 받는 피해 감소 시간(실제 초 · 지쳐 동작이 느려져도 늘지 않음) · shieldCut 그동안 칼날 상처 감소(동방 막기와 같은 칸 50 %) · dealt 찌르는 동안 주는 피해 몫
   //  동작(샛별 저장소 입력형 개선안 값): 겨눔 aim · 뻗기 extend · 끝 유지 hold · 거둠 recover(합 0.66 s) · 손 당김 pull 뒤 뻗기 reach · 겨눔 = 상대 칼 든 쪽 위팔을 lead 초 앞(leadMax m 까지)
   //  옛 접촉형(10/20 — 누르고 0.4 s 안 실제 칼 접촉)의 window · maxGap · minVn · injuryGrace 는 걷어냄
-  itOppositionVals: { shield: .6, shieldCut: .5, dealt: .6, aim: .10, extend: .28, hold: .12, recover: .16, pull: .10, reach: .42, turn: .65, side: .04, lead: .15, leadMax: .2 },
+  itOppositionVals: { shield: realS(.6), shieldCut: .5, dealt: .6, aim: .10, extend: .28, hold: .12, recover: .16, pull: .10, reach: .42, turn: .65, side: .04, lead: .15, leadMax: .2 },
   itForte: 0, // 이탈리아 forte 막기 연구 후보 (가) (10/17 감독 요청 — **연구 · 사장님 확인 전**, 확인표 2037): 0 = 끔(지금 판 그대로 — 이탈리아 막기 몸꼴 덧씌우기 없음) · 1·2 = 후보 몸꼴(schools.js ITALIAN_FORTE — 위 줄을 팔 뻗은 원전 꼴로 세워 forte 로 받게). `?itForte=1`, 시뮬 with_config.mjs SKILL.itForte=1 · parry_gap_map.mjs '무기:forte'·'무기:forte2' — docs/strike/italian_forte_parry_2026-10-17.md
   // 플레이어 막기 버튼 거듦 (10/12 — 사장님 01:1x '무기가 무거울수록 성공률이 너무 떨어져서 거의 무용지물 … 지금보다는 성공률이 올라야 해'. docs/strike/parry_assist_2026-10-12.md · 확인표 990~993, **사장님 확인 전**).
   //  막기 버튼을 누르고 있는 동안만, 플레이어만(src/parry_button.js). AI 막기·시뮬 판은 읽지 않는다. 새 상한·쿨타임 없음.
@@ -851,7 +876,7 @@ export const SKILL = {
   enterJolt: 0.25,
   enterStep: 0.45,
   enterMin: 1.1, // 이미 이보다 가까우면 들어가지 않는다 (m)
-  enterCool: 1.0, // 한 번 들어간 뒤 다시 들어가기까지 (초)
+  enterCool: realS(1.0), // 한 번 들어간 뒤 다시 들어가기까지 (초)
 };
 
 // ── 스킬트리 편지 '00에서 온 편지' (10/21 — docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md §5 · skill_tree_data.js letterMul · weapons.js drawWeaponCards weightOf) ──
@@ -876,7 +901,7 @@ export const SECRET = {
   // ── 독일 죽음의 일격 (모르트슐라크 · Mordschlag — 10/22 저녁 사장님 '독일은 죽음의 일격으로 하자. 막기로 버틸 때나 서로 몸이 맞붙어 클린치 상태일 때 밀기가 n초 이상 작동하면 발동' ·
   //  n '1.5로 해' · 사람 먼저 — src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md · 확인표 2183~2189). 10/24 AI 도 같은 칸을 본다(aiOpenSchools 'german' — ai.js mordTick · 확인표 2400~2405)
   deMord: 1, // 1 = 사람 독일 비기 = 죽음의 일격 (사장님 결정 · 10/24 AI 도) · 0 = 옛 판(deSecret — 받아 베기 · 감아 들기 — 사람 · AI). `?deMord=0`
-  mordPress: 1.5, // 밀치기 누르기(fighter.barge phase 'press')가 끊기지 않고 이 초 이어지면 창(playerWindow) — 사장님 결정 '1.5로 해'(시간 사다리 '무장' 칸 · 확인표 2113). 누르기가 끝나면 셈 0. `?mordPress=0.6` 비교
+  mordPress: realS(1.5), // 밀치기 누르기(fighter.barge phase 'press')가 끊기지 않고 이 초 이어지면 창(playerWindow) — 사장님 결정 '1.5로 해'(시간 사다리 '무장' 칸 · 확인표 2113). 누르기가 끝나면 셈 0. `?mordPress=0.6` 비교
   mordNear: 1, // AI 몸 붙이기는 경합 중 자연스럽게 가까워졌을 때만 — 상대가 붙은 거리(M.clinch)에 든 순간 · 붙은 거리 안에서 칼이 맞닿은 순간 · 내 칼이 막혀 맞물린 채 붙은 거리 안에서 끝난 순간(인물 밀치기 확률) · 상대가 붙은 거리 밖으로 떨어지면 끝(쫓지 않음). 사장님 10/24 14:2x '무작정 밀며 들어가지 말고, 경합하다가 자연스럽게 가까워졌을 때 전략적으로 밀기 사용'(확인표 2438). 0 = 12:0x · 13:3x 판(칠 때를 본 순간 굴려 멀리서 붙이러 걸어감 · 칠 거리 밖까지 쫓음) `?mordNear=0`
   mordWalkStrike: 1, // AI 몸 붙이기(ai.js mordPressGo)로 걸어 들어가는 동안에도 칠 때가 오면 친다(간 보기 걸쇠는 밀치는 동안만) — 사장님 10/24 13:3x '걸어가며 치기도 같이 넣어. 걸어들어가는 시간 제한은 취소'(확인표 2436). 0 = 걸어가는 동안 안 침(10/24 12:0x 판) `?mordWalkStrike=0`
   // 동작 값 (사장님 확인 전 — 확인표 2185 · 2186): 다른 비기와 같은 길 틀(준비 → 베기 길 → 따라 지나감 → 굳음 — 손 빠르기 handSpeed · 서보 힘 창 power · 판정 배율 hitMul 그대로)에
@@ -898,7 +923,7 @@ export const SECRET = {
   power: 1.3, // 서보 힘 창: 비기 베기 동안 칼을 미는 손목 힘 배율 (fighter.js driveSword 의 str 에 곱함)
   handSpeed: 1.5, // 10/9 4차 사장님 '비기는 통상보다 훨씬 빨라야' — 사다리 1.5 → 2.0 → 2.5 (문서 §11): 1.5 에서 서보 포화(닿기까지 ms 가 더 줄지 않고 J 가 떨어짐) → 1.5 에서 멈춤. 1.3 에서 올림. 손 속도 배율: 비기의 준비(빠른 준비 parrySpeed)·베기(strikeSpeed) 손 빠르기에 곱함
   stepPush: 2.0, // 10/9 4차 1.8 → 2.0 (일본·이탈리아 비기 걸음). 일본 後の先 내딛는 걸음의 몸 따라감 배율 (gait.js 기술 걸음 몸 목표 — '앞발을 강하게'). 10/9 후속: 1.3 → 1.8
-  stiff: { german: 0.4, italian: 0.4, iberian: 1.2, japanese: 1.2, chinese: 0.4 }, // 10/25 16:3x 사장님 '1번을 1.2로 바꿔' — 일본 · 이베리아 1.3 → 1.2 (확인표 2527) · 이베리아 1.3 = 10/23 01:5x 사장님 '고노센과 동일한 발동 후 경직 줘'(휘감아 돌기 — 전 0.4) · 10/21 14:0x 사장님 '숫자의 통일성을 위해 비기 뒤 굳음도 0.4초로'(무릎 꺾기 0.4 s 와 같게 — 0.5 → 0.4 · 일본 1.3 은 10/21 15:1x 사장님 '일본 비기 뒤 굳음은 1.3 유지') · 비기 직후 경직 (s) — 사장님 지시 10/10 20:5x '모두 0.5초로, 일본만 1.5 유지'(전 0.3 · 일본 1.5). 일본은 10/10 0.8 → 1.5 ('경직은 더 길어도 된다, 있는 것도 몰랐다') → 10/14 1.5 → 1.3 (사장님 결정 10/14 '고노센 딜레이는 현재 1.5초에서 1.3초로' — 발도 끝 자세 붙잡기 hold 도 이 값)
+  stiff: { german: realS(0.4), italian: realS(0.4), iberian: realS(1.2), japanese: realS(1.2), chinese: realS(0.4) }, // 10/25 16:3x 사장님 '1번을 1.2로 바꿔' — 일본 · 이베리아 1.3 → 1.2 (확인표 2527) · 이베리아 1.3 = 10/23 01:5x 사장님 '고노센과 동일한 발동 후 경직 줘'(휘감아 돌기 — 전 0.4) · 10/21 14:0x 사장님 '숫자의 통일성을 위해 비기 뒤 굳음도 0.4초로'(무릎 꺾기 0.4 s 와 같게 — 0.5 → 0.4 · 일본 1.3 은 10/21 15:1x 사장님 '일본 비기 뒤 굳음은 1.3 유지') · 비기 직후 경직 (s) — 사장님 지시 10/10 20:5x '모두 0.5초로, 일본만 1.5 유지'(전 0.3 · 일본 1.5). 일본은 10/10 0.8 → 1.5 ('경직은 더 길어도 된다, 있는 것도 몰랐다') → 10/14 1.5 → 1.3 (사장님 결정 10/14 '고노센 딜레이는 현재 1.5초에서 1.3초로' — 발도 끝 자세 붙잡기 hold 도 이 값)
   // stiffHand(경직 동안 손 빠르기 ×0.5) 없앰 — 사장님 10/10 20:5x '손 빠르기 줄이지 말고 잠깐 아예 못 움직이게': 경직 = 칼(손 목표)이 시작된 자리에 멈추고 걸음·칼 조작이 안 듣는다 (skill.js update · ai.js moveHand·moveFeet). 위 머리 주석의 '손 빠르기 ×0.5' 는 옛 설명
   // 독일 Versetzen 치명 판정 (10/10 사장님 '치명성을 J 로 판단하는 게 이상하다 — 목을 노리는 궤적으로' → 디렉터 안 승인): 칼끝 위치·속도로 앞을 내다본 길이 내 머리·목 곁을 지나면 [확인 전]
   lethalLook: 0.25, // 내다보는 시간 (s)
@@ -926,7 +951,7 @@ export const SECRET = {
   japaneseLead: 0, // 일본 後の先 앞당김 (m — 칠 거리에 더함)
   // 터뜨림 창 (10/9 3차 — 막는 것은 힘이 아니라 닿는 거리): 준비를 마친 비기가 '닿을 때 거리'(지금 거리 − 다가오는 빠르기 × releaseT)가 창(내 간격 끝 reach 기준)에 들 때까지 붙잡았다 터뜨린다
   releaseT: 0.25, // 터뜨려서 닿기까지 (s)
-  releaseMaxHold: 0.6, // 붙잡는 최대 (s) — 지나면 창보다 가까우면 치고 멀면 거둔다
+  releaseMaxHold: realS(0.6), // 붙잡는 최대 (s) — 지나면 창보다 가까우면 치고 멀면 거둔다
   japaneseRelease: [0, 0.3], // 일본 창 (m, reach + …) — 실측으로 고름. 10/9 4차(아래로 지나가는 真向 길 · 손 1.5): [0, 0.3] 이 [0.2, 0.5] 보다 두 무기 모두 한 칼 J 가 큼(문서 §11) — 3차엔 [0.2, 0.5]
   iberianRelease: [0.3, 0.55], // 이베리아 창 (m, reach + …) — 실측으로 고름(문서 §10: 셋 가운데 zornhau 대비 가장 높음)
   chineseLoopHand: 0.6, // 중국 連環三擊 이음새 고리(머리 위 한 바퀴 — 10/10 04:4x 사장님 '현란한 고리는 연환삼격으로, 검무처럼') 손 빠르기 = 베기 빠르기 × 이 값 (수마다 ≈0.5 s 목표) [확인 전]
@@ -977,8 +1002,8 @@ export const SECRET = {
   //  무장 = 상대 가슴이 내 칼끝 거리(검술 풀이 measure.reach) 밖에 armTime 초 (일본 발도 대기와 같은 틀 — secret.js IaiArm) → 금색 '!' · 무장이 이어지는 동안 공격 입력 하나 →
   //  한 발을 축으로 몸을 한 바퀴 돌리는 대본(src/iberian_spin.js — 물리 원칙의 예외: 몸놀림만, 맞음은 물리 판정 그대로) → 경직 stiff.iberian
   ibSpin: {
-    armTime: 1.5, // 무장까지 (s — 시간 사다리 '무장' 칸 · 발도 대기 iaiArmTime 과 같은 수, 새 열쇠)
-    armGrace: 0.6, // 간격 안으로 들어와도 무장이 이 초 남는다 (s — '이어짐/입력' 칸 · 발도 대기 iaiArmGrace 0.5 와 같은 뜻을 사다리 값으로)
+    armTime: realS(1.5), // 무장까지 (s — 시간 사다리 '무장' 칸 · 발도 대기 iaiArmTime 과 같은 수, 새 열쇠)
+    armGrace: realS(0.6), // 간격 안으로 들어와도 무장이 이 초 남는다 (s — '이어짐/입력' 칸 · 발도 대기 iaiArmGrace 0.5 와 같은 뜻을 사다리 값으로)
     hurtDisarm: 1, // 1 = 무장 동안 내 몸에 상처가 나면 곧장 풀림(설계 '맞으면 풀림' — 발도 대기에는 없는 규칙이라 스위치) · 0 = 발도 대기와 똑같이
     aiFire: 0.3, // AI 가 무장된 채 낼 거리 (m — 상대 가슴이 내 칼끝 거리 + 이 몫 안 · 10/24 AI 열림 · 사장님 확인 전, 확인표 2366): 서 있는 과녁 앞 칼끝 거리 + 0.3 m 까지 맞힘 (츠바이핸더 · 티소나 — docs/strike/iberian_spin_2026-10-22.md §15)
     // 빠르기 몫 (10/24 사장님 02:5x '속도가 너무 과도하게 헛돌아 … 필요 시 싱지르를 더 느리게 바꿔. 지금 고노센의 몇%지?' — 감독 '격살처럼 고노센의 몫으로' · 사장님 확인 전, 확인표 2363):
@@ -1062,8 +1087,8 @@ export const SECRET = {
   cnSecret: 'parry',
   deSecret: 'v1', // 디렉터 10/11 21:0x: 독일 감아 들기는 지금 물리에서 칼이 0.3 s 넘게 붙지 않아(48 판 p90 0.09 s) 한 번도 안 열림 → 사장님 답 전까지 옛 Versetzen 기본 · 새 판은 ?deSecret=parry · test.html
   // 독일 감아 들기 (Indes — 붙어서 이긴다, 10/11 19:1x 사장님 '몇 초(0.n초?) 이상 붙어있으면 붙어있는 한 계속 발동 가능, 오래 붙어 있었을수록 깊고 강한 공격') [모두 사장님 확인 전]:
-  deBindMin: 0.3, // 정한 걸이 막기 뒤 칼이 이 초 이상 맞붙어 이어지면 창이 열린다(붙어 있는 동안 계속). 시작값 = 이베리아 호 안쪽 머묾 iberianInsideDwell · 따라 지나감 0.3 과 같은 수
-  deBindFull: 1.0, // 붙음이 이 초(맞닿은 때부터)에 이르면 어드밴티지 최대 (secret.js bindGain)
+  deBindMin: realS(0.3), // 정한 걸이 막기 뒤 칼이 이 초 이상 맞붙어 이어지면 창이 열린다(붙어 있는 동안 계속). 시작값 = 이베리아 호 안쪽 머묾 iberianInsideDwell · 따라 지나감 0.3 과 같은 수
+  deBindFull: realS(1.0), // 붙음이 이 초(맞닿은 때부터)에 이르면 어드밴티지 최대 (secret.js bindGain)
   deBindGain: 1.4, // 그때 판정 배율(hitMul)·서보 힘 창(power)에 곱하는 최대 배 (창이 열린 순간 1)
   // 이베리아 휩쓸기 (10/10 02:5x 사장님 '이베리아 비기도 새 동작을 크게 — 뭐가 나가는지 전혀 알 수 없었다') · 비기 카메라 [모두 확인 전] — 10/11 부터 iberianSecret 'v4' 일 때만
   iberianSweep: 1, // 1 = 사이드스텝(반걸음 뒤 섞음) + 오른 어깨 뒤로 감았다 크게 한 번 가로 베기 (발도와 같은 스텝마다 자리 지정 틀 — 10/10 04:4x, 전 02:5x 머리 위 고리 + 사선), 0 = 10/9 고리·사선 길
@@ -1086,8 +1111,8 @@ export const SECRET = {
   camSwing: 20, // 이베리아 휩쓸기 동안 카메라를 사이드스텝 쪽으로 (°) — 설정 '비기 카메라 연출'
   camSwingIn: 0.15, // 돌리는 시간 (s, 실시간)
   camSwingOut: 0.5, // 되돌리는 시간 (s)
-  iaiArmTime: 1.5, // 지시 시작값 2.0 — 48 판 모노호시자오 2.0: 25 번·승률 83 % / 1.5: 27 번·75 %, 打刀 15 번·54 % / 16 번·40 % → 1.5
-  iaiArmGrace: 0.5, // 간격 안으로 들어와도 대기 자세가 이 초 동안은 남는다 (달려드는 상대가 막 들어온 순간을 받게 — 공격·막기면 곧장 풀림) [해석] // 상대 간격 밖에 이 초 이상 머물면 발도 대기 (AI 는 자세, 플레이어는 '고노센 준비' 표시만). 간격 안·공격·막기면 풀림
+  iaiArmTime: realS(1.5), // 지시 시작값 2.0 — 48 판 모노호시자오 2.0: 25 번·승률 83 % / 1.5: 27 번·75 %, 打刀 15 번·54 % / 16 번·40 % → 1.5
+  iaiArmGrace: realS(0.5), // 간격 안으로 들어와도 대기 자세가 이 초 동안은 남는다 (달려드는 상대가 막 들어온 순간을 받게 — 공격·막기면 곧장 풀림) [해석] // 상대 간격 밖에 이 초 이상 머물면 발도 대기 (AI 는 자세, 플레이어는 '고노센 준비' 표시만). 간격 안·공격·막기면 풀림
   // 고노센 들어옴 사건 (10/25 01:3x 사장님 '이 경우에 창이 안 열리고 천천히 다가와서 가까이 붙어 버리던데?' — secret.js enterEvent · docs/strike/school_secret_2026-10-09.md §16):
   //  발도 대기인 채 상대 가슴이 내 발도가 닿는 거리(secretCond 의 발도 창 위 끝 = 맞닿기 + iaiStep + iaiMargin 그대로 — gnsEnterLine)를 넘어 드는 순간 창(금색 '!') 한 번 — 出端.
   //  상대가 들어와서 넘었을 때만(최근 0.6 s 상대 가슴 다가옴 > 0 · > 내 다가옴 — 문턱 수 없음 · 내가 걸어 들어간 것은 아님) · 창을 연 뒤엔 준비가 풀리거나 상대가 선 밖에 iaiArmTime 머물 때까지 다시 안 검.
@@ -1102,25 +1127,25 @@ export const SECRET = {
   //  ③ 고노센에 베이면 선 밖까지 물러나 참을성을 되채움(주고받은 뒤와 같은 셈). 새 수 없음 — 모두 있는 AI 값
   gnsWary: 1, // 1 = 켬 · 0 = 10/25 01:3x 판 AI (같은 걸음으로 거듭 걸어 듦 — 끄면 AI 판 바이트 그대로) `?gnsWary=0` [사장님 10/25 결정 — 확인표 2508]
   // 여쭘 (10/25 08:0x 사장님 '지금은 발동이 너무 쉬운데' — 고르실 거리 · 기본 = 지금 판 · §17):
-  gnsEnterWindow: 0, // A: 들어옴 창 길이(s) — 0 = playerWindow(0.6) 그대로 · 0.4 = 짧게(시간 사다리) `?gnsEnterWindow=0.4` [안 함 — 사장님 10/25 16:0x B 선택 · 확인표 2510]
+  gnsEnterWindow: realS(0), // A: 들어옴 창 길이(s) — 0 = playerWindow(0.6) 그대로 · 0.4 = 짧게(시간 사다리) `?gnsEnterWindow=0.4` [안 함 — 사장님 10/25 16:0x B 선택 · 확인표 2510]
   gnsEnterBlock: 2, // B 2 기본 (10/25 19:4x 사장님 위임 — 확인 전 · 확인표 2526: B 1 칼 닿음만으로는 천천히 가리며 걸어 든 몸이 0/15 막힘이라 사장님 뜻 '막기 누르면 막아짐'에 못 미침 → 가리고 들어오면 막힘) · 1 = B (10/25 16:0x 사장님 'B 켬'): 들어옴 창에서 낸 발도는 막힐 수 있음 — 칼이 몸보다 먼저 상대 칼에 닿으면 막힘(연환 · 격살 · 런지와 같은 막힘 · iberianBlockDist · 밀어냄 없음). 달려듦 빠르기(foeChargeSpeed)로 넘은 들어옴 · 칼을 들거나 달려들거나 헛친 상대에게 낸 것은 그대로(막힘 없음) `?gnsEnterBlock=0` [사장님 10/25 결정 — 확인표 2511] ·
   //  2 = 그에 더해 낼 때 상대가 앞을 가리고 있으면(사람 = 막기 단추를 누름 · AI = 막기 꼴 · 또는 칼끝이 내 몸을 겨눔 — secret.js foeOnline, AI 'stepin' 의 칼끝 겨눔과 같은 셈) 몸에 닿는 자리에서 그 칼에 막힘 `?gnsEnterBlock=2` (secret.js gnsBlockOf) [시험 · 사장님 확인 전 — 확인표 2526]
   // 달려듦 (상대 사건 foeCharge — 일본 고노센 · 이탈리아 옛 박자 밑 찌르기): 상대 골반이 나 쪽으로 이 빠르기(m/s, 지금 모습 한 스텝)를 넘으면 '빠르게 걸어 들어옴' (secret.js secretEvent · 들어옴 fast).
   //  10/25 16:0x 사장님 '지금은 대부분의 걸음걸이가 다 적용되는 거라 고노센을 천천히 걸어들어와서 파훼할 수 있어야 해. 최고 속도 기준으로 상위 30% 정도를' (앞걸음 최고 GAIT.moveSpeed 1.8 × 0.7 = 1.26)
   //  → 16:1x '빠르게 달려들기의 속도는 1.2m를 기준으로 하자' → 1.2. AI 의 낌새 읽기(ai.js preThreat '달려든다' 0.9)는 비기 창이 아니라 그대로
-  foeChargeSpeed: 1.2, // 전 0.9 `?foeChargeSpeed=0.9` [사장님 10/25 결정 — 확인표 2524]
+  foeChargeSpeed: realV(1.2), // 실제 1.2 m/s (사장님 10/25 22:3x '고노센 달려듦 1.2도 실제 시간으로 해' — 게임 1.09 · 옛 판 `?timeStd=0` 은 게임 1.2 = 실제 1.32 · 확인표 2592) · 전 0.9 `?foeChargeSpeed=0.9`(실제 m/s) [사장님 10/25 결정 — 확인표 2524]
   foeChargeAvg: 1, // 1 = 위 빠르기를 최근 0.6 s 평균(들어옴 판정과 같은 지수 평균)으로 봄 — 걸음마다 출렁이는 한 스텝 최고가 아니라 걸음 빠르기 · 0 = 한 스텝 지금 모습(전) `?foeChargeAvg=0` [사장님 확인 전 — 확인표 2525]
   gnsEnterOpen: 0, // C: 들어옴 창은 상대 칼끝이 내 몸을 겨누지 않을 때만 — AI 가 '걸어 들어오는 상대'를 칠 때 보는 칼끝 겨눔(ai.js foeClass online · 같은 셈 secret.js foeOnline)과 같음 `?gnsEnterOpen=1` [안 함 — 사장님 10/25 16:0x B 선택 · 확인표 2512]
   // 이베리아 길목 지키기 준비 (10/11 v6 — secret.js IaiArm 같은 셈, 열쇠만 다름) [사장님 확인 전 — 확인표 870·871]: 상대 가슴이 내 칼끝 거리(reach) 밖에 이 초 이상 계속 머물고
   //  내가 공격·막기 중이 아니면 준비(armed). 시작값은 일본 iaiArmTime·iaiArmGrace 와 같은 수 — 일본 값을 바꿔도 따라 바뀌지 않게 새 열쇠
-  gilmokArmTime: 1.5,
+  gilmokArmTime: realS(1.5),
   // 길목 한 칼이 겨누는 높이 (사장님 결정 10/11 13:5x '최대한 위를 겨누고 쳐' — v6 §18): secret_instant.js gilmokCutPose 높이 각의 목표 몸 자리. 새 수 없음, 몸의 자리만 고름 —
   //  'chest' = 상대 가슴 몸체(3차 · 13f6795 까지) · 'head' = 머리 몸체 가운데 · 'headTop' = 머리 꼭대기(머리 가운데 + 머리 반지름 fighter.headR). 둘러 베는 동안 칼날이 명령보다 20° 넘게 처지는 것을 겨눔으로 받는다
   //  10/11 §18 측정: AI 48 판은 headTop 이 맞힘 23 → 65 %(츠바이핸더)·8 → 15 %(북부 대공의 검)로 오르나, 플레이어 브라우저는 head·headTop 모두 칼이 머리 위로 넘어가 0/7 헛침(chest 는 2/2 넓적다리) —
   //  플레이어 쪽만 높이 겨눔에서 AI 와 갈리는 까닭을 못 찾아 기본은 'chest' 그대로 둠(디렉터 판단 기다림 — 확인표 890). 시험: with_config.mjs SECRET.gilmokAim=headTop · 브라우저 `?gilAim=headTop`
   gilmokAim: 'headTop', // 사장님 결정 10/11 13:5x '최대한 위를 겨누고 쳐' — §19 플레이어 날 세우기 앞당김 고친 뒤 적용(디렉터 17:4x): 플레이어 알맞게 낸 칼 머리·가슴에 닿음 · AI 48 판 츠바이핸더 맞힘 65 %·승률 81 %(밸런스 단계)
   gilmokEdge: 'reach', // 길목 경계 선 (10/11 v6 4차 — 스위치, 사장님 답 기다림): 'reach' = 무기 간격 끝 · 'cut' = 한 칼의 칼끝 앞 거리 + 디딤 (secret.js gilmokLine) — 시뮬 with_config.mjs SECRET.gilmokEdge=cut
-  gilmokArmGrace: 0.5, // 경계 안으로 들어와도 준비가 이 초 동안은 남는다 (일본 iaiArmGrace 와 같은 뜻)
+  gilmokArmGrace: realS(0.5), // 경계 안으로 들어와도 준비가 이 초 동안은 남는다 (일본 iaiArmGrace 와 같은 뜻)
   // 발도 길 열쇠 (몸 기준 — 가슴 원점, x 앞 · y 위 · z 칼 든 쪽, 칼날 가로 각 yaw ° 앞 0 → 칼 든 쪽 +, 높이 각 el °)
   iaiPath: {
     B: { hand: [0.2, -0.28, -0.12], yaw: -120, el: -8 }, // 왼 허리에서 뽑는 자리 (칼끝 왼 뒤)
@@ -1143,21 +1168,21 @@ export const SECRET = {
   //  10/12 미나미 칼 겹침: 전 hand [0.14, −0.36, −0.1] · yaw −125 · el −18 — 칼 뿌리가 뒷허벅지에 붙어(캡슐 틈 0.04 m) 하카마를 뚫어 보이거나 허벅지에 걸려 칼끝이 위로 튐 → 손 앞·조금 위, 칼끝을 덜 뒤·덜 아래로 (확인표 1010, docs/motion/minami_clip_2026-10-12.md)
   iaiReady: { hand: [0.28, -0.32, -0.1], yaw: -115, el: -12, body: { pelvisYaw: 20, chestYaw: 25, pitch: 14, drop: 0.16 } },
   // 10/10 01:2x 사장님 결정 — 중국·이베리아 조건 (secret.js firstHitOk·BindCount, AI·플레이어 같음) [모두 확인 전]
-  chineseRest: 0.5, // 중국 연환삼격: 내 공격 없이 이 초 이상 지난 뒤 들어가며 친 첫 칼이 맞으면. 48 판 청강검: 0.5 → 31 번(판마다 0.65) · 0.7 → 21 · 1.0 → 17 · 1.5 → 12 · 2.0 → 8 — 목표 0.5~1.2 안은 0.5 뿐
+  chineseRest: realS(0.5), // 중국 연환삼격: 내 공격 없이 이 초 이상 지난 뒤 들어가며 친 첫 칼이 맞으면. 48 판 청강검: 0.5 → 31 번(판마다 0.65) · 0.7 → 21 · 1.0 → 17 · 1.5 → 12 · 2.0 → 8 — 목표 0.5~1.2 안은 0.5 뿐
   // 10/10 04:4x 사장님 — 이베리아 조건을 '호 안쪽'으로 (secret.js insideEvent, AI·플레이어 같음). 아래 iberianBinds·iberianReset·iberianHurt 는 옛 BindCount 값(자료로 남김) [모두 확인 전]
   iberianInside: 0.7, // 상대 가슴이 내 reach − 이 m 안쪽 (10/10 05:5x 디렉터 0.5 → 0.7: 0.5 면 판마다 2.2 번·츠바이핸더 63 % 띠 밖, 0.7 이면 0.7 번·35 % — 확인표 498)
-  iberianInsideClosing: 0.3, // 그리고 상대 가슴이 나 쪽으로 이 m/s 넘게 다가오는 중이거나
-  iberianInsideDwell: 0.3, // 그 거리에 이 초 머묾
+  iberianInsideClosing: realV(0.3), // 그리고 상대 가슴이 나 쪽으로 이 m/s 넘게 다가오는 중이거나
+  iberianInsideDwell: realS(0.3), // 그 거리에 이 초 머묾
   iberianBinds: 3, // (옛) 이베리아: 내 베기가 상처 없이 칼끼리만 닿고 끝난 수가 이것이 되면 다음 공격이 비기
-  iberianReset: 4, // 이베리아: 내 칼이 상대 칼에 이 초 동안 닿지 않으면 셈 0
+  iberianReset: realS(4), // 이베리아: 내 칼이 상대 칼에 이 초 동안 닿지 않으면 셈 0
   iberianHurt: 'wound', // 이베리아 '피해를 주지 못하고'의 피해: 'wound' = 이 칼이 벤 상처(살을 가름)를 냄 · 'pain' = 상대 아픔 +0.05(AI 가 맞힘으로 보는 눈). 48 판 츠바이핸더(칼 닿음 = 실제 부딪힘 포함): pain → 7 번 · wound → 29 번(판마다 0.6) [해석 · 확인 전]
-  iberianWindow: 1.5, // 이베리아 플레이어 창 (s) — 셈이 차면 다음 공격 입력이 비기
+  iberianWindow: realS(1.5), // 이베리아 플레이어 창 (s) — 셈이 차면 다음 공격 입력이 비기
   italianCommit: 4.5, // 이탈리아: 상대가 칼을 드는 사건은 손(패드)이 이 빠르기(m/s) 이상일 때만 — 결심한 공격(들어 올림 사건 문턱 hvy 1.6 위). 달려듦은 그대로. 48 판 레이피어 2.5 → 84 번 · 3.5 → 64 · 4.5 → 56(판마다 1.17) [확인 전]
   // 결정타 (10/9 23:5x 사장님 '사실성을 다소 저해하더라도 모션 연출이나 판정에 약간의 어드밴티지 — 모든 비기'): AI·플레이어 공통. 물리(속도·힘)는 그대로, 상처 판정·화면만
   hitMul: 1.3, // 판정 어드밴티지: 비기 베기(베기 길·따라 지나감 동안)가 낸 상처 에너지 배율 (combat.js analyze — 공격자 fighter.secretHit) [확인 전]
   slowMo: { scale: 0.4, dur: 0.25 }, // 연출: 비기가 터뜨려지는 순간 화면 시간 배율 scale 을 dur 초(실시간) 동안 (main.js 프레임 dt — 물리 스텝 dt 는 그대로, 스텝 수만 준다). `?slowMo=0` 끔 [확인 전]
   // 플레이어 비기 (SKILL.playerSecret)
-  playerWindow: 0.6, // 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.5 → 0.6 (이어짐 · 입력 칸) · 조건이 찬 뒤 공격 입력을 받는 창 (s) [확인 전]
+  playerWindow: realS(0.6), // 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.5 → 0.6 (이어짐 · 입력 칸) · 조건이 찬 뒤 공격 입력을 받는 창 (s) [확인 전]
   secretHold: 1, // 사람 비기 창 지킴 (사장님 10/25 21:0x '비기 발동창이 열리면 어떻게 상황이 변하더라도 최소 0.6초는 열린 상태를 유지해서 비기가 나갈 수 있도록 해' — secret.js PlayerSecretWatch.holding): 1 = 창이 열린 뒤 playerWindow 초 동안은 조건이 바뀌어도(간격 · 내 휘두름 · 무장 풀림 · 칼 떨어짐 · 베임) 닫지 않음 — 짧은 창도 그만큼 · 몸이 비기를 낼 수 없는 때(내가 넘어짐 · 죽음 · 칼 없음 · 상대 죽음)는 그대로 닫음 · 0 = 전(조건이 바뀌면 바로 닫힘 — `?secretHold=0`) [사장님 10/25 결정 — 확인표 2567]
   // 이탈리아 사람 비기 — 거침없이 나아가 찌르기 (안다레 리솔루토) (사장님 10/22 '덮음은 모양으로 재고 사람 먼저' — src/italian_risoluto.js · docs/strike/italian_risoluto_2026-10-22.md · 확인표 2190~2196)
   //  사람 길만 바꾼다(schools.js playerSecretDef) — AI 는 TRADITIONS.italian.secret(옛 엇박 찌르기)를 보고 aiOpenSchools 로 닫혀 있다
@@ -1165,22 +1190,22 @@ export const SECRET = {
   risolutoCover: 0.15, // 덮음 거리 (m — 리솔루토만 읽음): 칼끼리 어느 부위든(bladesNear — 두 칼날 전체) · 내 칼 손 쪽 절반 ↔ 상대 칼 칼끝 쪽 절반 가장 가까운 거리 — 사장님 10/25 21:0x '칼끼리 닿아 있거나 7cm 이내에 -> 칼끼리 닿아 있거나 15cm 이내에' (전 0.07 = ai.js checkBind · secret.js bladesTouch 의 맞물림 기하와 같은 수 — 그쪽은 그대로 · `?risoCover=0.07`) [사장님 10/25 결정 — 확인표 2565]
   risolutoStick: 'both', // 덮인 채 나아가기의 스틱 (사장님 10/25 21:0x '앞을 향하고 있을 때 -> 앞이나 뒤를 향하고 있을 때'): 'both' = 앞 90° 부채꼴(stickY > |stickX|) 또는 뒤 90° 부채꼴(−stickY > |stickX|) · 옆 · 놓음은 아님 · 'fwd' = 전(앞만 — `?risoStick=fwd`) [사장님 10/25 결정 — 확인표 2563]
   risolutoTap: 0, // 창 안의 입력 (사장님 10/25 21:0x '찌르기(탭)로 발동 -> 공격하면 발동'): 0 = 공격 입력이면 모두(탭 · 끌기 — 다른 비기와 같은 main.js 길) · 같은 런지 · 1 = 전(탭만 — schools.js tapOnly · `?risoTap=1`) [사장님 10/25 결정 — 확인표 2564]
-  risolutoHold: 0.6, // 덮인 채 나아가기가 이 초 이어지면 창 — 시간 사다리 0.6(이어짐) · 1.5(무장) 둘 다 잼 (`?risoHold=1.5`) [사장님 확인 전]
+  risolutoHold: realS(0.6), // 덮인 채 나아가기가 이 초 이어지면 창 — 시간 사다리 0.6(이어짐) · 1.5(무장) 둘 다 잼 (`?risoHold=1.5`) [사장님 확인 전]
   risolutoBeat: 1, // 두 번째 길 (1 = 켬): 덮인 채 나아가던 중 상대가 칼을 내거나 덮음이 풀리면 곧장 창 — 원전 '상대가 박자를 내면 잡아라' · 10/23 넓은 판정으로 기본 켬 (`?risoBeat=0` 끔) [사장님 확인 전 — 확인표 2241]
-  risolutoBeatMin: 0.2, // 두 번째 길: 그 전에 덮인 채 나아가기가 이 초 넘게 이어졌어야 (시간 사다리 0.2 반응) [사장님 확인 전]
+  risolutoBeatMin: realS(0.2), // 두 번째 길: 그 전에 덮인 채 나아가기가 이 초 넘게 이어졌어야 (시간 사다리 0.2 반응) [사장님 확인 전]
   risolutoClose: 1, // '다 붙었을 때' 창 — 덮인 채 나아가다 맞닿기 거리(무기 실측 measure.contact) 밖에서 안으로 든 순간 · 시간 조건 없음 · 10/23 넓은 판정으로 기본 켬 (`?risoClose=0` 끔) [사장님 확인 전 — 확인표 2240]
   risolutoGuard: 0, // 시험 (1 = 켬 · 기본 끔): 막기 단추를 누른 채 나아가기도 덮인 채 나아가기로 셈 ('나는 막기 단추도 아님'을 풂 — 사장님 10/22 물음 '막기를 누르면 칼을 허공에 고정한 채 뻗고 있으니 교착이 늘지 않을까') (`?risoGuard=1`) [사장님 결정 전 — 측정만]
   // 10/23 넓은 판정 (사장님 10/23 00:1x '리솔루토 발동 거의 안 되더라 칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게 적용할 수 없는가?' — 문서 §9 · 확인표 2236~2242) · 10/22 판 = `?risoWide=0`
   risolutoAnyPart: 1, // 칼 어느 부위든 실제 맞닿음(접촉 사건 feel.touching) · 두 칼날 전체 0.07 m 안도 덮음 (italian_risoluto.js bladesNear — 새 문턱 없음 · `?risoAny=0`) [사장님 확인 전 — 확인표 2237]
-  risolutoGrace: 0.2, // 덮음 · 가슴 사이가 이 초(시간 사다리 0.2 반응) 안에 다시 이어지면 같은 덮인 채 나아가기 — 그동안은 안 셈(붙은 시간을 모아서 셈) (`?risoGrace=0`) [사장님 확인 전 — 확인표 2238]
+  risolutoGrace: realS(0.2), // 덮음 · 가슴 사이가 이 초(시간 사다리 0.2 반응) 안에 다시 이어지면 같은 덮인 채 나아가기 — 그동안은 안 셈(붙은 시간을 모아서 셈) (`?risoGrace=0`) [사장님 확인 전 — 확인표 2238]
   risolutoClosing: 0, // 1 = 가슴 사이가 스텝마다 줄어야 함(10/22 판) · 0 = 스틱 앞이면 됨 (`?risoClosing=1`) [사장님 확인 전 — 확인표 2239]
   risolutoLine: 0, // 시험 (1 = 켬 · 기본 끔): 칼을 대지 않는 덮음 — 칼끝이 상대 가슴을 겨눔(곧은 선 최대 각 12° 안) · 내 강한 쪽이 상대 칼끝 → 내 가슴 줄 위(0.07 m 안)면 덮음으로 셈 (`?risoLine=1`) [사장님 결정 전 — 측정만]
   // 10/24 런지 (사장님 10/24 12:1x '런지로 진행해. 단 런지 동작이 고노센처럼 빠르게 나가야 의미가 있어. 상대 팔 늦어지는 효과는 0.6초 내 경직도 0.6초' — 문서 §10 · 확인표 2406~2412) · 10/23 탭 찌르기 판 = `?risoLunge=0`
   //  창 안의 탭 = 런지(아폰도 · 카포 페로 1610 · 파브리스 1606): 앞발을 길게 내딛으며 팔을 뻗어 몸무게를 실어 찌른다 — 칼 팔 · 칼은 고노센 · 격살과 같은 운동학 틀(secret_instant.js requestCombo)
   risolutoLunge: 1, // 1 = 런지 (사장님 10/24 결정) · 0 = 10/23 판 탭 찌르기 (`?risoLunge=0` — 아래 셋도 10/23 값으로) [사장님 10/24 결정]
   risolutoShare: 1, // 런지 칼끝 빠르기 = 같은 칼 고노센 발도 칼끝 빠르기(iaiTipSpeed) × 이 몫 — 사장님 10/24 '고노센처럼 빠르게' (격살 0.6 · 연환 0.3 과 같은 칸) [사장님 10/24 결정]
-  risolutoArmSlow: 0.6, // 런지가 나갈 때 상대 두 팔 늦춤 (s — 흘림 장치 nagashi_recovery.js · 바닥 FLOW_RECOVERY.floor 그대로) — 사장님 10/24 '상대 팔 늦어지는 효과는 0.6초' (전 FLOW_RECOVERY.seconds 0.4 그대로 씀) [사장님 10/24 결정]
-  risolutoStiff: 0.6, // 런지 뒤 굳음 (s — 칼 · 발 조작이 안 듣는 같은 굳음 · 그동안 몸이 앞발 위로 실림 — 끝나면 앞발을 거둬 자세로: 10/24 14:0x) — 사장님 10/24 '경직도 0.6초' (전 stiff.italian 0.4) [사장님 10/24 결정]
+  risolutoArmSlow: realS(0.6), // 런지가 나갈 때 상대 두 팔 늦춤 (s — 흘림 장치 nagashi_recovery.js · 바닥 FLOW_RECOVERY.floor 그대로) — 사장님 10/24 '상대 팔 늦어지는 효과는 0.6초' (전 FLOW_RECOVERY.seconds 0.4 그대로 씀) [사장님 10/24 결정]
+  risolutoStiff: realS(0.6), // 런지 뒤 굳음 (s — 칼 · 발 조작이 안 듣는 같은 굳음 · 그동안 몸이 앞발 위로 실림 — 끝나면 앞발을 거둬 자세로: 10/24 14:0x) — 사장님 10/24 '경직도 0.6초' (전 stiff.italian 0.4) [사장님 10/24 결정]
   risolutoStep: { slide: 'iaiStep', foot: 'italianStep', draw: 0, room: 0, push: 'stepPush', accel: 1, recover: 1, recoverT: 0.4 }, // 런지 걸음 — 몸 미끄러짐 한도 = 고노센 발도와 같은 SECRET.iaiStep(0.6 m · 맞닿기에서 멈춤 · clinch 안 금지) · 앞발 = 이탈리아 런지 걸음 SECRET.italianStep(0.9 m — 엇박 찌르기 런지와 같은 수) · draw 1 = 디딘 뒤 뒷발 끌어붙임(이탈리아 걸음 drawT — 14:0x 전 판) · room 1 = 앞발도 미끄러진 뒤 가슴 사이가 clinch 안으로 들지 않을 만큼만(창이 열리는 가슴 사이 p50 1.23 m 라 걸음이 거의 없어짐 — 문서 §10 · `?risoRoom=1`) [사장님 확인 전 — 확인표 2409] · 10/24 14:0x 사장님 '앞발을 뒤로 회수하는 방식으로 자세 마무리' · '앞무릎을 굽히면서 자세 낮춰야': push = 앞발이 나가는 동안 몸 따라감 배율(SECRET.stepPush 2.0 — 고노센 · 이탈리아 비기 걸음과 같은 수) · accel 1 = 그 동안과 몸이 앞발을 따라잡을 때까지 몸 가속 한도 × GAIT.burstAccel(4 — 박차기 · 세게 멈춤과 같은 배율) — 몸이 앞발 위로 실려 앞무릎이 굽음 · recover 1 = 굳음이 끝나고 앞발이 디뎌 있으면 앞발을 런지로 벌어진 만큼 뒤로 거둬 겨눔 자세로 (걸음 길이 recoverT 0.4 s — 사다리 수) · 새 수 없음(0.4 만 새 자리) · `?risoRecover=0` = 14:0x 전 걸음 [사장님 확인 전 — 확인표 2434 · 2435]
   risolutoGap: 1, // 런지 간격 조건 (사장님 10/24 13:2x '그럼 오히려 간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게' · 13:4x 대안 ③ '맞닿는 거리만 막기'): 가슴 사이 ≥ 런지 최소 간격 = 맞닿기 거리(무기 실측 measure.contact — 레이피어 1.54 · 달타냥 1.39 m)일 때만 창(금색 '!')이 열리고, 열린 뒤 모자라지면 닫힘(탭은 보통 탭 찌르기 — 10/25 21:0x 부터는 열린 창을 secretHold 가 0.6 s 지킴: 그 사이 모자라져도 비기 · 런지 몸 미끄러짐 0 — secret_instant.js comboMoveStart) — 새 수 없음 · 0 = 간격 조건 없음(`?risoGap=0` — 10/24 12:1x 판) [사장님 10/24 결정 — 확인표 2432 · 2433]
   risolutoTouch: 1, // 칼끝 얽힘 창 (사장님 10/25 01:0x '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — italian_risoluto.js RisolutoWatch.tick 'touch'): 덮인 채 나아가기(칼끼리 어느 부위든 맞닿음 · 0.07 m · 나도 상대도 안 휘두름 · 스틱 앞)가 선 첫 스텝에 곧장 창 · 셈 시간 없음 · 한 번에 한 번 · 창 0.6 s · 탭 규칙 · 간격 조건 그대로 · 0 = 10/24 판(이어짐 0.6 s 를 기다림 — `?risoTouch=0` · `?risoWide=0` 도 끔) [사장님 10/25 결정 · 한 번에 한 번은 사장님 확인 전 — 확인표 2470]
@@ -1199,7 +1224,7 @@ export const SECRET = {
   risoGlintK: 4, // 끝 반짝임 가로 팔 = 빛줄기 반 폭 × 이 배 (0.48 m — 뒤 카메라에서 상대 몸통 밖으로 나와 보이게 · 세로 팔은 0.6 배) [사장님 확인 전 — 확인표 2522]
   risoStreakLife: 0.6, // 빛줄기 남는 시간 (s, 화면 시간 — 다 그린 때부터 옅어짐 · 시간 사다리 0.6) [사장님 확인 전 — 확인표 2523]
   risoGlintLife: 0.4, // 끝 반짝임 남는 시간 (s, 화면 시간 — 칼끝이 처음 찌르는 토막에 든 때부터 · 시간 사다리 0.4) · 0 = 반짝임만 끔 (`?risoGlint=0`) [사장님 확인 전 — 확인표 2523]
-  cnParryWindow: 0.6, // 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 1.0 → 0.6 (이어짐 · 입력 칸) · 중국 막기 연환의 플레이어 창 (s) — 칼이 갈라진 뒤 이 초 안의 공격 입력 하나가 연환. 사장님 10/12 01:0x '우선 테스트를 위해 막기 후 발동 시간을 대폭 완화해봐. 1초 정도로' (전 공용 playerWindow 0.5) [시험 · 사장님 확인 전]
+  cnParryWindow: realS(0.6), // 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 1.0 → 0.6 (이어짐 · 입력 칸) · 중국 막기 연환의 플레이어 창 (s) — 칼이 갈라진 뒤 이 초 안의 공격 입력 하나가 연환. 사장님 10/12 01:0x '우선 테스트를 위해 막기 후 발동 시간을 대폭 완화해봐. 1초 정도로' (전 공용 playerWindow 0.5) [시험 · 사장님 확인 전]
   // 중국 막기 연환 사람이 쓰게 (사장님 10/12 01:1x 플레이 시험 — docs/strike/cn_combo_play_2026-10-12.md) [모두 사장님 확인 전 — 확인표 970~]
   cnBongdu: 1, // 1 = 봉두세(highL) 막기도 정한 자세 (schools.js CHINESE_SECRET_PARRY cond.slots — 오는 줄 25 %), 0 = 전 두 자리(거정세·표두세). `?cnBongdu=0`
   cnBuffer: 1, // 1 = 정한 자세로 막아 칼이 맞닿은 동안 온 공격 입력을 미리 받아 두고 칼이 떨어지는 순간 연환 (secret.js PlayerSecretWatch.buffer — 플레이어만), 0 = 전(그 입력은 보통 공격 · 기다림 취소). `?cnBuffer=0`
@@ -1209,7 +1234,7 @@ export const SECRET = {
   cnGeojeongOrder: 'cutFirst', // 거정세 연환 순서: 'cutFirst' = 원문 「擧鼎格 … 向前掣擊中殺」·「進步逆鱗」 대로 당겨 벰 → 찌름 · 'thrustFirst' = 다른 두 자리처럼 찌름 → 벰. `?cnGeojeongOrder=thrustFirst` [사장님 확인 전 — 확인표 981]
   cnCombo: 3, // 10/12 08:2x 사장님 '초기 계획대로 3연격으로 … 반걸음 물러나도록': 3 = 3 연격(첫 수 가장 짧은 공격 → 손목을 굴려 이어지는 두 벰, 마지막 수 반걸음 물러남 — schools.js CN3) · 2 = 10/12 두 수. `?cnCombo=2` [사장님 확인 전 — 확인표 1020]
   secretReach: 1, // 1 = 비기를 실행하는 동안(경직 빼고 · AI·플레이어 · 모든 유파) 칼 팔이 끝까지 펴질 수 있게 — 역운동학 닿는 거리 위팔 + 아래팔(팔꿈치 0°, 평소 − 0.005 m = 15° · 플레이어 × 0.975 = 26°) · 고노센 발도 길의 가운데·끝 손 자리를 어깨에서 팔 길이까지. 0 = 평소 제한 그대로. `?secretReach=0` (사장님 10/12 03:0x '관절 제한이 문제야. 완화할까?' · 03:1x '고노센도 관절 비기 풀어') [사장님 확인 전 — 확인표 982·983]
-  playerChainGap: 0.6, // 플레이어 베기 덩이 사이 쉼이 이 초보다 길면 끊김 (이베리아 이어진 베기 셈 · 중국 '들어가며 친 첫 베기') [해석]
+  playerChainGap: realS(0.6), // 플레이어 베기 덩이 사이 쉼이 이 초보다 길면 끊김 (이베리아 이어진 베기 셈 · 중국 '들어가며 친 첫 베기') [해석]
   playerVibrate: 50, // 창이 열릴 때 진동 (ms, navigator.vibrate — 없으면 생략)
   // 동방 막아 죽이기 (격살 · 格殺 — 10/22 사장님 '앞으로 향하면서 타이밍 맞추어 막기 정도로 조건을 걸게. 대신 다음 공격이 말그대로 살격이 되게' · docs/strike/chinese_gyeoksal_2026-10-22.md):
   //  사람만 (secret.js PlayerSecretWatch.gyeoksalTick · schools.js CHINESE_SECRET_GYEOKSAL — TRADITIONS.chinese.playerSecret). AI 는 aiOpenSchools 로 닫힘 · 옛 막기 연환은 AI 길과 `?gyeoksal=0` 에 남음.
@@ -1217,7 +1242,7 @@ export const SECRET = {
   //  playerWindow 0.6 s 창(미리 받기 cnBuffer 그대로) · 받은 자세(거정 · 어거 · 요략 · 봉두)가 겨눌 곳(머리 · 팔 · 다리 · 허파)을 정한다. 즉사 없음 — 투구 · 갑옷 판정 그대로.
   gyeoksal: {
     on: 1, // 1 = 사람 동방 비기가 격살 · 0 = 옛 판(막기 연환 · cnSecret 그대로) `?gyeoksal=0`
-    press: 0.6, // 때맞춤 (s): 막기 단추를 새로 누른 뒤 이 안에 칼이 닿아야 — 사장님 10/24 12:2x '0.4초 안 -> 0.6초로'(시간 사다리 0.6 · 전 0.4)
+    press: realS(0.6), // 때맞춤 (s): 막기 단추를 새로 누른 뒤 이 안에 칼이 닿아야 — 사장님 10/24 12:2x '0.4초 안 -> 0.6초로'(시간 사다리 0.6 · 전 0.4)
     auto: 1, // 1 = 받아 내면 격살이 저절로 나감(공격 입력 없음 — 스틱 앞이 곧 입력) · 사장님 10/24 12:2x '비기는 그후 자동으로 나가게 해. (방향 커맨드가 입력인 셈)' · 0 = 옛 판(창 0.6 s 안 공격 입력) `?gyeoksalAuto=0`
     // 시험 스위치 둘 (10/22 감독 '격살만 칼끝 빠르기를 따로' · '팔을 위에서 내려 깎는 길' — 기본 끔, 판 그대로 · 문서 §9):
     share: 0.6, // 사장님 10/22 23:0x '격살 그렇게 확정해'(감독 안 — 고노센의 60 % · 맨몸 다리 절단 16·14/18 · 머리 죽음 18/18 · 케틀햇 머리 지킴). 격살 한 칼의 칼끝 빠르기 몫(고노센 발도 칼끝 빠르기의 몫 · 잔상 세기도 같은 몫). null = 연환과 같은 cnFastShare 0.3 · 시험 값은 있던 수 — 0.5(모노호시자오 진 · 츠바메가에시 되돌림 칼 secretBlade.kin · 연환 10/12 전 값) · 1(고노센 발도 그대로) `?gyeoksalShare=`
@@ -1238,10 +1263,10 @@ export const UNIQUE_ASSIST = {
   // 긋기 읽기 (손이 빠르게 움직이기 시작하는 순간 — 검술 층의 휘두르기 문턱 SKILL.swingSpeed 를 넘는 스텝)
   padRadius: 0.15, // 시작 자리 = 가장 가까운 자세 패드(G.*), 이 거리(패드 m) 안일 때만 그 자세에서 시작한 긋기로 본다 (패드 사이 간격 0.25~0.4 의 절반쯤)
   angle: 40, // 허용 각(°): 처음 손 방향 ↔ 기본 동작 첫 방향 · 조건의 방향(위·아래·가로) · 이어 들어갈 고유 동작 길의 첫 방향
-  onsetQuiet: 0.06, // 휘두르기가 이만큼(s) 끊겼다가 다시 시작해야 새 긋기 (그보다 짧은 끊김은 같은 긋기 — 방향이 turnDeg 넘게 꺾였으면 새 긋기)
+  onsetQuiet: realS(0.06), // 휘두르기가 이만큼(s) 끊겼다가 다시 시작해야 새 긋기 (그보다 짧은 끊김은 같은 긋기 — 방향이 turnDeg 넘게 꺾였으면 새 긋기)
   turnDeg: 90, // 휘두르는 채로 손 방향이 이보다 크게 꺾이면 새 긋기
-  afterWindow: 0.6, // '…뒤 다음 긋기' 조건의 시간 창(s): 앞 긋기가 끝나고 이 안에 시작한 긋기 (겹치기·츠바메가에시·카바치오네·자→격)
-  turnWindow: 0.25, // '찌르기를 시작했다가 짧은 시간 창 안에 꺾음/거둠' 의 창(s): 찌르기가 시작되고 이 안에 손 방향이 허용 각(angle) 넘게 바뀌면 꺾음 (카바치오네·염시 — 이어 주던 찌르기도 놓고 그리로)
+  afterWindow: realS(0.6), // '…뒤 다음 긋기' 조건의 시간 창(s): 앞 긋기가 끝나고 이 안에 시작한 긋기 (겹치기·츠바메가에시·카바치오네·자→격)
+  turnWindow: realS(0.25), // '찌르기를 시작했다가 짧은 시간 창 안에 꺾음/거둠' 의 창(s): 찌르기가 시작되고 이 안에 손 방향이 허용 각(angle) 넘게 바뀌면 꺾음 (카바치오네·염시 — 이어 주던 찌르기도 놓고 그리로)
   joinMax: 0.25, // 조건으로 여는 고유 동작(앞 긋기 뒤): 지금 손에서 이어 들어갈 길까지 이 거리(패드 m) 안일 때만 — 자세로 연 동작은 시작 자리를 이미 봤으므로 안 씀
   // 이어 주기 (손 목표 = 서보 목표를 고유 동작 길로 — 비기 길 따라가기 skill.js secretMove 와 같은 꼴, 운동학 아님)
   blend: 0.5, // 지금 손 자리와 길의 어긋남을 남은 길의 이 몫에 걸쳐 0 으로 (앞부분은 플레이어가 그은 쪽, 뒷부분이 고유 동작 길)
@@ -1252,20 +1277,20 @@ export const UNIQUE_ASSIST = {
   //  두 번 잇는 동작(chain)의 뒷부분은 그 자리에서 손가락이 아직 휘두르기 빠르기로 긋고 있을 때만 (방향 조건이 있으면 그쪽으로)
   idleRelease: 0.1,
   oppositeDeg: 120,
-  chainWait: 0.15, // 두 번 잇는 동작: 뒷부분이 시작되는 자리에서 손가락이 그쪽으로 긋기 시작하기를 이만큼(s)까지 기다림 (손가락이 꺾이는 동안 잠깐 느려지는 것). 10/14 강화 판: 앞 긋기가 끝나고 이 안에 플레이어가 다시 그어야 뒷몫 강화
+  chainWait: realS(0.15), // 두 번 잇는 동작: 뒷부분이 시작되는 자리에서 손가락이 그쪽으로 긋기 시작하기를 이만큼(s)까지 기다림 (손가락이 꺾이는 동안 잠깐 느려지는 것). 10/14 강화 판: 앞 긋기가 끝나고 이 안에 플레이어가 다시 그어야 뒷몫 강화
   // ── 10/14 강화 방식 (사장님 결정 10/14 01:5x '궤적은 끝까지 내 손가락, 고유 동작은 손가락으로는 못 하는 몫만 더한다') — 위의 blend(기본 동작 발동 판단 join 에만)·joinMax·speedK·vMin·idleRelease·oppositeDeg 는
   //    10/13 이어 주기(손 목표를 길로 끌던 판) 수라 지금은 blend 만 읽는다. 아래 수는 모두 [추정] · 사장님 확인 전 (owner_defaults_table.md 1078~1084). 몸 꼴 값은 unique_assist.js PLAYER_UNIQUE 의 body·body2 칸
   enhance: 1, // 강화 세기 손잡이 하나: 몸 덧씌우기 × enhance · 끝 힘 1 + (endPower − 1) × enhance · 걸음 크기 × min(1, enhance). 0 = 기술 이름 알림만 (`?uniqueEnhance=0`)
   bodyIn: 0.1, // 몸 꼴을 얹는 시간 상수(s) — 긋기가 고유 동작으로 읽힌 순간부터
   bodyOut: 0.25, // 긋기가 끝난 뒤 몸 꼴을 걷는 시간 상수(s)
   powerAt: 0.4, // 끝 힘이 들어가는 자리: 손 목표가 그 몫(앞 긋기 = 길 처음 ~ 잇는 자리 · 뒷몫 = 잇는 자리 ~ 끝) 길이의 이 비율 넘게 간 뒤
-  powerMax: 0.6, // 끝 힘은 강화가 시작되고 이 초까지만 (긋기가 길게 이어져도)
+  powerMax: realS(0.6), // 끝 힘은 강화가 시작되고 이 초까지만 (긋기가 길게 이어져도)
   endPower: 1.12, // 끝 힘 배율 (팔 서보 힘 f.powerMul — 비기 힘 창 SECRET.power 1.3 과 같은 칸, 작게)
   enhPower: 1.25, // 강화동작의 끝 힘 배율 (10/21 사장님 '강화동작' — 기본 동작 하나를 늘 이것으로 · 명령 동작은 endPower 그대로). 감독 값 — 사장님 확인 전
   // 강화동작 이점 (10/21 사장님): 곁눈 베기(독일) 무릎 꺾기 — 칼날이 들어간 베기(심각도 > 0)가 머리 · 가슴(목 포함) · 위팔(어깨)에 맞으면 p 로 한쪽 무릎을 꿇는다.
   //  꿇는 시간 kneel 초(다리 · 기력이 약하면 넘어졌다 일어날 때와 같은 꼴로 더 길게) 뒤 보통 일어나기(riseTime). cool 초 안에는 그 상대에게 다시 걸리지 않는다(0 = 제한 없음 — 10/21 사장님).
   //  p · kneel = 사장님 10/21 (처음 15 % · 0.8 s → '전투에 다양성 … 25%로 강화하고 대신 시간을 절반인 0.4초로' → '50%로 늘려') · parts · cool = 감독 (확인표 2107 — 사장님 확인 전). AI 도 같은 규칙 (숙련도 4 이상 독일). 맞는 쪽 버티기(일본 steady)는 확률에 곱함(fighter.swayScale — 일본 50 % → 37.5 %). 0 = 끔 (`?buckle=0`)
-  buckle: { p: 0.5, kneel: 0.4, cool: 0, /* 10/21 14:0x 사장님 '다시 무릎 안 꿇음 제한은 아예 없애자' — 5 → 0(없음) */ parts: ['head', 'chest', 'uarmS', 'uarmO'] },
+  buckle: { p: 0.5, kneel: realS(0.4), cool: realS(0), /* 10/21 14:0x 사장님 '다시 무릎 안 꿇음 제한은 아예 없애자' — 5 → 0(없음) */ parts: ['head', 'chest', 'uarmS', 'uarmO'] },
   // 곁눈 베기 길 다시 그림 (사장님 10/25 08:0x '셸하우 3번 — 맞는 순간 손목이 사람 범위 안이면서 손목 교정 전처럼 세게' · 기록 docs/strike/wrist_audit_2026-10-24.md §13 · 확인표 2501 ~ 2505):
   //  1 = 다시 그린 길(schools.js GERMAN_UNIQUE schielhau 의 redraw — AI 길 점 + 길 덧칸 plan: 칼끝 들기 · 손 뻗기 · 손 돌리기, ai.js techPlanStep → fighter.js driveSword) ·
   //  0 = 10/25 전 길(`?schielPath=0` — 손목 교정이 맞는 순간 칼끝을 옆으로 돌리던 판, 바이트 같음 · AI · 사람 둘 다). AI 는 sword_art.js applySchoolArt 가 꾸러미에 넣을 때 · 사람은 아래 schielPlayer
@@ -1339,9 +1364,9 @@ export const SKILL_BODY = {
 //  discipline: 간격을 지키는 정도 (0~1)
 //  aggression: 인내심이 줄어드는 빠르기·공격 성향, skill: 검술 보정(자세 지도를 따르는 정도)
 export const AI_LEVELS = {
-  easy: { reaction: 0.38, windup: 1.2, chamberSpeed: 2.2, strikeSpeed: 7.5, parrySpeed: 3.5, guardChance: 0.35, predict: 0.4, counter: 0, feint: 0, followUp: 0.25, read: 0.35, discipline: 0.6, strength: 0.8, aggression: 0.6, skill: 0.4 },
-  normal: { reaction: 0.26, windup: 0.6, chamberSpeed: 3, strikeSpeed: 11, parrySpeed: 4.5, guardChance: 0.6, predict: 0.75, counter: 0.2, feint: 0.15, followUp: 0.5, read: 0.65, discipline: 0.85, strength: 1.0, aggression: 0.9, skill: 0.7 },
-  hard: { reaction: 0.17, windup: 0.4, chamberSpeed: 3.8, strikeSpeed: 13, parrySpeed: 5.5, guardChance: 0.85, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.15, aggression: 1.0, skill: 0.85 },
+  easy: { reaction: realS(0.38), windup: 1.2, chamberSpeed: 2.2, strikeSpeed: 7.5, parrySpeed: 3.5, guardChance: 0.35, predict: 0.4, counter: 0, feint: 0, followUp: 0.25, read: 0.35, discipline: 0.6, strength: 0.8, aggression: 0.6, skill: 0.4 },
+  normal: { reaction: realS(0.26), windup: 0.6, chamberSpeed: 3, strikeSpeed: 11, parrySpeed: 4.5, guardChance: 0.6, predict: 0.75, counter: 0.2, feint: 0.15, followUp: 0.5, read: 0.65, discipline: 0.85, strength: 1.0, aggression: 0.9, skill: 0.7 },
+  hard: { reaction: realS(0.17), windup: 0.4, chamberSpeed: 3.8, strikeSpeed: 13, parrySpeed: 5.5, guardChance: 0.85, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.15, aggression: 1.0, skill: 0.85 },
 };
 
 // AI 숙련도 (사장님 결정 10/13 22:4x~23:0x — '난이도'를 숙련도로 개편: "각 검술의 숙련도가 있고 캐릭터마다 숙련도가 달라", 메뉴의 상대 난이도는 뺌.
@@ -1368,7 +1393,7 @@ export const AI_PROFICIENCY = {
   // AI 반응 시간 (s · 숙련도 0~5 — 10/21 14:3x 사장님 'ai 막기 반응은 … 난이도가 없어졌으니 숙련도에 따라 달라지게 개편해' · 확인표 2114):
   //  AI 의 눈(sense.seen — 막기 · 틈 읽기 · 미리 보기가 모두 읽는 한 값)이 이만큼 늦게 본다. 숙련도 한 단계마다 0.05 s 빨라짐 · 2 = 0.25(전 normal 0.26) · 3 = 0.2.
   //  인물 시트의 reaction 덮어쓰기와 이름(easy · normal · hard) 값보다 이것이 이긴다(ai.js). 광기 인물은 숙련도 + 1 이라 한 단계 빠름. 수는 감독 — 사장님 확인 전
-  reaction: [0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05], // [6] 0.05 s (10/24 — 한 단계 −0.05 그대로 · 사장님 확인 전)
+  reaction: [0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05].map(realS), // 표준 시간: 실제 초 (10/25) · [6] 0.05 s (10/24 — 한 단계 −0.05 그대로 · 사장님 확인 전)
 };
 
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)
@@ -1421,7 +1446,7 @@ export const THRUST = {
   bindTurn: 0.35,
   // 탭 연타 억제 (디렉터 16:42): 바로 앞 찌르기가 끝나고 이 시간(초) 안에 다시 탭하면 칼 길 잡기를 하지 않는다 —
   //  칼을 맞댄 채 느끼고(Fühlen) 밀어 넣는 찌르기는 서두른 연타로는 안 된다. 한 번 숨을 고르고 찌른 탭만 칼 길을 잡는다
-  bindRest: 0.7,
+  bindRest: realS(0.7),
   bindAim: 180, // 칼끝이 목표 방향과 이 각도(도) 안일 때만 칼 길을 잡는다. 180 = 거르지 않음
   // 이탈리아 찌르기 — 팔 → 몸 → 발 (10/25 08:0x 사장님 '이탈리아 찌르기 손봐' — docs/strike/italian_thrust_2026-10-25.md · 확인표 2513 ~ 2516 · 사장님 확인 전):
   //  이탈리아 유파 몸(swordArt.tradition 'italian' — 레이피어 · 달타냥 · 발리사르다 · 10/25 파펜하이머)의 보통 탭 찌르기와 AI 찌르기 기술(찌르기 무기 AI 는 같은 탭 길 — ai.js startStrike)만.

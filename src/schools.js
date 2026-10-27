@@ -45,7 +45,7 @@
 import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS } from './ai_techniques.js';
 import { WEAPONS } from './weapons.js';
 import { schoolMeasure } from './weapon_measured.js';
-import { SECRET, SKILL } from './config.js'; // 이베리아 비기 판 스위치 (10/11 — SECRET.iberianSecret) · 독일 왕관 막기 자리 스위치 (SKILL.deKron)
+import { SECRET, SKILL, realS } from './config.js'; // 이베리아 비기 판 스위치 (10/11 — SECRET.iberianSecret) · 독일 왕관 막기 자리 스위치 (SKILL.deKron)
 import { IBERIAN_TABLE } from './guards.js'; // 이베리아 몬탄테 자세표 (10/10 고증 — TRADITIONS.iberian.guardTable) // 무기별 간격은 한 곳(weapon_measured.js)에서 읽는다
 
 /** 기술 목록을 복사하면서 기술별 reach(닿는 거리 보정, m)를 무기에 맞게 바꾼다 (표에 없는 기술은 롱소드 값 그대로) */
@@ -379,7 +379,7 @@ const ITALIAN_RHYTHM = { count: 'foot', normal: 2, fast: 2, every: 3, mul: (ITAL
 //   독일 유파 몸만(유파 칸이 아니라 TRADITIONS.german 에 — 독일 걸음 칸이 없어야 지금 걸음 그대로라서). 스위치 GAIT.deChase(`?deChase=0` 끔).
 //   두 걸음 · ×1.5 · 헛침만 = 사장님 결정 10/15, window 0.6 s · brake 0.2 · accel 1.5 는 사장님 확인 전 (확인표 1512~)
 //   잡기(10/15 18:0x — GAIT.deHold, 플레이어만)는 새 값 없이 이 window 를 잡는 시간으로 다시 쓴다(확인표 1638~ — 잡는 거리는 무기 measure.contact · 풀림은 스틱 데드존)
-const GERMAN_CHASE = { window: 0.6, steps: 2, mul: 1.5, brake: 0.2, accel: 1.5, accent: FAST_ACCENT };
+const GERMAN_CHASE = { window: realS(0.6), steps: 2, mul: 1.5, brake: 0.2, accel: 1.5, accent: FAST_ACCENT };
 //  burst: false — 첫 걸음 박차기(10/15 바탕 걸음, config GAIT.stepBurst · docs/strike/step_burst_2026-10-15.md)를 이 유파는 받지 않는다(gait.js 가 gaitParams 로 읽음).
 //   서 있다가 뒤로 떼는 첫 걸음이 박차기이면서 박자 걸음 첫 디딤이라 '느·느·느·느·빠·빠'가 '빠·느·…'로 흐트러진다(사장님 10/15 13:3x 걱정) — 감독 권고 2안, 사장님 확인 전 (확인표 1580~).
 //   지우면(또는 true) 이탈리아도 박차기를 받는다 — 다른 유파는 칸이 없어 받는다

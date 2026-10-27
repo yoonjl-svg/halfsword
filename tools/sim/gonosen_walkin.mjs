@@ -20,7 +20,7 @@ const [seedsArg = '4', simArg = '20', gArg = 'monohoshizao,uchigatana,muramasa',
 const E = process.env;
 const S0 = CONFIG.SECRET;
 if (E.GNS_BLOCK != null) S0.gnsEnterBlock = [0, 1, 2].includes(+E.GNS_BLOCK) ? +E.GNS_BLOCK : 1; // 2 = 앞을 가린 상대도 막음
-if (E.CHARGE != null && +E.CHARGE > 0) S0.foeChargeSpeed = +E.CHARGE;
+if (E.CHARGE != null && +E.CHARGE > 0) S0.foeChargeSpeed = CONFIG.realV(+E.CHARGE); // 실제 m/s (주소 ?foeChargeSpeed 와 같게 — 표준 시간 10/25)
 if (E.CHARGE_AVG != null) S0.foeChargeAvg = +E.CHARGE_AVG ? 1 : 0; // 달려듦 빠르기 최근 0.6 s 평균 (?foeChargeAvg)
 const SEEDS = +seedsArg, SIM = +simArg, REACT = +rArg, MODE = modeArg;
 const GUARD = E.WALK_GUARD == null ? 1 : +E.WALK_GUARD ? 1 : 0;
@@ -147,7 +147,7 @@ for (const gw of gArg.split(',')) for (const ww of wArg.split(',')) for (const g
   rows.push(R);
 }
 const S = CONFIG.SECRET;
-console.log(`[고노센 대 걸어 드는 몸] mode ${MODE} · B 막힘 ${['끔', '켬', '켬 + 앞 가림'][S.gnsEnterBlock]} · 달려듦 ${TH} m/s (${S.foeChargeAvg ? "0.6 s 평균" : "한 스텝"}) · 걷는 몸 막기 단추 ${GUARD ? '누름' : '안 누름'} · 씨앗 ${SEEDS} × ${SIM} s${MODE !== 'ai' ? ` · 탭 반응 ${REACT} s` : ''}`);
+console.log(`[고노센 대 걸어 드는 몸] mode ${MODE} · B 막힘 ${['끔', '켬', '켬 + 앞 가림'][S.gnsEnterBlock]} · 달려듦 ${+TH.toFixed(3)} 게임 m/s = 실제 ${+(TH * CONFIG.TIME.tempo).toFixed(3)} (빠르기 칸은 모두 게임 m/s · 실제 = × 템포 ${CONFIG.TIME.tempo}) (${S.foeChargeAvg ? "0.6 s 평균" : "한 스텝"}) · 걷는 몸 막기 단추 ${GUARD ? '누름' : '안 누름'} · 씨앗 ${SEEDS} × ${SIM} s${MODE !== 'ai' ? ` · 탭 반응 ${REACT} s` : ''}`);
 console.log(`| 고노센 | 걷는 칼 | 스틱 | 판 | 선 앞뒤 0.5 m 다가옴 p10 · p50 · p90 · 최고 (> ${TH} · > 0.9 몫) | 선을 넘는 스텝 p50 · 최고 (0.6 s 평균 p50) · 칼끝 겨눔 | 창 천천히 · 빠르게 · 듦 · 달려듦 · 헛침 | 발도 낸 · 맞힘 · 막힘 · 헛침 | 그 칼로 죽임 | 굳음 동안 베임 | 고노센 죽음 · 걷는 몸 죽음 |`);
 console.log('|---|---|---|---|---|---|---|---|---|---|---|');
 for (const R of rows) {
