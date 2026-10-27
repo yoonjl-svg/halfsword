@@ -40,7 +40,7 @@ import { FINISH, cleaveFinish } from './finish.js';
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
-import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
+import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -524,7 +524,7 @@ export class AI {
     if (this.iaiArm && SECRET.iai) {
       const busy = this.mode === 'attack' || this.mode === 'defend' || (!!this.secretRun && this.secretRun.stage !== 'instant') || this.drillOut; // 헛스윙 연습 동안은 대기하지 않는다
       const outside = SECRET.gnsEnterAI ? gnsOutside(d, { foeReach: this.foeReach, reach: this.M.reach, contact: this.M.contact }, this.iaiArm.armed, SECRET.gnsLong) : d > this.foeReach; // 고노센 들어옴 AI 판(10/25 — 기본 끔)의 긴 칼 상대 규칙 · 끄면 옛 셈
-      gnsArmTick(this.iaiArm, dt, busy || kneeling || hurt, gnsMoving(me), { outside: outside && !kneeling, busy });
+      gnsArmTick(this.iaiArm, dt, busy || kneeling || hurt, gnsMoving(me), { outside: outside && !kneeling, busy }, armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x — 서 있는 모습 인물은 그동안 여기 안 옴 · 기본 AI 몫)
       iaiReadyPose(me, this.iaiArm.armed && this.mode !== 'attack', dt);
     }
     // 이베리아 길목 지키기 준비 (10/11 v6): 상대가 내 칼끝 거리(reach) 밖에 gilmokArmTime 초 머물면 칼을 몸 옆으로 감아 뒤로 둔 옆 자세(가로 탈류·가로 레베스)로 길목을 지킨다.
@@ -534,7 +534,7 @@ export class AI {
     //   유지(깜빡이지 않게 — 재사용). 감는 모습이 곧 길목의 예고다. 쪽 = 낮은 자세의 쪽(아래 레베스면 왼쪽, 아니면 오른쪽 — 피 단Ⅰ 탈류부터)
     if (this.gilArm) {
       const was = this.gilArm.armed;
-      this.gilArm.tick(dt, d > gilmokLine(me, this.M.reach, this.secret.do) && !kneeling, this.mode === 'attack' || this.mode === 'defend' || !!this.secretRun || this.drillOut); // 헛스윙 연습 동안은 준비하지 않는다
+      this.gilArm.tick(dt, d > gilmokLine(me, this.M.reach, this.secret.do) && !kneeling, this.mode === 'attack' || this.mode === 'defend' || !!this.secretRun || this.drillOut || armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x) // 헛스윙 연습 동안은 준비하지 않는다
       const A = this.gilArm.armed && (this.mode === 'watch' || this.mode === 'withdraw');
       if (this.gilArm.armed && !was) {
         this.guard = gilmokLowGuard(this.school.guards, this.guard, [this.me.handOffset.x, this.me.handOffset.y]); // secret.js — 플레이어와 같은 규칙
@@ -784,7 +784,7 @@ export class AI {
       const down = !foe.alive || !foe.armed || foe.state !== 'stand';
       const foeHurt = foe.pain > (W.pain ?? foe.pain) + 0.05; // 사람이 맞음 (사람 창과 같은 셈 — 10/25 22:3x 'idle')
       W.pain = foe.pain;
-      gnsArmTick(A, dt, down || gnsHumanUnsettled(foe, foeHurt), gnsMoving(foe), { outside: gnsOutside(d, V, A.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: down || !!foe.skill?.swinging || !!foe.skill?.sec }); // 'idle' — 거리 안 봄 · 'dist' 옛 셈
+      gnsArmTick(A, dt, down || gnsHumanUnsettled(foe, foeHurt), gnsMoving(foe), { outside: gnsOutside(d, V, A.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: down || !!foe.skill?.swinging || !!foe.skill?.sec }, armHold(foe)); // 'idle' — 거리 안 봄 · 'dist' 옛 셈
       W.ready = !!SECRET.iai && A.armed;
     }
     if (hurt && iaiBusy(foe)) {
@@ -2119,7 +2119,7 @@ export class AI {
     const hurt = !!SECRET.ibSpin.hurtDisarm && nw > this.spinW;
     this.spinW = nw;
     const busy = this.mode === 'attack' || this.mode === 'defend' || !!this.secretRun || this.drillOut || kneeling;
-    this.spinArm.tick(dt, d0 > this.M.reach && !kneeling, busy || hurt);
+    this.spinArm.tick(dt, d0 > this.M.reach && !kneeling, busy || hurt || armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x 사장님 '실제 공격이 가능해진 때부터')
     if (!this.spinArm.armed || busy || !this.secretFree() || !this.foe.alive || s0.state !== 'stand' || !me.armed || me.state !== 'stand') return false;
     if (d0 > this.M.reach + SECRET.ibSpin.aiFire) return false;
     return this.spinGo();
@@ -2178,7 +2178,7 @@ export class AI {
       else if (P.goBarge || busy || this.mode !== 'watch' || !this.foe.alive || this.foe.state !== 'stand' || this.d >= (SECRET.mordNear ? this.M.clinch : this.holdDist() + this.watchReachOut())) P.go = P.goBarge = false; // 14:2x: 상대가 붙은 거리 밖으로 떨어지면 끝(쫓지 않음) · 12:0x 판은 칠 거리 밖까지
     }
     if (P.win > 0) P.win -= dt; // 사람 창(PlayerSecretWatch.update)과 같은 차례: 창 시간을 먼저 줄이고 셈
-    if (pressStep(P, dt, me.barge?.phase === 'press', busy, P.win > 0, secretVal(this.secret.cond.press))) {
+    if (pressStep(P, dt, me.barge?.phase === 'press', busy, P.win > 0, secretVal(this.secret.cond.press), me.barge?.phase === 'step' ? me.barge : null)) { // step: 다시 시작한 밀치기 첫 걸음 동안 너그러움 시계 멈춤 (사람과 같은 셈 · 10/27 23:0x)
       P.win = SECRET.playerWindow;
       P.wins++;
     }

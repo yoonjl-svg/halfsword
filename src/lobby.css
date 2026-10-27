@@ -367,7 +367,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
   .node-detail .detail-cmd { margin-top: 2px; padding-top: 0; border-top: 0; font-size: 10px; line-height: 1.15; } /* 10/27 21:4x 사장님(감독 전달) '입력 줄 글을 조금 작게' — 11 → 10 px · 줄 높이 1.25 → 1.15 (사장님 비기 글 두 줄) */
 }
 /* 낮은 폰 가로(높이 370 이하)에서 칸 설명 카드를 연 동안은 위 '스킬' 제목 줄(금화 · 머리)까지 덮어 그만큼 키운다 — 작은 화면에서 배우기 전 비기 카드(싱지르 · 고노센 두 줄 입력)와
-   몇 칸이 넘치던 것(844 × 340 · 680 × 360 — 10/27 감독 '넘침 0'). 카드를 닫으면 제목 줄이 그대로 보임 · 값은 카드에 있음 (작업자 — 사장님 확인 전 · 확인표 2637) */
+   몇 칸이 넘치던 것(844 × 340 · 680 × 360 — 10/27 감독 '넘침 0'). 카드를 닫으면 제목 줄이 그대로 보임 · 값은 카드에 있음 (사장님 10/27 23:0x 결정 '둘다 제안대로 할게' · 확인표 2637) */
 @media (max-height: 370px) {
   .skill-tree-host .node-detail { top: calc(2px - var(--title-h) - var(--title-gap)); }
   #panelSkills:has(.node-detail:not([hidden])) > .panel-heading { visibility: hidden; } /* 카드 옆으로 제목 줄 끝(글 · 금화)이 비져 보이지 않게 */

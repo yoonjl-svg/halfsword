@@ -1418,7 +1418,13 @@ export class Fighter {
 
   /** 판 시작 뒤 ARENA.startHold 초 동안 발이 묶였나 (사장님 9/30: 시작 2초 뒤 움직여). 걷기·기술 걸음·자세 고쳐 딛기만 막고 팔·칼·균형 걸음(stumble·닿지 않는 발)은 그대로 */
   get feetHeld() {
-    return this.stamina.exhausted || this.fightT < ARENA.startHold - 1e-6;
+    return this.stamina.exhausted || this.openHold;
+  }
+
+  /** 판 시작 정지 동안인가 (ARENA.startHold — 브라우저는 판 시작 카메라 길이 · feetHeld 의 판 시작 몫): 아직 실제로 싸움이 시작되지 않음(AI 는 서 있는 모습만 · 발 묶임).
+   *  10/27 23:0x 사장님 '고노센과 싱지르는 전투 시작 후, 실제 공격이 가능해진 때부터 시간을 카운트 해' — 비기 무장 시계(고노센 준비 · 싱지르 · 길목)는 이 동안 0 (secret.js gnsArmTick · spinTick · ai.js) */
+  get openHold() {
+    return this.fightT < ARENA.startHold - 1e-6;
   }
 
   // 상태: stand(서 있음) → down(완전히 쓰러짐) → getup(무릎 꿇고 → 일어섬) → stand

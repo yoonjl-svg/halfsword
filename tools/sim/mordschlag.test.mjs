@@ -47,6 +47,38 @@ test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 2 s — 10/
   assert.equal(TRADITIONS.german.aiSecret, S); // 10/24 AI 몫 = 사람과 같은 비기
 });
 
+test('10/27 23:0x 다시 붙는 밀치기 첫 걸음 동안 너그러움 시계 멈춤 (SECRET.mordStepPause): 끊긴 뒤 새 밀치기의 딛는 단계(barge phase step)는 너그러움보다 길어도 셈을 쥠 · 그 걸음 하나만 · 끄면 너그러움 넘으면 셈 0', () => {
+  const { g, P, E } = fixture();
+  try {
+    assert.equal(SECRET.mordStepPause, 1);
+    const steps = (sec) => Math.round(sec / DT);
+    const run = (w, n, barge) => { for (let i = 0; i < n; i++) { P.barge = barge; w.update(DT, false); } };
+    const press = { phase: 'press' };
+    const w = new PlayerSecretWatch(P, E);
+    run(w, steps(SECRET.mordPress / 2), press);
+    const held = w.pressT;
+    run(w, steps(SECRET.mordGrace / 2), null); // 끊김 (너그러움 안)
+    const stepA = { phase: 'step' };
+    run(w, steps(SECRET.mordGrace * 2), stepA); // 다시 시작한 밀치기의 첫 걸음 — 너그러움의 두 배 동안 딛어도
+    assert.ok(Math.abs(w.pressT - held) < 1e-9, `첫 걸음 동안 셈을 쥠 ${w.pressT}`);
+    run(w, 3, press); // 발이 닿아 누르기 → 이어 셈
+    assert.ok(w.pressT > held, '이어 셈');
+    run(w, steps(SECRET.mordGrace / 2), null); // 다시 끊김
+    run(w, steps(SECRET.mordGrace / 4), { phase: 'step' }); // 첫 걸음이 누르기 없이 끝남(떨어짐 · 거절)
+    run(w, 1, null);
+    run(w, steps(SECRET.mordGrace), { phase: 'step' }); // 다른 걸음 — 멈추지 않음 → 너그러움 넘어 셈 0
+    assert.equal(w.pressT, 0, '두 번째 걸음은 시계를 멈추지 않음');
+    const old = SECRET.mordStepPause;
+    try {
+      SECRET.mordStepPause = 0;
+      const w0 = new PlayerSecretWatch(P, E);
+      run(w0, steps(SECRET.mordPress / 2), press);
+      run(w0, steps(SECRET.mordGrace * 2), { phase: 'step' });
+      assert.equal(w0.pressT, 0, '끄면(10/27 21:4x 판) 걸음 동안에도 너그러움 시계가 감');
+    } finally { SECRET.mordStepPause = old; }
+  } finally { P.barge = null; g.world.free(); }
+});
+
 test('사람 · AI 몫: 플레이어 독일 무기 = 죽음의 일격 · deMord 0 = 옛 판 · AI 독일 숙련도 5 = 같은 비기 · 4 = 없음 · aiOpenSchools 에서 빼면 없음 (10/24)', () => {
   const { g, P, E } = fixture();
   try {

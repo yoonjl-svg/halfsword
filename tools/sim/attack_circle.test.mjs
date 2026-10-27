@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { circleState, circleStep, circleClear, circleLive, circleFit, circleTurn, CIRCLE_INNER } from '../../src/attack_circle.js';
-import { SECRET, SKILL, UNIQUE_ASSIST, realS } from '../../src/config.js'; // realS: 표준 시간(10/25) — 무장 1.5 s 는 실제 초
+import { SECRET, SKILL, UNIQUE_ASSIST, ARENA, realS } from '../../src/config.js'; // realS: 표준 시간(10/25) — 무장 1.5 s 는 실제 초
 
 const F = 1 / 60; // 프레임 (60 fps)
 const R = Math.PI / 180;
@@ -150,7 +150,7 @@ test('사람 몸: 무장 창이 열린 동안 원 한 바퀴 → 참 · 톡 · �
     return hit;
   };
   assert.equal(feed(arc(0.3, 0, 400), 0.6), false); // 창 전: 셈 없음
-  while (G.t < 3 && W.open?.ctx?.ev !== 'spin') G.step();
+  while (G.t < ARENA.startHold + SECRET.ibSpin.armTime + 0.5 && W.open?.ctx?.ev !== 'spin') G.step(); // 무장 시계는 판 시작 정지가 끝나야 감 (10/27 23:0x)
   assert.equal(W.open?.ctx?.ev, 'spin');
   assert.equal(W.circleOwns(), true);
   assert.equal(W.stickOwns(), false);

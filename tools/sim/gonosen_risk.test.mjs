@@ -185,14 +185,17 @@ function standoff(id, vals) {
     const ps = new PlayerSecretWatch(p, G.enemy);
     const L = gnsEnterLine(ps.view());
     const out = { creep: 0, ready: 0, W: null };
-    let prev = null;
+    let prev = null, pending = false;
     G.before = () => {
       ps.update(DT, !!p.skill.sec);
       p.move.set(0, 0);
       const W = G.ai.gnsW;
       if (W?.ready) out.ready++;
       const d = p.foeDistance();
-      if (prev != null && prev > L - DEEP && d <= L - DEEP && ps.iaiArm.armed && (!W || W.ready) && G.ai.mode === 'watch') out.creep++;
+      // 10/27 (무장 시계를 판 시작 정지 뒤부터 — 사장님 23:0x): 간 보기(watch)로 선을 넘어 든 뒤 DEEP 넘게 들어감(그 사이 꼴이 공격으로 바뀌어도) — 선 끝을 mm 로 오가는 것 · 들자마자 공격으로 바꾼 것은 깊이로 거름
+      if (prev != null && prev > L && d <= L && ps.iaiArm.armed && (!W || W.ready) && G.ai.mode === 'watch') pending = true;
+      if (d > L) pending = false;
+      else if (pending && d <= L - DEEP) (out.creep++, (pending = false));
       prev = d;
     };
     for (let i = 0; i < 16 / DT && p.alive && G.enemy.alive; i++) G.step();
@@ -220,7 +223,7 @@ test('⑤ 실제 몸: 경계를 끄면 AI 가 간 보기로 준비된 사람 발
 test('⑤ 속임 → 결행: 속임은 준비 한 번에 한 번 (선 밖에서 들었다 거둠) · 다음 칠 때는 결행 — 상대가 고노센 쓰는 몸이 아니면 아무 일 없음', () => {
   const G = newRound({ weapon: 'monohoshizao', weapon2: 'longsword', seed: 1, difficulty: 'normal' });
   const ai = G.ai;
-  for (let i = 0; i < 2 / DT; i++) G.step();
+  for (let i = 0; i < (CONFIG.ARENA.startHold + SECRET.iaiArmTime + 0.1) / DT; i++) G.step(); // 사람 준비가 켜질 때까지 (무장 시계는 판 시작 정지 뒤부터 — 10/27 23:0x · 실제 2 s)
   ai.gnsWatch(DT, ai.d, false);
   const W = ai.gnsW;
   assert.equal(W.user, true);

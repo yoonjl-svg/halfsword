@@ -130,6 +130,8 @@ if (['v1', 'parry'].includes(params.get('deSecret'))) CONFIG.SECRET.deSecret = p
 if (params.has('deMord')) CONFIG.SECRET.deMord = +params.get('deMord') ? 1 : 0;
 if (+params.get('mordPress') > 0) CONFIG.SECRET.mordPress = CONFIG.realS(+params.get('mordPress')); // 주소 값 = 실제 초 (표준 시간 10/25 — 아래 시간 · 빠르기 주소 인자도 같음)
 if (params.has('mordGrace') && +params.get('mordGrace') >= 0) CONFIG.SECRET.mordGrace = CONFIG.realS(+params.get('mordGrace')); // 모르트슐라크 누르기 끊김 너그러움 (10/25 23:1x 사장님 · 10/27 21:4x 0.4 s — 기본 0.4 s · 주소 값 = 실제 초 · `?mordGrace=0` = 끊기면 셈 0)
+if (params.has('armAtFight')) CONFIG.SECRET.armAtFight = +params.get('armAtFight') ? 1 : 0; // 비기 무장 시계를 공격이 풀린 때부터 (10/27 23:0x 사장님 결정 — 기본 1 · `?armAtFight=0` = 판 시작부터)
+if (params.has('mordStepPause')) CONFIG.SECRET.mordStepPause = +params.get('mordStepPause') ? 1 : 0; // 다시 붙는 밀치기 첫 걸음 동안 너그러움 시계 멈춤 (10/27 23:0x 사장님 결정 — 기본 1 · `?mordStepPause=0`)
 if (params.has('closeLatch')) CONFIG.CLOSE.latch = +params.get('closeLatch') ? 1 : 0; // 밀치기 걸쇠 (10/25 23:3x 사장님 '이 걸쇠 없애' — 기본 0 · `?closeLatch=1` = 놓았다 다시 밀어야)
 if (params.has('closeLatchAI')) CONFIG.CLOSE.latchAI = +params.get('closeLatchAI') ? 1 : 0; // AI 밀치기 걸쇠 (기본 = config CLOSE.latchAI)
 if (params.has('mordNear')) CONFIG.SECRET.mordNear = +params.get('mordNear') ? 1 : 0; // AI 몸 붙이기 자연스럽게 가까울 때만 (10/24 14:2x 사장님 · 0 = 멀리서 붙이러 걸어가는 옛 판)

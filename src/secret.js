@@ -304,6 +304,9 @@ export function gnsOutside(d0, view, armed, long) {
   return view.foeReach >= L && d0 > L;
 }
 
+/** 비기 무장 시계를 아직 세지 않나 (10/27 23:0x 사장님 '고노센과 싱지르는 전투 시작 후, 실제 공격이 가능해진 때부터 시간을 카운트 해' — SECRET.armAtFight): 그 몸의 판 시작 정지(fighter.openHold) 동안. 끄면 늘 거짓(옛 판) */
+export const armHold = (f) => !!SECRET.armAtFight && !!f?.openHold;
+
 /**
  * 고노센 준비 한 스텝 (10/25 22:3x 사장님 '2] … 거리와 상관없이 '1.5초 동안 치지도 막지도 않고 침착하게 있으면 준비'로 바꾸는 것 이것도 좋다. 그렇게 바꿔.' ·
  *  '3] 시간도 1.5초에서 2초로' · 22:5x(감독 전달) '아무 행동 없이 2초' = 이동 입력도 없이 · '고노센은 일단 준비가 활성화되면 걸어도 준비가 유지돼' —
@@ -311,9 +314,10 @@ export function gnsOutside(d0, view, armed, long) {
  *  'idle'(기본): 거리와 상관없이 — unsettled(공격 · 막기 · 맞음 · 비기 — 부르는 쪽이 그 몸에 맞게 셈)면 곧장 풀림(유예 없음) · 준비가 아직이면 moving(이동 입력 — gnsMoving)도 셈을 0 으로 ·
  *   그 밖엔 iaiArmTime 초 쌓여 준비 · 준비된 뒤엔 걸어도(moving) 유지.
  *  'dist'(10/25 전 판 `?gnsReady=dist`): old = { outside, busy } 그대로 — 상대 칼 거리 밖(gnsOutside)에서 쌓이고 간격 안이면 iaiArmGrace 뒤 풀림 · 풀림은 그 판 몫(휘두름 · 비기 / AI 공격 · 막기 꼴)만.
- *  A = IaiArm (열쇠 iaiArmTime · iaiArmGrace). 굴림 없음
+ *  A = IaiArm (열쇠 iaiArmTime · iaiArmGrace). hold = 그 몸의 판 시작 정지(fighter.openHold — 10/27 23:0x) 동안이면 셈 0. 굴림 없음
  */
-export function gnsArmTick(A, dt, unsettled, moving, old) {
+export function gnsArmTick(A, dt, unsettled, moving, old, hold = false) {
+  if (hold) return A.tick(0, false, true); // 판 시작 정지 동안(fighter.openHold — 10/27 23:0x 사장님 '실제 공격이 가능해진 때부터 시간을 카운트') 셈 0 · 준비 아님 — 두 판 모두
   if (SECRET.gnsReady === 'dist') return A.tick(dt, old.outside, old.busy);
   A.tick(dt, true, !!unsettled || (!A.armed && !!moving));
 }
@@ -675,16 +679,24 @@ export function foeRecentTipSp(sense, span) {
  * 독일 모르트슐라크 누르기 셈 (10/22 사람 — PlayerSecretWatch.pressTick · 10/24 AI — ai.js mordTick, 같은 셈 · 10/25 23:1x 끊김 너그러움 SECRET.mordGrace): st 의 pressT(지금 셈) · pressHeld(이 누르기 길이 — 너그러움으로 이은 것 포함) ·
  *  pressMax(가장 긴 누르기) · pressRuns(창까지 이어진 수)를 고친다. pressing = 밀치기 누르기(fighter.barge phase 'press') · busy = 비기 실행 · 굳음(셈 0) ·
  *  open = 창이 열려 있음(새 창 없음 — 셈은 이어짐) · need = 창까지 초(SECRET.mordPress). 창을 열 때면 셈 0 으로 하고 true
+ *  step = 지금 밀치기가 딛는 단계(fighter.barge phase 'step')면 그 barge — 10/27 23:0x 사장님 '둘다 제안대로'(SECRET.mordStepPause): 끊긴 뒤 다시 시작한 밀치기의
+ *   첫 걸음이 딛는 동안(걸음 시작부터 그 발이 땅에 닿아 누르기가 될 때까지)은 너그러움 시계를 멈춤 — 그 걸음 하나만(끝나거나 다른 걸음이면 다시 감 · 새 수 없음 — 걸음은 0.7 s 안팎에 닿음)
  */
-export function pressStep(st, dt, pressing, busy, open, need) {
+export function pressStep(st, dt, pressing, busy, open, need, step = null) {
   if (pressing) {
     st.pressOff = 0;
+    st.pauseStep = null;
+    st.pauseDone = false;
     st.pressT = (st.pressT ?? 0) + dt;
     st.pressHeld = (st.pressHeld ?? 0) + dt;
     if (st.pressHeld > (st.pressMax ?? 0)) st.pressMax = st.pressHeld;
+  } else if ((st.pressHeld ?? 0) > 0 && SECRET.mordStepPause && step && !st.pauseDone && (!st.pauseStep || st.pauseStep === step)) {
+    st.pauseStep = step; // 다시 시작한 밀치기의 첫 걸음 — 너그러움 시계 멈춤(셈도 쥔 채 · 안 셈)
+    st.pausedT = (st.pausedT ?? 0) + dt; // 재기: 멈춘 시간 합 (판정에는 안 씀)
   } else if ((st.pressHeld ?? 0) > 0 && (st.pressOff = (st.pressOff ?? 0) + dt) <= (SECRET.mordGrace ?? 0)) {
     // 너그러움 (10/25 23:1x 사장님 '리솔루토처럼 0.2초 안에 다시 붙으면 이어서 세' · 10/27 21:4x '0.2초 간격을 0.4초로 늘려' — SECRET.mordGrace · risolutoGrace 와 같은 틀): 끊긴 지 mordGrace 초 안이면 셈을 쥔 채 기다림(그동안은 안 셈)
-  } else st.pressT = st.pressHeld = st.pressOff = 0;
+    if (st.pauseStep) (st.pauseStep = null), (st.pauseDone = true); // 멈춘 걸음이 끝남(누르기가 아님 — 떨어짐 · 거절 등) — 그 뒤 걸음은 멈추지 않음
+  } else st.pressT = st.pressHeld = st.pressOff = 0, (st.pauseStep = null), (st.pauseDone = false);
   if (busy) st.pressT = 0; // 비기 실행 · 굳음 동안은 세지 않는다 (끝난 뒤 다시 need 초)
   if (busy || open || !(st.pressT >= need)) return false;
   st.pressT = 0;
@@ -782,13 +794,13 @@ export class PlayerSecretWatch {
     if (S.when === 'press') this.pressTick(dt, busy);
     // 고노센 준비 (10/25 22:3x · 22:5x 사장님 '거리와 상관없이 … 아무 행동 없이 2초' · '준비가 활성화되면 걸어도 유지' — gnsArmTick 'idle'): 휘두름 · 탭 · 손잡이 찍기 · 비기 · 막기 단추 · 맞음이면 풀림 ·
     //  준비 전엔 이동 입력도 셈을 0 으로 · 'dist'(10/25 전 판) = 상대 칼 거리 밖(긴 칼 상대 규칙 gnsLong 이 아니면 d0 > foeReach 그대로) · 휘두름 · 비기만 풀림
-    if (S.do?.instant) gnsArmTick(this.iaiArm, dt, gnsHumanUnsettled(me, hurt) || busy, gnsMoving(me), { outside: gnsOutside(d0, V, this.iaiArm.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: sw || busy });
+    if (S.do?.instant) gnsArmTick(this.iaiArm, dt, gnsHumanUnsettled(me, hurt) || busy, gnsMoving(me), { outside: gnsOutside(d0, V, this.iaiArm.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: sw || busy }, armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x)
     // 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준비가 되면 웅크리게 해.' — SECRET.gnsCrouch · secret_instant.js iaiReadyPosePlayer): 준비된 동안 AI 와 같은 발도 대기 자세 ·
     //  칼을 쥐면(손가락 움직임 · 막기 단추 · 휘두름) 손 · 칼은 곧장 사람 것 — 몸 웅크림은 그대로 · 0 이면 '고노센 준비' 표시만(전 판)
     if (S.do?.instant && SECRET.iai && SECRET.gnsCrouch) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!me.inputActive || !!me.parryGuard?.held || sw, dt);
     if (S.do?.gilmok) {
       const was = this.gilArm.armed;
-      this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖)
+      this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy || armHold(me)); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖) · 판 시작 정지 동안 셈 0 (10/27 23:0x — 싱지르와 같은 무장 시계)
       this.gilmokRest(dt, was, s0, c, d0, V, sw || busy);
     }
     if (S.do?.spin) this.spinTick(dt, d0, V, busy, sw);
@@ -838,7 +850,8 @@ export class PlayerSecretWatch {
    *  셈은 pressStep(위 — 10/24 AI 와 같이 씀 · ai.js mordTick)
    */
   pressTick(dt, busy) {
-    if (pressStep(this, dt, this.me.barge?.phase === 'press', busy, !!this.open, secretVal(this.S.cond.press))) this.openWindow({ ev: 'press', held: this.pressHeld });
+    const b = this.me.barge;
+    if (pressStep(this, dt, b?.phase === 'press', busy, !!this.open, secretVal(this.S.cond.press), b?.phase === 'step' ? b : null)) this.openWindow({ ev: 'press', held: this.pressHeld });
   }
 
   /**
@@ -861,7 +874,7 @@ export class PlayerSecretWatch {
       swing = !!this.circSwung && !live;
       if (!live) this.circSwung = false;
     } else this.circSwung = false;
-    this.spinArm.tick(dt, d0 > V.reach, busy || swing || hurt);
+    this.spinArm.tick(dt, d0 > V.reach, busy || swing || hurt || armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x 사장님 '전투 시작 후, 실제 공격이 가능해진 때부터')
     const o = this.open;
     if (this.spinArm.armed) {
       if (!o && !busy) this.openWindow({ ev: 'spin' }, Infinity);

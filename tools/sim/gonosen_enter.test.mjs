@@ -124,7 +124,7 @@ function walkIn(vals, { meWalks = false } = {}) {
 
 test('실제 몸: (gnsWalkIn 1) 준비된 채 상대가 걸어 들어오면 창이 한 번 (들어옴) · ?gnsEnter=0 이면 창 없음 (옛 판 그대로) · 기본(gnsWalkIn 0)도 창 없음', () => {
   const on = walkIn({ gnsWalkIn: 1 });
-  assert.ok(on.armedAt != null && on.armedAt <= SECRET.iaiArmTime + 0.1, `준비 ${on.armedAt}`);
+  assert.ok(on.armedAt != null && on.armedAt <= CONFIG.ARENA.startHold + SECRET.iaiArmTime + 0.1, `준비 ${on.armedAt}`); // 판 시작 정지 뒤부터 셈 (10/27 23:0x)
   assert.equal(on.wins[0]?.ev, 'enter', JSON.stringify(on.wins)); // 첫 창 = 선을 넘을 때
   assert.equal(on.wins.filter((w) => w.ev === 'enter').length, 1, JSON.stringify(on.wins)); // 한 번만
   assert.ok(on.wins[0].d <= on.L + 0.05 && on.wins[0].d > on.L - 0.2, `${on.wins[0].d} L ${on.L}`);

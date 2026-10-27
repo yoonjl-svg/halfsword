@@ -80,7 +80,7 @@ test('무장: 칼끝 거리 밖 armTime(2 s) → 끝 없는 창(금색 !) · 휘
   let armT = null;
   let busy = false;
   G.before = () => W.update(DT, busy);
-  while (G.t < 3 && armT == null) {
+  while (G.t < ARENA.startHold + SECRET.ibSpin.armTime + 0.5 && armT == null) { // 무장 시계는 판 시작 정지가 끝나야 감 (10/27 23:0x)
     G.step();
     if (W.open?.ctx?.ev === 'spin') armT = G.t;
   }
@@ -235,12 +235,13 @@ test('AI 싱지르 (10/24): 롤랑(이베리아 숙련도 6)이 칼끝 거리 �
   assert.equal(G.ai.secret?.name, 'ibSpin');
   let fired = null, sawSpin = false, back = false;
   G.before = () => {
-    P.move.set(0, G.t > 3 ? 0.7 : 0); // 사람 자리: 서 있다가 3 s 부터 곧장 다가간다
+    const go = ARENA.startHold + SECRET.ibSpin.armTime + 0.3; // 무장(판 시작 정지 뒤 armTime — 10/27 23:0x) 뒤
+    P.move.set(0, G.t > go ? 0.7 : 0); // 사람 자리: 서 있다가 무장 뒤 곧장 다가간다
     if (G.ai.secretRun?.stage === 'spin' && fired == null) fired = G.t;
     if (E.ibSpin) sawSpin = true;
     if (fired != null && !G.ai.secretRun && G.ai.mode !== 'secret') back = true;
   };
-  while (G.t < 9 && !back) G.step();
+  while (G.t < ARENA.startHold + 9 && !back) G.step();
   assert.ok(fired != null, 'AI 가 싱지르를 냄');
   assert.ok(sawSpin, '대본이 돎');
   assert.ok(back, '끝나고 다시 간 보기');
@@ -319,12 +320,14 @@ test('몸통 뚜껑 (10/24 lid): 놓은 칼끝이 몸통 위 끝 쪽으로 오�
 // 10/24 기록 장면 (표준 시간 전 판의 게임 초 — 싱지르 무장 ibSpin.armTime 1.5): 옛 결함 재현 판 둘(아래 '칼 높이' 의 고침 끈 판 · '땅' 의 손목 옛 판 · 땅 끔)은 원을 다 그려 내는 때가 10/24 그림 판과 같아야
 //  칼이 솟고(본판 10/27 대검 몸 뒤 — 표준 시간으론 셋 중 하나만 솟음) · 칼끝이 땅을 스친다 — 표준 시간(무장 게임 1.65)으로는 그 때가 0.15 s 늦어 옛 결함이 안 보인다(옛 결함 재현만의 장면 · docs/strike/time_standard_2026-10-25.md §4). 고친 판(땅 · 발디딤)은 표준 시간 그대로 본다
 const withScene1024 = async (fn) => {
-  const a = SECRET.ibSpin.armTime;
+  const a = SECRET.ibSpin.armTime, f = SECRET.armAtFight;
   SECRET.ibSpin.armTime = 1.5;
+  SECRET.armAtFight = 0; // 10/24 장면은 판 시작부터 무장 시계가 감 (10/27 23:0x 전 판 — 공격이 풀린 때부터 세면 원을 긋는 때가 정지 뒤로 밀려 옛 결함 장면이 아님)
   try {
     return await fn();
   } finally {
     SECRET.ibSpin.armTime = a;
+    SECRET.armAtFight = f;
   }
 };
 test('원 입력 싱지르 칼 높이 (10/24): 전에 머리 위로 솟던 큰 원 셋 — 고친 판은 한 바퀴 다 돌고 칼 가장 높은 점 ≤ 가슴 + 0.45 m · 고침을 끄면 솟음', async () => {
@@ -352,10 +355,10 @@ test('땅은 막힘 아님 (10/24 floor): 원을 아래에서 끝내 감기 첫 
   const c = { r: 50, T: 0.8, a0: 0, dir: 'ccw', close: 380 };
   // 장면 = 10/24 기록 그대로: 원은 무장 0.3 s 뒤에 긋는다 — 무장 시간이 바뀌면(10/25 22:3x 1.5 → 2 s) 원을 긋는 때의 몸 · 칼 자리가 달라져 옛 결함(땅 스침)이 안 날 수 있어 그때 시간(1.5)으로 고정
   const at = { armTime: 1.5 };
-  const r = await withSpin(at, () => runCircle('zweihander', 'langort', 'circle', c));
+  const r = await withScene1024(() => withSpin(at, () => runCircle('zweihander', 'langort', 'circle', c)));
   assert.equal(r.why, 'done');
   assert.equal(r.q, 1);
-  const b = await withJoints(WRIST_OLD, () => withSpin({ ...at, floor: 0 }, () => runCircle('zweihander', 'langort', 'circle', c))); // 옛 결함은 옛 손목 판에서 (새 손목 판은 꺼도 칼끝이 땅을 안 스침)
+  const b = await withScene1024(() => withJoints(WRIST_OLD, () => withSpin({ ...at, floor: 0 }, () => runCircle('zweihander', 'langort', 'circle', c)))); // 옛 결함은 옛 손목 판에서 (새 손목 판은 꺼도 칼끝이 땅을 안 스침)
   assert.equal(b.why, 'blocked');
   assert.ok(b.q < 0.05, `진행 ${b.q}`);
 });
