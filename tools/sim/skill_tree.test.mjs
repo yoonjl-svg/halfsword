@@ -69,15 +69,19 @@ test('처음엔 뿌리(보법 I)만 배울 수 있음 · 곁가지(편지 · 보
     for (const n of D.nodesOf(s)) for (const p of n.pre) assert.ok(!optIds.has(p), `${s} ${n.id} 의 앞 칸 ${p} 은 곁가지가 아니어야`);
   }
 });
-test('독일 관문: 2단계 셋(곁눈 베기 · 비껴 딛는 가로베기 · 막기 I)을 모두 익혀야 3단계(겹치기 · 심화 · 막기 II) — 하나라도 빠지면 잠김 · 보법 II → 패시브', () => {
+test('독일 관문: 2단계 셋(곁눈 베기 · 비껴 딛는 가로베기 · 막기 I)을 모두 익혀야 3단계(심화 · 막기 II) — 하나라도 빠지면 잠김 · 겹치기는 왕관 뒤(10/28) · 보법 II → 패시브', () => {
   const L = ids('G1', 'G5', 'G8', 'G3');
-  for (const id of ['G7', 'G6', 'G4']) {
+  for (const id of ['G6', 'G4']) {
     assert.equal(D.nodeState('german', D.nodeOf('german', id), L), 'open', id);
     for (const miss of ['G5', 'G8', 'G3']) { const l = new Set(L); l.delete(miss); assert.equal(D.nodeState('german', D.nodeOf('german', id), l), 'locked', `${id} without ${miss}`); }
   }
   assert.equal(D.nodeState('german', D.nodeOf('german', 'G9'), ids('G1')), 'locked');
   assert.equal(D.nodeState('german', D.nodeOf('german', 'G9'), ids('G1', 'G2')), 'open');
-  assert.deepEqual([...D.nodeOf('german', 'G10').pre], ['G9', 'G7', 'G4']);
+  assert.equal(D.nodeState('german', D.nodeOf('german', 'G7'), L), 'locked'); // 10/28 00:5x 겹치기 = 왕관 아래
+  assert.equal(D.nodeState('german', D.nodeOf('german', 'G7'), ids('G1', 'G5', 'G8', 'G3', 'G4')), 'open');
+  assert.deepEqual([...D.nodeOf('german', 'G10').pre], ['G9', 'G6', 'G7']); // 10/28 00:5x 무릎 꺾기 + 겹치기 + 인데스
+  assert.equal(D.nodeState('german', D.nodeOf('german', 'G10'), ids('G1', 'G2', 'G9', 'G5', 'G8', 'G3', 'G4', 'G7')), 'locked'); // 무릎 꺾기 없이는 잠김
+  assert.deepEqual([...D.nodeOf('chinese', 'C9').pre], ['C5', 'C8']); // 10/28 00:5x 동방 체보요격 · 염시 자리 바꿈 — 격살 ← 체보요격 + 단단한 받기
 });
 test('이탈리아 줄기: 보법 II(물러서기)를 거쳐야 찌르기 · 막기 줄기 · 편지는 보법 I 곁가지', () => {
   for (const id of ['I2', 'I5']) {
@@ -124,7 +128,7 @@ test('닫힌 칸: 비기는 열린 유파만(SECRET.openSchools — 10/22 사람
   try { assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false); assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J8')), false); } finally { SECRET.openSchools = keep; }
   wallet(99999, 999);
   { const keepOpen = SECRET.openSchools; SECRET.openSchools = keepOpen.filter((x) => x !== 'iberian'); try { assert.deepEqual(S.learnNode('iberian', 'B7'), { ok: false, saved: false, why: 'closed' }); } finally { SECRET.openSchools = keepOpen; } } // 닫힌 칸은 못 배움 — 10/22 다섯 유파 모두 열림, 시험 안에서만 이베리아를 닫아 본다
-  for (const id of ['G1', 'G2', 'G5', 'G8', 'G3', 'G7', 'G4', 'G9']) assert.equal(S.learnNode('german', id).ok, true, id);
+  for (const id of ['G1', 'G2', 'G5', 'G8', 'G3', 'G6', 'G4', 'G7', 'G9']) assert.equal(S.learnNode('german', id).ok, true, id);
   assert.equal(S.learnNode('german', 'G10').ok, true); // 비기 칸 값 그대로 (금화 400 + 머리 20)
 });
 

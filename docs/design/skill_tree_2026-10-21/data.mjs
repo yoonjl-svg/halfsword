@@ -3,7 +3,7 @@
 // cat: foot 보법 · parry 막기 · atk 고유 공격 · deep 심화 · secret 비기 · passive 패시브 · letter 편지 / st: now 지금 그대로 · split 지금 묶음에서 나눔 · new 새로 / opt: 곁가지(다음을 막지 않음)
 // 편지는 뿌리 왼쪽 같은 줄 — 사장님 10/22 02:1x (d 0 · cx 250 · 뿌리 원 왼쪽에서 수평 점선 · 전: d 1 · 1단 오른쪽 끝)
 export const SCHOOLS = [
-  { id: 'german', ko: '독일', title: '독일 — 부채꼴 + 관문', gapAfter: 1, gate: { from: ['G5', 'G8', 'G3'], to: ['G7', 'G6', 'G4'], label: '2단계 셋을 모두 익히면 열림' },
+  { id: 'german', ko: '독일', title: '독일 — 부채꼴 + 관문', gapAfter: 1, gate: { from: ['G5', 'G8', 'G3'], to: ['G6', 'G4'], label: '2단계 셋을 모두 익히면 열림' },
     shape: '기본기가 먼저 — 2단계 기술 셋을 모두 익혀야 3단계가 열리고, 몸의 길(보법 II → 패시브)까지 마쳐야 비기. 비기는 공격 · 막기 · 몸 세 길이 만나는 곳.', nodes: [
     { id: 'G1', cat: 'foot', name: '보법 I', sub: '뒤 박차기', eff: '서 있다가 뒤로 밀면 첫 걸음이 빠르다', pre: [], price: 100, st: 'split', d: 0, cx: 500 },
     { id: 'G2', cat: 'foot', name: '보법 II', sub: '간격 잡기', eff: '상대가 헛치면 두 걸음 빠르게 들어간다 — 독일은 패시브 앞 칸', pre: ['G1'], price: 100, st: 'split', d: 1, cx: 100 },
@@ -11,11 +11,11 @@ export const SCHOOLS = [
     { id: 'G8', cat: 'atk', name: '비껴 딛는', sub: '가로베기', eff: '옆으로 걸으며 가로베기 (걸음 명령)', pre: ['G1'], price: 200, st: 'split', d: 1, cx: 500 },
     { id: 'G3', cat: 'parry', name: '막기 I', sub: '막기 자리', eff: '막기 단추로 독일 막기 자리를 잡는다', pre: ['G1'], price: 200, st: 'split', d: 1, cx: 690 },
     { id: 'G11', cat: 'letter', name: '뉘른베르크에서', sub: '온 편지', eff: '독일 무기가 나올 확률 ×2', pre: ['G1'], price: 100, st: 'new', opt: true, d: 0, cx: 250 },
-    { id: 'G7', cat: 'atk', name: '겹치기', sub: '이어 긋기', eff: '칼이 맞물린 뒤 다음 긋기', pre: ['G5', 'G8', 'G3'], price: 300, st: 'split', d: 2, cx: 310 },
-    { id: 'G6', cat: 'deep', name: '곁눈 베기 심화', sub: '무릎 꺾기', eff: '머리 · 어깨 · 가슴에 들면 50% 무릎을 꿇린다', pre: ['G5', 'G8', 'G3'], price: 300, st: 'split', d: 2, cx: 500 },
+    { id: 'G7', cat: 'atk', name: '겹치기', sub: '이어 긋기', eff: '칼이 맞물린 뒤 다음 긋기', pre: ['G4'], price: 300, st: 'split', d: 3, cx: 690 }, // 10/28 00:5x 사장님 '겹치기는 왕관 아래로'
+    { id: 'G6', cat: 'deep', name: '곁눈 베기 심화', sub: '무릎 꺾기', eff: '머리 · 어깨 · 가슴에 들면 50% 무릎을 꿇린다', pre: ['G5', 'G8', 'G3'], price: 300, st: 'split', d: 2, cx: 310 }, // 10/28 00:5x 사장님 '무릎 꺾기가 곁눈 베기 아래로'
     { id: 'G4', cat: 'parry', name: '막기 II', sub: '왕관', eff: '머리 위 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, st: 'split', d: 2, cx: 690 },
     { id: 'G9', cat: 'passive', name: '패시브', sub: '인데스', eff: '그 순간 (인데스) — 상대 칼이 헛치거나 막힌 뒤 0.6초 안에 친 칼 피해 +30% · 간격 잡기 중엔 시간이 멈춤 · 비기엔 안 실림', pre: ['G2'], price: 0, heads: 10, st: 'new', d: 2, cx: 100 },
-    { id: 'G10', cat: 'secret', name: '비기', sub: '죽음의 일격', eff: '붙어서 밀어붙이며 버티면 칼을 뒤집어 코등이로 내리친다', pre: ['G9', 'G7', 'G4'], price: 400, heads: 20, st: 'now', d: 3, cx: 420 }, // 10/22 사장님 '독일은 죽음의 일격으로 하자' — 사람 먼저 열림 (전: 받아 베기 · 준비 중)
+    { id: 'G10', cat: 'secret', name: '비기', sub: '죽음의 일격', eff: '붙어서 밀어붙이며 버티면 칼을 뒤집어 코등이로 내리친다', pre: ['G9', 'G6', 'G7'], price: 400, heads: 20, st: 'now', d: 4, cx: 420 }, // 10/28 00:5x 사장님 '무릎 꺾기와 겹치기를 다 배워야' · 인데스도 남김 // 10/22 사장님 '독일은 죽음의 일격으로 하자' — 사람 먼저 열림 (전: 받아 베기 · 준비 중)
   ] },
   { id: 'italian', ko: '이탈리아', title: '이탈리아 — 긴 줄기', shape: '거리가 생명이라 보법 II(물러서기)를 반드시 거친다. 찌르기 줄기는 내려 찌르기 → 심화 → 비기로 한 줄, 막기 줄기가 나란히 뻗는다.', nodes: [
     { id: 'I1', cat: 'foot', name: '보법 I', sub: '박자 걸음', eff: '짧게 둘 · 길게 둘, 잦은 걸음', pre: [], price: 100, st: 'split', d: 0, cx: 500 },
@@ -63,10 +63,10 @@ export const SCHOOLS = [
     { id: 'C7', cat: 'parry', name: '막기 I', sub: '세 자세 받기', eff: '위 · 가운데 · 아래를 세 자세로 받는다', pre: ['C1'], price: 200, st: 'split', d: 1, cx: 660 },
     { id: 'C11', cat: 'letter', name: '한양에서', sub: '온 편지', eff: '동방 무기가 나올 확률 ×2', pre: ['C1'], price: 100, st: 'new', opt: true, d: 0, cx: 250 },
     { id: 'C4', cat: 'deep', name: '요격 심화', sub: '출혈', eff: '몸통을 베면 출혈 1.5배', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 130 },
-    { id: 'C5', cat: 'atk', name: '체보요격', sub: '걸음 명령', eff: '앞으로 끌어 딛으며 요격', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 310 },
-    { id: 'C6', cat: 'atk', name: '날개 접기', sub: '이어 긋기', eff: '찌르다가 거둔다', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 490 },
+    { id: 'C5', cat: 'atk', name: '체보요격', sub: '걸음 명령', eff: '앞으로 끌어 딛으며 요격', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 490 }, // 10/28 00:5x 사장님 '체보요격과 염시 자리 바꿔' — 선도 따라
+    { id: 'C6', cat: 'atk', name: '날개 접기', sub: '이어 긋기', eff: '찌르다가 거둔다', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 310 }, // 10/28 00:5x 체보요격과 자리 바꿈
     { id: 'C8', cat: 'parry', name: '막기 II', sub: '단단한 받기', eff: '막는 동안 피해 50% 감소', pre: ['C7'], price: 300, st: 'split', d: 2, cx: 680 },
     { id: 'C10', cat: 'passive', name: '패시브', sub: '토납', eff: '숨 바꾸기 (토납) — 칼을 휘두르지 않는 동안 피가 2배 빨리 멎는다', pre: ['C7'], price: 0, heads: 10, st: 'new', d: 2, cx: 880 },
-    { id: 'C9', cat: 'secret', name: '비기', sub: '막아 죽이기', eff: '앞으로 나서며 때맞춰 막아 낸 직후 받은 자세가 노리는 급소를 깊게 친다', pre: ['C6', 'C8'], price: 400, heads: 20, st: 'now', d: 3, cx: 590 }, // 10/22 격살로 열림 (전 '연환' · 준비 중)
+    { id: 'C9', cat: 'secret', name: '비기', sub: '막아 죽이기', eff: '앞으로 나서며 때맞춰 막아 낸 직후 받은 자세가 노리는 급소를 깊게 친다', pre: ['C5', 'C8'], price: 400, heads: 20, st: 'now', d: 3, cx: 590 }, // 10/22 격살로 열림 (전 '연환' · 준비 중)
   ] },
 ];
