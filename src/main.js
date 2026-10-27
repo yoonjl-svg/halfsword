@@ -36,6 +36,7 @@ import { Emotions, EMO_ABILITY } from './emotions.js';
 import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, setGripTorque, RETIRED_WEAPONS } from './weapons.js';
 import { attachAura, AURA_VIEW } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
+import { bloodPalette } from './blood_palette.js'; // 피 색 (10/27 — 광기의 병마용은 흰 피 · 그 밖은 붉은 피 그대로)
 import { Sound, BodySounds } from './sound.js';
 import { woundImpact, clashImpact, stopGrant, stopTick, shakeWall } from './impact_fx.js'; // 타격감 셈 (10/25 — config IMPACT_FX: 맞는 순간의 무게로 멈칫 · 카메라 밀림 · 무게 소리 — 아래 onWound · onClash · 멈칫 묶음 addHitStop)
 import { whipTipStep, whipHitMode } from './whip_sound.js'; // 드루이드의 채찍 휙 · 딱 걸쇠 (10/24 — 아래 whipWhoosh 에서 옮김) · 맞음 소리 주소 스위치
@@ -829,7 +830,7 @@ function newRound(weaponId) {
     look: enemyLook,
     weapon: foeWeapon, // prepareRound 가 정한 상대 무기
     revive: currentFoe?.revive, // 부활 (이졸데: 처음 죽으면 한 번 다시 일어선다, src/revive.js)
-    physiology: currentFoe?.physiology, // 몸 규칙 (병마용: 출혈 0 · 머리가 떨어져야만 죽음 · 흙 몸 — fighter.js HUMAN_BODY). 없으면 사람
+    physiology: currentFoe?.physiology, // 몸 규칙 (병마용: 출혈 0 · 머리가 떨어져야만 죽음 · 흙 몸 / 광기의 병마용: 사람 몸 · 흰 피 — fighter.js HUMAN_BODY). 없으면 사람
     vitality: currentFoe?.vitality, // 버티는 힘 (10/24 — 롤랑 · 베르나르도 1.1 · 없으면 1, fighter.js)
   });
   if (loadout?.armor === LOBBY_ARMOR.id) player.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus); // 케틀 햇 '생존술: 기력 +30' — 최대 130에서 시작·회복 (문턱 0 · −35 · −70 그대로 · 기력 끔이면 아무 일 없음)
@@ -1002,10 +1003,13 @@ function onWound(att, vic, r, point, pr) {
   const opened = r.type !== 'blunt' && r.severity > 0;
   // 흙 몸(병마용 — fighter.physiology.body 'clay', 샛별 901b1f39): 피 대신 흙 알갱이 · 상처 자국 대신 무광 잔금 · 칼에 피 안 묻음 · 살 소리 대신 마른 타격음.
   //  사람(body 'human')은 아래 예전 길 그대로
+  //  피 색(blood_palette.js — 사장님 10/27 23:2x · 샛별 저장소 6821e98c): 광기의 병마용(physiology.blood 'white')은 사람 길 그대로에 피만 희다 —
+  //   튀는 피 · 바닥 얼룩 · 상처 자국 · 번지는 핏자국 · 칼에 묻는 피 · 핏방울(updateDrips). 붉은 피 사람은 예전 값 그대로
   const clay = vic.physiology?.body === 'clay';
+  const blood = bloodPalette(vic);
   // 피: 벤 방향으로 흩뿌림
   if (clay) { if (e > 5) particles.clayChips(point, r.dir, e); } // 5 J 넘는 타격마다 잠깐 흩어지는 흙 알갱이 (샛별 값 — 확인표 1420)
-  else if (opened) particles.blood(point, r.dir, 6 + r.severity * 40, r.speed);
+  else if (opened) particles.blood(point, r.dir, 6 + r.severity * 40, r.speed, blood.splash);
   // 흔적 (몸 표면에 붙어서 같이 움직인다)
   const mesh = vic.partMesh[pr.v.part];
   const group = vic.groups[pr.v.part];
@@ -1030,17 +1034,17 @@ function onWound(att, vic, r, point, pr) {
       stickDecal(steel, p, bladeLocal, 'scratch', 0.03, Math.min(0.16, 0.04 + e / 1200));
       if (e > 60) stickDecal(steel, p, null, 'dent', 0.03 + Math.min(0.05, e / 4000), 0.03 + Math.min(0.05, e / 4000));
     } else if (!opened) {
-      if (e > 15) stickDecal(mesh, local, null, 'bruise', 0.05 + Math.min(0.08, e / 1500), 0.05 + Math.min(0.08, e / 1500));
+      if (e > 15) stickDecal(mesh, local, null, 'bruise', 0.05 + Math.min(0.08, e / 1500), 0.05 + Math.min(0.08, e / 1500), blood.key);
     } else {
       const len = Math.min(0.24, 0.06 + sev * 0.14);
-      if (r.type === 'stab') stickDecal(mesh, local, null, 'stab', 0.05 + sev * 0.02, 0.05 + sev * 0.02);
-      else stickDecal(mesh, local, bladeLocal, clothed ? 'tear' : 'cut', 0.035 + Math.min(0.03, sev * 0.02), len);
+      if (r.type === 'stab') stickDecal(mesh, local, null, 'stab', 0.05 + sev * 0.02, 0.05 + sev * 0.02, blood.key);
+      else stickDecal(mesh, local, bladeLocal, clothed ? 'tear' : 'cut', 0.035 + Math.min(0.03, sev * 0.02), len, blood.key);
       // 피가 옷에 번진다 (상처에서 계속 흐르는 만큼)
       const wound = vic.wounds.findLast((w) => !w.stump); // 참수: 목 단면(stump)은 건너뛰고 목 상처에 번진다
-      if (wound && wound.part === pr.v.part && !wound.soak) wound.soak = stickDecal(mesh, local, null, 'soak', 0.04, 0.04);
+      if (wound && wound.part === pr.v.part && !wound.soak) wound.soak = stickDecal(mesh, local, null, 'soak', 0.04, 0.04, blood.key);
     }
   }
-  if (opened && !clay) att.bloodyBlade(0.08 + r.severity * 0.15); // 흙 몸을 벤 칼에는 피가 묻지 않는다
+  if (opened && !clay) att.bloodyBlade(0.08 + r.severity * 0.15, blood.blade); // 흙 몸을 벤 칼에는 피가 묻지 않는다 (흰 피 몸을 벤 칼에는 흰 피)
   // 소리: 투구는 투구 소리. 판금은 전투 판정(r.plate — 아직 붙어 있는 판이 덮은 곳을 맞았다)을 따른다:
   //  날이 들지 못했으면 판금이 막는 소리(때린 무기 재질대로), 판을 뚫고 들어갔으면 강철 소리 한 번 (살 소리는 아래에서 따로)
   //  불꽃: 막혔으면 더 많고, 판을 뚫고 들어가도 강철을 긁은 불꽃이 조금 튄다 (ARMOR 를 켰을 때만 — 끄면 예전 그대로)
@@ -1196,7 +1200,7 @@ function updateDrips(f, dt) {
     if (w.bleed < 0.001) continue;
     if (Math.random() < w.bleed * dt * 900) {
       const g = f.groups[w.part];
-      if (g) particles.drip(g.localToWorld(_wp.copy(w.local)));
+      if (g) particles.drip(g.localToWorld(_wp.copy(w.local)), bloodPalette(f).drip); // 흰 피 몸(광기의 병마용)은 흰 핏방울
     }
   }
 }

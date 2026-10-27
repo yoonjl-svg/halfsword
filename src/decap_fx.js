@@ -9,8 +9,11 @@
 //   판이 바뀌면 검객(과 그 그룹에 붙인 원판)이 통째로 바뀌므로 따로 치울 것이 없다.
 //   · 흙 몸(병마용 — fighter.physiology.body 'clay', 샛별 901b1f39): 회갈색 흙 단면 · 뼈 단면 없음 · 분출·핏방울 없음. 재질을 사람 것과 따로 둔다 —
 //     사람 단면 재질은 '피 표현' 켬/끔에 따라 프레임마다 색을 바꾸는데, 같은 재질을 쓰면 같은 판의 흙 단면까지 핏빛·회색으로 바뀌고 흙 단면 색이 사람 단면에 번진다(샛별도 겪고 나눔).
+//   · 흰 피(광기의 병마용 — fighter.physiology.blood 'white', 사장님 10/27 23:2x · 샛별 저장소 6821e98c): 사람 단면 그대로(뼈 있음)에 살 · 테만 흰 피 색, 분출 · 핏방울도 흰 피.
+//     흙과 같은 까닭으로 재질을 따로 둔다('피 표현' 끔이면 사람 것과 같은 회색). 붉은 피 사람은 예전 그대로
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { BLOOD_WHITE, bloodPalette } from './blood_palette.js';
 
 const SPRAY_T = 1.5; // 초: 몸통 단면의 강한 분출
 const HEAD_T = 0.8; // 초: 머리 쪽 핏방울
@@ -30,12 +33,14 @@ const CLAY = 0x8b887a; // 흙 단면 (샛별 값)
 const CLAY_RIM = 0xaaa697; // 흙 단면 가장자리 (샛별 값)
 const matClay = new THREE.MeshStandardMaterial({ color: CLAY, roughness: 1, side: THREE.DoubleSide }); // 흙 몸 전용 — 피 표현 켬/끔과 상관없이 늘 이 색
 const matClayRim = new THREE.MeshStandardMaterial({ color: CLAY_RIM, roughness: 1, side: THREE.DoubleSide });
+const matWhiteFlesh = new THREE.MeshStandardMaterial({ color: BLOOD_WHITE.flesh, roughness: 0.55, side: THREE.DoubleSide }); // 흰 피 몸 전용 (사람 살 재질과 같은 결 · 색만)
+const matWhiteRing = new THREE.MeshStandardMaterial({ color: BLOOD_WHITE.rim, roughness: 0.6, side: THREE.DoubleSide });
 
-/** 단면 원판 하나 (그룹 기준 pos 에, 법선 n 쪽을 보게). clay = 흙 몸: 흙 재질 · 뼈 없음 */
-function stumpDisc(group, pos, n, clay = false) {
+/** 단면 원판 하나 (그룹 기준 pos 에, 법선 n 쪽을 보게). clay = 흙 몸: 흙 재질 · 뼈 없음 · white = 흰 피 몸: 살 · 테만 흰 피 재질 */
+function stumpDisc(group, pos, n, clay = false, white = false) {
   const g = new THREE.Group();
-  const flesh = new THREE.Mesh(geoFlesh, clay ? matClay : matFlesh);
-  const ring = new THREE.Mesh(geoRing, clay ? matClayRim : matRing);
+  const flesh = new THREE.Mesh(geoFlesh, clay ? matClay : white ? matWhiteFlesh : matFlesh);
+  const ring = new THREE.Mesh(geoRing, clay ? matClayRim : white ? matWhiteRing : matRing);
   ring.position.z = 0.0005;
   g.add(flesh, ring);
   if (!clay) {
@@ -71,9 +76,11 @@ export function createDecapFx(particles) {
     const local = w ? w.local.clone() : new THREE.Vector3(0, 0.17, 0);
     local.y = Math.max(local.y, 0.176); // 옷깃(원기둥) 위에 얹는다
     const clay = f.physiology?.body === 'clay';
-    const body = f.groups.chest ? stumpDisc(f.groups.chest, local, UP, clay) : null;
-    const head = f.groups.head ? stumpDisc(f.groups.head, new THREE.Vector3(0, -0.072, 0), DOWN, clay) : null;
-    const st = { t: 0, body, head, local, acc: 0, hacc: 0, clay };
+    const palette = bloodPalette(f); // 피 색 (붉은 피 = 예전 RED 그대로)
+    const white = palette === BLOOD_WHITE;
+    const body = f.groups.chest ? stumpDisc(f.groups.chest, local, UP, clay, white) : null;
+    const head = f.groups.head ? stumpDisc(f.groups.head, new THREE.Vector3(0, -0.072, 0), DOWN, clay, white) : null;
+    const st = { t: 0, body, head, local, acc: 0, hacc: 0, clay, splash: white ? palette.splash : RED };
     done.set(f, st);
     return st;
   };
@@ -88,6 +95,8 @@ export function createDecapFx(particles) {
       if (matFlesh.color.getHex() !== col) {
         matFlesh.color.setHex(col);
         matRing.color.setHex(blood ? 0x6a1a18 : 0x4a4644);
+        matWhiteFlesh.color.setHex(blood ? BLOOD_WHITE.flesh : FLESH_OFF); // 흰 피 단면도 '피 표현' 끔이면 같은 회색
+        matWhiteRing.color.setHex(blood ? BLOOD_WHITE.rim : 0x4a4644);
       }
       if (!blood || st.clay || dt <= 0) continue; // 흙 몸: 분출·핏방울 없음 (단면 색은 흙 재질 그대로)
       // 몸통 단면: 박동하며 뿜는 피 (초당 70 → 10 방울, 2.2 Hz 박동)
@@ -103,7 +112,7 @@ export function createDecapFx(particles) {
           st.acc -= 1;
           const sp = (1.4 + 2.6 * k) * (0.7 + 0.5 * rnd());
           const v = new THREE.Vector3(_n.x * sp + (rnd() - 0.5) * 0.9, _n.y * sp + (rnd() - 0.5) * 0.6, _n.z * sp + (rnd() - 0.5) * 0.9);
-          particles.add(_p, v, RED, 0.012 + rnd() * 0.02, 3 + rnd() * 2, true);
+          particles.add(_p, v, st.splash, 0.012 + rnd() * 0.02, 3 + rnd() * 2, true);
         }
       }
       // 머리 쪽: 떨어지는 머리에서 몇 방울
@@ -113,7 +122,7 @@ export function createDecapFx(particles) {
         while (st.hacc >= 1) {
           st.hacc -= 1;
           g.localToWorld(_p.set(0, -0.075, 0));
-          particles.add(_p, new THREE.Vector3((rnd() - 0.5) * 0.6, -0.3 - rnd() * 0.4, (rnd() - 0.5) * 0.6), RED, 0.01 + rnd() * 0.012, 3, true);
+          particles.add(_p, new THREE.Vector3((rnd() - 0.5) * 0.6, -0.3 - rnd() * 0.4, (rnd() - 0.5) * 0.6), st.splash, 0.01 + rnd() * 0.012, 3, true);
         }
       }
     }
