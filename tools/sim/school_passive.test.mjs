@@ -121,7 +121,7 @@ test('kentai: stroke start locks the charge and resets the build; no build while
   const fx = fixture('uchigatana');
   try {
     const { f, sp } = fx;
-    tick(fx, 2);
+    tick(fx, SP.japanese.full + 0.5); // 다 쌓임 (켄타이 2 s — 10/25 23:1x)
     startTapThrust(f);
     assert.ok(Math.abs(sp.lock.ken - 0.3) < 1e-9, 'locked');
     assert.equal(sp.charge, 0, 'build reset');
@@ -138,7 +138,7 @@ test('kentai: missed charge carries to tsubame-gaeshi started within 0.6 s, else
     const fx = fixture('uchigatana');
     try {
       const { f, sp } = fx;
-      tick(fx, 2);
+      tick(fx, SP.japanese.full + 0.5); // 다 쌓임 (켄타이 2 s — 10/25 23:1x)
       startTapThrust(f); // 1: 묶임 0.3
       f.skill.tap = null; f.skill.thrustPush = false; // 못 맞히고 끝남
       tick(fx, gap);
@@ -157,7 +157,7 @@ test('kentai: never on secret strikes', () => {
   const fx = fixture('uchigatana');
   try {
     const { f, sp } = fx;
-    tick(fx, 2);
+    tick(fx, SP.japanese.full + 0.5); // 다 쌓임 (켄타이 2 s — 10/25 23:1x)
     f.skill.sec = { fake: true };
     f.stamina.attack('cut', true); // 비기 수 (skill.js secretNextMove 와 같은 청구)
     assert.equal(sp.lock.ken, 0);

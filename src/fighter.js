@@ -2050,6 +2050,11 @@ export class Fighter {
     return wristClamp(fx, aim, z);
   }
 
+  /** 아래팔 굴림 한도 (°, 손목 밧줄 HUMAN.forearmRoll 그대로 — 운동학 칼은 밧줄이 못 막아 secret_instant.js placeIai 의 굴림 묶음이 읽는다 · 제비 베기 되돌림 칼 10/25) */
+  rollMax() {
+    return HUMAN.forearmRoll;
+  }
+
   gripDevOff() {
     if (!this.gripDev) return;
     for (const j of this.gripDev) {
