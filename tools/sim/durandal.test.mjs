@@ -37,11 +37,11 @@ test('스펙: 레전드 · 이베리아 · 양손 · 무거운 틀 · 베기 1.1
   assert.equal(weaponSpecText(w), '대형 양손검, 155 cm, 2.2 kg');
 });
 
-test('질량 배분 (사장님 10/24 02:3x · 10/25 손맛 — 칼날 0.05 kg 를 폼멜로): 감개 0.24 · 폼멜 0.60 · 코등이 0.24 · 칼날 1.12 kg · 무게중심 0.223 m · 손 관성 0.464 · 서보 30 · 부품 관성 = 같은 도우미 식', () => {
+test('질량 배분 (사장님 10/24 02:3x · 10/25 손맛 — 칼날 0.05 kg 를 폼멜로): 감개 0.24 · 폼멜 0.60 · 코등이 0.24 · 칼날 1.12 kg · 무게중심 0.223 m · 손 관성 0.464 · 서보 28 · 부품 관성 = 같은 도우미 식', () => {
   const w = W(), parts = w.buildParts({}), p = weaponPhysics(w);
   assert.deepEqual(parts.map((q) => q[2][0]), [0.24, 0.6, 0.24, 1.12]);
   near(p.mass, 2.2, 1e-9); near(p.com, 0.2231, 5e-4); near(p.I, 0.4640, 5e-4);
-  assert.equal(w.controlOverrides.maxAimTorque, 30); // 10/25 손맛 '무겁지만 말을 듣는 칼' (전 두 손 쥠 기본값 26)
+  assert.equal(w.controlOverrides.maxAimTorque, 28); // 10/25 손맛 '무겁지만 말을 듣는 칼' · 사장님 10/27 21:2x 30 → 28 (전 두 손 쥠 기본값 26)
   const L = w.bladeLength;
   near(parts[1][2][2], 0.4 * 0.6 * 0.036 ** 2, 1e-12); // sphereInertia
   near(parts[0][2][2], (0.24 * (0.04 ** 2 + 0.328 ** 2)) / 12, 1e-12); // boxInertia 감개
@@ -87,9 +87,9 @@ test('유파 · AI: 이베리아 몬탄테 — 자세표 · 쥠 · 빈팔 · 막
   assert.equal(s.weapon, 'durandal');
   assert.equal(s.tradition, 'iberian');
   assert.deepEqual(s.tech.map((t) => t.name), schoolOf('zweihander').tech.map((t) => t.name));
-  assert.deepEqual(MEASURED.durandal, [1.71, 1.92, 1.36, 0.42]); // 10/25 손맛 뒤 다시 잼 (전 [1.70, 1.94, 1.35, 0.44] · 0.32)
+  assert.deepEqual(MEASURED.durandal, [1.69, 1.91, 1.34, 0.42]); // 10/27 손맛(서보 28) 뒤 다시 잼 (전 [1.70, 1.94, 1.35, 0.44] · 0.32)
   assert.equal(CUT_TIME_30.durandal, 0.30);
-  assert.deepEqual(s.measure, { contact: 1.71, reach: 1.92, clinch: 1.36, cutTime: 0.30 });
+  assert.deepEqual(s.measure, { contact: 1.69, reach: 1.91, clinch: 1.34, cutTime: 0.30 });
 });
 
 test('롤랑: 무기 · AI 꾸러미 = 뒤랑달 · 숙련도 6 · 버티는 힘 1.1 그대로 · 베르나르도는 티소나 그대로', () => {

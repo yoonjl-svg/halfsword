@@ -1,15 +1,11 @@
 // 티소나 겉모습 — 승인된 상아색 · 검은 쇠 · 금빛 시안을 이베리아 양손 대검으로 각색한 절차적 기하.
-// 샛별 저장소 f9aea01a 에서 가져옴 (10/21 — 주석만 한국어로 옮김, 기하는 바이트 그대로 · 10/25 칼날 줄어듦만 고침 — TIZONA_TAPER). 겉모습만 맡는다:
+// 샛별 저장소 f9aea01a 에서 가져옴 (10/21 — 주석만 한국어로 옮김, 기하는 바이트 그대로). 겉모습만 맡는다:
 //  유물 고증 · 부품 질량 · 콜라이더 · 능력('위세')은 weapons.js · stamina.js 가 맡는다.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { metalMat, weaponEnv } from './weapon_looks.js';
 
 export const TIZONA_COLORS = { grip: 0xd6ccb3, hilt: 0x393a35, blade: 0xaab0af, gold: 0xb19861, inlay: 0xb78c4f };
-// 칼날 줄어듦 (칼날 밑동 → 칼끝 90 % 까지 폭 · 두께가 줄어드는 몫 — 그 뒤 10 % 는 칼끝 뾰족): 10/25 사장님 손맛 결정('앞무게 내리치는 칼' — 확인표 2610 ~ ·
-//  weapons.js 티소나 머리말)으로 폭 0.28 → 0.05 · 두께 0.45 → 0.15 (샛별 저장소 f9aea01a 값 0.28 · 0.45) — 칼끝 쪽까지 넓고 두꺼운 칼몸.
-//  weapons.js 가 이 꼴의 단면 넓이로 칼날 무게중심 · 회전 반경을 셈한다(taperMoments)
-export const TIZONA_TAPER = Object.freeze({ width: 0.05, thick: 0.15 });
 const V = p => new THREE.Vector3(...p);
 function add(group, geometry, material, p = [0, 0, 0]) {
   const mesh = new THREE.Mesh(geometry, material);
@@ -96,8 +92,8 @@ function blade(shape) {
   const pale = new THREE.Color(TIZONA_COLORS.blade), dark = new THREE.Color(0x424845), ridge = new THREE.Color(0x626b68);
   const stops = [0,.025,.12,.32,.55,.76,.90,1];
   function section(t) {
-    const tip = Math.max(0, (t - .9) / .1), w = W * (1 - TIZONA_TAPER.width * t) * (1 - tip);
-    const thick = .0044 * (1 - TIZONA_TAPER.thick * t) * (1 - tip);
+    const tip = Math.max(0, (t - .9) / .1), w = W * (1 - .28 * t) * (1 - tip);
+    const thick = .0044 * (1 - .45 * t) * (1 - tip);
     const face = [[-w,0,pale],[-w*.77,thick*.43,pale],[-w*.65,thick*.64,dark],[0,thick,ridge],[w*.65,thick*.64,dark],[w*.77,thick*.43,pale],[w,0,pale]];
     return [...face,...face.slice(1,-1).reverse().map(([x,z,c])=>[x,-z,c])].map(([x,z,c])=>({p:[x,(t-.5)*L,z],c}));
   }
@@ -112,7 +108,7 @@ function blade(shape) {
   // 양면에 실제 기하로 새긴 은은한 금빛 상감 — 자체 발광 · 피해 효과 없음.
   // 글자 같은 무늬는 장식일 뿐, 유물의 명문을 옮긴 것이 아니다.
   for(const side of [-1,1])for(let i=0;i<13;i++){
-    const y=-L/2+.045+i*.018,t=(y+L/2)/L,z=side*(.0044*(1-TIZONA_TAPER.thick*t)+.00025),s=i%3;
+    const y=-L/2+.045+i*.018,t=(y+L/2)/L,z=side*(.0044*(1-.45*t)+.00025),s=i%3;
     const strokes=s===0?[[[-.003,-.005],[.003,-.005]],[[0,-.005],[0,.006]]]:s===1?[[[-.003,-.005],[-.003,.005],[.003,.005],[.003,0],[-.003,0]]]:[[[-.003,-.005],[.003,.005]],[[-.003,.005],[.003,-.005]]];
     for(const path of strokes)line(inlays,path.map(([x,dy])=>[x,y+dy,z]),.00048,gold,path.length===2?1:4);
   }

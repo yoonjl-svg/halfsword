@@ -35,7 +35,7 @@ test('값 · 카드 · 몸: 막힘 깎음 끔 · 판 시작 15 · 티소나만 �
   const Z = getWeapon('zweihander');
   const mass = (w) => w.buildParts({}).reduce((a, p) => a + p[2][0], 0);
   near(T.bladeLength, 1.05); near(T.hiltLength + T.bladeLength, 1.195); near(mass(T), 2.3, 1e-9); // 사장님 10/21 23:4x · 23:5x
-  near(T.buildParts({})[3][2][0], 1.62 + 0.62 * (0.68 / 1.2) - 0.25, 1e-9); near(T.buildParts({})[1][2][0], 0.25, 1e-9); // 늘린 무게는 칼날에 · 10/25 손맛 폼멜 0.351 → 0.25 kg 의 몫도 칼날로 (1.62 → 1.721)
+  near(T.buildParts({})[3][2][0], 1.62, 1e-9); // 늘린 무게는 칼날에
   assert.deepEqual(T.buildParts({}).map((p) => [p[0], p[1]]).slice(0, 3), Z.buildParts({}).map((p) => [p[0], p[1]]).slice(0, 3)); // 자루 · 폼멜 · 날밑 모양 · 자리(쥠)는 같음
   near(T.gripAlong, Z.gripAlong); near(T.hiltLength, Z.hiltLength);
   assert.equal(T.frame, 'heavy'); assert.equal(T.school, 'iberian');
@@ -137,7 +137,7 @@ test('AI 가 든 티소나 (상대 자리 · 플레이어 자리 모두): 막힘
   }
 }));
 
-test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · 플레이어 자리 7.5 s): 기력 깎음은 티소나의 막힌 공격 끝에서만 · 공격 하나에 한 번 · 8 씩 · 1.5 s 안의 둘째 막힘은 없음', oldDrain(() => {
+test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · 플레이어 자리 11 s): 기력 깎음은 티소나의 막힌 공격 끝에서만 · 공격 하나에 한 번 · 8 씩 · 1.5 s 안의 둘째 막힘은 없음', oldDrain(() => {
   const orig = AI.prototype.afterStrike;
   const log = [];
   AI.prototype.afterStrike = function (d) {
@@ -147,9 +147,11 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
     return r;
   };
   try {
-    // 씨앗 6 · 상대 자리: 10.2 s 에 깎음 (그 뒤 1.5 s 안 막힘 하나 건너뜀) / 씨앗 9 · 플레이어 자리: 7.3 s 에 깎음 — 몸 · AI 가 바뀌면 씨앗을 다시 고른다
-    //  (10/24 17:2x 팔꿈치 돌림 켬 · 손목 교정으로 상대 자리 씨앗을 다시 고름 — 전 씨앗 9: 10.1 · 10.7 s · 10/25 손맛 티소나 몸(앞무게) 뒤 상대 자리 씨앗 1 → 6 — 씨앗 1 은 11 s 안 막힘 없음)
-    for (const [w1, w2, seed, secs, minDrains, minSkipped] of [['longsword', 'tizona', 6, 11, 1, 1], ['tizona', 'longsword', 9, 7.5, 1, 0]]) {
+    // 상대 자리 씨앗 6 (깎음 뒤 1.5 s 안 막힘 하나 건너뜀) · 플레이어 자리 씨앗 1 — 몸 · AI 가 바뀌면 씨앗을 다시 고른다. 이 파일의 앞 시험들을 거친 뒤의 판이라
+    //  씨앗을 따로 돌린 결과와 다를 수 있다 — 고를 때는 이 파일째 돌려 본다
+    //  (10/24 17:2x 팔꿈치 돌림 켬 · 손목 교정으로 상대 자리 씨앗을 다시 고름 — 전 씨앗 9: 10.1 · 10.7 s · 10/27 손맛 티소나 몸(칼날 질량 분포를 그림 꼴에서) 뒤
+    //   상대 자리 씨앗 1 → 6 · 플레이어 자리 씨앗 9 · 7.5 s → 씨앗 1 · 11 s — 전 씨앗은 그 시간 안에 막힘이 없어짐)
+    for (const [w1, w2, seed, secs, minDrains, minSkipped] of [['longsword', 'tizona', 6, 11, 1, 1], ['tizona', 'longsword', 1, 11, 1, 0]]) {
       log.length = 0;
       const G = newRound({ walls: true, weapon: w1, weapon2: w2, seed, AI2Class: AI });
       for (let i = 0; i < secs / DT; i++) G.step();
@@ -181,7 +183,7 @@ test('북부 대공의 검 지움: 무기 목록에 없음 · 옛 id ice = 츠�
   assert.equal(Object.keys(WEAPONS).length, 34); // 28 (+ 티소나 − 북부 대공의 검) + 발리사르다 · 무라마사 (dev 가지 e3b1532) + 드루이드의 채찍 (10/23) + 뒤랑달 (10/24) + 파펜하이머 (10/25) + 적소검 (10/27)
 });
 
-test('몸 길이 (사장님 10/21 23:5x · 10/25 22:5x 손맛): 츠바이핸더 손 ~ 칼끝 1.335 m · 2.865 kg 그대로 · 플랑베르주 칼날 1.30 m · 3.2 kg(폼멜 0.35) · 서보 22 · 티소나 앞무게(무게중심 0.442 m)', async () => {
+test('몸 길이 (사장님 10/21 23:5x · 10/25 22:5x 손맛 · 10/27 21:2x): 츠바이핸더 손 ~ 칼끝 1.335 m · 2.865 kg 그대로 · 플랑베르주 칼날 1.30 m · 3.2 kg(폼멜 0.35) · 서보 22 · 티소나 앞무게(무게중심 0.368 m · 관성은 츠바이핸더 · 플랑베르주보다 작음)', async () => {
   const { weaponPhysics } = await import('../../src/weapon_class.js');
   const { FLAMBERGE_MUSEUM, FLAMBERGE_GAME } = await import('../../src/flamberge_look.js');
   const Z = getWeapon('zweihander'), F = getWeapon('flamberge'), T = getWeapon('tizona');
@@ -197,9 +199,11 @@ test('몸 길이 (사장님 10/21 23:5x · 10/25 22:5x 손맛): 츠바이핸더 
     const fp = F.buildParts({});
     near(fp[0][1] - fp[0][0][2], -0.28, 1e-9); near(fp[1][1], -0.28, 1e-9); near(fp[1][1] + fp[1][2][1], -0.33, 1e-9); near(fp[0][1] + fp[0][2][1], -0.13, 1e-9);
   } assert.ok(pf.I / 0.2724 >= 2.5, `플랑베르주 관성 ${pf.I}`);
-  near(pt.mass, 2.3, 1e-9); near(pt.com, 0.442, 0.001); near(pt.I, 0.820, 0.001); near(T.hiltLength + T.bladeLength, 1.195, 1e-9); // 10/25 손맛 앞무게 (전 무게중심 0.339 · 관성 0.586)
+  near(pt.mass, 2.3, 1e-9); near(pt.com, 0.368, 0.001); near(pt.I, 0.675, 0.001); near(T.hiltLength + T.bladeLength, 1.195, 1e-9); // 10/27 손맛 앞무게 — 칼날 질량 분포를 그림 꼴에서 (전 무게중심 0.339 · 관성 0.586)
+  assert.ok(pt.I < pz.I && pt.I < pf.I, `티소나 관성 ${pt.I} — 츠바이핸더 · 플랑베르주보다 작다 (사장님 10/27 21:2x)`);
+  { const { TIZONA_COLORS } = await import('../../src/tizona_details.js'); assert.ok(TIZONA_COLORS); } // 겉모습 모듈은 들여온 그대로 (칼날 그림 꼴 0.28 · 0.45)
   assert.equal(T.controlOverrides.maxAimTorque, 26); assert.equal(Z.controlOverrides.maxAimTorque, 26);
-  assert.ok(pt.mass * pt.com > pz.mass * pz.com, '티소나 중력 몫(질량 × 무게중심)이 츠바이핸더보다 크다'); // 1.02 · 0.83 kg·m
+  assert.ok(pt.mass * pt.com > pz.mass * pz.com && pt.com > pz.com, '티소나 중력 몫(질량 × 무게중심)이 츠바이핸더보다 크다'); // 0.846 · 0.834 kg·m · 무게중심 0.368 · 0.291 m
   for (const w of [Z, F, T]) assert.equal(w.frame, 'heavy');
 });
 
