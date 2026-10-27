@@ -13,6 +13,8 @@ import { historicalPartMesh, historicalDecorate } from './historical_weapon_deta
 //  실측이 없어 물리적으로 그럴듯하게 추정/창작한 값. 아래 각 무기 설명에 표기해 둔다.
 // ─────────────────────────────────────────────────────────────
 import { classifyWeapon } from './weapon_class.js';
+import { CHIXIAO_COLORS, chixiaoPartMesh } from './chixiao_details.js';
+import { chixiaoCollider, chixiaoBladeMass } from './chixiao_profile.js';
 import { drawBrothersSword } from './renji_sword_wrap.js'; // 황약사의 검(형의 칼)의 흰 천 감싼 겉모습 (샛별 저장소에서 가져옴 10/17)
 import { MONTANTE } from './config.js';
 import * as THREE from 'three';
@@ -67,12 +69,12 @@ export const TIER_DEFAULTS = {
 const KIND_KO = {
   durandal: '대형 양손검', hwando: '한손 외날도', kriegsmesser: '양손 외날검', tizona: '대형 양손검',
   balisarda: '한손 찌르기검', muramasa: '일본도',
-  dartagnan: '한손 찌르기검', kusanagi: '양손 직검',
+  dartagnan: '한손 찌르기검', kusanagi: '한손반 직검', // 쿠사나기 10/25 한 손 반 쥠 (전 '양손 직검' — 사장님 확인 전)
   longsword: '양손검', zweihander: '대형 양손검', estoc: '찌르기검', sabre: '한손 곡도', rapier: '한손 찌르기검', falchion: '한손 외날검',
   monohoshizao: '노다치', uchigatana: '일본도', qinggang: '한손 양날검', excalibur: '양손검', excalibur_replica: '양손검', lightsaber: '양손검',
   tree_branch: '한손 둔기', rubber_chicken: '한손 둔기', frozen_tuna: '양손 둔기', pistol: '권총', morgenstern: '한손 철퇴', ganjiang: '한손 양날검',
   moye: '한손 양날검', sain: '한손 양날검', flamberge: '대형 양손검', goujian: '한손 청동검', brothers_sword: '한손 둔기',
-  druid_whip: '한손 채찍', pappenheimer: '한손 찌르기검',
+  druid_whip: '한손 채찍', pappenheimer: '한손 찌르기검', chixiao: '한손 양날검',
 };
 /** '종류, 길이 cm, 무게 kg' (예: '한손 양날검, 95 cm, 0.95 kg') — 자료가 없으면 '' */
 export function weaponSpecText(spec) {
@@ -678,7 +680,7 @@ const RAPIER_SPEC = {
   grip: 'one-hand', material: 'steel',
   tier: 'common', // 사장님 10/21(샛별 저장소 경유): 기본 레이피어 커먼 — 커먼 등급 계수(힘 · 내구 · 파손). 전 감독 판정 레어
   hiltLength: 0.1, bladeLength: 0.95,
-  mCut: 0.5, mThrust: 1.3, mBlunt: 0.7,
+  mCut: 0.6, mThrust: 1.3, mBlunt: 0.7, // 베기 0.5 → 0.6 (사장님 10/25 21:3x — 잘 친 베기만 겨우 벰: 0.5 는 가장 빠를 때도 실효 27 J < 벰 문턱 30 J 라 늘 둔 · 발리사르다도 물려받음 · 확인표 2577)
   thrustStyle: THRUST_STYLE.rapier,
   // 가늘고 뻣뻣한 다이아몬드(마름모) 단면 — 찌르기 전용 칼답게 폭이 좁고 끝으로 갈수록 더 가늘어진다.
   partMesh: swordKit({
@@ -961,26 +963,36 @@ const monohoshizao = finalizeSpec('monohoshizao', {
 });
 
 // 쿠사나기: 신화 시안 선택 승인(2026-10-21). 치수는 게임용 창작이며 유물 실측이 아니다.
+//  10/25 일본 유파 손맛 개편 (사장님 10/25 22:4x '1] 일본 유파 무기 개편 진행 · 쿠사나기는 휨 없이 곧게' · '중요한 핵심은 … 손맛 · 특히 휘두를 때의 감각'):
+//   곧은 양날 고대 검(츠루기 — 휨 0) · 한 손 반 쥠 · 칼날 0.75 → 0.80 m · 총 1.10 → 1.25 kg — 우치가타나(커먼)보다 칼끝이 무겁게 도는 칼.
+//   참고: 에도 시대 전승(玉籤集 — 본 사람이 적었다는 이야기)의 길이 2자 7 ~ 8치(약 82 ~ 85 cm) · 칼끝은 창포 잎 모양 · 몸 가운데가 두툼 [전승 — 실측 아님] ·
+//   고훈 시대 철검(이나리야마 고분 철검 73.5 cm)처럼 곧은 양날. 칼몸 꼴(창포 잎 폭 · 양날 · 창끝)은 kusanagi_details.js 그대로 — 처음부터 휨이 없었다.
+//   한 손 반 쥠(에스톡과 같은 'hand-and-half' — 두 손으로 쥐되 뒷손은 자루 끝 · 머리 구슬에 걸침): 자루 30 → 25 cm · 손 간격 0.20 → 0.17 ·
+//    머리 구슬 0.10 → 0.15 kg(고훈 시대 칼의 둥근 머리 頭椎 처럼 — 무게를 손 뒤로 조금 받침). 서보 상한은 쥠 기본값(GRIP_TORQUE 'hand-and-half' 22 — 전 두 손 26)
+//   → 손 기준 관성 0.128 → 0.18 · 무게중심 손에서 0.18 → 0.24 m (weaponPhysics — 부품 가운데만 센 Σm·y² 로는 0.144 → 0.20 · 0.23 → 0.29) [사장님 확인 전 — 확인표 2600 ~]
+//   베기 · 찌르기 · 둔타 배율은 그대로(사장님 '계수는 나중에 따로')
 const kusanagi = finalizeSpec('kusanagi', {
   nameKo: '쿠사나기', nameEn: 'Kusanagi',
   desc: '큰 뱀의 꼬리에서 나온 신검.\n풀을 베어 불길 속의 길을 열었다.', // 편집 지침 두 줄 (10/21 들여올 때)
-  grip: 'two-hand', material: 'steel', school: 'japanese',
+  grip: 'hand-and-half', material: 'steel', school: 'japanese',
   frame: 'two', style: 'versatile', tier: 'legend',
-  hiltLength: 0.10, bladeLength: 0.75, gripAlong: -0.2,
+  hiltLength: 0.10, bladeLength: 0.80, gripAlong: -0.17,
   mCut: 1.2, mThrust: 1.1, mBlunt: 0.95,
   partMesh: kusanagiPartMesh, decorate: kusanagiDecorate,
   buildParts() {
-    // 창작 사양: 총 1.10 kg. 사장님 자루 비례 지적 뒤 양손 자루 30 cm 로 줄임 · 손 간격 20 cm 유지(샛별 저장소)
+    // 창작 사양: 총 1.25 kg (자루 0.20 · 머리 구슬 0.15 · 코등이 0.12 · 칼날 0.78). 자루 상자는 코등이 아랫면(0.065) ~ −0.185 (25 cm) ·
+    //  머리 구슬 가운데 −0.21(끝 −0.236) — 뒷손 주먹(gripAlong −0.17 · −0.222 ~ −0.122)이 자루 끝과 구슬을 함께 쥔다(허공 없음)
+    //  (전 10/21: 총 1.10 kg · 자루 30 cm · 손 간격 20 cm · 칼날 0.75 m 0.60 kg)
     const L = this.bladeLength;
-    const grip = boxInertia(0.28, 0.014, 0.15, 0.017);
-    const pommel = sphereInertia(0.10, 0.024);
+    const grip = boxInertia(0.20, 0.014, 0.125, 0.017);
+    const pommel = sphereInertia(0.15, 0.026);
     const guard = boxInertia(0.12, 0.065, 0.025, 0.012);
-    const blade = bladeInertia(0.60, L, 0.395, 0.26, 0.041, 0.007);
+    const blade = bladeInertia(0.78, L, 0.40, 0.26, 0.041, 0.007);
     return [
-      partTuple(['box', 0.014, 0.15, 0.017], -0.08, 0.28, 0, grip.Ie, grip.It, KUSANAGI_COLORS.grip),
-      partTuple(['ball', 0.024], -0.25, 0.10, 0, pommel.Ie, pommel.It, KUSANAGI_COLORS.gold),
+      partTuple(['box', 0.014, 0.125, 0.017], -0.06, 0.20, 0, grip.Ie, grip.It, KUSANAGI_COLORS.grip),
+      partTuple(['ball', 0.026], -0.21, 0.15, 0, pommel.Ie, pommel.It, KUSANAGI_COLORS.gold),
       partTuple(['box', 0.065, 0.025, 0.012], 0.09, 0.12, 0, guard.Ie, guard.It, KUSANAGI_COLORS.gold),
-      partTuple(['box', 0.0205, L / 2, 0.0035], 0.10 + L / 2, 0.60, blade.comY, blade.Ie, blade.It, KUSANAGI_COLORS.blade, true),
+      partTuple(['box', 0.0205, L / 2, 0.0035], 0.10 + L / 2, 0.78, blade.comY, blade.Ie, blade.It, KUSANAGI_COLORS.blade, true),
     ];
   },
 });
@@ -1955,6 +1967,32 @@ const durandal = finalizeSpec('durandal', {
   },
 });
 
+// 적소검 — 10/27 사용자 자체 리뷰·직접 적용 승인. 날 80 cm · 총 1.30 kg 유지.
+// 새 테이퍼 날은 실제 면을 적분해 중심·관성을 구한다. 밑동 두께8.2mm, 날1kg은 강철 밀도 약7.86g/cm³. 자루·슴베/옥·금동 부품은 게임 추정.
+// 기존 목표(손 중심42 cm / 관성.26) 역산을 대신하며, 더 빠르게 회수해도 동방 한손검 중 묵직한 편을 유지한다.
+const CHIXIAO_MASS = { grip: 0.10, pommel: 0.10, cross: 0.10, blade: 1.00 };
+const chixiao = finalizeSpec('chixiao', {
+  nameKo: '적소검', nameEn: 'Chixiao', tier: 'legend', school: 'chinese', style: 'versatile',
+  desc: '한 고조 유방이 길을 막은 흰 뱀을 두 동강 낸 붉은 검.\n한나라를 세운 신화의 시작입니다.',
+  grip: 'one-hand', material: 'steel', enterParry: true,
+  hiltLength: .085, bladeLength: .80, gripAlong: -.10,
+  // 기존 한손검 범위의 베기/찌르기 계수. 레전드 공통 배율 1.2는 finalizeSpec에서 적용.
+  mCut: 1.10, mThrust: .85, mBlunt: 1.0,
+  partMesh: chixiaoPartMesh, partCollider: chixiaoCollider,
+  buildParts() {
+    const L=this.bladeLength, { grip: gm, pommel: pm, cross: cm, blade: bm }=CHIXIAO_MASS;
+    const gy=-.005, py=-.098, cy=.078;
+    const grip=boxInertia(gm,.014,.072,.012),pommel=boxInertia(pm,.023,.023,.0105),cross=boxInertia(cm,.067,.020,.015);
+    const blade=chixiaoBladeMass(bm,['box',.0225,L/2,.0041]);
+    return [
+      partTuple(['box',.014,.072,.012],gy,gm,0,grip.Ie,grip.It,CHIXIAO_COLORS.grip),
+      partTuple(['box',.023,.023,.0105],py,pm,0,pommel.Ie,pommel.It,CHIXIAO_COLORS.gold),
+      partTuple(['box',.067,.020,.015],cy,cm,0,cross.Ie,cross.It,CHIXIAO_COLORS.gold),
+      partTuple(['box',.0225,L/2,.0041],this.hiltLength+L/2,bm,blade.comY,blade.Ie,blade.It,CHIXIAO_COLORS.blade,true),
+    ];
+  },
+});
+
 export const WEAPONS = {
   longsword, zweihander, estoc, sabre, rapier, falchion,
   monohoshizao, qinggang, excalibur, excalibur_replica: excaliburReplica, lightsaber, tree_branch: treeBranch,
@@ -1972,6 +2010,7 @@ export const WEAPONS = {
   druid_whip: druidWhip, // 10/23 샛별 저장소에서 들여옴: ??? · 휘는 마디 채찍 — 같은 까닭으로 끝에 둔다
   durandal, // 10/24 샛별 저장소에서 들여옴: 이베리아 레전드 · 롤랑의 성검 — 같은 까닭으로 끝에 둔다
   pappenheimer, // 10/25 샛별 저장소에서 들여옴: 이탈리아 레어 (사장님 10/25 결정 — 베기 0.85 · 찌르기 1.10 · 사장님 글) — 같은 까닭으로 끝에 둔다
+  chixiao, // 새 무기는 끝에 추가하여 기존 목록 순서 보존.
 };
 
 // 다른 담당이 쓰는 짧은 이름 → 정식 id (characters.js의 'branch', URL 파라미터의 'chicken' 등)
@@ -1994,7 +2033,8 @@ export const DEFAULT_WEAPON = 'longsword';
 export const WEAPON_LIST = Object.values(WEAPONS);
 // 빼 둔 무기 (사장님 10/13 23:2x '독일 무기가 너무 많으니까 쓸데없는 걸 빼자 — 롱소드가 기본 양손 무기인데 에스톡·세이버·팔쉬온은 애매하고 별 특색도 없다'):
 //  주인공 무기 카드(main.js PLAYER_WEAPON_POOL)와 테스트 고르기 화면(test_pick.js)에서만 뺀다. 정의·코드는 남겨 되살리기 쉽게 — 시뮬·무기 점검(weapon_smoke)·브란의 '주워 온 칼'(characters.js shortest_common)은 그대로
-export const RETIRED_WEAPONS = new Set(['estoc', 'sabre', 'falchion']);
+// 간장 · 막야는 적소검이 대신한다(사장님 10/27 18:3x '적소검은 간장막야를 대신하는 것') — 카드 뽑기에서만 빠지고, 막야를 쓰는 인물 · 이미 가진 칼은 그대로.
+export const RETIRED_WEAPONS = new Set(['estoc', 'sabre', 'falchion', 'ganjiang', 'moye']);
 
 /**
  * 한손검인가 (달타냥 '총사의 결투' 상대 가름 — 사장님 10/25 · 목록도 사장님 10/25 결정, 확인표 2492): 한손 쥠(grip 'one-hand') · 날 있음(edged).

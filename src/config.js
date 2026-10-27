@@ -508,7 +508,7 @@ export const SCHOOL_PASSIVE = {
   at: 4,
   iberian: { on: true, wrist: 1.3 },
   italian: { on: true, tipMax: 12, tipRate: 60, aiK: 0.5 }, // 사장님 10/21 '최대 12° · 초당 60° · AI는 약하게'(절반)
-  japanese: { on: true, full: 2.0, gain: 0.3 }, // 사장님 10/21 '1.5초에 +30%' → 10/25 23:1x '켄타이는 공격하지 않는 동안 1.5초에 걸쳐-> 2초에 걸쳐'(확인표 2588) · 곧은 오름은 감독
+  japanese: { on: true, full: 2.0, gain: 0.3 }, // 사장님 10/25 23:1x '1.5초에 걸쳐 -> 2초에 걸쳐' (전 10/21 '1.5초에 +30%') · 곧은 오름은 감독
   german: { on: true, gain: 0.3, aiK: 1 }, // 사장님 10/21 '+30% · 창 0.6초(afterWindow)' · aiK 1 은 감독(반으로 줄일 자리)
   chinese: { on: true, clot: 2 }, // 숨 바꾸기 (토납) — 사장님 10/21 '휘두르지 않을 때 출혈 굳기 2배'
 };
@@ -1158,10 +1158,13 @@ export const SECRET = {
   slowMo: { scale: 0.4, dur: 0.25 }, // 연출: 비기가 터뜨려지는 순간 화면 시간 배율 scale 을 dur 초(실시간) 동안 (main.js 프레임 dt — 물리 스텝 dt 는 그대로, 스텝 수만 준다). `?slowMo=0` 끔 [확인 전]
   // 플레이어 비기 (SKILL.playerSecret)
   playerWindow: 0.6, // 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.5 → 0.6 (이어짐 · 입력 칸) · 조건이 찬 뒤 공격 입력을 받는 창 (s) [확인 전]
+  secretHold: 1, // 사람 비기 창 지킴 (사장님 10/25 21:0x '비기 발동창이 열리면 어떻게 상황이 변하더라도 최소 0.6초는 열린 상태를 유지해서 비기가 나갈 수 있도록 해' — secret.js PlayerSecretWatch.holding): 1 = 창이 열린 뒤 playerWindow 초 동안은 조건이 바뀌어도(간격 · 내 휘두름 · 무장 풀림 · 칼 떨어짐 · 베임) 닫지 않음 — 짧은 창도 그만큼 · 몸이 비기를 낼 수 없는 때(내가 넘어짐 · 죽음 · 칼 없음 · 상대 죽음)는 그대로 닫음 · 0 = 전(조건이 바뀌면 바로 닫힘 — `?secretHold=0`) [사장님 10/25 결정 — 확인표 2567]
   // 이탈리아 사람 비기 — 거침없이 나아가 찌르기 (안다레 리솔루토) (사장님 10/22 '덮음은 모양으로 재고 사람 먼저' — src/italian_risoluto.js · docs/strike/italian_risoluto_2026-10-22.md · 확인표 2190~2196)
   //  사람 길만 바꾼다(schools.js playerSecretDef) — AI 는 TRADITIONS.italian.secret(옛 엇박 찌르기)를 보고 aiOpenSchools 로 닫혀 있다
   itSecret: 'risoluto', // 'risoluto' = 거침없이 나아가 찌르기 · 'contratempo' = 옛 엇박 찌르기(박자 밑 찌르기 — `?itSecret=contratempo`)
-  risolutoCover: 0.07, // 덮음 거리 (m): 내 칼 손 쪽 절반 ↔ 상대 칼 칼끝 쪽 절반 가장 가까운 거리 — ai.js checkBind · secret.js bladesTouch 의 맞물림 기하 0.07 과 같은 수 (잰 값 — 문서 §3) [사장님 확인 전]
+  risolutoCover: 0.15, // 덮음 거리 (m — 리솔루토만 읽음): 칼끼리 어느 부위든(bladesNear — 두 칼날 전체) · 내 칼 손 쪽 절반 ↔ 상대 칼 칼끝 쪽 절반 가장 가까운 거리 — 사장님 10/25 21:0x '칼끼리 닿아 있거나 7cm 이내에 -> 칼끼리 닿아 있거나 15cm 이내에' (전 0.07 = ai.js checkBind · secret.js bladesTouch 의 맞물림 기하와 같은 수 — 그쪽은 그대로 · `?risoCover=0.07`) [사장님 10/25 결정 — 확인표 2565]
+  risolutoStick: 'both', // 덮인 채 나아가기의 스틱 (사장님 10/25 21:0x '앞을 향하고 있을 때 -> 앞이나 뒤를 향하고 있을 때'): 'both' = 앞 90° 부채꼴(stickY > |stickX|) 또는 뒤 90° 부채꼴(−stickY > |stickX|) · 옆 · 놓음은 아님 · 'fwd' = 전(앞만 — `?risoStick=fwd`) [사장님 10/25 결정 — 확인표 2563]
+  risolutoTap: 0, // 창 안의 입력 (사장님 10/25 21:0x '찌르기(탭)로 발동 -> 공격하면 발동'): 0 = 공격 입력이면 모두(탭 · 끌기 — 다른 비기와 같은 main.js 길) · 같은 런지 · 1 = 전(탭만 — schools.js tapOnly · `?risoTap=1`) [사장님 10/25 결정 — 확인표 2564]
   risolutoHold: 0.6, // 덮인 채 나아가기가 이 초 이어지면 창 — 시간 사다리 0.6(이어짐) · 1.5(무장) 둘 다 잼 (`?risoHold=1.5`) [사장님 확인 전]
   risolutoBeat: 1, // 두 번째 길 (1 = 켬): 덮인 채 나아가던 중 상대가 칼을 내거나 덮음이 풀리면 곧장 창 — 원전 '상대가 박자를 내면 잡아라' · 10/23 넓은 판정으로 기본 켬 (`?risoBeat=0` 끔) [사장님 확인 전 — 확인표 2241]
   risolutoBeatMin: 0.2, // 두 번째 길: 그 전에 덮인 채 나아가기가 이 초 넘게 이어졌어야 (시간 사다리 0.2 반응) [사장님 확인 전]
@@ -1179,7 +1182,7 @@ export const SECRET = {
   risolutoArmSlow: 0.6, // 런지가 나갈 때 상대 두 팔 늦춤 (s — 흘림 장치 nagashi_recovery.js · 바닥 FLOW_RECOVERY.floor 그대로) — 사장님 10/24 '상대 팔 늦어지는 효과는 0.6초' (전 FLOW_RECOVERY.seconds 0.4 그대로 씀) [사장님 10/24 결정]
   risolutoStiff: 0.6, // 런지 뒤 굳음 (s — 칼 · 발 조작이 안 듣는 같은 굳음 · 그동안 몸이 앞발 위로 실림 — 끝나면 앞발을 거둬 자세로: 10/24 14:0x) — 사장님 10/24 '경직도 0.6초' (전 stiff.italian 0.4) [사장님 10/24 결정]
   risolutoStep: { slide: 'iaiStep', foot: 'italianStep', draw: 0, room: 0, push: 'stepPush', accel: 1, recover: 1, recoverT: 0.4 }, // 런지 걸음 — 몸 미끄러짐 한도 = 고노센 발도와 같은 SECRET.iaiStep(0.6 m · 맞닿기에서 멈춤 · clinch 안 금지) · 앞발 = 이탈리아 런지 걸음 SECRET.italianStep(0.9 m — 엇박 찌르기 런지와 같은 수) · draw 1 = 디딘 뒤 뒷발 끌어붙임(이탈리아 걸음 drawT — 14:0x 전 판) · room 1 = 앞발도 미끄러진 뒤 가슴 사이가 clinch 안으로 들지 않을 만큼만(창이 열리는 가슴 사이 p50 1.23 m 라 걸음이 거의 없어짐 — 문서 §10 · `?risoRoom=1`) [사장님 확인 전 — 확인표 2409] · 10/24 14:0x 사장님 '앞발을 뒤로 회수하는 방식으로 자세 마무리' · '앞무릎을 굽히면서 자세 낮춰야': push = 앞발이 나가는 동안 몸 따라감 배율(SECRET.stepPush 2.0 — 고노센 · 이탈리아 비기 걸음과 같은 수) · accel 1 = 그 동안과 몸이 앞발을 따라잡을 때까지 몸 가속 한도 × GAIT.burstAccel(4 — 박차기 · 세게 멈춤과 같은 배율) — 몸이 앞발 위로 실려 앞무릎이 굽음 · recover 1 = 굳음이 끝나고 앞발이 디뎌 있으면 앞발을 런지로 벌어진 만큼 뒤로 거둬 겨눔 자세로 (걸음 길이 recoverT 0.4 s — 사다리 수) · 새 수 없음(0.4 만 새 자리) · `?risoRecover=0` = 14:0x 전 걸음 [사장님 확인 전 — 확인표 2434 · 2435]
-  risolutoGap: 1, // 런지 간격 조건 (사장님 10/24 13:2x '그럼 오히려 간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게' · 13:4x 대안 ③ '맞닿는 거리만 막기'): 가슴 사이 ≥ 런지 최소 간격 = 맞닿기 거리(무기 실측 measure.contact — 레이피어 1.54 · 달타냥 1.39 m)일 때만 창(금색 '!')이 열리고, 열린 뒤 모자라지면 닫힘(탭은 보통 탭 찌르기) — 새 수 없음 · 0 = 간격 조건 없음(`?risoGap=0` — 10/24 12:1x 판) [사장님 10/24 결정 — 확인표 2432 · 2433]
+  risolutoGap: 1, // 런지 간격 조건 (사장님 10/24 13:2x '그럼 오히려 간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게' · 13:4x 대안 ③ '맞닿는 거리만 막기'): 가슴 사이 ≥ 런지 최소 간격 = 맞닿기 거리(무기 실측 measure.contact — 레이피어 1.54 · 달타냥 1.39 m)일 때만 창(금색 '!')이 열리고, 열린 뒤 모자라지면 닫힘(탭은 보통 탭 찌르기 — 10/25 21:0x 부터는 열린 창을 secretHold 가 0.6 s 지킴: 그 사이 모자라져도 비기 · 런지 몸 미끄러짐 0 — secret_instant.js comboMoveStart) — 새 수 없음 · 0 = 간격 조건 없음(`?risoGap=0` — 10/24 12:1x 판) [사장님 10/24 결정 — 확인표 2432 · 2433]
   risolutoTouch: 1, // 칼끝 얽힘 창 (사장님 10/25 01:0x '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — italian_risoluto.js RisolutoWatch.tick 'touch'): 덮인 채 나아가기(칼끼리 어느 부위든 맞닿음 · 0.07 m · 나도 상대도 안 휘두름 · 스틱 앞)가 선 첫 스텝에 곧장 창 · 셈 시간 없음 · 한 번에 한 번 · 창 0.6 s · 탭 규칙 · 간격 조건 그대로 · 0 = 10/24 판(이어짐 0.6 s 를 기다림 — `?risoTouch=0` · `?risoWide=0` 도 끔) [사장님 10/25 결정 · 한 번에 한 번은 사장님 확인 전 — 확인표 2470]
   thrustArm: 1, // 10/24 15:5x 운동학 겨눈 찌름(secret_instant.js comboPlanAim thrust — 안다레 리솔루토 런지 · 격살 허파 찌르기, 사람 비기만) 손 자리: 1 = 어깨 → 겨눈 곳 줄 위 팔 길이(팔꿈치 곧게) · 칼은 그 줄(곧은 아래팔의 연장) · 맞힌 뒤 뽑지 않고 뻗은 채 굳음 · 0 = 전(칼끝이 겨눈 곳에 닿게 손을 어깨 가까이 · 뽑아 붙잡음 — 팔이 굽은 채 칼이 새끼 쪽으로 75 ~ 85° 꺾여 '거꾸로 쥔 꼴') `?thrustArm=0` — 새 수 없음 (사장님 10/24 15:4x '주먹 아래쪽으로 칼날이 향하도록 거꾸로 쥐고 있는 거 같은데?' · docs/strike/wrist_audit_2026-10-24.md) [사장님 확인 전]
   holdDepth: 0, // 시험 (기본 끔 · `?holdDepth=1` — 10/24 17:2x 뒤 감독 'holdGhost 로 칼이 상대 몸을 뚫고 나간 것처럼 보이는지'): 맞힌 겨눈 찌름의 굳음 동안 칼끝이 겨눈 곳(상대 몸통 가운데)을 넘지 않게 손을 칼 줄을 따라 거둠 — 등 뒤로 나온 칼 p50 0.60 → 0.41 m 이나 몸이 붙으며 팔이 접혀 손목이 꺾여 권하지 않음 (fighter.js holdDepthHand · 기록 §9-9) [사장님 결정 전]
@@ -1433,6 +1436,11 @@ export const THRUST = {
   //     칼이 상대 몸에 판정을 내면(combat.js strike) 곧장 자세로 (시간 값 없음)
   //  1 = 켬 · 0 = 10/25 아침 판 (`?itThrust=0` — 판 해시 바이트 같음)
   itLunge: 1,
+  // 이탈리아 유파 무기 간격 줄 세 판 (10/25 — 파펜하이머 들임 중 간격 생성기가 이탈리아 무기를 못 잼 · docs/strike/italian_measure_2026-10-25.md · 확인표 2556 ~ 2560 · 사장님 확인 전 — 고르실 때까지 기본 'old'):
+  //  'old' = 지금 판(10/8 ~ 10/25 분노의 베기 줄 — 판 바이트 같음) · 'contact' = 맞닿음(contact)만 찌르기 잣대 값(한 걸음 · 맞붙음 · 베는 시간은 지금 그대로) + 안다레 리솔루토 창 최소 간격 · 런지 미끄러짐은 지금 맞닿음 그대로 ·
+  //  'full' = 찌르기 잣대 줄 통째(contact · reach · clinch · 베는 시간 — 파펜하이머 포함 · 리솔루토도 새 맞닿음을 따름). 찌르기 잣대 = 3번 자세 탭 찌르기의 칼날 70 % 지점 ÷ 같은 실행 롱소드 찌르기 × 롱소드 손 값(weapon_measured.js ITALIAN_THRUST).
+  //  판을 만들기 전에 읽는다(꾸러미 간격이 weapon_measured.js 를 읽을 때 정해짐) — 주소 `?itMeasure=old|contact|full` · 시뮬 `IT_MEASURE=…` (with_config 로는 늦음)
+  itMeasure: ((v) => (['old', 'contact', 'full'].includes(v) ? v : 'full'))((typeof location !== 'undefined' && location.search && new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')).get('itMeasure')) || (typeof process !== 'undefined' && process.env?.IT_MEASURE) || 'full'), // 기본 'full' (사장님 10/25 22:1x '전부 새 값으로 적용해. ai의 밸런스 문제는 나중에 따로 개선하자' · 확인표 2556)
 };
 
 // 손잡이 찍기(Knaufschlag, 시제품 — 사장님 아이디어 3] 10/9 "근접 상황에서 칼 손잡이로 찍기", docs/strike/pommel_strike_2026-10-09.md).

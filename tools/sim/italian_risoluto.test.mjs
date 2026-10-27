@@ -6,7 +6,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, THREE } from './harness_m.mjs';
-import { coverDist, RisolutoWatch, lungeGap, lungeGapOk } from '../../src/italian_risoluto.js';
+import { coverDist, bladesNear, RisolutoWatch, lungeGap, lungeGapOk } from '../../src/italian_risoluto.js';
+import { MEASURED, risolutoContact } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 THRUST.itMeasure (old 기본 · contact · full — IT_MEASURE=…)
 import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
 import { playerSecretDef, TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
@@ -40,7 +41,7 @@ test('덮음 거리 = 내 칼 손 쪽 절반 ↔ 상대 칼 칼끝 쪽 절반 (�
   assert.ok(coverDist(weak.me, weak.foe) > SECRET.risolutoCover);
   // 칼이 없으면 덮음 없음
   assert.equal(coverDist({ ...me, armed: false }, foe), Infinity);
-  assert.equal(SECRET.risolutoCover, 0.07);
+  assert.equal(SECRET.risolutoCover, 0.15); // 사장님 10/25 21:0x '칼끼리 닿아 있거나 15cm 이내에' (전 0.07 — `?risoCover=0.07`)
 });
 
 test('10/22 판(?risoWide=0) 덮인 채 나아가기: 덮음 · 둘 다 안 휘두름 · 스틱 앞 · 가슴 사이 줄어듦이 risolutoHold 이어지면 창 (하나라도 빠지면 셈이 0)', () => withCfg(OLD, () => {
@@ -320,8 +321,10 @@ test('10/24 런지는 멈춘 상대를 칼 축으로 찌른다 (찌르기 상처
   assert.equal(t.stiffT, SECRET.stiff.italian);
 });
 
-test('창 안의 끌기(베기)는 비기가 아님 · 내가 베기를 시작하면 창이 닫힘', () => {
-  assert.equal(playerSecretDef('italian').do.tapOnly, true);
+test('10/25 21:0x 공격하면 발동 (사장님 \'찌르기(탭)로 발동 -> 공격하면 발동\'): 창 안의 끌기도 비기 · 내 휘두름이 열린 창을 0.6 s 안에 닫지 않음 · ?risoTap=1 · ?secretHold=0 = 전(끌기는 보통 베기 · 베기를 시작하면 창이 닫힘)', () => {
+  assert.equal(SECRET.risolutoTap, 0);
+  assert.equal(playerSecretDef('italian').do.tapOnly, false); // main.js secSwipe — 끌기도 비기 입력
+  withCfg({ risolutoTap: 1 }, () => assert.equal(playerSecretDef('italian').do.tapOnly, true)); // 전: 탭만
   const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: 1.8, seed: 9 });
   const p = g.player, e = g.enemy;
   g.ai.update = () => {}; p.foe = e; e.foe = p;
@@ -331,7 +334,21 @@ test('창 안의 끌기(베기)는 비기가 아님 · 내가 베기를 시작�
     ps.openWindow({ ev: 'risoluto', path: 'hold', held: 0.6 });
     p.skill.swinging = true;
     ps.update(DT, false);
-    assert.equal(ps.open, null);
+    assert.ok(ps.open, '창 지킴 — 내 휘두름(끌기)이 창을 닫지 않음');
+    // 끌기로 낸 비기 = 탭과 같은 런지 (skill.secret 은 입력 종류를 보지 않음 — o.dir 만 다름)
+    p.skill.swinging = false;
+    const o = ps.fire();
+    o.dir = [0.05, -0.02];
+    assert.equal(p.skill.secret(o), true);
+    assert.ok(p.skill.sec?.risoluto && p.skill.sec.lunge, '런지');
+    // 전(?secretHold=0): 베기를 시작하면 창이 닫힘
+    withCfg({ secretHold: 0 }, () => {
+      const ps2 = new PlayerSecretWatch(p, e);
+      ps2.openWindow({ ev: 'risoluto', path: 'hold', held: 0.6 });
+      p.skill.swinging = true;
+      ps2.update(DT, false);
+      assert.equal(ps2.open, null);
+    });
   } finally { g.world.free(); }
 });
 
@@ -384,9 +401,11 @@ test('10/24 13:2x 런지 간격 조건 (사장님 \'그럼 오히려 간격이 �
     } finally { g.world.free(); }
   };
   // 최소 간격 = 무기 실측 맞닿기 거리 measure.contact (13:4x 대안 ③ '맞닿는 거리만 막기' — 13:2x 첫 식 clinch + 앞발은 버림) — 새 수 없음
-  for (const w of ['rapier', 'dartagnan', 'balisarda', 'pappenheimer']) at(w, 2.5, (p) => assert.equal(lungeGap(p), p.swordArt.measure.contact, w));
-  at('rapier', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 1.54) < 0.01, `레이피어 ${lungeGap(p)}`));
-  at('dartagnan', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - 1.39) < 0.01, `달타냥 ${lungeGap(p)}`));
+  // 'contact' 판(맞닿음만 찌르기 잣대 값)은 리솔루토만 지금 맞닿음 그대로(risolutoContact) · 'full' 판은 새 맞닿음 1.72 · 1.64 를 따름
+  for (const w of ['rapier', 'dartagnan', 'balisarda', 'pappenheimer']) at(w, 2.5, (p) => assert.equal(lungeGap(p), risolutoContact(w) ?? p.swordArt.measure.contact, w));
+  const C = CONFIG.THRUST.itMeasure === 'full' ? { rapier: 1.72, dartagnan: 1.64 } : { rapier: 1.54, dartagnan: 1.39 };
+  at('rapier', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - C.rapier) < 0.01, `레이피어 ${lungeGap(p)}`));
+  at('dartagnan', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - C.dartagnan) < 0.01, `달타냥 ${lungeGap(p)}`));
   // 가까움(1.3 m — 맞닿기 1.54 안): 창 조건이 차도 창이 안 뜸 (금색 '!' 없음) · 그 밖(2.4 m): 뜸
   at('rapier', 1.3, (p, ps) => {
     assert.equal(lungeGapOk(p), false);
@@ -397,21 +416,52 @@ test('10/24 13:2x 런지 간격 조건 (사장님 \'그럼 오히려 간격이 �
     withCfg({ risolutoGap: 0 }, () => { ps.risoTick(DT, false); assert.ok(ps.open, '간격 조건 끔'); ps.open = null; });
     withCfg(TAP1023, () => { assert.equal(lungeGapOk(p), true); ps.risoTick(DT, false); assert.ok(ps.open, '10/23 판'); ps.open = null; });
   });
+  // 10/25 21:0x 창 지킴: 창이 열린 뒤 맞닿기 거리 안(1.3 m)으로 들어와 낸 런지 = 몸 미끄러짐 0 (comboMoveStart clamp — 음수 없음) · 앞발 걸음 · 넘어지지 않음
+  at('rapier', 1.3, (p, ps, g) => {
+    ps.riso.tick = () => null;
+    ps.openWindow(ctx);
+    ps.risoTick(DT, false);
+    assert.ok(ps.open, '지킴');
+    const o = ps.fire();
+    assert.ok(o, '지키는 동안 비기');
+    assert.equal(p.skill.secret(o), true);
+    let res = null, minSlide = Infinity, maxSlide = -Infinity;
+    g.before = () => ps.update(DT, !!p.skill.sec);
+    for (let i = 0; i < Math.round(2 / DT) && !res; i++) {
+      g.step();
+      const sl = p.iai?.slide?.slide;
+      if (sl != null) (minSlide = Math.min(minSlide, sl)), (maxSlide = Math.max(maxSlide, sl));
+      res = p.skill.sec?.lungeRes ?? null;
+    }
+    assert.ok(res?.lunge, '런지 결과');
+    assert.ok(Math.abs(res.slide) <= 1e-3, `몸 미끄러짐 ${res.slide}`);
+    assert.ok(!(minSlide < 0) && !(maxSlide > 1e-3), `미끄러짐 ${minSlide} ~ ${maxSlide}`);
+    assert.equal(p.state, 'stand');
+  });
   at('rapier', 2.4, (p, ps) => {
     assert.equal(lungeGapOk(p), true);
     ps.risoTick(DT, false);
     assert.equal(ps.open?.ctx?.path, 'hold', '간격이 있으면 창');
-    // 창이 뜬 뒤 가까워지면 닫힘 (그때의 탭은 보통 탭 찌르기 — 창이 없으니 main.js 가 skill.thrust)
+    // 10/25 21:0x 창 지킴(기본 SECRET.secretHold): 창이 뜬 뒤 가까워져도 playerWindow 초는 열림 · 그 탭은 비기
     p.foeDistance = () => 1.3;
     ps.riso.tick = () => null;
     ps.risoTick(DT, false);
-    assert.equal(ps.open, null, '가까워지면 창 닫힘');
-    assert.equal(ps.riso.gapClosed, 1);
-    // 같은 스텝 안의 탭(창은 아직 열림 · 간격은 모자람): fire() = null → 비기 아님
-    ps.openWindow(ctx);
-    assert.equal(ps.fire(), null);
-    assert.equal(ps.open, null);
-    assert.equal(p.skill.secret(null), false);
+    assert.ok(ps.open, '창 지킴 — 가까워져도 열림');
+    assert.equal(ps.riso.gapHeld, 1);
+    assert.equal(ps.riso.gapClosed ?? 0, 0);
+    assert.ok(ps.fire(), '지키는 동안 탭 = 비기');
+    // 전(?secretHold=0): 창이 뜬 뒤 가까워지면 닫힘 (그때의 탭은 보통 탭 찌르기 — 창이 없으니 main.js 가 skill.thrust)
+    withCfg({ secretHold: 0 }, () => {
+      ps.openWindow(ctx);
+      ps.risoTick(DT, false);
+      assert.equal(ps.open, null, '가까워지면 창 닫힘');
+      assert.equal(ps.riso.gapClosed, 1);
+      // 같은 스텝 안의 탭(창은 아직 열림 · 간격은 모자람): fire() = null → 비기 아님
+      ps.openWindow(ctx);
+      assert.equal(ps.fire(), null);
+      assert.equal(ps.open, null);
+      assert.equal(p.skill.secret(null), false);
+    });
   });
 });
 
@@ -500,7 +550,8 @@ test('10/25 칼끝 얽힘 창 · 실제 몸: 맞닿기 거리 밖이면 첫 닿�
 // 10/24 14:0x 런지 자세 (사장님 '런지할 때 런지 자세가 되려면 앞무릎을 굽히면서 자세 낮춰야 하는데 지금 그렇게 보여?'): 앞무릎 굽힘 · 뒷다리 펴짐 · 골반 낮춤 — 무릎 굽힘 = 넓적다리(엉덩이 → 무릎)와 정강이(무릎 → 발목) 사이 각
 function lungePose(cfg) {
   return withCfg(cfg, () => {
-    const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: 2.2, seed: 9 });
+    // 가슴 사이 2.2 m = 맞닿기 1.54 + 0.66(몸 미끄러짐이 한도 0.6 를 다 나가는 거리) — 'full' 판(맞닿기 1.72)은 같은 자리로 맞닿기 + 0.66
+    const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: CONFIG.THRUST.itMeasure === 'full' ? MEASURED.rapier[0] + 0.66 : 2.2, seed: 9 });
     const p = g.player, e = g.enemy;
     g.ai.update = () => {}; p.foe = e; e.foe = p;
     const V = (t) => new THREE.Vector3(t.x, t.y, t.z);
@@ -547,4 +598,50 @@ test('10/24 14:0x 런지 자세: 앞무릎이 굽고 뒷다리가 펴짐 (전: �
   // 14:0x 전 걸음 (?risoRecover=0 — 뒷발 끌어붙임 · 몸 따라감 배율 · 몸 가속 없음)
   const old = lungePose({ risolutoStep: { ...SECRET.risolutoStep, draw: 1, recover: 0, push: 0, accel: 0 } });
   assert.ok(old.front - old.back < 0, `전 앞무릎 ${old.front.toFixed(0)}° · 뒷무릎 ${old.back.toFixed(0)}°`);
+});
+
+test("10/25 21:0x 사장님 조건 (스틱 '앞이나 뒤' · 덮음 '15cm 이내'): 뒤 90° 부채꼴도 덮인 채 나아가기 · 옆 · 놓음은 아님 · 0.12 m 떨어진 칼도 덮음 · ?risoStick=fwd · ?risoCover=0.07 = 전", () => {
+  assert.equal(SECRET.risolutoStick, 'both');
+  const open = (set, cfg = {}) => withCfg(cfg, () => { const f = fake(); set(f.me); return tick(new RisolutoWatch(f.me, f.foe), f, 5)?.path ?? null; });
+  assert.equal(open((m) => { m.stickY = -1; }), 'touch', '뒤');
+  assert.equal(open((m) => { m.stickY = -0.6; m.stickX = 0.4; }), 'touch', '뒤 부채꼴 안');
+  assert.equal(open((m) => { m.stickY = -0.4; m.stickX = 0.6; }), null, '옆');
+  assert.equal(open((m) => { m.stickY = 0; m.stickX = 0; }), null, '놓음');
+  assert.equal(open((m) => { m.stickY = -1; }, { risolutoStick: 'fwd' }), null, '전: 앞만');
+  assert.equal(open((m) => { m.stickY = 1; }, { risolutoStick: 'fwd' }), 'touch');
+  // 덮음 15 cm: 상대 칼이 내 칼 위 0.12 m 를 엇갈려 지나감
+  const far = () => fake({ foeA: [1.4, 1.12, 0.4], foeB: [0.2, 1.12, -0.4] });
+  const a = far();
+  assert.ok(Math.abs(coverDist(a.me, a.foe) - 0.12) < 1e-6);
+  assert.ok(bladesNear(a.me, a.foe));
+  assert.equal(tick(new RisolutoWatch(a.me, a.foe), a, 5)?.path, 'touch');
+  withCfg({ risolutoCover: 0.07 }, () => { const b = far(); assert.equal(bladesNear(b.me, b.foe), false); assert.equal(tick(new RisolutoWatch(b.me, b.foe), b, 5), null); });
+});
+
+test("10/25 21:0x 창 지킴 (사장님 '비기 발동창이 열리면 어떻게 상황이 변하더라도 최소 0.6초는 열린 상태를 유지') — 모든 사람 비기 창: 짧은 창도 0.6 s · 조건이 바뀌어도 열림 · 몸이 낼 수 없으면(넘어짐) 닫힘 · ?secretHold=0 = 전", () => {
+  assert.equal(SECRET.secretHold, 1);
+  const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: 2.4, seed: 9 });
+  const p = g.player, e = g.enemy;
+  g.ai.update = () => {}; p.foe = e; e.foe = p;
+  try {
+    g.step();
+    const ps = new PlayerSecretWatch(p, e);
+    ps.riso.tick = () => null;
+    const run = (secs) => { for (let i = 0; i < Math.round(secs / DT); i++) ps.update(DT, false); };
+    // 짧은 창(0.2 s)도 playerWindow 까지 · 그 뒤 닫힘
+    ps.openWindow({ ev: 'x' }, 0.2);
+    run(0.5); assert.ok(ps.open, '0.5 s — 열림'); assert.ok(ps.holding());
+    run(0.11); assert.equal(ps.open, null, '0.61 s — 닫힘');
+    // 0.6 s 창은 그대로 0.6 s (한 스텝도 더 열리지 않음)
+    ps.openWindow({ ev: 'x' });
+    let k = 0; while (ps.open && k < 200) (ps.update(DT, false), k++);
+    assert.equal(k, Math.round(SECRET.playerWindow / DT));
+    // 몸이 비기를 낼 수 없음(넘어짐) = 지킴과 상관없이 닫힘 (skill.secret 이 받지 않는 몸)
+    ps.openWindow({ ev: 'x' });
+    const st = p.state; p.state = 'down';
+    ps.update(DT, false); assert.equal(ps.open, null, '넘어지면 닫힘');
+    p.state = st;
+    // 전(?secretHold=0): 짧은 창은 그 길이에 닫힘
+    withCfg({ secretHold: 0 }, () => { ps.openWindow({ ev: 'x' }, 0.2); run(0.21); assert.equal(ps.open, null); });
+  } finally { g.world.free(); }
 });

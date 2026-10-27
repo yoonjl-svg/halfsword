@@ -1,0 +1,22 @@
+{
+  "baseline": "367611a2361229e70d59d75dfc306875c5a72e83",
+  "target": "yoonjl-svg/halfsword:main",
+  "authorization": "첫화면 Stage/이어가기·대기실, 대기실 Stage 문구 변경 — 우화 main에 바로 올려",
+  "files": [
+    {
+      "path": "src/start_screen.js",
+      "bytes": 14811,
+      "sha256": "3895316e70f79b4b1ae88d0b17bc561af38a0306b9db90eb7d709bb2c21fbf63"
+    },
+    {
+      "path": "src/game_entry.js",
+      "bytes": 9382,
+      "sha256": "9b15a6378968987d8908901ef55369e8e654405d5b31fe1f0295408473b9a936"
+    },
+    {
+      "path": "src/lobby.js",
+      "bytes": 37218,
+      "sha256": "ab73fb1cf59aaba5fb9e11470479b34e0441b9e24c5c4dd1084a3baad6a865e1"
+    }
+  ]
+}

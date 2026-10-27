@@ -1,0 +1,32 @@
+[
+  {
+    "test": "fights12",
+    "stdoutExact": true,
+    "elapsedOnlyNormalized": false,
+    "resultsEqual": true
+  },
+  {
+    "test": "live_battery",
+    "stdoutExact": true,
+    "elapsedOnlyNormalized": false,
+    "resultsEqual": true
+  },
+  {
+    "test": "finish_thrust",
+    "stdoutExact": true,
+    "elapsedOnlyNormalized": false,
+    "resultsEqual": true
+  },
+  {
+    "test": "weapon_smoke",
+    "stdoutExact": true,
+    "elapsedOnlyNormalized": false,
+    "resultsEqual": true
+  },
+  {
+    "test": "corr_s0",
+    "stdoutExact": false,
+    "elapsedOnlyNormalized": true,
+    "resultsEqual": true
+  }
+]

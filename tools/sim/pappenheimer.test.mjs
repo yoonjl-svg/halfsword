@@ -11,7 +11,8 @@ import { weaponPhysics } from '../../src/weapon_class.js';
 import { traditionOf, schoolOf } from '../../src/schools.js';
 import { resolveSwordArt } from '../../src/sword_art.js';
 import { LIB_PARRY, HAND_GRIPS } from '../../src/frames.js';
-import { MEASURED, CUT_TIME_30 } from '../../src/weapon_measured.js';
+import { MEASURED, CUT_TIME_30, italianMeasureRows } from '../../src/weapon_measured.js';
+import { THRUST } from '../../src/config.js';
 import { duelOneHandMult } from '../../src/combat.js';
 import { newRound, DT, AI } from './harness_m.mjs';
 
@@ -95,7 +96,7 @@ test('겉모습: 칼날 뿌리 Mesh(피 묻음) · 자루 · 폼멜 · 칼날은
   assert.deepEqual([1 + thumb.readUIntLE(24, 3), 1 + thumb.readUIntLE(27, 3)], [256, 256]);
 });
 
-test('유파 · AI: 이탈리아 — 자세표 · 쥠 · 빈팔 · 막기 · 동작 · 기술이 레이피어와 같음 · 막기 자리 · 손 쥠 줄 = 레이피어 · 간격 줄 1.51/1.66/1.20 · 베는 시간 0.19', () => {
+test('유파 · AI: 이탈리아 — 자세표 · 쥠 · 빈팔 · 막기 · 동작 · 기술이 레이피어와 같음 · 막기 자리 · 손 쥠 줄 = 레이피어 · 간격 줄 = 이탈리아 간격 판(full 1.69/1.94/1.34 · 0.30 · old 1.51/1.66/1.20 · 0.19)', () => {
   const a = resolveSwordArt(W()), r = resolveSwordArt(getWeapon('rapier'));
   assert.equal(a.tradition, 'italian');
   for (const k of ['table', 'grip', 'offArm', 'parry', 'motion', 'tech', 'feints']) assert.deepEqual(a[k], r[k], k);
@@ -104,9 +105,13 @@ test('유파 · AI: 이탈리아 — 자세표 · 쥠 · 빈팔 · 막기 · 동
   const s = schoolOf('pappenheimer');
   assert.equal(s.weapon, 'pappenheimer');
   assert.equal(s.tradition, 'italian');
-  assert.deepEqual(MEASURED.pappenheimer, [1.51, 1.66, 1.20, 0.26]);
-  assert.equal(CUT_TIME_30.pappenheimer, 0.19);
-  assert.deepEqual(s.measure, { contact: 1.51, reach: 1.66, clinch: 1.20, cutTime: 0.19 });
+  // 10/25 22:1x 이탈리아 간격 판 THRUST.itMeasure (기본 'full' — 찌르기 잣대 줄 · 'old' = 들일 때 잰 줄): 판에 맞는 줄인지 본다
+  const R = italianMeasureRows(THRUST.itMeasure).pappenheimer;
+  if (THRUST.itMeasure === 'old') assert.deepEqual(R.row, [1.51, 1.66, 1.20, 0.26]);
+  if (THRUST.itMeasure === 'full') assert.deepEqual(R.row, [1.69, 1.94, 1.34, 0.41]);
+  assert.deepEqual(MEASURED.pappenheimer, R.row);
+  assert.equal(CUT_TIME_30.pappenheimer, R.cut);
+  assert.deepEqual(s.measure, { contact: R.row[0], reach: R.row[1], clinch: R.row[2], cutTime: R.cut });
   // 같은 실행 차례: 맞닿는 간격 · 한 걸음 간격이 달타냥보다 길다 (칼이 4.2 cm 김 — 전달본 줄은 거꾸로였다)
   assert.ok(MEASURED.pappenheimer[0] > MEASURED.dartagnan[0] && MEASURED.pappenheimer[1] > MEASURED.dartagnan[1]);
 });
@@ -116,7 +121,7 @@ test('총사의 결투: 한손 날 있는 칼이라 한손검 — 달타냥이 �
   assert.equal(isOneHandSword(W()), true);
   near(duelOneHandMult(f('dartagnan'), f('pappenheimer')), 1.15);
   assert.equal(duelOneHandMult(f('pappenheimer'), f('dartagnan')), 1); // 파펜하이머는 능력 없음
-  assert.equal(Object.values(WEAPONS).filter(isOneHandSword).length, 12);
+  assert.equal(Object.values(WEAPONS).filter(isOneHandSword).length, 13);
 });
 
 test('사람 카드: 뽑기 목록에 있음 · 레어 칸 다섯째(이탈리아 레어 빈칸을 채움) · 편지 없으면 첫 장 5.2 %', () => {

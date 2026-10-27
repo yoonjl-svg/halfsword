@@ -1,0 +1,8 @@
+using deprecated parameters for the initialization function; pass a single object instead
+생성 측정값 → docs/import/chixiao_2026-10-27/results/measured-final.json (보정 배율 1.2962, 롱소드 raw 1.250 m, 시작 정지 0 s, 내려오는 동안만, 잣대 auto)
+| 무기 | contact 손 / 생성 | reach 손 / 생성 | clinch 손 / 생성 | 베는 시간 날것 손 / 생성 | 0.30 기준 손 / 날것으로 셈 | 잣대 |
+|---|---|---|---|---|---|---|
+| longsword | 1.57 / 1.62 ≠ | 1.80 / 1.74 ≠ | 1.25 / 1.25 | 0.41 / 0.28 ≠ | 0.30 / 0.30 | 분노의 베기 |
+| qinggang | 1.35 / 1.42 ≠ | 1.52 / 1.61 ≠ | 1.04 / 1.10 ≠ | 0.33 / 0.28 ≠ | 0.24 / 0.24 | 분노의 베기 |
+| chixiao | 1.40 / 1.44 ≠ | 1.68 / 1.62 ≠ | 1.11 / 1.11 | 0.42 / 0.29 ≠ | 0.31 / 0.31 | 분노의 베기 |
+손 표와 다른 칸 10 개 (≠, 0.005 이상) — 비교란: 손 표는 바꾸지 않는다

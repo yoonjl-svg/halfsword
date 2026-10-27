@@ -48,7 +48,7 @@ test('book off / wrong school / low proficiency: no passive', () => {
 test('switches: SCHOOL_PASSIVE.on and per-school on turn it off', () => {
   const fx = fixture('uchigatana');
   try {
-    tick(fx, SP.japanese.full + 0.1);
+    tick(fx, SP.japanese.full); // 10/25 23:1x 켄타이 2 s (전 1.5)
     assert.ok(Math.abs(fx.sp.charge - SP.japanese.gain) < 1e-9);
     SP.on = false; assert.equal(fx.sp.charge, 0);
     SP.on = true; SP.japanese.on = false; assert.equal(fx.sp.charge, 0);
@@ -106,8 +106,7 @@ test('italian: no correction for parry-thrust (opposition), secret, or non-thrus
 });
 
 // ── 일본 켄타이 ──
-test('kentai: linear ramp to +30% over SP.japanese.full (2 s — 사장님 10/25 23:1x) of no attack, capped', () => {
-  assert.equal(SP.japanese.full, 2.0);
+test('kentai: linear ramp to +30% over SP.japanese.full s (10/25 23:1x 2 s · 전 1.5) of no attack, capped', () => {
   const fx = fixture('uchigatana');
   try {
     const { sp } = fx;

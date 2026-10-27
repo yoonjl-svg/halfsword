@@ -19,6 +19,9 @@
 //  10/25 칼끝 얽힘 창 (사장님 10/25 01:0x '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — 기본 · 10/24 판은 `?risoTouch=0` · 문서 §14):
 //   덮인 채 나아가기가 새로 선 그 스텝(칼끼리 어느 부위든 실제 맞닿음 · 0.07 m — 칼끝끼리 · 칼끝이 상대 칼 몸에 엇걸림도)에 곧장 창 · 셈 시간 없음 · 덮인 채 나아가기 한 번에 한 번.
 //   10/24 판에서 첫 닿음을 늦춘 것 = 이어짐 0.6 s(risolutoHold) 하나 — 부위 · 가슴 사이 조건은 10/23 에 이미 풂 · 다 붙음 창은 13:4x 간격 조건(맞닿기 거리)과 같은 자리라 늘 막힘.
+//  10/25 21:0x 사장님 조건 셋 (기본 — 문서 §16 · 확인표 2563 ~ 2569): ① 스틱 앞이나 뒤(SECRET.risolutoStick 'both' · `?risoStick=fwd` = 앞만) ·
+//   ② 창 안의 공격 입력이면 탭 · 끌기 모두(SECRET.risolutoTap 0 · `?risoTap=1` = 탭만 — schools.js tapOnly) · ③ 덮음 거리 0.07 → 0.15 m(SECRET.risolutoCover — 칼 어느 부위든 · 손 쪽 ↔ 칼끝 쪽 둘 다) ·
+//   그리고 사람 비기 창은 열리면 0.6 s 지킴(SECRET.secretHold — secret.js PlayerSecretWatch.holding · 간격 조건이 열린 창을 닫지 않음).
 //  AI 는 쓰지 않는다(SECRET.aiOpenSchools — ai.js 는 TRADITIONS.italian.secret 옛 비기를 보고, 그마저 닫힘). 시뮬 도구엔 PlayerSecretWatch 가 없어 AI 끼리 판 그대로.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -26,6 +29,7 @@ import { SECRET, SCHOOL_PASSIVE } from './config.js';
 import { segDist } from './skill.js';
 import { swingingNow } from './school_passive.js';
 import { iaiTipSpeed, ART_MIN } from './secret_instant.js';
+import { risolutoContact } from './weapon_measured.js'; // 10/25 THRUST.itMeasure 'contact' 판: 창 최소 간격은 지금 맞닿음 그대로
 
 const _a0 = new THREE.Vector3();
 const _a1 = new THREE.Vector3();
@@ -39,9 +43,11 @@ const D2R = Math.PI / 180;
  * 런지 최소 간격 (m — 10/24 13:2x 사장님 '그럼 오히려 간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게' · 13:4x 대안 ③ '맞닿는 거리만 막기'):
  *  = 맞닿기 거리(무기 실측 measure.contact — 칼이 제대로 들어가는 거리). 레이피어 1.54 · 달타냥 1.39 m. 새 수 없음.
  *  (13:2x 첫 식 '맞붙는 거리 clinch + 런지 앞발 0.9' 는 같은 운전 창 판당 0.97 → 0 이라 버림 · 앞발 0.9 · 몸 미끄러짐은 그대로 — 런지 뒤 몸이 붙는 것은 사장님이 받아들임)
+ *  10/25 이탈리아 간격 줄 'contact' 판(THRUST.itMeasure — 맞닿음만 찌르기 잣대 값)에서는 지금 맞닿음 그대로(weapon_measured.js risolutoContact — 레이피어 1.54 · 달타냥 1.39 · 발리사르다 1.51 · 파펜하이머 1.51 —
+ *   사장님이 쳐 본 리솔루토 그대로 · 새 수 아님) · 'full' 판은 새 맞닿음을 따름
  */
 export function lungeGap(me) {
-  return me.swordArt?.measure?.contact ?? 0;
+  return risolutoContact(me.weapon?.id) ?? me.swordArt?.measure?.contact ?? 0;
 }
 
 /** 런지를 쓸 수 있는 간격인가 (간격 조건 SECRET.risolutoGap · 런지 판 SECRET.risolutoLunge 일 때만 — 아니면 늘 true) */
@@ -83,7 +89,7 @@ export function lineCover(me, foe) {
 
 /**
  * 칼끼리 어느 부위든 (10/23 넓은 판정 — SECRET.risolutoAnyPart · 사장님 '칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게'):
- *  실제 칼끼리 맞닿음(combat.js 가 적는 feel.touching — 접촉 사건) 이거나, 두 칼날 전체(0 ~ 1) 선분 가장 가까운 거리 ≤ SECRET.risolutoCover(0.07 m — 덮음과 같은 수 · 새 문턱 없음)
+ *  실제 칼끼리 맞닿음(combat.js 가 적는 feel.touching — 접촉 사건) 이거나, 두 칼날 전체(0 ~ 1) 선분 가장 가까운 거리 ≤ SECRET.risolutoCover(덮음과 같은 수 — 10/25 21:0x 사장님 0.07 → 0.15 m · 리솔루토만 읽음)
  */
 export function bladesNear(me, foe) {
   if (!me?.armed || !foe?.armed || me.weaponBroken || foe.weaponBroken || me.weapon?.gun || foe.weapon?.gun) return false;
@@ -103,6 +109,19 @@ export function meFree(me) {
 /** 스틱이 앞 (상대 쪽 90° 부채꼴 — fighter.js closeStep 밂 걸쇠와 같은 기하) */
 export function stickForward(me) {
   return (me.stickY ?? 0) > Math.abs(me.stickX ?? 0);
+}
+
+/** 스틱이 뒤 (상대 반대쪽 90° 부채꼴 — 앞 부채꼴을 뒤집은 기하) */
+export function stickBack(me) {
+  return -(me.stickY ?? 0) > Math.abs(me.stickX ?? 0);
+}
+
+/**
+ * 덮인 채 나아가기의 스틱 (사장님 10/25 21:0x '앞을 향하고 있을 때 -> 앞이나 뒤를 향하고 있을 때' — SECRET.risolutoStick):
+ *  'both'(기본) = 앞 또는 뒤 90° 부채꼴 · 옆 · 놓음은 아님 · 'fwd' = 전(앞만 — `?risoStick=fwd`)
+ */
+export function stickOk(me) {
+  return stickForward(me) || (SECRET.risolutoStick !== 'fwd' && stickBack(me));
 }
 
 /**
@@ -150,7 +169,7 @@ export class RisolutoWatch {
     const me = this.me;
     const foe = this.foe;
     const gap = me.foeDistance();
-    if (gap > (me.swordArt?.measure?.contact ?? 0)) this.closeArmed = true; // 맞닿기 거리 밖 — 다음에 들어오는 순간이 '다 붙음'
+    if (gap > lungeGap(me)) this.closeArmed = true; // 맞닿기 거리 밖 — 다음에 들어오는 순간이 '다 붙음' (맞닿기 = lungeGap — 10/25 'contact' 판에서도 지금 맞닿음 그대로)
     const closing = this.gap != null && gap < this.gap;
     this.gap = gap;
     const d = (this.d = coverDist(me, foe));
@@ -164,7 +183,7 @@ export class RisolutoWatch {
       this.lineSteps++;
     }
     const mine = meFree(me);
-    const fwd = stickForward(me);
+    const fwd = stickOk(me); // 10/25 21:0x 앞이나 뒤 (SECRET.risolutoStick — 'fwd' = 전 앞만)
     const foeFree = !swingingNow(foe);
     const on = cover && mine && foeFree && fwd && (closing || !SECRET.risolutoClosing);
     if (on) {
@@ -187,7 +206,7 @@ export class RisolutoWatch {
         return { ev: 'risoluto', path: 'hold', held };
       }
       // 다 붙음 창 (시험 SECRET.risolutoClose — 기본 끔 · 감독 10/22): 덮인 채 나아가다 맞닿기 거리(무기 실측 measure.contact — 칼이 제대로 들어가는 거리)에 든 순간 · 시간 조건 없음 · 덮인 채 나아가기 한 번에 한 번
-      const contact = me.swordArt?.measure?.contact;
+      const contact = lungeGap(me); // 몸 간격 measure.contact (10/25 THRUST.itMeasure 'contact' 판에서는 지금 맞닿음 그대로 — risolutoContact)
       if (SECRET.risolutoClose && canOpen && !this.closeDone && this.closeArmed && contact > 0 && gap <= contact) {
         this.closeArmed = false; // 다시 열려면 맞닿기 거리 밖으로 나갔다 들어와야 (닿은 '순간' — 10/23: 맞닿기 언저리에서 셈이 끊겼다 이어질 때마다 다시 열리지 않게)
         this.closeDone = true;

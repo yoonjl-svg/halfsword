@@ -7,7 +7,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CHARACTERS_BY_ID, savedFoeWeapon } from '../../src/characters.js';
 import { schoolOf } from '../../src/schools.js';
-import { AI_PROFICIENCY, SCHOOL_PASSIVE } from '../../src/config.js';
+import { AI_PROFICIENCY, SCHOOL_PASSIVE, THRUST } from '../../src/config.js';
+import { italianMeasureRows } from '../../src/weapon_measured.js';
 import { newRound, AI } from './harness_m.mjs';
 
 const C = CHARACTERS_BY_ID;
@@ -53,7 +54,7 @@ test('광기의 하인리히 AI: 이탈리아 자세 · 기술 · 파펜하이�
   assert.equal(ai.proficiency, 3);
   const M = schoolOf('pappenheimer').measure;
   for (const k of ['contact', 'reach', 'clinch', 'cutTime']) near(ai.art.measure[k], M[k]); // 꾸러미 간격 = 파펜하이머 실측 그대로 (AI 가 쓰는 ai.M 은 여기에 R2′ 묶음 보정 BODY.r2pAiContact 를 더함)
-  assert.ok(Math.abs(M.contact - 1.51) < 1e-9 && Math.abs(M.reach - 1.66) < 1e-9); // weapon_measured.js MEASURED.pappenheimer (확인표 2531)
+  { const R = italianMeasureRows(THRUST.itMeasure).pappenheimer.row; assert.ok(Math.abs(M.contact - R[0]) < 1e-9 && Math.abs(M.reach - R[1]) < 1e-9); } // weapon_measured.js — 이탈리아 간격 판(10/25 22:1x 기본 'full' 1.69 / 1.94 · 'old' 1.51 / 1.66 — 확인표 2531 · 2558)
   assert.deepEqual(ai.school.guards.map((g) => g.name), ['pflugR', 'langort', 'pflugL', 'ochsR', 'tag']); // 이탈리아 간 보는 자세 (3번 · 뻗은 3번 · 4번 · 2번 · 1번)
   for (const n of ['inquartata', 'imbroccata', '칼끝 돌려 빼기 (카바치오네)']) assert.ok(ai.uniqueByName.has(n), n);
   assert.ok(ai.proficiency < SCHOOL_PASSIVE.at); // 패시브 칸(곧은 선)은 4 부터

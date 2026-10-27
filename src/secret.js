@@ -677,7 +677,7 @@ export class PlayerSecretWatch {
     this.S = locked || !SECRET.openSchools.includes(me.swordArt?.tradition) ? null : playerSecretOf(me); // 10/21 닫힌 유파 비기 없음 (config SECRET.openSchools)
     this.sense = new Senses(me, foe);
     this.ev = { armed: true, off: 0 };
-    this.open = null; // 열린 창 { S, ctx, t }
+    this.open = null; // 열린 창 { S, ctx, t, age } — age = 열린 뒤 지난 시간 (secretHold)
     this.queued = null; // 미리 받은 입력으로 곧 낼 연환 { dir } (canBuffer — 중국 막기 연환, 10/12)
     this.combo = 0;
     this.binds = new BindCount(); // 이베리아 맺힘 셈 (10/10)
@@ -705,12 +705,15 @@ export class PlayerSecretWatch {
     const me = this.me;
     const foe = this.foe;
     this.sense.record(dt);
-    if (this.open && (this.open.t -= dt) <= 0) this.open = null;
+    if (this.open) {
+      this.open.age = (this.open.age ?? 0) + dt;
+      if ((this.open.t -= dt) <= 0 && !this.holding()) this.open = null; // 창 끝 (secretHold: 열린 뒤 playerWindow 초까지는 짧은 창도 지킴)
+    }
     const S = this.S;
     const painUp = foe.pain > this.prevFoePain + 0.05;
     this.prevFoePain = foe.pain;
     if (!S || !me.alive || !foe.alive || !me.armed || me.state !== 'stand') {
-      this.open = null;
+      this.open = null; // 몸이 비기를 낼 수 없음(skill.secret 이 받지 않는 몸 — 내가 넘어짐 · 죽음 · 칼 없음 · 상대 죽음) — secretHold 도 지키지 않음
       this.queued = null;
       this.swing = null;
       this.combo = 0;
@@ -818,7 +821,7 @@ export class PlayerSecretWatch {
     const o = this.open;
     if (this.spinArm.armed) {
       if (!o && !busy) this.openWindow({ ev: 'spin' }, Infinity);
-    } else if (o?.ctx?.ev === 'spin') this.open = null;
+    } else if (o?.ctx?.ev === 'spin' && !this.holding()) this.open = null; // 무장이 풀림 (secretHold: 열린 뒤 playerWindow 초는 지킴)
   }
 
   /** 이베리아 휘감아 돌기 창이 스틱 판인가 (SECRET.ibSpin.input 'stick') — 참이면 그 창은 공격 입력으로 나가지 않는다(공격은 보통 공격 · main.js) */
@@ -941,7 +944,7 @@ export class PlayerSecretWatch {
     }
     const o = this.open;
     if (o?.ctx?.ev === 'parry') {
-      if (P.woundAge === 0 || (S.cond.window === 'bind' && !touch)) this.open = null; // 뚫림 · 독일: 칼이 떨어짐
+      if ((P.woundAge === 0 || (S.cond.window === 'bind' && !touch)) && !this.holding()) this.open = null; // 뚫림 · 독일: 칼이 떨어짐 (secretHold: 열린 뒤 playerWindow 초는 지킴)
       else if (S.cond.window === 'bind') o.ctx.held += dt; // 독일: 창이 열린 뒤 붙어 있는 시간 (어드밴티지 — bindGain · 화면 차오름)
     }
     if (P.buf && (P.buf.t += dt) > secretVal(S.cond.time)) {
@@ -1006,7 +1009,7 @@ export class PlayerSecretWatch {
       P.buf = null; // 미리 받은 입력: 칼이 붙은 채 창 길이보다 오래면 버린다 (막기 연환과 같은 꼴 — 떨어지면 창은 열린다)
       P.bufDrop = (P.bufDrop ?? 0) + 1;
     }
-    if (this.open?.ctx?.ev === 'gyeoksal' && P.woundAge === 0) this.open = null; // 창이 열린 뒤 베이면 닫힘 (막기 연환과 같음)
+    if (this.open?.ctx?.ev === 'gyeoksal' && P.woundAge === 0 && !this.holding()) this.open = null; // 창이 열린 뒤 베이면 닫힘 (막기 연환과 같음 · secretHold: 열린 뒤 playerWindow 초는 지킴)
     if (P.pend) {
       if (P.woundAge === 0 || attacking) {
         if (P.woundAge === 0) K.cut++;
@@ -1087,13 +1090,21 @@ export class PlayerSecretWatch {
   risoTick(dt, busy) {
     const R = this.riso;
     if (busy) return void R.reset();
-    if (this.open && (this.me.skill?.swinging || this.me.stamina?.stroke?.paid)) this.open = null;
+    if (this.open && (this.me.skill?.swinging || this.me.stamina?.stroke?.paid)) {
+      if (!this.holding()) this.open = null;
+      else R.swingHeld = (R.swingHeld ?? 0) + 1; // 재기: secretHold 가 지킨 스텝 (내 휘두름 — 10/25 부터 끌기도 비기 입력이라 그 프레임에 나감)
+    }
     // 런지 간격 조건 (10/24 13:2x 사장님 '간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게' — italian_risoluto.js lungeGap): 가슴 사이가 런지 최소 간격보다 가까우면
     //  창 조건이 차도 창을 열지 않고(금색 '!' 없음 — 재기 gapBlocked) · 열린 창은 닫는다(재기 gapClosed). 창이 없으니 그때의 탭은 보통 탭 찌르기 (main.js)
+    //  10/25 21:0x secretHold(기본): 열린 창은 playerWindow 초 동안 닫지 않음(재기 gapHeld — 그 사이 비기를 내면 런지 몸 미끄러짐 0 · secret_instant.js comboMoveStart)
     const gapOk = lungeGapOk(this.me);
     if (this.open && !gapOk) {
-      this.open = null;
-      R.gapClosed = (R.gapClosed ?? 0) + 1;
+      if (this.holding()) {
+        if (!this.open.gapShort) (this.open.gapShort = true), (R.gapHeld = (R.gapHeld ?? 0) + 1);
+      } else {
+        this.open = null;
+        R.gapClosed = (R.gapClosed ?? 0) + 1;
+      }
     }
     const ctx = R.tick(dt, !this.open);
     if (ctx && !gapOk) R.gapBlocked = (R.gapBlocked ?? 0) + 1;
@@ -1101,14 +1112,23 @@ export class PlayerSecretWatch {
   }
 
   openWindow(ctx, t = SECRET.playerWindow) {
-    this.open = { S: this.S, ctx, t };
+    this.open = { S: this.S, ctx, t, age: 0 };
     this.opened++;
+  }
+
+  /**
+   * 창 지킴 (사장님 10/25 21:0x '비기 발동창이 열리면 어떻게 상황이 변하더라도 최소 0.6초는 열린 상태를 유지해서 비기가 나갈 수 있도록 해' — SECRET.secretHold):
+   *  열린 창이 열린 뒤 SECRET.playerWindow 초가 안 됐으면 참 — 그동안은 창을 연 조건이 바뀌어도(간격 · 내 휘두름 · 무장 풀림 · 칼 떨어짐 · 베임) 닫지 않는다.
+   *  몸이 비기를 낼 수 없는 때(update 첫머리 — 내가 넘어짐 · 죽음 · 칼 없음 · 상대 죽음)는 이것과 상관없이 닫는다. `?secretHold=0` = 전
+   */
+  holding() {
+    return !!SECRET.secretHold && !!this.open && (this.open.age ?? 0) < SECRET.playerWindow - 1e-6; // 1e-6: 스텝 시간 더하기의 떠다니는 소수 (창 끝과 같은 스텝에 닫히게)
   }
 
   /** 창 안의 공격 입력: 열린 창을 닫고 그 비기 { S, ctx } 를 돌려준다 (없으면 null) */
   fire() {
-    if (this.riso && this.open && !lungeGapOk(this.me)) {
-      // 런지 간격 조건 (10/24 13:2x): 창이 열린 뒤 이번 물리 스텝 전에 간격이 모자라졌으면 비기가 아님 — 창을 닫고 null (main.js 는 그 탭을 보통 탭 찌르기로)
+    if (this.riso && this.open && !lungeGapOk(this.me) && !this.holding()) {
+      // 런지 간격 조건 (10/24 13:2x): 창이 열린 뒤 이번 물리 스텝 전에 간격이 모자라졌으면 비기가 아님 — 창을 닫고 null (main.js 는 그 탭을 보통 탭 찌르기로) · secretHold 동안은 비기
       this.open = null;
       this.riso.gapClosed = (this.riso.gapClosed ?? 0) + 1;
       return null;
