@@ -1,0 +1,17 @@
+{
+  "physics": {
+    "mass": 1.3,
+    "com": 0.2947647897165478,
+    "I": 0.19057038883391964,
+    "length": 0.885
+  },
+  "density": 7861.686892695492,
+  "triangles": 19972,
+  "meshes": 13,
+  "maxWidthErrorMm": 1.6155809657233973,
+  "collisionProbes": 101,
+  "naturalBreak": 0,
+  "forcedTrim": true,
+  "blood": true,
+  "draw": true
+}

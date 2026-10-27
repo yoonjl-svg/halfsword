@@ -1,0 +1,67 @@
+{
+  "baseline": "f489e3088ee4f754bded7e7aab9264109dfbda3c",
+  "target": "yoonjl-svg/halfsword:main",
+  "authorization": "그래 그렇게 해봐. 다 고친 후 네가 직접 우화의 main에 커밋해",
+  "files": [
+    {
+      "path": "src/aura.js",
+      "bytes": 22870,
+      "sha256": "9fd46c1404c2803950a52d1a71411bc11ce36c5c63e155b340decca5f98fe944"
+    },
+    {
+      "path": "src/chixiao_details.js",
+      "bytes": 14227,
+      "sha256": "2baaa23e29157995209ceff7845200e1271862d84b5f0f94f41d66ea6d14e5ce"
+    },
+    {
+      "path": "src/chixiao_profile.js",
+      "bytes": 3312,
+      "sha256": "cf28105eadc3bc033cf1b641f03a10a0a0359145ad986994c884a182e518d664"
+    },
+    {
+      "path": "src/fighter.js",
+      "bytes": 311517,
+      "sha256": "d1f57ec64f71bf9ff8e58d2ef768b406c25e322626d2f4978f4ef3afc88a8897"
+    },
+    {
+      "path": "src/frames.js",
+      "bytes": 34518,
+      "sha256": "b33f47f9d4cad2ccc98535f06767d8ab39007c1f4087156b9c79be661ebb47d4"
+    },
+    {
+      "path": "src/weapon_measured.js",
+      "bytes": 23253,
+      "sha256": "859f24a97cfcbcdb6b540627007a68daef2b29f558bb0bd1b19820529d204bb3"
+    },
+    {
+      "path": "src/weapons.js",
+      "bytes": 180164,
+      "sha256": "404b5c40be7114f0493ad2700a38a6b91e17865c91ec6df6d3b72fb013d6189b"
+    },
+    {
+      "path": "public/ui/weapons/chixiao.webp",
+      "bytes": 4058,
+      "sha256": "f228a214d42c6b963266386000ab39606f12dab5176cce5aaff587c7a894e8ed"
+    },
+    {
+      "path": "tools/sim/chixiao.test.mjs",
+      "bytes": 4531,
+      "sha256": "6dd83d004d4e0ce2952bc9eecc4bc5a1e65db8f8d1ead01d9e15f3356c70647b"
+    },
+    {
+      "path": "tools/sim/dartagnan_duel.test.mjs",
+      "bytes": 5717,
+      "sha256": "07a1f19377baf15b934f6e40ce10251355b6e9d0ebc63f41265b52fd94ab3baf"
+    },
+    {
+      "path": "tools/sim/pappenheimer.test.mjs",
+      "bytes": 10046,
+      "sha256": "88da0cb5de4467aeb60d6c534a759ef45f455c97afe8eac0b74b90624d050150"
+    },
+    {
+      "path": "tools/sim/tizona_awe.test.mjs",
+      "bytes": 17227,
+      "sha256": "467b889be1ebece1962c7e480c0b9f8937b44a11ac8b6f80352d12d747055e6f"
+    }
+  ]
+}
