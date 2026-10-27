@@ -256,6 +256,11 @@ export class Stamina {
     this.chargeAttack(kind, false);
   }
 
+  /** 지금 손길을 청구 없이 버림 (사람 위에서 내려 찌르기 — 손가락 긋기가 곧 탭 찌르기로 바뀌어 탭 하나만 청구 · unique_assist.js start · 10/27) */
+  dropStroke() {
+    this.stroke = null;
+  }
+
   finishStroke() {
     const s = this.stroke;
     if (!s) return;

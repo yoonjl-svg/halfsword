@@ -2067,6 +2067,16 @@ export class Fighter {
     return wristClamp(fx, aim, z);
   }
 
+  /** 손목 사람 범위 안 손 면 (아래 모듈 wristPlane 그대로 — 운동학 칼 secret_instant.js iaiSolve 의 칼끝 돌려 빼기가 부른다 · 10/28: 그 모듈이 fighter.js 를 부르면 모듈 차례가 꼬여서) · 칼 면 법선 또는 null */
+  wristPlane(fx, zF, aim, pref, out) {
+    return wristPlane(fx, zF, aim, pref, out);
+  }
+
+  /** 손목 척측 편위 한도 (°, HUMAN.ulnarDev 그대로 — 운동학 칼끝 돌려 빼기 secret_instant.js comboPlanArtThrust 가 찌르는 줄의 꺾임으로 읽는다 · 10/28) */
+  ulnarMax() {
+    return HUMAN.ulnarDev;
+  }
+
   /** 아래팔 굴림 한도 (°, 손목 밧줄 HUMAN.forearmRoll 그대로 — 운동학 칼은 밧줄이 못 막아 secret_instant.js placeIai 의 굴림 묶음이 읽는다 · 제비 베기 되돌림 칼 10/25) */
   rollMax() {
     return HUMAN.forearmRoll;
@@ -3681,7 +3691,7 @@ export class Fighter {
     return tp.t < tp.K.aim + tp.K.extend + tp.K.hold ? tp : null;
   }
 
-  armIK(target) {
+  armIK(target, alignDir = null) {
     const J = this.jointByName;
     const chest = this.bodies.chest;
     rot(chest, _q1);
@@ -3705,7 +3715,21 @@ export class Fighter {
     pDir.normalize();
     const alpha = Math.acos(THREE.MathUtils.clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1));
     // 팔꿈치 돌림 (기본 켬 — 사장님 10/24 17:2x): 손목이 새끼 쪽으로 꺾이면 팔꿈치를 돌려 세움 — 아래 elbowSwivel. 돌림 각(swivelTh)은 스텝마다 이어서 (JOINTS.swivelTau 로 따라감)
-    if (JOINTS.elbowSwivel && this.armed && this.aimDirW) {
+    if (alignDir) {
+      // 아래팔을 칼 줄에 맞춤 (운동학 칼끝 돌려 빼기 — secret_instant.js iaiSolve · 10/28): 팔꿈치를 칼이 손 줄(어깨 → 손)에서 비킨 쪽의 반대로 두면 아래팔이 칼 쪽으로 눕는다 —
+      //  다만 팔꿈치는 어깨 → 손 줄 위로 들지 않게(가슴 틀 위 몫 ≤ 0 — 머리 곁으로 꺾여 든 팔꿈치 막음 · wrist_audit §10) 그 끝(옆으로 벌린 팔꿈치)까지. 새 수 없음
+      const dW = _ik8.copy(alignDir).applyQuaternion(_q2);
+      const pd = dW.addScaledVector(Dn, -dW.dot(Dn)).negate();
+      if (pd.lengthSq() > 1e-8) {
+        pd.normalize();
+        const up = _ik9.set(0, 1, 0).addScaledVector(Dn, -Dn.y);
+        if (up.lengthSq() > 1e-8 && pd.dot(up.normalize()) > 0) {
+          pd.addScaledVector(up, -pd.dot(up));
+          if (pd.lengthSq() < 1e-8) pd.copy(pDir).addScaledVector(up, -pDir.dot(up));
+        }
+        if (pd.lengthSq() > 1e-8) pDir.copy(pd.normalize());
+      }
+    } else if (JOINTS.elbowSwivel && this.armed && this.aimDirW) {
       const tau = JOINTS.swivelTau;
       const dt = this.lastDt || 1 / 120;
       let k = tau > 0 ? 1 - Math.exp(-dt / tau) : 1;
