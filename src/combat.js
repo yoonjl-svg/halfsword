@@ -632,6 +632,7 @@ export class Combat {
       }
     }
     for (const f of [A.fighter, B.fighter]) if (f.skill?.corr === 'v2') (f.bladeTouch = true), (f.touchStep = this.stepNo); // 보정 v2: 칼끼리 닿음
+    for (const f of [A.fighter, B.fighter]) f.schoolPassive?.bladeContact(); // 독일 인데스 (10/28 01:4x 사장님 '무기가 맞부딪혔을 때' — school_passive.js): 닿아 있는 스텝마다 창을 열고 시계를 0 으로 · 두 몸 모두
     if (BIND.natural) this.bindFeel(pairs, point, A.fighter, B.fighter, fresh);
     A.fighter.parryGuard?.opposition?.onClash(B.fighter, { vn });
     B.fighter.parryGuard?.opposition?.onClash(A.fighter, { vn });

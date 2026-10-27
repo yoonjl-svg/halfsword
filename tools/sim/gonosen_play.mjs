@@ -10,11 +10,13 @@
 //   준비된 채 발도가 닿는 거리 안으로 든 번 → 그 안에서 창 · 창 없이 상대가 나감 · 준비가 유예로 풀림 / 넘는 스텝의 상대 다가옴 빠르기
 //  실행: node tools/sim/gonosen_play.mjs [씨앗 4] [초 30] [무기 monohoshizao,uchigatana,muramasa] [인물 isolde,artoria,ratna,tome,omari,roland,bernardo] [REACT 0.25] [운전 stand|back]
 //  스위치 (환경 변수 — 판 기본은 그대로): GNS_ENTER=0 들어옴 사건 끔(옛 판 — main.js ?gnsEnter=0) · GNS_LONG=1 긴 칼 상대 규칙(제안 — ?gnsLong=1) · GNS_AI=1 AI 쪽 들어옴 사건(?gnsEnterAI=1)
-//   GNS_DUMP=1 창 · 들어옴 한 줄씩
+//   GNS_DUMP=1 창 · 들어옴 한 줄씩 · 10/28 KEN_SECRET=0|1 고노센 켄타이(SCHOOL_PASSIVE.japanese.secret) · KEN_FULL=실제 초 켄타이 쌓이는 시간(japanese.full — realS) — 끝줄에 켄타이가 묶인 고노센 · 평균 k
 //  10/25 08:0x (§17): GNS_WARY=0 AI 고노센 경계 끔(?gnsWary=0) · 여쭘 GNS_EWIN=0.4 들어옴 창 길이 A(?gnsEnterWindow=) · GNS_BLOCK=1 들어옴 발도 막힐 수 있음 B(?gnsEnterBlock=1) ·
 //   GNS_OPEN=1 들어옴은 상대 칼끝이 비켰을 때만 C(?gnsEnterOpen=1) — 놓침을 헛침 · 막힘으로 나눔 · AI 경계 셈(결행 · 속임 · 발도에 베여 물러남)
 //  10/25 16:0x (§18): CHARGE=0.9 달려듦 빠르기 옛 판(?foeChargeSpeed=0.9 — 기본 1.2) · B 기본 켬(GNS_BLOCK=0 = 끔) — 들어옴 창 가운데 빠르게(달려듦 빠르기로 넘음 — 막힘 없음) · 듦 창 가운데 달려듦만으로 열린 것
 import { newRound, DT, CONFIG } from './harness_m.mjs';
+if (process.env.KEN_SECRET != null) CONFIG.SCHOOL_PASSIVE.japanese.secret = +process.env.KEN_SECRET ? 1 : 0;
+if (process.env.KEN_FULL != null) CONFIG.SCHOOL_PASSIVE.japanese.full = CONFIG.realS(+process.env.KEN_FULL);
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import * as SEC from '../../src/secret.js';
@@ -42,6 +44,7 @@ const q = (a, f) => { const s = [...a].sort((x, y) => x - y); return s.length ? 
 const f2 = (x) => (Number.isFinite(x) ? x.toFixed(2) : '-'), f1 = (x) => (Number.isFinite(x) ? x.toFixed(1) : '-');
 const KEYS = ['rounds', 'live', 'entries', 'entArmed', 'entShort', 'entBusy', 'periods', 'pWin', 'pNoEv', 'pEvFar', 'pOther', 'endGrace', 'endBusy', 'endFired', 'endState', 'graceNoWin', 'crossArmed', 'crossWin', 'crossLeft', 'crossGrace', 'win', 'wRaise', 'wRecover', 'wEnter', 'wCharge', 'fired', 'landed', 'kill1', 'missWhiff', 'missBlock', 'unfired', 'foeFirst', 'pDead', 'fDead', 'dealt', 'taken', 'evUnarmed', 'aiCommit', 'aiFeint', 'aiCut', 'stiffHit', 'wFast', 'wChg'];
 const rows = [];
+const KEN = { secret: 0, hits: 0, bonus: 0 }; // 10/28 01:5x 고노센 켄타이: 묶인 고노센 · 실려 맞음 · 몫 합
 const LG = { enterClose: [], reachClose: [], winGap: [], evFarBy: [], commitClose: [], otherClose: [], commitAvg: [], otherAvg: [] };
 for (const w of weapons) for (const id of foes) {
   const C = CHARACTERS_BY_ID[id];
@@ -158,6 +161,7 @@ for (const w of weapons) for (const id of foes) {
       if (!e.alive && !run) break;
     }
     R.rounds++;
+    { const K = p.schoolPassive?.stats?.ken; if (K) { KEN.secret += K.secret; KEN.hits += K.secretHits; KEN.bonus += K.secretBonus; } } // 10/28 고노센 켄타이 (사람 몸 — 일본 패시브)
     const gn = G.ai.gnsW?.n;
     if (gn) { R.aiCommit += gn.commit; R.aiFeint += gn.feint; R.aiCut += gn.cut; }
     if (!p.alive) R.pDead++;
@@ -192,3 +196,4 @@ console.log(`준비된 채 발도가 닿는 거리 안으로 든 수 ${T.crossAr
 console.log(`창 가운데 들어옴 빠르게 ${T.wFast} · 달려듦 ${T.wChg} (달려듦 빠르기 ${S.foeChargeSpeed} m/s)`);
 console.log(`놓침 헛침 ${T.missWhiff} · 막힘 ${T.missBlock} · 낸 뒤 굳음 동안 베임 ${T.stiffHit} · AI 경계: 결행 ${T.aiCommit} · 속임 ${T.aiFeint} · 발도에 베여 물러남 ${T.aiCut}`);
 console.log(`맞힘 ${T.landed} / ${T.fired} 탭 (${T.fired ? Math.round((100 * T.landed) / T.fired) : '-'} %) · 그 칼로 죽임 ${T.kill1} · 판당 창 ${f2(T.win / T.rounds)} · 서 있는 30 s 당 창 ${f2(per30(T.win, T.live))} · 탭 ${f2(per30(T.fired, T.live))} · 맞힘 ${f2(per30(T.landed, T.live))}`);
+console.log(`[10/28 고노센 켄타이 ${CONFIG.SCHOOL_PASSIVE.japanese.secret ? '켬' : '끔'} · 쌓이는 시간 ${f2(CONFIG.SCHOOL_PASSIVE.japanese.full)} s(게임)] 켄타이가 묶인 고노센 ${KEN.secret} / 탭 ${T.fired} · 실려 상처 낸 고노센 ${KEN.hits} · 평균 k ${KEN.hits ? (1 + KEN.bonus / KEN.hits).toFixed(3) : '-'}`);
