@@ -46,6 +46,10 @@ export const ROWS = {
   //  cavStroke = 전 판 입력(맞물린 탭이 끝나고 2 ~ 6 프레임 뒤 짧은 긋기 — 맞물림 뒤 afterWindow 안의 긋기). 맞물리지 않았으면 시도는 첫 탭으로 끝
   cavTap: { trad: 'italian', w: 'rapier', name: 'cavazione', base: 'tap', ko: '칼끝 돌려 빼기 (탭 → 맞물림 → 탭)', strokes: [], cav: 'tap' },
   cavStroke: { trad: 'italian', w: 'rapier', name: 'cavazione', base: 'tap', ko: '칼끝 돌려 빼기 (탭 → 맞물림 → 긋기 — 전 판 입력)', strokes: [], cav: 'stroke' },
+  // 10/28 날개 접기 (C6 염시 — 사장님 10/28 00:3x · 01:0x): lianTap = 사선 내려 긋기 → 그 긋기가 상대 칼에 부딪혔으면 부딪힌 때부터 0.05 ~ 0.35 s 뒤 탭(cavBot lian) ·
+  //  lianTurn = 전 판 입력(쟁기 찌르기 긋기를 시작하고 곧 왼 아래로 꺾어 긋기 — turnWindow 안)
+  lianTap: { trad: 'chinese', w: 'hwando', name: 'lianchi', base: 'zornhau', ko: '날개 접기 (긋기 → 부딪힘 → 탭)', strokes: [], lian: true, cut: T('zornhau') },
+  lianTurn: { trad: 'chinese', w: 'hwando', name: 'lianchi', base: 'stichPflug', ko: '날개 접기 (쟁기 찌르기 긋기 → 꺾음 — 전 판 입력)', strokes: [{ from: PAD.pflugR, path: [[0.06, -0.1]] }, { chain: true, path: [[-0.5, -0.15]] }] },
   iberian: { trad: 'iberian', w: 'zweihander', name: 'redondo', base: 'zwerchL', ko: '머리 위 돌려 베기', strokes: [T('zwerchL'), { ...ZW_BACK, chain: true }] },
   japanese: { trad: 'japanese', w: 'uchigatana', name: 'tsubameGaeshi', base: 'oberhau', ko: '제비 베기', strokes: [TSU], combo: true },
   kote: { trad: 'japanese', w: 'uchigatana', name: 'kote', base: 'langortDown', ko: '손목 치기', strokes: [{ from: PAD.langort, path: [[0.02, -0.22]] }] },
@@ -65,6 +69,7 @@ const APPR = CONFIG.SKILL.recoverSpeed; // 1.2 패드 m/s — 손가락으로 �
 const r3 = (x) => (x == null || !isFinite(x) ? null : +x.toFixed(3));
 const LOW = [0, -0.5];
 const GUARD = [0, 0.03]; // 긴 자세 (ai_techniques.js G.langort — 칼끝을 상대 가슴으로)
+const GUARD_HIGH = [0, 0.25]; // 칼끝을 든 가운데 자세 (짧은 칼이 그 칼 밑으로 다가가 긋기가 칼에 부딪히는 판 — 날개 접기 · 10/28)
 function holdLow(f, xy) {
   f.handOffset.set(xy[0], xy[1]);
   const sk = f.skill;
@@ -233,10 +238,25 @@ function cavBot(G, P, uq, bot, rnd, R) {
     c.bound = 0;
     c.second = 0;
     c.rec = null;
-    c.stage = P.skill.thrust() ? 'tap1' : 'done';
     c.t1 = G.t;
+    if (R.lian) {
+      bot.queue = bot.make([R.cut]);
+      c.stage = 'cut1';
+      return;
+    }
+    c.stage = P.skill.thrust() ? 'tap1' : 'done';
   };
   c.step = () => {
+    if (c.stage === 'cut1') {
+      // 날개 접기 손: 긋는 동안 그 긋기 기록(uq.cur)이 상대 칼에 부딪혔나 — 부딪혔으면 0.05 ~ 0.35 s 뒤 탭 · 안 부딪히고 긋기가 끝나면 끝
+      if (!c.rec && uq?.cur?.kind === 'cut') c.rec = uq.cur;
+      if (c.rec?.clashT != null) {
+        c.bound = 1;
+        c.stage = 'wait';
+        c.fireAt = c.rec.clashT + 0.05 + rnd() * 0.3;
+      } else if (!bot.queue.length && uq?.cur !== c.rec) c.stage = 'done';
+      return;
+    }
     if (c.stage === 'tap1') {
       if (uq?.tapRec) c.rec = uq.tapRec; // 이 탭의 기록 (끝난 뒤 last 로 옮겨 가기 전 — 지난 시도 기록을 읽지 않게)
       if (P.skill.tap || G.t - c.t1 < 0.05) return;
@@ -286,12 +306,12 @@ export function drillRun(rowKey, seed, { foe = 'still', variant = 'on', dur = 14
   P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   // 칼끝 돌려 빼기 줄 끔 판: 맞물림을 적는 몸이 있어야 손이 뒤 칼을 낸다 — 옆 스틱이 없으면 안 나는 비껴서며 찌르기만 연 몸(그대로 보통 탭)
-  const uq = new PlayerUniqueAssist(P, { names: new Set(variant === 'on' && !R.tap ? [R.name] : R.cav ? ['inquartata'] : []) });
+  const uq = new PlayerUniqueAssist(P, { names: new Set(variant === 'on' && !R.tap ? [R.name] : R.cav ? ['inquartata'] : R.lian ? ['chebuYaoji'] : []) });
   if (variant === 'on' && !R.tap && !uq.list.length) throw new Error(`${R.name} 이 열리지 않음`);
   const slog = strokeLog(uq);
   const rnd = rng(seed * 7919 + 17);
   const bot = fingerBot(G, P, rnd, { sjit, jit, spd });
-  const cav = R.cav ? cavBot(G, P, uq, bot, rnd, R) : null;
+  const cav = R.cav || R.lian ? cavBot(G, P, uq, bot, rnd, R) : null;
   const [CONTACT, REACH] = MEASURED[R.w] ?? MEASURED.longsword;
   const atts = [];
   let cur = null;
@@ -334,7 +354,7 @@ export function drillRun(rowKey, seed, { foe = 'still', variant = 'on', dur = 14
   };
   try {
     while (G.t < dur && D.alive && P.alive) {
-      if (foe !== 'walk') holdLow(D, foe === 'guard' ? GUARD : LOW); // guard = 칼끝을 내게 겨눈 긴 자세 (내 찌르기가 그 칼에 맞물리는 판 — 칼끝 돌려 빼기 · 10/28)
+      if (foe !== 'walk') holdLow(D, foe === 'guard' ? GUARD : foe === 'guardHigh' ? GUARD_HIGH : LOW); // guard = 칼끝을 내게 겨눈 긴 자세 (내 찌르기가 그 칼에 맞물리는 판 — 칼끝 돌려 빼기 · 10/28)
       G.step();
       if (cur) cur.stackMax = Math.max(cur.stackMax ?? 0, uq.stackN ?? 0);
       probe?.(G, P, D, cur); // 재는 도구만 (스텝마다 — 칼끝 거리 등)
@@ -393,7 +413,7 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
   let strokesN = 0;
   let taps = 0;
   let counters = 0;
-  const cav = R.cav ? cavBot(G, P, uq, bot, rnd, R) : null;
+  const cav = R.cav || R.lian ? cavBot(G, P, uq, bot, rnd, R) : null;
   const special = (t, why) => {
     const dist = P.foeDistance();
     if (cav) cav.start();
@@ -571,7 +591,7 @@ export function attSummary(atts, name, row = null) {
       if (a.fired > 0) continue;
       const S = a.strokes ?? [];
       if (Object.keys(a.firedOther ?? {}).length || S.some((x) => x.unique && x.unique !== name)) why.displaced++;
-      else if (R.cav) a.bound ? why.other++ : why.misread++; // 칼끝 돌려 빼기 줄: 첫 탭이 맞물리지 않음 = misread 칸에 셈
+      else if (R.cav || R.lian) a.bound ? why.other++ : why.misread++; // 칼끝 돌려 빼기 · 날개 접기 줄: 첫 칼이 맞물리지 · 부딪히지 않음 = misread 칸에 셈
       else if (R.combo) {
         const d = S.find((x) => DOWN.includes(x.tech));
         if (!d) why.misread++;
@@ -627,7 +647,7 @@ export function attSummary(atts, name, row = null) {
     downLanded: atts.filter((a) => a.strokes?.[0] && ['oberhau', 'zornhau', 'zornhauL'].includes(a.strokes[0].tech) && a.strokes[0].landed).length,
     downRead: atts.filter((a) => a.strokes?.[0] && ['oberhau', 'zornhau', 'zornhauL'].includes(a.strokes[0].tech)).length,
     // 10/28 (위에서 내려 찌르기): 첫 특수 맞음의 갈래 · 끌고 간 칼 몫 · 손목(범위 밖 > 1° · 굴림 ≥ 78 · 굽힘 · 폄 p50 · dev p50) · 틈 파고들기가 걸린 찌른 상처(칼날 · 심각도 > 0) · 칼끝이 겨눈 곳을 지난 길이 p50
-    cavBound: R?.cav ? atts.filter((a) => a.bound).length : undefined, // 칼끝 돌려 빼기 줄: 첫 탭이 맞물린 시도
+    cavBound: R?.cav || R?.lian ? atts.filter((a) => a.bound).length : undefined, // 칼끝 돌려 빼기 줄: 첫 탭이 맞물린 시도
     spTypes: spFirst.reduce((m, h) => ((m[h.type] = (m[h.type] ?? 0) + 1), m), {}),
     spSnap: spFirst.filter((h) => h.snap).length,
     wrist: (() => {

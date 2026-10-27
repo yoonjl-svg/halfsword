@@ -24,9 +24,10 @@ test('기본값 — 닿게 켬 · 탭 창 실제 0.6 ~ 1.2 s · 운동학 찌름
   assert.ok(Math.abs(UA.cavTo - realS(1.2)) < 1e-12);
   const it = Object.fromEntries(PLAYER_UNIQUE.italian.map((e) => [e.name, e]));
   assert.deepEqual(it.imbroccata.on, [{ tech: 'stichOchs' }], '위에서 내려 찌르기 조건은 그대로 (늘 — 이어 찌르기 조건 없음)');
-  assert.ok(it.imbroccata.tap && !it.imbroccata.tapOn);
+  assert.ok(it.imbroccata.tap && !it.imbroccata.tapKey);
   assert.deepEqual(it.cavazione.on, [{ prev: 'thrust', when: 'bound' }, { prev: 'thrust', when: 'turn' }], '긋기 조건(전 판)은 그대로');
-  assert.deepEqual(it.cavazione.tapOn, [{ prev: 'thrust', when: 'bound' }]);
+  assert.equal(it.cavazione.tapKey, 'cav');
+  assert.equal(UA.cavTrig, 'bind');
 });
 
 /** 사람 레이피어 몸 + 칼끝 돌려 빼기만 연 강화 (판을 돌리지 않음 — 기록을 손으로 놓고 탭을 부름) */
@@ -149,4 +150,22 @@ test('① 위에서 내려 찌르기 닿게 (씨앗 1 · 서 있는 상대): 찌
     UA.imbroReach = 1;
   }
   assert.equal(typeof strokeTechOf, 'function');
+});
+
+test('후보 조건 갈래 (사장님 확인 전 — cavTrig tap2): 맞물림 없이 내 탭 찌르기를 낸 때부터 실제 0.8 s 의 탭 = 칼끝 돌려 빼기 · 0.3 s 탭은 기회를 없앰', () => {
+  const B = body();
+  UA.cavTrig = 'tap2';
+  try {
+    B.uq.last = { tech: 'tap', kind: 'thrust', tap: true, t0: B.uq.t - realS(0.8), dir: [0, 0], landed: false, bound: false, tEnd: B.uq.t - realS(0.4), unique: null };
+    B.uq.atk = B.uq.last;
+    assert.equal(B.tap(), true);
+    B.uq.tapRec = null;
+    B.uq.last = { tech: 'tap', kind: 'thrust', tap: true, t0: B.uq.t - realS(0.3), dir: [0, 0], landed: false, bound: false, tEnd: null, unique: null };
+    B.uq.atk = B.uq.last;
+    assert.equal(B.tap(), false);
+    assert.ok(B.uq.last.cavSpent);
+  } finally {
+    UA.cavTrig = 'bind';
+    B.free();
+  }
 });
