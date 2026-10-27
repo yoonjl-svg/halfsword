@@ -2092,7 +2092,7 @@ export const DEFAULT_WEAPON = 'longsword';
 export const WEAPON_LIST = Object.values(WEAPONS);
 // 빼 둔 무기 (사장님 10/13 23:2x '독일 무기가 너무 많으니까 쓸데없는 걸 빼자 — 롱소드가 기본 양손 무기인데 에스톡·세이버·팔쉬온은 애매하고 별 특색도 없다'):
 //  주인공 무기 카드(main.js PLAYER_WEAPON_POOL)와 테스트 고르기 화면(test_pick.js)에서만 뺀다. 정의·코드는 남겨 되살리기 쉽게 — 시뮬·무기 점검(weapon_smoke)·브론의 '주워 온 칼'(characters.js shortest_common)은 그대로
-// 간장 · 막야는 적소검이 대신한다(사장님 10/27 18:3x '적소검은 간장막야를 대신하는 것') — 카드 뽑기에서만 빠지고, 막야를 쓰는 인물 · 이미 가진 칼은 그대로.
+// 간장 · 막야는 적소검이 대신한다(사장님 10/27 18:3x '적소검은 간장막야를 대신하는 것') — 카드 뽑기에서만 빠지고, 이미 가진 칼 · 무기 정의는 그대로(막야를 쓰던 찬다는 10/27 환도로).
 export const RETIRED_WEAPONS = new Set(['estoc', 'sabre', 'falchion', 'ganjiang', 'moye']);
 
 /**
