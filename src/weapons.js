@@ -1020,7 +1020,7 @@ const UCHIGATANA_SPEC = {
   frame: 'two', // 경계 고정 (제안서 §0-3: 카타나 가족이 무게 몇십 g 차이로 앞무게로 넘어가지 않게)
   style: 'versatile', // 두루 (제안서 §7-2 권고) — 자동 판정도 두루지만 가족 안에서 묶으려고 적는다
   tier: 'common',
-  strayPick: false, // 브란이 '주워 온 커먼 칼'(characters.js shortest_common) 후보에서 뺀다 — 칼날 0.71 m 로 가장 짧아 팔쉬온 자리를 빼앗기 때문 (사장님 확인 전)
+  strayPick: false, // 브론이 '주워 온 커먼 칼'(characters.js shortest_common) 후보에서 뺀다 — 칼날 0.71 m 로 가장 짧아 팔쉬온 자리를 빼앗기 때문 (사장님 확인 전)
   // 쥠 고침 A안 (사장님 10/21 '뒷손이 손잡이를 넘어간다면 고쳐야' → A안 승인 · '베기 배율은 바꾸지 마'): 전엔 모노호시자오 자루 자리(hiltLength 0.25 · 츠바 0.24)를 그대로 써
   //  오른손 주먹이 츠바 아래 0.235 m(츠카 한가운데)에 있고 왼손 주먹(gripAlong −0.2)은 카시라 끝(−0.16)보다 4 cm 밖 — 주먹 폭 10 cm 중 9 cm 가 허공을 쥐었다.
   //  이제 칼날 · 츠바를 통째로 손 쪽으로 0.175 m 내려 츠바 아랫면이 오른손 주먹 바로 위(0.065), 카시라가 왼손 주먹 끝(−0.245)에 오게 했다 —
@@ -1773,7 +1773,8 @@ const goujian = finalizeSpec('goujian', {
   partMesh: goujianPartMesh, decorate: goujianDecorate,
   buildParts() {
     const L = this.bladeLength;
-    const bladeMass = 0.78 * L / 0.62; // 같은 단면·재질: 80 cm 판 날(0.62 m · 0.78 kg)을 날 길이 비로 (샛별 식 그대로 — 지금 날 0.62 m 라 0.78 kg, 전 0.67 m 일 때 0.843 kg)
+    const bladeMass = 0.68 * L / 0.62; // 0.78 → 0.68 kg (사장님 10/27 20:4x '칼날에서 빼' — 더 얇은 날 · 휘두름 관성 0.105 → 0.092). 전: 같은 단면·재질: 80 cm 판 날(0.62 m · 0.78 kg)을 날 길이 비로 (샛별 식 그대로 — 지금 날 0.62 m 라 0.78 kg, 전 0.67 m 일 때 0.843 kg)
+    // 총 1.15 → 1.05 kg (사장님 10/27 20:2x '월왕구천검이 너무 무겁다. 100g 줄여' → 20:4x '칼날에서 빼' — 자루 · 머리 · 코등이는 그대로)
     const grip = boxInertia(0.13, 0.016, 0.079, 0.014);
     const pommel = boxInertia(0.14, 0.026, 0.004, 0.026); // 원반 폼멜 (상자 콜라이더 — 샛별 그대로)
     const guard = boxInertia(0.10, 0.034, 0.007, 0.016);
@@ -1967,17 +1968,17 @@ const durandal = finalizeSpec('durandal', {
   },
 });
 
-// 적소검 — 10/27 사용자 자체 리뷰·직접 적용 승인. 날 80 cm · 총 1.30 kg 유지.
+// 적소검 — 10/27 사용자 자체 리뷰·직접 적용 승인. 날 80 cm · 총 1.30 kg → 1.26 kg(사장님 10/27 20:2x '무게 40g만 줄여' — 날은 그대로, 자루 · 머리 · 코등이 추정 무게에서 뺌).
 // 새 테이퍼 날은 실제 면을 적분해 중심·관성을 구한다. 밑동 두께8.2mm, 날1kg은 강철 밀도 약7.86g/cm³. 자루·슴베/옥·금동 부품은 게임 추정.
 // 기존 목표(손 중심42 cm / 관성.26) 역산을 대신하며, 더 빠르게 회수해도 동방 한손검 중 묵직한 편을 유지한다.
-const CHIXIAO_MASS = { grip: 0.10, pommel: 0.10, cross: 0.10, blade: 1.00 };
+const CHIXIAO_MASS = { grip: 0.09, pommel: 0.09, cross: 0.08, blade: 1.00 }; // 전 0.10 · 0.10 · 0.10 (사장님 10/27 −40 g)
 const chixiao = finalizeSpec('chixiao', {
   nameKo: '적소검', nameEn: 'Chixiao', tier: 'legend', school: 'chinese', style: 'versatile',
   desc: '한 고조 유방이 길을 막은 흰 뱀을 두 동강 낸 붉은 검.\n한나라를 세운 신화의 시작입니다.',
   grip: 'one-hand', material: 'steel', enterParry: true,
   hiltLength: .085, bladeLength: .80, gripAlong: -.10,
   // 기존 한손검 범위의 베기/찌르기 계수. 레전드 공통 배율 1.2는 finalizeSpec에서 적용.
-  mCut: 1.10, mThrust: .85, mBlunt: 1.0,
+  mCut: 1.10, mThrust: 1.0, mBlunt: 1.0, // 찌르기 .85 → 1.0 (사장님 10/27 20:2x — 곧은 양날 직검, 사인검과 같음)
   partMesh: chixiaoPartMesh, partCollider: chixiaoCollider,
   buildParts() {
     const L=this.bladeLength, { grip: gm, pommel: pm, cross: cm, blade: bm }=CHIXIAO_MASS;
@@ -2032,7 +2033,7 @@ export const DEFAULT_WEAPON = 'longsword';
 
 export const WEAPON_LIST = Object.values(WEAPONS);
 // 빼 둔 무기 (사장님 10/13 23:2x '독일 무기가 너무 많으니까 쓸데없는 걸 빼자 — 롱소드가 기본 양손 무기인데 에스톡·세이버·팔쉬온은 애매하고 별 특색도 없다'):
-//  주인공 무기 카드(main.js PLAYER_WEAPON_POOL)와 테스트 고르기 화면(test_pick.js)에서만 뺀다. 정의·코드는 남겨 되살리기 쉽게 — 시뮬·무기 점검(weapon_smoke)·브란의 '주워 온 칼'(characters.js shortest_common)은 그대로
+//  주인공 무기 카드(main.js PLAYER_WEAPON_POOL)와 테스트 고르기 화면(test_pick.js)에서만 뺀다. 정의·코드는 남겨 되살리기 쉽게 — 시뮬·무기 점검(weapon_smoke)·브론의 '주워 온 칼'(characters.js shortest_common)은 그대로
 // 간장 · 막야는 적소검이 대신한다(사장님 10/27 18:3x '적소검은 간장막야를 대신하는 것') — 카드 뽑기에서만 빠지고, 막야를 쓰는 인물 · 이미 가진 칼은 그대로.
 export const RETIRED_WEAPONS = new Set(['estoc', 'sabre', 'falchion', 'ganjiang', 'moye']);
 
