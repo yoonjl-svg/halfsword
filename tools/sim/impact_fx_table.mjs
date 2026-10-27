@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  impact_fx_table.mjs — 타격감 표 (10/25 — config IMPACT_FX · src/impact_fx.js · docs/strike/impact_feel_2026-10-25.md)
-//   맞음 에너지 → 무게 H · 세기 x · 멈칫(ms) · 카메라 밀림(내가 맞음 / 내가 침) · 무게 소리 음량. 게임과 같은 셈(src/impact_fx.js)을 읽는다 — 읽기만.
+//   맞음 에너지 → 무게 H · 세기 x · 멈칫(ms — 살을 가르고 지나감 / 보통 / 박힘 · 뼈 · 투구 · 판금) · 카메라 밀림(내가 맞음 / 내가 침) · 무게 소리 음량.
+//   게임과 같은 셈(src/impact_fx.js)을 읽는다 — 읽기만.
 //
 //   node tools/sim/impact_fx_table.mjs                 예시 에너지 표 (레이피어 · 롱소드 · 츠바이핸더 · 플랑베르주 · 칼끼리 부딪힘)
 //   node tools/sim/impact_fx_table.mjs ai [판 수=12] [무기,…]      AI 대 롱소드(주인공 대리 — ref_duel 과 같은 판 · 40 s)에서 그 무기가 낸 맞음 · 부딪힘의 에너지 분위 → 효과
@@ -23,12 +24,14 @@ const f2 = (v) => v.toFixed(2);
 export function row(E, M, C = IMPACT_FX) {
   const t = woundImpact({ energy: E, mass: M, taken: true }, C);
   const d = woundImpact({ energy: E, mass: M, taken: false }, C);
-  return { E, H: t.H, x: t.x, stop: t.stop, camTaken: t.cam, camDealt: d.cam, sound: t.sound };
+  const pass = woundImpact({ energy: E, mass: M, pass: true }, C).stop;
+  const hard = woundImpact({ energy: E, mass: M, hard: true }, C).stop;
+  return { E, H: t.H, x: t.x, stop: t.stop, pass, hard, camTaken: t.cam, camDealt: d.cam, sound: t.sound };
 }
-const line = (lab, r) => `${lab.padEnd(26)} ${String(Math.round(r.E)).padStart(4)} J → H ${String(Math.round(r.H)).padStart(4)} · x ${f2(r.x)} · 멈칫 ${ms(r.stop)} ms · 카메라 맞음 ${f2(r.camTaken)} / 침 ${f2(r.camDealt)} · 소리 ${f2(r.sound)}`;
+const line = (lab, r) => `${lab.padEnd(26)} ${String(Math.round(r.E)).padStart(4)} J → H ${String(Math.round(r.H)).padStart(4)} · x ${f2(r.x)} · 멈칫 ${ms(r.pass)} / ${ms(r.stop)} / ${ms(r.hard)} ms · 카메라 맞음 ${f2(r.camTaken)} / 침 ${f2(r.camDealt)} · 소리 ${f2(r.sound)}`;
 
 function exampleTable(C) {
-  const out = [`타격감 표 (IMPACT_FX massExp ${C.massExp} · h0 ${C.h0} · h1 ${C.h1} J · 멈칫 최대 ${C.stop * 1000} ms)`];
+  const out = [`타격감 표 (IMPACT_FX massExp ${C.massExp} · h0 ${C.h0} · h1 ${C.h1} J · 멈칫 ${C.stop * 1000} ms × x — 가르고 지나감 × ${C.passK} / 보통 / 걸림 × ${C.hardK} · 위 끝 ${C.stopMax * 1000} ms)`];
   for (const w of ['rapier', 'longsword', 'zweihander', 'flamberge']) {
     for (const E of [20, 40, 60, 100, 150]) out.push(line(`${NAME[w]} (${MASS[w]} kg)`, row(E, MASS[w], C)));
   }

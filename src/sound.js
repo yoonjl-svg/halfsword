@@ -2259,15 +2259,18 @@ export class Sound {
   heft(gain, x, { metal = false } = {}) {
     if (!this._on || !this.ctx || !(gain > 0.02)) return;
     const now = this.ctx.currentTime;
-    const last = (this._lastHeft ??= { t: -1, g: 0 });
-    if (now - last.t < 0.06 && gain <= last.g) return;
-    this._lastHeft = { t: now, g: gain };
+    const last = this._lastHeft;
+    if (last && now - last.t < 0.06) {
+      if (gain <= last.g) return;
+      last.ev?.out?.gain?.setTargetAtTime?.(0, now, 0.01); // 더 센 것이 곧장 뒤따르면 앞 겹을 줄여 끈다 (두 '쿵'이 겹쳐 커지지 않게)
+    }
     const S = IMPACT_FX.sound;
     const k = clamp01(x);
     const rate = 1 - (1 - S.rate) * k; // 무거울수록 낮게
     const lp = S.lpLight + (S.lpHeavy - S.lpLight) * k; // 무거울수록 어둡게
     const R = Math.random;
     const ev = this.event({ bus: metal ? this.metalBus : this.fleshBus, gain, bright: lp, prio: 1 + k }); // 우선은 타격음(2)보다 낮게 — 소리가 몰리면 이 겹이 먼저 빠진다
+    this._lastHeft = { t: now, g: gain, ev };
     this.layer(ev, this.pick('thump'), { gain: 1, rate: rate * between(R, 0.95, 1.05) });
     const soft = this.pickSample('soft');
     if (soft) this.layer(ev, soft, { gain: 0.8, rate: rate * 0.9 * between(R, 0.95, 1.05), delay: 0.003 });

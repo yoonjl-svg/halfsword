@@ -37,7 +37,7 @@ import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, setGripTorque, RET
 import { attachAura, AURA_VIEW } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
 import { Sound, BodySounds } from './sound.js';
-import { woundImpact, clashImpact } from './impact_fx.js'; // 타격감 셈 (10/25 — config IMPACT_FX: 맞는 순간의 무게로 멈칫 · 카메라 밀림 · 무게 소리 — 아래 onWound · onClash)
+import { woundImpact, clashImpact, stopGrant, stopTick, shakeWall } from './impact_fx.js'; // 타격감 셈 (10/25 — config IMPACT_FX: 맞는 순간의 무게로 멈칫 · 카메라 밀림 · 무게 소리 — 아래 onWound · onClash · 멈칫 묶음 addHitStop)
 import { whipTipStep, whipHitMode } from './whip_sound.js'; // 드루이드의 채찍 휙 · 딱 걸쇠 (10/24 — 아래 whipWhoosh 에서 옮김) · 맞음 소리 주소 스위치
 import { SecretSfxWatch, secretSfxMode } from './secret_sfx.js'; // 비기 소리 (10/25 — 샛별 저장소 2fa0b2ae): 낸 전투자 · 유파 소리 한 번 · 주소 스위치
 import { Combat, woundDegree, woundRageMult, COMBAT_HOOKS } from './combat.js';
@@ -899,7 +899,9 @@ function newRound(weaponId) {
   roundOver = false;
   roundOverTime = 0;
   resetCamera(); // 따라가기를 새 판 몸 자리에 바로 맞춘다 (지난 판 자리에서 미끄러져 오지 않게 — 판 시작 자리는 planOpening 이 정한다)
-  hitStop = 0;
+  hitStop.left = 0;
+  hitStop.spent = 0;
+  hitStop.quiet = CONFIG.IMPACT_FX.chainGap;
   // 시간이 흐르기 전에도(무기 뽑기 동안) 선 자세 그대로 보이게 겉모습을 몸에 맞춰 둔다
   player.syncMeshes();
   enemy.syncMeshes();
@@ -907,7 +909,13 @@ function newRound(weaponId) {
 }
 
 // ── 타격감 ──
-let hitStop = 0; // 큰 타격 때 아주 잠깐 멈칫하는 연출
+// 큰 타격 때 아주 잠깐 멈칫하는 연출 — left = 남은 멈칫(실제 초). 멈칫 = 화면 시간 배율만 낮춤(물리 스텝 길이 · 차례 그대로 — 판정 같음).
+//  spent · quiet = 멈칫 묶음(타격감 10/25 — src/impact_fx.js stopGrant · stopTick: 잇달아 오는 멈칫 합 IMPACT_FX.chainCap 까지). 넣는 곳은 addHitStop 하나
+const hitStop = { left: 0, spent: 0, quiet: 0 };
+function addHitStop(t) {
+  if (CONFIG.IMPACT_FX.on) stopGrant(hitStop, t, CONFIG.IMPACT_FX);
+  else hitStop.left = Math.max(hitStop.left, t); // `?impactFx=0`: 옛 식 그대로 (더 긴 쪽만 · 묶음 상한 없음)
+}
 let playerEmo = null; // 플레이어 감정 판정 (emotions.js)
 let playerEv = { hurt: false, parried: false, landed: false }; // 이번 프레임에 플레이어에게 일어난 사건
 const playerTremor = { x: 0, y: 0, ax: 0, ay: 0, t: 0 }; // 공포 손 떨림 (지금 얹혀 있는 값·시계)
@@ -1048,13 +1056,14 @@ function onWound(att, vic, r, point, pr) {
   const bone = e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg');
   // 타격감 (10/25 — config IMPACT_FX · src/impact_fx.js): 맞는 순간의 무게(판정 에너지 × 때린 무기 무게 배율) 하나로 멈칫 · 카메라 밀림 · 무게 소리 — 모든 무기 같은 식 · 무거운 칼일수록 크게.
   //  내가 맞음 · 내가 침 둘 다 (카메라는 내가 맞을 때 더 크게). `?impactFx=0` 이면 아래 옛 식 그대로
-  const fx = CONFIG.IMPACT_FX.on ? woundImpact({ energy: e, mass: att.swordProps?.m, pass: !!r.pass, hard: !!(r.stuck || bone || r.helmet || r.plate), taken: vic === player }, CONFIG.IMPACT_FX) : null;
+  //  총알(r.gun)은 무게 배율 없이 판정 에너지만 (총 무게는 맞은 몸에 실리지 않는다)
+  const fx = CONFIG.IMPACT_FX.on ? woundImpact({ energy: e, mass: r.gun ? 0 : att.swordProps?.m, pass: !!r.pass, hard: !!(r.stuck || bone || r.helmet || r.plate), taken: vic === player }, CONFIG.IMPACT_FX) : null;
   if (fx) {
-    // 무게 소리 한 겹 (기존 타격음 위에 — 빛의 칼 · 고무 닭은 몸통 '쿵'이 어울리지 않아 뺌)
-    if (mat !== 'plasma' && mat !== 'rubber') sound.heft(fx.sound, fx.x, { metal: !!(r.helmet || r.plate) && !opened });
+    // 무게 소리 한 겹 (기존 타격음 위에 — 빛의 칼 · 고무 닭은 몸통 '쿵'이 어울리지 않아 뺌 · 드루이드의 채찍은 녹음 맞음 소리 그대로)
+    if (mat !== 'plasma' && mat !== 'rubber' && !whipHit) sound.heft(fx.sound, fx.x, { metal: !!(r.helmet || r.plate) && !opened });
   }
   const stopT = fx ? fx.stop : r.pass ? Math.min(0.06, e / 2000) : r.stuck || bone || r.helmet || r.plate ? Math.min(0.1, e / 900) : Math.min(0.08, e / 1200);
-  hitStop = Math.max(hitStop, stopT);
+  addHitStop(stopT);
   // 손맛: 칼의 타격 중심(스위트 스팟, 코등이에서 약 58cm)에 맞으면 손이 울리지 않고, 칼끝·칼 밑동에 맞으면 손이 찌릿하다
   //  (손을 축으로 도는 강체에서 한 점을 치면 축(손)이 받는 충격 = 1 − a·b/k²)
   const sting = att.swordSting(r.t);
@@ -1075,7 +1084,7 @@ function onClash(point, speed, touch) {
   if (touch?.nagashi) {
     sound.flow(Math.max(touch.vn ?? 0, 3));
     particles.flowSparks(point, combat?.lastNagashi?.dir);
-    hitStop = Math.max(hitStop, 0.035);
+    addHitStop(0.035);
     clashCooldown = Math.max(clashCooldown, 0.12);
     haptic(0.5);
     return;
@@ -1114,7 +1123,7 @@ function onClash(point, speed, touch) {
   const cfx = CONFIG.IMPACT_FX.on ? clashImpact({ vn: impact, m1: player?.swordProps?.m, m2: enemy?.swordProps?.m, energyScale: CONFIG.STRIKE.energyScale }, CONFIG.IMPACT_FX) : null;
   // 세게 부딪힐 때만 잠깐 멈칫 (칼끼리 맞대고 밀 때마다 멈추면 끊겨 보인다)
   if (impact > 6 && clashStopCooldown <= 0) {
-    hitStop = Math.max(hitStop, cfx ? cfx.stop : Math.min(0.08, impact / 200));
+    addHitStop(cfx ? cfx.stop : Math.min(0.08, impact / 200));
     clashStopCooldown = 0.5;
   }
   const clashDir = new THREE.Vector3((Math.random() - 0.5), 0.3, (Math.random() - 0.5)).normalize();
@@ -2500,6 +2509,7 @@ function updateCamera(dt) {
   const h = Math.min(dt, 1 / 30);
   camShake.v.addScaledVector(camShake.o, -170 * h).multiplyScalar(Math.max(0, 1 - 13 * h));
   camShake.o.addScaledVector(camShake.v, h);
+  if (CONFIG.IMPACT_FX.on) shakeWall(camShake.o, camShake.v, CONFIG.IMPACT_FX.camMaxOff); // 타격감 (10/25): 맞음이 잇달아 와도 밀린 거리는 벽 안 (폰 멀미)
   camera.position.add(camShake.o);
   camera.lookAt(camLook);
   camera.position.sub(camShake.o); // 다음 프레임 따라가기는 흔들림 없는 위치 기준
@@ -2773,7 +2783,7 @@ function frame(now) {
     const exhausted = player.stamina.exhausted;
     if (exhausted) { d.x = 0; d.y = 0; }
     // 멈칫하는 동안엔 손가락 움직임도 느리게 반영한다 (멈칫이 끝나는 순간 손이 휙 튀지 않게)
-    const inScale = hitStop > 0 ? 0.25 : 1;
+    const inScale = hitStop.left > 0 ? 0.25 : 1;
     // 칼 쪽 화면을 톡 치면(마우스는 끌지 않고 클릭) 찌른다 (skill.js thrust). 권총은 손가락이 닿는 순간 쏜다 (쏘는 타이밍이 실력이라 뗄 때까지 늦추지 않는다)
     input.tapOnDown = !!player.weapon?.gun;
     let taps = input.consumeTaps();
@@ -2846,8 +2856,10 @@ function frame(now) {
 
     // 타격 순간 살짝 멈칫 + 판이 끝나면 슬로모션
     let scale = 1;
-    if (hitStop > 0) {
-      hitStop -= dt;
+    if (CONFIG.IMPACT_FX.on) {
+      scale = 1 - stopTick(hitStop, dt, CONFIG.IMPACT_FX) * (1 - 0.12); // 멈칫 묶음 시계 (실제 시간 · 화면 안 멈칫 몫만 0.12 배 — 느린 폰에서도 짧게)
+    } else if (hitStop.left > 0) {
+      hitStop.left -= dt;
       scale = 0.12;
     }
     // 결정타 연출 (10/9 23:5x — CONFIG.SECRET.slowMo): AI·플레이어 비기가 터뜨려진 순간(터뜨림 수가 바뀜) 화면 시간을 잠깐 늦춘다 — 물리 스텝 dt 는 그대로, 스텝 수만 준다
@@ -2992,6 +3004,10 @@ window.game = {
   },
   get combat() {
     return combat;
+  },
+  // 타격감 (10/25 — IMPACT_FX): 멈칫(left · spent · quiet — 실제 초) · 카메라 흔들림 스프링(o 밀린 거리 m · v 빠르기) — 브라우저 탐침이 읽는다
+  get impactFx() {
+    return { ...hitStop, shake: camShake.o.length(), shakeV: camShake.v.length() };
   },
   // 와신상담 (월왕구천검 특수 능력, combat.js woundRageMult): 두 싸움꾼의 다친 정도 d 와 지금 공격력 배율 — 그 능력이 없는 칼은 늘 1
   get woundRage() {
