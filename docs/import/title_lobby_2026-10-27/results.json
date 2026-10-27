@@ -1,0 +1,12 @@
+{
+  "base": "http://127.0.0.1:5281",
+  "checks": [
+    "fresh title/lobby creates no checkpoint; Stage starts poseidon; round-trip changes first label; lobby Stage resumes unchanged cards/weapon",
+    "desktop existing later-stage save: both lobby access and first-button continue preserve stage",
+    "invalid save falls back to Stage and can start via lobby",
+    "invalid save falls back to Stage and can start via lobby",
+    "blocked persistent storage: fresh lobby departure and same-session continuation work"
+  ],
+  "errors": [],
+  "scope": "real browser, mobile emulation and desktop; not physical iPhone"
+}

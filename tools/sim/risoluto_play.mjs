@@ -15,6 +15,7 @@
 //   10/24 14:0x 런지 되돌아오기(기본 — SECRET.risolutoStep.recover): RISO_OLDSTEP=1 = 14:0x 전 걸음(뒷발 끌어붙임 · 앞발 거둠 없음 — main.js ?risoRecover=0 과 같은 값) ·
 //    되돌아오기 재기: 앞발을 거둔 번 수 · 런지 시작부터 걸린 때 · 거둔 길이 · 상대가 살아 있을 때 가슴 사이(거둘 때 → 0.6 s 뒤)
 //   10/25 01:0x 칼끝 얽힘 창(기본 — SECRET.risolutoTouch): RISO_TOUCH=0 = 10/24 판(이어짐 0.6 s 를 기다림) ·
+//   10/25 21:0x 사장님 조건 셋 · 창 지킴(기본): RISO_OLD=1 = 전 판(스틱 앞만 · 탭만 · 덮음 0.07 · 창 지킴 끔) · 탭이 창 뒤 REACT 초라 창 지킴 판에선 '탭 때 창이 이미 닫힘'이 0 이어야 함 ·
 //    재기: 칼끼리 처음 가까워진 때(어느 부위든 0.07 · 맞닿음 — 0.2 s 넘게 떨어졌다 다시 붙은 때도) 가슴 사이 p10 · p50 · p90 · 그때 막은 조건 · 열린 창 가슴 사이 p10 · p50 · p90 · 탭 때 창이 이미 닫힘(tapLost)
 import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
@@ -52,6 +53,7 @@ if (E.RISO_SHARE) CONFIG.SECRET.risolutoShare = +E.RISO_SHARE;
 if (E.RISO_GLIDE) CONFIG.SECRET.risolutoGlide = +E.RISO_GLIDE; // 0 = 붙은 칼 따라 미끄러짐 끔 (연환과 같은 막힘)
 if (E.RISO_GAP) CONFIG.SECRET.risolutoGap = +E.RISO_GAP; // 10/24 13:2x 런지 간격 조건 — 0 = 간격 조건 없음 (12:1x 판)
 if (E.RISO_TOUCH) CONFIG.SECRET.risolutoTouch = +E.RISO_TOUCH; // 10/25 01:0x 칼끝 얽힘 창 — 0 = 10/24 판 (이어짐 0.6 s 를 기다림)
+if (E.RISO_OLD === '1') Object.assign(CONFIG.SECRET, { risolutoStick: 'fwd', risolutoTap: 1, risolutoCover: 0.07, secretHold: 0 }); // 10/25 21:0x 전 판 (스틱 앞만 · 탭만 · 덮음 0.07 · 창 지킴 끔 — main.js ?risoStick=fwd&risoTap=1&risoCover=0.07&secretHold=0)
 const STOP = E.RISO_STOP === '1';
 const CREEP = +E.RISO_CREEP || 0; // 운전: 칼끼리 가까운 동안 스틱을 이 몫만 (천천히 밀고 들어감 — 간격 조건 판을 아는 사람 흉내 · 0 = 늘 1) // 운전: 창(금색 '!')이 보이면 스틱을 놓고 선다 (간격 조건 판을 아는 사람 흉내 — 기본은 늘 같은 운전)
 if (E.RISO_OLDSTEP === '1') CONFIG.SECRET.risolutoStep = { slide: 'iaiStep', foot: 'italianStep', draw: 1, room: 0 }; // 10/24 14:0x 전 걸음 (뒷발 끌어붙임 · 몸 가속 · 따라감 배율 · 앞발 거둠 없음)

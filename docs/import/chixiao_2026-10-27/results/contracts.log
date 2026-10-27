@@ -1,0 +1,19 @@
+using deprecated parameters for the initialization function; pass a single object instead
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(hit >= 0)
+
+    at file:///workspace/halfsword-chixiao-direct/tools/sim/chixiao.test.mjs:41:3 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

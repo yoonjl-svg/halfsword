@@ -10,7 +10,10 @@
 //     휘두름 묵직함 = 칼끝 최고 때 칼 운동 에너지 ½Iω² + ½mv² (부품 합 질량·관성, J)
 //   긋기 길 7 개(player_edge 의 LINES) × 빠르기 3 개(6 · 10 · 14 패드 m/s) = 21 획, 한 판 하나씩 (씨앗 = 획 번호)
 //
-//   node tools/sim/swing_feel.mjs [무기=zweihander] [--speeds=6,10,14] [--json=<파일>]
+//   node tools/sim/swing_feel.mjs [무기=zweihander] [--speeds=6,10,14] [--json=<파일>] [--miss]
+//   --miss (10/25 일본 유파 손맛 개편): 헛친 획 — 긋기 뒤 되긋기 없이 손가락을 B 에 댄 채 1.2 s. 칼끝 최고 · 닿기는 긋기 시작 뒤 0.6 s 안에서 ·
+//    제동 = 칼끝 최고 → 칼끝이 그 최고의 25 % 아래로 처음 떨어질 때까지 s (헛친 칼을 세우는 데 걸리는 시간) · 남은 흔들림 = 긋기 끝 0.3 ~ 0.8 s 뒤 칼끝 평균 m/s ·
+//    손 최고 = 그 0.6 s 동안 칼 원점(오른 주먹) 최고 m/s · 칼끝 ÷ 손 = 손목이 칼끝을 얼마나 더 빨리 돌리나. 되돌림은 없음. 기본(없음)의 줄 · 숫자는 전과 같다
 //   쥠 꼴 비교: MONTANTE_HAND=old|mid|guard node tools/sim/swing_feel.mjs zweihander
 // ─────────────────────────────────────────────────────────────
 import { newRound, THREE, CONFIG, DT, seedRandom } from './harness_m.mjs';
@@ -29,6 +32,7 @@ const WID = pos[0] || 'zweihander';
 const SPEEDS = String(args.speeds ?? '6,10,14').split(',').map(Number);
 const FRAME = 1 / 60;
 const FOLLOW = +(args.follow ?? 0.15); // 긋기 끝 → 되긋기 사이 (손가락 댄 채 멈춤, s)
+const MISS = !!args.miss; // 헛친 획 (위 머리말)
 const { SKILL } = CONFIG;
 const LINES = {
   ober: [[0.02, 0.52], [0.0, -0.45]],
@@ -77,9 +81,10 @@ function trial(lineKey, v, seed) {
   G.ai.update = () => E.move.set(0, 0);
   const [A, B] = LINES[lineKey];
   // 다리: [목표, 빠르기, 이름] — wait 은 [null, 초, 이름]
-  const legs = [[null, 2.6, 'settle'], [A, 2, 'wind'], [null, 0.6, 'pause'], [B, v, 'cut'], [null, FOLLOW, 'follow'], [A, v, 'rev'], [null, 0.8, 'hold']];
+  const legs = MISS ? [[null, 2.6, 'settle'], [A, 2, 'wind'], [null, 0.6, 'pause'], [B, v, 'cut'], [null, 1.2, 'hold']] : [[null, 2.6, 'settle'], [A, 2, 'wind'], [null, 0.6, 'pause'], [B, v, 'cut'], [null, FOLLOW, 'follow'], [A, v, 'rev'], [null, 0.8, 'hold']];
   let li = 0, legT = 0, from = null, dur = 0, t = 0, stepAcc = 0;
   const R = { pre: 0, peak: 0, tPeak: null, dirPeak: null, revT: null, back: null, stop: null, ePeak: 0, revEnd: null, ok: true };
+  if (MISS) { R.hand = 0; R.trace = []; }
   let cutT = null;
   while (li < legs.length && t < 8) {
     const [to, sp, tag] = legs[li];
@@ -101,7 +106,7 @@ function trial(lineKey, v, seed) {
       const nx = from[0] + (to[0] - from[0]) * k, ny = from[1] + (to[1] - from[1]) * k;
       moved = Math.abs(nx - off.x) + Math.abs(ny - off.y) > 1e-5;
       off.x = nx; off.y = ny;
-      if (k >= 1) { li++; from = null; if (tag === 'rev') R.revEnd = t + FRAME; }
+      if (k >= 1) { li++; from = null; if (tag === 'rev' || (MISS && tag === 'cut')) R.revEnd = t + FRAME; } // 헛친 획은 긋기 끝부터 멈춤을 잰다
     }
     P.handHeld = tag !== 'settle';
     P.inputActive = moved;
@@ -116,12 +121,28 @@ function trial(lineKey, v, seed) {
       if (cutT == null && tag === 'pause') R.pre = sp2; // 긋기 바로 전 칼끝 (가라앉았나)
       if (cutT != null && R.revT == null) {
         if (sp2 > R.peak) { R.peak = sp2; R.tPeak = tt - cutT; R.dirPeak = tv.clone().normalize(); R.ePeak = kinE(P); }
+        if (MISS && tt - cutT < 0.6) { const lv = P.sword.linvel(); R.hand = Math.max(R.hand, Math.hypot(lv.x, lv.y, lv.z)); }
       } else if (R.revT != null && R.back == null && R.dirPeak) {
         if (-tv.dot(R.dirPeak) > 0.5 * R.peak) R.back = tt - R.revT;
       }
-      if (R.revEnd != null && R.stop == null && tt >= R.revEnd && sp2 < 1.5) R.stop = tt - R.revEnd;
+      if (MISS) { if (cutT != null) R.trace.push([tt - cutT, sp2]); }
+      else if (R.revEnd != null && R.stop == null && tt >= R.revEnd && sp2 < 1.5) R.stop = tt - R.revEnd;
     }
     t += FRAME;
+  }
+  if (MISS) {
+    // 헛친 획: 칼끝 최고(긋기 시작 뒤 0.6 s 안) → 제동(최고의 25 % 아래로 처음) · 남은 흔들림(긋기 끝 0.3 ~ 0.8 s 뒤 평균)
+    const tr = R.trace.filter(([u]) => u <= 0.6);
+    let ip = 0;
+    for (let i = 1; i < tr.length; i++) if (tr[i][1] > tr[ip][1]) ip = i;
+    R.peak = tr[ip]?.[1] ?? 0;
+    R.tPeak = tr[ip]?.[0] ?? null;
+    const after = R.trace.find(([u, v]) => u > R.tPeak && v < 0.25 * R.peak);
+    R.stop = after ? after[0] - R.tPeak : null;
+    const e0 = R.revEnd - cutT;
+    const tail = R.trace.filter(([u]) => u >= e0 + 0.3 && u <= e0 + 0.8).map(([, v]) => v);
+    R.wobble = tail.length ? tail.reduce((a, v) => a + v, 0) / tail.length : null;
+    delete R.trace;
   }
   return R;
 }
@@ -140,6 +161,13 @@ for (const v of SPEEDS) {
     ePeak: +mean(r.map((x) => x.ePeak)).toFixed(1), pre: +mean(r.map((x) => x.pre)).toFixed(2), back: +med(backs).toFixed(3), backN: backs.length, stop: +med(stops).toFixed(3), stopN: stops.length,
   };
   const o = out.bySpeed[v];
+  if (MISS) {
+    o.hand = +mean(r.map((x) => x.hand)).toFixed(2);
+    o.stopMean = +mean(stops).toFixed(3);
+    o.wobble = +mean(r.filter((x) => x.wobble != null).map((x) => x.wobble)).toFixed(2);
+    console.log(`${WID} [헛친 획] 패드 ${v} m/s (${o.n} 획): 칼끝 최고 평균 ${o.tipPeak} m/s · 손 최고 평균 ${o.hand} m/s · 칼끝 ÷ 손 ${(o.tipPeak / o.hand).toFixed(2)} · 닿기(긋기 → 최고) ${o.tPeak} s · 최고 때 칼 운동 에너지 ${o.ePeak} J · 제동(최고 → 25 %) 평균 ${o.stopMean} s · p50 ${o.stop} s (${o.stopN}) · 남은 흔들림 ${o.wobble} m/s · (긋기 전 칼끝 ${o.pre} m/s)`);
+    continue;
+  }
   console.log(`${WID} [${out.hand}] 패드 ${v} m/s (${o.n} 획): 칼끝 최고 평균 ${o.tipPeak} · 최대 ${o.tipPeakMax} m/s · 닿기(긋기 → 최고) ${o.tPeak} s · 최고 때 칼 운동 에너지 ${o.ePeak} J · 되돌림 p50 ${o.back} s (${o.backN}) · 멈춤 p50 ${o.stop} s (${o.stopN}) · (긋기 전 칼끝 ${o.pre} m/s)`);
 }
 if (args.json) writeFileSync(args.json, JSON.stringify({ out, rows }, null, 1));

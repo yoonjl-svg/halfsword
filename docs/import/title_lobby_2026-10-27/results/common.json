@@ -1,0 +1,27 @@
+[
+  {
+    "name": "fights12",
+    "sameResult": true,
+    "exact": true
+  },
+  {
+    "name": "live_battery",
+    "sameResult": true,
+    "exact": true
+  },
+  {
+    "name": "finish_thrust",
+    "sameResult": true,
+    "exact": true
+  },
+  {
+    "name": "corr_s0",
+    "sameResult": true,
+    "exact": false
+  },
+  {
+    "name": "weapon_smoke",
+    "sameResult": true,
+    "exact": true
+  }
+]

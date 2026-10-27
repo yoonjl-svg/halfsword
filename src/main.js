@@ -83,7 +83,7 @@ const staminaHud = createStaminaHud(document.getElementById('staminaHud')); // �
 const screenTint = createScreenTint(); // 출혈·감정 화면 물들임을 게임 캔버스에 합성 (샛별 저장소 2f593ba6 — 전엔 #vignette · #emotion CSS 층. 기력 스위치와 상관없이 늘 이 길)
 // 주인공은 판마다 무기 카드 세 장 중 하나를 골라 받는다 (아래 "무기 뽑기"). 주소에 ?weapon=을 적으면 뽑기 없이 그 무기로 고정.
 //  진짜 엑스칼리버는 주인공만 받을 수 있고, 복제품은 하인리히 몫이라 뽑기에서 뺀다
-const PLAYER_WEAPON_POOL = WEAPON_LIST.map((w) => w.id).filter((id) => id !== 'excalibur_replica' && !RETIRED_WEAPONS.has(id)); // 빼 둔 무기(에스톡·세이버·팔쉬온 — 사장님 10/13 23:2x)는 카드에 안 나온다
+const PLAYER_WEAPON_POOL = WEAPON_LIST.map((w) => w.id).filter((id) => id !== 'excalibur_replica' && !RETIRED_WEAPONS.has(id)); // 빼 둔 무기(에스톡·세이버·팔쉬온 — 사장님 10/13 23:2x · 간장·막야 — 적소검이 대신함, 사장님 10/27)는 카드에 안 나온다
 const FIXED_WEAPON = params.get('weapon');
 const testRoute = createTestRoute(params); // 인자가 없으면 아무것도 바꾸지 않는다
 // 이미 받은 인장 → 금화 (사장님 10/16 04:2x · 08:1x '인장 제도 없애' — seal_coins.js): 이 판을 처음 연 때 한 번, 첫 화면 · 옛 메뉴 · 주소 판 어느 길이든(테스트 경로만 빼고).
@@ -250,6 +250,10 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.get('risoRecover') === '0') CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, draw: 1, recover: 0, push: 0, accel: 0 }; // 10/24 14:0x 전 걸음 = 디딘 뒤 뒷발 끌어붙임 (몸 따라감 배율 · 몸 가속 · 앞발 거둠은 없음)
   if (params.has('risoGap')) CONFIG.SECRET.risolutoGap = +params.get('risoGap') ? 1 : 0; // 10/24 13:2x 런지 간격 조건 — 0 = 간격 조건 없음 (12:1x 판 — 가까워도 창)
   if (params.has('risoTouch')) CONFIG.SECRET.risolutoTouch = +params.get('risoTouch') ? 1 : 0; // 10/25 01:0x 칼끝 얽힘 창 — 0 = 10/24 판 (이어짐 0.6 s 를 기다림)
+  // 10/25 21:0x 사장님 조건 셋 · 창 지킴 (기본 — 확인표 2563 ~ 2569): `?risoStick=fwd` 스틱 앞만(전) · `?risoTap=1` 탭만(전) · `?risoCover=0.07` 덮음 거리(전 — 위 줄) · `?secretHold=0` 열린 창을 조건이 바뀌면 바로 닫음(전 — 모든 사람 비기 창)
+  if (params.get('risoStick') === 'fwd' || params.get('risoStick') === 'both') CONFIG.SECRET.risolutoStick = params.get('risoStick');
+  if (params.has('risoTap')) CONFIG.SECRET.risolutoTap = +params.get('risoTap') ? 1 : 0;
+  if (params.has('secretHold')) CONFIG.SECRET.secretHold = +params.get('secretHold') ? 1 : 0;
   // 10/25 14:0x 런지 연출 (사장님 '리솔루토 쓰는 순간 비기인 줄 모르겠더라' → 안 1 — 화면만): `?risoCam=0` 카메라 밀어 넣기 끔(`?risoCam=0.9` 처럼 m 로 견주기) · `?risoStreak=0` 빛줄기 · 끝 반짝임 끔(10/23 마주 보는 띠 'line' 그대로) · `?risoGlint=0` 끝 반짝임만 끔
   if (params.has('risoCam')) CONFIG.SECRET.risoCam = Math.max(0, +params.get('risoCam') || 0);
   if (params.has('risoStreak')) CONFIG.SECRET.risoStreak = +params.get('risoStreak') ? 1 : 0;
@@ -274,6 +278,8 @@ if (params.has('schielPath')) CONFIG.UNIQUE_ASSIST.schielPath = +params.get('sch
 if (params.has('schielPlayer')) CONFIG.UNIQUE_ASSIST.schielPlayer = +params.get('schielPlayer') ? 1 : 0; // 사람 곁눈 베기 같은 길 (사장님 10/25 18:0x '같은 길 입혀' — 기본 1 · `?schielPlayer=0` = 사람은 옛 길 잣대 · 덧칸 없음 · unique_assist.js uniqueDef · planStep)
 if (params.has('schielPlayerK') && Number.isFinite(+params.get('schielPlayerK'))) CONFIG.UNIQUE_ASSIST.schielPlayerK = +params.get('schielPlayerK'); // 사람 곁눈 베기 세기 손잡이 (사장님 10/25 20:2x 결정 — 기본 1 = 세기 100 % · `?schielPlayerK=0.5` = 시험용 50 % · combat.js analyze)
 if (params.has('schielPlayerTip')) CONFIG.UNIQUE_ASSIST.schielPlayerTip = +params.get('schielPlayerTip') ? 1 : 0; // 사람 곁눈 베기 칼끝 들기 (사장님 10/25 20:2x 결정 '칼끝 들기 빼지 마' — 기본 1 = AI 와 같은 덧칸 셋 · `?schielPlayerTip=0` = 시험용 칼끝 들기 없음 · unique_assist.js planStep)
+for (const k of ['tsuRuler', 'tsuSnap', 'tsuAim']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 제비 베기 세 해법 (사장님 10/25 21:1x '해법 1~3 좋아' — 기본 1 · 0 = 그 해법만 끔 · unique_assist.js)
+if (params.has('tsuSnapShare') && +params.get('tsuSnapShare') > 0) CONFIG.UNIQUE_ASSIST.tsuSnapShare = +params.get('tsuSnapShare'); // 제비 베기 되돌림 칼끝 빠르기 몫 (기본 0.6 — 고노센 발도 칼끝 빠르기의 몫)
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
 if (params.has('koteDrop')) CONFIG.UNIQUE_ASSIST.koteDrop.p = +params.get('koteDrop') || 0; // 손목 치기 칼 떨구기 확률(10/24 J8 — 판 값 0.5 · `?koteDrop=0` 끔)
@@ -2742,7 +2748,7 @@ function frame(now) {
     let secBusy = exhausted || !!player.skill.secretPhase;
     // 이베리아 길목 (사장님 결정 10/11 13:2x): 준비(armed)가 켜져 있으면 창을 기다리지 않고 공격 입력 하나가 곧 길목 한 칼 (secret.js fireArmed — 플레이어만)
     const gilReady = !!playerSecret?.S?.do?.gilmok && !!playerSecret.gilArm?.armed;
-    const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly; // 이탈리아 거침없이 나아가 찌르기(10/22)는 찌르기 입력(톡)만 — 끌기는 보통 베기로
+    const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly; // tapOnly(이탈리아 안다레 리솔루토 전 판 — `?risoTap=1`)면 찌르기 입력(톡)만 · 10/25 21:0x 사장님 '공격하면 발동' 뒤 기본은 끌기도 비기 (schools.js tapOnly = SECRET.risolutoTap)
     // 이베리아 휘감아 돌기 스틱 판 (10/23 사장님 '공격 버튼 대신 이동 버튼을 360도 돌린다거나' · '반 바퀴 이상으로' — SECRET.ibSpin.input 'stick'): 무장 창은 공격 입력으로 나가지 않고
     //  (무장 동안의 톡 · 끌기는 보통 공격) 이동 스틱을 stickTime 초 안에 stickTurn° 돌리면 같은 길(fire → skill.secret → showPlayerCue)로 낸다. 몸짓 셈 = 실제 프레임 시간 (secret.js spinStick)
     //  10/24 공격 원 판 (사장님 02:5x '공격 동작 360도 원형 입력으로 변경' — 기본 'attackCircle'): 무장 창은 톡 · 끌기 하나로 나가지 않고(원이 아닌 공격은 보통 공격) 공격 손 움직임 d 로
@@ -2751,7 +2757,9 @@ function frame(now) {
     const stickGo = !!playerSecret?.spinStick(dt, input.move, !secBusy && player.alive);
     const handDown = input.activeTouch !== null || document.pointerLockElement === canvas;
     const circleGo = !!playerSecret?.spinCircle(dt, d, handDown, !secBusy && player.alive);
-    if (((atkWin || gilReady) && (taps > 0 || secSwipe) || stickGo || circleGo) && !secBusy && player.alive) {
+    // 창 지킴 (10/25 21:0x — SECRET.secretHold): 보통 탭 찌르기 · 손잡이 찍기가 아직 도는 동안은 비기를 못 낸다(skill.secret 이 받지 않음) — 그 입력으로 창을 써 버리지 않고 남겨 둠 (`?secretHold=0` = 전: 창을 쓰고 비기 없음)
+    const secArm = !(CONFIG.SECRET.secretHold && (player.skill.tap || player.skill.pom));
+    if (((atkWin || gilReady) && (taps > 0 || secSwipe) || stickGo || circleGo) && !secBusy && player.alive && secArm) {
       const o = playerSecret.open ? playerSecret.fire() : playerSecret.fireArmed();
       if (o) o.dir = [d.x, d.y]; // 비기를 낸 끌기의 방향 — 이베리아 흐름(10/11)이 이 칼의 흐름을 이어받는다 (톡이면 0 → 걸러진 손 목표 속도)
       if (player.skill.secret(o)) {
