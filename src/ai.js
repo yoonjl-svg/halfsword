@@ -21,7 +21,7 @@ import { STAMINA } from './config.js';
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE } from './config.js';
+import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, realS, realRate, TIME } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
@@ -48,6 +48,16 @@ const FEAR_TREMOR = 0.03;
 
 const clamp = THREE.MathUtils.clamp;
 const rand = (a, b) => a + Math.random() * (b - a);
+// 표준 시간 (10/25 22:3x — config.js TIME): AI 판단 박자 · 막기 · 물러남 · 걸쇠 · 눈의 기억은 실제 초로 적고 한 번 게임 초로 바꾼다 (realS).
+//  몸 · 칼 움직임 시간(기술 걸음 STEP_T · 따라 지나감 0.3 · 내딛기 늦춤 0.04 · 떨림 박자 · 비기 동작 단계)은 그대로 — 지금 빠르기가 표준.
+const DEF_T = realS(0.65); // 막기 한 번의 길이 (parry_button.js 와 같은 수)
+const DEF_SEIZE = realS(0.4); // 막는 중 남은 시간이 이 밑이면 붙잡기도 본다
+const DEF_MIN = realS(0.35); // 공격이 지나갔으면 남은 시간이 이 밑일 때 되받거나 물러난다 (막기 최소)
+const LOCK_T = realS(0.5); // 패시브 걸쇠 · 미룬 패시브 남은 시간
+const EV_REARM = realS(0.3); // 낌새 · 상대 사건이 이만큼 그치면 다시 본다 (secret.js 와 같은 수)
+const QUIET_T = realS(0.12); // 위협이 이만큼 없고 손이 멎으면 '공격이 지나갔다' (parry_button.js 와 같은 수)
+const NEW_THREAT_T = realS(0.25); // 잠깐 조용했다가 다시 오면 새 공격으로 보는 틈 (parry_button.js 와 같은 수)
+const CALM_T = realS(2); // 대치: 위협 없이 이만큼 지나야 '조용히 맞섬' (패시브 standoff)
 const STEP_T = 0.3; // 기술 걸음 'strike'(유파 고유 동작 step 칸): 닿는 거리여도 내딛는 시간 (보통 내딛기의 최대와 같다)
 // 무기별 간격 실측표(MEASURED)는 weapon_measured.js 한 곳에 있다 (10/8 ① 구조 — 전엔 이 파일과 schools.js MEASURES 두 벌).
 //  간격을 무기에 맞춰 늘이고 줄이는 일은 sword_art.js 가 한다. 옛 이름 MEASURED 는 여기서도 그대로 내보낸다 —
@@ -191,7 +201,7 @@ export class AI {
     this.handSpeed = 1.2;
     this.path = []; // 베는 동안 손이 지나갈 점들
     this.guard = null; // 간 볼 때의 자세
-    this.guardTimer = rand(0.3, 1.0);
+    this.guardTimer = realS(rand(0.3, 1.0));
     this.patience = rand(0.55, 0.85); // 처음엔 조금 간을 보다가 들어간다
     this.foeReach = this.foeM.reach + 0.05; // 상대 칼이 닿는 거리 추정 (생각보다 멀리서 맞으면 늘린다)
     this.decideTimer = 0;
@@ -200,7 +210,7 @@ export class AI {
     this.shuffle = 0;
     this.shuffleTimer = 0;
     this.circle = 0;
-    this.circleTimer = rand(0.5, 1.5);
+    this.circleTimer = realS(rand(0.5, 1.5));
     this.threatId = 0; // 상대 공격 번호 (한 공격에 한 번만 판단)
     this.threatSeen = -1;
     this.readRollId = -1; // '위험을 알아챘나' 판단도 한 공격에 한 번만 굴린다 (매 스텝 다시 굴리면 사실상 항상 알아채게 된다)
@@ -341,7 +351,7 @@ export class AI {
     if (this.passiveLock && (this.passiveLock.left -= dt) <= 0) this.passiveLock = null;
     if (this.pendingPassive?.left != null && (this.pendingPassive.left -= dt) <= 0) this.pendingPassive = null;
     // 물러남 끝까지 미룬 것(left null)인데 물러남이 끊겼으면(막기·피하기로 꼴이 바뀜) 그때부터 0.5 s 만 남긴다 — 끝없이 남아 한참 뒤 공격 기회를 가로채지 않게
-    if (this.pendingPassive && this.pendingPassive.left == null && this.mode !== 'withdraw') this.pendingPassive.left = 0.5;
+    if (this.pendingPassive && this.pendingPassive.left == null && this.mode !== 'withdraw') this.pendingPassive.left = LOCK_T;
 
     // 부활하는 동안(revive.js): 싸우지 않고 기다린다. 끝나면 집념으로 다시 싸운다
     if (me.revival) {
@@ -362,7 +372,7 @@ export class AI {
       me.move.set(0, 0);
       this.mode = 'withdraw';
       this.phase = 'ready';
-      this.timer = 0.9;
+      this.timer = realS(0.9);
       this.path.length = 0;
       this.pendingPassive = null;
       if (this.secretRun) this.secretAbort(); // 쓰러지면 비기도 끝
@@ -414,7 +424,7 @@ export class AI {
     }
 
     // ── 보기 (반응 시간만큼 늦게) ──
-    const s = this.sense.seen(L.reaction + 0.04 * this.anger); // 화나면 눈이 조금 늦다
+    const s = this.sense.seen(L.reaction + realS(0.04) * this.anger); // 화나면 눈이 조금 늦다
     this.lastSeen = s; // 늦게 본 모습 (startStrike 의 crouchLow 가 읽음 — 10/27)
     // 약한 자세 겨눔 (FINISH.vital, 10/12 — vital_target.js): 늦게 본 모습을 기술 고르기·공격 준비가 읽고, 손 높이·칼 기울기 보정을 한 스텝 옮긴다
     if (FINISH.vital) {
@@ -443,7 +453,7 @@ export class AI {
     if (this.drillOut) this.pendingPassive = null;
     // 상대가 얼마나 몰아치는가: 다가오며 휘두르는 사람이면 곧장 벨 수 있는 자세(지붕·황소)로 기다린다
     const aggrNow = (this.foeClosing > 0.6 ? 0.6 : 0) + (Math.hypot(s.hvx, s.hvy) > 3 && d < this.foeReach + 0.6 ? 0.6 : 0);
-    this.foeAggro += (Math.min(1, aggrNow) - this.foeAggro) * Math.min(1, dt / 2.5);
+    this.foeAggro += (Math.min(1, aggrNow) - this.foeAggro) * Math.min(1, dt / realS(2.5));
 
     // 맞혔나 / 맞았나 (움찔하는 것은 눈에 보이고, 맞은 것은 느낀다)
     if (foe.pain > this.prevFoePain + 0.05 && this.mode === 'attack') this.hitLanded = true;
@@ -455,12 +465,12 @@ export class AI {
       if (this.mode !== 'attack') this.foeReach = clamp(Math.max(this.foeReach, d + 0.1), this.foeM.reach, 2.5);
       if ((this.mode !== 'attack' || this.phase !== 'strike') && this.secretRun?.stage !== 'stiff' && this.secretRun?.stage !== 'instant' && this.secretRun?.stage !== 'spin' && this.secretRun?.stage !== 'mord') this.startWithdraw(0.8); // 순간 베기·발도 도중(instant)도 끊지 않는다 — 그 몇 스텝은 대본 // 비기 경직 동안은 물러나지도 못한다 (핸디캡)
     }
-    this.foeReach += (this.foeM.reach + 0.05 - this.foeReach) * dt * 0.03; // 천천히 원래 생각으로
+    this.foeReach += (this.foeM.reach + 0.05 - this.foeReach) * dt * realRate(0.03); // 천천히 원래 생각으로
     if (SECRET.gnsWary) this.gnsWatch(dt, d, hurt); // 고노센 경계 (10/25 08:0x 사장님 '⑤'): 상대가 고노센 쓰는 몸이 아니면 아무 일 없음 · 끄면 이 줄을 안 타 옛 판 그대로
 
     // 인내심: 시간이 지나면 줄어든다 → 판이 늘어지지 않는다
     const hurry = this.hurry();
-    this.patience = Math.max(0, this.patience - (dt / this.pers.patienceTime) * L.aggression * this.pers.aggr * hurry);
+    this.patience = Math.max(0, this.patience - (dt / realS(this.pers.patienceTime)) * L.aggression * this.pers.aggr * hurry); // 참을성 시간 patienceTime = 실제 초 (유파 기질 · 인물)
 
     // 상대 칼이 내 몸 쪽으로 오나
     const th = this.threat(s, c, r, d);
@@ -492,7 +502,7 @@ export class AI {
       else {
         this.decideTimer -= dt;
         if (this.decideTimer <= 0) {
-          this.decideTimer = rand(0.3, 0.6);
+          this.decideTimer = realS(rand(0.3, 0.6));
           const canPoke = d < this.M.contact + 0.15 && this.foe.alive && this.foe.state === 'stand' && !th;
           if (canPoke && Math.random() < 0.5 * L.read) {
             this.startAttack(this.pickTech(s, 'stepin'), 'stepin', { noFeint: true, fastChamber: true, skipChamber: true });
@@ -684,7 +694,7 @@ export class AI {
     // 자세 바꾸기 (잠깐씩 멈추며)
     this.guardTimer -= dt;
     if (this.guardTimer <= 0) {
-      this.guardTimer = this.pers.rhythm * rand(0.6, 1.4);
+      this.guardTimer = realS(this.pers.rhythm * rand(0.6, 1.4)); // 자세 바꾸는 박자 rhythm = 실제 초
       this.guard = this.pickGuard(s);
     }
     this.hand.set(this.guard.pad[0], this.guard.pad[1]);
@@ -693,7 +703,7 @@ export class AI {
     // 기회를 본다 (사람처럼 가끔씩 판단)
     this.decideTimer -= dt;
     if (this.decideTimer > 0) return;
-    this.decideTimer = rand(0.06, 0.14);
+    this.decideTimer = realS(rand(0.06, 0.14));
     const opp = this.opportunity(s, d);
     let need = 1 - 0.3 * (this.pers.aggr * L.aggression - 0.8);
     if (STAMINA.on && this.foe.stamina.level > 0) need -= this.foe.stamina.exhausted ? 0.45 : 0.2;
@@ -720,7 +730,7 @@ export class AI {
   drillWatch(dt, s, d) {
     this.guardTimer -= dt;
     if (this.guardTimer <= 0) {
-      this.guardTimer = this.pers.rhythm * rand(0.6, 1.4);
+      this.guardTimer = realS(this.pers.rhythm * rand(0.6, 1.4)); // 자세 바꾸는 박자 rhythm = 실제 초
       this.guard = this.pickGuard(s);
     }
     this.hand.set(this.guard.pad[0], this.guard.pad[1]);
@@ -862,7 +872,7 @@ export class AI {
     ev.winning = foe.blood < me.blood;
     ev.foeBleeding = foe.bleed > 0.01;
     ev.landed = this.evLanded;
-    if (!C.update(dt, ev)) return; // 문턱값이 전부 0 (기본 AI): 감정층이 꺼져 있다
+    if (!C.update(dt / TIME.k, ev)) return; // 감정 시계 = 실제 초 (표준 시간 10/25 — 사람 감정은 main.js 가 화면 dt 로 돌려 원래 실제 초 · emotions.js 의 9 · 12 · 8 초 감쇠 · 10 초 · 텀이 둘 다 실제 초) · 문턱값이 전부 0 (기본 AI): 감정층이 꺼져 있다
     this.evParried = this.evLanded = false;
 
     // 아래는 AI 에만 있는 것: 지배 감정이 없으면 공포 세기가 그대로 검술에 걸린다, 발끈한 순간 참을성, 관찰 통계
@@ -964,7 +974,7 @@ export class AI {
     let top = 0;
     const cls = this.foeClass(s);
     const handSp = Math.hypot(s.hvx, s.hvy);
-    const swungRecently = this.sense.recentHandSpeed(L.reaction, 0.7) > 3.5;
+    const swungRecently = this.sense.recentHandSpeed(L.reaction, realS(0.7)) > 3.5;
     const add = (v, k) => {
       if (v > top) {
         top = v;
@@ -1003,10 +1013,10 @@ export class AI {
   seize(s, d, dt) {
     this.seizeT -= dt;
     if (this.seizeT > 0) return false;
-    this.seizeT = rand(0.08, 0.16);
+    this.seizeT = realS(rand(0.08, 0.16));
     if (d > this.M.reach + 0.2 || d < 0.9 || !this.foe.alive) return false;
     const L = this.level;
-    const swung = this.sense.recentHandSpeed(L.reaction, 0.6) > 3.5;
+    const swung = this.sense.recentHandSpeed(L.reaction, realS(0.6)) > 3.5;
     const recovering = swung && Math.hypot(s.hvx, s.hvy) < 1.8;
     const pressing = d < 1.5 && this.foeClosing > 0.1;
     if (!recovering && !pressing) return false;
@@ -1136,7 +1146,7 @@ export class AI {
     // 빈틈을 잡아 순간적으로 치는 공격(recover/stepin/press/counter/stop 등)은 준비 자세로 옮기는 손도
     //  빠르게 움직여야 한다. 느린 chamberSpeed로 챔버하면 정작 순간을 놓친다
     this.fastChamber = !!opt.fastChamber || this.quick;
-    this.timer = this.phase === 'approach' && !this.quick ? L.windup * 0.15 : 0;
+    this.timer = this.phase === 'approach' && !this.quick ? realS(L.windup * 0.15) : 0; // 준비 자세 멈칫 = 실제 초
     // 기술 알림: 고유 동작 이름은 칼이 실제로 나갈 때(startStrike — 10/9 13:xx 옮김). 패시브 이름은 passiveFired 가 여기(결정)에서
     return true;
   }
@@ -1212,9 +1222,9 @@ export class AI {
       if (!LP?.length && padDist([me.handOffset.x, me.handOffset.y], t.from) < 0.03) {
         if (this.gnsW?.plan?.kind === 'feint') return this.abortAttack(); // 고노센 경계 속임 (10/25): 들기를 마치면 거둔다 (선 밖 — 상대 창 없음)
         this.phase = 'approach';
-        this.timer = this.quick ? 0 : L.windup * 0.25; // 잠깐 자세를 잡는다 (쉬운 상대일수록 길다 = 읽기 쉽다)
+        this.timer = this.quick ? 0 : realS(L.windup * 0.25); // 잠깐 자세를 잡는다 (쉬운 상대일수록 길다 = 읽기 쉽다)
       }
-      if (this.attackT > 1.2 + (this.secretRun?.S.do.release ? 2 : 0)) this.abortAttack(); // 터뜨림 창 비기는 붙잡는 몫만큼 더 (maxHold 가 먼저 끝낸다)
+      if (this.attackT > realS(1.2 + (this.secretRun?.S.do.release ? 2 : 0))) this.abortAttack(); // 터뜨림 창 비기는 붙잡는 몫만큼 더 (maxHold 가 먼저 끝낸다)
     } else if (this.phase === 'approach') {
       if (this.gnsW?.plan?.kind === 'feint') return this.abortAttack(); // 고노센 경계 속임 (10/25): 이미 준비 자세였으면 들기 없이 거둠
       this.hand.set(t.from[0], t.from[1]);
@@ -1237,7 +1247,7 @@ export class AI {
       // 상대가 물러나 따라잡을 수 없거나 너무 오래 걸리면 그만둔다 (좀비처럼 쫓지 않는다)
       const keep = 1 + 0.5 * this.obsession; // 물고 늘어질 땐 접근을 쉽게 포기하지 않는다
       const hold = this.secretRun?.S.do.loop ? 1 : 0; // 이베리아 비기: 고리를 준비로 도는 몫만큼 1 s 더 버틴다 (다른 공격·비기는 0 — 같은 수)
-      if (this.attackT > (this.chasing ? 3 : 1.4) * keep + hold || d > this.holdDist() + (this.chasing ? 1.4 : 0.8) * keep + hold) this.abortAttack();
+      if (this.attackT > realS((this.chasing ? 3 : 1.4) * keep + hold) || d > this.holdDist() + (this.chasing ? 1.4 : 0.8) * keep + hold) this.abortAttack();
     } else if (this.phase === 'strike') {
       this.handSpeed = L.strikeSpeed;
       if (this.secretRun) this.secretStrike(dt); // 비기: 손 속도 배율 · 서보 힘 창 · 재기
@@ -1354,7 +1364,7 @@ export class AI {
     if (this.secretRun) this.secretAbort();
     this.mode = 'watch';
     this.phase = 'ready';
-    this.guardTimer = rand(0.2, 0.6);
+    this.guardTimer = realS(rand(0.2, 0.6));
   }
 
   startStrike() {
@@ -1693,7 +1703,7 @@ export class AI {
     const fromPassive = this.mode === 'attack' ? this.passiveAtk : null; // 패시브가 낸 공격 끝의 물러남이면 같은 패시브를 다시 굴리지 않는다
     this.mode = 'withdraw';
     this.phase = 'ready';
-    this.timer = time;
+    this.timer = realS(time); // 물러남 길이 = 실제 초 (부르는 쪽 0.4 ~ 1.2 · 패시브 do.time)
     this.path.length = 0;
     this.stepT = 0;
     // 물러남 끝 패시브(斂翅)는 지우지 않는다: 몰아치는 상대에게 물러나는 동안 막기·되물러남이 끼어도 끝에 들어간다 (공격을 시작하면 startAttack 이 지운다)
@@ -1712,10 +1722,10 @@ export class AI {
       if (P.do.at === 'end') this.pendingPassive = { P, why: 'press', left: null }; // 물러남 끝까지 (left null = 시간 안 셈)
       else if (P.do.withdraw) {
         this.guard = this.passiveGuard(P.do.withdraw) ?? this.guard;
-        if (P.do.time) this.timer = P.do.time;
+        if (P.do.time) this.timer = realS(P.do.time); // 패시브 물러남 길이도 실제 초 (startWithdraw 와 같음)
         this.passiveFired(P);
       } else if (!(this.foe.alive && this.d < this.M.reach + 0.2 && this.d > this.M.clinch && this.passiveGo(P, null, 'press'))) {
-        this.pendingPassive = { P, why: 'press', left: 0.5 }; // 간격 밖 → 확정: 0.5 s 안에 낼 수 있으면 낸다 (10/9 13:xx)
+        this.pendingPassive = { P, why: 'press', left: LOCK_T }; // 간격 밖 → 확정: 0.5 s 안에 낼 수 있으면 낸다 (10/9 13:xx)
       }
     }
   }
@@ -1737,14 +1747,14 @@ export class AI {
       this.hand.set(this.guard.pad[0], this.guard.pad[1]);
       this.handSpeed = 1.4;
     }
-    if ((this.timer <= 0 && d > this.M.reach) || d > this.holdDist() - 0.05 || this.timer < -1) {
+    if ((this.timer <= 0 && d > this.M.reach) || d > this.holdDist() - 0.05 || this.timer < -realS(1)) {
       this.mode = 'watch';
-      this.guardTimer = rand(0.3, 0.8);
+      this.guardTimer = realS(rand(0.3, 0.8));
       // 패시브 斂翅 꼴: 물러남 끝에 갑자기 들어가며 벤다 (굴림은 물러남을 시작할 때 이미 했다).
       //  지금 못 내면(상대가 서 있지 않음 등) 0.5 s 동안 간 보기에서 다시 본다 (10/9 13:xx — 막기·물러남이 끼어도 지워지지 않게)
       const PP = this.pendingPassive;
       if (PP) {
-        if (PP.left == null) PP.left = 0.5;
+        if (PP.left == null) PP.left = LOCK_T;
         this.passivePending(s, d);
       }
     }
@@ -1814,21 +1824,21 @@ export class AI {
     this.defVoid = !this.me.armed || Math.random() < pVoid + (1 - pVoid) * this.fear * 0.8;
     if (this.defVoid) this.stats.voids++;
     else this.stats.parries++;
-    this.timer = 0.65;
+    this.timer = DEF_T;
     return true;
   }
 
   defend(dt, s, d) {
     const L = this.level;
     this.timer -= dt;
-    if (!this.drillOut && this.timer < 0.4 && this.seize(s, d, dt)) return;
+    if (!this.drillOut && this.timer < DEF_SEIZE && this.seize(s, d, dt)) return;
     const p = this.school.parry[this.defLine] || this.school.pose.point;
     this.hand.set(p[0], p[1]);
     this.handSpeed = this.defVoid ? L.parrySpeed * 0.6 : L.parrySpeed;
     this.checkBind();
     if (this.drillOut) {
       // 시험: 헛스윙 연습 동안은 받기만 (whiff_drill.js) — 막기 연환·버릇·되받기 없이, 칼이 지나가면 물러난다 (드릴 거리에서 곧 간 보기로)
-      if ((this.noThreat > 0.12 && Math.hypot(s.hvx, s.hvy) < 2.5 && this.timer < 0.35) || this.timer <= 0) this.startWithdraw(0.6);
+      if ((this.noThreat > QUIET_T && Math.hypot(s.hvx, s.hvy) < 2.5 && this.timer < DEF_MIN) || this.timer <= 0) this.startWithdraw(0.6);
       return;
     }
     // 막기 연환 비기 (10/11 — schools.js *_SECRET_PARRY): 정한 자리로 받아 낸 막기 → 독일은 맞붙은 그 순간, 중국은 칼이 갈라진 순간 곧장. 버릇(bindDef)·흐름 되받기보다 먼저
@@ -1840,8 +1850,8 @@ export class AI {
     if (!pcWait && SKILL.flow && SKILL.flowParry && !this.defVoid && this.flowRiposte(d)) return;
     if (BIND.natural && this.natHoldDef(dt)) return; // 자연 바인드 실험 ②: 칼이 맞붙어 있는 동안은 막는 자리를 지키며 민다 (BIND.holdMax 까지)
     // 공격이 지나갔다(칼끝이 더는 오지 않고 손이 멈췄다) → 상대가 다시 자세를 잡기 전에 되받아 친다 (Nach)
-    const swingOver = this.noThreat > 0.12 && Math.hypot(s.hvx, s.hvy) < 2.5;
-    if ((swingOver && this.timer < 0.35) || this.timer <= 0) {
+    const swingOver = this.noThreat > QUIET_T && Math.hypot(s.hvx, s.hvy) < 2.5;
+    if ((swingOver && this.timer < DEF_MIN) || this.timer <= 0) {
       const riposte = d < this.M.reach + 0.25 && d > this.M.clinch + 0.1 && this.foe.alive && Math.random() < L.followUp;
       if (!(riposte && this.startAttack(this.pickTech(s, 'recover'), 'riposte', { noFeint: true }))) this.startWithdraw(0.6);
     }
@@ -1957,7 +1967,7 @@ export class AI {
       if (!hit || tc < hit.tc) hit = { tc, hx, hy, hz, vx, vy, vz, sp };
     }
     if (!hit) return null;
-    if (this.noThreat > 0.25) this.threatId++; // 잠깐 조용했다가 다시 오면 새 공격
+    if (this.noThreat > NEW_THREAT_T) this.threatId++; // 잠깐 조용했다가 다시 오면 새 공격
     const lat = hit.hx * r.x + hit.hz * r.z; // + = 내 오른쪽
     // 찌르기: 칼끝이 칼날 방향으로 곧게 움직인다
     const bx = s.tx - s.mx;
@@ -1991,7 +2001,7 @@ export class AI {
     const near = d < this.foeReach + closing * 0.4 + 0.3;
     if (!near || (!raising && !charging)) {
       this.preOff += dt;
-      if (this.preOff > 0.3) this.preArmed = true;
+      if (this.preOff > EV_REARM) this.preArmed = true;
       return false;
     }
     this.preOff = 0;
@@ -2058,7 +2068,7 @@ export class AI {
     const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach, this.me, { reach: this.gilArm ? gilmokLine(this.me, this.M.reach, S.do) : this.M.reach, dt, st: E, armed: !!this.gilArm?.armed, ...(SECRET.gnsWalkIn && SECRET.gnsEnterAI && SECRET.iai && this.iaiArm ? { enterLine: gnsEnterLine(this.M), iaiArmed: this.iaiArm.armed } : null) }); // 사건 판정은 플레이어 창과 같은 함수 (secret.js) · ex: 이베리아 호 안쪽 · 길목 (준비) · 일본 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만 · 10/25 22:3x 들어옴 창 gnsWalkIn 0 기본이면 안 봄)
     if (!on) {
       E.off += dt;
-      if (E.off > 0.3) E.armed = true;
+      if (E.off > EV_REARM) E.armed = true;
       return false;
     }
     E.off = 0;
@@ -2491,7 +2501,7 @@ export class AI {
     this.path.length = 0;
     this.stepT = 0;
     run.stage = 'stiff';
-    run.t = SECRET.stiff[run.tr] ?? 0.3;
+    run.t = SECRET.stiff[run.tr] ?? realS(0.3);
     this.hand.set(this.me.handOffset.x, this.me.handOffset.y); // 경직이 시작된 자리 (끝나면 물러남이 새 목표를 준다)
   }
 
@@ -2695,7 +2705,7 @@ export class AI {
     F[P.name] = (F[P.name] ?? 0) + 1;
     this.passiveAtk = this.mode === 'attack' ? P.name : null;
     // 확정(10/9 13:xx): 패시브가 낸 공격은 0.5 s 동안 새 위협에 거두지 않는다 (attack 의 respond 확인을 건너뜀 — 맞는 것은 물리 그대로)
-    this.passiveLock = this.passiveAtk ? { left: 0.5, name: P.name } : null;
+    this.passiveLock = this.passiveAtk ? { left: LOCK_T, name: P.name } : null;
     this.setTechCue(P.nameKo ?? P.name, 'passive'); // 기술 알림 (패시브가 낸 공격은 칼이 나갈 때 고유 동작 이름으로 덮지 않는다 — strikeCue)
   }
 
@@ -2789,7 +2799,7 @@ export class AI {
       this.defVoid = !!D.void || !this.me.armed;
       if (this.defVoid) this.stats.voids++;
       else this.stats.parries++;
-      this.timer = 0.65;
+      this.timer = DEF_T;
       this.passiveFired(P);
       return true;
     }
@@ -2810,7 +2820,7 @@ export class AI {
   /** watch 의 판단 박자: standoff(위협 없음 2 s 넘게 · 상대 손 1 m/s 아래 · 간격 끝 가까이)와 foeStepIn(기회 종류 'stepin') — 사건마다 한 번 */
   passiveWatch(s, d, opp, reachOut) {
     if (!this.foe.alive || s.state !== 'stand') return false;
-    const calm = this.noThreat > 2 && Math.hypot(s.hvx, s.hvy) < 1 && d < this.holdDist() + 0.3;
+    const calm = this.noThreat > CALM_T && Math.hypot(s.hvx, s.hvy) < 1 && d < this.holdDist() + 0.3;
     if (!calm) this.standoffArmed = true;
     else if (this.standoffArmed) {
       const P = this.passiveFor('standoff');
@@ -2884,7 +2894,7 @@ export class AI {
         this.path.shift();
         // 속임수의 가짜 부분이 끝났다 → 칼이 가짜 쪽으로 움직이는 것이 보이도록 잠깐 두었다가 진짜 길로 간다.
         //  너무 오래 멈추면 진짜 칼이 나가기까지 전체 시간이 늘어져 오히려 읽히기 쉽다. 숙련될수록 더 빨리 다시 챔버한다
-        if (this.feintPts > 0 && --this.feintPts === 0) this.feintHold = clamp(0.16 - 0.08 * this.level.read, 0.06, 0.16);
+        if (this.feintPts > 0 && --this.feintPts === 0) this.feintHold = realS(clamp(0.16 - 0.08 * this.level.read, 0.06, 0.16)); // 속임 멈칫 = 실제 초
       }
     }
     // 공포 떨림 (플레이어 눈에 보이는 신호, 무기·검술 담당 추가): 겁먹으면 간 보는 동안 칼끝이 잔잔히 떨린다 —
@@ -3029,7 +3039,7 @@ export class AI {
         // 제자리: 잔걸음으로 들어갔다 빠졌다 (리듬)
         this.shuffleTimer -= dt;
         if (this.shuffleTimer <= 0) {
-          this.shuffleTimer = rand(0.5, 1.2);
+          this.shuffleTimer = realS(rand(0.5, 1.2));
           this.shuffle = Math.random() < 0.5 ? 0 : rand(-0.3 - 0.3 * this.fear, 0.18 * (1 - this.fear)); // 겁먹으면 잔걸음이 뒷걸음으로 기운다
         }
         v = this.shuffle;
@@ -3040,7 +3050,7 @@ export class AI {
       // 옆으로 돌기 (가끔 방향을 바꾸고 가끔 멈춘다)
       this.circleTimer -= dt;
       if (this.circleTimer <= 0) {
-        this.circleTimer = rand(0.8, 2.2);
+        this.circleTimer = realS(rand(0.8, 2.2));
         const x = Math.random();
         const ds = this.drySense; // 마른 길 (라트나 · 잠든 습지만): 같은 굴림 x 로 멈춤·도는 쪽을 땅에 맞춰 고른다 — 0 이면 아래 옛 줄 그대로
         this.circle = ds ? this.dryCircle(x, ds) : x < 0.45 ? 0 : (x < 0.85 ? this.pers.circleDir : -this.pers.circleDir) * this.pers.circleRate;
@@ -3067,7 +3077,7 @@ export class AI {
       const k = clamp((rA - 4.6) * 1.2, 0, 1);
       if (fwd < 0 && outBack > 0.3) fwd *= 1 - k * 0.8; // 뒤로는 더 못 간다
       side = side * (1 - k) + Math.sign(toCenter || 1) * k;
-      if (this.mode === 'watch') this.patience = Math.max(0, this.patience - dt * 0.15 * k); // 몰렸으면 먼저 친다
+      if (this.mode === 'watch') this.patience = Math.max(0, this.patience - dt * realRate(0.15) * k); // 몰렸으면 먼저 친다
     }
     // 모르트슐라크 몸 붙이기 (10/24 — mordPressGo): 닿는 거리(CLOSE.reach) 밖이면 곧장 걸어 들어간다 (너무 붙음 · 간 보기 걸음 대신 · 닿으면 아래 밀치기가 스틱을 쥔다)
     if (this.press?.go && !this.closeInside && this.mode === 'watch' && !me.barge) {
@@ -3266,7 +3276,7 @@ export class AI {
     const me = this.me;
     const ob = me.arenaObstacle;
     const p = me.bodies.pelvis.translation();
-    const [fx, fz] = this.dryFoeAt(this.sense.seen(this.level.reaction + 0.04 * this.anger));
+    const [fx, fz] = this.dryFoeAt(this.sense.seen(this.level.reaction + realS(0.04) * this.anger));
     const ox = p.x - fx;
     const oz = p.z - fz;
     const R = Math.hypot(ox, oz) || 1e-6;

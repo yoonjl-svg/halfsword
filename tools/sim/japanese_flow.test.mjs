@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Vector2 } from 'three';
 import { Stamina } from '../../src/stamina.js';
-import { STAMINA, SKILL, AI_PROFICIENCY } from '../../src/config.js';
+import { STAMINA, SKILL, AI_PROFICIENCY, realS } from '../../src/config.js'; // realS: 표준 시간(10/25) — 창 0.2 s · 팔 늦춤 0.4 s 는 실제 초
 import { FLOW_REDESIGN, spendFlowPenalty, aiFlowReady, flowShieldKeep } from '../../src/nagashi_redesign.js';
 import { FLOW_RECOVERY, beginFlowRecovery, flowRecoveryScale } from '../../src/nagashi_recovery.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
@@ -17,8 +17,8 @@ function actor(extra = {}) {
 }
 
 test('판 값: 판정 개편 켬 · 공격 끝 = 실제 칼 기하 · 기력 40 · 창 0.2 s · 팔 늦춤 0.4 s(바닥 0.25 — 10/21 시간 통일) · 자연 회복 탈진 · 일본/이베리아 0.2 · 동방 0.5', () => {
-  assert.equal(FLOW_REDESIGN.on, true); assert.equal(FLOW_REDESIGN.penalty, 40); assert.equal(FLOW_REDESIGN.window, 0.2); assert.equal(FLOW_REDESIGN.threatEnd, true);
-  assert.equal(FLOW_RECOVERY.seconds, 0.4); assert.equal(FLOW_RECOVERY.floor, 0.25); assert.equal(STAMINA.exhaustNatural, true);
+  assert.equal(FLOW_REDESIGN.on, true); assert.equal(FLOW_REDESIGN.penalty, 40); assert.equal(FLOW_REDESIGN.window, realS(0.2)); assert.equal(FLOW_REDESIGN.threatEnd, true);
+  assert.equal(FLOW_RECOVERY.seconds, realS(0.4)); assert.equal(FLOW_RECOVERY.floor, 0.25); assert.equal(STAMINA.exhaustNatural, true);
   assert.equal(SKILL.jpParryDmgCut, 0.2); assert.equal(SKILL.ibParryDmgCut, 0.2); assert.equal(SKILL.cnParryDmgCut, 0.5);
 });
 

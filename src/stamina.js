@@ -1,7 +1,10 @@
 import { classifyStroke } from './attack_stroke.js';
-import { STAMINA, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY } from './config.js';
+import { STAMINA, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY, realS } from './config.js';
 import { entersAttackLine, isPreparation } from './stamina_stroke.js';
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
+// 표준 시간 (10/25 22:3x): 공격 번호가 살아 있는 시간 · 긋기 꼬리는 실제 초로 적는다 (STAMINA 의 초 · 초당 값은 config 에서 realS · realRate)
+const ATTACK_LIFE = realS(1.5); // 공격을 낸 뒤 그 공격 번호가 살아 있는 시간 (막아 받기 청구 · 옛 흘림 판정)
+const ATTACK_TAIL = realS(0.35); // 긋는 동안 · 긋기가 끝난 뒤 공격으로 셈하는 꼬리
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -201,7 +204,7 @@ export class Stamina {
     if (!STAMINA.on || this.exhausted || !this.fighter.alive) return;
     this.attackId++;
     this.flowAttackKind = kind; this.flowAttackStart = this.time; // 흘림 판정이 읽는 공격 종류(찌르기는 흘리지 않음 — nagashi_redesign.js) · 사람 · AI 같게
-    this.attackUntil = this.time + 1.5;
+    this.attackUntil = this.time + ATTACK_LIFE;
     if (bundled) return;
     this.counts[kind] = (this.counts[kind] ?? 0) + 1;
     this.spend('attack', Math.max(0, (kind === 'thrust' ? STAMINA.thrustCost : STAMINA.cutCost) * this.weight - credit));
@@ -212,7 +215,7 @@ export class Stamina {
     if (!STAMINA.on || this.exhausted) return;
     this.attackId++;
     this.flowAttackKind = 'secret'; this.flowAttackStart = this.time;
-    this.attackUntil = this.time + 1.5;
+    this.attackUntil = this.time + ATTACK_LIFE;
     if (this.spend('secret', STAMINA.secretCost)) this.counts.secret++;
   }
 
@@ -257,7 +260,7 @@ export class Stamina {
     const s = this.stroke;
     if (!s) return;
     if (s.travel >= STAMINA.strokeTravel && !isPreparation(s)) this.commitStroke(s);
-    s.until = this.time + 0.35;
+    s.until = this.time + ATTACK_TAIL;
     this.strokeTail = s;
     this.stroke = null;
   }
@@ -356,7 +359,7 @@ export class Stamina {
     this.pose = Math.max(0, this.pose - dt * 6);
     this.action = this.guarding ? 'guard' : 'rest';
     this.observeStroke(dt);
-    if ((f.aiControlled && this.controller?.phase === 'strike') || (!f.aiControlled && f.skill?.swinging && this.stroke?.paid)) this.attackUntil = this.time + 0.35;
+    if ((f.aiControlled && this.controller?.phase === 'strike') || (!f.aiControlled && f.skill?.swinging && this.stroke?.paid)) this.attackUntil = this.time + ATTACK_TAIL;
     if (this.exhausted) return;
     const shots = f.gun?.shots ?? 0;
     if (shots > this.lastShots) this.spend('attack', (shots - this.lastShots) * STAMINA.shotCost * this.weight);

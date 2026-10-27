@@ -188,8 +188,10 @@ test('맞는 순간 손목 · 세기 (서 있는 상대 · 셸하우만 · 씨�
   assert.ok(neu.perAtk >= 3 * old.perAtk, `공격당 심각도 새 ${neu.perAtk} · 옛 ${old.perAtk}`);
 });
 
-test('사람 곁눈 베기 맞는 순간 (손가락 봇 · 분노의 베기 길 · 고른 견줌 — 상대 상처 끔 · 씨앗 여섯 × 앞 다섯 칼): 같은 길(기본 · 덧칸 셋)과 3(칼끝 들기 없음) 모두 손목 범위 밖 ≤ 15 % · 거꾸로 ≤ 5 % · 3 은 공격당 심각도가 18:0x 전 판의 ± 25 % 안 · 같은 길은 더 셈 / 전 판은 범위 밖 ≥ 25 %', () => {
-  const fair = () => duelSummary([1, 2, 3, 4, 5, 6].map((s) => playerRun(s, { foe: 'still', dur: 14, immortal: true })).map((r) => ({ ...r, rows: r.rows.slice(0, 5) })));
+// 씨앗 여섯 → 열둘 (10/27 표준 시간 — 적힌 시간이 실제 초가 되어 손가락 봇 판 · 과녁 몸 돌기가 바뀜: 여섯 씨앗으론 3 판 범위 밖 4 / 23 = 17 % · 3 ÷ 전 판 세기 1.38 로 문턱을 넘고
+//  옛 판도 여섯 씨앗 2 / 24 · 0.80 처럼 출렁임 — 열둘이면 표준 시간 5 / 46 · 1.23 · 옛 판 5 / 48 · 0.91 로 둘 다 문턱 안 · 문턱 그대로 · 기록 docs/strike/time_standard_2026-10-25.md §4)
+test('사람 곁눈 베기 맞는 순간 (손가락 봇 · 분노의 베기 길 · 고른 견줌 — 상대 상처 끔 · 씨앗 열둘 × 앞 다섯 칼): 같은 길(기본 · 덧칸 셋)과 3(칼끝 들기 없음) 모두 손목 범위 밖 ≤ 15 % · 거꾸로 ≤ 5 % · 3 은 공격당 심각도가 18:0x 전 판의 ± 25 % 안 · 같은 길은 더 셈 / 전 판은 범위 밖 ≥ 25 %', () => {
+  const fair = () => duelSummary([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((s) => playerRun(s, { foe: 'still', dur: 14, immortal: true })).map((r) => ({ ...r, rows: r.rows.slice(0, 5) })));
   const withTip = (v, fn) => {
     const old = UA.schielPlayerTip;
     UA.schielPlayerTip = v;

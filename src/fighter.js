@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST } from './config.js';
+import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
 import { Stamina } from './stamina.js';
@@ -33,6 +33,7 @@ import { SchoolPassive, schoolPassiveOn } from './school_passive.js'; // 유파 
 import { fighterWetlandMoveScale } from './wetland_ground.js';
 import { spinStep } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 — 한 바퀴 도는 대본 (10/22 · f.ibSpin 이 없으면 부르지 않는다) // 잠든 습지 진흙 웅덩이: 자발 이동만 줄인다 (다른 무대 배율 1 — 값이 비트 단위로 같다)
 
+const KNEEL_T = realS(1.1); // 넘어졌다 일어날 때 무릎 꿇은 채 기다림 (실제 초 — 표준 시간 10/25 · 곁눈 베기 꿇음은 UNIQUE_ASSIST.buckle.kneel)
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
 // 롱소드의 칼날 축(비트는 축) 관성 실측값 (칼자루+폼멜+코등이+칼날 합, kg·m²). fighter.js
 // 생성자의 twistScale 계산 기준 (weapons.js의 롱소드 spec과 같은 수치가 나와야 한다).
@@ -348,7 +349,7 @@ export class Fighter {
     this.physiology = o.physiology ? Object.freeze({ ...HUMAN_BODY, ...o.physiology }) : HUMAN_BODY; // 몸 규칙 (캐릭터 시트 physiology — 병마용, 위 HUMAN_BODY). 없으면 사람
     this.daze = 0;
     this.downTime = BODY.fallDuration;
-    this.kneelTime = 1.1;
+    this.kneelTime = KNEEL_T;
     this.riseTime = 0.9;
     // 투구: ARMOR.on 이면 look.helmet 에 무엇이든 적혀 있으면 막아 주는 투구다(종류별 값은 ARMOR.helmets).
     //  끄면 예전처럼 플레이어 케틀햇만 막는다
@@ -1428,7 +1429,7 @@ export class Fighter {
     const tilt = this.tiltDeg();
     const leg = Math.max(0.3, this.legHealth);
     // 일어나는 데 걸리는 시간: 다리가 다칠수록, 피를 흘릴수록 오래
-    this.kneelTime = ((this.buckleKneel ?? 1.1) / leg) / Math.max(0.5, this.vigor); // buckleKneel: 곁눈 베기 무릎 꺾기는 꿇는 시간만 그 값 꼴(10/21 — 0.4 s)
+    this.kneelTime = ((this.buckleKneel ?? KNEEL_T) / leg) / Math.max(0.5, this.vigor); // 무릎 꿇은 채 기다림 = 실제 초 (KNEEL_T · buckleKneel 은 config 에서 실제 초) · 일어서는 몸놀림 riseTime 0.9 은 그대로 // buckleKneel: 곁눈 베기 무릎 꺾기는 꿇는 시간만 그 값 꼴(10/21 — 0.4 s)
     this.riseTime = (0.9 / leg) / Math.max(0.5, this.vigor);
     if (this.revival) reviveTick(this, dt); // 부활: 쓰러져 누웠다가 정한 때에 일어난다 (revive.js)
     if (this.state === 'stand') {
@@ -2053,6 +2054,11 @@ export class Fighter {
   /** 비정상 손목 교정 (아래 모듈 wristClamp 그대로 — 운동학 비기 secret_instant.js placeIai 가 부른다: 그 모듈이 fighter.js 를 부르면 모듈 차례가 꼬여서) */
   wristClamp(fx, aim, z) {
     return wristClamp(fx, aim, z);
+  }
+
+  /** 아래팔 굴림 한도 (°, 손목 밧줄 HUMAN.forearmRoll 그대로 — 운동학 칼은 밧줄이 못 막아 secret_instant.js placeIai 의 굴림 묶음이 읽는다 · 제비 베기 되돌림 칼 10/25) */
+  rollMax() {
+    return HUMAN.forearmRoll;
   }
 
   gripDevOff() {

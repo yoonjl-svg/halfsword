@@ -32,10 +32,10 @@ const wristGap = (P) => {
 
 test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 2 s — 10/25 23:1x · 끊김 너그러움 0.4 s — 10/27 21:4x · 창 0.6 s · 굳음 0.4 s) · 사람 비기 열림에 독일 · AI 도 독일 (10/24)', () => {
   assert.equal(SECRET.deMord, 1);
-  assert.equal(SECRET.mordPress, 2); // 10/25 23:1x 사장님 '1초 말고 2초로 하고, 대신 리솔루토처럼 0.2초 안에 다시 붙으면 이어서 세.' (전 1.5)
-  assert.equal(SECRET.mordGrace, 0.4); // 10/27 21:4x 사장님 '0.2초 간격을 0.4초로 늘려' (전 0.2)
-  assert.equal(SECRET.playerWindow, 0.6);
-  assert.equal(SECRET.stiff.german, 0.4);
+  assert.equal(SECRET.mordPress, CONFIG.realS(2)); // 10/25 23:1x 사장님 '1초 말고 2초로 하고, 대신 리솔루토처럼 0.2초 안에 다시 붙으면 이어서 세.' (전 1.5) · 표준 시간(10/25): 적힌 수는 실제 초 — 게임 값 = × 1.1
+  assert.equal(SECRET.mordGrace, CONFIG.realS(0.4)); // 10/27 21:4x 사장님 '0.2초 간격을 0.4초로 늘려' (전 0.2)
+  assert.equal(SECRET.playerWindow, CONFIG.realS(0.6));
+  assert.equal(SECRET.stiff.german, CONFIG.realS(0.4));
   assert.equal(SECRET.mordOver, 0); // 넘어 들어감 규칙 — 사장님 확인 전 · 기본 끔
   assert.ok(SECRET.openSchools.includes('german') && SECRET.openSchools.includes('japanese'));
   assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german']); // 10/24 이베리아 싱지르 · 독일 모르트슐라크 AI 열림 (사장님 12:0x 'ai도 비기 쓰게 해')
@@ -69,7 +69,7 @@ test('조건: 밀치기 누르기가 mordPress(2 s) 이어지면 창 · 끊겨�
   try {
     const w = new PlayerSecretWatch(P, E);
     assert.equal(w.S.name, 'mordschlag');
-    const steps = (sec) => Math.round(sec / DT);
+    const steps = (sec) => Math.round(sec / DT); // 게임 초 → 물리 스텝 (SECRET 값은 읽을 때 이미 게임 초 — 표준 시간 10/25)
     const N = steps(SECRET.mordPress);
     const press = (n, on = true) => { for (let i = 0; i < n; i++) { P.barge = on ? { phase: 'press' } : null; w.update(DT, false); } };
     press(N - 2);
@@ -91,9 +91,9 @@ test('조건: 밀치기 누르기가 mordPress(2 s) 이어지면 창 · 끊겨�
     assert.equal(w.pressT, 0);
     const old = { mordPress: SECRET.mordPress, mordGrace: SECRET.mordGrace };
     try {
-      SECRET.mordPress = 0.6;
+      SECRET.mordPress = CONFIG.realS(0.6); // 실제 0.6 s 판
       const w2 = new PlayerSecretWatch(P, E);
-      for (let i = 0; i < steps(0.6) + 2; i++) { P.barge = { phase: 'press' }; w2.update(DT, false); }
+      for (let i = 0; i < steps(CONFIG.realS(0.6)) + 2; i++) { P.barge = { phase: 'press' }; w2.update(DT, false); }
       assert.ok(w2.open, '0.6 s 판');
       SECRET.mordGrace = 0; // 전 판: 끊기면 곧장 셈 0
       const w4 = new PlayerSecretWatch(P, E);
@@ -153,7 +153,7 @@ test('비기 흐름: 준비 → 베기 길 → 따라 지나감 → 다시 세�
     }
     assert.equal(P.skill.sec, null);
     for (const s of ['chamber', 'strike', 'follow', 'mordBack', 'stiff']) assert.ok(seen.has(s), s);
-    assert.equal(stiffT, 0.4);
+    assert.equal(stiffT, CONFIG.realS(0.4));
     assert.equal(P.mordGrip, null);
     assert.equal(P.mordAim, false);
     assert.equal(P.mordHold, null);

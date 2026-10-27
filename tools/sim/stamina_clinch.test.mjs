@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Vector2 } from 'three';
 import { Stamina } from '../../src/stamina.js';
-import { STAMINA, CLOSE } from '../../src/config.js';
+import { STAMINA, CLOSE, TIME, realS } from '../../src/config.js';
+// 표준 시간 (10/25 22:3x — config.js TIME): 초당 10 · 회복 21 · 15 /s · 0.6 s 는 실제 초 — 아래 tick(…, 초)는 실제 초를 받아 게임 초(× TIME.k)만큼 물리 dt 로 돌린다 · exT 도 실제 초
 import { newRound, DT } from './harness_m.mjs';
 
 const near = (a, b, e = 1e-7) => assert.ok(Math.abs(a - b) < e, `${a} != ${b}`);
 // 탈진 길이 · 풀리는 값 (STAMINA.exhaustNatural — 사장님 10/18 22:1x 자연 회복 −70 → −35 · `?exhaust=fixed` 옛 2.5 s → 0)
-const exT = (f) => STAMINA.exhaustNatural ? (STAMINA.severeAt - STAMINA.floor) / (f.aiControlled ? STAMINA.recoverPerSecond : STAMINA.playerRecoverPerSecond) : STAMINA.exhaustSeconds;
+const exT = (f) => (STAMINA.exhaustNatural ? (STAMINA.severeAt - STAMINA.floor) / (f.aiControlled ? STAMINA.recoverPerSecond : STAMINA.playerRecoverPerSecond) : STAMINA.exhaustSeconds) / TIME.k; // 실제 초
 const exEnd = () => STAMINA.exhaustNatural ? STAMINA.severeAt : 0;
 const bothRules = (fn) => { const was = STAMINA.exhaustNatural; try { for (const natural of [true, false]) { STAMINA.exhaustNatural = natural; fn(); } } finally { STAMINA.exhaustNatural = was; } };
 function pair() {
@@ -25,7 +26,8 @@ function pair() {
   [fighters[0].foe, fighters[1].foe] = [fighters[1], fighters[0]];
   return fighters;
 }
-function tick(fs, duration, dt = 1 / 120, reverse = false) {
+function tick(fs, sec, dt = 1 / 120, reverse = false) {
+  const duration = realS(sec); // 실제 초 → 게임 초
   let t = 0;
   while (t < duration - 1e-9) {
     const step = Math.min(dt, duration - t);
@@ -40,7 +42,7 @@ test('클린치 초당10은 소수점 연속 차감, 양쪽 밀기·무게·갱�
     tick(fs, 1 / 120, 1 / 120, reverse);
     for (const f of fs) { near(f.stamina.value, 80 - 10 / 120); near(f.stamina.recovered, 0); }
     tick(fs, 119 / 120, 1 / 120, reverse);
-    for (const f of fs) { near(f.stamina.value, 70); near(f.stamina.spent.clinch, 10); near(f.stamina.clinchSeconds, 1); }
+    for (const f of fs) { near(f.stamina.value, 70); near(f.stamina.spent.clinch, 10); near(f.stamina.clinchSeconds, realS(1)); }
   }
 });
 test('한쪽만 밀어도 받는 사람/AI 양쪽 비용과 회복 중단은 같다', () => {
@@ -87,7 +89,7 @@ test('기력50 대 탈진+20:2초 뒤30 대 탈진, 갱신 순서에 따른 차�
     const fs = pair(); fs[0].stamina.value = 50; fs[1].stamina.value = STAMINA.floor + 20; tick(fs, 2, 1 / 120, reverse);
     near(fs[0].stamina.value, 30); near(fs[1].stamina.value, STAMINA.floor);
     near(fs[0].stamina.spent.clinch, 20); near(fs[1].stamina.spent.clinch, 20);
-    near(fs[1].stamina.exhaustLeft, exT(fs[1]));
+    near(fs[1].stamina.exhaustLeft, realS(exT(fs[1])));
     fs.forEach(f => { assert.equal(f.stamina.clinching, false); assert.equal(f.barge, null); });
     fs[1].stamina.controller = { held: true };
     tick(fs, exT(fs[1]), 1 / 120, reverse);
@@ -99,10 +101,10 @@ test('탈진 직전 마지막 소수점 비용도 양쪽이 같고, 동시 탈�
   for (const both of [false, true]) {
     const fs = pair(); fs[0].stamina.value = both ? STAMINA.floor + 0.02 : 80; fs[1].stamina.value = STAMINA.floor + 0.02;
     fs[1].stamina.attack('cut', true); // 직전 공격 번호가 남아 있어도 누르기 접촉에 추가 청구하지 않는다.
-    tick(fs, 1 / 120); fs[0].stamina.block(fs[1]);
+    fs.forEach(f => f.stamina.step(1 / 120)); fs[0].stamina.block(fs[1]); // 물리 한 스텝 (게임 초)
     near(fs[0].stamina.value, both ? STAMINA.floor : 79.98); near(fs[0].stamina.spent.block, 0);
     fs.forEach(f => near(f.stamina.spent.clinch, 0.02));
-    near(fs[1].stamina.value, STAMINA.floor); near(fs[1].stamina.exhaustLeft, exT(fs[1]));
+    near(fs[1].stamina.value, STAMINA.floor); near(fs[1].stamina.exhaustLeft, realS(exT(fs[1])));
     tick(fs, exT(fs[1])); near(fs[1].stamina.value, exEnd()); if (both) near(fs[0].stamina.value, exEnd());
   }
 }));
@@ -157,12 +159,12 @@ function physicalClinch(mutual, exhaust = false) {
         fs.forEach(f => assert.equal(f.barge, null));
       }
       if (exhaustedAt != null && !fs[1].stamina.exhausted) {
-        near(g.t - exhaustedAt, exT(fs[1])); near(fs[1].stamina.value, exEnd()); break;
+        near(g.t - exhaustedAt, realS(exT(fs[1]))); near(fs[1].stamina.value, exEnd()); break;
       }
     }
     assert.ok(activeSteps > 5, `actual contact never drained: ${activeSteps}`);
     if (exhaust) assert.ok(exhaustedAt != null, 'clinch did not exhaust the defender');
-    else fs.forEach(f => near(f.stamina.spent.clinch, activeSteps * DT * 10));
+    else fs.forEach(f => near(f.stamina.spent.clinch, activeSteps * DT * STAMINA.clinchPerSecond)); // 게임 초당 몫 (실제 초당 10)
     fs.forEach(f => assert.ok(Number.isFinite(f.bodies.pelvis.translation().y)));
   } finally { g.world.free(); }
 }

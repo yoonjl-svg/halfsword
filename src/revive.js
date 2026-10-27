@@ -16,9 +16,11 @@
 //  fighter.js 에는 갈고리 몇 줄만 둔다: 생성자(reviveOf) · die(tryRevive) · updateState(reviveTick) · applyWound · shove
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { BODY } from './config.js';
+import { BODY, realS } from './config.js';
 
 // 시간(초)과 되찾는 몸 상태의 기본값. 캐릭터 시트의 revive 가 같은 이름으로 덮어쓴다 (limbs 는 항목별로)
+//  표준 시간 (10/25 22:3x): 아래 연출 · 기다림 시간(lie · lightAt · descend · kneel · linger · fade)은 실제 초 — reviveOf 가 한 번 게임 초로 바꾼다(REAL_KEYS).
+//  rise(일어서는 몸놀림 — 보통 일어서기 0.9 와 같은 수) · swordFly(칼이 날아오는 움직임)는 몸 · 물체 빠르기라 그대로 · obsessionHold 는 감정 시계(실제 초 — ai.js emote)
 export const REVIVE = {
   count: 1, // 한 판에 몇 번 일어서나
   lie: 1.9, // 쓰러진 뒤 일어나기 시작할 때까지 (쓰러지는 약 0.6초 + 누워 있기 약 1.3초)
@@ -38,12 +40,16 @@ export const REVIVE = {
   obsessionHold: 10, // 그동안 다른 감정이 집념을 밀어내지 못한다 (초)
 };
 
+const REAL_KEYS = ['lie', 'lightAt', 'descend', 'kneel', 'linger', 'fade']; // 실제 초로 적은 연출 · 기다림 칸 (표준 시간 10/25)
+
 const GROUND_BIT = 1; // fighter.js BIT.ground (충돌 그룹: 땅)
 
 /** 생성자에서: 캐릭터 시트의 revive → 이 싸움꾼의 부활 설정 (없으면 null = 부활 없음) */
 export function reviveOf(spec) {
   if (!spec || !(spec.count > 0)) return null;
-  return { ...REVIVE, ...spec, limbs: { ...REVIVE.limbs, ...spec.limbs }, left: spec.count };
+  const R = { ...REVIVE, ...spec, limbs: { ...REVIVE.limbs, ...spec.limbs }, left: spec.count };
+  for (const k of REAL_KEYS) R[k] = realS(R[k]); // 실제 초 → 게임 초 (옛 판 그대로)
+  return R;
 }
 
 /**

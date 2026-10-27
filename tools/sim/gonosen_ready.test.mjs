@@ -17,9 +17,9 @@ const steps = (s) => Math.round(s / DT);
 
 test("기본값: gnsReady 'idle' · iaiArmTime 2 · 싱지르 무장 2 · 들어옴 창 끔 (사장님 10/25 22:3x · 22:5x)", () => {
   assert.equal(SECRET.gnsReady, 'idle');
-  assert.equal(SECRET.iaiArmTime, 2);
-  assert.equal(SECRET.ibSpin.armTime, 2);
-  assert.equal(SECRET.gilmokArmTime, 1.5); // 길목은 따로 열쇠 — 그대로
+  assert.equal(SECRET.iaiArmTime, CONFIG.realS(2)); // 실제 2 s (표준 시간 10/25 — 게임 값 × 1.1)
+  assert.equal(SECRET.ibSpin.armTime, CONFIG.realS(2));
+  assert.equal(SECRET.gilmokArmTime, CONFIG.realS(1.5)); // 길목은 따로 열쇠 — 그대로 (실제 1.5 s)
   assert.equal(SECRET.gnsWalkIn, 0);
   assert.equal(SECRET.gnsReadyStill, undefined); // 22:5x 규칙으로 바뀜 (걷기 스위치 없음)
 });

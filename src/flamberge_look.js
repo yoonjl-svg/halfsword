@@ -25,7 +25,8 @@ export const FLAMBERGE_MUSEUM = Object.freeze({ overall: 1.689, blade: 1.187, ri
 //  날 −2.5 cm(물결 날 칼끝 쪽 — 리카소 26.7 cm 그대로) · 손잡이 −1.5 cm(왼손 아래 — 폼멜이 1.5 cm 올라옴 · 오른손 · 날밑 · 손 사이 0.24 m 그대로) → 전체 164.9 cm.
 //  손잡이가 츠바이핸더 것(날밑 아랫면 ~ 폼멜 끝 0.398 m)보다 9 cm 길어 자루에서 비례 몫(1.2 cm)보다 조금 더 덜었다
 //  사장님 10/22 03:3x 'a로 하고 길이는 4cm만 줄여' (긴 손잡이가 칼끝을 내릴 때 제 배에 걸림 — docs/strike/iberian_flat_hits_2026-10-22.md §8): 손잡이 47.7 → 43.7 cm(왼손 아래 −4 cm — 폼멜 가운데 오른손 아래 0.37 → 0.33 m) → 전체 160.9 cm
-export const FLAMBERGE_GAME = Object.freeze({ overall: 1.609, blade: 1.162, ricasso: 0.267, guard: 0.505, handle: 0.437 });
+//  사장님 10/25 22:5x 손맛 결정(확인표 2610 ~ — weapons.js flamberge 머리말 '손맛'): 날 1.162 → 1.30 m(물결 날 칼끝 쪽 +13.8 cm · 리카소 · 손잡이 그대로 — 물결 한 주기 길이는 박물관 날 그대로라 물결 수만 는다) → 전체 174.7 cm
+export const FLAMBERGE_GAME = Object.freeze({ overall: 1.747, blade: 1.30, ricasso: 0.267, guard: 0.505, handle: 0.437 });
 
 // 그쪽 모델 좌표(폼멜 끝 = 0, 칼끝 +y)에서 칼날 밑동·물결 날 시작
 const ROOT_SB = FLAMBERGE_MUSEUM.overall - FLAMBERGE_MUSEUM.blade; // 0.502
@@ -174,8 +175,8 @@ function guardGroup(y0) {
   return group;
 }
 
-// ── 부품 3: 촘촘하고 얕은 물결 양날 (그쪽 y 0.769~1.689 — 날 세운 92.0 cm · 게임 치수는 칼끝 쪽 2.5 cm 짧은 89.5 cm) ──
-//  22 주기(박물관 날 길이에서 — 게임 날은 같은 물결 길이로 21.4 주기)·6.4 mm 밑동 단면은 그림 어림 [추정]. 물결 = 칼몸 가운데 선이 ±3.6 mm 로 흔들린다(칼몸 폭 3.4 cm 는 그대로)
+// ── 부품 3: 촘촘하고 얕은 물결 양날 (그쪽 y 0.769~1.689 — 날 세운 92.0 cm · 게임 치수는 10/25 칼끝 쪽 11.3 cm 긴 103.3 cm) ──
+//  22 주기(박물관 날 길이에서 — 게임 날은 같은 물결 길이로 24.7 주기 · 10/21 ~ 10/25 21.4 주기)·6.4 mm 밑동 단면은 그림 어림 [추정]. 물결 = 칼몸 가운데 선이 ±3.6 mm 로 흔들린다(칼몸 폭 3.4 cm 는 그대로)
 const WAVE = { cycles: 22, amp: 0.0036 };
 export function flambergeBladeGeometry() {
   const L = FLAMBERGE_GAME.blade - FLAMBERGE_GAME.ricasso;

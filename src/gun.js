@@ -13,7 +13,7 @@
 //  매 물리 스텝 combat.js afterStep 이 updateGun 을, skill.js thrust 가 gunCanFire 를, ai.js 가 gunAI 를 부른다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { ANATOMY, ARENA, COMBAT } from './config.js';
+import { ANATOMY, ARENA, COMBAT, realS } from './config.js';
 import { prepareRevolverReload, playRevolverReload } from './revolver_reload_audio.js';
 
 /** 권총을 든 동안 화면에 띄우는 자세 이름 (사장님: "사격 자세 라고 써") — main.js 자세 이름 표시가 GUARDS 대신 쓴다 */
@@ -24,21 +24,21 @@ export const GUN = {
   energy: 80, // J: 맞으면 늘 이 세기의 찌르기. 70 → 80 (그쪽 70 → 75 → 80). 방어구·부위별 피해 계산은 그대로. 가슴 두 발로 죽는 가장 낮은 값이 75 J 였다(gun_dummy)
   // 싱글액션 6연발 (사장님 9/29 "사실감"). 아래 시간은 게임 값이며 사람 실측 평균이 아니다
   rounds: 6, // 실린더에 드는 탄
-  cooldown: 0.8, // 초: 한 발 쏜 뒤 다음 발까지 (공이를 젖히고 다시 겨눔). 0.7 → 0.8. 인물 배율 gunCooldownK 가 곱해진다(사미라 1.5 → 1.2 s). AI 가 모는 몸은 아래 aiCooldownK 를 한 번 더 곱한다
+  cooldown: realS(0.8), // 초(실제 — 표준 시간 10/25 · 아래 장전 · 첫 발 · 기다림도): 한 발 쏜 뒤 다음 발까지 (공이를 젖히고 다시 겨눔). 0.7 → 0.8. 인물 배율 gunCooldownK 가 곱해진다(사미라 1.5 → 1.2 s). AI 가 모는 몸은 아래 aiCooldownK 를 한 번 더 곱한다
   aiCooldownK: 1.8, // 배: AI 가 모는 몸(f.aiControlled — ai.js AI 가 붙이는 표시)의 발 사이 간격에만 곱한다. 사장님 10/16 지시 (샛별 쪽 메모로 전달 — 10/17 들여옴, 확인표 2022).
   //  인물 배율 위에 얹는다: 인물 배율 없는 AI 0.8 → 1.44 s · 사미라 1.2 → 2.16 s. 사람(플레이어) 간격 · 첫 발(aiFirst) · 장전(reload) · 위력 · 명중은 그대로.
   //  쏠 때마다 새로 곱하고 몸에 쌓아 두지 않는다 — 다시 시작 · 무기 바꿈 · 새 판에도 두 번 곱해지지 않는다
-  reload: 8, // 초: 여섯 발을 다 쏘면 전체 장전 (9 → 8). 다 끝나야 탄 6 으로 돌아오고 다시 쏜다. gunCooldownK · aiCooldownK 는 곱하지 않는다
-  reloadOpen: 0.9, // 초: 장전 첫머리 — 실린더를 열고 빈 탄피를 밀어낸다 (그 뒤부터 한 발씩 넣는 소리)
-  reloadClose: 0.8, // 초: 장전 끝에 남겨 두는 닫기 구간 — 마지막 한 발은 이 구간 바로 앞에 넣는다
-  reloadInsertInterval: (7.3 / 6) * 0.8 * 0.8, // 초(≈0.779): 한 발 넣는 소리 사이. 옛 고른 간격 7.3/6 에서 20% 씩 두 번 줄임 — 여섯 발이 닫기 앞으로 몰려 끝에 긴 빈틈이 없다
+  reload: realS(8), // 초: 여섯 발을 다 쏘면 전체 장전 (9 → 8). 다 끝나야 탄 6 으로 돌아오고 다시 쏜다. gunCooldownK · aiCooldownK 는 곱하지 않는다
+  reloadOpen: realS(0.9), // 초: 장전 첫머리 — 실린더를 열고 빈 탄피를 밀어낸다 (그 뒤부터 한 발씩 넣는 소리)
+  reloadClose: realS(0.8), // 초: 장전 끝에 남겨 두는 닫기 구간 — 마지막 한 발은 이 구간 바로 앞에 넣는다
+  reloadInsertInterval: realS((7.3 / 6) * 0.8 * 0.8), // 초(≈0.779): 한 발 넣는 소리 사이. 옛 고른 간격 7.3/6 에서 20% 씩 두 번 줄임 — 여섯 발이 닫기 앞으로 몰려 끝에 긴 빈틈이 없다
   range: 25, // m: 총알이 닿는 거리
   armorBlunt: 0.25, // 투구·판금이 막으면(그리고 바로 부서지면) 몸에는 세기의 이 비율만 둔하게 전해진다
   laser: false, // 조준 레이저는 외형 PM gun_fx.js 가 그린다 (사장님: 아주 희미하게 · 두 겹 방지). true 면 여기 updateLaser 가 그린다(효과 모듈 없는 점검용)
   aiAimTol: 3, // 도: AI 는 총구가 골반·배·가슴·(붙어 있는) 머리 몸체 중심 중 하나에서 이만큼 안일 때만 쏜다.
   //  (사장님 10/12 지시로 바뀜: 9/30 '무릎 위부터' → 골반 위부터. 겨누는 몸 줄과 같은 부위만 본다 — docs/decisions.md 10/12, 확인표 953)
-  aiFirst: 1.5, // 초: AI 는 판이 열리고 이만큼 지나서야 첫 발을 쏜다
-  maxWait: 0.6, // 초: 찌르기를 시작하고 이 안에 팔이 안 뻗어지면 그냥 그때 총구 방향으로 쏜다
+  aiFirst: realS(1.5), // 초: AI 는 판이 열리고 이만큼 지나서야 첫 발을 쏜다
+  maxWait: realS(0.6), // 초: 찌르기를 시작하고 이 안에 팔이 안 뻗어지면 그냥 그때 총구 방향으로 쏜다
   // 사격 자세 (사장님: 한 손 사격 자세) — gunPose. 몸 기준 [앞, 위, 총 든 쪽] (m·도)
   shoulder: [0, 0.1, 0.2], // 총 든 어깨 (가슴 기준)
   armLen: 0.55, // 곧게 뻗은 팔: 어깨에서 손까지

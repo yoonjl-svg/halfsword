@@ -121,7 +121,7 @@ test('kentai: stroke start locks the charge and resets the build; no build while
   const fx = fixture('uchigatana');
   try {
     const { f, sp } = fx;
-    tick(fx, 2);
+    tick(fx, SP.japanese.full + 0.5); // 다 쌓임 (켄타이 실제 2.0 s — 표준 시간 게임 2.2 · 여유 0.5)
     startTapThrust(f);
     assert.ok(Math.abs(sp.lock.ken - 0.3) < 1e-9, 'locked');
     assert.equal(sp.charge, 0, 'build reset');
@@ -138,7 +138,7 @@ test('kentai: missed charge carries to tsubame-gaeshi started within 0.6 s, else
     const fx = fixture('uchigatana');
     try {
       const { f, sp } = fx;
-      tick(fx, 2);
+      tick(fx, SP.japanese.full + 0.5); // 다 쌓임 (켄타이 실제 2.0 s — 표준 시간 게임 2.2 · 여유 0.5)
       startTapThrust(f); // 1: 묶임 0.3
       f.skill.tap = null; f.skill.thrustPush = false; // 못 맞히고 끝남
       tick(fx, gap);
@@ -157,7 +157,7 @@ test('kentai: never on secret strikes', () => {
   const fx = fixture('uchigatana');
   try {
     const { f, sp } = fx;
-    tick(fx, 2);
+    tick(fx, SP.japanese.full + 0.5); // 다 쌓임 (켄타이 실제 2.0 s — 표준 시간 게임 2.2 · 여유 0.5)
     f.skill.sec = { fake: true };
     f.stamina.attack('cut', true); // 비기 수 (skill.js secretNextMove 와 같은 청구)
     assert.equal(sp.lock.ken, 0);
@@ -273,7 +273,7 @@ test('chinese: bleeding clots ×2 only while not swinging', () => {
 // ── 실제 판 (AI 대 AI · 숙련도 4) — 배율이 실제 맞음에 실린다 ──
 test('real fight: kentai and indes bonuses reach real wounds', () => {
   for (const [w, key] of [['uchigatana', 'ken'], ['longsword', 'indes']]) {
-    const g = newRound({ weapon: w, weapon2: 'longsword', seed: 1002, AI2Class: AI, persona: { proficiency: 4 }, persona2: { proficiency: 4 } }); // 씨앗 1001 → 1002 (10/24 17:2x 팔꿈치 돌림 · 손목 교정 — 1001 은 30 s 안에 독일 indes 가 안 터짐 · 1002 = ken 2 · indes 1)
+    const g = newRound({ weapon: w, weapon2: 'longsword', seed: 1011, AI2Class: AI, persona: { proficiency: 4 }, persona2: { proficiency: 4 } }); // 씨앗 1002 → 1011 (10/27 표준 시간 — AI 판단 박자 · 반응이 실제 초가 되어 판이 바뀜: 1002 는 30 s 안 켄타이 맞음 0 · 1011 은 켄타이 2 · 인데스 2) · 씨앗 1001 → 1002 (10/24 17:2x 팔꿈치 돌림 · 손목 교정 — 1001 은 30 s 안에 독일 indes 가 안 터짐 · 1002 = ken 2 · indes 1)
     try {
       let boosted = 0;
       const pw = g.combat.hooks.onWound;

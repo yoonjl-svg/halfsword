@@ -20,7 +20,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { MEASURED } from './weapon_measured.js'; // 무기별 간격 실측 한 곳 (10/8 ① 구조 — 전엔 ai.js 에서 읽었다, 같은 객체)
-import { ARM } from './config.js';
+import { ARM, realS } from './config.js';
 import { GUARDS } from './guards.js'; // 쪼개 내려치기(FINISH.cleave)의 들기 자세 = 교본 지붕 자세 (guards.js 는 이 파일을 읽지 않는다 — 고리 없음)
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js';
 
@@ -124,7 +124,7 @@ export const FINISH = {
     //  지금 로스터: 츠바이핸더 · 플랑베르주 · 티소나 · 모노호시자오 (냉동 참치는 날이 없어 찍기 그대로 — 머리를 내려찍는다). 무기 칸 finishCleave(true | false)가 있으면 그 값
     frame: 'heavy',
     power: 2, // 쪼개 내려치기의 판정 에너지 배율 (사장님 10/22 23:0x '대검은 마무리를 2.5 말고 2로 해' — 찍기는 FINISH.power 2.5 그대로)
-    charge: 0.2, // 머리 위에 든 뒤 힘을 모으는 시간 (s, 시간 사다리 0.2 반응 — 사장님 확인 전). 주소 ?finishCleaveCharge=초
+    charge: realS(0.2), // 머리 위에 든 뒤 힘을 모으는 시간 (실제 s — 표준 시간 10/25, 시간 사다리 0.2 반응 — 사장님 확인 전). 주소 ?finishCleaveCharge=초
     // 사장님 10/22 23:0x '내 최초 의도는 … 어떤 높이이든 꿇기 이하로 낮아지면 내려치라는 거였어. 강렬한 수직베기를 지면까지 그대로 내리꽂는 것' →
     //  true: 몸 높이(낮은 상대 진입 LOW_FINISH) 대신 상대 상태로 연다 — 무릎 꿇음(kneel) · 일어나는 중(getup) · 쓰러짐(down)이면 높이와 상관없이 (cleaveFoe).
     //   내려치는 칼끝 목표도 몸 점이 아니라 그 밑 땅까지(칼끝이 땅에 닿는 각 — skill.cleavePose). 새 문턱 없음(상태 가름만).
