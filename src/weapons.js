@@ -1790,7 +1790,8 @@ const goujian = finalizeSpec('goujian', {
   partMesh: goujianPartMesh, decorate: goujianDecorate,
   buildParts() {
     const L = this.bladeLength;
-    const bladeMass = 0.78 * L / 0.62; // 같은 단면·재질: 80 cm 판 날(0.62 m · 0.78 kg)을 날 길이 비로 (샛별 식 그대로 — 지금 날 0.62 m 라 0.78 kg, 전 0.67 m 일 때 0.843 kg)
+    const bladeMass = 0.68 * L / 0.62; // 0.78 → 0.68 kg (사장님 10/27 20:4x '칼날에서 빼' — 더 얇은 날 · 휘두름 관성 0.105 → 0.092). 전: 같은 단면·재질: 80 cm 판 날(0.62 m · 0.78 kg)을 날 길이 비로 (샛별 식 그대로 — 지금 날 0.62 m 라 0.78 kg, 전 0.67 m 일 때 0.843 kg)
+    // 총 1.15 → 1.05 kg (사장님 10/27 20:2x '월왕구천검이 너무 무겁다. 100g 줄여' → 20:4x '칼날에서 빼' — 자루 · 머리 · 코등이는 그대로)
     const grip = boxInertia(0.13, 0.016, 0.079, 0.014);
     const pommel = boxInertia(0.14, 0.026, 0.004, 0.026); // 원반 폼멜 (상자 콜라이더 — 샛별 그대로)
     const guard = boxInertia(0.10, 0.034, 0.007, 0.016);
@@ -2013,17 +2014,17 @@ const durandal = finalizeSpec('durandal', {
   },
 });
 
-// 적소검 — 10/27 사용자 자체 리뷰·직접 적용 승인. 날 80 cm · 총 1.30 kg 유지.
+// 적소검 — 10/27 사용자 자체 리뷰·직접 적용 승인. 날 80 cm · 총 1.30 kg → 1.26 kg(사장님 10/27 20:2x '무게 40g만 줄여' — 날은 그대로, 자루 · 머리 · 코등이 추정 무게에서 뺌).
 // 새 테이퍼 날은 실제 면을 적분해 중심·관성을 구한다. 밑동 두께8.2mm, 날1kg은 강철 밀도 약7.86g/cm³. 자루·슴베/옥·금동 부품은 게임 추정.
 // 기존 목표(손 중심42 cm / 관성.26) 역산을 대신하며, 더 빠르게 회수해도 동방 한손검 중 묵직한 편을 유지한다.
-const CHIXIAO_MASS = { grip: 0.10, pommel: 0.10, cross: 0.10, blade: 1.00 };
+const CHIXIAO_MASS = { grip: 0.09, pommel: 0.09, cross: 0.08, blade: 1.00 }; // 전 0.10 · 0.10 · 0.10 (사장님 10/27 −40 g)
 const chixiao = finalizeSpec('chixiao', {
   nameKo: '적소검', nameEn: 'Chixiao', tier: 'legend', school: 'chinese', style: 'versatile',
   desc: '한 고조 유방이 길을 막은 흰 뱀을 두 동강 낸 붉은 검.\n한나라를 세운 신화의 시작입니다.',
   grip: 'one-hand', material: 'steel', enterParry: true,
   hiltLength: .085, bladeLength: .80, gripAlong: -.10,
   // 기존 한손검 범위의 베기/찌르기 계수. 레전드 공통 배율 1.2는 finalizeSpec에서 적용.
-  mCut: 1.10, mThrust: .85, mBlunt: 1.0,
+  mCut: 1.10, mThrust: 1.0, mBlunt: 1.0, // 찌르기 .85 → 1.0 (사장님 10/27 20:2x — 곧은 양날 직검, 사인검과 같음)
   partMesh: chixiaoPartMesh, partCollider: chixiaoCollider,
   buildParts() {
     const L=this.bladeLength, { grip: gm, pommel: pm, cross: cm, blade: bm }=CHIXIAO_MASS;
