@@ -1773,16 +1773,16 @@ const goujian = finalizeSpec('goujian', {
   partMesh: goujianPartMesh, decorate: goujianDecorate,
   buildParts() {
     const L = this.bladeLength;
-    const bladeMass = 0.78 * L / 0.62; // 같은 단면·재질: 80 cm 판 날(0.62 m · 0.78 kg)을 날 길이 비로 (샛별 식 그대로 — 지금 날 0.62 m 라 0.78 kg, 전 0.67 m 일 때 0.843 kg)
-    // 총 1.15 → 1.05 kg (사장님 10/27 20:2x '월왕구천검이 너무 무겁다. 100g 줄여' — 날은 그대로, 자루 0.13 → 0.10 · 머리 0.14 → 0.09 · 코등이 0.10 → 0.08)
-    const grip = boxInertia(0.10, 0.016, 0.079, 0.014);
-    const pommel = boxInertia(0.09, 0.026, 0.004, 0.026); // 원반 폼멜 (상자 콜라이더 — 샛별 그대로)
-    const guard = boxInertia(0.08, 0.034, 0.007, 0.016);
+    const bladeMass = 0.68 * L / 0.62; // 0.78 → 0.68 kg (사장님 10/27 20:4x '칼날에서 빼' — 더 얇은 날 · 휘두름 관성 0.105 → 0.092). 전: 같은 단면·재질: 80 cm 판 날(0.62 m · 0.78 kg)을 날 길이 비로 (샛별 식 그대로 — 지금 날 0.62 m 라 0.78 kg, 전 0.67 m 일 때 0.843 kg)
+    // 총 1.15 → 1.05 kg (사장님 10/27 20:2x '월왕구천검이 너무 무겁다. 100g 줄여' → 20:4x '칼날에서 빼' — 자루 · 머리 · 코등이는 그대로)
+    const grip = boxInertia(0.13, 0.016, 0.079, 0.014);
+    const pommel = boxInertia(0.14, 0.026, 0.004, 0.026); // 원반 폼멜 (상자 콜라이더 — 샛별 그대로)
+    const guard = boxInertia(0.10, 0.034, 0.007, 0.016);
     const blade = bladeInertia(bladeMass, L, 0.38, 0.26, 0.046, 0.009);
     return [
-      partTuple(['box', 0.016, 0.079, 0.014], -0.001, 0.10, 0, grip.Ie, grip.It, GOUJIAN_COLORS.grip),
-      partTuple(['box', 0.026, 0.004, 0.026], -0.086, 0.09, 0, pommel.Ie, pommel.It, GOUJIAN_COLORS.metal),
-      partTuple(['box', 0.034, 0.007, 0.016], 0.083, 0.08, 0, guard.Ie, guard.It, GOUJIAN_COLORS.metal),
+      partTuple(['box', 0.016, 0.079, 0.014], -0.001, 0.13, 0, grip.Ie, grip.It, GOUJIAN_COLORS.grip),
+      partTuple(['box', 0.026, 0.004, 0.026], -0.086, 0.14, 0, pommel.Ie, pommel.It, GOUJIAN_COLORS.metal),
+      partTuple(['box', 0.034, 0.007, 0.016], 0.083, 0.10, 0, guard.Ie, guard.It, GOUJIAN_COLORS.metal),
       partTuple(['box', 0.023, L / 2, 0.0045], this.hiltLength + L / 2, bladeMass,
         blade.comY, blade.Ie, blade.It, GOUJIAN_COLORS.blade, true),
     ];
