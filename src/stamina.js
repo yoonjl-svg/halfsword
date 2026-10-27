@@ -110,7 +110,7 @@ export class Stamina {
   get attacking() {
     const f = this.fighter;
     return f.aiControlled ? this.controller?.mode === 'attack' && this.controller.phase === 'strike'
-      : !!(f.skill?.tap || f.skill?.pom || this.stroke?.paid || (this.strokeTail?.paid && this.time <= this.strokeTail.until));
+      : !!(f.skill?.tap || f.skill?.pom || this.stroke?.paid || (this.strokeTail?.paid && this.time <= this.strokeTail.until) || f.iai?.attack); // iai.attack: 탭으로 낸 특수 공격 운동학 칼(10/28 — 칼끝 돌려 빼기 · 날개 접기 · 겹치기)이 끄는 동안
   }
 
   /** 기존 누르기 단계 + 실제 팔/칼 접촉. 거리만 가깝거나 공격 중인 것은 클린치가 아니다. */

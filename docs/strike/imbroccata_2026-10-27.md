@@ -41,4 +41,6 @@
 - AI 임브로카타 그대로(AI 는 이 몸을 쓰지 않음 — `f.skill.uniq` 는 사람만). 관문 해시 fights12 `d2b7915f` · live_battery `e8127a92` · finish_thrust 1 --stand `ad302969` 그대로.
 - 시험 `tools/sim/cavazione_tap.test.mjs` ① (씨앗 1 서 있는 상대: 찌른 상처 ≥ 1 · `imbroReach` 0 이면 칼날 상처 0).
 - 재현: `node tools/sim/special_balance.mjs drill --rows=italian --variants=on --seeds=16 --first=5 [--set=UNIQUE_ASSIST.imbroReach=0 | UNIQUE_ASSIST.imbroccataGap=0.3]` · `fight --rows=italian --variants=on --fseeds=901,902,903,904,905 --set=UNIQUE_ASSIST.cavTap=0` (칼끝 돌려 빼기 탭을 닫아 이것만 견줌) · 탭 견줌 `drill --rows=italianTap --variants=off`.
-- 도구 `tools/sim/special_balance.mjs` 는 wk/special-bal 의 것을 가져와 `--set` · 손목(wrist_audit 잣대) · 틈 파고들기 셈 · 칼끝 돌려 빼기 줄(`cavTap` · `cavStroke` · 긴 자세 상대 `guard`)을 더함.
+- 도구 `tools/sim/special_balance.mjs` 는 wk/special-bal 의 것을 가져와 `--set` · 손목(wrist_audit 잣대) · 틈 파고들기 셈 · 탭 특수 공격 줄(`cavTap` · `lianTap` · `dupTap` · 상대 자세 `guard` · `guardHigh`)을 더함.
+- 10/28 01:2x 뒤 다시 잼(같은 30 판 · 이탈리아 열린 동작 모두 · 특수 공격 식힘 켬 — 위에서 내려 찌르기는 식힘 없음): 싸움 시도당 0.233 · 입력 몫 0.81 · 같은 판 독일 0.549 로 나누면 **0.42**.
+- 10/28 고침: 읽힌 순간 낸 탭이 '걸어 맞추기 판'(무릎 꿇은 상대 약한 자리 — `skill.thrust` 가 참이어도 탭이 아직 없음)이면 이름을 달지 않고 넘어감 — 싸움 재기에서 그 자리 오류로 판이 떨어짐(시험 `cavazione_tap.test.mjs` 마지막).
