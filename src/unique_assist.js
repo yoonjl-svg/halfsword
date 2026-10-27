@@ -31,7 +31,7 @@ import { UNIQUE_ASSIST as UA, SKILL } from './config.js';
 import { G, TECH, TECH_BY_NAME } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js';
 import { segDist } from './skill.js';
-import { requestArtReturn, setArtTechOf } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21)
+import { requestArtReturn, requestArtSnap, setArtTechOf } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21) · 제비 베기 되돌림 칼 (10/25 해법 ②)
 import { perkOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 돌려 베기 쌓기 = 이베리아 심화 B6)
 
 // ── 고유 동작 표 (디렉터 안 → 사장님 확정 10/13 22:3x. 바뀌면 여기 한 곳만 고친다) ──
@@ -62,6 +62,12 @@ export const RETIRED_UNIQUE = new Set(['krumphau', 'passataSotto', 'altibaixo', 
 //   'step'  걸음 명령: 긋기를 시작할 때 스틱(키)을 stick 쪽('side' 옆 · 'fwd' 앞)으로 밀고 있으면 그 쪽으로 디디며(옆은 스틱 쪽으로 걸음 좌우를 맞춤). 안 밀면 기본 동작 그대로
 //   'chain' 이어 긋기: 앞 동작 뒤 창 안의 긋기 — 창이 열리면 자세 칸에 이름이 뜬다(ready · main.js updateGuardName)
 //  hint = 대기실 스킬북 목록의 쓰는 법 한 줄
+// 사람 제비 베기 올려 긋는 길 (사장님 10/25 21:1x 해법 ③ — 아래 tsubameGaeshi aim · config UNIQUE_ASSIST.tsuAim · 기록 docs/strike/tsubame_snap_2026-10-25.md): 패드 점 · 덧칸 [칼끝 들기 °, 손 뻗기 m, 손 돌리기 °].
+//  꺾은 자리(덧칸 첫 칸)에서 칼끝을 30° 더 떨궈(내려간 칼이 상대 다리 곁을 비킴 — 제비가 몸을 뒤집는 자리) 오른 아래 [0.2, −0.2](칼끝 10° 떨굼)를 지나 가슴 높이 가운데 [0, 0.1] 로 올려 긋는다
+//  (전 길 = schools.js 의 [0.06, −0.15] → 오른 황소 [0.22, 0.26] — 내려간 칼이 상대 다리 · 골반을 먼저 지남). 손 돌리기 −40° = 날이 앞장선 칼 면에서 뒤침 쪽으로 40°
+//  (날 세우기 문턱 STRIKE.edgeAlign 0.6 안 — 날이 앞장선 그대로면 아래팔 굴림이 손목 밧줄 끝 80° 가까이). 손 뻗기는 0(손을 몸 쪽으로 거두면 끌고 가는 팔이 상대 칼 · 내 몸에 박혀 몸이 튕김 — 기록).
+//  수는 [추정] — 사장님 확인 전 (확인표 2575 · 2576). 도구가 시험 길로 덮어쓸 수 있게 따로 둔다 (tools/sim/schielhau_strike.mjs --tsuPath · --tsuPlan)
+export const TSU_AIM = { path: [[0.2, -0.2], [0, 0.1]], plan: [[-30, 0, -40], [-10, 0, -40], [0, 0, -40]] };
 export const PLAYER_UNIQUE = {
   german: [
     { stage: 1, name: 'zwerchAbtritt', role: 'step', stick: 'side', hint: '옆으로 걸으며 가로 긋기', body: [-15, -20, 1.5, 0.025], on: [{ tech: 'zwerch' }] }, // 비껴 딛는 가로베기 ← 옆 + 가로베기
@@ -80,7 +86,11 @@ export const PLAYER_UNIQUE = {
   japanese: [
     { stage: 1, name: 'hirakiGiri', role: 'step', stick: 'side', hint: '옆으로 걸으며 왼 사선 내려 긋기', body: [-18, -12, 2, 0.02], bodyMirror: -1, /* 開き = 비스듬히 디딘 뒤 몸을 상대 쪽으로 엶 → 디딘 쪽의 반대로(오른쪽으로 디디면 왼쪽) · 원전에 몸 돌림 수 없음 — 10/21 확인 */ on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 옆 + 왼 분노의 베기
     { stage: 2, name: 'kote', role: 'enh', replaces: 'langortDown', hint: '강화동작 · 가운데서 짧게 내려베기 대신', anchor: 'start', body: [5, 3, 4, 0.015], on: [{ pad: 'langort', dir: 'down' }] }, // 코테 ← 긴 자세에서 짧게 내려베기 (늘)
-    { stage: 3, name: 'tsubameGaeshi', role: 'chain', hint: '내려벤 칼이 빗나가거나 막힌 뒤 위로 긋기', body: [0, 0, 5, 0.02], body2: [0, 0, 0, 0.02], on: [{ prev: 'oberhau', when: 'miss', dir: 'up' }, { prev: 'zornhau', when: 'miss', dir: 'up' }, { prev: 'zornhauL', when: 'miss', dir: 'up' }], /* 10/21 15:4x 사장님 '츠바메가에시 자체의 발동을 완화하고 데미지는 진에서 세게' — 정수리 · 좌우 사선 내려베기가 빗나가거나 막힌 뒤 위로 */ chain: { at: 2 } }, // 츠바메가에시
+    { stage: 3, name: 'tsubameGaeshi', role: 'chain', hint: '내려벤 칼이 빗나가거나 막힌 뒤 위로 긋기', body: [0, 0, 5, 0.02], body2: [0, 0, 0, 0.02], on: [{ prev: 'oberhau', when: 'miss', dir: 'up' }, { prev: 'zornhau', when: 'miss', dir: 'up' }, { prev: 'zornhauL', when: 'miss', dir: 'up' }], /* 10/21 15:4x 사장님 '츠바메가에시 자체의 발동을 완화하고 데미지는 진에서 세게' — 정수리 · 좌우 사선 내려베기가 빗나가거나 막힌 뒤 위로 */ chain: { at: 2 },
+      // 세 해법 (사장님 10/25 21:1x '해법 1~3 좋아' — config UNIQUE_ASSIST.tsuRuler · tsuSnap · tsuAim · 사람만): ruler 'turn' = 끝 힘 잣대를 꺾은 자리부터(이 동작은 앞 칼 조건으로 열려 강화되는 긋기가 곧 올려 긋기) ·
+      //  snap = 꺾는 순간 올려 긋는 길을 끌고 감(secret_instant.js requestArtSnap) · aim = 올려 긋는 길(꺾은 자리 다음 점부터 — 길 점 번호 chain.at 뒤를 바꿈) · plan = [꺾은 자리, ...path] 점마다 [칼끝 들기 °, 손 뻗기 m, 손 돌리기 °]
+      //  (곁눈 베기 같은 길 덧칸과 같은 칸 — planStep). 수는 [추정] — 사장님 확인 전 (확인표 2575 · 2576)
+      ruler: 'turn', snap: 1, aim: TSU_AIM }, // 츠바메가에시
   ],
   chinese: [
     { stage: 1, name: 'chebuYaoji', role: 'step', stick: 'fwd', hint: '앞으로 걸으며 가로 긋기', body: [-8, -12, 4, 0.045], on: [{ tech: 'zwerch' }] }, // 체보요격 ← 앞 + 가로베기 (앞으로 끌어 딛고 낮게)
@@ -184,6 +194,12 @@ export function uniqueDef(tradition, e) {
   if (!u.path?.length) return null; // 길 없는 것(맞받아치기 목록 등)은 플레이어 몫이 아니다
   const def = { name: e.name, nameKo: e.nameKo ?? u.nameKo ?? u.name, orig: e.orig ?? u.orig ?? null, kind: u.kind, pts: [u.from.slice(), ...u.path.map((p) => p.slice())], step: e.step ?? u.step ?? null }; // step = 표 칸이 있으면 그것(플레이어만 — 10/21 체보요격)
   if (u.plan) def.plan = u.plan; // [from, ...path] 점마다 [칼끝 들기 °, 손 뻗기 m, 손 돌리기 °] (10/25 18:0x)
+  // 사람 제비 베기 올려 긋는 길 (사장님 10/25 21:1x 해법 ③ — config UNIQUE_ASSIST.tsuAim · 표의 aim 칸): 꺾는 자리(chain.at 점)까지는 그대로 · 그 뒤 점을 aim.path 로 · 덧칸 = 앞 몫 0 + aim.plan
+  if (e.aim && UA.tsuAim && e.chain) {
+    const at = Math.min(e.chain.at, def.pts.length - 1);
+    def.pts = [...def.pts.slice(0, at + 1), ...e.aim.path.map((p) => p.slice())];
+    if (e.aim.plan) def.plan = [...Array.from({ length: at }, () => [0, 0, 0]), ...e.aim.plan.map((p) => p.slice())];
+  }
   return def;
 }
 
@@ -206,7 +222,9 @@ export class PlayerUniqueAssist {
     // 무기 비검 (10/21 — weapons.js secretBlade): open 이면 그 기술은 책(단계)과 상관없이 열리고, prev 가 있으면 앞 칼 조건을 그 칼들로 넓힌다(진 · 츠바메가에시)
     const SB = f.weapon?.secretBlade;
     const sbOn = (e) => SB?.open && SB.tech === e.name;
-    const widen = (e) => (sbOn(e) && SB.prev && e.on?.length ? { ...e, on: [...e.on, ...SB.prev.filter((p) => !e.on.some((c) => c.prev === p)).map((p) => ({ ...e.on[0], prev: p }))] } : e);
+    const widen0 = (e) => (sbOn(e) && SB.prev && e.on?.length ? { ...e, on: [...e.on, ...SB.prev.filter((p) => !e.on.some((c) => c.prev === p)).map((p) => ({ ...e.on[0], prev: p }))] } : e);
+    // 진 · 츠바메가에시(무기 비검 kin — 모노호시자오)는 그 되돌림 칼 그대로 (10/25 제비 베기 세 해법의 길 · 끌고 감은 보통 제비 베기만)
+    const widen = (e) => { const w = widen0(e); return SB?.kin && SB.tech === e.name && w.aim ? { ...w, aim: null, snap: 0 } : w; };
     const opened = (e) => (names ? names.has(e.name) : e.stage <= stage) || sbOn(e);
     this.list = UA.on && !f.weapon?.gun ? (PLAYER_UNIQUE[tradition] ?? []).filter(opened).map(widen).map((e) => ({ ...e, U: uniqueDef(tradition, e) })).filter((e) => e.U) : [];
     this.r = null; // 강화 중인 긋기 { e, U, part(1 앞 긋기 | 2 잇는 뒷몫), t, travel, len, stepAsked, chainable }
@@ -454,7 +472,9 @@ export class PlayerUniqueAssist {
     const f = this.f;
     const U = e.U;
     const at = e.chain ? Math.min(e.chain.at, U.pts.length - 1) : U.pts.length - 1;
-    const len = part === 2 ? PlayerUniqueAssist.lenOf(U.pts, at) : PlayerUniqueAssist.lenOf(U.pts, 0, at);
+    // 끝 힘 잣대: 앞 긋기 = 길 처음 ~ 잇는 자리 · 뒷몫 = 잇는 자리 ~ 끝. 제비 베기(ruler 'turn' — 사장님 10/25 해법 ① · UNIQUE_ASSIST.tsuRuler)는 강화되는 긋기가 곧 올려 긋기라 꺾은 자리부터
+    const fromTurn = part === 2 || (e.ruler === 'turn' && UA.tsuRuler);
+    const len = fromTurn ? PlayerUniqueAssist.lenOf(U.pts, at) : PlayerUniqueAssist.lenOf(U.pts, 0, at);
     this.r = { e, U, part, t: 0, travel: 0, len: Math.max(0.05, len), stepAsked: false };
     // 이어 그을수록 강해짐 (강화동작 stack — 이베리아 머리 위 돌려 베기): 같은 동작을 이어짐 창(afterWindow 0.6 s — 10/21 0.45 에서 통일) 안에 다시 그으면 하나씩(셋까지) — 맞는 순간 에너지 × (1 + stack × 그 수) (strokeHitK)
     if (e.stack) { this.stackN = this.stackE === e.name && this.t - (this.stackT ?? -9) <= UA.afterWindow ? Math.min(3, (this.stackN ?? 0) + 1) : 0; this.stackE = e.name; }
@@ -474,6 +494,12 @@ export class PlayerUniqueAssist {
     if (SB?.kin && SB.tech === e.name) {
       const at = Math.min(e.chain?.at ?? 2, U.pts.length - 2);
       if (requestArtReturn(f, U.pts[at], U.pts.slice(at + 1), SB)) this.end('yield');
+    } else if (e.snap && UA.tsuSnap && UA.enhance > 0) {
+      // 제비 베기 되돌림 칼 (사장님 10/25 21:1x 해법 ② — 중력과 관성을 거스름): 꺾은 자리(지금 손 목표)에서 올려 긋는 길을 고노센 칼끝 빠르기 × tsuSnapShare 로 tsuSnapTime 초까지 끌고 간다.
+      //  강화(몸 · 끝 힘 · 덧칸)는 그대로 둔다 — 끌고 가는 칼이 끝나면 손가락이 이어 긋는다
+      const at = Math.min(e.chain?.at ?? 2, U.pts.length - 2);
+      //  길 덧칸(해법 ③ 손 돌리기 등)은 끌고 가는 칼에도 같은 점마다 (U.plan 의 꺾은 자리부터)
+      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: UA.tsuSnapShare, maxT: UA.tsuSnapTime, tech: e.name, plan: U.plan ? U.plan.slice(at) : null })) this.stats.snap = (this.stats.snap ?? 0) + 1;
     }
   }
 

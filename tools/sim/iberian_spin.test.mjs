@@ -87,10 +87,12 @@ test('무장: 칼끝 거리 밖 1.5 s → 끝 없는 창(금색 !) · 휘두르�
   assert.ok(armT != null, '무장');
   assert.ok(P.foeDistance() > P.swordArt.measure.reach);
   assert.equal(W.open.t, Infinity);
-  // 휘두름(비기 실행 중 busy 와 같은 칸) → 풀림 · 창 닫힘
+  // 휘두름(비기 실행 중 busy 와 같은 칸) → 풀림 · 창 닫힘 — 10/25 21:0x 창 지킴(SECRET.secretHold — 사장님 '최소 0.6초는 열린 상태를 유지'): 열린 뒤 playerWindow 초까지는 열림, 그 뒤 닫힘 (`?secretHold=0` = 곧장 닫힘)
   busy = true;
   G.step();
   assert.equal(W.spinArm.armed, false);
+  assert.equal(W.open?.ctx?.ev, 'spin', '창 지킴 — 무장이 풀려도 열린 뒤 0.6 s 는 열림');
+  for (let i = 0; i < Math.round(SECRET.playerWindow / DT); i++) G.step();
   assert.equal(W.open, null);
   busy = false;
   for (let i = 0; i < Math.round(1.6 / DT); i++) G.step();

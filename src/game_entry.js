@@ -1,8 +1,9 @@
 // 게임 들머리 (index.html 의 첫 모듈 — 샛별 저장소 215d7b7e · 817db21c · 3b280a1b 를 우리 판에 맞춤, docs/import/lobby_port_2026-10-16.md §3 · §5)
-//  인자 없는 주소: 공지 → 첫 화면 → 곧바로 여정(무기 카드, 또는 이어하기 지점) — 사장님 10/17 11:2x '첫화면-대기실-전투 흐름이 아니라 첫화면에서 바로 전투로 이동'
-//   (전: 첫 화면 → 대기실 → 여정). 게임(main.js)은 첫 화면 뒤에서 받아 두고, 첫 화면·대기실이 앞에 있는 동안(html[data-start-open]) 게임의 3D 그리기·물리는 멈춘다 (main.js frame).
-//  대기실은 싸움에서 연다 (사장님 10/16 08:3x — docs/import/ui_fix_2026-10-16.md §3): 첫 화면에서 연 여정이면 정지 · 결과 창의 '대기실'이 이 덮개를 다시 열고
-//   대기실을 띄운다 — 출발 단추 'Stage 입장'(사장님 10/17 12:1x — 전 '여정 시작' · '여정 이어가기')은 이어하기 지점부터 (main.js setLobbyReturn → toLobby). 장비 · 이름 · 스킬북은 저장된 그대로 싸움에 쓰인다. 주소로 연 판 · 테스트 경로는 이 길이 없다.
+//  10/27 사용자 변경: 첫 단추 Stage / 기록이 있으면 이어가기 → 곧바로 여정. 둘째 대기실 → 바로 대기실.
+//  대기실 Stage도 누르는 순간 유효한 기록이 있으면 이어가고, 없으면 첫 무대부터. 아래 옛 배치를 대체한다.
+//  게임(main.js)은 첫 화면 뒤에서 받아 두고, 첫 화면·대기실이 앞에 있는 동안(html[data-start-open]) 게임의 3D 그리기·물리는 멈춘다 (main.js frame).
+//  첫 화면의 둘째 단추 외에, 여정의 정지 · 결과 창에서도 대기실로 돌아온다(main.js setLobbyReturn → toLobby).
+//  장비 · 이름 · 스킬은 저장된 그대로 싸움에 쓰인다. 주소로 연 판 · 테스트 경로는 이 길이 없다.
 //  게임 인자가 하나라도 있는 주소(?stage= ?weapon= ?foe= ?test=1 ?stamina=0 ?foeWhiff=1 …): 지금처럼 바로 게임 메뉴 (journey_save.js skipsTitle)
 //  첫 화면·대기실은 Shadow DOM 안 — 꾸밈은 그 안에서만, 글자는 게임 HUD 규칙의 토큰(index.html :root)을 물려받아 entrance_type.css 한 곳에서 (lobby_fix §1).
 //   단추 · 미닫이 · 탭은 싸움 화면 꼴을 같은 토큰 · 같은 값으로 옮긴 entrance_ui.css 하나 (사장님 10/16 15:3x ② ③ — docs/import/ui_unify_2026-10-16.md)
@@ -57,7 +58,7 @@ if (skipsTitle(params)) {
     root.replaceChildren(style, markup.content);
     titleWind(true, root.getElementById('entrance')); // 첫 화면 바람 — 붙인 뒤 · 띄우기 전 (공지 없이 바로 바람 장면이 불어도 놓치지 않게)
     let choosing = false;
-    screen = mountStartScreen({
+    const mounted = screen = mountStartScreen({
       root,
       settings: async () => { const game = await loaded; return { get: game.getLobbySettings, set: game.setLobbyFps }; },
       accountLoader: () => import('./account/title_account.js'),
@@ -66,11 +67,9 @@ if (skipsTitle(params)) {
         choosing = true; screen.setBusy(true); screen.setStatus('');
         try {
           const game = await loaded;
-          if (choice === 'continue' && !game.canContinueJourney()) {
-            screen.setStatus('이어갈 여정이 없습니다. Stage 1로 시작해 주십시오.');
-            screen.setBusy(false); choosing = false; return;
-          }
-          await depart(game, choice, () => { screen?.destroy(); screen = null; }, root.getElementById('entrance')); // 첫 화면 → 곧바로 싸움 (대기실을 거치지 않음)
+          const journeyChoice = game.canContinueJourney() ? 'continue' : 'new';
+          if (choice === 'lobby') { await showLobby(game, journeyChoice); return; }
+          await depart(game, journeyChoice, () => { screen?.destroy(); screen = null; }, root.getElementById('entrance')); // 첫 단추 → 곧바로 싸움
         } catch {
           if (!root.getElementById('selectionStatus')) showTitle();
           screen.setStatus('게임을 준비하지 못했습니다. 다시 시도해 주십시오.');
@@ -78,8 +77,16 @@ if (skipsTitle(params)) {
         }
       },
     });
+    // 유효한 기록을 판별한 뒤 누르게 한다. 대기실 왕복 뒤에도 새로 읽고,
+    // 늦게 끝난 옛 화면의 로딩이 현재 화면의 단추 상태를 바꾸지 않게 한다.
+    mounted.setBusy(true);
+    loaded.then(game => {
+      if (screen !== mounted) return;
+      mounted.setCanContinue(game.canContinueJourney());
+      mounted.setBusy(false);
+    }).catch(() => {}); // 로딩 오류 표시는 아래 loaded.catch에서 한 번 처리
   }
-  // 여정 출발 (첫 화면의 Stage 1 · 이어하기 · 대기실의 'Stage 입장'): choice 'new' = 첫 무대부터 · 'continue' = 이어하기 지점부터 · 'wander' = 방랑(대기실 '방랑' — main.js launchWander, 10/23).
+  // 여정 출발 (첫 화면 Stage / 이어가기 · 대기실 Stage): choice 'new' = 첫 무대부터 · 'continue' = 이어하기 지점부터 · 'wander' = 방랑.
   //  판을 세운 뒤 덮개를 0.3 s 걷어 낸다 — 뒤의 카드·싸움 화면이 비쳐 보이며 넘어가게 (리뷰 §8-6 '갑작스럽다'). close = 첫 화면 · 대기실 정리 · fading = 걷어 낼 꺼풀
   async function depart(game, choice, close, fading) {
     if (!await (choice === 'wander' ? game.launchWander() : game.launchJourney(choice))) throw new Error(choice === 'wander' ? 'Missing wander' : 'Missing journey');
@@ -94,7 +101,7 @@ if (skipsTitle(params)) {
     close();
     leaving.remove();
   }
-  // 대기실 (싸움의 정지 · 결과 창 '대기실'에서 — 'continue' = 이어하기 지점부터)
+  // 대기실 (첫 화면의 둘째 단추 또는 싸움의 정지 · 결과 창에서)
   async function showLobby(game, choice) {
     const { mountLobby } = await import('./lobby.js'); // 대기실 묶음은 열 때 받는다 — 첫 화면을 늦추지 않게 (10/17 3D 미리보기를 프로필 그림으로 바꿔 묶음이 가벼워짐)
     titleWind(false);
@@ -103,9 +110,9 @@ if (skipsTitle(params)) {
       const gone = lobby;
       await depart(game, how, () => { gone.destroy(); if (lobby === gone) lobby = null; }, root.querySelector('.lobby'));
     };
-    lobby = mountLobby({ root, game, choice, onBack: showTitle, onDepart: () => leave(choice), onWander: () => leave('wander') });
+    lobby = mountLobby({ root, game, choice, onBack: showTitle, onDepart: () => leave(game.canContinueJourney() ? 'continue' : 'new'), onWander: () => leave('wander') });
   }
-  // 싸움 → 대기실 (main.js toLobby 가 부른다): 덮개를 다시 열고 대기실을 'continue'(출발 단추 'Stage 입장')로 — 이어하기 지점은 지금 무대 시작(이긴 판이면 다음 무대)
+  // 싸움 → 대기실 (main.js toLobby 가 부른다): 이어하기 지점은 지금 무대 시작(이긴 판이면 다음 무대)
   async function backToLobby() {
     const game = await loaded;
     openHost();

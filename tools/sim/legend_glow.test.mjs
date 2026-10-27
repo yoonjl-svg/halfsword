@@ -4,10 +4,11 @@
 //  node --test tools/sim/legend_glow.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WEAPON_LIST, RETIRED_WEAPONS } from '../../src/weapons.js';
+import { WEAPON_LIST } from '../../src/weapons.js';
 import { AURA_PROFILES, AURA_VIEW } from '../../src/aura.js';
 
-const legends = WEAPON_LIST.filter((w) => w.tier === 'legend' && !RETIRED_WEAPONS.has(w.id)).map((w) => w.id);
+// 뽑기에서 뺀 레전드(간장 · 막야 — 적소검이 대신함, 사장님 10/27)도 센다: 막야를 쓰는 인물(찬다) · 이미 가진 칼은 빛이 그대로 있어야 한다.
+const legends = WEAPON_LIST.filter((w) => w.tier === 'legend').map((w) => w.id);
 
 test('레전드 무기는 모두 기운 줄이 있고, 기운 줄은 모두 레전드 무기', () => {
   assert.ok(legends.length >= 6, legends.join(','));
