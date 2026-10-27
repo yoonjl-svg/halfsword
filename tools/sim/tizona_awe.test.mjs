@@ -35,7 +35,7 @@ test('값 · 카드 · 몸: 막힘 깎음 끔 · 판 시작 15 · 티소나만 �
   const Z = getWeapon('zweihander');
   const mass = (w) => w.buildParts({}).reduce((a, p) => a + p[2][0], 0);
   near(T.bladeLength, 1.05); near(T.hiltLength + T.bladeLength, 1.195); near(mass(T), 2.3, 1e-9); // 사장님 10/21 23:4x · 23:5x
-  near(T.buildParts({})[3][2][0], 1.62, 1e-9); // 늘린 무게는 칼날에
+  near(T.buildParts({})[3][2][0], 1.62 + 0.62 * (0.68 / 1.2) - 0.25, 1e-9); near(T.buildParts({})[1][2][0], 0.25, 1e-9); // 늘린 무게는 칼날에 · 10/25 손맛 폼멜 0.351 → 0.25 kg 의 몫도 칼날로 (1.62 → 1.721)
   assert.deepEqual(T.buildParts({}).map((p) => [p[0], p[1]]).slice(0, 3), Z.buildParts({}).map((p) => [p[0], p[1]]).slice(0, 3)); // 자루 · 폼멜 · 날밑 모양 · 자리(쥠)는 같음
   near(T.gripAlong, Z.gripAlong); near(T.hiltLength, Z.hiltLength);
   assert.equal(T.frame, 'heavy'); assert.equal(T.school, 'iberian');
@@ -147,9 +147,9 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
     return r;
   };
   try {
-    // 씨앗 1 · 상대 자리: 8.0 s 에 깎음 (그 뒤 1.5 s 안 막힘 하나 건너뜀) / 씨앗 9 · 플레이어 자리: 7.4 s 에 깎음 — 몸 · AI 가 바뀌면 씨앗을 다시 고른다
-    //  (10/24 17:2x 팔꿈치 돌림 켬 · 손목 교정으로 상대 자리 씨앗을 다시 고름 — 전 씨앗 9: 10.1 · 10.7 s)
-    for (const [w1, w2, seed, secs, minDrains, minSkipped] of [['longsword', 'tizona', 1, 11, 1, 1], ['tizona', 'longsword', 9, 7.5, 1, 0]]) {
+    // 씨앗 6 · 상대 자리: 10.2 s 에 깎음 (그 뒤 1.5 s 안 막힘 하나 건너뜀) / 씨앗 9 · 플레이어 자리: 7.3 s 에 깎음 — 몸 · AI 가 바뀌면 씨앗을 다시 고른다
+    //  (10/24 17:2x 팔꿈치 돌림 켬 · 손목 교정으로 상대 자리 씨앗을 다시 고름 — 전 씨앗 9: 10.1 · 10.7 s · 10/25 손맛 티소나 몸(앞무게) 뒤 상대 자리 씨앗 1 → 6 — 씨앗 1 은 11 s 안 막힘 없음)
+    for (const [w1, w2, seed, secs, minDrains, minSkipped] of [['longsword', 'tizona', 6, 11, 1, 1], ['tizona', 'longsword', 9, 7.5, 1, 0]]) {
       log.length = 0;
       const G = newRound({ walls: true, weapon: w1, weapon2: w2, seed, AI2Class: AI });
       for (let i = 0; i < secs / DT; i++) G.step();
@@ -181,21 +181,25 @@ test('북부 대공의 검 지움: 무기 목록에 없음 · 옛 id ice = 츠�
   assert.equal(Object.keys(WEAPONS).length, 34); // 28 (+ 티소나 − 북부 대공의 검) + 발리사르다 · 무라마사 (dev 가지 e3b1532) + 드루이드의 채찍 (10/23) + 뒤랑달 (10/24) + 파펜하이머 (10/25) + 적소검 (10/27)
 });
 
-test('몸 길이 (사장님 10/21 23:5x): 츠바이핸더 손 ~ 칼끝 1.335 m · 2.865 kg · 플랑베르주 전체 −4 cm · 3.0 kg(폼멜 0.35) · 티소나는 그대로', async () => {
+test('몸 길이 (사장님 10/21 23:5x · 10/25 22:5x 손맛): 츠바이핸더 손 ~ 칼끝 1.335 m · 2.865 kg 그대로 · 플랑베르주 칼날 1.30 m · 3.2 kg(폼멜 0.35) · 서보 22 · 티소나 앞무게(무게중심 0.442 m)', async () => {
   const { weaponPhysics } = await import('../../src/weapon_class.js');
   const { FLAMBERGE_MUSEUM, FLAMBERGE_GAME } = await import('../../src/flamberge_look.js');
   const Z = getWeapon('zweihander'), F = getWeapon('flamberge'), T = getWeapon('tizona');
   const pz = weaponPhysics(Z), pf = weaponPhysics(F), pt = weaponPhysics(T);
   near(Z.hiltLength + Z.bladeLength, 1.335, 1e-9); near(pz.mass, 2.865, 1e-9); near(pz.I, 0.749, 0.001);
   assert.deepEqual({ ...FLAMBERGE_MUSEUM }, { overall: 1.689, blade: 1.187, ricasso: 0.267, guard: 0.505, handle: 0.492 }); // 박물관 기록은 그대로
-  near(FLAMBERGE_GAME.blade, 1.162); near(FLAMBERGE_GAME.handle, 0.437); near(FLAMBERGE_GAME.overall, 1.609); // 손잡이 47.7 → 43.7 cm (사장님 10/22 03:3x) near(F.bladeLength, 1.162); near(F.hiltLength + F.bladeLength, 1.247, 1e-9);
+  near(FLAMBERGE_GAME.blade, 1.30); near(FLAMBERGE_GAME.handle, 0.437); near(FLAMBERGE_GAME.overall, 1.747); // 손잡이 47.7 → 43.7 cm (사장님 10/22 03:3x) · 칼날 1.162 → 1.30 m (10/25 손맛 — 전체 160.9 → 174.7 cm)
+  near(F.bladeLength, 1.30); near(F.hiltLength + F.bladeLength, 1.385, 1e-9); // 전 1.162 · 1.247
   const fm = F.buildParts({}).map((p) => p[2][0]);
-  near(pf.mass, 3.0, 1e-9); near(fm[1], 0.35); near(fm[3], 1.789, 0.001); near(pf.com, 0.263, 0.001); // 10/22 03:3x 손잡이 −4 cm 뒤 (전 칼날 1.756 · 무게중심 0.250)
+  near(pf.mass, 3.2, 1e-9); near(fm[1], 0.35); near(fm[3], 1.989, 0.001); near(pf.com, 0.329, 0.001); near(pf.I, 1.029, 0.001); // 10/25 손맛: 칼끝 쪽 토막 0.2 kg (전 3.0 kg · 칼날 1.789 · 무게중심 0.263 · 관성 0.682)
+  assert.equal(F.controlOverrides.maxAimTorque, 22); // 10/25 손맛 '세우기 어려운 칼' (전 두 손 쥠 기본값 26)
   { // 칼자루 충돌체는 손에서 −0.28 m 까지만 (사장님 10/22 03:3x 'a로' — 묻힘 균형으로 −0.25 → −0.28) — 폼멜 질량은 −0.33 에 그대로
     const fp = F.buildParts({});
     near(fp[0][1] - fp[0][0][2], -0.28, 1e-9); near(fp[1][1], -0.28, 1e-9); near(fp[1][1] + fp[1][2][1], -0.33, 1e-9); near(fp[0][1] + fp[0][2][1], -0.13, 1e-9);
   } assert.ok(pf.I / 0.2724 >= 2.5, `플랑베르주 관성 ${pf.I}`);
-  near(pt.mass, 2.3, 1e-9); near(pt.I, 0.586, 0.001); near(T.hiltLength + T.bladeLength, 1.195, 1e-9);
+  near(pt.mass, 2.3, 1e-9); near(pt.com, 0.442, 0.001); near(pt.I, 0.820, 0.001); near(T.hiltLength + T.bladeLength, 1.195, 1e-9); // 10/25 손맛 앞무게 (전 무게중심 0.339 · 관성 0.586)
+  assert.equal(T.controlOverrides.maxAimTorque, 26); assert.equal(Z.controlOverrides.maxAimTorque, 26);
+  assert.ok(pt.mass * pt.com > pz.mass * pz.com, '티소나 중력 몫(질량 × 무게중심)이 츠바이핸더보다 크다'); // 1.02 · 0.83 kg·m
   for (const w of [Z, F, T]) assert.equal(w.frame, 'heavy');
 });
 

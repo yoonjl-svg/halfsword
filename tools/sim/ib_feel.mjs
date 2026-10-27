@@ -2,7 +2,7 @@
 //  ib_feel.mjs — 이베리아 대검 손맛 계기 (10/25 사장님 '이베리아 무기는 손맛이 달라야 하지만 확실히 묵직한 대검 느낌이 사라지면 안돼')
 //   docs/strike/iberian_feel_2026-10-25.md. 읽기만 한다 (게임 값을 바꾸지 않는다).
 //   몸: 질량 · 손에서 무게중심 · 손 둘레 관성 — 엔진 값(weaponPhysics: 부품 무게중심 comY · 부품 관성 Ie 포함)과 부품 가운데 값(Σm·y² — 부품 자리만) 둘 다
-//   자세: 손가락을 떼고 쉰 자세 마지막 0.5 s — 칼 축이 겨눔(debug.aim)보다 아래로 처진 각(°) · 칼끝 높이(m)
+//   자세: 손가락을 떼고 쉰 자세 마지막 0.5 s — 칼 축이 겨눔(debug.aim)보다 아래로 처진 각(°) · 칼끝 높이(m) · 칼끝 떨림(칼끝 자리가 그 0.5 s 평균 자리에서 벗어난 거리의 제곱 평균 제곱근 mm)
 //   획: swing_feel.mjs 와 같은 손가락 길(60 Hz 프레임마다 handOffset · handHeld · inputActive · 숙련 0.7 · corr · autoGuard)로 허공을 긋는다 —
 //    감는 자리 A 로 2 m/s → 0.6 s 쉼 → A→B 긋기(v 패드 m/s) → 손가락을 B 에 댄 채 1.5 s (헛친 칼: 되긋기 없음).
 //    손 빠르기 = 칼 원점(오른손 주먹 가운데) 점 빠르기 최고 · 칼끝 = 칼날 끝 점 빠르기 최고(둘 다 velocityAtPoint — 강체 linvel 은 무게중심 빠르기라 쓰지 않는다)
@@ -96,7 +96,7 @@ function trial(wid, lineKey, v, seed) {
   const A = A0 ?? 'here'; // 'here' = 감지 않음 (쉰 자세 손가락 자리)
   const legs = [[null, 2.6, 'settle'], [A, 2, 'wind'], [null, 0.6, 'pause'], [B, v, 'cut'], [null, HOLD, 'hold']];
   let li = 0, legT = 0, from = null, dur = 0, t = 0, stepAcc = 0, cutT = null, endT = null;
-  const R = { hand: 0, tip: 0, v70: 0, tPeak: null, t90: null, t8: null, v15: null, sat: 0, dirPeak: null, over: 0, stop: null, ok: true, droop: [], tipY: [], endDroop: [] };
+  const R = { hand: 0, tip: 0, v70: 0, tPeak: null, t90: null, t8: null, v15: null, sat: 0, dirPeak: null, over: 0, stop: null, ok: true, droop: [], tipY: [], tipP: [], endDroop: [] };
   let satN = 0, cutN = 0;
   const samples = []; // 손가락이 멈춘 뒤 칼 축 (지나침을 마지막 자리 기준으로 셈)
   const tips = []; // 긋기 동안 [시각, 칼끝 빠르기]
@@ -135,7 +135,9 @@ function trial(wid, lineKey, v, seed) {
       if (tag === 'settle' && legT > 2.1) { // 쉰 자세 마지막 0.5 s: 칼 축이 겨눔보다 아래로 처진 각
         const ax = axisOf(P, _ax), aim = P.debug.aim;
         if (aim.lengthSq() > 0.5) R.droop.push(deg(Math.asin(Math.max(-1, Math.min(1, aim.y / aim.length()))) - Math.asin(Math.max(-1, Math.min(1, ax.y)))));
-        R.tipY.push(P.bladePoint(1, _o).y);
+        const tp = P.bladePoint(1, _o);
+        R.tipY.push(tp.y);
+        R.tipP.push([tp.x, tp.y, tp.z]);
       }
       if (tag === 'hold' && legT > HOLD - 0.3) { // 끝 처짐: 손가락을 B 에 댄 마지막 0.3 s
         const ax = axisOf(P, _ax), aim = P.debug.aim;
@@ -176,7 +178,11 @@ function trial(wid, lineKey, v, seed) {
   R.droopMean = R.droop.length ? R.droop.reduce((x, y) => x + y, 0) / R.droop.length : NaN;
   R.tipYMean = R.tipY.length ? R.tipY.reduce((x, y) => x + y, 0) / R.tipY.length : NaN;
   R.endDroopMean = R.endDroop.length ? R.endDroop.reduce((x, y) => x + y, 0) / R.endDroop.length : NaN;
-  delete R.droop; delete R.tipY; delete R.endDroop; delete R.dirPeak;
+  if (R.tipP.length) { // 칼끝 떨림 (mm — 위 머리말 '자세')
+    const n = R.tipP.length, c = [0, 1, 2].map((i) => R.tipP.reduce((s2, p) => s2 + p[i], 0) / n);
+    R.wobble = 1000 * Math.sqrt(R.tipP.reduce((s2, p) => s2 + (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2, 0) / n);
+  } else R.wobble = NaN;
+  delete R.droop; delete R.tipY; delete R.tipP; delete R.endDroop; delete R.dirPeak;
   return R;
 }
 
@@ -191,7 +197,7 @@ for (const wid of IDS) {
   const by = (k) => ok.filter((r) => r.line === k);
   const o = {
     body: { mass: +ph.mass.toFixed(3), com: +ph.com.toFixed(3), I: +ph.I.toFixed(3), geoCom: +geo.com.toFixed(3), geoI: +geo.I.toFixed(3), reach: +(spec.hiltLength + spec.bladeLength).toFixed(3), cap: spec.controlOverrides.maxAimTorque, hitMass: +hitMass(spec, ph).toFixed(3) },
-    droop: +mean(ok.map((r) => r.droopMean)).toFixed(1), tipY: +mean(ok.map((r) => r.tipYMean)).toFixed(3),
+    droop: +mean(ok.map((r) => r.droopMean)).toFixed(1), tipY: +mean(ok.map((r) => r.tipYMean)).toFixed(3), wobble: +mean(ok.map((r) => r.wobble)).toFixed(1),
     lines: {},
   };
   for (const k of LINES) {
@@ -205,7 +211,7 @@ for (const wid of IDS) {
   if (L.drop && L.lift) o.dropLift = { tip: +(L.drop.tip / L.lift.tip).toFixed(2), v15: +(L.drop.v15 / L.lift.v15).toFixed(2), t8: +(L.lift.t8 / L.drop.t8).toFixed(2) };
   out[wid] = o;
   const b = o.body;
-  console.log(`${wid}: ${b.mass} kg · 무게중심 ${b.com} m · 관성 ${b.I} (부품 가운데 값 ${b.geoCom} · ${b.geoI}) · 손 ~ 칼끝 ${b.reach} m · 서보 ${b.cap} · 맞는 무게 ${b.hitMass} kg · 쉰 자세 처짐 ${f2(o.droop, 1)}° · 칼끝 높이 ${f2(o.tipY, 3)} m`);
+  console.log(`${wid}: ${b.mass} kg · 무게중심 ${b.com} m · 관성 ${b.I} (부품 가운데 값 ${b.geoCom} · ${b.geoI}) · 손 ~ 칼끝 ${b.reach} m · 서보 ${b.cap} · 맞는 무게 ${b.hitMass} kg · 쉰 자세 처짐 ${f2(o.droop, 1)}° · 칼끝 높이 ${f2(o.tipY, 3)} m · 칼끝 떨림 ${f2(o.wobble, 1)} mm`);
   for (const k of LINES) {
     const x = L[k];
     console.log(`  ${k.padEnd(8)} (${x.n} 획) 손 ${f2(x.hand)} · 칼끝 ${f2(x.tip)} m/s · 70 % 운동 에너지 ${f2(x.e70, 1)} J · 0.15 s 때 ${f2(x.v15)} · 8 m/s 까지 ${f2(x.t8, 3)} s · 90 % ${f2(x.t90, 3)} s · 최고 ${f2(x.tPeak, 3)} s · 손목 포화 ${f2(x.sat)} · 지나침 ${f2(x.over, 1)}° · 멈춤 ${f2(x.stop, 3)} s · 끝 처짐 ${f2(x.endDroop, 1)}°`);
