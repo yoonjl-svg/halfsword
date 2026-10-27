@@ -7,6 +7,7 @@
 //   10/25 22:3x · 23:1x: 비기 칸(사장님 글 — 33 자 넘음)은 두 줄까지 받음 · 그림에 J5 · I4(844 × 390) · J5(680 × 360) 더함
 //   ② 모든 칸(다섯 유파 × 11) × 화면 여섯(폰 가로 844 × 390 · 740 × 360 · 844 × 340 · 680 × 360 · 작은 가로 568 × 320 · PC 1280 × 720): 입력 줄 한 줄 · 줄 끝 남는 폭 · 카드 넘침.
 //      넘침은 844 × 390 · 740 × 360 · 568 × 320 · PC 에서 0 이어야(걸리면 실패) · 844 × 340 · 680 × 360 은 적어만 둔다(값 · '배우기'가 있는 안 배운 칸 몇이 원래 빠듯 — 문서 §4)
+//      10/27: 낮은 화면에서 카드가 '스킬' 제목 줄까지 덮어(src/lobby.css) 844 × 340 · 680 × 360 도 0 이어야 · 그림에 B7(844 × 340 · 680 × 360) 더함
 //  실행: vite build(+ tools/pwa/build.mjs) → vite preview 를 띄운 뒤  node tools/browser/skill_cmd_shots.mjs http://127.0.0.1:5528 [출력 폴더(기본 docs/handoff/skill_input_2026-10-25)]
 //  출력(WebP · 화면 배율 2): card_G10_844x390 · card_I2_844x390 · card_J9_844x390 · card_C9_844x390 · card_B7_740x360 · card_G10_680x360. 크롬 경로 PW_CHROMIUM (기본 /opt/pw-browsers/chromium) · 끝 코드 0 = 모두 맞음 · 콘솔 오류 0
 import { chromium } from 'playwright';
@@ -26,8 +27,8 @@ const SAVE = { version: 1, coins: 640, heads: 12, titles: [], title: '', acquisi
 const SIZES = [
   { w: 844, h: 390, must: true, shots: [['german', 'G10', 'locked'], ['italian', 'I2', 'locked'], ['japanese', 'J9', 'locked'], ['chinese', 'C9', 'learned'], ['japanese', 'J5', 'locked'], ['italian', 'I4', 'locked']] }, // J5 · I4 — 10/25 22:3x 사장님 비기 글(두 줄)
   { w: 740, h: 360, must: true, shots: [['iberian', 'B7', 'locked']] },
-  { w: 844, h: 340, must: false, shots: [] },
-  { w: 680, h: 360, must: false, shots: [['german', 'G10', 'locked'], ['japanese', 'J5', 'locked']] },
+  { w: 844, h: 340, must: true, shots: [['iberian', 'B7', 'locked']] }, // 10/27 — 카드가 제목 줄까지 덮어 넘침 0 이어야(전 적어만 둠)
+  { w: 680, h: 360, must: true, shots: [['german', 'G10', 'locked'], ['japanese', 'J5', 'locked'], ['iberian', 'B7', 'locked']] }, // 10/27 — 넘침 0 이어야(전 적어만 둠)
   { w: 568, h: 320, must: true, shots: [] },
   { w: 1280, h: 720, must: true, shots: [] },
 ];
