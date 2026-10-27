@@ -48,6 +48,8 @@ function iaiGhostPair(a, b) {
 //  onDecapitate(f, headBody): 참수된 순간 한 번 (fighter.applyWound, die 뒤) — 사운드 PM 이 소리를 건다
 export const COMBAT_HOOKS = { onDecapitate: null, onSever: null }; // onSever(f, kind('elbow'|'shoulder'|'knee'|'hip'), bodies[], parentPart): 팔·다리가 떨어진 순간 한 번 (fighter.sever)
 
+/** 요격 깊은 출혈이 붙는 칼 (10/28 — UA.yaojiBleed.techs · 없으면 요격만) */
+export const yaojiBleedTech = (tn) => !!tn && (UA.yaojiBleed?.techs ?? ['yaoji']).includes(tn);
 const FINISH_PARTS = new Set(['chest', 'abdomen', 'pelvis', 'head']); // 내려찍기 즉사 부위 (몸통·머리). 부위 이름으로 — 가슴·머리 몸체의 목 쪽도 들어간다
 const Y = new THREE.Vector3(0, 1, 0);
 const X = new THREE.Vector3(1, 0, 0);
@@ -398,7 +400,7 @@ export class Combat {
       severity,
       pass,
       absorb: A.absorb ?? 100,
-      bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed * (att.weapon?.bleedMult ?? 1) * (UA.yaojiBleed?.k > 0 && UA.yaojiBleed.zones.includes(zone) && strokeTechOf(att) === 'yaoji' && !perkOff(att, 'yaoji') ? UA.yaojiBleed.k : 1), // 모노호시자오 '제비 베기': 출혈 배율 · 요격 몸통 깊은 출혈(10/21 UA.yaojiBleed)
+      bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed * (att.weapon?.bleedMult ?? 1) * (UA.yaojiBleed?.k > 0 && UA.yaojiBleed.zones.includes(zone) && yaojiBleedTech(strokeTechOf(att)) && !perkOff(att, 'yaoji') ? UA.yaojiBleed.k : 1), // 모노호시자오 '제비 베기': 출혈 배율 · 요격 몸통 깊은 출혈(10/21 UA.yaojiBleed · 10/28 체보요격 · 염시도 — 심화 칸 C4 하나)
       local: vicLocal,
       point: point.clone(),
       dir,
@@ -888,7 +890,7 @@ export class Combat {
       if (r.schoolK) att.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (켄타이는 여기서 씀 — school_passive.js)
       if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
       // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈
-      if (r.severity > 0) { const tn = strokeTechOf(att); if (((tn === 'imbroccata' && r.type === 'stab') || (tn === 'yaoji' && r.type === 'cut' && UA.yaojiBleed?.zones.includes(r.zone))) && !perkOff(att, tn)) artFlash(att, this.dt); }
+      if (r.severity > 0) { const tn = strokeTechOf(att); if ((tn === 'imbroccata' && r.type === 'stab' && !perkOff(att, tn)) || (yaojiBleedTech(tn) && r.type === 'cut' && UA.yaojiBleed?.zones.includes(r.zone) && !perkOff(att, 'yaoji'))) artFlash(att, this.dt); }
     }
     if (att.weapon?.kneelHit) this.whipKneelCheck(att, vic, pr.v.part); // 채찍 무릎 꿇리기 (10/23 — 한 획에 한 번 · 아래)
     this.koteCheck(att, vic, pr.v.part, r); // 손목 치기 칼 떨구기 (J8 — 아래팔에 판정이 난 맞음: 10/24 12:3x 판정 완화 · 'cut' 판은 칼날 베기 · 심각도 > 0 만)

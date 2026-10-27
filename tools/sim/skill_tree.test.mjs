@@ -374,7 +374,7 @@ test('칸 하나 = 제 몫 하나: 칸만 켠 몫과 빈 몫의 차이 = 그 칸
     }
   }
 });
-test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 공격은 모두 한 칸씩 · 강화동작 이점은 그 강화동작의 심화 칸', () => {
+test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 공격은 모두 한 칸씩 · 강화동작 이점은 그 강화동작의 심화 칸', async () => {
   const on = (s, id) => { const k = D.kitFromNodes(s, ids(id)); return [...D.KIT_KEYS.filter((x) => k[x]), ...[...k.unique].map((u) => `u:${u}`), ...[...k.perk].map((p) => `perk:${p}`)]; };
   assert.deepEqual(on('german', 'G1'), ['footwork']);
   assert.deepEqual(on('german', 'G2'), ['chase']);
@@ -400,6 +400,11 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('japanese', 'J5'), ['secret']);
   assert.deepEqual(on('chinese', 'C2'), ['stepCost']);
   assert.deepEqual(on('chinese', 'C4'), ['perk:yaoji']);
+  { // 10/28 01:1x 사장님 '체보요격과 염시에도 붙여' — 깊은 허리 베기(C4) 출혈은 허리를 베는 세 칼 모두 · 다른 칼은 아님
+    const { yaojiBleedTech } = await import('../../src/combat.js');
+    for (const t of ['yaoji', 'chebuYaoji', 'lianchi']) assert.equal(yaojiBleedTech(t), true, t);
+    for (const t of ['zwerch', 'zwerchL', 'schielhau', 'tsubameGaeshi', null]) assert.equal(yaojiBleedTech(t), false, String(t));
+  }
   for (const s of D.TREE_SCHOOLS) {
     const us = D.nodesOf(s).filter((n) => n.u).map((n) => n.u);
     assert.deepEqual([...us].sort(), PLAYER_UNIQUE[s].map((e) => e.name).sort(), `${s} 고유 공격 = 칸`);
