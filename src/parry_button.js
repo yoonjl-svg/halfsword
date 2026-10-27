@@ -29,8 +29,6 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { AI_LEVELS, SKILL, ARENA, realS } from './config.js';
-const DEF_T = realS(0.65); // 막기 한 번의 길이 (실제 초 — ai.js defend 와 같은 수 · 표준 시간 10/25)
-const DEF_MIN = realS(0.35); // 공격이 지나갔으면 남은 시간이 이 밑일 때 놓는다
 import { Senses } from './ai_sense.js';
 import { threatNow } from './secret.js';
 import { TRADITIONS } from './schools.js';
@@ -38,6 +36,11 @@ import { GUARD_BASE } from './guards.js';
 import { installCover } from './frames.js';
 import { AI } from './ai.js';
 import { ItalianOpposition } from './italian_opposition.js';
+// 표준 시간 (10/25 22:3x — config.js TIME): ai.js defend 와 같은 막기 시간 · 위협 틈은 실제 초로 적고 한 번 게임 초로
+const DEF_T = realS(0.65); // 막기 한 번의 길이
+const DEF_MIN = realS(0.35); // 공격이 지나갔으면 남은 시간이 이 밑일 때 놓는다
+const QUIET_T = realS(0.12); // 위협이 이만큼 없고 손이 멎으면 '공격이 지나갔다'
+const NEW_THREAT_T = realS(0.25); // 잠깐 조용했다가 다시 오면 새 공격
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 몸꼴 덧씌우기 parryCover · 막는 동안 피해 감소 parryCut)
 
 const _r = new THREE.Vector3();
@@ -141,7 +144,7 @@ export class PlayerParryGuard {
     const sr = A >= 2 && AV.lead > 0 ? this.ahead(s, AV.lead) : s; // ② 일찍 읽기
     const th = this.foe.alive ? threatNow(this.sense, this.foe, sr, c, me.right(_r), d, foeReach, this.lag) : null;
     if (th) {
-      if (this.noThreat > 0.25) this.threatId++;
+      if (this.noThreat > NEW_THREAT_T) this.threatId++;
       this.noThreat = 0;
     } else this.noThreat += dt;
     if (!can) {
@@ -183,7 +186,7 @@ export class PlayerParryGuard {
     if (this.defLine) {
       // ai.js defend 의 끝: 공격이 지나갔다 (칼끝이 더는 오지 않고 손이 멈췄다) · 막기 시간이 다 됐다
       this.timer -= dt;
-      const swingOver = this.noThreat > 0.12 && Math.hypot(s.hvx, s.hvy) < 2.5;
+      const swingOver = this.noThreat > QUIET_T && Math.hypot(s.hvx, s.hvy) < 2.5;
       if ((swingOver && this.timer < DEF_MIN) || this.timer <= 0) this.defLine = null;
     }
     // 물러서는 한 짝 (10/17 연구 — SKILL.itRetreat): 박자 걸음이 짧은 디딤으로 센 두 디딤(뒷발 → 앞발 — gait.js shortPair)을 다 디딜 때까지 스틱을 뒤로 쥔다 · maxT 안에 못 하면 놓음.

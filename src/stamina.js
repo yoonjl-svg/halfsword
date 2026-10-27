@@ -1,10 +1,10 @@
 import { classifyStroke } from './attack_stroke.js';
 import { STAMINA, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY, realS } from './config.js';
+import { entersAttackLine, isPreparation } from './stamina_stroke.js';
+import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
 // 표준 시간 (10/25 22:3x): 공격 번호가 살아 있는 시간 · 긋기 꼬리는 실제 초로 적는다 (STAMINA 의 초 · 초당 값은 config 에서 realS · realRate)
 const ATTACK_LIFE = realS(1.5); // 공격을 낸 뒤 그 공격 번호가 살아 있는 시간 (막아 받기 청구 · 옛 흘림 판정)
 const ATTACK_TAIL = realS(0.35); // 긋는 동안 · 긋기가 끝난 뒤 공격으로 셈하는 꼬리
-import { entersAttackLine, isPreparation } from './stamina_stroke.js';
-import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 

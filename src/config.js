@@ -103,7 +103,7 @@ export const ARENA_SCALE = Math.SQRT2;
 export const ARENA = {
   radius: 6.5 * ARENA_SCALE, // 원형 경기장 반지름 (대리석 경계 테두리 위치)
   startGap: 5.6, // 시작할 때 두 검투사 사이 거리. 사장님 9/30 "멀리 떨어트려 맵을 보게"(4.2 → 7.0) → 09:10 "너무 떨어져 있어, 조금만 붙이자, 그래도 초기보다는 멀게"(→ 5.6, 롱소드 닿는 거리 밖 3.6 m)
-  startHold: realS(2.0), // 판 시작 뒤 이 시간(초) 동안 둘 다 발만 묶는다 (팔·칼은 자유). 사장님 값 (fighter.js feetHeld)
+  startHold: 2.0, // 판 시작 뒤 이 시간(초) 동안 둘 다 발만 묶는다 (팔·칼은 자유). 사장님 값 (fighter.js feetHeld) · 표준 시간(10/25): 이 수는 시뮬 · 도구 판의 게임 초(도구 장면 시각의 바탕 — 그대로) · 브라우저는 판마다 카메라 실제 초 × 템포로 덮고(main.js planOpening) `?openSweep=0` 판도 실제 2.0 s(realS)
 };
 
 export const CAMERA = {

@@ -55,6 +55,9 @@ const DEF_SEIZE = realS(0.4); // 막는 중 남은 시간이 이 밑이면 붙�
 const DEF_MIN = realS(0.35); // 공격이 지나갔으면 남은 시간이 이 밑일 때 되받거나 물러난다 (막기 최소)
 const LOCK_T = realS(0.5); // 패시브 걸쇠 · 미룬 패시브 남은 시간
 const EV_REARM = realS(0.3); // 낌새 · 상대 사건이 이만큼 그치면 다시 본다 (secret.js 와 같은 수)
+const QUIET_T = realS(0.12); // 위협이 이만큼 없고 손이 멎으면 '공격이 지나갔다' (parry_button.js 와 같은 수)
+const NEW_THREAT_T = realS(0.25); // 잠깐 조용했다가 다시 오면 새 공격으로 보는 틈 (parry_button.js 와 같은 수)
+const CALM_T = realS(2); // 대치: 위협 없이 이만큼 지나야 '조용히 맞섬' (패시브 standoff)
 const STEP_T = 0.3; // 기술 걸음 'strike'(유파 고유 동작 step 칸): 닿는 거리여도 내딛는 시간 (보통 내딛기의 최대와 같다)
 // 무기별 간격 실측표(MEASURED)는 weapon_measured.js 한 곳에 있다 (10/8 ① 구조 — 전엔 이 파일과 schools.js MEASURES 두 벌).
 //  간격을 무기에 맞춰 늘이고 줄이는 일은 sword_art.js 가 한다. 옛 이름 MEASURED 는 여기서도 그대로 내보낸다 —
@@ -1698,7 +1701,7 @@ export class AI {
       if (P.do.at === 'end') this.pendingPassive = { P, why: 'press', left: null }; // 물러남 끝까지 (left null = 시간 안 셈)
       else if (P.do.withdraw) {
         this.guard = this.passiveGuard(P.do.withdraw) ?? this.guard;
-        if (P.do.time) this.timer = P.do.time;
+        if (P.do.time) this.timer = realS(P.do.time); // 패시브 물러남 길이도 실제 초 (startWithdraw 와 같음)
         this.passiveFired(P);
       } else if (!(this.foe.alive && this.d < this.M.reach + 0.2 && this.d > this.M.clinch && this.passiveGo(P, null, 'press'))) {
         this.pendingPassive = { P, why: 'press', left: LOCK_T }; // 간격 밖 → 확정: 0.5 s 안에 낼 수 있으면 낸다 (10/9 13:xx)
@@ -1814,7 +1817,7 @@ export class AI {
     this.checkBind();
     if (this.drillOut) {
       // 시험: 헛스윙 연습 동안은 받기만 (whiff_drill.js) — 막기 연환·버릇·되받기 없이, 칼이 지나가면 물러난다 (드릴 거리에서 곧 간 보기로)
-      if ((this.noThreat > 0.12 && Math.hypot(s.hvx, s.hvy) < 2.5 && this.timer < DEF_MIN) || this.timer <= 0) this.startWithdraw(0.6);
+      if ((this.noThreat > QUIET_T && Math.hypot(s.hvx, s.hvy) < 2.5 && this.timer < DEF_MIN) || this.timer <= 0) this.startWithdraw(0.6);
       return;
     }
     // 막기 연환 비기 (10/11 — schools.js *_SECRET_PARRY): 정한 자리로 받아 낸 막기 → 독일은 맞붙은 그 순간, 중국은 칼이 갈라진 순간 곧장. 버릇(bindDef)·흐름 되받기보다 먼저
@@ -1826,7 +1829,7 @@ export class AI {
     if (!pcWait && SKILL.flow && SKILL.flowParry && !this.defVoid && this.flowRiposte(d)) return;
     if (BIND.natural && this.natHoldDef(dt)) return; // 자연 바인드 실험 ②: 칼이 맞붙어 있는 동안은 막는 자리를 지키며 민다 (BIND.holdMax 까지)
     // 공격이 지나갔다(칼끝이 더는 오지 않고 손이 멈췄다) → 상대가 다시 자세를 잡기 전에 되받아 친다 (Nach)
-    const swingOver = this.noThreat > 0.12 && Math.hypot(s.hvx, s.hvy) < 2.5;
+    const swingOver = this.noThreat > QUIET_T && Math.hypot(s.hvx, s.hvy) < 2.5;
     if ((swingOver && this.timer < DEF_MIN) || this.timer <= 0) {
       const riposte = d < this.M.reach + 0.25 && d > this.M.clinch + 0.1 && this.foe.alive && Math.random() < L.followUp;
       if (!(riposte && this.startAttack(this.pickTech(s, 'recover'), 'riposte', { noFeint: true }))) this.startWithdraw(0.6);
@@ -1943,7 +1946,7 @@ export class AI {
       if (!hit || tc < hit.tc) hit = { tc, hx, hy, hz, vx, vy, vz, sp };
     }
     if (!hit) return null;
-    if (this.noThreat > 0.25) this.threatId++; // 잠깐 조용했다가 다시 오면 새 공격
+    if (this.noThreat > NEW_THREAT_T) this.threatId++; // 잠깐 조용했다가 다시 오면 새 공격
     const lat = hit.hx * r.x + hit.hz * r.z; // + = 내 오른쪽
     // 찌르기: 칼끝이 칼날 방향으로 곧게 움직인다
     const bx = s.tx - s.mx;
@@ -2796,7 +2799,7 @@ export class AI {
   /** watch 의 판단 박자: standoff(위협 없음 2 s 넘게 · 상대 손 1 m/s 아래 · 간격 끝 가까이)와 foeStepIn(기회 종류 'stepin') — 사건마다 한 번 */
   passiveWatch(s, d, opp, reachOut) {
     if (!this.foe.alive || s.state !== 'stand') return false;
-    const calm = this.noThreat > 2 && Math.hypot(s.hvx, s.hvy) < 1 && d < this.holdDist() + 0.3;
+    const calm = this.noThreat > CALM_T && Math.hypot(s.hvx, s.hvy) < 1 && d < this.holdDist() + 0.3;
     if (!calm) this.standoffArmed = true;
     else if (this.standoffArmed) {
       const P = this.passiveFor('standoff');

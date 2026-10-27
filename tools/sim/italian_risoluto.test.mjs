@@ -15,6 +15,7 @@ import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { iaiTipSpeed, stanceSpread } from '../../src/secret_instant.js';
 
 const { SECRET } = CONFIG;
+const rs = CONFIG.realS; // 표준 시간 (10/25 22:3x): 적힌 0.6 · 0.2 · 0.4 s 는 실제 초 — 게임 초 = × 1.1
 const keep = (o, k, v, fn) => { const old = o[k]; o[k] = v; try { return fn(); } finally { o[k] = old; } };
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
 const withJ = (vals, fn) => { const J = CONFIG.JOINTS, old = {}; for (const k of Object.keys(vals)) (old[k] = J[k]), (J[k] = vals[k]); try { return fn(); } finally { Object.assign(J, old); } }; // 손목 값 (10/24 17:2x)
@@ -47,7 +48,7 @@ test('덮음 거리 = 내 칼 손 쪽 절반 ↔ 상대 칼 칼끝 쪽 절반 (�
 test('10/22 판(?risoWide=0) 덮인 채 나아가기: 덮음 · 둘 다 안 휘두름 · 스틱 앞 · 가슴 사이 줄어듦이 risolutoHold 이어지면 창 (하나라도 빠지면 셈이 0)', () => withCfg(OLD, () => {
   const f = fake();
   const W = new RisolutoWatch(f.me, f.foe);
-  assert.equal(SECRET.risolutoHold, 0.6);
+  assert.equal(SECRET.risolutoHold, rs(0.6));
   const n = Math.round(SECRET.risolutoHold / DT);
   assert.equal(tick(W, f, n - 2), null);
   const r = tick(W, f, 4);
@@ -96,7 +97,7 @@ test('두 번째 길(상대 박자 — 10/23 기본 켬 · 10/22 판 위에서):
 }));
 
 test('10/23 넓은 판정 (사장님 \'칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게\'): 기본값 · 칼 어느 부위든 · 끊김 너그러움 0.2 s(모아서 셈) · 가슴 사이 조건 없음 (이어짐 창 — 10/24 판 ?risoTouch=0 위에서)', () => {
-  assert.deepEqual([SECRET.risolutoAnyPart, SECRET.risolutoGrace, SECRET.risolutoClosing, SECRET.risolutoClose, SECRET.risolutoBeat, SECRET.risolutoHold], [1, 0.2, 0, 1, 1, 0.6]);
+  assert.deepEqual([SECRET.risolutoAnyPart, SECRET.risolutoGrace, SECRET.risolutoClosing, SECRET.risolutoClose, SECRET.risolutoBeat, SECRET.risolutoHold], [1, rs(0.2), 0, 1, 1, rs(0.6)]);
   withCfg(HOLD1024, () => {
     const n = Math.round(SECRET.risolutoHold / DT) + 4;
     // 칼 어느 부위든: 손 쪽 ↔ 칼끝 쪽은 아니지만(내 약한 쪽 곁) 실제로 칼끼리 맞닿음 → 덮음
@@ -108,19 +109,19 @@ test('10/23 넓은 판정 (사장님 \'칼이 붙어 있는 상황에 대한 판
     // 너그러움: 0.1 s 떨어졌다 다시 붙으면 이어서 셈(떨어진 동안은 안 셈) · 0.3 s 떨어지면 처음부터 (상대 박자 끔으로 따로 봄)
     const blink = (gapS) => keep(SECRET, 'risolutoBeat', 0, () => {
       const f = fake(); const W = new RisolutoWatch(f.me, f.foe), on = f.foe.bladePoint;
-      assert.equal(tick(W, f, Math.round(0.4 / DT)), null);
+      assert.equal(tick(W, f, Math.round(rs(0.4) / DT)), null);
       f.foe.bladePoint = blade([2.2, 1.6, 0.4], [0.9, 1.6, 0.4]); // 칼이 떨어짐
-      assert.equal(tick(W, f, Math.round(gapS / DT)), null);
+      assert.equal(tick(W, f, Math.round(rs(gapS) / DT)), null);
       f.foe.bladePoint = on;
       let k = 0, r = null;
       for (; k < n && !r; k++) { f.me.gap -= 0.01; r = W.tick(DT, true); }
       return { r, k };
     });
-    const b1 = blink(0.1); assert.equal(b1.r?.path, 'hold'); assert.ok(b1.k <= Math.round(0.2 / DT) + 2, `이어서 셈 ${b1.k}`); // 0.4 s 모은 뒤 0.2 s 더
-    const b3 = blink(0.3); assert.equal(b3.r?.path, 'hold'); assert.ok(b3.k >= Math.round(0.6 / DT) - 1, `처음부터 ${b3.k}`);
+    const b1 = blink(0.1); assert.equal(b1.r?.path, 'hold'); assert.ok(b1.k <= Math.round(rs(0.2) / DT) + 2, `이어서 셈 ${b1.k}`); // 0.4 s 모은 뒤 0.2 s 더
+    const b3 = blink(0.3); assert.equal(b3.r?.path, 'hold'); assert.ok(b3.k >= Math.round(rs(0.6) / DT) - 1, `처음부터 ${b3.k}`);
     // 상대 박자 + 너그러움: 덮음이 풀리면 너그러움(0.2 s)이 지난 뒤 창 · 상대가 칼을 내면 곧장
     const f = fake(); const W = new RisolutoWatch(f.me, f.foe);
-    tick(W, f, Math.round(0.3 / DT));
+    tick(W, f, Math.round(rs(0.3) / DT));
     f.foe.bladePoint = blade([2.2, 1.6, 0.4], [0.9, 1.6, 0.4]);
     let k = 0, r = null;
     for (; k < 60 && !r; k++) r = W.tick(DT, true);
@@ -182,7 +183,7 @@ test('10/23 판(?risoLunge=0) 실제 몸 실행: 탭 찌르기 하나 · 기력�
     assert.ok(sawPower, '찌르는 동안 서보 힘 · 판정 배율 = SECRET.power · hitMul');
     assert.equal(sawTip, false, '곧은 선은 비기에 안 실림');
     assert.equal(p.skill.sec, null, '굳음 뒤 끝');
-    assert.equal(SECRET.stiff.italian, 0.4);
+    assert.equal(SECRET.stiff.italian, rs(0.4));
   } finally { g.world.free(); }
 }));
 
@@ -251,15 +252,15 @@ function lungeRun(w, { gap = 2.2, seed = 9, foeW = 'longsword', cfg = {} } = {})
 test('10/24 런지 값 (사장님 \'런지로 진행해. 단 런지 동작이 고노센처럼 빠르게 나가야 의미가 있어. 상대 팔 늦어지는 효과는 0.6초 내 경직도 0.6초\')', () => {
   assert.equal(SECRET.risolutoLunge, 1);
   assert.equal(SECRET.risolutoShare, 1); // 고노센 칼끝 빠르기 그대로
-  assert.equal(SECRET.risolutoArmSlow, 0.6);
-  assert.equal(SECRET.risolutoStiff, 0.6);
+  assert.equal(SECRET.risolutoArmSlow, rs(0.6));
+  assert.equal(SECRET.risolutoStiff, rs(0.6));
   assert.equal(SECRET.hitMul, 1.3); // 판정 배율 그대로 (사장님 지시 — 바꾸지 않음)
   // 걸음은 있던 수: 몸 미끄러짐 = 고노센 발도 iaiStep · 앞발 = 이탈리아 런지 italianStep · 디딘 뒤 뒷발 끌어붙임
   // 10/24 14:0x: 디딘 뒤 뒷발 끌어붙임(draw) 대신 앞발을 뒤로 거둠(recover — 걸음 시간 0.4 사다리) · 걸음 동안 몸 따라감 배율 stepPush(엇박 찌르기 런지와 같은 2.0) · 몸 가속 한도 × burstAccel(accel)
   assert.deepEqual(SECRET.risolutoStep, { slide: 'iaiStep', foot: 'italianStep', draw: 0, room: 0, push: 'stepPush', accel: 1, recover: 1, recoverT: 0.4 }); // room 1 = 앞발도 clinch 밖까지만 (?risoRoom=1)
   assert.equal(SECRET.iaiStep, 0.6); assert.equal(SECRET.italianStep, 0.9);
   // 다른 곳 값은 그대로 (흘림 팔 늦춤 · 이탈리아 비기 굳음 — 10/23 판 · AI 칸)
-  assert.equal(CONFIG.FLOW_RECOVERY.seconds, 0.4); assert.equal(SECRET.stiff.italian, 0.4);
+  assert.equal(CONFIG.FLOW_RECOVERY.seconds, rs(0.4)); assert.equal(SECRET.stiff.italian, rs(0.4));
 });
 
 test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝 빠르기) · 몸 미끄러짐 + 앞발 런지 0.9 m · 상대 팔 늦춤 0.6 s · 굳음 0.6 s(끝 자세 붙잡음) · 굳음 뒤 앞발을 뒤로 거둠(14:0x) · 넘어지지 않음', () => {
@@ -274,10 +275,10 @@ test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝
     assert.ok(o.req?.combo && m?.lunge && m.kind === 'thrust', '운동학 찌르기 한 수');
     assert.equal(o.req.share, SECRET.risolutoShare);
     assert.equal(o.req.hitMul, SECRET.hitMul);
-    assert.equal(o.req.hold, 0.6);
+    assert.equal(o.req.hold, rs(0.6));
     assert.deepEqual([m.step.fwd, m.step.foot, !!m.step.draw, !!m.step.room, m.step.push, !!m.step.accel], [SECRET.iaiStep, SECRET.italianStep, false, false, SECRET.stepPush, true]);
     assert.equal(m.glide, true);
-    assert.equal(o.armSlow, 0.6, '상대 두 팔 늦춤 0.6 s');
+    assert.equal(o.armSlow, rs(0.6), '상대 두 팔 늦춤 0.6 s');
     assert.ok(o.lungeT > 0, '런지 자세 (SECRET.stance.lunge)');
     assert.equal(o.spentAttack, 0, '찌르기 값은 따로 안 냄');
     assert.ok(o.spentSecret > 0 || !CONFIG.STAMINA.on, '비기 값 하나');
@@ -285,8 +286,8 @@ test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝
     assert.ok(Math.abs(o.res.v - SECRET.risolutoShare * o.gon) < 1e-6, `${w} 길 빠르기 ${o.res.v}`);
     assert.ok(o.res.tipVmax >= 0.9 * o.gon && o.res.tipV >= 0.8 * o.gon, `${w} 칼끝 ${o.res.tipV.toFixed(1)} · 최고 ${o.res.tipVmax.toFixed(1)} / 고노센 ${o.gon.toFixed(1)}`);
     assert.deepEqual(o.gaitReq, { kind: 'lunge', fwd: SECRET.italianStep, draw: false, push: SECRET.stepPush, accel: true }, `${w} 앞발 런지 걸음`);
-    assert.equal(o.stiffT, 0.6, '굳음 0.6 s');
-    assert.ok(Math.abs(o.stiffSteps * DT - 0.6) < 3 * DT, `${w} 굳음 ${(o.stiffSteps * DT).toFixed(3)} s`);
+    assert.equal(o.stiffT, rs(0.6), '굳음 0.6 s');
+    assert.ok(Math.abs(o.stiffSteps * DT - rs(0.6)) < 3 * DT, `${w} 굳음 ${(o.stiffSteps * DT).toFixed(3)} s`);
     assert.equal(o.phase, 'stiff'); // main.js 가 칼 입력 · 스틱 · 막기 단추를 막는다
     assert.equal(o.held, true, '굳음 동안 끝 자세 붙잡음');
     assert.equal(o.drew, false, `${w} 뒷발 끌어붙임 없음 (14:0x)`);
@@ -627,21 +628,21 @@ test("10/25 21:0x 창 지킴 (사장님 '비기 발동창이 열리면 어떻게
     g.step();
     const ps = new PlayerSecretWatch(p, e);
     ps.riso.tick = () => null;
-    const run = (secs) => { for (let i = 0; i < Math.round(secs / DT); i++) ps.update(DT, false); };
+    const run = (secs) => { for (let i = 0; i < Math.round(rs(secs) / DT); i++) ps.update(DT, false); }; // 실제 초
     // 짧은 창(0.2 s)도 playerWindow 까지 · 그 뒤 닫힘
-    ps.openWindow({ ev: 'x' }, 0.2);
+    ps.openWindow({ ev: 'x' }, rs(0.2));
     run(0.5); assert.ok(ps.open, '0.5 s — 열림'); assert.ok(ps.holding());
     run(0.11); assert.equal(ps.open, null, '0.61 s — 닫힘');
     // 0.6 s 창은 그대로 0.6 s (한 스텝도 더 열리지 않음)
     ps.openWindow({ ev: 'x' });
     let k = 0; while (ps.open && k < 200) (ps.update(DT, false), k++);
-    assert.equal(k, Math.round(SECRET.playerWindow / DT));
+    assert.equal(k, Math.ceil(SECRET.playerWindow / DT - 1e-6)); // 창이 다 닫히는 스텝 (게임 0.66 s = 79.2 스텝 → 80째)
     // 몸이 비기를 낼 수 없음(넘어짐) = 지킴과 상관없이 닫힘 (skill.secret 이 받지 않는 몸)
     ps.openWindow({ ev: 'x' });
     const st = p.state; p.state = 'down';
     ps.update(DT, false); assert.equal(ps.open, null, '넘어지면 닫힘');
     p.state = st;
     // 전(?secretHold=0): 짧은 창은 그 길이에 닫힘
-    withCfg({ secretHold: 0 }, () => { ps.openWindow({ ev: 'x' }, 0.2); run(0.21); assert.equal(ps.open, null); });
+    withCfg({ secretHold: 0 }, () => { ps.openWindow({ ev: 'x' }, rs(0.2)); run(0.21); assert.equal(ps.open, null); });
   } finally { g.world.free(); }
 });

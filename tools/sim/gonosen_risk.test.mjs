@@ -170,6 +170,9 @@ test('⑤ 고노센 쓰는 몸 (gnsUser): 사람 = 일본 칼 · 비기 칸 (ski
 });
 
 /** 서서 기다리는 모노호시자오 사람(창이 열려도 안 침) 대 인물 AI — 준비된 동안 AI 가 간 보기(결행 · 속임 없이)로 사람 발도 선을 안으로 넘은 수 (이미 안에 있을 때 준비된 것은 넘음이 아님) */
+// '기어 듦' = 발도 선을 DEEP 넘게 들어옴 (10/27 표준 시간 — 토메 씨앗 1 은 선 밖 간 보기 자리(holdDist 2.42)에서 옆으로 돌며 가슴 사이가 선 2.33 m 위아래 1 ~ 2 cm 로 흔들려
+//  선을 두 번 스침 — 걸어 들지는 않음 · 끄면(옛 01:3x 판) 몸이 선 안으로 걸어 들어와 이 깊이도 넘음 · docs/strike/time_standard_2026-10-25.md §4)
+const DEEP = 0.05;
 function standoff(id, vals) {
   return withCfg(vals, () => {
     const C = CHARACTERS_BY_ID[id];
@@ -186,7 +189,7 @@ function standoff(id, vals) {
       const W = G.ai.gnsW;
       if (W?.ready) out.ready++;
       const d = p.foeDistance();
-      if (prev != null && prev > L && d <= L && ps.iaiArm.armed && (!W || W.ready) && G.ai.mode === 'watch') out.creep++;
+      if (prev != null && prev > L - DEEP && d <= L - DEEP && ps.iaiArm.armed && (!W || W.ready) && G.ai.mode === 'watch') out.creep++;
       prev = d;
     };
     for (let i = 0; i < 16 / DT && p.alive && G.enemy.alive; i++) G.step();

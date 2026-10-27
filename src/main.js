@@ -2345,7 +2345,7 @@ const camOpen = { mode: 'old', params: null, centre: { x: 0, z: 0 }, swept: null
 function planOpening() {
   if (!OPEN_SWEEP) {
     camOpen.mode = 'old';
-    ARENA.startHold = SIM_HOLD;
+    ARENA.startHold = CONFIG.realS(SIM_HOLD); // 실제 2.0 s (표준 시간 10/25 — 훑기 · 내려앉기와 같이 실제 초 × 템포 · 옛 판 k 1 = 게임 2.0 그대로)
   } else {
     camOpen.mode = stages.id !== camOpen.swept ? 'sweep' : 'settle';
     ARENA.startHold = (camOpen.mode === 'sweep' ? CAMERA.open.sweepSec : CAMERA.open.settleSec) * TEMPO;

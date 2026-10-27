@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, AI } from './harness_m.mjs';
-import { SECRET, SKILL, JOINTS } from '../../src/config.js';
+import { SECRET, SKILL, JOINTS, ARENA, realS } from '../../src/config.js'; // realS: 표준 시간(10/25) — 무장 1.5 s 는 실제 초
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerSecretWatch } from '../../src/secret.js';
 import { spinProgress, spinRate } from '../../src/iberian_spin.js';
@@ -36,7 +36,7 @@ test('도는 진행: 0 → 1 · 빠르기 끝 0 · 가운데 1 · 한 바퀴 시
   const { time: T, ramp: r } = SECRET.ibSpin;
   assert.equal(T, 0.6);
   assert.equal(r, 0.2);
-  assert.equal(SECRET.ibSpin.armTime, 1.5);
+  assert.equal(SECRET.ibSpin.armTime, realS(1.5)); // 실제 1.5 s (표준 시간 10/25 — 게임 1.65)
   assert.equal(spinProgress(0, T, r), 0);
   assert.equal(spinProgress(T, T, r), 1);
   let prev = 0;
@@ -95,7 +95,7 @@ test('무장: 칼끝 거리 밖 1.5 s → 끝 없는 창(금색 !) · 휘두르�
   for (let i = 0; i < Math.round(SECRET.playerWindow / DT); i++) G.step();
   assert.equal(W.open, null);
   busy = false;
-  for (let i = 0; i < Math.round(1.6 / DT); i++) G.step();
+  for (let i = 0; i < Math.round(realS(1.6) / DT); i++) G.step(); // 무장 실제 1.5 s 넘게
   assert.equal(W.open?.ctx?.ev, 'spin');
   // 상처 → 풀림
   P.wounds.push({ part: 'farmO', severity: 0.1 });
@@ -104,7 +104,7 @@ test('무장: 칼끝 거리 밖 1.5 s → 끝 없는 창(금색 !) · 휘두르�
   // 끄면(0) 발도 대기처럼 상처로는 안 풀림
   SECRET.ibSpin.hurtDisarm = 0;
   try {
-    for (let i = 0; i < Math.round(1.6 / DT); i++) G.step();
+    for (let i = 0; i < Math.round(realS(1.6) / DT); i++) G.step(); // 무장 실제 1.5 s 넘게
     assert.equal(W.spinArm.armed, true);
     P.wounds.push({ part: 'farmO', severity: 0.1 });
     G.step();
@@ -130,7 +130,7 @@ test('한 바퀴: 대본이 몸을 2π 돌리고 · 한 걸음쯤 나아가고 �
   let started = null, turned = 0, last = null, x0 = null, tipMax = 0, ended = null, extra = 0;
   G.before = () => {
     W.update(DT, !!P.skill.sec);
-    if (started == null && G.t > 2.6 && P.skill.secret({ S: W.S, ctx: { ev: 'spin' } })) {
+    if (started == null && G.t > ARENA.startHold + 0.6 && P.skill.secret({ S: W.S, ctx: { ev: 'spin' } })) { // 발이 풀리고 0.6 s 뒤 (10/24 장면 — 전 2.6 s = 발 묶음 2.0 + 0.6 · 표준 시간 뒤 발 묶음 게임 2.2)
       started = G.t;
       extra = P.ibSpin.pre + (SECRET.ibSpin.settle ? SECRET.ibSpin.ramp : 0) + P.ibSpin.T; // 10/23: 먼저 감기(칼이 가슴보다 높으면 ramp) · 마무리 받기(ramp) · 10/24 한 바퀴 = 칼마다(share — spinPlan)
       last = P.heading;
@@ -261,6 +261,17 @@ const withSpin = async (vals, fn) => {
     Object.assign(SECRET.ibSpin, old);
   }
 };
+// 10/24 기록 장면 (표준 시간 전 판의 게임 초 — 싱지르 무장 ibSpin.armTime 1.5): 아래 '땅' 시험의 옛 결함 판(손목 옛 판 · 땅 끔)은 원을 다 그려 내는 때가 10/24 그림 판과 같아야
+//  칼끝이 땅을 스친다 — 표준 시간(무장 게임 1.65)으로는 그 때가 0.15 s 늦어 막히지 않는다(옛 결함 재현만의 장면 · docs/strike/time_standard_2026-10-25.md §4). 고친 판(땅 · 발디딤)은 표준 시간 그대로 본다
+const withScene1024 = async (fn) => {
+  const a = SECRET.ibSpin.armTime;
+  SECRET.ibSpin.armTime = 1.5;
+  try {
+    return await fn();
+  } finally {
+    SECRET.ibSpin.armTime = a;
+  }
+};
 const HEAD = 0.45; // 시험 눈금 — 칼 가장 높은 점이 가슴 점 + 0.45 m(머리 꼭대기 언저리)를 넘으면 '허공' (판 값 아님)
 const spinTop = (r) => Math.max(...['ramp', 'wind', 'free', 'settle', 'follow'].filter((p) => r.ph[p].n).map((p) => r.ph[p].top));
 
@@ -342,7 +353,7 @@ test('땅은 막힘 아님 (10/24 floor): 원을 아래에서 끝내 감기 첫 
   const r = runCircle('zweihander', 'langort', 'circle', c);
   assert.equal(r.why, 'done');
   assert.equal(r.q, 1);
-  const b = await withJoints(WRIST_OLD, () => withSpin({ floor: 0 }, () => runCircle('zweihander', 'langort', 'circle', c))); // 옛 결함은 옛 손목 판에서 (새 손목 판은 꺼도 칼끝이 땅을 안 스침)
+  const b = await withScene1024(() => withJoints(WRIST_OLD, () => withSpin({ floor: 0 }, () => runCircle('zweihander', 'langort', 'circle', c)))); // 옛 결함은 옛 손목 판에서 (새 손목 판은 꺼도 칼끝이 땅을 안 스침)
   assert.equal(b.why, 'blocked');
   assert.ok(b.q < 0.05, `진행 ${b.q}`);
 });
