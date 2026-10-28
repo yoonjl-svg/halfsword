@@ -154,7 +154,8 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     <section class="node-detail" hidden aria-labelledby="nodeTitle"><button type="button" class="detail-close" aria-label="설명 닫기">×</button>
       <img class="detail-icon" id="nodeIcon" alt="" aria-hidden="true" draggable="false"><b id="nodeTitle" class="detail-title" tabindex="-1"></b>
       <figure class="detail-lore" id="nodeLoreBox"><blockquote id="nodeLore"></blockquote><figcaption id="nodeSrc"></figcaption></figure>
-      <div class="detail-body"><p id="nodeEffect" class="detail-effect"></p><p id="nodePre" class="detail-pre"></p><p id="nodeState" class="detail-state" role="status"></p></div>
+      <div class="detail-body"><p id="nodeEffect" class="detail-effect"></p><p id="nodeState" class="detail-state" role="status"></p></div>
+      <p id="nodePre" class="detail-pre"></p>
       <p id="nodeCmd" class="detail-cmd" hidden><b class="detail-cmd-label">입력:</b> <span id="nodeCmdText"></span></p>
       <small id="nodeMeta" class="detail-meta"></small>
       <div class="detail-act"><p id="nodePrice" class="detail-price"></p><div class="detail-actions start-actions"><button type="button" id="learnNode">배우기</button></div></div>

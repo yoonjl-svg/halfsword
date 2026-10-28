@@ -540,7 +540,7 @@ const IBERIAN_UNIQUE = [
   //  the montante to give a revez cutting from behind with the other edge … also from low to high」(피 단Ⅰ — 「whoever performs it well will be able to perform them all」).
   //  오른 아래 → 올려 탈류 → 왼 높이 비낌(피 복ⅩⅤ 멈춤 자리) → 왼쪽으로 떨궈(「let fall the montante to the left」 피 복Ⅰ) → 왼 아래 → 올려 레베스 → 오른 높이 비낌. chain 2 = 흐름이 이어 돈다
   { name: 'talhoRevezBaixo', nameKo: '번갈아 올려베기 (탈류 이 레베스 드 바슈)', orig: 'talho e revez de baxo', from: G.wechselR, path: [[0.04, -0.08], G.ochsL, [-0.5, 0.0], G.wechselL, [-0.04, -0.08], G.ochsR], open: 'LL', kind: 'cut', reach: 0, base: 0.9, chain: 2, src: '피게이레두 1651 단순 규칙 Ⅰ·복합 규칙 Ⅰ·Ⅶ(「always from low to high, alternating talho and revez」) [원문 영역] · 길의 수 [추정]' },
-  { name: 'talhoRodeado', nameKo: '돌며 베기 (탈류 로데아두)', orig: 'talho rodeado', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.35, fwd: 0.3, when: 'strike' }, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
+  { name: 'talhoRodeado', nameKo: '나선 걸음 베기 (탈류 로데아두)', orig: 'talho rodeado', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.35, fwd: 0.3, when: 'strike' }, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
 ];
 
 // ── 패시브 고유 동작 (10/9 — 사장님 02:1x '어떤 고유 동작은 패시브여도 좋을 거 같아', docs/strike/school_passive_design_2026-10-09.md) ──
