@@ -29,7 +29,7 @@ const WITH_CMD = ['G1', 'G2', 'G5', 'G8', 'G7', 'G10', 'I2', 'I7', 'I6', 'I9', '
 // 10/25 22:3x 사장님 확정 비기 글 (감독 전달 — 사장님 원문 '아무 행동 없이 2초 기다리면 준비 활성화, …' · '4] 이베리아와 이탈리아 비기도 활성화 앞에 '비기'를 붙여줘' · '5] 이베리아 비기도 기다리는 시간 2초로'):
 //  글 그대로 — ② 의 도식 규칙(33 자 · 숫자 없음 · 기호 · 낱말) 밖. 코드 조건은 아래 비기 시험이 본다. G10 은 23:1x
 const OWNER = {
-  I4: '칼 길이 바깥에서 칼을 맞대고 움직이면(↑/↓) 비기 활성화',
+  I4: '칼을 맞대고 상대 걸음 따라 움직이면(↑/↓) 비기 활성화', // 10/28 18:3x 사장님 '라솔루토 설명은 1' (전 10/25 22:3x '칼 길이 바깥에서 칼을 맞대고 움직이면(↑/↓) 비기 활성화')
   B7: '칼 길이 바깥에서 2초 기다리면 비기 활성화 · 원을 그리며 긋기(↻/↺)로 발동',
   J5: '아무 행동 없이 2초 기다리면 준비 활성화, 상대가 내 간격에서 공격을 시도하거나 빠르게 움직이면 비기 활성화',
   C9: '앞으로 움직이며(↑) 상대 공격을 정확한 타이밍에 막으면 자동 발동',
@@ -234,7 +234,8 @@ test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · confi
   const it = playerSecretDef('italian');
   assert.ok(SECRET.itSecret === 'risoluto' && it.when === 'risoluto' && !it.do.tapOnly && !SECRET.risolutoTap, '이탈리아 = 덮인 채 나아가기 → 공격(탭 · 끌기)');
   assert.equal(SECRET.risolutoStick, 'both', "I4 '움직이면(↑/↓)' = 스틱 앞이나 뒤");
-  assert.ok(SECRET.risolutoLunge && SECRET.risolutoGap, "I4 '칼 길이 바깥에서' = 런지 간격 조건(가슴 사이 ≥ 맞닿기 거리 — italian_risoluto.js lungeGapOk)");
+  assert.ok(SECRET.risolutoLunge && SECRET.risolutoGap, '런지 간격 조건(가슴 사이 ≥ 맞닿기 거리 — italian_risoluto.js lungeGapOk) — 10/28 글에서는 뺐지만 조건은 그대로');
+  assert.equal(SECRET.risolutoMirror, 1, "I4 '상대 걸음 따라' = 상대가 물러서면 앞 · 들어오면 뒤 (italian_risoluto.js risolutoMirror — 10/28 01:4x)");
   assert.equal(sec('italian').cmd, OWNER.I4);
   // 이베리아: 칼끝 거리 밖 ibSpin.armTime 초 무장(비기 활성화) → 공격으로 원 한 바퀴(어느 쪽이든 — ↻/↺)
   const ib = playerSecretDef('iberian');

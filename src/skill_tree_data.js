@@ -201,7 +201,7 @@ const NODE_CMD = {
   I7: '머리 높이에서 사선 긋기(↙)', // 위에서 내려 찌르기 ← 황소 찌르기 긋기(stichOchs — 머리 오른쪽 → 가운데 · 탭은 안 됨)
   I6: '막기', // italian_opposition.js — 막기 단추 새 누름 한 번에 곧장
   I9: '탭이나 찌르는 긋기가 상대 칼에 닿으면 바로 긋기', // 이어 긋기 — 앞 찌르기(prev 'thrust' = 탭 · 찌르기 길 긋기 둘 다 — unique_assist.js track) 맞물림 뒤 afterWindow 안의 긋기(탭은 안 셈)
-  I4: '칼 길이 바깥에서 칼을 맞대고 움직이면(↑/↓) 비기 활성화', // 10/25 22:3x 사장님 확정 글(4] '활성화 앞에 '비기'') — italian_risoluto.js 덮인 채 나아가기(칼끼리 risolutoCover 안 · 스틱 앞이나 뒤 risolutoStick 'both') · 가슴 사이 ≥ 맞닿기 거리(lungeGapOk — '칼 길이 바깥') → 창(비기 활성화) → 공격(탭 · 긋기 — risolutoTap 0) · 전 '칼을 맞댄 채 앞으로 이동(↑), 느낌표(!)가 뜨면 탭'
+  I4: '칼을 맞대고 상대 걸음 따라 움직이면(↑/↓) 비기 활성화', // 10/28 18:3x 사장님 '라솔루토 설명은 1' — 상대 걸음에 맞춰(italian_risoluto.js risolutoMirror) · 전 '칼 길이 바깥에서 칼을 맞대고 움직이면(↑/↓) 비기 활성화'(10/25 22:3x 사장님 확정 글(4] '활성화 앞에 '비기'') — italian_risoluto.js 덮인 채 나아가기(칼끼리 risolutoCover 안 · 스틱 앞이나 뒤 risolutoStick 'both') · 가슴 사이 ≥ 맞닿기 거리(lungeGapOk — '칼 길이 바깥') → 창(비기 활성화) → 공격(탭 · 긋기 — risolutoTap 0) · 전 '칼을 맞댄 채 앞으로 이동(↑), 느낌표(!)가 뜨면 탭'
   // 이베리아
   B2: '좌우 이동(←/→)', // gait.js 옆 누르면 첫 걸음에 늘 옆 박차기(burstWalkSide · sideDash)
   B3: '좌우 이동(←/→)과 동시에 사선 긋기(↙)', // 걸음 명령 stick 'side' + 분노의 베기(zornhau)
