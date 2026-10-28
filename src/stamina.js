@@ -207,7 +207,9 @@ export class Stamina {
     this.attackUntil = this.time + ATTACK_LIFE;
     if (bundled) return;
     this.counts[kind] = (this.counts[kind] ?? 0) + 1;
-    this.spend('attack', Math.max(0, (kind === 'thrust' ? STAMINA.thrustCost : STAMINA.cutCost) * this.weight - credit));
+    // 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:5x · fighter.js ibChainCostK): 사람의 이어 그은 베기는 × 0.9ⁿ (02:2x) (AI · 다른 몸 · 찌르기는 1)
+    const chainK = kind === 'cut' ? this.fighter.ibChainCostK?.() ?? 1 : 1;
+    this.spend('attack', Math.max(0, (kind === 'thrust' ? STAMINA.thrustCost : STAMINA.cutCost) * this.weight * chainK - credit));
   }
 
   secret() {

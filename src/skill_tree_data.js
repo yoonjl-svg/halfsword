@@ -22,7 +22,7 @@ export const NODE_CAT = Object.freeze({
 });
 
 /** 판 몫 열쇠 (skillKit 칸 — 칸이 없으면 false). unique · perk 는 이름 모음 */
-export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'passive', 'secret']);
+export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29)
 
 export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10/21)
 
@@ -69,13 +69,13 @@ const TREE_SRC = {
       N({ id: 'B2', name: '옆 박차기', cat: 'foot', l1: '보법 II', l2: '옆 박차기', eff: '옆으로 누르면 첫 걸음을 박찬다', pre: ['B1'], price: 100, opt: true, d: 1, cx: 84, f: ['burstSide'] }),
       N({ id: 'B10', name: '손목 힘', cat: 'passive', l1: '패시브', l2: '손목 힘', eff: '큰 칼을 돌리는 손목 힘이 세진다', pre: ['B1'], price: 0, heads: 5, d: 1, cx: 252, f: ['passive'] }),
       N({ id: 'B3', name: '나선 걸음 베기', cat: 'atk', l1: '나선 걸음 베기', l2: '걸음 기술', eff: '옆으로 걸으며 사선으로 내려 긋는다', pre: ['B1'], price: 200, d: 1, cx: 420, u: 'talhoRodeado' }), // 10/29 01:1x 사장님 '나선 걸음 베기로 해' — 머리 위 돌려 베기 · 거듭 돌려 베기와 헷갈려서 이름만(전 '돌며 베기')
-      N({ id: 'B4', name: '머리 위 돌려 베기', cat: 'atk', l1: '머리 위', l2: '돌려 베기', eff: '왼 가로베기를 그으면 머리 위로 돌려 베기가 나간다', pre: ['B1'], price: 200, d: 1, cx: 588, u: 'redondo' }),
+      N({ id: 'B4', name: '풍차 베기', cat: 'atk', l1: '풍차', l2: '베기', eff: '칼을 머리 위로 돌리다가 내려 벤다', pre: ['B5'], price: 300, d: 2, cx: 560, u: 'redondo' }), // 10/29 01:3x 사장님 '흐르는 긋기와 머리 위 돌려 베기 스킬 위치를 바꿔 · 레돈두를 특수공격으로 · 이름을 특수공격 답게' · 02:0x '레돈두는 풍차 베기로' (전: 머리 위 돌려 베기 — 왼 가로베기 강화동작 · d 1 · cx 588 · B1 뒤 · 금화 200 — 값은 자리의 깊이를 따름) · 효과 글은 사장님 확인 전
       N({ id: 'B8', name: '쳐내기', cat: 'parry', l1: '막기 I', l2: '쳐내기', title: '막기 I · 쳐내기 (탈류 · 레베스)', eff: '높이 오는 칼을 베어 쳐낸다', pre: ['B1'], price: 200, d: 1, cx: 756, f: ['parry', 'parryCover'] }),
       N({ id: 'B11', name: '리스본에서 온 편지', cat: 'letter', l1: '리스본에서', l2: '온 편지', title: '리스본에서 온 편지', pre: ['B1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
-      N({ id: 'B5', name: '흐르는 긋기', cat: 'atk', l1: '이어 긋기', l2: '흐름', eff: '이어 그을 때 칼이 멈추지 않고 다음 긋기로 흐른다', pre: ['B4'], price: 300, d: 2, cx: 560, f: ['ibFlow'] }),
+      N({ id: 'B5', name: '흐르는 긋기', cat: 'atk', l1: '이어 긋기', l2: '흐름', eff: '이어 그을 때 칼이 멈추지 않고 다음 긋기로 흐른다', pre: ['B1'], price: 200, d: 1, cx: 588, f: ['ibFlow'] }), // 10/29 01:3x 머리 위 돌려 베기와 자리 바꿈 (전 d 2 · cx 560 · B4 뒤 · 금화 300)
       N({ id: 'B9', name: '굳은 받기', cat: 'parry', l1: '막기 II', l2: '굳은 받기', eff: '막는 동안 받는 피해가 줄어든다', pre: ['B8'], price: 300, d: 2, cx: 800, f: ['parryCut'] }),
       N({ id: 'B7', name: '싱지르', cat: 'secret', l1: '비기', l2: '싱지르', eff: '칼끝 거리 밖에서 버티다 공격을 원을 그리듯 한 바퀴 돌리면, 몸을 한 바퀴 돌려 가로로 벤다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 10, d: 3, cx: 420, f: ['secret'] }), // 10/22 이베리아 새 비기 (사장님 '빙글 한바퀴 돌면서 … 일격' — schools.js IBERIAN_SECRET_SPIN · 전 '길목 지키기')
-      N({ id: 'B6', name: '거듭 돌려 베기', cat: 'deep', l1: '심화', l2: '쌓기', title: '돌려 베기 심화 · 쌓기', eff: '돌려 베기를 이어 그을수록 피해가 증가한다', pre: ['B5'], price: 400, d: 3, cx: 680, perk: 'redondo' }),
+      N({ id: 'B6', name: '이어지는 흐름', cat: 'deep', l1: '이어지는', l2: '흐름', title: '흐르는 긋기 심화 · 이어지는 흐름', eff: '이어 그을수록 더 세고 덜 지친다', pre: ['B4'], price: 400, d: 3, cx: 680, f: ['ibChain'] }), // 10/29 01:4x ~ 02:2x 사장님 결정 — 이어 그은 수마다 흐르는 긋기 위력 더하기 · 기력 × 0.9ⁿ · 상한 없음 (config IB_FLOW.chainStack — 전: 거듭 돌려 베기 · 돌려 베기 쌓기 perk redondo) · 효과 글은 사장님 확인 전
     ],
   },
   japanese: {
@@ -205,7 +205,7 @@ const NODE_CMD = {
   // 이베리아
   B2: '좌우 이동(←/→)', // gait.js 옆 누르면 첫 걸음에 늘 옆 박차기(burstWalkSide · sideDash)
   B3: '좌우 이동(←/→)과 동시에 사선 긋기(↙)', // 걸음 명령 stick 'side' + 분노의 베기(zornhau)
-  B4: '수평 긋기(→)', // 머리 위 돌려 베기 ← 왼 가로베기(zwerchL)
+  B4: '탭을 길게 누른 채 이동하다 떼기', // 10/29 풍차 베기 (사장님 확인 전) — unique_assist.js holdTick: 탭(PC 왼 단추)을 끌지 않고 rdHoldTime 넘게 누르면 머리 위로 감기 · 그동안 걸음 그대로 · 떼면 내려침 (전 '수평 긋기(→)' — 머리 위 돌려 베기 ← 왼 가로베기)
   B5: '긋기를 쉬지 않고 이어 가기', // fighter.js updateIbFlow — 앞 휘두르기(긋기) 뒤 이어짐 창 안에 다시 휘두름 · 휘두르며 둥글게 꺾음(탭은 휘두르기가 아님)
   B7: '칼 길이 바깥에서 2초 기다리면 비기 활성화 · 원을 그리며 긋기(↻/↺)로 발동', // 10/25 22:3x 사장님 확정 글(4] '비기' · 5] 2초) — secret.js spinTick 무장(칼끝 거리 밖 SECRET.ibSpin.armTime 2 초 — 금빛 '!' = 비기 활성화) → spinCircle 긋기로 원 한 바퀴(어느 쪽이든 — SECRET.ibSpin.input 'attackCircle' · 탭은 보통 공격) · 전 '거리 밖에서 버티다 느낌표(!)가 뜨면 원을 그리며 긋기'
   // 일본

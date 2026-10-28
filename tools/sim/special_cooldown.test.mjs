@@ -12,10 +12,10 @@ const UA = CONFIG.UNIQUE_ASSIST;
 const { realS } = CONFIG;
 const CD = realS(6.0);
 
-test('기본값 — 식힘 실제 6 s · 표 칸 special = 제비 베기 · 겹치기 · 날개 접기 · 칼끝 돌려 빼기 넷뿐', () => {
+test('기본값 — 식힘 실제 6 s · 표 칸 special = 제비 베기 · 겹치기 · 날개 접기 · 칼끝 돌려 빼기 · 풍차 베기 다섯뿐', () => {
   assert.ok(Math.abs(UA.specialCooldown - CD) < 1e-12);
   const sp = Object.values(PLAYER_UNIQUE).flat().filter((e) => e.special).map((e) => e.name).sort();
-  assert.deepEqual(sp, ['cavazione', 'duplieren', 'lianchi', 'tsubameGaeshi']);
+  assert.deepEqual(sp, ['cavazione', 'duplieren', 'lianchi', 'redondo', 'tsubameGaeshi']); // 10/29 풍차 베기 (이베리아 B4)
 });
 
 /** 몸 하나 + 한 기술만 연 강화 */

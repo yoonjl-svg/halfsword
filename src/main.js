@@ -310,6 +310,11 @@ if (params.has('lianTap')) CONFIG.UNIQUE_ASSIST.lianTap = +params.get('lianTap')
 if (params.has('lianSnapShare') && +params.get('lianSnapShare') > 0) CONFIG.UNIQUE_ASSIST.lianSnapShare = +params.get('lianSnapShare'); // 날개 접기 칼끝 빠르기 몫 (기본 0.6 — 격살 칼끝 빠르기의 몫)
 if (params.has('specialCooldown')) CONFIG.UNIQUE_ASSIST.specialCooldown = CONFIG.realS(Math.max(0, +params.get('specialCooldown') || 0)); // 특수 공격 공통 식힘 (실제 초 — 기본 6 · 0 = 끔 · 사장님 10/28 02:0x)
 if (params.has('dupTap')) CONFIG.UNIQUE_ASSIST.dupTap = +params.get('dupTap') ? 1 : 0; // 사람 겹치기 탭 (사장님 10/28 01:2x — 맞물린 채 탭 · 기본 1)
+if (params.has('rdHold')) CONFIG.UNIQUE_ASSIST.rdHold = +params.get('rdHold') ? 1 : 0; // 사람 풍차 베기 길게 누름 (이베리아 B4 — 사장님 10/29 · 기본 1)
+if (params.has('rdSnapShare')) CONFIG.UNIQUE_ASSIST.rdSnapShare = Math.max(0, +params.get('rdSnapShare') || 0); // 풍차 베기 칼끝 빠르기 몫 (× 싱지르 칼끝 · 기본 0.6)
+if (params.has('rdEdge')) CONFIG.UNIQUE_ASSIST.rdEdge = +params.get('rdEdge') < 0 ? -1 : 1; // 감는 칼 날 쪽 (기본 −1 — 사장님 확인 전)
+if (params.has('ibChain')) CONFIG.IB_FLOW.chainStack = +params.get('ibChain') ? 1 : 0; // 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:5x · 기본 1)
+if (params.has('ibWindChain')) CONFIG.IB_FLOW.windmillChain = +params.get('ibWindChain') ? 1 : 0; // 풍차 베기를 이어 그은 칼 하나로 셈 (사장님 10/29 02:1x · 기본 1)
 if (params.has('dupSnapShare') && +params.get('dupSnapShare') > 0) CONFIG.UNIQUE_ASSIST.dupSnapShare = +params.get('dupSnapShare'); // 겹치기 칼끝 빠르기 몫 (기본 0.6 — 죽음의 일격 칼 빠르기의 몫)
 if (params.has('dupEdge')) CONFIG.UNIQUE_ASSIST.dupEdge = +params.get('dupEdge') < 0 ? -1 : 1; // 겹치기 날 (1 긴 날 · −1 짧은 날)
 if (params.has('cavSnapShare') && +params.get('cavSnapShare') > 0) CONFIG.UNIQUE_ASSIST.cavSnapShare = +params.get('cavSnapShare'); // 칼끝 돌려 빼기 칼끝 빠르기 몫 (기본 0.6 — 리솔루토 런지 칼끝 빠르기의 몫)
@@ -2865,14 +2870,21 @@ function frame(now) {
     // 고유 동작 강화 (10/14 — 10/13 이어 주기를 다시 만듦): 손가락 움직임을 알린다(긋기 읽기 · 다른 동작이 손을 쥐는지). 손 목표는 쥐지 않는다 — 손가락은 늘 그대로 더한다
     //  (사장님 결정 10/14 01:5x '궤적은 끝까지 내 손가락, 고유 동작은 손가락으로는 못 하는 몫만 더한다')
     player.skill.uniq?.feed(d.x, d.y, dt, guardHold || bufHold || !!playerGuard?.held);
+    // 풍차 베기 (이베리아 B4 — 10/29 · unique_assist.js holdTick): 탭 입력을 끌지 않고 길게 누르면 감기 · 떼면 내려침 — 누름 상태를 알린다(비기 창이 열려 있으면 감지 않음 — 싱지르가 먼저).
+    //  감는 동안은 손가락 움직임을 손 목표에 더하지 않는다(손은 감기가 쥔다)
+    if (player.skill.uniq?.holdE) {
+      const hs = input.holdState();
+      player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open);
+    }
+    const winding = !!player.skill.uniq?.winding;
     // 권총: 자동 조준이라 끌기는 손을 움직이지 않는다 (빠른 끌기가 내딛기·자세 복귀를 부르지 않게)
-    if (player.alive && !player.weapon?.gun && !secBusy && !guardHold && !bufHold) {
+    if (player.alive && !player.weapon?.gun && !secBusy && !guardHold && !bufHold && !winding) {
       player.handOffset.x += d.x * inScale;
       player.handOffset.y += d.y * inScale;
     }
     // 검술 층의 "자세로 돌아가기"가 알아야 할 것: 손가락이 화면에 닿아 있는지, 지금 움직였는지
     player.handHeld = input.activeTouch !== null;
-    player.inputActive = !secBusy && !bufHold && Math.abs(d.x) + Math.abs(d.y) > 1e-5;
+    player.inputActive = !secBusy && !bufHold && !winding && Math.abs(d.x) + Math.abs(d.y) > 1e-5;
     if (taps > 0 && player.alive && !(pommelTap && player.foeDistance() <= CONFIG.CLOSE.pommelDist && player.skill.pommel())) player.skill.thrust();
     updatePlayerEmotion(dt);
     watchEmotions();

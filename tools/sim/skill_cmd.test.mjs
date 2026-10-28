@@ -145,6 +145,15 @@ test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · �
     const e = PLAYER_UNIQUE[s].find((u) => u.name === x.u);
     assert.ok(e, `${x.id} ${x.u}`);
     const c = x.cmd, id = `${x.id} ${c}`;
+    if (e.role === 'hold') {
+      // 길게 눌러 내는 특수 공격 (풍차 베기 B4 — 10/29): 탭을 끌지 않고 길게 눌러 감고 · 그동안 이동 그대로 · 떼면 냄 (unique_assist.js holdTick · main.js holdInput — 긋기 · 탭 하나로는 안 남)
+      assert.ok(e.hold && !e.on.length && !e.tapKey, `${x.id} 길게 누름 칸은 긋기 조건 · 탭 조건 없음`);
+      assert.ok(c.startsWith('탭을 길게 ') && c.endsWith('떼기'), `${id} — 탭을 길게 누르다 떼기`);
+      assert.ok(!c.includes('긋기') && !c.includes('공격'), `${id} — 긋기 · 공격으로는 안 남`);
+      assert.match(ua, /holdTick\(dt\) \{[\s\S]{0,1200}if \(!P\.still\) \{/, 'unique_assist.js holdTick — 끈 누름은 감지 않음');
+      assert.ok(src('main.js').includes('player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open);'), 'main.js — 누름 상태 · 비기 창');
+      continue;
+    }
     // 걸음 명령: 긋기를 시작할 때 스틱이 그 쪽 (unique_assist.js stickOk — 옆은 어느 쪽이든)
     if (e.stick === 'side') assert.ok(c.startsWith('좌우 이동(←/→)과 동시에 '), `${id} — 옆`);
     else if (e.stick === 'fwd') assert.ok(c.startsWith('앞으로 이동(↑)과 동시에 '), `${id} — 앞`);
@@ -263,6 +272,6 @@ test("'공격' = 탭도 긋기도 받는 자리만 · '탭' = 탭을 받는(또�
   assert.deepEqual(withWord(/공격$/), [], "받는 입력을 '공격' 으로 끝맺는 칸 없음 (10/25 비기 글은 '비기 활성화' 꼴)");
   assert.deepEqual(withWord(/공격/), ['C9', 'J5'], "'공격' 낱말 = 일본 · 동방 확정 글의 상대 공격");
   assert.deepEqual(withWord(/탭$/), [], '탭만 받는 비기 창 없음 (10/25 21:0x 리솔루토 공격하면)');
-  assert.deepEqual(withWord(/탭/), ['I9'], "탭 = 칼끝 돌려 빼기 앞 칼(prev 'thrust' — 탭 포함)");
+  assert.deepEqual(withWord(/탭/), ['B4', 'I9'], "탭 = 칼끝 돌려 빼기 앞 칼(prev 'thrust' — 탭 포함) · 풍차 베기(B4 — 탭을 길게 누름 · 10/29)");
   assert.deepEqual(withWord(/찌르는 긋기/), ['I9'], "찌르는 긋기(앞 칼 조건) = 칼끝 돌려 빼기(prev 'thrust' — 찌르기 길 긋기 포함)");
 });

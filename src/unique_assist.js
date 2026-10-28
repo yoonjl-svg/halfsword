@@ -27,12 +27,13 @@ import { classifyStroke } from './attack_stroke.js';
 //  수는 config.js UNIQUE_ASSIST (확인표 1040~1047 · 10/14 강화 수는 owner_defaults_table.md 끝, 사장님 확인 전). 끄기 `?uniqueAssist=0`.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { UNIQUE_ASSIST as UA, SKILL, SECRET } from './config.js';
+import { UNIQUE_ASSIST as UA, SKILL, SECRET, STAMINA, IB_FLOW } from './config.js';
 import { G, TECH, TECH_BY_NAME } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js';
 import { segDist } from './skill.js';
-import { requestArtReturn, requestArtSnap, requestArtThrust, requestArtFold, requestArtDup, setArtTechOf } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21) · 제비 베기 되돌림 칼 (10/25 해법 ②) · 칼끝 돌려 빼기 운동학 찌름 (10/28)
-import { perkOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 돌려 베기 쌓기 = 이베리아 심화 B6)
+import { requestArtReturn, requestArtSnap, requestArtThrust, requestArtFold, requestArtDup, requestArtRedondo, setArtTechOf, iaiBusy } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21) · 제비 베기 되돌림 칼 (10/25 해법 ②) · 칼끝 돌려 빼기 운동학 찌름 (10/28)
+import { perkOff, kitOff } from './skill_kit.js';
+import { windStart, windStep, windEnd } from './iberian_redondo.js'; // 풍차 베기 머리 위 감기 (B4 — 10/29) // 플레이어 스킬트리 몫 (10/21 — 돌려 베기 쌓기 = 이베리아 심화 B6)
 
 // ── 고유 동작 표 (디렉터 안 → 사장님 확정 10/13 22:3x. 바뀌면 여기 한 곳만 고친다) ──
 //  유파마다 넷 = 발 기술 1 · 공유 2 · 대표 1 (10/21 통폐합으로 둘~셋 — 아래 머리말). stage = 단계(1~4 — AI 는 숙련도로 거른다: 아래 aiUniqueStages · 플레이어는 스킬트리 칸마다 하나 — 10/21 skill_tree_data.js u 칸). name =schools.js 그 유파 unique 의 이름(path 가 있으면 그 이름의 길을 빌림).
@@ -99,7 +100,10 @@ export const PLAYER_UNIQUE = {
   ],
   iberian: [
     { stage: 1, name: 'talhoRodeado', role: 'step', stick: 'side', hint: '옆으로 걸으며 사선 내려 긋기', body: [-15, -8, 4, 0.02], /* 10/21 전수 조사: 탈류(오른쪽 위 → 왼쪽 아래) · 원전 「왼쪽 위로 나사처럼」 — 몸 왼쪽(−) · 전 +15 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 옆 + 분노의 베기
-    { stage: 3, name: 'redondo', role: 'enh', replaces: 'zwerchL', stack: 0.1, /* 이어 그을 때마다 맞는 순간 에너지 + 10 %(셋까지 × 1.3 — 10/21 사장님 '너의 제안대로' · 전 끝 힘 + 0.06 은 근육 힘이라 효과 없음) · AI 도 */ hint: '강화동작 · 왼 가로베기 대신 · 이어 그을수록 강해짐', body: [12, 8, 2, 0], body2: [-12, -8, 2, 0], on: [{ tech: 'zwerchL' }], chain: { at: 3 } }, // 머리 위 돌려 베기 ← 왼 가로베기 (늘 — 10/21 전수 조사: 왼쪽 → 오른쪽으로 떨어지는 레베스라 왼 가로베기와 짝 · 전 가로베기(오른쪽 → 왼쪽)는 방향이 거꾸로)
+    // 풍차 베기 (B4 레돈두 — 이베리아 특수 공격 · 사장님 10/29 01:3x '레돈두를 지금 우리가 개발 중인 특수공격으로' · 02:0x '레돈두는 풍차 베기로' — config UNIQUE_ASSIST.rdHold):
+    //  사람 = role 'hold' — 탭을 길게 눌러 머리 위로 칼을 돌리다(iberian_redondo.js) 떼면 왼팔 위로 떨어뜨려 비스듬히 벰(secret_instant.js requestArtRedondo) · 왼 가로베기는 사람에게 보통 긋기로 돌아감(긋기 조건 on 없음).
+    //  ai = AI 몫 그대로(전 판 강화동작 — 왼 가로베기 대신 · enhancedMoves · sword_art.js 가 읽음) · stack = AI 이어 그을수록 맞는 순간 에너지 + 10 %(셋까지 — strokeHitK · 사람은 쌓기 칸이 없어 안 받음)
+    { stage: 3, name: 'redondo', role: 'hold', hold: 1, special: true, nameKo: '풍차 베기 (레돈두)', orig: 'redondo', hint: '탭을 길게 눌러 머리 위로 칼을 돌리다 떼면 내려 벤다', on: [], ai: { role: 'enh', replaces: 'zwerchL' }, stack: 0.1 },
   ],
   japanese: [
     { stage: 1, name: 'hirakiGiri', role: 'step', stick: 'side', hint: '옆으로 걸으며 왼 사선 내려 긋기', body: [-18, -12, 2, 0.02], bodyMirror: -1, /* 開き = 비스듬히 디딘 뒤 몸을 상대 쪽으로 엶 → 디딘 쪽의 반대로(오른쪽으로 디디면 왼쪽) · 원전에 몸 돌림 수 없음 — 10/21 확인 */ on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 옆 + 왼 분노의 베기
@@ -167,7 +171,8 @@ export function strokeHitK(f) {
 }
 
 export function enhancedMoves(tradition) {
-  return (PLAYER_UNIQUE[tradition] ?? []).filter((e) => e.role === 'enh' && TECH_BY_NAME[e.replaces]).map((e) => ({ base: e.replaces, name: e.path ?? e.name, stage: e.stage }));
+  // ai 칸 = AI 몫이 사람과 다른 기술 (풍차 베기 — 사람은 길게 눌러 내는 특수 공격 · AI 는 전 판 왼 가로베기 강화동작 그대로 · 10/29)
+  return (PLAYER_UNIQUE[tradition] ?? []).map((e) => (e.ai ? { ...e, ...e.ai } : e)).filter((e) => e.role === 'enh' && TECH_BY_NAME[e.replaces]).map((e) => ({ base: e.replaces, name: e.path ?? e.name, stage: e.stage }));
 }
 
 const D2R = Math.PI / 180;
@@ -307,6 +312,9 @@ export class PlayerUniqueAssist {
     this.powV = 0; // 내가 둔 끝 힘 배율 (f.powerMul 이 아직 이 값일 때만 되돌린다)
     this.planFade = null; // 길 덧칸 놓기 { tilt, reach, turn, t } (planStep — 10/25 18:0x)
     this.stats = { strokes: 0, techs: {}, fired: {}, ends: {}, steps: 0, power: 0 };
+    this.holdE = this.list.find((e) => e.hold) ?? null; // 길게 눌러 내는 특수 공격 (풍차 베기 B4 — 10/29)
+    this.press = { down: false, still: false, secretOpen: false }; // main.js holdInput — 탭 입력을 누르고 있나 · 탭 문턱(끌지 않음) 안인가 · 비기 창이 열렸나
+    this.hold = { st: 'idle', t: 0 }; // 누름 셈 · 감기 ('idle' · 'press' · 'spent' 이 누름은 감지 않음 · 'wind' 감는 중)
     this.coolT = {}; // 특수 공격(표 칸 special)마다 마지막으로 나간 때 (사장님 10/28 02:0x '특수공격은 6초 쿨타임 … 스킬이 발동한 순간부터 재' — UNIQUE_ASSIST.specialCooldown)
     f.uniqueCue = null;
     f.skill.uniqBody = null;
@@ -524,6 +532,148 @@ export class PlayerUniqueAssist {
     return t0 == null ? 0 : Math.max(0, UA.specialCooldown - (now - t0));
   }
 
+  /**
+   * 탭 입력 누름 (main.js 프레임마다 · 재는 도구): down = 탭 손가락(PC 왼 단추)이 닿아 있나 · still = 그 누름이 탭 문턱(input.js tapPx · clickPx — 끌지 않음) 안인가 ·
+   *  secretOpen = 비기 창이 열렸나(싱지르 무장 — 열린 동안 길게 눌러도 감지 않음: 비기가 먼저)
+   */
+  holdInput(down, still, secretOpen = false) {
+    this.press.down = !!down;
+    this.press.still = !!still;
+    this.press.secretOpen = !!secretOpen;
+  }
+  /** 감는 중인가 (main.js — 그동안 손가락 움직임은 손 목표에 안 더함) */
+  get winding() {
+    return this.hold.st === 'wind';
+  }
+
+  /**
+   * 풍차 베기 (B4 레돈두 — 사장님 10/29 · config UNIQUE_ASSIST.rdHold): 물리 스텝마다 (drive 머리).
+   *  ① 누름: 끌지 않은 누름이 rdHoldTime 을 넘기면 감기 시작 — 그 순간 식힘 중 · 비기 창 · 몸이 바쁨 · 탈진이면 이 누름은 감지 않음(뗄 때까지) · 끌면 이 누름은 보통 긋기.
+   *  ② 감는 중: 떼면 내려침 · 기력 rdDrain 초당 · 기력이 바닥(0)이면 저절로 내려침 · 맞음(칼날 상처 · 넘어짐 · 칼을 세게 맞음) · 막기 단추 · 비기 · 탈진 · 칼을 잃음이면 그만둠(식힘 없음) · 감는 칼이 닿기만 하면 그대로 감음.
+   *  흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 02:1x · 감독 풀이): 머리 위로 한 바퀴 넘게 돌린 뒤 낸 내려침은 이어 그은 칼 하나로 셈(windFire)
+   */
+  holdTick(dt) {
+    const f = this.f;
+    const H = this.hold;
+    const P = this.press;
+    if (H.fade > 0 && !f.iai && !f.iaiReq && !(f.iaiHoldT > 0) && !(f.iaiFade > 0)) {
+      // 그만둔 감기의 덧씌우기 칸을 0.12 s 에 내려놓음 (탭 찌르기 · 길목 한 칼 내려놓기와 같은 빠르기)
+      H.fade = Math.max(0, H.fade - dt);
+      const th = f.skill.thrustPose;
+      th.w = Math.min(th.w, H.fade / 0.12);
+    }
+    if (H.st === 'wind') {
+      const why = this.windStop();
+      if (why) return this.windCancel(why);
+      if (!P.down) return this.windFire('release');
+      const S = f.stamina;
+      S.spent.wind ??= 0;
+      S.spend('wind', UA.rdDrain * dt); // 회복도 멈춤 (spend — 쉼 시계 0)
+      if (STAMINA.on && !S.infinite && S.value <= 0) return this.windFire('empty');
+      const hit = windStep(f, dt);
+      if (hit) this.stats.windTouch = (this.stats.windTouch ?? 0) + 1; // 감는 칼이 무엇에 닿은 스텝 (재기만 — 닿아도 그대로 감음 · 세게 맞으면 windStop 의 jolt · 상처면 hit)
+      return;
+    }
+    if (!P.down) {
+      H.st = 'idle';
+      H.t = 0;
+      return;
+    }
+    if (H.st === 'spent') return;
+    if (!P.still) {
+      H.st = 'spent'; // 끈 누름 = 긋기
+      return;
+    }
+    if (H.st === 'idle') {
+      H.st = 'press';
+      H.t = 0;
+      // 이어 긋기 창 안에서 누르기 시작했나 (흐르는 긋기 — 마지막 진짜 긋기가 끝나고 afterWindow 안 · 누르고 도는 동안은 창이 닫히지 않는 것으로 셈)
+      H.chainN = f.ibFlowChainNow?.() ?? -1;
+    }
+    H.t += dt;
+    if (H.t < UA.rdHoldTime) return;
+    const e = this.holdE;
+    if (!UA.rdHold || this.cooling(e) || P.secretOpen || this.busy() || iaiBusy(f) || f.stamina.exhausted || !f.sword) {
+      H.st = 'spent';
+      this.stats.holdRefused = (this.stats.holdRefused ?? 0) + 1;
+      return;
+    }
+    this.windBegin();
+  }
+
+  windBegin() {
+    const f = this.f;
+    const H = this.hold;
+    H.st = 'wind';
+    H.wounds0 = f.wounds?.length ?? 0;
+    H.fade = 0;
+    H.windT = 0;
+    if (this.cur) this.closeStroke(this.t);
+    windStart(f);
+    this.stats.winds = (this.stats.winds ?? 0) + 1;
+  }
+
+  /** 감기를 그만둘 까닭 (없으면 null) */
+  windStop() {
+    const f = this.f;
+    const sk = f.skill;
+    if (!f.alive || !f.armed || f.weaponBroken || !f.sword) return 'armed';
+    if (f.state !== 'stand') return 'down';
+    if ((f.wounds?.length ?? 0) > (this.hold.wounds0 ?? 0)) return 'hit';
+    if (this.blocked || f.parryGuard?.held) return 'parry';
+    if (sk.sec || f.ibSpin) return 'secret';
+    if (f.stamina.exhausted) return 'exhausted';
+    if (f.jolt > 0.5) return 'jolt'; // 칼을 세게 맞음 (맞아 흔들림 = 끊김 — 막기 연환 secret.js 와 같은 문턱)
+    if (sk.tap || sk.pom || f.iai || f.iaiReq || !f.foe) return 'busy';
+    if (!UA.rdHold || !UA.on) return 'off';
+    return null;
+  }
+
+  /** 감기 그만둠 (식힘 없음 · 흐름 셈 없음) — 팔 · 칼은 서보로 (덧씌우기 칸 0.12 s 에 내려놓음) */
+  windCancel(why) {
+    windEnd(this.f);
+    this.hold.st = this.press.down ? 'spent' : 'idle';
+    this.hold.fade = 0.12;
+    this.stats.windCancel ??= {};
+    this.stats.windCancel[why] = (this.stats.windCancel[why] ?? 0) + 1;
+  }
+
+  /** 내려침 (떼었거나 기력이 바닥) — 운동학 칼 · 기술 알림 · 칼 하나 기력 · 식힘 시작 · 흐르는 긋기 셈 */
+  windFire(why) {
+    const f = this.f;
+    const e = this.holdE;
+    const W = f.rdWind;
+    const turns = W?.turns ?? 0;
+    windEnd(f);
+    this.hold.st = this.press.down ? 'spent' : 'idle'; // 기력이 바닥나 낸 칼: 손가락을 뗄 때까지 다시 감지 않음
+    this.hold.fade = 0.12;
+    const U = e.U;
+    // 흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 02:1x · 감독 풀이 · 사장님 확인 전): 한 바퀴 넘게 돌린 뒤 낸 칼 = 이어 그은 칼 하나 (더 돌려도 하나) ·
+    //  이어 긋기 창 안에서 누르기 시작했으면 그 사슬의 다음 수(n + 1) · 아니면 첫 수(n 1) · 사슬은 이 칼 뒤로 이어짐. 흐르는 긋기(B5)가 없으면 없음 · 한 바퀴 못 돌았으면 없음
+    const chain = IB_FLOW.windmillChain && IB_FLOW.a && turns >= 1 && f.swordArt?.tradition === 'iberian' && !kitOff(f, 'ibFlow');
+    const n = chain ? (this.hold.chainN >= 0 ? this.hold.chainN + 1 : 1) : 0;
+    f.ibStrike = chain ? { n, t0: this.t } : null; // fighter.js updateIbFlow 가 칼이 끄는 동안 흐름을 켬 · 기력(ibChainCostK)이 읽음
+    const gk = SECRET.ibSpin?.share > 0 ? SECRET.ibSpin.share : SECRET.cnFastShare;
+    const ok = UA.enhance > 0 && requestArtRedondo(f, { share: UA.rdSnapShare * gk, maxT: UA.rdSnapTime, tech: U.name, arc: UA.rdArc });
+    if (!ok) {
+      f.ibStrike = null;
+      this.stats.windCancel ??= {};
+      this.stats.windCancel.noStrike = (this.stats.windCancel.noStrike ?? 0) + 1;
+      return false;
+    }
+    this.coolStart(e); // 식힘은 내려침이 나간 순간부터 (사장님 10/28 02:0x '스킬이 발동한 순간부터 재')
+    if (this.cur) this.closeStroke(this.t);
+    this.tapRec = { tech: 'tap', kind: 'cut', tap: true, t0: this.t, dir: [0, 0], start: null, landed: false, bound: false, tEnd: null, unique: U.name }; // 앞 칼 기록 (다음 기회를 열지 않음 — tapChain 과 같음)
+    this.stats.fired[U.name] = (this.stats.fired[U.name] ?? 0) + 1;
+    this.stats.windFire ??= {};
+    this.stats.windFire[why] = (this.stats.windFire[why] ?? 0) + 1;
+    this.stats.windTurns = [...(this.stats.windTurns ?? []), +turns.toFixed(2)];
+    this.stats.windChain = [...(this.stats.windChain ?? []), n];
+    f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
+    f.stamina.attack('cut'); // 칼 하나 (끌고 가는 칼은 같은 공격 — same) · 이어 그은 칼이면 기력 × 0.9ⁿ (stamina.js chargeAttack — 이어지는 흐름 B6)
+    return true;
+  }
+
   /** 탭 창 (TAP_TRIG): age < from 이면 이른 탭 — 그 기회를 없앰(from > 0 일 때) · from ~ to 면 { spend } · 그 밖 null */
   windowed(rec, key, age, from, to) {
     if (age < from) {
@@ -694,6 +844,7 @@ export class PlayerUniqueAssist {
   drive(dt) {
     this.t += dt;
     const f = this.f;
+    if (this.holdE) this.holdTick(dt); // 풍차 베기 (B4 — 길게 눌러 감다 떼면 내려침 · 10/29)
     // 물러남이 풀린 때 (날개 접기 탭 조건 TAP_TRIG 'lian' — 10/28 01:2x): 스틱 뒤가 풀린 스텝
     const back = this.backNow();
     if (this.backOn && !back) this.backOff = this.t;

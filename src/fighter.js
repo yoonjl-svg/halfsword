@@ -1880,15 +1880,34 @@ export class Fighter {
     if (raw) this.ibFlowLow = 0;
     else if (this.ibFlowSw && (this.ibFlowLow = (this.ibFlowLow ?? 0) + 1) === 1) this.ibFlowLowT = t; // 문턱 밑으로 처음 내려간 때 = 끝난 때(굳으면)
     const sw = raw || (!!this.ibFlowSw && this.ibFlowLow <= IB_FLOW.endSteps);
+    // 풍차 베기 내려침 (10/29 IB_FLOW.windmillChain — unique_assist.js windFire 가 ibStrike 를 둠): 한 바퀴 넘게 돌린 뒤 낸 운동학 칼 = 이어 그은 진짜 긋기 하나 —
+    //  끄는 동안 흐름 켬 · 그 칼의 이어 그은 수 n · 끝난 때가 마지막 진짜 긋기 끝(사슬이 그 뒤로 이어짐). 손 목표는 안 움직여 아래 휘두르기 읽기는 그동안 쉼
+    if (this.ibStrike) {
+      if (this.iai || this.iaiReq) {
+        this.ibCutN = this.ibLastN = this.ibStrike.n;
+        this.ibFlowChain = true;
+        this.ibFlowWasCut = true;
+        this.ibFlowEnd = this.ibFlowCutEnd = t;
+        this.ibFlowSw = false;
+        this.ibFlowOn = true;
+        return;
+      }
+      this.ibStrike = null;
+    }
     if (sw) {
       const u = sp || 1;
       if (!this.ibFlowSw) {
         this.ibFlowChain = t - (this.ibFlowCutEnd ?? -9) <= win;
+        this.ibCutN = this.ibFlowChain ? (this.ibLastN ?? 0) + 1 : 0; // 이어지는 흐름 (B6 — 10/29 01:5x): 이 칼의 이어 그은 수 (사슬 첫 이은 칼 1 · 다음 2 …)
         this.ibFlowDir = [v.x / u, v.y / u];
         this.ibFlowPk = this.ibFlowLeg = sp;
       } else {
         if (raw && this.ibFlowDir && (v.x * this.ibFlowDir[0] + v.y * this.ibFlowDir[1]) / u < 0) { // 90° 넘게 꺾임 = 둥글게 이어 감 (꺾이기 전 몫이 진짜 긋기일 때)
-          if (this.ibFlowLeg >= IB_FLOW.cutSpeed) this.ibFlowChain = true;
+          if (this.ibFlowLeg >= IB_FLOW.cutSpeed) {
+            this.ibFlowChain = true;
+            this.ibLastN = this.ibCutN ?? 0; // 꺾이기 전 몫 = 진짜 긋기 하나 · 꺾인 뒤 몫이 그다음 수
+            this.ibCutN = this.ibLastN + 1;
+          }
           this.ibFlowDir = [v.x / u, v.y / u];
           this.ibFlowLeg = sp;
         } else if (sp > this.ibFlowLeg) this.ibFlowLeg = sp;
@@ -1897,12 +1916,46 @@ export class Fighter {
     } else if (this.ibFlowSw) {
       this.ibFlowEnd = this.ibFlowLowT;
       this.ibFlowWasCut = this.ibFlowPk >= IB_FLOW.cutSpeed;
-      if (this.ibFlowWasCut) this.ibFlowCutEnd = this.ibFlowLowT; // 마지막 진짜 긋기가 끝난 때
+      if (this.ibFlowWasCut) {
+        this.ibFlowCutEnd = this.ibFlowLowT; // 마지막 진짜 긋기가 끝난 때
+        this.ibLastN = this.ibFlowChain ? this.ibCutN ?? 0 : 0; // 사슬 길이 (이어 감이 아닌 진짜 긋기면 0 부터 — 사슬이 끊김)
+      }
     }
     this.ibFlowSw = sw;
     const real = sw ? this.ibFlowPk >= IB_FLOW.cutSpeed : !!this.ibFlowWasCut && t - (this.ibFlowEnd ?? -9) <= win;
     this.ibFlowOn = !!this.ibFlowChain && real;
     if (!this.ibFlowOn && !sw) this.ibFlowChain = false;
+  }
+
+  /**
+   * 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:5x '상한 없음' · config IB_FLOW.chainStack): 이 몸이 받나 — 사람만(AI 몸 그대로 · 관문 판 그대로) · 스킬트리 B6 칸 · 흐름 읽기 'a'(진짜 이어 긋기)
+   */
+  ibChainOn() {
+    return !!IB_FLOW.chainStack && IB_FLOW.a && IB_FLOW.detect !== 'old' && !this.aiControlled && this.swordArt?.tradition === 'iberian' && !kitOff(this, 'ibFlow') && !kitOff(this, 'ibChain');
+  }
+  /** 지금 칼의 이어 그은 수 n (이어 그은 진짜 긋기가 아니면 0) — 흐름이 켜진 동안 · 휘두르기가 막 시작돼 읽기가 아직 못 본 스텝은 미리 셈 (stamina.js 가 같은 스텝에 긋기를 청구할 때) */
+  ibChainN() {
+    if (this.ibStrike) return this.ibStrike.n;
+    if (this.ibFlowSw) return this.ibFlowChain ? this.ibCutN ?? 0 : 0;
+    if (this.skill?.swinging) return (this.ibFlowT ?? 0) - (this.ibFlowCutEnd ?? -9) <= UNIQUE_ASSIST.afterWindow ? (this.ibLastN ?? 0) + 1 : 0;
+    return this.ibFlowOn ? this.ibCutN ?? 0 : 0;
+  }
+  /** 지금 이어 긋기 창 안인가 (풍차 베기 누름 시작 — unique_assist.js holdTick): 창 안이면 그 사슬 길이(이어 그은 수 · 0 이상), 아니면 −1 */
+  ibFlowChainNow() {
+    if (!IB_FLOW.a || kitOff(this, 'ibFlow') || this.swordArt?.tradition !== 'iberian') return -1;
+    return (this.ibFlowT ?? 0) - (this.ibFlowCutEnd ?? -9) <= UNIQUE_ASSIST.afterWindow ? this.ibLastN ?? 0 : -1;
+  }
+  /** 흐르는 긋기 위력 (combat.js analyze): 흐름이 켜진 채 맞힌 긋기 × IB_FLOW.power · 이어지는 흐름(B6)이면 더하기 1 + (power − 1) × n (상한 없음 — 사장님 10/29 01:5x) */
+  ibFlowK() {
+    if (!this.ibFlowOn || !IB_FLOW.a) return 1;
+    if (!this.ibChainOn()) return IB_FLOW.power;
+    return 1 + (IB_FLOW.power - 1) * Math.max(1, this.ibCutN ?? 1);
+  }
+  /** 이어지는 흐름 긋기 기력 배율 (stamina.js chargeAttack — 베기만): 이어 그은 칼이면 IB_FLOW.chainCost ^ n (곱하기 — 0.9 · 0.81 · 0.729 … 사장님 10/29 01:5x · 02:2x) · 아니면 1 */
+  ibChainCostK() {
+    if (!this.ibChainOn()) return 1;
+    const n = this.ibChainN();
+    return n > 0 ? Math.pow(IB_FLOW.chainCost, n) : 1;
   }
 
   /** 이베리아 이어 긋기 흐름 10/21 판 읽기 (IB_FLOW.detect 'old' — 휘두르기 표시를 스텝마다 그대로 · 앞 휘두르기 빠르기를 안 봄) */

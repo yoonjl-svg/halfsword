@@ -393,7 +393,8 @@ export class Combat {
     if (spl !== 1 && UA.schielPath && UA.schielPlayer && att.skill?.uniq && strokeTechOf(att) === 'schielhau') { if (type === 'blunt') energy *= spl; else severity *= spl; }
     // 이베리아 흐르는 긋기 위력 (10/28 22:0x 사장님 '위력도 그만큼 올려' — config IB_FLOW.power · 확인표 2692): 흐름이 켜진 채(fighter.js updateIbFlow — 사람은 B5 · AI 이베리아는 늘)
     //  맞힌 긋기의 칼날 상처 심각도 · 둔타 에너지 × power. 찌르기 · 비기 칼(secretHit ≠ 1)은 그대로 · 물리(빠르기 · 가르나 튕기나)는 그대로
-    const ibK = att.ibFlowOn && IB_FLOW.a && type !== 'stab' && (att.secretHit ?? 1) === 1 ? IB_FLOW.power : 1;
+    //  10/29 01:5x 이어지는 흐름(B6 — 사람만 · fighter.js ibFlowK): 이어 그은 수 n 만큼 더하기 1 + (power − 1) × n · AI 는 그대로 power
+    const ibK = att.ibFlowOn && IB_FLOW.a && type !== 'stab' && (att.secretHit ?? 1) === 1 ? (att.ibFlowK ? att.ibFlowK() : IB_FLOW.power) : 1;
     if (ibK !== 1) { if (type === 'blunt') energy *= ibK; else severity *= ibK; }
     return {
       type,

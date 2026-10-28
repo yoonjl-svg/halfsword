@@ -48,7 +48,10 @@ export const ROWS = {
   cavTap: { trad: 'italian', w: 'rapier', name: 'cavazione', base: 'tap', ko: '칼끝 돌려 빼기 (막아찌르기 빗나감 → 탭)', strokes: [], cav: 'tap' },
   lianTap: { trad: 'chinese', w: 'hwando', name: 'lianchi', base: 'tap', ko: '날개 접기 (물러나며 탭)', strokes: [], lian: true },
   dupTap: { trad: 'german', w: 'longsword', name: 'duplieren', base: 'zornhau', ko: '겹치기 (긋기 맞물림 → 탭)', strokes: [], dup: true, cut: T('zornhau') },
-  iberian: { trad: 'iberian', w: 'zweihander', name: 'redondo', base: 'zwerchL', ko: '머리 위 돌려 베기', strokes: [T('zwerchL'), { ...ZW_BACK, chain: true }] },
+  iberian: { trad: 'iberian', w: 'zweihander', name: 'redondo', base: 'zwerchL', ko: '머리 위 돌려 베기 (10/29 전 판 — 사람 강화동작 · 지금은 AI 몫만)', strokes: [T('zwerchL'), { ...ZW_BACK, chain: true }] },
+  // 10/29 풍차 베기 (이베리아 B4 특수 공격 — 사장님 10/29 · rdBot): 칼끝 거리 + startAdd 안에서 탭을 길게 누름 → 감는 동안 앞으로 걸음 → 상대 가슴이 releaseAt(맞닿기 ~ 칼끝 거리 + 0.15) 안이고
+  //  (반은) 한 바퀴 넘게 돈 뒤 뗌 · 4 s 넘으면 뗌 · combo 몫은 앞 칼(1 ~ 2 이어 긋기) 끝 0.05 ~ 0.25 s 안에 누름(이어 긋기 사슬 안)
+  rdHold: { trad: 'iberian', w: 'zweihander', name: 'redondo', base: 'tap', ko: '풍차 베기 (길게 눌러 돌리다 뗌)', strokes: [], rd: true, startAdd: 0.9 },
   japanese: { trad: 'japanese', w: 'uchigatana', name: 'tsubameGaeshi', base: 'oberhau', ko: '제비 베기', strokes: [TSU], combo: true },
   kote: { trad: 'japanese', w: 'uchigatana', name: 'kote', base: 'langortDown', ko: '손목 치기', strokes: [{ from: PAD.langort, path: [[0.02, -0.22]] }] },
   chinese: { trad: 'chinese', w: 'hwando', name: 'yaoji', base: 'zwerch', ko: '허리 베기', strokes: [T('zwerch')] },
@@ -63,6 +66,8 @@ const p50 = (a) => {
   const s = [...a].sort((x, y) => x - y);
   return s[Math.floor((s.length - 1) / 2)];
 };
+const RD_COMBO = +(process.env.RD_COMBO ?? 0.5); // 풍차 베기 시도 가운데 이어 긋기 사슬 안에서 누르는 몫 (rdBot · 10/29)
+const OTHER_RD = ['zornhau', 'zwerch', 'zornhauL', 'oberhau'].map((n) => ({ from: TECH_BY_NAME[n].from, path: TECH_BY_NAME[n].path }));
 const APPR = CONFIG.SKILL.recoverSpeed; // 1.2 패드 m/s — 손가락으로 자세를 잡는 빠르기 (게임의 자세로 돌아가기와 같은 수)
 const r3 = (x) => (x == null || !isFinite(x) ? null : +x.toFixed(3));
 const LOW = [0, -0.5];
@@ -219,6 +224,7 @@ function addHit(a, r, part, P, name) {
     h.w = ws ? { oor: r3(outOfRange(ws)), roll: r3(ws.roll), fe: r3(ws.fe), dev: r3(ws.dev), elbowUp: r3(ws.elbowUp) } : null;
   }
   h.snap = !!P.iai;
+  if (P.ibFlowK) { h.ibK = r3(P.ibFlowOn ? P.ibFlowK() : 1); h.ibN = P.ibStrike?.n ?? (P.ibFlowOn ? P.ibCutN ?? 0 : 0); } // 흐르는 긋기 위력 · 이어 그은 수 (10/29 — 이베리아)
   if (P.iai?.artReach) h.reach = { over: r3(P.iai.overshoot), el: r3(P.iai.artReach.el), dX: r3(P.iai.artReach.dX) };
   if (tech === 'imbroccata' && r.type === 'stab') h.gap = 1;
   a.hits.push(h);
@@ -253,9 +259,43 @@ function cavBot(G, P, uq, bot, rnd, R, guard) {
       bot.queue = bot.make([R.cut]);
       c.stage = 'cut1';
       c.endT = null;
+    } else if (R.rd) {
+      const [CONTACT, REACH] = MEASURED[R.w] ?? MEASURED.longsword;
+      c.releaseAt = CONTACT + rnd() * (REACH + 0.15 - CONTACT);
+      c.minTurns = rnd() < 0.5 ? 1 : 0; // 반은 한 바퀴 넘게 돌린 뒤 (흐르는 긋기 셈 — IB_FLOW.windmillChain)
+      c.stage = c.pre ? 'rdPre' : 'rdPress';
+      c.stick = 0.6;
+      if (c.pre) {
+        bot.queue = bot.make(c.pre);
+        c.pre = null;
+      }
     }
   };
   c.step = () => {
+    if (c.stage === 'rdPre') {
+      // 앞 칼(이어 긋기)이 끝나면 0.05 ~ 0.25 s 안에 누름 — 이어 긋기 창(0.6 s) 안
+      if (bot.queue.length) return;
+      c.preEnd ??= G.t + 0.05 + rnd() * 0.2;
+      if (G.t < c.preEnd) return;
+      c.stage = 'rdPress';
+      c.t1 = G.t;
+    }
+    if (c.stage === 'rdPress') {
+      const dist = P.foeDistance();
+      const W = P.rdWind;
+      uq.holdInput(true, true, false);
+      c.stick = dist < (MEASURED[R.w] ?? MEASURED.longsword)[0] + 0.1 ? 0 : 0.6;
+      if (uq.winding) c.bound = 1;
+      const go = uq.winding && dist <= c.releaseAt && (W?.turns ?? 0) >= c.minTurns;
+      if (go || (uq.winding && G.t - c.t1 > 4) || (!uq.winding && G.t - c.t1 > UAc.rdHoldTime + 0.3)) {
+        uq.holdInput(false, true, false);
+        c.second = uq.winding ? 1 : 0;
+        c.stage = 'tap2';
+        c.t2 = G.t;
+        c.stick = null;
+      }
+      return;
+    }
     const O = guard?.opposition;
     if (c.stage === 'press') {
       // 새 누름 한 스텝 → 놓음 (막아찌르기는 놓아도 마침)
@@ -311,8 +351,34 @@ function cavBot(G, P, uq, bot, rnd, R, guard) {
       c.stage = 'done';
     }
   };
-  c.busy = () => c.stage === 'press' || c.stage === 'back' || c.stage === 'cut1' || c.stage === 'wait' || c.stage === 'tap2';
+  c.busy = () => c.stage === 'press' || c.stage === 'back' || c.stage === 'cut1' || c.stage === 'wait' || c.stage === 'tap2' || c.stage === 'rdPre' || c.stage === 'rdPress';
   return c;
+}
+
+/** 풍차 베기 감기 기록 (10/29 — unique_assist.js holdTick stats): 감기 · 냄(뗌 · 기력 바닥) · 그만둠 까닭 · 돈 바퀴 · 이어 그은 수 n(0 = 흐름 셈 없음) */
+function windStats(uq) {
+  const S = uq?.stats ?? {};
+  return S.winds || S.holdRefused ? { winds: S.winds ?? 0, fire: S.windFire ?? {}, cancel: S.windCancel ?? {}, refused: S.holdRefused ?? 0, touch: S.windTouch ?? 0, turns: S.windTurns ?? [], chain: S.windChain ?? [] } : null;
+}
+/** 감기 기록 묶음 */
+export function windSummary(list) {
+  const W = list.filter(Boolean);
+  if (!W.length) return null;
+  const add = (o, k, v) => ((o[k] = (o[k] ?? 0) + v), o);
+  const fire = {}, cancel = {}, nDist = {};
+  let winds = 0, refused = 0, touch = 0;
+  const turns = [];
+  for (const w of W) {
+    winds += w.winds;
+    refused += w.refused;
+    touch += w.touch ?? 0;
+    for (const [k, v] of Object.entries(w.fire)) add(fire, k, v);
+    for (const [k, v] of Object.entries(w.cancel)) add(cancel, k, v);
+    turns.push(...w.turns);
+    for (const n of w.chain) add(nDist, n, 1);
+  }
+  const fired = Object.values(fire).reduce((q, v) => q + v, 0);
+  return { winds, fired, fire, cancel, refused, touchSteps: touch, turnsP50: r3(p50(turns)), turnsMin: r3(Math.min(...turns)), turns1: turns.length ? r3(turns.filter((x) => x >= 1).length / turns.length) : null, nDist, k: Object.fromEntries(Object.entries(nDist).map(([n]) => [n, n === '0' ? 1 : r3(1 + (CONFIG.IB_FLOW.power - 1) * +n)])) };
 }
 
 // ── drill: 서 있는 · 걷는 상대 ──
@@ -343,7 +409,7 @@ export function drillRun(rowKey, seed, { foe = 'still', variant = 'on', dur = 14
   P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   // 칼끝 돌려 빼기 줄 끔 판: 맞물림을 적는 몸이 있어야 손이 뒤 칼을 낸다 — 옆 스틱이 없으면 안 나는 비껴서며 찌르기만 연 몸(그대로 보통 탭)
-  const uq = new PlayerUniqueAssist(P, { names: new Set(variant === 'on' && !R.tap ? [R.name] : R.cav ? ['inquartata'] : R.lian ? ['chebuYaoji'] : R.dup ? ['zwerchAbtritt'] : []) });
+  const uq = new PlayerUniqueAssist(P, { names: new Set(variant === 'on' && !R.tap ? [R.name] : R.cav ? ['inquartata'] : R.lian ? ['chebuYaoji'] : R.dup ? ['zwerchAbtritt'] : R.rd ? ['talhoRodeado'] : []) });
   if (variant === 'on' && !R.tap && !uq.list.length) throw new Error(`${R.name} 이 열리지 않음`);
   const slog = strokeLog(uq);
   const rnd = rng(seed * 7919 + 17);
@@ -351,11 +417,12 @@ export function drillRun(rowKey, seed, { foe = 'still', variant = 'on', dur = 14
   // 막기 단추 (칼끝 돌려 빼기 줄 — 막아찌르기 I6 를 누르는 손 · 10/28 01:2x)
   const guard = R.cav ? new PlayerParryGuard(P, D) : null;
   if (guard) P.stamina.controller = guard;
-  const cav = R.cav || R.lian || R.dup ? cavBot(G, P, uq, bot, rnd, R, guard) : null;
+  const cav = R.cav || R.lian || R.dup || R.rd ? cavBot(G, P, uq, bot, rnd, R, guard) : null;
   const [CONTACT, REACH] = MEASURED[R.w] ?? MEASURED.longsword;
   const atts = [];
   let cur = null;
   let nextAtk = 1.5;
+  startAdd += R.startAdd ?? 0; // 풍차 베기: 감고 걸어 들어갈 몫
   G.before = () => {
     const t = G.t;
     const dist = P.foeDistance();
@@ -369,11 +436,13 @@ export function drillRun(rowKey, seed, { foe = 'still', variant = 'on', dur = 14
     if (cur && cur.tq != null && t - cur.tq > 0.35) cur = null;
     if (!bot.queue.length && !cur && t >= nextAtk && dist < REACH + startAdd && P.alive && P.armed && !P.stamina.exhausted) {
       if (R.tap) P.skill.thrust();
-      else if (cav) cav.start();
-      else bot.queue = bot.make(R.strokes);
+      else if (cav) {
+        if (R.rd && rnd() < RD_COMBO) cav.pre = [OTHER_RD[Math.floor(rnd() * OTHER_RD.length)]]; // 이어 긋기 사슬 안에서 누름 (앞 칼 하나)
+        cav.start();
+      } else bot.queue = bot.make(R.strokes);
       cur = { t0: +t.toFixed(3), tq: null, tap: !!R.tap, cav: !!cav, hits: [], sev: 0, sevSp: 0, fired0: uq.stats?.fired?.[R.name] ?? 0, chain0: uq.stats?.ends?.chained ?? 0, s0: slog.length, dist0: r3(dist) };
       atts.push(cur);
-      nextAtk = t + 0.8 + rnd() * 0.6 + (R.tap ? 0.6 : cav ? 2.0 : bot.queue.length * 2 * DT); // 다음 시도: 이 입력이 끝나고 0.8 ~ 1.4 s 뒤 (탭은 찌르기 길이 약 0.6 s · 칼끝 돌려 빼기 손은 탭 둘 — 2 s)
+      nextAtk = t + 0.8 + rnd() * 0.6 + (R.tap ? 0.6 : R.rd ? CONFIG.UNIQUE_ASSIST.specialCooldown + 4.5 : cav ? 2.0 : bot.queue.length * 2 * DT); // 풍차 베기: 식힘(내려침부터 6 s)을 넘겨 — 혼자 판은 나갔을 때를 잼 // 다음 시도: 이 입력이 끝나고 0.8 ~ 1.4 s 뒤 (탭은 찌르기 길이 약 0.6 s · 칼끝 돌려 빼기 손은 탭 둘 — 2 s)
     }
     if (cur?.tap && cur.tq == null && !P.skill.tap && t - cur.t0 > 0.05) cur.tq = t;
     if (guard) {
@@ -423,7 +492,7 @@ export function drillRun(rowKey, seed, { foe = 'still', variant = 'on', dur = 14
       delete a.chain0;
       delete a.s0;
     });
-    return { row: rowKey, seed, foe, variant: variant + (ghost ? 'G' : ''), atts: atts.filter((a) => a.tq != null) };
+    return { row: rowKey, seed, foe, variant: variant + (ghost ? 'G' : ''), atts: atts.filter((a) => a.tq != null), wind: windStats(uq) };
   } finally {
     G.world.free();
   }
@@ -459,9 +528,11 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
   let strokesN = 0;
   let taps = 0;
   let counters = 0;
-  const cav = R.cav || R.lian || R.dup ? cavBot(G, P, uq, bot, rnd, R, guard) : null;
+  const cav = R.cav || R.lian || R.dup || R.rd ? cavBot(G, P, uq, bot, rnd, R, guard) : null;
+  startAdd += R.startAdd ?? 0; // 풍차 베기: 감고 걸어 들어갈 몫
   const special = (t, why) => {
     const dist = P.foeDistance();
+    if (cav && R.rd && rnd() < RD_COMBO) cav.pre = [OTHER[Math.floor(rnd() * OTHER.length)]]; // 이어 긋기 사슬 안에서 누름 (앞 칼 하나)
     if (cav) cav.start();
     else bot.queue = bot.make(R.strokes);
     cur = { t0: +t.toFixed(3), tq: null, why, cav: !!cav, hits: [], sev: 0, sevSp: 0, fired0: uq.stats?.fired?.[R.name] ?? 0, firedAll0: { ...(uq.stats?.fired ?? {}) }, s0: slog.length, dist0: r3(dist) };
@@ -489,7 +560,7 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
     } else if (t - lastMotion > 0.3) notice = false;
     if (t >= due) {
       due = Infinity;
-      if (P.armed && !P.stamina.exhausted && rnd() < counter) {
+      if (P.armed && !P.stamina.exhausted && !R.rd && rnd() < counter) { // 풍차 베기는 맞받지 않음 (길게 눌러야 — 막기 단추)
         special(t, 'counter');
         counters++;
         nextAtk = t + 1.0 + rnd() * 0.6;
@@ -573,7 +644,7 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
       win: !A.alive && P.alive, lose: !P.alive && A.alive,
       killedBy: !A.alive ? lastTech : null,
       dealt: r3(dealt), bleedDealt: r3(bleedDealt), recv: r3(recv), spSev: r3(spSev), spHits, strokesN, taps, counters,
-      fired: { ...(uq.stats?.fired ?? {}) }, uqStrokes: slog.length,
+      fired: { ...(uq.stats?.fired ?? {}) }, uqStrokes: slog.length, wind: windStats(uq),
       downs: downs.length, downsMiss: downs.filter((s) => !s.landed).length,
       atts,
     };
@@ -795,8 +866,9 @@ if (isMain(import.meta.url)) {
           for (let s = s0; s < s0 + seeds; s++) runs.push(drillRun(row, s, { foe, variant, dur: +(args.dur ?? 14), sjit, helm: !!+(args.helm ?? 0) }));
           const atts = runs.flatMap((r) => r.atts.slice(0, first));
           const sm = attSummary(atts, ROWS[row].name, row);
-          out.res.push({ row, foe, variant, sum: sm, atts });
-          console.log(`${row} ${foe} ${variant}: ${JSON.stringify(sm)}  (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
+          const ws = windSummary(runs.map((r) => r.wind));
+          out.res.push({ row, foe, variant, sum: sm, atts, wind: ws });
+          console.log(`${row} ${foe} ${variant}: ${JSON.stringify(sm)}${ws ? `\n   wind: ${JSON.stringify(ws)}` : ''}  (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
         }
   } else if (mode === 'fight') {
     const opps = String(args.opps ?? 'longsword,uchigatana,zweihander').split(',');
@@ -807,6 +879,7 @@ if (isMain(import.meta.url)) {
         const runs = [];
         for (const opp of opps) for (const seed of fseeds) for (const delay of delays) runs.push(fightRun(row, seed, opp, { variant, delay, prof: +(args.prof ?? 3), dur: +(args.dur ?? 30), share: +(args.share ?? 0.5), sjit }));
         const sm = fightSummary(runs, ROWS[row].name, row);
+        sm.wind = windSummary(runs.map((r) => r.wind));
         out.res.push({ row, variant, sum: sm, runs });
         console.log(`${row} fight ${variant}: ${JSON.stringify({ ...sm, att: undefined })}\n   att: ${JSON.stringify(sm.att)}  (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
       }

@@ -392,7 +392,8 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('iberian', 'B2'), ['burstSide']);
   assert.deepEqual(on('iberian', 'B5'), ['ibFlow']);
   assert.deepEqual(on('iberian', 'B9'), ['parryCut']);
-  assert.deepEqual(on('iberian', 'B6'), ['perk:redondo']);
+  assert.deepEqual(on('iberian', 'B6'), ['ibChain']); // 10/29 01:5x 이어지는 흐름 (전: 돌려 베기 쌓기 perk redondo)
+  assert.deepEqual(on('iberian', 'B4'), ['u:redondo']); // 10/29 풍차 베기 = 특수 공격 (같은 이름 열쇠 redondo — 사람은 길게 눌러 냄)
   assert.deepEqual(on('japanese', 'J1'), ['footwork', 'stepCost']);
   assert.deepEqual(on('japanese', 'J2'), ['parry', 'parryCover', 'parryCut']);
   assert.deepEqual(on('japanese', 'J3'), ['flow']);
@@ -509,7 +510,7 @@ test('실제 몸 — 흘린 칼(J4): 흘린 공격 피해 감소는 J4 를 익�
   assert.equal(flowShieldKeep(vic(kitOf('japanese', 'J1', 'J2', 'J3')), att), 1);
   near(flowShieldKeep(vic(kitOf('japanese', 'J1', 'J2', 'J3', 'J4')), att), 0.2);
 });
-test('실제 몸 — 강화동작 이점은 심화 칸: 곁눈 베기 무릎 꺾기(G6) · 돌려 베기 쌓기(B6) / 이어 긋기 흐름(B5)', async () => {
+test('실제 몸 — 강화동작 이점은 심화 칸: 곁눈 베기 무릎 꺾기(G6) / 이어 긋기 흐름(B5) · 사람은 돌려 베기 쌓기 없음(10/29 — B6 이어지는 흐름 · AI 쌓기 그대로)', async () => {
   const g = round('longsword', kitOf('german', 'G1', 'G5'), 9);
   try {
     g.player.artTech = 'schielhau'; // 지금 긋는 기술 = 곁눈 베기
@@ -522,7 +523,7 @@ test('실제 몸 — 강화동작 이점은 심화 칸: 곁눈 베기 무릎 꺾
   const f = { artTech: 'redondo', skill: { uniq: { stackN: 2 } } };
   assert.ok(Math.abs(strokeHitK(f) - 1.2) < 1e-9); // AI 꼴(몫 없음) — 그대로
   f.skillKit = kitOf('iberian', 'B1', 'B4'); assert.equal(strokeHitK(f), 1);
-  f.skillKit = kitOf('iberian', 'B1', 'B4', 'B5', 'B6'); assert.ok(Math.abs(strokeHitK(f) - 1.2) < 1e-9);
+  f.skillKit = kitOf('iberian', 'B1', 'B4', 'B5', 'B6'); assert.equal(strokeHitK(f), 1); // 10/29: 사람 쌓기 칸 없음 (AI 꼴 — 몫 없음 — 은 위에서 그대로 1.2)
   for (const [kit, want] of [[kitOf('iberian', 'B1', 'B4'), false], [kitOf('iberian', 'B1', 'B4', 'B5'), true]]) {
     const r = round('zweihander', kit, 9);
     try {
@@ -568,6 +569,58 @@ test('흐르는 긋기 A (10/28 22:0x 사장님 \'A로 해\'): 한 스텝 깜빡
     st(true, 8); st(false, 1.2); st(true, 8, 0, 2); // 10/21 판: 한 스텝 깜빡임도 '끝나고 곧 다시' = 이어 감
     assert.equal(P.ibFlowOn, true);
   } finally { IB_FLOW.detect = 'a'; r.world.free(); }
+});
+test('이어지는 흐름 (B6 — 사장님 10/29 01:5x · 02:2x): 이어 그은 수 n — 위력 1 + 0.2n 더하기 · 베기 기력 × 0.9ⁿ · 상한 없음 · 끊기면 처음부터 · B5 만이면 1.2 · AI 는 그대로', () => {
+  assert.equal(IB_FLOW.power, 1.2); // 사장님 10/29 01:5x 결정
+  assert.equal(IB_FLOW.chainStack, 1);
+  assert.equal(IB_FLOW.chainCost, 0.9); // 02:2x 0.8 → 0.9
+  const run = (kit) => {
+    const r = round('zweihander', kit, 9);
+    const P = r.player;
+    const st = (sw, vx, vy = 0, n = 1) => { P.skill.swinging = sw; P.skill.vel.set(vx, vy); for (let i = 0; i < n; i++) P.updateIbFlow(1 / 120); };
+    return { r, P, st };
+  };
+  {
+    const { r, P, st } = run(kitOf('iberian', 'B1', 'B5', 'B4', 'B6'));
+    try {
+      const seen = [];
+      st(false, 0, 0, 120);
+      st(true, 8, 0, 20); st(false, 0, 0, 30); // 첫 진짜 긋기 (이어 감 아님)
+      assert.equal(P.ibChainN(), 0);
+      for (let k = 1; k <= 8; k++) {
+        st(true, k % 2 ? -8 : 8, 0, 20); // 창 안에 다시 = 이어 그은 칼 k
+        seen.push([P.ibChainN(), +P.ibFlowK().toFixed(3), +P.ibChainCostK().toFixed(4)]);
+        st(false, 0, 0, 30);
+      }
+      assert.deepEqual(seen.map((x) => x[0]), [1, 2, 3, 4, 5, 6, 7, 8]); // 상한 없음
+      seen.forEach(([n, k, c]) => { assert.ok(Math.abs(k - (1 + 0.2 * n)) < 1e-9, `위력 n ${n}`); assert.ok(Math.abs(c - 0.9 ** n) < 1e-4, `기력 n ${n}`); });
+      st(false, 0, 0, 120); // 창 밖 = 끊김
+      st(true, 8, 0, 20);
+      assert.equal(P.ibChainN(), 0);
+      st(false, 0, 0, 30); st(true, -8, 0, 20);
+      assert.equal(P.ibChainN(), 1); // 처음부터
+      // 기력: 이어 그은 베기 청구 × 0.9ⁿ (stamina.js chargeAttack — 베기만)
+      const S = P.stamina;
+      const before = S.value;
+      S.chargeAttack('cut', false);
+      assert.ok(Math.abs(before - S.value - 12 * S.weight * 0.9) < 1e-6, '베기 × 0.9');
+      const b2 = S.value;
+      S.chargeAttack('thrust', false);
+      assert.ok(Math.abs(b2 - S.value - 10 * S.weight) < 1e-6, '찌르기는 그대로');
+    } finally { r.world.free(); }
+  }
+  for (const [kit, why] of [[kitOf('iberian', 'B1', 'B5'), 'B5 만'], [null, 'AI 꼴']]) {
+    const { r, P, st } = run(kit);
+    try {
+      if (!kit) P.aiControlled = true;
+      st(false, 0, 0, 120);
+      st(true, 8, 0, 20); st(false, 0, 0, 30); st(true, -8, 0, 20); st(false, 0, 0, 30); st(true, 8, 0, 20);
+      assert.equal(P.ibFlowOn, true, why);
+      assert.equal(P.ibFlowK(), 1.2, why); // 이어 그은 수와 상관없이 그대로
+      assert.equal(P.ibChainCostK(), 1, why);
+    } finally { r.world.free(); }
+  }
+  { const keep = IB_FLOW.chainStack; IB_FLOW.chainStack = 0; const { r, P, st } = run(kitOf('iberian', 'B1', 'B5', 'B4', 'B6')); try { st(false, 0, 0, 120); st(true, 8, 0, 20); st(false, 0, 0, 30); st(true, -8, 0, 20); st(false, 0, 0, 30); st(true, 8, 0, 20); assert.equal(P.ibFlowK(), 1.2, '끔'); } finally { IB_FLOW.chainStack = keep; r.world.free(); } }
 });
 test('실제 몸 — 손목 치기 칼 떨구기(J8 · 10/24): J8 을 익혀야 · 손목 치기만 · 칼 쥔 아래팔(손 · 손목)만 · 50 % 는 친 쪽 전용 난수 · 떨구면 칼을 놓침 · 못 떨구면 보통 맞음 그대로 · AI 가 모는 몸은 굴리지 않음', () => {
   const K = UNIQUE_ASSIST.koteDrop;

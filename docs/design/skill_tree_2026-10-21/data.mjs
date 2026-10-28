@@ -35,13 +35,13 @@ export const SCHOOLS = [
     { id: 'B2', cat: 'foot', name: '보법 II', sub: '옆 박차기', eff: '옆으로 첫 걸음을 박찬다', pre: ['B1'], price: 100, st: 'split', opt: true, d: 1, cx: 84 },
     { id: 'B10', cat: 'passive', name: '패시브', sub: '손목 힘', eff: '손목 힘 30% — 큰 칼을 빨리 돌린다 (보법 바로 아래)', pre: ['B1'], price: 0, heads: 10, st: 'now', d: 1, cx: 252 },
     { id: 'B3', cat: 'atk', name: '둥근 걸음', sub: '탈류', eff: '옆으로 돌며 내려베기 (걸음 명령)', pre: ['B1'], price: 200, st: 'split', d: 1, cx: 420 },
-    { id: 'B4', cat: 'atk', name: '머리 위', sub: '돌려 베기', eff: '왼 가로베기가 돌려 베기로 (강화동작)', pre: ['B1'], price: 200, st: 'split', d: 1, cx: 588 },
+    { id: 'B4', cat: 'atk', name: '풍차', sub: '베기', eff: '탭을 길게 눌러 머리 위로 돌리다 떼면 내려 벤다 (특수 공격)', pre: ['B5'], price: 300, st: 'split', d: 2, cx: 560 }, // 10/29 01:3x 사장님 '흐르는 긋기와 머리 위 돌려 베기 스킬 위치를 바꿔' · 레돈두 = 특수 공격 · 02:0x '풍차 베기'
     { id: 'B8', cat: 'parry', name: '막기 I', sub: '쳐내기', eff: '높이 오는 칼을 베어 쳐낸다', pre: ['B1'], price: 200, st: 'split', d: 1, cx: 756 },
     { id: 'B11', cat: 'letter', name: '리스본에서', sub: '온 편지', eff: '이베리아 무기가 나올 확률 ×2', pre: ['B1'], price: 100, st: 'new', opt: true, d: 0, cx: 250 },
-    { id: 'B5', cat: 'atk', name: '이어 긋기', sub: '흐름', eff: '이어 그을 때 칼을 덜 세워 흐르듯', pre: ['B4'], price: 300, st: 'split', d: 2, cx: 560 },
+    { id: 'B5', cat: 'atk', name: '이어 긋기', sub: '흐름', eff: '이어 그을 때 칼을 덜 세워 흐르듯', pre: ['B1'], price: 200, st: 'split', d: 1, cx: 588 }, // 10/29 01:3x 머리 위 돌려 베기와 자리 바꿈
     { id: 'B9', cat: 'parry', name: '막기 II', sub: '굳은 받기', eff: '막는 동안 피해 20% 감소', pre: ['B8'], price: 300, st: 'split', d: 2, cx: 800 },
     { id: 'B7', closed: true, cat: 'secret', name: '비기', sub: '몰리네테 탈류', eff: '칼 호 안으로 들면 비켜 서며 가로 벤다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 20, st: 'now', d: 3, cx: 420 },
-    { id: 'B6', cat: 'deep', name: '돌려 베기 심화', sub: '쌓기', eff: '이어 그을수록 맞는 힘 +10% (셋까지)', pre: ['B5'], price: 400, st: 'split', d: 3, cx: 680 },
+    { id: 'B6', cat: 'deep', name: '흐르는 긋기 심화', sub: '이어지는 흐름', eff: '이어 그은 수마다 흐름 위력 +20% (더하기) · 그 긋기 기력 × 0.9ⁿ · 상한 없음', pre: ['B4'], price: 400, st: 'split', d: 3, cx: 680 }, // 10/29 01:5x · 02:2x 사장님 결정 (전: 돌려 베기 심화 · 쌓기)
   ] },
   { id: 'japanese', ko: '일본', title: '일본 — 막기 줄기', shape: '받기를 세 번 깊이 익혀야 고노센(받아서 먼저 친다). 보법은 나누기 어려워 하나로 두고, 대신 막기를 셋으로 나눴다.', nodes: [
     { id: 'J1', cat: 'foot', name: '보법', sub: '낮게 깔린 걸음', eff: '흔들려도 버틴다 · 걷기 기력 1.5배', pre: [], price: 100, st: 'now', d: 0, cx: 500 },
