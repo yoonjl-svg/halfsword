@@ -44,7 +44,7 @@ const TREE_SRC = {
       N({ id: 'G7', name: '겹치기', cat: 'atk', l1: '겹치기', l2: '이어 긋기', eff: '칼이 맞물리면 곧바로 다시 그어 들어간다', pre: ['G4'], price: 300, d: 3, cx: 690, u: 'duplieren' }), // 10/28 00:5x 사장님 '겹치기는 왕관 아래로' — 특수공격(이어 긋기)이 된 뒤 자리 (전 2단계 관문 뒤 · cx 310)
       N({ id: 'G6', name: '무릎 꺾기', cat: 'deep', l1: '심화', l2: '무릎 꺾기', title: '곁눈 베기 심화 · 무릎 꺾기', eff: '곁눈 베기에 맞은 상대가 무릎을 꿇기도 한다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 310, perk: 'schielhau' }), // 10/28 00:5x 사장님 '무릎 꺾기가 곁눈 베기 아래로' (전 cx 500)
       N({ id: 'G4', name: '왕관', cat: 'parry', l1: '막기 II', l2: '왕관', title: '막기 II · 왕관 (크론)', orig: 'Kron', eff: '머리 위로 오는 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 690, f: ['parryCover'] }),
-      N({ id: 'G9', name: '인데스', cat: 'passive', l1: '패시브', l2: '인데스', eff: '상대가 헛치거나 막힌 직후에 친 칼은 피해가 증가한다', pre: ['G2'], price: 0, heads: 5, d: 2, cx: 100, f: ['passive'] }),
+      N({ id: 'G9', name: '인데스', cat: 'passive', l1: '패시브', l2: '인데스', eff: '칼이 맞부딪히거나 상대가 헛친 직후에 친 칼은 피해가 증가한다', pre: ['G2'], price: 0, heads: 5, d: 2, cx: 100, f: ['passive'] }), // 10/28 23:4x 사장님 '그래 그 안으로 바꿔' — 칼끼리 닿음에도 창(10/28 01:4x · school_passive.js) · 전 '상대가 헛치거나 막힌 직후에 친 칼은 피해가 증가한다'
       N({ id: 'G10', name: '모르트슐라크', cat: 'secret', l1: '비기', l2: '모르트슐라크', eff: '붙어서 밀다가 공격하면, 거꾸로 쥔 칼자루로 머리를 내리친다', pre: ['G9', 'G6', 'G7'], price: 400, heads: 10, d: 4, cx: 420, f: ['secret'] }), // 10/28 00:5x 사장님 '무릎 꺾기와 겹치기를 다 배워야 죽음의 일격' · 인데스도 남김 (전 인데스 + 겹치기 + 왕관 · 3줄) // 10/22 사장님 '독일은 죽음의 일격으로 하자' (옛 받아 베기 — `?deMord=0` · 10/24 AI 도 같은 비기 — 사장님 'ai도 비기 쓰게 해')
     ],
   },
@@ -68,7 +68,7 @@ const TREE_SRC = {
       N({ id: 'B1', name: '넓은 옆걸음', cat: 'foot', l1: '보법 I', l2: '넓은 옆걸음', eff: '넓은 보폭으로 옆으로 빠르게 돈다', price: 100, d: 0, cx: 500, f: ['footwork'] }),
       N({ id: 'B2', name: '옆 박차기', cat: 'foot', l1: '보법 II', l2: '옆 박차기', eff: '옆으로 누르면 첫 걸음을 박찬다', pre: ['B1'], price: 100, opt: true, d: 1, cx: 84, f: ['burstSide'] }),
       N({ id: 'B10', name: '손목 힘', cat: 'passive', l1: '패시브', l2: '손목 힘', eff: '큰 칼을 돌리는 손목 힘이 세진다', pre: ['B1'], price: 0, heads: 5, d: 1, cx: 252, f: ['passive'] }),
-      N({ id: 'B3', name: '돌며 베기', cat: 'atk', l1: '돌며 베기', l2: '걸음 기술', eff: '옆으로 걸으며 사선으로 내려 긋는다', pre: ['B1'], price: 200, d: 1, cx: 420, u: 'talhoRodeado' }),
+      N({ id: 'B3', name: '나선 걸음 베기', cat: 'atk', l1: '나선 걸음 베기', l2: '걸음 기술', eff: '옆으로 걸으며 사선으로 내려 긋는다', pre: ['B1'], price: 200, d: 1, cx: 420, u: 'talhoRodeado' }), // 10/29 01:1x 사장님 '나선 걸음 베기로 해' — 머리 위 돌려 베기 · 거듭 돌려 베기와 헷갈려서 이름만(전 '돌며 베기')
       N({ id: 'B4', name: '머리 위 돌려 베기', cat: 'atk', l1: '머리 위', l2: '돌려 베기', eff: '왼 가로베기를 그으면 머리 위로 돌려 베기가 나간다', pre: ['B1'], price: 200, d: 1, cx: 588, u: 'redondo' }),
       N({ id: 'B8', name: '쳐내기', cat: 'parry', l1: '막기 I', l2: '쳐내기', title: '막기 I · 쳐내기 (탈류 · 레베스)', eff: '높이 오는 칼을 베어 쳐낸다', pre: ['B1'], price: 200, d: 1, cx: 756, f: ['parry', 'parryCover'] }),
       N({ id: 'B11', name: '리스본에서 온 편지', cat: 'letter', l1: '리스본에서', l2: '온 편지', title: '리스본에서 온 편지', pre: ['B1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),

@@ -311,7 +311,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .node-detail, .reset-confirm { position: absolute; inset: 2px; z-index: 2; overflow: auto; padding: 8px 10px; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-s); line-height: 1.4; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 /* 카드 자리 (격자): 위 = 그림 · 이름 · 갈래 줄 / 오의 · 출처 (온 폭) / 아래 = 효과 · 먼저 익힐 칸 · 까닭 (왼쪽) + 값 · '배우기' (오른쪽 아래) / 맨 아래 = 입력 줄 (온 폭 — 10/24 · 10/25 이름표 '입력:')
    읽기 차례(DOM) = 이름 · 오의 · 출처 · 효과 · … · 입력 · 갈래 줄 · 값 · 단추 — 갈래 줄은 격자 자리로만 이름 밑에 보인다 (사장님 10/22 00:5x) */
-.node-detail { z-index: 3; padding: 7px 10px 6px; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "icon title title" "icon meta meta" "lore lore lore" "body body act" "cmd cmd cmd"; column-gap: 10px; align-content: start; }
+.node-detail { z-index: 3; padding: 7px 10px 6px; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "icon title title" "icon meta meta" "lore lore lore" "body body act" "pre pre pre" "cmd cmd cmd"; column-gap: 10px; align-content: start; }
 .node-detail[hidden] { display: none; }
 .detail-close { position: absolute; top: 0; right: 2px; width: 28px; min-height: 28px; padding: 0; font-size: 17px; line-height: 1; color: var(--c-sub); }
 @media (hover: hover) { .detail-close:hover { color: var(--c-text); } }
@@ -334,7 +334,7 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .detail-body { grid-area: body; align-self: start; min-width: 0; margin-top: 5px; }
 .detail-effect { font-size: 11px; line-height: 1.35; color: var(--c-text); }
 .node-detail[data-lore=y] .detail-effect { color: var(--c-sub); }
-.detail-pre { margin-top: 2px !important; font-size: 11px; line-height: 1.35; color: var(--c-sub); }
+.detail-pre { grid-area: pre; margin-top: 2px !important; font-size: 11px; line-height: 1.35; color: var(--c-sub); } /* 10/29 — '먼저 익힐 칸' 줄은 카드 폭 전체(전: 효과 글 칸 안 — 이베리아 B3 이름 '나선 걸음 베기'로 좁은 칸에서 줄이 늘어 싱지르 카드가 넘침) */
 .detail-pre[hidden] { display: none; }
 .detail-state { margin-top: 2px !important; font-size: 11px; line-height: 1.35; color: var(--c-text); }
 /* 값 · '배우기' (오른쪽 아래 한 줄 — 값 왼쪽 · 단추 오른쪽) */

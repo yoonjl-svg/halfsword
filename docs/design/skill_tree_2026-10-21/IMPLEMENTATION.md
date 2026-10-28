@@ -57,7 +57,7 @@
 | B1 보법 I · 넓은 옆걸음 | `footwork` — 넓은 자세 · 옆 × 1.3 · 둥근 걸음 | `gait.js gaitParams` |
 | B2 보법 II · 옆 박차기 | `burstSide` — 첫 걸음 옆 박차기 · 옆 누르면 늘 · 비스듬히 앞 | `gait.js gaitParams`(`P.burstSide`) |
 | B10 패시브 · 손목 힘 | `passive` | `fighter.js wristK` |
-| B3 돌며 베기 (걸음 명령) | `u: talhoRodeado` | `PlayerUniqueAssist` |
+| B3 나선 걸음 베기 (걸음 명령 · 10/29 — 전 돌며 베기) | `u: talhoRodeado` | `PlayerUniqueAssist` |
 | B4 머리 위 돌려 베기 (강화동작) | `u: redondo` | 〃 |
 | B8 막기 I · 쳐내기 | `parry` + `parryCover` — 자리 + 탈류 · 레베스 쳐내기 몸꼴 + 쳐내기 튕김 | `parry_button.js` · `combat.js ibParrying` |
 | B5 이어 긋기 · 흐름 | `ibFlow` — 이어 그을 때 손목 제동을 늦춤 | `fighter.js updateIbFlow` |
