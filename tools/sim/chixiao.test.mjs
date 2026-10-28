@@ -61,4 +61,6 @@ for (let i = 0; i < 10000; i++) { const cards = drawWeaponCards(pool, 2, { rnd: 
 assert(found);
 const result = { physics: phys, density, triangles, meshes,
   maxWidthErrorMm: maxWidthError * 1000, collisionProbes: 101, naturalBreak: w.fragility, forcedTrim: true, blood: true, draw: true };
-fs.writeFileSync(new URL('results/contracts.json', base), JSON.stringify(result, null, 2)); console.log(JSON.stringify(result));
+// 기록 파일(results/contracts.json — 사장님 적소검 기록)은 CHIXIAO_WRITE=1 일 때만 다시 쓴다 (사장님 10/28 '고쳐' — 평소 시험은 검사만 · 저장소 파일을 고치지 않음)
+if (process.env.CHIXIAO_WRITE === '1') fs.writeFileSync(new URL('results/contracts.json', base), JSON.stringify(result, null, 2));
+console.log(JSON.stringify(result));

@@ -22,6 +22,10 @@
 //  10/25 21:0x 사장님 조건 셋 (기본 — 문서 §16 · 확인표 2563 ~ 2569): ① 스틱 앞이나 뒤(SECRET.risolutoStick 'both' · `?risoStick=fwd` = 앞만) ·
 //   ② 창 안의 공격 입력이면 탭 · 끌기 모두(SECRET.risolutoTap 0 · `?risoTap=1` = 탭만 — schools.js tapOnly) · ③ 덮음 거리 0.07 → 0.15 m(SECRET.risolutoCover — 칼 어느 부위든 · 손 쪽 ↔ 칼끝 쪽 둘 다) ·
 //   그리고 사람 비기 창은 열리면 0.6 s 지킴(SECRET.secretHold — secret.js PlayerSecretWatch.holding · 간격 조건이 열린 창을 닫지 않음).
+//  10/28 01:4x 사장님 '기존 조건과 같아. 단 상대도 들어오거나 나가야 한다' → '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로' (기본 — SECRET.risolutoMirror · `?risoMirror=0` = 10/25 판):
+//   사장님 원칙(10/28) '비기 = 상대 반응(상대가 막을 수 있음) · 특수공격 = 내 커맨드' — 덮인 채 나아가기는 스틱만이 아니라 상대 걸음에 맞춰야 셈(mirrorOk): 상대가 물러서는 동안 스틱 앞 ·
+//   상대가 들어오는 동안 스틱 뒤. 상대 걸음 = 걸음 의도 move.y(몸 틀 앞 = 나 쪽 — AI 는 상대 쪽 기준 스틱 · 실제 골반 빠르기와 칼이 가까운 동안 93 % 같음 · 문서 §17) ∓ 0.1(gait.js requestStep 과 같은 문턱).
+//   어긋남(상대가 섬 · 방향이 바뀜)은 덮음 풀림처럼 너그러움 risolutoGrace 동안 셈을 쥠 · 칼끝 얽힘 · 이어짐 · 상대 박자 창 모두 같은 조건 · 다 붙음 창(내 커맨드)은 기본 끔(risolutoClose 0)
 //  AI 는 쓰지 않는다(SECRET.aiOpenSchools — ai.js 는 TRADITIONS.italian.secret 옛 비기를 보고, 그마저 닫힘). 시뮬 도구엔 PlayerSecretWatch 가 없어 AI 끼리 판 그대로.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -124,10 +128,28 @@ export function stickOk(me) {
   return stickForward(me) || (SECRET.risolutoStick !== 'fwd' && stickBack(me));
 }
 
+/** 상대 걸음 의도의 문턱 (스틱 몫 — gait.js requestStep '물러나는 중' move.y < −0.1 과 같은 수 · 새 수 아님) */
+const FOE_STEP = 0.1;
+
+/**
+ * 상대 걸음 (10/28 — SECRET.risolutoMirror): 'retreat' = 물러섬(move.y < −0.1) · 'advance' = 들어옴(move.y > 0.1) · null = 섬 · 옆걸음 · 걸음 없음.
+ *  move 는 몸 틀(앞 = 몸이 보는 쪽 — 맞선 상대는 나를 봄) · AI 는 상대(나) 쪽 기준 스틱(ai.js 걸음 fwd · side) · 무릎 · 판 시작 정지 · 쓰러짐 동안은 0
+ */
+export function foeStep(foe) {
+  const y = foe?.move?.y ?? 0;
+  return y < -FOE_STEP ? 'retreat' : y > FOE_STEP ? 'advance' : null;
+}
+
+/** 상대 걸음에 맞춰 (10/28 사장님 '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로'): 물러섬 + 스틱 앞 · 들어옴 + 스틱 뒤 (부채꼴은 stickForward · stickBack 그대로) */
+export function mirrorOk(me, foe) {
+  const s = foeStep(foe);
+  return s === 'retreat' ? stickForward(me) : s === 'advance' ? stickBack(me) : false;
+}
+
 /**
  * 덮인 채 나아가기 셈 (PlayerSecretWatch 가 비기 when 'risoluto' 일 때 물리 스텝마다 부른다). 굴림 · 새 힘 없음.
- *  tick(dt) → null | { ev: 'risoluto', path: 'hold' | 'beat', held, why? } — 창을 열 때만 (창은 PlayerSecretWatch.openWindow)
- *  재기(판정엔 안 씀): runs = 끝난 덮인 채 나아가기 길이들 · ends = 끝난 까닭 셈 · opens = 길별 창 수
+ *  tick(dt) → null | { ev: 'risoluto', path: 'touch' | 'hold' | 'close' | 'beat', held, why?, foe? } — 창을 열 때만 (창은 PlayerSecretWatch.openWindow) · foe = 그때(상대 박자는 끝나기 전) 상대 걸음(10/28 맞춤 판만)
+ *  재기(판정엔 안 씀): runs = 끝난 덮인 채 나아가기 길이들 · ends = 끝난 까닭 셈(mirror = 상대 걸음과 어긋남 — 너그러움 뒤) · opens = 길별 창 수
  */
 export class RisolutoWatch {
   constructor(me, foe) {
@@ -138,7 +160,8 @@ export class RisolutoWatch {
     this.d = Infinity; // 지금 덮음 거리 (재기 · 화면)
     this.on = false; // 지금 덮인 채 나아가는 중
     this.runs = [];
-    this.ends = { foeSwing: 0, uncover: 0, meSwing: 0, stick: 0, gap: 0 };
+    this.ends = { foeSwing: 0, uncover: 0, meSwing: 0, stick: 0, gap: 0, mirror: 0 };
+    this.step = null; // 10/28 맞춤 판: 덮인 채 나아가기가 마지막으로 선 스텝의 상대 걸음 ('retreat' | 'advance')
     this.opens = { hold: 0, beat: 0, close: 0, touch: 0 };
     this.closeDone = false; // 다 붙음 창 (SECRET.risolutoClose): 이번 덮인 채 나아가기에서 이미 열었나
     this.touchDone = false; // 칼끝 얽힘 창 (SECRET.risolutoTouch — 10/25): 이번 덮인 채 나아가기에서 이미 셈했나 (열렸든 가까워 막혔든)
@@ -157,6 +180,7 @@ export class RisolutoWatch {
     this.closeDone = false;
     this.touchDone = false;
     this.off = 0;
+    this.step = null;
   }
 
   /**
@@ -185,25 +209,27 @@ export class RisolutoWatch {
     const mine = meFree(me);
     const fwd = stickOk(me); // 10/25 21:0x 앞이나 뒤 (SECRET.risolutoStick — 'fwd' = 전 앞만)
     const foeFree = !swingingNow(foe);
-    const on = cover && mine && foeFree && fwd && (closing || !SECRET.risolutoClosing);
+    const mir = !SECRET.risolutoMirror || mirrorOk(me, foe); // 10/28 상대 걸음에 맞춰 (끄면 늘 참 — 10/25 판)
+    const on = cover && mine && foeFree && fwd && mir && (closing || !SECRET.risolutoClosing);
     if (on) {
       if (this.on && this.off > 0) this.bridged++;
       this.off = 0;
       this.held += dt;
       this.on = true;
+      if (SECRET.risolutoMirror) this.step = foeStep(foe);
       // 칼끝 얽힘 창 (10/25 사장님 '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — SECRET.risolutoTouch · `?risoTouch=0` = 10/24 판): 덮인 채 나아가기가 선 첫 스텝에 곧장 · 셈 시간 없음 ·
       //  덮인 채 나아가기 한 번에 한 번(같은 묶임에서 다시는 이어짐 · 상대 박자 창으로). 창이 이미 열려 있으면 그 창이 끝난 스텝에
       if (SECRET.risolutoTouch && canOpen && !this.touchDone) {
         this.touchDone = true;
         this.opens.touch++;
-        return { ev: 'risoluto', path: 'touch', held: this.held };
+        return { ev: 'risoluto', path: 'touch', held: this.held, ...this.foeCtx() };
       }
       if (canOpen && this.held >= SECRET.risolutoHold) {
         const held = this.held;
         this.runs.push(held);
         this.held = 0; // 창을 열면 다시 셈 (이어서 덮인 채 나아가면 또 risolutoHold 뒤)
         this.opens.hold++;
-        return { ev: 'risoluto', path: 'hold', held };
+        return { ev: 'risoluto', path: 'hold', held, ...this.foeCtx() };
       }
       // 다 붙음 창 (시험 SECRET.risolutoClose — 기본 끔 · 감독 10/22): 덮인 채 나아가다 맞닿기 거리(무기 실측 measure.contact — 칼이 제대로 들어가는 거리)에 든 순간 · 시간 조건 없음 · 덮인 채 나아가기 한 번에 한 번
       const contact = lungeGap(me); // 몸 간격 measure.contact (10/25 THRUST.itMeasure 'contact' 판에서는 지금 맞닿음 그대로 — risolutoContact)
@@ -212,15 +238,16 @@ export class RisolutoWatch {
         this.closeDone = true;
         const held = this.held;
         this.opens.close++;
-        return { ev: 'risoluto', path: 'close', held };
+        return { ev: 'risoluto', path: 'close', held, ...this.foeCtx() };
       }
       return null;
     }
     if (!this.on) return null;
     // 덮인 채 나아가기가 끝남 — 까닭 (재기) · 두 번째 길
-    const why = !mine ? 'meSwing' : !fwd ? 'stick' : !foeFree ? 'foeSwing' : !cover ? 'uncover' : 'gap';
+    const why = !mine ? 'meSwing' : !fwd ? 'stick' : !foeFree ? 'foeSwing' : !cover ? 'uncover' : !mir ? 'mirror' : 'gap';
     // 너그러움 (10/23): 덮음이 풀리거나 가슴 사이가 안 줄어든 것은 risolutoGrace 초까지 셈을 쥔 채 기다림 — 내가 휘두름 · 스틱을 놓음 · 상대 휘두름은 곧장 끝
-    if ((why === 'uncover' || why === 'gap') && (this.off += dt) <= (SECRET.risolutoGrace ?? 0)) return null;
+    //  10/28 상대 걸음과 어긋남(상대가 섬 · 방향을 바꿈 — 내 스틱은 앞이나 뒤 그대로)도 같은 너그러움 (상대 걸음은 걸음마다 끊겼다 이어짐)
+    if ((why === 'uncover' || why === 'gap' || why === 'mirror') && (this.off += dt) <= (SECRET.risolutoGrace ?? 0)) return null;
     this.off = 0;
     this.ends[why]++;
     const held = this.held;
@@ -232,9 +259,14 @@ export class RisolutoWatch {
     // 두 번째 길: 상대 박자(칼을 냄 · 칼을 빼 덮음이 풀림) — 내가 휘두르거나 스틱을 놓아 끝난 것은 아님
     if (SECRET.risolutoBeat && canOpen && held >= SECRET.risolutoBeatMin && (why === 'foeSwing' || why === 'uncover')) {
       this.opens.beat++;
-      return { ev: 'risoluto', path: 'beat', held, why };
+      return { ev: 'risoluto', path: 'beat', held, why, ...this.foeCtx() };
     }
     return null;
+  }
+
+  /** 창 사건에 붙이는 상대 걸음 (재기 · 10/28 맞춤 판만 — 덮인 채 나아가기가 마지막으로 선 스텝의 것) */
+  foeCtx() {
+    return SECRET.risolutoMirror && this.step ? { foe: this.step } : {};
   }
 }
 

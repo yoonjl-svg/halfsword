@@ -504,8 +504,13 @@ export const SWING_TURN = { on: false, rate: 30, from: 'windup' };
 // 이베리아 이어 긋기 흐름 A (10/21 — 시험 스위치에서 사장님 'A를 기본 적용해' · 확인표 2109): 이베리아 유파 몸(사람 · AI)이 휘두르기를 이어 갈 때 —
 //  앞 휘두르기가 끝난 뒤 '이어짐 창'(UNIQUE_ASSIST.afterWindow 0.6 s — 게임의 이어짐 기준 하나) 안에 다시 휘두르거나, 휘두르는 채로 손 방향이 90° 넘게 꺾일 때(둥글게 돌리기) —
 //  그 휘두르기 동안과 끝난 뒤 창까지 손목 제동을 '멈출 거리 × releaseMargin' 의 (1 − brake) 몫에서 늦게 시작 → 칼이 서지 않고 다음 긋기로 흐른다 (fighter.js updateIbFlow).
-//  test.html '이베리아 시험' · `?ibFlow=0` = 끔. brake 0.5 는 감독 값 — 사장님 확인 전
-export const IB_FLOW = { a: true, brake: 0.5 };
+//  test.html '이베리아 시험' · `?ibFlow=0` = 끔.
+//  10/28 22:0x 사장님 'A로 해. 대신 확실히 다른 손맛을 위해 흐르는 긋기의 제동을 좀더 늦추고 위력도 그만큼 올려' (docs/decisions.md · 확인표 2690 ~ 2693):
+//   detect 'a' = 진짜 이어 그을 때만 — 휘두르기 끝은 손 목표가 문턱(SKILL.swingSpeed) 밑에 물리 endSteps 스텝 넘게 머물 때(60 Hz 화면 깜빡임 거름) ·
+//    앞 휘두르기의 손 목표 빠르기 최고가 cutSpeed(패드 m/s) 이상일 때만 이어 감(빠른 감기 · AI 준비 손은 안 셈) · 'old' = 10/21 판(`?ibFlowDetect=old`)
+//   brake 0.5 → 0.8(제동을 멈출 거리의 20 % 에서 — 사장님 '좀더 늦추고' · 값은 감독) · power = 흐름이 켜진 채 맞힌 긋기의 칼날 상처 심각도 · 둔타 에너지 ×(combat.js analyze — 찌르기 · 비기 칼은 그대로)
+//   brake 0.8 · power 1.2 · endSteps 2 · cutSpeed 5 — 사장님 확인 전
+export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps: 2, cutSpeed: 5 };
 // 이베리아 날 세우기 시험 (10/22 — 사장님 10/21 23:5x '이베리아 유파가 유독 칼면이 맞는 경우가 많았어 특히 수직베기에서', docs/strike/iberian_flat_hits_2026-10-22.md · 확인표 2167~ · **기본 끔 · 사장님 확인 전**).
 //  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
 //   다른 유파 · 무기는 그대로. 끄면(on false) 판 그대로(같은 float). `?ibEdge=motor` · `?ibEdge=pre` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=ibEdge=motor
@@ -528,8 +533,9 @@ export const EDGE_REST = { on: false, pre: false, preV: 2, kick: false, kickK: 1
 //   italian 곧은 선 (리네아 레타) — 찌르는 동안(탭 찌르기 · 그어 찌르기 · AI 찌르기 — 막아찌르기 · 비기 빼고) 칼끝이 상대 쪽으로 돈다: 처음 찌르는 줄에서 tipMax ° 까지 ·
 //    초당 tipRate ° 까지(부드럽게 — 튀지 않음). AI 는 × aiK (사장님 'AI는 약하게' — 6° · 30°/s)
 //   japanese 기다림과 침 (켄타이) — 공격하지 않는 동안 full 초에 걸쳐 0 → gain 만큼 쌓이고(곧은 오름 — 감독, 사장님 확인 전), 칼을 내는 순간 그 칼에 묶이고 다시 0 부터.
-//    그 칼이 상처를 내면 주는 피해(칼날 상처 심각도 · 둔타 에너지) × (1 + 묶인 몫) 뒤 씀 · 빗나가거나 막히면 이어짐 창(UNIQUE_ASSIST.afterWindow 0.6 s) 안에 시작한 츠바메가에시로 넘어감 · 비기엔 안 실림
+//    그 칼이 상처를 내면 주는 피해(칼날 상처 심각도 · 둔타 에너지) × (1 + 묶인 몫) 뒤 씀 · 빗나가거나 막히면 이어짐 창(UNIQUE_ASSIST.afterWindow 0.6 s) 안에 시작한 츠바메가에시로 넘어감 · 비기엔 안 실림(10/28 고노센은 실림 — secret)
 //   german 인데스 — 상대 공격이 내게 실패하면(헛침 = 칼에도 몸에도 안 닿음 · 막힘 = 내 칼에 닿고 나를 못 벰) 이어짐 창(afterWindow 0.6 s)이 열리고, 그 안에 시작한 내 칼은 주는 피해 × (1 + gain × aiK(AI)).
+//    10/28 touch: 내 칼이 상대 칼에 닿아 있는 동안도 창(닿음이 끝나고 afterWindow 뒤 닫힘 — 겹치기 · 맞물린 채 낸 칼은 늘 실림)
 //    간격 잡기 빠른 디딤이 창 안에서 시작되면 빠른 디딤 · 잡기 동안 창 시계가 멈추고 잡기가 끝날 때 닫힘 · 비기엔 안 실림 · aiK 1 = AI 도 같음(반으로 줄일 자리 — 사장님 확인 전)
 //   chinese 숨 바꾸기 (토납 — 『장자』 각의편 吐故納新, 10/21 사장님 이름) — 휘두르지 않는 동안(긋기 · 탭 · 손잡이 찍기 · 비기 없음) 피가 굳는 빠르기(VITALS.clotting) × clot. 휘두르는 동안은 그대로
 export const SCHOOL_PASSIVE = {
@@ -537,8 +543,8 @@ export const SCHOOL_PASSIVE = {
   at: 4,
   iberian: { on: true, wrist: 1.3 },
   italian: { on: true, tipMax: 12, tipRate: realRate(60), aiK: 0.5 }, // 사장님 10/21 '최대 12° · 초당 60° · AI는 약하게'(절반)
-  japanese: { on: true, full: realS(2.0), gain: 0.3 }, // 사장님 10/25 23:1x '1.5초에 걸쳐 -> 2초에 걸쳐' (전 10/21 '1.5초에 +30%') · 곧은 오름은 감독
-  german: { on: true, gain: 0.3, aiK: 1 }, // 사장님 10/21 '+30% · 창 0.6초(afterWindow)' · aiK 1 은 감독(반으로 줄일 자리)
+  japanese: { on: true, full: realS(6.0), gain: 0.3, secret: 1 }, // full: 사장님 10/28 02:0x '대신 2초간 30을 6초간 30으로 바꿔' (6 s 에 걸쳐 0 → +30 % · 2 s 면 +10 % — 전 10/25 23:1x 2 s · 10/21 1.5 s · 확인표 2588) · 곧은 오름은 감독 · secret: 10/28 01:5x 사장님 '일본 기다림과 침도 고노센도 적용받게 해' — 1 = 고노센도 보통 칼처럼 묶고 첫 상처에 씀 · 0 = 전(비기엔 안 실림 — `?kenSecret=0` · 확인표 2671)
+  german: { on: true, gain: 0.3, aiK: 1, touch: 1 }, // 사장님 10/21 '+30% · 창 0.6초(afterWindow)' · aiK 1 은 감독(반으로 줄일 자리) · touch: 10/28 01:4x 사장님 '무기가 맞부딪혔을 때로 하면?' — 1 = 칼끼리 닿아 있는 동안 창이 열려 있고 닿음이 끝나고 afterWindow 뒤 닫힘(헛침 · 막힘 길도 그대로) · 0 = 전(상대 공격이 실패할 때만 — `?indesTouch=0` · 확인표 2670)
   chinese: { on: true, clot: 2 }, // 숨 바꾸기 (토납) — 사장님 10/21 '휘두르지 않을 때 출혈 굳기 2배'
 };
 // AI 반응 시간 (10/21 사장님 '당장해' — 옆 공략: 박찬 직후 짧게 옆이 열리고 그때 치는 플레이): AI 는 상대 쪽으로 몸을 돌릴 때 face s 전의 상대 자리를 본다
@@ -1221,12 +1227,13 @@ export const SECRET = {
   //  사람 길만 바꾼다(schools.js playerSecretDef) — AI 는 TRADITIONS.italian.secret(옛 엇박 찌르기)를 보고 aiOpenSchools 로 닫혀 있다
   itSecret: 'risoluto', // 'risoluto' = 거침없이 나아가 찌르기 · 'contratempo' = 옛 엇박 찌르기(박자 밑 찌르기 — `?itSecret=contratempo`)
   risolutoCover: 0.15, // 덮음 거리 (m — 리솔루토만 읽음): 칼끼리 어느 부위든(bladesNear — 두 칼날 전체) · 내 칼 손 쪽 절반 ↔ 상대 칼 칼끝 쪽 절반 가장 가까운 거리 — 사장님 10/25 21:0x '칼끼리 닿아 있거나 7cm 이내에 -> 칼끼리 닿아 있거나 15cm 이내에' (전 0.07 = ai.js checkBind · secret.js bladesTouch 의 맞물림 기하와 같은 수 — 그쪽은 그대로 · `?risoCover=0.07`) [사장님 10/25 결정 — 확인표 2565]
+  risolutoMirror: 1, // 상대 걸음에 맞춰 (사장님 10/28 01:4x '기존 조건과 같아. 단 상대도 들어오거나 나가야 한다' → '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로' — italian_risoluto.js mirrorOk): 1 = 덮인 채 나아가기는 상대가 물러서는 동안 스틱 앞 · 상대가 들어오는 동안 스틱 뒤일 때만 셈(상대 걸음 = 걸음 의도 move.y ∓ 0.1 — gait.js requestStep 의 물러나는 중과 같은 문턱 · 새 수 없음) · 어긋나면 너그러움 risolutoGrace 동안 셈을 쥠 · 0 = 10/25 21:0x 판(스틱 앞이나 뒤만 — `?risoMirror=0` · 다 붙음 창도 켬) [사장님 10/28 결정 · 끊김 너그러움 · 상대 걸음 읽기는 사장님 확인 전 — 확인표 2672]
   risolutoStick: 'both', // 덮인 채 나아가기의 스틱 (사장님 10/25 21:0x '앞을 향하고 있을 때 -> 앞이나 뒤를 향하고 있을 때'): 'both' = 앞 90° 부채꼴(stickY > |stickX|) 또는 뒤 90° 부채꼴(−stickY > |stickX|) · 옆 · 놓음은 아님 · 'fwd' = 전(앞만 — `?risoStick=fwd`) [사장님 10/25 결정 — 확인표 2563]
   risolutoTap: 0, // 창 안의 입력 (사장님 10/25 21:0x '찌르기(탭)로 발동 -> 공격하면 발동'): 0 = 공격 입력이면 모두(탭 · 끌기 — 다른 비기와 같은 main.js 길) · 같은 런지 · 1 = 전(탭만 — schools.js tapOnly · `?risoTap=1`) [사장님 10/25 결정 — 확인표 2564]
   risolutoHold: realS(0.6), // 덮인 채 나아가기가 이 초 이어지면 창 — 시간 사다리 0.6(이어짐) · 1.5(무장) 둘 다 잼 (`?risoHold=1.5`) [사장님 확인 전]
   risolutoBeat: 1, // 두 번째 길 (1 = 켬): 덮인 채 나아가던 중 상대가 칼을 내거나 덮음이 풀리면 곧장 창 — 원전 '상대가 박자를 내면 잡아라' · 10/23 넓은 판정으로 기본 켬 (`?risoBeat=0` 끔) [사장님 확인 전 — 확인표 2241]
   risolutoBeatMin: realS(0.2), // 두 번째 길: 그 전에 덮인 채 나아가기가 이 초 넘게 이어졌어야 (시간 사다리 0.2 반응) [사장님 확인 전]
-  risolutoClose: 1, // '다 붙었을 때' 창 — 덮인 채 나아가다 맞닿기 거리(무기 실측 measure.contact) 밖에서 안으로 든 순간 · 시간 조건 없음 · 10/23 넓은 판정으로 기본 켬 (`?risoClose=0` 끔) [사장님 확인 전 — 확인표 2240]
+  risolutoClose: 0, // '다 붙었을 때' 창 — 덮인 채 나아가다 맞닿기 거리(무기 실측 measure.contact) 밖에서 안으로 든 순간 · 시간 조건 없음 · 10/23 넓은 판정으로 켬 → 10/28 끔(사장님 10/28 원칙 '비기 = 상대 반응 · 특수공격 = 내 커맨드' — 맞닿기 거리로 다가드는 것은 내 커맨드 · 13:4x 간격 조건과 같은 자리라 그 뒤 늘 막혀 있었음 — `?risoClose=1` 켬 · `?risoMirror=0` 도 켬) [사장님 확인 전 — 확인표 2240 · 2673]
   risolutoGuard: 0, // 시험 (1 = 켬 · 기본 끔): 막기 단추를 누른 채 나아가기도 덮인 채 나아가기로 셈 ('나는 막기 단추도 아님'을 풂 — 사장님 10/22 물음 '막기를 누르면 칼을 허공에 고정한 채 뻗고 있으니 교착이 늘지 않을까') (`?risoGuard=1`) [사장님 결정 전 — 측정만]
   // 10/23 넓은 판정 (사장님 10/23 00:1x '리솔루토 발동 거의 안 되더라 칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게 적용할 수 없는가?' — 문서 §9 · 확인표 2236~2242) · 10/22 판 = `?risoWide=0`
   risolutoAnyPart: 1, // 칼 어느 부위든 실제 맞닿음(접촉 사건 feel.touching) · 두 칼날 전체 0.07 m 안도 덮음 (italian_risoluto.js bladesNear — 새 문턱 없음 · `?risoAny=0`) [사장님 확인 전 — 확인표 2237]
@@ -1378,7 +1385,7 @@ export const UNIQUE_ASSIST = {
   cavSnap: 1,
   cavSnapShare: 0.6, // 칼끝 빠르기 = 이탈리아 비기 리솔루토 런지 칼끝 빠르기(고노센 발도 칼끝 iaiTipSpeed × SECRET.risolutoShare)의 이 몫 — 제비 베기 tsuSnapShare(고노센의 0.6)와 같은 몫 · 사장님 10/28 00:5x 결정 · `?cavSnapShare=`
   cavSnapTime: realS(0.2), // 끌고 가는 시간 상한 (실제 초 — 시간 사다리 0.2) · tsuSnapTime 과 같은 수(그쪽은 표준 시간 기록 §2 경계 2 로 게임 초 그대로 — 여쭐 것) · 사장님 10/28 00:5x 결정. 길(약 0.1 s)이 먼저 끝나면 거기서 끝
-  // 사람 날개 접기 (C6 염시 斂翅 — 동방 특수 공격 · 사장님 10/28 00:2x ~ 00:3x · 01:0x — 기록 docs/strike/lianchi_2026-10-28.md · 확인표 2670 ~ 2675). 사람 강화(unique_assist.js)만 · AI 염시(속임 길)는 그대로.
+  // 사람 날개 접기 (C6 염시 斂翅 — 동방 특수 공격 · 사장님 10/28 00:2x ~ 00:3x · 01:0x — 기록 docs/strike/lianchi_2026-10-28.md · 확인표 2694 ~ 2699). 사람 강화(unique_assist.js)만 · AI 염시(속임 길)는 그대로.
   //  ① lianTap: 물러나는 동안(스틱 뒤 — 뒤 몫 ≥ 0.5 · 옆 몫보다 큼, 걸음 명령 '앞'의 거울) · 스틱 뒤를 놓고 lianWindow 안의 탭 = 보통 탭 찌르기 대신 날개 접기 (상대 칼 닿음 없이 내 명령만 —
   //   사장님 10/28 01:2x). 그 밖의 탭은 보통 탭 찌르기 · 전 판 입력(쟁기 찌르기 긋기 → 꺾음)은 사람 몫에서 뺌(AI 그대로). 0 = 끔 `?lianTap=0`
   //  ② 그 칼 = 날개 접기(칼을 오른 허리 옆으로 빠르게 거둠 — 맞힘 없음) → 앞으로 한 걸음(SECRET.chineseStep 반걸음 — 연환 · 격살 수와 같은 걸음) 들며 허리(배 · 골반 띠)를 오른 → 왼으로 가로 벰 —
