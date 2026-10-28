@@ -370,7 +370,10 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, 
   f.secretHit = h0;
   if (!r || r.energy < STRIKE.minEnergy) return null;
   foe.hitCooldowns.set(`${f.index}:${best.info.part}`, STRIKE.hitCooldown);
-  if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) foe.applyWound({ ...r, part: best.info.part, passing: true });
+  if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
+    foe.applyWound({ ...r, part: best.info.part, passing: true });
+    if (r.schoolK) f.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (위 갈래와 같음 — 10/28 고노센 발도의 켄타이: 첫 상처에 씀 · 다른 비기는 몫 없음)
+  }
   combat.hooks.onWound?.(f, foe, r, point, pr);
   return r;
 }
