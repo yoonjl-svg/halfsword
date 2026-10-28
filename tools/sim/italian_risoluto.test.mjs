@@ -6,7 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, THREE } from './harness_m.mjs';
-import { coverDist, bladesNear, RisolutoWatch, lungeGap, lungeGapOk } from '../../src/italian_risoluto.js';
+import { coverDist, bladesNear, RisolutoWatch, lungeGap, lungeGapOk, foeStep, mirrorOk } from '../../src/italian_risoluto.js';
 import { MEASURED, risolutoContact } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 THRUST.itMeasure (old 기본 · contact · full — IT_MEASURE=…)
 import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
 import { playerSecretDef, TRADITIONS } from '../../src/schools.js';
@@ -19,7 +19,8 @@ const rs = CONFIG.realS; // 표준 시간 (10/25 22:3x): 적힌 0.6 · 0.2 · 0.
 const keep = (o, k, v, fn) => { const old = o[k]; o[k] = v; try { return fn(); } finally { o[k] = old; } };
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
 const withJ = (vals, fn) => { const J = CONFIG.JOINTS, old = {}; for (const k of Object.keys(vals)) (old[k] = J[k]), (J[k] = vals[k]); try { return fn(); } finally { Object.assign(J, old); } }; // 손목 값 (10/24 17:2x)
-const OLD = { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0, risolutoTouch: 0 }; // 10/22 판 (main.js ?risoWide=0 과 같은 값)
+const OLD = { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0, risolutoTouch: 0, risolutoMirror: 0 }; // 10/22 판 (main.js ?risoWide=0 과 같은 값 — 10/28 상대 걸음 맞춤도 끔)
+const PRE1028 = { risolutoMirror: 0, risolutoClose: 1 }; // 10/25 21:0x 판 (main.js ?risoMirror=0 과 같은 값 — 스틱만 · 다 붙음 창 켬)
 const HOLD1024 = { risolutoTouch: 0 }; // 10/24 판 창 규칙 — 이어짐 0.6 s 를 기다림 (main.js ?risoTouch=0 과 같은 값 · 10/25 칼끝 얽힘 창 전)
 const TAP1023 = { risolutoLunge: 0, risolutoArmSlow: null, risolutoStiff: null }; // 10/23 탭 찌르기 판 (main.js ?risoLunge=0 과 같은 값)
 
@@ -27,7 +28,7 @@ const TAP1023 = { risolutoLunge: 0, risolutoArmSlow: null, risolutoStiff: null }
 const blade = (a, b) => (t, out = new THREE.Vector3()) => out.set(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t);
 function fake({ foeA = [1.4, 1.03, 0.4], foeB = [0.2, 1.03, -0.4] } = {}) {
   const me = { armed: true, alive: true, stickX: 0, stickY: 1, skill: {}, stamina: {}, aiControlled: false, gap: 2, bladePoint: blade([0.3, 1, 0], [1.4, 1, 0]) };
-  const foe = { armed: true, alive: true, skill: {}, stamina: {}, aiControlled: true, aiCtl: { mode: 'watch', phase: 'ready' }, bladePoint: blade(foeA, foeB) };
+  const foe = { armed: true, alive: true, skill: {}, stamina: {}, aiControlled: true, aiCtl: { mode: 'watch', phase: 'ready' }, move: { x: 0, y: -1 }, bladePoint: blade(foeA, foeB) }; // move: 상대가 물러서는 중 (10/28 상대 걸음에 맞춰 — 내 스틱 앞과 맞음)
   me.foeDistance = () => me.gap;
   return { me, foe };
 }
@@ -97,7 +98,7 @@ test('두 번째 길(상대 박자 — 10/23 기본 켬 · 10/22 판 위에서):
 }));
 
 test('10/23 넓은 판정 (사장님 \'칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게\'): 기본값 · 칼 어느 부위든 · 끊김 너그러움 0.2 s(모아서 셈) · 가슴 사이 조건 없음 (이어짐 창 — 10/24 판 ?risoTouch=0 위에서)', () => {
-  assert.deepEqual([SECRET.risolutoAnyPart, SECRET.risolutoGrace, SECRET.risolutoClosing, SECRET.risolutoClose, SECRET.risolutoBeat, SECRET.risolutoHold], [1, rs(0.2), 0, 1, 1, rs(0.6)]);
+  assert.deepEqual([SECRET.risolutoAnyPart, SECRET.risolutoGrace, SECRET.risolutoClosing, SECRET.risolutoClose, SECRET.risolutoBeat, SECRET.risolutoHold], [1, rs(0.2), 0, 0, 1, rs(0.6)]); // 다 붙음 창은 10/28 끔 (아래 시험)
   withCfg(HOLD1024, () => {
     const n = Math.round(SECRET.risolutoHold / DT) + 4;
     // 칼 어느 부위든: 손 쪽 ↔ 칼끝 쪽은 아니지만(내 약한 쪽 곁) 실제로 칼끼리 맞닿음 → 덮음
@@ -354,7 +355,7 @@ test('10/25 21:0x 공격하면 발동 (사장님 \'찌르기(탭)로 발동 -> �
 });
 
 test('다 붙음 창(risolutoClose — 10/23 기본 켬: 맞닿기 거리 밖에서 안으로 든 순간 · 덮인 채 나아가기 한 번에 한 번 · 시간 조건 없음) · 시험 스위치(기본 끔) · 칼을 대지 않는 덮음(risolutoLine — 겨눔 곧은 선 12° 안 · 강한 쪽이 상대 칼끝 → 내 가슴 줄 위)', () => {
-  assert.equal(SECRET.risolutoClose, 1); // 10/23 기본 켬
+  assert.equal(SECRET.risolutoClose, 0); // 10/23 기본 켬 → 10/28 끔 (내 커맨드 — 사장님 원칙 '비기 = 상대 반응') · `?risoClose=1` · `?risoMirror=0` 이면 켬
   assert.equal(SECRET.risolutoLine, 0);
   // 다 붙음: 1.6 m 에서 0.01 m 씩 다가감 · 맞닿기 1.5 m → 1.5 를 넘는 스텝에 창 (0.6 s 전) · 안에 머무는 동안 다시 안 열림 (밖으로 나갔다 들어와야) — 10/24 판(?risoTouch=0) 위에서 (칼끝 얽힘 창이 첫 스텝에 먼저 염)
   withCfg({ ...HOLD1024, risolutoClose: 1 }, () => {
@@ -517,6 +518,7 @@ test('10/25 칼끝 얽힘 창 · 실제 몸: 맞닿기 거리 밖이면 첫 닿�
       g.step();
       const ps = new PlayerSecretWatch(p, e);
       p.stickX = 0; p.stickY = 1; // 스틱 앞
+      e.move.set(0, -1); // 상대가 물러서는 중 (10/28 상대 걸음에 맞춰 — AI 를 멈춰 두어 걸음 의도를 손으로)
       const touch = () => { p.feel.touching = true; }; // 칼끼리 맞닿음 사건 (combat.js 가 스텝마다 적는 것 — 여기선 물리 스텝 없이 셈만)
       return fn(p, ps, touch);
     } finally { g.world.free(); }
@@ -603,13 +605,14 @@ test('10/24 14:0x 런지 자세: 앞무릎이 굽고 뒷다리가 펴짐 (전: �
 
 test("10/25 21:0x 사장님 조건 (스틱 '앞이나 뒤' · 덮음 '15cm 이내'): 뒤 90° 부채꼴도 덮인 채 나아가기 · 옆 · 놓음은 아님 · 0.12 m 떨어진 칼도 덮음 · ?risoStick=fwd · ?risoCover=0.07 = 전", () => {
   assert.equal(SECRET.risolutoStick, 'both');
-  const open = (set, cfg = {}) => withCfg(cfg, () => { const f = fake(); set(f.me); return tick(new RisolutoWatch(f.me, f.foe), f, 5)?.path ?? null; });
+  // 10/28 상대 걸음에 맞춰(기본): 뒤 스틱은 상대가 들어올 때 (fake 상대는 물러서는 중 — 뒤 시험은 들어오게 둠)
+  const open = (set, cfg = {}) => withCfg(cfg, () => { const f = fake(); f.foe.move.y = 1; set(f.me); return tick(new RisolutoWatch(f.me, f.foe), f, 5)?.path ?? null; });
   assert.equal(open((m) => { m.stickY = -1; }), 'touch', '뒤');
   assert.equal(open((m) => { m.stickY = -0.6; m.stickX = 0.4; }), 'touch', '뒤 부채꼴 안');
   assert.equal(open((m) => { m.stickY = -0.4; m.stickX = 0.6; }), null, '옆');
   assert.equal(open((m) => { m.stickY = 0; m.stickX = 0; }), null, '놓음');
   assert.equal(open((m) => { m.stickY = -1; }, { risolutoStick: 'fwd' }), null, '전: 앞만');
-  assert.equal(open((m) => { m.stickY = 1; }, { risolutoStick: 'fwd' }), 'touch');
+  assert.equal(open((m) => { m.stickY = 1; }, { risolutoStick: 'fwd', ...PRE1028 }), 'touch');
   // 덮음 15 cm: 상대 칼이 내 칼 위 0.12 m 를 엇갈려 지나감
   const far = () => fake({ foeA: [1.4, 1.12, 0.4], foeB: [0.2, 1.12, -0.4] });
   const a = far();
@@ -645,4 +648,69 @@ test("10/25 21:0x 창 지킴 (사장님 '비기 발동창이 열리면 어떻게
     // 전(?secretHold=0): 짧은 창은 그 길이에 닫힘
     withCfg({ secretHold: 0 }, () => { ps.openWindow({ ev: 'x' }, rs(0.2)); run(0.21); assert.equal(ps.open, null); });
   } finally { g.world.free(); }
+});
+
+test("10/28 01:4x 상대 걸음에 맞춰 (사장님 '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로'): 물러섬 + 스틱 앞 · 들어옴 + 스틱 뒤만 셈 · 어긋남은 너그러움 0.2 s · 다 붙음 창 끔 · ?risoMirror=0 = 전", () => {
+  assert.equal(SECRET.risolutoMirror, 1);
+  assert.equal(SECRET.risolutoClose, 0);
+  // 상대 걸음 = 걸음 의도 move.y ∓ 0.1 (gait.js requestStep 과 같은 문턱)
+  assert.deepEqual([-1, -0.11, -0.09, 0, 0.09, 0.11, 1].map((y) => foeStep({ move: { x: 0, y } })), ['retreat', 'retreat', null, null, null, 'advance', 'advance']);
+  assert.equal(foeStep({ move: { x: 1, y: 0 } }), null, '옆걸음은 아님');
+  assert.equal(foeStep({}), null);
+  // 넷 짝: 맞으면 첫 스텝에 칼끝 얽힘 창 · 어긋나거나 상대가 서 있으면 없음
+  const first = (fy, sy, cfg = {}) => withCfg(cfg, () => { const f = fake(); f.foe.move.y = fy; f.me.stickY = sy; return tick(new RisolutoWatch(f.me, f.foe), f, 5) ?? null; });
+  assert.deepEqual([first(-1, 1)?.path, first(-1, 1)?.foe], ['touch', 'retreat'], '물러섬 + 앞');
+  assert.deepEqual([first(1, -1)?.path, first(1, -1)?.foe], ['touch', 'advance'], '들어옴 + 뒤');
+  assert.equal(first(-1, -1), null, '물러섬 + 뒤');
+  assert.equal(first(1, 1), null, '들어옴 + 앞');
+  assert.equal(first(0, 1), null, '상대가 섬 + 앞');
+  assert.equal(first(0, -1), null, '상대가 섬 + 뒤');
+  assert.ok(mirrorOk({ stickX: 0, stickY: 1 }, { move: { x: 0, y: -1 } }) && !mirrorOk({ stickX: 0, stickY: 1 }, { move: { x: 0, y: 1 } }));
+  // 전 판(?risoMirror=0): 상대가 서 있어도 · 어긋나도 스틱 앞이나 뒤면 창 · ctx 에 상대 걸음 없음
+  for (const [fy, sy] of [[0, 1], [0, -1], [1, 1], [-1, -1]]) {
+    const r = first(fy, sy, PRE1028);
+    assert.equal(r?.path, 'touch', `전 ${fy} ${sy}`);
+    assert.equal(r.foe, undefined);
+  }
+  // 이어짐 창(10/24 판 위): 맞춘 시간만 셈 · 상대가 0.1 s 서면 셈을 쥐고 기다렸다 이어서 셈 · 0.3 s 서면 끝(까닭 mirror) · 상대 박자 아님
+  withCfg({ ...HOLD1024, risolutoBeat: 0 }, () => {
+    const n = Math.round(SECRET.risolutoHold / DT);
+    const pause = (s) => {
+      const f = fake(); const W = new RisolutoWatch(f.me, f.foe);
+      assert.equal(tick(W, f, Math.round(rs(0.4) / DT), 0), null);
+      const h0 = W.held;
+      f.foe.move.y = 0;
+      assert.equal(tick(W, f, Math.round(rs(s) / DT), 0), null);
+      const kept = W.held;
+      f.foe.move.y = -1;
+      let k = 0, r = null;
+      for (; k < n + 4 && !r; k++) r = W.tick(DT, true);
+      return { W, h0, kept, r, k };
+    };
+    const a = pause(0.1);
+    assert.ok(Math.abs(a.kept - a.h0) < 1e-9, '선 동안은 안 셈');
+    assert.equal(a.r?.path, 'hold'); assert.ok(a.k <= Math.round(rs(0.2) / DT) + 2, `이어서 셈 ${a.k}`);
+    assert.equal(a.W.ends.mirror, 0);
+    const b = pause(0.3);
+    assert.equal(b.W.ends.mirror, 1, '너그러움 0.2 s 넘으면 끝 — 까닭 mirror');
+    assert.equal(b.r?.path, 'hold'); assert.ok(b.k >= n - 1, `처음부터 ${b.k}`);
+    // 상대가 방향을 바꾸면 스틱도 바꿔야 이어짐 (들어옴 + 뒤로 이어 셈)
+    const f = fake(); const W = new RisolutoWatch(f.me, f.foe);
+    tick(W, f, Math.round(rs(0.3) / DT), 0);
+    f.foe.move.y = 1; f.me.stickY = -1;
+    const r = tick(W, f, n, 0);
+    assert.deepEqual([r?.path, r?.foe], ['hold', 'advance']);
+    assert.equal(W.ends.mirror + W.ends.stick, 0, '같은 덮인 채 나아가기');
+  });
+  // 상대 박자(두 번째 길)는 그대로: 맞춰 0.2 s 넘게 셈한 뒤 상대가 칼을 내면 창 · 그 전 상대 걸음을 붙임
+  withCfg(HOLD1024, () => {
+    const f = fake(); f.foe.move.y = 1; f.me.stickY = -1; const W = new RisolutoWatch(f.me, f.foe);
+    tick(W, f, Math.round(rs(0.3) / DT), 0);
+    f.foe.aiCtl = { mode: 'attack', phase: 'strike' };
+    assert.deepEqual(((r) => [r?.path, r?.why, r?.foe])(W.tick(DT, true)), ['beat', 'foeSwing', 'advance']);
+  });
+  // 다 붙음 창: 기본 끔 — 맞닿기 거리로 걸어 들어가도 없음 · ?risoMirror=0 이면 켜짐
+  const close = (cfg) => withCfg({ ...HOLD1024, ...cfg }, () => { const f = fake(); f.me.gap = 1.6; f.me.swordArt = { measure: { contact: 1.5 } }; return tick(new RisolutoWatch(f.me, f.foe), f, 30)?.path ?? null; });
+  assert.equal(close({}), null);
+  assert.equal(close(PRE1028), 'close');
 });

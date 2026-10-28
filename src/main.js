@@ -243,12 +243,14 @@ if (IB_TABLE === 'v2') useIberianTableV2();
 }
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
   const its = params.get('itSecret');
-  if (params.get('risoWide') === '0') Object.assign(CONFIG.SECRET, { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0, risolutoHold: CONFIG.realS(0.6), risolutoTouch: 0 }); // 10/23 넓은 판정 전 10/22 판 (아래 낱낱 스위치가 덮을 수 있게 먼저)
+  // 10/28 01:4x 사장님 '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로' (기본 — italian_risoluto.js mirrorOk): `?risoMirror=0` = 10/25 21:0x 판(스틱 앞이나 뒤만 · 다 붙음 창 켬 — 아래 ?risoClose 가 덮을 수 있게 먼저)
+  if (params.get('risoMirror') === '0') Object.assign(CONFIG.SECRET, { risolutoMirror: 0, risolutoClose: 1 });
+  if (params.get('risoWide') === '0') Object.assign(CONFIG.SECRET, { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0, risolutoHold: CONFIG.realS(0.6), risolutoTouch: 0, risolutoMirror: 0 }); // 10/23 넓은 판정 전 10/22 판 (10/28 상대 걸음 맞춤도 끔) (아래 낱낱 스위치가 덮을 수 있게 먼저)
   if (['risoluto', 'contratempo'].includes(its)) CONFIG.SECRET.itSecret = its;
   if (params.has('risoHold') && +params.get('risoHold') > 0) CONFIG.SECRET.risolutoHold = CONFIG.realS(+params.get('risoHold'));
   if (params.has('risoBeat')) CONFIG.SECRET.risolutoBeat = +params.get('risoBeat') ? 1 : 0;
   if (params.has('risoCover') && +params.get('risoCover') > 0) CONFIG.SECRET.risolutoCover = +params.get('risoCover');
-  if (params.has('risoClose')) CONFIG.SECRET.risolutoClose = +params.get('risoClose') ? 1 : 0; // 시험: '다 붙었을 때' 창
+  if (params.has('risoClose')) CONFIG.SECRET.risolutoClose = +params.get('risoClose') ? 1 : 0; // '다 붙었을 때' 창 — 10/28 기본 끔(내 커맨드라 비기 원칙 밖) · 1 = 켬
   if (params.has('risoLine')) CONFIG.SECRET.risolutoLine = +params.get('risoLine') ? 1 : 0; // 시험: 칼을 대지 않는 덮음 (줄 막기)
   if (params.has('risoGuard')) CONFIG.SECRET.risolutoGuard = +params.get('risoGuard') ? 1 : 0; // 시험: 막기 단추를 누른 채 나아가기도 셈
   // 10/23 넓은 판정 (사장님 '칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게'): `?risoWide=0` = 10/22 판(손 쪽 ↔ 칼끝 쪽만 · 끊김 너그러움 없음 · 가슴 사이 줄어듦 · 다 붙음 · 상대 박자 끔) · 낱낱이 `?risoAny=0|1` · `?risoGrace=0.2` · `?risoClosing=0|1`
@@ -282,6 +284,10 @@ if (IB_TABLE === 'v2') useIberianTableV2();
     const keep = new Set(sp.split(','));
     for (const k of ['iberian', 'italian', 'japanese', 'german', 'chinese']) CONFIG.SCHOOL_PASSIVE[k].on = keep.has(k);
   }
+  // 10/28 01:4x 사장님 '무기가 맞부딪혔을 때로 하면?' — 독일 인데스 창이 칼끼리 닿음에도 열림 (기본): `?indesTouch=0` = 전(상대 공격이 실패할 때만)
+  if (params.has('indesTouch')) CONFIG.SCHOOL_PASSIVE.german.touch = +params.get('indesTouch') ? 1 : 0;
+  // 10/28 01:5x 사장님 '일본 기다림과 침도 고노센도 적용받게 해' — 고노센에도 켄타이 (기본): `?kenSecret=0` = 전(비기엔 안 실림)
+  if (params.has('kenSecret')) CONFIG.SCHOOL_PASSIVE.japanese.secret = +params.get('kenSecret') ? 1 : 0;
 }
 if (params.has('whipKneel')) CONFIG.WHIP_KNEEL.p = +params.get('whipKneel') || 0; // 채찍 무릎 꿇리기 확률 (10/23 — 판 값 0.5 · `?whipKneel=0` 끔)
 if (params.get('whipKneelAi') === '1') CONFIG.WHIP_KNEEL.ai = true; // AI 가 든 채찍도 꿇리기 (기본 끔 — 사람 먼저)
