@@ -43,7 +43,7 @@ const STATE_KO = { learned: '익힘', open: '배울 수 있음', locked: '잠김
 
 // 원어 (사장님 10/19 02:0x '대기실 스킬에서만 원어 병기') — 패시브 이름 · 원어 (config SCHOOL_PASSIVE 이름 — 10/21)
 const PASSIVE_NAME = {
-  german: ['인데스', 'Indes'],
+  german: ['그 순간 (인데스)', 'Indes'], // 10/29 02:3x 사장님 '인데스만 독일어더라 그것도 바꿔' (전 '인데스')
   italian: ['곧은 선 (리네아 레타)', 'linea retta'],
   iberian: ['손목 힘', null],
   japanese: ['기다림과 침 (켄타이)', '懸待'],
