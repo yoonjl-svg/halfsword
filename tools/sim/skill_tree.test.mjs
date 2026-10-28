@@ -14,7 +14,7 @@ const { SCHOOLS: DESIGN } = await import('../../docs/design/skill_tree_2026-10-2
 const D = await import('../../src/skill_tree_data.js');
 const S = await import('../../src/skill_tree_store.js');
 const { readProgress, recordAcquisition, PROGRESS_KEY } = await import('../../src/lobby_progress.js');
-const { SECRET, STAMINA, GAIT, LETTER, UNIQUE_ASSIST } = await import('../../src/config.js');
+const { SECRET, STAMINA, GAIT, LETTER, UNIQUE_ASSIST, IB_FLOW } = await import('../../src/config.js');
 const { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_DRAW, RETIRED_WEAPONS } = await import('../../src/weapons.js');
 const { traditionOf, TRADITIONS } = await import('../../src/schools.js');
 const { PLAYER_UNIQUE, PlayerUniqueAssist, strokeHitK, enhancedMoves } = await import('../../src/unique_assist.js');
@@ -527,12 +527,47 @@ test('실제 몸 — 강화동작 이점은 심화 칸: 곁눈 베기 무릎 꺾
     const r = round('zweihander', kit, 9);
     try {
       const P = r.player;
-      P.skill.swinging = true; P.skill.vel.set(1, 0); P.updateIbFlow(1 / 120);
-      P.skill.swinging = false; P.updateIbFlow(0.1);
+      P.skill.swinging = true; P.skill.vel.set(6, 0); P.updateIbFlow(1 / 120); // 진짜 긋기 (손 목표 ≥ IB_FLOW.cutSpeed — 10/28)
+      P.skill.swinging = false; for (let i = 0; i < 3; i++) P.updateIbFlow(1 / 120); // 문턱 밑 세 스텝 = 끝남 (endSteps 2 넘게)
       P.skill.swinging = true; P.updateIbFlow(1 / 120); // 창 안에 다시 휘두름 = 이어 감
       assert.equal(P.ibFlowOn, want);
     } finally { r.world.free(); }
   }
+});
+test('흐르는 긋기 A (10/28 22:0x 사장님 \'A로 해\'): 한 스텝 깜빡임 · 느린 감기 뒤 긋기는 이어 감이 아님 · 진짜 긋기 뒤 창 안 · 둥글게 꺾임은 이어 감 · old = 10/21 판', () => {
+  assert.equal(IB_FLOW.detect, 'a');
+  assert.equal(IB_FLOW.brake, 0.8); // 사장님 '제동을 좀더 늦추고' (0.5 → 0.8 — 사장님 확인 전)
+  assert.equal(IB_FLOW.power, 1.2); // '위력도 그만큼 올려' (사장님 확인 전)
+  const r = round('zweihander', kitOf('iberian', 'B1', 'B4', 'B5'), 9);
+  try {
+    const P = r.player;
+    const st = (sw, vx, vy = 0, n = 1) => { P.skill.swinging = sw; P.skill.vel.set(vx, vy); for (let i = 0; i < n; i++) P.updateIbFlow(1 / 120); };
+    st(false, 0, 0, 120); // 쉼 1 s
+    st(true, 8); st(false, 1.2); st(true, 8, 0, 10); // 60 Hz 깜빡임: 한 스텝 꺼짐은 끝이 아님
+    assert.equal(P.ibFlowOn, false);
+    st(false, 0, 0, 120);
+    st(true, 3.3, 0, 20); st(false, 1, 0, 4); st(true, 8, 0, 4); // 빠른 감기(손 목표 최고 3.3 < 5) → 0.03 s 뒤 긋기: 이어 감 아님
+    assert.equal(P.ibFlowOn, false);
+    st(false, 0, 0, 120);
+    st(true, 8, 0, 20); st(false, 0, 0, 30); st(true, -8, 0, 2); // 진짜 긋기 → 0.25 s 쉼 → 다시: 이어 감
+    assert.equal(P.ibFlowOn, true);
+    st(false, 0, 0, 120);
+    assert.equal(P.ibFlowOn, false); // 창(0.6 s) 넘게 쉬면 꺼짐
+    st(true, 8, 0, 10); st(true, -8, 0, 2); // 쉬지 않고 90° 넘게 꺾음 (꺾이기 전이 진짜 긋기) = 둥글게 이어 감
+    assert.equal(P.ibFlowOn, true);
+    st(false, 0, 0, 120);
+    st(true, 8, 0, 10); st(false, 0, 0, 6); st(true, 3, 0, 10); // 진짜 긋기 → 0.05 s → 감기: 감기엔 흐름 없음
+    assert.equal(P.ibFlowOn, false);
+    st(false, 0, 0, 6); st(true, -8, 0, 2); // 감기 뒤 긋기 — 앞 진짜 긋기가 끝나고 창 안이라 이어 감 (사이 감기는 창을 끊지 않음)
+    assert.equal(P.ibFlowOn, true);
+    st(false, 0, 0, 120);
+    st(true, 3, 0, 10); st(true, -8, 0, 2); // 느린 감기에서 곧장 꺾어 긋기 — 이어 감 아님
+    assert.equal(P.ibFlowOn, false);
+    IB_FLOW.detect = 'old';
+    st(false, 0, 0, 120);
+    st(true, 8); st(false, 1.2); st(true, 8, 0, 2); // 10/21 판: 한 스텝 깜빡임도 '끝나고 곧 다시' = 이어 감
+    assert.equal(P.ibFlowOn, true);
+  } finally { IB_FLOW.detect = 'a'; r.world.free(); }
 });
 test('실제 몸 — 손목 치기 칼 떨구기(J8 · 10/24): J8 을 익혀야 · 손목 치기만 · 칼 쥔 아래팔(손 · 손목)만 · 50 % 는 친 쪽 전용 난수 · 떨구면 칼을 놓침 · 못 떨구면 보통 맞음 그대로 · AI 가 모는 몸은 굴리지 않음', () => {
   const K = UNIQUE_ASSIST.koteDrop;

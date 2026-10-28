@@ -224,6 +224,9 @@ if (params.has('gnsCrouchAim')) CONFIG.SECRET.gnsCrouchAim = +params.get('gnsCro
 if (params.has('gnsAiSettle')) CONFIG.SECRET.gnsAiSettle = +params.get('gnsAiSettle') ? 1 : 0; // 고노센 AI 가 준비 전이면 간 보기 동안 제자리에 섬 (10/25 22:5x 규칙의 AI 쪽 — 기본 1 · `?gnsAiSettle=0` · 사장님 확인 전)
 if (params.has('gnsWalkIn')) CONFIG.SECRET.gnsWalkIn = +params.get('gnsWalkIn') ? 1 : 0; // 고노센 들어옴 창 (기본 0 = 천천히 걸어 듦은 창 없음 — 사장님 10/25 22:3x 입력 글 · 22:5x 끈 채로 · `?gnsWalkIn=1` = 01:3x 판)
 if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')
+if (params.get('ibFlowDetect') === 'old') CONFIG.IB_FLOW.detect = 'old'; // 흐르는 긋기 10/21 판 읽기 (10/28 — 기본 'a' 진짜 이어 그을 때만 · 확인표 2690)
+if (params.has('ibFlowBrake')) CONFIG.IB_FLOW.brake = +params.get('ibFlowBrake'); // 흐르는 긋기 제동 늦춤 몫 (10/28 기본 0.8 · 전 0.5 · 확인표 2691)
+if (params.has('ibFlowPow')) CONFIG.IB_FLOW.power = +params.get('ibFlowPow'); // 흐르는 긋기 위력 (10/28 기본 1.2 · 1 = 없음 · 확인표 2692)
 if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.iberian.on = false; // 이베리아 손목 힘 패시브만 끔 (10/21 — test.html '이베리아 시험')
 // 이베리아 날 세우기 시험 (10/22 — 기본 끔 · 사장님 확인 전, config IB_EDGE · docs/strike/iberian_flat_hits_2026-10-22.md): `?ibEdge=motor` · `?ibEdge=ff` · `?ibEdge=pre` = 이베리아 유파만 그 날 세우기 방식
 if (['motor', 'ff', 'pre'].includes(params.get('ibEdge'))) Object.assign(CONFIG.IB_EDGE, { on: true, edge: params.get('ibEdge') });

@@ -32,7 +32,7 @@ import { updateGun } from './gun.js';
 import { runInstants, artFlash } from './secret_instant.js'; // artFlash: 이점이 터진 순간 잔상 (10/21)
 import { FINISH, cleaveFoe } from './finish.js'; // 마무리 스위치 entry·mode·power (10/12, 기본 끔)
 import { lowFinishOn, lowFinishPosture, downLowTarget } from './finish_entry.js';
-import { UNIQUE_ASSIST as UA } from './config.js';
+import { UNIQUE_ASSIST as UA, IB_FLOW } from './config.js'; // IB_FLOW.power: 이베리아 흐르는 긋기 위력 (10/28 — analyze)
 import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
 import { kitOff, perkOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4)
 
@@ -391,6 +391,10 @@ export class Combat {
     //  칼날 상처 심각도 · 둔타 에너지 × k. 물리(빠르기 · 가르나 튕기나) · 길 · 손목은 그대로 · AI 곁눈 베기 · 다른 기술은 그대로
     const spl = UA.schielPlayerK;
     if (spl !== 1 && UA.schielPath && UA.schielPlayer && att.skill?.uniq && strokeTechOf(att) === 'schielhau') { if (type === 'blunt') energy *= spl; else severity *= spl; }
+    // 이베리아 흐르는 긋기 위력 (10/28 22:0x 사장님 '위력도 그만큼 올려' — config IB_FLOW.power · 확인표 2692): 흐름이 켜진 채(fighter.js updateIbFlow — 사람은 B5 · AI 이베리아는 늘)
+    //  맞힌 긋기의 칼날 상처 심각도 · 둔타 에너지 × power. 찌르기 · 비기 칼(secretHit ≠ 1)은 그대로 · 물리(빠르기 · 가르나 튕기나)는 그대로
+    const ibK = att.ibFlowOn && IB_FLOW.a && type !== 'stab' && (att.secretHit ?? 1) === 1 ? IB_FLOW.power : 1;
+    if (ibK !== 1) { if (type === 'blunt') energy *= ibK; else severity *= ibK; }
     return {
       type,
       zone,

@@ -1865,10 +1865,49 @@ export class Fighter {
    * 이베리아 이어 긋기 흐름 A (10/21 — config IB_FLOW, 기본 켬): 휘두르기(skill.swinging — 사람 · AI 같은 문턱)를 이어 가는지 읽어 ibFlowOn 을 둔다.
    *  이어 감 = 앞 휘두르기가 끝난 뒤 이어짐 창(0.6 s) 안에 다시 휘두름 · 휘두르는 채로 손 방향이 90° 넘게 꺾임(둥글게 돌리기). 켜진 채로 그 휘두르기 동안 + 끝난 뒤 창까지.
    *  IB_FLOW.a 를 끄면 읽지도 않는다. (B 손목 힘 한도는 10/21 유파 패시브 wristK 로 옮김 — 이어 긋기와 상관없이 늘)
+   *  10/28 22:0x 사장님 'A로 해'(진짜 이어 그을 때만 — IB_FLOW.detect 'a' · 확인표 2690): 휘두르기 끝 = 손 목표가 문턱 밑에 물리 endSteps(2) 스텝 넘게 머묾
+   *   (60 Hz 화면은 물리 두세 스텝에 한 번 손가락이 움직여 문턱 근처에서 휘두르기 표시가 한 스텝씩 꺼졌다 켜짐 → 혼자 벤 칼도 '끝나고 곧 다시'로 읽혔음) ·
+   *   진짜 긋기 = 손 목표 빠르기 최고가 cutSpeed(5 패드 m/s) 이상인 휘두르기(감기 · AI 준비 손 2.2 ~ 3.8 은 아님) — 이어 감 = 마지막 진짜 긋기가 끝나고 창 안에 시작한 휘두르기
+   *   (사이에 낀 감기는 창을 끊지도 잇지도 않음) · 90° 꺾임은 꺾이기 전 몫이 진짜 긋기일 때만 · 흐름은 그 휘두르기도 진짜 긋기일 때만(최고가 cutSpeed 를 넘은 뒤 + 끝난 뒤 창까지).
+   *   'old' = 10/21 판 (updateIbFlowOld — `?ibFlowDetect=old`)
    */
   updateIbFlow(dt) {
     if (!IB_FLOW.a || this.swordArt?.tradition !== 'iberian' || kitOff(this, 'ibFlow')) { this.ibFlowOn = false; return; } // 사람은 스킬트리 B5 '이어 긋기 · 흐름' (10/21)
+    if (IB_FLOW.detect === 'old') return this.updateIbFlowOld(dt);
     const win = UNIQUE_ASSIST.afterWindow; // 이어짐 창 0.6 s (게임 하나 — 10/21)
+    const t = (this.ibFlowT = (this.ibFlowT ?? 0) + dt);
+    const sk = this.skill, raw = !!sk.swinging, v = sk.vel, sp = Math.hypot(v.x, v.y);
+    if (raw) this.ibFlowLow = 0;
+    else if (this.ibFlowSw && (this.ibFlowLow = (this.ibFlowLow ?? 0) + 1) === 1) this.ibFlowLowT = t; // 문턱 밑으로 처음 내려간 때 = 끝난 때(굳으면)
+    const sw = raw || (!!this.ibFlowSw && this.ibFlowLow <= IB_FLOW.endSteps);
+    if (sw) {
+      const u = sp || 1;
+      if (!this.ibFlowSw) {
+        this.ibFlowChain = t - (this.ibFlowCutEnd ?? -9) <= win;
+        this.ibFlowDir = [v.x / u, v.y / u];
+        this.ibFlowPk = this.ibFlowLeg = sp;
+      } else {
+        if (raw && this.ibFlowDir && (v.x * this.ibFlowDir[0] + v.y * this.ibFlowDir[1]) / u < 0) { // 90° 넘게 꺾임 = 둥글게 이어 감 (꺾이기 전 몫이 진짜 긋기일 때)
+          if (this.ibFlowLeg >= IB_FLOW.cutSpeed) this.ibFlowChain = true;
+          this.ibFlowDir = [v.x / u, v.y / u];
+          this.ibFlowLeg = sp;
+        } else if (sp > this.ibFlowLeg) this.ibFlowLeg = sp;
+        if (sp > this.ibFlowPk) this.ibFlowPk = sp;
+      }
+    } else if (this.ibFlowSw) {
+      this.ibFlowEnd = this.ibFlowLowT;
+      this.ibFlowWasCut = this.ibFlowPk >= IB_FLOW.cutSpeed;
+      if (this.ibFlowWasCut) this.ibFlowCutEnd = this.ibFlowLowT; // 마지막 진짜 긋기가 끝난 때
+    }
+    this.ibFlowSw = sw;
+    const real = sw ? this.ibFlowPk >= IB_FLOW.cutSpeed : !!this.ibFlowWasCut && t - (this.ibFlowEnd ?? -9) <= win;
+    this.ibFlowOn = !!this.ibFlowChain && real;
+    if (!this.ibFlowOn && !sw) this.ibFlowChain = false;
+  }
+
+  /** 이베리아 이어 긋기 흐름 10/21 판 읽기 (IB_FLOW.detect 'old' — 휘두르기 표시를 스텝마다 그대로 · 앞 휘두르기 빠르기를 안 봄) */
+  updateIbFlowOld(dt) {
+    const win = UNIQUE_ASSIST.afterWindow;
     const t = (this.ibFlowT = (this.ibFlowT ?? 0) + dt);
     const sk = this.skill, sw = !!sk.swinging, v = sk.vel;
     if (sw) {
@@ -3483,7 +3522,7 @@ export class Fighter {
         const stopAngle = (toward * toward) / (2 * brakeAcc);
         // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js). 마무리 찌르기가 겨눔으로 칼을 옮기는 동안(skill.plungePose)은 치는 게 아니라 예전대로 세운다
         const tap = this.skill.tap;
-        const fr = (this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1) * (this.ibFlowOn && IB_FLOW.a ? 1 - IB_FLOW.brake : 1); // 이베리아 이어 긋기 A: 제동을 늦게 (시험)
+        const fr = (this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1) * (this.ibFlowOn && IB_FLOW.a ? 1 - IB_FLOW.brake : 1); // 이베리아 흐르는 긋기: 제동을 늦게 (IB_FLOW.brake — 10/28 0.8 · 확인표 2691)
         if (angle * leadK > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;

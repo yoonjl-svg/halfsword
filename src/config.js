@@ -504,8 +504,13 @@ export const SWING_TURN = { on: false, rate: 30, from: 'windup' };
 // 이베리아 이어 긋기 흐름 A (10/21 — 시험 스위치에서 사장님 'A를 기본 적용해' · 확인표 2109): 이베리아 유파 몸(사람 · AI)이 휘두르기를 이어 갈 때 —
 //  앞 휘두르기가 끝난 뒤 '이어짐 창'(UNIQUE_ASSIST.afterWindow 0.6 s — 게임의 이어짐 기준 하나) 안에 다시 휘두르거나, 휘두르는 채로 손 방향이 90° 넘게 꺾일 때(둥글게 돌리기) —
 //  그 휘두르기 동안과 끝난 뒤 창까지 손목 제동을 '멈출 거리 × releaseMargin' 의 (1 − brake) 몫에서 늦게 시작 → 칼이 서지 않고 다음 긋기로 흐른다 (fighter.js updateIbFlow).
-//  test.html '이베리아 시험' · `?ibFlow=0` = 끔. brake 0.5 는 감독 값 — 사장님 확인 전
-export const IB_FLOW = { a: true, brake: 0.5 };
+//  test.html '이베리아 시험' · `?ibFlow=0` = 끔.
+//  10/28 22:0x 사장님 'A로 해. 대신 확실히 다른 손맛을 위해 흐르는 긋기의 제동을 좀더 늦추고 위력도 그만큼 올려' (docs/decisions.md · 확인표 2690 ~ 2693):
+//   detect 'a' = 진짜 이어 그을 때만 — 휘두르기 끝은 손 목표가 문턱(SKILL.swingSpeed) 밑에 물리 endSteps 스텝 넘게 머물 때(60 Hz 화면 깜빡임 거름) ·
+//    앞 휘두르기의 손 목표 빠르기 최고가 cutSpeed(패드 m/s) 이상일 때만 이어 감(빠른 감기 · AI 준비 손은 안 셈) · 'old' = 10/21 판(`?ibFlowDetect=old`)
+//   brake 0.5 → 0.8(제동을 멈출 거리의 20 % 에서 — 사장님 '좀더 늦추고' · 값은 감독) · power = 흐름이 켜진 채 맞힌 긋기의 칼날 상처 심각도 · 둔타 에너지 ×(combat.js analyze — 찌르기 · 비기 칼은 그대로)
+//   brake 0.8 · power 1.2 · endSteps 2 · cutSpeed 5 — 사장님 확인 전
+export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps: 2, cutSpeed: 5 };
 // 이베리아 날 세우기 시험 (10/22 — 사장님 10/21 23:5x '이베리아 유파가 유독 칼면이 맞는 경우가 많았어 특히 수직베기에서', docs/strike/iberian_flat_hits_2026-10-22.md · 확인표 2167~ · **기본 끔 · 사장님 확인 전**).
 //  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
 //   다른 유파 · 무기는 그대로. 끄면(on false) 판 그대로(같은 float). `?ibEdge=motor` · `?ibEdge=pre` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=ibEdge=motor

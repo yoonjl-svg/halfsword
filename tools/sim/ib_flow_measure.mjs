@@ -16,6 +16,8 @@
 //   fight = 사람 싸움 (playerFight 꼴): 손가락 봇 대 치고 막는 AI(숙련 PROF · OPPS) · 30 s · 칠 때 15 % 탭 찌르기 · 나머지 1 ~ 3 칼 이어 긋기(쉼 0 ~ 0.4 s) ·
 //           상대 칼이 가까이서 빠르면 반응 지연 뒤 0.6 ~ 1.0 s 막기 단추(PlayerParryGuard). 승 · 패 · 무 · 준 / 받은 칼날 상처 심각도 합 · 흐름 켜진 칼 몫
 //           감기는 playerFight 처럼 1.6 패드 m/s(휘두르기 문턱 위) · 4 프레임 쉼 뒤 긋기 — 사람이 빨리 감고 곧장 긋는 꼴(감기도 '앞 휘두르기'로 읽힌다)
+//  10/28 22:0x 사장님 'A로 해 · 제동 더 늦게 · 위력' 뒤: --detect=a|old(IB_FLOW.detect) · --power=1.2(IB_FLOW.power) · 10/28 전 본판 = --detect=old --brake=0.5 --power=1 ·
+//   --variants=on(fight — 끔 판을 한 번만 돌리고 켬만 견줄 때) · 칼마다 hand = 손 목표 빠르기 최고(진짜 긋기 잣대 IB_FLOW.cutSpeed 와 견줌) · held = 고유 공격 강화가 손을 쥠
 //  견줌 시험(이 실행 안에서만 — src 값은 그대로): --brake=0.8(IB_FLOW.brake) · --flowWrist=1.2(흐름 켜진 동안 손목 힘 wristK × 수 — 지금 판엔 없는 몫) ·
 //   --hz=120(pair 만 — 손가락 프레임 빠르기. 60 Hz 는 물리 두 스텝에 한 번 손가락이 움직여 휘두르기 문턱 1.5 m/s 근처에서 휘두르기 표시가 깜빡인다)
 //  사용법: node tools/sim/ib_flow_measure.mjs pair|chain|fight [--w=zweihander] [--seeds=8] [--seed0=1] [--speeds=4,8] [--pauses=0,0.1,0.2,0.3,0.4,0.5,0.8,1.2] [--pats=zwerch,diag,oberUnter]
@@ -60,7 +62,12 @@ const lcg = (seed) => { let s = (seed * 7919 + 17) >>> 0; return () => (s = (Mat
 
 // 견줌 시험 (이 실행 안에서만 — src 값은 그대로): --brake=0.8 = IB_FLOW.brake 를 이 실행에서만 바꿈 · --flowWrist=1.15 = 흐름 켜진 동안 손목 힘(wristK) × 수 (지금 판엔 없는 몫)
 if (args.brake != null) CONFIG.IB_FLOW.brake = +args.brake;
+if (args.power != null) CONFIG.IB_FLOW.power = +args.power; // 10/28 흐름 위력 (기본 1.2 · 1 = 없음)
+if (args.detect != null) CONFIG.IB_FLOW.detect = args.detect; // 10/28 흐름 읽기 'a' (기본) | 'old' (10/21 판)
+// 10/28 전 본판과 견줌: --detect=old --brake=0.5 --power=1
 const FLOW_WRIST = +(args.flowWrist ?? 1);
+const SPF = Math.max(1, Math.round(FRAME / DT)); // 손가락 한 프레임 = 물리 몇 스텝 (chain · fight)
+const VARIANTS = String(args.variants ?? 'off,on').split(',').map((x) => x === 'on'); // fight: 켬 · 끔 가운데 돌릴 것
 function setupPlayer(P) {
   P.skill.level = 0.7;
   P.skill.corr = SKILL.corr;
@@ -226,7 +233,7 @@ function cutTracker(P) {
   let cur = null, lastEnd = null;
   return {
     cuts,
-    start(t, meta) { cur = { t0: t, tEnd: null, prevEnd: lastEnd, flow: 0, tip: 0, tPeak: null, hit: null, sev: 0, n: 0, ...meta }; cuts.push(cur); },
+    start(t, meta) { cur = { t0: t, tEnd: null, prevEnd: lastEnd, flow: 0, hand: 0, held: 0, tip: 0, tPeak: null, hit: null, sev: 0, n: 0, ...meta }; cuts.push(cur); },
     end(t) { if (cur) { cur.tEnd = t; lastEnd = t; } },
     breakChain() { lastEnd = null; },
     step(t) {
@@ -235,6 +242,7 @@ function cutTracker(P) {
       const live = cur.tEnd == null || t < cur.tEnd + 0.4;
       if (live && sp > cur.tip) { cur.tip = sp; cur.tPeak = t - cur.t0; }
       if ((cur.tEnd == null || t < cur.tEnd + 0.3) && P.ibFlowOn) cur.flow = 1;
+      if (cur.tEnd == null) { cur.hand = Math.max(cur.hand, Math.hypot(P.skill.vel.x, P.skill.vel.y)); if (P.skill.uniq?.holdsHand ?? P.skill.uniq?.running) cur.held = 1; } // 손 목표 빠르기 최고 (흐름 읽기의 진짜 긋기 잣대 IB_FLOW.cutSpeed 와 견줌) · 고유 공격 강화가 손을 쥠
     },
     wound(r) {
       if (!cur) return;
@@ -271,7 +279,7 @@ function chainRun(foe, seed, on, dur = 30) {
       tr.breakChain();
       nextChain = Infinity;
     }
-    if ((stepN++ & 1) === 0) {
+    if (stepN++ % SPF === 0) {
       const tg = qTag.shift();
       const fq = queue.shift() ?? [0, 0, false];
       if (tg?.end) tr.end(t);
@@ -334,7 +342,7 @@ function fightRun(opp, seed, on, { dur = 30, prof = 3, delay = 0.15 } = {}) {
     }
     guard.step(DT);
     P.inputActive = guard.active;
-    if ((stepN++ & 1) === 0) {
+    if (stepN++ % SPF === 0) {
       const tg = qTag.shift();
       const fq = queue.shift() ?? [0, 0, false];
       if (tg?.end) tr.end(t);
@@ -365,7 +373,7 @@ function fightRun(opp, seed, on, { dur = 30, prof = 3, delay = 0.15 } = {}) {
       if ((!P.alive || !A.alive) && end === dur) end = G.t + 0.5;
       if (G.t >= end) break;
     }
-    return { opp, seed, on, win: !A.alive && P.alive, lose: !P.alive && A.alive, dealt, recv, taps, t: G.t, cuts: tr.cuts.map((c) => ({ k: c.k, flow: c.flow, tip: c.tip, sev: c.sev })), fired: { ...(uq.stats?.fired ?? {}) } };
+    return { opp, seed, on, win: !A.alive && P.alive, lose: !P.alive && A.alive, dealt, recv, taps, t: G.t, cuts: tr.cuts.map((c) => ({ k: c.k, flow: c.flow, tip: c.tip, sev: c.sev, hand: +c.hand.toFixed(2), held: c.held, pause: c.pause })), fired: { ...(uq.stats?.fired ?? {}) } };
   } finally { G.world.free(); }
 }
 
@@ -423,12 +431,12 @@ if (MODE === 'pair') {
   const opps = String(args.opps ?? 'longsword,uchigatana,rapier').split(',');
   const o = { dur: +(args.dur ?? 30), prof: +(args.prof ?? 3), delay: +(args.delay ?? 0.15) };
   out.runs = [];
-  for (const opp of opps) for (const s of SEEDS) for (const on of [false, true]) {
+  for (const opp of opps) for (const s of SEEDS) for (const on of VARIANTS) {
     const r = fightRun(opp, s, on, o);
     out.runs.push(r);
     console.log(JSON.stringify({ ...r, cuts: undefined, nCuts: r.cuts.length, flow: +mean(r.cuts.map((c) => c.flow)).toFixed(2), dealt: +r.dealt.toFixed(3), recv: +r.recv.toFixed(3), t: +r.t.toFixed(1) }));
   }
-  for (const on of [false, true]) {
+  for (const on of VARIANTS) {
     const R = out.runs.filter((r) => r.on === on);
     const C = R.flatMap((r) => r.cuts);
     console.log(`${on ? 'on ' : 'off'}: ${R.length} 판 · 승 ${R.filter((r) => r.win).length} 패 ${R.filter((r) => r.lose).length} 무 ${R.filter((r) => !r.win && !r.lose).length} · 준 ${f(mean(R.map((r) => r.dealt)), 3)} 받은 ${f(mean(R.map((r) => r.recv)), 3)} · 칼 ${C.length} · 흐름 켜진 칼 ${f(mean(C.map((c) => c.flow)))} (첫 칼 ${f(mean(C.filter((c) => c.k === 0).map((c) => c.flow)))} · 이은 칼 ${f(mean(C.filter((c) => c.k > 0).map((c) => c.flow)))}) · 칼끝 최고 ${f(mean(C.map((c) => c.tip)))}`);
