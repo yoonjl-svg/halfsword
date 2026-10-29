@@ -67,6 +67,7 @@ const p50 = (a) => {
   return s[Math.floor((s.length - 1) / 2)];
 };
 const RD_COMBO = +(process.env.RD_COMBO ?? 0.5); // 풍차 베기 시도 가운데 이어 긋기 사슬 안에서 누르는 몫 (rdBot · 10/29)
+const RD_HELD = +(process.env.RD_HELD ?? 1); // 풍차 베기 누름 동안 손가락 닿음(handHeld) — 게임과 같음 (10/29 20:0x · RD_HELD=0 = 10/29 판 봇: 누르는 동안 손가락이 안 닿은 것으로 셈)
 const OTHER_RD = ['zornhau', 'zwerch', 'zornhauL', 'oberhau'].map((n) => ({ from: TECH_BY_NAME[n].from, path: TECH_BY_NAME[n].path }));
 const APPR = CONFIG.SKILL.recoverSpeed; // 1.2 패드 m/s — 손가락으로 자세를 잡는 빠르기 (게임의 자세로 돌아가기와 같은 수)
 const r3 = (x) => (x == null || !isFinite(x) ? null : +x.toFixed(3));
@@ -237,7 +238,7 @@ function fingerBot(G, P, rnd, { sjit, jit, spd }) {
       P.handOffset.x += f[0];
       P.handOffset.y += f[1];
     }
-    P.handHeld = f[2];
+    P.handHeld = f[2] || (RD_HELD && !!B.hold); // 풍차 베기 길게 누름 동안 손가락이 닿아 있음 (게임 main.js handHeld = activeTouch — 10/29 20:0x: 전엔 거짓이라 쉼 자세 · 휘청이 게임과 달랐음)
     if (Math.abs(f[0]) + Math.abs(f[1]) > 1e-5) P.inputActive = true;
   };
   return B;
@@ -345,11 +346,13 @@ function cavBot(G, P, uq, bot, rnd, R, guard) {
         (uq.stats.rdReach ??= []).push({ pre: c.rr.pre, gap: r3(c.rr.gap), inWin: c.rr.inWin, chainN: c.rr.chainN, tipP50: r3(p50(c.rr.tip)), tipMax: r3(Math.max(0, ...c.rr.tip)), still: c.rr.tip.length ? r3(c.rr.tip.filter((v) => v < 1.5).length / c.rr.tip.length) : null });
       }
       uq.holdInput(true, true, false);
+      bot.hold = true; // 손가락이 닿아 있음 (feed → handHeld)
       c.stick = dist < (MEASURED[R.w] ?? MEASURED.longsword)[0] + 0.1 ? 0 : 0.6;
       if (uq.winding) c.bound = 1;
       const go = uq.winding && dist <= c.releaseAt && (W?.turns ?? 0) >= c.minTurns;
       if (go || (uq.winding && G.t - c.t1 > 4) || (!uq.winding && G.t - c.t1 > UAc.rdHoldTime + 0.3)) {
         uq.holdInput(false, true, false);
+        bot.hold = false;
         c.second = uq.winding ? 1 : 0;
         c.stage = 'tap2';
         c.t2 = G.t;

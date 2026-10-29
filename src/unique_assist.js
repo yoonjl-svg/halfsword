@@ -33,7 +33,7 @@ import { TRADITIONS } from './schools.js';
 import { segDist } from './skill.js';
 import { requestArtReturn, requestArtSnap, requestArtThrust, requestArtFold, requestArtDup, requestArtRedondo, setArtTechOf, iaiBusy } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21) · 제비 베기 되돌림 칼 (10/25 해법 ②) · 칼끝 돌려 빼기 운동학 찌름 (10/28)
 import { perkOff, kitOff } from './skill_kit.js';
-import { windStart, windStep, windEnd } from './iberian_redondo.js'; // 풍차 베기 머리 위 감기 (B4 — 10/29) // 플레이어 스킬트리 몫 (10/21 — 돌려 베기 쌓기 = 이베리아 심화 B6)
+import { windStart, windStep, windEnd, windLoopOf, windRopesBack } from './iberian_redondo.js'; // 풍차 베기 머리 위 감기 (B4 — 10/29) // 플레이어 스킬트리 몫 (10/21 — 돌려 베기 쌓기 = 이베리아 심화 B6)
 
 // ── 고유 동작 표 (디렉터 안 → 사장님 확정 10/13 22:3x. 바뀌면 여기 한 곳만 고친다) ──
 //  유파마다 넷 = 발 기술 1 · 공유 2 · 대표 1 (10/21 통폐합으로 둘~셋 — 아래 머리말). stage = 단계(1~4 — AI 는 숙련도로 거른다: 아래 aiUniqueStages · 플레이어는 스킬트리 칸마다 하나 — 10/21 skill_tree_data.js u 칸). name =schools.js 그 유파 unique 의 이름(path 가 있으면 그 이름의 길을 빌림).
@@ -589,6 +589,7 @@ export class PlayerUniqueAssist {
     const f = this.f;
     const H = this.hold;
     const P = this.press;
+    if (H.ropes) this.ropesBack(); // 감기에 뗀 밧줄 다시 (10/29 20:0x — 아래 ropesBack)
     if (H.fade > 0 && !f.iai && !f.iaiReq && !(f.iaiHoldT > 0) && !(f.iaiFade > 0)) {
       // 그만둔 감기의 덧씌우기 칸을 0.12 s 에 내려놓음 (탭 찌르기 · 길목 한 칼 내려놓기와 같은 빠르기)
       H.fade = Math.max(0, H.fade - dt);
@@ -634,6 +635,15 @@ export class PlayerUniqueAssist {
     this.windBegin();
   }
 
+  /** 감기에 뗀 손목 원뿔 · 칼 어깨 면 밧줄 (10/29 20:0x 휘청 고침 — iberian_redondo.js windStart): 내려침 운동학 칼이 끝나고 · 그만둔 팔의 덧씌우기 칸을 다 내려놓은 뒤 다시 건다 */
+  ropesBack() {
+    const f = this.f;
+    const H = this.hold;
+    if (H.st === 'wind' || f.iai || f.iaiReq || H.fade > 0) return;
+    windRopesBack(f, H.ropes);
+    H.ropes = null;
+  }
+
   windBegin() {
     const f = this.f;
     const H = this.hold;
@@ -642,6 +652,10 @@ export class PlayerUniqueAssist {
     H.fade = 0;
     H.windT = 0;
     if (this.cur) this.closeStroke(this.t);
+    if (H.ropes) {
+      windRopesBack(f, H.ropes); // 앞 감기에 뗀 밧줄이 아직이면 먼저 되걸고 (windStart 가 지금 있는 것을 적어 다시 뗌)
+      H.ropes = null;
+    }
     windStart(f);
     this.stats.winds = (this.stats.winds ?? 0) + 1;
   }
@@ -664,7 +678,11 @@ export class PlayerUniqueAssist {
 
   /** 감기 그만둠 (식힘 없음 · 흐름 셈 없음) — 팔 · 칼은 서보로 (덧씌우기 칸 0.12 s 에 내려놓음) */
   windCancel(why) {
-    windEnd(this.f);
+    this.hold.ropes = windEnd(this.f, true) ?? this.hold.ropes; // 뗀 밧줄은 덧씌우기 칸을 다 내려놓은 뒤 (holdTick)
+    if (!this.f.alive || !this.f.armed) {
+      windRopesBack(this.f, this.hold.ropes); // 죽음 · 칼 잃음: 곧장 (몸이 서보로 돌아오지 않음 — 어깨 면 밧줄만 · 칼이 없으면 손목 원뿔은 안 검)
+      this.hold.ropes = null;
+    }
     this.hold.st = this.press.down ? 'spent' : 'idle';
     this.hold.fade = 0.12;
     this.stats.windCancel ??= {};
@@ -677,7 +695,7 @@ export class PlayerUniqueAssist {
     const e = this.holdE;
     const W = f.rdWind;
     const turns = W?.turns ?? 0;
-    windEnd(f);
+    this.hold.ropes = windEnd(f, true) ?? this.hold.ropes; // 뗀 밧줄은 내려침 운동학 칼이 끝난 뒤 (holdTick — 머리 위 → 왼 어깨 길도 어깨 면 한도 밖을 지남)
     this.hold.st = this.press.down ? 'spent' : 'idle'; // 기력이 바닥나 낸 칼: 손가락을 뗄 때까지 다시 감지 않음
     this.hold.fade = 0.12;
     const U = e.U;
@@ -688,7 +706,7 @@ export class PlayerUniqueAssist {
     const chain = !!mode && IB_FLOW.a && turns >= 1 && f.swordArt?.tradition === 'iberian' && !kitOff(f, 'ibFlow');
     const n = !chain ? 0 : mode === 'inside' && this.hold.chainN >= 0 ? this.hold.chainN + 1 : 1;
     f.ibStrike = chain ? { n, t0: this.t, newChain: !(mode === 'inside' && this.hold.chainN >= 0) } : null; // fighter.js updateIbFlow 가 칼이 끄는 동안 흐름을 켬 · newChain = 이 칼이 새 사슬의 첫 칼(세 칼 셈 — 10/29 14:2x)
-    const ok = UA.enhance > 0 && requestArtRedondo(f, { share: specialShare(e.name), maxT: UA.rdSnapTime, tech: U.name, arc: UA.rdArc, loop: UA.rdLoop });
+    const ok = UA.enhance > 0 && requestArtRedondo(f, { share: specialShare(e.name), maxT: UA.rdSnapTime, tech: U.name, arc: UA.rdArc, loop: windLoopOf(W?.M) }); // '먼저 머리 위로' 자리 = 이 감기 꼴의 고리 (어깨 꼴은 10/29 판 고리 — 10/29 20:0x)
     if (!ok) {
       f.ibStrike = null;
       this.stats.windCancel ??= {};

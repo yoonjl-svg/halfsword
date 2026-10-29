@@ -448,7 +448,11 @@ function iaiReach(f, I, P, u) {
   return { H: S.add(r.multiplyScalar((d + w * (Lf - d)) / d)), D: P.D };
 }
 
-/** 휩쓸기 동안 손목 원뿔·칼 어깨 면 밧줄을 잠깐 뗀다 (머리 위 고리는 그 한도를 넘는 자리를 지나 — 밧줄이 매 스텝 팔·가슴을 잡아채 몸이 50° 넘게 기울었다). 끝나면 다시 건다 */
+/** 휩쓸기 동안 손목 원뿔·칼 어깨 면 밧줄을 잠깐 뗀다 (머리 위 고리는 그 한도를 넘는 자리를 지나 — 밧줄이 매 스텝 팔·가슴을 잡아채 몸이 50° 넘게 기울었다). 끝나면 다시 건다
+ *  (풍차 베기 감기도 같은 까닭으로 뗀다 — iberian_redondo.js windStart · windEnd · 10/29 20:0x 휘청 고침) */
+export function armRopes(f, on) {
+  return ropes(f, on);
+}
 function ropes(f, on) {
   if (!on) {
     if (f.gripCone) for (const j of f.gripCone) f.world.removeImpulseJoint(j, true);
