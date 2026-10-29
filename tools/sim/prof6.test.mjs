@@ -45,3 +45,14 @@ test('시트 무기: 미나미 쿠사나기 · 광기의 미나미 무라마사 
     assert.deepEqual(Object.keys(C[id].ai.persona.proficiency), ['japanese'], id);
   }
 });
+
+test("무기와 어긋나던 글 · 겉모습 (사장님 10/30 00:4x '… 최소 수정으로 모순만 덜어내는 방식으로 고쳐')", () => {
+  for (const id of ['minami', 'minami_mad']) assert.ok(C[id].lines.losing.includes('칼이 짧아서가 아니에요. 제가 서툴러서예요.'), id);
+  assert.ok(C.silver_wanderer.school.startsWith('기존 우치가타나와') && C.silver_wanderer_mad.school.startsWith('기존 모노호시자오와'));
+  assert.ok(!C.silver_wanderer.backstory.includes('긴 칼'));
+  assert.equal(C.silver_wanderer.look.daraishiScabbardLen, 0.75);
+  assert.equal(C.silver_wanderer_mad.look.daraishiScabbardLen, undefined, '광기의 다라이시 검집 0.94 그대로');
+  const madText = ['school', 'signatureMoves', 'favoriteGuards', 'movementNotes', 'weaknesses'].map((k) => C.samira_mad[k]).join(' ');
+  assert.ok(!/리볼버|총구|장전|사격/.test(madText), madText);
+  assert.ok(C.samira.school.includes('리볼버'), '낮의 마야 글 그대로');
+});
