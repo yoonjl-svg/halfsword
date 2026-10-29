@@ -44,6 +44,7 @@ export const SAENGSA_TEXT = Object.freeze({
   busy: '진행 중인 대회가 있습니다.',
   saveFail: '저장하지 못했습니다. 다시 시도해 주십시오.',
   notReady: '지금은 이 경기를 할 수 없습니다.',
+  notPlayed: '경기를 그만두었습니다. 다시 입장할 수 있습니다.', // 실제 싸움을 정지 창에서 그만둠 — 결과 없음(지지 않음)
   ready: '입장 가능',
   nextCup: '다음 대회', // 시험판(SAENGSA.testMode) — 대회가 끝나면 바로 다음 대회 (사장님 10/29 17:5x)
 });

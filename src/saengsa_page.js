@@ -5,7 +5,7 @@
 //  ② 경기 화면(경기 칸을 누름 — 화면 전체를 덮는 층): 상대 팀 카드 셋 · 내 팀 카드 셋(얼굴 · 이름 · 체력 막대 · 부상 · 무기 · 다섯 유파 숙련도 · 죽은 사람은 흐림).
 //     내 경기면 내 카드를 한두 장 골라 '전투 입장' — 상대는 가린 채 함께 고르고 입장 때 함께 보인다(사장님 10/29 14:5x). 결과는 카드 위에 그대로(경기 뒤 체력 · 부상 · 죽음 · 출전 표시).
 //     '무기 배정'(사장님 10/29 18:2x 경기마다 내가 배정): 살아 있는 내 팀 세 사람마다 가진 무기 한 자루 — 카드에 바로 보이고 '전투 입장' 때 저장.
-//     1단계는 엔진이 없어 빠른 셈으로 끝난다(saengsa_engine.js — 2단계 자리).
+//     내 경기는 실제 2:2 싸움(saengsa_engine.js — game.launchSaengsa · 나섬 = 내 몸 · 동료만 = 지켜봄) · 엔진이 없으면 빠른 셈 · 상대끼리 경기는 빠른 셈.
 import uiStyle from './entrance_ui.css?inline';
 import lobbyStyle from './lobby.css?inline';
 import sgStyle from './saengsa.css?inline';
@@ -288,7 +288,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
     busy = true;
     try {
       let res = null;
-      if (engine.real) { res = await engine.play(setup); if (!res) return; } // 2단계: 실제 싸움 (그만두고 나오면 결과 없음)
+      if (engine.real) { res = await engine.play(setup); if (!res) { status(T.notPlayed); return; } } // 실제 싸움 (saengsa_engine.js — 그만두고 나오면 null = 아직 하지 않은 경기: 지지 않음 · 적지 않음)
       const result = playMine(open.id, open.picks, now(), res, { arm });
       if (!result) { status(T.saveFail); return; }
       render();

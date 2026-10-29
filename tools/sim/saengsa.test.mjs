@@ -479,3 +479,23 @@ test('부러진 무기는 대회 끝까지 · 빠른 셈 부러짐 · 레전드�
   assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], seed: 6, data, cfg: { ...cfgT, keepBrokenAfterCup: true } }).ok);
   assert.deepEqual([S.readSaengsa().current.broken, S.readSaengsa().current.teams[0].members[0].broken], [['w1'], true]);
 });
+
+test('엔진 잇기: 내 경기 = game.launchSaengsa (스위치 SAENGSA.engine.mine) · 없으면 빠른 셈 · 판 사람에 broken', async () => {
+  const { makeEngine } = await import('../../src/saengsa_engine.js');
+  let got = null;
+  const game = { launchSaengsa: async (setup) => { got = setup; return null; } };
+  assert.equal(makeEngine(game).real, true);
+  assert.equal(makeEngine(game, { ...SAENGSA, engine: { mine: false, ai: false } }).real, false);
+  assert.equal(makeEngine({}).real, false);
+  assert.equal(await makeEngine({}).play({}), null);
+  const t = make(7);
+  R.advance(t, at(30, 10));
+  t.broken = [t.teams[0].members[1].weapon];
+  t.teams[0].members[1].broken = true;
+  const m = R.myMatch(t);
+  const setup = R.matchSetup(t, m, ['0-1'], at(30, 10));
+  assert.equal(setup.control, 'watch');
+  assert.equal(await makeEngine(game).play(setup), null); // 그만두기 = null (적지 않음)
+  assert.equal(got.sides[setup.mineSide][0].broken, true);
+  assert.equal(R.matchSetup(t, m, ['0-0', '0-1'], at(30, 10)).control, 'player');
+});
