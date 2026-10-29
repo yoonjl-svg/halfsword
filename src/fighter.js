@@ -49,6 +49,7 @@ const groups = (member, filter) => (member << 16) | filter;
 const torsoBit = (i) => (i === 0 ? 256 : 512);
 const armSBit = (i) => (i === 0 ? 1024 : 2048);
 const TORSO_PARTS = new Set(['pelvis', 'abdomen', 'chest', 'thighF', 'thighB']);
+const ARM_JOINT = new Set(['uarmS', 'farmS', 'uarmO', 'farmO']); // 두 팔 관절 (armsPlaced — 대본이 놓는 팔)
 // ── 팔·다리 절단 (COMBAT.limbSever, 설계 docs/strike/limb_sever_design_2026-10-07.md §2) ──
 //  베인 부위 → 뗄 수 있는 관절 후보. 'own' = 그 부위 자신의 관절(앵커2 가 부위 틀), 'child' = 아래 부위의 관절(앵커1 이 부위 틀).
 //  팔꿈치 = farm*의 관절, 어깨 = uarm*의 관절, 무릎 = shin*의 관절, 엉덩이 = thigh*의 관절. 손목·발목은 안 한다(몸체가 손·발을 따로 안 가짐).
@@ -2887,6 +2888,7 @@ export class Fighter {
   driveJoints() {
     const legsMus = Math.max(0.15, this.muscle);
     const inv = this.lastDt > 0 ? 1 / this.lastDt : 0;
+    const placed = this.armsPlaced(); // 풍차 베기 감기 (10/29 20:0x 휘청 고침): 대본이 놓은 두 팔은 목표 빠르기 0 — 아래 armsPlaced
     const armBoost = (this.armBoost = plungeBoost(this, 'strikeArm')); // 10/13 FINISH.lift (finish.js) — 중력 보상(manualMuscle)은 이 배율을 빼고 그대로
     for (const j of this.joints) {
       const n = j.name;
@@ -2927,7 +2929,7 @@ export class Fighter {
           mErr *= hill(Math.sign(_rv.z - _cur.z || 1) * wRel, this.weaponCfg.elbowVmax * (this.stamina.exhausted || (STAMINA.attackTempo && !this.stamina.guarding && !STAMINA.tempoCaps) ? 1 : this.stamina.motorSpeed));
         }
         const tz = _cur.z + THREE.MathUtils.clamp(_rv.z - _cur.z, -mErr, mErr);
-        const vz = THREE.MathUtils.clamp((_rv.z - prev.z) * inv, -15, 15);
+        const vz = placed && ARM_JOINT.has(n) ? 0 : THREE.MathUtils.clamp((_rv.z - prev.z) * inv, -15, 15);
         raw.jointConfigureMotor(j.joint.handle, HINGE_AXIS, tz, vz, k, d);
       } else {
         const chainY = BODY.chain === 'legs' && (n === 'thighF' || n === 'thighB' || n === 'abdomen' || n === 'chest'); // R2′ 비틀기 y 축 (124·125)
@@ -2937,7 +2939,7 @@ export class Fighter {
             this.chainAxisY(j, raw, t - _cur.y, t, k, d, mus);
             continue;
           }
-          const v = THREE.MathUtils.clamp((_rv[ax] - prev[ax]) * inv, -15, 15);
+          const v = placed && ARM_JOINT.has(n) ? 0 : THREE.MathUtils.clamp((_rv[ax] - prev[ax]) * inv, -15, 15);
           raw.jointConfigureMotor(j.joint.handle, MOTOR_AXES[i], t, v, k, d);
         }
       }
@@ -3604,6 +3606,8 @@ export class Fighter {
     }
     if (STAMINA.attackTempo && !this.stamina.guarding && STAMINA.tempoWristDamping && this.stamina.speed > 0) damp *= this.stamina.motorSpeed;
     torque.addScaledVector(wSwing.sub(wAim), -damp);
+    const placed = this.armsPlaced(); // 풍차 베기 감기 (10/29 20:0x 휘청 고침): 대본이 놓은 칼 — 겨눔 · 감쇠 · 날 비틀기 힘 없음 (칼 무게 버팀만 — 아래 _mG) · armsPlaced
+    if (placed) torque.set(0, 0, 0);
     // 칼 무게도 같은 힘 안에서 버틴다 (칼끝이 처지지 않게)
     this.gravityTorque([sword], forearm, 0.13, _mG).multiplyScalar(-Math.min(1, STAMINA.attackTempo && !this.stamina.guarding && STAMINA.tempoGravity ? str / this.stamina.power : str));
     const tempoGravity = STAMINA.attackTempo && !this.stamina.guarding && STAMINA.tempoGravity && this.stamina.power < 1;
@@ -3647,7 +3651,7 @@ export class Fighter {
       twist = new THREE.Vector3().crossVectors(flat, flatTarget).projectOnVector(blade).multiplyScalar(4 * tsE);
       twist.addScaledVector(wTwist, -0.12 * tsE);
     } else twist = this.edgeTwist(em, blade, flat, flatTarget, w.dot(blade));
-    torque.add(twist);
+    if (!placed) torque.add(twist);
     sword.addTorque(vecArg(torque), true);
     // 손목 근육의 반작용은 아래팔로 간다. 단, 아래팔 길이 방향으로 비트는 몫은
     // 아래팔이 너무 가늘어(관성이 작아) 받으면 팽이처럼 돈다 → 팔뚝 뼈(요골·척골)가 그러듯
@@ -3779,6 +3783,19 @@ export class Fighter {
    * 가슴 기준 좌표에서 계산하므로, 허리가 틀어져도 손은 목표를 향한다.
    */
   /** 비기를 실행하는 중인가 (경직 빼고) — 그동안 칼 팔 역운동학이 팔 끝까지 편다 (SECRET.secretReach, 10/12). 플레이어 = skill.sec · AI = ai.js 가 스텝마다 적는 secretActing · 발도·연환·휩쓸기 = iai */
+  /**
+   * 대본이 두 팔 · 칼을 스텝마다 놓는 중인가 (풍차 베기 감기 f.rdWind — iberian_redondo.js windStep · UNIQUE_ASSIST.rdSteady · 사장님 10/29 20:0x '처음 발동을 시작할 때 캐릭터가 크게 휘청거려 … 반드시 고쳐야'):
+   *  놓인 팔 · 칼은 빠르기가 가슴 빠르기로 되돌려진다(secret_instant.js placeIai — 놓은 자리의 차로 두면 팔 · 칼 운동량이 몸을 밀어 넘어뜨림 · 기록 §2).
+   *  그런데 관절 근육(driveJoints)은 목표가 도는 빠르기(감는 길 · 팔꿈치 돌림)를, 손목(driveSword)은 겨눔이 도는 빠르기 · 날 비틀기를 따라가려고 힘을 내 —
+   *  그 힘에 팔 · 칼이 얻은 빠르기는 다음 스텝 놓기에 지워지고 반작용만 가슴에 남는다(감는 칼을 따라 도는 헛힘 → 몸이 원을 그리며 흔들리고 걸으면 발 밖으로 벗어남 · 기록 §8).
+   *  빈손(offHand)도 겨눔(aimDirW) 쪽으로 빈팔 목표를 다시 풀어 놓인 빈팔과 어긋난 근육 힘(어긋남 최대 80° 넘음 — 손이 원을 그리는 고리)을 냈다.
+   *  손목 교정(wristGuardAim)도 이 몸의 겨눔을 놓인 칼에서 최대 20° 비켜 겨눔 힘(aimStiffness)이 칼을 놓인 자리에서 끌어냈다(안 A 고리 — 칼이 뒤로 누운 자리에서 몸이 뒤로 21° 젖혀짐).
+   *  켠 동안: 두 팔 관절 목표 빠르기 0 · 손목 겨눔 · 감쇠 · 날 비틀기 힘 없음(칼 무게 버팀만) · 빈팔 목표 = 놓인 칼자루 끝 (자리 · 빈손 쥠 · 몸 · 다리 그대로)
+   */
+  armsPlaced() {
+    return !!this.rdWind && UNIQUE_ASSIST.rdSteady > 0;
+  }
+
   secretReaching() {
     if (!SECRET.secretReach) return false;
     const sec = this.skill?.sec;
@@ -3886,7 +3903,7 @@ export class Fighter {
     // 빈손은 칼자루가 "있어야 할 곳"(칼끝이 향해야 할 방향 기준)을 향해 뻗는다 → 두 손이 칼자루를 밀고 당겨
     //  (손 사이 지렛대) 칼을 돌린다. 손목 힘이 사람 수준이라도 칼끝이 흔들리지 않는 이유
     const gripAim = rg ? _gw.set(0, rg.g, 0).applyQuaternion(_q1).add(_v7.set(st.x, st.y, st.z)).addScaledVector(this.aimDirW, rg.gOff - rg.g) : _gw.copy(this.aimDirW).multiplyScalar(along).add(_v7.set(st.x, st.y, st.z));
-    this.offArmIK(gripAim);
+    this.offArmIK(this.armsPlaced() ? pommel : gripAim); // 대본이 놓은 칼(풍차 베기 감기 — armsPlaced)은 놓인 칼자루 끝으로 (놓은 빈팔과 같은 풀이 — 겨눔 쪽 gripAim 으로 풀면 놓인 팔과 어긋난 근육 힘이 가슴에 남음 · 10/29 20:0x)
     // 빈손 위치 (아래팔 끝)
     const fo = this.bodies.farmO;
     rot(fo, _q2);

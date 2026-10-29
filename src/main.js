@@ -129,6 +129,8 @@ if (['v1', 'parry'].includes(params.get('deSecret'))) CONFIG.SECRET.deSecret = p
 // 독일 죽음의 일격 (10/22 — 사람 독일 비기, src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md): `?deMord=0` = 옛 판(deSecret) · `?mordPress=0.6` 누르기 시간 비교 ·
 //  `?mordGrip=hilt` 쥠 그대로 폼멜 판 · `?mordOver=1` 넘어 들어감 규칙 (사장님 확인 전)
 if (params.has('deMord')) CONFIG.SECRET.deMord = +params.get('deMord') ? 1 : 0;
+if (['close', 'press'].includes(params.get('mordRule'))) CONFIG.SECRET.mordRule = params.get('mordRule'); // 사람 모르트슐라크 조건 (10/29 20:0x — close 붙은 거리 2 s · press 밀치기 누르기 옛 판)
+if (params.has('mordClose') && +params.get('mordClose') > 0) CONFIG.SECRET.mordCloseN = +params.get('mordClose'); // 붙은 거리 n (m — 없으면 CLOSE.reach)
 if (+params.get('mordPress') > 0) CONFIG.SECRET.mordPress = CONFIG.realS(+params.get('mordPress')); // 주소 값 = 실제 초 (표준 시간 10/25 — 아래 시간 · 빠르기 주소 인자도 같음)
 if (params.has('mordGrace') && +params.get('mordGrace') >= 0) CONFIG.SECRET.mordGrace = CONFIG.realS(+params.get('mordGrace')); // 모르트슐라크 누르기 끊김 너그러움 (10/25 23:1x 사장님 · 10/27 21:4x 0.4 s — 기본 0.4 s · 주소 값 = 실제 초 · `?mordGrace=0` = 끊기면 셈 0)
 if (params.has('armAtFight')) CONFIG.SECRET.armAtFight = +params.get('armAtFight') ? 1 : 0; // 비기 무장 시계를 공격이 풀린 때부터 (10/27 23:0x 사장님 결정 — 기본 1 · `?armAtFight=0` = 판 시작부터)
@@ -315,14 +317,29 @@ for (const k of ['tsuRuler', 'tsuSnap', 'tsuAim', 'tsuBand']) if (params.has(k))
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
 for (const k of ['imbroReach', 'cavTap', 'cavSnap']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
+if (params.has('cavFrom') && +params.get('cavFrom') >= 0) CONFIG.UNIQUE_ASSIST.cavFrom = CONFIG.realS(+params.get('cavFrom')); // 칼끝 돌려 빼기 탭 창 처음 (실제 초 — 기본 0.2 · 10/29 20:0x · 옛 판 0.6)
 if (params.has('cavTo') && +params.get('cavTo') > 0) CONFIG.UNIQUE_ASSIST.cavTo = CONFIG.realS(+params.get('cavTo')); // 칼끝 돌려 빼기 탭 창 끝 (실제 초 — 기본 1.2 · 사장님 10/28 01:1x)
 if (params.has('lianTap')) CONFIG.UNIQUE_ASSIST.lianTap = +params.get('lianTap') ? 1 : 0; // 사람 날개 접기 탭 (사장님 10/28 01:2x — 물러나며 탭 · 기본 1)
 if (params.has('lianStep') && +params.get('lianStep') >= 0) CONFIG.UNIQUE_ASSIST.lianStep = +params.get('lianStep'); // 사람 날개 접기 앞 걸음 (m — 기본 0.45 · 사장님 10/29 14:3x)
 if (params.has('specialCooldown')) CONFIG.UNIQUE_ASSIST.specialCooldown = CONFIG.realS(Math.max(0, +params.get('specialCooldown') || 0)); // 특수 공격 공통 식힘 (실제 초 — 기본 6 · 0 = 끔 · 사장님 10/28 02:0x)
-if (params.has('secretCooldown')) CONFIG.UNIQUE_ASSIST.secretCooldown = CONFIG.realS(Math.max(0, +params.get('secretCooldown') || 0)); // 유파 비기 식힘 (실제 초 — 기본 10 · 0 = 끔 · 사장님 10/29 17:5x · secret.js PlayerSecretWatch)
+/** `?secretUses=1,chinese:3` → { default: 1, chinese: 3 } (숫자 하나 = default · 'inf' · 'off' = 끝없음 — 10/29 19:5x) */
+function parseSecretUses(v) {
+  const out = { default: 1 };
+  for (const p of String(v ?? '').split(',')) {
+    const [k, n] = p.includes(':') ? p.split(':') : ['default', p];
+    const x = n === 'inf' || n === 'off' ? Infinity : +n;
+    if (k.trim() && (x === Infinity || x >= 0)) out[k.trim()] = x;
+  }
+  return out;
+}
+if (params.has('specialCoolFrom') && ['free', 'motion', 'fire'].includes(params.get('specialCoolFrom'))) CONFIG.UNIQUE_ASSIST.specialCoolFrom = params.get('specialCoolFrom'); // 특수 공격 식힘을 세기 시작하는 때 (기본 free — 몸이 다시 자유로울 때 · motion 동작 끝 · fire 나간 순간 · 10/29 19:5x)
+if (params.has('secretUses')) CONFIG.UNIQUE_ASSIST.secretUses = parseSecretUses(params.get('secretUses')); // 유파 비기 판당 쓸 수 (기본 1 · 동방 3 · 'inf' = 끝없음 · 사장님 10/29 19:5x)
 if (params.has('dupTap')) CONFIG.UNIQUE_ASSIST.dupTap = +params.get('dupTap') ? 1 : 0; // 사람 겹치기 탭 (사장님 10/28 01:2x — 맞물린 채 탭 · 기본 1)
 if (params.has('rdHold')) CONFIG.UNIQUE_ASSIST.rdHold = +params.get('rdHold') ? 1 : 0; // 사람 풍차 베기 길게 누름 (이베리아 B4 — 사장님 10/29 · 기본 1)
 if (params.has('rdEdge')) CONFIG.UNIQUE_ASSIST.rdEdge = +params.get('rdEdge') < 0 ? -1 : 1; // 감는 칼 날 쪽 (기본 −1 — 사장님 확인 전)
+if (params.has('rdWind')) CONFIG.UNIQUE_ASSIST.rdWindMode = ['spin', 'slowSpin', 'shoulder'].includes(params.get('rdWind')) ? params.get('rdWind') : 'spin'; // 풍차 베기 감기 꼴 (사장님 10/29 20:0x 두 안 — 기본 'spin' · 안 A 'slowSpin' · 안 B 'shoulder' · 사장님 확인 전)
+if (params.has('rdSteady')) CONFIG.UNIQUE_ASSIST.rdSteady = +params.get('rdSteady') ? 1 : 0; // 풍차 베기 감기 휘청 고침 (10/29 20:0x — 기본 1 · 0 = 10/29 판)
+if (params.has('rdRamp')) CONFIG.UNIQUE_ASSIST.rdRamp = +params.get('rdRamp') ? 1 : 0; // 감기 첫머리 도는 빠르기 부드럽게 (10/29 20:0x — 기본 1)
 if (params.has('ibChain')) CONFIG.IB_FLOW.chainStack = +params.get('ibChain') ? 1 : 0; // 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:4x · 01:5x · 기본 1)
 if (params.has('ibFreeEvery')) CONFIG.IB_FLOW.freeEvery = Math.max(0, Math.round(+params.get('ibFreeEvery') || 0)); // 이어지는 흐름 — 사슬 세 칼마다 기력 0 (사장님 10/29 14:2x · 기본 3 · 0 = 끔)
 if (params.has('ibWindChain')) CONFIG.IB_FLOW.windmillChain = ['simple', 'inside'].includes(params.get('ibWindChain')) ? params.get('ibWindChain') : 0; // 풍차 베기를 이어 그은 칼 하나로 셈 (사장님 10/29 01:5x · 08:3x 'simple' — 기본 'simple' · 'inside' 견줌 · 0 끔)

@@ -9,7 +9,7 @@
 //   플레이어는 검술 풀이의 measure(같은 꾸러미 값)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, SKILL, BIND, UNIQUE_ASSIST, realS } from './config.js';
+import { SECRET, SKILL, BIND, CLOSE, UNIQUE_ASSIST, realS } from './config.js';
 import { TRADITIONS, playerSecretDef } from './schools.js';
 import { Senses } from './ai_sense.js';
 import { segDist } from './skill.js';
@@ -709,6 +709,24 @@ export function chainRange(d, view) {
   return d <= view.reach + 0.1 && d >= view.clinch - 0.5;
 }
 
+/**
+ * 유파 비기 판당 쓸 수 (사장님 10/29 19:5x '비기는 쿨타임을 없애고 판당 1회만 쓸 수 있게 하자.(동방 격살은 3회)' · 19:4x 'AI의 모든 쿨타임은 사람과 맞춰.' — config UNIQUE_ASSIST.secretUses):
+ *  그 몸 손에 든 무기 유파(swordArt.tradition)의 수 · 없으면 default · 표가 없으면 끝없음. 셈은 몸(fighter.secretUsed — 판마다 새 Fighter)에 — 사람 창(PlayerSecretWatch) · AI(ai.js) · AI 가 읽는 사람 고노센 준비(gnsWatch) 같은 칸
+ */
+export function secretUsesOf(f) {
+  const U = UNIQUE_ASSIST.secretUses;
+  if (!U) return Infinity;
+  return U[f?.swordArt?.tradition] ?? U.default ?? Infinity;
+}
+/** 이 판에 남은 비기 수 */
+export const secretLeft = (f) => Math.max(0, secretUsesOf(f) - (f?.secretUsed ?? 0));
+/** 이 판 비기를 다 썼나 */
+export const secretSpent = (f) => secretLeft(f) <= 0;
+/** 비기가 나감 — 한 번 셈 (사람: PlayerSecretWatch.update 가 새 실행을 본 때 · AI: 비기 실행을 건 때) */
+export function useSecret(f) {
+  f.secretUsed = (f.secretUsed ?? 0) + 1;
+}
+
 // ─────────────────────────────────────────────────────────────
 //  플레이어 비기 창 (main.js 가 물리 스텝마다 부른다 — 시뮬 도구에는 없다)
 //   내 무기 유파의 비기 조건이 차면 SECRET.playerWindow 초 동안 창이 열린다. 그 안에 공격 입력이 오면 main.js 가
@@ -739,19 +757,12 @@ export class PlayerSecretWatch {
     this.prevFoePain = foe.pain;
     this.opened = 0; // 창이 열린 수 (재기)
     this.riso = this.S?.when === 'risoluto' ? new RisolutoWatch(me, foe) : null; // 이탈리아 거침없이 나아가 찌르기 (10/22 — italian_risoluto.js)
-    this.t = 0; // 이 창의 시계 (update 의 dt 합 — 비기 식힘)
-    this.coolT = null; // 비기가 마지막으로 나간 때 (사장님 10/29 17:5x '유파별 비기는 쿨타임 10초' — UNIQUE_ASSIST.secretCooldown · 특수 공격 식힘 coolT 와 같은 틀)
     this.secRun = me.skill?.sec ?? null; // 지난 스텝의 비기 실행(me.skill.sec) — 새 실행이 보이면 그때 비기가 나간 것 (창을 만들 때 이미 돌던 실행은 이 창에서 나간 것이 아님)
   }
 
-  /** 비기 식힘 중인가 (10/29 17:5x — 나간 순간부터 UNIQUE_ASSIST.secretCooldown · 0 = 끔) */
-  cooling(now = this.t) {
-    return this.coolT != null && UNIQUE_ASSIST.secretCooldown > 0 && now - this.coolT < UNIQUE_ASSIST.secretCooldown;
-  }
-
-  /** 식힘 남은 초 (0 = 다 식음 — 읽기만 · 재는 도구 · 앞으로 화면) */
-  coolLeft(now = this.t) {
-    return this.coolT == null ? 0 : Math.max(0, UNIQUE_ASSIST.secretCooldown - (now - this.coolT));
+  /** 이 판에 남은 비기 수 (사장님 10/29 19:5x 판당 1회 · 동방 격살 3회 — UNIQUE_ASSIST.secretUses · 읽기만 · 재는 도구 · 앞으로 화면) */
+  get left() {
+    return secretLeft(this.me);
   }
 
   /** 판정 쪽 간격 (검술 풀이의 꾸러미 값 — AI 와 같은 수) */
@@ -765,16 +776,15 @@ export class PlayerSecretWatch {
   update(dt, busy) {
     const me = this.me;
     const foe = this.foe;
-    this.t += dt;
-    // 비기 식힘 (사장님 10/29 17:5x '유파별 비기는 쿨타임 10초' — UNIQUE_ASSIST.secretCooldown · 특수 공격 식힘과 같은 틀): 비기가 나간 순간(skill.secret 이 받아 me.skill.sec 에 새 실행이 걸린 때 —
-    //  창을 썼어도 skill.secret 이 받지 않았으면 아님)부터 그 비기의 창 · 조건은 없는 것 = 비기가 도는 동안과 같은 '바쁨'(창을 새로 열지 않음 · 무장 · 누르기 셈 · 덮음 셈 · 격살 기다림이 안 걸림 ·
-    //  고노센 웅크림도 풀림) — 그동안 공격 입력은 보통 공격. 나간 때 = 이 스텝 앞(main.js 입력 길 · 미리 받은 입력 모두 지난 update 와 이 update 사이에 낸다) → this.t − dt
+    // 비기 판당 쓸 수 (사장님 10/29 19:5x '비기는 쿨타임을 없애고 판당 1회만 쓸 수 있게 하자.(동방 격살은 3회)' — UNIQUE_ASSIST.secretUses · 10/29 17:5x 의 식힘 10 s 를 바꿈):
+    //  비기가 나간 때(skill.secret 이 받아 me.skill.sec 에 새 실행이 걸린 때 — 창을 썼어도 skill.secret 이 받지 않았으면 아님) 한 번 셈(몸 fighter.secretUsed — 판마다 새 몸).
+    //  다 쓰면 그 판엔 그 비기의 창 · 조건은 없는 것 = 비기가 도는 동안과 같은 '바쁨'(창을 새로 열지 않음 · 무장 · 누르기 셈 · 덮음 셈 · 격살 기다림이 안 걸림 · 고노센 웅크림도 풀림) — 공격 입력은 보통 공격
     const run = me.skill?.sec ?? null;
-    if (run && run !== this.secRun) this.coolT = this.t - dt;
+    if (run && run !== this.secRun) useSecret(me);
     this.secRun = run;
-    if (this.cooling()) {
+    if (secretSpent(me)) {
       busy = true;
-      this.open = null; // 식힘 중 창은 없음 (보통 길에선 이미 닫혀 있음 — fire 가 닫고 냄)
+      this.open = null; // 다 쓴 판엔 창이 없음 (보통 길에선 이미 닫혀 있음 — fire 가 닫고 냄)
       this.queued = null;
     }
     this.sense.record(dt);
@@ -868,15 +878,26 @@ export class PlayerSecretWatch {
   }
 
   /**
-   * 독일 죽음의 일격 (10/22 사장님 '막기로 버틸 때나 서로 몸이 맞붙어 클린치 상태일 때 밀기가 n초 이상 작동하면 발동' · '1.5로 해' — mordschlag.js):
+   * 독일 죽음의 일격 (10/29 20:0x 부터 기본 'close' — 몸이 붙은 채(가슴 사이 ≤ n) 2 s · 아래 코드 · SECRET.mordRule. 이 아래 글은 옛 'press' 판):
+   *  옛 판 — 독일 죽음의 일격 (10/22 사장님 '막기로 버틸 때나 서로 몸이 맞붙어 클린치 상태일 때 밀기가 n초 이상 작동하면 발동' · '1.5로 해' — mordschlag.js):
    *  밀치기 누르기(fighter.closeStep 의 barge phase 'press' — 가슴 사이 CLOSE.reach 안에서 상대 쪽으로 미는 동안 · 10/25 23:3x 부터 놓았다 밀 것 없음 CLOSE.latch 0)가 cond.press 초(SECRET.mordPress — 10/25 23:1x 2 s)
    *  이어지면 창(playerWindow)을 연다. 누르기가 끝나면(떨어짐 · 스틱 놓음 · 팔 다 펴짐 · 베기 · 넘어짐) SECRET.mordGrace(10/27 21:4x 0.4 s) 안에 다시 누르면 셈을 이어감 · 넘으면 셈 0 · 창을 열면 셈 0(계속 누르면 다시 cond.press 초 뒤 또 창).
    *  비기 실행 · 굳음 동안은 셈 0. 상대가 막는 중이든 몸만 붙었든 같다. 새 값 없음(누르기 판정은 밀치기 그대로). 재기: pressT(지금 셈) · pressRuns(창까지 이어진 수) · pressMax(가장 긴 누르기)
    *  셈은 pressStep(위 — 10/24 AI 와 같이 씀 · ai.js mordTick)
    */
   pressTick(dt, busy) {
-    const b = this.me.barge;
-    if (pressStep(this, dt, b?.phase === 'press', busy, !!this.open, secretVal(this.S.cond.press), b?.phase === 'step' ? b : null)) this.openWindow({ ev: 'press', held: this.pressHeld });
+    const me = this.me;
+    if (SECRET.mordRule === 'press') {
+      const b = me.barge;
+      if (pressStep(this, dt, b?.phase === 'press', busy, !!this.open, secretVal(this.S.cond.press), b?.phase === 'step' ? b : null)) this.openWindow({ ev: 'press', held: this.pressHeld });
+      return;
+    }
+    // 'close' (10/29 20:0x 사장님 — SECRET.mordRule): 몸이 붙어 있음 = 가슴 사이 ≤ mordCloseN(없으면 밀치기가 닿는 거리 CLOSE.reach) · 나 · 상대 서 있음 — 밀치기 꼴 · 스틱 · 긋기와 상관없이.
+    //  셈 · 너그러움(mordGrace) · 창은 같은 pressStep(첫 걸음 멈춤 mordStepPause 는 밀치기 걸음 몫이라 안 씀)
+    const n = SECRET.mordCloseN ?? CLOSE.reach(me.armed ? me.weapon : null);
+    const foe = this.foe;
+    const close = me.state === 'stand' && foe.alive && foe.state === 'stand' && me.foeDistance() <= n;
+    if (pressStep(this, dt, close, busy, !!this.open, secretVal(this.S.cond.press), null)) this.openWindow({ ev: 'press', held: this.pressHeld, close: true });
   }
 
   /**
