@@ -2277,3 +2277,7 @@
 - 제안 사다리 **0.3 반걸음 · 0.45 들어감 · 0.6 한 걸음 · 0.9 런지**. 전수 표 · 재기: `docs/strike/step_ladder_2026-10-29.md` · 확인표 2840.
 - 관문 해시는 그대로(fights12 d2b7915f · live_battery e8127a92 · finish_thrust ad302969 · corr 12 · smoke 34 — 롱소드 AI 판이고 기본 판 AI 는 이 걸음을 부탁하지 않음). 바뀌는 곳은 사람 격살 · 손잡이 찍기 · 표두격 가까이 · 옛 판(`?gyeoksal=0` · `?cnSecret=v1` · `?deMord=0&deSecret=parry`).
 - 여쭘 남음(넣지 않음): 0.35 → 0.3(체보요격 · 비껴 딛는 가로베기 앞 · 나선 걸음 베기 옆) · 0.5 → 0.45(AI 발도 대기 앞발 · 유파 AI 베기 걸음 cutStep) · 0.7 → 0.6(발도 순간 앞발) · 0.15 비껴서며 찌르기는 그대로 권함 · 뒤 걸음(−0.15 · −0.3)도 사다리로 묶을지.
+
+### 10/29 15:xx 사장님 결정 — 0.5 → 0.45 (AI 발도 대기 앞발) · 0.7 그대로
+- 사장님: "0.5는 0.45로 옮기고 0.7은 그냥 둬" → `SECRET.stance.iai.step` **0.5 → 0.45**(걸음 사다리 0.45 칸 '들어감' — AI 일본이 발도 대기에 들 때 앞발) · `SECRET.iaiDrawStep` **0.7 그대로**(발도 순간 앞발). 0.35 는 이때 정하지 않음.
+- 관문: fights12 · live_battery · finish_thrust 그대로 · school_ai_fights 7ade96f7 → e978b035(일본 칼 판 6 / 12) · corr 12 · smoke 34. 기록 `docs/strike/step_ladder_2026-10-29.md` §8-1 · 확인표 2841.
