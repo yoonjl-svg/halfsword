@@ -78,7 +78,7 @@ try {
   step('fighting');
   // 상대가 상처를 낼 때까지 (내 몸은 서 있기만)
   let L = await bodies();
-  for (let i = 0; i < 40 && L.player.alive && L.player.wounds === 0 && L.player.blood > 0.97; i++) { await run(1000); L = await bodies(); }
+  for (let i = 0; i < 60 && L.player.alive && L.player.wounds < 2 && L.player.blood > 0.9; i++) { await run(1000); L = await bodies(); } // 상처 둘 또는 피 0.9 밑까지 (판이 끝나기 전)
   await run(500);
   await shot('w1_fight', true); // 사진을 찍는 동안에도 싸움 시계가 조금 흐를 수 있어 먼저 찍고 잰다
   await p.evaluate(() => document.getElementById('btnPause').click());
