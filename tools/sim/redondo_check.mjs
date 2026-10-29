@@ -76,7 +76,7 @@ export function rdCheck({ w = 'zweihander', seeds = 6, foes = ['still', 'walk'] 
             const I = P.iai;
             if (I?.moves?.[0]?.rd) {
               if (!K) {
-                strikes.push((K = { w, foe, seed, vMax: 0, y: [], side: [], tRel: G.t, tHit: null, drain: Wl && Wl.st0 != null ? Wl.st0 - Wl.st1 : null, windT: Wl ? G.t - Wl.t0 : null, turns: Wl?.turns ?? null }));
+                strikes.push((K = { w, foe, seed, first: !strikes.some((k) => k.foe === foe && k.seed === seed), vMax: 0, y: [], side: [], tRel: G.t, tHit: null, drain: Wl && Wl.st0 != null ? Wl.st0 - Wl.st1 : null, windT: Wl ? G.t - Wl.t0 : null, turns: Wl?.turns ?? null }));
                 Wl = null;
               }
               const seg = I.segs?.[I.si];
@@ -123,6 +123,8 @@ export function rdSummary({ S, winds, strikes }) {
       turns: q(strikes.map((k) => k.turns), 0.5),
       // 다 감은 뒤 뗀 칼만 (감은 셈 ≥ 1 — 봇의 반은 감자마자 뗌): 수 · 맞음 · 뗀 때 → 첫 상처 p50
       wound: (() => { const Z = strikes.filter((k) => (k.turns ?? 0) >= 1); const H = Z.filter((k) => k.tHit != null); return { n: Z.length, hits: Z.filter((k) => k.res?.hits).length, toHit: q(H.map((k) => (k.tHit - k.tRel) / CONFIG.TIME.k), 0.5), drain: q(Z.map((k) => k.drain), 0.5) }; })(),
+      // 판마다 첫 내려침만 (12 판 — 식힘 3 s 가 끝난 때부터라 한 판에 둘이 나가기도 함): 수 · 맞음 · 뗀 때 → 첫 상처 p50
+      first: (() => { const F = strikes.filter((k) => k.first); const H = F.filter((k) => k.tHit != null); return { n: F.length, hits: F.filter((k) => k.res?.hits).length, toHit: q(H.map((k) => (k.tHit - k.tRel) / CONFIG.TIME.k), 0.5) }; })(),
       zones: strikes.reduce((o, k) => ((o[k.res?.zone ?? '-'] = (o[k.res?.zone ?? '-'] ?? 0) + 1), o), {}),
       table: dupTable(S.strike),
     },

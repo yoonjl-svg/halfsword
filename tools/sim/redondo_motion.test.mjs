@@ -54,16 +54,18 @@ function sway(B, holdS) {
   return { dTilt, off, fell };
 }
 
-test('기본값 — 휘청 고침 켬 · 감기 꼴은 사장님이 고르실 때까지 10/29 판(spin) · 안 A 한 바퀴 1.2 s · 안 B 얹은 채 0.6 s = 감음 (시간 사다리)', () => {
+test('기본값 — 휘청 고침 켬 · 감기 꼴 = 안 A(slowSpin — 사장님 10/30 00:1x \'레돈두는 A로\') · 한 바퀴 1.2 s · 안 B 얹은 채 0.6 s = 감음 (시간 사다리) · 내려침 = 곧장 사선(direct)', () => {
   assert.equal(UA.rdSteady, 1);
   assert.equal(UA.rdRamp, 1);
-  assert.equal(UA.rdWindMode, 'spin');
+  assert.equal(UA.rdWindMode, 'slowSpin');
   assert.ok(Math.abs(UA.rdSlow.loopT - realS(1.2)) < 1e-12);
   assert.ok(Math.abs(UA.rdSlow.windIn - realS(0.6)) < 1e-12);
   assert.ok(Math.abs(UA.rdShoulder.windIn - realS(0.6)) < 1e-12);
   assert.ok(Math.abs(UA.rdShoulder.woundT - realS(0.6)) < 1e-12);
   assert.equal(windSpec().kind, 'spin');
-  assert.ok(Math.abs(windRate() - (2 * Math.PI) / UA.rdLoopT) < 1e-12, 'spin = 10/29 판 한 바퀴');
+  assert.ok(Math.abs(windRate() - (2 * Math.PI) / UA.rdSlow.loopT) < 1e-12, '안 A 한 바퀴');
+  assert.equal(UA.rdRelease, 'direct'); // 10/30 00:1x '바로 내려치는 게 아닌가?' — 'chamber' = 10/29 판 왼 어깨 뒤 길
+  assert.deepEqual({ ...UA.rdDiag }, { tilt: 45, from: 95, to: -45, at: 0.7, pull: 0, target: 'lung', lowY: 0.35 });
 });
 
 test('휘청 고침 — 네 칼(츠바이핸더 · 플랑베르주 · 티소나 · 듀란달) 손가락을 대고 길게 눌러 감아도 가슴이 크게 안 젖혀지고 · 무게중심이 발 둘레 안 · 안 넘어짐 / 고치기 전(rdSteady 0)은 휘청', () => {
@@ -183,4 +185,24 @@ test('흐르는 긋기 셈 (IB_FLOW.windmillChain simple) — 안 B 는 얹은 �
   assert.equal(IB_FLOW.windmillChain, 'simple');
   assert.equal(run(0.4), 0, '0.6 s 전 → 셈 없음');
   assert.equal(run(0.8), 1, '0.6 s 넘게 → n 1');
+});
+
+test('내려침 길 (사장님 10/30 00:1x \'궤적이 8자 모양으로 현란해 보이는데. 바로 내려치는 게 아닌가?\') — 곧장 사선(direct): 원 어디서 떼도 칼끝이 머리 위에 머문 채 왼 위로 들려 왼 위 → 오른 아래로 벰 · 10/29 판(chamber)은 칼끝이 어깨 뒤로 떨어지는 고리', async () => {
+  const { traceRun, figure8 } = await import('./redondo_trace.mjs');
+  for (const release of [1.6, 2.2]) {
+    const r = traceRun({ w: 'zweihander', release });
+    const m = figure8(r);
+    assert.equal(r.fell, false);
+    assert.ok(m.leadLow > 0.9, `${release} s — 드는 동안 칼끝 가장 낮은 곳 가슴 위 ${m.leadLow} m (머리 위에 머묾)`);
+    assert.ok(r.tCut != null && r.tCut < 0.12, `${release} s — 뗌 → 벰 ${r.tCut} s`);
+    assert.ok(m.cutY[0] - m.cutY[1] > 1.2, `내려 벰 — 칼끝 높이 ${m.cutY}`);
+    assert.ok(m.cutZ[0] < -0.6 && m.cutZ[1] > 0.2, `왼 → 오른 — 칼끝 옆 ${m.cutZ}`);
+  }
+  const keep = UA.rdRelease;
+  UA.rdRelease = 'chamber';
+  try {
+    const m = figure8(traceRun({ w: 'zweihander', release: 1.6 }));
+    assert.ok(m.leadBack < -0.7 && m.leadLow < 0.6, `10/29 판 — 칼끝이 가슴 뒤 ${m.leadBack} m · 높이 ${m.leadLow} m 로 떨어짐 (8 자의 둘째 고리)`);
+    assert.ok(m.leadLen > 2.5, `드는 길 ${m.leadLen} m`);
+  } finally { UA.rdRelease = keep; }
 });

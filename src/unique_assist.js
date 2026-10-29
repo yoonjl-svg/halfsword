@@ -101,7 +101,7 @@ export const PLAYER_UNIQUE = {
   iberian: [
     { stage: 1, name: 'talhoRodeado', role: 'step', stick: 'side', hint: '옆으로 걸으며 사선 내려 긋기', body: [-15, -8, 4, 0.02], /* 10/21 전수 조사: 탈류(오른쪽 위 → 왼쪽 아래) · 원전 「왼쪽 위로 나사처럼」 — 몸 왼쪽(−) · 전 +15 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 옆 + 분노의 베기
     // 풍차 베기 (B4 레돈두 — 이베리아 특수 공격 · 사장님 10/29 01:3x '레돈두를 지금 우리가 개발 중인 특수공격으로' · 01:5x '레돈두는 풍차 베기로' — config UNIQUE_ASSIST.rdHold · 확인표 2727):
-    //  사람 = role 'hold' — 탭을 길게 눌러 머리 위로 칼을 돌리다(iberian_redondo.js) 떼면 왼팔 위로 떨어뜨려 비스듬히 벰(secret_instant.js requestArtRedondo) · 왼 가로베기는 사람에게 보통 긋기로 돌아감(긋기 조건 on 없음).
+    //  사람 = role 'hold' — 탭을 길게 눌러 머리 위로 칼을 돌리다(iberian_redondo.js) 떼면 곧장 왼 위 → 오른 아래 사선으로 내려 벰(secret_instant.js requestArtRedondo — 10/30 rdRelease 'direct' · 'chamber' = 10/29 판 왼팔 위로 떨어뜨림) · 왼 가로베기는 사람에게 보통 긋기로 돌아감(긋기 조건 on 없음).
     //  ai = AI 몫 그대로(전 판 강화동작 — 왼 가로베기 대신 · enhancedMoves · sword_art.js 가 읽음) · stack = AI 이어 그을수록 맞는 순간 에너지 + 10 %(셋까지 — strokeHitK · 사람은 쌓기 칸이 없어 안 받음 — 10/29 B6 은 이어지는 흐름)
     { stage: 3, name: 'redondo', role: 'hold', hold: 1, special: true, nameKo: '풍차 베기 (레돈두)', orig: 'redondo', hint: '탭을 길게 눌러 머리 위로 칼을 돌리다 떼면 내려 벤다', on: [], ai: { role: 'enh', replaces: 'zwerchL' }, stack: 0.1 },
   ],
@@ -706,7 +706,7 @@ export class PlayerUniqueAssist {
     const chain = !!mode && IB_FLOW.a && turns >= 1 && f.swordArt?.tradition === 'iberian' && !kitOff(f, 'ibFlow');
     const n = !chain ? 0 : mode === 'inside' && this.hold.chainN >= 0 ? this.hold.chainN + 1 : 1;
     f.ibStrike = chain ? { n, t0: this.t, newChain: !(mode === 'inside' && this.hold.chainN >= 0) } : null; // fighter.js updateIbFlow 가 칼이 끄는 동안 흐름을 켬 · newChain = 이 칼이 새 사슬의 첫 칼(세 칼 셈 — 10/29 14:2x)
-    const ok = UA.enhance > 0 && requestArtRedondo(f, { share: specialShare(e.name), maxT: UA.rdSnapTime, tech: U.name, arc: UA.rdArc, loop: windLoopOf(W?.M) }); // '먼저 머리 위로' 자리 = 이 감기 꼴의 고리 (어깨 꼴은 10/29 판 고리 — 10/29 20:0x)
+    const ok = UA.enhance > 0 && requestArtRedondo(f, { share: specialShare(e.name), maxT: UA.rdSnapTime, tech: U.name, arc: UA.rdArc, loop: windLoopOf(W?.M), diag: UA.rdRelease === 'chamber' ? null : UA.rdDiag }); // '먼저 머리 위로' 자리 = 이 감기 꼴의 고리 (어깨 꼴은 10/29 판 고리 — 10/29 20:0x) · 길 = 곧장 사선(10/30 rdRelease 'direct' — rdDiag) · 'chamber' 면 10/29 판 왼 어깨 뒤 길
     if (!ok) {
       f.ibStrike = null;
       this.stats.windCancel ??= {};

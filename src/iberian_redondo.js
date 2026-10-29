@@ -21,6 +21,7 @@
 //    놓인 팔 · 칼의 근육 · 손목 헛힘 끔(fighter.js armsPlaced) · 섞는 동안 도는 빠르기도 0 에서 부드럽게 올림(rdRamp — 감는 첫머리 칼끝이 고리 빠르기의 두 배로 튀던 것)
 //   ② 감기 꼴 셋 (UNIQUE_ASSIST.rdWindMode — windSpec): 'spin' 10/29 판 원뿔 고리 · 'slowSpin' 안 A(rdSlow — 한 바퀴 1.2 s · 칼을 더 눕힌 큰 고리 · 팔을 더 뻗음) ·
 //    'shoulder' 안 B(rdShoulder — 오른 어깨에 얹어 멈춤 · 날 위 · 감은 셈은 그 자세로 woundT 넘게 쥐었나)
+//  10/30 00:1x 사장님 '레돈두는 A로 하고 흐름 보너스 시간은 한바퀴로 둬' — 기본 'slowSpin' · 흐름 셈 '한 바퀴' 그대로 (내려침 길은 secret_instant.js comboPlanRdDiag — 기록 §8-9)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { UNIQUE_ASSIST as UA } from './config.js';
@@ -34,7 +35,7 @@ const sideOf = (f) => (f.side >= 0 ? 1 : -1);
 const BODY0 = Object.freeze({ pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 });
 
 /**
- * 지금 감기 꼴 (UNIQUE_ASSIST.rdWindMode — 사장님 10/29 20:0x 두 안 · 감독 안 · 사장님 확인 전): { kind 'spin' | 'shoulder', loopT, cone, hand, handR, windIn, woundT, blade }
+ * 지금 감기 꼴 (UNIQUE_ASSIST.rdWindMode — 사장님 10/29 20:0x 두 안 · 10/30 00:1x 안 A 'slowSpin' 기본): { kind 'spin' | 'shoulder', loopT, cone, hand, handR, windIn, woundT, blade }
  *  'spin' = 10/29 판(rdLoopT · rdLoop · rdWindIn) · 'slowSpin' = 안 A(rdSlow) · 'shoulder' = 안 B(rdShoulder). 모르는 이름은 'spin'
  */
 export function windSpec() {

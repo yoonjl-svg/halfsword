@@ -9,6 +9,8 @@
 //        node tools/browser/redondo_motion_shots.mjs http://127.0.0.1:5397 [그림 폴더 (기본 docs/handoff/redondo_motion_2026-10-29)] [무기 (기본 zweihander)] [꼴들 (기본 spin,slowSpin,shoulder)]
 //        FOE=인물 id (기본 isolde) · GAP=칼끝 거리 밖 몫 (기본 0.3 m) · STEADY=0 이면 휘청 고침 끔(?rdSteady=0 — 고치기 전 견줌) · TIMED=1 감기 시작부터 시각으로만 찍음(넘어져도) · KEEP=1 낱장 남김
 //  844×390 · 끝 코드 0 = 콘솔 에러 0. 소프트웨어 GL 이라 느리다(꼴마다 1~3 분)
+//  10/30 내려침 견줌 (사장님 00:1x '궤적이 8자 모양 … 바로 내려치는 게 아닌가?' · 기록 §8-9): 꼴에 ':내려침 길'을 붙이면(slowSpin:direct · slowSpin:chamber) ?rdRelease= 로 고름 ·
+//   RELSHOTS=1 이면 감기 넷(섞기 끝 · 바퀴 ¼ · ½ · ¾) + 내려침 넷(드는 길 가운데 · 벰 첫 자리 · 벰 가운데 · 벰 끝) · SHOTS_JSON=적을 이름(기본 _shots.json) · 띠 그림 이름 redondo_release_<길>_<눈>.png
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -23,6 +25,7 @@ const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM 
 const errors = [];
 const summary = [];
 for (const mode of modes) {
+  const [windMode, rel] = mode.split(':'); // 감기 꼴 · 내려침 길 (없으면 기본)
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, deviceScaleFactor: 1 });
   await ctx.addInitScript(() => {
     const raf = window.requestAnimationFrame.bind(window);
@@ -36,11 +39,11 @@ for (const mode of modes) {
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(`${mode} pageerror ${e}`));
   page.on('console', (m) => m.type() === 'error' && errors.push(`${mode} ${m.text()}`));
-  await page.goto(`${base}/?test=1&weapon=${weapon}&foe=${process.env.FOE ?? 'isolde'}&stage=poseidon&slowMo=0&rdWind=${mode}&rdSteady=${steady}`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/?test=1&weapon=${weapon}&foe=${process.env.FOE ?? 'isolde'}&stage=poseidon&slowMo=0&rdWind=${windMode}&rdSteady=${steady}${rel ? `&rdRelease=${rel}` : ''}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 120000 });
   await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight' && window.game.playerUnique, null, { timeout: 120000 });
-  await page.waitForFunction(() => window.game.stats.simTime > 5.5, null, { timeout: 400000 }); // 판 시작 정지 · 첫 자세 걸음이 끝난 뒤 (그 걸음 가운데 누르면 걸음 위에서 감기 시작)
+  await page.waitForFunction(() => window.game?.stats?.simTime > 5.5, null, { timeout: 400000 }); // 판 시작 정지 · 첫 자세 걸음이 끝난 뒤 (그 걸음 가운데 누르면 걸음 위에서 감기 시작)
   await page.waitForFunction(() => !document.getElementById('foeIntro')?.classList.contains('show'), null, { timeout: 120000 }).catch(() => {});
   const info = await page.evaluate((want) => {
     const g = window.game;
@@ -66,12 +69,22 @@ for (const mode of modes) {
       const W = p.rdWind, I = p.iai;
       const c = p.bodies.chest.rotation();
       const up = { x: 2 * (c.x * c.y - c.w * c.z), y: 1 - 2 * (c.x * c.x + c.z * c.z), z: 2 * (c.y * c.z + c.w * c.x) };
-      rec.push({ t: g.stats.simTime, w: W ? { t: W.t, k: W.k, turns: W.turns } : null, rd: !!I?.moves?.[0]?.rd, si: I?.si ?? null, cut: !!I?.segs?.[I?.si]?.cut, tip: p.tipVel.length(), tilt: (Math.acos(Math.max(-1, Math.min(1, up.y))) * 180) / Math.PI, st: p.stamina.value });
+      // 내려침 몫 (10/30): 드는 이음(맞힘 없는 앞 토막들) · 벰 토막들 안 어디쯤 (0 ~ 1)
+      let lf = null, cf = null;
+      if (I?.moves?.[0]?.rd && I.segs?.length) {
+        const c0 = Math.max(0, I.segs.findIndex((sg) => sg.cut));
+        const LT = I.segs.slice(0, c0).reduce((a, sg) => a + sg.T, 0);
+        const CT = I.segs.slice(c0).reduce((a, sg) => a + sg.T, 0);
+        const e = I.t - (I.segT0 ?? 0);
+        lf = LT > 0 ? e / LT : 1;
+        cf = CT > 0 ? (e - LT) / CT : 1;
+      }
+      rec.push({ t: g.stats.simTime, w: W ? { t: W.t, k: W.k, turns: W.turns } : null, rd: !!I?.moves?.[0]?.rd, si: I?.si ?? null, cut: !!I?.segs?.[I?.si]?.cut, lf, cf, tip: p.tipVel.length(), tilt: (Math.acos(Math.max(-1, Math.min(1, up.y))) * 180) / Math.PI, st: p.stamina.value });
     };
     const U = g.playerUnique;
-    return { holdE: U?.holdE?.name ?? null, mode: g.config.UNIQUE_ASSIST.rdWindMode, steady: g.config.UNIQUE_ASSIST.rdSteady, reach: p.swordArt.measure.reach, tempo: g.tempo ?? 1.1 };
+    return { holdE: U?.holdE?.name ?? null, mode: g.config.UNIQUE_ASSIST.rdWindMode, release: g.config.UNIQUE_ASSIST.rdRelease, steady: g.config.UNIQUE_ASSIST.rdSteady, reach: p.swordArt.measure.reach, tempo: g.tempo ?? 1.1 };
   }, +(process.env.GAP ?? 0.3));
-  console.log(`${mode}: 길게 누름 ${info.holdE} · 꼴 ${info.mode} · 휘청 고침 ${info.steady} · 칼끝 거리 ${info.reach.toFixed(2)} m`);
+  console.log(`${mode}: 길게 누름 ${info.holdE} · 꼴 ${info.mode} · 내려침 ${info.release} · 휘청 고침 ${info.steady} · 칼끝 거리 ${info.reach.toFixed(2)} m`);
   if (!info.holdE) throw new Error('풍차 베기가 열리지 않음 (테스트 경로 칸)');
   await page.waitForTimeout(300);
   const shots = [];
@@ -101,14 +114,14 @@ for (const mode of modes) {
         }
       }, place);
       await page.waitForTimeout(350);
-      await page.screenshot({ path: `${dir}/_${mode}_${view}_${k}.png` });
+      await page.screenshot({ path: `${dir}/_${mode}_${view}_${k}.png`, timeout: 180000 }); // 소프트웨어 GL · 바쁜 기계에선 30 s 를 넘기도 함
     }
     await page.evaluate(() => (window.game.freeCam = false));
     shots.push({ k, label, t: r?.t, w: r?.w, tilt: r?.tilt });
     console.log(`  SHOT ${k} ${label} · 감기 ${r?.w ? `t ${r.w.t.toFixed(2)} k ${r.w.k.toFixed(2)} 셈 ${r.w.turns.toFixed(2)}` : '-'} · 가슴 기울기 ${r?.tilt?.toFixed(1)}°`);
     await page.evaluate((k) => (window.__timeK = k), k0);
   };
-  await shoot(0, 'guard');
+  if (!process.env.RELSHOTS) await shoot(0, 'guard'); // 내려침 견줌은 감기 넷 · 내려침 넷만
   // 길게 누름 (칼 쪽 화면 · 끌지 않음)
   await page.evaluate(() => {
     const cv = document.getElementById('game');
@@ -131,6 +144,36 @@ for (const mode of modes) {
     const s = { mode, steady: info.steady, timed: true, tiltRange: +(Math.max(...wind.map((r) => r.tilt)) - Math.min(...wind.map((r) => r.tilt))).toFixed(1), tiltMax: +Math.max(...wind.map((r) => r.tilt)).toFixed(1), shots };
     summary.push(s);
     console.log(`SUMMARY ${mode} (시각): 가슴 기울기 최고 ${s.tiltMax}° · 폭 ${s.tiltRange}°`);
+    await ctx.close();
+    continue;
+  }
+  if (process.env.RELSHOTS) {
+    // 내려침 견줌 (10/30): 감기 넷 → 한 바퀴 넘겨 뗌 → 드는 길 가운데 · 벰 첫 자리 · 벰 가운데 · 벰 끝
+    await atW((t) => (window.game.player.rdWind?.t ?? 9) >= t, spec.windIn);
+    const t0 = await page.evaluate(() => window.game.player.rdWind.turns);
+    await shoot(1, 'circle');
+    for (const [i, q] of [[2, 0.25], [3, 0.5], [4, 0.75]]) {
+      await atW((m) => (window.game.player.rdWind?.turns ?? 99) >= m, t0 + q);
+      await shoot(i, `circle +${q}`);
+    }
+    await atW(() => (window.game.player.rdWind?.turns ?? 9) >= 1.05);
+    await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 91, pointerType: 'touch', clientX: 640, clientY: 150, bubbles: true, isPrimary: true, button: 0 })));
+    await atW(() => { const r = window.__rec[window.__rec.length - 1]; return r?.rd && (r.lf >= 0.5 || r.cut); });
+    await shoot(5, 'release: lift');
+    await atW(() => { const r = window.__rec[window.__rec.length - 1]; return r?.rd && r.cut; });
+    await shoot(6, 'cut start');
+    await atW(() => { const r = window.__rec[window.__rec.length - 1]; return !r?.rd || r.cf >= 0.5; });
+    await shoot(7, 'mid cut');
+    await atW(() => { const r = window.__rec[window.__rec.length - 1]; return !r?.rd; });
+    await shoot(8, 'cut end');
+    const rec = await page.evaluate(() => window.__rec);
+    const strike = rec.filter((r) => r.rd);
+    const tRel = strike[0]?.t;
+    const tCut = strike.find((r) => r.cut)?.t;
+    const wounds = await page.evaluate(() => (window.game.enemy.wounds ?? []).map((w) => `${w.part}:${(+w.severity).toFixed(2)}`));
+    const s = { mode, wind: windMode, release: info.release, steady: info.steady, tag: `release_${info.release}`, liftSec: tRel != null && tCut != null ? +((tCut - tRel) / info.tempo).toFixed(3) : null, strikeSec: strike.length ? +((strike.at(-1).t - strike[0].t) / info.tempo).toFixed(3) : null, tipStrikeMax: +Math.max(...strike.map((r) => r.tip)).toFixed(1), tiltStrikeMax: +Math.max(...strike.map((r) => r.tilt)).toFixed(1), wounds, shots };
+    summary.push(s);
+    console.log(`SUMMARY ${mode}: 뗌 → 벰 ${s.liftSec} s · 내려침 ${s.strikeSec} s · 칼끝 최고 ${s.tipStrikeMax} m/s · 가슴 기울기 최고 ${s.tiltStrikeMax}° · 상대 상처 ${wounds.join(' ') || '없음'}`);
     await ctx.close();
     continue;
   }
@@ -168,9 +211,10 @@ for (const mode of modes) {
   await ctx.close();
 }
 await browser.close();
-fs.writeFileSync(`${dir}/_shots.json`, JSON.stringify({ weapon, steady, summary }, null, 1));
+const shotsJson = process.env.SHOTS_JSON || '_shots.json';
+fs.writeFileSync(`${dir}/${shotsJson}`, JSON.stringify({ weapon, steady, summary }, null, 1));
 // 띠 그림 (감기 꼴 × 눈 — 낱장 8 장씩)
-execFileSync(process.env.PYTHON || '/usr/bin/python3', ['tools/browser/redondo_motion_strip.py', dir, modes.join(','), steady === '0' ? 'nofix' : ''], { stdio: 'inherit' });
+execFileSync(process.env.PYTHON || '/usr/bin/python3', ['tools/browser/redondo_motion_strip.py', dir, modes.join(','), steady === '0' ? 'nofix' : '', shotsJson], { stdio: 'inherit' });
 if (!process.env.KEEP) for (const f of fs.readdirSync(dir)) if (/^_.*\.png$/.test(f)) fs.unlinkSync(`${dir}/${f}`);
 if (errors.length) {
   console.log(`콘솔 에러 ${errors.length}:\n${errors.slice(0, 10).join('\n')}`);
