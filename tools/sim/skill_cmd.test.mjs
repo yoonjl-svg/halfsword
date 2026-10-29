@@ -34,6 +34,11 @@ const OWNER = {
   J5: '아무 행동 없이 2초 기다리면 준비 활성화, 상대가 내 간격에서 공격을 시도하거나 빠르게 움직이면 비기 활성화',
   C9: '앞으로 움직이며(↑) 상대 공격을 정확한 타이밍에 막으면 자동 발동',
   G10: '상대와 몸이 붙은 채 2초 이상 밀치면(↑) 비기 활성화', // 10/25 23:1x (감독 전달) — 글 속 시간 = SECRET.mordPress
+  // 10/29 14:1x · 14:2x 사장님 글 (감독 전달) — 특수 공격 넷: 풍차 베기(길게 누름) · 탭으로 내는 셋
+  B4: '탭을 길게 누르다 떼기',
+  I9: '막기로 찌른 칼이 빗나가면 박자를 맞추어 탭',
+  C6: '뒤로 움직이며(↓) 탭',
+  G7: '긋기가 상대 칼에 닿은 채 탭',
 };
 
 // ── 도식 낱말 ──
@@ -154,6 +159,12 @@ test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · �
       assert.ok(src('main.js').includes('player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open);'), 'main.js — 누름 상태 · 비기 창');
       continue;
     }
+    if (e.tapKey) {
+      // 탭으로 내는 특수 공격 셋 (10/28 01:2x 조건 · 10/29 14:1x 사장님 글): 긋기 조건 없음 · 끝말 '탭' · 글은 사장님 글 그대로(OWNER)
+      assert.ok(e.special && !e.on.length, `${x.id} 탭 특수 공격 — 긋기 조건 없음`);
+      assert.ok(c.endsWith(' 탭') && c === OWNER[x.id], `${id} — 탭으로 냄 · 사장님 글`);
+      continue;
+    }
     // 걸음 명령: 긋기를 시작할 때 스틱이 그 쪽 (unique_assist.js stickOk — 옆은 어느 쪽이든)
     if (e.stick === 'side') assert.ok(c.startsWith('좌우 이동(←/→)과 동시에 '), `${id} — 옆`);
     else if (e.stick === 'fwd') assert.ok(c.startsWith('앞으로 이동(↑)과 동시에 '), `${id} — 앞`);
@@ -271,7 +282,7 @@ test("'공격' = 탭도 긋기도 받는 자리만 · '탭' = 탭을 받는(또�
   const withWord = (re) => all().filter(({ n }) => n.cmd && re.test(n.cmd)).map(({ n }) => n.id).sort();
   assert.deepEqual(withWord(/공격$/), [], "받는 입력을 '공격' 으로 끝맺는 칸 없음 (10/25 비기 글은 '비기 활성화' 꼴)");
   assert.deepEqual(withWord(/공격/), ['C9', 'J5'], "'공격' 낱말 = 일본 · 동방 확정 글의 상대 공격");
-  assert.deepEqual(withWord(/탭$/), [], '탭만 받는 비기 창 없음 (10/25 21:0x 리솔루토 공격하면)');
-  assert.deepEqual(withWord(/탭/), ['B4', 'I9'], "탭 = 칼끝 돌려 빼기 앞 칼(prev 'thrust' — 탭 포함) · 풍차 베기(B4 — 탭을 길게 누름 · 10/29)");
-  assert.deepEqual(withWord(/찌르는 긋기/), ['I9'], "찌르는 긋기(앞 칼 조건) = 칼끝 돌려 빼기(prev 'thrust' — 찌르기 길 긋기 포함)");
+  assert.deepEqual(withWord(/탭$/), ['C6', 'G7', 'I9'], '탭으로 내는 특수 공격 셋만 탭으로 끝남 (10/29 14:1x 사장님 글 — 비기 창은 탭만 받지 않음)');
+  assert.deepEqual(withWord(/탭/), ['B4', 'C6', 'G7', 'I9'], '탭 = 탭 특수 공격 셋 · 풍차 베기(B4 — 탭을 길게 누름)');
+  assert.deepEqual(withWord(/찌르는 긋기/), [], "'찌르는 긋기' 쓰는 칸 없음 (10/29 I9 사장님 글)");
 });

@@ -134,7 +134,7 @@ test('흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 01:5x · 08:3x
   const out = run(rot * 1.2);
   assert.equal(out.n, 1, '사슬 밖 → 첫 수');
   assert.ok(Math.abs(out.k - 1.2) < 1e-9, '× 1.2');
-  assert.ok(Math.abs(out.cost - 0.9) < 1e-9, '기력 × 0.9');
+  assert.equal(out.cost, 1, '풍차 베기 칼은 기력 0 자리가 아님 (10/29 14:2x)');
   const inSimple = run(rot * 1.2, inPrep);
   assert.equal(inSimple.n, 1, 'simple — 사슬 안에서 눌러도 n 1');
   assert.ok(Math.abs(inSimple.k - 1.2) < 1e-9);
@@ -151,7 +151,7 @@ test('흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 01:5x · 08:3x
   assert.equal(off.n, 0, '끔');
 });
 
-test('simple — 풍차 베기 뒤 이어 그은 긋기는 n 2 (× 1.4 · 기력 × 0.81): 풍차 베기가 새 사슬의 첫 수', () => {
+test('simple — 풍차 베기 뒤 이어 그은 긋기는 n 2 (× 1.4): 풍차 베기가 새 사슬의 첫 칼 — 세 칼 셈은 풍차 베기가 1 번째 · 그 뒤 두 번째 긋기(사슬 3 번째)가 기력 0', () => {
   const B = body({ seed: 7, kit: kitFromNodes('iberian', new Set(['B1', 'B5', 'B4', 'B6'])) });
   try {
     const { P, press, steps } = B;
@@ -165,7 +165,11 @@ test('simple — 풍차 베기 뒤 이어 그은 긋기는 n 2 (× 1.4 · 기력
     P.skill.swinging = true; P.skill.vel.set(-8, 0); P.updateIbFlow(1 / 120);
     assert.equal(P.ibChainN(), 2, '다음 긋기 = n 2');
     assert.ok(Math.abs(P.ibFlowK() - 1.4) < 1e-9);
-    assert.ok(Math.abs(P.ibChainCostK() - 0.81) < 1e-9);
+    assert.equal(P.ibChainCostK(), 1, '사슬 2 번째 = 보통');
+    P.skill.swinging = false; for (let i = 0; i < 30; i++) P.updateIbFlow(1 / 120);
+    P.skill.swinging = true; P.skill.vel.set(8, 0); P.updateIbFlow(1 / 120);
+    assert.equal(P.ibChainN(), 3);
+    assert.equal(P.ibChainCostK(), 0, '사슬 3 번째 = 기력 0');
   } finally { B.free(); }
 });
 

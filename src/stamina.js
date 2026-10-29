@@ -207,8 +207,14 @@ export class Stamina {
     this.attackUntil = this.time + ATTACK_LIFE;
     if (bundled) return;
     this.counts[kind] = (this.counts[kind] ?? 0) + 1;
-    // 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:5x · fighter.js ibChainCostK · 확인표 2736): 사람의 이어 그은 베기는 × 0.9ⁿ (AI · 다른 몸 · 찌르기는 1 · 풍차 베기 감는 기력은 따로 — 안 걸림)
+    // 이어지는 흐름 (이베리아 B6 — 사장님 10/29 14:1x · 14:2x '세 칼마다' · fighter.js ibChainCostK · 확인표 2741): 사람의 사슬 세 칼마다 그 베기는 기력 0 —
+    //  공격이라 회복 쉼(0.6 s)은 다른 칼과 같이 다시 셈 (AI · 다른 몸 · 찌르기 · 풍차 베기 칼 · 감는 기력은 그대로)
     const chainK = kind === 'cut' ? this.fighter.ibChainCostK?.() ?? 1 : 1;
+    if (chainK === 0) {
+      this.rest = 0;
+      this.action = 'attack';
+      return;
+    }
     this.spend('attack', Math.max(0, (kind === 'thrust' ? STAMINA.thrustCost : STAMINA.cutCost) * this.weight * chainK - credit));
   }
 

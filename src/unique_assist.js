@@ -491,7 +491,7 @@ export class PlayerUniqueAssist {
       }
       // 날개 접기 (사장님 10/28 00:3x): 오른 허리 옆으로 거뒀다 앞으로 반걸음 들며 허리를 오른 → 왼 가로 호로 — 고노센 칼끝 × specialShare.lianchi (10/29 02:0x)
       if (e.tapFold && UA.enhance > 0) {
-        if (requestArtFold(f, { share: specialShare(e.name), maxT: UA.lianSnapTime, tech: U.name, step: { kind: 'lunge', fwd: SECRET.chineseStep } })) {
+        if (requestArtFold(f, { share: specialShare(e.name), maxT: UA.lianSnapTime, tech: U.name, step: { kind: 'lunge', fwd: UA.lianStep ?? SECRET.chineseStep } })) { // 앞 걸음 = 날개 접기만의 lianStep 0.45 (10/29 14:3x)
           this.stats.snap = (this.stats.snap ?? 0) + 1;
           return true;
         }
@@ -649,12 +649,12 @@ export class PlayerUniqueAssist {
     this.hold.fade = 0.12;
     const U = e.U;
     // 흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 01:5x '한 바퀴 이상 돌렸을 때 한 번만' · 08:3x 'simple' 결정 · 확인표 2737): 한 바퀴 넘게 돌린 뒤 낸 칼 = 이어 그은 칼 하나 (더 돌려도 하나) ·
-    //  'simple' = 늘 첫 수(n 1 — × 1.2 · 기력 × 0.9 · 앞 사슬과 상관없이) · 'inside'(견줌) = 이어 긋기 창 안에서 누르기 시작했으면 그 사슬의 다음 수(n + 1) · 아니면 n 1 ·
+    //  'simple' = 늘 첫 수(n 1 — × 1.2 · 앞 사슬과 상관없이 · 새 사슬의 1 번째 칼 — 세 칼 셈) · 'inside'(견줌) = 이어 긋기 창 안에서 누르기 시작했으면 그 사슬의 다음 수(n + 1) · 아니면 n 1 ·
     //  사슬은 이 칼 뒤로 이어짐(다음 긋기 n + 1). 흐르는 긋기(B5)가 없으면 없음 · 한 바퀴 못 돌았으면 없음(앞 사슬도 이 칼로 잇지 않음)
     const mode = IB_FLOW.windmillChain;
     const chain = !!mode && IB_FLOW.a && turns >= 1 && f.swordArt?.tradition === 'iberian' && !kitOff(f, 'ibFlow');
     const n = !chain ? 0 : mode === 'inside' && this.hold.chainN >= 0 ? this.hold.chainN + 1 : 1;
-    f.ibStrike = chain ? { n, t0: this.t } : null; // fighter.js updateIbFlow 가 칼이 끄는 동안 흐름을 켬 · 기력(ibChainCostK)이 읽음
+    f.ibStrike = chain ? { n, t0: this.t, newChain: !(mode === 'inside' && this.hold.chainN >= 0) } : null; // fighter.js updateIbFlow 가 칼이 끄는 동안 흐름을 켬 · newChain = 이 칼이 새 사슬의 첫 칼(세 칼 셈 — 10/29 14:2x)
     const ok = UA.enhance > 0 && requestArtRedondo(f, { share: specialShare(e.name), maxT: UA.rdSnapTime, tech: U.name, arc: UA.rdArc, loop: UA.rdLoop });
     if (!ok) {
       f.ibStrike = null;
@@ -671,7 +671,7 @@ export class PlayerUniqueAssist {
     this.stats.windTurns = [...(this.stats.windTurns ?? []), +turns.toFixed(2)];
     this.stats.windChain = [...(this.stats.windChain ?? []), n];
     f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
-    f.stamina.attack('cut'); // 칼 하나 (끌고 가는 칼은 같은 공격 — same) · 이어 그은 칼이면 기력 × 0.9ⁿ (stamina.js chargeAttack — 이어지는 흐름 B6)
+    f.stamina.attack('cut'); // 칼 하나 (끌고 가는 칼은 같은 공격 — same) · 풍차 베기 칼은 세 칼마다 기력 0 자리가 아님 (fighter.js ibChainCostK — 이어지는 흐름 B6)
     return true;
   }
 

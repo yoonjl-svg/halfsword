@@ -11,10 +11,10 @@ import { drillRun } from './special_balance.mjs';
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, SECRET } = CONFIG;
 
-test('기본값 — 날개 접기 탭 켬 · 놓은 뒤 창 실제 0.6 s · 고노센 칼끝 × 0.6(10/29 13:xx) · 실제 0.2 s (사장님 10/28 00:3x · 01:2x) · 긋기 조건 없음', () => {
+test('기본값 — 날개 접기 탭 켬 · 놓은 뒤 창 실제 0.6 s · 고노센 칼끝 × 0.6(10/29 12:3x) · 실제 0.2 s (사장님 10/28 00:3x · 01:2x) · 긋기 조건 없음', () => {
   assert.equal(UA.lianTap, 1);
   assert.ok(Math.abs(UA.lianWindow - realS(0.6)) < 1e-12);
-  assert.equal(UA.specialShare.lianchi, 0.6); // 10/29 13:xx 사장님 0.6 (02:0x '염시는 50%' · 전 격살 × 0.6 = 고노센 × 0.36)
+  assert.equal(UA.specialShare.lianchi, 0.6); // 10/29 12:3x 사장님 0.6 (02:0x '염시는 50%' · 전 격살 × 0.6 = 고노센 × 0.36)
   assert.ok(Math.abs(UA.lianSnapTime - realS(0.2)) < 1e-12);
   const e = PLAYER_UNIQUE.chinese.find((x) => x.name === 'lianchi');
   assert.deepEqual(e.on, []);
@@ -65,7 +65,7 @@ test('물러나는(스틱 뒤 0.8) 동안의 탭 = 날개 접기 (허리 호 요
     assert.equal(B.tap(), true, '물러나는 채 탭');
     const R = B.P.iaiReq;
     assert.ok(R?.combo && R.tech === 'lianchi');
-    assert.ok(Math.abs(R.share - 0.6) < 1e-12); // 고노센 × 0.6 (격살 빠르기와 따로 — 10/29 13:xx)
+    assert.ok(Math.abs(R.share - 0.6) < 1e-12); // 고노센 × 0.6 (격살 빠르기와 따로 — 10/29 12:3x)
     assert.equal(R.maxT, UA.lianSnapTime);
     assert.equal(R.hold, 0);
     assert.ok(R.keepAim);
@@ -73,7 +73,9 @@ test('물러나는(스틱 뒤 0.8) 동안의 탭 = 날개 접기 (허리 호 요
     assert.ok(m.same && m.cutSweep && m.capFromCut);
     assert.equal(m.dyn.target, 'waist');
     assert.equal(m.dyn.band, 'waist');
-    assert.equal(m.step.fwd, SECRET.chineseStep);
+    assert.equal(m.step.fwd, UA.lianStep); // 날개 접기만의 앞 걸음 0.45 (10/29 14:3x — 연환 · 격살 반걸음 chineseStep 0.25 는 그대로)
+    assert.equal(UA.lianStep, 0.45);
+    assert.equal(SECRET.chineseStep, 0.25);
     assert.ok(B.P.skill.tap == null, '보통 탭 찌르기 없음');
   } finally {
     B.free();

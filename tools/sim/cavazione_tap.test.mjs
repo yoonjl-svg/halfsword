@@ -15,11 +15,11 @@ import { drillRun } from './special_balance.mjs';
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS } = CONFIG;
 
-test('기본값 — 닿게 켬 · 탭 창 실제 0.6 ~ 1.2 s · 운동학 찌름 고노센 × 0.3(10/29 13:xx) · 0.2 s (사장님 10/27 23:5x · 10/28 00:5x · 01:1x · 01:2x)', () => {
+test('기본값 — 닿게 켬 · 탭 창 실제 0.6 ~ 1.2 s · 운동학 찌름 고노센 × 0.3(10/29 12:3x) · 0.2 s (사장님 10/27 23:5x · 10/28 00:5x · 01:1x · 01:2x)', () => {
   assert.equal(UA.imbroReach, 1);
   assert.equal(UA.cavTap, 1);
   assert.equal(UA.cavSnap, 1);
-  assert.equal(UA.specialShare.cavazione, 0.3); // 10/29 13:xx 사장님 0.3 (02:0x 고노센 × 0.6 — 전 리솔루토 런지 1 × 0.6 과 같은 수)
+  assert.equal(UA.specialShare.cavazione, 0.3); // 10/29 12:3x 사장님 0.3 (02:0x 고노센 × 0.6 — 전 리솔루토 런지 1 × 0.6 과 같은 수)
   assert.ok(Math.abs(UA.cavSnapTime - realS(0.2)) < 1e-12);
   assert.ok(Math.abs(UA.cavFrom - realS(0.6)) < 1e-12);
   assert.ok(Math.abs(UA.cavTo - realS(1.2)) < 1e-12);
@@ -74,13 +74,13 @@ test('② 상처를 못 낸 막아찌르기가 끝난 때부터 실제 0.8 s 의
     const R = B.P.iaiReq;
     assert.ok(R?.combo, '운동학 찌름 요청');
     assert.equal(R.tech, 'cavazione');
-    assert.ok(Math.abs(R.share - 0.3) < 1e-12); // 고노센 × 0.3 (10/29 13:xx 사장님)
+    assert.ok(Math.abs(R.share - 0.3) < 1e-12); // 고노센 × 0.3 (10/29 12:3x 사장님)
     assert.equal(R.maxT, UA.cavSnapTime);
     assert.equal(R.hold, 0);
     assert.equal(R.hitMul, 1);
     assert.ok(R.moves[0].same && R.moves[0].artThrust && R.moves[0].dyn.under && R.moves[0].plane);
     assert.ok(B.P.skill.tap == null, '보통 탭 찌르기는 없음');
-    assert.ok(iaiTipSpeed(B.P) * R.share > 8, '레이피어 칼끝 빠르기 (고노센 × 0.3 — 약 10.6 m/s · 10/29 13:xx)');
+    assert.ok(iaiTipSpeed(B.P) * R.share > 8, '레이피어 칼끝 빠르기 (고노센 × 0.3 — 약 10.6 m/s · 10/29 12:3x)');
     assert.equal(B.tap(), false, '한 번 막아찌르기에 한 번');
     assert.ok(B.P.skill.tap, '두 번째 탭은 보통 탭 찌르기');
     B.ended(realS(0.7), false, 'interrupt');

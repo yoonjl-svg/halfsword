@@ -570,10 +570,23 @@ test('흐르는 긋기 A (10/28 22:0x 사장님 \'A로 해\'): 한 스텝 깜빡
     assert.equal(P.ibFlowOn, true);
   } finally { IB_FLOW.detect = 'a'; r.world.free(); }
 });
-test('이어지는 흐름 (B6 — 사장님 10/29 01:4x · 01:5x): 이어 그은 수 n — 위력 1 + 0.2n 더하기 · 베기 기력 × 0.9ⁿ · 상한 없음 · 끊기면 처음부터 · B5 만이면 1.2 · AI 는 그대로', () => {
+test('칸 효과 글 — 사장님 글 그대로 (10/29 14:1x · 14:2x — 특수 공격 넷 · 이어지는 흐름)', () => {
+  const OWNER_EFF = {
+    iberian: { B4: '칼을 머리 위로 돌려서 강하게 내려 벤다', B6: '이어 그을수록 세지고, 세 번째 긋기마다 기력을 쓰지 않는다' },
+    italian: { I9: '빗나간 막아찌르기 뒤 칼끝을 돌려 빼 가슴을 찌른다' },
+    chinese: { C6: '물러나는 척 칼을 거두며 나아가 허리를 벤다' },
+    german: { G7: '칼이 맞물리면 상대 칼 뒤로 들어가 얼굴을 벤다' },
+  };
+  for (const [s, m] of Object.entries(OWNER_EFF)) for (const [id, eff] of Object.entries(m)) {
+    assert.equal(D.nodeOf(s, id).eff, eff, id);
+    assert.equal(DESIGN.find((x) => x.id === s).nodes.find((n) => n.id === id).eff, eff, `${id} 설계 자료`);
+  }
+});
+test('이어지는 흐름 (B6 — 사장님 10/29 01:4x · 01:5x · 14:1x · 14:2x): 이어 그은 수 n — 위력 1 + 0.2n 더하기 · 상한 없음 · 사슬 세 칼마다 베기 기력 0 · 끊기면 처음부터 · B5 만이면 1.2 · AI 는 그대로', () => {
   assert.equal(IB_FLOW.power, 1.2); // 사장님 10/29 01:5x 결정
   assert.equal(IB_FLOW.chainStack, 1);
-  assert.equal(IB_FLOW.chainCost, 0.9); // 01:5x 0.9ⁿ (01:4x '20%씩 감소' → 0.9)
+  assert.equal(IB_FLOW.freeEvery, 3); // 14:2x '세 칼마다' (전 01:5x 0.9ⁿ — 없앰)
+  assert.equal(IB_FLOW.chainCost, undefined);
   const run = (kit) => {
     const r = round('zweihander', kit, 9);
     const P = r.player;
@@ -593,17 +606,24 @@ test('이어지는 흐름 (B6 — 사장님 10/29 01:4x · 01:5x): 이어 그은
         st(false, 0, 0, 30);
       }
       assert.deepEqual(seen.map((x) => x[0]), [1, 2, 3, 4, 5, 6, 7, 8]); // 상한 없음
-      seen.forEach(([n, k, c]) => { assert.ok(Math.abs(k - (1 + 0.2 * n)) < 1e-9, `위력 n ${n}`); assert.ok(Math.abs(c - 0.9 ** n) < 1e-4, `기력 n ${n}`); });
+      seen.forEach(([n, k, c]) => { assert.ok(Math.abs(k - (1 + 0.2 * n)) < 1e-9, `위력 n ${n}`); assert.equal(c, (n + 1) % 3 === 0 ? 0 : 1, `기력 n ${n} (사슬 ${n + 1} 번째 칼)`); });
       st(false, 0, 0, 120); // 창 밖 = 끊김
       st(true, 8, 0, 20);
       assert.equal(P.ibChainN(), 0);
       st(false, 0, 0, 30); st(true, -8, 0, 20);
       assert.equal(P.ibChainN(), 1); // 처음부터
-      // 기력: 이어 그은 베기 청구 × 0.9ⁿ (stamina.js chargeAttack — 베기만)
+      // 기력 (stamina.js chargeAttack — 베기만): 사슬 2 번째 칼 = 보통 · 3 번째 = 0 (회복 쉼은 다시 셈)
       const S = P.stamina;
       const before = S.value;
       S.chargeAttack('cut', false);
-      assert.ok(Math.abs(before - S.value - 12 * S.weight * 0.9) < 1e-6, '베기 × 0.9');
+      assert.ok(Math.abs(before - S.value - 12 * S.weight) < 1e-6, '사슬 2 번째 칼 = 보통 베기');
+      st(false, 0, 0, 30); st(true, 8, 0, 20);
+      assert.equal(P.ibChainN(), 2);
+      const b1 = S.value;
+      S.rest = 5;
+      S.chargeAttack('cut', false);
+      assert.equal(S.value, b1, '사슬 3 번째 칼 = 기력 0');
+      assert.equal(S.rest, 0, '공격이라 회복 쉼은 다시 셈');
       const b2 = S.value;
       S.chargeAttack('thrust', false);
       assert.ok(Math.abs(b2 - S.value - 10 * S.weight) < 1e-6, '찌르기는 그대로');

@@ -511,12 +511,14 @@ export const SWING_TURN = { on: false, rate: 30, from: 'windup' };
 //   brake 0.5 → 0.8(제동을 멈출 거리의 20 % 에서 — 사장님 '좀더 늦추고' · 값은 감독) · power = 흐름이 켜진 채 맞힌 긋기의 칼날 상처 심각도 · 둔타 에너지 ×(combat.js analyze — 찌르기 · 비기 칼은 그대로)
 //   brake 0.8 · endSteps 2 · cutSpeed 5 — 사장님 확인 전 (power 1.2 는 10/29 01:4x 사장님 결정 — 아래)
 // 10/29 01:4x · 01:5x 사장님 결정 — 이어지는 흐름 (이베리아 B6 · '상한 없음' · 기록 docs/strike/redondo_hold_2026-10-29.md §3 · 확인표 2735 ~ 2737): 흐르는 긋기 위력 power 1.2 = 사장님 결정(B5 만이면 이어 그은 수와 상관없이 × 1.2) ·
-//  chainStack 1 = B6 칸을 익힌 사람은 이어 그은 진짜 긋기의 n(사슬 첫 이은 칼 1 · 다음 2 …)만큼 위력을 더하기 1 + (power − 1) × n(1.2 · 1.4 · 1.6 …) · 그 긋기 기력 × chainCost ^ n(곱하기 0.9 · 0.81 … · 베기만) — 상한 · 바닥 없음 ·
+//  chainStack 1 = B6 칸을 익힌 사람은 이어 그은 진짜 긋기의 n(사슬 첫 이은 칼 1 · 다음 2 …)만큼 위력을 더하기 1 + (power − 1) × n(1.2 · 1.4 · 1.6 …) — 상한 없음 ·
+//  freeEvery 3 = 사슬의 세 칼마다(사슬 첫 칼을 1 번째로 셈 — 3 · 6 · 9 번째) 그 베기는 기력 0(공격이라 회복은 0.6 s 쉼 그대로 · 위력 쌓기는 그대로 · 0 = 끔 `?ibFreeEvery=`) —
+//   10/29 14:1x 사장님 '기력 감소 효과는 아예 뺄게. 대신 세 번째 긋기는 기력을 소모하지 않는 걸로' · 14:2x '세 칼마다' (전 01:5x 그 긋기 기력 × 0.9ⁿ — 없앰 · 확인표 2741) ·
 //  사슬이 끊기면 n 은 처음부터 · AI 는 그대로(power 만) · 0 = 끔 `?ibChain=0`.
 //  windmillChain = 풍차 베기(B4)와 사슬 (01:5x '한 바퀴 이상 돌렸을 때 한 번만' · 08:3x 사장님 'simple' 결정): 머리 위로 한 바퀴 넘게 돌린 뒤 낸 칼만 이어 그은 칼 하나로 셈 —
-//   'simple' = 늘 n 1(× 1.2 · 기력 × 0.9) · 그 칼부터 새 사슬(앞 사슬과 상관없이) · 'inside' = 이어 긋기 창 안에서 누르기 시작했으면(누르고 도는 동안 사슬이 안 끊김) 그 사슬의 다음 수 n + 1 · 밖이면 n 1 (사장님 확인 전 견줌 판) ·
-//   0 = 셈 없음 · `?ibWindChain=simple|inside|0`. 감는 동안 기력(rdDrain)에는 0.9ⁿ 이 안 걸림. 흐름이 끊긴 뒤 1.2 s 이어받기는 넣지 않음(여쭘 남음)
-export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps: 2, cutSpeed: 5, chainStack: 1, chainCost: 0.9, windmillChain: 'simple' };
+//   'simple' = 늘 n 1(× 1.2) · 그 칼부터 새 사슬(앞 사슬과 상관없이 — 세 칼 셈도 풍차 베기를 1 번째로 다시 · 풍차 베기 칼은 기력 0 자리가 아님) · 'inside' = 이어 긋기 창 안에서 누르기 시작했으면(누르고 도는 동안 사슬이 안 끊김) 그 사슬의 다음 수 n + 1 · 밖이면 n 1 (사장님 확인 전 견줌 판) ·
+//   0 = 셈 없음 · `?ibWindChain=simple|inside|0`. 감는 동안 기력(rdDrain)은 그대로. 흐름이 끊긴 뒤 1.2 s 이어받기는 넣지 않음(여쭘 남음)
+export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps: 2, cutSpeed: 5, chainStack: 1, freeEvery: 3, windmillChain: 'simple' };
 // 이베리아 날 세우기 시험 (10/22 — 사장님 10/21 23:5x '이베리아 유파가 유독 칼면이 맞는 경우가 많았어 특히 수직베기에서', docs/strike/iberian_flat_hits_2026-10-22.md · 확인표 2167~ · **기본 끔 · 사장님 확인 전**).
 //  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
 //   다른 유파 · 무기는 그대로. 끄면(on false) 판 그대로(같은 float). `?ibEdge=motor` · `?ibEdge=pre` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=ibEdge=motor
@@ -1389,7 +1391,7 @@ export const UNIQUE_ASSIST = {
   //  ② cavSnap: 탭으로 낸 칼끝 돌려 빼기 = 상대 칼 밑으로 칼끝을 돌려 빼(상대 칼이 없는 쪽으로) 가슴(목 아래 ~ 가슴 위 띠)을 곧게 찔러 뻗음 — 제비 베기 되돌림 칼과 같은 운동학 틀
   //   (secret_instant.js requestArtThrust · requestCombo — 맞음은 쓸린 자리의 실제 빠르기 · 판정 배율 1 · 끝 자세 붙잡기 없이 곧장 손가락에 · 잔상 = 연환 잔상). 0 = 탭 찌르기 덧씌우기로만 `?cavSnap=0`
   cavSnap: 1,
-  //  칼끝 빠르기 = specialShare.cavazione 0.3 (고노센 칼끝의 몫 — 10/28 00:5x 결정 '리솔루토 런지 × 0.6' = 고노센 × 0.6 → 10/29 02:0x 한 표로 · 13:xx 사장님 0.3)
+  //  칼끝 빠르기 = specialShare.cavazione 0.3 (고노센 칼끝의 몫 — 10/28 00:5x 결정 '리솔루토 런지 × 0.6' = 고노센 × 0.6 → 10/29 02:0x 한 표로 · 12:3x 사장님 0.3)
   cavSnapTime: realS(0.2), // 끌고 가는 시간 상한 (실제 초 — 시간 사다리 0.2) · tsuSnapTime 과 같은 수(그쪽은 표준 시간 기록 §2 경계 2 로 게임 초 그대로 — 여쭐 것) · 사장님 10/28 00:5x 결정. 길(약 0.1 s)이 먼저 끝나면 거기서 끝
   // 사람 날개 접기 (C6 염시 斂翅 — 동방 특수 공격 · 사장님 10/28 00:2x ~ 00:3x · 01:0x — 기록 docs/strike/lianchi_2026-10-28.md · 확인표 2694 ~ 2699). 사람 강화(unique_assist.js)만 · AI 염시(속임 길)는 그대로.
   //  ① lianTap: 물러나는 동안(스틱 뒤 — 뒤 몫 ≥ 0.5 · 옆 몫보다 큼, 걸음 명령 '앞'의 거울) · 스틱 뒤를 놓고 lianWindow 안의 탭 = 보통 탭 찌르기 대신 날개 접기 (상대 칼 닿음 없이 내 명령만 —
@@ -1398,7 +1400,10 @@ export const UNIQUE_ASSIST = {
   //   제비 베기 되돌림 칼과 같은 운동학 틀(secret_instant.js requestArtFold → requestCombo · 격살 한 칼과 같은 가로 호 · 허리 띠 겨눔 · 날 세우기 · 굴림 묶음 · 잔상 = 연환 잔상)
   lianTap: 1,
   lianWindow: realS(0.6), // 스틱 뒤를 놓은 때부터 (시간 사다리 0.6) · 사장님 10/28 01:2x 결정
-  //  칼끝 빠르기 = specialShare.lianchi 0.6 (고노센 칼끝의 몫 — 10/29 02:0x 0.5 · 13:xx 사장님 0.6 · 전 격살 × 0.6 = 고노센 × 0.36)
+  // 날개 접기 앞 걸음 (m — 사람 날개 접기만 · 연환 · 격살 반걸음 SECRET.chineseStep 0.25 · AI 염시는 그대로): 들어가며 막기 SECRET.enterStep · 휘감아 돌기 ibSpin.advance 와 같은 수 —
+  //  사장님 10/29 14:3x '게임에 걸음값 테이블이 있나? 그중 하나로 염시 걸음 고르게' (물러나다 탭이라 칼끝 거리 밖에서 나감 — 반걸음으로는 헛침 17 % · 확인표 2745) · `?lianStep=`
+  lianStep: 0.45, // [사장님 10/29 14:3x 결정]
+  //  칼끝 빠르기 = specialShare.lianchi 0.6 (고노센 칼끝의 몫 — 10/29 02:0x 0.5 · 12:3x 사장님 0.6 · 전 격살 × 0.6 = 고노센 × 0.36)
   lianSnapTime: realS(0.2), // 끌고 가는 시간 상한 (실제 초 — 시간 사다리 0.2) · 사장님 10/28 00:3x 결정. 다 끌기 전에 상한이면 거기서 0.2 s 에 서보로
   // 특수 공격 공통 식힘 (사장님 10/28 02:0x '‘특수공격’은 6초 쿨타임이 있어. 제비베기 듀플리렌 염시 카바치오네. 쿨타임은 스킬이 발동한 순간부터 재.' — 확인표 2700):
   //  표 칸 special(unique_assist.js PLAYER_UNIQUE — tsubameGaeshi · duplieren · lianchi · cavazione)마다 따로 · 나간 순간(조건이 받아들여진 때)부터 이 초 동안 그 조건은 없는 것 —
@@ -1407,8 +1412,8 @@ export const UNIQUE_ASSIST = {
   // 특수 공격 칼끝 빠르기 (사장님 10/29 02:0x '계산식을 바꿔. 모든 유파 특수공격을 고노센 곱하기 n으로. 풍차베기는 50% 염시는 50% 두플리렌 50%' — 확인표 2734):
   //  끌고 가는 칼(secret_instant.js requestCombo)의 칼끝 빠르기 목표 = 같은 칼 고노센 발도 칼끝 빠르기(iaiTipSpeed) × 이 몫 · 표 칸 special 이름마다 한 곳 — 유파 비기 빠르기(격살 share · 모르트슐라크 kin ·
   //  싱지르 share · 리솔루토 share)를 바꿔도 특수 공격은 안 바뀜. 제비 베기 · 칼끝 돌려 빼기는 전과 같은 수(고노센 × 0.6) · 잔상 세기도 이 몫(연환 잔상). `?specialShare=redondo:0.5,lianchi:0.5`
-  //  10/29 13:xx 사장님: 칼끝 돌려 빼기 0.6 → 0.3 · 날개 접기(염시) 0.5 → 0.6 (나머지 그대로)
-  specialShare: { tsubameGaeshi: 0.6, cavazione: 0.3, lianchi: 0.6, duplieren: 0.5, redondo: 0.5 }, // [사장님 10/29 02:0x · 13:xx 결정]
+  //  10/29 12:3x 사장님: 칼끝 돌려 빼기 0.6 → 0.3 · 날개 접기(염시) 0.5 → 0.6 (나머지 그대로)
+  specialShare: { tsubameGaeshi: 0.6, cavazione: 0.3, lianchi: 0.6, duplieren: 0.5, redondo: 0.5 }, // [사장님 10/29 02:0x · 12:3x 결정]
   // 사람 겹치기 (G7 두플리렌 — 독일 특수 공격 · 사장님 10/28 01:2x '지금대로' · 감독 전달 — 기록 docs/strike/duplieren_2026-10-28.md · 확인표 2710 ~ 2721). 사람 강화(unique_assist.js)만 · AI 겹치기(가로베기)는 그대로.
   //  ① dupTap: 내 긋기가 상대 칼에 맞물려 지금도 닿아 있는 동안의 탭 = 보통 탭 찌르기 대신 겹치기 (찌르기 맞물림 · 탭 연타는 아님 · 한 맞물림에 한 번). 전 판 입력(맞물린 뒤 다음 긋기)은 사람 몫에서 뺌. 0 = 끔 `?dupTap=0`
   //  ② 그 칼 = 맞물린 자리에서 칼을 떼지 않고 칼 축으로 밀어 상대 칼 뒤(상대 칼과 몸 사이)로 넣은 뒤, 맞닿은 자리를 축으로 칼자루를 오른쪽(폼멜이 오른팔 밑 — 엇갈린 손)으로 돌려 칼날 앞몫이 얼굴을 지나는 사선 베기 —

@@ -1885,6 +1885,7 @@ export class Fighter {
     if (this.ibStrike) {
       if (this.iai || this.iaiReq) {
         this.ibCutN = this.ibLastN = this.ibStrike.n;
+        if (this.ibStrike.newChain) this.ibChainN0 = this.ibStrike.n; // 풍차 베기가 새 사슬의 첫 칼 (세 칼 셈 — 10/29 14:2x · 'simple')
         this.ibFlowChain = true;
         this.ibFlowWasCut = true;
         this.ibFlowEnd = this.ibFlowCutEnd = t;
@@ -1899,6 +1900,7 @@ export class Fighter {
       if (!this.ibFlowSw) {
         this.ibFlowChain = t - (this.ibFlowCutEnd ?? -9) <= win;
         this.ibCutN = this.ibFlowChain ? (this.ibLastN ?? 0) + 1 : 0; // 이어지는 흐름 (B6 — 10/29 01:5x): 이 칼의 이어 그은 수 (사슬 첫 이은 칼 1 · 다음 2 …)
+        if (!this.ibFlowChain) this.ibChainN0 = 0; // 새 사슬 — 첫 칼 n 0 (세 칼 셈의 1 번째)
         this.ibFlowDir = [v.x / u, v.y / u];
         this.ibFlowPk = this.ibFlowLeg = sp;
       } else {
@@ -1951,11 +1953,16 @@ export class Fighter {
     if (!this.ibChainOn()) return IB_FLOW.power;
     return 1 + (IB_FLOW.power - 1) * Math.max(1, this.ibCutN ?? 1);
   }
-  /** 이어지는 흐름 긋기 기력 배율 (stamina.js chargeAttack — 베기만): 이어 그은 칼이면 IB_FLOW.chainCost ^ n (곱하기 — 0.9 · 0.81 · 0.729 … 사장님 10/29 01:4x '기력 소모는 … 감소' · 01:5x 0.9ⁿ · 확인표 2736) · 아니면 1 */
+  /**
+   * 이어지는 흐름 긋기 기력 배율 (stamina.js chargeAttack — 베기만 · 사장님 10/29 14:1x '세 번째 긋기는 기력을 소모하지 않는 걸로' · 14:2x '세 칼마다' · 확인표 2741):
+   *  사슬의 몇 번째 칼(사슬 첫 칼 = 1 · 풍차 베기로 시작한 사슬은 풍차 베기가 1)이 IB_FLOW.freeEvery 의 배수면 0 · 아니면 1. 풍차 베기 칼 자체는 늘 1 (전 01:5x × 0.9ⁿ — 없앰)
+   */
   ibChainCostK() {
-    if (!this.ibChainOn()) return 1;
+    const every = IB_FLOW.freeEvery | 0;
+    if (!(every > 0) || this.ibStrike || !this.ibChainOn()) return 1;
     const n = this.ibChainN();
-    return n > 0 ? Math.pow(IB_FLOW.chainCost, n) : 1;
+    if (!(n > 0)) return 1;
+    return (n - (this.ibChainN0 ?? 0) + 1) % every === 0 ? 0 : 1;
   }
 
   /** 이베리아 이어 긋기 흐름 10/21 판 읽기 (IB_FLOW.detect 'old' — 휘두르기 표시를 스텝마다 그대로 · 앞 휘두르기 빠르기를 안 봄) */
