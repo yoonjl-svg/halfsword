@@ -904,14 +904,12 @@ export const CHARACTER_GUESTS = [
     },
   },
 ];
-// 10/23 손님 인물 셋 (샛별 저장소 전달본 977c2a43 — 마지막 모습만): 롤랑 · 베르나르도는 아르토리아의 실력 숫자(persona.level)를 빌려 이베리아 유파로 · 백린의 전사는 일본 유파.
-//  (아르토리아 숙련도가 5 로 올라도(10/24) 롤랑 시트가 숙련도를 6 으로 따로 적어 빌리는 것은 실력 숫자뿐)
+// 10/23 손님 인물 셋 (샛별 저장소 전달본 977c2a43 — 마지막 모습만): 롤랑 · 베르나르도는 이베리아 유파 · 백린의 전사는 일본 유파.
+//  롤랑 · 베르나르도의 기질은 10/29 15:5x 부터 저마다 제 것(사장님 '롤랑과 베르나르도의 성향과 캐릭터를 분화해서 싸움 스타일도 바꾸도록 해' — 전: 아르토리아의 실력 숫자 · 성격을 빌림 ·
+//   아르토리아 시트는 그대로 · docs/characters/temperament_2026-10-29.md §7-3)
 //  숙련도 (사장님 10/24 01:1x '백린 전사는 5 롤랑과 베르나르도는 6'): 롤랑 · 베르나르도 6 (전 4 — config AI_PROFICIENCY 의 6 칸) · 백린의 전사 5 (전 3).
 //  셋 다 방랑에서만 나온다(wander_rules.js WANDER_EXCLUSIVE — 베르나르도는 사장님 10/23 저녁 결정) · 시험 경로 고르기 · ?foe=<id> 로도 부른다
-{
-  const artoria = CHARACTERS.find((c) => c.id === 'artoria');
-  CHARACTER_GUESTS.push(createRoland(artoria), createWhiteScaleWarrior(), createBernardo(artoria));
-}
+CHARACTER_GUESTS.push(createRoland(), createWhiteScaleWarrior(), createBernardo());
 for (const c of CHARACTER_GUESTS) finishAI(c);
 
 // Guests are declared after the base rotation. Register Ratna's visual variant
