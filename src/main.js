@@ -148,6 +148,7 @@ if (params.has('parryAssist')) CONFIG.SKILL.parryAssist = Math.max(0, Math.min(3
 if (params.has('kron')) CONFIG.SKILL.deKron = +params.get('kron') ? 1 : 0; // 독일 왕관 막기 자리(10/11 22:2x 사장님 기본): `?kron=0` = 전 자리(머리 위 = 긴 자세)
 if (params.has('gyeoksal')) CONFIG.SECRET.gyeoksal.on = +params.get('gyeoksal') ? 1 : 0; // 동방 막아 죽이기 (10/22 — 사람 동방 비기): `?gyeoksal=0` = 옛 판(막기 연환)
 if (params.has('talhoApproach')) CONFIG.SKILL.talhoApproach = +params.get('talhoApproach') ? 1 : 0; // 나선 걸음 베기 '먼저 비껴 딛고 벤다'(AI — 10/29 18:4x 사장님): `?talhoApproach=0` = 전처럼 베며 딛음 (비교용)
+if (params.has('passAsRung')) CONFIG.GAIT.passAsRung = +params.get('passAsRung') ? 1 : 0; // follow 안 pass → lunge + 끌어붙임 걸음 길이: 1 = 사다리 한 칸 아래(10/29 18:5x 사장님) · `?passAsRung=0` = 옛 × 0.85 (비교용)
 if (params.get('gyeoksalPow') === 'hit' || +params.get('gyeoksalPow') > 0) CONFIG.SECRET.gyeoksal.power = params.get('gyeoksalPow') === 'hit' ? 'hit' : +params.get('gyeoksalPow'); // 격살 판정 시험 (기본 'finish' = FINISH.power 2.5 · 'hit' = 다른 비기와 같은 hitMul 1.3)
 if (params.get('gyeoksalTrail') === '1') CONFIG.SECRET.gyeoksal.trailWidth = 1; // 격살 잔상 굵기도 빠르기 몫으로 (시험)
 if (+params.get('gyeoksalShare') > 0) CONFIG.SECRET.gyeoksal.share = +params.get('gyeoksalShare'); // 격살 칼끝 빠르기 몫 시험 (기본 = cnFastShare 0.3 · 0.5 진 · 1 고노센 발도)
