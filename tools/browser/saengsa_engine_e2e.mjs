@@ -25,6 +25,7 @@ const shot = async (name, fight = false) => { if (fight) { await render(true); a
 const fightLook = () => p.evaluate(() => {
   const R = window.game.teamRun;
   return { state: window.game.state, over: !!R?.M.over, sim: +window.game.stats.simTime.toFixed(1), human: R?.human?.index ?? null,
+    hud: [...document.querySelectorAll('#teamHud .tl-n')].map((e) => e.textContent), // 왼쪽 위 이름 · 체력 목록 (wk/team-fight ecacc60b)
     fighters: window.game.fighters.map((f) => ({ name: f.name, team: f.team, weapon: f.weapon.id, broken: !!f.weaponBroken, blood: +f.blood.toFixed(3), carried: (f.wounds ?? []).filter((w) => w.carried).map((w) => `${w.part}:${w.severity}`), alive: f.alive })) };
 });
 /** 판 하나 (전투 입장 → 판 → 끝) — 돌려줌: 시작 · 끝 모습 */
@@ -77,7 +78,7 @@ try {
   await shot('e4_watch_result');
   const after1 = await saved_();
   const r1 = after1.current.matches.find((m) => m.id === m1).result;
-  log.push({ step: 'watch', control: w.start.human == null ? 'watch' : 'player', start: w.start.fighters, end: w.end?.fighters?.map((f) => `${f.name}:${f.alive ? '삶' : '죽음'}`), sim: w.end?.sim,
+  log.push({ step: 'watch', control: w.start.human == null ? 'watch' : 'player', hud: w.start.hud, start: w.start.fighters, end: w.end?.fighters?.map((f) => `${f.name}:${f.alive ? '삶' : '죽음'}`), sim: w.end?.sim,
     recorded: !!r1, by: r1?.by, winner: r1?.winner, fighters: r1 && Object.fromEntries(Object.entries(r1.fighters).map(([k, v]) => [k, `${v.hp}/${v.alive ? '삶' : '죽음'}/${v.injuries.map((i) => `${i.part}${i.sev}`).join(',')}${v.broken ? '/부러짐' : ''}`])),
     resultsBefore: before1.current.matches.filter((m) => m.result).length, resultsAfter: after1.current.matches.filter((m) => m.result).length });
   await tap('#sgDone');
@@ -105,7 +106,7 @@ try {
   const after2 = await saved_();
   const r2 = after2.current.matches.find((m) => m.id === m2);
   const status = await inRoot(`return root.getElementById('sgStatus').textContent;`);
-  log.push({ step: 'player', control: pl.start.human == null ? 'watch' : 'player', start: pl.start.fighters, quitRecorded: !!r2.result, stillReady: await inRoot(`return root.getElementById('sgFight').hidden === false;`), status });
+  log.push({ step: 'player', control: pl.start.human == null ? 'watch' : 'player', hud: pl.start.hud, start: pl.start.fighters, quitRecorded: !!r2.result, stillReady: await inRoot(`return root.getElementById('sgFight').hidden === false;`), status });
   // ④ 같은 경기를 다시 끝까지 (내 몸은 서 있기만 — 동료 · 상대 AI 가 판을 끝냄): 결과의 broken 이 적히고 부러진 내 무기가 대회 끝까지 남는가
   const pf = await playOut('e9_player_full');
   await until(() => !document.querySelector('#gameEntrance').shadowRoot.getElementById('sgDone').hidden, 100, 100);
