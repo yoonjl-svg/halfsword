@@ -106,7 +106,10 @@ export class AI {
     //  숙련도 (10/13): 손에 든 유파의 고유 동작은 단계 ≤ 숙련도인 것만 꾸러미에 (sword_art.js applySchoolArt) · 비기는 숙련도 5 에서만 (아래 this.secret)
     const art = resolveSwordArt(me.weapon, this.persona, { proficiency: this.persona.proficiency ?? AI_PROFICIENCY.ofLevel[levelName] ?? AI_PROFICIENCY.ofLevel.normal });
     this.art = art;
-    this.proficiency = art.proficiency;
+    this.proficiency = art.proficiency; // 유파 몫: 손에 든 무기 유파의 숙련도 (고유 동작 · 비기 · schoolK · 패시브 · 흘림 문턱 · 마른 길 세기)
+    // 사람 몫 (사장님 10/29 15:5x '반응은 본 유파 숙련도를 따르도록 해'): 인물의 본 유파 숙련도(characters.js aiAtProficiency → persona.mainProficiency) — 반응 시간(setLevel).
+    //  인물이 아닌 AI(숫자 숙련도 · 난이도 이름만)는 지금처럼 위 값 — 그때는 둘이 같다
+    this.mainProficiency = this.persona.mainProficiency ?? this.proficiency;
     me.wristK = schoolPassiveOn('iberian') && art.tradition === 'iberian' && this.proficiency >= SCHOOL_PASSIVE.at ? SCHOOL_PASSIVE.iberian.wrist : 1; // 유파 패시브 손목 힘 (10/21 — 4급 책 = 숙련도 at 이상)
     me.schoolPassive?.set(this.proficiency >= SCHOOL_PASSIVE.at ? art.tradition : null, { ai: true }); // 나머지 넷 (10/21 — 이탈리아 · 일본 · 독일 · 동방, school_passive.js · AI 몫 aiK)
     this.school = art.school;
@@ -284,8 +287,8 @@ export class AI {
     // persona.level: 반응 시간·막기 확률·읽는 눈·힘 같은 "실력 숫자"를 난이도 기본값 위에 캐릭터별로 덮어쓴다
     const PL = this.persona?.level;
     this.level = PL ? { ...base, ...PL } : base;
-    const RX = AI_PROFICIENCY.reaction; // AI 반응 시간은 숙련도로 (10/21 — 인물 시트 · 이름 값보다 이김)
-    if (RX) this.level = { ...this.level, reaction: RX[Math.max(0, Math.min(RX.length - 1, Math.round(this.proficiency ?? 2)))] };
+    const RX = AI_PROFICIENCY.reaction; // AI 반응 시간은 숙련도로 (10/21 — 인물 시트 · 이름 값보다 이김) · 10/29 15:5x 부터 본 유파 숙련도(사람 몫 — 다른 유파 무기를 들어도 그대로)
+    if (RX) this.level = { ...this.level, reaction: RX[Math.max(0, Math.min(RX.length - 1, Math.round(this.mainProficiency ?? this.proficiency ?? 2)))] };
     this.me.strength = this.level.strength;
     this.me.skill.level = this.level.skill;
     this.me.skill.corr = SKILL.corrAI; // AI 보정 방식 (사장님 9/30 23:40: 사람이 먼저, AI 는 옛 보정)

@@ -576,9 +576,11 @@ const HEINRICH = CHARACTERS.find((c) => c.id === 'heinrich');
 //   10/16 22:3x 사장님 "모든 얼터에 숙련도+1을 잊지 말고 적용해 두도록 해" → appearanceOnly 도 숙련도 +1(madVariantAI)은 받는다 — 빼는 것은 실력 숫자 +20% 뿐.
 //    새 얼터가 들어와도 아래 '얼터 숙련도 맞춤'이 원본 +1(상한 5)로 맞춘다. 미나미(5)는 얼터도 5 — 낮의 미나미도 고노센(사장님 '마음에 든다')
 const VARIANT_PLUS = 1;
+//  본 유파 숙련도 mainProficiency (사장님 10/29 15:5x '반응은 본 유파 숙련도를 따르도록 해'): 사람 몫(반응 — ai.js setLevel)은 손에 든 무기가 아니라 이 값을 읽는다.
+//   유파 몫(고유 동작 · 비기 · schoolK · 패시브 · 흘림 문턱)은 그대로 손에 든 유파의 숙련도 — 가름은 docs/characters/temperament_2026-10-29.md §7-1
 export function aiAtProficiency(c, p) {
   const level = AI_PROFICIENCY.levels[p] ?? 'normal';
-  const persona = { ...c.ai.persona, proficiency: { [traditionOf(WEAPONS[c.weapon])]: p } };
+  const persona = { ...c.ai.persona, proficiency: { [traditionOf(WEAPONS[c.weapon])]: p }, mainProficiency: p };
   if (c.mad && !c.appearanceOnly && !c.retainBaseStats) {
     const base = CHARACTERS.find((x) => x.id === c.variantOf);
     persona.level = scaledLevel({ level, persona: base.ai.persona }, MAD_SCALE);
