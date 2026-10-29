@@ -62,8 +62,8 @@ function capSeg(f, name) {
   return { a: ct.clone().sub(ax), b: ct.clone().add(ax), r: col.shape.radius };
 }
 
-/** 한 스텝 표본 (겹치기 칼이 도는 동안) */
-function sample(P, D, st) {
+/** 한 스텝 표본 (겹치기 칼이 도는 동안 · 풍차 베기 몸 검사 redondo_check.mjs 도 씀) */
+export function sample(P, D, st) {
   const w = wristSample(P);
   const s = { w: w ? { elbow: w.elbow, dev: w.dev, fe: w.fe, roll: w.roll, oor: outOfRange(w), shRot: w.shRot, elbowUp: w.elbowUp } : null };
   // 빈팔

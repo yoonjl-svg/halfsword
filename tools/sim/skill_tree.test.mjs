@@ -570,10 +570,10 @@ test('흐르는 긋기 A (10/28 22:0x 사장님 \'A로 해\'): 한 스텝 깜빡
     assert.equal(P.ibFlowOn, true);
   } finally { IB_FLOW.detect = 'a'; r.world.free(); }
 });
-test('이어지는 흐름 (B6 — 사장님 10/29 01:5x · 02:2x): 이어 그은 수 n — 위력 1 + 0.2n 더하기 · 베기 기력 × 0.9ⁿ · 상한 없음 · 끊기면 처음부터 · B5 만이면 1.2 · AI 는 그대로', () => {
+test('이어지는 흐름 (B6 — 사장님 10/29 01:4x · 01:5x): 이어 그은 수 n — 위력 1 + 0.2n 더하기 · 베기 기력 × 0.9ⁿ · 상한 없음 · 끊기면 처음부터 · B5 만이면 1.2 · AI 는 그대로', () => {
   assert.equal(IB_FLOW.power, 1.2); // 사장님 10/29 01:5x 결정
   assert.equal(IB_FLOW.chainStack, 1);
-  assert.equal(IB_FLOW.chainCost, 0.9); // 02:2x 0.8 → 0.9
+  assert.equal(IB_FLOW.chainCost, 0.9); // 01:5x 0.9ⁿ (01:4x '20%씩 감소' → 0.9)
   const run = (kit) => {
     const r = round('zweihander', kit, 9);
     const P = r.player;

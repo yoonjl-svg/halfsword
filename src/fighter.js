@@ -1865,7 +1865,7 @@ export class Fighter {
    * 이베리아 이어 긋기 흐름 A (10/21 — config IB_FLOW, 기본 켬): 휘두르기(skill.swinging — 사람 · AI 같은 문턱)를 이어 가는지 읽어 ibFlowOn 을 둔다.
    *  이어 감 = 앞 휘두르기가 끝난 뒤 이어짐 창(0.6 s) 안에 다시 휘두름 · 휘두르는 채로 손 방향이 90° 넘게 꺾임(둥글게 돌리기). 켜진 채로 그 휘두르기 동안 + 끝난 뒤 창까지.
    *  IB_FLOW.a 를 끄면 읽지도 않는다. (B 손목 힘 한도는 10/21 유파 패시브 wristK 로 옮김 — 이어 긋기와 상관없이 늘)
-   *  10/28 22:0x 사장님 'A로 해'(진짜 이어 그을 때만 — IB_FLOW.detect 'a' · 확인표 2690): 휘두르기 끝 = 손 목표가 문턱 밑에 물리 endSteps(2) 스텝 넘게 머묾
+   *  10/28 22:0x 사장님 'A로 해'(진짜 이어 그을 때만 — IB_FLOW.detect 'a' · 확인표 2722): 휘두르기 끝 = 손 목표가 문턱 밑에 물리 endSteps(2) 스텝 넘게 머묾
    *   (60 Hz 화면은 물리 두세 스텝에 한 번 손가락이 움직여 문턱 근처에서 휘두르기 표시가 한 스텝씩 꺼졌다 켜짐 → 혼자 벤 칼도 '끝나고 곧 다시'로 읽혔음) ·
    *   진짜 긋기 = 손 목표 빠르기 최고가 cutSpeed(5 패드 m/s) 이상인 휘두르기(감기 · AI 준비 손 2.2 ~ 3.8 은 아님) — 이어 감 = 마지막 진짜 긋기가 끝나고 창 안에 시작한 휘두르기
    *   (사이에 낀 감기는 창을 끊지도 잇지도 않음) · 90° 꺾임은 꺾이기 전 몫이 진짜 긋기일 때만 · 흐름은 그 휘두르기도 진짜 긋기일 때만(최고가 cutSpeed 를 넘은 뒤 + 끝난 뒤 창까지).
@@ -1951,7 +1951,7 @@ export class Fighter {
     if (!this.ibChainOn()) return IB_FLOW.power;
     return 1 + (IB_FLOW.power - 1) * Math.max(1, this.ibCutN ?? 1);
   }
-  /** 이어지는 흐름 긋기 기력 배율 (stamina.js chargeAttack — 베기만): 이어 그은 칼이면 IB_FLOW.chainCost ^ n (곱하기 — 0.9 · 0.81 · 0.729 … 사장님 10/29 01:5x · 02:2x) · 아니면 1 */
+  /** 이어지는 흐름 긋기 기력 배율 (stamina.js chargeAttack — 베기만): 이어 그은 칼이면 IB_FLOW.chainCost ^ n (곱하기 — 0.9 · 0.81 · 0.729 … 사장님 10/29 01:4x '기력 소모는 … 감소' · 01:5x 0.9ⁿ · 확인표 2736) · 아니면 1 */
   ibChainCostK() {
     if (!this.ibChainOn()) return 1;
     const n = this.ibChainN();
@@ -3585,7 +3585,7 @@ export class Fighter {
         const stopAngle = (toward * toward) / (2 * brakeAcc);
         // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js). 마무리 찌르기가 겨눔으로 칼을 옮기는 동안(skill.plungePose)은 치는 게 아니라 예전대로 세운다
         const tap = this.skill.tap;
-        const fr = (this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1) * (this.ibFlowOn && IB_FLOW.a ? 1 - IB_FLOW.brake : 1); // 이베리아 흐르는 긋기: 제동을 늦게 (IB_FLOW.brake — 10/28 0.8 · 확인표 2691)
+        const fr = (this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1) * (this.ibFlowOn && IB_FLOW.a ? 1 - IB_FLOW.brake : 1); // 이베리아 흐르는 긋기: 제동을 늦게 (IB_FLOW.brake — 10/28 0.8 · 확인표 2723)
         if (angle * leadK > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;

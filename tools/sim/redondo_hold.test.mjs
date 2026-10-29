@@ -1,4 +1,4 @@
-// 이베리아 특수 공격 시험 — 풍차 베기 (B4 레돈두 · 사장님 10/29 00:4x ~ 02:2x — docs/strike/redondo_hold_2026-10-29.md · config UNIQUE_ASSIST.rdHold · rdHoldTime · rdDrain · rdSnapShare · rdSnapTime · IB_FLOW.windmillChain):
+// 이베리아 특수 공격 시험 — 풍차 베기 (B4 레돈두 · 사장님 10/29 00:4x ~ 01:5x · 08:3x — docs/strike/redondo_hold_2026-10-29.md · config UNIQUE_ASSIST.rdHold · rdHoldTime · rdDrain · rdSnapShare · rdSnapTime · IB_FLOW.windmillChain):
 //   탭(손가락 · PC 왼 단추)을 끌지 않고 실제 0.6 s 넘게 누르면 머리 위로 칼을 돌리고(감기 — 걸음 그대로 · 기력이 듦) 떼면 왼팔 위로 떨어뜨려 비스듬히 벰 ·
 //   0.6 s 전에 떼면 보통 탭 · 끌면 보통 긋기 · 식힘(내려침이 나간 순간부터 6 s) 중엔 감지 않음 · 맞음 · 막기 단추 · 비기는 감기를 그만두게(식힘 없음) · 기력이 바닥이면 저절로 내려침 ·
 //   한 바퀴 넘게 돌린 뒤 낸 칼 = 이어 그은 칼 하나(흐르는 긋기 B5 · 이어지는 흐름 B6) · 사람의 왼 가로베기는 보통 긋기 · AI 는 그대로(왼 가로베기 강화동작)
@@ -14,19 +14,19 @@ import { G as PAD } from '../../src/ai_techniques.js';
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, STAMINA, IB_FLOW, INPUT } = CONFIG;
 
-test('기본값 — 길게 누름 실제 0.6 s · 기력 초당 붙어 버티기와 같은 수 · 싱지르 칼끝 × 0.6 · 실제 0.2 s · 식힘 6 s · B4 칸 = 풍차 베기 · AI 는 왼 가로베기 강화동작 그대로', () => {
+test('기본값 — 길게 누름 실제 0.6 s · 기력 초당 붙어 버티기와 같은 수 · 고노센 칼끝 × 0.5 · 실제 0.2 s · 식힘 6 s · 사슬 simple · B4 칸 = 풍차 베기 · AI 는 왼 가로베기 강화동작 그대로', () => {
   assert.equal(UA.rdHold, 1);
   assert.ok(Math.abs(UA.rdHoldTime - realS(0.6)) < 1e-12); // 사장님 '0.6초'
   assert.equal(UA.rdDrain, STAMINA.clinchPerSecond);
-  assert.equal(UA.rdSnapShare, 0.6);
+  assert.equal(UA.specialShare.redondo, 0.5); // 10/29 02:0x 사장님 '풍차베기는 50%' (전 싱지르 × 0.6 = 고노센 × 0.42)
   assert.ok(Math.abs(UA.rdSnapTime - realS(0.2)) < 1e-12);
   assert.ok(Math.abs(UA.specialCooldown - realS(6.0)) < 1e-12);
-  assert.equal(IB_FLOW.windmillChain, 1);
+  assert.equal(IB_FLOW.windmillChain, 'simple'); // 10/29 08:3x 사장님 결정
   const e = PLAYER_UNIQUE.iberian.find((x) => x.name === 'redondo');
   assert.equal(e.role, 'hold');
   assert.deepEqual(e.on, []); // 사람: 긋기 조건 없음 — 왼 가로베기는 보통 긋기
   assert.ok(e.special && e.hold);
-  assert.equal(e.nameKo, '풍차 베기 (레돈두)'); // 사장님 10/29 02:0x '레돈두는 풍차 베기로'
+  assert.equal(e.nameKo, '풍차 베기 (레돈두)'); // 사장님 10/29 01:5x '레돈두는 풍차 베기로'
   const n = nodeOf('iberian', 'B4');
   assert.equal(n.u, 'redondo');
   assert.equal(n.name, '풍차 베기');
@@ -112,10 +112,13 @@ test('그만둠 (식힘 없음): 막기 단추 · 맞음(칼날 상처) · 비�
   } finally { B.free(); }
 });
 
-test('흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 02:1x): 한 바퀴 전에 떼면 셈 없음 · 사슬 밖이면 n 1 · 사슬 안(창 안에서 누름)이면 n + 1 · 흐르는 긋기(B5) 없으면 셈 없음', () => {
+test('흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 01:5x · 08:3x simple): 한 바퀴 전에 떼면 셈 없음 · simple = 사슬 안이든 밖이든 n 1(× 1.2) · inside(견줌) = 창 안에서 누르면 n + 1 · 흐르는 긋기(B5) 없으면 셈 없음 · B5 만이면 × 1.2 · 0 = 끔', () => {
   const rot = UA.rdLoopT;
   const kitAll = kitFromNodes('iberian', new Set(['B1', 'B5', 'B4', 'B6']));
-  const run = (holdS, prep, kit = kitAll) => {
+  const inPrep = (P) => { P.ibFlowT = 10; P.ibFlowCutEnd = 10; P.ibLastN = 3; }; // 이어 긋기 창 안 · 사슬 셋
+  const run = (holdS, prep, kit = kitAll, mode = 'simple') => {
+    const keep = IB_FLOW.windmillChain;
+    IB_FLOW.windmillChain = mode;
     const B = body({ seed: 7, kit });
     try {
       const { P, uq, press, steps } = B;
@@ -123,21 +126,47 @@ test('흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 02:1x): 한 �
       press.down = true; steps(realS(0.6) + holdS); press.down = false; steps(DT * 3);
       const n = uq.stats.windChain?.at(-1);
       const k = P.ibFlowOn ? P.ibFlowK() : 1;
-      return { n, k, strike: P.ibStrike };
-    } finally { B.free(); }
+      const cost = P.ibChainCostK();
+      return { n, k, cost, strike: P.ibStrike };
+    } finally { IB_FLOW.windmillChain = keep; B.free(); }
   };
   assert.equal(run(rot * 0.7).n, 0, '한 바퀴 전');
   const out = run(rot * 1.2);
   assert.equal(out.n, 1, '사슬 밖 → 첫 수');
   assert.ok(Math.abs(out.k - 1.2) < 1e-9, '× 1.2');
-  const inChain = run(rot * 1.2, (P) => { P.ibFlowT = 10; P.ibFlowCutEnd = 10; P.ibLastN = 3; });
-  assert.equal(inChain.n, 4, '사슬 안 → n + 1');
+  assert.ok(Math.abs(out.cost - 0.9) < 1e-9, '기력 × 0.9');
+  const inSimple = run(rot * 1.2, inPrep);
+  assert.equal(inSimple.n, 1, 'simple — 사슬 안에서 눌러도 n 1');
+  assert.ok(Math.abs(inSimple.k - 1.2) < 1e-9);
+  const inChain = run(rot * 1.2, inPrep, kitAll, 'inside');
+  assert.equal(inChain.n, 4, 'inside — 사슬 안 → n + 1');
   assert.ok(Math.abs(inChain.k - 1.8) < 1e-9, '1 + 0.2 × 4');
-  const b5 = run(rot * 1.2, (P) => { P.ibFlowT = 10; P.ibFlowCutEnd = 10; P.ibLastN = 3; }, kitFromNodes('iberian', new Set(['B1', 'B5', 'B4'])));
+  const b5 = run(rot * 1.2, inPrep, kitFromNodes('iberian', new Set(['B1', 'B5', 'B4'])), 'inside');
   assert.ok(Math.abs(b5.k - 1.2) < 1e-9, 'B5 만 → 1.2');
+  assert.equal(b5.cost, 1, 'B5 만 → 기력 그대로');
   const none = run(rot * 1.2, null, kitFromNodes('iberian', new Set(['B1', 'B4'])));
   assert.equal(none.n, 0, 'B5 없음 → 셈 없음');
   assert.equal(none.k, 1);
+  const off = run(rot * 1.2, null, kitAll, 0);
+  assert.equal(off.n, 0, '끔');
+});
+
+test('simple — 풍차 베기 뒤 이어 그은 긋기는 n 2 (× 1.4 · 기력 × 0.81): 풍차 베기가 새 사슬의 첫 수', () => {
+  const B = body({ seed: 7, kit: kitFromNodes('iberian', new Set(['B1', 'B5', 'B4', 'B6'])) });
+  try {
+    const { P, press, steps } = B;
+    press.down = true; steps(realS(0.6) + UA.rdLoopT * 1.2); press.down = false;
+    let k = 0;
+    while (!(P.iai || P.iaiReq) && k++ < 40) steps(DT); // 뗀 다음 스텝에 내려침이 나감
+    assert.ok(P.iai || P.iaiReq, '내려침');
+    while ((P.iai || P.iaiReq) && k++ < 400) steps(DT);
+    steps(0.05);
+    assert.ok(P.ibFlowOn, '내려침 끝 뒤 창 안 — 흐름 켜짐');
+    P.skill.swinging = true; P.skill.vel.set(-8, 0); P.updateIbFlow(1 / 120);
+    assert.equal(P.ibChainN(), 2, '다음 긋기 = n 2');
+    assert.ok(Math.abs(P.ibFlowK() - 1.4) < 1e-9);
+    assert.ok(Math.abs(P.ibChainCostK() - 0.81) < 1e-9);
+  } finally { B.free(); }
 });
 
 test('사람 왼 가로베기는 보통 긋기 (풍차 베기를 열어도 강화동작으로 안 읽힘)', () => {

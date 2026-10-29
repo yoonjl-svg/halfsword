@@ -19,7 +19,7 @@ test('기본값 — 닿게 켬 · 탭 창 실제 0.6 ~ 1.2 s · 운동학 찌름
   assert.equal(UA.imbroReach, 1);
   assert.equal(UA.cavTap, 1);
   assert.equal(UA.cavSnap, 1);
-  assert.equal(UA.cavSnapShare, 0.6);
+  assert.equal(UA.specialShare.cavazione, 0.6); // 10/29 02:0x 고노센 × 0.6 (전 리솔루토 런지 1 × 0.6 과 같은 수)
   assert.ok(Math.abs(UA.cavSnapTime - realS(0.2)) < 1e-12);
   assert.ok(Math.abs(UA.cavFrom - realS(0.6)) < 1e-12);
   assert.ok(Math.abs(UA.cavTo - realS(1.2)) < 1e-12);
@@ -74,7 +74,7 @@ test('② 상처를 못 낸 막아찌르기가 끝난 때부터 실제 0.8 s 의
     const R = B.P.iaiReq;
     assert.ok(R?.combo, '운동학 찌름 요청');
     assert.equal(R.tech, 'cavazione');
-    assert.ok(Math.abs(R.share - UA.cavSnapShare * CONFIG.SECRET.risolutoShare) < 1e-12);
+    assert.ok(Math.abs(R.share - 0.6) < 1e-12); // 고노센 × 0.6 (10/29 02:0x — 전 리솔루토 런지 몫 1 × 0.6 과 같은 수)
     assert.equal(R.maxT, UA.cavSnapTime);
     assert.equal(R.hold, 0);
     assert.equal(R.hitMul, 1);

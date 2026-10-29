@@ -553,7 +553,7 @@ function iaiSolve(f, H, D, turn = 0, edgeHint = null, rollCap = false, I = f.iai
 }
 
 /**
- * 거듭 돌려 베기 감기 (B6 이베리아 특수 공격 — 사장님 10/29 · iberian_redondo.js windStep): 손 자리 H · 칼날 D(몸 틀 I.yaw — 가슴 원점)에 팔 · 칼(· 빈팔)을 놓는다 —
+ * 풍차 베기 감기 (B4 이베리아 특수 공격 — 사장님 10/29 · iberian_redondo.js windStep): 손 자리 H · 칼날 D(몸 틀 I.yaw — 가슴 원점)에 팔 · 칼(· 빈팔)을 놓는다 —
  *  아래 placeIai 그대로(팔 IK · 굴림 묶음 · 손목 교정 · 날 = edgeHint 쪽 · 빠르기 = 가슴 · 덧씌우기 칸도 같은 자세 · 몸 비틀기 = I.body). I = { yaw, off, body } (끌고 가는 칼 f.iai 가 아님). 칼날 선분 { B, D, tip }
  */
 export function placeArmsAt(f, I, H, D, edgeHint = null) {
@@ -2411,7 +2411,7 @@ export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, 
 /**
  * 사람 칼끝 돌려 빼기 (I9 — 사장님 10/28 00:5x · 01:0x — config UNIQUE_ASSIST.cavSnap · unique_assist.js tapChain): 맞물린 뒤 창 안의 탭으로 낸 그 칼을
  *  제비 베기 되돌림 칼과 같은 틀(연환 — 운동학 · 쓸린 자리의 실제 빠르기 · 판정 배율 1 · 같은 공격 · 끝 자세 붙잡기 없음 · 시간 상한 maxT)로 찌른다. 길 = comboPlanArtThrust (under = 상대 칼 밑으로 돌려 빼기).
- *  칼끝 빠르기 = 고노센 발도 칼끝 빠르기 × share (unique_assist.js 가 리솔루토 런지 몫 × cavSnapShare 로 넘김) · 잔상 = 제비 베기 되돌림 칼과 같은 연환 잔상(share 몫).
+ *  칼끝 빠르기 = 고노센 발도 칼끝 빠르기 × share (unique_assist.js 가 UNIQUE_ASSIST.specialShare.cavazione 로 넘김 — 10/29 02:0x) · 잔상 = 제비 베기 되돌림 칼과 같은 연환 잔상(share 몫).
  *  plane = 아래팔을 칼 줄에 맞추는 팔꿈치 · 손목이 사람 범위 안인 칼 면(iaiSolve — fighter.js armIK alignDir · wristPlane) · roll = 굴림 묶음(그런 면이 없을 때) ·
  *  dyn.thrust = 겨눈 찌름과 같이 찌르는 토막 첫 자리부터 쓸린 자리(thrustSweep) · 손목 교정은 칼을 줄에서 비키지 않음(iaiSolve thrustSeg). 이미 끌고 가는 중이면 거절(false)
  */

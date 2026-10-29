@@ -100,9 +100,9 @@ export const PLAYER_UNIQUE = {
   ],
   iberian: [
     { stage: 1, name: 'talhoRodeado', role: 'step', stick: 'side', hint: '옆으로 걸으며 사선 내려 긋기', body: [-15, -8, 4, 0.02], /* 10/21 전수 조사: 탈류(오른쪽 위 → 왼쪽 아래) · 원전 「왼쪽 위로 나사처럼」 — 몸 왼쪽(−) · 전 +15 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 옆 + 분노의 베기
-    // 풍차 베기 (B4 레돈두 — 이베리아 특수 공격 · 사장님 10/29 01:3x '레돈두를 지금 우리가 개발 중인 특수공격으로' · 02:0x '레돈두는 풍차 베기로' — config UNIQUE_ASSIST.rdHold):
+    // 풍차 베기 (B4 레돈두 — 이베리아 특수 공격 · 사장님 10/29 01:3x '레돈두를 지금 우리가 개발 중인 특수공격으로' · 01:5x '레돈두는 풍차 베기로' — config UNIQUE_ASSIST.rdHold · 확인표 2727):
     //  사람 = role 'hold' — 탭을 길게 눌러 머리 위로 칼을 돌리다(iberian_redondo.js) 떼면 왼팔 위로 떨어뜨려 비스듬히 벰(secret_instant.js requestArtRedondo) · 왼 가로베기는 사람에게 보통 긋기로 돌아감(긋기 조건 on 없음).
-    //  ai = AI 몫 그대로(전 판 강화동작 — 왼 가로베기 대신 · enhancedMoves · sword_art.js 가 읽음) · stack = AI 이어 그을수록 맞는 순간 에너지 + 10 %(셋까지 — strokeHitK · 사람은 쌓기 칸이 없어 안 받음)
+    //  ai = AI 몫 그대로(전 판 강화동작 — 왼 가로베기 대신 · enhancedMoves · sword_art.js 가 읽음) · stack = AI 이어 그을수록 맞는 순간 에너지 + 10 %(셋까지 — strokeHitK · 사람은 쌓기 칸이 없어 안 받음 — 10/29 B6 은 이어지는 흐름)
     { stage: 3, name: 'redondo', role: 'hold', hold: 1, special: true, nameKo: '풍차 베기 (레돈두)', orig: 'redondo', hint: '탭을 길게 눌러 머리 위로 칼을 돌리다 떼면 내려 벤다', on: [], ai: { role: 'enh', replaces: 'zwerchL' }, stack: 0.1 },
   ],
   japanese: [
@@ -176,6 +176,8 @@ export function enhancedMoves(tradition) {
 }
 
 const D2R = Math.PI / 180;
+/** 특수 공격 칼끝 빠르기 몫 (사장님 10/29 02:0x '모든 유파 특수공격을 고노센 곱하기 n으로' — config UNIQUE_ASSIST.specialShare · 확인표 2734): 끌고 가는 칼 칼끝 = 같은 칼 고노센 칼끝 × 이 몫 */
+export const specialShare = (name) => UA.specialShare?.[name] ?? 0;
 const _v = new THREE.Vector3();
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -483,22 +485,20 @@ export class PlayerUniqueAssist {
       this.stats.tapFired = (this.stats.tapFired ?? 0) + 1;
       f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
       f.stamina.attack(cav ? 'thrust' : 'cut'); // 탭 하나 (끌고 가는 칼은 같은 공격 — same)
-      if (e.tapSnap && UA.cavSnap && UA.enhance > 0 && requestArtThrust(f, { share: UA.cavSnapShare * (SECRET.risolutoShare ?? 1), maxT: UA.cavSnapTime, tech: U.name, under: true })) {
+      if (e.tapSnap && UA.cavSnap && UA.enhance > 0 && requestArtThrust(f, { share: specialShare(e.name), maxT: UA.cavSnapTime, tech: U.name, under: true })) {
         this.stats.snap = (this.stats.snap ?? 0) + 1;
         return true;
       }
-      // 날개 접기 (사장님 10/28 00:3x): 오른 허리 옆으로 거뒀다 앞으로 반걸음 들며 허리를 오른 → 왼 가로 호로 — 격살 칼끝 빠르기 × lianSnapShare
+      // 날개 접기 (사장님 10/28 00:3x): 오른 허리 옆으로 거뒀다 앞으로 반걸음 들며 허리를 오른 → 왼 가로 호로 — 고노센 칼끝 × specialShare.lianchi (10/29 02:0x)
       if (e.tapFold && UA.enhance > 0) {
-        const gk = SECRET.gyeoksal?.share > 0 ? SECRET.gyeoksal.share : SECRET.cnFastShare;
-        if (requestArtFold(f, { share: UA.lianSnapShare * gk, maxT: UA.lianSnapTime, tech: U.name, step: { kind: 'lunge', fwd: SECRET.chineseStep } })) {
+        if (requestArtFold(f, { share: specialShare(e.name), maxT: UA.lianSnapTime, tech: U.name, step: { kind: 'lunge', fwd: SECRET.chineseStep } })) {
           this.stats.snap = (this.stats.snap ?? 0) + 1;
           return true;
         }
       }
-      // 겹치기 (10/28): 맞물린 자리에서 상대 칼 뒤로 밀어 넣어 엇갈린 손으로 얼굴을 사선으로 — 죽음의 일격 칼 빠르기(고노센 × SECRET.mord.kin) × dupSnapShare
+      // 겹치기 (10/28): 맞물린 자리에서 상대 칼 뒤로 밀어 넣어 엇갈린 손으로 얼굴을 사선으로 — 고노센 칼끝 × specialShare.duplieren (10/29 02:0x)
       if (e.tapDup && UA.enhance > 0) {
-        const mk = SECRET.mord?.kin > 0 ? SECRET.mord.kin : SECRET.cnFastShare;
-        if (requestArtDup(f, { share: UA.dupSnapShare * mk, maxT: UA.dupSnapTime, tech: U.name, face: UA.dupFace, follow: UA.dupFollow, plan: UA.dupPlan, body: UA.dupBody, edge: UA.dupEdge })) {
+        if (requestArtDup(f, { share: specialShare(e.name), maxT: UA.dupSnapTime, tech: U.name, face: UA.dupFace, follow: UA.dupFollow, plan: UA.dupPlan, body: UA.dupBody, edge: UA.dupEdge })) {
           this.stats.snap = (this.stats.snap ?? 0) + 1;
           return true;
         }
@@ -550,7 +550,7 @@ export class PlayerUniqueAssist {
    * 풍차 베기 (B4 레돈두 — 사장님 10/29 · config UNIQUE_ASSIST.rdHold): 물리 스텝마다 (drive 머리).
    *  ① 누름: 끌지 않은 누름이 rdHoldTime 을 넘기면 감기 시작 — 그 순간 식힘 중 · 비기 창 · 몸이 바쁨 · 탈진이면 이 누름은 감지 않음(뗄 때까지) · 끌면 이 누름은 보통 긋기.
    *  ② 감는 중: 떼면 내려침 · 기력 rdDrain 초당 · 기력이 바닥(0)이면 저절로 내려침 · 맞음(칼날 상처 · 넘어짐 · 칼을 세게 맞음) · 막기 단추 · 비기 · 탈진 · 칼을 잃음이면 그만둠(식힘 없음) · 감는 칼이 닿기만 하면 그대로 감음.
-   *  흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 02:1x · 감독 풀이): 머리 위로 한 바퀴 넘게 돌린 뒤 낸 내려침은 이어 그은 칼 하나로 셈(windFire)
+   *  흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 01:5x '한 바퀴 이상 돌렸을 때 한 번만' · 08:3x 'simple'): 머리 위로 한 바퀴 넘게 돌린 뒤 낸 내려침은 이어 그은 칼 하나로 셈(windFire)
    */
   holdTick(dt) {
     const f = this.f;
@@ -587,7 +587,7 @@ export class PlayerUniqueAssist {
     if (H.st === 'idle') {
       H.st = 'press';
       H.t = 0;
-      // 이어 긋기 창 안에서 누르기 시작했나 (흐르는 긋기 — 마지막 진짜 긋기가 끝나고 afterWindow 안 · 누르고 도는 동안은 창이 닫히지 않는 것으로 셈)
+      // 이어 긋기 창 안에서 누르기 시작했나 (흐르는 긋기 windmillChain 'inside' 견줌 판만 읽음 — 마지막 진짜 긋기가 끝나고 afterWindow 안 · 누르고 도는 동안은 창이 닫히지 않는 것으로 셈)
       H.chainN = f.ibFlowChainNow?.() ?? -1;
     }
     H.t += dt;
@@ -648,13 +648,14 @@ export class PlayerUniqueAssist {
     this.hold.st = this.press.down ? 'spent' : 'idle'; // 기력이 바닥나 낸 칼: 손가락을 뗄 때까지 다시 감지 않음
     this.hold.fade = 0.12;
     const U = e.U;
-    // 흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 02:1x · 감독 풀이 · 사장님 확인 전): 한 바퀴 넘게 돌린 뒤 낸 칼 = 이어 그은 칼 하나 (더 돌려도 하나) ·
-    //  이어 긋기 창 안에서 누르기 시작했으면 그 사슬의 다음 수(n + 1) · 아니면 첫 수(n 1) · 사슬은 이 칼 뒤로 이어짐. 흐르는 긋기(B5)가 없으면 없음 · 한 바퀴 못 돌았으면 없음
-    const chain = IB_FLOW.windmillChain && IB_FLOW.a && turns >= 1 && f.swordArt?.tradition === 'iberian' && !kitOff(f, 'ibFlow');
-    const n = chain ? (this.hold.chainN >= 0 ? this.hold.chainN + 1 : 1) : 0;
+    // 흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 01:5x '한 바퀴 이상 돌렸을 때 한 번만' · 08:3x 'simple' 결정 · 확인표 2737): 한 바퀴 넘게 돌린 뒤 낸 칼 = 이어 그은 칼 하나 (더 돌려도 하나) ·
+    //  'simple' = 늘 첫 수(n 1 — × 1.2 · 기력 × 0.9 · 앞 사슬과 상관없이) · 'inside'(견줌) = 이어 긋기 창 안에서 누르기 시작했으면 그 사슬의 다음 수(n + 1) · 아니면 n 1 ·
+    //  사슬은 이 칼 뒤로 이어짐(다음 긋기 n + 1). 흐르는 긋기(B5)가 없으면 없음 · 한 바퀴 못 돌았으면 없음(앞 사슬도 이 칼로 잇지 않음)
+    const mode = IB_FLOW.windmillChain;
+    const chain = !!mode && IB_FLOW.a && turns >= 1 && f.swordArt?.tradition === 'iberian' && !kitOff(f, 'ibFlow');
+    const n = !chain ? 0 : mode === 'inside' && this.hold.chainN >= 0 ? this.hold.chainN + 1 : 1;
     f.ibStrike = chain ? { n, t0: this.t } : null; // fighter.js updateIbFlow 가 칼이 끄는 동안 흐름을 켬 · 기력(ibChainCostK)이 읽음
-    const gk = SECRET.ibSpin?.share > 0 ? SECRET.ibSpin.share : SECRET.cnFastShare;
-    const ok = UA.enhance > 0 && requestArtRedondo(f, { share: UA.rdSnapShare * gk, maxT: UA.rdSnapTime, tech: U.name, arc: UA.rdArc });
+    const ok = UA.enhance > 0 && requestArtRedondo(f, { share: specialShare(e.name), maxT: UA.rdSnapTime, tech: U.name, arc: UA.rdArc });
     if (!ok) {
       f.ibStrike = null;
       this.stats.windCancel ??= {};
@@ -822,11 +823,11 @@ export class PlayerUniqueAssist {
       const at = Math.min(e.chain?.at ?? 2, U.pts.length - 2);
       if (requestArtReturn(f, U.pts[at], U.pts.slice(at + 1), SB)) this.end('yield');
     } else if (e.snap && UA.tsuSnap && UA.enhance > 0) {
-      // 제비 베기 되돌림 칼 (사장님 10/25 21:1x 해법 ② — 중력과 관성을 거스름): 꺾은 자리(지금 손 목표)에서 올려 긋는 길을 고노센 칼끝 빠르기 × tsuSnapShare 로 tsuSnapTime 초까지 끌고 간다.
+      // 제비 베기 되돌림 칼 (사장님 10/25 21:1x 해법 ② — 중력과 관성을 거스름): 꺾은 자리(지금 손 목표)에서 올려 긋는 길을 고노센 칼끝 빠르기 × specialShare.tsubameGaeshi 로 tsuSnapTime 초까지 끌고 간다.
       //  강화(몸 · 끝 힘 · 덧칸)는 그대로 둔다 — 끌고 가는 칼이 끝나면 손가락이 이어 긋는다
       const at = Math.min(e.chain?.at ?? 2, U.pts.length - 2);
       //  길 덧칸(해법 ③ 손 돌리기 등)은 끌고 가는 칼에도 같은 점마다 (U.plan 의 꺾은 자리부터)
-      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: UA.tsuSnapShare, maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band })) this.stats.snap = (this.stats.snap ?? 0) + 1;
+      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band })) this.stats.snap = (this.stats.snap ?? 0) + 1;
     } else if (e.tap && UA.imbroReach) {
       // 위에서 내려 찌르기 닿게 (사장님 10/27 23:5x '찌르기 뻗게 고치고'): 읽힌 순간 탭 찌르기 덧씌우기로 찌른다 — AI 임브로카타(ai.js startStrike → skill.thrust)와 같은 길
       //  (이탈리아 찌르기 THRUST.itLunge — 몸통 겨눔 · 팔만으로 안 닿으면 거리만큼 런지). 그 탭이 도는 동안 강화(몸 · 끝 힘)는 물러남(busy) · 맞은 상처는 이 기술(strokeTechOf — I8 틈 파고들기).
