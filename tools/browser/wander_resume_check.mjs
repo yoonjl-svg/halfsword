@@ -110,7 +110,7 @@ try {
   const after = await bodies();
   await shot('w5_after_reload', true);
   log.push({ step: 'reload mid-fight → continue', resume, before, atReload, savedPlayer: saved2 && { blood: +saved2.player.blood.toFixed(4), wounds: saved2.player.wounds.length }, after,
-    sameAsSaved: !!saved2 && Math.abs(after.player.blood - saved2.player.blood) < 0.05 && after.player.wounds === saved2.player.wounds }); // 피는 이어받은 출혈로 첫 몇 프레임에도 조금 줄어듦
+    sameAsSaved: !!saved2 && Math.abs(after.player.blood - saved2.player.blood) < 0.05 && after.player.wounds === saved2.player.wounds.length && after.player.parts === saved2.player.wounds.map((w) => w.part).join(',') }); // 피는 이어받은 출혈로 첫 몇 프레임에도 조금 줄어듦 (저장 사본의 wounds 는 목록)
 } catch (e) {
   errors.push('harness: ' + e.message.split('\n')[0]);
 }
