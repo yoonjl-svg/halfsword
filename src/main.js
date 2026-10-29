@@ -897,7 +897,7 @@ function newRound(weaponId) {
   fighters = [player, enemy]; // 1:1 — 두 몸 고리 · 효과가 읽는다 (예전 [player, enemy] 와 같은 차례)
   teamRun = null;
   teamHud.hide();
-  staminaHud.setTeam(false); // 1:1: 체력 막대 없음 · 기력 막대 이름표 예전 그대로
+  staminaHud.setTeam(false); // 1:1: 기력 막대 이름표 예전 그대로
   if (loadout?.armor === LOBBY_ARMOR.id) player.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus); // 케틀 햇 '생존술: 기력 +30' — 최대 130에서 시작·회복 (문턱 0 · −35 · −70 그대로 · 기력 끔이면 아무 일 없음)
   //  판 시작 장착으로 정한다: 판 중에 투구가 맞아 벗겨져도(fighter.js knockOffHelmet) 그 판은 130 그대로 — 사장님 결정 10/16 08:1x '아이템은 사라져도 효과는 그대로 둬.'
   if (loadout?.neck === HERO_TEAR.id) player.stamina.setInfinite(true); // 용사의 눈물 '기력 무한' (사장님 10/17) — 플레이어만 · 청구 · 지침 · 탈진 없음 · 머리 위 내 막대 없음(stamina_hud.js) · 몸에 붙이는 것 없음(겉모습 그대로)
@@ -1006,7 +1006,10 @@ async function saengsaMods() {
 /** 판 꼴 한 칸의 겉모습: 준 것 · 나(케틀 햇) · 인물 시트 · 무명 검객(생사전 가지) · 기본 */
 function teamLook(e, mods) {
   if (e.look) return e.look;
-  if (e.id === 'player') return LOOKS.player;
+  if (e.id === 'player') {
+    const lo = e.human ? journeyLoadout() : null; // 1:1 newRound 와 같은 겉모습: 대기실에서 케틀 햇을 벗었으면 맨머리 (첫 화면에서 연 판만 — 그 밖은 케틀 햇)
+    return lo && lo.armor !== LOBBY_ARMOR.id ? LOOK_BAREHEAD : LOOKS.player;
+  }
   const ch = CHARACTERS_BY_ID[e.id];
   if (ch) return ch.look;
   if (e.id === 'nameless' && mods.namelessLook) return mods.namelessLook(e.cloth ?? 0);
@@ -1052,12 +1055,20 @@ function newTeamRound(spec, mods = {}) {
       terrain,
       look: teamLook(e, mods),
       weapon: e.weapon,
+      ffa: E.length > 2, // 셋 이상 판: 같은 편도 적과 똑같이 부딪히고 벤다 (사장님 10/29 22:3x · fighter.js FFA_*)
       ...(e.human
-        ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined }
+        ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined, ...(IB_TABLE === 'v2p' ? { guardTables: { iberian: iberianTableV2() } } : {}) }
         : { revive: ch?.revive, physiology: ch?.physiology, vitality: ch?.vitality }),
     });
   });
   for (const f of fighters) f.applySnapshot(E[f.index].snapshot); // 들어올 때 상태 (생사전 체력 · 부상 — 6단계)
+  {
+    // 사람 몸의 대기실 장비 — 1:1 newRound 와 똑같이 (사장님 10/29 22:3x '완전 동일해야 함'): 케틀 햇 기력 +30 · 용사의 눈물 기력 무한 (첫 화면에서 연 판만 — journeyLoadout)
+    const H0 = fighters.find((f) => f.human);
+    const lo = H0 ? journeyLoadout() : null;
+    if (lo?.armor === LOBBY_ARMOR.id) H0.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus);
+    if (lo?.neck === HERO_TEAR.id) H0.stamina.setInfinite(true);
+  }
   for (const a of fighters) for (const v of fighters) if (a.team !== v.team) applyAweStart(a, v);
   for (const f of fighters) {
     configureWetlandMovement(f, stages.id);
@@ -1149,8 +1160,8 @@ function newTeamRound(spec, mods = {}) {
   hitStop.quiet = CONFIG.IMPACT_FX.chainGap;
   for (const f of fighters) f.syncMeshes();
   warmRoundFx(fxWarm);
-  teamHud.show(fighters);
-  staminaHud.setTeam(true); // 동시 대전: 기력 막대 밑 체력 막대 (편 색)
+  teamHud.show(fighters, stageInfo.classList.contains('show') ? stageInfo : null); // 왼쪽 위 이름 · 체력 목록 (무대 이름이 보이면 그 밑 — 생사전은 무대 이름을 감춰 그 자리)
+  staminaHud.setTeam(true); // 동시 대전: 기력 막대 이름표 = 싸움꾼 이름
 }
 
 /** stepMatch 갈고리 — 1:1 고리의 같은 자리 (사람 몸의 비기 창 · 막기 단추는 AI 조종 뒤 · 몸 스텝 앞) */
@@ -1317,6 +1328,7 @@ async function teamStart(spec, mods = {}, opts = {}) {
   techClear();
   guardClear();
   currentFoe = null; // 동시 대전은 가운데 상대 소개 없음 (판 알림 · 안내만 — showFightCues)
+  if (opts.saengsa) stageInfo.classList.remove('show'); // 생사전: 무대 이름을 감춘다 (사장님 10/29 22:3x — 그 자리에 이름 · 체력 목록 · 다른 판은 그대로 — startFight 가 다시 띄움)
   newTeamRound(spec, mods);
   teamRun.opts = opts;
   beginFight();

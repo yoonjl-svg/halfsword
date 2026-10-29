@@ -135,7 +135,7 @@ export function newMatch(opts = {}) {
   const count = opts.count ?? 2;
   const spots = spawnSpots(count, { gap: opts.gap ?? ARENA.startGap, mateGap: opts.mateGap ?? CONFIG.TEAM_FIGHT.mateGap });
   const NAMES = ['P', 'E', 'P2', 'E2'];
-  const W = (i) => (opts.weapons?.[i] ? { weapon: opts.weapons[i] } : {}); // 자리마다 무기 (안 주면 Fighter 기본 — 롱소드)
+  const W = (i) => ({ ...(opts.weapons?.[i] ? { weapon: opts.weapons[i] } : {}), ...(count > 2 && opts.ffa !== false ? { ffa: true } : {}) }); // 자리마다 무기 (안 주면 Fighter 기본 — 롱소드) · 셋 이상 판은 같은 편도 같은 물리 (ffa — opts.ffa false 면 예전 편 비트, 전후 비교)
   const fighters = spots.map((s, i) => (s.z === 0
     ? new Fighter(RAPIER, world, scene, colliderInfo, { index: i, name: NAMES[i], x: s.x, heading: s.heading, look: opts.looks?.[i] ?? (s.team === 0 ? LOOKS.player : LOOKS.enemy), breakSeed: opts.seed, ...W(i) })
     : new Fighter(RAPIER, world, scene, colliderInfo, { index: i, name: NAMES[i], x: s.x, z: s.z, heading: s.heading, look: opts.looks?.[i] ?? (s.team === 0 ? LOOKS.player : LOOKS.enemy), breakSeed: opts.seed, ...W(i) })));

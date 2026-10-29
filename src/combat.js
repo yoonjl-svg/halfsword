@@ -35,12 +35,12 @@ import { lowFinishOn, lowFinishPosture, downLowTarget } from './finish_entry.js'
 import { UNIQUE_ASSIST as UA, IB_FLOW } from './config.js'; // IB_FLOW.power: 이베리아 흐르는 긋기 위력 (10/28 — analyze)
 import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
 import { kitOff, perkOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4)
-import { sameSide, MAX_FIGHTERS } from './team.js'; // 편 (2:2 동시 대전 10/29): 같은 편끼리는 상처 · 칼 겨루기가 없다 (1:1 은 '같은 몸' 판정과 같은 답)
+import { MAX_FIGHTERS } from './team.js'; // 셋 이상 판: 같은 편도 적과 똑같이 상처 · 칼 겨루기 (사장님 10/29 22:3x — 제 몸끼리만 버린다)
 
 /** 발도 충돌 끔 쌍: 서로 다른 싸움꾼이고, 충돌을 끄는 중인 쪽의 칼·칼 쪽 팔·빈팔이 낀 쌍 (팔 ↔ 몸, 칼 ↔ 칼) */
 const IAI_GHOST_PARTS = new Set(['uarmS', 'farmS', 'uarmO', 'farmO']);
 function iaiGhostPair(a, b) {
-  if (!a || !b || sameSide(a.fighter, b.fighter)) return false;
+  if (!a || !b || a.fighter === b.fighter) return false;
   const g = (x) => x.fighter.instantGhost > 0 && (x.kind === 'weapon' || IAI_GHOST_PARTS.has(x.part));
   return g(a) || g(b);
 } // 일본 비기 순간 베기 (10/10 — 물리 원칙의 예외)
@@ -151,7 +151,7 @@ export class Combat {
   pairOf(c1, c2) {
     const a = this.info.get(c1);
     const b = this.info.get(c2);
-    if (!a || !b || sameSide(a.fighter, b.fighter)) return null; // 제 몸 · 같은 편 몸 (2:2 — 같은 편 칼은 물리로도 지나가지만 여기서도 상처를 막는다)
+    if (!a || !b || a.fighter === b.fighter) return null; // 제 몸 (같은 편은 적과 똑같이 — 사장님 10/29 22:3x)
     if (a.fighter.revival || b.fighter.revival) return null; // 부활하는 동안엔 상처를 주고받지 않는다 (revive.js)
     if (a.detached || b.detached) return null; // 잘려 떨어진 팔다리(와 그 손의 칼)는 잔해: 상처를 내지도 받지도 않는다 (fighter.sever)
     // 손에서 놓친(땅에 떨어진) 칼은 부딪히기만 하고 상처를 내지 않는다
@@ -539,7 +539,7 @@ export class Combat {
       const h2 = e.collider2();
       const a = this.info.get(h1);
       const b = this.info.get(h2);
-      if (!a || !b || sameSide(a.fighter, b.fighter)) return; // 제 몸 · 같은 편 (2:2)
+      if (!a || !b || a.fighter === b.fighter) return; // 제 몸 (같은 편은 적과 똑같이)
       if (a.detached || b.detached) return; // 잔해(잘린 팔다리)는 겨루기·튕김 판정에서 뺀다
       if (a.kind === 'weapon' && b.kind === 'weapon') {
         if (!a.fighter.armed || !b.fighter.armed) return; // 땅에 떨어진 칼은 겨루기(바인드·쨍)가 아니다
