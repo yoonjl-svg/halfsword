@@ -829,7 +829,8 @@ export class AI {
     // 싱지르 무장 (10/24): 같은 걸쇠 — 무장된 동안은 먼저 치지 않고 간을 보며(발은 holdDist 그대로 다가섬) 상대가 칼끝 거리 + aiFire 안에 들면 spinTick 이 한 바퀴.
     //  걸쇠가 없으면 롤랑이 무장한 뒤 상대가 칼끝 거리 + 0.6 m 에 오자마자 보통 공격을 열어 무장이 풀렸다(첫 시험 — 낸 수 0). 들어오는 칼(위 respond)은 그대로 받는다
     //  인물 손잡이 pers.spinHold (10/29 15:5x — 사장님 '롤랑과 베르나르도의 … 싸움 스타일도 바꾸도록 해'): 걸쇠는 둘 다 같고, 발만 다르다 —
-    //   true(기본 · 롤랑) = 칼끝 거리에서 서서 상대가 들어오기를 기다림(전 그대로) · false(베르나르도 '말보다 행동이 먼저') = 내가 걸어 들어가 상대를 칼끝 거리 안에 넣음(holdDist)
+    //   true(기본 · 롤랑) = 칼끝 거리에서 서서 상대가 들어오기를 기다림(전 그대로) · false = 내가 걸어 들어가 상대를 칼끝 거리 안에 넣음(holdDist — 15:5x ~ 21:0x 베르나르도.
+    //   21:0x '롤랑의 상극' 부터 베르나르도도 true — 쓰는 인물 없음 · 둘이 함께 내는 맞냄에서 걸어 들어간 쪽이 졌다: docs/characters/temperament_2026-10-29.md §7-5)
     if (this.spinArm?.armed) return;
     // 모르트슐라크 몸 붙이기 (10/24): 같은 걸쇠 — 미는 동안은 먼저 치지 않는다(누르기가 베기로 끊기지 않게 — fighter.closeStep 'swing'). 들어오는 칼(위 respond)은 그대로 받는다.
     //  붙으러 걸어 들어가는 동안은 칠 때가 오면 친다(10/24 13:3x 사장님 '걸어가며 치기도 같이 넣어' — SECRET.mordWalkStrike · 0 이면 걸어가는 동안도 걸쇠 — 12:0x 판). 치면 붙이기는 끝(mordTick — 간 보기를 벗어남)
@@ -888,7 +889,7 @@ export class AI {
   /** 간을 볼 거리: 상대 칼이 닿는 거리 + 여유. 인내심이 줄수록 여유를 줄여 간격 끝에 선다 */
   holdDist() {
     if (this.drillOut) return this.drill.dist(this); // 시험: 헛스윙 연습 — 드릴 거리 (물러남이 거기서 끝난다)
-    // 싱지르 무장 + 기다리지 않는 인물(pers.spinHold false — 베르나르도, 10/29 15:5x): 내기 거리(칼끝 거리 + aiFire)의 절반 안쪽까지 걸어 들어가 상대를 넣는다 — 들어서면 spinTick 이 낸다
+    // 싱지르 무장 + 기다리지 않는 인물(pers.spinHold false — 10/29 15:5x ~ 21:0x 베르나르도 · 지금 쓰는 인물 없음): 내기 거리(칼끝 거리 + aiFire)의 절반 안쪽까지 걸어 들어가 상대를 넣는다 — 들어서면 spinTick 이 낸다
     if (this.spinArm?.armed && !this.pers.spinHold && !this.chasing) return this.M.reach + SECRET.ibSpin.aiFire * 0.5;
     const L = this.level;
     let m = this.pers.margin * (0.3 + 0.7 * this.patience) * (0.6 + 0.4 * L.discipline * (1 - 0.3 * this.anger)); // 화나면 규율이 흐트러진다

@@ -105,7 +105,7 @@ export const AXES = Object.freeze({
   // 기력 아끼기: 0 다 쓴다 · 1 아껴 쓴다. 인물 손잡이 없음 — 지금은 aggr × aggression > 1.15 이면 기력 −10 까지 · 아니면 20 에서 쉼(config.js STAMINA.aiRestAt · aiAggressiveRestAt)
   stamina: K({ ko: '기력 아끼기', knobs: K({}), read: null }),
   // 유파 특성: 고유 동작 · 패시브 · 비기를 얼마나 적극적으로 쓰나 (그 유파 숙련도가 연 것 안에서). 인물 손잡이 — 지금은 숙련도 표 AI_PROFICIENCY.schoolK[숙련도] 하나 +
-  //  (10/29 15:5x) 싱지르 걸쇠 pers.spinHold (무장하면 먼저 치지 않고 기다리나 — 기본 true · 베르나르도 false). 식에는 넣지 않음(낱말 손잡이)
+  //  (10/29 15:5x) 싱지르 걸쇠 pers.spinHold (무장하면 먼저 치지 않고 기다리나 — 기본 true · 15:5x ~ 21:0x 베르나르도 false · 21:0x 부터 쓰는 인물 없음). 식에는 넣지 않음(낱말 손잡이)
   schoolArt: K({ ko: '유파 특성', knobs: K({}), read: null }),
 });
 
@@ -180,9 +180,10 @@ export const TEMPERAMENT = Object.freeze({
   // 지금: 시트 값 없음 (pers {} — 일본 기질 범위) · 이름 · 사연 미정 시안이라 근거가 얇다(thin)
   white_scale: T({ special: true, thin: true, initiative: 0.5, patience: 0.65, distance: 0.7, counter: 0.45, feint: 0.35, press: 0.55, risk: 0.4, composure: 0.85, wounded: 'fightOn', finisher: 0.5, stamina: 0.6, schoolArt: 0.7,
     team: { target: 'nearest', guard: 0.5, woundedFight: 0.75 } }),
-  // 지금 (10/29 15:5x 제 기질 — 전: 롤랑 시트 복사 = 아르토리아 숫자): aggr 1.15 × aggression 1.15 · pt 5 rhythm 2 · margin .18 · counter .4 vor .75 · feint .2 · followUp .75 angry .5 · close .6 (whole 없음) · fearful .1 · dogged .55
-  //  기울기(선공 ↑ · 막힌 뒤 ↑)는 이 기질로 풀림 · 싱지르 걸쇠 spinHold false (무장해도 먼저 친다 — 유파 특성 .6, 롤랑 .85)
-  bernardo: T({ special: true, initiative: 0.8, patience: 0.1, distance: 0.2, counter: 0.65, feint: 0.4, press: 0.75, risk: 0.75, composure: 0.8, wounded: 'fightOn', finisher: 0.8, stamina: 0.25, schoolArt: 0.6,
+  // 지금 (10/29 21:0x 롤랑의 상극 '골짜기의 매복' — 문서 §7-5): aggr .9 × aggression .95 · pt 14 rhythm 2.5 · margin .6 · counter .55 vor .3 · feint .2 · followUp .75 angry .5 · close .6 (whole 없음) · fearful .1 · dogged .55
+  //  싱지르 걸쇠 spinHold true (무장하면 칼끝 거리 끝에서 기다림 — 롤랑과 같음 · 유파 특성 .85) · 기력: aggr × aggression .86 ≤ 1.15 → 20 에서 쉼
+  //  전 (10/29 15:5x 먼저 들어가는 칼): 선공 .8 · 참을성 .1 · 간격 .2 · 받아치기 .65 · 기력 .25 · 유파 특성 .6 (spinHold false) — 나머지 같음
+  bernardo: T({ special: true, initiative: 0.35, patience: 0.55, distance: 1, counter: 0.55, feint: 0.4, press: 0.75, risk: 0.75, composure: 0.8, wounded: 'fightOn', finisher: 0.8, stamina: 0.4, schoolArt: 0.85,
     team: { target: 'strongest', guard: 0.5, woundedFight: 1 } }),
 });
 

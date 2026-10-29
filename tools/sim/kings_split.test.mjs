@@ -1,5 +1,6 @@
 // 롤랑 · 베르나르도 가르기 (사장님 10/29 15:5x '롤랑과 베르나르도의 성향과 캐릭터를 분화해서 싸움 스타일도 바꾸도록 해' — docs/characters/temperament_2026-10-29.md §7-3)
 //  아르토리아 숫자 그대로 · 셋이 서로 다른 기질 · 싱지르 걸쇠의 발(pers.spinHold) · 셋 다 칭호 '왕'
+//  10/29 21:0x 사장님 '베르나르도는 성향을 손봐서 롤랑의 상극이 되게 해' (§7-5): 베르나르도가 롤랑보다 더 멀리 · 더 오래 기다림 · 둘 다 걸쇠에서 기다림(spinHold true)
 //  node --test tools/sim/kings_split.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,8 +22,10 @@ test('셋은 서로 다른 기질 · 숙련도 · 칭호는 그대로', () => {
     assert.notDeepEqual(x.level, y.level, `${w} level`);
     assert.notDeepEqual(x.pers, y.pers, `${w} pers`);
   }
-  assert.ok(r.pers.margin > a.pers.margin && a.pers.margin > b.pers.margin, '간격: 롤랑 > 아르토리아 > 베르나르도');
-  assert.ok(b.pers.aggr * b.level.aggression > r.pers.aggr * r.level.aggression, '베르나르도가 먼저 들어간다');
+  assert.ok(b.pers.margin > r.pers.margin && r.pers.margin > a.pers.margin, '간격: 베르나르도 > 롤랑 > 아르토리아 (21:0x — 전 롤랑 > 아르토리아 > 베르나르도)');
+  const wait = (p) => p.pers.patienceTime / (p.pers.aggr * p.level.aggression); // 참을성이 바닥나는 실제 시간 (ai.js update — patienceTime ÷ aggression · aggr)
+  assert.ok(wait(b) > wait(r), '베르나르도가 롤랑보다 오래 기다린다 (21:0x — 전: 먼저 들어감)');
+  assert.ok(b.level.discipline >= r.level.discipline, '롤랑이 들어오는 만큼 물러난다 (규율 — holdDist · moveFeet)');
   assert.equal(C.roland.ai.proficiency, 6);
   assert.equal(C.bernardo.ai.proficiency, 6);
   for (const id of ['artoria', 'roland', 'bernardo']) assert.equal(C[id].epithet, '왕');
@@ -40,10 +43,10 @@ test('설정 맞춤: 있던 문장은 한 글자도 그대로 · 롤랑이 론�
   assert.equal(C.roland.origin, '이베리아 서쪽 · 바다 너머에서 사라진 왕국'); // origin 그대로
 });
 
-test('싱지르 걸쇠의 발: 롤랑 기다림(기본) · 베르나르도 걸어 들어감 · 다른 AI 는 기본 그대로', () => {
+test('싱지르 걸쇠의 발: 롤랑 · 베르나르도 둘 다 기다림(기본 — 21:0x 부터 · 전 베르나르도 걸어 들어감) · 다른 AI 는 기본 그대로', () => {
   const aiOf = (id) => newRound({ seed: 3, weapon: 'longsword', weapon2: C[id].weapon, difficulty: C[id].ai.level, persona: C[id].ai.persona, AI2Class: AI }).ai;
   assert.equal(aiOf('roland').pers.spinHold, true);
-  assert.equal(aiOf('bernardo').pers.spinHold, false);
+  assert.equal(aiOf('bernardo').pers.spinHold, true);
   assert.ok(aiOf('roland').spinArm && aiOf('bernardo').spinArm, '둘 다 싱지르를 쓴다 (이베리아 숙련도 6)');
   assert.equal(newRound({ seed: 3, weapon: 'longsword', difficulty: 'normal' }).ai.pers.spinHold, true);
 });
