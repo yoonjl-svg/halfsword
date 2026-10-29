@@ -292,6 +292,47 @@ export class AI {
     this.me.skill.corrTip = false; // AI 는 끝점 겨눔 ② 없음 (손 뗌 사건이 없고 속임을 망친다, 설계 AI 절)
   }
 
+  // ── 겨눌 상대 바꾸기 (2:2 동시 대전 10/29 — docs/strike/team_fight_2026-10-29.md · src/match.js) ──
+  //  상대마다 따로 두는 몫 = 눈(Senses — 그 상대의 늦게 본 모습) · 상대 간격 어림(foeM · foeReach · 부러짐 foeBrokeM) · 지난 스텝 상대 아픔(prevFoePain).
+  //  지금 겨눈 상대의 몫은 this 위 칸 그대로(아래 코드가 읽는 자리) — 바꿀 때만 기록(foeRecs)과 맞바꾼다. 눈은 모두 매 스텝 함께 적어(recordSenses)
+  //  시계(sense.t — 공격 · 비기 시간 셈)가 하나다. addFoe 를 한 번도 안 부르면(1:1) foeRecs 가 없고 아래는 예전 한 줄(this.sense.record)과 같다
+  /** 겨눌 수 있는 상대를 하나 더 적는다 (판 시작에 — 그 뒤로 매 스텝 그 상대도 본다). 이미 있으면 아무 일 없음 */
+  addFoe(f) {
+    if (!f || f === this.me) return;
+    if (!this.foeRecs) this.foeRecs = [{ foe: this.foe }]; // 지금 상대 몫은 this 위에 있다 (맞바꿀 때 적는다)
+    if (this.foeRecs.some((r) => r.foe === f)) return;
+    const sense = new Senses(this.me, f);
+    sense.t = this.sense.t; // 같은 시계
+    const foeM = this.art.measureFor(f.weapon);
+    this.foeRecs.push({ foe: f, sense, foeM, foeReach: foeM.reach + 0.05, foeBrokeM: undefined, prevFoePain: f.pain });
+  }
+
+  /** 겨눌 상대를 f 로 (지금 상대와 같으면 아무 일 없음 — 1:1 은 늘 그렇다). 처음 보는 상대면 addFoe 부터 */
+  setFoe(f) {
+    if (!f || f === this.foe) return;
+    this.addFoe(f);
+    const cur = this.foeRecs.find((r) => r.foe === this.foe);
+    if (cur) Object.assign(cur, { sense: this.sense, foeM: this.foeM, foeReach: this.foeReach, foeBrokeM: this.foeBrokeM, prevFoePain: this.prevFoePain });
+    const nx = this.foeRecs.find((r) => r.foe === f);
+    this.foe = f;
+    this.sense = nx.sense;
+    this.foeM = nx.foeM;
+    this.foeReach = nx.foeReach;
+    this.foeBrokeM = nx.foeBrokeM;
+    this.prevFoePain = nx.prevFoePain;
+  }
+
+  /** 매 스텝 눈: 지금 상대 + (2:2) 기록해 둔 다른 상대들. 다른 상대의 지난 아픔도 따라 적는다 (바꾼 첫 스텝에 '맞혔다'로 잘못 읽지 않게) */
+  recordSenses(dt) {
+    this.sense.record(dt);
+    if (!this.foeRecs) return;
+    for (const r of this.foeRecs) {
+      if (r.foe === this.foe) continue;
+      r.sense.record(dt);
+      r.prevFoePain = r.foe.pain;
+    }
+  }
+
   /** 상대가 칼을 놓쳤다(또는 붙어 싸울 수 없는 권총을 들었다): 간격을 지킬 까닭이 없다 → 쫓아가 끝낸다 (도망치는 상대를 놓치지 않게) */
   get chasing() {
     return this.foe.alive && (!this.foe.armed || !!this.foe.weapon?.gun) && this.me.armed;
@@ -343,7 +384,7 @@ export class AI {
   updateCombat(dt) {
     const me = this.me;
     const foe = this.foe;
-    this.sense.record(dt);
+    this.recordSenses(dt); // 1:1 = this.sense.record(dt) 그대로 (2:2 는 기록해 둔 다른 상대의 눈도)
     me.secretActing = !!this.secretRun && this.secretRun.stage !== 'stiff' && this.secretRun.stage !== 'spin' && this.secretRun.stage !== 'mord'; // 비기 실행 중(경직 빼고) — fighter.secretReaching: 그동안 칼 팔이 끝까지 펴짐 (SECRET.secretReach, 10/12) · 싱지르 · 모르트슐라크는 사람과 같게(검술 층이 팔을 쥠 — 10/24)
     this.coverLine = null; // 물러나며 가리는 줄 (withdraw 가 그 스텝에 정함 — frames.js installCover 의 watch 덮개가 읽음, 10/12 왕관)
     const L = this.level;

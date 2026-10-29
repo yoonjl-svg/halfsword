@@ -106,6 +106,11 @@ export const ARENA = {
   startHold: 2.0, // 판 시작 뒤 이 시간(초) 동안 둘 다 발만 묶는다 (팔·칼은 자유). 사장님 값 (fighter.js feetHeld) · 표준 시간(10/25): 이 수는 시뮬 · 도구 판의 게임 초(도구 장면 시각의 바탕 — 그대로) · 브라우저는 판마다 카메라 실제 초 × 템포로 덮고(main.js planOpening) `?openSweep=0` 판도 실제 2.0 s(realS)
 };
 
+// 동시 대전 2:2 · 2:1 (사장님 10/29 14:2x 생사전 — docs/strike/team_fight_2026-10-29.md · src/team.js · src/match.js). 1:1 은 이 값을 읽지 않는다
+export const TEAM_FIGHT = {
+  mateGap: 1.6, // 한 편 둘이 시작할 때 옆(z)으로 벌린 거리 (m, 골반 사이). 편 사이는 ARENA.startGap 그대로 · 사장님 확인 전 (확인표 2860)
+};
+
 export const CAMERA = {
   back: 2.9, // 내 캐릭터 뒤로 얼마나 떨어질지
   height: 2.3, // 카메라 높이

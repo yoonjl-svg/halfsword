@@ -8,6 +8,7 @@ import { AI } from '../../src/ai.js';
 import { Combat } from '../../src/combat.js';
 import { setSupportFloor } from '../../src/gait.js';
 import { terrainForStage, createTerrainGround, applyTerrainHazards } from '../../src/etna_ground.js';
+import { createMatch, stepMatch, orderControllers, spawnSpots, pairFoe, foesOf } from '../../src/match.js'; // 동시 대전 판 newMatch (10/29)
 
 await RAPIER.init();
 export { RAPIER, THREE, CONFIG, AI };
@@ -100,6 +101,64 @@ export function newRound(opts = {}) {
     G.parkEnemy = true;
     G.faceP = { x: 100, y: 1, z: 0 };
   };
+  return G;
+}
+
+// ── 동시 대전 판 (10/29 — src/match.js stepMatch · docs/strike/team_fight_2026-10-29.md) ──
+//  newRound 와 같은 평지 세계(지형 없음)에 싸움꾼 count 명(자리 0 ~ 3 — 0 편 = 0 · 2, 1 편 = 1 · 3)을 세우고, 스텝은 src/match.js 의 공용 차례로 돈다.
+//  1:1(count 2)은 newRound 와 같은 자리 · 겉모습 · 시드 · 만드는 차례 — tools/sim/match_twin.mjs 가 fights12 해시로 확인한다.
+//  opts: count(2) · gap(ARENA.startGap) · mateGap(TEAM_FIGHT.mateGap — 한 편 둘 사이 옆 간격) · seed · walls · iters · difficulty ·
+//        ai(AI 를 붙일 자리 — 안 주면 [1] = newRound 처럼 상대만. 'all' 이면 모두) · foeOf(f, M)(상대 고르기 — 안 주면 src/match.js pairFoe) · onFighter
+//  AI 는 조종 부르는 차례(1 편 → 0 편, 자리 차례, 사람 몸 맨 뒤 — orderControllers)대로 만든다: AI 생성자의 Math.random 차례 (fights12 = 상대 AI 먼저)
+//  돌려줌 G = 판(M) + { player(자리 0), enemy(자리 1), ai(자리 1 의 AI), ai2(자리 0 의 AI), ais(자리 → AI), hits, step(), before? }
+export function newMatch(opts = {}) {
+  const world = new RAPIER.World({ x: 0, y: PHYSICS.gravity, z: 0 });
+  world.timestep = PHYSICS.timestep;
+  world.integrationParameters.numSolverIterations = opts.iters ?? 6;
+  const eventQueue = new RAPIER.EventQueue(true);
+  const colliderInfo = new Map();
+  const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+  const floor = world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
+  setSupportFloor(world, floor);
+  const nw = 32;
+  const R = ARENA.radius + 0.25;
+  for (let i = 0; i < (opts.walls === false ? 0 : nw); i++) {
+    const a = (i / nw) * Math.PI * 2;
+    const half = R * Math.tan(Math.PI / nw) + 0.05;
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -a);
+    world.createCollider(
+      RAPIER.ColliderDesc.cuboid(0.2, 0.6, half).setTranslation(Math.cos(a) * R, 0.6, Math.sin(a) * R).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setCollisionGroups(GROUND_GROUPS),
+      ground,
+    );
+  }
+  const scene = new THREE.Scene();
+  const count = opts.count ?? 2;
+  const spots = spawnSpots(count, { gap: opts.gap ?? ARENA.startGap, mateGap: opts.mateGap ?? CONFIG.TEAM_FIGHT.mateGap });
+  const NAMES = ['P', 'E', 'P2', 'E2'];
+  const fighters = spots.map((s, i) => (s.z === 0
+    ? new Fighter(RAPIER, world, scene, colliderInfo, { index: i, name: NAMES[i], x: s.x, heading: s.heading, look: s.team === 0 ? LOOKS.player : LOOKS.enemy, breakSeed: opts.seed })
+    : new Fighter(RAPIER, world, scene, colliderInfo, { index: i, name: NAMES[i], x: s.x, z: s.z, heading: s.heading, look: s.team === 0 ? LOOKS.player : LOOKS.enemy, breakSeed: opts.seed })));
+  if (opts.onFighter) for (const f of fighters) opts.onFighter(f, world, RAPIER);
+  const player = fighters[0];
+  const enemy = fighters[1];
+  player.skill.level = opts.skill ?? 0.7; // newRound 와 같은 값 (자리 0 에 AI 를 붙이면 AI 가 제 실력으로 덮는다 — fights12 와 같음)
+  const want = opts.ai === 'all' ? fighters.map((f) => f.index) : opts.ai ?? [1];
+  const order = orderControllers(want.map((i) => ({ me: fighters[i] }))).map((c) => c.me.index);
+  const M0 = { fighters };
+  const ais = [];
+  for (const i of order) {
+    const f = fighters[i];
+    const foes = foesOf(M0, f);
+    const ai = new AI(f, pairFoe(f, M0), opts.difficulty ?? 'normal');
+    if (foes.length > 1) for (const g of foes) ai.addFoe(g); // 상대마다 눈 · 간격 어림을 판 시작에 (같은 시계)
+    ais[i] = ai;
+  }
+  const hits = [];
+  const combat = new Combat(colliderInfo, { onWound: (att, vic, r) => hits.push(`${att.name}->${r.zone}:${r.type} ${r.energy.toFixed(0)}J`), onClash: () => {} });
+  const G = createMatch({ world, eventQueue, combat, fighters, controllers: order.map((i) => ais[i]), foeOf: opts.foeOf ?? null });
+  Object.assign(G, { player, enemy, ai: ais[1] ?? null, ai2: ais[0] ?? null, ais, hits });
+  const hooks = { afterControl: () => G.before?.(G.t) };
+  G.step = () => stepMatch(G, DT, hooks);
   return G;
 }
 
