@@ -20,7 +20,7 @@ import { WANDER_EXCLUSIVE } from './wander_rules.js'; // 방랑에서만 나오�
 
 import { WEAPONS, WEAPON_LIST } from './weapons.js';
 import { getLook, CHARACTER_LOOK_VERSION } from './looks.js';
-import { AI_LEVELS, AI_PROFICIENCY } from './config.js'; // 변형의 실력 숫자를 원본 실효값에서 계산 · 숙련도 → 실력 숫자 이름 (config.js는 아무것도 import하지 않아 순환이 없다)
+import { AI_LEVELS, AI_PROFICIENCY, PROF6_VITALITY } from './config.js'; // 변형의 실력 숫자를 원본 실효값에서 계산 · 숙련도 → 실력 숫자 이름 (config.js는 아무것도 import하지 않아 순환이 없다)
 import { traditionOf, schoolOf } from './schools.js'; // 인물의 유파 = AI 가 실제로 싸우는 유파 — 꾸러미 persona.school 이 있으면 그 유파, 없으면 시트 무기의 유파 (숙련도 표 열쇠 — 10/13 · 10/29 15:5x)
 
 export const CHARACTERS = [
@@ -398,7 +398,7 @@ export const CHARACTERS = [
     epithet: '빚 없는 선장', // 사장님 10/10 19:4x (샛별 저장소 칭호)
     weapon: 'zweihander', // 이베리아 유파 (사장님: 이베리아 비기를 볼 수 있게. 샛별 설정은 펄션)
     voice: 'omari', // 목소리: 오마리 전용 녹음(CC0) — 10/12 사장님 지시로 샛별 저장소 1ea73c5·200269d 를 가져옴 (전 'bran')
-    ai: { proficiency: 1, persona: { school: 'zweihander', pers: {} } },
+    ai: { proficiency: 2, persona: { school: 'zweihander', pers: {} } }, // 숙련도 2 (사장님 10/29 22:5x '오마리 숙련도 이베리아 2, 광기의 오마리 숙련도 이베리아 3으로' — 전 1 · 얼터는 원본 +1 = 3)
     look: getLook('omari'),
     lookVersion: CHARACTER_LOOK_VERSION.omari,
     // 대사 (10/10 19:4x 사장님 — 작가 제안 §4-2 그대로: 느낌표 없는 짧은 반말, 물때·닻·뭍·셈 같은 뱃사람 낱말)
@@ -417,9 +417,9 @@ export const CHARACTERS = [
     id: 'minami',
     name: '미나미',
     epithet: '수호자', // 사장님 10/11 01:1x (전 '금줄의 무녀' 10/10 19:4x)
-    weapon: 'monohoshizao', // 일본 유파
+    weapon: 'kusanagi', // 쿠사나기 (레전드 · 일본 유파 — 스펙 school 'japanese') — 사장님 10/29 22:4x '미나미 스테이지 무기도 쿠사나기로 바꿔' (전 모노호시자오 · 여정 · 방랑 같은 시트 무기)
     voice: 'isolde', // 목소리: 이졸데의 녹음 (이졸데와 같이. 10/13 기절2·출혈2 보충 — 마야는 10/13 에 따로 나감)
-    ai: { proficiency: 5, persona: { school: 'monohoshizao', pers: {} } }, // 숙련도 5 = 일본 유파 신 — 고유 동작 넷 + 비기(고노센) (사장님 10/14 03:5x '미나미 숙련도 5로 해줘', 전 3)
+    ai: { proficiency: 5, persona: { school: 'kusanagi', pers: {} } }, // AI 꾸러미 = 무기 id(쿠사나기 — 전 'monohoshizao') // 숙련도 5 = 일본 유파 신 — 고유 동작 넷 + 비기(고노센) (사장님 10/14 03:5x '미나미 숙련도 5로 해줘', 전 3)
     look: getLook('minami'),
     lookVersion: CHARACTER_LOOK_VERSION.minami,
     // 대사 (10/10 19:4x 사장님 — 작가 제안 §4-3 그대로: 짧고 단단한 해요체, 금줄·안개·피가 흙에 닿는 일, 겁 고백 없음)
@@ -457,7 +457,7 @@ export const CHARACTERS = [
     weaknesses: '큰 베기가 빗나간 뒤 몸 가까이 파고드는 연속 압박에는 빈틈이 생긴다.',
     weapon: 'excalibur', // 진품(레전드, 금빛 기운) — 사장님 10/10 20:3x '진품 그대로 들게 해'. 하인리히는 복제품 그대로, 플레이어도 카드로 진품을 뽑을 수 있다
     voice: 'soft_female', // 목소리: 조용한 들숨·한숨 묶음(Reitanna, CC0 — 에이라와 같이) — 10/12 사장님 지시로 샛별 저장소 04311ff 배정을 가져옴 (전 'isolde')
-    ai: { proficiency: 5, persona: { // 숙련도 5 (사장님 10/24 01:5x '아르토리아 5로' — 전 4 · 광기의 아르토리아도 5 그대로: 원본 +1 이 상한 5 에서 멈춤)
+    ai: { proficiency: 6, persona: { // 숙련도 6 (사장님 10/29 22:4x '아르토리아는 아예 기본캐를 6으로 해. 광기는 상한에 걸려서 6임' — 전 5(10/24 01:5x) · 그 전 4 · 광기의 아르토리아도 6: 원본 +1 이 상한 6 에서 멈춤)
       school: 'excalibur',
       level: { reaction: 0.26, guardChance: 0.7, counter: 0.35, feint: 0.2, followUp: 0.42, read: 0.75, discipline: 0.88, strength: 1, aggression: 0.8, windup: 0.7, skill: 0.82 },
       pers: { precision: 0.85, guardStick: 2.5, fearful: 0.2, angry: 0.2, dogged: 0.45, guardSpeed: 0.85, rhythm: 2.6, margin: 0.22, aggr: 0.85, vor: 0.45, patienceTime: 4.5, circleRate: 0.22,
@@ -488,7 +488,7 @@ export const CHARACTERS = [
     weaknesses: '장전 중의 빈틈과 총구 안쪽으로 파고드는 근거리 압박.',
     weapon: 'pistol', // 건슬링어의 리볼버(??? 등급) — 그쪽 '전용 리볼버'는 새 무기가 아니라 이 권총이다. AI 는 gun.js(간격 벌려 쏘기)
     voice: 'maya', // 목소리: 마야 전용 녹음(AuraVoice, CC0) — 10/13 사장님 지시로 샛별 저장소 3f330f7·b75013b·9d1b56a 배정을 가져옴 (전 'isolde')
-    ai: { proficiency: 3, persona: { // 숙련도 3 (사장님 10/20 00:4x '마야 숙련도 3을 적용해' — 전 1 · 10/13)
+    ai: { proficiency: 4, persona: { // 숙련도 4 (사장님 10/29 22:5x '마야 무유파 4 광기의 마야 독일 5' — 전 3(10/20 00:4x) · 그 전 1 · 얼터는 원본 +1 = 5 를 세이버 = 독일 칸에)
       gunCooldownK: 1.5, // 핸디캡: 사격 사이 쿨타임 1.5 배 (GUN.cooldown 0.8 → 1.2 s, AI 가 몰면 GUN.aiCooldownK 1.8 을 더 곱해 2.16 s — 확인표 2022) — 사장님 지시 10/10 20:0x (기본 무작위 상대에서 빼는 대신, 확인표 750)
       level: { reaction: 0.16, guardChance: 0.88, counter: 0.55, feint: 0.15, followUp: 0.65, read: 0.9, discipline: 0.95, strength: 1.1, aggression: 0.9, windup: 0.36, strikeSpeed: 13, skill: 0.95 },
       pers: { precision: 0.95, guardStick: 4, fearful: 0.08, angry: 0.12, dogged: 0.4, guardSpeed: 0.7, rhythm: 4, margin: 0.3, aggr: 0.95, vor: 0.45, patienceTime: 6, circleRate: 0.18 },
@@ -574,7 +574,7 @@ const HEINRICH = CHARACTERS.find((c) => c.id === 'heinrich');
 //   기존 하인리히 실력 숫자 = 그 숙련도에서 원본이 받을 실효값 × MAD_SCALE(+20%).
 //   10/16 새 투야나·랴오는 외양만: appearanceOnly는 원본 AI를 그대로 쓰고 이 강화 규칙을 적용하지 않는다.
 //   10/16 22:3x 사장님 "모든 얼터에 숙련도+1을 잊지 말고 적용해 두도록 해" → appearanceOnly 도 숙련도 +1(madVariantAI)은 받는다 — 빼는 것은 실력 숫자 +20% 뿐.
-//    새 얼터가 들어와도 아래 '얼터 숙련도 맞춤'이 원본 +1(상한 5)로 맞춘다. 미나미(5)는 얼터도 5 — 낮의 미나미도 고노센(사장님 '마음에 든다')
+//    새 얼터가 들어와도 아래 '얼터 숙련도 맞춤'이 원본 +1(상한 AI_PROFICIENCY.max 6 — 사장님 10/29 22:4x '상한 6으로 올려' · 전 5)로 맞춘다. 미나미(5)의 얼터는 6(전 상한 5 에서 5) — 낮의 미나미도 고노센(사장님 '마음에 든다')
 const VARIANT_PLUS = 1;
 //  본 유파 숙련도 mainProficiency (사장님 10/29 15:5x '반응은 본 유파 숙련도를 따르도록 해'): 사람 몫(반응 — ai.js setLevel)은 손에 든 무기가 아니라 이 값을 읽는다.
 //   유파 몫(고유 동작 · 비기 · schoolK · 패시브 · 흘림 문턱)은 그대로 손에 든 유파의 숙련도 — 가름은 docs/characters/temperament_2026-10-29.md §7-1
@@ -692,9 +692,12 @@ export const CHARACTER_VARIANTS = [
   // Visual previews: the original proficiency, persona and combat stats are unchanged.
   ...['eira', 'liao', 'margarethe', 'isolde', 'tome', 'omari', 'bran', 'minami'].map((id) => {
     const base = CHARACTERS.find((c) => c.id === id);
+    const ai = madVariantAI(base); // 숙련도 +1 (사장님 10/16 22:3x — 모든 얼터)
+    if (id === 'minami') ai.persona.school = 'muramasa'; // 광기의 미나미 AI 꾸러미 = 무라마사 (아래 무기 — 낮의 미나미는 쿠사나기)
     return { ...base, ...(id === 'bran' ? { weapon: 'falchion', weaponAlt: null } : {}), // 얼터 브론은 늘 팔쉬온 (사장님 10/20 00:4x)
+      ...(id === 'minami' ? { weapon: 'muramasa' } : {}), // 광기의 미나미는 무라마사 (레어 · 일본 — 사장님 10/29 22:5x '광기의 미나미는 무라마사를 들게 해' · 전: 원본 무기를 그대로 — 모노호시자오)
       id: `${id}_mad`, variantOf: id, mad: true, appearanceOnly: true,
-      name: `광기의 ${base.name}`, ai: madVariantAI(base), // 숙련도 +1 (사장님 10/16 22:3x — 모든 얼터)
+      name: `광기의 ${base.name}`, ai,
       look: alterLook(base.look, id), lookVersion: `${base.lookVersion}-alter${id==='isolde'?3:['margarethe','tome','bran'].includes(id)?2:1}`,
       eyes: id === 'liao' ? 'clothGlow' : 'madGlow',
     };
@@ -772,12 +775,12 @@ export const CHARACTER_GUESTS = [
     want: '잃어버린 이름을 찾는 동안에도, 자신을 받아 준 근위대와 맡겨진 사람들을 지키는 것.',
     school: '기존 모노호시자오와 일본 유파의 쥠·자세·기술을 그대로 쓰는 창작 검객. 의상의 문양으로 실제 출신이나 역사적 유파를 확정하지 않는다.',
     temperament: '과묵하다. 기억을 잃은 이방인이라 이곳 말이 서툴러, 대개 "음." 한마디로 답한다. 기억나지 않는 일을 아는 척하지 않는다. 서두르지 않고, 상대가 먼저 들어오기를 기다린다.', // 말투: 사장님 10/14 13:4x~13:5x '엄청 짧고 무뚝뚝한 말투 — 기억을 잃은 외국인이라 말을 잘 못해 · 으음. 음. 이런 말 위주로' (전 궁중 경어체)
-    weapon: 'monohoshizao', // 모노호시자오 (에픽) — 일본 유파 (traditionOf)
+    weapon: 'uchigatana', // 우치가타나 (커먼 · 일본 유파) — 사장님 10/29 22:5x '낮의 다라이시는 우치가타나를 들게 해' (전 모노호시자오 · 광기의 다라이시는 모노호시자오 그대로 — 아래 얼터 시트)
     voice: 'heinrich', // 목소리: 하인리히 묶음 (하인리히·광기의 하인리히와 같이 — 감독 지시 10/14, 사장님 확인 전. 랴오 묶음은 'liao')
     ai: {
       proficiency: 4, // 숙련도 (사장님 결정 10/14) — 실력 숫자 hard · 일본 고유 동작 넷(히라키기리 · 코테 · 츠바메가에시 · 코코 연타), 비기는 5 에서만
       persona: {
-        school: 'monohoshizao',
+        school: 'uchigatana', // AI 꾸러미 = 무기 id (10/29 22:5x — 전 'monohoshizao')
         level: { feint: 0.12, counter: 0.45, aggression: 0.85 }, // hard(0.3 · 0.35 · 1.0) 위에: 속임 적게 · 맞받아 베기 많이 · 조급하지 않게
         // 일본 유파 기본 범위(박자 4~7 s · 인내 9~14 s · 맞받기 0.2~0.5 · 돌기 0.1~0.25 · 자세 고집 4 · 손 0.7)의 참을성 있는 끝. 간격(margin)·자세 취향(guardPref)은 유파 기본 그대로 —
         //  간격 0.5 · 추단/핫소 취향까지 못박으면 기본 AI(롱소드 normal)와 30 판 4 승으로 떨어져(숙련도 4 기본 기질 16 승) 뺐다 (docs/import/salt_desert_port_2026-10-14.md §2-4)
@@ -960,10 +963,12 @@ finishAI(terracottaAlter);CHARACTER_VARIANTS.push(terracottaAlter);
 
 // 다라이시 흑의 얼터 (사장님 10/16 승인 — 샛별 쪽). 잃어버린 이름은 설정에만 둔다 (화면에 안 나옴)
 const daraishiBase=CHARACTER_GUESTS.find(c=>c.id==='silver_wanderer');
-const daraishiAlter={...daraishiBase,id:'silver_wanderer_mad',variantOf:'silver_wanderer',mad:true,appearanceOnly:true,
+// 광기의 다라이시는 모노호시자오 그대로 (사장님 10/29 22:5x '낮의 다라이시는 우치가타나를 들게 해' — 낮만 바뀜 · 얼터는 원본을 복사하므로 무기 · 꾸러미를 되적음)
+const daraishiAlter={...daraishiBase,weapon:'monohoshizao',id:'silver_wanderer_mad',variantOf:'silver_wanderer',mad:true,appearanceOnly:true,
  name:`광기의 ${daraishiBase.name}`,ai:JSON.parse(JSON.stringify(daraishiBase.ai)),
  look:alterLook({...getLook('silver_wanderer','v7-silver-c'),daraishiBlack:1},'silver_wanderer'),lookVersion:'v7-alter2',eyes:'madGlow',
  backstory:'흑의에 애쉬 실버 머리의 검사. 머리 뒤에는 짧고 해진 붉은 끈이 묶여 있다. 무엇을 기억하려는 매듭인지 자신도 알지 못한다. 이름을 잃어도, 검을 쥐는 손은 망설이지 않는다.'};
+daraishiAlter.ai.persona.school='monohoshizao'; // AI 꾸러미도 모노호시자오 (낮은 'uchigatana')
 finishAI(daraishiAlter);CHARACTER_VARIANTS.push(daraishiAlter);
 
 // 마야 · 아르토리아: 원본 무기 · AI 그대로. 아르토리아는 갑옷 없는 궁정 예복이라 실제 판금도 벗는다
@@ -988,6 +993,11 @@ for (const c of CHARACTER_VARIANTS) {
     finishAI(c);
   }
 }
+
+// 숙련도 6 버티는 힘 (사장님 10/29 22:4x '지금 숙련도 6인 캐릭터는 (롤랑과 베르나르도의 경우를 보면) 체력 10% 보너스가 있었어. 그와 동일한 방식으로 숙련도 6캐릭터는 모두같은 보너스를 주도록 해'):
+//  모든 시트(기본 회전 · 얼터 · 손님)의 실효 숙련도 = 위 맞춤까지 끝난 ai.proficiency. 6 이면 vitality = PROF6_VITALITY(config.js — 1.1, 롤랑 · 베르나르도의 10/24 값과 같은 뜻).
+//  시트에 손으로 적던 1.1(롤랑 · 베르나르도)은 지움 — 이 한 곳이 정한다. 6 아래는 시트 그대로(지금 모두 없음 = 1)
+for (const c of [...CHARACTERS, ...CHARACTER_VARIANTS, ...CHARACTER_GUESTS]) if (c.ai?.proficiency === 6) c.vitality = PROF6_VITALITY;
 
 /** id → 시트. 기본 회전·변형·손님 인물까지 (변형은 여정의 정해진 자리·?foe=id, 손님 인물은 여정의 제 무대(STAGE_FOE)·테스트 경로의 상대 고르기·?foe=id) */
 export const CHARACTERS_BY_ID = Object.fromEntries([...CHARACTERS, ...CHARACTER_VARIANTS, ...CHARACTER_GUESTS].map((c) => [c.id, c]));

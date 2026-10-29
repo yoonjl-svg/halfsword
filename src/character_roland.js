@@ -46,7 +46,7 @@ export function createRoland() {
     weaknesses: '무거운 판금과 큰 검의 회수. 목은 기존 판금 규칙대로 보호하지 않는다.',
     weapon: 'durandal', // 롤랑의 성검 (사장님 10/24 — 전 츠바이핸더 임시)
     voice: 'bran', // 목소리: 브론 오소리 묶음(브론과 같이 — 사장님 10/24 13:0x '롤랑 사운드셋은 브론의 것을 같이 쓸게' · 전 'tome')
-    vitality: 1.1, // 버티는 힘 +10 % (사장님 10/24 01:5x '롤랑과 베르나르도는 체력도 +10%' — 초당 잃는 피 · 머리를 맞아 잃는 의식 ÷ 1.1, fighter.js · 방법은 사장님 확인 전)
+    // 버티는 힘 +10 % (사장님 10/24 01:5x '롤랑과 베르나르도는 체력도 +10%') — 10/29 22:4x 부터 시트에 적지 않고 숙련도 6 규칙이 준다(characters.js · config PROF6_VITALITY 1.1)
     ai,
     look: getLook('roland'),
     lookVersion: CHARACTER_LOOK_VERSION.roland, // v2 (10/23 줄이면서 다듬은 판) — 옛 판 ?look=roland:v1

@@ -28,7 +28,7 @@ import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
 import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — 내 공격이 상대 칼에 막히면 막은 쪽 기력 −, afterStrike)
 import { schoolPassiveOn } from './school_passive.js'; // 유파 패시브 스위치 (10/21 — 이베리아 손목 힘 · 나머지 넷은 fighter.schoolPassive)
-import { aiUniqueStages } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
+import { aiUniqueStages, PLAYER_UNIQUE } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
 import { MEASURED } from './weapon_measured.js';
 import { routeAroundStageObstacle, obstacleSegmentBlocked, OBSTACLE_ROUTE } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 막힌 길이면 스틱 방향만 둘레로 (석상 없는 무대는 아무 일 없음)
@@ -40,7 +40,7 @@ import { FINISH, cleaveFinish } from './finish.js';
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
-import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
+import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -58,6 +58,13 @@ const EV_REARM = realS(0.3); // 낌새 · 상대 사건이 이만큼 그치면 �
 const QUIET_T = realS(0.12); // 위협이 이만큼 없고 손이 멎으면 '공격이 지나갔다' (parry_button.js 와 같은 수)
 const NEW_THREAT_T = realS(0.25); // 잠깐 조용했다가 다시 오면 새 공격으로 보는 틈 (parry_button.js 와 같은 수)
 const CALM_T = realS(2); // 대치: 위협 없이 이만큼 지나야 '조용히 맞섬' (패시브 standoff)
+// 특수 공격 AI 몫 (사장님 10/29 19:4x 'AI의 모든 쿨타임은 사람과 맞춰.' — UNIQUE_ASSIST.specialCooldown · specialCoolFrom · 사람 unique_assist.js cooling 과 같은 수 · 같은 셈):
+//  사람 표 칸 special 다섯(제비 베기 · 칼끝 돌려 빼기 · 날개 접기 · 겹치기 · 풍차 베기)의 이름 = AI 기술 길 이름(제비 베기 · 겹치기 · 머리 위 돌려 베기 강화동작 — 왼 가로베기 자리) ·
+//  속임 꼴 고유 동작(날개 접기 · 칼끝 돌려 빼기 — schools.js *_UNIQUE feint) · 패시브(겹치기 · 빼서 찌르기 cavazione — 같은 이름 · 되받아 치기 kaeshi — 그 기술이 제비 베기)
+const SPECIALS = new Set(Object.values(PLAYER_UNIQUE).flat().filter((e) => e.special).map((e) => e.name));
+const SPECIAL_FEINT = new Map(Object.values(TRADITIONS).flatMap((T) => (T.unique ?? []).filter((u) => u.feint && SPECIALS.has(u.name)).map((u) => [u.feint.name, u.name])));
+/** 패시브 P 가 특수 공격의 AI 몫이면 그 이름 (같은 이름 · 그 기술 · 그 속임) — 아니면 null */
+const passiveSpecial = (P) => (SPECIALS.has(P.name) ? P.name : [].concat(P.do?.tech ?? []).find((n) => SPECIALS.has(n)) ?? (P.do?.feint ? SPECIAL_FEINT.get(P.do.feint) ?? null : null));
 const STEP_T = 0.3; // 기술 걸음 'strike'(유파 고유 동작 step 칸): 닿는 거리여도 내딛는 시간 (보통 내딛기의 최대와 같다)
 // 무기별 간격 실측표(MEASURED)는 weapon_measured.js 한 곳에 있다 (10/8 ① 구조 — 전엔 이 파일과 schools.js MEASURES 두 벌).
 //  간격을 무기에 맞춰 늘이고 줄이는 일은 sword_art.js 가 한다. 옛 이름 MEASURED 는 여기서도 그대로 내보낸다 —
@@ -264,6 +271,9 @@ export class AI {
     const TR = TRADITIONS[art.tradition];
     this.secret = SKILL.schoolArt && SKILL.schoolSecret && this.proficiency >= AI_PROFICIENCY.secretAt && SECRET.aiOpenSchools.includes(art.tradition) ? (TR?.aiSecret ?? TR?.secret) ?? null : null; // 10/21 닫힌 유파 비기 없음 · 10/22 AI 는 따로 (config SECRET.aiOpenSchools — 사람 먼저)
     this.secretRun = null; // 지금 내는 비기 { S, stage, t, landed, … } (null = 없음)
+    this.specCool = {}; // 특수 공격 AI 몫마다 식힘을 세기 시작한 때 (sense.t · 도는 동안 Infinity — 10/29 19:4x 사람과 같게)
+    this.specRun = null; // 나갔는데 아직 안 끝난 특수 공격 { name, seq, t0, motion } (specTick)
+    this.atkSeq = 0; // 공격(startAttack)마다 하나씩 — 이어 치기 · 흐름도 새 수 (특수 공격이 끝났나 보는 데만)
     this.secretEv = { armed: true, off: 0 }; // 상대 사건(threat·foeRaise·foeCharge·foeRecover) 한 번에 한 번 — 사건이 0.3 s 그치면 다시 건다
     this.combo = 0; // 끊기지 않은 내 베기 수 (이베리아 옛 비기 조건 — 공격 꼴을 벗어나면 0)
     this.iaiArm = this.secret?.do?.instant ? new IaiArm() : null; // 일본 발도 대기 (10/10 02:4x — 상대 간격 밖 iaiArmTime 초 · 10/25 22:3x 부터 거리와 상관없이 침착하게 iaiArmTime 초 — secret.js gnsArmTick)
@@ -320,6 +330,8 @@ export class AI {
    *  마른 길(drySense > 0 — 라트나 · 잠든 습지만)이면 돌아갈 쪽을 덜 젖은 쪽으로 미리 고르고(dryRouteSide), 돌아가기까지 끝난 스틱을 덜 젖은 쪽으로 튼다(dryFeet).
    *  둘 다 자기 무대에서만 일한다(습지 · 화산섬은 함께 나오지 않음) — 용암 피하기를 마지막에 둬 안전 쪽이 이긴다 */
   update(dt) {
+    this.specTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:4x · 19:5x 사람과 같게)
+    if (this.secret && !this.secretRun && secretSpent(this.me)) this.dropSecret(); // 이 판 비기를 다 씀 (10/29 19:5x 판당 쓸 수 — 비기 없는 AI 와 같은 길)
     // 동방 AI 걸음 박자 (10/15 — GAIT.cnLightAi · docs/strike/cn_light_feet_2026-10-15.md §7): 가벼운 발 몸(유파 걸음 칸 light)의 AI 는 공격 꼴(준비·다가가기·벰·뒤따름)일 때만 가벼운 발 —
     //  간 보기·막기·물러남(비기 꼴 포함)의 발놀림 박자(간격 비례 제어·잔걸음·'관성으로 너무 멀리 가지 않게' 늦추는 물러남)는 옛 가속(3.2 m/s²) 몸에 맞춘 값이라 그 꼴에서는 옛 가속으로 민다
     //  (fighter.js driveBalance 가 읽음 — 지난 스텝의 꼴 · 칸 없는 몸은 어차피 × 1). 끄면(0) 늘 false(사람·AI 같이 — 지금 판, 바이트 같음). 사람은 AI 가 없어 그대로
@@ -790,7 +802,7 @@ export class AI {
       const V = { reach: art.measure.reach, contact: art.measure.contact, foeReach: art.measureFor(this.me.weapon).reach + 0.05 }; // 사람 창 view() 와 같은 수
       W.line = gnsEnterLine(V);
       const A = (W.arm ??= new IaiArm());
-      const down = !foe.alive || !foe.armed || foe.state !== 'stand';
+      const down = !foe.alive || !foe.armed || foe.state !== 'stand' || secretSpent(foe); // 10/29 19:5x: 이 판 비기를 다 쓴 사람은 준비가 아님 (사람 창이 무장을 안 거는 것과 같게)
       const foeHurt = foe.pain > (W.pain ?? foe.pain) + 0.05; // 사람이 맞음 (사람 창과 같은 셈 — 10/25 22:3x 'idle')
       W.pain = foe.pain;
       gnsArmTick(A, dt, down || gnsHumanUnsettled(foe, foeHurt), gnsMoving(foe), { outside: gnsOutside(d, V, A.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: down || !!foe.skill?.swinging || !!foe.skill?.sec }, armHold(foe)); // 'idle' — 거리 안 봄 · 'dist' 옛 셈
@@ -1038,6 +1050,79 @@ export class AI {
 
   /** 기술 고르기: 노리는 빈틈 × 상대 자세 × 준비 자세까지의 거리 × 성격. prefer(패시브, 이 한 번만): { thrust, fast, presses } 곱 — 없으면 전과 같은 셈.
    *  고유 동작의 fit 칸({ online·high·low·left·right·parried: 곱 }) — parried 는 바로 앞 내 공격이 막혔나(bound, 다음 startAttack 이 지우기 전) */
+  // ───────────────────────── 특수 공격 AI 몫 식힘 · 비기 다 씀 (10/29 19:4x · 19:5x) ─────────────────────────
+  /** 특수 공격 AI 몫 식힘 중인가 (사람 PlayerUniqueAssist.cooling 과 같은 수 — UNIQUE_ASSIST.specialCooldown · 끝난 때부터 · 도는 동안 Infinity) */
+  specCooling(name, now = this.sense.t) {
+    const t0 = name ? this.specCool[name] : null;
+    return t0 != null && UA.specialCooldown > 0 && now - t0 < UA.specialCooldown;
+  }
+
+  /** 고르는 기술 t 를 지금 낼 꼴로: 식는 특수 공격이면 바탕 동작(강화동작의 plain — 머리 위 돌려 베기 → 왼 가로베기 · sword_art.js) 또는 null(고르지 않음 — 사람의 '보통 동작'과 같은 뜻) */
+  techNow(t) {
+    return t && SPECIALS.has(t.name) && this.specCooling(t.name) ? t.plain ?? null : t;
+  }
+
+  /** 지금 칼이 나가는 공격의 특수 공격 이름 (startStrike): 속임(날개 접기 · 칼끝 돌려 빼기) · 패시브(겹치기 · 빼서 찌르기 · 되받아 치기) · 기술 이름(제비 베기 · 겹치기 · 머리 위 돌려 베기) — 비기가 낸 칼은 아님 */
+  specialNow() {
+    if (this.secretRun) return null;
+    if (this.feint) return SPECIAL_FEINT.get(this.feint.name) ?? null;
+    const P = this.passiveAtk ? this.passives.find((x) => x.name === this.passiveAtk) : null;
+    const ps = P ? passiveSpecial(P) : null;
+    if (ps) return ps;
+    return SPECIALS.has(this.tech?.name) ? this.tech.name : null;
+  }
+
+  /** 특수 공격이 나감 (칼이 실제로 나가는 순간 — startStrike): 'fire' 면 지금부터 · 아니면 끝날 때까지 식힘 중(specTick 이 끝난 때를 적음) */
+  specStart(name) {
+    const now = this.sense.t;
+    (this.stats.specials ??= {})[name] = (this.stats.specials[name] ?? 0) + 1;
+    if (this.specRun) this.specEnd(this.specRun, now, now); // (한 유파에 특수 공격 하나 — 오지 않는 길)
+    if (UA.specialCoolFrom === 'fire') {
+      this.specCool[name] = now;
+      return;
+    }
+    this.specCool[name] = Infinity;
+    this.specRun = { name, seq: this.atkSeq, t0: now, motion: null };
+  }
+
+  /**
+   * 나간 특수 공격이 끝났나 (update 머리 — 사람 coolTick 과 같은 셈): 동작 = 그 공격의 베는 길(attack 꼴의 follow 앞 단계) · 끌고 가는 칼(me.iai · iaiReq — 진 · 츠바메가에시 되돌림 칼) ·
+   *  풀기 = 뒤따름(follow — 칼이 다 지나갈 때까지 · afterStrike 앞) · 끝 자세 붙잡기 · 풀기(iaiHoldT · iaiFade). 그 공격이 끝나면(다음 공격 · 이어 치기 · 흐름 · 물러남 · 거둠) 끝
+   */
+  specTick() {
+    const R = this.specRun;
+    if (!R) return;
+    const me = this.me;
+    const now = this.sense.t;
+    const live = this.mode === 'attack' && this.atkSeq === R.seq;
+    const moving = (live && this.phase !== 'follow') || !!me.iai || !!me.iaiReq;
+    if (R.motion == null) {
+      if (moving) return;
+      R.motion = now;
+      if (UA.specialCoolFrom === 'motion') this.specCool[R.name] = now;
+    }
+    if (live || moving || me.iaiHoldT > 0 || me.iaiFade > 0) return;
+    this.specEnd(R, R.motion, now);
+  }
+
+  specEnd(R, motion, now) {
+    if (UA.specialCoolFrom !== 'fire') this.specCool[R.name] = UA.specialCoolFrom === 'motion' ? motion ?? now : now;
+    (this.stats.specRuns ??= []).push({ name: R.name, motion: (motion ?? now) - R.t0, free: now - R.t0 });
+    this.specRun = null;
+  }
+
+  /**
+   * 이 판 비기를 다 씀 (사장님 10/29 19:5x '비기는 … 판당 1회만 쓸 수 있게 하자.(동방 격살은 3회)' · 19:4x 'AI의 모든 쿨타임은 사람과 맞춰.' — UNIQUE_ASSIST.secretUses · secret.js secretSpent):
+   *  비기 없는 AI(숙련도 밑 · 닫힌 유파)와 같은 길로 — 상대 사건 · 발도 대기(웅크림) · 길목 · 싱지르 무장 · 모르트슐라크 누르기 · 맺힘 셈 모두 없음. 판마다 새 AI · 새 몸이라 다음 판엔 다시
+   */
+  dropSecret() {
+    if (this.iaiArm) iaiReadyPose(this.me, false, 1); // 발도 대기 웅크림이 남아 있으면 풀기 (덧씌우기 칸을 가졌을 때만 — iaiReadyW > 0)
+    this.secret = null;
+    this.iaiArm = this.gilArm = this.spinArm = this.binds = null;
+    if (this.press && !('tech' in this.press)) this.press = null; // 모르트슐라크 누르기 셈 (자연 바인드 실험의 밀기 칸 natPress 는 tech 가 있는 다른 꼴)
+    this.stats.secretDropped = (this.stats.secretDropped ?? 0) + 1;
+  }
+
   pickTech(s, why, prefer) {
     const L = this.level;
     const cls = this.foeClass(s);
@@ -1054,10 +1139,12 @@ export class AI {
     const neckCut = vKind === 'cut' && this.school.tech.some(neckCrossingTechnique);
     let best = null;
     let bestW = -1;
-    for (const t of this.school.tech) {
+    for (const t0 of this.school.tech) {
+      const t = this.techNow(t0); // 식는 특수 공격은 바탕 동작 또는 건너뜀 (10/29 19:4x — 사람과 같게)
+      if (!t) continue;
       if (vKind && t.kind !== vKind) continue;
       if (neckCut && !neckCrossingTechnique(t)) continue;
-      let w = this.pers.techPref[t.name] * t.base;
+      let w = this.pers.techPref[t0.name] * t.base;
       if (t.kind === 'thrust') w *= thrustBias;
       // 빈틈: 상대 칼이 높으면 아래·찌르기, 낮으면 위, 한쪽으로 치우치면 반대쪽
       const o = t.open;
@@ -1114,6 +1201,7 @@ export class AI {
     // 이어 그을수록 강해짐 (강화동작 stack — 10/21, unique_assist.js strokeHitK): 앞 공격도 같은 기술이고 그 공격 꼴이 끝난 뒤 이어짐 창(afterWindow 0.6 s) 안에 다시 시작하면 하나씩(셋까지) — 플레이어와 같은 셈 · 난수 없음
     this.stackN = tech.name === this.prevAtkName && this.sense.t - this.lastAtkT <= UA.afterWindow ? Math.min(3, (this.stackN ?? 0) + 1) : 0;
     this.prevAtkName = tech.name;
+    this.atkSeq++; // 특수 공격이 끝났나 보는 공격 번호 (10/29)
     this.mode = 'attack';
     this.drillAtk = !!opt.drill; // 시험: 헛스윙 연습 공격 — 그 자리에서 친다 (attack 다가가기·stepTime·moveFeet)
     this.tech = tech;
@@ -1140,7 +1228,7 @@ export class AI {
       const want = L.feint * (1 + Math.min(2, this.foeParried * 0.4));
       if (Math.random() < want * (1 - this.anger)) { // 화나면 속임수를 안 쓴다 (곧장 친다)
         const byName = this.school.techByName;
-        const cands = this.school.feints.filter((f) => padDist(hand, byName[f.fake].from) < 0.45);
+        const cands = this.school.feints.filter((f) => padDist(hand, byName[f.fake].from) < 0.45 && !this.specCooling(SPECIAL_FEINT.get(f.name))); // 식는 특수 공격 속임(날개 접기 · 칼끝 돌려 빼기)은 빼고 (10/29 19:4x)
         if (cands.length) {
           this.feint = cands[Math.floor(Math.random() * cands.length)];
           this.tech = byName[this.feint.fake];
@@ -1328,7 +1416,7 @@ export class AI {
       P.felt = true;
       const at = me.feel.at ?? 1;
       if (at >= 0.5 && me.feel.force >= BIND.strongN) {
-        const t = this.uniqueByName.get('duplieren') ?? this.school.techByName?.zwerch;
+        const t = this.techNow(this.uniqueByName.get('duplieren') ?? null) ?? this.school.techByName?.zwerch; // 식는 동안은 가로베기 (10/29 19:4x)
         P.done = true;
         if (t && this.startAttack(t, 'follow', { chain: this.chain + 1, noFeint: true, skipChamber: true, noPending: true })) {
           this.natEndAs('wind');
@@ -1383,6 +1471,8 @@ export class AI {
     this.path.length = 0;
     this.sbFired = false; // 진 · 츠바메가에시 되돌림 칼 (한 공격에 한 번)
     this.strikeCue(t); // 기술 알림 (고유 동작 — 칼이 실제로 나가는 순간)
+    const sp = this.specialNow(); // 특수 공격 AI 몫이 나감 → 식힘 (10/29 19:4x — 사람과 같게)
+    if (sp) this.specStart(sp);
     if (this.feint) {
       // 속임수: 가짜 기술의 앞부분만 가다가(내딛지 않고) 진짜 길로 바꾼다
       const f = this.feint;
@@ -1623,11 +1713,12 @@ export class AI {
       const hand = [this.me.handOffset.x, this.me.handOffset.y];
       let best = null;
       let bestW = -1;
-      for (const t of this.school.tech) {
-        if (t === this.tech) continue;
+      for (const t0 of this.school.tech) {
+        const t = this.techNow(t0); // 식는 특수 공격 (10/29 19:4x)
+        if (!t || t0 === this.tech || t === this.tech) continue;
         const cd = padDist(hand, t.from);
         if (cd > 0.35) continue;
-        const w = this.pers.techPref[t.name] * t.base * Math.exp(-cd / 0.2) * rand(0.6, 1.4);
+        const w = this.pers.techPref[t0.name] * t.base * Math.exp(-cd / 0.2) * rand(0.6, 1.4);
         if (w > bestW) {
           bestW = w;
           best = t;
@@ -1652,10 +1743,11 @@ export class AI {
     const hand = [this.me.handOffset.x, this.me.handOffset.y];
     let best = null;
     let bestW = 0;
-    for (const t of this.school.tech) {
-      if (t === this.tech || t.kind === 'thrust') continue;
+    for (const t0 of this.school.tech) {
+      const t = this.techNow(t0); // 식는 특수 공격 (10/29 19:4x)
+      if (!t || t0 === this.tech || t === this.tech || t.kind === 'thrust') continue;
       const cd = padDist(hand, t.from);
-      const w = this.pers.techPref[t.name] * t.base * (t.presses ? 3 : 1) * Math.exp(-cd / (2 * SKILL.flowReach));
+      const w = this.pers.techPref[t0.name] * t.base * (t.presses ? 3 : 1) * Math.exp(-cd / (2 * SKILL.flowReach));
       if (w > bestW) {
         bestW = w;
         best = t;
@@ -1935,7 +2027,7 @@ export class AI {
     let best = null;
     let bestD = 1e9;
     for (const n of names) {
-      const t = this.school.techByName[n];
+      const t = this.techNow(this.school.techByName[n]); // 식는 특수 공격 (10/29 19:4x)
       if (!t) continue;
       const cd = padDist(hand, t.from);
       if (cd < bestD) {
@@ -2138,7 +2230,7 @@ export class AI {
   spinGo() {
     const me = this.me;
     const S = this.secret;
-    if (me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false;
+    if (me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(me)) return false; // 판당 쓸 수 (10/29 19:5x)
     if (!me.skill.secret({ S, ctx: { ev: 'spin', turnDir: me.side >= 0 ? 1 : -1 } })) {
       this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
       return false;
@@ -2151,6 +2243,7 @@ export class AI {
     this.stepT = 0;
     this.hand.set(me.handOffset.x, me.handOffset.y);
     this.secretStat(S).fired++;
+    useSecret(this.me); // 판당 쓸 수 셈 (10/29 19:5x — 사람 창과 같은 칸 fighter.secretUsed)
     this.secretBursts = (this.secretBursts ?? 0) + 1; // 결정타 연출 (터뜨림 = 낸 순간)
     this.setTechCue(S.nameKo ?? S.name, 'secret');
     return true;
@@ -2234,7 +2327,7 @@ export class AI {
   mordGo() {
     const me = this.me;
     const S = this.secret;
-    if (me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false;
+    if (me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(me)) return false; // 판당 쓸 수 (10/29 19:5x)
     if (!me.skill.secret({ S, ctx: { ev: 'press', held: this.press.pressHeld } })) {
       this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
       return false;
@@ -2248,6 +2341,7 @@ export class AI {
     this.stepT = 0;
     this.hand.set(me.handOffset.x, me.handOffset.y);
     this.secretStat(S).fired++;
+    useSecret(this.me); // 판당 쓸 수 셈 (10/29 19:5x — 사람 창과 같은 칸 fighter.secretUsed)
     this.secretBursts = (this.secretBursts ?? 0) + 1; // 결정타 연출 (터뜨림 = 낸 순간)
     this.setTechCue(S.nameKo ?? S.name, 'secret');
     return true;
@@ -2255,7 +2349,7 @@ export class AI {
 
   /** 비기를 낸다 (조건은 이미 찼다). 냈으면 true — 기술이 꾸러미에 없거나 공격을 못 열면 false (아무것도 바꾸지 않는다) */
   secretGo(S, ctx = {}) {
-    if (this.me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false;
+    if (this.me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(this.me)) return false; // 판당 쓸 수 (10/29 19:5x)
     const D = S.do;
     const run = { S, stage: 'strike', t: 0, landed: false, peakE: 0, tr: this.art.tradition };
     const opt = { noFeint: true, fastChamber: true, noPending: true, secret: true };
@@ -2369,6 +2463,7 @@ export class AI {
     }
     this.me.stamina.secret();
     this.secretStat(S).fired++;
+    useSecret(this.me); // 판당 쓸 수 셈 (10/29 19:5x — 사람 창과 같은 칸 fighter.secretUsed)
     this.binds?.reset(); // 이베리아: 비기를 내면 맺힘 셈 0
     this.setTechCue(S.nameKo ?? S.name, 'secret');
     return true;
@@ -2686,6 +2781,7 @@ export class AI {
   passiveFor(key, ctx) {
     for (const P of this.passives) {
       if (P.when !== key && !(Array.isArray(P.when) && P.when.includes(key))) continue;
+      if (this.specCooling(passiveSpecial(P))) continue; // 특수 공격 AI 몫 패시브(겹치기 · 빼서 찌르기 · 되받아 치기)는 식는 동안 없음 (10/29 19:4x)
       const c = P.cond;
       if (c) {
         if (c.thrust && !ctx?.thrust) continue;
@@ -2726,7 +2822,7 @@ export class AI {
     let best = null;
     let bestD = D.far ? -1 : 1e9;
     for (const n of names) {
-      const t = byName[n];
+      const t = this.techNow(byName[n]); // 식는 특수 공격 (10/29 19:4x)
       if (!t) continue;
       const cd = padDist(hand, t.from);
       if (D.far ? cd > bestD : cd < bestD) {
@@ -2734,7 +2830,7 @@ export class AI {
         best = t;
       }
     }
-    return best ?? (D.alt ? byName[D.alt] ?? null : null);
+    return best ?? (D.alt ? this.techNow(byName[D.alt] ?? null) : null);
   }
 
   /** 이름으로 자세: 이 꾸러미의 간 보는 자세에 없으면 바탕 WATCH_GUARDS 의 것을 빌린다 (일본 높은 자세 목록엔 긴 자세가 없다 — 残心) */

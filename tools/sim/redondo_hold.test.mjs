@@ -14,13 +14,14 @@ import { G as PAD } from '../../src/ai_techniques.js';
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, STAMINA, IB_FLOW, INPUT } = CONFIG;
 
-test('기본값 — 길게 누름 실제 0.6 s · 기력 초당 붙어 버티기와 같은 수 · 고노센 칼끝 × 0.5 · 실제 0.2 s · 식힘 6 s · 사슬 simple · B4 칸 = 풍차 베기 · AI 는 왼 가로베기 강화동작 그대로', () => {
+test('기본값 — 길게 누름 실제 0.6 s · 기력 초당 붙어 버티기와 같은 수 · 고노센 칼끝 × 0.5 · 실제 0.2 s · 식힘 3 s(끝난 때부터 — 10/29 19:5x) · 사슬 simple · B4 칸 = 풍차 베기 · AI 는 왼 가로베기 강화동작 그대로', () => {
   assert.equal(UA.rdHold, 1);
   assert.ok(Math.abs(UA.rdHoldTime - realS(0.6)) < 1e-12); // 사장님 '0.6초'
   assert.equal(UA.rdDrain, STAMINA.clinchPerSecond);
   assert.equal(UA.specialShare.redondo, 0.5); // 10/29 02:0x 사장님 '풍차베기는 50%' (전 싱지르 × 0.6 = 고노센 × 0.42)
   assert.ok(Math.abs(UA.rdSnapTime - realS(0.2)) < 1e-12);
-  assert.ok(Math.abs(UA.specialCooldown - realS(6.0)) < 1e-12);
+  assert.ok(Math.abs(UA.specialCooldown - realS(3.0)) < 1e-12); // 10/29 19:5x 사장님 '특수공격 3초(발동이 완료된 시점부터)' (전 6 s · 나간 순간부터)
+  assert.equal(UA.specialCoolFrom, 'free');
   assert.equal(IB_FLOW.windmillChain, 'simple'); // 10/29 08:3x 사장님 결정
   const e = PLAYER_UNIQUE.iberian.find((x) => x.name === 'redondo');
   assert.equal(e.role, 'hold');
@@ -69,10 +70,13 @@ test('짧은 누름 · 끈 누름은 감지 않음 / 0.6 s 넘게 누르면 감�
     assert.equal(uq.coolLeft('redondo'), 0, '감는 동안은 식힘 아님');
     press.down = false; steps(DT * 2);
     assert.equal(uq.stats.fired.redondo, 1, '떼면 내려침');
-    assert.ok(uq.coolLeft('redondo') > realS(5.9), '식힘은 내려침부터');
+    assert.equal(uq.coolT.redondo, Infinity, '내려침이 도는 동안 식힘 중 (끝난 때부터 셈 — 10/29 19:5x)');
     assert.ok(P.iai || P.instantResult?.combo, '운동학 칼');
     steps(0.6);
     assert.equal(P.instantResult?.tech, 'redondo');
+    const run = uq.stats.coolRuns?.at(-1);
+    assert.ok(run?.name === 'redondo' && Number.isFinite(uq.coolT.redondo), '내려침 · 풀기가 끝나면 식힘을 셈');
+    assert.ok(uq.coolLeft('redondo') > realS(2.0) && uq.coolLeft('redondo') <= realS(3.0), `남은 식힘 ${uq.coolLeft('redondo')}`);
     // 식힘 중: 길게 눌러도 감지 않음 · 떼도 아무것도 아님(탭 찌르기 없음 — 누른 시간이 탭 문턱 밖)
     press.down = true; steps(realS(1.0)); press.down = false; steps(0.1);
     assert.equal(uq.stats.winds, 1);

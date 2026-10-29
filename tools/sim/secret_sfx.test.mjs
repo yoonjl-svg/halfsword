@@ -268,6 +268,7 @@ test('AI 모르트슐라크 (독일 숙련도 5 · mordTick → mordGo): 누르�
   const E = g.enemy, ai = g.ai;
   try {
     assert.equal(ai.secret?.name, 'mordschlag');
+    const S = ai.secret, PR = ai.press; // 판당 1 번 (10/29 19:5x — 다 쓰면 ai.secret · ai.press 를 비움 · dropSecret)
     ai.watch = () => {};
     ai.moveFeet = function () { this.me.move.set(0, 0); this.me.stickX = 0; this.me.stickY = 0; };
     for (let i = 0; i < Math.round(0.3 / DT); i++) { g.step(); W.tick(); }
@@ -276,7 +277,7 @@ test('AI 모르트슐라크 (독일 숙련도 5 · mordTick → mordGo): 누르�
     for (let i = 0; i < Math.round((CONFIG.SECRET.mordPress + 1.5) / DT); i++) { // 누르기 mordPress(실제 2 s · 게임 2.2) 뒤 창 · 냄 · 끝까지
       g.step();
       W.tick();
-      if (opened == null && ai.press.wins > 0) opened = g.t;
+      if (opened == null && PR.wins > 0) opened = g.t;
       if (fired == null && ai.secretRun?.stage === 'mord') fired = g.t;
       if (fired == null && reqs.length) quietBeforeFire = false;
       if (fired != null && ended == null && !ai.secretRun) ended = g.t;
@@ -285,7 +286,7 @@ test('AI 모르트슐라크 (독일 숙련도 5 · mordTick → mordGo): 누르�
     for (let i = 0; i < 120; i++) { g.step(); W.tick(); }
     assert.ok(opened != null && fired != null && ended != null, `창 ${opened} · 냄 ${fired} · 끝 ${ended}`);
     assert.ok(quietBeforeFire, '누르기 · 창 동안 소리 없음');
-    assert.equal(ai.secretStat(ai.secret).fired, 1);
+    assert.equal(ai.secretStat(S).fired, 1);
     assert.equal(reqs.length, 1, JSON.stringify(reqs));
     assert.deepEqual([reqs[0].who, reqs[0].school, reqs[0].file, reqs[0].sounded], ['ai', 'german', G2, 1]);
     assert.ok(Math.abs(reqs[0].t - fired) <= 2 * DT);
