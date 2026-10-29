@@ -53,6 +53,17 @@ const TORSO_BITS = [256, 512, 4096, 8192];
 const ARMS_BITS = [1024, 2048, 16384, 32768];
 const torsoBit = (i) => TORSO_BITS[i];
 const armSBit = (i) => ARMS_BITS[i];
+// 셋 이상 판의 같은 편 공격 · 같은 물리 (사장님 10/29 22:3x '같은 편도 공격할 수 있어야 해. 적과 아군 사이의 물리를 평등하게' — o.ffa, main.js · 시뮬 newMatch 가 셋 이상 판에만 넘김):
+//  몸 · 칼은 싸움꾼(자리)마다 비트 · 발 · 몸통 · 칼팔은 모두 한 비트 — 거름(filter)이 '나 빼고 모두'라 엔진 판정(구성원 & 거름 양쪽)이 제 몸끼리만 버린다.
+//  비트 지도: 땅 1 · 몸 [2, 8, 256, 512] · 칼 [4, 16, 1024, 2048] · 발 64 · 몸통 4096 · 칼팔 8192 · 날아간 투구 32(땅하고만) · 남음 128 · 16384 · 32768.
+//  1:1(ffa 없음)은 위의 예전 비트 그대로 — 관문 바이트 같음
+const FFA_BODY = [2, 8, 256, 512];
+const FFA_WEAPON = [4, 16, 1024, 2048];
+const FFA_FOOT = 64;
+const FFA_TORSO = 4096;
+const FFA_ARMS = 8192;
+const FFA_ALL_BODY = FFA_BODY.reduce((a, b) => a | b, 0);
+const FFA_ALL_WEAPON = FFA_WEAPON.reduce((a, b) => a | b, 0);
 const TORSO_PARTS = new Set(['pelvis', 'abdomen', 'chest', 'thighF', 'thighB']);
 // ── 팔·다리 절단 (COMBAT.limbSever, 설계 docs/strike/limb_sever_design_2026-10-07.md §2) ──
 //  베인 부위 → 뗄 수 있는 관절 후보. 'own' = 그 부위 자신의 관절(앵커2 가 부위 틀), 'child' = 아래 부위의 관절(앵커1 이 부위 틀).
@@ -329,6 +340,7 @@ export class Fighter {
    *        걸음 값을 처음부터 기본으로 고르게 걸음(Gait)을 만들기 전에 적는다. 없으면 속성도 없다(시뮬·AI 그대로)
    * @param {object} [o.skillKit] 플레이어 스킬트리 몫(10/21 — skill_tree_data.js kitFromNodes · 읽는 곳 skill_kit.js kitOff · perkOff). 없으면 속성도 없다(AI · 시뮬 = 지금 규칙 그대로)
    * @param {boolean} [o.human] true = 사람 손(입력)이 모는 몸(main.js 플레이어) → humanInput. 안 주면 속성도 없다 — 시뮬 도구의 자리 0(AI 가 모는 몸 · 대본 몸)은 아님 (10/29 17:5x)
+   * @param {boolean} [o.ffa] 셋 이상 판: 같은 편도 적과 똑같이 부딪히고 벤다 (자리마다 몸 · 칼 비트 — 위 FFA_* · 사장님 10/29 22:3x). 안 주면 1:1 예전 비트
    */
   constructor(RAPIER, world, scene, colliderInfo, o) {
     this.R = RAPIER;
@@ -474,22 +486,27 @@ export class Fighter {
     const toWorld = (p) => new THREE.Vector3(...p).applyQuaternion(yaw).add(origin);
 
     const T = this.team;
-    const myBody = bodyBit(T);
-    const otherBody = bodyBit(1 - T);
-    const otherWeapon = weaponBit(1 - T);
+    const FFA = !!o.ffa; // 셋 이상 판 — 같은 편도 적과 같은 물리 (위 FFA_*)
+    this.ffa = FFA;
+    const myBody = FFA ? FFA_BODY[this.index] : bodyBit(T);
+    const otherBody = FFA ? FFA_ALL_BODY & ~myBody : bodyBit(1 - T);
+    const myWeapon = FFA ? FFA_WEAPON[this.index] : weaponBit(T);
+    const otherWeapon = FFA ? FFA_ALL_WEAPON & ~myWeapon : weaponBit(1 - T);
+    const myFoot = FFA ? FFA_FOOT : footBit(T);
+    const otherFoot = FFA ? FFA_FOOT : footBit(1 - T); // ffa: 발은 한 비트 — 제 발은 제 칼 거름(발 쪽 거름에 제 칼이 없음)으로 걸러진다
     const bodyGroups = groups(myBody, BIT.ground | otherBody | otherWeapon);
-    const footGroups = groups(footBit(T), BIT.ground | otherWeapon);
-    let weaponGroups = groups(weaponBit(T), BIT.ground | otherBody | otherWeapon | footBit(1 - T));
+    const footGroups = groups(myFoot, BIT.ground | otherWeapon);
+    let weaponGroups = groups(myWeapon, BIT.ground | otherBody | otherWeapon | otherFoot);
     // 자기 몸 충돌 (BODY.humanLimits): 제 칼·칼팔(위팔·아래팔) ↔ 제 몸통(골반·배·가슴)·허벅지. 그 밖의 제 몸끼리는 그대로 지나간다.
     //  제 몸 닿음은 combat.js 가 같은 싸움꾼 쌍을 버려 상처·부딪힘·불꽃·소리·멈칫이 되지 않는다(pairOf·접촉힘 사건)
     const HL = BODY.humanLimits;
-    const myTorso = torsoBit(this.index);
-    const myArmS = armSBit(this.index);
-    const torsoGroups = groups(myBody | myTorso, BIT.ground | otherBody | otherWeapon | weaponBit(T) | myArmS);
+    const myTorso = FFA ? FFA_TORSO : torsoBit(this.index); // ffa: 몸통 · 칼팔은 한 비트 — 남의 몸통 · 칼팔은 몸 비트로 어차피 부딪히고, 제 것끼리만 아래 규칙
+    const myArmS = FFA ? FFA_ARMS : armSBit(this.index);
+    const torsoGroups = groups(myBody | myTorso, BIT.ground | otherBody | otherWeapon | myWeapon | myArmS);
     const armSGroups = groups(myBody | myArmS, BIT.ground | otherBody | otherWeapon | myTorso);
-    if (HL) weaponGroups = groups(weaponBit(T), BIT.ground | otherBody | otherWeapon | footBit(1 - T) | myTorso);
-    // 이 몸의 비트 (읽기만 — mordschlag.js 넘어 들어감 · revive.js 유령이 '상대 편 칼' 비트를 여기서 읽는다)
-    this.bits = Object.freeze({ body: myBody, weapon: weaponBit(T), foot: footBit(T), torso: myTorso, armS: myArmS, foeBody: otherBody, foeWeapon: otherWeapon, foeFoot: footBit(1 - T) });
+    if (HL) weaponGroups = groups(myWeapon, BIT.ground | otherBody | otherWeapon | otherFoot | myTorso);
+    // 이 몸의 비트 (읽기만 — mordschlag.js 넘어 들어감 · revive.js 유령이 '남의 칼' 비트를 여기서 읽는다 · ffa 는 나 빼고 모두)
+    this.bits = Object.freeze({ body: myBody, weapon: myWeapon, foot: myFoot, torso: myTorso, armS: myArmS, foeBody: otherBody, foeWeapon: otherWeapon, foeFoot: otherFoot });
 
     const defs = partDefs(this.side);
     this.headR = defs.find((d) => d.name === 'head').shape[1]; // 머리 공 반지름 (skill.js 찍기 겨눔이 머리 꼭대기 높이를 잰다)

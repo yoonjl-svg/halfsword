@@ -1,6 +1,8 @@
 // ─────────────────────────────────────────────────────────────
 //  동시 대전 화면 — 4단계 최소 (10/29 · docs/strike/team_fight_2026-10-29.md §11)
-//   체력 막대: 머리 위 기력 막대 바로 밑 같은 크기 (stamina_hud.js setTeam — 사장님 10/29 20:3x · 그 전의 정지 단추 밑 이름 막대 묶음은 뺌) · 편 색 · 몫 = hpShare
+//   이름 · 체력 목록 (사장님 10/29 22:3x '왼쪽 상단에 작게 이름과 체력바 … 글자 크기와 스타일은 전투 중 기술 상세 설명 표기할 때 쓰는 것으로 · 체력바도 기력바 크기보다 작게'):
+//    왼쪽 위 #teamList (index.html — 글자 = 기술 칸 둘째 줄 .slot small 과 같은 크기 · 굵기 · 색 · 외곽선) · 내 편 먼저 · 막대 40 × 2 px(기력 막대 56 × 2 의 약 70 %) · 편 색 · 죽으면 흐림.
+//    생사전 판은 무대 이름을 감추고 그 자리 · 시험 판은 무대 이름 밑 (그 전의 머리 위 체력 막대 · 정지 단추 밑 막대 묶음은 뺌)
 //   화면 밖 화살표: 살아 있는 싸움꾼이 화면 밖(또는 카메라 뒤)이면 화면 가장자리에 그쪽을 가리키는 작은 화살표 (편 색)
 //   편 표시: 화면 안의 산 상대(1 편) 머리 위에 같은 화살표를 작게 붉게 아래로 — 무명 검객처럼 겉모습이 같아도 편이 보이게 (내 편 금색 세모는 뺌 — 사장님 10/29 20:3x '우리편 머리의 금색 세모는 없어도 돼')
 //   카메라 물러남 몫: 보는 몸(focus)에서 TEAM_FIGHT.cam.radius 안의 산 싸움꾼이 모두 들어오게 뒤로 · 위로 (main.js updateCamera 가 부드럽게)
@@ -46,14 +48,38 @@ export function createTeamHud(doc = document) {
   root.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2;display:none;font-family:var(--font-ui, system-ui);';
   const arrows = doc.createElement('div');
   arrows.style.cssText = 'position:absolute;inset:0;';
-  root.append(arrows);
+  const list = doc.createElement('div');
+  list.id = 'teamList';
+  list.setAttribute('aria-label', '싸움꾼 체력');
+  root.append(arrows, list);
   doc.body.appendChild(root);
   let marks = [];
+  let rows = [];
   const _v = new THREE.Vector3();
 
-  /** 판을 열 때: 싸움꾼마다 화살표 하나 (focus 는 화면 밖 화살표 없음 — 늘 화면 안) */
-  function show(fighters) {
+  /** 판을 열 때: 싸움꾼마다 화살표 하나 (focus 는 화면 밖 화살표 없음 — 늘 화면 안) · 왼쪽 위 이름 · 체력 목록 (내 편 먼저 — 자리 차례). below = 그 밑에 둘 요소(무대 이름 — 생사전은 null) */
+  function show(fighters, below = null) {
     arrows.replaceChildren();
+    list.replaceChildren();
+    const order = [...fighters].sort((a, b) => a.team - b.team || a.index - b.index);
+    rows = order.map((f) => {
+      const n = doc.createElement('span');
+      n.className = 'tl-n';
+      n.textContent = f.name ?? '';
+      const bar = doc.createElement('span');
+      bar.className = 'tl-b';
+      bar.setAttribute('role', 'meter');
+      bar.setAttribute('aria-label', `${f.name ?? ''} 체력`);
+      bar.setAttribute('aria-valuemin', '0');
+      bar.setAttribute('aria-valuemax', '100');
+      const fill = doc.createElement('span');
+      fill.style.background = TEAM_COLORS[f.team] ?? '#888';
+      bar.append(fill);
+      list.append(n, bar);
+      return { f, n, bar, fill, last: -1, dead: false };
+    });
+    const r = below?.getBoundingClientRect?.();
+    list.style.top = r && r.height > 0 ? `${Math.round(r.bottom + 6)}px` : '';
     marks = fighters.map((f) => {
       const a = doc.createElement('div');
       a.className = 'th-arrow';
@@ -69,8 +95,18 @@ export function createTeamHud(doc = document) {
     root.style.display = 'none';
   }
 
-  /** 프레임마다: 화살표 · 편 표시 (visible 거짓이면 모두 숨김 — 메뉴 · 판 끝). me = 사람 몸 (지켜보기면 null) */
+  /** 프레임마다: 화살표 · 편 표시 (visible 거짓이면 모두 숨김 — 메뉴 · 판 끝) · 목록 체력 몫 (늘). me = 사람 몸 (지켜보기면 null) */
   function update(camera, focus, visible, me = null, width = window.innerWidth, height = window.innerHeight) {
+    for (const r of rows) {
+      const v = hpShare(r.f);
+      if (Math.abs(v - r.last) > 0.004) {
+        r.last = v;
+        r.fill.style.transform = `scaleX(${v.toFixed(3)})`;
+        r.bar.setAttribute('aria-valuenow', String(Math.round(v * 100)));
+      }
+      const dead = !r.f.alive;
+      if (dead !== r.dead) (r.dead = dead), r.n.classList.toggle('dead', dead), r.bar.classList.toggle('dead', dead);
+    }
     const m = 22; // 가장자리 여백 (px)
     for (const { f, a } of marks) {
       if (!visible || !f.alive || (f === focus && f === me)) {

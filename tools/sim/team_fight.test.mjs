@@ -43,12 +43,13 @@ test('① 1:1 충돌 비트 = 예전 식 그대로 (편 = 자리 번호)', () =>
   }
 });
 
-test('② 2:2 같은 편은 서로 지나가고 상대 편은 부딪힌다 · 16 비트 안 · 투구 비트 32 와 안 겹침', () => {
+test('② 2:2 같은 편도 적과 똑같이 부딪힌다 (ffa — 사장님 10/29 22:3x) · 제 몸끼리만 지나감 · 16 비트 안 · 투구 비트 32 와 안 겹침', () => {
   const G = newMatch({ count: 4, ai: 'all', seed: 1 });
   const F = G.fighters;
   assert.deepEqual(F.map((f) => f.team), [0, 1, 0, 1]);
   const HELMET = (32 << 16) | 1; // fighter.js knockOffHelmet
-  let mates = 0, foes = { bodyBody: 0, swordBody: 0, swordSword: 0, swordFoot: 0, footBody: 0 };
+  let mates = 0;
+  const foes = { bodyBody: 0, swordBody: 0, swordSword: 0, swordFoot: 0, footBody: 0 };
   for (const a of F) {
     for (const [, c] of [...bodyCols(a), ...swordCols(a)]) {
       const g = c.collisionGroups();
@@ -60,7 +61,7 @@ test('② 2:2 같은 편은 서로 지나가고 상대 편은 부딪힌다 · 16
       if (b.index <= a.index) continue;
       for (const [pa, ca] of [...bodyCols(a), ...swordCols(a)]) for (const [pb, cb] of [...bodyCols(b), ...swordCols(b)]) {
         const hit = meets(ca.collisionGroups(), cb.collisionGroups());
-        if (a.team === b.team) { assert.equal(hit, false, `같은 편 ${a.name}.${pa} ↔ ${b.name}.${pb}`); mates++; continue; }
+        if (a.team === b.team) mates++; // 같은 편도 아래 적 규칙 그대로
         const ka = pa === 'weapon' ? 'sword' : pa.startsWith('foot') ? 'foot' : 'body';
         const kb = pb === 'weapon' ? 'sword' : pb.startsWith('foot') ? 'foot' : 'body';
         const k = [ka, kb].sort().join('');
@@ -73,13 +74,29 @@ test('② 2:2 같은 편은 서로 지나가고 상대 편은 부딪힌다 · 16
     }
   }
   assert.ok(mates > 0 && Object.values(foes).every((n) => n > 0));
-  // 자기 칼 ↔ 제 몸통 (BODY.humanLimits): 자리마다 따로 — 같은 편 몸통과는 안 부딪힌다
-  if (CONFIG.BODY.humanLimits) for (const f of F) assert.ok(meets(f.swordColliders[0].collisionGroups(), f.bodies.chest.collider(0).collisionGroups()));
-  // 상대 편 칼 비트 (mordschlag · revive 가 읽는다)
-  for (const f of F) assert.equal(f.bits.foeWeapon, mem(F[f.index ^ 1].swordColliders[0].collisionGroups()));
+  // 제 몸끼리: 몸 ↔ 몸 · 칼 ↔ 발 · 칼 ↔ 팔다리는 지나감 · 칼 ↔ 제 몸통 · 칼팔 ↔ 제 몸통만 (BODY.humanLimits)
+  const HL = CONFIG.BODY.humanLimits;
+  for (const f of F) {
+    const torso = new Set(['pelvis', 'abdomen', 'chest', 'thighF', 'thighB']);
+    for (const [pa, ca] of bodyCols(f)) {
+      for (const [pb, cb] of bodyCols(f)) {
+        if (pa >= pb) continue;
+        const want = HL && ((torso.has(pa) && (pb === 'uarmS' || pb === 'farmS')) || (torso.has(pb) && (pa === 'uarmS' || pa === 'farmS')));
+        assert.equal(meets(ca.collisionGroups(), cb.collisionGroups()), want, `${f.name} 제 몸 ${pa} ↔ ${pb}`);
+      }
+      for (const [, cw] of swordCols(f)) assert.equal(meets(ca.collisionGroups(), cw.collisionGroups()), HL && torso.has(pa), `${f.name} 제 칼 ↔ ${pa}`);
+    }
+  }
+  // 남의 칼 비트 (mordschlag · revive 가 읽는다) = 나 빼고 모두의 칼
+  for (const f of F) assert.equal(f.bits.foeWeapon, F.filter((g) => g !== f).reduce((m, g) => m | mem(g.swordColliders[0].collisionGroups()), 0));
+  // ffa 끔(전후 비교 — newMatch ffa:false): 예전 편 비트 — 같은 편은 지나감
+  const O = newMatch({ count: 4, ai: 'all', seed: 1, ffa: false }).fighters;
+  assert.equal(meets(O[0].bodies.chest.collider(0).collisionGroups(), O[2].bodies.chest.collider(0).collisionGroups()), false);
+  assert.equal(meets(O[0].swordColliders[0].collisionGroups(), O[2].bodies.chest.collider(0).collisionGroups()), false);
+  assert.ok(meets(O[0].swordColliders[0].collisionGroups(), O[3].bodies.chest.collider(0).collisionGroups()));
 });
 
-test('③ sameSide · pairOf · 칼 쌍 묶기 · AI setFoe', () => {
+test('③ sameSide(겨눔만) · pairOf(제 몸만 버림) · 칼 쌍 묶기 · AI setFoe', () => {
   const G = newMatch({ count: 4, ai: 'all', seed: 2 });
   const [P, E, P2, E2] = G.fighters;
   assert.ok(sameSide(P, P2) && sameSide(E, E2) && sameSide(P, P) && !sameSide(P, E) && !sameSide(P2, E));
@@ -87,8 +104,9 @@ test('③ sameSide · pairOf · 칼 쌍 묶기 · AI setFoe', () => {
   const fake = {};
   assert.ok(sameSide(fake, fake) && !sameSide(fake, {})); // 편 없는 가짜 몸: 같은 몸일 때만 (예전 a === b)
   const C = G.combat;
-  assert.equal(C.pairOf(P.swordColliders[0].handle, P2.bodies.chest.collider(0).handle), null, '같은 편 칼 → 몸');
+  assert.ok(C.pairOf(P.swordColliders[0].handle, P2.bodies.chest.collider(0).handle), '같은 편 칼 → 몸 (같은 편도 벤다 — 사장님 10/29 22:3x)');
   assert.ok(C.pairOf(P.swordColliders[0].handle, E2.bodies.chest.collider(0).handle), '상대 편 칼 → 몸');
+  assert.equal(C.pairOf(P.swordColliders[0].handle, P.bodies.chest.collider(0).handle), null, '제 칼 → 제 몸');
   const w = (f, k = 0) => f.swordColliders[k].handle;
   const groups = C.groupBlades([[w(P2), w(E2)], [w(P), w(E)], [w(P2, 1), w(E2)], [w(P, 1), w(E)]]);
   assert.deepEqual(groups.map((g) => g.key), [2 * 4 + 3, 0 * 4 + 1], '들어온 차례');

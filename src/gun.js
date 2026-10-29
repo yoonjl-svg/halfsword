@@ -15,7 +15,6 @@
 import * as THREE from 'three';
 import { ANATOMY, ARENA, COMBAT, realS } from './config.js';
 import { prepareRevolverReload, playRevolverReload } from './revolver_reload_audio.js';
-import { sameSide } from './team.js'; // 편 (2:2 동시 대전 10/29): 총알 · 레이저는 같은 편 몸 · 칼을 지나간다 (1:1 은 제 몸만 — 예전과 같은 답)
 
 /** 권총을 든 동안 화면에 띄우는 자세 이름 (사장님: "사격 자세 라고 써") — main.js 자세 이름 표시가 GUARDS 대신 쓴다 */
 export const GUN_STANCE = { name: '사격 자세', desc: '레이저가 몸에 걸리면 탭으로 쏜다' };
@@ -383,7 +382,7 @@ function fire(f, world, combat) {
   );
   f.takeJolt?.(GUN.recoilBack + GUN.recoilUp);
   const info = combat.info;
-  const hit = castRay(world, _o, _d, (h) => !sameSide(info.get(h)?.fighter, f));
+  const hit = castRay(world, _o, _d, (h) => info.get(h)?.fighter !== f); // 제 몸만 뺌 (같은 편도 맞는다 — 사장님 10/29 22:3x)
   sound('onShot', f, _d.clone(), hit ? hit.toi : GUN.range); // 효과 모듈의 총알 궤적이 실제 총알을 따라가게 방향·거리를 넘긴다
   const vi = hit ? info.get(hit.collider.handle) : null;
   // 어디에 맞았나 (검사 도구가 읽는다): 허공·땅벽·칼·몸
@@ -391,7 +390,7 @@ function fire(f, world, combat) {
   g.what = g.what ?? {};
   g.what[what] = (g.what[what] ?? 0) + 1;
   if (hit) GUN_HOOKS.onImpact?.(f, _o.clone().addScaledVector(_d, hit.toi), _d.clone(), what);
-  if (what !== 'body' || sameSide(vi.fighter, f)) return; // 칼·땅·벽에 맞았거나 빗나갔다
+  if (what !== 'body' || vi.fighter === f) return; // 칼·땅·벽에 맞았거나 빗나갔다
   bulletHit(f, vi, _o.clone().addScaledVector(_d, hit.toi), _d.clone(), combat);
 }
 
@@ -504,7 +503,7 @@ function updateLaser(f, g, world, combat) {
   _q.set(r.x, r.y, r.z, r.w);
   const dir = _l.set(0, 1, 0).applyQuaternion(_q);
   const o = muzzle(f, new THREE.Vector3());
-  const hit = castRay(world, o, dir, (h) => !sameSide(combat.info.get(h)?.fighter, f));
+  const hit = castRay(world, o, dir, (h) => combat.info.get(h)?.fighter !== f);
   const dist = hit ? hit.toi : GUN.range;
   const y0 = f.weaponCfg.hiltLength + f.weaponCfg.bladeLength; // 총구 (칼 기준)
   const mx = f.weapon.muzzleX ?? 0;

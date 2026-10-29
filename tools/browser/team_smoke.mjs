@@ -23,7 +23,7 @@ const SAENGSA_SETUP = {
   sides: {
     a: [
       { key: '0-0', id: 'nameless', weapon: 'longsword', school: 'german', tier: 1, prof: { german: 2 }, lent: false, hp: 70, injuries: [{ part: 'leg', sev: 0.3, rests: 1 }], dead: false, cloth: 1 },
-      { key: '0-1', id: 'nameless', weapon: 'rapier', school: 'italian', tier: 1, prof: { italian: 2 }, lent: false, hp: 100, injuries: [], dead: false, cloth: 3 },
+      { key: '0-1', id: 'nameless', tag: '오토', weapon: 'rapier', school: 'italian', tier: 1, prof: { italian: 2 }, lent: false, hp: 100, injuries: [], dead: false, cloth: 3 },
     ],
     b: [
       { key: '5-0', id: 'nameless', weapon: { id: 'longsword', broken: true }, school: 'german', tier: 1, prof: { german: 2 }, lent: false, hp: 100, injuries: [], dead: false, cloth: 5 },
@@ -69,8 +69,10 @@ for (const C of CASES) {
       broken: game.fighters.map((f) => (f.weaponBroken ? 1 : 0)).join(''),
       focus: R?.focus?.index ?? null,
       human: R?.human?.index ?? null,
-      bars: document.querySelectorAll('.hp-bar').length, // 체력 막대 (기력 막대 밑 — 넷까지 · 판마다 수)
-      hpShown: [...document.querySelectorAll('.hp-bar')].filter((b) => !b.hidden).length,
+      bars: document.querySelectorAll('#teamList .tl-b').length, // 왼쪽 위 이름 · 체력 목록 줄 수 (사장님 10/29 22:3x)
+      hpShown: hud && hud.style.display !== 'none' ? document.querySelectorAll('#teamList .tl-b').length : 0,
+      stage: document.getElementById('stageInfo').classList.contains('show'), // 무대 이름 (생사전은 감춤)
+      listNames: [...document.querySelectorAll('#teamList .tl-n')].map((n) => n.textContent),
       arrows: hud ? [...hud.querySelectorAll('.th-arrow[data-kind="edge"]')].filter((a) => a.style.display !== 'none').length : 0,
       heads: hud ? [...hud.querySelectorAll('.th-arrow[data-kind="head"]')].filter((a) => a.style.display !== 'none').length : 0,
       switches: R ? game.fighters.map((f) => R.M.targeting?.get(f)?.switches ?? 0) : [],
@@ -86,16 +88,23 @@ for (const C of CASES) {
     } else {
       await page.evaluate(() => document.getElementById('btnStart').click());
     }
-    for (let i = 0; i < 200 && !(await page.evaluate(() => game.state === 'fight' && !!game.teamRun)); i++) await page.clock.runFor(50);
+    for (let i = 0; i < 400 && !(await page.evaluate(() => game.state === 'fight' && !!game.teamRun)); i++) {
+      if (!C.saengsa && i % 40 === 39 && (await page.evaluate(() => game.state === 'menu'))) await page.evaluate(() => document.getElementById('btnStart').click()); // 첫 누름이 판을 못 열었으면 (짐이 무거울 때) 다시
+      await page.clock.runFor(50);
+    }
     await page.evaluate(() => { game.renderCap.tick = () => false; });
     row.start = await look();
+    if (!(row.start.state === 'fight' && row.start.n === C.n)) throw new Error(`판이 안 열림 (${row.start.state} · ${row.start.n})`);
     await page.clock.runFor(2500);
     await shot('start');
     let L = await look();
     let mid = false;
+    let still = 0;
     while (!L.over && L.sim < MAX_SIM && !errors.length) {
+      const was = L.sim;
       await page.clock.runFor(2000);
       L = await look();
+      if (L.sim <= was && ++still > 10) throw new Error(`게임 시간이 안 흐름 (${L.state} · ${L.sim} s)`);
       if (!mid && (L.alive.includes('0') || L.sim > 25)) (mid = true), await shot('mid');
     }
     row.end = L;
@@ -110,7 +119,7 @@ for (const C of CASES) {
         await page.evaluate(() => document.getElementById('btnStart').click());
         for (let i = 0; i < 200 && !(await page.evaluate(() => game.state === 'fight')); i++) await page.clock.runFor(50);
         await page.clock.runFor(1500);
-        row.oneAfter = await page.evaluate(() => ({ state: game.state, n: game.fighters.length, teamRun: !!game.teamRun, hpShown: [...document.querySelectorAll('.hp-bar')].filter((b) => !b.hidden).length, staminaShown: [...document.querySelectorAll('.stamina-bar')].filter((b) => !b.hidden).length }));
+        row.oneAfter = await page.evaluate(() => ({ state: game.state, n: game.fighters.length, teamRun: !!game.teamRun, hpShown: document.getElementById('teamHud')?.style.display !== 'none' ? 1 : 0, staminaShown: [...document.querySelectorAll('.stamina-bar')].filter((b) => !b.hidden).length, stage: document.getElementById('stageInfo').classList.contains('show') }));
       } else {
         for (let i = 0; i < 40 && (await page.evaluate(() => game.state === 'fight')); i++) await page.clock.runFor(250);
         row.after = await page.evaluate(() => ({ state: game.state, title: document.getElementById('menuTitle')?.textContent, sub: document.getElementById('menuSub')?.textContent, again: document.getElementById('btnStart')?.textContent }));
@@ -123,8 +132,10 @@ for (const C of CASES) {
   row.errors = errors;
   const okSaengsa = !C.saengsa || (row.saengsa && ['a', 'b'].includes(row.saengsa.winner) && Object.keys(row.saengsa.fighters).length === C.n && Object.values(row.saengsa.fighters).every((f) => Number.isInteger(f.hp) && Array.isArray(f.injuries) && typeof f.alive === 'boolean' && typeof f.weaponBroken === 'boolean')
     && row.start?.broken === '0100' && row.saengsa.fighters['5-0'].weaponBroken === true // 5-0 (자리 1) 은 부러진 칼로 서고 결과에도 부러진 채
+    && row.start?.stage === false // 생사전은 무대 이름 감춤
+    && row.start?.listNames?.includes('무명 검객 오토') // 무명 검객 이름 = 무명 검객 + tag
     && (row.end?.winner == null || C.saengsa.entrants[row.saengsa.winner].some((k) => row.saengsa.fighters[k].alive))); // 이긴 편에 산 몸 (판이 끝난 스텝의 몸으로 적음)
-  const okAfter = !C.saengsa || (row.oneAfter?.state === 'fight' && row.oneAfter.n === 2 && !row.oneAfter.teamRun && row.oneAfter.hpShown === 0); // 1:1 엔 체력 막대 없음
+  const okAfter = !C.saengsa || (row.oneAfter?.state === 'fight' && row.oneAfter.n === 2 && !row.oneAfter.teamRun && row.oneAfter.hpShown === 0 && row.oneAfter.stage === true); // 1:1 엔 목록 없음 · 무대 이름 다시
   row.ok = !errors.length && !!row.end?.over && row.start?.n === C.n && (row.start?.human != null) === C.human && row.start?.bars === C.n && okSaengsa && okAfter;
   rows.push(row);
   console.log(JSON.stringify(row));
