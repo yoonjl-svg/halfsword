@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, AI } from './harness_m.mjs';
 import { PlayerSecretWatch, secretEvent, gnsEnterLine, foeOnline, gnsUser, gnsBlockOf } from '../../src/secret.js';
-import { playerSecretDef } from '../../src/schools.js';
+import { playerSecretDef, JAPANESE_GAIT, setJapaneseGait } from '../../src/schools.js';
 import { requestIai } from '../../src/secret_instant.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 
@@ -205,8 +205,21 @@ function standoff(id, vals) {
   });
 }
 
+// 경계를 끈 판(10/25 01:3x 판)의 기어 듦은 그때 걸음(일본 걸음 전 판 `?jpGait=old` — 모노호시자오 서 있는 자세 0.35)에서 본다: 10/29 일본 걸음(자세 0.51)에선
+//  씨앗 1 ~ 6 모두 '준비된 발도 + 간 보기 꼴'로 선을 넘는 일이 없음(이솔데는 선 2.33 m 안 0.8 ~ 1.4 m 까지 들어오나 그 조건 밖 — docs/strike/jp_gait_2026-10-29.md §10). 켠 판(지금 판)은 새 걸음 그대로
+const withJpOld = (fn) => {
+  const keep = { ...JAPANESE_GAIT };
+  setJapaneseGait('old');
+  try {
+    return fn();
+  } finally {
+    for (const k of Object.keys(JAPANESE_GAIT)) delete JAPANESE_GAIT[k];
+    Object.assign(JAPANESE_GAIT, keep);
+  }
+};
+
 test('⑤ 실제 몸: 경계를 끄면 AI 가 간 보기로 준비된 사람 발도 선 안에 기어 든다(10/25 01:3x 판) · 켜면 간 보기로는 선 밖에서 기다림', () => {
-  const off = standoff('isolde', { gnsWary: 0 });
+  const off = withJpOld(() => standoff('isolde', { gnsWary: 0 }));
   assert.equal(off.W, null); // 끄면 경계 칸 자체가 없다 (옛 판 그대로)
   assert.ok(off.creep > 0, `off creep ${off.creep}`);
   const on = standoff('isolde', {});
