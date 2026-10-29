@@ -540,7 +540,7 @@ const IBERIAN_UNIQUE = [
   //  the montante to give a revez cutting from behind with the other edge … also from low to high」(피 단Ⅰ — 「whoever performs it well will be able to perform them all」).
   //  오른 아래 → 올려 탈류 → 왼 높이 비낌(피 복ⅩⅤ 멈춤 자리) → 왼쪽으로 떨궈(「let fall the montante to the left」 피 복Ⅰ) → 왼 아래 → 올려 레베스 → 오른 높이 비낌. chain 2 = 흐름이 이어 돈다
   { name: 'talhoRevezBaixo', nameKo: '번갈아 올려베기 (탈류 이 레베스 드 바슈)', orig: 'talho e revez de baxo', from: G.wechselR, path: [[0.04, -0.08], G.ochsL, [-0.5, 0.0], G.wechselL, [-0.04, -0.08], G.ochsR], open: 'LL', kind: 'cut', reach: 0, base: 0.9, chain: 2, src: '피게이레두 1651 단순 규칙 Ⅰ·복합 규칙 Ⅰ·Ⅶ(「always from low to high, alternating talho and revez」) [원문 영역] · 길의 수 [추정]' },
-  { name: 'talhoRodeado', nameKo: '나선 걸음 베기 (탈류 로데아두)', orig: 'talho rodeado', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.35, fwd: 0.3, when: 'strike' }, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
+  { name: 'talhoRodeado', nameKo: '나선 걸음 베기 (탈류 로데아두)', orig: 'talho rodeado', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.45, fwd: 0.45, when: 'strike' } /* 10/29 옆 0.35 → 0.45 · 앞 0.3 → 0.45 = 걸음 사다리 0.45 칸(몬탄테의 더 큰 둥근 걸음): 감독 안 · 사장님 확인 전(사장님 15:xx '가령 이베리아 나선 걸음 베기는 둘 다 0.45가 나을 수도 있어' — docs/strike/step_ladder_2026-10-29.md §8-4) */, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
 ];
 
 // ── 패시브 고유 동작 (10/9 — 사장님 02:1x '어떤 고유 동작은 패시브여도 좋을 거 같아', docs/strike/school_passive_design_2026-10-09.md) ──
@@ -584,7 +584,7 @@ const IBERIAN_PASSIVES = [
   //  길 = 고유 동작 talhoRevezBaixo 의 한 반 = 꾸러미 unterhau(아래 탈류 → [0.04, −0.08] → 왼 높이 비낌) · unterhauL(거울) — 손에서 가까운 쪽. 벤 칼은 높이 비낌(머리 위)으로 넘어가
   //  헛치거나 막히면 '이어 돌기'(위)가 흐름을 잇는다(새 고리 없음). 성공 보장 없음 — 상대 칼이 먼저 떨어지면 내가 맞는다(물리).
   //  cond.low: 지금 간 보는 자세가 목록에 있고 손이 그 자세 자리(0.15 패드 안 — v5 montanteFlowSeq '이미 아래' 판정 재사용)에 있음 (길목 준비 옆 자세로 덮였으면 아님)
-  //  걸음 fwd 0.3 = 이베리아 고유 동작 talhoRodeado 의 걸음 앞 값 재사용 · p 0.6 = 일본 데바나(foeRaise 패시브) p 재사용 — 둘 다 사장님 확인 전(확인표 876·877)
+  //  걸음 fwd 0.3 = 이베리아 고유 동작 talhoRodeado 의 걸음 앞 값 재사용(10/29 뒤 talhoRodeado 는 0.45 — 이 값은 걸음 사다리 0.3 칸 그대로 · 숫자만 빌렸음) · p 0.6 = 일본 데바나(foeRaise 패시브) p 재사용 — 둘 다 사장님 확인 전(확인표 876·877)
   //  근거: 피 복Ⅰ 「from where the montante comes to a stop you will give a talho from low to high」 · 복Ⅶ 「in each step you must give a blow, always from low to high」 [원문 영역] ·
   //   상대가 칼을 드는 순간을 받는 것은 [해석] · 수 [추정]
   { name: 'contraBaixo', nameKo: '올려 맞받기', when: 'foeRaise', cond: { low: ['wechselR', 'wechselL', 'alber'] }, do: { tech: ['unterhau', 'unterhauL'], step: { lat: 0, fwd: 0.3, when: 'strike' }, as: 'contraBaixo' }, p: 0.6, src: '피게이레두 1651 복Ⅰ·복Ⅶ(아래에서 위로 · 걸음마다 한 칼) [원문 영역] · 칼을 드는 순간을 받기 [해석] · 수 [추정] · 이름 가칭' },
@@ -730,7 +730,7 @@ const IBERIAN_SECRET_GILMOK = {
     // 둘러 베는 칼의 가운데 점: 지시는 v5 cutMid [0, 0.1](= zwerch 길). 탐침(맞닿기에서 낸 8 번): [0, 0.1] 이면 칼끝이 상대 머리 위(내 가슴 +1.2~1.5 m)로 지나 맞힘 1/8 →
     //  [0, −0.1] 맞힘 8/8(아픔 눈) — 손을 0.2 낮춤 [추정 · 사장님 확인 전 — 확인표 873]. 끝 점(반대쪽 옆 자세)은 그대로
     cutMid: [0.0, -0.1],
-    // 한 칼과 함께 디딤 (10/11 v6 2차 — 디렉터 '뻗음 + 높이 + 디딤을 함께'): 앞 0.3 m = 이베리아 고유 동작 talhoRodeado 의 걸음 앞 값 재사용 (첫 토막에 — secret.js gilmokSeq) ·
+    // 한 칼과 함께 디딤 (10/11 v6 2차 — 디렉터 '뻗음 + 높이 + 디딤을 함께'): 앞 0.3 m = 이베리아 고유 동작 talhoRodeado 의 걸음 앞 값 재사용(10/29 뒤 talhoRodeado 는 0.45 — 이 값은 걸음 사다리 0.3 칸 그대로 · 숫자만 빌렸음) (첫 토막에 — secret.js gilmokSeq) ·
     //  피 복Ⅶ 「in each step you must give a blow」 [원문 영역]. 팔 뻗음·몸통 높이는 덧씌우기 자세(secret_instant.js gilmokCutPose — 발도 길 SECRET.iaiPath 의 M·E 재사용)
     step: { lat: 0, fwd: 0.3, when: 'strike' }, // 10/11 3차: 간격에 맞춘 디딤(max: 0.6 을 두면 (상대 가슴 거리 − 칼끝 앞 거리)를 [0.3, 0.6] 로 자름 — secret.js gilmokStep)은 48 판 맞힘 츠바이핸더 23 → 19 % · 북부 대공의 검 8 → 2 % 로 나아지지 않아 끔
   },
