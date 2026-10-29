@@ -14,6 +14,7 @@ import { flowRecoveryScale } from './nagashi_recovery.js';
 import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { Skill } from './skill.js';
+import { GUN, gunFiring } from './gun.js'; // 쏘는 동안 발 묶음 (fireHold — AI 권총)
 import { Stamina } from './stamina.js';
 import { Gait, hybridJointDefs } from './gait.js';
 import { guardAt, finishAt } from './guards.js';
@@ -1429,6 +1430,12 @@ export class Fighter {
    *  10/27 23:0x 사장님 '고노센과 싱지르는 전투 시작 후, 실제 공격이 가능해진 때부터 시간을 카운트 해' — 비기 무장 시계(고노센 준비 · 싱지르 · 길목)는 이 동안 0 (secret.js gnsArmTick · spinTick · ai.js) */
   get openHold() {
     return this.fightT < ARENA.startHold - 1e-6;
+  }
+
+  /** 쏘는 동안 발 묶음 (사장님 10/29 22:3x '발사 중엔 이동하지 못하게' — GUN.aiFireStill · AI 가 모는 권총 몸만): gun.js gunFiring(방아쇠 ~ 총구 꺾음이 풀릴 때까지 0.23 s) 동안
+   *  gait 가 기술 걸음 · 자세 고쳐 딛기를 판 시작 정지처럼 받지 않는다(걷기 입력은 gunAI 가 0). feetHeld 와 달리 쏘기는 막지 않는다 · 균형 걸음(stumble · 닿지 않는 발)은 그대로 */
+  get fireHold() {
+    return !!(this.aiControlled && GUN.aiFireStill && this.weapon?.gun) && gunFiring(this);
   }
 
   // 상태: stand(서 있음) → down(완전히 쓰러짐) → getup(무릎 꿇고 → 일어섬) → stand
