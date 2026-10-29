@@ -127,7 +127,8 @@ function mkLeg(k, side) {
  *  player: 플레이어 쪽(fighter.index 0 이고 AI 가 몰지 않을 때)만 다시 덮는 값(조작감 완화용)
  *  even: GAIT.itEven(10/15 이탈리아 '고른 바탕 걸음' — `?itGait=old` 면 0)일 때 그 위에 다시 덮는 값(even.player 는 플레이어만) — 끄면 덮지 않아 옛 걸음 그대로
  *  보폭 규칙 (10/15 20:3x 사장님 — GAIT.strideRule, docs/strike/stride_rule_2026-10-15.md): 칸에 strideK(k)가 있으면 맨 끝에 보폭 상한 = GAIT.maxStride × k · 1 m/s 박자 = GAIT.cadence0 ÷ k 로
- *   (덮어쓰기 칸 byFrame·player 의 그 두 값도 이것으로 — 사람·AI 같은 보폭 · 박자는 빠르기 ÷ 보폭). 끄면(0) 칸 값 그대로(바이트 같음)
+ *   (덮어쓰기 칸 byFrame·player 의 그 두 값도 이것으로 — 사람·AI 같은 보폭 · 박자는 빠르기 ÷ 보폭). 끄면(0) 칸 값 그대로(바이트 같음) — 일본은 10/29 strideK 뺌(설계 박자 · 보폭 칸 그대로)
+ *  speedMul: 가려는 빠르기 배율(update — 일본 0.67 · 10/29 사장님 '확연히 느려도 돼') · settleStance: 서 있는 자세 길이 고쳐 딛기(settleLeg · target — 일본)
  */
 export function gaitParams(f, isPlayer = false) {
   if (!GAIT.school) return GAIT;
@@ -348,7 +349,7 @@ export class Gait {
    */
   requestStep(o = {}) {
     if (!GAIT.requestSteps || !this.active || this.f.state !== 'stand') return false;
-    if (this.f.feetHeld) return false; // 판 시작 정지 (ARENA.startHold): 기술 걸음도 받지 않는다
+    if (this.f.feetHeld || this.f.fireHold) return false; // 판 시작 정지 (ARENA.startHold): 기술 걸음도 받지 않는다 · AI 가 쏘는 동안(fireHold — 10/29)도
     // 물러나는 중이면 받지 않는다 (몸은 뒤로, 발은 앞으로 가면 넘어진다). 뒤로 딛는 걸음(retreat)은 예외
     if (this.f.move.y < -0.1 && o.kind !== 'retreat') return false;
     this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, 0.28, 0.7), age: 0, leg: o.leg ?? null }; // leg 'left'|'right': 기술이 고른 발(R2′ 채널 B, 확인표 182) — 없으면 아래 규칙(lunge 앞발·pass 뒷발)
@@ -694,6 +695,9 @@ export class Gait {
       const k = wf > 0 ? this.P.foreMul ?? 1 : this.P.backMul === 'flat' ? 1 / GAIT.backFactor : this.P.backMul ?? 1; // 'flat' = 뒤 느려짐(GAIT.backFactor) 없앰 — 이탈리아 10/21
       if (k !== 1) want.addScaledVector(fwd, wf * (k - 1));
     }
+    // 유파 걸음 빠르기 (10/29 21:0x 사장님 '일본 걸음 … 다른 유파보다 확연히 느려도 돼' — P.speedMul · docs/strike/jp_gait_2026-10-29.md): 가려는 빠르기 전부(앞 · 뒤 · 옆)에 곱한다.
+    //  박자는 아래 cad(빠르기 ÷ 보폭)가 따라 내린다. 칸 없으면 셈하지 않는다(바이트 같음)
+    if (this.P.speedMul && this.P.speedMul !== 1 && !f.feetHeld) want.multiplyScalar(this.P.speedMul);
     // 비스듬히 앞으로 박차기 (10/21 GAIT.burstFwdDeg — 이베리아 둥근 걸음): 옆 박찬 걸음(fastSide · fastK > 1) 동안 가려는 빠르기에 옆 몫 × tan(각)만큼 앞(상대 쪽)을 더한다.
     //  스틱에 뒤 몫이 있으면(물러나며 옆) 더하지 않음 · 플레이어 몸만(AI 는 박차지 않음)
     if (GAIT.burstFwdDeg > 0 && this.fastSide && this.fastK > 1 && !f.feetHeld && f.move.y > -0.05) {
@@ -1021,20 +1025,21 @@ export class Gait {
           next = df > 0 ? 'B' : 'F';
         }
       } else if (next) kind = 'catch';
-      else if (this.P.pair?.stop && this.pairOpen && !walkNow && !f.feetHeld && this.sinceTD >= Tds) {
+      else if (this.P.pair?.stop && this.pairOpen && !walkNow && !f.feetHeld && !f.fireHold && this.sinceTD >= Tds) {
         // 짝걸음 멈춤(pair.stop): 이끄는 발만 딛고 멈췄으면 기다리지 않고(settleDelay 없이) 따라붙는 발을 곧 펜싱 자세 자리로 짧게 딛는다 — '착' 하고 선다
         next = this.pairOpen === 'F' ? 'B' : 'F';
         kind = 'settle';
         this.settles++;
         this.pairStop = true;
         this.pairOpen = null;
-      } else if (this.idleT > GAIT.settleDelay && !f.feetHeld) {
-        // (판 시작 정지 동안엔 자세 고쳐 딛기도 미룬다. 닿지 않는 발·균형 잡는 걸음은 그대로)
+      } else if (this.idleT > GAIT.settleDelay && !f.feetHeld && !f.fireHold) {
+        // (판 시작 정지 · AI 가 쏘는 동안(fireHold) 엔 자세 고쳐 딛기도 미룬다. 닿지 않는 발·균형 잡는 걸음은 그대로)
         // 자리 고치기는 settleMax번까지, 몸을 돌려 발이 틀어진 것은 언제든 (발을 돌려 딛는다)
         next = this.settleLeg(this.settles < GAIT.settleMax);
         if (next) {
           kind = 'settle';
           this.settles++;
+          if (this.P.settleStance) this.settleRel = this.settleByStance; // 자세 길이 고치기 걸음 (P.settleStance — 10/29 일본 걸음): 디딜 자리 = 다른 발에서 자세 길이 (target) · 걸음 동안 그대로
         }
       }
       // 짝걸음으로 일찍 들어왔는데(gate < Tds) 따라붙는 걸음이 아니면 전처럼 Tds 까지 기다린다 (고른 짝걸음은 걷는 걸음 모두 gate 가 제 간격 — 빠른 디딤이면 Tds 보다 짧을 수 있음)
@@ -1343,6 +1348,7 @@ export class Gait {
   settleLeg(posOk) {
     const c = this.f.com;
     if (!c) return null;
+    this.settleByStance = false;
     let worst = null;
     let worstE = 0;
     for (const k of ['F', 'B']) {
@@ -1356,6 +1362,23 @@ export class Gait {
         worstE = score;
         worst = k;
         this.settleTurn = ye / GAIT.yawTol >= (posOk ? e / tol : 0); // 몸을 돌려서 고쳐 딛는 발
+      }
+    }
+    // 자세 길이 (P.settleStance — 10/29 일본 걸음): 발 하나하나는 자리 안이어도 두 발 앞뒤 거리가 자세 길이(guardLength)에서 settleTol(0.08 — 두 번째부터 넓히지 않음) 넘게
+    //  벗어나면 한 발을 다른 발에서 자세 길이로 고쳐 딛는다 — 판 시작 자세 0.31 m 가 일본 자세 길이 0.45 로 끝내 안 고쳐지던 것(무게중심 기준 자리 고치기는 앞발을 옮기면 무게중심이 따라오고,
+    //  뒷발을 뒤로 옮기면 무게가 실린 채 0.1 m 쯤 못 미쳐 디뎌 자세가 짧게 멈춤). 옮길 발 = 무게중심에서 먼 발(덜 실린 발). 칸 없으면 셈하지 않음
+    //  발 하나가 자리 밖이어도 방금 고쳐 딛은 그 발을 또 고쳐 딛으려는 때(못 미쳐 디딘 뒷발 — 모노호시자오 자세 0.5 에서 settleMax 를 다 씀)엔 자세 길이를 먼저 본다
+    if (posOk && this.P.settleStance && (!worst || (!this.settleTurn && worst === this.lastTD && this.lastTDKind === 'settle'))) {
+      const h = this.headAhead();
+      const fx = Math.cos(h);
+      const fz = -Math.sin(h);
+      const aF = this.legs.F.plant.x * fx + this.legs.F.plant.z * fz;
+      const aB = this.legs.B.plant.x * fx + this.legs.B.plant.z * fz;
+      if (Math.abs(Math.abs(aF - aB) - this.P.guardLength) > GAIT.settleTol) {
+        const ac = c.x * fx + c.z * fz;
+        worst = Math.abs(aF - ac) >= Math.abs(aB - ac) ? 'F' : 'B';
+        this.settleTurn = false;
+        this.settleByStance = true;
       }
     }
     return worst;
@@ -1408,7 +1431,7 @@ export class Gait {
     l.p1.copy(l.p0);
     l.v0.set(this.vf.x * GAIT.liftCarry, 0, this.vf.z * GAIT.liftCarry);
     l.yaw0 = l.footYaw;
-    l.lift = kind === 'settle' ? this.P.liftSettle : this.P.lift;
+    l.lift = kind === 'settle' && !(this.P.settleStance && this.settleRel) ? this.P.liftSettle : this.P.lift; // 자세 길이 고치기 걸음(settleRel — 10/29 일본)은 걷는 들기: 고쳐 딛는 들기(일본 0.015)로는 낮은 자세에서 발이 일찍 실려 0.1 m 쯤 못 미쳐 디딤
     // 걷는 중엔 발을 든 시간 내내 옮긴다 (일찍 도착하면 몸이 따라올 때까지 발이 몸 앞 멀리 떠 있어야 한다)
     //  (다리가 닿지 않아 크게 옮기는 발(catch)은 조금 일찍 도착해 제자리에서 내려 딛는다: 움직이는 채로 닿으면 미끄러진다)
     l.hFrac = kind === 'settle' ? GAIT.hFrac : kind === 'catch' ? GAIT.hFracCatch : 1;
@@ -1421,7 +1444,16 @@ export class Gait {
     const p = f.bodies.pelvis.translation();
     const out = l.p1;
     if (l.kind === 'settle') {
-      this.guardSpot(l, out);
+      if (this.P.settleStance && this.settleRel) {
+        // 자세 길이로 고쳐 딛음 (P.settleStance — 10/29 일본 걸음 · settleRel 은 고쳐 딛기를 시작할 때 정함): 다른 발에서 앞뒤 guardLength · 옆 guardWidth (끌어붙임 draw 자리와 같은 꼴)
+        const h = this.headAhead();
+        const fx = Math.cos(h);
+        const fz = -Math.sin(h);
+        const sg = l.k === 'F' ? 1 : -1;
+        const z = (l.side - other.side) * this.P.guardWidth * 0.5;
+        out.set(other.plant.x + fx * sg * this.P.guardLength - fz * z, ANKLE_H, other.plant.z + fz * sg * this.P.guardLength + fx * z);
+        if (f.terrain) out.y = this.ankleHeight(out.x, out.z);
+      } else this.guardSpot(l, out);
       l.yaw1 = this.guardYaw(l);
     } else if (l.kind === 'req' && this.req) {
       // 기술 걸음. lunge: 앞발을 fwd만큼 내딛는다. pass: 뒷발이 앞발을 지나 그 앞에 딛는다 (앞뒤 발이 바뀐다). retreat: 뒷발을 fwd(음수)만큼 뒤로 (유파 비기 백스텝)

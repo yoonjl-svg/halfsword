@@ -319,9 +319,9 @@ const CHINESE_TEMPER = { ...GERMAN_TEMPER, margin: [0.1, 0.3], circleRate: [0.2,
 //  기질(temper)은 '어디로 가려 하나'(AI 스틱), 걸음은 '그걸 어떤 발로 하나'(gait.js) — 빠르기(moveSpeed·sideFactor·backFactor)는 여기 두지 않는다(기질 스틱과 곱해짐).
 //  독일·무유파: 칸 없음 = 지금 걸음(바이트 같음). 값은 모두 사장님 확인 전 (확인표 500~)
 //  보폭 규칙 strideK (10/15 20:3x 사장님 '보폭 규칙안대로 가자' — docs/strike/stride_rule_2026-10-15.md · config GAIT.strideRule · `?strideRule=0` = 아래 칸 값 그대로):
-//   걷는 최고 빠르기는 모든 유파 같고(moveSpeed 등 그대로) 보폭 상한 maxStride = 0.62 × k · 1 m/s 박자 cadence0 = 2.05 ÷ k(박자는 빠르기 ÷ 보폭) — gait.js gaitParams 가 맨 끝에 덮음
+//   걷는 최고 빠르기는 모든 유파 같고(moveSpeed 등 그대로 — 10/29 부터 일본만 speedMul 로 줄임) 보폭 상한 maxStride = 0.62 × k · 1 m/s 박자 cadence0 = 2.05 ÷ k(박자는 빠르기 ÷ 보폭) — gait.js gaitParams 가 맨 끝에 덮음
 //   (사람·AI 같음 — 이탈리아 player 칸의 maxStride·cadence0 도 이것으로, 다른 덮어쓰기 칸·이베리아 옆걸음 sideStride·sideMul·모노호시자오 byFrame 은 그대로).
-//   k 는 컨셉에서 0.1 단위: 이탈리아 0.7(작게 빨리 — 0.434 m · 2.93) · 일본 0.8(0.496 · 2.56) · 동방 0.9(0.558 · 2.28) · 독일 1.0(칸 없음 = 기본 0.62 · 2.05) · 이베리아 1.2(크게 느리게 — 0.744 · 1.71)
+//   k 는 컨셉에서 0.1 단위: 이탈리아 0.7(작게 빨리 — 0.434 m · 2.93) · 일본 0.8(0.496 · 2.56 — 10/29 뺌: 칸 설계 박자 2.2 · 보폭 0.5 + speedMul 0.67 · 아래 JAPANESE_GAIT) · 동방 0.9(0.558 · 2.28 — 10/29 0.75: 0.465 · 2.73 · 아래 CHINESE_GAIT) · 독일 1.0(칸 없음 = 기본 0.62 · 2.05) · 이베리아 1.2(크게 느리게 — 0.744 · 1.71)
 //  ⓐ 이탈리아 (카포 페로): 곧은 선 위 좁은 너비·무게 조금 뒤·뒷무릎 굽힘 [원전 2차] · 짧고 잦은 걸음(파브리스) [원전 2차] — 수는 [추정]
 //  짝걸음 pair (10/10 사장님 '다리를 저는 것처럼 — 리듬감·탄력감이 없다' · '동작이 빨라야 해'): follow 를 앞뒤로 갈 때 '따·닥' 두 박 한 짝으로 — gait.js update ③.
 //   이끄는 발(가는 쪽 발) Tsw × lead → 두 발 디딤 Tds × inner 만에 따라붙는 발 Tsw × trail('착') → 짝 사이 쉼(한 짝 = 걸음 두 개 시간이 되게).
@@ -404,7 +404,14 @@ const CHINESE_BOW = { drop: 0.22, lowMax: 0.24, rate: 1.2, inTime: 0.12, outTime
 //    (GAIT.maxAccel 3.2 m/s²)의 보통 걸음 몫(× 1)에 곱한다(fighter.js driveBalance) — 걷기 시작·멈춤·방향 바꿈이 같은 한도라 셋이 함께 빨라지고, 최고 빠르기(moveSpeed)는 그대로
 //    ('빠르진 않지만 신속하다'). 빠른 걸음·첫 걸음 박차기·세게 멈춤(fastAcc · burstAccel)엔 곱하지 않는다(그 값 그대로). 몸의 일이라 사람·AI 같이 · 칼 입력은 읽지 않는다(보법 = 다리만).
 //    스위치 GAIT.cnLight(`?cnLight=0` = 끔) · 걸음 칸에서 읽으므로 `?schoolGait=0` 이어도 꺼진다
-const CHINESE_GAIT = { guardHeight: 0.88, walkHeight: 0.95, guardLength: 0.55, guardWidth: 0.16, weightFront: 0.55, maxStride: 0.5, cadence0: 2.5, dsFrac: 0.18, width: 0.07, minWidth: 0.11, lift: 0.05, liftSettle: 0.03, toeUp: 0.15, sway: 0.018, bobAdd: 0.015, dsLow: 1.2, footwork: 'follow', followIn: 3.3, followVmax: 0.8, trailReach: 0.42, dragLift: 0.03, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, guardLow: CHINESE_GUARD_LOW, bow: CHINESE_BOW, light: 1.5, strideK: 0.9 };
+export const CHINESE_GAIT = { guardHeight: 0.88, walkHeight: 0.95, guardLength: 0.55, guardWidth: 0.16, weightFront: 0.55, maxStride: 0.5, cadence0: 2.5, dsFrac: 0.18, width: 0.07, minWidth: 0.11, lift: 0.05, liftSettle: 0.03, toeUp: 0.15, sway: 0.018, bobAdd: 0.015, dsLow: 1.2, footwork: 'follow', followIn: 3.3, followVmax: 0.8, trailReach: 0.42, dragLift: 0.03, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, guardLow: CHINESE_GUARD_LOW, bow: CHINESE_BOW, light: 1.5, strideK: 0.75 };
+//  ↑ 동방 박자 (10/29 21:0x 사장님 '동방 박자도 바꾸고' — docs/strike/cn_cadence_2026-10-29.md): 보폭 규칙 k 0.9 → 0.75 — 같은 꼭대기(2.0 m/s)를 더 잦고 짧은 걸음으로
+//   (보폭 상한 0.558 → 0.465 · 1 m/s 박자 2.28 → 2.73 · 초당 3.26 → 3.83 걸음 × 0.63 → 0.55 m · 90 % 까지 0.55 → 0.54 s — 가벼운 발 그대로). 독일(k 1.0)은 그대로. 전 판 = `?cnGait=old`
+export const CHINESE_GAIT_OLD = { strideK: 0.9 };
+/** 동방 박자 비교 (주소 `?cnGait=old` = 10/29 전 판 strideK 0.9 — 판을 세우기 전에 한 번) */
+export function setChineseGait(o) {
+  if (o === 'old') Object.assign(CHINESE_GAIT, CHINESE_GAIT_OLD);
+}
 //  ⓑ 이베리아 (몬탄테): 좌우로 번갈아 베며 앞뒤로 걷기·둥근 걸음 [원전 2차] · 넓게 서서 큰 칼의 원심력을 받는다 [해석] — 수는 [추정]
 //  10/10 데스트레사 고증 (docs/strike/school_gait_iberian_chinese_2026-10-10.md, 사장님 12:5x~13:0x '고증대로 · 사이드스텝이 더 원활하고 이동량 증가'):
 //   보통 옆걸음에서 발을 엇갈리지 않는다(crossSide 뺌 — 에텐하르트 1675 원서 55~56 쪽 둥근·옆걸음 '그 발이 제 쪽으로', 피게이레두 1651 복합 XII '왼발이 따라붙는다' · 확인표 620)
@@ -421,10 +428,20 @@ const IBERIAN_GAIT = { guardLength: 0.62, guardWidth: 0.34, weightFront: 0.5, ma
 //  낮춤 (10/10 사장님 '충분히 낮은 느낌이 아님' → '최대한 내려봐. AI 승률보다 플레이어 조작감'): 골반 멈춤 0.75 · 걸음 0.818 = 전역 기본(0.9·0.978)보다 15·16 cm —
 //   낮춤 합계 상한 GAIT.lowMax 0.16 까지(플레이어 자세표 낮춤 ~1 cm 를 더하면 멈춤도 0.16). 낮아진 만큼 다리가 옆으로 더 닿으므로 reachMax 0.55 → 0.7(넘으면 옮겨 딛기),
 //   발이 땅에 일찍 걸리지 않게 발 들기 AI 0.025 → 0.035 · 플레이어 0.035 → 0.05 — gait_rhythm.mjs·player_gait_feel.mjs·gait_metrics.mjs 로 고름 (확인표 590~)
-//  버티기 steady (10/15 사장님 '휘청·넘어짐 저항으로 가자' — 25 % 는 감독 권고 수치, 미세 조정은 나중 · docs/strike/japanese_steady_2026-10-15.md · 확인표 1520~):
+//  버티기 steady (10/15 사장님 '휘청·넘어짐 저항으로 가자' — 25 % 는 감독 권고 수치, 미세 조정은 나중 · docs/strike/japanese_steady_2026-10-15.md · 확인표 1520~): · 10/30 00:1x 사장님 '흔들림 저항도 30%로 늘려' → steady 0.25 → 0.3
 //   균형이 흔들리는 양을 이 몫만큼 덜 받는다(× 0.75 — fighter.js swayScale 이 '발 밖으로 벗어난 몫 offBalance'와 '맞아 깎이는 휘청임 게이지'에 곱함).
 //   몸의 일이라 사람·AI 같이, 두 일본 무기(byFrame·player 덮개가 안 건드림) 모두. `?jpSteady=0` = 끔
-const JAPANESE_GAIT = { guardHeight: 0.75, walkHeight: 0.818, reachMax: 0.7, guardLength: 0.45, guardWidth: 0.18, weightFront: 0.5, maxStride: 0.5, cadence0: 2.2, dsFrac: 0.25, width: 0.08, minWidth: 0.12, lift: 0.035, liftSettle: 0.015, toeUp: 0.06, sway: 0.01, bobAdd: 0.005, dsLow: 0.5, footwork: 'follow', followIn: 3.5, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, steady: 0.25, byFrame: { heavy: { guardLength: 0.5, footwork: 'pass' } }, player: { trailReach: 0.36, dsFrac: 0.18, lift: 0.05 }, strideK: 0.8 };
+export const JAPANESE_GAIT = { guardHeight: 0.75, walkHeight: 0.818, reachMax: 0.7, guardLength: 0.45, guardWidth: 0.18, weightFront: 0.5, maxStride: 0.5, cadence0: 2.2, dsFrac: 0.25, width: 0.08, minWidth: 0.12, lift: 0.035, liftSettle: 0.015, toeUp: 0.06, sway: 0.01, bobAdd: 0.005, dsLow: 0.5, footwork: 'follow', followIn: 3.5, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, steady: 0.3, byFrame: { heavy: { guardLength: 0.5, footwork: 'pass' } }, player: { trailReach: 0.36 }, speedMul: 0.67, settleStance: true };
+//  ↑ 10/29 21:0x 사장님 '일본 걸음 설계대로 고쳐' · '다른 유파보다 확연히 느려도 돼. 10%~50% 사이로 일본 걸음의 맛을 살렸을 때 가장 자연스러운 쪽으로' (docs/strike/jp_gait_2026-10-29.md):
+//   보폭 규칙 strideK 0.8 뺌(보폭 상한 0.496 · 1 m/s 박자 2.56 으로 설계 박자 2.2 · 보폭 0.5 를 덮어 — 같은 꼭대기를 짧은 보폭으로 내느라 사람은 독일보다 잦은 박자, AI 는 두 발 디딤 0.25 · 들기 0.035 로
+//   초당 5.2 잔걸음이 되어 꼭대기 −33 %) · 설계 박자 2.2 · 보폭 상한 0.5 그대로 · speedMul = 가려는 빠르기 × (꼭대기 약 −30 % — 확연히 느리고 잰 걸음) ·
+//   사람 칸의 두 발 디딤 0.18 · 들기 0.05 뺌(사람도 설계 0.25 · 0.035 — 스리아시) · settleStance = 서 있는 자세를 자세 길이 0.45 로(판 시작 0.31 에서 안 고쳐지던 것). 전 판 = `?jpGait=old`
+export const JAPANESE_GAIT_OLD = { strideK: 0.8, player: { trailReach: 0.36, dsFrac: 0.18, lift: 0.05 }, speedMul: undefined, settleStance: undefined };
+/** 일본 걸음 비교 (주소 `?jpGait=old` = 10/29 전 판 · `?jpWalk=0.67` = speedMul 시험 — 판을 세우기 전에 한 번) */
+export function setJapaneseGait(o) {
+  if (o === 'old') for (const [k, v] of Object.entries(JAPANESE_GAIT_OLD)) { if (v === undefined) delete JAPANESE_GAIT[k]; else JAPANESE_GAIT[k] = v; }
+  else if (+o > 0) JAPANESE_GAIT.speedMul = +o;
+}
 // 중국 기술 가중치 (초안 §3-2, 지금 jianTech 의 찌르기 ×1.5 위에 곱한다). 안 A (24 세 쪽, 베기 : 찌르기 ≈ 3 : 1) — 腰擊 ×2.0(10/9 腰擊 쓰임에서 ×3.0) · 걷어 올리기 ×1.2 · 손 노리기 ×1.2
 //  腰擊 ×2.0 → ×3.0 (10/9 腰擊 쓰임 — docs/strike/chinese_yaoji_2026-10-09.md): ×2 로는 공용 腰擊(zwerch·zwerchL)이 휘두름의 6 % — 옆 자세에 손이 있어도 base 0.5 가 분노의 베기(1.4)에 졌다
 const CHINESE_TECHK = { '*': { zwerch: 3.0, zwerchL: 3.0, unterhau: 1.2, unterhauL: 1.2, wristCut: 1.2 } };

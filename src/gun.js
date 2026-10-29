@@ -4,7 +4,7 @@
 //     둘레를 느리게 크게 흔들린다(GUN.sway*). 레이저 점이 몸 위를 들락날락할 때 그 순간에 맞춰 탭하는 것이 실력이다(사장님).
 //     사람은 지금 총신 방향(칼 축 = 몸체 +y, 레이저가 보여 준다)으로 바로 한 발. AI 도 같은 흔들림으로 겨누고, 레이저가 골반 이상의 몸
 //     (골반~머리)을 지날 때(GUN.aiAimTol) 쏜다. 싱글액션 6연발(사장님 "사실감"): 겨눈 사격 사이 GUN.cooldown(AI 가 모는 몸은 × GUN.aiCooldownK), 여섯 발을 다 쏘면 GUN.reload 초 동안
-//     실린더를 열고 한 발씩 채운다 — 다 채워야 다시 쏠 수 있다.
+//     실린더를 열고 한 발씩 채운다 — 다 채워야 다시 쏠 수 있다. AI 는 공격이 가능해진 때부터 발 사이 간격만큼 지나 첫 발(GUN.aiFirstGap) · 쏘는 동안 발이 묶인다(GUN.aiFireStill).
 //   · 맞으면 늘 같은 세기(GUN.energy)의 찌르기 상처 — 새 상처 종류는 만들지 않는다. 투구·판금은 총알을 막는 대신 그 자리에서 부서진다.
 //     맨머리 한 발 = 즉사, 가슴은 두세 발. 쏘면 팔 동작으로 총구를 튀겨 올린다(GUN.kick*, 물리 반동은 작은 '탁'). 총신 방향으로 레이저(탄 길)를 그린다
 //   · 근접전 불가: 무기 제원이 날 없음·둔기 배율 0 이라 몸을 쳐도 아무 효과가 없다 (weapons.js pistol).
@@ -24,9 +24,9 @@ export const GUN = {
   energy: 80, // J: 맞으면 늘 이 세기의 찌르기. 70 → 80 (그쪽 70 → 75 → 80). 방어구·부위별 피해 계산은 그대로. 가슴 두 발로 죽는 가장 낮은 값이 75 J 였다(gun_dummy)
   // 싱글액션 6연발 (사장님 9/29 "사실감"). 아래 시간은 게임 값이며 사람 실측 평균이 아니다
   rounds: 6, // 실린더에 드는 탄
-  cooldown: realS(0.8), // 초(실제 — 표준 시간 10/25 · 아래 장전 · 첫 발 · 기다림도): 한 발 쏜 뒤 다음 발까지 (공이를 젖히고 다시 겨눔). 0.7 → 0.8. 인물 배율 gunCooldownK 가 곱해진다(사미라 1.5 → 1.2 s). AI 가 모는 몸은 아래 aiCooldownK 를 한 번 더 곱한다
-  aiCooldownK: 1.8, // 배: AI 가 모는 몸(f.aiControlled — ai.js AI 가 붙이는 표시)의 발 사이 간격에만 곱한다. 사장님 10/16 지시 (샛별 쪽 메모로 전달 — 10/17 들여옴, 확인표 2022).
-  //  인물 배율 위에 얹는다: 인물 배율 없는 AI 0.8 → 1.44 s · 사미라 1.2 → 2.16 s. 사람(플레이어) 간격 · 첫 발(aiFirst) · 장전(reload) · 위력 · 명중은 그대로.
+  cooldown: realS(0.8), // 초(실제 — 표준 시간 10/25 · 아래 장전 · 첫 발 · 기다림도): 한 발 쏜 뒤 다음 발까지 (공이를 젖히고 다시 겨눔). 0.7 → 0.8. 인물 배율 gunCooldownK 가 곱해진다(마야 1.5 → 1.2 s). AI 가 모는 몸은 아래 aiCooldownK 를 한 번 더 곱한다
+  aiCooldownK: 2.0, // 배: AI 가 모는 몸(f.aiControlled — ai.js AI 가 붙이는 표시)의 발 사이 간격에만 곱한다. 1.8(사장님 10/16 지시 · 확인표 2022) → 2.0 (사장님 10/29 22:3x · 확인표 2980).
+  //  인물 배율 위에 얹는다(gunGap): 인물 배율 없는 AI 0.8 → 1.6 s · 마야 1.2 → 2.4 s (실제 초 — 시뮬 게임 초는 × 1.1: 1.76 · 2.64). 사람(플레이어) 간격 · 장전(reload) · 위력 · 명중은 그대로.
   //  쏠 때마다 새로 곱하고 몸에 쌓아 두지 않는다 — 다시 시작 · 무기 바꿈 · 새 판에도 두 번 곱해지지 않는다
   reload: realS(8), // 초: 여섯 발을 다 쏘면 전체 장전 (9 → 8). 다 끝나야 탄 6 으로 돌아오고 다시 쏜다. gunCooldownK · aiCooldownK 는 곱하지 않는다
   reloadOpen: realS(0.9), // 초: 장전 첫머리 — 실린더를 열고 빈 탄피를 밀어낸다 (그 뒤부터 한 발씩 넣는 소리)
@@ -37,7 +37,9 @@ export const GUN = {
   laser: false, // 조준 레이저는 외형 PM gun_fx.js 가 그린다 (사장님: 아주 희미하게 · 두 겹 방지). true 면 여기 updateLaser 가 그린다(효과 모듈 없는 점검용)
   aiAimTol: 3, // 도: AI 는 총구가 골반·배·가슴·(붙어 있는) 머리 몸체 중심 중 하나에서 이만큼 안일 때만 쏜다.
   //  (사장님 10/12 지시로 바뀜: 9/30 '무릎 위부터' → 골반 위부터. 겨누는 몸 줄과 같은 부위만 본다 — docs/decisions.md 10/12, 확인표 953)
-  aiFirst: realS(1.5), // 초: AI 는 판이 열리고 이만큼 지나서야 첫 발을 쏜다
+  aiFirst: realS(1.5), // 초: (aiFirstGap 0 일 때만 — 전 판) AI 는 gunAI 를 처음 부른 때부터 이만큼 지나서야 첫 발을 쏜다
+  aiFirstGap: 1, // AI 첫 발 (사장님 10/29 22:3x · 확인표 2981): 1 = 공격이 가능해진 때(판 시작 정지 ARENA.startHold 끝 — fighter.openHold)부터 발 사이 간격(gunGap — 마야 2.4 s · 기본 AI 1.6 s)만큼 지나서 · 0 = 전(aiFirst)
+  aiFireStill: 1, // AI 는 쏘는 동안(gunFiring — 방아쇠 ~ 총구 꺾음이 풀릴 때까지 0.23 s) 발이 묶인다 (사장님 10/29 22:3x '발사 중엔 이동하지 못하게' · 확인표 2982 — fighter.fireHold). 0 = 전. 사람은 안 묶음
   maxWait: realS(0.6), // 초: 찌르기를 시작하고 이 안에 팔이 안 뻗어지면 그냥 그때 총구 방향으로 쏜다
   // 사격 자세 (사장님: 한 손 사격 자세) — gunPose. 몸 기준 [앞, 위, 총 든 쪽] (m·도)
   shoulder: [0, 0.1, 0.2], // 총 든 어깨 (가슴 기준)
@@ -344,8 +346,21 @@ export function updateGun(f, world, combat, dt) {
     g.reloading = true;
     g.cool = GUN.reload;
     sound('onReloadStart', f);
-  } else g.cool = GUN.cooldown * (f.gunCooldownK ?? 1) * (f.aiControlled ? GUN.aiCooldownK : 1); // gunCooldownK: 인물 핸디캡(사미라 1.5 — 사장님 지시 10/10 20:0x, ai.js persona.gunCooldownK). 없으면 1 (그대로). aiCooldownK: AI 가 모는 몸만(사장님 10/16 지시 — 사람은 × 1 그대로). 장전 시간(GUN.reload)에는 둘 다 곱하지 않는다
+  } else g.cool = gunGap(f); // 장전 시간(GUN.reload)에는 인물 · AI 배율을 곱하지 않는다
   fire(f, world, combat);
+}
+
+/** 발 사이 간격(게임 초) = GUN.cooldown × 인물 배율 gunCooldownK(마야 1.5 — 사장님 지시 10/10 20:0x, ai.js persona.gunCooldownK · 없으면 1) × AI 배율(AI 가 모는 몸만 aiCooldownK — 사람은 × 1).
+ *  마야 AI 0.8 × 1.5 × 2.0 = 2.4 s · 기본 AI 1.6 s · 사람 0.8 s (실제 초). updateGun 의 발 사이와 gunAI 의 첫 발이 같이 쓴다 */
+export function gunGap(f) {
+  return GUN.cooldown * (f.gunCooldownK ?? 1) * (f.aiControlled ? GUN.aiCooldownK : 1);
+}
+
+/** 쏘는 중 (사장님 10/29 22:3x '발사 중엔 이동하지 못하게' — AI 발 묶음 fighter.fireHold 가 읽는다): 방아쇠를 건 때(g.pending ≥ 0 — 권총 찌르기는 now 라 그 스텝에 나감)부터
+ *  쏜 뒤 총구 꺾음이 다 풀릴 때까지(g.since < kickTime + kickFade = 0.08 + 0.15 = 0.23 게임 초 ≈ 실제 0.21 s). 발 사이 기다림 · 겨누며 기다림 · 장전은 아님(그동안은 걷는다) */
+export function gunFiring(f) {
+  const g = f.gun;
+  return !!g && (g.pending >= 0 || g.since < GUN.kickTime + GUN.kickFade);
 }
 
 function fire(f, world, combat) {
@@ -595,7 +610,8 @@ export function reloadSound(snd, pos) {
  */
 export function gunAI(ai, dt) {
   const me = ai.me;
-  // 판이 열리자마자 쏘지 않는다: 첫 발 전 GUN.aiFirst 초 (예전엔 0.1초에 쏴 판이 시작하자마자 끝나기도 했다).
+  // 판이 열리자마자 쏘지 않는다 (예전엔 0.1초에 쏴 판이 시작하자마자 끝나기도 했다): 첫 발은 공격이 가능해진 때(판 시작 정지 ARENA.startHold 끝)부터
+  //  발 사이 간격 gunGap 만큼 지나서(GUN.aiFirstGap — 사장님 10/29 22:3x · 마야 2.4 s · 기본 AI 1.6 s) · 0 = 전(gunAI 를 처음 부른 때부터 GUN.aiFirst).
   //  장전(cool)으로 기다리면 사격 자세가 총을 세워 올렸다가 내리며 쏴서 땅을 쐈다 → 겨눈 채로 따로 센다
   const d = ai.d;
   ai.gunT = (ai.gunT ?? 0) + dt;
@@ -614,5 +630,8 @@ export function gunAI(ai, dt) {
   ai.moveHand(dt);
   // 흔들리는 총구가 상대의 골반 이상 몸 부위(골반·배·가슴·머리) 중 하나에서 aiAimTol° 안으로 들어왔을 때만 쏜다 (팔을 뻗는 중이나 장전 뒤 내려오는 중엔 쏘지 않는다)
   const aimed = aimErr(me) < GUN.aiAimTol;
-  if (ai.gunT >= GUN.aiFirst && aimed && d < 7 && (me.gun?.cool ?? 0) <= 0 && me.skill.thrust({ step: false })) state(me).aim = 0.5 + 0.5 * (ai.level?.skill ?? 0.7);
+  const first = GUN.aiFirstGap ? me.fightT >= ARENA.startHold + gunGap(me) : ai.gunT >= GUN.aiFirst;
+  if (first && aimed && d < 7 && (me.gun?.cool ?? 0) <= 0 && me.skill.thrust({ step: false })) state(me).aim = 0.5 + 0.5 * (ai.level?.skill ?? 0.7);
+  // 쏘는 동안(gunFiring) 걷기 입력 0 — 기술 걸음 · 자세 고쳐 딛기는 fighter.fireHold 를 gait 가 읽어 막는다 (방아쇠를 건 이 스텝부터)
+  if (GUN.aiFireStill && gunFiring(me)) me.move.set(0, 0);
 }
