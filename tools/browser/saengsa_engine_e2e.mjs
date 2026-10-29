@@ -2,6 +2,8 @@
 //  시험 페이지 빌드(/saengsa/ — 저장 가르기 · 시간 제한 없음)를 띄우고 playwright 시계로 빨리 돌린다(싸움 그리기는 사진 때만 — tools/browser/team_smoke.mjs 와 같은 틀)
 //  ① 신청(나 · 무명 검객 둘 · 무기 배정) → ② '지켜보기' 경기(동료 둘만 나섬 — 넷 다 AI): 판이 서고 → 끝나고 → 생사전 화면에 결과가 적히고 대진표가 넘어가는지
 //  ③ '내가 나섬' 경기: 저장을 고쳐 동료 체력 55 · 다리 부상 · 내 무기 부러짐을 넣고 → 판에 그대로 서는지(피 · 닫힌 상처 · 무기 · 사람 몸 · 부러짐 표시) → 정지 창 '대기실'로 그만두면 결과 없음(아직 하지 않은 경기)
+//  ⑤ 체력 목록 짧은 이름 (사장님 10/30 01:0x — wk/team-fight 61f13e9b): 판마다 왼쪽 위 이름이 짧은 이름(나 · 무명 검객은 붙인 이름만 · 얼터 'A.' + 본캐)인가 ·
+//    끝에 game.launchSaengsa 를 바로 불러 나 · 무명 검객 '오토' 대 광기의 미나미 · 롤랑 판을 세워 'A.미나미' · '오토' · '나' 를 본다(정지 → 대기실로 그만둠)
 //  node tools/browser/saengsa_engine_e2e.mjs http://127.0.0.1:<port> <사진 폴더>   (빌드 · 띄우기는 saengsa_testpage_play.mjs 머리 글)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -25,7 +27,9 @@ const shot = async (name, fight = false) => { if (fight) { await render(true); a
 const fightLook = () => p.evaluate(() => {
   const R = window.game.teamRun;
   return { state: window.game.state, over: !!R?.M.over, sim: +window.game.stats.simTime.toFixed(1), human: R?.human?.index ?? null,
-    hud: [...document.querySelectorAll('#teamHud .tl-n')].map((e) => e.textContent), // 왼쪽 위 이름 · 체력 목록 (wk/team-fight ecacc60b)
+    hud: [...document.querySelectorAll('#teamHud .tl-n')].map((e) => e.textContent), // 왼쪽 위 이름 · 체력 목록 (wk/team-fight ecacc60b · v3 짧은 이름 61f13e9b)
+    rows: [...document.querySelectorAll('#teamList .tl-row')].map((r) => [...r.querySelectorAll('.tl-n')].map((e) => e.textContent)), // 줄마다 (첫 줄 상대 · 둘째 줄 아군)
+    bars: [...document.querySelectorAll('#teamList .tl-b > span')].map((e) => getComputedStyle(e).backgroundColor),
     fighters: window.game.fighters.map((f) => ({ name: f.name, team: f.team, weapon: f.weapon.id, broken: !!f.weaponBroken, blood: +f.blood.toFixed(3), carried: (f.wounds ?? []).filter((w) => w.carried).map((w) => `${w.part}:${w.severity}`), alive: f.alive })) };
 });
 /** 판 하나 (전투 입장 → 판 → 끝) — 돌려줌: 시작 · 끝 모습 */
@@ -50,6 +54,8 @@ async function playOut(tag, { quit = false } = {}) {
   await until(() => window.game?.state !== 'fight', 250, 80);
   return { start, end: L };
 }
+/** 짧은 이름 점검: 목록 이름 = 몸마다 shortName · '무명 검객' · '광기의' · 띄어쓰기 없음 · 내가 나서면 '나' */
+const shortCheck = (L) => ({ hud: L.hud, rows: L.rows, ok: L.hud.length === L.fighters.length && L.hud.every((n) => n && !/무명 검객|광기의|\s/.test(n)) && (L.human == null) === !L.hud.includes('나') });
 const saved_ = () => p.evaluate(() => JSON.parse(localStorage.getItem('stillness.saengsa.v1'))); // 시험판 저장(열쇠 앞 stillness.test. — 페이지 안에서는 그대로 읽힘)
 
 try {
@@ -78,7 +84,7 @@ try {
   await shot('e4_watch_result');
   const after1 = await saved_();
   const r1 = after1.current.matches.find((m) => m.id === m1).result;
-  log.push({ step: 'watch', control: w.start.human == null ? 'watch' : 'player', hud: w.start.hud, start: w.start.fighters, end: w.end?.fighters?.map((f) => `${f.name}:${f.alive ? '삶' : '죽음'}`), sim: w.end?.sim,
+  log.push({ step: 'watch', control: w.start.human == null ? 'watch' : 'player', short: shortCheck(w.start), hud: w.start.hud, start: w.start.fighters, end: w.end?.fighters?.map((f) => `${f.name}:${f.alive ? '삶' : '죽음'}`), sim: w.end?.sim,
     recorded: !!r1, by: r1?.by, winner: r1?.winner, fighters: r1 && Object.fromEntries(Object.entries(r1.fighters).map(([k, v]) => [k, `${v.hp}/${v.alive ? '삶' : '죽음'}/${v.injuries.map((i) => `${i.part}${i.sev}`).join(',')}${v.broken ? '/부러짐' : ''}`])),
     resultsBefore: before1.current.matches.filter((m) => m.result).length, resultsAfter: after1.current.matches.filter((m) => m.result).length });
   await tap('#sgDone');
@@ -106,7 +112,7 @@ try {
   const after2 = await saved_();
   const r2 = after2.current.matches.find((m) => m.id === m2);
   const status = await inRoot(`return root.getElementById('sgStatus').textContent;`);
-  log.push({ step: 'player', control: pl.start.human == null ? 'watch' : 'player', hud: pl.start.hud, start: pl.start.fighters, quitRecorded: !!r2.result, stillReady: await inRoot(`return root.getElementById('sgFight').hidden === false;`), status });
+  log.push({ step: 'player', control: pl.start.human == null ? 'watch' : 'player', short: shortCheck(pl.start), hud: pl.start.hud, start: pl.start.fighters, quitRecorded: !!r2.result, stillReady: await inRoot(`return root.getElementById('sgFight').hidden === false;`), status });
   // ④ 같은 경기를 다시 끝까지 (내 몸은 서 있기만 — 동료 · 상대 AI 가 판을 끝냄): 결과의 broken 이 적히고 부러진 내 무기가 대회 끝까지 남는가
   const pf = await playOut('e9_player_full');
   await until(() => !document.querySelector('#gameEntrance').shadowRoot.getElementById('sgDone').hidden, 100, 100);
@@ -117,6 +123,26 @@ try {
     resultBroken: r3 && Object.fromEntries(Object.entries(r3.fighters).map(([k, v]) => [k, !!v.broken])),
     cupBroken: after3.current.broken, mineBroken: after3.current.teams[0].members.map((f) => `${f.weapon}${f.broken ? ':부러짐' : ''}`),
     foePoolBroken: after3.current.teams.filter((x) => !x.mine && x.pool?.some((w) => w.broken)).map((x) => x.pool.filter((w) => w.broken).map((w) => w.weapon)) });
+  // ⑤ 짧은 이름 — 얼터 · 손님 · 무명 검객 · 나 를 한 판에 (game.launchSaengsa 바로 · 정지 → 대기실로 그만둠 = null)
+  await tap('#sgDone');
+  const SETUP = { matchId: 'e2e-short', round: 1, seed: 7, mineSide: 'a', control: 'player', entrants: { a: ['0-0', '0-1'], b: ['5-0', '5-1'] },
+    sides: {
+      a: [{ key: '0-0', id: 'player', weapon: 'longsword', school: 'german', tier: 1, prof: { german: 1 }, hp: 100, injuries: [], dead: false },
+        { key: '0-1', id: 'nameless', tag: '오토', weapon: 'rapier', school: 'italian', tier: 1, prof: { italian: 2 }, hp: 100, injuries: [], dead: false, cloth: 2 }],
+      b: [{ key: '5-0', id: 'minami_mad', weapon: 'muramasa', school: 'japanese', tier: 2, prof: { japanese: 6 }, hp: 100, injuries: [], dead: false },
+        { key: '5-1', id: 'roland', weapon: 'durandal', school: 'iberian', tier: 4, prof: { iberian: 6 }, hp: 100, injuries: [], dead: false }] } };
+  await p.evaluate((setup) => { window.__short = 'pending'; window.game.launchSaengsa(setup).then((r) => (window.__short = r)); }, SETUP);
+  if (!(await until(() => window.game?.state === 'fight' && !!window.game.teamRun, 50, 800))) throw new Error('short: 판이 서지 않음');
+  await render(false);
+  await run(1500);
+  const sh = await fightLook();
+  await shot('e11_short_names', true);
+  await p.evaluate(() => document.getElementById('btnPause').click());
+  await run(300);
+  const pauseMenu = await p.evaluate(() => ({ restart: !document.getElementById('btnStart').hidden, lobby: !document.getElementById('btnLobby').hidden }));
+  await p.evaluate(() => document.getElementById('btnLobby').click());
+  await until(() => window.__short !== 'pending', 100, 100);
+  log.push({ step: 'short_names', short: shortCheck(sh), want: ['나', '오토', 'A.미나미', '롤랑'], same: ['나', '오토', 'A.미나미', '롤랑'].every((n) => sh.hud.includes(n)), bars: sh.bars, pauseMenu, quitResult: await p.evaluate(() => window.__short) });
 } catch (e) {
   errors.push('harness: ' + e.message.split('\n')[0]);
 }
