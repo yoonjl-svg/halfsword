@@ -73,9 +73,9 @@ test('물러나는(스틱 뒤 0.8) 동안의 탭 = 날개 접기 (허리 호 요
     assert.ok(m.same && m.cutSweep && m.capFromCut);
     assert.equal(m.dyn.target, 'waist');
     assert.equal(m.dyn.band, 'waist');
-    assert.equal(m.step.fwd, UA.lianStep); // 날개 접기만의 앞 걸음 0.45 (10/29 14:3x — 연환 · 격살 반걸음 chineseStep 0.25 는 그대로)
+    assert.equal(m.step.fwd, UA.lianStep); // 날개 접기만의 앞 걸음 0.45 (10/29 14:3x — 연환 · 격살 반걸음 chineseStep 은 따로 — 10/29 14:5x 걸음 사다리 0.3)
     assert.equal(UA.lianStep, 0.45);
-    assert.equal(SECRET.chineseStep, 0.25);
+    assert.equal(SECRET.chineseStep, 0.3); // 걸음 사다리 0.3 칸 (사장님 10/29 14:5x '0.25는 0.3으로 합치자')
     assert.ok(B.P.skill.tap == null, '보통 탭 찌르기 없음');
   } finally {
     B.free();
