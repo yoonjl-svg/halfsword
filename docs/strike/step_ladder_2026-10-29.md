@@ -1,8 +1,9 @@
-# 걸음 사다리 — 기술 걸음 길이 한 표 (사장님 10/29 14:4x · 14:5x)
+# 걸음 사다리 — 기술 걸음 길이 한 표 (사장님 10/29 14:4x · 14:5x · 15:xx)
 
 사장님 말씀:
 - 14:4x — 날개 접기(염시) 걸음 **0.45 m** 확인. 다른 가지에서 이미 `UNIQUE_ASSIST.lianStep` 0.45 로 넣었으므로 이 가지에서는 손대지 않는다.
 - 14:5x (원문) — "걸음 테이블도 통합할 수 있는 건 최대한 그렇게 해. 0.25는 0.3으로 합치자."
+- 15:xx (원문) — "0.5는 0.45로 옮기고 0.7은 그냥 둬" (0.35 는 이때 정하지 않음)
 
 ## 0. 한눈에
 
@@ -12,14 +13,15 @@
   - `CHINESE_BOW.tech.oberhau.fwd` 0.25 → 0.3 (`src/schools.js:402`): 표두격 반걸음. 가까운 거리(맞닿기 − 0.1 m 안)에서 AI 가 내딛는 걸음 길이다(`ai.js:1455` · `:3001` · `:3123~3125` → `gait.requestStep` fwd).
 - **관문 해시는 그대로다** (§5). fights12 `d2b7915f` · live_battery `e8127a92` · finish_thrust `ad302969` · corr 12 · smoke 34 · 시험 472/472 · 빌드 0. 까닭: 세 장면이 모두 롱소드 AI 끼리 싸우는 판이고, 기본 판의 AI 는 이 세 걸음을 한 번도 부탁하지 않는다(걸음 셈 0 — §5-2).
 - **판에서 실제로 바뀌는 곳**: 사람이 내는 동방 비기 격살, 손잡이 찍기(하인리히 AI가 붙었을 때 · `?pommel=`), 표두격을 가까이서 낼 때(AI), 옛 판들(`?gyeoksal=0` 막기 연환 · 3 연격, `?cnSecret=v1` 연환삼격, `?deMord=0&deSecret=parry` 왕관 뛰어들기).
-- **사장님 여쭘 — 넣지 않음** (§6): 0.35 → 0.3 · 0.5 → 0.45 · 0.7 → 0.6. 0.15 는 그대로 두기를 권한다(옆걸음에 섞인 앞 몫이라서).
+- **10/29 15:xx 사장님 결정 (§8-1)**: AI 발도 대기 앞발 `SECRET.stance.iai.step` **0.5 → 0.45**(사다리 0.45 칸 '들어감') · 발도 순간 앞발 `SECRET.iaiDrawStep` **0.7 그대로**.
+- **사장님 여쭘 — 넣지 않음** (§6): 0.35 → 0.3 · 유파 AI 베기 걸음 `cutStep` 0.5 → 0.45. 0.15 는 그대로 두기를 권한다(옆걸음에 섞인 앞 몫이라서).
 
 ## 1. 사다리 (제안)
 
 | 칸 | 이름 | 뜻 | 이번에 이 칸에 있는 값 |
 |---|---|---|---|
 | **0.3** | 반걸음 | 붙은 거리에서 앞발만 조금 내딛는 걸음. 칼과 함께 나간다 | 찌르기 걸음 · 비껴 베기 · 나선 걸음 베기 · 올려 맞받기 · 길목 · 흐르는 긋기 걸음 · **동방 반걸음 · 손잡이 찍기 · 표두격(이번)** |
-| **0.45** | 들어감 | 막은 칼을 덮은 채 안으로 한 걸음 | 들어가며 막기 · 싱지르 한 바퀴 나아감 · 날개 접기(염시 — 다른 가지) |
+| **0.45** | 들어감 | 막은 칼을 덮은 채 안으로 한 걸음 | 들어가며 막기 · 싱지르 한 바퀴 나아감 · 날개 접기(염시 — 다른 가지) · **AI 발도 대기 앞발(15:xx)** |
 | **0.6** | 한 걸음 | 보통 한 걸음(보폭 0.62 와 같은 크기) | 순간 베기 · 발도 미끄러짐 · AI 보통 베기 걸음 · 런지 덧씌우기 · 옛 고노센 |
 | **0.9** | 런지 | 앞발을 멀리, 몸이 따라 실린다 | 이탈리아 런지 |
 
@@ -51,7 +53,7 @@
 | 0.45 | `SKILL.enterStep` | 들어가며 막기 (짧은 한손 칼) | src/config.js:882 | 0.45 |
 | 0.45 | `SECRET.ibSpin.advance` | 싱지르 한 바퀴에 골반이 나아가는 거리 상한 | src/config.js:1085 | 0.45 |
 | 0.45 | `UNIQUE_ASSIST.lianStep` (다른 가지) | 날개 접기 (염시) — 사장님 14:4x | (다른 가지) | 0.45 — 이 가지에는 없음 |
-| 0.5 | `SECRET.stance.iai.step` | AI 발도 대기에 들어갈 때 앞발 | src/config.js:992 · src/secret_instant.js:792 | **여쭘 0.5 → 0.45** |
+| **0.5 → 0.45** | **`SECRET.stance.iai.step`** | AI 발도 대기에 들어갈 때 앞발 (사람 웅크림은 안 디딤 — secret_instant.js:819) | src/config.js:992 · src/secret_instant.js:792 | 0.45 — **사장님 15:xx 결정** (§8-1) |
 | 0.5 | `*_GAIT.cutStep.fwd` (이탈리아 · 동방 · 일본) | 유파 걸음의 AI 베기 걸음 (앞발 lunge + 끌어붙임 — 표두격이 멀 때 이 값) | src/schools.js:389 · :407 · :427 · 읽는 곳 src/ai.js:3124 | **여쭘 0.5 → 0.45** (이번에 찾음) |
 | 0.5 | `requestStep` 기본값 | fwd 를 안 주면 0.5 (부르는 곳은 모두 fwd 를 줌) | src/gait.js:340 | 사다리 밖 (기본값) |
 | 0.6 | `SECRET.japaneseStep` | 옛 고노센 앞발 (`?iai=0` 만) · 길목 상한(secret.js:576 주석 — 지금 꺼짐) | src/config.js:951 · src/schools.js:772 | 0.6 |
@@ -61,7 +63,7 @@
 | 0.6 | 코드 수 | 채널 B 베기 걸음 (`GAIT.cutStep` 0 — 꺼짐) | src/skill.js:1745 | 0.6 |
 | 0.6 | 코드 수 | AI 보통 베기 걸음 · 이탈리아 찌르기 걸음 상한 | src/ai.js:3129 | 0.6 |
 | 0.6 | `OVERLAY.thrust.lunge.step` | 찌르기 무기 런지 덧씌우기 | src/frames.js:269 | 0.6 |
-| 0.7 | `SECRET.iaiDrawStep` | 발도 순간 앞발 | src/config.js:995 · src/secret_instant.js:641 | **여쭘 0.7 → 0.6** |
+| 0.7 | `SECRET.iaiDrawStep` | 발도 순간 앞발 | src/config.js:995 · src/secret_instant.js:641 | 사다리 밖 그대로 — **사장님 15:xx '0.7은 그냥 둬'** |
 | 0.9 | `SECRET.italianStep` | 이탈리아 런지 (passataSotto · 리솔루토 앞발) | src/config.js:946 · src/schools.js:635 · src/config.js:1244 | 0.9 |
 
 거리로 정하는 걸음 (값이 없어 사다리에 넣지 않음):
@@ -147,8 +149,8 @@
 |---|---|---|---|
 | 0.35 → 0.3 | 앞 0.35 | 체보요격 `chebuYaoji` (src/schools.js:447) · 비껴 딛는 가로베기 `zwerchAbtritt` (:477) | 0.3 칸 반걸음과 5 cm 차이. 합칠 수 있음 |
 | 0.35 → 0.3 (옆) | 옆 0.35 | 나선 걸음 베기 `talhoRodeado.lat` (:543) | 옆 몫은 앞 사다리와 따로 볼지 먼저 정하셔야 함 |
-| 0.5 → 0.45 | 0.5 | AI 발도 대기 앞발 `SECRET.stance.iai.step` (src/config.js:992) · 유파 AI 베기 걸음 `cutStep.fwd` 셋 (src/schools.js:389 · :407 · :427) | 0.45 '들어감' 칸과 합칠 수 있음. cutStep 은 AI 베기마다 쓰여 판이 크게 바뀜 |
-| 0.7 → 0.6 | 0.7 | 발도 순간 앞발 `SECRET.iaiDrawStep` (src/config.js:995) | 0.6 '한 걸음'과 합칠 수 있음. 10/10 캡처에서 0.4 는 좁았음 — 0.6 은 다시 볼 것 |
+| 0.5 → 0.45 | 0.5 | ~~AI 발도 대기 앞발 `SECRET.stance.iai.step`~~ (**15:xx 결정 — 넣음**, §8-1) · 유파 AI 베기 걸음 `cutStep.fwd` 셋 (src/schools.js:389 · :407 · :427) | cutStep 은 같은 '0.5 → 0.45' 규칙에 들지만 사장님께 따로 말씀드리지 않았음 — 여쭘 |
+| ~~0.7 → 0.6~~ | 0.7 | 발도 순간 앞발 `SECRET.iaiDrawStep` (src/config.js:995) | **사장님 15:xx '0.7은 그냥 둬' — 그대로** |
 | 0.15 | 0.15 | 비껴서며 찌르기 `inquartata` (src/schools.js:490) | **그대로 권함** — 옆 0.3 비켜서기에 섞인 앞 몫이고, 앞으로 나가는 걸음이 아님 |
 | 뒤 걸음 | −0.15 · −0.3 | `japaneseBack` · `iberianBack` | 뒤 걸음도 사다리(0.15? · 0.3)로 묶을지 |
 
@@ -164,3 +166,24 @@
 | `JAPANESE_GAIT.steady` 0.25 · `dsFrac` 0.25 | src/schools.js:427 | 걸음 기계 몫 |
 | `POMMEL.pull` [0.2, 0.25] | src/config.js:1517 | 손 자리 (m — 걸음 아님) |
 | `SECRET.releaseT` 0.25 | src/config.js:963 | 시간 (s) |
+
+## 8. 10/29 15:xx 뒤
+
+### 8-1. A — AI 발도 대기 앞발 0.5 → 0.45 (사장님 결정)
+
+- 바꾼 것: `SECRET.stance.iai.step` **0.5 → 0.45** (src/config.js:992 — 걸음 사다리 0.45 칸 · 사장님 10/29 15:xx '0.5는 0.45로 옮기고'). AI 일본(고노센 무장이 찬 순간 발도 대기 자세로 들 때 한 번 — secret_instant.js:792 `iaiReadyPose`)만 딛는다. 사람 고노센 웅크림은 걸음이 없다(secret_instant.js:819).
+- 그대로: `SECRET.iaiDrawStep` 0.7(발도 순간 앞발 — 사장님 '0.7은 그냥 둬').
+- 관문 (전 = 2bd82d68 → 후):
+
+| 관문 | 전 | 후 |
+|---|---|---|
+| fights12 | d2b7915f | d2b7915f |
+| live_battery | e8127a92 | e8127a92 |
+| finish_thrust 1 --stand | ad302969 | ad302969 |
+| school_ai_fights | 7ade96f7 | **e978b035** — 12 판 가운데 일본 칼이 낀 6 판(rapier v uchigatana · uchigatana v monohoshizao · monohoshizao v rapier, 씨앗 11 · 12)만 바뀜 |
+| corr IDENTICAL · smoke OK | 12 · 34 | 12 · 34 |
+| 시험 · 빌드 | 472 / 472 · 0 | 472 / 472 · 0 |
+
+  이 열쇠 하나만 0.5 로 되돌리면 school_ai_fights 가 7ade96f7 로 바이트 그대로 돌아온다 — 움직인 관문은 이 열쇠 몫.
+- 일본 AI 맞대결 (uchigatana 숙련도 5 대 longsword · qinggang · rapier, 씨앗 8 × 30 s = 24 판): 발도 대기 앞발 걸음 26 → 25 번(0.5 → 0.45 m) · 승 2 → 5 / 24 · 준 상처 186 → 228 · 받은 402 → 426. 걸음 수는 거의 같고, 승패 차이는 판이 갈린 소음 폭(5 cm 걸음이 뒤의 판을 다 바꿈).
+

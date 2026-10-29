@@ -989,7 +989,7 @@ export const SECRET = {
   iai: 1, // 1 = 발도(운동학 팔·칼로 가로 휩쓸기), 0 = 위 순간이동 고노센. `?iai=0` · SECRET_JSON
   // 비기 자세 (10/10 04:2x 사장님 발도술 GIF 첫 장면 · 런지 사진) — secret_instant.js stanceTick → gait.js 골반 높이 · fighter.js 몸통 숙임·빈팔 [모두 확인 전]
   stance: {
-    iai: { drop: 0.28, pitch: 25, rate: 0.8, inTime: 0.3, outTime: 0.6, reach: 0.85, step: 0.5, draw: { drop: 0.16, pitch: 11 } }, // draw: 발도·경직 동안 (덧씌우기 몸 낮춤 0.12·숙임 14° 가 더해져 합 0.28 m · 25°) // reach: 넓게 벌린 발을 그대로 두는 거리(gait reachMax 대신) · step: 대기에 들어갈 때 앞발 내딛기 (m) // 발도 대기·발도·뻗은 경직: 골반 0.28 m 낮춤, 몸통 25° 숙임
+    iai: { drop: 0.28, pitch: 25, rate: 0.8, inTime: 0.3, outTime: 0.6, reach: 0.85, step: 0.45, draw: { drop: 0.16, pitch: 11 } }, // step = 걸음 사다리 0.45 칸 · 사장님 10/29 15:xx '0.5는 0.45로 옮기고' (전 0.5 — docs/strike/step_ladder_2026-10-29.md) // draw: 발도·경직 동안 (덧씌우기 몸 낮춤 0.12·숙임 14° 가 더해져 합 0.28 m · 25°) // reach: 넓게 벌린 발을 그대로 두는 거리(gait reachMax 대신) · step: 대기에 들어갈 때 앞발 내딛기 (m) // 발도 대기·발도·뻗은 경직: 골반 0.28 m 낮춤, 몸통 25° 숙임
     lunge: { drop: 0.22, pitch: 8, rate: 1.8, offArm: -1.0, time: 0.6, inTime: 0.12, outTime: 0.4, reach: 1.0 }, // Passata 런지: 골반 0.22 m, 몸통 곧게 살짝 앞(8°), 빈팔 뒤로, 찌르기 시작부터 0.6 s(찌르기 + 0.3 s 버팀). 48 판 레이피어 drop 0.3 → 승률 65 %·맞힘 33/55 · 0.22 → 73 %·41/57
   },
   iaiDrawStep: 0.7, // 발도 순간 앞발을 크게 내딛는 걸음 (m, gait lunge — 몸 미끄러짐과 따로). 0.4 는 몸이 함께 미끄러져 두 발 사이 0.18 m 로 좁았다(캡처)
