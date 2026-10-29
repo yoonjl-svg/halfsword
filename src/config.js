@@ -235,7 +235,7 @@ export const GAIT = {
   school: 1, // 유파 걸음 (10/10 비싼 층, docs/strike/school_gait_design_2026-10-10.md): 1 = 무기 유파의 TRADITIONS[t].gait 를 덮음(독일·무유파는 칸 없음 = 그대로), 0 = 모든 유파 같은 걸음(전 판). `?schoolGait=0`
   // 보폭 규칙 (10/15 20:3x 사장님 '보폭 규칙안대로 가자' — docs/strike/stride_rule_2026-10-15.md): 1 = 유파 걸음 칸 strideK(k)가 있으면 그 몸의 보폭 상한 maxStride = 이 칸 maxStride(0.62) × k ·
   //  1 m/s 박자 cadence0 = 이 칸 cadence0(2.05) ÷ k (사람·AI 같이 — 플레이어 덮어쓰기 칸의 두 값도 이것으로) · 걷는 최고 빠르기(moveSpeed·backFactor·sideFactor)는 모든 유파 같음(손대지 않음 — 일본만 걸음 칸 speedMul 로 줄임, 10/29).
-  //  k = 이탈리아 0.7 · 동방 0.9 · 독일 1.0(칸 없음) · 이베리아 1.2 (schools.js *_GAIT.strideK). 0 = 옛 유파 값(바이트 같음). `?strideRule=0`. 사장님 결정 10/15 20:3x (확인표 1700~)
+  //  k = 이탈리아 0.7 · 동방 0.75(10/29 21:0x 사장님 '동방 박자도 바꾸고' — 전 0.9 · docs/strike/cn_cadence_2026-10-29.md) · 독일 1.0(칸 없음) · 이베리아 1.2 (schools.js *_GAIT.strideK). 0 = 옛 유파 값(바이트 같음). `?strideRule=0`. 사장님 결정 10/15 20:3x (확인표 1700~)
   //  일본은 10/29 뺌(전 k 0.8 — 사장님 20:5x '일본 걸음 설계대로 고쳐' · 21:0x '다른 유파보다 확연히 느려도 돼'): 칸의 설계 박자 2.2 · 보폭 상한 0.5 + 걸음 빠르기 speedMul 0.67 (gait.js · docs/strike/jp_gait_2026-10-29.md · 확인표 2960~)
   strideRule: 1,
   itEven: 1, // 이탈리아 '고른 바탕 걸음' (10/15 사장님 '이탈리아 보법 자체가 이미 불균질 … 런지를 흉내낸건가? … 보폭을 조금 줄일까? 작게 빨리' — docs/strike/italian_rhythm_2026-10-15.md §10): 1 = schools.js ITALIAN_GAIT.even 을 덮음(고른 짝걸음 — 디딤 간격이 늘 한 걸음 시간 · 몸 박자 없음 · 짝 보폭 0.36 → 0.28), 0 = 옛 짝걸음('따·닥 + 쉼' — 바이트 같음). `?itGait=old` = 0. 사람·AI 같이 · 지나 딛기(멀리·빨리) 보폭·박자는 보폭 규칙(strideRule — 이탈리아 k 0.7)
