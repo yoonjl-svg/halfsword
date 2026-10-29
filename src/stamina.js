@@ -110,7 +110,7 @@ export class Stamina {
   get attacking() {
     const f = this.fighter;
     return f.aiControlled ? this.controller?.mode === 'attack' && this.controller.phase === 'strike'
-      : !!(f.skill?.tap || f.skill?.pom || this.stroke?.paid || (this.strokeTail?.paid && this.time <= this.strokeTail.until));
+      : !!(f.skill?.tap || f.skill?.pom || this.stroke?.paid || (this.strokeTail?.paid && this.time <= this.strokeTail.until) || f.iai?.attack); // iai.attack: 탭으로 낸 특수 공격 운동학 칼(10/28 — 칼끝 돌려 빼기 · 날개 접기 · 겹치기)이 끄는 동안
   }
 
   /** 기존 누르기 단계 + 실제 팔/칼 접촉. 거리만 가깝거나 공격 중인 것은 클린치가 아니다. */
@@ -207,7 +207,15 @@ export class Stamina {
     this.attackUntil = this.time + ATTACK_LIFE;
     if (bundled) return;
     this.counts[kind] = (this.counts[kind] ?? 0) + 1;
-    this.spend('attack', Math.max(0, (kind === 'thrust' ? STAMINA.thrustCost : STAMINA.cutCost) * this.weight - credit));
+    // 이어지는 흐름 (이베리아 B6 — 사장님 10/29 14:1x · 14:2x '세 칼마다' · fighter.js ibChainCostK · 확인표 2741): 사람의 사슬 세 칼마다 그 베기는 기력 0 —
+    //  공격이라 회복 쉼(0.6 s)은 다른 칼과 같이 다시 셈 (AI · 다른 몸 · 찌르기 · 풍차 베기 칼 · 감는 기력은 그대로)
+    const chainK = kind === 'cut' ? this.fighter.ibChainCostK?.() ?? 1 : 1;
+    if (chainK === 0) {
+      this.rest = 0;
+      this.action = 'attack';
+      return;
+    }
+    this.spend('attack', Math.max(0, (kind === 'thrust' ? STAMINA.thrustCost : STAMINA.cutCost) * this.weight * chainK - credit));
   }
 
   secret() {
@@ -254,6 +262,11 @@ export class Stamina {
     if (!stroke || stroke.paid || this.exhausted) return;
     stroke.paid = true;
     this.chargeAttack(kind, false);
+  }
+
+  /** 지금 손길을 청구 없이 버림 (사람 위에서 내려 찌르기 — 손가락 긋기가 곧 탭 찌르기로 바뀌어 탭 하나만 청구 · unique_assist.js start · 10/27) */
+  dropStroke() {
+    this.stroke = null;
   }
 
   finishStroke() {
