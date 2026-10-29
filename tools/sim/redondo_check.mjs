@@ -39,7 +39,9 @@ export function rdCheck({ w = 'zweihander', seeds = 6, foes = ['still', 'walk'] 
             const v = tip0 ? tip.distanceTo(tip0) / DT : 0; // 놓인 자리의 차 (칼 몸 빠르기는 감는 동안 가슴 빠르기)
             tip0 = tip.clone();
             const Wd = P.rdWind;
-            if (Wd) {
+            if (Wd && Wd.t === 0) {
+              // 감기 첫 스텝 = 아직 놓기 전(그 전 자세 — 보통 자세의 손목) · 셈 밖
+            } else if (Wd) {
               if (!W) winds.push((W = { w, foe, seed, t0: G.t, tRot: null, v: [], h: [], face: [] }));
               if (W.tRot == null && Wd.turns >= 1) W.tRot = G.t - W.t0;
               if (Wd.k >= 1) {
