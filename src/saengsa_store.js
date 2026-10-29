@@ -4,7 +4,7 @@
 //   하사품은 연 것을 대회에 먼저 적고 금화를 더한다(새로고침해도 두 번 받지 않음 — 그 사이에 막히면 그 하사품 금화를 잃을 수 있다).
 //  저장이 막히면 이번 실행 동안만 메모리 값(다음 실행은 저장된 옛 값).
 import { SAENGSA } from './config.js';
-import { createTournament, advance, canSignUp, openChests, myMatch, matchById, finishMine } from './saengsa_rules.js';
+import { createTournament, advance, canSignUp, openChests, myMatch, matchById, finishMine, NAMELESS } from './saengsa_rules.js';
 import { signupWindow } from './saengsa_clock.js';
 import { update as updateWallet, addCoins } from './lobby_progress.js';
 
@@ -28,7 +28,7 @@ function normalize(v) {
   if (v?.version !== 1) return out;
   if (validTournament(v.current)) out.current = v.current;
   const c = Array.isArray(v.draft?.companions) ? v.draft.companions : [];
-  out.draft.companions = [0, 1].map((i) => (typeof c[i] === 'string' && c[i] !== c[1 - i] ? c[i] : null));
+  out.draft.companions = [0, 1].map((i) => (typeof c[i] === 'string' && (c[i] !== c[1 - i] || c[i] === NAMELESS) ? c[i] : null)); // 무명 검객은 둘 다여도 됨
   const l = v.draft?.lend;
   if (l && typeof l.weapon === 'string' && Number.isInteger(l.to) && l.to >= 0 && l.to < SAENGSA.teamSize) out.draft.lend = { weapon: l.weapon, to: l.to };
   return out;
@@ -62,7 +62,7 @@ export function saveDraft(draft, storage) {
 }
 /**
  * 신청 (사장님 10/29 — 신청 창 안에서만): 동료 둘 · 빌려 줄 무기(lendMax 까지) · 고용 금화를 내고 대회를 만든다.
- *  data = { roster, drawWeapon, weaponInfo, profOf, owned: [내 무기], hireCostOf(id) → { coins } | { token } }
+ *  data = { roster(이름난 인물), drawWeapon, weaponInfo, profOf, owned: [내 무기], hireCostOf(id) → { coins } | { token } } · 동료 = 로스터 인물(서로 다르게) 또는 무명 검객(NAMELESS — 둘 다여도 됨)
  *  지난 대회가 남아 있으면(내 팀은 떨어짐) 남은 경기를 끝내고 하사품을 연 뒤 바꾼다.
  *  돌려줌 { ok, why, cost } — why: 'closed' 신청 창 밖 · 'busy' 진행 중인 내 대회 · 'team' 동료가 틀림 · 'lend' 빌려 줄 무기가 틀림 · 'token' 아직 없는 고용 · 'coins' 금화 모자람
  */
@@ -70,8 +70,8 @@ export function signUp({ now, companions, lend = null, seed, data, cfg = SAENGSA
   const before = syncSaengsa(now, { cfg, storage });
   if (!signupWindow(now, cfg).open) return { ok: false, why: 'closed' };
   if (!canSignUp(now, before.current, cfg)) return { ok: false, why: 'busy' };
-  const team = [...new Set(companions)].filter((id) => data.roster.includes(id));
-  if (team.length !== cfg.teamSize - 1) return { ok: false, why: 'team' };
+  const team = (companions ?? []).filter((id, i, all) => id === NAMELESS || (data.roster.includes(id) && all.indexOf(id) === i));
+  if (team.length !== cfg.teamSize - 1 || team.length !== (companions ?? []).length) return { ok: false, why: 'team' };
   if (lend && (cfg.lendMax < 1 || !data.owned.includes(lend.weapon) || !(lend.to >= 0 && lend.to < cfg.teamSize))) return { ok: false, why: 'lend' };
   const costs = team.map((id) => data.hireCostOf(id));
   if (costs.some((c) => c.token)) return { ok: false, why: 'token' };

@@ -33,17 +33,25 @@ test('시계: 신청 창은 밤 10시 ~ 새벽 2시(자정을 넘김) · 첫 대
   assert.equal(clock(), at(30, 9, 59));
 });
 
-test('대진표: 16 팀 · 15 경기 · 내 팀 = 나 + 동료 둘 · 한 팀 안 겹침 없음 · 씨앗이 같으면 같은 대회', () => {
+test('대진표: 16 팀 · 15 경기 · 이름난 인물은 한 번씩 · 남는 자리는 무명 검객(팀 안 옷 색 다름) · 씨앗이 같으면 같은 대회', () => {
   const t = make(11, { lend: { weapon: 'tree_branch', to: 1 } });
   assert.equal(t.teams.length, SAENGSA.teams);
   assert.equal(t.matches.length, SAENGSA.teams - 1);
   assert.deepEqual(t.teams[0].members.map((f) => f.id), ['player', 'a', 'b']);
   assert.equal(t.teams[0].members[1].weapon, 'tree_branch');
   assert.equal(t.teams[0].members[1].lent, true);
+  const ai = t.teams.slice(1).flatMap((team) => team.members);
+  const named = ai.filter((f) => f.id !== R.NAMELESS).map((f) => f.id);
+  assert.deepEqual([...named].sort(), ROSTER.filter((id) => !['a', 'b'].includes(id)).sort()); // 아홉 명이 한 번씩
+  assert.equal(ai.length - named.length, 45 - 9);
   for (const team of t.teams.slice(1)) {
-    assert.equal(new Set(team.members.map((f) => f.id)).size, 3);
-    assert.ok(team.members.every((f) => !['a', 'b'].includes(f.id)));
+    assert.ok(team.members.filter((f) => f.id !== R.NAMELESS).length <= 1);
+    const cloth = team.members.filter((f) => f.id === R.NAMELESS).map((f) => f.cloth);
+    assert.equal(new Set(cloth).size, cloth.length);
   }
+  const hired = make(3, { companions: [R.NAMELESS, R.NAMELESS] });
+  assert.deepEqual(hired.teams[0].members.map((f) => [f.id, f.cloth]), [['player', undefined], [R.NAMELESS, 0], [R.NAMELESS, 1]]);
+  assert.equal(hired.teams.slice(1).flatMap((x) => x.members).filter((f) => f.id !== R.NAMELESS).length, 11);
   assert.deepEqual([...R.seatOrder(t)].sort((x, y) => x - y), [...Array(16).keys()]);
   assert.deepEqual(make(11, { lend: { weapon: 'tree_branch', to: 1 } }), t);
   assert.notDeepEqual(make(12), t);
@@ -113,15 +121,15 @@ test('부상: 경상은 두 번 쉬면 낫고 중상은 대회 동안 그대로 
   R.advance(t, at(30, 10));
   const m0 = R.myMatch(t);
   const light = { part: 'arm', sev: SAENGSA.seriousAt - 0.1, rests: 0 }, serious = { part: 'leg', sev: SAENGSA.seriousAt, rests: 0 };
-  R.finishMine(t, m0, ['0-0'], at(30, 10, 5), winFor(t, m0, { '0-0': { hp: 50, injuries: [light, serious], alive: true } }));
+  R.finishMine(t, m0, ['0-0'], at(30, 10, 5), winFor(t, m0, { '0-0': { hp: 20, injuries: [light, serious], alive: true } }));
   const me = () => t.teams[0].members[0];
-  assert.equal(me().hp, 50 + SAENGSA.restHeal);
+  assert.equal(me().hp, 20 + SAENGSA.restHeal);
   assert.deepEqual(me().injuries.map((i) => [i.part, i.rests]), [['arm', 1], ['leg', 0]]);
   R.advance(t, at(30, 12, 5));
   const m1 = R.myMatch(t);
   R.finishMine(t, m1, ['0-1'], at(30, 12, 5), winFor(t, m1));
   assert.deepEqual(me().injuries.map((i) => i.part), ['leg']); // 경기 k 의 경상은 k + 2 전에 없음
-  assert.equal(me().hp, 50 + 2 * SAENGSA.restHeal);
+  assert.equal(me().hp, Math.min(SAENGSA.hpMax, 20 + 2 * SAENGSA.restHeal));
   assert.deepEqual(R.injuriesFromWounds([], [{ part: 'uarmS', severity: 0.05 }, { part: 'neck', severity: 0.7 }]), [{ part: 'head', sev: 0.7, rests: 0 }]);
 });
 
@@ -166,18 +174,45 @@ test('저장 왕복 · 신청(고용 금화) · 깨진 저장은 버림', () => 
   assert.deepEqual([ok.ok, ok.cost, P.readProgress().coins], [true, 40, 60]);
   assert.equal(S.readSaengsa().current.teams[0].members[0].weapon, 'tree_branch');
   assert.equal(S.signUp({ now: at(29, 23, 30), companions: ['a', 'b'], seed: 2, data }).why, 'busy');
+  mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1 })); // 빈 저장 (저장소 열쇠가 없으면 이번 실행 값을 쥐고 있으니 빈 판을 적는다)
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'a'], seed: 3, data }).why, 'team');
+  assert.equal(S.signUp({ now: at(29, 23), companions: [R.NAMELESS, R.NAMELESS], seed: 3, data }).ok, true); // 무명 검객은 둘 다여도 됨
 });
 
-test('로스터 · 숙련도 자리 표 · 고용 값', async () => {
+test('로스터 · 숙련도(인물 성향 표) · 고용 값 · 무명 검객', async () => {
   const roster = await import('../../src/saengsa_roster.js');
   const { CHARACTERS_BY_ID } = await import('../../src/characters.js');
+  const { PROFICIENCY } = await import('../../src/character_temperament.js');
   assert.equal(roster.SAENGSA_ROSTER.length, 11);
   assert.ok(!roster.SAENGSA_ROSTER.includes('artoria'));
+  assert.deepEqual(roster.HIRE_ROSTER.slice(-1), [R.NAMELESS]);
   for (const id of roster.SAENGSA_ROSTER) {
     const p = roster.profOf(id), c = CHARACTERS_BY_ID[id];
-    assert.equal(Object.keys(p).length, 6, id);
+    for (const s of R.SCHOOLS5) assert.equal(p[s], PROFICIENCY[id][s], `${id} ${s}`);
+    assert.equal('none' in p, 'none' in PROFICIENCY[id], id); // 무유파 칸은 무유파가 주 유파인 인물만
     assert.equal(p[roster.weaponInfo(c.weapon).school], c.ai.proficiency, id);
     assert.equal(roster.hireCostOf(id).coins, SAENGSA.hire.base + SAENGSA.hire.step * Math.max(...Object.values(p)));
   }
+  assert.deepEqual(roster.profOf(R.NAMELESS), { german: 1, italian: 1, iberian: 1, japanese: 1, chinese: 1 });
+  assert.equal(roster.hireCostOf(R.NAMELESS).coins, 20);
+  assert.equal(R.profFor({ school: 'none', prof: { german: 2, italian: 0, iberian: 0, japanese: 3, chinese: 0 } }), 2); // 무유파 무기 · none 칸 없음 → 가장 높은 값 − 1
+  assert.equal(R.profFor({ school: 'none', prof: { german: 0, italian: 0, iberian: 0, japanese: 0, chinese: 0, none: 3 } }), 3);
   assert.ok(roster.SAENGSA_WEAPONS.length > 20 && !roster.SAENGSA_WEAPONS.includes('excalibur_replica'));
+});
+
+test('무명 검객 겉모습: 광기의 브론 옷차림 · 옷 일곱 색만 옷 색 줄로 · 살갗 · 머리 그대로 · 프로필 옷 칸 가리기', async () => {
+  const N = await import('../../src/saengsa_nameless.js');
+  const { CHARACTERS_BY_ID } = await import('../../src/characters.js');
+  const base = CHARACTERS_BY_ID.bran_mad.look;
+  const looks = Array.from({ length: N.clothCount() }, (_, i) => N.namelessLook(i));
+  for (const look of looks) {
+    assert.deepEqual(Object.keys(look.outfitPalette), Object.keys(base.outfitPalette));
+    assert.equal(look.alter, 'bran');
+    for (const k of ['skin', 'hair', 'helmet', 'eyeColor']) assert.equal(look[k], base[k], k);
+    assert.notEqual(look.tunic, base.tunic);
+  }
+  assert.equal(new Set(looks.map((l) => l.tunic)).size, looks.length); // 옷 색 줄마다 다른 옷
+  assert.equal(N.isClothPixel(0x24, 0x39, 0x6b), true); // 광기의 브론 남색 옷
+  assert.equal(N.isClothPixel(0xf5, 0xa8, 0x78), false); // 살갗
+  assert.equal(N.isClothPixel(0x6e, 0x3a, 0x2c), false); // 머리 · 가죽끈
 });

@@ -14,7 +14,8 @@ import { SAENGSA } from './config.js';
 import { clockFrom, signupWindow, roundAt } from './saengsa_clock.js';
 import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, isMine } from './saengsa_rules.js';
 import { syncSaengsa, playMine, claimChests } from './saengsa_store.js';
-import { nameOf, portraitOf, weaponName, weaponThumb } from './saengsa_roster.js';
+import { nameOf, spokenName, portraitOf, weaponName, weaponThumb } from './saengsa_roster.js';
+import { makeNamelessFaces } from './saengsa_nameless.js';
 import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, clockText, untilText, roundName, teamName, resultLine, myResultLine, nextMatchLine, outLine, chestLine, chestGot, injuryText, signupHours } from './saengsa_text.js';
 import { makeEngine } from './saengsa_engine.js';
 
@@ -51,7 +52,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
   // ── 이름 · 얼굴 ──
   const seatNo = (team) => seatOrder(t).indexOf(team) + 1;
   const tName = (team) => (team == null ? '' : teamName(seatNo(team), team === 0));
-  const faces = (team) => (team == null ? '' : `<span class="sg-faces">${t.teams[team].members.map((f) => `<img src="${esc(portraitOf(f.id))}" alt="" draggable="false"${f.dead ? ' data-dead' : ''}>`).join('')}</span>`);
+  const faces = (team) => (team == null ? '' : `<span class="sg-faces">${t.teams[team].members.map((f) => `<img src="${esc(portraitOf(f.id, f.cloth))}" alt="" draggable="false"${f.dead ? ' data-dead' : ''}>`).join('')}</span>`);
   const deathsIn = (m) => Object.values(m.result?.fighters ?? {}).filter((o) => !o.alive).length;
   /** 내 길 (내 팀이 지나왔거나 — 아직 남아 있으면 — 지나갈 경기) */
   function onPath(m) {
@@ -134,11 +135,13 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
   function card(f, { mine, pick, picked, entrant, result }) {
     const o = result?.fighters?.[f.key], hp = o ? o.hp : f.hp, inj = o ? o.injuries : f.injuries, dead = o ? !o.alive : f.dead;
     const hpPct = Math.max(0, Math.min(100, Math.round((hp / SAENGSA.hpMax) * 100)));
-    const prof = SCHOOL_CELLS.map((s) => `<span class="sg-pc"${s === f.school ? ' data-on' : ''}><small>${SCHOOL_KO[s]}</small><b>${f.prof?.[s] ?? 0}</b></span>`).join('');
+    // 다섯 유파 + 무유파가 주 유파인 인물만 무유파 칸 (숙련도 표에 none 이 있는 사람 — 브론 · 마야 · 김씨) · 든 무기의 유파 칸을 강조
+    const cells = f.prof && 'none' in f.prof && f.id !== 'player' ? [...SCHOOL_CELLS, 'none'] : SCHOOL_CELLS;
+    const prof = cells.map((s) => `<span class="sg-pc"${s === f.school ? ' data-on' : ''}><small>${SCHOOL_KO[s]}</small><b>${f.prof?.[s] ?? 0}</b></span>`).join('');
     const tag = pick ? 'button' : 'div';
-    const label = `${nameOf(f.id)} · 체력 ${hp} · ${injuryText(inj, (i) => isSerious(i))} · ${weaponName(f.weapon)}${dead ? ` · ${T.dead}` : ''}`;
+    const label = `${spokenName(f.id, f.cloth)} · 체력 ${hp} · ${injuryText(inj, (i) => isSerious(i))} · ${weaponName(f.weapon)}${dead ? ` · ${T.dead}` : ''}`;
     return `<${tag} ${pick ? 'type="button" ' : ''}class="sg-card" data-key="${f.key}"${pick ? ` aria-pressed="${picked}"` : ''}${dead ? ' data-dead' : ''}${entrant ? ' data-entrant' : ''}${mine ? ' data-mine' : ''}${pick && dead ? ' disabled' : ''} aria-label="${esc(label)}">
-      <img class="sg-face" src="${esc(portraitOf(f.id))}" alt="" draggable="false">
+      <img class="sg-face" src="${esc(portraitOf(f.id, f.cloth))}" alt="" draggable="false">
       <span class="sg-card-body"><b class="sg-name">${esc(nameOf(f.id))}</b>
         <span class="sg-hp"><span class="sg-hp-bar"><i style="width:${hpPct}%"></i></span><span class="sg-hp-num">${hp}</span></span>
         <span class="sg-wpn"><img src="${esc(weaponThumb(f.weapon))}" alt="" draggable="false"><span>${esc(weaponName(f.weapon))}</span>${f.lent ? `<i class="sg-tag">${T.lentTag}</i>` : ''}</span>
@@ -231,6 +234,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
   on($('sgBack'), 'click', () => onBack?.());
 
   render({ scroll: true });
+  makeNamelessFaces().then((ok) => { if (!ok) return; render(); if (open) renderMatch(); }); // 무명 검객 얼굴(옷 색마다)을 칠한 뒤 다시 그림
   $('sgHeading').focus({ preventScroll: true });
   const timer = setInterval(() => render(), 30e3);
   return {

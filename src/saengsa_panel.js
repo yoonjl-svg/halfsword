@@ -7,7 +7,9 @@ import { SAENGSA } from './config.js';
 import { clockFrom, signupWindow } from './saengsa_clock.js';
 import { scheduleState, canSignUp, myMatch, myTeamOut, sidesOf, winnerOf, readyAt, matchState, chestCount, seatOrder } from './saengsa_rules.js';
 import { syncSaengsa, readSaengsa, saveDraft, signUp } from './saengsa_store.js';
-import { SAENGSA_DATA, SAENGSA_ROSTER, ownedWeapons, hireCostOf, nameOf, portraitOf, weaponName } from './saengsa_roster.js';
+import { SAENGSA_DATA, HIRE_ROSTER, ownedWeapons, hireCostOf, nameOf, spokenName, portraitOf, weaponName } from './saengsa_roster.js';
+import { NAMELESS } from './saengsa_rules.js';
+import { makeNamelessFaces } from './saengsa_nameless.js';
 import { SAENGSA_TEXT as T, stateLine, signupHours, nextMatchLine, outLine, chestLine, hireLine, roundName, teamName } from './saengsa_text.js';
 import { COIN_ICON } from './wallet_icons.js';
 import { readProgress } from './lobby_progress.js';
@@ -37,10 +39,10 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
 
   const draftOf = () => readSaengsa().draft;
   const lendText = (w) => (w ? weaponName(w) : T.random); // 칸이 좁아 '무작위' (고르기 카드의 '무기' 줄과 같은 말)
-  function slotHtml({ id, label, weapon, lent, price, empty }) {
+  function slotHtml({ id, weapon, lent, price, empty, cloth = 0 }) {
     if (empty) return `<span class="sg-slot-empty">${T.pick}</span>${price ?? ''}`;
     // 칸 = 얼굴 · 이름 · (무기 · 고용 금화) — '나' · '동료' 는 칸 자리로 읽히고 화면 읽기 글(aria-label)에 있다
-    return `<img class="sg-slot-face" src="${esc(portraitOf(id))}" alt="" draggable="false"><span class="sg-slot-body"><b class="sg-slot-name">${esc(nameOf(id))}</b><span class="sg-slot-meta"><small class="sg-slot-weapon"${lent ? ' data-lent' : ''}>${esc(weapon)}</small>${price ?? ''}</span></span>`;
+    return `<img class="sg-slot-face" src="${esc(portraitOf(id, cloth))}" alt="" draggable="false"><span class="sg-slot-body"><b class="sg-slot-name">${esc(nameOf(id))}</b><span class="sg-slot-meta"><small class="sg-slot-weapon"${lent ? ' data-lent' : ''}>${esc(weapon)}</small>${price ?? ''}</span></span>`;
   }
   const priceHtml = (id) => { const c = hireCostOf(id); return c.coins != null ? `<span class="sg-price">${COIN_ICON}${c.coins}</span>` : ''; };
 
@@ -58,9 +60,9 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
         const id = ids[i];
         b.disabled = false;
         b.dataset.state = id ? 'set' : 'empty';
-        b.innerHTML = slotHtml({ id, empty: !id, label: i ? T.companion : T.me, weapon: lendText(lend?.to === i ? lend.weapon : null), lent: lend?.to === i, price: id && i ? priceHtml(id) : '' });
+        b.innerHTML = slotHtml({ id, empty: !id, weapon: lendText(lend?.to === i ? lend.weapon : null), lent: lend?.to === i, price: id && i ? priceHtml(id) : '', cloth: i - 1 }); // 내 무명 검객 옷 색 = 자리 1 → 줄 0 · 자리 2 → 줄 1 (saengsa_rules.js createTournament 와 같게)
         const price = id && i ? hireCostOf(id).coins : null;
-        b.setAttribute('aria-label', id ? `${i ? T.companion : T.me} · ${nameOf(id)} · ${lend?.to === i ? `${weaponName(lend.weapon)} · ${T.lentTag}` : T.randomWeapon}${price != null ? ` · ${hireLine(price)}` : ''}` : T.pick);
+        b.setAttribute('aria-label', id ? `${i ? T.companion : T.me} · ${spokenName(id, i - 1)} · ${lend?.to === i ? `${weaponName(lend.weapon)} · ${T.lentTag}` : T.randomWeapon}${price != null ? ` · ${hireLine(price)}` : ''}` : T.pick);
       });
       const cost = draft.companions.filter(Boolean).reduce((s, id) => s + (hireCostOf(id).coins ?? 0), 0);
       view.cost = cost;
@@ -77,8 +79,8 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
         const f = members[i];
         b.disabled = true;
         b.dataset.state = f?.dead ? 'dead' : 'set';
-        b.innerHTML = f ? slotHtml({ id: f.id, label: i ? T.companion : T.me, weapon: weaponName(f.weapon), lent: f.lent }) : '';
-        b.setAttribute('aria-label', f ? `${i ? T.companion : T.me} · ${nameOf(f.id)} · ${weaponName(f.weapon)}${f.lent ? ` · ${T.lentTag}` : ''}${f.dead ? ` · ${T.dead}` : ''}` : '');
+        b.innerHTML = f ? slotHtml({ id: f.id, weapon: weaponName(f.weapon), lent: f.lent, cloth: f.cloth }) : '';
+        b.setAttribute('aria-label', f ? `${i ? T.companion : T.me} · ${spokenName(f.id, f.cloth)} · ${weaponName(f.weapon)}${f.lent ? ` · ${T.lentTag}` : ''}${f.dead ? ` · ${T.dead}` : ''}` : '');
       });
       $('#sgCost').hidden = true;
       $('#sgNote').textContent = noteFor(t, t0);
@@ -114,9 +116,9 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
   function drawPicker() {
     const d = draftOf(), other = picker.slot ? d.companions[2 - picker.slot] : null;
     if (picker.slot) {
-      $('#sgRoster').innerHTML = SAENGSA_ROSTER.map((id) => {
-        const taken = id === other, on = id === picker.id;
-        return `<button type="button" class="sg-pick" role="option" data-id="${id}" aria-selected="${on}" ${taken ? 'disabled' : ''}><img src="${esc(portraitOf(id))}" alt="" draggable="false"><span class="sg-pick-name">${esc(nameOf(id))}</span>${priceHtml(id)}</button>`;
+      $('#sgRoster').innerHTML = HIRE_ROSTER.map((id) => {
+        const taken = id === other && id !== NAMELESS, on = id === picker.id; // 무명 검객은 두 자리 모두 고를 수 있다
+        return `<button type="button" class="sg-pick" role="option" data-id="${id}" aria-selected="${on}" ${taken ? 'disabled' : ''}><img src="${esc(portraitOf(id, picker.slot - 1))}" alt="" draggable="false"><span class="sg-pick-name">${esc(nameOf(id))}</span>${priceHtml(id)}</button>`;
       }).join('');
     }
     $('#sgChips').innerHTML = [null, ...ownedWeapons()].map((w) => `<button type="button" class="sg-chip-btn" role="radio" data-weapon="${w ?? ''}" aria-checked="${(picker.weapon ?? null) === w}">${esc(w ? weaponName(w) : T.random)}</button>`).join('');
@@ -159,6 +161,7 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
   });
 
   render();
+  makeNamelessFaces().then((ok) => { if (ok) { if (picker) drawPicker(); else render(); } }); // 무명 검객 얼굴(옷 색마다)을 칠한 뒤 다시 그림
   const timer = setInterval(() => { if (host.offsetParent && !picker) render(); }, 30e3);
   return {
     refresh: () => { if (!picker) render(); },

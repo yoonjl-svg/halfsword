@@ -1,6 +1,6 @@
 // 생사전 1단계 사진 · 넘침 점검 (docs/design/saengsa_2026-10-29.md §9): 1280×720 · 844×390 · 932×430 마다
-//  ① 신청 창(10/29 23:00 — ?saengsaNow) 대기실 생사전 칸 빈 판 · 동료 고르기 카드 · 다 고른 판 → 입장(신청) → 생사전 화면(첫 대진 전)
-//  ② 다음 날 10:05 — 대진표(상대끼리 첫 대진 끝 · 내 경기 '입장 가능') · 경기 화면(카드 둘 고름) · 결과 · 대기실 칸(대회 진행 중)
+//  ① 신청 창(10/29 23:00 — ?saengsaNow) 대기실 생사전 칸 빈 판 · 동료 고르기 카드(둘째 자리 = 무명 검객) · 다 고른 판 → 입장(신청) → 생사전 화면(첫 대진 전)
+//  ② 다음 날 10:05 — 대진표(상대끼리 첫 대진 끝 · 내 경기 '입장 가능') · 경기 화면(나 + 무명 검객 카드 고름) · 결과 · 대기실 칸(대회 진행 중)
 //  점검: 화면이 옆 · 아래로 넘치지 않는가(대기실 · 생사전 화면 · 경기 화면) · 입장 단추가 칸 안인가 · 카드 · 경기 칸이 서로 겹치지 않는가 · 글이 잘리는가(말줄임 수)
 //  node node_modules/vite/bin/vite.js --port 5391 → node tools/browser/saengsa_capture.mjs http://127.0.0.1:5391 dist/saengsa_shots
 import { chromium } from 'playwright';
@@ -62,10 +62,11 @@ for (const [size, width, height, phone] of SIZES) {
   await shot('panel-signup');
   await tap('.sg-slot[data-slot="1"]');
   await tap('.sg-pick[data-id="minami"]');
-  await shot('picker');
   await tap('#sgPickOk');
   await tap('.sg-slot[data-slot="2"]');
-  await tap('.sg-pick[data-id="bran"]');
+  await tap('.sg-pick[data-id="nameless"]'); // 무명 검객 (사장님 10/29 15:5x — 고용비 20)
+  await p.waitForTimeout(300); // 옷 색 얼굴을 칠하는 동안
+  await shot('picker');
   await tap('#sgPickOk');
   await tap('.sg-slot[data-slot="0"]');
   await tap('.sg-chip-btn[data-weapon="druid_whip"]');
@@ -82,7 +83,7 @@ for (const [size, width, height, phone] of SIZES) {
   await shot('page-ready');
   await tap('.sg-m[data-state="ready"]');
   await tap('button.sg-card[data-key="0-0"]');
-  await tap('button.sg-card[data-key="0-1"]');
+  await tap('button.sg-card[data-key="0-2"]'); // 무명 검객
   await shot('match-pick');
   await tap('#sgFight');
   await p.locator('#sgDone').waitFor({ state: 'visible', timeout: 10000 });

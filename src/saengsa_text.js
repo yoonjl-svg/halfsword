@@ -5,11 +5,12 @@ import { roundsOf } from './saengsa_rules.js';
 export const SAENGSA_TEXT = Object.freeze({
   title: '생사전',
   subtitle: '3인의 맹약',
-  desc: '나와 동료 둘이 한 팀으로 겨루는 토너먼트입니다. 죽은 사람은 대회가 끝나면 돌아옵니다.',
+  desc: '왕의 후견인이 왕을 대신해 생사전을 소집했습니다.', // 사장님 10/29 15:5x 글 그대로 — 고치지 않는다
   enter: '생사전 입장',
   back: '대기실',
   bracket: '대진표',
   me: '나',
+  nameless: '무명 검객', // 사장님 10/29 15:5x
   companion: '동료',
   pick: '동료 고르기',
   randomWeapon: '무작위 무기',
@@ -42,6 +43,8 @@ export const SAENGSA_TEXT = Object.freeze({
   ready: '입장 가능',
 });
 export const INJURY_KO = Object.freeze({ arm: '팔', leg: '다리', torso: '몸통', head: '머리' });
+/** 무명 검객 옷 색 이름 (config SAENGSA.nameless.cloth 차례 — 화면 읽기 글에서 같은 팀 무명 검객을 가름) */
+export const CLOTH_KO = Object.freeze(['붉은 옷', '쑥색 옷', '황토색 옷', '자줏빛 옷', '청록 옷', '녹슨 붉은 옷', '잿빛 옷', '솔빛 옷']);
 export const SCHOOL_KO = Object.freeze({ german: '독일', italian: '이탈리아', iberian: '이베리아', japanese: '일본', chinese: '동방', none: '무유파' });
 
 const pad = (n) => String(n).padStart(2, '0');

@@ -2,7 +2,8 @@
 //  빠른 셈 · 결과 적기 · 쉬는 동안 회복 · 왕의 하사품.
 //  순수 함수 — 인물 · 무기 자료는 부르는 쪽이 넘긴다(src/saengsa_roster.js · 시험 tools/sim/saengsa.test.mjs 는 가짜 자료). 값은 config.js SAENGSA 한 곳.
 //  대회 t = { v, day, seed, signedAt, teams: [{ mine, members: [사람] }], matches: [경기], status 'active' | 'done', champion, endedAt, chests }
-//   사람 = { key '팀-자리', id(인물 id · 'player'), weapon, school(그 무기 유파), tier(무기 등급), prof { german … chinese, none }, lent(내 무기를 빌림), hp, injuries [부상], dead }
+//   사람 = { key '팀-자리', id(인물 id · 'player' · 'nameless'), weapon, school(그 무기 유파), tier(무기 등급), prof { german … chinese (, none) }, lent(내 무기를 빌림), hp, injuries [부상], dead,
+//          cloth(무명 검객만 — 옷 색 줄 SAENGSA.nameless.cloth 번호) }
 //   부상 = { part 'arm' | 'leg' | 'torso' | 'head', sev(상처 심각도 — combat.js 와 같은 잣대), rests(다친 뒤 쉰 수) } · 중상 = sev ≥ SAENGSA.seriousAt
 //   팀 0 = 내 팀(자리 0 = 나) · 대진표 자리는 씨앗으로 섞는다 · 첫 대진 경기만 a · b(팀 번호)를 적고, 다음 대진은 앞 두 경기의 이긴 팀(sidesOf).
 //  경기 = { id 'r<대진>m<번호>', round, index, a, b, result } · 결과 = { at(저장 시각), winner 'a' | 'b', entrants { a: [key], b: [key] }, fighters { key: { hp, injuries, alive } },
@@ -12,6 +13,8 @@ import { SAENGSA } from './config.js';
 import { roundAt, restUntil, startAt, signupWindow, windowOf, shiftDay } from './saengsa_clock.js';
 
 export const SCHOOLS5 = Object.freeze(['german', 'italian', 'iberian', 'japanese', 'chinese']);
+/** 무명 검객 인물 id (사장님 10/29 15:5x — 이름난 인물은 한 대회에 한 번씩 · 남는 자리를 채움 · 겉모습 saengsa_nameless.js) */
+export const NAMELESS = 'nameless';
 export const INJURY_PARTS = Object.freeze(['arm', 'leg', 'torso', 'head']);
 /** 저장한 결과의 판 (다시보기가 같은 셈인지 가린다 — 빠른 셈 · 엔진 셈이 바뀌면 올린다) */
 export const SAENGSA_VER = 'saengsa-1';
@@ -48,35 +51,34 @@ export const roundsOf = (teamCount) => Math.round(Math.log2(teamCount));
 
 /**
  * 신청 → 대회 하나 (씨앗이 같으면 바이트까지 같은 대회).
- *  companions: 동료 인물 id 둘 · roster: 상대 팀을 뽑을 인물 id 목록(내 동료는 뺀다 — 모자라면 상대 팀끼리 겹친다 · 한 팀 안에서는 안 겹침)
+ *  companions: 동료 둘 — 인물 id 또는 NAMELESS(무명 검객 — 둘 다여도 됨 · 옷 색 = 자리 1 → 줄 0 · 자리 2 → 줄 1, 고르기 칸 미리 보기와 같게)
+ *  roster: 이름난 인물 id 목록 — 상대 팀에는 한 대회에 한 번씩만(내 동료는 뺌 · 사장님 10/29 15:5x): 팀을 섞은 차례로 한 팀에 한 명씩 돌려 넣고(16 팀이면 아홉 팀에 한 명씩)
+ *   남는 자리는 무명 검객 — 옷 색은 팀마다 서로 다르게(씨앗)
  *  lend: { weapon, to: 팀 자리 0 ~ 2 } | null — 빌려 준 사람은 늘 그 무기 · 나머지는 drawWeapon(rnd) 무작위
  *  weaponInfo(id) → { school, tier } · profOf(인물 id) → { german … chinese, none }
  */
 export function createTournament({ day, seed, at, companions, roster, lend = null, drawWeapon, weaponInfo, profOf, cfg = SAENGSA }) {
   const n = bracketTeams(cfg), size = cfg.teamSize, r = rng(seed);
-  const fighter = (team, slot, id, lendWeapon = null) => {
+  const fighter = (team, slot, id, lendWeapon = null, cloth = null) => {
     const weapon = lendWeapon ?? drawWeapon(r);
     const { school, tier } = weaponInfo(weapon);
-    return { key: `${team}-${slot}`, id, weapon, school, tier, prof: { ...profOf(id) }, lent: !!lendWeapon, hp: cfg.hpMax, injuries: [], dead: false };
+    const f = { key: `${team}-${slot}`, id, weapon, school, tier, prof: { ...profOf(id) }, lent: !!lendWeapon, hp: cfg.hpMax, injuries: [], dead: false };
+    if (id === NAMELESS) f.cloth = cloth ?? 0;
+    return f;
   };
   const mineIds = ['player', ...companions].slice(0, size);
-  const teams = [{ mine: true, members: mineIds.map((id, s) => fighter(0, s, id, lend && lend.to === s ? lend.weapon : null)) }];
-  // 상대 팀: 팀장(첫 자리)은 로스터가 닿는 데까지 서로 다르게 · 나머지 자리는 가장 덜 쓴 인물부터(같으면 씨앗으로) — 한 팀 안에서는 겹치지 않는다
-  const order = shuffle(r, roster.filter((id) => !mineIds.includes(id)));
-  const used = new Map(order.map((id) => [id, 0]));
-  const lineup = Array.from({ length: n - 1 }, (_, i) => [order[i % order.length]]);
-  for (const [id] of lineup) used.set(id, used.get(id) + 1);
-  for (let s = 1; s < size; s++) {
-    for (const l of lineup) {
-      const free = order.filter((id) => !l.includes(id));
-      const from = free.length ? free : order;
-      const least = Math.min(...from.map((id) => used.get(id)));
-      const id = pickOne(r, from.filter((x) => used.get(x) === least));
-      l.push(id);
-      used.set(id, used.get(id) + 1);
-    }
-  }
-  lineup.forEach((ids, i) => teams.push({ mine: false, members: ids.map((id, s) => fighter(i + 1, s, id)) }));
+  const teams = [{ mine: true, members: mineIds.map((id, s) => fighter(0, s, id, lend && lend.to === s ? lend.weapon : null, s - 1)) }];
+  // 상대 팀: 이름난 인물은 한 번씩만 — 섞은 팀 차례로 한 팀에 한 명씩 돌려 넣고(다 돌면 둘째 자리) · 남는 자리는 무명 검객
+  const named = shuffle(r, roster.filter((id) => id !== NAMELESS && !mineIds.includes(id)));
+  const lineup = Array.from({ length: n - 1 }, () => []);
+  const teamOrder = shuffle(r, lineup.map((_, i) => i));
+  for (let s = 0, k = 0; s < size && k < named.length; s++) for (const ti of teamOrder) if (k < named.length) lineup[ti].push(named[k++]);
+  lineup.forEach((ids, i) => {
+    const cloths = shuffle(r, Array.from({ length: cfg.nameless.cloth.length }, (_, c) => c)); // 한 팀 안에서는 옷 색이 서로 다르게
+    let c = 0;
+    while (ids.length < size) ids.push(NAMELESS);
+    teams.push({ mine: false, members: ids.map((id, s) => fighter(i + 1, s, id, null, id === NAMELESS ? cloths[c++ % cloths.length] : null)) });
+  });
   const seats = shuffle(r, teams.map((_, i) => i)); // 대진표 자리 → 팀 번호
   const matches = [];
   for (let rd = 0; rd < roundsOf(n); rd++) {
@@ -169,11 +171,18 @@ function rest(members, cfg) {
 }
 
 // ── 빠른 셈 ──
+/** 그 무기를 든 숙련도: 무기 유파 칸 · 무유파 무기인데 none 칸이 없으면(주 유파가 무유파가 아닌 사람) 다섯 유파 가운데 가장 높은 값 − 1 (확인 전 · 확인표 2799) */
+export function profFor(f) {
+  const p = f?.prof ?? {};
+  if (p[f?.school] != null) return p[f.school];
+  if (f?.school !== 'none') return 0;
+  return Math.max(0, Math.max(0, ...SCHOOLS5.map((s) => p[s] ?? 0)) - 1);
+}
 /** 한 사람의 힘 (config SAENGSA.quick): 그 무기 유파 숙련도 · 무기 등급 · 남은 체력 · 부상(경상 · 중상) */
 export function power(f, cfg = SAENGSA) {
   if (!f || f.dead) return 0;
   const q = cfg.quick;
-  const prof = f.prof?.[f.school] ?? 0;
+  const prof = profFor(f);
   const hpK = q.hpFloor + (1 - q.hpFloor) * Math.max(0, Math.min(cfg.hpMax, f.hp)) / cfg.hpMax;
   const injK = (f.injuries ?? []).reduce((k, i) => k * (isSerious(i, cfg) ? q.injuryK.serious : q.injuryK.light), 1);
   return (q.profBase + q.profStep * prof) * (q.tierK[f.tier] ?? 1) * hpK * injK;
