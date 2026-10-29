@@ -17,7 +17,7 @@
 //  난수 없음. 비기가 아니면(요청 없음) 아무 일도 없다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, ARM, STRIKE, GAIT, ARENA, JOINTS } from './config.js';
+import { SECRET, ARM, STRIKE, GAIT, ARENA, JOINTS, THRUST } from './config.js';
 import { risolutoContact } from './weapon_measured.js'; // 10/25 THRUST.itMeasure 'contact' 판: 리솔루토 런지 미끄러짐은 지금 맞닿음 그대로
 const GAIT_REACH = GAIT.reachMax;
 
@@ -490,17 +490,18 @@ const _wx = new THREE.Vector3();
  * 손 자리 H·칼날 D(몸 기준)에 칼이 놓일 자세를 셈한다 (placeIai 의 셈 — 팔 IK · 칼 면 · 굴림 묶음 · 손목 교정). 팔 관절 목표(armIK)를 쓰고 몸은 놓지 않는다.
  *  { M, Dw(교정 뒤 칼날 — 월드), up, fp, wrist, qu, qf, qs, fix(손목 교정 각) }
  */
-function iaiSolve(f, H, D, turn = 0, edgeHint = null, rollCap = false) {
+function iaiSolve(f, H, D, turn = 0, edgeHint = null, rollCap = false, I = f.iai) {
   const J = f.jointByName;
   const chest = f.bodies.chest;
   const qc = tq(chest.rotation(), new THREE.Quaternion());
   const c = tv(chest.translation(), new THREE.Vector3());
-  const yaw = f.iai.yaw;
+  const yaw = I.yaw;
   const target = H.clone().applyQuaternion(yaw).add(c);
-  const M = f.iai.mord; // 죽음의 일격 (10/22 밤 — 운동학 길): D = 칼자루 쪽 · 칼 축(+y) = −D · 칼 원점 = 손목 + D × g (거꾸로 쥔 자리 g 가 손목에) · 날은 휘두르는 면 안(몸 옆 축 × 칼 축)
+  const M = I.mord; // 죽음의 일격 (10/22 밤 — 운동학 길): D = 칼자루 쪽 · 칼 축(+y) = −D · 칼 원점 = 손목 + D × g (거꾸로 쥔 자리 g 가 손목에) · 날은 휘두르는 면 안(몸 옆 축 × 칼 축)
   const Dw = D.clone().applyQuaternion(yaw).normalize();
   if (!M) (f.aimRawW ||= new THREE.Vector3()).copy(Dw); // 팔꿈치 돌림(armIK)이 이 칼날을 읽는다 (교정 전)
-  f.armIK(target);
+  const planeMove = !M && I.kind === 'combo' && !!I.moves?.[I.mi]?.plane; // 칼끝 돌려 빼기 (10/28): 아래팔을 칼 줄에 맞추는 팔꿈치 · 아래 손 면 찾기
+  f.armIK(target, planeMove ? Dw : null);
   const S = new THREE.Vector3(ARM.shoulder[0], ARM.shoulder[1], f.side * ARM.shoulder[2]).applyQuaternion(qc).add(c);
   const qu = qc.clone().multiply(J.uarmS.target);
   const qf = qu.clone().multiply(J.farmS.target);
@@ -523,7 +524,7 @@ function iaiSolve(f, H, D, turn = 0, edgeHint = null, rollCap = false) {
     //  날 세우기 두 쪽(날 = 칼끝이 가는 쪽 · 그 반대 = 등 — 칼 면을 칼 축 둘레로 180°: 칼 줄 · 칼끝 그대로 · 판정의 날 맞춤 |cos| 같음): 묶은 뒤에도 날 쪽이 판정 문턱
     //   (STRIKE.edgeAlign) 안에서 앞장서면 날 쪽(외날 打刀가 등으로 베지 않게), 아니면 덜 돈 쪽(driveSword rollSide 의 양날 규칙과 같음) —
     //   전엔 늘 날 쪽이라 낮게 지나는 올려 긋기에서 칼 면이 손에 대해 164° 돌았다(사람 밖 · 손목 교정이 손 면 각을 잃어 칼 줄이 스텝마다 튐)
-    if (edgeHint && Math.cos(rot) < STRIKE.edgeAlign) {
+    if (edgeHint && Math.cos(rot) < STRIKE.edgeAlign && !I.moves?.[I.mi]?.edge) { // 겹치기(edge 칸)는 고른 날 그대로
       const zB = zS.clone().negate();
       const rotB = rollToCap(zF, zB, Dw, lim);
       if (Math.abs(rotB) < Math.abs(rot)) {
@@ -534,22 +535,38 @@ function iaiSolve(f, H, D, turn = 0, edgeHint = null, rollCap = false) {
     if (rot) edge.applyAxisAngle(Dw, rot);
     swordQuat(yAx, qs, edge.normalize());
   }
+  // 손 면 찾기 (칼끝 돌려 빼기 — 10/28 · 수의 plane 칸): 칼 줄(찌르는 줄)은 그대로 두고 칼 면만 칼 축 둘레로 돌려 손목(굽힘 · 폄 · 손 면 안 치우침 · 아래팔 굴림)이
+  //  사람 범위 안이 되는 면 가운데 지금 면에 가장 가까운 것 (fighter.js wristPlane — 높은 자세의 엎친 손 길 JOINTS.wristPronate · 탭 찌르기와 같은 풀이 · 새 수 없음). 그런 면이 없으면 위 굴림 묶음 그대로
+  if (planeMove && f.wristPlane) {
+    const fx = new THREE.Vector3(1, 0, 0).applyQuaternion(qf);
+    const zF = new THREE.Vector3(0, 0, 1).applyQuaternion(qf);
+    const n = f.wristPlane(fx, zF, Dw, new THREE.Vector3(0, 0, 1).applyQuaternion(qs), new THREE.Vector3());
+    if (n) swordQuat(yAx, qs, new THREE.Vector3().crossVectors(Dw, n));
+    I.planeMiss = (I.planeMiss ?? 0) + (n ? 0 : 1); // 재기 (판정에는 안 씀)
+  }
   // 비정상 손목 교정 (JOINTS.wristGuard — driveSword 와 같은 wristClamp): 놓을 아래팔(qf)과 칼날이 사람 손목 범위 밖이면 칼날을 칼 면 안에서 범위 끝으로. 손 자리 · 팔 · 칼 면 그대로
   //  겨눈 찌름(comboPlanAim thrust · SECRET.thrustArm — 런지 · 격살 허파 찌르기)은 칼이 어깨 → 겨눈 곳 줄 위라 건드리지 않는다: 칼끝을 줄에서 비키면 찌름이 베기가 된다(탭 찌르기와 같은 원칙 — 손목은 팔이 맡음)
-  const thrustSeg = SECRET.thrustArm && f.iai.kind === 'combo' && f.iai.moves?.[f.iai.mi]?.dyn?.thrust;
-  const fix = JOINTS.wristGuard && !M && !thrustSeg ? f.wristClamp(new THREE.Vector3(1, 0, 0).applyQuaternion(qf), Dw, _wz.set(0, 0, 1).applyQuaternion(qs)) : 0; // fighter.js wristClamp (몸의 메서드로 — 이 모듈이 fighter.js 를 부르면 모듈 차례가 꼬인다)
+  const thrustSeg = SECRET.thrustArm && I.kind === 'combo' && I.moves?.[I.mi]?.dyn?.thrust;
+  const fix = JOINTS.wristGuard && !M && !thrustSeg ? f.wristClamp(new THREE.Vector3(1, 0, 0).applyQuaternion(qf), Dw, _wz.set(0, 0, 1).applyQuaternion(qs), I.wristMargin ?? 0) : 0; // fighter.js wristClamp (몸의 메서드로 — 이 모듈이 fighter.js 를 부르면 모듈 차례가 꼬인다)
   if (fix) swordQuat(Dw, qs, _wx.crossVectors(Dw, _wz));
   return { M, Dw, up, fp, wrist, qu, qf, qs, fix };
 }
 
+/**
+ * 풍차 베기 감기 (B4 이베리아 특수 공격 — 사장님 10/29 · iberian_redondo.js windStep): 손 자리 H · 칼날 D(몸 틀 I.yaw — 가슴 원점)에 팔 · 칼(· 빈팔)을 놓는다 —
+ *  아래 placeIai 그대로(팔 IK · 굴림 묶음 · 손목 교정 · 날 = edgeHint 쪽 · 빠르기 = 가슴 · 덧씌우기 칸도 같은 자세 · 몸 비틀기 = I.body). I = { yaw, off, body } (끌고 가는 칼 f.iai 가 아님). 칼날 선분 { B, D, tip }
+ */
+export function placeArmsAt(f, I, H, D, edgeHint = null) {
+  return placeIai(f, H, D, false, 0, edgeHint, true, I);
+}
 /** 손 자리 H·칼날 D(몸 기준)로 팔·칼(·빈팔)을 놓는다 — now: 지금 자리로(첫 스텝), 아니면 다음 스텝 운동학 목표. 칼날 선분 { B, D, tip } (월드) */
-function placeIai(f, H, D, now, turn = 0, edgeHint = null, rollCap = false) {
+function placeIai(f, H, D, now, turn = 0, edgeHint = null, rollCap = false, I = f.iai) {
   const J = f.jointByName;
   const chest = f.bodies.chest;
   const qc = tq(chest.rotation(), new THREE.Quaternion());
   const c = tv(chest.translation(), new THREE.Vector3());
-  const yaw = f.iai.yaw;
-  const { M, Dw, up, fp, wrist, qu, qf, qs, fix } = iaiSolve(f, H, D, turn, edgeHint, rollCap);
+  const yaw = I.yaw;
+  const { M, Dw, up, fp, wrist, qu, qf, qs, fix } = iaiSolve(f, H, D, turn, edgeHint, rollCap, I);
   // 서보 목표도 같은 자세로 (덧씌우기 칸 = 이 손 자리·칼날): 팔 근육이 다른 자리로 당기며 가슴을 비틀어 넘어뜨리지 않게
   const th = f.skill.thrustPose;
   const Hy = H.clone().applyQuaternion(yaw).applyQuaternion(f.yaw.clone().invert());
@@ -561,7 +578,7 @@ function placeIai(f, H, D, now, turn = 0, edgeHint = null, rollCap = false) {
   th.dir[0] = Dy.x;
   th.dir[1] = Dy.y;
   th.dir[2] = Dy.z;
-  const EB = f.iai.bodyAt ? f.iai.bodyAt(f.iai.u ?? 0) : f.iai.body; // 휩쓸기: 몸 비틀기가 길을 따라 (감기 → 돌리기)
+  const EB = I.bodyAt ? I.bodyAt(I.u ?? 0) : I.body; // 휩쓸기: 몸 비틀기가 길을 따라 (감기 → 돌리기)
   th.pelvisYaw = EB.pelvisYaw * D2R;
   th.chestYaw = EB.chestYaw * D2R;
   th.pitch = EB.pitch * D2R;
@@ -585,7 +602,7 @@ function placeIai(f, H, D, now, turn = 0, edgeHint = null, rollCap = false) {
   put(f.bodies.uarmS, up, qu);
   put(f.bodies.farmS, fp, qf);
   put(f.sword, M ? wrist.clone().addScaledVector(Dw, M.g) : wrist, qs);
-  if (f.iai.off) {
+  if (I.off) {
     const pommel = M ? wrist.clone().addScaledVector(Dw, M.g - M.gOff) : new THREE.Vector3(0, f.weaponCfg.gripAlong, 0).applyQuaternion(qs).add(wrist); // 죽음의 일격: 빈손 = 칼 축 gOff
     f.offArmIK(pommel);
     const So = new THREE.Vector3(0, 0.1, -f.side * 0.2).applyQuaternion(qc).add(c);
@@ -1076,7 +1093,7 @@ const COMBO_TURN = 0.35; // 손이 있는 쪽으로 몸을 트는 계수 (rad / 
 
 /** 빠른 연환을 걸어 둔다. opt.moves = 두 수 (schools.js 막기 연환 seq 꼴, step.fwd 는 m 로 푼 것) */
 export function requestCombo(f, opt = {}) {
-  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, effMul: opt.effMul, width: opt.width, tech: opt.tech, mord: opt.mord ?? null, arcCut: !!opt.arcCut, face: opt.face || null, min: opt.min ?? 0, maxT: opt.maxT ?? 0 }; // width: 잔상 굵기 몫 (격살 시험 — sword_trail.js) · mord: 죽음의 일격 운동학 길(10/22 밤 — mordschlag.js) · arcCut: 잔상은 베는 토막만 · face: 마주 보는 띠('path' 치는 끝 길 · 'line' 찌르는 줄) · min: 잔상 밝기 바닥 (10/23 비기 잔상 점검 — 사람 비기만, 아래 stepCombo · sword_trail.js)
+  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, effMul: opt.effMul, width: opt.width, tech: opt.tech, mord: opt.mord ?? null, arcCut: !!opt.arcCut, face: opt.face || null, min: opt.min ?? 0, maxT: opt.maxT ?? 0, keepAim: !!opt.keepAim, attack: !!opt.attack }; // width: 잔상 굵기 몫 (격살 시험 — sword_trail.js) · mord: 죽음의 일격 운동학 길(10/22 밤 — mordschlag.js) · arcCut: 잔상은 베는 토막만 · face: 마주 보는 띠('path' 치는 끝 길 · 'line' 찌르는 줄) · min: 잔상 밝기 바닥 (10/23 비기 잔상 점검 — 사람 비기만, 아래 stepCombo · sword_trail.js)
   f.instantResult = null;
 }
 
@@ -1174,6 +1191,8 @@ function startCombo(f, combat, req) {
     off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hits: 0, E: 0, Emax: 0, blocked: 0, part: null, zone: null, type: null,
     arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share, pts: [], ...(req.width > 0 && req.width < 1 ? { width: req.width } : {}), ...(req.face ? { face: req.face } : {}), ...(req.min > 0 ? { min: req.min } : {}), ...(req.moves.some((m) => m.lunge) ? { lunge: lungeFrom(f) } : {}) }, slide: null, mord: req.mord ?? null, arcCut: !!req.arcCut,
     maxT: req.maxT ?? 0, // 끌고 가는 시간 상한 (s — 제비 베기 되돌림 칼 requestArtSnap · 0 = 없음, 길 끝까지)
+    keepAim: !!req.keepAim, // 끝나도 손 목표를 옮기지 않음 (탭으로 낸 칼 — 날개 접기 10/28: 손 목표 뜀이 긋기로 읽히지 않게)
+    attack: !!req.attack, // 탭으로 낸 특수 공격 칼 (10/28): 끄는 동안 공격 중(stamina.attacking — 유파 패시브 인데스 · 몸 돌림 묶기 · 막아 받기 값이 보통 긋기 · 탭과 같게)
   };
   if (!req.arcCut) f.instantArc = f.iai.arc; // 베는 토막만(arcCut)이면 첫 베는 점에서 건다 (stepCombo — 섬광 · 남는 시간이 베는 순간부터)
   f.artTech = req.tech ?? null; // 이 끌고 가는 칼이 어떤 기술인가 (unique_assist.js strokeTechOf — 진 · 츠바메가에시 피해 × 3)
@@ -1189,12 +1208,23 @@ function comboNext(f, I) {
   comboMoveStart(f, I, I.mi + 1);
   const m = I.moves[I.mi];
   const dyn = !!m.dyn && (!!SECRET.cnPath || !!m.lunge); // 안다레 리솔루토 런지(10/24 — m.lunge)는 연환 길 스위치(cnPath)와 따로 늘 그때 계산 찌름
-  I.segs = (I.mord ? comboPlanMord(f, I, m, I.cur) : dyn ? comboPlanDyn(f, I, m, I.cur) : comboPlanPad(f, I, m, I.cur)).filter((sg) => sg.T > 0);
+  I.segs = (I.mord ? comboPlanMord(f, I, m, I.cur) : m.artThrust ? comboPlanArtThrust(f, I, m, I.cur) : m.dup ? comboPlanDup(f, I, m, I.cur) : m.rd ? comboPlanRd(f, I, m, I.cur) : dyn ? comboPlanDyn(f, I, m, I.cur) : comboPlanPad(f, I, m, I.cur)).filter((sg) => sg.T > 0); // rd: 사람 풍차 베기 (10/29 — 아래) // artThrust: 사람 칼끝 돌려 빼기 (10/28 — 아래)
   I.si = 0;
   I.ts = I.t;
   I.segT0 = I.t; // 이 수 토막들이 시작한 때 (런지 쓸린 자리 — lungeSweep)
   let span = I.segs.reduce((a, sg) => a + sg.T, 0);
-  if (I.slide && I.slide.slide > 0 && dyn && span > 0) {
+  if (m.capFromCut && I.maxT > 0 && I.segs[0] && !I.segs[0].cut) {
+    // 날개 접기 (10/28) · 풍차 베기 (10/29): 시간 상한은 베는 몫부터 (앞의 맞힘 없는 준비 토막들은 셈 밖 — 같은 빠르기 · 날개 접기는 준비 토막 하나라 전과 같음)
+    let lead = 0;
+    for (const sg of I.segs) {
+      if (sg.cut) break;
+      lead += sg.T;
+    }
+    I.maxT = I.t + lead + I.maxT;
+  }
+  if (m.artThrust || m.dup) {
+    // 칼끝 돌려 빼기 (10/28): 몸 미끄러짐 시간 · 토막 늘림은 길을 짜며 정함 (comboPlanArtThrust — 찌름이 끝날 때 다 미끄러짐) · 겹치기는 걸음 없음
+  } else if (I.slide && I.slide.slide > 0 && dyn && span > 0) {
     // 그때 계산 길 (10/12 03:0x): 길은 미끄러진 뒤의 상대 자리로 짜므로 몸 틀 칼끝 길이 짧아진다 — 칼끝이 땅에 대해 지나는 길 = 몸 틀 길 + 반걸음.
     //  그만큼 시간을 늘려 칼끝 빠르기를 같은 값(I.v)에 두고, 반걸음은 그 수 시간 내내 미끄러진다. (안 하면 찌름 길이 0.02 s 로 줄어 몸이 12 m/s 로 미끄러지며 그 빠르기가
     //  찌름에 실려 48 판 찌름 상처가 566~811 J 로 튀었다)
@@ -1240,11 +1270,6 @@ const BAND_LEG = new Set(['thighF', 'thighB', 'shinF', 'shinB', 'footF', 'footB'
  *  셈만 하고 팔 관절 목표 · 팔꿈치 돌림 · 칼날 읽기 칸은 되돌린다. 두 몸의 움직임은 가슴 빠르기 차이만큼 칼을 곧게 옮겨 본다(끌고 가는 0.1 s 안팎 — 몸 비틀기 · 상대 팔 움직임은 셈 밖)
  */
 function bandFirst(f, I, A, poses) {
-  const foe = f.foe;
-  const J = f.jointByName;
-  const HL = f.weaponCfg.hiltLength;
-  const L = HL + f.weaponCfg.bladeLength;
-  const c = tv(f.bodies.chest.translation(), new THREE.Vector3());
   const segs = [];
   let from = A;
   for (let k = 0; k < poses.length; k++) {
@@ -1253,6 +1278,16 @@ function bandFirst(f, I, A, poses) {
     if (sg.T > 0) segs.push(sg);
     from = poses[k];
   }
+  return bandFirstSegs(f, I, segs);
+}
+/** bandFirst 의 셈 몸 (토막을 받음 — 날개 접기 허리 호 waistAim 도 씀 · 10/28). slide = { dx, dz, slide, span } 이면 그 미끄러짐(stepCombo 와 같은 1 − (1 − x)² 꼴)만큼 칼을 옮겨 봄 */
+function bandFirstSegs(f, I, segs, slide = null) {
+  const foe = f.foe;
+  const J = f.jointByName;
+  const HL = f.weaponCfg.hiltLength;
+  const L = HL + f.weaponCfg.bladeLength;
+  const c = tv(f.bodies.chest.translation(), new THREE.Vector3());
+  const slAt = (t) => (slide ? slide.slide * (1 - (1 - clamp((t - I.t) / slide.span, 0, 1)) ** 2) : 0);
   const keep = { u: J.uarmS.target.clone(), fa: J.farmS.target.clone(), sw: f.swivelTh, full: f.armFull, raw: f.aimRawW?.clone() ?? null };
   const dt = (f.lastDt || 1 / 120) * f.stamina.attackSpeed;
   const vRel = tv(f.bodies.chest.linvel(), new THREE.Vector3()).sub(tv(foe.bodies.chest.linvel(), new THREE.Vector3())); // 두 몸이 서로 다가오는 빠르기 (맞힘을 볼 때만 칼을 그만큼 옮김 — 끌고 가는 동안 가슴이 스텝마다 0.5 cm 안팎 감)
@@ -1278,7 +1313,9 @@ function bandFirst(f, I, A, poses) {
       const cur = { B, D: R.Dw, tip: B.clone().addScaledVector(R.Dw, f.weaponCfg.bladeLength) };
       if (sg.cut && segs[si0]?.cut && prev) {
         for (let k = 1; k <= 3 && !hit; k++) {
-          const Bk = prev.B.clone().lerp(cur.B, k / 3).addScaledVector(vRel, t - dt * (1 - k / 3) - I.t);
+          const tk = t - dt * (1 - k / 3);
+          const Bk = prev.B.clone().lerp(cur.B, k / 3).addScaledVector(vRel, tk - I.t);
+          if (slide) Bk.add(new THREE.Vector3(slide.dx, 0, slide.dz).multiplyScalar(slAt(tk)));
           const Dk = prev.D.clone().lerp(cur.D, k / 3).normalize();
           const tip = Bk.clone().addScaledVector(Dk, f.weaponCfg.bladeLength);
           if (foe.armed && foe.sword && segSegApprox(Bk, tip, foe.bladePoint(0, new THREE.Vector3()), foe.bladePoint(1, new THREE.Vector3())) < SECRET.iberianBlockDist) {
@@ -1448,7 +1485,7 @@ function comboDir(psi, eps, out = new THREE.Vector3()) {
  */
 function comboPlanDyn(f, I, m, A) {
   const D = m.dyn;
-  if (D.kind === 'aim') return comboPlanAim(f, I, m, A, D); // 격살 (10/22): 그 순간 상대 몸의 겨눌 곳으로
+  if (D.kind === 'aim') return D.band === 'waist' ? waistAim(f, I, m, A, D) : comboPlanAim(f, I, m, A, D); // 격살 (10/22): 그 순간 상대 몸의 겨눌 곳으로 · 허리 띠(날개 접기 10/28)
   const S = comboShoulder(f, I.yaw);
   const Lf = comboArmLen();
   const Lb = f.weaponCfg.hiltLength + f.weaponCfg.bladeLength;
@@ -1531,6 +1568,7 @@ function comboAimPoint(f, I, target) {
     return new THREE.Vector3(a.x, a.y, a.z).applyQuaternion(tq(body.rotation(), new THREE.Quaternion())).add(W(body));
   };
   if (target === 'head' && B.head) return { P: at(W(B.chest).lerp(W(B.head), 0.8)), part: 'head' };
+  if (target === 'waist' && B.abdomen) return { P: at(W(B.abdomen)), part: 'waist' }; // 허리 (날개 접기 10/28 '허리(배 · 골반)를'): 배 몸체 가운데
   if (target === 'arm' && B.farmS) {
     const e = jointW('farmS', false) ?? W(B.farmS); // 팔꿈치 — 절단은 관절 곁 0.11 m 안(COMBAT.limbSeverRadius): 아래팔 가운데를 겨누면 관절에서 0.15 ~ 0.17 m 라 잘리지 않았다(탐침)
     return { P: at(e), part: 'arm' };
@@ -1554,12 +1592,64 @@ function comboAimPoint(f, I, target) {
  *  벰 — 연환 'draw' 와 같은 큰 호(가로 각 side × yaw · 높이 각 el, 6 토막 · 마지막 ⅓ 은 손을 당겨 벰)인데 가운데 줄이 상대 몸통이 아니라 P 이고,
  *   손 거리 r 은 칼날 dyn.at(기본 0.6) 자리가 P 에 오게(칼자루 + 칼날 × at 을 뺀 거리 — [0.15, 팔 길이] 로 자름 · 비율 [추정]). from 'prep' = 호 첫 자리로 옮기는 이음 토막은 맞힘 없음.
  */
-function comboPlanAim(f, I, m, A, D) {
+/**
+ * 날개 접기 허리 호 (사장님 10/28 00:3x '허리(배 · 골반)를 … 실제로 닿게' — requestArtFold · D.band 'waist'): 격살 한 칼의 가로 호(comboPlanAim)를 겨눈 곳(배 몸체 가운데)으로 짜고,
+ *  그 길을 미리 끌고 가 보아(bandFirstSegs — stepCombo 와 같은 스텝 · 미끄러짐 · 날 세우기 · 손목 교정) 처음 닿을 곳이 허리 띠(배 · 골반) 밖이면 겨눈 곳 높이를 가장 적게 옮긴다
+ *  (제비 베기 몸통 띠 comboBandShift 와 같은 규칙 · 같은 칸 BAND_STEP · BAND_MAX — 가슴 · 목 · 머리면 아래로 · 다리면 위로 · 팔(띠 앞을 막음)이면 위아래 가까운 쪽 먼저 · 안 나오면 다리 · 가슴 위를 비킨 가장 적은 옮김 · 안 닿으면 그대로).
+ *  재기: I.bandDy (m) · I.bandFrom · I.bandTo
+ */
+function waistAim(f, I, m, A, D) {
+  const base = comboAimPoint(f, I, D.target);
+  const sl = I.slide && I.slide.slide > 0 ? I.slide : null;
+  const plan = (dy) => {
+    const P = base.P.clone().add(new THREE.Vector3(0, dy, 0)); // 몸 틀 위쪽 = 세상 위쪽 (yaw 만)
+    return comboPlanAim(f, I, m, A, D, { P, part: base.part });
+  };
+  const first = (segs) => {
+    if (!sl) return bandFirstSegs(f, I, segs);
+    // comboNext 의 그때 계산 길 늘림과 같은 셈: 칼끝 길이 + 미끄러짐 만큼 시간을 늘리고 그 동안 미끄러짐
+    const span = segs.reduce((a, sg) => a + sg.T, 0);
+    const k = span > 0 ? (span * I.v + sl.slide) / (span * I.v) : 1;
+    const S2 = segs.map((sg) => ({ ...sg, T: sg.T * k }));
+    return bandFirstSegs(f, I, S2, { dx: sl.dx, dz: sl.dz, slide: sl.slide, span: Math.max(1e-3, span * k) });
+  };
+  const cls = (h) => (!h ? null : BAND_LEG.has(h.part) ? 'leg' : h.part === 'head' || h.part === 'chest' ? 'high' : h.part === 'pelvis' || h.part === 'abdomen' ? 'torso' : 'arm');
+  const s0 = plan(0);
+  const h0 = first(s0);
+  const c0 = cls(h0);
+  I.bandDy = 0;
+  I.bandFrom = I.bandTo = h0?.part ?? null;
+  if (!c0 || c0 === 'torso') return s0;
+  const dirs = c0 === 'leg' ? [1] : c0 === 'high' ? [-1] : [1, -1];
+  let side = null;
+  for (let k = 1; k <= BAND_MAX; k++) {
+    for (const sg of dirs) {
+      const dy = sg * BAND_STEP * k;
+      const P = plan(dy);
+      const h = first(P);
+      const c = cls(h);
+      if (c === 'torso') {
+        I.bandDy = dy;
+        I.bandTo = h.part;
+        return P;
+      }
+      if (c === 'arm' && c0 !== 'arm' && !side) side = { dy, P, part: h.part };
+    }
+  }
+  if (side) {
+    I.bandDy = side.dy;
+    I.bandTo = side.part;
+    return side.P;
+  }
+  return s0;
+}
+
+function comboPlanAim(f, I, m, A, D, at0 = null) {
   const S = comboShoulder(f, I.yaw);
   const Lf = comboArmLen();
   const HL = f.weaponCfg.hiltLength;
   const BL = f.weaponCfg.bladeLength;
-  const { P, part } = comboAimPoint(f, I, D.target);
+  const { P, part } = at0 ?? comboAimPoint(f, I, D.target);
   I.aim = part;
   const segs = [];
   let cur = A;
@@ -1618,6 +1708,348 @@ function comboPlanAim(f, I, m, A, D) {
   return segs;
 }
 
+/**
+ * 사람 풍차 베기 한 칼의 길 (B4 레돈두 — 사장님 10/29 · config UNIQUE_ASSIST.rdArc · requestArtRedondo): 피게이레두 복합 규칙 2 「칼을 머리 위로 넘겨 어깨 뒤로 보내, 왼팔 위로 떨어뜨리며 둘러 벤다」 [원문 영역 · 길은 해석].
+ *  ① 넘김(맞힘 없음): 지금 자리(머리 위에서 돌던 칼) → 왼 어깨 뒤(m.rd.arc.chamber — 이베리아 자세표 '왼 어깨 지붕' 손 · 칼 그대로 · 레베스 준비).
+ *  ② 떨어뜨림(맞힘 없음): 왼 어깨 뒤 → 호 첫 자리(겨눈 곳 줄에서 반대쪽(왼) 위) — 칼이 왼팔 위로 넘어온다.
+ *  ③ 벰(맞힘): 격살 한 칼 comboPlanAim 과 같은 틀의 큰 호 — 어깨 → 겨눈 곳(상대 가슴 위 'lung' 점) 줄에서 가로 yaw[0] → yaw[1] °(칼 든 쪽 + — 왼 → 오른 · 레베스) · 높이 el[0] → el[1] °(조금 내려 비스듬히) ·
+ *   칼날 at 자리가 겨눈 곳에 오게 손 거리 · 마지막 ⅓ 은 손을 당김. 몸은 곧게(덧씌우기 몸 = 손 쪽 몸 돌림 — 싱지르의 온몸 한 바퀴가 아님)
+ */
+function comboPlanRd(f, I, m, A) {
+  const R = m.rd.arc;
+  const s = f.side >= 0 ? 1 : -1;
+  const S = comboShoulder(f, I.yaw);
+  const Lf = comboArmLen();
+  const HL = f.weaponCfg.hiltLength;
+  const BL = f.weaponCfg.bladeLength;
+  const segs = [];
+  let cur = A;
+  const push = (H, Dv, cut, pad = null) => {
+    const B = { H, D: Dv, px: H.z - 0.1, pad };
+    const sg = { cut, A: cur, B };
+    sg.T = comboSegLen(f, sg) / I.v;
+    segs.push(sg);
+    cur = B;
+  };
+  // ① 왼 어깨 뒤 (자세표 칸 꼴 — 손 [앞, 위, 칼 든 쪽] · 칼 [높이 °, 가로 °])
+  const C = R.chamber;
+  const ce = C.blade[0] * D2R;
+  const ca = C.blade[1] * D2R;
+  // ⓪ 칼이 아직 머리 위에 없으면(감기 섞는 첫 0.2 s 안에 뗌 — 칼이 앞 · 아래) 먼저 머리 위로 (10/29 몸 검사: 곧장 어깨 뒤로 slerp 하면 칼날이 제 배 · 가슴 · 머리를
+  //  최대 10 cm 지나감 — 원전 '머리 위로 넘겨 어깨 뒤로') · 머리 위 자리 = 감는 길(rdLoop)의 이마 앞 위 손 · 어깨 뒤 쪽(chamber 가로 각)으로 cone ° 기운 칼 · 맞힘 없음 · 같은 빠르기
+  const L = m.rd.loop;
+  if (L && A?.D && A.D.y < (R.overY ?? 0.75)) {
+    const b = L.cone * D2R;
+    push(new THREE.Vector3(L.hand[0], L.hand[1], s * L.hand[2]), new THREE.Vector3(Math.sin(b) * Math.cos(ca), Math.cos(b), s * Math.sin(b) * Math.sin(ca)), false);
+  }
+  push(new THREE.Vector3(C.hand[0], C.hand[1], s * C.hand[2]), new THREE.Vector3(Math.cos(ce) * Math.cos(ca), Math.sin(ce), s * Math.cos(ce) * Math.sin(ca)), false);
+  // ③ 호 (② 는 그 첫 자리로)
+  const { P, part } = comboAimPoint(f, I, R.target ?? 'lung');
+  I.aim = part;
+  const dc = P.clone().sub(S);
+  const dist = dc.length();
+  dc.normalize();
+  const psi0 = Math.atan2(dc.z, dc.x);
+  const eps0 = Math.asin(clamp(dc.y, -1, 1));
+  const r0 = clamp(dist - HL - BL * (R.at ?? 0.7), 0.15, Lf);
+  const N = 6;
+  const arc = (w) => {
+    const psi = psi0 + s * (R.yaw[0] + (R.yaw[1] - R.yaw[0]) * w) * D2R;
+    const eps = eps0 + (R.el[0] + (R.el[1] - R.el[0]) * w) * D2R;
+    const r = r0 * (w <= 2 / 3 ? 1 : 1 - 0.25 * ((w - 2 / 3) / (1 / 3)));
+    return { H: S.clone().addScaledVector(comboDir(psi0 + 0.5 * (psi - psi0), eps0 + 0.5 * (eps - eps0)), r), D: comboDir(psi, eps) };
+  };
+  const a0 = arc(0);
+  push(a0.H, a0.D, false); // ② 왼팔 위로 떨어뜨림
+  for (let j = 1; j <= N; j++) {
+    const a = arc(j / N);
+    push(a.H, a.D, true, j === N ? comboPad(a.H) : null);
+  }
+  return segs;
+}
+
+/**
+ * 사람 칼끝 돌려 빼기 한 칼의 길 (I9 — 사장님 10/28 00:5x 'cavazione … 칼끝을 빼 돌리고 조이며 나아가, 가슴을 찔러라' — config UNIQUE_ASSIST.cavSnap · requestArtThrust):
+ *  몸 틀(시작 yaw · 가슴 원점)에서 겨눌 곳 P = 목 아래 ~ 가슴 위 띠: 상대 가슴 몸체 틀에서 가운데 0.05 m 위(리솔루토 런지 · 격살 허파 찌르기 'lung' 점과 같은 높이를 그 몸 틀로 —
+ *   숙인 몸이면 세상 위쪽 0.05 m 가 목 경계(몸 틀 0.11 m — combat.js zoneOf)에 가까워져 목으로 셈됐다).
+ *  찌르는 줄(칼 방향 dc · 찌르는 동안 그대로 — 칼 축으로 곧게 = 찌르기): 팔을 다 편 손 H1(어깨에서 comboArmLen)에서 P 로 · 팔 ↔ 칼 꺾임 = 사람 손목 척측 한도(HUMAN.ulnarDev 30°)가 되게
+ *   어깨 → P 줄에서 팔을 φ 만큼 '비킨 쪽'(상대 칼이 없는 쪽 — 상대 칼 날 선분이 어깨 → P 줄에서 비킨 쪽의 반대 · 상대 칼이 없으면 지금 손 쪽)으로 든다 (φ + 칼이 줄에서 내려가는 각 = 30°).
+ *   다 뻗은 칼끝이 P 를 지나는 길이 = 칼 길이 − |P − H1| (가까우면 + — 리솔루토 팔을 뻗은 찌름과 같음) · 모자라면(멀면) 그만큼 런지(아래 — 이탈리아 찌르기 THRUST.itLunge 와 같은 뜻 · THRUST.step 까지).
+ *  토막: 돌려 빼기(맞힘 없음 — 손은 그대로 · 칼끝을 맞물린 상대 칼 밑으로: 지금 칼끝에 가장 가까운 상대 칼 자리에서 막힘 거리 + 닿음 거리만큼 아래) → 겨눔(맞힘 없음 — 찌름 시작: 끝 손에서 줄을 따라
+ *   draw + 지나는 길이 뒤 · 손이 어깨에서 아래팔 길이까지만) → 찌름(줄을 따라 곧게 4 토막 · 맞힘 · 막힘) → 뻗은 채 둠(탭 찌르기 버팀 THRUST.hold · 맞힘 없음) → 찌름 시작 자리로 거둠(맞힘 없음 ·
+ *   손 목표는 손가락 그대로 — 끝 자세에서 0.2 s 에 서보로). draw = 탭 찌르기 당김 THRUST.chamber(0.22 m). 새 수 없음.
+ *  손목: 맞는 때 팔이 거의 펴져 있게(다 뻗은 손에서 칼끝이 P 언저리) + 아래팔을 칼 줄에 맞추는 팔꿈치(fighter.js armIK alignDir — 어깨 → 손 줄 위로 들지 않게) + 칼 면 손 면 찾기(iaiSolve plane)
+ */
+function comboPlanArtThrust(f, I, m, A) {
+  const D = m.dyn;
+  const S = comboShoulder(f, I.yaw);
+  const L = f.weaponCfg.hiltLength + f.weaponCfg.bladeLength;
+  const draw = D.draw ?? THRUST.chamber; // 찌름 길이 = 탭 찌르기가 칼 선 뒤로 당겼다 뻗는 길이(THRUST.chamber 0.22 m)
+  const Lf = comboArmLen();
+  const beta = (f.ulnarMax ? f.ulnarMax() : 30) * D2R; // 팔 ↔ 칼 꺾임 = 사람 손목 척측 한도(HUMAN.ulnarDev) — 팔꿈치를 내린 채 손목만으로 칼끝을 비키는 끝
+  const inv = I.yaw.clone().invert();
+  const c0 = tv(f.bodies.chest.translation(), new THREE.Vector3());
+  const body = (w) => w.clone().sub(c0).applyQuaternion(inv); // 세상 → 몸 틀
+  const foe = f.foe;
+  const fb = foe?.armed && foe.sword ? [body(foe.bladePoint(0, new THREE.Vector3())), body(foe.bladePoint(1, new THREE.Vector3()))] : null; // 상대 칼 날 선분 (몸 틀)
+  // 줄 짜기: 어깨 S → P(거리 dX · 방향 xh) 줄에서 비킨 쪽으로 φ 만큼 든 팔(다 펴짐) 끝 H1 에서 P 로 칼 (꺾임 φ + ψ = beta — ψ = 칼이 S → P 줄에서 돌아오는 각)
+  const solve = (P) => {
+    const X = P.clone().sub(S);
+    const dX = Math.max(1e-3, X.length());
+    const xh = X.clone().divideScalar(dX);
+    let side = null;
+    if (D.under && fb) {
+      // 비킨 쪽 = 상대 칼이 없는 쪽: 상대 칼 날 선분에서 S → P 줄에 가장 가까운 점(8 조각)이 줄에서 비킨 쪽의 반대
+      let best = null;
+      for (let i = 0; i <= 8; i++) {
+        const q = fb[0].clone().lerp(fb[1], i / 8).sub(S);
+        const along = clamp(q.dot(xh), 0, dX);
+        const off = q.addScaledVector(xh, -along);
+        if (!best || off.lengthSq() < best.lengthSq()) best = off;
+      }
+      best.addScaledVector(xh, -best.dot(xh));
+      if (best.lengthSq() > 1e-8) {
+        side = best.normalize().negate();
+        // 밑으로 돌려 뺌 (cavazione — 상대 칼 밑을 지나 다른 쪽으로): 비킨 쪽이 위로 들면 위 몫을 빼 옆으로만 (위로 든 팔에서 내려 찌르면 목 · 머리로 들었다) · 옆 몫도 없으면 아래로
+        if (side.y > 0) {
+          side.y = 0;
+          side.addScaledVector(xh, -side.dot(xh));
+          if (side.lengthSq() < 1e-4) side.set(0, -1, 0).addScaledVector(xh, xh.y);
+          side.normalize();
+        }
+      }
+    }
+    if (!side) {
+      const w = A.H.clone().sub(S); // 지금 손 쪽
+      side = w.addScaledVector(xh, -w.dot(xh));
+      if (side.lengthSq() < 1e-8) side.set(0, 1, 0).addScaledVector(xh, -xh.y);
+      side.normalize();
+    }
+    const g = (ph) => ph + Math.atan2(Lf * Math.sin(ph), Math.max(1e-3, dX - Lf * Math.cos(ph))) - beta;
+    let lo = 0;
+    let hi = beta;
+    for (let i = 0; i < 20; i++) {
+      const mid = (lo + hi) / 2;
+      if (g(mid) > 0) hi = mid;
+      else lo = mid;
+    }
+    const ph = (lo + hi) / 2;
+    const u = xh.clone().multiplyScalar(Math.cos(ph)).addScaledVector(side, Math.sin(ph));
+    const H1 = S.clone().addScaledVector(u, Lf);
+    const toP = P.clone().sub(H1);
+    const dP = toP.length();
+    return { dX, ph, H1, dc: toP.divideScalar(Math.max(1e-6, dP)), dP };
+  };
+  // 겨눌 곳: 목 아래 ~ 가슴 위 띠 = 상대 가슴 몸체 틀에서 가운데 0.05 m 위 (리솔루토 'lung' 점과 같은 높이를 그 몸 틀로 — 숙인 몸이면 세상 위쪽 0.05 m 가 목 경계(몸 틀 0.11 m — combat.js zoneOf)에 가까워져서)
+  const aimAt = () => {
+    const B = f.foe.bodies.chest;
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(tq(B.rotation(), new THREE.Quaternion()));
+    const r = comboAimPoint(f, I, 'lung'); // 몸 틀 · 미끄러짐 당김 그대로 — 세상 위쪽 0.05 m 를 몸 틀 위쪽 0.05 m 로 바꿈
+    return r.P.sub(new THREE.Vector3(0, 0.05, 0).applyQuaternion(I.yaw.clone().invert())).add(up.multiplyScalar(0.05).applyQuaternion(I.yaw.clone().invert()));
+  };
+  let P = aimAt();
+  I.aim = 'lung';
+  let Z = solve(P);
+  // 팔을 다 펴도 칼끝이 겨눈 곳에 못 닿으면 모자란 만큼 런지 (이탈리아 찌르기 ③ THRUST.itLunge · AI 임브로카타 탭 찌르기 길과 같은 뜻 — 런지 걸음 THRUST.step 까지):
+  //  몸 미끄러짐(comboMoveStart 와 같은 한도 — 맞닿기에서 멈춤 · clinch 안 금지) + 다리 런지 걸음(몸이 앞발을 따라 실림 — SECRET.stepPush · accel) · 길은 미끄러진 뒤 자리로 짬
+  const short = Z.dP - L;
+  if (short > 1e-3 && f.foe?.bodies?.chest && !I.slide) {
+    const M = f.swordArt.measure;
+    const c0 = f.bodies.chest.translation();
+    const fc = f.foe.bodies.chest.translation();
+    const dx = fc.x - c0.x;
+    const dz = fc.z - c0.z;
+    const d = Math.max(1e-3, Math.hypot(dx, dz));
+    const slide = Math.min(short, THRUST.step, Math.max(0, d - M.contact), Math.max(0, d - M.clinch));
+    if (slide > 1e-3) {
+      I.slide = { dx: dx / d, dz: dz / d, slide, t0: I.t, span: 1, done: 0 };
+      if (f.gait?.active) f.gait.requestStep({ kind: 'lunge', fwd: slide, duration: 0.3, push: SECRET.stepPush, accel: true });
+      I.artLunge = slide; // 재기
+      P = aimAt();
+      Z = solve(P);
+    }
+  }
+  const { H1, dc } = Z;
+  const dX = Z.dX;
+  const over = L - Z.dP; // 다 뻗은 칼끝이 P 를 지나는 길이 (가까우면 + — 리솔루토 팔을 뻗은 찌름과 같음)
+  const H0 = H1.clone().addScaledVector(dc, -Math.min(draw + Math.max(0, over), Lf - ARM.fore)); // 찌름 시작: 칼끝이 P 앞 draw (몸 겉 밖) — 아주 가까우면 손이 어깨에서 아래팔 길이까지만 (팔꿈치를 다 접은 자리)
+  const segs = [];
+  let cur = A;
+  const push = (H, cut, pad = null, T = null, Dv = dc) => {
+    const B = { H, D: Dv.clone(), px: H.z - 0.1, pad };
+    const sg = { cut, A: cur, B };
+    sg.T = T ?? comboSegLen(f, sg) / I.v;
+    segs.push(sg);
+    cur = B;
+  };
+  if (D.under && fb) {
+    // 돌려 빼기: 손은 그대로 두고 칼끝을 맞물린 상대 칼 밑으로 (지금 칼끝에 가장 가까운 상대 칼 자리에서 막힘 거리 + 닿음 거리만큼 아래 — 칼끼리 막힘으로 셈되지 않는 거리)
+    const tip = A.H.clone().addScaledVector(A.D, L);
+    let q = fb[0];
+    let bd = Infinity;
+    for (let i = 0; i <= 8; i++) {
+      const p = fb[0].clone().lerp(fb[1], i / 8);
+      const d = p.distanceTo(tip);
+      if (d < bd) (bd = d), (q = p);
+    }
+    const W = q.clone().add(new THREE.Vector3(0, -(SECRET.iberianBlockDist + SECRET.instantTouch), 0).applyQuaternion(inv));
+    const Dv = W.sub(A.H);
+    if (Dv.lengthSq() > 1e-6) push(A.H.clone(), false, null, null, Dv.normalize());
+  }
+  push(H0.clone(), false);
+  for (let k = 1; k <= 4; k++) push(H0.clone().lerp(H1, k / 4), true);
+  if (I.slide && I.slide.slide > 0) {
+    // 런지: 겨눔 · 찌름 동안 다 미끄러지고 칼끝이 땅에 대해 지나는 길(몸 틀 길 + 미끄러짐)의 빠르기가 I.v 그대로 (comboNext 의 그때 계산 길과 같은 셈)
+    const T = segs.reduce((a, sg) => a + sg.T, 0);
+    const k = T > 0 ? (T * I.v + I.slide.slide) / (T * I.v) : 1;
+    for (const sg of segs) sg.T *= k;
+    I.slide.span = Math.max(1e-3, T * k);
+  }
+  push(H1.clone(), false, null, THRUST.hold); // 뻗은 채 둠 (같은 자리 토막은 칼끝 길이 0 — 탭 찌르기 버팀 시간)
+  push(H0.clone(), false); // 손 목표는 그대로 (손가락이 둔 자리 — 탭으로 낸 칼이라 손 목표를 옮기면 그 뜀이 긋기로 읽혔다) · 끝 자세에서 0.2 s 에 서보로
+  I.overshoot = H1.clone().addScaledVector(dc, L).sub(P).dot(dc); // 재기 (판정에는 안 씀): 다 뻗은 칼끝이 겨눈 곳을 지난 길이 (m — 음수면 못 닿음)
+  I.artReach = { dX, el: Math.asin(clamp(dc.y, -1, 1)) / D2R, lift: Z.ph / D2R, hand: H1.distanceTo(S) }; // 재기: 어깨 → P · 칼 높이각(°) · 팔을 든 각 φ(°) · 끝 손 ↔ 어깨
+  return segs;
+}
+
+/**
+ * 사람 겹치기 한 칼의 길 (G7 두플리렌 — requestArtDup · 원전 Ringeck 주해 Duplieren 「폼멜을 왼손으로 오른팔 밑으로 밀고 상대 칼 뒤, 칼과 사람 사이로 엇갈린 팔로 얼굴을 친다」 [원전 2차] · 길 [해석]):
+ *  몸 틀(시작 yaw · 가슴 원점). X = 지금 내 칼날과 상대 칼날이 가장 가까운 내 칼 자리(손에서 칼 축으로 sx) · 맞닿은 어긋남(내 칼 − 상대 칼)은 그대로(칼을 떼지 않음).
+ *  얼굴 P = 상대 머리 몸체 가운데에서 머리 틀 아래로 dyn.face m (입 언저리 — 투구 테 아래).
+ *  ① 미끄러뜨려 밀어 넣기 (맞힘 없음): 내 칼 방향 그대로 맞닿은 자리를 상대 칼 줄을 따라 칼끝 쪽으로 옮기고(상대 칼 몫 0.05 칸) 칼 축으로 밀어 X 너머 칼날이 얼굴까지 닿게(X 너머 길이 ≥ |P − X| + 닿음 거리 ·
+ *   손은 어깨에서 팔 길이까지). ② 감아 베기 (맞힘): 맞닿은 자리 X 를 축으로 칼을 지금 방향 D0 → 얼굴 쪽 방향 Dp → 그 길 끝 방향으로 dyn.follow ° 더. 얼굴까지는 상대 칼 줄(X 에서 상대 칼자루 쪽 u)을 둘레로 감는 길
+ *   (u 에서 벌어진 각 α · u 둘레 각 β 를 고르게 — α 는 늘 두 끝 가운데 작은 쪽 이상 = 내 칼 줄이 상대 칼 줄과 겹치지 않음 → 칼이 칼을 지나가지 않음 · 감기 Winden 과 같은 꼴) ·
+ *   손 = X − 칼 방향 × sx (칼자루는 칼끝 반대쪽 — 오른쪽으로 돌면 폼멜이 오른팔 밑 · 손이 엇갈림).
+ *   옮김 자리 · 감는 쪽(둘레 두 쪽)은 얼굴에 닿기 전 X 너머 칼날이 상대 몸(머리 · 목 밖 — 팔 · 몸통 · 다리)을 닿음 거리 안에 지나지 않는 것 가운데 가장 덜 옮긴 것 · 같으면 얼굴을 내려 지나는 쪽
+ *   (다 막히면 가장 멀리 비킨 것 — 앞을 가린 팔에 먼저 닿음). 길 덧칸 m.plan [밀어 넣은 자리 · 얼굴을 지나는 자리 · 끝] 마다 [칼끝 들기 °, 손 뻗기 m, 손 돌리기 °] (comboPlanAdd).
+ *  재기: I.dup = { sx, push, sweep(°), down(° — 얼굴을 지날 때 칼끝이 내려가는 각 · + = 내려 벰), reach(손 ↔ 어깨 최대), dP, minA(상대 칼 줄에서 가장 가까이 간 각), tX · tC(맞닿은 자리 상대 칼 몫 — 처음 · 옮긴 뒤), clear }
+ */
+function comboPlanDup(f, I, m, A) {
+  const D = m.dyn;
+  const HL = f.weaponCfg.hiltLength;
+  const L = HL + f.weaponCfg.bladeLength;
+  const S = comboShoulder(f, I.yaw);
+  const Lf = comboArmLen();
+  const inv = I.yaw.clone().invert();
+  const c0 = tv(f.bodies.chest.translation(), new THREE.Vector3());
+  const body = (w) => w.clone().sub(c0).applyQuaternion(inv);
+  const toW = (v) => v.clone().applyQuaternion(I.yaw).add(c0);
+  const foe = f.foe;
+  const fb0 = body(foe.bladePoint(0, new THREE.Vector3()));
+  const fb1 = body(foe.bladePoint(1, new THREE.Vector3()));
+  const hb = foe.bodies.head;
+  const hup = new THREE.Vector3(0, 1, 0).applyQuaternion(tq(hb.rotation(), new THREE.Quaternion()));
+  const P = body(tv(hb.translation(), new THREE.Vector3()).addScaledVector(hup, -(D.face ?? 0)));
+  const touch = SECRET.instantTouch;
+  // 맞닿은 자리 (내 칼 축 16 조각 중 상대 칼날에 가장 가까운 곳)
+  let best = null;
+  for (let i = 0; i <= 16; i++) {
+    const sx = HL + (L - HL) * (i / 16);
+    const p = A.H.clone().addScaledVector(A.D, sx);
+    const r = segPointT(fb0, fb1, p);
+    if (!best || r.d < best.d) best = { d: r.d, sx, X: p, t: r.t };
+  }
+  const tX = best.t;
+  const D0 = A.D.clone().normalize();
+  const u = fb0.clone().sub(fb1).normalize(); // X → 상대 칼자루 쪽
+  const e1 = new THREE.Vector3().crossVectors(u, Math.abs(u.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)).normalize();
+  const e2 = new THREE.Vector3().crossVectors(u, e1);
+  const sph = (v) => ({ a: Math.acos(clamp(v.dot(u), -1, 1)), b: Math.atan2(v.dot(e2), v.dot(e1)) });
+  const S0 = sph(D0);
+  const cols = [];
+  for (const [h, info] of f.colliderInfo) {
+    if (info.fighter !== foe || info.kind === 'weapon' || info.detached || info.part === 'head' || info.part === 'neck') continue;
+    const col = f.world.getCollider(h);
+    if (col) cols.push(col);
+  }
+  // 한 판 짜기: 상대 칼 몫 t 로 옮긴 맞닿은 자리 · 감는 쪽 k (0 짧은 쪽 · 1 긴 쪽)
+  const plan = (t, k) => {
+    const slide = fb0.clone().lerp(fb1, t).sub(fb0.clone().lerp(fb1, tX));
+    const X = best.X.clone().add(slide);
+    const Hs = A.H.clone().add(slide);
+    const need = P.distanceTo(X) + touch;
+    let push = clamp(best.sx - (L - need), 0, Math.max(0, best.sx - HL - touch)); // 맞닿은 자리는 칼날 위(코등이에서 닿음 거리 너머)에 남음
+    if (Hs.clone().addScaledVector(D0, push).distanceTo(S) > Lf) {
+      let lo = 0;
+      let hi = push;
+      for (let i = 0; i < 16; i++) {
+        const mid = (lo + hi) / 2;
+        if (Hs.clone().addScaledVector(D0, mid).distanceTo(S) > Lf) hi = mid;
+        else lo = mid;
+      }
+      push = lo;
+    }
+    const sx = best.sx - push;
+    const Dp = P.clone().sub(X).normalize();
+    const Sp = sph(Dp);
+    let db = Sp.b - S0.b;
+    if (db > Math.PI) db -= 2 * Math.PI;
+    if (db < -Math.PI) db += 2 * Math.PI;
+    if (k && Math.abs(db) > 1e-3) db -= Math.sign(db) * 2 * Math.PI;
+    const dirAt = (w) => {
+      const a = S0.a + (Sp.a - S0.a) * w;
+      const b = S0.b + db * w;
+      return u.clone().multiplyScalar(Math.cos(a)).addScaledVector(e1, Math.sin(a) * Math.cos(b)).addScaledVector(e2, Math.sin(a) * Math.sin(b)).normalize();
+    };
+    // 얼굴에 닿기 전(감는 길 0 ~ 0.95) X 너머 칼날 ↔ 상대 몸(머리 · 목 밖)의 가장 가까운 거리 · 얼굴이 X 너머 칼날 밖이면 −1 (못 닿음)
+    let clear = P.distanceTo(X) > L - sx ? -1 : Infinity;
+    for (let j = 1; j <= 19 && clear >= 0; j++) {
+      const Dv = dirAt((0.95 * j) / 19);
+      const a = toW(X.clone().addScaledVector(Dv, touch));
+      const b = toW(X.clone().addScaledVector(Dv, L - sx));
+      for (const col of cols) clear = Math.min(clear, segToCollider(a, b, col));
+    }
+    const tan = dirAt(1).sub(dirAt(0.98)).normalize();
+    return { t, k, X, Hs, push, sx, Dp, db, Sp, dirAt, clear, tan, down: Math.asin(clamp(-tan.y, -1, 1)) / D2R };
+  };
+  // 비킴 문턱 = 막힘 거리 + 닿음 거리 (칼끝 돌려 빼기가 상대 칼 밑을 지나는 거리와 같음 — 놓인 칼은 손목 교정 · 날 세우기로 짠 길에서 몇 cm 비켜 남)
+  const need = SECRET.iberianBlockDist + touch;
+  let pick = null;
+  for (let t = tX; t <= 1 + 1e-9 && !(pick && pick.clear > need); t += 0.05) {
+    for (const k of [0, 1]) {
+      const z = plan(t, k);
+      const ok = z.clear > need;
+      if (!pick || (ok && !(pick.clear > need)) || (ok && pick.clear > need && pick.t === z.t && z.down > pick.down) || (!ok && !(pick.clear > need) && z.clear > pick.clear)) pick = z;
+    }
+  }
+  const { X, Hs, push, sx, Dp, dirAt, tan, t: tC } = pick;
+  const H0 = Hs.clone().addScaledVector(D0, push);
+  const segs = [];
+  let cur = A;
+  const pl = m.plan ?? [];
+  const put = (H, Dv, cut, row) => {
+    const B = { H: H.clone(), D: Dv.clone().normalize(), px: H.z - 0.1, pad: null };
+    if (row) comboPlanAdd(B, row);
+    const sg = { cut, A: cur, B };
+    sg.T = comboSegLen(f, sg) / I.v;
+    segs.push(sg);
+    cur = B;
+  };
+  put(H0, D0, false, pl[0]);
+  let ax2 = new THREE.Vector3().crossVectors(Dp, tan);
+  if (ax2.lengthSq() < 1e-8) ax2 = new THREE.Vector3(0, 1, 0);
+  ax2.normalize();
+  const fol = (D.follow ?? 25) * D2R;
+  let arc = 0;
+  for (let j = 1; j <= 20; j++) arc += Math.acos(clamp(dirAt(j / 20).dot(dirAt((j - 1) / 20)), -1, 1));
+  const N1 = Math.max(2, Math.round((6 * arc) / Math.max(1e-6, arc + fol)));
+  const N2 = Math.max(1, 6 - N1);
+  let reach = 0;
+  const rowAt = (k, a, b) => (a || b ? [0, 1, 2].map((q) => (a?.[q] ?? 0) + ((b?.[q] ?? 0) - (a?.[q] ?? 0)) * k) : null);
+  for (let j = 1; j <= N1 + N2; j++) {
+    const Dv = j <= N1 ? dirAt(j / N1) : Dp.clone().applyAxisAngle(ax2, (fol * (j - N1)) / N2);
+    const H = X.clone().addScaledVector(Dv, -sx);
+    reach = Math.max(reach, H.distanceTo(S));
+    put(H, Dv, true, j <= N1 ? rowAt(j / N1, pl[0], pl[1]) : rowAt((j - N1) / N2, pl[1], pl[2])); // 길 덧칸 칸마다 보간 (얼굴까지 [0] → [1] · 그 뒤 [1] → [2])
+  }
+  let minA = 180;
+  for (let j = 0; j <= 20; j++) minA = Math.min(minA, Math.acos(clamp(dirAt(j / 20).dot(u), -1, 1)) / D2R);
+  I.dup = { sx: +sx.toFixed(3), push: +push.toFixed(3), sweep: +((arc + fol) / D2R).toFixed(1), down: +pick.down.toFixed(1), reach: +reach.toFixed(3), dP: +P.distanceTo(X).toFixed(3), minA: +minA.toFixed(1), tX: +tX.toFixed(2), tC: +tC.toFixed(2), clear: +pick.clear.toFixed(3), way: pick.k };
+  I.dupGlide = true; // 처음 닿아 있던 상대 칼을 따라 감는 동안은 막힘이 아님 (stepCombo — 떨어진 뒤 다시 닿으면 막힘)
+  I.aim = 'face';
+  return segs;
+}
+
 /** 몸 틀 손 자리 → 그 손을 부르는 패드 (날것 매핑 z = 0.1 + x · y = 0.1 + y 를 거꾸로, 패드 안으로) — 연환이 끝난 뒤 손 목표를 그 자리에 둔다 (endCombo snapAim) */
 function comboPad(H) {
   return [clamp(H.z - 0.1, -0.6, 0.6), clamp(H.y - 0.1, -0.6, 0.6)];
@@ -1653,7 +2085,7 @@ function comboMoveStart(f, I, mi) {
   dz /= d;
   // 안다레 리솔루토 런지(앞발 st.foot 이 있는 수 — SECRET.risolutoStep 만)는 이탈리아 간격 줄 'contact' 판에서 지금 맞닿음으로 멈춤 (weapon_measured.js risolutoContact · 없으면 몸 간격 그대로)
   const contact = (st.foot != null && risolutoContact(f.weapon?.id)) || M.contact;
-  let slide = fwd > 0 ? Math.min(clamp(d - contact, 0, fwd), Math.max(0, d - M.clinch)) : fwd; // 앞 = 발도 미끄러짐과 같은 한도 · 뒤(물러남 — 10/12 3 연격) = 반걸음 그대로
+  let slide = fwd > 0 ? Math.min(st.close ? fwd : clamp(d - contact, 0, fwd), Math.max(0, d - M.clinch)) : fwd; // 앞 = 발도 미끄러짐과 같은 한도(close — 날개 접기 10/28: 맞닿기에서 멈추지 않고 걸음만큼 · clinch 안 금지 그대로) · 뒤(물러남 — 10/12 3 연격) = 반걸음 그대로
   if (slide < 0) {
     // 물러남은 경기장 테두리(ARENA.radius — 이미 있는 값)를 넘지 않게: 끝 자리 가슴이 반지름 밖이면 그 안까지만
     const ex = c.x + dx * slide;
@@ -1696,7 +2128,7 @@ function stepCombo(f, combat) {
     }
     if (I.si < I.segs.length) break;
     if (!comboNext(f, I)) {
-      placeIai(f, I.cur.H, I.cur.D, false, I.cur.turn ?? 0, I.edgeHint ?? null, !!I.moves[I.mi]?.band);
+      placeIai(f, I.cur.H, I.cur.D, false, I.cur.turn ?? 0, I.edgeHint ?? null, !!(I.moves[I.mi]?.band || I.moves[I.mi]?.roll));
       if (I.moves[I.mi]?.lunge) lungeSweep(f, I, combat, t0, I.t); // 런지: 이 스텝에 남은 토막(찌름 · 뽑음)을 지났으면 그 길도 본다
       return endCombo(f, combat);
     }
@@ -1726,15 +2158,21 @@ function stepCombo(f, combat) {
   const u = sg.T > 0 ? clamp((I.t - I.ts) / sg.T, 0, 1) : 1;
   const P = comboLerp(sg, u);
   I.cutting = sg.cut;
-  I.body = comboBody(P.px);
+  const bp = I.moves[I.mi]?.bodyPose; // 겹치기 몸 (10/28 — 엇갈린 손: UNIQUE_ASSIST.dupBody [골반 °, 가슴 °, 숙임 °, 낮춤 m] — 이 수 동안 손 쪽 몸 돌림에서 그 꼴로)
+  if (bp) {
+    const b0 = comboBody(P.px);
+    const w = clamp((I.t - I.segT0) / Math.max(1e-3, I.segs.reduce((a, x) => a + x.T, 0)), 0, 1);
+    I.body = { pelvisYaw: b0.pelvisYaw + (bp[0] - b0.pelvisYaw) * w, chestYaw: b0.chestYaw + (bp[1] - b0.chestYaw) * w, pitch: b0.pitch + (bp[2] - b0.pitch) * w, drop: b0.drop + (bp[3] - b0.drop) * w };
+  } else I.body = comboBody(P.px);
   I.cur = P;
   // 제비 베기 되돌림 칼(cutSweep — 10/25): 날이 칼끝이 가는 쪽(길 위 이 자리 칼끝 − 지난 스텝 칼끝)을 향하게 (날 세우기)
   if (I.moves[I.mi]?.cutSweep && I.prev?.tip) {
     const Dw = P.D.clone().applyQuaternion(I.yaw).normalize();
     const hint = P.H.clone().applyQuaternion(I.yaw).add(tv(f.bodies.chest.translation(), new THREE.Vector3())).addScaledVector(Dw, f.weaponCfg.hiltLength + f.weaponCfg.bladeLength).sub(I.prev.tip);
+    if (I.moves[I.mi]?.edge < 0) hint.negate(); // 겹치기 짧은 날 (UNIQUE_ASSIST.dupEdge −1 — 칼 면 +x 날의 반대가 앞장)
     if (hint.lengthSq() > 1e-8) I.edgeHint = hint;
   }
-  const cur = placeIai(f, P.H, P.D, false, P.turn, I.moves[I.mi]?.cutSweep ? I.edgeHint ?? null : null, !!I.moves[I.mi]?.band);
+  const cur = placeIai(f, P.H, P.D, false, P.turn, I.moves[I.mi]?.cutSweep ? I.edgeHint ?? null : null, !!(I.moves[I.mi]?.band || I.moves[I.mi]?.roll)); // roll: 굴림 묶음만 (칼끝 돌려 빼기 — 10/28)
   const subs = I.moves[I.mi]?.lunge ? 0 : 3; // 런지는 아래 lungeSweep (지나온 토막 길을 따라)
   // 제비 베기 되돌림 칼(10/25 — requestArtSnap 의 cutSweep): 꺾은 자리로 거두는 준비 토막(맞힘 없음)에서 베는 토막으로 넘어온 스텝은 맞힘을 보지 않는다 —
   //  그 스텝 쓸린 자리가 준비 토막(내려간 칼 자리 — 상대 다리 곁)부터 베기로 셈됐다 (겨눈 찌름 thrustSweep 과 같은 까닭 · 길 점 자리는 팔이 다 닿지 않아 실제 놓인 칼과 달라 그 자리부터 재지 않음)
@@ -1752,7 +2190,12 @@ function stepCombo(f, combat) {
     }
     if (!sg.cut || fresh || I.hitM || I.blockM || !foe.alive || foe.state === 'dead') continue;
     // 몸보다 먼저 상대 칼에 닿으면 이 수는 막힘 (이베리아 휩쓸기와 같은 거리 — 밀어냄 없음) · 죽음의 일격은 넘어 들어감 규칙(SECRET.mordOver)이면 막힘 없음
-    if (!I.mord?.over && foe.armed && foe.sword && segSegApprox(B, tip, foe.bladePoint(0, new THREE.Vector3()), foe.bladePoint(1, new THREE.Vector3())) < SECRET.iberianBlockDist) {
+    // 겹치기(10/28 — 맞닿은 자리를 축으로 감아 돌림): 처음 붙어 있던 상대 칼에 닿아 있는 동안은 막힘이 아님 · 한 번 떨어진(같은 거리 밖) 뒤 다시 닿으면 막힘 (붙은 칼 따라 미끄러짐 risolutoGlide 와 같은 규칙 · 새 수 없음)
+    const bd = foe.armed && foe.sword ? segSegApprox(B, tip, foe.bladePoint(0, new THREE.Vector3()), foe.bladePoint(1, new THREE.Vector3())) : Infinity;
+    if (I.dupGlide && I.moves[I.mi]?.dup) {
+      if (bd >= SECRET.iberianBlockDist) I.dupGlide = false;
+      else I.glided = (I.glided ?? 0) + 1;
+    } else if (!I.mord?.over && bd < SECRET.iberianBlockDist) {
       I.blockM = true;
       I.blocked++;
       continue;
@@ -1929,7 +2372,7 @@ function endCombo(f, combat) {
   th.chestYaw = K.chestYaw * D2R;
   th.pitch = K.pitch * D2R;
   th.drop = K.drop;
-  if (last?.pad) snapAim(f, last.pad);
+  if (last?.pad && !I.keepAim) snapAim(f, last.pad);
   f.iaiHoldT = I.hold;
   f.iaiHoldKind = 'combo';
   f.iaiFade = I.hold > 0 ? 0 : 0.2; // 붙잡기 0 (제비 베기 되돌림 칼 — 비기 굳음이 아님)이면 곧장 손가락에 돌려준다 (holdIai 의 0.2 s 풀기 그대로)
@@ -1940,7 +2383,7 @@ function endCombo(f, combat) {
   f.hitPointPrev = f.bladePoint(0.7, new THREE.Vector3());
   f.tipVel.set(0, 0, 0);
   f.hitPointVel.set(0, 0, 0);
-  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech, aim: I.aim ?? null, sev: I.sev ?? 0, ...(I.mord ? { mord: true, pullD: I.mord.pullD ?? 0, wPart: I.wPart ?? null, hy: I.hy ?? null } : {}), ...(I.moves.some((m) => m.lunge) ? { lunge: true, glided: I.glided ?? 0, slide: I.slide?.slide ?? 0, foot: I.footStep ?? 0, tipV: I.tipT > 0 ? I.tipL / I.tipT : 0, tipVmax: I.tipVmax ?? 0, v: I.v } : {}) };
+  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech, aim: I.aim ?? null, sev: I.sev ?? 0, ...(I.mord ? { mord: true, pullD: I.mord.pullD ?? 0, wPart: I.wPart ?? null, hy: I.hy ?? null } : {}), ...(I.dup ? { dup: I.dup, glided: I.glided ?? 0 } : {}), ...(I.moves.some((m) => m.lunge) ? { lunge: true, glided: I.glided ?? 0, slide: I.slide?.slide ?? 0, foot: I.footStep ?? 0, tipV: I.tipT > 0 ? I.tipL / I.tipT : 0, tipVmax: I.tipVmax ?? 0, v: I.v } : {}) };
   f.iai = null;
   f.artTech = null;
 }
@@ -1970,6 +2413,52 @@ export function requestArtReturn(f, from, path, SB) {
 export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, band = false }) {
   if (f.iai || f.iaiReq || !path?.length || !(share > 0)) return false;
   requestCombo(f, { moves: [{ from, path, plan, kind: 'cut', name: tech, cutSweep: true, same: true, band }], share, hold: 0, hitMul: 1, tech, maxT }); // plan = [from, ...path] 점마다 길 덧칸 (comboPlanAdd) · cutSweep = 날 세우기 · 준비 토막에서 넘어온 스텝은 맞힘 안 봄 (stepCombo) · same = 손가락 긋기와 같은 공격 (comboMoveStart) · band = 몸통 띠 겨눔(comboBandShift) · 굴림 묶음(placeIai)
+  return true;
+}
+/**
+ * 사람 칼끝 돌려 빼기 (I9 — 사장님 10/28 00:5x · 01:0x — config UNIQUE_ASSIST.cavSnap · unique_assist.js tapChain): 맞물린 뒤 창 안의 탭으로 낸 그 칼을
+ *  제비 베기 되돌림 칼과 같은 틀(연환 — 운동학 · 쓸린 자리의 실제 빠르기 · 판정 배율 1 · 같은 공격 · 끝 자세 붙잡기 없음 · 시간 상한 maxT)로 찌른다. 길 = comboPlanArtThrust (under = 상대 칼 밑으로 돌려 빼기).
+ *  칼끝 빠르기 = 고노센 발도 칼끝 빠르기 × share (unique_assist.js 가 UNIQUE_ASSIST.specialShare.cavazione 로 넘김 — 10/29 02:0x) · 잔상 = 제비 베기 되돌림 칼과 같은 연환 잔상(share 몫).
+ *  plane = 아래팔을 칼 줄에 맞추는 팔꿈치 · 손목이 사람 범위 안인 칼 면(iaiSolve — fighter.js armIK alignDir · wristPlane) · roll = 굴림 묶음(그런 면이 없을 때) ·
+ *  dyn.thrust = 겨눈 찌름과 같이 찌르는 토막 첫 자리부터 쓸린 자리(thrustSweep) · 손목 교정은 칼을 줄에서 비키지 않음(iaiSolve thrustSeg). 이미 끌고 가는 중이면 거절(false)
+ */
+export function requestArtThrust(f, { share, maxT, tech, under = false }) {
+  if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.chest) return false;
+  requestCombo(f, { moves: [{ name: tech, kind: 'thrust', same: true, artThrust: true, roll: true, plane: true, dyn: { kind: 'artThrust', thrust: true, target: 'lung', under } }], share, hold: 0, hitMul: 1, tech, maxT, attack: true });
+  return true;
+}
+/**
+ * 사람 날개 접기 (C6 염시 — 사장님 10/28 00:3x · 01:0x — config UNIQUE_ASSIST.lianTap · unique_assist.js tapChain): 내가 긋던 칼이 상대 칼에 부딪힌 뒤 창 안의 탭으로 낸 그 칼을
+ *  제비 베기 되돌림 칼과 같은 틀(연환 — 운동학 · 쓸린 자리의 실제 빠르기 · 판정 배율 1 · 같은 공격 · 끝 자세 붙잡기 없음 · 시간 상한 maxT · 잔상 = 연환 잔상 share 몫)로 끈다.
+ *  길 = 격살 한 칼과 같은 큰 가로 호(comboPlanAim — 오른 → 왼 side −1 · 가로 ± 40° · 높이 10 → −10° · 칼날 0.8 자리가 겨눈 곳 — 격살 팔 깎기 · 다리 베기와 같은 호) ·
+ *   겨눌 곳 = 상대 배 몸체 가운데(comboAimPoint 'waist') · 처음 닿을 곳이 배 · 골반이 되게 높이를 가장 적게 옮김(waistAim) · 첫 토막(호 첫 자리 = 오른 옆으로 옮김)은 맞힘 없음 = 날개 접기(부딪힌 칼을 오른 허리 옆으로 거둠) ·
+ *  날 세우기 · 굴림 묶음(cutSweep · roll) · 걸음(앞으로 반걸음 SECRET.chineseStep — comboMoveStart: 몸 미끄러짐은 맞닿기에서 멈추지 않고 걸음만큼(close) · clinch 안 금지 · 다리 런지 걸음 ·
+ *  길은 미끄러진 뒤 자리로 짬) · 시간 상한은 베는 몫부터(capFromCut) · 끝나도 손 목표 그대로(keepAim). 이미 끌고 가는 중이면 거절(false)
+ */
+export function requestArtFold(f, { share, maxT, tech, step = null }) {
+  if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.abdomen) return false;
+  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, capFromCut: true, ...(step ? { step: { ...step, close: true } } : {}), dyn: { kind: 'aim', target: 'waist', band: 'waist', from: 'prep', side: -1, yaw: [-40, 40], el: [10, -10], at: 0.8 } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true });
+  return true;
+}
+/**
+ * 사람 겹치기 (G7 두플리렌 — 사장님 10/28 01:2x '지금대로' · 감독 전달 — config UNIQUE_ASSIST.dupTap · unique_assist.js tapChain): 내 긋기가 상대 칼에 맞물려 닿아 있는 동안의 탭으로 낸 그 칼을
+ *  제비 베기 되돌림 칼과 같은 틀(연환 — 운동학 · 쓸린 자리의 실제 빠르기 · 판정 배율 1 · 같은 공격 · 끝 자세 붙잡기 없음 · 시간 상한 maxT · 잔상 = 연환 잔상 share 몫)로 끈다.
+ *  길 = comboPlanDup (맞물린 자리에서 칼을 떼지 않고 상대 칼 뒤 — 상대 칼과 몸 사이 — 로 밀어 넣은 뒤 맞닿은 자리를 축으로 칼자루를 오른쪽(폼멜이 오른팔 밑)으로 돌려
+ *   칼날 앞몫이 얼굴을 지나는 사선 베기 · 손이 엇갈림) · 날 = edge(1 긴 날 · −1 짧은 날 — 날 세우기 쪽) · 몸 = bodyPose · 끝나도 손 목표 그대로(keepAim). 이미 끌고 가는 중이면 거절(false)
+ */
+export function requestArtDup(f, { share, maxT, tech, face = 0, follow = 25, plan = null, body = null, edge = 1 }) {
+  if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.head || !f.foe.armed || !f.foe.sword) return false;
+  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, dup: true, edge, plan, bodyPose: body, dyn: { kind: 'dup', face, follow } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true });
+  return true;
+}
+/**
+ * 사람 풍차 베기 (B4 레돈두 — 이베리아 특수 공격 · 사장님 10/29 · config UNIQUE_ASSIST.rdHold · unique_assist.js holdTick): 길게 눌러 머리 위로 돌리던 칼(iberian_redondo.js)을 뗀 순간
+ *  제비 베기 되돌림 칼과 같은 틀(연환 — 운동학 · 쓸린 자리의 실제 빠르기 · 판정 배율 1 · 같은 공격 · 끝 자세 붙잡기 없음 · 시간 상한 maxT — 베는 몫부터 capFromCut · 잔상 = 연환 잔상 share 몫)로 끈다.
+ *  길 = comboPlanRd (arc = UNIQUE_ASSIST.rdArc) · 날 세우기 · 굴림 묶음 · 끝나도 손 목표 그대로(keepAim). 이미 끌고 가는 중이면 거절(false)
+ */
+export function requestArtRedondo(f, { share, maxT, tech, arc, loop = null }) {
+  if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.chest || !arc) return false;
+  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, capFromCut: true, rd: { arc, loop } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true });
   return true;
 }
 export const ART_HIST = 0.3; // s — 잔상으로 그릴 지난 길 (감독 값)
