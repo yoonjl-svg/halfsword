@@ -2286,3 +2286,4 @@
 
 ### 10/29 15:5x 사장님 결정 — 반응 = 본 유파 · 광기의 브론 · 롤랑 / 베르나르도 가르기 · 설정 맞춤 (작업자 wk/temperament)
 - "반응은 본 유파 숙련도를 따르도록 해" → AI 반응 시간(`AI_PROFICIENCY.reaction`)은 인물의 본 유파 숙련도(`persona.mainProficiency` = 시트 `ai.proficiency`)에서. 고유 동작 · 비기 · schoolK · 패시브 · 흘림 문턱은 손에 든 유파 그대로. 마른 길 세기(`DRYPATH.power`)는 애매해 그대로 두고 여쭘. 가름 표 · 잰 것은 `docs/characters/temperament_2026-10-29.md` §7-1 · 확인표 2804. 관문 그대로.
+- "광기의 브론 버그 고쳐" → 숙련도 표 열쇠를 시트 무기 유파에서 **AI 가 실제로 싸우는 유파**(꾸러미 `persona.school` → 없으면 시트 무기)로(`characters.js` aiAtProficiency — resolveSwordArt 와 같은 규칙). 광기의 브론 `{ german: 2 }` → `{ none: 2 }` 하나만 바뀜 → AI 숙련도 0 → 2(낮의 브론 + 1) · 무유파 꾸러미 그대로(10/25 20:0x). 문서 §7-2 · 확인표 2805. 관문 그대로.

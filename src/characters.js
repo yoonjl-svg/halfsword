@@ -21,7 +21,7 @@ import { WANDER_EXCLUSIVE } from './wander_rules.js'; // 방랑에서만 나오�
 import { WEAPONS, WEAPON_LIST } from './weapons.js';
 import { getLook, CHARACTER_LOOK_VERSION } from './looks.js';
 import { AI_LEVELS, AI_PROFICIENCY } from './config.js'; // 변형의 실력 숫자를 원본 실효값에서 계산 · 숙련도 → 실력 숫자 이름 (config.js는 아무것도 import하지 않아 순환이 없다)
-import { traditionOf } from './schools.js'; // 인물의 유파 = 시트 무기의 유파 (숙련도 표 열쇠 — 10/13)
+import { traditionOf, schoolOf } from './schools.js'; // 인물의 유파 = AI 가 실제로 싸우는 유파 — 꾸러미 persona.school 이 있으면 그 유파, 없으면 시트 무기의 유파 (숙련도 표 열쇠 — 10/13 · 10/29 15:5x)
 
 export const CHARACTERS = [
   // ───────────────────────────────────────────── 1. 쉬움 : 촌뜨기 난동꾼 ─────────────────────────────────────────────
@@ -578,9 +578,14 @@ const HEINRICH = CHARACTERS.find((c) => c.id === 'heinrich');
 const VARIANT_PLUS = 1;
 //  본 유파 숙련도 mainProficiency (사장님 10/29 15:5x '반응은 본 유파 숙련도를 따르도록 해'): 사람 몫(반응 — ai.js setLevel)은 손에 든 무기가 아니라 이 값을 읽는다.
 //   유파 몫(고유 동작 · 비기 · schoolK · 패시브 · 흘림 문턱)은 그대로 손에 든 유파의 숙련도 — 가름은 docs/characters/temperament_2026-10-29.md §7-1
+//  표 열쇠 (사장님 10/29 15:5x '광기의 브론 버그 고쳐'): AI 가 실제로 싸우는 유파 = sword_art.js resolveSwordArt 와 같은 규칙(꾸러미 persona.school 의 유파 → 없으면 시트 무기의 유파).
+//   전엔 늘 시트 무기의 유파라, 팔쉬온을 들되 나뭇가지(무유파) 꾸러미로 싸우는 광기의 브론이 { german: 2 } 를 받고 AI 는 무유파 칸 0 을 읽었다(반응 0.35 s — 낮의 브론보다 느림).
+//   다른 인물은 꾸러미 유파 = 시트 무기 유파(시험 character_school_pack)라 표가 그대로다
 export function aiAtProficiency(c, p) {
   const level = AI_PROFICIENCY.levels[p] ?? 'normal';
-  const persona = { ...c.ai.persona, proficiency: { [traditionOf(WEAPONS[c.weapon])]: p }, mainProficiency: p };
+  const pack = c.ai.persona?.school;
+  const tradition = pack != null ? schoolOf(pack).tradition : traditionOf(WEAPONS[c.weapon]);
+  const persona = { ...c.ai.persona, proficiency: { [tradition]: p }, mainProficiency: p };
   if (c.mad && !c.appearanceOnly && !c.retainBaseStats) {
     const base = CHARACTERS.find((x) => x.id === c.variantOf);
     persona.level = scaledLevel({ level, persona: base.ai.persona }, MAD_SCALE);

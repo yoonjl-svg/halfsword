@@ -26,6 +26,16 @@ test('다른 유파 무기: 유파 몫은 그 유파 숙련도(0) · 반응은 �
   }
 });
 
+test('광기의 브론: 숙련도 표 = 실제로 싸우는 유파(무유파) · 원본 + 1 로 싸움 · 낮의 브론보다 느리지 않음 (사장님 10/29 15:5x)', () => {
+  assert.deepEqual(C.bran_mad.ai.persona.proficiency, { none: 2 });
+  const mad = aiOf('bran_mad'), day = aiOf('bran');
+  assert.equal(mad.proficiency, C.bran.ai.proficiency + 1);
+  assert.equal(mad.mainProficiency, C.bran.ai.proficiency + 1);
+  assert.equal(mad.level.reaction, AI_PROFICIENCY.reaction[2]);
+  assert.ok(mad.level.reaction < day.level.reaction, `${mad.level.reaction} < ${day.level.reaction}`);
+  assert.equal(mad.art.tradition, 'none'); // 검술을 배우지 못함 — 팔쉬온을 들어도 무유파 그대로 (10/25 20:0x)
+});
+
 test('제 무기 · 인물 없는 AI 는 그대로 (두 몫이 같다)', () => {
   const m = aiOf('margarethe');
   assert.equal(m.proficiency, 3);
