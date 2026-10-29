@@ -21,7 +21,8 @@ import { readProfile, recordDuel } from './player_profile.js'; // 대기실 이�
 import { readLobbyEquipment, readLobbyArmor, readLobbyNeck, LOBBY_ARMOR, HERO_TEAR } from './lobby_equipment.js'; // 대기실 장착을 싸움에 (사장님 10/16 03:5x '장착하면 실제 전투에 가져나가게 해' — docs/import/lobby_fix_2026-10-16.md §3 · 용사의 눈물 hero_tear_2026-10-17.md)
 import { journeyCoins, awardHead, readProgress, rand01, recordCampaignStage, migrateCampaignStages, ensureWanderRun, saveWanderLoadout, resetWanderLoadout, markWanderFighting, settleAbandonedWander, awardWanderHead, settleWander, wanderNoticeDue, markWanderNotice, markWanderEncounter } from './lobby_progress.js'; // 여정 판 끝 금화 · 상대의 목을 베면 머리 1 (사장님 10/16 04:3x) · 방랑 저장 (10/23) · 방랑 전용 상대 알림 창 본 기록 (10/24)
 import { showTitleNotice } from './title_notice.js'; // 결과 창 위 호칭 알림 창 (10/24)
-import { titleTierDraw } from './lobby_progress.js'; // 호칭 하나마다 레전드 확률 (10/24 — drawCardIds)
+import { titleTierDraw, saveWanderResume } from './lobby_progress.js'; // saveWanderResume = 방랑 몸 상태 이어받기 (10/30 — WANDER.resumeState)
+import { snapshotFighter, applyFighterSnapshot } from './fight_snapshot.js'; // 방랑 몸 상태 사본 (10/30 01:1x — 감독 안 (b)) // 호칭 하나마다 레전드 확률 (10/24 — drawCardIds)
 import { TIER_DRAW } from './weapons.js';
 import { COIN_ICON, POUCH_ICON } from './wallet_icons.js'; // 결과 창 금화 줄 = 대기실 금화 · 천 주머니 그림 (사장님 10/16 14:0x)
 import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, playerLetters } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
@@ -582,6 +583,7 @@ const WANDER_FOES = [...new Set([...WANDER_STAGES.map((id) => STAGE_FOE[id]), ..
 // 주소 스위치 (?title=1 과 함께 — 대기실을 거쳐야 방랑이 열린다): ?wanderQuit=1 = 싸움 도중 그만두면 패배 · ?wanderLegacy=0 = 옛 저장 한 바퀴 인정 끔 (wander_rules.js WANDER — 사장님 확인 전)
 if (['0', '1'].includes(params.get('wanderQuit'))) WANDER.quitAsLoss = params.get('wanderQuit') === '1';
 if (['0', '1'].includes(params.get('wanderLegacy'))) WANDER.legacyLoop = params.get('wanderLegacy') === '1';
+if (['0', '1'].includes(params.get('wanderResume'))) WANDER.resumeState = params.get('wanderResume') === '1'; // 몸 상태 이어받기 시제품 (사장님 10/30 01:1x — 감독 안 (b) · 기본 끔)
 // 대기실 장착을 싸움에 (docs/import/lobby_fix_2026-10-16.md §3): 첫 화면·대기실에서 연 여정만(journeySaves — 주소 고정 판·테스트 경로·옛 메뉴 판은 지금 그대로).
 //  weapon = 대기실 무기(있으면 무대마다 카드 없이 그 무기 · 없으면 카드) · armor = 케틀 햇(있으면 투구 + 최대 기력 130 · 없으면 맨머리) ·
 //  neck = 용사의 눈물(있으면 플레이어 기력 무한 + 내 기력 막대 없음 · 겉모습 그대로 — 10/17, docs/import/hero_tear_2026-10-17.md).
@@ -1717,6 +1719,21 @@ function showHint(text, ms = 3500) {
   hudLater('hint', ms / 1000, () => hint.classList.remove('show'));
 }
 
+// 방랑 몸 상태 이어받기 (WANDER.resumeState — 사장님 10/30 01:1x '이어하면 그 상황 그대로' · 감독 안 (b) · src/fight_snapshot.js):
+//  싸우는 동안 2 초마다 · 대기실로 나갈 때 · 화면을 떠날 때 두 몸의 사본을 진행 중 판(run.resume)에 적고, 같은 대면을 다시 열면 판을 세운 뒤 첫 스텝 전에 입힌다
+let resumeSaveT = 0;
+const wanderResumeOn = () => wanderSaves() && WANDER.resumeState && !WANDER.quitAsLoss;
+function saveWanderBody() {
+  if (!wanderResumeOn() || roundOver || !player || !enemy || !currentFoe) return false;
+  return saveWanderResume({ v: 1, foe: currentFoe.id, foeWeapon: enemy.weapon?.id ?? null, player: snapshotFighter(player), enemy: snapshotFighter(enemy) });
+}
+function applyWanderBody(run) {
+  const R = run?.resume;
+  if (!wanderResumeOn() || !R || R.v !== 1 || R.foe !== currentFoe?.id) return false;
+  applyFighterSnapshot(player, R.player);
+  if (R.foeWeapon === enemy.weapon?.id) applyFighterSnapshot(enemy, R.enemy);
+  return true;
+}
 async function startFight() {
   if (wanderMode && !openWanderRound()) return; // 방랑: 지금 판의 무대를 짓고 pendingJourney 에 넣는다 (버린 판을 패배로 셈했으면 결과 창 — 판을 열지 않음)
   $('btnStart').hidden = false; // 방랑 진 판 결과 창이 숨긴 단추
@@ -1760,6 +1777,7 @@ async function startFight() {
     lastPlayerWeapon = lobbyWeapon;
     newRound(lobbyWeapon);
     saveJourneyRound(null);
+    applyWanderBody(savedRound); // 방랑 몸 상태 이어받기 (WANDER.resumeState — 끄면 아무 일 없음)
     if (wanderEncounter(beginFight)) return; // 방랑 전용 상대면 싸움 전에 알림 창 (10/24 — 확인을 누르면 싸움)
     beginFight();
     return;
@@ -1768,6 +1786,7 @@ async function startFight() {
     // 이어하기: 무기를 이미 골라 둔 판 — 그 무기로 무대 시작부터 (카드 없이)
     lastPlayerWeapon = savedRound.weapon;
     newRound(savedRound.weapon);
+    applyWanderBody(savedRound); // 방랑 몸 상태 이어받기 (WANDER.resumeState — 끄면 아무 일 없음)
     if (wanderEncounter(beginFight)) return; // 방랑 전용 상대 알림 창 (10/24 — 같은 대면에서 이미 봤으면 없음)
     beginFight();
     return;
@@ -1986,12 +2005,15 @@ function pause() {
   input.resetTransient();
   document.exitPointerLock?.();
   $('menuTitle').textContent = '일시정지';
+  // 방랑 정지 창은 '재개' · '대기실'만 (사장님 10/30 01:1x '방랑과 생사전은 일시정지 후엔 재개랑 대기실로 가기만 할 수 있고 재시작은 못하게 해') — 아래 btnStart('재대결')를 감춘다
+  const noRestart = wanderMode;
   // 방랑 · 도중에 그만두기 켬(WANDER.quitAsLoss)이면 싸우는 동안 그만두면 패배라고 알린다
   $('menuSub').textContent = wanderSaves() && WANDER.quitAsLoss && pausedFrom === 'fight' ? '지금 그만두면 이 방랑은 패배로 끝납니다.' : '설정을 바꾸거나 계속할 수 있습니다.';
   $('btnStart').hidden = false; // 방랑 진 판 결과 창이 숨긴 단추
   $('menuReward').hidden = true;
   showDefeatFoe(null); // 패배 창의 상대 프로필 · 대사는 정지 창에 남기지 않는다
-  $('btnStart').textContent = '재대결'; // 사장님 10/24 02:4x "스테이지 모드에서 일시 정지 누른 화면에서 '처음부터 다시'를 '재대결'로 고쳐" — 방랑 정지 창도 같은 단추(전 '처음부터 다시')
+  $('btnStart').textContent = '재대결'; // 사장님 10/24 02:4x "스테이지 모드에서 일시 정지 누른 화면에서 '처음부터 다시'를 '재대결'로 고쳐" (여정 · 시험 판 정지 창)
+  $('btnStart').hidden = noRestart; // 방랑은 재대결 없음 (10/30 01:1x)
   $('btnStart').classList.remove('wander'); // 방랑 승리 창의 '다음 방랑' 색을 정지 창에 남기지 않는다 (금색 주 단추)
   $('btnResume').style.display = '';
   $('btnLobby').hidden = !lobbyMenu(); // 첫 화면·대기실 여정만 — 판을 떠나 대기실로 (아래 toLobby)
@@ -2027,6 +2049,7 @@ export function setLobbyReturn(fn) {
 const lobbyMenu = () => careerSaves() && !!lobbyReturn; // 방랑도 같다
 function toLobby() {
   if (!lobbyMenu()) return;
+  if (pausedFrom === 'fight' && !roundOver) saveWanderBody(); // 방랑 몸 상태 이어받기 (WANDER.resumeState) — 싸우던 몸을 적고 떠난다
   const back = lobbyReturn;
   pauseOpen = false;
   state = 'menu';
@@ -2081,6 +2104,7 @@ for (const ev of ['touchend', 'pointerup', 'keydown']) {
   window.addEventListener(ev, () => sound.ctx && !document.documentElement.hasAttribute('data-start-open') && sound.unlock(), { passive: true }); // 첫 화면·대기실이 앞이면 안 켬 (싸움 → 대기실 동안 소리 멈춤)
 }
 document.addEventListener('visibilitychange', () => {
+  if (document.hidden && state === 'fight') saveWanderBody(); // 방랑 몸 상태 이어받기 — 앱을 닫거나 새로고침해도 그 몸으로 (WANDER.resumeState)
   if (document.hidden) pause(); // 화면을 떠나면(전화·앱 전환) 멈춘다 — 돌아와서 첫 손가락이 지난 획을 잇지 않게 (10/8)
   if (!document.hidden && sound.ctx && !document.documentElement.hasAttribute('data-start-open')) sound.unlock(); // (손을 대지 않아도 되는 브라우저는 여기서 바로 다시 켜진다)
 });
@@ -3015,6 +3039,7 @@ function frame(now) {
     arena.update(dt);
     updateHud();
     checkRoundEnd(dt);
+    if (wanderResumeOn() && !roundOver && (resumeSaveT += dt) >= 2) { resumeSaveT = 0; saveWanderBody(); } // 방랑 몸 상태 2 초마다 (새로고침 · 앱 꺼짐 대비 — WANDER.resumeState)
   } else {
     muteWhoosh();
     camSteps = 0;

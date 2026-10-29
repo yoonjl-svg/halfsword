@@ -287,6 +287,17 @@ export function saveWanderLoadout({ weapon, cards, lastWeapon }) {
   Object.assign(run, { weapon, cards, lastWeapon });
   return save(true);
 }
+/**
+ * 몸 상태 이어받기 (WANDER.resumeState — 사장님 10/30 01:1x '이어하면 그 상황 그대로' · 감독 안 (b)): 진행 중 판에 두 몸의 사본을 적는다 · null 이면 지움.
+ *  resume = { v 1, foe, foeWeapon, player: 사본, enemy: 사본 } (src/fight_snapshot.js) · 돌려줌: 저장했나
+ */
+export function saveWanderResume(resume) {
+  readProgress();
+  const run = session.wander.run;
+  if (!run || run.status !== 'active') return false;
+  if (resume) run.resume = resume; else delete run.resume;
+  return save(true);
+}
 /** 정지 창 '재대결'(10/24 02:4x — 전 '처음부터 다시') (WANDER.quitAsLoss 끔 — 일반 여정과 같게): 같은 대면을 카드부터 다시 — 고른 무기 · 카드만 지운다 */
 export function resetWanderLoadout() {
   readProgress();
@@ -340,6 +351,7 @@ export function settleWander(win, roll = rollInt) {
   noteEarned(session.coins - before, reward.heads); // 대부호 · 도살자 — 특별 몫 포함 · 진 판 차감은 빼지 않음
   run.status = win ? 'won' : 'lost';
   run.fighting = false;
+  delete run.resume; // 끝난 판은 이어받을 몸이 없다 (WANDER.resumeState)
   if (win) run.wins++;
   run.reward = { coins: session.coins - before, heads: reward.heads + (run.headTaken ? WANDER_HEAD : 0), bonus: reward.bonus, streak: reward.streak };
   save(true);
