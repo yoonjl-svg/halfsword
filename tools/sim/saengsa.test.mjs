@@ -34,12 +34,11 @@ test('시계: 신청 창은 밤 10시 ~ 새벽 2시(자정을 넘김) · 첫 대
 });
 
 test('대진표: 16 팀 · 15 경기 · 이름난 인물은 한 번씩 · 남는 자리는 무명 검객(팀 안 옷 색 다름) · 씨앗이 같으면 같은 대회', () => {
-  const t = make(11, { lend: { weapon: 'tree_branch', to: 1 } });
+  const t = make(11, { weapons: ['tree_branch', 'w9', 'w8'] });
   assert.equal(t.teams.length, SAENGSA.teams);
   assert.equal(t.matches.length, SAENGSA.teams - 1);
   assert.deepEqual(t.teams[0].members.map((f) => f.id), ['player', 'a', 'b']);
-  assert.equal(t.teams[0].members[1].weapon, 'tree_branch');
-  assert.equal(t.teams[0].members[1].lent, true);
+  assert.deepEqual(t.teams[0].members.map((f) => f.weapon), ['tree_branch', 'w9', 'w8']); // 내 팀 무기 = 내가 배정 (사장님 10/29 18:2x)
   const ai = t.teams.slice(1).flatMap((team) => team.members);
   const named = ai.filter((f) => f.id !== R.NAMELESS).map((f) => f.id);
   assert.deepEqual([...named].sort(), ROSTER.filter((id) => !['a', 'b'].includes(id)).sort()); // 아홉 명이 한 번씩
@@ -53,7 +52,7 @@ test('대진표: 16 팀 · 15 경기 · 이름난 인물은 한 번씩 · 남는
   assert.deepEqual(hired.teams[0].members.map((f) => [f.id, f.cloth]), [['player', undefined], [R.NAMELESS, 0], [R.NAMELESS, 1]]);
   assert.equal(hired.teams.slice(1).flatMap((x) => x.members).filter((f) => f.id !== R.NAMELESS).length, 11);
   assert.deepEqual([...R.seatOrder(t)].sort((x, y) => x - y), [...Array(16).keys()]);
-  assert.deepEqual(make(11, { lend: { weapon: 'tree_branch', to: 1 } }), t);
+  assert.deepEqual(make(11, { weapons: ['tree_branch', 'w9', 'w8'] }), t);
   assert.notDeepEqual(make(12), t);
 });
 
@@ -157,7 +156,7 @@ test('하사품: 우승 셋 · 준우승 하나 · 하나에 금화 500 · 한 �
   assert.deepEqual([u.status, R.placeOf(u), R.chestCount(u)], ['done', 'final', 1]);
 });
 
-test('저장 왕복 · 신청(고용 금화) · 깨진 저장은 버림', () => {
+test('저장 왕복 · 신청(입장 조건 · 무기 배정 · 고용 금화) · 깨진 저장은 버림', () => {
   mem.clear();
   const t = make(5);
   assert.equal(S.updateSaengsa((d) => { d.current = t; return true; }).saved, true);
@@ -166,17 +165,56 @@ test('저장 왕복 · 신청(고용 금화) · 깨진 저장은 버림', () => 
   assert.equal(S.readSaengsa().current, null);
   mem.clear();
   P.setCoins(30);
-  const data = { ...DATA, owned: ['tree_branch'], hireCostOf: () => ({ coins: 20 }) };
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data }).why, 'coins');
+  const OWNED = ['tree_branch', 'druid_whip', 'w1', 'w2', 'w3'], W = ['tree_branch', 'w1', 'w2'];
+  const data = { ...DATA, owned: OWNED, hasTitle: true, hireCostOf: () => ({ coins: 20 }) };
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: W, seed: 1, data: { ...data, hasTitle: false } }).why, 'entry'); // 정복자 호칭 없음
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: W, seed: 1, data: { ...data, owned: OWNED.slice(0, 4) } }).why, 'entry'); // 무기 넷
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: W, seed: 1, data }).why, 'coins');
   P.setCoins(100);
-  assert.equal(S.signUp({ now: at(29, 21), companions: ['a', 'b'], seed: 1, data }).why, 'closed');
-  const ok = S.signUp({ now: at(29, 23), companions: ['a', 'b'], lend: { weapon: 'tree_branch', to: 0 }, seed: 1, data });
+  assert.equal(S.signUp({ now: at(29, 21), companions: ['a', 'b'], weapons: W, seed: 1, data }).why, 'closed');
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: ['tree_branch', 'w1'], seed: 1, data }).why, 'weapons'); // 셋 다
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: ['tree_branch', 'w1', 'w1'], seed: 1, data }).why, 'weapons'); // 한 무기는 한 사람에게(확인 전)
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: ['tree_branch', 'w1', 'longsword'], seed: 1, data }).why, 'weapons'); // 안 가진 무기
+  assert.equal(P.readProgress().coins, 100);
+  const ok = S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: W, seed: 1, data });
   assert.deepEqual([ok.ok, ok.cost, P.readProgress().coins], [true, 40, 60]);
-  assert.equal(S.readSaengsa().current.teams[0].members[0].weapon, 'tree_branch');
-  assert.equal(S.signUp({ now: at(29, 23, 30), companions: ['a', 'b'], seed: 2, data }).why, 'busy');
+  assert.deepEqual(S.readSaengsa().current.teams[0].members.map((f) => f.weapon), W);
+  assert.deepEqual(S.readSaengsa().draft.weapons, W);
+  assert.equal(S.signUp({ now: at(29, 23, 30), companions: ['a', 'b'], weapons: W, seed: 2, data }).why, 'busy');
+  // 경기마다 배정: 살아 있는 사람만 · 가진 무기 · 서로 다르게 — 결과의 pre 에 그 경기 무기
+  S.syncSaengsa(at(30, 10));
+  const m0 = R.myMatch(S.readSaengsa().current);
+  const info = (w) => ({ school: w === 'w3' ? 'italian' : 'german', tier: 'rare' });
+  assert.equal(S.playMine(m0.id, ['0-0'], at(30, 10), null, { arm: { weapons: ['w3', 'w1', 'w1'], owned: OWNED, weaponInfo: info } }), null);
+  const res = S.playMine(m0.id, ['0-0'], at(30, 10), null, { arm: { weapons: ['w3', 'druid_whip', 'w2'], owned: OWNED, weaponInfo: info } });
+  const mineSide = R.sidesOf(S.readSaengsa().current, m0)[0] === 0 ? 'a' : 'b';
+  assert.deepEqual([res.pre[mineSide][0].weapon, res.pre[mineSide][0].school, res.pre[mineSide][0].tier], ['w3', 'italian', 'rare']);
+  assert.deepEqual(S.readSaengsa().current.teams[0].members.map((f) => f.weapon), ['w3', 'druid_whip', 'w2']);
+  const dead = make(4, { weapons: W });
+  dead.teams[0].members[2].dead = true;
+  assert.equal(R.assignWeapons(dead, ['w1', 'w2', 'w2'], { owned: OWNED, weaponInfo: info }), true); // 죽은 사람 자리는 셈 밖
+  assert.deepEqual(dead.teams[0].members.map((f) => f.weapon), ['w1', 'w2', 'w2']);
+  assert.deepEqual(R.entryMissing({ hasTitle: false, owned: 2 }), [{ kind: 'title' }, { kind: 'weapons', have: 2, need: 5 }]);
+  assert.deepEqual(R.entryMissing({ hasTitle: true, owned: 5 }), []);
   mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1 })); // 빈 저장 (저장소 열쇠가 없으면 이번 실행 값을 쥐고 있으니 빈 판을 적는다)
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'a'], seed: 3, data }).why, 'team');
-  assert.equal(S.signUp({ now: at(29, 23), companions: [R.NAMELESS, R.NAMELESS], seed: 3, data }).ok, true); // 무명 검객은 둘 다여도 됨
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'a'], weapons: W, seed: 3, data }).why, 'team');
+  assert.equal(S.signUp({ now: at(29, 23), companions: [R.NAMELESS, R.NAMELESS], weapons: W, seed: 3, data }).ok, true); // 무명 검객은 둘 다여도 됨
+  mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1, draft: { companions: ['a', 'b'], lend: { weapon: 'w2', to: 1 } } })); // 옛 꼴 → 그 자리 무기
+  assert.deepEqual(S.readSaengsa().draft, { companions: ['a', 'b'], weapons: [null, 'w2', null] });
+});
+
+test('가진 무기 · 입장 조건 글 (사장님 10/29 18:2x)', async () => {
+  const { ownedWeapons, weaponReceipt } = await import('../../src/owned_weapons.js');
+  const { entryLine } = await import('../../src/saengsa_text.js');
+  const { TITLE } = await import('../../src/title_rules.js');
+  assert.deepEqual(ownedWeapons({ acquisitions: [] }), ['tree_branch', 'druid_whip']);
+  const acq = [{ receipt: weaponReceipt('longsword'), kind: 'item' }, { receipt: 'skill:german:G1', kind: 'skill' }, { receipt: weaponReceipt('nope'), kind: 'item' }, { receipt: weaponReceipt('rapier'), kind: 'item' }];
+  assert.deepEqual(ownedWeapons({ acquisitions: acq }), ['tree_branch', 'druid_whip', 'longsword', 'rapier']);
+  assert.equal(entryLine(R.entryMissing({ hasTitle: false, owned: 2 })), '정복자 호칭이 필요합니다 · 무기 5개가 필요합니다 (지금 2개)');
+  assert.deepEqual([SAENGSA.entry.title, SAENGSA.entry.weapons, TITLE.conquerWins], ['conqueror', 5, 10]);
+  assert.ok(SAENGSA.testWeapons.length + 2 >= 8 && SAENGSA.testWeapons.length + 2 <= 10);
+  const schools = new Set((await Promise.all(SAENGSA.testWeapons.map(async (id) => (await import('../../src/saengsa_roster.js')).weaponInfo(id).school))));
+  assert.equal(schools.size, 5); // 다섯 유파 (+ 시작 무기 무유파)
 });
 
 test('로스터 · 숙련도(인물 성향 표) · 고용 값 · 무명 검객', async () => {

@@ -2,8 +2,9 @@
 //  빠른 셈 · 결과 적기 · 쉬는 동안 회복 · 왕의 하사품.
 //  순수 함수 — 인물 · 무기 자료는 부르는 쪽이 넘긴다(src/saengsa_roster.js · 시험 tools/sim/saengsa.test.mjs 는 가짜 자료). 값은 config.js SAENGSA 한 곳.
 //  대회 t = { v, day, seed, signedAt, teams: [{ mine, members: [사람] }], matches: [경기], status 'active' | 'done', champion, endedAt, chests }
-//   사람 = { key '팀-자리', id(인물 id · 'player' · 'nameless'), weapon, school(그 무기 유파), tier(무기 등급), prof { german … chinese (, none) }, lent(내 무기를 빌림), hp, injuries [부상], dead,
+//   사람 = { key '팀-자리', id(인물 id · 'player' · 'nameless'), weapon, school(그 무기 유파), tier(무기 등급), prof { german … chinese (, none) }, hp, injuries [부상], dead,
 //          cloth · tag · main · sub(무명 검객만 — 옷 색 줄 번호 · 붙인 이름 · 메인 · 보조 유파 — 대회마다 새로 만든다, makeNameless) }
+//   내 팀 무기 = 내가 배정(신청 때 · 경기마다 — 사장님 10/29 18:2x · assignWeapons) · 상대 팀 무기 = 무작위(drawWeapon). 입장 조건 = entryMissing (호칭 · 가진 무기 수)
 //  시험판(cfg.testMode — 사장님 10/29 17:5x): 신청 창 늘 열림 · 내 경기는 두 팀을 알면 바로 · 상대끼리 경기는 앞 대진이 다 끝나면 바로 · 쉬는 시간 · 대진 시각 · 기권 없음 · 결과 시각 = 셈한 때
 //   부상 = { part 'arm' | 'leg' | 'torso' | 'head', sev(상처 심각도 — combat.js 와 같은 잣대), rests(다친 뒤 쉰 수) } · 중상 = sev ≥ SAENGSA.seriousAt
 //   팀 0 = 내 팀(자리 0 = 나) · 대진표 자리는 씨앗으로 섞는다 · 첫 대진 경기만 a · b(팀 번호)를 적고, 다음 대진은 앞 두 경기의 이긴 팀(sidesOf).
@@ -56,21 +57,21 @@ export const roundsOf = (teamCount) => Math.round(Math.log2(teamCount));
  *  companions: 동료 둘 — 인물 id 또는 NAMELESS(무명 검객 — 둘 다여도 됨 · 옷 색 = 자리 1 → 줄 0 · 자리 2 → 줄 1, 고르기 칸 미리 보기와 같게)
  *  roster: 이름난 인물 id 목록 — 상대 팀에는 한 대회에 한 번씩만(내 동료는 뺌 · 사장님 10/29 15:5x): 팀을 섞은 차례로 한 팀에 한 명씩 돌려 넣고(16 팀이면 아홉 팀에 한 명씩)
  *   남는 자리는 무명 검객 — 옷 색은 팀마다 서로 다르게(씨앗)
- *  lend: { weapon, to: 팀 자리 0 ~ 2 } | null — 빌려 준 사람은 늘 그 무기 · 나머지는 drawWeapon(rnd) 무작위
+ *  weapons: 내 팀 세 자리의 무기 [나, 동료 1, 동료 2] (내가 배정 — 사장님 10/29 18:2x) · 빈 자리(시험의 옛 꼴)와 상대 팀은 drawWeapon(rnd) 무작위
  *  weaponInfo(id) → { school, tier } · profOf(인물 id) → { german … chinese, none }
  */
-export function createTournament({ day, seed, at, companions, roster, lend = null, drawWeapon, weaponInfo, profOf, cfg = SAENGSA }) {
+export function createTournament({ day, seed, at, companions, roster, weapons = [], drawWeapon, weaponInfo, profOf, cfg = SAENGSA }) {
   const n = bracketTeams(cfg), size = cfg.teamSize, r = rng(seed);
   const usedNames = new Set();
-  const fighter = (team, slot, id, lendWeapon = null, cloth = null) => {
-    const weapon = lendWeapon ?? drawWeapon(r);
+  const fighter = (team, slot, id, given = null, cloth = null) => {
+    const weapon = given ?? drawWeapon(r);
     const { school, tier } = weaponInfo(weapon);
-    const f = { key: `${team}-${slot}`, id, weapon, school, tier, prof: { ...profOf(id) }, lent: !!lendWeapon, hp: cfg.hpMax, injuries: [], dead: false };
+    const f = { key: `${team}-${slot}`, id, weapon, school, tier, prof: { ...profOf(id) }, hp: cfg.hpMax, injuries: [], dead: false };
     if (id === NAMELESS) Object.assign(f, { cloth: cloth ?? 0 }, makeNameless(r, usedNames, cfg));
     return f;
   };
   const mineIds = ['player', ...companions].slice(0, size);
-  const teams = [{ mine: true, members: mineIds.map((id, s) => fighter(0, s, id, lend && lend.to === s ? lend.weapon : null, s - 1)) }];
+  const teams = [{ mine: true, members: mineIds.map((id, s) => fighter(0, s, id, weapons[s] ?? null, s - 1)) }];
   // 상대 팀: 이름난 인물은 한 번씩만 — 섞은 팀 차례로 한 팀에 한 명씩 돌려 넣고(다 돌면 둘째 자리) · 남는 자리는 무명 검객
   const named = shuffle(r, roster.filter((id) => id !== NAMELESS && !mineIds.includes(id)));
   const lineup = Array.from({ length: n - 1 }, () => []);
@@ -107,6 +108,35 @@ export function makeNameless(r, used = new Set(), cfg = SAENGSA) {
   const tag = pickOne(r, fresh.length ? fresh : pool) ?? '';
   used.add(tag);
   return { prof, main, sub, tag };
+}
+
+// ── 입장 조건 · 무기 배정 (사장님 10/29 18:2x) ──
+/** 입장(신청) 조건에서 모자란 것: [{ kind 'title' }, { kind 'weapons', have, need }] — 빈 목록이면 됨. hasTitle = 호칭(cfg.entry.title)을 가졌나 · owned = 가진 무기 수 */
+export function entryMissing({ hasTitle, owned }, cfg = SAENGSA) {
+  const out = [];
+  if (!hasTitle) out.push({ kind: 'title' });
+  if (!(owned >= cfg.entry.weapons)) out.push({ kind: 'weapons', have: owned | 0, need: cfg.entry.weapons });
+  return out;
+}
+/** 배정이 맞나: 자리마다(only 의 자리만) 가진 무기 · assignUnique 면 서로 다르게 */
+export function validAssignment(weapons, owned, only = [0, 1, 2], cfg = SAENGSA) {
+  if (!Array.isArray(weapons)) return false;
+  const used = only.map((i) => weapons[i]);
+  if (!used.every((w) => typeof w === 'string' && owned.includes(w))) return false;
+  return !cfg.assignUnique || new Set(used).size === used.length;
+}
+/** 경기 전 내 팀 무기 바꾸기 (살아 있는 사람만 — 죽은 사람은 그대로): weapons [나, 동료 1, 동료 2] · 돌려줌: 바꿨나(틀리면 아무것도 안 바꿈) */
+export function assignWeapons(t, weapons, { owned, weaponInfo }, cfg = SAENGSA) {
+  const members = t?.teams?.[0]?.members ?? [];
+  const alive = members.map((f, i) => (f.dead ? -1 : i)).filter((i) => i >= 0);
+  if (!validAssignment(weapons, owned, alive, cfg)) return false;
+  for (const i of alive) {
+    const f = members[i], w = weapons[i];
+    if (f.weapon === w) continue;
+    const { school, tier } = weaponInfo(w);
+    Object.assign(f, { weapon: w, school, tier });
+  }
+  return true;
 }
 
 // ── 대진표 읽기 ──

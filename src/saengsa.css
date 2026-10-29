@@ -22,7 +22,7 @@
 .sg-slot-meta { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .sg-slot-name { font-size: var(--fs-s); line-height: 1.25; font-weight: var(--fw-head); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .sg-slot-weapon { flex: 1; min-width: 0; font-size: 11px; line-height: 1.3; color: var(--c-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sg-slot-weapon[data-lent] { color: var(--c-accent); } /* 내 무기를 빌려 줌 — 칸이 좁아 알약 대신 글 색 (화면 읽기 글엔 '내 무기') */
+.sg-slot-weapon[data-none] { color: var(--c-alert); } /* 아직 무기를 배정하지 않음 '무기 없음' */
 .sg-slot-empty { font-size: var(--fs-s); color: var(--c-sub); }
 .sg-tag { margin-left: 2px; padding: 0 4px; border-radius: 999px; background: color-mix(in srgb, var(--c-accent) 25%, transparent); font-style: normal; font-size: 10px; line-height: 14px; color: var(--c-text); }
 .sg-price { display: inline-flex; align-items: center; gap: 2px; font-size: 10.5px; line-height: 1; color: var(--c-accent); font-variant-numeric: tabular-nums; }
@@ -34,8 +34,9 @@
 .sg-cost { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
 .sg-cost .coin-icon { width: 15px; height: 15px; }
 :host .sg-enter { min-width: 132px; }
+:host .sg-look[hidden] { display: none; } /* 입장 조건을 못 채웠을 때 대진표 보기 */
 /* 고르기 카드 (팀 칸을 누름 — 판 전체를 덮음 · 스킬 상세 카드와 같은 꼴) */
-.sg-picker { position: absolute; inset: 2px; z-index: 3; display: flex; flex-direction: column; gap: 6px; overflow: auto; padding: 8px 10px; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 8px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.sg-picker { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; gap: 6px; overflow: auto; padding: 8px 10px; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 8px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .sg-picker[hidden] { display: none; }
 .sg-pick-title { font-size: var(--fs-m); line-height: 1.3; outline: none; }
 .sg-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 4px; }
@@ -45,15 +46,20 @@
 .sg-pick-name { font-size: 10px; line-height: 1.2; text-align: center; word-break: keep-all; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; min-height: 24px; }
 .sg-pick[aria-selected="true"] { border-color: var(--c-accent); background: color-mix(in srgb, var(--c-accent) 12%, transparent); }
 .sg-pick:disabled { opacity: .3; cursor: default; }
-.sg-lend { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-top: auto; }
-.sg-lend-label { font-size: var(--fs-s); color: var(--c-sub); }
+.sg-arm { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-top: auto; }
+.sg-arm-label { font-size: var(--fs-s); color: var(--c-sub); }
+.sg-arm .sg-chips { flex: 1 1 0; min-width: 0; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; } /* 가진 무기가 많아도 한 줄 — 옆으로 밀어 봄 · 확인은 같은 줄 끝 */
+.sg-arm .sg-chip-btn { flex: none; white-space: nowrap; }
 .sg-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .sg-chip-btn { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-s); line-height: 16px; color: var(--c-sub); background: none; }
 .sg-chip-btn[aria-checked="true"] { border-color: var(--c-accent); color: var(--c-accent); }
+.sg-chip-btn:disabled { opacity: .35; cursor: default; } /* 다른 사람에게 배정한 무기 */
 .sg-pick-actions { display: flex; justify-content: flex-end; margin-left: auto; }
 :host .sg-pick-actions .primary { min-width: 88px; }
 @media (max-height: 500px) {
   .sg-picker { gap: 4px; padding: 6px 8px; }
+  .sg-chips { gap: 4px; }
+  .sg-chip-btn { padding: 3px 8px; font-size: 11px; line-height: 15px; }
   .sg-roster { grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 2px; }
   .sg-pick { padding: 2px 1px 3px; gap: 1px; }
   .sg-pick img { width: 30px; height: 30px; }
@@ -157,6 +163,23 @@ button.sg-card:disabled { cursor: default; }
 .sg-outcome b { font-size: var(--fs-l); font-weight: var(--fw-head); }
 .sg-outcome[data-won="true"] b { color: var(--c-accent); }
 :host .sg-mf .primary { min-width: 120px; }
+/* 무기 배정 창 (경기 화면을 덮음 — 사장님 10/29 18:2x 경기마다 배정) */
+.sg-armbox { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; gap: 8px; overflow: auto; padding: var(--pad-t) var(--pad-r) var(--pad-b) var(--pad-l); background: #1d1711; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.sg-armbox[hidden] { display: none; }
+.sg-arm-rows { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 1220px; margin: 0 auto; }
+.sg-arm-row { display: flex; align-items: flex-start; gap: 10px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
+.sg-arm-who { flex: none; display: flex; align-items: center; gap: 6px; width: 132px; min-width: 0; }
+.sg-arm-who img { width: 32px; height: 32px; display: block; }
+.sg-arm-who b { min-width: 0; font-size: var(--fs-s); line-height: 1.25; word-break: keep-all; }
+.sg-armbox .sg-pick-actions { width: 100%; max-width: 1220px; margin: 0 auto; }
+.sg-armbox .sg-pick-title { width: 100%; max-width: 1220px; margin: 0 auto; }
+@media (max-height: 500px) {
+  .sg-armbox { gap: 5px; }
+  .sg-arm-rows { gap: 5px; }
+  .sg-arm-row { padding: 4px 6px; gap: 8px; }
+  .sg-arm-who { width: 116px; }
+  .sg-arm-who img { width: 26px; height: 26px; }
+}
 @media (max-height: 500px) {
   .sg-card { grid-template-columns: 44px minmax(0, 1fr); padding: 5px 8px; row-gap: 3px; }
   .sg-face { width: 44px; height: 44px; }

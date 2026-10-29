@@ -1,6 +1,8 @@
 // 생사전 화면 글 (docs/text/editing_guide.md — 안내 · 공지 '~합니다' 체 · 단추 · 이름표는 명사 · 결과 줄은 '~다' 체 · 설명은 짧게 · 개발 말 없음)
 //  대기실 '생사전' 칸(saengsa_panel.js) · 생사전 화면(saengsa_page.js)이 이 글만 쓴다. 시각 글은 기기의 현지 시각.
 import { roundsOf } from './saengsa_rules.js';
+import { SAENGSA } from './config.js';
+import { titleName } from './title_rules.js';
 
 export const SAENGSA_TEXT = Object.freeze({
   title: '생사전',
@@ -13,10 +15,10 @@ export const SAENGSA_TEXT = Object.freeze({
   nameless: '무명 검객', // 사장님 10/29 15:5x
   companion: '동료',
   pick: '동료 고르기',
-  randomWeapon: '무작위 무기',
-  random: '무작위',
   weapon: '무기',
-  lentTag: '내 무기',
+  noWeapon: '무기 없음',
+  pickWeapons: '세 사람 모두 무기를 고르십시오.',
+  arm: '무기 배정', // 경기 화면 — 나설 사람의 무기를 바꿈(사장님 10/29 18:2x 경기마다 배정)
   hire: '고용',
   confirm: '확인',
   myTeam: '내 팀',
@@ -103,3 +105,5 @@ export const chestLine = (n) => `${SAENGSA_TEXT.chest} ${n}개를 열 수 있습
 export const chestGot = (coins) => `${SAENGSA_TEXT.chest}에서 금화 ${coins.toLocaleString('ko-KR')}을 받았습니다.`;
 /** 고용 값 줄 */
 export const hireLine = (coins) => `고용 금화 ${coins.toLocaleString('ko-KR')}`;
+/** 입장 조건에서 모자란 것 (saengsa_rules.js entryMissing — 사장님 10/29 18:2x): '정복자 호칭이 필요합니다 · 무기 5개가 필요합니다 (지금 2개)' */
+export const entryLine = (missing) => missing.map((x) => (x.kind === 'title' ? `${titleName(SAENGSA.entry.title)} 호칭이 필요합니다` : `무기 ${x.need}개가 필요합니다 (지금 ${x.have}개)`)).join(' · ');
