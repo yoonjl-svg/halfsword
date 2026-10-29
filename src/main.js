@@ -129,6 +129,8 @@ if (['v1', 'parry'].includes(params.get('deSecret'))) CONFIG.SECRET.deSecret = p
 // 독일 죽음의 일격 (10/22 — 사람 독일 비기, src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md): `?deMord=0` = 옛 판(deSecret) · `?mordPress=0.6` 누르기 시간 비교 ·
 //  `?mordGrip=hilt` 쥠 그대로 폼멜 판 · `?mordOver=1` 넘어 들어감 규칙 (사장님 확인 전)
 if (params.has('deMord')) CONFIG.SECRET.deMord = +params.get('deMord') ? 1 : 0;
+if (['close', 'press'].includes(params.get('mordRule'))) CONFIG.SECRET.mordRule = params.get('mordRule'); // 사람 모르트슐라크 조건 (10/29 20:0x — close 붙은 거리 2 s · press 밀치기 누르기 옛 판)
+if (params.has('mordClose') && +params.get('mordClose') > 0) CONFIG.SECRET.mordCloseN = +params.get('mordClose'); // 붙은 거리 n (m — 없으면 CLOSE.reach)
 if (+params.get('mordPress') > 0) CONFIG.SECRET.mordPress = CONFIG.realS(+params.get('mordPress')); // 주소 값 = 실제 초 (표준 시간 10/25 — 아래 시간 · 빠르기 주소 인자도 같음)
 if (params.has('mordGrace') && +params.get('mordGrace') >= 0) CONFIG.SECRET.mordGrace = CONFIG.realS(+params.get('mordGrace')); // 모르트슐라크 누르기 끊김 너그러움 (10/25 23:1x 사장님 · 10/27 21:4x 0.4 s — 기본 0.4 s · 주소 값 = 실제 초 · `?mordGrace=0` = 끊기면 셈 0)
 if (params.has('armAtFight')) CONFIG.SECRET.armAtFight = +params.get('armAtFight') ? 1 : 0; // 비기 무장 시계를 공격이 풀린 때부터 (10/27 23:0x 사장님 결정 — 기본 1 · `?armAtFight=0` = 판 시작부터)

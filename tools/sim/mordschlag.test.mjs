@@ -49,6 +49,8 @@ test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 2 s — 10/
 
 test('10/27 23:0x 다시 붙는 밀치기 첫 걸음 동안 너그러움 시계 멈춤 (SECRET.mordStepPause): 끊긴 뒤 새 밀치기의 딛는 단계(barge phase step)는 너그러움보다 길어도 셈을 쥠 · 그 걸음 하나만 · 끄면 너그러움 넘으면 셈 0', () => {
   const { g, P, E } = fixture();
+  const rule0 = SECRET.mordRule;
+  SECRET.mordRule = 'press'; // 밀치기 누르기 판 (10/29 20:0x 전 — 지금 기본은 'close')
   try {
     assert.equal(SECRET.mordStepPause, 1);
     const steps = (sec) => Math.round(sec / DT);
@@ -76,7 +78,7 @@ test('10/27 23:0x 다시 붙는 밀치기 첫 걸음 동안 너그러움 시계 
       run(w0, steps(SECRET.mordGrace * 2), { phase: 'step' });
       assert.equal(w0.pressT, 0, '끄면(10/27 21:4x 판) 걸음 동안에도 너그러움 시계가 감');
     } finally { SECRET.mordStepPause = old; }
-  } finally { P.barge = null; g.world.free(); }
+  } finally { SECRET.mordRule = rule0; P.barge = null; g.world.free(); }
 });
 
 test('사람 · AI 몫: 플레이어 독일 무기 = 죽음의 일격 · deMord 0 = 옛 판 · AI 독일 숙련도 5 = 같은 비기 · 4 = 없음 · aiOpenSchools 에서 빼면 없음 (10/24)', () => {
@@ -96,8 +98,10 @@ test('사람 · AI 몫: 플레이어 독일 무기 = 죽음의 일격 · deMord 
   } finally { g.world.free(); }
 });
 
-test('조건: 밀치기 누르기가 mordPress(2 s) 이어지면 창 · 끊겨도 mordGrace(0.4 s) 안에 다시 누르면 셈을 이어감(그동안은 안 셈) · 더 끊기면 셈 0 · 창을 열면 셈 0 · 0.6 s 판도', () => {
+test('옛 조건(mordRule press — 10/25 판): 밀치기 누르기가 mordPress(2 s) 이어지면 창 · 끊겨도 mordGrace(0.4 s) 안에 다시 누르면 셈을 이어감(그동안은 안 셈) · 더 끊기면 셈 0 · 창을 열면 셈 0 · 0.6 s 판도', () => {
   const { g, P, E } = fixture();
+  const rule0 = SECRET.mordRule;
+  SECRET.mordRule = 'press';
   try {
     const w = new PlayerSecretWatch(P, E);
     assert.equal(w.S.name, 'mordschlag');
@@ -137,7 +141,46 @@ test('조건: 밀치기 누르기가 mordPress(2 s) 이어지면 창 · 끊겨�
     const w3 = new PlayerSecretWatch(P, E);
     for (let i = 0; i < steps(SECRET.mordPress + 0.5); i++) { P.barge = { phase: 'press' }; w3.update(DT, true); } // 비기 실행 · 굳음 동안은 세지 않음
     assert.equal(w3.open, null);
-  } finally { P.barge = null; g.world.free(); }
+  } finally { SECRET.mordRule = rule0; P.barge = null; g.world.free(); }
+});
+
+test('조건 (사장님 10/29 20:0x — mordRule close 기본): 가슴 사이 ≤ 붙은 거리 n(CLOSE.reach — 롱소드 0.77)인 채 mordPress(2 s) → 창 · 밀치기 꼴 · 긋기와 상관없음 · 너그러움 0.4 s 안 떨어짐은 이어 셈 · 더 길면 0 · 상대가 서 있지 않으면 아님 · mordCloseN 숫자면 그 거리', () => {
+  const { g, P, E } = fixture();
+  try {
+    assert.equal(SECRET.mordRule, 'close');
+    assert.equal(SECRET.mordCloseN, null);
+    assert.ok(Math.abs(CONFIG.CLOSE.reach(P.weapon) - 0.77) < 0.02, `롱소드 닿는 거리 ${CONFIG.CLOSE.reach(P.weapon)}`);
+    let d = 0.6;
+    P.foeDistance = () => d;
+    const steps = (sec) => Math.round(sec / DT);
+    const N = steps(SECRET.mordPress);
+    const w = new PlayerSecretWatch(P, E);
+    const run = (n, dd) => { for (let i = 0; i < n; i++) { d = dd; P.barge = null; P.skill.swinging = i % 7 === 0; w.update(DT, false); } };
+    run(N - 2, 0.6);
+    assert.equal(w.open, null, '2 s 전');
+    run(steps(SECRET.mordGrace) - 2, 1.2); // 너그러움 안 떨어짐 → 셈을 쥠
+    assert.equal(w.open, null);
+    run(3, 0.7);
+    assert.ok(w.open, '이어 센 붙음이 2 s 넘으면 창 (밀치기 · 스틱 없음 · 긋는 중이어도)');
+    assert.equal(w.open.ctx.ev, 'press');
+    assert.equal(w.open.ctx.close, true);
+    const w2 = new PlayerSecretWatch(P, E);
+    for (let i = 0; i < N - 2; i++) { d = 0.6; w2.update(DT, false); }
+    for (let i = 0; i < steps(SECRET.mordGrace) + 2; i++) { d = 1.2; w2.update(DT, false); }
+    assert.equal(w2.pressT, 0, '너그러움보다 길게 떨어지면 셈 0');
+    const st = E.state;
+    E.state = 'kneel';
+    const w3 = new PlayerSecretWatch(P, E);
+    for (let i = 0; i < N + 2; i++) { d = 0.5; w3.update(DT, false); }
+    assert.equal(w3.open, null, '상대가 서 있지 않으면 아님');
+    E.state = st;
+    SECRET.mordCloseN = 0.5;
+    try {
+      const w4 = new PlayerSecretWatch(P, E);
+      for (let i = 0; i < N + 2; i++) { d = 0.6; w4.update(DT, false); }
+      assert.equal(w4.open, null, 'n 0.5 이면 0.6 m 는 붙음 아님');
+    } finally { SECRET.mordCloseN = null; }
+  } finally { delete P.foeDistance; P.skill.swinging = false; g.world.free(); }
 });
 
 test('칼날 거꾸로 쥐기: 손목 관절이 그 자리에서 맞음 · 칼끝 아래 · 원래 쥠으로 돌아오면 관성 · 닻 그대로', () => {
