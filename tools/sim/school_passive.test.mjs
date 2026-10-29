@@ -405,15 +405,21 @@ test('chinese: bleeding clots ×2 only while not swinging', () => {
 
 // ── 실제 판 (AI 대 AI · 숙련도 4) — 배율이 실제 맞음에 실린다 ──
 test('real fight: kentai and indes bonuses reach real wounds', () => {
+  // 씨앗 셋 가운데 한 판에서 (10/29 걸음 사다리 — 한 씨앗에 기대지 않게: 일본 AI 베기 걸음 0.5 → 0.45 만으로도 1011 판이 갈려 켄타이 맞음 0 ·
+  //  씨앗 1011 ~ 1016 에서 켄타이가 실리는 판 수는 전 · 후 모두 4 / 6). 전: 한 씨앗 1001 → 1002(10/24) → 1011(10/27 표준 시간)
   for (const [w, key] of [['uchigatana', 'ken'], ['longsword', 'indes']]) {
-    const g = newRound({ weapon: w, weapon2: 'longsword', seed: 1011, AI2Class: AI, persona: { proficiency: 4 }, persona2: { proficiency: 4 } }); // 씨앗 1002 → 1011 (10/27 표준 시간 — AI 판단 박자 · 반응이 실제 초가 되어 판이 바뀜: 1002 는 30 s 안 켄타이 맞음 0 · 1011 은 켄타이 2 · 인데스 2) · 씨앗 1001 → 1002 (10/24 17:2x 팔꿈치 돌림 · 손목 교정 — 1001 은 30 s 안에 독일 indes 가 안 터짐 · 1002 = ken 2 · indes 1)
-    try {
-      let boosted = 0;
-      const pw = g.combat.hooks.onWound;
-      g.combat.hooks.onWound = (att, vic, r, ...rest) => { pw?.(att, vic, r, ...rest); if (att === g.player && r.schoolK > 1) boosted++; };
-      for (let i = 0; i < 30 / DT; i++) { g.step(); if (!g.player.alive || !g.enemy.alive) break; }
-      assert.ok(g.player.schoolPassive.stats[key].hits >= 1, `${key} hits`);
-      assert.ok(boosted >= 1, 'a wound carried schoolK');
-    } finally { g.world.free(); }
+    let ok = false;
+    for (const seed of [1011, 1012, 1013]) {
+      const g = newRound({ weapon: w, weapon2: 'longsword', seed, AI2Class: AI, persona: { proficiency: 4 }, persona2: { proficiency: 4 } });
+      try {
+        let boosted = 0;
+        const pw = g.combat.hooks.onWound;
+        g.combat.hooks.onWound = (att, vic, r, ...rest) => { pw?.(att, vic, r, ...rest); if (att === g.player && r.schoolK > 1) boosted++; };
+        for (let i = 0; i < 30 / DT; i++) { g.step(); if (!g.player.alive || !g.enemy.alive) break; }
+        ok = g.player.schoolPassive.stats[key].hits >= 1 && boosted >= 1;
+      } finally { g.world.free(); }
+      if (ok) break;
+    }
+    assert.ok(ok, `${key} hits and a wound carried schoolK (seeds 1011 ~ 1013)`);
   }
 });

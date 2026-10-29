@@ -147,6 +147,8 @@ if (params.has('mordPow')) CONFIG.SECRET.mord.power = params.get('mordPow') === 
 if (params.has('parryAssist')) CONFIG.SKILL.parryAssist = Math.max(0, Math.min(3, +params.get('parryAssist') || 0)); // 플레이어 막기 버튼 거듦 단계(10/12 — parry_button.js, 확인표 990): `?parryAssist=0` = 끔(10/11 판) · 1 무게 보정 · 2 + 일찍 읽기 · 3 + 자리 덧힘
 if (params.has('kron')) CONFIG.SKILL.deKron = +params.get('kron') ? 1 : 0; // 독일 왕관 막기 자리(10/11 22:2x 사장님 기본): `?kron=0` = 전 자리(머리 위 = 긴 자세)
 if (params.has('gyeoksal')) CONFIG.SECRET.gyeoksal.on = +params.get('gyeoksal') ? 1 : 0; // 동방 막아 죽이기 (10/22 — 사람 동방 비기): `?gyeoksal=0` = 옛 판(막기 연환)
+if (params.has('talhoApproach')) CONFIG.SKILL.talhoApproach = +params.get('talhoApproach') ? 1 : 0; // 나선 걸음 베기 '먼저 비껴 딛고 벤다'(AI — 10/29 18:4x 사장님): `?talhoApproach=0` = 전처럼 베며 딛음 (비교용)
+if (params.has('passAsRung')) CONFIG.GAIT.passAsRung = +params.get('passAsRung') ? 1 : 0; // follow 안 pass → lunge + 끌어붙임 걸음 길이: 1 = 사다리 한 칸 아래(10/29 18:5x 사장님) · `?passAsRung=0` = 옛 × 0.85 (비교용)
 if (params.get('gyeoksalPow') === 'hit' || +params.get('gyeoksalPow') > 0) CONFIG.SECRET.gyeoksal.power = params.get('gyeoksalPow') === 'hit' ? 'hit' : +params.get('gyeoksalPow'); // 격살 판정 시험 (기본 'finish' = FINISH.power 2.5 · 'hit' = 다른 비기와 같은 hitMul 1.3)
 if (params.get('gyeoksalTrail') === '1') CONFIG.SECRET.gyeoksal.trailWidth = 1; // 격살 잔상 굵기도 빠르기 몫으로 (시험)
 if (+params.get('gyeoksalShare') > 0) CONFIG.SECRET.gyeoksal.share = +params.get('gyeoksalShare'); // 격살 칼끝 빠르기 몫 시험 (기본 = cnFastShare 0.3 · 0.5 진 · 1 고노센 발도)
@@ -317,6 +319,7 @@ if (params.has('cavTo') && +params.get('cavTo') > 0) CONFIG.UNIQUE_ASSIST.cavTo 
 if (params.has('lianTap')) CONFIG.UNIQUE_ASSIST.lianTap = +params.get('lianTap') ? 1 : 0; // 사람 날개 접기 탭 (사장님 10/28 01:2x — 물러나며 탭 · 기본 1)
 if (params.has('lianStep') && +params.get('lianStep') >= 0) CONFIG.UNIQUE_ASSIST.lianStep = +params.get('lianStep'); // 사람 날개 접기 앞 걸음 (m — 기본 0.45 · 사장님 10/29 14:3x)
 if (params.has('specialCooldown')) CONFIG.UNIQUE_ASSIST.specialCooldown = CONFIG.realS(Math.max(0, +params.get('specialCooldown') || 0)); // 특수 공격 공통 식힘 (실제 초 — 기본 6 · 0 = 끔 · 사장님 10/28 02:0x)
+if (params.has('secretCooldown')) CONFIG.UNIQUE_ASSIST.secretCooldown = CONFIG.realS(Math.max(0, +params.get('secretCooldown') || 0)); // 유파 비기 식힘 (실제 초 — 기본 10 · 0 = 끔 · 사장님 10/29 17:5x · secret.js PlayerSecretWatch)
 if (params.has('dupTap')) CONFIG.UNIQUE_ASSIST.dupTap = +params.get('dupTap') ? 1 : 0; // 사람 겹치기 탭 (사장님 10/28 01:2x — 맞물린 채 탭 · 기본 1)
 if (params.has('rdHold')) CONFIG.UNIQUE_ASSIST.rdHold = +params.get('rdHold') ? 1 : 0; // 사람 풍차 베기 길게 누름 (이베리아 B4 — 사장님 10/29 · 기본 1)
 if (params.has('rdEdge')) CONFIG.UNIQUE_ASSIST.rdEdge = +params.get('rdEdge') < 0 ? -1 : 1; // 감는 칼 날 쪽 (기본 −1 — 사장님 확인 전)
@@ -828,6 +831,7 @@ function newRound(weaponId) {
   const kit = playerKit(kitSchool, readLearned(), { test: testRoute.active, upTo: UNIQUE_STAGE, nodes: skillNodesParam(SKILL_NODES, kitSchool) });
   player = new Fighter(RAPIER, world, scene, colliderInfo, {
     index: 0,
+    human: true, // 사람 손(입력)이 모는 몸 — 기력 회복 사람 값(STAMINA.humanRecoverPerSecond — 사장님 10/29 17:5x) · 시뮬 도구는 안 넘김(자리 0 이어도 AI · 대본 몸)
     name: careerSaves() ? readProfile().name : '나', // 대기실 이름 (첫 화면에서 연 여정만 — 화면에 플레이어 이름이 나오는 자리는 없다. 메뉴 뒤 판·주소 판은 그대로 '나')
     x: -ARENA.startGap / 2,
     z: startZ,

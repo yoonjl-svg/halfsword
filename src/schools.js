@@ -386,7 +386,7 @@ const GERMAN_CHASE = { window: realS(0.6), steps: 2, mul: 1.5, brake: 0.2, accel
 //  even: 고른 바탕 걸음 (10/15 — config GAIT.itEven 1 일 때 gait.js gaitParams 가 위에 덮음 · `?itGait=old` = 덮지 않음, 옛 짝걸음 바이트 같음 · docs/strike/italian_rhythm_2026-10-15.md §10):
 //   짝걸음(가까이 · 앞뒤로 천천히)을 고른 짝(ITALIAN_PAIR_EVEN)으로. 지나 딛기(멀리·빨리)의 보폭·박자는 보폭 규칙(strideK 0.7 — 아래 칸 · config GAIT.strideRule)이 맡는다. 값은 사장님 확인 전 (확인표 1710~)
 const ITALIAN_EVEN = { pair: ITALIAN_PAIR_EVEN, dsFrac: 0.21, player: { dsFrac: 0.21 } };
-const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 }, strideK: 0.85, backMul: 'flat', even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375 · `?itStride=0` 이면 0.7)
+const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 }, strideK: 0.85, backMul: 'flat', even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375 · `?itStride=0` 이면 0.7)
 //  ⓐ′ 중국 (조선세법): 체보 (掣步) — 앞발 내딛고 뒷발 끌어붙임 [원문 무비지 쪽155·156] · 진보 (進步) 로 들어가며 침 [원문 쪽158] — 수는 [추정]
 //   10/10 사장님 12:5x~13:0x (docs/strike/school_gait_iberian_chinese_2026-10-10.md):
 //   간수세 낮춤 guardLow — 바탕 자세표 '옆 지킴'(중국 이름 看守勢 · 자세 虎蹲 '웅크린 범', 무비지 쪽163 · 무도 권2 p039 「左脚右手虎蹲勢」 [원문 이름])에 있을 때 골반 +0.04 m (확인표 628)
@@ -404,7 +404,7 @@ const CHINESE_BOW = { drop: 0.22, lowMax: 0.24, rate: 1.2, inTime: 0.12, outTime
 //    (GAIT.maxAccel 3.2 m/s²)의 보통 걸음 몫(× 1)에 곱한다(fighter.js driveBalance) — 걷기 시작·멈춤·방향 바꿈이 같은 한도라 셋이 함께 빨라지고, 최고 빠르기(moveSpeed)는 그대로
 //    ('빠르진 않지만 신속하다'). 빠른 걸음·첫 걸음 박차기·세게 멈춤(fastAcc · burstAccel)엔 곱하지 않는다(그 값 그대로). 몸의 일이라 사람·AI 같이 · 칼 입력은 읽지 않는다(보법 = 다리만).
 //    스위치 GAIT.cnLight(`?cnLight=0` = 끔) · 걸음 칸에서 읽으므로 `?schoolGait=0` 이어도 꺼진다
-const CHINESE_GAIT = { guardHeight: 0.88, walkHeight: 0.95, guardLength: 0.55, guardWidth: 0.16, weightFront: 0.55, maxStride: 0.5, cadence0: 2.5, dsFrac: 0.18, width: 0.07, minWidth: 0.11, lift: 0.05, liftSettle: 0.03, toeUp: 0.15, sway: 0.018, bobAdd: 0.015, dsLow: 1.2, footwork: 'follow', followIn: 3.3, followVmax: 0.8, trailReach: 0.42, dragLift: 0.03, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, guardLow: CHINESE_GUARD_LOW, bow: CHINESE_BOW, light: 1.5, strideK: 0.9 };
+const CHINESE_GAIT = { guardHeight: 0.88, walkHeight: 0.95, guardLength: 0.55, guardWidth: 0.16, weightFront: 0.55, maxStride: 0.5, cadence0: 2.5, dsFrac: 0.18, width: 0.07, minWidth: 0.11, lift: 0.05, liftSettle: 0.03, toeUp: 0.15, sway: 0.018, bobAdd: 0.015, dsLow: 1.2, footwork: 'follow', followIn: 3.3, followVmax: 0.8, trailReach: 0.42, dragLift: 0.03, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, guardLow: CHINESE_GUARD_LOW, bow: CHINESE_BOW, light: 1.5, strideK: 0.9 };
 //  ⓑ 이베리아 (몬탄테): 좌우로 번갈아 베며 앞뒤로 걷기·둥근 걸음 [원전 2차] · 넓게 서서 큰 칼의 원심력을 받는다 [해석] — 수는 [추정]
 //  10/10 데스트레사 고증 (docs/strike/school_gait_iberian_chinese_2026-10-10.md, 사장님 12:5x~13:0x '고증대로 · 사이드스텝이 더 원활하고 이동량 증가'):
 //   보통 옆걸음에서 발을 엇갈리지 않는다(crossSide 뺌 — 에텐하르트 1675 원서 55~56 쪽 둥근·옆걸음 '그 발이 제 쪽으로', 피게이레두 1651 복합 XII '왼발이 따라붙는다' · 확인표 620)
@@ -417,14 +417,14 @@ const CHINESE_GAIT = { guardHeight: 0.88, walkHeight: 0.95, guardLength: 0.55, g
 const IBERIAN_GAIT = { guardLength: 0.62, guardWidth: 0.34, weightFront: 0.5, maxStride: 0.68, cadence0: 1.85, cadenceK: 0.45, width: 0.13, minWidth: 0.16, lift: 0.08, sway: 0.025, arcYaw: 0.35, crossFrom: 0.5, sideStride: 0.7, sideLead: true, sideMul: 1.3, burstSide: true, strideK: 1.2 };
 //  ⓒ 일본: 스리아시·오쿠리아시 [원문 검도형 p24·p06] · 늘 걷듯이·뜬발을 꺼림 [원문 고린노쇼 p20] — 낮고 안정, 짧은 앞뒤 간격. 앞무게 틀(모노호시자오 — 큰 칼)은 byFrame.heavy: 앞뒤 조금 길게, 발 놀림은 번갈아 걷기(고린노쇼 음양의 발 [원문] — follow 는 48×2 판 옮겨 딛기 1.73 → 3.2~4.2/판, 잣대 ×1.5 밖)
 //  follow 는 상대 가슴 followIn 안 + 걸러진 빠르기 followVmax 아래에서만(빨리 좁힐 땐 지나 딛기), 뒤에 남은 발이 엉덩이에서 trailReach 넘으면 그 발부터 따라붙임.
-//  cutStep = AI 베기 걸음(ai.js gaitStep) · passAs = follow 안에서 들어온 'pass' 기술 걸음(플레이어 베기 걸음 등)을 바꿀 꼴 · draw = 디딘 뒤 뒷발 끌어붙임(drawT s)
+//  cutStep = AI 베기 걸음(ai.js gaitStep) · passAs = follow 안에서 들어온 'pass' 기술 걸음(플레이어 베기 걸음 등)을 바꿀 꼴 · draw = 디딘 뒤 뒷발 끌어붙임(drawT s) · cutStep.fwd 0.45 = 걸음 사다리 0.45 칸 — 감독 안 '0.5 → 0.45' 규칙(사장님 10/29 15:xx '0.5는 0.45로 옮기고' 를 따름 · 사장님 확인 전 · 전 0.5 · docs/strike/step_ladder_2026-10-29.md §8-2)
 //  낮춤 (10/10 사장님 '충분히 낮은 느낌이 아님' → '최대한 내려봐. AI 승률보다 플레이어 조작감'): 골반 멈춤 0.75 · 걸음 0.818 = 전역 기본(0.9·0.978)보다 15·16 cm —
 //   낮춤 합계 상한 GAIT.lowMax 0.16 까지(플레이어 자세표 낮춤 ~1 cm 를 더하면 멈춤도 0.16). 낮아진 만큼 다리가 옆으로 더 닿으므로 reachMax 0.55 → 0.7(넘으면 옮겨 딛기),
 //   발이 땅에 일찍 걸리지 않게 발 들기 AI 0.025 → 0.035 · 플레이어 0.035 → 0.05 — gait_rhythm.mjs·player_gait_feel.mjs·gait_metrics.mjs 로 고름 (확인표 590~)
 //  버티기 steady (10/15 사장님 '휘청·넘어짐 저항으로 가자' — 25 % 는 감독 권고 수치, 미세 조정은 나중 · docs/strike/japanese_steady_2026-10-15.md · 확인표 1520~):
 //   균형이 흔들리는 양을 이 몫만큼 덜 받는다(× 0.75 — fighter.js swayScale 이 '발 밖으로 벗어난 몫 offBalance'와 '맞아 깎이는 휘청임 게이지'에 곱함).
 //   몸의 일이라 사람·AI 같이, 두 일본 무기(byFrame·player 덮개가 안 건드림) 모두. `?jpSteady=0` = 끔
-const JAPANESE_GAIT = { guardHeight: 0.75, walkHeight: 0.818, reachMax: 0.7, guardLength: 0.45, guardWidth: 0.18, weightFront: 0.5, maxStride: 0.5, cadence0: 2.2, dsFrac: 0.25, width: 0.08, minWidth: 0.12, lift: 0.035, liftSettle: 0.015, toeUp: 0.06, sway: 0.01, bobAdd: 0.005, dsLow: 0.5, footwork: 'follow', followIn: 3.5, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.5, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, steady: 0.25, byFrame: { heavy: { guardLength: 0.5, footwork: 'pass' } }, player: { trailReach: 0.36, dsFrac: 0.18, lift: 0.05 }, strideK: 0.8 };
+const JAPANESE_GAIT = { guardHeight: 0.75, walkHeight: 0.818, reachMax: 0.7, guardLength: 0.45, guardWidth: 0.18, weightFront: 0.5, maxStride: 0.5, cadence0: 2.2, dsFrac: 0.25, width: 0.08, minWidth: 0.12, lift: 0.035, liftSettle: 0.015, toeUp: 0.06, sway: 0.01, bobAdd: 0.005, dsLow: 0.5, footwork: 'follow', followIn: 3.5, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, steady: 0.25, byFrame: { heavy: { guardLength: 0.5, footwork: 'pass' } }, player: { trailReach: 0.36, dsFrac: 0.18, lift: 0.05 }, strideK: 0.8 };
 // 중국 기술 가중치 (초안 §3-2, 지금 jianTech 의 찌르기 ×1.5 위에 곱한다). 안 A (24 세 쪽, 베기 : 찌르기 ≈ 3 : 1) — 腰擊 ×2.0(10/9 腰擊 쓰임에서 ×3.0) · 걷어 올리기 ×1.2 · 손 노리기 ×1.2
 //  腰擊 ×2.0 → ×3.0 (10/9 腰擊 쓰임 — docs/strike/chinese_yaoji_2026-10-09.md): ×2 로는 공용 腰擊(zwerch·zwerchL)이 휘두름의 6 % — 옆 자세에 손이 있어도 base 0.5 가 분노의 베기(1.4)에 졌다
 const CHINESE_TECHK = { '*': { zwerch: 3.0, zwerchL: 3.0, unterhau: 1.2, unterhauL: 1.2, wristCut: 1.2 } };
@@ -444,7 +444,7 @@ const CHINESE_UNIQUE = [
   { name: 'lianchi', feint: { name: '날개 접기 (염시)', fake: 'stichPflug', at: 0.3, then: [G.nebenR, G.sideR, [0.0, 0.1], G.sideL], open: 'UL' }, src: '조선세법 斂翅勢 무비지 쪽174/0588 · 무도 권2 p045/37 「法能佯北誘賺 … 倒退進步腰擊」 [원문] · 물러남을 손 거둠으로 [해석]' },
   // 掣步 腰擊: 앞발을 왼쪽 앞으로 비껴 딛고(뒷발 끌어붙임) 찌른 자리(긴 자세)에서 오른쪽으로 당겨 허리를 가로 벤다 — 길 = 위 yaoji, base = yaoji × 1.1.
   //  처음엔 공용 zwerch 길(오른 옆 시작·base 0.5)이었으나 48 판에 한 번도 안 골랐다(청강검 손이 오른 옆에 거의 안 감) → 원문 「向前進步腰擊」(찌른 뒤 腰擊)대로 yaoji 길로 (10/9 잼)
-  { name: 'chebuYaoji', nameKo: '끌어 딛고 허리 베기 (체보요격)', orig: '掣步腰擊', from: G.langort, path: [[0.35, 0.08], [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0, base: 0.33, chain: 1, step: { lat: -0.05, fwd: 0.35, when: 'strike' }, /* 10/21 앞으로 끌어 딛기(掣步) — 전 옆 −0.25 · 앞 0.25 는 독일 비껴 딛는 가로베기와 같은 꼴이었음 */ src: '조선세법 掣步(앞발 딛고 뒷발 끌어붙임) 「向前掣擊中殺」 쪽154/0568(무도 권2 p035/27 글자) · 「向前掣步左翼擊」 쪽173/0587 · 腰擊 「向前進步腰擊」 쪽158/0572 [원문] · 옆으로 비끼는 것은 [해석] · 수 [추정]' },
+  { name: 'chebuYaoji', nameKo: '끌어 딛고 허리 베기 (체보요격)', orig: '掣步腰擊', from: G.langort, path: [[0.35, 0.08], [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0, base: 0.33, chain: 1, step: { lat: -0.05, fwd: 0.3, when: 'strike' }, /* 10/29 fwd 0.35 → 0.3 = 걸음 사다리 0.3 칸(반걸음 무리 — 掣步 는 짧게 끌어 딛는 걸음 · 동방 반걸음 0.3 과 같게): 감독 안 · 사장님 확인 전(사장님 15:xx '0.35는 0.3으로 옮길 것과 0.45로 옮길 것을 나눠' — docs/strike/step_ladder_2026-10-29.md §8-3) · 10/21 앞으로 끌어 딛기(掣步) — 전 옆 −0.25 · 앞 0.25 는 독일 비껴 딛는 가로베기와 같은 꼴이었음 */ src: '조선세법 掣步(앞발 딛고 뒷발 끌어붙임) 「向前掣擊中殺」 쪽154/0568(무도 권2 p035/27 글자) · 「向前掣步左翼擊」 쪽173/0587 · 腰擊 「向前進步腰擊」 쪽158/0572 [원문] · 옆으로 비끼는 것은 [해석] · 수 [추정]' },
 ];
 
 // ── 고유 동작 (10/9 — 사장님 01:5x '각 유파마다 강점과 특징을 살릴 고유 동작', docs/strike/school_unique_2026-10-09.md) ──
@@ -474,7 +474,7 @@ const GERMAN_UNIQUE = [
   //  딛는 발은 비껴 가는 쪽 발(앞발이면 내딛고, 뒷발이면 앞발을 지나 그쪽 앞으로 — ai.js techStepRequest). 켬(10/9 12:2x 사장님 '우선 다 켜봐' — 전엔 ai 끔, 롱소드 AI 결정 몫)
   //  길: 처음엔 공용 zwerch(오른 옆 시작·base 0.25)였으나 롱소드 AI 는 그 자리를 거의 안 가서 48 판에 공용 zwerch 도 이것도 0 번 →
   //  리히테나워 Zwerch 처럼 오른 어깨 지붕에서 머리 높이로 가로 [추정], base 는 같은 자리 고유 동작 schielhau 와 같은 0.7 (10/9 잼)
-  { name: 'zwerchAbtritt', nameKo: '비껴 딛는 가로베기 (츠베르히 미트 압트리트)', orig: 'Zwerch mit Abtritt', from: G.tagR, path: [[0.3, 0.22], [0.0, 0.2], [-0.45, 0.2]], open: 'UL', kind: 'cut', reach: 0, base: 0.7, step: { lat: -0.3, fwd: 0.35, when: 'strike' }, src: 'Meyer 1570 장검 — 삼각 걸음(Triangel)으로 비껴 딛으며 Zwerch(오른쪽에서 칠 때 왼발을 왼쪽 앞으로) [원전 2차] · Zettel 「Zwerch benimmt, was vom Tag dar kommt」 [원전 2차] · 수 [추정]' },
+  { name: 'zwerchAbtritt', nameKo: '비껴 딛는 가로베기 (츠베르히 미트 압트리트)', orig: 'Zwerch mit Abtritt', from: G.tagR, path: [[0.3, 0.22], [0.0, 0.2], [-0.45, 0.2]], open: 'UL', kind: 'cut', reach: 0, base: 0.7, step: { lat: -0.3, fwd: 0.3, when: 'strike' } /* 10/29 fwd 0.35 → 0.3 = 걸음 사다리 0.3 칸(옆 0.3 과 같아 줄에서 45° 비켜 딛음 — Abtritt 는 비켜섬이지 나아감이 아님): 감독 안 · 사장님 확인 전(사장님 15:xx '0.35는 0.3으로 옮길 것과 0.45로 옮길 것을 나눠' — docs/strike/step_ladder_2026-10-29.md §8-3) */, src: 'Meyer 1570 장검 — 삼각 걸음(Triangel)으로 비껴 딛으며 Zwerch(오른쪽에서 칠 때 왼발을 왼쪽 앞으로) [원전 2차] · Zettel 「Zwerch benimmt, was vom Tag dar kommt」 [원전 2차] · 수 [추정]' },
 ];
 
 // 이탈리아 (카포 페로 1610 — 레이피어, 한손 찌르기). 찌르기 방식 꾸러미의 실제 찌르기 base(stichPflug 0.63·stichAlber 0.54)에 맞춤
@@ -540,7 +540,7 @@ const IBERIAN_UNIQUE = [
   //  the montante to give a revez cutting from behind with the other edge … also from low to high」(피 단Ⅰ — 「whoever performs it well will be able to perform them all」).
   //  오른 아래 → 올려 탈류 → 왼 높이 비낌(피 복ⅩⅤ 멈춤 자리) → 왼쪽으로 떨궈(「let fall the montante to the left」 피 복Ⅰ) → 왼 아래 → 올려 레베스 → 오른 높이 비낌. chain 2 = 흐름이 이어 돈다
   { name: 'talhoRevezBaixo', nameKo: '번갈아 올려베기 (탈류 이 레베스 드 바슈)', orig: 'talho e revez de baxo', from: G.wechselR, path: [[0.04, -0.08], G.ochsL, [-0.5, 0.0], G.wechselL, [-0.04, -0.08], G.ochsR], open: 'LL', kind: 'cut', reach: 0, base: 0.9, chain: 2, src: '피게이레두 1651 단순 규칙 Ⅰ·복합 규칙 Ⅰ·Ⅶ(「always from low to high, alternating talho and revez」) [원문 영역] · 길의 수 [추정]' },
-  { name: 'talhoRodeado', nameKo: '나선 걸음 베기 (탈류 로데아두)', orig: 'talho rodeado', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.35, fwd: 0.3, when: 'strike' }, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
+  { name: 'talhoRodeado', nameKo: '나선 걸음 베기 (탈류 로데아두)', orig: 'talho rodeado', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.45, fwd: 0.45, get when() { return SKILL.talhoApproach ? 'approach' : 'strike'; } } /* 10/29 옆 0.35 → 0.45 · 앞 0.3 → 0.45 = 걸음 사다리 0.45 칸(몬탄테의 더 큰 둥근 걸음) · when = AI 가 먼저 비껴 딛고 발이 닿으면 벤다(SKILL.talhoApproach — 사람 B3 은 when 을 읽지 않아 긋는 순간 딛음 그대로): 사장님 10/29 18:4x 결정 '나선 걸음 베기 조정해' — docs/strike/step_ladder_2026-10-29.md §8-4 · §9 · §10 */, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
 ];
 
 // ── 패시브 고유 동작 (10/9 — 사장님 02:1x '어떤 고유 동작은 패시브여도 좋을 거 같아', docs/strike/school_passive_design_2026-10-09.md) ──
@@ -584,7 +584,7 @@ const IBERIAN_PASSIVES = [
   //  길 = 고유 동작 talhoRevezBaixo 의 한 반 = 꾸러미 unterhau(아래 탈류 → [0.04, −0.08] → 왼 높이 비낌) · unterhauL(거울) — 손에서 가까운 쪽. 벤 칼은 높이 비낌(머리 위)으로 넘어가
   //  헛치거나 막히면 '이어 돌기'(위)가 흐름을 잇는다(새 고리 없음). 성공 보장 없음 — 상대 칼이 먼저 떨어지면 내가 맞는다(물리).
   //  cond.low: 지금 간 보는 자세가 목록에 있고 손이 그 자세 자리(0.15 패드 안 — v5 montanteFlowSeq '이미 아래' 판정 재사용)에 있음 (길목 준비 옆 자세로 덮였으면 아님)
-  //  걸음 fwd 0.3 = 이베리아 고유 동작 talhoRodeado 의 걸음 앞 값 재사용 · p 0.6 = 일본 데바나(foeRaise 패시브) p 재사용 — 둘 다 사장님 확인 전(확인표 876·877)
+  //  걸음 fwd 0.3 = 이베리아 고유 동작 talhoRodeado 의 걸음 앞 값 재사용(10/29 뒤 talhoRodeado 는 0.45 — 이 값은 걸음 사다리 0.3 칸 그대로 · 숫자만 빌렸음) · p 0.6 = 일본 데바나(foeRaise 패시브) p 재사용 — 둘 다 사장님 확인 전(확인표 876·877)
   //  근거: 피 복Ⅰ 「from where the montante comes to a stop you will give a talho from low to high」 · 복Ⅶ 「in each step you must give a blow, always from low to high」 [원문 영역] ·
   //   상대가 칼을 드는 순간을 받는 것은 [해석] · 수 [추정]
   { name: 'contraBaixo', nameKo: '올려 맞받기', when: 'foeRaise', cond: { low: ['wechselR', 'wechselL', 'alber'] }, do: { tech: ['unterhau', 'unterhauL'], step: { lat: 0, fwd: 0.3, when: 'strike' }, as: 'contraBaixo' }, p: 0.6, src: '피게이레두 1651 복Ⅰ·복Ⅶ(아래에서 위로 · 걸음마다 한 칼) [원문 영역] · 칼을 드는 순간을 받기 [해석] · 수 [추정] · 이름 가칭' },
@@ -730,7 +730,7 @@ const IBERIAN_SECRET_GILMOK = {
     // 둘러 베는 칼의 가운데 점: 지시는 v5 cutMid [0, 0.1](= zwerch 길). 탐침(맞닿기에서 낸 8 번): [0, 0.1] 이면 칼끝이 상대 머리 위(내 가슴 +1.2~1.5 m)로 지나 맞힘 1/8 →
     //  [0, −0.1] 맞힘 8/8(아픔 눈) — 손을 0.2 낮춤 [추정 · 사장님 확인 전 — 확인표 873]. 끝 점(반대쪽 옆 자세)은 그대로
     cutMid: [0.0, -0.1],
-    // 한 칼과 함께 디딤 (10/11 v6 2차 — 디렉터 '뻗음 + 높이 + 디딤을 함께'): 앞 0.3 m = 이베리아 고유 동작 talhoRodeado 의 걸음 앞 값 재사용 (첫 토막에 — secret.js gilmokSeq) ·
+    // 한 칼과 함께 디딤 (10/11 v6 2차 — 디렉터 '뻗음 + 높이 + 디딤을 함께'): 앞 0.3 m = 이베리아 고유 동작 talhoRodeado 의 걸음 앞 값 재사용(10/29 뒤 talhoRodeado 는 0.45 — 이 값은 걸음 사다리 0.3 칸 그대로 · 숫자만 빌렸음) (첫 토막에 — secret.js gilmokSeq) ·
     //  피 복Ⅶ 「in each step you must give a blow」 [원문 영역]. 팔 뻗음·몸통 높이는 덧씌우기 자세(secret_instant.js gilmokCutPose — 발도 길 SECRET.iaiPath 의 M·E 재사용)
     step: { lat: 0, fwd: 0.3, when: 'strike' }, // 10/11 3차: 간격에 맞춘 디딤(max: 0.6 을 두면 (상대 가슴 거리 − 칼끝 앞 거리)를 [0.3, 0.6] 로 자름 — secret.js gilmokStep)은 48 판 맞힘 츠바이핸더 23 → 19 % · 북부 대공의 검 8 → 2 % 로 나아지지 않아 끔
   },

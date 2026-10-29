@@ -158,6 +158,20 @@ export function gaitParams(f, isPlayer = false) {
   return P;
 }
 
+/**
+ * follow 안 'pass' → lunge + 끌어붙임(passAs) 걸음 길이 (10/29 18:5x 사장님 '네 제안대로' — docs/strike/step_ladder_2026-10-29.md §11):
+ *  GAIT.passAsRung 1 = 가까운 사다리 칸(GAIT.stepRungs)으로 맞춘 뒤 한 칸 아래 · 맨 아래 칸(0.3) 이하는 그대로(늘리지 않음) · pa.rung === false 면 옛 꼴 ·
+ *  0 = 옛 판 × pa.fwdK (0.85). 뒤 · 0 걸음은 그대로
+ */
+export function passAsFwd(fwd, pa) {
+  if (!GAIT.passAsRung || pa?.rung === false) return fwd * (pa?.fwdK ?? 1);
+  const R = GAIT.stepRungs;
+  if (!(fwd > R[0])) return fwd;
+  let i = 0;
+  for (let k = 1; k < R.length; k++) if (Math.abs(R[k] - fwd) < Math.abs(R[i] - fwd)) i = k;
+  return R[Math.max(0, i - 1)];
+}
+
 export class Gait {
   constructor(fighter) {
     this.f = fighter;
@@ -346,7 +360,7 @@ export class Gait {
     const pa = this.follow && o.kind === 'pass' ? this.P.passAs : null;
     if (pa) {
       this.req.kind = pa.kind;
-      this.req.fwd *= pa.fwdK ?? 1;
+      this.req.fwd = passAsFwd(this.req.fwd, pa); // 걸음 사다리 한 칸 아래 (GAIT.passAsRung — 0 이면 옛 × fwdK)
       this.req.leg = null;
       if (pa.draw) this.req.draw = true;
     }
