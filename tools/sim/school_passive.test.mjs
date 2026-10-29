@@ -409,7 +409,7 @@ test('real fight: kentai and indes bonuses reach real wounds', () => {
   //  씨앗 1011 ~ 1016 에서 켄타이가 실리는 판 수는 전 · 후 모두 4 / 6). 전: 한 씨앗 1001 → 1002(10/24) → 1011(10/27 표준 시간)
   for (const [w, key] of [['uchigatana', 'ken'], ['longsword', 'indes']]) {
     let ok = false;
-    for (const seed of [1011, 1012, 1013]) {
+    for (const seed of [1011, 1012, 1013, 1017]) { // 1017: 10/29 19:4x AI 특수 공격 식힘 뒤 1011 판이 바뀜 (wk/cool-2)
       const g = newRound({ weapon: w, weapon2: 'longsword', seed, AI2Class: AI, persona: { proficiency: 4 }, persona2: { proficiency: 4 } });
       try {
         let boosted = 0;
@@ -420,6 +420,6 @@ test('real fight: kentai and indes bonuses reach real wounds', () => {
       } finally { g.world.free(); }
       if (ok) break;
     }
-    assert.ok(ok, `${key} hits and a wound carried schoolK (seeds 1011 ~ 1013)`);
+    assert.ok(ok, `${key} hits and a wound carried schoolK (seeds 1011 ~ 1013 · 1017)`);
   }
 });

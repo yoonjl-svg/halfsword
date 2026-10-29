@@ -1,7 +1,7 @@
 // 이탈리아 특수 공격 시험 (사장님 10/27 23:5x '임브로카타 찌르기 뻗게 고치고' · 10/28 00:5x 칼끝 돌려 빼기로 옮김 · 01:1x 탭 창 0.6 ~ 1.2 s · 01:2x 조건 = 실패한 막아찌르기 —
 //   docs/strike/imbroccata_2026-10-27.md · docs/strike/cavazione_2026-10-28.md · config UNIQUE_ASSIST.imbroReach · cavTap · cavSnap · cavFrom · cavTo):
 //   ① 위에서 내려 찌르기(I7)는 읽힌 순간 탭 찌르기 덧씌우기로 찌른다(AI 와 같은 길) — 칼끝이 닿아 찌른 상처가 남(전 판 0)
-//   ② 칼끝 돌려 빼기(I9): 막아찌르기(I6)가 상처를 못 내고 끝난 때부터 실제 0.6 ~ 1.2 s 의 탭만 — 이른 탭은 보통 탭이고 그 기회를 없앰(연달아 두드리면 안 나감) ·
+//   ② 칼끝 돌려 빼기(I9): 막아찌르기(I6)가 상처를 못 내고 끝난 때부터 실제 0.2 ~ 1.2 s(10/29 20:0x — 전 0.6 ~ 1.2) 의 탭만 — 이른 탭은 보통 탭이고 그 기회를 없앰(연달아 두드리면 안 나감) ·
 //      창 밖 · 상처를 낸 막아찌르기 · 막아찌르기 없는 탭은 보통 탭 · 낸 칼은 운동학 찌름(리솔루토 런지 칼끝 빠르기 × 0.6 · 0.2 s)
 //  작게 · 빠르게(사장님): 손으로 기록을 놓는 시험 + 씨앗 하나 판 둘.  node --test tools/sim/cavazione_tap.test.mjs
 import test from 'node:test';
@@ -21,7 +21,7 @@ test('기본값 — 닿게 켬 · 탭 창 실제 0.6 ~ 1.2 s · 운동학 찌름
   assert.equal(UA.cavSnap, 1);
   assert.equal(UA.specialShare.cavazione, 0.3); // 10/29 12:3x 사장님 0.3 (02:0x 고노센 × 0.6 — 전 리솔루토 런지 1 × 0.6 과 같은 수)
   assert.ok(Math.abs(UA.cavSnapTime - realS(0.2)) < 1e-12);
-  assert.ok(Math.abs(UA.cavFrom - realS(0.6)) < 1e-12);
+  assert.ok(Math.abs(UA.cavFrom - realS(0.2)) < 1e-12); // 10/29 20:0x 0.6 → 0.2 (사람 반응 박자 — 이른 탭이 모두 0.6 s 전이었음)
   assert.ok(Math.abs(UA.cavTo - realS(1.2)) < 1e-12);
   const it = Object.fromEntries(PLAYER_UNIQUE.italian.map((e) => [e.name, e]));
   assert.deepEqual(it.imbroccata.on, [{ tech: 'stichOchs' }], '위에서 내려 찌르기 조건은 그대로 (늘 — 이어 찌르기 조건 없음)');
@@ -90,7 +90,7 @@ test('② 상처를 못 낸 막아찌르기가 끝난 때부터 실제 0.8 s 의
   }
 });
 
-test('② 상처를 낸 막아찌르기 · 막아찌르기 없는 탭 · 도는 중 · 창 밖(실제 1.3 s) · 이른 탭(0.5 s — 그 기회를 없앰) · 끔(cavTap 0)은 보통 탭', () => {
+test('② 상처를 낸 막아찌르기 · 막아찌르기 없는 탭 · 도는 중 · 창 밖(실제 1.3 s) · 이른 탭(0.1 s — 그 기회를 없앰 · 10/29 20:0x 창 0.2 s 부터) · 끔(cavTap 0)은 보통 탭', () => {
   const B = body();
   try {
     B.O.lastEnd = null;
@@ -104,10 +104,10 @@ test('② 상처를 낸 막아찌르기 · 막아찌르기 없는 탭 · 도는 
     B.O.run = null;
     B.ended(realS(1.3));
     assert.equal(B.tap(), false, '늦은 탭');
-    const E = B.ended(realS(0.5));
+    const E = B.ended(realS(0.1));
     assert.equal(B.tap(), false, '이른 탭');
     assert.ok(E.cavSpent, '이른 탭이 기회를 없앰');
-    B.wait(realS(0.3)); // 같은 막아찌르기 끝에서 0.8 s
+    B.wait(realS(0.3)); // 같은 막아찌르기 끝에서 0.4 s (창 안)
     assert.equal(B.tap(), false, '이른 탭 뒤에는 창 안이어도 안 나감');
     B.ended(realS(0.8));
     UA.cavTap = 0;
