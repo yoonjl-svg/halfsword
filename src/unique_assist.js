@@ -253,7 +253,7 @@ export function uniqueDef(tradition, e) {
  */
 const TAP_TRIG = {
   // 칼끝 돌려 빼기 (10/28 01:2x 사장님 '그냥 찌르기 x' · 01:1x 0.6 ~ 1.2): 막아찌르기(I6 — 막기 단추 새 누름의 짧은 찌르기 · italian_opposition.js)가 상처(심각도 > 0)를 못 내고 끝난 때(다 마침 · 끊김 —
-  //  헛침 · 막힘 · 칼끼리 맞닿음 모두)부터 cavFrom ~ cavTo 의 탭 · 이른 탭은 보통 탭이고 그 기회를 없앰(연타로는 안 나감) · 상처를 낸 막아찌르기는 안 엶 · 시계 = 막기 단추 시계(guard.clock)
+  //  헛침 · 막힘 · 칼끼리 맞닿음 모두)부터 cavFrom ~ cavTo(10/29 20:0x 실제 0.2 ~ 1.2 s · 전 0.6 ~ 1.2) 의 탭 · 이른 탭은 보통 탭이고 그 기회를 없앰(연타로는 안 나감) · 상처를 낸 막아찌르기는 안 엶 · 시계 = 막기 단추 시계(guard.clock)
   cav(uq) {
     const O = uq.f.parryGuard?.opposition;
     const E = O?.lastEnd;
