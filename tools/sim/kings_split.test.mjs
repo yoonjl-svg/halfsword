@@ -28,6 +28,18 @@ test('셋은 서로 다른 기질 · 숙련도 · 칭호는 그대로', () => {
   for (const id of ['artoria', 'roland', 'bernardo']) assert.equal(C[id].epithet, '왕');
 });
 
+test('설정 맞춤: 있던 문장은 한 글자도 그대로 · 롤랑이 론세스바예스에서 쓰러져 바다 너머 왕이 됨 · 베르나르도가 왕인 까닭 (사장님 10/29 15:5x)', () => {
+  const kept = {
+    roland: ['왕이 군대를 이끌고 바다를 건넌 뒤, 누구도 돌아오지 않았다.', '오랜 세월이 지나 안개가 성문을 덮은 밤, 왕의 문장을 새긴 기사가 홀로 돌아왔다.', '상아빛 갑옷과 포도주색 망토는 출정하던 날 그대로였으나, 얼굴을 가린 투구는 끝내 열리지 않았다.', '그를 뒤따르던 군대가 어디에 있는지, 귀환한 것이 정말 왕인지 아는 이는 없다.'],
+    bernardo: ['스페인 전승이 노래하는 레온의 영웅.', '알폰소 왕의 누이 히메나와 살다냐 백작 사이에서 난 왕의 조카다.', '그 왕이 나라를 샤를마뉴에게 넘기려 하자, 외국 왕의 지배를 받을 수 없다며 칼을 들었다.', '론세스바예스 골짜기에서 프랑크 군을 막아서고 롤랑을 쓰러뜨렸다고 전해진다.', '먹빛 갑옷 위에 금관을 쓴 레온의 사자를 검게 그린 흰 겉옷을 입고 긴 금빛 망토를 한쪽 어깨에 비스듬히 걸쳤다.'],
+  };
+  for (const [id, lines] of Object.entries(kept)) for (const l of lines) assert.ok(C[id].backstory.includes(l), `${id}: ${l}`);
+  assert.ok(C.roland.backstory.startsWith('론세스바예스 골짜기에서 그는 뿔나팔을 너무 늦게 불었다.'));
+  assert.ok(C.roland.backstory.includes('그를 왕이라 불렀다') && C.roland.backstory.includes('일곱 도시의 섬'));
+  assert.ok(C.bernardo.backstory.endsWith('레온 사람들은 왕관을 쓰지 않은 그를 왕이라 부른다. 그의 금관은 머리가 아니라 가슴의 사자가 쓰고 있다.'));
+  assert.equal(C.roland.origin, '이베리아 서쪽 · 바다 너머에서 사라진 왕국'); // origin 그대로
+});
+
 test('싱지르 걸쇠의 발: 롤랑 기다림(기본) · 베르나르도 걸어 들어감 · 다른 AI 는 기본 그대로', () => {
   const aiOf = (id) => newRound({ seed: 3, weapon: 'longsword', weapon2: C[id].weapon, difficulty: C[id].ai.level, persona: C[id].ai.persona, AI2Class: AI }).ai;
   assert.equal(aiOf('roland').pers.spinHold, true);
