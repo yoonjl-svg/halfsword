@@ -2,7 +2,7 @@
 //  redondo_sway.mjs — 풍차 베기(B4 레돈두) 감기 첫머리 휘청 재기 (사장님 10/29 20:0x '레돈두는 처음 발동을 시작할 때 캐릭터가 크게 휘청거려' · docs/strike/redondo_hold_2026-10-29.md §8)
 //   재기만 한다 — 게임 값은 건드리지 않는다(--set 으로 바꿔 견줌). 사람 몸(0 번)이 서서(stand) · 앞으로 걸으며(walk — 스틱 0.6) 탭을 끌지 않고 길게 누름 → 감기 →
 //   감기 시작부터 release 초 뒤 뗌. 상대는 멀리(시작 거리 5.6 m) 가만히 칼을 내린 채.
-//   창 = 감기 시작 ~ 실제 0.6 s (사장님 '처음 발동을 시작할 때') · hold = 감는 내내(감기 시작 ~ 뗌) · 바탕 = 누르기 전 같은 길이(같은 몸 · 같은 걸음 — 감기 없이도 있는 흔들림)
+//   창 = 감기 시작 ~ 실제 0.6 s (사장님 '처음 발동을 시작할 때') · hold = 감는 내내(감기 시작 ~ 뗌) · rel = 뗀 뒤 after 초(내려침 · 거둠 — 10/30) · 바탕 = 누르기 전 같은 길이(같은 몸 · 같은 걸음 — 감기 없이도 있는 흔들림)
 //   잼 (창 안 최대 · cm · °):
 //    pelvis   골반 가로 옮김 − 바탕 걸음 몫(서기: 창 첫 자리부터 · 걷기: 스틱 걸음 빠르기 × 시간을 뺀 몫이 아니라 바탕 창의 같은 셈과 견줌)
 //    comOff   무게중심 ↔ 두 발 사이 선분 가로 거리 (fighter.js updateBalance 의 offBalance 셈 — 캡처 포인트 · 발 둘레 여유 footMargin 밖 몫)
@@ -11,7 +11,7 @@
 //    foot     땅에 닿은 발의 가로 미끄러짐 (스텝마다 닿은 채 움직인 거리의 합 — 걸음으로 든 발은 뺌)
 //    stumble  균형 걸음 명령 크기 최대 (0 ~ 1 — 1 이면 넘어지지 않으려 딛는 걸음이 다 걸림) · 넘어짐(state ≠ stand)
 //    jerk     칼끝 놓인 자리의 가속 최대 (m/s² — 놓인 자리의 차 두 번) · 손 놓인 자리 첫 스텝 뜀(cm)
-//   사용법: node tools/sim/redondo_sway.mjs [--ws=zweihander,flamberge,tizona,durandal] [--seeds=6] [--moves=stand,walk] [--release=1.5] [--control=1] [--paired=1] [--held=press|always|off] [--set=UNIQUE_ASSIST.rdWindMode="slowSpin";…] [--json=.tmp/파일]
+//   사용법: node tools/sim/redondo_sway.mjs [--ws=zweihander,flamberge,tizona,durandal] [--seeds=6] [--moves=stand,walk] [--release=1.5] [--control=1] [--paired=1] [--held=press|always|off] [--gap=m — 시작 가슴 사이 (기본 ARENA.startGap)] [--set=UNIQUE_ASSIST.rdWindMode="slowSpin";…] [--json=.tmp/파일]
 //    씨앗 n = 누르는 때 3.8 + 0.1·(n − 1) s (걸음 박자 자리를 고르게 — 상대 · 몸은 같은 판) · --control=1 = 누르지 않고 같은 창 (걸음만의 흔들림) · --paired=1 = 같은 박자의 control 과 짝 차이(excess)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
@@ -37,8 +37,8 @@ function segDist2D(x, z, a, b) {
 }
 
 /** 한 판: 누름 → 감기 → 뗌. 창 · 바탕 재기를 돌려줌 */
-export function swayRun({ w = 'zweihander', seed = 1, move = 'stand', press = 4.0, release = 1.5, after = 1.0, setup = null, control = false, held = 'press' } = {}) {
-  const G = newRound({ walls: true, seed, weapon: w, weapon2: 'longsword', persona: { proficiency: 4 } });
+export function swayRun({ w = 'zweihander', seed = 1, move = 'stand', press = 4.0, release = 1.5, after = 1.0, setup = null, control = false, held = 'press', gap = null } = {}) {
+  const G = newRound({ walls: true, seed, weapon: w, weapon2: 'longsword', persona: { proficiency: 4 }, ...(gap ? { gap } : {}) });
   const P = G.player;
   const D = G.enemy;
   setup?.(G, P); // 견줌 (재는 도구만 — 충돌 · 무게 끄기 등)
@@ -96,6 +96,7 @@ export function swayRun({ w = 'zweihander', seed = 1, move = 'stand', press = 4.
   const base = mk();
   const win = mk();
   const hold = mk(); // 감는 내내 (감기 시작 ~ 뗌 — 고리를 여러 바퀴 도는 동안의 흔들림)
+  const rel = mk(); // 뗀 뒤 (뗌 ~ after 초 — 내려침 · 거둠: 10/30 곧장 사선 내려침 견줌)
   const sampleInto = (S, first) => {
     const pel = V(P.bodies.pelvis.translation());
     const chest = P.bodies.chest;
@@ -160,6 +161,7 @@ export function swayRun({ w = 'zweihander', seed = 1, move = 'stand', press = 4.
     let inB = false;
     let inW = false;
     let inH = false;
+    let inR = false;
     while (!end() && P.alive) {
       G.step();
       const t = G.t;
@@ -175,6 +177,10 @@ export function swayRun({ w = 'zweihander', seed = 1, move = 'stand', press = 4.
         sampleInto(hold, !inH);
         inH = true;
       }
+      if (tRel != null && t >= tRel) {
+        sampleInto(rel, !inR);
+        inR = true;
+      }
       if (P.state !== 'stand') rec.fell = true;
       if (tRel != null && rec.fire == null && P.iai?.moves?.[0]?.rd) rec.fire = +(t - tRel).toFixed(3);
     }
@@ -185,6 +191,7 @@ export function swayRun({ w = 'zweihander', seed = 1, move = 'stand', press = 4.
   rec.base = out(base);
   rec.win = out(win);
   rec.hold = out(hold);
+  rec.rel = out(rel);
   rec.drain = rec.stam0 != null && rec.stam1 != null ? r2(rec.stam0 - rec.stam1) : null;
   rec.stats = { winds: uq.stats.winds ?? 0, fire: uq.stats.windFire ?? {}, cancel: uq.stats.windCancel ?? {} };
   return rec;
@@ -194,7 +201,7 @@ export function swayRun({ w = 'zweihander', seed = 1, move = 'stand', press = 4.
 export function swaySummary(runs) {
   const keys = ['pelvis', 'side', 'back', 'comOff', 'offBal', 'dTilt', 'chestW', 'tipV', 'foot', 'stumble', 'jerk', 'handJump', 'yawDev', 'selfImp', 'selfShare'];
   const agg = (which) => Object.fromEntries(keys.map((k) => [k, [r2(q(runs.map((r) => r[which][k]), 0.5)), r2(Math.max(...runs.map((r) => r[which][k] ?? 0)))]]));
-  return { n: runs.length, fell: runs.filter((r) => r.fell).length, base: agg('base'), win: agg('win'), hold: agg('hold'), turns: r2(q(runs.map((r) => r.turns), 0.5)), drain: r2(q(runs.map((r) => r.drain), 0.5)) };
+  return { n: runs.length, fell: runs.filter((r) => r.fell).length, base: agg('base'), win: agg('win'), hold: agg('hold'), rel: agg('rel'), turns: r2(q(runs.map((r) => r.turns), 0.5)), drain: r2(q(runs.map((r) => r.drain), 0.5)) };
 }
 
 if (isMain(import.meta.url)) {
@@ -210,16 +217,17 @@ if (isMain(import.meta.url)) {
   for (const w of String(args.ws || 'zweihander,flamberge,tizona,durandal').split(','))
     for (const move of String(args.moves || 'stand,walk').split(',')) {
       const runs = [];
-      for (let seed = 1; seed <= +(args.seeds || 6); seed++) runs.push(swayRun({ w, seed, move, press: 3.8 + 0.1 * (seed - 1), release: +(args.release || 1.5), control: !!+(args.control || 0), held: args.held || 'press' })); // 씨앗마다 누르는 때를 0.1 s 씩 (걸음 박자 자리를 고르게)
+      for (let seed = 1; seed <= +(args.seeds || 6); seed++) runs.push(swayRun({ w, seed, move, press: 3.8 + 0.1 * (seed - 1), release: +(args.release || 1.5), control: !!+(args.control || 0), held: args.held || 'press', gap: +(args.gap || 0) || null })); // 씨앗마다 누르는 때를 0.1 s 씩 (걸음 박자 자리를 고르게)
       const sm = swaySummary(runs);
       if (args.paired) {
         // 같은 박자 자리의 누르지 않은 판(control)과 짝 차이 (창 안 최대 − 걸음만의 최대): 걸음 자체가 가끔 발 밖으로 벗어나는 몫(control 최대 13 cm 남짓)을 뺌
-        const ctl = runs.map((r) => swayRun({ w, seed: r.seed, move, press: 3.8 + 0.1 * (r.seed - 1), release: +(args.release || 1.5), control: true, held: args.held || 'press' }));
+        const ctl = runs.map((r) => swayRun({ w, seed: r.seed, move, press: 3.8 + 0.1 * (r.seed - 1), release: +(args.release || 1.5), control: true, held: args.held || 'press', gap: +(args.gap || 0) || null }));
         sm.ctl = swaySummary(ctl).win;
         sm.ctlHold = swaySummary(ctl).hold;
         const ex = (wh) => Object.fromEntries(['dTilt', 'side', 'offBal', 'stumble', 'chestW', 'comOff'].map((k) => { const d = runs.map((r, i) => (r[wh][k] ?? 0) - (ctl[i][wh][k] ?? 0)); return [k, [r2(q(d, 0.5)), r2(Math.max(...d))]]; }));
         sm.excess = ex('win');
         sm.excessHold = ex('hold');
+        sm.excessRel = ex('rel');
       }
       out[`${w}/${move}`] = { ...sm, runs: args.runs ? runs : undefined };
       console.log(`${w} ${move}: ${JSON.stringify(sm)}`);
