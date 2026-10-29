@@ -306,6 +306,7 @@ export class PlayerUniqueAssist {
     this.quietT = 1;
     this.restPos = [f.handOffset.x, f.handOffset.y];
     this.blocked = false; // main.js: 막기 버튼·미리 받기가 손을 쥐는 중
+    this.handHeld = false; // main.js: 손이 정말 쥐여 있나 (막기가 손을 쥠 · 미리 받기 — 막기 단추를 쥐었어도 탭 · 휘두르기로 놓아 준 때는 거짓) · 칼끝 돌려 빼기 탭만 봄 (10/30 — UNIQUE_ASSIST.cavHeld)
     this.painFoe = null;
     this.fv = new THREE.Vector2(); // 손가락 속도 (고른 값, 패드 m/s)
     this.fSpeed = 0;
@@ -334,8 +335,9 @@ export class PlayerUniqueAssist {
   }
 
   /** 프레임마다 (main.js): 이번 프레임 손가락 움직임(패드 m)·프레임 시간·손을 쥔 다른 동작이 있나 */
-  feed(dx, dy, dt, blocked = false) {
+  feed(dx, dy, dt, blocked = false, handHeld = blocked) {
     this.blocked = blocked;
+    this.handHeld = handHeld;
     if (!(dt > 0)) return;
     const k = 1 - Math.exp(-dt / UA.fingerTau);
     this.fv.x += (dx / dt - this.fv.x) * k;
@@ -344,11 +346,11 @@ export class PlayerUniqueAssist {
     this.fIdle = Math.abs(dx) + Math.abs(dy) > 1e-5 ? 0 : this.fIdle + dt;
   }
 
-  /** 발동하지 않는 때: 다른 플레이어 동작이 돌거나 칼을 못 쓰는 때 */
-  busy() {
+  /** 발동하지 않는 때: 다른 플레이어 동작이 돌거나 칼을 못 쓰는 때 · held 참이면 막기 단추를 쥔 것은 보지 않고 손이 정말 쥐였나(handHeld)만 (칼끝 돌려 빼기 탭 — 10/30 UNIQUE_ASSIST.cavHeld) */
+  busy(held = false) {
     const f = this.f;
     const sk = f.skill;
-    return this.blocked || !UA.on || !!sk.sec || !!sk.tap || !!sk.pom || !!sk.vitalRange || !f.alive || !f.armed || f.weaponBroken || f.state !== 'stand' || !f.foe || f.finish?.amt > 0.5;
+    return (held ? this.handHeld : this.blocked) || !UA.on || !!sk.sec || !!sk.tap || !!sk.pom || !!sk.vitalRange || !f.alive || !f.armed || f.weaponBroken || f.state !== 'stand' || !f.foe || f.finish?.amt > 0.5;
   }
 
   /** 긋기 결과 적기: 맞힘(상대 아픔 +0.05 — 비기와 같은 눈) · 칼 맞물림(ai.js checkBind 와 같은 기하 0.07 m). 탭 찌르기도 한 긋기로 센다 */
@@ -475,7 +477,9 @@ export class PlayerUniqueAssist {
       const ok = TAP_TRIG[e.tapKey]?.(this, now);
       if (!ok) continue;
       const f = this.f;
-      if (this.busy() || f.foe?.state !== 'stand' || f.stamina.exhausted) return false; // 지금은 못 냄 (다른 탭 · 비기가 도는 중 등 — 그 탭은 버려짐)
+      // 지금은 못 냄 (다른 탭 · 비기가 도는 중 등 — 그 탭은 버려짐). 칼끝 돌려 빼기는 막기 단추를 쥔 채 친 탭도 받음(10/30 cavHeld — 막기 단추로 낸 막아찌르기 다음 칼이라 쥔 채 치는 게 자연스러움 ·
+      //  전 판은 막기 단추를 쥐고 있으면 늘 버려져 '한 번도 안 나감' — 사장님 10/30 00:4x 보고)
+      if (this.busy(cav && !!UA.cavHeld) || f.foe?.state !== 'stand' || f.stamina.exhausted) return false;
       ok.spend();
       this.coolStart(e);
       const U = e.U;
@@ -486,7 +490,7 @@ export class PlayerUniqueAssist {
       this.stats.tapFired = (this.stats.tapFired ?? 0) + 1;
       f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
       f.stamina.attack(cav ? 'thrust' : 'cut'); // 탭 하나 (끌고 가는 칼은 같은 공격 — same)
-      if (e.tapSnap && UA.cavSnap && UA.enhance > 0 && requestArtThrust(f, { share: specialShare(e.name), maxT: UA.cavSnapTime, tech: U.name, under: true })) {
+      if (e.tapSnap && UA.cavSnap && UA.enhance > 0 && requestArtThrust(f, { share: specialShare(e.name), maxT: UA.cavSnapTime, tech: U.name, under: true, capFromCut: !!UA.cavCapCut })) {
         this.stats.snap = (this.stats.snap ?? 0) + 1;
         return true;
       }
