@@ -282,6 +282,7 @@ test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누�
   const P = g.player, E = g.enemy, ai = g.ai;
   try {
     assert.equal(ai.secret?.name, 'mordschlag');
+    const S = ai.secret, PR = ai.press; // 판당 1 번(10/29 19:5x — 다 쓰면 ai.secret · ai.press 가 비워짐 · dropSecret)
     assert.equal(E.canShove, false); // persona.close 없는 몸 — 아래 누르기는 시험이 쥔다 (fighter.closeStep 이 돌지 않음)
     ai.watch = () => {}; // 간 보기 결정 없음 (공격 · 물러남 없이 셈만 본다)
     ai.moveFeet = function () { this.me.move.set(0, 0); this.me.stickX = 0; this.me.stickY = 0; };
@@ -292,13 +293,13 @@ test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누�
     for (let i = 0; i < steps(1.0); i++) g.step();
     E.barge = null; // 너그러움(mordGrace)보다 길게 끊김 → 셈 0
     for (let i = 0; i < steps(SECRET.mordGrace) + 2; i++) g.step();
-    assert.equal(ai.press.pressT, 0);
+    assert.equal(PR.pressT, 0);
     E.barge = { phase: 'press' };
     let opened = null, fired = null, ended = null;
     const c0 = E.stamina.counts.secret ?? 0;
     for (let i = 0; i < steps(SECRET.mordPress + 1.5); i++) {
       g.step();
-      if (opened == null && ai.press.wins > 0) opened = ai.press.pressMax;
+      if (opened == null && PR.wins > 0) opened = PR.pressMax;
       if (fired == null && ai.secretRun?.stage === 'mord') fired = g.t;
       if (fired != null && ended == null && !ai.secretRun) ended = g.t;
       const s = E.sword.translation();
@@ -307,8 +308,10 @@ test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누�
     assert.ok(opened != null && Math.abs(opened - SECRET.mordPress) < 3 * DT, `창은 누르기 ${opened} s 에`);
     assert.ok(fired != null, '창 안에서 냄');
     assert.ok(ended != null && ended - fired < 1.5, `냄 → 끝 ${ended - fired} s`);
-    assert.equal(ai.secretStat(ai.secret).fired, 1);
-    assert.equal(ai.press.wins, 1);
+    assert.equal(ai.secretStat(S).fired, 1);
+    assert.equal(PR.wins, 1);
+    assert.equal(ai.secret, null, '판당 1 번 — 다 쓰면 비기 없는 AI (10/29 19:5x)');
+    assert.equal(E.secretUsed, 1);
     assert.equal(E.mordGrip, null); // 원래 쥠으로
     assert.equal(E.skill.sec, null);
     if (CONFIG.STAMINA.on) assert.equal((E.stamina.counts.secret ?? 0) - c0, 1); // 비기 기력 (사람과 같은 장부)

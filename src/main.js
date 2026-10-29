@@ -317,7 +317,18 @@ if (params.has('cavTo') && +params.get('cavTo') > 0) CONFIG.UNIQUE_ASSIST.cavTo 
 if (params.has('lianTap')) CONFIG.UNIQUE_ASSIST.lianTap = +params.get('lianTap') ? 1 : 0; // 사람 날개 접기 탭 (사장님 10/28 01:2x — 물러나며 탭 · 기본 1)
 if (params.has('lianStep') && +params.get('lianStep') >= 0) CONFIG.UNIQUE_ASSIST.lianStep = +params.get('lianStep'); // 사람 날개 접기 앞 걸음 (m — 기본 0.45 · 사장님 10/29 14:3x)
 if (params.has('specialCooldown')) CONFIG.UNIQUE_ASSIST.specialCooldown = CONFIG.realS(Math.max(0, +params.get('specialCooldown') || 0)); // 특수 공격 공통 식힘 (실제 초 — 기본 6 · 0 = 끔 · 사장님 10/28 02:0x)
-if (params.has('secretCooldown')) CONFIG.UNIQUE_ASSIST.secretCooldown = CONFIG.realS(Math.max(0, +params.get('secretCooldown') || 0)); // 유파 비기 식힘 (실제 초 — 기본 10 · 0 = 끔 · 사장님 10/29 17:5x · secret.js PlayerSecretWatch)
+/** `?secretUses=1,chinese:3` → { default: 1, chinese: 3 } (숫자 하나 = default · 'inf' · 'off' = 끝없음 — 10/29 19:5x) */
+function parseSecretUses(v) {
+  const out = { default: 1 };
+  for (const p of String(v ?? '').split(',')) {
+    const [k, n] = p.includes(':') ? p.split(':') : ['default', p];
+    const x = n === 'inf' || n === 'off' ? Infinity : +n;
+    if (k.trim() && (x === Infinity || x >= 0)) out[k.trim()] = x;
+  }
+  return out;
+}
+if (params.has('specialCoolFrom') && ['free', 'motion', 'fire'].includes(params.get('specialCoolFrom'))) CONFIG.UNIQUE_ASSIST.specialCoolFrom = params.get('specialCoolFrom'); // 특수 공격 식힘을 세기 시작하는 때 (기본 free — 몸이 다시 자유로울 때 · motion 동작 끝 · fire 나간 순간 · 10/29 19:5x)
+if (params.has('secretUses')) CONFIG.UNIQUE_ASSIST.secretUses = parseSecretUses(params.get('secretUses')); // 유파 비기 판당 쓸 수 (기본 1 · 동방 3 · 'inf' = 끝없음 · 사장님 10/29 19:5x)
 if (params.has('dupTap')) CONFIG.UNIQUE_ASSIST.dupTap = +params.get('dupTap') ? 1 : 0; // 사람 겹치기 탭 (사장님 10/28 01:2x — 맞물린 채 탭 · 기본 1)
 if (params.has('rdHold')) CONFIG.UNIQUE_ASSIST.rdHold = +params.get('rdHold') ? 1 : 0; // 사람 풍차 베기 길게 누름 (이베리아 B4 — 사장님 10/29 · 기본 1)
 if (params.has('rdEdge')) CONFIG.UNIQUE_ASSIST.rdEdge = +params.get('rdEdge') < 0 ? -1 : 1; // 감는 칼 날 쪽 (기본 −1 — 사장님 확인 전)

@@ -317,7 +317,8 @@ export class PlayerUniqueAssist {
     this.holdE = this.list.find((e) => e.hold) ?? null; // 길게 눌러 내는 특수 공격 (풍차 베기 B4 — 10/29)
     this.press = { down: false, still: false, secretOpen: false }; // main.js holdInput — 탭 입력을 누르고 있나 · 탭 문턱(끌지 않음) 안인가 · 비기 창이 열렸나
     this.hold = { st: 'idle', t: 0 }; // 누름 셈 · 감기 ('idle' · 'press' · 'spent' 이 누름은 감지 않음 · 'wind' 감는 중)
-    this.coolT = {}; // 특수 공격(표 칸 special)마다 마지막으로 나간 때 (사장님 10/28 02:0x '특수공격은 6초 쿨타임 … 스킬이 발동한 순간부터 재' — UNIQUE_ASSIST.specialCooldown)
+    this.coolT = {}; // 특수 공격(표 칸 special)마다 식힘을 세기 시작한 때 (사장님 10/28 02:0x 나간 순간 → 10/29 19:5x 끝난 때 — UNIQUE_ASSIST.specialCooldown · specialCoolFrom · 도는 동안 Infinity)
+    this.coolRun = {}; // 나갔는데 아직 안 끝난 특수 공격 { t0 나간 때, motion 동작 끝 } (coolTick)
     f.uniqueCue = null;
     f.skill.uniqBody = null;
     f.skill.uniq = this.list.length ? this : null;
@@ -514,15 +515,47 @@ export class PlayerUniqueAssist {
     return false;
   }
 
-  /** 특수 공격 식힘 중인가 (사장님 10/28 02:0x — 표 칸 special: 제비 베기 · 겹치기 · 날개 접기 · 칼끝 돌려 빼기 · 기술마다 따로 · 나간 순간부터 UNIQUE_ASSIST.specialCooldown) */
+  /**
+   * 특수 공격 식힘 중인가 (사장님 10/28 02:0x 6 s · 나간 순간부터 → 10/29 19:5x '특수공격 3초(발동이 완료된 시점부터 카운트, 경직시간을 포함할지 말지는 너가 판단)' —
+   *  UNIQUE_ASSIST.specialCooldown · specialCoolFrom · 표 칸 special 다섯 · 기술마다 따로): 나간 뒤 그 동작이 끝날 때까지(coolT = Infinity — coolTick) + 끝난 때부터 specialCooldown.
+   *  끝난 때 = specialCoolFrom 'free'(몸이 다시 자유로울 때 — 운동학 칼 · 탭 찌르기 · 강화 긋기가 끝나고 끝 자세 풀기(iaiFade) · 굳음(iaiHoldT)까지 · 감독 권고) ·
+   *  'motion'(동작이 끝난 때 — 풀기 · 굳음 빼고) · 'fire'(나간 순간 — 10/28 판)
+   */
   cooling(e, now = this.t) {
     const t0 = e.special ? this.coolT[e.name] : null;
     return t0 != null && UA.specialCooldown > 0 && now - t0 < UA.specialCooldown;
   }
 
-  /** 특수 공격이 나감 — 그 기술 식힘 시작 (조건이 받아들여진 순간) */
+  /** 특수 공격이 나감 — 그 기술 식힘 시작 (조건이 받아들여진 순간 · 'fire' 가 아니면 끝날 때까지 식힘 중 — coolTick 이 끝난 때를 적음) */
   coolStart(e) {
-    if (e.special) this.coolT[e.name] = this.t;
+    if (!e.special) return;
+    if (UA.specialCoolFrom === 'fire') {
+      this.coolT[e.name] = this.t;
+      return;
+    }
+    this.coolT[e.name] = Infinity;
+    this.coolRun[e.name] = { t0: this.t, motion: null };
+  }
+
+  /**
+   * 나간 특수 공격이 끝났나 (drive 스텝마다 — 10/29 19:5x): 동작 = 끌고 가는 운동학 칼(f.iai · iaiReq) · 그 이름의 탭 찌르기 · 그 기술의 강화 긋기(this.r — 제비 베기) ·
+   *  풀기 · 굳음 = 끝 자세 붙잡기(iaiHoldT) · 손가락으로 돌려주는 0.2 s(iaiFade). 끝나면 coolT = 끝난 때 (재기: stats.coolRuns — 나간 때부터 동작 끝 · 몸 자유 s)
+   */
+  coolTick() {
+    const f = this.f;
+    for (const name in this.coolRun) {
+      const R = this.coolRun[name];
+      const moving = !!f.iai || !!f.iaiReq || f.skill.tap?.uniqTech === name || this.r?.e?.name === name;
+      if (R.motion == null) {
+        if (moving) continue;
+        R.motion = this.t;
+        if (UA.specialCoolFrom === 'motion') this.coolT[name] = R.motion;
+      }
+      if (moving || f.iaiHoldT > 0 || f.iaiFade > 0) continue;
+      if (UA.specialCoolFrom !== 'motion') this.coolT[name] = this.t;
+      (this.stats.coolRuns ??= []).push({ name, motion: R.motion - R.t0, free: this.t - R.t0 });
+      delete this.coolRun[name];
+    }
   }
 
   /** 식힘 남은 초 (0 = 다 식음 — 읽기만 · 재는 도구 · 앞으로 화면) */
@@ -846,6 +879,7 @@ export class PlayerUniqueAssist {
     this.t += dt;
     const f = this.f;
     if (this.holdE) this.holdTick(dt); // 풍차 베기 (B4 — 길게 눌러 감다 떼면 내려침 · 10/29)
+    this.coolTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:5x)
     // 물러남이 풀린 때 (날개 접기 탭 조건 TAP_TRIG 'lian' — 10/28 01:2x): 스틱 뒤가 풀린 스텝
     const back = this.backNow();
     if (this.backOn && !back) this.backOff = this.t;
