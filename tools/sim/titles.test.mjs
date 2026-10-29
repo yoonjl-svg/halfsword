@@ -51,7 +51,7 @@ test('호칭 표: 유파 다섯 = 비기 원전 책 이름 + 계승자 (04:0x �
   // 원전 = 그 유파 비기 칸의 출처 줄 책 (skill_tree_data.js NODE_LORE src)
   const book = { german: 'Kampffechten', italian: 'Lo Schermo', iberian: 'Arte de Esgrima', japanese: '오륜서', chinese: '무비지' };
   for (const s of D.TREE_SCHOOLS) assert.match(D.nodesOf(s).find((n) => n.cat === 'secret').src, new RegExp(`『${book[s]}』`), s);
-  assert.equal(R.TITLE.countsLevel, true); assert.equal(R.TITLE.conquerWins, 30); assert.equal(R.TITLE.butcherHeads, 100); assert.equal(R.TITLE.tycoonCoins, 10000);
+  assert.equal(R.TITLE.countsLevel, true); assert.equal(R.TITLE.conquerWins, 10); // 사장님 10/29 18:2x '10연승' assert.equal(R.TITLE.butcherHeads, 100); assert.equal(R.TITLE.tycoonCoins, 10000);
   assert.deepEqual([...R.KING_FOES], ['artoria', 'roland', 'bernardo']);
 });
 
@@ -122,7 +122,7 @@ test('알림은 한 번: 얻은 호칭 = 안 봄(seen false) · 글 · 본 뒤�
   assert.equal(R.titleReason('swordmaster'), '다섯 유파의 모든 기술을 익혀 소드마스터가 되었습니다.');
   assert.equal(R.titleReason('wander'), '모든 무대를 깨고 방랑을 열어 방랑자가 되었습니다.');
   assert.equal(R.titleReason('regicide'), '한 번의 방랑에서 아르토리아와 롤랑, 베르나르도 델 카르피오를 모두 쓰러뜨려 왕 시해자가 되었습니다.');
-  assert.equal(R.titleReason('conqueror'), '한 번의 방랑에서 지지 않고 30번을 내리 이겨 정복자가 되었습니다.');
+  assert.equal(R.titleReason('conqueror'), '한 번의 방랑에서 지지 않고 10번을 내리 이겨 정복자가 되었습니다.');
   assert.equal(R.titleReason('butcher'), '지금까지 머리를 100개 얻어 도살자가 되었습니다.');
   assert.equal(R.titleReason('tycoon'), '지금까지 금화를 10,000 벌어 대부호가 되었습니다.');
   assert.equal(R.titleReason('woodcutter'), '나뭇가지 하나로 왕을 쓰러뜨려 나무꾼이 되었습니다.');
@@ -197,16 +197,16 @@ test('방랑자: 30 무대를 처음 다 깬 판의 저장에 같이 · 옛 저�
   assert.deepEqual(saved().titles.map((t) => t.event), ['wander']);
 });
 
-test('정복자: 한 번의 방랑에서 30 연승 — 29 번째엔 없음 · 30 번째 이긴 판 저장에 같이 · 지면 처음부터', () => {
+test('정복자: 한 번의 방랑에서 10 연승 (10/29 18:2x) — 9 번째엔 없음 · 10 번째 이긴 판 저장에 같이 · 지면 처음부터', () => {
   fresh(); unlockWander(); P.markTitleSeen('wander');
-  for (let i = 0; i < 29; i++) fight('heinrich', true);
-  assert.equal(P.readProgress().wander.run.wins, 29); assert.equal(events().includes('conqueror'), false);
+  for (let i = 0; i < 9; i++) fight('heinrich', true);
+  assert.equal(P.readProgress().wander.run.wins, 9); assert.equal(events().includes('conqueror'), false);
   fight('heinrich', false); // 지면 그 방랑이 끝남
-  for (let i = 0; i < 29; i++) fight('heinrich', true);
+  for (let i = 0; i < 9; i++) fight('heinrich', true);
   assert.equal(events().includes('conqueror'), false, '진 뒤 새 방랑은 0 부터');
   fight('heinrich', true);
   const s = saved();
-  assert.equal(s.wander.run.wins, 30); assert.equal(s.wander.run.status, 'won');
+  assert.equal(s.wander.run.wins, 10); assert.equal(s.wander.run.status, 'won');
   assert.deepEqual(s.titles.map((t) => t.event), ['wander', 'conqueror']);
   assert.deepEqual(P.titleNotices().map((n) => n.name), ['정복자']);
   fight('heinrich', true); assert.deepEqual(events(), ['wander', 'conqueror'], '한 번만');
@@ -228,9 +228,9 @@ test('왕 시해자: 한 번의 방랑에서 아르토리아 · 롤랑 · 베르
   // 다른 차례 (롤랑 → 베르나르도 → 아르토리아) · 같은 판에 정복자도 얻으면 둘을 차례로
   fresh(); unlockWander(); P.markTitleSeen('wander');
   fight('roland', true); fight('bernardo', true);
-  for (let i = 0; i < 27; i++) fight('heinrich', true);
+  for (let i = 0; i < 7; i++) fight('heinrich', true);
   assert.deepEqual(events(), ['wander']);
-  fight('artoria', true); // 30 번째 승 · 셋째 왕
+  fight('artoria', true); // 10 번째 승 · 셋째 왕
   assert.deepEqual(saved().titles.map((t) => t.event), ['wander', 'regicide', 'conqueror']);
   assert.deepEqual(P.titleNotices().map((n) => n.name), ['왕 시해자', '정복자']);
   assert.equal(P.readProgress().level, 1 + 3);

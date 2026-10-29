@@ -57,11 +57,14 @@ export const STAMINA = {
   weaponReferenceMass: 1.6, // 무게 = √(처음 쥔 칼 질량 ÷ 1.6 kg) 0.75 ~ 1.5 — 칼이 부러져도 처음 질량(사장님 결정)
   // 걷기: 골반 수평 이동 0.62 m 마다 보통 1.4 · 동방 0.7 · 일본 2.1(사장님 결정 §0 15 · 16 — 유파 열쇠 swordArt.tradition · docs/strike/school_kit_map.md 보법 칸) · 한 스텝 거리 상한 3 m/s(튐 막기)
   stepDistance: 0.62, stepCosts: { default: 1.4, chinese: 0.7, japanese: 2.1 }, maxWalkSpeed: 3,
-  // 회복: 0.6 s 동안 공격·막아 받기·박차기·비기·클린치를 안 쓰면 AI 초당 15 · 사람 21(샛별 저장소 c76b4a6f — 설계안은 모두 15, 사장님 확인 전) · 막기 유지 중엔 멈춤
+  // 회복: 0.6 s 동안 공격·막아 받기·박차기·비기·클린치를 안 쓰면 AI 초당 15 · 사람 21(샛별 저장소 c76b4a6f — 설계안은 모두 15, 사장님 확인 전 · 10/29 17:5x 사람 입력 몸은 아래 25 — 21 은 시뮬 대본 몸) · 막기 유지 중엔 멈춤
   recoverPerSecond: realRate(15), playerRecoverPerSecond: realRate(21), recoverDelay: realS(0.6), // 표준 시간: 실제 초당 · 실제 초 (10/25)
+  // 사람 회복 (사장님 10/29 17:5x '인간 플레이어의 기력 회복 속도 25로 상승시켜.' — 확인표 2922): 사람 입력이 모는 몸(main.js 플레이어 — fighter.humanInput)만 초당 21 → 25 · AI 15 그대로 ·
+  //  자연 회복 탈진(바닥 −70 → −35)도 같은 빠르기(1.667 → 1.4 s) · 다 비운 바닥에서 가득(100)까지 8.10 → 6.8 s. 시뮬 대본 몸(AI 도 사람 입력도 아님)은 위 playerRecoverPerSecond 21 그대로 — 관문 바이트 같음
+  humanRecoverPerSecond: realRate(25), // [사장님 10/29 17:5x 결정]
   // 탈진 규칙 (사장님 10/18 22:1x '탈진 규칙은 샛별 것이 맞음' — 원문 '새벽'은 오타, 23:3x 정정 · 샛별 연구 규칙 · docs/strike/japanese_flow_adopt_2026-10-18.md): 바닥(floor −70)에서 이동 · 공격 불가 ·
-  //  막기를 누르고 있어도 자연 회복 빠르기(플레이어 playerRecoverPerSecond 21 · AI recoverPerSecond 15 /s)로 강제로 차서 severeAt(−35)에서 풀림(심한 지침 단계) —
-  //  플레이어 1.667 s · AI 2.333 s. 풀린 뒤는 보통 규칙(되돌림 +15 · 막기 쥐면 회복 멈춤). `?exhaust=fixed` = 옛 규칙(아래 exhaustSeconds · exhaustRecover)
+  //  막기를 누르고 있어도 자연 회복 빠르기(사람 humanRecoverPerSecond 25(10/29 17:5x — 전 21) · AI recoverPerSecond 15 /s)로 강제로 차서 severeAt(−35)에서 풀림(심한 지침 단계) —
+  //  사람 1.4 s(전 1.667) · 시뮬 대본 몸 1.667 s · AI 2.333 s. 풀린 뒤는 보통 규칙(되돌림 +15 · 막기 쥐면 회복 멈춤). `?exhaust=fixed` = 옛 규칙(아래 exhaustSeconds · exhaustRecover)
   exhaustNatural: true,
   exhaustSeconds: realS(2.5), exhaustRecover: realRate(28), // (옛 규칙 · `?exhaust=fixed`) 탈진: 2.5 s 제자리 숨 고르기(사장님 결정) · 끝에서 0(지침 단계)으로. 초당 28 = −floor ÷ 2.5 — 2.5 s 끝에 0 에 닿게(같은 규칙 — 10/16 −80 ÷ 2.5 = 32 · 10/17 탈진 −70 에 맞춤 · 탈진 중 값은 막대에 안 보이고(진행은 시간) 끝에서 0 으로 맞추므로 게임 차이 없음)
   // 실제 접촉 시간 보정 (attackTempo false = 공격 시계에 attackTired · attackSevere 를 그대로 곱함 · 안쪽 계수 없음). 아래 값은 샛별 저장소 19 무기 266 조건 고정 표적 측정에서 정한 것 — 사장님 확인 전
@@ -416,6 +419,12 @@ export const GAIT = {
   hurrySpeed: 1.2, // 그렇게 서두르는 건 이보다 빨리(m/s) 가려 할 때만
   requestSteps: true, // 기술 걸음(requestStep)을 받는다
   pushAtFoot: 0, // R2′ 걸음 조율 채널 A(docs/strike/r2p_step_channel_2026-10-08.md §3-A, 확인표 181): 1 = 수평 추진력의 골반 몫을 딛은 발 자리(발바닥 가운데 x·z, 골반 높이)에 하중 비율대로 건다 → 발의 옆 치우침만큼 yaw 짝힘이 저절로(오른발이 밀면 왼쪽으로). 크기·방향은 그대로, 수직 받침·가슴 몫은 오늘 자리. 0 = 오늘(바이트 동일). ?r2p=legs 가 1 로 켠다
+  // 걸음 사다리 (10/29 사장님 14:5x · 18:5x — docs/strike/step_ladder_2026-10-29.md): 기술 걸음 길이 칸 0.3 반걸음 · 0.45 들어감 · 0.6 한 걸음 · 0.9 런지
+  stepRungs: [0.3, 0.45, 0.6, 0.9],
+  // 1 = 유파 걸음 follow 안에서 'pass' 를 앞발 lunge + 끌어붙임(*_GAIT.passAs)으로 바꿀 때 걸음을 사다리 한 칸 아래로 — 가까운 칸으로 맞춘 뒤 한 칸 내림
+  //  (0.9 → 0.6 · 0.6 → 0.45 · 0.45 → 0.3 · 0.3 은 맨 아래 칸이라 그대로 · 0.3 보다 짧은 걸음은 늘리지 않고 그대로) · 0 = 옛 판 × passAs.fwdK 0.85 (비교용 `?passAsRung=0`)
+  //  사장님 10/29 18:5x '그래 재보고 네 제안대로 해' (§11 — 끌어붙임이 몸을 더 실어 나르는 것을 맞추는 보상값이 아니라 걸음을 15 % 줄이는 값이었음 · 이탈리아 · 동방 · 일본 셋 다)
+  passAsRung: 1,
   cutStep: 0, // 채널 B(§3-B, 확인표 182): 1 = chain legs 에서 베기 시작 때(오늘 lunge 창 SKILL.lungeMin~Max) 획 방향의 반대 발을 내딛는 걸음을 부탁한다(requestStep leg; 가로 속도 ±0.3 m/s 안이면 발을 고르지 않음) — 획 시작 쪽 발이 밀어 골반을 돌린다. AI 도 기술 길의 가로 변위(±0.2 패드) 부호로 같은 규칙. anchor 에선 안 읽음. 0 = 오늘(바이트 동일)
   pinK: 20000, // 발바닥 정지 마찰 스프링(N/m). 0 = 끔 (물리 엔진 마찰만)
   pinD: 250,
@@ -925,6 +934,7 @@ export const SKILL = {
   enterStep: 0.45,
   enterMin: 1.1, // 이미 이보다 가까우면 들어가지 않는다 (m)
   enterCool: realS(1.0), // 한 번 들어간 뒤 다시 들어가기까지 (초)
+  talhoApproach: 1, // 1 = 이베리아 나선 걸음 베기(talhoRodeado — schools.js step when 게터)를 AI 가 '먼저 비껴 딛고, 발이 닿으면 벤다'(when 'approach' — 비껴 베기 · 비껴서며 찌르기와 같은 꼴, ai.js approachStep) · 0 = 전처럼 베며 딛음('strike' — 칼이 발 딛기 전에 지나가 옆 0.45 미끄러짐 한가운데서 빗나감). 사장님 10/29 18:4x '나선 걸음 베기 조정해' (docs/strike/step_ladder_2026-10-29.md §9 · §10). 사람(B3)은 이 칸을 읽지 않음 — 긋는 순간 딛음. `?talhoApproach=0`
 };
 
 // ── 스킬트리 편지 '00에서 온 편지' (10/21 — docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md §5 · skill_tree_data.js letterMul · weapons.js drawWeaponCards weightOf) ──
@@ -1439,6 +1449,10 @@ export const UNIQUE_ASSIST = {
   //  표 칸 special(unique_assist.js PLAYER_UNIQUE — tsubameGaeshi · duplieren · lianchi · cavazione)마다 따로 · 나간 순간(조건이 받아들여진 때)부터 이 초 동안 그 조건은 없는 것 —
   //  입력은 보통 동작(탭 = 보통 탭 찌르기 · 제비 베기 = 보통 올려 긋기 · 줄 세우기 · 취소 없음) · 자세 칸 '이어 긋기' 이름도 안 뜸. 사람만(AI 는 이 길을 안 씀). 0 = 끔 `?specialCooldown=0`
   specialCooldown: realS(6.0), // 실제 초 (시간 사다리 6.0 — 확인표 2658) [사장님 10/28 02:0x 결정]
+  // 유파 비기 식힘 (사장님 10/29 17:5x '유파별 비기는 쿨타임 10초 적용해' — 확인표 2920 · 2921): 특수 공격 식힘과 같은 틀 — 비기가 나간 순간(skill.secret 이 받은 때)부터 이 초 동안
+  //  그 비기의 창 · 조건은 없는 것(secret.js PlayerSecretWatch — 창이 안 열림 · 무장 · 누르기 셈 · 덮음 셈 · 격살 기다림도 안 걸림 = 비기가 도는 동안과 같은 '바쁨') — 입력은 보통 공격.
+  //  다섯 비기 모두(독일 모르트슐라크 · 이탈리아 안다레 리솔루토 · 이베리아 싱지르 · 일본 고노센 · 동방 격살) · 판마다 새로 · 사람만(AI 비기는 특수 공격처럼 식힘 없음 — 여쭐 것). 0 = 끔 `?secretCooldown=0`
+  secretCooldown: realS(10.0), // 실제 초 (시간 사다리에 10.0 — 사장님이 더한 칸 · 확인표 2921) [사장님 10/29 17:5x 결정]
   // 특수 공격 칼끝 빠르기 (사장님 10/29 02:0x '계산식을 바꿔. 모든 유파 특수공격을 고노센 곱하기 n으로. 풍차베기는 50% 염시는 50% 두플리렌 50%' — 확인표 2734):
   //  끌고 가는 칼(secret_instant.js requestCombo)의 칼끝 빠르기 목표 = 같은 칼 고노센 발도 칼끝 빠르기(iaiTipSpeed) × 이 몫 · 표 칸 special 이름마다 한 곳 — 유파 비기 빠르기(격살 share · 모르트슐라크 kin ·
   //  싱지르 share · 리솔루토 share)를 바꿔도 특수 공격은 안 바뀜. 제비 베기 · 칼끝 돌려 빼기는 전과 같은 수(고노센 × 0.6) · 잔상 세기도 이 몫(연환 잔상). `?specialShare=redondo:0.5,lianchi:0.5`

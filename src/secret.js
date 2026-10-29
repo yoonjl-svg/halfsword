@@ -9,7 +9,7 @@
 //   플레이어는 검술 풀이의 measure(같은 꾸러미 값)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, SKILL, BIND, realS } from './config.js';
+import { SECRET, SKILL, BIND, UNIQUE_ASSIST, realS } from './config.js';
 import { TRADITIONS, playerSecretDef } from './schools.js';
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
 import { segDist } from './skill.js';
@@ -573,7 +573,7 @@ export function gilmokLine(f, reach, D) {
 
 /**
  * 길목 한 칼의 디딤 (10/11 v6 3차 — 디렉터 '디딤을 그 순간 상대와의 간격에 맞추세요'): 디딤 = (그 순간 상대 가슴 거리 − 이 한 칼의 칼끝 앞 거리)를
- *  [st.fwd 0.3 (talhoRodeado), st.max 0.6 (japaneseStep)] 로 자름 — 기하로 정하는 값. 칼끝 앞 거리 = 덧씌우기 가운데 손 앞(SECRET.iaiPath.M.hand[0] 0.5) + 날 길이(weaponCfg.bladeLength).
+ *  [st.fwd 0.3 (talhoRodeado 와 같던 수 — 10/29 뒤 talhoRodeado 0.45 · 이 값은 0.3 칸 그대로), st.max 0.6 (japaneseStep)] 로 자름 — 기하로 정하는 값. 칼끝 앞 거리 = 덧씌우기 가운데 손 앞(SECRET.iaiPath.M.hand[0] 0.5) + 날 길이(weaponCfg.bladeLength).
  *  f 가 없으면(도구) st.fwd 그대로
  */
 function gilmokStep(st, f) {
@@ -739,6 +739,19 @@ export class PlayerSecretWatch {
     this.prevFoePain = foe.pain;
     this.opened = 0; // 창이 열린 수 (재기)
     this.riso = this.S?.when === 'risoluto' ? new RisolutoWatch(me, foe) : null; // 이탈리아 거침없이 나아가 찌르기 (10/22 — italian_risoluto.js)
+    this.t = 0; // 이 창의 시계 (update 의 dt 합 — 비기 식힘)
+    this.coolT = null; // 비기가 마지막으로 나간 때 (사장님 10/29 17:5x '유파별 비기는 쿨타임 10초' — UNIQUE_ASSIST.secretCooldown · 특수 공격 식힘 coolT 와 같은 틀)
+    this.secRun = me.skill?.sec ?? null; // 지난 스텝의 비기 실행(me.skill.sec) — 새 실행이 보이면 그때 비기가 나간 것 (창을 만들 때 이미 돌던 실행은 이 창에서 나간 것이 아님)
+  }
+
+  /** 비기 식힘 중인가 (10/29 17:5x — 나간 순간부터 UNIQUE_ASSIST.secretCooldown · 0 = 끔) */
+  cooling(now = this.t) {
+    return this.coolT != null && UNIQUE_ASSIST.secretCooldown > 0 && now - this.coolT < UNIQUE_ASSIST.secretCooldown;
+  }
+
+  /** 식힘 남은 초 (0 = 다 식음 — 읽기만 · 재는 도구 · 앞으로 화면) */
+  coolLeft(now = this.t) {
+    return this.coolT == null ? 0 : Math.max(0, UNIQUE_ASSIST.secretCooldown - (now - this.coolT));
   }
 
   /** 2:2 (동시 대전 3단계 10/29): 상대를 하나 더 · 겨눈 상대 바꾸기 — 눈(Senses)만 상대마다 (ai_sense.js) · 창 걸쇠 · 셈은 내 몸의 것이라 그대로 */
@@ -761,6 +774,18 @@ export class PlayerSecretWatch {
   update(dt, busy) {
     const me = this.me;
     const foe = this.foe;
+    this.t += dt;
+    // 비기 식힘 (사장님 10/29 17:5x '유파별 비기는 쿨타임 10초' — UNIQUE_ASSIST.secretCooldown · 특수 공격 식힘과 같은 틀): 비기가 나간 순간(skill.secret 이 받아 me.skill.sec 에 새 실행이 걸린 때 —
+    //  창을 썼어도 skill.secret 이 받지 않았으면 아님)부터 그 비기의 창 · 조건은 없는 것 = 비기가 도는 동안과 같은 '바쁨'(창을 새로 열지 않음 · 무장 · 누르기 셈 · 덮음 셈 · 격살 기다림이 안 걸림 ·
+    //  고노센 웅크림도 풀림) — 그동안 공격 입력은 보통 공격. 나간 때 = 이 스텝 앞(main.js 입력 길 · 미리 받은 입력 모두 지난 update 와 이 update 사이에 낸다) → this.t − dt
+    const run = me.skill?.sec ?? null;
+    if (run && run !== this.secRun) this.coolT = this.t - dt;
+    this.secRun = run;
+    if (this.cooling()) {
+      busy = true;
+      this.open = null; // 식힘 중 창은 없음 (보통 길에선 이미 닫혀 있음 — fire 가 닫고 냄)
+      this.queued = null;
+    }
     recordFoeSenses(this, dt); // 1:1 = this.sense.record(dt) 그대로 (2:2 는 상대마다 — setFoe)
     if (this.open) {
       this.open.age = (this.open.age ?? 0) + dt;
