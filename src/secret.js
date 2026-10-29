@@ -573,7 +573,7 @@ export function gilmokLine(f, reach, D) {
 
 /**
  * 길목 한 칼의 디딤 (10/11 v6 3차 — 디렉터 '디딤을 그 순간 상대와의 간격에 맞추세요'): 디딤 = (그 순간 상대 가슴 거리 − 이 한 칼의 칼끝 앞 거리)를
- *  [st.fwd 0.3 (talhoRodeado), st.max 0.6 (japaneseStep)] 로 자름 — 기하로 정하는 값. 칼끝 앞 거리 = 덧씌우기 가운데 손 앞(SECRET.iaiPath.M.hand[0] 0.5) + 날 길이(weaponCfg.bladeLength).
+ *  [st.fwd 0.3 (talhoRodeado 와 같던 수 — 10/29 뒤 talhoRodeado 0.45 · 이 값은 0.3 칸 그대로), st.max 0.6 (japaneseStep)] 로 자름 — 기하로 정하는 값. 칼끝 앞 거리 = 덧씌우기 가운데 손 앞(SECRET.iaiPath.M.hand[0] 0.5) + 날 길이(weaponCfg.bladeLength).
  *  f 가 없으면(도구) st.fwd 그대로
  */
 function gilmokStep(st, f) {
