@@ -229,7 +229,7 @@ export function createSilverWandererDetail(h) {
     // Work in scabbard coordinates and transform the whole fitting together.
     const place=geo=>bake(geo,[-.018,-.22,-.24],[0,0,-.23]);
     if(look?.daraishiRevision>=7) { // ── v7: 입 쇠·끝 쇠(10 각)·끈 띠 둘·매다는 끈만 — 가는 테 넷·끈 고리·덩굴 잎은 뺀다. 끝 쇠는 늘인 검집(DARAISHI_SCABBARD) 끝으로
-      const S=DARAISHI_SCABBARD, chape=S.top-S.length+.0295, put=geo=>placeDaraishiScabbard(THREE,bake,geo,look); // ── v8: 기울인 검집을 따른다 (v7 도 10/15 부터 v8 자리 — daraishiScabbard 8)
+      const S=DARAISHI_SCABBARD, chape=S.top-(look?.daraishiScabbardLen??S.length)+.0295, put=geo=>placeDaraishiScabbard(THREE,bake,geo,look); // ── v8: 기울인 검집을 따른다 (v7 도 10/15 부터 v8 자리 — daraishiScabbard 8)
       addMerged(l,[put(cyl(.027,.027,.043,10,true,[0,.315,0])),put(cyl(.022,.018,.059,10,false,[0,chape,0]))],GOLD,metal);
       addMerged(l,[put(bake(new THREE.CircleGeometry(.024,10),[0,.331,0],[-Math.PI/2,0,0]))],0x221a21,leather);
       addMerged(l,[.27,.19].map(y=>put(cyl(.027,.027,.023,10,true,[0,y,0]))),0x30242d,leather);

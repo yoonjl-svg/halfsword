@@ -1,10 +1,11 @@
 // AI 리볼버 발 사이 간격 · 첫 발 · 쏘는 동안 발 묶음 점검 — 사장님 10/16 지시(× 1.8, 샛별 쪽 메모로 전달, 10/17 들여옴 · 확인표 2022 · docs/import/saetbyeol_requests_2026-10-17.md)
-//  → 사장님 10/29 22:3x '1.8배 → 2.0배 · 공격이 가능하게 된 시점에서 그 초만큼 간격을 주어 첫 탄환 · 발사 중엔 이동 못 하게'(확인표 2980 ~ 2982).
+//  → 사장님 10/29 22:3x '1.8배 → 2.0배 · 공격이 가능하게 된 시점에서 그 초만큼 간격을 주어 첫 탄환 · 발사 중엔 이동 못 하게'(확인표 2980 ~ 2982)
+//  → 사장님 10/30 00:1x '사람은 그대로 두고 AI만 적용해. 쏘기 전과 후에 모두 0.2초 움직임 정지 넣어.'(확인표 2985 · 2986 — GUN.aiPlant · aiAfter).
 //  GUN.aiCooldownK(2.0)는 AI 가 모는 몸(f.aiControlled — ai.js AI 생성자가 붙이는 표시)의 발 사이 간격에만 곱한다(gun.js gunGap).
 //  실제 gun.js updateGun 길을 그대로 돌리고, 한 발이 나간 바로 그 스텝에 정해진 시간(f.gun.cool)을 읽는다:
 //   장전이 아닐 때 = 발 사이 간격(GUN.cooldown × 인물 배율 gunCooldownK × AI 배율) · 여섯째 발 뒤 = 장전(GUN.reload).
 //  사람 손은 '쏠 수 있으면 바로 탭'(skill.thrust — 게임의 찌르기 단추와 같은 길)으로 흉내 낸다. 이 손에는 AI 표시가 없다.
-//  '전' = 같은 판을 10/29 전 값(aiCooldownK 1.8 · aiFirstGap 0 · aiFireStill 0)으로 돌린 것 · '후' = 지금 값.
+//  '전' = 같은 판을 10/29 전 값(aiCooldownK 1.8 · aiFirstGap 0 · aiFireStill 0 · 흔들림 1.1)으로 돌린 것 · '후' = 지금 값.
 //  시간: 정해진 값은 게임 초(시뮬 템포 1.1 — 실제 초 × TIME.k), 줄에는 실제 초를 함께 찍는다.
 //  결정적: harness_m newRound 의 seed 로 Math.random 을 고정한다. 어긋난 줄이 있으면 '실패' 를 찍고 종료 코드 1.
 //   node tools/sim/ai_gun_cooldown_check.mjs
@@ -13,8 +14,9 @@ import { GUN } from '../../src/gun.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 
 const { realS, TIME, ARENA } = CONFIG;
-const NOW = { aiCooldownK: GUN.aiCooldownK, aiFirstGap: GUN.aiFirstGap, aiFireStill: GUN.aiFireStill }; // 지금 값 (2.0 · 1 · 1)
-const OLD = { aiCooldownK: 1.8, aiFirstGap: 0, aiFireStill: 0 }; // 10/29 전
+const KEYS = ['aiCooldownK', 'aiFirstGap', 'aiFireStill', 'aiPlant', 'aiPlantAim', 'aiAfter', 'aimEnvelopeScale'];
+const NOW = Object.fromEntries(KEYS.map((k) => [k, GUN[k]])); // 지금 값 (2.0 · 1 · 1 · 0.2 · 0.2 · 1.21)
+const OLD = { aiCooldownK: 1.8, aiFirstGap: 0, aiFireStill: 0, aiPlant: 0, aiPlantAim: 0, aiAfter: GUN.kickTime + GUN.kickFade, aimEnvelopeScale: 1.1 }; // 10/29 전
 const MAYA = CHARACTERS_BY_ID.samira; // 마야(id samira): persona.gunCooldownK 1.5
 const FOE_MAYA = { weapon2: 'pistol', look2: MAYA.look, difficulty: MAYA.ai.level, persona: MAYA.ai.persona };
 const HUMAN = realS(0.8); // 사람 간격 (게임 초)
@@ -23,7 +25,7 @@ const MAYA_GAP = realS(0.8) * 1.5 * 2.0; // 마야 AI — 실제 2.4 s
 const PLAIN_OLD = realS(0.8) * 1.8; // 전 1.44 s
 const MAYA_OLD = realS(0.8) * 1.5 * 1.8; // 전 2.16 s
 const RELOAD = realS(8);
-const KICK = GUN.kickTime + GUN.kickFade; // 쏘는 중(gunFiring) 꼬리 — 게임 초
+const STOP = realS(0.2); // 쏘기 전 · 뒤 멈춤 (게임 초)
 const near = (a, b) => Math.abs(a - b) < 1e-9;
 const allNear = (xs, v) => xs.length > 0 && xs.every((x) => near(x, v));
 const real = (t) => +(t / TIME.k).toFixed(4);
@@ -54,21 +56,29 @@ function run(opts, secs, cond = NOW, before = null) {
     const seen = [0, 0];
     const hold = [0, 0];
     const leak = [0, 0];
+    const runs = [[], []]; // 이어진 발 묶음 토막 { pre, post } (게임 초 — 쏘지 않은 토막은 pre null)
+    const open = [null, null];
     for (let i = 0; i < Math.round(secs / DT); i++) {
       G.step();
       F.forEach((f, j) => {
         const n = f.gun?.shots ?? 0;
+        if (f.fireHold && !open[j]) open[j] = { start: i, shot: null };
         if (n > seen[j]) {
           seen[j] = n;
           shots[j].push({ t: +G.t.toFixed(4), cool: f.gun.cool, reload: f.gun.reloading });
+          if (open[j]) open[j].shot = i;
         }
         if (f.fireHold) {
           hold[j]++;
           if (f.move.x || f.move.y) leak[j]++;
+        } else if (open[j]) {
+          const o = open[j];
+          runs[j].push(o.shot == null ? { pre: null, post: (i - o.start) * DT } : { pre: (o.shot - o.start) * DT, post: (i - o.shot) * DT });
+          open[j] = null;
         }
       });
     }
-    return { P: G.player, E: G.enemy, sP: shots[0], sE: shots[1], hP: hold[0], hE: hold[1], leakP: leak[0], leakE: leak[1] };
+    return { P: G.player, E: G.enemy, sP: shots[0], sE: shots[1], hP: hold[0], hE: hold[1], leakP: leak[0], leakE: leak[1], rP: runs[0], rE: runs[1] };
   } finally {
     Object.assign(GUN, NOW);
   }
@@ -91,6 +101,7 @@ const firstAfter = (s, gap) => !!s[0] && s[0].t >= ARENA.startHold + gap - 1e-9;
 
 console.log(`GUN.cooldown ${real(GUN.cooldown)} s · GUN.reload ${real(GUN.reload)} s · GUN.aiCooldownK ${NOW.aiCooldownK} · aiFirstGap ${NOW.aiFirstGap} · aiFireStill ${NOW.aiFireStill} · 마야 gunCooldownK ${MAYA.ai.persona.gunCooldownK} · 판 시작 정지 ${ARENA.startHold} 게임 초 (실제 초로 찍음 — TIME.k ${TIME.k})`);
 check(NOW.aiCooldownK === 2.0 && NOW.aiFirstGap === 1 && NOW.aiFireStill === 1, 'GUN.aiCooldownK = 2.0 · aiFirstGap 1 · aiFireStill 1 (사장님 10/29 22:3x)');
+check(near(NOW.aiPlant, STOP) && near(NOW.aiAfter, STOP), 'GUN.aiPlant · aiAfter = 실제 0.2 s (사장님 10/30 00:1x — 시간 사다리 0.2)');
 check(near(GUN.cooldown, realS(0.8)) && near(GUN.reload, realS(8)), 'GUN.cooldown 실제 0.8 · GUN.reload 실제 8 그대로 (플레이어 간격 · 장전을 건드리지 않음)');
 
 // ① 사람 대 AI (AI 는 롱소드로 실제로 싸운다): 사람 권총의 간격 · 장전 · 쏜 시각이 전과 바이트 같다 · 사람은 발이 안 묶인다
@@ -126,15 +137,17 @@ console.log('\n③ 가만히 선 사람(롱소드) 대 AI 마야(권총, 인물 
   const o = { seed: 12, weapon: 'longsword', ...FOE_MAYA };
   const a = run(o, 30, OLD);
   const b = run(o, 30);
-  console.log(`  전 ${line('마야', a.sE)}\n  후 ${line('마야', b.sE)} · 발 묶인 스텝 ${b.hE}(한 발에 ${real((b.hE * DT) / Math.max(1, b.sE.length))} s)`);
+  const shotRuns = b.rE.filter((r) => r.pre != null);
+  const fmtR = (k) => [...new Set(shotRuns.map((r) => real(r[k])))].join('/');
+  console.log(`  전 ${line('마야', a.sE)}\n  후 ${line('마야', b.sE)} · 발 묶인 스텝 ${b.hE} · 한 발 쏘기 전 ${fmtR('pre')} s · 쏜 뒤 ${fmtR('post')} s · 쏘지 않고 풀린 멈춤 ${b.rE.length - shotRuns.length}`);
   check(b.E.gunCooldownK === 1.5, '마야 인물 배율 1.5 그대로 몸에 붙음');
   check(allNear(gapsOf(a.sE), MAYA_OLD) && allNear(gapsOf(b.sE), MAYA_GAP), '마야 간격 전 2.16 s → 후 2.4 s');
   check(allNear(reloadsOf(b.sE), RELOAD) || reloadsOf(b.sE).length === 0, '마야 장전 8 s 그대로 (장전까지 갔으면)');
   check(firstAfter(b.sE, MAYA_GAP), `마야 첫 발 공격 가능 ${real(b.sE[0]?.t - ARENA.startHold)} s 뒤 ≥ 2.4 s (전 ${real(a.sE[0]?.t - ARENA.startHold)} s)`);
   check(minOf(realGaps(b.sE)) >= MAYA_GAP - 1e-9, `실제로 잰 발 사이 시간 최소 ${real(minOf(realGaps(b.sE)))} s ≥ 2.4`);
-  // 쏘는 중 = 방아쇠 스텝 + 꺾음 꼬리(kickTime + kickFade) — 한 발에 그 스텝 수만큼만 묶이고(발 사이 기다림 전체가 아님) 묶인 동안 걷기 입력은 0
-  const per = Math.ceil(KICK / DT - 1e-9) + 1;
-  check(b.sE.length > 0 && Math.abs(b.hE - per * b.sE.length) <= b.sE.length, `발 묶임 ${b.hE} 스텝 ≈ 한 발 ${per} 스텝(${real(per * DT)} s) × ${b.sE.length}발 — 간격 2.4 s 전체가 아님`);
+  // 쏘는 중 = 쏘기 전 멈춤 0.2 s + 방아쇠 스텝 + 쏜 뒤 멈춤 0.2 s — 한 발에 그만큼만 묶이고(발 사이 기다림 전체가 아님) 묶인 동안 걷기 입력은 0
+  const within = (x, v) => x >= v - DT - 1e-9 && x <= v + 2 * DT + 1e-9;
+  check(shotRuns.length > 0 && shotRuns.length >= b.sE.length - 1 && shotRuns.every((r) => within(r.pre, STOP) && within(r.post, STOP)), `한 발마다 쏘기 전 · 쏜 뒤 0.2 s(± 스텝) 묶임 — ${shotRuns.length} 토막 · 간격 2.4 s 전체가 아님`);
   check(b.leakE === 0, '묶인 동안 걷기 입력(move) 0');
   check(a.hE === 0, '전(aiFireStill 0)은 안 묶임');
 }
@@ -166,6 +179,7 @@ console.log('\n⑤ AI 대 AI — 플레이어 자리 기본 AI(권총) 대 마�
   check(firstAfter(b.sP, PLAIN) && (b.sE.length === 0 || firstAfter(b.sE, MAYA_GAP)), '첫 발: P ≥ 공격 가능 + 1.6 s · E ≥ + 2.4 s');
   check([...reloadsOf(b.sP), ...reloadsOf(b.sE)].every((x) => near(x, RELOAD)), '장전은 둘 다 8 s');
   check(b.hP > 0 && b.leakP === 0 && b.leakE === 0, 'AI 둘 다 쏘는 동안 묶임 · 묶인 동안 걷기 입력 0');
+  check(b.rP.filter((r) => r.pre != null).every((r) => r.pre >= STOP - DT - 1e-9), 'P 기본 AI 도 쏘기 전 0.2 s 멈춤');
 }
 
 // ⑥ 자리와 무관: 상대 자리(index 1)를 사람 손이 몰면 곱해지지 않고, 플레이어 자리 AI 는 곱해진다
