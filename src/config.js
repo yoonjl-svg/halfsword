@@ -1589,6 +1589,24 @@ export const THRUST = {
   itMeasure: ((v) => (['old', 'contact', 'full'].includes(v) ? v : 'full'))((typeof location !== 'undefined' && location.search && new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')).get('itMeasure')) || (typeof process !== 'undefined' && process.env?.IT_MEASURE) || 'full'), // 기본 'full' (사장님 10/25 22:1x '전부 새 값으로 적용해. ai의 밸런스 문제는 나중에 따로 개선하자' · 확인표 2556)
 };
 
+// 플랑베르주 간격 줄 (10/29 15:xx 사장님 '봐' — docs/strike/flamberge_measure_2026-10-29.md · 확인표 2900 ~ 2903 · 사장님 10/29 17:5x 결정 — 기본 'geo'):
+//  손 표(weapon_measured.js) 플랑베르주 [1.91, 2.57, 1.52, 0.77] 의 맞닿기 · 칼끝 거리가 츠바이핸더보다 23 · 56 cm 크다(손 ~ 칼끝은 5 cm 차)
+//  'off' = 지금 줄(판 바이트 같음) · 그 밖은 weapon_measured.js FLAMBERGE_ROWS 의 같은 이름 줄 — 판을 만들기 전에 읽는다(꾸러미 간격이 weapon_measured.js 를 읽을 때 정해짐)
+//  주소 `?flMeasure=…` · 시뮬 `FL_MEASURE=…` 또는 with_config.mjs WEAPON_MEASURE.flambergeFix=…
+export const WEAPON_MEASURE = {
+  // 판마다 플랑베르주 줄 [contact, reach, clinch, 베는 시간 날것] · cut = 유파 꾸러미 베는 시간(CUT_TIME_30 — 롱소드 0.30 기준) — 'off' 는 손 표 그대로라 여기 없음
+  //  geo     (가) 기하: 츠바이핸더 손 표 [1.68, 2.01, 1.30] × 손 ~ 칼끝 비 1.385 / 1.335 (= 1.0375) · 베는 시간 그대로(사장님 10/25 손맛 — 늦은 베기)
+  //  step    (나) 다시 잼 — 걸음을 AI 한 걸음(스틱 앞 0.3 s · ai.js STEP_T)으로 묶은 같은 실행 생성기 값의 츠바이핸더 비 × 츠바이핸더 손 표:
+  //          contact 1.9783 / 1.8850 · reach 2.2119 / 2.0666 · 베는 시간 0.5167 / 0.4083 (clinch 는 contact 와 같은 비 · 꾸러미 베는 시간 0.34 × 같은 비)
+  //  contact (다) 맞닿기 · 붙음만 (가) 값 · 칼끝 거리 2.57 · 베는 시간 그대로
+  flambergeRows: {
+    geo: { row: [1.74, 2.09, 1.35, 0.77], cut: 0.57 },
+    step: { row: [1.76, 2.15, 1.36, 0.59], cut: 0.43 },
+    contact: { row: [1.74, 2.57, 1.35, 0.77], cut: 0.57 },
+  },
+  flambergeFix: ((v) => (['off', 'geo', 'step', 'contact'].includes(v) ? v : 'geo'))((typeof location !== 'undefined' && location.search && new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')).get('flMeasure')) || (typeof process !== 'undefined' && process.env?.FL_MEASURE) || 'geo'), // 사장님 10/29 17:5x '플랑베르주 거리 값을 칼 길이대로 다시 매겨' → 기본 'geo' (`?flMeasure=off` = 옛 손 표 줄)
+};
+
 // 손잡이 찍기(Knaufschlag, 시제품 — 사장님 아이디어 3] 10/9 "근접 상황에서 칼 손잡이로 찍기", docs/strike/pommel_strike_2026-10-09.md).
 //  skill.pommel(): 붙은 거리에서 칼자루를 가슴 높이로 당겼다가(chamber) 폼멜을 상대 얼굴(또는 윗가슴) 쪽으로 내지른다(drive).
 //  칼끝은 위·뒤로 세워 둔다(elev) → 칼자루가 앞장선다. 탭 찌르기와 같은 덧씌우기 칸(skill.thrustPose)을 쓴다.
