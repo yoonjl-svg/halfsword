@@ -27,7 +27,7 @@ const SAENGSA_SETUP = {
     ],
     b: [
       { key: '5-0', id: 'nameless', weapon: { id: 'longsword', broken: true }, school: 'german', tier: 1, prof: { german: 2 }, lent: false, hp: 100, injuries: [], dead: false, cloth: 5 },
-      { key: '5-1', id: 'nameless', weapon: 'sabre', school: 'none', tier: 1, prof: { german: 1 }, lent: false, hp: 55, injuries: [{ part: 'arm', sev: 0.4, rests: 0 }], dead: false, cloth: 7 },
+      { key: '5-1', id: 'minami_mad', weapon: 'monohoshizao', school: 'japanese', tier: 1, prof: { japanese: 2 }, lent: false, hp: 55, injuries: [{ part: 'arm', sev: 0.4, rests: 0 }], dead: false }, // 얼터 → 목록 'A.미나미'
     ],
   },
 };
@@ -83,6 +83,7 @@ for (const C of CASES) {
     await page.clock.install({ time: new Date('2026-10-29T21:00:00+09:00') });
     await page.goto(base + '/' + C.q, { waitUntil: 'networkidle' });
     await page.clock.runFor(500);
+    for (let i = 0; i < 200 && !(await page.evaluate(() => typeof window.game?.launchSaengsa === 'function' && !!window.game?.renderCap)); i++) await page.clock.runFor(100); // 짐이 무거우면 main.js 가 늦게 선다
     if (C.saengsa) {
       await page.evaluate((setup) => { window.__saengsa = 'pending'; game.launchSaengsa(setup).then((r) => (window.__saengsa = r)); }, C.saengsa);
     } else {
@@ -133,7 +134,8 @@ for (const C of CASES) {
   const okSaengsa = !C.saengsa || (row.saengsa && ['a', 'b'].includes(row.saengsa.winner) && Object.keys(row.saengsa.fighters).length === C.n && Object.values(row.saengsa.fighters).every((f) => Number.isInteger(f.hp) && Array.isArray(f.injuries) && typeof f.alive === 'boolean' && typeof f.weaponBroken === 'boolean')
     && row.start?.broken === '0100' && row.saengsa.fighters['5-0'].weaponBroken === true // 5-0 (자리 1) 은 부러진 칼로 서고 결과에도 부러진 채
     && row.start?.stage === false // 생사전은 무대 이름 감춤
-    && row.start?.listNames?.includes('무명 검객 오토') // 무명 검객 이름 = 무명 검객 + tag
+    && row.start?.listNames?.includes('오토') && !row.start.listNames.some((n) => n.startsWith('무명 검객')) // 무명 검객은 붙인 이름만 (사장님 10/30 01:0x)
+    && row.start.listNames.includes('A.미나미') // 얼터 = 'A.' + 본캐 짧은 이름
     && (row.end?.winner == null || C.saengsa.entrants[row.saengsa.winner].some((k) => row.saengsa.fighters[k].alive))); // 이긴 편에 산 몸 (판이 끝난 스텝의 몸으로 적음)
   const okAfter = !C.saengsa || (row.oneAfter?.state === 'fight' && row.oneAfter.n === 2 && !row.oneAfter.teamRun && row.oneAfter.hpShown === 0 && row.oneAfter.stage === true); // 1:1 엔 목록 없음 · 무대 이름 다시
   row.ok = !errors.length && !!row.end?.over && row.start?.n === C.n && (row.start?.human != null) === C.human && row.start?.bars === C.n && okSaengsa && okAfter;

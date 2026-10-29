@@ -11,7 +11,9 @@ import assert from 'node:assert/strict';
 import { newMatch, CONFIG } from './jelly_harness.mjs';
 import { sameSide, teamOfIndex } from '../../src/team.js';
 import { spawnSpots, orderControllers, pairFoe, standing, matchResult } from '../../src/match.js';
-import { teamFramePull } from '../../src/team_hud.js';
+import { teamFramePull, HP_COLORS, TEAM_COLORS } from '../../src/team_hud.js';
+import { shortNameOf, SHORT_NAMES } from '../../src/short_names.js';
+import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { chooseTarget, targetScore, committed } from '../../src/targeting.js';
 
 const mem = (g) => g >>> 16;
@@ -315,3 +317,19 @@ test('⑨ 죽은 몸 쉬게 하기 (셋 이상 판만) · 카메라 물러남 �
   assert.ok(pull([fake(0.5, 6)], 1).back > side); // 좁은 화면이면 더 물러남
   assert.ok(Math.abs(pull([fake(-2, 0)]).up - pull([fake(-2, 0)]).back * CONFIG.TEAM_FIGHT.cam.upK) < 1e-12);
 });
+
+test('⑩ 체력 목록 짧은 이름 (사장님 10/30 01:0x — 얼터 A.) · 막대 색', () => {
+  const S = (id) => shortNameOf(CHARACTERS_BY_ID[id]);
+  assert.deepEqual(['isolde', 'bernardo', 'samira', 'liao', 'white_scale', 'minami'].map(S), ['이졸데', '베르나르도', '마야', '랴오', '백린', '미나미']);
+  assert.deepEqual(['minami_mad', 'bran_mad', 'heinrich_mad'].map(S), ['A.미나미', 'A.브론', 'A.하인리히']);
+  for (const [id, c] of Object.entries(CHARACTERS_BY_ID)) {
+    const n = S(id);
+    assert.ok(n && !n.includes(' ') && n.length <= 8, `${id}: '${n}'`); // 한 낱말 · 짧음
+    if (!c.mad) assert.ok(c.name.startsWith(n) || SHORT_NAMES[id], `${id}: ${c.name} → ${n}`);
+  }
+  const names = Object.keys(CHARACTERS_BY_ID).map(S);
+  assert.equal(new Set(names).size, names.length, '짧은 이름이 겹치지 않음 (본캐 · 얼터 갈림)');
+  assert.deepEqual(HP_COLORS, ['#35953f', '#c8553d']); // 아군 녹색 · 적 붉은색 (같은 OKLCH 밝기 · 채도)
+  assert.equal(HP_COLORS[1], TEAM_COLORS[1]);
+});
+
