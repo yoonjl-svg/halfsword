@@ -13,6 +13,7 @@ import { sameSide, teamOfIndex } from '../../src/team.js';
 import { spawnSpots, orderControllers, pairFoe, standing, matchResult } from '../../src/match.js';
 import { teamFramePull, HP_COLORS, TEAM_COLORS } from '../../src/team_hud.js';
 import { shortNameOf, SHORT_NAMES } from '../../src/short_names.js';
+import { hexToOklch } from '../../src/oklch.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { chooseTarget, targetScore, committed } from '../../src/targeting.js';
 
@@ -329,7 +330,12 @@ test('⑩ 체력 목록 짧은 이름 (사장님 10/30 01:0x — 얼터 A.) · �
   }
   const names = Object.keys(CHARACTERS_BY_ID).map(S);
   assert.equal(new Set(names).size, names.length, '짧은 이름이 겹치지 않음 (본캐 · 얼터 갈림)');
-  assert.deepEqual(HP_COLORS, ['#35953f', '#c8553d']); // 아군 녹색 · 적 붉은색 (같은 OKLCH 밝기 · 채도)
-  assert.equal(HP_COLORS[1], TEAM_COLORS[1]);
+  assert.deepEqual(HP_COLORS, ['#10561a', '#792820']); // 사장님 10/30 02:0x: 적 = 피 색 #8a0000 의 OKLCH 채도만 × 0.7 · 아군 = 같은 밝기 · 채도의 녹색(145°)
+  assert.equal(HP_COLORS[1], TEAM_COLORS[1]); // 머리 위 세모 · 화면 밖 화살표도 같은 적 색
+  const [Lb, Cb, hb] = hexToOklch(0x8a0000);
+  const [Lf, Cf, hf] = hexToOklch(parseInt(HP_COLORS[1].slice(1), 16));
+  const [La, Ca, ha] = hexToOklch(parseInt(HP_COLORS[0].slice(1), 16));
+  assert.ok(Math.abs(Lf - Lb) < 0.005 && Math.abs(hf - hb) < 2 && Math.abs(Cf / Cb - 0.7) < 0.03, `적 = 피 색 채도만 낮춤 ${[Lf, Cf, hf]}`);
+  assert.ok(Math.abs(La - Lf) < 0.005 && Math.abs(Ca - Cf) < 0.006 && Math.abs(ha - 145) < 2, `아군 = 같은 밝기 · 채도 녹색 ${[La, Ca, ha]}`);
 });
 

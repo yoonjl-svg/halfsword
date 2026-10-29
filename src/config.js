@@ -130,6 +130,9 @@ export const TEAM_FIGHT = {
   // 3단계 (10/29 — main.js 동시 대전 판): 카메라 물러남 · 죽은 몸 쉬게 하기 — 사장님 확인 전 (확인표 2875 · 2876)
   cam: { radius: 7, fit: 0.85, minDepth: 2.4, max: 3.0, upK: 0.45, tau: realS(0.6) }, // 보는 몸에서 radius m 안의 산 싸움꾼이 모두 화면에 들게 뒤로(≤ max m): 화면 가로 반폭의 fit 몫 안 · 카메라 앞 깊이 minDepth m 넘게 · 위로 그 × upK · 시간 상수 tau (2875)
   deadSettle: { t: realS(1.5), v: 0.05 }, // 죽은 지 t 넘게 · 몸 부위가 모두 v m/s 밑이면 그 몸은 스텝 · 조종 · 칼 잔상 · 바람 소리를 쉼 (셋 이상 판만 — 2876)
+  // 화면 색 (사장님 10/30 02:0x '적군 체력바 색과 적군 머리 위 기호 색을 현재 전투에서 쓰고 있는 피 색으로 바꾸자. 저기서 채도만 낮춰서.' — team_hud.js):
+  //  적 = 피 색(blood_palette.js BLOOD_RED.splash)의 OKLCH 채도만 × foeChromaK (밝기 · 색상 그대로) · 아군 체력 막대 = 같은 밝기 · 채도로 색상만 allyHue°(녹색) — 확인표 2890 (사장님 확인 전 — 0.7 · 145° 는 작업자)
+  hudColor: { foeChromaK: 0.7, allyHue: 145 },
   // 2:1 숙련도 몫 (사장님 10/29 20:4x '높은 숙련도가 똑똑해지도록 · 잘 싸워서 이긴 느낌' — 셋 이상 판의 AI 만 · ai.js teamFeet). 숙련도 몫 sk = (p − prof[0]) ÷ (prof[1] − prof[0]) 를 0 ~ 1 로
   //  목표 띠는 확인표 2881(사장님 결정) · 값은 2882 · 2883 (사장님 확인 전 — 12 판 2차 값 · 띠에 못 미침: docs/strike/team_fight_2026-10-29.md §13) · 끄기 tools/sim/team_balance.mjs --lever=none
   lever: {

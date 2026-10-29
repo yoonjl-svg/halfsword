@@ -12,12 +12,20 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { TEAM_FIGHT, VITALS, CAMERA } from './config.js';
+import { BLOOD_RED } from './blood_palette.js';
+import { hexToOklch, oklchToCss } from './oklch.js';
 
-/** 편 색: 0 편(내 편) 금색(--c-accent 와 같음) · 1 편 붉은색 — 화면 밖 화살표 · 머리 위 세모 */
-export const TEAM_COLORS = Object.freeze(['#d9a441', '#c8553d']);
-/** 체력 막대 색 (사장님 10/30 01:0x '아군 체력바 색은 녹색 계열로 하자. 단 적군 체력바 색과 톤과 채도와 명도는 어울리게 맞춰서'):
- *  적 #c8553d = OKLCH(0.593 0.152 33°) 그대로 · 아군 #35953f = 같은 밝기 0.593 · 같은 채도 0.152 · 색상만 145°(녹색) */
-export const HP_COLORS = Object.freeze(['#35953f', '#c8553d']);
+/** 적 색 (사장님 10/30 02:0x '적군 체력바 색과 적군 머리 위 기호 색을 현재 전투에서 쓰고 있는 피 색으로 바꾸자. 저기서 채도만 낮춰서.'):
+ *  피 색 BLOOD_RED.splash #8a0000 = OKLCH(0.398 0.163 29°) → 채도만 × TEAM_FIGHT.hudColor.foeChromaK(0.7) = #792820 */
+const BLOOD_LCH = hexToOklch(BLOOD_RED.splash);
+const FOE_LCH = [BLOOD_LCH[0], BLOOD_LCH[1] * TEAM_FIGHT.hudColor.foeChromaK, BLOOD_LCH[2]];
+export const FOE_COLOR = oklchToCss(FOE_LCH);
+/** 아군 체력 막대 녹색 (사장님 10/30 01:0x '아군 체력바 색은 녹색 계열로 … 적군 체력바 색과 톤과 채도와 명도는 어울리게'): 적 색과 같은 밝기 · 채도 · 색상만 allyHue°(145) = #10561a */
+export const ALLY_HP_COLOR = oklchToCss([FOE_LCH[0], FOE_LCH[1], TEAM_FIGHT.hudColor.allyHue]);
+/** 편 색: 0 편(내 편) 금색(--c-accent 와 같음) · 1 편 = 적 색 — 화면 밖 화살표 · 머리 위 세모 */
+export const TEAM_COLORS = Object.freeze(['#d9a441', FOE_COLOR]);
+/** 체력 막대 색: 아군 녹색 · 적 = 적 색 */
+export const HP_COLORS = Object.freeze([ALLY_HP_COLOR, FOE_COLOR]);
 
 /** 체력 몫 0 ~ 1 (피 1 = 1 · 쓰러져 죽는 문턱 = 0 · 죽으면 0) */
 export const hpShare = (f) => (f.alive ? Math.min(1, Math.max(0, (f.blood - VITALS.collapseBlood) / (1 - VITALS.collapseBlood))) : 0);
