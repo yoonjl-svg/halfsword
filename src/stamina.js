@@ -8,6 +8,11 @@ const ATTACK_TAIL = realS(0.35); // 긋는 동안 · 긋기가 끝난 뒤 공격
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
+/** 자연 회복 빠르기 (게임 초당): AI 15 · 사람 입력이 모는 몸(fighter.humanInput — main.js 플레이어) 25(사장님 10/29 17:5x) · 그 밖(시뮬 대본 몸) 21 — 쉼 뒤 회복 · 자연 회복 탈진 모두 */
+export function recoverRate(f) {
+  return f.aiControlled ? STAMINA.recoverPerSecond : f.humanInput ? STAMINA.humanRecoverPerSecond : STAMINA.playerRecoverPerSecond;
+}
+
 /** 공통 기력 장부. 유파의 동작/해금과 독립적이며 모든 시간은 물리 시간이다. */
 export class Stamina {
   constructor(fighter) {
@@ -167,11 +172,11 @@ export class Stamina {
     if (this.exhausted) return;
     if (this.value <= STAMINA.floor) {
       this.value = STAMINA.floor;
-      // 탈진 (사장님 10/18 22:1x '탈진 규칙은 샛별 것이 맞음' — 원문 '새벽'은 오타, 23:3x 정정 · 샛별 연구 규칙): 이동 · 공격 불가 · 막기를 누르고 있어도 자연 회복 빠르기(플레이어 21 · AI 15 /s)로 차서
-      //  severeAt(−35)에서 풀린다(심한 지침 단계로) — 바닥 −70 에서 플레이어 1.667 s · AI 2.333 s. 옛 규칙(`?exhaust=fixed`): exhaustSeconds 2.5 s 숨 고르기 뒤 0(지침)
+      // 탈진 (사장님 10/18 22:1x '탈진 규칙은 샛별 것이 맞음' — 원문 '새벽'은 오타, 23:3x 정정 · 샛별 연구 규칙): 이동 · 공격 불가 · 막기를 누르고 있어도 자연 회복 빠르기(recoverRate — 사람 25(10/29 17:5x) · 시뮬 대본 몸 21 · AI 15 /s)로 차서
+      //  severeAt(−35)에서 풀린다(심한 지침 단계로) — 바닥 −70 에서 사람 1.4 s(전 1.667) · AI 2.333 s. 옛 규칙(`?exhaust=fixed`): exhaustSeconds 2.5 s 숨 고르기 뒤 0(지침)
       this.exhaustNaturalTarget = STAMINA.exhaustNatural ? STAMINA.severeAt : null;
       this.exhaustLeft = this.exhaustNaturalTarget != null
-        ? (this.exhaustNaturalTarget - this.value) / (this.fighter.aiControlled ? STAMINA.recoverPerSecond : STAMINA.playerRecoverPerSecond)
+        ? (this.exhaustNaturalTarget - this.value) / recoverRate(this.fighter)
         : STAMINA.exhaustSeconds;
       this.level = 3;
       this.counts.exhaustion++;
@@ -354,7 +359,7 @@ export class Stamina {
       this.exhaustLeft = Math.max(0, this.exhaustLeft - slice);
       const target = this.exhaustNaturalTarget ?? 0;
       const rate = this.exhaustNaturalTarget != null
-        ? (f.aiControlled ? STAMINA.recoverPerSecond : STAMINA.playerRecoverPerSecond) : STAMINA.exhaustRecover;
+        ? recoverRate(f) : STAMINA.exhaustRecover;
       this.value = Math.min(target, this.value + rate * slice);
       this.recovered += this.value - before;
       this.pose = Math.min(1, this.pose + dt * 6);
@@ -396,7 +401,7 @@ export class Stamina {
     this.rest += dt;
     if (!this.guarding) {
       const before = this.value;
-      const rate = f.aiControlled ? STAMINA.recoverPerSecond : STAMINA.playerRecoverPerSecond;
+      const rate = recoverRate(f);
       this.value = Math.min(this.max, this.value + active * rate);
       this.recovered += this.value - before;
     }
