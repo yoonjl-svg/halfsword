@@ -858,12 +858,29 @@ export class Fighter {
 
   /** AI 반응 시간 (10/21 AI_REACT): 바라볼 지점(faceTarget)을 매 스텝 적어 두고 AI_REACT.face s 전 것을 돌려준다(기록이 그보다 짧으면 가장 오래된 것) */
   reactTarget(dt) {
+    if (this.foes?.includes(this.foe)) return this.reactTargetFoes(dt); // 2:2 (10/29): 상대마다 기록 — 1:1 은 this.foes 가 없어 아래 예전 길
     const h = (this._react ??= { t: 0, buf: [] });
     h.t += dt;
     h.buf.push({ t: h.t, x: this.faceTarget.x, z: this.faceTarget.z });
     const want = h.t - AI_REACT.face;
     while (h.buf.length > 1 && h.buf[1].t <= want) h.buf.shift();
     return h.buf[0];
+  }
+
+  /** 2:2 (10/29 — 상대를 알고 보는 반응 시간): 상대 편 모두의 골반 자리를 매 스텝 상대마다 적고, 지금 상대의 face s 전 자리를 돌려준다.
+   *  상대를 바꿔도 옛 상대 자리 쪽으로 face s 동안 돌지 않는다 — 새 상대의 face s 전 자리부터 본다(그 상대도 늘 적어 두었으므로) */
+  reactTargetFoes(dt) {
+    const h = (this._reactFoes ??= { t: 0, bufs: new Map() });
+    h.t += dt;
+    const want = h.t - AI_REACT.face;
+    for (const g of this.foes) {
+      let buf = h.bufs.get(g);
+      if (!buf) h.bufs.set(g, (buf = []));
+      const p = g.bodies.pelvis.translation();
+      buf.push({ t: h.t, x: p.x, z: p.z });
+      while (buf.length > 1 && buf[1].t <= want) buf.shift();
+    }
+    return h.bufs.get(this.foe)[0];
   }
 
   /** 휘두르는 동안 몸 돌림 묶기(SWING_TURN)가 걸리는 때: AI 는 공격의 긋기 · 따라 긋기(from 'approach' 는 들어오는 단계부터 · 'windup' 은 칼 드는 때부터), 사람은 청구된 긋기 · 탭 · 폼멜 */
@@ -1229,10 +1246,26 @@ export class Fighter {
 
   /** 바짝 붙었을 때 손을 상대 몸 속으로 뻗지 않는다 (팔을 접어 칼자루를 몸 가까이 당긴다) */
   closeReach() {
-    const r = Math.max(0.12, this.foeDistance() - 0.3);
+    const r = Math.max(0.12, (this.foes ? Math.min(this.foeDistance(), this.blockDistance()) : this.foeDistance()) - 0.3); // 2:2: 앞을 막은 다른 상대 몸 속으로도 뻗지 않는다
     // 쓰러진 상대는 발밑에 누워 있어 가슴끼리 가까워도 손을 앞으로 뻗어 내려찍을 수 있다 (finish.js)
     const fa = this.finish.amt;
     return fa > 0 ? r + Math.max(0, 0.6 - r) * fa : r;
+  }
+
+  /** 2:2 (10/29): 지금 상대가 아닌 산 상대 가운데 가슴 앞(±60°)에 선 가장 가까운 가슴 수평 거리 (없으면 Infinity) — 붙는 판정은 지금 상대, 이 몸은 막힘으로만 */
+  blockDistance() {
+    const a = this.bodies.chest.translation();
+    const F = this.forward(_vBlk);
+    let best = Infinity;
+    for (const g of this.foes) {
+      if (g === this.foe || !g.alive) continue;
+      const b = g.bodies.chest.translation();
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const d = Math.hypot(dx, dz);
+      if (d < best && dx * F.x + dz * F.z > 0.5 * d) best = d;
+    }
+    return best;
   }
 
   /**
@@ -4671,6 +4704,7 @@ const _cr1 = new THREE.Vector3(); // 보정 v2 ① 날 맞춤 scratch
 const _cr2 = new THREE.Vector3(); // 사람 관절 범위: 아래팔 경첩 축(세계)
 const _cq = new THREE.Quaternion();
 const _ct1 = new THREE.Vector3(); // 보정 v2 corrTrunkTurn (순서 결합)
+const _vBlk = new THREE.Vector3(); // 2:2 blockDistance
 const _ct2 = new THREE.Vector3();
 const _ct3 = new THREE.Vector3();
 const _ct4 = new THREE.Vector3();

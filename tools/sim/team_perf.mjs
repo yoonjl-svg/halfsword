@@ -2,27 +2,27 @@
 //  ① 시작 간격: 한 편 둘의 옆 간격(mateGap)마다 판 시작(0 s)과 발 묶임(ARENA.startHold) 동안 다른 싸움꾼 콜라이더 사이 가장 짧은 거리 (음수 = 겹침)
 //  ② 연기: 2:2 를 secs 초 돌려 NaN · 예외 · 같은 편 접촉 · 같은 편 상처가 없는지, 상대 바꾸기(ai.setFoe) 횟수 · 끝 상태
 //  ③ 성능: 같은 판(씨앗)들을 1:1 · 2:1 · 2:2 로 돌려 물리 한 스텝 ms (가운데 · p95 · 평균)와 그 몫(조종 · 몸 · 물리 world.step · 전투 afterStep)
-//  쓰임: node tools/sim/team_perf.mjs [씨앗 수 4] [초 30] [--target=pair|nearest] [--only=spacing|smoke] [--counts=2,3,4]
-//   pair = src/match.js pairFoe (마주 선 짝 0↔1 · 2↔3, 짝이 죽으면 가장 가까운 산 상대 — 1단계 임시) · nearest = 매 스텝 가장 가까운 산 상대 (상대 바꾸기 시험)
+//  쓰임: node tools/sim/team_perf.mjs [씨앗 수 4] [초 30] [--target=score|pair|nearest] [--only=spacing|smoke|perf] [--counts=2,3,4]
+//   score(기본 — 2단계) = src/targeting.js chooseTarget · pair = src/match.js pairFoe (마주 선 짝 0↔1 · 2↔3, 짝이 죽으면 가장 가까운 산 상대 — 1단계 임시) · nearest = 매 스텝 가장 가까운 산 상대 (상대 바꾸기 시험)
 //  게임 값이 아닌 재기 도구 — 시간은 이 기계의 Node(V8 + Rapier WASM) 값이다 (폰은 따로 재야 함)
 import os from 'node:os';
 import { performance } from 'node:perf_hooks';
 import { newMatch, DT, CONFIG } from './jelly_harness.mjs';
-import { stepMatch, nearestFoe, standing, matesOf, foesOf } from '../../src/match.js';
+import { stepMatch, nearestFoe, pairFoe, standing, matesOf, foesOf } from '../../src/match.js';
 
 const args = process.argv.slice(2);
 const pos = args.filter((a) => !a.startsWith('--'));
 const flag = (k, d) => { const a = args.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
 const SEEDS = +(pos[0] ?? 4);
 const SECS = +(pos[1] ?? 30);
-const TARGET = flag('target', 'pair');
+const TARGET = flag('target', 'score');
 const ONLY = flag('only', '');
 const COUNTS = flag('counts', '2,3,4').split(',').map(Number);
 const seedRand = (seed) => { let s = seed * 9301 + 49297; Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280); };
 const r1 = (x) => +x.toFixed(1), r2 = (x) => +x.toFixed(2), r3 = (x) => +x.toFixed(3);
 const pct = (a, p) => { const b = Float64Array.from(a).sort(); return b.length ? b[Math.min(b.length - 1, Math.floor(p * b.length))] : NaN; };
 const mean = (a) => a.reduce((s, x) => s + x, 0) / Math.max(1, a.length);
-const foeOf = TARGET === 'nearest' ? (f, M) => nearestFoe(M, f) ?? f.foe ?? foesOf(M, f)[0] : null;
+const foeOf = TARGET === 'nearest' ? (f, M) => nearestFoe(M, f) ?? f.foe ?? foesOf(M, f)[0] : TARGET === 'pair' ? pairFoe : null; // null = createMatch 기본 (chooseTarget)
 
 /** 싸움꾼의 살아 있는 콜라이더 (몸 · 칼 — 떼어 낸 부품 빼고) */
 function collidersOf(f, { sword = true } = {}) {
@@ -94,7 +94,7 @@ function run(count, seed, { secs = SECS, probe = false } = {}) {
     ms[i] = t1 - t0; ctl[i] = tc - t0; body[i] = tf - tc; phys[i] = tw - tf; cmb[i] = te - tw;
     done = i + 1;
     if (!nan) for (const f of F) if (!finite(f)) { nan = `${f.name} @ ${(i * DT).toFixed(2)} s`; break; }
-    if (probe && i % 12 === 0) for (const [a, b] of mates) { mateTouch += mateContacts(G.world, a, b); mateSamples++; if (minGap(a, b, { sword: false, pred: 0.5 }) < 0) mateOverlap++; }
+    if (probe && i % 12 === 0) for (const [a, b] of mates) { mateTouch += mateContacts(G.world, a, b); if (G.over || !a.alive || !b.alive) continue; mateSamples++; if (minGap(a, b, { sword: false, pred: 0.5 }) < 0) mateOverlap++; }
   }
   const cpu = process.cpuUsage(cpu0); // 이 판 전체 CPU 시간 (µs — 기계가 붐벼 벽시계가 늘어도 덜 흔들린다 · 첫 1 s 포함)
   const skip = Math.min(done, Math.round(1 / DT)); // 첫 1 s(JIT 데우기)는 시간 셈에서 뺀다
@@ -113,14 +113,16 @@ if (!ONLY || ONLY === 'spacing') {
   for (const r of spacing()) console.log(JSON.stringify(r));
 }
 if (ONLY === 'spacing') process.exit(0);
-console.log(`\n② 연기 2:2 (${SECS} s · 상대 고르기 ${TARGET})`);
 let bad = 0;
+if (ONLY !== 'perf') {
+console.log(`\n② 연기 2:2 (${SECS} s · 상대 고르기 ${TARGET})`);
 for (let s = 1; s <= SEEDS; s++) {
   const r = run(4, s, { probe: true });
   if (r.nan || r.error || r.mateWounds || r.mateTouch || r.steps * DT < SECS - 1e-6) bad++;
   console.log(JSON.stringify({ seed: s, steps: r.steps, nan: r.nan, error: r.error, wounds: r.wounds, mateWounds: r.mateWounds, mateContacts: r.mateTouch, mateBodyOverlapPct: r.mateOverlapPct, swaps: r.swaps, standing: r.standing, end: r.end }));
 }
 console.log(bad ? `연기 실패 ${bad} 판` : '연기 OK (NaN · 예외 · 같은 편 접촉 · 같은 편 상처 0)');
+}
 if (ONLY === 'smoke') process.exit(bad ? 1 : 0);
 console.log(`\n③ 물리 한 스텝 ms (첫 1 s 뺌 · 씨앗 ${SEEDS} · ${SECS} s · 가운데 / p95 / 평균) — 몫: ctl 조종 · body 몸 step · phys cacheState+world.step · cmb combat.afterStep`);
 const agg = {};

@@ -2,15 +2,17 @@
 //  한 판의 물리 스텝 차례 — 1:1 · 2:1 · 2:2 같은 길 (동시 대전 1단계 배관, 사장님 10/29 14:2x 생사전 ·
 //  docs/strike/team_fight_2026-10-29.md)
 //
-//  지금(1단계)은 시뮬 하니스(tools/sim/jelly_harness.mjs newMatch)만 부른다. main.js 의 스텝 고리는 아직 제 줄 그대로이고
+//  지금(1 · 2단계)은 시뮬 하니스(tools/sim/jelly_harness.mjs newMatch)만 부른다. main.js 의 스텝 고리는 아직 제 줄 그대로이고
 //  (3단계에서 이 함수로 바꾼다) 차례는 그 고리와 똑같다:
 //   ① 상대 · 바라볼 곳   f.foe = foeOf(f) · f.faceTarget = 상대 골반 · AI 의 겨눈 상대(ai.setFoe — 1:1 은 늘 같아 아무 일 없음)
 //   ② 조종               1 편 → 0 편, 편 안에서 자리 차례, 사람 몸(human)의 조종은 맨 뒤 (orderControllers)
 //   ③ 몸                 자리 차례로 f.step → (hooks.afterFighters) → 자리 차례로 f.cacheState
-//   ④ 물리 · 전투        world.step → combat.afterStep → (hooks.afterWorld)
-//  1:1 의 상대 고르기 = 다른 하나 (산 · 죽음 상관없이 — 예전 그대로). 셋 이상은 임시 짝(pairFoe) — 2단계에서 상대 고르기로 바꾼다
+//   ④ 물리 · 전투        world.step → combat.afterStep → (hooks.afterWorld) → 판 끝 보기(한 편에 산 싸움꾼 0 — M.over · M.winner)
+//  1:1 의 상대 고르기 = 다른 하나 (산 · 죽음 상관없이 — 예전 그대로). 셋 이상은 src/targeting.js chooseTarget (2단계) —
+//  그때만 싸움꾼에 f.foes · f.mates(상대 편 · 같은 편 목록)를 달고 AI 에 상대마다 눈을 둔다(addFoe). 1:1 은 둘 다 없어 예전 길 그대로
 // ─────────────────────────────────────────────────────────────
 import { sameSide, teamOfIndex } from './team.js';
+import { chooseTarget } from './targeting.js';
 
 /**
  * 판 하나를 묶는다. o = { world, eventQueue, combat, fighters(자리 차례 — fighters[i].index === i), controllers([{ me, update(dt), setFoe?(f) }] — AI 들), foeOf?(f, M) }
@@ -22,7 +24,40 @@ export function createMatch(o) {
     if (f.index !== i) throw new Error(`match: fighters[${i}].index = ${f.index}`);
   });
   M.order = orderControllers(M.controllers);
+  if (M.fighters.length > 2) {
+    M.foeOf ??= chooseTarget;
+    for (const f of M.fighters) {
+      f.foes = foesOf(M, f);
+      f.mates = matesOf(M, f);
+    }
+    for (const c of M.controllers) if (c.addFoe) for (const g of c.me.foes) c.addFoe(g); // 상대마다 눈 · 간격 어림을 판 시작에 (같은 시계)
+  }
+  M.over = false; // 한 편에 산 싸움꾼이 없으면 true (stepMatch)
+  M.winner = null; // 이긴 편 0 · 1 (둘 다 0 이면 null)
+  M.endT = null;
   return M;
+}
+
+/**
+ * 판 결과 (편 전멸 — 2단계): { over, winner, t(끝난 판 시간 · 아직이면 지금), fighters: 자리마다 { index, team, name, alive, blood, consciousness, wounds, causeOfDeath } }.
+ *  wounds = 상처 사본 [{ part, type, severity, bleed, stump? }] — 6단계(판 사이 이어받기)의 바탕
+ */
+export function matchResult(M) {
+  return {
+    over: M.over,
+    winner: M.winner,
+    t: M.endT ?? M.t,
+    fighters: M.fighters.map((f) => ({
+      index: f.index,
+      team: f.team,
+      name: f.name,
+      alive: f.alive,
+      blood: f.blood,
+      consciousness: f.consciousness,
+      wounds: f.wounds.map((w) => ({ part: w.part, type: w.type, severity: w.severity, bleed: w.bleed, ...(w.stump ? { stump: true } : {}) })),
+      causeOfDeath: f.causeOfDeath ?? null,
+    })),
+  };
 }
 
 /**
@@ -60,7 +95,7 @@ export function nearestFoe(M, f, { alive = true } = {}) {
 }
 
 /**
- * 기본 상대 고르기. 둘뿐이면 다른 하나 (1:1 — 예전 그대로). 셋 이상이면 임시 짝 (1단계 — 상대 고르기는 2단계):
+ * 짝 상대 고르기 (foeOf 를 안 줬을 때 1:1 의 기본 — 다른 하나, 예전 그대로). 셋 이상 판의 기본은 targeting.js chooseTarget 이고 이것은 1단계 임시 규칙(비교용 — team_perf --target=pair):
  *  마주 선 짝(자리 0 ↔ 1 · 2 ↔ 3)이 살아 있으면 그 짝, 아니면 가장 가까운 산 상대, 모두 죽었으면 지금 상대 그대로
  */
 export function pairFoe(f, M) {
@@ -71,7 +106,7 @@ export function pairFoe(f, M) {
   return nearestFoe(M, f) ?? f.foe ?? nearestFoe(M, f, { alive: false });
 }
 
-/** 편마다 서 있는(산) 싸움꾼 수 [0 편, 1 편] — 판 끝(한 편이 0)은 2단계 */
+/** 편마다 산(죽지 않은) 싸움꾼 수 [0 편, 1 편] — 한 편이 0 이면 판 끝 (stepMatch) */
 export function standing(M) {
   const n = [0, 0];
   for (const f of M.fighters) if (f.alive) n[f.team]++;
@@ -106,7 +141,7 @@ export function stepMatch(M, dt, hooks = {}) {
   const F = M.fighters;
   const foeOf = M.foeOf || pairFoe;
   // ① 상대 · 바라볼 곳 (모두 정한 뒤 바라볼 곳 — 1:1 의 예전 차례)
-  for (const f of F) f.foe = foeOf(f, M);
+  for (const f of F) f.foe = foeOf(f, M, dt);
   for (const f of F) {
     const t = hooks.faceOf?.(f, M) ?? f.foe?.bodies.pelvis.translation();
     if (t) f.faceTarget = t;
@@ -124,4 +159,9 @@ export function stepMatch(M, dt, hooks = {}) {
   M.combat.afterStep(M.world, M.eventQueue);
   hooks.afterWorld?.(M, dt);
   M.t += dt;
+  // 판 끝: 한 편에 산 싸움꾼이 없다 (죽은 싸움꾼은 빠짐 — 사장님 10/29 '이번 대회만 빠짐'). 읽기만 — 스텝을 멈추는 것은 부르는 쪽
+  if (!M.over) {
+    const n = standing(M);
+    if (n[0] === 0 || n[1] === 0) (M.over = true), (M.endT = M.t), (M.winner = n[0] ? 0 : n[1] ? 1 : null);
+  }
 }

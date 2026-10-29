@@ -8,7 +8,7 @@ import { AI } from '../../src/ai.js';
 import { Combat } from '../../src/combat.js';
 import { setSupportFloor } from '../../src/gait.js';
 import { terrainForStage, createTerrainGround, applyTerrainHazards } from '../../src/etna_ground.js';
-import { createMatch, stepMatch, orderControllers, spawnSpots, pairFoe, foesOf } from '../../src/match.js'; // 동시 대전 판 newMatch (10/29)
+import { createMatch, stepMatch, orderControllers, spawnSpots, pairFoe } from '../../src/match.js'; // 동시 대전 판 newMatch (10/29)
 
 await RAPIER.init();
 export { RAPIER, THREE, CONFIG, AI };
@@ -108,7 +108,7 @@ export function newRound(opts = {}) {
 //  newRound 와 같은 평지 세계(지형 없음)에 싸움꾼 count 명(자리 0 ~ 3 — 0 편 = 0 · 2, 1 편 = 1 · 3)을 세우고, 스텝은 src/match.js 의 공용 차례로 돈다.
 //  1:1(count 2)은 newRound 와 같은 자리 · 겉모습 · 시드 · 만드는 차례 — tools/sim/match_twin.mjs 가 fights12 해시로 확인한다.
 //  opts: count(2) · gap(ARENA.startGap) · mateGap(TEAM_FIGHT.mateGap — 한 편 둘 사이 옆 간격) · seed · walls · iters · difficulty ·
-//        ai(AI 를 붙일 자리 — 안 주면 [1] = newRound 처럼 상대만. 'all' 이면 모두) · foeOf(f, M)(상대 고르기 — 안 주면 src/match.js pairFoe) · onFighter
+//        ai(AI 를 붙일 자리 — 안 주면 [1] = newRound 처럼 상대만. 'all' 이면 모두) · foeOf(f, M, dt)(상대 고르기 — 안 주면 둘이면 다른 하나 · 셋 이상이면 src/targeting.js chooseTarget) · weapons(자리마다 무기 id) · looks(자리마다 겉모습 — 안 주면 0 편 LOOKS.player(케틀 투구) · 1 편 LOOKS.enemy(투구 없음): newRound 와 같음) · onFighter
 //  AI 는 조종 부르는 차례(1 편 → 0 편, 자리 차례, 사람 몸 맨 뒤 — orderControllers)대로 만든다: AI 생성자의 Math.random 차례 (fights12 = 상대 AI 먼저)
 //  돌려줌 G = 판(M) + { player(자리 0), enemy(자리 1), ai(자리 1 의 AI), ai2(자리 0 의 AI), ais(자리 → AI), hits, step(), before? }
 export function newMatch(opts = {}) {
@@ -135,9 +135,10 @@ export function newMatch(opts = {}) {
   const count = opts.count ?? 2;
   const spots = spawnSpots(count, { gap: opts.gap ?? ARENA.startGap, mateGap: opts.mateGap ?? CONFIG.TEAM_FIGHT.mateGap });
   const NAMES = ['P', 'E', 'P2', 'E2'];
+  const W = (i) => (opts.weapons?.[i] ? { weapon: opts.weapons[i] } : {}); // 자리마다 무기 (안 주면 Fighter 기본 — 롱소드)
   const fighters = spots.map((s, i) => (s.z === 0
-    ? new Fighter(RAPIER, world, scene, colliderInfo, { index: i, name: NAMES[i], x: s.x, heading: s.heading, look: s.team === 0 ? LOOKS.player : LOOKS.enemy, breakSeed: opts.seed })
-    : new Fighter(RAPIER, world, scene, colliderInfo, { index: i, name: NAMES[i], x: s.x, z: s.z, heading: s.heading, look: s.team === 0 ? LOOKS.player : LOOKS.enemy, breakSeed: opts.seed })));
+    ? new Fighter(RAPIER, world, scene, colliderInfo, { index: i, name: NAMES[i], x: s.x, heading: s.heading, look: opts.looks?.[i] ?? (s.team === 0 ? LOOKS.player : LOOKS.enemy), breakSeed: opts.seed, ...W(i) })
+    : new Fighter(RAPIER, world, scene, colliderInfo, { index: i, name: NAMES[i], x: s.x, z: s.z, heading: s.heading, look: opts.looks?.[i] ?? (s.team === 0 ? LOOKS.player : LOOKS.enemy), breakSeed: opts.seed, ...W(i) })));
   if (opts.onFighter) for (const f of fighters) opts.onFighter(f, world, RAPIER);
   const player = fighters[0];
   const enemy = fighters[1];
@@ -146,13 +147,7 @@ export function newMatch(opts = {}) {
   const order = orderControllers(want.map((i) => ({ me: fighters[i] }))).map((c) => c.me.index);
   const M0 = { fighters };
   const ais = [];
-  for (const i of order) {
-    const f = fighters[i];
-    const foes = foesOf(M0, f);
-    const ai = new AI(f, pairFoe(f, M0), opts.difficulty ?? 'normal');
-    if (foes.length > 1) for (const g of foes) ai.addFoe(g); // 상대마다 눈 · 간격 어림을 판 시작에 (같은 시계)
-    ais[i] = ai;
-  }
+  for (const i of order) ais[i] = new AI(fighters[i], pairFoe(fighters[i], M0), opts.difficulty ?? 'normal'); // 상대마다 눈(addFoe)은 createMatch 가 (셋 이상 판)
   const hits = [];
   const combat = new Combat(colliderInfo, { onWound: (att, vic, r) => hits.push(`${att.name}->${r.zone}:${r.type} ${r.energy.toFixed(0)}J`), onClash: () => {} });
   const G = createMatch({ world, eventQueue, combat, fighters, controllers: order.map((i) => ais[i]), foeOf: opts.foeOf ?? null });

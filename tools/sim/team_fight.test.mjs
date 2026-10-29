@@ -3,12 +3,14 @@
 //  ② 2:2 에서 같은 편끼리는 어떤 콜라이더도 엔진 거름(구성원 & 거름 양쪽)을 못 넘고, 상대 편끼리는 몸 ↔ 몸 · 칼 ↔ 몸 · 칼 ↔ 칼 · 칼 ↔ 발이 넘는다 · 날아간 투구 비트 32 와 안 겹침
 //  ③ sameSide · pairOf 가 같은 편 쌍을 버림 · 칼 쌍 묶기(groupBlades)가 싸움꾼 짝마다 · 들어온 차례 · AI setFoe 가 눈 · 간격 어림을 맞바꾸고 시계가 같음
 //  ④ 시작 자리: 1:1 은 newRound 자리 그대로 · 2:2 는 편마다 옆으로 mateGap
+//  ⑤ ~ ⑧ (2단계): 상대 고르기 규칙(가짜 몸 — 거리 · 쓰러짐 · 나눠 맡기 · 나를 침 · 기다림 · 붙잡힘 · 죽음 · 취향) · 편 전멸 · 결과 · 상대를 아는 반응 시간 · 상대마다 몫 맞바꿈
 //  node --test tools/sim/team_fight.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newMatch, CONFIG } from './jelly_harness.mjs';
 import { sameSide, teamOfIndex } from '../../src/team.js';
-import { spawnSpots, orderControllers, pairFoe, standing } from '../../src/match.js';
+import { spawnSpots, orderControllers, pairFoe, standing, matchResult } from '../../src/match.js';
+import { chooseTarget, targetScore, committed } from '../../src/targeting.js';
 
 const mem = (g) => g >>> 16;
 const filt = (g) => g & 0xffff;
@@ -131,4 +133,117 @@ test('④ 시작 자리 · 조종 차례 · 기본 상대', () => {
   assert.deepEqual(F.map((f) => pairFoe(f, G).index), [1, 0, 3, 2]);
   assert.deepEqual(standing(G), [2, 2]);
   assert.equal(CONFIG.TEAM_FIGHT.mateGap > 0, true);
+});
+
+// ── 2단계 ──
+/** 가짜 몸 (상대 고르기 규칙만 — 가슴 자리 · 편 · 상태 · 조종) */
+function fake(index, team, x, z, extra = {}) {
+  const p = { x, y: 1.3, z };
+  return { index, team, alive: true, state: 'stand', revival: null, foe: null, pos: p, bodies: { chest: { translation: () => p } }, wounds: [], limbs: {}, blood: 1, ...extra };
+}
+const fakeMatch = (F) => ({ fighters: F });
+const pick = (M, f, dt = 0) => (f.foe = chooseTarget(f, M, dt));
+
+test('⑤ 상대 고르기: 가까움 · 같으면 작은 자리 · 쓰러짐 · 나눠 맡기 · 나를 침 · 기다림 · 붙잡힘 · 죽음 · 취향', () => {
+  const T = CONFIG.TEAM_FIGHT.target;
+  const me = fake(0, 0, 0, 0), e1 = fake(1, 1, 2, 0), e3 = fake(3, 1, 0, 2), mate = fake(2, 0, 0, -1);
+  const M = fakeMatch([me, e1, mate, e3]);
+  assert.equal(pick(M, me), e1, '같은 거리면 작은 자리');
+  e3.pos.z = 1.9;
+  assert.equal(targetScore(M, me, e3) < targetScore(M, me, e1), true);
+  assert.equal(pick(M, me, 0.01), e1, '0.1 m 차 — margin 안이라 그대로');
+  // 쓰러진 상대: 다른 상대가 downNear 안에 서 있으면 + downAdd
+  e1.state = 'down';
+  assert.equal(targetScore(M, me, e1), 2 + T.downAdd);
+  e3.pos.z = 5; // 3 m 밖
+  assert.equal(targetScore(M, me, e1), 2);
+  e1.state = 'stand';
+  // 나눠 맡기: 같은 편이 겨눈 상대 + allyAdd
+  mate.foe = e1;
+  assert.equal(targetScore(M, me, e1), 2 + T.allyAdd);
+  mate.foe = null;
+  // 기다림: 1.0 m 더 낮은 후보 — hold 동안 이어져야 바꿈
+  e3.pos.z = 1.0;
+  let t = 0;
+  while (me.foe === e1 && t < 5) (t += 0.05), pick(M, me, 0.05);
+  assert.equal(me.foe, e3);
+  assert.ok(Math.abs(t - T.hold) <= 0.051, `hold ${t}`);
+  // 붙잡힘(공격 꼴)이면 안 바꿈
+  e1.pos.x = 0.5;
+  me.aiCtl = { mode: 'attack' };
+  assert.ok(committed(me));
+  for (let i = 0; i < 100; i++) pick(M, me, 0.05);
+  assert.equal(me.foe, e3, '붙잡힘 동안 그대로');
+  // 죽으면 붙잡혀 있어도 곧장
+  e3.alive = false;
+  assert.equal(pick(M, me, 0.01), e1);
+  me.aiCtl = null;
+  e3.alive = true;
+  e3.pos.z = 1.0;
+  e1.pos.x = 2;
+  // 나를 치는 상대: 기다림 없이 (− attackSub)
+  pick(M, me, 0); // 지금 e1 · 후보 e3 (1.0 대 2.0 — margin 넘음, 기다리는 중)
+  const st = M.targeting.get(me);
+  e3.foe = me;
+  e3.aiCtl = { mode: 'attack', M: { reach: 1.5 } };
+  assert.equal(pick(M, me, 0.01), e3, '나를 치는 상대는 곧장');
+  assert.equal(st.why.attacked, 1);
+  // 취향 갈고리: weakest — 다친 상대에 덧셈 (− prefAdd × 다친 정도)
+  const s0 = targetScore(M, me, e1);
+  me.targetPref = 'weakest';
+  e1.blood = 0.45; // VITALS.collapseBlood 까지 잃음 → 다친 정도 1
+  assert.equal(+(s0 - targetScore(M, me, e1)).toFixed(6), T.prefAdd);
+  me.targetPref = null;
+});
+
+test('⑥ 편 전멸 = 판 끝 · 결과 (자리마다 alive · blood · wounds · causeOfDeath)', () => {
+  const G = newMatch({ count: 3, ai: 'all', seed: 4 });
+  assert.equal(G.over, false);
+  G.step();
+  assert.equal(G.over, false);
+  G.fighters[1].die('시험');
+  G.step();
+  assert.equal(G.over, true);
+  assert.equal(G.winner, 0);
+  const R = matchResult(G);
+  assert.equal(R.over, true);
+  assert.equal(R.fighters.length, 3);
+  assert.deepEqual(R.fighters.map((r) => r.alive), [true, false, true]);
+  assert.equal(R.fighters[1].causeOfDeath, '시험');
+  for (const r of R.fighters) assert.ok(typeof r.blood === 'number' && Array.isArray(r.wounds) && 'causeOfDeath' in r);
+  // 1:1 도 같은 규칙 (읽기만)
+  const G1 = newMatch({ ai: [1, 0], seed: 1 });
+  G1.enemy.die('시험');
+  G1.step();
+  assert.equal(G1.over, true);
+  assert.equal(G1.winner, 0);
+});
+
+test('⑦ 상대를 아는 반응 시간: 상대를 바꾸면 새 상대의 face s 전 자리부터 (옛 상대 쪽으로 안 돎)', () => {
+  const G = newMatch({ count: 4, ai: 'all', seed: 5 });
+  const [P, E, , E2] = G.fighters;
+  for (let i = 0; i < 60; i++) G.step();
+  assert.ok(P.foes.includes(E) && P.foes.includes(E2));
+  P.foe = E2;
+  const tg = P.reactTarget(1 / 120);
+  const q = E2.bodies.pelvis.translation(), o = E.bodies.pelvis.translation();
+  assert.ok(Math.hypot(tg.x - q.x, tg.z - q.z) < 0.3, '새 상대 자리 근처');
+  assert.ok(Math.hypot(tg.x - o.x, tg.z - o.z) > 1.0, '옛 상대 자리 아님');
+  // 1:1 은 예전 기록 (상대 목록 없음)
+  const G1 = newMatch({ ai: [1, 0], seed: 1 });
+  assert.equal(G1.player.foes, undefined);
+  assert.equal(G1.player.mates, undefined);
+});
+
+test('⑧ AI 상대마다 몫 맞바꿈 (위협 걸쇠 · 몰아침 · 고노센 경계) · 그 상대와만의 셈은 0', () => {
+  const G = newMatch({ count: 4, ai: 'all', seed: 6 });
+  const ai = G.ais[0];
+  const [, E, , E2] = G.fighters;
+  for (let i = 0; i < 30; i++) G.step();
+  assert.equal(ai.foe, E);
+  Object.assign(ai, { threatId: 5, threatSeen: 5, foeAggro: 0.7, preArmed: false, gnsW: { mark: 1 }, combo: 2 });
+  ai.setFoe(E2);
+  assert.deepEqual([ai.threatId, ai.threatSeen, ai.foeAggro, ai.preArmed, ai.gnsW, ai.combo], [0, -1, 0, true, undefined, 0]);
+  ai.setFoe(E);
+  assert.deepEqual([ai.threatId, ai.threatSeen, ai.foeAggro, ai.preArmed, ai.gnsW.mark, ai.combo], [5, 5, 0.7, false, 1, 0]);
 });
