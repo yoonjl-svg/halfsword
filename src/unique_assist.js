@@ -734,7 +734,7 @@ export class PlayerUniqueAssist {
     const k = Math.min(1, UA.enhance);
     const front = g.frontLeg(f.forward(_v));
     const lead = Math.sign(g.legs[front].side) === Math.sign(st.lat);
-    const ok = g.requestStep({ kind: st.kind ?? (lead ? 'lunge' : 'pass'), fwd: st.fwd * k, side: st.lat * k, duration: st.dur ?? 0.35, ...(st.draw ? { draw: true } : {}) }); // draw: 칸에 끌어붙임이 있으면(10/29 시제품 schools.js STEP_PROTO — 지금 판 칸에는 없음)
+    const ok = g.requestStep({ kind: st.kind ?? (lead ? 'lunge' : 'pass'), fwd: st.fwd * k, side: st.lat * k, duration: st.dur ?? 0.35 });
     if (ok) this.stats.steps++;
     return ok;
   }

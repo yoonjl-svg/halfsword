@@ -895,6 +895,7 @@ export const SKILL = {
   enterStep: 0.45,
   enterMin: 1.1, // 이미 이보다 가까우면 들어가지 않는다 (m)
   enterCool: realS(1.0), // 한 번 들어간 뒤 다시 들어가기까지 (초)
+  talhoApproach: 1, // 1 = 이베리아 나선 걸음 베기(talhoRodeado — schools.js step when 게터)를 AI 가 '먼저 비껴 딛고, 발이 닿으면 벤다'(when 'approach' — 비껴 베기 · 비껴서며 찌르기와 같은 꼴, ai.js approachStep) · 0 = 전처럼 베며 딛음('strike' — 칼이 발 딛기 전에 지나가 옆 0.45 미끄러짐 한가운데서 빗나감). 사장님 10/29 18:4x '나선 걸음 베기 조정해' (docs/strike/step_ladder_2026-10-29.md §9 · §10). 사람(B3)은 이 칸을 읽지 않음 — 긋는 순간 딛음. `?talhoApproach=0`
 };
 
 // ── 스킬트리 편지 '00에서 온 편지' (10/21 — docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md §5 · skill_tree_data.js letterMul · weapons.js drawWeaponCards weightOf) ──

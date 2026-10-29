@@ -3145,7 +3145,7 @@ export class AI {
     if (!this.techStepTry) S.req++; // 공격 한 번에 한 번 센다 (못 받으면 다음 프레임에 다시 부탁한다)
     this.techStepTry = true;
     // kind·push: 비기가 덧씌운 걸음(일본 앞발 lunge·강하게, 이탈리아 뒷발 pass) — 칸이 없으면 전과 같다
-    if (!g.requestStep({ kind: st.kind ?? (lead ? 'lunge' : 'pass'), fwd: st.fwd, side: st.lat, duration: st.dur ?? 0.35, ...(st.push ? { push: st.push } : {}), ...(st.draw ? { draw: true } : {}) })) return false; // draw: 칸에 끌어붙임이 있으면(10/29 시제품 schools.js STEP_PROTO — 지금 판 칸에는 없음)
+    if (!g.requestStep({ kind: st.kind ?? (lead ? 'lunge' : 'pass'), fwd: st.fwd, side: st.lat, duration: st.dur ?? 0.35, ...(st.push ? { push: st.push } : {}) })) return false;
     S.ok++;
     this.techStepN = (this.techStepN ?? 0) + 1; // 받은 기술 걸음 수 — 도구가 바뀐 때를 보고 걸음 뒤 넘어짐을 잰다
     return true;

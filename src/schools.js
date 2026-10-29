@@ -540,7 +540,7 @@ const IBERIAN_UNIQUE = [
   //  the montante to give a revez cutting from behind with the other edge … also from low to high」(피 단Ⅰ — 「whoever performs it well will be able to perform them all」).
   //  오른 아래 → 올려 탈류 → 왼 높이 비낌(피 복ⅩⅤ 멈춤 자리) → 왼쪽으로 떨궈(「let fall the montante to the left」 피 복Ⅰ) → 왼 아래 → 올려 레베스 → 오른 높이 비낌. chain 2 = 흐름이 이어 돈다
   { name: 'talhoRevezBaixo', nameKo: '번갈아 올려베기 (탈류 이 레베스 드 바슈)', orig: 'talho e revez de baxo', from: G.wechselR, path: [[0.04, -0.08], G.ochsL, [-0.5, 0.0], G.wechselL, [-0.04, -0.08], G.ochsR], open: 'LL', kind: 'cut', reach: 0, base: 0.9, chain: 2, src: '피게이레두 1651 단순 규칙 Ⅰ·복합 규칙 Ⅰ·Ⅶ(「always from low to high, alternating talho and revez」) [원문 영역] · 길의 수 [추정]' },
-  { name: 'talhoRodeado', nameKo: '나선 걸음 베기 (탈류 로데아두)', orig: 'talho rodeado', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.45, fwd: 0.45, when: 'strike' } /* 10/29 옆 0.35 → 0.45 · 앞 0.3 → 0.45 = 걸음 사다리 0.45 칸(몬탄테의 더 큰 둥근 걸음): 감독 안 · 사장님 확인 전(사장님 15:xx '가령 이베리아 나선 걸음 베기는 둘 다 0.45가 나을 수도 있어' — docs/strike/step_ladder_2026-10-29.md §8-4) */, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
+  { name: 'talhoRodeado', nameKo: '나선 걸음 베기 (탈류 로데아두)', orig: 'talho rodeado', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.45, fwd: 0.45, get when() { return SKILL.talhoApproach ? 'approach' : 'strike'; } } /* 10/29 옆 0.35 → 0.45 · 앞 0.3 → 0.45 = 걸음 사다리 0.45 칸(몬탄테의 더 큰 둥근 걸음) · when = AI 가 먼저 비껴 딛고 발이 닿으면 벤다(SKILL.talhoApproach — 사람 B3 은 when 을 읽지 않아 긋는 순간 딛음 그대로): 사장님 10/29 18:4x 결정 '나선 걸음 베기 조정해' — docs/strike/step_ladder_2026-10-29.md §8-4 · §9 · §10 */, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
 ];
 
 // ── 패시브 고유 동작 (10/9 — 사장님 02:1x '어떤 고유 동작은 패시브여도 좋을 거 같아', docs/strike/school_passive_design_2026-10-09.md) ──
@@ -1565,24 +1565,3 @@ export const DEFAULT_SCHOOL = 'longsword';
 
 /** id가 없거나 모르는 유파면 기본(롱소드) 꾸러미 */
 export const schoolOf = (id) => SCHOOLS[id] || SCHOOLS[DEFAULT_SCHOOL];
-
-// ── 걸음 사다리 뒤 동작 맞춤 시제품 (10/29 17:5x 사장님 '나선 걸음 베기와 체보요격은 걸음 변화에 따라 동작을 재설계할 필요가 있는가?' — 판 꺼짐 · 사장님 확인 전 ·
-//    docs/strike/step_ladder_2026-10-29.md §9). 켜면 그 고유 동작의 step 칸 객체에 덮어쓴다(AI 꾸러미 · 사람 PlayerUniqueAssist 가 같은 칸 객체를 읽음). 끄는 길은 없다 — 판 시작 전에 한 번
-//  chebu: 체보요격을 掣步 그대로 — 앞발 lunge 반걸음 + 뒷발 끌어붙임(draw). 지금은 뒷발 쪽 걸음이면 'pass' 를 부탁하고 동방 걸음(follow)이 그것을 앞발 lunge × passAs.fwdK 0.85 + 끌어붙임으로
-//   바꿔 0.3 이 실제 0.255 가 된다(전 0.35 는 실제 0.297). lunge 를 바로 부탁하면 앞발이 칸 값 0.3 그대로 · 앞발 쪽 걸음(lunge)에도 끌어붙임
-//  talho: 나선 걸음 베기를 '먼저 비껴 딛고, 발이 닿으면 친다'(when 'approach' — 비껴 베기 · 비껴서며 찌르기와 같은 꼴, ai.js approachStep). AI 만 — 사람은 긋는 순간 딛는다(unique_assist askStep)
-export const STEP_PROTO = {
-  chebu: { tech: 'chebuYaoji', set: { kind: 'lunge', draw: true } },
-  talho: { tech: 'talhoRodeado', set: { when: 'approach' } },
-};
-/** 시제품 켜기: keys = ['chebu', 'talho'] 가운데 (주소 `?stepProto=chebu,talho` — main.js · 도구는 직접 부름). 고친 칸 수를 돌려준다 */
-export function applyStepProto(keys) {
-  let n = 0;
-  for (const k of keys) {
-    const P = STEP_PROTO[k];
-    if (!P) continue;
-    const seen = new Set();
-    for (const T of Object.values(TRADITIONS)) for (const t of T?.unique ?? []) if (t?.name === P.tech && t.step && !seen.has(t.step)) { seen.add(t.step); Object.assign(t.step, P.set); n++; }
-  }
-  return n;
-}
