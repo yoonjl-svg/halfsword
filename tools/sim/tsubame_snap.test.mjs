@@ -31,7 +31,7 @@ test('기본값 — 세 해법 켬 · 0.6 · 0.2 s (사장님 10/25 결정) · A
   assert.equal(UA.tsuSnap, 1);
   assert.equal(UA.tsuAim, 1);
   assert.equal(UA.tsuBand, 1);
-  assert.equal(UA.tsuSnapShare, 0.6);
+  assert.equal(UA.specialShare.tsubameGaeshi, 0.6); // 10/29 02:0x 특수 공격 칼끝 = 고노센 × n 한 표 (제비 베기는 전과 같은 0.6)
   assert.equal(UA.tsuSnapTime, 0.2);
   const u = TRADITIONS.japanese.unique.find((x) => x.name === 'tsubameGaeshi');
   assert.deepEqual([u.from, ...u.path], [G.tag, [0.0, 0.14], G.alber, [0.06, -0.15], G.ochsR]); // AI 가 읽는 길은 그대로

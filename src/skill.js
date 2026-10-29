@@ -199,8 +199,11 @@ export class Skill {
    *  (검술 층이 따로 내딛기를 부탁하면 AI 가 "안 내딛는다"고 정한 때도 내딛고, 곧이어 AI 걸음이 그 부탁을 덮어써 두 번 내딛었다)
    * @returns 시작했으면 true
    */
-  thrust({ step = true, vital = undefined, rangeCommit = false, finishOnly = false } = {}) {
+  thrust({ step = true, vital = undefined, rangeCommit = false, finishOnly = false, uniq = true, charged = false } = {}) {
     const f = this.f;
+    // 사람 탭으로 내는 이어 찌르기 (칼끝 돌려 빼기 — 사장님 10/28 00:5x · 01:0x · unique_assist.js tapChain): 내 찌르기가 상대 칼에 맞물린 때부터 창(cavFrom ~ cavTo) 안의 탭이면 보통 탭 찌르기 대신 그 칼 ·
+    //  창보다 이른 탭은 그 기회를 없앰 — 다른 탭이 도는 중이라 아래에서 버려지는 탭도 셈(연달아 두드리면 안 나가게). AI 는 uniq 가 없음
+    if (uniq && this.uniq && vital === undefined && !rangeCommit && !finishOnly && !f.weapon?.gun && this.uniq.tapChain()) return true;
     if (f.stamina.exhausted || this.tap || this.pom || (this.vitalRange && !rangeCommit) || !f.alive || !f.armed || !f.foe || (f.state !== 'stand' && f.state !== 'kneel')) return false;
     // 권총(??? 등급): 찌르기 = 발사. 장전 중이면 쏘지 않는다 (gun.js)
     if (f.weapon?.gun) return gunCanFire(f, { now: true }); // 권총: 찌르는 동작 없이 사격 자세(gunPose, 자동 조준 + 흔들림)의 지금 총신 방향으로 바로 쏜다 (AI 조준 보정은 gunAI)
@@ -248,7 +251,7 @@ export class Skill {
       }
     }
     const h0 = rangeCommit && this.thrustPose.w > 0 ? this.thrustPose.hand.slice() : g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12];
-    if (!f.aiControlled) f.stamina.attack('thrust');
+    if (!f.aiControlled && !charged) f.stamina.attack('thrust'); // charged: 이미 청구한 탭 (칼끝 돌려 빼기 탭 — unique_assist.js tapChain)
     // 이탈리아 찌르기 (THRUST.itLunge — 10/25 · config 머리말 ①~④): 몸통을 겨누고 · 당기지 않고 · 거리만큼 몸이 실린 런지로 · 닿거나 몸이 다 실릴 때까지 뻗은 채
     const it = !!THRUST.itLunge && f.swordArt?.tradition === 'italian' && !down && !V;
     this.tap = { t: 0, h0, down, head: !down && !V && this.aimRaw.y > THRUST.headPad && !it, K };

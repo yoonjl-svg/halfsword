@@ -104,7 +104,8 @@ export const AXES = Object.freeze({
   finisher: K({ ko: '끝내기', knobs: K({ 'pers.dogged': [0, 0.7] }), read: (k) => n(k['pers.dogged'], 0, 0.7) }),
   // 기력 아끼기: 0 다 쓴다 · 1 아껴 쓴다. 인물 손잡이 없음 — 지금은 aggr × aggression > 1.15 이면 기력 −10 까지 · 아니면 20 에서 쉼(config.js STAMINA.aiRestAt · aiAggressiveRestAt)
   stamina: K({ ko: '기력 아끼기', knobs: K({}), read: null }),
-  // 유파 특성: 고유 동작 · 패시브 · 비기를 얼마나 적극적으로 쓰나 (그 유파 숙련도가 연 것 안에서). 인물 손잡이 없음 — 지금은 숙련도 표 AI_PROFICIENCY.schoolK[숙련도] 하나
+  // 유파 특성: 고유 동작 · 패시브 · 비기를 얼마나 적극적으로 쓰나 (그 유파 숙련도가 연 것 안에서). 인물 손잡이 — 지금은 숙련도 표 AI_PROFICIENCY.schoolK[숙련도] 하나 +
+  //  (10/29 15:5x) 싱지르 걸쇠 pers.spinHold (무장하면 먼저 치지 않고 기다리나 — 기본 true · 베르나르도 false). 식에는 넣지 않음(낱말 손잡이)
   schoolArt: K({ ko: '유파 특성', knobs: K({}), read: null }),
 });
 
@@ -173,15 +174,16 @@ export const TEMPERAMENT = Object.freeze({
   // 지금: 시트 값 없음 (pers {} — 동방 기질 범위 · 흙 몸: 피를 흘리지 않고 머리가 떨어져야 쓰러짐)
   terracotta: T({ special: true, initiative: 0.5, patience: 0.45, distance: 0.3, counter: 0.35, feint: 0.2, press: 0.6, risk: 0.7, composure: 0.95, wounded: 'fightOn', finisher: 0.6, stamina: 0.5, schoolArt: 0.5,
     team: { target: 'nearest', guard: 0.2, woundedFight: 1 } }),
-  // 지금: 아르토리아 시트를 빌림(character_roland.js — '전투 수치는 검토용 시작값이다') — aggr .85 × aggression .8 · pt 4.5 rhythm 2.6 · margin .22 · counter .35 vor .45 · feint .2 · followUp .42 angry .2 · close .25 · fearful .2 · dogged .45
-  roland: T({ special: true, initiative: 0.2, patience: 0.15, distance: 0.3, counter: 0.5, feint: 0.4, press: 0.4, risk: 0.55, composure: 0.6, wounded: 'fightOn', finisher: 0.65, stamina: 0.35, schoolArt: 0.8,
-    team: { target: 'nearest', guard: 0.7, woundedFight: 1 } }),
+  // 지금 (10/29 15:5x 제 기질 — 전: 아르토리아 시트를 빌림): aggr .95 × aggression .85 · pt 9 rhythm 3.6 · margin .4 · counter .3 vor .65 · feint .08 · followUp .7 angry .45 · close .3 (whole 없음) · fearful .05 · dogged .6 · spinHold true
+  roland: T({ special: true, initiative: 0.3, patience: 0.4, distance: 0.75, counter: 0.55, feint: 0.15, press: 0.7, risk: 0.6, composure: 0.9, wounded: 'fightOn', finisher: 0.85, stamina: 0.3, schoolArt: 0.85,
+    team: { target: 'nearest', guard: 0.45, woundedFight: 1 } }),
   // 지금: 시트 값 없음 (pers {} — 일본 기질 범위) · 이름 · 사연 미정 시안이라 근거가 얇다(thin)
   white_scale: T({ special: true, thin: true, initiative: 0.5, patience: 0.65, distance: 0.7, counter: 0.45, feint: 0.35, press: 0.55, risk: 0.4, composure: 0.85, wounded: 'fightOn', finisher: 0.5, stamina: 0.6, schoolArt: 0.7,
     team: { target: 'nearest', guard: 0.5, woundedFight: 0.75 } }),
-  // 지금: 롤랑 시트 복사(= 아르토리아 숫자) — 롤랑과 같음
-  bernardo: T({ special: true, initiative: 0.2, patience: 0.15, distance: 0.3, counter: 0.5, feint: 0.4, press: 0.4, risk: 0.6, composure: 0.6, wounded: 'fightOn', finisher: 0.65, stamina: 0.4, schoolArt: 0.8,
-    team: { target: 'strongest', guard: 0.5, woundedFight: 1 }, lean: { initiative: +1, press: +1 } }),
+  // 지금 (10/29 15:5x 제 기질 — 전: 롤랑 시트 복사 = 아르토리아 숫자): aggr 1.15 × aggression 1.15 · pt 5 rhythm 2 · margin .18 · counter .4 vor .75 · feint .2 · followUp .75 angry .5 · close .6 (whole 없음) · fearful .1 · dogged .55
+  //  기울기(선공 ↑ · 막힌 뒤 ↑)는 이 기질로 풀림 · 싱지르 걸쇠 spinHold false (무장해도 먼저 친다 — 유파 특성 .6, 롤랑 .85)
+  bernardo: T({ special: true, initiative: 0.8, patience: 0.1, distance: 0.2, counter: 0.65, feint: 0.4, press: 0.75, risk: 0.75, composure: 0.8, wounded: 'fightOn', finisher: 0.8, stamina: 0.25, schoolArt: 0.6,
+    team: { target: 'strongest', guard: 0.5, woundedFight: 1 } }),
 });
 
 const baseId = (id) => (id in PROFICIENCY ? id : String(id ?? '').replace(/_mad$/, ''));

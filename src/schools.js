@@ -399,7 +399,7 @@ const CHINESE_GUARD_LOW = { guard: '옆 지킴 (네벤후트)', drop: 0.04 };
 //    10/10 14:2x 사장님 '0.16 은 규칙이 아니라 기준, 판단은 디렉터' → 디렉터 판단으로 활 자세만 lowMax 0.16 밖(칸 lowMax — gait.js 활 자세 줄만 읽음, 대기·걸음 낮춤은 GAIT.lowMax 그대로):
 //     drop 0.14 → 0.22 · lowMax 0.24 — 앞 허벅지 58 → 65° (tools/sim/bow_depth.mjs). 0.24/0.26(67°)부터 붙잡기 반사가 0.25 → 0.34(반걸음 0 → 0.06), 0.26/0.28(69°)엔 0.46·0.16 — 그 바로 아래에서 멈춤
 //     (docs/motion/chinese_guards_2026-10-10.md §5, 확인표 712)
-const CHINESE_BOW = { drop: 0.22, lowMax: 0.24, rate: 1.2, inTime: 0.12, outTime: 0.35, hold: 0.25, front: 0.8, tech: { oberhau: { hold: 0.45, fwd: 0.25 } } };
+const CHINESE_BOW = { drop: 0.22, lowMax: 0.24, rate: 1.2, inTime: 0.12, outTime: 0.35, hold: 0.25, front: 0.8, tech: { oberhau: { hold: 0.45, fwd: 0.3 } } }; // tech.oberhau.fwd = 걸음 사다리 0.3 칸 · 사장님 10/29 14:5x '0.25는 0.3으로 합치자' (전 0.25 — docs/strike/step_ladder_2026-10-29.md)
 //   가벼운 발 light (10/15 18:3x 사장님 '가벼운 발로 가자' — 1.5 는 감독 제안 · docs/strike/cn_light_feet_2026-10-15.md · 확인표 1649~): 발로 내는 몸 가속 한도
 //    (GAIT.maxAccel 3.2 m/s²)의 보통 걸음 몫(× 1)에 곱한다(fighter.js driveBalance) — 걷기 시작·멈춤·방향 바꿈이 같은 한도라 셋이 함께 빨라지고, 최고 빠르기(moveSpeed)는 그대로
 //    ('빠르진 않지만 신속하다'). 빠른 걸음·첫 걸음 박차기·세게 멈춤(fastAcc · burstAccel)엔 곱하지 않는다(그 값 그대로). 몸의 일이라 사람·AI 같이 · 칼 입력은 읽지 않는다(보법 = 다리만).
@@ -817,7 +817,7 @@ const CHINESE_SECRET = {
 //   중국 = 쳐 내고 흘려 연달아 (格 → 連擊) — 막은 칼을 쳐 내어 칼이 갈라진 뒤 · 기회 = 갈라진 직후 짧은 n 초 · 반걸음씩 들어가며 빈 곳으로 빠른 두 수
 //  꼴: when 'parry' · cond.slots { 줄: 자리 열쇠 } (막기 줄 = AI defLine, 패드 = 꾸러미 parry[줄]) · cond.window ('bind' = 칼이 붙은 동안 · 'apart' = 갈라진 뒤 cond.time 초 — SECRET 열쇠) ·
 //   do.combo { 자리 열쇠: { nameKo, seq: [수 — 중국 둘 · 독일 하나] } } — seq 의 수는 연환삼격 seq 꼴(pre: [] = 이음새 고리 없이 앞 수 끝에서 곧장). 판정은 secret.js parrySlotOf·PlayerSecretWatch, AI 는 ai.js parryCombo
-const step25 = { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' }; // 수마다 반걸음 進步 (연환삼격과 같은 칸 — SECRET.chineseStep 0.25)
+const step25 = { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' }; // 수마다 반걸음 進步 (연환삼격과 같은 칸 — SECRET.chineseStep 0.3: 걸음 사다리 0.3 칸 · 사장님 10/29 14:5x '0.25는 0.3으로 합치자', 전 0.25)
 const stepBack25 = { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'retreat', back: true }; // 10/12 3 연격 마지막 수: 반걸음 물러남 退步·掣步 (같은 칸 SECRET.chineseStep — 부르는 쪽이 fwd 를 음수로 푼다)
 const CHINESE_SECRET_PARRY = {
   name: 'lianhuanParry',
@@ -969,7 +969,7 @@ const CHINESE_SECRET_GYEOKSAL = {
 //  어드밴티지: 창이 열린 뒤 붙어 있던 시간만큼 판정 배율·서보 힘 창 × secret.js bindGain (SECRET.deBindFull 에 deBindGain 최대). 오래 버티는 위험(상대가 감거나 떼어 냄)은 물리 그대로.
 //  자리: highR 오른 황소(G.ochsR) · highL 왼 걸이(독일 막기 자리 [−0.3, 0.1] — '칼을 왼쪽에 세워 받는다', 왼쪽 황소 꼴) · highC 왕관(Kron, SKILL.deKron 켬일 때 — 사장님 10/11 22:2x). 쟁기(lowL·lowR·thrust)는 아님
 //   왕관 → 뛰어들기 (Einlaufen): Ringeck 「this displacement is called "the crown". From there you can rush in」 [원전 2차 영역] — 칼자루로 받은 칼을 머리 위에 걸친 채 반걸음 들어가며 짧게 머리로 내려 벰.
-//   씨름(Ringen am Schwert)은 우리 몸에 없어(잡기·던지기 없음) 들어가며 짧게 치는 한 칼로 [해석] · 반걸음 = 중국 연환 반걸음과 같은 값(SECRET.chineseStep 0.25 — 새 값 아님) · 길 [추정]
+//   씨름(Ringen am Schwert)은 우리 몸에 없어(잡기·던지기 없음) 들어가며 짧게 치는 한 칼로 [해석] · 반걸음 = 중국 연환 반걸음과 같은 값(SECRET.chineseStep 0.3 — 새 값 아님 · 걸음 사다리 0.3 칸 · 사장님 10/29 14:5x '0.25는 0.3으로 합치자', 전 0.25) · 길 [추정]
 const deStep = { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' };
 const GERMAN_SECRET_PARRY = {
   name: 'indesWinden',

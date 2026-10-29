@@ -219,7 +219,35 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
         return `M${(a.x + (dir * a.D) / 2).toFixed(1)} ${yc.toFixed(1)} H${(b.x - (dir * b.D) / 2).toFixed(1)}`;
       }
       const [x0, y0] = bottomOf(from), ys = stemOf(from), [x1, y1] = topOf(to), m = (ys + y1) / 2;
-      return `M${x0.toFixed(1)} ${y0.toFixed(1)} V${ys.toFixed(1)} C${x0.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+      const plain = `M${x0.toFixed(1)} ${y0.toFixed(1)} V${ys.toFixed(1)} C${x0.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${m.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+      if (to.d - from.d < 2) return plain;
+      // 줄을 건너뛰는 줄(10/29 이베리아 B5 d 1 → 싱지르 B7 d 3 — 사이 줄의 풍차 베기 B4 를 지남): 한 곡선이 사이 줄의 다른 칸을 지나면
+      //  사이 줄마다 칸 옆 빈 길(가운데 줄에서 가장 가까운 칸 가장자리 밖)로 — 틈에서 굽고 줄 안은 곧게. 안 지나면 전 곡선 그대로(다른 유파 판 그대로)
+      const pad = 4 * g.s;
+      const boxes = Object.entries(g.pos).filter(([id]) => id !== from.id && id !== to.id).map(([id, q]) => ({ d: q.d, l: q.x - q.w / 2, r: q.x + q.w / 2, t: q.top, b: q.top + q.Db + g.nameGap + q.lines.length * g.lh }));
+      const inBox = (x, y) => boxes.some((b) => x > b.l - 1 && x < b.r + 1 && y > b.t && y < b.b);
+      let hit = false;
+      for (let i = 0; i <= 64 && !hit; i++) {
+        const t = i / 64, u = 1 - t;
+        hit = inBox(x0 + (x1 - x0) * (3 * u * t * t + t * t * t), ys * u * u * u + 3 * m * u * t + y1 * t * t * t);
+      }
+      if (!hit) return plain;
+      let d = `M${x0.toFixed(1)} ${y0.toFixed(1)} V${ys.toFixed(1)}`, xp = x0, yp = ys;
+      for (let r = from.d + 1; r < to.d; r++) {
+        let xr = x0 + ((x1 - x0) * (r - from.d)) / (to.d - from.d);
+        const row = boxes.filter((b) => b.d === r);
+        const blk = row.find((b) => xr > b.l - pad && xr < b.r + pad);
+        if (blk) {
+          const free = (x) => !row.some((b) => x > b.l - pad && x < b.r + pad);
+          xr = [blk.l - pad, blk.r + pad].filter(free).sort((a, b) => Math.abs(a - xr) - Math.abs(b - xr))[0] ?? xr;
+        }
+        const yt = g.row[r].top, yb = g.row[r].nameBottom, mm = (yp + yt) / 2;
+        d += ` C${xp.toFixed(1)} ${mm.toFixed(1)} ${xr.toFixed(1)} ${mm.toFixed(1)} ${xr.toFixed(1)} ${yt.toFixed(1)} V${yb.toFixed(1)}`;
+        xp = xr;
+        yp = yb;
+      }
+      const ml = (yp + y1) / 2;
+      return `${d} C${xp.toFixed(1)} ${ml.toFixed(1)} ${x1.toFixed(1)} ${ml.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
     };
     const cls = (from, to) => ['tree-link', to.opt ? 'opt' : '', learned.has(from.id) && learned.has(to.id) ? 'lit' : learned.has(from.id) && !isClosed(school, to) ? 'ready' : ''].filter(Boolean).join(' ');
     const gate = T.gate;
