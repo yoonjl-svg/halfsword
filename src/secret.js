@@ -892,7 +892,7 @@ export class PlayerSecretWatch {
       if (pressStep(this, dt, b?.phase === 'press', busy, !!this.open, secretVal(this.S.cond.press), b?.phase === 'step' ? b : null)) this.openWindow({ ev: 'press', held: this.pressHeld });
       return;
     }
-    // 'close' (10/29 20:0x 사장님 — SECRET.mordRule): 몸이 붙어 있음 = 가슴 사이 ≤ mordCloseN(없으면 밀치기가 닿는 거리 CLOSE.reach) · 나 · 상대 서 있음 — 밀치기 꼴 · 스틱 · 긋기와 상관없이.
+    // 'close' (10/29 20:0x 사장님 — SECRET.mordRule): 몸이 붙어 있음 = 가슴 사이 ≤ mordCloseN(0.8 m 모든 무기 — 10/30 00:4x 사장님 · null 이면 밀치기가 닿는 거리 CLOSE.reach) · 나 · 상대 서 있음 — 밀치기 꼴 · 스틱 · 긋기와 상관없이.
     //  셈 · 너그러움(mordGrace) · 창은 같은 pressStep(첫 걸음 멈춤 mordStepPause 는 밀치기 걸음 몫이라 안 씀)
     const n = SECRET.mordCloseN ?? CLOSE.reach(me.armed ? me.weapon : null);
     const foe = this.foe;
