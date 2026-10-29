@@ -62,7 +62,8 @@ import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { TRADITIONS, setChineseGait, setItalianRhythm, setItalianStride, setItalianWalk, setJapaneseGait, traditionOf } from './schools.js';
 import { createMatch, stepMatch, spawnSpots, orderControllers, pairFoe, matchResult } from './match.js'; // 동시 대전 판 (10/29 3단계 — 2:2 · 2:1 · 1:2 · 지켜보기)
-import { createTeamHud, teamFramePull } from './team_hud.js'; // 동시 대전 화면 (위 막대 넷 · 화면 밖 화살표 · 카메라 물러남)
+import { createTeamHud, teamFramePull } from './team_hud.js';
+import { shortNameOf } from './short_names.js'; // 체력 목록 짧은 이름 (사장님 10/30 01:0x) // 동시 대전 화면 (위 막대 넷 · 화면 밖 화살표 · 카메라 물러남)
 import { specFromSetup, resultFromMatch, profOfEntry, fallbackInjuries } from './saengsa_match.js'; // 생사전 ↔ 엔진 (game.launchSaengsa)
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
 import { portraitIdOf, portraitSrc, portraitMode, portraitGrid } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
@@ -1019,6 +1020,8 @@ function teamLook(e, mods) {
   return LOOKS.enemy;
 }
 const teamName = (e) => e.name ?? (e.id === 'player' ? '나' : CHARACTERS_BY_ID[e.id]?.name ?? (e.id === 'nameless' ? '무명 검객' : '검객'));
+/** 체력 목록의 짧은 이름 (사장님 10/30 01:0x '이름만 표기되게. 무명 검객도 마찬가지'): 나 · 무명 검객은 붙인 이름(tag)만 · 인물은 short_names.js (얼터 'A.' + 본캐) · 그 밖은 준 이름 */
+const teamShort = (e) => e.short ?? (e.human || e.id === 'player' ? '나' : e.id === 'nameless' ? e.person?.tag || e.tag || '무명' : CHARACTERS_BY_ID[e.id] ? shortNameOf(CHARACTERS_BY_ID[e.id]) : teamName(e));
 /** AI 실력 · 성격: 인물 시트(숙련도를 주면 그 숙련도 — 생사전 사람의 유파별 숙련도 표 그대로) · 시트가 없으면(무명 검객) 숙련도에서. 시트와 다른 무기면 유파 꾸러미는 그 무기 것 (newRound 와 같은 규칙) */
 function teamAiOf(e) {
   const ch = CHARACTERS_BY_ID[e.id] ?? null;
@@ -1065,6 +1068,7 @@ function newTeamRound(spec, mods = {}) {
     });
   });
   for (const f of fighters) f.applySnapshot(E[f.index].snapshot); // 들어올 때 상태 (생사전 체력 · 부상 — 6단계)
+  for (const f of fighters) f.shortName = teamShort(E[f.index]); // 체력 목록 이름 (team_hud.js)
   {
     // 사람 몸의 대기실 장비 — 1:1 newRound 와 똑같이 (사장님 10/29 22:3x '완전 동일해야 함'): 케틀 햇 기력 +30 · 용사의 눈물 기력 무한 (첫 화면에서 연 판만 — journeyLoadout)
     const H0 = fighters.find((f) => f.human);
