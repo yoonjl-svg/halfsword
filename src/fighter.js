@@ -2155,8 +2155,8 @@ export class Fighter {
   }
 
   /** 비정상 손목 교정 (아래 모듈 wristClamp 그대로 — 운동학 비기 secret_instant.js placeIai 가 부른다: 그 모듈이 fighter.js 를 부르면 모듈 차례가 꼬여서) */
-  wristClamp(fx, aim, z) {
-    return wristClamp(fx, aim, z);
+  wristClamp(fx, aim, z, margin = 0) {
+    return wristClamp(fx, aim, z, margin);
   }
 
   /** 손목 사람 범위 안 손 면 (아래 모듈 wristPlane 그대로 — 운동학 칼 secret_instant.js iaiSolve 의 칼끝 돌려 빼기가 부른다 · 10/28: 그 모듈이 fighter.js 를 부르면 모듈 차례가 꼬여서) · 칼 면 법선 또는 null */
@@ -4555,15 +4555,15 @@ function cutSwing(f) {
  *  손 자리 · 팔 · 손 면은 그대로, 칼끝만 손 면 안에서 들리거나 내려간다(가장 작은 바꿈). 아래팔이 손 면에서 JOINTS.wristFE 넘게 벗어나면(면 안 각이 뜻이 없음) 건드리지 않는다 —
  *  그 굽힘 · 폄은 끝 스프링(anatSoft (3))이, 굴림은 손목 밧줄(HUMAN.forearmRoll)이 맡는다. aim(단위)을 바꿔 쓰고 z 를 칼 축에 수직으로 다듬는다. 돌린 각(°, + = 엄지 쪽)
  */
-export function wristClamp(fx, aim, z) {
+export function wristClamp(fx, aim, z, margin = 0) {
   z.addScaledVector(aim, -z.dot(aim));
   if (z.lengthSq() < 1e-6) return 0;
   z.normalize();
   if (Math.abs(Math.asin(THREE.MathUtils.clamp(fx.dot(z), -1, 1))) > JOINTS.wristFE * HD) return 0;
   const x = _wgX.crossVectors(aim, z);
   const dev = 90 - Math.atan2(fx.dot(aim), fx.dot(x)) / HD;
-  const lo = -HUMAN.ulnarDev;
-  const hi = HUMAN.wristThumb;
+  const lo = -HUMAN.ulnarDev + margin; // margin ° = 끝에서 안쪽으로 (풍차 베기 감기 rdWristMargin — 놓은 뒤 물리가 1 ~ 1.6° 밀어 범위를 넘던 것 · 기본 0 = 전 그대로)
+  const hi = HUMAN.wristThumb - margin;
   const a = (((dev - hi) % 360) + 360) % 360; // 엄지 쪽 끝을 넘은 각 (0 ~ 360) — 범위 [lo, hi] 는 a ≥ 360 − (hi − lo)
   const span = 360 - (hi - lo); // 사람이 못 하는 호
   if (a === 0 || a >= span) return 0;

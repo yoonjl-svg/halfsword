@@ -55,7 +55,7 @@ export function windStart(f) {
   const AH = new THREE.Vector3(sw.x - c.x, sw.y - c.y, sw.z - c.z).applyQuaternion(inv);
   const AD = f.bladePoint(1, new THREE.Vector3()).sub(f.bladePoint(0, new THREE.Vector3())).normalize().applyQuaternion(inv);
   const psi = Math.atan2(sideOf(f) * AD.z, AD.x); // 지금 칼 가로 각에서 돌기 시작
-  const I = { yaw: f.yaw.clone(), mord: null, kind: 'wind', moves: null, mi: 0, off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), body: BODY0 };
+  const I = { yaw: f.yaw.clone(), mord: null, kind: 'wind', moves: null, mi: 0, off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), body: BODY0, wristMargin: UA.rdWristMargin ?? 0 }; // 손목 교정은 범위 끝에서 rdWristMargin ° 안쪽으로 (10/29 몸 검사)
   f.rdWind = { t: 0, psi, psi0: psi, AH, AD, H: AH.clone(), D: AD.clone(), k: 0, I, turns: 0 };
   return f.rdWind;
 }

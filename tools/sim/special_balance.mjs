@@ -265,6 +265,7 @@ function cavBot(G, P, uq, bot, rnd, R, guard) {
       c.minTurns = rnd() < 0.5 ? 1 : 0; // 반은 한 바퀴 넘게 돌린 뒤 (흐르는 긋기 셈 — IB_FLOW.windmillChain)
       c.stage = c.pre ? 'rdPre' : 'rdPress';
       c.stick = 0.6;
+      c.rr = { pre: !!c.pre, gap: null, inWin: null, tip: [], tip0: null }; // 'inside' 닿음 재기 (10/29 감독): 누름 시작 ↔ 마지막 진짜 긋기 끝 · 누름 첫 0.6 s 칼끝 빠르기
       if (c.pre) {
         bot.queue = bot.make(c.pre);
         c.pre = null;
@@ -283,6 +284,20 @@ function cavBot(G, P, uq, bot, rnd, R, guard) {
     if (c.stage === 'rdPress') {
       const dist = P.foeDistance();
       const W = P.rdWind;
+      if (c.rr && c.rr.gap == null) {
+        c.rr.gap = (P.ibFlowT ?? 0) - (P.ibFlowCutEnd ?? -9); // 누름 시작 = 마지막 진짜 긋기 끝에서 (s — 게임 초)
+        c.rr.inWin = c.rr.gap <= UAc.afterWindow; // 이어 긋기 창(0.6 s) 안에서 누름 = 'inside' 가 닿는 자리
+        c.rr.chainN = P.ibFlowChainNow?.() ?? -1;
+      }
+      if (c.rr && !uq.winding && uq.hold?.st === 'press') {
+        const tp = P.bladePoint(1, new THREE.Vector3());
+        if (c.rr.tip0) c.rr.tip.push(tp.distanceTo(c.rr.tip0) / DT);
+        c.rr.tip0 = tp;
+      }
+      if (c.rr && uq.winding && !c.rr.done) {
+        c.rr.done = true;
+        (uq.stats.rdReach ??= []).push({ pre: c.rr.pre, gap: r3(c.rr.gap), inWin: c.rr.inWin, chainN: c.rr.chainN, tipP50: r3(p50(c.rr.tip)), tipMax: r3(Math.max(0, ...c.rr.tip)), still: c.rr.tip.length ? r3(c.rr.tip.filter((v) => v < 1.5).length / c.rr.tip.length) : null });
+      }
       uq.holdInput(true, true, false);
       c.stick = dist < (MEASURED[R.w] ?? MEASURED.longsword)[0] + 0.1 ? 0 : 0.6;
       if (uq.winding) c.bound = 1;
@@ -358,7 +373,7 @@ function cavBot(G, P, uq, bot, rnd, R, guard) {
 /** 풍차 베기 감기 기록 (10/29 — unique_assist.js holdTick stats): 감기 · 냄(뗌 · 기력 바닥) · 그만둠 까닭 · 돈 바퀴 · 이어 그은 수 n(0 = 흐름 셈 없음) */
 function windStats(uq) {
   const S = uq?.stats ?? {};
-  return S.winds || S.holdRefused ? { winds: S.winds ?? 0, fire: S.windFire ?? {}, cancel: S.windCancel ?? {}, refused: S.holdRefused ?? 0, touch: S.windTouch ?? 0, turns: S.windTurns ?? [], chain: S.windChain ?? [] } : null;
+  return S.winds || S.holdRefused ? { winds: S.winds ?? 0, fire: S.windFire ?? {}, cancel: S.windCancel ?? {}, refused: S.holdRefused ?? 0, touch: S.windTouch ?? 0, turns: S.windTurns ?? [], chain: S.windChain ?? [], reach: S.rdReach ?? [] } : null;
 }
 /** 감기 기록 묶음 */
 export function windSummary(list) {
@@ -368,7 +383,9 @@ export function windSummary(list) {
   const fire = {}, cancel = {}, nDist = {};
   let winds = 0, refused = 0, touch = 0;
   const turns = [];
+  const reach = [];
   for (const w of W) {
+    reach.push(...(w.reach ?? []));
     winds += w.winds;
     refused += w.refused;
     touch += w.touch ?? 0;
@@ -378,7 +395,10 @@ export function windSummary(list) {
     for (const n of w.chain) add(nDist, n, 1);
   }
   const fired = Object.values(fire).reduce((q, v) => q + v, 0);
-  return { winds, fired, fire, cancel, refused, touchSteps: touch, turnsP50: r3(p50(turns)), turnsMin: r3(Math.min(...turns)), turns1: turns.length ? r3(turns.filter((x) => x >= 1).length / turns.length) : null, nDist, k: Object.fromEntries(Object.entries(nDist).map(([n]) => [n, n === '0' ? 1 : r3(1 + (CONFIG.IB_FLOW.power - 1) * +n)])) };
+  // 'inside' 닿음 (10/29 감독 — 사장님 'simple' 결정 08:3x 뒤 재기만): 감기까지 간 누름 가운데 앞 칼(이어 긋기) 뒤 누름 · 이어 긋기 창(0.6 s) 안에서 누른 몫 · 누름 첫 0.6 s 칼끝 빠르기(p50 · 1.5 m/s 밑 몫 = 칼이 섬)
+  const pre = reach.filter((x) => x.pre);
+  const rq = { n: reach.length, pre: pre.length, inWin: reach.filter((x) => x.inWin).length, inWinPre: pre.filter((x) => x.inWin).length, gapPreP50: r3(p50(pre.map((x) => x.gap))), tipP50: r3(p50(reach.map((x) => x.tipP50))), stillP50: r3(p50(reach.map((x) => x.still))), insideN: reach.filter((x) => x.chainN >= 0).map((x) => x.chainN + 1) };
+  return { winds, fired, fire, cancel, refused, touchSteps: touch, reach: rq, turnsP50: r3(p50(turns)), turnsMin: r3(Math.min(...turns)), turns1: turns.length ? r3(turns.filter((x) => x >= 1).length / turns.length) : null, nDist, k: Object.fromEntries(Object.entries(nDist).map(([n]) => [n, n === '0' ? 1 : r3(1 + (CONFIG.IB_FLOW.power - 1) * +n)])) };
 }
 
 // ── drill: 서 있는 · 걷는 상대 ──

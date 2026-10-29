@@ -547,7 +547,7 @@ function iaiSolve(f, H, D, turn = 0, edgeHint = null, rollCap = false, I = f.iai
   // 비정상 손목 교정 (JOINTS.wristGuard — driveSword 와 같은 wristClamp): 놓을 아래팔(qf)과 칼날이 사람 손목 범위 밖이면 칼날을 칼 면 안에서 범위 끝으로. 손 자리 · 팔 · 칼 면 그대로
   //  겨눈 찌름(comboPlanAim thrust · SECRET.thrustArm — 런지 · 격살 허파 찌르기)은 칼이 어깨 → 겨눈 곳 줄 위라 건드리지 않는다: 칼끝을 줄에서 비키면 찌름이 베기가 된다(탭 찌르기와 같은 원칙 — 손목은 팔이 맡음)
   const thrustSeg = SECRET.thrustArm && I.kind === 'combo' && I.moves?.[I.mi]?.dyn?.thrust;
-  const fix = JOINTS.wristGuard && !M && !thrustSeg ? f.wristClamp(new THREE.Vector3(1, 0, 0).applyQuaternion(qf), Dw, _wz.set(0, 0, 1).applyQuaternion(qs)) : 0; // fighter.js wristClamp (몸의 메서드로 — 이 모듈이 fighter.js 를 부르면 모듈 차례가 꼬인다)
+  const fix = JOINTS.wristGuard && !M && !thrustSeg ? f.wristClamp(new THREE.Vector3(1, 0, 0).applyQuaternion(qf), Dw, _wz.set(0, 0, 1).applyQuaternion(qs), I.wristMargin ?? 0) : 0; // fighter.js wristClamp (몸의 메서드로 — 이 모듈이 fighter.js 를 부르면 모듈 차례가 꼬인다)
   if (fix) swordQuat(Dw, qs, _wx.crossVectors(Dw, _wz));
   return { M, Dw, up, fp, wrist, qu, qf, qs, fix };
 }
@@ -1735,6 +1735,13 @@ function comboPlanRd(f, I, m, A) {
   const C = R.chamber;
   const ce = C.blade[0] * D2R;
   const ca = C.blade[1] * D2R;
+  // ⓪ 칼이 아직 머리 위에 없으면(감기 섞는 첫 0.2 s 안에 뗌 — 칼이 앞 · 아래) 먼저 머리 위로 (10/29 몸 검사: 곧장 어깨 뒤로 slerp 하면 칼날이 제 배 · 가슴 · 머리를
+  //  최대 10 cm 지나감 — 원전 '머리 위로 넘겨 어깨 뒤로') · 머리 위 자리 = 감는 길(rdLoop)의 이마 앞 위 손 · 어깨 뒤 쪽(chamber 가로 각)으로 cone ° 기운 칼 · 맞힘 없음 · 같은 빠르기
+  const L = m.rd.loop;
+  if (L && A?.D && A.D.y < (R.overY ?? 0.75)) {
+    const b = L.cone * D2R;
+    push(new THREE.Vector3(L.hand[0], L.hand[1], s * L.hand[2]), new THREE.Vector3(Math.sin(b) * Math.cos(ca), Math.cos(b), s * Math.sin(b) * Math.sin(ca)), false);
+  }
   push(new THREE.Vector3(C.hand[0], C.hand[1], s * C.hand[2]), new THREE.Vector3(Math.cos(ce) * Math.cos(ca), Math.sin(ce), s * Math.cos(ce) * Math.sin(ca)), false);
   // ③ 호 (② 는 그 첫 자리로)
   const { P, part } = comboAimPoint(f, I, R.target ?? 'lung');
@@ -2449,9 +2456,9 @@ export function requestArtDup(f, { share, maxT, tech, face = 0, follow = 25, pla
  *  제비 베기 되돌림 칼과 같은 틀(연환 — 운동학 · 쓸린 자리의 실제 빠르기 · 판정 배율 1 · 같은 공격 · 끝 자세 붙잡기 없음 · 시간 상한 maxT — 베는 몫부터 capFromCut · 잔상 = 연환 잔상 share 몫)로 끈다.
  *  길 = comboPlanRd (arc = UNIQUE_ASSIST.rdArc) · 날 세우기 · 굴림 묶음 · 끝나도 손 목표 그대로(keepAim). 이미 끌고 가는 중이면 거절(false)
  */
-export function requestArtRedondo(f, { share, maxT, tech, arc }) {
+export function requestArtRedondo(f, { share, maxT, tech, arc, loop = null }) {
   if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.chest || !arc) return false;
-  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, capFromCut: true, rd: { arc } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true });
+  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, capFromCut: true, rd: { arc, loop } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true });
   return true;
 }
 export const ART_HIST = 0.3; // s — 잔상으로 그릴 지난 길 (감독 값)

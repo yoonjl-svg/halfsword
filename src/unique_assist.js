@@ -655,7 +655,7 @@ export class PlayerUniqueAssist {
     const chain = !!mode && IB_FLOW.a && turns >= 1 && f.swordArt?.tradition === 'iberian' && !kitOff(f, 'ibFlow');
     const n = !chain ? 0 : mode === 'inside' && this.hold.chainN >= 0 ? this.hold.chainN + 1 : 1;
     f.ibStrike = chain ? { n, t0: this.t } : null; // fighter.js updateIbFlow 가 칼이 끄는 동안 흐름을 켬 · 기력(ibChainCostK)이 읽음
-    const ok = UA.enhance > 0 && requestArtRedondo(f, { share: specialShare(e.name), maxT: UA.rdSnapTime, tech: U.name, arc: UA.rdArc });
+    const ok = UA.enhance > 0 && requestArtRedondo(f, { share: specialShare(e.name), maxT: UA.rdSnapTime, tech: U.name, arc: UA.rdArc, loop: UA.rdLoop });
     if (!ok) {
       f.ibStrike = null;
       this.stats.windCancel ??= {};
