@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
 import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
+import { MAX_FIGHTERS, teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
 import { Skill } from './skill.js';
 import { Stamina } from './stamina.js';
 import { Gait, hybridJointDefs } from './gait.js';
@@ -40,14 +41,18 @@ const KNEEL_T = realS(1.1); // 넘어졌다 일어날 때 무릎 꿇은 채 기�
 // 생성자의 twistScale 계산 기준 (weapons.js의 롱소드 spec과 같은 수치가 나와야 한다).
 const TWIST_I_BASE = 0.0010137;
 const BIT = { ground: 1 };
-const bodyBit = (i) => (i === 0 ? 2 : 8);
-const weaponBit = (i) => (i === 0 ? 4 : 16);
+// 몸 · 칼 · 발 비트는 편(team — src/team.js)마다: 같은 편끼리는 서로 지나간다(2:2 동시 대전 10/29). 1:1 은 편 = 자리 번호라 예전 비트 그대로
+const bodyBit = (t) => (t === 0 ? 2 : 8);
+const weaponBit = (t) => (t === 0 ? 4 : 16);
 // 발은 따로: 상대 발·다리와는 부딪히지 않는다 (서로 발을 밟고 마찰로 엉겨 붙는 것을 막는다)
-const footBit = (i) => (i === 0 ? 64 : 128);
+const footBit = (t) => (t === 0 ? 64 : 128);
 const groups = (member, filter) => (member << 16) | filter;
-// 자기 몸 충돌 (BODY.humanLimits 일 때만): 제 몸통·허벅지, 제 칼팔
-const torsoBit = (i) => (i === 0 ? 256 : 512);
-const armSBit = (i) => (i === 0 ? 1024 : 2048);
+// 자기 몸 충돌 (BODY.humanLimits 일 때만): 제 몸통·허벅지, 제 칼팔 — 자리(index)마다 따로 (제 칼이 같은 편 몸통에 걸리지 않게).
+//  자리 0 · 1 은 예전 비트 그대로, 2 · 3 은 남은 네 비트. 그 밖: 땅 1 · 날아간 투구 32(땅하고만) — 16 비트를 다 쓴다
+const TORSO_BITS = [256, 512, 4096, 8192];
+const ARMS_BITS = [1024, 2048, 16384, 32768];
+const torsoBit = (i) => TORSO_BITS[i];
+const armSBit = (i) => ARMS_BITS[i];
 const TORSO_PARTS = new Set(['pelvis', 'abdomen', 'chest', 'thighF', 'thighB']);
 // ── 팔·다리 절단 (COMBAT.limbSever, 설계 docs/strike/limb_sever_design_2026-10-07.md §2) ──
 //  베인 부위 → 뗄 수 있는 관절 후보. 'own' = 그 부위 자신의 관절(앵커2 가 부위 틀), 'child' = 아래 부위의 관절(앵커1 이 부위 틀).
@@ -66,6 +71,9 @@ export const LIMB_SEVER_COUNT = { events: [] };
 //   bleeds: false 면 출혈 0 · 혈액 1 고정 · deathRequiresHeadDetachment: true 면 목 관절이 떨어지기 전에는 죽지 않는다(die 거부 — 부활보다 먼저 본다)
 //   blood: 'white' 면 피 겉모습만 흰 피(blood_palette.js — 광기의 병마용, 사장님 10/27 23:2x). 없으면 붉은 피 — 몸 규칙(출혈 · 죽음)과는 상관없다
 export const HUMAN_BODY = Object.freeze({ body: 'human', bleeds: true, deathRequiresHeadDetachment: false });
+// 상처 부위 → 팔다리 기능 칸 · 심각도당 잃는 몫 (applyWound — 판 사이 이어받기 src/saengsa_match.js 도 같은 셈을 읽는다)
+export const WOUND_LIMB = Object.freeze({ uarmS: 'armS', farmS: 'armS', uarmO: 'armO', farmO: 'armO', thighF: 'legF', shinF: 'legF', footF: 'legF', thighB: 'legB', shinB: 'legB', footB: 'legB' });
+export const LIMB_LOSS = 0.7;
 export const GROUND_GROUPS = groups(BIT.ground, 0xffff);
 
 // ─────────────────────────────────────────────────────────────
@@ -309,7 +317,9 @@ function guardDir(x, y, oneHand = false) {
 export class Fighter {
   /**
    * @param {object} o
-   * @param {number} o.index  0 = 플레이어, 1 = 상대
+   * @param {number} o.index  자리 0 ~ 3 (1:1 은 0 = 플레이어, 1 = 상대 · 2:2 는 src/team.js)
+   * @param {number} [o.team]  편 0 · 1 (안 주면 자리의 홀짝 — 1:1 은 자리 번호 그대로)
+   * @param {boolean} [o.human] 사람이 조종하는 몸 (안 주면 자리 0 — 예전 'index 0' 판정)
    * @param {number} o.x       시작 x 위치
    * @param {number} [o.z]     시작 z 위치 (기본 0 — 잠든 습지만 옆으로 비켜 선다, main.js)
    * @param {object} [o.terrain] 땅 계약 { heightAt(x, z), normalAt(x, z), … } (화산섬만 — 없으면 평평한 y 0)
@@ -325,6 +335,12 @@ export class Fighter {
     this.world = world;
     this.colliderInfo = colliderInfo; // 절단(sever) 이 떨어진 부위의 collider 에 detached 표시를 적는다 (combat.js 가 상처를 건너뜀)
     this.index = o.index;
+    // 편 · 사람 (2:2 동시 대전 10/29 — src/team.js): 자리 0 ~ 3, 0 편 = 0 · 2, 1 편 = 1 · 3. 안 주면 자리의 홀짝(1:1 은 편 = 자리) ·
+    //  human 은 사람이 조종하는 몸인가 (안 주면 자리 0 — 예전 'index 0 = 플레이어' 판정을 이 칸으로 읽는다. 시뮬의 AI 가 모는 자리 0 도 그대로 참)
+    if (!(o.index >= 0 && o.index < MAX_FIGHTERS && Number.isInteger(o.index))) throw new Error(`Fighter index ${o.index}: 0 ~ ${MAX_FIGHTERS - 1} 만`);
+    this.team = o.team ?? teamOfIndex(o.index);
+    if (this.team !== 0 && this.team !== 1) throw new Error(`Fighter team ${this.team}: 0 · 1 만`);
+    this.human = o.human ?? (o.index === 0);
     // 유파 패시브 (10/21 — config SCHOOL_PASSIVE): 이베리아 손목 힘 · 이탈리아 · 일본 · 독일 · 동방(school_passive.js). 사람은 4급 책(o.schoolPassive — main.js), AI 는 ai.js 가 숙련도로 다시 둔다
     this.passiveBook = o.schoolPassive !== false;
     if (o.schoolFootwork === false) this.schoolFootwork = false; // schools.js footworkTradition — gait.js · stamina.js
@@ -457,20 +473,23 @@ export class Fighter {
     const origin = this.terrain ? new THREE.Vector3(o.x, this.terrain.heightAt(o.x, o.z ?? 0), o.z ?? 0) : new THREE.Vector3(o.x, 0, o.z ?? 0); // 지형 무대: 시작 자리 땅 높이만큼 몸 전체를 올려 세운다
     const toWorld = (p) => new THREE.Vector3(...p).applyQuaternion(yaw).add(origin);
 
-    const myBody = bodyBit(this.index);
-    const otherBody = bodyBit(1 - this.index);
-    const otherWeapon = weaponBit(1 - this.index);
+    const T = this.team;
+    const myBody = bodyBit(T);
+    const otherBody = bodyBit(1 - T);
+    const otherWeapon = weaponBit(1 - T);
     const bodyGroups = groups(myBody, BIT.ground | otherBody | otherWeapon);
-    const footGroups = groups(footBit(this.index), BIT.ground | otherWeapon);
-    let weaponGroups = groups(weaponBit(this.index), BIT.ground | otherBody | otherWeapon | footBit(1 - this.index));
+    const footGroups = groups(footBit(T), BIT.ground | otherWeapon);
+    let weaponGroups = groups(weaponBit(T), BIT.ground | otherBody | otherWeapon | footBit(1 - T));
     // 자기 몸 충돌 (BODY.humanLimits): 제 칼·칼팔(위팔·아래팔) ↔ 제 몸통(골반·배·가슴)·허벅지. 그 밖의 제 몸끼리는 그대로 지나간다.
     //  제 몸 닿음은 combat.js 가 같은 싸움꾼 쌍을 버려 상처·부딪힘·불꽃·소리·멈칫이 되지 않는다(pairOf·접촉힘 사건)
     const HL = BODY.humanLimits;
     const myTorso = torsoBit(this.index);
     const myArmS = armSBit(this.index);
-    const torsoGroups = groups(myBody | myTorso, BIT.ground | otherBody | otherWeapon | weaponBit(this.index) | myArmS);
+    const torsoGroups = groups(myBody | myTorso, BIT.ground | otherBody | otherWeapon | weaponBit(T) | myArmS);
     const armSGroups = groups(myBody | myArmS, BIT.ground | otherBody | otherWeapon | myTorso);
-    if (HL) weaponGroups = groups(weaponBit(this.index), BIT.ground | otherBody | otherWeapon | footBit(1 - this.index) | myTorso);
+    if (HL) weaponGroups = groups(weaponBit(T), BIT.ground | otherBody | otherWeapon | footBit(1 - T) | myTorso);
+    // 이 몸의 비트 (읽기만 — mordschlag.js 넘어 들어감 · revive.js 유령이 '상대 편 칼' 비트를 여기서 읽는다)
+    this.bits = Object.freeze({ body: myBody, weapon: weaponBit(T), foot: footBit(T), torso: myTorso, armS: myArmS, foeBody: otherBody, foeWeapon: otherWeapon, foeFoot: footBit(1 - T) });
 
     const defs = partDefs(this.side);
     this.headR = defs.find((d) => d.name === 'head').shape[1]; // 머리 공 반지름 (skill.js 찍기 겨눔이 머리 꼭대기 높이를 잰다)
@@ -844,12 +863,29 @@ export class Fighter {
 
   /** AI 반응 시간 (10/21 AI_REACT): 바라볼 지점(faceTarget)을 매 스텝 적어 두고 AI_REACT.face s 전 것을 돌려준다(기록이 그보다 짧으면 가장 오래된 것) */
   reactTarget(dt) {
+    if (this.foes?.includes(this.foe)) return this.reactTargetFoes(dt); // 2:2 (10/29): 상대마다 기록 — 1:1 은 this.foes 가 없어 아래 예전 길
     const h = (this._react ??= { t: 0, buf: [] });
     h.t += dt;
     h.buf.push({ t: h.t, x: this.faceTarget.x, z: this.faceTarget.z });
     const want = h.t - AI_REACT.face;
     while (h.buf.length > 1 && h.buf[1].t <= want) h.buf.shift();
     return h.buf[0];
+  }
+
+  /** 2:2 (10/29 — 상대를 알고 보는 반응 시간): 상대 편 모두의 골반 자리를 매 스텝 상대마다 적고, 지금 상대의 face s 전 자리를 돌려준다.
+   *  상대를 바꿔도 옛 상대 자리 쪽으로 face s 동안 돌지 않는다 — 새 상대의 face s 전 자리부터 본다(그 상대도 늘 적어 두었으므로) */
+  reactTargetFoes(dt) {
+    const h = (this._reactFoes ??= { t: 0, bufs: new Map() });
+    h.t += dt;
+    const want = h.t - AI_REACT.face;
+    for (const g of this.foes) {
+      let buf = h.bufs.get(g);
+      if (!buf) h.bufs.set(g, (buf = []));
+      const p = g.bodies.pelvis.translation();
+      buf.push({ t: h.t, x: p.x, z: p.z });
+      while (buf.length > 1 && buf[1].t <= want) buf.shift();
+    }
+    return h.bufs.get(this.foe)[0];
   }
 
   /** 휘두르는 동안 몸 돌림 묶기(SWING_TURN)가 걸리는 때: AI 는 공격의 긋기 · 따라 긋기(from 'approach' 는 들어오는 단계부터 · 'windup' 은 칼 드는 때부터), 사람은 청구된 긋기 · 탭 · 폼멜 */
@@ -961,9 +997,9 @@ export class Fighter {
    *  δₑ 에서도 안 풀리면(트는 것으로 다 닿지 못함) δₑ 를 돌려준다: 가장 덜 넘치는 데까지 튼다 (0 으로 끄면 풀리는 이웃 패드와 수십 도 뜀).
    *  두 조건이 다 걸리면 큰 쪽. 크기·빠르기는 부르는 쪽 follow(SKILL_BODY 빠르기·holdSpeed 몫)·관절·근육이 정한다
    */
-  /** R2′ 팔 단계 묶음이 이 검객에게 걸리나 (BODY.r2pScope: 'player' = index 0 만, 'all' = 모두) */
+  /** R2′ 팔 단계 묶음이 이 검객에게 걸리나 (BODY.r2pScope: 'player' = 사람 몸(human — 안 주면 자리 0)만, 'all' = 모두) */
   r2pOn() {
-    return BODY.r2pScope === 'all' || this.index === 0;
+    return BODY.r2pScope === 'all' || this.human;
   }
 
   corrTrunkTurn(x, y, s, psi0) {
@@ -1215,10 +1251,26 @@ export class Fighter {
 
   /** 바짝 붙었을 때 손을 상대 몸 속으로 뻗지 않는다 (팔을 접어 칼자루를 몸 가까이 당긴다) */
   closeReach() {
-    const r = Math.max(0.12, this.foeDistance() - 0.3);
+    const r = Math.max(0.12, (this.foes ? Math.min(this.foeDistance(), this.blockDistance()) : this.foeDistance()) - 0.3); // 2:2: 앞을 막은 다른 상대 몸 속으로도 뻗지 않는다
     // 쓰러진 상대는 발밑에 누워 있어 가슴끼리 가까워도 손을 앞으로 뻗어 내려찍을 수 있다 (finish.js)
     const fa = this.finish.amt;
     return fa > 0 ? r + Math.max(0, 0.6 - r) * fa : r;
+  }
+
+  /** 2:2 (10/29): 지금 상대가 아닌 산 상대 가운데 가슴 앞(±60°)에 선 가장 가까운 가슴 수평 거리 (없으면 Infinity) — 붙는 판정은 지금 상대, 이 몸은 막힘으로만 */
+  blockDistance() {
+    const a = this.bodies.chest.translation();
+    const F = this.forward(_vBlk);
+    let best = Infinity;
+    for (const g of this.foes) {
+      if (g === this.foe || !g.alive) continue;
+      const b = g.bodies.chest.translation();
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const d = Math.hypot(dx, dz);
+      if (d < best && dx * F.x + dz * F.z > 0.5 * d) best = d;
+    }
+    return best;
   }
 
   /**
@@ -1519,6 +1571,38 @@ export class Fighter {
     return !this.physiology.deathRequiresHeadDetachment || (this.decapitated && !this.jointByName.head?.joint);
   }
 
+  // ── 판 사이 이어받기 (동시 대전 6단계 — 10/29 · 생사전: src/saengsa_match.js) ──
+  /** 몸 상태 사본 (셈 칸만 · 그림 · 물리 · 난수 없음): 피 · 출혈 · 의식 · 아픔 · 팔다리 기능 · 상처 목록. applySnapshot → snapshot 은 같은 꼴을 돌려준다 */
+  snapshot() {
+    return {
+      v: 1,
+      blood: this.blood,
+      bleed: this.bleed,
+      consciousness: this.consciousness,
+      pain: this.pain,
+      limbs: { ...this.limbs },
+      wounds: this.wounds.map((w) => ({
+        part: w.part, type: w.type, severity: w.severity, bleed: w.bleed, local: [w.local.x, w.local.y, w.local.z],
+        ...(w.stump ? { stump: true } : {}), ...(w.limb ? { limb: w.limb } : {}), ...(w.carried ? { carried: true } : {}),
+      })),
+    };
+  }
+
+  /** 새 판 몸에 사본을 입힌다 (판을 세운 뒤 · 첫 스텝 전). 칼 쥔 팔 기능이 칼을 놓치는 문턱 밑이면 처음부터 칼을 놓친다 (싸움 상처와 같은 규칙) */
+  applySnapshot(s) {
+    if (!s) return;
+    this.blood = s.blood;
+    this.bleed = s.bleed;
+    this.consciousness = s.consciousness;
+    this.pain = s.pain;
+    this.limbs = { ...this.limbs, ...s.limbs };
+    this.wounds = s.wounds.map((w) => ({
+      part: w.part, type: w.type, severity: w.severity, bleed: w.bleed, local: new THREE.Vector3(w.local[0], w.local[1], w.local[2]),
+      ...(w.stump ? { stump: true } : {}), ...(w.limb ? { limb: w.limb } : {}), ...(w.carried ? { carried: true } : {}),
+    }));
+    if (this.limbs.armS < VITALS.dropSwordArm && this.armed) this.dropSword();
+  }
+
   // ── 출혈·의식·통증 ──
   updateVitals(dt) {
     if (!this.physiology.bleeds) { // 피 없는 몸(병마용): 혈액 1 · 출혈 0 고정 (사람은 이 줄을 타지 않는다)
@@ -1621,9 +1705,9 @@ export class Fighter {
     }
 
     // 팔다리 기능
-    const limb = { uarmS: 'armS', farmS: 'armS', uarmO: 'armO', farmO: 'armO', thighF: 'legF', shinF: 'legF', footF: 'legF', thighB: 'legB', shinB: 'legB', footB: 'legB' }[h.part];
+    const limb = WOUND_LIMB[h.part];
     if (limb) {
-      this.limbs[limb] = Math.max(0, this.limbs[limb] - sev * 0.7);
+      this.limbs[limb] = Math.max(0, this.limbs[limb] - sev * LIMB_LOSS);
       if (limb === 'armS' && this.limbs.armS < VITALS.dropSwordArm) this.dropSword();
     }
     if (Z === 'head' && h.type === 'cut') this.consciousness -= (sev * 0.5) / this.vitality; // 버티는 힘 (10/24)
@@ -3274,7 +3358,7 @@ export class Fighter {
     //  찌르기는 지금 손 목표(handBase, 덧씌우기 전)에서 뻗어 나간다 (skill.thrust)
     // 약한 자세 겨눔 (FINISH.vital, 10/12 — vital_target.js): 상대가 무릎 꿇음·일어나는 중이면 베기 길이 목 앞을 지나게 손 높이를 준비 (보정 0 이면 손대지 않는다)
     if (FINISH.vital) {
-      if (this.index === 0) playerVitalUpdate(this, this.lastDt || 0);
+      if (this.human) playerVitalUpdate(this, this.lastDt || 0);
       vitalHand(this, handLocal);
     }
     const hb = (this.handBase ||= [0, 0, 0]);
@@ -4657,6 +4741,7 @@ const _cr1 = new THREE.Vector3(); // 보정 v2 ① 날 맞춤 scratch
 const _cr2 = new THREE.Vector3(); // 사람 관절 범위: 아래팔 경첩 축(세계)
 const _cq = new THREE.Quaternion();
 const _ct1 = new THREE.Vector3(); // 보정 v2 corrTrunkTurn (순서 결합)
+const _vBlk = new THREE.Vector3(); // 2:2 blockDistance
 const _ct2 = new THREE.Vector3();
 const _ct3 = new THREE.Vector3();
 const _ct4 = new THREE.Vector3();
