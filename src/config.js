@@ -1541,7 +1541,7 @@ export const AI_LEVELS = {
 //     max(5)는 얼터 숙련도 +1 의 상한 그대로(미나미 얼터 5 그대로) — 표 끝(6)은 levels.length − 1. 6 칸 수는 사장님 확인 전
 export const AI_PROFICIENCY = {
   levels: ['easy', 'easy', 'normal', 'hard', 'hard', 'hard', 'hard'], // [6] 'hard' (10/24 — 사장님 확인 전)
-  max: 5, // 얼터(광기) 숙련도 +1 의 상한 (characters.js VARIANT_PLUS) — 시트 값은 6 까지(10/24 롤랑 · 베르나르도)
+  max: 6, // 얼터(광기) 숙련도 +1 의 상한 (characters.js VARIANT_PLUS) · 사장님 10/29 22:4x '상한 6으로 올려' — 전 5(시트 값만 6 까지: 10/24 롤랑 · 베르나르도). 아래 표들의 [6] 칸은 10/24 부터 있음
   secretAt: UNIQUE_ASSIST.secretStage,
   ofLevel: { easy: 1, normal: 2, hard: 3 },
   schoolK: [0.7, 0.85, 1, 1.15, 1.3, 1.45, 1.6], // [6] 1.6 (10/24 — 한 단계 +0.15 그대로 · 사장님 확인 전)
@@ -1551,6 +1551,10 @@ export const AI_PROFICIENCY = {
   //  인물 시트의 reaction 덮어쓰기와 이름(easy · normal · hard) 값보다 이것이 이긴다(ai.js). 광기 인물은 숙련도 + 1 이라 한 단계 빠름. 수는 감독 — 사장님 확인 전
   reaction: [0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05].map(realS), // 표준 시간: 실제 초 (10/25) · [6] 0.05 s (10/24 — 한 단계 −0.05 그대로 · 사장님 확인 전)
 };
+// 숙련도 6 버티는 힘 (사장님 10/29 22:4x '지금 숙련도 6인 캐릭터는 (롤랑과 베르나르도의 경우를 보면) 체력 10% 보너스가 있었어. 그와 동일한 방식으로 숙련도 6캐릭터는 모두같은 보너스를 주도록 해'):
+//  인물 시트의 실효 숙련도(ai.proficiency — 얼터는 원본 +1 · 상한 맞춤 뒤)가 6 이면 시트 vitality = 이 값(characters.js 한 곳 — 시트마다 손으로 적지 않음).
+//  뜻은 10/24 롤랑 · 베르나르도 1.1 과 같다: 초당 잃는 피 · 머리를 맞아 잃는 의식 ÷ vitality(fighter.js) — 피가 10 % 많은 것과 같음
+export const PROF6_VITALITY = 1.1;
 
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)
 //  ai.js 는 인물 표식 persona.terrainSense === 'wetland' 이고 그 몸이 진흙 감속을 받는 무대(fighter.movementSurface === 'wetland' — 잠든 습지)일 때만 이 묶음을 읽는다.
