@@ -4,7 +4,7 @@
 //     둘레를 느리게 크게 흔들린다(GUN.sway*). 레이저 점이 몸 위를 들락날락할 때 그 순간에 맞춰 탭하는 것이 실력이다(사장님).
 //     사람은 지금 총신 방향(칼 축 = 몸체 +y, 레이저가 보여 준다)으로 바로 한 발. AI 도 같은 흔들림으로 겨누고, 레이저가 골반 이상의 몸
 //     (골반~머리)을 지날 때(GUN.aiAimTol) 쏜다. 싱글액션 6연발(사장님 "사실감"): 겨눈 사격 사이 GUN.cooldown(AI 가 모는 몸은 × GUN.aiCooldownK), 여섯 발을 다 쏘면 GUN.reload 초 동안
-//     실린더를 열고 한 발씩 채운다 — 다 채워야 다시 쏠 수 있다. AI 는 공격이 가능해진 때부터 발 사이 간격만큼 지나 첫 발(GUN.aiFirstGap) · 쏘는 동안 발이 묶인다(GUN.aiFireStill).
+//     실린더를 열고 한 발씩 채운다 — 다 채워야 다시 쏠 수 있다. AI 는 공격이 가능해진 때부터 발 사이 간격만큼 지나 첫 발(GUN.aiFirstGap) · 쏘기 전 · 뒤 0.2 s 씩 발이 묶인다(GUN.aiFireStill · aiPlant · aiAfter).
 //   · 맞으면 늘 같은 세기(GUN.energy)의 찌르기 상처 — 새 상처 종류는 만들지 않는다. 투구·판금은 총알을 막는 대신 그 자리에서 부서진다.
 //     맨머리 한 발 = 즉사, 가슴은 두세 발. 쏘면 팔 동작으로 총구를 튀겨 올린다(GUN.kick*, 물리 반동은 작은 '탁'). 총신 방향으로 레이저(탄 길)를 그린다
 //   · 근접전 불가: 무기 제원이 날 없음·둔기 배율 0 이라 몸을 쳐도 아무 효과가 없다 (weapons.js pistol).
@@ -39,7 +39,11 @@ export const GUN = {
   //  (사장님 10/12 지시로 바뀜: 9/30 '무릎 위부터' → 골반 위부터. 겨누는 몸 줄과 같은 부위만 본다 — docs/decisions.md 10/12, 확인표 953)
   aiFirst: realS(1.5), // 초: (aiFirstGap 0 일 때만 — 전 판) AI 는 gunAI 를 처음 부른 때부터 이만큼 지나서야 첫 발을 쏜다
   aiFirstGap: 1, // AI 첫 발 (사장님 10/29 22:3x · 확인표 2981): 1 = 공격이 가능해진 때(판 시작 정지 ARENA.startHold 끝 — fighter.openHold)부터 발 사이 간격(gunGap — 마야 2.4 s · 기본 AI 1.6 s)만큼 지나서 · 0 = 전(aiFirst)
-  aiFireStill: 1, // AI 는 쏘는 동안(gunFiring — 방아쇠 ~ 총구 꺾음이 풀릴 때까지 0.23 s) 발이 묶인다 (사장님 10/29 22:3x '발사 중엔 이동하지 못하게' · 확인표 2982 — fighter.fireHold). 0 = 전. 사람은 안 묶음
+  aiFireStill: 1, // AI 는 쏘는 동안(gunFiring) 발이 묶인다 (사장님 10/29 22:3x '발사 중엔 이동하지 못하게' · 확인표 2982 — fighter.fireHold). 0 = 전(안 묶음 · 쏘기 전 멈춤도 없음). 사람은 안 묶음
+  //  10/30 00:1x 사장님 '사람은 그대로 두고 AI만 적용해. 쏘기 전과 후에 모두 0.2초 움직임 정지 넣어.' (확인표 2985 · 2986) — 시간 사다리 0.2 · 실제 초:
+  aiPlant: realS(0.2), // 쏘기 전 멈춤: 쏠 때가 되어 겨눔이 몸에 걸린(aiAimTol) 순간 서고, 이만큼 선 채 기다린 뒤 그때 총신 방향으로 쏜다(gunAI · AI 조준 보정은 그대로). 0 = 멈춤 없이 바로 쏨(10/29 판)
+  aiPlantAim: 0, // (시험 · 사장님 확인 전 — 확인표 2989) 1 = 다 선 뒤 겨눔이 다시 몸에 걸릴 때까지 선 채 기다렸다 쏜다(쏘기 전 멈춤이 0.2 s 보다 길어질 수 있음) · 0 = 다 서면 바로 쏨
+  aiAfter: realS(0.2), // 쏜 뒤 멈춤 (10/29 판 = 총구 꺾음 꼬리 kickTime + kickFade 0.23 게임 초를 대신함)
   maxWait: realS(0.6), // 초: 찌르기를 시작하고 이 안에 팔이 안 뻗어지면 그냥 그때 총구 방향으로 쏜다
   // 사격 자세 (사장님: 한 손 사격 자세) — gunPose. 몸 기준 [앞, 위, 총 든 쪽] (m·도)
   shoulder: [0, 0.1, 0.2], // 총 든 어깨 (가슴 기준)
@@ -60,7 +64,7 @@ export const GUN = {
   //  상반신 둘레에 묶는다(gunAimTarget). 거리가 멀어져도 표적 범위가 커지지 않는다. 누우면 범위도 몸을 따라 눕는다
   aimSide: 0.30, // m: 상반신 가운데 줄에서 좌우 최대 폭 (가슴 반폭 0.18 + 여유 0.12)
   aimHeightSway: 0.20, // 몸 줄 길이(골반→머리) 가운데 위아래 흔들림 비율
-  aimEnvelopeScale: 1.1, // 완성한 겨눔 범위를 가운데에서 가로·세로 10% 씩 넓힌다 (면적 약 21%)
+  aimEnvelopeScale: 1.1 * 1.1, // 완성한 겨눔 범위를 가운데에서 가로·세로 이 배로 넓힌다 — 1.1(샛별 값 · 확인표 952) × 1.1 = 1.21: 사장님 10/30 00:1x '가늠쇠의 흔들림 궤적을 좀더 넓혀 … 지금 총 궤적 범위보다 10% 정도 더 넓혀' (사람 · AI 같이 · 확인표 2987)
   aimSpanLoops: 0.5, // 8자 몇 바퀴마다 몸 줄 위의 새 높이를 뽑나: 0.5 = 반 바퀴(평균 1.3 초, 머무는 시간 0.6~1.4 배 들쭉날쭉)
   // 불규칙한 흔들림: 8자 위에 얹는 매끄러운 무작위 떠돌이. swayRandHold 초마다 새 목표(옆 ±swayRandYaw°, 위아래 ±swayRandPitch°)를 전용 난수로 뽑아
   //  부드럽게 옮겨 간다 — 언제 몸에 걸릴지 읽기 어렵게. 판정 난수(Math.random·탄 퍼짐)와 분리한 검객별 난수라 칼 판은 바이트 그대로
@@ -332,6 +336,17 @@ export function updateGun(f, world, combat, dt) {
       }
     }
   }
+  // AI 쏘기 전 멈춤 (gunAI 가 건 g.plant — aiPlant): 물리 스텝마다 줄이고, 다 줄면 한 스텝 동안 g.planted — 그다음 gunAI 가 쏜다(gunAI 가 안 불리면 여기서 저절로 풀림).
+  //  못 쏘는 몸(죽음 · 칼 놓침 · 발 묶임 · 서거나 무릎 꿇지 않음)이 되면 멈춤을 거둔다. 사람 몸엔 걸리지 않는다
+  if (!GUN.aiPlantAim) g.planted = false; // 다 선 그 한 스텝만 (aiPlantAim 1 = gunAI 가 쏠 때까지 선 채)
+  if (g.planted && (!f.alive || !f.armed || f.feetHeld || (f.state !== 'stand' && f.state !== 'kneel'))) g.planted = false;
+  if (g.plant > 0) {
+    if (!f.alive || !f.armed || f.feetHeld || (f.state !== 'stand' && f.state !== 'kneel')) g.plant = 0;
+    else if ((g.plant -= dt) <= 1e-9) {
+      g.plant = 0;
+      g.planted = true;
+    }
+  }
   // 이미 예약된 발사도 같은 시작 조건으로 막는다. 겨눔·장전 시계는 유지한다.
   if (f.feetHeld) return void (g.pending = -1);
   if (g.pending < 0) return;
@@ -356,11 +371,12 @@ export function gunGap(f) {
   return GUN.cooldown * (f.gunCooldownK ?? 1) * (f.aiControlled ? GUN.aiCooldownK : 1);
 }
 
-/** 쏘는 중 (사장님 10/29 22:3x '발사 중엔 이동하지 못하게' — AI 발 묶음 fighter.fireHold 가 읽는다): 방아쇠를 건 때(g.pending ≥ 0 — 권총 찌르기는 now 라 그 스텝에 나감)부터
- *  쏜 뒤 총구 꺾음이 다 풀릴 때까지(g.since < kickTime + kickFade = 0.08 + 0.15 = 0.23 게임 초 ≈ 실제 0.21 s). 발 사이 기다림 · 겨누며 기다림 · 장전은 아님(그동안은 걷는다) */
+/** 쏘는 중 (AI 발 묶음 fighter.fireHold 가 읽는다 — 사장님 10/29 22:3x · 10/30 00:1x '쏘기 전과 후에 모두 0.2초 움직임 정지'):
+ *  쏘기 전 멈춤(g.plant > 0 · 다 선 그 스텝 g.planted — gunAI 가 건다, aiPlant 0.2 s) → 방아쇠(g.pending ≥ 0 — 권총은 그 스텝에 나감) → 쏜 뒤 멈춤(g.since < aiAfter 0.2 s).
+ *  발 사이 기다림 · 겨눔이 몸에 걸리기를 기다림 · 장전은 아님(그동안은 걷는다) */
 export function gunFiring(f) {
   const g = f.gun;
-  return !!g && (g.pending >= 0 || g.since < GUN.kickTime + GUN.kickFade);
+  return !!g && (g.plant > 0 || g.planted || g.pending >= 0 || g.since < GUN.aiAfter);
 }
 
 function fire(f, world, combat) {
@@ -630,8 +646,23 @@ export function gunAI(ai, dt) {
   ai.moveHand(dt);
   // 흔들리는 총구가 상대의 골반 이상 몸 부위(골반·배·가슴·머리) 중 하나에서 aiAimTol° 안으로 들어왔을 때만 쏜다 (팔을 뻗는 중이나 장전 뒤 내려오는 중엔 쏘지 않는다)
   const aimed = aimErr(me) < GUN.aiAimTol;
-  const first = GUN.aiFirstGap ? me.fightT >= ARENA.startHold + gunGap(me) : ai.gunT >= GUN.aiFirst;
-  if (first && aimed && d < 7 && (me.gun?.cool ?? 0) <= 0 && me.skill.thrust({ step: false })) state(me).aim = 0.5 + 0.5 * (ai.level?.skill ?? 0.7);
-  // 쏘는 동안(gunFiring) 걷기 입력 0 — 기술 걸음 · 자세 고쳐 딛기는 fighter.fireHold 를 gait 가 읽어 막는다 (방아쇠를 건 이 스텝부터)
+  // 쏘기 전 멈춤 (aiPlant — 사장님 10/30 00:1x '쏘기 전과 후에 모두 0.2초 움직임 정지'): 쏠 수 있게 되기 aiPlant 전부터(발 사이 · 첫 발 문 · 장전이 그만큼 남았을 때)
+  //  겨눔이 몸에 걸리면 선다 → aiPlant 를 선 채 기다린 뒤(updateGun 이 g.planted) 그때 총신 방향으로 쏜다. 발 사이 · 첫 발 시각은 그대로(일러지지 않음).
+  //  다 선 때 겨눔을 다시 보지 않는다: 다시 보면 겨눔이 0.2 s 뒤엔 대개 빠져(마야 판 41 번 멈춤에 8 발) 서고 걷기를 되풀이했다 — 맞힘은 AI 조준 보정(aim)이 맡는다
+  const g = state(me);
+  const lead = GUN.aiFireStill ? GUN.aiPlant : 0;
+  const first = GUN.aiFirstGap ? me.fightT >= ARENA.startHold + gunGap(me) - lead : ai.gunT >= GUN.aiFirst - lead;
+  const fireNow = () => me.skill.thrust({ step: false }) && (g.aim = 0.5 + 0.5 * (ai.level?.skill ?? 0.7));
+  if (g.planted) {
+    if (d >= 7) g.planted = false;
+    else if (aimed || !GUN.aiPlantAim) {
+      g.planted = false;
+      fireNow();
+    }
+  } else if (!(g.plant > 0) && g.pending < 0 && first && aimed && d < 7 && g.cool <= lead) {
+    if (lead > 0) g.plant = lead;
+    else fireNow();
+  }
+  // 쏘는 동안(gunFiring — 쏘기 전 멈춤 · 방아쇠 · 쏜 뒤 멈춤) 걷기 입력 0 — 기술 걸음 · 자세 고쳐 딛기는 fighter.fireHold 를 gait 가 읽어 막는다 (멈춤을 건 이 스텝부터)
   if (GUN.aiFireStill && gunFiring(me)) me.move.set(0, 0);
 }

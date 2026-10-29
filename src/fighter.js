@@ -1502,7 +1502,7 @@ export class Fighter {
     return this.fightT < ARENA.startHold - 1e-6;
   }
 
-  /** 쏘는 동안 발 묶음 (사장님 10/29 22:3x '발사 중엔 이동하지 못하게' — GUN.aiFireStill · AI 가 모는 권총 몸만): gun.js gunFiring(방아쇠 ~ 총구 꺾음이 풀릴 때까지 0.23 s) 동안
+  /** 쏘는 동안 발 묶음 (사장님 10/29 22:3x '발사 중엔 이동하지 못하게' — GUN.aiFireStill · AI 가 모는 권총 몸만): gun.js gunFiring(쏘기 전 0.2 s 멈춤 ~ 방아쇠 ~ 쏜 뒤 0.2 s — 10/30 00:1x '쏘기 전과 후에 모두 0.2초') 동안
    *  gait 가 기술 걸음 · 자세 고쳐 딛기를 판 시작 정지처럼 받지 않는다(걷기 입력은 gunAI 가 0). feetHeld 와 달리 쏘기는 막지 않는다 · 균형 걸음(stumble · 닿지 않는 발)은 그대로 */
   get fireHold() {
     return !!(this.aiControlled && GUN.aiFireStill && this.weapon?.gun) && gunFiring(this);
