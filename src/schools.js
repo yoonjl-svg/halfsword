@@ -1565,3 +1565,24 @@ export const DEFAULT_SCHOOL = 'longsword';
 
 /** id가 없거나 모르는 유파면 기본(롱소드) 꾸러미 */
 export const schoolOf = (id) => SCHOOLS[id] || SCHOOLS[DEFAULT_SCHOOL];
+
+// ── 걸음 사다리 뒤 동작 맞춤 시제품 (10/29 17:5x 사장님 '나선 걸음 베기와 체보요격은 걸음 변화에 따라 동작을 재설계할 필요가 있는가?' — 판 꺼짐 · 사장님 확인 전 ·
+//    docs/strike/step_ladder_2026-10-29.md §9). 켜면 그 고유 동작의 step 칸 객체에 덮어쓴다(AI 꾸러미 · 사람 PlayerUniqueAssist 가 같은 칸 객체를 읽음). 끄는 길은 없다 — 판 시작 전에 한 번
+//  chebu: 체보요격을 掣步 그대로 — 앞발 lunge 반걸음 + 뒷발 끌어붙임(draw). 지금은 뒷발 쪽 걸음이면 'pass' 를 부탁하고 동방 걸음(follow)이 그것을 앞발 lunge × passAs.fwdK 0.85 + 끌어붙임으로
+//   바꿔 0.3 이 실제 0.255 가 된다(전 0.35 는 실제 0.297). lunge 를 바로 부탁하면 앞발이 칸 값 0.3 그대로 · 앞발 쪽 걸음(lunge)에도 끌어붙임
+//  talho: 나선 걸음 베기를 '먼저 비껴 딛고, 발이 닿으면 친다'(when 'approach' — 비껴 베기 · 비껴서며 찌르기와 같은 꼴, ai.js approachStep). AI 만 — 사람은 긋는 순간 딛는다(unique_assist askStep)
+export const STEP_PROTO = {
+  chebu: { tech: 'chebuYaoji', set: { kind: 'lunge', draw: true } },
+  talho: { tech: 'talhoRodeado', set: { when: 'approach' } },
+};
+/** 시제품 켜기: keys = ['chebu', 'talho'] 가운데 (주소 `?stepProto=chebu,talho` — main.js · 도구는 직접 부름). 고친 칸 수를 돌려준다 */
+export function applyStepProto(keys) {
+  let n = 0;
+  for (const k of keys) {
+    const P = STEP_PROTO[k];
+    if (!P) continue;
+    const seen = new Set();
+    for (const T of Object.values(TRADITIONS)) for (const t of T?.unique ?? []) if (t?.name === P.tech && t.step && !seen.has(t.step)) { seen.add(t.step); Object.assign(t.step, P.set); n++; }
+  }
+  return n;
+}
