@@ -444,7 +444,7 @@ const CHINESE_UNIQUE = [
   { name: 'lianchi', feint: { name: '날개 접기 (염시)', fake: 'stichPflug', at: 0.3, then: [G.nebenR, G.sideR, [0.0, 0.1], G.sideL], open: 'UL' }, src: '조선세법 斂翅勢 무비지 쪽174/0588 · 무도 권2 p045/37 「法能佯北誘賺 … 倒退進步腰擊」 [원문] · 물러남을 손 거둠으로 [해석]' },
   // 掣步 腰擊: 앞발을 왼쪽 앞으로 비껴 딛고(뒷발 끌어붙임) 찌른 자리(긴 자세)에서 오른쪽으로 당겨 허리를 가로 벤다 — 길 = 위 yaoji, base = yaoji × 1.1.
   //  처음엔 공용 zwerch 길(오른 옆 시작·base 0.5)이었으나 48 판에 한 번도 안 골랐다(청강검 손이 오른 옆에 거의 안 감) → 원문 「向前進步腰擊」(찌른 뒤 腰擊)대로 yaoji 길로 (10/9 잼)
-  { name: 'chebuYaoji', nameKo: '끌어 딛고 허리 베기 (체보요격)', orig: '掣步腰擊', from: G.langort, path: [[0.35, 0.08], [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0, base: 0.33, chain: 1, step: { lat: -0.05, fwd: 0.35, when: 'strike' }, /* 10/21 앞으로 끌어 딛기(掣步) — 전 옆 −0.25 · 앞 0.25 는 독일 비껴 딛는 가로베기와 같은 꼴이었음 */ src: '조선세법 掣步(앞발 딛고 뒷발 끌어붙임) 「向前掣擊中殺」 쪽154/0568(무도 권2 p035/27 글자) · 「向前掣步左翼擊」 쪽173/0587 · 腰擊 「向前進步腰擊」 쪽158/0572 [원문] · 옆으로 비끼는 것은 [해석] · 수 [추정]' },
+  { name: 'chebuYaoji', nameKo: '끌어 딛고 허리 베기 (체보요격)', orig: '掣步腰擊', from: G.langort, path: [[0.35, 0.08], [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0, base: 0.33, chain: 1, step: { lat: -0.05, fwd: 0.3, when: 'strike' }, /* 10/29 fwd 0.35 → 0.3 = 걸음 사다리 0.3 칸(반걸음 무리 — 掣步 는 짧게 끌어 딛는 걸음 · 동방 반걸음 0.3 과 같게): 감독 안 · 사장님 확인 전(사장님 15:xx '0.35는 0.3으로 옮길 것과 0.45로 옮길 것을 나눠' — docs/strike/step_ladder_2026-10-29.md §8-3) · 10/21 앞으로 끌어 딛기(掣步) — 전 옆 −0.25 · 앞 0.25 는 독일 비껴 딛는 가로베기와 같은 꼴이었음 */ src: '조선세법 掣步(앞발 딛고 뒷발 끌어붙임) 「向前掣擊中殺」 쪽154/0568(무도 권2 p035/27 글자) · 「向前掣步左翼擊」 쪽173/0587 · 腰擊 「向前進步腰擊」 쪽158/0572 [원문] · 옆으로 비끼는 것은 [해석] · 수 [추정]' },
 ];
 
 // ── 고유 동작 (10/9 — 사장님 01:5x '각 유파마다 강점과 특징을 살릴 고유 동작', docs/strike/school_unique_2026-10-09.md) ──
@@ -474,7 +474,7 @@ const GERMAN_UNIQUE = [
   //  딛는 발은 비껴 가는 쪽 발(앞발이면 내딛고, 뒷발이면 앞발을 지나 그쪽 앞으로 — ai.js techStepRequest). 켬(10/9 12:2x 사장님 '우선 다 켜봐' — 전엔 ai 끔, 롱소드 AI 결정 몫)
   //  길: 처음엔 공용 zwerch(오른 옆 시작·base 0.25)였으나 롱소드 AI 는 그 자리를 거의 안 가서 48 판에 공용 zwerch 도 이것도 0 번 →
   //  리히테나워 Zwerch 처럼 오른 어깨 지붕에서 머리 높이로 가로 [추정], base 는 같은 자리 고유 동작 schielhau 와 같은 0.7 (10/9 잼)
-  { name: 'zwerchAbtritt', nameKo: '비껴 딛는 가로베기 (츠베르히 미트 압트리트)', orig: 'Zwerch mit Abtritt', from: G.tagR, path: [[0.3, 0.22], [0.0, 0.2], [-0.45, 0.2]], open: 'UL', kind: 'cut', reach: 0, base: 0.7, step: { lat: -0.3, fwd: 0.35, when: 'strike' }, src: 'Meyer 1570 장검 — 삼각 걸음(Triangel)으로 비껴 딛으며 Zwerch(오른쪽에서 칠 때 왼발을 왼쪽 앞으로) [원전 2차] · Zettel 「Zwerch benimmt, was vom Tag dar kommt」 [원전 2차] · 수 [추정]' },
+  { name: 'zwerchAbtritt', nameKo: '비껴 딛는 가로베기 (츠베르히 미트 압트리트)', orig: 'Zwerch mit Abtritt', from: G.tagR, path: [[0.3, 0.22], [0.0, 0.2], [-0.45, 0.2]], open: 'UL', kind: 'cut', reach: 0, base: 0.7, step: { lat: -0.3, fwd: 0.3, when: 'strike' } /* 10/29 fwd 0.35 → 0.3 = 걸음 사다리 0.3 칸(옆 0.3 과 같아 줄에서 45° 비켜 딛음 — Abtritt 는 비켜섬이지 나아감이 아님): 감독 안 · 사장님 확인 전(사장님 15:xx '0.35는 0.3으로 옮길 것과 0.45로 옮길 것을 나눠' — docs/strike/step_ladder_2026-10-29.md §8-3) */, src: 'Meyer 1570 장검 — 삼각 걸음(Triangel)으로 비껴 딛으며 Zwerch(오른쪽에서 칠 때 왼발을 왼쪽 앞으로) [원전 2차] · Zettel 「Zwerch benimmt, was vom Tag dar kommt」 [원전 2차] · 수 [추정]' },
 ];
 
 // 이탈리아 (카포 페로 1610 — 레이피어, 한손 찌르기). 찌르기 방식 꾸러미의 실제 찌르기 base(stichPflug 0.63·stichAlber 0.54)에 맞춤
