@@ -1021,7 +1021,7 @@ export const SECRET = {
   iai: 1, // 1 = 발도(운동학 팔·칼로 가로 휩쓸기), 0 = 위 순간이동 고노센. `?iai=0` · SECRET_JSON
   // 비기 자세 (10/10 04:2x 사장님 발도술 GIF 첫 장면 · 런지 사진) — secret_instant.js stanceTick → gait.js 골반 높이 · fighter.js 몸통 숙임·빈팔 [모두 확인 전]
   stance: {
-    iai: { drop: 0.28, pitch: 25, rate: 0.8, inTime: 0.3, outTime: 0.6, reach: 0.85, step: 0.5, draw: { drop: 0.16, pitch: 11 } }, // draw: 발도·경직 동안 (덧씌우기 몸 낮춤 0.12·숙임 14° 가 더해져 합 0.28 m · 25°) // reach: 넓게 벌린 발을 그대로 두는 거리(gait reachMax 대신) · step: 대기에 들어갈 때 앞발 내딛기 (m) // 발도 대기·발도·뻗은 경직: 골반 0.28 m 낮춤, 몸통 25° 숙임
+    iai: { drop: 0.28, pitch: 25, rate: 0.8, inTime: 0.3, outTime: 0.6, reach: 0.85, step: 0.45, draw: { drop: 0.16, pitch: 11 } }, // step = 걸음 사다리 0.45 칸 · 사장님 10/29 15:xx '0.5는 0.45로 옮기고' (전 0.5 — docs/strike/step_ladder_2026-10-29.md) // draw: 발도·경직 동안 (덧씌우기 몸 낮춤 0.12·숙임 14° 가 더해져 합 0.28 m · 25°) // reach: 넓게 벌린 발을 그대로 두는 거리(gait reachMax 대신) · step: 대기에 들어갈 때 앞발 내딛기 (m) // 발도 대기·발도·뻗은 경직: 골반 0.28 m 낮춤, 몸통 25° 숙임
     lunge: { drop: 0.22, pitch: 8, rate: 1.8, offArm: -1.0, time: 0.6, inTime: 0.12, outTime: 0.4, reach: 1.0 }, // Passata 런지: 골반 0.22 m, 몸통 곧게 살짝 앞(8°), 빈팔 뒤로, 찌르기 시작부터 0.6 s(찌르기 + 0.3 s 버팀). 48 판 레이피어 drop 0.3 → 승률 65 %·맞힘 33/55 · 0.22 → 73 %·41/57
   },
   iaiDrawStep: 0.7, // 발도 순간 앞발을 크게 내딛는 걸음 (m, gait lunge — 몸 미끄러짐과 따로). 0.4 는 몸이 함께 미끄러져 두 발 사이 0.18 m 로 좁았다(캡처)
@@ -1606,6 +1606,24 @@ export const THRUST = {
   //  'full' = 찌르기 잣대 줄 통째(contact · reach · clinch · 베는 시간 — 파펜하이머 포함 · 리솔루토도 새 맞닿음을 따름). 찌르기 잣대 = 3번 자세 탭 찌르기의 칼날 70 % 지점 ÷ 같은 실행 롱소드 찌르기 × 롱소드 손 값(weapon_measured.js ITALIAN_THRUST).
   //  판을 만들기 전에 읽는다(꾸러미 간격이 weapon_measured.js 를 읽을 때 정해짐) — 주소 `?itMeasure=old|contact|full` · 시뮬 `IT_MEASURE=…` (with_config 로는 늦음)
   itMeasure: ((v) => (['old', 'contact', 'full'].includes(v) ? v : 'full'))((typeof location !== 'undefined' && location.search && new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')).get('itMeasure')) || (typeof process !== 'undefined' && process.env?.IT_MEASURE) || 'full'), // 기본 'full' (사장님 10/25 22:1x '전부 새 값으로 적용해. ai의 밸런스 문제는 나중에 따로 개선하자' · 확인표 2556)
+};
+
+// 플랑베르주 간격 줄 (10/29 15:xx 사장님 '봐' — docs/strike/flamberge_measure_2026-10-29.md · 확인표 2900 ~ 2903 · 사장님 10/29 17:5x 결정 — 기본 'geo'):
+//  손 표(weapon_measured.js) 플랑베르주 [1.91, 2.57, 1.52, 0.77] 의 맞닿기 · 칼끝 거리가 츠바이핸더보다 23 · 56 cm 크다(손 ~ 칼끝은 5 cm 차)
+//  'off' = 지금 줄(판 바이트 같음) · 그 밖은 weapon_measured.js FLAMBERGE_ROWS 의 같은 이름 줄 — 판을 만들기 전에 읽는다(꾸러미 간격이 weapon_measured.js 를 읽을 때 정해짐)
+//  주소 `?flMeasure=…` · 시뮬 `FL_MEASURE=…` 또는 with_config.mjs WEAPON_MEASURE.flambergeFix=…
+export const WEAPON_MEASURE = {
+  // 판마다 플랑베르주 줄 [contact, reach, clinch, 베는 시간 날것] · cut = 유파 꾸러미 베는 시간(CUT_TIME_30 — 롱소드 0.30 기준) — 'off' 는 손 표 그대로라 여기 없음
+  //  geo     (가) 기하: 츠바이핸더 손 표 [1.68, 2.01, 1.30] × 손 ~ 칼끝 비 1.385 / 1.335 (= 1.0375) · 베는 시간 그대로(사장님 10/25 손맛 — 늦은 베기)
+  //  step    (나) 다시 잼 — 걸음을 AI 한 걸음(스틱 앞 0.3 s · ai.js STEP_T)으로 묶은 같은 실행 생성기 값의 츠바이핸더 비 × 츠바이핸더 손 표:
+  //          contact 1.9783 / 1.8850 · reach 2.2119 / 2.0666 · 베는 시간 0.5167 / 0.4083 (clinch 는 contact 와 같은 비 · 꾸러미 베는 시간 0.34 × 같은 비)
+  //  contact (다) 맞닿기 · 붙음만 (가) 값 · 칼끝 거리 2.57 · 베는 시간 그대로
+  flambergeRows: {
+    geo: { row: [1.74, 2.09, 1.35, 0.77], cut: 0.57 },
+    step: { row: [1.76, 2.15, 1.36, 0.59], cut: 0.43 },
+    contact: { row: [1.74, 2.57, 1.35, 0.77], cut: 0.57 },
+  },
+  flambergeFix: ((v) => (['off', 'geo', 'step', 'contact'].includes(v) ? v : 'geo'))((typeof location !== 'undefined' && location.search && new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')).get('flMeasure')) || (typeof process !== 'undefined' && process.env?.FL_MEASURE) || 'geo'), // 사장님 10/29 17:5x '플랑베르주 거리 값을 칼 길이대로 다시 매겨' → 기본 'geo' (`?flMeasure=off` = 옛 손 표 줄)
 };
 
 // 손잡이 찍기(Knaufschlag, 시제품 — 사장님 아이디어 3] 10/9 "근접 상황에서 칼 손잡이로 찍기", docs/strike/pommel_strike_2026-10-09.md).
