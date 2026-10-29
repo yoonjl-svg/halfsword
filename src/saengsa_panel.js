@@ -6,8 +6,8 @@
 import { SAENGSA } from './config.js';
 import { clockFrom, signupWindow } from './saengsa_clock.js';
 import { scheduleState, canSignUp, myMatch, myTeamOut, sidesOf, winnerOf, readyAt, matchState, chestCount, seatOrder } from './saengsa_rules.js';
-import { syncSaengsa, readSaengsa, saveDraft, signUp } from './saengsa_store.js';
-import { SAENGSA_DATA, HIRE_ROSTER, ownedWeapons, hireCostOf, nameOf, spokenName, portraitOf, weaponName } from './saengsa_roster.js';
+import { syncSaengsa, readSaengsa, saveDraft, signUp, newSeed } from './saengsa_store.js';
+import { SAENGSA_DATA, HIRE_ROSTER, ownedWeapons, hireCostOf, nameOf, spokenName, fighterName, portraitOf, weaponName } from './saengsa_roster.js';
 import { NAMELESS } from './saengsa_rules.js';
 import { makeNamelessFaces } from './saengsa_nameless.js';
 import { SAENGSA_TEXT as T, stateLine, signupHours, nextMatchLine, outLine, chestLine, hireLine, roundName, teamName } from './saengsa_text.js';
@@ -15,7 +15,6 @@ import { COIN_ICON } from './wallet_icons.js';
 import { readProgress } from './lobby_progress.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const newSeed = () => (globalThis.crypto?.getRandomValues ? globalThis.crypto.getRandomValues(new Uint32Array(1))[0] : Math.floor(Math.random() * 2 ** 32));
 
 /**
  * host: ③ 창 안 판(#saengsaHost) · chip: 제목 줄 오른쪽 일정 알약 · status(text, tone): 대기실 알림 줄 · onEnter(): 생사전 화면으로 · onWallet(): 금화가 바뀜
@@ -39,10 +38,10 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
 
   const draftOf = () => readSaengsa().draft;
   const lendText = (w) => (w ? weaponName(w) : T.random); // 칸이 좁아 '무작위' (고르기 카드의 '무기' 줄과 같은 말)
-  function slotHtml({ id, weapon, lent, price, empty, cloth = 0 }) {
+  function slotHtml({ id, weapon, lent, price, empty, cloth = 0, name = nameOf(id) }) {
     if (empty) return `<span class="sg-slot-empty">${T.pick}</span>${price ?? ''}`;
     // 칸 = 얼굴 · 이름 · (무기 · 고용 금화) — '나' · '동료' 는 칸 자리로 읽히고 화면 읽기 글(aria-label)에 있다
-    return `<img class="sg-slot-face" src="${esc(portraitOf(id, cloth))}" alt="" draggable="false"><span class="sg-slot-body"><b class="sg-slot-name">${esc(nameOf(id))}</b><span class="sg-slot-meta"><small class="sg-slot-weapon"${lent ? ' data-lent' : ''}>${esc(weapon)}</small>${price ?? ''}</span></span>`;
+    return `<img class="sg-slot-face" src="${esc(portraitOf(id, cloth))}" alt="" draggable="false"><span class="sg-slot-body"><b class="sg-slot-name">${esc(name)}</b><span class="sg-slot-meta"><small class="sg-slot-weapon"${lent ? ' data-lent' : ''}>${esc(weapon)}</small>${price ?? ''}</span></span>`;
   }
   const priceHtml = (id) => { const c = hireCostOf(id); return c.coins != null ? `<span class="sg-price">${COIN_ICON}${c.coins}</span>` : ''; };
 
@@ -79,8 +78,8 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
         const f = members[i];
         b.disabled = true;
         b.dataset.state = f?.dead ? 'dead' : 'set';
-        b.innerHTML = f ? slotHtml({ id: f.id, weapon: weaponName(f.weapon), lent: f.lent, cloth: f.cloth }) : '';
-        b.setAttribute('aria-label', f ? `${i ? T.companion : T.me} · ${spokenName(f.id, f.cloth)} · ${weaponName(f.weapon)}${f.lent ? ` · ${T.lentTag}` : ''}${f.dead ? ` · ${T.dead}` : ''}` : '');
+        b.innerHTML = f ? slotHtml({ id: f.id, weapon: weaponName(f.weapon), lent: f.lent, cloth: f.cloth, name: fighterName(f) }) : '';
+        b.setAttribute('aria-label', f ? `${i ? T.companion : T.me} · ${fighterName(f)} · ${weaponName(f.weapon)}${f.lent ? ` · ${T.lentTag}` : ''}${f.dead ? ` · ${T.dead}` : ''}` : '');
       });
       $('#sgCost').hidden = true;
       $('#sgNote').textContent = noteFor(t, t0);

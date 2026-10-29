@@ -85,6 +85,8 @@
 .sg-prize { display: flex; align-items: center; gap: 8px; font-size: var(--fs-s); color: var(--c-accent); }
 .sg-prize[hidden] { display: none; }
 :host .sg-prize .primary { padding: 6px 14px; }
+:host .sg-nextcup { padding: 6px 14px; } /* 시험판 '다음 대회' */
+.sg-nextcup[hidden] { display: none; }
 .sg-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .sg-empty { margin: 12px 0; font-size: var(--fs-s); color: var(--c-sub); }
 /* 대진표: 대진마다 한 줄 · 첫 대진 칸 차례가 줄(--rows) — 다음 대진 칸은 앞 두 칸 가운데(grid-row span) · 맨 오른쪽 우승 */

@@ -41,6 +41,7 @@ export const SAENGSA_TEXT = Object.freeze({
   saveFail: '저장하지 못했습니다. 다시 시도해 주십시오.',
   notReady: '지금은 이 경기를 할 수 없습니다.',
   ready: '입장 가능',
+  nextCup: '다음 대회', // 시험판(SAENGSA.testMode) — 대회가 끝나면 바로 다음 대회 (사장님 10/29 17:5x)
 });
 export const INJURY_KO = Object.freeze({ arm: '팔', leg: '다리', torso: '몸통', head: '머리' });
 /** 무명 검객 옷 색 이름 (config SAENGSA.nameless.cloth 차례 — 화면 읽기 글에서 같은 팀 무명 검객을 가름) */
@@ -72,7 +73,7 @@ export function roundName(teamCount, r) {
 /** 일정 상태 한 줄 (saengsa_rules.js scheduleState) */
 export function stateLine(s) {
   switch (s.kind) {
-    case 'signup': return `신청 받는 중 · ${hourWords(s.until)}까지`;
+    case 'signup': return s.until == null ? '신청 받는 중' : `신청 받는 중 · ${hourWords(s.until)}까지`; // 시험판은 창이 늘 열림(until 없음)
     case 'waiting': return `첫 대진 ${hourWords(s.startAt)}`;
     case 'running': return '대회 진행 중';
     case 'done': return '대회 끝';
@@ -94,7 +95,7 @@ export function resultLine(winner, loser, result, deaths) {
 export const myResultLine = (won, forfeit) => (forfeit ? '기권했다' : won ? '상대 팀을 꺾었다' : '상대 팀에 졌다');
 /** 내 다음 경기 안내 */
 export const nextMatchLine = (round, at, state, now) =>
-  state === 'ready' ? `내 경기 · ${round} · 지금 싸울 수 있습니다.` : `내 경기 · ${round} · ${clockText(at)}${at > now ? ` · ${untilText(at - now)}` : ''}`;
+  state === 'ready' ? `내 경기 · ${round} · 지금 싸울 수 있습니다.` : !at ? `내 경기 · ${round}` : `내 경기 · ${round} · ${clockText(at)}${at > now ? ` · ${untilText(at - now)}` : ''}`; // 시각 없음(시험판) = 대진 이름만
 /** 떨어진 뒤 안내 */
 export const outLine = (round, forfeit) => (forfeit ? `내 팀은 ${round}에서 기권했습니다.` : `내 팀은 ${round}에서 졌습니다.`);
 /** 하사품 안내 · 연 뒤 */

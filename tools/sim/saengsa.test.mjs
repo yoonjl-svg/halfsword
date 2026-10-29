@@ -193,7 +193,7 @@ test('로스터 · 숙련도(인물 성향 표) · 고용 값 · 무명 검객',
     assert.equal(p[roster.weaponInfo(c.weapon).school], c.ai.proficiency, id);
     assert.equal(roster.hireCostOf(id).coins, SAENGSA.hire.base + SAENGSA.hire.step * Math.max(...Object.values(p)));
   }
-  assert.deepEqual(roster.profOf(R.NAMELESS), { german: 1, italian: 1, iberian: 1, japanese: 1, chinese: 1 });
+  assert.deepEqual(roster.profOf(R.NAMELESS), { german: 0, italian: 0, iberian: 0, japanese: 0, chinese: 0 }); // 만들기 전 빈 칸 — 신청 때 makeNameless
   assert.equal(roster.hireCostOf(R.NAMELESS).coins, 20);
   assert.equal(R.profFor({ school: 'none', prof: { german: 2, italian: 0, iberian: 0, japanese: 3, chinese: 0 } }), 2); // 무유파 무기 · none 칸 없음 → 가장 높은 값 − 1
   assert.equal(R.profFor({ school: 'none', prof: { german: 0, italian: 0, iberian: 0, japanese: 0, chinese: 0, none: 3 } }), 3);
@@ -215,4 +215,109 @@ test('무명 검객 겉모습: 광기의 브론 옷차림 · 옷 일곱 색만 �
   assert.equal(N.isClothPixel(0x24, 0x39, 0x6b), true); // 광기의 브론 남색 옷
   assert.equal(N.isClothPixel(0xf5, 0xa8, 0x78), false); // 살갗
   assert.equal(N.isClothPixel(0x6e, 0x3a, 0x2c), false); // 머리 · 가죽끈
+});
+
+test('무명 검객 숙련도 · 이름: 대회마다 새로 — 메인 0 ~ 2 · 보조 0 ~ 2(겹치면 높은 쪽) · 나머지 0 · 이름은 메인 유파 문화 (사장님 10/29 18:2x)', async () => {
+  const { NAMELESS_NAMES } = await import('../../src/saengsa_names.js');
+  const roster = await import('../../src/saengsa_roster.js');
+  assert.deepEqual([SAENGSA.nameless.main, SAENGSA.nameless.sub, SAENGSA.nameless.other], [[0, 2], [0, 2], [0, 0]]);
+  for (const [culture, names] of Object.entries(NAMELESS_NAMES)) {
+    assert.ok(R.SCHOOLS5.includes(culture), culture);
+    assert.ok(names.length >= 10 && names.length <= 15, culture);
+    assert.equal(new Set(names).size, names.length, culture);
+  }
+  assert.equal(new Set(Object.values(NAMELESS_NAMES).flat()).size, Object.values(NAMELESS_NAMES).flat().length); // 문화끼리도 안 겹침
+  let overlap = 0, allZero = 0, highMain = 0, total = 0;
+  const seen = new Set();
+  for (let seed = 1; seed <= 60; seed++) {
+    const t = make(seed, { companions: [R.NAMELESS, 'a'] });
+    const nameless = t.teams.flatMap((team) => team.members).filter((f) => f.id === R.NAMELESS);
+    assert.equal(nameless.length, 45 - 10 + 1); // 상대 자리 45 − 이름난 열 + 내가 고용한 하나
+    const perCulture = {};
+    for (const f of nameless) {
+      total++;
+      assert.ok(R.SCHOOLS5.includes(f.main) && R.SCHOOLS5.includes(f.sub));
+      for (const s of R.SCHOOLS5) {
+        const v = f.prof[s];
+        assert.ok(Number.isInteger(v), `${seed} ${s}`);
+        if (s !== f.main && s !== f.sub) assert.equal(v, 0, `${seed} ${f.key} ${s} 나머지`);
+        else assert.ok(v >= 0 && v <= 2, `${seed} ${f.key} ${s}`);
+      }
+      if (f.main === f.sub) overlap++;
+      if (R.SCHOOLS5.every((s) => f.prof[s] === 0)) allZero++;
+      if (f.prof[f.main] === 2) highMain++;
+      assert.ok(NAMELESS_NAMES[f.main].includes(f.tag), `${f.tag} ∈ ${f.main}`);
+      assert.equal(roster.fighterName(f), `무명 검객 ${f.tag}`);
+      (perCulture[f.main] ??= []).push(f.tag);
+      seen.add(f.tag);
+    }
+    for (const [c, tags] of Object.entries(perCulture)) assert.equal(new Set(tags).size, Math.min(tags.length, NAMELESS_NAMES[c].length), `${seed} ${c} 한 대회 안 이름`);
+    assert.ok(t.teams[0].members[1].tag, '내가 고용한 무명 검객도 새로');
+  }
+  assert.ok(overlap > 0 && overlap < total / 3, `메인 · 보조 겹침 ${overlap}/${total}`);
+  assert.ok(allZero > 0, '모두 0 도 나올 수 있음');
+  assert.ok(highMain > 0);
+  assert.ok(seen.size > 40, `이름 ${seen.size} 가지`);
+  // 겹치면 높은 쪽: 나머지 5 · 메인 독일 · 보조 독일 · 메인 값 0 · 보조 값 2 → 독일 2
+  const seq = [0, 0, 0, 0, 0, 0, 0, 0, 0.99, 0];
+  let i = 0;
+  const one = R.makeNameless(() => seq[i++] ?? 0);
+  assert.deepEqual([one.main, one.sub, one.prof], ['german', 'german', { german: 2, italian: 0, iberian: 0, japanese: 0, chinese: 0 }]);
+  assert.equal(one.tag, NAMELESS_NAMES.german[0]);
+  assert.deepEqual(make(9), make(9)); // 씨앗이 같으면 같은 무명 검객
+});
+
+test('내 숙련도: 0 칸 · 1 칸 = 1 · 2 칸 = 2 · 5 칸 = 3 · 비기 + 특수공격 = 4 · 전부 = 5 · 편지 칸은 셈 밖 (사장님 10/29 17:5x · 18:1x)', async () => {
+  const roster = await import('../../src/saengsa_roster.js');
+  const { nodesOf, isClosed } = await import('../../src/skill_tree_data.js');
+  const L = (ids) => ({ german: new Set(ids) });
+  const g = (ids) => roster.playerProficiency(L(ids)).german;
+  assert.deepEqual(roster.playerProficiency({}), { german: 1, italian: 1, iberian: 1, japanese: 1, chinese: 1 });
+  assert.equal(g(['G1']), 1);
+  assert.equal(g(['G1', 'G11']), 1); // 편지는 칸으로 세지 않음
+  assert.equal(g(['G1', 'G2']), 2);
+  assert.equal(g(['G1', 'G2', 'G5', 'G8']), 2);
+  assert.equal(g(['G1', 'G2', 'G5', 'G8', 'G3']), 3);
+  assert.equal(g(['G10', 'G7']), 4); // 비기 + 특수공격(겹치기)
+  assert.equal(g(['G1', 'G2', 'G5', 'G8', 'G3', 'G10']), 3); // 비기만
+  for (const s of R.SCHOOLS5) {
+    const skills = nodesOf(s).filter((n) => n.cat !== 'letter' && !isClosed(s, n)).map((n) => n.id);
+    const all = roster.playerProficiency({ [s]: new Set(skills) })[s];
+    assert.equal(all, 5, s);
+    assert.equal(roster.playerProficiency({ [s]: new Set(skills.slice(1)) })[s] < 5, true, s);
+    const special = SAENGSA.playerProf.special[s], secret = nodesOf(s).find((n) => n.cat === 'secret').id;
+    assert.ok(nodesOf(s).find((n) => n.id === special)?.u, `${s} 특수공격 칸 ${special}`);
+    assert.equal(roster.playerProficiency({ [s]: new Set([special, secret]) })[s], 4, s);
+  }
+});
+
+test('시험판(testMode): 신청 늘 열림 · 모든 경기 바로 · 쉬는 시간 · 기권 없음 · 끝나면 바로 다음 대회', () => {
+  const cfg = { ...SAENGSA, testMode: true };
+  const now = at(30, 15, 7); // 신청 창 밖 · 대진 시각과 무관한 때
+  assert.deepEqual(C.signupWindow(now, cfg), { open: true, day: '2026-10-30', from: now, to: null });
+  const t = R.createTournament({ day: '2026-10-30', seed: 21, at: now, companions: ['a', 'b'], ...DATA, cfg });
+  assert.deepEqual(R.scheduleState(now, t, cfg), { kind: 'running' });
+  assert.equal(R.advance(t, now, cfg), 7); // 16강 상대끼리 일곱은 바로
+  for (let r = 0; r < 4; r++) {
+    const m = R.myMatch(t);
+    assert.equal(m.round, r);
+    assert.equal(R.matchState(t, m, now, cfg), 'ready', `대진 ${r}`);
+    assert.equal(R.advance(t, Infinity, cfg), 0, '내 경기는 기권 없음');
+    assert.ok(R.finishMine(t, m, ['0-0'], now, winFor(t, m), cfg));
+    const left = t.matches.filter((x) => x.round === r + 1 && !R.isMine(t, x)).length;
+    assert.equal(R.advance(t, now, cfg), left, `대진 ${r + 1} 상대끼리`);
+    assert.ok(t.matches.filter((x) => x.result).every((x) => x.result.at === now));
+  }
+  assert.deepEqual([t.status, R.placeOf(t), R.chestCount(t, cfg)], ['done', 'champion', 3]);
+  assert.equal(R.canSignUp(now, t, cfg), true); // 같은 날 바로 다음 대회
+  // 앞 대진이 다 끝나기 전엔 상대끼리 다음 경기도 기다림 · 내가 지면 대회는 바로 끝까지
+  const u = R.createTournament({ day: '2026-10-30', seed: 22, at: now, companions: ['a', 'b'], ...DATA, cfg });
+  R.advance(u, now, cfg);
+  assert.equal(u.matches.filter((x) => x.round === 1 && x.result).length, 0);
+  const m = R.myMatch(u), w = winFor(u, m);
+  R.finishMine(u, m, ['0-0'], now, { ...w, winner: w.winner === 'a' ? 'b' : 'a' }, cfg);
+  R.advance(u, now, cfg);
+  assert.deepEqual([u.status, R.myTeamOut(u), R.canSignUp(now, u, cfg)], ['done', true, true]);
+  // 본판은 그대로: 같은 때 신청 창은 닫힘
+  assert.equal(C.signupWindow(now).open, false);
 });

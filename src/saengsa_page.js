@@ -13,14 +13,15 @@ import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { SAENGSA } from './config.js';
 import { clockFrom, signupWindow, roundAt } from './saengsa_clock.js';
 import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, isMine } from './saengsa_rules.js';
-import { syncSaengsa, playMine, claimChests } from './saengsa_store.js';
-import { nameOf, spokenName, portraitOf, weaponName, weaponThumb } from './saengsa_roster.js';
+import { syncSaengsa, readSaengsa, playMine, claimChests, signUp, newSeed } from './saengsa_store.js';
+import { fighterName, portraitOf, weaponName, weaponThumb, SAENGSA_DATA, ownedWeapons, hireCostOf } from './saengsa_roster.js';
 import { makeNamelessFaces } from './saengsa_nameless.js';
-import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, clockText, untilText, roundName, teamName, resultLine, myResultLine, nextMatchLine, outLine, chestLine, chestGot, injuryText, signupHours } from './saengsa_text.js';
+import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, clockText as clockWords, untilText, roundName, teamName, resultLine, myResultLine, nextMatchLine, outLine, chestLine, chestGot, injuryText, signupHours } from './saengsa_text.js';
 import { makeEngine } from './saengsa_engine.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const SCHOOL_CELLS = ['german', 'italian', 'iberian', 'japanese', 'chinese'];
+const clockText = (at) => (SAENGSA.testMode ? '' : clockWords(at)); // 시험판은 시각을 보이지 않는다(모든 경기 바로 — 사장님 10/29 17:5x)
 
 /** root: 덮개 Shadow root · game: 게임 모듈(2단계 launchSaengsa) · onBack(): 대기실로 */
 export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
@@ -30,7 +31,8 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
       <p id="sgStatus" class="lobby-status" role="status"></p><button id="sgBack" class="secondary small on-art utility">${T.back}</button></header>
     <section class="sg-board" aria-labelledby="sgBoardTitle">
       <div class="sg-board-head"><h2 class="sr-only" id="sgBoardTitle">${T.bracket}</h2><span class="sg-state" id="sgChip"></span><p class="sg-next" id="sgNext"></p>
-        <div class="sg-prize" id="sgPrize" hidden><span id="sgPrizeText"></span><button type="button" class="primary" id="sgOpen">${T.open}</button></div></div>
+        <div class="sg-prize" id="sgPrize" hidden><span id="sgPrizeText"></span><button type="button" class="primary" id="sgOpen">${T.open}</button></div>
+        <button type="button" class="primary sg-nextcup" id="sgNextCup" hidden>${T.nextCup}</button></div>
       <div class="sg-scroll" id="sgScroll"><div class="sg-bracket" id="sgBracket" role="list"></div><p class="sg-empty" id="sgEmpty" hidden></p></div>
     </section>
     <section class="sg-match" id="sgMatch" hidden aria-labelledby="sgMatchTitle">
@@ -84,7 +86,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
     for (const m of t.matches) {
       const span = 2 ** m.round, [A, B] = sidesOf(t, m), W = winnerOf(t, m), s = stateOf(m, t0);
       const team = (x) => `<span class="sg-t"${x != null && W === x ? ' data-win' : ''}${x != null && W != null && W !== x ? ' data-lose' : ''}${x === 0 ? ' data-me' : ''}>${faces(x)}<span class="sg-tn">${x == null ? '—' : esc(tName(x))}</span></span>`;
-      const label = `${roundName(n, m.round)} ${s.time} · ${tName(A) || '—'} · ${tName(B) || '—'}${s.text ? ` · ${s.text}` : ''}`;
+      const label = `${roundName(n, m.round)}${s.time ? ` ${s.time}` : ''} · ${tName(A) || '—'} · ${tName(B) || '—'}${s.text ? ` · ${s.text}` : ''}`;
       html += `<button type="button" class="sg-m" role="listitem" data-match="${m.id}" data-state="${s.st}"${onPath(m) ? ' data-path' : ''}${A == null || B == null ? ' disabled' : ''} style="grid-column:${m.round + 1};grid-row:${2 + m.index * span} / span ${span}" aria-label="${esc(label)}">
         <span class="sg-m-head"><span class="sg-m-time">${s.time}</span><span class="sg-m-state">${esc(s.text)}</span></span>${team(A)}${team(B)}</button>`;
     }
@@ -101,6 +103,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
     $('sgBracket').hidden = !t;
     $('sgEmpty').hidden = !!t;
     $('sgPrize').hidden = true;
+    $('sgNextCup').hidden = true;
     if (!t) {
       const w = signupWindow(t0);
       $('sgNext').textContent = '';
@@ -112,6 +115,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
       $('sgNext').textContent = `${T.champion} · ${tName(t.champion)}`;
       const chests = chestCount(t);
       if (chests && !t.chests) { $('sgPrize').hidden = false; $('sgPrizeText').textContent = chestLine(chests); }
+      else if (SAENGSA.testMode) $('sgNextCup').hidden = false; // 시험판: 하사품을 연 뒤(없으면 바로) 다음 대회
     } else if (m) $('sgNext').textContent = nextMatchLine(roundName(n, m.round), readyAt(t, m) ?? 0, matchState(t, m, t0), t0);
     else if (myTeamOut(t)) {
       const lost = t.matches.find((x) => x.result && sidesOf(t, x).includes(0) && winnerOf(t, x) !== 0);
@@ -129,6 +133,16 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
     const got = claimChests();
     if (got) status(chestGot(got.reduce((s, x) => s + (x.kind === 'coins' ? x.amount : 0), 0)), 'notice');
     render();
+    if (!$('sgNextCup').hidden) $('sgNextCup').focus({ preventScroll: true });
+  });
+  // 시험판 '다음 대회': 지난 팀(동료 · 빌려 준 무기) 그대로 바로 새 대회 — 고용 금화는 시험판 지갑에서
+  on($('sgNextCup'), 'click', () => {
+    const t0 = now(), d = readSaengsa().draft;
+    const res = signUp({ now: t0, companions: d.companions, lend: d.lend, seed: newSeed(), data: { ...SAENGSA_DATA, owned: ownedWeapons(), hireCostOf } });
+    if (!res.ok) { status({ coins: T.noCoins, busy: T.busy, team: T.pickTwo }[res.why] ?? T.saveFail, 'alert'); return; }
+    status(T.signed, 'notice');
+    render({ scroll: true });
+    $('sgHeading').focus({ preventScroll: true });
   });
 
   // ── ② 경기 화면 ──
@@ -139,10 +153,10 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
     const cells = f.prof && 'none' in f.prof && f.id !== 'player' ? [...SCHOOL_CELLS, 'none'] : SCHOOL_CELLS;
     const prof = cells.map((s) => `<span class="sg-pc"${s === f.school ? ' data-on' : ''}><small>${SCHOOL_KO[s]}</small><b>${f.prof?.[s] ?? 0}</b></span>`).join('');
     const tag = pick ? 'button' : 'div';
-    const label = `${spokenName(f.id, f.cloth)} · 체력 ${hp} · ${injuryText(inj, (i) => isSerious(i))} · ${weaponName(f.weapon)}${dead ? ` · ${T.dead}` : ''}`;
+    const label = `${fighterName(f)} · 체력 ${hp} · ${injuryText(inj, (i) => isSerious(i))} · ${weaponName(f.weapon)}${dead ? ` · ${T.dead}` : ''}`;
     return `<${tag} ${pick ? 'type="button" ' : ''}class="sg-card" data-key="${f.key}"${pick ? ` aria-pressed="${picked}"` : ''}${dead ? ' data-dead' : ''}${entrant ? ' data-entrant' : ''}${mine ? ' data-mine' : ''}${pick && dead ? ' disabled' : ''} aria-label="${esc(label)}">
       <img class="sg-face" src="${esc(portraitOf(f.id, f.cloth))}" alt="" draggable="false">
-      <span class="sg-card-body"><b class="sg-name">${esc(nameOf(f.id))}</b>
+      <span class="sg-card-body"><b class="sg-name">${esc(fighterName(f))}</b>
         <span class="sg-hp"><span class="sg-hp-bar"><i style="width:${hpPct}%"></i></span><span class="sg-hp-num">${hp}</span></span>
         <span class="sg-wpn"><img src="${esc(weaponThumb(f.weapon))}" alt="" draggable="false"><span>${esc(weaponName(f.weapon))}</span>${f.lent ? `<i class="sg-tag">${T.lentTag}</i>` : ''}</span>
         <span class="sg-inj"${inj.length ? ' data-hurt' : ''}>${esc(injuryText(inj, (i) => isSerious(i)))}</span></span>
@@ -171,7 +185,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
     const top = mineSide === 'a' ? 'b' : 'a', bottom = top === 'a' ? 'b' : 'a';
     const teamOf = (side) => (side === 'a' ? A : B);
     const s = stateOf(m, t0);
-    $('sgMatchTitle').textContent = `${roundName(n, m.round)} · ${s.time}`;
+    $('sgMatchTitle').textContent = s.time ? `${roundName(n, m.round)} · ${s.time}` : roundName(n, m.round);
     $('sgMatchSub').textContent = result ? '' : s.text;
     // 결과 뒤 카드: 결과 전 상태(pre)에 결과 몫을 겹쳐 그린다 — 쉬며 되찾은 체력 · 나은 경상은 대진표 카드에
     const membersAt = (side) => (result?.pre ? result.pre[side] : t.teams[teamOf(side)].members);

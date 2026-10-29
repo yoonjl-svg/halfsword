@@ -28,9 +28,10 @@ export function atHour(day, h) {
 export function windowOf(day, cfg = SAENGSA) {
   return { day, from: atHour(cfg.signupFrom > cfg.signupTo ? shiftDay(day, -1) : day, cfg.signupFrom), to: atHour(day, cfg.signupTo) };
 }
-/** 지금 열린 신청 창(open true) · 닫혀 있으면 다음 창(open false) — { open, day, from, to } */
+/** 지금 열린 신청 창(open true) · 닫혀 있으면 다음 창(open false) — { open, day, from, to } · 시험판(cfg.testMode)은 늘 열림(to null · 대회 날 = 오늘) */
 export function signupWindow(now, cfg = SAENGSA) {
   const today = dayKey(now);
+  if (cfg.testMode) return { open: true, day: today, from: now, to: null };
   for (let i = 0; i < 3; i++) {
     const w = windowOf(shiftDay(today, i), cfg);
     if (now < w.to) return { ...w, open: now >= w.from };

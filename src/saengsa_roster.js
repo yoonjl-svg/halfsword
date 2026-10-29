@@ -2,8 +2,8 @@
 //  로스터 = 주 인물(characters.js CHARACTERS) 가운데 방랑 전용(wander_rules.js WANDER_EXCLUSIVE — 아르토리아)을 뺀 열하나 · 얼터 · 손님 인물은 넣지 않는다 (감독 10/29).
 //  무기 = 무작위(사장님 10/29 14:1x 요지 — 무기는 캐릭터에게 무작위로 배정) — 카드 뽑기와 같은 목록 · 같은 등급 확률(weapons.js TIER_DRAW · drawWeaponCards — 칸 하나) · 씨앗 난수.
 //   내 무기를 빌려 주면 그 사람은 늘 그 무기(사장님 10/29 14:1x 요지 — 내 무기를 장착시킨 캐릭터는 늘 그 무기로 출전) — 내 무기 = 대기실 아이템 칸 무기(lobby_equipment.js LOBBY_ITEMS).
-//  숙련도: 인물 = saengsa_proficiency.js proficiencyOf(character_temperament.js 표) · 무명 검객 = SAENGSA.nameless.prof · 나 = 스킬트리 — 그 유파에서 익힌 칸 가운데 가장 높은 급
-//   (보법 1 · 막기 2 · 고유 공격 · 심화 3 · 패시브 4 · 비기 5 — skill_tree_data.js NODE_CAT stage · 확인표 2792) · 무유파 무기는 빠른 셈 규칙(saengsa_rules.js profFor)
+//  숙련도: 인물 = saengsa_proficiency.js proficiencyOf(character_temperament.js 표) · 무명 검객 = 대회마다 새로(saengsa_rules.js makeNameless — 사장님 10/29 18:2x) ·
+//   나 = 스킬트리 — 그 유파에서 익힌 칸 수로(사장님 10/29 17:5x · 18:1x — config SAENGSA.playerProf · 확인표 2792) · 무유파 무기는 빠른 셈 규칙(saengsa_rules.js profFor)
 //  고용 금화 (사장님 10/29 14:5x '동료를 고용할 때 금화를 내는 걸로' · 15:5x '고용비는 그대로 둬'): SAENGSA.hire.base + step × 가장 높은 숙련도 ·
 //   무명 검객 = SAENGSA.nameless.hire (15:5x '무명 검객은 고용비 20') — 특별 동료(특별한 증표로 고용 — 나중)는 { token } 자리만
 import { SAENGSA } from './config.js';
@@ -13,7 +13,7 @@ import { WEAPON_LIST, RETIRED_WEAPONS, getWeapon, drawWeaponCards } from './weap
 import { traditionOf } from './schools.js';
 import { portraitSrc } from './portraits.js';
 import { readLearned } from './skill_tree_store.js';
-import { NODE_CAT, TREE_SCHOOLS, nodeOf } from './skill_tree_data.js';
+import { TREE_SCHOOLS, nodesOf, isClosed } from './skill_tree_data.js';
 import { LOBBY_ITEMS } from './lobby_equipment.js';
 import { readProfile } from './player_profile.js';
 import { proficiencyOf, PROF_SCHOOLS } from './saengsa_proficiency.js';
@@ -39,11 +39,24 @@ export function weaponInfo(id) {
 /** 내 무기 (빌려 줄 수 있는 것 — 대기실 아이템 칸 무기) */
 export const ownedWeapons = () => [...LOBBY_ITEMS];
 
-/** 내 숙련도 (스킬트리) */
-export function playerProficiency(learned = readLearned()) {
-  const out = Object.fromEntries(PROF_SCHOOLS.map((s) => [s, 0]));
+/**
+ * 내 숙련도 (사장님 10/29 17:5x '2칸 이상 배우면 2가 됨, 5칸 이상 배우면 3이 됨, 비기와 특수공격을 모두 배우면 4가 됨, 전부 다 배우면 5가 됨.' ·
+ *  18:1x '플레이어 숙련도는 0이 없고 1부터 시작'): 유파마다 그 유파 스킬 칸(편지 · 닫힌 칸 뺌)에서 익힌 수로 맞는 가장 높은 단계 — 1(늘) · 2(at2 칸 이상) · 3(at3 칸 이상) ·
+ *  4(비기 칸 + 특수공격 칸 special) · 5(스킬 칸 전부). learned = { 유파: Set(칸 id) } (skill_tree_store.js readLearned)
+ */
+export function playerProficiency(learned = readLearned(), cfg = SAENGSA.playerProf) {
+  const out = Object.fromEntries(PROF_SCHOOLS.map((s) => [s, 1]));
   for (const s of TREE_SCHOOLS) {
-    for (const id of learned[s] ?? []) out[s] = Math.max(out[s], NODE_CAT[nodeOf(s, id)?.cat]?.stage ?? 0);
+    const has = new Set(learned[s] ?? []);
+    const skills = nodesOf(s).filter((n) => n.cat !== 'letter' && !isClosed(s, n));
+    const got = skills.filter((n) => has.has(n.id));
+    const secret = skills.find((n) => n.cat === 'secret');
+    let v = 1;
+    if (got.length >= cfg.at2) v = 2;
+    if (got.length >= cfg.at3) v = 3;
+    if (secret && has.has(secret.id) && has.has(cfg.special[s])) v = 4;
+    if (skills.length && got.length === skills.length) v = 5;
+    out[s] = v;
   }
   return out;
 }
@@ -61,6 +74,8 @@ export function hireCostOf(id) {
 export const nameOf = (id) => (id === 'player' ? readProfile().name : id === NAMELESS ? SAENGSA_TEXT.nameless : CHARACTERS_BY_ID[id]?.name ?? id);
 /** 화면 읽기 이름 (무명 검객은 옷 색까지 — 한 팀에 둘 이상일 때 가름) */
 export const spokenName = (id, cloth) => (id === NAMELESS ? `${SAENGSA_TEXT.nameless} · ${CLOTH_KO[cloth] ?? ''}` : nameOf(id));
+/** 대회 속 사람 이름 (무명 검객 = '무명 검객 <붙인 이름>' — 사장님 10/29 17:5x · 붙인 이름이 없으면 옷 색으로) */
+export const fighterName = (f) => (f?.id === NAMELESS ? (f.tag ? `${SAENGSA_TEXT.nameless} ${f.tag}` : spokenName(NAMELESS, f.cloth)) : nameOf(f?.id));
 /** 프로필 그림 주소 (무명 검객 = 광기의 브론 그림의 옷 칸만 그 옷 색 — saengsa_nameless.js · 칠하기 전이면 광기의 브론 그림) */
 export const portraitOf = (id, cloth = 0) => (id === NAMELESS ? namelessFace(cloth) : portraitSrc(id) ?? portraitSrc('player'));
 /** 무기 이름 큰 줄 (괄호 앞 — '츠바이핸더 (대형 양손검)' → '츠바이핸더') */

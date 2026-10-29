@@ -9,6 +9,8 @@ import { signupWindow } from './saengsa_clock.js';
 import { update as updateWallet, addCoins } from './lobby_progress.js';
 
 export const SAENGSA_KEY = 'stillness.saengsa.v1';
+/** 새 대회 씨앗 (신청마다) */
+export const newSeed = () => (globalThis.crypto?.getRandomValues ? globalThis.crypto.getRandomValues(new Uint32Array(1))[0] : Math.floor(Math.random() * 2 ** 32));
 const blank = () => ({ version: 1, current: null, draft: { companions: [null, null], lend: null } });
 let session = blank();
 const store = (s) => { try { return s ?? globalThis.localStorage ?? null; } catch { return null; } };

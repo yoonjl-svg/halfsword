@@ -3,7 +3,8 @@
 //  순수 함수 — 인물 · 무기 자료는 부르는 쪽이 넘긴다(src/saengsa_roster.js · 시험 tools/sim/saengsa.test.mjs 는 가짜 자료). 값은 config.js SAENGSA 한 곳.
 //  대회 t = { v, day, seed, signedAt, teams: [{ mine, members: [사람] }], matches: [경기], status 'active' | 'done', champion, endedAt, chests }
 //   사람 = { key '팀-자리', id(인물 id · 'player' · 'nameless'), weapon, school(그 무기 유파), tier(무기 등급), prof { german … chinese (, none) }, lent(내 무기를 빌림), hp, injuries [부상], dead,
-//          cloth(무명 검객만 — 옷 색 줄 SAENGSA.nameless.cloth 번호) }
+//          cloth · tag · main · sub(무명 검객만 — 옷 색 줄 번호 · 붙인 이름 · 메인 · 보조 유파 — 대회마다 새로 만든다, makeNameless) }
+//  시험판(cfg.testMode — 사장님 10/29 17:5x): 신청 창 늘 열림 · 내 경기는 두 팀을 알면 바로 · 상대끼리 경기는 앞 대진이 다 끝나면 바로 · 쉬는 시간 · 대진 시각 · 기권 없음 · 결과 시각 = 셈한 때
 //   부상 = { part 'arm' | 'leg' | 'torso' | 'head', sev(상처 심각도 — combat.js 와 같은 잣대), rests(다친 뒤 쉰 수) } · 중상 = sev ≥ SAENGSA.seriousAt
 //   팀 0 = 내 팀(자리 0 = 나) · 대진표 자리는 씨앗으로 섞는다 · 첫 대진 경기만 a · b(팀 번호)를 적고, 다음 대진은 앞 두 경기의 이긴 팀(sidesOf).
 //  경기 = { id 'r<대진>m<번호>', round, index, a, b, result } · 결과 = { at(저장 시각), winner 'a' | 'b', entrants { a: [key], b: [key] }, fighters { key: { hp, injuries, alive } },
@@ -11,6 +12,7 @@
 //   2단계 엔진(실제 2:2 싸움)도 같은 꼴을 돌려준다(matchSetup → 엔진 → finishMine · 설계 §8).
 import { SAENGSA } from './config.js';
 import { roundAt, restUntil, startAt, signupWindow, windowOf, shiftDay } from './saengsa_clock.js';
+import { NAMELESS_NAMES } from './saengsa_names.js';
 
 export const SCHOOLS5 = Object.freeze(['german', 'italian', 'iberian', 'japanese', 'chinese']);
 /** 무명 검객 인물 id (사장님 10/29 15:5x — 이름난 인물은 한 대회에 한 번씩 · 남는 자리를 채움 · 겉모습 saengsa_nameless.js) */
@@ -59,11 +61,12 @@ export const roundsOf = (teamCount) => Math.round(Math.log2(teamCount));
  */
 export function createTournament({ day, seed, at, companions, roster, lend = null, drawWeapon, weaponInfo, profOf, cfg = SAENGSA }) {
   const n = bracketTeams(cfg), size = cfg.teamSize, r = rng(seed);
+  const usedNames = new Set();
   const fighter = (team, slot, id, lendWeapon = null, cloth = null) => {
     const weapon = lendWeapon ?? drawWeapon(r);
     const { school, tier } = weaponInfo(weapon);
     const f = { key: `${team}-${slot}`, id, weapon, school, tier, prof: { ...profOf(id) }, lent: !!lendWeapon, hp: cfg.hpMax, injuries: [], dead: false };
-    if (id === NAMELESS) f.cloth = cloth ?? 0;
+    if (id === NAMELESS) Object.assign(f, { cloth: cloth ?? 0 }, makeNameless(r, usedNames, cfg));
     return f;
   };
   const mineIds = ['player', ...companions].slice(0, size);
@@ -87,6 +90,25 @@ export function createTournament({ day, seed, at, companions, roster, lend = nul
   return { v: 1, day, seed: seed >>> 0, signedAt: at, teams, matches, status: 'active', champion: null, endedAt: null, chests: null };
 }
 
+/**
+ * 무명 검객 하나 (사장님 10/29 17:5x 대회마다 새로 · 18:2x 결정 숫자): 다섯 유파 저마다 other 범위(0) · 메인 유파(무작위) main 범위(0 ~ 2) ·
+ *  보조 유파(무작위 — 메인과 같을 수 있고, 같으면 높은 쪽만 남아 한 유파만 높음) sub 범위(0 ~ 2) · 0 = 그 유파 못 씀 ·
+ *  이름 = 메인 유파 문화의 이름 표에서(한 대회 안에서 되도록 안 겹침)
+ *  돌려줌 { prof, main, sub, tag }
+ */
+export function makeNameless(r, used = new Set(), cfg = SAENGSA) {
+  const N = cfg.nameless, int = ([lo, hi]) => lo + Math.min(hi - lo, Math.floor(r() * (hi - lo + 1)));
+  const prof = Object.fromEntries(SCHOOLS5.map((s) => [s, int(N.other)]));
+  const main = pickOne(r, SCHOOLS5), sub = pickOne(r, SCHOOLS5);
+  const mainV = int(N.main), subV = int(N.sub);
+  prof[main] = mainV;
+  prof[sub] = sub === main ? Math.max(mainV, subV) : subV;
+  const pool = NAMELESS_NAMES[main] ?? [], fresh = pool.filter((n) => !used.has(n));
+  const tag = pickOne(r, fresh.length ? fresh : pool) ?? '';
+  used.add(tag);
+  return { prof, main, sub, tag };
+}
+
 // ── 대진표 읽기 ──
 export const matchById = (t, id) => t.matches.find((m) => m.id === id) ?? null;
 const matchAt = (t, round, index) => t.matches.find((m) => m.round === round && m.index === index) ?? null;
@@ -108,10 +130,16 @@ function lastResultAt(t, team, round) {
   for (const m of t.matches) if (m.round < round && m.result && sidesOf(t, m).includes(team)) at = Math.max(at ?? -Infinity, m.result.at);
   return at;
 }
-/** 이 경기를 시작할 수 있는 시각 = max(대진 시각, 두 팀 저마다 마지막 결과 + 쉬는 시간) · 두 팀을 아직 모르면 null */
+/** 앞 대진이 다 끝났나 (시험판의 상대끼리 경기 차례) */
+const roundDone = (t, round) => t.matches.every((m) => m.round !== round || m.result);
+/**
+ * 이 경기를 시작할 수 있는 시각 = max(대진 시각, 두 팀 저마다 마지막 결과 + 쉬는 시간) · 두 팀을 아직 모르면 null
+ *  시험판: 시각 없음 — 내 경기는 두 팀을 알면 0(바로) · 상대끼리 경기는 앞 대진이 다 끝나야 0 (아니면 null)
+ */
 export function readyAt(t, m, cfg = SAENGSA) {
   const [A, B] = sidesOf(t, m);
   if (A == null || B == null) return null;
+  if (cfg.testMode) return isMine(t, m) || m.round === 0 || roundDone(t, m.round - 1) ? 0 : null;
   let at = roundAt(t.day, m.round, cfg);
   for (const team of [A, B]) {
     const last = lastResultAt(t, team, m.round);
@@ -131,7 +159,7 @@ export function matchState(t, m, now, cfg = SAENGSA) {
   const at = readyAt(t, m, cfg);
   if (at == null) return 'wait';
   if (now < at) return 'soon';
-  return isMine(t, m) && now < deadlineOf(t, cfg) ? 'ready' : 'due';
+  return isMine(t, m) && (cfg.testMode || now < deadlineOf(t, cfg)) ? 'ready' : 'due';
 }
 /** 내 팀이 떨어졌나 */
 export const myTeamOut = (t) => !!t && t.matches.some((m) => m.result && sidesOf(t, m).includes(0) && winnerOf(t, m) !== 0);
@@ -264,17 +292,18 @@ const membersOf = (t, team, keys) => keys.map((k) => t.teams[team].members.find(
  */
 export function advance(t, now, cfg = SAENGSA) {
   if (!t || t.status === 'done') return 0;
-  const deadline = deadlineOf(t, cfg);
+  const deadline = cfg.testMode ? Infinity : deadlineOf(t, cfg); // 시험판은 기권 없음
   const dueAt = (m) => {
     const at = readyAt(t, m, cfg);
     if (at == null) return Infinity;
-    return isMine(t, m) ? Math.max(at, deadline) : at;
+    if (isMine(t, m)) return cfg.testMode ? Infinity : Math.max(at, deadline);
+    return at;
   };
   let n = 0;
   for (;;) {
-    const m = t.matches.find((x) => !x.result && dueAt(x) <= now);
+    const m = t.matches.find((x) => { if (x.result) return false; const d = dueAt(x); return Number.isFinite(d) && d <= now; }); // 끝없음(두 팀 모름 · 시험판 내 경기)은 now = Infinity 여도 끝내지 않음
     if (!m) break;
-    const [A, B] = sidesOf(t, m), at = dueAt(m);
+    const [A, B] = sidesOf(t, m), at = cfg.testMode ? now : dueAt(m); // 시험판은 셈한 때
     if (isMine(t, m)) {
       const mineSide = A === 0 ? 'a' : 'b';
       applyResult(t, m, { winner: mineSide === 'a' ? 'b' : 'a', fighters: {}, entrants: { a: [], b: [] }, by: 'forfeit' }, at, cfg);
@@ -343,7 +372,7 @@ export function openChests(t, cfg = SAENGSA) {
 /** 새로 신청할 수 있나: 신청 창이 열렸고 · 대회가 없거나 끝났거나 내 팀이 떨어졌고 · 그 창의 대회에 이미 들지 않았을 때 */
 export function canSignUp(now, t, cfg = SAENGSA) {
   const w = signupWindow(now, cfg);
-  return w.open && (!t || t.status === 'done' || myTeamOut(t)) && t?.day !== w.day;
+  return w.open && (!t || t.status === 'done' || myTeamOut(t)) && (cfg.testMode || t?.day !== w.day); // 시험판은 같은 날 몇 번이고
 }
 /**
  * 일정 상태 (대기실 칸 · 생사전 화면 머리줄): kind
@@ -353,7 +382,7 @@ export function scheduleState(now, t, cfg = SAENGSA) {
   const w = signupWindow(now, cfg);
   if (t && t.status !== 'done' && !myTeamOut(t)) {
     const s = startAt(t.day, cfg);
-    return now < s ? { kind: 'waiting', startAt: s } : { kind: 'running' };
+    return now < s && !cfg.testMode ? { kind: 'waiting', startAt: s } : { kind: 'running' };
   }
   if (canSignUp(now, t, cfg)) return { kind: 'signup', until: w.to, day: w.day };
   if (t && t.day === w.day && w.open) return { kind: 'waiting', startAt: startAt(t.day, cfg) };
