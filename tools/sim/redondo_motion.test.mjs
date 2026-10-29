@@ -65,7 +65,7 @@ test('기본값 — 휘청 고침 켬 · 감기 꼴 = 안 A(slowSpin — 사장�
   assert.equal(windSpec().kind, 'spin');
   assert.ok(Math.abs(windRate() - (2 * Math.PI) / UA.rdSlow.loopT) < 1e-12, '안 A 한 바퀴');
   assert.equal(UA.rdRelease, 'direct'); // 10/30 00:1x '바로 내려치는 게 아닌가?' — 'chamber' = 10/29 판 왼 어깨 뒤 길
-  assert.deepEqual({ ...UA.rdDiag }, { tilt: 45, from: 95, to: -45, at: 0.7, pull: 0, target: 'lung', lowY: 0.35 });
+  assert.deepEqual({ ...UA.rdDiag }, { angle: 60, from: 95, to: -45, at: 0.7, pull: 0, target: 'lung', lowY: 0.35 }); // angle 60 — 사장님 10/30 01:3x '그래 60도로 진행해' (벰 면이 땅과 이루는 각)
 });
 
 test('휘청 고침 — 네 칼(츠바이핸더 · 플랑베르주 · 티소나 · 듀란달) 손가락을 대고 길게 눌러 감아도 가슴이 크게 안 젖혀지고 · 무게중심이 발 둘레 안 · 안 넘어짐 / 고치기 전(rdSteady 0)은 휘청', () => {

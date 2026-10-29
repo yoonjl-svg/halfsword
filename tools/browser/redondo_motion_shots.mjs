@@ -171,7 +171,7 @@ for (const mode of modes) {
     const tRel = strike[0]?.t;
     const tCut = strike.find((r) => r.cut)?.t;
     const wounds = await page.evaluate(() => (window.game.enemy.wounds ?? []).map((w) => `${w.part}:${(+w.severity).toFixed(2)}`));
-    const s = { mode, wind: windMode, release: info.release, steady: info.steady, tag: `release_${info.release}`, liftSec: tRel != null && tCut != null ? +((tCut - tRel) / info.tempo).toFixed(3) : null, strikeSec: strike.length ? +((strike.at(-1).t - strike[0].t) / info.tempo).toFixed(3) : null, tipStrikeMax: +Math.max(...strike.map((r) => r.tip)).toFixed(1), tiltStrikeMax: +Math.max(...strike.map((r) => r.tilt)).toFixed(1), wounds, shots };
+    const s = { mode, wind: windMode, release: info.release, steady: info.steady, tag: `release_${info.release}${process.env.TAG ? `_${process.env.TAG}` : ""}`, liftSec: tRel != null && tCut != null ? +((tCut - tRel) / info.tempo).toFixed(3) : null, strikeSec: strike.length ? +((strike.at(-1).t - strike[0].t) / info.tempo).toFixed(3) : null, tipStrikeMax: +Math.max(...strike.map((r) => r.tip)).toFixed(1), tiltStrikeMax: +Math.max(...strike.map((r) => r.tilt)).toFixed(1), wounds, shots };
     summary.push(s);
     console.log(`SUMMARY ${mode}: 뗌 → 벰 ${s.liftSec} s · 내려침 ${s.strikeSec} s · 칼끝 최고 ${s.tipStrikeMax} m/s · 가슴 기울기 최고 ${s.tiltStrikeMax}° · 상대 상처 ${wounds.join(' ') || '없음'}`);
     await ctx.close();

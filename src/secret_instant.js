@@ -1777,7 +1777,7 @@ function comboPlanRd(f, I, m, A) {
  * 사람 풍차 베기 곧장 사선 내려침 (사장님 10/30 00:1x '근데 궤적이 8자 모양으로 현란해 보이는데. 바로 내려치는 게 아닌가?' · config UNIQUE_ASSIST.rdRelease 'direct' · rdDiag ·
  *  기록 docs/strike/redondo_hold_2026-10-29.md §8-9): 머리 위에서 돌던 칼을 그 자리에서 곧장 왼 위로 들어(맞힘 없음 · 한 토막) 왼 위 → 오른 아래 한 면으로 내려 벤다(맞힘 · 6 토막).
  *  10/29 판(위 comboPlanRd — 왼 어깨 뒤로 넘겨 왼팔 위로 떨어뜨림)은 머리 위 원 뒤에 어깨 뒤 고리가 하나 더 붙어 칼끝 길이 8 자였다(위에서 본 칼끝 — 기록 §8-9).
- *  면 = 어깨 S → 겨눈 곳 P 줄 dc · 그에 수직인 '왼 위' u (하늘에서 칼 안 든 쪽으로 tilt °) — 칼 D(θ) = dc cos θ + u sin θ (θ = from → to °) ·
+ *  면 = 어깨 S → 겨눈 곳 P 줄 dc · 그에 수직인 '왼 위' u (칼 안 든 쪽 가로에서 하늘 쪽으로 angle ° — 벰 면이 땅과 이루는 각 · 10/30 01:3x 사장님 60) — 칼 D(θ) = dc cos θ + u sin θ (θ = from → to °) ·
  *  손 = S + r · (dc cos θ/2 + u sin θ/2) (칼날 at 자리가 P 에 오는 r — 격살 한 칼 comboPlanAim 과 같은 틀 · 마지막 ⅓ 에 pull 몫만큼 당김 — 기본 0 끝까지 뻗음). 칼이 아직 머리 위에 없으면(섞는 첫머리) 먼저 그 가로 쪽으로 세운다
  */
 function comboPlanRdDiag(f, I, m, A) {
@@ -1801,8 +1801,8 @@ function comboPlanRdDiag(f, I, m, A) {
   const dc = P.clone().sub(S);
   const dist = dc.length();
   dc.normalize();
-  const tl = (R.tilt ?? 45) * D2R;
-  const u = new THREE.Vector3(0, Math.cos(tl), -s * Math.sin(tl));
+  const an = (R.angle ?? 45) * D2R; // 벰 면이 땅과 이루는 각 (90 = 곧게 내려침 · 0 = 가로)
+  const u = new THREE.Vector3(0, Math.sin(an), -s * Math.cos(an));
   u.addScaledVector(dc, -u.dot(dc)).normalize();
   const r0 = clamp(dist - HL - BL * (R.at ?? 0.7), 0.15, Lf);
   const pose = (w) => {
