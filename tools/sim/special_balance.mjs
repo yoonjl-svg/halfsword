@@ -103,6 +103,51 @@ function edgeOf(f) {
   const pl = p.length();
   return pl > 1e-3 ? p.dot(ed) / pl : null;
 }
+// 10/29 특수 공격 진단 (사장님 '쓸 기회가 없거나 잘 안 맞는거지 공격력이 약한거니?'): 내 칼날 ↔ 상대 몸 콜라이더 겉 거리 (duplieren_check.mjs segCol 과 같은 셈 — 음수 = 닿음)
+const _V = (p) => new THREE.Vector3(p.x, p.y, p.z);
+const _Q = (q) => new THREE.Quaternion(q.x, q.y, q.z, q.w);
+function segPoint(a, b, p) {
+  const u = b.clone().sub(a);
+  const t = Math.max(0, Math.min(1, p.clone().sub(a).dot(u) / Math.max(1e-9, u.lengthSq())));
+  return a.clone().addScaledVector(u, t).distanceTo(p);
+}
+function segCol(a, b, col) {
+  const sh = col.shape;
+  const ct = _V(col.translation());
+  const cq = _Q(col.rotation());
+  if (sh.type === 0) return segPoint(a, b, ct) - sh.radius;
+  if (sh.type === 2) {
+    const ax = new THREE.Vector3(0, sh.halfHeight, 0).applyQuaternion(cq);
+    let m = Infinity;
+    for (let i = 0; i <= 10; i++) m = Math.min(m, segPoint(ct.clone().sub(ax), ct.clone().add(ax), a.clone().lerp(b, i / 10)));
+    return m - sh.radius;
+  }
+  if (sh.type === 1) {
+    const he = sh.halfExtents;
+    const inv = cq.clone().invert();
+    let best = Infinity;
+    for (let i = 0; i <= 10; i++) {
+      const q = a.clone().lerp(b, i / 10).sub(ct).applyQuaternion(inv);
+      const qx = Math.abs(q.x) - he.x, qy = Math.abs(q.y) - he.y, qz = Math.abs(q.z) - he.z;
+      best = Math.min(best, Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0));
+    }
+    return best;
+  }
+  return Infinity;
+}
+/** 내 칼날 ↔ 상대 몸 가장 가까운 겉 거리 (m) · 그 몸 이름 */
+function bodyGap(P, D) {
+  if (!P.sword || !D?.bodies) return { gap: Infinity, part: null };
+  const b0 = P.bladePoint(0, new THREE.Vector3()), b1 = P.bladePoint(1, new THREE.Vector3());
+  let gap = Infinity, part = null;
+  for (const [n, b] of Object.entries(D.bodies)) {
+    const col = b?.collider?.(0);
+    if (!col) continue;
+    const g = segCol(b0, b1, col);
+    if (g < gap) (gap = g), (part = n);
+  }
+  return { gap, part };
+}
 const SWORD_ARM = new Set(['uarmS', 'farmS']);
 const DISARM_SEV = (1 - CONFIG.VITALS.dropSwordArm) / 0.7; // fighter.js applyWound: 칼 팔 기능 −= 심각도 × 0.7 → dropSwordArm 아래면 칼 놓침
 /** 새 몸이었다면 이 상처 하나로: 'kill' 즉사(fighter.js applyWound 치명상 문턱) · 'disarm' 칼 놓침 · 'deep' 심각도 ≥ 1 · null */
@@ -241,6 +286,7 @@ function cavBot(G, P, uq, bot, rnd, R, guard) {
   const UAc = CONFIG.UNIQUE_ASSIST;
   const c = { stage: 'idle', bound: 0, second: 0, stick: null, press: false };
   c.start = () => {
+    c.cool = null; // 탭을 낸 때 식힘 중이었나 (10/29 진단)
     c.bound = 0;
     c.second = 0;
     c.rec = null;
@@ -330,6 +376,7 @@ function cavBot(G, P, uq, bot, rnd, R, guard) {
       if (G.t < c.backEnd) return;
       c.bound = 1;
       if (c.hold) {
+        c.cool = (uq.coolLeft?.(R.name) ?? 0) > 0;
         P.skill.thrust(); // 물러나는 채 탭
         c.stick = null;
         c.stage = 'tap2';
@@ -358,6 +405,7 @@ function cavBot(G, P, uq, bot, rnd, R, guard) {
       const now = R.cav ? guard.clock : uq.t;
       if (now < c.fireAt) return;
       c.second = 1;
+      c.cool = (uq.coolLeft?.(R.name) ?? 0) > 0;
       P.skill.thrust();
       c.stage = 'tap2';
       c.t2 = G.t;
@@ -555,19 +603,46 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
     if (cav && R.rd && rnd() < RD_COMBO) cav.pre = [OTHER[Math.floor(rnd() * OTHER.length)]]; // 이어 긋기 사슬 안에서 누름 (앞 칼 하나)
     if (cav) cav.start();
     else bot.queue = bot.make(R.strokes);
-    cur = { t0: +t.toFixed(3), tq: null, why, cav: !!cav, hits: [], sev: 0, sevSp: 0, fired0: uq.stats?.fired?.[R.name] ?? 0, firedAll0: { ...(uq.stats?.fired ?? {}) }, s0: slog.length, dist0: r3(dist) };
+    cur = { t0: +t.toFixed(3), tq: null, why, cav: !!cav, hits: [], sev: 0, sevSp: 0, fired0: uq.stats?.fired?.[R.name] ?? 0, firedAll0: { ...(uq.stats?.fired ?? {}) }, s0: slog.length, dist0: r3(dist), cool: cav ? null : (uq.coolLeft?.(R.name) ?? 0) > 0 };
     atts.push(cur);
     strokesN++;
+  };
+  // 10/29 진단: 특수 공격이 나간 때마다 — 나간 때 상대 거리 · 끌고 가는 칼(iai tech)이 돌았나 · 칼날 ↔ 상대 몸 가장 가까운 겉 거리 · 그동안 가장 가까운 상대 거리 · 결과(막힘 · 맞음)
+  const fires = [];
+  let fireCur = null;
+  let firedSeen = 0;
+  const fireTick = () => {
+    const fNow = uq.stats?.fired?.[R.name] ?? 0;
+    if (fNow > firedSeen) {
+      firedSeen = fNow;
+      fireCur = { t: G.t, dist0: P.foeDistance(), snap: false, gap: Infinity, gapPart: null, minDist: Infinity, distSnap0: null, hits: [], res: null, done: false };
+      fires.push(fireCur);
+    }
+    if (!fireCur || fireCur.done) return;
+    const I = P.iai;
+    if (I && I.tech === R.name) {
+      if (!fireCur.snap) fireCur.distSnap0 = P.foeDistance();
+      fireCur.snap = true;
+      const g = bodyGap(P, A);
+      if (g.gap < fireCur.gap) (fireCur.gap = g.gap), (fireCur.gapPart = g.part);
+      fireCur.minDist = Math.min(fireCur.minDist, P.foeDistance());
+    } else if (fireCur.snap || G.t - fireCur.t > 1.5) {
+      fireCur.done = true;
+      const r = P.instantResult;
+      if (fireCur.snap && r?.combo && r.tech === R.name) fireCur.res = { hits: r.hits, blocked: !!r.blocked, zone: r.zone, type: r.type, E: r3(r.energy), sev: r3(r.sev) };
+    }
   };
   G.before = () => {
     const t = G.t;
     const dist = P.foeDistance();
     cav?.step();
+    fireTick();
     if (cur && !cur.cav && !bot.queue.length && cur.tq == null) cur.tq = t;
     if (cur?.cav && cur.tq == null && !cav.busy() && !bot.queue.length) {
       cur.tq = t;
       cur.bound = cav.bound;
       cur.second = cav.second;
+      cur.cool = cav.cool;
     }
     if (cur && cur.tq != null && t - cur.tq > 0.35) cur = null;
     const motion = A.armed && dist < 2.2 && Math.hypot(A.hitPointVel.x, A.hitPointVel.y, A.hitPointVel.z) > 2.5;
@@ -629,6 +704,7 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
     if (tn === R.name) {
       spSev += sv;
       if (sv > 0) spHits++;
+      if (fireCur && !fireCur.done) fireCur.hits.push({ type: r.type, zone: r.zone, sev: r3(sv), E: r3(r.energy), edge: r3(edgeOf(P)) });
     }
     if (cur) addHit(cur, r, rest[1]?.v?.part ?? null, P, R.name);
   };
@@ -665,6 +741,7 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
       killedBy: !A.alive ? lastTech : null,
       dealt: r3(dealt), bleedDealt: r3(bleedDealt), recv: r3(recv), spSev: r3(spSev), spHits, strokesN, taps, counters,
       fired: { ...(uq.stats?.fired ?? {}) }, uqStrokes: slog.length, wind: windStats(uq),
+      fires: fires.map((x) => ({ dist0: r3(x.dist0), snap: x.snap, distSnap0: r3(x.distSnap0), minDist: r3(x.minDist), gap: r3(x.gap), gapPart: x.gapPart, hits: x.hits, res: x.res })),
       downs: downs.length, downsMiss: downs.filter((s) => !s.landed).length,
       atts,
     };
@@ -807,6 +884,28 @@ export function attSummary(atts, name, row = null) {
     firstTech: Object.entries(atts.reduce((m, a) => ((m[a.strokes?.[0]?.unique ?? a.strokes?.[0]?.tech ?? '-'] = (m[a.strokes?.[0]?.unique ?? a.strokes?.[0]?.tech ?? '-'] ?? 0) + 1), m), {})).sort((a, b) => b[1] - a[1]).slice(0, 4),
   };
 }
+/** 10/29 진단 묶음: 시도 → 식힘 · 나감 / 나감 → 끌고 간 칼 · 막힘 · 맞음(상처) · 스침(둔타 · 심각도 0) · 헛침(칼날 ↔ 상대 몸 겉 거리) / 상처당 심각도 · 맞은 곳 · 나간 때 거리 */
+export function fireDiag(runs) {
+  const atts = runs.flatMap((r) => r.atts);
+  const F = runs.flatMap((r) => r.fires ?? []);
+  const q = (a, p) => { const b = a.filter((x) => x != null && isFinite(x)).sort((x, y) => x - y); return b.length ? r3(b[Math.min(b.length - 1, Math.floor(p * (b.length - 1)))]) : null; };
+  const wound = (h) => h.type !== 'blunt' && h.sev > 0;
+  const cls = F.map((f) => (!f.snap ? 'noStrike' : f.hits.some(wound) ? 'wound' : f.hits.length ? 'glance' : f.res?.blocked ? 'blocked' : 'miss'));
+  const by = cls.reduce((o, k) => ((o[k] = (o[k] ?? 0) + 1), o), {});
+  const H = F.flatMap((f) => f.hits);
+  const W = H.filter(wound);
+  const miss = F.filter((f, i) => cls[i] === 'miss');
+  const zones = H.reduce((o, h) => ((o[h.zone] = (o[h.zone] ?? 0) + 1), o), {});
+  const flat = H.filter((h) => h.edge != null && Math.abs(h.edge) <= CONFIG.STRIKE.edgeAlign).length;
+  return {
+    attempts: atts.length, cool: atts.filter((a) => a.cool).length, fired: atts.filter((a) => a.fired > 0).length, notFiredNotCool: atts.filter((a) => !(a.fired > 0) && !a.cool).length,
+    fires: F.length, by, blockedAny: F.filter((f) => f.res?.blocked).length,
+    hits: H.length, woundHits: W.length, bluntHits: H.filter((h) => h.type === 'blunt').length, sev0Hits: H.filter((h) => h.type !== 'blunt' && !(h.sev > 0)).length, flatHits: flat,
+    sevPerWound: { mean: r3(W.reduce((a, h) => a + h.sev, 0) / Math.max(1, W.length)), p50: q(W.map((h) => h.sev), 0.5) }, E: { p50: q(H.map((h) => h.E), 0.5) },
+    zones, dist0: [q(F.map((f) => f.dist0), 0.1), q(F.map((f) => f.dist0), 0.5), q(F.map((f) => f.dist0), 0.9)], distSnap0: q(F.map((f) => f.distSnap0), 0.5), minDist: q(F.map((f) => f.minDist), 0.5),
+    missGap: [q(miss.map((f) => f.gap), 0.1), q(miss.map((f) => f.gap), 0.5), q(miss.map((f) => f.gap), 0.9)], missGapPart: miss.reduce((o, f) => ((o[f.gapPart] = (o[f.gapPart] ?? 0) + 1), o), {}),
+  };
+}
 export function fightSummary(runs, name, row = null) {
   const n = runs.length;
   const atts = runs.flatMap((r) => r.atts);
@@ -900,8 +999,9 @@ if (isMain(import.meta.url)) {
         for (const opp of opps) for (const seed of fseeds) for (const delay of delays) runs.push(fightRun(row, seed, opp, { variant, delay, prof: +(args.prof ?? 3), dur: +(args.dur ?? 30), share: +(args.share ?? 0.5), sjit }));
         const sm = fightSummary(runs, ROWS[row].name, row);
         sm.wind = windSummary(runs.map((r) => r.wind));
+        sm.diag = fireDiag(runs);
         out.res.push({ row, variant, sum: sm, runs });
-        console.log(`${row} fight ${variant}: ${JSON.stringify({ ...sm, att: undefined })}\n   att: ${JSON.stringify(sm.att)}  (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
+        console.log(`${row} fight ${variant}: ${JSON.stringify({ ...sm, att: undefined, diag: undefined })}\n   att: ${JSON.stringify(sm.att)}\n   diag: ${JSON.stringify(sm.diag)}  (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
       }
   } else if (mode === 'ease') {
     const sig = String(args.sigmas ?? '0.03,0.06,0.09,0.12').split(',').map(Number);
