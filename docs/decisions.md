@@ -2200,3 +2200,7 @@
 ### 10/29 15:xx 사장님 결정 — 0.5 → 0.45 (AI 발도 대기 앞발) · 0.7 그대로
 - 사장님: "0.5는 0.45로 옮기고 0.7은 그냥 둬" → `SECRET.stance.iai.step` **0.5 → 0.45**(걸음 사다리 0.45 칸 '들어감' — AI 일본이 발도 대기에 들 때 앞발) · `SECRET.iaiDrawStep` **0.7 그대로**(발도 순간 앞발). 0.35 는 이때 정하지 않음.
 - 관문: fights12 · live_battery · finish_thrust 그대로 · school_ai_fights 7ade96f7 → e978b035(일본 칼 판 6 / 12) · corr 12 · smoke 34. 기록 `docs/strike/step_ladder_2026-10-29.md` §8-1 · 확인표 2841.
+
+### 10/29 15:xx 감독 안 (사장님 확인 전) — 유파 AI 베기 걸음 cutStep 0.5 → 0.45
+- 같은 '0.5 → 0.45' 규칙(사장님 15:xx '0.5는 0.45로 옮기고' · '통합할 수 있는 건 최대한')에 드는 이탈리아 · 동방 · 일본 `*_GAIT.cutStep.fwd`(AI 베기 걸음) 셋을 0.45 로 — **사장님께 따로 말씀드리지 않아 합치기 전에 여쭘**.
+- 관문: fights12 · live_battery · finish_thrust 그대로 · school_ai_fights e978b035 → f4adfe33(6 / 12) · corr 12 · smoke 34. 맞대결 16 판씩 — 동방 승 1 → 2 · 일본 4 → 4 · 이탈리아 그대로(베기 걸음 안 씀). 기록 `docs/strike/step_ladder_2026-10-29.md` §8-2 · 확인표 2842.
