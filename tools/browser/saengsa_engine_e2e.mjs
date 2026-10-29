@@ -106,6 +106,16 @@ try {
   const r2 = after2.current.matches.find((m) => m.id === m2);
   const status = await inRoot(`return root.getElementById('sgStatus').textContent;`);
   log.push({ step: 'player', control: pl.start.human == null ? 'watch' : 'player', start: pl.start.fighters, quitRecorded: !!r2.result, stillReady: await inRoot(`return root.getElementById('sgFight').hidden === false;`), status });
+  // ④ 같은 경기를 다시 끝까지 (내 몸은 서 있기만 — 동료 · 상대 AI 가 판을 끝냄): 결과의 broken 이 적히고 부러진 내 무기가 대회 끝까지 남는가
+  const pf = await playOut('e9_player_full');
+  await until(() => !document.querySelector('#gameEntrance').shadowRoot.getElementById('sgDone').hidden, 100, 100);
+  await shot('e10_player_result');
+  const after3 = await saved_();
+  const r3 = after3.current.matches.find((m) => m.id === m2).result;
+  log.push({ step: 'player_full', sim: pf.end?.sim, recorded: !!r3, by: r3?.by, winner: r3?.winner,
+    resultBroken: r3 && Object.fromEntries(Object.entries(r3.fighters).map(([k, v]) => [k, !!v.broken])),
+    cupBroken: after3.current.broken, mineBroken: after3.current.teams[0].members.map((f) => `${f.weapon}${f.broken ? ':부러짐' : ''}`),
+    foePoolBroken: after3.current.teams.filter((x) => !x.mine && x.pool?.some((w) => w.broken)).map((x) => x.pool.filter((w) => w.broken).map((w) => w.weapon)) });
 } catch (e) {
   errors.push('harness: ' + e.message.split('\n')[0]);
 }
