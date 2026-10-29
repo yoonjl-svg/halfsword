@@ -1,7 +1,8 @@
 // 생사전 인물 · 무기 자료 (src/saengsa_rules.js 에 넘기는 쪽 — 순수 규칙은 자료를 모른다)
 //  로스터 = 주 인물(characters.js CHARACTERS) 가운데 방랑 전용(wander_rules.js WANDER_EXCLUSIVE — 아르토리아)을 뺀 열하나 · 얼터 · 손님 인물은 넣지 않는다 (감독 10/29).
 //  무기: 내 팀 세 사람 = 내가 가진 무기에서 배정(사장님 10/29 18:2x '무기는 랜덤 뽑기가 아니라 플레이어가 배정해 주는거야' — 신청 때 · 경기마다) — 가진 무기 = owned_weapons.js ownedWeapons(상점이 채울 자리).
-//   상대 팀 = 무작위(사장님 10/29 14:1x 요지) — 카드 뽑기와 같은 목록 · 같은 등급 확률(weapons.js TIER_DRAW · drawWeaponCards — 칸 하나) · 씨앗 난수.
+//   상대 팀 = 팀마다 무기 다섯(사장님 10/29 19:5x — 전용무기 + 카드 뽑기와 같은 목록 · 같은 등급 확률에서 ??? 를 뺀 표 · 서로 다르게 · 씨앗 난수 — drawPool · signatureOf) → AI 가 나눠 줌(saengsa_rules.js aiArm).
+//   전용무기 = 인물 시트 무기(characters.js weapon) 가운데 등급이 SAENGSA.aiPool.signatureTiers(에픽 · 레전드)인 것 — 무명 검객은 없음.
 //  입장 조건(18:2x): 호칭 SAENGSA.entry.title(정복자) + 가진 무기 SAENGSA.entry.weapons 개 — entryState
 //  숙련도: 인물 = saengsa_proficiency.js proficiencyOf(character_temperament.js 표) · 무명 검객 = 대회마다 새로(saengsa_rules.js makeNameless — 사장님 10/29 18:2x) ·
 //   나 = 스킬트리 — 그 유파에서 익힌 칸 수로(사장님 10/29 17:5x · 18:1x — config SAENGSA.playerProf · 확인표 2792) · 무유파 무기는 빠른 셈 규칙(saengsa_rules.js profFor)
@@ -10,7 +11,7 @@
 import { SAENGSA } from './config.js';
 import { CHARACTERS, CHARACTERS_BY_ID } from './characters.js';
 import { WANDER_EXCLUSIVE } from './wander_rules.js';
-import { WEAPON_LIST, RETIRED_WEAPONS, getWeapon, drawWeaponCards } from './weapons.js';
+import { WEAPON_LIST, RETIRED_WEAPONS, getWeapon, drawWeaponCards, TIER_DRAW, BREAK } from './weapons.js';
 import { traditionOf } from './schools.js';
 import { portraitSrc } from './portraits.js';
 import { readLearned } from './skill_tree_store.js';
@@ -33,10 +34,19 @@ export const SPECIAL_COMPANIONS = Object.freeze([]);
 export const SAENGSA_WEAPONS = Object.freeze(WEAPON_LIST.filter((w) => w.id !== 'excalibur_replica' && !RETIRED_WEAPONS.has(w.id) && !w.characterOnly).map((w) => w.id));
 /** 씨앗 난수로 무기 하나 (등급 먼저 — TIER_DRAW) */
 export const drawWeapon = (rnd) => drawWeaponCards([...SAENGSA_WEAPONS], 1, { rnd })[0];
-/** 무기 → { school, tier } (규칙의 빠른 셈 · 카드) */
+/** 상대 팀 무기 뽑기 확률 = 카드 뽑기 TIER_DRAW 에서 SAENGSA.aiPool.excludeTiers(???) 를 0 으로 (남은 등급끼리 비율 — drawWeaponCards 가 0 인 등급을 건너뜀) */
+export const AI_TIER_DRAW = Object.freeze(Object.fromEntries(Object.entries(TIER_DRAW).map(([t, w]) => [t, SAENGSA.aiPool.excludeTiers.includes(t) ? 0 : w])));
+/** 상대 팀 무기 n 개 (서로 다르게 · taken 은 뺌 — 전용무기) */
+export const drawPool = (rnd, n, taken = []) => drawWeaponCards(SAENGSA_WEAPONS.filter((id) => !taken.includes(id)), n, { rnd, tierDraw: AI_TIER_DRAW });
+/** 전용무기 (사장님 10/29 19:5x '에픽 이상의 무기만을 전용무기라고 정의함'): 시트 무기 등급이 signatureTiers 면 그 무기 id · 아니면 null (무명 검객 · 나 = null) */
+export function signatureOf(id) {
+  const w = id === NAMELESS || id === 'player' ? null : CHARACTERS_BY_ID[id]?.weapon;
+  return w && SAENGSA.aiPool.signatureTiers.includes(getWeapon(w).tier) ? w : null;
+}
+/** 무기 → { school, tier, frag } (규칙의 빠른 셈 · 카드) · frag = 무거운 충돌 한 번에 부러질 확률(weapons.js breakChance(BREAK.jRef) — 등급표 · 재질 · 무기 고유 값) */
 export function weaponInfo(id) {
   const w = getWeapon(id);
-  return { school: traditionOf(w), tier: w.tier };
+  return { school: traditionOf(w), tier: w.tier, frag: typeof w.breakChance === 'function' ? w.breakChance(BREAK.jRef) : 0 };
 }
 /** 가진 무기 (배정할 수 있는 것 — owned_weapons.js) */
 export { ownedWeapons };
@@ -92,4 +102,4 @@ export const weaponName = (id) => getWeapon(id).nameKo.replace(/\s*\(.*\)\s*$/, 
 /** 무기 그림 주소 */
 export const weaponThumb = (id) => `ui/weapons/${getWeapon(id).id}.webp`;
 /** 규칙에 넘길 자료 묶음 */
-export const SAENGSA_DATA = Object.freeze({ roster: SAENGSA_ROSTER, drawWeapon, weaponInfo, profOf });
+export const SAENGSA_DATA = Object.freeze({ roster: SAENGSA_ROSTER, drawWeapon, drawPool, signatureOf, weaponInfo, profOf });

@@ -54,6 +54,8 @@
 .sg-chip-btn { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-s); line-height: 16px; color: var(--c-sub); background: none; }
 .sg-chip-btn[aria-checked="true"] { border-color: var(--c-accent); color: var(--c-accent); }
 .sg-chip-btn:disabled { opacity: .35; cursor: default; } /* 다른 사람에게 배정한 무기 */
+.sg-chip-btn[data-broken] { border-style: dashed; } /* 부러진 무기(그래도 줄 수 있음) */
+.sg-tag[data-kind="broken"] { background: color-mix(in srgb, var(--c-alert) 30%, transparent); }
 .sg-pick-actions { display: flex; justify-content: flex-end; margin-left: auto; }
 :host .sg-pick-actions .primary { min-width: 88px; }
 @media (max-height: 500px) {
@@ -126,7 +128,9 @@
 .sg-mh b { font-size: var(--fs-m); outline: none; }
 .sg-mh-sub { font-size: var(--fs-s); color: var(--c-sub); }
 .sg-rows { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px; width: 100%; max-width: 1220px; margin: 0 auto; }
-.sg-row-label { margin: 0 0 3px; font-size: var(--fs-s); color: var(--c-sub); }
+.sg-row-label { margin: 0 0 3px; font-size: var(--fs-s); color: var(--c-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sg-row-pool i { font-style: normal; opacity: .6; } /* 상대 팀 무기 다섯 — 지금 든 무기만 밝게 */
+.sg-row-pool i[data-on] { opacity: 1; color: var(--c-text); }
 .sg-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .sg-card { position: relative; display: grid; grid-template-columns: 52px minmax(0, 1fr); grid-template-areas: "face body" "prof prof"; column-gap: 9px; row-gap: 5px; align-items: start; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: rgba(0, 0, 0, .25); color: var(--c-text); text-align: left; }
 button.sg-card { cursor: pointer; }

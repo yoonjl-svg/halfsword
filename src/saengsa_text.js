@@ -17,8 +17,10 @@ export const SAENGSA_TEXT = Object.freeze({
   pick: '동료 고르기',
   weapon: '무기',
   noWeapon: '무기 없음',
+  broken: '부러짐', // 부러진 무기(사장님 10/29 20:1x — 대회 끝까지 부러진 채) · 카드 무기 이름 옆 · 무기 배정 칸 · 팀 무기
   pickWeapons: '세 사람 모두 무기를 고르십시오.',
   arm: '무기 배정', // 경기 화면 — 나설 사람의 무기를 바꿈(사장님 10/29 18:2x 경기마다 배정)
+  teamPool: '팀 무기', // 경기 화면 상대 팀 이름표 끝 — 그 팀이 받은 무기 다섯(사장님 10/29 19:5x)
   hire: '고용',
   confirm: '확인',
   myTeam: '내 팀',

@@ -158,12 +158,12 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
     const cells = f.prof && 'none' in f.prof && f.id !== 'player' ? [...SCHOOL_CELLS, 'none'] : SCHOOL_CELLS;
     const prof = cells.map((s) => `<span class="sg-pc"${s === f.school ? ' data-on' : ''}><small>${SCHOOL_KO[s]}</small><b>${f.prof?.[s] ?? 0}</b></span>`).join('');
     const tag = pick ? 'button' : 'div';
-    const label = `${fighterName(f)} · 체력 ${hp} · ${injuryText(inj, (i) => isSerious(i))} · ${weaponName(f.weapon)}${dead ? ` · ${T.dead}` : ''}`;
+    const label = `${fighterName(f)} · 체력 ${hp} · ${injuryText(inj, (i) => isSerious(i))} · ${weaponName(f.weapon)}${f.broken ? ` ${T.broken}` : ''}${dead ? ` · ${T.dead}` : ''}`;
     return `<${tag} ${pick ? 'type="button" ' : ''}class="sg-card" data-key="${f.key}"${pick ? ` aria-pressed="${picked}"` : ''}${dead ? ' data-dead' : ''}${entrant ? ' data-entrant' : ''}${mine ? ' data-mine' : ''}${pick && dead ? ' disabled' : ''} aria-label="${esc(label)}">
       <img class="sg-face" src="${esc(portraitOf(f.id, f.cloth))}" alt="" draggable="false">
       <span class="sg-card-body"><b class="sg-name">${esc(fighterName(f))}</b>
         <span class="sg-hp"><span class="sg-hp-bar"><i style="width:${hpPct}%"></i></span><span class="sg-hp-num">${hp}</span></span>
-        <span class="sg-wpn"><img src="${esc(weaponThumb(f.weapon))}" alt="" draggable="false"><span>${esc(weaponName(f.weapon))}</span></span>
+        <span class="sg-wpn"><img src="${esc(weaponThumb(f.weapon))}" alt="" draggable="false"><span>${esc(weaponName(f.weapon))}</span>${f.broken ? `<i class="sg-tag" data-kind="broken">${T.broken}</i>` : ''}</span>
         <span class="sg-inj"${inj.length ? ' data-hurt' : ''}>${esc(injuryText(inj, (i) => isSerious(i)))}</span></span>
       <span class="sg-prof" aria-hidden="true">${prof}</span>${dead ? `<span class="sg-badge" data-kind="dead">${T.dead}</span>` : entrant ? `<span class="sg-badge">${T.entrant}</span>` : ''}</${tag}>`;
   }
@@ -196,12 +196,17 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
     $('sgMatchSub').textContent = result ? '' : s.text;
     // 결과 뒤 카드: 결과 전 상태(pre)에 결과 몫을 겹쳐 그린다 — 쉬며 되찾은 체력 · 나은 경상은 대진표 카드에
     // 배정 중인 무기는 내 카드에 바로 (저장은 '전투 입장' 때)
-    const armed = (f, i) => (open.arms[i] && open.arms[i] !== f.weapon && !f.dead ? { ...f, weapon: open.arms[i], ...weaponInfo(open.arms[i]) } : f);
+    const brokenMine = new Set(t.broken ?? []);
+    const armed = (f, i) => (open.arms[i] && open.arms[i] !== f.weapon && !f.dead ? { ...f, weapon: open.arms[i], ...weaponInfo(open.arms[i]), broken: brokenMine.has(open.arms[i]) } : f);
     const membersAt = (side) => (result?.pre ? result.pre[side] : teamOf(side) === 0 && playable ? t.teams[0].members.map(armed) : t.teams[teamOf(side)].members);
     const row = (side, el, labelEl) => {
       const team = teamOf(side), mine = team === 0, entrants = result?.entrants?.[side] ?? [];
-      labelEl.textContent = mine ? T.myTeam : `${mineSide ? `${T.foeTeam} · ` : ''}${tName(team)}`;
-      $(el).innerHTML = membersAt(side).map((f) => card(f, { mine, pick: playable && mine, picked: open.picks.includes(f.key), entrant: entrants.includes(f.key), result })).join('');
+      // 상대 팀 무기 다섯(사장님 10/29 19:5x) — 이름표 줄 끝에 작게 · 지금 든 무기는 밝게
+      const members = membersAt(side), pool = mine ? null : t.teams[team].pool;
+      const held = new Set(members.filter((f) => !f.dead).map((f) => f.weapon));
+      const poolHtml = Array.isArray(pool) && pool.length ? `<span class="sg-row-pool"> · ${T.teamPool} ${pool.map((w) => `<i${held.has(w.weapon) ? ' data-on' : ''}>${esc(weaponName(w.weapon))}${w.broken ? ` ${T.broken}` : ''}</i>`).join(' · ')}</span>` : '';
+      labelEl.innerHTML = esc(mine ? T.myTeam : `${mineSide ? `${T.foeTeam} · ` : ''}${tName(team)}`) + poolHtml;
+      $(el).innerHTML = members.map((f) => card(f, { mine, pick: playable && mine, picked: open.picks.includes(f.key), entrant: entrants.includes(f.key), result })).join('');
     };
     row(top, 'sgCardsA', $('sgRowA'));
     row(bottom, 'sgCardsB', $('sgRowB'));
@@ -241,11 +246,11 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
   const aliveIdx = () => t.teams[0].members.map((f, i) => (f.dead ? -1 : i)).filter((i) => i >= 0);
   const armsValid = () => !!open && validAssignment(open.arms, ownedWeapons(), aliveIdx());
   function drawArm() {
-    const owned = ownedWeapons(), members = t.teams[0].members;
+    const owned = ownedWeapons(), members = t.teams[0].members, brokenMine = new Set(t.broken ?? []);
     $('sgArmRows').innerHTML = members.map((f, i) => {
       if (f.dead) return '';
       const taken = new Set(SAENGSA.assignUnique ? aliveIdx().filter((j) => j !== i).map((j) => armDraft[j]) : []);
-      const chips = owned.map((w) => `<button type="button" class="sg-chip-btn" role="radio" data-slot="${i}" data-weapon="${w}" aria-checked="${armDraft[i] === w}"${taken.has(w) ? ' disabled' : ''}>${esc(weaponName(w))}</button>`).join('');
+      const chips = owned.map((w) => `<button type="button" class="sg-chip-btn" role="radio" data-slot="${i}" data-weapon="${w}" aria-checked="${armDraft[i] === w}"${taken.has(w) ? ' disabled' : ''}${brokenMine.has(w) ? ' data-broken' : ''}>${esc(weaponName(w))}${brokenMine.has(w) ? ` · ${T.broken}` : ''}</button>`).join('');
       return `<div class="sg-arm-row"><span class="sg-arm-who"><img src="${esc(portraitOf(f.id, f.cloth))}" alt="" draggable="false"><b>${esc(fighterName(f))}</b></span><div class="sg-chips" role="radiogroup" aria-label="${esc(fighterName(f))} · ${T.weapon}">${chips}</div></div>`;
     }).join('');
     $('sgArmOk').disabled = !validAssignment(armDraft, owned, aliveIdx());

@@ -88,7 +88,8 @@ export function signUp({ now, companions, weapons = [], seed, data, cfg = SAENGS
   const old = before.current;
   if (old && old.status !== 'done') advance(old, Infinity, cfg); // 떨어진 지난 대회는 남은 경기를 끝까지
   const prize = old ? openChests(old, cfg) : null;
-  const t = createTournament({ day: signupWindow(now, cfg).day, seed, at: now, companions: team, roster: data.roster, weapons: [...weapons], drawWeapon: data.drawWeapon, weaponInfo: data.weaponInfo, profOf: data.profOf, cfg });
+  const keep = cfg.keepBrokenAfterCup && old ? (old.broken ?? []) : []; // 부러진 내 무기를 다음 대회로 넘길지 (확인 전 — 기본 아님)
+  const t = createTournament({ day: signupWindow(now, cfg).day, seed, at: now, companions: team, roster: data.roster, weapons: [...weapons], broken: keep, drawWeapon: data.drawWeapon, drawPool: data.drawPool, signatureOf: data.signatureOf, weaponInfo: data.weaponInfo, profOf: data.profOf, cfg });
   const res = updateSaengsa((d) => { d.current = t; d.draft = { companions: [...team], weapons: [...weapons] }; return true; }, storage);
   if (!res.changed) { updateWallet((w) => { w.coins += cost; return true; }); return { ok: false, why: 'save' }; }
   if (prize) addCoins(prize.reduce((s, x) => s + (x.kind === 'coins' ? x.amount : 0), 0));

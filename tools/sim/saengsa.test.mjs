@@ -359,3 +359,123 @@ test('시험판(testMode): 신청 늘 열림 · 모든 경기 바로 · 쉬는 �
   // 본판은 그대로: 같은 때 신청 창은 닫힘
   assert.equal(C.signupWindow(now).open, false);
 });
+
+test('상대 팀 무기 다섯 · 전용무기 · AI 나눠 주기 (사장님 10/29 19:5x)', async () => {
+  const roster = await import('../../src/saengsa_roster.js');
+  const { getWeapon } = await import('../../src/weapons.js');
+  // 전용무기 = 시트 무기 등급 에픽 이상 — 로스터에서는 랴오 청강검 · 미나미 모노호시자오 (마야 · 김씨의 ??? 무기는 아님 — 확인 전)
+  assert.deepEqual(Object.fromEntries(roster.SAENGSA_ROSTER.map((id) => [id, roster.signatureOf(id)]).filter(([, w]) => w)), { liao: 'qinggang', minami: 'monohoshizao' });
+  assert.deepEqual([roster.signatureOf('samira'), roster.signatureOf('renji'), roster.signatureOf(R.NAMELESS), roster.signatureOf('roland')], [null, null, null, 'durandal']);
+  assert.equal(roster.AI_TIER_DRAW.mystery, 0);
+  let sigs = 0, sigHeld = 0;
+  for (let seed = 1; seed <= 40; seed++) {
+    const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: [R.NAMELESS, R.NAMELESS], weapons: ['tree_branch', 'druid_whip', 'longsword'], ...roster.SAENGSA_DATA });
+    assert.equal(t.teams[0].pool, undefined);
+    for (const team of t.teams.slice(1)) {
+      const ids = team.pool.map((w) => w.weapon);
+      assert.equal(ids.length, SAENGSA.aiPool.size);
+      assert.equal(new Set(ids).size, ids.length, '서로 다른 다섯');
+      assert.ok(team.pool.every((w) => w.tier !== 'mystery' && getWeapon(w.weapon).tier === w.tier), '??? 없음');
+      for (const f of team.members) {
+        assert.ok(ids.includes(f.weapon), '받은 무기 다섯 가운데서');
+        if (f.sig) { sigs++; sigHeld += f.weapon === f.sig; assert.ok(ids.includes(f.sig), '전용무기는 다섯 안에'); }
+      }
+      assert.equal(new Set(team.members.map((f) => f.weapon)).size, team.members.length, '한 무기는 한 사람');
+      // 다 세어 본 가장 큰 합과 같은가 · 숙련도 0 인 사람 수는 줄일 수 없는가
+      const zeros = (ws) => team.members.filter((f, i) => R.profFor({ prof: f.prof, school: ws[i].school }) <= 0).length;
+      const sum = (ws) => team.members.reduce((a, f, i) => a + R.armScore(f, ws[i]), 0);
+      const now = team.members.map((f) => team.pool.find((w) => w.weapon === f.weapon));
+      let bestSum = -Infinity, fewest = Infinity;
+      for (const a of team.pool) for (const b of team.pool) for (const c of team.pool) {
+        if (a === b || b === c || a === c) continue;
+        bestSum = Math.max(bestSum, sum([a, b, c])); fewest = Math.min(fewest, zeros([a, b, c]));
+      }
+      assert.ok(Math.abs(sum(now) - bestSum) < 1e-9, `씨앗 ${seed} 가장 좋은 배분`);
+      assert.equal(zeros(now), fewest, `씨앗 ${seed} 0 을 피함`);
+    }
+  }
+  assert.ok(sigs > 0 && sigHeld / sigs > 0.85, `전용무기를 주인이 듦 ${sigHeld}/${sigs}`);
+  // 다친 · 죽은 사람이 생기면 다시 나눈다 (산 사람만 · 죽은 사람의 무기도 쓸 수 있음)
+  const pool = [{ weapon: 'a1', school: 'german', tier: 'legend' }, { weapon: 'a2', school: 'italian', tier: 'common' }, { weapon: 'a3', school: 'japanese', tier: 'common' }];
+  const p = (o) => ({ german: 0, italian: 0, iberian: 0, japanese: 0, chinese: 0, ...o });
+  const team = { mine: false, pool, members: [
+    { key: '1-0', id: 'x', prof: p({ german: 2, italian: 2 }), hp: 100, injuries: [], dead: false },
+    { key: '1-1', id: 'y', prof: p({ german: 2 }), hp: 100, injuries: [], dead: false },
+    { key: '1-2', id: 'z', prof: p({ japanese: 1 }), hp: 100, injuries: [], dead: false }] };
+  R.aiArm(team);
+  assert.deepEqual(team.members.map((f) => f.weapon), ['a2', 'a1', 'a3']); // x 는 이탈리아로 비켜 y 가 0 이 되지 않게
+  team.members[1].dead = true;
+  R.aiArm(team);
+  assert.deepEqual(team.members.map((f) => f.weapon), ['a1', 'a1', 'a3']); // y 가 죽자 x 가 레전드를 (죽은 y 는 마지막 무기 그대로)
+  team.members[1].dead = false;
+  team.members[0].hp = 10;
+  team.members[0].prof = p({ german: 2 });
+  team.members[2].prof = p({ italian: 1, japanese: 1 });
+  R.aiArm(team);
+  assert.equal(team.members[1].weapon, 'a1'); // 똑같이 독일 2 라도 다친 x 보다 성한 y 가 레전드
+  // 이긴 상대 팀은 결과 뒤 다시 나눔 (applyResult)
+  const t = R.createTournament({ day: '2026-10-30', seed: 3, at: 0, companions: [R.NAMELESS, R.NAMELESS], weapons: ['tree_branch', 'druid_whip', 'longsword'], ...roster.SAENGSA_DATA });
+  const m = t.matches.find((x) => x.round === 0 && x.a !== 0 && x.b !== 0), A = t.teams[m.a];
+  const key = A.members[0].key, before = structuredClone(A.members);
+  R.applyResult(t, m, { winner: 'a', fighters: { [key]: { hp: 0, injuries: [], alive: false } }, entrants: { a: [key], b: [] } }, 0);
+  const alive = A.members.filter((f) => !f.dead);
+  assert.ok(alive.length === 2 && new Set(alive.map((f) => f.weapon)).size === 2);
+  assert.deepEqual(m.result.pre.a.map((f) => f.weapon), before.map((f) => f.weapon)); // 결과의 pre 는 그 경기 무기
+});
+
+test('부러진 무기는 대회 끝까지 · 빠른 셈 부러짐 · 레전드는 안 부러짐 (사장님 10/29 20:1x)', async () => {
+  const roster = await import('../../src/saengsa_roster.js');
+  const f = (key, weapon, extra = {}) => ({ key, id: key, weapon, ...roster.weaponInfo(weapon), prof: { ...PROF }, hp: 100, injuries: [], dead: false, ...extra });
+  // 경기 한 번 부러질 확률 = 1 − (1 − 파손률)^breakClashes — 레전드 · 플라스마 · 참치 0
+  const rate = (w) => 1 - (1 - roster.weaponInfo(w).frag) ** SAENGSA.quick.breakClashes;
+  assert.deepEqual(['excalibur', 'durandal', 'lightsaber', 'frozen_tuna'].map(rate), [0, 0, 0, 0]);
+  assert.ok(rate('tree_branch') > 0.7 && rate('longsword') > 0.12 && rate('longsword') < 0.2 && rate('goujian') < 0.05);
+  let legend = 0, branch = 0;
+  for (let s = 0; s < 300; s++) {
+    const sides = { a: [f('0-0', 'excalibur')], b: [f('1-0', 'tree_branch')] };
+    const r = R.quickResolve(sides, s);
+    legend += !!r.fighters['0-0'].broken; branch += !!r.fighters['1-0'].broken;
+    const plain = R.quickResolve({ a: [{ ...sides.a[0], frag: 0 }], b: [{ ...sides.b[0], frag: 0 }] }, s); // 부러짐을 빼도 승패 · 체력 · 부상은 같다
+    assert.deepEqual([r.winner, r.fighters['0-0'].hp, r.fighters['1-0'].hp, r.fighters['1-0'].injuries], [plain.winner, plain.fighters['0-0'].hp, plain.fighters['1-0'].hp, plain.fighters['1-0'].injuries]);
+  }
+  assert.equal(legend, 0);
+  assert.ok(branch > 200, `나뭇가지 ${branch}/300`);
+  assert.equal(R.quickResolve({ a: [f('0-0', 'excalibur', { broken: true })], b: [f('1-0', 'excalibur')] }, 1).fighters['0-0'].broken, true); // 이미 부러진 것은 그대로
+  assert.ok(R.power(f('x', 'longsword', { broken: true })) < R.power(f('x', 'longsword')));
+  // 결과에 부러짐이 오면: 내 팀 = t.broken (다시 배정해도 부러진 채) · 상대 팀 = 무기 다섯의 그 줄 (다시 나눠도 부러진 채 · 점수 감점)
+  const t = R.createTournament({ day: '2026-10-30', seed: 8, at: 0, companions: [R.NAMELESS, R.NAMELESS], weapons: ['longsword', 'rapier', 'uchigatana'], ...roster.SAENGSA_DATA });
+  assert.deepEqual(t.broken, []);
+  R.advance(t, at(30, 10));
+  const m = R.myMatch(t), mineSide = R.sidesOf(t, m)[0] === 0 ? 'a' : 'b', foe = t.teams[R.sidesOf(t, m)[mineSide === 'a' ? 1 : 0]];
+  const foeKey = foe.members[0].key, foeWeapon = foe.members[0].weapon;
+  R.applyResult(t, m, { winner: mineSide, fighters: { '0-0': { hp: 80, injuries: [{ part: 'arm', sev: 2.23, rests: 0 }], alive: true, broken: true }, [foeKey]: { hp: 0, injuries: [], alive: false, broken: true } }, entrants: { [mineSide]: ['0-0'], [mineSide === 'a' ? 'b' : 'a']: [foeKey] } }, at(30, 10));
+  assert.deepEqual(t.broken, ['longsword']);
+  assert.equal(t.teams[0].members[0].broken, true);
+  assert.equal(t.teams[0].members[0].injuries[0].sev, 1); // 실제 싸움 심각도 1 넘음 → 1
+  assert.equal(foe.pool.find((w) => w.weapon === foeWeapon).broken, true);
+  const owned = ['longsword', 'rapier', 'uchigatana', 'hwando'];
+  assert.ok(R.assignWeapons(t, ['hwando', 'rapier', 'longsword'], { owned, weaponInfo: roster.weaponInfo }));
+  assert.deepEqual(t.teams[0].members.map((x) => !!x.broken), [false, false, true]); // 부러진 롱소드는 누구에게 줘도 부러진 채
+  const setup = R.matchSetup(t, R.myMatch(t) ?? m, ['0-2'], at(30, 13));
+  if (setup) assert.equal(setup.sides[setup.mineSide][0].broken, true); // 2단계 엔진에 broken: true 로 넘김
+  const team = { mine: false, members: [{ key: 'k', id: 'x', prof: { ...PROF }, hp: 100, injuries: [], dead: false }], pool: [{ weapon: 'g1', school: 'german', tier: 'legend', broken: true }, { weapon: 'g2', school: 'german', tier: 'common' }] };
+  R.aiArm(team);
+  assert.equal(team.members[0].weapon, 'g2'); // 같은 유파면 부러진 레전드보다 성한 커먼
+  team.pool[1].school = 'japanese';
+  R.aiArm(team);
+  assert.deepEqual([team.members[0].weapon, team.members[0].broken], ['g1', true]); // 0 을 피할 길이 부러진 칼뿐이면 그것 (그래도 줄 수 있음)
+  // 대회가 끝나면: keepBrokenAfterCup false(기본) = 다음 대회 성함 · true = 넘김
+  assert.equal(SAENGSA.keepBrokenAfterCup, false);
+  mem.clear();
+  P.setCoins(1000);
+  const OWNED = ['tree_branch', 'druid_whip', 'w1', 'w2', 'w3'];
+  const data = { ...DATA, owned: OWNED, hasTitle: true, hireCostOf: () => ({ coins: 20 }) };
+  const cfgT = { ...SAENGSA, testMode: true };
+  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], seed: 4, data, cfg: cfgT }).ok);
+  S.updateSaengsa((d) => { d.current.broken = ['w1']; d.current.status = 'done'; return true; });
+  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], seed: 5, data, cfg: cfgT }).ok);
+  assert.deepEqual([S.readSaengsa().current.broken, !!S.readSaengsa().current.teams[0].members[0].broken], [[], false]);
+  S.updateSaengsa((d) => { d.current.broken = ['w1']; d.current.status = 'done'; return true; });
+  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], seed: 6, data, cfg: { ...cfgT, keepBrokenAfterCup: true } }).ok);
+  assert.deepEqual([S.readSaengsa().current.broken, S.readSaengsa().current.teams[0].members[0].broken], [['w1'], true]);
+});
