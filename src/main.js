@@ -60,7 +60,7 @@ import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
-import { TRADITIONS, setItalianRhythm, setItalianStride, setItalianWalk, traditionOf } from './schools.js';
+import { TRADITIONS, setItalianRhythm, setItalianStride, setItalianWalk, setJapaneseGait, traditionOf } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
 import { portraitIdOf, portraitSrc, portraitMode, portraitGrid } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
 import { WhiffDrill } from './whiff_drill.js'; // 시험: 헛스윙 연습 상대 (?foeWhiff=1 — test.html '상대 헛스윙', docs/strike/german_hold_2026-10-15.md §7)
@@ -148,6 +148,8 @@ if (params.has('parryAssist')) CONFIG.SKILL.parryAssist = Math.max(0, Math.min(3
 if (params.has('kron')) CONFIG.SKILL.deKron = +params.get('kron') ? 1 : 0; // 독일 왕관 막기 자리(10/11 22:2x 사장님 기본): `?kron=0` = 전 자리(머리 위 = 긴 자세)
 if (params.has('gyeoksal')) CONFIG.SECRET.gyeoksal.on = +params.get('gyeoksal') ? 1 : 0; // 동방 막아 죽이기 (10/22 — 사람 동방 비기): `?gyeoksal=0` = 옛 판(막기 연환)
 if (params.has('talhoApproach')) CONFIG.SKILL.talhoApproach = +params.get('talhoApproach') ? 1 : 0; // 나선 걸음 베기 '먼저 비껴 딛고 벤다'(AI — 10/29 18:4x 사장님): `?talhoApproach=0` = 전처럼 베며 딛음 (비교용)
+if (params.get('jpGait') === 'old') setJapaneseGait('old'); // 일본 걸음 (10/29 21:0x 사장님 '설계대로'): `?jpGait=old` = 전 판 (비교용)
+if (params.has('jpWalk')) setJapaneseGait(+params.get('jpWalk')); // 일본 걸음 빠르기 시험: `?jpWalk=0.81` 처럼 speedMul (가려는 빠르기 ×)
 if (params.has('passAsRung')) CONFIG.GAIT.passAsRung = +params.get('passAsRung') ? 1 : 0; // follow 안 pass → lunge + 끌어붙임 걸음 길이: 1 = 사다리 한 칸 아래(10/29 18:5x 사장님) · `?passAsRung=0` = 옛 × 0.85 (비교용)
 if (params.get('gyeoksalPow') === 'hit' || +params.get('gyeoksalPow') > 0) CONFIG.SECRET.gyeoksal.power = params.get('gyeoksalPow') === 'hit' ? 'hit' : +params.get('gyeoksalPow'); // 격살 판정 시험 (기본 'finish' = FINISH.power 2.5 · 'hit' = 다른 비기와 같은 hitMul 1.3)
 if (params.get('gyeoksalTrail') === '1') CONFIG.SECRET.gyeoksal.trailWidth = 1; // 격살 잔상 굵기도 빠르기 몫으로 (시험)

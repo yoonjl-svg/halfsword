@@ -8,7 +8,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT } from './harness_m.mjs';
 import { tsubameRun, tsubameSummary } from './schielhau_strike.mjs';
-import { TRADITIONS } from '../../src/schools.js';
+import { TRADITIONS, JAPANESE_GAIT, setJapaneseGait } from '../../src/schools.js';
 import { G } from '../../src/ai_techniques.js';
 import { PLAYER_UNIQUE, uniqueDef, PlayerUniqueAssist, TSU_AIM } from '../../src/unique_assist.js';
 import { HUMAN } from '../../src/fighter.js';
@@ -25,6 +25,18 @@ const withUA = (o, fn) => {
   }
 };
 const OFF = { tsuRuler: 0, tsuSnap: 0, tsuAim: 0 };
+// 한 판 견줌은 10/25 · 10/27 판 걸음(일본 걸음 전 판 `?jpGait=old`)에서 — 10/29 일본 걸음(느린 걸음 · 자세 0.45)은 씨앗 1 의 들어가는 거리 · 때가 달라 그 한 번 맞음이
+//  위팔에 닿음(씨앗 1 ~ 6 모아 보면 새 걸음도 몸통 4 · 팔 2 — 전 걸음 5 · 1 · docs/strike/jp_gait_2026-10-29.md §10). 이 시험은 제비 베기 세 해법을 보는 것이라 판을 묶어 둠
+const withJpOld = (fn) => {
+  const keep = { ...JAPANESE_GAIT };
+  setJapaneseGait('old');
+  try {
+    return fn();
+  } finally {
+    for (const k of Object.keys(JAPANESE_GAIT)) delete JAPANESE_GAIT[k];
+    Object.assign(JAPANESE_GAIT, keep);
+  }
+};
 
 test('기본값 — 세 해법 켬 · 0.6 · 0.2 s (사장님 10/25 결정) · AI 길 그대로', () => {
   assert.equal(UA.tsuRuler, 1);
@@ -132,7 +144,7 @@ test('진 · 츠바메가에시(모노호시자오 무기 비검 kin)는 그대�
 });
 
 test('한 판 견줌 (씨앗 1 · 14 s · 상대 상처 끔 · 아래 칼 빗나감): 공격당 심각도 10 배 넘게 · 몸통 띠(다리 없음 · 팔보다 몸통) · 손목 범위 안 · 굴림 한도 안', () => {
-  const run = () => tsubameRun(1, { immortal: true, dur: 14, ghostDown: true });
+  const run = () => withJpOld(() => tsubameRun(1, { immortal: true, dur: 14, ghostDown: true }));
   const R = run();
   const on = tsubameSummary([R]);
   const off = tsubameSummary([withUA(OFF, run)]);
