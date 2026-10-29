@@ -1,11 +1,12 @@
 import { Vector3 } from 'three';
 import { STAMINA } from './config.js';
 
-/** 두 검객의 머리 위에 붙이는 화면 크기 고정 기력 바. 판마다 DOM을 만들지 않는다. */
+/** 두 검객의 머리 위에 붙이는 화면 크기 고정 기력 바. 판마다 DOM을 만들지 않는다.
+ *  동시 대전(3단계 10/29 — 넷까지): 셋째 · 넷째 바는 셋 이상 판이 처음 올 때만 만든다 (1:1 DOM 은 예전 그대로 둘) */
 export function createStaminaHud(root) {
   const point = new Vector3();
   const viewPoint = new Vector3();
-  const bars = ['나', '상대'].map((name) => {
+  const make = (name) => {
     const bar = document.createElement('div');
     bar.className = 'stamina-bar';
     bar.hidden = true;
@@ -17,10 +18,13 @@ export function createStaminaHud(root) {
     bar.append(fill);
     root.append(bar);
     return { bar, fill };
-  });
+  };
+  const bars = ['나', '상대'].map(make);
+  const more = ['동료', '상대 2'];
   return {
     update(fighters, camera, visible, width = window.innerWidth, height = window.innerHeight) {
       camera.updateMatrixWorld();
+      while (bars.length < Math.min(4, fighters.length)) bars.push(make(more[bars.length - 2]));
       bars.forEach(({ bar, fill }, i) => {
         const f = fighters[i];
         bar.hidden = true;

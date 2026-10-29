@@ -7,9 +7,9 @@
 //   − attackSub 나를 겨눠 제 칼끝 거리(reach) 안에서 치고 있는 상대
 //   + 인물 취향  f.targetPref ('weakest' · 'strongest' · 'allyAttacker' · 'nearest') × prefAdd — 갈고리만 (인물 시트가 아직 안 채움)
 //  바꾸는 때: 지금 상대가 죽었거나 부활하는 중이면 곧장 (붙잡고 있어도 — 죽은 몸을 겨눌 까닭이 없다).
-//   그 밖엔 다른 상대가 margin 넘게 낮은 채 hold 동안 이어지면. 나를 치고 있는 상대면 기다리지 않는다.
+//   그 밖엔 다른 상대가 margin 넘게 낮은 채 hold 동안 이어지면. 나를 치고 있는 상대면 hold 를 기다리지 않는다 — 그 상대가 attackHold(실제 초 0.4) 동안 내리 쳤으면 (3단계 10/29 · 2877).
 //   붙잡힘(committed — 공격 · 비기 · 칼끼리 맞댐 · 밀치기) 동안은 바꾸지 않는다.
-//  값: config.js TEAM_FIGHT.target (모두 사장님 확인 전 — 확인표 2864 ~ 2869)
+//  값: config.js TEAM_FIGHT.target (모두 사장님 확인 전 — 확인표 2864 ~ 2869 · 2877)
 // ─────────────────────────────────────────────────────────────
 import { TEAM_FIGHT } from './config.js';
 import { sameSide } from './team.js';
@@ -76,8 +76,9 @@ export function chooseTarget(f, M, dt = 0) {
   const T = TEAM_FIGHT.target;
   const S = M.targeting ?? (M.targeting = new Map());
   let st = S.get(f);
-  if (!st) S.set(f, (st = { foe: null, cand: null, held: 0, switches: 0, why: { gone: 0, attacked: 0, held: 0 } }));
+  if (!st) S.set(f, (st = { foe: null, cand: null, held: 0, switches: 0, why: { gone: 0, attacked: 0, held: 0 }, atk: new Map() }));
   if (!f.alive) return st.foe ?? f.foe ?? null;
+  if (T.attackHold > 0) for (const g of M.fighters) if (!sameSide(g, f)) { if (attacking(g, f)) st.atk.set(g, (st.atk.get(g) ?? 0) + dt); else st.atk.delete(g); } // '나를 침'이 이어진 시간 (멈추면 0 부터)
   let best = null;
   let bs = Infinity;
   let cur = Infinity;
@@ -102,7 +103,7 @@ export function chooseTarget(f, M, dt = 0) {
     } else {
       if (st.cand !== best) (st.cand = best), (st.held = 0);
       st.held += dt;
-      if (attacking(best, f)) take(best, 'attacked'); // 나를 치는 상대는 기다리지 않는다
+      if (attacking(best, f) && (T.attackHold <= 0 || (st.atk.get(best) ?? 0) >= T.attackHold)) take(best, 'attacked'); // 나를 치는 상대는 hold 를 기다리지 않는다 (attackHold 만큼 내리 쳤으면)
       else if (st.held >= T.hold) take(best, 'held');
     }
   } else (st.cand = null), (st.held = 0);

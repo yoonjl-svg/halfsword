@@ -4,12 +4,14 @@
 //  ③ sameSide · pairOf 가 같은 편 쌍을 버림 · 칼 쌍 묶기(groupBlades)가 싸움꾼 짝마다 · 들어온 차례 · AI setFoe 가 눈 · 간격 어림을 맞바꾸고 시계가 같음
 //  ④ 시작 자리: 1:1 은 newRound 자리 그대로 · 2:2 는 편마다 옆으로 mateGap
 //  ⑤ ~ ⑧ (2단계): 상대 고르기 규칙(가짜 몸 — 거리 · 쓰러짐 · 나눠 맡기 · 나를 침 · 기다림 · 붙잡힘 · 죽음 · 취향) · 편 전멸 · 결과 · 상대를 아는 반응 시간 · 상대마다 몫 맞바꿈
+//  ⑨ (3단계): 죽은 몸 쉬게 하기(settleDead — 셋 이상 판만 · 1:1 은 그대로) · 카메라 물러남 몫(team_hud.js teamFramePull)
 //  node --test tools/sim/team_fight.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newMatch, CONFIG } from './jelly_harness.mjs';
 import { sameSide, teamOfIndex } from '../../src/team.js';
 import { spawnSpots, orderControllers, pairFoe, standing, matchResult } from '../../src/match.js';
+import { teamFramePull } from '../../src/team_hud.js';
 import { chooseTarget, targetScore, committed } from '../../src/targeting.js';
 
 const mem = (g) => g >>> 16;
@@ -181,12 +183,22 @@ test('⑤ 상대 고르기: 가까움 · 같으면 작은 자리 · 쓰러짐 ·
   e3.alive = true;
   e3.pos.z = 1.0;
   e1.pos.x = 2;
-  // 나를 치는 상대: 기다림 없이 (− attackSub)
+  // 나를 치는 상대: hold 를 기다리지 않음 (− attackSub) — attackHold(2877) 동안 내리 치면 · 멈추면 0 부터
   pick(M, me, 0); // 지금 e1 · 후보 e3 (1.0 대 2.0 — margin 넘음, 기다리는 중)
   const st = M.targeting.get(me);
   e3.foe = me;
   e3.aiCtl = { mode: 'attack', M: { reach: 1.5 } };
-  assert.equal(pick(M, me, 0.01), e3, '나를 치는 상대는 곧장');
+  const half = Math.round(T.attackHold / 2 / 0.01);
+  for (let i = 0; i < half; i++) pick(M, me, 0.01);
+  e3.aiCtl = { mode: 'probe', M: { reach: 1.5 } }; // 한 번 멈춤
+  pick(M, me, 0.01);
+  st.held = 0; // (기다림 hold 로 바뀌지 않게 — 여기선 '나를 침' 문턱만 본다)
+  e3.aiCtl = { mode: 'attack', M: { reach: 1.5 } };
+  let ta = 0;
+  while (me.foe !== e3 && ta < 1) (ta += 0.01), pick(M, me, 0.01);
+  assert.equal(me.foe, e3, '나를 치는 상대로');
+  assert.ok(T.attackHold > 0 ? Math.abs(ta - T.attackHold) <= 0.0101 : ta <= 0.0101, `attackHold ${ta} (멈추면 0 부터)`);
+  assert.ok(ta < T.hold);
   assert.equal(st.why.attacked, 1);
   // 취향 갈고리: weakest — 다친 상대에 덧셈 (− prefAdd × 다친 정도)
   const s0 = targetScore(M, me, e1);
@@ -246,4 +258,42 @@ test('⑧ AI 상대마다 몫 맞바꿈 (위협 걸쇠 · 몰아침 · 고노센
   assert.deepEqual([ai.threatId, ai.threatSeen, ai.foeAggro, ai.preArmed, ai.gnsW, ai.combo], [0, -1, 0, true, undefined, 0]);
   ai.setFoe(E);
   assert.deepEqual([ai.threatId, ai.threatSeen, ai.foeAggro, ai.preArmed, ai.gnsW.mark, ai.combo], [5, 5, 0.7, false, 1, 0]);
+});
+
+test('⑨ 죽은 몸 쉬게 하기 (셋 이상 판만) · 카메라 물러남 몫', () => {
+  const G = newMatch({ count: 4, ai: 'all', seed: 6 });
+  const dead = G.fighters[3];
+  let stepped = 0;
+  const step0 = dead.step.bind(dead);
+  dead.step = (dt) => (stepped++, step0(dt));
+  dead.die('시험');
+  const D = CONFIG.TEAM_FIGHT.deadSettle;
+  let n = 0;
+  while (!dead.settled && n < 3000) G.step(), n++;
+  assert.equal(dead.settled, true, '죽은 몸이 쉬지 않음');
+  assert.ok(n * CONFIG.PHYSICS.timestep >= D.t - 1e-9, `너무 일찍 쉼 (${n} 스텝)`);
+  assert.ok(Object.values(dead.bodies).every((b) => b.isSleeping()));
+  const before = stepped;
+  for (let i = 0; i < 30; i++) G.step();
+  assert.equal(stepped, before, '쉬는 몸이 스텝을 탐');
+  assert.ok(G.fighters.slice(0, 3).every((f) => !f.settled));
+  // 1:1 은 예전 그대로 (쉬지 않음)
+  const G1 = newMatch({ ai: [1, 0], seed: 1 });
+  G1.enemy.die('시험');
+  for (let i = 0; i < 400; i++) G1.step();
+  assert.equal(G1.enemy.settled, undefined);
+  // 카메라 물러남: 보는 몸 (0, 0) · 바라보는 쪽 +x · 화면 비 2.16 (844 × 390)
+  const fake = (x, z, alive = true) => ({ alive, pelvisPos: { x, z }, bodies: { pelvis: { translation: () => ({ x, y: 1, z }) } } });
+  const me = fake(0, 0);
+  const dir = { x: 1, z: 0 };
+  const pull = (others, aspect = 2.16) => teamFramePull(me, [me, ...others], dir, aspect);
+  assert.deepEqual(pull([fake(3, 0)]), { back: 0, up: 0 }); // 앞의 상대 — 이미 화면 안
+  assert.ok(Math.abs(pull([fake(-2, 0)]).back - (CONFIG.TEAM_FIGHT.cam.minDepth - (CONFIG.CAMERA.back - 2))) < 1e-9); // 뒤의 몸 — 카메라 앞 minDepth 까지
+  assert.equal(pull([fake(-2, 0, false)]).back, 0); // 죽은 몸은 안 봄
+  assert.equal(pull([fake(-7.5, 0)]).back, 0); // radius 밖은 안 봄
+  assert.equal(pull([fake(-6, 0)]).back, CONFIG.TEAM_FIGHT.cam.max); // 카메라 뒤 멀리 — max 까지만
+  const side = pull([fake(0.5, 6)]).back; // 옆 — 화면 가로 반폭에 들게
+  assert.ok(side > 1 && side < CONFIG.TEAM_FIGHT.cam.max, String(side));
+  assert.ok(pull([fake(0.5, 6)], 1).back > side); // 좁은 화면이면 더 물러남
+  assert.ok(Math.abs(pull([fake(-2, 0)]).up - pull([fake(-2, 0)]).back * CONFIG.TEAM_FIGHT.cam.upK) < 1e-12);
 });

@@ -71,6 +71,9 @@ export const LIMB_SEVER_COUNT = { events: [] };
 //   bleeds: false 면 출혈 0 · 혈액 1 고정 · deathRequiresHeadDetachment: true 면 목 관절이 떨어지기 전에는 죽지 않는다(die 거부 — 부활보다 먼저 본다)
 //   blood: 'white' 면 피 겉모습만 흰 피(blood_palette.js — 광기의 병마용, 사장님 10/27 23:2x). 없으면 붉은 피 — 몸 규칙(출혈 · 죽음)과는 상관없다
 export const HUMAN_BODY = Object.freeze({ body: 'human', bleeds: true, deathRequiresHeadDetachment: false });
+// 상처 부위 → 팔다리 기능 칸 · 심각도당 잃는 몫 (applyWound — 판 사이 이어받기 src/saengsa_match.js 도 같은 셈을 읽는다)
+export const WOUND_LIMB = Object.freeze({ uarmS: 'armS', farmS: 'armS', uarmO: 'armO', farmO: 'armO', thighF: 'legF', shinF: 'legF', footF: 'legF', thighB: 'legB', shinB: 'legB', footB: 'legB' });
+export const LIMB_LOSS = 0.7;
 export const GROUND_GROUPS = groups(BIT.ground, 0xffff);
 
 // ─────────────────────────────────────────────────────────────
@@ -1566,6 +1569,38 @@ export class Fighter {
     return !this.physiology.deathRequiresHeadDetachment || (this.decapitated && !this.jointByName.head?.joint);
   }
 
+  // ── 판 사이 이어받기 (동시 대전 6단계 — 10/29 · 생사전: src/saengsa_match.js) ──
+  /** 몸 상태 사본 (셈 칸만 · 그림 · 물리 · 난수 없음): 피 · 출혈 · 의식 · 아픔 · 팔다리 기능 · 상처 목록. applySnapshot → snapshot 은 같은 꼴을 돌려준다 */
+  snapshot() {
+    return {
+      v: 1,
+      blood: this.blood,
+      bleed: this.bleed,
+      consciousness: this.consciousness,
+      pain: this.pain,
+      limbs: { ...this.limbs },
+      wounds: this.wounds.map((w) => ({
+        part: w.part, type: w.type, severity: w.severity, bleed: w.bleed, local: [w.local.x, w.local.y, w.local.z],
+        ...(w.stump ? { stump: true } : {}), ...(w.limb ? { limb: w.limb } : {}), ...(w.carried ? { carried: true } : {}),
+      })),
+    };
+  }
+
+  /** 새 판 몸에 사본을 입힌다 (판을 세운 뒤 · 첫 스텝 전). 칼 쥔 팔 기능이 칼을 놓치는 문턱 밑이면 처음부터 칼을 놓친다 (싸움 상처와 같은 규칙) */
+  applySnapshot(s) {
+    if (!s) return;
+    this.blood = s.blood;
+    this.bleed = s.bleed;
+    this.consciousness = s.consciousness;
+    this.pain = s.pain;
+    this.limbs = { ...this.limbs, ...s.limbs };
+    this.wounds = s.wounds.map((w) => ({
+      part: w.part, type: w.type, severity: w.severity, bleed: w.bleed, local: new THREE.Vector3(w.local[0], w.local[1], w.local[2]),
+      ...(w.stump ? { stump: true } : {}), ...(w.limb ? { limb: w.limb } : {}), ...(w.carried ? { carried: true } : {}),
+    }));
+    if (this.limbs.armS < VITALS.dropSwordArm && this.armed) this.dropSword();
+  }
+
   // ── 출혈·의식·통증 ──
   updateVitals(dt) {
     if (!this.physiology.bleeds) { // 피 없는 몸(병마용): 혈액 1 · 출혈 0 고정 (사람은 이 줄을 타지 않는다)
@@ -1668,9 +1703,9 @@ export class Fighter {
     }
 
     // 팔다리 기능
-    const limb = { uarmS: 'armS', farmS: 'armS', uarmO: 'armO', farmO: 'armO', thighF: 'legF', shinF: 'legF', footF: 'legF', thighB: 'legB', shinB: 'legB', footB: 'legB' }[h.part];
+    const limb = WOUND_LIMB[h.part];
     if (limb) {
-      this.limbs[limb] = Math.max(0, this.limbs[limb] - sev * 0.7);
+      this.limbs[limb] = Math.max(0, this.limbs[limb] - sev * LIMB_LOSS);
       if (limb === 'armS' && this.limbs.armS < VITALS.dropSwordArm) this.dropSword();
     }
     if (Z === 'head' && h.type === 'cut') this.consciousness -= (sev * 0.5) / this.vitality; // 버티는 힘 (10/24)

@@ -2,7 +2,7 @@
 //  AI 모두 보통 · 섞인 무기(롱소드 · 몬탄테 = zweihander · 레이피어 · 세이버 · 우치가타나 · 에스톡) · 벽 있음 · 한 편 전멸(M.over) 또는 maxSecs 까지.
 //  재는 것: NaN · 예외 · 같은 편 상처 · 산 싸움꾼의 상대가 늘 겨눌 수 있는 몸인가(살아 있음 · 부활 중 아님) · 상대 바꿈 / 분 · 120 s 안 끝남 · 판 길이 ·
 //   2:1 에서 혼자인 쪽(자리 1)이 이긴 판 · 같은 편 몸 겹친 표본(12 스텝마다 몸 콜라이더 모양 거리 < 0 — 판이 살아 있는 동안 · 둘 다 산 동안)
-//  쓰임: node tools/sim/team_fights.mjs [씨앗 24] [maxSecs 120] [--modes=2v2,2v1] [--jobs=4] [--sep=0](같은 편 비킴 끔 — 전후 비교) [--flank=0](둘러싸임 비켜 서기 끔) [--mirror](두 편 무기 맞바꿈) [--looks=team](0 편 케틀 투구 · 1 편 없음 — newRound 겉모습, 기본은 모두 투구 없음) [--json](판마다 줄)
+//  쓰임: node tools/sim/team_fights.mjs [씨앗 24] [maxSecs 120] [--modes=2v2,2v1] [--jobs=4] [--sep=0](같은 편 비킴 끔 — 전후 비교) [--flank=0](둘러싸임 비켜 서기 끔) [--mirror](두 편 무기 맞바꿈) [--looks=team](0 편 케틀 투구 · 1 편 없음 — newRound 겉모습, 기본은 모두 투구 없음) [--atkHold=0.4](나를 침 바꿈 문턱 — 실제 초) [--json](판마다 줄)
 //  판마다 따로 시드(fights12 의 LCG)와 파손 씨앗이라 jobs 수와 상관없이 같은 판은 같다 (게임 값이 아닌 재기 도구)
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +18,7 @@ const SEP = flag('sep', '1') !== '0';
 const MIRROR = !!flag('mirror', false); // 시험: 두 편 무기를 맞바꿈 (자리 0 ↔ 1 · 2 ↔ 3 — 편 쏠림이 무기 탓인지 보기)
 const FLANK = flag('flank', '1') !== '0'; // 시험: --flank=0 = 둘러싸임 비켜 서기 끔 (전후 비교)
 const LOOKS_TEAM = flag('looks', 'same') === 'team'; // 겉모습: same(기본) = 모두 LOOKS.enemy(투구 없음 — 편 쏠림 없게) · team = newRound 처럼 0 편 케틀 투구 · 1 편 없음
+const ATK_HOLD = flag('atkHold', null); // 시험: --atkHold=0.4 = '나를 침' 바꿈은 그 상대가 실제 초 0.4 동안 내리 쳐야 (TEAM_FIGHT.target.attackHold — 3단계 2877)
 const WORKER = flag('worker', null);
 const WEAPONS = ['longsword', 'zweihander', 'rapier', 'sabre', 'uchigatana', 'estoc'];
 export const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 5) % WEAPONS.length]);
@@ -31,6 +32,7 @@ async function fight(mode, seed) {
   Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
   const count = mode === '2v1' ? 3 : 4;
   if (!FLANK) CONFIG.TEAM_FIGHT.flank.side = 0;
+  if (ATK_HOLD != null) CONFIG.TEAM_FIGHT.target.attackHold = CONFIG.realS(+ATK_HOLD);
   const base = loadout(seed, count);
   const weapons = MIRROR ? base.map((w, i) => base[i ^ 1] ?? w) : base;
   const { LOOKS } = await import('../../src/looks.js');
@@ -95,7 +97,7 @@ jobs.forEach((j, i) => buckets[i % buckets.length].push(j));
 const self = fileURLToPath(import.meta.url);
 const rows = [];
 await Promise.all(buckets.filter((b) => b.length).map((b) => new Promise((res, rej) => {
-  const pass = args.filter((a) => /^--(sep|mirror|flank|looks)\b/.test(a));
+  const pass = args.filter((a) => /^--(sep|mirror|flank|looks|atkHold)\b/.test(a));
   const p = spawn(process.execPath, [self, `--worker=${b.join(';')}`, ...pass, String(SEEDS), String(MAX)], { stdio: ['ignore', 'pipe', 'ignore'] });
   let buf = '';
   p.stdout.on('data', (d) => { buf += d; let k; while ((k = buf.indexOf('\n')) >= 0) { rows.push(JSON.parse(buf.slice(0, k))); buf = buf.slice(k + 1); } });

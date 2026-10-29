@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────────────
 import { sameSide, teamOfIndex } from './team.js';
 import { chooseTarget } from './targeting.js';
+import { TEAM_FIGHT } from './config.js';
 
 /**
  * 판 하나를 묶는다. o = { world, eventQueue, combat, fighters(자리 차례 — fighters[i].index === i), controllers([{ me, update(dt), setFoe?(f) }] — AI 들), foeOf?(f, M) }
@@ -106,6 +107,24 @@ export function pairFoe(f, M) {
   return nearestFoe(M, f) ?? f.foe ?? nearestFoe(M, f, { alive: false });
 }
 
+/**
+ * 죽은 몸 쉬게 하기 (3단계 10/29 — 셋 이상 판 · TEAM_FIGHT.deadSettle): 죽은 지 t 넘게 몸 부위 빠르기가 모두 v 밑이면 f.settled —
+ *  그 뒤로 조종 · 스텝을 건너뛰고(그림 · 칼 잔상 · 바람 소리도 main.js · sword_trail.js 가 쉼) 몸 부위를 재운다(엔진이 셈에서 뺌 · 다른 몸이 닿으면 엔진이 깨운다)
+ */
+export function settleDead(f, dt) {
+  if (f.settled || f.alive) return;
+  f.deadT = (f.deadT ?? 0) + dt;
+  const D = TEAM_FIGHT.deadSettle;
+  if (f.deadT < D.t) return;
+  for (const k in f.bodies) {
+    const v = f.bodies[k].linvel();
+    if (v.x * v.x + v.y * v.y + v.z * v.z > D.v * D.v) return;
+  }
+  f.settled = true;
+  for (const k in f.bodies) f.bodies[k].sleep();
+  f.sword?.sleep();
+}
+
 /** 편마다 산(죽지 않은) 싸움꾼 수 [0 편, 1 편] — 한 편이 0 이면 판 끝 (stepMatch) */
 export function standing(M) {
   const n = [0, 0];
@@ -148,16 +167,18 @@ export function stepMatch(M, dt, hooks = {}) {
   }
   for (const c of M.order) if (c.setFoe && c.me.foe && c.foe !== c.me.foe) c.setFoe(c.me.foe);
   // ② 조종
-  for (const c of M.order) c.update(dt);
+  const team = F.length > 2; // 셋 이상 판만: 쉬는 죽은 몸(f.settled — 아래 settleDead)은 조종 · 스텝을 건너뛴다 (1:1 은 예전 그대로 모두)
+  for (const c of M.order) if (!(team && c.me.settled)) c.update(dt);
   hooks.afterControl?.(M, dt);
   // ③ 몸
-  for (const f of F) f.step(dt);
+  for (const f of F) if (!(team && f.settled)) f.step(dt);
   hooks.afterFighters?.(M, dt);
   for (const f of F) f.cacheState();
   // ④ 물리 · 전투
   M.world.step(M.eventQueue, M.combat.physicsHooks);
   M.combat.afterStep(M.world, M.eventQueue);
   hooks.afterWorld?.(M, dt);
+  if (team) for (const f of F) settleDead(f, dt);
   M.t += dt;
   // 판 끝: 한 편에 산 싸움꾼이 없다 (죽은 싸움꾼은 빠짐 — 사장님 10/29 '이번 대회만 빠짐'). 읽기만 — 스텝을 멈추는 것은 부르는 쪽
   if (!M.over) {

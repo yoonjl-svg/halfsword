@@ -706,7 +706,7 @@ export class Combat {
     A.fighter.parryGuard?.opposition?.onClash(B.fighter, { vn });
     B.fighter.parryGuard?.opposition?.onClash(A.fighter, { vn });
     if (fresh && SA && SB && J > 0) this.koteSword(A, B, SA, SB, point, nrm, vn); // 손목 치기가 상대 칼 손 쪽 절반을 세게 침 (J8 판정 완화 — 사람만)
-    this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm, nagashi: !!flowD });
+    this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm, nagashi: !!flowD, a: A.fighter, b: B.fighter }); // a · b = 앞 · 뒤 싸움꾼 (2:2 — main.js 가 보는 몸이 낀 부딪힘인지 본다)
   }
 
   /**
