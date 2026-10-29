@@ -290,7 +290,7 @@ console.log(`| 합 | | ${T.rounds} | ${T.runs.length} (${f2(T.runs.length / T.ro
 console.log(`[10/24 13:2x 런지 간격 조건 ${S.risolutoLunge && S.risolutoGap ? '켬' : '끔'}${STOP ? ' · 운전: 창이 보이면 섬' : ''}] 실제로 열린 창 ${T.win} (판당 ${f2(T.win / T.rounds)} — 이어짐 ${T.winHold} · 다 붙음 ${T.winClose} · 상대 박자 ${T.winBeat} · 칼끝 얽힘 ${T.winTouch}) · 창 조건이 찼으나 가까워 안 뜸 ${T.gapBlocked} · 뜬 뒤 가까워져 닫힘 ${T.gapClosed} · 열린 때 가슴 사이 p50 ${f2(q(L.winGap, 0.5))} (${f2(q(L.winGap, 0))} ~ ${f2(q(L.winGap, 1))}) m · 그 가운데 런지 최소 간격(맞닿기 거리) 밖 ${T.winFar}`);
 {
   const m = L.winMargin, n = (x) => m.filter((v) => v >= x).length;
-  console.log(`  열린 창의 맞붙는 거리 밖 여유 (가슴 사이 − clinch) p50 ${f2(q(m, 0.5))} · 최대 ${f2(q(m, 1))} m — 여유 ≥ 0.25(chineseStep) ${n(0.25)} · ≥ 0.45(이탈리아 걸음 보폭 maxStride) ${n(0.45)} · ≥ 0.5(이탈리아 베기 걸음 cutStep) ${n(0.5)} · ≥ 0.6(iaiStep) ${n(0.6)} · ≥ 0.9(italianStep) ${n(0.9)} / ${m.length} · 덮인 채 나아가는 스텝 가운데 런지 최소 간격(맞닿기 거리) 밖 ${L.coverFar} / ${L.coverAll}${CREEP ? ` · 운전: 칼이 붙으면 스틱 ${CREEP}` : ''}`);
+  console.log(`  열린 창의 맞붙는 거리 밖 여유 (가슴 사이 − clinch) p50 ${f2(q(m, 0.5))} · 최대 ${f2(q(m, 1))} m — 여유 ≥ ${S.chineseStep}(chineseStep) ${n(S.chineseStep)} · ≥ 0.45(이탈리아 걸음 보폭 maxStride) ${n(0.45)} · ≥ 0.5(이탈리아 베기 걸음 cutStep) ${n(0.5)} · ≥ 0.6(iaiStep) ${n(0.6)} · ≥ 0.9(italianStep) ${n(0.9)} / ${m.length} · 덮인 채 나아가는 스텝 가운데 런지 최소 간격(맞닿기 거리) 밖 ${L.coverFar} / ${L.coverAll}${CREEP ? ` · 운전: 칼이 붙으면 스틱 ${CREEP}` : ''}`);
 }
 {
   const g = L.winGap, F = L.first, pc = (x) => `${x} (${Math.round((100 * x) / Math.max(1, L.firstN))} %)`;
