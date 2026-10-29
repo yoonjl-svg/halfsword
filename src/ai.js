@@ -47,6 +47,12 @@ import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24
 const FEAR_TREMOR = 0.03;
 
 const clamp = THREE.MathUtils.clamp;
+/** 2:1 숙련도 몫 0 ~ 1 (config TEAM_FIGHT.lever.prof — 셋 이상 판의 AI 만 읽음) */
+const teamSkill = (p) => clamp(((p ?? 0) - TEAM_FIGHT.lever.prof[0]) / (TEAM_FIGHT.lever.prof[1] - TEAM_FIGHT.lever.prof[0]), 0, 1);
+/** g 가 me 를 겨눠 치는 중인가 (targeting.js isAttacking 과 같은 셈 — 순환 import 를 피해 여기 둠) */
+const foeAttackingMe = (g, me) => g.foe === me && (g.aiCtl ? g.aiCtl.mode === 'attack' || !!g.aiCtl.secretRun : !!g.stamina?.attacking || !!g.skill?.swinging || !!g.skill?.tap);
+/** g 의 칼끝 거리 (targeting.js reachOf 와 같음) */
+const reachOfFoe = (g) => g.aiCtl?.M?.reach ?? g.swordArt?.measure?.reach ?? 1.8;
 const rand = (a, b) => a + Math.random() * (b - a);
 // 표준 시간 (10/25 22:3x — config.js TIME): AI 판단 박자 · 막기 · 물러남 · 걸쇠 · 눈의 기억은 실제 초로 적고 한 번 게임 초로 바꾼다 (realS).
 //  몸 · 칼 움직임 시간(기술 걸음 STEP_T · 따라 지나감 0.3 · 내딛기 늦춤 0.04 · 떨림 박자 · 비기 동작 단계)은 그대로 — 지금 빠르기가 표준.
@@ -375,6 +381,35 @@ export class AI {
         if (Math.acos(clamp(cos, -1, 1)) > (TF.flank.angle * Math.PI) / 180 && (!fl || o.d < fl.d)) fl = o;
       }
       if (fl) side = -Math.sign(fl.x * R.x + fl.z * R.z || 1) * TF.flank.side; // 다른 상대가 오른쪽이면 왼쪽으로
+    }
+    // 2:1 숙련도 몫 (10/29 20:4x 사장님 '높은 숙련도가 똑똑해지도록' — TEAM_FIGHT.lever): 상대가 둘 이상이고 베는 중이 아닐 때 숙련도가 높을수록
+    //  ① 줄 세우기: 가장 가까운 다른 상대가 지금 상대 뒤로 가게 지금 상대를 축으로 돈다 (벌어진 각만큼) · 집게(각 > backFrom°)면 물러나 둘을 앞에 둔다
+    //  ② 피하기: 지금 상대가 아닌 상대가 나를 치러 제 칼끝 거리 + gap 안에 들면 그 몸에서 비킨다 (모든 상대의 위협을 읽음 — 겨눈 상대를 바꾸지 않고)
+    const LV = TF.lever;
+    const sk = (LV.lineUp.on || LV.evade.on) && near.length >= 2 ? teamSkill(this.proficiency) : 0;
+    if (sk > 0 && t && this.mode !== 'secret' && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow'))) {
+      if (LV.lineUp.on) {
+        let o = null;
+        for (const q of near) if (q !== t && q.d <= LV.lineUp.range && q.d > 1e-6 && (!o || q.d < o.d)) o = q;
+        if (o) {
+          const at = Math.atan2(t.x * R.x + t.z * R.z, t.x * F.x + t.z * F.z); // 내 눈 기준 각 (오른쪽 +)
+          let da = Math.atan2(o.x * R.x + o.z * R.z, o.x * F.x + o.z * F.z) - at;
+          if (da > Math.PI) da -= 2 * Math.PI;
+          if (da < -Math.PI) da += 2 * Math.PI;
+          const a = Math.abs(da);
+          side -= Math.sign(da || 1) * LV.lineUp.side * sk * Math.min(1, a / LV.lineUp.full); // o 가 t 보다 오른쪽이면 왼쪽으로 돌아 o 를 t 뒤로
+          const from = (LV.lineUp.backFrom * Math.PI) / 180;
+          if (a > from) fwd -= LV.lineUp.back * sk * ((a - from) / (Math.PI - from)); // 집게: 물러나 둘을 앞으로
+        }
+      }
+      if (LV.evade.on) {
+        for (const q of near) {
+          if (q === t || q.d < 1e-6 || q.d > reachOfFoe(q.g) + LV.evade.gap || !foeAttackingMe(q.g, me)) continue;
+          const k = LV.evade.k * sk;
+          fwd -= (k * (q.x * F.x + q.z * F.z)) / q.d;
+          side -= (k * (q.x * R.x + q.z * R.z)) / q.d;
+        }
+      }
     }
     for (const o of near) {
       if (o === t || o.d >= this.M.clinch || o.d < 1e-6) continue;

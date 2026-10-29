@@ -880,6 +880,7 @@ function newRound(weaponId) {
   fighters = [player, enemy]; // 1:1 — 두 몸 고리 · 효과가 읽는다 (예전 [player, enemy] 와 같은 차례)
   teamRun = null;
   teamHud.hide();
+  staminaHud.setTeam(false); // 1:1: 체력 막대 없음 · 기력 막대 이름표 예전 그대로
   if (loadout?.armor === LOBBY_ARMOR.id) player.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus); // 케틀 햇 '생존술: 기력 +30' — 최대 130에서 시작·회복 (문턱 0 · −35 · −70 그대로 · 기력 끔이면 아무 일 없음)
   //  판 시작 장착으로 정한다: 판 중에 투구가 맞아 벗겨져도(fighter.js knockOffHelmet) 그 판은 130 그대로 — 사장님 결정 10/16 08:1x '아이템은 사라져도 효과는 그대로 둬.'
   if (loadout?.neck === HERO_TEAR.id) player.stamina.setInfinite(true); // 용사의 눈물 '기력 무한' (사장님 10/17) — 플레이어만 · 청구 · 지침 · 탈진 없음 · 머리 위 내 막대 없음(stamina_hud.js) · 몸에 붙이는 것 없음(겉모습 그대로)
@@ -1132,6 +1133,7 @@ function newTeamRound(spec, mods = {}) {
   for (const f of fighters) f.syncMeshes();
   warmRoundFx(fxWarm);
   teamHud.show(fighters);
+  staminaHud.setTeam(true); // 동시 대전: 기력 막대 밑 체력 막대 (편 색)
 }
 
 /** stepMatch 갈고리 — 1:1 고리의 같은 자리 (사람 몸의 비기 창 · 막기 단추는 AI 조종 뒤 · 몸 스텝 앞) */
@@ -1186,6 +1188,8 @@ function checkTeamEnd(dt) {
     resultShown = false;
     lastRoundWon = R.M.winner === 0;
     R.result = matchResult(R.M);
+    // 생사전 결과는 판이 끝난 그 스텝의 몸으로 (결과 글자 3.5 s 동안 피를 더 흘려 이긴 편의 산 몸이 죽은 것으로 적히지 않게)
+    if (R.opts.resolve) R.saengsa = resultFromMatch(R.spec, fighters, R.M.winner, R.opts.injuries ?? fallbackInjuries);
     showRoundResult();
     return;
   }
@@ -1201,7 +1205,7 @@ function teamFinish() {
   document.exitPointerLock?.();
   toast.classList.remove('show');
   if (R.opts.resolve) {
-    const res = resultFromMatch(R.spec, fighters, R.M.winner, R.opts.injuries ?? fallbackInjuries);
+    const res = R.saengsa ?? resultFromMatch(R.spec, fighters, R.M.winner, R.opts.injuries ?? fallbackInjuries);
     const done = R.opts.resolve;
     teamLeave();
     done(res);
@@ -1340,7 +1344,7 @@ function startTeamTest() {
 /**
  * 생사전 경기 (가지 wk/saengsa — docs/design/saengsa_2026-10-29.md §8 · src/saengsa_engine.js makeEngine(game) 이 부른다).
  *  setup = { matchId, round, seed, mineSide, entrants, sides, control 'player'|'watch' } → 판을 세워 돌리고, 판이 끝나면
- *  { winner 'a'|'b', fighters { key: { hp, injuries, alive } } } 로 풀린다 (그만두면 null). 대기실 덮개가 앞에 있으면 걷었다가 끝에 되돌린다
+ *  { winner 'a'|'b', fighters { key: { hp, injuries, alive, weaponBroken } } } 로 풀린다 (그만두면 null). 대기실 덮개가 앞에 있으면 걷었다가 끝에 되돌린다
  */
 export async function launchSaengsa(setup) {
   const spec = specFromSetup(setup);
@@ -3453,7 +3457,7 @@ function frame(now) {
   }
   updateCamera(dt); // 거르는 프레임에도: 흔들림 스프링·발걸음(player.footstep 소비)·소리 자리(sound.listener)가 여기 달려 있다
   staminaHud.update(fighters, camera, state === 'fight' && !roundOver);
-  if (teamRun) teamHud.update(camera, teamRun.focus, state === 'fight' && !roundOver, teamRun.human); // 동시 대전 위 막대 · 화면 밖 화살표 · 머리 위 편 표시
+  if (teamRun) teamHud.update(camera, teamRun.focus, state === 'fight' && !roundOver, teamRun.human); // 동시 대전 화면 밖 화살표 · 상대 머리 위 붉은 세모 (체력 막대는 staminaHud)
   strikeCue.update(dt, camera, state === 'fight' && !roundOver && (!teamRun || !!teamRun.human), player, enemy, playerUnique, playerSecret); // 칠 때 알림: 카메라가 정해진 뒤 · 그리기 전
   screenTint.update(dt);
   let renderMs = 0;

@@ -121,7 +121,7 @@ export const TEAM_FIGHT = {
     margin: 0.8, // 바꾸려면 새 상대가 이만큼(m) 더 낮아야 (2867)
     hold: realS(1.2), // … 그리고 이 시간 동안 내리 낮아야 (실제 초 — 시간 사다리 1.2 · 나를 치는 상대는 기다림 없이) (2867)
     prefAdd: 1.0, // 인물별 2:2 겨눔 취향 덧셈 크기 (weakest · strongest · allyAttacker — 갈고리만, 아직 쓰는 인물 없음) (2868)
-    attackHold: realS(0.4), // '나를 침' 바꿈: 그 상대가 나를 이만큼(실제 초 — 시간 사다리 0.4) 내리 치고 있어야 (0 = 곧장 — 2단계) · 2:1 혼자 쪽 2 s 안에 되돌아봄 6.4 → 1.2 / 분 (2877)
+    attackHold: realS(0.2), // '나를 침' 바꿈: 그 상대가 나를 이만큼(실제 초 — 시간 사다리 0.2) 내리 치고 있어야 (0 = 곧장 — 2단계) — 사장님 10/29 20:3x '2:1에서 혼자인 쪽이 몸을 돌리는 시간 공격해 오는 쪽 0.2초 이상으로' (2877)
   },
   // 상대 둘 (AI — ai.js teamFeet): 간 보기 · 물러남 동안 다른 상대가 range 안에서 지금 상대와 angle 넘게 벌어져 있으면 그 반대 옆으로 비켜 둘을 한 줄로 (2870)
   flank: { range: 3.5, angle: 70, side: 0.6 }, // m · 도(°) · 스틱 옆 몫
@@ -130,6 +130,13 @@ export const TEAM_FIGHT = {
   // 3단계 (10/29 — main.js 동시 대전 판): 카메라 물러남 · 죽은 몸 쉬게 하기 — 사장님 확인 전 (확인표 2875 · 2876)
   cam: { radius: 7, fit: 0.85, minDepth: 2.4, max: 3.0, upK: 0.45, tau: realS(0.6) }, // 보는 몸에서 radius m 안의 산 싸움꾼이 모두 화면에 들게 뒤로(≤ max m): 화면 가로 반폭의 fit 몫 안 · 카메라 앞 깊이 minDepth m 넘게 · 위로 그 × upK · 시간 상수 tau (2875)
   deadSettle: { t: realS(1.5), v: 0.05 }, // 죽은 지 t 넘게 · 몸 부위가 모두 v m/s 밑이면 그 몸은 스텝 · 조종 · 칼 잔상 · 바람 소리를 쉼 (셋 이상 판만 — 2876)
+  // 2:1 숙련도 몫 (사장님 10/29 20:4x '높은 숙련도가 똑똑해지도록 · 잘 싸워서 이긴 느낌' — 셋 이상 판의 AI 만 · ai.js teamFeet). 숙련도 몫 sk = (p − prof[0]) ÷ (prof[1] − prof[0]) 를 0 ~ 1 로
+  //  목표 띠는 확인표 2881(사장님 결정) · 값은 2882 · 2883 (사장님 확인 전 — 12 판 2차 값 · 띠에 못 미침: docs/strike/team_fight_2026-10-29.md §13) · 끄기 tools/sim/team_balance.mjs --lever=none
+  lever: {
+    prof: [2, 6], // 숙련도 2 이하 = 0 (똑똑해지지 않음) · 6 = 1
+    lineUp: { on: true, range: 4.5, side: 1.0, full: 0.8, backFrom: 95, back: 1.0 }, // 줄 세우기: 다른 상대를 지금 상대 뒤로 (옆 몫 side × sk × min(1, 벌어진 각 ÷ full rad)) · 집게(각 > backFrom°)면 물러남 back × sk
+    evade: { on: true, gap: 0.8, k: 1.2 }, // 모든 상대의 위협 읽기: 지금 상대가 아닌 상대가 나를 치러 칼끝 거리 + gap 안이면 그 몸에서 k × sk 만큼 비킴
+  },
 };
 
 export const CAMERA = {

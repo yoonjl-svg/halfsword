@@ -1585,10 +1585,13 @@ export class Fighter {
         part: w.part, type: w.type, severity: w.severity, bleed: w.bleed, local: [w.local.x, w.local.y, w.local.z],
         ...(w.stump ? { stump: true } : {}), ...(w.limb ? { limb: w.limb } : {}), ...(w.carried ? { carried: true } : {}),
       })),
+      weaponBroken: this.weaponBroken, // 부러진 무기는 그 대회 끝까지 부러진 채 (사장님 10/29 20:1x — 생사전)
     };
   }
 
-  /** 새 판 몸에 사본을 입힌다 (판을 세운 뒤 · 첫 스텝 전). 칼 쥔 팔 기능이 칼을 놓치는 문턱 밑이면 처음부터 칼을 놓친다 (싸움 상처와 같은 규칙) */
+  /** 새 판 몸에 사본을 입힌다 (판을 세운 뒤 · 첫 스텝 전). 칼 쥔 팔 기능이 칼을 놓치는 문턱 밑이면 처음부터 칼을 놓친다 (싸움 상처와 같은 규칙).
+   *  weaponBroken 이면 처음부터 부러진 무기 — 싸움에서 부러질 때와 같은 breakWeapon(토막 · 질량 · 칼 길이 · 휘는 마디 무기는 안 부러짐) ·
+   *  부러질 수 없는 무기(fragile 거짓 — 싸움에서도 안 부러짐)는 그대로 · 조각은 날리지 않음(quiet) · 난수 없음 */
   applySnapshot(s) {
     if (!s) return;
     this.blood = s.blood;
@@ -1600,6 +1603,7 @@ export class Fighter {
       part: w.part, type: w.type, severity: w.severity, bleed: w.bleed, local: new THREE.Vector3(w.local[0], w.local[1], w.local[2]),
       ...(w.stump ? { stump: true } : {}), ...(w.limb ? { limb: w.limb } : {}), ...(w.carried ? { carried: true } : {}),
     }));
+    if (s.weaponBroken && !this.weaponBroken && this.weapon.fragile) this.breakWeapon(true);
     if (this.limbs.armS < VITALS.dropSwordArm && this.armed) this.dropSword();
   }
 
@@ -2395,7 +2399,7 @@ export class Fighter {
    *  물리: 칼날 콜라이더를 그 자리에서 줄인다(핸들이 그대로라 combat.js 의 접촉 기록이 끊기지 않는다) → 질량·관성·칼 길이가 함께 준다.
    *  겉모습: 절단선 위 메쉬는 조각이 되어 날아가 사라지고(debris.js), 남는 끝엔 톱니 모양 부러진 면을 얹는다.
    */
-  breakWeapon() {
+  breakWeapon(quiet = false) { // quiet: 판을 세울 때 처음부터 부러진 무기(applySnapshot — 생사전) — 떨어진 조각을 날리지 않고 버린다
     if (this.weaponBroken || this.flexWeapon) return; // 한 번만 부러진다 · 휘는 마디 무기(채찍)는 끊어지지 않는다 — 길이 · 질량 그대로
     this.weaponBroken = true;
     const cfg = this.weaponCfg;
@@ -2421,7 +2425,7 @@ export class Fighter {
     // 칼끝 자리가 한순간에 옮겨졌다: 칼끝 속도 추정이 튀지 않게 이전 값을 버린다
     this.tipPrev = null;
     this.hitPointPrev = null;
-    this.shatterLook(cutY);
+    this.shatterLook(cutY, quiet);
   }
 
   /** (파손) 떨어져 나간 부품의 콜라이더를 세계에서 떼어 낸다. Rapier 0.19.3 의 setEnabled(false) 는 충돌을 끄지 못한다
@@ -2481,7 +2485,7 @@ export class Fighter {
   }
 
   /** (파손) 칼 겉모습을 절단선에서 끊고, 떨어진 조각을 날려 보낸다 (보여 주기만 — 전역 난수를 건드리지 않는다) */
-  shatterLook(cutY) {
+  shatterLook(cutY, quiet = false) {
     const group = this.swordGroup;
     const sword = this.sword;
     // 그룹 자세는 지난 화면 갱신 값일 수 있어 몸체 자세로 맞춘 뒤 자른다
@@ -2490,7 +2494,7 @@ export class Fighter {
     rot(sword, group.quaternion);
     const out = isolatedVisual(() => breakWeaponLook(group, cutY, { material: this.weapon.material }), 0);
     if (!out.fragment) return;
-    if (!debrisEnabled()) {
+    if (quiet || !debrisEnabled()) {
       out.fragment.traverse((o) => o.geometry?.dispose());
       return;
     }
