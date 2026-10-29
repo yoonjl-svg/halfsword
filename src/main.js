@@ -225,6 +225,9 @@ if (params.has('gnsCrouchAim')) CONFIG.SECRET.gnsCrouchAim = +params.get('gnsCro
 if (params.has('gnsAiSettle')) CONFIG.SECRET.gnsAiSettle = +params.get('gnsAiSettle') ? 1 : 0; // 고노센 AI 가 준비 전이면 간 보기 동안 제자리에 섬 (10/25 22:5x 규칙의 AI 쪽 — 기본 1 · `?gnsAiSettle=0` · 사장님 확인 전)
 if (params.has('gnsWalkIn')) CONFIG.SECRET.gnsWalkIn = +params.get('gnsWalkIn') ? 1 : 0; // 고노센 들어옴 창 (기본 0 = 천천히 걸어 듦은 창 없음 — 사장님 10/25 22:3x 입력 글 · 22:5x 끈 채로 · `?gnsWalkIn=1` = 01:3x 판)
 if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')
+if (params.get('ibFlowDetect') === 'old') CONFIG.IB_FLOW.detect = 'old'; // 흐르는 긋기 10/21 판 읽기 (10/28 — 기본 'a' 진짜 이어 그을 때만 · 확인표 2722)
+if (params.has('ibFlowBrake')) CONFIG.IB_FLOW.brake = +params.get('ibFlowBrake'); // 흐르는 긋기 제동 늦춤 몫 (10/28 기본 0.8 · 전 0.5 · 확인표 2723)
+if (params.has('ibFlowPow')) CONFIG.IB_FLOW.power = +params.get('ibFlowPow'); // 흐르는 긋기 위력 (10/28 기본 1.2 · 1 = 없음 · 확인표 2724)
 if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.iberian.on = false; // 이베리아 손목 힘 패시브만 끔 (10/21 — test.html '이베리아 시험')
 // 이베리아 날 세우기 시험 (10/22 — 기본 끔 · 사장님 확인 전, config IB_EDGE · docs/strike/iberian_flat_hits_2026-10-22.md): `?ibEdge=motor` · `?ibEdge=ff` · `?ibEdge=pre` = 이베리아 유파만 그 날 세우기 방식
 if (['motor', 'ff', 'pre'].includes(params.get('ibEdge'))) Object.assign(CONFIG.IB_EDGE, { on: true, edge: params.get('ibEdge') });
@@ -299,9 +302,29 @@ if (params.has('schielPlayer')) CONFIG.UNIQUE_ASSIST.schielPlayer = +params.get(
 if (params.has('schielPlayerK') && Number.isFinite(+params.get('schielPlayerK'))) CONFIG.UNIQUE_ASSIST.schielPlayerK = +params.get('schielPlayerK'); // 사람 곁눈 베기 세기 손잡이 (사장님 10/25 20:2x 결정 — 기본 1 = 세기 100 % · `?schielPlayerK=0.5` = 시험용 50 % · combat.js analyze)
 if (params.has('schielPlayerTip')) CONFIG.UNIQUE_ASSIST.schielPlayerTip = +params.get('schielPlayerTip') ? 1 : 0; // 사람 곁눈 베기 칼끝 들기 (사장님 10/25 20:2x 결정 '칼끝 들기 빼지 마' — 기본 1 = AI 와 같은 덧칸 셋 · `?schielPlayerTip=0` = 시험용 칼끝 들기 없음 · unique_assist.js planStep)
 for (const k of ['tsuRuler', 'tsuSnap', 'tsuAim', 'tsuBand']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 제비 베기 세 해법 (사장님 10/25 21:1x '해법 1~3 좋아' — 기본 1 · 0 = 그 해법만 끔 · unique_assist.js)
-if (params.has('tsuSnapShare') && +params.get('tsuSnapShare') > 0) CONFIG.UNIQUE_ASSIST.tsuSnapShare = +params.get('tsuSnapShare'); // 제비 베기 되돌림 칼끝 빠르기 몫 (기본 0.6 — 고노센 발도 칼끝 빠르기의 몫)
+// 특수 공격 칼끝 빠르기 몫 (사장님 10/29 02:0x — 같은 칼 고노센 칼끝 × 몫 · config UNIQUE_ASSIST.specialShare 한 곳): `?specialShare=redondo:0.5,lianchi:0.5` · 옛 이름 `?tsuSnapShare=` · `?cavSnapShare=` · `?lianSnapShare=` · `?dupSnapShare=` · `?rdSnapShare=` 도 그 칸(값 = 고노센 몫)
+{
+  const SPK = { tsuSnapShare: 'tsubameGaeshi', cavSnapShare: 'cavazione', lianSnapShare: 'lianchi', dupSnapShare: 'duplieren', rdSnapShare: 'redondo' };
+  for (const [k, name] of Object.entries(SPK)) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST.specialShare[name] = +params.get(k);
+  for (const kv of String(params.get('specialShare') ?? '').split(',').filter(Boolean)) {
+    const [name, v] = kv.split(':');
+    if (name in CONFIG.UNIQUE_ASSIST.specialShare && +v >= 0) CONFIG.UNIQUE_ASSIST.specialShare[name] = +v;
+  }
+}
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
+for (const k of ['imbroReach', 'cavTap', 'cavSnap']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
+if (params.has('cavTo') && +params.get('cavTo') > 0) CONFIG.UNIQUE_ASSIST.cavTo = CONFIG.realS(+params.get('cavTo')); // 칼끝 돌려 빼기 탭 창 끝 (실제 초 — 기본 1.2 · 사장님 10/28 01:1x)
+if (params.has('lianTap')) CONFIG.UNIQUE_ASSIST.lianTap = +params.get('lianTap') ? 1 : 0; // 사람 날개 접기 탭 (사장님 10/28 01:2x — 물러나며 탭 · 기본 1)
+if (params.has('lianStep') && +params.get('lianStep') >= 0) CONFIG.UNIQUE_ASSIST.lianStep = +params.get('lianStep'); // 사람 날개 접기 앞 걸음 (m — 기본 0.45 · 사장님 10/29 14:3x)
+if (params.has('specialCooldown')) CONFIG.UNIQUE_ASSIST.specialCooldown = CONFIG.realS(Math.max(0, +params.get('specialCooldown') || 0)); // 특수 공격 공통 식힘 (실제 초 — 기본 6 · 0 = 끔 · 사장님 10/28 02:0x)
+if (params.has('dupTap')) CONFIG.UNIQUE_ASSIST.dupTap = +params.get('dupTap') ? 1 : 0; // 사람 겹치기 탭 (사장님 10/28 01:2x — 맞물린 채 탭 · 기본 1)
+if (params.has('rdHold')) CONFIG.UNIQUE_ASSIST.rdHold = +params.get('rdHold') ? 1 : 0; // 사람 풍차 베기 길게 누름 (이베리아 B4 — 사장님 10/29 · 기본 1)
+if (params.has('rdEdge')) CONFIG.UNIQUE_ASSIST.rdEdge = +params.get('rdEdge') < 0 ? -1 : 1; // 감는 칼 날 쪽 (기본 −1 — 사장님 확인 전)
+if (params.has('ibChain')) CONFIG.IB_FLOW.chainStack = +params.get('ibChain') ? 1 : 0; // 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:4x · 01:5x · 기본 1)
+if (params.has('ibFreeEvery')) CONFIG.IB_FLOW.freeEvery = Math.max(0, Math.round(+params.get('ibFreeEvery') || 0)); // 이어지는 흐름 — 사슬 세 칼마다 기력 0 (사장님 10/29 14:2x · 기본 3 · 0 = 끔)
+if (params.has('ibWindChain')) CONFIG.IB_FLOW.windmillChain = ['simple', 'inside'].includes(params.get('ibWindChain')) ? params.get('ibWindChain') : 0; // 풍차 베기를 이어 그은 칼 하나로 셈 (사장님 10/29 01:5x · 08:3x 'simple' — 기본 'simple' · 'inside' 견줌 · 0 끔)
+if (params.has('dupEdge')) CONFIG.UNIQUE_ASSIST.dupEdge = +params.get('dupEdge') < 0 ? -1 : 1; // 겹치기 날 (1 긴 날 · −1 짧은 날)
 if (params.has('koteDrop')) CONFIG.UNIQUE_ASSIST.koteDrop.p = +params.get('koteDrop') || 0; // 손목 치기 칼 떨구기 확률(10/24 J8 — 판 값 0.5 · `?koteDrop=0` 끔)
 if (['cut', 'arm', 'all'].includes(params.get('koteJudge'))) CONFIG.UNIQUE_ASSIST.koteDrop.judge = params.get('koteJudge'); // 칼 떨구기 닿음 판정(10/24 12:3x — 판 값 'all' · 'cut' = 11:5x 판 · 'arm' = 아래팔 닿음만)
 if (params.has('uniqueAssist')) CONFIG.UNIQUE_ASSIST.on = +params.get('uniqueAssist') ? 1 : 0; // 플레이어 고유 동작 강화(10/14 — 10/13 이어 주기): 기본 1, `?uniqueAssist=0` = 끔 (기술 이름 알림도 없음)
@@ -2854,14 +2877,21 @@ function frame(now) {
     // 고유 동작 강화 (10/14 — 10/13 이어 주기를 다시 만듦): 손가락 움직임을 알린다(긋기 읽기 · 다른 동작이 손을 쥐는지). 손 목표는 쥐지 않는다 — 손가락은 늘 그대로 더한다
     //  (사장님 결정 10/14 01:5x '궤적은 끝까지 내 손가락, 고유 동작은 손가락으로는 못 하는 몫만 더한다')
     player.skill.uniq?.feed(d.x, d.y, dt, guardHold || bufHold || !!playerGuard?.held);
+    // 풍차 베기 (이베리아 B4 — 10/29 · unique_assist.js holdTick): 탭 입력을 끌지 않고 길게 누르면 감기 · 떼면 내려침 — 누름 상태를 알린다(비기 창이 열려 있으면 감지 않음 — 싱지르가 먼저).
+    //  감는 동안은 손가락 움직임을 손 목표에 더하지 않는다(손은 감기가 쥔다)
+    if (player.skill.uniq?.holdE) {
+      const hs = input.holdState();
+      player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open);
+    }
+    const winding = !!player.skill.uniq?.winding;
     // 권총: 자동 조준이라 끌기는 손을 움직이지 않는다 (빠른 끌기가 내딛기·자세 복귀를 부르지 않게)
-    if (player.alive && !player.weapon?.gun && !secBusy && !guardHold && !bufHold) {
+    if (player.alive && !player.weapon?.gun && !secBusy && !guardHold && !bufHold && !winding) {
       player.handOffset.x += d.x * inScale;
       player.handOffset.y += d.y * inScale;
     }
     // 검술 층의 "자세로 돌아가기"가 알아야 할 것: 손가락이 화면에 닿아 있는지, 지금 움직였는지
     player.handHeld = input.activeTouch !== null;
-    player.inputActive = !secBusy && !bufHold && Math.abs(d.x) + Math.abs(d.y) > 1e-5;
+    player.inputActive = !secBusy && !bufHold && !winding && Math.abs(d.x) + Math.abs(d.y) > 1e-5;
     if (taps > 0 && player.alive && !(pommelTap && player.foeDistance() <= CONFIG.CLOSE.pommelDist && player.skill.pommel())) player.skill.thrust();
     updatePlayerEmotion(dt);
     watchEmotions();

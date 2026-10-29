@@ -12,11 +12,11 @@ import { TREE_SCHOOLS, nodesOf, isClosed, SCHOOL_KO } from './skill_tree_data.js
 /**
  * 감독 스위치
  *  countsLevel: 얻은 호칭 하나마다 Lv +1 (사장님 10/24 03:4x '호칭 하나마다 레벨+1 해' · 끄면 레벨 = 1 + 얻은 것 그대로)
- *  conquerWins: 정복자 = 한 번의 방랑(지지 않은 연승)에서 이긴 판 수 — 감독 해석 '30 무대와 같은 수'(사장님 04:1x '연속으로 모든 방랑 클리어')
+ *  conquerWins: 정복자 = 한 번의 방랑(지지 않은 연승)에서 이긴 판 수 — 10 (사장님 10/29 18:2x '방랑 30승인가 하면 주는 칭호의 조건을 10연승으로 바꾸고 해당 칭호가 있어야 (생사전에) 입장' · 전: 감독 해석 '30 무대와 같은 수' — 사장님 10/24 04:1x '연속으로 모든 방랑 클리어')
  *  butcherHeads · tycoonCoins: 도살자 · 대부호 = 지금까지 싸움에서 번 머리 · 금화(lobby_progress.js earned — 감독 기본 '번 것' · 가진 것이 아님 — 쓰면 손해가 되지 않게)
  *  legendStep: 가진 호칭 하나마다 내 카드 뽑기의 레전드 등급 확률 +이만큼(%p) · 커먼 −이만큼 (사장님 10/24 04:0x — tierDrawFor · 0 이면 끔)
  */
-export const TITLE = { countsLevel: true, conquerWins: 30, butcherHeads: 100, tycoonCoins: 10000, legendStep: 0.2 };
+export const TITLE = { countsLevel: true, conquerWins: 10, butcherHeads: 100, tycoonCoins: 10000, legendStep: 0.2 };
 /** 왕 시해자: 한 번의 방랑에서 이 셋을 모두 이김(차례 상관없음 · 광기의 아르토리아 artoria_mad 는 셈 밖 — 사장님 04:2x) · 나무꾼: 이 셋 중 하나를 나뭇가지로 이김 */
 export const KING_FOES = Object.freeze(['artoria', 'roland', 'bernardo']);
 /** 나무꾼 무기 = 나뭇가지 (weapons.js 'tree_branch') */

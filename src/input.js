@@ -130,6 +130,16 @@ export class Input {
     flushHaptic(); // 아이폰: 손가락을 떼는 순간에만 진동이 허락된다
   }
 
+  /**
+   * 지금 탭 손가락(마우스 왼 단추)을 누르고 있나 (풍차 베기 길게 누름 — 이베리아 B4 · 10/29 · main.js → unique_assist.js holdInput):
+   *  down = 탭으로 셀 수 있는 누름이 닿아 있음(권총 · 잠금 거는 첫 클릭 · 다른 단추는 아님) · still = 그 누름이 지금까지 탭 문턱(움직인 거리 tapPx · clickPx — 끌지 않음) 안
+   */
+  holdState() {
+    const p = this.press;
+    if (!this.enabled || !p || !p.ok) return { down: false, still: false };
+    return { down: true, still: p.moved < (p.mouse ? INPUT.clickPx : INPUT.tapPx) };
+  }
+
   /** 지난번 이후 톡 친 횟수 (찌르기) */
   consumeTaps() {
     const n = this.taps;
