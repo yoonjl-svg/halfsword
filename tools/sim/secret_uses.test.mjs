@@ -1,5 +1,5 @@
 // 유파 비기 판당 쓸 수 시험 (사장님 10/29 19:5x '비기는 쿨타임을 없애고 판당 1회만 쓸 수 있게 하자.(동방 격살은 3회)' · 19:4x 'AI의 모든 쿨타임은 사람과 맞춰.' —
-//   config UNIQUE_ASSIST.secretUses · secret.js secretLeft · useSecret · PlayerSecretWatch · ai.js dropSecret · gnsWatch — 감독 해석 · 사장님 확인 중):
+//   config UNIQUE_ASSIST.secretUses · secret.js secretLeft · useSecret · PlayerSecretWatch · ai.js dropSecret · gnsWatch — 사장님 10/29 20:5x 확인):
 //   비기가 실제로 나간 때(skill.secret 이 받음 · AI 비기 실행)만 셈 · 다 쓰면 그 판엔 창 · 조건이 안 걸림(비기가 도는 동안과 같은 바쁨) · 판(몸)이 새로면 다시 · 동방 3 번 · AI 같은 수
 //  작게 · 빠르게: 사람 창은 물리 스텝 없이 창만 돌린다.  node --test tools/sim/secret_uses.test.mjs
 import test from 'node:test';
@@ -23,6 +23,7 @@ function body(weapon, gap) {
   const P = G.player;
   for (let i = 0; i < 3; i++) G.step();
   P.fightT = 1e3;
+  if (weapon === 'longsword') P.foeDistance = () => 0.6; // 모르트슐라크 조건 = 몸이 붙은 채 2 s (10/29 20:0x mordRule 'close' — 롱소드 붙은 거리 0.77 안)
   const W = new PlayerSecretWatch(P, G.enemy);
   const upd = () => W.update(DT, !!P.skill.sec);
   const until = (pred, max) => {

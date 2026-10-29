@@ -1,4 +1,4 @@
-// AI 특수 공격 식힘 시험 (사장님 10/29 19:4x 'AI의 모든 쿨타임은 사람과 맞춰.' · 19:5x 특수공격 3초 · 끝난 때부터 — ai.js specCooling · techNow · specStart · specTick · 감독 해석 · 사장님 확인 중):
+// AI 특수 공격 식힘 시험 (사장님 10/29 19:4x 'AI의 모든 쿨타임은 사람과 맞춰.' · 19:5x 특수공격 3초 · 끝난 때부터 — ai.js specCooling · techNow · specStart · specTick · 사장님 10/29 20:5x 확인):
 //   AI 몫 = 제비 베기 길 · 되받아 치기 패시브(kaeshi — 제비 베기) / 칼끝 돌려 빼기 속임 · 빼서 찌르기 패시브(cavazione) / 날개 접기 속임 / 겹치기 길 · 겹치기 패시브 / 머리 위 돌려 베기 강화동작(왼 가로베기 자리)
 //   식는 동안: 고르지 않음(강화동작은 바탕 왼 가로베기로) · 패시브 · 속임 없음 · 나간 공격이 끝날 때까지 식힘 중 → 끝난 때부터 3 s.  node --test tools/sim/ai_special_cooldown.test.mjs
 import test from 'node:test';
