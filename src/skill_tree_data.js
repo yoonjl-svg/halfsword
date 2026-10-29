@@ -22,7 +22,7 @@ export const NODE_CAT = Object.freeze({
 });
 
 /** 판 몫 열쇠 (skillKit 칸 — 칸이 없으면 false). unique · perk 는 이름 모음 */
-export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'passive', 'secret']);
+export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29)
 
 export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10/21)
 
@@ -41,7 +41,7 @@ const TREE_SRC = {
       N({ id: 'G8', name: '비껴 딛는 가로베기', cat: 'atk', l1: '비껴 딛는', l2: '가로베기', eff: '옆으로 걸으며 가로로 긋는다', pre: ['G1'], price: 200, d: 1, cx: 500, u: 'zwerchAbtritt' }),
       N({ id: 'G3', name: '세워 받기', cat: 'parry', l1: '막기 I', l2: '막기 자리', eff: '오는 칼 쪽에 칼을 세워 받는다', pre: ['G1'], price: 200, d: 1, cx: 690, f: ['parry'] }),
       N({ id: 'G11', name: '뉘른베르크에서 온 편지', cat: 'letter', l1: '뉘른베르크', l2: '온 편지', title: '뉘른베르크에서 온 편지', pre: ['G1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
-      N({ id: 'G7', name: '겹치기', cat: 'atk', l1: '겹치기', l2: '이어 긋기', eff: '칼이 맞물리면 곧바로 다시 그어 들어간다', pre: ['G4'], price: 300, d: 3, cx: 690, u: 'duplieren' }), // 10/28 00:5x 사장님 '겹치기는 왕관 아래로' — 특수공격(이어 긋기)이 된 뒤 자리 (전 2단계 관문 뒤 · cx 310)
+      N({ id: 'G7', name: '겹치기', cat: 'atk', l1: '겹치기', l2: '이어 긋기', eff: '칼이 맞물리면 상대 칼 뒤로 들어가 얼굴을 벤다', pre: ['G4'], price: 300, d: 3, cx: 690, u: 'duplieren' }), // 10/28 00:5x 사장님 '겹치기는 왕관 아래로' — 특수공격(이어 긋기)이 된 뒤 자리 (전 2단계 관문 뒤 · cx 310) // 10/29 14:1x · 14:2x 사장님 글 (효과)
       N({ id: 'G6', name: '무릎 꺾기', cat: 'deep', l1: '심화', l2: '무릎 꺾기', title: '곁눈 베기 심화 · 무릎 꺾기', eff: '곁눈 베기에 맞은 상대가 무릎을 꿇기도 한다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 310, perk: 'schielhau' }), // 10/28 00:5x 사장님 '무릎 꺾기가 곁눈 베기 아래로' (전 cx 500)
       N({ id: 'G4', name: '왕관', cat: 'parry', l1: '막기 II', l2: '왕관', title: '막기 II · 왕관 (크론)', orig: 'Kron', eff: '머리 위로 오는 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 690, f: ['parryCover'] }),
       N({ id: 'G9', name: '그 순간', cat: 'passive', l1: '패시브', l2: '그 순간', eff: '칼이 맞부딪히거나 상대가 헛친 직후에 친 칼은 피해가 증가한다', pre: ['G2'], price: 0, heads: 5, d: 2, cx: 100, f: ['passive'] }), // 10/29 01:5x 사장님 '인데스만 독일어더라 그것도 바꿔' → '그 순간' (뜻 이름 — 대기실 스킬 '그 순간 (인데스)') · 10/28 23:4x 사장님 '그래 그 안으로 바꿔' — 칼끼리 닿음에도 창(10/28 01:4x · school_passive.js) · 전 '상대가 헛치거나 막힌 직후에 친 칼은 피해가 증가한다'
@@ -58,7 +58,7 @@ const TREE_SRC = {
       N({ id: 'I7', name: '위에서 내려 찌르기', cat: 'atk', l1: '위에서', l2: '내려 찌르기', eff: '황소 찌르기를 하면 위에서 내려 찌르기가 나간다', pre: ['I2'], price: 300, d: 3, cx: 330, u: 'imbroccata' }),
       N({ id: 'I6', name: '막아찌르기', cat: 'parry', l1: '막기 II', l2: '막아찌르기', eff: '막기를 누르면 바로 짧게 찌르고, 그동안 받는 피해가 줄어든다', pre: ['I5'], price: 300, d: 3, cx: 670, f: ['opposition'] }),
       N({ id: 'I8', name: '틈 파고들기', cat: 'deep', l1: '심화', l2: '틈 파고들기', title: '내려 찌르기 심화 · 틈 파고들기', eff: '내려 찌르기가 옷과 갑옷 틈을 더 파고든다', pre: ['I7'], price: 400, d: 4, cx: 330, perk: 'imbroccata' }),
-      N({ id: 'I9', name: '칼끝 돌려 빼기', cat: 'atk', l1: '칼끝', l2: '돌려 빼기', eff: '찌르기가 맞물리거나 꺾인 뒤 다시 찌른다', pre: ['I6'], price: 300, d: 4, cx: 670, u: 'cavazione' }),
+      N({ id: 'I9', name: '칼끝 돌려 빼기', cat: 'atk', l1: '칼끝', l2: '돌려 빼기', eff: '빗나간 막아찌르기 뒤 칼끝을 돌려 빼 가슴을 찌른다', pre: ['I6'], price: 300, d: 4, cx: 670, u: 'cavazione' }), // 10/29 14:1x · 14:2x 사장님 글 (효과)
       N({ id: 'I4', name: '안다레 리솔루토', cat: 'secret', l1: '비기', l2: '안다레 리솔루토', eff: '칼을 붙인 채 상대 걸음에 맞춰 오가다 공격하면, 번개 같은 런지로 찔러 든다', pre: ['I8'], price: 400, heads: 10, d: 5, cx: 330, f: ['secret'] }), // 10/22 사람 먼저 — 거침없이 나아가 찌르기 (옛 엇박 찌르기는 ?itSecret=contratempo · 그때 칸 글은 이것 그대로) · 10/23 넓은 판정에 맞춰 '덮은 채' → '칼을 붙인 채' · 10/24 런지(사장님 '런지로 진행해 … 고노센처럼 빠르게') '묶인 칼을 누르고 곧게 찌른다' → '번개 같은 런지로 찔러 든다' · 10/25 22:3x 사장님 확정 글 '걸어 들어가 찌르면' → '오가다 공격하면'(21:0x 조건 — 스틱 앞이나 뒤 · 공격하면) · 10/28 01:4x 사장님 확정 글 '상대 칼에 칼을 붙인 채' → '칼을 붙인 채 상대 걸음에 맞춰'(상대가 물러서면 들고 · 들어오면 빠짐 — SECRET.risolutoMirror)
       N({ id: 'I10', name: '곧은 선', cat: 'passive', l1: '패시브', l2: '곧은 선', eff: '찌르는 동안 칼끝이 상대를 조금 따라간다', pre: ['I9'], price: 0, heads: 5, d: 5, cx: 670, f: ['passive'] }),
     ],
@@ -69,13 +69,13 @@ const TREE_SRC = {
       N({ id: 'B2', name: '옆 박차기', cat: 'foot', l1: '보법 II', l2: '옆 박차기', eff: '옆으로 누르면 첫 걸음을 박찬다', pre: ['B1'], price: 100, opt: true, d: 1, cx: 84, f: ['burstSide'] }),
       N({ id: 'B10', name: '손목 힘', cat: 'passive', l1: '패시브', l2: '손목 힘', eff: '큰 칼을 돌리는 손목 힘이 세진다', pre: ['B1'], price: 0, heads: 5, d: 1, cx: 252, f: ['passive'] }),
       N({ id: 'B3', name: '나선\u00a0걸음 베기', cat: 'atk', l1: '나선 걸음 베기', l2: '걸음 기술', eff: '옆으로 걸으며 사선으로 내려 긋는다', pre: ['B1'], price: 200, d: 1, cx: 420, u: 'talhoRodeado' }), // 10/29 01:1x 사장님 '나선 걸음 베기로 해' — 머리 위 돌려 베기 · 거듭 돌려 베기와 헷갈려서 이름만(전 '돌며 베기') · 10/29 01:4x '나선 걸음 / 베기 - 이렇게 줄을 바꿔' — 나선과 걸음 사이는 줄 안 바꿈 빈칸(\u00a0 — skill_tree.js nameOptions 는 보통 빈칸에서만 줄을 나눔)
-      N({ id: 'B4', name: '머리 위 돌려 베기', cat: 'atk', l1: '머리 위', l2: '돌려 베기', eff: '왼 가로베기를 그으면 머리 위로 돌려 베기가 나간다', pre: ['B1'], price: 200, d: 1, cx: 588, u: 'redondo' }),
+      N({ id: 'B4', name: '풍차 베기', cat: 'atk', l1: '풍차', l2: '베기', eff: '칼을 머리 위로 돌려서 강하게 내려 벤다', pre: ['B5'], price: 300, d: 2, cx: 560, u: 'redondo' }), // 10/29 01:3x 사장님 '흐르는 긋기와 머리 위 돌려 베기 스킬 위치를 바꿔 · 레돈두를 특수공격으로 · 이름을 특수공격 답게' · 01:5x '레돈두는 풍차 베기로' · 확인표 2726 · 2727 (전: 머리 위 돌려 베기 — 왼 가로베기 강화동작 · d 1 · cx 588 · B1 뒤 · 금화 200 — 값은 자리의 깊이를 따름) // 10/29 14:1x · 14:2x 사장님 글 (효과)
       N({ id: 'B8', name: '쳐내기', cat: 'parry', l1: '막기 I', l2: '쳐내기', title: '막기 I · 쳐내기 (탈류 · 레베스)', eff: '높이 오는 칼을 베어 쳐낸다', pre: ['B1'], price: 200, d: 1, cx: 756, f: ['parry', 'parryCover'] }),
       N({ id: 'B11', name: '리스본에서 온 편지', cat: 'letter', l1: '리스본에서', l2: '온 편지', title: '리스본에서 온 편지', pre: ['B1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
-      N({ id: 'B5', name: '흐르는 긋기', cat: 'atk', l1: '이어 긋기', l2: '흐름', eff: '이어 그을 때 칼이 멈추지 않고 다음 긋기로 흐른다', pre: ['B4'], price: 300, d: 2, cx: 560, f: ['ibFlow'] }),
+      N({ id: 'B5', name: '흐르는 긋기', cat: 'atk', l1: '이어 긋기', l2: '흐름', eff: '이어 그을 때 칼이 멈추지 않고 다음 긋기로 흐른다', pre: ['B1'], price: 200, d: 1, cx: 588, f: ['ibFlow'] }), // 10/29 01:3x 머리 위 돌려 베기와 자리 바꿈 (전 d 2 · cx 560 · B4 뒤 · 금화 300)
       N({ id: 'B9', name: '굳은 받기', cat: 'parry', l1: '막기 II', l2: '굳은 받기', eff: '막는 동안 받는 피해가 줄어든다', pre: ['B8'], price: 300, d: 2, cx: 800, f: ['parryCut'] }),
       N({ id: 'B7', name: '싱지르', cat: 'secret', l1: '비기', l2: '싱지르', eff: '칼끝 거리 밖에서 버티다 공격을 원을 그리듯 한 바퀴 돌리면, 몸을 한 바퀴 돌려 가로로 벤다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 10, d: 3, cx: 420, f: ['secret'] }), // 10/22 이베리아 새 비기 (사장님 '빙글 한바퀴 돌면서 … 일격' — schools.js IBERIAN_SECRET_SPIN · 전 '길목 지키기')
-      N({ id: 'B6', name: '거듭 돌려 베기', cat: 'deep', l1: '심화', l2: '쌓기', title: '돌려 베기 심화 · 쌓기', eff: '돌려 베기를 이어 그을수록 피해가 증가한다', pre: ['B5'], price: 400, d: 3, cx: 680, perk: 'redondo' }),
+      N({ id: 'B6', name: '이어지는 흐름', cat: 'deep', l1: '이어지는', l2: '흐름', title: '이어지는 흐름', eff: '이어 그을수록 세지고, 세 번째 긋기마다 기력을 쓰지 않는다', pre: ['B4'], price: 400, d: 3, cx: 680, f: ['ibChain'] }), // 10/29 01:4x · 01:5x 사장님 결정 · 확인표 2735 ~ 2738 — 이어 그은 수마다 흐르는 긋기 위력 더하기 · 상한 없음 · 14:1x · 14:2x 사슬 세 칼마다 기력 0 (config IB_FLOW.chainStack · freeEvery — 전 01:5x 기력 × 0.9ⁿ · 그 전: 거듭 돌려 베기 · 돌려 베기 쌓기 perk redondo) · 효과 글 14:1x · 14:2x 사장님 글
     ],
   },
   japanese: {
@@ -102,7 +102,7 @@ const TREE_SRC = {
       N({ id: 'C11', name: '한양에서 온 편지', cat: 'letter', l1: '한양에서', l2: '온 편지', title: '한양에서 온 편지', pre: ['C1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'C4', name: '깊은 허리 베기', cat: 'deep', l1: '심화', l2: '출혈', title: '허리 베기 심화 · 출혈', eff: '허리를 베는 칼이 몸통에 들면 피를 더 흘린다', pre: ['C3'], price: 300, d: 2, cx: 130, perk: 'yaoji' }), // 10/28 01:1x 사장님 '체보요격과 염시에도 붙여' — 허리 베기 · 끌어 딛고 허리 베기 · 날개 접기 (전 '허리 베기로 몸통을 베면 …')
       N({ id: 'C5', name: '끌어 딛고 허리 베기', cat: 'atk', l1: '끌어 딛고', l2: '허리 베기', eff: '앞으로 끌어 딛으며 가로로 긋는다', pre: ['C3'], price: 300, d: 2, cx: 490, u: 'chebuYaoji' }), // 10/28 00:5x 사장님 '체보요격과 염시 자리 바꿔' — 선도 자리를 따라 격살로 (전 cx 310)
-      N({ id: 'C6', name: '날개 접기', cat: 'atk', l1: '날개 접기', l2: '이어 긋기', eff: '찌르다가 칼을 거두며 벤다', pre: ['C3'], price: 300, d: 2, cx: 310, u: 'lianchi' }), // 10/28 00:5x 체보요격과 자리 바꿈 — 특수공격(이어 긋기)은 비기와 다른 줄 (전 cx 490 · 격살 앞 칸)
+      N({ id: 'C6', name: '날개 접기', cat: 'atk', l1: '날개 접기', l2: '이어 긋기', eff: '물러나는 척 칼을 거두며 나아가 허리를 벤다', pre: ['C3'], price: 300, d: 2, cx: 310, u: 'lianchi' }), // 10/28 00:5x 체보요격과 자리 바꿈 — 특수공격(이어 긋기)은 비기와 다른 줄 (전 cx 490 · 격살 앞 칸) // 10/29 14:1x · 14:2x 사장님 글 (효과)
       N({ id: 'C8', name: '단단한 받기', cat: 'parry', l1: '막기 II', l2: '단단한 받기', eff: '막는 동안 받는 피해가 크게 줄어든다', pre: ['C7'], price: 300, d: 2, cx: 680, f: ['parryCut'] }),
       N({ id: 'C10', name: '숨 바꾸기', cat: 'passive', l1: '패시브', l2: '숨 바꾸기', eff: '휘두르지 않는 동안 출혈이 빨리 잦아든다', pre: ['C7'], price: 0, heads: 5, d: 2, cx: 880, f: ['passive'] }),
       N({ id: 'C9', name: '격살', cat: 'secret', l1: '비기', l2: '격살', eff: '나서며 때맞춰 막으면, 받은 자세의 급소를 깊게 친다', pre: ['C5', 'C8'], price: 400, heads: 10, d: 3, cx: 590, f: ['secret'] }), // 10/22 격살 (사람 — schools.js CHINESE_SECRET_GYEOKSAL) · 10/24 받아 내면 저절로(글 '막고 공격하면' → '막으면') · 전 '세 번 이어 치기'
@@ -194,18 +194,18 @@ const NODE_CMD = {
   G2: '상대가 헛치면 앞으로 이동(↑)', // gait.js foeWhiff → 받을 창 안의 첫 앞 걸음이 빠른 디딤 둘
   G5: '사선 긋기(↙)', // 곁눈 베기 ← 분노의 베기(어깨 지붕 → 왼 아래 — ai_techniques.js zornhau)
   G8: '좌우 이동(←/→)과 동시에 수평 긋기(←)', // 걸음 명령 stick 'side'(옆 몫 ≥ 0.5 · 어느 쪽이든) + 가로베기(zwerch — 옆 자세 → 왼 옆)
-  G7: '긋기가 상대 칼에 닿으면 바로 다시 긋기', // 이어 긋기 — 앞 긋기(kind 'cut' — 찌르기 길 긋기는 안 셈) 맞물림 뒤 afterWindow 안의 긋기(길 · 쪽 없음 · 탭은 안 셈 — unique_assist.js busy)
+  G7: '긋기가 상대 칼에 닿은 채 탭', // 탭으로 내는 특수 공격 — unique_assist.js TAP_TRIG.dup: 내 긋기가 상대 칼에 맞물려 지금도 닿아 있는 동안의 탭 (10/28 01:2x) · 10/29 14:1x · 14:2x 사장님 글 (전 '긋기가 상대 칼에 닿으면 바로 다시 긋기')
   G10: '상대와 몸이 붙은 채 2초 이상 밀치면(↑) 비기 활성화', // 10/25 23:1x 사장님 확정 글(감독 전달 — 글 속 시간 = SECRET.mordPress 2 · 걸쇠 없앰 CLOSE.latch 0) — secret.js pressTick 밀치기 누르기(fighter.js closeStep — 닿는 거리 안에서 스틱 앞 · 끊겨도 mordGrace 0.4 s(10/27 21:4x — 전 0.2) 안에 다시 누르면 이어 셈) mordPress 초 → 창(비기 활성화) → 탭 · 긋기 둘 다(main.js) · 전 '붙은 채 멈췄다 앞으로 이동(↑), 느낌표(!)가 뜨면 공격'
   // 이탈리아
   I2: '좌우 이동(←/→)과 동시에 사선 긋기(↖/↗)', // 걸음 명령 stick 'side' + 쟁기 찌르기 긋기(stichPflug ↖ · stichPflugL ↗ — 허리 옆 → 가운데 · 탭은 안 됨)
   I7: '머리 높이에서 사선 긋기(↙)', // 위에서 내려 찌르기 ← 황소 찌르기 긋기(stichOchs — 머리 오른쪽 → 가운데 · 탭은 안 됨)
   I6: '막기', // italian_opposition.js — 막기 단추 새 누름 한 번에 곧장
-  I9: '탭이나 찌르는 긋기가 상대 칼에 닿으면 바로 긋기', // 이어 긋기 — 앞 찌르기(prev 'thrust' = 탭 · 찌르기 길 긋기 둘 다 — unique_assist.js track) 맞물림 뒤 afterWindow 안의 긋기(탭은 안 셈)
+  I9: '막기로 찌른 칼이 빗나가면 박자를 맞추어 탭', // 탭으로 내는 특수 공격 — unique_assist.js TAP_TRIG.cav: 막아찌르기(I6)가 상처를 못 내고 끝난 때부터 실제 0.6 ~ 1.2 s 의 탭 · 이른 탭은 그 기회를 없앰('박자') (10/28 01:2x) · 10/29 14:1x · 14:2x 사장님 글 (전 '탭이나 찌르는 긋기가 상대 칼에 닿으면 바로 긋기')
   I4: '칼을 맞대고 상대 걸음 따라 움직이면(↑/↓) 비기 활성화', // 10/28 18:3x 사장님 '라솔루토 설명은 1' — 상대 걸음에 맞춰(italian_risoluto.js risolutoMirror) · 전 '칼 길이 바깥에서 칼을 맞대고 움직이면(↑/↓) 비기 활성화'(10/25 22:3x 사장님 확정 글(4] '활성화 앞에 '비기'') — italian_risoluto.js 덮인 채 나아가기(칼끼리 risolutoCover 안 · 스틱 앞이나 뒤 risolutoStick 'both') · 가슴 사이 ≥ 맞닿기 거리(lungeGapOk — '칼 길이 바깥') → 창(비기 활성화) → 공격(탭 · 긋기 — risolutoTap 0) · 전 '칼을 맞댄 채 앞으로 이동(↑), 느낌표(!)가 뜨면 탭'
   // 이베리아
   B2: '좌우 이동(←/→)', // gait.js 옆 누르면 첫 걸음에 늘 옆 박차기(burstWalkSide · sideDash)
   B3: '좌우 이동(←/→)과 동시에 사선 긋기(↙)', // 걸음 명령 stick 'side' + 분노의 베기(zornhau)
-  B4: '수평 긋기(→)', // 머리 위 돌려 베기 ← 왼 가로베기(zwerchL)
+  B4: '탭을 길게 누르다 떼기', // 풍차 베기 — unique_assist.js holdTick: 탭(PC 왼 단추)을 끌지 않고 rdHoldTime 넘게 누르면 머리 위로 감기 · 그동안 걸음 그대로 · 떼면 내려침 · 10/29 14:1x · 14:2x 사장님 글 (전 '탭을 길게 누른 채 이동하다 떼기' · 그 전 '수평 긋기(→)' — 머리 위 돌려 베기 ← 왼 가로베기 · AI 몫)
   B5: '긋기를 쉬지 않고 이어 가기', // fighter.js updateIbFlow — 앞 휘두르기(긋기) 뒤 이어짐 창 안에 다시 휘두름 · 휘두르며 둥글게 꺾음(탭은 휘두르기가 아님)
   B7: '칼 길이 바깥에서 2초 기다리면 비기 활성화 · 원을 그리며 긋기(↻/↺)로 발동', // 10/25 22:3x 사장님 확정 글(4] '비기' · 5] 2초) — secret.js spinTick 무장(칼끝 거리 밖 SECRET.ibSpin.armTime 2 초 — 금빛 '!' = 비기 활성화) → spinCircle 긋기로 원 한 바퀴(어느 쪽이든 — SECRET.ibSpin.input 'attackCircle' · 탭은 보통 공격) · 전 '거리 밖에서 버티다 느낌표(!)가 뜨면 원을 그리며 긋기'
   // 일본
@@ -216,7 +216,7 @@ const NODE_CMD = {
   // 동방
   C3: '수평 긋기(←)', // 허리 베기 ← 가로베기(zwerch)
   C5: '앞으로 이동(↑)과 동시에 수평 긋기(←)', // 걸음 명령 stick 'fwd'(앞 몫 ≥ 0.5) + 가로베기(zwerch)
-  C6: '사선 긋기(↖) 도중 바로 방향 꺾기', // 이어 긋기 'turn' — 쟁기 찌르기 긋기(stichPflug — 탭 아님)를 시작하고 turnWindow 안에 방향을 꺾음
+  C6: '뒤로 움직이며(↓) 탭', // 탭으로 내는 특수 공격 — unique_assist.js TAP_TRIG.lian: 물러나는 동안(스틱 뒤) · 놓고 실제 0.6 s 안의 탭 (10/28 01:2x) · 10/29 14:1x · 14:2x 사장님 글 (전 '사선 긋기(↖) 도중 바로 방향 꺾기')
   C9: '앞으로 움직이며(↑) 상대 공격을 정확한 타이밍에 막으면 자동 발동', // 10/25 22:3x 사장님 확정 글(감독 전달) · 전 '앞으로 이동(↑)과 동시에, 칼이 닿기 직전 막기' — secret.js gyeoksalTick — 막기 새 누름 뒤 gyeoksal.press 초 안에 칼이 닿음 · 그때 스틱 앞 · 받아 내면 저절로(gyeoksal.auto — 공격 입력 없음)
 };
 /** 칸 + 오의 (lore · src — 편지는 lore 만) + 입력 줄 (cmd — 정해진 입력으로 내는 칸만) */

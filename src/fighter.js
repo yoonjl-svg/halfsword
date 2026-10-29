@@ -1881,10 +1881,109 @@ export class Fighter {
    * 이베리아 이어 긋기 흐름 A (10/21 — config IB_FLOW, 기본 켬): 휘두르기(skill.swinging — 사람 · AI 같은 문턱)를 이어 가는지 읽어 ibFlowOn 을 둔다.
    *  이어 감 = 앞 휘두르기가 끝난 뒤 이어짐 창(0.6 s) 안에 다시 휘두름 · 휘두르는 채로 손 방향이 90° 넘게 꺾임(둥글게 돌리기). 켜진 채로 그 휘두르기 동안 + 끝난 뒤 창까지.
    *  IB_FLOW.a 를 끄면 읽지도 않는다. (B 손목 힘 한도는 10/21 유파 패시브 wristK 로 옮김 — 이어 긋기와 상관없이 늘)
+   *  10/28 22:0x 사장님 'A로 해'(진짜 이어 그을 때만 — IB_FLOW.detect 'a' · 확인표 2722): 휘두르기 끝 = 손 목표가 문턱 밑에 물리 endSteps(2) 스텝 넘게 머묾
+   *   (60 Hz 화면은 물리 두세 스텝에 한 번 손가락이 움직여 문턱 근처에서 휘두르기 표시가 한 스텝씩 꺼졌다 켜짐 → 혼자 벤 칼도 '끝나고 곧 다시'로 읽혔음) ·
+   *   진짜 긋기 = 손 목표 빠르기 최고가 cutSpeed(5 패드 m/s) 이상인 휘두르기(감기 · AI 준비 손 2.2 ~ 3.8 은 아님) — 이어 감 = 마지막 진짜 긋기가 끝나고 창 안에 시작한 휘두르기
+   *   (사이에 낀 감기는 창을 끊지도 잇지도 않음) · 90° 꺾임은 꺾이기 전 몫이 진짜 긋기일 때만 · 흐름은 그 휘두르기도 진짜 긋기일 때만(최고가 cutSpeed 를 넘은 뒤 + 끝난 뒤 창까지).
+   *   'old' = 10/21 판 (updateIbFlowOld — `?ibFlowDetect=old`)
    */
   updateIbFlow(dt) {
     if (!IB_FLOW.a || this.swordArt?.tradition !== 'iberian' || kitOff(this, 'ibFlow')) { this.ibFlowOn = false; return; } // 사람은 스킬트리 B5 '이어 긋기 · 흐름' (10/21)
+    if (IB_FLOW.detect === 'old') return this.updateIbFlowOld(dt);
     const win = UNIQUE_ASSIST.afterWindow; // 이어짐 창 0.6 s (게임 하나 — 10/21)
+    const t = (this.ibFlowT = (this.ibFlowT ?? 0) + dt);
+    const sk = this.skill, raw = !!sk.swinging, v = sk.vel, sp = Math.hypot(v.x, v.y);
+    if (raw) this.ibFlowLow = 0;
+    else if (this.ibFlowSw && (this.ibFlowLow = (this.ibFlowLow ?? 0) + 1) === 1) this.ibFlowLowT = t; // 문턱 밑으로 처음 내려간 때 = 끝난 때(굳으면)
+    const sw = raw || (!!this.ibFlowSw && this.ibFlowLow <= IB_FLOW.endSteps);
+    // 풍차 베기 내려침 (10/29 IB_FLOW.windmillChain — unique_assist.js windFire 가 ibStrike 를 둠): 한 바퀴 넘게 돌린 뒤 낸 운동학 칼 = 이어 그은 진짜 긋기 하나 —
+    //  끄는 동안 흐름 켬 · 그 칼의 이어 그은 수 n · 끝난 때가 마지막 진짜 긋기 끝(사슬이 그 뒤로 이어짐). 손 목표는 안 움직여 아래 휘두르기 읽기는 그동안 쉼
+    if (this.ibStrike) {
+      if (this.iai || this.iaiReq) {
+        this.ibCutN = this.ibLastN = this.ibStrike.n;
+        if (this.ibStrike.newChain) this.ibChainN0 = this.ibStrike.n; // 풍차 베기가 새 사슬의 첫 칼 (세 칼 셈 — 10/29 14:2x · 'simple')
+        this.ibFlowChain = true;
+        this.ibFlowWasCut = true;
+        this.ibFlowEnd = this.ibFlowCutEnd = t;
+        this.ibFlowSw = false;
+        this.ibFlowOn = true;
+        return;
+      }
+      this.ibStrike = null;
+    }
+    if (sw) {
+      const u = sp || 1;
+      if (!this.ibFlowSw) {
+        this.ibFlowChain = t - (this.ibFlowCutEnd ?? -9) <= win;
+        this.ibCutN = this.ibFlowChain ? (this.ibLastN ?? 0) + 1 : 0; // 이어지는 흐름 (B6 — 10/29 01:5x): 이 칼의 이어 그은 수 (사슬 첫 이은 칼 1 · 다음 2 …)
+        if (!this.ibFlowChain) this.ibChainN0 = 0; // 새 사슬 — 첫 칼 n 0 (세 칼 셈의 1 번째)
+        this.ibFlowDir = [v.x / u, v.y / u];
+        this.ibFlowPk = this.ibFlowLeg = sp;
+      } else {
+        if (raw && this.ibFlowDir && (v.x * this.ibFlowDir[0] + v.y * this.ibFlowDir[1]) / u < 0) { // 90° 넘게 꺾임 = 둥글게 이어 감 (꺾이기 전 몫이 진짜 긋기일 때)
+          if (this.ibFlowLeg >= IB_FLOW.cutSpeed) {
+            this.ibFlowChain = true;
+            this.ibLastN = this.ibCutN ?? 0; // 꺾이기 전 몫 = 진짜 긋기 하나 · 꺾인 뒤 몫이 그다음 수
+            this.ibCutN = this.ibLastN + 1;
+          }
+          this.ibFlowDir = [v.x / u, v.y / u];
+          this.ibFlowLeg = sp;
+        } else if (sp > this.ibFlowLeg) this.ibFlowLeg = sp;
+        if (sp > this.ibFlowPk) this.ibFlowPk = sp;
+      }
+    } else if (this.ibFlowSw) {
+      this.ibFlowEnd = this.ibFlowLowT;
+      this.ibFlowWasCut = this.ibFlowPk >= IB_FLOW.cutSpeed;
+      if (this.ibFlowWasCut) {
+        this.ibFlowCutEnd = this.ibFlowLowT; // 마지막 진짜 긋기가 끝난 때
+        this.ibLastN = this.ibFlowChain ? this.ibCutN ?? 0 : 0; // 사슬 길이 (이어 감이 아닌 진짜 긋기면 0 부터 — 사슬이 끊김)
+      }
+    }
+    this.ibFlowSw = sw;
+    const real = sw ? this.ibFlowPk >= IB_FLOW.cutSpeed : !!this.ibFlowWasCut && t - (this.ibFlowEnd ?? -9) <= win;
+    this.ibFlowOn = !!this.ibFlowChain && real;
+    if (!this.ibFlowOn && !sw) this.ibFlowChain = false;
+  }
+
+  /**
+   * 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:5x '상한 없음' · config IB_FLOW.chainStack): 이 몸이 받나 — 사람만(AI 몸 그대로 · 관문 판 그대로) · 스킬트리 B6 칸 · 흐름 읽기 'a'(진짜 이어 긋기)
+   */
+  ibChainOn() {
+    return !!IB_FLOW.chainStack && IB_FLOW.a && IB_FLOW.detect !== 'old' && !this.aiControlled && this.swordArt?.tradition === 'iberian' && !kitOff(this, 'ibFlow') && !kitOff(this, 'ibChain');
+  }
+  /** 지금 칼의 이어 그은 수 n (이어 그은 진짜 긋기가 아니면 0) — 흐름이 켜진 동안 · 휘두르기가 막 시작돼 읽기가 아직 못 본 스텝은 미리 셈 (stamina.js 가 같은 스텝에 긋기를 청구할 때) */
+  ibChainN() {
+    if (this.ibStrike) return this.ibStrike.n;
+    if (this.ibFlowSw) return this.ibFlowChain ? this.ibCutN ?? 0 : 0;
+    if (this.skill?.swinging) return (this.ibFlowT ?? 0) - (this.ibFlowCutEnd ?? -9) <= UNIQUE_ASSIST.afterWindow ? (this.ibLastN ?? 0) + 1 : 0;
+    return this.ibFlowOn ? this.ibCutN ?? 0 : 0;
+  }
+  /** 지금 이어 긋기 창 안인가 (풍차 베기 누름 시작 — unique_assist.js holdTick): 창 안이면 그 사슬 길이(이어 그은 수 · 0 이상), 아니면 −1 */
+  ibFlowChainNow() {
+    if (!IB_FLOW.a || kitOff(this, 'ibFlow') || this.swordArt?.tradition !== 'iberian') return -1;
+    return (this.ibFlowT ?? 0) - (this.ibFlowCutEnd ?? -9) <= UNIQUE_ASSIST.afterWindow ? this.ibLastN ?? 0 : -1;
+  }
+  /** 흐르는 긋기 위력 (combat.js analyze): 흐름이 켜진 채 맞힌 긋기 × IB_FLOW.power · 이어지는 흐름(B6)이면 더하기 1 + (power − 1) × n (상한 없음 — 사장님 10/29 01:5x) */
+  ibFlowK() {
+    if (!this.ibFlowOn || !IB_FLOW.a) return 1;
+    if (!this.ibChainOn()) return IB_FLOW.power;
+    return 1 + (IB_FLOW.power - 1) * Math.max(1, this.ibCutN ?? 1);
+  }
+  /**
+   * 이어지는 흐름 긋기 기력 배율 (stamina.js chargeAttack — 베기만 · 사장님 10/29 14:1x '세 번째 긋기는 기력을 소모하지 않는 걸로' · 14:2x '세 칼마다' · 확인표 2741):
+   *  사슬의 몇 번째 칼(사슬 첫 칼 = 1 · 풍차 베기로 시작한 사슬은 풍차 베기가 1)이 IB_FLOW.freeEvery 의 배수면 0 · 아니면 1. 풍차 베기 칼 자체는 늘 1 (전 01:5x × 0.9ⁿ — 없앰)
+   */
+  ibChainCostK() {
+    const every = IB_FLOW.freeEvery | 0;
+    if (!(every > 0) || this.ibStrike || !this.ibChainOn()) return 1;
+    const n = this.ibChainN();
+    if (!(n > 0)) return 1;
+    return (n - (this.ibChainN0 ?? 0) + 1) % every === 0 ? 0 : 1;
+  }
+
+  /** 이베리아 이어 긋기 흐름 10/21 판 읽기 (IB_FLOW.detect 'old' — 휘두르기 표시를 스텝마다 그대로 · 앞 휘두르기 빠르기를 안 봄) */
+  updateIbFlowOld(dt) {
+    const win = UNIQUE_ASSIST.afterWindow;
     const t = (this.ibFlowT = (this.ibFlowT ?? 0) + dt);
     const sk = this.skill, sw = !!sk.swinging, v = sk.vel;
     if (sw) {
@@ -2079,8 +2178,18 @@ export class Fighter {
   }
 
   /** 비정상 손목 교정 (아래 모듈 wristClamp 그대로 — 운동학 비기 secret_instant.js placeIai 가 부른다: 그 모듈이 fighter.js 를 부르면 모듈 차례가 꼬여서) */
-  wristClamp(fx, aim, z) {
-    return wristClamp(fx, aim, z);
+  wristClamp(fx, aim, z, margin = 0) {
+    return wristClamp(fx, aim, z, margin);
+  }
+
+  /** 손목 사람 범위 안 손 면 (아래 모듈 wristPlane 그대로 — 운동학 칼 secret_instant.js iaiSolve 의 칼끝 돌려 빼기가 부른다 · 10/28: 그 모듈이 fighter.js 를 부르면 모듈 차례가 꼬여서) · 칼 면 법선 또는 null */
+  wristPlane(fx, zF, aim, pref, out) {
+    return wristPlane(fx, zF, aim, pref, out);
+  }
+
+  /** 손목 척측 편위 한도 (°, HUMAN.ulnarDev 그대로 — 운동학 칼끝 돌려 빼기 secret_instant.js comboPlanArtThrust 가 찌르는 줄의 꺾임으로 읽는다 · 10/28) */
+  ulnarMax() {
+    return HUMAN.ulnarDev;
   }
 
   /** 아래팔 굴림 한도 (°, 손목 밧줄 HUMAN.forearmRoll 그대로 — 운동학 칼은 밧줄이 못 막아 secret_instant.js placeIai 의 굴림 묶음이 읽는다 · 제비 베기 되돌림 칼 10/25) */
@@ -3499,7 +3608,7 @@ export class Fighter {
         const stopAngle = (toward * toward) / (2 * brakeAcc);
         // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js). 마무리 찌르기가 겨눔으로 칼을 옮기는 동안(skill.plungePose)은 치는 게 아니라 예전대로 세운다
         const tap = this.skill.tap;
-        const fr = (this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1) * (this.ibFlowOn && IB_FLOW.a ? 1 - IB_FLOW.brake : 1); // 이베리아 이어 긋기 A: 제동을 늦게 (시험)
+        const fr = (this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1) * (this.ibFlowOn && IB_FLOW.a ? 1 - IB_FLOW.brake : 1); // 이베리아 흐르는 긋기: 제동을 늦게 (IB_FLOW.brake — 10/28 0.8 · 확인표 2723)
         if (angle * leadK > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;
@@ -3697,7 +3806,7 @@ export class Fighter {
     return tp.t < tp.K.aim + tp.K.extend + tp.K.hold ? tp : null;
   }
 
-  armIK(target) {
+  armIK(target, alignDir = null) {
     const J = this.jointByName;
     const chest = this.bodies.chest;
     rot(chest, _q1);
@@ -3721,7 +3830,21 @@ export class Fighter {
     pDir.normalize();
     const alpha = Math.acos(THREE.MathUtils.clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1));
     // 팔꿈치 돌림 (기본 켬 — 사장님 10/24 17:2x): 손목이 새끼 쪽으로 꺾이면 팔꿈치를 돌려 세움 — 아래 elbowSwivel. 돌림 각(swivelTh)은 스텝마다 이어서 (JOINTS.swivelTau 로 따라감)
-    if (JOINTS.elbowSwivel && this.armed && this.aimDirW) {
+    if (alignDir) {
+      // 아래팔을 칼 줄에 맞춤 (운동학 칼끝 돌려 빼기 — secret_instant.js iaiSolve · 10/28): 팔꿈치를 칼이 손 줄(어깨 → 손)에서 비킨 쪽의 반대로 두면 아래팔이 칼 쪽으로 눕는다 —
+      //  다만 팔꿈치는 어깨 → 손 줄 위로 들지 않게(가슴 틀 위 몫 ≤ 0 — 머리 곁으로 꺾여 든 팔꿈치 막음 · wrist_audit §10) 그 끝(옆으로 벌린 팔꿈치)까지. 새 수 없음
+      const dW = _ik8.copy(alignDir).applyQuaternion(_q2);
+      const pd = dW.addScaledVector(Dn, -dW.dot(Dn)).negate();
+      if (pd.lengthSq() > 1e-8) {
+        pd.normalize();
+        const up = _ik9.set(0, 1, 0).addScaledVector(Dn, -Dn.y);
+        if (up.lengthSq() > 1e-8 && pd.dot(up.normalize()) > 0) {
+          pd.addScaledVector(up, -pd.dot(up));
+          if (pd.lengthSq() < 1e-8) pd.copy(pDir).addScaledVector(up, -pDir.dot(up));
+        }
+        if (pd.lengthSq() > 1e-8) pDir.copy(pd.normalize());
+      }
+    } else if (JOINTS.elbowSwivel && this.armed && this.aimDirW) {
       const tau = JOINTS.swivelTau;
       const dt = this.lastDt || 1 / 120;
       let k = tau > 0 ? 1 - Math.exp(-dt / tau) : 1;
@@ -4455,15 +4578,15 @@ function cutSwing(f) {
  *  손 자리 · 팔 · 손 면은 그대로, 칼끝만 손 면 안에서 들리거나 내려간다(가장 작은 바꿈). 아래팔이 손 면에서 JOINTS.wristFE 넘게 벗어나면(면 안 각이 뜻이 없음) 건드리지 않는다 —
  *  그 굽힘 · 폄은 끝 스프링(anatSoft (3))이, 굴림은 손목 밧줄(HUMAN.forearmRoll)이 맡는다. aim(단위)을 바꿔 쓰고 z 를 칼 축에 수직으로 다듬는다. 돌린 각(°, + = 엄지 쪽)
  */
-export function wristClamp(fx, aim, z) {
+export function wristClamp(fx, aim, z, margin = 0) {
   z.addScaledVector(aim, -z.dot(aim));
   if (z.lengthSq() < 1e-6) return 0;
   z.normalize();
   if (Math.abs(Math.asin(THREE.MathUtils.clamp(fx.dot(z), -1, 1))) > JOINTS.wristFE * HD) return 0;
   const x = _wgX.crossVectors(aim, z);
   const dev = 90 - Math.atan2(fx.dot(aim), fx.dot(x)) / HD;
-  const lo = -HUMAN.ulnarDev;
-  const hi = HUMAN.wristThumb;
+  const lo = -HUMAN.ulnarDev + margin; // margin ° = 끝에서 안쪽으로 (풍차 베기 감기 rdWristMargin — 놓은 뒤 물리가 1 ~ 1.6° 밀어 범위를 넘던 것 · 기본 0 = 전 그대로)
+  const hi = HUMAN.wristThumb - margin;
   const a = (((dev - hi) % 360) + 360) % 360; // 엄지 쪽 끝을 넘은 각 (0 ~ 360) — 범위 [lo, hi] 는 a ≥ 360 − (hi − lo)
   const span = 360 - (hi - lo); // 사람이 못 하는 호
   if (a === 0 || a >= span) return 0;

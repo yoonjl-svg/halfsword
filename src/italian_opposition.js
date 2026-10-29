@@ -55,7 +55,7 @@ export class ItalianOpposition {
 
   cancel(reason) {
     if (!this.run) return;
-    this.lastEnd = { t: this.guard.clock, reason };
+    this.lastEnd = { t: this.guard.clock, reason, dealt: !!this.run.dealt }; // dealt: 이 막아찌르기가 상대에게 상처(심각도 > 0)를 냈나 — 못 냈으면(헛침 · 막힘 · 칼끼리 맞닿음) 칼끝 돌려 빼기 탭 조건이 열림 (unique_assist.js TAP_TRIG 'cav' · 10/28 01:2x)
     if (reason !== 'complete') this.shieldUntil = Math.min(this.shieldUntil, this.guard.clock); // 끊기면 보호도 끝
     this.run = null; this.f.skill.thrustPose.w = 0; this.f.skill.thrustPush = false;
   }
@@ -70,6 +70,9 @@ export class ItalianOpposition {
   dealtK() { return this.run ? SKILL.itOppositionVals.dealt : 1; }
 
   onWound(hit) { if (hit.severity > 0) this.lastInjury = this.guard.clock; }
+
+  /** 이 몸이 상대에게 상처(심각도 > 0)를 냄 (combat.js — 막아찌르기가 도는 동안이면 그 판에 적음 · 칼끝 돌려 빼기 탭 조건 10/28) */
+  onDealt(hit) { if (this.run && hit.severity > 0) this.run.dealt = true; }
 
   /** 찌르는 동안 상대 칼과 맞닿음 — 센다(측정 · 소리 검토용). 효과는 없다 */
   onClash(attacker) { if (this.run && attacker === this.foe) this.contacts++; }
