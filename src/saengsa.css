@@ -39,7 +39,7 @@
 .sg-picker { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; gap: 6px; overflow: auto; padding: 8px 10px; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 8px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .sg-picker[hidden] { display: none; }
 .sg-pick-title { font-size: var(--fs-m); line-height: 1.3; outline: none; }
-.sg-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 4px; }
+.sg-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 4px; flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; } /* 인물이 많아(서른다섯 + 무명 검객) 안에서 내려 봄 — 무기 줄 · 확인은 늘 보임 */
 .sg-roster[hidden] { display: none; }
 .sg-pick { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 3px 2px 4px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--c-text); }
 .sg-pick img { width: 40px; height: 40px; display: block; }

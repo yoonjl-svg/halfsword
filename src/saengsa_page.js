@@ -13,7 +13,7 @@ import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { SAENGSA } from './config.js';
 import { clockFrom, signupWindow, roundAt } from './saengsa_clock.js';
-import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, isMine, assignWeapons, validAssignment } from './saengsa_rules.js';
+import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, isMine, assignWeapons, validAssignment, lockedSignatures } from './saengsa_rules.js';
 import { syncSaengsa, readSaengsa, playMine, claimChests, signUp, newSeed } from './saengsa_store.js';
 import { fighterName, portraitOf, weaponName, weaponThumb, weaponInfo, SAENGSA_DATA, ownedWeapons, entryState, hireCostOf } from './saengsa_roster.js';
 import { makeNamelessFaces } from './saengsa_nameless.js';
@@ -244,16 +244,16 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
   });
   // ── 무기 배정 (경기마다 — 살아 있는 내 팀 세 사람 · 가진 무기 · 한 무기는 한 사람에게(SAENGSA.assignUnique)) ──
   const aliveIdx = () => t.teams[0].members.map((f, i) => (f.dead ? -1 : i)).filter((i) => i >= 0);
-  const armsValid = () => !!open && validAssignment(open.arms, ownedWeapons(), aliveIdx());
+  const armsValid = () => !!open && validAssignment(open.arms, ownedWeapons(), aliveIdx()) && !aliveIdx().some((i) => lockedSignatures(t).has(open.arms[i])); // 상대 팀이 가진 전용무기는 못 씀 (사장님 10/29 22:3x)
   function drawArm() {
     const owned = ownedWeapons(), members = t.teams[0].members, brokenMine = new Set(t.broken ?? []);
     $('sgArmRows').innerHTML = members.map((f, i) => {
       if (f.dead) return '';
-      const taken = new Set(SAENGSA.assignUnique ? aliveIdx().filter((j) => j !== i).map((j) => armDraft[j]) : []);
+      const taken = new Set([...(SAENGSA.assignUnique ? aliveIdx().filter((j) => j !== i).map((j) => armDraft[j]) : []), ...lockedSignatures(t)]); // 다른 사람에게 준 무기 · 상대 팀이 가진 전용무기
       const chips = owned.map((w) => `<button type="button" class="sg-chip-btn" role="radio" data-slot="${i}" data-weapon="${w}" aria-checked="${armDraft[i] === w}"${taken.has(w) ? ' disabled' : ''}${brokenMine.has(w) ? ' data-broken' : ''}>${esc(weaponName(w))}${brokenMine.has(w) ? ` · ${T.broken}` : ''}</button>`).join('');
       return `<div class="sg-arm-row"><span class="sg-arm-who"><img src="${esc(portraitOf(f.id, f.cloth))}" alt="" draggable="false"><b>${esc(fighterName(f))}</b></span><div class="sg-chips" role="radiogroup" aria-label="${esc(fighterName(f))} · ${T.weapon}">${chips}</div></div>`;
     }).join('');
-    $('sgArmOk').disabled = !validAssignment(armDraft, owned, aliveIdx());
+    $('sgArmOk').disabled = !validAssignment(armDraft, owned, aliveIdx()) || aliveIdx().some((j) => lockedSignatures(t).has(armDraft[j]));
   }
   function openArm() {
     armDraft = [...open.arms];

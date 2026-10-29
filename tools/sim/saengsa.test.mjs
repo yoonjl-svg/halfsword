@@ -221,14 +221,16 @@ test('로스터 · 숙련도(인물 성향 표) · 고용 값 · 무명 검객',
   const roster = await import('../../src/saengsa_roster.js');
   const { CHARACTERS_BY_ID } = await import('../../src/characters.js');
   const { PROFICIENCY } = await import('../../src/character_temperament.js');
-  assert.equal(roster.SAENGSA_ROSTER.length, 11);
-  assert.ok(!roster.SAENGSA_ROSTER.includes('artoria'));
+  // 로스터 = 그림이 있는 모든 인물 (사장님 10/29 22:3x — 손님 · 아르토리아 · 얼터도 생사전 인물 · 기본 인물과 얼터는 다른 사람)
+  assert.equal(roster.SAENGSA_ROSTER.length, Object.keys(CHARACTERS_BY_ID).length);
+  for (const id of ['artoria', 'roland', 'bernardo', 'white_scale', 'silver_wanderer', 'silver_wanderer_mad', 'minami_mad', 'liao_mad']) assert.ok(roster.SAENGSA_ROSTER.includes(id), id);
   assert.deepEqual(roster.HIRE_ROSTER.slice(-1), [R.NAMELESS]);
   for (const id of roster.SAENGSA_ROSTER) {
-    const p = roster.profOf(id), c = CHARACTERS_BY_ID[id];
-    for (const s of R.SCHOOLS5) assert.equal(p[s], PROFICIENCY[id][s], `${id} ${s}`);
-    assert.equal('none' in p, 'none' in PROFICIENCY[id], id); // 무유파 칸은 무유파가 주 유파인 인물만
-    assert.equal(p[roster.weaponInfo(c.weapon).school], c.ai.proficiency, id);
+    const p = roster.profOf(id), c = CHARACTERS_BY_ID[id], base = PROFICIENCY[id] ?? PROFICIENCY[c.variantOf];
+    const sheet = roster.weaponInfo(c.weapon).school;
+    for (const s of R.SCHOOLS5) if (!(c.variantOf && s === sheet)) assert.equal(p[s], base[s], `${id} ${s}`); // 얼터는 원본 칸(시트 무기 유파 칸만 +1)
+    assert.equal('none' in p, 'none' in base, id); // 무유파 칸은 무유파가 주 유파인 인물만
+    assert.equal(p[sheet], c.ai.proficiency, id); // 시트 무기 유파 = 실력 숙련도 (얼터 +1 · 상한 5 포함)
     assert.equal(roster.hireCostOf(id).coins, SAENGSA.hire.base + SAENGSA.hire.step * Math.max(...Object.values(p)));
   }
   assert.deepEqual(roster.profOf(R.NAMELESS), { german: 0, italian: 0, iberian: 0, japanese: 0, chinese: 0 }); // 만들기 전 빈 칸 — 신청 때 makeNameless
@@ -364,7 +366,8 @@ test('상대 팀 무기 다섯 · 전용무기 · AI 나눠 주기 (사장님 10
   const roster = await import('../../src/saengsa_roster.js');
   const { getWeapon } = await import('../../src/weapons.js');
   // 전용무기 = 시트 무기 등급 에픽 이상 — 로스터에서는 랴오 청강검 · 미나미 모노호시자오 (마야 · 김씨의 ??? 무기는 아님 — 확인 전)
-  assert.deepEqual(Object.fromEntries(roster.SAENGSA_ROSTER.map((id) => [id, roster.signatureOf(id)]).filter(([, w]) => w)), { liao: 'qinggang', minami: 'monohoshizao' });
+  assert.deepEqual(Object.fromEntries(roster.SAENGSA_ROSTER.map((id) => [id, roster.signatureOf(id)]).filter(([, w]) => w)),
+    { liao: 'qinggang', minami: 'kusanagi', artoria: 'excalibur', silver_wanderer_mad: 'monohoshizao', roland: 'durandal', bernardo: 'tizona' }); // 사장님 10/29 22:3x 표 (랴오 청강검은 남김)
   assert.deepEqual([roster.signatureOf('samira'), roster.signatureOf('renji'), roster.signatureOf(R.NAMELESS), roster.signatureOf('roland')], [null, null, null, 'durandal']);
   assert.equal(roster.AI_TIER_DRAW.mystery, 0);
   let sigs = 0, sigHeld = 0;
@@ -498,4 +501,44 @@ test('엔진 잇기: 내 경기 = game.launchSaengsa (스위치 SAENGSA.engine.m
   assert.equal(await makeEngine(game).play(setup), null); // 그만두기 = null (적지 않음)
   assert.equal(got.sides[setup.mineSide][0].broken, true);
   assert.equal(R.matchSetup(t, m, ['0-0', '0-1'], at(30, 10)).control, 'player');
+});
+
+test('전용무기 표 — 한 무기는 한 사람 · 한 대회에 같은 전용무기 둘 없음 · 주인이 나오면 무작위로 안 뽑힘 (사장님 10/29 22:3x)', async () => {
+  const roster = await import('../../src/saengsa_roster.js');
+  const { getWeapon } = await import('../../src/weapons.js');
+  const { CHARACTERS_BY_ID } = await import('../../src/characters.js');
+  const sig = SAENGSA.signature, ws = Object.values(sig);
+  assert.equal(new Set(ws).size, ws.length, '한 무기는 한 사람');
+  for (const [id, w] of Object.entries(sig)) { assert.ok(CHARACTERS_BY_ID[id], id); assert.ok(roster.SAENGSA_WEAPONS.includes(w), w); }
+  assert.deepEqual(Object.fromEntries(Object.entries(sig).map(([id, w]) => [w, getWeapon(w).tier])), { kusanagi: 'legend', monohoshizao: 'epic', durandal: 'legend', tizona: 'epic', excalibur: 'legend', qinggang: 'epic' });
+  assert.equal(CHARACTERS_BY_ID.minami.weapon, 'monohoshizao'); // 인물 시트 무기는 그대로 (생사전에서만)
+  for (const id of ['minami_mad', 'silver_wanderer', 'liao_mad', 'artoria_mad']) assert.equal(roster.signatureOf(id), null, id);
+  for (let seed = 1; seed <= 60; seed++) {
+    const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: ['minami', R.NAMELESS], weapons: ['tree_branch', 'druid_whip', 'longsword'], ...roster.SAENGSA_DATA });
+    const pools = t.teams.slice(1).flatMap((x) => x.pool.map((w) => w.weapon));
+    const sigs = pools.filter((w) => ws.includes(w));
+    assert.equal(new Set(sigs).size, sigs.length, `씨앗 ${seed} 같은 전용무기 둘`);
+    assert.ok(!pools.includes('kusanagi'), `씨앗 ${seed} 미나미(내 동료)의 쿠사나기가 상대에`);
+    for (const x of t.teams.slice(1)) for (const f of x.members) if (sig[f.id]) assert.ok(x.pool.some((w) => w.weapon === sig[f.id]), `${f.id} 전용무기`);
+    const present = new Set(t.teams.flatMap((x) => x.members.map((f) => f.id)));
+    for (const [id, w] of Object.entries(sig)) if (present.has(id)) assert.ok(pools.filter((x) => x === w).length <= (id === 'minami' ? 0 : 1), `씨앗 ${seed} ${w}`);
+  }
+  // 내 팀이 전용무기를 들고 나오면: 주인은 이번 대회 전용무기 없음 · 상대 무기 다섯에 그 무기 없음
+  const OWNED = ['tree_branch', 'druid_whip', 'excalibur'];
+  let seen = 0;
+  for (let seed = 1; seed <= 40; seed++) {
+    const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: [R.NAMELESS, R.NAMELESS], weapons: OWNED, ...roster.SAENGSA_DATA });
+    const art = t.teams.slice(1).flatMap((x) => x.members).find((f) => f.id === 'artoria');
+    if (art) { seen++; assert.equal(art.sig, undefined); }
+    assert.ok(!t.teams.slice(1).some((x) => x.pool.some((w) => w.weapon === 'excalibur')), `씨앗 ${seed}`);
+  }
+  assert.ok(seen > 0);
+  // 대회 도중: 상대 팀 무기 다섯에 든 전용무기는 내 팀에 배정할 수 없음
+  const t = R.createTournament({ day: '2026-10-30', seed: 2, at: 0, companions: [R.NAMELESS, R.NAMELESS], weapons: ['tree_branch', 'druid_whip', 'longsword'], ...roster.SAENGSA_DATA });
+  const locked = [...R.lockedSignatures(t)];
+  assert.ok(locked.length > 0);
+  assert.equal(R.assignWeapons(t, [locked[0], 'druid_whip', 'longsword'], { owned: ['tree_branch', 'druid_whip', 'longsword', locked[0]], weaponInfo: roster.weaponInfo }), false);
+  assert.equal(R.assignWeapons(t, ['tree_branch', 'druid_whip', 'longsword'], { owned: ['tree_branch', 'druid_whip', 'longsword'], weaponInfo: roster.weaponInfo }), true);
+  // 고용 값: 손님 숙련도 6 → 20 + 20 × 6 = 140 · 광기의 미나미 5(얼터 +1 상한 5 — 감독 여쭘 중)
+  assert.deepEqual([roster.hireCostOf('roland').coins, roster.hireCostOf('bernardo').coins, roster.profOf('minami_mad').japanese], [140, 140, 5]);
 });

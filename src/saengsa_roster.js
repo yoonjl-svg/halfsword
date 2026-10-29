@@ -1,19 +1,19 @@
 // 생사전 인물 · 무기 자료 (src/saengsa_rules.js 에 넘기는 쪽 — 순수 규칙은 자료를 모른다)
-//  로스터 = 주 인물(characters.js CHARACTERS) 가운데 방랑 전용(wander_rules.js WANDER_EXCLUSIVE — 아르토리아)을 뺀 열하나 · 얼터 · 손님 인물은 넣지 않는다 (감독 10/29).
+//  로스터 = 그림이 있는 모든 인물(characters.js CHARACTERS_BY_ID · portraits.js PORTRAIT_IDS) — 주 인물 · 아르토리아 · 방랑 인물 · 손님(롤랑 · 베르나르도 · 백린의 전사) · 얼터(광기의 …)
+//   (사장님 10/29 22:3x — 롤랑 · 베르나르도 · 아르토리아 · 얼터도 생사전 인물 · 기본 인물과 얼터는 다른 사람 · 감독 전달). 한 대회에 한 사람 한 번씩 (전: 주 인물에서 아르토리아를 뺀 열하나).
 //  무기: 내 팀 세 사람 = 내가 가진 무기에서 배정(사장님 10/29 18:2x '무기는 랜덤 뽑기가 아니라 플레이어가 배정해 주는거야' — 신청 때 · 경기마다) — 가진 무기 = owned_weapons.js ownedWeapons(상점이 채울 자리).
 //   상대 팀 = 팀마다 무기 다섯(사장님 10/29 19:5x — 전용무기 + 카드 뽑기와 같은 목록 · 같은 등급 확률에서 ??? 를 뺀 표 · 서로 다르게 · 씨앗 난수 — drawPool · signatureOf) → AI 가 나눠 줌(saengsa_rules.js aiArm).
-//   전용무기 = 인물 시트 무기(characters.js weapon) 가운데 등급이 SAENGSA.aiPool.signatureTiers(에픽 · 레전드)인 것 — 무명 검객은 없음.
+//   전용무기 = 표 SAENGSA.signature (사장님 10/29 22:3x — 인물 하나에 하나 · 기본 인물과 얼터를 가름 · 생사전에서만) — 무명 검객은 없음.
 //  입장 조건(18:2x): 호칭 SAENGSA.entry.title(정복자) + 가진 무기 SAENGSA.entry.weapons 개 — entryState
 //  숙련도: 인물 = saengsa_proficiency.js proficiencyOf(character_temperament.js 표) · 무명 검객 = 대회마다 새로(saengsa_rules.js makeNameless — 사장님 10/29 18:2x) ·
 //   나 = 스킬트리 — 그 유파에서 익힌 칸 수로(사장님 10/29 17:5x · 18:1x — config SAENGSA.playerProf · 확인표 2792) · 무유파 무기는 빠른 셈 규칙(saengsa_rules.js profFor)
 //  고용 금화 (사장님 10/29 14:5x '동료를 고용할 때 금화를 내는 걸로' · 15:5x '고용비는 그대로 둬'): SAENGSA.hire.base + step × 가장 높은 숙련도 ·
 //   무명 검객 = SAENGSA.nameless.hire (15:5x '무명 검객은 고용비 20') — 특별 동료(특별한 증표로 고용 — 나중)는 { token } 자리만
 import { SAENGSA } from './config.js';
-import { CHARACTERS, CHARACTERS_BY_ID } from './characters.js';
-import { WANDER_EXCLUSIVE } from './wander_rules.js';
+import { CHARACTERS_BY_ID } from './characters.js';
 import { WEAPON_LIST, RETIRED_WEAPONS, getWeapon, drawWeaponCards, TIER_DRAW, BREAK } from './weapons.js';
 import { traditionOf } from './schools.js';
-import { portraitSrc } from './portraits.js';
+import { portraitSrc, PORTRAIT_IDS } from './portraits.js';
 import { readLearned } from './skill_tree_store.js';
 import { TREE_SCHOOLS, nodesOf, isClosed } from './skill_tree_data.js';
 import { ownedWeapons } from './owned_weapons.js';
@@ -25,7 +25,7 @@ import { namelessFace } from './saengsa_nameless.js';
 import { SAENGSA_TEXT, CLOTH_KO } from './saengsa_text.js';
 
 /** 생사전 로스터 (동료 고르기 · 상대 팀) */
-export const SAENGSA_ROSTER = Object.freeze(CHARACTERS.filter((c) => !WANDER_EXCLUSIVE.includes(c.id)).map((c) => c.id));
+export const SAENGSA_ROSTER = Object.freeze(Object.keys(CHARACTERS_BY_ID).filter((id) => PORTRAIT_IDS.includes(id)));
 /** 동료 고르기 칸 = 로스터 + 무명 검객(맨 끝 — 둘 다 무명 검객이어도 됨) */
 export const HIRE_ROSTER = Object.freeze([...SAENGSA_ROSTER, NAMELESS]);
 /** 특별 동료 (특별한 증표로 고용 — 사장님 10/29 14:5x 말씀만 · 아직 없음): { id, token } 줄이 생기면 고르기 칸 · hireCostOf 가 읽는다 */
@@ -38,11 +38,8 @@ export const drawWeapon = (rnd) => drawWeaponCards([...SAENGSA_WEAPONS], 1, { rn
 export const AI_TIER_DRAW = Object.freeze(Object.fromEntries(Object.entries(TIER_DRAW).map(([t, w]) => [t, SAENGSA.aiPool.excludeTiers.includes(t) ? 0 : w])));
 /** 상대 팀 무기 n 개 (서로 다르게 · taken 은 뺌 — 전용무기) */
 export const drawPool = (rnd, n, taken = []) => drawWeaponCards(SAENGSA_WEAPONS.filter((id) => !taken.includes(id)), n, { rnd, tierDraw: AI_TIER_DRAW });
-/** 전용무기 (사장님 10/29 19:5x '에픽 이상의 무기만을 전용무기라고 정의함'): 시트 무기 등급이 signatureTiers 면 그 무기 id · 아니면 null (무명 검객 · 나 = null) */
-export function signatureOf(id) {
-  const w = id === NAMELESS || id === 'player' ? null : CHARACTERS_BY_ID[id]?.weapon;
-  return w && SAENGSA.aiPool.signatureTiers.includes(getWeapon(w).tier) ? w : null;
-}
+/** 전용무기 (사장님 10/29 22:3x 표 — SAENGSA.signature): 그 인물의 전용무기 id · 없으면 null (무명 검객 · 나 · 표에 없는 인물) */
+export const signatureOf = (id) => SAENGSA.signature[id] ?? null;
 /** 무기 → { school, tier, frag } (규칙의 빠른 셈 · 카드) · frag = 무거운 충돌 한 번에 부러질 확률(weapons.js breakChance(BREAK.jRef) — 등급표 · 재질 · 무기 고유 값) */
 export function weaponInfo(id) {
   const w = getWeapon(id);
