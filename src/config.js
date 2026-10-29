@@ -389,6 +389,12 @@ export const GAIT = {
   hurrySpeed: 1.2, // 그렇게 서두르는 건 이보다 빨리(m/s) 가려 할 때만
   requestSteps: true, // 기술 걸음(requestStep)을 받는다
   pushAtFoot: 0, // R2′ 걸음 조율 채널 A(docs/strike/r2p_step_channel_2026-10-08.md §3-A, 확인표 181): 1 = 수평 추진력의 골반 몫을 딛은 발 자리(발바닥 가운데 x·z, 골반 높이)에 하중 비율대로 건다 → 발의 옆 치우침만큼 yaw 짝힘이 저절로(오른발이 밀면 왼쪽으로). 크기·방향은 그대로, 수직 받침·가슴 몫은 오늘 자리. 0 = 오늘(바이트 동일). ?r2p=legs 가 1 로 켠다
+  // 걸음 사다리 (10/29 사장님 14:5x · 18:5x — docs/strike/step_ladder_2026-10-29.md): 기술 걸음 길이 칸 0.3 반걸음 · 0.45 들어감 · 0.6 한 걸음 · 0.9 런지
+  stepRungs: [0.3, 0.45, 0.6, 0.9],
+  // 1 = 유파 걸음 follow 안에서 'pass' 를 앞발 lunge + 끌어붙임(*_GAIT.passAs)으로 바꿀 때 걸음을 사다리 한 칸 아래로 — 가까운 칸으로 맞춘 뒤 한 칸 내림
+  //  (0.9 → 0.6 · 0.6 → 0.45 · 0.45 → 0.3 · 0.3 은 맨 아래 칸이라 그대로 · 0.3 보다 짧은 걸음은 늘리지 않고 그대로) · 0 = 옛 판 × passAs.fwdK 0.85 (비교용 `?passAsRung=0`)
+  //  사장님 10/29 18:5x '그래 재보고 네 제안대로 해' (§11 — 끌어붙임이 몸을 더 실어 나르는 것을 맞추는 보상값이 아니라 걸음을 15 % 줄이는 값이었음 · 이탈리아 · 동방 · 일본 셋 다)
+  passAsRung: 1,
   cutStep: 0, // 채널 B(§3-B, 확인표 182): 1 = chain legs 에서 베기 시작 때(오늘 lunge 창 SKILL.lungeMin~Max) 획 방향의 반대 발을 내딛는 걸음을 부탁한다(requestStep leg; 가로 속도 ±0.3 m/s 안이면 발을 고르지 않음) — 획 시작 쪽 발이 밀어 골반을 돌린다. AI 도 기술 길의 가로 변위(±0.2 패드) 부호로 같은 규칙. anchor 에선 안 읽음. 0 = 오늘(바이트 동일)
   pinK: 20000, // 발바닥 정지 마찰 스프링(N/m). 0 = 끔 (물리 엔진 마찰만)
   pinD: 250,
@@ -898,6 +904,7 @@ export const SKILL = {
   enterStep: 0.45,
   enterMin: 1.1, // 이미 이보다 가까우면 들어가지 않는다 (m)
   enterCool: realS(1.0), // 한 번 들어간 뒤 다시 들어가기까지 (초)
+  talhoApproach: 1, // 1 = 이베리아 나선 걸음 베기(talhoRodeado — schools.js step when 게터)를 AI 가 '먼저 비껴 딛고, 발이 닿으면 벤다'(when 'approach' — 비껴 베기 · 비껴서며 찌르기와 같은 꼴, ai.js approachStep) · 0 = 전처럼 베며 딛음('strike' — 칼이 발 딛기 전에 지나가 옆 0.45 미끄러짐 한가운데서 빗나감). 사장님 10/29 18:4x '나선 걸음 베기 조정해' (docs/strike/step_ladder_2026-10-29.md §9 · §10). 사람(B3)은 이 칸을 읽지 않음 — 긋는 순간 딛음. `?talhoApproach=0`
 };
 
 // ── 스킬트리 편지 '00에서 온 편지' (10/21 — docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md §5 · skill_tree_data.js letterMul · weapons.js drawWeaponCards weightOf) ──
