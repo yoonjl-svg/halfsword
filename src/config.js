@@ -959,6 +959,12 @@ export const SECRET = {
     //  지금 손 → 시작 자세 → 기술 길 → 시작 자세(다시 세우기)를 팔 · 칼을 놓으며 몰고, 칼자루 끝(폼멜 끝) 평균 빠르기 = 같은 칼 고노센 칼끝 빠르기(iaiTipSpeed)의 이 몫 (0.5 · 0.6 견줌). `?mordKin=0.6`
     aim: 'pull', // 사장님 10/23 확정(30 % 안에 붙은 칼자루 머리 겨눔). 'pad' = 기술 패드 길 그대로 · 'pull' = 운동학 길(kin)에서 베는 길 전체를 옮겨 칼자루 가운데(코등이 ~ 폼멜 끝)가 상대 머리 가운데를 지나게 (격살 겨눔과 같은 꼴 — 새 수 없음). `?mordAim=pull`
     power: 'hit', // 판정 배율: 'hit' = 결정타 SECRET.hitMul(1.3) · 'finish' = 그 자리에 마무리 찍기 FINISH.power(2.5 — 겹치지 않음) · 수 = 그 수. 둔타도 듣는 자리(secretHit) `?mordPow=finish`
+    // 머리 따라 겨눔 (10/30 시제품 — 사장님 '모르트가 빗나가는 경우는 어떤거지? … 모르트의 적중은 실력이 아니라 그저 행운인가?' · 기본 끔 · 감독 — 사장님 확인 전): 'pull' 겨눔이 길을 짜는 그때(공격 입력 다음 스텝)
+    //  머리 자리 한 번만 보던 것을, 칼자루 가운데가 겨눈 자리에 닿기 trackCommit 초 전까지 스텝마다 그때 머리(내 가슴 틀)로 다시 옮김 (secret_instant.js mordTrack) · trackUntil 'cut' = 베는 토막 시작까지만.
+    //  재기(tools/sim/mordschlag_hits.mjs — 확인표 2993 · 2994): 머리 치며 미는 봇 71 → 81 % · 스틱만 쥔 봇 73 → 91 % · 칼자루가 머리 대신 가슴 · 팔에 11 → 1 · 막힘 그대로. `?mordTrack=1` · `?mordCommit=` 실제 초 · `?mordTrackUntil=cut`
+    track: 0,
+    trackCommit: 0,
+    trackUntil: 'aim',
   },
   // 넘어 들어감 규칙 (사장님 확인 전 · 기본 끔 — 확인표 2187): 1 = 내리치는 동안(③) 내 칼자루 · 칼날 ↔ 상대 칼 충돌을 끈다(상대가 막아도 칼 위로 지나 머리에). 0 = 물리 그대로. `?mordOver=1`
   mordOver: 0,
