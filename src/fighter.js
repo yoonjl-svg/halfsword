@@ -318,6 +318,7 @@ export class Fighter {
    * @param {boolean} [o.schoolFootwork] [o.schoolParry] false = 대기실 스킬트리 보법 I · 막기 I 을 안 익힌 플레이어(main.js newRound — 모든 판).
    *        걸음 값을 처음부터 기본으로 고르게 걸음(Gait)을 만들기 전에 적는다. 없으면 속성도 없다(시뮬·AI 그대로)
    * @param {object} [o.skillKit] 플레이어 스킬트리 몫(10/21 — skill_tree_data.js kitFromNodes · 읽는 곳 skill_kit.js kitOff · perkOff). 없으면 속성도 없다(AI · 시뮬 = 지금 규칙 그대로)
+   * @param {boolean} [o.human] true = 사람 손(입력)이 모는 몸(main.js 플레이어) → humanInput. 안 주면 속성도 없다 — 시뮬 도구의 자리 0(AI 가 모는 몸 · 대본 몸)은 아님 (10/29 17:5x)
    */
   constructor(RAPIER, world, scene, colliderInfo, o) {
     this.R = RAPIER;
@@ -329,6 +330,7 @@ export class Fighter {
     if (o.schoolFootwork === false) this.schoolFootwork = false; // schools.js footworkTradition — gait.js · stamina.js
     if (o.schoolParry === false) this.schoolParry = false; // parry_button.js
     if (o.skillKit) this.skillKit = o.skillKit; // 스킬트리 칸마다의 몫 (10/21 — 걸음 · 막기 · 흘림 · 이어 긋기 흐름 · 강화동작 이점을 칸 하나씩 켬, 사람만)
+    if (o.human === true) this.humanInput = true; // 사람 입력이 모는 몸 (main.js — 기력 회복 사람 값 stamina.js recoverRate · 사장님 10/29 17:5x '인간 플레이어의 기력 회복 속도 25로') · 'index 0' 판정이 아님
     this.name = o.name;
     this.side = 1; // 오른손잡이
     this.heading = o.heading ?? 0;
