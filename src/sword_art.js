@@ -138,7 +138,7 @@ function applySchoolArt(school, tradition, frame, style, prof = null, openTech =
     const E = out.techByName[m.name];
     const B0 = out.techByName[m.base];
     if (!E || !B0 || E === B0 || !out.tech.includes(B0)) continue;
-    const E2 = { ...E, base: (E.base ?? 1) + (B0.base ?? 1) };
+    const E2 = { ...E, base: (E.base ?? 1) + (B0.base ?? 1), plain: B0 }; // plain = 바탕 동작 (특수 공격 AI 몫 식힘 동안 그 자리를 바탕으로 — ai.js techNow · 10/29 19:4x)
     const tech = out.tech.filter((t) => t !== B0).map((t) => (t === E ? E2 : t));
     out = { ...out, tech, techByName: { ...Object.fromEntries(tech.map((t) => [t.name, t])), [m.base]: E2 } };
   }

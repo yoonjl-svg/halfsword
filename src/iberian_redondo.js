@@ -15,16 +15,38 @@
 //   두 손은 이마 앞 위에 두고 칼은 곧게 선 축에서 cone ° 기운 채, 기운 쪽 가로 각 ψ 가 rdLoopT 초에 한 바퀴 — 앞 → 칼 든 쪽 → 뒤 → 반대쪽
 //   (내려칠 레베스가 왼 → 오른으로 가므로 같은 쪽으로 돎) · 칼끝이 머리 위에서 원을 그림 · 날 = 도는 쪽(rdEdge).
 //   처음 rdWindIn 초는 지금 손 · 칼날에서 길로 섞는다(가로 각은 지금 칼 가로 각에서 시작 — 섞는 길이 짧게).
+//  10/29 20:0x 사장님 '레돈두는 처음 발동을 시작할 때 캐릭터가 크게 휘청거려 … 머리 위로 칼을 돌리는 동작이 너무 빠르고 조악 … 좀 더 천천히 큰 동작으로 돌리거나 어깨에 얹는 고정 준비동작으로'
+//   (기록 docs/strike/redondo_hold_2026-10-29.md §8):
+//   ① 휘청 고침 (UNIQUE_ASSIST.rdSteady — 기본 켬): 감는 동안 손목 원뿔 · 칼 어깨 면 밧줄을 뗌(손가락을 댄 쉼 자세에서 머리 위로 섞을 때 어깨 면 밧줄이 가슴을 잡아채 넘어지던 것 — 가장 큰 까닭) ·
+//    놓인 팔 · 칼의 근육 · 손목 헛힘 끔(fighter.js armsPlaced) · 섞는 동안 도는 빠르기도 0 에서 부드럽게 올림(rdRamp — 감는 첫머리 칼끝이 고리 빠르기의 두 배로 튀던 것)
+//   ② 감기 꼴 셋 (UNIQUE_ASSIST.rdWindMode — windSpec): 'spin' 10/29 판 원뿔 고리 · 'slowSpin' 안 A(rdSlow — 한 바퀴 1.2 s · 칼을 더 눕힌 큰 고리 · 팔을 더 뻗음) ·
+//    'shoulder' 안 B(rdShoulder — 오른 어깨에 얹어 멈춤 · 날 위 · 감은 셈은 그 자세로 woundT 넘게 쥐었나)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { UNIQUE_ASSIST as UA } from './config.js';
-import { placeArmsAt } from './secret_instant.js';
+import { placeArmsAt, armRopes } from './secret_instant.js';
 
 const D2R = Math.PI / 180;
 const TAU = Math.PI * 2;
 const smooth = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+const smoother = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * x * (x * (6 * x - 15) + 10)); // 섞기 (rdRamp): 빠르기 · 가속 모두 0 에서 시작해 0 으로 끝남
 const sideOf = (f) => (f.side >= 0 ? 1 : -1);
 const BODY0 = Object.freeze({ pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 });
+
+/**
+ * 지금 감기 꼴 (UNIQUE_ASSIST.rdWindMode — 사장님 10/29 20:0x 두 안 · 감독 안 · 사장님 확인 전): { kind 'spin' | 'shoulder', loopT, cone, hand, handR, windIn, woundT, blade }
+ *  'spin' = 10/29 판(rdLoopT · rdLoop · rdWindIn) · 'slowSpin' = 안 A(rdSlow) · 'shoulder' = 안 B(rdShoulder). 모르는 이름은 'spin'
+ */
+export function windSpec() {
+  const m = UA.rdWindMode;
+  if (m === 'shoulder' && UA.rdShoulder) return { kind: 'shoulder', loopT: 0, cone: 0, handR: 0, ...UA.rdShoulder };
+  if (m === 'slowSpin' && UA.rdSlow) return { kind: 'spin', handR: 0, ...UA.rdSlow };
+  return { kind: 'spin', loopT: UA.rdLoopT, cone: UA.rdLoop.cone, hand: UA.rdLoop.hand, handR: 0, windIn: UA.rdWindIn };
+}
+/** 내려침 앞 '먼저 머리 위로' 자리 (secret_instant.js comboPlanRd loop — { cone, hand }): 도는 꼴이면 그 고리 · 어깨 꼴이면 10/29 판 고리(rdLoop) */
+export function windLoopOf(M = windSpec()) {
+  return M.kind === 'spin' ? { cone: M.cone, hand: M.hand } : UA.rdLoop;
+}
 
 /**
  * 감는 길 한 자리 (몸 틀): 칼 가로 각 psi(rad — 0 앞 · + 칼 든 쪽) → 손(칼자루 쥔 자리 = 칼 원점) H · 칼날 D(단위).
@@ -32,18 +54,35 @@ const BODY0 = Object.freeze({ pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 });
  *  칼날이 아래팔 축 가까이(30°)라 어느 쪽으로 기울어도 손목이 굽힘 · 폄 · 치우침만으로 닿아 굴림을 뒤집지 않는다 (머리 위 가로 고리 · 자세표 머리 위 자세를 이은 고리는
  *  손목이 거꾸로 뒤집히거나 칼자루 · 팔이 머리를 지났다 — 기록 §2)
  */
-export function windPose(f, psi, H = new THREE.Vector3(), D = new THREE.Vector3()) {
-  const L = UA.rdLoop;
+export function windPose(f, psi, H = new THREE.Vector3(), D = new THREE.Vector3(), M = windSpec()) {
   const s = sideOf(f);
-  const b = L.cone * D2R;
-  H.set(L.hand[0], L.hand[1], s * L.hand[2]);
+  if (M.kind === 'shoulder') {
+    // 안 B 어깨에 얹음 (rdShoulder): 손 hand [앞, 위, 칼 든 쪽] m · 칼 blade [높이 °, 가로 °](0 앞 · + 칼 든 쪽 — 150 이면 뒤 · 칼 든 쪽) — 칼이 칼 든 어깨 위로 뒤로 누움
+    const e = M.blade[0] * D2R;
+    const a = M.blade[1] * D2R;
+    H.set(M.hand[0], M.hand[1], s * M.hand[2]);
+    D.set(Math.cos(e) * Math.cos(a), Math.sin(e), s * Math.cos(e) * Math.sin(a));
+    return { H, D };
+  }
+  const b = M.cone * D2R;
+  const r = M.handR ?? 0; // 손도 칼이 기운 쪽으로 원 (rdSlow.handR — 기본 0: 손이 원을 그리면 손목이 사람 범위 끝을 오가 칼이 튐 · 기록 §8-4)
+  H.set(M.hand[0] + r * Math.cos(psi), M.hand[1], s * (M.hand[2] + r * Math.sin(psi)));
   D.set(Math.sin(b) * Math.cos(psi), Math.cos(b), s * Math.sin(b) * Math.sin(psi));
+  if (M.lean) {
+    // 안 A: 고리 축을 뒤로 lean ° 눕힘 (몸 옆 축 둘레) — 손은 이마 앞인데 칼끝 원의 가운데가 머리 위에 오게
+    const l = M.lean * D2R;
+    const x = D.x;
+    D.x = x * Math.cos(l) - D.y * Math.sin(l);
+    D.y = x * Math.sin(l) + D.y * Math.cos(l);
+  }
   return { H, D };
 }
-/** 감는 빠르기 (rad/s) */
-export const windRate = () => TAU / Math.max(1e-3, UA.rdLoopT);
-/** 감는 칼이 도는 쪽 (몸 틀 — 가로 각이 느는 쪽 · 날 세우기 · rdEdge −1 이면 반대 날) */
-function windEdge(f, psi, out = new THREE.Vector3()) {
+/** 감는 빠르기 (rad/s — 어깨 꼴은 0) */
+export const windRate = (M = windSpec()) => (M.loopT > 0 ? TAU / M.loopT : 0);
+const _UP = new THREE.Vector3(0, 1, 0);
+/** 감는 칼이 도는 쪽 (몸 틀 — 가로 각이 느는 쪽 · 날 세우기 · rdEdge −1 이면 반대 날) · 어깨 꼴은 날 위(하늘 쪽 — 사장님 '날 위') */
+function windEdge(f, psi, out = new THREE.Vector3(), M = windSpec()) {
+  if (M.kind === 'shoulder') return out.copy(_UP);
   return out.set(-Math.sin(psi), 0, sideOf(f) * Math.cos(psi)).multiplyScalar(UA.rdEdge < 0 ? -1 : 1);
 }
 
@@ -55,13 +94,41 @@ export function windStart(f) {
   const AH = new THREE.Vector3(sw.x - c.x, sw.y - c.y, sw.z - c.z).applyQuaternion(inv);
   const AD = f.bladePoint(1, new THREE.Vector3()).sub(f.bladePoint(0, new THREE.Vector3())).normalize().applyQuaternion(inv);
   const psi = Math.atan2(sideOf(f) * AD.z, AD.x); // 지금 칼 가로 각에서 돌기 시작
-  const I = { yaw: f.yaw.clone(), mord: null, kind: 'wind', moves: null, mi: 0, off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), body: BODY0, wristMargin: UA.rdWristMargin ?? 0 }; // 손목 교정은 범위 끝에서 rdWristMargin ° 안쪽으로 (10/29 몸 검사)
-  f.rdWind = { t: 0, psi, psi0: psi, AH, AD, H: AH.clone(), D: AD.clone(), k: 0, I, turns: 0 };
+  const M = windSpec(); // 이 감기의 꼴 (감는 동안 그대로)
+  const I = { yaw: f.yaw.clone(), mord: null, kind: 'wind', moves: null, mi: 0, off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), body: M.body ? { ...BODY0, ...M.body } : BODY0, wristMargin: UA.rdWristMargin ?? 0 }; // 손목 교정은 범위 끝에서 rdWristMargin ° 안쪽으로 (10/29 몸 검사) · 몸 = 꼴의 body(덧씌우기 몸 ° · m) 없으면 0
+  f.rdWind = { t: 0, psi, psi0: psi, AH, AD, H: AH.clone(), D: AD.clone(), k: 0, I, turns: 0, M };
+  // 휘청 고침 ① (rdSteady — 10/29 20:0x): 감는 동안 손목 원뿔 · 칼 어깨 면 밧줄을 뗀다 (휩쓸기 · 죽음의 일격과 같음 — secret_instant.js ropes).
+  //  놓은 위팔이 어깨 면 한도(HUMAN.shoulderPlane) 밖을 지나면 밧줄이 매 스텝 가슴을 팔 쪽으로 잡아챈다 — 손가락을 대고 있는(handHeld) 쉼 자세(칼이 오른쪽 아래)에서
+  //  머리 위로 섞을 때 가슴이 0.1 s 에 7 rad/s 로 뒤로 젖혀져 37° · 무게중심이 발 밖 1 m 로 나가 넘어짐(브라우저 · 시뮬 같음 — 기록 §8). 감기 끝(windEnd)에 다시 건다
+  if (UA.rdSteady > 0) {
+    f.rdWind.ropes = { grip: !!f.gripCone, shoulder: !!f.shoulderRopes };
+    armRopes(f, false);
+  }
   return f.rdWind;
 }
 
 const _q = new THREE.Quaternion();
 const _e = new THREE.Vector3();
+const _vh = new THREE.Vector3();
+const _vd = new THREE.Vector3();
+const _bh = new THREE.Vector3();
+const _bd = new THREE.Vector3();
+/** 손 · 칼날 섞기 (손 곧게 · 칼날 slerp): (AH, AD) → (BH, BD) 의 k 자리 → (oH, oD) — oH · oD 가 BH · BD 와 같아도 됨 */
+function blendTo(AH, AD, BH, BD, k, oH, oD) {
+  const qd = _q.setFromUnitVectors(AD, BD);
+  const d = AD.clone().applyQuaternion(new THREE.Quaternion().slerp(qd, k)).normalize();
+  oH.lerpVectors(AH, BH, k);
+  oD.copy(d);
+}
+/** 안 B 섞기의 거쳐 가는 자리 (M.via — 손 [앞, 위, 칼 든 쪽] m · 칼 [높이 °, 가로 °]) */
+function windVia(f, M, H, D) {
+  const s = sideOf(f);
+  const e = M.via.blade[0] * D2R;
+  const a = M.via.blade[1] * D2R;
+  H.set(M.via.hand[0], M.via.hand[1], s * M.via.hand[2]);
+  D.set(Math.cos(e) * Math.cos(a), Math.sin(e), s * Math.cos(e) * Math.sin(a));
+  return { H, D };
+}
 /**
  * 한 물리 스텝 (unique_assist.js holdTick — skill.update 머리 · 물리 스텝 앞): 가로 각을 돌리고 그 자리에 두 팔 · 칼을 놓는다.
  *  돌려줌 = 감는 칼이 지난 물리 스텝에 무엇에 닿았나('body' 상대 몸 · 'blade' 상대 칼 · 'other' 벽 · 땅) 또는 null
@@ -70,27 +137,45 @@ export function windStep(f, dt) {
   const W = f.rdWind;
   if (!W) return null;
   const hit = windContact(f);
+  const M = W.M ?? windSpec();
+  const T = M.windIn ?? 0;
+  const ramp = UA.rdSteady > 0 && UA.rdRamp > 0 && T > 0; // 휘청 고침 ③ (rdRamp): 도는 빠르기를 섞는 동안 0 → 고리 빠르기로 · 섞기 smoother (전: 첫 스텝부터 고리 빠르기 + smooth 섞기)
+  W.psi += windRate(M) * (ramp ? smooth((W.t + 0.5 * dt) / T) : 1) * dt;
   W.t += dt;
-  W.psi += windRate() * dt;
-  W.turns = (W.psi - W.psi0) / TAU;
-  const { H, D } = windPose(f, W.psi);
-  const k = UA.rdWindIn > 0 ? smooth(W.t / UA.rdWindIn) : 1;
+  W.turns = M.kind === 'shoulder' ? W.t / Math.max(1e-3, M.woundT) : (W.psi - W.psi0) / TAU; // 어깨 꼴: 감은 셈 = 얹은 채 쥔 시간 ÷ woundT (흐르는 긋기 '한 바퀴' 자리 — 사장님 확인 전)
+  const { H, D } = windPose(f, W.psi, undefined, undefined, M);
+  const k = T > 0 ? (ramp ? smoother(W.t / T) : smooth(W.t / T)) : 1;
   if (k < 1) {
-    H.lerpVectors(W.AH, H, k);
-    _q.setFromUnitVectors(W.AD, D);
-    D.copy(W.AD).applyQuaternion(new THREE.Quaternion().slerp(_q, k)).normalize();
+    if (M.via) {
+      // 안 B: 지금 칼 → 거쳐 가는 자리(via — 칼을 세워 든 자리) → 어깨 (곧장 섞으면 칼이 앞에서 뒤로 넘어가며 제 머리 · 몸을 지남 — 몸 검사)
+      const V = windVia(f, M, _vh, _vd);
+      const k1 = Math.min(1, 2 * k);
+      const k2 = Math.max(0, 2 * k - 1);
+      blendTo(W.AH, W.AD, V.H, V.D, k1, _bh, _bd);
+      blendTo(_bh, _bd, H, D, k2, H, D);
+    } else blendTo(W.AH, W.AD, H, D, k, H, D);
   }
   W.H.copy(H);
   W.D.copy(D);
   W.k = k;
   W.I.yaw.copy(f.yaw); // 몸 틀 = 지금 몸 방향 (걷고 돌아도 머리 위 그대로)
-  placeArmsAt(f, W.I, H, D, windEdge(f, W.psi, _e).applyQuaternion(f.yaw));
+  placeArmsAt(f, W.I, H, D, windEdge(f, W.psi, _e, M).applyQuaternion(f.yaw));
   return hit;
 }
 
 /** 감기 끝 (내려침이 이어받든 그만두든): 대본 놓기를 멈춤 — 팔 · 칼은 동역학 몸 그대로(서보 · 덧씌우기 칸은 holdTick 이 내려놓음) */
-export function windEnd(f) {
+export function windEnd(f, keepRopes = false) {
+  const R = f.rdWind?.ropes ?? null;
   f.rdWind = null;
+  if (keepRopes) return R; // 뗀 밧줄 기록을 돌려줌 — 내려침 운동학 칼이 끝나고 · 그만둔 팔이 서보로 돌아온 뒤 다시 건다 (unique_assist.js holdTick → windRopesBack)
+  windRopesBack(f, R);
+  return null;
+}
+/** 감기에 뗀 밧줄을 다시 (있던 것만 · 칼을 잃었으면 손목 원뿔은 걸지 않음 — secret_instant.js endIai 와 같은 조건) */
+export function windRopesBack(f, R) {
+  if (!R) return;
+  if (R.grip && f.armed && f.sword && f.weaponCfg.hiltLength && !f.gripCone) f.gripConeOn();
+  if (R.shoulder && !f.shoulderRopes && f.bodies.uarmS && f.jointByName.uarmS) f.shoulderOn();
 }
 
 /** 감는 칼이 지난 물리 스텝에 무엇에 닿았나 (iberian_spin.js swordContact 와 같은 셈 — 내 몸은 뺌): 'body' · 'blade' · 'other'(벽 · 땅) · null */

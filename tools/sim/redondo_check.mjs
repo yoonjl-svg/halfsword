@@ -30,19 +30,36 @@ export function rdCheck({ w = 'zweihander', seeds = 6, foes = ['still', 'walk'] 
         let W = null;
         let K = null;
         let tip0 = null;
+        let Wl = null; // 이 판의 마지막 감기 (뗀 때 → 맞음 · 든 기력 — 감자마자 뗀 감기는 첫 스텝뿐이라 W 가 없음)
         drillRun('rdHold', seed, {
           foe,
           variant: 'on',
           dur: 16,
           probe: (G, P, D) => {
+            if (!G.__rdHit) {
+              // 내려침이 처음 상처를 낸 때 (뗀 때 → 맞음 — 10/29 20:0x 감기 꼴 견줌)
+              G.__rdHit = true;
+              const pw = G.combat.hooks.onWound;
+              G.combat.hooks.onWound = (att, vic, ...rest) => {
+                pw?.(att, vic, ...rest);
+                if (att === P && vic === D && K && K.tHit == null) K.tHit = G.t;
+              };
+            }
             const tip = P.bladePoint(1, new THREE.Vector3());
             const v = tip0 ? tip.distanceTo(tip0) / DT : 0; // 놓인 자리의 차 (칼 몸 빠르기는 감는 동안 가슴 빠르기)
             tip0 = tip.clone();
             const Wd = P.rdWind;
             if (Wd && Wd.t === 0) {
               // 감기 첫 스텝 = 아직 놓기 전(그 전 자세 — 보통 자세의 손목) · 셈 밖
+              Wl = { t0: G.t, st0: P.stamina.value, st1: P.stamina.value, turns: 0 };
             } else if (Wd) {
-              if (!W) winds.push((W = { w, foe, seed, t0: G.t, tRot: null, v: [], h: [], face: [] }));
+              if (!W) winds.push((W = { w, foe, seed, t0: G.t, tRot: null, v: [], h: [], face: [], st0: P.stamina.value }));
+              W.st1 = P.stamina.value; // 감는 동안 든 기력 (마지막 감은 스텝까지 — 내려침 칼 하나 몫은 뺌)
+              W.off = Math.max(W.off ?? 0, P.offBalance ?? 0); // 휘청 (10/29 20:0x): 무게중심이 발 둘레 밖으로 벗어난 몫 최대 · 균형 걸음 · 넘어짐
+              W.stum = Math.max(W.stum ?? 0, P.stumble?.length?.() ?? 0);
+              if (P.state !== 'stand') W.fell = true;
+              W.turns = Wd.turns;
+              if (Wl) Object.assign(Wl, { st1: W.st1, turns: W.turns });
               if (W.tRot == null && Wd.turns >= 1) W.tRot = G.t - W.t0;
               if (Wd.k >= 1) {
                 W.v.push(v);
@@ -55,10 +72,12 @@ export function rdCheck({ w = 'zweihander', seeds = 6, foes = ['still', 'walk'] 
               }
               S.wind.push({ w, foe, seed, ...sample(P, D, { cross: 0 }) });
             } else W = null;
+            if (K && P.state !== 'stand') K.fell = true; // 내려침 동안 넘어짐
             const I = P.iai;
             if (I?.moves?.[0]?.rd) {
               if (!K) {
-                strikes.push((K = { w, foe, seed, vMax: 0, y: [], side: [] }));
+                strikes.push((K = { w, foe, seed, vMax: 0, y: [], side: [], tRel: G.t, tHit: null, drain: Wl && Wl.st0 != null ? Wl.st0 - Wl.st1 : null, windT: Wl ? G.t - Wl.t0 : null, turns: Wl?.turns ?? null }));
+                Wl = null;
               }
               const seg = I.segs?.[I.si];
               if (seg?.cut) {
@@ -88,7 +107,7 @@ export function rdSummary({ S, winds, strikes }) {
   const V = W.flatMap((x) => x.v);
   const cut = strikes.filter((k) => k.y.length);
   return {
-    wind: { n: winds.length, steps: S.wind.length, tRotGame: q(winds.map((x) => x.tRot), 0.5), tRotReal: q(winds.map((x) => (x.tRot == null ? null : x.tRot / CONFIG.TIME.k)), 0.5), rotDone: winds.filter((x) => x.tRot != null).length, tipV: [q(V, 0.1), q(V, 0.5), q(V, 0.9)], tipH: [q(W.flatMap((x) => x.h), 0.1), q(W.flatMap((x) => x.h), 0.9)], faceDeg: [q(W.flatMap((x) => x.face), 0.5), q(W.flatMap((x) => x.face), 0.95)], table: dupTable(S.wind) },
+    wind: { n: winds.length, off: [q(W.map((x) => x.off ?? 0), 0.5), q(W.map((x) => x.off ?? 0), 1)], stum: q(W.map((x) => x.stum ?? 0), 1), fell: winds.filter((x) => x.fell).length, steps: S.wind.length, tRotGame: q(winds.map((x) => x.tRot), 0.5), tRotReal: q(winds.map((x) => (x.tRot == null ? null : x.tRot / CONFIG.TIME.k)), 0.5), rotDone: winds.filter((x) => x.tRot != null).length, tipV: [q(V, 0.1), q(V, 0.5), q(V, 0.9)], tipH: [q(W.flatMap((x) => x.h), 0.1), q(W.flatMap((x) => x.h), 0.9)], faceDeg: [q(W.flatMap((x) => x.face), 0.5), q(W.flatMap((x) => x.face), 0.95)], table: dupTable(S.wind) },
     strike: {
       n: strikes.length,
       tipVmax: [q(cut.map((k) => k.vMax), 0.1), q(cut.map((k) => k.vMax), 0.5), q(cut.map((k) => k.vMax), 0.9)],
@@ -96,6 +115,14 @@ export function rdSummary({ S, winds, strikes }) {
       y0: q(cut.map((k) => k.y[0]), 0.5), y1: q(cut.map((k) => k.y.at(-1)), 0.5), side0: q(cut.map((k) => k.side[0]), 0.5), side1: q(cut.map((k) => k.side.at(-1)), 0.5),
       leftHighRightLow: cut.filter((k) => k.y.at(-1) < k.y[0] && k.side.at(-1) > k.side[0]).length,
       hits: strikes.filter((k) => k.res?.hits).length,
+      fell: strikes.filter((k) => k.fell).length,
+      // 뗀 때 → 첫 상처 (실제 초 p50 · p90) · 감는 동안 든 기력 (p50 · 최대) · 감은 시간 (실제 초 p50) · 감은 셈 p50 (10/29 20:0x)
+      toHit: [q(strikes.filter((k) => k.tHit != null).map((k) => (k.tHit - k.tRel) / CONFIG.TIME.k), 0.5), q(strikes.filter((k) => k.tHit != null).map((k) => (k.tHit - k.tRel) / CONFIG.TIME.k), 0.9)],
+      drain: [q(strikes.map((k) => k.drain), 0.5), q(strikes.map((k) => k.drain), 1)],
+      windReal: q(strikes.map((k) => (k.windT == null ? null : k.windT / CONFIG.TIME.k)), 0.5),
+      turns: q(strikes.map((k) => k.turns), 0.5),
+      // 다 감은 뒤 뗀 칼만 (감은 셈 ≥ 1 — 봇의 반은 감자마자 뗌): 수 · 맞음 · 뗀 때 → 첫 상처 p50
+      wound: (() => { const Z = strikes.filter((k) => (k.turns ?? 0) >= 1); const H = Z.filter((k) => k.tHit != null); return { n: Z.length, hits: Z.filter((k) => k.res?.hits).length, toHit: q(H.map((k) => (k.tHit - k.tRel) / CONFIG.TIME.k), 0.5), drain: q(Z.map((k) => k.drain), 0.5) }; })(),
       zones: strikes.reduce((o, k) => ((o[k.res?.zone ?? '-'] = (o[k.res?.zone ?? '-'] ?? 0) + 1), o), {}),
       table: dupTable(S.strike),
     },
