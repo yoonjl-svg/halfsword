@@ -152,6 +152,9 @@
       #staminaHud { position: fixed; inset: 0; pointer-events: none; }
       .stamina-bar { position: absolute; width: 56px; height: 2px; transform: translate(-50%, -100%); background: rgba(24,18,14,.35); border-radius: 1px; overflow: hidden; box-shadow: 0 0 0 .25px var(--c-text), 0 0 0 .5px var(--c-accent); }
       .stamina-bar > span { display: block; width: 100%; height: 100%; background: var(--c-sub); opacity: .85; transform-origin: left center; }
+      /* 동시 대전 체력 막대 (src/stamina_hud.js setTeam — 사장님 10/29 20:3x): 기력 막대 바로 밑 · 같은 크기 · 모양 · 채움 = 편 색 (1:1 엔 없음) */
+      .hp-bar { position: absolute; width: 56px; height: 2px; transform: translate(-50%, -100%); background: rgba(24,18,14,.35); border-radius: 1px; overflow: hidden; box-shadow: 0 0 0 .25px var(--c-text), 0 0 0 .5px var(--c-accent); }
+      .hp-bar > span { display: block; width: 100%; height: 100%; opacity: .9; transform-origin: left center; }
       .stamina-bar { transition: opacity .4s; }
       .stamina-bar[data-full="true"] { opacity: .6; }
       .stamina-bar[data-level="1"], .stamina-bar[data-level="2"] { animation: stamina-breath 1.8s ease-in-out infinite; }

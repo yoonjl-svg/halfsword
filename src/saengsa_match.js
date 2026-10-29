@@ -4,8 +4,11 @@
 //  생사전 쪽(가지 wk/saengsa — docs/design/saengsa_2026-10-29.md §8 · src/saengsa_engine.js makeEngine)이 부르는 꼴:
 //   res = await game.launchSaengsa(setup)
 //   setup = { matchId, round, seed, mineSide 'a'|'b', entrants { a: [key], b: [key] }, sides { a: [사람], b: [사람] }, control 'player' | 'watch' }
-//    사람 = { key '팀-자리', id(인물 id · 'player' · 'nameless'), weapon, school, tier, prof { 유파: 숙련도 }, lent, hp 0~100, injuries [{ part 팔·다리·몸통·머리, sev, rests }], dead, cloth? }
-//   res = { winner 'a'|'b', fighters { key: { hp, injuries, alive } } } (나선 사람만) · 그만두고 나오면 null
+//    사람 = { key '팀-자리', id(인물 id · 'player' · 'nameless'), weapon(id 또는 { id, broken }), school, tier, prof { 유파: 숙련도 }, lent, hp 0~100, injuries [{ part 팔·다리·몸통·머리, sev, rests }], dead, cloth? }
+//   res = { winner 'a'|'b', fighters { key: { hp, injuries, alive, weaponBroken } } } (나선 사람만) · 그만두고 나오면 null
+//   부러진 무기는 그 대회 끝까지 부러진 채 (사장님 10/29 20:1x): 사람 broken: true (생사전 가지 꼴) 또는 weapon { id, broken: true } 면 처음부터 부러진 무기로 서고(fighter.js applySnapshot → breakWeapon) ·
+//    판 끝 broken (= weaponBroken — 두 이름 다 적음)을 돌려준다
+//   이름: 사람 name · 무명 검객은 '무명 검객 ' + tag (생사전 가지 saengsa_roster.js fighterName 과 같은 꼴)
 //  이 파일은 그림 · 물리 없이 셈만 (Node 시험 tools/sim/saengsa_match.test.mjs). 판을 세우고 돌리는 것은 main.js launchSaengsa.
 //
 //  체력 ↔ 피: 체력 100 = 피 1 · 체력 0 = 쓰러져 죽는 문턱(VITALS.collapseBlood) — 판 끝 체력 = 그 사이의 몫(산 사람은 적어도 1).
@@ -29,7 +32,12 @@ export function hpFromFighter(f) {
   return Math.max(1, Math.min(HP_MAX, Math.round(((f.blood - VITALS.collapseBlood) / (1 - VITALS.collapseBlood)) * HP_MAX)));
 }
 
-/** 사람(체력 · 부상) → 싸움꾼 상태 사본 (fighter.js snapshot 꼴 — 판을 세울 때 applySnapshot) */
+/** 사람의 무기 칸 (id 문자열 또는 { id, broken }) → { id, broken } */
+export const weaponOfPerson = (p) => (p?.weapon && typeof p.weapon === 'object' ? { id: p.weapon.id, broken: !!(p.weapon.broken || p.broken) } : { id: p?.weapon, broken: !!p?.broken });
+/** 싸움 화면 이름: 사람 name · 무명 검객 = '무명 검객 ' + tag (붙인 이름) · 없으면 undefined (main.js teamName 이 인물 이름 · '무명 검객') */
+export const nameOfPerson = (p) => p?.name ?? (p?.id === 'nameless' && p.tag ? `무명 검객 ${p.tag}` : undefined);
+
+/** 사람(체력 · 부상 · 부러진 무기) → 싸움꾼 상태 사본 (fighter.js snapshot 꼴 — 판을 세울 때 applySnapshot) */
 export function snapshotFromPerson(p) {
   const limbs = { armS: 1, armO: 1, legF: 1, legB: 1 };
   const wounds = [];
@@ -40,7 +48,7 @@ export function snapshotFromPerson(p) {
     const limb = WOUND_LIMB[part];
     if (limb) limbs[limb] = Math.max(0, limbs[limb] - inj.sev * LIMB_LOSS);
   }
-  return { v: 1, blood: bloodFromHp(p.hp), bleed: 0, consciousness: 1, pain: 0, limbs, wounds };
+  return { v: 1, blood: bloodFromHp(p.hp), bleed: 0, consciousness: 1, pain: 0, limbs, wounds, weaponBroken: weaponOfPerson(p).broken };
 }
 
 /**
@@ -64,7 +72,7 @@ export function specFromSetup(setup) {
   }
   // 2:1 · 1:2 · 2:2 · 1:1 모두: 자리 차례 = [내 첫째, 상대 첫째, (내 둘째), (상대 둘째)] — 위 고리가 그 차례로 넣는다
   const fighters = seq.map(([p, team], index) => ({
-    index, team, key: p.key, human: p === human, id: p.id, weapon: p.weapon, school: p.school ?? null, prof: p.prof ?? null, cloth: p.cloth ?? null,
+    index, team, key: p.key, human: p === human, id: p.id, name: p === human ? undefined : nameOfPerson(p), weapon: weaponOfPerson(p).id, weaponBroken: weaponOfPerson(p).broken, school: p.school ?? null, prof: p.prof ?? null, cloth: p.cloth ?? null,
     snapshot: snapshotFromPerson(p), person: p,
   }));
   return { matchId: setup.matchId ?? null, seed: setup.seed ?? 0, control: human ? 'player' : 'watch', mineSide: mine, fighters };
@@ -80,7 +88,7 @@ export function profOfEntry(e) {
 }
 
 /**
- * 판 끝 → 생사전 결과 { winner 'a'|'b', fighters { key: { hp, injuries, alive } } }.
+ * 판 끝 → 생사전 결과 { winner 'a'|'b', fighters { key: { hp, injuries, alive, broken, weaponBroken } } } (broken = weaponBroken — 생사전 가지는 broken 을 읽음).
  *  winnerTeam = 이긴 편(0 = 내 편 · 1 = 상대 · null = 둘 다 쓰러짐 — 피가 더 남은 쪽, 같으면 상대) · injuriesFromWounds = 생사전 쪽 함수(saengsa_rules.js — 없으면 fallbackInjuries)
  */
 export function resultFromMatch(spec, fighters, winnerTeam, injuriesFromWounds = fallbackInjuries) {
@@ -95,7 +103,7 @@ export function resultFromMatch(spec, fighters, winnerTeam, injuriesFromWounds =
   for (const e of spec.fighters) {
     const f = fighters[e.index];
     const fresh = (f.wounds ?? []).filter((w) => !w.carried).map((w) => ({ part: w.part, severity: w.severity }));
-    out[e.key] = { hp: hpFromFighter(f), injuries: injuriesFromWounds(e.person?.injuries ?? [], fresh), alive: !!f.alive };
+    out[e.key] = { hp: hpFromFighter(f), injuries: injuriesFromWounds(e.person?.injuries ?? [], fresh), alive: !!f.alive, broken: !!f.weaponBroken, weaponBroken: !!f.weaponBroken };
   }
   return { winner: team === 0 ? mine : other, fighters: out };
 }

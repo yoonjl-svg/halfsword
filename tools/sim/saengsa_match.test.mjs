@@ -3,12 +3,13 @@
 //  ① 자리 차례 · 편 · 사람 몸 · 조종(지켜보기로 떨어짐) · 죽은 사람 빠짐 (2:2 · 2:1 · 1:2)
 //  ② 체력 ↔ 피 · 부상 → 닫힌 상처(carried) · 팔다리 기능
 //  ③ 진짜 몸에서 사본 → 입힘 → 사본 = 같은 값 (난수 없음) · 칼 쥔 팔이 문턱 밑이면 처음부터 칼을 놓침
-//  ④ 결과 꼴 { winner, fighters { key: { hp, injuries, alive } } } — 들어올 때 상처는 다시 세지 않음 · 둘 다 쓰러지면 피가 더 남은 편
+//  ⑥ 부러진 무기는 그 대회 끝까지 (사장님 10/29 20:1x): weapon { id, broken } → 처음부터 부러진 무기 = 싸움에서 부러질 때와 같은 몸 · 결과 weaponBroken
+//  ④ 결과 꼴 { winner, fighters { key: { hp, injuries, alive, weaponBroken } } } — 들어올 때 상처는 다시 세지 않음 · 둘 다 쓰러지면 피가 더 남은 편
 //  node --test tools/sim/saengsa_match.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newMatch, CONFIG } from './jelly_harness.mjs';
-import { specFromSetup, snapshotFromPerson, bloodFromHp, hpFromFighter, resultFromMatch, fallbackInjuries, profOfEntry, INJURY_WOUND, HP_MAX } from '../../src/saengsa_match.js';
+import { specFromSetup, snapshotFromPerson, bloodFromHp, hpFromFighter, resultFromMatch, fallbackInjuries, profOfEntry, weaponOfPerson, INJURY_WOUND, HP_MAX } from '../../src/saengsa_match.js';
 import { WOUND_LIMB, LIMB_LOSS } from '../../src/fighter.js';
 
 const V = CONFIG.VITALS;
@@ -119,9 +120,12 @@ test('④ 결과 꼴 · 들어올 때 상처는 다시 세지 않음 · 둘 다 
   const res = resultFromMatch(spec, fake, 0);
   assert.equal(res.winner, 'b'); // 내 편(0 편) = mineSide
   assert.deepEqual(Object.keys(res.fighters).sort(), ['0-0', '0-1', '3-0', '3-1']);
-  assert.deepEqual(res.fighters['0-0'], { hp: 40, alive: true, injuries: [{ part: 'arm', sev: 0.3, rests: 0 }, { part: 'leg', sev: 0.45, rests: 0 }] }); // 팔(들어올 때) 그대로 · 다리 새로
-  assert.deepEqual(res.fighters['3-0'], { hp: 0, alive: false, injuries: [{ part: 'head', sev: 0.9, rests: 0 }] });
-  assert.deepEqual(res.fighters['0-1'], { hp: HP_MAX, alive: true, injuries: [] });
+  assert.deepEqual(res.fighters['0-0'], { hp: 40, alive: true, broken: false, weaponBroken: false, injuries: [{ part: 'arm', sev: 0.3, rests: 0 }, { part: 'leg', sev: 0.45, rests: 0 }] }); // 팔(들어올 때) 그대로 · 다리 새로
+  assert.deepEqual(res.fighters['3-0'], { hp: 0, alive: false, broken: false, weaponBroken: false, injuries: [{ part: 'head', sev: 0.9, rests: 0 }] });
+  assert.deepEqual(res.fighters['0-1'], { hp: HP_MAX, alive: true, broken: false, weaponBroken: false, injuries: [] });
+  // 이름: 무명 검객 = '무명 검객 ' + tag · 사람 name 이 있으면 그것 · 나(사람 몸)는 main.js 가 '나'
+  const named = specFromSetup({ ...fakeSetup(), sides: { ...fakeSetup().sides, a: [person('3-0', 'nameless', { tag: '오토' }), person('3-1', 'sigmund', { name: '지그문트' })] } });
+  assert.deepEqual(named.fighters.map((e) => [e.key, e.name]), [['0-0', undefined], ['3-0', '무명 검객 오토'], ['0-1', undefined], ['3-1', '지그문트']]);
   assert.equal(res.fighters['3-1'].hp, 1); // 살아 있으면 적어도 1
   assert.deepEqual(res.fighters['3-1'].injuries, [{ part: 'leg', sev: 0.5, rests: 1 }]); // 긁힘(0.1 밑)은 뺌 · 들어올 때 부상 그대로
   assert.equal(resultFromMatch(spec, fake, 1).winner, 'a');
@@ -144,4 +148,53 @@ test('⑤ hpFromFighter: 죽음 0 · 산 몸 1 ~ 100 정수', () => {
   assert.equal(hpFromFighter({ alive: true, blood: 1 }), 100);
   assert.equal(hpFromFighter({ alive: true, blood: 0.2 }), 1);
   assert.equal(hpFromFighter({ alive: true, blood: bloodFromHp(73) }), 73);
+});
+
+test('⑥ 부러진 무기: 처음부터 부러짐 = 싸움에서 부러질 때와 같은 몸 · 난수 없음 · 결과 weaponBroken', () => {
+  // setup 꼴: weapon 이 id 문자열이든 { id, broken } 이든
+  assert.deepEqual(weaponOfPerson({ weapon: 'rapier' }), { id: 'rapier', broken: false });
+  assert.deepEqual(weaponOfPerson({ weapon: { id: 'rapier', broken: true } }), { id: 'rapier', broken: true });
+  assert.deepEqual(weaponOfPerson({ weapon: 'rapier', broken: true }), { id: 'rapier', broken: true }); // 생사전 가지 꼴 (사람 broken)
+  const setup = fakeSetup();
+  setup.sides.b[1].weapon = { id: 'rapier', broken: true }; // 0-1 무명 검객 — 지난 경기에서 부러진 레이피어
+  const spec = specFromSetup(setup);
+  const e = spec.fighters.find((x) => x.key === '0-1');
+  assert.equal(e.weapon, 'rapier');
+  assert.equal(e.weaponBroken, true);
+  assert.equal(e.snapshot.weaponBroken, true);
+  assert.equal(spec.fighters.find((x) => x.key === '0-0').snapshot.weaponBroken, false);
+  // 진짜 몸: 사본으로 부러진 칼 = 싸움 중 breakWeapon() 과 같은 칼 길이 · 질량 · 관성 · 콜라이더
+  const body = (f) => ({
+    broken: f.weaponBroken, blade: f.weaponCfg.bladeLength, hilt: f.weaponCfg.hiltLength, mass: f.swordMass, I: { ...f.swordProps.I }, com: f.swordCom, Ihand: f.swordIhand, twist: f.twistScale,
+    cols: f.swordColliders.map((c) => [c.collisionGroups(), c.mass(), c.translationWrtParent?.()?.y ?? null]),
+  });
+  for (const w of ['rapier', 'longsword', 'morgenstern', 'zweihander']) {
+    const A = newMatch({ seed: 2, count: 4, weapons: [w, w, w, w] });
+    A.fighters[2].applySnapshot(snapshotFromPerson({ hp: 100, injuries: [], weapon: { id: w, broken: true } }));
+    const B = newMatch({ seed: 2, count: 4, weapons: [w, w, w, w] });
+    B.fighters[2].breakWeapon();
+    assert.equal(A.fighters[2].weaponBroken, true, w);
+    assert.deepEqual(body(A.fighters[2]), body(B.fighters[2]), `${w}: 사본으로 부러짐 = 싸움 중 부러짐`);
+    assert.ok(A.fighters[2].weaponCfg.bladeLength < A.fighters[0].weaponCfg.bladeLength || w === 'morgenstern', w);
+    assert.ok(A.fighters[2].swordMass < A.fighters[0].swordMass, `${w} 질량`);
+    // 다시 한 판: 같은 값 (난수 없음) · 사본 → 입힘 → 사본 같음
+    const C = newMatch({ seed: 7, count: 4, weapons: [w, w, w, w] });
+    const s1 = A.fighters[2].snapshot();
+    C.fighters[2].applySnapshot(s1);
+    assert.deepEqual(C.fighters[2].snapshot(), s1);
+    assert.deepEqual(body(C.fighters[2]), body(A.fighters[2])); // 다른 판 씨앗 · 같은 자리
+  }
+  // 부러질 수 없는 무기(싸움에서도 안 부러짐 — 휘는 마디 무기 포함)는 그대로
+  for (const w of ['druid_whip', 'excalibur', 'frozen_tuna']) {
+    const A = newMatch({ seed: 3, weapons: [w, w] });
+    const before = body(A.fighters[0]);
+    A.fighters[0].applySnapshot(snapshotFromPerson({ hp: 100, injuries: [], weapon: { id: w, broken: true } }));
+    assert.equal(A.fighters[0].weaponBroken, false, w);
+    assert.deepEqual(body(A.fighters[0]), before, w);
+  }
+  // 결과: 판 끝 weaponBroken (이번 판에 부러진 것 · 들고 들어온 것 모두)
+  const fake = spec.fighters.map((x, i) => ({ team: x.team, alive: true, blood: 1, wounds: [], weaponBroken: i === 0 || x.weaponBroken }));
+  const res = resultFromMatch(spec, fake, 0);
+  assert.deepEqual(Object.fromEntries(Object.entries(res.fighters).map(([k, v]) => [k, v.weaponBroken])), { '0-0': true, '3-0': false, '0-1': true, '3-1': false });
+  assert.ok(Object.values(res.fighters).every((v) => v.broken === v.weaponBroken)); // 생사전 가지는 broken 을 읽음
 });

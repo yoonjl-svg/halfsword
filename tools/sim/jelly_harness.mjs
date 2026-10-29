@@ -147,7 +147,10 @@ export function newMatch(opts = {}) {
   const order = orderControllers(want.map((i) => ({ me: fighters[i] }))).map((c) => c.me.index);
   const M0 = { fighters };
   const ais = [];
-  for (const i of order) ais[i] = new AI(fighters[i], pairFoe(fighters[i], M0), opts.difficulty ?? 'normal'); // 상대마다 눈(addFoe)은 createMatch 가 (셋 이상 판)
+  for (const i of order) {
+    const a = opts.aiOf?.(i) ?? null; // 자리마다 실력 · 성격 (team_balance.mjs — aiAtProficiency) · 없으면 예전 그대로
+    ais[i] = a ? new AI(fighters[i], pairFoe(fighters[i], M0), a.level, a.persona) : new AI(fighters[i], pairFoe(fighters[i], M0), opts.difficulty ?? 'normal'); // 상대마다 눈(addFoe)은 createMatch 가 (셋 이상 판)
+  }
   const hits = [];
   const combat = new Combat(colliderInfo, { onWound: (att, vic, r) => hits.push(`${att.name}->${r.zone}:${r.type} ${r.energy.toFixed(0)}J`), onClash: () => {} });
   const G = createMatch({ world, eventQueue, combat, fighters, controllers: order.map((i) => ais[i]), foeOf: opts.foeOf ?? null });

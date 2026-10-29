@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────
 //  동시 대전 화면 — 4단계 최소 (10/29 · docs/strike/team_fight_2026-10-29.md §11)
-//   위 막대: 넷까지 — 정지 단추 밑 가운데(왼쪽 무대 이름 · 오른쪽 자세 칸 사이 빈 곳), 0 편(내 편) 왼쪽 · 1 편 오른쪽, 편 색 · 이름 · 체력(피의 몫 — saengsa_match.js 와 같은 잣대) · 죽으면 흐림
+//   체력 막대: 머리 위 기력 막대 바로 밑 같은 크기 (stamina_hud.js setTeam — 사장님 10/29 20:3x · 그 전의 정지 단추 밑 이름 막대 묶음은 뺌) · 편 색 · 몫 = hpShare
 //   화면 밖 화살표: 살아 있는 싸움꾼이 화면 밖(또는 카메라 뒤)이면 화면 가장자리에 그쪽을 가리키는 작은 화살표 (편 색)
-//   편 표시: 화면 안의 산 싸움꾼(내 몸 빼고) 머리 위에 같은 화살표를 작게 아래로 — 무명 검객처럼 겉모습이 같아도 편이 보이게
+//   편 표시: 화면 안의 산 상대(1 편) 머리 위에 같은 화살표를 작게 붉게 아래로 — 무명 검객처럼 겉모습이 같아도 편이 보이게 (내 편 금색 세모는 뺌 — 사장님 10/29 20:3x '우리편 머리의 금색 세모는 없어도 돼')
 //   카메라 물러남 몫: 보는 몸(focus)에서 TEAM_FIGHT.cam.radius 안의 산 싸움꾼이 모두 들어오게 뒤로 · 위로 (main.js updateCamera 가 부드럽게)
 //  1:1 판에서는 만들지도 부르지도 않는다 (main.js — teamRun 이 있을 때만)
 // ─────────────────────────────────────────────────────────────
@@ -44,45 +44,16 @@ export function createTeamHud(doc = document) {
   const root = doc.createElement('div');
   root.id = 'teamHud';
   root.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2;display:none;font-family:var(--font-ui, system-ui);';
-  const bars = doc.createElement('div');
-  // 정지 단추(#topButtons — 위 8px · 높이 약 38px) 밑 · 옆 칸(--side-w) 사이 너비에 맞춤 (좁은 가로 폰이면 막대가 줄어듦)
-  bars.style.cssText = 'position:absolute;left:50%;top:calc(max(8px, env(safe-area-inset-top)) + 46px);transform:translateX(-50%);display:flex;gap:12px;';
-  const colW = 'min(112px, calc(50vw - var(--side-w, 34vw) - 20px))';
-  const cols = [0, 1].map((t) => {
-    const c = doc.createElement('div');
-    c.style.cssText = `display:flex;flex-direction:column;gap:5px;width:${colW};align-items:stretch;`;
-    bars.appendChild(c);
-    return c;
-  });
   const arrows = doc.createElement('div');
   arrows.style.cssText = 'position:absolute;inset:0;';
-  root.append(bars, arrows);
+  root.append(arrows);
   doc.body.appendChild(root);
-  let rows = [];
   let marks = [];
   const _v = new THREE.Vector3();
 
-  /** 판을 열 때: 싸움꾼마다 막대 한 줄 · 화살표 하나 (focus 는 화살표 없음 — 늘 화면 안) */
+  /** 판을 열 때: 싸움꾼마다 화살표 하나 (focus 는 화면 밖 화살표 없음 — 늘 화면 안) */
   function show(fighters) {
-    for (const c of cols) c.replaceChildren();
     arrows.replaceChildren();
-    rows = fighters.map((f) => {
-      const color = TEAM_COLORS[f.team] ?? '#888';
-      const row = doc.createElement('div');
-      row.className = 'th-row';
-      row.style.cssText = `display:flex;flex-direction:column;gap:2px;align-items:${f.team ? 'flex-start' : 'flex-end'};font-size:11px;line-height:1.1;color:var(--c-text, #f3e9d8);text-shadow:0 1px 2px #000;`;
-      const name = doc.createElement('span');
-      name.textContent = f.name ?? '';
-      name.style.cssText = 'max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-      const bar = doc.createElement('div');
-      bar.style.cssText = `width:100%;height:6px;border-radius:3px;background:rgba(0,0,0,.45);border:1px solid ${color}88;overflow:hidden;box-sizing:border-box;`;
-      const fill = doc.createElement('div');
-      fill.style.cssText = `height:100%;width:100%;background:${color};transform-origin:${f.team ? 'right' : 'left'};transition:transform .25s;`;
-      bar.appendChild(fill);
-      row.append(name, bar);
-      cols[f.team ? 1 : 0].appendChild(row);
-      return { f, row, fill, last: -1 };
-    });
     marks = fighters.map((f) => {
       const a = doc.createElement('div');
       a.className = 'th-arrow';
@@ -98,13 +69,8 @@ export function createTeamHud(doc = document) {
     root.style.display = 'none';
   }
 
-  /** 프레임마다: 막대 몫 · 화살표 · 편 표시 (visible 거짓이면 화살표 · 편 표시만 숨김 — 메뉴 · 판 끝). me = 사람 몸(편 표시 없음 · 지켜보기면 null) */
+  /** 프레임마다: 화살표 · 편 표시 (visible 거짓이면 모두 숨김 — 메뉴 · 판 끝). me = 사람 몸 (지켜보기면 null) */
   function update(camera, focus, visible, me = null, width = window.innerWidth, height = window.innerHeight) {
-    for (const r of rows) {
-      const v = hpShare(r.f);
-      if (Math.abs(v - r.last) > 0.004) (r.fill.style.transform = `scaleX(${v.toFixed(3)})`), (r.last = v);
-      r.row.style.opacity = r.f.alive ? '1' : '0.4';
-    }
     const m = 22; // 가장자리 여백 (px)
     for (const { f, a } of marks) {
       if (!visible || !f.alive || (f === focus && f === me)) {
@@ -116,10 +82,10 @@ export function createTeamHud(doc = document) {
       let x = behind ? -_v.x : _v.x;
       let y = behind ? -_v.y : _v.y;
       if (!behind && Math.abs(x) <= 1 && Math.abs(y) <= 1) {
-        // 화면 안: 머리 위(기력 막대 위)에 작게 아래로 (내 몸은 없음)
+        // 화면 안: 상대(1 편)만 머리 위(기력 · 체력 막대 위)에 작게 아래로 — 내 편은 없음
         const h = f.bodies.head.translation();
         _v.set(h.x, h.y + 0.5, h.z).project(camera);
-        if (f === me || _v.z > 1 || Math.abs(_v.x) > 1 || Math.abs(_v.y) > 1) {
+        if (f.team === 0 || f === me || _v.z > 1 || Math.abs(_v.x) > 1 || Math.abs(_v.y) > 1) {
           a.style.display = 'none';
           continue;
         }
