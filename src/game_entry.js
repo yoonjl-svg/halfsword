@@ -9,6 +9,8 @@
 //   단추 · 미닫이 · 탭은 싸움 화면 꼴을 같은 토큰 · 같은 값으로 옮긴 entrance_ui.css 하나 (사장님 10/16 15:3x ② ③ — docs/import/ui_unify_2026-10-16.md)
 //  디자인 보기용 주소 `?coins=N` = 대기실 금화를 N 으로 (lobby_progress.js setCoins — 게임 인자로 세지 않아 첫 화면이 뜬다 · lobby_fix §6) · `?heads=N` = 머리를 N 으로 (10/25 · setHeads — 같은 꼴)
 //  소리 (사장님 10/17 — docs/import/ui_sound_2026-10-17.md · ui_sound.js): 덮개 안 확인 류 단추 = 짧은 딸깍 · 첫 화면 = 바람(첫 누름에 스며들고 싸움 · 대기실로 가면 잦아들어 꺼짐)
+//  생사전 (10/29 — docs/design/saengsa_2026-10-29.md): 대기실 '생사전' 칸의 '생사전 입장' → showSaengsa(같은 덮개 안 · 대진표 화면 saengsa_page.js) · '대기실' 단추 → 대기실 생사전 칸.
+//   시험 주소 `?saengsaNow=2026-10-30T09:59` = 생사전 시계를 그 현지 시각에서 출발(saengsa_clock.js — 게임 인자로 세지 않아 첫 화면이 뜬다)
 import baseStyle from './start_screen.css?inline';
 import pixelStyle from './start_pixel.css?inline';
 import uiStyle from './entrance_ui.css?inline';
@@ -44,9 +46,10 @@ if (skipsTitle(params)) {
   }
   openHost();
   const loaded = import('./main.js');
-  let screen = null, lobby = null;
+  let screen = null, lobby = null, saengsa = null;
   function showTitle() {
     lobby?.destroy(); lobby = null;
+    saengsa?.destroy(); saengsa = null;
     const style = document.createElement('style');
     // 빌드가 속성 선택자의 따옴표를 뺄 수 있어 따옴표가 있든 없든 바꾼다 (샛별 쪽에서 찾은 문제)
     style.textContent = (baseStyle + pixelStyle)
@@ -102,15 +105,22 @@ if (skipsTitle(params)) {
     leaving.remove();
   }
   // 대기실 (첫 화면의 둘째 단추 또는 싸움의 정지 · 결과 창에서)
-  async function showLobby(game, choice) {
+  async function showLobby(game, choice, tab = null) {
     const { mountLobby } = await import('./lobby.js'); // 대기실 묶음은 열 때 받는다 — 첫 화면을 늦추지 않게 (10/17 3D 미리보기를 프로필 그림으로 바꿔 묶음이 가벼워짐)
     titleWind(false);
     screen?.destroy(); screen = null;
+    saengsa?.destroy(); saengsa = null;
     const leave = async (how) => {
       const gone = lobby;
       await depart(game, how, () => { gone.destroy(); if (lobby === gone) lobby = null; }, root.querySelector('.lobby'));
     };
-    lobby = mountLobby({ root, game, choice, onBack: showTitle, onDepart: () => leave(game.canContinueJourney() ? 'continue' : 'new'), onWander: () => leave('wander') });
+    lobby = mountLobby({ root, game, choice, tab, onBack: showTitle, onDepart: () => leave(game.canContinueJourney() ? 'continue' : 'new'), onWander: () => leave('wander'), onSaengsa: () => showSaengsa(game) });
+  }
+  // 생사전 화면 (대기실 '생사전 입장') — 같은 덮개 안. '대기실'로 돌아가면 생사전 칸이 열린 대기실
+  async function showSaengsa(game) {
+    const { mountSaengsa } = await import('./saengsa_page.js');
+    lobby?.destroy(); lobby = null;
+    saengsa = mountSaengsa({ root, game, onBack: () => showLobby(game, 'continue', 'Event') });
   }
   // 싸움 → 대기실 (main.js toLobby 가 부른다): 이어하기 지점은 지금 무대 시작(이긴 판이면 다음 무대)
   async function backToLobby() {

@@ -1,0 +1,101 @@
+// 생사전 화면 글 (docs/text/editing_guide.md — 안내 · 공지 '~합니다' 체 · 단추 · 이름표는 명사 · 결과 줄은 '~다' 체 · 설명은 짧게 · 개발 말 없음)
+//  대기실 '생사전' 칸(saengsa_panel.js) · 생사전 화면(saengsa_page.js)이 이 글만 쓴다. 시각 글은 기기의 현지 시각.
+import { roundsOf } from './saengsa_rules.js';
+
+export const SAENGSA_TEXT = Object.freeze({
+  title: '생사전',
+  subtitle: '3인의 맹약',
+  desc: '나와 동료 둘이 한 팀으로 겨루는 토너먼트입니다. 죽은 사람은 대회가 끝나면 돌아옵니다.',
+  enter: '생사전 입장',
+  back: '대기실',
+  bracket: '대진표',
+  me: '나',
+  companion: '동료',
+  pick: '동료 고르기',
+  randomWeapon: '무작위 무기',
+  random: '무작위',
+  weapon: '무기',
+  lentTag: '내 무기',
+  hire: '고용',
+  confirm: '확인',
+  myTeam: '내 팀',
+  foeTeam: '상대 팀',
+  fightEnter: '전투 입장',
+  pickHint: '나설 사람을 한두 명 고르십시오.',
+  foeHidden: '상대는 입장할 때 함께 보입니다.',
+  noInjury: '부상 없음',
+  dead: '죽음',
+  entrant: '출전',
+  win: '승리',
+  loss: '패배',
+  champion: '우승',
+  chest: '왕의 하사품',
+  open: '열기',
+  noTournament: '신청한 대회가 없습니다.',
+  pickTwo: '동료 둘을 고르십시오.',
+  willSign: '입장하면 이 팀으로 신청합니다.',
+  signed: '생사전에 신청했습니다.',
+  noCoins: '금화가 모자랍니다.',
+  busy: '진행 중인 대회가 있습니다.',
+  saveFail: '저장하지 못했습니다. 다시 시도해 주십시오.',
+  notReady: '지금은 이 경기를 할 수 없습니다.',
+  ready: '입장 가능',
+});
+export const INJURY_KO = Object.freeze({ arm: '팔', leg: '다리', torso: '몸통', head: '머리' });
+export const SCHOOL_KO = Object.freeze({ german: '독일', italian: '이탈리아', iberian: '이베리아', japanese: '일본', chinese: '동방', none: '무유파' });
+
+const pad = (n) => String(n).padStart(2, '0');
+/** 시각 → '10:00' */
+export const clockText = (t) => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+/** 시각 → '새벽 2시' · '아침 10시' · '낮 12시' · '오후 2시' · '저녁 6시' · '밤 10시' (분이 있으면 '반' 대신 '10시 30분') */
+export function hourWords(t) {
+  const d = new Date(t), h = d.getHours(), m = d.getMinutes();
+  const part = h < 5 ? '새벽' : h < 12 ? '아침' : h === 12 ? '낮' : h < 18 ? '오후' : h < 22 ? '저녁' : '밤';
+  const h12 = h % 12 || 12;
+  return `${part} ${h12}시${m ? ` ${m}분` : ''}`;
+}
+/** 남은 시간 → '1시간 12분 뒤' · '12분 뒤' · '곧' */
+export function untilText(ms) {
+  const min = Math.ceil(ms / 60e3);
+  if (min <= 1) return '곧';
+  const h = Math.floor(min / 60), m = min % 60;
+  return h ? `${h}시간${m ? ` ${m}분` : ''} 뒤` : `${m}분 뒤`;
+}
+/** 대진 이름 (16 팀: 16강 · 8강 · 4강 · 결승) */
+export function roundName(teamCount, r) {
+  const R = roundsOf(teamCount);
+  return r >= R - 1 ? '결승' : `${2 ** (R - r)}강`;
+}
+/** 일정 상태 한 줄 (saengsa_rules.js scheduleState) */
+export function stateLine(s) {
+  switch (s.kind) {
+    case 'signup': return `신청 받는 중 · ${hourWords(s.until)}까지`;
+    case 'waiting': return `첫 대진 ${hourWords(s.startAt)}`;
+    case 'running': return '대회 진행 중';
+    case 'done': return '대회 끝';
+    default: return `다음 신청 · ${hourWords(s.opensAt)}`;
+  }
+}
+/** 신청 창 안내 */
+export const signupHours = (from, to) => `신청은 ${hourWords(from)}부터 ${hourWords(to)}까지입니다.`;
+/** 부상 한 줄 '팔 경상 · 다리 중상' */
+export const injuryText = (list, serious) => (list.length ? list.map((i) => `${INJURY_KO[i.part] ?? i.part} ${serious(i) ? '중상' : '경상'}`).join(' · ') : SAENGSA_TEXT.noInjury);
+/** 팀 이름: 내 팀 · 'N번 팀'(대진표 자리 차례) */
+export const teamName = (seat, mine) => (mine ? SAENGSA_TEXT.myTeam : `${seat}번 팀`);
+/** 경기 한 줄 결과 (대진표 칸) */
+export function resultLine(winner, loser, result, deaths) {
+  if (result.by === 'forfeit') return `${loser} 기권`;
+  return `${winner} 승리${deaths ? ` · 죽음 ${deaths}` : ''}`;
+}
+/** 내 경기 결과 줄 ('~다' 체) */
+export const myResultLine = (won, forfeit) => (forfeit ? '기권했다' : won ? '상대 팀을 꺾었다' : '상대 팀에 졌다');
+/** 내 다음 경기 안내 */
+export const nextMatchLine = (round, at, state, now) =>
+  state === 'ready' ? `내 경기 · ${round} · 지금 싸울 수 있습니다.` : `내 경기 · ${round} · ${clockText(at)}${at > now ? ` · ${untilText(at - now)}` : ''}`;
+/** 떨어진 뒤 안내 */
+export const outLine = (round, forfeit) => (forfeit ? `내 팀은 ${round}에서 기권했습니다.` : `내 팀은 ${round}에서 졌습니다.`);
+/** 하사품 안내 · 연 뒤 */
+export const chestLine = (n) => `${SAENGSA_TEXT.chest} ${n}개를 열 수 있습니다.`;
+export const chestGot = (coins) => `${SAENGSA_TEXT.chest}에서 금화 ${coins.toLocaleString('ko-KR')}을 받았습니다.`;
+/** 고용 값 줄 */
+export const hireLine = (coins) => `고용 금화 ${coins.toLocaleString('ko-KR')}`;
