@@ -252,8 +252,9 @@ function lungeRun(w, { gap = 2.2, seed = 9, foeW = 'longsword', cfg = {} } = {})
 
 test('10/24 런지 값 (사장님 \'런지로 진행해. 단 런지 동작이 고노센처럼 빠르게 나가야 의미가 있어. 상대 팔 늦어지는 효과는 0.6초 내 경직도 0.6초\')', () => {
   assert.equal(SECRET.risolutoLunge, 1);
-  assert.equal(SECRET.risolutoShare, 1); // 고노센 칼끝 빠르기 그대로
-  assert.equal(SECRET.risolutoArmSlow, rs(0.6));
+  assert.equal(SECRET.risolutoShare, 0.9); // 10/30 20:0x 사장님 '팔 느려짐 없애고 속도는 90%' (전 1 — 고노센 칼끝 빠르기 그대로)
+  assert.equal(SECRET.risolutoArmSlow, 0); // 10/30 20:0x 사장님 — 팔 늦춤 없앰 (전 0.6)
+  assert.equal(SECRET.risolutoGlide, 1); // 붙은 칼 미끄러짐은 그대로
   assert.equal(SECRET.risolutoStiff, rs(0.6));
   assert.equal(SECRET.hitMul, 1.3); // 판정 배율 그대로 (사장님 지시 — 바꾸지 않음)
   // 걸음은 있던 수: 몸 미끄러짐 = 고노센 발도 iaiStep · 앞발 = 이탈리아 런지 italianStep · 디딘 뒤 뒷발 끌어붙임
@@ -279,13 +280,14 @@ test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝
     assert.equal(o.req.hold, rs(0.6));
     assert.deepEqual([m.step.fwd, m.step.foot, !!m.step.draw, !!m.step.room, m.step.push, !!m.step.accel], [SECRET.iaiStep, SECRET.italianStep, false, false, SECRET.stepPush, true]);
     assert.equal(m.glide, true);
-    assert.equal(o.armSlow, rs(0.6), '상대 두 팔 늦춤 0.6 s');
+    assert.equal(o.armSlow, null, '상대 두 팔 늦춤 없음 (10/30 20:0x — 전 0.6 s)');
     assert.ok(o.lungeT > 0, '런지 자세 (SECRET.stance.lunge)');
     assert.equal(o.spentAttack, 0, '찌르기 값은 따로 안 냄');
     assert.ok(o.spentSecret > 0 || !CONFIG.STAMINA.on, '비기 값 하나');
     // 고노센처럼 빠르게: 길 빠르기 = 같은 칼 고노센 칼끝 빠르기 × 1 · 찌르는 토막 칼끝(월드 — 쓸린 자리 조각) 가장 빠름 ≥ 고노센의 0.9 · 평균 ≥ 0.8 (몸 미끄러짐 몫을 길 시간에 넣어 늘임 — 연환 그때 계산 길과 같음)
     assert.ok(Math.abs(o.res.v - SECRET.risolutoShare * o.gon) < 1e-6, `${w} 길 빠르기 ${o.res.v}`);
-    assert.ok(o.res.tipVmax >= 0.9 * o.gon && o.res.tipV >= 0.8 * o.gon, `${w} 칼끝 ${o.res.tipV.toFixed(1)} · 최고 ${o.res.tipVmax.toFixed(1)} / 고노센 ${o.gon.toFixed(1)}`);
+    const sh = SECRET.risolutoShare; // 10/30 20:0x 0.9 — 칼끝 문턱도 그 몫만큼
+    assert.ok(o.res.tipVmax >= 0.9 * sh * o.gon && o.res.tipV >= 0.8 * sh * o.gon, `${w} 칼끝 ${o.res.tipV.toFixed(1)} · 최고 ${o.res.tipVmax.toFixed(1)} / 고노센 ${o.gon.toFixed(1)} × ${sh}`);
     assert.deepEqual(o.gaitReq, { kind: 'lunge', fwd: SECRET.italianStep, draw: false, push: SECRET.stepPush, accel: true }, `${w} 앞발 런지 걸음`);
     assert.equal(o.stiffT, rs(0.6), '굳음 0.6 s');
     assert.ok(Math.abs(o.stiffSteps * DT - rs(0.6)) < 3 * DT, `${w} 굳음 ${(o.stiffSteps * DT).toFixed(3)} s`);
