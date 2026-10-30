@@ -7,8 +7,8 @@
 //  실행 (저장소 뿌리 · playwright 는 저장소 의존성에 없음 — npm i --no-save playwright): npm run build → npx vite preview --port <빌드 포트> --strictPort --host 127.0.0.1 &
 //        npx vite --port <개발 포트> --strictPort --host 127.0.0.1 &   (배우기만 — 빌드에는 모듈이 없음)
 //        node tools/browser/longpress_probe.mjs http://127.0.0.1:<빌드 포트> http://127.0.0.1:<개발 포트> [결과 json (기본 .tmp/longpress/hold.json)]
-//   환경: K(0.15 — 화면 시계 배) · DUR(0.6,0.8,1.0,1.5 실제 초) · DRIFT(0,3,6,10,15,25 px) · REPS(2) · SCEN(grid,afterSwing,walking,tapArt) · EXTRA(주소 덧붙임 — 예 &holdPx=12 = 전 판)
-//   누른 시간은 게임 시계로 셈(게임이 본 실제 초 = gameHold) · 시도 사이 식힘은 지움(시험 발판) · 기력은 가득으로
+//   환경: K(0.15 — 화면 시계 배) · DUR(0.6,0.8,1.0,1.5 실제 초) · DRIFT(0,3,6,10,15,25 px) · REPS(2) · SCEN(grid,afterSwing,walking,stick,tapArt) · EXTRA(주소 덧붙임 — 예 &holdPx=12 = 전 판)
+//   누른 시간은 게임 시계로 셈(게임이 본 실제 초 = gameHold) · 시도 사이 식힘은 지움(시험 발판) · 기력은 가득으로 · 줄마다 바로 찍음(긴 재기는 갈래를 나눠 돌림)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 const base = process.argv[2] || 'http://127.0.0.1:5391';
@@ -221,9 +221,9 @@ if (SCEN.includes('tapArt')) {
     });
   }
 }
-if (SCEN.includes('walking') && S0) {
+if ((SCEN.includes('walking') || SCEN.includes('stick')) && S0) {
   let seed = 201;
-  for (const dur of [0.8, 1.0, 1.5]) for (const drift of [0, 6]) {
+  for (const dur of SCEN.includes('walking') ? [0.8, 1.0, 1.5] : []) for (const drift of [0, 6]) {
     // 스틱: 뒤 · 옆으로 천천히 (상대에 다가가지 않게) — 손가락이 패드 가운데서 30 px 아래 · 옆으로
     const st = { at: (u) => ({ x: S0.x + 22 * Math.sin(u * 3), y: S0.y + 30 }) };
     await trial('walking', { dur, drift, ang: 0.5, seed: seed++, stick: st });
@@ -233,6 +233,9 @@ if (SCEN.includes('walking') && S0) {
   for (const dur of [1.0]) for (const off of [R + 6, R + 14]) {
     const st = { at: () => ({ x: S0.x + off * 0.7071, y: S0.y - off * 0.7071 }) };
     await trial('stickMiss', { dur, drift: 0, ang: 0.5, seed: seed++, stick: st, off: +off.toFixed(0) });
+    // 걸으려고 그 엄지를 움직임(패드 밖에서 끌기 — 30 px 위로 천천히)
+    const st2 = { at: (u) => ({ x: S0.x + off * 0.7071, y: S0.y - off * 0.7071 - 30 * u }) };
+    await trial('stickMissMove', { dur, drift: 0, ang: 0.5, seed: seed++, stick: st2, off: +off.toFixed(0) });
   }
 }
 const cell = {};
