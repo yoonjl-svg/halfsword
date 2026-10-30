@@ -1,7 +1,7 @@
 // 상점 칸 · 구입 확인 카드 사진 (사장님 10/31 02:xx — 칸 줄임(A 둘) · 셋 팔기(B) · 이름 한 단계 작게 · 확인 카드 왼쪽 글 / 오른쪽 그림 + 구입 · '이 물건을 사겠나?')
 //  844 × 390 (폰 가로 · 터치) · 390 × 844 (PC 세로 창) 마다: 상점 칸(보통 — 에픽 · 레전드가 든 칸) · 확인 카드 넷(보통 · 에픽 뿔피리 · 얼터 머리 · 돈 모자람) · 얼터 칸
 //  물건은 저장에 씨앗을 넣어 고른다(지금 칸에서 바라는 물건이 나오는 씨앗을 shop_rules.js 로 찾음 — 본판에도 스위치 없이). 시험판이면 주소 뒤에 ?shopItems=3 처럼 붙여 B 를 본다.
-//  잼: 상점 칸 세로 넘침 · 확인 카드 넘침 · 화면 가로 넘침 · 파는 무기 이름이 낱말 가운데서 꺾이나 · 묻는 말 · 페이지 에러
+//  잼: 상점 칸 세로 넘침 · 확인 카드 넘침 · 확인 카드 바탕 불투명 · 화면 가로 넘침 · 파는 무기 이름이 낱말 가운데서 꺾이나 · 묻는 말 · 페이지 에러
 //  node tools/browser/shop_layout_shots.mjs <주소> <사진 폴더> <이름표 A|B> [--items=2|3] [--query='?shopItems=3']
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -34,7 +34,8 @@ const METRICS = `const host=root.getElementById('shopHost'),card=root.querySelec
     sideRightOfText:cr?side.left>=txt.right-1:null,artPx:cr?Math.round(root.querySelector('.shop-c-art').getBoundingClientRect().width):null,
     itemH:[...root.querySelectorAll('.shop-item')].map(b=>Math.round(b.getBoundingClientRect().height)),nameFont:getComputedStyle(root.querySelector('.shop-iname')||document.body).fontSize,
     emptyBelowItems:Math.round(root.querySelector('.shop-foot').getBoundingClientRect().top-root.querySelector('.shop-items').getBoundingClientRect().bottom),
-    note:cr?root.querySelector('.shop-c-note').textContent:null,buy:cr?!root.querySelector('.shop-buy').disabled:null};`;
+    note:cr?root.querySelector('.shop-c-note').textContent:null,buy:cr?!root.querySelector('.shop-buy').disabled:null,
+    cardBg:cr?getComputedStyle(card).backgroundColor:null,cardBgOpaque:cr?getComputedStyle(card).backgroundColor.startsWith('rgb(')&&getComputedStyle(card).backgroundImage==='none':null};`; // 확인 카드 바탕이 불투명한가 (뒤 칸이 비치지 않게)
 const nameFit = `const el=root.querySelector('.shop-iname');if(!el)return ['(물건 없음)'];const keep=el.textContent,w=el.clientWidth,bad=[];
   const probe=document.createElement('span');probe.style.cssText='white-space:nowrap;position:absolute;visibility:hidden';el.after(probe);
   for(const n of ${JSON.stringify(NAMES)}){for(const word of n.split(' ')){probe.textContent=word;if(probe.getBoundingClientRect().width>w+.5)bad.push(n+' ('+word+')');}}
@@ -51,7 +52,7 @@ for (const [size, width, height, phone] of [['844x390', 844, 390, true], ['390x8
   await p.goto(base + query, { waitUntil: 'networkidle' });
   await p.waitForFunction(R(`return !!root?.getElementById('tabShop') || root?.getElementById('noticeDialog')?.open || root?.getElementById('entrance')?.dataset.phase === 'ready';`), null, { timeout: 120000 });
   if (!(await p.evaluate(R(`return !!root.getElementById('tabShop');`)))) {
-    if (await p.evaluate(R(`return root.getElementById('noticeDialog')?.open;`))) await p.evaluate(R(`root.getElementById('confirmNotices').click();`));
+    if (await p.evaluate(R(`return root.getElementById('noticeDialog')?.open;`))) await p.evaluate(R(`root.getElementById('confirmNotices')?.click();`));
     await p.waitForFunction(R(`return !!root.getElementById('tabShop') || (root.getElementById('entrance')?.dataset.phase === 'ready' && !root.getElementById('enterLobby').disabled);`), null, { timeout: 120000 });
     if (!(await p.evaluate(R(`return !!root.getElementById('tabShop');`)))) await p.evaluate(R(`root.getElementById('enterLobby').click();`));
   }

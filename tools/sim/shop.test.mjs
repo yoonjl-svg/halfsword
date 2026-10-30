@@ -424,4 +424,7 @@ test('구입 확인 카드 묻는 말 = 이 물건을 사겠나? (사장님 10/3
   assert.match(panel, /<div class="shop-c-text">[\s\S]*shop-c-name[\s\S]*shop-c-desc[\s\S]*shop-c-price[\s\S]*shop-c-note[\s\S]*<\/div>\s*<div class="shop-c-side"><span class="shop-c-art"><img[^>]*><\/span><button type="button" class="primary shop-buy">/);
   assert.match(panel, /q\('\.shop-c-art img'\)\.src = `ui\/weapons\/\$\{it\.id\}\.webp`/);
   assert.match(panel, /class="shop-cancel" aria-label="\$\{SHOP_TEXT\.close\}">×</);
+  const css = fs.readFileSync(new URL('../../src/shop.css', import.meta.url), 'utf8');
+  assert.match(css, /\.shop-confirm \{[^}]*background: rgb\(24, 18, 14\);/, '확인 카드 바탕 불투명 — 뒤 상점 칸이 비치지 않게');
+  assert.match(css, /\.shop-host:has\(\.shop-confirm:not\(\[hidden\]\)\) > :not\(\.shop-confirm\) \{ visibility: hidden; \}/, '카드가 열린 동안 뒤 칸 감춤');
 });

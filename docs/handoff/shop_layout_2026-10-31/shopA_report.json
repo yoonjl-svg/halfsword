@@ -17,7 +17,9 @@
    "nameFont": "12px",
    "emptyBelowItems": 71,
    "note": null,
-   "buy": null
+   "buy": null,
+   "cardBg": null,
+   "cardBgOpaque": null
   },
   "names": [],
   "confirmNormal": {
@@ -35,7 +37,9 @@
    "nameFont": "12px",
    "emptyBelowItems": 71,
    "note": "이 물건을 사겠나?",
-   "buy": true
+   "buy": true,
+   "cardBg": "rgb(24, 18, 14)",
+   "cardBgOpaque": true
   },
   "confirmEpic": {
    "hostOverY": 0,
@@ -52,7 +56,9 @@
    "nameFont": "12px",
    "emptyBelowItems": 71,
    "note": "이 물건을 사겠나?",
-   "buy": true
+   "buy": true,
+   "cardBg": "rgb(24, 18, 14)",
+   "cardBgOpaque": true
   },
   "confirmShort": {
    "hostOverY": 0,
@@ -69,7 +75,9 @@
    "nameFont": "12px",
    "emptyBelowItems": 71,
    "note": "금화와 뿔피리가 부족합니다.",
-   "buy": false
+   "buy": false,
+   "cardBg": "rgb(24, 18, 14)",
+   "cardBgOpaque": true
   },
   "alterPanel": {
    "hostOverY": 0,
@@ -86,7 +94,9 @@
    "nameFont": "12px",
    "emptyBelowItems": 71,
    "note": null,
-   "buy": null
+   "buy": null,
+   "cardBg": null,
+   "cardBgOpaque": null
   },
   "confirmAlter": {
    "hostOverY": 0,
@@ -103,7 +113,9 @@
    "nameFont": "12px",
    "emptyBelowItems": 71,
    "note": "이 물건을 사겠나?",
-   "buy": true
+   "buy": true,
+   "cardBg": "rgb(24, 18, 14)",
+   "cardBgOpaque": true
   }
  },
  "390x844": {
@@ -122,7 +134,9 @@
    "nameFont": "12px",
    "emptyBelowItems": 12,
    "note": null,
-   "buy": null
+   "buy": null,
+   "cardBg": null,
+   "cardBgOpaque": null
   },
   "names": [],
   "confirmNormal": {
@@ -140,7 +154,9 @@
    "nameFont": "12px",
    "emptyBelowItems": 12,
    "note": "이 물건을 사겠나?",
-   "buy": true
+   "buy": true,
+   "cardBg": "rgb(24, 18, 14)",
+   "cardBgOpaque": true
   },
   "confirmEpic": {
    "hostOverY": 0,
@@ -157,7 +173,9 @@
    "nameFont": "12px",
    "emptyBelowItems": 12,
    "note": "이 물건을 사겠나?",
-   "buy": true
+   "buy": true,
+   "cardBg": "rgb(24, 18, 14)",
+   "cardBgOpaque": true
   },
   "confirmShort": {
    "hostOverY": 0,
@@ -174,7 +192,9 @@
    "nameFont": "12px",
    "emptyBelowItems": 12,
    "note": "금화와 뿔피리가 부족합니다.",
-   "buy": false
+   "buy": false,
+   "cardBg": "rgb(24, 18, 14)",
+   "cardBgOpaque": true
   },
   "alterPanel": {
    "hostOverY": 0,
@@ -191,7 +211,9 @@
    "nameFont": "12px",
    "emptyBelowItems": 12,
    "note": null,
-   "buy": null
+   "buy": null,
+   "cardBg": null,
+   "cardBgOpaque": null
   },
   "confirmAlter": {
    "hostOverY": 0,
@@ -208,7 +230,9 @@
    "nameFont": "12px",
    "emptyBelowItems": 12,
    "note": "이 물건을 사겠나?",
-   "buy": true
+   "buy": true,
+   "cardBg": "rgb(24, 18, 14)",
+   "cardBgOpaque": true
   }
  }
 }

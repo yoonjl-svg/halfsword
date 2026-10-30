@@ -53,8 +53,10 @@
 .shop-next .shop-cost b { font-weight: var(--fw-label); color: var(--c-accent); }
 /* 확인 카드 (물건을 누르면 — 칸 전체를 덮음 · 싸움 창 꼴 · 스킬 상세 카드 .node-detail 과 같은 바탕) — 사장님 10/31 02:xx '설명은 왼쪽에 몰아서 뜨고 오른쪽에는 해당 무기의 풀일러스트랑 구매 버튼':
    왼쪽 칸 = 이름 · 등급 · 설명(스펙) · 값 · 묻는 말 / 오른쪽 칸 = 무기 그림(등급 빛 · 무기 카드 앞면 .wthumb 와 같은 원 빛) + '구입'(주 단추 · 칸 폭) · 닫기 = 오른쪽 위 ×(스킬 설명 카드 .detail-close 꼴) */
-.shop-confirm { position: absolute; inset: 0; z-index: 3; display: grid; grid-template-columns: minmax(0, 1fr) 128px; column-gap: 14px; overflow: auto; padding: 10px 12px; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-s); line-height: 1.45; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.shop-confirm { position: absolute; inset: 0; z-index: 3; display: grid; grid-template-columns: minmax(0, 1fr) 128px; column-gap: 14px; overflow: auto; padding: 10px 12px; background: rgb(24, 18, 14); border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-s); line-height: 1.45; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+/* 바탕 = --panel 을 불투명하게(index.html 알림 창 .overlay.notice .card 와 같은 색) — 뒤의 상점 칸(이름 · 대사 · 물건 · 시계)이 비치지 않게 (10/31 — 전 반투명 두 겹) */
 .shop-confirm[hidden] { display: none; }
+.shop-host:has(.shop-confirm:not([hidden])) > :not(.shop-confirm) { visibility: hidden; } /* 카드가 열린 동안 뒤 칸은 감춤 — 둥근 모서리 틈으로 상인 액자 · 물건 테가 비치지 않게 · Tab 도 카드 안에서만 */
 .shop-confirm p { margin: 0; }
 .shop-c-text { min-width: 0; display: flex; flex-direction: column; }
 .shop-confirm .item-head { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; margin-bottom: 4px; padding-right: 0; }
