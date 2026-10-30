@@ -61,7 +61,7 @@ export const SHOP_TEXT = Object.freeze({
   unsaved: '구입은 이번 실행 동안 유지됩니다.',
   failed: '구입하지 못했습니다. 다시 시도해 주십시오.',
   reroll: '다음 갱신', // 머리 1 로 지금 칸 물건을 새로 (사장님 10/31 00:2x — 전 10/30 시험판만 · 공짜)
-  rerolled: '새 물건이 들어왔습니다.',
+  rerolled: '새 물건이 들어왔습니다.', // 다시 들인 뒤 알림 줄 · 사장님 10/31 01:3x 결정 ('새로 뽑을 때 글 ok')
   rerollShort: '머리가 부족합니다.', // 머리 0 — 단추 옆 짧은 까닭
 });
 
@@ -73,6 +73,15 @@ export function shortText(short) {
   const josa = /[가-힣]$/.test(last) && (last.charCodeAt(last.length - 1) - 0xac00) % 28 ? '이' : '가'; // 받침이 있으면 '이'
   const join = names.length === 1 ? last : `${names.slice(0, -1).map((n, i) => `${n}${(n.charCodeAt(n.length - 1) - 0xac00) % 28 ? '과' : '와'}`).join(' ')} ${last}`;
   return `${join}${josa} 부족합니다.`;
+}
+
+/**
+ * 다음 대사: list 에서 지금 보이는 대사(current — 따옴표 없이)와 다른 것 하나를 무작위로 (사장님 10/31 01:3x '쥘리아 대사도 바뀌게' — 다시 들일 때 · 4 시간 갱신 · 칸을 열 때).
+ *  보통 ↔ 얼터로 바뀌면 다른 표라 무엇이든 다르다. 표가 하나뿐이면 그것. rnd = [0, 1) (rand01 — 시험은 바꿔 넣음)
+ */
+export function nextLine(list, current, rnd) {
+  const pool = list.length > 1 ? list.filter((l) => l !== current) : list;
+  return pool[Math.min(pool.length - 1, Math.floor(rnd() * pool.length))];
 }
 
 /** 남은 시간 → 'h:mm:ss' (사장님 10/31 00:2x '실시간으로 줄어들게 초까지 표시. h:mm:ss') — 초는 올림(칸이 막 바뀐 때 4:00:00 · 마지막 초 0:00:01) */

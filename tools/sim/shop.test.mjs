@@ -340,3 +340,29 @@ test('결과 창 뿔피리 = 금화 · 머리와 같은 줄 · 같은 꼴 (그�
   assert.ok(!/menuHorn|뿔피리를 얻었다/.test(main + html), '따로 뜨던 줄 · 글은 없음');
   assert.match(main, /if \(win\) roundHorns = kingHorn\(\);/);
 });
+
+test('새 물건 (사장님 10/31 01:3x): 쥘리아 대사가 지금과 다른 대사로 · 보통 ↔ 얼터 표 · 소리 표지 restock = 대기실 딸깍과 같은 리볼버 녹음 · 다시 들이기 · 4 시간 갱신에서 부름', async () => {
+  // 다른 대사 — 난수가 무엇이든 지금 대사는 다시 안 나옴
+  for (const list of [T.SHOP_LINES, T.SHOP_ALTER_LINES]) for (const cur of list) for (let k = 0; k < 10; k++) {
+    const next = T.nextLine(list, cur, () => k / 10);
+    assert.ok(list.includes(next)); assert.notEqual(next, cur);
+  }
+  assert.ok(T.SHOP_ALTER_LINES.includes(T.nextLine(T.SHOP_ALTER_LINES, T.SHOP_LINES[0], () => 0.5))); // 보통 → 얼터: 얼터 표에서
+  assert.equal(T.nextLine(['하나'], '하나', () => 0.9), '하나');
+  // 소리 표지: 있는 녹음 (새 파일 없음) · 자른 구간이 녹음 안 · 딸깍과 같은 묶음
+  const { UI_SOUND } = await import('../../src/ui_sound.js');
+  const C = UI_SOUND.restock;
+  assert.equal(C.src, 'sfx/revolver/close.wav');
+  assert.equal(UI_SOUND.click.src.split('/').slice(0, 2).join('/'), C.src.split('/').slice(0, 2).join('/'));
+  const wav = fs.readFileSync(new URL(`../../public/${C.src}`, import.meta.url));
+  const rate = wav.readUInt32LE(24), bytes = wav.readUInt32LE(40), channels = wav.readUInt16LE(22);
+  assert.ok(C.from >= 0 && C.from + C.length <= bytes / 2 / channels / rate + 1e-6, `${C.from}+${C.length} 초가 녹음 ${(bytes / 2 / channels / rate).toFixed(3)} 초 안`);
+  assert.ok(C.gain > 0 && C.gain <= 1);
+  // 부르는 곳: 다시 들이기 · 4 시간 갱신(보는 동안만 도는 시계 안) — 둘 다 새 대사(renderKeeper(true)) + 소리
+  const panel = fs.readFileSync(new URL('../../src/shop_panel.js', import.meta.url), 'utf8');
+  const reroll = panel.slice(panel.indexOf('function reroll()'), panel.indexOf("on(q('.shop-items')"));
+  assert.match(reroll, /renderKeeper\(true\)[\s\S]*playUiCue\('restock'\)/);
+  const tick = panel.slice(panel.indexOf('function tick()'), panel.indexOf('function start()'));
+  assert.match(tick, /if \(!shown\(\)\) return;[\s\S]*slotNow\(\) !== stock\?\.slot\) \{[^}]*renderKeeper\(true\)[^}]*playUiCue\('restock'\)/);
+  assert.match(panel, /loadUiCue\('restock'\)/);
+});

@@ -17,6 +17,11 @@ export const UI_SOUND = Object.freeze({
   //  크기 0.5 (× 전체 음량 0.8 → 꼭대기 약 −12 dBFS — 싸움 타격음보다 한참 작고, 첫 화면 바람 위로는 또렷하게) · 0.05 초 안에 다시 누르면 하나로 ·
   //  앞 딸깍이 아직 울리면 5 ms 에 줄여 끄고 새로 (겹쳐 쌓이지 않게) · 누를 때마다 높낮이 ±3 % (같은 소리가 기계처럼 되풀이되지 않게)
   click: Object.freeze({ src: 'sfx/revolver/insert2.wav', from: 0.19, length: 0.1, fade: 0.05, gain: 0.5, lowpass: 6000, gap: 0.05, detune: 0.03 }),
+  // 상점 새 물건 '철-컥' (사장님 10/31 01:3x "효과음도 나고 쥘리아 대사도 바뀌게." — 상점 '다음 갱신' · 상점을 보는 동안의 4 시간 갱신 · shop_panel.js):
+  //  딸깍과 같은 녹음 묶음(AugustSandberg 리볼버 — 새 파일 없음)의 실린더 닫는 소리 close.wav — 0.065 초 작은 딸깍 + 0.105 초 큰 철컥(꼭대기 0.78) 두 마디 ·
+  //  0.05 초부터 0.27 초 · 끝 0.08 초 잦아듦 · 7 kHz 위 깎기 · 크기 0.55(딸깍보다 조금 굵게) · 0.12 초 안에 다시면 하나로 · 높낮이 ±3 % · 값은 사장님 확인 전.
+  //  우리 소리 묶음(public/sfx)에 동전 · 주머니 소리는 없다 — 대기실 소리 말(리볼버 딸깍)과 같은 쇠 소리로 '새로 채움'
+  restock: Object.freeze({ src: 'sfx/revolver/close.wav', from: 0.05, length: 0.27, fade: 0.08, gain: 0.55, lowpass: 7000, gap: 0.12, detune: 0.03 }),
   // 바람: 스며듦 0.8 초 · 잦아듦 0.8 초 · 바람 장면이 불 때 1.8 배로 0.6 초쯤 올랐다가 2 초쯤에 걸쳐 제자리(그림의 바람 줄 2.2 초와 같이) + 잎 바람 높이 +350 Hz
   //  (공지 확인이 첫 누름이면 스며듦과 세짐이 겹쳐 '휘익 — 잔잔' 하나로 들린다)
   //  층 = 잎 바람 둘(왼 · 오른 — 솔바람 900 Hz 띠 꼴) + 골짜기 바람(220 Hz 아래). gain = 층 크기 · depth = 느린 물결 폭 · lfo = 물결 빠르기(Hz) · sweep = 띠 높이 물결 폭(Hz)
@@ -44,6 +49,7 @@ export const CONFIRM_BUTTONS = [
 
 let ctx = null, master = null, noiseBuf = null, broken = false;
 let clickPcm = null, clickBuf = null, voice = null, lastPress = -Infinity;
+const cues = {}; // 소리 표지 하나씩 (restock — 10/31): { pcm, buf, voice, last, loading }
 let windWanted = false, wind = null, watcher = null, sleepTimer = 0, wired = false;
 
 const level = () => (SOUND.volume > 0 ? SOUND.volume : 0);
@@ -83,7 +89,7 @@ function wake() {
 function sleepSoon() {
   clearTimeout(sleepTimer);
   sleepTimer = setTimeout(() => {
-    if (ctx && !wind && !voice && ctx.state === 'running') ctx.suspend().catch(() => {});
+    if (ctx && !wind && !voice && !Object.values(cues).some((c) => c.voice) && ctx.state === 'running') ctx.suspend().catch(() => {});
   }, UI_SOUND.sleep * 1000);
 }
 
@@ -139,6 +145,51 @@ export function playUiClick() {
     source.connect(tone).connect(gain).connect(master);
     const mine = (voice = { source, gain });
     source.onended = () => { source.disconnect(); tone.disconnect(); gain.disconnect(); if (voice === mine) voice = null; sleepSoon(); };
+    source.start(t);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 소리 표지 녹음 받기 (상점 칸을 열 때 — shop_panel.js · 받기에는 누름이 필요 없다). name = UI_SOUND 열쇠('restock') */
+export function loadUiCue(name) {
+  const C = UI_SOUND[name], c = (cues[name] ??= { pcm: null, buf: null, voice: null, last: -Infinity, loading: false });
+  if (!C?.src || c.pcm || c.loading || typeof fetch !== 'function') return;
+  c.loading = true;
+  fetch(new URL(C.src, document.baseURI))
+    .then((r) => (r.ok ? r.arrayBuffer() : null))
+    .then((bytes) => { if (bytes) c.pcm = wavSlice(bytes, C.from, C.length, C.fade); })
+    .catch(() => {})
+    .finally(() => { c.loading = false; });
+}
+
+/**
+ * 소리 표지 하나 (상점 새 물건 '철-컥' — 10/31): 딸깍과 같은 길(이 모듈의 문맥 → 전체 음량 SOUND.volume — 0 이면 조용) · 같은 열기 규칙
+ *  (문맥이 아직 없으면 누름 안에서만 만든다 — 누름 밖(4 시간 갱신)에서는 이미 열린 문맥이 있을 때만). 앞 소리가 울리면 짧게 줄여 끄고 새로. 냈으면 true
+ */
+export function playUiCue(name) {
+  try {
+    const C = UI_SOUND[name], c = cues[name];
+    const now = performance.now();
+    if (!C || !c || now - c.last < C.gap * 1000 || !wake()) return false;
+    if (!c.buf) {
+      if (!c.pcm) return false; // 녹음을 아직 못 받았다 — 이번은 조용히
+      c.buf = ctx.createBuffer(1, c.pcm.data.length, c.pcm.rate);
+      c.buf.getChannelData(0).set(c.pcm.data);
+    }
+    c.last = now;
+    const t = ctx.currentTime;
+    if (c.voice) { const old = c.voice; c.voice = null; old.gain.gain.setTargetAtTime(0, t, 0.0015); old.source.stop(t + 0.005); }
+    const source = ctx.createBufferSource(), tone = ctx.createBiquadFilter(), gain = ctx.createGain();
+    source.buffer = c.buf;
+    source.playbackRate.value = 1 + (Math.random() * 2 - 1) * C.detune;
+    tone.type = 'lowpass';
+    tone.frequency.value = C.lowpass;
+    gain.gain.value = C.gain;
+    source.connect(tone).connect(gain).connect(master);
+    const mine = (c.voice = { source, gain });
+    source.onended = () => { source.disconnect(); tone.disconnect(); gain.disconnect(); if (c.voice === mine) c.voice = null; sleepSoon(); };
     source.start(t);
     return true;
   } catch {

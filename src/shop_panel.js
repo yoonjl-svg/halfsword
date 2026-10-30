@@ -7,12 +7,15 @@
 //   돈이 모자라면 확인 카드에 모자란 재화를 한 줄로('금화가 부족합니다.') · 구입 단추는 누를 수 없음.
 //  맨 아래: '⏳ 1:29:59' — 다음 갱신까지 남은 시간이 1 초마다 줄어듦(사장님 10/31 00:2x · 초 경계에 맞춤 · 칸이 바뀌면 새 물건). 칸이 닫혀 있거나(다른 탭) · 화면이 숨었거나 ·
 //   대기실이 걷혔으면(싸움 — lobby.destroy) 시계는 쉰다. 오른쪽 '[머리] 1 다음 갱신' = 머리 1 로 지금 칸 물건을 새로(rerollShopStock — 한 번의 저장 · 4 시간 갱신 시각 그대로) ·
-//   머리가 없으면 단추는 꺼지고 옆에 '머리가 부족합니다.'. 시험판(SHOP.testMode)만 주소 ?shopSlot=N(N 칸 뒤) · ?shopAlter=1 / 0(얼터 억지로 켬 / 끔)
+//   머리가 없으면 단추는 꺼지고 옆에 '머리가 부족합니다.'.
+//  새 물건이 들어오면(다시 들이기 · 상점을 보는 동안의 4 시간 갱신 — 사장님 10/31 01:3x '효과음도 나고 쥘리아 대사도 바뀌게') '철-컥' 소리(ui_sound.js — 대기실 소리 규칙 그대로) +
+//   지금과 다른 대사(얼터가 되면 얼터 대사 · 장면 글 켬 / 보통으로 돌아오면 보통 대사 · 장면 글 끔). 칸이 안 보일 때 지난 갱신은 소리 없이 — 다시 열면 새 대사로. 시험판(SHOP.testMode)만 주소 ?shopSlot=N(N 칸 뒤) · ?shopAlter=1 / 0(얼터 억지로 켬 / 끔)
 import { SHOP } from './config.js';
 import { readProgress, purchase, ensureShopStock, rerollShopStock, rand01 } from './lobby_progress.js';
 import { ownedWeapons, weaponReceipt } from './owned_weapons.js';
 import { shopSlot, msToNextSlot, rollStock, normalizeShop } from './shop_rules.js';
-import { SHOP_TEXT, SHOP_LINES, SHOP_ALTER_LINES, SHOP_ALTER_MOOD, SHOP_KEEPER_NAME, SHOP_HOURGLASS, shortText, clockText } from './shop_text.js';
+import { SHOP_TEXT, SHOP_LINES, SHOP_ALTER_LINES, SHOP_ALTER_MOOD, SHOP_KEEPER_NAME, SHOP_HOURGLASS, shortText, clockText, nextLine } from './shop_text.js';
+import { loadUiCue, playUiCue } from './ui_sound.js'; // 새 물건 '철-컥' (10/31 01:3x — ui_sound.js UI_SOUND.restock)
 import { portraitSrc } from './portraits.js';
 import { getWeapon, TIER_LABEL, weaponSpecText } from './weapons.js';
 import { COIN_ICON, POUCH_ICON, HORN_ICON } from './wallet_icons.js';
@@ -52,7 +55,8 @@ export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, n
   const events = new AbortController(), on = (el, type, fn) => el?.addEventListener(type, fn, { signal: events.signal });
   const img = q('.shop-portrait img');
   on(img, 'error', () => { q('.shop-portrait').dataset.empty = ''; });
-  let stock = null, picked = null, lastLine = -1, keeper = null, tickT = 0;
+  loadUiCue('restock'); // 새 물건 소리 녹음을 미리 (누름 없이 받음)
+  let stock = null, picked = null, shownLine = '', keeper = null, tickT = 0;
   const slotNow = () => shopSlot(now()) + test.offset;
   const rollFor = (slot) => { const owned = ownedWeapons(); return (seed, reroll) => rollStock({ seed, slot, reroll, owned, forceAlter: test.alter }); };
 
@@ -60,12 +64,9 @@ export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, n
     const slot = slotNow();
     stock = ensureShopStock({ slot, roll: rollFor(slot), valid: (s) => !!normalizeShop(s), forceAlter: test.alter });
   }
+  /** 지금 보이는 대사와 다른 대사 (보통 · 얼터 표 — nextLine) */
   function pickLine() {
-    const list = stock?.alter ? SHOP_ALTER_LINES : SHOP_LINES;
-    let i = Math.min(list.length - 1, Math.floor(rand01() * list.length));
-    if (list.length > 1 && i === lastLine) i = (i + 1 + Math.floor(rand01() * (list.length - 1))) % list.length; // 바로 앞 대사는 다시 안 나오게
-    lastLine = i;
-    return list[i];
+    return (shownLine = nextLine(stock?.alter ? SHOP_ALTER_LINES : SHOP_LINES, shownLine, rand01));
   }
   function renderKeeper(newLine) {
     const id = stock?.alter ? SHOP.alterKeeper : SHOP.keeper, box = q('.shop-keeper');
@@ -158,10 +159,11 @@ export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, n
     if (!r.ok) { renderReroll(); if (r.why === 'heads') status(SHOP_TEXT.rerollShort); return; }
     stock = r.stock;
     closeConfirm(false);
-    renderKeeper(true);
+    renderKeeper(true); // 다른 대사 (얼터면 얼터 대사 · 장면 글)
     renderItems();
     renderReroll();
     onWallet();
+    playUiCue('restock'); // 누름 안 — 첫 소리라도 낼 수 있다
     status(r.saved ? SHOP_TEXT.rerolled : `${SHOP_TEXT.rerolled} ${SHOP_TEXT.unsaved}`, 'notice');
   }
   on(q('.shop-items'), 'click', (e) => {
@@ -179,7 +181,7 @@ export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, n
   function tick() {
     tickT = 0;
     if (!shown()) return; // 닫힌 칸 · 숨은 화면 · 걷힌 대기실(싸움)에서는 멈춤 — 다시 열면 refresh · start
-    if (slotNow() !== stock?.slot) { closeConfirm(false); loadStock(); renderKeeper(true); renderItems(); renderReroll(); } // 4 시간 갱신
+    if (slotNow() !== stock?.slot) { closeConfirm(false); loadStock(); renderKeeper(true); renderItems(); renderReroll(); playUiCue('restock'); } // 4 시간 갱신 — 보는 동안만 돌므로 소리도 보는 동안만
     renderTimer();
     tickT = setTimeout(tick, 1000 - (now() % 1000) + 15);
   }

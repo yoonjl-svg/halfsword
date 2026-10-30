@@ -1,7 +1,9 @@
 // 본판 빌드 상점 점검 · 사진 (사장님 10/31 00:2x — 본판에 상점 열기 · '⏳ h:mm:ss' · 다음 갱신 머리 1 · 얼터도 '쥘리아 크리스테바' · 결과 창 뿔피리 = 금화 · 머리 줄과 같은 꼴)
 //  폰 가로 844 × 390 (화소 비 2 · 터치) — 시험판 스위치 없이 본판 그대로:
 //   ① 대기실 상점 칸: 시계가 1 초마다 줄어드나 · 다른 칸이면 멈추나 · 모래시계를 그린 글꼴(CDP — 우리 보충 Noto Sans Symbols 2 인가 · 색 그림 문자가 아닌가)
-//   ② 다음 갱신(머리 1): 머리 −1 · 저장 rerolls 1 · 새로고침해도 같은 물건 ③ 구입 → 판매 완료 ④ 머리 0 → 단추 꺼짐 + 까닭
+//   ② 다음 갱신(머리 1 — 진짜 누름): 머리 −1 · 저장 rerolls 1 · 다른 대사 · '철-컥' 소리(페이지의 AudioBufferSourceNode.start 를 세어 봄 — 0.27 초 녹음) · 새로고침해도 같은 물건
+//   ②b 4 시간 갱신(10/31 01:3x — 페이지 Date.now 를 갱신 2.5 초 앞으로 옮김): 상점을 보는 중이면 새 칸 · 다른 대사 · 소리 / 다른 탭이면 소리 없음 · 다시 열면 새 대사
+//   ③ 구입 → 판매 완료 ④ 머리 0 → 단추 꺼짐 + 까닭
 //   ⑤ 얼터: 지금 칸이 얼터가 되는 씨앗을 저장에 넣고 연다(shop_rules.js 로 찾음) — 이름 '쥘리아 크리스테바' · 장면 글
 //   ⑥ 결과 창: 방랑을 연 저장(상대 롤랑 — 왕)으로 방랑 → 상대 쓰러뜨림 · 뿔피리 50 % 는 페이지의 crypto 난수를 그 순간만 0 으로(게임 코드는 그대로) → 금화 · 머리 줄 옆 '[뿔피리] 뿔피리 +1'
 //  npm run build && python3 -m http.server 5254 -d dist → node tools/browser/shop_real_check.mjs http://127.0.0.1:5254/ docs/handoff/shop_2026-10-31
@@ -19,6 +21,14 @@ const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, de
 await ctx.route('https://*.supabase.co/**', (r) => r.abort());
 // 결과 창 사진만: crypto 난수를 window.__zeroRand 동안 0 으로 (rand01 → 뿔피리 50 % 통과)
 await ctx.addInitScript(() => {
+  // 소리 세기: 버퍼 소리 시작마다 길이(초)를 적음 (상점 '철-컥' = 0.27 초 · 문맥을 열 때 무음 한 칸은 아주 짧음)
+  window.__abStarts = [];
+  const start = AudioBufferSourceNode.prototype.start;
+  AudioBufferSourceNode.prototype.start = function (...a) { try { window.__abStarts.push(+(this.buffer?.duration ?? 0).toFixed(3)); } catch { /* 셈만 */ } return start.apply(this, a); };
+  // 시계 옮기기 (4 시간 갱신 점검): Date.now 에 __shift ms 를 더함
+  const realNow = Date.now.bind(Date);
+  window.__shift = 0;
+  Date.now = () => realNow() + window.__shift;
   const orig = crypto.getRandomValues.bind(crypto);
   crypto.getRandomValues = (a) => { if (window.__zeroRand && a instanceof Uint32Array) { a.fill(0); return a; } return orig(a); };
 });
@@ -65,17 +75,42 @@ await cdp.send('DOM.enable'); await cdp.send('CSS.enable');
 { const { root } = await cdp.send('DOM.getDocument', { depth: -1 }); const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector: '#hgProbe' }); const { fonts } = await cdp.send('CSS.getPlatformFontsForNode', { nodeId }); report.hourglassFont = fonts.map((f) => `${f.familyName}${f.isCustomFont ? ' (웹폰트)' : ''} ×${f.glyphCount}`).join(' + '); }
 report.normal = c0;
 await shot('shop');
-// ② 다음 갱신 (머리 1)
-const before = await save();
-await p.evaluate(R(`root.querySelector('.shop-next').click();`));
-await p.waitForTimeout(200);
+// ② 다음 갱신 (머리 1 — 진짜 누름: 소리 문맥은 누름 안에서만 열린다)
+const line = () => p.evaluate(R(`return root.querySelector('.shop-line').textContent;`));
+const cues = () => p.evaluate(() => window.__abStarts.filter((d) => d > 0.2).length);
+const before = await save(), lineBefore = await line(), cue0 = await cues();
+await p.locator('.shop-next').click();
+await p.waitForTimeout(400);
 const after = await save(), st2 = await shopState();
-report.reroll = { headsBefore: before.heads, headsAfter: after.heads, rerolls: after.shop.rerolls, slotSame: after.shop.slot === before.shop.slot, itemsBefore: before.shop.items.map((i) => i.id), itemsAfter: after.shop.items.map((i) => i.id), status: st2.status, alter: after.shop.alter };
+report.reroll = { headsBefore: before.heads, headsAfter: after.heads, rerolls: after.shop.rerolls, slotSame: after.shop.slot === before.shop.slot, itemsBefore: before.shop.items.map((i) => i.id), itemsAfter: after.shop.items.map((i) => i.id), status: st2.status, alter: after.shop.alter,
+  lineBefore, lineAfter: await line(), lineChanged: lineBefore !== (await line()), moodShownIffAlter: (st2.mood != null) === after.shop.alter, sound: (await cues()) - cue0, soundLengths: await p.evaluate(() => window.__abStarts) };
 await shot('reroll');
 // 새로고침 → 같은 물건 (다시 안 뽑음)
 await toLobby(''); await tab('tabShop');
 const reload = await save();
 report.reroll.afterReload = { rerolls: reload.shop.rerolls, same: JSON.stringify(reload.shop.items) === JSON.stringify(after.shop.items), shown: (await shopState()).items };
+// ②b 4 시간 갱신 — 다시 한 번 진짜 누름(소리 문맥을 연다 · 머리 1)으로 다시 들인 뒤, 시계를 갱신 2.5 초 앞으로
+await p.locator('.shop-next').click();
+await p.waitForTimeout(400);
+const toBoundary = () => p.evaluate(() => { const span = 4 * 3600e3, tz = 9 * 3600e3, n = Date.now(), next = (Math.floor((n + tz) / span) + 1) * span - tz; window.__shift += next - 2500 - n; });
+{
+  const s0 = await save(), l0 = await line(), q0 = await cues();
+  await toBoundary(); await p.waitForTimeout(4500);
+  const s1 = await save(), st = await shopState();
+  report.schedule = { open: { slotBefore: s0.shop.slot, slotAfter: s1.shop.slot, rerollsAfter: s1.shop.rerolls, lineChanged: l0 !== (await line()), alter: s1.shop.alter, moodShownIffAlter: (st.mood != null) === s1.shop.alter, sound: (await cues()) - q0, clock: st.clock } };
+  await shot('refresh');
+}
+{
+  await tab('tabItems');
+  const s0 = await save(), l0 = await line(), q0 = await cues();
+  await toBoundary(); await p.waitForTimeout(4500);
+  const mid = await save();
+  await tab('tabShop'); await p.waitForTimeout(300);
+  const s1 = await save();
+  report.schedule.closed = { slotBefore: s0.shop.slot, slotWhileClosed: mid.shop.slot, slotAfterOpen: s1.shop.slot, lineChanged: l0 !== (await line()), sound: (await cues()) - q0 };
+}
+await p.evaluate(() => { window.__shift = 0; }); // 시계 제자리 (다음 점검은 지금 칸)
+await tab('tabItems'); await tab('tabShop'); await p.waitForTimeout(300); // 지금 칸 물건으로 다시 그림
 // ③ 구입 (살 수 있는 물건 — 커먼 · 레어 · 얼터면 머리 3)
 const can = await p.evaluate(R(`const p=JSON.parse(localStorage.getItem('${KEY}'));return [...root.querySelectorAll('.shop-item')].map(b=>b.dataset.i).find(i=>{const it=p.shop.items[i];return it&&it.coins<=p.coins&&it.heads<=p.heads&&it.horns<=p.horns;})??null;`));
 if (can == null) { await p.evaluate((k) => { const v = JSON.parse(localStorage.getItem(k)); v.coins = 20000; v.heads = 9; v.horns = 9; localStorage.setItem(k, JSON.stringify(v)); }, KEY); await tab('tabItems'); await tab('tabShop'); }

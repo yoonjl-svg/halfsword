@@ -1,7 +1,7 @@
 {
  "clock": {
-  "first": "2:51:06",
-  "after2s": "2:51:04",
+  "first": "2:14:31",
+  "after2s": "2:14:29",
   "ticked": 2,
   "format": true,
   "hourglass": "U+23F3 U+FE0E",
@@ -13,11 +13,11 @@
   "name": "쥘리아 크리스테바",
   "mood": null,
   "alter": "false",
-  "clock": "2:51:06",
+  "clock": "2:14:31",
   "hg": "⏳︎",
   "items": [
-   "goujian",
-   "longsword"
+   "uchigatana",
+   "flamberge"
   ],
   "rerollDisabled": false,
   "why": null,
@@ -30,22 +30,51 @@
   "rerolls": 1,
   "slotSame": true,
   "itemsBefore": [
-   "goujian",
-   "longsword"
+   "uchigatana",
+   "flamberge"
   ],
   "itemsAfter": [
-   "muramasa",
-   "uchigatana"
+   "uchigatana",
+   "zweihander"
   ],
   "status": "새 물건이 들어왔습니다.",
   "alter": false,
+  "lineBefore": "“어서 오너라, 길손이여. 갓 들인 칼이로다.”",
+  "lineAfter": "“좋은 칼은 주인을 고르는 법. 오늘은 네 차례인 듯하구나.”",
+  "lineChanged": true,
+  "moodShownIffAlter": true,
+  "sound": 1,
+  "soundLengths": [
+   0,
+   0.1,
+   0.27
+  ],
   "afterReload": {
    "rerolls": 1,
    "same": true,
    "shown": [
-    "muramasa",
-    "uchigatana"
+    "uchigatana",
+    "zweihander"
    ]
+  }
+ },
+ "schedule": {
+  "open": {
+   "slotBefore": 124542,
+   "slotAfter": 124543,
+   "rerollsAfter": 0,
+   "lineChanged": true,
+   "alter": false,
+   "moodShownIffAlter": true,
+   "sound": 1,
+   "clock": "3:59:59"
+  },
+  "closed": {
+   "slotBefore": 124543,
+   "slotWhileClosed": 124543,
+   "slotAfterOpen": 124544,
+   "lineChanged": true,
+   "sound": 0
   }
  },
  "buy": {
@@ -53,41 +82,41 @@
    "name": "쥘리아 크리스테바",
    "mood": null,
    "alter": "false",
-   "clock": "2:50:53",
+   "clock": "2:14:09",
    "hg": "⏳︎",
    "items": [
-    "muramasa(판매 완료)",
-    "uchigatana"
+    "uchigatana(판매 완료)",
+    "flamberge"
    ],
-   "rerollDisabled": false,
-   "why": null,
-   "wallet": "18010",
+   "rerollDisabled": true,
+   "why": "머리가 부족합니다.",
+   "wallet": "1,14000",
    "status": "구입했습니다. 아이템에서 장착할 수 있습니다."
   },
   "owned": [
-   "weapon:muramasa"
+   "weapon:uchigatana"
   ]
  },
  "noHeads": {
   "name": "쥘리아 크리스테바",
   "mood": null,
   "alter": "false",
-  "clock": "2:50:53",
+  "clock": "2:14:08",
   "hg": "⏳︎",
   "items": [
-   "muramasa(판매 완료)",
-   "uchigatana"
+   "uchigatana(판매 완료)",
+   "flamberge"
   ],
   "rerollDisabled": true,
   "why": "머리가 부족합니다.",
-  "wallet": "18000",
+  "wallet": "1,14000",
   "status": "구입했습니다. 아이템에서 장착할 수 있습니다."
  },
  "alter": {
   "name": "쥘리아 크리스테바",
   "mood": "*크리스테바의 분위기가 이상하다*",
   "alter": "true",
-  "clock": "2:50:52",
+  "clock": "2:14:08",
   "hg": "⏳︎",
   "items": [
    "rubber_chicken",
@@ -95,7 +124,7 @@
   ],
   "rerollDisabled": false,
   "why": null,
-  "wallet": "18030",
+  "wallet": "1,14030",
   "status": "구입했습니다. 아이템에서 장착할 수 있습니다."
  },
  "fightFoe": "롤랑",
