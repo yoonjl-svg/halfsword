@@ -1237,7 +1237,7 @@ function comboNext(f, I) {
     for (const sg of I.segs) sg.T *= k;
     span *= k;
     I.slide.span = span;
-  } else if (I.slide && I.slide.slide < 0) I.slide.span = Math.max(1e-3, span); // 물러남(10/12 3 연격 마지막 수): 그 수 시간 내내 뒤로 — 벰은 옆으로 가로질러 칼끝 길은 그대로 둔다
+  } else if (I.slide && I.slide.slide < 0 && !I.slide.keep) I.slide.span = Math.max(1e-3, span); // 물러남(10/12 3 연격 마지막 수) · keep = 길을 짤 때 정한 span 그대로(죽음의 일격 머리 뚫음 막기 반걸음 — 10/31 시제품 · 기본 끔): 그 수 시간 내내 뒤로 — 벰은 옆으로 가로질러 칼끝 길은 그대로 둔다
   else if (I.slide) I.slide.span = Math.max(1e-3, span * SECRET.iaiSlideShare); // 패드 길: 그 수 시간의 발도와 같은 몫 안에 (10/12 01:1x 그대로)
   return true;
 }
@@ -1427,7 +1427,8 @@ function comboPlanMord(f, I, m, A) {
       const delta = P.clone().sub(best.C);
       // 머리 따라 겨눔 (10/30 시제품 — SECRET.mord.track · 기본 끔): 옮기기 전 길 · 겨눈 길 자리(토막 k 의 i/8)를 두었다가 stepCombo 가 스텝마다 그때 머리로 다시 옮김 (mordTrack)
       if (SECRET.mord.track) M.trk = { pts, base: pts.map((B) => ({ H: B.H.clone(), D: B.D.clone() })), k: best.k, w: best.i / 8, r, seg: null, tAim: null, done: false, n: 0, moved: 0 };
-      for (const B of pts) B.H.add(delta);
+      if (SECRET.mord.noSelfClip) M.clip = mordClipPlan(f, I, pts, M.trk?.base ?? pts.map((B) => ({ H: B.H.clone(), D: B.D.clone() })), best.k, best.i / 8, P, r); // 내 머리 뚫음 막기 (10/31 시제품 · 기본 끔 — 아래)
+      else for (const B of pts) B.H.add(delta);
       M.pullD = delta.length(); // 재기 (옮긴 거리 m)
     }
   }
@@ -1443,7 +1444,76 @@ function comboPlanMord(f, I, m, A) {
   for (let k = 1; k < pts.length; k++) push(pts[k], true);
   push({ ...home, back: true }, false);
   if (M.trk) M.trk.seg = segs[M.trk.k + 1]; // 겨눈 자리가 든 토막 (pts[k] → pts[k + 1])
+  if (M.clip && I.slide?.keep) {
+    // 내 머리 뚫음 막기 반걸음: 칼자루가 겨눈 자리에 닿는 때까지 다 물러남 (준비 토막 + 겨눈 토막 앞 토막들 + 겨눈 토막의 w 몫)
+    let t = 0;
+    for (let s = 0; s <= M.clip.k && s < segs.length; s++) t += segs[s].T;
+    I.slide.span = Math.max(1e-3, t + M.clip.w * (segs[M.clip.k + 1]?.T ?? 0));
+  }
   return segs;
+}
+
+/**
+ * 내 머리 뚫음 막기 (10/31 시제품 — 사장님 확인 전 · 기본 끔 SECRET.mord.noSelfClip · 확인표 3110 ~ 3119): 사장님 10/31 02:xx '가까이서 보면 팔이 나의 머리를 뚫고 뒤로 갔다가 다시 적을 강타하는 것처럼 보여'.
+ *  까닭: 거꾸로 쥔 칼(at 0.6)의 칼자루 가운데가 손에서 (Lc + Lp)/2 ≈ 0.76 m(롱소드) — 지붕 자세 손(내 이마 앞 위)에서 휘두르면 그 점이 가슴 사이 약 1.05 m 의 머리를 지나는데,
+ *   창은 가슴 사이 0.8 m 안이라 'pull' 이 길 전체를 0.3 ~ 0.8 m 뒤로 옮긴다 → 두 손이 내 머리 위 · 속(0.75 ~ 0.8 m) · 머리 뒤 목덜미(0.45 ~ 0.65 m)를 지나 내리친다.
+ *  B = 옮기기 전 길(손 H · 칼자루 쪽 D — 몸 틀), (k, w) = 겨눈 자리(토막 k 의 w 몫), P = 상대 머리 가운데(몸 틀), r = 손 → 칼자루 가운데. 셋:
+ *   ① 앞뒤 묶음: 옮긴 길의 두 손(칼 든 손 · 빈손 — 시작 자세 + 기술 길, 토막마다 8 조각)이 내 머리 가운데보다 몸 앞으로 SECRET.mord.clipX 밖에 있게 — 앞뒤 옮김(d.x)만 묶음 · 위아래 · 옆 그대로
+ *   ② 기울임: 묶어서 못 옮긴 몫은 겨눈 자리의 칼자루 방향을 손 → 상대 머리 줄로 돌려 메움 — 길 전체 D 를 같은 돌림으로(손 자리 그대로) · 머리에 닿는 칼자루 자리 = 손 ~ 머리 거리
+ *   ③ 반걸음 뒤로(mordClipPlan 만): 묶어서 못 옮긴 몫(앞뒤 m)을 SECRET.mord.clipStep 까지 몸을 상대 반대쪽으로 미끄러뜨려 메움(칼자루가 겨눈 자리에 닿는 때까지 — 1 − (1 − x)² 꼴 · 경기장 테두리 안)
+ *  { d (손 옮김), q (D 돌림), short (못 옮긴 앞뒤 m — 걸음 앞), xMin }
+ */
+function mordClipSolve(f, I, B, k, w, P, r) {
+  const M = I.mord;
+  const X = SECRET.mord.clipX ?? 0.16;
+  const Hh = tv(f.bodies.head.translation(), new THREE.Vector3()).sub(tv(f.bodies.chest.translation(), new THREE.Vector3())).applyQuaternion(I.yaw.clone().invert()); // 내 머리 가운데 (몸 틀)
+  const off = (M.g ?? 0) - (M.gOff ?? 0); // 빈손 = 칼 든 손 + D × (g − gOff) — placeIai 와 같은 자리(거꾸로 쥐면 칼끝 쪽 −0.14)
+  const Q = comboLerp({ A: B[k], B: B[k + 1] }, w);
+  const d = P.clone().sub(Q.H.clone().addScaledVector(Q.D, r));
+  const want = d.x;
+  let xMin = -Infinity;
+  for (let j = 0; j < B.length; j++) {
+    const n = j + 1 < B.length ? 8 : 1;
+    for (let i = 0; i < n; i++) {
+      const S = j + 1 < B.length ? comboLerp({ A: B[j], B: B[j + 1] }, i / 8) : B[j];
+      xMin = Math.max(xMin, X - (S.H.x - Hh.x), X - (S.H.x + S.D.x * off - Hh.x));
+    }
+  }
+  if (d.x < xMin) d.x = xMin;
+  const q = new THREE.Quaternion();
+  if (d.x > want + 1e-4) {
+    const u = P.clone().sub(Q.H.clone().add(d));
+    if (u.lengthSq() > 1e-8) q.setFromUnitVectors(Q.D.clone().normalize(), u.normalize());
+  }
+  return { d, q, short: d.x - want, xMin };
+}
+function mordClipPut(pts, base, sol) {
+  for (let j = 0; j < pts.length; j++) {
+    pts[j].H.copy(base[j].H).add(sol.d);
+    pts[j].D.copy(base[j].D).applyQuaternion(sol.q);
+  }
+}
+function mordClipPlan(f, I, pts, base, k, w, P, r) {
+  let sol = mordClipSolve(f, I, base, k, w, P, r);
+  let s = Math.min(SECRET.mord.clipStep ?? 0, Math.max(0, sol.short));
+  let e = null;
+  if (s > 1e-3 && f.foe) {
+    const c = f.bodies.chest.translation();
+    const fc = f.foe.bodies.chest.translation();
+    let dx = fc.x - c.x;
+    let dz = fc.z - c.z;
+    const dl = Math.max(1e-3, Math.hypot(dx, dz));
+    dx /= dl;
+    dz /= dl;
+    if (Math.hypot(c.x - dx * s, c.z - dz * s) > ARENA.radius) s = Math.max(0, Math.min(s, ARENA.radius - Math.hypot(c.x, c.z))); // 경기장 테두리 (comboMoveStart 물러남과 같은 규칙)
+    if (s > 1e-3) {
+      e = new THREE.Vector3(dx, 0, dz).applyQuaternion(I.yaw.clone().invert()); // 몸 틀에서 상대 쪽 (물러나면 상대 머리가 이쪽으로 s 만큼 멀어짐)
+      I.slide = { dx, dz, slide: -s, t0: I.t, span: 1, done: 0, keep: true }; // span 은 길을 다 짠 뒤 (comboPlanMord 끝)
+      sol = mordClipSolve(f, I, base, k, w, P.clone().addScaledVector(e, s), r);
+    } else s = 0;
+  } else s = 0;
+  mordClipPut(pts, base, sol);
+  return { base, k, w, r, s, e, short0: sol.short, d0: sol.d.clone(), tilt: (2 * Math.acos(Math.min(1, Math.abs(sol.q.w))) * 180) / Math.PI };
 }
 
 /**
@@ -1466,6 +1536,18 @@ function mordTrack(f, I) {
   if (I.mordBacked || I.hitM || I.blockM || I.t >= until || !f.foe?.bodies.head) return void (T.done = true);
   const c = tv(f.bodies.chest.translation(), new THREE.Vector3());
   const P = tv(f.foe.bodies.head.translation(), new THREE.Vector3()).sub(c).applyQuaternion(I.yaw.clone().invert());
+  const C = I.mord.clip;
+  if (C) {
+    // 내 머리 뚫음 막기 (10/31 시제품 · 기본 끔): 같은 셈(묶음 · 기울임)을 그때 머리로 — 남은 반걸음만큼 상대 머리를 멀리 둔 자리(물러난 뒤의 자리)로 겨눔
+    const rem = C.e && I.slide?.keep ? C.s + I.slide.done : 0;
+    const sol = mordClipSolve(f, I, T.base, T.k, T.w, rem > 0 ? P.clone().addScaledVector(C.e, rem) : P, T.r);
+    T.moved += T.pts[0].H.distanceTo(T.base[0].H.clone().add(sol.d));
+    mordClipPut(T.pts, T.base, sol);
+    C.short = sol.short;
+    C.tiltMax = Math.max(C.tiltMax ?? 0, (2 * Math.acos(Math.min(1, Math.abs(sol.q.w))) * 180) / Math.PI);
+    T.n++;
+    return;
+  }
   const Q = comboLerp({ A: T.base[T.k], B: T.base[T.k + 1] }, T.w);
   const delta = P.sub(Q.H.addScaledVector(Q.D, T.r));
   for (let j = 0; j < T.pts.length; j++) {
@@ -2479,7 +2561,7 @@ function endCombo(f, combat) {
   f.hitPointPrev = f.bladePoint(0.7, new THREE.Vector3());
   f.tipVel.set(0, 0, 0);
   f.hitPointVel.set(0, 0, 0);
-  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech, aim: I.aim ?? null, sev: I.sev ?? 0, ...(I.mord ? { mord: true, pullD: I.mord.pullD ?? 0, wPart: I.wPart ?? null, hy: I.hy ?? null, ...(I.mord.trk ? { trackN: I.mord.trk.n, trackMoved: I.mord.trk.moved } : {}) } : {}), ...(I.dup ? { dup: I.dup, glided: I.glided ?? 0 } : {}), ...(I.moves.some((m) => m.lunge) ? { lunge: true, glided: I.glided ?? 0, slide: I.slide?.slide ?? 0, foot: I.footStep ?? 0, tipV: I.tipT > 0 ? I.tipL / I.tipT : 0, tipVmax: I.tipVmax ?? 0, v: I.v } : {}) };
+  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech, aim: I.aim ?? null, sev: I.sev ?? 0, ...(I.mord ? { mord: true, pullD: I.mord.pullD ?? 0, wPart: I.wPart ?? null, hy: I.hy ?? null, ...(I.mord.trk ? { trackN: I.mord.trk.n, trackMoved: I.mord.trk.moved } : {}), ...(I.mord.clip ? { clip: { step: +I.mord.clip.s.toFixed(3), short0: +I.mord.clip.short0.toFixed(3), short: +(I.mord.clip.short ?? I.mord.clip.short0).toFixed(3), tilt: +Math.max(I.mord.clip.tilt, I.mord.clip.tiltMax ?? 0).toFixed(1) } } : {}) } : {}), ...(I.dup ? { dup: I.dup, glided: I.glided ?? 0 } : {}), ...(I.moves.some((m) => m.lunge) ? { lunge: true, glided: I.glided ?? 0, slide: I.slide?.slide ?? 0, foot: I.footStep ?? 0, tipV: I.tipT > 0 ? I.tipL / I.tipT : 0, tipVmax: I.tipVmax ?? 0, v: I.v } : {}) };
   f.iai = null;
   f.artTech = null;
 }
