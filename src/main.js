@@ -584,7 +584,7 @@ let wanderMode = false;
 let wanderResume = false; // 이번 startFight 가 대기실에서 들어온 것인가(저장된 판 그대로 — 카드 · 고른 무기까지) · 아니면 정지 창 '재대결' · '다음 방랑'
 const wanderSaves = () => wanderMode && JOURNEY_PURE;
 const careerSaves = () => journeySaves() || wanderSaves();
-// 방랑 풀: 무대 = 여정 30곳(보관용 화전 터 · 어두운 홀 빼고) · 상대 = 그 무대 상대 + 방랑 전용 다섯(아르토리아 두 모습 · 롤랑 · 백린의 전사 · 베르나르도)
+// 방랑 풀: 무대 = 여정 30곳(보관용 화전 터 · 어두운 홀 빼고) · 상대 = 그 무대 상대 + 방랑 전용 일곱(아르토리아 두 모습 · 롤랑 · 백린의 전사 · 베르나르도 · 쥘리아 두 모습 — 10/30 22:1x)
 const WANDER_STAGES = [...STAGE_ORDER];
 const WANDER_FOES = [...new Set([...WANDER_STAGES.map((id) => STAGE_FOE[id]), ...WANDER_EXCLUSIVE])].filter((id) => CHARACTERS_BY_ID[id]);
 // 주소 스위치 (?title=1 과 함께 — 대기실을 거쳐야 방랑이 열린다): ?wanderQuit=1 = 싸움 도중 그만두면 패배 · ?wanderLegacy=0 = 옛 저장 한 바퀴 인정 끔 (wander_rules.js WANDER — 사장님 확인 전)

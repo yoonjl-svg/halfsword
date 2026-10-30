@@ -2,7 +2,7 @@ import { alterLook } from './outfit_alter.js';
 import { createRoland } from './character_roland.js'; // 손님 인물 롤랑 (10/23 — 방랑 전용, docs/import/wander_heroes_import_2026-10-23.md)
 import { createWhiteScaleWarrior } from './character_white_scale.js'; // 손님 인물 백린의 전사(가칭 — 방랑 전용)
 import { createBernardo } from './character_bernardo.js'; // 손님 인물 베르나르도 (롤랑의 숙적 — 방랑 전용)
-import { createJulia } from './character_julia.js'; // 손님 인물 쥘리아 크리스테바 (10/30 샛별 저장소 전달 — 시험 경로 · ?foe=julia 만, docs/import/julia_import_2026-10-30.md)
+import { createJulia } from './character_julia.js'; // 손님 인물 쥘리아 크리스테바 (10/30 샛별 저장소 전달 — 방랑 전용 · 시험 경로 · ?foe=julia, docs/import/julia_import_2026-10-30.md)
 import { createJuliaAlter } from './character_julia_alter.js'; // 광기의 쥘리아 크리스테바 (같은 전달 — 겉모습만 · 숙련도는 우리 얼터 규칙대로 원본 +1)
 import { WANDER_EXCLUSIVE } from './wander_rules.js'; // 방랑에서만 나오는 상대 — 무작위 상대에서 뺀다 (사장님 10/23 18:3x '아르토리아 방랑 전용')
 // ─────────────────────────────────────────────────────────────
@@ -911,8 +911,9 @@ export const CHARACTER_GUESTS = [
   const artoria = CHARACTERS.find((c) => c.id === 'artoria');
   CHARACTER_GUESTS.push(createRoland(artoria), createWhiteScaleWarrior(), createBernardo(artoria));
 }
-// 10/30 쥘리아 크리스테바 (샛별 저장소 전달 C-JULIA-20261030): 이탈리아 숙련도 4 · 레이피어(검토용 기본 무기) · 목소리 없음.
-//  손님 인물 — 무작위 회전 · 여정 무대 · 방랑 · 생사전 어디에도 아직 넣지 않았다(사장님 결정 전). 시험 경로 고르기 · ?foe=julia · ?hero=julia 로만 만난다
+// 10/30 쥘리아 크리스테바 (샛별 저장소 전달 C-JULIA-20261030): 이탈리아 숙련도 4 · 전용 무기 초안 달타냥 · 목소리 maya 묶음 · 전투 성향 · 대사 (모두 사장님 확인 · 검수 전 — 시트 주석).
+//  손님 인물 — 무작위 회전 · 여정 무대에는 없다. 방랑 전용(wander_rules.js WANDER_EXCLUSIVE — 사장님 10/30 22:1x '상점주인이자 방랑과 생사전에 나오게 해' · 두 모습 다) ·
+//  상점 · 생사전은 다른 가지 · 시험 경로 고르기 · ?foe=julia · ?hero=julia
 CHARACTER_GUESTS.push(createJulia());
 for (const c of CHARACTER_GUESTS) finishAI(c);
 
@@ -995,7 +996,8 @@ for(const id of ['samira','artoria']){
  finishAI(alter);CHARACTER_VARIANTS.push(alter);
 }
 
-// 광기의 쥘리아 크리스테바 (10/30 샛별 저장소 전달 C-JULIA-20261030): 겉모습만(기계 반신 — 갑옷 · 체력 · 힘 혜택 없음 · 사람 몸 그대로) · 정체 · 이야기 · 대사 없음.
+// 광기의 쥘리아 크리스테바 (10/30 샛별 저장소 전달 C-JULIA-20261030): 겉모습만(기계 반신 — 갑옷 · 체력 · 힘 혜택 없음 · 사람 몸 그대로) · 정체 · 이야기 없음.
+//  무기 레이피어(원본의 달타냥은 원본 몫) · 성향은 원본 복사 + 시작 자세만 · 대사는 원본 대사의 부서진 꼴 (10/30 22:2x — 사장님 확인 · 검수 전, character_julia_alter.js)
 //  숙련도: 전달 사양은 4 로 못 박음(proficiencyFixed 4)이지만 우리 규칙(사장님 10/16 22:3x '모든 얼터에 숙련도+1' — 예외는 광기의 병마용 하나, 10/27 23:3x)대로
 //   못 박음을 빼서 아래 '얼터 숙련도 맞춤'이 원본 +1 = 5 로 맞춘다(5 = 이탈리아 비기가 열림) — 사장님 10/30 22:0x '쥘리앙 얼터는 숙련도 5야' 결정
 {
