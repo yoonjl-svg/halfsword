@@ -4,6 +4,7 @@
 //    감는 동안(f.rdWind) · 내려침(운동학 칼 iai — moves[0].rd) 따로 duplieren_check.mjs sample 표(칼 팔 손목 wrist_audit · 빈팔 · 내 팔 · 칼날 ↔ 내 몸통 · 머리 겉 거리 — 음수 = 겹침)
 //    감기: 한 바퀴 시간(바퀴 수 1 이 된 때 — 감기 시작부터 · 게임 초 · 실제 초) · 칼끝 빠르기(놓인 자리의 차 ÷ 스텝 — 칼 몸 빠르기는 가슴이라 따로) · 칼끝 높이 · 몸 방향 ↔ 상대 방향 각
 //    내려침: 칼끝 빠르기 최고 · 맞음 · 칼 방향(왼 위 → 오른 아래 — 칼끝 높이 처음 → 끝 · 칼 든 쪽 쪽으로 감)
+//    10/30: 판마다 첫 칼(first) · 내려침 상처 자리(첫 살 상처 — 목 · 머리 · 어깨 · 가슴) · 그 자리에서 끝냄 · 참수(게임 applyWound 치명 규칙 — 판은 상처를 몸에 안 검)
 //   사용법: node tools/sim/redondo_check.mjs [--ws=zweihander,flamberge,tizona,durandal] [--seeds=6] [--foes=still,walk] [--json=.tmp/파일]
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
@@ -44,6 +45,13 @@ export function rdCheck({ w = 'zweihander', seeds = 6, foes = ['still', 'walk'] 
                 pw?.(att, vic, ...rest);
                 if (att === P && vic === D && K && K.tHit == null) K.tHit = G.t;
               };
+              // 내려침 상처 자리 · 그 자리에서 끝낼 상처였나 (10/30 벰 면 견줌): 판은 상처를 몸에 안 걸므로(special_balance drillRun — 통증만) 게임 applyWound 의 치명 규칙으로 셈 —
+              //  목 심각도 > 0.5 = 죽음(그중 가르고 지나간 베기 = 참수 — COMBAT.decapitate) · 머리 베기 > 0.8 · 찌르기 > 0.5 = 죽음
+              const pa = D.applyWound;
+              D.applyWound = (h) => {
+                if (K) K.w.push({ zone: h.zone, part: h.part, type: h.type, sev: h.severity ?? 0, pass: !!h.pass, passing: !!h.passing });
+                pa(h);
+              };
             }
             const tip = P.bladePoint(1, new THREE.Vector3());
             const v = tip0 ? tip.distanceTo(tip0) / DT : 0; // 놓인 자리의 차 (칼 몸 빠르기는 감는 동안 가슴 빠르기)
@@ -76,7 +84,7 @@ export function rdCheck({ w = 'zweihander', seeds = 6, foes = ['still', 'walk'] 
             const I = P.iai;
             if (I?.moves?.[0]?.rd) {
               if (!K) {
-                strikes.push((K = { w, foe, seed, vMax: 0, y: [], side: [], tRel: G.t, tHit: null, drain: Wl && Wl.st0 != null ? Wl.st0 - Wl.st1 : null, windT: Wl ? G.t - Wl.t0 : null, turns: Wl?.turns ?? null }));
+                strikes.push((K = { w, foe, seed, first: !strikes.some((k) => k.foe === foe && k.seed === seed), vMax: 0, y: [], side: [], w: [], tRel: G.t, tHit: null, drain: Wl && Wl.st0 != null ? Wl.st0 - Wl.st1 : null, windT: Wl ? G.t - Wl.t0 : null, turns: Wl?.turns ?? null }));
                 Wl = null;
               }
               const seg = I.segs?.[I.si];
@@ -101,6 +109,24 @@ export function rdCheck({ w = 'zweihander', seeds = 6, foes = ['still', 'walk'] 
   return { S, winds, strikes };
 }
 
+// 첫 상처 자리 묶음: 판정 자리(zone) 머리 · 목이 먼저(목은 가슴 몸체의 자리) · 위팔(uarmS · uarmO) = 어깨 · 가슴 · 그 밖 other
+const atOf = (x) => (x.zone === 'head' || x.zone === 'neck' ? x.zone : x.part === 'uarmS' || x.part === 'uarmO' ? 'shoulder' : x.zone === 'chest' ? 'chest' : 'other');
+/** 내려침 하나의 상처 셈: 첫 살 상처 자리 · 그 자리에서 끝냄(죽음) · 참수 (게임 applyWound 치명 규칙 — 위 probe) */
+function woundOf(k) {
+  const W = k.w.filter((x) => x.sev > 0);
+  const first = W[0] ?? null;
+  const decap = W.some((x) => x.zone === 'neck' && x.sev > 0.5 && CONFIG.COMBAT.decapitate && x.type === 'cut' && x.pass && x.passing);
+  const kill = W.some((x) => (x.zone === 'neck' && x.sev > 0.5) || (x.zone === 'head' && ((x.type === 'cut' && x.sev > 0.8) || (x.type === 'stab' && x.sev > 0.5))));
+  return { at: first ? atOf(first) : null, kill, decap };
+}
+/** 상처 자리 몫 · 끝냄 · 참수 (내려침 묶음) */
+function woundSum(K) {
+  const R = K.map(woundOf);
+  const at = {};
+  for (const r of R) if (r.at) at[r.at] = (at[r.at] ?? 0) + 1;
+  return { n: K.length, cut: R.filter((r) => r.at).length, at, kill: R.filter((r) => r.kill).length, decap: R.filter((r) => r.decap).length };
+}
+
 /** 묶음 표 (무기 하나) */
 export function rdSummary({ S, winds, strikes }) {
   const W = winds.filter((x) => x.v.length);
@@ -123,6 +149,10 @@ export function rdSummary({ S, winds, strikes }) {
       turns: q(strikes.map((k) => k.turns), 0.5),
       // 다 감은 뒤 뗀 칼만 (감은 셈 ≥ 1 — 봇의 반은 감자마자 뗌): 수 · 맞음 · 뗀 때 → 첫 상처 p50
       wound: (() => { const Z = strikes.filter((k) => (k.turns ?? 0) >= 1); const H = Z.filter((k) => k.tHit != null); return { n: Z.length, hits: Z.filter((k) => k.res?.hits).length, toHit: q(H.map((k) => (k.tHit - k.tRel) / CONFIG.TIME.k), 0.5), drain: q(Z.map((k) => k.drain), 0.5) }; })(),
+      // 판마다 첫 내려침만 (12 판 — 식힘 3 s 가 끝난 때부터라 한 판에 둘이 나가기도 함): 수 · 맞음 · 뗀 때 → 첫 상처 p50
+      first: (() => { const F = strikes.filter((k) => k.first); const H = F.filter((k) => k.tHit != null); return { n: F.length, hits: F.filter((k) => k.res?.hits).length, toHit: q(H.map((k) => (k.tHit - k.tRel) / CONFIG.TIME.k), 0.5), wound: woundSum(F) }; })(),
+      // 모든 내려침 상처 자리(첫 살 상처 — 머리 · 목 · 어깨(위팔) · 가슴 · 그 밖) · 그 자리에서 끝냄 · 참수 (10/30)
+      woundAt: woundSum(strikes),
       zones: strikes.reduce((o, k) => ((o[k.res?.zone ?? '-'] = (o[k.res?.zone ?? '-'] ?? 0) + 1), o), {}),
       table: dupTable(S.strike),
     },

@@ -1,5 +1,5 @@
 // 이베리아 특수 공격 시험 — 풍차 베기 (B4 레돈두 · 사장님 10/29 00:4x ~ 01:5x · 08:3x — docs/strike/redondo_hold_2026-10-29.md · config UNIQUE_ASSIST.rdHold · rdHoldTime · rdDrain · rdSnapShare · rdSnapTime · IB_FLOW.windmillChain):
-//   탭(손가락 · PC 왼 단추)을 끌지 않고 실제 0.6 s 넘게 누르면 머리 위로 칼을 돌리고(감기 — 걸음 그대로 · 기력이 듦) 떼면 왼팔 위로 떨어뜨려 비스듬히 벰 ·
+//   탭(손가락 · PC 왼 단추)을 끌지 않고 실제 0.6 s 넘게 누르면 머리 위로 칼을 돌리고(감기 — 걸음 그대로 · 기력이 듦) 떼면 왼 위 → 오른 아래로 내려 벰(10/30 곧장 사선 — redondo_motion.test.mjs) ·
 //   0.6 s 전에 떼면 보통 탭 · 끌면 보통 긋기 · 식힘(내려침이 나간 순간부터 6 s) 중엔 감지 않음 · 맞음 · 막기 단추 · 비기는 감기를 그만두게(식힘 없음) · 기력이 바닥이면 저절로 내려침 ·
 //   한 바퀴 넘게 돌린 뒤 낸 칼 = 이어 그은 칼 하나(흐르는 긋기 B5 · 이어지는 흐름 B6) · 사람의 왼 가로베기는 보통 긋기 · AI 는 그대로(왼 가로베기 강화동작)
 //  손으로 누름을 놓는 시험 + 입력 층(input.js) 흉내 판.  node --test tools/sim/redondo_hold.test.mjs
@@ -10,6 +10,7 @@ import { PLAYER_UNIQUE, PlayerUniqueAssist, enhancedMoves } from '../../src/uniq
 import { kitFromNodes, nodeOf } from '../../src/skill_tree_data.js';
 import { classifyStroke } from '../../src/attack_stroke.js';
 import { G as PAD } from '../../src/ai_techniques.js';
+import { windSpec } from '../../src/iberian_redondo.js';
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, STAMINA, IB_FLOW, INPUT } = CONFIG;
@@ -37,6 +38,12 @@ test('기본값 — 길게 누름 실제 0.6 s · 기력 초당 붙어 버티기
   // AI 몫 그대로: 왼 가로베기 대신 머리 위 돌려 베기 (sword_art.js 가 읽는 표)
   assert.deepEqual(enhancedMoves('iberian'), [{ base: 'zwerchL', name: 'redondo', stage: 3 }]);
 });
+
+/** 감기 시작부터 한 바퀴 (게임 초): 감기 꼴 한 바퀴 + 섞는 동안 도는 빠르기를 0 에서 올린 늦음(rdRamp — smooth 의 적분 = 섞기의 반) */
+function oneTurn() {
+  const M = windSpec();
+  return M.loopT + (UA.rdSteady > 0 && UA.rdRamp > 0 ? (M.windIn ?? 0) / 2 : 0);
+}
 
 /** 사람 츠바이핸더 + 풍차 베기만 연 강화 · 상대는 서 있음 */
 function body({ seed = 3, gap = 2.4, names = ['redondo'], kit = null, weapon = 'zweihander' } = {}) {
@@ -117,7 +124,8 @@ test('그만둠 (식힘 없음): 막기 단추 · 맞음(칼날 상처) · 비�
 });
 
 test('흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 01:5x · 08:3x simple): 한 바퀴 전에 떼면 셈 없음 · simple = 사슬 안이든 밖이든 n 1(× 1.2) · inside(견줌) = 창 안에서 누르면 n + 1 · 흐르는 긋기(B5) 없으면 셈 없음 · B5 만이면 × 1.2 · 0 = 끔', () => {
-  const rot = UA.rdLoopT;
+  // 한 바퀴 = 감기 꼴 한 바퀴 + 섞는 동안 도는 빠르기를 0 에서 올린 늦음(rdRamp — 섞기의 반) · 기본 안 A(사장님 10/30 00:1x 'A로 하고 흐름 보너스 시간은 한바퀴로') 감기 시작부터 실제 약 1.5 s
+  const rot = oneTurn();
   const kitAll = kitFromNodes('iberian', new Set(['B1', 'B5', 'B4', 'B6']));
   const inPrep = (P) => { P.ibFlowT = 10; P.ibFlowCutEnd = 10; P.ibLastN = 3; }; // 이어 긋기 창 안 · 사슬 셋
   const run = (holdS, prep, kit = kitAll, mode = 'simple') => {
@@ -159,7 +167,7 @@ test('simple — 풍차 베기 뒤 이어 그은 긋기는 n 2 (× 1.4): 풍차 
   const B = body({ seed: 7, kit: kitFromNodes('iberian', new Set(['B1', 'B5', 'B4', 'B6'])) });
   try {
     const { P, press, steps } = B;
-    press.down = true; steps(realS(0.6) + UA.rdLoopT * 1.2); press.down = false;
+    press.down = true; steps(realS(0.6) + oneTurn() * 1.2); press.down = false;
     let k = 0;
     while (!(P.iai || P.iaiReq) && k++ < 40) steps(DT); // 뗀 다음 스텝에 내려침이 나감
     assert.ok(P.iai || P.iaiReq, '내려침');
