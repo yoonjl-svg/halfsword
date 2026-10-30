@@ -36,6 +36,7 @@ function selfClip(P, I, rec) {
   const sq = qOf(P.sword.rotation()), sp = new THREE.Vector3().copy(P.sword.translation());
   const gp = new THREE.Vector3(0, P.mordGrip ? P.mordGrip.g : 0, 0).applyQuaternion(sq).add(sp), pom = new THREE.Vector3(0, -0.15, 0).applyQuaternion(sq).add(sp);
   const hilt = segToPoint(gp, pom, hd) - hr - 0.02;
+  if (Math.max(wS.distanceTo(hd), wO.distanceTo(hd)) > 1.0) { rec.scCut = (rec.scCut ?? 0) + 1; return; } // 팔이 잘려 날아감 (붙은 팔은 머리에서 0.85 m 밖으로 못 감) — 재지 않음
   const hand = Math.min(wS.distanceTo(hd), wO.distanceTo(hd));
   const back = Math.min(wS.clone().sub(hd).applyQuaternion(yi).x, wO.clone().sub(hd).applyQuaternion(yi).x); // 두 손이 내 머리 가운데보다 몸 앞(+) · 뒤(−)
   rec.sc ??= { arm: Infinity, hilt: Infinity, hand: Infinity, back: Infinity };
@@ -211,7 +212,7 @@ console.log(`창 → 냄 (실제 s): 머리 ${wt((r) => r.cls === 'head')} · �
 {
   const S = recs.filter((r) => r.sc);
   const pct = (k) => `${S.filter(k).length} (${f2((S.filter(k).length / Math.max(1, S.length)) * 100)} %)`;
-  console.log(`내 머리 (시작한 일격 ${S.length}): 팔이 머리 공을 뚫음 ${pct((r) => r.sc.arm < 0)} · 칼자루 쪽이 머리를 지남 ${pct((r) => r.sc.hilt < 0)} · 손이 머리 가운데 뒤 ${pct((r) => r.sc.back < 0)} · 팔 틈 ${st((r) => r.sc, (r) => r.sc.arm)} · 가장 작음 ${f2(Math.min(...S.map((r) => r.sc.arm)))}`);
+  console.log(`내 머리 (시작한 일격 ${S.length} · 팔이 잘려 뺀 스텝이 있는 일격 ${recs.filter((r) => r.scCut).length}): 팔이 머리 공을 뚫음 ${pct((r) => r.sc.arm < 0)} · 칼자루 쪽이 머리를 지남 ${pct((r) => r.sc.hilt < 0)} · 손이 머리 가운데 뒤 ${pct((r) => r.sc.back < 0)} · 팔 틈 ${st((r) => r.sc, (r) => r.sc.arm)} · 가장 작음 ${f2(Math.min(...S.map((r) => r.sc.arm)))}`);
   console.log(`  손 ↔ 머리 가운데 (m) ${st((r) => r.sc, (r) => r.sc.hand)} · 가장 작음 ${f2(Math.min(...S.map((r) => r.sc.hand)))} · 손 앞(+)/뒤(−) ${st((r) => r.sc, (r) => r.sc.back)} · 가장 깊이 ${f2(Math.min(...S.map((r) => r.sc.back)))} · 칼자루 쪽 틈 ${st((r) => r.sc, (r) => r.sc.hilt)}`);
   const wp = {}; for (const r of recs) if (r.cls === 'head') wp[r.wPart ?? '?'] = (wp[r.wPart ?? '?'] ?? 0) + 1;
   console.log(`  머리를 친 칼 부품: ${JSON.stringify(wp)} · 머리 맞힘 에너지 (J) ${st((r) => r.cls === 'head', (r) => r.E)}${S.some((r) => r.clip) ? ` · 반걸음 (m) ${st((r) => r.clip, (r) => r.clip.step)} · 기울임 (°) ${st((r) => r.clip, (r) => r.clip.tilt)} · 못 옮긴 몫 (m) ${st((r) => r.clip, (r) => r.clip.short)}` : ''}`);

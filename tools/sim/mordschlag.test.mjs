@@ -356,6 +356,37 @@ test('머리 따라 겨눔 (10/30 사장님 \'모르트가 빗나가는 경우�
   assert.ok(cut.R.trackN > 0 && cut.R.trackN < on.R.trackN, `베기 전까지 ${cut.R.trackN} < 겨눈 자리까지 ${on.R.trackN}`);
 });
 
+test('내 머리 뚫음 막기 시제품 (10/31 사장님 \'팔이 나의 머리를 뚫고 뒤로 갔다가 다시 적을 강타하는 것처럼 보여\' — SECRET.mord.noSelfClip · 사장님 확인 전 · 기본 끔): 끄면 가슴 사이 0.65 m 에서 두 손이 내 머리 가운데 뒤로 감(지금 판) · 켜면 두 손이 늘 머리 앞 · 반걸음 ≤ clipStep · 결과에 clip 칸 · 머리에 닿음', () => {
+  assert.equal(SECRET.mord.noSelfClip, 0);
+  const run = (on) => {
+    const { g, P } = fixture('longsword', 0.65);
+    SECRET.mord.noSelfClip = on;
+    try {
+      for (let i = 0; i < Math.round(2.4 / DT); i++) g.step();
+      const hits = [];
+      g.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === P) hits.push({ zone: r.zone, part: pr.w.part }); };
+      assert.equal(P.skill.secret({ S: TRADITIONS.german.playerSecret, ctx: { ev: 'press' } }), true);
+      let front = Infinity;
+      for (let i = 0; i < Math.round(3 / DT) && P.skill.sec; i++) {
+        g.step();
+        const I = P.iai;
+        if (!I?.mord) continue;
+        const hd = new THREE.Vector3().copy(P.bodies.head.translation()), yi = I.yaw.clone().invert();
+        const wS = new THREE.Vector3(0.13, 0, 0).applyQuaternion(q(P.bodies.farmS.rotation())).add(P.bodies.farmS.translation());
+        const wO = new THREE.Vector3(0, -0.13, 0).applyQuaternion(q(P.bodies.farmO.rotation())).add(P.bodies.farmO.translation());
+        front = Math.min(front, wS.sub(hd).applyQuaternion(yi).x, wO.sub(hd).applyQuaternion(yi).x); // 두 손이 내 머리 가운데보다 몸 앞(+) · 뒤(−) (m)
+      }
+      return { R: P.instantResult, hits, front };
+    } finally { SECRET.mord.noSelfClip = 0; g.world.free(); }
+  };
+  const off = run(0);
+  assert.ok(off.R?.mord && off.R.clip === undefined && off.front < -0.1, `지금 판: 손이 머리 뒤 ${off.front.toFixed(2)} m`);
+  const on = run(1);
+  assert.ok(on.front > 0.05, `켜면 손이 머리 앞 ${on.front.toFixed(2)} m`);
+  assert.ok(on.R.clip && on.R.clip.step <= SECRET.mord.clipStep + 1e-9, JSON.stringify(on.R.clip));
+  assert.ok(on.hits.some((h) => h.zone === 'head'), JSON.stringify(on.hits));
+});
+
 test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누르기 mordPress(2 s) → 창 → 머리가 닿으면 곧장 냄(사람과 같은 실행부) → 굳음 → 끝 · 끊기면 셈 0 · 머리가 멀면 안 냄', () => {
   const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 } } });
   const P = g.player, E = g.enemy, ai = g.ai;
