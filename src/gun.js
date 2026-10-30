@@ -40,12 +40,15 @@ export const GUN = {
   laser: false, // 조준 레이저는 외형 PM gun_fx.js 가 그린다 (사장님: 아주 희미하게 · 두 겹 방지). true 면 여기 updateLaser 가 그린다(효과 모듈 없는 점검용)
   aiAimTol: 3, // 도: AI 는 총구가 골반·배·가슴·(붙어 있는) 머리 몸체 중심 중 하나에서 이만큼 안일 때만 쏜다.
   //  (사장님 10/12 지시로 바뀜: 9/30 '무릎 위부터' → 골반 위부터. 겨누는 몸 줄과 같은 부위만 본다 — docs/decisions.md 10/12, 확인표 953)
+  aiTorsoOnly: 1, // AI 는 가늠쇠(레이저 점 — 총신 방향 첫 닿는 곳)가 상대 몸통(골반 · 배 · 가슴 — 가슴 몸체 윗 2 cm 목 띠는 뺌)에 걸려 있을 때만 쏜다 · 머리 · 목 · 팔 · 칼에 걸리면 안 쏨
+  //  (사장님 10/30 08:1x 'AI는 가늠쇠가 몸통(골반 ~ 가슴)을 지날 때만 쏜다' · 확인표 3015 — sightOnTorso). 쏘기 전 멈춤을 시작할 때와 쏘는 순간 둘 다 본다(aiPlantAim). 0 = 전(aiAimTol 3° · 머리 포함). 사람은 그대로
   aiFirst: realS(1.5), // 초: (aiFirstGap 0 일 때만 — 전 판) AI 는 gunAI 를 처음 부른 때부터 이만큼 지나서야 첫 발을 쏜다
   aiFirstGap: 1, // AI 첫 발 (사장님 10/29 22:3x · 확인표 2981): 1 = 공격이 가능해진 때(판 시작 정지 ARENA.startHold 끝 — fighter.openHold)부터 발 사이 간격(gunGap — AI 2.4 s · 10/30 01:4x 부터 마야 · 기본 AI 같음)만큼 지나서 · 0 = 전(aiFirst)
   aiFireStill: 1, // AI 는 쏘는 동안(gunFiring) 발이 묶인다 (사장님 10/29 22:3x '발사 중엔 이동하지 못하게' · 확인표 2982 — fighter.fireHold). 0 = 전(안 묶음 · 쏘기 전 멈춤도 없음). 사람은 안 묶음
   //  10/30 00:1x 사장님 '사람은 그대로 두고 AI만 적용해. 쏘기 전과 후에 모두 0.2초 움직임 정지 넣어.' (확인표 2985 · 2986) — 시간 사다리 0.2 · 실제 초:
   aiPlant: realS(0.2), // 쏘기 전 멈춤: 쏠 때가 되어 겨눔이 몸에 걸린(aiAimTol) 순간 서고, 이만큼 선 채 기다린 뒤 그때 총신 방향으로 쏜다(gunAI · 조준 보정은 aiAimAssist — 기본 없음). 0 = 멈춤 없이 바로 쏨(10/29 판)
-  aiPlantAim: 0, // (시험 · 사장님 확인 전 — 확인표 2989) 1 = 다 선 뒤 겨눔이 다시 몸에 걸릴 때까지 선 채 기다렸다 쏜다(쏘기 전 멈춤이 0.2 s 보다 길어질 수 있음) · 0 = 다 서면 바로 쏨
+  aiPlantAim: 1, // 다 선 뒤(aiPlant): 1 = 가늠쇠가 다시 몸통에 걸릴 때까지 선 채 기다렸다 쏜다(쏘기 전 멈춤이 0.2 s 보다 길어질 수 있음 — 10/30 08:1x '몸통을 지날 때만 쏜다' · 확인표 3016) ·
+  //  2 = 안 걸려 있으면 풀고 다시 걸릴 때 또 섬 · 0 = 다 서면 그때 총신 방향으로 바로 쏨(10/30 00:1x 판 · 2989)
   aiAimAssist: 0, // AI 조준 보정 (fire — 총알을 상대 명치 쪽으로 level.skill 만큼 꺾음): 0 = 없음 — AI 총알 · 궤적도 사람처럼 쏜 순간 총신(레이저) 방향 그대로
   //  (사장님 10/30 01:4x '2번으로' — 2989 의 ②: 보정을 줄여 총알이 총신 · 레이저 방향을 따르게 · 마야가 덜 맞혀도 됨 · 확인표 3010). 1 = 전(0.5 + 0.5 · skill — 마야 0.975). 사람은 전부터 보정 없음
   aiAfter: realS(0.2), // 쏜 뒤 멈춤 (10/29 판 = 총구 꺾음 꼬리 kickTime + kickFade 0.23 게임 초를 대신함)
@@ -99,6 +102,11 @@ const _o = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _l = new THREE.Vector3();
+const _so = new THREE.Vector3(); // sightOnTorso 전용 (fire 의 _o · _d · _q 와 따로)
+const _sd = new THREE.Vector3();
+const _sq = new THREE.Quaternion();
+const _sl = new THREE.Vector3();
+const TORSO = new Set(['pelvis', 'abdomen', 'chest']);
 
 const _gp = new THREE.Vector3();
 const _gq = new THREE.Quaternion();
@@ -321,6 +329,7 @@ export function updateGun(f, world, combat, dt) {
   updateRandSway(g, dt);
   updateAimSpan(g, dt);
   if (GUN.laser) updateLaser(f, g, world, combat);
+  if (GUN.aiTorsoOnly && f.aiControlled) g.onTorso = sightOnTorso(f, world, combat); // AI 쏘는 조건 (gunAI 가 다음 스텝에 읽는다 — 물리 뒤 총신 그대로) · 사람 몸은 안 셈
   if (g.cool > 0) {
     const before = GUN.reload - g.cool;
     g.cool -= dt;
@@ -551,6 +560,30 @@ function updateLaser(f, g, world, combat) {
 }
 
 /** 광선 하나: 가장 가까이 맞은 콜라이더 { collider, toi } (없으면 null). 쏜 사람 자신의 콜라이더는 건너뛴다 */
+/** 가늠쇠(레이저 점)가 상대 몸통에 걸렸나 (AI 쏘는 조건 — GUN.aiTorsoOnly): 총구에서 총신 방향 첫 닿는 곳이 상대의 골반 · 배 · 가슴 몸체이고
+ *  가슴이면 목 띠(가슴 몸 기준 y > 0.11 — bulletHit 이 'neck' 으로 치는 선)에서 그 거리 탄 퍼짐 반지름만큼 더 밑. 머리 · 목 · 팔 · 다리 · 칼 · 땅 · 허공 = 아님. 읽기만(난수 · 몸 안 건드림) */
+function sightOnTorso(f, world, combat) {
+  const foe = f.foe;
+  if (!foe?.alive || !f.alive || !f.armed) return false;
+  const r = f.sword.rotation();
+  _sq.set(r.x, r.y, r.z, r.w);
+  _sd.set(0, 1, 0).applyQuaternion(_sq);
+  muzzle(f, _so);
+  const info = combat.info;
+  const hit = castRay(world, _so, _sd, (h) => info.get(h)?.fighter !== f);
+  const vi = hit ? info.get(hit.collider.handle) : null;
+  if (!vi || vi.fighter !== foe || !TORSO.has(vi.kind)) return false;
+  if (vi.kind !== 'chest') return true;
+  const bp = vi.body.translation();
+  const br = vi.body.rotation();
+  _sl.copy(_so).addScaledVector(_sd, hit.toi).sub(_sd.set(bp.x, bp.y, bp.z)).applyQuaternion(_sq.set(br.x, br.y, br.z, br.w).invert());
+  // 목 띠 밑으로 탄 퍼짐만큼 더 (그 거리에서 퍼짐 원뿔 반지름 — fire 와 같은 셈): 몸통 위 끝(목 쪽)에서 막 걸린 순간 쏘면 퍼진 총알이 목에 맞았다
+  //  (가만히 선 상대 판: 첫 발이 모두 목 — 흔들림이 머리에서 내려오며 몸통에 처음 닿는 곳이 목 띠라서)
+  const pv = f.bodies.pelvis.linvel();
+  const run = Math.min(1, Math.hypot(pv.x, pv.z) / 2.3);
+  return _sl.y <= 0.11 - hit.toi * Math.tan(((GUN.spread + GUN.spreadMove * run) * Math.PI) / 180);
+}
+
 function castRay(world, o, d, pred) {
   // RAPIER.Ray 는 origin·dir 만 담는 순수 객체라, 같은 모양의 객체를 넘기면 된다 (RAPIER 모듈을 따로 불러오지 않는다)
   const ray = { origin: { x: o.x, y: o.y, z: o.z }, dir: { x: d.x, y: d.y, z: d.z } };
@@ -649,11 +682,12 @@ export function gunAI(ai, dt) {
   ai.hand.set(0, 0); // 사격 자세(gunPose)는 조준 패드를 읽지 않는다 — 손 목표만 가운데에 둔다
   ai.handSpeed = 1.2;
   ai.moveHand(dt);
-  // 흔들리는 총구가 상대의 골반 이상 몸 부위(골반·배·가슴·머리) 중 하나에서 aiAimTol° 안으로 들어왔을 때만 쏜다 (팔을 뻗는 중이나 장전 뒤 내려오는 중엔 쏘지 않는다)
-  const aimed = aimErr(me) < GUN.aiAimTol;
+  // 겨눔: aiTorsoOnly(10/30 08:1x) = 가늠쇠가 몸통(골반 ~ 가슴 · 목 띠 뺌)에 걸려 있을 때(updateGun 이 지난 물리 스텝 뒤 sightOnTorso 로 적어 둔 g.onTorso) ·
+  //  0 = 전: 흔들리는 총구가 상대의 골반 이상 몸 부위(골반·배·가슴·머리) 중 하나에서 aiAimTol° 안 (팔을 뻗는 중이나 장전 뒤 내려오는 중엔 쏘지 않는다)
+  const aimed = GUN.aiTorsoOnly ? !!state(me).onTorso : aimErr(me) < GUN.aiAimTol;
   // 쏘기 전 멈춤 (aiPlant — 사장님 10/30 00:1x '쏘기 전과 후에 모두 0.2초 움직임 정지'): 쏠 수 있게 되기 aiPlant 전부터(발 사이 · 첫 발 문 · 장전이 그만큼 남았을 때)
-  //  겨눔이 몸에 걸리면 선다 → aiPlant 를 선 채 기다린 뒤(updateGun 이 g.planted) 그때 총신 방향으로 쏜다. 발 사이 · 첫 발 시각은 그대로(일러지지 않음).
-  //  다 선 때 겨눔을 다시 보지 않는다: 다시 보면 겨눔이 0.2 s 뒤엔 대개 빠져(마야 판 41 번 멈춤에 8 발) 서고 걷기를 되풀이했다 · 10/30 01:4x 부터 조준 보정도 없음(aiAimAssist 0 — 총알은 쏜 순간 총신 그대로)
+  //  겨눔(aiTorsoOnly — 가늠쇠가 몸통에)이 걸리면 선다 → aiPlant 를 선 채 기다린 뒤(updateGun 이 g.planted) 쏜다 — aiPlantAim 1(10/30 08:1x): 그때도 몸통에 걸린 스텝까지 선 채 기다려 쏨 ·
+  //  2: 안 걸려 있으면 풀고 다시 걸릴 때 또 섬 · 0: 그때 총신 방향으로 바로 쏨(00:1x · 01:4x 판). 발 사이 · 첫 발 시각은 일러지지 않음 · 10/30 01:4x 부터 조준 보정 없음(총알은 쏜 순간 총신 그대로)
   const g = state(me);
   const lead = GUN.aiFireStill ? GUN.aiPlant : 0;
   const first = GUN.aiFirstGap ? me.fightT >= ARENA.startHold + gunGap(me) - lead : ai.gunT >= GUN.aiFirst - lead;
@@ -663,7 +697,7 @@ export function gunAI(ai, dt) {
     else if (aimed || !GUN.aiPlantAim) {
       g.planted = false;
       fireNow();
-    }
+    } else if (GUN.aiPlantAim === 2) g.planted = false; // 풀고 다시 걸릴 때 또 섬
   } else if (!(g.plant > 0) && g.pending < 0 && first && aimed && d < 7 && g.cool <= lead) {
     if (lead > 0) g.plant = lead;
     else fireNow();
