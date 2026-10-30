@@ -7,7 +7,7 @@
 //  무기 카드 그림(weapon_thumbs.mjs)과 같은 빛 · 같은 금속 재질 · 투명 배경 webp. 문서 꼴 · 등급 색 · 모양을 바꾸면 다시 돌린다.
 //  실행: vite 개발 서버를 띄운 뒤 playwright 가 있는 곳에서
 //    node tools/browser/item_thumbs.mjs http://127.0.0.1:5251                    (전체 28 장)
-//    node tools/browser/item_thumbs.mjs http://127.0.0.1:5251 coins pouch german_3 (몇 개만 — books · coins · pouch · tear · skills · <유파>_<급> · <유파>_letter · <유파>_deep)
+//    node tools/browser/item_thumbs.mjs http://127.0.0.1:5251 coins pouch german_3 (몇 개만 — books · coins · pouch · tear · horn(뿔피리 wallet/horn.webp — 10/30 상점) · skills · <유파>_<급> · <유파>_letter · <유파>_deep)
 //    (전체는 기본 28 장 — 스킬트리 열 장은 'skills' 로 따로: node tools/browser/item_thumbs.mjs http://127.0.0.1:5251 skills)
 //    --out=<폴더> 로 다른 곳에 저장(시험) · --q='cx=0.7' 로 구도 시험값을 넘긴다 (item_thumbs_page.js 머리말)
 //  찍는 쪽은 tools/browser/item_thumbs.html (+ item_thumbs_page.js) — 브라우저로 열면 256 px 그림과 실제 화면 크기를 눈으로 볼 수 있다.

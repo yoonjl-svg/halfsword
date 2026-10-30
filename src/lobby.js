@@ -17,11 +17,13 @@
 //  10/23 방랑 (main.js getWanderStatus · launchWander — docs/import/wander_heroes_import_2026-10-23.md): 'Stage 입장' 아래 '방랑' 단추(같은 폭 · 다른 색 — lobby.css .wander) ·
 //   사장님 18:3x '버튼 밑에 설명 쓰는 거 싫음' — 단추 밑 글 없음. 잠겼을 때 누르면 위 알림 줄에 열리는 조건 · 깬 무대 수 · 판이 남아 있으면 '방랑 이어가기'
 //   이미 다 깬 사람(옛 저장 인정 — 저장 wander.noticeSeen 없음)은 대기실에 처음 들어올 때 알림 창 한 번(스킬트리 알림 창과 같은 꼴 · '확인'은 방랑 단추 색 — 사장님 10/24 00:3x)
+//  10/30 상점 (사장님 19:0x — config.js SHOP · shop_panel.js): '상점' 칸 = 상인 프로필 · 대사 · 파는 무기 둘 · 갱신까지 남은 시간 (SHOP.enabled — 본판은 끔: 전 빈 안내 한 줄 그대로) ·
+//   뿔피리는 상점 칸 제목 줄 지갑에(내 정보 칸은 좁아 금화 · 머리만 그대로) · 아이템 칸 무기 = 가진 무기 모두(시작 무기 + 산 무기 — owned_weapons.js · 산 무기도 장착) · 시험판은 상점 칸으로 바로 열림(tab)
 import style from './lobby.css?inline';
 import uiStyle from './entrance_ui.css?inline';
 import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
-import { LOBBY_ITEMS, LOBBY_ARMORS, armorSlot, readLobbyEquipment, saveLobbyEquipment, readLobbyArmor, saveLobbyArmor, readLobbyNeck, saveLobbyNeck } from './lobby_equipment.js';
+import { LOBBY_ARMORS, armorSlot, readLobbyEquipment, saveLobbyEquipment, readLobbyArmor, saveLobbyArmor, readLobbyNeck, saveLobbyNeck } from './lobby_equipment.js';
 import { portraitSrc, portraitMode, portraitGrid } from './portraits.js'; // ① 프로필 칸 (10/17 — 전: 3D 미리보기 · 10/18 그 코드 지움)
 import { readProfile, renamePlayer } from './player_profile.js';
 import { readProgress, titleOptions, selectTitle, markWanderNotice, checkTitles, titleNotices, markTitleSeen } from './lobby_progress.js';
@@ -31,7 +33,12 @@ import { mountSkillTree } from './skill_tree.js';
 import { convertSeals, takeSealNotice } from './seal_coins.js';
 import { migrateSkillBooks, takeTreeNotice, treeNoticeText } from './skill_tree_store.js'; // 옛 스킬북 → 스킬트리 (10/21 — 한 번)
 import { getWeapon, TIER_LABEL, weaponSpecText } from './weapons.js';
-import { COIN_ICON, POUCH_ICON } from './wallet_icons.js'; // 금화 · 머리 그림 — 결과 창 금화 줄과 같은 그림
+import { COIN_ICON, POUCH_ICON, HORN_ICON } from './wallet_icons.js'; // 금화 · 머리 그림 — 결과 창 금화 줄과 같은 그림 · 뿔피리(10/30 상점)
+import { SHOP } from './config.js';
+import shopStyle from './shop.css?inline'; // 상점 칸 (10/30)
+import { mountShopPanel } from './shop_panel.js';
+import { SHOP_TEXT } from './shop_text.js';
+import { ownedWeapons } from './owned_weapons.js'; // 아이템 칸 무기 = 가진 무기 (10/30 — 산 무기도)
 
 // 칸 그림 맞춤 (사장님 ⑨ — 감독 검토 §2 '케틀 햇이 칸 폭의 약 45 %'): 그림 파일의 투명한 가장자리를 빼고, 보이는 부분의 긴 쪽이 칸의 80 % 가 되게 키우고 가운데에 둔다.
 //  같은 그림은 한 번만 잰다(이번 실행 동안). 재기 전 · 못 재면 그림 상자 = 칸의 80 % 그대로 (lobby.css .inventory-item img 의 --fit · --fx · --fy)
@@ -59,9 +66,10 @@ function fitThumb(img) {
 const CHEVRON = '<svg class="chevron" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5 5 6.5 8 3.5"/></svg>';
 const CHECK = '<svg class="check" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 5 9 9.5 3.5"/></svg>';
 
-export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
+export function mountLobby({ root, game, choice, onDepart, onWander, onBack, tab: firstTab = null }) {
   const ctx = game.getSkillBookContext?.() ?? { test: false };
-  root.innerHTML = `<style>${uiStyle}\n${style}\n${typeStyle}</style><main class="lobby" aria-labelledby="lobbyHeading">
+  const shopOn = SHOP.enabled; // 상점 (10/30 — 본판은 끔 · 시험판 켬)
+  root.innerHTML = `<style>${uiStyle}\n${style}\n${shopOn ? shopStyle : ''}\n${typeStyle}</style><main class="lobby" aria-labelledby="lobbyHeading">
     <canvas class="lobby-backdrop" id="lobbyGrove" aria-hidden="true"></canvas><div class="lobby-shade" aria-hidden="true"></div>
     <header class="lobby-header"><h1 id="lobbyHeading" tabindex="-1"><span>대기실</span></h1><p id="lobbyStatus" class="lobby-status" role="status"></p><button id="lobbyBack" class="secondary small on-art utility">첫 화면</button></header>
     <div class="lobby-columns">
@@ -84,7 +92,9 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
           <div class="item-detail" id="itemDetail" hidden><p class="item-head"><b id="itemName"></b><span id="itemRarity"></span></p><p id="itemDescription"></p><div class="equipment-actions"><button type="button" id="equipItem" disabled>장착</button><button type="button" id="unequipItem" disabled>해제</button></div></div></div>
           <p id="equipmentStatus" class="sr-only" role="status"></p>
         </div>
-        <div role="tabpanel" id="panelShop" aria-labelledby="tabShop" hidden><div class="panel-heading"><h2>상점</h2></div><p class="empty-panel">아직 판매 중인 물품이 없습니다.</p></div>
+        <div role="tabpanel" id="panelShop" aria-labelledby="tabShop" hidden>${shopOn
+          ? `<div class="panel-heading"><h2>${SHOP_TEXT.title}</h2><span class="wallet panel-wallet">${COIN_ICON}<b id="shopCoins"></b>${POUCH_ICON}<b id="shopHeads"></b>${HORN_ICON}<b id="shopHorns"></b></span></div><div id="shopHost" class="shop-host"></div>`
+          : `<div class="panel-heading"><h2>상점</h2></div><p class="empty-panel">${SHOP_TEXT.closed}</p>`}</div>
         <div role="tabpanel" id="panelSkills" aria-labelledby="tabSkills" hidden><div class="panel-heading"><h2>스킬</h2><span class="wallet panel-wallet">${COIN_ICON}<b id="skillCoins"></b>${POUCH_ICON}<b id="skillHeads"></b></span></div><div id="skillTreeHost" class="skill-tree-host"></div><p id="skillStatus" class="sr-only" role="status"></p></div>
         <div role="tabpanel" id="panelEvent" aria-labelledby="tabEvent" hidden><div class="panel-heading"><h2>이벤트</h2></div><p class="empty-panel">아직 진행 중인 이벤트가 없습니다.</p></div>
       </section>
@@ -111,6 +121,10 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
     $('lobbyLevel').textContent = `Lv.${progress.level}`; // 레벨은 글 그대로 (금색 아님 — 강조 색은 누를 것 · 꼭 볼 것만)
     $('lobbyCoins').textContent = $('skillCoins').textContent = progress.coins.toLocaleString('ko-KR');
     $('lobbyHeads').textContent = $('skillHeads').textContent = progress.heads.toLocaleString('ko-KR');
+    if (shopOn) { // 상점 칸 지갑 — 금화 · 머리 · 뿔피리 (10/30 · 내 정보 지갑에는 뿔피리를 넣지 않음: 844 × 390 내 정보 칸 안 폭 약 130 px 에 세 재화가 들지 않는다)
+      $('shopCoins').textContent = progress.coins.toLocaleString('ko-KR'); $('shopHeads').textContent = progress.heads.toLocaleString('ko-KR');
+      $('shopHorns').textContent = progress.horns.toLocaleString('ko-KR');
+    }
   }
   // ── 호칭 내림 상자 (사장님 10/16 15:3x ⑥ "'여행자'는 내림박스 같은 기능을 만들어서 호칭 선택할 수 있게 해" ·
   //    16:0x "호칭 내림 상자를 누르면 아래로 열리는 투명도를 가진 박스에 이미 가진 호칭인 여행자가 보이고, '호칭 없음' 같은 시스템 알림은 거기서 빼자"):
@@ -200,6 +214,8 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
   // 장착 자리: 무기 · 머리(케틀 햇) · 목(용사의 눈물 — 10/17)
   const equipped = { weapon: readLobbyEquipment(), head: readLobbyArmor(), neck: readLobbyNeck() };
   const tree = mountSkillTree($('skillTreeHost'), { test: ctx.test, onWallet: () => { renderWallet(); showTitleNotice(); }, announce: text => { $('skillStatus').textContent = text; } }); // 칸을 사서 호칭을 얻으면 스킬 화면 위에 알림 창
+  // 상점 칸 (10/30): 무기를 사면 지갑 · 레벨(얻은 것 하나 = Lv +1)을 다시 그림 · 알림 줄에 '구입했습니다.'
+  const shop = shopOn ? mountShopPanel($('shopHost'), { status: (text, tone) => status(text, tone), onWallet: () => { renderWallet(); showTitleNotice(); } }) : null;
   const tabs = [...root.querySelectorAll('.lobby-tabs [role=tab]')]; // 차례 = 2 × 2 칸 차례(윗줄 아이템 · 상점 · 아랫줄 스킬북 · 이벤트) — ↑ ↓ 는 같은 칸 줄, ← → 는 다음 · 앞
   function selectTab(tab) {
     for (const item of tabs) {
@@ -208,6 +224,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
     for (const panel of root.querySelectorAll('.contents-panel > [role=tabpanel]')) panel.hidden = panel.id !== 'panel' + tab.dataset.panel;
     if (tab.dataset.panel === 'Inventory') { selectedItem = null; renderInventory(); } // 아이템 칸으로 오면 고른 것 없이 (전 무기 · 방어구 탭과 같게)
     if (tab.dataset.panel === 'Skills') tree.refresh();
+    if (tab.dataset.panel === 'Shop') shop?.refresh(); // 열 때마다 새 대사 · 이 칸 물건 (10/30)
     root.querySelector('.contents-panel').scrollTop = 0;
   }
   for (const tab of tabs) {
@@ -222,8 +239,10 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
   }
   const grid = root.querySelector('.inventory-grid');
   const armorOf = id => LOBBY_ARMORS.find(a => a.id === id);
-  // 아이템 칸 차례 (사장님 10/18 04:1x '무기+방어구 합쳐서 아이템'): 무기 다 → 방어구 다 — lobby_equipment.js 의 두 표 그대로(LOBBY_ITEMS · LOBBY_ARMORS)
-  const ITEMS = Object.freeze([...LOBBY_ITEMS.map(id => ({ kind: 'weapon', id })), ...LOBBY_ARMORS.map(a => ({ kind: 'armor', id: a.id }))]);
+  // 아이템 칸 차례 (사장님 10/18 04:1x '무기+방어구 합쳐서 아이템'): 무기 다 → 방어구 다 — 무기 = 가진 무기(시작 무기 LOBBY_ITEMS 먼저 · 산 차례 — owned_weapons.js · 10/30 상점) · 방어구 = LOBBY_ARMORS
+  //  칸을 그릴 때마다 저장에서 다시 읽는다 (상점에서 산 무기가 아이템 칸을 다시 열면 바로 보이게)
+  const itemsNow = () => [...ownedWeapons().map(id => ({ kind: 'weapon', id })), ...LOBBY_ARMORS.map(a => ({ kind: 'armor', id: a.id }))];
+  let ITEMS = itemsNow();
   const COLS = 6, ROWS = 4; // 칸 판 6 × 4 = 24 칸 (사장님 10/18 04:1x '가로 5칸에서 6칸으로' · 세로 4 줄 그대로 — 칸 크기는 lobby.css --cell, 줄 수는 lobby.css 판 높이와 같게)
   const itemOf = button => ({ kind: 'weapon' in button.dataset ? 'weapon' : 'armor', id: button.dataset.item }); // 칸 단추 → 물건 (data-weapon · data-armor 가 종류)
   const sameItem = (a, b) => !!a && !!b && a.kind === b.kind && a.id === b.id;
@@ -240,6 +259,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
   // 칸: 그림 = 칸의 80 % · 매끈하게 줄임 · 뒤에 등급 빛(무기 카드 앞면 .wthumb 와 같은 원 빛 — data-tier · lobby.css) — 사장님 ⑨ 1 단계(감독 검토 §2)
   //  칸 수 = 24(빈 칸이 채움) · 물건이 24 개보다 많으면 6 칸씩 줄을 더한다 — 판 높이는 4 줄 그대로라 판 안에서 내려 본다(숨기지 않음 · 담는 수 규칙 없음)
   function renderInventory() {
+    ITEMS = itemsNow();
     const slots = Math.max(COLS * ROWS, Math.ceil(ITEMS.length / COLS) * COLS);
     $('inventoryCount').textContent = `${ITEMS.length}개`;
     grid.setAttribute('aria-label', `가로 ${COLS}칸 세로 ${slots / COLS}칸`);
@@ -346,9 +366,11 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack }) {
     if (!wander.unlocked) { status(`방랑은 모든 무대를 깨면 열립니다. (깬 무대 ${wander.cleared}/${wander.total})`); return; }
     if (onWander) leave(onWander, '방랑을 열지 못했습니다. 다시 시도해 주십시오.');
   });
+  if (firstTab) { const t = tabs.find((x) => x.dataset.panel === firstTab); if (t) selectTab(t); } // 처음 열 칸 (상점 시험판 — 'Shop' · game_entry.js)
   $('lobbyHeading').focus();
   return {
     tree, // 시험·사진 도구: lobby.tree.show('german', 2)
-    destroy() { events.abort(); tree.destroy(); $('nameDialog').close(); $('treeDialog').close(); $('wanderDialog').close(); $('titleDialog').close(); grove.dispose(); },
+    shop, // 시험·사진 도구: lobby.shop.stock (상점 켬일 때만)
+    destroy() { events.abort(); tree.destroy(); shop?.destroy(); $('nameDialog').close(); $('treeDialog').close(); $('wanderDialog').close(); $('titleDialog').close(); grove.dispose(); },
   };
 }

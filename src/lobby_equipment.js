@@ -5,6 +5,9 @@
 //  무기 칸: 나뭇가지 하나 (사장님 10/16 01:0x '무기에 롱소드는 삭제') — 설명 카드는 우리 무기 자료(weapons.js nameKo · desc · tier)를 lobby.js 가 읽는다.
 //  방어구 칸: 둘 — 케틀 햇(머리 · 플레이어 겉모습의 머리 장비 looks.js helmet 'kettle') · 용사의 눈물(목 · 겉모습 그대로, 10/17 아래 HERO_TEAR).
 //   거는 자리가 달라 둘 다 걸 수 있다 (armorSlot — 머리는 전 저장 armor.v1 그대로 · 목은 neck.v1).
+//  10/30 상점 (사장님 19:0x): 무기 자리는 가진 무기 아무것이나 — 시작 무기(LOBBY_ITEMS) + 상점에서 산 무기(owned_weapons.js ownedWeapons · 얻은 것 'weapon:<id>').
+//   저장된 무기가 가진 무기가 아니면(옛 롱소드 기록 · 지운 저장) 맨손(null — 카드)으로 읽는다. 가진 무기 목록은 부를 때마다 저장에서 읽는다(사면 바로 걸 수 있게).
+import { ownedWeapons } from './owned_weapons.js'; // 가진 무기 (10/30 상점 — owned_weapons.js 가 LOBBY_ITEMS 를 되읽는 고리: 부를 때만 서로 읽어 괜찮다)
 export const LOBBY_ITEMS = Object.freeze(['tree_branch', 'druid_whip']); // 10/24 01:3x 사장님 '드루이드의 채찍 … 모든 플레이어 인벤토리에 지급해' — 나뭇가지처럼 모두가 가진 시작 무기(레벨 셈 밖)
 const KETTLE_STAMINA = 30; // 케틀 햇 특수 능력 '생존술': 최대 기력 100 → 130 (사장님 10/16 03:5x — 플레이어만, 문턱·그 밖 규칙 그대로 · stamina.js setMaxBonus)
 export const LOBBY_ARMOR = Object.freeze({
@@ -70,12 +73,15 @@ export function saveLobbyArmor(id) {
 export function readLobbyEquipment() {
   try {
     const value = JSON.parse(localStorage.getItem(EQUIPMENT_KEY));
-    if (value?.version === 1) equipped = LOBBY_ITEMS.includes(value.weapon) ? value.weapon : null;
+    if (value?.version === 1) equipped = ownsWeapon(value.weapon) ? value.weapon : null;
   } catch { /* 저장 불가 시 이번 실행 동안 유지한다. */ }
+  if (equipped !== null && !ownsWeapon(equipped)) equipped = null; // 이번 실행 동안 쥔 무기도 더는 가진 무기가 아니면(저장을 지움) 맨손 (10/30)
   return equipped;
 }
+/** 이 무기를 가졌나 (시작 무기 · 산 무기 — 10/30) */
+const ownsWeapon = (id) => typeof id === 'string' && (LOBBY_ITEMS.includes(id) || ownedWeapons().includes(id));
 export function saveLobbyEquipment(id) {
-  if (id !== null && !LOBBY_ITEMS.includes(id)) return false;
+  if (id !== null && !ownsWeapon(id)) return false;
   equipped = id;
   try { localStorage.setItem(EQUIPMENT_KEY, JSON.stringify({ version: 1, weapon: id })); return true; }
   catch { return false; }
