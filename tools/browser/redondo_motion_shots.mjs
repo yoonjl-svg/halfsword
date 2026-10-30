@@ -149,12 +149,25 @@ for (const mode of modes) {
   }
   if (process.env.RELSHOTS) {
     // 내려침 견줌 (10/30): 감기 넷 → 한 바퀴 넘겨 뗌 → 드는 길 가운데 · 벰 첫 자리 · 벰 가운데 · 벰 끝
-    await atW((t) => (window.game.player.rdWind?.t ?? 9) >= t, spec.windIn);
-    const t0 = await page.evaluate(() => window.game.player.rdWind.turns);
-    await shoot(1, 'circle');
-    for (const [i, q] of [[2, 0.25], [3, 0.5], [4, 0.75]]) {
-      await atW((m) => (window.game.player.rdWind?.turns ?? 99) >= m, t0 + q);
-      await shoot(i, `circle +${q}`);
+    //  어깨 꼴(안 B — 10/31 기본): 감기 넷 = 감기 0.15 s · 섞는 길 가운데(칼을 세워 듦) · 얹음(섞기 끝) · 얹은 채 0.3 s → 감음(얹은 채 0.6 s) 넘겨 뗌
+    if (spec.kind === 'shoulder') {
+      const tk = (t) => atW((x) => (window.game.player.rdWind?.t ?? 9) >= x, t);
+      await tk(0.15);
+      await shoot(1, 'wind 0.15s');
+      await tk(spec.windIn * 0.5);
+      await shoot(2, 'lift to shoulder');
+      await tk(spec.windIn);
+      await shoot(3, 'on shoulder');
+      await atW(() => (window.game.player.rdWind?.turns ?? 9) >= 0.5);
+      await shoot(4, 'held 0.3s');
+    } else {
+      await atW((t) => (window.game.player.rdWind?.t ?? 9) >= t, spec.windIn);
+      const t0 = await page.evaluate(() => window.game.player.rdWind.turns);
+      await shoot(1, 'circle');
+      for (const [i, q] of [[2, 0.25], [3, 0.5], [4, 0.75]]) {
+        await atW((m) => (window.game.player.rdWind?.turns ?? 99) >= m, t0 + q);
+        await shoot(i, `circle +${q}`);
+      }
     }
     await atW(() => (window.game.player.rdWind?.turns ?? 9) >= 1.05);
     await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 91, pointerType: 'touch', clientX: 640, clientY: 150, bubbles: true, isPrimary: true, button: 0 })));

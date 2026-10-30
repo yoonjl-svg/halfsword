@@ -143,7 +143,9 @@ export function windStep(f, dt) {
   const ramp = UA.rdSteady > 0 && UA.rdRamp > 0 && T > 0; // 휘청 고침 ③ (rdRamp): 도는 빠르기를 섞는 동안 0 → 고리 빠르기로 · 섞기 smoother (전: 첫 스텝부터 고리 빠르기 + smooth 섞기)
   W.psi += windRate(M) * (ramp ? smooth((W.t + 0.5 * dt) / T) : 1) * dt;
   W.t += dt;
-  W.turns = M.kind === 'shoulder' ? W.t / Math.max(1e-3, M.woundT) : (W.psi - W.psi0) / TAU; // 어깨 꼴: 감은 셈 = 얹은 채 쥔 시간 ÷ woundT (흐르는 긋기 '한 바퀴' 자리 — 사장님 확인 전)
+  // 어깨 꼴: 감은 셈 = 어깨에 얹은 채 쥔 시간 ÷ woundT (흐르는 긋기 '한 바퀴' 자리 — 10/31 감독 해석 · 사장님 확인 전): 얹은 때 = 섞기(windIn)가 끝난 때 ·
+  //  woundFrom 'start' = 10/29 판 셈(감기 시작부터 — 섞는 동안도 셈해 칼이 어깨에 닿는 순간 1)
+  W.turns = M.kind === 'shoulder' ? Math.max(0, W.t - (M.woundFrom === 'start' ? 0 : M.windIn ?? 0)) / Math.max(1e-3, M.woundT) : (W.psi - W.psi0) / TAU;
   const { H, D } = windPose(f, W.psi, undefined, undefined, M);
   const k = T > 0 ? (ramp ? smoother(W.t / T) : smooth(W.t / T)) : 1;
   if (k < 1) {
