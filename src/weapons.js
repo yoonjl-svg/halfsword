@@ -531,7 +531,7 @@ const ZW_FORMS = {
 };
 const ZW = ZW_FORMS[MONTANTE.hand] ?? ZW_FORMS.mid; // 모르는 이름은 기본(중간)
 const zweihander = finalizeSpec('zweihander', {
-  nameKo: '츠바이핸더 (대형 양손검)', nameEn: 'Zweihänder',
+  nameKo: '츠바이핸더', nameEn: 'Zweihänder',
   desc: '두 배 급료를 받고 창 숲 맨 앞을 깨던 용병의 칼.\n느리지만 맞으면 묵직하게 부순다.',
   grip: 'two-hand', material: 'steel',
   tier: 'common', // 사장님 10/11 01:4x '츠바이핸더는 커먼으로' (전: 레어 — 도펠죌트너만 다루던 특수 대검, power 1.05) → power 1.0
@@ -593,7 +593,7 @@ const zweihander = finalizeSpec('zweihander', {
 //     테이퍼가 적은 각진 칼날이라 무게중심이 롱소드보다 앞쪽이라고 추정 [I]
 // ═════════════════════════════════════════════════════════════
 const estoc = finalizeSpec('estoc', {
-  nameKo: '에스톡 (찌르기검)', nameEn: 'Estoc',
+  nameKo: '에스톡', nameEn: 'Estoc',
   desc: '판금 갑옷의 틈을 찌르려 날 대신 끝을 벼린 칼.\n찌르기로 싸워야 제값을 한다.',
   grip: 'hand-and-half', material: 'steel',
   hiltLength: 0.14, bladeLength: 1.15, gripAlong: -0.15,
@@ -629,7 +629,7 @@ const estoc = finalizeSpec('estoc', {
 //     균형점 18.4~22cm(코등이에서, 곡도라 앞쪽으로 쏠림) [M]
 // ═════════════════════════════════════════════════════════════
 const sabre = finalizeSpec('sabre', {
-  nameKo: '세이버 (기병도)', nameEn: 'Cavalry Sabre',
+  nameKo: '세이버', nameEn: 'Cavalry Sabre',
   desc: '말 위에서 내리베기 좋게 휘어진 기병의 칼.\n빠르게 베고 빠진다.',
   grip: 'one-hand', material: 'steel',
   enterParry: true, // 들어가며 막기 (10라운드 R3, skill.js): 상대 칼을 받아 낸 순간 한 걸음 안쪽으로 — 짧은 한손 칼
@@ -834,7 +834,7 @@ const pappenheimer = finalizeSpec('pappenheimer', {
 //     → 넓고 앞이 무거운 외날 반달칼 형태라 무게중심이 앞쪽이라고 추정 [I]
 // ═════════════════════════════════════════════════════════════
 const falchion = finalizeSpec('falchion', {
-  nameKo: '팔쉬온 (반달칼)', nameEn: 'Falchion',
+  nameKo: '팔쉬온', nameEn: 'Falchion',
   desc: '잉글랜드의 한 가문은 이 칼로 용을 베었다고 전한다.\n내려찍듯 베면 도끼처럼 들어간다.',
   grip: 'one-hand', material: 'steel',
   enterParry: true, // 들어가며 막기 (10라운드 R3, skill.js): 상대 칼을 받아 낸 순간 한 걸음 안쪽으로 — 짧은 한손 칼
@@ -1483,7 +1483,7 @@ const pistol = finalizeSpec('pistol', {
 //      파손: 나무 자루가 보강띠 밑(breakY 0.40)에서 부러지고 쇠 공 머리가 통째로 떨어져 날아간다 — 남는 자루 토막(≈0.4 kg)이 둔기.
 // ═════════════════════════════════════════════════════════════
 const morgenstern = finalizeSpec('morgenstern', {
-  nameKo: '모르겐슈테른 (가시 철퇴)', nameEn: 'Morgenstern', // 카드 글 초안 — 줄 148 (문구는 사장님 확인 전)
+  nameKo: '모르겐슈테른', nameEn: 'Morgenstern', // 카드 글 초안 — 줄 148 (문구는 사장님 확인 전)
   desc: '독일 말로 ‘샛별’. 가시 돋친 쇠머리를 별에 빗댔다.\n갑옷 위로도 충격이 들어가고 투구를 벗긴다.',
   grip: 'one-hand', material: 'steel', // 틀 C 한손 → 세이버 자세표 guardBaseOne('blunt'); 대안 'hand-and-half'(B 앞무게) — 줄 133. 재질 steel: 자루에 쇠 보강띠·소리는 쇠 (줄 146)
   tier: 'mystery', // 10/21 22:xx 사장님 '모르겐슈테른은 ???로 · 따로 보정 없이 등급을 옮겨' — ??? = 커먼 계수(힘 1.0 · 내구 0.8 · 파손 0.056). 전 레어(1.05 · 0.85 · 0.032)
@@ -1750,7 +1750,7 @@ const FL_HILT_CUT = -0.28; // 칼자루 충돌체 끝 (손에서 m — 자루 �
 // 충돌체 자리 [자루 상자 · 폼멜 공 · 코등이 · 칼날] — 자루 상자는 위 끝 그대로 밑만 FL_HILT_CUT 까지, 폼멜 공은 FL_HILT_CUT 에
 const FL_COL_Y = [(FL_GRIP_TOP + FL_HILT_CUT) / 2, FL_HILT_CUT, FL.y[2], FL.y[3]];
 const flamberge = finalizeSpec('flamberge', {
-  nameKo: '플랑베르주 (물결 날 양손검)', nameEn: 'Flamberge',
+  nameKo: '플랑베르주', nameEn: 'Flamberge',
   desc: '독일 용병 란츠크네히트가 들던 불꽃 날 대검.\n물결 날은 벼리기 어려워 값비싼 칼이었다.',
   grip: 'two-hand', material: 'steel', tier: 'rare', // 10/21 사장님 결정: 에픽 → 레어 (보정 없음 — 위 머리말)
   hiltLength: FLAMBERGE_HILT, bladeLength: FLAMBERGE_GAME.blade, gripAlong: -0.24,
