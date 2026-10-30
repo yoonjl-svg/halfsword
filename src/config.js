@@ -1997,7 +1997,8 @@ export const SAENGSA = {
   //  인물 id → 무기 id · 기본 인물과 얼터는 다른 사람(광기의 미나미 · 기본 다라이시 · 광기의 랴오 · 광기의 아르토리아는 전용무기 없음) · 한 무기는 한 사람에게만 · 생사전에서만(인물 시트 무기 characters.js 는 그대로)
   //  등급: 쿠사나기 · 뒤랑달 · 엑스칼리버 레전드 · 모노호시자오 · 티소나 · 청강검 에픽. 랴오 청강검은 19:5x 정의(에픽 이상 시트 무기)에서 남김(사장님이 빼지 않음 — 감독 10/29)
   //  전 19:5x 정의: 시트 무기 등급이 에픽 이상(미나미 모노호시자오 · 랴오 청강검)
-  signature: { minami: 'kusanagi', silver_wanderer_mad: 'monohoshizao', roland: 'durandal', bernardo: 'tizona', artoria: 'excalibur', liao: 'qinggang' },
+  //  10/30 쥘리아 달타냥(에픽 레이피어 — 쥘리아만 · 광기의 쥘리아는 없음 · 사장님 10/30 22:1x '상점주인이자 방랑과 생사전에 나오게 해' · 감독 초안 · 사장님 확인 전 · 시트 무기도 달타냥으로 바꾸는 중 — 다른 작업 wk/julia-wander)
+  signature: { minami: 'kusanagi', silver_wanderer_mad: 'monohoshizao', roland: 'durandal', bernardo: 'tizona', artoria: 'excalibur', liao: 'qinggang', julia: 'dartagnan' },
   // AI 무기 나눠 주기 점수 (확인 전 · saengsa_rules.js armScore): 살아 있는 사람 × 무기 짝마다
   //  몸 상태 × (prof × 그 무기 유파 숙련도 + tier[무기 등급] + 제 전용무기면 sig) − (숙련도 0 이면 zero)
   //  몸 상태 = 빠른 셈의 체력 · 부상 몫(quick.hpFloor · injuryK — 다친 사람은 좋은 무기 차례가 뒤로) · 팀 합이 가장 큰 배분(무기 5 개에서 셋 — 5P3 = 60 가지를 다 셈)

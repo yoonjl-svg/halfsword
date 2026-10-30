@@ -6,8 +6,9 @@
 //  기록 · 근거 줄: docs/characters/temperament_2026-10-29.md (인물마다 유파별 까닭 · 성향 글 · 2:2 · 여쭐 것)
 //
 //  자료만 있다 — 아무 데도 이어지지 않았다(게임 · 시뮬 · AI 는 이 파일을 읽지 않는다). 다른 모듈을 읽지 않고, 읽어도 아무 일이 일어나지 않는다.
-//  범위: 기본 회전 CHARACTERS 열둘 + 손님 인물 CHARACTER_GUESTS 일곱(special: true — 나중에 특별 토큰으로 고용하는 특별 동료 후보).
+//  범위: 기본 회전 CHARACTERS 열둘 + 손님 인물 CHARACTER_GUESTS 여덟(special: true — 나중에 특별 토큰으로 고용하는 특별 동료 후보 · 10/30 쥘리아 — 사장님 10/30 22:1x '상점주인이자 방랑과 생사전에 나오게 해').
 //   변형(*_mad)은 따로 적지 않는다 — 원본과 같은 칸을 쓴다(proficiencyOf · temperamentOf 가 '_mad' 를 떼고 찾음).
+//   예외: 성향이 원본과 다른 얼터는 ALTER_TEMPERAMENT 에 따로(광기의 쥘리아 — 감독 초안 10/30 '더 차갑고 기계적이고 끈질김 · 설정 없음') — 숙련도는 그대로 원본 칸 + 얼터 +1.
 //   얼터의 숙련도 +1(characters.js VARIANT_PLUS — 시트 무기 유파에 붙음)은 지금처럼 characters.js 몫이다.
 // ─────────────────────────────────────────────────────────────
 
@@ -28,6 +29,7 @@ export const MAIN_SCHOOL = Object.freeze({
   bran: 'none', isolde: 'german', liao: 'chinese', heinrich: 'german', margarethe: 'german', tome: 'italian',
   omari: 'iberian', minami: 'japanese', artoria: 'german', samira: 'none', renji: 'none', eira: 'italian',
   ratna: 'iberian', silver_wanderer: 'japanese', chanda: 'chinese', terracotta: 'chinese', roland: 'iberian', white_scale: 'japanese', bernardo: 'iberian',
+  julia: 'italian', // 10/30 쥘리아 (사장님 10/30 22:1x '상점주인이자 방랑과 생사전에 나오게 해') — 레이피어 · 이탈리아 4 (시트 · 전달본) · 사장님 확인 전
 });
 
 const P5 = (german, italian, japanese, chinese, iberian, none) =>
@@ -58,6 +60,7 @@ export const PROFICIENCY = Object.freeze({
   roland: P5(0, 0, 0, 0, 6), // 이베리아 몬탄테 · 뒤랑달
   white_scale: P5(0, 0, 5, 0, 0), // '몽골에서 태어나 … 일본 검술을 배운 전사' — 초원의 칼은 다섯 유파 밖 (사연 미정 시안)
   bernardo: P5(0, 0, 0, 0, 6), // 레온의 영웅 · 티소나
+  julia: P5(1, 4, 1, 2, 3), // 온 나라 칼을 다루는 상인 — 기본 이탈리아 4(레이피어 · 시트) · **이베리아 3 · 동방 2 = 사장님 10/30 22:4x 결정 — 이베리아 3 · 동방 2 (쥘리아 · 광기의 쥘리아)** · 독일 · 일본 1(감독 초안 · 사장님 확인 전 — '칼은 써 봐야 안다') · 광기의 쥘리아 = 이탈리아 5(얼터 +1)
 });
 
 // ── 전투성향 축 ──
@@ -185,6 +188,21 @@ export const TEMPERAMENT = Object.freeze({
   //  전 (10/29 15:5x 먼저 들어가는 칼): 선공 .8 · 참을성 .1 · 간격 .2 · 받아치기 .65 · 기력 .25 · 유파 특성 .6 (spinHold false) — 나머지 같음
   bernardo: T({ special: true, initiative: 0.35, patience: 0.55, distance: 1, counter: 0.55, feint: 0.4, press: 0.75, risk: 0.75, composure: 0.8, wounded: 'fightOn', finisher: 0.8, stamina: 0.4, schoolArt: 0.85,
     team: { target: 'strongest', guard: 0.5, woundedFight: 1 } }),
+  // 지금: 시트 값 없음 (pers {} — 이탈리아 기질 범위) · 10/30 쥘리아 (사장님 10/30 22:1x '상점주인이자 방랑과 생사전에 나오게 해') — 감독 초안 · 사장님 확인 전:
+  //  온 나라 칼을 사고파는 상인 · 낡은 말투('~느니라 · ~노라') · 쾌활하고 셈이 밝다. 흥정하듯 싸운다 — 간격을 재고(.6) · 떠보는 속임(.55) · 지나치게 들어온 칼을 벌한다(받아치기 .75) ·
+  //  먼저 값을 부르지 않음(선공 .3) · 손해 보는 거래는 안 함(모험 .3) · 베이면 물러나 다시 잰다(withdraw) · '칼은 써 봐야 안다'(유파 특성 .7) · 2:2 는 값싼 쪽(다친 쪽)부터
+  julia: T({ special: true, initiative: 0.3, patience: 0.65, distance: 0.6, counter: 0.75, feint: 0.55, press: 0.45, risk: 0.3, composure: 0.75, wounded: 'withdraw', finisher: 0.5, stamina: 0.7, schoolArt: 0.7,
+    team: { target: 'weakest', guard: 0.4, woundedFight: 0.6 } }),
+});
+
+/**
+ * 성향이 원본과 다른 얼터 (예외 — 나머지 얼터는 원본 칸). 숙련도 표는 늘 원본 칸(+ 얼터 +1 은 characters.js).
+ *  광기의 쥘리아 (10/30 — 사장님 10/30 22:1x '상점주인이자 방랑과 생사전에 나오게 해' · 감독 초안 '같은 유파 꼴 · 성향은 더 차갑고 기계적이고 끈질김 · 설정 없음' · 사장님 확인 전):
+ *   먼저 들어감 .75 · 기다리지 않음 .15 · 간격 .45 · 받아치기 .6 · 속임 .3(흥정 없음) · 막힌 뒤 .95 · 모험 .55 · 침착 1 · 버팀 · 끝내기 1 · 기력 아끼지 않음 .35 · 2:2 다친 쪽 · 지킴 .05 · 다쳐도 나섬 1
+ */
+export const ALTER_TEMPERAMENT = Object.freeze({
+  julia_mad: T({ special: true, thin: true, initiative: 0.75, patience: 0.15, distance: 0.45, counter: 0.6, feint: 0.3, press: 0.95, risk: 0.55, composure: 1, wounded: 'fightOn', finisher: 1, stamina: 0.35, schoolArt: 0.6,
+    team: { target: 'weakest', guard: 0.05, woundedFight: 1 } }),
 });
 
 const baseId = (id) => (id in PROFICIENCY ? id : String(id ?? '').replace(/_mad$/, ''));
@@ -194,5 +212,5 @@ export function proficiencyOf(id) {
 }
 /** 인물 id → 전투성향 (변형 id 는 원본 칸 · 없으면 null) */
 export function temperamentOf(id) {
-  return TEMPERAMENT[baseId(id)] ?? null;
+  return ALTER_TEMPERAMENT[id] ?? TEMPERAMENT[baseId(id)] ?? null; // 성향이 따로 있는 얼터 먼저 (광기의 쥘리아)
 }

@@ -74,3 +74,14 @@ test('시트에 적힌 손잡이와 맞는다 (없는 손잡이는 그 범위 �
   }
   assert.deepEqual(bad, []);
 });
+
+test('성향이 따로 있는 얼터 (ALTER_TEMPERAMENT — 광기의 쥘리아): 있는 얼터 · 값 범위 · temperamentOf 가 먼저 읽음 · 숙련도는 원본 칸', () => {
+  const ids = new Set(CHARACTER_VARIANTS.map((v) => v.id));
+  for (const [id, t] of Object.entries(M.ALTER_TEMPERAMENT)) {
+    assert.ok(ids.has(id), id);
+    for (const a of Object.keys(M.AXES)) assert.ok(unit(t[a]), `${id}.${a}`);
+    assert.ok(M.WOUNDED.includes(t.wounded) && M.TEAM_TARGETS.includes(t.team.target) && unit(t.team.guard) && unit(t.team.woundedFight), id);
+    assert.equal(M.temperamentOf(id), t, id);
+    assert.equal(M.proficiencyOf(id), M.PROFICIENCY[CHARACTER_VARIANTS.find((v) => v.id === id).variantOf], id);
+  }
+});

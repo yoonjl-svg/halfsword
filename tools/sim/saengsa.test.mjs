@@ -367,7 +367,7 @@ test('상대 팀 무기 다섯 · 전용무기 · AI 나눠 주기 (사장님 10
   const { getWeapon } = await import('../../src/weapons.js');
   // 전용무기 = 시트 무기 등급 에픽 이상 — 로스터에서는 랴오 청강검 · 미나미 모노호시자오 (마야 · 김씨의 ??? 무기는 아님 — 확인 전)
   assert.deepEqual(Object.fromEntries(roster.SAENGSA_ROSTER.map((id) => [id, roster.signatureOf(id)]).filter(([, w]) => w)),
-    { liao: 'qinggang', minami: 'kusanagi', artoria: 'excalibur', silver_wanderer_mad: 'monohoshizao', roland: 'durandal', bernardo: 'tizona' }); // 사장님 10/29 22:3x 표 (랴오 청강검은 남김)
+    { liao: 'qinggang', minami: 'kusanagi', artoria: 'excalibur', silver_wanderer_mad: 'monohoshizao', roland: 'durandal', bernardo: 'tizona', julia: 'dartagnan' }); // 사장님 10/29 22:3x 표 (랴오 청강검은 남김) · 쥘리아 달타냥 (10/30 초안 · 사장님 확인 전)
   assert.deepEqual([roster.signatureOf('samira'), roster.signatureOf('renji'), roster.signatureOf(R.NAMELESS), roster.signatureOf('roland')], [null, null, null, 'durandal']);
   assert.equal(roster.AI_TIER_DRAW.mystery, 0);
   let sigs = 0, sigHeld = 0;
@@ -510,10 +510,10 @@ test('전용무기 표 — 한 무기는 한 사람 · 한 대회에 같은 전�
   const sig = SAENGSA.signature, ws = Object.values(sig);
   assert.equal(new Set(ws).size, ws.length, '한 무기는 한 사람');
   for (const [id, w] of Object.entries(sig)) { assert.ok(CHARACTERS_BY_ID[id], id); assert.ok(roster.SAENGSA_WEAPONS.includes(w), w); }
-  assert.deepEqual(Object.fromEntries(Object.entries(sig).map(([id, w]) => [w, getWeapon(w).tier])), { kusanagi: 'legend', monohoshizao: 'epic', durandal: 'legend', tizona: 'epic', excalibur: 'legend', qinggang: 'epic' });
+  assert.deepEqual(Object.fromEntries(Object.entries(sig).map(([id, w]) => [w, getWeapon(w).tier])), { kusanagi: 'legend', monohoshizao: 'epic', durandal: 'legend', tizona: 'epic', excalibur: 'legend', qinggang: 'epic', dartagnan: 'epic' });
   assert.equal(CHARACTERS_BY_ID.minami.weapon, 'kusanagi'); // 인물 시트 무기도 쿠사나기 (사장님 10/29 22:4x '미나미 스테이지 무기도 쿠사나기로 바꿔' — 본판 8980a3f4) · 광기의 미나미 무라마사(레어 — 전용무기 아님)
   assert.equal(CHARACTERS_BY_ID.minami_mad.weapon, 'muramasa');
-  for (const id of ['minami_mad', 'silver_wanderer', 'liao_mad', 'artoria_mad']) assert.equal(roster.signatureOf(id), null, id);
+  for (const id of ['minami_mad', 'silver_wanderer', 'liao_mad', 'artoria_mad', 'julia_mad']) assert.equal(roster.signatureOf(id), null, id);
   for (let seed = 1; seed <= 60; seed++) {
     const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: ['minami', R.NAMELESS], weapons: ['tree_branch', 'druid_whip', 'longsword'], ...roster.SAENGSA_DATA });
     const pools = t.teams.slice(1).flatMap((x) => x.pool.map((w) => w.weapon));
@@ -583,4 +583,19 @@ test('몸 사본 (생사전 넷): 들고 온 상처(carried) · 죽은 몸은 �
   const live = mk();
   applyFighterSnapshot(live, { ...s, dead: undefined });
   assert.equal(live.alive, true, '산 몸은 산 채');
+});
+
+test('쥘리아 생사전 몫 (사장님 10/30 22:1x \'상점주인이자 방랑과 생사전에 나오게 해\' — 숙련도 · 성향 · 고용 · 전용무기 초안 · 사장님 확인 전)', async () => {
+  const roster = await import('../../src/saengsa_roster.js');
+  const T = await import('../../src/character_temperament.js');
+  assert.ok(roster.SAENGSA_ROSTER.includes('julia') && roster.SAENGSA_ROSTER.includes('julia_mad'));
+  assert.deepEqual(roster.profOf('julia'), { german: 1, italian: 4, iberian: 3, japanese: 1, chinese: 2 }); // 이베리아 3 · 동방 2 = 사장님 10/30 22:4x 결정
+  assert.deepEqual(roster.profOf('julia_mad'), { german: 1, italian: 5, iberian: 3, japanese: 1, chinese: 2 }, '얼터 +1 (이탈리아 — 시트 무기 유파)');
+  assert.deepEqual([roster.hireCostOf('julia').coins, roster.hireCostOf('julia_mad').coins], [100, 120], '20 + 20 × 가장 높은 숙련도');
+  assert.deepEqual([roster.signatureOf('julia'), roster.signatureOf('julia_mad')], ['dartagnan', null], '전용무기는 한 꼴에만');
+  assert.equal(Object.values(SAENGSA.signature).filter((w) => w === 'dartagnan').length, 1, '달타냥은 다른 사람 전용무기가 아님');
+  const a = T.temperamentOf('julia'), b = T.temperamentOf('julia_mad');
+  assert.deepEqual([a.distance, a.feint, a.counter, a.wounded, a.team.target], [0.6, 0.55, 0.75, 'withdraw', 'weakest'], '흥정하듯 — 간격 · 떠보는 속임 · 지나친 칼을 벌함');
+  assert.ok(b !== a && b.press > a.press && b.patience < a.patience && b.composure === 1 && b.finisher === 1, '얼터: 더 차갑고 끈질김');
+  assert.equal(T.temperamentOf('minami_mad'), T.temperamentOf('minami'), '다른 얼터는 원본 칸 그대로');
 });
