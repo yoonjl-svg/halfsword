@@ -417,4 +417,5 @@
 
 **⑤ 그림 (`docs/handoff/redondo_motion_2026-10-29/`)**: `redondo_release_direct_shoulder_side.png` · `redondo_release_direct_shoulder_q34.png`(옆 · 3/4 — 감기 0.15 s · 들어 올림 · 얹음 · 얹은 채 0.3 s · 드는 길 · 벰 첫 자리 · 가운데 · 끝 · 찍은 값 `_shots_release_direct_shoulder.json`) · `redondo_release_tip_path_shoulder.png`(칼끝 길 — 안 A · 안 B · 위 · 뒤 · 옆).
 
-**⑥ 시험 · 판**: 안 A 몫 시험(흐름 셈 한 바퀴 · simple n 2 · 원 어디서나 곧장 사선)은 'slowSpin' 으로 고정하고 같은 시험을 안 B 로도(흐름 셈 얹은 채 0.6 s · n 2 · 어깨에서 곧장 사선 — 뒤 · 아래 고리 없음 · 칼날 ↔ 내 몸 > 5 cm · 섞는 첫머리에 떼도) · 휘청 시험은 두 꼴 네 칼 · 기본값 시험 안 B.
+**⑥ 시험 · 판**: 안 A 몫 시험(흐름 셈 한 바퀴 · simple n 2 · 원 어디서나 곧장 사선)은 'slowSpin' 으로 고정하고 같은 시험을 안 B 로도(흐름 셈 얹은 채 0.6 s · n 2 · 어깨에서 곧장 사선 — 뒤 · 아래 고리 없음 · 칼날 ↔ 내 몸 > 5 cm · 섞는 첫머리에 떼도) · 휘청 시험은 두 꼴 네 칼 · 기본값 시험 안 B. `node --test tools/sim/*.test.mjs` → **584 통과 · 실패 0** · 빌드 됨 · 이름 규칙 위반 0.
+- 관문(바탕 6860f458 와 같음 — AI 의 머리 위 돌려 베기는 왼 가로베기 강화동작(sword_art.js)이라 사람 감기 꼴 `rdWindMode` 를 읽지 않음): fights12 `768085f3` · live_battery `e8127a92` · finish_thrust 1 --stand `ad302969` · corr_s0 `--limits=off,on` 12 IDENTICAL · weapon_smoke 34 OK.
