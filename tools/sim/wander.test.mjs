@@ -61,14 +61,15 @@ test('옛 저장 옮기기: 한 번만 · 한 바퀴 돈 저장은 바로 열림
   assert.equal(p.readProgress().wander.unlocked, false, '처음 본 때의 저장으로 한 번만 판단');
 });
 
-test('대면 뽑기: 무대 · 상대를 따로 · 방랑 전용 다섯은 모두 있는 인물 · 특별 몫 표', () => {
+test('대면 뽑기: 무대 · 상대를 따로 · 방랑 전용 일곱은 모두 있는 인물 · 특별 몫 표', () => {
   const seq = [0.1, 0.9];
   assert.deepEqual(chooseWanderEncounter(['a', 'b'], ['x', 'y'], () => seq.shift()), { stage: 'a', foe: 'y' });
   assert.deepEqual(chooseWanderEncounter(['a'], ['x'], () => 0.9999999), { stage: 'a', foe: 'x' });
   assert.throws(() => chooseWanderEncounter([], ['x']));
-  assert.deepEqual([...WANDER_EXCLUSIVE], ['artoria', 'artoria_mad', 'roland', 'white_scale', 'bernardo']);
+  // 쥘리아 두 모습 (사장님 10/30 22:1x '상점주인이자 방랑과 생사전에 나오게 해' — 아르토리아 두 모습과 같은 꼴)
+  assert.deepEqual([...WANDER_EXCLUSIVE], ['artoria', 'artoria_mad', 'roland', 'white_scale', 'bernardo', 'julia', 'julia_mad']);
   for (const id of WANDER_EXCLUSIVE) assert.ok(CHARACTERS_BY_ID[id], id);
-  assert.deepEqual(Object.keys(WANDER_BONUS), ['artoria', 'artoria_mad', 'roland', 'white_scale', 'bernardo']);
+  assert.deepEqual(Object.keys(WANDER_BONUS), ['artoria', 'artoria_mad', 'roland', 'white_scale', 'bernardo'], '쥘리아 특별 몫 없음 — 사장님 결정 전 (확인표 3051)');
   const Z = { coins: 0, heads: 0 };
   assert.deepEqual(wanderReward(true, 'roland', 32), { coins: 232, heads: 0, bonus: { coins: 200, heads: 0 }, streak: 0 }, '롤랑 왕의 금고 +200 (사장님 10/24 02:4x — 전 400) · 판 금화 32 뒤에 더함');
   assert.deepEqual(wanderReward(true, 'bernardo', 32), { coins: 232, heads: 0, bonus: { coins: 200, heads: 0 }, streak: 0 }, '베르나르도 = 롤랑과 같은 몫 (사장님 10/23 저녁 · 10/24 02:4x 200)');

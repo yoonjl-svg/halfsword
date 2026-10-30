@@ -327,9 +327,12 @@ export async function collectTexts({ characters = true } = {}) {
       const at = (k) => `src/characters.js ${ch.id}.${k}`;
       add('인물', sc, at('name'), ch.name, { field: 'char.name', id: ch.id, characters: true });
       add('인물', sc, at('epithet'), ch.epithet, { field: 'char.epithet', characters: true });
-      add('인물', sc, at('taunt'), ch.taunt, { field: 'char.taunt', characters: true, note: '대사를 못 찾을 때' });
+      // scriptMix: 대사에 일본어 · 중국어 낱말을 일부러 섞은 시트(광기의 쥘리아 — 사장님 10/30 22:2x '같은 톤으로'. 상점 얼터 대사와 같은 편집 지침 §1 예외) —
+      //  그 시트의 대사 칸(taunt · lines)만 name_policy 의 가나 · 한자 꼴 검사에서 뺀다(글꼴 점검 · 모으기는 그대로). 이름 · 칭호는 늘 검사
+      const mix = ch.scriptMix === true ? { scriptMix: true } : {};
+      add('인물', sc, at('taunt'), ch.taunt, { field: 'char.taunt', characters: true, note: '대사를 못 찾을 때', ...mix });
       for (const [k, list] of Object.entries(ch.lines ?? {})) {
-        (Array.isArray(list) ? list : [list]).forEach((t, i) => add('인물', sc, at(`lines.${k}[${i}]`), t, { field: 'char.line', characters: true }));
+        (Array.isArray(list) ? list : [list]).forEach((t, i) => add('인물', sc, at(`lines.${k}[${i}]`), t, { field: 'char.line', characters: true, ...mix }));
       }
       // 대사 출처 (10/14 병마용 — 화면에 대사 아래 줄로 나온다: main.js lineSourceOf). 같은 출처는 한 번만
       for (const src of new Set(Object.values(ch.lineSources ?? {}))) add('인물', sc, at(`lineSources['${src}']`), src, { field: 'char.lineSource', characters: true });
