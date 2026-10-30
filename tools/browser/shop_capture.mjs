@@ -1,7 +1,7 @@
 // 상점 시험판 사진 · 점검 (사장님 10/30 19:0x — src/shop_panel.js · config.js SHOP): 시험판 빌드(/shop/)를 폰 가로 844 × 390 (화소 비 2 · 터치)에서
-//  ① 보통 상점(뿔피리 값이 붙은 에픽 · 레전드가 나올 때까지 '다음 갱신') ② 얼터 상점(?shopAlter=1) ③ 구입 확인 카드 → 구입 → '판매 완료'
+//  ① 보통 상점(뿔피리 값이 붙은 에픽 · 레전드가 나올 때까지 '다음 갱신') ② 얼터 상점(?shopAlter=1 · 가장 긴 줄 · 6 번 가나 · 9 번 한자) ③ 구입 확인 카드 → 구입 → '판매 완료'
 //  ④ 돈이 모자란 확인 카드(모자란 재화 한 줄) ⑤ 왕 뿔피리 결과 창(?horn=1 — 대기실 Stage → 카드 → 상대 쓰러뜨림) · 좁은 화면 390 × 844(PC 세로 창 — 터치 없음) 보통 상점
-//  점검: 페이지 에러 0 · 대사 20 줄(보통 10 · 얼터 10)이 두 화면에서 칸을 넘지 않나(가로 넘침 · 상점 칸 세로 넘침) · 대사 속 낱자모 · 줄표 · 가나 · 한자를 실제로 그린 글꼴(CDP CSS.getPlatformFontsForNode)
+//  점검: 페이지 에러 0 · 대사 20 줄(보통 10 · 얼터 10)이 두 화면에서 칸을 넘지 않나(가로 넘침 · 상점 칸 세로 넘침) · 파는 무기 이름이 낱말 가운데서 꺾이지 않나 · 대사 속 낱자모 · 줄표 · 가나 · 한자를 실제로 그린 글꼴(CDP CSS.getPlatformFontsForNode)
 //  npx vite build --config tools/shop_page/vite.config.mjs --outDir .tmp/shop_site/shop --emptyOutDir && python3 -m http.server 5253 -d .tmp/shop_site
 //   → node tools/browser/shop_capture.mjs http://127.0.0.1:5253/shop/ docs/handoff/shop_2026-10-30
 import { chromium } from 'playwright';
@@ -41,6 +41,16 @@ const fit = (o, text) => o.p.evaluate(R(`
   return {lines:Math.round(line.getBoundingClientRect().height/parseFloat(getComputedStyle(line).lineHeight)),hostOver:Math.max(0,Math.round(host.scrollHeight-host.clientHeight)),lineOverX:Math.max(0,line.scrollWidth-line.clientWidth),
     keeperInside:k.right<=h.right+1&&k.left>=h.left-1,itemsBelow:items.top>=k.bottom-1,panelOverX:Math.max(0,panel.scrollWidth-panel.clientWidth),pageOverX:Math.max(0,document.documentElement.scrollWidth-innerWidth)};`));
 
+/** 파는 무기 이름마다 가장 긴 낱말이 물건 칸 이름 줄 폭에 드나 (낱말 가운데서 꺾이지 않게) — 넘는 이름 목록 */
+const { SHOP_POOL } = await import('../../src/shop_rules.js');
+const { getWeapon } = await import('../../src/weapons.js');
+const NAMES = SHOP_POOL.map((id) => getWeapon(id).nameKo);
+const nameFit = (o) => o.p.evaluate(R(`
+  const el=root.querySelector('.shop-iname');if(!el)return ['(물건 없음)'];const keep=el.textContent,w=el.clientWidth,bad=[];
+  const probe=document.createElement('span');probe.style.cssText='white-space:nowrap;position:absolute;visibility:hidden';el.after(probe);
+  for(const n of ${JSON.stringify(NAMES)}){for(const word of n.split(' ')){probe.textContent=word;if(probe.getBoundingClientRect().width>w+.5)bad.push(n+' ('+word+')');}}
+  probe.remove();el.textContent=keep;return bad;`));
+
 // ── 폰 가로 844 × 390 ──
 {
   const o = await open('844x390', 844, 390, true, '?coins=1200&heads=3&horns=1');
@@ -74,6 +84,7 @@ const fit = (o, text) => o.p.evaluate(R(`
   const { SHOP_LINES, SHOP_ALTER_LINES } = await import('../../src/shop_text.js');
   report.fit844 = [];
   for (const line of [...SHOP_LINES, ...SHOP_ALTER_LINES]) report.fit844.push({ line: line.slice(0, 14), ...(await fit(o, line)) });
+  report.names844 = await nameFit(o);
   // 글꼴: 대사 속 특수 글자를 실제로 그린 글꼴 (CDP — 화면과 같은 글꼴 줄로 빛 DOM 에 같은 글을 놓고 잼)
   const cdp = await o.ctx.newCDPSession(o.p);
   const family = await o.p.evaluate(R(`return getComputedStyle(root.querySelector('.shop-line')).fontFamily;`));
@@ -103,6 +114,7 @@ const fit = (o, text) => o.p.evaluate(R(`
   const longest = [...SHOP_ALTER_LINES].sort((a, b) => b.length - a.length)[0];
   report.alterLongest = { line: longest, ...(await fit(o, longest)) };
   await shot(o, 'alter-longest');
+  for (const k of [5, 8]) { await fit(o, SHOP_ALTER_LINES[k]); await shot(o, `alter-line${k + 1}`); } // 6 번(가나) · 9 번(한자) — 글꼴 보기
   await o.ctx.close();
 }
 // ⑤ 왕 뿔피리 결과 창 (?horn=1 — 시험판에서 모든 상대 · 늘): 대기실 Stage → 카드 → 상대 쓰러뜨림
@@ -129,13 +141,14 @@ const fit = (o, text) => o.p.evaluate(R(`
   const { SHOP_LINES, SHOP_ALTER_LINES } = await import('../../src/shop_text.js');
   report.fit390 = [];
   for (const line of [...SHOP_LINES, ...SHOP_ALTER_LINES]) report.fit390.push({ line: line.slice(0, 14), ...(await fit(o, line)) });
+  report.names390 = await nameFit(o);
   await o.ctx.close();
 }
 await browser.close();
 const worst = (list) => list.reduce((m, r) => ({ lines: Math.max(m.lines, r.lines), hostOver: Math.max(m.hostOver, r.hostOver), lineOverX: Math.max(m.lineOverX, r.lineOverX), panelOverX: Math.max(m.panelOverX, r.panelOverX), pageOverX: Math.max(m.pageOverX, r.pageOverX), bad: m.bad + (!r.keeperInside || !r.itemsBelow ? 1 : 0) }), { lines: 0, hostOver: 0, lineOverX: 0, panelOverX: 0, pageOverX: 0, bad: 0 });
 report.fitSummary = { '844x390': worst(report.fit844), '390x844': worst(report.fit390) };
 fs.writeFileSync(`${out}/shop_report.json`, JSON.stringify(report, null, 1));
-console.log(JSON.stringify({ normal: report.normal.state, short: report.short.confirm, confirm: report.confirm.confirm, bought: report.bought.state.status, sold: report.bought.stock.filter((x) => x.sold).map((x) => x.id), inventory: report.inventory, equipped: report.equipped, alter: report.alter.state, result: report.result, fit: report.fitSummary, fonts: report.fonts }, null, 1));
+console.log(JSON.stringify({ normal: report.normal.state, short: report.short.confirm, confirm: report.confirm.confirm, bought: report.bought.state.status, sold: report.bought.stock.filter((x) => x.sold).map((x) => x.id), inventory: report.inventory, equipped: report.equipped, alter: report.alter.state, result: report.result, fit: report.fitSummary, nameBreaks: { '844x390': report.names844, '390x844': report.names390 }, fonts: report.fonts }, null, 1));
 console.log(saved.join('\n'));
 console.log(errors.length ? `페이지 에러 ${errors.length}:\n${errors.join('\n')}` : '페이지 에러 0');
 if (errors.length) process.exit(1);

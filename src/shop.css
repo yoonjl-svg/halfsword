@@ -61,6 +61,9 @@
 @media (max-width: 679px) {
   .shop-host { width: 100%; height: auto; min-height: 0; }
   .shop-foot { margin-top: 2px; }
+  /* 물건 칸 = 그림 위 · 글 아래 (칸 폭 약 150 px — 옆에 그림을 두면 '크리그스메서'처럼 긴 한 낱말이 가운데서 꺾였다 · 390 × 844 사진) */
+  .shop-item { grid-template-columns: minmax(0, 1fr); grid-template-areas: "thumb" "name" "tier" "price"; align-content: start; padding: 8px 10px 10px; }
+  .shop-thumb { width: 52px; height: 52px; margin-bottom: 4px; }
 }
 /* 굵기 (entrance_type.css 위계 그대로 — 이름 · 첫 줄 700 · 표지 600 · 줄 400): 상점 칸 글만 여기 */
 .shop-name, .shop-iname, .shop-c-name { font-weight: var(--fw-head); }
