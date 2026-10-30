@@ -21,7 +21,7 @@ const PADS = { home: SKILL.homeGuard, high: [0.02, 0.45], low: [0.05, -0.35] };
 const V = (p) => new THREE.Vector3(p.x, p.y, p.z);
 const Q = (r) => new THREE.Quaternion(r.x, r.y, r.z, r.w);
 // 점 P ↔ 선분 AB 거리
-const segPt = (A, B, P) => { const ab = B.clone().sub(A); const t = Math.max(0, Math.min(1, P.clone().sub(A).dot(ab) / Math.max(1e-9, ab.lengthSq()))); return A.clone().addScaledVector(ab, t).distanceTo(P); };
+const segDist = (A, B, P) => { const ab = B.clone().sub(A); const t = Math.max(0, Math.min(1, P.clone().sub(A).dot(ab) / Math.max(1e-9, ab.lengthSq()))); return A.clone().addScaledVector(ab, t).distanceTo(P); };
 // 몸 캡슐 (몸 축 반 길이 · 반지름 — fighter.js partDefs): 칼 팔은 x 축(alongX) · 빈팔은 y 축
 const CAPS = { uarmS: [0.105, 0.045, 'x'], farmS: [0.095, 0.04, 'x'], uarmO: [0.105, 0.045, 'y'], farmO: [0.095, 0.04, 'y'] };
 const capSeg = (b, [h, , ax]) => { const q = Q(b.rotation()); const c = V(b.translation()); const a = new THREE.Vector3(ax === 'x' ? h : 0, ax === 'y' ? h : 0, 0).applyQuaternion(q); return [c.clone().sub(a), c.clone().add(a)]; };
@@ -60,16 +60,16 @@ for (const gap of GAPS) for (const gd of GUARDS) {
     let arm = Infinity, armPart = null;
     for (const [k, cap] of Object.entries(CAPS)) {
       const [A, B] = capSeg(P.bodies[k], cap);
-      const g = segPt(A, B, hd) - headR - cap[1];
+      const g = segDist(A, B, hd) - headR - cap[1];
       if (g < arm) { arm = g; armPart = k; }
     }
     // 칼 축 (폼멜 끝 ~ 칼끝) ↔ 머리 공 틈 (칼 반두께 0.02)
     const sq = Q(P.sword.rotation()), sp = V(P.sword.translation());
     const W = P.weaponCfg;
     const pom = new THREE.Vector3(0, -0.15, 0).applyQuaternion(sq).add(sp), tip = new THREE.Vector3(0, W.hiltLength + W.bladeLength, 0).applyQuaternion(sq).add(sp);
-    const sw = segPt(pom, tip, hd) - headR - 0.02;
+    const sw = segDist(pom, tip, hd) - headR - 0.02;
     const gp = new THREE.Vector3(0, P.mordGrip ? P.mordGrip.g : 0, 0).applyQuaternion(sq).add(sp); // 칼 든 손이 쥔 자리
-    const swH = segPt(pom, gp, hd) - headR - 0.02, swT = segPt(gp, tip, hd) - headR - 0.02; // 칼자루 쪽(손 → 폼멜 끝 — 치는 막대) · 칼끝 쪽(손 → 칼끝 — 내 쪽으로 남는 꼬리)
+    const swH = segDist(pom, gp, hd) - headR - 0.02, swT = segDist(gp, tip, hd) - headR - 0.02; // 칼자루 쪽(손 → 폼멜 끝 — 치는 막대) · 칼끝 쪽(손 → 칼끝 — 내 쪽으로 남는 꼬리)
     // 옮김 delta (몸 틀): 시작 자세(옮긴 뒤 — segs[0].B) − home(다시 세우기 끝 — 옮기기 전 시작 자세)
     const s0 = I.segs[0]?.B, sh = I.segs.find((sg) => sg.B.back)?.B;
     const delta = s0 && sh && !I.mordBacked ? s0.H.clone().sub(sh.H) : null;

@@ -68,7 +68,7 @@ const info = await page.evaluate((GAP) => {
     if (e.gait) for (const k of ['F', 'B']) { const l = e.gait.legs[k]; for (const key of ['plant', 'hip', 'ankle', 'p0', 'p1', 'des', 'fp', 'pinC', 'pinT']) if (l[key]?.isVector3) { l[key].x += dx; l[key].z += dz; } } }
   // 재기 (읽기만): 내 머리 기준 몸 틀(길을 짠 yaw — secret_instant.js comboPlanMord 와 같은 틀)
   const V = (q) => new T.Vector3(q.x, q.y, q.z), Q = (r) => new T.Quaternion(r.x, r.y, r.z, r.w);
-  const segPt = (A, B, P) => { const ab = B.clone().sub(A); const t = Math.max(0, Math.min(1, P.clone().sub(A).dot(ab) / Math.max(1e-9, ab.lengthSq()))); return A.clone().addScaledVector(ab, t).distanceTo(P); };
+  const segDist = (A, B, P) => { const ab = B.clone().sub(A); const t = Math.max(0, Math.min(1, P.clone().sub(A).dot(ab) / Math.max(1e-9, ab.lengthSq()))); return A.clone().addScaledVector(ab, t).distanceTo(P); };
   const CAPS = { uarmS: [0.105, 0.045, 'x'], farmS: [0.095, 0.04, 'x'], uarmO: [0.105, 0.045, 'y'], farmO: [0.095, 0.04, 'y'] };
   window.__meas = () => {
     const I = p.iai;
@@ -81,12 +81,12 @@ const info = await page.evaluate((GAP) => {
     let arm = Infinity, part = null;
     for (const [k, [h, rad, ax]] of Object.entries(CAPS)) {
       const b = p.bodies[k], a = new T.Vector3(ax === 'x' ? h : 0, ax === 'y' ? h : 0, 0).applyQuaternion(Q(b.rotation())), m = V(b.translation());
-      const gp = segPt(m.clone().sub(a), m.clone().add(a), hd) - (p.headR ?? 0.1) - rad;
+      const gp = segDist(m.clone().sub(a), m.clone().add(a), hd) - (p.headR ?? 0.1) - rad;
       if (gp < arm) { arm = gp; part = k; }
     }
     const sq = Q(p.sword.rotation()), sp = V(p.sword.translation());
     const grip = new T.Vector3(0, p.mordGrip ? p.mordGrip.g : 0, 0).applyQuaternion(sq).add(sp), pom = new T.Vector3(0, -0.15, 0).applyQuaternion(sq).add(sp);
-    const hilt = segPt(grip, pom, hd) - (p.headR ?? 0.1) - 0.02;
+    const hilt = segDist(grip, pom, hd) - (p.headR ?? 0.1) - 0.02;
     const s0 = I?.segs?.[0]?.B, sh = I?.segs?.find((sg) => sg.B.back)?.B;
     const delta = I?.mord && s0 && sh && !I.mordBacked ? s0.H.clone().sub(sh.H) : null;
     const r3 = (x) => +x.toFixed(3);
