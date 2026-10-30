@@ -1753,6 +1753,7 @@ function comboPlanAim(f, I, m, A, D, at0 = null) {
  *   칼날 at 자리가 겨눈 곳에 오게 손 거리 · 마지막 ⅓ 은 손을 당김. 몸은 곧게(덧씌우기 몸 = 손 쪽 몸 돌림 — 싱지르의 온몸 한 바퀴가 아님)
  */
 function comboPlanRd(f, I, m, A) {
+  if (m.rd.diag) return comboPlanRdDiag(f, I, m, A); // 10/30 곧장 사선 내려침 (rdRelease 'direct' — 아래)
   const R = m.rd.arc;
   const s = f.side >= 0 ? 1 : -1;
   const S = comboShoulder(f, I.yaw);
@@ -1801,6 +1802,63 @@ function comboPlanRd(f, I, m, A) {
   for (let j = 1; j <= N; j++) {
     const a = arc(j / N);
     push(a.H, a.D, true, j === N ? comboPad(a.H) : null);
+  }
+  return segs;
+}
+
+/**
+ * 사람 풍차 베기 곧장 사선 내려침 (사장님 10/30 00:1x '근데 궤적이 8자 모양으로 현란해 보이는데. 바로 내려치는 게 아닌가?' · config UNIQUE_ASSIST.rdRelease 'direct' · rdDiag ·
+ *  기록 docs/strike/redondo_hold_2026-10-29.md §8-9): 머리 위에서 돌던 칼을 그 자리에서 곧장 왼 위로 들어(맞힘 없음 · 한 토막) 왼 위 → 오른 아래 한 면으로 내려 벤다(맞힘 · 6 토막).
+ *  10/29 판(위 comboPlanRd — 왼 어깨 뒤로 넘겨 왼팔 위로 떨어뜨림)은 머리 위 원 뒤에 어깨 뒤 고리가 하나 더 붙어 칼끝 길이 8 자였다(위에서 본 칼끝 — 기록 §8-9).
+ *  면 = 어깨 S → 겨눈 곳 P 줄 dc · 그에 수직인 '왼 위' u (칼 안 든 쪽 가로에서 하늘 쪽으로 angle ° — 벰 면이 땅과 이루는 각 · 10/30 01:3x 사장님 60) — 칼 D(θ) = dc cos θ + u sin θ (θ = from → to °) ·
+ *  손 = S + r · (dc cos θ/2 + u sin θ/2) (칼날 at 자리가 P 에 오는 r — 격살 한 칼 comboPlanAim 과 같은 틀 · 마지막 ⅓ 에 pull 몫만큼 당김 — 기본 0 끝까지 뻗음). 칼이 아직 머리 위에 없으면(섞는 첫머리) 먼저 그 가로 쪽으로 세운다
+ */
+function comboPlanRdDiag(f, I, m, A) {
+  const R = m.rd.diag;
+  const s = f.side >= 0 ? 1 : -1;
+  const S = comboShoulder(f, I.yaw);
+  const Lf = comboArmLen();
+  const HL = f.weaponCfg.hiltLength;
+  const BL = f.weaponCfg.bladeLength;
+  const segs = [];
+  let cur = A;
+  const push = (H, Dv, cut, pad = null) => {
+    const B = { H, D: Dv, px: H.z - 0.1, pad };
+    const sg = { cut, A: cur, B };
+    sg.T = comboSegLen(f, sg) / I.v;
+    segs.push(sg);
+    cur = B;
+  };
+  const { P, part } = comboAimPoint(f, I, R.target ?? 'lung');
+  I.aim = part;
+  const dc = P.clone().sub(S);
+  const dist = dc.length();
+  dc.normalize();
+  const an = (R.angle ?? 45) * D2R; // 벰 면이 땅과 이루는 각 (90 = 곧게 내려침 · 0 = 가로)
+  const u = new THREE.Vector3(0, Math.sin(an), -s * Math.cos(an));
+  u.addScaledVector(dc, -u.dot(dc)).normalize();
+  const r0 = clamp(dist - HL - BL * (R.at ?? 0.7), 0.15, Lf);
+  const pose = (w) => {
+    const th = (R.from + (R.to - R.from) * w) * D2R;
+    const r = r0 * (w <= 2 / 3 ? 1 : 1 - (R.pull ?? 0.25) * ((w - 2 / 3) / (1 / 3)));
+    const Hd = dc.clone().multiplyScalar(Math.cos(th / 2)).addScaledVector(u, Math.sin(th / 2));
+    return { H: S.clone().addScaledVector(Hd, r), D: dc.clone().multiplyScalar(Math.cos(th)).addScaledVector(u, Math.sin(th)).normalize() };
+  };
+  const p0 = pose(0);
+  const L = m.rd.loop;
+  if (L && A?.D && A.D.y < (R.lowY ?? 0.35)) {
+    // 섞는 첫머리에 뗌 (칼이 아직 앞 · 아래): 감는 고리의 손 · 지금 칼 가로 쪽으로 cone ° 기운 칼로 먼저 세움 (곧장 왼 위로 slerp 하면 칼날이 제 몸 앞을 가로지름)
+    const b = L.cone * D2R;
+    const h = Math.hypot(A.D.x, A.D.z);
+    const cx = h > 1e-3 ? A.D.x / h : 1;
+    const cz = h > 1e-3 ? A.D.z / h : 0;
+    push(new THREE.Vector3(L.hand[0], L.hand[1], s * L.hand[2]), new THREE.Vector3(Math.sin(b) * cx, Math.cos(b), Math.sin(b) * cz), false);
+  }
+  push(p0.H, p0.D, false); // 든 자리 (왼 위)
+  const N = 6;
+  for (let j = 1; j <= N; j++) {
+    const p = pose(j / N);
+    push(p.H, p.D, true, j === N ? comboPad(p.H) : null);
   }
   return segs;
 }
@@ -2494,10 +2552,11 @@ export function requestArtDup(f, { share, maxT, tech, face = 0, follow = 25, pla
  * 사람 풍차 베기 (B4 레돈두 — 이베리아 특수 공격 · 사장님 10/29 · config UNIQUE_ASSIST.rdHold · unique_assist.js holdTick): 길게 눌러 머리 위로 돌리던 칼(iberian_redondo.js)을 뗀 순간
  *  제비 베기 되돌림 칼과 같은 틀(연환 — 운동학 · 쓸린 자리의 실제 빠르기 · 판정 배율 1 · 같은 공격 · 끝 자세 붙잡기 없음 · 시간 상한 maxT — 베는 몫부터 capFromCut · 잔상 = 연환 잔상 share 몫)로 끈다.
  *  길 = comboPlanRd (arc = UNIQUE_ASSIST.rdArc) · 날 세우기 · 굴림 묶음 · 끝나도 손 목표 그대로(keepAim). 이미 끌고 가는 중이면 거절(false)
+ *  diag 를 주면(10/30 rdRelease 'direct' — UNIQUE_ASSIST.rdDiag) 곧장 사선 내려침 comboPlanRdDiag · 잔상은 베는 토막만(arcCut)
  */
-export function requestArtRedondo(f, { share, maxT, tech, arc, loop = null }) {
-  if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.chest || !arc) return false;
-  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, capFromCut: true, rd: { arc, loop } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true });
+export function requestArtRedondo(f, { share, maxT, tech, arc, loop = null, diag = null }) {
+  if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.chest || !(arc || diag)) return false;
+  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, capFromCut: true, rd: { arc, loop, diag } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true, arcCut: !!diag });
   return true;
 }
 export const ART_HIST = 0.3; // s — 잔상으로 그릴 지난 길 (감독 값)

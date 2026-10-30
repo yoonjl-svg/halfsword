@@ -165,7 +165,8 @@ export function createSilverWandererOutfit(h) {
     addMerged(l, [line([[.124, .086, -.164], [.137, .046, -.06], [.139, -.015, .04], [.117, -.07, .164]], .013)], LEATHER, cloth);
     // Empty scabbard beside the left leg; decorative and independently colored.
     // ── v7: 검집 좌표에서 위 끝(top)을 그대로 두고 길이만 DARAISHI_SCABBARD.length 로 (가운데를 아래로 옮겨 굽는다)
-    const S = DARAISHI_SCABBARD, scabbard = slim ? placeDaraishiScabbard(THREE, bake, bake(cyl(.025, .02, S.length, 10, false), [0, S.top - S.length / 2, 0]), look)
+    //  look.daraishiScabbardLen (10/30 00:4x 사장님 '무기 바꾼 거 그대로 넣고 어긋나는 … 설정 최소 수정으로 모순만 덜어내는 방식으로'): 낮의 다라이시 시트 겉모습만 우치가타나 길이로 — 없으면 0.94 (광기의 다라이시 · 모노호시자오)
+    const S = DARAISHI_SCABBARD, SL = look?.daraishiScabbardLen ?? S.length, scabbard = slim ? placeDaraishiScabbard(THREE, bake, bake(cyl(.025, .02, SL, 10, false), [0, S.top - SL / 2, 0]), look)
       : bake(cyl(.025, .02, .66, 10, false), [-.018, -.22, -.24], [0, 0, -.23]);
     addMerged(l, [scabbard], 0x655047, cloth);
     if (!slim) addMerged(l, [bake(cyl(.027, .027, .019, 10, false), [.057, .101, -.24], [0, 0, -.23]),
