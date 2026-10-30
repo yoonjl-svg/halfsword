@@ -32,6 +32,8 @@ import { createRolandOutfit } from './outfit_roland.js'; // 롤랑 복식 (샛�
 import { createRolandOutfitV2 } from './outfit_roland_v2.js'; // 롤랑 복식 v2 (사장님 10/23 결정 — 줄이면서 다듬은 판 · 관절 사슬 · 겉옷 앞판 · 뿔피리)
 import { createWhiteScaleOutfit } from './outfit_white_scale.js'; // 백린의 전사(가칭) 복식 (같은 전달본)
 import { createBernardoOutfit } from './outfit_bernardo.js'; // 베르나르도 복식 (같은 전달본 — 그쪽 올리비에 마지막 판 · 겉모습 그대로)
+import { createJuliaOutfit } from './outfit_julia.js'; // 쥘리아 크리스테바 복식 (샛별 저장소 전달 10/30 — docs/import/julia_import_2026-10-30.md)
+import { createJuliaAlterOutfit } from './outfit_julia_alter.js'; // 광기의 쥘리아 크리스테바 기계 반신 복식 (같은 전달)
 import { createBernardoOutfitV2 } from './outfit_bernardo_v2.js'; // 베르나르도 v2 (우리 판 10/23 — 사장님 '줄이면서 디자인 개선' · 같은 날 밤 다듬기: 흰 겉옷 · 금관 쓴 레온 사자 · 금빛 긴 망토 · 사슬 치마)
 
 const _m4 = new THREE.Matrix4();
@@ -2904,6 +2906,8 @@ export const OUTFITS = {
   minami_hakama: MINAMI_HAKAMA,
   minami_miko: MINAMI_MIKO,
   omari_seafarer_round: OMARI_ROUND,
+  julia_merchant: createJuliaOutfit(newOutfitHelpers), // 쥘리아 크리스테바 (10/30 — 겉모습만 · 콜라이더 · 질량 · 관절 그대로)
+  julia_mechanical: createJuliaAlterOutfit(newOutfitHelpers), // 광기의 쥘리아 크리스테바 — 기계 반신 (겉옷 반쪽을 실제로 잘라 냄 · 오른팔 · 손 금속 — 손 장식은 hands.js 훅)
 };
 
 /** dressPart가 부위 하나를 다 그린 뒤 불린다. look.outfit이 가리키는 세트에 그 부위용 함수가 있으면 얹는다.

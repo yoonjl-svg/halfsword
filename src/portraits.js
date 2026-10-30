@@ -25,8 +25,13 @@ export const GUEST_PORTRAIT_IDS = Object.freeze([...GUEST_IDS]);
 const TEMP_IDS = [];
 /** 임시 그림 id (위) */
 export const TEMP_PORTRAIT_IDS = Object.freeze([...TEMP_IDS]);
-/** 기본 판(pixel)에 그림이 있는 id 36 (바탕 17 + 얼터 16 + 손님 3) */
-export const PORTRAIT_IDS = Object.freeze([...BASE_IDS, ...ALTER_IDS, ...GUEST_IDS, ...TEMP_IDS]);
+// 쥘리아 크리스테바 · 광기의 쥘리아 크리스테바 (10/30 샛별 저장소 전달 C-JULIA-20261030 — 손그림 확정본 · 같은 22 × 22 칸 · 액자 1 · 투명 바탕):
+//  마스터 art/julia-profiles-20261030/<id>/low.png → tools/ui/portraits_px_build.py (docs/import/julia_import_2026-10-30.md). 예비 판(hd · low)에는 없어 기본 판 그림을 쓴다
+const JULIA_IDS = ['julia', 'julia_mad'];
+/** 쥘리아 둘 그림 id (위) */
+export const JULIA_PORTRAIT_IDS = Object.freeze([...JULIA_IDS]);
+/** 기본 판(pixel)에 그림이 있는 id 38 (바탕 17 + 얼터 16 + 손님 3 + 쥘리아 2) */
+export const PORTRAIT_IDS = Object.freeze([...BASE_IDS, ...ALTER_IDS, ...GUEST_IDS, ...TEMP_IDS, ...JULIA_IDS]);
 /** 예비 판(hd · low)에 그림이 있는 id 17 (얼터는 바탕 인물 그림) */
 export const BACKUP_PORTRAIT_IDS = Object.freeze([...BASE_IDS]);
 export const PORTRAIT_FILES = Object.freeze({
