@@ -40,6 +40,9 @@ function selfClip(P, I, rec) {
   const hand = Math.min(wS.distanceTo(hd), wO.distanceTo(hd));
   const back = Math.min(wS.clone().sub(hd).applyQuaternion(yi).x, wO.clone().sub(hd).applyQuaternion(yi).x); // 두 손이 내 머리 가운데보다 몸 앞(+) · 뒤(−)
   rec.sc ??= { arm: Infinity, hilt: Infinity, hand: Infinity, back: Infinity };
+  const ph = I.segs[I.si]?.B?.back || I.mordBacked ? 'back' : I.segs[I.si]?.cut ? 'cut' : 'wind'; // 준비 · 내리침 · 다시 세우기(막혀 되돌아감 포함)
+  if (arm < rec.sc.arm) rec.sc.armPh = ph;
+  if (back < rec.sc.back) rec.sc.backPh = ph;
   rec.sc.arm = Math.min(rec.sc.arm, arm); rec.sc.hilt = Math.min(rec.sc.hilt, hilt); rec.sc.hand = Math.min(rec.sc.hand, hand); rec.sc.back = Math.min(rec.sc.back, back);
 }
 const [foesArg = 'isolde,tome,omari,minami,liao,margarethe,artoria,eira,roland', seedArg = '6', durArg = '40'] = process.argv.slice(2);
@@ -215,6 +218,8 @@ console.log(`창 → 냄 (실제 s): 머리 ${wt((r) => r.cls === 'head')} · �
   console.log(`내 머리 (시작한 일격 ${S.length} · 팔이 잘려 뺀 스텝이 있는 일격 ${recs.filter((r) => r.scCut).length}): 팔이 머리 공을 뚫음 ${pct((r) => r.sc.arm < 0)} · 칼자루 쪽이 머리를 지남 ${pct((r) => r.sc.hilt < 0)} · 손이 머리 가운데 뒤 ${pct((r) => r.sc.back < 0)} · 팔 틈 ${st((r) => r.sc, (r) => r.sc.arm)} · 가장 작음 ${f2(Math.min(...S.map((r) => r.sc.arm)))}`);
   console.log(`  손 ↔ 머리 가운데 (m) ${st((r) => r.sc, (r) => r.sc.hand)} · 가장 작음 ${f2(Math.min(...S.map((r) => r.sc.hand)))} · 손 앞(+)/뒤(−) ${st((r) => r.sc, (r) => r.sc.back)} · 가장 깊이 ${f2(Math.min(...S.map((r) => r.sc.back)))} · 칼자루 쪽 틈 ${st((r) => r.sc, (r) => r.sc.hilt)}`);
   const wp = {}; for (const r of recs) if (r.cls === 'head') wp[r.wPart ?? '?'] = (wp[r.wPart ?? '?'] ?? 0) + 1;
+  const phs = (k, f) => { const o = {}; for (const r of S.filter(f)) o[r.sc[k] ?? '?'] = (o[r.sc[k] ?? '?'] ?? 0) + 1; return JSON.stringify(o); };
+  console.log(`  팔이 머리 공을 뚫은 토막 ${phs('armPh', (r) => r.sc.arm < 0)} · 손이 머리 뒤인 토막 ${phs('backPh', (r) => r.sc.back < 0)}`);
   console.log(`  머리를 친 칼 부품: ${JSON.stringify(wp)} · 머리 맞힘 에너지 (J) ${st((r) => r.cls === 'head', (r) => r.E)}${S.some((r) => r.clip) ? ` · 반걸음 (m) ${st((r) => r.clip, (r) => r.clip.step)} · 기울임 (°) ${st((r) => r.clip, (r) => r.clip.tilt)} · 못 옮긴 몫 (m) ${st((r) => r.clip, (r) => r.clip.short)}` : ''}`);
   for (const [a, b] of [[0, 0.5], [0.5, 0.6], [0.6, 0.7], [0.7, 0.8], [0.8, 9]]) {
     const T = S.filter((r) => r.d >= a && r.d < b);
