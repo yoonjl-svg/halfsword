@@ -51,7 +51,9 @@ test('값: 운동학 겨눈 찌름 팔 뻗음 SECRET.thrustArm 1 · 팔꿈치 �
 // 10/24 런지 굳음 길이(게임 0.6 s — 표준 시간 전 판)로 본다: 뻗은 팔은 굳음이 시작되고 게임 약 0.45 s(54 스텝) 뒤부터 돌아오기 시작한다 — 옛 판 · 표준 시간 판 같은 스텝(굳음 · 붙잡기 길이와
 //  상관없는 몫 — 까닭은 따로 볼 일). 굳음이 실제 0.6 s(게임 0.66 — 80 스텝)가 되면 돌아오는 몫이 평균에 더 들어가 달타냥 '굳음 손 앞 평균' 0.90 → 0.845
 //  (docs/strike/time_standard_2026-10-25.md §4 — 사장님 · 감독께 여쭘). 팔 · 손목 규칙 시험이라 10/24 굳음 길이로 본다
-const withLunge1024 = (fn) => withSets([[SECRET, 'risolutoStiff', 0.6], [SECRET, 'risolutoArmSlow', 0.6]], fn);
+//  10/30 20:0x 사장님 '팔 느려짐 없애고 속도는 90%'(risolutoArmSlow 0 · risolutoShare 0.9) 뒤에도 이 팔 · 손목 시험은 10/24 런지 값(빠르기 1 · 팔 늦춤 0.6)으로 본다 — 손목 규칙이 그대로인지 보는 자리
+const LUNGE1024 = [[SECRET, 'risolutoStiff', 0.6], [SECRET, 'risolutoArmSlow', 0.6], [SECRET, 'risolutoShare', 1]];
+const withLunge1024 = (fn) => withSets(LUNGE1024, fn);
 test('10/24 런지 손목: 맞힌 자세 아래팔-칼 ≤ 135° · 손이 어깨 앞 팔 길이 0.8 이상 · 새끼 쪽 아님 · 굳음 동안 뻗은 채 (레이피어 · 달타냥 · 2.2 m)', () => {
   for (const w of ['rapier', 'dartagnan']) {
     const r = withLunge1024(() => lungeRun(w, { gap: 2.2 }));
@@ -74,7 +76,7 @@ test('10/24 런지 손목: 맞힌 자세 아래팔-칼 ≤ 135° · 손이 어�
 test('10/24 런지 `?thrustArm=0&elbowSwivel=0&wristGuard=0` = 옛 꼴 그대로: 굳음 동안 손이 어깨 앞 팔 길이 0.5 아래 · 칼이 새끼 쪽으로 75° 안팎 (거꾸로 쥔 꼴) — 손목 교정만 켜면 같은 굽은 팔에서 범위 안', () => {
   // 옛 판 재현 = 그때 간격 줄로 (THRUST.itMeasure 'full' — 런지 몸 미끄러짐은 맞닿기에서 멈춰 새 줄에선 끝 자리가 0.18 ~ 0.25 m 멀어 옛 꼴이 안 남 · 'old' · 'contact' 는 지금 맞닿음 그대로라 덮지 않음)
   const old = (w) => (CONFIG.THRUST.itMeasure === 'full' ? { contact: ITALIAN_NOW.MEASURED[w][0], reach: ITALIAN_NOW.MEASURED[w][1], clinch: ITALIAN_NOW.MEASURED[w][2], cutTime: ITALIAN_NOW.CUT_TIME_30[w] } : null);
-  withSets([[SECRET, 'thrustArm', 0], ...OLD], () => {
+  withSets([[SECRET, 'thrustArm', 0], ...OLD, ...LUNGE1024.slice(1)], () => {
     for (const w of ['rapier', 'dartagnan']) {
       const r = lungeRun(w, { gap: 2.2, measure: old(w) });
       assert.ok(r.fired && r.res?.ok && r.res.hit, `${w} 런지 · 맞힘`);
@@ -84,7 +86,7 @@ test('10/24 런지 `?thrustArm=0&elbowSwivel=0&wristGuard=0` = 옛 꼴 그대로
       assert.ok(S.rev / S.n > 0.5, `${w} 옛 굳음 거꾸로 몫 ${((100 * S.rev) / S.n).toFixed(0)} %`);
     }
   });
-  withSets([[SECRET, 'thrustArm', 0]], () => {
+  withSets([[SECRET, 'thrustArm', 0], ...LUNGE1024.slice(1)], () => {
     const r = lungeRun('rapier', { gap: 2.2, measure: old('rapier') });
     assert.ok(r.fired && r.res?.ok && r.res.hit, '교정 켬 · 옛 팔 길 런지 맞힘');
     const S = ph(r.T, 'stiff');
@@ -98,7 +100,7 @@ test('격살 허파 찌르기(봉두세)도 같은 길: 굳음 동안 뻗은 채
   assert.ok(now.fired && now.res?.ok, '격살 허파 찌르기');
   const S = ph(now.T, 'stiff');
   assert.ok(S.aSum / S.n >= 0.85 && S.devSum / S.n >= ULNAR, `굳음 손 앞 ${(S.aSum / S.n).toFixed(2)} · dev ${(S.devSum / S.n).toFixed(0)}`);
-  withSets([[SECRET, 'thrustArm', 0], ...OLD], () => {
+  withSets([[SECRET, 'thrustArm', 0], ...OLD, ...LUNGE1024.slice(1)], () => {
     const old = gyeoksalRun('qinggang', 'bongdu');
     const O = ph(old.T, 'stiff');
     assert.ok(O.aSum / O.n < 0.5 && O.devSum / O.n < -60, `옛 굳음 손 앞 ${(O.aSum / O.n).toFixed(2)} · dev ${(O.devSum / O.n).toFixed(0)}`);
