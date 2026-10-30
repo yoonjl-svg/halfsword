@@ -22,7 +22,7 @@ export const SHORT_NAMES = Object.freeze({
   chanda: '찬다',
   terracotta: '병마용',
   roland: '롤랑',
-  white_scale: '백린', // 백린의 전사
+  white_scale: '백귀', // 백린의 전사 — 짧은 이름 백귀 (사장님 10/30 18:3x '체력바 색 그대로 두고 짧은 이름 백귀로.')
   bernardo: '베르나르도', // 베르나르도 델 카르피오
 });
 

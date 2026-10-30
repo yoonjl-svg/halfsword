@@ -321,7 +321,7 @@ test('⑨ 죽은 몸 쉬게 하기 (셋 이상 판만) · 카메라 물러남 �
 
 test('⑩ 체력 목록 짧은 이름 (사장님 10/30 01:0x — 얼터 A.) · 막대 색', () => {
   const S = (id) => shortNameOf(CHARACTERS_BY_ID[id]);
-  assert.deepEqual(['isolde', 'bernardo', 'samira', 'liao', 'white_scale', 'minami'].map(S), ['이졸데', '베르나르도', '마야', '랴오', '백린', '미나미']);
+  assert.deepEqual(['isolde', 'bernardo', 'samira', 'liao', 'white_scale', 'minami'].map(S), ['이졸데', '베르나르도', '마야', '랴오', '백귀', '미나미']); // 백린의 전사 = 백귀 (사장님 10/30 18:3x)
   assert.deepEqual(['minami_mad', 'bran_mad', 'heinrich_mad'].map(S), ['A.미나미', 'A.브론', 'A.하인리히']);
   for (const [id, c] of Object.entries(CHARACTERS_BY_ID)) {
     const n = S(id);
