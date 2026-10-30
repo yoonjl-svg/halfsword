@@ -26,7 +26,7 @@ for tag in tags:
     pre = [s for s in meta['shots'] if not s.get('ph')]
     if not shots:
         continue
-    pick = [pre[0]] if pre else []
+    pick = []
     if len(shots) <= N:
         pick += shots
     else:
@@ -49,7 +49,7 @@ for tag in tags:
             im = Image.open(f"{D}/{tag}_{view}_{s['k']}.png").convert('RGB').crop(BOX).resize((tw, th))
             x, y = (i % cols) * tw, top + (i // cols) * (th + lab)
             out.paste(im, (x, y))
-            ph = s.get('ph') or 'guard'
+            ph = s.get('ph') or 'after'
             behind = min(s['wristS'][0], s['wristO'][0])
             col = (255, 110, 110) if (s['arm'] < 0 or behind < 0) else (170, 230, 170)
             d.text((x + 4, y + th + 2), f"t {s['t'] - t0:+.3f} s  {ph}", fill=(230, 230, 230), font=font)
