@@ -12,6 +12,7 @@ import { newRound, CONFIG, THREE } from './harness_m.mjs';
 import { PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { MEASURED } from '../../src/weapon_measured.js';
 import { isMain } from './is_main.mjs';
+import { sample } from './duplieren_check.mjs';
 
 const R2D = 180 / Math.PI;
 const r3 = (x) => (x == null || !isFinite(x) ? null : +x.toFixed(3));
@@ -31,7 +32,7 @@ export function traceRun({ w = 'zweihander', seed = 1, press = 3.0, release = 1.
   if (!uq.holdE) throw new Error('풍차 베기가 열리지 않음');
   const relG = CONFIG.realS(release);
   const aftG = CONFIG.realS(after);
-  const rec = { w, seed, release, pts: [], tRel: null, tCut: null, tEnd: null, turns: null, fell: false };
+  const rec = { w, seed, release, pts: [], tRel: null, tCut: null, tEnd: null, turns: null, fell: false, selfBlade: null }; // selfBlade = 내려침(드는 길 + 벰) 동안 칼날 ↔ 내 몸통 · 머리 가장 가까이 (m — duplieren_check sample)
   let down = false;
   let tWind = null;
   let tRel = null;
@@ -69,6 +70,7 @@ export function traceRun({ w = 'zweihander', seed = 1, press = 3.0, release = 1.
       if (P.state !== 'stand') rec.fell = true;
       if (!ph) continue;
       if (ph === 'cut' && rec.tCut == null) rec.tCut = r3((t - tRel) / CONFIG.TIME.k);
+      if (ph === 'lead' || ph === 'cut') rec.selfBlade = r3(Math.min(rec.selfBlade ?? Infinity, sample(P, D, { cross: 0 }).self.blade));
       const inv = P.yaw.clone().invert();
       const c = P.bodies.chest.translation();
       const loc = (p) => {
@@ -142,6 +144,9 @@ export function figure8(rec, loopT = CONFIG.UNIQUE_ASSIST.rdSlow.loopT / CONFIG.
   })();
   // 드는 이음이 몸 뒤로 간 거리(칼끝 앞 x 의 가장 뒤 — 음수 = 가슴 뒤) · 가장 낮은 칼끝(가슴 기준 y — 어깨 뒤로 떨어뜨리면 낮음)
   if (ld.length) Object.assign(out, { leadBack: r3(Math.min(...ld.map((p) => p[2]))), leadLow: r3(Math.min(...ld.map((p) => p[3]))) });
+  // 뗀 자리에 견줘 (10/31 안 B — 어깨에 얹은 칼은 처음부터 몸 뒤 · 낮음): 드는 동안 뗀 자리보다 더 뒤로 간 거리 · 더 낮아진 거리 (0 이면 뒤 · 아래로 고리를 안 그림)
+  const st = P.filter((p) => p[0] === 'wind' || p[0] === 'blend').at(-1);
+  if (ld.length && st) Object.assign(out, { liftBack: r3(Math.max(0, st[2] - Math.min(...ld.map((p) => p[2])))), liftDrop: r3(Math.max(0, st[3] - Math.min(...ld.map((p) => p[3])))), start: [st[2], st[3], st[4]] });
   // 벰 칼끝 높이 · 칼 든 쪽: 첫 → 끝 (왼 위 → 오른 아래면 y 줄고 z 늚)
   const cut = P.filter((p) => p[0] === 'cut');
   if (cut.length) Object.assign(out, { cutY: [cut[0][3], cut.at(-1)[3]], cutZ: [cut[0][4], cut.at(-1)[4]] });

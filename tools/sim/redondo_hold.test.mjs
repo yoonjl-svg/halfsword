@@ -39,10 +39,18 @@ test('기본값 — 길게 누름 실제 0.6 s · 기력 초당 붙어 버티기
   assert.deepEqual(enhancedMoves('iberian'), [{ base: 'zwerchL', name: 'redondo', stage: 3 }]);
 });
 
-/** 감기 시작부터 한 바퀴 (게임 초): 감기 꼴 한 바퀴 + 섞는 동안 도는 빠르기를 0 에서 올린 늦음(rdRamp — smooth 의 적분 = 섞기의 반) */
+/** 감기 시작부터 '한 바퀴' (게임 초 — 흐르는 긋기 셈 자리): 도는 꼴 = 꼴 한 바퀴 + 섞는 동안 도는 빠르기를 0 에서 올린 늦음(rdRamp — smooth 의 적분 = 섞기의 반) ·
+ *  어깨 꼴(안 B — 10/31 기본) = 어깨에 얹는 섞기(windIn) + 얹은 채 woundT (woundFrom 'rest' — 감독 해석 · 'start' 면 감기 시작부터 woundT) */
 function oneTurn() {
   const M = windSpec();
+  if (M.kind === 'shoulder') return (M.woundFrom === 'start' ? 0 : M.windIn ?? 0) + M.woundT;
   return M.loopT + (UA.rdSteady > 0 && UA.rdRamp > 0 ? (M.windIn ?? 0) / 2 : 0);
+}
+/** 감기 꼴을 이 시험 동안만 (안 A 'slowSpin' · 안 B 'shoulder' — 둘 다 덮음) */
+function withWind(mode, fn) {
+  const keep = UA.rdWindMode;
+  UA.rdWindMode = mode;
+  try { return fn(); } finally { UA.rdWindMode = keep; }
 }
 
 /** 사람 츠바이핸더 + 풍차 베기만 연 강화 · 상대는 서 있음 */
@@ -123,8 +131,10 @@ test('그만둠 (식힘 없음): 막기 단추 · 맞음(칼날 상처) · 비�
   } finally { B.free(); }
 });
 
-test('흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 01:5x · 08:3x simple): 한 바퀴 전에 떼면 셈 없음 · simple = 사슬 안이든 밖이든 n 1(× 1.2) · inside(견줌) = 창 안에서 누르면 n + 1 · 흐르는 긋기(B5) 없으면 셈 없음 · B5 만이면 × 1.2 · 0 = 끔', () => {
-  // 한 바퀴 = 감기 꼴 한 바퀴 + 섞는 동안 도는 빠르기를 0 에서 올린 늦음(rdRamp — 섞기의 반) · 기본 안 A(사장님 10/30 00:1x 'A로 하고 흐름 보너스 시간은 한바퀴로') 감기 시작부터 실제 약 1.5 s
+for (const mode of ['slowSpin', 'shoulder'])
+test(`흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 01:5x · 08:3x simple) [${mode === 'shoulder' ? '안 B 어깨 — 기본 10/31 · 얹은 채 0.6 s = 한 바퀴(감독 해석)' : '안 A 고리 — 사장님 10/30 00:1x 한 바퀴'}]: 한 바퀴 전에 떼면 셈 없음 · simple = 사슬 안이든 밖이든 n 1(× 1.2) · inside(견줌) = 창 안에서 누르면 n + 1 · 흐르는 긋기(B5) 없으면 셈 없음 · B5 만이면 × 1.2 · 0 = 끔`, () => withWind(mode, () => {
+  // 한 바퀴 = 안 A 꼴 한 바퀴 + 섞는 동안 도는 빠르기를 0 에서 올린 늦음(rdRamp — 섞기의 반 · 사장님 10/30 00:1x 'A로 하고 흐름 보너스 시간은 한바퀴로' — 감기 시작부터 실제 약 1.5 s) ·
+  //  안 B = 어깨에 얹는 섞기 0.6 s + 얹은 채 0.6 s (감기 시작부터 실제 1.2 s — 10/31 감독 해석 · 사장님 확인 전)
   const rot = oneTurn();
   const kitAll = kitFromNodes('iberian', new Set(['B1', 'B5', 'B4', 'B6']));
   const inPrep = (P) => { P.ibFlowT = 10; P.ibFlowCutEnd = 10; P.ibLastN = 3; }; // 이어 긋기 창 안 · 사슬 셋
@@ -161,9 +171,10 @@ test('흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 01:5x · 08:3x
   assert.equal(none.k, 1);
   const off = run(rot * 1.2, null, kitAll, 0);
   assert.equal(off.n, 0, '끔');
-});
+}));
 
-test('simple — 풍차 베기 뒤 이어 그은 긋기는 n 2 (× 1.4): 풍차 베기가 새 사슬의 첫 칼 — 세 칼 셈은 풍차 베기가 1 번째 · 그 뒤 두 번째 긋기(사슬 3 번째)가 기력 0', () => {
+for (const mode of ['slowSpin', 'shoulder'])
+test(`simple — 풍차 베기 뒤 이어 그은 긋기는 n 2 (× 1.4) [${mode === 'shoulder' ? '안 B 어깨' : '안 A 고리'}]: 풍차 베기가 새 사슬의 첫 칼 — 세 칼 셈은 풍차 베기가 1 번째 · 그 뒤 두 번째 긋기(사슬 3 번째)가 기력 0`, () => withWind(mode, () => {
   const B = body({ seed: 7, kit: kitFromNodes('iberian', new Set(['B1', 'B5', 'B4', 'B6'])) });
   try {
     const { P, press, steps } = B;
@@ -183,7 +194,7 @@ test('simple — 풍차 베기 뒤 이어 그은 긋기는 n 2 (× 1.4): 풍차 
     assert.equal(P.ibChainN(), 3);
     assert.equal(P.ibChainCostK(), 0, '사슬 3 번째 = 기력 0');
   } finally { B.free(); }
-});
+}));
 
 test('사람 왼 가로베기는 보통 긋기 (풍차 베기를 열어도 강화동작으로 안 읽힘)', () => {
   const B = body();
