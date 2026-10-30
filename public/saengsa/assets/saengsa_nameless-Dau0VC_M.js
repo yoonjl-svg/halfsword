@@ -1,1 +1,0 @@
-import{a as e,c as t,i as n,l as r,n as i,o as a,r as o,s,t as c,u as l}from"./saengsa_nameless-B7m-Yq8J.js";export{c as NAMELESS_BASE,i as NAMELESS_ID,o as clothCount,n as isClothPixel,e as makeNamelessFaces,a as namelessFace,s as namelessLook,t as namelessLookVersion,r as recolorHex,l as recolorRgb};

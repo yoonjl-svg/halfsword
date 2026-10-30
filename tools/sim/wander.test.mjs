@@ -352,3 +352,46 @@ test('저장 칸 거르기: 모양이 틀린 판은 버리고 나머지는 지�
   assert.equal(ok.run.headTaken, false);
   assert.equal(ok.run.fighting, false);
 });
+
+test('몸 상태 이어받기 (사장님 10/30 01:1x · 08:2x \'둘 다 켜\' — WANDER.resumeState 기본 켬): 진행 중 판에 사본 · 새로고침에도 남음 · 정산 · 재대결에 지움 · 끝난 판엔 안 적음', async () => {
+  assert.equal(WANDER.resumeState, true, '기본 켬 (주소 ?wanderResume=0 = 전 판)');
+  let p = await reset();
+  unlock(p);
+  assert.equal(p.saveWanderResume({ v: 1 }), false, '판이 없으면 안 적음');
+  p.ensureWanderRun(encounter());
+  const R = { v: 1, foe: 'roland', foeWeapon: 'tizona', player: { v: 1, blood: 0.8, wounds: [{ part: 'thighF', type: 'cut', severity: 0.4, bleed: 0.01, local: [0, 0, 0] }] }, enemy: { v: 1, blood: 1, wounds: [] } };
+  assert.ok(p.saveWanderResume(R));
+  p = await fresh();
+  assert.deepEqual(p.ensureWanderRun(() => { throw new Error('진행 중 판을 다시 뽑으면 안 됨'); }).resume, R, '새로고침 · 앱을 다시 켜도 그 몸');
+  p.resetWanderLoadout();
+  assert.equal(p.readProgress().wander.run.resume, undefined, '재대결 = 처음 몸');
+  p.saveWanderResume(R);
+  p.saveWanderResume(null);
+  assert.equal(p.readProgress().wander.run.resume, undefined, 'null = 지움');
+  p.saveWanderResume(R);
+  p.settleWander(true, () => 30);
+  assert.equal(p.readProgress().wander.run.resume, undefined, '끝난 판은 이어받을 몸이 없다');
+  assert.equal(p.saveWanderResume(R), false, '끝난 판엔 안 적음');
+  assert.equal(p.ensureWanderRun(encounter('heinrich')).resume, undefined, '다음 판은 처음 몸');
+});
+
+test('몸 사본 (src/fight_snapshot.js): 셈 칸만 · 값 묶음 · 무기가 다르면 부러짐은 안 옮김 · 남은 부활은 줄기만', async () => {
+  const { snapshotFighter, applyFighterSnapshot } = await import('../../src/fight_snapshot.js');
+  const body = (over = {}) => ({ weapon: { id: 'longsword', fragile: true }, blood: 1, bleed: 0, consciousness: 1, pain: 0, limbs: { armS: 1, armO: 1, legF: 1, legB: 1 }, wounds: [], weaponBroken: false, stamina: { value: 100, max: 130 }, secretUsed: 0, revive: { left: 1 }, armed: true,
+    breakWeapon() { this.weaponBroken = true; }, dropSword() { this.armed = false; }, ...over });
+  const a = body({ blood: 0.71, bleed: 0.02, pain: 0.4, limbs: { armS: 0.9, armO: 0.5, legF: 1, legB: 0.8 }, wounds: [{ part: 'uarmO', type: 'cut', severity: 0.5, bleed: 0.01, local: { x: 0.1, y: 0.2, z: 0.3 } }], weaponBroken: true, stamina: { value: 42, max: 130 }, secretUsed: 1, revive: { left: 0 } });
+  const s = JSON.parse(JSON.stringify(snapshotFighter(a)));
+  const b = body();
+  assert.ok(applyFighterSnapshot(b, s));
+  assert.deepEqual([b.blood, b.bleed, b.pain, b.limbs.armO, b.limbs.legB, b.wounds.length, b.wounds[0].part, b.wounds[0].local.y, b.weaponBroken, b.stamina.value, b.secretUsed, b.revive.left, b.armed], [0.71, 0.02, 0.4, 0.5, 0.8, 1, 'uarmO', 0.2, true, 42, 1, 0, true]);
+  const c = body({ weapon: { id: 'rapier', fragile: true } });
+  applyFighterSnapshot(c, s);
+  assert.equal(c.weaponBroken, false, '대기실에서 무기를 바꿨으면 부러짐은 안 옮김');
+  const d = body({ revive: { left: 0 } });
+  applyFighterSnapshot(d, { ...s, reviveLeft: 3, blood: 7, stamina: 999 });
+  assert.deepEqual([d.revive.left, d.blood, d.stamina.value], [0, 1, 130], '부활은 늘지 않음 · 피 0 ~ 1 · 기력은 최대까지');
+  const e = body();
+  applyFighterSnapshot(e, { ...s, limbs: { ...s.limbs, armS: 0.05 } });
+  assert.equal(e.armed, false, '칼 쥔 팔이 문턱 밑이면 칼을 놓친 채');
+  assert.equal(applyFighterSnapshot(body(), { v: 2 }), false, '모르는 꼴은 안 입힘');
+});
