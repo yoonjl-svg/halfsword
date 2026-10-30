@@ -346,6 +346,8 @@ if (params.has('specialCoolFrom') && ['free', 'motion', 'fire'].includes(params.
 if (params.has('secretUses')) CONFIG.UNIQUE_ASSIST.secretUses = parseSecretUses(params.get('secretUses')); // 유파 비기 판당 쓸 수 (기본 1 · 동방 3 · 'inf' = 끝없음 · 사장님 10/29 19:5x)
 if (params.has('dupTap')) CONFIG.UNIQUE_ASSIST.dupTap = +params.get('dupTap') ? 1 : 0; // 사람 겹치기 탭 (사장님 10/28 01:2x — 맞물린 채 탭 · 기본 1)
 if (params.has('rdHold')) CONFIG.UNIQUE_ASSIST.rdHold = +params.get('rdHold') ? 1 : 0; // 사람 풍차 베기 길게 누름 (이베리아 B4 — 사장님 10/29 · 기본 1)
+if (params.has('holdPx') && +params.get('holdPx') > 0) CONFIG.INPUT.holdPx = +params.get('holdPx'); // 길게 누름 떠돎 한도 (손가락 px — 10/31 · 기본 24 · 12 = 전 판 탭 문턱) [사장님 확인 전 — 확인표 3070]
+if (params.has('strokeMin')) CONFIG.STAMINA.humanStrokeMin = Math.max(0, +params.get('strokeMin') || 0); // 사람 긋기 청구 바닥 (패드 m — 10/31 · 기본 0.15 · 0 = 전 판 strokeTravel 0.06) [사장님 확인 전 — 확인표 3074]
 if (params.has('rdEdge')) CONFIG.UNIQUE_ASSIST.rdEdge = +params.get('rdEdge') < 0 ? -1 : 1; // 감는 칼 날 쪽 (기본 −1 — 사장님 확인 전)
 if (params.has('rdWind')) CONFIG.UNIQUE_ASSIST.rdWindMode = ['spin', 'slowSpin', 'shoulder'].includes(params.get('rdWind')) ? params.get('rdWind') : 'slowSpin'; // 풍차 베기 감기 꼴 (사장님 10/29 20:0x 두 안 · 10/30 00:1x 'A로' — 기본 안 A 'slowSpin' · 10/29 판 'spin' · 안 B 'shoulder')
 if (params.has('rdRelease')) CONFIG.UNIQUE_ASSIST.rdRelease = params.get('rdRelease') === 'chamber' ? 'chamber' : 'direct'; // 풍차 베기 내려침 길 (사장님 10/30 00:1x '바로 내려치는 게 아닌가?' — 기본 'direct' 곧장 사선 · 'chamber' 10/29 판 왼 어깨 뒤 길)
