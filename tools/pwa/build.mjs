@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const dist = path.resolve(root, process.argv[2] || 'dist');
 // encounters(소개 페이지 사진 · 영상)도 뺀다 — 게임이 쓰는 자산이 아니라 검토용이다. 온라인에서는 그대로 열리고, 설치 때 옛 사진을 다 받지 않는다 (샛별 저장소 10/17)
-const EXCLUDED_DIRS = new Set(['corr', 'r2p', 'support', 'wb', 'encounters', 'saengsa']); // saengsa = 생사전 시험판 (10/29 — 본 게임 오프라인 저장에서 뺌)
+const EXCLUDED_DIRS = new Set(['corr', 'r2p', 'support', 'wb', 'encounters', 'saengsa', 'shop']); // saengsa = 생사전 시험판 (10/29 — 본 게임 오프라인 저장에서 뺌) · shop = 상점 시험판 (10/30 — 같은 까닭)
 const GENERATED = new Set(['sw.js', 'pwa-build.json']);
 const BUDGET_BYTES = 30 * 1024 * 1024; // 넘으면 담을 목록을 다시 보라고 멈춘다
 const NAV_TIMEOUT_MS = 10000; // 화면 요청이 이보다 늦으면 깔린 판으로 연다 (깔린 판이 있을 때만) — 사장님 확인 전
