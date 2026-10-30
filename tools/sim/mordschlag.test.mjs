@@ -144,12 +144,12 @@ test('옛 조건(mordRule press — 10/25 판): 밀치기 누르기가 mordPress
   } finally { SECRET.mordRule = rule0; P.barge = null; g.world.free(); }
 });
 
-test('조건 (사장님 10/29 20:0x — mordRule close 기본): 가슴 사이 ≤ 붙은 거리 n(CLOSE.reach — 롱소드 0.77)인 채 mordPress(2 s) → 창 · 밀치기 꼴 · 긋기와 상관없음 · 너그러움 0.4 s 안 떨어짐은 이어 셈 · 더 길면 0 · 상대가 서 있지 않으면 아님 · mordCloseN 숫자면 그 거리', () => {
+test('조건 (사장님 10/29 20:0x — mordRule close 기본): 가슴 사이 ≤ 붙은 거리 n(0.8 m 모든 무기 — 사장님 10/30 00:4x)인 채 mordPress(2 s) → 창 · 밀치기 꼴 · 긋기와 상관없음 · 너그러움 0.4 s 안 떨어짐은 이어 셈 · 더 길면 0 · 상대가 서 있지 않으면 아님 · mordCloseN 숫자면 그 거리', () => {
   const { g, P, E } = fixture();
   try {
     assert.equal(SECRET.mordRule, 'close');
-    assert.equal(SECRET.mordCloseN, null);
-    assert.ok(Math.abs(CONFIG.CLOSE.reach(P.weapon) - 0.77) < 0.02, `롱소드 닿는 거리 ${CONFIG.CLOSE.reach(P.weapon)}`);
+    assert.equal(SECRET.mordCloseN, 0.8);
+    const n0 = SECRET.mordCloseN;
     let d = 0.6;
     P.foeDistance = () => d;
     const steps = (sec) => Math.round(sec / DT);
@@ -179,7 +179,17 @@ test('조건 (사장님 10/29 20:0x — mordRule close 기본): 가슴 사이 �
       const w4 = new PlayerSecretWatch(P, E);
       for (let i = 0; i < N + 2; i++) { d = 0.6; w4.update(DT, false); }
       assert.equal(w4.open, null, 'n 0.5 이면 0.6 m 는 붙음 아님');
-    } finally { SECRET.mordCloseN = null; }
+    } finally { SECRET.mordCloseN = n0; }
+    SECRET.mordCloseN = null; // 옛 판 — 롱소드 CLOSE.reach 0.77: 0.78 m 는 붙음 아님 · 기본 0.8 이면 붙음
+    try {
+      assert.ok(Math.abs(CONFIG.CLOSE.reach(P.weapon) - 0.77) < 0.02, `롱소드 닿는 거리 ${CONFIG.CLOSE.reach(P.weapon)}`);
+      const w5 = new PlayerSecretWatch(P, E);
+      for (let i = 0; i < N + 2; i++) { d = 0.78; w5.update(DT, false); }
+      assert.equal(w5.open, null, 'CLOSE.reach 0.77 이면 0.78 m 는 붙음 아님');
+    } finally { SECRET.mordCloseN = n0; }
+    const w6 = new PlayerSecretWatch(P, E);
+    for (let i = 0; i < N + 2; i++) { d = 0.78; w6.update(DT, false); }
+    assert.ok(w6.open, '기본 0.8 m 면 0.78 m 는 붙음');
   } finally { delete P.foeDistance; P.skill.swinging = false; g.world.free(); }
 });
 
@@ -318,6 +328,32 @@ test('운동학 길 (kin 0.6): 쥠 바꿈 → instant(연환 틀) → 원래 쥠
       }
     } finally { SECRET.mord.kin = 0.3; SECRET.mord.aim = 'pull'; g.world.free(); }
   }
+});
+
+test('머리 따라 겨눔 (10/30 사장님 \'모르트가 빗나가는 경우는 어떤거지?\' · 08:2x \'머리를 끝까지 따라가게 해.\' — SECRET.mord.track 기본 켬 · commit 0): 끄면 결과에 따라 겨눔 셈 없음 · 켜면 겨눈 자리까지 스텝마다 그때 머리로 다시 옮김(trackN) · trackUntil cut 은 베는 토막 전까지만(더 적음) · 머리 맞음', () => {
+  assert.equal(SECRET.mord.track, 1);
+  assert.equal(SECRET.mord.trackCommit, 0);
+  assert.equal(SECRET.mord.trackUntil, 'aim');
+  const run = (track, until = 'aim') => {
+    const { g, P } = fixture('longsword', 0.65);
+    SECRET.mord.track = track;
+    SECRET.mord.trackUntil = until;
+    try {
+      for (let i = 0; i < Math.round(2.4 / DT); i++) g.step();
+      const hits = [];
+      g.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === P) hits.push({ zone: r.zone, part: pr.w.part }); };
+      assert.equal(P.skill.secret({ S: TRADITIONS.german.playerSecret, ctx: { ev: 'press' } }), true);
+      for (let i = 0; i < Math.round(3 / DT) && P.skill.sec; i++) g.step();
+      return { R: P.instantResult, hits };
+    } finally { SECRET.mord.track = 1; SECRET.mord.trackUntil = 'aim'; g.world.free(); }
+  };
+  const off = run(0);
+  assert.ok(off.R?.mord && off.R.trackN === undefined, '끄면 따라 겨눔 없음');
+  const on = run(1);
+  assert.ok(on.R.trackN > 0 && Number.isFinite(on.R.trackMoved), JSON.stringify(on.R));
+  assert.ok(on.hits.some((h) => h.zone === 'head' && h.part === 'hilt'), JSON.stringify(on.hits));
+  const cut = run(1, 'cut');
+  assert.ok(cut.R.trackN > 0 && cut.R.trackN < on.R.trackN, `베기 전까지 ${cut.R.trackN} < 겨눈 자리까지 ${on.R.trackN}`);
 });
 
 test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누르기 mordPress(2 s) → 창 → 머리가 닿으면 곧장 냄(사람과 같은 실행부) → 굳음 → 끝 · 끊기면 셈 0 · 머리가 멀면 안 냄', () => {
