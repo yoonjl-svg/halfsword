@@ -252,7 +252,7 @@ function lungeRun(w, { gap = 2.2, seed = 9, foeW = 'longsword', cfg = {} } = {})
 
 test('10/24 런지 값 (사장님 \'런지로 진행해. 단 런지 동작이 고노센처럼 빠르게 나가야 의미가 있어. 상대 팔 늦어지는 효과는 0.6초 내 경직도 0.6초\')', () => {
   assert.equal(SECRET.risolutoLunge, 1);
-  assert.equal(SECRET.risolutoShare, 0.9); // 10/30 20:0x 사장님 '팔 느려짐 없애고 속도는 90%' (전 1 — 고노센 칼끝 빠르기 그대로)
+  assert.equal(SECRET.risolutoShare, 0.8); // 10/30 22:2x 사장님 '속도 80%로 해.' (전 0.9 — 20:0x · 그 전 1 — 고노센 칼끝 빠르기 그대로)
   assert.equal(SECRET.risolutoArmSlow, 0); // 10/30 20:0x 사장님 — 팔 늦춤 없앰 (전 0.6)
   assert.equal(SECRET.risolutoGlide, 1); // 붙은 칼 미끄러짐은 그대로
   assert.equal(SECRET.risolutoStiff, rs(0.6));
