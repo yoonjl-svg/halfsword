@@ -22,7 +22,7 @@ const render = (on) => p.evaluate((v) => { if (window.game?.renderCap) window.ga
 const shot = async (name) => { await render(true); await run(80); const path = `${out}/${name}.png`; try { await p.screenshot({ path, timeout: 20000 }); saved.push(path); } catch (e) { errors.push(`사진 ${name}: ${e.message.split('\n')[0]}`); } await render(false); };
 const look = () => p.evaluate(() => ({ over: !!window.game.teamRun?.M.over, sim: +window.game.stats.simTime.toFixed(1),
   hud: [...document.querySelectorAll('#teamHud .tl-n')].map((e) => e.textContent),
-  fighters: window.game.fighters.map((f) => ({ name: f.name, blood: +f.blood.toFixed(3), parts: (f.wounds ?? []).map((w) => w.part).join(','), fresh: (f.wounds ?? []).filter((w) => !w.carried).length, carried: (f.wounds ?? []).filter((w) => w.carried).length, broken: !!f.weaponBroken, alive: f.alive })) }));
+  fighters: window.game.fighters.map((f) => ({ name: f.name, blood: +f.blood.toFixed(3), bleed: +(f.bleed ?? 0).toFixed(3), parts: (f.wounds ?? []).map((w) => w.part).join(','), fresh: (f.wounds ?? []).filter((w) => !w.carried).length, carried: (f.wounds ?? []).filter((w) => w.carried).length, broken: !!f.weaponBroken, alive: f.alive })) }));
 const W = { matchId: 'resume-check', round: 1, seed, mineSide: 'a', control: 'watch', entrants: { a: ['0-1', '0-2'], b: ['5-0', '5-1'] },
   sides: {
     a: [{ key: '0-1', id: 'nameless', tag: '오토', weapon: 'rapier', school: 'italian', tier: 1, prof: { italian: 2 }, hp: 100, injuries: [], dead: false, cloth: 2 },
@@ -43,7 +43,7 @@ async function quit() {
   await until(() => window.__rr !== 'pending', 100, 100);
   return { L, bodies: await p.evaluate(() => window.__rb), res: await p.evaluate(() => window.__rr) };
 }
-const compare = (a, b) => a.fighters.map((f, i) => { const g = b.fighters[i]; return { name: f.name, leave: `${f.blood}/${f.parts || '-'}/${f.alive ? '삶' : '죽음'}`, back: `${g.blood}/${g.parts || '-'}/${g.alive ? '삶' : '죽음'}`, ok: g.name === f.name && Math.abs(g.blood - f.blood) < 0.03 && g.parts === f.parts && g.alive === f.alive && g.broken === f.broken }; });
+const compare = (a, b) => a.fighters.map((f, i) => { const g = b.fighters[i]; return { name: f.name, leave: `${f.blood}/${f.parts || '-'}/${f.alive ? '삶' : '죽음'}`, back: `${g.blood}/${g.parts || '-'}/${g.alive ? '삶' : '죽음'}`, ok: g.name === f.name && g.blood <= f.blood + 0.002 && f.blood - g.blood <= 0.02 + (f.bleed ?? 0) * 0.3 && g.parts === f.parts && g.alive === f.alive && g.broken === f.broken }; }); // 피: 이어받은 출혈만큼 줄 수 있음
 try {
   await p.goto(`${base}/saengsa/`, { waitUntil: 'domcontentloaded' });
   if (!(await until(() => typeof window.game?.launchSaengsa === 'function' && !!window.game?.renderCap, 100, 1500))) throw new Error('게임이 안 섬');

@@ -32,7 +32,7 @@ const fightLook = () => p.evaluate(() => {
     hud: [...document.querySelectorAll('#teamHud .tl-n')].map((e) => e.textContent), // 왼쪽 위 이름 · 체력 목록 (wk/team-fight ecacc60b · v3 짧은 이름 61f13e9b)
     rows: [...document.querySelectorAll('#teamList .tl-row')].map((r) => [...r.querySelectorAll('.tl-n')].map((e) => e.textContent)), // 줄마다 (첫 줄 상대 · 둘째 줄 아군)
     bars: [...document.querySelectorAll('#teamList .tl-b > span')].map((e) => getComputedStyle(e).backgroundColor),
-    fighters: window.game.fighters.map((f) => ({ name: f.name, team: f.team, weapon: f.weapon.id, broken: !!f.weaponBroken, blood: +f.blood.toFixed(3), carried: (f.wounds ?? []).filter((w) => w.carried).map((w) => `${w.part}:${w.severity}`), parts: (f.wounds ?? []).map((w) => w.part).join(','), fresh: (f.wounds ?? []).filter((w) => !w.carried).length, alive: f.alive })) };
+    fighters: window.game.fighters.map((f) => ({ name: f.name, team: f.team, weapon: f.weapon.id, broken: !!f.weaponBroken, blood: +f.blood.toFixed(3), bleed: +(f.bleed ?? 0).toFixed(3), carried: (f.wounds ?? []).filter((w) => w.carried).map((w) => `${w.part}:${w.severity}`), parts: (f.wounds ?? []).map((w) => w.part).join(','), fresh: (f.wounds ?? []).filter((w) => !w.carried).length, alive: f.alive })) };
 });
 /** 판 하나 (전투 입장 → 판 → 끝) — 돌려줌: 시작 · 끝 모습 */
 async function playOut(tag, { quit = false, hurt = 0 } = {}) {
@@ -126,7 +126,7 @@ try {
   await shot('e8b_resume_locked');
   // ④ 같은 경기를 다시 끝까지 (내 몸은 서 있기만 — 동료 · 상대 AI 가 판을 끝냄): 결과의 broken 이 적히고 부러진 내 무기가 대회 끝까지 남는가 · 떠날 때 몸으로 서는가
   const pf = await playOut('e9_player_full');
-  const same = pl.leave.fighters.map((f, i) => { const g = pf.first.fighters[i]; return { name: f.name, leave: `${f.blood}/${f.parts || '-'}/${f.alive ? '삶' : '죽음'}${f.broken ? '/부러짐' : ''}`, back: `${g.blood}/${g.parts || '-'}/${g.alive ? '삶' : '죽음'}${g.broken ? '/부러짐' : ''}`, ok: g.name === f.name && Math.abs(g.blood - f.blood) < 0.03 && g.parts === f.parts && g.alive === f.alive && g.broken === f.broken }; });
+  const same = pl.leave.fighters.map((f, i) => { const g = pf.first.fighters[i]; return { name: f.name, bleed: f.bleed, leave: `${f.blood}/${f.parts || '-'}/${f.alive ? '삶' : '죽음'}${f.broken ? '/부러짐' : ''}`, back: `${g.blood}/${g.parts || '-'}/${g.alive ? '삶' : '죽음'}${g.broken ? '/부러짐' : ''}`, ok: g.name === f.name && g.blood <= f.blood + 0.002 && f.blood - g.blood <= 0.02 + (f.bleed ?? 0) * 0.3 && g.parts === f.parts && g.alive === f.alive && g.broken === f.broken }; }); // 피: 이어받은 출혈만큼 줄 수 있음(첫 모습은 판이 선 뒤 몇 스텝 — 죽은 몸도 피를 흘림)
   log.push({ step: 'resume', saved: !!resumeSaved && { picks: resumeSaved.picks, arms: resumeSaved.arms, keys: Object.keys(resumeSaved.bodies ?? {}) }, lock, bodies: same, allSame: same.length === 4 && same.every((x) => x.ok), hurt: pl.leave.fighters.filter((f) => f.fresh > 0).length });
   await until(() => !document.querySelector('#gameEntrance').shadowRoot.getElementById('sgDone').hidden, 100, 100);
   await shot('e10_player_result');
