@@ -40,7 +40,7 @@ const paidOf = p => (p && count(p.coins) && count(p.heads) ? { coins: p.coins, h
 /** 상점 칸 (10/30 — 모양만 · 무기 id 맞춤은 shop_rules.js normalizeShop) — 맞으면 사본, 아니면 null */
 const shopOf = s => (s?.v === 1 && Number.isSafeInteger(s.slot) && count(s.seed) && s.seed <= 0xffffffff && Array.isArray(s.items) && s.items.length <= 8
   && s.items.every(i => i && validText(i.id) && validText(i.tier) && count(i.coins) && count(i.heads) && count(i.horns))
-  ? { v: 1, seed: s.seed, slot: s.slot, rerolls: count(s.rerolls) ? s.rerolls : 0, alter: s.alter === true, items: s.items.map(({ id, tier, coins, heads, horns }) => ({ id, tier, coins, heads, horns })) } : null);
+  ? { v: 1, seed: s.seed, slot: s.slot, rerolls: count(s.rerolls) ? s.rerolls : 0, ...(count(s.n) && s.n ? { n: s.n } : {}), alter: s.alter === true, items: s.items.map(({ id, tier, coins, heads, horns }) => ({ id, tier, coins, heads, horns })) } : null); // n = 그 칸을 뽑은 수(10/31 — 없으면 옛 2)
 /** 번 것 (도살자 · 대부호 — title_rules.js) — 모양이 맞으면 사본, 아니면 null */
 const earnedOf = e => (e && count(e.coins) && count(e.heads) ? { coins: e.coins, heads: e.heads } : null);
 /** 옛 저장의 번 것 = 지금 가진 것 + 칸 · 물건에 낸 값 (적어도 이만큼은 벌었다 — 감독 10/24) */
@@ -196,12 +196,17 @@ const newShopSeed = () => Math.floor(rand01() * 4294967296) >>> 0;
  * 이 칸(slot)의 물건: 저장된 칸이 같은 칸이고 맞으면(valid — 무기 id 맞춤) 그대로 · 아니면 roll(seed, reroll) 로 새로 뽑아 한 번 저장.
  *  같은 칸을 다시 뽑을 때(깨진 칸 · 시험판 forceAlter 가 다름)는 그 칸의 다시 들인 수 그대로 · 새 칸이면 0.
  *  forceAlter (시험판 ?shopAlter — true · false · null) 가 저장된 칸과 다르면 다시 뽑는다. 씨앗은 저장에 하나(없으면 만듦 — 같은 칸 · 같은 씨앗 · 같은 수 = 같은 물건).
- *  돌려줌: { v, seed, slot, rerolls, alter, items } 사본 (저장이 막혀도 이번 실행 동안 같은 물건)
+ *  fix(s) = 저장된 같은 칸을 고쳐 쓸 때(파는 수를 늘린 뒤 옛 2 개 칸 채우기 — shop_rules.js topUpStock): 고친 칸 · null(그대로) — 고치면 한 번 저장.
+ *  돌려줌: { v, seed, slot, rerolls, n, alter, items } 사본 (저장이 막혀도 이번 실행 동안 같은 물건)
  */
-export function ensureShopStock({ slot, roll, valid = () => true, forceAlter = null }) {
+export function ensureShopStock({ slot, roll, valid = () => true, fix = () => null, forceAlter = null }) {
   readProgress();
   const s = session.shop;
-  if (s && s.slot === slot && valid(s) && (forceAlter == null || s.alter === forceAlter)) return structuredClone(s);
+  if (s && s.slot === slot && valid(s) && (forceAlter == null || s.alter === forceAlter)) {
+    const fixed = shopOf(fix(structuredClone(s)) ?? null);
+    if (fixed) { session.shop = fixed; save(); }
+    return structuredClone(session.shop);
+  }
   const seed = s?.seed ?? newShopSeed(), rerolls = s?.slot === slot ? s.rerolls : 0;
   const next = shopOf({ ...roll(seed, rerolls), seed, slot, rerolls });
   if (!next) return null;

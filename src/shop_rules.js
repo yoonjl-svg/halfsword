@@ -71,20 +71,11 @@ export function rollPrice(rnd, tier, cfg = SHOP) {
   return { coins: rollStep(rnd, p.coins[0], p.coins[1], cfg.coinStep), heads: 0, horns: p.horns ? rollStep(rnd, p.horns[0], p.horns[1], 1) : 0 };
 }
 
-/**
- * 한 칸의 물건 뽑기 — 같은 seed · slot · owned 면 늘 같다.
- *  reroll = 이 칸에서 다시 들인 수(0 = 갱신 때 물건) · owned = 가진 무기 id 목록(시작 무기 포함 — owned_weapons.js ownedWeapons) · forceAlter = 시험판 ?shopAlter (true · false · null = 확률대로)
- *  돌려줌 { v 1, slot, rerolls, alter, items: [{ id, tier, coins, heads, horns }] } — 팔 무기가 모자라면 items 가 짧다(없으면 빈 목록)
- */
-export function rollStock({ seed, slot, reroll = 0, owned = [], forceAlter = null }, cfg = SHOP) {
-  const rnd = seededRandom(seed, slot, reroll);
-  const alterRoll = rnd(); // 늘 먼저 하나 — 얼터를 억지로 정해도 뒤 흐름은 같다
-  const alter = forceAlter == null ? alterRoll < cfg.alterChance : !!forceAlter;
-  const have = new Set(owned), left = {};
-  for (const id of SHOP_POOL) if (!have.has(id)) (left[tierOf(id)] ??= []).push(id);
+/** 등급 무게대로 물건 count 개 (left = 등급 → 남은 무기 id — 뽑은 것은 빠짐) · 보통 = 등급표 값 · 얼터 = 머리 */
+function drawItems(rnd, { alter, left, count }, cfg) {
   const weights = alter ? Object.fromEntries(cfg.alterTiers.map((t) => [t, 1])) : { ...cfg.tierWeights };
   const items = [];
-  for (let i = 0; i < cfg.slots; i++) {
+  for (let i = 0; i < count; i++) {
     const open = Object.fromEntries(Object.entries(weights).filter(([t]) => left[t]?.length));
     let tier = pickWeighted(rnd, weights);
     if (!left[tier]?.length) {
@@ -97,7 +88,38 @@ export function rollStock({ seed, slot, reroll = 0, owned = [], forceAlter = nul
     const price = alter ? { coins: 0, heads: cfg.alterPrice.heads, horns: 0 } : rollPrice(rnd, tier, cfg);
     items.push({ id, tier, ...price });
   }
-  return { v: 1, slot, rerolls: reroll, alter, items };
+  return items;
+}
+const leftOf = (exclude) => {
+  const have = new Set(exclude), left = {};
+  for (const id of SHOP_POOL) if (!have.has(id)) (left[tierOf(id)] ??= []).push(id);
+  return left;
+};
+
+/**
+ * 한 칸의 물건 뽑기 — 같은 seed · slot · owned 면 늘 같다.
+ *  reroll = 이 칸에서 다시 들인 수(0 = 갱신 때 물건) · owned = 가진 무기 id 목록(시작 무기 포함 — owned_weapons.js ownedWeapons) · forceAlter = 시험판 ?shopAlter (true · false · null = 확률대로)
+ *  돌려줌 { v 1, slot, rerolls, n, alter, items: [{ id, tier, coins, heads, horns }] } — n = 뽑은 수(SHOP.items) · 팔 무기가 모자라면 items 가 짧다(없으면 빈 목록).
+ *  물건은 하나씩 차례로 뽑으므로 수만 늘리면(2 → 3) 앞 물건은 그대로 · 뒤에 하나 더 (topUpStock 은 저장된 물건을 지키며 채움)
+ */
+export function rollStock({ seed, slot, reroll = 0, owned = [], forceAlter = null }, cfg = SHOP) {
+  const rnd = seededRandom(seed, slot, reroll);
+  const alterRoll = rnd(); // 늘 먼저 하나 — 얼터를 억지로 정해도 뒤 흐름은 같다
+  const alter = forceAlter == null ? alterRoll < cfg.alterChance : !!forceAlter;
+  const items = drawItems(rnd, { alter, left: leftOf(owned), count: cfg.items }, cfg);
+  return { v: 1, slot, rerolls: reroll, n: cfg.items, alter, items };
+}
+
+/**
+ * 저장된 칸 채우기 (사장님 10/31 02:xx — 파는 수를 2 → 3 으로 바꾼 뒤 옛 저장): 그 칸을 뽑은 수(n — 없으면 옛 2)가 지금 수보다 적고 물건도 적으면
+ *  있던 물건(산 것 · 판매 완료 포함)은 그대로 두고 모자란 만큼 같은 규칙(그 칸의 보통 · 얼터)으로 더 뽑아 붙인다 — 가진 무기 · 있던 무기는 뺌 ·
+ *  같은 씨앗 · 칸 · 다시 들인 수면 늘 같다(다른 흐름 — 씨앗에 고정 값을 섞음). 채울 것이 없으면 null
+ */
+export function topUpStock(stock, { owned = [], count = SHOP.items } = {}, cfg = SHOP) {
+  if (!stock || (stock.n ?? 2) >= count || stock.items.length >= count) return null;
+  const rnd = seededRandom((stock.seed ^ 0x7f4a7c15) >>> 0, stock.slot, stock.rerolls ?? 0);
+  const extra = drawItems(rnd, { alter: !!stock.alter, left: leftOf([...owned, ...stock.items.map((i) => i.id)]), count: count - stock.items.length }, cfg);
+  return { ...stock, n: count, items: [...stock.items, ...extra] };
 }
 
 const count = (n) => Number.isSafeInteger(n) && n >= 0;
@@ -109,5 +131,5 @@ export function normalizeShop(s) {
     if (!it || !SHOP_POOL.includes(it.id) || tierOf(it.id) !== it.tier || !count(it.coins) || !count(it.heads) || !count(it.horns) || items.some((x) => x.id === it.id)) return null;
     items.push({ id: it.id, tier: it.tier, coins: it.coins, heads: it.heads, horns: it.horns });
   }
-  return { v: 1, seed: s.seed, slot: s.slot, rerolls: count(s.rerolls) ? s.rerolls : 0, alter: s.alter === true, items };
+  return { v: 1, seed: s.seed, slot: s.slot, rerolls: count(s.rerolls) ? s.rerolls : 0, ...(count(s.n) ? { n: s.n } : {}), alter: s.alter === true, items };
 }

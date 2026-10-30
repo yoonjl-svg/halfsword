@@ -2,7 +2,9 @@
 //  위: 상인 프로필(얼터면 광기의 그림 julia_mad — public/ui/portraits/<id>.webp · 없으면 빈 액자 1) + 장면 글(얼터만 '*크리스테바의 분위기가 이상하다*') · 이름 · “대사”
 //   (방랑 전용 상대 알림 창과 같은 차례 · 같은 꼴 — 장면 글은 대사와 같은 색 · 크기, 사장님 10/24 02:4x). 이름은 얼터도 '쥘리아 크리스테바'(10/31 00:2x).
 //   대사는 칸을 열 때 · 물건을 다시 들일 때마다 무작위(바로 앞 대사는 빼고 — rand01).
-//  가운데: 파는 물건 둘(SHOP.slots) — 그림 · 이름 · 등급 · 값. 누르면 확인 카드(이름 · 등급 · 설명 · 값 · 취소 / 구입) → 구입 = lobby_progress.js purchase 한 번의 저장
+//  가운데: 파는 물건 SHOP.items(2 또는 3 — 10/31 02:xx 견주기) — 그림 · 이름 · 등급 · 값. 누르면 확인 카드 → 구입 = lobby_progress.js purchase 한 번의 저장
+//   확인 카드(사장님 10/31 02:xx '설명은 왼쪽에 몰아서 뜨고 오른쪽에는 해당 무기의 풀일러스트랑 구매 버튼'): 왼쪽 = 이름 · 등급 · 설명(스펙) · 값 · 묻는 말 '이 물건을 사겠나?'(모자라면 모자란 재화) /
+//   오른쪽 = 무기 그림 크게(무기 카드 · 아이템 칸과 같은 그림 public/ui/weapons/<id>.webp — 따로 그린 큰 그림은 없음 · 등급 빛) + '구입' · 닫기 = 오른쪽 위 ×(스킬 칸 설명 카드와 같은 꼴) · Esc
 //   (금화 · 머리 · 뿔피리를 내고 얻은 것 'weapon:<id>' — owned_weapons.js · 아이템 칸 · 장착 · 생사전 가진 무기 수에 바로). 산 물건은 '판매 완료'(다음 갱신까지).
 //   돈이 모자라면 확인 카드에 모자란 재화를 한 줄로('금화가 부족합니다.') · 구입 단추는 누를 수 없음.
 //  맨 아래: '⏳ 1:29:59' — 다음 갱신까지 남은 시간이 1 초마다 줄어듦(사장님 10/31 00:2x · 초 경계에 맞춤 · 칸이 바뀌면 새 물건). 칸이 닫혀 있거나(다른 탭) · 화면이 숨었거나 ·
@@ -13,7 +15,7 @@
 import { SHOP } from './config.js';
 import { readProgress, purchase, ensureShopStock, rerollShopStock, rand01 } from './lobby_progress.js';
 import { ownedWeapons, weaponReceipt } from './owned_weapons.js';
-import { shopSlot, msToNextSlot, rollStock, normalizeShop } from './shop_rules.js';
+import { shopSlot, msToNextSlot, rollStock, normalizeShop, topUpStock } from './shop_rules.js';
 import { SHOP_TEXT, SHOP_LINES, SHOP_ALTER_LINES, SHOP_ALTER_MOOD, SHOP_KEEPER_NAME, SHOP_HOURGLASS, shortText, clockText, nextLine } from './shop_text.js';
 import { loadUiCue, playUiCue } from './ui_sound.js'; // 새 물건 '철-컥' (10/31 01:3x — ui_sound.js UI_SOUND.restock)
 import { portraitSrc } from './portraits.js';
@@ -36,6 +38,7 @@ function testSwitches(search) {
 export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, now = () => Date.now(), search = globalThis.location?.search ?? '' } = {}) {
   const test = SHOP.testMode ? testSwitches(search) : { alter: null, offset: 0 };
   const cost = SHOP.rerollHeads;
+  host.dataset.count = String(SHOP.items); // 2 = 옆 그림 칸 · 3 = 세로 칸 (shop.css)
   host.innerHTML = `<div class="shop-keeper">
       <figure class="shop-portrait"><img alt="" draggable="false" decoding="async"></figure>
       <div class="shop-say"><p class="shop-mood" hidden></p><p class="shop-name"></p><p class="shop-line"></p></div>
@@ -44,11 +47,14 @@ export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, n
     <p class="shop-foot"><span class="shop-refresh" role="timer"><span class="shop-hg" aria-hidden="true">${SHOP_HOURGLASS}</span><span class="shop-clock"></span><span class="shop-test"></span></span>
       <span class="shop-reroll"><span class="shop-reroll-why" hidden>${SHOP_TEXT.rerollShort}</span><button type="button" class="secondary small shop-next" aria-label="${SHOP_TEXT.reroll} · ${SHOP_TEXT.heads} ${cost}"><span class="shop-cost" aria-hidden="true">${POUCH_ICON}<b>${cost}</b></span>${SHOP_TEXT.reroll}</button></span></p>
     <div class="shop-confirm" role="group" aria-label="${SHOP_TEXT.confirm}" hidden>
-      <p class="item-head"><b class="shop-c-name" tabindex="-1"></b><span class="shop-c-tier"></span></p>
-      <p class="shop-c-desc"></p>
-      <p class="shop-c-row"><span class="shop-c-price"></span></p>
-      <p class="shop-c-note" role="status"></p>
-      <div class="confirm-actions"><button type="button" class="secondary shop-cancel">${SHOP_TEXT.cancel}</button><button type="button" class="primary shop-buy">${SHOP_TEXT.buy}</button></div>
+      <div class="shop-c-text">
+        <p class="item-head"><b class="shop-c-name" tabindex="-1"></b><span class="shop-c-tier"></span></p>
+        <p class="shop-c-desc"></p>
+        <p class="shop-c-row"><span class="shop-c-price"></span></p>
+        <p class="shop-c-note" role="status"></p>
+      </div>
+      <div class="shop-c-side"><span class="shop-c-art"><img alt="" draggable="false"></span><button type="button" class="primary shop-buy">${SHOP_TEXT.buy}</button></div>
+      <button type="button" class="shop-cancel" aria-label="${SHOP_TEXT.close}">×</button>
     </div>`;
   const q = (sel) => host.querySelector(sel);
   for (const icon of host.querySelectorAll('.shop-next img')) { icon.alt = ''; icon.setAttribute('aria-hidden', 'true'); }
@@ -62,7 +68,7 @@ export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, n
 
   function loadStock() {
     const slot = slotNow();
-    stock = ensureShopStock({ slot, roll: rollFor(slot), valid: (s) => !!normalizeShop(s), forceAlter: test.alter });
+    stock = ensureShopStock({ slot, roll: rollFor(slot), valid: (s) => !!normalizeShop(s), fix: (s) => topUpStock(s, { owned: ownedWeapons() }), forceAlter: test.alter }); // 옛 2 개 칸 → 지금 수만큼 채움 (10/31)
   }
   /** 지금 보이는 대사와 다른 대사 (보통 · 얼터 표 — nextLine) */
   function pickLine() {
@@ -115,8 +121,11 @@ export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, n
     const it = stock.items[i], w = getWeapon(it.id), sp = weaponSpecText(w), card = q('.shop-confirm');
     picked = i;
     card.dataset.tier = it.tier;
+    q('.shop-c-art img').src = `ui/weapons/${it.id}.webp`; // 무기 그림 크게 (오른쪽)
     q('.shop-c-name').textContent = w.nameKo; q('.shop-c-tier').textContent = TIER_LABEL[it.tier];
-    q('.shop-c-desc').textContent = `${(w.desc || '').replace(/\n/g, ' ')}${sp ? ` (${sp})` : ''}`.trim(); // 아이템 칸 설명 카드와 같은 글 (스펙은 대기실에서만 — 편집 지침 §3)
+    // 아이템 칸 설명 카드와 같은 글 (스펙은 대기실에서만 — 편집 지침 §3) · 스펙 괄호는 한 덩이(줄 끝에서 '1 / kg)' 처럼 쪼개지지 않게)
+    q('.shop-c-desc').textContent = (w.desc || '').replace(/\n/g, ' ').trim();
+    if (sp) { const spec = document.createElement('span'); spec.className = 'shop-c-spec'; spec.textContent = `(${sp})`; q('.shop-c-desc').append(' ', spec); }
     const short = shortOf(it);
     q('.shop-c-price').innerHTML = priceHtml(it, short);
     for (const icon of q('.shop-c-price').querySelectorAll('img')) { icon.alt = ''; icon.setAttribute('aria-hidden', 'true'); }
