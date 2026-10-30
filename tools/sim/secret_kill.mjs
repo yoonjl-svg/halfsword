@@ -18,7 +18,7 @@ Skill.prototype.secret = function (o) {
   if (ok) {
     const f = this.f;
     const foe = f.foe;
-    const r = { name: o?.S?.name ?? '?', who: f.aiControlled ? 'AI' : '사람', f, foe, run: this.sec, t0: clock(f), w0: foe?.wounds?.length ?? 0, pain0: foe?.pain ?? 0, wounds: [], hitT: null, endT: null, deadT: null, res: null, alive0: !!foe?.alive, d0: f.foeDistance?.() ?? null, touch0: !!(foe && bladesTouch(f, foe)), cover0: foe ? coverDist(f, foe) : null, cutT: null, blockT: null, glideSteps: 0 };
+    const r = { name: o?.S?.name ?? '?', who: f.aiControlled ? 'AI' : '사람', f, foe, run: this.sec, t0: clock(f), w0: foe?.wounds?.length ?? 0, pain0: foe?.pain ?? 0, wounds: [], hitT: null, endT: null, deadT: null, res: null, alive0: !!foe?.alive, d0: f.foeDistance?.() ?? null, decap0: !!foe?.decapitated, decap: false, touch0: !!(foe && bladesTouch(f, foe)), cover0: foe ? coverDist(f, foe) : null, cutT: null, blockT: null, glideSteps: 0 };
     recs.push(r);
     live.push(r);
   }
@@ -63,6 +63,7 @@ Skill.prototype.update = function (dt) {
       if (r.hitT == null && (r.wounds.length || (foe?.pain ?? 0) > r.pain0 + 0.05 || !foe?.alive)) r.hitT = now;
     }
     if (r.deadT == null && foe && !foe.alive) r.deadT = now;
+    if (foe?.decapitated && !r.decap0) r.decap = true; // 참수 (fighter.decapitated — 낸 뒤 생긴 것만)
     const ref = r.hitT ?? r.t0;
     if (r.endT != null && now - ref > 3.3) live.splice(i, 1);
   }
@@ -98,6 +99,6 @@ process.on('exit', () => {
     lines.push(`| ${who} | ${name} | ${R.length} | ${pc(H.length, R.length)} | ${JSON.stringify(zones)} | ${f2(q(sev, 0.5))} · ${f2(sev.reduce((a, b) => a + b, 0) / Math.max(1, sev.length))} | ${pc(d1, H.length)} | ${pc(d3, H.length)} | ${pc(blk, R.length)} | ${pc(gl, R.length)} | ${f2(q(H.map((r) => (r.hitT - r.t0) / K), 0.5))} | ${f2(q(R.map((r) => (r.res?.T ?? NaN) / K), 0.5))} | ${f2(q(R.map((r) => r.d0), 0.5))} | ${pc(R.filter((r) => r.touch0).length, R.length)} | ${pc(early, B.length)} | ${pc(bt, B.length)} |`);
   }
   process.stderr.write(`\n[SET ${process.env.SET ?? '-'}]\n` + lines.join('\n') + '\n');
-  if (process.env.KILL_JSON) fs.writeFileSync(process.env.KILL_JSON, recs.map((r) => JSON.stringify({ who: r.who, name: r.name, t0: r.t0 / K, hitT: r.hitT != null ? r.hitT / K : null, deadT: r.deadT != null ? r.deadT / K : null, sev: r.wounds.reduce((a, w) => a + w.severity, 0), wounds: r.wounds.map((w) => [w.part, w.type, +w.severity.toFixed(2)]), touch0: r.touch0, cover0: r.cover0, cutT: r.cutT != null ? (r.cutT - r.t0) / K : null, blockT: r.blockT != null ? (r.blockT - r.t0) / K : null, blockIntoCut: r.blockI != null && r.tCut0 != null ? (r.blockI - r.tCut0) / K : null, offT: r.offT != null ? (r.offT - r.t0) / K : null, res: r.res && { hit: r.res.hit, zone: r.res.zone, part: r.res.part, blocked: r.res.blocked, glided: r.res.glided, E: r.res.energy, T: r.res.T, tipV: r.res.tipV }, d0: r.d0 })).join('\n'));
+  if (process.env.KILL_JSON) fs.writeFileSync(process.env.KILL_JSON, recs.map((r) => JSON.stringify({ who: r.who, name: r.name, t0: r.t0 / K, hitT: r.hitT != null ? r.hitT / K : null, deadT: r.deadT != null ? r.deadT / K : null, sev: r.wounds.reduce((a, w) => a + w.severity, 0), wounds: r.wounds.map((w) => [w.part, w.type, +w.severity.toFixed(2)]), touch0: r.touch0, cover0: r.cover0, cutT: r.cutT != null ? (r.cutT - r.t0) / K : null, blockT: r.blockT != null ? (r.blockT - r.t0) / K : null, blockIntoCut: r.blockI != null && r.tCut0 != null ? (r.blockI - r.tCut0) / K : null, offT: r.offT != null ? (r.offT - r.t0) / K : null, decap: r.decap, res: r.res && { hit: r.res.hit, zone: r.res.zone, part: r.res.part, blocked: r.res.blocked, glided: r.res.glided, E: r.res.energy, T: r.res.T, tipV: r.res.tipV }, d0: r.d0 })).join('\n'));
 });
 await import(pathToFileURL(resolve(script)).href);
