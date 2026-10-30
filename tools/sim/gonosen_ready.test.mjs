@@ -154,7 +154,10 @@ test('③ AI: 같은 셈 — 일본 AI(숙련도 5)는 걸음 뜻이 없고 공�
 
 test("④ 사람 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준비가 되면 웅크리게 해.' — SECRET.gnsCrouch): 준비 → AI 와 같은 발도 대기 자세 · 손을 쉬면 칼이 왼 허리(발도가 그 자리에서) · 칼을 쥐면 손은 곧장 사람 것 · 막기로 풀리면 gnsCrouchOut 에 풀림 · 끄면 표시만", async () => {
   const THREE = await import('three');
-  assert.equal(SECRET.gnsCrouch, 1);
+  assert.equal(SECRET.gnsCrouch, 0); // 10/31 01:0x 사장님 '플레이어만 웅크리기 꺼' — 기본 끔 · 아래는 켠 판(`?gnsCrouch=1`)을 본다
+  const gnsWas = SECRET.gnsCrouch;
+  SECRET.gnsCrouch = 1;
+  try {
   assert.equal(SECRET.gnsCrouchOut, 0.2);
   const R = near({});
   const p = R.p;
@@ -202,6 +205,9 @@ test("④ 사람 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준
   assert.equal(O.ps.iaiArm.armed, true);
   assert.ok(!(O.p.iaiReadyW > 0) && O.p.skill.thrustPose.w === 0, '?gnsCrouch=0 — 자세 그대로');
   O.G.world.free();
+  } finally {
+    SECRET.gnsCrouch = gnsWas;
+  }
 });
 
 test('⑤ 10/27 21:4x AI 가 웅크린 사람에게 낮게 침 (SECRET.gnsCrouchAim): 늦게 본 모습이 웅크림 · 상대가 사람이면 내 가슴 − 상대 가슴 · 서 있음 · AI 상대 · 끔이면 0', async () => {

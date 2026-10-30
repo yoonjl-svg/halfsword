@@ -235,7 +235,7 @@ if (params.has('foeChargeAvg')) CONFIG.SECRET.foeChargeAvg = +params.get('foeCha
 if (params.has('foeChargeSpeed') && +params.get('foeChargeSpeed') > 0) CONFIG.SECRET.foeChargeSpeed = CONFIG.realV(+params.get('foeChargeSpeed')); // 실제 m/s // 비기 '달려듦' 빠르기 (10/25 16:1x 사장님 결정 — 기본 1.2 · `?foeChargeSpeed=0.9` 옛 판)
 if (params.has('gnsEnterOpen')) CONFIG.SECRET.gnsEnterOpen = +params.get('gnsEnterOpen') ? 1 : 0; // 여쭘 C: 들어옴 창은 상대 칼끝이 나를 겨누지 않을 때만 (기본 0 · `?gnsEnterOpen=1`)
 if (['idle', 'dist'].includes(params.get('gnsReady'))) CONFIG.SECRET.gnsReady = params.get('gnsReady'); // 고노센 준비 (10/25 22:3x · 22:5x 사장님 — 기본 'idle' = 거리와 상관없이 아무 행동 없이 2 s · 준비된 뒤엔 걸어도 유지 · `?gnsReady=dist` = 상대 칼 거리 밖 옛 판)
-if (params.has('gnsCrouch')) CONFIG.SECRET.gnsCrouch = +params.get('gnsCrouch') ? 1 : 0; // 사람 고노센 준비 웅크림 (10/25 23:0x 사장님 결정 — 기본 1 · `?gnsCrouch=0` = '고노센 준비' 표시만)
+if (params.has('gnsCrouch')) CONFIG.SECRET.gnsCrouch = +params.get('gnsCrouch') ? 1 : 0; // 사람 고노센 준비 웅크림 (10/25 23:0x 사장님 결정 1 → 10/31 01:0x '플레이어만 웅크리기 꺼' — 기본 0 · `?gnsCrouch=1` = 웅크림)
 if (params.has('gnsCrouchOut') && +params.get('gnsCrouchOut') > 0) CONFIG.SECRET.gnsCrouchOut = +params.get('gnsCrouchOut'); // 웅크림 풀림 시간 (s — 기본 0.2 · 사장님 확인 전)
 if (params.has('gnsCrouchAim')) CONFIG.SECRET.gnsCrouchAim = +params.get('gnsCrouchAim') ? 1 : 0; // AI 가 웅크린 사람을 칠 때 길을 낮춤 (10/27 21:4x 사장님 결정 — 기본 1 · `?gnsCrouchAim=0` = 7b02877 판)
 if (params.has('gnsAiSettle')) CONFIG.SECRET.gnsAiSettle = +params.get('gnsAiSettle') ? 1 : 0; // 고노센 AI 가 준비 전이면 간 보기 동안 제자리에 섬 (10/25 22:5x 규칙의 AI 쪽 — 기본 1 · `?gnsAiSettle=0` · 사장님 확인 전)
@@ -279,7 +279,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('risoClosing')) CONFIG.SECRET.risolutoClosing = +params.get('risoClosing') ? 1 : 0;
   // 10/24 런지 (사장님 '런지로 진행해 … 고노센처럼 빠르게 … 0.6초 내 경직도 0.6초'): `?risoLunge=0` = 10/23 판(탭 찌르기 · 팔 늦춤 FLOW_RECOVERY 0.4 · 굳음 stiff.italian 0.4) · `?risoShare=0.6` 칼끝 빠르기 몫 비교 · `?risoRoom=1` · `?risoGlide=0`
   if (params.get('risoLunge') === '0') Object.assign(CONFIG.SECRET, { risolutoLunge: 0, risolutoArmSlow: null, risolutoStiff: null });
-  if (params.has('risoShare') && +params.get('risoShare') > 0) CONFIG.SECRET.risolutoShare = +params.get('risoShare'); // 10/30 22:2x 사장님 0.8 (전 0.9 · 그 전 1)
+  if (params.has('risoShare') && +params.get('risoShare') > 0) CONFIG.SECRET.risolutoShare = +params.get('risoShare'); // 10/31 01:2x 사장님 0.7 (전 0.8 · 0.9 · 그 전 1)
   if (params.has('risoArmSlow') && +params.get('risoArmSlow') >= 0) CONFIG.SECRET.risolutoArmSlow = CONFIG.realS(+params.get('risoArmSlow')); // 런지 상대 팔 늦춤 (실제 초 — 10/30 20:0x 사장님 0 · 전 0.6)
   if (params.has('risoRoom')) CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, room: +params.get('risoRoom') ? 1 : 0 }; // 1 = 앞발 런지 걸음을 가슴 사이(clinch 밖까지)로 줄임
   if (params.has('risoGlide')) CONFIG.SECRET.risolutoGlide = +params.get('risoGlide') ? 1 : 0; // 0 = 붙은 칼 따라 미끄러짐 끔 (연환과 같은 막힘)
