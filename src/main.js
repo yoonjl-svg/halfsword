@@ -584,7 +584,7 @@ const WANDER_FOES = [...new Set([...WANDER_STAGES.map((id) => STAGE_FOE[id]), ..
 // 주소 스위치 (?title=1 과 함께 — 대기실을 거쳐야 방랑이 열린다): ?wanderQuit=1 = 싸움 도중 그만두면 패배 · ?wanderLegacy=0 = 옛 저장 한 바퀴 인정 끔 (wander_rules.js WANDER — 사장님 확인 전)
 if (['0', '1'].includes(params.get('wanderQuit'))) WANDER.quitAsLoss = params.get('wanderQuit') === '1';
 if (['0', '1'].includes(params.get('wanderLegacy'))) WANDER.legacyLoop = params.get('wanderLegacy') === '1';
-if (['0', '1'].includes(params.get('wanderResume'))) WANDER.resumeState = params.get('wanderResume') === '1'; // 몸 상태 이어받기 시제품 (사장님 10/30 01:1x — 감독 안 (b) · 기본 끔)
+if (['0', '1'].includes(params.get('wanderResume'))) WANDER.resumeState = params.get('wanderResume') === '1'; // 몸 상태 이어받기 (사장님 10/30 01:1x · 08:2x '둘 다 켜' — 기본 켬 · 0 = 전 판: 같은 대면을 처음 몸으로)
 // 대기실 장착을 싸움에 (docs/import/lobby_fix_2026-10-16.md §3): 첫 화면·대기실에서 연 여정만(journeySaves — 주소 고정 판·테스트 경로·옛 메뉴 판은 지금 그대로).
 //  weapon = 대기실 무기(있으면 무대마다 카드 없이 그 무기 · 없으면 카드) · armor = 케틀 햇(있으면 투구 + 최대 기력 130 · 없으면 맨머리) ·
 //  neck = 용사의 눈물(있으면 플레이어 기력 무한 + 내 기력 막대 없음 · 겉모습 그대로 — 10/17, docs/import/hero_tear_2026-10-17.md).

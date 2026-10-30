@@ -304,6 +304,7 @@ export function resetWanderLoadout() {
   const run = session.wander.run;
   if (!run || run.status !== 'active') return false;
   Object.assign(run, { weapon: null, cards: null, fighting: false });
+  delete run.resume; // 재대결 = 처음 몸 (몸 상태 이어받기 사본도 지움 — 방랑 정지 창엔 재대결이 없지만 이 길로 오면)
   return save(true);
 }
 /** 싸움이 시작됨 / 끝남 (WANDER.quitAsLoss 켬 — main.js beginFight): 싸우는 동안 판을 버리면(새로고침 · 대기실 · 재대결) 다음에 패배로 셈한다 */
