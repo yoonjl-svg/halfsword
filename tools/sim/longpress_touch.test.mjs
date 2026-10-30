@@ -93,6 +93,7 @@ function actor(extra = {}) {
 // 손 목표를 dist(패드 m)만큼 steps 스텝 동안 빠르게 옮김 (휘두르기) → 쉼 0.3 s (긋기 끝맺음)
 function flick(f, dist, steps = 2, dir = [0.8, 0.6]) {
   const dt = 1 / 120;
+  f.stamina.step(dt); // 쉬던 손 (긋기 시작 자리)
   for (let i = 0; i < steps; i++) {
     f.skill.swinging = true;
     f.skill.vel.set((dir[0] * dist) / (steps * dt), (dir[1] * dist) / (steps * dt));
@@ -129,6 +130,7 @@ test('사람: 떼기 직전 미끄러진 탭 = 찌르기 10 하나 (전 판 22 �
   const h = actor({ humanInput: true });
   h.handOffset.set(0.1, 0.0);
   const dt = 1 / 120;
+  h.stamina.step(dt); // 쉬던 손
   h.skill.swinging = true;
   h.skill.vel.set(8, 0);
   h.handOffset.x += 0.067;
@@ -143,6 +145,7 @@ test('사람: 떼기 직전 미끄러진 탭 = 찌르기 10 하나 (전 판 22 �
   try {
     const o = actor({ humanInput: true });
     o.handOffset.set(0.1, 0.0);
+    o.stamina.step(dt);
     o.skill.swinging = true;
     o.skill.vel.set(8, 0);
     o.handOffset.x += 0.067;
@@ -156,6 +159,7 @@ test('사람: 떼기 직전 미끄러진 탭 = 찌르기 10 하나 (전 판 22 �
 test('사람: 짧은 손길도 칼이 닿으면 청구 (닿음 = 공격 — 그대로)', () => {
   const h = actor({ humanInput: true });
   h.handOffset.set(0.1, 0.0);
+  h.stamina.step(1 / 120);
   h.skill.swinging = true;
   h.skill.vel.set(8, 0);
   h.handOffset.x += 0.07;
