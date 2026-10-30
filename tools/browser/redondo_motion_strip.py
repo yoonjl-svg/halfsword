@@ -14,7 +14,8 @@ meta = json.load(open(f'{D}/{jname}'))
 by = {s['mode']: s for s in meta['summary']}
 TITLE = {'spin': 'CURRENT spin (0.6 s/turn)', 'slowSpin': 'A slowSpin (1.2 s/turn, wider)', 'shoulder': 'B shoulder rest',
          'release_direct': 'NEW: A circle + direct diagonal cut (upper left -> lower right)', 'release_chamber': 'OLD: A circle + release over the left shoulder (extra loop)',
-         'release_direct_60deg': 'A circle + direct cut, plane 60 deg from the ground (owner 10/30 01:3x)'}
+         'release_direct_60deg': 'A circle + direct cut, plane 60 deg from the ground (owner 10/30 01:3x)',
+         'release_direct_shoulder': 'B (default, owner 10/31): sword rested on the right shoulder + direct 60 deg cut'}
 try:
     font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 13)
     big = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 15)
