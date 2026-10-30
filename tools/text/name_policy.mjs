@@ -13,7 +13,7 @@ const rows = await collectTexts({ characters: true });
 const bad = [];
 const count = {};
 for (const r of rows) {
-  const p = policyProblem(r.text, schoolSet(r.school));
+  const p = r.scriptMix ? null : policyProblem(r.text, schoolSet(r.school)); // scriptMix = 일본어 · 중국어 낱말을 일부러 섞은 대사 (texts.mjs — 광기의 쥘리아, 사장님 10/30 22:2x · 확인표 3057)
   const k = r.school || '공용';
   count[k] = count[k] ?? { all: 0, bad: 0 };
   count[k].all++;
