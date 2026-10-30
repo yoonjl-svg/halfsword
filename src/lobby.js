@@ -17,7 +17,7 @@
 //  10/23 방랑 (main.js getWanderStatus · launchWander — docs/import/wander_heroes_import_2026-10-23.md): 'Stage 입장' 아래 '방랑' 단추(같은 폭 · 다른 색 — lobby.css .wander) ·
 //   사장님 18:3x '버튼 밑에 설명 쓰는 거 싫음' — 단추 밑 글 없음. 잠겼을 때 누르면 위 알림 줄에 열리는 조건 · 깬 무대 수 · 판이 남아 있으면 '방랑 이어가기'
 //   이미 다 깬 사람(옛 저장 인정 — 저장 wander.noticeSeen 없음)은 대기실에 처음 들어올 때 알림 창 한 번(스킬트리 알림 창과 같은 꼴 · '확인'은 방랑 단추 색 — 사장님 10/24 00:3x)
-//  10/30 상점 (사장님 19:0x — config.js SHOP · shop_panel.js): '상점' 칸 = 상인 프로필 · 대사 · 파는 무기 둘 · 갱신까지 남은 시간 (SHOP.enabled — 본판은 끔: 전 빈 안내 한 줄 그대로) ·
+//  10/30 상점 (사장님 19:0x — config.js SHOP · shop_panel.js): '상점' 칸 = 상인 프로필 · 대사 · 파는 무기 둘 · '⏳ 1:29:59' · '다음 갱신'(머리 1) (SHOP.enabled — 10/31 00:2x 본판 켬 · 끄면 전 빈 안내 한 줄) ·
 //   뿔피리는 상점 칸 제목 줄 지갑에(내 정보 칸은 좁아 금화 · 머리만 그대로) · 아이템 칸 무기 = 가진 무기 모두(시작 무기 + 산 무기 — owned_weapons.js · 산 무기도 장착) · 시험판은 상점 칸으로 바로 열림(tab)
 import style from './lobby.css?inline';
 import uiStyle from './entrance_ui.css?inline';
@@ -224,7 +224,8 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, tab
     for (const panel of root.querySelectorAll('.contents-panel > [role=tabpanel]')) panel.hidden = panel.id !== 'panel' + tab.dataset.panel;
     if (tab.dataset.panel === 'Inventory') { selectedItem = null; renderInventory(); } // 아이템 칸으로 오면 고른 것 없이 (전 무기 · 방어구 탭과 같게)
     if (tab.dataset.panel === 'Skills') tree.refresh();
-    if (tab.dataset.panel === 'Shop') shop?.refresh(); // 열 때마다 새 대사 · 이 칸 물건 (10/30)
+    if (tab.dataset.panel === 'Shop') shop?.refresh(); // 열 때마다 새 대사 · 이 칸 물건 · 1 초 시계 시작 (10/30 · 10/31)
+    else shop?.stop(); // 다른 칸이면 상점 시계는 쉼
     root.querySelector('.contents-panel').scrollTop = 0;
   }
   for (const tab of tabs) {

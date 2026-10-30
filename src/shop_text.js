@@ -2,8 +2,9 @@
 //  — config.js SHOP · src/shop_panel.js). 말투는 docs/text/editing_guide.md §2: 메뉴 · 안내 글 '~합니다' · 장면 · 결과 글 '~다' · 단추 · 이름표는 명사.
 //  상인 = 쥘리아 크리스테바(id julia) · 얼터 = 광기의 쥘리아 크리스테바(id julia_mad).
 
-/** 상인 이름 (그림 id → 이름) */
-export const SHOP_KEEPER_NAME = Object.freeze({ julia: '쥘리아 크리스테바', julia_mad: '광기의 쥘리아 크리스테바' });
+/** 상점에 쓰는 상인 이름 (그림 id → 이름) — 얼터도 '쥘리아 크리스테바'(사장님 10/31 00:2x '상점에서는 얼터도 쥘리아 크리스테바 라고만 써.' · 전 '광기의 쥘리아 크리스테바').
+ *  얼터는 그림(julia_mad) · 장면 글 '*크리스테바의 분위기가 이상하다*' · 부서진 대사로만 가른다 */
+export const SHOP_KEEPER_NAME = Object.freeze({ julia: '쥘리아 크리스테바', julia_mad: '쥘리아 크리스테바' });
 
 // 보통 상인 대사 10 — 상점을 열 때마다 하나를 무작위로. 사장님 10/30 19:1x '이상할 정도로 고풍스러운 말투' · '경어를 쓰지 마' →
 //  사장님 검수 끝 (10/30 19:2x "좋아 그대로 써.")
@@ -40,8 +41,10 @@ export const SHOP_ALTER_LINES = Object.freeze([
 /** 얼터일 때 대사 위 장면 글 — 사장님 원문 그대로(별표 포함 · 10/30 19:0x '대사 위에 *크리스테바의 분위기가 이상하다* 라고 써있음') */
 export const SHOP_ALTER_MOOD = '*크리스테바의 분위기가 이상하다*';
 
-/** 왕을 이긴 판 결과 창 한 줄 (장면 · 결과 글 '~다') · 사장님 검수 전 */
-export const HORN_GAINED_TEXT = '뿔피리를 얻었다.';
+/** 왕을 이긴 판 결과 창: 금화 · 머리 줄과 같은 꼴 '[뿔피리] 뿔피리 +1' (사장님 10/31 00:2x '뿔피리 얻는 건 금화나 목 획득처럼 아이콘만 넣고 따로 메시지 출력 안 함.' — 전 10/30 '뿔피리를 얻었다.') */
+export const HORN_REWARD_LABEL = '뿔피리';
+/** 남은 시간 앞 모래시계 (사장님 10/31 00:2x '특수문자로 모래시계 아이콘 삽입하고 숫자로 표시해') — U+23F3 + 글자 꼴 고르기 U+FE0E · 글꼴은 우리 보충 조각 Noto Sans Symbols 2(index.html — 색 그림 문자가 아니게) */
+export const SHOP_HOURGLASS = '\u23F3\uFE0E';
 
 /** 상점 칸 글 (메뉴 · 안내 '~합니다' · 이름표 명사) — 사장님 확인 전 */
 export const SHOP_TEXT = Object.freeze({
@@ -49,7 +52,7 @@ export const SHOP_TEXT = Object.freeze({
   coins: '금화', heads: '머리', horns: '뿔피리', // 재화 이름 (purchase short 열쇠 — 대기실 지갑 · 결과 창과 같은 말 · 목 = 머리)
   closed: '아직 판매 중인 물품이 없습니다.', // 본판(상점 끔) — 전 빈 칸 글 그대로
   empty: '오늘은 팔 물건이 없습니다.', // 살 수 있는 무기를 모두 가짐
-  refresh: '갱신까지', // '갱신까지 3시간 12분'
+  refreshLabel: '다음 갱신까지', // 남은 시간의 읽는 글(aria — 화면은 '⏳ 1:29:59')
   soldOut: '판매 완료',
   buy: '구입', cancel: '취소', close: '닫기',
   confirm: '이 무기를 구입합니까?',
@@ -57,7 +60,9 @@ export const SHOP_TEXT = Object.freeze({
   owned: '이미 가진 무기입니다.',
   unsaved: '구입은 이번 실행 동안 유지됩니다.',
   failed: '구입하지 못했습니다. 다시 시도해 주십시오.',
-  nextSlot: '다음 갱신', // 시험판만
+  reroll: '다음 갱신', // 머리 1 로 지금 칸 물건을 새로 (사장님 10/31 00:2x — 전 10/30 시험판만 · 공짜)
+  rerolled: '새 물건이 들어왔습니다.',
+  rerollShort: '머리가 부족합니다.', // 머리 0 — 단추 옆 짧은 까닭
 });
 
 /** 모자란 재화 → 안내 한 줄 ('금화가 부족합니다.' · '금화와 뿔피리가 부족합니다.') */
@@ -70,9 +75,8 @@ export function shortText(short) {
   return `${join}${josa} 부족합니다.`;
 }
 
-/** 남은 시간 → '3시간 12분' · '12분' · '1분 미만' */
-export function leftText(ms) {
-  const m = Math.max(0, Math.floor(ms / 60000)), h = Math.floor(m / 60), r = m % 60;
-  if (!m) return '1분 미만';
-  return h ? `${h}시간${r ? ` ${r}분` : ''}` : `${r}분`;
+/** 남은 시간 → 'h:mm:ss' (사장님 10/31 00:2x '실시간으로 줄어들게 초까지 표시. h:mm:ss') — 초는 올림(칸이 막 바뀐 때 4:00:00 · 마지막 초 0:00:01) */
+export function clockText(ms) {
+  const t = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, sec = t % 60;
+  return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }

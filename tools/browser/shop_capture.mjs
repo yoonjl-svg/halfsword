@@ -53,7 +53,7 @@ const nameFit = (o) => o.p.evaluate(R(`
 
 // ── 폰 가로 844 × 390 ──
 {
-  const o = await open('844x390', 844, 390, true, '?coins=1200&heads=3&horns=1');
+  const o = await open('844x390', 844, 390, true, '?coins=1200&heads=999&horns=1'); // 다음 갱신 = 머리 1 (10/31) — 여러 번 누르려고 머리를 넉넉히
   // ① 보통 상점 — 에픽 · 레전드(뿔피리 값)가 한 칸이라도 나오고 커먼 · 레어(금화로 살 수 있음)도 나올 때까지 '다음 갱신'
   let tries = 0, s = await stock(o), st = await state(o);
   while (tries < 400 && !(st.alter === 'false' && s.some((x) => ['epic', 'legend'].includes(x.tier)) && s.some((x) => x.tier === 'common'))) { await tap(o, '.shop-next'); s = await stock(o); st = await state(o); tries++; }
@@ -128,7 +128,7 @@ const nameFit = (o) => o.p.evaluate(R(`
   await o.p.waitForFunction(() => game.state === 'fight' && game.stats.simTime > 2, null, { timeout: 240000 });
   await o.p.evaluate(() => game.enemy.die('기절', true));
   await o.p.waitForFunction(() => game.state === 'paused' && document.getElementById('menu').classList.contains('show'), null, { timeout: 240000 });
-  report.result = await o.p.evaluate(() => ({ title: document.getElementById('menuTitle').textContent, reward: document.getElementById('menuReward').textContent, horn: document.getElementById('menuHorn').hidden ? null : document.getElementById('menuHorn').textContent, horns: JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).horns }));
+  report.result = await o.p.evaluate(() => ({ title: document.getElementById('menuTitle').textContent, reward: document.getElementById('menuReward').textContent, icons: [...document.querySelectorAll('#menuReward img')].map((i) => i.getAttribute('src').split('/').pop()), horns: JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).horns })); // 10/31: 뿔피리는 금화 줄 안 '뿔피리 +1'
   await shot(o, 'result-horn');
   await o.ctx.close();
 }

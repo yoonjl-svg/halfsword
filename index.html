@@ -39,6 +39,8 @@
         unicode-range: U+2160-2161, U+4E09, U+523A, U+528D, U+52E2, U+53E3, U+53F3, U+5766, U+593E, U+5B88, U+5DE6, U+5FA1, U+6380, U+63A0, U+63A3, U+6492, U+64A9, U+64CA, U+6582, U+66F8, U+6B65, U+74B0, U+76F4, U+770B, U+7B26, U+7FC5, U+7FFC, U+8170, U+8179, U+82B1, U+84CB, U+864E, U+8C79, U+8DE8, U+8E72, U+8ECA, U+9001, U+9006, U+9023, U+9802, U+982D, U+9C57, U+9CF3, U+9EDE; }
       @font-face { font-family: 'Noto Sans Math'; src: url('/fonts/NotoSansMath-symbols.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap;
         unicode-range: U+21BA-21BB, U+25AE-25AF; }
+      @font-face { font-family: 'Noto Sans Symbols 2'; src: url('/fonts/NotoSansSymbols2-hourglass.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap;
+        unicode-range: U+231B, U+23F3; } /* 10/31 상점 남은 시간 모래시계 ⌛ ⏳ — 색 그림 문자 대신 글자 꼴 (public/fonts/README.md) */
       :root {
         /* ── 글자 규칙 (10/14 — docs/ui/hud_type_system_2026-10-10.md §16 · docs/ui/webfont_2026-10-14.md): 글꼴 하나 · 크기 세 단계 + 큰 글자 예외 둘 · 굵기 셋 · 글자 색 넷 ──
            사장님 10/14 10:3x '폰트 크기 규칙을 다시 · 다소 커 · 굵은 건 조금 얇게' · 10:4x '프리텐다드 + 킨젤' · 10:5x '굵기 한 단계만 · 색도 몇 개 규칙 이내 · 크기 다이내믹 절제' ·
@@ -60,7 +62,7 @@
         --line: rgba(243, 233, 216, 0.18);
         --red: #b3261e;
         --blue: #3f6fb5;
-        --font-ui: 'Cinzel', 'Pretendard', 'Noto Sans TC', 'Noto Sans Math', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; /* 10/14 라틴 글자 = Cinzel · 그 밖 = 프리텐다드 · 보충 둘 — 뒤 시스템 글꼴은 이모지만 */
+        --font-ui: 'Cinzel', 'Pretendard', 'Noto Sans TC', 'Noto Sans Math', 'Noto Sans Symbols 2', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; /* 10/14 라틴 글자 = Cinzel · 그 밖 = 프리텐다드 · 보충 둘 — 뒤 시스템 글꼴은 이모지만 */
         /* 크기 세 단계 — 평소 글자는 모두 이 셋 가운데 하나 (가장 큰 단계 ÷ 가장 작은 단계 = 17 / 12 ≈ 1.42) */
         --fs-s: 12px; /* 작게: 칸 둘째 줄 · 왼쪽 위 칸 · 안내 알약 · 카드 부제·등급·설명·특수 능력·알약·번호 · 창 안내 목록 */
         --fs-m: 14px; /* 보통: 칸 첫 줄 · 인물 소개 · 감정 줄 · 막기 · 카드 이름 · 창 부제·설정 줄·단추 */
@@ -349,8 +351,10 @@
       .reward img { flex: none; width: 14px; height: 14px; margin-right: 5px; }
       .reward .sep { margin: 0 7px; } /* ' · ' — 글은 띄어 쓴 그대로(읽는 글 '금화 +12 · 머리 +1'), 보이는 틈만 여백으로 */
       .reward .bonus { margin-left: .3em; } /* 방랑 특별 보상 '(특별 보상 금화 +200 포함)' — 괄호 앞 한 칸(글의 앞 빈칸은 flex 라 접힌다 · 10/23 리뷰 2-10) */
+      .reward { flex-wrap: wrap; row-gap: 4px; } /* 10/31: 재화 덩이(.rw — main.js showRewardLine)가 한 줄에 안 들면 덩이째 다음 줄 (뿔피리까지 붙은 왕 판) */
+      .reward .rw { display: inline-flex; align-items: center; max-width: 100%; }
+      .reward .rw-n, .reward .sep { white-space: nowrap; }
       .reward[hidden] { display: none; }
-      .reward + .reward-horn { margin-top: -6px; } /* 뿔피리 줄 (10/30 상점 — 왕을 이긴 판 '뿔피리를 얻었다.'): 금화 줄 바로 아래 · 같은 꼴 · 사이 6 px (위 여백 12 와 겹쳐 접힘) */
       /* 패배 창 프로필 + 대사 (사장님 10/17 22:1x — docs/design/portrait_ui_2026-10-17.md §4): 그림이 있으면 창이 옆으로 넓어진다 — 왼쪽 정사각 그림 --pf · 틈 16 · 오른쪽 칸은 전 창 폭(340) 그대로 · 위에 붙임.
          그림 크기 --pf = 같은 화면의 대기실 프로필 칸과 같은 CSS px (사장님 23:4x '패배 팝업 프로필도 같은 크기로 맞추고') — 아래 셈은 lobby.css .lobby 의 --card-w 셈을 그대로 옮긴 것
          (칸 높이 · 줄 폭 · 출발 단추 → 전 카드 폭 --card-w0 → 그 60 % — 10/18 01:0x). lobby.css 의 여백 · 제목 줄 · 단추 값이나 미디어 조건을 바꾸면 여기도 같이 — tools/browser/defeat_portrait_smoke.mjs 가 두 크기를 견준다.
@@ -475,7 +479,6 @@
         <p class="sub" id="menuSub">길 위에선 이름을 묻지 않는다.</p>
         <p class="foe-line" id="menuFoeLine" hidden><span id="menuFoeQuote"></span><small id="menuFoeSource"></small></p> <!-- 패배 창: 진 순간 고른 상대의 승리 대사(출처가 있으면 아래 줄 — 싸움 화면 대사 칸과 같은 꼴 · 10/18 01:4x 부터 싸움 화면엔 안 띄움) -->
         <p class="reward" id="menuReward" hidden></p> <!-- 결과 창: 이번 판 금화 · 머리 (첫 화면·대기실 여정만 — main.js) -->
-        <p class="reward reward-horn" id="menuHorn" hidden></p> <!-- 결과 창: 왕을 이긴 판 뿔피리 (10/30 상점 — main.js showRewardLine · 상점을 켰을 때만) -->
         <!-- 상대 난이도 줄은 뺐다 (사장님 결정 10/13 '상대 난이도는 메뉴에서 빼자' — 상대의 실력은 인물 숙련도가 정한다, characters.js · main.js) -->
         <!-- 검술 보정 단계 메뉴(끔·약·보통·강)는 뺐다 — 사장님 10/8 21:5x "플레이어에겐 구분이 필요 없어. 한 단계로 기본 적용": 보정은 늘 0.7 (main.js DEFAULTS.skill) -->
         <!-- 10/10 19:2x 사장님 '시작 전 설정에서도 뺄 기능이 많아': 자세 이름 · 피 · 조작 흔적 · 유파 기술 알림 · 소리 · 비기 화면 번쩍임 · 비기 카메라 연출은 늘 켬,

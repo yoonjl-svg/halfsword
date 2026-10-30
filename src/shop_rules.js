@@ -5,6 +5,8 @@
 //  보통 상인: 물건마다 등급을 SHOP.tierWeights(커먼 60 · 레어 25 · 에픽 10 · 레전드 5)로 뽑고 그 등급에서 아직 안 가진 무기 하나 · 두 물건은 서로 다름.
 //   그 등급에 남은 무기가 없으면 남은 등급끼리 다시 뽑는다(SHOP.redrawEmptyTier — 감독 기본). 값 = 등급 SHOP.price(금화 SHOP.coinStep 단위 · 뿔피리).
 //  얼터(SHOP.alterChance 5 %): 물건마다 쓰레기 · ??? 반반(SHOP.alterTiers) · 안 가진 무기 · 값 = 머리 SHOP.alterPrice.heads(3) · 금화 없음.
+//  다시 들이기 (사장님 10/31 00:2x "'다음 갱신'도 재화가 필요해. 머리 1개로 하자." — SHOP.rerollHeads): 같은 칸에서 머리를 내고 물건을 새로 뽑는다 — 같은 규칙(얼터 5 % 도 새로).
+//   칸 안 다시 들인 수(reroll — 저장 shop.rerolls)를 씨앗에 섞어 뽑으므로 같은 저장 · 같은 칸 · 같은 수면 늘 같다. 4 시간 갱신 시각은 그대로(감독 기본) · 새 칸이 되면 수는 0.
 //  파는 무기 = 무기 표 전부에서 주인공 카드에 안 나오는 것(복제 엑스칼리버 · 빼 둔 무기 weapons.js RETIRED_WEAPONS)을 뺀 것 — main.js PLAYER_WEAPON_POOL 과 같은 규칙(감독 기본)
 import { SHOP } from './config.js';
 import { WEAPON_LIST, RETIRED_WEAPONS } from './weapons.js';
@@ -35,9 +37,10 @@ function mix32(a, b) {
   h ^= h >>> 16; h = Math.imul(h, 0x7feb352d) >>> 0; h ^= h >>> 15; h = Math.imul(h, 0x846ca68b) >>> 0; h ^= h >>> 16;
   return h >>> 0;
 }
-/** mulberry32 — [0, 1) 흐름 */
-export function seededRandom(seed, slot) {
+/** mulberry32 — [0, 1) 흐름 · reroll(칸 안 다시 들인 수)이 0 이면 전과 같은 흐름 */
+export function seededRandom(seed, slot, reroll = 0) {
   let s = mix32(seed >>> 0, slot | 0);
+  if (reroll) s = mix32(s, 0x5eed0000 + (reroll | 0));
   return () => {
     s = (s + 0x6d2b79f5) >>> 0;
     let t = s;
@@ -70,11 +73,11 @@ export function rollPrice(rnd, tier, cfg = SHOP) {
 
 /**
  * 한 칸의 물건 뽑기 — 같은 seed · slot · owned 면 늘 같다.
- *  owned = 가진 무기 id 목록(시작 무기 포함 — owned_weapons.js ownedWeapons) · forceAlter = 시험판 ?shopAlter (true · false · null = 확률대로)
- *  돌려줌 { v 1, slot, alter, items: [{ id, tier, coins, heads, horns }] } — 팔 무기가 모자라면 items 가 짧다(없으면 빈 목록)
+ *  reroll = 이 칸에서 다시 들인 수(0 = 갱신 때 물건) · owned = 가진 무기 id 목록(시작 무기 포함 — owned_weapons.js ownedWeapons) · forceAlter = 시험판 ?shopAlter (true · false · null = 확률대로)
+ *  돌려줌 { v 1, slot, rerolls, alter, items: [{ id, tier, coins, heads, horns }] } — 팔 무기가 모자라면 items 가 짧다(없으면 빈 목록)
  */
-export function rollStock({ seed, slot, owned = [], forceAlter = null }, cfg = SHOP) {
-  const rnd = seededRandom(seed, slot);
+export function rollStock({ seed, slot, reroll = 0, owned = [], forceAlter = null }, cfg = SHOP) {
+  const rnd = seededRandom(seed, slot, reroll);
   const alterRoll = rnd(); // 늘 먼저 하나 — 얼터를 억지로 정해도 뒤 흐름은 같다
   const alter = forceAlter == null ? alterRoll < cfg.alterChance : !!forceAlter;
   const have = new Set(owned), left = {};
@@ -94,7 +97,7 @@ export function rollStock({ seed, slot, owned = [], forceAlter = null }, cfg = S
     const price = alter ? { coins: 0, heads: cfg.alterPrice.heads, horns: 0 } : rollPrice(rnd, tier, cfg);
     items.push({ id, tier, ...price });
   }
-  return { v: 1, slot, alter, items };
+  return { v: 1, slot, rerolls: reroll, alter, items };
 }
 
 const count = (n) => Number.isSafeInteger(n) && n >= 0;
@@ -106,5 +109,5 @@ export function normalizeShop(s) {
     if (!it || !SHOP_POOL.includes(it.id) || tierOf(it.id) !== it.tier || !count(it.coins) || !count(it.heads) || !count(it.horns) || items.some((x) => x.id === it.id)) return null;
     items.push({ id: it.id, tier: it.tier, coins: it.coins, heads: it.heads, horns: it.horns });
   }
-  return { v: 1, seed: s.seed, slot: s.slot, alter: s.alter === true, items };
+  return { v: 1, seed: s.seed, slot: s.slot, rerolls: count(s.rerolls) ? s.rerolls : 0, alter: s.alter === true, items };
 }

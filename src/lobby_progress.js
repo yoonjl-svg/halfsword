@@ -24,7 +24,7 @@
 //   판 결과와 보상을 한 번의 저장에 같이 써서 새로고침 · 대기실 왕복 · 다시 열기로 같은 보상을 두 번 받지 않는다. 옛 판(wander 를 모르는 판)으로 되돌리면 이 칸은 버려진다(금화 · 머리는 남음).
 //   저장이 막히면 방랑 거래만 이번 실행 메모리에 남긴다(pendingSave — 옛 지갑을 다시 읽어 같은 보상을 또 주지 않게). 다른 거래는 전처럼 '실패하면 다음 읽기에서 옛 값'.
 //  10/30 상점 (사장님 19:0x — config.js SHOP · shop_rules.js · shop_panel.js): 새 재화 뿔피리 horns(금화 · 머리 옆 — 왕을 이긴 판에서 awardKingHorn) · 상점 칸 shop { v, seed, slot, alter, items }
-//   (뽑은 물건 — ensureShopStock · 같은 칸 동안 그대로). 무기를 사면 purchase 가 금화 · 머리 · 뿔피리 · 얻은 것(receipt 'weapon:<id>' — owned_weapons.js)을 한 번에 저장.
+//   (뽑은 물건 — ensureShopStock · 같은 칸 동안 그대로 · rerolls = 이 칸에서 머리로 다시 들인 수 — rerollShopStock, 10/31). 무기를 사면 purchase 가 금화 · 머리 · 뿔피리 · 얻은 것(receipt 'weapon:<id>' — owned_weapons.js)을 한 번에 저장.
 //   이 모듈은 첫 화면 묶음에 들어 무기 표(weapons.js — three)를 읽지 않는다: 물건 뽑기 · 무기 맞춤은 부르는 쪽(shop_panel.js)이 넘긴다. 뿔피리는 '번 것'(earned)에 세지 않는다(쓰는 호칭이 없음)
 import { normalizeWander, wanderReward, WANDER_HEAD, WANDER_COINS, legacyWanderStages } from './wander_rules.js';
 import { TITLE, TITLE_NAMES, titleName, titleReason, dueTitles, noteKing, regicideOf, tierDrawFor } from './title_rules.js';
@@ -40,7 +40,7 @@ const paidOf = p => (p && count(p.coins) && count(p.heads) ? { coins: p.coins, h
 /** 상점 칸 (10/30 — 모양만 · 무기 id 맞춤은 shop_rules.js normalizeShop) — 맞으면 사본, 아니면 null */
 const shopOf = s => (s?.v === 1 && Number.isSafeInteger(s.slot) && count(s.seed) && s.seed <= 0xffffffff && Array.isArray(s.items) && s.items.length <= 8
   && s.items.every(i => i && validText(i.id) && validText(i.tier) && count(i.coins) && count(i.heads) && count(i.horns))
-  ? { v: 1, seed: s.seed, slot: s.slot, alter: s.alter === true, items: s.items.map(({ id, tier, coins, heads, horns }) => ({ id, tier, coins, heads, horns })) } : null);
+  ? { v: 1, seed: s.seed, slot: s.slot, rerolls: count(s.rerolls) ? s.rerolls : 0, alter: s.alter === true, items: s.items.map(({ id, tier, coins, heads, horns }) => ({ id, tier, coins, heads, horns })) } : null);
 /** 번 것 (도살자 · 대부호 — title_rules.js) — 모양이 맞으면 사본, 아니면 null */
 const earnedOf = e => (e && count(e.coins) && count(e.heads) ? { coins: e.coins, heads: e.heads } : null);
 /** 옛 저장의 번 것 = 지금 가진 것 + 칸 · 물건에 낸 값 (적어도 이만큼은 벌었다 — 감독 10/24) */
@@ -193,20 +193,40 @@ export function setHorns(amount) {
 /** 저장마다 하나인 상점 씨앗 (처음 상점을 열 때 만듦 — crypto) */
 const newShopSeed = () => Math.floor(rand01() * 4294967296) >>> 0;
 /**
- * 이 칸(slot)의 물건: 저장된 칸이 같은 칸이고 맞으면(valid — 무기 id 맞춤) 그대로 · 아니면 roll(seed) 로 새로 뽑아 한 번 저장.
- *  forceAlter (시험판 ?shopAlter — true · false · null) 가 저장된 칸과 다르면 다시 뽑는다. 씨앗은 저장에 하나(없으면 만듦 — 같은 칸 · 같은 씨앗 = 같은 물건).
- *  돌려줌: { v, seed, slot, alter, items } 사본 (저장이 막혀도 이번 실행 동안 같은 물건)
+ * 이 칸(slot)의 물건: 저장된 칸이 같은 칸이고 맞으면(valid — 무기 id 맞춤) 그대로 · 아니면 roll(seed, reroll) 로 새로 뽑아 한 번 저장.
+ *  같은 칸을 다시 뽑을 때(깨진 칸 · 시험판 forceAlter 가 다름)는 그 칸의 다시 들인 수 그대로 · 새 칸이면 0.
+ *  forceAlter (시험판 ?shopAlter — true · false · null) 가 저장된 칸과 다르면 다시 뽑는다. 씨앗은 저장에 하나(없으면 만듦 — 같은 칸 · 같은 씨앗 · 같은 수 = 같은 물건).
+ *  돌려줌: { v, seed, slot, rerolls, alter, items } 사본 (저장이 막혀도 이번 실행 동안 같은 물건)
  */
 export function ensureShopStock({ slot, roll, valid = () => true, forceAlter = null }) {
   readProgress();
   const s = session.shop;
   if (s && s.slot === slot && valid(s) && (forceAlter == null || s.alter === forceAlter)) return structuredClone(s);
-  const seed = s?.seed ?? newShopSeed();
-  const next = shopOf({ ...roll(seed), seed, slot });
+  const seed = s?.seed ?? newShopSeed(), rerolls = s?.slot === slot ? s.rerolls : 0;
+  const next = shopOf({ ...roll(seed, rerolls), seed, slot, rerolls });
   if (!next) return null;
   session.shop = next;
   save();
   return structuredClone(next);
+}
+/**
+ * 다시 들이기 (사장님 10/31 00:2x "'다음 갱신'도 재화가 필요해. 머리 1개로 하자." — 상점 칸 '다음 갱신' 단추 · config.js SHOP.rerollHeads):
+ *  지금 칸(slot)의 저장된 물건이 있을 때만 · 머리 heads 를 내고 roll(seed, rerolls + 1) 로 같은 규칙의 새 물건 — 머리 · 새 물건 · 수가 한 번의 저장(반쯤 남지 않음 · 새로고침해도 다시 안 뽑음).
+ *  4 시간 갱신 시각은 그대로(칸 번호를 바꾸지 않음). 머리가 모자라면 아무것도 안 바뀐다.
+ *  돌려줌 { ok, saved, why, stock } — why: 'heads'(모자람) · 'stale'(저장된 칸이 지금 칸이 아님 — ensureShopStock 먼저) · 'bad'
+ */
+export function rerollShopStock({ slot, roll, heads = 1 }) {
+  readProgress();
+  const s = session.shop;
+  if (!count(heads)) return { ok: false, saved: false, why: 'bad', stock: null };
+  if (!s || s.slot !== slot) return { ok: false, saved: false, why: 'stale', stock: null };
+  if (session.heads < heads) return { ok: false, saved: false, why: 'heads', stock: structuredClone(s) };
+  const rerolls = s.rerolls + 1;
+  const next = shopOf({ ...roll(s.seed, rerolls), seed: s.seed, slot, rerolls });
+  if (!next) return { ok: false, saved: false, why: 'bad', stock: structuredClone(s) };
+  session.heads -= heads;
+  session.shop = next;
+  return { ok: true, saved: save(), why: null, stock: structuredClone(next) };
 }
 /**
  * 왕을 이긴 판의 뿔피리 (main.js checkRoundEnd — 여정 · 방랑 이긴 판 · config.js SHOP.hornKings · hornChance · hornAmount): 상대가 왕이고 roll() < chance 면 +amount 한 번 저장.

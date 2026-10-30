@@ -3,6 +3,7 @@
 //  node --test tools/sim/shop.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 const storage = new Map();
 let writes = 0;
 globalThis.localStorage = { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => { writes++; storage.set(k, v); }, removeItem: (k) => storage.delete(k) };
@@ -19,8 +20,10 @@ const fresh = (extra = {}) => { storage.clear(); storage.set(P.PROGRESS_KEY, JSO
 const tierCount = (items) => items.reduce((m, it) => ((m[it.tier] = (m[it.tier] ?? 0) + 1), m), {});
 const H = 3600e3;
 
-test('사장님 값이 config SHOP 에 그대로 (10/30 19:0x) · 본판 기본은 꺼짐', () => {
-  assert.equal(SHOP.enabled, false); // 본판 · 시뮬 · 개발 서버 — 시험판 빌드(VITE_SHOP_TEST=1)만 켬
+test('사장님 값이 config SHOP 에 그대로 (10/30 19:0x · 10/31 00:2x) · 본판 켬 · 다음 갱신 머리 1', () => {
+  assert.equal(SHOP.enabled, true); // 사장님 10/31 00:2x '게임 본판에 상점 열어.' (전: 시험판만)
+  assert.equal(SHOP.testMode, false); // 시험판 스위치(?shopAlter · ?shopSlot · ?horns · ?horn)는 시험판 빌드만
+  assert.equal(SHOP.rerollHeads, 1); // 사장님 10/31 00:2x "'다음 갱신'도 재화가 필요해. 머리 1개로 하자." 
   assert.equal(SHOP.slots, 2);
   assert.deepEqual(SHOP.tierWeights, { common: 60, rare: 25, epic: 10, legend: 5 });
   assert.deepEqual(SHOP.price, { common: { coins: [800, 1000] }, rare: { coins: [1600, 2000] }, epic: { coins: [3300, 3900], horns: [2, 4] }, legend: { coins: [5000, 5800], horns: [3, 7] } });
@@ -168,7 +171,7 @@ test('저장: 뿔피리 · 상점 칸이 금화 · 머리 옆에 남고 옛 저�
   assert.equal(P.readProgress().horns, 0); // 옛 저장
   assert.equal(P.readProgress().shop, null);
   let rolls = 0;
-  const roll = (slot) => (seed) => { rolls++; return R.rollStock({ seed, slot, owned: ownedWeapons() }); };
+  const roll = (slot) => (seed, reroll) => { rolls++; return R.rollStock({ seed, slot, reroll, owned: ownedWeapons() }); };
   const valid = (s) => !!R.normalizeShop(s);
   const a = P.ensureShopStock({ slot: 50, roll: roll(50), valid });
   assert.equal(rolls, 1);
@@ -257,11 +260,83 @@ test('상인 대사: 보통 10 · 얼터 10 (사장님 검수 끝) · 장면 글
   assert.equal(T.SHOP_ALTER_LINES[5], '오호, 뿔피리를 지녔느냐? それなら 말이 다, 다, 違う…달라지노라.');
   assert.equal(T.SHOP_ALTER_LINES[8], '东西은 곧 바뀌느니라. 망설이다간 别人的 칼이 되리라. 되리라. 되ㄹ');
   assert.equal(T.SHOP_ALTER_MOOD, '*크리스테바의 분위기가 이상하다*');
-  assert.equal(T.HORN_GAINED_TEXT, '뿔피리를 얻었다.');
+  assert.equal(T.HORN_GAINED_TEXT, undefined); // 따로 글 없음 (사장님 10/31 00:2x) — 결과 창은 금화 · 머리 줄 옆 '[뿔피리] 뿔피리 +1'
+  assert.equal(T.HORN_REWARD_LABEL, '뿔피리');
   for (const line of [...T.SHOP_LINES, ...T.SHOP_ALTER_LINES]) assert.ok(line.length <= 48, `${line.length} 자 — ${line}`);
-  assert.deepEqual(T.SHOP_KEEPER_NAME, { julia: '쥘리아 크리스테바', julia_mad: '광기의 쥘리아 크리스테바' });
-  assert.equal(T.leftText(3 * H + 12 * 60e3 + 5e3), '3시간 12분');
-  assert.equal(T.leftText(4 * H), '4시간');
-  assert.equal(T.leftText(59e3), '1분 미만');
-  assert.equal(T.leftText(12 * 60e3), '12분');
+  // 상점에서는 얼터도 '쥘리아 크리스테바' (사장님 10/31 00:2x — 그림 · 장면 글 · 부서진 대사로만 가름)
+  assert.deepEqual(T.SHOP_KEEPER_NAME, { julia: '쥘리아 크리스테바', julia_mad: '쥘리아 크리스테바' });
+});
+
+test('남은 시간: 모래시계 + h:mm:ss (사장님 10/31 00:2x — 초까지 · 올림)', () => {
+  assert.equal(T.SHOP_HOURGLASS, '\u23F3\uFE0E');
+  assert.equal(T.clockText(4 * H), '4:00:00');
+  assert.equal(T.clockText(H + 29 * 60e3 + 59e3), '1:29:59');
+  assert.equal(T.clockText(H + 29 * 60e3 + 58.2e3), '1:29:59'); // 초 올림
+  assert.equal(T.clockText(9e3), '0:00:09');
+  assert.equal(T.clockText(0), '0:00:00');
+  assert.equal(T.clockText(-5), '0:00:00');
+  // 한 칸 안에서 1 초마다 1 씩 줄고 칸 끝에서 4:00:00 으로
+  const at = Date.UTC(2026, 9, 30, 15, 0); // 한국 10/31 00:00 = 칸 시작
+  assert.equal(T.clockText(R.msToNextSlot(at)), '4:00:00');
+  assert.equal(T.clockText(R.msToNextSlot(at + 1000)), '3:59:59');
+  assert.equal(T.clockText(R.msToNextSlot(at + 4 * H - 1000)), '0:00:01');
+  // 글꼴: 모래시계는 우리 보충 조각(색 그림 문자가 아님 — index.html @font-face · 글꼴 줄)
+  const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /font-family: 'Noto Sans Symbols 2'; src: url\('\/fonts\/NotoSansSymbols2-hourglass\.woff2'\)[^}]*unicode-range: U\+231B, U\+23F3;/);
+  assert.match(html, /--font-ui: [^;]*'Noto Sans Math', 'Noto Sans Symbols 2'/);
+  assert.ok(fs.existsSync(new URL('../../public/fonts/NotoSansSymbols2-hourglass.woff2', import.meta.url)));
+});
+
+test('다음 갱신 (머리 1): 머리 · 새 물건 · 수가 한 번의 저장 · 같은 저장 · 칸 · 수면 같은 물건 · 새로고침해도 그대로 · 얼터 5 % 새로 · 갱신 시각 그대로 · 머리 0 이면 거절', () => {
+  fresh({ coins: 100, heads: 2 });
+  const slot = 9000, owned = () => ownedWeapons();
+  const roll = (seed, reroll) => R.rollStock({ seed, slot, reroll, owned: owned() });
+  const valid = (s) => !!R.normalizeShop(s);
+  const a = P.ensureShopStock({ slot, roll, valid });
+  assert.equal(a.rerolls, 0);
+  const startOfSlot = R.slotStart(slot), timerBefore = R.msToNextSlot(startOfSlot + 123456);
+  const w0 = writes;
+  const r1 = P.rerollShopStock({ slot, roll, heads: SHOP.rerollHeads });
+  assert.equal(writes - w0, 1, '저장은 한 번');
+  assert.equal(r1.ok, true); assert.equal(r1.saved, true);
+  assert.equal(r1.stock.rerolls, 1); assert.equal(r1.stock.slot, slot); assert.equal(r1.stock.seed, a.seed);
+  assert.deepEqual(r1.stock.items, R.rollStock({ seed: a.seed, slot, reroll: 1, owned: owned() }).items, '같은 씨앗 · 칸 · 수 = 같은 물건');
+  const saved = JSON.parse(storage.get(P.PROGRESS_KEY));
+  assert.equal(saved.heads, 1); assert.equal(saved.shop.rerolls, 1); assert.deepEqual(saved.shop.items, r1.stock.items);
+  // 새로고침(다시 열기) = 저장된 다시 들인 물건 그대로 — 굴리면 실패
+  const again = P.ensureShopStock({ slot, roll: () => { throw new Error('다시 뽑으면 안 됨'); }, valid });
+  assert.deepEqual(again, r1.stock);
+  // 갱신 시각 그대로 — 칸 번호 · 남은 시간은 다시 들이기와 상관없음
+  assert.equal(R.shopSlot(startOfSlot + 123456), slot); assert.equal(R.msToNextSlot(startOfSlot + 123456), timerBefore);
+  // 둘째 · 머리 0
+  assert.equal(P.rerollShopStock({ slot, roll, heads: SHOP.rerollHeads }).ok, true);
+  const before = storage.get(P.PROGRESS_KEY);
+  const no = P.rerollShopStock({ slot, roll, heads: SHOP.rerollHeads });
+  assert.equal(no.ok, false); assert.equal(no.why, 'heads'); assert.equal(no.stock.rerolls, 2);
+  assert.equal(storage.get(P.PROGRESS_KEY), before, '머리가 없으면 아무것도 안 바뀜');
+  assert.equal(P.readProgress().heads, 0);
+  // 지난 칸 물건으로는 못 함 · 새 칸이면 수 0
+  P.setHeads(5);
+  assert.equal(P.rerollShopStock({ slot: slot + 1, roll, heads: 1 }).why, 'stale');
+  const nextSlot = P.ensureShopStock({ slot: slot + 1, roll: (seed, reroll) => R.rollStock({ seed, slot: slot + 1, reroll, owned: owned() }), valid });
+  assert.equal(nextSlot.rerolls, 0);
+  assert.deepEqual(nextSlot.items, R.rollStock({ seed: a.seed, slot: slot + 1, owned: owned() }).items);
+  // 얼터 판정도 다시 들일 때마다 새로 (같은 씨앗 · 같은 칸 · 수 1 ~ 20000 에서 약 5 %) · 다시 들인 수가 0 이면 전 흐름 그대로
+  let alt = 0;
+  for (let k = 1; k <= 20000; k++) if (R.rollStock({ seed: 4242, slot: 77, reroll: k, owned: LOBBY_ITEMS }).alter) alt++;
+  assert.ok(Math.abs(alt / 20000 - 0.05) < 0.006, `다시 들인 칸 얼터 ${(alt / 200).toFixed(2)} %`);
+  assert.deepEqual(R.rollStock({ seed: 4242, slot: 77, reroll: 0, owned: LOBBY_ITEMS }), R.rollStock({ seed: 4242, slot: 77, owned: LOBBY_ITEMS }));
+  assert.notDeepEqual(R.rollStock({ seed: 4242, slot: 77, reroll: 1, owned: LOBBY_ITEMS }).items, R.rollStock({ seed: 4242, slot: 77, reroll: 2, owned: LOBBY_ITEMS }).items);
+});
+
+test('결과 창 뿔피리 = 금화 · 머리와 같은 줄 · 같은 꼴 (그림 + 수) · 따로 글 없음 (main.js · index.html)', () => {
+  const main = fs.readFileSync(new URL('../../src/main.js', import.meta.url), 'utf8');
+  const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  const fn = main.slice(main.indexOf('function showRewardLine()'), main.indexOf('function checkRoundEnd('));
+  // 같은 덩이 꼴 seg(나눔표, 그림, '이름 +수') — 금화 · 머리 · 뿔피리
+  assert.match(fn, /seg\(true, POUCH_ICON, `머리 \+\$\{r\.heads\}`/);
+  assert.match(fn, /seg\(true, HORN_ICON, `\$\{HORN_REWARD_LABEL\} \+\$\{roundHorns\}`\)/);
+  assert.match(fn, /roundHorns > 0 \?/);
+  assert.ok(!/menuHorn|뿔피리를 얻었다/.test(main + html), '따로 뜨던 줄 · 글은 없음');
+  assert.match(main, /if \(win\) roundHorns = kingHorn\(\);/);
 });

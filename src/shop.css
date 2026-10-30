@@ -34,7 +34,16 @@
 .shop-item:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 @media (hover: hover) { .shop-item:not([data-sold]):hover { border-color: var(--c-sub); } }
 .shop-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: auto 0 0; font-size: var(--fs-s); line-height: 1.4; color: var(--c-sub); }
-.shop-next { flex: none; }
+/* 남은 시간 '⏳ 1:29:59' (사장님 10/31 00:2x — 1 초마다 · 숫자 폭 고정) · 모래시계는 글자 꼴(우리 보충 글꼴 Noto Sans Symbols 2 — 색 그림 문자가 아님) */
+.shop-refresh { display: inline-flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; }
+.shop-hg { font-size: 13px; line-height: 1; color: var(--c-sub); }
+.shop-clock { font-variant-numeric: tabular-nums; letter-spacing: .02em; color: var(--c-text); }
+/* '다음 갱신' (머리 1 — 10/31): 작은 부 단추 안에 값 표지 · 머리가 없으면 꺼지고 왼쪽에 짧은 까닭 */
+.shop-reroll { flex: none; display: inline-flex; align-items: center; gap: 8px; }
+.shop-reroll-why { color: var(--c-alert); white-space: nowrap; }
+.shop-next { flex: none; display: inline-flex; align-items: center; gap: 6px; }
+.shop-next .shop-cost .coin-icon { width: 14px; height: 14px; }
+.shop-next .shop-cost b { font-weight: var(--fw-label); color: var(--c-accent); }
 /* 확인 카드 (물건을 누르면 — 칸 전체를 덮음 · 싸움 창 꼴 · 스킬 상세 카드 .node-detail 과 같은 바탕) */
 .shop-confirm { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; overflow: auto; padding: 10px 12px; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-s); line-height: 1.45; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .shop-confirm[hidden] { display: none; }
