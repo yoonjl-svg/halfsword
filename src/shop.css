@@ -1,0 +1,80 @@
+/* 대기실 상점 칸 (사장님 10/30 19:0x — src/shop_panel.js · lobby.js 가 lobby.css 뒤 · entrance_type.css 앞에 붙임). 꼴은 대기실 ③ 창 규칙 그대로:
+   싸움 창 토큰(--panel --line --c-text --c-sub --c-accent --c-alert --tier-*)만 · 글자 크기 셋(--fs-s 12 · --fs-m 14) · 칸 안 넓이 = 스킬 칸과 같은 --grid-w + --grid-x × --grid-h.
+   위 = 상인 프로필(액자 1 이 그림 안 — CSS 틀 없음 · 못 불러오면 빈 액자 1, 대기실 프로필 칸과 같음) + 장면 글 · 이름 · “대사”(방랑 전용 상대 알림 창 .foe-line 꼴 — 보조 색 · 같은 크기)
+   아래 = 물건 둘(칸 = 아이템 칸처럼 1 px --line · 모서리 8 · 그림 뒤 등급 빛 · 이름 · 등급 = 등급 색) · 맨 아래 갱신까지 남은 시간 · 확인 카드는 칸 전체를 덮음(스킬 상세 카드와 같은 꼴) */
+.shop-host { position: relative; display: flex; flex-direction: column; gap: 10px; width: calc(var(--grid-w) + var(--grid-x)); height: var(--grid-h); }
+.shop-keeper { flex: none; display: flex; align-items: flex-start; gap: 12px; }
+.shop-portrait { flex: none; width: 80px; height: 80px; margin: 0; background: #30261c; box-shadow: 0 6px 16px rgba(0, 0, 0, .45); }
+.shop-portrait img { display: block; width: 100%; height: 100%; image-rendering: auto; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; -webkit-touch-callout: none; }
+.shop-portrait[data-empty] { border: calc(var(--fr) * .73) solid transparent; border-image: url('../public/ui/frame1_portrait.png') 122 / calc(var(--fr) * .73) / 0 stretch; } /* 그림이 아직 없으면 빈 액자 1 (두께 = 80 px 그림 속 액자 비 — 프로필 칸 110 px 의 틀을 줄여) */
+.shop-portrait[data-empty] img { display: none; }
+.shop-say { flex: 1; min-width: 0; }
+.shop-say p { margin: 0; word-break: keep-all; overflow-wrap: anywhere; }
+.shop-mood, .shop-line { font-size: var(--fs-s); line-height: 1.45; color: var(--c-sub); } /* 장면 글 = 대사와 같은 색 · 크기 (사장님 10/24 02:4x 방랑 알림 창) */
+.shop-name { margin: 1px 0 2px !important; font-size: var(--fs-m); line-height: 1.4; color: var(--c-text); }
+.shop-items { flex: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.shop-empty { grid-column: 1 / -1; }
+.shop-item { --tg: rgba(255, 236, 190, .28); position: relative; display: grid; grid-template-columns: 60px minmax(0, 1fr); grid-template-areas: "thumb name" "thumb tier" "thumb price"; align-content: center; column-gap: 8px; min-height: 80px; padding: 8px 10px 8px 8px; border: 1px solid var(--line); border-radius: 8px; background: rgba(22, 17, 13, .45); color: var(--c-text); text-align: left; }
+.shop-item[data-tier="trash"] { --tg: rgba(190, 188, 180, .2); }
+.shop-item[data-tier="rare"] { --tg: rgba(110, 170, 255, .45); }
+.shop-item[data-tier="epic"] { --tg: rgba(190, 130, 255, .5); }
+.shop-item[data-tier="legend"] { --tg: rgba(255, 210, 74, .6); }
+.shop-item[data-tier="mystery"] { --tg: rgba(120, 220, 190, .45); }
+.shop-thumb { grid-area: thumb; align-self: center; position: relative; width: 60px; height: 60px; background: radial-gradient(closest-side, var(--tg), transparent); }
+.shop-thumb img { position: absolute; inset: 10%; width: 80%; height: 80%; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .45)); }
+.shop-iname { grid-area: name; align-self: end; font-size: var(--fs-m); line-height: 1.3; color: var(--tc); }
+.shop-itier { grid-area: tier; font-size: var(--fs-s); line-height: 1.4; letter-spacing: var(--ls-label); color: var(--tc); }
+.shop-price { grid-area: price; align-self: start; display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 2px; font-size: var(--fs-s); line-height: 16px; font-variant-numeric: tabular-nums; }
+.shop-cost { display: inline-flex; align-items: center; gap: 3px; }
+.shop-cost .coin-icon { width: 14px; height: 14px; margin: 0; }
+.shop-cost.short { color: var(--c-alert); } /* 확인 카드: 모자란 재화 */
+.shop-item[data-sold] { cursor: default; }
+.shop-item[data-sold] > :not(.shop-sold) { opacity: .38; }
+.shop-sold { position: absolute; top: 6px; right: 6px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--c-text); font-size: var(--fs-xs); line-height: 16px; white-space: nowrap; }
+.shop-item:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+@media (hover: hover) { .shop-item:not([data-sold]):hover { border-color: var(--c-sub); } }
+.shop-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: auto 0 0; font-size: var(--fs-s); line-height: 1.4; color: var(--c-sub); }
+/* 남은 시간 '⏳ 1:29:59' (사장님 10/31 00:2x — 1 초마다 · 숫자 폭 고정) · 모래시계는 글자 꼴(우리 보충 글꼴 Noto Sans Symbols 2 — 색 그림 문자가 아님) */
+.shop-refresh { display: inline-flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; }
+.shop-hg { font-size: 13px; line-height: 1; color: var(--c-sub); }
+.shop-clock { font-variant-numeric: tabular-nums; letter-spacing: .02em; color: var(--c-text); }
+/* '다음 갱신' (머리 1 — 10/31): 작은 부 단추 안에 값 표지 · 머리가 없으면 꺼지고 왼쪽에 짧은 까닭 */
+.shop-reroll { flex: none; display: inline-flex; align-items: center; gap: 8px; }
+.shop-reroll-why { color: var(--c-alert); white-space: nowrap; }
+.shop-next { flex: none; display: inline-flex; align-items: center; gap: 6px; }
+.shop-next .shop-cost .coin-icon { width: 14px; height: 14px; }
+.shop-next .shop-cost b { font-weight: var(--fw-label); color: var(--c-accent); }
+/* 확인 카드 (물건을 누르면 — 칸 전체를 덮음 · 싸움 창 꼴 · 스킬 상세 카드 .node-detail 과 같은 바탕) */
+.shop-confirm { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; overflow: auto; padding: 10px 12px; background: linear-gradient(var(--panel), var(--panel)), var(--panel); border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-s); line-height: 1.45; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.shop-confirm[hidden] { display: none; }
+.shop-confirm p { margin: 0; }
+.shop-confirm .item-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.shop-c-name { font-size: var(--fs-m); color: var(--tc); outline: none; }
+.shop-c-tier { letter-spacing: var(--ls-label); color: var(--tc); }
+.shop-c-desc { color: var(--c-text); }
+.shop-c-row { margin-top: 8px !important; }
+.shop-c-price { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-variant-numeric: tabular-nums; }
+.shop-c-price .coin-icon { width: 15px; height: 15px; }
+.shop-c-note { margin-top: 6px !important; color: var(--c-sub); }
+.shop-c-note[data-tone="short"] { color: var(--c-alert); }
+.shop-confirm .confirm-actions { margin-top: auto; padding-top: 8px; justify-content: flex-end; }
+.shop-confirm .confirm-actions button { min-width: 72px; min-height: 40px; }
+/* 낮은 폰 가로 (높이 370 이하 — 844 × 340 · 740 × 360): 그림 · 칸을 한 단계 작게 */
+@media (max-height: 370px) {
+  .shop-host { gap: 8px; }
+  .shop-portrait { width: 68px; height: 68px; }
+  .shop-item { grid-template-columns: 52px minmax(0, 1fr); min-height: 70px; padding: 6px 8px 6px 6px; }
+  .shop-thumb { width: 52px; height: 52px; }
+}
+/* 좁은 화면 (폭 679 이하 — ③ 창이 아래 줄 전체 · 화면이 아래로 흐름) */
+@media (max-width: 679px) {
+  .shop-host { width: 100%; height: auto; min-height: 0; }
+  .shop-foot { margin-top: 2px; }
+  /* 물건 칸 = 그림 위 · 글 아래 (칸 폭 약 150 px — 옆에 그림을 두면 '크리그스메서'처럼 긴 한 낱말이 가운데서 꺾였다 · 390 × 844 사진) */
+  .shop-item { grid-template-columns: minmax(0, 1fr); grid-template-areas: "thumb" "name" "tier" "price"; align-content: start; padding: 8px 10px 10px; }
+  .shop-thumb { width: 52px; height: 52px; margin-bottom: 4px; }
+}
+/* 굵기 (entrance_type.css 위계 그대로 — 이름 · 첫 줄 700 · 표지 600 · 줄 400): 상점 칸 글만 여기 */
+.shop-name, .shop-iname, .shop-c-name { font-weight: var(--fw-head); }
+.shop-itier, .shop-c-tier, .shop-sold { font-weight: var(--fw-label); }
+.shop-mood, .shop-line, .shop-price, .shop-foot, .shop-c-desc, .shop-c-note { font-weight: var(--fw-body); }

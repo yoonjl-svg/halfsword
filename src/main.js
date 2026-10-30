@@ -25,6 +25,10 @@ import { titleTierDraw, saveWanderResume } from './lobby_progress.js'; // saveWa
 import { snapshotFighter, applyFighterSnapshot } from './fight_snapshot.js'; // 방랑 몸 상태 사본 (10/30 01:1x — 감독 안 (b)) // 호칭 하나마다 레전드 확률 (10/24 — drawCardIds)
 import { TIER_DRAW } from './weapons.js';
 import { COIN_ICON, POUCH_ICON } from './wallet_icons.js'; // 결과 창 금화 줄 = 대기실 금화 · 천 주머니 그림 (사장님 10/16 14:0x)
+import { HORN_ICON } from './wallet_icons.js'; // 결과 창 뿔피리 (10/30 상점 · 10/31 금화 · 머리와 같은 줄)
+import { SHOP } from './config.js'; // 상점 — 왕을 이긴 판의 뿔피리 (10/30 · SHOP.enabled 일 때만 — 본판은 끔)
+import { awardKingHorn } from './lobby_progress.js';
+import { HORN_REWARD_LABEL } from './shop_text.js';
 import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, playerLetters } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
 import { letterMul } from './skill_tree_data.js'; // 편지 — 카드 뽑기 유파 무게 (10/21)
 import { convertSeals } from './seal_coins.js'; // 이미 받은 인장 → 금화 한 번 — 판을 처음 연 때 어느 길이든 (아래 testRoute 다음 · 10/16 08:1x 인장 없앰)
@@ -599,6 +603,13 @@ const journeyLoadout = () => (careerSaves() ? { weapon: readLobbyEquipment(), ar
 const LOOK_BAREHEAD = { ...LOOKS.player, helmet: null }; // 케틀 햇을 벗은 주인공 — 겉모습·머리 방어 둘 다 없음 (fighter.js look.helmet)
 // 이번 판 금화 · 머리 (결과 창 한 줄 — showRewardLine). 첫 화면·대기실 여정만 바뀐다 (주소 고정 판 · 테스트 경로 · 옛 메뉴 판은 그대로)
 let roundReward = null;
+// 뿔피리 (사장님 10/30 19:0x "뿔피리는 '왕'을 잡으면 50% 확률로 얻어. 얻으면 전투 후 팝업에 획득 메시지가 뜸." — config.js SHOP · lobby_progress.js awardKingHorn):
+//  여정 · 방랑(내 저장 판 — careerSaves)에서 왕(SHOP.hornKings)을 이긴 판 끝에 한 번 · 상점이 켜졌을 때만(SHOP.enabled — 본판은 끔) · 난수 = rand01(crypto — 게임 난수 그대로).
+//  결과 창 = 금화 · 머리와 같은 줄에 '[뿔피리] 뿔피리 +1'(showRewardLine — 사장님 10/31 00:2x '금화나 목 획득처럼 아이콘만 넣고 따로 메시지 출력 안 함' · 전 10/30 은 금화 줄 아래 따로 한 줄 글).
+//  상점 시험판 `?horn=1` = 모든 상대 · 늘(사장님이 왕까지 가지 않고 창을 보게 — 본판에는 없음)
+let roundHorns = 0;
+const HORN_FORCE = SHOP.testMode && params.get('horn') === '1';
+const kingHorn = () => (SHOP.enabled ? awardKingHorn(currentFoe?.id, { kings: SHOP.hornKings, chance: SHOP.hornChance, amount: SHOP.hornAmount, force: HORN_FORCE }) : 0);
 // 머리 (사장님 결정 10/16 04:3x '적의 머리를 베면 1개씩 주는 재화'): 참수가 일어난 순간 한 번 부르는 자리(combat.js COMBAT_HOOKS.onDecapitate — fighter.js applyWound ·
 //  흙 몸의 머리 떨어짐 detachHeadFromWound)에 건다. 이 판 상대만 · 한 상대에 한 번(lobby_progress.js awardHead). 시뮬은 이 훅을 걸지 않는다(null)
 //  방랑도 머리 1(WANDER_HEAD — 10/24 02:4x, 전 2) · 판마다 한 번 — 판 결과와 같은 저장에 적어 다시 열어도 두 번 받지 않는다(awardWanderHead). 쓰러뜨린 뒤 벤 목도 센다(여정과 같게)
@@ -1747,6 +1758,7 @@ async function startFight() {
   const savedRound = pendingJourney; // 이어하기로 연 판이면 저장된 무대 시작 지점 (launchJourney 가 넣는다 — 한 번만 쓴다)
   pendingJourney = null;
   roundReward = wanderMode && savedRound?.headTaken ? { coins: 0, heads: WANDER_HEAD } : null; // 방랑: 이 판에서 이미 벤 목(다시 연 판)
+  roundHorns = 0; // 이번 판 뿔피리 (10/30 상점)
   $('menuReward').hidden = true;
   sound.unlock();
   sound.ambience(); // 배경의 고요 (포세이돈: 파도·바람, 산사: 산바람·풍경·산새). 아주 작게, 처음 한 번만 켜진다
@@ -1894,6 +1906,7 @@ function openWanderRound() {
 function showWanderForfeit(lost) {
   recordDuel(false);
   roundReward = lost;
+  roundHorns = 0; // 진 판 — 지난 판 뿔피리가 남지 않게 (10/30)
   pauseOpen = false;
   state = 'paused';
   roundOver = true;
@@ -2293,7 +2306,7 @@ function showRoundResult() {
   showToast(lastRoundWon ? '승리' : '패배', 0);
 }
 
-/** 결과 창 한 줄: '[금화] 금화 +12 · [천 주머니] 머리 +1' / '[금화] 금화 −3' (첫 화면·대기실 여정만 — 그 밖은 숨김).
+/** 결과 창 한 줄: '[금화] 금화 +12 · [천 주머니] 머리 +1 · [뿔피리] 뿔피리 +1' / '[금화] 금화 −3' (첫 화면·대기실 여정 · 방랑만 — 그 밖은 숨김 · 뿔피리는 왕을 이긴 판 — 10/31).
  *  사장님 10/16 14:0x: 늘든 줄든 같은 색(index.html .reward — 강조 색) · 위 부제와 빈 줄 하나 · 대기실 금화 그림. 그림은 글 옆 꾸밈이라 읽는 글에서 뺀다(글 '금화' · '머리'가 이미 있다) */
 function showRewardLine() {
   const r = roundReward, el = $('menuReward');
@@ -2306,7 +2319,9 @@ function showRewardLine() {
   const L = WANDER_BONUS_LABEL;
   const parts = { coins: [r.bonus?.coins && `${L.coins} +${r.bonus.coins}`, r.streak && `${L.streak} +${r.streak}`], heads: [r.bonus?.heads && `${L.heads} +${r.bonus.heads}`] };
   const note = (kind) => { const p = parts[kind].filter(Boolean); return p.length ? `<span class="bonus"> (${p.join(' · ')} 포함)</span>` : ''; };
-  el.innerHTML = `${COIN_ICON}<span>금화 ${sign(r.coins)}</span>${note('coins')}${r.heads ? `<span class="sep"> · </span>${POUCH_ICON}<span>머리 +${r.heads}</span>${note('heads')}` : ''}`;
+  // 재화마다 한 덩이(.rw — ' · ' · 그림 · 수 · 특별 몫): 줄이 좁으면 덩이째 다음 줄로 (10/31 — 왕의 금고 · 연승 · 빼앗은 수급 · 뿔피리가 한 판에 다 붙으면 한 줄에 안 들어 글자가 세로로 눌렸다)
+  const seg = (sep, icon, label, extra = '') => `<span class="rw">${sep ? '<span class="sep"> · </span>' : ''}${icon}<span class="rw-n">${label}</span>${extra}</span>`;
+  el.innerHTML = seg(false, COIN_ICON, `금화 ${sign(r.coins)}`, note('coins')) + (r.heads ? seg(true, POUCH_ICON, `머리 +${r.heads}`, note('heads')) : '') + (roundHorns > 0 ? seg(true, HORN_ICON, `${HORN_REWARD_LABEL} +${roundHorns}`) : '');
   for (const icon of el.querySelectorAll('img')) { icon.alt = ''; icon.setAttribute('aria-hidden', 'true'); } // 매끈한 그림(wallet_icons.js — 10/16 15:3x ⑦): 빈 alt = 꾸밈
 }
 
@@ -2322,11 +2337,13 @@ function checkRoundEnd(dt) {
         if (reward) {
           recordDuel(win);
           roundReward = reward;
+          if (win) roundHorns = kingHorn(); // 왕을 이긴 판의 뿔피리 (10/30 상점 — 셈한 판에서만 한 번)
         }
       } else if (journeySaves()) {
         recordDuel(win); // 대기실 '대면 결과' — 첫 화면에서 연 여정의 판마다 한 번
         // 금화 (사장님 결정 10/16 04:3x · 10/22 01:5x · 10/24 03:0x — 낮 · 밤 같음: 이기면 +10~25 · 지면 −5~10, 0 아래로는 안 내려감, lobby_progress.js journeyCoins)
         roundReward = { heads: roundReward?.heads ?? 0, coins: journeyCoins(win, undefined, { night: /_night$/.test(stages.id ?? '') }).delta };
+        if (win) roundHorns = kingHorn(); // 왕을 이긴 판의 뿔피리 (10/30 상점)
       }
       lastRoundWon = win; // 다음 판을 열 때 다음 무대로 넘어갈지 (nextRoundStage)
       // 여정(무대마다 그곳 검객 — 이기면 다음 무대로 넘어간다: nextRoundStage 의 advance)에서 이긴 판 = 무대 하나 깸 → 깬 수 +1 (통계 — journey_save.js).

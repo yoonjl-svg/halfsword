@@ -1,0 +1,119 @@
+{
+ "clock": {
+  "first": "2:51:06",
+  "after2s": "2:51:04",
+  "ticked": 2,
+  "format": true,
+  "hourglass": "U+23F3 U+FE0E",
+  "pausedWhileClosed": true,
+  "resumed": true
+ },
+ "hourglassFont": "Noto Sans Symbols 2 (웹폰트) ×1",
+ "normal": {
+  "name": "쥘리아 크리스테바",
+  "mood": null,
+  "alter": "false",
+  "clock": "2:51:06",
+  "hg": "⏳︎",
+  "items": [
+   "goujian",
+   "longsword"
+  ],
+  "rerollDisabled": false,
+  "why": null,
+  "wallet": "2,00020",
+  "status": ""
+ },
+ "reroll": {
+  "headsBefore": 2,
+  "headsAfter": 1,
+  "rerolls": 1,
+  "slotSame": true,
+  "itemsBefore": [
+   "goujian",
+   "longsword"
+  ],
+  "itemsAfter": [
+   "muramasa",
+   "uchigatana"
+  ],
+  "status": "새 물건이 들어왔습니다.",
+  "alter": false,
+  "afterReload": {
+   "rerolls": 1,
+   "same": true,
+   "shown": [
+    "muramasa",
+    "uchigatana"
+   ]
+  }
+ },
+ "buy": {
+  "state": {
+   "name": "쥘리아 크리스테바",
+   "mood": null,
+   "alter": "false",
+   "clock": "2:50:53",
+   "hg": "⏳︎",
+   "items": [
+    "muramasa(판매 완료)",
+    "uchigatana"
+   ],
+   "rerollDisabled": false,
+   "why": null,
+   "wallet": "18010",
+   "status": "구입했습니다. 아이템에서 장착할 수 있습니다."
+  },
+  "owned": [
+   "weapon:muramasa"
+  ]
+ },
+ "noHeads": {
+  "name": "쥘리아 크리스테바",
+  "mood": null,
+  "alter": "false",
+  "clock": "2:50:53",
+  "hg": "⏳︎",
+  "items": [
+   "muramasa(판매 완료)",
+   "uchigatana"
+  ],
+  "rerollDisabled": true,
+  "why": "머리가 부족합니다.",
+  "wallet": "18000",
+  "status": "구입했습니다. 아이템에서 장착할 수 있습니다."
+ },
+ "alter": {
+  "name": "쥘리아 크리스테바",
+  "mood": "*크리스테바의 분위기가 이상하다*",
+  "alter": "true",
+  "clock": "2:50:52",
+  "hg": "⏳︎",
+  "items": [
+   "rubber_chicken",
+   "frozen_tuna"
+  ],
+  "rerollDisabled": false,
+  "why": null,
+  "wallet": "18030",
+  "status": "구입했습니다. 아이템에서 장착할 수 있습니다."
+ },
+ "fightFoe": "롤랑",
+ "shopTickInFight": false,
+ "titleNotice": null,
+ "result": {
+  "title": "승리",
+  "sub": "방랑 1 · 기절시켰다",
+  "row": "금화 +220 (왕의 금고 +200 포함) · 뿔피리 +1",
+  "icons": [
+   "coins.webp",
+   "horn.webp"
+  ],
+  "rowInsideCard": true,
+  "rowHeight": 14,
+  "horns": {
+   "before": 0,
+   "after": 1
+  }
+ }
+}

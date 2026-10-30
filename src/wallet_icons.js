@@ -7,3 +7,6 @@ export const COIN_ICON = `<img class="coin-icon" src="${COIN_SRC}" alt="금화" 
 // 머리 — 천 주머니 (사장님 10/16 04:3x '금화 옆에 천 주머니 모양으로 만들어'): 묶은 끈 · 위로 벌어진 주름 · 불룩한 몸 · 아래가 살짝 피에 젖음 (15:3x ⑧)
 export const POUCH_SRC = 'ui/wallet/pouch.webp';
 export const POUCH_ICON = `<img class="coin-icon pouch-icon" src="${POUCH_SRC}" alt="머리" draggable="false">`;
+// 뿔피리 — 상점 재화 (사장님 10/30 19:0x "뿔피리는 '왕'을 잡으면 50% 확률로 얻어" — config.js SHOP): 굽은 소뿔 + 청동 띠 (tools/browser/item_thumbs.mjs horn — 금화 · 주머니와 같은 빛 · 금속)
+export const HORN_SRC = 'ui/wallet/horn.webp';
+export const HORN_ICON = `<img class="coin-icon horn-icon" src="${HORN_SRC}" alt="뿔피리" draggable="false">`;

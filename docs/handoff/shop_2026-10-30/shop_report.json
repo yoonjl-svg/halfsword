@@ -1,0 +1,613 @@
+{
+ "normal": {
+  "tries": 2,
+  "stock": [
+   {
+    "i": 0,
+    "id": "tizona",
+    "tier": "epic",
+    "sold": false,
+    "label": "티소나 · 에픽 · 3,4903"
+   },
+   {
+    "i": 1,
+    "id": "hwando",
+    "tier": "common",
+    "sold": false,
+    "label": "환도 · 커먼 · 1,000"
+   }
+  ],
+  "state": {
+   "alter": "false",
+   "mood": null,
+   "name": "쥘리아 크리스테바",
+   "line": "“금화만 넉넉하다면 왕의 칼인들 못 구해 오겠느냐.”",
+   "timer": "갱신까지 1시간 30분 · 시험 칸 +2",
+   "wallet": "1,70031",
+   "status": "",
+   "confirm": null
+  }
+ },
+ "short": {
+  "alter": "false",
+  "mood": null,
+  "name": "쥘리아 크리스테바",
+  "line": "“금화만 넉넉하다면 왕의 칼인들 못 구해 오겠느냐.”",
+  "timer": "갱신까지 1시간 30분 · 시험 칸 +2",
+  "wallet": "1,70031",
+  "status": "",
+  "confirm": {
+   "name": "티소나",
+   "note": "금화와 뿔피리가 부족합니다.",
+   "buy": false
+  }
+ },
+ "confirm": {
+  "alter": "false",
+  "mood": null,
+  "name": "쥘리아 크리스테바",
+  "line": "“금화만 넉넉하다면 왕의 칼인들 못 구해 오겠느냐.”",
+  "timer": "갱신까지 1시간 30분 · 시험 칸 +2",
+  "wallet": "1,70031",
+  "status": "",
+  "confirm": {
+   "name": "환도",
+   "note": "이 무기를 구입합니까?",
+   "buy": true
+  }
+ },
+ "bought": {
+  "state": {
+   "alter": "false",
+   "mood": null,
+   "name": "쥘리아 크리스테바",
+   "line": "“금화만 넉넉하다면 왕의 칼인들 못 구해 오겠느냐.”",
+   "timer": "갱신까지 1시간 30분 · 시험 칸 +2",
+   "wallet": "70031",
+   "status": "구입했습니다. 아이템에서 장착할 수 있습니다.",
+   "confirm": null
+  },
+  "stock": [
+   {
+    "i": 0,
+    "id": "tizona",
+    "tier": "epic",
+    "sold": false,
+    "label": "티소나 · 에픽 · 3,4903"
+   },
+   {
+    "i": 1,
+    "id": "hwando",
+    "tier": "common",
+    "sold": true,
+    "label": "환도 · 커먼 · 1,000 · 판매 완료"
+   }
+  ],
+  "owned": [
+   {
+    "receipt": "weapon:hwando",
+    "kind": "item",
+    "paid": {
+     "coins": 1000,
+     "heads": 0
+    }
+   }
+  ]
+ },
+ "inventory": [
+  "tree_branch",
+  "druid_whip",
+  "hwando"
+ ],
+ "equipped": "hwando",
+ "fit844": [
+  {
+   "line": "어서 오너라, 길손이여. ",
+   "lines": 1,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "구경은 공짜니라. 허나 칼",
+   "lines": 1,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "에누리는 없느니라. 다만 ",
+   "lines": 1,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "이 칼 말이냐? 전 주인이",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "금화만 넉넉하다면 왕의 칼",
+   "lines": 1,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "오호, 뿔피리를 지녔느냐?",
+   "lines": 1,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "좋은 칼은 주인을 고르는 ",
+   "lines": 1,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "부디 목숨을 보전하여 다시",
+   "lines": 1,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "물건은 곧 바뀌느니라. 망",
+   "lines": 1,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "피 묻은 금화도 받노라. ",
+   "lines": 1,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "어서 오너라, 길—길손이여",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "구경은 공짜니…치직…라. ",
+   "lines": 1,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "에누리는 없느니라. 녹 한",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "이 칼 말이냐? 전 주인이",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "금화만 넉넉하다면 ───의",
+   "lines": 1,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "오호, 뿔피리를 지녔느냐?",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "좋은 칼은 주인을 고르는 ",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "부디 목숨을 보전하여 다시",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "东西은 곧 바뀌느니라. 망",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "피 묻은 금화도 받노라. ",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  }
+ ],
+ "names844": [],
+ "fonts": {
+  "ㄷ": "Pretendard (웹폰트) ×1",
+  "ㄹ": "Pretendard (웹폰트) ×1",
+  "ㅎ": "Pretendard (웹폰트) ×1",
+  "─": "Liberation Sans ×1",
+  "—": "Pretendard (웹폰트) ×1",
+  "…": "Pretendard (웹폰트) ×1",
+  "それなら": "WenQuanYi Zen Hei ×4",
+  "違う": "WenQuanYi Zen Hei ×2",
+  "东西": "WenQuanYi Zen Hei ×2",
+  "别人的": "WenQuanYi Zen Hei ×3",
+  "한글": "Pretendard (웹폰트) ×4"
+ },
+ "fontFamily": "Cinzel, Pretendard, \"Noto Sans TC\", \"Noto Sans Math\", system-ui, -apple-system, \"Apple SD Gothic Neo\", \"Noto Sans KR\", \"Malgun Gothic\", sans-serif",
+ "alter": {
+  "state": {
+   "alter": "true",
+   "mood": "*크리스테바의 분위기가 이상하다*",
+   "name": "광기의 쥘리아 크리스테바",
+   "line": "“금화만 넉넉하다면 ───의 칼인들 못 구해 오겠느냐. 삐—”",
+   "timer": "갱신까지 1시간 30분",
+   "wallet": "3,50033",
+   "status": "",
+   "confirm": null
+  },
+  "stock": [
+   {
+    "i": 0,
+    "id": "frozen_tuna",
+    "tier": "trash",
+    "sold": false,
+    "label": "냉동 참치 · 쓰레기 · 3"
+   },
+   {
+    "i": 1,
+    "id": "rubber_chicken",
+    "tier": "trash",
+    "sold": false,
+    "label": "고무 닭 · 쓰레기 · 3"
+   }
+  ]
+ },
+ "alterLongest": {
+  "line": "이 칼 말이냐? 전 주인이 몹시 아끼던 것이라 하더라. …아마도. 아마도. 아마ㄷ",
+  "lines": 2,
+  "hostOver": 0,
+  "lineOverX": 0,
+  "keeperInside": true,
+  "itemsBelow": true,
+  "panelOverX": 0,
+  "pageOverX": 0
+ },
+ "result": {
+  "title": "승리",
+  "reward": "금화 +13",
+  "horn": "뿔피리를 얻었다.",
+  "horns": 4
+ },
+ "narrow": {
+  "state": {
+   "alter": "false",
+   "mood": null,
+   "name": "쥘리아 크리스테바",
+   "line": "“구경은 공짜니라. 허나 칼끝은 건드리지 말지어다.”",
+   "timer": "갱신까지 1시간 26분",
+   "wallet": "3,50033",
+   "status": "",
+   "confirm": null
+  },
+  "stock": [
+   {
+    "i": 0,
+    "id": "flamberge",
+    "tier": "rare",
+    "sold": false,
+    "label": "플랑베르주 (물결 날 양손검) · 레어 · 1,600"
+   },
+   {
+    "i": 1,
+    "id": "hwando",
+    "tier": "common",
+    "sold": false,
+    "label": "환도 · 커먼 · 910"
+   }
+  ]
+ },
+ "fit390": [
+  {
+   "line": "어서 오너라, 길손이여. ",
+   "lines": 1,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "구경은 공짜니라. 허나 칼",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "에누리는 없느니라. 다만 ",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "이 칼 말이냐? 전 주인이",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "금화만 넉넉하다면 왕의 칼",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "오호, 뿔피리를 지녔느냐?",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "좋은 칼은 주인을 고르는 ",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "부디 목숨을 보전하여 다시",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "물건은 곧 바뀌느니라. 망",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "피 묻은 금화도 받노라. ",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "어서 오너라, 길—길손이여",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "구경은 공짜니…치직…라. ",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "에누리는 없느니라. 녹 한",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "이 칼 말이냐? 전 주인이",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "금화만 넉넉하다면 ───의",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "오호, 뿔피리를 지녔느냐?",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "좋은 칼은 주인을 고르는 ",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "부디 목숨을 보전하여 다시",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "东西은 곧 바뀌느니라. 망",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  },
+  {
+   "line": "피 묻은 금화도 받노라. ",
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "keeperInside": true,
+   "itemsBelow": true,
+   "panelOverX": 0,
+   "pageOverX": 0
+  }
+ ],
+ "names390": [],
+ "fitSummary": {
+  "844x390": {
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "panelOverX": 0,
+   "pageOverX": 0,
+   "bad": 0
+  },
+  "390x844": {
+   "lines": 2,
+   "hostOver": 0,
+   "lineOverX": 0,
+   "panelOverX": 0,
+   "pageOverX": 0,
+   "bad": 0
+  }
+ }
+}

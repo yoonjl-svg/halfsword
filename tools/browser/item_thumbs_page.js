@@ -16,7 +16,8 @@
 //   · 금화 wallet/coins.webp — 256 × 256: 금화 여덟이 아무렇게나 쌓임(다섯 쌓임 · 하나 기댐 · 흩어진 둘)
 //   · 머리(천 주머니) wallet/pouch.webp — 256 × 256: 불룩한 천 주머니 · 묶은 끈 · 아래가 살짝 피에 젖음(사장님 ⑧)
 //   · 용사의 눈물 armor/hero_tear.webp — 256 × 256: 물방울 모양 다이아 목걸이 (사장님 10/17 — 대기실 방어구 칸 · 아래 buildTear)
-//  ?ids=books,coins,pouch,tear 또는 german_3 처럼 몇 개만. 결과는 window.thumbs = { done, list: [{ path, url, w, h, bytes, pad }] }
+//   · 뿔피리 wallet/horn.webp — 256 × 256: 굽은 소뿔 + 청동 띠 (상점 재화 — 10/30 · 아래 buildHorn)
+//  ?ids=books,coins,pouch,tear,horn 또는 german_3 처럼 몇 개만. 결과는 window.thumbs = { done, list: [{ path, url, w, h, bytes, pad }] }
 //  구도 시험: ?cx=0.78 (금화 내려다보기) ?px=0.28 (주머니 내려다보기) ?soak=0.22 (피 높이)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -1004,6 +1005,50 @@ function buildTear() {
   return g;
 }
 
+// ── 뿔피리 — 상점 재화 (사장님 10/30 19:0x "뿔피리는 '왕'을 잡으면 50% 확률로 얻어" — config.js SHOP · lobby_progress.js horns) ──
+//  wallet/horn.webp 256 × 256: 굽은 소뿔 몸(밑동 = 넓은 나팔 입 · 상아빛 → 끝 = 부는 곳 · 짙은 갈색) + 청동 띠 셋(나팔 입 테 · 가운데 · 부는 곳) · 금화 · 주머니와 같은 빛 · 같은 금속.
+//  몸 = 굽은 길(2차 베지어)을 따라 반지름이 줄어드는 관(직접 지음 — TubeGeometry 는 굵기가 하나). 구도 시험: ?hx= ?hy= (돌림) · ?hc=e9dcc0 (뿔 색)
+const hornBronze = metalMat(parseInt(params.get('hb') || 'c08a3e', 16), { rough: num('hbr', 0.3), metal: num('hbm', 0.9), env: num('hbe', 1.4) });
+function buildHorn() {
+  const g = new THREE.Group();
+  const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(-0.34, 0.02, 0), new THREE.Vector3(-0.02, -0.5, 0.04), new THREE.Vector3(0.36, 0.12, -0.02));
+  const N = 64, M = 28, frames = curve.computeFrenetFrames(N, false);
+  const radius = (t) => 0.04 + 0.15 * (1 - t) ** 1.5; // t 0 = 나팔 입(넓음) → 1 = 부는 곳(좁음) — 작은 크기(14 ~ 20 px)에서도 뿔로 읽히게 굵고 짧게
+  const ivory = new THREE.Color(parseInt(params.get('hc') || 'e9dcc0', 16)), tip = new THREE.Color(0x4a3122), mid = new THREE.Color(0xc9ab7c);
+  const pos = [], col = [], idx = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, p = curve.getPointAt(t), n = frames.normals[i], b = frames.binormals[i], r = radius(t);
+    const c = t < 0.55 ? ivory.clone().lerp(mid, t / 0.55) : mid.clone().lerp(tip, (t - 0.55) / 0.45);
+    for (let j = 0; j <= M; j++) {
+      const a = (j / M) * Math.PI * 2, ring = 1 + 0.025 * Math.sin(t * 90) * (1 - t); // 뿔결 (가는 고리 무늬)
+      pos.push(p.x + r * ring * (Math.cos(a) * n.x + Math.sin(a) * b.x), p.y + r * ring * (Math.cos(a) * n.y + Math.sin(a) * b.y), p.z + r * ring * (Math.cos(a) * n.z + Math.sin(a) * b.z));
+      const shade = 0.92 + 0.08 * Math.sin(t * 90 + 1.3);
+      col.push(c.r * shade, c.g * shade, c.b * shade);
+    }
+  }
+  for (let i = 0; i < N; i++) for (let j = 0; j < M; j++) { const a = i * (M + 1) + j, b = a + M + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: num('hr', 0.42), metalness: 0.05, side: THREE.DoubleSide })));
+  // 나팔 입 안쪽 그늘 (입을 막는 어두운 원판 — 안이 비어 보이게)
+  const mouth = curve.getPointAt(0.004), md = curve.getTangentAt(0).negate();
+  const hole = new THREE.Mesh(new THREE.CircleGeometry(radius(0) * 0.93, 32), new THREE.MeshStandardMaterial({ color: 0x2a1c12, roughness: 0.9, side: THREE.DoubleSide }));
+  hole.position.copy(mouth); hole.lookAt(mouth.clone().add(md)); g.add(hole);
+  // 청동 띠: 나팔 입 테(굵게) · 가운데 · 부는 곳
+  for (const [t, w, k] of [[0.012, 0.022, 1.04], [0.46, 0.016, 1.06], [0.95, 0.014, 1.12]]) {
+    const p = curve.getPointAt(t), d = curve.getTangentAt(t);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(radius(t) * k, w, 12, 40), hornBronze);
+    band.position.copy(p); band.lookAt(p.clone().add(d)); g.add(band);
+  }
+  const mp = curve.getPointAt(1), mpd = curve.getTangentAt(1);
+  const piece = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.032, 0.07, 20), hornBronze); // 부는 곳 쇠
+  piece.position.copy(mp.clone().addScaledVector(mpd, 0.03)); piece.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), mpd); g.add(piece);
+  g.rotation.set(num('hx', 0.3), num('hy', -0.35), num('hz', 0.42));
+  return g;
+}
+
 // ── 찍기 ──
 const small = document.createElement('canvas');
 const ctx2d = small.getContext('2d');
@@ -1046,6 +1091,7 @@ for (const s of BOOK_SCHOOLS) for (const [kind, label, build] of [['letter', '�
 if (want.includes('coins')) jobs.push({ path: 'wallet/coins.webp', label: '금화', w: 256, h: 256, build: buildCoins, show: [[20, 20], [14, 14], [9, 9]] });
 if (want.includes('pouch')) jobs.push({ path: 'wallet/pouch.webp', label: '머리', w: 256, h: 256, build: buildPouch, show: [[20, 20], [14, 14]] });
 if (want.includes('tear')) jobs.push({ path: 'armor/hero_tear.webp', label: '용사의 눈물', w: 256, h: 256, build: buildTear, show: [[38, 38], [30, 30]] }); // 대기실 방어구 칸 (칸 약 44~49 px 의 80 %)
+if (want.includes('horn')) jobs.push({ path: 'wallet/horn.webp', label: '뿔피리', w: 256, h: 256, build: buildHorn, show: [[20, 20], [14, 14]] }); // 상점 재화 (10/30 — 대기실 지갑 · 결과 창 줄 · 값 표지)
 
 // 틀: 유파마다 다섯 장(I~V)을 모두 담는 한 틀 — 한 유파 안에선 같은 배율이라 급마다 볼륨(두께 · 높이 · 길이 · 대쪽 수) 차이가 그대로 보이고,
 //  유파끼리는 저마다 칸을 채운다(대기실 별자리 판은 유파 탭 하나씩 보여 준다). 몇 장만 찍어도 틀은 같다
