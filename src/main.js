@@ -143,6 +143,7 @@ if (params.has('mordWalkStrike')) CONFIG.SECRET.mordWalkStrike = +params.get('mo
 if (['reverse', 'hilt'].includes(params.get('mordGrip'))) CONFIG.SECRET.mord.grip = params.get('mordGrip');
 if (params.has('mordOver')) CONFIG.SECRET.mordOver = +params.get('mordOver') ? 1 : 0;
 if (params.has('mordTrack')) CONFIG.SECRET.mord.track = +params.get('mordTrack') ? 1 : 0; // 죽음의 일격 머리 따라 겨눔 (10/30 08:2x 사장님 기본 켬 — secret_instant.js mordTrack · `?mordTrack=0` = 옛 겨눔)
+if (params.has('secretStaminaMin') && Number.isFinite(+params.get('secretStaminaMin'))) CONFIG.SECRET.secretStaminaMin = +params.get('secretStaminaMin'); // 이 기력 이하면 비기 못 씀 (10/30 18:3x 사장님 0)
 if (params.has('secretStamina')) CONFIG.SECRET.secretStamina = +params.get('secretStamina') ? 1 : 0; // 기력이 비기 값보다 적으면 비기 못 씀 (10/30 08:2x 사장님 — 사람 · AI · 기본 1 · `?secretStamina=0` = 전 판)
 if (params.has('mordCommit') && +params.get('mordCommit') >= 0) CONFIG.SECRET.mord.trackCommit = CONFIG.realS(+params.get('mordCommit')); // 따라 겨눔을 멈추는 때 = 겨눈 자리에 닿기 이 실제 초 전
 if (['aim', 'cut'].includes(params.get('mordTrackUntil'))) CONFIG.SECRET.mord.trackUntil = params.get('mordTrackUntil');

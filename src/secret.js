@@ -758,7 +758,7 @@ export class PlayerSecretWatch {
     this.opened = 0; // 창이 열린 수 (재기)
     this.riso = this.S?.when === 'risoluto' ? new RisolutoWatch(me, foe) : null; // 이탈리아 거침없이 나아가 찌르기 (10/22 — italian_risoluto.js)
     this.secRun = me.skill?.sec ?? null; // 지난 스텝의 비기 실행(me.skill.sec) — 새 실행이 보이면 그때 비기가 나간 것 (창을 만들 때 이미 돌던 실행은 이 창에서 나간 것이 아님)
-    this.poor = { refused: 0, by: {}, step: 0, last: -9, steps: 0 }; // 기력이 비기 값보다 적어 거절한 창 · 내기 (10/30 08:2x — 재기 · 잇단 스텝 거절은 한 번)
+    this.poor = { refused: 0, by: {}, step: 0, last: -9, steps: 0 }; // 기력이 0 이하라 거절한 창 · 내기 (10/30 08:2x — 재기 · 잇단 스텝 거절은 한 번)
   }
 
   /** 이 판에 남은 비기 수 (사장님 10/29 19:5x 판당 1회 · 동방 격살 3회 — UNIQUE_ASSIST.secretUses · 읽기만 · 재는 도구 · 앞으로 화면) */
@@ -788,7 +788,7 @@ export class PlayerSecretWatch {
       this.open = null; // 다 쓴 판엔 창이 없음 (보통 길에선 이미 닫혀 있음 — fire 가 닫고 냄)
       this.queued = null;
     }
-    // 기력이 비기 값보다 적음 (사장님 10/30 08:2x '기력이 모자라면 못써(다른 비기도 그렇게 해)' — SECRET.secretStamina · stamina.secretReady): 창이 안 열림(openWindow 가 거절) · 열린 창도 닫힘 —
+    // 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써(다른 비기도 그렇게 해)' · 18:3x '0 이하' — SECRET.secretStamina · stamina.secretReady): 창이 안 열림(openWindow 가 거절) · 열린 창도 닫힘 —
     //  아무것도 안 나가고 판당 쓸 수도 안 씀. 무장 · 누르기 셈 · 덮음 셈은 그대로 (기력이 차면 다음 창)
     this.poor.step++;
     if (!me.stamina?.secretReady) {
@@ -1223,7 +1223,7 @@ export class PlayerSecretWatch {
     else if (ctx) this.openWindow(ctx);
   }
 
-  /** 창을 연다 — 기력이 비기 값보다 적으면 열지 않고 false (사장님 10/30 08:2x '기력이 모자라면 못써' — SECRET.secretStamina) */
+  /** 창을 연다 — 기력이 0 이하면 열지 않고 false (사장님 10/30 08:2x '기력이 모자라면 못써' — SECRET.secretStamina) */
   openWindow(ctx, t = SECRET.playerWindow) {
     if (!this.me.stamina?.secretReady) return this.refusePoor(ctx);
     this.open = { S: this.S, ctx, t, age: 0 };
@@ -1255,7 +1255,7 @@ export class PlayerSecretWatch {
   /** 창 안의 공격 입력: 열린 창을 닫고 그 비기 { S, ctx } 를 돌려준다 (없으면 null) */
   fire() {
     if (this.open && !this.me.stamina?.secretReady) {
-      // 기력이 비기 값보다 적음 (10/30 08:2x — 창이 열린 뒤 이번 스텝 전에 모자라졌음): 창을 닫고 null (main.js 는 그 입력을 보통 공격으로)
+      // 기력이 0 이하 (10/30 08:2x · 18:3x — 창이 열린 뒤 이번 스텝 전에 모자라졌음): 창을 닫고 null (main.js 는 그 입력을 보통 공격으로)
       this.refusePoor(this.open.ctx);
       this.open = null;
       this.queued = null;

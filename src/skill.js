@@ -628,7 +628,7 @@ export class Skill {
   secret(o) {
     const f = this.f;
     if (f.stamina.exhausted || this.sec || this.tap || this.pom || !o?.S || !f.alive || !f.armed || f.state !== 'stand' || !f.foe) return false;
-    if (!f.stamina.secretReady) return false; // 기력이 비기 값보다 적음 (사장님 10/30 08:2x '기력이 모자라면 못써' — SECRET.secretStamina · 사람 창 · AI 는 그 앞에서 거름) — 아무것도 안 나감 · 판당 쓸 수 안 씀
+    if (!f.stamina.secretReady) return false; // 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써' · 18:3x '0 이하' — SECRET.secretStamina · 사람 창 · AI 는 그 앞에서 거름) — 아무것도 안 나감 · 판당 쓸 수 안 씀
     const S = o.S;
     const D = S.do;
     const school = f.swordArt?.school;
