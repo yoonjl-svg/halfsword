@@ -1,7 +1,7 @@
 // 모르트슐라크 사람 적중 진단 (10/30 사장님 '모르트가 빗나가는 경우는 어떤거지? … 모르트의 적중은 실력이 아니라 그저 행운인가?') — 붙어 미는 사람 봇이 낸 일격 하나하나의 결과와 빗나간 까닭 (읽기만 · 판 값 그대로)
 //  node tools/sim/mordschlag_hits.mjs [foes isolde,…,roland] [seeds 6] [dur 40]
 //  BOT=player(걸어 붙어 스틱 앞 ±25° 흔들림 · 붙은 동안 0.8 ~ 1.6 s 마다 긋기) | hold(스틱 앞 쥠만) · STICK=keep(일격 동안 스틱 앞 그대로 — 기본) | release(놓음) · 판당 쓸 수 끔 · 창이 열리면 0.12 ~ 0.30 s 뒤 냄
-//  TRACK=1 머리 따라 겨눔 시제품(SECRET.mord.track) · COMMIT=실제 초(trackCommit) · UNTIL=cut · JSON=1 일격마다 한 줄
+//  TRACK=0 옛 겨눔(SECRET.mord.track — 10/30 08:2x 부터 기본 1) · COMMIT=실제 초(trackCommit) · UNTIL=cut · JSON=1 일격마다 한 줄
 //  까닭: head 머리 · otherPart 칼자루가 머리 대신 가슴 · 팔 등에 · blocked 상대 칼(막힘 거리) · headMoved 머리가 길에서 빠져 헛침 · pathOff 길이 겨눈 자리를 안 지남 · outOfReach 안 닿음 ·
 //   foeDown 상대가 넘어짐 · notStarted 시작 못 함(기력이 비기 값보다 적어 낸 스텝에 탈진 — lost) · 겨눈 자리 = 길을 짠 때 머리(내 가슴 틀) · 가장 가까운 때 머리 옮김(rel) · 상대 머리 · 내 가슴(땅) 옮김
 import { newRound, DT, CONFIG, THREE } from './harness_m.mjs';

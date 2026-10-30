@@ -330,8 +330,8 @@ test('운동학 길 (kin 0.6): 쥠 바꿈 → instant(연환 틀) → 원래 쥠
   }
 });
 
-test('머리 따라 겨눔 시제품 (10/30 사장님 \'모르트가 빗나가는 경우는 어떤거지?\' — SECRET.mord.track 기본 끔): 끄면 결과에 따라 겨눔 셈 없음 · 켜면 겨눈 자리까지 스텝마다 그때 머리로 다시 옮김(trackN) · trackUntil cut 은 베는 토막 전까지만(더 적음) · 머리 맞음', () => {
-  assert.equal(SECRET.mord.track, 0);
+test('머리 따라 겨눔 (10/30 사장님 \'모르트가 빗나가는 경우는 어떤거지?\' · 08:2x \'머리를 끝까지 따라가게 해.\' — SECRET.mord.track 기본 켬 · commit 0): 끄면 결과에 따라 겨눔 셈 없음 · 켜면 겨눈 자리까지 스텝마다 그때 머리로 다시 옮김(trackN) · trackUntil cut 은 베는 토막 전까지만(더 적음) · 머리 맞음', () => {
+  assert.equal(SECRET.mord.track, 1);
   assert.equal(SECRET.mord.trackCommit, 0);
   assert.equal(SECRET.mord.trackUntil, 'aim');
   const run = (track, until = 'aim') => {
@@ -345,7 +345,7 @@ test('머리 따라 겨눔 시제품 (10/30 사장님 \'모르트가 빗나가�
       assert.equal(P.skill.secret({ S: TRADITIONS.german.playerSecret, ctx: { ev: 'press' } }), true);
       for (let i = 0; i < Math.round(3 / DT) && P.skill.sec; i++) g.step();
       return { R: P.instantResult, hits };
-    } finally { SECRET.mord.track = 0; SECRET.mord.trackUntil = 'aim'; g.world.free(); }
+    } finally { SECRET.mord.track = 1; SECRET.mord.trackUntil = 'aim'; g.world.free(); }
   };
   const off = run(0);
   assert.ok(off.R?.mord && off.R.trackN === undefined, '끄면 따라 겨눔 없음');

@@ -80,6 +80,29 @@ test('맞물린 긋기가 닿아 있는 동안 탭 = 겹치기 (운동학 칼 �
   }
 });
 
+test('막기 단추를 쥔 채 친 탭 (사장님 10/30 08:2x \'날개접기랑 겹치기도 같게해\' — UNIQUE_ASSIST.tapHeld 1): 쥔 막기(feed 넷째 값)여도 손이 정말 쥐이지 않았으면(다섯째 값) 겹치기 · tapHeld 0 은 전 판(버려짐) · 손이 쥐였으면 버려짐', () => {
+  const B = body();
+  try {
+    assert.equal(UA.tapHeld, 1);
+    B.cut();
+    B.uq.feed(0, 0, 1 / 60, true, false);
+    assert.equal(B.tap(), true, '쥔 채 탭 = 겹치기');
+    B.cut();
+    B.uq.feed(0, 0, 1 / 60, true, true);
+    assert.equal(B.tap(), false, '손이 쥐였으면 버려짐');
+    B.cut();
+    UA.tapHeld = 0;
+    try {
+      B.uq.feed(0, 0, 1 / 60, true, false);
+      assert.equal(B.tap(), false, '전 판');
+    } finally {
+      UA.tapHeld = 1;
+    }
+  } finally {
+    B.free();
+  }
+});
+
 test('찌르기 맞물림 · 탭 기록 · 안 맞물린 긋기 · 떨어진 뒤(맞댐 없음) · 끔(dupTap 0)은 보통 탭 · 긋기가 끝난 뒤에도 맞댄 채면 겹치기', () => {
   const B = body();
   try {

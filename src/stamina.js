@@ -1,5 +1,5 @@
 import { classifyStroke } from './attack_stroke.js';
-import { STAMINA, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY, realS } from './config.js';
+import { STAMINA, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY, SECRET, realS } from './config.js';
 import { entersAttackLine, isPreparation } from './stamina_stroke.js';
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
 // 표준 시간 (10/25 22:3x): 공격 번호가 살아 있는 시간 · 긋기 꼬리는 실제 초로 적는다 (STAMINA 의 초 · 초당 값은 config 에서 realS · realRate)
@@ -111,6 +111,9 @@ export class Stamina {
       ? c?.mode === 'defend' && !c.defVoid
       : !!c?.held && !c.broken);
   }
+  /** 비기를 낼 기력이 있나 (사장님 10/30 08:2x '기력이 모자라면 못써(다른 비기도 그렇게 해)' — SECRET.secretStamina): 지금 기력 ≥ 비기 값 STAMINA.secretCost(모든 비기 같은 값 — secret()) ·
+   *  기력 끔 · 기력 무한 · 스위치 끔이면 늘 참. 사람 창(secret.js) · AI(ai.js secretGo · spinGo · mordGo) · skill.secret 이 본다 */
+  get secretReady() { return !SECRET.secretStamina || !STAMINA.on || this.infinite || this.value >= STAMINA.secretCost; }
   get inSecret() { return !!(this.fighter.skill?.sec || this.controller?.secretRun); }
   get attacking() {
     const f = this.fighter;

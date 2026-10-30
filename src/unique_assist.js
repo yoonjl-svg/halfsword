@@ -478,8 +478,8 @@ export class PlayerUniqueAssist {
       if (!ok) continue;
       const f = this.f;
       // 지금은 못 냄 (다른 탭 · 비기가 도는 중 등 — 그 탭은 버려짐). 칼끝 돌려 빼기는 막기 단추를 쥔 채 친 탭도 받음(10/30 cavHeld — 막기 단추로 낸 막아찌르기 다음 칼이라 쥔 채 치는 게 자연스러움 ·
-      //  전 판은 막기 단추를 쥐고 있으면 늘 버려져 '한 번도 안 나감' — 사장님 10/30 00:4x 보고)
-      if (this.busy(cav && !!UA.cavHeld) || f.foe?.state !== 'stand' || f.stamina.exhausted) return false;
+      //  전 판은 막기 단추를 쥐고 있으면 늘 버려져 '한 번도 안 나감' — 사장님 10/30 00:4x 보고) · 날개 접기 · 겹치기도 같게 (10/30 08:2x 사장님 '날개접기랑 겹치기도 같게해' — UNIQUE_ASSIST.tapHeld)
+      if (this.busy(!!(cav ? UA.cavHeld : UA.tapHeld)) || f.foe?.state !== 'stand' || f.stamina.exhausted) return false;
       ok.spend();
       this.coolStart(e);
       const U = e.U;

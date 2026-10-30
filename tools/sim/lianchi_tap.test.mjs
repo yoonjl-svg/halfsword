@@ -55,6 +55,28 @@ function body() {
   return { G, P, uq, stick, run, tap, free: () => ((UA.specialCooldown = cd), G.world.free()) };
 }
 
+test('막기 단추를 쥔 채 친 탭 (사장님 10/30 08:2x \'날개접기랑 겹치기도 같게해\' — UNIQUE_ASSIST.tapHeld 1): 물러나며 쥔 막기 · 탭 = 날개 접기 · tapHeld 0 은 전 판(버려짐)', () => {
+  const B = body();
+  try {
+    assert.equal(UA.tapHeld, 1);
+    B.run(0.3, 0, -0.8);
+    B.uq.feed(0, 0, 1 / 60, true, false);
+    assert.equal(B.tap(), true, '쥔 채 탭 = 날개 접기');
+    B.P.iai = null;
+    B.P.iaiReq = null;
+    UA.tapHeld = 0;
+    try {
+      B.run(0.3, 0, -0.8);
+      B.uq.feed(0, 0, 1 / 60, true, false);
+      assert.equal(B.tap(), false, '전 판');
+    } finally {
+      UA.tapHeld = 1;
+    }
+  } finally {
+    B.free();
+  }
+});
+
 test('물러나는(스틱 뒤 0.8) 동안의 탭 = 날개 접기 (허리 호 요청 · 고노센 × 0.6 · 실제 0.2 s · 앞으로 반걸음 · 같은 공격) · 스틱 가운데 · 최근 물러남 없음 탭은 보통 탭', () => {
   const B = body();
   try {

@@ -141,7 +141,8 @@ if (params.has('mordNear')) CONFIG.SECRET.mordNear = +params.get('mordNear') ? 1
 if (params.has('mordWalkStrike')) CONFIG.SECRET.mordWalkStrike = +params.get('mordWalkStrike') ? 1 : 0; // AI 몸 붙이기 걸어가며 치기 (10/24 13:3x 사장님 · 0 = 걸어가는 동안 안 침 옛 판)
 if (['reverse', 'hilt'].includes(params.get('mordGrip'))) CONFIG.SECRET.mord.grip = params.get('mordGrip');
 if (params.has('mordOver')) CONFIG.SECRET.mordOver = +params.get('mordOver') ? 1 : 0;
-if (params.has('mordTrack')) CONFIG.SECRET.mord.track = +params.get('mordTrack') ? 1 : 0; // 죽음의 일격 머리 따라 겨눔 (10/30 시제품 · 기본 끔 — secret_instant.js mordTrack)
+if (params.has('mordTrack')) CONFIG.SECRET.mord.track = +params.get('mordTrack') ? 1 : 0; // 죽음의 일격 머리 따라 겨눔 (10/30 08:2x 사장님 기본 켬 — secret_instant.js mordTrack · `?mordTrack=0` = 옛 겨눔)
+if (params.has('secretStamina')) CONFIG.SECRET.secretStamina = +params.get('secretStamina') ? 1 : 0; // 기력이 비기 값보다 적으면 비기 못 씀 (10/30 08:2x 사장님 — 사람 · AI · 기본 1 · `?secretStamina=0` = 전 판)
 if (params.has('mordCommit') && +params.get('mordCommit') >= 0) CONFIG.SECRET.mord.trackCommit = CONFIG.realS(+params.get('mordCommit')); // 따라 겨눔을 멈추는 때 = 겨눈 자리에 닿기 이 실제 초 전
 if (['aim', 'cut'].includes(params.get('mordTrackUntil'))) CONFIG.SECRET.mord.trackUntil = params.get('mordTrackUntil');
 //  가볍고 느림을 고칠 안 (10/22 밤 — 스위치 · 기본 끔 · 사장님 확인 전): `?mordKin=0.6` 운동학 길(칼자루 끝 = 고노센 칼끝 빠르기 몫) · `?mordAt=0.5` 쥔 자리 · `?mordAim=pull` 머리 겨눔 · `?mordPow=finish` 판정 × FINISH.power
@@ -322,7 +323,7 @@ for (const k of ['tsuRuler', 'tsuSnap', 'tsuAim', 'tsuBand']) if (params.has(k))
 }
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
-for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
+for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
 if (params.has('cavFrom') && +params.get('cavFrom') >= 0) CONFIG.UNIQUE_ASSIST.cavFrom = CONFIG.realS(+params.get('cavFrom')); // 칼끝 돌려 빼기 탭 창 처음 (실제 초 — 기본 0.2 · 10/29 20:0x · 옛 판 0.6)
 if (params.has('cavTo') && +params.get('cavTo') > 0) CONFIG.UNIQUE_ASSIST.cavTo = CONFIG.realS(+params.get('cavTo')); // 칼끝 돌려 빼기 탭 창 끝 (실제 초 — 기본 1.2 · 사장님 10/28 01:1x)
 if (params.has('lianTap')) CONFIG.UNIQUE_ASSIST.lianTap = +params.get('lianTap') ? 1 : 0; // 사람 날개 접기 탭 (사장님 10/28 01:2x — 물러나며 탭 · 기본 1)
