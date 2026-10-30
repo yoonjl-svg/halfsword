@@ -1079,6 +1079,8 @@ function newTeamRound(spec, mods = {}) {
     if (lo?.armor === LOBBY_ARMOR.id) H0.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus);
     if (lo?.neck === HERO_TEAR.id) H0.stamina.setInfinite(true);
   }
+  // 생사전 몸 상태 이어받기 (사장님 10/30 08:2x '방랑 · 생사전 둘 다 켜' — 생사전 SAENGSA.resumeState): 그만둔 경기의 넷 몸 사본을 들어올 때 상태 위에 입힌다 (자리 · AI 는 새 판)
+  if (spec.resume) for (const f of fighters) { const RS = spec.resume[E[f.index].key]; if (RS) applyFighterSnapshot(f, RS); }
   for (const a of fighters) for (const v of fighters) if (a.team !== v.team) applyAweStart(a, v);
   for (const f of fighters) {
     configureWetlandMovement(f, stages.id);
@@ -1290,7 +1292,15 @@ function teamLeave() {
   showEntrance(overlay);
 }
 /** 생사전 판 그만두기 (정지 창 '대기실'): 결과 null — 생사전은 적지 않는다 (saengsa_engine.js) */
+// 생사전 몸 상태 이어받기 (사장님 10/30 08:2x): 싸우는 동안 2 초마다 · 정지 창 '대기실'로 그만둘 때 · 화면을 떠날 때 넷의 몸 사본을 생사전 쪽(setup.resumeSave)에 넘긴다
+let teamSaveT = 0;
+function saveTeamBodies() {
+  const R = teamRun;
+  if (!R?.opts?.resumeSave || roundOver || R.M.over) return false;
+  try { R.opts.resumeSave(Object.fromEntries(fighters.map((f) => [R.spec.fighters[f.index].key, snapshotFighter(f)]))); return true; } catch { return false; }
+}
 function teamQuit() {
+  saveTeamBodies(); // 그만둔 그 몸으로 (생사전 SAENGSA.resumeState — 생사전 쪽이 넘긴 resumeSave 가 없으면 아무 일 없음)
   const done = teamRun.opts.resolve;
   teamLeave();
   done?.(null);
@@ -1341,6 +1351,7 @@ async function teamStart(spec, mods = {}, opts = {}) {
   if (opts.saengsa) stageInfo.classList.remove('show'); // 생사전: 무대 이름을 감춘다 (사장님 10/29 22:3x — 그 자리에 이름 · 체력 목록 · 다른 판은 그대로 — startFight 가 다시 띄움)
   newTeamRound(spec, mods);
   teamRun.opts = opts;
+  teamSaveT = 0;
   beginFight();
   return teamRun;
 }
@@ -1387,11 +1398,12 @@ function startTeamTest() {
  */
 export async function launchSaengsa(setup) {
   const spec = specFromSetup(setup);
+  spec.resume = setup.resume && typeof setup.resume === 'object' ? setup.resume : null; // 그만둔 경기 넷의 몸 사본 { 열쇠: 사본 } (생사전 SAENGSA.resumeState)
   if (!spec.fighters.some((e) => e.team === 0) || !spec.fighters.some((e) => e.team === 1)) return null;
   const mods = await saengsaMods();
   return new Promise((resolve) => {
     const overlay = hideEntrance();
-    teamStart(spec, mods, { resolve, injuries: mods.injuriesFromWounds, saengsa: true, overlay });
+    teamStart(spec, mods, { resolve, injuries: mods.injuriesFromWounds, saengsa: true, overlay, resumeSave: typeof setup.resumeSave === 'function' ? setup.resumeSave : null });
   });
 }
 
@@ -2539,7 +2551,7 @@ for (const ev of ['touchend', 'pointerup', 'keydown']) {
   window.addEventListener(ev, () => sound.ctx && !document.documentElement.hasAttribute('data-start-open') && sound.unlock(), { passive: true }); // 첫 화면·대기실이 앞이면 안 켬 (싸움 → 대기실 동안 소리 멈춤)
 }
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && state === 'fight') saveWanderBody(); // 방랑 몸 상태 이어받기 — 앱을 닫거나 새로고침해도 그 몸으로 (WANDER.resumeState)
+  if (document.hidden && state === 'fight') { saveWanderBody(); saveTeamBodies(); } // 방랑 · 생사전 몸 상태 이어받기 — 앱을 닫거나 새로고침해도 그 몸으로
   if (document.hidden) pause(); // 화면을 떠나면(전화·앱 전환) 멈춘다 — 돌아와서 첫 손가락이 지난 획을 잇지 않게 (10/8)
   if (!document.hidden && sound.ctx && !document.documentElement.hasAttribute('data-start-open')) sound.unlock(); // (손을 대지 않아도 되는 브라우저는 여기서 바로 다시 켜진다)
 });
@@ -3506,6 +3518,7 @@ function frame(now) {
     if (teamRun) checkTeamEnd(dt); // 동시 대전: 한 편 전멸 = 판 끝 (match.js M.over)
     else checkRoundEnd(dt);
     if (!teamRun && wanderResumeOn() && !roundOver && (resumeSaveT += dt) >= 2) { resumeSaveT = 0; saveWanderBody(); } // 방랑 몸 상태 2 초마다 (새로고침 · 앱 꺼짐 대비 — WANDER.resumeState)
+    if (teamRun?.opts?.resumeSave && !roundOver && (teamSaveT += dt) >= 2) { teamSaveT = 0; saveTeamBodies(); } // 생사전 넷의 몸 2 초마다 (새로고침 · 앱 꺼짐 대비)
   } else {
     muteWhoosh();
     camSteps = 0;

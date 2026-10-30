@@ -543,3 +543,44 @@ test('전용무기 표 — 한 무기는 한 사람 · 한 대회에 같은 전�
   // 고용 값: 숙련도 6 → 20 + 20 × 6 = 140 (손님 둘 · 아르토리아 6 — 사장님 10/29 22:4x) · 광기의 미나미 6(얼터 +1 · 상한 6 — 사장님 '광기는 상한에 걸려서 6임')
   assert.deepEqual([roster.hireCostOf('roland').coins, roster.hireCostOf('bernardo').coins, roster.hireCostOf('artoria').coins, roster.profOf('minami_mad').japanese, roster.profOf('artoria').german], [140, 140, 140, 6, 6]);
 });
+
+test('몸 상태 이어받기 (사장님 10/30 08:2x "몸 상태 이어받기 방랑 · 생사전 둘 다 켜."): 내 경기에만 적힘 · 같은 사람 · 같은 무기 · 결과가 적히면 지움 · 끄면 없음', () => {
+  assert.equal(SAENGSA.resumeState, true);
+  mem.clear();
+  const t = make(5);
+  S.updateSaengsa((d) => { d.current = t; return true; });
+  S.syncSaengsa(at(30, 10));
+  const m0 = R.myMatch(S.readSaengsa().current), other = S.readSaengsa().current.matches.find((m) => m.id !== m0.id && !m.result);
+  const body = (blood) => ({ v: 1, blood, wounds: [{ part: 'thighB', type: 'cut', severity: 0.3, bleed: 0, local: [0, 0, 0], carried: true }, { part: 'chest', type: 'stab', severity: 0.5, bleed: 0.01, local: [0, 0, 0] }] });
+  const bodies = { '0-0': body(0.8), '0-1': body(0.7), x: body(0.6), y: { ...body(0.2), dead: true } };
+  assert.equal(S.saveResume(other.id, { picks: ['0-0'], arms: ['w1', 'w2', 'w3'], bodies }), false, '내 경기가 아니면 안 적음');
+  assert.equal(S.saveResume(m0.id, { picks: ['0-0', '0-1'], arms: ['w1', 'w2', 'w3'], bodies, at: at(30, 10, 5) }), true);
+  const t1 = S.readSaengsa().current, Rm = R.resumeOf(t1, m0.id);
+  assert.deepEqual([Rm.matchId, Rm.picks, Rm.arms, Rm.bodies.y.dead, Rm.bodies['0-0'].wounds[0].carried], [m0.id, ['0-0', '0-1'], ['w1', 'w2', 'w3'], true, true]);
+  assert.equal(R.resumeOf(t1, other.id), null, '다른 경기 열쇠로는 없음');
+  assert.equal(R.resumeOf(t1, m0.id, { ...SAENGSA, resumeState: false }), null, '끄면 없음');
+  assert.equal(R.resumeOf({ ...t1, resume: { ...t1.resume, picks: [] } }, m0.id), null, '모양이 틀리면 버림');
+  // 경기 결과가 적히면 지움 (실제 싸움 결과 · 빠른 셈 모두 applyResult)
+  const res = S.playMine(m0.id, ['0-0', '0-1'], at(30, 10, 6), null);
+  assert.ok(res);
+  assert.equal(S.readSaengsa().current.resume, undefined, '끝난 경기는 이어받을 몸이 없다');
+  assert.equal(S.saveResume(m0.id, null), false, '지울 것이 없으면 저장 안 함');
+});
+
+test('몸 사본 (생사전 넷): 들고 온 상처(carried) · 죽은 몸은 죽은 채 · 흙 몸도', async () => {
+  const { snapshotFighter, applyFighterSnapshot } = await import('../../src/fight_snapshot.js');
+  const mk = (over = {}) => ({ weapon: { id: 'longsword', fragile: true }, blood: 1, bleed: 0, consciousness: 1, pain: 0, limbs: { armS: 1, armO: 1 }, wounds: [], weaponBroken: false, stamina: { value: 100, max: 100 }, secretUsed: 0, revive: null, armed: true, state: 'stand', canDie: true,
+    get alive() { return this.state !== 'dead'; }, setState(s) { if (s === 'dead' && !this.canDie) return; this.state = s; }, breakWeapon(quiet) { this.weaponBroken = true; this.quiet = quiet; }, dropSword() { this.armed = false; }, ...over });
+  const a = mk({ blood: 0.3, wounds: [{ part: 'thighB', type: 'cut', severity: 0.3, bleed: 0, local: { x: 0, y: 0, z: 0 }, carried: true }, { part: 'neck', type: 'cut', severity: 1.4, bleed: 0.2, local: { x: 0, y: 0, z: 0 } }], state: 'dead', causeOfDeath: '출혈', weaponBroken: true });
+  const s = JSON.parse(JSON.stringify(snapshotFighter(a)));
+  assert.deepEqual([s.dead, s.cause, s.wounds[0].carried, s.wounds[1].carried], [true, '출혈', true, undefined]);
+  const b = mk();
+  applyFighterSnapshot(b, s);
+  assert.deepEqual([b.alive, b.causeOfDeath, b.wounds.map((w) => !!w.carried), b.weaponBroken, b.quiet], [false, '출혈', [true, false], true, true], '죽은 채 · 들고 온 상처 표시 · 조용히 부러짐');
+  const clay = mk({ canDie: false });
+  applyFighterSnapshot(clay, s);
+  assert.equal(clay.alive, false, '흙 몸(머리가 떨어져 죽었던 몸)도 죽은 채');
+  const live = mk();
+  applyFighterSnapshot(live, { ...s, dead: undefined });
+  assert.equal(live.alive, true, '산 몸은 산 채');
+});

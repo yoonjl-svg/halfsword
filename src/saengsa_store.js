@@ -111,6 +111,15 @@ export function playMine(matchId, picks, now, engineResult = null, { cfg = SAENG
   }, storage);
   return out;
 }
+/** 이어받을 몸 적기 (SAENGSA.resumeState — 사장님 10/30 08:2x): 지금 내 경기일 때만 · null 이면 지움 · 돌려줌: 저장했나 */
+export function saveResume(matchId, resume, { cfg = SAENGSA, storage } = {}) {
+  return updateSaengsa((d) => {
+    const t = d.current;
+    if (!cfg.resumeState || !t || myMatch(t)?.id !== matchId) return false;
+    if (resume) t.resume = { ...resume, v: 1, matchId }; else if (t.resume) delete t.resume; else return false;
+    return true;
+  }, storage).saved;
+}
 /** 왕의 하사품 열기 (우승 셋 · 준우승 하나) · 돌려줌: [{ kind, amount }] | null (열 것이 없음) */
 export function claimChests({ cfg = SAENGSA, storage } = {}) {
   let got = null;

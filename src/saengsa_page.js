@@ -13,8 +13,8 @@ import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { SAENGSA } from './config.js';
 import { clockFrom, signupWindow, roundAt } from './saengsa_clock.js';
-import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, isMine, assignWeapons, validAssignment, lockedSignatures } from './saengsa_rules.js';
-import { syncSaengsa, readSaengsa, playMine, claimChests, signUp, newSeed } from './saengsa_store.js';
+import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, isMine, assignWeapons, validAssignment, lockedSignatures, resumeOf } from './saengsa_rules.js';
+import { syncSaengsa, readSaengsa, playMine, claimChests, signUp, newSeed, saveResume } from './saengsa_store.js';
 import { fighterName, portraitOf, weaponName, weaponThumb, weaponInfo, SAENGSA_DATA, ownedWeapons, entryState, hireCostOf } from './saengsa_roster.js';
 import { makeNamelessFaces } from './saengsa_nameless.js';
 import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, clockText as clockWords, untilText, roundName, teamName, resultLine, myResultLine, nextMatchLine, outLine, chestLine, chestGot, injuryText, signupHours, entryLine } from './saengsa_text.js';
@@ -188,6 +188,9 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
     const [A, B] = sidesOf(t, m), result = open.result ?? m.result, n = t.teams.length;
     const mineSide = A === 0 ? 'a' : B === 0 ? 'b' : null;
     const playable = !result && mineSide && myMatch(t)?.id === m.id && matchState(t, m, t0) === 'ready';
+    // 싸우던 경기(몸 상태 이어받기 — SAENGSA.resumeState · 사장님 10/30 08:2x '둘 다 켜'): 같은 사람 · 같은 무기로 묶음(고르기 · 무기 배정 잠금)
+    const R = playable ? resumeOf(t, m.id) : null;
+    if (R) { open.picks = [...R.picks]; open.arms = [...R.arms]; }
     // 내 경기면 위 = 상대 · 아래 = 내 팀 / 그 밖은 위 = a · 아래 = b
     const top = mineSide === 'a' ? 'b' : 'a', bottom = top === 'a' ? 'b' : 'a';
     const teamOf = (side) => (side === 'a' ? A : B);
@@ -206,16 +209,16 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
       const held = new Set(members.filter((f) => !f.dead).map((f) => f.weapon));
       const poolHtml = Array.isArray(pool) && pool.length ? `<span class="sg-row-pool"> · ${T.teamPool} ${pool.map((w) => `<i${held.has(w.weapon) ? ' data-on' : ''}>${esc(weaponName(w.weapon))}${w.broken ? ` ${T.broken}` : ''}</i>`).join(' · ')}</span>` : '';
       labelEl.innerHTML = esc(mine ? T.myTeam : `${mineSide ? `${T.foeTeam} · ` : ''}${tName(team)}`) + poolHtml;
-      $(el).innerHTML = members.map((f) => card(f, { mine, pick: playable && mine, picked: open.picks.includes(f.key), entrant: entrants.includes(f.key), result })).join('');
+      $(el).innerHTML = members.map((f) => card(f, { mine, pick: playable && mine && !R, picked: open.picks.includes(f.key), entrant: R && mine ? R.picks.includes(f.key) : entrants.includes(f.key), result })).join('');
     };
     row(top, 'sgCardsA', $('sgRowA'));
     row(bottom, 'sgCardsB', $('sgRowB'));
     const armsOk = armsValid();
     $('sgFight').hidden = !playable;
-    $('sgArmBtn').hidden = !playable;
+    $('sgArmBtn').hidden = !playable || !!R;
     $('sgFight').disabled = !(open.picks.length >= 1 && open.picks.length <= SAENGSA.entrantsMax) || !armsOk || busy;
     $('sgDone').hidden = !open.result;
-    $('sgHint').textContent = playable ? (armsOk ? `${T.pickHint} ${T.foeHidden}` : T.pickWeapons) : '';
+    $('sgHint').textContent = playable ? (R ? T.resumeHint : armsOk ? `${T.pickHint} ${T.foeHidden}` : T.pickWeapons) : '';
     $('sgHint').hidden = !playable;
     const out = $('sgOutcome');
     out.hidden = !result;
@@ -285,10 +288,15 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
     if (!assignWeapons(armedT, arm.weapons, arm)) { status(T.pickWeapons); renderMatch(); return; }
     const setup = matchSetup(armedT, matchById(armedT, m.id), open.picks, t0);
     if (!setup) { status(T.notReady); render(); return; }
+    if (SAENGSA.resumeState) { // 몸 상태 이어받기 (사장님 10/30 08:2x '둘 다 켜'): 그만둔 경기면 넷의 몸 사본을 입히고 · 싸우는 동안 엔진이 넘기는 사본을 대회 저장에
+      const R = resumeOf(t, m.id), picks = [...open.picks], arms = [...arm.weapons];
+      if (R) setup.resume = R.bodies;
+      setup.resumeSave = (bodies) => saveResume(m.id, { picks, arms, bodies, at: now() });
+    }
     busy = true;
     try {
       let res = null;
-      if (engine.real) { res = await engine.play(setup); if (!res) { status(T.notPlayed); return; } } // 실제 싸움 (saengsa_engine.js — 그만두고 나오면 null = 아직 하지 않은 경기: 지지 않음 · 적지 않음)
+      if (engine.real) { res = await engine.play(setup); if (!res) { render(); status(SAENGSA.resumeState ? T.notPlayedResume : T.notPlayed); return; } } // 실제 싸움 (saengsa_engine.js — 그만두고 나오면 null = 아직 하지 않은 경기: 지지 않음 · 적지 않음)
       const result = playMine(open.id, open.picks, now(), res, { arm });
       if (!result) { status(T.saveFail); return; }
       render();

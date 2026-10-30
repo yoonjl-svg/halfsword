@@ -380,6 +380,7 @@ export function applyResult(t, m, { winner, fighters, entrants, by = 'quick' }, 
   const [A, B] = sidesOf(t, m);
   const pre = { a: structuredClone(t.teams[A].members), b: structuredClone(t.teams[B].members) };
   m.result = { at, winner, entrants: { a: [...entrants.a], b: [...entrants.b] }, fighters: structuredClone(fighters), by, seed: hash32(t.seed, m.id), ver: SAENGSA_VER, pre };
+  if (t.resume?.matchId === m.id) delete t.resume; // 끝난 경기는 이어받을 몸이 없다 (SAENGSA.resumeState — 결과 · 기권 · 빠른 셈 모두)
   for (const team of [A, B]) {
     for (const f of t.teams[team].members) {
       const o = fighters[f.key];
@@ -449,6 +450,16 @@ export function matchSetup(t, m, picks, now, cfg = SAENGSA) {
     sides: { a: structuredClone(membersOf(t, team('a'), entrants.a)), b: structuredClone(membersOf(t, team('b'), entrants.b)) },
     control: picks.includes('0-0') ? 'player' : 'watch',
   };
+}
+/**
+ * 이어받을 내 경기 몸 (SAENGSA.resumeState — 사장님 10/30 08:2x "몸 상태 이어받기 방랑 · 생사전 둘 다 켜."): 지금 내 경기의 사본이면 { v, matchId, picks, arms, bodies, at } · 아니면 null.
+ *  picks = 나선 내 사람 열쇠 · arms = 그때 배정한 내 팀 무기 셋 · bodies = { 열쇠: 몸 사본 } (넷 — src/fight_snapshot.js)
+ */
+export function resumeOf(t, matchId, cfg = SAENGSA) {
+  const R = t?.resume;
+  if (!cfg.resumeState || !R || R.v !== 1 || R.matchId !== matchId || myMatch(t)?.id !== matchId) return null;
+  if (!Array.isArray(R.picks) || !R.picks.length || !Array.isArray(R.arms) || !R.bodies || typeof R.bodies !== 'object') return null;
+  return R;
 }
 /** 내 경기 결과 적기 (엔진 결과 — 없으면 빠른 셈). 저장 시각 = now (쉬는 시간이 여기서부터 — 사장님 10/29) · 돌려줌: 경기 결과 · 판이 틀리면 null */
 export function finishMine(t, m, picks, now, engineResult = null, cfg = SAENGSA) {
