@@ -131,7 +131,7 @@ if (['v1', 'parry'].includes(params.get('deSecret'))) CONFIG.SECRET.deSecret = p
 //  `?mordGrip=hilt` 쥠 그대로 폼멜 판 · `?mordOver=1` 넘어 들어감 규칙 (사장님 확인 전)
 if (params.has('deMord')) CONFIG.SECRET.deMord = +params.get('deMord') ? 1 : 0;
 if (['close', 'press'].includes(params.get('mordRule'))) CONFIG.SECRET.mordRule = params.get('mordRule'); // 사람 모르트슐라크 조건 (10/29 20:0x — close 붙은 거리 2 s · press 밀치기 누르기 옛 판)
-if (params.has('mordClose') && +params.get('mordClose') > 0) CONFIG.SECRET.mordCloseN = +params.get('mordClose'); // 붙은 거리 n (m — 없으면 CLOSE.reach)
+if (params.get('mordClose') === 'reach') CONFIG.SECRET.mordCloseN = null; else if (+params.get('mordClose') > 0) CONFIG.SECRET.mordCloseN = +params.get('mordClose'); // 붙은 거리 n (m — 기본 0.8 사장님 10/30 00:4x · 'reach' = 옛 판 CLOSE.reach(내 무기))
 if (+params.get('mordPress') > 0) CONFIG.SECRET.mordPress = CONFIG.realS(+params.get('mordPress')); // 주소 값 = 실제 초 (표준 시간 10/25 — 아래 시간 · 빠르기 주소 인자도 같음)
 if (params.has('mordGrace') && +params.get('mordGrace') >= 0) CONFIG.SECRET.mordGrace = CONFIG.realS(+params.get('mordGrace')); // 모르트슐라크 누르기 끊김 너그러움 (10/25 23:1x 사장님 · 10/27 21:4x 0.4 s — 기본 0.4 s · 주소 값 = 실제 초 · `?mordGrace=0` = 끊기면 셈 0)
 if (params.has('armAtFight')) CONFIG.SECRET.armAtFight = +params.get('armAtFight') ? 1 : 0; // 비기 무장 시계를 공격이 풀린 때부터 (10/27 23:0x 사장님 결정 — 기본 1 · `?armAtFight=0` = 판 시작부터)
@@ -142,6 +142,11 @@ if (params.has('mordNear')) CONFIG.SECRET.mordNear = +params.get('mordNear') ? 1
 if (params.has('mordWalkStrike')) CONFIG.SECRET.mordWalkStrike = +params.get('mordWalkStrike') ? 1 : 0; // AI 몸 붙이기 걸어가며 치기 (10/24 13:3x 사장님 · 0 = 걸어가는 동안 안 침 옛 판)
 if (['reverse', 'hilt'].includes(params.get('mordGrip'))) CONFIG.SECRET.mord.grip = params.get('mordGrip');
 if (params.has('mordOver')) CONFIG.SECRET.mordOver = +params.get('mordOver') ? 1 : 0;
+if (params.has('mordTrack')) CONFIG.SECRET.mord.track = +params.get('mordTrack') ? 1 : 0; // 죽음의 일격 머리 따라 겨눔 (10/30 08:2x 사장님 기본 켬 — secret_instant.js mordTrack · `?mordTrack=0` = 옛 겨눔)
+if (params.has('secretStaminaMin') && Number.isFinite(+params.get('secretStaminaMin'))) CONFIG.SECRET.secretStaminaMin = +params.get('secretStaminaMin'); // 이 기력 이하면 비기 못 씀 (10/30 18:3x 사장님 0)
+if (params.has('secretStamina')) CONFIG.SECRET.secretStamina = +params.get('secretStamina') ? 1 : 0; // 기력이 비기 값보다 적으면 비기 못 씀 (10/30 08:2x 사장님 — 사람 · AI · 기본 1 · `?secretStamina=0` = 전 판)
+if (params.has('mordCommit') && +params.get('mordCommit') >= 0) CONFIG.SECRET.mord.trackCommit = CONFIG.realS(+params.get('mordCommit')); // 따라 겨눔을 멈추는 때 = 겨눈 자리에 닿기 이 실제 초 전
+if (['aim', 'cut'].includes(params.get('mordTrackUntil'))) CONFIG.SECRET.mord.trackUntil = params.get('mordTrackUntil');
 //  가볍고 느림을 고칠 안 (10/22 밤 — 스위치 · 기본 끔 · 사장님 확인 전): `?mordKin=0.6` 운동학 길(칼자루 끝 = 고노센 칼끝 빠르기 몫) · `?mordAt=0.5` 쥔 자리 · `?mordAim=pull` 머리 겨눔 · `?mordPow=finish` 판정 × FINISH.power
 if (params.has('mordKin')) CONFIG.SECRET.mord.kin = Math.max(0, +params.get('mordKin') || 0);
 if (+params.get('mordAt') > 0) CONFIG.SECRET.mord.at = +params.get('mordAt');
@@ -270,7 +275,8 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('risoClosing')) CONFIG.SECRET.risolutoClosing = +params.get('risoClosing') ? 1 : 0;
   // 10/24 런지 (사장님 '런지로 진행해 … 고노센처럼 빠르게 … 0.6초 내 경직도 0.6초'): `?risoLunge=0` = 10/23 판(탭 찌르기 · 팔 늦춤 FLOW_RECOVERY 0.4 · 굳음 stiff.italian 0.4) · `?risoShare=0.6` 칼끝 빠르기 몫 비교 · `?risoRoom=1` · `?risoGlide=0`
   if (params.get('risoLunge') === '0') Object.assign(CONFIG.SECRET, { risolutoLunge: 0, risolutoArmSlow: null, risolutoStiff: null });
-  if (params.has('risoShare') && +params.get('risoShare') > 0) CONFIG.SECRET.risolutoShare = +params.get('risoShare');
+  if (params.has('risoShare') && +params.get('risoShare') > 0) CONFIG.SECRET.risolutoShare = +params.get('risoShare'); // 10/30 20:0x 사장님 0.9 (전 1)
+  if (params.has('risoArmSlow') && +params.get('risoArmSlow') >= 0) CONFIG.SECRET.risolutoArmSlow = CONFIG.realS(+params.get('risoArmSlow')); // 런지 상대 팔 늦춤 (실제 초 — 10/30 20:0x 사장님 0 · 전 0.6)
   if (params.has('risoRoom')) CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, room: +params.get('risoRoom') ? 1 : 0 }; // 1 = 앞발 런지 걸음을 가슴 사이(clinch 밖까지)로 줄임
   if (params.has('risoGlide')) CONFIG.SECRET.risolutoGlide = +params.get('risoGlide') ? 1 : 0; // 0 = 붙은 칼 따라 미끄러짐 끔 (연환과 같은 막힘)
   if (params.get('risoRecover') === '0') CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, draw: 1, recover: 0, push: 0, accel: 0 }; // 10/24 14:0x 전 걸음 = 디딘 뒤 뒷발 끌어붙임 (몸 따라감 배율 · 몸 가속 · 앞발 거둠은 없음)
@@ -320,7 +326,7 @@ for (const k of ['tsuRuler', 'tsuSnap', 'tsuAim', 'tsuBand']) if (params.has(k))
 }
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
-for (const k of ['imbroReach', 'cavTap', 'cavSnap']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
+for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
 if (params.has('cavFrom') && +params.get('cavFrom') >= 0) CONFIG.UNIQUE_ASSIST.cavFrom = CONFIG.realS(+params.get('cavFrom')); // 칼끝 돌려 빼기 탭 창 처음 (실제 초 — 기본 0.2 · 10/29 20:0x · 옛 판 0.6)
 if (params.has('cavTo') && +params.get('cavTo') > 0) CONFIG.UNIQUE_ASSIST.cavTo = CONFIG.realS(+params.get('cavTo')); // 칼끝 돌려 빼기 탭 창 끝 (실제 초 — 기본 1.2 · 사장님 10/28 01:1x)
 if (params.has('lianTap')) CONFIG.UNIQUE_ASSIST.lianTap = +params.get('lianTap') ? 1 : 0; // 사람 날개 접기 탭 (사장님 10/28 01:2x — 물러나며 탭 · 기본 1)
@@ -2924,7 +2930,8 @@ function frame(now) {
     }
     // 고유 동작 강화 (10/14 — 10/13 이어 주기를 다시 만듦): 손가락 움직임을 알린다(긋기 읽기 · 다른 동작이 손을 쥐는지). 손 목표는 쥐지 않는다 — 손가락은 늘 그대로 더한다
     //  (사장님 결정 10/14 01:5x '궤적은 끝까지 내 손가락, 고유 동작은 손가락으로는 못 하는 몫만 더한다')
-    player.skill.uniq?.feed(d.x, d.y, dt, guardHold || bufHold || !!playerGuard?.held);
+    //  둘째 값 = 손이 정말 쥐여 있나(막기가 손을 쥠 · 미리 받기) — 막기 단추를 쥔 채 친 탭은 막기가 놓아 주는 공격(위 G.broken)이라 칼끝 돌려 빼기 탭은 이것만 봄 (10/30 — UNIQUE_ASSIST.cavHeld)
+    player.skill.uniq?.feed(d.x, d.y, dt, guardHold || bufHold || !!playerGuard?.held, guardHold || bufHold);
     // 풍차 베기 (이베리아 B4 — 10/29 · unique_assist.js holdTick): 탭 입력을 끌지 않고 길게 누르면 감기 · 떼면 내려침 — 누름 상태를 알린다(비기 창이 열려 있으면 감지 않음 — 싱지르가 먼저).
     //  감는 동안은 손가락 움직임을 손 목표에 더하지 않는다(손은 감기가 쥔다)
     if (player.skill.uniq?.holdE) {

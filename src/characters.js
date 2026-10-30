@@ -2,6 +2,8 @@ import { alterLook } from './outfit_alter.js';
 import { createRoland } from './character_roland.js'; // 손님 인물 롤랑 (10/23 — 방랑 전용, docs/import/wander_heroes_import_2026-10-23.md)
 import { createWhiteScaleWarrior } from './character_white_scale.js'; // 손님 인물 백린의 전사(가칭 — 방랑 전용)
 import { createBernardo } from './character_bernardo.js'; // 손님 인물 베르나르도 (롤랑의 숙적 — 방랑 전용)
+import { createJulia } from './character_julia.js'; // 손님 인물 쥘리아 크리스테바 (10/30 샛별 저장소 전달 — 시험 경로 · ?foe=julia 만, docs/import/julia_import_2026-10-30.md)
+import { createJuliaAlter } from './character_julia_alter.js'; // 광기의 쥘리아 크리스테바 (같은 전달 — 겉모습만 · 숙련도는 우리 얼터 규칙대로 원본 +1)
 import { WANDER_EXCLUSIVE } from './wander_rules.js'; // 방랑에서만 나오는 상대 — 무작위 상대에서 뺀다 (사장님 10/23 18:3x '아르토리아 방랑 전용')
 // ─────────────────────────────────────────────────────────────
 //  상대 캐릭터 12인(다섯 + 샛별 저장소에서 가져온 셋 6~8 · 넷 9~12): 저마다 다른 유파·성격·자세 전환 습관을 가진 검객들.
@@ -489,7 +491,7 @@ export const CHARACTERS = [
     weapon: 'pistol', // 건슬링어의 리볼버(??? 등급) — 그쪽 '전용 리볼버'는 새 무기가 아니라 이 권총이다. AI 는 gun.js(간격 벌려 쏘기)
     voice: 'maya', // 목소리: 마야 전용 녹음(AuraVoice, CC0) — 10/13 사장님 지시로 샛별 저장소 3f330f7·b75013b·9d1b56a 배정을 가져옴 (전 'isolde')
     ai: { proficiency: 4, persona: { // 숙련도 4 (사장님 10/29 22:5x '마야 무유파 4 광기의 마야 독일 5' — 전 3(10/20 00:4x) · 그 전 1 · 얼터는 원본 +1 = 5 를 세이버 = 독일 칸에)
-      gunCooldownK: 1.5, // 핸디캡: 사격 사이 쿨타임 1.5 배 (GUN.cooldown 0.8 → 1.2 s, AI 가 몰면 GUN.aiCooldownK 2.0 을 더 곱해 2.4 s — 확인표 2022 · 2980 사장님 10/29 1.8 → 2.0) — 사장님 지시 10/10 20:0x (기본 무작위 상대에서 빼는 대신, 확인표 750)
+      // 핸디캡 '사격 사이 쿨타임 1.5 배'(사장님 지시 10/10 20:0x · 확인표 750 — 전 이 자리 gunCooldownK 1.5)는 10/30 01:4x '마야가 받는 모든 핸디캡은 ai가 리볼버를 쓸 때 전부 적용' 으로 gun.js GUN.aiHandicapK(AI 권총 모두)로 옮김 — 마야는 그대로 0.8 × 1.5 × 2.0 = 2.4 s
       level: { reaction: 0.16, guardChance: 0.88, counter: 0.55, feint: 0.15, followUp: 0.65, read: 0.9, discipline: 0.95, strength: 1.1, aggression: 0.9, windup: 0.36, strikeSpeed: 13, skill: 0.95 },
       pers: { precision: 0.95, guardStick: 4, fearful: 0.08, angry: 0.12, dogged: 0.4, guardSpeed: 0.7, rhythm: 4, margin: 0.3, aggr: 0.95, vor: 0.45, patienceTime: 6, circleRate: 0.18 },
       idle: { guard: 'langort', gesture: 'still' },
@@ -909,6 +911,9 @@ export const CHARACTER_GUESTS = [
   const artoria = CHARACTERS.find((c) => c.id === 'artoria');
   CHARACTER_GUESTS.push(createRoland(artoria), createWhiteScaleWarrior(), createBernardo(artoria));
 }
+// 10/30 쥘리아 크리스테바 (샛별 저장소 전달 C-JULIA-20261030): 이탈리아 숙련도 4 · 레이피어(검토용 기본 무기) · 목소리 없음.
+//  손님 인물 — 무작위 회전 · 여정 무대 · 방랑 · 생사전 어디에도 아직 넣지 않았다(사장님 결정 전). 시험 경로 고르기 · ?foe=julia · ?hero=julia 로만 만난다
+CHARACTER_GUESTS.push(createJulia());
 for (const c of CHARACTER_GUESTS) finishAI(c);
 
 // Guests are declared after the base rotation. Register Ratna's visual variant
@@ -988,6 +993,16 @@ for(const id of ['samira','artoria']){
   name:`광기의 ${base.name}`,ai:JSON.parse(JSON.stringify(base.ai)),
   look:alterLook(base.look,id),lookVersion:base.lookVersion+(id==='artoria'?'-alter13':'-alter1'),eyes:'madGlow'};
  finishAI(alter);CHARACTER_VARIANTS.push(alter);
+}
+
+// 광기의 쥘리아 크리스테바 (10/30 샛별 저장소 전달 C-JULIA-20261030): 겉모습만(기계 반신 — 갑옷 · 체력 · 힘 혜택 없음 · 사람 몸 그대로) · 정체 · 이야기 · 대사 없음.
+//  숙련도: 전달 사양은 4 로 못 박음(proficiencyFixed 4)이지만 우리 규칙(사장님 10/16 22:3x '모든 얼터에 숙련도+1' — 예외는 광기의 병마용 하나, 10/27 23:3x)대로
+//   못 박음을 빼서 아래 '얼터 숙련도 맞춤'이 원본 +1 = 5 로 맞춘다(5 = 이탈리아 비기가 열림) — 사장님 10/30 22:0x '쥘리앙 얼터는 숙련도 5야' 결정
+{
+  const juliaAlter = createJuliaAlter(CHARACTER_GUESTS.find((c) => c.id === 'julia'));
+  delete juliaAlter.proficiencyFixed;
+  finishAI(juliaAlter);
+  CHARACTER_VARIANTS.push(juliaAlter);
 }
 
 // 얼터 숙련도 맞춤 (사장님 10/16 22:3x "모든 얼터에 숙련도+1을 잊지 말고 적용해 두도록 해"): 변형(variantOf)은 모두 원본 숙련도 +1(상한 AI_PROFICIENCY.max).

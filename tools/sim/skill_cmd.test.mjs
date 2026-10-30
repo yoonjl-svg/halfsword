@@ -138,7 +138,7 @@ test('기본 동작 길 → 화살표 · 긋기 꼴 (ai_techniques.js TECH: 시�
 test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · 기본 동작 화살표 · 긋기 꼴 · 앞 동작 조건 · 받는 입력(긋기만 → 긋기)', () => {
   // 고유 공격은 긋기(긋기 읽기)로만 난다: 탭 찌르기가 도는 동안은 발동하지 않는다(unique_assist.js busy — sk.tap) → 받는 입력 낱말은 '긋기'('공격' · '탭' 아님)
   const ua = src('unique_assist.js');
-  assert.match(ua, /busy\(\) \{[\s\S]{0,200}!!sk\.tap/, 'unique_assist.js busy() 가 탭 찌르기 동안 막음 — 바뀌면 이어 긋기 칸 낱말을 다시 본다(탭도 되면 공격)');
+  assert.match(ua, /busy\([^)]*\) \{[\s\S]{0,200}!!sk\.tap/, 'unique_assist.js busy() 가 탭 찌르기 동안 막음 — 바뀌면 이어 긋기 칸 낱말을 다시 본다(탭도 되면 공격)');
   assert.match(ua, /if \(c\.when === 'turn'\) return !L\.tap/, "꺾기('turn')는 탭으로는 안 됨");
   // 앞 칼 종류: 탭 = 'thrust'(track tapRec) · 긋기 = 긋기 읽기가 고른 기본 동작의 kind(찌르기 길이면 'thrust' — 아니면 'cut')
   assert.ok(ua.includes("this.tapRec = { tech: 'tap', kind: 'thrust', tap: true"), "unique_assist.js track — 탭은 앞 칼 'thrust'");

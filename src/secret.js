@@ -758,6 +758,7 @@ export class PlayerSecretWatch {
     this.opened = 0; // 창이 열린 수 (재기)
     this.riso = this.S?.when === 'risoluto' ? new RisolutoWatch(me, foe) : null; // 이탈리아 거침없이 나아가 찌르기 (10/22 — italian_risoluto.js)
     this.secRun = me.skill?.sec ?? null; // 지난 스텝의 비기 실행(me.skill.sec) — 새 실행이 보이면 그때 비기가 나간 것 (창을 만들 때 이미 돌던 실행은 이 창에서 나간 것이 아님)
+    this.poor = { refused: 0, by: {}, step: 0, last: -9, steps: 0 }; // 기력이 0 이하라 거절한 창 · 내기 (10/30 08:2x — 재기 · 잇단 스텝 거절은 한 번)
   }
 
   /** 이 판에 남은 비기 수 (사장님 10/29 19:5x 판당 1회 · 동방 격살 3회 — UNIQUE_ASSIST.secretUses · 읽기만 · 재는 도구 · 앞으로 화면) */
@@ -785,6 +786,15 @@ export class PlayerSecretWatch {
     if (secretSpent(me)) {
       busy = true;
       this.open = null; // 다 쓴 판엔 창이 없음 (보통 길에선 이미 닫혀 있음 — fire 가 닫고 냄)
+      this.queued = null;
+    }
+    // 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써(다른 비기도 그렇게 해)' · 18:3x '0 이하' — SECRET.secretStamina · stamina.secretReady): 창이 안 열림(openWindow 가 거절) · 열린 창도 닫힘 —
+    //  아무것도 안 나가고 판당 쓸 수도 안 씀. 무장 · 누르기 셈 · 덮음 셈은 그대로 (기력이 차면 다음 창)
+    this.poor.step++;
+    if (!me.stamina?.secretReady) {
+      this.poor.steps++;
+      if (this.open) this.refusePoor(this.open.ctx);
+      this.open = null;
       this.queued = null;
     }
     this.sense.record(dt);
@@ -892,7 +902,7 @@ export class PlayerSecretWatch {
       if (pressStep(this, dt, b?.phase === 'press', busy, !!this.open, secretVal(this.S.cond.press), b?.phase === 'step' ? b : null)) this.openWindow({ ev: 'press', held: this.pressHeld });
       return;
     }
-    // 'close' (10/29 20:0x 사장님 — SECRET.mordRule): 몸이 붙어 있음 = 가슴 사이 ≤ mordCloseN(없으면 밀치기가 닿는 거리 CLOSE.reach) · 나 · 상대 서 있음 — 밀치기 꼴 · 스틱 · 긋기와 상관없이.
+    // 'close' (10/29 20:0x 사장님 — SECRET.mordRule): 몸이 붙어 있음 = 가슴 사이 ≤ mordCloseN(0.8 m 모든 무기 — 10/30 00:4x 사장님 · null 이면 밀치기가 닿는 거리 CLOSE.reach) · 나 · 상대 서 있음 — 밀치기 꼴 · 스틱 · 긋기와 상관없이.
     //  셈 · 너그러움(mordGrace) · 창은 같은 pressStep(첫 걸음 멈춤 mordStepPause 는 밀치기 걸음 몫이라 안 씀)
     const n = SECRET.mordCloseN ?? CLOSE.reach(me.armed ? me.weapon : null);
     const foe = this.foe;
@@ -1118,8 +1128,7 @@ export class PlayerSecretWatch {
         if (P.woundAge === 0) K.cut++;
         P.pend = P.buf = null; // 뚫림(받아 내지 못함) · 내가 공격 — 창 없음
       } else if (sep) {
-        if (!busy && !this.open) {
-          this.openWindow({ ev: 'gyeoksal', slot: P.pend.stance, stance: P.pend.stance, line: P.pend.line, by: P.pend.by }, SECRET.playerWindow);
+        if (!busy && !this.open && this.openWindow({ ev: 'gyeoksal', slot: P.pend.stance, stance: P.pend.stance, line: P.pend.line, by: P.pend.by }, SECRET.playerWindow)) { // 기력이 모자라면 창 없음 (10/30 08:2x)
           K.open++;
           K.stance[P.pend.stance] = (K.stance[P.pend.stance] ?? 0) + 1;
           if (P.buf) (this.queued = P.buf), (P.bufFired = (P.bufFired ?? 0) + 1); // 미리 받은 입력 → 이 스텝 곧장 (main.js 가 update 뒤에 fire)
@@ -1214,9 +1223,24 @@ export class PlayerSecretWatch {
     else if (ctx) this.openWindow(ctx);
   }
 
+  /** 창을 연다 — 기력이 0 이하면 열지 않고 false (사장님 10/30 08:2x '기력이 모자라면 못써' — SECRET.secretStamina) */
   openWindow(ctx, t = SECRET.playerWindow) {
+    if (!this.me.stamina?.secretReady) return this.refusePoor(ctx);
     this.open = { S: this.S, ctx, t, age: 0 };
     this.opened++;
+    return true;
+  }
+
+  /** 기력이 모자라 거절 (재기 poor.refused — 잇단 스텝 거절은 한 번 · 갈래 by[ctx.ev]) · false */
+  refusePoor(ctx) {
+    const P = this.poor;
+    if (P.last < P.step - 1) {
+      P.refused++;
+      const k = ctx?.ev ?? 'window';
+      P.by[k] = (P.by[k] ?? 0) + 1;
+    }
+    P.last = P.step;
+    return false;
   }
 
   /**
@@ -1230,6 +1254,13 @@ export class PlayerSecretWatch {
 
   /** 창 안의 공격 입력: 열린 창을 닫고 그 비기 { S, ctx } 를 돌려준다 (없으면 null) */
   fire() {
+    if (this.open && !this.me.stamina?.secretReady) {
+      // 기력이 0 이하 (10/30 08:2x · 18:3x — 창이 열린 뒤 이번 스텝 전에 모자라졌음): 창을 닫고 null (main.js 는 그 입력을 보통 공격으로)
+      this.refusePoor(this.open.ctx);
+      this.open = null;
+      this.queued = null;
+      return null;
+    }
     if (this.riso && this.open && !lungeGapOk(this.me) && !this.holding()) {
       // 런지 간격 조건 (10/24 13:2x): 창이 열린 뒤 이번 물리 스텝 전에 간격이 모자라졌으면 비기가 아님 — 창을 닫고 null (main.js 는 그 탭을 보통 탭 찌르기로) · secretHold 동안은 비기
       this.open = null;
@@ -1256,6 +1287,7 @@ export class PlayerSecretWatch {
    */
   fireArmed() {
     if (!this.S?.do?.gilmok || !this.gilArm.armed) return null;
+    if (!this.me.stamina?.secretReady) return this.refusePoor({ ev: 'gilmokArmed' }) || null; // 기력이 모자람 (10/30 08:2x) — 준비는 그대로 · 이 입력은 보통 공격
     this.gilArm.consume();
     this.open = null;
     this.combo = 0;

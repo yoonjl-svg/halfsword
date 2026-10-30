@@ -121,6 +121,31 @@ test('② 상처를 낸 막아찌르기 · 막아찌르기 없는 탭 · 도는 
   }
 });
 
+test('② 막기 단추를 쥔 채 친 탭 (10/30 00:4x 사장님 \'한번도 안나감\' — UNIQUE_ASSIST.cavHeld 1): main.js 가 쥔 막기를 알려도(feed 넷째 값) 손이 정말 쥐이지 않았으면(다섯째 값 — 탭이 막기를 놓아 줌) 나감 · cavHeld 0 은 전 판(버려짐) · 손이 쥐였으면 늘 버려짐', () => {
+  const B = body();
+  try {
+    assert.equal(UA.cavHeld, 1);
+    B.ended(realS(0.8));
+    B.uq.feed(0, 0, 1 / 60, true, false); // 막기 단추를 쥔 채 탭 — main.js: guardHold 거짓(탭이 G.broken) · playerGuard.held 참
+    assert.equal(B.tap(), true, '쥔 채 탭 = 칼끝 돌려 빼기');
+    B.ended(realS(0.8));
+    B.uq.feed(0, 0, 1 / 60, true, true); // 막기가 손을 쥐는 중 (탭이 아닌 때 — 시험으로)
+    assert.equal(B.tap(), false, '손이 쥐였으면 버려짐');
+    B.ended(realS(0.8));
+    UA.cavHeld = 0;
+    try {
+      B.uq.feed(0, 0, 1 / 60, true, false);
+      assert.equal(B.tap(), false, '전 판: 막기 단추를 쥐고 있으면 버려짐');
+    } finally {
+      UA.cavHeld = 1;
+    }
+    B.uq.feed(0, 0, 1 / 60, true); // 다섯째 값이 없으면 넷째 값 그대로 (다른 부르는 곳 — 전과 같음)
+    assert.equal(B.uq.handHeld, true);
+  } finally {
+    B.free();
+  }
+});
+
 test('② 탭 연타(0.15 s 마다)는 실패한 막아찌르기 뒤에도 칼끝 돌려 빼기가 한 번도 안 나감 · 막아찌르기 끝 실제 0.8 s 를 기다린 탭은 나감', () => {
   const B = body();
   try {
@@ -163,6 +188,50 @@ test('판 (씨앗 1 · 긴 자세 상대): 막기 단추 새 누름 → 막아�
   const H = F.flatMap((a) => a.hits.filter((h) => h.tech === 'cavazione'));
   assert.ok(H.some((h) => h.type === 'stab' && h.sev > 0), '찌른 상처');
   for (const h of H.filter((x) => x.w)) assert.ok(h.w.oor <= 1 && Math.abs(h.w.fe) <= CONFIG.JOINTS.wristFE, `손목 ${JSON.stringify(h.w)}`);
+});
+
+test('② 가까운 거리 (10/30 — UNIQUE_ASSIST.cavCapCut 1): 시간 상한 0.2 s 를 찌르는 토막부터 셈 → 가슴 사이 1.1 m 에서도 찔러 맞음 · 0 = 전 판(돌려 빼기 · 겨눔이 상한을 다 써 찌름 없이 끝남)', () => {
+  const one = () => {
+    const G = newRound({ walls: true, seed: 3, weapon: 'rapier', weapon2: 'longsword', gap: 1.2 });
+    try {
+      const P = G.player;
+      P.fightT = G.enemy.fightT = 1e3;
+      G.ai.update = () => {};
+      const guard = new PlayerParryGuard(P, G.enemy);
+      P.stamina.controller = guard;
+      const uq = new PlayerUniqueAssist(P, { names: new Set(['cavazione']) });
+      for (let i = 0; i < 60; i++) G.step();
+      guard.opposition.lastEnd = { t: guard.clock - realS(0.6), reason: 'complete', dealt: false };
+      uq.t = guard.clock;
+      P.skill.thrust();
+      const R = P.iaiReq;
+      for (let i = 0; i < 120 && (P.iai || P.iaiReq); i++) G.step();
+      return { d: P.foeDistance(), cap: !!R?.moves?.[0]?.capFromCut, res: P.instantResult };
+    } finally {
+      G.world.free();
+    }
+  };
+  const cd = UA.specialCooldown;
+  UA.specialCooldown = 0;
+  try {
+    assert.equal(UA.cavCapCut, 1);
+    const on = one();
+    assert.ok(on.cap, '찌르는 토막부터 셈');
+    assert.ok(on.d < 1.3, `가슴 사이 ${on.d}`);
+    assert.equal(on.res?.tech, 'cavazione');
+    assert.ok(on.res.hit && on.res.part === 'chest', `맞음 ${JSON.stringify(on.res)}`);
+    UA.cavCapCut = 0;
+    try {
+      const off = one();
+      assert.ok(!off.cap);
+      assert.equal(off.res?.tech, 'cavazione');
+      assert.equal(off.res.hit, false, '전 판: 찌름 없이 끝남');
+    } finally {
+      UA.cavCapCut = 1;
+    }
+  } finally {
+    UA.specialCooldown = cd;
+  }
 });
 
 test('① 위에서 내려 찌르기 닿게 (씨앗 1 · 서 있는 상대): 찌른 상처가 남 · 끄면(imbroReach 0) 전 판(칼날 상처 0) · 탭 찌르기 맞음은 이 기술 이름(I8 틈)', () => {

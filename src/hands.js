@@ -123,6 +123,10 @@ export function attachHands(f) {
   for (const m of [fistS, fistO]) m.castShadow = true;
   f.swordGroup.add(fistS, fistO);
   fistO.visible = false;
+  // 칼 든 손 장식 (10/30 광기의 쥘리아 크리스테바 기계 손 — 샛별 저장소 전달 C-JULIA-20261030 의 훅): 복식이 원래 손 구체 userData.decorateNativeHand 에 함수를 두면
+  //  편 손 · 쥔 주먹에 장식을 붙여 그 손의 보임을 따른다. 그림만 — 쥠 · 물리는 그대로. 함수가 없는 인물(다른 모두)은 아무 일도 없다
+  const decorateHand = sphS.userData.decorateNativeHand;
+  const handDetails = decorateHand ? [decorateHand(openS, false), decorateHand(fistS, true)] : [];
   // 한손 무기의 빈손이 '가볍게 쥔 주먹'이면: 아래팔 끝에 주먹 (구멍이 아래팔과 직각)
   const armFistO = new THREE.Mesh(fistGeometry(0), matO);
   armFistO.position.set(0, -0.145, 0);
@@ -167,6 +171,10 @@ export function attachHands(f) {
       openO.visible = !twoHold && !armFistO.visible;
     },
     dispose() {
+      for (const detail of handDetails) {
+        detail.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); for (const m of [o.material].flat()) m.dispose(); } });
+        detail.removeFromParent();
+      }
       openS.removeFromParent();
       openO.removeFromParent();
       armFistO.removeFromParent();

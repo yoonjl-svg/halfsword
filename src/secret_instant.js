@@ -1420,11 +1420,13 @@ function comboPlanMord(f, I, m, A) {
         const Q = comboLerp({ A: pts[k], B: pts[k + 1] }, i / 8);
         const C = Q.H.clone().addScaledVector(Q.D, r);
         const d = C.distanceTo(P);
-        if (!best || d < best.d) best = { d, C };
+        if (!best || d < best.d) best = { d, C, k, i };
       }
     }
     if (best) {
       const delta = P.clone().sub(best.C);
+      // 머리 따라 겨눔 (10/30 시제품 — SECRET.mord.track · 기본 끔): 옮기기 전 길 · 겨눈 길 자리(토막 k 의 i/8)를 두었다가 stepCombo 가 스텝마다 그때 머리로 다시 옮김 (mordTrack)
+      if (SECRET.mord.track) M.trk = { pts, base: pts.map((B) => ({ H: B.H.clone(), D: B.D.clone() })), k: best.k, w: best.i / 8, r, seg: null, tAim: null, done: false, n: 0, moved: 0 };
       for (const B of pts) B.H.add(delta);
       M.pullD = delta.length(); // 재기 (옮긴 거리 m)
     }
@@ -1440,7 +1442,38 @@ function comboPlanMord(f, I, m, A) {
   push(pts[0], false);
   for (let k = 1; k < pts.length; k++) push(pts[k], true);
   push({ ...home, back: true }, false);
+  if (M.trk) M.trk.seg = segs[M.trk.k + 1]; // 겨눈 자리가 든 토막 (pts[k] → pts[k + 1])
   return segs;
+}
+
+/**
+ * 머리 따라 겨눔 (10/30 시제품 — 사장님 '모르트가 빗나가는 경우는 어떤거지? … 모르트의 적중은 실력이 아니라 그저 행운인가?' · SECRET.mord.track · 기본 끔):
+ *  길을 짠 때 한 번만 머리에 맞추던('pull') 칼자루 길을, 칼자루 가운데가 겨눈 자리에 닿기 SECRET.mord.trackCommit 초 전까지 스텝마다 그때 머리(내 가슴 틀 — 내 몸이 밀려도)로 다시 옮긴다
+ *  (trackUntil 'cut' 이면 베는 토막이 시작될 때까지만). 그 뒤는 고정 — 마지막 몫에 머리를 빼면 빗나감. 막힘 · 맞힘 · 다시 세우기면 멈춤. 옮김은 길 전체를 그대로 평행 이동(pull 과 같은 꼴)
+ */
+function mordTrack(f, I) {
+  const T = I.mord.trk;
+  if (T.done || !T.seg) return;
+  if (T.tAim == null) {
+    const j = I.segs.indexOf(T.seg);
+    if (j < 0) return void (T.done = true);
+    let t = I.segT0;
+    for (let s = 0; s < j; s++) t += I.segs[s].T;
+    T.tCut = I.segT0 + (I.segs[0]?.cut ? 0 : I.segs[0].T);
+    T.tAim = t + T.w * T.seg.T;
+  }
+  const until = SECRET.mord.trackUntil === 'cut' ? T.tCut : T.tAim - (SECRET.mord.trackCommit ?? 0);
+  if (I.mordBacked || I.hitM || I.blockM || I.t >= until || !f.foe?.bodies.head) return void (T.done = true);
+  const c = tv(f.bodies.chest.translation(), new THREE.Vector3());
+  const P = tv(f.foe.bodies.head.translation(), new THREE.Vector3()).sub(c).applyQuaternion(I.yaw.clone().invert());
+  const Q = comboLerp({ A: T.base[T.k], B: T.base[T.k + 1] }, T.w);
+  const delta = P.sub(Q.H.addScaledVector(Q.D, T.r));
+  for (let j = 0; j < T.pts.length; j++) {
+    const H = T.pts[j].H;
+    if (j === 0) T.moved += H.distanceTo(T.base[0].H.clone().add(delta)); // 재기: 스텝마다 옮긴 거리 합
+    H.copy(T.base[j].H).add(delta);
+  }
+  T.n++;
 }
 
 /** 죽음의 일격이 막혔을 때 (상대 칼이 칼자루 길에 먼저): 남은 베는 길을 건너뛰고 지금 자리에서 시작 자세로 곧장 (다시 세우기 — 맞힘 없음) */
@@ -2217,6 +2250,7 @@ function stepCombo(f, combat) {
     if (Math.abs(ds) > 1e-5) shiftFighter(f, S.dx * ds, S.dz * ds);
     S.done = want;
   }
+  if (I.mord?.trk) mordTrack(f, I); // 죽음의 일격 머리 따라 겨눔 (10/30 시제품 — SECRET.mord.track · 기본 끔)
   const u = sg.T > 0 ? clamp((I.t - I.ts) / sg.T, 0, 1) : 1;
   const P = comboLerp(sg, u);
   I.cutting = sg.cut;
@@ -2445,7 +2479,7 @@ function endCombo(f, combat) {
   f.hitPointPrev = f.bladePoint(0.7, new THREE.Vector3());
   f.tipVel.set(0, 0, 0);
   f.hitPointVel.set(0, 0, 0);
-  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech, aim: I.aim ?? null, sev: I.sev ?? 0, ...(I.mord ? { mord: true, pullD: I.mord.pullD ?? 0, wPart: I.wPart ?? null, hy: I.hy ?? null } : {}), ...(I.dup ? { dup: I.dup, glided: I.glided ?? 0 } : {}), ...(I.moves.some((m) => m.lunge) ? { lunge: true, glided: I.glided ?? 0, slide: I.slide?.slide ?? 0, foot: I.footStep ?? 0, tipV: I.tipT > 0 ? I.tipL / I.tipT : 0, tipVmax: I.tipVmax ?? 0, v: I.v } : {}) };
+  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech, aim: I.aim ?? null, sev: I.sev ?? 0, ...(I.mord ? { mord: true, pullD: I.mord.pullD ?? 0, wPart: I.wPart ?? null, hy: I.hy ?? null, ...(I.mord.trk ? { trackN: I.mord.trk.n, trackMoved: I.mord.trk.moved } : {}) } : {}), ...(I.dup ? { dup: I.dup, glided: I.glided ?? 0 } : {}), ...(I.moves.some((m) => m.lunge) ? { lunge: true, glided: I.glided ?? 0, slide: I.slide?.slide ?? 0, foot: I.footStep ?? 0, tipV: I.tipT > 0 ? I.tipL / I.tipT : 0, tipVmax: I.tipVmax ?? 0, v: I.v } : {}) };
   f.iai = null;
   f.artTech = null;
 }
@@ -2484,9 +2518,10 @@ export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, 
  *  plane = 아래팔을 칼 줄에 맞추는 팔꿈치 · 손목이 사람 범위 안인 칼 면(iaiSolve — fighter.js armIK alignDir · wristPlane) · roll = 굴림 묶음(그런 면이 없을 때) ·
  *  dyn.thrust = 겨눈 찌름과 같이 찌르는 토막 첫 자리부터 쓸린 자리(thrustSweep) · 손목 교정은 칼을 줄에서 비키지 않음(iaiSolve thrustSeg). 이미 끌고 가는 중이면 거절(false)
  */
-export function requestArtThrust(f, { share, maxT, tech, under = false }) {
+export function requestArtThrust(f, { share, maxT, tech, under = false, capFromCut = false }) {
   if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.chest) return false;
-  requestCombo(f, { moves: [{ name: tech, kind: 'thrust', same: true, artThrust: true, roll: true, plane: true, dyn: { kind: 'artThrust', thrust: true, target: 'lung', under } }], share, hold: 0, hitMul: 1, tech, maxT, attack: true });
+  // capFromCut (10/30 — UNIQUE_ASSIST.cavCapCut): 시간 상한을 찌르는 토막부터 셈 (돌려 빼기 · 겨눔 토막은 셈 밖 — 날개 접기 · 풍차 베기와 같은 셈) — 가까우면 돌려 빼기 길이 길어 상한 안에 찌름까지 못 갔다
+  requestCombo(f, { moves: [{ name: tech, kind: 'thrust', same: true, artThrust: true, roll: true, plane: true, ...(capFromCut ? { capFromCut: true } : {}), dyn: { kind: 'artThrust', thrust: true, target: 'lung', under } }], share, hold: 0, hitMul: 1, tech, maxT, attack: true });
   return true;
 }
 /**

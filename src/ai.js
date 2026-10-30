@@ -95,7 +95,7 @@ export class AI {
     this.persona = persona || {};
     // 근접 밀치기 (closeQuarters): persona.close 가 있는 인물만 스틱으로 민다. 기본 AI 는 밀지 않는다 (fights12·live_battery 그대로)
     if (this.persona.close) me.canShove = true;
-    // 권총 사격 사이 쿨타임 배율 (persona.gunCooldownK — 사미라 1.5, 사장님 지시 10/10 20:0x 핸디캡). 없는 인물은 몸에 아무것도 안 붙인다
+    // 권총 사격 사이 쿨타임 배율을 인물이 따로 줄 때만 (persona.gunCooldownK — 지금 주는 인물 없음). 없으면 AI 권총 핸디캡 GUN.aiHandicapK 1.5(10/30 01:4x — 전 마야 시트 값)
     if (this.persona.gunCooldownK) me.gunCooldownK = this.persona.gunCooldownK;
     if (this.persona.close?.kind === 'kick') me.closeStepKind = 'pass'; // 랴오 발차기 = 뒷발이 지나 딛는 몸 부딪기 (발차기 명령·발 충돌이 없다)
     this.closeWant = false; // 밀기로 정함 (사건마다 한 번 rate 굴림)
@@ -2217,11 +2217,20 @@ export class AI {
     return this.spinGo();
   }
 
+  /** 기력이 0 이하라 비기를 거절 (사장님 10/30 08:2x · 18:3x — SECRET.secretStamina · 사람 창과 같은 규칙): 재기 stats.secretPoor (0.3 s 안 다시 거절은 한 번) · false */
+  secretPoor() {
+    const t = this.me.stamina.time ?? 0;
+    if (!(t - (this.poorAt ?? -9) <= 0.3)) this.stats.secretPoor = (this.stats.secretPoor ?? 0) + 1;
+    this.poorAt = t;
+    return false;
+  }
+
   /** 싱지르를 낸다 — 검술 층 skill.secret (사람과 같은 실행부: iberian_spin.js 대본 · 기력 · 굳음). 냈으면 true */
   spinGo() {
     const me = this.me;
     const S = this.secret;
     if (me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(me)) return false; // 판당 쓸 수 (10/29 19:5x)
+    if (!me.stamina.secretReady) return this.secretPoor(); // 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써' · 18:3x '0 이하' — 사람과 같은 규칙 · 판당 쓸 수 안 씀)
     if (!me.skill.secret({ S, ctx: { ev: 'spin', turnDir: me.side >= 0 ? 1 : -1 } })) {
       this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
       return false;
@@ -2319,6 +2328,7 @@ export class AI {
     const me = this.me;
     const S = this.secret;
     if (me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(me)) return false; // 판당 쓸 수 (10/29 19:5x)
+    if (!me.stamina.secretReady) return this.secretPoor(); // 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써' · 18:3x '0 이하' — 사람과 같은 규칙 · 판당 쓸 수 안 씀)
     if (!me.skill.secret({ S, ctx: { ev: 'press', held: this.press.pressHeld } })) {
       this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
       return false;
@@ -2341,6 +2351,7 @@ export class AI {
   /** 비기를 낸다 (조건은 이미 찼다). 냈으면 true — 기술이 꾸러미에 없거나 공격을 못 열면 false (아무것도 바꾸지 않는다) */
   secretGo(S, ctx = {}) {
     if (this.me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(this.me)) return false; // 판당 쓸 수 (10/29 19:5x)
+    if (!this.me.stamina.secretReady) return this.secretPoor(); // 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써' · 18:3x '0 이하' — 사람과 같은 규칙 · 판당 쓸 수 안 씀)
     const D = S.do;
     const run = { S, stage: 'strike', t: 0, landed: false, peakE: 0, tr: this.art.tradition };
     const opt = { noFeint: true, fastChamber: true, noPending: true, secret: true };

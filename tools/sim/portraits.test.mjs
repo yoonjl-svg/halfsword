@@ -7,10 +7,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 const { CHARACTERS_BY_ID } = await import('../../src/characters.js');
-const { PORTRAIT_IDS, BACKUP_PORTRAIT_IDS, GUEST_PORTRAIT_IDS, TEMP_PORTRAIT_IDS, portraitIdOf, portraitSrc, portraitMode, portraitGrid, PORTRAIT_GRID_SRC } = await import('../../src/portraits.js');
+const { PORTRAIT_IDS, BACKUP_PORTRAIT_IDS, GUEST_PORTRAIT_IDS, TEMP_PORTRAIT_IDS, JULIA_PORTRAIT_IDS, portraitIdOf, portraitSrc, portraitMode, portraitGrid, PORTRAIT_GRID_SRC } = await import('../../src/portraits.js');
 const pub = (src) => new URL(`../../public/${src}`, import.meta.url);
 const root = (path) => new URL(`../../${path}`, import.meta.url);
-const NO_BACKUP = [...GUEST_PORTRAIT_IDS, ...TEMP_PORTRAIT_IDS]; // 예비 판(hd · low)에 그림이 없는 id — 기본 판 그림을 쓴다
+const NO_BACKUP = [...GUEST_PORTRAIT_IDS, ...TEMP_PORTRAIT_IDS, ...JULIA_PORTRAIT_IDS]; // 예비 판(hd · low)에 그림이 없는 id — 기본 판 그림을 쓴다
 
 test('기본 판(pixel): 모든 인물 · 얼터가 자기 그림 (사장님 10/18 16:3x — 얼터까지 모두) · 그림 없는 상대는 null', () => {
   const ids = Object.keys(CHARACTERS_BY_ID);
@@ -31,12 +31,12 @@ test('예비 판(hd · low): 얼터는 바탕 인물 그림 (10/18 01:0x 판 그
   }
 });
 
-test('그림 파일: 기본 36 장(768² WebP · 마스터 art/portraits-px-20261018 · 손님 셋은 art/hero-profiles-20261024/<id>/low) · 예비 hd / low 17 장 · 칸 줄 SVG — 주소 ?portrait=hd|low · ?portraitGrid=1', () => {
-  assert.equal(PORTRAIT_IDS.length, 36); assert.equal(BACKUP_PORTRAIT_IDS.length, 17);
+test('그림 파일: 기본 38 장(768² WebP · 마스터 art/portraits-px-20261018 · 손님 셋은 art/hero-profiles-20261024/<id>/low · 쥘리아 둘은 art/julia-profiles-20261030/<id>/low) · 예비 hd / low 17 장 · 칸 줄 SVG — 주소 ?portrait=hd|low · ?portraitGrid=1', () => {
+  assert.equal(PORTRAIT_IDS.length, 38); assert.equal(BACKUP_PORTRAIT_IDS.length, 17);
   assert.deepEqual([...GUEST_PORTRAIT_IDS], ['roland', 'white_scale', 'bernardo']); assert.deepEqual([...TEMP_PORTRAIT_IDS], []); // 10/24 사장님 '모두 적용해' — 임시 그림 없음
   for (const id of PORTRAIT_IDS) {
     assert.ok(fs.existsSync(pub(portraitSrc(id, 'pixel'))), id);
-    const master = GUEST_PORTRAIT_IDS.includes(id) ? `hero-profiles-20261024/${id}/low` : TEMP_PORTRAIT_IDS.includes(id) ? `portraits-temp-20261023/${id}` : `portraits-px-20261018/${id === 'player' ? 'player2' : id}`;
+    const master = JULIA_PORTRAIT_IDS.includes(id) ? `julia-profiles-20261030/${id}/low` : GUEST_PORTRAIT_IDS.includes(id) ? `hero-profiles-20261024/${id}/low` : TEMP_PORTRAIT_IDS.includes(id) ? `portraits-temp-20261023/${id}` : `portraits-px-20261018/${id === 'player' ? 'player2' : id}`;
     assert.ok(fs.existsSync(new URL(`../../art/${master}.png`, import.meta.url)), id);
   }
   for (const id of BACKUP_PORTRAIT_IDS) for (const mode of ['hd', 'low']) assert.ok(fs.existsSync(pub(portraitSrc(id, mode))), `${mode} ${id}`);
@@ -82,4 +82,20 @@ test('베르나르도 복식 수정본 (10/24 · 샛별 저장소 100a5971 — d
   assert.equal(sha(colors(span(y0, y1), span(x0, x1))), '58c2ebc06e91aa75'); // 얼굴 칸 (10, 6) ~ (17, 14) 그대로
   assert.equal(sha(colors(span(0, 11), span(0, 21))), '85d89e16cb79a853'); // 위 12 줄(머리 · 얼굴 · 수염) 그대로 — 바뀐 82 칸은 12 ~ 21 줄 옷
   assert.deepEqual([sha(spec.characters.sebastian), sha(spec.characters.white_scale)], ['227ae7cc9f8e22be', '6e614ead0ec5aabb']); // 롤랑 · 백린 그대로
+});
+
+test('쥘리아 둘 (10/30 샛별 저장소 전달 C-JULIA-20261030 — docs/import/julia_import_2026-10-30.md): manifest 해시 그대로 · 게임 WebP 768² · 시트가 있음 · 예비 판은 기본 그림', () => {
+  const manifest = JSON.parse(fs.readFileSync(root('art/julia-profiles-20261030/manifest.json'), 'utf8'));
+  assert.equal(manifest.source.commit, '6d5f5c760ddf55d2978c77b6401e56a6f4620282');
+  assert.deepEqual(manifest.characters.map((c) => c.id), [...JULIA_PORTRAIT_IDS]);
+  const sha = (path) => crypto.createHash('sha256').update(fs.readFileSync(root(path))).digest('hex');
+  for (const rec of [manifest.frame, ...manifest.characters.flatMap((c) => [...Object.values(c.files), c.game])]) assert.equal(sha(rec.path), rec.sha256, rec.path);
+  for (const c of manifest.characters) {
+    assert.ok(CHARACTERS_BY_ID[c.id], c.id);
+    assert.equal(CHARACTERS_BY_ID[c.id].name, c.name, c.id);
+    assert.equal(c.game.path, `public/${portraitSrc(c.id)}`, c.id);
+    const b = fs.readFileSync(root(c.game.path));
+    assert.deepEqual([b.toString('ascii', 0, 4), b.toString('ascii', 8, 16), 1 + b.readUIntLE(24, 3), 1 + b.readUIntLE(27, 3), !!(b[20] & 0x10)], ['RIFF', 'WEBPVP8X', 768, 768, true], c.id);
+    for (const mode of ['hd', 'low']) assert.equal(portraitSrc(c.id, mode), `ui/portraits/${c.id}.webp`, `${mode} ${c.id}`);
+  }
 });
