@@ -9,6 +9,7 @@
 //  node tools/browser/saengsa_engine_e2e.mjs http://127.0.0.1:<port> <사진 폴더>   (빌드 · 띄우기는 saengsa_testpage_play.mjs 머리 글)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
+import { VITALS } from '../../src/config.js'; // 쓰러지는 피 문턱 (이어받기 견줌 — 문턱 바로 위에서 떠난 몸은 다시 선 첫 스텝들에 죽을 수 있음)
 const base = process.argv[2] || 'http://127.0.0.1:5392', out = process.argv[3] || 'dist/saengsa_engine';
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader'] });
@@ -126,7 +127,7 @@ try {
   await shot('e8b_resume_locked');
   // ④ 같은 경기를 다시 끝까지 (내 몸은 서 있기만 — 동료 · 상대 AI 가 판을 끝냄): 결과의 broken 이 적히고 부러진 내 무기가 대회 끝까지 남는가 · 떠날 때 몸으로 서는가
   const pf = await playOut('e9_player_full');
-  const same = pl.leave.fighters.map((f, i) => { const g = pf.first.fighters[i]; return { name: f.name, bleed: f.bleed, leave: `${f.blood}/${f.parts || '-'}/${f.alive ? '삶' : '죽음'}${f.broken ? '/부러짐' : ''}`, back: `${g.blood}/${g.parts || '-'}/${g.alive ? '삶' : '죽음'}${g.broken ? '/부러짐' : ''}`, ok: g.name === f.name && g.blood <= f.blood + 0.002 && f.blood - g.blood <= 0.02 + (f.bleed ?? 0) * 0.3 && g.parts === f.parts && g.alive === f.alive && g.broken === f.broken }; }); // 피: 이어받은 출혈만큼 줄 수 있음(첫 모습은 판이 선 뒤 몇 스텝 — 죽은 몸도 피를 흘림)
+  const same = pl.leave.fighters.map((f, i) => { const g = pf.first.fighters[i]; return { name: f.name, bleed: f.bleed, leave: `${f.blood}/${f.parts || '-'}/${f.alive ? '삶' : '죽음'}${f.broken ? '/부러짐' : ''}`, back: `${g.blood}/${g.parts || '-'}/${g.alive ? '삶' : '죽음'}${g.broken ? '/부러짐' : ''}`, ok: g.name === f.name && g.blood <= f.blood + 0.002 && f.blood - g.blood <= 0.02 + (f.bleed ?? 0) * 0.3 && g.parts === f.parts && (g.alive === f.alive || (f.alive && !g.alive && g.blood < VITALS.collapseBlood)) && g.broken === f.broken }; }); // 피: 이어받은 출혈만큼 줄 수 있음(첫 모습은 판이 선 뒤 몇 스텝 — 죽은 몸도 피를 흘림)
   log.push({ step: 'resume', saved: !!resumeSaved && { picks: resumeSaved.picks, arms: resumeSaved.arms, keys: Object.keys(resumeSaved.bodies ?? {}) }, lock, bodies: same, allSame: same.length === 4 && same.every((x) => x.ok), hurt: pl.leave.fighters.filter((f) => f.fresh > 0).length });
   await until(() => !document.querySelector('#gameEntrance').shadowRoot.getElementById('sgDone').hidden, 100, 100);
   await shot('e10_player_result');

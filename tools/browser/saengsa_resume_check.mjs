@@ -5,6 +5,7 @@
 //  (생사전 화면 길 — 고르기 · 무기 잠금 · 대회 저장 · 결과 뒤 지움 — 은 saengsa_engine_e2e.mjs ⑥)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
+import { VITALS } from '../../src/config.js'; // 쓰러지는 피 문턱 (이어받기 견줌 — 문턱 바로 위에서 떠난 몸은 다시 선 첫 스텝들에 죽을 수 있음)
 const base = process.argv[2] || 'http://127.0.0.1:5392', out = process.argv[3] || 'dist/saengsa_resume', seed = +(process.argv[4] ?? 11);
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader'] });
@@ -43,7 +44,7 @@ async function quit() {
   await until(() => window.__rr !== 'pending', 100, 100);
   return { L, bodies: await p.evaluate(() => window.__rb), res: await p.evaluate(() => window.__rr) };
 }
-const compare = (a, b) => a.fighters.map((f, i) => { const g = b.fighters[i]; return { name: f.name, leave: `${f.blood}/${f.parts || '-'}/${f.alive ? '삶' : '죽음'}`, back: `${g.blood}/${g.parts || '-'}/${g.alive ? '삶' : '죽음'}`, ok: g.name === f.name && g.blood <= f.blood + 0.002 && f.blood - g.blood <= 0.02 + (f.bleed ?? 0) * 0.3 && g.parts === f.parts && g.alive === f.alive && g.broken === f.broken }; }); // 피: 이어받은 출혈만큼 줄 수 있음
+const compare = (a, b) => a.fighters.map((f, i) => { const g = b.fighters[i]; return { name: f.name, leave: `${f.blood}/${f.parts || '-'}/${f.alive ? '삶' : '죽음'}`, back: `${g.blood}/${g.parts || '-'}/${g.alive ? '삶' : '죽음'}`, ok: g.name === f.name && g.blood <= f.blood + 0.002 && f.blood - g.blood <= 0.02 + (f.bleed ?? 0) * 0.3 && g.parts === f.parts && (g.alive === f.alive || (f.alive && !g.alive && g.blood < VITALS.collapseBlood)) && g.broken === f.broken }; }); // 피: 이어받은 출혈만큼 줄 수 있음
 try {
   await p.goto(`${base}/saengsa/`, { waitUntil: 'domcontentloaded' });
   if (!(await until(() => typeof window.game?.launchSaengsa === 'function' && !!window.game?.renderCap, 100, 1500))) throw new Error('게임이 안 섬');
