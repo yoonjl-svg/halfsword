@@ -24,7 +24,7 @@ test('사장님 값이 config SHOP 에 그대로 (10/30 19:0x · 10/31 00:2x) ·
   assert.equal(SHOP.enabled, true); // 사장님 10/31 00:2x '게임 본판에 상점 열어.' (전: 시험판만)
   assert.equal(SHOP.testMode, false); // 시험판 스위치(?shopAlter · ?shopSlot · ?horns · ?horn)는 시험판 빌드만
   assert.equal(SHOP.rerollHeads, 1); // 사장님 10/31 00:2x "'다음 갱신'도 재화가 필요해. 머리 1개로 하자." 
-  assert.equal(SHOP.slots, 2);
+  assert.ok([2, 3].includes(SHOP.items)); // 파는 수 2 또는 3 (10/31 02:xx 견주기 — 사장님 확인 전)
   assert.deepEqual(SHOP.tierWeights, { common: 60, rare: 25, epic: 10, legend: 5 });
   assert.deepEqual(SHOP.price, { common: { coins: [800, 1000] }, rare: { coins: [1600, 2000] }, epic: { coins: [3300, 3900], horns: [2, 4] }, legend: { coins: [5000, 5800], horns: [3, 7] } });
   assert.equal(SHOP.refreshHours, 4);
@@ -78,8 +78,8 @@ test('보통 상인: 등급 무게 60 · 25 · 10 · 5 (첫 물건 · 3 만 칸)
   let n = 0;
   for (let slot = 0; slot < 30000; slot++) {
     const s = R.rollStock({ seed: 777, slot, owned, forceAlter: false });
-    assert.equal(s.items.length, 2);
-    assert.notEqual(s.items[0].id, s.items[1].id);
+    assert.equal(s.items.length, SHOP.items);
+    assert.equal(new Set(s.items.map((i) => i.id)).size, s.items.length);
     for (const it of s.items) {
       assert.ok(!owned.includes(it.id), `가진 무기 ${it.id} 를 팔지 않는다`);
       assert.ok(['common', 'rare', 'epic', 'legend'].includes(it.tier), it.tier);
@@ -96,7 +96,7 @@ test('등급에 남은 무기가 없으면 남은 등급끼리 다시 뽑는다 
   const seen = {};
   for (let slot = 0; slot < 4000; slot++) {
     const s = R.rollStock({ seed: 9, slot, owned, forceAlter: false });
-    assert.equal(s.items.length, 2);
+    assert.equal(s.items.length, SHOP.items);
     for (const it of s.items) seen[it.tier] = (seen[it.tier] ?? 0) + 1;
   }
   assert.equal(seen.common, undefined);
@@ -141,8 +141,8 @@ test('얼터: 갱신마다 5 % · 쓰레기 · ??? 반반 · 안 가진 무기 �
     const s = R.rollStock({ seed: 31337, slot, owned: LOBBY_ITEMS });
     if (!s.alter) continue;
     alters++;
-    assert.equal(s.items.length, 2);
-    assert.notEqual(s.items[0].id, s.items[1].id);
+    assert.equal(s.items.length, SHOP.items);
+    assert.equal(new Set(s.items.map((i) => i.id)).size, s.items.length);
     for (const it of s.items) {
       assert.ok(SHOP.alterTiers.includes(it.tier), it.tier);
       assert.ok(!LOBBY_ITEMS.includes(it.id), '시작 무기(나뭇가지 · 드루이드의 채찍)는 팔지 않는다');
@@ -162,7 +162,7 @@ test('얼터: 갱신마다 5 % · 쓰레기 · ??? 반반 · 안 가진 무기 �
   const trash = R.SHOP_POOL.filter((id) => R.tierOf(id) === 'trash');
   const mystery = R.SHOP_POOL.filter((id) => R.tierOf(id) === 'mystery');
   const onlyMystery = R.rollStock({ seed: 5, slot: 5, owned: [...LOBBY_ITEMS, ...trash], forceAlter: true });
-  assert.ok(onlyMystery.items.length === 2 && onlyMystery.items.every((i) => i.tier === 'mystery'));
+  assert.ok(onlyMystery.items.length === SHOP.items && onlyMystery.items.every((i) => i.tier === 'mystery'));
   assert.deepEqual(R.rollStock({ seed: 5, slot: 5, owned: [...LOBBY_ITEMS, ...trash, ...mystery], forceAlter: true }).items, []);
 });
 
@@ -365,4 +365,66 @@ test('새 물건 (사장님 10/31 01:3x): 쥘리아 대사가 지금과 다른 �
   const tick = panel.slice(panel.indexOf('function tick()'), panel.indexOf('function start()'));
   assert.match(tick, /if \(!shown\(\)\) return;[\s\S]*slotNow\(\) !== stock\?\.slot\) \{[^}]*renderKeeper\(true\)[^}]*playUiCue\('restock'\)/);
   assert.match(panel, /loadUiCue\('restock'\)/);
+});
+
+test('파는 수 셋 (SHOP.items 3 — 사장님 10/31 02:xx): 같은 무게 · 서로 다름 · 안 가진 무기 · 얼터는 셋 다 머리 3 · 수만 늘리면 앞 물건 그대로', () => {
+  const C3 = { ...SHOP, items: 3 }, C2 = { ...SHOP, items: 2 };
+  const first = { common: 0, rare: 0, epic: 0, legend: 0 };
+  let n = 0, alters = 0;
+  for (let slot = 0; slot < 20000; slot++) {
+    const s = R.rollStock({ seed: 99, slot, owned: LOBBY_ITEMS }, C3);
+    assert.equal(s.n, 3); assert.equal(s.items.length, 3);
+    assert.equal(new Set(s.items.map((i) => i.id)).size, 3);
+    for (const it of s.items) assert.ok(!LOBBY_ITEMS.includes(it.id));
+    if (s.alter) { alters++; for (const it of s.items) { assert.ok(SHOP.alterTiers.includes(it.tier)); assert.deepEqual([it.coins, it.heads, it.horns], [0, 3, 0]); } continue; }
+    first[s.items[0].tier]++; n++;
+    if (slot < 500) assert.deepEqual(s.items.slice(0, 2), R.rollStock({ seed: 99, slot, owned: LOBBY_ITEMS }, C2).items, '2 → 3 은 뒤에 하나 더');
+  }
+  for (const [t, w] of Object.entries(SHOP.tierWeights)) assert.ok(Math.abs(first[t] / n - w / 100) < 0.015, `${t} ${(first[t] / n * 100).toFixed(1)} %`);
+  assert.ok(Math.abs(alters / 20000 - 0.05) < 0.006);
+  const a = R.rollStock({ seed: 5, slot: 5, owned: LOBBY_ITEMS, forceAlter: true }, C3); // 얼터 셋: 지금 팔 수 있는 쓰레기 2 + ??? 3 = 5 — 셋 다 다름
+  assert.equal(a.items.length, 3);
+});
+
+test('옛 저장(2 개 칸)을 셋으로 채움: 있던 물건 · 산 물건은 그대로 · 모자란 하나를 같은 규칙으로 · 같은 칸이면 늘 같음 · 한 번 저장 · 다시 들이기도 셋', () => {
+  const C3 = { ...SHOP, items: 3 };
+  const old = { ...R.rollStock({ seed: 777, slot: 4000, owned: LOBBY_ITEMS }, { ...SHOP, items: 2 }), seed: 777 };
+  delete old.n; // 옛 저장엔 n 이 없다(= 2)
+  const owned = [...LOBBY_ITEMS, old.items[0].id]; // 그 칸에서 하나를 이미 삼
+  const up = R.topUpStock(old, { owned, count: 3 }, C3);
+  assert.equal(up.n, 3); assert.equal(up.items.length, 3);
+  assert.deepEqual(up.items.slice(0, 2), old.items, '있던 두 물건(산 것 포함) 그대로');
+  assert.ok(!owned.includes(up.items[2].id) && !old.items.some((i) => i.id === up.items[2].id));
+  assert.equal(up.alter, old.alter);
+  assert.deepEqual(R.topUpStock(old, { owned, count: 3 }, C3), up, '같은 칸이면 같은 하나');
+  assert.equal(R.topUpStock(up, { owned, count: 3 }, C3), null, '이미 셋');
+  assert.equal(R.topUpStock({ ...old, n: 3 }, { owned, count: 3 }, C3), null, '셋으로 뽑았는데 모자란 칸(무기가 바닥)은 그대로');
+  assert.equal(R.topUpStock(old, { owned, count: 2 }, C3), null, '수가 2 면 그대로');
+  const alterOld = { ...R.rollStock({ seed: 5, slot: 6, owned: LOBBY_ITEMS, forceAlter: true }, { ...SHOP, items: 2 }), seed: 5 };
+  const alterUp = R.topUpStock(alterOld, { owned: LOBBY_ITEMS, count: 3 }, C3);
+  assert.ok(SHOP.alterTiers.includes(alterUp.items[2].tier)); assert.deepEqual([alterUp.items[2].coins, alterUp.items[2].heads], [0, 3]);
+  // 저장: ensureShopStock 의 fix 로 한 번 저장 · 다음 열기는 그대로
+  fresh({ heads: 2, shop: { ...old, slot: 4000 } });
+  const valid = (s) => !!R.normalizeShop(s), fix = (s) => R.topUpStock(s, { owned: LOBBY_ITEMS, count: 3 }, C3);
+  const w0 = writes;
+  const got = P.ensureShopStock({ slot: 4000, roll: () => { throw new Error('다시 뽑지 않음'); }, valid, fix });
+  assert.equal(writes - w0, 1); assert.equal(got.items.length, 3); assert.equal(got.n, 3);
+  assert.deepEqual(JSON.parse(storage.get(P.PROGRESS_KEY)).shop.items, got.items);
+  const w1 = writes;
+  assert.deepEqual(P.ensureShopStock({ slot: 4000, roll: () => { throw new Error('x'); }, valid, fix }), got);
+  assert.equal(writes - w1, 0, '채운 뒤엔 저장 없음');
+  // 다시 들이기 = 지금 수(셋)로
+  const r = P.rerollShopStock({ slot: 4000, roll: (seed, reroll) => R.rollStock({ seed, slot: 4000, reroll, owned: LOBBY_ITEMS }, C3), heads: 1 });
+  assert.equal(r.ok, true); assert.equal(r.stock.items.length, 3); assert.equal(r.stock.n, 3); assert.equal(r.stock.rerolls, 1);
+});
+
+test('구입 확인 카드 묻는 말 = 이 물건을 사겠나? (사장님 10/31 02:xx 결정) · 왼쪽 글 · 오른쪽 그림 · 구입 · 닫기 ×', () => {
+  assert.equal(T.SHOP_TEXT.confirm, '이 물건을 사겠나?');
+  const panel = fs.readFileSync(new URL('../../src/shop_panel.js', import.meta.url), 'utf8');
+  assert.match(panel, /<div class="shop-c-text">[\s\S]*shop-c-name[\s\S]*shop-c-desc[\s\S]*shop-c-price[\s\S]*shop-c-note[\s\S]*<\/div>\s*<div class="shop-c-side"><span class="shop-c-art"><img[^>]*><\/span><button type="button" class="primary shop-buy">/);
+  assert.match(panel, /q\('\.shop-c-art img'\)\.src = `ui\/weapons\/\$\{it\.id\}\.webp`/);
+  assert.match(panel, /class="shop-cancel" aria-label="\$\{SHOP_TEXT\.close\}">×</);
+  const css = fs.readFileSync(new URL('../../src/shop.css', import.meta.url), 'utf8');
+  assert.match(css, /\.shop-confirm \{[^}]*background: rgb\(24, 18, 14\);/, '확인 카드 바탕 불투명 — 뒤 상점 칸이 비치지 않게');
+  assert.match(css, /\.shop-host:has\(\.shop-confirm:not\(\[hidden\]\)\) > :not\(\.shop-confirm\) \{ visibility: hidden; \}/, '카드가 열린 동안 뒤 칸 감춤');
 });
