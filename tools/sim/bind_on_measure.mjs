@@ -42,6 +42,13 @@ AI.prototype.natHoldDef = function (dt) {
   if (r) this._nhdT = this.sense.t;
   return r;
 };
+// 치는 쪽 밀기가 끝날 때마다 [미는 뜻 w · 민 시간 s · 끝난 방식] (natEndAs — 재기만)
+const nea = AI.prototype.natEndAs;
+AI.prototype.natEndAs = function (why) {
+  const P = this.natP;
+  if (P) (this.stats.natLog ??= []).push([r3(P.w), r3(P.t), why]);
+  return nea.call(this, why);
+};
 const pressing = (A) => !!A && ((A.mode === 'attack' && A.pressAim && A.pressAimT === A.sense.t) || A._nhdT === A.sense.t);
 const willOf = (A) => (A ? Math.max(A.natP && !A.natP.done ? A.natP.w ?? 1 : 0, A.mode === 'defend' && A.natDef?.w != null ? A.natDef.w : 0) : 0);
 
@@ -100,7 +107,7 @@ function meter(G, X, Y, XA, YA) {
   return { M, step, end };
 }
 
-const natStats = (A) => (A ? { nat: { ...(A.stats.natBind ?? {}) }, will: A.stats.natWill ? { n: A.stats.natWill.n, mean: r3(A.stats.natWill.sum / A.stats.natWill.n), min: r3(A.stats.natWill.min), max: r3(A.stats.natWill.max) } : null, wind: A.stats.natBind?.wind ?? 0 } : null);
+const natStats = (A) => (A ? { nat: { ...(A.stats.natBind ?? {}) }, will: A.stats.natWill ? { n: A.stats.natWill.n, mean: r3(A.stats.natWill.sum / A.stats.natWill.n), min: r3(A.stats.natWill.min), max: r3(A.stats.natWill.max) } : null, wind: A.stats.natBind?.wind ?? 0, log: A.stats.natLog ?? [] } : null);
 
 /** AI 대 AI 한 판 */
 export function aiFight(wA, wB, seed, dur = 40) {
