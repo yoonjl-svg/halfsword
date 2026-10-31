@@ -29,7 +29,7 @@ test('기본값 (10/31): 칼끝 돌려 빼기 = 기본 기술(특수 공격 아�
   assert.equal(UA.cavArmSlowAi, 1);
   assert.equal(UA.inqTap, 1);
   assert.ok(Math.abs(UA.inqThreat - realS(0.25)) < 1e-12);
-  assert.equal(UA.specialShare.inquartata, 0.5);
+  assert.equal(UA.specialShare.inquartata, 0.3); // 10/31 16:xx 감독 판단(사장님 위임 — 확인표 3217)
   assert.equal(UA.imbroDown, 67.5);
   assert.ok(!it.cavazione.special && it.cavazione.tapKey === 'cav' && !it.cavazione.on.length, '칼끝 돌려 빼기 — 탭으로만 · 특수 공격 아님');
   assert.ok(it.inquartata.special && it.inquartata.tapKey === 'inq' && !it.inquartata.on.length && !it.inquartata.stick, '비껴서며 찌르기 — 탭으로만 · 특수 공격');
