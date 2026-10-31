@@ -813,7 +813,7 @@ export class PlayerSecretWatch {
       this.swing = null;
       this.combo = 0;
       this.iaiArm.tick(0, false, true);
-      if (S?.do?.instant && SECRET.gnsCrouch) iaiReadyPosePlayer(me, false, true, dt); // 웅크림도 풀림 (손 · 칼은 곧장 · 몸은 gnsCrouchOut)
+      if (S?.do?.instant && (SECRET.gnsCrouch || SECRET.gnsReadyHip)) iaiReadyPosePlayer(me, false, true, dt, !SECRET.gnsCrouch); // 웅크림 · 허리 대기도 풀림 (손 · 칼은 곧장 · 몸은 gnsCrouchOut)
       this.gilArm.tick(0, false, true);
       this.spinArm.tick(0, false, true);
       if (this.pc) this.pc.pend = this.pc.buf = null;
@@ -842,7 +842,10 @@ export class PlayerSecretWatch {
     if (S.do?.instant) gnsArmTick(this.iaiArm, dt, gnsHumanUnsettled(me, hurt) || busy, gnsMoving(me), { outside: gnsOutside(d0, V, this.iaiArm.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: sw || busy }, armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x)
     // 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준비가 되면 웅크리게 해.' — SECRET.gnsCrouch · secret_instant.js iaiReadyPosePlayer): 준비된 동안 AI 와 같은 발도 대기 자세 ·
     //  칼을 쥐면(손가락 움직임 · 막기 단추 · 휘두름) 손 · 칼은 곧장 사람 것 — 몸 웅크림은 그대로 · 0 이면 '고노센 준비' 표시만(전 판)
+    //  10/31 허리 대기 (사장님 08:xx '웅크리기를 없앴더니 고노센 발동창이 안열려.' — SECRET.gnsReadyHip · 웅크림 0 일 때): 몸은 선 채 손 · 칼만 왼 허리 발도 대기 —
+    //   칼을 쥠 = 손가락이 닿은 자리에서 길게 누름 한도(INPUT.holdPx)를 넘게 끌었음(main.js handGrip — 얹은 손가락의 떨림 · 떠돎은 쥠이 아님) · 막기 단추 · 휘두름. 손가락 몸이 없으면(시뮬 · 마우스) 손가락 움직임 그대로
     if (S.do?.instant && SECRET.iai && SECRET.gnsCrouch) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!me.inputActive || !!me.parryGuard?.held || sw, dt);
+    else if (S.do?.instant && SECRET.iai && SECRET.gnsReadyHip) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!(me.handGrip ?? me.inputActive) || !!me.parryGuard?.held || sw, dt, true);
     if (S.do?.gilmok) {
       const was = this.gilArm.armed;
       this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy || armHold(me)); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖) · 판 시작 정지 동안 셈 0 (10/27 23:0x — 싱지르와 같은 무장 시계)
