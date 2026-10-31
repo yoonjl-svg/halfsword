@@ -2751,9 +2751,9 @@ export function requestArtFold(f, { share, maxT, tech, step = null }) {
  *  길 = comboPlanDup (맞물린 자리에서 칼을 떼지 않고 상대 칼 뒤 — 상대 칼과 몸 사이 — 로 밀어 넣은 뒤 맞닿은 자리를 축으로 칼자루를 오른쪽(폼멜이 오른팔 밑)으로 돌려
  *   칼날 앞몫이 얼굴을 지나는 사선 베기 · 손이 엇갈림) · 날 = edge(1 긴 날 · −1 짧은 날 — 날 세우기 쪽) · 몸 = bodyPose · 끝나도 손 목표 그대로(keepAim). 이미 끌고 가는 중이면 거절(false)
  */
-export function requestArtDup(f, { share, maxT, tech, face = 0, follow = 25, plan = null, body = null, edge = 1 }) {
+export function requestArtDup(f, { share, maxT, tech, face = 0, follow = 25, plan = null, body = null, edge = 1, step = null }) {
   if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.head || !f.foe.armed || !f.foe.sword) return false;
-  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, dup: true, edge, plan, bodyPose: body, dyn: { kind: 'dup', face, follow } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true });
+  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, dup: true, edge, plan, bodyPose: body, ...(step ? { step: { ...step, close: true } } : {}), dyn: { kind: 'dup', face, follow } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true }); // step: 시제품 앞 걸음(10/31 UNIQUE_ASSIST.dupStep — 기본 없음)
   return true;
 }
 /**
