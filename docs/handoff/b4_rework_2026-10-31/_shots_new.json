@@ -1,0 +1,228 @@
+{
+ "tag": "new",
+ "url": "?weapon=zweihander&foeWeapon=longsword&skillNodes=B1,B5,B4",
+ "kit": {
+  "holdE": "redondo",
+  "mode": "load",
+  "release": "tajo",
+  "tajo": {
+   "angle": 60,
+   "from": 110,
+   "to": -45,
+   "at": 0.7,
+   "pull": 0,
+   "target": "head",
+   "lowY": 0.35,
+   "body": [
+    -8,
+    -15,
+    8,
+    0.07
+   ],
+   "liftK": 2
+  },
+  "chain": 0,
+  "apart": 1
+ },
+ "st": {
+  "fired": 1,
+  "winds": 1,
+  "refused": 0,
+  "cancel": {},
+  "res": {
+   "hits": 1,
+   "zone": "head"
+  }
+ },
+ "frames": [
+  {
+   "label": "자세",
+   "pose": {
+    "tip": [
+     1.49,
+     0.94,
+     0.11
+    ],
+    "hand": [
+     0.38,
+     0.19,
+     0.06
+    ],
+    "wind": null,
+    "iai": null,
+    "state": "stand"
+   }
+  },
+  {
+   "label": "메는 중 0.3 s",
+   "pose": {
+    "tip": [
+     -0.36,
+     1.56,
+     0.18
+    ],
+    "hand": [
+     0.14,
+     0.33,
+     0.17
+    ],
+    "wind": {
+     "t": 0.34,
+     "k": 0.53,
+     "kind": "load"
+    },
+    "iai": null,
+    "state": "stand"
+   }
+  },
+  {
+   "label": "멘 채 0.4 s",
+   "pose": {
+    "tip": [
+     -1,
+     -0.55,
+     0.07
+    ],
+    "hand": [
+     0.12,
+     0.16,
+     0.26
+    ],
+    "wind": {
+     "t": 1.12,
+     "k": 1,
+     "kind": "load"
+    },
+    "iai": null,
+    "state": "stand"
+   }
+  },
+  {
+   "label": "멘 채 0.9 s",
+   "pose": {
+    "tip": [
+     -1,
+     -0.55,
+     0.07
+    ],
+    "hand": [
+     0.12,
+     0.16,
+     0.26
+    ],
+    "wind": {
+     "t": 1.67,
+     "k": 1,
+     "kind": "load"
+    },
+    "iai": null,
+    "state": "stand"
+   }
+  },
+  {
+   "label": "뗀 뒤 0.05 s",
+   "pose": {
+    "tip": [
+     -0.65,
+     1.24,
+     0.98
+    ],
+    "hand": [
+     0.23,
+     0.44,
+     0.37
+    ],
+    "wind": null,
+    "iai": {
+     "seg": 0,
+     "cut": false
+    },
+    "state": "stand"
+   }
+  },
+  {
+   "label": "0.12 s",
+   "pose": {
+    "tip": [
+     0.84,
+     1.49,
+     0.87
+    ],
+    "hand": [
+     0.37,
+     0.38,
+     0.3
+    ],
+    "wind": null,
+    "iai": {
+     "seg": 2,
+     "cut": true
+    },
+    "state": "stand"
+   }
+  },
+  {
+   "label": "0.2 s",
+   "pose": {
+    "tip": [
+     1.77,
+     0.48,
+     0.17
+    ],
+    "hand": [
+     0.47,
+     0.18,
+     0.17
+    ],
+    "wind": null,
+    "iai": {
+     "seg": 4,
+     "cut": true
+    },
+    "state": "stand"
+   }
+  },
+  {
+   "label": "0.3 s",
+   "pose": {
+    "tip": [
+     1.8,
+     0.02,
+     -0.09
+    ],
+    "hand": [
+     0.48,
+     0.1,
+     0.12
+    ],
+    "wind": null,
+    "iai": {
+     "seg": 5,
+     "cut": true
+    },
+    "state": "stand"
+   }
+  },
+  {
+   "label": "0.42 s",
+   "pose": {
+    "tip": [
+     1.47,
+     -0.74,
+     -0.48
+    ],
+    "hand": [
+     0.44,
+     -0.06,
+     0.04
+    ],
+    "wind": null,
+    "iai": null,
+    "state": "stand"
+   }
+  }
+ ],
+ "errors": [
+  "A bad HTTP response code (404) was received when fetching the script."
+ ]
+}

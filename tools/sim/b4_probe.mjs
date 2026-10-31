@@ -26,11 +26,11 @@ const r3 = (x) => (x == null || !isFinite(x) ? null : +x.toFixed(3));
 const r1 = (x) => (x == null || !isFinite(x) ? null : +x.toFixed(1));
 const V = (p) => new THREE.Vector3(p.x, p.y, p.z);
 const Q = (r) => new THREE.Quaternion(r.x, r.y, r.z, r.w);
-const segPt = (A, B, P) => { const ab = B.clone().sub(A); const t = Math.max(0, Math.min(1, P.clone().sub(A).dot(ab) / Math.max(1e-9, ab.lengthSq()))); return A.clone().addScaledVector(ab, t).distanceTo(P); };
+const ptSeg = (A, B, P) => { const ab = B.clone().sub(A); const t = Math.max(0, Math.min(1, P.clone().sub(A).dot(ab) / Math.max(1e-9, ab.lengthSq()))); return A.clone().addScaledVector(ab, t).distanceTo(P); };
 const segSeg = (p1, q1, p2, q2) => {
   // 두 선분 사이 가장 가까운 거리 (표본 — 32 점)
   let m = Infinity;
-  for (let i = 0; i <= 32; i++) m = Math.min(m, segPt(p2, q2, p1.clone().lerp(q1, i / 32)));
+  for (let i = 0; i <= 32; i++) m = Math.min(m, ptSeg(p2, q2, p1.clone().lerp(q1, i / 32)));
   return m;
 };
 // 몸 캡슐 (fighter.js partDefs): 칼 팔은 x 축 · 빈팔은 y 축 — [반 길이, 반지름, 축]
@@ -48,7 +48,7 @@ export function selfGaps(P) {
   for (const [k, cap] of Object.entries(CAPS)) {
     if (!P.bodies[k]) continue;
     const [A, B] = capSeg(P.bodies[k], cap);
-    const g = segPt(A, B, hd) - hr - cap[1];
+    const g = ptSeg(A, B, hd) - hr - cap[1];
     if (g < arm) (arm = g), (armPart = k);
     const n = segSeg(A, B, neckA, hd) - 0.05 - cap[1];
     if (n < neck) (neck = n), (neckPart = k);
@@ -58,7 +58,7 @@ export function selfGaps(P) {
     const sq = Q(P.sword.rotation()), sp = V(P.sword.translation()), W = P.weaponCfg;
     const pom = new THREE.Vector3(0, W.gripAlong ?? -0.15, 0).applyQuaternion(sq).add(sp);
     const tip = new THREE.Vector3(0, W.hiltLength + W.bladeLength, 0).applyQuaternion(sq).add(sp);
-    blade = segPt(pom, tip, hd) - hr - 0.02;
+    blade = ptSeg(pom, tip, hd) - hr - 0.02;
   }
   return { arm, armPart, neck, neckPart, blade };
 }
