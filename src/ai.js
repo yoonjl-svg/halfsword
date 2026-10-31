@@ -1238,7 +1238,7 @@ export class AI {
     this.fastChamber = !!opt.fastChamber || this.quick;
     this.timer = this.phase === 'approach' && !this.quick ? realS(L.windup * 0.15) : 0; // 준비 자세 멈칫 = 실제 초
     // 풍차 베기 AI 몫 (사장님 10/31 08:xx '누가봐도 레돈두 준비처럼' — UNIQUE_ASSIST.rdAiWind): 머리 위 돌려 베기는 패드 길 대신 사람과 같은 감기로 (아래 rdWindTick)
-    if (UA.rdAiWind && this.tech?.name === 'redondo' && !this.feint && !this.secretRun && this.me.sword && this.me.armed && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin();
+    if (UA.rdAiWind && this.tech?.name === 'redondo' && !this.feint && !this.secretRun && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin(); // 부러진 칼은 옛 길 (사람도 부러지면 감기를 그만둠 — windStop 'armed')
     // 기술 알림: 고유 동작 이름은 칼이 실제로 나갈 때(startStrike — 10/9 13:xx 옮김). 패시브 이름은 passiveFired 가 여기(결정)에서
     return true;
   }
@@ -1501,7 +1501,7 @@ export class AI {
     const me = this.me;
     const W = me.rdWind;
     if (!W) return this.abortAttack();
-    const stop = !me.alive || !me.armed || !me.sword || me.state !== 'stand' || me.weaponBroken ? 'armed' : (me.wounds?.length ?? 0) > this.rd.wounds0 ? 'hit' : me.jolt > 0.5 ? 'jolt' : null;
+    const stop = !me.alive || !me.armed || !me.sword || me.weaponBroken ? 'armed' : me.state !== 'stand' ? 'down' : (me.wounds?.length ?? 0) > this.rd.wounds0 ? 'hit' : me.jolt > 0.5 ? 'jolt' : null;
     if (stop) {
       this.rdCancel(stop);
       return this.abortAttack();
