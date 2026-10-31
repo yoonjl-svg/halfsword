@@ -1530,11 +1530,12 @@ export const UNIQUE_ASSIST = {
   //  dupAuto 0 = 지금(맞물린 채 탭) · 'clash2' = 칼끼리 닿음이 dupClashT 안에 두 번(떨어진 틈 dupClashGap 이상이면 새 닿음) · 'bind' = 칼끼리 닿아 있고 가슴 사이가 띠 안인 동안 쌓임이 차면(dupStackS) —
   //  켜면 탭 조건은 꺼짐(탭 = 보통 탭 찌르기) · 나가는 칼 · 빠르기 · 식힘 · 기력은 탭 판과 같음(unique_assist.js dupAutoTick → launchTap). 띠 = 가슴 사이(죽음의 일격과 같은 잣대 fighter.foeDistance) dupBandMin 초과 ~ dupBandMax 이하 ·
   //  dupBandMin null = SECRET.mordCloseN(0.8 — 죽음의 일격 거리 바로 밖 · 겹치지 않음). 'clash2' 도 띠를 봄(둘째 닿음이 띠 안) — dupClashMax 0 이면 위 끝 없음.
-  //  막기 단추를 누른 동안은 쌓이지 않고 나가지도 않음(dupAutoParry 0 — 1 = 막기 단추와 상관없이) · 손가락이 새 긋기를 시작하면 쌓임 0(그 긋기가 맞물린 칼 그대로면 이어 셈) ·
+  //  막기 단추를 누른 동안은 쌓이지 않고 나가지도 않음(dupAutoParry 0 — 1 = 막기 단추와 상관없이) · 'bind' 는 손가락이 긋는 중(휘두르기 문턱 위)이면 냄만 미룸(쌓임은 쥠 — 맞댄 채 멈추거나 느리게 밀면 나감) ·
   //  자세 칸 알림(dupAutoHint 1): 쌓임이 절반 넘으면 이어 긋기 칸에 '겹치기 · 맞물림'(이미 있는 칸 · 새 그림 없음). `?dupAuto=bind|clash2|0` · `?dupStackS=` · `?dupStackGap=` · `?dupBandMax=` · `?dupClashT=` · `?dupAutoParry=`
   dupAuto: 0, // [사장님 확인 전 — 확인표 3220]
   dupStackS: realS(0.6), // 'bind' 쌓임 (실제 초 — 시간 사다리 0.6) [사장님 확인 전 — 확인표 3221]
   dupStackGap: realS(0.2), // 'bind' 끊겨도 이 초(실제) 안에 다시 맞대면 쌓임을 쥠(그동안 안 셈) · 넘으면 0 (시간 사다리 0.2) [사장님 확인 전 — 확인표 3222]
+  dupStackDrain: 0, // 'bind' 끊김이 dupStackGap 을 넘으면 쌓임이 초당 이만큼 빠짐 (0 = 곧장 0 — 죽음의 일격 셈과 같은 틀) · 견줌 0.5 [사장님 확인 전 — 확인표 3222]
   dupBandMin: null, // 띠 아래 끝 (가슴 사이 m · 초과) — null = SECRET.mordCloseN [사장님 확인 전 — 확인표 3223]
   dupBandMax: 1.4, // 띠 위 끝 (가슴 사이 m · 이하 — 0.8 + 0.6 걸음 사다리) [사장님 확인 전 — 확인표 3223]
   dupClashT: realS(1.2), // 'clash2' 첫 닿음 시작부터 둘째 닿음 시작까지 (실제 초 — 시간 사다리 1.2) [사장님 확인 전 — 확인표 3224]

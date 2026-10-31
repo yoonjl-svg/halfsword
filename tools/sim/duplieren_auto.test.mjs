@@ -10,7 +10,7 @@ import { G7_CMD_AUTO, nodeCmd, nodeOf } from '../../src/skill_tree_data.js';
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, SECRET } = CONFIG;
-const KEYS = ['dupAuto', 'dupStackS', 'dupStackGap', 'dupBandMin', 'dupBandMax', 'dupClashT', 'dupClashGap', 'dupClashMax', 'dupAutoParry', 'dupAutoHint', 'specialCooldown', 'dupTap'];
+const KEYS = ['dupAuto', 'dupStackS', 'dupStackGap', 'dupStackDrain', 'dupBandMin', 'dupBandMax', 'dupClashT', 'dupClashGap', 'dupClashMax', 'dupAutoParry', 'dupAutoHint', 'specialCooldown', 'dupTap'];
 
 test('기본값 — 자동 끔(0 = 지금 탭 판) · 수는 사다리 칸 (시간 0.2 / 0.4 / 0.6 / 1.2 · 거리 0.8 + 걸음 사다리) · 띠 아래 끝 = 죽음의 일격 거리', () => {
   assert.equal(UA.dupAuto, 0);
@@ -125,7 +125,7 @@ test("'bind' — 죽음의 일격 거리(가슴 사이 ≤ 0.8 m) · 띠 위(> d
   }
 });
 
-test("'bind' — 막기 단추를 누른 동안은 안 쌓임(dupAutoParry 0) · 1 이면 쌓고 냄 · 쌓는 동안 새로 시작한 휘두르는 긋기는 0 · 자세 칸 알림은 절반부터", () => {
+test("'bind' — 막기 단추를 누른 동안은 안 쌓임(dupAutoParry 0) · 1 이면 쌓고 냄 · 손가락이 긋는 중이면 냄만 미룸(쌓임 쥠) · 자세 칸 알림은 절반부터 · 빠짐 판", () => {
   const B = body({ dupAuto: 'bind', specialCooldown: 0 });
   try {
     const need = Math.ceil(UA.dupStackS / DT);
@@ -137,28 +137,34 @@ test("'bind' — 막기 단추를 누른 동안은 안 쌓임(dupAutoParry 0) ·
     UA.dupAutoParry = 0;
     B.clear();
     B.uq.feed(0, 0, 1 / 60, false, false);
-    // 새 긋기
+    // 자세 칸 알림 · 긋는 중엔 미룸
     const half = Math.floor(need / 2);
     assert.equal(B.run(half), -1);
     assert.equal(B.uq.dupCue?.name, 'duplieren', '절반 — 자세 칸 알림');
     assert.equal(B.uq.dupCue?.sub, '맞물림');
-    B.uq.cur = { tech: 'zwerch', kind: 'cut', tap: false, t0: B.uq.t, dir: [-1, 0], landed: false, bound: false, tEnd: null, unique: null };
     B.P.skill.inputSwinging = true;
-    B.uq.drive(DT);
-    assert.equal(B.uq.dupA.st, 0, '새 긋기 → 0');
-    assert.equal(B.uq.dupCue, null);
+    assert.equal(B.run(need * 2), -1, '긋는 중 — 미룸');
+    assert.ok(B.uq.dupA.st >= UA.dupStackS, '쌓임은 쥠');
     B.P.skill.inputSwinging = false;
-    // 쌓기 전에 시작한(맞물린) 긋기가 휘두르는 중이어도 이어 셈
-    B.uq.cur.t0 = B.uq.t - 1;
-    B.P.skill.inputSwinging = true;
-    const j = B.run(need + 3);
-    assert.ok(j >= 0, `쌓기 전 긋기 — ${j}`);
+    assert.equal(B.run(2), 0, '손가락이 멈춘 스텝에 냄');
     UA.dupAutoHint = 0;
     B.clear();
-    B.P.skill.inputSwinging = false;
-    B.uq.cur = null;
     B.run(Math.floor(need * 0.8));
     assert.equal(B.uq.dupCue, null, '알림 끔');
+    // 빠짐 판 (dupStackDrain 0.5): 긴 끊김 뒤에도 쌓임이 남아 이어 셈
+    UA.dupAutoHint = 1;
+    UA.dupStackDrain = 0.5;
+    B.clear();
+    B.uq.dupA = null;
+    assert.equal(B.run(half), -1);
+    B.st.touch = false;
+    const offN = Math.ceil(UA.dupStackGap / DT) + Math.ceil(realS(0.2) / DT);
+    assert.equal(B.run(offN), -1);
+    const left = B.uq.dupA.st;
+    assert.ok(left > 0 && left < half * DT, `빠진 뒤 남음 ${left}`);
+    B.st.touch = true;
+    const k = B.run(need);
+    assert.ok(k >= 0 && k < need - 2, `빠짐 판 이어 셈 — ${k}`);
   } finally {
     B.free();
   }

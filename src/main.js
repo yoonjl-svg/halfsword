@@ -369,7 +369,7 @@ if (params.has('dupStep')) CONFIG.UNIQUE_ASSIST.dupStep = Math.max(0, +params.ge
 // 겹치기 자동 (사장님 10/31 16:xx — 시제품 · 기본 0 = 지금 탭 · 확인표 3220 ~ 3229): `?dupAuto=bind` · `?dupAuto=clash2` · 수는 실제 초 · m
 if (params.has('dupAuto')) CONFIG.UNIQUE_ASSIST.dupAuto = ['bind', 'clash2'].includes(params.get('dupAuto')) ? params.get('dupAuto') : 0;
 for (const k of ['dupStackS', 'dupStackGap', 'dupClashT', 'dupClashGap']) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST[k] = CONFIG.realS(+params.get(k)); // 실제 초
-for (const k of ['dupBandMax', 'dupClashMax']) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST[k] = +params.get(k); // 가슴 사이 m (dupClashMax 0 = 위 끝 없음)
+for (const k of ['dupBandMax', 'dupClashMax', 'dupStackDrain']) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST[k] = +params.get(k); // 가슴 사이 m (dupClashMax 0 = 위 끝 없음) · 빠짐 초당 몫 (0 = 곧장 0)
 if (params.has('dupBandMin')) CONFIG.UNIQUE_ASSIST.dupBandMin = +params.get('dupBandMin') > 0 ? +params.get('dupBandMin') : null; // null = 죽음의 일격 거리(SECRET.mordCloseN)
 for (const k of ['dupAutoParry', 'dupAutoHint']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0;
 if (params.has('stickGuard')) CONFIG.INPUT.stickGuardPx = Math.max(0, +params.get('stickGuard') || 0); // 이동 스틱 둘레 (px — 10/31 08:xx 사장님 '+10~20px 정도' · 기본 15 · 0 = 전 판) [확인표 3096]

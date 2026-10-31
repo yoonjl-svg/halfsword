@@ -777,8 +777,8 @@ export class PlayerUniqueAssist {
   /**
    * 겹치기 자동 (사장님 10/31 16:xx '추가 커맨드 없이 일정 조건 충족하면 자동으로' — UNIQUE_ASSIST.dupAuto · 시제품 기본 끔 · 기록 docs/strike/duplieren_auto_2026-10-31.md): drive 가 물리 스텝마다.
    *  띠 = 가슴 사이(fighter.foeDistance — 죽음의 일격 'close' 와 같은 잣대) dupBandMin(null = SECRET.mordCloseN 0.8) 초과 ~ 위 끝 이하 · 닿음 = bladeTouch(몸이 느끼는 맞댐 · 칼날 선분 0.07 m).
-   *  'bind'  : 닿아 있고 띠 안인 스텝마다 쌓임 += dt · 끊기면(떨어짐 · 띠 밖) dupStackGap 안엔 쌓임을 쥠(안 셈 — 죽음의 일격 mordGrace 와 같은 틀) · 넘으면 0 ·
-   *            손가락이 쌓는 동안 새 긋기를 시작하면 0(맞댄 칼을 떼고 다른 데를 치려는 손 — 쌓기 전에 시작한 맞물린 긋기는 그대로) · 쌓임 ≥ dupStackS 이고 지금 닿아 있고 띠 안이면 냄.
+   *  'bind'  : 닿아 있고 띠 안인 스텝마다 쌓임 += dt · 끊기면(떨어짐 · 띠 밖) dupStackGap 안엔 쌓임을 쥠(안 셈 — 죽음의 일격 mordGrace 와 같은 틀) · 넘으면 0(dupStackDrain > 0 이면 초당 그만큼 빠짐) ·
+   *            쌓임 ≥ dupStackS 이고 지금 닿아 있고 띠 안이고 손가락이 휘두르는 중이 아니면 냄(긋는 중엔 미룸 — 쌓임은 쥠).
    *  'clash2': 닿음 덩이(떨어진 틈이 dupClashGap 이상이어야 새 덩이 — 한 맞댐의 떨림을 둘로 세지 않음)의 시작이 앞 덩이 시작부터 dupClashT 안이고 띠 안이면 그 덩이가 닿아 있는 동안 냄.
    *  셈 0(쌓임 · 짝 버림): 식힘 중 · 끌고 가는 칼(iaiBusy — 겹치기 · 다른 특수 공격 · 고노센) · 비기 · 나 · 상대가 서 있지 않음 · 칼 없음 · 탈진 · 막기 단추(dupAutoParry 0).
    *  냄 막음(쌓임은 쥠 — 풀리면 그때 냄): 몸이 바쁨(busy — 탭 찌르기 · 손잡이 찍기 · 걸어 맞추기 등) · 운동학 칼을 못 냄(상대 칼 없음 · 세기 0).
@@ -806,10 +806,12 @@ export class PlayerUniqueAssist {
         A.st += dt;
       } else if (A.st > 0 && !dead && (A.off += dt) <= UA.dupStackGap) {
         // 너그러움: 쥔 채 기다림 (안 셈)
+      } else if (A.st > 0 && !dead && UA.dupStackDrain > 0) {
+        A.st = Math.max(0, A.st - UA.dupStackDrain * dt); // 빠짐 판 (dupStackDrain — 초당 쌓임 몫 · 0 = 곧장 0)
+        if (!A.st) A.since = null;
       } else (A.st = 0), (A.off = 0), (A.since = null);
-      // 새 긋기 = 다른 뜻: 쌓기 시작한 뒤 시작한 긋기가 휘두르는 중이면 0 (맞물린 채 미는 느린 손은 휘두르기 문턱 SKILL.swingSpeed 아래)
-      if (A.st > 0 && this.cur && A.since != null && this.cur.t0 > A.since && f.skill.inputSwinging) (A.st = 0), (A.off = 0), (A.since = null), (this.stats.dupReset = (this.stats.dupReset ?? 0) + 1);
-      ready = A.st >= UA.dupStackS && touch && band;
+      // 손가락이 휘두르는 동안(긋는 중 — 휘두르기 문턱 SKILL.swingSpeed 위)은 냄만 미룸(쌓임은 쥠): 맞댄 칼을 떼고 다른 데를 치려는 손을 겹치기가 가로채지 않게 · 맞댄 채 멈추거나 느리게 밀면 나감
+      ready = A.st >= UA.dupStackS && touch && band && !f.skill.inputSwinging;
       this.dupCue = UA.dupAutoHint && !dead && A.st >= UA.dupStackS * 0.5 ? { name: e.U.name, nameKo: e.U.nameKo, sub: '맞물림' } : null;
     } else if (mode === 'clash2') {
       if (touch && !A.on) {

@@ -300,9 +300,12 @@ export function replay(L, c) {
         A.st += dt;
       } else if (A.st > 0 && !dead && (A.off += dt) <= c.gap) {
         /* 쥠 */
+      } else if (A.st > 0 && !dead && c.drain > 0) {
+        A.st = Math.max(0, A.st - c.drain * dt); // 빠짐 (초당 쌓임 몫)
+        if (!A.st) A.since = null;
       } else (A.st = 0), (A.off = 0), (A.since = null);
       if (c.newStroke && A.st > 0 && A.since != null && bits & B.newStroke && bits & B.swing && t > A.since) (A.st = 0), (A.off = 0), (A.since = null);
-      ready = A.st >= c.S && touch && band;
+      ready = A.st >= c.S && touch && band && !(c.quiet && bits & B.swing);
     } else {
       if (touch && !A.on) {
         A.on = true;
@@ -436,11 +439,20 @@ if (isMain(import.meta.url)) {
     const runs = args._.slice(1).flatMap((p) => JSON.parse(readFileSync(p, 'utf8')));
     const lo = MORD_N;
     const cands = [];
-    for (const hi of [1.1, 1.25, 1.4, 1.7]) for (const S of [0.2, 0.4, 0.6, 1.2, 1.5, 2.0]) for (const gap of [0.2, 0.4]) cands.push({ mode: 'bind', lo, hi, S: S * STD, gap: gap * STD, parry: 0, newStroke: 1, key: `bind hi${hi} S${S} g${gap}` });
+    // 쌓임 꼴: reset(끊김 g 넘으면 0 — 죽음의 일격 틀) · drain r(g 넘으면 초당 r 씩 빠짐) × 냄 막음: ns(쌓은 뒤 새로 휘두르는 긋기면 0) · quiet(손가락이 휘두르는 동안은 냄만 미룸)
+    const kinds = String(args.kinds ?? 'reset-ns,reset-quiet,drain0.5-quiet,drain1-quiet').split(',');
+    for (const kind of kinds) {
+      const [dk, rule] = kind.split('-');
+      const drain = dk.startsWith('drain') ? +dk.slice(5) : 0;
+      for (const hi of [1.1, 1.25, 1.4, 1.7]) for (const S of [0.2, 0.4, 0.6, 1.2, 1.5, 2.0]) for (const gap of [0.2, 0.4]) cands.push({ mode: 'bind', lo, hi, S: S * STD, gap: gap * STD, parry: 0, newStroke: rule === 'ns' ? 1 : 0, quiet: rule === 'quiet' ? 1 : 0, drain, key: `bind ${kind} hi${hi} S${S} g${gap}` });
+    }
     for (const hi of [1.4, 1.7, 9]) for (const T of [0.6, 1.2, 2.0]) for (const gap of [0.2, 0.4]) cands.push({ mode: 'clash2', lo, hi, T: T * STD, gap: gap * STD, parry: 0, key: `clash2 hi${hi} T${T} g${gap}` });
     // 막기 단추 · 새 긋기 규칙 견줌
-    cands.push({ mode: 'bind', lo, hi: 1.4, S: 0.6 * STD, gap: 0.2 * STD, parry: 1, newStroke: 1, key: 'bind hi1.4 S0.6 g0.2 parry1' });
-    cands.push({ mode: 'bind', lo, hi: 1.4, S: 0.6 * STD, gap: 0.2 * STD, parry: 0, newStroke: 0, key: 'bind hi1.4 S0.6 g0.2 newStroke0' });
+    for (const S of [0.4, 0.6]) {
+      cands.push({ mode: 'bind', lo, hi: 1.4, S: S * STD, gap: 0.2 * STD, parry: 1, newStroke: 0, quiet: 1, key: `bind reset-quiet hi1.4 S${S} g0.2 parry1` });
+      cands.push({ mode: 'bind', lo, hi: 1.4, S: S * STD, gap: 0.2 * STD, parry: 0, newStroke: 0, quiet: 0, key: `bind reset-none hi1.4 S${S} g0.2` });
+      cands.push({ mode: 'bind', lo, hi: 1.4, S: S * STD, gap: 0.2 * STD, parry: 1, newStroke: 0, quiet: 1, drain: 0.5, key: `bind drain0.5-quiet hi1.4 S${S} g0.2 parry1` });
+    }
     cands.push({ mode: 'clash2', lo, hi: 9, T: 1.2 * STD, gap: 0.2 * STD, parry: 1, key: 'clash2 hi9 T1.2 g0.2 parry1' });
     const byBot = {};
     for (const r of runs) (byBot[r.bot] ??= []).push(r);
