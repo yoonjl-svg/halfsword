@@ -64,7 +64,7 @@ const poseOf = () => {
   const V3 = g.THREE.Vector3;
   const loc = (p) => { const v = new V3(p.x - c.x, p.y - c.y, p.z - c.z).applyQuaternion(q); return [+v.x.toFixed(2), +v.y.toFixed(2), +(s * v.z).toFixed(2)]; };
   const W = f.rdWind, I = f.iai;
-  return { tip: loc(f.bladePoint(1, new V3())), hand: loc(f.sword.translation()), wind: W ? { t: +W.t.toFixed(2), k: +W.k.toFixed(2), kind: W.M.name ?? W.M.kind } : null, iai: I ? { seg: I.si, cut: !!I.segs?.[I.si]?.cut } : null, state: f.state };
+  return { tip: loc(f.bladePoint(1, new V3())), hand: loc(f.sword.translation()), wind: W ? { t: +W.t.toFixed(2), k: +W.k.toFixed(2), kind: W.M.name ?? W.M.kind } : null, iai: I ? { seg: I.si, cut: !!I.segs?.[I.si]?.cut } : null, state: f.state, dist: +f.foeDistance().toFixed(2) };
 };
 // 눈: side = 칼 든 쪽에서 몸에 곧게 · back = 등 뒤 (조금 칼 든 쪽 · 위) · game = 게임 카메라
 const VIEWS = ['side', 'back', 'game'];
@@ -127,7 +127,8 @@ for (const [lab, w] of [['메는 중 0.3 s', 0.6 + 0.3], ['멘 채 0.4 s', 0.6 +
 }
 await page.evaluate(() => (window.__hold = false));
 const r0 = await simT();
-for (const [lab, w] of [['뗀 뒤 0.05 s', 0.05], ['0.12 s', 0.12], ['0.2 s', 0.2], ['0.3 s', 0.3], ['0.42 s', 0.42]]) {
+const RELT = (process.env.RELT || '0.05,0.12,0.2,0.3,0.42').split(',').map(Number); // 뗀 뒤 찍는 때 (실제 초 — 드는 몫 × 1 이면 0.06,0.15,0.25,0.36,0.48)
+for (const [lab, w] of RELT.map((x, i) => [i ? `${x} s` : `뗀 뒤 ${x} s`, x])) {
   await waitSim(r0 + w * K);
   await shoot(lab);
 }
