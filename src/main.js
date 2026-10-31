@@ -185,7 +185,7 @@ if (params.get('itParryBeat') === '1') CONFIG.SKILL.itParryBeat = 1; // 막기�
 if (+params.get('cnParrySpeed') > 0) CONFIG.SKILL.cnParrySpeedK = +params.get('cnParrySpeed'); // 동방 막기 단추 손 빠르기 배율(10/17 — 판 값 1 = 끔, 사장님 확인 전): `?cnParrySpeed=1.3` = 동방 막기 책 플레이어의 막기 단추 손 옮김 4.5 → 5.85 m/s (docs/strike/chinese_parry_speed_2026-10-17.md)
 if (+params.get('cnBrace') > 0) CONFIG.SKILL.cnBraceK = +params.get('cnBrace'); // 동방 버티는 힘(10/17 연구 — 판 값 0 = 끔, 사장님 확인 전): `?cnBrace=0.5` = 동방 막기 책 플레이어가 막기 단추로 막는 중 서보 힘 × 1.5 (docs/strike/chinese_parry_brace_2026-10-17.md)
 if (params.has('cnParryCut') && +params.get('cnParryCut') >= 0 && +params.get('cnParryCut') <= 1) CONFIG.SKILL.cnParryDmgCut = +params.get('cnParryCut'); // 동방 막는 동안 피해 감소(10/17 — 판 값 0.5, 사장님 22:1x 결정): `?cnParryCut=0` = 끔 · `?cnParryCut=0.25` = 막는 중 입는 칼날 상처 심각도 × 0.75 (몫이라 0~1 만 읽음)
-// 일본 흘림 묶음 (사장님 10/18 22:1x — docs/strike/japanese_flow_adopt_2026-10-18.md): 판정 개편 · 팔 늦춤 0.36 s · 흘림당한 쪽 기력 40 · 자연 회복 탈진 · 일본/이베리아 막는 동안 피해 20 % 감소 — 모두 기본 켬
+// 일본 흘림 묶음 (사장님 10/18 22:1x — docs/strike/japanese_flow_adopt_2026-10-18.md): 판정 개편 · 팔 늦춤 0.36 s · 흘림당한 쪽 기력 40(10/31 09:xx 사장님 결정 60 — config FLOW_REDESIGN.penalty) · 자연 회복 탈진 · 일본/이베리아 막는 동안 피해 20 % 감소 — 모두 기본 켬
 if (params.has('flowJudge')) FLOW_REDESIGN.on = params.get('flowJudge') !== '0'; // `?flowJudge=0` = 옛 흘림 판정(내려 베기 · 칼 지붕 · 새로 부딪힌 순간만)
 if (params.has('flowDmgCut') && +params.get('flowDmgCut') >= 0 && +params.get('flowDmgCut') <= 1) FLOW_REDESIGN.flowDmgCut = +params.get('flowDmgCut'); // 흘린 공격의 피해 감소(판 값 0.8) — `?flowDmgCut=0` = 끔
 if (params.get('flowEnd') === 'timer') FLOW_REDESIGN.threatEnd = false; // `?flowEnd=timer` = 공격 끝을 공격 번호 시간으로(샛별 연구 그대로 — 판 값은 실제 칼 기하)
@@ -196,7 +196,7 @@ if (params.has('burstWalkSide')) CONFIG.GAIT.burstWalkSide = params.get('burstWa
 if (params.has('burstFwdDeg') && +params.get('burstFwdDeg') >= 0 && +params.get('burstFwdDeg') <= 60) CONFIG.GAIT.burstFwdDeg = +params.get('burstFwdDeg'); // 비스듬히 앞으로 박차기 각(°, 판 값 30 · 0 = 곧장 옆)
 if (params.has('aiReact') && +params.get('aiReact') >= 0 && +params.get('aiReact') <= 0.6) Object.assign(CONFIG.AI_REACT, { on: +params.get('aiReact') > 0, face: CONFIG.realS(+params.get('aiReact')) || CONFIG.AI_REACT.face }); // AI 반응 시간 s (판 값 0.2 · 0 = 끔)
 if (['strike', 'approach', 'windup'].includes(params.get('swingTurnFrom'))) CONFIG.SWING_TURN.from = params.get('swingTurnFrom'); // 묶기 시작: windup(기본 — 칼 드는 때부터) · approach(들어오는 단계부터) · strike(긋기부터)
-if (params.has('flowCost') && +params.get('flowCost') >= 0 && +params.get('flowCost') <= 100) FLOW_REDESIGN.penalty = +params.get('flowCost'); // `?flowCost=0` = 흘림당한 쪽 기력 청구 끔 · `?flowCost=20` = 20
+if (params.has('flowCost') && +params.get('flowCost') >= 0 && +params.get('flowCost') <= 100) FLOW_REDESIGN.penalty = +params.get('flowCost'); // `?flowCost=0` = 흘림당한 쪽 기력 청구 끔 · `?flowCost=20` = 20 · `?flowCost=40` = 10/31 전 판(판 값 60)
 if (params.get('exhaust') === 'fixed') CONFIG.STAMINA.exhaustNatural = false; // `?exhaust=fixed` = 옛 탈진(2.5 s 숨 고르기 뒤 0)
 if (params.get('thrustCost') === '7') CONFIG.STAMINA.thrustCost = 7; // `?thrustCost=7` = 옛 찌르기 기력 7 (10/24 사장님 결정 전)
 if (params.has('jpParryCut') && +params.get('jpParryCut') >= 0 && +params.get('jpParryCut') <= 1) CONFIG.SKILL.jpParryDmgCut = +params.get('jpParryCut'); // 일본 막는 동안 피해 감소(판 값 0.2) — `?jpParryCut=0` = 끔
