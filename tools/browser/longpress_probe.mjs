@@ -7,7 +7,8 @@
 //  실행 (저장소 뿌리 · playwright 는 저장소 의존성에 없음 — npm i --no-save playwright): npm run build → npx vite preview --port <빌드 포트> --strictPort --host 127.0.0.1 &
 //        npx vite --port <개발 포트> --strictPort --host 127.0.0.1 &   (배우기만 — 빌드에는 모듈이 없음)
 //        node tools/browser/longpress_probe.mjs http://127.0.0.1:<빌드 포트> http://127.0.0.1:<개발 포트> [결과 json (기본 .tmp/longpress/hold.json)]
-//   환경: K(0.15 — 화면 시계 배) · DUR(0.6,0.8,1.0,1.5 실제 초) · DRIFT(0,3,6,10,15,25 px) · REPS(2) · SCEN(grid,afterSwing,walking,stick,tapArt) · EXTRA(주소 덧붙임 — 예 &holdPx=12 = 전 판)
+//   환경: K(0.15 — 화면 시계 배) · DUR(0.6,0.8,1.0,1.5 실제 초) · DRIFT(0,3,6,10,15,25 px) · REPS(2) · SCEN(grid,afterSwing,walking,stick,ring,ringTap,tapArt) · EXTRA(주소 덧붙임 — 예 &holdPx=12 · &stickGuard=0 = 전 판)
+//   ring(10/31 08:xx 스틱 둘레): 왼 엄지가 원 테 6 · 14 px 밖(왼 아래) — 가만히 · 움직임 + 오른 엄지 1.0 s 누름(걸은 거리 · 걸음 스텝 · 감기) · 오른 엄지 탭 · 칼 쪽 둘레 바로 밖(+3 · 8 · 20 px) 탭
 //   누른 시간은 게임 시계로 셈(게임이 본 실제 초 = gameHold) · 시도 사이 식힘은 지움(시험 발판) · 기력은 가득으로 · 줄마다 바로 찍음(긴 재기는 갈래를 나눠 돌림)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -98,6 +99,7 @@ const kit = await page.evaluate(() => {
       exh: f.stamina.exhausted, stam: +f.stamina.value.toFixed(1), holdT: +(Hh.t ?? 0).toFixed(3),
     };
     if (sk.swinging) window.__sw++;
+    if (Math.hypot(f.move.x, f.move.y) > 0.05) window.__mv = (window.__mv ?? 0) + 1;
     const r = orig(dt);
     if (Hh.st !== st0) window.__hl.push({ T: +g.stats.simTime.toFixed(3), from: st0, to: Hh.st, ...pre });
     return r;
@@ -129,8 +131,8 @@ const ready = async () => {
   // 시험 발판: 식힘을 지움(시도 사이 기다림만 줄임 — 식힘 중 누름은 'afterSwing' · 'cool' 갈래가 따로 봄) · 기력 가득
   await page.evaluate(() => { const S = game.player.stamina; S.value = S.max; if (!window.__keepCool) delete game.playerUnique.coolT.redondo; });
 };
-const snap = () => page.evaluate(() => { const uq = game.playerUnique, f = game.player; return { fired: uq.stats.fired?.redondo ?? 0, winds: uq.stats.winds ?? 0, refused: uq.stats.holdRefused ?? 0, cancel: { ...(uq.stats.windCancel ?? {}) }, hl: window.__hl.length, ev: window.__ev.length, sw: window.__sw, thrusts: f.skill.thrusts ?? 0, spent: { ...(f.stamina.spent ?? {}) }, stam: f.stamina.value, dist: f.foeDistance() }; });
-const diff = (a, b) => ({ fired: b.fired - a.fired, winds: b.winds - a.winds, refused: b.refused - a.refused, thrusts: b.thrusts - a.thrusts, swingSteps: b.sw - a.sw });
+const snap = () => page.evaluate(() => { const uq = game.playerUnique, f = game.player; return { fired: uq.stats.fired?.redondo ?? 0, winds: uq.stats.winds ?? 0, refused: uq.stats.holdRefused ?? 0, cancel: { ...(uq.stats.windCancel ?? {}) }, hl: window.__hl.length, ev: window.__ev.length, sw: window.__sw, thrusts: f.skill.thrusts ?? 0, spent: { ...(f.stamina.spent ?? {}) }, stam: f.stamina.value, dist: f.foeDistance(), px: f.bodies.pelvis.translation().x, pz: f.bodies.pelvis.translation().z, mv: window.__mv ?? 0 }; });
+const diff = (a, b) => ({ walked: +Math.hypot(b.px - a.px, b.pz - a.pz).toFixed(3), moveSteps: b.mv - a.mv, fired: b.fired - a.fired, winds: b.winds - a.winds, refused: b.refused - a.refused, thrusts: b.thrusts - a.thrusts, swingSteps: b.sw - a.sw });
 // 한 번 누름 (벽시계는 D/K) — pts = 함께 닿아 있는 다른 손가락(스틱)
 const HOLD0 = { x: W * 0.68, y: H * 0.42 };
 async function hold({ dur, drift, ang, seed, stick = null }) {
@@ -206,6 +208,65 @@ if (SCEN.includes('afterSwing')) {
   let seed = 101;
   for (const gap of [0.1, 0.3]) for (const dur of [0.8, 1.0]) for (const drift of [0, 6]) {
     await trial('afterSwing', { dur, drift, ang: 0.5, seed: seed++, gap }, async () => { await swipe(); await setK(K); await waitSim(gap * 1.1); });
+  }
+}
+if ((SCEN.includes('ring') || SCEN.includes('ringTap')) && S0) {
+  // 스틱 둘레 (사장님 10/31 08:xx): 왼 엄지가 원 테 6 · 14 px 밖(둘레 안) — 가만히 · 걸으려고 움직임 → 오른 엄지 1.0 s 누름이 감기를 내나 · 걸었나
+  const R = stickBox.width / 2;
+  let seed = 401;
+  for (const off of SCEN.includes('ring') ? [R + 6, R + 14] : []) {
+    // 왼 아래(뒤 · 왼쪽으로 걸음 — 멈춘 상대 쪽으로 다가가 판이 끝나지 않게)
+    const st = { at: () => ({ x: S0.x - off * 0.7071, y: S0.y + off * 0.7071 }) };
+    await trial('ringStill', { dur: 1.0, drift: 0, ang: 0.5, seed: seed++, stick: st, off: +off.toFixed(0) });
+    const st2 = { at: (u) => ({ x: S0.x - off * 0.7071 + 30 * u, y: S0.y + off * 0.7071 }) };
+    await trial('ringMove', { dur: 1.0, drift: 0, ang: 0.5, seed: seed++, stick: st2, off: +off.toFixed(0) });
+  }
+  // 왼 엄지가 둘레 안에 가만히 있는 동안 오른 엄지 탭 하나 — 찌르기가 나가나 (전 판: 왼 엄지가 칼 손가락이라 오른 엄지 탭은 버려짐)
+  for (const off of [R + 6, R + 14]) for (const k of [0, 1]) {
+    await ready();
+    const n0 = await page.evaluate(() => window.__th.length);
+    const L = { x: S0.x - off * 0.7071, y: S0.y + off * 0.7071, id: 9 };
+    const Rt = { x: W * 0.66 + k * 30, y: H * 0.45, id: 6 };
+    await setK(K);
+    await touch('touchStart', [L]);
+    await sleep(150 / K);
+    // 오른 엄지 탭 = 캔버스에 바로 포인터 사건(CDP 는 손가락 하나만 떼지 못함 — cavazione_probe 와 같은 꼴 · pointerType touch · 실제 50 ms)
+    await page.evaluate(([x, y]) => {
+      const cv = document.querySelector('canvas');
+      const o = { pointerId: 77, pointerType: 'touch', isPrimary: false, clientX: x, clientY: y, bubbles: true, cancelable: true };
+      cv.dispatchEvent(new PointerEvent('pointerdown', o));
+      const until = Date.now() + 50;
+      while (Date.now() < until) { /* 짧게 */ }
+      window.dispatchEvent(new PointerEvent('pointerup', o));
+    }, [Rt.x, Rt.y]);
+    await sleep(100 / K);
+    await touch('touchEnd', []);
+    await setK(1);
+    await waitSim(0.4);
+    const th = await page.evaluate((n) => window.__th.slice(n), n0);
+    const ev = await page.evaluate(() => window.__ev.slice(-6).map((e) => e.ev + ':' + e.tgt).join(','));
+    const r0 = { tag: 'ringTap', off: +off.toFixed(0), k, thrust: th.filter((x) => x.r).length, calls: th.length, ev };
+    results.push(r0);
+    console.log(JSON.stringify(r0));
+  }
+  // 칼 쪽 둘레 바로 밖 탭: 원 가운데에서 R + 15 + 3 · 8 · 20 px · 오른쪽 · 오른 위 · 위 (각 -10 · -45 · -80°)
+  for (const extra of SCEN.includes('ring') ? [3, 8, 20] : []) for (const deg of [-10, -45, -80]) {
+    const r = R + 15 + extra;
+    const pt = { x: S0.x + r * Math.cos((deg * Math.PI) / 180), y: S0.y + r * Math.sin((deg * Math.PI) / 180) };
+    await ready();
+    const n0 = await page.evaluate(() => window.__th.length);
+    const T0 = Date.now() / 1000;
+    await setK(K);
+    await touch('touchStart', [{ ...pt, id: 5 }], T0);
+    await sleep(60 / K);
+    await touch('touchEnd', [], T0 + 0.05);
+    await setK(1);
+    await waitSim(0.4);
+    const th = await page.evaluate((n) => window.__th.slice(n), n0);
+    const ev = await page.evaluate(() => window.__ev.slice(-3).map((e) => e.ev + ':' + e.tgt).join(','));
+    const r0 = { tag: 'sideTap', extra, deg, r: +r.toFixed(1), at: [+pt.x.toFixed(0), +pt.y.toFixed(0)], thrust: th.filter((x) => x.r).length, ev };
+    results.push(r0);
+    console.log(JSON.stringify(r0));
   }
 }
 if (SCEN.includes('tapArt')) {

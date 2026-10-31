@@ -1,5 +1,5 @@
 // 일본 흘림 묶음 시험 (사장님 10/18 22:1x — docs/strike/japanese_flow_adopt_2026-10-18.md)
-//  흘림당한 쪽 기력 40(공격 하나에 한 번) · 팔 늦춤 0.4 s(10/21 시간 통일 — 전 0.36) · 일본/이베리아 막는 동안 피해 20 % 감소(동방 50 % 그대로) · 판 값
+//  흘림당한 쪽 기력 60(공격 하나에 한 번 · 10/31 09:xx 사장님 '일본 흘림의 상대 기력 소모는 60으로 증가' — 전 40) · 팔 늦춤 0.4 s(10/21 시간 통일 — 전 0.36) · 일본/이베리아 막는 동안 피해 20 % 감소(동방 50 % 그대로) · 판 값
 //  node --test tools/sim/japanese_flow.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,23 +16,23 @@ function actor(extra = {}) {
   f.stamina = new Stamina(f); return f;
 }
 
-test('판 값: 판정 개편 켬 · 공격 끝 = 실제 칼 기하 · 기력 40 · 창 0.2 s · 팔 늦춤 0.4 s(바닥 0.25 — 10/21 시간 통일) · 자연 회복 탈진 · 일본/이베리아 0.2 · 동방 0.5', () => {
-  assert.equal(FLOW_REDESIGN.on, true); assert.equal(FLOW_REDESIGN.penalty, 40); assert.equal(FLOW_REDESIGN.window, realS(0.2)); assert.equal(FLOW_REDESIGN.threatEnd, true);
+test('판 값: 판정 개편 켬 · 공격 끝 = 실제 칼 기하 · 기력 60 · 창 0.2 s · 팔 늦춤 0.4 s(바닥 0.25 — 10/21 시간 통일) · 자연 회복 탈진 · 일본/이베리아 0.2 · 동방 0.5', () => {
+  assert.equal(FLOW_REDESIGN.on, true); assert.equal(FLOW_REDESIGN.penalty, 60); assert.equal(FLOW_REDESIGN.window, realS(0.2)); assert.equal(FLOW_REDESIGN.threatEnd, true);
   assert.equal(FLOW_RECOVERY.seconds, realS(0.4)); assert.equal(FLOW_RECOVERY.floor, 0.25); assert.equal(STAMINA.exhaustNatural, true);
   assert.equal(SKILL.jpParryDmgCut, 0.2); assert.equal(SKILL.ibParryDmgCut, 0.2); assert.equal(SKILL.cnParryDmgCut, 0.5);
 });
 
-test('흘림당한 쪽 기력 40: 공격 번호 하나에 한 번 · 다른 방어자를 만나도 다시 안 냄 · 새 공격이면 다시 · 공격 번호 없으면 없음 · 40 끄면 없음', () => {
+test('흘림당한 쪽 기력 60: 공격 번호 하나에 한 번 · 다른 방어자를 만나도 다시 안 냄 · 새 공격이면 다시 · 공격 번호 없으면 없음 · 0 이면 없음', () => {
   const O = actor({ index: 1 }), D = actor({ index: 0 }), D2 = actor({ index: 2 });
   assert.equal(spendFlowPenalty(O, D), null); // 공격 번호 없음
   O.stamina.attack(); const v0 = O.stamina.value; // 베기 12 를 낸 뒤
-  const e = spendFlowPenalty(O, D); assert.ok(e && e.charged); near(O.stamina.value, v0 - 40); near(e.actual, 40); assert.equal(O.stamina.counts.flow, 1);
-  assert.equal(spendFlowPenalty(O, D), null); assert.equal(spendFlowPenalty(O, D2), null); near(O.stamina.value, v0 - 40); // 같은 공격 재접촉 · 다른 방어자
-  O.stamina.attack(); const v1 = O.stamina.value; assert.ok(spendFlowPenalty(O, D)); near(O.stamina.value, v1 - 40); near(O.stamina.spent.flow, 80);
+  const e = spendFlowPenalty(O, D); assert.ok(e && e.charged); near(O.stamina.value, v0 - 60); near(e.actual, 60); assert.equal(O.stamina.counts.flow, 1);
+  assert.equal(spendFlowPenalty(O, D), null); assert.equal(spendFlowPenalty(O, D2), null); near(O.stamina.value, v0 - 60); // 같은 공격 재접촉 · 다른 방어자
+  O.stamina.attack(); const v1 = O.stamina.value; assert.ok(spendFlowPenalty(O, D)); near(O.stamina.value, v1 - 60); near(O.stamina.spent.flow, 120);
   const was = FLOW_REDESIGN.penalty; try { FLOW_REDESIGN.penalty = 0; O.stamina.attack(); const v2 = O.stamina.value; assert.equal(spendFlowPenalty(O, D), null); near(O.stamina.value, v2); } finally { FLOW_REDESIGN.penalty = was; }
 });
 
-test('흘림당한 쪽 기력 40: 바닥(−70)에서 멈추고 탈진 · 기력 무한(용사의 눈물)은 청구 없음', () => {
+test('흘림당한 쪽 기력 60: 바닥(−70)에서 멈추고 탈진 · 기력 무한(용사의 눈물)은 청구 없음', () => {
   const O = actor({ index: 1 }), D = actor();
   O.stamina.value = STAMINA.floor + 10; O.stamina.attack('cut', true); // 묶음 공격(비용 없음)으로 번호만
   const e = spendFlowPenalty(O, D); near(O.stamina.value, STAMINA.floor); near(e.actual, 10); assert.equal(O.stamina.exhausted, true);

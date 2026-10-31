@@ -1,5 +1,5 @@
 import { classifyStroke } from './attack_stroke.js';
-import { STAMINA, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY, SECRET, realS } from './config.js';
+import { STAMINA, GAIT, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY, SECRET, realS } from './config.js';
 import { entersAttackLine, isPreparation } from './stamina_stroke.js';
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
 // 표준 시간 (10/25 22:3x): 공격 번호가 살아 있는 시간 · 긋기 꼬리는 실제 초로 적는다 (STAMINA 의 초 · 초당 값은 config 에서 realS · realRate)
@@ -397,11 +397,14 @@ export class Stamina {
       const heading = f.heading ?? 0;
       const dx = p.x - old.x, dz = p.z - old.z;
       const along = dx * (Math.cos(heading) * mv.y + Math.sin(heading) * mv.x) + dz * (-Math.sin(heading) * mv.y + Math.cos(heading) * mv.x);
-      if (along > 0) this.distance += Math.min(Math.hypot(dx, dz), STAMINA.maxWalkSpeed * dt);
+      // 뒷걸음 × STAMINA.backStepCostMul (10/31 09:xx 사장님 '뒷걸음은 항상 1.5배' — 첫 걸음부터 · 사람 · AI · 모든 유파): 스틱의 뒤 몫(× backFactor)이 옆 몫(× sideFactor)보다 큰 걸음 —
+      //  gait.js 걸음 셈과 같은 앞뒤 · 옆 가름(옆걸음 · 비스듬히 옆은 뒤 아님). 뒤로 간 거리를 × 1.5 로 쌓는다
+      const back = mv.y < 0 && -mv.y * GAIT.backFactor > Math.abs(mv.x) * GAIT.sideFactor;
+      if (along > 0) this.distance += Math.min(Math.hypot(dx, dz), STAMINA.maxWalkSpeed * dt) * (back ? STAMINA.backStepCostMul ?? 1 : 1);
       const steps = Math.floor((this.distance + 1e-9) / STAMINA.stepDistance);
       if (steps) {
         this.distance -= steps * STAMINA.stepDistance;
-        const cost = STAMINA.stepCosts[f.schoolFootwork === false || kitOff(f, 'stepCost') ? 'default' : f.swordArt?.tradition] ?? STAMINA.stepCosts.default; // 유파 걷기 기력은 보법 몫 — 대기실 스킬트리(10/21) 일본 보법 J1 · 동방 보법 II C2 를 안 익힌 플레이어는 보통 1.4
+        const cost = STAMINA.stepCosts[f.schoolFootwork === false || kitOff(f, 'stepCost') ? 'default' : f.swordArt?.tradition] ?? STAMINA.stepCosts.default; // 유파 걷기 기력은 보법 몫 — 대기실 스킬트리(10/21) 일본 보법 J1(6) · 동방 보법 II C2(2) 를 안 익힌 플레이어는 보통 4(10/31 — 전 1.4)
         this.spend('move', steps * cost);
       }
     }

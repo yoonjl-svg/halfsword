@@ -72,6 +72,8 @@ export class Input {
 
   onDown(e) {
     if (!this.enabled) return;
+    // 이동 스틱 둘레(10/31 — INPUT.stickGuardPx · attachStick 이 stickGuard 를 건다): 스틱 원 + 둘레 안에 닿은 손가락은 칼 손가락이 아님 (권총 탭도 아님)
+    if (e.pointerType !== 'mouse' && this.stickGuard?.(e)) return;
     // 마우스 잠금을 거는 첫 클릭은 찌르기로 치지 않는다 (잠금을 못 거는 브라우저는 클릭 그대로)
     const lockedBefore = document.pointerLockElement === this.canvas || !this.canvas.requestPointerLock;
     if (e.pointerType === 'mouse') {
@@ -185,11 +187,13 @@ export class Input {
  */
 export function attachStick(input, pad, knob) {
   let id = null;
+  let ring = false; // 스틱 둘레에서 쥔 손가락 (10/31 — 아래 input.stickGuard · 캡처가 안 걸린 환경에서도 창 사건으로 따라감)
   const R = 40;
   const DEAD = STICK_DEAD; // 가운데 근처 살짝 건드린 건 무시 (0.15)
   const reset = () => {
     const captured = id;
     id = null;
+    ring = false;
     knob.style.transform = '';
     input.stickMove = { x: 0, y: 0 };
     if (captured !== null && pad.releasePointerCapture) {
@@ -231,4 +235,24 @@ export function attachStick(input, pad, knob) {
   pad.addEventListener('pointerup', end);
   pad.addEventListener('pointercancel', end);
   pad.addEventListener('lostpointercapture', end);
+  // 스틱 둘레 (사장님 10/31 08:xx '이동스틱 주위의 일정 픽셀(+10~20px 정도)에선 공격 커맨드 입력이 안되도록 해.' — INPUT.stickGuardPx · stickGuardGrab):
+  //  캔버스에 닿은 손가락이 지금 그려진 스틱 원(크기 · 자리 — 닿는 때마다 잼 · 숨었으면 없음) 바깥 stickGuardPx 안이면 칼 입력이 아님(Input.onDown 이 버림) ·
+  //  스틱이 비어 있고 stickGuardGrab 이면 그 손가락이 스틱을 쥠(원 안 누름과 같은 update — 원 밖이라 그쪽으로 끝까지 기욺). 원 안 누름(위 pad 사건)은 그대로.
+  input.stickGuard = (e) => {
+    const g = +(INPUT.stickGuardPx ?? 0);
+    if (!(g > 0)) return false;
+    const r = pad.getBoundingClientRect();
+    if (!(r.width > 0 && r.height > 0)) return false; // 숨은 스틱 (대기실 · 뽑기 · PC)
+    const R0 = Math.min(r.width, r.height) / 2;
+    if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) > R0 + g) return false;
+    if (INPUT.stickGuardGrab && id === null) {
+      id = e.pointerId;
+      ring = true;
+      try { pad.setPointerCapture(id); } catch { /* 캡처가 안 되면 아래 창 사건이 따라감 */ }
+      update(e);
+    }
+    return true;
+  };
+  window.addEventListener('pointermove', (e) => ring && e.pointerId === id && e.target !== pad && update(e));
+  for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, (e) => ring && e.pointerId === id && e.target !== pad && reset());
 }

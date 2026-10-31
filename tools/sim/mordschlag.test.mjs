@@ -356,6 +356,87 @@ test('머리 따라 겨눔 (10/30 사장님 \'모르트가 빗나가는 경우�
   assert.ok(cut.R.trackN > 0 && cut.R.trackN < on.R.trackN, `베기 전까지 ${cut.R.trackN} < 겨눈 자리까지 ${on.R.trackN}`);
 });
 
+test('내 머리 뚫음 막기 시제품 (10/31 사장님 \'팔이 나의 머리를 뚫고 뒤로 갔다가 다시 적을 강타하는 것처럼 보여\' — SECRET.mord.noSelfClip · 사장님 확인 전 · 기본 끔): 끄면 가슴 사이 0.65 m 에서 두 손이 내 머리 가운데 뒤로 감(지금 판) · 켜면 두 손이 늘 머리 앞 · 반걸음 ≤ clipStep · 결과에 clip 칸 · 머리에 닿음', () => {
+  assert.equal(SECRET.mord.noSelfClip, 0);
+  const run = (on) => {
+    const { g, P } = fixture('longsword', 0.65);
+    SECRET.mord.noSelfClip = on;
+    try {
+      for (let i = 0; i < Math.round(2.4 / DT); i++) g.step();
+      const hits = [];
+      g.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === P) hits.push({ zone: r.zone, part: pr.w.part }); };
+      assert.equal(P.skill.secret({ S: TRADITIONS.german.playerSecret, ctx: { ev: 'press' } }), true);
+      let front = Infinity;
+      for (let i = 0; i < Math.round(3 / DT) && P.skill.sec; i++) {
+        g.step();
+        const I = P.iai;
+        if (!I?.mord) continue;
+        const hd = new THREE.Vector3().copy(P.bodies.head.translation()), yi = I.yaw.clone().invert();
+        const wS = new THREE.Vector3(0.13, 0, 0).applyQuaternion(q(P.bodies.farmS.rotation())).add(P.bodies.farmS.translation());
+        const wO = new THREE.Vector3(0, -0.13, 0).applyQuaternion(q(P.bodies.farmO.rotation())).add(P.bodies.farmO.translation());
+        front = Math.min(front, wS.sub(hd).applyQuaternion(yi).x, wO.sub(hd).applyQuaternion(yi).x); // 두 손이 내 머리 가운데보다 몸 앞(+) · 뒤(−) (m)
+      }
+      return { R: P.instantResult, hits, front };
+    } finally { SECRET.mord.noSelfClip = 0; g.world.free(); }
+  };
+  const off = run(0);
+  assert.ok(off.R?.mord && off.R.clip === undefined && off.front < -0.1, `지금 판: 손이 머리 뒤 ${off.front.toFixed(2)} m`);
+  const on = run(1);
+  assert.ok(on.front > 0.05, `켜면 손이 머리 앞 ${on.front.toFixed(2)} m`);
+  assert.ok(on.R.clip && on.R.clip.step <= SECRET.mord.clipStep + 1e-9, JSON.stringify(on.R.clip));
+  assert.ok(on.hits.some((h) => h.zone === 'head'), JSON.stringify(on.hits));
+});
+
+test('자연스러운 쥠 바꿈 · 강제 뒤 박차기 · 폼멜 찍기 시제품 (10/31 08:xx 사장님 \'칼등을 거꾸로 쥐는 동작이 자연스러워야 돼 … 박차기 강제 발동과 함께 한걸음 물러나며 일격\' — SECRET.mord.regrip · burstBack · pommel · 사장님 확인 전 · 기본 끔): 낸 스텝에 칼이 옮겨지지 않고 쥠 자리가 스텝마다 조금씩 · 쥠 바꿈 뒤 거꾸로 · 박찬 걸음 한 번(기력 pushCost) · 가슴 사이가 늘어남 · 칼자루로 머리 · 서 있음 · 끝나면 원래 쥠 · 폼멜 찍기는 쥠 그대로 폼멜로 머리', () => {
+  assert.equal(SECRET.mord.regrip, 0);
+  assert.equal(SECRET.mord.burstBack, 0);
+  assert.equal(SECRET.mord.burstFree, 0);
+  assert.equal(SECRET.mord.pommel, 0);
+  const keep = { ...SECRET.mord };
+  const run = (set, gap) => {
+    const { g, P, E } = fixture('longsword', gap);
+    Object.assign(SECRET.mord, set);
+    try {
+      for (let i = 0; i < Math.round(2.4 / DT); i++) g.step();
+      const hits = [];
+      g.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === P) hits.push({ zone: r.zone, part: pr.w.part }); };
+      const push0 = P.stamina.counts?.push ?? 0;
+      const d0 = P.foeDistance();
+      assert.equal(P.skill.secret({ S: TRADITIONS.german.playerSecret, ctx: { ev: 'press' } }), true);
+      const out = { gripAtFire: P.mordGrip, gMaxStep: 0, revSeen: false, fell: false, dCut: null, front: Infinity };
+      let gPrev = null;
+      for (let i = 0; i < Math.round(3 / DT) && P.skill.sec; i++) {
+        g.step();
+        const I = P.iai;
+        if (P.state !== 'stand') out.fell = true;
+        if (P.mordGrip) out.revSeen = true;
+        if (!I?.mord) continue;
+        if (gPrev != null) out.gMaxStep = Math.max(out.gMaxStep, Math.abs(I.mord.g - gPrev));
+        gPrev = I.mord.g;
+        if (I.cutting && out.dCut == null) out.dCut = P.foeDistance();
+        const hd = new THREE.Vector3().copy(P.bodies.head.translation()), yi = I.yaw.clone().invert();
+        const wS = new THREE.Vector3(0.13, 0, 0).applyQuaternion(q(P.bodies.farmS.rotation())).add(P.bodies.farmS.translation());
+        out.front = Math.min(out.front, wS.sub(hd).applyQuaternion(yi).x);
+      }
+      return { ...out, R: P.instantResult, hits, pushN: (P.stamina.counts?.push ?? 0) - push0, d0, gripEnd: P.mordGrip };
+    } finally { Object.assign(SECRET.mord, keep); g.world.free(); }
+  };
+  const best = run({ regrip: CONFIG.realS(0.4), burstBack: 1, noSelfClip: 1, clipStep: 0 }, 0.6);
+  assert.equal(best.gripAtFire, null, '낸 스텝에 칼을 옮기지 않음 (쥠 바꿈은 운동학 토막에서)');
+  assert.ok(best.gMaxStep < 0.06, `쥠 자리가 스텝마다 조금씩 (가장 큰 한 스텝 ${best.gMaxStep.toFixed(3)} m — 지금 판은 0.88 m 한 번)`);
+  assert.ok(best.revSeen && best.gripEnd === null, '쥠 바꿈 뒤 거꾸로 · 끝나면 원래 쥠');
+  assert.equal(best.pushN, 1, '박찬 걸음 한 번 (기력 pushCost)');
+  assert.ok(best.dCut > best.d0 + 0.15, `물러나 가슴 사이가 늘어남 ${best.d0.toFixed(2)} → ${best.dCut?.toFixed(2)}`);
+  assert.ok(!best.fell, '서 있음');
+  assert.ok(best.front > 0.1, `손이 머리 앞 ${best.front.toFixed(2)}`);
+  assert.ok(best.hits.some((h) => h.zone === 'head' && h.part === 'hilt'), JSON.stringify(best.hits));
+  const free = run({ regrip: CONFIG.realS(0.4), burstBack: 1, burstFree: 1, noSelfClip: 1, clipStep: 0 }, 0.6);
+  assert.equal(free.pushN, 0, 'burstFree 면 박찬 걸음 기력 안 냄');
+  const pom = run({ pommel: 1, noSelfClip: 1, clipStep: 0 }, 0.45);
+  assert.ok(!pom.revSeen && pom.gripEnd === null, '폼멜 찍기는 쥠 그대로');
+  assert.ok(pom.hits.some((h) => h.zone === 'head' && h.part === 'hilt'), JSON.stringify(pom.hits));
+});
+
 test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누르기 mordPress(2 s) → 창 → 머리가 닿으면 곧장 냄(사람과 같은 실행부) → 굳음 → 끝 · 끊기면 셈 0 · 머리가 멀면 안 냄', () => {
   const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 } } });
   const P = g.player, E = g.enemy, ai = g.ai;

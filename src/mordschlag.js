@@ -15,14 +15,14 @@
 //    AI 는 창 안에서 상대 머리가 칼자루 길에 닿을 때(mordHeadReach — 아래) 곧장 낸다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, ARM } from './config.js';
+import { SECRET, ARM, realS } from './config.js';
 import { FINISH } from './finish.js';
 import { comboArmLen } from './secret_instant.js';
 
 /** 이 몸의 판: 'reverse'(칼날을 거꾸로 쥠) | 'hilt'(쥠 그대로 폼멜) — 칼날을 잡을 수 없는 칼(날 없는 무기 · 라이트세이버 · 부러진 칼)은 늘 'hilt' */
 export function mordMode(f) {
   const W = f.weaponCfg;
-  if (SECRET.mord.grip === 'hilt' || !W?.edged || W.ignoreArmor || f.weaponBroken) return 'hilt';
+  if (SECRET.mord.grip === 'hilt' || SECRET.mord.pommel || !W?.edged || W.ignoreArmor || f.weaponBroken) return 'hilt'; // pommel: 폼멜 찍기 시제품(10/31 — 쥠 그대로)
   return 'reverse';
 }
 
@@ -47,10 +47,15 @@ export function mordTech(byName) {
 export function mordStart(f, run, tech) {
   const mode = mordMode(f);
   const m = (run.mord = { mode, G: mode === 'reverse' ? mordGripOf(f) : null, flipped: false, overOn: false });
-  if (mode === 'reverse') {
+  if (mode === 'reverse' && SECRET.mord.regrip > 0 && SECRET.mord.kin > 0) {
+    // 자연스러운 쥠 바꿈 (10/31 시제품 — SECRET.mord.regrip · 기본 끔): 여기서 칼을 옮기지 않는다 — 운동학 길의 쥠 바꿈 토막이 손을 칼날로 옮긴 뒤 그 자세 그대로 쥠을 바꿈(secret_instant.js mordRegripDone)
+    if (!f.armed || !f.sword || !f.gripJoint || f.mordGrip) return false;
+    m.regrip = true;
+  } else if (mode === 'reverse') {
     m.flipped = f.reverseGrip(m.G, DOWN);
     if (!m.flipped) return false;
   }
+  if (SECRET.mord.burstBack && f.gait) m.burst = { t: 0, phase: 'go', used: false, timeout: false, landT: null }; // 강제 뒤 박차기 (10/31 시제품 — 아래 mordBurstTick)
   f.mordAim = true;
   const d = f.strokeCommand(tech.from[0], tech.from[1], _h, _d); // 시작 자세 패드의 칼끝 겨눔 (몸 틀) — 준비 동안 칼자루가 이쪽으로 선다
   f.mordHold = [d.x, d.y, d.z];
@@ -149,8 +154,57 @@ export function mordKinOf(f, run) {
     const h = t === 0 ? c.radius() : t === 1 ? c.halfExtents().y : 0; // 공(ball) · 상자(cuboid)
     yp = Math.min(yp, y - h);
   }
-  return { g: G.g, gOff: G.gOff, Lc: G.g - W.hiltLength, Lp: G.g - yp, pull: SECRET.mord.aim === 'pull', over: !!SECRET.mordOver, end: mordEnd };
+  const K = { g: G.g, gOff: G.gOff, Lc: G.g - W.hiltLength, Lp: G.g - yp, pull: SECRET.mord.aim === 'pull', over: !!SECRET.mordOver, end: mordEnd };
+  if (run.mord.regrip) {
+    // 쥠 바꿈 토막 (10/31 시제품): 원래 쥠(칼 든 손 칼 축 0 · 빈손 gripAlong)에서 시작 — 토막마다 g · gOff · Lc · Lp 를 옮김(secret_instant.js stepCombo). G = 끝 쥠 · yp = 칼자루 끝 · HL = 코등이
+    K.regrip = { T: SECRET.mord.regrip, G: run.mord.G, g0: 0, o0: W.twoHand ? W.gripAlong ?? -0.14 : 0, yp, HL: W.hiltLength, done: false };
+    K.g = 0;
+    K.gOff = K.regrip.o0;
+    K.Lc = -W.hiltLength;
+    K.Lp = -yp;
+  }
+  if (SECRET.mord.pommel && run.mord.mode === 'hilt') K.pommel = true; // 폼멜 찍기 길 (10/31 시제품)
+  return K;
 }
+
+/**
+ * 강제 뒤 박차기 (10/31 시제품 — SECRET.mord.burstBack · 기본 끔 · 사장님 '박차기 강제 발동과 함께 한걸음 물러나며 일격'): skill.js updateSecret 이 비기 스텝마다 부름.
+ *  'go' = 스틱을 곧장 뒤로(f.move — 이 스텝의 걸음 · 균형이 읽기 전) · 박차기(gait.burst — 독일 뒤 박차기와 같은 칸 { fore −1 })를 박찬 걸음이 시작될 때까지 다시 걺 →
+ *   gait.js fastBegin 이 다음에 떼는 걸음을 박찬 걸음으로(몸 목표 빠르기 burstBackV · 가속 한도 × burstAccel · 발 뜬 시간 burstT · 기력 pushCost — burstFree 면 안 냄) ·
+ *   박찬 발이 디디면(burstLeg 가 풀림) 'hold' = 일격이 끝날 때까지 발을 멈춤(스틱 0 — 박찬 뒤 세게 멈춤은 걸음 그대로). 0.6 s(시간 사다리) 안에 못 디디면 그때 'hold'
+ */
+export function mordBurstTick(f, run, dt) {
+  const B = run.mord?.burst;
+  if (!B || B.phase === 'off') return;
+  const g = f.gait;
+  B.t += dt;
+  if (!g?.active || f.state !== 'stand' || run.stage !== 'instant') {
+    if (B.phase !== 'go' || run.stage !== 'instant') B.phase = 'off';
+    return;
+  }
+  if (B.phase === 'go') {
+    // 한 걸음만: 박찬 발이 디디면 놓음 · 머리 뚫음 막기(noSelfClip)가 켜져 있으면 그 셈의 '못 옮긴 몫'(I.mord.clip.short — 머리 따라 겨눔이 스텝마다 그때 머리로 셈)이
+    //  먼저 0 이 되면(상대도 물러나 일찍 넉넉해짐) 박찬 걸음 도중이라도 놓음(세게 멈춤). 디딘 뒤 더 물러나지는 않음(뒷걸음을 이어 가면 판 싸움에서 넘어짐 2 ~ 4 / 30 — 확인표 3143)
+    const C = f.iai?.mord?.clip;
+    const room = C && C.short != null && C.short <= ROOM_TOL;
+    if (g.burstLeg) B.used = true;
+    else if (!B.used && !g.burst && !g.burstStep) g.burst = { fore: -1, side: 0, lat: 0, ...(SECRET.mord.burstFree ? { free: true } : {}) };
+    if (B.used && (room || !g.burstLeg)) {
+      B.phase = 'hold';
+      B.landT = B.t;
+    }
+    if (B.phase === 'go' && B.t > BURST_MAX) {
+      B.phase = 'hold';
+      B.timeout = true;
+    }
+  }
+  const back = B.phase === 'go';
+  f.move.set(0, back ? -1 : 0);
+  f.stickX = 0;
+  f.stickY = back ? -1 : 0;
+}
+const BURST_MAX = realS(0.6); // 실제 초 — 시간 사다리 0.6 칸 (이 안에 못 디디거나 거리가 안 나면 놓음)
+const ROOM_TOL = 0.02; // m — '넉넉함' 판정 여유 (칼자루 가운데 ↔ 머리 가운데 못 옮긴 몫 · 머리 공 반지름 0.1 의 몫)
 
 /**
  * 상대 머리가 칼자루 길에 닿나 (10/24 — AI 가 창 안에서 낼 때 · ai.js mordTick): 운동학 길의 머리 겨눔('pull' — secret_instant.js comboPlanMord)은 칼자루 가운데

@@ -52,21 +52,30 @@ test('실제 접촉 청구는 상대 공격당 한 번, 다음 공격에서 다�
 test('비기는35 한 번, 구성 공격/걷기와 이중 청구하지 않음',()=>{
  const f=actor();f.skill.sec={};f.stamina.secret();f.stamina.attack();f.stamina.attack('thrust');near(f.stamina.value,65);near(f.stamina.spent.attack,0);near(f.stamina.spent.secret,35);
 });
-test('사람/AI 걷기는0.62m당 동방0.7·일반1.4·일본2.1, 걷는 중 회복·제자리 무료',()=>{
- for(const aiControlled of [false,true])for(const [trad,cost] of [['chinese',.7],['german',1.4],['italian',1.4],['iberian',1.4],['japanese',2.1],['none',1.4]]) {
+test('사람/AI 걷기는0.6m당 동방2·일반4·일본6(10/31 09:xx 사장님 — 전 0.62 m · 0.7 · 1.4 · 2.1), 걷는 중 회복·제자리 무료',()=>{
+ for(const aiControlled of [false,true])for(const [trad,cost] of [['chinese',2],['german',4],['italian',4],['iberian',4],['japanese',6],['none',4]]) {
   const f=actor({aiControlled,swordArt:{tradition:trad}});f.stamina.value=20;f.stamina.rest=realS(.6);f.move.y=1;f.stamina.step(1/120);
-  for(let i=0;i<123;i++){f.pos.x+=.01;f.stamina.step(1/120);}near(f.stamina.spent.move,cost);
+  for(let i=0;i<119;i++){f.pos.x+=.01;f.stamina.step(1/120);}near(f.stamina.spent.move,cost);
   f.pos.x+=.01;f.stamina.step(1/120);
-  near(f.stamina.spent.move,2*cost);assert.ok(f.stamina.value>30);
+  near(f.stamina.spent.move,2*cost);assert.ok(f.stamina.recovered>10);near(f.stamina.value,20+f.stamina.recovered-2*cost,1e-6); // 걷는 중에도 회복(10/31 전: 값 > 30 — 걷기 기력이 커져 몫으로 봄)
  }
  const f=actor();f.move.y=1;tick(f,2);near(f.stamina.spent.move,0);
 });
-test('거리0.62 직전에는 미청구, 일시정지·남은 거리를 거쳐 다음 문턱에서 한 번 청구',()=>{
+test('거리0.6 직전에는 미청구, 일시정지·남은 거리를 거쳐 다음 문턱에서 한 번 청구',()=>{
  const f=actor();f.move.y=1;f.stamina.step(.01);
- for(let i=0;i<61;i++){f.pos.x+=.01;f.stamina.step(.01);}near(f.stamina.spent.move,0);
+ for(let i=0;i<59;i++){f.pos.x+=.01;f.stamina.step(.01);}near(f.stamina.spent.move,0);
  f.stamina.step(0);near(f.stamina.spent.move,0);
- f.pos.x+=.01;f.stamina.step(.01);near(f.stamina.spent.move,1.4);
- f.pos.x+=.01;f.stamina.step(.01);near(f.stamina.spent.move,1.4);
+ f.pos.x+=.01;f.stamina.step(.01);near(f.stamina.spent.move,4);
+ f.pos.x+=.01;f.stamina.step(.01);near(f.stamina.spent.move,4);
+});
+test('뒷걸음은 첫 걸음부터 × 1.5(10/31 09:xx 사장님 \'뒷걸음은 항상 1.5배\' — 뒤로 0.4 m 마다 한 번) · 옆걸음 · 옆 몫이 큰 비스듬히 뒤는 × 1 · 뒤 몫이 큰 비스듬히 뒤는 × 1.5',()=>{
+ assert.equal(STAMINA.backStepCostMul,1.5);
+ const walk=(mx,my,n)=>{const f=actor();f.move.set(mx,my);f.stamina.step(.01);const h=Math.hypot(mx*.4,my*.7);for(let i=0;i<n;i++){f.pos.x+=.01*my*.7/h;f.pos.z+=.01*mx*.4/h;f.stamina.step(.01);}return f.stamina.spent.move;};
+ near(walk(0,-1,39),0);near(walk(0,-1,40),4);near(walk(0,-1,80),8); // 뒤 0.39 m · 0.40 m · 0.80 m
+ near(walk(1,0,59),0);near(walk(1,0,60),4); // 옆 0.6 m 마다
+ near(walk(.5,-1,40),4); // 뒤 몫 0.7 > 옆 0.2 — 뒤
+ near(walk(1,-.5,40),0);near(walk(1,-.5,60),4); // 뒤 몫 0.35 < 옆 0.4 — 뒤 아님
+ near(walk(0,1,40),0);near(walk(0,1,60),4); // 앞 0.6 m 마다
 });
 test('비자발적/기술 이동에는 걷기 비용 없음',()=>{
  for(const extra of [{feetHeld:true},{gait:{req:{}}},{state:'down'}]){

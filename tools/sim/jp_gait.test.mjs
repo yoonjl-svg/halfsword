@@ -1,15 +1,15 @@
-// 일본 걸음 설계대로 (10/29 20:5x · 21:0x 사장님 '다른 유파보다 확연히 느려도 돼' — docs/strike/jp_gait_2026-10-29.md)
+// 일본 걸음 설계대로 (10/29 20:5x · 21:0x 사장님 '다른 유파보다 확연히 느려도 돼' — docs/strike/jp_gait_2026-10-29.md) · speedMul 0.70 (10/31 08:xx 사장님 '일본 바로잡아' — 전 0.67)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { JAPANESE_GAIT, JAPANESE_GAIT_OLD, setJapaneseGait } from '../../src/schools.js';
 import { newRound, DT } from './harness_m.mjs';
 
-test('일본 걸음 칸: 보폭 규칙 밖 · 설계 박자 2.2 · 보폭 0.5 · 사람 칸은 trailReach 만 · speedMul 0.67 · settleStance · 전 판 스위치', () => {
+test('일본 걸음 칸: 보폭 규칙 밖 · 설계 박자 2.2 · 보폭 0.5 · 사람 칸은 trailReach 만 · speedMul 0.70 · settleStance · 전 판 스위치', () => {
   assert.equal(JAPANESE_GAIT.strideK, undefined);
   assert.equal(JAPANESE_GAIT.cadence0, 2.2);
   assert.equal(JAPANESE_GAIT.maxStride, 0.5);
   assert.deepEqual(JAPANESE_GAIT.player, { trailReach: 0.36 });
-  assert.equal(JAPANESE_GAIT.speedMul, 0.67);
+  assert.equal(JAPANESE_GAIT.speedMul, 0.7);
   assert.equal(JAPANESE_GAIT.settleStance, true);
   assert.deepEqual(JAPANESE_GAIT_OLD.player, { trailReach: 0.36, dsFrac: 0.18, lift: 0.05 });
   const keep = { ...JAPANESE_GAIT };
@@ -18,6 +18,8 @@ test('일본 걸음 칸: 보폭 규칙 밖 · 설계 박자 2.2 · 보폭 0.5 ·
     assert.equal(JAPANESE_GAIT.strideK, 0.8);
     assert.equal(JAPANESE_GAIT.speedMul, undefined);
     assert.equal(JAPANESE_GAIT.settleStance, undefined);
+    setJapaneseGait(0.67); // `?jpWalk=0.67` = 10/30 판 빠르기
+    assert.equal(JAPANESE_GAIT.speedMul, 0.67);
   } finally {
     for (const k of Object.keys(JAPANESE_GAIT)) delete JAPANESE_GAIT[k];
     Object.assign(JAPANESE_GAIT, keep);
