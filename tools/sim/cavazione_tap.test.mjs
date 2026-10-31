@@ -74,6 +74,7 @@ test('② 칼끼리 닿음 처음부터 실제 0.5 s 의 탭 = 칼끝 돌려 빼
     assert.ok(Math.abs(R.speed - cavTipSpeed()) < 1e-9 && R.noArc, '보통 찌르기 빠르기 · 잔상 없음');
     assert.equal(R.maxT, 0, '길 끝(거둠)까지');
     assert.ok(R.moves[0].same && R.moves[0].artThrust && R.moves[0].dyn.under && R.moves[0].dyn.tapTiming && R.moves[0].plane);
+    assert.equal(R.selfFree, UA.cavSelfFree, '넘어짐 고침 (cavSelfFree — 그 수 동안 칼 어깨 면 밧줄 뗌)');
     assert.ok(B.P.skill.tap == null, '보통 탭 찌르기는 없음');
     const costCav = st0 - B.P.stamina.value;
     assert.equal(B.uq.coolT.cavazione, undefined, '식힘 없음');
@@ -279,6 +280,35 @@ test('② 판 (씨앗 901 · 롱소드 AI · 12 s · 칼끼리 닿음을 느끼�
   assert.ok((r.fired.cavazione ?? 0) >= 1, `나감 ${r.fired.cavazione}`);
   assert.ok(r.it.touches >= r.fired.cavazione && r.it.touchCut <= r.it.touches, JSON.stringify({ touches: r.it.touches, cut: r.it.touchCut }));
   assert.ok(r.it.fires.every((x) => !x || x.E >= 0), '낸 칼 결과');
+});
+
+test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼기 수 동안 칼 어깨 면 밧줄을 떼고 끝나면 다시 검 · 0 = 전 판(씨앗 902 츠바이핸더 7.05 s 수 뒤 발 밖 넘어짐)', () => {
+  const watch = () => {
+    const seen = { during: 0, ropesDuring: 0, after: 0, ropesAfter: 0, was: false };
+    const probe = (G, P) => {
+      const on = P.iai?.tech === 'cavazione';
+      if (on) (seen.during++, P.shoulderRopes && seen.ropesDuring++);
+      else if (seen.was) (seen.after++, P.shoulderRopes && seen.ropesAfter++);
+      seen.was = on;
+    };
+    return { seen, probe };
+  };
+  const a = watch();
+  const on = fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: a.probe });
+  assert.ok(a.seen.during > 0 && a.seen.ropesDuring === 0, `수 동안 밧줄 없음 ${JSON.stringify(a.seen)}`);
+  assert.ok(a.seen.after > 0 && a.seen.ropesAfter === a.seen.after, `끝나면 다시 ${JSON.stringify(a.seen)}`);
+  const body = (r) => (r.it.knock ?? []).filter((k) => (k.why === 'footing' || k.why === 'tilt') && r.it.fireT.some((t) => k.t >= t && k.t <= t + 0.4));
+  assert.equal(body(on).length, 0, JSON.stringify(on.it.knock));
+  const sf = UA.cavSelfFree;
+  UA.cavSelfFree = 0;
+  try {
+    const b = watch();
+    const off = fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: b.probe });
+    assert.ok(b.seen.during > 0 && b.seen.ropesDuring === b.seen.during, '전 판: 밧줄 그대로');
+    assert.ok(body(off).some((k) => k.why === 'footing'), `전 판: 낸 뒤 발 밖 넘어짐 ${JSON.stringify(off.it.knock)}`);
+  } finally {
+    UA.cavSelfFree = sf;
+  }
 });
 
 test('①② 탭이 걸어 맞추기 판(무릎 꿇은 상대 약한 자리 — skill.thrust 가 참이어도 탭이 아직 없음)이면 이름을 달지 않고 넘어감 (10/28 싸움 재기에서 떨어진 오류)', () => {
