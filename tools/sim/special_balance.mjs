@@ -583,7 +583,7 @@ function itStats(IT, uq, fires) {
   const recvIn = (t0, w = 0.6) => IT.recvLog.filter(([t]) => t >= t0 && t <= t0 + w).reduce((a, [, sv]) => a + sv, 0);
   const inq = IT.inq.map((x) => ({ ...x, recv: r3(recvIn(x.t)), hit: recvIn(x.t) > 0, fall: IT.falls.some((f) => f.t >= x.t && f.t <= x.t + 1) }));
   const kill3 = fires.filter((x) => IT.foeDeadT != null && IT.foeDeadT >= x.t && IT.foeDeadT <= x.t + 3).length; // 낸 뒤 3 s 안에 상대가 죽은 낸 수 (헛누름 견줌 — 10/31)
-  return { touches: S.touches ?? 0, touchCut: S.touchCut ?? 0, early: S.tapEarly ?? 0, touchTaps: IT.touchTaps, armSlow: S.armSlow ?? 0, cavCancel: S.cavCancel ?? 0, inq, falls: IT.falls, knock: IT.knock ?? [], fires: fires.map((x) => x.res), fireT: fires.map((x) => r3(x.t)), fireDur: fires.map((x) => (x.dur != null ? r3(x.dur) : null)), tapDur: IT.tapDur ?? [], foeDeadT: IT.foeDeadT ?? null, kill3, recvLog: IT.recvLog.map(([t, sv, z, ty, E]) => [r3(t), r3(sv), z, ty, E]) };
+  return { touches: S.touches ?? 0, touchCut: S.touchCut ?? 0, early: S.tapEarly ?? 0, touchTaps: IT.touchTaps, armSlow: S.armSlow ?? 0, cavCancel: S.cavCancel ?? 0, inq, falls: IT.falls, knock: IT.knock ?? [], fires: fires.map((x) => x.res), fireT: fires.map((x) => r3(x.t)), fireDur: fires.map((x) => (x.dur != null ? r3(x.dur) : null)), tapDur: IT.tapDur ?? [], tapRes: (IT.tapRes ?? []).map((x) => ({ ...x, E: r3(x.E), sev: r3(x.sev), kill3: IT.foeDeadT != null && IT.foeDeadT >= x.t0 && IT.foeDeadT <= x.t0 + 3 })), foeDeadT: IT.foeDeadT ?? null, kill3, recvLog: IT.recvLog.map(([t, sv, z, ty, E]) => [r3(t), r3(sv), z, ty, E]) };
 }
 
 // ── fight: 손가락 봇 대 치고 막는 AI ──
@@ -696,8 +696,17 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
     if (IT) {
       if (!A.alive && IT.foeDeadT == null) IT.foeDeadT = r3(t);
       // 보통 탭 찌르기가 팔을 묶는 시간 (skill.tap 이 선 때 ~ 끝난 때 — 11/01 재기 · 칼끝 돌려 빼기와 견줌)
-      if (P.skill.tap && IT.tapT0 == null) IT.tapT0 = t;
-      else if (!P.skill.tap && IT.tapT0 != null) { (IT.tapDur ??= []).push(r3(t - IT.tapT0)); IT.tapT0 = null; }
+      if (P.skill.tap && IT.tapT0 == null) {
+        IT.tapT0 = t;
+        IT.tapCur = { t0: r3(t), touch: !!IT.nextTouch, hits: 0, E: 0, sev: 0, bladeTouch: false }; // 보통 탭 찌르기 하나의 결과 (11/01 — 닿음 뒤 탭이면 touch)
+        IT.nextTouch = false;
+      } else if (!P.skill.tap && IT.tapT0 != null) {
+        (IT.tapDur ??= []).push(r3(t - IT.tapT0));
+        IT.tapT0 = null;
+        if (IT.tapCur) (IT.tapRes ??= []).push(IT.tapCur);
+        IT.tapCur = null;
+      }
+      if (IT.tapCur && P.feel?.touching) IT.tapCur.bladeTouch = true;
       if (P.state !== IT.st) {
         if (IT.st === 'stand' && P.state !== 'stand') IT.falls.push({ t: r3(t), to: P.state });
         IT.st = P.state;
@@ -711,7 +720,9 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
       if (R.touch && tapAt != null && uq.t >= tapAt) {
         tapAt = null;
         IT.touchTaps++;
+        IT.nextTouch = true; // 다음에 서는 보통 탭 찌르기 = 닿음 뒤 탭 (칼끝 돌려 빼기가 나가면 탭이 서지 않음)
         P.skill.thrust();
+        if (!P.skill.tap) IT.nextTouch = false;
       }
       // 비껴서며 찌르기 손: 맞받기에서 스틱 옆 · 곧 탭
       if (inqHand && !inqHand.tapped && t >= inqHand.tapAt) {
@@ -785,6 +796,7 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
     if (IT && att === A && vic === P) IT.recvLog.push([G.t, sv, r.zone, r.type, r3(r.energy)]);
     if (att !== P || vic !== A) return;
     dealt += sv;
+    if (IT?.tapCur && !strokeTechOf(P) && P.skill?.tap) (IT.tapCur.hits += sv > 0 ? 1 : 0), (IT.tapCur.E = Math.max(IT.tapCur.E, r.energy ?? 0)), (IT.tapCur.sev += sv); // 보통 탭 찌르기 맞음
     bleedDealt += sv * (r.bleedPerSev ?? 0) * (r.type === 'stab' ? 1.6 : 1);
     const tn = strokeTechOf(P) ?? (P.skill?.tap ? 'tap' : '-');
     if (sv > 0) lastTech = tn;

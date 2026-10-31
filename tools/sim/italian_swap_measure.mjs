@@ -38,6 +38,12 @@ export function summarize(row, runs) {
     armLockCav: med(runs.flatMap((r) => (r.it?.fireDur ?? []).filter((x) => x != null))), armLockTap: med(runs.flatMap((r) => r.it?.tapDur ?? [])),
     tapsDonePerFight: r3(sum(runs, (r) => (r.it?.tapDur ?? []).length) / n),
     cancelPerFight: r3(sum(runs, (r) => r.it?.cavCancel ?? 0) / n), // 시제품 E 거둠 수 (10/31)
+    // 닿음 뒤 보통 탭 찌르기 (11/01 — 같은 손이 칼끝 돌려 빼기 대신 낸 탭: 끔 판 견줌): 수 · 맞힘 % · 칼끼리 닿고 못 맞힘 % · 맞음당 J · 심각도 · 뒤 3 s 안 상대 죽음
+    ...(() => {
+      const T = runs.flatMap((r) => (r.it?.tapRes ?? []).filter((x) => x.touch));
+      const H = T.filter((x) => x.hits > 0);
+      return { touchTapN: T.length, touchTapHitPct: pct(H.length, T.length), touchTapBladePct: pct(T.filter((x) => !x.hits && x.bladeTouch).length, T.length), touchTapE: r3(sum(H, (x) => x.E) / Math.max(1, H.length)), touchTapSev: r3(sum(H, (x) => x.sev) / Math.max(1, H.length)), touchTapKill3: T.filter((x) => x.kill3).length };
+    })(),
     kill3: sum(runs, (r) => r.it?.kill3 ?? 0), // 낸 뒤 3 s 안에 상대가 죽은 낸 수
     armSlow: sum(runs, (r) => r.it?.armSlow ?? 0), // 헛누름 팔 늦춤을 건 수
     sevPerHit: r3(sum(res, (x) => x.sev ?? 0) / Math.max(1, hit)), EperHit: r3(sum(res.filter((x) => x.hits > 0), (x) => x.E ?? 0) / Math.max(1, hit)),
