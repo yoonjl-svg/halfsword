@@ -874,6 +874,18 @@ export class PlayerSecretWatch {
     const E = this.ev;
     const enter = SECRET.gnsWalkIn && SECRET.gnsEnter && S.do?.instant ? { enterLine: gnsEnterLine(V), iaiArmed: V.armed } : null; // 일본 들어옴 (10/25 — 발도 대기인 채 상대가 내 발도가 닿는 거리를 넘어 듦) · 10/25 22:3x 들어옴 창 gnsWalkIn 0(기본 — 사장님 입력 글에 없음)이면 안 봄
     const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: S.do?.gilmok ? gilmokLine(me, V.reach, S.do) : V.reach, dt, st: E, armed: this.gilArm.armed, ...enter }); // ex: 이베리아 호 안쪽 (reach · 머문 시간) · 길목 (준비) · 일본 들어옴
+    // 고노센 든 칼 이어 봄 (10/31 — SECRET.gnsRaiseLatch · 사장님 확인 전): 준비된 채 상대가 발도가 닿는 거리 밖에서 칼을 들었으면(창 없음) 그 들기를 playerWindow 초 붙잡아,
+    //  그 사이 상대가 그 칼로 내 발도 선 안에 들면 그때 창(같은 '듦' 창) — 선 밖에서 시작해 들어오며 치는 칼도 '내 간격에서 공격을 시도'로 셈. 새 수 없음(창 길이 그대로) · 끄면 이 몫 없음
+    if (E.latch) {
+      E.latch.t += dt;
+      if (E.latch.t > SECRET.playerWindow || !V.armed || this.open || s0.state !== 'stand') E.latch = null;
+      else if (secretCond(S, E.latch.ctx, d0, V)) {
+        const lc = { ...E.latch.ctx, latched: +E.latch.t.toFixed(3) };
+        E.latch = null;
+        E.armed = false;
+        return this.openWindow(lc, SECRET.playerWindow);
+      }
+    }
     if (!on) {
       E.off += dt;
       if (E.off > EV_REARM) E.armed = true;
@@ -881,7 +893,10 @@ export class PlayerSecretWatch {
     }
     E.off = 0;
     if (!E.armed || s0.state !== 'stand' || this.open) return;
-    if (!secretCond(S, ctx, d0, V)) return;
+    if (!secretCond(S, ctx, d0, V)) {
+      if (SECRET.gnsRaiseLatch && S.do?.instant && ctx?.ev === 'raise' && V.armed && !E.latch) E.latch = { ctx, t: 0 }; // 위 — 든 칼 이어 봄
+      return;
+    }
     E.armed = false;
     if (ctx?.ev === 'gilmok') {
       this.gilArm.consume(); // 한 번 준비에 한 번 기회 — 창을 놓치면 다시 간격 밖에서 준비해야 한다

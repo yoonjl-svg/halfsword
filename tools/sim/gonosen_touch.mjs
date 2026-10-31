@@ -98,6 +98,7 @@ for (const w of weapons) for (const id of foes) {
           seenOpen = ps.opened;
           if (ps.open && available) {
             T.win++; T.ev[ps.open.ctx?.ev ?? '-'] = (T.ev[ps.open.ctx?.ev ?? '-'] ?? 0) + 1;
+            if (ps.open.ctx?.latched != null) T.latched = (T.latched ?? 0) + 1;
             if (firstWin == null) { firstWin = t; T.firstWin.push(t); }
             due = t + REACT * tk; sinceWin = 0;
             if (E.GNS_DUMP === '1') console.log(`WIN ${w} ${id} s${seed} t ${t.toFixed(2)} ${ps.open.ctx?.ev} d ${chest().toFixed(2)} armedFor ${armT0 != null ? (t - armT0).toFixed(2) : '-'}`);
@@ -145,9 +146,9 @@ for (const w of weapons) for (const id of foes) {
 }
 const pm = (n) => (T.live > 0 ? ((60 * n) / T.live).toFixed(2) : '-');
 const q = (a, f) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor(f * s.length))] : NaN; };
-console.log(`[고노센 손가락 봇] 운전 ${DRIVE} · 웅크림 gnsCrouch ${S0.gnsCrouch}${'gnsReadyHip' in S0 ? ` · 허리 대기 gnsReadyHip ${S0.gnsReadyHip}` : ''} · 무기 ${wArg} · 인물 ${foes.length} × 씨앗 ${SEEDS} × ${SIM} s · 반응 ${REACT} s · 떨림 ${JIT} px · 떠돎 ${DRIFT} px${IMPATIENT ? ` · 참지 못함 ${IMPATIENT} s` : ''}`);
+console.log(`[고노센 손가락 봇] 운전 ${DRIVE} · 웅크림 gnsCrouch ${S0.gnsCrouch}${'gnsReadyHip' in S0 ? ` · 허리 대기 gnsReadyHip ${S0.gnsReadyHip}` : ''}${'gnsRaiseLatch' in S0 ? ` · 든 칼 이어 봄 gnsRaiseLatch ${S0.gnsRaiseLatch}` : ''} · 무기 ${wArg} · 인물 ${foes.length} × 씨앗 ${SEEDS} × ${SIM} s · 반응 ${REACT} s · 떨림 ${JIT} px · 떠돎 ${DRIFT} px${IMPATIENT ? ` · 참지 못함 ${IMPATIENT} s` : ''}`);
 console.log(`판 ${T.rounds} · 비기를 쓸 수 있는 서 있는 때 ${T.live.toFixed(1)} s(실제) · 준비된 때 몫 ${(T.armedT / Math.max(1e-9, T.live) * 100).toFixed(0)} % · 준비 켜짐 ${T.ons} · 셈 0 으로 ${T.resets} (${Object.entries(T.why).map(([k, v]) => `${k} ${v}`).join(' · ')})`);
-console.log(`창 ${T.win} (${Object.entries(T.ev).map(([k, v]) => `${k} ${v}`).join(' · ')}) · 분당 창 ${pm(T.win)} · 낸 ${T.fired} (분당 ${pm(T.fired)}) · 맞힘 ${T.landed} · 1 s 안 죽임 ${T.kill1} · 첫 창까지 p50 ${q(T.firstWin, 0.5).toFixed(1)} s(게임) · 창이 연 판 ${T.firstWin.length} / ${T.rounds}`);
+console.log(`창 ${T.win} (${Object.entries(T.ev).map(([k, v]) => `${k} ${v}`).join(' · ')}) · 이어 봄 창 ${T.latched ?? 0} · 분당 창 ${pm(T.win)} · 낸 ${T.fired} (분당 ${pm(T.fired)}) · 맞힘 ${T.landed} · 1 s 안 죽임 ${T.kill1} · 첫 창까지 p50 ${q(T.firstWin, 0.5).toFixed(1)} s(게임) · 창이 연 판 ${T.firstWin.length} / ${T.rounds}`);
 console.log(`AI 공격 시작 ${T.atk} · 그때 준비 ${T.atkArmed} · 발도 선 안 ${T.atkIn} · 준비 + 선 안 ${T.atkArmedIn} · 준비된 동안 웅크림 무게 평균 ${(T.crouchW / Math.max(1, T.wSamples)).toFixed(2)} · 손 덧씌우기 평균 ${(T.handW / Math.max(1, T.wSamples)).toFixed(2)} · AI 가 본 칼끝 겨눔(준비된 동안) ${(100 * T.online / Math.max(1, T.onN)).toFixed(0)} % · 내 죽음 ${T.pDead} · 상대 죽음 ${T.fDead}`);
 const zs = Object.entries(ZONES).sort((a, b) => b[1] - a[1]);
 const zt = zs.reduce((s, [, v]) => s + v, 0);

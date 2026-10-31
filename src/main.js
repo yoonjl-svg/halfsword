@@ -236,6 +236,7 @@ if (params.has('foeChargeSpeed') && +params.get('foeChargeSpeed') > 0) CONFIG.SE
 if (params.has('gnsEnterOpen')) CONFIG.SECRET.gnsEnterOpen = +params.get('gnsEnterOpen') ? 1 : 0; // 여쭘 C: 들어옴 창은 상대 칼끝이 나를 겨누지 않을 때만 (기본 0 · `?gnsEnterOpen=1`)
 if (['idle', 'dist'].includes(params.get('gnsReady'))) CONFIG.SECRET.gnsReady = params.get('gnsReady'); // 고노센 준비 (10/25 22:3x · 22:5x 사장님 — 기본 'idle' = 거리와 상관없이 아무 행동 없이 2 s · 준비된 뒤엔 걸어도 유지 · `?gnsReady=dist` = 상대 칼 거리 밖 옛 판)
 if (params.has('gnsCrouch')) CONFIG.SECRET.gnsCrouch = +params.get('gnsCrouch') ? 1 : 0; // 사람 고노센 준비 웅크림 (10/25 23:0x 사장님 결정 1 → 10/31 01:0x '플레이어만 웅크리기 꺼' — 기본 0 · `?gnsCrouch=1` = 웅크림)
+if (params.has('gnsRaiseLatch')) CONFIG.SECRET.gnsRaiseLatch = +params.get('gnsRaiseLatch') ? 1 : 0; // 고노센 든 칼 이어 봄 — 선 밖에서 든 칼이 선 안에 들면 창 (10/31 — 사장님 확인 전)
 if (params.has('gnsReadyHip')) CONFIG.SECRET.gnsReadyHip = +params.get('gnsReadyHip') ? 1 : 0; // 사람 허리 대기 — 웅크림 없이 칼만 왼 허리 (10/31 08:xx — 기본 1 · `?gnsReadyHip=0` = 10/31 01:0x 판 '고노센 준비' 글만 · 사장님 확인 전)
 if (params.has('gnsCrouchOut') && +params.get('gnsCrouchOut') > 0) CONFIG.SECRET.gnsCrouchOut = +params.get('gnsCrouchOut'); // 웅크림 풀림 시간 (s — 기본 0.2 · 사장님 확인 전)
 if (params.has('gnsCrouchAim')) CONFIG.SECRET.gnsCrouchAim = +params.get('gnsCrouchAim') ? 1 : 0; // AI 가 웅크린 사람을 칠 때 길을 낮춤 (10/27 21:4x 사장님 결정 — 기본 1 · `?gnsCrouchAim=0` = 7b02877 판)

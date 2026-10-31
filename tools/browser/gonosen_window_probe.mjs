@@ -6,7 +6,7 @@
 //   맞음 · 비기 실행 · 걸음 뜻 · 판 시작 정지 · 다 씀 · 넘어짐) · 창이 열린 때(사건 · 가슴 사이) · AI 공격 시작(그때 준비였나 · 가슴 사이 · 발도 선) ·
 //   화면에 보이는 것(② 줄 글 · 꼴 · 흐림 · 금색 '!' · 웅크림 무게 · 손 덧씌우기 · 칼 자리 — 5 번 / 게임 초)
 //  손가락 갈래(SCEN): none(손 뗌) · stick(엄지를 스틱에 얹음 — 가운데에서 STICKOFF px · 떨림) · sword(칼 쪽 화면에 손가락을 얹음 — 떨림 · 천천히 떠돎 DRIFT px) ·
-//   both · play(다가가 멈추고 기다림 — 스틱 엄지는 떼고 칼 손가락은 얹음 · 창이 뜨면 REACT 초 뒤 그음 · FIRE=1 일 때)
+//   both · play(다가가 멈추고 기다림 — 칼 손가락은 얹음 · 준비가 켜지면 스틱으로 발도 선 안까지 걸어 들어감 · 창이 뜨면 REACT 초 뒤 그음 · FIRE=1 일 때)
 //  실행: 빌드(vite build --outDir <폴더>) → vite preview --outDir <폴더> --port <빌드 포트> & · 개발 서버(배우기만 — 파일 감시 끈 설정) --port <개발 포트> &
 //        node tools/browser/gonosen_window_probe.mjs http://127.0.0.1:<빌드 포트> http://127.0.0.1:<개발 포트> [결과 json (기본 .tmp/gns_window/probe.json)]
 //   환경: CROUCH(1,0 — ?gnsCrouch=) · SCEN(none,stick,sword,both,play) · DUR(40 게임 초 한 판) · K(0.2) · FIRE(0 — 1 이면 창에서 그어 냄) · REACT(0.25 실제 초)
@@ -92,7 +92,7 @@ async function run(crouch, scen) {
   const kit = await page.evaluate(() => {
     const g = window.game, ps = g.playerSecret, p = g.player, e = g.enemy, ai = g.ai, C = g.config.SECRET;
     const L = (window.__gl = { tr: [], resets: [], opens: [], atk: [], samples: [], fires: [], wounds: [], armedT: 0, liveT: 0, steps: 0, t0: g.stats.simTime });
-    let prevPain = p.pain, lastMode = ai.mode, sampleAt = 0, armT0 = null, maxT = 0;
+    let prevPain = p.pain, lastMode = ai.mode, sampleAt = 0, armT0 = null, maxT = 0, lastSec = null;
     const V0 = ps.view();
     const line = V0.contact + C.iaiStep + C.iaiMargin;
     const chestD = () => { const a = p.bodies.chest.translation(), b = e.bodies.chest.translation(); return Math.hypot(a.x - b.x, a.z - b.z); };
@@ -118,7 +118,8 @@ async function run(crouch, scen) {
       if (ps.opened !== op0 && ps.open) L.opens.push({ T: +T.toFixed(3), ev: ps.open.ctx?.ev ?? null, charge: !!ps.open.ctx?.charge, d: +chestD().toFixed(2), line: +line.toFixed(2), armedFor: armT0 != null ? +(T - armT0).toFixed(2) : null });
       if (ai.mode === 'attack' && lastMode !== 'attack') L.atk.push({ T: +T.toFixed(3), d: +chestD().toFixed(2), line: +line.toFixed(2), armed: A.armed, t: +A.t.toFixed(2), wary: !!ai.gnsW?.ready, plan: ai.gnsW?.plan?.kind ?? null });
       lastMode = ai.mode;
-      if (sk.sec && sk.sec !== sec0) L.fires.push({ T: +T.toFixed(3), name: sk.sec.S?.name ?? null, d: +chestD().toFixed(2), w0: e.wounds?.length ?? 0 });
+      if (sk.sec && sk.sec !== lastSec) L.fires.push({ T: +T.toFixed(3), name: sk.sec.S?.name ?? null, d: +chestD().toFixed(2), w0: e.wounds?.length ?? 0 });
+      lastSec = sk.sec ?? null;
       if (T >= sampleAt) {
         sampleAt = T + 0.2;
         const tip = p.bladePoint(1, new g.THREE.Vector3()), pel = p.bodies.pelvis.translation(), head = p.bodies.head.translation();
@@ -160,7 +161,9 @@ async function run(crouch, scen) {
     }
     return out;
   };
-  let thumbDown = false, fingerDown = false, walk = false, swipeDx = 0, swipeDy = 0;
+  let thumbDown = false, fingerDown = false, walk = false, swipeDx = 0, swipeDy = 0, reached = false;
+  // 손가락 하나 떼기: CDP touchEnd 는 닿은 점을 다 뗌(점 목록을 못 받음) — 다 떼고 남은 손가락(thumbDown · fingerDown 그대로인 것)을 그 자리에 다시 댐
+  const lift = async (T) => { await touch('touchEnd', []); const rest = pts(T); if (rest.length) await touch('touchStart', rest); };
   const g0 = await simT();
   if (useStick) { thumbDown = true; await touch('touchStart', pts(g0)); }
   if (useSword) { fingerDown = true; await touch('touchStart', pts(g0)); }
@@ -182,11 +185,12 @@ async function run(crouch, scen) {
     }
     if (!s.armed) shot.armT = null;
     if (s.T - lastLog > 5) { lastLog = s.T; console.log(`  … ${crouch}/${scen} T ${(s.T - g0).toFixed(1)} armed ${s.armed} opened ${s.opened} d ${s.d.toFixed(2)} wall ${((Date.now() - w0) / 1000).toFixed(0)} s`); }
-    // play: 멀면 스틱으로 다가감(엄지를 스틱 위로 · 가슴 사이가 발도 선 + 0.6 m 안이 될 때까지) · 그 뒤 엄지를 뗌
+    // play: 처음 멀면 스틱으로 다가감(가슴 사이가 발도 선 + 0.6 m 안이 될 때까지) · 엄지를 떼고 기다림 · 준비가 켜지면 발도 선 − 0.1 m 까지 걸어 들어감(준비된 뒤엔 걸어도 유지)
     if (scen === 'play') {
-      const want = s.d > kit.line + 0.6 && !s.armed;
+      if (s.d <= kit.line + 0.6) reached = true;
+      const want = s.armed ? !s.open && s.d > kit.line - 0.1 : !reached && s.d > kit.line + 0.6; // 처음엔 다가감 · 준비 전엔 서서 기다림 · 준비가 보이면 발도 선 안까지 걸어 들어감
       if (want && !thumbDown) { thumbDown = true; walk = true; await touch('touchStart', pts(s.T)); }
-      else if (!want && thumbDown) { thumbDown = false; walk = false; await touch('touchEnd', pts(s.T).filter((p) => p.id !== 9)); }
+      else if (!want && thumbDown) { thumbDown = false; walk = false; await lift(s.T); }
     }
     if (s.opened !== seen) { seen = s.opened; if (s.open && FIRE && s.left > 0) due = s.T + REACT * 1.1; }
     if (due != null && s.T >= due && !s.sec) {
@@ -196,7 +200,7 @@ async function run(crouch, scen) {
       for (let i = 1; i <= 4; i++) { swipeDx = -10 * i; swipeDy = 30 * i; await touch('touchMove', pts(s.T)); await sleep(Math.max(4, 8 / K)); }
       swipeDx = swipeDy = 0;
       fired++;
-      if (!useSword) { fingerDown = false; await touch('touchEnd', pts(s.T).filter((p) => p.id !== 1)); }
+      if (!useSword) { fingerDown = false; await lift(s.T); }
       continue;
     }
     if (thumbDown || fingerDown) await touch('touchMove', pts(s.T));
