@@ -54,6 +54,11 @@ export const STAMINA = {
   clinchPerSecond: realRate(10), // 붙어 밀고 버티는 동안(밀치기 누르기 + 팔·칼 닿음) 두 몸 각각 초당 10 · 회복 멈춤(샛별 저장소 ba14a6f8 — 설계안에 없음, 사장님 확인 전)
   // 사람 긋기 청구(샛별 저장소 f933bc07): 끊김 0.12 s 넘으면 새 긋기(설계안은 고유 동작의 onsetQuiet 0.06) · 손이 0.06 m 넘게 움직여야 · 겨눔 가운데 0.22 m 를 가르는 긋기는 바로 확정
   strokeQuiet: realS(0.12), strokeTravel: 0.06, strokeCenter: 0.22,
+  // 사람 손가락 긋기의 바닥 (10/31 01:5x 사장님 '화면에 손가락을 아주 조금 대거나 여러 번 잘못 톡톡 건드려질 때 실제로 아무 커맨드 입력은 안 되면서 기력은 소모되거든' — 사람 입력 몸 fighter.humanInput 만):
+  //  손 목표가 이만큼(패드 m) 넘게 움직인 긋기만 베기로 청구 — 가벼운 손끝 · 떼기 직전 미끄러짐(탭 문턱 12 px 안이면 손 0.08 ~ 0.11 m)은 칼이 떨기만 하고 베기가 아님.
+  //  0.15 = 고유 동작 패드 반지름(UNIQUE_ASSIST.padRadius) · 준비 자리 거리(stamina_stroke.js isPreparation)와 같은 수 — 844×390 화면에서 손가락 가로 22 px · 세로 17 px.
+  //  탭 찌르기 10 · 베기 12 는 그대로 · 칼이 닿으면 짧아도 청구(contactAttack 그대로) · AI · 시뮬 대본 몸은 strokeTravel 그대로(관문 그대로). `?strokeMin=0` = 전 판 [사장님 확인 전 — 확인표 3092]
+  humanStrokeMin: 0.15,
   weaponReferenceMass: 1.6, // 무게 = √(처음 쥔 칼 질량 ÷ 1.6 kg) 0.75 ~ 1.5 — 칼이 부러져도 처음 질량(사장님 결정)
   // 걷기: 골반 수평 이동 0.62 m 마다 보통 1.4 · 동방 0.7 · 일본 2.1(사장님 결정 §0 15 · 16 — 유파 열쇠 swordArt.tradition · docs/strike/school_kit_map.md 보법 칸) · 한 스텝 거리 상한 3 m/s(튐 막기)
   stepDistance: 0.62, stepCosts: { default: 1.4, chinese: 0.7, japanese: 2.1 }, maxWalkSpeed: 3,
@@ -1632,6 +1637,10 @@ export const INPUT = {
   //  더 길게 누르거나(누르고 있기) 더 움직이면(끌기) 예전 그대로다
   tapMs: 180, // 손가락 탭: 누른 시간 한도 (ms)
   tapPx: 12, // 손가락 탭: 움직인 거리 한도 (px)
+  // 길게 누름(풍차 베기 B4 — input.js holdState · unique_assist.js holdTick)의 떠돎 한도 (손가락 · px — 처음 닿은 자리에서 가장 먼 거리): 엄지를 유리에 0.6 s 넘게 대고 있으면
+  //  닿은 면이 눌리고 구르며 자리가 몇 px 씩 떠돈다(브라우저 CDP 재기 — 10/31 01:4x 사장님 '탭을 오래 누르고 있는 커맨드가 잘 안 먹혀'). 짧은 탭 문턱 tapPx 12 는 그대로(탭 · 긋기 느낌 그대로) ·
+  //  길게 누름만 이 한도 — 탭 문턱의 두 배. 넘으면 전처럼 그 누름은 끌기(보통 긋기). 마우스는 clickPx 그대로. `?holdPx=12` = 전 판 [사장님 확인 전 — 확인표 3090]
+  holdPx: 24,
   clickMs: 250, // 마우스 클릭: 누른 시간 한도 (ms). 마우스는 끌지 않은 클릭만
   clickPx: 6, // 마우스 클릭: 그동안 움직인 거리 한도 (px, 잠긴 마우스의 움직임 합)
 };

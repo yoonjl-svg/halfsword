@@ -277,10 +277,16 @@ export class Stamina {
     this.stroke = null;
   }
 
+  /** 긋기를 청구할 손 움직임 바닥 (패드 m): 사람 입력 몸(main.js 플레이어)은 humanStrokeMin(10/31 — 가벼운 손끝 · 미끄러짐은 베기가 아님) · 그 밖은 strokeTravel 그대로 */
+  strokeMin() {
+    return this.fighter.humanInput ? Math.max(STAMINA.strokeTravel, STAMINA.humanStrokeMin ?? 0) : STAMINA.strokeTravel;
+  }
+
   finishStroke() {
     const s = this.stroke;
     if (!s) return;
-    if (s.travel >= STAMINA.strokeTravel && !isPreparation(s)) this.commitStroke(s);
+    if (!s.paid && s.travel >= STAMINA.strokeTravel && s.travel < this.strokeMin()) this.freeStrokes = (this.freeStrokes ?? 0) + 1; // 재기: 전 판이면 청구됐을 가벼운 손길
+    if (s.travel >= this.strokeMin() && !isPreparation(s)) this.commitStroke(s);
     s.until = this.time + ATTACK_TAIL;
     this.strokeTail = s;
     this.stroke = null;
@@ -331,7 +337,7 @@ export class Stamina {
     const s = this.stroke;
     s.travel += Math.hypot(at[0] - s.end[0], at[1] - s.end[1]);
     s.end = at;
-    if (s.travel >= STAMINA.strokeTravel && (s.matched || s.enters || s.travel >= 0.9)) this.commitStroke(s);
+    if (s.travel >= this.strokeMin() && (s.matched || s.enters || s.travel >= 0.9)) this.commitStroke(s);
     this.quiet = 0;
   }
 

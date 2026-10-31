@@ -38,6 +38,9 @@ export class Input {
     //  안 버리면 다음 손가락이 지난 손가락의 이동량·누름을 물려받아 첫 획이 튄다. 입력이 꺼진 동안의 키도 무시한다
     window.addEventListener('pointercancel', (e) => this.onCancel(e));
     canvas.addEventListener('lostpointercapture', (e) => this.onCancel(e));
+    // 길게 누름이 시스템 몸짓으로 새지 않게 (10/31 — 풍차 베기 길게 누름 · iOS Safari 길게 누름 메뉴 · 글자 고르기): 캔버스에서 메뉴 · 고르기 시작만 막는다 (탭 · 끌기 사건 길은 그대로)
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    canvas.addEventListener('selectstart', (e) => e.preventDefault());
     window.addEventListener('keydown', (e) => this.keys.add(e.code)); // 물리적으로 누른 키는 늘 기록 — 읽는 쪽(move)이 enabled 로 거른다
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => { this.resetTransient(); this.keys.clear(); }); // 창을 떠나면 keyup 이 안 오므로 키도 지운다
@@ -132,12 +135,13 @@ export class Input {
 
   /**
    * 지금 탭 손가락(마우스 왼 단추)을 누르고 있나 (풍차 베기 길게 누름 — 이베리아 B4 · 10/29 · main.js → unique_assist.js holdInput):
-   *  down = 탭으로 셀 수 있는 누름이 닿아 있음(권총 · 잠금 거는 첫 클릭 · 다른 단추는 아님) · still = 그 누름이 지금까지 탭 문턱(움직인 거리 tapPx · clickPx — 끌지 않음) 안
+   *  down = 탭으로 셀 수 있는 누름이 닿아 있음(권총 · 잠금 거는 첫 클릭 · 다른 단추는 아님) · still = 그 누름이 지금까지 떠돎 한도 안(끌지 않음) —
+   *  손가락은 길게 누름 한도 holdPx(10/31 — 엄지 떠돎 · 탭 문턱 tapPx 는 그대로) · 마우스는 clickPx
    */
   holdState() {
     const p = this.press;
     if (!this.enabled || !p || !p.ok) return { down: false, still: false };
-    return { down: true, still: p.moved < (p.mouse ? INPUT.clickPx : INPUT.tapPx) };
+    return { down: true, still: p.moved < (p.mouse ? INPUT.clickPx : INPUT.holdPx ?? INPUT.tapPx) };
   }
 
   /** 지난번 이후 톡 친 횟수 (찌르기) */
