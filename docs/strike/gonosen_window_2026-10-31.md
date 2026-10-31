@@ -106,7 +106,7 @@
 ## 8. 시험 · 관문
 
 - 새 시험 `tools/sim/gonosen_ready.test.mjs` ⑦(웅크림 0: 얹은 손가락 떨림으로도 iaiArmTime 에 준비 · 허리 대기 켬 · 끔 · 몸 높이 그대로 · 칼 왼 허리 · 쥐면 곧장 사람 손 · 선 안에서 칼을 들면 창) · ④ 의 '끈 판'은 `gnsReadyHip` 0 으로.
-- 관문(올리기 없이 손으로): (뒤에 채움)
+- 관문(`/root/ops_keep/run_expect.sh` 의 셈만 · 올리기 없이 · 고친 기본 d3ef4335 위): 이름 0 · fights12 `768085f3` · live `e8127a92` · ft `ad302969` · corr 12 IDENTICAL · weapon_smoke 34 / 34 OK · 빌드 0 · name_policy 0 — **모두 그대로**(사람 고노센만 바뀜 — AI 판은 안 탐).
 
 ## 9. 도구
 
