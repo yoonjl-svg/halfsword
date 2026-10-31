@@ -5,7 +5,7 @@
 //  칸 → 판 몫(아래 f · u · perk): 칸 하나가 제 몫 하나만 켠다 — 몫 열쇠는 skill_kit.js kitOff 가 싸움 코드에서 읽는다(사람만 · AI 는 숙련도 그대로).
 //   표 · 근거: IMPLEMENTATION.md §2 · docs/strike/school_kit_map.md §2 '스킬트리'. 글(l1 · l2 · eff)은 화면 글 지침(docs/text/editing_guide.md) — data.mjs eff 는 설계 메모라 고쳐 씀.
 //  이 파일은 저장 · 화면을 모른다(시험이 바로 읽음) — 저장은 skill_tree_store.js · 화면은 skill_tree.js.
-import { SECRET, LETTER } from './config.js';
+import { SECRET, LETTER, UNIQUE_ASSIST } from './config.js';
 
 /** 탭 차례 (감독 10/16: 독일 · 이탈리아 · 이베리아 · 일본 · 동방) */
 export const TREE_SCHOOLS = Object.freeze(['german', 'italian', 'iberian', 'japanese', 'chinese']);
@@ -195,7 +195,7 @@ const NODE_CMD = {
   G2: '상대가 헛치면 앞으로 이동(↑)', // gait.js foeWhiff → 받을 창 안의 첫 앞 걸음이 빠른 디딤 둘
   G5: '사선 긋기(↙)', // 곁눈 베기 ← 분노의 베기(어깨 지붕 → 왼 아래 — ai_techniques.js zornhau)
   G8: '좌우 이동(←/→)과 동시에 수평 긋기(←)', // 걸음 명령 stick 'side'(옆 몫 ≥ 0.5 · 어느 쪽이든) + 가로베기(zwerch — 옆 자세 → 왼 옆)
-  G7: '긋기가 상대 칼에 닿은 채 탭', // 탭으로 내는 특수 공격 — unique_assist.js TAP_TRIG.dup: 내 긋기가 상대 칼에 맞물려 지금도 닿아 있는 동안의 탭 (10/28 01:2x) · 10/29 14:1x · 14:2x 사장님 글 (전 '긋기가 상대 칼에 닿으면 바로 다시 긋기')
+  G7: '가까이서 칼을 맞댄 채 버티면 자동 발동', // 겹치기 자동 (사장님 10/31 18:xx '… 초안 ok.' — 확인표 3272 · 3227): unique_assist.js dupAutoTick 'bind' — 가슴 사이 0.8 m 넘고 1.6 m 이하에서 칼끼리 맞댄 채 0.6 s 쌓이면 저절로 · C9 '… 자동 발동' 꼴 (전 '긋기가 상대 칼에 닿은 채 탭' — 아래 G7_CMD_TAP)
   G10: '상대와 몸이 붙은 채 2초 이상 밀치면(↑) 비기 활성화', // 10/25 23:1x 사장님 확정 글(감독 전달 — 글 속 시간 = SECRET.mordPress 2 · 걸쇠 없앰 CLOSE.latch 0) — secret.js pressTick 밀치기 누르기(fighter.js closeStep — 닿는 거리 안에서 스틱 앞 · 끊겨도 mordGrace 0.4 s(10/27 21:4x — 전 0.2) 안에 다시 누르면 이어 셈) mordPress 초 → 창(비기 활성화) → 탭 · 긋기 둘 다(main.js) · 전 '붙은 채 멈췄다 앞으로 이동(↑), 느낌표(!)가 뜨면 공격'
   // 이탈리아
   I7: '아래로 내려 긋기(↓/↙/↘)', // 10/31 12:xx 사장님 'I7은 어떤 방향이나 높이에서든 다른 유파의 내려 긋는 베기에 해당하는 커맨드를 내려찌르기로 전환' (글 = 감독 안 · 사장님 검수 전) — unique_assist.js PLAYER_UNIQUE imbroccata on { down } · 아래로 가는 긋기(곧장 아래 ↓ · 사선 아래 ↙/↘ — 아래 축에서 67.5° 안: 수평 22.5° 띠 밖) 모두 · 어느 자세 · 높이에서든 · 전 '머리 높이에서 사선 긋기(↙)'(황소 찌르기 긋기 stichOchs 만)
@@ -220,8 +220,13 @@ const NODE_CMD = {
   C6: '뒤로 움직이며(↓) 탭', // 탭으로 내는 특수 공격 — unique_assist.js TAP_TRIG.lian: 물러나는 동안(스틱 뒤) · 놓고 실제 0.6 s 안의 탭 (10/28 01:2x) · 10/29 14:1x · 14:2x 사장님 글 (전 '사선 긋기(↖) 도중 바로 방향 꺾기')
   C9: '앞으로 움직이며(↑) 상대 공격을 정확한 타이밍에 막으면 자동 발동', // 10/25 22:3x 사장님 확정 글(감독 전달) · 전 '앞으로 이동(↑)과 동시에, 칼이 닿기 직전 막기' — secret.js gyeoksalTick — 막기 새 누름 뒤 gyeoksal.press 초 안에 칼이 닿음 · 그때 스틱 앞 · 받아 내면 저절로(gyeoksal.auto — 공격 입력 없음)
 };
+// G7 다른 판 입력 줄 (UNIQUE_ASSIST.dupAuto 를 기본 'bind' 에서 바꿨을 때만 카드에 나옴 — nodeCmd): 0 = 전 판 맞물린 채 탭(10/29 14:1x · 14:2x 사장님 글) · 'clash2' = 두 번 맞부딪힘 시제품 초안(검수 전) · 효과 글(eff — 사장님 글)은 그대로
+export const G7_CMD_TAP = '긋기가 상대 칼에 닿은 채 탭';
+export const G7_CMD_AUTO = { bind: NODE_CMD.G7, clash2: '칼끼리 연달아 부딪히면 자동 발동' /* [검수 전] */ };
+/** 상세 카드 입력 줄 (skill_tree.js — 얼린 칸의 cmd · 겹치기 자동 판을 바꿨으면 G7 은 그 판 글) */
+export const nodeCmd = (n) => (n?.id !== 'G7' ? n?.cmd : !UNIQUE_ASSIST.dupAuto ? G7_CMD_TAP : G7_CMD_AUTO[UNIQUE_ASSIST.dupAuto] ?? n.cmd);
 /** 칸 + 오의 (lore · src — 편지는 lore 만) + 입력 줄 (cmd — 정해진 입력으로 내는 칸만) */
-const withLore = (n) => Object.freeze({ ...n, ...NODE_LORE[n.id], ...(NODE_CMD[n.id] ? { cmd: NODE_CMD[n.id] } : {}) });
+const withLore =(n) => Object.freeze({ ...n, ...NODE_LORE[n.id], ...(NODE_CMD[n.id] ? { cmd: NODE_CMD[n.id] } : {}) });
 /** 유파 → { gate?, nodes } (얼림) */
 export const TREE = Object.freeze(Object.fromEntries(Object.entries(TREE_SRC).map(([s, t]) => [s, Object.freeze({ ...t, nodes: Object.freeze(t.nodes.map(withLore)) })])));
 

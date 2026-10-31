@@ -93,6 +93,7 @@ export const PLAYER_UNIQUE = {
     { stage: 3, name: 'duplieren', role: 'chain', hint: '칼이 맞물린 뒤 다시 긋기', far: true, body: [5, -3, 3, 0], on: [], // 겹치기 — 사람은 탭으로만 (10/28 01:2x 사장님 '지금대로' — 맞물린 뒤 다음 긋기 입력은 뺌 · AI 는 schools.js 그대로 — 이 칸을 안 읽음)
       // tapKey = 탭으로 내는 조건 (TAP_TRIG 'dup' — config UNIQUE_ASSIST.dupTap): 내 긋기가 상대 칼에 맞물려 지금도 닿아 있는 동안의 탭 · tapDup = 맞물린 자리에서 칼을 떼지 않고
       //  상대 칼 뒤로 밀어 넣어 엇갈린 손으로 얼굴을 사선으로 베는 운동학 칼(secret_instant.js requestArtDup)
+      //  10/31 18:xx 사장님 결정부터 기본은 탭 없이 저절로 (UNIQUE_ASSIST.dupAuto 'bind' — dupAutoTick: 가슴 사이 0.8 ~ 1.6 m 에서 칼끼리 맞댄 채 0.6 s) · 탭 조건은 dupAuto 0 일 때만
       tapKey: 'dup', tapDup: 1, special: true },
     { stage: 4, name: 'schielhau', role: 'enh', replaces: 'zornhau', hint: '강화동작 · 분노의 베기 대신 · 맞은 상대가 무릎을 꿇기도 함', body: [-12, -8, 2, 0.02], /* 10/21 전수 조사: 오른쪽 위 → 왼쪽 아래 긋기라 몸도 왼쪽(−) — 전 +12 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 곁눈 베기 ← 분노의 베기 (늘 — 같은 시작 자리 오른쪽 머리 위 · 10/21 사장님 '분노의 베기를 바꾸는 걸로' · 전 황소 찌르기는 찌르기 → 베기로 어긋나 AI 손해)
   ],
@@ -308,6 +309,7 @@ const TAP_TRIG = {
   },
   // 겹치기 (10/28 01:2x 사장님 '지금대로'): 내 긋기(탭 · 찌르기 · 강화 탭 칼 빼고)가 상대 칼에 맞물렸고(track — 칼끼리 0.07 m 안) 지금도 닿아 있는(같은 거리 안) 동안의 탭 · 한 맞물림에 한 번
   dup(uq) {
+    if (UA.dupAuto) return null; // 겹치기 자동 (사장님 10/31 18:xx 결정 — 기본 'bind' · dupAutoTick): 탭으로는 안 냄 (탭 = 보통 탭 찌르기) · `?dupAuto=0` 이면 아래 전 판 탭 조건
     const rec = uq.cur && !uq.repos(uq.cur) ? uq.cur : uq.prevAtk();
     if (UA.dupAny || UA.dupGrace > 0) {
       // 시제품 (10/31 — 기본 끔): 닿음 덩이(drive 의 dupC — 칼끼리 닿음이 시작된 때 · 끝난 때)로 · 끝난 뒤 dupGrace 초까지 · dupAny 면 내 베기 맞물림이 아니어도 · 한 닿음에 한 번
@@ -367,6 +369,9 @@ export class PlayerUniqueAssist {
     this.planFade = null; // 길 덧칸 놓기 { tilt, reach, turn, t } (planStep — 10/25 18:0x)
     this.stats = { strokes: 0, techs: {}, fired: {}, ends: {}, steps: 0, power: 0 };
     this.holdE = this.list.find((e) => e.hold) ?? null; // 길게 눌러 내는 특수 공격 (풍차 베기 B4 — 10/29)
+    this.dupE = this.list.find((e) => e.tapKey === 'dup') ?? null; // 겹치기 (자동 판 dupAutoTick — 10/31 16:xx 시제품)
+    this.dupA = null; // 겹치기 자동 셈 { st 쌓임 · off 끊긴 시간 · since 쌓기 시작 · on 닿는 중 · t0 · prev 닿음 시작 · tEnd 떨어진 때 · pair 짝이 찬 닿음 }
+    this.dupCue = null; // 자세 칸 알림 { name, nameKo, sub } (쌓임 절반부터 — main.js updateGuardName)
     // 탭으로 내는 동작 (tapChain): 특수 공격이 먼저 (10/31 이탈리아 — 비껴서며 찌르기 조건과 칼끝 돌려 빼기 닿음 조건이 함께 차면 스틱 옆을 민 비껴서며 찌르기 · 식는 동안은 칼끝 돌려 빼기)
     this.tapList = this.list.filter((e) => e.tapKey).sort((a, b) => (b.special ? 1 : 0) - (a.special ? 1 : 0));
     this.touch = null; // 칼끼리 한 닿음 (칼끝 돌려 빼기 탭 조건 — touchTick · 10/31): { t0 처음 · t1 마지막 닿은 때 · cut 내 긋기 동안 닿음 · n 상대 칼 쪽(월드 — feel.normal 의 반대) · cavSpent }
@@ -401,11 +406,11 @@ export class PlayerUniqueAssist {
     this.fIdle = Math.abs(dx) + Math.abs(dy) > 1e-5 ? 0 : this.fIdle + dt;
   }
 
-  /** 발동하지 않는 때: 다른 플레이어 동작이 돌거나 칼을 못 쓰는 때 · held 참이면 막기 단추를 쥔 것은 보지 않고 손이 정말 쥐였나(handHeld)만 (칼끝 돌려 빼기 탭 — 10/30 UNIQUE_ASSIST.cavHeld) */
+  /** 발동하지 않는 때: 다른 플레이어 동작이 돌거나 칼을 못 쓰는 때 · held 참이면 막기 단추를 쥔 것은 보지 않고 손이 정말 쥐였나(handHeld)만 (칼끝 돌려 빼기 탭 — 10/30 UNIQUE_ASSIST.cavHeld) · 'any' 면 막기 단추를 아예 안 봄 (겹치기 자동 dupAutoParry 1 — 10/31) */
   busy(held = false) {
     const f = this.f;
     const sk = f.skill;
-    return (held ? this.handHeld : this.blocked) || !UA.on || !!sk.sec || !!sk.tap || !!sk.pom || !!sk.vitalRange || !f.alive || !f.armed || f.weaponBroken || f.state !== 'stand' || !f.foe || f.finish?.amt > 0.5;
+    return (held === 'any' ? false : held ? this.handHeld : this.blocked) || !UA.on || !!sk.sec || !!sk.tap || !!sk.pom || !!sk.vitalRange || !f.alive || !f.armed || f.weaponBroken || f.state !== 'stand' || !f.foe || f.finish?.amt > 0.5;
   }
 
   /** 긋기 결과 적기: 맞힘(상대 아픔 +0.05 — 비기와 같은 눈) · 칼 맞물림(ai.js checkBind 와 같은 기하 0.07 m). 탭 찌르기도 한 긋기로 센다 */
@@ -541,63 +546,76 @@ export class PlayerUniqueAssist {
       //  전 판은 막기 단추를 쥐고 있으면 늘 버려져 '한 번도 안 나감' — 사장님 10/30 00:4x 보고) · 날개 접기 · 겹치기도 같게 (10/30 08:2x 사장님 '날개접기랑 겹치기도 같게해' — UNIQUE_ASSIST.tapHeld)
       if (this.busy(!!(cav ? UA.cavHeld : UA.tapHeld)) || f.foe?.state !== 'stand' || f.stamina.exhausted) return false;
       ok.spend();
-      this.coolStart(e);
-      const U = e.U;
-      if (this.cur) this.closeStroke(now); // 긋던 것은 여기서 끝 (이 탭이 다음 칼)
-      const rec = { tech: 'tap', kind: thrustTap ? 'thrust' : 'cut', tap: true, t0: now, dir: [0, 0], start: null, landed: false, bound: false, tEnd: null, unique: U.name };
-      this.tapRec = rec; // 앞 칼 기록 (운동학 칼이면 track 이 다음 스텝에 끝냄 — 맞힘 · 맞물림은 그 뒤 last 로 이어 적음 · 이 기록은 다음 기회를 열지 않음)
-      this.stats.fired[U.name] = (this.stats.fired[U.name] ?? 0) + 1;
-      this.stats.tapFired = (this.stats.tapFired ?? 0) + 1;
-      f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
-      f.stamina.attack(thrustTap ? 'thrust' : 'cut'); // 탭 하나 (끌고 가는 칼은 같은 공격 — same) · 찌르기 10 · 베기 12
-      // 칼끝 돌려 빼기 (10/31 — 기본 고유 공격): 같은 돌려 빼기 길 · 보통 찌르기 빠르기(cavTipSpeed) · 잔상 없음 · 비킨 쪽은 닿았을 때 상대 칼 쪽(cavSide 'contact')
-      // 칼끝 돌려 빼기 심화 · 헛누름 (I8 — 사장님 10/31 '1로 해. … 1초로 해.' → '1.2초로 할게'): 돌려 빼는 순간(맞힘과 상관없이) 누르거나 닿아 있던 상대 칼이 허공으로 — 상대 두 팔 늦춤 cavArmSlow (흘림 장치)
-      if (cav && UA.cavArmSlow > 0 && !perkOff(f, 'cavazione') && f.foe && beginFlowRecovery(f.foe, f, UA.cavArmSlow)) this.stats.armSlow = (this.stats.armSlow ?? 0) + 1;
-      if (e.tapSnap && UA.cavSnap && UA.enhance > 0) {
-        const side = UA.cavSide === 'contact' ? ok.touch?.n ?? null : null;
-        const tapT = UA.cavSpeed === 'tap'; // 탭 찌르기 박자 — 길 끝(거둠)까지 시간 상한 없음: 상한에서 끊으면 뻗은 칼이 상대 몸 · 칼 안에 든 채 충돌이 돌아와 내 몸이 튕겨 넘어졌음(싸움 판 넘어짐 8 / 9 판 — 낸 뒤 0.25 ~ 0.35 s)
-        // 세게 하는 시제품 (10/31 16:xx 사장님 물음 — config UNIQUE_ASSIST cavSpeedMul · cavHitMul · cavParryLock · cavCancel · combat.js cavGap · 기본 모두 끔): A 빠르기 배 · D 판정 배율
-        const vMul = UA.cavSpeedMul > 0 ? UA.cavSpeedMul : 1;
-        if (requestArtThrust(f, { v: cavTipSpeed() * vMul, trail: false, maxT: tapT ? 0 : UA.cavSnapTime, tech: U.name, under: true, capFromCut: !tapT && !!UA.cavCapCut, side, tapTiming: tapT, selfFree: UA.cavSelfFree, hitMul: UA.cavHitMul > 0 ? UA.cavHitMul : 1 })) {
-          this.stats.snap = (this.stats.snap ?? 0) + 1;
-          // C 상대 반응 묶음: 누르던 칼이 빠져 이 실제 초 동안 막기 · 피하기 · 맞받아치기를 새로 시작하지 못함 (ai.js respond — I8 헛누름의 팔 늦춤과 따로)
-          if (UA.cavParryLock > 0 && f.foe) f.foe.parryLockUntil = (f.foe.fightT ?? 0) + UA.cavParryLock;
-          this.cavFire = { threat: f.parryGuard?.threatId ?? null, held: !!f.parryGuard?.held }; // E 거둠 판단의 기준 (낸 때 위협 번호 · 막기 단추)
-          return true;
-        }
-      }
-      // 비껴서며 찌르기 (10/31 — 특수 공격): 스틱 쪽으로 몸을 빼며(옆 · 앞 = schools.js inquartata step · 뒷발을 그쪽으로 돌려 디딤) 넷째 자세로 가슴 — 고노센 칼끝 × specialShare.inquartata · 잔상
-      if (e.tapVoid && UA.enhance > 0) {
-        const st = U.step ?? { lat: 0.3, fwd: 0.15 };
-        const sg = Math.sign(f.stickX ?? 0) || 1;
-        const B = e.body ? [Math.abs(e.body[0]) * sg * (e.bodyMirror ?? 1), Math.abs(e.body[1]) * sg * (e.bodyMirror ?? 1), e.body[2], e.body[3]] : null;
-        if (requestArtThrust(f, { share: specialShare(e.name), maxT: UA.inqSnapTime, tech: U.name, under: false, capFromCut: true, voidStep: { lat: Math.abs(st.lat) * sg, fwd: st.fwd ?? 0 }, bodyPose: B })) {
-          this.stats.snap = (this.stats.snap ?? 0) + 1;
-          return true;
-        }
-      }
-      // 날개 접기 (사장님 10/28 00:3x): 오른 허리 옆으로 거뒀다 앞으로 반걸음 들며 허리를 오른 → 왼 가로 호로 — 고노센 칼끝 × specialShare.lianchi (10/29 02:0x)
-      if (e.tapFold && UA.enhance > 0) {
-        if (requestArtFold(f, { share: specialShare(e.name), maxT: UA.lianSnapTime, tech: U.name, step: { kind: 'lunge', fwd: UA.lianStep ?? SECRET.chineseStep } })) { // 앞 걸음 = 날개 접기만의 lianStep 0.45 (10/29 14:3x)
-          this.stats.snap = (this.stats.snap ?? 0) + 1;
-          return true;
-        }
-      }
-      // 겹치기 (10/28): 맞물린 자리에서 상대 칼 뒤로 밀어 넣어 엇갈린 손으로 얼굴을 사선으로 — 고노센 칼끝 × specialShare.duplieren (10/29 02:0x)
-      if (e.tapDup && UA.enhance > 0) {
-        if (requestArtDup(f, { share: specialShare(e.name), maxT: UA.dupSnapTime, tech: U.name, face: UA.dupFace, follow: UA.dupFollow, plan: UA.dupPlan, body: UA.dupBody, edge: UA.dupEdge, step: UA.dupStep > 0 ? { kind: 'lunge', fwd: UA.dupStep } : null })) {
-          this.stats.snap = (this.stats.snap ?? 0) + 1;
-          return true;
-        }
-      }
-      // 운동학 칼이 없으면(끔 · 이미 끌고 가는 중) 탭 찌르기 덧씌우기에 이름만
-      if (f.skill.thrust({ uniq: false, charged: true })) {
-        if (f.skill.tap) f.skill.tap.uniqTech = U.name; // (걸어 맞추기 판 vitalRange 면 탭이 아직 없음)
+      return this.launchTap(e, now, false, ok);
+    }
+    return false;
+  }
+
+  /**
+   * 탭 특수 공격을 냄 (tapChain 이 조건을 받아들인 뒤 · 겹치기 자동 dupAutoTick — 10/31): 식힘 시작 · 긋던 것 끝 · 앞 칼 기록 · 알림 · 탭 하나 기력 · 운동학 칼(없으면 탭 찌르기 덧씌우기에 이름만).
+   *  auto = 탭 없이 저절로 나감(겹치기 자동 — 재기 stats.autoFired · 탭 찌르기로 바꾸지 않음) · ok = 탭 조건이 돌려준 것(칼끝 돌려 빼기 닿음 ok.touch — 비킨 쪽). 냈으면 true
+   */
+  launchTap(e, now = this.t, auto = false, ok = null) {
+    const f = this.f;
+    const cav = e.tapKey === 'cav';
+    const thrustTap = cav || e.tapKey === 'inq'; // 찌르는 탭 칼 (칼끝 돌려 빼기 · 비껴서며 찌르기 — 기력 · 앞 칼 기록 꼴)
+    this.coolStart(e);
+    const U = e.U;
+    if (auto) this.stats.autoFired = (this.stats.autoFired ?? 0) + 1;
+    if (this.cur) this.closeStroke(now); // 긋던 것은 여기서 끝 (이 탭이 다음 칼)
+    const rec = { tech: 'tap', kind: thrustTap ? 'thrust' : 'cut', tap: true, t0: now, dir: [0, 0], start: null, landed: false, bound: false, tEnd: null, unique: U.name };
+    this.tapRec = rec; // 앞 칼 기록 (운동학 칼이면 track 이 다음 스텝에 끝냄 — 맞힘 · 맞물림은 그 뒤 last 로 이어 적음 · 이 기록은 다음 기회를 열지 않음)
+    this.stats.fired[U.name] = (this.stats.fired[U.name] ?? 0) + 1;
+    this.stats.tapFired = (this.stats.tapFired ?? 0) + 1;
+    f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
+    f.stamina.attack(thrustTap ? 'thrust' : 'cut'); // 탭 하나 (끌고 가는 칼은 같은 공격 — same) · 찌르기 10 · 베기 12
+    // 칼끝 돌려 빼기 (10/31 — 기본 고유 공격): 같은 돌려 빼기 길 · 보통 찌르기 빠르기(cavTipSpeed) · 잔상 없음 · 비킨 쪽은 닿았을 때 상대 칼 쪽(cavSide 'contact')
+    // 칼끝 돌려 빼기 심화 · 헛누름 (I8 — 사장님 10/31 '1로 해. … 1초로 해.' → '1.2초로 할게'): 돌려 빼는 순간(맞힘과 상관없이) 누르거나 닿아 있던 상대 칼이 허공으로 — 상대 두 팔 늦춤 cavArmSlow (흘림 장치)
+    if (cav && UA.cavArmSlow > 0 && !perkOff(f, 'cavazione') && f.foe && beginFlowRecovery(f.foe, f, UA.cavArmSlow)) this.stats.armSlow = (this.stats.armSlow ?? 0) + 1;
+    if (e.tapSnap && UA.cavSnap && UA.enhance > 0) {
+      const side = UA.cavSide === 'contact' ? ok?.touch?.n ?? null : null;
+      const tapT = UA.cavSpeed === 'tap'; // 탭 찌르기 박자 — 길 끝(거둠)까지 시간 상한 없음: 상한에서 끊으면 뻗은 칼이 상대 몸 · 칼 안에 든 채 충돌이 돌아와 내 몸이 튕겨 넘어졌음(싸움 판 넘어짐 8 / 9 판 — 낸 뒤 0.25 ~ 0.35 s)
+      // 세게 하는 시제품 (10/31 16:xx 사장님 물음 — config UNIQUE_ASSIST cavSpeedMul · cavHitMul · cavParryLock · cavCancel · combat.js cavGap · 기본 모두 끔): A 빠르기 배 · D 판정 배율
+      const vMul = UA.cavSpeedMul > 0 ? UA.cavSpeedMul : 1;
+      if (requestArtThrust(f, { v: cavTipSpeed() * vMul, trail: false, maxT: tapT ? 0 : UA.cavSnapTime, tech: U.name, under: true, capFromCut: !tapT && !!UA.cavCapCut, side, tapTiming: tapT, selfFree: UA.cavSelfFree, hitMul: UA.cavHitMul > 0 ? UA.cavHitMul : 1 })) {
+        this.stats.snap = (this.stats.snap ?? 0) + 1;
+        // C 상대 반응 묶음: 누르던 칼이 빠져 이 실제 초 동안 막기 · 피하기 · 맞받아치기를 새로 시작하지 못함 (ai.js respond — I8 헛누름의 팔 늦춤과 따로)
+        if (UA.cavParryLock > 0 && f.foe) f.foe.parryLockUntil = (f.foe.fightT ?? 0) + UA.cavParryLock;
+        this.cavFire = { threat: f.parryGuard?.threatId ?? null, held: !!f.parryGuard?.held }; // E 거둠 판단의 기준 (낸 때 위협 번호 · 막기 단추)
         return true;
       }
-      this.tapRec = null;
-      return false;
     }
+    // 비껴서며 찌르기 (10/31 — 특수 공격): 스틱 쪽으로 몸을 빼며(옆 · 앞 = schools.js inquartata step · 뒷발을 그쪽으로 돌려 디딤) 넷째 자세로 가슴 — 고노센 칼끝 × specialShare.inquartata · 잔상
+    if (e.tapVoid && UA.enhance > 0) {
+      const st = U.step ?? { lat: 0.3, fwd: 0.15 };
+      const sg = Math.sign(f.stickX ?? 0) || 1;
+      const B = e.body ? [Math.abs(e.body[0]) * sg * (e.bodyMirror ?? 1), Math.abs(e.body[1]) * sg * (e.bodyMirror ?? 1), e.body[2], e.body[3]] : null;
+      if (requestArtThrust(f, { share: specialShare(e.name), maxT: UA.inqSnapTime, tech: U.name, under: false, capFromCut: true, voidStep: { lat: Math.abs(st.lat) * sg, fwd: st.fwd ?? 0 }, bodyPose: B })) {
+        this.stats.snap = (this.stats.snap ?? 0) + 1;
+        return true;
+      }
+    }
+    // 날개 접기 (사장님 10/28 00:3x): 오른 허리 옆으로 거뒀다 앞으로 반걸음 들며 허리를 오른 → 왼 가로 호로 — 고노센 칼끝 × specialShare.lianchi (10/29 02:0x)
+    if (e.tapFold && UA.enhance > 0) {
+      if (requestArtFold(f, { share: specialShare(e.name), maxT: UA.lianSnapTime, tech: U.name, step: { kind: 'lunge', fwd: UA.lianStep ?? SECRET.chineseStep } })) { // 앞 걸음 = 날개 접기만의 lianStep 0.45 (10/29 14:3x)
+        this.stats.snap = (this.stats.snap ?? 0) + 1;
+        return true;
+      }
+    }
+    // 겹치기 (10/28): 맞물린 자리에서 상대 칼 뒤로 밀어 넣어 엇갈린 손으로 얼굴을 사선으로 — 고노센 칼끝 × specialShare.duplieren (10/29 02:0x)
+    if (e.tapDup && UA.enhance > 0) {
+      if (requestArtDup(f, { share: specialShare(e.name), maxT: UA.dupSnapTime, tech: U.name, face: UA.dupFace, follow: UA.dupFollow, plan: UA.dupPlan, body: UA.dupBody, edge: UA.dupEdge, step: UA.dupStep > 0 ? { kind: 'lunge', fwd: UA.dupStep } : null })) {
+        this.stats.snap = (this.stats.snap ?? 0) + 1;
+        return true;
+      }
+    }
+    if (auto) return false; // 저절로 낸 칼은 탭 찌르기로 바꾸지 않음 (dupAutoTick 이 운동학 칼이 나갈 수 있을 때만 부름)
+    // 운동학 칼이 없으면(끔 · 이미 끌고 가는 중) 탭 찌르기 덧씌우기에 이름만
+    if (f.skill.thrust({ uniq: false, charged: true })) {
+      if (f.skill.tap) f.skill.tap.uniqTech = U.name; // (걸어 맞추기 판 vitalRange 면 탭이 아직 없음)
+      return true;
+    }
+    this.tapRec = null;
     return false;
   }
 
@@ -833,6 +851,69 @@ export class PlayerUniqueAssist {
   }
 
   /**
+   * 겹치기 자동 (사장님 10/31 16:xx '추가 커맨드 없이 일정 조건 충족하면 자동으로' — UNIQUE_ASSIST.dupAuto · 시제품 기본 끔 · 기록 docs/strike/duplieren_auto_2026-10-31.md): drive 가 물리 스텝마다.
+   *  띠 = 가슴 사이(fighter.foeDistance — 죽음의 일격 'close' 와 같은 잣대) dupBandMin(null = SECRET.mordCloseN 0.8) 초과 ~ 위 끝 이하 · 닿음 = bladeTouch(몸이 느끼는 맞댐 · 칼날 선분 0.07 m).
+   *  'bind'  : 닿아 있고 띠 안인 스텝마다 쌓임 += dt · 끊기면(떨어짐 · 띠 밖) dupStackGap 안엔 쌓임을 쥠(안 셈 — 죽음의 일격 mordGrace 와 같은 틀) · 넘으면 0(dupStackDrain > 0 이면 초당 그만큼 빠짐) ·
+   *            쌓임 ≥ dupStackS 이고 지금 닿아 있고 띠 안이고 손가락이 휘두르는 중이 아니면 냄(긋는 중엔 미룸 — 쌓임은 쥠).
+   *  'clash2': 닿음 덩이(떨어진 틈이 dupClashGap 이상이어야 새 덩이 — 한 맞댐의 떨림을 둘로 세지 않음)의 시작이 앞 덩이 시작부터 dupClashT 안이고 띠 안이면 그 덩이가 닿아 있는 동안 냄.
+   *  셈 0(쌓임 · 짝 버림): 식힘 중 · 끌고 가는 칼(iaiBusy — 겹치기 · 다른 특수 공격 · 고노센) · 비기 · 나 · 상대가 서 있지 않음 · 칼 없음 · 탈진 · 막기 단추(dupAutoParry 0).
+   *  냄 막음(쌓임은 쥠 — 풀리면 그때 냄): 몸이 바쁨(busy — 탭 찌르기 · 손잡이 찍기 · 걸어 맞추기 등) · 운동학 칼을 못 냄(상대 칼 없음 · 세기 0).
+   *  냄 = 탭 판과 같은 칼(launchTap — 식힘 · 기력 탭 하나 · 알림 · requestArtDup). 자세 칸 알림 dupCue = 'bind' 쌓임 절반부터(dupAutoHint)
+   */
+  dupAutoTick(dt) {
+    const f = this.f;
+    const e = this.dupE;
+    const mode = UA.dupAuto;
+    const A = (this.dupA ??= { st: 0, off: 0, since: null, on: false, t0: null, prev: null, tEnd: null, pair: false });
+    const foe = f.foe;
+    const touch = this.bladeTouch();
+    const d = f.foeDistance();
+    const lo = UA.dupBandMin ?? SECRET.mordCloseN ?? 0;
+    const hi = mode === 'clash2' ? (UA.dupClashMax > 0 ? UA.dupClashMax : Infinity) : UA.dupBandMax;
+    const band = d > lo && d <= hi;
+    const parry = !UA.dupAutoParry && this.blocked;
+    const dead = !UA.on || this.cooling(e) || iaiBusy(f) || !!f.skill.sec || !f.alive || f.state !== 'stand' || !foe || foe.state !== 'stand' || !f.armed || !foe.armed || f.weaponBroken || f.stamina.exhausted || parry;
+    let ready = false;
+    if (mode === 'bind') {
+      const live = touch && band && !dead;
+      if (live) {
+        if (!(A.st > 0)) A.since = this.t;
+        A.off = 0;
+        A.st += dt;
+      } else if (A.st > 0 && !dead && (A.off += dt) <= UA.dupStackGap) {
+        // 너그러움: 쥔 채 기다림 (안 셈)
+      } else if (A.st > 0 && !dead && UA.dupStackDrain > 0) {
+        A.st = Math.max(0, A.st - UA.dupStackDrain * dt); // 빠짐 판 (dupStackDrain — 초당 쌓임 몫 · 0 = 곧장 0)
+        if (!A.st) A.since = null;
+      } else (A.st = 0), (A.off = 0), (A.since = null);
+      // 손가락이 휘두르는 동안(긋는 중 — 휘두르기 문턱 SKILL.swingSpeed 위)은 냄만 미룸(쌓임은 쥠): 맞댄 칼을 떼고 다른 데를 치려는 손을 겹치기가 가로채지 않게 · 맞댄 채 멈추거나 느리게 밀면 나감
+      ready = A.st >= UA.dupStackS && touch && band && !f.skill.inputSwinging;
+      this.dupCue = UA.dupAutoHint && !dead && A.st >= UA.dupStackS * 0.5 ? { name: e.U.name, nameKo: e.U.nameKo, sub: '맞물림' } : null;
+    } else if (mode === 'clash2') {
+      if (touch && !A.on) {
+        A.on = true;
+        if (A.tEnd == null || this.t - A.tEnd >= UA.dupClashGap) {
+          A.prev = A.t0;
+          A.t0 = this.t;
+          A.pair = A.prev != null && this.t - A.prev <= UA.dupClashT && band;
+        }
+      } else if (!touch && A.on) (A.on = false), (A.tEnd = this.t); // 짝은 쥠 — dupClashGap 안에 다시 닿으면 같은 덩이(냄은 닿아 있을 때만)
+      if (dead) (A.pair = false), (A.prev = A.t0 = null);
+      ready = A.pair && touch && band;
+      this.dupCue = null;
+    }
+    if (!ready || dead) return false;
+    if (this.busy(UA.dupAutoParry ? 'any' : false) || f.iai || f.iaiReq || !(specialShare(e.name) > 0) || !(UA.enhance > 0) || !foe.sword || !foe.bodies?.head) return false;
+    A.st = 0;
+    A.off = 0;
+    A.since = null;
+    A.pair = false;
+    A.prev = A.t0 = null;
+    this.dupCue = null;
+    return this.launchTap(e, this.t, true);
+  }
+
+  /**
    * 내 긋기가 도는 중인가 (칼끝 돌려 빼기 닿음 조건 — 10/31 사장님 '베기에서의 닿음이나 막힘은 빼야' · 감독 '내 긋기 동안의 닿음은 뺌'):
    *  손가락 휘두름이 찌르기 꼴(찌르는 긋기 — 시작 자세 + 첫 방향이 찌르기 기본 동작)이 아닌 긋기로 읽혀 도는 중(this.cur — 끝은 onsetQuiet 쉼) · 또는 끌고 가는 베는 칼(f.iai 의 지금 수가 베기)
    */
@@ -1051,6 +1132,7 @@ export class PlayerUniqueAssist {
     }
     this.coolTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:5x)
     this.touchTick(); // 칼끼리 닿음 (칼끝 돌려 빼기 탭 조건 — 10/31)
+    if (UA.dupAuto && this.dupE) this.dupAutoTick(dt); // 겹치기 자동 (사장님 10/31 18:xx 'bind' 기본 — 0 이면 셈도 안 함 · 겹치기를 익힌 독일 사람만)
     // 물러남이 풀린 때 (날개 접기 탭 조건 TAP_TRIG 'lian' — 10/28 01:2x): 스틱 뒤가 풀린 스텝
     const back = this.backNow();
     if (this.backOn && !back) this.backOff = this.t;

@@ -213,7 +213,9 @@ if (params.get('thrustCost') === '7') CONFIG.STAMINA.thrustCost = 7; // `?thrust
 if (params.has('jpParryCut') && +params.get('jpParryCut') >= 0 && +params.get('jpParryCut') <= 1) CONFIG.SKILL.jpParryDmgCut = +params.get('jpParryCut'); // 일본 막는 동안 피해 감소(판 값 0.2) — `?jpParryCut=0` = 끔
 if (params.has('ibParryCut') && +params.get('ibParryCut') >= 0 && +params.get('ibParryCut') <= 1) CONFIG.SKILL.ibParryDmgCut = +params.get('ibParryCut'); // 이베리아 막는 동안 피해 감소(판 값 0.2) — `?ibParryCut=0` = 끔
 if (['1', '2'].includes(params.get('itForte'))) CONFIG.SKILL.itForte = +params.get('itForte'); // 이탈리아 forte 막기 연구 후보 (가)(10/17 — 사장님 확인 전): 기본 0 = 끔, `?itForte=1`·`?itForte=2` = 후보 몸꼴 (docs/strike/italian_forte_parry_2026-10-17.md)
-if (params.has('bind')) CONFIG.BIND.natural = +params.get('bind') ? 1 : 0; // 자연 바인드 실험(10/11 — docs/strike/natural_bind_2026-10-11.md): 기본 0, `?bind=1` = 칼끼리 덜 튕기고 더 물림 · 막힌 칼을 노리던 자리로 밂 · 독일 느낌 · 넓은 맞부딪힘
+if (params.has('bind')) CONFIG.BIND.natural = +params.get('bind') ? 1 : 0; // 자연 바인드 (10/11 실험 — docs/strike/natural_bind_2026-10-11.md · 10/31 본판 — natural_bind_on_2026-10-31.md): 기본 1(사장님 10/31 19:xx), `?bind=0` = 전 물리(칼끼리 더 튕김 · AI 밀기 없음)
+if (params.has('bindRest')) CONFIG.BIND.restitution = +params.get('bindRest'); // 칼끼리 닿는 면 반발 (기본 0.2 — 사장님 10/31 19:xx · 10/11 실험 0.1)
+if (params.has('bindWill')) CONFIG.BIND.will.on = +params.get('bindWill') ? 1 : 0; // AI 미는 정도를 성향에 따라 (기본 1 · 0 = 모든 AI 10/11 실험 값 그대로 — 셈은 사장님 확인 전)
 if (['v4', 'flow', 'gilmok', 'spin'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11 · 10/22): 기본 'spin'(휘감아 돌기 — docs/strike/iberian_spin_2026-10-22.md), `?ibSecret=gilmok` = v6 길목 지키기, `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
 if (['stick', 'attack', 'attackCircle'].includes(params.get('ibInput'))) CONFIG.SECRET.ibSpin.input = params.get('ibInput'); // 싱지르 내는 조작: 기본 'attackCircle'(10/24 — 무장 동안 공격으로 원 한 바퀴) · `?ibInput=stick` = 10/23 판(이동 스틱 반 바퀴) · `?ibInput=attack` = 10/22 판(무장 동안 공격 입력 하나)
 if ([0.6, 1.5].includes(+params.get('ibCircleTime'))) CONFIG.SECRET.ibSpin.circleTime = +params.get('ibCircleTime'); // 원 한 바퀴를 이 초 안에 (판 값 1.5 — 사다리 칸만) · 시험 `?ibCircleTime=0.6`
@@ -378,6 +380,12 @@ if (params.has('rdHold')) CONFIG.UNIQUE_ASSIST.rdHold = +params.get('rdHold') ? 
 if (params.has('dupGrace')) CONFIG.UNIQUE_ASSIST.dupGrace = Math.max(0, +params.get('dupGrace') || 0); // 겹치기 시제품: 닿음이 끝난 뒤 받는 초 (10/31 · 기본 0 · 사장님 확인 전 — 확인표 3100)
 if (params.has('dupAny')) CONFIG.UNIQUE_ASSIST.dupAny = +params.get('dupAny') ? 1 : 0; // 겹치기 시제품: 칼끼리 닿음이면 모두 (기본 0 · 확인표 3101)
 if (params.has('dupStep')) CONFIG.UNIQUE_ASSIST.dupStep = Math.max(0, +params.get('dupStep') || 0); // 겹치기 시제품: 앞 걸음 m (기본 0 · 확인표 3102)
+// 겹치기 자동 (사장님 10/31 16:xx — 시제품 · 기본 0 = 지금 탭 · 확인표 3220 ~ 3229): `?dupAuto=bind` · `?dupAuto=clash2` · 수는 실제 초 · m
+if (params.has('dupAuto')) CONFIG.UNIQUE_ASSIST.dupAuto = ['bind', 'clash2'].includes(params.get('dupAuto')) ? params.get('dupAuto') : 0;
+for (const k of ['dupStackS', 'dupStackGap', 'dupClashT', 'dupClashGap']) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST[k] = CONFIG.realS(+params.get(k)); // 실제 초
+for (const k of ['dupBandMax', 'dupClashMax', 'dupStackDrain']) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST[k] = +params.get(k); // 가슴 사이 m (dupClashMax 0 = 위 끝 없음) · 빠짐 초당 몫 (0 = 곧장 0)
+if (params.has('dupBandMin')) CONFIG.UNIQUE_ASSIST.dupBandMin = +params.get('dupBandMin') > 0 ? +params.get('dupBandMin') : null; // null = 죽음의 일격 거리(SECRET.mordCloseN)
+for (const k of ['dupAutoParry', 'dupAutoHint']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0;
 if (params.has('stickGuard')) CONFIG.INPUT.stickGuardPx = Math.max(0, +params.get('stickGuard') || 0); // 이동 스틱 둘레 (px — 10/31 08:xx 사장님 '+10~20px 정도' · 기본 15 · 0 = 전 판) [확인표 3096]
 if (params.has('stickGuardGrab')) CONFIG.INPUT.stickGuardGrab = +params.get('stickGuardGrab') ? 1 : 0; // 둘레에 닿은 손가락이 스틱을 쥠 (기본 1 · 0 = 버리기만) [사장님 확인 전 — 확인표 3097]
 if (params.has('holdPx') && +params.get('holdPx') > 0) CONFIG.INPUT.holdPx = +params.get('holdPx'); // 길게 누름 떠돎 한도 (손가락 px — 10/31 · 기본 24 · 12 = 전 판 탭 문턱) [사장님 확인 전 — 확인표 3090]
@@ -2713,10 +2721,11 @@ function updateGuardName() {
     return;
   }
   // 이어 긋기 창 (10/21 강화동작 · 명령 — unique_assist.js readyChain): 앞 동작 뒤 이어 그을 수 있는 동안 자세 칸에 그 기술 이름 · '이어 긋기'
-  const uqReady = playerUnique?.ready;
+  //  겹치기 자동 'bind' (10/31 16:xx 시제품 — UNIQUE_ASSIST.dupAutoHint): 맞댄 채 쌓임이 절반 넘으면 같은 칸에 '겹치기' · '맞물림' (새 그림 없음 · 끔이면 dupCue 없음)
+  const uqReady = playerUnique?.ready ?? playerUnique?.dupCue;
   if (uqReady && player.alive) {
-    const key = `uq:${uqReady.name}`;
-    if (key !== guardShown) paintGuard(key, uqReady.nameKo, '이어 긋기');
+    const key = uqReady.sub ? `uq:${uqReady.name}:${uqReady.sub}` : `uq:${uqReady.name}`;
+    if (key !== guardShown) paintGuard(key, uqReady.nameKo, uqReady.sub ?? '이어 긋기');
     return;
   }
   // 고노센 발도 대기 (10/31 13:xx 사장님 '1-2번 다 고쳐' — 확인표 3201): 준비된 채 칼이 왼 허리에 있는 동안(허리 대기 · 웅크림 판) '발도 대기' — 칼을 쥐면(손 몫 0) 아래 보통 자세 이름으로 돌아옴

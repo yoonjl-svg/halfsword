@@ -1117,7 +1117,7 @@ export class AI {
     if (this.iaiArm) iaiReadyPose(this.me, false, 1); // 발도 대기 웅크림이 남아 있으면 풀기 (덧씌우기 칸을 가졌을 때만 — iaiReadyW > 0)
     this.secret = null;
     this.iaiArm = this.gilArm = this.spinArm = this.binds = null;
-    if (this.press && !('tech' in this.press)) this.press = null; // 모르트슐라크 누르기 셈 (자연 바인드 실험의 밀기 칸 natPress 는 tech 가 있는 다른 꼴)
+    if (this.press && !('tech' in this.press)) this.press = null; // 모르트슐라크 누르기 셈 (자연 바인드 밀기 칸은 10/31 부터 따로 this.natP — 이 칸에 tech 가 있는 꼴은 이제 없음)
     this.stats.secretDropped = (this.stats.secretDropped ?? 0) + 1;
   }
 
@@ -1430,7 +1430,8 @@ export class AI {
    *  ③ 느낌 (독일만 — Lichtenauer 「Fühlen」·「Indes」·「Vor/Nach, Schwach/Stark」): 맞닿고 BIND.feelT 뒤 한 번 —
    *   상대가 세다(누르는 힘 feel.force ≥ BIND.strongN 이고 맞닿은 자리가 내 칼 약한 쪽 feel.at ≥ 0.5) → 감아 돌아감(Duplieren — 고유 동작, 없으면 가로베기) ·
    *   상대가 약하다(내 강한 쪽 at < 0.5 로 상대 칼을 쥠) → 밀고 들어감(밀기를 그치고 원래 빠르기로 빈틈까지) · 그 밖 → 계속 민다.
-   *  BIND.holdMax 를 넘도록 붙어 있으면 그만 밀고 길을 마저 간다(뗌). 끝난 방식은 me.natEnd = { why: slip|wind|push|release, t } (측정 도구가 읽는다). 비기 베기 동안은 하지 않는다.
+   *  10/31 본판(사장님 19:xx): 밀기 손 빠르기 · 상한은 성향에 따른 미는 뜻 w 를 곱함(pressWill — 바인드마다 처음 한 번).
+   *  BIND.holdMax × w 를 넘도록 붙어 있으면 그만 밀고 길을 마저 간다(뗌). 끝난 방식은 me.natEnd = { why: slip|wind|push|release, t } (측정 도구가 읽는다). 비기 베기 동안은 하지 않는다.
    *  돌려줌: 이번 스텝을 다른 공격(감기)이 가져갔으면 true
    */
   natPress(dt) {
@@ -1438,8 +1439,9 @@ export class AI {
     this.pressAim = null;
     if (this.secretRun) return false;
     const touch = !!me.feel?.touching && me.armed && this.foe.armed;
-    let P = this.press;
-    if (P?.tech !== this.tech || P?.n !== this.stats.attacks) P = this.press = null; // 새 공격
+    // 10/31 고침: 밀기 칸은 this.natP — 10/11 판은 this.press 를 썼는데 10/24 부터 모르트슐라크 누르기 셈(mordTick)이 같은 칸이라, 켜면 독일 숙련 5 AI 의 누르기 · 창 셈을 베는 스텝마다 지우고 덮어썼다
+    let P = this.natP;
+    if (P?.tech !== this.tech || P?.n !== this.stats.attacks) P = this.natP = null; // 새 공격
     if (!touch) {
       if (P && !P.done && (P.gone += dt) > 0.034) {
         P.done = true; // 떨어짐 (4 스텝 — STEEL.rearmSteps 와 같은 틈): 밀어붙이던 중이면 밀어냄, 아니면 칼이 미끄러져 풀림
@@ -1447,11 +1449,11 @@ export class AI {
       }
       return false;
     }
-    if (!P) P = this.press = { tech: this.tech, n: this.stats.attacks, t: 0, gone: 0, felt: false, done: false, push: false };
+    if (!P) P = this.natP = { tech: this.tech, n: this.stats.attacks, t: 0, gone: 0, felt: false, done: false, push: false, w: this.pressWill() };
     if (P.done) return false;
     P.gone = 0;
     P.t += dt;
-    if (P.t > BIND.holdMax) {
+    if (P.t > BIND.holdMax * P.w) {
       P.done = true;
       this.natEndAs('release');
       return false;
@@ -1477,7 +1479,7 @@ export class AI {
     const a = this.tech.kind === 'thrust' ? T[T.length - 1] : T[Math.floor((T.length - 1) / 2)];
     this.pressAim = [clamp(a[0] + clamp(this.foeLat, -0.4, 0.4) * 0.5, -0.6, 0.6), a[1]];
     this.pressAimT = this.sense.t; // 이 스텝에만 (모드가 바뀐 뒤 묵은 목표를 쓰지 않게)
-    if (!P.push) this.handSpeed = Math.min(this.handSpeed, BIND.pressSpeed);
+    if (!P.push) this.handSpeed = Math.min(this.handSpeed, BIND.pressSpeed * P.w);
     if (this.phase === 'follow') this.timer = Math.max(this.timer, 0.05); // 미는 동안은 다음을 정하지 않는다
     return false;
   }
@@ -1489,15 +1491,33 @@ export class AI {
     N[why]++;
   }
 
-  /** 자연 바인드 실험 ② 막는 쪽: 이 막기에서 칼이 맞붙어 있는 동안(BIND.holdMax 까지) 막기를 끝내지 않는다 — 손은 막는 자리 패드(defend 가 둔 그대로)를 지키며 서보가 민다 */
+  /** 자연 바인드 ② 막는 쪽: 이 막기에서 칼이 맞붙어 있는 동안(BIND.holdMax × 미는 뜻 w 까지) 막기를 끝내지 않는다 — 손은 막는 자리 패드(defend 가 둔 그대로)를 지키며 서보가 민다 */
   natHoldDef(dt) {
     const me = this.me;
-    if (this.natDef?.id !== this.threatSeen) this.natDef = { id: this.threatSeen, t: 0 };
+    if (this.natDef?.id !== this.threatSeen) this.natDef = { id: this.threatSeen, t: 0, w: null };
     if (this.defVoid || !me.feel?.touching || !this.foe.armed) return false;
+    this.natDef.w ??= this.pressWill(); // 이 막기에서 처음 붙은 때 한 번
     this.natDef.t += dt;
-    if (this.natDef.t > BIND.holdMax) return false;
+    if (this.natDef.t > BIND.holdMax * this.natDef.w) return false;
     this.timer = Math.max(this.timer, 0.05);
     return true;
+  }
+
+  /**
+   * 자연 바인드 ②′ 미는 뜻 w (사장님 10/31 19:xx 'ai가 밀지의 여부는 기본적으로 키되 성향에 따라 그 정도가 조절되면 좋겠네' — config BIND.will · 셈 · 수는 사장님 확인 전 · 확인표 3313 ~ 3315):
+   *  공격 성향(pers.aggr × level.aggression — aggressiveTemper 와 같은 곱) × 맞받기 성향(pers.vor) × 지금 감정(분노 · 집념은 더 밀고 · 공포는 덜)을 [lo, hi] 로 자름.
+   *  치는 쪽 natPress: 밀기 손 빠르기 · 밀기 상한 × w / 막는 쪽 natHoldDef: 붙어 버팀 상한 × w. 성격 칸 · 감정 세기를 읽기만(난수 없음) · will.on 0 이면 1(10/11 실험 그대로)
+   */
+  pressWill() {
+    const W = BIND.will;
+    if (!W?.on) return 1;
+    const a = 1 + W.aggrK * (this.pers.aggr * this.level.aggression - W.aggr0);
+    const v = 1 + W.vorK * ((this.pers.vor ?? W.vor0) - W.vor0);
+    const e = (1 + W.emoK * (this.anger ?? 0)) * (1 + W.emoK * (this.obsession ?? 0)) * (1 - W.emoK * (this.fear ?? 0));
+    const w = clamp(a * v * e, W.lo, W.hi);
+    const S = (this.stats.natWill ??= { n: 0, sum: 0, min: Infinity, max: -Infinity }); // 재기만 (측정 도구가 읽음)
+    S.n++, (S.sum += w), (S.min = Math.min(S.min, w)), (S.max = Math.max(S.max, w));
+    return w;
   }
 
   // ───────────────────────── 풍차 베기 AI 몫 (사장님 10/31 08:xx '풍차 b는 칼을 어깨 위로 올리거나 들지 않던데? 플레이어만 그런 건가? 누가봐도 레돈두 준비처럼 보여야해.') ─────────────────────────

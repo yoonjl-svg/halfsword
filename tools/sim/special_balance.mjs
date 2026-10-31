@@ -1073,6 +1073,9 @@ function parseArgs() {
   return args;
 }
 
+// 겹치기 자동 재기(duplieren_auto.mjs — 10/31)가 같은 손가락 봇 · 걸음 · 난수를 쓴다 (내보내기만 — 이 파일 판은 그대로)
+export { fingerBot, rng, stepIn, bodyGap, strokeLog, edgeOf, freshOutcome };
+
 if (isMain(import.meta.url)) {
   const args = parseArgs();
   const mode = args._[0] ?? 'drill';
