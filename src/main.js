@@ -350,6 +350,8 @@ if (params.has('specialCoolFrom') && ['free', 'motion', 'fire'].includes(params.
 if (params.has('secretUses')) CONFIG.UNIQUE_ASSIST.secretUses = parseSecretUses(params.get('secretUses')); // 유파 비기 판당 쓸 수 (기본 1 · 동방 3 · 'inf' = 끝없음 · 사장님 10/29 19:5x)
 if (params.has('dupTap')) CONFIG.UNIQUE_ASSIST.dupTap = +params.get('dupTap') ? 1 : 0; // 사람 겹치기 탭 (사장님 10/28 01:2x — 맞물린 채 탭 · 기본 1)
 if (params.has('rdHold')) CONFIG.UNIQUE_ASSIST.rdHold = +params.get('rdHold') ? 1 : 0; // 사람 풍차 베기 길게 누름 (이베리아 B4 — 사장님 10/29 · 기본 1)
+if (params.has('stickGuard')) CONFIG.INPUT.stickGuardPx = Math.max(0, +params.get('stickGuard') || 0); // 이동 스틱 둘레 (px — 10/31 08:xx 사장님 '+10~20px 정도' · 기본 15 · 0 = 전 판) [확인표 3096]
+if (params.has('stickGuardGrab')) CONFIG.INPUT.stickGuardGrab = +params.get('stickGuardGrab') ? 1 : 0; // 둘레에 닿은 손가락이 스틱을 쥠 (기본 1 · 0 = 버리기만) [사장님 확인 전 — 확인표 3097]
 if (params.has('holdPx') && +params.get('holdPx') > 0) CONFIG.INPUT.holdPx = +params.get('holdPx'); // 길게 누름 떠돎 한도 (손가락 px — 10/31 · 기본 24 · 12 = 전 판 탭 문턱) [사장님 확인 전 — 확인표 3090]
 if (params.has('strokeMin')) CONFIG.STAMINA.humanStrokeMin = Math.max(0, +params.get('strokeMin') || 0); // 사람 긋기 청구 바닥 (패드 m — 10/31 · 기본 0.15 · 0 = 전 판 strokeTravel 0.06) [사장님 확인 전 — 확인표 3092]
 if (params.has('rdEdge')) CONFIG.UNIQUE_ASSIST.rdEdge = +params.get('rdEdge') < 0 ? -1 : 1; // 감는 칼 날 쪽 (기본 −1 — 사장님 확인 전)
