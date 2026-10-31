@@ -72,7 +72,7 @@
 ## 4. 관문 · 시험
 
 - 관문 그대로: fights12 `768085f3` · live_battery `e8127a92` · finish_thrust 1 --stand `ad302969`(사람 제비 베기만 바꿈 — AI 길 · 다른 운동학 칼 그대로).
-- 시험: (아래 §7 — 모두 돌린 결과)
+- 시험 `node --test tools/sim/*.test.mjs` **615 / 615 통과**(실패 0) · `node tools/text/name_policy.mjs` 위반 0 · `npx vite build` 됨.
 
 ## 5. 남는 것 · 여쭐 것
 
