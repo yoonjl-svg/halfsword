@@ -356,6 +356,8 @@ if (params.has('rdEdge')) CONFIG.UNIQUE_ASSIST.rdEdge = +params.get('rdEdge') < 
 if (params.has('rdWind')) CONFIG.UNIQUE_ASSIST.rdWindMode = ['spin', 'slowSpin', 'shoulder'].includes(params.get('rdWind')) ? params.get('rdWind') : 'shoulder'; // 풍차 베기 감기 꼴 (사장님 10/29 20:0x 두 안 · 10/30 00:1x 'A로' · 10/31 02:xx 'b안으로 본판 적용해' — 기본 안 B 'shoulder' · 안 A 'slowSpin' · 10/29 판 'spin')
 if (params.has('rdRelease')) CONFIG.UNIQUE_ASSIST.rdRelease = params.get('rdRelease') === 'chamber' ? 'chamber' : 'direct'; // 풍차 베기 내려침 길 (사장님 10/30 00:1x '바로 내려치는 게 아닌가?' — 기본 'direct' 곧장 사선 · 'chamber' 10/29 판 왼 어깨 뒤 길)
 if (params.has('rdAiWind')) CONFIG.UNIQUE_ASSIST.rdAiWind = +params.get('rdAiWind') ? 1 : 0; // AI 풍차 베기 = 사람과 같은 감기 · 내려침 (사장님 10/31 08:xx — 기본 1 · 0 = 옛 판 패드 길)
+if (params.has('rdAiQuick')) CONFIG.UNIQUE_ASSIST.rdAiQuick = +params.get('rdAiQuick') ? 1 : 0; // (a) 빠른 틈엔 감지 않고 바탕 동작 (사장님 10/31 13:4x — 기본 1 · 0 = 08:xx 판)
+if (params.has('rdAiThrift')) CONFIG.UNIQUE_ASSIST.rdAiThrift = +params.get('rdAiThrift') ? 1 : 0; // (c) 성향마다 기력 아낌 (사장님 10/31 13:4x — 기본 1 · 0 = 늘 감음)
 if (params.has('rdSteady')) CONFIG.UNIQUE_ASSIST.rdSteady = +params.get('rdSteady') ? 1 : 0; // 풍차 베기 감기 휘청 고침 (10/29 20:0x — 기본 1 · 0 = 10/29 판)
 if (params.has('rdRamp')) CONFIG.UNIQUE_ASSIST.rdRamp = +params.get('rdRamp') ? 1 : 0; // 감기 첫머리 도는 빠르기 부드럽게 (10/29 20:0x — 기본 1)
 if (params.has('ibChain')) CONFIG.IB_FLOW.chainStack = +params.get('ibChain') ? 1 : 0; // 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:4x · 01:5x · 기본 1)

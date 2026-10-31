@@ -80,6 +80,13 @@ export function windPose(f, psi, H = new THREE.Vector3(), D = new THREE.Vector3(
 }
 /** 감는 빠르기 (rad/s — 어깨 꼴은 0) */
 export const windRate = (M = windSpec()) => (M.loopT > 0 ? TAU / M.loopT : 0);
+/** 감기 시작부터 '감음'(감은 셈 1 — windStep W.turns)까지 게임 초 (10/31 13:4x AI 기력 아낌 셈 — ai.js rdWindCost):
+ *  어깨 꼴 = 얹음(windIn — woundFrom 'start' 면 0) + woundT · 도는 꼴 = 한 바퀴 loopT(섞기 rdRamp 면 섞는 windIn 동안 평균 반 빠르기 → + windIn / 2) */
+export function windWoundT(M = windSpec()) {
+  if (M.kind === 'shoulder') return (M.woundFrom === 'start' ? 0 : M.windIn ?? 0) + (M.woundT ?? 0);
+  const T = M.windIn ?? 0;
+  return (M.loopT ?? 0) + (UA.rdSteady > 0 && UA.rdRamp > 0 && T > 0 ? T / 2 : 0);
+}
 const _UP = new THREE.Vector3(0, 1, 0);
 /** 감는 칼이 도는 쪽 (몸 틀 — 가로 각이 느는 쪽 · 날 세우기 · rdEdge −1 이면 반대 날) · 어깨 꼴은 날 위(하늘 쪽 — 사장님 '날 위') */
 function windEdge(f, psi, out = new THREE.Vector3(), M = windSpec()) {

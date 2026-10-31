@@ -282,3 +282,79 @@ test('AI 풍차 베기 (사장님 10/31 08:xx \'플레이어만 그런 건가? �
   assert.ok(!off.phases.has('rdWind') && off.phases.has('strike'), `옛 패드 길 — ${[...off.phases].join(',')}`);
   assert.equal(off.rdMove, false);
 });
+
+test('AI 풍차 베기 빠른 틈 · 성향 기력 아낌 (사장님 10/31 13:4x \'a는 기본 적용하고 c는 성향마다 달랐음 좋겠어. 싸움을 풀어가는 방식에 따라 자율적으로.\' — rdAiQuick · rdAiThrift): 빠른 틈 · 기력 모자람은 바탕 동작 · 공격적 기질 · 분노는 감음 · 감는 중 기력이 아낌 줄 아래면 그만둠', () => {
+  const mk = () => {
+    const G = newRound({ walls: true, seed: 1, weapon: 'longsword', weapon2: 'zweihander', gap: 2.3, persona: { proficiency: 4 } });
+    for (let i = 0; i < Math.round(2.0 / DT); i++) G.step();
+    const rd = G.ai.school.tech.find((x) => x.name === 'redondo');
+    assert.ok(rd?.plain, '머리 위 돌려 베기 강화동작 · 바탕 동작');
+    return { G, ai: G.ai, E: G.enemy, rd };
+  };
+  const once = (fn) => {
+    const o = mk();
+    try { return fn(o); } finally { o.G.world.free(); }
+  };
+  assert.equal(UA.rdAiQuick, 1);
+  assert.equal(UA.rdAiThrift, 1);
+  // (a) 빠른 틈 — 상대 헛친 뒤(recover) · 이어 치기 → 바탕 동작 · 느긋한 틈(open) → 감기
+  once(({ ai, E, rd }) => {
+    assert.ok(ai.startAttack(rd, 'recover', { noFeint: true }));
+    assert.equal(ai.tech.name, rd.plain.name, '빠른 틈 = 바탕 동작');
+    assert.ok(!E.rdWind && ai.phase !== 'rdWind');
+    assert.equal(ai.stats.rdWind.skip.quick, 1);
+  });
+  once(({ ai, rd }) => {
+    assert.ok(ai.startAttack(rd, 'open', { noFeint: true, chain: 1 }));
+    assert.equal(ai.tech.name, rd.plain.name, '이어 치기 = 빠른 틈');
+  });
+  once(({ ai, E, rd }) => {
+    assert.ok(ai.startAttack(rd, 'open', { noFeint: true }));
+    assert.equal(ai.phase, 'rdWind');
+    assert.ok(E.rdWind);
+  });
+  // (c) 기력 30 — 바탕 AI(규율 0.85 · 공격적 기질 아님): 아낌 0.85 × (쉼 20 + 감기 24) ≈ 37 > 30 → 바탕 동작
+  once(({ ai, E, rd }) => {
+    assert.equal(ai.aggressiveTemper, false);
+    assert.ok(Math.abs(ai.rdWindCost() - 24) < 0.5, `감기 한 번 몫 ${ai.rdWindCost()}`);
+    E.stamina.value = 30;
+    assert.ok(ai.startAttack(rd, 'open', { noFeint: true }));
+    assert.equal(ai.tech.name, rd.plain.name);
+    assert.equal(ai.stats.rdWind.skip.low, 1);
+  });
+  // 공격적 기질(공격 성향 × aggression > 1.15) · 지금 분노 0.6 → 같은 기력에도 감음
+  once(({ ai, E, rd }) => {
+    ai.pers.aggr = 1.4;
+    assert.equal(ai.aggressiveTemper, true);
+    assert.equal(ai.rdThrift(), 0);
+    E.stamina.value = 30;
+    assert.ok(ai.startAttack(rd, 'open', { noFeint: true }));
+    assert.equal(ai.phase, 'rdWind');
+  });
+  once(({ ai, E, rd }) => {
+    ai.anger = 0.6;
+    E.stamina.value = 30;
+    assert.ok(ai.startAttack(rd, 'open', { noFeint: true }));
+    assert.equal(ai.phase, 'rdWind', `분노 아낌 ${ai.rdThrift().toFixed(2)}`);
+  });
+  // 감는 중 기력이 아낌 × 쉼 기력(≈ 17) 아래 · 감기 전 → 그만둠 'low' (아낌 0 이면 0 까지 감음)
+  once(({ G, ai, E, rd }) => {
+    assert.ok(ai.startAttack(rd, 'open', { noFeint: true }));
+    G.step();
+    E.stamina.value = 10;
+    for (let i = 0; i < 3; i++) G.step();
+    assert.equal(ai.stats.rdWind.cancel.low, 1, JSON.stringify(ai.stats.rdWind));
+    assert.ok(!E.rdWind);
+  });
+  // 끔: 빠른 틈 · 기력 모자람에도 감음 (10/31 08:xx 판)
+  const keep = [UA.rdAiQuick, UA.rdAiThrift];
+  UA.rdAiQuick = 0;
+  UA.rdAiThrift = 0;
+  try {
+    once(({ ai, E, rd }) => {
+      E.stamina.value = 30;
+      assert.ok(ai.startAttack(rd, 'recover', { noFeint: true }));
+      assert.equal(ai.phase, 'rdWind');
+    });
+  } finally { [UA.rdAiQuick, UA.rdAiThrift] = keep; }
+});
