@@ -17,7 +17,7 @@ const CASES = [
 ];
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader'] });
 const res = {};
-for (const [tag, extra] of CASES) {
+for (const [tag, extra] of CASES.filter(([t]) => !process.env.TAGS || process.env.TAGS.split(',').includes(t))) {
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   const errors = [];
@@ -32,6 +32,7 @@ for (const [tag, extra] of CASES) {
     const g = window.game, p = g.player, e = g.enemy, u = p.skill.uniq;
     const UA = g.config.UNIQUE_ASSIST;
     g.ai.update = () => e.move.set(0, 0);
+    e.applyWound = () => {}; // 상대는 안 다침 (판이 끝나 시간이 멈추지 않게 — 이 점검은 나감만 봄)
     if (!u) return { err: 'no uniq' };
     const L = (window.dupLog = { st: [], cue: [], guard: new Set(), iai: 0, t0: g.stats.simTime, pulse: 0 });
     // 칼끼리 닿음: bind = 늘 닿음 · clash2 = 0.15 s 닿고 0.35 s 떨어짐 되풀이 (둘째 닿음에 나가야 함)
@@ -49,13 +50,13 @@ for (const [tag, extra] of CASES) {
     return { dupAuto: UA.dupAuto, dupStackS: UA.dupStackS, dupBandMax: UA.dupBandMax, dupClashT: UA.dupClashT, tempo: g.tempo, unique: u.list.map((x) => x.name), dupE: !!u.dupE, dist: +p.foeDistance().toFixed(3) };
   });
   // 게임 시간으로 SIM 초 (느린 기계 — 그림 그리기가 느려 벽시계로는 못 잼)
-  await page.waitForFunction((s) => window.game.stats.simTime - window.dupLog.t0 >= s || window.dupLog.iai > 30, +(process.env.SIM || 2.5), { timeout: 900000, polling: 250 });
+  const waited = await page.waitForFunction((s) => window.game.stats.simTime - window.dupLog.t0 >= s || window.game.state !== 'fight', +(process.env.SIM || 2.5), { timeout: +(process.env.WAIT || 600000), polling: 250 }).then(() => 'ok', (e) => `timeout ${String(e).slice(0, 60)}`);
   const got = await page.evaluate(() => {
     const g = window.game, u = g.player.skill.uniq, L = window.dupLog;
-    return { simT: +(g.stats.simTime - L.t0).toFixed(2), stMax: Math.max(0, ...L.st), cueSteps: L.cue.length, guardTexts: [...L.guard].slice(0, 8), iaiSteps: L.iai, fired: u.stats.fired?.duplieren ?? 0, autoFired: u.stats.autoFired ?? 0, dist: +g.player.foeDistance().toFixed(3) };
+    return { state: g.state, simT: +(g.stats.simTime - L.t0).toFixed(2), stMax: Math.max(0, ...L.st), cueSteps: L.cue.length, guardTexts: [...L.guard].slice(0, 8), iaiSteps: L.iai, fired: u.stats.fired?.duplieren ?? 0, autoFired: u.stats.autoFired ?? 0, dist: +g.player.foeDistance().toFixed(3) };
   });
   await page.screenshot({ path: `${out}/${tag}.png` });
-  res[tag] = { kit, got, errors: errors.slice(0, 5) };
+  res[tag] = { kit, got, waited, errors: errors.slice(0, 5) };
   console.log(tag, JSON.stringify(res[tag]));
   await ctx.close();
 }
