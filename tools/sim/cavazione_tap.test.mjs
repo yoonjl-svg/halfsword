@@ -3,7 +3,7 @@
 //   ② 칼끝 돌려 빼기(I2 — 기본 고유 공격 · 특수 공격 아님): 칼끼리 실제로 닿은 한 닿음의 처음부터 실제 0.2 s · 마지막 닿음에서 1.2 s 안의 탭 — 이른 탭은 그 닿음의 기회를 없앰 ·
 //      내 긋기 동안의 닿음은 셈 밖 · 낸 칼 = 돌려 빼기 운동학 길 · 보통 찌르기 빠르기 · 잔상 · 식힘 없음
 //   ③ 헛누름(I8 — 칼끝 돌려 빼기 심화): 돌려 빼는 순간 상대 두 팔 실제 1.2 s 늦춤(흘림 장치) · 익힌 사람만
-//   ④ 비껴서며 찌르기(I9 — 특수 공격): 상대 칼이 들어오는 동안 스틱 옆 탭 → 몸 빼기 + 넷째 자세 운동학 찌름(고노센 × 0.5 · 잔상) · 한 공격에 한 번 · 닿음 조건과 겹치면 먼저
+//   ④ 비껴서며 찌르기(I9 — 특수 공격): 상대 칼이 들어오는 동안 스틱 옆 탭 → 몸 빼기 + 넷째 자세 운동학 찌름(고노센 × 0.3 · 잔상) · 한 공격에 한 번 · 닿음 조건과 겹치면 먼저
 //  작게 · 빠르게(사장님): 손으로 기록을 놓는 시험 + 씨앗 하나 판 셋.  node --test tools/sim/cavazione_tap.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,7 +18,7 @@ const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, THRUST } = CONFIG;
 const it = Object.fromEntries(PLAYER_UNIQUE.italian.map((e) => [e.name, e]));
 
-test('기본값 (10/31): 칼끝 돌려 빼기 = 기본 기술(특수 공격 아님 · 보통 찌르기 빠르기 · 잔상 없음) · 비껴서며 찌르기 = 특수 공격(고노센 × 0.5) · 헛누름 1.2 s · 내려 긋기 67.5°', () => {
+test('기본값 (10/31): 칼끝 돌려 빼기 = 기본 기술(특수 공격 아님 · 보통 찌르기 빠르기 · 잔상 없음) · 비껴서며 찌르기 = 특수 공격(고노센 × 0.3) · 헛누름 1.2 s · 내려 긋기 67.5°', () => {
   assert.equal(UA.cavTap, 1);
   assert.equal(UA.cavSnap, 1);
   assert.ok(Math.abs(UA.cavFrom - realS(0.2)) < 1e-12 && Math.abs(UA.cavTo - realS(1.2)) < 1e-12, '창 그대로 (사장님 값)');
@@ -194,7 +194,7 @@ test('③ 헛누름 (I8 · 사장님 1.2 s): 칼끝 돌려 빼기가 나가는 �
   }
 });
 
-test('④ 비껴서며 찌르기: 상대 칼이 들어오는 동안(위협) 스틱 옆 탭 = 특수 공격(고노센 × 0.5 · 잔상 · 몸 빼기 · 몸 꼴은 스틱 쪽) · 스틱 앞 · 위협 없음 = 보통 탭 · 한 공격에 한 번 · 닿음 조건과 함께면 이것이 먼저', () => {
+test('④ 비껴서며 찌르기: 상대 칼이 들어오는 동안(위협) 스틱 옆 탭 = 특수 공격(고노센 × 0.3 · 잔상 · 몸 빼기 · 몸 꼴은 스틱 쪽) · 스틱 앞 · 위협 없음 = 보통 탭 · 한 공격에 한 번 · 닿음 조건과 함께면 이것이 먼저', () => {
   const B = body(['cavazione', 'inquartata']);
   const cd = UA.specialCooldown;
   UA.specialCooldown = 0;
@@ -213,7 +213,7 @@ test('④ 비껴서며 찌르기: 상대 칼이 들어오는 동안(위협) 스�
     assert.equal(B.tap('inquartata'), true, '스틱 옆 + 위협');
     assert.equal(B.uq.stats.fired.cavazione ?? 0, 0, '비껴서며 찌르기가 먼저');
     const R = B.P.iaiReq;
-    assert.ok(R.share === 0.5 && !R.noArc && !(R.speed > 0), '고노센 × 0.5 · 잔상');
+    assert.ok(R.share === 0.3 && !R.noArc && !(R.speed > 0), '고노센 × 0.3 · 잔상');
     assert.deepEqual(R.moves[0].dyn.void, { lat: -0.3, fwd: 0.15 }, '스틱 쪽(왼) 옆 0.3 · 앞 0.15 (schools.js inquartata step)');
     assert.deepEqual(R.moves[0].bodyPose, [-18, -10, 5, 0.025], '몸 꼴은 디딘 쪽');
     assert.equal(R.maxT, UA.inqSnapTime);
