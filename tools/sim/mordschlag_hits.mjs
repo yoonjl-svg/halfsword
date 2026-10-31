@@ -2,6 +2,7 @@
 //  node tools/sim/mordschlag_hits.mjs [foes isolde,…,roland] [seeds 6] [dur 40]
 //  BOT=player(걸어 붙어 스틱 앞 ±25° 흔들림 · 붙은 동안 0.8 ~ 1.6 s 마다 긋기) | hold(스틱 앞 쥠만) · STICK=keep(일격 동안 스틱 앞 그대로 — 기본) | release(놓음) · 판당 쓸 수 끔 · 창이 열리면 0.12 ~ 0.30 s 뒤 냄
 //  TRACK=0 옛 겨눔(SECRET.mord.track — 10/30 08:2x 부터 기본 1) · COMMIT=실제 초(trackCommit) · UNTIL=cut · JSON=1 일격마다 한 줄
+//  NOCLIP=1 내 머리 뚫음 막기(SECRET.mord.noSelfClip — 10/31 시제품 · 기본 끔) · CLIPX= · CLIPSTEP= · AT=(SECRET.mord.at) · 일격마다 내 머리 ↔ 두 손 · 팔 · 칼자루 쪽 틈도 잰다(10/31)
 //  까닭: head 머리 · otherPart 칼자루가 머리 대신 가슴 · 팔 등에 · blocked 상대 칼(막힘 거리) · headMoved 머리가 길에서 빠져 헛침 · pathOff 길이 겨눈 자리를 안 지남 · outOfReach 안 닿음 ·
 //   foeDown 상대가 넘어짐 · notStarted 시작 못 함(기력이 비기 값보다 적어 낸 스텝에 탈진 — lost) · 겨눈 자리 = 길을 짠 때 머리(내 가슴 틀) · 가장 가까운 때 머리 옮김(rel) · 상대 머리 · 내 가슴(땅) 옮김
 import { newRound, DT, CONFIG, THREE } from './harness_m.mjs';
@@ -16,6 +17,40 @@ if (process.env.UNTIL) SECRET.mord.trackUntil = process.env.UNTIL;
 const STICK = process.env.STICK || 'keep'; // 일격 동안 스틱: keep = 앞으로 쥔 채(붙어 밀던 그대로) · release = 놓음
 if (process.env.MORD_N) SECRET.mordCloseN = +process.env.MORD_N;
 if (process.env.MORD_JSON) Object.assign(SECRET.mord, JSON.parse(process.env.MORD_JSON));
+if (process.env.NOCLIP) SECRET.mord.noSelfClip = +process.env.NOCLIP;
+if (process.env.CLIPX) SECRET.mord.clipX = +process.env.CLIPX;
+if (process.env.CLIPSTEP) SECRET.mord.clipStep = +process.env.CLIPSTEP;
+if (process.env.AT) SECRET.mord.at = +process.env.AT;
+// 10/31 08:xx 시제품: REGRIP=0.4(실제 초 — 자연스러운 쥠 바꿈) · BURST=1(강제 뒤 박차기) · BURSTFREE=1(그 걸음 기력 안 냄) · POMMEL=1(쥠 그대로 폼멜 찍기)
+if (process.env.REGRIP) SECRET.mord.regrip = TIME.k * +process.env.REGRIP;
+if (process.env.BURST) SECRET.mord.burstBack = +process.env.BURST;
+if (process.env.BURSTFREE) SECRET.mord.burstFree = +process.env.BURSTFREE;
+if (process.env.POMMEL) SECRET.mord.pommel = +process.env.POMMEL;
+// 내 머리 ↔ 팔 캡슐 (10/31 — tools/sim/mordschlag_selfclip.mjs 와 같은 셈): 칼 팔 x 축 · 빈팔 y 축 [반 길이, 반지름]
+const CAPS = { uarmS: [0.105, 0.045, 'x'], farmS: [0.095, 0.04, 'x'], uarmO: [0.105, 0.045, 'y'], farmO: [0.095, 0.04, 'y'] };
+const qOf = (r) => new THREE.Quaternion(r.x, r.y, r.z, r.w);
+function selfClip(P, I, rec) {
+  const hd = new THREE.Vector3().copy(P.bodies.head.translation()), hr = P.headR ?? 0.1, yi = I.yaw.clone().invert();
+  const wS = new THREE.Vector3(0.13, 0, 0).applyQuaternion(qOf(P.bodies.farmS.rotation())).add(P.bodies.farmS.translation());
+  const wO = new THREE.Vector3(0, -0.13, 0).applyQuaternion(qOf(P.bodies.farmO.rotation())).add(P.bodies.farmO.translation());
+  let arm = Infinity;
+  for (const [k, [h, rad, ax]] of Object.entries(CAPS)) {
+    const b = P.bodies[k], a = new THREE.Vector3(ax === 'x' ? h : 0, ax === 'y' ? h : 0, 0).applyQuaternion(qOf(b.rotation())), c = new THREE.Vector3().copy(b.translation());
+    arm = Math.min(arm, segToPoint(c.clone().sub(a), c.clone().add(a), hd) - hr - rad);
+  }
+  const sq = qOf(P.sword.rotation()), sp = new THREE.Vector3().copy(P.sword.translation());
+  const gp = new THREE.Vector3(0, P.mordGrip ? P.mordGrip.g : 0, 0).applyQuaternion(sq).add(sp), pom = new THREE.Vector3(0, -0.15, 0).applyQuaternion(sq).add(sp);
+  const hilt = segToPoint(gp, pom, hd) - hr - 0.02;
+  if (Math.max(wS.distanceTo(hd), wO.distanceTo(hd)) > 1.0) { rec.scCut = (rec.scCut ?? 0) + 1; return; } // 팔이 잘려 날아감 (붙은 팔은 머리에서 0.85 m 밖으로 못 감) — 재지 않음
+  const hand = Math.min(wS.distanceTo(hd), wO.distanceTo(hd));
+  const back = Math.min(wS.clone().sub(hd).applyQuaternion(yi).x, wO.clone().sub(hd).applyQuaternion(yi).x); // 두 손이 내 머리 가운데보다 몸 앞(+) · 뒤(−)
+  rec.sc ??= { arm: Infinity, hilt: Infinity, hand: Infinity, back: Infinity };
+  const rg = I.segs[I.si]?.rg;
+  const ph = rg ? (rg.in ? 'grip' : 'gripOut') : I.segs[I.si]?.B?.back || I.mordBacked ? 'back' : I.segs[I.si]?.cut ? 'cut' : 'wind'; // 쥠 바꿈 · 준비 · 내리침 · 다시 세우기(막혀 되돌아감 포함)
+  if (arm < rec.sc.arm) rec.sc.armPh = ph;
+  if (back < rec.sc.back) rec.sc.backPh = ph;
+  rec.sc.arm = Math.min(rec.sc.arm, arm); rec.sc.hilt = Math.min(rec.sc.hilt, hilt); rec.sc.hand = Math.min(rec.sc.hand, hand); rec.sc.back = Math.min(rec.sc.back, back);
+}
 const [foesArg = 'isolde,tome,omari,minami,liao,margarethe,artoria,eira,roland', seedArg = '6', durArg = '40'] = process.argv.slice(2);
 const BOT = process.env.BOT || 'player';
 const DUR = +durArg;
@@ -43,9 +78,10 @@ for (const id of foesArg.split(',')) {
       if (W.open && fireAt == null) { fireAt = t + realS(0.12 + 0.18 * rnd()); winAt = t; }
       if (!W.open) fireAt = null;
       if (fireAt != null && t >= fireAt && W.open && !P.skill.sec && P.alive) {
+        const st0 = P.stamina.value, push0 = P.stamina.counts?.push ?? 0, ch0 = { x: P.bodies.chest.translation().x, z: P.bodies.chest.translation().z };
         const o = W.fire(); fireAt = null;
         const d = P.foeDistance();
-        const r = { foe: id, seed, t: t / K, wait: (t - winAt) / K, d, reach: mordHeadReach(P), foeState: E.state, mode: G.ai.mode, phase: G.ai.phase, foeAtk: !!E.stamina?.attacking, started: false };
+        const r = { foe: id, seed, t: t / K, wait: (t - winAt) / K, d, reach: mordHeadReach(P), foeState: E.state, mode: G.ai.mode, phase: G.ai.phase, foeAtk: !!E.stamina?.attacking, started: false, st0, push0, ch0, tFire: t };
         const sk = P.skill;
         r.why = !o ? 'noWindow' : P.stamina.exhausted ? 'exhausted' : sk.sec ? 'sec' : sk.tap ? 'tap' : sk.pom ? 'pom' : P.state !== 'stand' ? `state:${P.state}` : null;
         const ok = !!(o && P.skill.secret(o));
@@ -73,7 +109,10 @@ for (const id of foesArg.split(',')) {
         P.handOffset.y += (-1.2) * DT;
       } else if (!P.skill.sec) { P.handOffset.x += (SKILL.homeGuard[0] - P.handOffset.x) * 0.1; P.handOffset.y += (SKILL.homeGuard[1] - P.handOffset.y) * 0.1; }
     };
+    let watch = null;
     const after = () => {
+      if (watch) { if (P.state !== 'stand' && P.alive) watch.rec.fell = P.state; if (G.t >= watch.until) watch = null; }
+      if (rec?.started && P.state !== 'stand' && P.alive) rec.fell = P.state;
       if (!rec) return;
       if (!rec.started && !P.iai && !P.iaiReq && !rec.lost) {
         // 운동학 길이 시작하지 못함 (secret_instant.js startIai 거절 — 다음 스텝 몸 상태)
@@ -97,6 +136,8 @@ for (const id of foesArg.split(',')) {
         rec.live = { hit: I.hits > 0, part: I.part, blocked: I.blocked > 0, E: I.E };
         if (!I.hitM && !I.blockM) { rec.modes.add(`${G.ai.mode}/${G.ai.phase}`); if (E.state !== 'stand') rec.foeDown = true; }
         if (I.blockM && rec.blockT == null) { rec.blockT = (G.t - rec.t0) / K; rec.blockMode = `${G.ai.mode}/${G.ai.phase}`; rec.foeGuard = !!E.skill?.guarding || !!E.guard?.held; }
+        selfClip(P, I, rec); // 내 머리 ↔ 손 · 팔 · 칼자루 쪽 (10/31)
+        { const cc = P.bodies.chest.translation(), fw = new THREE.Vector3(1, 0, 0).applyQuaternion(I.yaw); rec.backD = Math.max(rec.backD ?? 0, -((cc.x - rec.ch0.x) * fw.x + (cc.z - rec.ch0.z) * fw.z)); } // 내 가슴이 뒤로 간 거리 (낸 때부터 · 땅)
         const cur = I.prev; // 이 스텝 놓인 치는 막대 (손목 → 칼자루 끝)
         if (cur?.B && I.cutting && !I.hitM && !I.blockM) {
           if (rec.cutT0 == null) { rec.cutT0 = G.t; rec.hCut = h.clone(); rec.cCut = c.clone(); rec.dCut = P.foeDistance(); rec.cutState = E.state; rec.cutMode = `${G.ai.mode}/${G.ai.phase}`; }
@@ -121,7 +162,7 @@ for (const id of foesArg.split(',')) {
       }
       if (rec.started && !I) {
         const R = P.instantResult ?? {};
-        rec.hit = !!R.hit; rec.part = R.part; rec.zone = R.zone; rec.blocked = !!R.blocked; rec.E = R.energy ?? 0; rec.T = R.T; rec.trackN = R.trackN; rec.trackMoved = R.trackMoved;
+        rec.hit = !!R.hit; rec.part = R.part; rec.zone = R.zone; rec.blocked = !!R.blocked; rec.E = R.energy ?? 0; rec.T = R.T; rec.trackN = R.trackN; rec.trackMoved = R.trackMoved; rec.wPart = R.wPart ?? null; rec.clip = R.clip ?? null;
         rec.helm = !!E.hasHelmet;
         const relMove = rec.minAt?.rel ?? 0;
         if (rec.blocked && !rec.hit) rec.cls = 'blocked';
@@ -132,8 +173,10 @@ for (const id of foesArg.split(',')) {
         else if (rec.dPlanMin > 0.05) rec.cls = 'pathOff';
         else rec.cls = 'headMoved';
         rec.relMove = relMove;
+        rec.stEnd = P.stamina.value; rec.pushN = (P.stamina.counts?.push ?? 0) - rec.push0; rec.Ttot = (G.t - rec.tFire) / K;
         delete rec.prev; rec.modes = [...rec.modes].join(' ');
         recs.push(rec);
+        watch = { rec, until: G.t + realS(1.0) }; // 끝난 뒤 1 s — 넘어짐
         rec = null;
       }
     };
@@ -142,7 +185,7 @@ for (const id of foesArg.split(',')) {
     if (rec) {
       // 판이 일격 도중 끝남 (대개 머리를 맞아 상대가 죽음 — 루프가 곧장 멈춤): 그때까지의 결과로
       const L = rec.live ?? {};
-      rec.hit = !!L.hit; rec.part = L.part; rec.blocked = !!L.blocked; rec.E = L.E ?? 0; rec.endedFight = true; rec.foeDead = !E.alive; rec.meDead = !P.alive;
+      rec.hit = !!L.hit; rec.part = L.part; rec.blocked = !!L.blocked; rec.wPart = P.iai?.wPart ?? null; rec.E = L.E ?? 0; rec.endedFight = true; rec.foeDead = !E.alive; rec.meDead = !P.alive;
       rec.cls = !rec.started ? 'notStarted' : rec.hit && rec.part === 'head' ? 'head' : rec.hit ? 'otherPart' : rec.blocked ? 'blocked' : 'unfinished';
       delete rec.prev; rec.modes = [...(rec.modes ?? [])].join(' ');
       recs.push(rec);
@@ -181,4 +224,21 @@ for (const r of recs) { (fo[r.foe] ??= { n: 0, head: 0 }).n++; if (r.cls === 'he
 console.log(`상대별 일격 · 머리: ${Object.entries(fo).map(([k, v]) => `${k} ${v.n}·${v.head}`).join(' | ')}`);
 const wt = (sel) => st(sel, (r) => r.wait);
 console.log(`창 → 냄 (실제 s): 머리 ${wt((r) => r.cls === 'head')} · 빗나감 ${wt((r) => r.cls !== 'head')}`);
+// 내 머리 뚫음 (10/31): 일격마다 가장 작은 틈 — 팔 캡슐 ↔ 머리 공 · 칼자루 쪽(손 → 폼멜 끝) ↔ 머리 · 두 손 ↔ 머리 가운데 · 두 손이 머리 가운데보다 몸 앞(+)/뒤(−)
+{
+  const S = recs.filter((r) => r.sc);
+  const pct = (k) => `${S.filter(k).length} (${f2((S.filter(k).length / Math.max(1, S.length)) * 100)} %)`;
+  console.log(`내 머리 (시작한 일격 ${S.length} · 팔이 잘려 뺀 스텝이 있는 일격 ${recs.filter((r) => r.scCut).length}): 팔이 머리 공을 뚫음 ${pct((r) => r.sc.arm < 0)} · 칼자루 쪽이 머리를 지남 ${pct((r) => r.sc.hilt < 0)} · 손이 머리 가운데 뒤 ${pct((r) => r.sc.back < 0)} · 팔 틈 ${st((r) => r.sc, (r) => r.sc.arm)} · 가장 작음 ${f2(Math.min(...S.map((r) => r.sc.arm)))}`);
+  console.log(`  손 ↔ 머리 가운데 (m) ${st((r) => r.sc, (r) => r.sc.hand)} · 가장 작음 ${f2(Math.min(...S.map((r) => r.sc.hand)))} · 손 앞(+)/뒤(−) ${st((r) => r.sc, (r) => r.sc.back)} · 가장 깊이 ${f2(Math.min(...S.map((r) => r.sc.back)))} · 칼자루 쪽 틈 ${st((r) => r.sc, (r) => r.sc.hilt)}`);
+  const Sg = recs.filter((r) => r.started);
+  console.log(`  넘어짐(낸 때 ~ 끝 + 1 s) ${Sg.filter((r) => r.fell).length} / ${Sg.length} · 박찬 걸음 기력 청구 ${Sg.filter((r) => r.pushN > 0).length} 번 · 가슴 사이 낼 때 ${st((r) => r.started, (r) => r.d)} → 내리침 시작 ${st((r) => Number.isFinite(r.dCut), (r) => r.dCut)} (늘어난 몫 ${st((r) => Number.isFinite(r.dCut), (r) => r.dCut - r.d)}) · 내 가슴이 낸 자리보다 뒤로 간 가장 큰 거리 ${st((r) => r.started, (r) => r.backD)} · 기력 낼 때 ${st((r) => r.started, (r) => r.st0)} → 끝 ${st((r) => Number.isFinite(r.stEnd), (r) => r.stEnd)} · 낸 때 → 비기 끝(굳음 앞) 실제 s ${st((r) => Number.isFinite(r.Ttot), (r) => r.Ttot)}`);
+  const wp = {}; for (const r of recs) if (r.cls === 'head') wp[r.wPart ?? '?'] = (wp[r.wPart ?? '?'] ?? 0) + 1;
+  const phs = (k, f) => { const o = {}; for (const r of S.filter(f)) o[r.sc[k] ?? '?'] = (o[r.sc[k] ?? '?'] ?? 0) + 1; return JSON.stringify(o); };
+  console.log(`  팔이 머리 공을 뚫은 토막 ${phs('armPh', (r) => r.sc.arm < 0)} · 손이 머리 뒤인 토막 ${phs('backPh', (r) => r.sc.back < 0)}`);
+  console.log(`  머리를 친 칼 부품: ${JSON.stringify(wp)} · 머리 맞힘 에너지 (J) ${st((r) => r.cls === 'head', (r) => r.E)}${S.some((r) => r.clip) ? ` · 반걸음 (m) ${st((r) => r.clip, (r) => r.clip.step)} · 기울임 (°) ${st((r) => r.clip, (r) => r.clip.tilt)} · 못 옮긴 몫 (m) ${st((r) => r.clip, (r) => r.clip.short)}` : ''}`);
+  for (const [a, b] of [[0, 0.5], [0.5, 0.6], [0.6, 0.7], [0.7, 0.8], [0.8, 9]]) {
+    const T = S.filter((r) => r.d >= a && r.d < b);
+    if (T.length) console.log(`    가슴 사이 ${a} ~ ${b}: ${T.length} · 팔 뚫음 ${T.filter((r) => r.sc.arm < 0).length} · 칼자루 쪽 ${T.filter((r) => r.sc.hilt < 0).length} · 손 뒤 ${T.filter((r) => r.sc.back < 0).length} · 손 앞뒤 p50 ${f2(q(T.map((r) => r.sc.back), 0.5))}`);
+  }
+}
 if (process.env.JSON) for (const r of recs) console.log(JSON.stringify({ ...r, Prel: undefined, h0: undefined, c0: undefined, hCut: undefined, cCut: undefined }));

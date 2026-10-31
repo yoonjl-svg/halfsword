@@ -1,0 +1,1774 @@
+{
+ "summary": {
+  "info": {
+   "gap": 0.6,
+   "d": 0.6000000650864737,
+   "S": "mordschlag",
+   "noClip": 1,
+   "at": 0.6,
+   "track": 1
+  },
+  "tag": "clip_0.6",
+  "fired": true,
+  "minArm": 0.091,
+  "minHilt": 0.152,
+  "minHandHead": 0.267,
+  "deepestBehind": 0.125,
+  "result": {
+   "hit": true,
+   "part": "head",
+   "wPart": "blade",
+   "E": 94.085,
+   "clip": {
+    "step": 0.3,
+    "short0": 0.271,
+    "short": 0.3,
+    "tilt": 10.4
+   }
+  },
+  "errors": []
+ },
+ "shots": [
+  {
+   "k": "000",
+   "t": 6.758,
+   "sec": "instant",
+   "open": false,
+   "d": 0.657,
+   "ph": "wind",
+   "wristS": [
+    0.293,
+    -0.113,
+    0.109
+   ],
+   "wristO": [
+    0.288,
+    -0.256,
+    0.107
+   ],
+   "arm": 0.106,
+   "armPart": "uarmS",
+   "hilt": 0.194,
+   "handHead": 0.333,
+   "delta": [
+    -0.07,
+    -0.211,
+    -0.057
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.547,
+   "hits": 0,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "001",
+   "t": 6.775,
+   "sec": "instant",
+   "open": false,
+   "d": 0.687,
+   "ph": "cut",
+   "wristS": [
+    0.257,
+    0.042,
+    0.079
+   ],
+   "wristO": [
+    0.248,
+    -0.102,
+    0.08
+   ],
+   "arm": 0.091,
+   "armPart": "uarmS",
+   "hilt": 0.152,
+   "handHead": 0.272,
+   "delta": [
+    -0.07,
+    -0.208,
+    -0.05
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.584,
+   "hits": 0,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "002",
+   "t": 6.792,
+   "sec": "instant",
+   "open": false,
+   "d": 0.716,
+   "ph": "cut",
+   "wristS": [
+    0.281,
+    0.001,
+    0.083
+   ],
+   "wristO": [
+    0.25,
+    -0.14,
+    0.086
+   ],
+   "arm": 0.114,
+   "armPart": "uarmS",
+   "hilt": 0.173,
+   "handHead": 0.293,
+   "delta": [
+    -0.067,
+    -0.206,
+    -0.044
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.621,
+   "hits": 0,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "003",
+   "t": 6.808,
+   "sec": "instant",
+   "open": false,
+   "d": 0.744,
+   "ph": "cut",
+   "wristS": [
+    0.306,
+    -0.042,
+    0.088
+   ],
+   "wristO": [
+    0.253,
+    -0.177,
+    0.093
+   ],
+   "arm": 0.126,
+   "armPart": "uarmS",
+   "hilt": 0.201,
+   "handHead": 0.321,
+   "delta": [
+    -0.067,
+    -0.206,
+    -0.038
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.655,
+   "hits": 0,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "004",
+   "t": 6.825,
+   "sec": "instant",
+   "open": false,
+   "d": 0.768,
+   "ph": "cut",
+   "wristS": [
+    0.33,
+    -0.089,
+    0.093
+   ],
+   "wristO": [
+    0.257,
+    -0.213,
+    0.102
+   ],
+   "arm": 0.134,
+   "armPart": "uarmS",
+   "hilt": 0.234,
+   "handHead": 0.349,
+   "delta": [
+    -0.069,
+    -0.209,
+    -0.03
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.686,
+   "hits": 0,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "005",
+   "t": 6.85,
+   "sec": "instant",
+   "open": false,
+   "d": 0.799,
+   "ph": "cut",
+   "wristS": [
+    0.366,
+    -0.159,
+    0.104
+   ],
+   "wristO": [
+    0.266,
+    -0.262,
+    0.115
+   ],
+   "arm": 0.141,
+   "armPart": "uarmO",
+   "hilt": 0.292,
+   "handHead": 0.39,
+   "delta": [
+    -0.075,
+    -0.215,
+    -0.019
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.727,
+   "hits": 0,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "006",
+   "t": 6.867,
+   "sec": "instant",
+   "open": false,
+   "d": 0.816,
+   "ph": "cut",
+   "wristS": [
+    0.389,
+    -0.207,
+    0.11
+   ],
+   "wristO": [
+    0.275,
+    -0.292,
+    0.123
+   ],
+   "arm": 0.143,
+   "armPart": "uarmO",
+   "hilt": 0.335,
+   "handHead": 0.419,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.751,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "007",
+   "t": 6.883,
+   "sec": "instant",
+   "open": false,
+   "d": 0.83,
+   "ph": "cut",
+   "wristS": [
+    0.419,
+    -0.25,
+    0.109
+   ],
+   "wristO": [
+    0.292,
+    -0.314,
+    0.123
+   ],
+   "arm": 0.144,
+   "armPart": "uarmO",
+   "hilt": 0.38,
+   "handHead": 0.447,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.773,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "008",
+   "t": 6.9,
+   "sec": "instant",
+   "open": false,
+   "d": 0.844,
+   "ph": "cut",
+   "wristS": [
+    0.447,
+    -0.294,
+    0.107
+   ],
+   "wristO": [
+    0.311,
+    -0.337,
+    0.122
+   ],
+   "arm": 0.145,
+   "armPart": "uarmO",
+   "hilt": 0.425,
+   "handHead": 0.475,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.793,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "009",
+   "t": 6.917,
+   "sec": "instant",
+   "open": false,
+   "d": 0.856,
+   "ph": "cut",
+   "wristS": [
+    0.426,
+    -0.38,
+    0.108
+   ],
+   "wristO": [
+    0.287,
+    -0.406,
+    0.123
+   ],
+   "arm": 0.149,
+   "armPart": "uarmO",
+   "hilt": 0.461,
+   "handHead": 0.513,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.813,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "010",
+   "t": 6.933,
+   "sec": "instant",
+   "open": false,
+   "d": 0.864,
+   "ph": "cut",
+   "wristS": [
+    0.406,
+    -0.466,
+    0.11
+   ],
+   "wristO": [
+    0.265,
+    -0.475,
+    0.125
+   ],
+   "arm": 0.152,
+   "armPart": "uarmO",
+   "hilt": 0.507,
+   "handHead": 0.558,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.829,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "011",
+   "t": 6.958,
+   "sec": "instant",
+   "open": false,
+   "d": 0.873,
+   "ph": "cut",
+   "wristS": [
+    0.375,
+    -0.594,
+    0.112
+   ],
+   "wristO": [
+    0.235,
+    -0.577,
+    0.126
+   ],
+   "arm": 0.15,
+   "armPart": "uarmO",
+   "hilt": 0.591,
+   "handHead": 0.636,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.848,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "012",
+   "t": 6.975,
+   "sec": "instant",
+   "open": false,
+   "d": 0.876,
+   "ph": "cut",
+   "wristS": [
+    0.333,
+    -0.647,
+    0.117
+   ],
+   "wristO": [
+    0.195,
+    -0.614,
+    0.131
+   ],
+   "arm": 0.147,
+   "armPart": "uarmO",
+   "hilt": 0.617,
+   "handHead": 0.657,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.859,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "013",
+   "t": 6.992,
+   "sec": "instant",
+   "open": false,
+   "d": 0.876,
+   "ph": "cut",
+   "wristS": [
+    0.284,
+    -0.677,
+    0.125
+   ],
+   "wristO": [
+    0.151,
+    -0.628,
+    0.138
+   ],
+   "arm": 0.147,
+   "armPart": "uarmO",
+   "hilt": 0.625,
+   "handHead": 0.661,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.867,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "014",
+   "t": 7.008,
+   "sec": "instant",
+   "open": false,
+   "d": 0.875,
+   "ph": "back",
+   "wristS": [
+    0.254,
+    -0.692,
+    0.13
+   ],
+   "wristO": [
+    0.125,
+    -0.635,
+    0.142
+   ],
+   "arm": 0.147,
+   "armPart": "uarmO",
+   "hilt": 0.629,
+   "handHead": 0.662,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.874,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "015",
+   "t": 7.05,
+   "sec": "instant",
+   "open": false,
+   "d": 0.868,
+   "ph": "back",
+   "wristS": [
+    0.32,
+    -0.614,
+    0.118
+   ],
+   "wristO": [
+    0.179,
+    -0.604,
+    0.13
+   ],
+   "arm": 0.152,
+   "armPart": "uarmO",
+   "hilt": 0.583,
+   "handHead": 0.643,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.885,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "016",
+   "t": 7.083,
+   "sec": "instant",
+   "open": false,
+   "d": 0.846,
+   "ph": "back",
+   "wristS": [
+    0.321,
+    -0.453,
+    0.122
+   ],
+   "wristO": [
+    0.183,
+    -0.482,
+    0.133
+   ],
+   "arm": 0.155,
+   "armPart": "uarmO",
+   "hilt": 0.449,
+   "handHead": 0.533,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.88,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "017",
+   "t": 7.117,
+   "sec": "instant",
+   "open": false,
+   "d": 0.813,
+   "ph": "back",
+   "wristS": [
+    0.314,
+    -0.291,
+    0.123
+   ],
+   "wristO": [
+    0.189,
+    -0.359,
+    0.133
+   ],
+   "arm": 0.151,
+   "armPart": "uarmO",
+   "hilt": 0.326,
+   "handHead": 0.427,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.865,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "018",
+   "t": 7.158,
+   "sec": "instant",
+   "open": false,
+   "d": 0.772,
+   "ph": "back",
+   "wristS": [
+    0.301,
+    -0.086,
+    0.123
+   ],
+   "wristO": [
+    0.205,
+    -0.193,
+    0.13
+   ],
+   "arm": 0.137,
+   "armPart": "uarmO",
+   "hilt": 0.217,
+   "handHead": 0.31,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.847,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "019",
+   "t": 7.192,
+   "sec": "instant",
+   "open": false,
+   "d": 0.748,
+   "ph": "back",
+   "wristS": [
+    0.295,
+    0.081,
+    0.123
+   ],
+   "wristO": [
+    0.231,
+    -0.048,
+    0.127
+   ],
+   "arm": 0.118,
+   "armPart": "uarmO",
+   "hilt": 0.21,
+   "handHead": 0.267,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.841,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "k": "020",
+   "t": 7.233,
+   "sec": "instant",
+   "open": false,
+   "d": 0.728,
+   "ph": null,
+   "wristS": [
+    0.309,
+    0.248,
+    0.046
+   ],
+   "wristO": [
+    0.284,
+    0.106,
+    0.052
+   ],
+   "arm": 0.035,
+   "armPart": "uarmS",
+   "hilt": 0.208,
+   "handHead": 0.307,
+   "delta": null,
+   "pullD": null,
+   "myChestMoved": 0.842,
+   "hits": 1,
+   "foe": "stand",
+   "result": {
+    "hit": true,
+    "part": "head",
+    "wPart": "blade",
+    "E": 94.085,
+    "clip": {
+     "step": 0.3,
+     "short0": 0.271,
+     "short": 0.3,
+     "tilt": 10.4
+    }
+   }
+  },
+  {
+   "k": "021",
+   "t": 7.25,
+   "sec": "stiff",
+   "open": false,
+   "d": 0.719,
+   "ph": null,
+   "wristS": [
+    0.308,
+    0.25,
+    0.048
+   ],
+   "wristO": [
+    0.283,
+    0.105,
+    0.05
+   ],
+   "arm": 0.045,
+   "armPart": "uarmS",
+   "hilt": 0.206,
+   "handHead": 0.306,
+   "delta": null,
+   "pullD": null,
+   "myChestMoved": 0.842,
+   "hits": 1,
+   "foe": "stand",
+   "result": {
+    "hit": true,
+    "part": "head",
+    "wPart": "blade",
+    "E": 94.085,
+    "clip": {
+     "step": 0.3,
+     "short0": 0.271,
+     "short": 0.3,
+     "tilt": 10.4
+    }
+   }
+  },
+  {
+   "k": "022",
+   "t": 7.267,
+   "sec": "stiff",
+   "open": false,
+   "d": 0.712,
+   "ph": null,
+   "wristS": [
+    0.31,
+    0.25,
+    0.054
+   ],
+   "wristO": [
+    0.288,
+    0.106,
+    0.05
+   ],
+   "arm": 0.057,
+   "armPart": "uarmS",
+   "hilt": 0.207,
+   "handHead": 0.311,
+   "delta": null,
+   "pullD": null,
+   "myChestMoved": 0.843,
+   "hits": 1,
+   "foe": "stand",
+   "result": {
+    "hit": true,
+    "part": "head",
+    "wPart": "blade",
+    "E": 94.085,
+    "clip": {
+     "step": 0.3,
+     "short0": 0.271,
+     "short": 0.3,
+     "tilt": 10.4
+    }
+   }
+  }
+ ],
+ "frames": [
+  {
+   "t": 6.758,
+   "sec": "instant",
+   "open": false,
+   "d": 0.657,
+   "ph": "wind",
+   "wristS": [
+    0.293,
+    -0.113,
+    0.109
+   ],
+   "wristO": [
+    0.288,
+    -0.256,
+    0.107
+   ],
+   "arm": 0.106,
+   "armPart": "uarmS",
+   "hilt": 0.194,
+   "handHead": 0.333,
+   "delta": [
+    -0.07,
+    -0.211,
+    -0.057
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.547,
+   "hits": 0,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.775,
+   "sec": "instant",
+   "open": false,
+   "d": 0.687,
+   "ph": "cut",
+   "wristS": [
+    0.257,
+    0.042,
+    0.079
+   ],
+   "wristO": [
+    0.248,
+    -0.102,
+    0.08
+   ],
+   "arm": 0.091,
+   "armPart": "uarmS",
+   "hilt": 0.152,
+   "handHead": 0.272,
+   "delta": [
+    -0.07,
+    -0.208,
+    -0.05
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.584,
+   "hits": 0,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.792,
+   "sec": "instant",
+   "open": false,
+   "d": 0.716,
+   "ph": "cut",
+   "wristS": [
+    0.281,
+    0.001,
+    0.083
+   ],
+   "wristO": [
+    0.25,
+    -0.14,
+    0.086
+   ],
+   "arm": 0.114,
+   "armPart": "uarmS",
+   "hilt": 0.173,
+   "handHead": 0.293,
+   "delta": [
+    -0.067,
+    -0.206,
+    -0.044
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.621,
+   "hits": 0,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.808,
+   "sec": "instant",
+   "open": false,
+   "d": 0.744,
+   "ph": "cut",
+   "wristS": [
+    0.306,
+    -0.042,
+    0.088
+   ],
+   "wristO": [
+    0.253,
+    -0.177,
+    0.093
+   ],
+   "arm": 0.126,
+   "armPart": "uarmS",
+   "hilt": 0.201,
+   "handHead": 0.321,
+   "delta": [
+    -0.067,
+    -0.206,
+    -0.038
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.655,
+   "hits": 0,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.825,
+   "sec": "instant",
+   "open": false,
+   "d": 0.768,
+   "ph": "cut",
+   "wristS": [
+    0.33,
+    -0.089,
+    0.093
+   ],
+   "wristO": [
+    0.257,
+    -0.213,
+    0.102
+   ],
+   "arm": 0.134,
+   "armPart": "uarmS",
+   "hilt": 0.234,
+   "handHead": 0.349,
+   "delta": [
+    -0.069,
+    -0.209,
+    -0.03
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.686,
+   "hits": 0,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.85,
+   "sec": "instant",
+   "open": false,
+   "d": 0.799,
+   "ph": "cut",
+   "wristS": [
+    0.366,
+    -0.159,
+    0.104
+   ],
+   "wristO": [
+    0.266,
+    -0.262,
+    0.115
+   ],
+   "arm": 0.141,
+   "armPart": "uarmO",
+   "hilt": 0.292,
+   "handHead": 0.39,
+   "delta": [
+    -0.075,
+    -0.215,
+    -0.019
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.727,
+   "hits": 0,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.867,
+   "sec": "instant",
+   "open": false,
+   "d": 0.816,
+   "ph": "cut",
+   "wristS": [
+    0.389,
+    -0.207,
+    0.11
+   ],
+   "wristO": [
+    0.275,
+    -0.292,
+    0.123
+   ],
+   "arm": 0.143,
+   "armPart": "uarmO",
+   "hilt": 0.335,
+   "handHead": 0.419,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.751,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.867,
+   "sec": "instant",
+   "open": false,
+   "d": 0.816,
+   "ph": "cut",
+   "wristS": [
+    0.389,
+    -0.207,
+    0.11
+   ],
+   "wristO": [
+    0.275,
+    -0.292,
+    0.123
+   ],
+   "arm": 0.143,
+   "armPart": "uarmO",
+   "hilt": 0.335,
+   "handHead": 0.419,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.751,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.867,
+   "sec": "instant",
+   "open": false,
+   "d": 0.816,
+   "ph": "cut",
+   "wristS": [
+    0.389,
+    -0.207,
+    0.11
+   ],
+   "wristO": [
+    0.275,
+    -0.292,
+    0.123
+   ],
+   "arm": 0.143,
+   "armPart": "uarmO",
+   "hilt": 0.335,
+   "handHead": 0.419,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.751,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.883,
+   "sec": "instant",
+   "open": false,
+   "d": 0.83,
+   "ph": "cut",
+   "wristS": [
+    0.419,
+    -0.25,
+    0.109
+   ],
+   "wristO": [
+    0.292,
+    -0.314,
+    0.123
+   ],
+   "arm": 0.144,
+   "armPart": "uarmO",
+   "hilt": 0.38,
+   "handHead": 0.447,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.773,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.9,
+   "sec": "instant",
+   "open": false,
+   "d": 0.844,
+   "ph": "cut",
+   "wristS": [
+    0.447,
+    -0.294,
+    0.107
+   ],
+   "wristO": [
+    0.311,
+    -0.337,
+    0.122
+   ],
+   "arm": 0.145,
+   "armPart": "uarmO",
+   "hilt": 0.425,
+   "handHead": 0.475,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.793,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.917,
+   "sec": "instant",
+   "open": false,
+   "d": 0.856,
+   "ph": "cut",
+   "wristS": [
+    0.426,
+    -0.38,
+    0.108
+   ],
+   "wristO": [
+    0.287,
+    -0.406,
+    0.123
+   ],
+   "arm": 0.149,
+   "armPart": "uarmO",
+   "hilt": 0.461,
+   "handHead": 0.513,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.813,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.933,
+   "sec": "instant",
+   "open": false,
+   "d": 0.864,
+   "ph": "cut",
+   "wristS": [
+    0.406,
+    -0.466,
+    0.11
+   ],
+   "wristO": [
+    0.265,
+    -0.475,
+    0.125
+   ],
+   "arm": 0.152,
+   "armPart": "uarmO",
+   "hilt": 0.507,
+   "handHead": 0.558,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.829,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.958,
+   "sec": "instant",
+   "open": false,
+   "d": 0.873,
+   "ph": "cut",
+   "wristS": [
+    0.375,
+    -0.594,
+    0.112
+   ],
+   "wristO": [
+    0.235,
+    -0.577,
+    0.126
+   ],
+   "arm": 0.15,
+   "armPart": "uarmO",
+   "hilt": 0.591,
+   "handHead": 0.636,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.848,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.975,
+   "sec": "instant",
+   "open": false,
+   "d": 0.876,
+   "ph": "cut",
+   "wristS": [
+    0.333,
+    -0.647,
+    0.117
+   ],
+   "wristO": [
+    0.195,
+    -0.614,
+    0.131
+   ],
+   "arm": 0.147,
+   "armPart": "uarmO",
+   "hilt": 0.617,
+   "handHead": 0.657,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.859,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 6.992,
+   "sec": "instant",
+   "open": false,
+   "d": 0.876,
+   "ph": "cut",
+   "wristS": [
+    0.284,
+    -0.677,
+    0.125
+   ],
+   "wristO": [
+    0.151,
+    -0.628,
+    0.138
+   ],
+   "arm": 0.147,
+   "armPart": "uarmO",
+   "hilt": 0.625,
+   "handHead": 0.661,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.867,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.008,
+   "sec": "instant",
+   "open": false,
+   "d": 0.875,
+   "ph": "back",
+   "wristS": [
+    0.254,
+    -0.692,
+    0.13
+   ],
+   "wristO": [
+    0.125,
+    -0.635,
+    0.142
+   ],
+   "arm": 0.147,
+   "armPart": "uarmO",
+   "hilt": 0.629,
+   "handHead": 0.662,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.874,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.025,
+   "sec": "instant",
+   "open": false,
+   "d": 0.873,
+   "ph": "back",
+   "wristS": [
+    0.283,
+    -0.676,
+    0.123
+   ],
+   "wristO": [
+    0.148,
+    -0.636,
+    0.136
+   ],
+   "arm": 0.146,
+   "armPart": "uarmO",
+   "hilt": 0.623,
+   "handHead": 0.667,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.88,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.05,
+   "sec": "instant",
+   "open": false,
+   "d": 0.868,
+   "ph": "back",
+   "wristS": [
+    0.32,
+    -0.614,
+    0.118
+   ],
+   "wristO": [
+    0.179,
+    -0.604,
+    0.13
+   ],
+   "arm": 0.152,
+   "armPart": "uarmO",
+   "hilt": 0.583,
+   "handHead": 0.643,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.885,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.067,
+   "sec": "instant",
+   "open": false,
+   "d": 0.858,
+   "ph": "back",
+   "wristS": [
+    0.322,
+    -0.534,
+    0.121
+   ],
+   "wristO": [
+    0.182,
+    -0.543,
+    0.132
+   ],
+   "arm": 0.155,
+   "armPart": "uarmO",
+   "hilt": 0.515,
+   "handHead": 0.588,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.884,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.083,
+   "sec": "instant",
+   "open": false,
+   "d": 0.846,
+   "ph": "back",
+   "wristS": [
+    0.321,
+    -0.453,
+    0.122
+   ],
+   "wristO": [
+    0.183,
+    -0.482,
+    0.133
+   ],
+   "arm": 0.155,
+   "armPart": "uarmO",
+   "hilt": 0.449,
+   "handHead": 0.533,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.88,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.1,
+   "sec": "instant",
+   "open": false,
+   "d": 0.83,
+   "ph": "back",
+   "wristS": [
+    0.319,
+    -0.372,
+    0.123
+   ],
+   "wristO": [
+    0.186,
+    -0.421,
+    0.133
+   ],
+   "arm": 0.154,
+   "armPart": "uarmO",
+   "hilt": 0.385,
+   "handHead": 0.479,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.873,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.117,
+   "sec": "instant",
+   "open": false,
+   "d": 0.813,
+   "ph": "back",
+   "wristS": [
+    0.314,
+    -0.291,
+    0.123
+   ],
+   "wristO": [
+    0.189,
+    -0.359,
+    0.133
+   ],
+   "arm": 0.151,
+   "armPart": "uarmO",
+   "hilt": 0.326,
+   "handHead": 0.427,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.865,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.142,
+   "sec": "instant",
+   "open": false,
+   "d": 0.787,
+   "ph": "back",
+   "wristS": [
+    0.306,
+    -0.169,
+    0.123
+   ],
+   "wristO": [
+    0.197,
+    -0.261,
+    0.131
+   ],
+   "arm": 0.144,
+   "armPart": "uarmO",
+   "hilt": 0.251,
+   "handHead": 0.352,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.854,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.158,
+   "sec": "instant",
+   "open": false,
+   "d": 0.772,
+   "ph": "back",
+   "wristS": [
+    0.301,
+    -0.086,
+    0.123
+   ],
+   "wristO": [
+    0.205,
+    -0.193,
+    0.13
+   ],
+   "arm": 0.137,
+   "armPart": "uarmO",
+   "hilt": 0.217,
+   "handHead": 0.31,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.847,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.175,
+   "sec": "instant",
+   "open": false,
+   "d": 0.758,
+   "ph": "back",
+   "wristS": [
+    0.297,
+    -0.003,
+    0.123
+   ],
+   "wristO": [
+    0.216,
+    -0.122,
+    0.129
+   ],
+   "arm": 0.129,
+   "armPart": "uarmO",
+   "hilt": 0.202,
+   "handHead": 0.28,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.843,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.192,
+   "sec": "instant",
+   "open": false,
+   "d": 0.748,
+   "ph": "back",
+   "wristS": [
+    0.295,
+    0.081,
+    0.123
+   ],
+   "wristO": [
+    0.231,
+    -0.048,
+    0.127
+   ],
+   "arm": 0.118,
+   "armPart": "uarmO",
+   "hilt": 0.21,
+   "handHead": 0.267,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.841,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.208,
+   "sec": "instant",
+   "open": false,
+   "d": 0.74,
+   "ph": "back",
+   "wristS": [
+    0.295,
+    0.164,
+    0.122
+   ],
+   "wristO": [
+    0.248,
+    0.027,
+    0.124
+   ],
+   "arm": 0.1,
+   "armPart": "uarmO",
+   "hilt": 0.239,
+   "handHead": 0.278,
+   "delta": [
+    -0.08,
+    -0.22,
+    -0.011
+   ],
+   "pullD": 0.677,
+   "myChestMoved": 0.841,
+   "hits": 1,
+   "foe": "stand",
+   "result": null
+  },
+  {
+   "t": 7.233,
+   "sec": "instant",
+   "open": false,
+   "d": 0.728,
+   "ph": null,
+   "wristS": [
+    0.309,
+    0.248,
+    0.046
+   ],
+   "wristO": [
+    0.284,
+    0.106,
+    0.052
+   ],
+   "arm": 0.035,
+   "armPart": "uarmS",
+   "hilt": 0.208,
+   "handHead": 0.307,
+   "delta": null,
+   "pullD": null,
+   "myChestMoved": 0.842,
+   "hits": 1,
+   "foe": "stand",
+   "result": {
+    "hit": true,
+    "part": "head",
+    "wPart": "blade",
+    "E": 94.085,
+    "clip": {
+     "step": 0.3,
+     "short0": 0.271,
+     "short": 0.3,
+     "tilt": 10.4
+    }
+   }
+  },
+  {
+   "t": 7.25,
+   "sec": "stiff",
+   "open": false,
+   "d": 0.719,
+   "ph": null,
+   "wristS": [
+    0.308,
+    0.25,
+    0.048
+   ],
+   "wristO": [
+    0.283,
+    0.105,
+    0.05
+   ],
+   "arm": 0.045,
+   "armPart": "uarmS",
+   "hilt": 0.206,
+   "handHead": 0.306,
+   "delta": null,
+   "pullD": null,
+   "myChestMoved": 0.842,
+   "hits": 1,
+   "foe": "stand",
+   "result": {
+    "hit": true,
+    "part": "head",
+    "wPart": "blade",
+    "E": 94.085,
+    "clip": {
+     "step": 0.3,
+     "short0": 0.271,
+     "short": 0.3,
+     "tilt": 10.4
+    }
+   }
+  },
+  {
+   "t": 7.267,
+   "sec": "stiff",
+   "open": false,
+   "d": 0.712,
+   "ph": null,
+   "wristS": [
+    0.31,
+    0.25,
+    0.054
+   ],
+   "wristO": [
+    0.288,
+    0.106,
+    0.05
+   ],
+   "arm": 0.057,
+   "armPart": "uarmS",
+   "hilt": 0.207,
+   "handHead": 0.311,
+   "delta": null,
+   "pullD": null,
+   "myChestMoved": 0.843,
+   "hits": 1,
+   "foe": "stand",
+   "result": {
+    "hit": true,
+    "part": "head",
+    "wPart": "blade",
+    "E": 94.085,
+    "clip": {
+     "step": 0.3,
+     "short0": 0.271,
+     "short": 0.3,
+     "tilt": 10.4
+    }
+   }
+  }
+ ]
+}
