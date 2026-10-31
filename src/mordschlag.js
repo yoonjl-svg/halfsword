@@ -214,11 +214,14 @@ const ROOM_TOL = 0.02; // m — '넉넉함' 판정 여유 (칼자루 가운데 �
 export function mordHeadReach(f) {
   const head = f.foe?.bodies?.head;
   if (!head || !f.weaponCfg) return false;
-  const K = mordKinOf(f, { mord: { G: mordMode(f) === 'reverse' ? mordGripOf(f) : null } });
+  const mode = mordMode(f);
+  const K = mordKinOf(f, { mord: { mode, G: mode === 'reverse' ? mordGripOf(f) : null } });
   const q = f.bodies.chest.rotation();
   const S = _s.set(ARM.shoulder[0], ARM.shoulder[1], f.side * ARM.shoulder[2]).applyQuaternion(_q.set(q.x, q.y, q.z, q.w)).add(f.bodies.chest.translation());
   const h = head.translation();
-  return Math.hypot(h.x - S.x, h.y - S.y, h.z - S.z) <= comboArmLen() + (K.Lc + K.Lp) / 2;
+  // 폼멜 찍기 (10/31 14:xx 사장님 결정 — 기본): 겨누는 점 = 폼멜 공 가운데 쯤(손에서 Lp × 0.8 — secret_instant.js comboPlanMord 와 같은 수) + 팔이 안 닿으면 내딛는 앞 반걸음(머리 뚫음 막기 셈 · clipStep)
+  const reach = K.pommel ? K.Lp * 0.8 + (SECRET.mord.noSelfClip ? SECRET.mord.clipStep ?? 0 : 0) : (K.Lc + K.Lp) / 2;
+  return Math.hypot(h.x - S.x, h.y - S.y, h.z - S.z) <= comboArmLen() + reach;
 }
 const _s = new THREE.Vector3();
 const _q = new THREE.Quaternion();
