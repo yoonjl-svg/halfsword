@@ -6,7 +6,7 @@
 //  ⑤ 10/27 21:4x AI 낮게 치기(SECRET.gnsCrouchAim — ai.js crouchLow): 웅크린 사람만 · 내 가슴 − 상대 가슴
 //  ⑥ 10/27 23:0x 무장 시계(고노센 준비 · 싱지르)는 공격이 풀린 때(판 시작 정지 끝 — fighter.openHold)부터
 //  ⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창(사장님 '웅크리기를 없앴더니 고노센 발동창이 안열려.'): 얹은 손가락(떨림)으로도 준비 · 허리 대기(SECRET.gnsReadyHip — 몸은 선 채 칼만 왼 허리) ·
-//   쥠(handGrip)이면 곧장 사람 손 · 상대가 발도 선 안에서 칼을 들면 창 (허리 대기 켬 · 끔 모두)
+//   쥠(handGrip)이면 곧장 사람 손 · 상대가 발도 선 안에서 칼을 들면 창 (허리 대기 켬 · 끔 모두) · 든 칼 이어 봄(SECRET.gnsRaiseLatch — 선 밖에서 든 칼로 선 안에 들면 창)
 //  node --test tools/sim/gonosen_ready.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -257,6 +257,7 @@ test("⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창 (사장님 '웅크리�
   const THREE = await import('three');
   assert.equal(SECRET.gnsCrouch, 0);
   assert.equal(SECRET.gnsReadyHip, 1);
+  assert.equal(SECRET.gnsRaiseLatch, 1);
   // 칼 쪽 화면에 얹은 손가락: 프레임(물리 두 스텝)마다 ±0.5 px 떨림(손 목표 ±3 mm — 휘두름 문턱 1.5 m/s 의 한참 아래) · 손가락 닿음(handHeld) · 쥠 아님(handGrip — 길게 누름 한도 안)
   const px = CONFIG.INPUT.touchSensitivity / 390;
   let n = 0, grip = false;
@@ -315,6 +316,26 @@ test("⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창 (사장님 '웅크리�
     R.G.ai.update = () => { e.move.set(0, 0); if (e.handOffset.y < 0.45) e.handOffset.y += 0.03; }; // 손 목표를 물리 스텝마다 3 cm 위로 (3.6 m/s)
     for (let i = 0; i < steps(0.4) && ev == null; i++) { withCfg({ gnsReadyHip: hip }, () => R.G.step()); if (R.ps.opened > o0) ev = R.ps.open?.ctx?.ev ?? '?'; }
     assert.equal(ev, 'raise', `hip ${hip}: 칼을 듦 → 창`);
+    R.G.world.free();
+  }
+  // 든 칼 이어 봄 (SECRET.gnsRaiseLatch): 선 밖에서 칼을 들고 그 칼로 선 안에 들면 창 · 끄면 창 없음
+  for (const latch of [1, 0]) {
+    const R = near({ gnsRaiseLatch: latch });
+    withCfg({ gnsRaiseLatch: latch }, () => R.run(SECRET.iaiArmTime + 0.5));
+    const e = R.G.enemy;
+    const line = R.view.contact + SECRET.iaiStep + SECRET.iaiMargin;
+    // 상대를 선 밖 0.15 m 로 옮김 (몸 전부 같은 만큼)
+    const back = line + 0.15 - R.p.foeDistance();
+    for (const { rb } of e.meshes) { const t = rb.translation(); rb.setTranslation({ x: t.x + back, y: t.y, z: t.z }, true); }
+    e.anchor.setTranslation({ x: e.anchor.translation().x + back, y: e.anchor.translation().y, z: e.anchor.translation().z }, true);
+    withCfg({ gnsRaiseLatch: latch }, () => R.run(0.4));
+    assert.ok(R.p.foeDistance() > line, `선 밖 ${R.p.foeDistance().toFixed(2)} > ${line.toFixed(2)}`);
+    const o0 = R.ps.opened;
+    let ev = null, k = 0;
+    R.G.ai.update = () => { k++; if (e.handOffset.y < 0.45) e.handOffset.y += 0.03; e.move.set(0, 0); if (k > 12) for (const { rb } of e.meshes) { const t = rb.translation(); rb.setTranslation({ x: t.x - 0.01, y: t.y, z: t.z }, true); } }; // 칼을 들고(3.6 m/s) 0.1 s 뒤부터 1.2 m/s 로 다가옴
+    for (let i = 0; i < steps(0.6) && ev == null; i++) { withCfg({ gnsRaiseLatch: latch }, () => R.G.step()); if (R.ps.opened > o0) ev = R.ps.open?.ctx; }
+    if (latch) assert.ok(ev?.ev === 'raise' && ev.latched != null, `이어 봄 → 창 ${JSON.stringify(ev)}`);
+    else assert.notEqual(ev?.ev, 'raise', `끄면 선 밖에서 든 칼은 '듦' 창 없음 (손이 멎으면 헛침 창은 그대로) ${JSON.stringify(ev)}`);
     R.G.world.free();
   }
 });
