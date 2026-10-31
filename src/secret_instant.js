@@ -1923,6 +1923,17 @@ function comboPlanArtThrust(f, I, m, A) {
         }
       }
     }
+    if (side && D.tapTiming) {
+      // 10/31 칼끝 돌려 빼기 (보통 찌르기 빠르기): 팔이 몸 앞을 가로지르는 쪽(칼 든 어깨의 반대 — 몸 틀 z)이면 그 몫을 빼 아래로 — 가로지르는 운동학 팔이 제 몸통을 밀어
+      //  몸이 뒤로 밀려 넘어졌다(싸움 판 — 끄는 시간이 길어 미는 시간도 김 · 팔 ↔ 몸통 충돌은 거르는 훅이 없음)
+      const out = Math.sign(S.z) || 1;
+      if (side.z * out < 0) {
+        side.z = 0;
+        side.addScaledVector(xh, -side.dot(xh));
+        if (side.lengthSq() < 1e-4) side.set(0, -1, 0).addScaledVector(xh, xh.y);
+        side.normalize();
+      }
+    }
     if (!side) {
       const w = A.H.clone().sub(S); // 지금 손 쪽
       side = w.addScaledVector(xh, -w.dot(xh));
