@@ -18,6 +18,13 @@ import fs from 'node:fs';
 const D = await import('../../src/skill_tree_data.js');
 const { SECRET, GAIT, SKILL, realS } = await import('../../src/config.js'); // realS: 글 속 초 = 실제 초 (표준 시간 10/25 — 게임 값 × 1.1)
 const { PLAYER_UNIQUE } = await import('../../src/unique_assist.js');
+const { UNIQUE_ASSIST: UA } = await import('../../src/config.js');
+// 10/31 이탈리아 자리 바꿈 글 (감독 안 · 사장님 검수 전 — 글 그대로 둠 · 사장님 글이 오면 OWNER 로): 칼끝 돌려 빼기 I2 · 비껴서며 찌르기 I9(특수 공격) · 내려 찌르기 I7(아래로 내려 긋기 모두)
+const DRAFT = {
+  I2: '칼이 상대 칼에 닿은 채 박자를 맞추어 탭',
+  I9: '상대가 공격해 올 때 옆으로 움직이며(←/→) 탭',
+  I7: '아래로 내려 긋기(↓/↙/↘)',
+};
 const { TECH_BY_NAME, G } = await import('../../src/ai_techniques.js');
 const { playerSecretDef } = await import('../../src/schools.js');
 const src = (f) => fs.readFileSync(new URL(`../../src/${f}`, import.meta.url), 'utf8');
@@ -36,7 +43,6 @@ const OWNER = {
   G10: '상대와 몸이 붙은 채 2초 이상 밀치면(↑) 비기 활성화', // 10/25 23:1x (감독 전달) — 글 속 시간 = SECRET.mordPress
   // 10/29 14:1x · 14:2x 사장님 글 (감독 전달) — 특수 공격 넷: 풍차 베기(길게 누름) · 탭으로 내는 셋
   B4: '탭을 길게 누르다 떼기',
-  I9: '막기로 찌른 칼이 빗나가면 박자를 맞추어 탭',
   C6: '뒤로 움직이며(↓) 탭',
   G7: '긋기가 상대 칼에 닿은 채 탭',
 };
@@ -91,8 +97,12 @@ test("글 꼴: 한 줄(33 자 안) · 숫자 · 원어 글자 없음 · 쓰는 �
     assert.equal(c, c.trim(), `${id} — 앞뒤 빈칸`);
     assert.ok(!/\s{2}/.test(c), `${id} — 겹 빈칸`);
     assert.notEqual(c, n.eff, n.id);
-    if (OWNER[n.id]) {
-      assert.equal(c, OWNER[n.id], `${n.id} — 사장님 확정 글 그대로 (10/25 22:3x)`);
+    // 10/31 I7 '아래로 내려 긋기(↓/↙/↘)' (감독 안 · 사장님 검수 전 — 글 그대로): 도식 규칙 둘 밖 — 긋기(…) 앞 꼴 낱말이 '내려'(사선 · 수직 · 수평 아님) · 괄호 안 화살표 셋에 꼴 둘(수직 ↓ · 사선 ↙/↘).
+    //  아래로 가는 긋기 모두를 한 줄로 적는 꼴이라 비기 확정 글처럼 글 그대로 보고 · 원어 글자 · 33 자만 본다 (여쭐 것 — 규칙에 맞추면 '수직 긋기(↓)나 사선 긋기(↙/↘)')
+    //  I9 '상대가 공격해 올 때 옆으로 움직이며(←/→) 탭' 도 같음 — '움직이며(…)' 는 사장님 확정 글 C6 '뒤로 움직이며(↓) 탭' 꼴(이동(…) · 긋기(…) 밖)
+    if (OWNER[n.id] || n.id === 'I7' || n.id === 'I9') {
+      assert.equal(c, OWNER[n.id] ?? DRAFT[n.id], `${n.id} — 정해진 글 그대로 (10/25 22:3x 사장님 확정 · 10/31 I7 · I9 검수 전)`);
+      if (!OWNER[n.id]) assert.ok([...c].length <= 33, `${id} — ${[...c].length} 자`);
       assert.ok(!/[\p{Script=Latin}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(c), `${id} — 원어 글자`);
       continue;
     }
@@ -160,9 +170,11 @@ test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · �
       continue;
     }
     if (e.tapKey) {
-      // 탭으로 내는 특수 공격 셋 (10/28 01:2x 조건 · 10/29 14:1x 사장님 글): 긋기 조건 없음 · 끝말 '탭' · 글은 사장님 글 그대로(OWNER)
-      assert.ok(e.special && !e.on.length, `${x.id} 탭 특수 공격 — 긋기 조건 없음`);
-      assert.ok(c.endsWith(' 탭') && c === OWNER[x.id], `${id} — 탭으로 냄 · 사장님 글`);
+      // 탭으로 내는 칸 (10/28 01:2x 조건 · 10/29 14:1x 사장님 글 · 10/31 이탈리아 — 칼끝 돌려 빼기는 기본 기술 · 비껴서며 찌르기는 특수 공격): 긋기 조건 없음 · 끝말 '탭' · 글은 사장님 글(OWNER) 또는 검수 전 글(DRAFT) 그대로
+      assert.ok(!e.on.length && !e.stick, `${x.id} 탭 칸 — 긋기 조건 · 걸음 명령 없음`);
+      assert.ok(c.endsWith(' 탭') && c === (OWNER[x.id] ?? DRAFT[x.id]), `${id} — 탭으로 냄 · 정해진 글`);
+      if (e.tapKey === 'inq') assert.ok(c.includes('좌우 이동') === false && c.includes('옆으로 움직이며(←/→)') && c.startsWith('상대가 공격해 올 때'), `${id} — 상대 공격 중 · 스틱 옆 (TAP_TRIG.inq — parryGuard.noThreat ≤ inqThreat · stickOk('side'))`);
+      if (e.tapKey === 'cav') assert.ok(c.startsWith('칼이 상대 칼에 닿은 채') && c.includes('박자'), `${id} — 칼끼리 닿음 · 박자 (TAP_TRIG.cav — touchTick · cavFrom)`);
       continue;
     }
     // 걸음 명령: 긋기를 시작할 때 스틱이 그 쪽 (unique_assist.js stickOk — 옆은 어느 쪽이든)
@@ -173,6 +185,13 @@ test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · �
     assert.ok(/긋기(\([^)]*\))?$|꺾기$/.test(c), `${id} — 받는 입력 = 긋기`);
     const base = e.on.filter((o) => !o.prev);
     const after = e.on.filter((o) => o.prev);
+    if (base.some((o) => o.down)) {
+      // 10/31 12:xx 사장님 'I7은 어떤 방향이나 높이에서든 다른 유파의 내려 긋는 베기에 해당하는 커맨드를 내려찌르기로' — 아래로 가는 긋기 모두(곧장 아래 ↓ · 사선 아래 ↙/↘): 수평 띠(축에서 22.5°) 밖 = 아래 축에서 67.5° 안
+      assert.equal(UA.imbroDown, 90 - 22.5, `${x.id} 아래로 가는 긋기 = 수평 띠 밖`);
+      assert.equal(c, DRAFT[x.id], `${id} — 검수 전 글`);
+      assert.ok(base.some((o) => o.tech === 'stichOchs'), `${x.id} 황소 찌르기 긋기도 그대로`);
+      continue;
+    }
     if (base.length) {
       assert.ok(!c.includes('탭'), `${id} — 탭으로는 안 남(찌르기 길도 긋기)`);
       const techs = base.filter((o) => o.tech).map((o) => techShape(o.tech));
@@ -281,8 +300,8 @@ test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · confi
 test("'공격' = 탭도 긋기도 받는 자리만 · '탭' = 탭을 받는(또는 앞 칼로 세는) 자리만 (사장님 17:5x · 18:3x · 10/25 22:3x 확정 글의 '상대 공격' 은 상대 쪽 말)", () => {
   const withWord = (re) => all().filter(({ n }) => n.cmd && re.test(n.cmd)).map(({ n }) => n.id).sort();
   assert.deepEqual(withWord(/공격$/), [], "받는 입력을 '공격' 으로 끝맺는 칸 없음 (10/25 비기 글은 '비기 활성화' 꼴)");
-  assert.deepEqual(withWord(/공격/), ['C9', 'J5'], "'공격' 낱말 = 일본 · 동방 확정 글의 상대 공격");
-  assert.deepEqual(withWord(/탭$/), ['C6', 'G7', 'I9'], '탭으로 내는 특수 공격 셋만 탭으로 끝남 (10/29 14:1x 사장님 글 — 비기 창은 탭만 받지 않음)');
-  assert.deepEqual(withWord(/탭/), ['B4', 'C6', 'G7', 'I9'], '탭 = 탭 특수 공격 셋 · 풍차 베기(B4 — 탭을 길게 누름)');
+  assert.deepEqual(withWord(/공격/), ['C9', 'I9', 'J5'], "'공격' 낱말 = 일본 · 동방 확정 글 · 이탈리아 비껴서며 찌르기(10/31 검수 전)의 상대 공격");
+  assert.deepEqual(withWord(/탭$/), ['C6', 'G7', 'I2', 'I9'], '탭으로 내는 칸만 탭으로 끝남 — 특수 공격 셋(날개 접기 · 겹치기 · 비껴서며 찌르기) · 칼끝 돌려 빼기(10/31 기본 기술) · 비기 창은 탭만 받지 않음');
+  assert.deepEqual(withWord(/탭/), ['B4', 'C6', 'G7', 'I2', 'I9'], '탭 = 탭으로 내는 칸 넷 · 풍차 베기(B4 — 탭을 길게 누름)');
   assert.deepEqual(withWord(/찌르는 긋기/), [], "'찌르는 긋기' 쓰는 칸 없음 (10/29 I9 사장님 글)");
 });

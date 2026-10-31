@@ -84,12 +84,16 @@ test('독일 관문: 2단계 셋(곁눈 베기 · 비껴 딛는 가로베기 · 
   assert.deepEqual([...D.nodeOf('chinese', 'C9').pre], ['C5', 'C8']); // 10/28 00:5x 동방 체보요격 · 염시 자리 바꿈 — 격살 ← 체보요격 + 단단한 받기
 });
 test('이탈리아 줄기: 보법 II(물러서기)를 거쳐야 찌르기 · 막기 줄기 · 편지는 보법 I 곁가지', () => {
-  for (const id of ['I2', 'I5']) {
+  for (const id of ['I7', 'I5']) { // 10/31 왼 줄 첫 칸 = 내려 찌르기 I7 (전 I2)
     assert.equal(D.nodeState('italian', D.nodeOf('italian', id), ids('I1')), 'locked', id);
     assert.equal(D.nodeState('italian', D.nodeOf('italian', id), ids('I1', 'I3')), 'open', id);
   }
   assert.equal(D.nodeState('italian', D.nodeOf('italian', 'I11'), ids('I1')), 'open');
-  assert.deepEqual([...D.nodeOf('italian', 'I4').pre], ['I8']); // 내려 찌르기 심화 → 비기 한 줄
+  assert.deepEqual([...D.nodeOf('italian', 'I4').pre], ['I8']); // 칼끝 돌려 빼기 심화(헛누름) → 비기 한 줄
+  // 10/31 12:xx 사장님 '임브로카타를 먼저 배우고 카바치오네를 배우고 틈 파고들기는 카바치오네 강화로 바꿔.' — 왼 줄 I7 → I2 → I8 → I4 · 오른 줄 I6 → I9(비껴서며 찌르기 특수 공격) → I10
+  assert.deepEqual(['I7', 'I2', 'I8', 'I4'].map((id) => [id, [...D.nodeOf('italian', id).pre], D.nodeOf('italian', id).d, D.nodeOf('italian', id).price, D.nodeOf('italian', id).u ?? D.nodeOf('italian', id).perk ?? null]),
+    [['I7', ['I3'], 2, 200, 'imbroccata'], ['I2', ['I7'], 3, 300, 'cavazione'], ['I8', ['I2'], 4, 400, 'cavazione'], ['I4', ['I8'], 5, 400, null]]);
+  assert.deepEqual([[...D.nodeOf('italian', 'I9').pre], D.nodeOf('italian', 'I9').u, D.nodeOf('italian', 'I9').d], [['I6'], 'inquartata', 4]);
 });
 test('이베리아: 손목 힘 패시브는 보법 바로 아래 · 비기는 패시브 + 둥근 걸음 + 이어 긋기 흐름 모두', () => {
   assert.equal(D.nodeState('iberian', D.nodeOf('iberian', 'B10'), ids('B1')), 'open');
@@ -388,7 +392,10 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('italian', 'I1'), ['footwork']);
   assert.deepEqual(on('italian', 'I3'), ['backFlat']);
   assert.deepEqual(on('italian', 'I6'), ['opposition']);
-  assert.deepEqual(on('italian', 'I8'), ['perk:imbroccata']);
+  assert.deepEqual(on('italian', 'I8'), ['perk:cavazione']); // 10/31 헛누름 (전 내려 찌르기 틈 파고들기 perk imbroccata)
+  assert.deepEqual(on('italian', 'I7'), ['u:imbroccata']);
+  assert.deepEqual(on('italian', 'I2'), ['u:cavazione']);
+  assert.deepEqual(on('italian', 'I9'), ['u:inquartata']);
   assert.deepEqual(on('iberian', 'B2'), ['burstSide']);
   assert.deepEqual(on('iberian', 'B5'), ['ibFlow']);
   assert.deepEqual(on('iberian', 'B9'), ['parryCut']);
@@ -410,7 +417,8 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
     const us = D.nodesOf(s).filter((n) => n.u).map((n) => n.u);
     assert.deepEqual([...us].sort(), PLAYER_UNIQUE[s].map((e) => e.name).sort(), `${s} 고유 공격 = 칸`);
     for (const n of D.nodesOf(s).filter((x) => x.perk && !D.isClosed(s, x))) {
-      assert.ok(enhancedMoves(s).some((e) => e.name === n.perk) || PLAYER_UNIQUE[s].some((e) => e.name === n.perk && e.role === 'enh'), `${s} ${n.perk} 강화동작`);
+      // 심화 칸 = 그 강화동작의 이점 (G6 · J8 · C4) · 10/31 이탈리아 I8 헛누름은 강화동작이 아닌 칼끝 돌려 빼기(탭으로 내는 기본 기술 — tapKey)의 심화 (사장님 '틈 파고들기는 카바치오네 강화로 바꿔.')
+      assert.ok(enhancedMoves(s).some((e) => e.name === n.perk) || PLAYER_UNIQUE[s].some((e) => e.name === n.perk && (e.role === 'enh' || e.tapKey)), `${s} ${n.perk} 강화동작 · 탭 기술`);
       assert.ok(n.pre.some((p) => D.nodeOf(s, p).u === n.perk) || D.nodesOf(s).some((m) => m.u === n.perk), `${s} 심화 칸 ${n.id}`);
     }
   }
@@ -573,7 +581,7 @@ test('흐르는 긋기 A (10/28 22:0x 사장님 \'A로 해\'): 한 스텝 깜빡
 test('칸 효과 글 — 사장님 글 그대로 (10/29 14:1x · 14:2x — 특수 공격 넷 · 이어지는 흐름)', () => {
   const OWNER_EFF = {
     iberian: { B4: '칼을 머리 위로 돌려서 강하게 내려 벤다', B6: '이어 그을수록 세지고, 세 번째 긋기마다 기력을 쓰지 않는다' },
-    italian: { I9: '빗나간 막아찌르기 뒤 칼끝을 돌려 빼 가슴을 찌른다' },
+    italian: { I7: '내려 긋는 칼이 내려 찌르기로 나간다' }, // 10/31 13:xx 사장님 확정 (전 I9 '빗나간 막아찌르기 뒤 칼끝을 돌려 빼 가슴을 찌른다' — 칼끝 돌려 빼기가 I2 기본 기술로 바뀌며 글도 바뀜)
     chinese: { C6: '물러나는 척 칼을 거두며 나아가 허리를 벤다' },
     german: { G7: '칼이 맞물리면 상대 칼 뒤로 들어가 얼굴을 벤다' },
   };
@@ -785,6 +793,10 @@ test('칸 오의(lore · src — 사장님 10/22 00:5x 원전의 오의를 밝�
   let n = 0;
   for (const s of D.TREE_SCHOOLS) for (const x of D.nodesOf(s)) {
     n++;
+    if (s === 'italian' && x.id === 'I8') { // 10/31 헛누름: 오의 비움 — 저장소 원전 읽기표에 맞는 카포 페로 · 파브리스 줄이 없어 지어내지 않음 (여쭐 것 · 화면은 오의 상자를 숨김)
+      assert.equal(x.lore, undefined, 'I8 오의 비움');
+      continue;
+    }
     assert.equal(typeof x.lore, 'string', `${x.id} lore`);
     assert.ok(x.lore.trim().length > 0, `${x.id} lore 빈칸`);
     assert.ok([...x.lore].length <= 45, `${x.id} lore ${[...x.lore].length} 자`);

@@ -580,11 +580,11 @@ function itStats(IT, uq, fires) {
   const recvIn = (t0, w = 0.6) => IT.recvLog.filter(([t]) => t >= t0 && t <= t0 + w).reduce((a, [, sv]) => a + sv, 0);
   const inq = IT.inq.map((x) => ({ ...x, recv: r3(recvIn(x.t)), hit: recvIn(x.t) > 0, fall: IT.falls.some((f) => f.t >= x.t && f.t <= x.t + 1) }));
   const kill3 = fires.filter((x) => IT.foeDeadT != null && IT.foeDeadT >= x.t && IT.foeDeadT <= x.t + 3).length; // 낸 뒤 3 s 안에 상대가 죽은 낸 수 (헛누름 견줌 — 10/31)
-  return { touches: S.touches ?? 0, touchCut: S.touchCut ?? 0, early: S.tapEarly ?? 0, touchTaps: IT.touchTaps, armSlow: S.armSlow ?? 0, inq, falls: IT.falls, fires: fires.map((x) => x.res), fireT: fires.map((x) => r3(x.t)), foeDeadT: IT.foeDeadT ?? null, kill3 };
+  return { touches: S.touches ?? 0, touchCut: S.touchCut ?? 0, early: S.tapEarly ?? 0, touchTaps: IT.touchTaps, armSlow: S.armSlow ?? 0, inq, falls: IT.falls, fires: fires.map((x) => x.res), fireT: fires.map((x) => r3(x.t)), foeDeadT: IT.foeDeadT ?? null, kill3, recvLog: IT.recvLog.map(([t, sv, z, ty, E]) => [r3(t), r3(sv), z, ty, E]) };
 }
 
 // ── fight: 손가락 봇 대 치고 막는 AI ──
-export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3, delay = 0.15, share = 0.5, counter = 0.5, sjit = 0.06, jit = 0.04, spd = [3, 5.5], startAdd = 0 } = {}) {
+export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3, delay = 0.15, share = 0.5, counter = 0.5, sjit = 0.06, jit = 0.04, spd = [3, 5.5], startAdd = 0, probe = null } = {}) {
   const R = ROWS[rowKey];
   const G = newRound({ walls: true, seed, weapon: R.w, weapon2: opp, persona: { proficiency: prof } });
   applyWeaponMeasure(G.ai, opp);
@@ -760,7 +760,7 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
     pw?.(att, vic, r, ...rest);
     const sv = r.type === 'blunt' ? 0 : r.severity ?? 0;
     if (att === A && vic === P) recv += sv;
-    if (IT && att === A && vic === P) IT.recvLog.push([G.t, sv]);
+    if (IT && att === A && vic === P) IT.recvLog.push([G.t, sv, r.zone, r.type, r3(r.energy)]);
     if (att !== P || vic !== A) return;
     dealt += sv;
     bleedDealt += sv * (r.bleedPerSev ?? 0) * (r.type === 'stab' ? 1.6 : 1);
@@ -777,6 +777,7 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
   try {
     for (let i = 0; i < Math.round(dur / DT); i++) {
       G.step();
+      probe?.(G, P, A, uq); // 재기 손잡이 (10/31 — 판마다 스텝 뒤)
       if ((!P.alive || !A.alive) && end === dur) end = G.t + 0.5;
       if (G.t >= end) break;
     }
