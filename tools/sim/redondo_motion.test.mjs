@@ -166,7 +166,9 @@ test('안 B shoulder — 오른 어깨에 얹어 멈춤(칼끝이 거의 안 움
   };
   const long = run(1.4); // 감기 1.4 s = 섞기 0.6 + 얹은 채 0.8
   assert.ok(long.tipV < 1.0, `얹은 칼끝 ${long.tipV.toFixed(2)} m/s`);
-  assert.ok(long.tip.x < -0.5, '칼끝은 뒤');
+  // 10/31 08:xx 보이는 꼴 (사장님 '누가봐도 레돈두 준비처럼'): 칼끝이 칼 든 어깨 뒤 위로 머리 위 1 m 넘게 솟음 (10/31 02:xx 판은 가슴 위 0.43 m · 뒤 1.0 m — 게임 카메라에서 숨음)
+  assert.ok(long.tip.x < -0.2, `칼끝은 뒤 ${long.tip.x.toFixed(2)}`);
+  assert.ok(long.tip.y > 1.2, `칼끝은 위 ${long.tip.y.toFixed(2)}`);
   assert.ok(long.turns >= 1, '얹은 채 0.6 s 넘음 = 감음');
   assert.equal(long.fired, 1);
   const mid = run(1.0); // 얹은 채 0.4 s
@@ -218,17 +220,65 @@ test('내려침 길 [안 A 고리] (사장님 10/30 00:1x \'궤적이 8자 모�
   } finally { UA.rdWindMode = keepWind; }
 });
 
-test('내려침 길 [안 B 어깨 — 10/31 기본] 곧장 사선 60°: 어깨에 얹은 칼을 떼어 들면 칼끝이 얹은 자리보다 더 뒤 · 더 아래로 가지 않고(어깨 뒤 고리 · 8 자 없음) 머리 위로 들려 왼 위 → 오른 아래로 벰 · 칼날이 제 몸을 지나지 않음 · 섞는 첫머리에 떼어도 같음', async () => {
+test('내려침 길 [안 B 어깨 — 10/31 기본] 곧장 사선 60°: 어깨에 얹은 칼을 떼어 들면 칼끝이 얹은 자리보다 더 뒤로 가지 않고 머리 위에 머문 채(어깨 뒤 고리 · 8 자 없음) 왼 위 → 오른 아래로 벰 · 칼날이 제 몸을 지나지 않음 · 섞는 첫머리에 떼어도 같음', async () => {
   const { traceRun, figure8 } = await import('./redondo_trace.mjs');
   assert.equal(UA.rdWindMode, 'shoulder');
   for (const release of [0.4, 1.4]) { // 0.4 s = 아직 어깨로 섞는 중 · 1.4 s = 얹은 채 0.8 s
     const r = traceRun({ w: 'zweihander', release });
     const m = figure8(r);
     assert.equal(r.fell, false, `${release} s`);
-    assert.ok(m.liftBack < 0.05 && m.liftDrop < 0.05, `${release} s — 드는 동안 뗀 자리보다 더 뒤 ${m.liftBack} m · 더 아래 ${m.liftDrop} m`);
+    assert.ok(m.liftBack < 0.05, `${release} s — 드는 동안 뗀 자리보다 더 뒤 ${m.liftBack} m`);
+    assert.ok(m.leadLow > 0.9, `${release} s — 드는 동안 칼끝 가장 낮은 곳 가슴 위 ${m.leadLow} m (머리 위에 머묾 — 10/31 08:xx 꼴은 칼을 세워 얹어 처음부터 머리 위)`);
     assert.ok(r.tCut != null && r.tCut < 0.15, `${release} s — 뗌 → 벰 ${r.tCut} s`);
     assert.ok(m.cutY[0] - m.cutY[1] > 1.2, `내려 벰 — 칼끝 높이 ${m.cutY}`);
     assert.ok(m.cutZ[0] < -0.5 && m.cutZ[1] > 0.2, `왼 → 오른 — 칼끝 옆 ${m.cutZ}`);
     assert.ok(r.selfBlade > 0.05, `${release} s — 칼날 ↔ 내 몸 가장 가까이 ${r.selfBlade} m`);
   }
+});
+
+test('AI 풍차 베기 (사장님 10/31 08:xx \'플레이어만 그런 건가? 누가봐도 레돈두 준비처럼 보여야해.\' — UNIQUE_ASSIST.rdAiWind): 머리 위 돌려 베기를 고르면 사람과 같은 감기(안 B 어깨에 얹음 — 칼끝이 머리 위로 솟음)로 다가가 감음 뒤 닿는 거리에서 같은 곧장 사선 내려침 · 밧줄 다시 · 0 = 옛 패드 길', async () => {
+  const { TRADITIONS } = await import('../../src/schools.js');
+  const t = TRADITIONS.iberian.unique.find((u) => u.name === 'redondo');
+  const run = (on) => {
+    const keep = UA.rdAiWind;
+    UA.rdAiWind = on;
+    const G = newRound({ walls: true, seed: 1, weapon: 'longsword', weapon2: 'zweihander', gap: 2.3, persona: { proficiency: 4 } });
+    try {
+      const E = G.enemy;
+      for (let i = 0; i < Math.round(2.0 / DT); i++) G.step();
+      assert.ok(G.ai.startAttack({ ...t, plain: null }, 'open', { noFeint: true }));
+      const o = { phases: new Set(), restTipY: null, rdMove: false, wound: false, ropesBack: null, kind: E.rdWind?.M?.kind ?? null };
+      const w0 = G.wounds.length;
+      for (let i = 0; i < Math.round(4.0 / DT); i++) {
+        G.step();
+        o.phases.add(G.ai.phase);
+        const W = E.rdWind;
+        if (W && W.k >= 1 && o.restTipY == null) {
+          const c = E.bodies.chest.translation();
+          o.restTipY = E.bladePoint(1, new THREE.Vector3()).y - c.y;
+          o.placed = E.armsPlaced();
+        }
+        if (E.iai?.moves?.[0]?.rd) o.rdMove = true;
+        if (o.rdMove && !E.iai && o.ropesBack == null && G.ai.phase !== 'rdStrike') o.ropesBack = false;
+        if (o.ropesBack === false && E.shoulderRopes?.length && E.gripCone?.length) o.ropesBack = true;
+      }
+      o.wound = G.wounds.slice(w0).some((x) => x.att === E);
+      o.stats = G.ai.stats.rdWind ?? null;
+      return o;
+    } finally { G.world.free(); UA.rdAiWind = keep; }
+  };
+  assert.equal(UA.rdAiWind, 1);
+  const on = run(1);
+  assert.equal(on.kind, 'shoulder', '사람과 같은 감기 꼴');
+  assert.ok(on.phases.has('rdWind') && on.phases.has('rdStrike'), [...on.phases].join(','));
+  assert.equal(on.placed, true, '감는 동안 두 팔 · 칼을 놓음');
+  assert.ok(on.restTipY > 1.2, `얹은 칼끝 가슴 위 ${on.restTipY?.toFixed(2)} m`);
+  assert.equal(on.rdMove, true, '내려침 = 사람 풍차 베기 운동학 칼');
+  assert.equal(on.wound, true, '서 있는 사람을 벰');
+  assert.equal(on.ropesBack, true, '내려침 뒤 밧줄 다시');
+  assert.equal(on.stats.fire, 1);
+  const off = run(0);
+  assert.equal(off.kind, null);
+  assert.ok(!off.phases.has('rdWind') && off.phases.has('strike'), `옛 패드 길 — ${[...off.phases].join(',')}`);
+  assert.equal(off.rdMove, false);
 });

@@ -35,6 +35,7 @@ import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 �
 import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg, stanceSpread } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 이탈리아 거침없이 나아가 찌르기 — 상대 팔 늦춤 (흘림과 같은 장치, 10/22)
 import { requestSpin, spinAbort, spinCutPose, spinCap, spinHandRest, spinLid } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 (10/22 — 한 바퀴 도는 대본)
+import { windStep } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 — ai.js rdWindTick)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain, gnsBlockOf } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
@@ -1636,6 +1637,7 @@ export class Skill {
     this.sinceThrust = this.tap ? 0 : this.sinceThrust + dt;
     if (this.sec) this.updateSecret(dt); // 플레이어 비기: 손 목표를 비기 길로 (이 스텝의 거르기·몸 따라가기는 아래 그대로)
     if (this.f.lungeRecover) this.lungeRecoverTick(dt); // 안다레 리솔루토 런지 되돌아오기 (10/24 14:0x — 앞발을 뒤로 거둠)
+    if (f.rdWind && f.aiControlled && !this.uniq) windStep(f, dt); // AI 풍차 베기 감기 (10/31 08:xx — ai.js rdWindTick · UNIQUE_ASSIST.rdAiWind): 사람 holdTick 과 같은 자리에서 스텝마다 두 팔 · 칼을 놓음
     if (this.uniq) this.uniq.drive(dt); // 플레이어 고유 동작 강화 (unique_assist.js — main.js 가 플레이어에게만 붙인다, AI 는 없음): 몸 덧씌우기·끝 힘·걸음 (손 목표는 건드리지 않는다)
     if (this.sec?.S?.do?.gilmok || f.gilCutW > 0) {
       // 이베리아 길목 한 칼의 덧씌우기 자세 (10/11 v6 2차 — AI 와 같은 함수 secret_instant.js gilmokCutPose): 팔을 앞으로 뻗어 몸통 높이로 둘러 벰
