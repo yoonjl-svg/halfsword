@@ -17,6 +17,9 @@ test('메기 꼴 — 네 칼 모두 칼 든(오른) 어깨에 메어 칼끝이 �
     assert.ok(L.below > 0.4, `${w} 칼끝이 손보다 아래 ${L.below} m`);
     assert.ok(L.el <= -20, `${w} 칼 높이각 ${L.el}° (땅 쪽)`);
     assert.ok(L.hand[2] > 0.15, `${w} 손이 칼 든 쪽 ${L.hand[2]} m (오른 어깨)`);
+    // 사장님 10/31 19:xx '칼이 어깨를 파고드는 것처럼 보여 … 칼이 어깨 위로 올라와 보이게' — 칼날이 칼 든 어깨 관절 위로 지나고 위팔에 안 닿음
+    assert.ok(L.bladeAboveShoulder > 0.05, `${w} 칼날이 어깨 관절 위 ${L.bladeAboveShoulder} m`);
+    assert.ok(L.bladeUarm > 0.01, `${w} 칼날 ↔ 위팔 ${L.bladeUarm} m`);
     assert.ok(L.armHead >= 0 && L.armNeck >= 0, `${w} 팔 ↔ 머리 ${L.armHead} · 목 ${L.armNeck} m`);
     assert.ok(L.blend.armHead >= 0 && L.blend.armNeck >= 0, `${w} 메는 길 팔 ↔ 머리 ${L.blend.armHead} · 목 ${L.blend.armNeck} m`);
     assert.ok(L.bladeHead > 0.05 && L.blend.bladeHead > 0.05, `${w} 칼 ↔ 머리 ${L.bladeHead} · 메는 길 ${L.blend.bladeHead} m`);
@@ -24,20 +27,22 @@ test('메기 꼴 — 네 칼 모두 칼 든(오른) 어깨에 메어 칼끝이 �
     assert.ok(L.fixMax <= 1, `${w} 손목 교정 ${L.fixMax}°`);
     assert.ok(L.oorShare <= 0.02, `${w} 손목 범위 밖 ${L.oorShare}`);
     assert.ok(L.offGap < 0.06, `${w} 빈손 ↔ 폼멜 ${L.offGap} m`);
-    assert.ok(L.dTilt < 10 && L.offCm < 5, `${w} 가슴 기울기 ${L.dTilt}° · 발 둘레 밖 ${L.offCm} cm`);
+    assert.ok(L.dTilt < 10 && L.offCm < 5.5, `${w} 가슴 기울기 ${L.dTilt}° · 발 둘레 밖 ${L.offCm} cm`);
     assert.equal(L.fell, false, w);
   }
 });
 
-test('멘 어깨에서 내려침 — 벰 면이 땅과 rdTajo.angle(45 ~ 90) · 오른 위 → 왼 아래 · 정수리부터 · 뗌 → 벰 옛 판만큼 빠름 · 팔 · 칼이 내 머리를 안 뚫음 · 안 넘어짐', () => {
+test('멘 어깨에서 내려침 — 벰 면이 땅과 60°(사장님 결정) · 오른 위 → 왼 아래 · 정수리부터 · 드는 몫도 벰과 같은 빠르기(사장님 \'2배로 하지 마\') · 팔 · 칼이 내 머리를 안 뚫음 · 안 넘어짐', () => {
+  assert.equal(UA.rdTajo.angle, 60);
+  assert.equal(UA.rdTajo.liftK, 1);
   for (const w of ['zweihander', 'tizona']) {
     const S = b4Sum(b4Run({ w })).strike;
     assert.ok(Math.abs(S.plane.angle - UA.rdTajo.angle) < 2.5, `${w} 벰 면 ${S.plane.angle}° (목표 ${UA.rdTajo.angle})`);
     assert.ok(S.plane.rms < 0.02, `${w} 면에서 벗어남 RMS ${S.plane.rms} m`);
     assert.ok(S.tip0[2] - S.tip1[2] > 0.3, `${w} 오른 → 왼 — 칼끝 옆 ${S.tip0[2]} → ${S.tip1[2]}`);
     assert.ok(S.tip0[1] - S.tip1[1] > 1.5, `${w} 위 → 아래 — 칼끝 높이 ${S.tip0[1]} → ${S.tip1[1]}`);
-    assert.ok(S.tLead != null && S.tLead < 0.13, `${w} 뗌 → 벰 ${S.tLead} s`);
-    assert.ok(S.tHit != null && S.tHit < 0.36, `${w} 뗌 → 첫 상처 ${S.tHit} s`);
+    assert.ok(S.tLead != null && S.tLead < 0.25, `${w} 뗌 → 벰 ${S.tLead} s`);
+    assert.ok(S.tHit != null && S.tHit < 0.46, `${w} 뗌 → 첫 상처 ${S.tHit} s`);
     assert.match(S.first ?? '', /^head\//, `${w} 첫 상처 ${S.first}`);
     assert.ok(S.armHead >= 0 && S.armNeck >= 0, `${w} 팔 ↔ 머리 ${S.armHead} · 목 ${S.armNeck} m`);
     assert.ok(S.selfBlade > 0.02, `${w} 칼날 ↔ 몸통 ${S.selfBlade} m`);

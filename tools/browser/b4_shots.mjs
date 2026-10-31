@@ -4,7 +4,8 @@
 //  손가락 떠돎 없음) → 정한 때마다 화면 시계를 거의 세우고 세 눈으로 찍음: 옆(칼 든 쪽에서 몸에 곧게) · 뒤(등 뒤 조금 칼 든 쪽 위) · 게임 카메라(그대로) →
 //  눈마다 띠 그림 한 장(.webp — 브라우저 canvas 로 줄여 저장)과 찍은 값(_shots_<꼬리>.json).
 //  실행 (저장소 뿌리): npx vite build && npx http-server dist -p 5391 -s &  ·  node tools/browser/b4_shots.mjs http://127.0.0.1:5391 <그림 폴더> <꼬리 (new | old)>
-//   환경: EXTRA(주소 덧붙임 — 예 &b4Old=1 · &rdTajoAngle=60) · WEAPON(기본 zweihander) · PW_CHROMIUM
+//   환경: EXTRA(주소 덧붙임 — 예 &b4Old=1 · &rdTajoAngle=60) · WEAPON(기본 zweihander) · PW_CHROMIUM · LOAD_JSON(메기 자리 rdLoad 칸을 덮음 — 예 '{"hand":[0.12,0.16,0.26],"blade":[-32,190]}' · 견줌용)
+//   덧붙여 '멘 채 0.9 s' 한 장의 옆 · 뒤를 크게 b4_<꼬리>_loaded.webp 로 (메기 자세 전 · 후 견줌 — 사장님 10/31 19:xx '칼이 어깨를 파고드는 것처럼 보여')
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 const { chromium } = createRequire(import.meta.url)('playwright'); // 미리 깔린 playwright (전역 — NODE_PATH)
@@ -29,6 +30,7 @@ const clockInit = () => {
 };
 const ctx = await browser.newContext({ viewport: { width: W, height: H }, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
 await ctx.addInitScript(clockInit);
+if (process.env.LOAD_JSON) await ctx.addInitScript((j) => { window.__loadJson = j; }, process.env.LOAD_JSON);
 const page = await ctx.newPage();
 page.on('pageerror', (e) => errors.push('pageerror ' + e));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -47,7 +49,8 @@ const kit = await page.evaluate(() => {
   window.__hold = null;
   uq.holdInput = (d, s, so) => orig(window.__hold ?? d, window.__hold ? true : s, so); // 길게 누름 = 끌지 않은 손가락 (main.js 가 프레임마다 부름)
   const C = g.config;
-  return { holdE: uq.holdE?.name ?? null, mode: C.UNIQUE_ASSIST.rdWindMode, release: C.UNIQUE_ASSIST.rdRelease, tajo: C.UNIQUE_ASSIST.rdTajo, chain: C.IB_FLOW.windmillChain, apart: C.IB_FLOW.windmillApart };
+  if (window.__loadJson) C.UNIQUE_ASSIST.rdLoad = { ...C.UNIQUE_ASSIST.rdLoad, ...JSON.parse(window.__loadJson) }; // 견줌: 메기 자리 덮음 (감기 시작 때 읽음)
+  return { holdE: uq.holdE?.name ?? null, load: C.UNIQUE_ASSIST.rdLoad, mode: C.UNIQUE_ASSIST.rdWindMode, release: C.UNIQUE_ASSIST.rdRelease, tajo: C.UNIQUE_ASSIST.rdTajo, chain: C.IB_FLOW.windmillChain, apart: C.IB_FLOW.windmillApart };
 });
 console.log('kit', JSON.stringify(kit));
 if (kit.holdE !== 'redondo') throw Error('B4 없음');
@@ -155,6 +158,29 @@ for (const v of VIEWS) {
     return c.toDataURL('image/webp', 0.78);
   }, { tiles, cw, ch, sc, title: `${tag} · ${v}` });
   const file = `${dir}/b4_${tag}_${v}.webp`;
+  fs.writeFileSync(file, Buffer.from(data.split(',')[1], 'base64'));
+  console.log('WROTE', file, fs.statSync(file).size);
+}
+// 메기 자세 한 장 (옆 · 뒤 — 크게)
+{
+  const f = frames.find((x) => x.label === '멘 채 0.9 s');
+  const data = await strip.evaluate(async ({ tiles, title }) => {
+    const imgs = await Promise.all(tiles.map((t) => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.src = t.src; })));
+    const cw = 300, ch = 360, sc = 0.9, tw = Math.round(cw * sc), th = Math.round(ch * sc), head = 18;
+    const c = document.getElementById('c');
+    c.width = tw * tiles.length; c.height = th + head;
+    const g = c.getContext('2d');
+    g.fillStyle = '#111'; g.fillRect(0, 0, c.width, c.height);
+    tiles.forEach((t, i) => {
+      const sx = Math.max(0, Math.min(imgs[i].width - cw, t.cx - cw / 2));
+      const sy = Math.max(0, Math.min(imgs[i].height - ch, t.cy - ch * 0.5));
+      g.drawImage(imgs[i], sx, sy, cw, ch, i * tw, head, tw, th);
+      g.fillStyle = '#eee'; g.font = '12px sans-serif'; g.fillText(t.label, i * tw + 4, 13);
+    });
+    g.fillStyle = '#ffd36b'; g.font = 'bold 12px sans-serif'; g.fillText(title, c.width - 120, 13);
+    return c.toDataURL('image/webp', 0.8);
+  }, { tiles: ['side', 'back'].map((v) => ({ src: 'data:image/png;base64,' + f.shots[v].png, cx: f.shots[v].cx, cy: f.shots[v].cy, label: v === 'side' ? '옆 (칼 든 쪽)' : '뒤' })), title: `${tag} · 멘 채` });
+  const file = `${dir}/b4_${tag}_loaded.webp`;
   fs.writeFileSync(file, Buffer.from(data.split(',')[1], 'base64'));
   console.log('WROTE', file, fs.statSync(file).size);
 }

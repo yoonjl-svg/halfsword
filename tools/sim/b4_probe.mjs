@@ -53,14 +53,27 @@ export function selfGaps(P) {
     const n = segSeg(A, B, neckA, hd) - 0.05 - cap[1];
     if (n < neck) (neck = n), (neckPart = k);
   }
-  let blade = null;
+  let blade = null, shoulder = null, uarm = null, above = null;
   if (P.armed && P.sword) {
     const sq = Q(P.sword.rotation()), sp = V(P.sword.translation()), W = P.weaponCfg;
     const pom = new THREE.Vector3(0, W.gripAlong ?? -0.15, 0).applyQuaternion(sq).add(sp);
     const tip = new THREE.Vector3(0, W.hiltLength + W.bladeLength, 0).applyQuaternion(sq).add(sp);
     blade = ptSeg(pom, tip, hd) - hr - 0.02;
+    // 칼 든 어깨 (사장님 10/31 19:xx '칼이 어깨를 파고드는 것처럼 보여'): 어깨 관절(가슴 틀 [0, 0.10, 칼 든 쪽 0.2])에 반지름 0.075 m 공(어깨 · 삼각근 겉) · 칼(칼날 밑동 → 칼끝 · 반두께 0.01) 틈 ·
+    //  위팔 캡슐(반지름 0.045) ↔ 칼날 틈 · 칼날이 어깨 관절 위를 지날 때의 높이(어깨 관절에 가로로 가장 가까운 칼날 점 y − 관절 y)
+    const ch = P.bodies.chest;
+    const S = new THREE.Vector3(0, 0.1, (P.side >= 0 ? 1 : -1) * 0.2).applyQuaternion(Q(ch.rotation())).add(V(ch.translation()));
+    const b0 = new THREE.Vector3(0, W.hiltLength, 0).applyQuaternion(sq).add(sp);
+    shoulder = ptSeg(b0, tip, S) - 0.075 - 0.01;
+    if (P.bodies.uarmS) { const [A, B] = capSeg(P.bodies.uarmS, CAPS.uarmS); uarm = segSeg(A, B, b0, tip) - 0.045 - 0.01; }
+    let best = Infinity;
+    for (let i = 0; i <= 40; i++) {
+      const q = b0.clone().lerp(tip, i / 40);
+      const dh = Math.hypot(q.x - S.x, q.z - S.z);
+      if (dh < best) (best = dh), (above = q.y - S.y);
+    }
   }
-  return { arm, armPart, neck, neckPart, blade };
+  return { arm, armPart, neck, neckPart, blade, shoulder, uarm, above };
 }
 
 /** 점들의 가장 맞는 면 (주성분 — 가장 작은 고유 벡터 = 면의 법선) · 면이 땅과 이루는 각 · 면에서 벗어난 거리 RMS · 최대 */
@@ -168,6 +181,11 @@ export function b4Run({ w = 'zweihander', seed = 1, hold = 1.6, after = 0.8, gap
           L.neck = Math.min(L.neck, gp.neck);
           if (gp.blade != null) L.blade = Math.min(L.blade, gp.blade);
           L.self = Math.min(L.self, sm.self.blade);
+          if (gp.shoulder != null && Wd.t > (Wd.M?.windIn ?? 0) + 0.1) {
+            L.shoulder = Math.min(L.shoulder ?? Infinity, gp.shoulder);
+            if (gp.uarm != null) L.uarm = Math.min(L.uarm ?? Infinity, gp.uarm);
+            (L.aboveS ??= []).push(gp.above);
+          }
         }
         L.steps++;
         if (sm.w?.oor) L.oor++;
@@ -246,7 +264,7 @@ export function b4Sum(o) {
   const firstCut = S.wounds.find((x) => x.sev > 0);
   return {
     w: o.w, seed: o.seed, side: o.side, tWind: o.tWind, turns: o.turns, distRel: o.distRel, fired: o.fired, cancel: o.cancel, recv: o.recv,
-    load: { behind: r3(avg(L.behind)), below: r3(avg(L.below)), el: r1(avg(L.el)), az: r1(avg(L.az)), tip: L.tipLoc, hand: L.handLoc, fixMax: r1(L.fix), offGap: r3(L.offGap), oorShare: L.steps ? r3(L.oor / L.steps) : null, armHead: r3(L.arm), armPart: L.armPart, armAt: L.armAt ?? null, armNeck: r3(L.neck), bladeHead: r3(L.blade), selfBlade: r3(L.self), blend: { armHead: r3(L.bArm), armPart: L.bArmPart ?? null, armNeck: r3(L.bNeck), bladeHead: r3(L.bBlade), selfBlade: r3(L.bSelf) }, dTilt: r1(L.dTilt), offCm: r1(L.off * 100), stumble: r3(L.stum), fell: L.fell, screenPx: r1(avg(L.len)), visPx: r1(avg(L.vis)), abovePx: r1(avg(L.above)) },
+    load: { behind: r3(avg(L.behind)), below: r3(avg(L.below)), el: r1(avg(L.el)), az: r1(avg(L.az)), tip: L.tipLoc, hand: L.handLoc, fixMax: r1(L.fix), offGap: r3(L.offGap), oorShare: L.steps ? r3(L.oor / L.steps) : null, armHead: r3(L.arm), armPart: L.armPart, armAt: L.armAt ?? null, armNeck: r3(L.neck), bladeHead: r3(L.blade), selfBlade: r3(L.self), bladeShoulder: r3(L.shoulder), bladeUarm: r3(L.uarm), bladeAboveShoulder: r3(L.aboveS?.length ? avg(L.aboveS) : null), blend: { armHead: r3(L.bArm), armPart: L.bArmPart ?? null, armNeck: r3(L.bNeck), bladeHead: r3(L.bBlade), selfBlade: r3(L.bSelf) }, dTilt: r1(L.dTilt), offCm: r1(L.off * 100), stumble: r3(L.stum), fell: L.fell, screenPx: r1(avg(L.len)), visPx: r1(avg(L.vis)), abovePx: r1(avg(L.above)) },
     strike: { tLead: S.tLead, tHit: S.tHit, tStrike: o.tStrike, hits: S.wounds.filter((x) => x.sev > 0).length, sevSum: r3(sevSum), first: firstCut ? `${firstCut.zone}/${firstCut.part}:${firstCut.sev}:${firstCut.E}J` : null, res: S.res,
       plane: pf ? { angle: r1(pf.angle), rms: r3(pf.rms), max: r3(pf.max) } : null, tip0: S.tip[0] ? S.tip[0].toArray().map(r3) : null, tip1: S.tip.at(-1) ? S.tip.at(-1).toArray().map(r3) : null,
       selfBlade: r3(S.self), armHead: r3(S.arm), armPart: S.armPart, armNeck: r3(S.neck), bladeHead: r3(S.blade), dTilt: r1(S.dTilt), offCm: r1(S.off * 100), stumble: r3(S.stum), fell: S.fell },
