@@ -583,7 +583,7 @@ function itStats(IT, uq, fires) {
   const recvIn = (t0, w = 0.6) => IT.recvLog.filter(([t]) => t >= t0 && t <= t0 + w).reduce((a, [, sv]) => a + sv, 0);
   const inq = IT.inq.map((x) => ({ ...x, recv: r3(recvIn(x.t)), hit: recvIn(x.t) > 0, fall: IT.falls.some((f) => f.t >= x.t && f.t <= x.t + 1) }));
   const kill3 = fires.filter((x) => IT.foeDeadT != null && IT.foeDeadT >= x.t && IT.foeDeadT <= x.t + 3).length; // 낸 뒤 3 s 안에 상대가 죽은 낸 수 (헛누름 견줌 — 10/31)
-  return { touches: S.touches ?? 0, touchCut: S.touchCut ?? 0, early: S.tapEarly ?? 0, touchTaps: IT.touchTaps, armSlow: S.armSlow ?? 0, inq, falls: IT.falls, knock: IT.knock ?? [], fires: fires.map((x) => x.res), fireT: fires.map((x) => r3(x.t)), foeDeadT: IT.foeDeadT ?? null, kill3, recvLog: IT.recvLog.map(([t, sv, z, ty, E]) => [r3(t), r3(sv), z, ty, E]) };
+  return { touches: S.touches ?? 0, touchCut: S.touchCut ?? 0, early: S.tapEarly ?? 0, touchTaps: IT.touchTaps, armSlow: S.armSlow ?? 0, inq, falls: IT.falls, knock: IT.knock ?? [], fires: fires.map((x) => x.res), fireT: fires.map((x) => r3(x.t)), fireDur: fires.map((x) => (x.dur != null ? r3(x.dur) : null)), tapDur: IT.tapDur ?? [], foeDeadT: IT.foeDeadT ?? null, kill3, recvLog: IT.recvLog.map(([t, sv, z, ty, E]) => [r3(t), r3(sv), z, ty, E]) };
 }
 
 // ── fight: 손가락 봇 대 치고 막는 AI ──
@@ -683,6 +683,7 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
       fireCur.minDist = Math.min(fireCur.minDist, P.foeDistance());
     } else if (fireCur.snap || G.t - fireCur.t > 1.5) {
       fireCur.done = true;
+      fireCur.dur = G.t - fireCur.t; // 팔이 묶인 시간 (낸 때 ~ 끌고 가는 칼이 끝난 때 — 11/01 재기)
       const r = P.instantResult;
       if (fireCur.snap && r?.combo && r.tech === R.name) fireCur.res = { hits: r.hits, blocked: !!r.blocked, zone: r.zone, type: r.type, E: r3(r.energy), sev: r3(r.sev) };
     }
@@ -694,6 +695,9 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
     fireTick();
     if (IT) {
       if (!A.alive && IT.foeDeadT == null) IT.foeDeadT = r3(t);
+      // 보통 탭 찌르기가 팔을 묶는 시간 (skill.tap 이 선 때 ~ 끝난 때 — 11/01 재기 · 칼끝 돌려 빼기와 견줌)
+      if (P.skill.tap && IT.tapT0 == null) IT.tapT0 = t;
+      else if (!P.skill.tap && IT.tapT0 != null) { (IT.tapDur ??= []).push(r3(t - IT.tapT0)); IT.tapT0 = null; }
       if (P.state !== IT.st) {
         if (IT.st === 'stand' && P.state !== 'stand') IT.falls.push({ t: r3(t), to: P.state });
         IT.st = P.state;

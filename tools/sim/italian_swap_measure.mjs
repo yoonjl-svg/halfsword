@@ -13,6 +13,7 @@ import { isMain } from './is_main.mjs';
 const r3 = (x) => (x == null || !isFinite(x) ? null : +x.toFixed(3));
 const sum = (a, f) => a.reduce((s, x) => s + f(x), 0);
 const pct = (n, d) => (d > 0 ? r3((100 * n) / d) : null);
+const med = (a) => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); return r3(b[Math.floor(b.length / 2)]); };
 
 /** 판들 → 한 줄 */
 export function summarize(row, runs) {
@@ -33,6 +34,9 @@ export function summarize(row, runs) {
     fallsBodyNearFire: sum(runs, (r) => (r.it?.knock ?? []).filter((k) => (k.why === 'footing' || k.why === 'tilt') && (r.it?.fireT ?? []).some((t) => k.t >= t && k.t <= t + 0.4)).length),
     fallsHit: sum(runs, (r) => (r.it?.knock ?? []).filter((k) => k.why === 'hit' || k.why === 'gauge').length),
     fallsNearFire: sum(runs, (r) => (r.it?.falls ?? []).filter((k) => (r.it?.fireT ?? []).some((t) => k.t >= t && k.t <= t + 0.4)).length),
+    // 팔 묶임 (11/01): 칼끝 돌려 빼기 낸 때 ~ 끌고 가는 칼 끝 · 보통 탭 찌르기 선 때 ~ 끝 — 가운데 값 · 평균 (s)
+    armLockCav: med(runs.flatMap((r) => (r.it?.fireDur ?? []).filter((x) => x != null))), armLockTap: med(runs.flatMap((r) => r.it?.tapDur ?? [])),
+    tapsDonePerFight: r3(sum(runs, (r) => (r.it?.tapDur ?? []).length) / n),
     kill3: sum(runs, (r) => r.it?.kill3 ?? 0), // 낸 뒤 3 s 안에 상대가 죽은 낸 수
     armSlow: sum(runs, (r) => r.it?.armSlow ?? 0), // 헛누름 팔 늦춤을 건 수
     sevPerHit: r3(sum(res, (x) => x.sev ?? 0) / Math.max(1, hit)), EperHit: r3(sum(res.filter((x) => x.hits > 0), (x) => x.E ?? 0) / Math.max(1, hit)),

@@ -469,7 +469,6 @@ export class Fighter {
     //  제 몸 닿음은 combat.js 가 같은 싸움꾼 쌍을 버려 상처·부딪힘·불꽃·소리·멈칫이 되지 않는다(pairOf·접촉힘 사건)
     const HL = BODY.humanLimits;
     const myTorso = torsoBit(this.index);
-    this.torsoBit = myTorso; // 10/31 secret_instant.js selfFree 가 읽음 (칼끝 돌려 빼기 동안 칼팔 거름에서 뺌 — 그 모듈은 fighter.js 를 부르지 않음)
     const myArmS = armSBit(this.index);
     const torsoGroups = groups(myBody | myTorso, BIT.ground | otherBody | otherWeapon | weaponBit(this.index) | myArmS);
     const armSGroups = groups(myBody | myArmS, BIT.ground | otherBody | otherWeapon | myTorso);
