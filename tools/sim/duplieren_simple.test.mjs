@@ -77,8 +77,12 @@ test('단순 길 — 맞물린 패드에서 얼굴로 가는 패드 곧은 줄 �
     const S = first.slide;
     assert.ok(S && S.slide > 0.3 && S.slide <= 0.45 + 1e-9, `미끄러짐 ${S?.slide}`);
     assert.equal(S.ease, 'line');
-    const span = Math.min(segs.reduce((a, s) => a + s.T, 0), UA.dupSnapTime);
-    assert.ok(Math.abs(S.span - span) < 1e-6, `미끄러짐 시간 ${S.span} · 칼 ${span}`);
+    // 때 맞춤: 미끄러짐 시간 = 앞발 발 뜬 시간 = 칼날이 얼굴을 지나는 때 (몫 빠르기 칼 시간 · 박찬 걸음 GAIT.burstT 가운데 긴 것) · 얼굴 앞 토막 시간 합 = 그 때
+    const Tstep = first.dup.Tstep;
+    assert.ok(Tstep >= CONFIG.GAIT.burstT - 1e-9, `박차기 시간 ${Tstep}`);
+    assert.ok(Math.abs(S.span - Tstep) < 1e-3, `미끄러짐 시간 ${S.span} · 박차기 ${Tstep}`);
+    assert.ok(Math.abs(first.dup.tFace - Tstep) < 1e-3, `얼굴 ${first.dup.tFace}`);
+    assert.ok(Math.abs(first.burst.T - Tstep) < 1e-3, `앞발 ${first.burst.T}`);
     assert.ok(first.burst?.asked, '앞발 걸음을 받음');
     // 앞발: 칼이 시작한 뒤 두 스텝 안에 뜸 (걷던 앞발이 떠 있었으면 그 걸음을 이어받음 — 'req')
     const i0 = R.steps.indexOf(first);
