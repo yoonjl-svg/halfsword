@@ -248,7 +248,7 @@ export function uniqueDef(tradition, e) {
     if (band) {
       def.band = true;
       def.snapPlan = lead(band.plan);
-      if (band.shift || band.side || band.pathHint) def.snapOpt = { shift: band.shift ?? null, side: band.side ?? null, pathHint: !!band.pathHint }; // 곧은 길 (10/31): 띠 높이 옮김 꼴 · 굴림 묶음 쪽 붙들기 · 날 쪽 = 길 위 칼끝
+      if (band.shift || band.pathHint || band.start) def.snapOpt = { shift: band.shift ?? null, pathHint: !!band.pathHint, start: band.start ?? null }; // 곧은 길 (10/31): 띠 높이 옮김 꼴 · 날 쪽 = 길 위 칼끝 · 준비 토막
     }
   }
   return def;
@@ -977,7 +977,7 @@ export class PlayerUniqueAssist {
       const at = Math.min(e.chain?.at ?? 2, U.pts.length - 2);
       //  길 덧칸(해법 ③ 손 돌리기 등)은 끌고 가는 칼에도 같은 점마다 (U.plan 의 꺾은 자리부터)
       const so = U.snapOpt; // 곧은 길 (10/31): shift 'none' = 띠 높이 옮김 없이 굴림 묶음만
-      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band && so?.shift !== 'none', roll: !!U.band && so?.shift === 'none', shift: so?.shift && so.shift !== 'none' ? so.shift : null, side: so?.side ?? null, pathHint: !!so?.pathHint })) this.stats.snap = (this.stats.snap ?? 0) + 1;
+      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band && so?.shift !== 'none', roll: !!U.band && so?.shift === 'none', shift: so?.shift && so.shift !== 'none' ? so.shift : null, pathHint: !!so?.pathHint, start: so?.start ?? null })) this.stats.snap = (this.stats.snap ?? 0) + 1;
     } else if (e.tap && UA.imbroReach) {
       // 위에서 내려 찌르기 닿게 (사장님 10/27 23:5x '찌르기 뻗게 고치고'): 읽힌 순간 탭 찌르기 덧씌우기로 찌른다 — AI 임브로카타(ai.js startStrike → skill.thrust)와 같은 길
       //  (이탈리아 찌르기 THRUST.itLunge — 몸통 겨눔 · 팔만으로 안 닿으면 거리만큼 런지). 그 탭이 도는 동안 강화(몸 · 끝 힘)는 물러남(busy) · 맞은 상처는 이 기술(strokeTechOf — I8 틈 파고들기).

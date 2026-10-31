@@ -213,6 +213,8 @@ export function traceSummary(runs) {
   const B = F.map((r) => r.bend).filter(Boolean);
   const C = F.map((r) => r.bendCut).filter(Boolean);
   const W = F.flatMap((r) => r.wr.filter((w) => w && w[1]));
+  const WF = F.flatMap((r) => r.wr.filter((w) => w && !w[1] && w[0] > 0));
+  const FH = runs.flatMap((r) => r.hits.filter((hh) => !hh.kin));
   const pc = (k) => (W.length ? +((100 * k) / W.length).toFixed(0) : null);
   const k = CONFIG.STRIKE.edgeAlign;
   const E = W.map((w) => w[5]).filter((x) => x != null);
@@ -234,6 +236,9 @@ export function traceSummary(runs) {
     hitEdge: first.filter((hh) => hh.edge != null && hh.edge > k).length, hitBack: first.filter((hh) => hh.edge != null && hh.edge < -k).length,
     sevPerRun: +(first.reduce((a, hh) => a + hh.sev, 0) / n).toFixed(3), E: f2(p50(first.map((hh) => hh.E))),
     shifted: F.filter((r) => r.bandDy).length,
+    // 끌고 간 칼이 끝난 뒤 0.1 s 손가락 몫 (덧칸 planStep): 범위 밖 · 굴림 ≥ 78 스텝 % · 손가락 맞음(뒤 맞음 — 날 · 등)
+    fSteps: WF.length, fOorStep: WF.length ? +((100 * WF.filter((w) => w[3] > OOR_EPS).length) / WF.length).toFixed(0) : null, fRoll78Step: WF.length ? +((100 * WF.filter((w) => w[2] >= ROLL_AT).length) / WF.length).toFixed(0) : null,
+    fHits: FH.length, fHitOor: FH.filter((hh) => hh.oor > OOR_EPS).length, fHitBack: FH.filter((hh) => hh.edge != null && hh.edge < -k).length,
   };
 }
 

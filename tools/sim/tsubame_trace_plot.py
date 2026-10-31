@@ -1,13 +1,17 @@
 # 제비 베기 칼끝 길 그림 (tools/sim/tsubame_trace.mjs --json 결과) — 갈래마다 옆(상대 쪽 x · 높이 y) · 앞(내 등 뒤에서 — 칼 든 쪽 z · 높이 y) 두 칸
 #  굵은 파란 점 = 운동학 칼이 끄는 스텝 · 가는 노란 점 = 그 뒤 손가락 몫 · 회색 = 칼자루(손) 길 · 숫자 = 첫 맞음 부위
-#  python3.12 tools/sim/tsubame_trace_plot.py <json> <png>   (PIL — 이 컨테이너는 python3.12 에 있음)
+#  python3.12 tools/sim/tsubame_trace_plot.py <json> <png|webp> [사이 m (기본: 갈래마다 처음 제비 베기가 난 판)] [씨앗]   (PIL — 이 컨테이너는 python3.12 에 있음 · .webp 면 WebP)
 import json, sys
 from PIL import Image, ImageDraw
 
 J = json.load(open(sys.argv[1]))
+GAP = float(sys.argv[3]) if len(sys.argv) > 3 else None
+SEED = int(sys.argv[4]) if len(sys.argv) > 4 else None
 runs = {}
 for r in J['runs']:
-    runs.setdefault(r['variant'], r)  # 갈래마다 첫 씨앗
+    if not r.get('fired') or (GAP is not None and abs(r['gap'] - GAP) > 1e-6) or (SEED is not None and r['seed'] != SEED):
+        continue
+    runs.setdefault(r['variant'], r)  # 갈래마다 처음 난 판 (사이 1.0 m 판은 걸음이 가슴 사이 1.19 m 에서 멈춰 손가락 봇이 시작을 안 함 — 12 번 가운데 4)
 W, H, PAD = 380, 300, 30
 img = Image.new('RGB', (W * 2 + 20, (H + 40) * len(runs)), (24, 22, 20))
 d = ImageDraw.Draw(img)
@@ -51,5 +55,5 @@ for row, (name, r) in enumerate(runs.items()):
         d.text((ox + 6, oy + 18), f"dev {b.get('dev')} m ({b.get('devShare')})  kink {b.get('kinkDeg')} deg  kin {b.get('dur')} s", fill=(200, 200, 200))
         hits = r.get('hits') or []
         d.text((ox + 6, oy + 32), 'hit ' + (','.join(h['zone'] for h in hits[:3]) or '-'), fill=(255, 120, 120))
-img.save(sys.argv[2])
+img.save(sys.argv[2], **({'quality': 80, 'method': 6} if sys.argv[2].endswith('.webp') else {}))
 print('saved', sys.argv[2])
