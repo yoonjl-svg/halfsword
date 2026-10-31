@@ -1510,7 +1510,7 @@ export const UNIQUE_ASSIST = {
   //   C cavParryLock — 낸 순간부터 이 실제 초 동안 상대가 막기 · 피하기 · 맞받아치기 반응을 새로 시작하지 못함(누르던 칼이 빠짐 — ai.js respond · 이미 막는 중이면 그대로) · 0 = 끔 `?cavParryLock=0.2`
   //   D cavHitMul — 이 찌르기 상처 에너지 판정 배율(비기 SECRET.hitMul 1.3 과 같은 자리 · combat.js secretHit) · 1 = 끔 `?cavHitMul=1.3`
   //   E cavCancel — 끄는 동안 막기 단추를 새로 누르거나(쥔 채면 새 위협이 올 때) 그 자리에서 칼을 거둠 → 막기로 · 0 = 끔 `?cavCancel=1`
-  cavSpeedMul: 1, // [시제품 · 사장님 확인 전]
+  cavSpeedMul: 1.2, // [사장님 10/31 18:xx 결정 '칼끝 돌려 빼기는 1.2배로 해' — 칼끝 5.3 m/s · 확인표 3270 · 재기 §6: 승 · 패 22 · 2 · 판당 준 2.96 · 받은 0.56(보통 탭 24 · 2 · 3.93 · 0.85)]
   cavGap: 0, // [시제품 · 사장님 확인 전]
   cavParryLock: 0, // [시제품 · 사장님 확인 전 — 켜면 사다리 realS(0.2)]
   cavHitMul: 1, // [시제품 · 견줌용 · 사장님 확인 전]

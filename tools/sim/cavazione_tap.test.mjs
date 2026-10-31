@@ -71,7 +71,7 @@ test('② 칼끼리 닿음 처음부터 실제 0.5 s 의 탭 = 칼끝 돌려 빼
     const R = B.P.iaiReq;
     assert.ok(R?.combo, '운동학 찌름 요청');
     assert.equal(R.tech, 'cavazione');
-    assert.ok(Math.abs(R.speed - cavTipSpeed()) < 1e-9 && R.noArc, '보통 찌르기 빠르기 · 잔상 없음');
+    assert.ok(Math.abs(R.speed - 1.2 * cavTipSpeed()) < 1e-9 && R.noArc, '보통 찌르기 빠르기 × 1.2(사장님 10/31 18:xx) · 잔상 없음');
     assert.equal(R.maxT, 0, '길 끝(거둠)까지');
     assert.ok(R.moves[0].same && R.moves[0].artThrust && R.moves[0].dyn.under && R.moves[0].dyn.tapTiming && R.moves[0].plane);
     assert.equal(R.selfFree, UA.cavSelfFree, '넘어짐 고침 (cavSelfFree — 그 수 동안 칼 어깨 면 밧줄 뗌)');
@@ -300,7 +300,9 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
   const body = (r) => (r.it.knock ?? []).filter((k) => (k.why === 'footing' || k.why === 'tilt') && r.it.fireT.some((t) => k.t >= t && k.t <= t + 0.4));
   assert.equal(body(on).length, 0, JSON.stringify(on.it.knock));
   const sf = UA.cavSelfFree;
+  const sm = UA.cavSpeedMul;
   UA.cavSelfFree = 0;
+  UA.cavSpeedMul = 1; // 전 판 넘어짐 재현은 고칠 때의 빠르기(× 1 — 10/31 18:xx 기본 × 1.2 전)로: 판이 달라지면 씨앗 902 의 그 수가 안 나옴
   try {
     const b = watch();
     const off = fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: b.probe });
@@ -308,17 +310,18 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
     assert.ok(body(off).some((k) => k.why === 'footing'), `전 판: 낸 뒤 발 밖 넘어짐 ${JSON.stringify(off.it.knock)}`);
   } finally {
     UA.cavSelfFree = sf;
+    UA.cavSpeedMul = sm;
   }
 });
 
 test('② 세게 하는 시제품 A ~ E (10/31 16:xx 사장님 물음 · 확인표 3263 ~ · 기본 모두 끔): A 빠르기 배 · D 판정 배율 → 요청 · C 상대 반응 묶음(ai.js respond) · E 막기 단추로 거둠 · B 는 combat.js(재기로 봄)', () => {
-  assert.deepEqual([UA.cavSpeedMul, UA.cavGap, UA.cavParryLock, UA.cavHitMul, UA.cavCancel], [1, 0, 0, 1, 0], '기본 끔');
+  assert.deepEqual([UA.cavSpeedMul, UA.cavGap, UA.cavParryLock, UA.cavHitMul, UA.cavCancel], [1.2, 0, 0, 1, 0], '기본: A × 1.2(사장님 10/31 18:xx \'1.2배로 해\') · 나머지 끔');
   const keep = { cavSpeedMul: UA.cavSpeedMul, cavHitMul: UA.cavHitMul, cavParryLock: UA.cavParryLock, cavCancel: UA.cavCancel };
   const B = body();
   try {
     B.touch(realS(0.5));
     assert.equal(B.tap(), true);
-    assert.ok(Math.abs(B.P.iaiReq.speed - cavTipSpeed()) < 1e-9 && B.P.iaiReq.hitMul === 1 && B.G.enemy.parryLockUntil == null, '끔 = 지금 판');
+    assert.ok(Math.abs(B.P.iaiReq.speed - 1.2 * cavTipSpeed()) < 1e-9 && B.P.iaiReq.hitMul === 1 && B.G.enemy.parryLockUntil == null, '기본 = × 1.2 · 나머지 끔');
     Object.assign(UA, { cavSpeedMul: 1.5, cavHitMul: 1.3, cavParryLock: realS(0.2), cavCancel: 1 });
     B.touch(realS(0.5));
     assert.equal(B.tap(), true);
