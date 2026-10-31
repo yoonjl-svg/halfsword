@@ -40,7 +40,7 @@ import { FINISH, cleaveFinish } from './finish.js';
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
-import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
+import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -796,7 +796,7 @@ export class AI {
       const down = !foe.alive || !foe.armed || foe.state !== 'stand' || secretSpent(foe); // 10/29 19:5x: 이 판 비기를 다 쓴 사람은 준비가 아님 (사람 창이 무장을 안 거는 것과 같게)
       const foeHurt = foe.pain > (W.pain ?? foe.pain) + 0.05; // 사람이 맞음 (사람 창과 같은 셈 — 10/25 22:3x 'idle')
       W.pain = foe.pain;
-      gnsArmTick(A, dt, down || gnsHumanUnsettled(foe, foeHurt), gnsMoving(foe), { outside: gnsOutside(d, V, A.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: down || !!foe.skill?.swinging || !!foe.skill?.sec }, armHold(foe)); // 'idle' — 거리 안 봄 · 'dist' 옛 셈
+      gnsArmTick(A, dt, down || gnsHumanUnsettled(foe, foeHurt), gnsHumanMoving(foe), { outside: gnsOutside(d, V, A.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: down || !!foe.skill?.swinging || !!foe.skill?.sec }, armHold(foe)); // 'idle' — 거리 안 봄 · 'dist' 옛 셈
       W.ready = !!SECRET.iai && A.armed;
     }
     if (hurt && iaiBusy(foe)) {
