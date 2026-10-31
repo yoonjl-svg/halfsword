@@ -19,24 +19,26 @@ except Exception:
     font = big = ImageFont.load_default()
 BOX = (172, 0, 672, 390)  # 844 × 390 가운데 (머리 둘레)
 SC = 0.5
-VIEW = {'side': 'left side', 'q34': 'front-left 3/4', 'back': 'behind, over right shoulder'}
+VIEW = {'side': 'left side', 'q34': 'front-left 3/4', 'back': 'behind, over right shoulder', 'game': 'game camera'}
 for tag in tags:
     meta = json.load(open(f'{D}/{tag}_frames.json'))
     shots = [s for s in meta['shots'] if s.get('ph')]
     pre = [s for s in meta['shots'] if not s.get('ph')]
     if not shots:
         continue
-    pick = []
+    pick = [x for x in meta['shots'] if x.get('pre')][-1:]  # 내기 바로 앞 한 장 (10/31 08:xx — 지금 판 순간이동 견줌)
     if len(shots) <= N:
         pick += shots
     else:
         pick += [shots[round(i * (len(shots) - 1) / (N - 1))] for i in range(N)]
     t0 = shots[0]['t']
     S = meta['summary']
-    clip = S['info'].get('noClip')
-    title = f"{'PROTOTYPE noSelfClip=1' if clip else 'CURRENT build'} - chest gap {S['info']['gap']} m - at {S['info']['at']}"
+    inf = S['info']
+    clip = inf.get('noClip')
+    name = 'FALLBACK pommel hammer (normal grip)' if inf.get('pommel') else ('BEST: regrip %.2f s + forced back burst + no self-clip' % inf['regrip']) if inf.get('regrip') and inf.get('burst') else ('regrip %.2f s' % inf['regrip']) if inf.get('regrip') else 'PROTOTYPE noSelfClip=1' if clip else 'CURRENT build'
+    title = f"{name} - chest gap {inf['gap']} m - at {inf['at']}"
     stat = f"min arm-head gap {S['minArm']:.2f} m · min hand-head centre {S['minHandHead']:.2f} m · deepest wrist behind head centre {S['deepestBehind']:.2f} m · hilt-side vs own head {S['minHilt']:.2f} m · result {S['result']}"
-    for view in [v for v in ('side', 'q34', 'back') if os.path.exists(f"{D}/{tag}_{v}_{pick[0]['k']}.png")]:
+    for view in [v for v in ('game', 'side', 'q34', 'back') if os.path.exists(f"{D}/{tag}_{v}_{pick[0]['k']}.png")]:
         tw, th = int((BOX[2] - BOX[0]) * SC), int((BOX[3] - BOX[1]) * SC)
         cols = min(len(pick), 7)
         rows = (len(pick) + cols - 1) // cols
@@ -49,7 +51,7 @@ for tag in tags:
             im = Image.open(f"{D}/{tag}_{view}_{s['k']}.png").convert('RGB').crop(BOX).resize((tw, th))
             x, y = (i % cols) * tw, top + (i // cols) * (th + lab)
             out.paste(im, (x, y))
-            ph = s.get('ph') or 'after'
+            ph = 'pre (before fire)' if s.get('pre') else (s.get('ph') or 'after')
             behind = min(s['wristS'][0], s['wristO'][0])
             col = (255, 110, 110) if (s['arm'] < 0 or behind < 0) else (170, 230, 170)
             d.text((x + 4, y + th + 2), f"t {s['t'] - t0:+.3f} s  {ph}", fill=(230, 230, 230), font=font)

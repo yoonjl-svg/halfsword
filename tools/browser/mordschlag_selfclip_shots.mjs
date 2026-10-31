@@ -16,7 +16,7 @@ const clip = process.argv[4] ?? '0';
 const GAP = +(process.argv[5] ?? 0.6);
 const extra = process.argv[6] ?? '';
 const FOE = process.env.FOE ?? 'isolde';
-const VIEWS = (process.env.VIEWS ?? 'side,q34,back').split(',');
+const VIEWS = (process.env.VIEWS ?? 'side,q34,back').split(','); // game = 게임 카메라 그대로(따라가기 · 화각 그대로 — 10/31 08:xx) · side · q34 · back = 내 머리 가까이
 const STEP_MS = 1000 / 60;
 fs.mkdirSync(dir, { recursive: true });
 const tag = `${clip === '1' ? 'clip' : 'now'}_${GAP}${process.env.TAG ? `_${process.env.TAG}` : ''}`;
@@ -93,7 +93,8 @@ const info = await page.evaluate((GAP) => {
     const v3 = (v) => [r3(v.x), r3(v.y), r3(v.z)];
     return {
       t: r3(g.stats.simTime), sec: p.skill.sec?.stage ?? p.skill.secretPhase ?? null, open: !!g.playerSecret.open, d: r3(p.foeDistance()),
-      ph: I?.mord ? (I.segs[I.si]?.B?.back ? 'back' : I.segs[I.si]?.cut ? 'cut' : 'wind') : null,
+      ph: I?.mord ? (I.segs[I.si]?.rg ? (I.segs[I.si].rg.in ? 'grip' : 'gripOut') : I.segs[I.si]?.B?.back ? 'back' : I.segs[I.si]?.cut ? 'cut' : 'wind') : null,
+      grip: p.mordGrip ? 'rev' : 'norm', g: I?.mord?.g != null ? r3(I.mord.g) : null, st: r3(p.stamina.value), push: p.stamina.counts?.push ?? 0, state: p.state, burst: p.skill.sec?.mord?.burst?.phase ?? null,
       wristS: v3(L(wS)), wristO: v3(L(wO)), arm: r3(arm), armPart: part, hilt: r3(hilt), handHead: r3(Math.min(wS.distanceTo(hd), wO.distanceTo(hd))),
       delta: delta ? v3(delta) : null, pullD: I?.mord?.pullD != null ? r3(I.mord.pullD) : null, myChestMoved: r3(c.distanceTo(window.__c0 ?? c)),
       hits: g.stats.hits.length, foe: e.state, result: p.instantResult?.mord ? { hit: p.instantResult.hit, part: p.instantResult.part, wPart: p.instantResult.wPart, E: r3(p.instantResult.energy ?? 0), clip: p.instantResult.clip ?? null } : null,
@@ -120,40 +121,43 @@ const info = await page.evaluate((GAP) => {
     g.camera.lookAt(T0.x, T0.y, T0.z);
   };
   window.__c0 = V(p.bodies.chest.translation());
-  return { gap: GAP, d: p.foeDistance(), S: g.playerSecret.S?.name, noClip: g.config.SECRET.mord.noSelfClip, at: g.config.SECRET.mord.at, track: g.config.SECRET.mord.track };
+  const Mc = g.config.SECRET.mord;
+  return { gap: GAP, d: p.foeDistance(), S: g.playerSecret.S?.name, noClip: Mc.noSelfClip, at: Mc.at, track: Mc.track, regrip: Mc.regrip, burst: Mc.burstBack, pommel: Mc.pommel, clipStep: Mc.clipStep };
 }, GAP);
 console.log(JSON.stringify(info));
 const frames = [];
-const step = async () => { await page.evaluate((ms) => window.__frame(ms), STEP_MS); return page.evaluate(() => window.__meas()); };
+const step = async () => { await page.evaluate(() => window.__camOff()); await page.evaluate((ms) => window.__frame(ms), STEP_MS); return page.evaluate(() => window.__meas()); }; // 나아가는 프레임은 게임 카메라로 그림 (눈 game 은 그 그림 그대로)
 // 비기 창을 기다림 (가슴 사이 ≤ 0.8 m 로 2 s — 'close' 규칙)
 let r = await step();
 for (let i = 0; i < 400 && !r.open; i++) r = await step();
 console.log(`창 ${r.open} · 가슴 사이 ${r.d} · t ${r.t}`);
 let fired = false;
-if (r.open) {
-  await page.evaluate((gap) => window.__place(gap), GAP);
-  await page.evaluate(() => window.__frame(0));
-  fired = await page.evaluate(() => { const g = window.game; const o = g.playerSecret.fire(); return !!(o && g.player.skill.secret(o)); });
-}
-console.log(`냄 ${fired}`);
-const shots = [];
-let n = 0;
 const shoot = async (m) => {
   const k = String(n++).padStart(3, '0');
   for (const v of VIEWS) {
-    await page.evaluate((v) => window.__cam(v), v);
+    if (v === 'game') await page.evaluate(() => window.__camOff());
+    else await page.evaluate((v) => window.__cam(v), v);
     await page.evaluate(() => window.__frame(0));
     await page.screenshot({ path: `${dir}/${tag}_${v}_${k}.png`, timeout: 180000 });
   }
   shots.push({ k, ...m });
 };
+const shots = [];
+let n = 0;
+if (r.open) {
+  await page.evaluate((gap) => window.__place(gap), GAP);
+  await page.evaluate(() => window.__frame(0));
+  for (let i = 0; i < 2; i++) { r = await step(); frames.push(r); await shoot({ ...r, pre: true }); } // 내기 바로 앞 두 장 (지금 판 쥠 바꿈이 한 스텝 순간이동인 것을 보이게)
+  fired = await page.evaluate(() => { const g = window.game; const o = g.playerSecret.fire(); return !!(o && g.player.skill.secret(o)); });
+}
+console.log(`냄 ${fired}`);
 if (fired) {
   let lastT = null, after = 0;
   for (let i = 0; i < 120 && after < 3; i++) {
     r = await step();
     frames.push(r);
     if (!r.ph && shots.some((s) => s.ph)) after++;
-    if (r.t !== lastT && (r.ph === 'cut' || r.ph === 'wind' || (r.ph === 'back' && i % 2 === 0) || (!r.ph && after > 0))) await shoot(r); // 준비 · 내리침은 1/60 s 마다 · 다시 세우기는 1/30 s · 멈칫(같은 시각)은 건너뜀
+    if (r.t !== lastT && (r.ph === 'cut' || r.ph === 'wind' || ((r.ph === 'grip' || r.ph === 'gripOut' || r.ph === 'back') && i % 2 === 0) || (!r.ph && after > 0) || i === 0)) await shoot(r); // 준비 · 내리침은 1/60 s 마다 · 쥠 바꿈 · 다시 세우기는 1/30 s · 낸 바로 뒤 첫 장 · 멈칫(같은 시각)은 건너뜀
     lastT = r.t;
   }
 }
