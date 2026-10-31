@@ -10,7 +10,7 @@
 //  실행: 빌드(vite build --outDir <폴더>) → vite preview --outDir <폴더> --port <빌드 포트> & · 개발 서버(배우기만 — 파일 감시 끈 설정) --port <개발 포트> &
 //        node tools/browser/gonosen_window_probe.mjs http://127.0.0.1:<빌드 포트> http://127.0.0.1:<개발 포트> [결과 json (기본 .tmp/gns_window/probe.json)]
 //   환경: CROUCH(1,0 — ?gnsCrouch=) · SCEN(none,stick,sword,both,play) · DUR(40 게임 초 한 판) · K(0.2) · FIRE(0 — 1 이면 창에서 그어 냄) · REACT(0.25 실제 초)
-//         STICKOFF(4 px) · DRIFT(4 px) · JIT(0.6 px) · EXTRA(주소 덧붙임) · WEAPON(uchigatana) · FOE(longsword) · NODRAW(1 — 그리기 건너뜀 · 0 = 그림) · SHOT(그림 앞 이름 — 준비 · 첫 창 한 장씩)
+//         STICKOFF(4 px) · THUMBDRIFT(0 px — 엄지가 4 s 에 걸쳐 바깥으로 떠돎) · DRIFT(4 px) · JIT(0.6 px) · EXTRA(주소 덧붙임) · WEAPON(uchigatana) · FOE(longsword) · NODRAW(1 — 그리기 건너뜀 · 0 = 그림) · SHOT(그림 앞 이름 — 준비 · 첫 창 한 장씩)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 const base = process.argv[2] || 'http://127.0.0.1:5872';
@@ -26,6 +26,7 @@ const REACT = +(E.REACT || 0.25);
 const STICKOFF = +(E.STICKOFF ?? 4);
 const DRIFT = +(E.DRIFT ?? 4);
 const JIT = +(E.JIT ?? 0.6);
+const THUMBDRIFT = +(E.THUMBDRIFT ?? 0); // 스틱에 얹은 엄지가 4 s 에 걸쳐 바깥쪽으로 떠도는 거리 (px)
 const EXTRA = E.EXTRA || '';
 const WEAPON = E.WEAPON || 'uchigatana';
 const FOE = E.FOE || 'longsword';
@@ -127,7 +128,8 @@ async function run(crouch, scen) {
         const ls = ai.lastSeen;
         let online = null, opp = null;
         try { if (ls) { online = !!ai.foeClass(ls).online; const o = ai.opportunity(ls, ai.d ?? chestD()); opp = { s: +o.score.toFixed(2), k: o.kind }; } } catch { /* */ }
-        L.samples.push({ T: +T.toFixed(2), armed: A.armed, t: +A.t.toFixed(2), open: !!ps.open, crouchW: +(p.iaiReadyW ?? 0).toFixed(2), handW: +(p.skill.thrustPose?.w ?? 0).toFixed(2), pelY: +pel.y.toFixed(2), headY: +head.y.toFixed(2), tipY: +tip.y.toFixed(2), d: +chestD().toFixed(2), aiMode: ai.mode, slot: slot(), cueOpen: cue?.open ?? null, cueGold: cue?.gold ?? null, held: !!p.handHeld, act: !!p.inputActive, stick: [+(p.stickX || 0).toFixed(2), +(p.stickY || 0).toFixed(2)], stam: +p.stamina.value.toFixed(0), left: ps.left, online, opp, patience: +(ai.patience ?? 0).toFixed(2), wary: !!ai.gnsW?.ready });
+        const gn = document.getElementById('guardName');
+        L.samples.push({ guard: gn ? gn.textContent.trim() : null, T: +T.toFixed(2), armed: A.armed, t: +A.t.toFixed(2), open: !!ps.open, crouchW: +(p.iaiReadyW ?? 0).toFixed(2), handW: +(p.skill.thrustPose?.w ?? 0).toFixed(2), pelY: +pel.y.toFixed(2), headY: +head.y.toFixed(2), tipY: +tip.y.toFixed(2), d: +chestD().toFixed(2), aiMode: ai.mode, slot: slot(), cueOpen: cue?.open ?? null, cueGold: cue?.gold ?? null, held: !!p.handHeld, act: !!p.inputActive, stick: [+(p.stickX || 0).toFixed(2), +(p.stickY || 0).toFixed(2)], stam: +p.stamina.value.toFixed(0), left: ps.left, online, opp, patience: +(ai.patience ?? 0).toFixed(2), wary: !!ai.gnsW?.ready });
       }
       return r;
     };
@@ -154,7 +156,8 @@ async function run(crouch, scen) {
   const pts = (T) => {
     const out = [];
     const u = T - g0;
-    if (thumbDown) out.push({ id: 9, x: (walk ? SC.x : thumb.x) + noise(u, seed) + 0.5 * Math.sin(u * 0.7), y: (walk ? SC.y - 30 : thumb.y) + noise(u, seed + 1) });
+    const td = THUMBDRIFT * (0.5 - 0.5 * Math.cos(Math.min(1, u / 4) * Math.PI)); // 엄지 떠돎: 4 s 에 걸쳐 가운데에서 바깥쪽(앞 · 오른쪽 비스듬히)으로 THUMBDRIFT px
+    if (thumbDown) out.push({ id: 9, x: (walk ? SC.x : thumb.x + td * 0.6) + noise(u, seed) + 0.5 * Math.sin(u * 0.7), y: (walk ? SC.y - 30 : thumb.y - td * 0.8) + noise(u, seed + 1) });
     if (fingerDown) {
       const drift = DRIFT * (0.5 - 0.5 * Math.cos(Math.min(1, (u % 9) / 6) * Math.PI)); // 천천히 떠돎 (9 s 마다 처음 자리로 — 손가락을 고쳐 얹음)
       out.push({ id: 1, x: finger.x + drift * 0.8 + noise(u, seed + 2) + swipeDx, y: finger.y + drift * 0.6 + noise(u, seed + 3) + swipeDy });
@@ -223,7 +226,7 @@ async function run(crouch, scen) {
     resets: L.resets.length, resetWhy: why, resetsAfter1s: tOver(1), opens: L.opens.length, opensPerMin: L.liveT ? +((60 * L.opens.length) / L.liveT).toFixed(2) : 0, openEv: L.opens.map((o) => o.ev),
     firstOpenT: L.opens[0] ? +(L.opens[0].T - L.t0).toFixed(1) : null, atk: L.atk.length, atkArmed: L.atk.filter((a) => a.armed).length, atkArmedInLine: L.atk.filter((a) => a.armed && a.d <= a.line).length, atkInLine: L.atk.filter((a) => a.d <= a.line).length,
     fires: L.fires.map((f) => ({ T: f.T, d: f.d, wounds: f.wounds })), firedSwipes: fired,
-    seenArmed: { n: visArmed.length, slotShown: visArmed.filter((x) => x.slot?.visible && x.slot?.kind === 'secretArm').length, slotTexts: [...new Set(visArmed.map((x) => x.slot?.visible ? `${x.slot.kind}:${x.slot.text}` : 'hidden'))].slice(0, 4), crouchW: visArmed.length ? +(visArmed.reduce((s, x) => s + x.crouchW, 0) / visArmed.length).toFixed(2) : null, handW: visArmed.length ? +(visArmed.reduce((s, x) => s + x.handW, 0) / visArmed.length).toFixed(2) : null, opacity: visArmed.find((x) => x.slot?.visible)?.slot?.opacity ?? null, foeSeesOnline: visArmed.length ? +(visArmed.filter((x) => x.online).length / visArmed.length).toFixed(2) : null, oppMean: visArmed.length ? +(visArmed.reduce((s, x) => s + (x.opp?.s ?? 0), 0) / visArmed.length).toFixed(2) : null },
+    seenArmed: { n: visArmed.length, slotShown: visArmed.filter((x) => x.slot?.visible && x.slot?.kind === 'secretArm').length, slotTexts: [...new Set(visArmed.map((x) => x.slot?.visible ? `${x.slot.kind}:${x.slot.text}` : 'hidden'))].slice(0, 4), crouchW: visArmed.length ? +(visArmed.reduce((s, x) => s + x.crouchW, 0) / visArmed.length).toFixed(2) : null, handW: visArmed.length ? +(visArmed.reduce((s, x) => s + x.handW, 0) / visArmed.length).toFixed(2) : null, opacity: visArmed.find((x) => x.slot?.visible)?.slot?.opacity ?? null, guardNames: [...new Set(visArmed.map((x) => x.guard))].slice(0, 4), stickMax: L.samples.reduce((m, x) => Math.max(m, Math.hypot(x.stick[0], x.stick[1])), 0), foeSeesOnline: visArmed.length ? +(visArmed.filter((x) => x.online).length / visArmed.length).toFixed(2) : null, oppMean: visArmed.length ? +(visArmed.reduce((s, x) => s + (x.opp?.s ?? 0), 0) / visArmed.length).toFixed(2) : null },
     end: L.end, errors: errors.slice(0, 5),
   };
   console.log(JSON.stringify(sum));

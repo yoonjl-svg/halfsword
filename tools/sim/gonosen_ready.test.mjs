@@ -7,11 +7,13 @@
 //  ⑥ 10/27 23:0x 무장 시계(고노센 준비 · 싱지르)는 공격이 풀린 때(판 시작 정지 끝 — fighter.openHold)부터
 //  ⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창(사장님 '웅크리기를 없앴더니 고노센 발동창이 안열려.'): 얹은 손가락(떨림)으로도 준비 · 허리 대기(SECRET.gnsReadyHip — 몸은 선 채 칼만 왼 허리) ·
 //   쥠(handGrip)이면 곧장 사람 손 · 상대가 발도 선 안에서 칼을 들면 창 (허리 대기 켬 · 끔 모두) · 든 칼 이어 봄(SECRET.gnsRaiseLatch — 선 밖에서 든 칼로 선 안에 들면 창)
+//  ⑧ 10/31 13:xx 사장님 '1-2번 다 고쳐': 스틱에 얹은 엄지(데드존 밖 조금)는 걸음 뜻 아님 — 몸을 걷게 할 때만(SECRET.gnsStickWalk) · 칼이 허리에 있는 동안 자세 이름 '발도 대기'(iaiReadyShown)
 //  node --test tools/sim/gonosen_ready.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG } from './harness_m.mjs';
-import { PlayerSecretWatch, IaiArm, gnsArmTick, gnsMoving, gnsHumanUnsettled } from '../../src/secret.js';
+import { PlayerSecretWatch, IaiArm, gnsArmTick, gnsMoving, gnsHumanMoving, gnsHumanUnsettled } from '../../src/secret.js';
+import { iaiReadyShown, IAI_READY_STANCE } from '../../src/secret_instant.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 
 const { SECRET } = CONFIG;
@@ -338,4 +340,41 @@ test("⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창 (사장님 '웅크리�
     else assert.notEqual(ev?.ev, 'raise', `끄면 선 밖에서 든 칼은 '듦' 창 없음 (손이 멎으면 헛침 창은 그대로) ${JSON.stringify(ev)}`);
     R.G.world.free();
   }
+});
+
+test("⑧ 10/31 13:xx 사장님 '1-2번 다 고쳐': 스틱 위 엄지는 몸을 걷게 할 때만 걸음 뜻 (SECRET.gnsStickWalk) · 허리 대기 동안 자세 이름 '발도 대기'", () => {
+  const { GAIT } = CONFIG;
+  assert.equal(SECRET.gnsStickWalk, 1);
+  // 문턱 = 몸이 가려는 빠르기 > GAIT.walkMin (일본 걸음 빠르기 0.67) — 앞 1 · 뒤 backFactor · 옆 sideFactor
+  const f = (x, y) => ({ stickX: x, stickY: y, gait: { P: { speedMul: 0.67 } } });
+  const k = GAIT.moveSpeed * 0.67;
+  const fwd = GAIT.walkMin / k, back = GAIT.walkMin / (k * GAIT.backFactor), side = GAIT.walkMin / (k * GAIT.sideFactor);
+  assert.equal(gnsHumanMoving(f(0, 0)), false);
+  for (const [nm, m, x, y] of [['앞', fwd, 0, 1], ['뒤', back, 0, -1], ['옆', side, 1, 0]]) {
+    assert.equal(gnsHumanMoving(f(x * m * 0.9, y * m * 0.9)), false, `${nm} 문턱 아래 (${(m * 0.9).toFixed(3)})`);
+    assert.equal(gnsHumanMoving(f(x * m * 1.1, y * m * 1.1)), true, `${nm} 문턱 위 (${(m * 1.1).toFixed(3)})`);
+  }
+  // 데드존 밖 몇 px 떠돈 엄지 (스틱 반지름 40 px · 데드존 0.15 — input.js attachStick): 가운데에서 9 px → 데드존 뒤 0.088 → 걸음 뜻 아님 · 25 px → 0.56 → 걸음
+  const post = (px) => (px / 40 - 0.15) / 0.85;
+  assert.equal(gnsHumanMoving(f(0, post(9))), false, '얹은 엄지 9 px');
+  assert.equal(gnsHumanMoving(f(post(9) * 0.6, post(9) * 0.8)), false, '비스듬히 9 px');
+  assert.equal(gnsHumanMoving(f(0, post(25))), true, '앞으로 민 25 px — 걸음');
+  assert.ok(gnsMoving(f(0, post(9))), 'AI 자기 준비 · 옛 판은 0 이 아니면 걸음');
+  withCfg({ gnsStickWalk: 0 }, () => assert.equal(gnsHumanMoving(f(0, post(9))), true, '?gnsStickWalk=0 — 0 이 아니면 걸음'));
+  // 실제 몸: 얹은 엄지(앞 9 px 쯤 · 0.088)로 서 있음 → iaiArmTime 에 준비 · 앞으로 민 엄지(0.56)는 준비 안 됨 (몸이 걸음)
+  for (const [m, want] of [[post(9), true], [post(25), false]]) {
+    const R = near({}, (t, p) => { p.stickX = 0; p.stickY = m; p.move.set(0, m); });
+    R.run(SECRET.iaiArmTime + 0.3);
+    assert.equal(R.ps.iaiArm.armed, want, `스틱 ${m.toFixed(3)} → 준비 ${want}`);
+    if (want) {
+      // 허리 대기 동안 자세 이름 '발도 대기' · 칼을 쥐면 아님
+      R.run(0.5);
+      assert.ok(iaiReadyShown(R.p), `칼이 허리 (손 몫 ${R.p.iaiHandW})`);
+      R.p.handGrip = true;
+      R.run(DT);
+      assert.equal(iaiReadyShown(R.p), false, '쥐면 보통 자세 이름으로');
+    }
+    R.G.world.free();
+  }
+  assert.equal(IAI_READY_STANCE.name, '발도 대기');
 });

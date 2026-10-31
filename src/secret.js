@@ -9,7 +9,7 @@
 //   플레이어는 검술 풀이의 measure(같은 꾸러미 값)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, SKILL, BIND, CLOSE, UNIQUE_ASSIST, realS } from './config.js';
+import { SECRET, SKILL, BIND, CLOSE, UNIQUE_ASSIST, GAIT, realS } from './config.js';
 import { TRADITIONS, playerSecretDef } from './schools.js';
 import { Senses } from './ai_sense.js';
 import { segDist } from './skill.js';
@@ -325,6 +325,21 @@ export function gnsArmTick(A, dt, unsettled, moving, old, hold = false) {
 /** 걷는 중인가 (고노센 준비 'idle' — 쌓는 동안만 셈을 0 으로): 이동 스틱 원값(사람 main.js · AI moveFeet 의 걸음 뜻 — 둘 다 stickX · stickY)이 0 이 아님. 새 문턱 없음 */
 export function gnsMoving(f) {
   return Math.hypot(f?.stickX || 0, f?.stickY || 0) > 0;
+}
+
+/**
+ * 사람 걸음 뜻 (고노센 준비 'idle' — 사람 창 · AI 가 읽는 사람 준비 gnsWatch 같은 셈 · 10/31 13:xx 사장님 '1-2번 다 고쳐' — SECRET.gnsStickWalk · docs/strike/gonosen_window_2026-10-31.md §10):
+ *  스틱에 얹은 엄지가 가운데에서 데드존(6 px) 밖으로 조금 떠돌아도 걸음 뜻이 아님 — 스틱이 몸을 **걷게 할 때만** 걸음:
+ *  스틱 값(데드존 뒤)을 몸이 가려는 빠르기로 바꿔(fighter.js 와 같은 몫 — 앞 1 · 뒤 GAIT.backFactor · 옆 GAIT.sideFactor × GAIT.moveSpeed × 유파 걸음 빠르기 gait P.speedMul)
+ *  걸음 문턱 GAIT.walkMin(gait.js — 이보다 빨리 가려 해야 발을 떼어 걷는다)을 넘나. 새 수 없음. 끄면(0) gnsMoving 그대로(0 이 아니면 걸음). AI 자기 준비는 gnsMoving 그대로
+ */
+export function gnsHumanMoving(f) {
+  if (!SECRET.gnsStickWalk) return gnsMoving(f);
+  const x = f?.stickX || 0;
+  const y = f?.stickY || 0;
+  if (!x && !y) return false;
+  const along = y * (y < 0 ? GAIT.backFactor : 1);
+  return Math.hypot(along, x * GAIT.sideFactor) * GAIT.moveSpeed * (f.gait?.P?.speedMul || 1) > GAIT.walkMin;
 }
 
 /**
@@ -839,7 +854,7 @@ export class PlayerSecretWatch {
     if (S.when === 'press') this.pressTick(dt, busy);
     // 고노센 준비 (10/25 22:3x · 22:5x 사장님 '거리와 상관없이 … 아무 행동 없이 2초' · '준비가 활성화되면 걸어도 유지' — gnsArmTick 'idle'): 휘두름 · 탭 · 손잡이 찍기 · 비기 · 막기 단추 · 맞음이면 풀림 ·
     //  준비 전엔 이동 입력도 셈을 0 으로 · 'dist'(10/25 전 판) = 상대 칼 거리 밖(긴 칼 상대 규칙 gnsLong 이 아니면 d0 > foeReach 그대로) · 휘두름 · 비기만 풀림
-    if (S.do?.instant) gnsArmTick(this.iaiArm, dt, gnsHumanUnsettled(me, hurt) || busy, gnsMoving(me), { outside: gnsOutside(d0, V, this.iaiArm.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: sw || busy }, armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x)
+    if (S.do?.instant) gnsArmTick(this.iaiArm, dt, gnsHumanUnsettled(me, hurt) || busy, gnsHumanMoving(me), { outside: gnsOutside(d0, V, this.iaiArm.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: sw || busy }, armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x)
     // 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준비가 되면 웅크리게 해.' — SECRET.gnsCrouch · secret_instant.js iaiReadyPosePlayer): 준비된 동안 AI 와 같은 발도 대기 자세 ·
     //  칼을 쥐면(손가락 움직임 · 막기 단추 · 휘두름) 손 · 칼은 곧장 사람 것 — 몸 웅크림은 그대로 · 0 이면 '고노센 준비' 표시만(전 판)
     //  10/31 허리 대기 (사장님 08:xx '웅크리기를 없앴더니 고노센 발동창이 안열려.' — SECRET.gnsReadyHip · 웅크림 0 일 때): 몸은 선 채 손 · 칼만 왼 허리 발도 대기 —

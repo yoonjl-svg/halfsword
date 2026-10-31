@@ -842,6 +842,15 @@ export function iaiReadyPose(f, on, dt) {
  *   ② 손 · 칼 · 몸 비틂만 위와 같이(왼 허리 발도 대기 · 몸 숙임 · 낮춤 0) — 준비가 칼 자리로 보이고, 칼끝이 상대를 안 겨눠 상대에게 빈틈으로 보임(웅크림 판과 같음).
  *   웅크림 판의 몸은 숙인 가슴이 상대 쪽으로 0.2 m · 그 자세로 0.5 m 남짓 저절로 다가가 발도가 낮게 나갔다(docs/strike/gonosen_window_2026-10-31.md) — 선 채 판은 그 둘이 없음
  */
+/** 사람 발도 대기의 자세 이름 (① 자세 칸 — main.js updateGuardName · 10/31 13:xx 사장님 '1-2번 다 고쳐' — 확인표 3201): 칼이 왼 허리 발도 대기에 있는 동안(손 몫 iaiHandW > 0.5) '가운데 겨눔' 대신.
+ *  이름은 이 저장소가 이 자세를 부르는 말(AI 발도 대기 · iaiReadyPose — 원어 쪽 출처 없음 · 사장님 확인 전) · 칼을 쥐면 손 몫이 곧장 0 이라 보통 자세 이름으로 돌아감 */
+export const IAI_READY_STANCE = Object.freeze({ name: '발도 대기', desc: '왼 허리에서 뽑을 때를 기다린다' });
+/** 사람 칼이 지금 발도 대기 자리에 있나 (손 덧씌우기 몫 — 웅크림 판 · 허리 대기 판 같음 · 발도 중 · 다른 덧씌우기 동작 중이면 아님) */
+export function iaiReadyShown(f) {
+  const sk = f?.skill;
+  return (f?.iaiHandW ?? 0) > 0.5 && !!sk && !sk.tap && !sk.pom && !sk.sec && !iaiBusy(f);
+}
+
 export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false) {
   const sk = f.skill;
   const own = !sk.tap && !sk.pom && !sk.sec && !sk.vitalRange && !sk.vitalRelease;

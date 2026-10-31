@@ -63,6 +63,7 @@ import { updateCapeSway } from './cape_sway.js'; // 긴 망토 흔들림 (10/24 
 import { tickDebris, clearDebris, debrisCount, DEBRIS } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
+import { IAI_READY_STANCE, iaiReadyShown } from './secret_instant.js'; // 고노센 발도 대기 자세 이름 (① 자세 칸 — 10/31 13:xx)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { TRADITIONS, setChineseGait, setItalianBackCap, setItalianRhythm, setItalianStride, setItalianWalk, setJapaneseGait, traditionOf } from './schools.js';
@@ -245,6 +246,7 @@ if (params.has('foeChargeSpeed') && +params.get('foeChargeSpeed') > 0) CONFIG.SE
 if (params.has('gnsEnterOpen')) CONFIG.SECRET.gnsEnterOpen = +params.get('gnsEnterOpen') ? 1 : 0; // 여쭘 C: 들어옴 창은 상대 칼끝이 나를 겨누지 않을 때만 (기본 0 · `?gnsEnterOpen=1`)
 if (['idle', 'dist'].includes(params.get('gnsReady'))) CONFIG.SECRET.gnsReady = params.get('gnsReady'); // 고노센 준비 (10/25 22:3x · 22:5x 사장님 — 기본 'idle' = 거리와 상관없이 아무 행동 없이 2 s · 준비된 뒤엔 걸어도 유지 · `?gnsReady=dist` = 상대 칼 거리 밖 옛 판)
 if (params.has('gnsCrouch')) CONFIG.SECRET.gnsCrouch = +params.get('gnsCrouch') ? 1 : 0; // 사람 고노센 준비 웅크림 (10/25 23:0x 사장님 결정 1 → 10/31 01:0x '플레이어만 웅크리기 꺼' — 기본 0 · `?gnsCrouch=1` = 웅크림)
+if (params.has('gnsStickWalk')) CONFIG.SECRET.gnsStickWalk = +params.get('gnsStickWalk') ? 1 : 0; // 고노센 준비의 걸음 뜻 = 스틱이 몸을 걷게 할 때만 (10/31 13:xx — 기본 1 · `?gnsStickWalk=0` = 0 이 아니면 걸음 · 사장님 확인 전)
 if (params.has('gnsRaiseLatch')) CONFIG.SECRET.gnsRaiseLatch = +params.get('gnsRaiseLatch') ? 1 : 0; // 고노센 든 칼 이어 봄 — 선 밖에서 든 칼이 선 안에 들면 창 (10/31 — 기본 1 · `?gnsRaiseLatch=0` = 10/31 01:0x 판 · 사장님 확인 전)
 if (params.has('gnsReadyHip')) CONFIG.SECRET.gnsReadyHip = +params.get('gnsReadyHip') ? 1 : 0; // 사람 허리 대기 — 웅크림 없이 칼만 왼 허리 (10/31 08:xx — 기본 1 · `?gnsReadyHip=0` = 10/31 01:0x 판 '고노센 준비' 글만 · 사장님 확인 전)
 if (params.has('gnsCrouchOut') && +params.get('gnsCrouchOut') > 0) CONFIG.SECRET.gnsCrouchOut = +params.get('gnsCrouchOut'); // 웅크림 풀림 시간 (s — 기본 0.2 · 사장님 확인 전)
@@ -2693,6 +2695,11 @@ function updateGuardName() {
   if (uqReady && player.alive) {
     const key = `uq:${uqReady.name}`;
     if (key !== guardShown) paintGuard(key, uqReady.nameKo, '이어 긋기');
+    return;
+  }
+  // 고노센 발도 대기 (10/31 13:xx 사장님 '1-2번 다 고쳐' — 확인표 3201): 준비된 채 칼이 왼 허리에 있는 동안(허리 대기 · 웅크림 판) '발도 대기' — 칼을 쥐면(손 몫 0) 아래 보통 자세 이름으로 돌아옴
+  if (player.alive && iaiReadyShown(player)) {
+    if (guardShown !== 'iaiReady') paintGuard('iaiReady', IAI_READY_STANCE.name, IAI_READY_STANCE.desc);
     return;
   }
   const gun = player.weapon?.gun; // 권총: 칼 자세 대신 '사격 자세' 하나만 (gun.js GUN_STANCE)
