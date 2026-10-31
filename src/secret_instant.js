@@ -2531,23 +2531,28 @@ function comboPlanDupLine(f, I, m, A) {
   // 앞 박차기와 때 맞춤 (사장님 10/31 19:xx '손 동작과 발 동작이 어우러져야'): 칼날이 얼굴을 지나는 때 = 앞발이 디디는 때 = 몸 미끄러짐이 끝나는 때.
   //  그 때 Tstep = 얼굴까지 칼 시간(몫 빠르기) · 박찬 걸음 발 뜬 시간 GAIT.burstT(0.22 s — 끄는 시간 상한 dupSnapTime 과 같은 수) 가운데 긴 것 → 얼굴은 미끄러진 끝 자리(k = 1).
   //  칼이 몫 빠르기로 그보다 일찍 닿으면 얼굴까지 토막을 그만큼 늦춤(손이 발을 기다림 — 몫은 빠르기 위 끝) · 얼굴 뒤 끝 따라 돌기는 몫 빠르기 그대로 · 끄는 시간 상한은 얼굴까지(Tstep) + 끝 따라 돌기
-  const k = 1;
-  const z = build(sl ? P0.clone().addScaledVector(sl, -k) : P0);
+  let k = 1;
+  let z = build(sl ? P0.clone().addScaledVector(sl, -k) : P0);
+  for (let it = 0; it < 3 && sl && m.step?.sync === false; it++) {
+    // 때 맞춤 끔: 칼이 몫 빠르기로 얼굴을 지나는 때(tFace)의 다가온 자리로 겨눔 (몫 k = tFace ÷ 박차기 시간)
+    k = clamp(z.tFace / Math.max(z.tFace, GAIT.burstT), 0, 1);
+    z = build(P0.clone().addScaledVector(sl, -k));
+  }
   if (sl) {
     const Tstep = Math.max(z.tFace, GAIT.burstT);
-    const sc = z.tFace > 1e-6 ? Tstep / z.tFace : 1;
+    const sc = z.tFace > 1e-6 && m.step?.sync !== false ? Tstep / z.tFace : 1; // sync false (dupBurstSync 0): 칼은 몫 빠르기 그대로 — 얼굴을 디딤보다 먼저 지날 수 있음
     let Tfol = 0;
     z.segs.forEach((sg, j) => {
       if (j < z.iFace) sg.T *= sc;
       else Tfol += sg.T;
     });
-    z.tFace = Tstep;
+    z.tFace *= sc;
     I.dupStepT = Tstep; // 박차기 시간 (dupBurstStart — 몸 미끄러짐 · 앞발 발 뜬 시간)
     I.maxT = I.t + Tstep + Tfol; // 끄는 시간 상한: 얼굴까지(= 디딤) + 끝 따라 돌기 (박차기 판 — 상한 0.2 s 는 얼굴까지 몫)
     z.slow = sc;
   } else I.dupStepT = null;
   const r2 = (v) => +v.toFixed(2);
-  I.dup = { p0: p0.map(r2), p1: z.p1.map(r2), p2: z.p2.map(r2), padLen: +z.padLen.toFixed(3), dFace: +z.dFace.toFixed(3), sweep: +(z.sweep / D2R).toFixed(1), k, tFace: +z.tFace.toFixed(3), Tstep: I.dupStepT == null ? null : +I.dupStepT.toFixed(3), slow: z.slow == null ? null : +z.slow.toFixed(2), fit: +c0b.toFixed(3), line: 1 };
+  I.dup = { p0: p0.map(r2), p1: z.p1.map(r2), p2: z.p2.map(r2), padLen: +z.padLen.toFixed(3), dFace: +z.dFace.toFixed(3), sweep: +(z.sweep / D2R).toFixed(1), k: +k.toFixed(2), tFace: +z.tFace.toFixed(3), Tstep: I.dupStepT == null ? null : +I.dupStepT.toFixed(3), slow: z.slow == null ? null : +z.slow.toFixed(2), fit: +c0b.toFixed(3), line: 1 };
   I.dupGlide = true; // 처음 닿아 있던 상대 칼에 닿아 있는 동안은 막힘이 아님 (comboPlanDup 과 같음)
   I.aim = 'face';
   return z.segs;
@@ -3011,7 +3016,7 @@ export function requestArtFold(f, { share, maxT, tech, step = null }) {
 export function requestArtDup(f, { share, maxT, tech, face = 0, follow = 25, plan = null, body = null, edge = 1, step = null, old = true, burst = null }) {
   if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.head || !f.foe.armed || !f.foe.sword) return false;
   // old: 10/28 길 (comboPlanDup — 감기 · 밀어 넣기) · 아니면 단순 길 (comboPlanDupLine — 10/31 19:xx) · burst { fwd, free }: 앞 박차기 (dupBurstStart — 죽음의 일격 거리에서 멈춤)
-  const st = burst?.fwd > 0 ? { kind: 'lunge', fwd: burst.fwd, close: true, stop: SECRET.mordCloseN ?? 0.8, burst: true, free: !!burst.free } : step ? { ...step, close: true } : null;
+  const st = burst?.fwd > 0 ? { kind: 'lunge', fwd: burst.fwd, close: true, stop: SECRET.mordCloseN ?? 0.8, burst: true, free: !!burst.free, sync: burst.sync !== false } : step ? { ...step, close: true } : null;
   requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, dup: true, edge, plan: old ? plan : null, bodyPose: body, ...(old ? {} : { hintBody: true }), ...(st ? { step: st } : {}), dyn: { kind: 'dup', face, follow, old: !!old } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true }); // step: 시제품 앞 걸음(10/31 UNIQUE_ASSIST.dupStep — 기본 없음 · 박차기가 있으면 안 씀)
   return true;
 }

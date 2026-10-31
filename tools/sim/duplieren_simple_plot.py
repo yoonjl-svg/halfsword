@@ -71,6 +71,7 @@ for r, (name, tr) in enumerate(rows):
             for p, c in ((p0, (60, 160, 60)), (p1, (120, 230, 120))):
                 if p:
                     q = mp(p[ix], p[iy] if iy != 1 else 0.06)
+                    q = (min(max(q[0], ox + 5), ox + W - 5), min(max(q[1], oy + 5), oy + H - 5))  # 칸 밖이면 테두리에 (옆 칸은 발이 땅 높이라 아래 테두리)
                     d.rectangle([q[0] - 4, q[1] - 4, q[0] + 4, q[1] + 4], outline=c, width=2)
         if hit is not None:
             s = min(K or S, key=lambda s: abs(s['t'] - hit))
@@ -92,7 +93,7 @@ for r, (name, tr) in enumerate(rows):
         d.text((tx(hit) + 3, oy + 92), f'contact {hit}', fill=(255, 120, 120))
     # 빠르기 (앞 몫) — 골반 · 손
     vy0 = oy + H - 12
-    sc = 30  # px per m/s
+    sc = 22  # px per m/s
     for key, color in (('pel', (230, 150, 60)), ('hand', (170, 170, 170))):
         line = []
         for a, b in zip(S, S[1:]):
@@ -103,6 +104,6 @@ for r, (name, tr) in enumerate(rows):
         if len(line) > 1:
             d.line(line, fill=color, width=2)
     d.line([ox + 10, vy0, ox + BW - 10, vy0], fill=(80, 80, 80))
-    d.text((ox + 10, vy0 - 4 * sc - 12), 'fwd speed: pelvis (orange) / hand (grey), 1 m/s = 30 px', fill=(160, 160, 160))
+    d.text((ox + 10, oy + H - 26), 'fwd speed: pelvis orange / hand grey (1 m/s = 22 px)', fill=(160, 160, 160))
 img.save(OUT, quality=80) if OUT.endswith('.webp') else img.save(OUT)
 print('saved', OUT, img.size)
