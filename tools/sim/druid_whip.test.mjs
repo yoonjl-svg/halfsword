@@ -178,6 +178,10 @@ test('무릎 꿇리기 (사장님 10/23 · config WHIP_KNEEL): 채찍만 · 한 
   for (const w of WEAPON_LIST) if (w.id !== 'druid_whip') assert.ok(!w.kneelHit, w.id);
   CONFIG.ARENA.startHold = 0;
   const p0 = WHIP_KNEEL.p;
+  // 꿇음 봄(e.state 'getup')은 휘청 게이지로 넘어진 것도 셈 — 자연 바인드 본판(10/31 19:xx)에선 칼끼리 덜 튕겨 이 씨앗의 채찍 둔타가 세져 p 0 판에서도 게이지로 넘어짐(4.77 s).
+  //  꿇리기 굴림을 보는 시험이라 장면은 만들 때의 칼 물리(BIND.natural 0)로 묶음
+  const bn = CONFIG.BIND.natural;
+  CONFIG.BIND.natural = 0;
   const run = (p, aiWhip = false) => {
     WHIP_KNEEL.p = p;
     const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', seed: 13, gap: 1.5, AIClass: Quiet, ...(aiWhip ? { AI2Class: AI } : {}) });
@@ -205,6 +209,7 @@ test('무릎 꿇리기 (사장님 10/23 · config WHIP_KNEEL): 채찍만 · 한 
   const c = run(1, true); // AI 가 든 채찍 (스위치 끔) — 굴리지 않음
   assert.equal(c.log.filter((x) => x.att === 0).length, 0);
   WHIP_KNEEL.p = p0;
+  CONFIG.BIND.natural = bn;
 });
 
 test('섬네일 (10/24 사장님 확정 — 처음 만든 넓은 원형 그림 · 샛별 저장소 537a7bd8): 게임 WebP = 승인 해시 = art 마스터 · 원본 1254² PNG 보관 · 다시 찍기 도구가 마스터를 그대로 복사', async () => {

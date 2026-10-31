@@ -152,7 +152,9 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
     //  (10/24 17:2x 팔꿈치 돌림 켬 · 손목 교정으로 상대 자리 씨앗을 다시 고름 — 전 씨앗 9: 10.1 · 10.7 s · 10/27 손맛 티소나 몸(칼날 질량 분포를 그림 꼴에서) 뒤
     //   상대 자리 씨앗 1 → 6 · 플레이어 자리 씨앗 9 · 7.5 s → 씨앗 1 · 11 s — 전 씨앗은 그 시간 안에 막힘이 없어짐)
     //  (10/27 표준 시간 — AI 판단 박자 · 반응 · 위세 틈이 실제 초가 되어 판이 바뀜: 상대 자리 씨앗 6 은 건너뜀 0 · 플레이어 자리 씨앗 1 은 깎음 0 → 이 파일째 돌려 다시 고름 — 상대 자리 씨앗 27 · 플레이어 자리 씨앗 10)
-    for (const [w1, w2, seed, secs, minDrains, minSkipped] of [['longsword', 'tizona', 27, 11, 1, 1], ['tizona', 'longsword', 10, 11, 1, 0]]) {
+    //  (10/31 자연 바인드 본판(사장님 19:xx — 칼끼리 덜 튕기고 AI 가 막힌 칼을 밂)으로 판이 바뀜: 플레이어 자리 씨앗 10 은 깎음 0 → 이 파일째 1 ~ 30 을 돌려 다시 고름 — 씨앗 5 (깎음 1 · 건너뜀 1).
+    //   30 씨앗 모두 위 규칙(티소나 막힌 끝에서만 · 한 번 · 8 · 1.5 s)은 그대로 맞음)
+    for (const [w1, w2, seed, secs, minDrains, minSkipped] of [['longsword', 'tizona', 27, 11, 1, 1], ['tizona', 'longsword', 5, 11, 1, 0]]) {
       log.length = 0;
       const G = newRound({ walls: true, weapon: w1, weapon2: w2, seed, AI2Class: AI });
       for (let i = 0; i < secs / DT; i++) G.step();
