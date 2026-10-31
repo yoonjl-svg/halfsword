@@ -925,7 +925,11 @@ export class Fighter {
     if (c.s === s && c.table === gp.table && c.oneHand === gp.oneHand) return c;
     const [hx, hy] = SKILL.homeGuard;
     const raw = rawHand(hx, hy, _cs1);
-    _csG.table = gp.table?.frameTable ?? gp.table; // 유파 자세표가 덮기 전 무기 틀 표 (10/31 — guards.js applySchoolGuardTable)
+    // 배수의 잣대 표 (10/31 SKILL.frameScale — 사장님 확인 전): 유파 자세표가 쉼 자리 칸을 덮기 전 무기 틀 표(guards.js applySchoolGuardTable frameTable).
+    //  'heavy' = 앞무게 틀(대검)만 · 'all' = 유파 자세표가 있는 모든 무기 · 'off' = 10/10 ~ 10/31 판(덮은 표로 잼)
+    const fs = SKILL.frameScale;
+    const useFrame = fs === 'all' || (fs === 'heavy' && this.swordArt?.frame === 'heavy');
+    _csG.table = (useFrame && gp.table?.frameTable) || gp.table;
     _csG.oneHand = gp.oneHand;
     const G = guardAt(hx, hy, _csG);
     const gw = this.guardWeight(s);
