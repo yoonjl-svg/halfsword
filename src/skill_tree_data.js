@@ -5,7 +5,7 @@
 //  칸 → 판 몫(아래 f · u · perk): 칸 하나가 제 몫 하나만 켠다 — 몫 열쇠는 skill_kit.js kitOff 가 싸움 코드에서 읽는다(사람만 · AI 는 숙련도 그대로).
 //   표 · 근거: IMPLEMENTATION.md §2 · docs/strike/school_kit_map.md §2 '스킬트리'. 글(l1 · l2 · eff)은 화면 글 지침(docs/text/editing_guide.md) — data.mjs eff 는 설계 메모라 고쳐 씀.
 //  이 파일은 저장 · 화면을 모른다(시험이 바로 읽음) — 저장은 skill_tree_store.js · 화면은 skill_tree.js.
-import { SECRET, LETTER } from './config.js';
+import { SECRET, LETTER, UNIQUE_ASSIST } from './config.js';
 
 /** 탭 차례 (감독 10/16: 독일 · 이탈리아 · 이베리아 · 일본 · 동방) */
 export const TREE_SCHOOLS = Object.freeze(['german', 'italian', 'iberian', 'japanese', 'chinese']);
@@ -219,8 +219,13 @@ const NODE_CMD = {
   C6: '뒤로 움직이며(↓) 탭', // 탭으로 내는 특수 공격 — unique_assist.js TAP_TRIG.lian: 물러나는 동안(스틱 뒤) · 놓고 실제 0.6 s 안의 탭 (10/28 01:2x) · 10/29 14:1x · 14:2x 사장님 글 (전 '사선 긋기(↖) 도중 바로 방향 꺾기')
   C9: '앞으로 움직이며(↑) 상대 공격을 정확한 타이밍에 막으면 자동 발동', // 10/25 22:3x 사장님 확정 글(감독 전달) · 전 '앞으로 이동(↑)과 동시에, 칼이 닿기 직전 막기' — secret.js gyeoksalTick — 막기 새 누름 뒤 gyeoksal.press 초 안에 칼이 닿음 · 그때 스틱 앞 · 받아 내면 저절로(gyeoksal.auto — 공격 입력 없음)
 };
+// G7 겹치기 자동 판 입력 줄 초안 — 검수 전 (사장님 10/31 16:xx '겹치기는 추가 커맨드 없이 일정 조건 충족하면 자동으로' · 시제품 UNIQUE_ASSIST.dupAuto 를 켰을 때만 카드에 나옴 · 끔이면 위 G7 그대로 ·
+//  C9 '… 자동 발동' 꼴을 따름 · 효과 글(eff — 사장님 글)은 그대로 · 확인표 3227): bind = 가슴 사이 0.8 m 넘는 거리(몸이 붙기 전)에서 칼끼리 맞댄 채 쌓임 · clash2 = 칼끼리 닿음 둘이 짧은 시간 안
+export const G7_CMD_AUTO = { bind: '가까이서 칼을 맞댄 채 버티면 자동 발동', clash2: '칼끼리 연달아 부딪히면 자동 발동' }; // [검수 전]
+/** 상세 카드 입력 줄 (skill_tree.js — 얼린 칸의 cmd · 겹치기 자동 판이면 G7 초안) */
+export const nodeCmd = (n) => (n?.id === 'G7' && UNIQUE_ASSIST.dupAuto && G7_CMD_AUTO[UNIQUE_ASSIST.dupAuto] ? G7_CMD_AUTO[UNIQUE_ASSIST.dupAuto] : n?.cmd);
 /** 칸 + 오의 (lore · src — 편지는 lore 만) + 입력 줄 (cmd — 정해진 입력으로 내는 칸만) */
-const withLore = (n) => Object.freeze({ ...n, ...NODE_LORE[n.id], ...(NODE_CMD[n.id] ? { cmd: NODE_CMD[n.id] } : {}) });
+const withLore =(n) => Object.freeze({ ...n, ...NODE_LORE[n.id], ...(NODE_CMD[n.id] ? { cmd: NODE_CMD[n.id] } : {}) });
 /** 유파 → { gate?, nodes } (얼림) */
 export const TREE = Object.freeze(Object.fromEntries(Object.entries(TREE_SRC).map(([s, t]) => [s, Object.freeze({ ...t, nodes: Object.freeze(t.nodes.map(withLore)) })])));
 

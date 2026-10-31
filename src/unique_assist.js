@@ -358,11 +358,11 @@ export class PlayerUniqueAssist {
     this.fIdle = Math.abs(dx) + Math.abs(dy) > 1e-5 ? 0 : this.fIdle + dt;
   }
 
-  /** 발동하지 않는 때: 다른 플레이어 동작이 돌거나 칼을 못 쓰는 때 · held 참이면 막기 단추를 쥔 것은 보지 않고 손이 정말 쥐였나(handHeld)만 (칼끝 돌려 빼기 탭 — 10/30 UNIQUE_ASSIST.cavHeld) */
+  /** 발동하지 않는 때: 다른 플레이어 동작이 돌거나 칼을 못 쓰는 때 · held 참이면 막기 단추를 쥔 것은 보지 않고 손이 정말 쥐였나(handHeld)만 (칼끝 돌려 빼기 탭 — 10/30 UNIQUE_ASSIST.cavHeld) · 'any' 면 막기 단추를 아예 안 봄 (겹치기 자동 dupAutoParry 1 — 10/31) */
   busy(held = false) {
     const f = this.f;
     const sk = f.skill;
-    return (held ? this.handHeld : this.blocked) || !UA.on || !!sk.sec || !!sk.tap || !!sk.pom || !!sk.vitalRange || !f.alive || !f.armed || f.weaponBroken || f.state !== 'stand' || !f.foe || f.finish?.amt > 0.5;
+    return (held === 'any' ? false : held ? this.handHeld : this.blocked) || !UA.on || !!sk.sec || !!sk.tap || !!sk.pom || !!sk.vitalRange || !f.alive || !f.armed || f.weaponBroken || f.state !== 'stand' || !f.foe || f.finish?.amt > 0.5;
   }
 
   /** 긋기 결과 적기: 맞힘(상대 아픔 +0.05 — 비기와 같은 눈) · 칼 맞물림(ai.js checkBind 와 같은 기하 0.07 m). 탭 찌르기도 한 긋기로 센다 */
@@ -825,7 +825,7 @@ export class PlayerUniqueAssist {
       this.dupCue = null;
     }
     if (!ready || dead) return false;
-    if (this.busy(!!UA.dupAutoParry) || f.iai || f.iaiReq || !(specialShare(e.name) > 0) || !(UA.enhance > 0) || !foe.sword || !foe.bodies?.head) return false;
+    if (this.busy(UA.dupAutoParry ? 'any' : false) || f.iai || f.iaiReq || !(specialShare(e.name) > 0) || !(UA.enhance > 0) || !foe.sword || !foe.bodies?.head) return false;
     A.st = 0;
     A.off = 0;
     A.since = null;

@@ -23,7 +23,7 @@
 //   원 · 줄 간격은 판 폭에서 셈(높이에 맞춰 줄이지 않음) · 가로 내려 보기 없음(01:3x '가로 스크롤은 하지 마') — 줄마다 칸 폭(원 · 이름)을 판 폭 안에 나눠 넣고,
 //   좁으면 넓은 이름부터 한 줄 더 접고(세 줄까지) · 그래도 안 들면 그 줄 원만 작게 · 설계 자리(cx)에서 덜 밀리게.
 //   첫 화면에 뿌리 줄이 보이고 아래 끝은 흐림 + 꺾쇠(더 있음). 잰 도구 tools/browser/skill_tree_layout.mjs
-import { TREE_SCHOOLS, TREE, NODE_CAT, nodesOf, nodeOf, nodeState, canLearn, isClosed, nodeEff, RESET_HEADS } from './skill_tree_data.js';
+import { TREE_SCHOOLS, TREE, NODE_CAT, nodesOf, nodeOf, nodeState, canLearn, isClosed, nodeEff, RESET_HEADS, nodeCmd } from './skill_tree_data.js';
 import { readLearned, learnNode, resetPreview, resetSchool } from './skill_tree_store.js';
 import { readProgress } from './lobby_progress.js';
 import { TRADITIONS, playerSecretDef } from './schools.js';
@@ -340,7 +340,7 @@ export function mountSkillTree(root, { test = false, onWallet = () => {}, announ
     box.dataset.lore = lore ? 'y' : '';
     $('#nodeEffect').textContent = st === 'closed' ? '준비 중입니다.' : nodeEff(school, n);
     // 입력 줄 (사장님 10/24 14:1x '커맨드가 있는 공격은 스킬 설명 최하단에 커맨드 적어' · 10/25 17:3x 도식 '입력: …' — 칸 cmd · skill_tree_data.js NODE_CMD): 카드 맨 아래 온 폭 한 줄 · 없거나 준비 중이면 숨김
-    const cmd = st === 'closed' ? '' : n.cmd ?? '';
+    const cmd = st === 'closed' ? '' : nodeCmd(n) ?? ''; // 겹치기 자동 판(UNIQUE_ASSIST.dupAuto)이면 G7 초안 줄 (10/31 — 검수 전)
     // 괄호 화살표가 붙은 낱말(예 '긋기(↻/↺)로' · '움직이면(↑/↓)')은 줄을 나누지 않음 — 10/25 사장님 비기 글이 두 줄이 되며 '(↻/' · '↺)' 로 갈라지던 것(글은 그대로 · textContent 같음)
     $('#nodeCmdText').replaceChildren(...cmd.split(/(\S*\([^)]*\)\S*)/).filter(Boolean).map((t) => (t.includes('(') ? Object.assign(document.createElement('span'), { className: 'cmd-nb', textContent: t }) : document.createTextNode(t))));
     $('#nodeCmd').hidden = !cmd;
