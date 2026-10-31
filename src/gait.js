@@ -359,7 +359,7 @@ export class Gait {
     if (!GAIT.requestSteps || !this.active || this.f.state !== 'stand') return false;
     if (this.f.feetHeld || this.f.fireHold) return false; // 판 시작 정지 (ARENA.startHold): 기술 걸음도 받지 않는다 · AI 가 쏘는 동안(fireHold — 10/29)도
     // 물러나는 중이면 받지 않는다 (몸은 뒤로, 발은 앞으로 가면 넘어진다). 뒤로 딛는 걸음(retreat)은 예외
-    if (this.f.move.y < -0.1 && o.kind !== 'retreat') return false;
+    if (this.f.move.y < -0.1 && o.kind !== 'retreat' && !o.force) return false; // force: 겹치기 앞 박차기 (몸은 이미 미끄러져 나감 — 발도 따라 디뎌야 넘어지지 않음)
     this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, Math.min(0.28, o.minT ?? 0.28), 0.7), age: 0, leg: o.leg ?? null }; // minT: 이보다 짧은 발 뜬 시간도 받음 (겹치기 앞 박차기 — 칼이 끌리는 시간에 맞춤 · 10/31 · 없으면 0.28 그대로) // leg 'left'|'right': 기술이 고른 발(R2′ 채널 B, 확인표 182) — 없으면 아래 규칙(lunge 앞발·pass 뒷발)
     if (o.push) this.req.push = o.push;
     if (o.accel) this.req.accel = true; // 안다레 리솔루토 런지 · 되돌아오기 (10/24 14:0x): 이 걸음 동안 · 끝난 뒤 몸이 따라잡을 때까지 가속 한도 × GAIT.burstAccel (lungeBrake — fighter.js driveBalance)
@@ -704,7 +704,6 @@ export class Gait {
     const L = this.legs;
     const sw = !L.F.stance ? L.F : !L.B.stance ? L.B : null;
     if (!sw) return this.requestStep(o);
-    if (L[this.frontLeg(this.f.forward(new THREE.Vector3()))] !== sw) return false;
     if (!this.requestStep(o)) return false;
     sw.kind = 'req';
     sw.T = sw.t + this.req.duration;

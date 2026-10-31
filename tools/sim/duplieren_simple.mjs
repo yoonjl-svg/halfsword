@@ -239,6 +239,7 @@ export function measure(tr) {
     tipDx: dx(atHit, 'tip'),
     bendW: bendOf(tipW),
     bendR: bendOf(tipR),
+    bendR2: bendOf(tipR.slice(2)), // 첫 두 스텝(놓인 칼 → 길 첫 자리 이음) 뺀 길
     bendHand: bendOf(handR),
     sweep: tr.dup?.sweep ?? null,
     oorStep: K.length ? r3(K.filter((s) => s.oor > OOR_EPS).length / K.length) : null,
@@ -276,6 +277,8 @@ export function summary(ms) {
     pelDx: p50(F.map((m) => m.pelDx)), handDx: p50(F.map((m) => m.handDx)), tipDx: p50(F.map((m) => m.tipDx)),
     devW: p50(F.map((m) => m.bendW?.devShare)), kinkW: p50(F.map((m) => m.bendW?.kinkDeg)), kinkWMax: mx(F.map((m) => m.bendW?.kinkDeg)),
     devR: p50(F.map((m) => m.bendR?.devShare)), devRMax: mx(F.map((m) => m.bendR?.devShare)), kinkR: p50(F.map((m) => m.bendR?.kinkDeg)), kinkRMax: mx(F.map((m) => m.bendR?.kinkDeg)),
+    devR2: p50(F.map((m) => m.bendR2?.devShare)), kinkR2: p50(F.map((m) => m.bendR2?.kinkDeg)), kinkR2Max: mx(F.map((m) => m.bendR2?.kinkDeg)),
+    kink30: F.filter((m) => m.bendR?.kinkDeg > 30).length,
     pathLenR: p50(F.map((m) => m.bendR?.pathLen)), chordR: p50(F.map((m) => m.bendR?.chord)),
     handDevR: p50(F.map((m) => m.bendHand?.devShare)), handKinkR: p50(F.map((m) => m.bendHand?.kinkDeg)),
     sweep: p50(F.map((m) => m.sweep)), sweepMax: mx(F.map((m) => m.sweep)),

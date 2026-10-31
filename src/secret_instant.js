@@ -2455,7 +2455,25 @@ function comboPlanDupLine(f, I, m, A) {
     const b = B.H.clone().addScaledVector(B.D, L);
     return segPointT(a, b, P).d;
   };
-  const p0 = [clamp(f.handOffset.x, -PM, PM), clamp(f.handOffset.y, -PM, PM)];
+  // p0 = 지금 놓인 칼(A — 맞물려 상대 칼에 밀린 자리)에 가장 가까운 자세 지도 패드 (손 · 칼끝 거리 합 — 0.05 칸 → 0.01 칸). 손가락 패드(handOffset)는 칼이 밀려 있으면 놓인 칼과 달라
+  //  그 자리로 먼저 거두는 갈고리가 생김
+  const tipA = A.H.clone().addScaledVector(A.D.clone().normalize(), L);
+  const poseCost = (p) => {
+    const B = pose(p);
+    return B.H.distanceTo(A.H) + B.H.clone().addScaledVector(B.D, L).distanceTo(tipA);
+  };
+  let p0 = [clamp(f.handOffset.x, -PM, PM), clamp(f.handOffset.y, -PM, PM)];
+  let c0b = poseCost(p0);
+  for (let x = -PM; x <= PM + 1e-9; x += 0.05) for (let y = -PM; y <= PM + 1e-9; y += 0.05) {
+    const c = poseCost([x, y]);
+    if (c < c0b) (c0b = c), (p0 = [x, y]);
+  }
+  const g0 = p0;
+  for (let x = g0[0] - 0.05; x <= g0[0] + 0.05 + 1e-9; x += 0.01) for (let y = g0[1] - 0.05; y <= g0[1] + 0.05 + 1e-9; y += 0.01) {
+    if (Math.abs(x) > PM || Math.abs(y) > PM) continue;
+    const c = poseCost([x, y]);
+    if (c < c0b) (c0b = c), (p0 = [x, y]);
+  }
   // 얼굴 P 로 가는 패드 p1 (가장 가까이 지나는 것 + 2 cm 안 가운데 p0 에서 가장 가까운 것)
   const target = (P) => {
     const cand = [];
@@ -2509,16 +2527,28 @@ function comboPlanDupLine(f, I, m, A) {
       if (j < iFace) tFace += sg.T;
       cur = B;
     });
-    return { segs, p1, p2, padLen: un + l2, dFace: t1[2], tFace, T: Math.min(tCap, segs.reduce((x, sg) => x + sg.T, 0)), sweep };
+    return { segs, p1, p2, padLen: un + l2, dFace: t1[2], tFace, iFace, sweep };
   };
-  let k = sl ? 0.7 : 1;
-  let z = build(sl ? P0.clone().addScaledVector(sl, -k) : P0);
-  for (let it = 0; it < 4 && sl; it++) {
-    k = clamp(z.tFace / Math.max(1e-6, z.T), 0, 1);
-    z = build(P0.clone().addScaledVector(sl, -k));
-  }
+  // 앞 박차기와 때 맞춤 (사장님 10/31 19:xx '손 동작과 발 동작이 어우러져야'): 칼날이 얼굴을 지나는 때 = 앞발이 디디는 때 = 몸 미끄러짐이 끝나는 때.
+  //  그 때 Tstep = 얼굴까지 칼 시간(몫 빠르기) · 박찬 걸음 발 뜬 시간 GAIT.burstT(0.22 s — 끄는 시간 상한 dupSnapTime 과 같은 수) 가운데 긴 것 → 얼굴은 미끄러진 끝 자리(k = 1).
+  //  칼이 몫 빠르기로 그보다 일찍 닿으면 얼굴까지 토막을 그만큼 늦춤(손이 발을 기다림 — 몫은 빠르기 위 끝) · 얼굴 뒤 끝 따라 돌기는 몫 빠르기 그대로 · 끄는 시간 상한은 얼굴까지(Tstep) + 끝 따라 돌기
+  const k = 1;
+  const z = build(sl ? P0.clone().addScaledVector(sl, -k) : P0);
+  if (sl) {
+    const Tstep = Math.max(z.tFace, GAIT.burstT);
+    const sc = z.tFace > 1e-6 ? Tstep / z.tFace : 1;
+    let Tfol = 0;
+    z.segs.forEach((sg, j) => {
+      if (j < z.iFace) sg.T *= sc;
+      else Tfol += sg.T;
+    });
+    z.tFace = Tstep;
+    I.dupStepT = Tstep; // 박차기 시간 (dupBurstStart — 몸 미끄러짐 · 앞발 발 뜬 시간)
+    I.maxT = I.t + Tstep + Tfol; // 끄는 시간 상한: 얼굴까지(= 디딤) + 끝 따라 돌기 (박차기 판 — 상한 0.2 s 는 얼굴까지 몫)
+    z.slow = sc;
+  } else I.dupStepT = null;
   const r2 = (v) => +v.toFixed(2);
-  I.dup = { p0: p0.map(r2), p1: z.p1.map(r2), p2: z.p2.map(r2), padLen: +z.padLen.toFixed(3), dFace: +z.dFace.toFixed(3), sweep: +(z.sweep / D2R).toFixed(1), k: +k.toFixed(2), tFace: +z.tFace.toFixed(3), line: 1 };
+  I.dup = { p0: p0.map(r2), p1: z.p1.map(r2), p2: z.p2.map(r2), padLen: +z.padLen.toFixed(3), dFace: +z.dFace.toFixed(3), sweep: +(z.sweep / D2R).toFixed(1), k, tFace: +z.tFace.toFixed(3), Tstep: I.dupStepT == null ? null : +I.dupStepT.toFixed(3), slow: z.slow == null ? null : +z.slow.toFixed(2), fit: +c0b.toFixed(3), line: 1 };
   I.dupGlide = true; // 처음 닿아 있던 상대 칼에 닿아 있는 동안은 막힘이 아님 (comboPlanDup 과 같음)
   I.aim = 'face';
   return z.segs;
@@ -2532,14 +2562,15 @@ function comboPlanDupLine(f, I, m, A) {
  */
 function dupBurstStart(f, I, m, span) {
   const S = I.slide;
-  const T = I.maxT > 0 ? Math.min(span, Math.max(0, I.maxT - I.t)) : span;
+  const T0 = I.dupStepT > 0 ? I.dupStepT : span; // 길이 정한 박차기 시간 (comboPlanDupLine — 얼굴까지 칼 시간 · 박찬 걸음 발 뜬 시간 가운데 긴 것 = 칼날이 얼굴을 지나는 때)
+  const T = I.maxT > 0 ? Math.min(T0, Math.max(0, I.maxT - I.t)) : T0;
   if (!S || !(S.slide > 1e-3) || !(T > 0)) return;
   S.span = T;
   S.ease = 'line'; // 고르게 (칼끝이 고른 빠르기로 끌리는 동안 몸도 고른 빠르기 — 손과 몸이 한 움직임)
   const k = f.stamina?.attackSpeed > 0 ? f.stamina.attackSpeed : 1; // 지친 몸은 칼 시간이 늘어남 (stepCombo I.t) — 걸음도 같은 실제 시간에
   const g = f.gait;
   const why = !g?.active ? 'gait' : f.state !== 'stand' ? 'state' : f.feetHeld ? 'held' : (f.move?.y ?? 0) < -0.1 ? 'back' : !g.legs?.F.stance || !g.legs?.B.stance ? 'swing' : 'stand'; // 재기: 걸음을 부탁할 때 다리 · 스틱
-  const asked = g?.active ? g.takeStep({ kind: 'lunge', fwd: S.slide, duration: T / k, minT: T / k, accel: true }) : false; // 앞발이 이미 떠 있으면 그 걸음을 이어받음 (gait.js takeStep)
+  const asked = g?.active ? g.takeStep({ kind: 'lunge', fwd: S.slide, duration: T / k, minT: T / k, accel: true, force: true }) : false; // 앞발이 이미 떠 있으면 그 걸음을 이어받음 (gait.js takeStep)
   if (!m.step.free) f.stamina?.burst();
   I.burst = { slide: +S.slide.toFixed(3), T: +T.toFixed(3), asked: !!asked, why };
 }
