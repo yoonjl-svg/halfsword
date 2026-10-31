@@ -113,7 +113,8 @@ if (isMain(import.meta.url)) {
     process.exit(0);
   }
   const runs = [];
-  for (let s = 1; s <= n; s++) {
+  const from = +(args.from || 1); // 씨앗 시작 (--from=13 → 13 ~ 12 + n)
+  for (let s = from; s < from + n; s++) {
     const r = duel({ seed: s, dur: +(args.dur || 45), w: args.w || 'zweihander', foe: args.foe || 'longsword' });
     runs.push(r);
     console.log(JSON.stringify(r));
