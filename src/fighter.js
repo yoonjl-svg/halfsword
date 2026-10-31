@@ -925,7 +925,7 @@ export class Fighter {
     if (c.s === s && c.table === gp.table && c.oneHand === gp.oneHand) return c;
     const [hx, hy] = SKILL.homeGuard;
     const raw = rawHand(hx, hy, _cs1);
-    _csG.table = gp.table;
+    _csG.table = gp.table?.frameTable ?? gp.table; // 유파 자세표가 덮기 전 무기 틀 표 (10/31 — guards.js applySchoolGuardTable)
     _csG.oneHand = gp.oneHand;
     const G = guardAt(hx, hy, _csG);
     const gw = this.guardWeight(s);
