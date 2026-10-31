@@ -1630,7 +1630,7 @@ export const UNIQUE_ASSIST = {
   //   고디뉴 규칙 4 「zum Tajo aufgezogen … Ort zum Boden … Parierstange den Kopf deckt」(탈류로 감아 올림 · 칼끝은 땅으로 · 날밑이 머리를 덮음 — guards.js 이베리아 '오른 베기 준비' 칸과 같은 원전)를
   //   더 깊게(칼끝 −15° → 아래 blade[0]) · 칼날이 머리 뒤를 가로지름(가로 각 > 180 — 칼끝이 머리 뒤 · 칼 안 든 쪽) · 몸을 칼 든 쪽으로 감아 무릎을 굽혀 힘을 모음(body).
   //   손 hand [앞, 위, 칼 든 쪽] m · 칼 blade [높이 °, 가로 °] · via · windIn · woundT · woundFrom 은 rdShoulder 와 같은 뜻 (iberian_redondo.js windSpec — 꼴 'shoulder' 와 같은 놓기)
-  rdLoad: { hand: [0.06, 0.36, 0.14], blade: [-35, 190], body: { chestYaw: 25, pelvisYaw: 10, pitch: 0, drop: 0.05 }, via: { hand: [0.14, 0.34, 0.12], blade: [80, 170] }, windIn: realS(0.6), woundT: realS(0.6), woundFrom: 'rest' },
+  rdLoad: { hand: [0.12, 0.16, 0.26], blade: [-32, 190], body: { chestYaw: 20, pelvisYaw: 8, pitch: 0, drop: 0.04 }, via: { hand: [0.14, 0.34, 0.16], blade: [75, 175] }, windIn: realS(0.6), woundT: realS(0.6), woundFrom: 'rest' },
   rdSteady: 1, // 감기 휘청 고침 (사장님 10/29 20:0x '처음 발동을 시작할 때 캐릭터가 크게 휘청거려. 이 문제를 반드시 고쳐야' — 고친 버그 · 기록 §8 · 확인표 2940):
   //  ① 감는 동안 손목 원뿔 · 칼 어깨 면 밧줄을 뗌(iberian_redondo.js windStart — 손가락을 댄 쉼 자세에서 머리 위로 섞을 때 놓은 위팔이 어깨 면 한도 밖을 지나 밧줄이 매 스텝 가슴을 잡아챔 · 내려침이 끝나면 다시)
   //  ② 대본이 놓은 두 팔 · 칼의 헛힘 끔(fighter.js armsPlaced — 팔 관절 목표 빠르기 0 · 손목 겨눔 · 감쇠 · 날 비틀기 힘 없음 · 빈팔 목표 = 놓인 칼자루 끝) · 0 = 10/29 판 `?rdSteady=0`
@@ -1657,7 +1657,10 @@ export const UNIQUE_ASSIST = {
   //   angle 90 = 곧게 내려침 · 45 = 사선 (사장님 45 ~ 90 사이) · 칼 = dc 에서 u 쪽으로 θ ° (from → to) · 손 = 어깨에서 θ ÷ 2 쪽 · 칼날 at 자리가 겨눈 곳 · pull = 마지막 ⅓ 손 당김 몫.
   //   뗀 순간: 멘 칼(칼끝 뒤 아래)을 머리 위로 들어(맞힘 없음 — 칼끝이 뒤 → 위로 · 어깨 뒤 고리 없음) θ = from 자리 → 벰(맞힘 6 토막). 섞는 첫머리에 떼어 칼이 아직 앞 아래면 먼저 감는 고리 손 자리로 세움(rdDiag lowY 와 같음).
   //   body = 그 칼 동안 몸 [골반 °, 가슴 °, 숙임 °, 낮춤 m] — 멘 몸 꼬임(rdLoad.body)에서 이 꼴로 풀며 앉음(온몸 — 가슴을 칼 안 든 쪽으로 돌리고 무릎을 굽혀 몸을 떨굼 · 겹치기 dupBody 와 같은 칸)
-  rdTajo: { angle: 75, from: 110, to: -45, at: 0.7, pull: 0, target: 'lung', lowY: 0.35, body: [-8, -15, 8, 0.07] },
+  //   target 'head' = 정수리 쪽(상대 가슴 → 머리 0.8 자리 — 격살 'head' 점과 같음 · 'lung' 이면 목 · 들린 팔에 먼저 닿음) · liftK = 드는 토막(맞힘 없음)만 칼끝 빠르기 × 이 배 —
+  //   멘 칼은 칼끝이 등 뒤 아래라 머리 위까지 드는 칼끝 길이 2.5 m 남짓(옛 얹음 1 m)이어서 1 이면 뗌 → 벰 0.205 s · 뗌 → 첫 상처 0.40 s(옛 판 0.106 · 0.26) — 2 면 0.106 · 0.30 s.
+  //   벰 칼끝 빠르기(specialShare.redondo 0.3) · 벰 시간 상한(rdSnapTime 0.4 s — 베는 몫부터)은 그대로 [angle · target · liftK · body 감독 판단 — 사장님 확인 전 · 확인표 3293 · 3294]
+  rdTajo: { angle: 75, from: 110, to: -45, at: 0.7, pull: 0, target: 'head', lowY: 0.35, body: [-8, -15, 8, 0.07], liftK: 2 },
   // AI 풍차 베기 (사장님 10/31 08:xx '플레이어만 그런 건가? 누가봐도 레돈두 준비처럼 보여야해.' — 감독 전달 'AI 도 같은 B 감기' · 확인표 3127): AI 가 머리 위 돌려 베기(redondo —
   //  왼 가로베기 강화동작)를 고르면 패드 길(머리 위 두 번 둘러 베기) 대신 사람과 같은 감기(rdWindMode · iberian_redondo.js windStart · windStep — 안 B 어깨에 얹음)로 다가가며
   //  감은 셈 ≥ 1(사람 흐름 셈과 같은 '감음')이고 닿는 거리면 사람과 같은 내려침(secret_instant.js requestArtRedondo — 곧장 사선 · 고노센 × specialShare.redondo) · 감는 동안 기력 rdDrain ·

@@ -2127,7 +2127,10 @@ function comboPlanRdTajo(f, I, m, A) {
     const cz = h > 1e-3 ? A.D.z / h : 0;
     push(new THREE.Vector3(L.hand[0], L.hand[1], s * L.hand[2]), new THREE.Vector3(Math.sin(b) * cx, Math.cos(b), Math.sin(b) * cz), false);
   }
+  const lead0 = segs.length;
   push(p0.H, p0.D, false); // 든 자리 (멘 쪽 위)
+  // 드는 몫 빠르기 배 (rdTajo.liftK — 1 = 벰과 같은 칼끝 빠르기): 맞힘 없는 드는 토막만 · 벰 칼끝 빠르기(specialShare)는 그대로
+  if ((R.liftK ?? 1) > 0 && (R.liftK ?? 1) !== 1) for (let k = lead0; k < segs.length; k++) segs[k].T /= R.liftK;
   const N = 6;
   for (let j = 1; j <= N; j++) {
     const p = pose(j / N);

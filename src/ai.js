@@ -1600,7 +1600,10 @@ export class AI {
     me.stamina.attack('cut');
     this.phase = 'rdStrike';
     this.path.length = 0;
-    this.strikeCue(this.tech);
+    // 기술 알림 = 사람 B4 와 같은 이름 (10/31 19:xx 사장님 '정수리 가르기 (알티바슈 포르트)' — 같은 감기 · 내려침이라 사람 표 이름 · 옛 패드 길 rdAiWind 0 은 schools.js 이름 그대로)
+    const B4 = PLAYER_UNIQUE.iberian?.find((e) => e.name === 'redondo');
+    if (B4?.nameKo && !this.passiveAtk && !this.secretRun) this.setTechCue(B4.nameKo, 'unique');
+    else this.strikeCue(this.tech);
     const sp = this.specialNow();
     if (sp) this.specStart(sp);
     const st = (this.stats.rdWind ??= { begin: 0, fire: 0, cancel: {} });

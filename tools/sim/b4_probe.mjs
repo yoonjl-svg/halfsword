@@ -146,7 +146,7 @@ export function b4Run({ w = 'zweihander', seed = 1, hold = 1.6, after = 0.8, gap
     while (G.t < pressAt + 12) {
       G.step();
       const t = G.t;
-      if (t < pressAt) { t0Tilt = tilt(P); st0 = P.stamina.value; continue; }
+      if (t < pressAt) { t0Tilt = tilt(P); st0 = P.stamina.value; out.wounds0 = P.wounds?.length ?? 0; continue; }
       const Wd = P.rdWind;
       const I = P.iai?.moves?.[0]?.rd ? P.iai : null;
       const gp = selfGaps(P);
@@ -156,11 +156,19 @@ export function b4Run({ w = 'zweihander', seed = 1, hold = 1.6, after = 0.8, gap
         L.off = Math.max(L.off, P.offBalance ?? 0);
         L.stum = Math.max(L.stum, P.stumble?.length?.() ?? 0);
         if (P.state !== 'stand') L.fell = true;
-        L.arm = Math.min(L.arm, gp.arm); if (gp.arm === L.arm) L.armPart = gp.armPart;
-        L.neck = Math.min(L.neck, gp.neck);
-        if (gp.blade != null) L.blade = Math.min(L.blade, gp.blade);
         const sm = sample(P, D, { cross: 0 });
-        L.self = Math.min(L.self, sm.self.blade);
+        if (Wd.t > 0 && Wd.k < 1) {
+          // 섞는 길 (지금 손 → via → 메기 — 감기 첫 스텝은 놓기 전이라 뺌)
+          L.bArm = Math.min(L.bArm ?? Infinity, gp.arm); if (gp.arm === L.bArm) L.bArmPart = gp.armPart;
+          L.bNeck = Math.min(L.bNeck ?? Infinity, gp.neck);
+          if (gp.blade != null) L.bBlade = Math.min(L.bBlade ?? Infinity, gp.blade);
+          L.bSelf = Math.min(L.bSelf ?? Infinity, sm.self.blade);
+        } else if (Wd.k >= 1) {
+          L.arm = Math.min(L.arm, gp.arm); if (gp.arm === L.arm) (L.armPart = gp.armPart), (L.armAt = r3((Wd.t - (Wd.M?.windIn ?? 0)) / K)); // 얹은 뒤 몇 실제 초
+          L.neck = Math.min(L.neck, gp.neck);
+          if (gp.blade != null) L.blade = Math.min(L.blade, gp.blade);
+          L.self = Math.min(L.self, sm.self.blade);
+        }
         L.steps++;
         if (sm.w?.oor) L.oor++;
         if (Wd.k >= 1 && sm.off) L.offGap = Math.max(L.offGap, sm.off.gap); // 빈손 ↔ 폼멜 목 (얹은 동안 — 놓침)
@@ -223,6 +231,9 @@ export function b4Run({ w = 'zweihander', seed = 1, hold = 1.6, after = 0.8, gap
   out.tWind = tWind != null ? r3((tWind - pressAt) / K) : null;
   out.tStrike = tEnd != null && tRel != null ? r3((tEnd - tRel) / K) : null;
   out.stamina = { wind: r1(st0 - (stRel ?? st0)), total: r1(st0 - P.stamina.value) };
+  out.fired = !!rec; // 내려침이 실제로 나감 (끌고 가는 칼이 돎)
+  out.cancel = uq.stats.windCancel ?? null; // 감기 그만둠 까닭 (AI 판 — 맞음 · 칼 세게 맞음 …)
+  out.recv = (P.wounds?.length ?? 0) - (out.wounds0 ?? 0); // 이 판 동안 내가 받은 상처 수 (AI 판)
   return out;
 }
 
@@ -234,8 +245,8 @@ export function b4Sum(o) {
   const sevSum = S.wounds.reduce((a, x) => a + (x.sev ?? 0), 0);
   const firstCut = S.wounds.find((x) => x.sev > 0);
   return {
-    w: o.w, seed: o.seed, side: o.side, tWind: o.tWind, turns: o.turns, distRel: o.distRel,
-    load: { behind: r3(avg(L.behind)), below: r3(avg(L.below)), el: r1(avg(L.el)), az: r1(avg(L.az)), tip: L.tipLoc, hand: L.handLoc, fixMax: r1(L.fix), offGap: r3(L.offGap), oorShare: L.steps ? r3(L.oor / L.steps) : null, armHead: r3(L.arm), armPart: L.armPart, armNeck: r3(L.neck), bladeHead: r3(L.blade), selfBlade: r3(L.self), dTilt: r1(L.dTilt), offCm: r1(L.off * 100), stumble: r3(L.stum), fell: L.fell, screenPx: r1(avg(L.len)), visPx: r1(avg(L.vis)), abovePx: r1(avg(L.above)) },
+    w: o.w, seed: o.seed, side: o.side, tWind: o.tWind, turns: o.turns, distRel: o.distRel, fired: o.fired, cancel: o.cancel, recv: o.recv,
+    load: { behind: r3(avg(L.behind)), below: r3(avg(L.below)), el: r1(avg(L.el)), az: r1(avg(L.az)), tip: L.tipLoc, hand: L.handLoc, fixMax: r1(L.fix), offGap: r3(L.offGap), oorShare: L.steps ? r3(L.oor / L.steps) : null, armHead: r3(L.arm), armPart: L.armPart, armAt: L.armAt ?? null, armNeck: r3(L.neck), bladeHead: r3(L.blade), selfBlade: r3(L.self), blend: { armHead: r3(L.bArm), armPart: L.bArmPart ?? null, armNeck: r3(L.bNeck), bladeHead: r3(L.bBlade), selfBlade: r3(L.bSelf) }, dTilt: r1(L.dTilt), offCm: r1(L.off * 100), stumble: r3(L.stum), fell: L.fell, screenPx: r1(avg(L.len)), visPx: r1(avg(L.vis)), abovePx: r1(avg(L.above)) },
     strike: { tLead: S.tLead, tHit: S.tHit, tStrike: o.tStrike, hits: S.wounds.filter((x) => x.sev > 0).length, sevSum: r3(sevSum), first: firstCut ? `${firstCut.zone}/${firstCut.part}:${firstCut.sev}:${firstCut.E}J` : null, res: S.res,
       plane: pf ? { angle: r1(pf.angle), rms: r3(pf.rms), max: r3(pf.max) } : null, tip0: S.tip[0] ? S.tip[0].toArray().map(r3) : null, tip1: S.tip.at(-1) ? S.tip.at(-1).toArray().map(r3) : null,
       selfBlade: r3(S.self), armHead: r3(S.arm), armPart: S.armPart, armNeck: r3(S.neck), bladeHead: r3(S.blade), dTilt: r1(S.dTilt), offCm: r1(S.off * 100), stumble: r3(S.stum), fell: S.fell },

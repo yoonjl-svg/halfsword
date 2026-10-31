@@ -119,7 +119,9 @@ export const PLAYER_UNIQUE = {
     // 풍차 베기 (B4 레돈두 — 이베리아 특수 공격 · 사장님 10/29 01:3x '레돈두를 지금 우리가 개발 중인 특수공격으로' · 01:5x '레돈두는 풍차 베기로' — config UNIQUE_ASSIST.rdHold · 확인표 2727):
     //  사람 = role 'hold' — 탭을 길게 눌러 머리 위로 칼을 돌리다(iberian_redondo.js) 떼면 곧장 왼 위 → 오른 아래 사선으로 내려 벰(secret_instant.js requestArtRedondo — 10/30 rdRelease 'direct' · 'chamber' = 10/29 판 왼팔 위로 떨어뜨림) · 왼 가로베기는 사람에게 보통 긋기로 돌아감(긋기 조건 on 없음).
     //  ai = AI 몫 그대로(전 판 강화동작 — 왼 가로베기 대신 · enhancedMoves · sword_art.js 가 읽음) · stack = AI 이어 그을수록 맞는 순간 에너지 + 10 %(셋까지 — strokeHitK · 사람은 쌓기 칸이 없어 안 받음 — 10/29 B6 은 이어지는 흐름)
-    { stage: 3, name: 'redondo', role: 'hold', hold: 1, special: true, nameKo: '풍차 베기 (레돈두)', orig: 'redondo', hint: '탭을 길게 눌러 머리 위로 칼을 돌리다 떼면 내려 벤다', on: [], ai: { role: 'enh', replaces: 'zwerchL' }, stack: 0.1 },
+    // 10/31 19:xx 사장님 결정 — 이름 '정수리 가르기 (알티바슈 포르트)' (전 '풍차 베기 (레돈두)' · 확인표 3290): 원어 'altibaxo forte' 는 피게이레두의 낱말 altibaxo(위에서 아래로 내려 베기 — 피 단Ⅸ · 복ⅩⅤ)에
+    //  forte(센)를 붙여 지은 이름이고 검술서에 그대로 나오는 말은 아님 · 원어 글자는 대기실 스킬에서만(화면 글 지침 §1). 열쇠 name 'redondo' 는 그대로(바꾸면 저장 · 주소 · 시험이 닿음 — 기록 docs/strike/b4_rework_2026-10-31.md §7)
+    { stage: 3, name: 'redondo', role: 'hold', hold: 1, special: true, nameKo: '정수리 가르기 (알티바슈 포르트)', orig: 'altibaxo forte', hint: '탭을 길게 눌러 칼을 어깨에 메었다가 떼면 정수리로 내려 가른다', on: [], ai: { role: 'enh', replaces: 'zwerchL' }, stack: 0.1 },
   ],
   japanese: [
     { stage: 1, name: 'hirakiGiri', role: 'step', stick: 'side', hint: '옆으로 걸으며 왼 사선 내려 긋기', body: [-18, -12, 2, 0.02], bodyMirror: -1, /* 開き = 비스듬히 디딘 뒤 몸을 상대 쪽으로 엶 → 디딘 쪽의 반대로(오른쪽으로 디디면 왼쪽) · 원전에 몸 돌림 수 없음 — 10/21 확인 */ on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 옆 + 왼 분노의 베기
