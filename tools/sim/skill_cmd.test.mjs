@@ -44,7 +44,7 @@ const OWNER = {
   // 10/29 14:1x · 14:2x 사장님 글 (감독 전달) — 특수 공격 넷: 풍차 베기(길게 누름) · 탭으로 내는 셋
   B4: '탭을 길게 누르다 떼기',
   C6: '뒤로 움직이며(↓) 탭',
-  G7: '긋기가 상대 칼에 닿은 채 탭',
+  G7: '가까이서 칼을 맞댄 채 버티면 자동 발동', // 10/31 18:xx 사장님 '초안 ok.' — 겹치기 자동 (UNIQUE_ASSIST.dupAuto 'bind') · 전 10/29 14:1x 글 '긋기가 상대 칼에 닿은 채 탭' = D.G7_CMD_TAP (dupAuto 0)
 };
 
 // ── 도식 낱말 ──
@@ -167,6 +167,14 @@ test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · �
       assert.ok(!c.includes('긋기') && !c.includes('공격'), `${id} — 긋기 · 공격으로는 안 남`);
       assert.match(ua, /holdTick\(dt\) \{[\s\S]{0,1200}if \(!P\.still\) \{/, 'unique_assist.js holdTick — 끈 누름은 감지 않음');
       assert.ok(src('main.js').includes('player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open);'), 'main.js — 누름 상태 · 비기 창');
+      continue;
+    }
+    if (e.tapKey === 'dup' && UA.dupAuto === 'bind') {
+      // 겹치기 자동 (사장님 10/31 18:xx — UNIQUE_ASSIST.dupAuto 'bind' 기본): 탭 조건은 안 봄(TAP_TRIG.dup 이 자동 판이면 null) · 저절로 냄(dupAutoTick) → 받는 입력 없음 · C9 꼴 '… 자동 발동'
+      assert.ok(!e.on.length && !e.stick, `${x.id} — 긋기 조건 · 걸음 명령 없음`);
+      assert.ok(c === OWNER[x.id] && c.endsWith('자동 발동') && !/탭|긋기|공격/.test(c), `${id} — 저절로 냄 · 사장님 글`);
+      assert.match(ua, /dup\(uq\) \{\s*if \(UA\.dupAuto\) return null;/, 'unique_assist.js TAP_TRIG.dup — 자동 판이면 탭으로 안 냄');
+      assert.equal(D.nodeCmd(x), c, `${x.id} 카드에 나오는 글 = 이 글`);
       continue;
     }
     if (e.tapKey) {
@@ -301,7 +309,8 @@ test("'공격' = 탭도 긋기도 받는 자리만 · '탭' = 탭을 받는(또�
   const withWord = (re) => all().filter(({ n }) => n.cmd && re.test(n.cmd)).map(({ n }) => n.id).sort();
   assert.deepEqual(withWord(/공격$/), [], "받는 입력을 '공격' 으로 끝맺는 칸 없음 (10/25 비기 글은 '비기 활성화' 꼴)");
   assert.deepEqual(withWord(/공격/), ['C9', 'I9', 'J5'], "'공격' 낱말 = 일본 · 동방 확정 글 · 이탈리아 비껴서며 찌르기(10/31 검수 전)의 상대 공격");
-  assert.deepEqual(withWord(/탭$/), ['C6', 'G7', 'I2', 'I9'], '탭으로 내는 칸만 탭으로 끝남 — 특수 공격 셋(날개 접기 · 겹치기 · 비껴서며 찌르기) · 칼끝 돌려 빼기(10/31 기본 기술) · 비기 창은 탭만 받지 않음');
-  assert.deepEqual(withWord(/탭/), ['B4', 'C6', 'G7', 'I2', 'I9'], '탭 = 탭으로 내는 칸 넷 · 풍차 베기(B4 — 탭을 길게 누름)');
+  assert.deepEqual(withWord(/탭$/), ['C6', 'I2', 'I9'], '탭으로 내는 칸만 탭으로 끝남 — 특수 공격 둘(날개 접기 · 비껴서며 찌르기) · 칼끝 돌려 빼기(10/31 기본 기술) · 겹치기는 10/31 18:xx 부터 저절로(자동 발동) · 비기 창은 탭만 받지 않음');
+  assert.deepEqual(withWord(/탭/), ['B4', 'C6', 'I2', 'I9'], '탭 = 탭으로 내는 칸 셋 · 풍차 베기(B4 — 탭을 길게 누름)');
+  assert.deepEqual(withWord(/자동 발동$/), ['C9', 'G7'], '저절로 나가는 칸 = 동방 격살(사장님 확정 글) · 겹치기 자동(10/31 18:xx 사장님 초안 ok)');
   assert.deepEqual(withWord(/찌르는 긋기/), [], "'찌르는 긋기' 쓰는 칸 없음 (10/29 I9 사장님 글)");
 });

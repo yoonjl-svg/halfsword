@@ -11,6 +11,8 @@ import { dupCheck, dupTable } from './duplieren_check.mjs';
 import { drillRun } from './special_balance.mjs';
 
 const UA = CONFIG.UNIQUE_ASSIST;
+// 이 파일은 전 판(맞물린 채 탭 — `?dupAuto=0`)을 본다: 10/31 18:xx 사장님 결정으로 기본이 겹치기 자동('bind' — duplieren_auto.test.mjs)이 되어 탭 조건은 자동 판이면 안 봄 · 시험 파일마다 따로 도는 프로세스라 여기서만 0
+UA.dupAuto = 0;
 const { realS, SECRET } = CONFIG;
 
 test('기본값 — 겹치기 탭 켬 · 고노센 칼끝 × 0.5(10/29 02:0x) · 실제 0.2 s · 긴 날 · 긋기 조건 없음 (탭으로만)', () => {

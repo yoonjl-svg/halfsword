@@ -93,6 +93,7 @@ export const PLAYER_UNIQUE = {
     { stage: 3, name: 'duplieren', role: 'chain', hint: '칼이 맞물린 뒤 다시 긋기', far: true, body: [5, -3, 3, 0], on: [], // 겹치기 — 사람은 탭으로만 (10/28 01:2x 사장님 '지금대로' — 맞물린 뒤 다음 긋기 입력은 뺌 · AI 는 schools.js 그대로 — 이 칸을 안 읽음)
       // tapKey = 탭으로 내는 조건 (TAP_TRIG 'dup' — config UNIQUE_ASSIST.dupTap): 내 긋기가 상대 칼에 맞물려 지금도 닿아 있는 동안의 탭 · tapDup = 맞물린 자리에서 칼을 떼지 않고
       //  상대 칼 뒤로 밀어 넣어 엇갈린 손으로 얼굴을 사선으로 베는 운동학 칼(secret_instant.js requestArtDup)
+      //  10/31 18:xx 사장님 결정부터 기본은 탭 없이 저절로 (UNIQUE_ASSIST.dupAuto 'bind' — dupAutoTick: 가슴 사이 0.8 ~ 1.6 m 에서 칼끼리 맞댄 채 0.6 s) · 탭 조건은 dupAuto 0 일 때만
       tapKey: 'dup', tapDup: 1, special: true },
     { stage: 4, name: 'schielhau', role: 'enh', replaces: 'zornhau', hint: '강화동작 · 분노의 베기 대신 · 맞은 상대가 무릎을 꿇기도 함', body: [-12, -8, 2, 0.02], /* 10/21 전수 조사: 오른쪽 위 → 왼쪽 아래 긋기라 몸도 왼쪽(−) — 전 +12 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 곁눈 베기 ← 분노의 베기 (늘 — 같은 시작 자리 오른쪽 머리 위 · 10/21 사장님 '분노의 베기를 바꾸는 걸로' · 전 황소 찌르기는 찌르기 → 베기로 어긋나 AI 손해)
   ],
@@ -295,7 +296,7 @@ const TAP_TRIG = {
   },
   // 겹치기 (10/28 01:2x 사장님 '지금대로'): 내 긋기(탭 · 찌르기 · 강화 탭 칼 빼고)가 상대 칼에 맞물렸고(track — 칼끼리 0.07 m 안) 지금도 닿아 있는(같은 거리 안) 동안의 탭 · 한 맞물림에 한 번
   dup(uq) {
-    if (UA.dupAuto) return null; // 겹치기 자동 (10/31 16:xx 시제품 — dupAutoTick): 탭으로는 안 냄 (탭 = 보통 탭 찌르기)
+    if (UA.dupAuto) return null; // 겹치기 자동 (사장님 10/31 18:xx 결정 — 기본 'bind' · dupAutoTick): 탭으로는 안 냄 (탭 = 보통 탭 찌르기) · `?dupAuto=0` 이면 아래 전 판 탭 조건
     const rec = uq.cur && !uq.repos(uq.cur) ? uq.cur : uq.prevAtk();
     if (UA.dupAny || UA.dupGrace > 0) {
       // 시제품 (10/31 — 기본 끔): 닿음 덩이(drive 의 dupC — 칼끼리 닿음이 시작된 때 · 끝난 때)로 · 끝난 뒤 dupGrace 초까지 · dupAny 면 내 베기 맞물림이 아니어도 · 한 닿음에 한 번

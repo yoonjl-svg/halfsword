@@ -5,6 +5,8 @@
 - 안 A `'clash2'` = 칼끼리 두 번 맞부딪힘(시간 T 안) · 안 B `'bind'` = 일정 거리(가슴 사이 띠)에서 칼을 맞댄 채 쌓임 S 초.
 - 거리 잣대는 죽음의 일격과 같은 가슴 ~ 가슴 수평 거리(`fighter.foeDistance` · 죽음의 일격 'close' 판 `SECRET.mordCloseN` 0.8 m). 띠는 **0.8 m 초과**부터라 죽음의 일격 거리(0.8 m 이하)와 겹치지 않음.
 
+- **사장님 결정 10/31 18:xx (확인표 3272)**: "겹치기는 가슴 사이 0.8~1.6 사이로 해. 0.6초 쌓이면 나가게 하고 0.2초 넘게 떨어지면 처음부터 다시 쌓고 막기 단추로 맞댄 것도 쌓아. 자세에 안 띄워도 돼. 초안 ok." → **기본 `dupAuto` 'bind' · 띠 0.8 초과 ~ 1.6 m · 쌓임 0.6 s · 끊김 0.2 s 넘으면 0 · 막기 단추 맞댐도 셈(`dupAutoParry` 1) · 자세 칸 알림 없음(`dupAutoHint` 0) · G7 입력 줄 '가까이서 칼을 맞댄 채 버티면 자동 발동'** — §11. 아래 §0 ~ §10 숫자는 결정 전 감독 안(1.4 m · 막기 안 셈)으로 잰 것.
+
 ## 0. 결과부터 — 추천: 안 B `'bind'` · 띠 0.8 ~ 1.4 m · 쌓임 0.6 s · 끊김 0.2 s
 
 (표 숫자는 아래 §3 · §4)
@@ -177,3 +179,18 @@
 - 시험 `node --test tools/sim/*.test.mjs` 617 / 617 (실패 0 — 새 시험 `duplieren_auto.test.mjs` 7: 기본값 · bind 쌓임 0.6 s 째 냄 · 식힘 · 띠(0.8 m 이하 · 위 끝 밖) · 떨어짐 · 끊김 쥠 / 0 · 막기 단추 · 긋는 중 미룸 · 자세 칸 알림 · 빠짐 판 · clash2 두 닿음 · 짧은 떨어짐 · T 넘음 · 0.7 m · 자동 판이면 탭은 보통 탭 찌르기 · 카드 입력 줄 초안).
 - 재현: 열린 고리 `node tools/sim/duplieren_auto.mjs run --bot=normal|press|clash --seeds=901,902,903,904 --set='{"dupTap":0}' --log=.tmp/log_<봇>.json` → `node tools/sim/duplieren_auto.mjs sweep .tmp/log_*.json` · 닫힌 고리 `run --bot=… --set='{"dupAuto":"bind","dupStackS":0.6,"dupBandMax":1.4}' --json=…` → `agg` · 실제 빌드 `npm run build` → `python3 -m http.server <포트> --directory dist --bind 127.0.0.1` → `node tools/browser/duplieren_auto_probe.mjs http://127.0.0.1:<포트>`.
 - 한계: 봇은 사람이 아님(사람 손은 더 들쭉날쭉 — 노리는 손 숫자는 '이렇게 하면 이만큼 된다'의 크기) · 상대 AI 는 숙련 3 하나 · 맞대고 미는 손짓(press)은 한 가지 꼴(긋기 쪽으로 0.6 패드 m/s · 0.25 m) · 투구 쓴 상대는 안 잼(겹치기 칼 길 그대로 — 10/28 기록 §3) · 폰 손맛은 사장님이 직접(`?dupAuto=bind`).
+
+## 11. 사장님 결정 (10/31 18:xx) · 개발 가지 합침
+
+- 사장님: "겹치기는 가슴 사이 0.8~1.6 사이로 해. 0.6초 쌓이면 나가게 하고 0.2초 넘게 떨어지면 처음부터 다시 쌓고 막기 단추로 맞댄 것도 쌓아. 자세에 안 띄워도 돼. 초안 ok." (확인표 3272 · 3220 ~ 3228 결정 표시)
+- 기본값 바꿈 (`src/config.js` `UNIQUE_ASSIST`): `dupAuto` 0 → **'bind'** · `dupBandMax` 1.4 → **1.6** (`dupBandMin` null = 0.8 그대로) · `dupStackS` 0.6 · `dupStackGap` 0.2 · `dupStackDrain` 0(처음부터) 그대로 · `dupAutoParry` 0 → **1**(막기 단추로 맞댄 것도 쌓고 · 막기 단추를 쥔 채도 냄 — §5 ① 의 판을 사장님이 고름) · `dupAutoHint` 1 → **0**(자세 칸 알림 없음). 손가락이 긋는 중이면 냄만 미룸(§5 ②)은 그대로.
+- G7 입력 줄: `NODE_CMD.G7` = **'가까이서 칼을 맞댄 채 버티면 자동 발동'**(사장님 초안 ok) · `?dupAuto=0` 이면 전 글 '긋기가 상대 칼에 닿은 채 탭'(`G7_CMD_TAP`) · `?dupAuto=clash2` 면 '칼끼리 연달아 부딪히면 자동 발동'(검수 전 그대로). `docs/text/skill_cmd_2026-10-24.md` G7 줄 · `tools/sim/skill_cmd.test.mjs`(G7 은 '… 자동 발동' — 탭으로 끝나는 칸 · 탭 낱말 칸에서 빠짐) 함께 고침.
+- 탭 판: 켜진 기본에선 탭은 보통 탭 찌르기(TAP_TRIG.dup 은 안 봄). 전 판은 `?dupAuto=0` — 시험 `duplieren_tap.test.mjs` 는 파일 머리에서 0 으로 · `special_cooldown.test.mjs` 겹치기 탭 칸도 그 시험 동안만 0.
+- 띠 1.6 · 막기 셈으로 다시 재지 않음(감독 전달 — 사장님이 실제 게임에서 해 봄). 어림만: §2 의 열린 고리 기록(같은 48 판 스텝 기록 — 새 싸움 없음)을 사장님 값으로 다시 셈하면 안 노리는 손 **0.25 /분**(48 판 가운데 3 판 · 3 번 — 둘은 스틱 뒤 · 낸 때 가슴 사이 p50 1.51 m) · press 3.2 /분 · clash 1.1 /분(1.4 m · 막기 안 셈 판: 0 · 2.7 · 0.54). 위 끝 1.7 m 면 안 노리는 손 0.41 /분.
+- 개발 가지 e4023389 합침(합침 커밋 321128a7 — 다시 쌓지 않음): `unique_assist.js` tapChain 은 개발 가지 몸통(칼끝 돌려 빼기 기본 탭 · ok.touch 비킨 쪽 · thrustTap · cavArmSlow · cavSpeedMul 1.2 · cavParryLock · cavFire · cavSelfFree · 비껴서며 찌르기 voidStep)을 그대로 `launchTap(e, now, auto, ok)` 로 옮김 · drive 는 touchTick 다음 dupAutoTick · 확인표 두 쪽 다.
+- 시험 · 관문: 아래 §12.
+
+## 12. 시험 · 관문 (사장님 값 기본 · 합친 뒤)
+
+- 시험 `node --test tools/sim/*.test.mjs` **623 / 623 (실패 0)** — 바뀐 시험: `duplieren_auto.test.mjs`(기본값 = 사장님 값 · 막기 단추 시험은 0 판부터 보고 1 판으로 · 카드 글 = 사장님 초안 ok) · `skill_cmd.test.mjs`(G7 = '… 자동 발동' · 자동 판이면 탭 조건 안 봄 · 카드 글 = nodeCmd) · `duplieren_tap.test.mjs`(파일 머리 `dupAuto` 0 — 전 판 탭) · `special_cooldown.test.mjs`(겹치기 탭 칸 동안만 0).
+- 관문(올리기 없이 · 이 가지에서 `/root/ops_keep/measure_only.sh` 와 같은 셈 · run_expect.sh 안 돌림): 이름 0 · fights12 `768085f3` · live `e8127a92` · ft `ad302969` · corr 12 / 12 · weapon_smoke 34 / 34 · 빌드 0 · name_policy 0 — **켠 기본에서도 모두 그대로**. 까닭: 다섯 장면 모두 사람 고유 공격 강화(`PlayerUniqueAssist` — 독일 G7 을 익힌 사람 몸에만 붙음)가 없어 `dupAutoTick` 이 돌지 않음(AI 겹치기 schools.js 는 안 바뀜).

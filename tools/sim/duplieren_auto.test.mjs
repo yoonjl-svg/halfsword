@@ -1,6 +1,7 @@
-// 겹치기 자동 시험 (사장님 10/31 16:xx '겹치기는 추가 커맨드 없이 일정 조건 충족하면 자동으로 나가게 하자' — 시제품 · 기본 끔 · UNIQUE_ASSIST.dupAuto · 기록 docs/strike/duplieren_auto_2026-10-31.md):
-//   기본 0 = 탭 판 그대로 · 'bind' = 칼끼리 닿고 가슴 사이가 띠(죽음의 일격 거리 0.8 m 초과 ~ dupBandMax) 안인 채 쌓임 dupStackS 면 냄 · 끊김 dupStackGap 안은 쥠 ·
-//   'clash2' = 두 닿음(떨어진 틈 dupClashGap 이상)이 dupClashT 안 · 막기 단추를 누른 동안은 안 쌓임 · 식힘 · 새 긋기 · 켜면 탭은 보통 탭 찌르기 · 카드 입력 줄 초안.
+// 겹치기 자동 시험 (사장님 10/31 16:xx '겹치기는 추가 커맨드 없이 일정 조건 충족하면 자동으로 나가게 하자' → 18:xx 결정 "겹치기는 가슴 사이 0.8~1.6 사이로 해. 0.6초 쌓이면 나가게 하고
+//   0.2초 넘게 떨어지면 처음부터 다시 쌓고 막기 단추로 맞댄 것도 쌓아. 자세에 안 띄워도 돼. 초안 ok." — UNIQUE_ASSIST.dupAuto · 기록 docs/strike/duplieren_auto_2026-10-31.md):
+//   기본 'bind' = 칼끼리 닿고 가슴 사이가 띠(죽음의 일격 거리 0.8 m 초과 ~ 1.6 m) 안인 채 쌓임 0.6 s 면 냄 · 끊김 0.2 s 안은 쥠 · 넘으면 0 · 막기 단추 맞댐도 셈 · 자세 칸 알림 없음 ·
+//   0 = 전 판 탭 · 'clash2' = 두 닿음(떨어진 틈 dupClashGap 이상)이 dupClashT 안 · 막기 단추(dupAutoParry 0 판) · 식힘 · 긋는 중 미룸 · 켜면 탭은 보통 탭 찌르기 · 카드 입력 줄.
 //  작게 · 빠르게: 판을 돌리지 않고 닿음 · 거리를 손으로 놓고 drive 를 부른다.  node --test tools/sim/duplieren_auto.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,17 +13,20 @@ const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, SECRET } = CONFIG;
 const KEYS = ['dupAuto', 'dupStackS', 'dupStackGap', 'dupStackDrain', 'dupBandMin', 'dupBandMax', 'dupClashT', 'dupClashGap', 'dupClashMax', 'dupAutoParry', 'dupAutoHint', 'specialCooldown', 'dupTap'];
 
-test('기본값 — 자동 끔(0 = 지금 탭 판) · 수는 사다리 칸 (시간 0.2 / 0.4 / 0.6 / 1.2 · 거리 0.8 + 걸음 사다리) · 띠 아래 끝 = 죽음의 일격 거리', () => {
-  assert.equal(UA.dupAuto, 0);
-  assert.equal(UA.dupTap, 1);
-  const LAD = [0.2, 0.4, 0.6, 1.2, 1.5, 2.0, 3.0, 6.0, 10.0];
-  for (const k of ['dupStackS', 'dupStackGap', 'dupClashT', 'dupClashGap']) assert.ok(LAD.some((s) => Math.abs(UA[k] - realS(s)) < 1e-9), `${k} ${UA[k]}`);
+test("기본값 — 사장님 10/31 18:xx 결정: 'bind' · 띠 0.8 m 초과(죽음의 일격 거리 밖) ~ 1.6 m · 쌓임 0.6 s · 끊김 0.2 s 넘으면 처음부터 · 막기 단추 맞댐도 셈 · 자세 칸 알림 없음 · clash2 값은 사다리 칸", () => {
+  assert.equal(UA.dupAuto, 'bind');
+  assert.equal(UA.dupTap, 1); // 탭 조건 스위치는 그대로 (자동 판이면 TAP_TRIG.dup 이 안 봄 — dupAuto 0 이면 전 판 탭)
+  assert.ok(Math.abs(UA.dupStackS - realS(0.6)) < 1e-9, `dupStackS ${UA.dupStackS}`);
+  assert.ok(Math.abs(UA.dupStackGap - realS(0.2)) < 1e-9, `dupStackGap ${UA.dupStackGap}`);
+  assert.equal(UA.dupStackDrain, 0, '0.2 s 넘게 떨어지면 처음부터');
   assert.equal(UA.dupBandMin, null);
   assert.equal(SECRET.mordCloseN, 0.8);
-  assert.ok([0.3, 0.45, 0.6, 0.9].some((s) => Math.abs(UA.dupBandMax - (0.8 + s)) < 1e-9), `dupBandMax ${UA.dupBandMax}`);
+  assert.equal(UA.dupBandMax, 1.6);
+  assert.equal(UA.dupAutoParry, 1, '막기 단추로 맞댄 것도 쌓음');
+  assert.equal(UA.dupAutoHint, 0, '자세에 안 띄움');
+  const LAD = [0.2, 0.4, 0.6, 1.2, 1.5, 2.0, 3.0, 6.0, 10.0];
+  for (const k of ['dupClashT', 'dupClashGap']) assert.ok(LAD.some((s) => Math.abs(UA[k] - realS(s)) < 1e-9), `${k} ${UA[k]}`);
   assert.equal(UA.dupClashMax, 0);
-  assert.equal(UA.dupAutoParry, 0);
-  assert.equal(UA.dupAutoHint, 1);
 });
 
 /** 사람 롱소드 몸 + 독일 고유 공격 셋 (판을 돌리지 않음 — 닿음 · 가슴 사이를 손으로 놓고 drive 를 부름) */
@@ -126,7 +130,7 @@ test("'bind' — 죽음의 일격 거리(가슴 사이 ≤ 0.8 m) · 띠 위(> d
 });
 
 test("'bind' — 막기 단추를 누른 동안은 안 쌓임(dupAutoParry 0) · 1 이면 쌓고 냄 · 손가락이 긋는 중이면 냄만 미룸(쌓임 쥠) · 자세 칸 알림은 절반부터 · 빠짐 판", () => {
-  const B = body({ dupAuto: 'bind', specialCooldown: 0 });
+  const B = body({ dupAuto: 'bind', specialCooldown: 0, dupAutoParry: 0, dupAutoHint: 1 }); // 16:xx 시제품 판(막기 단추 안 셈 · 알림 켬)부터 보고 아래에서 사장님 판(1)으로
   try {
     const need = Math.ceil(UA.dupStackS / DT);
     B.uq.feed(0, 0, 1 / 60, true, true); // 막기 단추 누름 (main.js feed — blocked · handHeld)
@@ -232,13 +236,15 @@ test('켜면 탭은 보통 탭 찌르기 (맞물린 채 탭이어도 겹치기 �
   }
 });
 
-test('G7 카드 입력 줄 — 끔이면 지금 글 그대로 · 켜면 초안(검수 전): 33 자 안 · 숫자 · 원어 글자 없음 · 칼 동작 말(베기 · 찌르기) 없음 · 효과 글은 사장님 글 그대로', () => {
+test('G7 카드 입력 줄 — 기본(자동 bind) = 사장님 초안 ok 글 · 0 이면 전 탭 글 · clash2 초안(검수 전): 33 자 안 · 숫자 · 원어 글자 없음 · 칼 동작 말(베기 · 찌르기) 없음 · 효과 글은 사장님 글 그대로', () => {
   const n = nodeOf('german', 'G7');
   assert.equal(n.eff, '칼이 맞물리면 상대 칼 뒤로 들어가 얼굴을 벤다');
+  assert.equal(n.cmd, '가까이서 칼을 맞댄 채 버티면 자동 발동', '사장님 10/31 18:xx 초안 ok');
+  assert.equal(nodeCmd(n), n.cmd, '기본(자동 bind) — 카드에 이 글');
   const save = UA.dupAuto;
   try {
     UA.dupAuto = 0;
-    assert.equal(nodeCmd(n), '긋기가 상대 칼에 닿은 채 탭');
+    assert.equal(nodeCmd(n), '긋기가 상대 칼에 닿은 채 탭', '0 = 전 판 탭 글');
     for (const m of ['bind', 'clash2']) {
       UA.dupAuto = m;
       const c = nodeCmd(n);
