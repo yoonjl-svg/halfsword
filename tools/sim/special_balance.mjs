@@ -394,10 +394,13 @@ function cavBot(G, P, uq, bot, rnd, R, guard) {
     }
     if (c.stage === 'cut1') {
       if (!c.rec && uq?.cur?.kind === 'cut') c.rec = uq.cur;
-      if (c.rec?.bound && uq.bladeTouch()) {
+      // 10/31 겹치기 재기 손잡이 (기본 = 전 판): SP_DUP_ANY=1 이면 맞물림이 아니어도 칼끼리 닿으면 · SP_DUP_DELAY='0.2,0.3' = 사람 반응 늦음(실제 s — 기본 0.03 ~ 0.15)
+      const dupAnyBot = process.env.SP_DUP_ANY === '1';
+      if ((dupAnyBot || c.rec?.bound) && uq.bladeTouch()) {
         c.bound = 1;
         c.stage = 'wait';
-        c.fireAt = uq.t + 0.03 + rnd() * 0.12;
+        const DD = (process.env.SP_DUP_DELAY || '0.03,0.15').split(',').map(Number);
+        c.fireAt = uq.t + DD[0] + rnd() * (DD[1] - DD[0]);
       } else if (!bot.queue.length && uq?.cur !== c.rec) {
         c.endT ??= G.t;
         if (G.t - c.endT > 0.3) c.stage = 'done'; // 긋기가 끝나도 0.3 s 는 맞댐을 봄 (맞물린 채 멈춘 칼)

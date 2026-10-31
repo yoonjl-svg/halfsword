@@ -268,6 +268,14 @@ const TAP_TRIG = {
   // 겹치기 (10/28 01:2x 사장님 '지금대로'): 내 긋기(탭 · 찌르기 · 강화 탭 칼 빼고)가 상대 칼에 맞물렸고(track — 칼끼리 0.07 m 안) 지금도 닿아 있는(같은 거리 안) 동안의 탭 · 한 맞물림에 한 번
   dup(uq) {
     const rec = uq.cur && !uq.repos(uq.cur) ? uq.cur : uq.prevAtk();
+    if (UA.dupAny || UA.dupGrace > 0) {
+      // 시제품 (10/31 — 기본 끔): 닿음 덩이(drive 의 dupC — 칼끼리 닿음이 시작된 때 · 끝난 때)로 · 끝난 뒤 dupGrace 초까지 · dupAny 면 내 베기 맞물림이 아니어도 · 한 닿음에 한 번
+      const C = uq.dupC;
+      if (!C || C.spent || (C.end != null && uq.t - C.end > (UA.dupGrace ?? 0))) return null;
+      const bound = !!(rec && !rec.tap && rec.kind === 'cut' && rec.bound && !rec.dupSpent);
+      if (!UA.dupAny && !bound) return null;
+      return { spend: () => { C.spent = true; if (bound) rec.dupSpent = true; } };
+    }
     if (!rec || rec.tap || rec.kind !== 'cut' || !rec.bound || rec.dupSpent || !uq.bladeTouch()) return null;
     return { spend: () => (rec.dupSpent = true) };
   },
@@ -503,7 +511,7 @@ export class PlayerUniqueAssist {
       }
       // 겹치기 (10/28): 맞물린 자리에서 상대 칼 뒤로 밀어 넣어 엇갈린 손으로 얼굴을 사선으로 — 고노센 칼끝 × specialShare.duplieren (10/29 02:0x)
       if (e.tapDup && UA.enhance > 0) {
-        if (requestArtDup(f, { share: specialShare(e.name), maxT: UA.dupSnapTime, tech: U.name, face: UA.dupFace, follow: UA.dupFollow, plan: UA.dupPlan, body: UA.dupBody, edge: UA.dupEdge })) {
+        if (requestArtDup(f, { share: specialShare(e.name), maxT: UA.dupSnapTime, tech: U.name, face: UA.dupFace, follow: UA.dupFollow, plan: UA.dupPlan, body: UA.dupBody, edge: UA.dupEdge, step: UA.dupStep > 0 ? { kind: 'lunge', fwd: UA.dupStep } : null })) {
           this.stats.snap = (this.stats.snap ?? 0) + 1;
           return true;
         }
@@ -901,6 +909,10 @@ export class PlayerUniqueAssist {
     this.t += dt;
     const f = this.f;
     if (this.holdE) this.holdTick(dt); // 풍차 베기 (B4 — 길게 눌러 감다 떼면 내려침 · 10/29)
+    if ((UA.dupAny || UA.dupGrace > 0) && UA.dupTap && this.list.some((x) => x.tapKey === 'dup')) {
+      // 겹치기 시제품 닿음 덩이 (10/31 — 기본 끔이면 셈도 안 함): 칼끼리 닿음이 시작된 때 · 끝난 때
+      if (this.bladeTouch()) { if (!this.dupC || this.dupC.end != null) this.dupC = { t0: this.t, end: null, spent: false }; } else if (this.dupC && this.dupC.end == null) this.dupC.end = this.t;
+    }
     this.coolTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:5x)
     // 물러남이 풀린 때 (날개 접기 탭 조건 TAP_TRIG 'lian' — 10/28 01:2x): 스틱 뒤가 풀린 스텝
     const back = this.backNow();
