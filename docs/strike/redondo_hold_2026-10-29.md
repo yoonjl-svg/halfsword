@@ -478,5 +478,5 @@
 - `redondo_gamecam_ai_before.png` · `redondo_gamecam_ai_after.png` — AI(상대 츠바이핸더 이베리아 · 머리 위 돌려 베기를 빈틈 공격으로 시킴 · 가슴 사이 2.6 m · 같은 카메라 — 상대가 나를 봄): 전 = 옛 패드 길(`?rdAiWind=0`) · 후 = 같은 감기(칼을 세워 어깨 위로 · 다가가며 감음 → 벰 — 서 있는 내 머리를 벰). 찍은 값 `_gamecam_before.json` · `_gamecam_after.json`.
 
 **⑦ 판 · 시험**
-- 시험 `redondo_motion.test.mjs`: 안 B 얹은 꼴(칼끝이 가슴 뒤 0.2 m 넘게 · 가슴 위 1.2 m 넘게) · 안 B 내려침(얹은 자리보다 뒤로 0.05 m 안 · 앞 낮은 끝 0.9 m 넘게) · **AI 풍차 베기** 켬(감기 꼴 shoulder · rdWind → rdStrike · 얹은 칼끝 머리 위 · 감으며 다가감 · 감음 · 밧줄 되걸림 · 내려침 1) / 끔(옛 패드 길 — 감기 없음). `node --test tools/sim/*.test.mjs` → {SUITE} · `npm run -s build` 됨 · 이름 규칙 위반 0.
+- 시험 `redondo_motion.test.mjs`: 안 B 얹은 꼴(칼끝이 가슴 뒤 0.2 m 넘게 · 가슴 위 1.2 m 넘게) · 안 B 내려침(얹은 자리보다 뒤로 0.05 m 안 · 앞 낮은 끝 0.9 m 넘게) · **AI 풍차 베기** 켬(감기 꼴 shoulder · rdWind → rdStrike · 얹은 칼끝 머리 위 · 감으며 다가감 · 감음 · 밧줄 되걸림 · 내려침 1) / 끔(옛 패드 길 — 감기 없음). `node --test tools/sim/*.test.mjs` → **593 통과 · 실패 0** · `npm run -s build` 됨 · 이름 규칙 위반 0.
 - 관문(바탕 6b109f55 와 같음): fights12 `768085f3` · live_battery `e8127a92` · finish_thrust 1 --stand `ad302969` · corr_s0 `--limits=off,on` 12 IDENTICAL · weapon_smoke 34 OK.
