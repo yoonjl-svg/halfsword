@@ -1446,7 +1446,9 @@ export const UNIQUE_ASSIST = {
   //   올려 긋는 길을 미리 끌고 가 보아 처음 닿을 곳이 몸통 띠(다리 위 골반 ~ 목 아래 가슴) 밖이면 길 높이를 가장 적게 옮김(secret_instant.js comboBandShift · bandFirst — 내려간 칼이 멈춘 자리 · 상대 자세에 따라
   //   배 · 골반 · 가슴으로 흩어짐) + 운동학 칼 굴림 묶음(날이 앞장서되 손목 밧줄 HUMAN.forearmRoll 까지만 — placeIai). 0 = 10/25 21:1x 판(`?tsuBand=0`). tsuAim 0 이면 읽지 않음
   tsuBand: 1,
-  tsuHook: 1, // (작업 중 — 곧은 길 재기)
+  //  ③ 곧은 길 (사장님 10/31 16:xx '제비 베기는 곧은 길로 바꿔' — 기록 docs/strike/tsubame_straight_2026-10-31.md · 확인표 3230): 0 = 꺾은 자리에서 왼 위로 곧게 한 번(unique_assist.js TSU_AIM.line —
+  //   몸통 띠 · 날 앞장 · 굴림 묶음 그대로) · 1 = 10/25 갈고리 길(TSU_AIM.band — 칼 든 쪽으로 나갔다 가슴 가운데로 되돌아옴) `?tsuHook=1`. tsuAim 0 · tsuBand 0 이면 읽지 않음
+  tsuHook: 0,
   // 위에서 내려 찌르기(이탈리아) — 옷 · 갑옷 틈을 파고드는 값(combat.js THRUST_STYLE gap 자리)을 이 찌르기만 이 값으로 (레이피어 기본 0.3 · 사장님 10/21 '파고드는 값 0.6으로 해' · 확인표 2107)
   imbroccataGap: 0.6,
   // 사람 위에서 내려 찌르기 닿게 (사장님 10/27 23:5x '임브로카타 찌르기 뻗게 고치고' — 기록 docs/strike/imbroccata_2026-10-27.md · 확인표 2660): 1 = 긋기가 내려 찌르기로 읽힌 순간

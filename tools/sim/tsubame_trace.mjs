@@ -3,7 +3,7 @@
 //  끌고 가는 칼(제비 베기 강화가 켜진 스텝부터 운동학 칼이 끝나고 0.1 s)마다 칼끝 · 손(칼자루) 세계 자리 · 맞은 자리 · 손목을 적음 →
 //   휨: 칼끝 길 ↔ 처음 · 끝을 잇는 곧은 줄 가장 먼 거리(m) · 그 줄 길이에 대한 몫 · 꺾임(이웃 조각 방향 바뀜 가장 큰 °) — 운동학 칼 모두(bend) · 베는 토막만(bendCut)
 //   손목(끌고 가는 스텝마다 · 첫 맞음 때 — wrist_audit.mjs 잣대): 범위 밖(> 1°) · 아래팔 굴림 ≥ 78 · 날 앞장(칼날 0.7 자리 움직임과 날 cos > STRIKE.edgeAlign — 외날의 날 쪽) · 등 앞장(cos < −문턱)
-//  갈래 VARIANTS (아래 표): hook(10/25 갈고리 — `?tsuHook=1`) · old(10/25 전 길 — tsuAim 0) · line(곧은 길 — 지금 기본) · 그 밖 시험 길 · 쪽 붙들기 · 띠 옮김 꼴
+//  갈래 VARIANTS (아래 표): hook(10/25 갈고리 — `?tsuHook=1`) · old(10/25 전 길 — tsuAim 0) · line(곧은 길 — 지금 기본) · 그 밖 시험 길 · 띠 옮김 꼴 · 날 쪽 셈
 //  node tools/sim/tsubame_trace.mjs [--variants=hook,line,old] [--seeds=4] [--gaps=1.0,1.15,1.3] [--json=파일]  (씨앗 1 = 손가락 길 그대로 · 2 부터 점마다 ± 0.04 흔들림)
 //   --sum 이면 갈래마다 묶음 한 줄(JSON) — 12 번(사이 셋 × 씨앗 넷)이 기록 표의 판
 import { writeFileSync } from 'node:fs';
@@ -18,19 +18,20 @@ const U = TRADITIONS.japanese.unique.find((x) => x.name === 'tsubameGaeshi');
 const r3 = (x) => +x.toFixed(3);
 const KEEP = { band: JSON.parse(JSON.stringify(TSU_AIM.band)), line: JSON.parse(JSON.stringify(TSU_AIM.line)), ua: { tsuAim: UA.tsuAim, tsuBand: UA.tsuBand, tsuHook: UA.tsuHook } };
 const OLD = [[0.06, -0.15], [0.22, 0.26]]; // AI 길 (schools.js — 10/25 전 사람 길)
+const BARE = { plan: [[0, 0, 0], [0, 0, 0], [0, 0, 0]], finger: undefined, shift: null, arcCut: false, pathHint: false }; // 곧은 길 칸을 비우고 시험 길만
 /** 갈래: ua = 스위치 · band = 갈고리 길(TSU_AIM.band) 덮음 · line = 곧은 길(TSU_AIM.line) 칸 덮음 */
 export const VARIANTS = {
-  hook: { ua: { tsuHook: 1 } }, // 10/25 해법 ③ 갈고리 — [0.2, −0.2] → [0, 0.1]
-  old: { ua: { tsuAim: 0 } }, // 10/25 전 길 — 덧칸 · 띠 · 굴림 묶음 없음
-  line: { ua: { tsuHook: 0 } }, // 곧은 길 (TSU_AIM.line 그대로)
-  diag: { ua: { tsuHook: 0 }, line: { path: OLD, shift: null, side: null } }, // 10/31 점검의 'diag' — 손가락 사선 + 띠 옮김 (쪽은 스텝마다)
-  diagStick: { ua: { tsuHook: 0 }, line: { path: OLD, shift: null, side: 'stick' } },
-  diagPivot: { ua: { tsuHook: 0 }, line: { path: OLD, shift: 'pivot', side: null } },
-  diagPivotStick: { ua: { tsuHook: 0 }, line: { path: OLD, shift: 'pivot', side: 'stick' } },
-  oldRoll: { ua: { tsuHook: 0 }, line: { path: OLD, shift: 'none', side: null } }, // 전 길 + 굴림 묶음만(띠 옮김 없음)
-  oldRollStick: { ua: { tsuHook: 0 }, line: { path: OLD, shift: 'none', side: 'stick' } },
+  hook: { ua: { tsuHook: 1 } }, // 10/25 해법 ③ 갈고리 — [0.2, −0.2] → [0, 0.1] (`?tsuHook=1`)
+  old: { ua: { tsuAim: 0 } }, // 10/25 전 길 — 덧칸 · 띠 · 굴림 묶음 없음 (`?tsuAim=0`)
+  line: { ua: { tsuHook: 0 } }, // 곧은 길 (TSU_AIM.line 그대로 — 지금 기본)
+  diag: { ua: { tsuHook: 0 }, line: { ...BARE, path: OLD } }, // 10/31 점검의 'diag' — 전 길 + 띠 옮김 · 굴림 묶음 (날 쪽 = 놓인 칼끝)
+  diagHint: { ua: { tsuHook: 0 }, line: { ...BARE, path: OLD, pathHint: true } }, // + 날 쪽 = 길 위 칼끝
+  diagFix: { ua: { tsuHook: 0 }, line: { ...BARE, path: OLD, pathHint: true, shift: 'slide', arcCut: true } }, // + 줄 따라 옮김 · 잔상은 베는 토막만
+  oldRoll: { ua: { tsuHook: 0 }, line: { ...BARE, path: OLD, pathHint: true, shift: 'none' } }, // 전 길 + 굴림 묶음만 (띠 옮김 없음 — tsuBand 와 떼어 냄)
+  up: { ua: { tsuHook: 0 }, line: { ...BARE, path: [[0, 0.1]], plan: [[0, 0, 0], [0, 0, 0]], pathHint: true, shift: 'slide', arcCut: true } }, // 꺾은 자리 → 가운데 가슴 높이 곧장 위
+  short: { ua: { tsuHook: 0 }, line: { ...BARE, path: [[-0.1, 0]], plan: [[0, 0, 0], [0, 0, 0]], pathHint: true, shift: 'slide', arcCut: true } }, // 꺾은 자리 → 왼 위 짧게 (배 높이)
 };
-// 그 밖 시험 길: --path='x,y;x,y' (line 칸) · --shift=all|pivot|none · --side=stick
+// 그 밖 시험 길: --path='x,y;x,y' (line 칸 · 덧칸 0) · --shift=pivot|slide|none · --hint=1 · --arcCut=1
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
 
 function apply(variant) {
@@ -135,6 +136,7 @@ export function traceRun(variant, seed, GAP) {
         tr.bandFrom = P.iai ? `${P.iai.bandFrom ?? '-'}>${P.iai.bandTo ?? '-'}` : null;
       }
       if (on) tr.fired = true;
+      if (P.iai?.kind === 'combo' && P.iai.tech === 'tsubameGaeshi') tr.arc = P.iai.arc.pts; // 잔상 점 (칼자루 · 칼끝 세계 자리 — 그리는 그대로)
       if (tr.snapT != null && tr.endT == null && !on && !P.iai) tr.endT = G.t;
       // 칼날 0.7 자리 움직임과 날(칼 틀 +x — 외날의 날 쪽) cos (부호 있음 · + = 날 앞장)
       const b7 = P.bladePoint(0.7, new THREE.Vector3());
@@ -197,9 +199,10 @@ export function bendOf(T) {
   }
   return { chord: r3(L), dev: r3(dev), devShare: r3(dev / L), devAt, kinkDeg: +kink.toFixed(1), pathLen: r3(len), steps: T.length, dur: r3(T[T.length - 1][0] - T[0][0]) };
 }
-/** 운동학 칼이 끄는 동안(iai 1) 칼끝 길 · 베는 토막만 */
+/** 운동학 칼이 끄는 동안(iai 1) 칼끝 길 · 베는 토막만 · 잔상(끌고 가는 칼이 그린 칼끝 점 — 스텝마다 셋)이 그린 길 */
 export const bend = (tr) => bendOf(tr.tip.filter((p) => p[4]));
 export const bendCut = (tr) => bendOf(tr.tip.filter((p) => p[4] && p[5]));
+export const bendTrail = (tr) => (tr.arc?.length >= 3 ? bendOf(tr.arc.map((a) => [0, a[3], a[4], a[5]])) : null);
 
 const p50 = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.floor((s.length - 1) / 2)]; };
 const LEGS = new Set(['thighF', 'thighB', 'shinF', 'shinB', 'footF', 'footB']);
@@ -212,6 +215,7 @@ export function traceSummary(runs) {
   for (const hh of first) parts[hh.part ?? hh.zone] = (parts[hh.part ?? hh.zone] ?? 0) + 1;
   const B = F.map((r) => r.bend).filter(Boolean);
   const C = F.map((r) => r.bendCut).filter(Boolean);
+  const T = F.map((r) => r.bendTrail).filter(Boolean);
   const W = F.flatMap((r) => r.wr.filter((w) => w && w[1]));
   const WF = F.flatMap((r) => r.wr.filter((w) => w && !w[1] && w[0] > 0));
   const FH = runs.flatMap((r) => r.hits.filter((hh) => !hh.kin));
@@ -230,6 +234,7 @@ export function traceSummary(runs) {
     dev: f2(p50(B.map((b) => b.dev))), devShare: f2(p50(B.map((b) => b.devShare))), devShareMax: f2(mx(B.map((b) => b.devShare))),
     kink: p50(B.map((b) => b.kinkDeg)), kinkMax: mx(B.map((b) => b.kinkDeg)),
     cutDevShare: f2(p50(C.map((b) => b.devShare))), cutKink: p50(C.map((b) => b.kinkDeg)), cutKinkMax: mx(C.map((b) => b.kinkDeg)),
+    trailDevShare: f2(p50(T.map((b) => b.devShare))), trailDevShareMax: f2(mx(T.map((b) => b.devShare))), trailKink: p50(T.map((b) => b.kinkDeg)), trailKinkMax: mx(T.map((b) => b.kinkDeg)),
     kinSteps: W.length, oorStep: pc(W.filter((w) => w[3] > OOR_EPS).length), roll78Step: pc(W.filter((w) => w[2] >= ROLL_AT).length), rollStepP50: p50(W.map((w) => w[2])), rollStepMax: mx(W.map((w) => w[2])),
     edgeLead: pe((x) => x > k), backLead: pe((x) => x < -k),
     hitRoll: p50(first.map((hh) => hh.roll).filter((x) => x != null)), hitOor: first.filter((hh) => hh.oor > OOR_EPS).length, hitRoll78: first.filter((hh) => hh.roll >= ROLL_AT).length,
@@ -246,13 +251,16 @@ if (isMain(import.meta.url)) {
   const SEEDS = +arg('seeds', 4);
   const GAPS = arg('gaps', '1.0,1.15,1.3').split(',').map(Number);
   const names = arg('variants', 'hook,line,old').split(',');
-  if (arg('path')) VARIANTS.custom = { ua: { tsuHook: 0 }, line: { path: arg('path').split(';').map((p) => p.split(',').map(Number)), shift: arg('shift', null), side: arg('side', null) } };
+  if (arg('path')) {
+    const path = arg('path').split(';').map((p) => p.split(',').map(Number));
+    VARIANTS.custom = { ua: { tsuHook: 0 }, line: { ...BARE, path, plan: Array.from({ length: path.length + 1 }, () => [0, 0, 0]), shift: arg('shift', null), arcCut: arg('arcCut') === '1', pathHint: arg('hint') === '1' } };
+  }
   const out = { gaps: GAPS, runs: [], sum: {} };
   for (const variant of names) {
     const runs = [];
     for (const gap of GAPS) for (let s = 1; s <= SEEDS; s++) {
       const tr = traceRun(variant, 700 + s, gap);
-      const row = { variant, seed: 700 + s, gap, fired: tr.fired, bend: bend(tr), bendCut: bendCut(tr), hits: tr.hits, bandDy: tr.bandDy, bandFrom: tr.bandFrom, tip: tr.tip, hand: tr.hand, pad: tr.pad, wr: tr.wr };
+      const row = { variant, seed: 700 + s, gap, fired: tr.fired, bend: bend(tr), bendCut: bendCut(tr), bendTrail: bendTrail(tr), hits: tr.hits, bandDy: tr.bandDy, bandFrom: tr.bandFrom, tip: tr.tip, hand: tr.hand, pad: tr.pad, wr: tr.wr };
       runs.push(row);
       out.runs.push(row);
       if (!process.argv.includes('--sum')) console.log(variant, gap, 700 + s, JSON.stringify({ fired: tr.fired, bend: row.bend && { dev: row.bend.dev, devShare: row.bend.devShare, kinkDeg: row.bend.kinkDeg, dur: row.bend.dur }, cut: row.bendCut && { devShare: row.bendCut.devShare, kinkDeg: row.bendCut.kinkDeg }, dy: tr.bandDy, hits: tr.hits.map((x) => `${x.part ?? x.zone}@${x.t}${x.kin ? '' : '(f)'} r${x.roll} e${x.edge}`) }));

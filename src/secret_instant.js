@@ -1281,9 +1281,6 @@ function comboPlanPad(f, I, m, A) {
   const last = pts[pts.length - 1];
   const kx = Math.abs(last[1] - pts[0][1]) > 1e-6 ? (last[0] - pts[0][0]) / (last[1] - pts[0][1]) : 0; // 줄 기울기 (패드 x / 높이)
   const pivot = (dy) => m.shift === 'pivot' || (m.shift === 'slide' && dy < 0);
-  //  start 'up' (곧은 제비 베기 — 10/31 · 수의 start 칸): 준비 자세(from)의 칼끝이 지금 칼끝보다 낮으면(손가락이 칼보다 먼저 내려가 꺾음) 준비 토막 없이 지금 자리부터 벤다 —
-  //   한 스텝 아래로 끌어내렸다 올리는 'V' 가 곧은 줄 머리에 붙지 않게 (돌려준 길에 here 표 — 첫 토막부터 맞힘 · 띠 셈 bandFirst 도 같음)
-  const lowTip = (P) => m.start === 'up' && comboTip(f, P.H, P.D).y < comboTip(f, A.H, A.D).y;
   const build = (dy = 0) => {
     const P = pts.map((p0, k) => {
       const p = !dy ? p0 : pivot(dy) ? [p0[0], p0[1] + (dy * cum[k]) / Math.max(1e-6, cum[cum.length - 1])] : m.shift === 'slide' ? [p0[0] + dy * kx, p0[1] + dy] : [p0[0], p0[1] + dy];
@@ -1292,17 +1289,11 @@ function comboPlanPad(f, I, m, A) {
       if (m.plan?.[k]) comboPlanAdd(B, m.plan[k]); // 길 덧칸 ([from, ...path] 점마다 — 제비 베기 되돌림 칼만)
       return B;
     });
-    if (P.length > 1 && lowTip(P[0])) {
-      const Q = P.slice(1);
-      Q.here = true;
-      return Q;
-    }
     return P;
   };
   const poses = m.band ? comboBandShift(f, I, A, build) : build(); // 몸통 띠 겨눔 (제비 베기 되돌림 칼 — 10/25 23:1x)
-  I.startHere = !!poses.here; // 재기
   poses.forEach((B, k) => {
-    const sg = { cut: k > 0 || !!poses.here, A: cur, B };
+    const sg = { cut: k > 0, A: cur, B };
     sg.T = comboSegLen(f, sg) / I.v;
     segs.push(sg);
     cur = B;
@@ -1322,7 +1313,7 @@ function bandFirst(f, I, A, poses) {
   const segs = [];
   let from = A;
   for (let k = 0; k < poses.length; k++) {
-    const sg = { cut: k > 0 || !!poses.here, A: from, B: poses[k] }; // here: 준비 토막 없이 지금 자리부터 (곧은 제비 베기 start 'up' — comboPlanPad)
+    const sg = { cut: k > 0, A: from, B: poses[k] };
     sg.T = comboSegLen(f, sg) / I.v;
     if (sg.T > 0) segs.push(sg);
     from = poses[k];
@@ -2572,7 +2563,7 @@ function stepCombo(f, combat) {
     const D = I.prev.D.clone().lerp(cur.D, w).normalize();
     const tip = B.clone().addScaledVector(D, I.mord ? I.mord.Lp : f.weaponCfg.bladeLength); // 죽음의 일격: 손 → 칼자루 끝 (치는 막대)
     // 잔상 (10/23 사장님 '잔상과 궤적도 비기에 걸맞는지 체크해'): 사람 비기(모르트슐라크 · 격살 — arcCut)는 베는 토막(맞음이 날 수 있는 몫)만 — 준비 · 다시 세우기는 그리지 않는다
-    if (!I.noArc && (!I.arcCut || sg.cut)) {
+    if (!I.noArc && (!I.arcCut || (sg.cut && !(fresh && I.moves[I.mi]?.cleanArc)))) { // cleanArc (곧은 제비 베기 — 10/31): 준비 토막에서 넘어온 스텝도 안 그림 (그 스텝 조각은 준비 토막 끝 → 베는 줄이라 옆으로 꺾임)
       I.arc.pts.push([B.x, B.y, B.z, tip.x, tip.y, tip.z]);
       if (I.arcCut && f.instantArc !== I.arc) f.instantArc = I.arc;
     }
@@ -2815,9 +2806,9 @@ export function requestArtReturn(f, from, path, SB) {
  *  꺾는 순간 from(손가락이 꺾은 자리 — 패드) → path(올려 긋는 길 패드들)를 진 · 츠바메가에시와 같은 틀(연환 — 운동학 · 쓸린 자리의 실제 빠르기 · 판정 배율 1)로 끌고 간다.
  *  칼끝 빠르기 = 고노센 발도 칼끝 빠르기 × share · 시간 상한 maxT · 끝 자세 붙잡기 없음(곧장 0.2 s 에 손가락으로). 이미 끌고 가는 중이면 거절(false)
  */
-export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, band = false, roll = false, shift = null, pathHint = false, start = null }) {
+export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, band = false, roll = false, shift = null, pathHint = false, arcCut = false }) {
   if (f.iai || f.iaiReq || !path?.length || !(share > 0)) return false;
-  requestCombo(f, { moves: [{ from, path, plan, kind: 'cut', name: tech, cutSweep: true, same: true, band, ...(roll ? { roll: true } : {}), ...(shift ? { shift } : {}), ...(pathHint ? { pathHint: true } : {}), ...(start ? { start } : {}) }], share, hold: 0, hitMul: 1, tech, maxT }); // plan = [from, ...path] 점마다 길 덧칸 (comboPlanAdd) · cutSweep = 날 세우기 · 준비 토막에서 넘어온 스텝은 맞힘 안 봄 (stepCombo) · same = 손가락 긋기와 같은 공격 (comboMoveStart) · band = 몸통 띠 겨눔(comboBandShift) · 굴림 묶음(placeIai) · 곧은 길 (10/31): roll = 띠 옮김 없이 굴림 묶음만 · shift = 띠 높이 옮김 꼴 · pathHint = 날 쪽을 길 위 칼끝으로 · start 'up' = 준비 토막이 내려가면 지금 자리부터
+  requestCombo(f, { moves: [{ from, path, plan, kind: 'cut', name: tech, cutSweep: true, same: true, band, ...(roll ? { roll: true } : {}), ...(shift ? { shift } : {}), ...(pathHint ? { pathHint: true } : {}), ...(arcCut ? { cleanArc: true } : {}) }], share, hold: 0, hitMul: 1, tech, maxT, arcCut }); // plan = [from, ...path] 점마다 길 덧칸 (comboPlanAdd) · cutSweep = 날 세우기 · 준비 토막에서 넘어온 스텝은 맞힘 안 봄 (stepCombo) · same = 손가락 긋기와 같은 공격 (comboMoveStart) · band = 몸통 띠 겨눔(comboBandShift) · 굴림 묶음(placeIai) · 곧은 길 (10/31): roll = 띠 옮김 없이 굴림 묶음만 · shift = 띠 높이 옮김 꼴 · pathHint = 날 쪽을 길 위 칼끝으로 · arcCut = 잔상은 베는 토막만(꺾은 자리로 거두는 준비 토막 · 거기서 넘어온 스텝은 안 그림)
   return true;
 }
 /**

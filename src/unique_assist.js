@@ -75,11 +75,17 @@ export const RETIRED_UNIQUE = new Set(['krumphau', 'passataSotto', 'altibaixo', 
 //   칼끝 떨굼은 옮긴 높이의 자세 지도가 손 · 칼끝을 함께 정하고, 손 돌리기는 날이 앞장서게 두되 사람 손목(손목 밧줄 HUMAN.forearmRoll)이 못 하면 한도까지만(placeIai 굴림 묶음) —
 //   끌고 가는 칼 덧칸은 0 · 끌고 간 칼이 끝난 뒤 손가락 몫 덧칸(planStep)은 위 plan 그대로. 길은 2575 그대로 · 띠 규칙 사장님 10/25 결정(확인표 2586) ·
 //   옮김 칸 수 [추정] 사장님 확인 전(2587). tsuBand 0 = 위 path · plan (10/25 21:1x 판)
+//  line (사장님 10/31 16:xx '제비 베기는 곧은 길로 바꿔' — config UNIQUE_ASSIST.tsuHook 0 · 기록 docs/strike/tsubame_straight_2026-10-31.md · 확인표 3230 ~ 3239): band 의 갈고리
+//   ([0.2, −0.2] 로 칼 든 쪽에 0.3 m 나갔다 되돌아옴 — 곧은 줄 대비 0.5 · 꺾임 약 100°) 대신 꺾은 자리에서 왼 위 [−0.3, 0.25] 로 곧게 한 번(점 하나라 꺾은 자리가 어디든 곧은 줄).
+//   등 뒤에서 보아 칼끝이 골반 높이에서 머리 높이로 왼쪽 약 30° 기울어 오름 — 오른 위(전 길 [0.06, −0.15] → [0.22, 0.26])로 곧게 올리면 손목 밧줄 안에서 날이 앞장설 수 없어
+//   칼등이 앞장섬(92 %). 몸통 띠 · 굴림 묶음은 band 와 같고 셋을 더함: shift 'slide' = 띠 옮김이 위로면 길을 제 줄 따라 밀어 올림 · 아래로면 꺾은 자리를 축으로 기울임(곧은 줄 그대로) ·
+//   pathHint = 날 쪽을 길 위 칼끝으로 셈(놓인 칼끝으로 세면 손목 교정 · 날 쪽이 스텝마다 오가며 곧은 길이 40 ~ 60° 꺾임) · arcCut = 잔상은 베는 토막만(꺾은 자리로 거두는 준비 토막은 안 그림).
+//   끌고 가는 칼 · 끌고 간 뒤 손가락 몫 덧칸 0. 수는 [추정] — 사장님 확인 전 (확인표 3231)
 export const TSU_AIM = {
   path: [[0.2, -0.2], [0, 0.1]],
   plan: [[-30, 0, -40], [-10, 0, -40], [0, 0, -40]],
   band: { path: [[0.2, -0.2], [0, 0.1]], plan: [[0, 0, 0], [0, 0, 0], [0, 0, 0]] },
-  line: { path: [[0.06, -0.15], [0.22, 0.26]], plan: [[0, 0, 0], [0, 0, 0], [0, 0, 0]] },
+  line: { path: [[-0.3, 0.25]], plan: [[0, 0, 0], [0, 0, 0]], shift: 'slide', pathHint: true, arcCut: true },
 };
 export const PLAYER_UNIQUE = {
   german: [
@@ -248,7 +254,7 @@ export function uniqueDef(tradition, e) {
     if (band) {
       def.band = true;
       def.snapPlan = lead(band.plan);
-      if (band.shift || band.pathHint || band.start) def.snapOpt = { shift: band.shift ?? null, pathHint: !!band.pathHint, start: band.start ?? null }; // 곧은 길 (10/31): 띠 높이 옮김 꼴 · 날 쪽 = 길 위 칼끝 · 준비 토막
+      if (band.shift || band.pathHint || band.arcCut) def.snapOpt = { shift: band.shift ?? null, pathHint: !!band.pathHint, arcCut: !!band.arcCut }; // 곧은 길 (10/31): 띠 높이 옮김 꼴 · 날 쪽 = 길 위 칼끝 · 잔상은 베는 토막만
     }
   }
   return def;
@@ -977,7 +983,7 @@ export class PlayerUniqueAssist {
       const at = Math.min(e.chain?.at ?? 2, U.pts.length - 2);
       //  길 덧칸(해법 ③ 손 돌리기 등)은 끌고 가는 칼에도 같은 점마다 (U.plan 의 꺾은 자리부터)
       const so = U.snapOpt; // 곧은 길 (10/31): shift 'none' = 띠 높이 옮김 없이 굴림 묶음만
-      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band && so?.shift !== 'none', roll: !!U.band && so?.shift === 'none', shift: so?.shift && so.shift !== 'none' ? so.shift : null, pathHint: !!so?.pathHint, start: so?.start ?? null })) this.stats.snap = (this.stats.snap ?? 0) + 1;
+      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band && so?.shift !== 'none', roll: !!U.band && so?.shift === 'none', shift: so?.shift && so.shift !== 'none' ? so.shift : null, pathHint: !!so?.pathHint, arcCut: !!so?.arcCut })) this.stats.snap = (this.stats.snap ?? 0) + 1;
     } else if (e.tap && UA.imbroReach) {
       // 위에서 내려 찌르기 닿게 (사장님 10/27 23:5x '찌르기 뻗게 고치고'): 읽힌 순간 탭 찌르기 덧씌우기로 찌른다 — AI 임브로카타(ai.js startStrike → skill.thrust)와 같은 길
       //  (이탈리아 찌르기 THRUST.itLunge — 몸통 겨눔 · 팔만으로 안 닿으면 거리만큼 런지). 그 탭이 도는 동안 강화(몸 · 끝 힘)는 물러남(busy) · 맞은 상처는 이 기술(strokeTechOf — I8 틈 파고들기).
