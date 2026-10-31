@@ -145,4 +145,4 @@
 ### 10-3. 시험 · 관문
 
 - 새 시험 `tools/sim/gonosen_ready.test.mjs` ⑧(문턱 아래 · 위 — 앞 · 뒤 · 옆 · 얹은 엄지 9 px 는 걸음 뜻 아님 · 25 px 는 걸음 · `?gnsStickWalk=0` 옛 판 · 실제 몸: 9 px 엄지로 준비 · 25 px 로 준비 안 됨 · 허리에서 '발도 대기' · 쥐면 아님).
-- 관문 · 시험 수: 관문(올리기 없이 · ce704176 위) 이름 0 · fights12 768085f3 · live e8127a92 · ft ad302969 · corr 12 · smoke 34 · 빌드 0 · name_policy 0 그대로 · 시험 TESTS_N
+- 관문 · 시험 수: 관문(올리기 없이 · ce704176 위) 이름 0 · fights12 768085f3 · live e8127a92 · ft ad302969 · corr 12 · smoke 34 · 빌드 0 · name_policy 0 그대로 · 시험 594 / 594(0 실패)

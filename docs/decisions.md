@@ -2688,4 +2688,4 @@
 - 사장님(감독 전달): "1-2번 다 고쳐" — 확인표 3157(스틱 위 엄지가 데드존 밖이면 준비가 안 쌓임) · 허리 대기 동안 자세 이름이 '가운데 겨눔'.
 - ① **걸음 뜻 = 스틱이 몸을 걷게 할 때만** `SECRET.gnsStickWalk` 1(`src/secret.js` `gnsHumanMoving` — 가려는 빠르기 > `GAIT.walkMin` · 새 수 없음 · 사람 창 · AI 가 읽는 사람 준비 · `?gnsStickWalk=0` = 전 판 · 확인표 3200). 실제 빌드 CDP 터치: 얹은 엄지 약 9 px(스틱 0.10) 전 판 준비 0 → 켜짐 · 창 / 25 px 민 걸음은 그대로 준비 안 됨. 문턱 아래 앞 스틱은 몸을 천천히 밂(3202).
 - ② **① 자세 칸 '발도 대기'**(`src/secret_instant.js` `IAI_READY_STANCE` · `iaiReadyShown` → `src/main.js` `updateGuardName` — 칼이 왼 허리에 있는 동안 · 쥐면 보통 이름 · 3201). 이름은 저장소가 이 자세를 부르는 말(원어 출처 없음).
-- 그대로: AI 자기 준비(`gnsMoving`) · 스틱 데드존 · 걸음 · 다른 고노센 규칙 · 관문 다섯. 시험 ⑧ 더함 · 관문(올리기 없이 · ce704176 위) 이름 0 · fights12 768085f3 · live e8127a92 · ft ad302969 · corr 12 · smoke 34 · 빌드 0 · name_policy 0 그대로 · 시험 TESTS_N. 기록 `docs/strike/gonosen_window_2026-10-31.md` §10 · 확인표 3200 ~ 3203.
+- 그대로: AI 자기 준비(`gnsMoving`) · 스틱 데드존 · 걸음 · 다른 고노센 규칙 · 관문 다섯. 시험 ⑧ 더함 · 관문(올리기 없이 · ce704176 위) 이름 0 · fights12 768085f3 · live e8127a92 · ft ad302969 · corr 12 · smoke 34 · 빌드 0 · name_policy 0 그대로 · 시험 594 / 594(0 실패). 기록 `docs/strike/gonosen_window_2026-10-31.md` §10 · 확인표 3200 ~ 3203.
