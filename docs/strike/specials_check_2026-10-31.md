@@ -51,4 +51,4 @@
 
 - `src/config.js` `UNIQUE_ASSIST.dupGrace` 0 · `dupAny` 0 · `dupStep` 0 · `src/unique_assist.js`(탭 조건 dup — 끔이면 전 판 그대로 · 켜면 닿음 덩이 `dupC`) · `src/secret_instant.js` `requestArtDup` step · `src/main.js` 주소 셋
 - 도구 `tools/sim/tsubame_trace.mjs` · `tools/sim/tsubame_trace_plot.py` · `tools/sim/duplieren_window.mjs` · `tools/sim/special_balance.mjs` 봇 반응 손잡이(`SP_DUP_DELAY` · `SP_DUP_ANY` — 기본 전 판)
-- 시험 CHECKS · 관문 GATES
+- 시험 608 가운데 606 통과 — 실패 2 는 `tools/sim/redondo_motion.test.mjs` '내려침 길 [안 A 고리]' · '[안 B 어깨]'(뗌 → 벰 0.121 s > 0.12 s — 풍차 베기 몫 0.5 → 0.3, dev 4122dad0 에서 이미 실패: 깨끗한 4122dad0 에서 같은 2 실패 · 이 가지 탓 아님) · 빌드 0 · 관문 다섯 그대로(fights12 768085f3 · live e8127a92 · ft ad302969 · corr 12 · smoke 34)
