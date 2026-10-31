@@ -120,6 +120,14 @@ export function fight({ bot: botKind = 'normal', weapon = 'longsword', opp = 'lo
       bot.feed();
       const fwd = stepIn(P, dist, bot.queue.length, t >= nextAtk && !guard.held, CONTACT, REACH, REACH);
       P.move.set(0.18 * Math.sin(t * 0.65 + seed), fwd);
+    } else if (botKind === 'mord') {
+      // 죽음의 일격을 노리는 손 (붙어 미는 봇 꼴): 칼은 긴 자세에 둔 채 가슴 사이 0.55 m 까지 걸어 들어가 계속 밂 · 치지 · 막지 않음 — 들어가는 길에 띠(0.8 ~ 위 끝)를 지나며 겹치기가 끼어드나
+      guard.held = false;
+      guard.broken = false;
+      guard.step(DT);
+      P.inputActive = guard.active;
+      bot.feed();
+      P.move.set(0, P.stamina.exhausted || !P.alive ? 0 : dist > 0.55 ? 0.6 : 0.3);
     } else {
       // 노리는 손 (press · clash)
       if (touch) D.lastTouch = t;
@@ -465,9 +473,25 @@ if (isMain(import.meta.url)) {
     }
     if (args.json) writeFileSync(String(args.json), JSON.stringify(out));
   } else if (mode === 'agg') {
+    // 표 한 줄씩 (닫힌 고리) + 낸 때 가슴 사이마다 맞음 (모든 파일)
+    const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)} %`);
+    const allF = [];
+    console.log('| 파일 | 봇 | 판 | 실제 분 | 낸 수 /분 | 맞음 | 부위 | 즉사 | 낸 것당 심각도 | 특수 심각도 /분 | 가슴 사이 p50 (p10 ~ p90) | 낸 뒤 가장 가까이 p50 · 0.8 밑 | 막기 단추 · 긋는 중 · 스틱 뒤 · 상대 공격 중 | 낸 뒤 1 s 받은 심각도 (평소 1 s) | 죽음의 일격 셈 창 /분 | 승 · 패 |');
     for (const p of args._.slice(1)) {
       const o = JSON.parse(readFileSync(p, 'utf8'));
-      console.log(p, o.bot, JSON.stringify(o.set), JSON.stringify(o.closed));
+      const c = o.closed;
+      if (!c) continue; // 건너뛴 판 자리
+      for (const r of o.runs) for (const f of r.fires) allF.push({ ...f, file: p });
+      const minLow = o.runs.flatMap((r) => r.fires).filter((f) => f.minD != null && f.minD <= MORD_N).length;
+      console.log(`| ${p.replace(/^.*\//, '')} | ${o.bot} | ${c.runs} | ${c.minutes} | ${c.firedPerMin} (${c.fired}) | ${c.hit} / ${c.fired} (${pct(c.hitShare)}) · 막힘 ${c.blocked} | ${Object.entries(c.zones).map(([z, n]) => `${z} ${n}`).join(' · ')} | ${c.kills} | ${c.sevPerFire ?? '—'} | ${c.spSevPerMin} | ${c.d0P50} (${c.d0P10} ~ ${c.d0P90}) | ${c.minDP50} · ${minLow} | ${pct(c.parry)} · ${pct(c.swing)} · ${pct(c.back)} · ${pct(c.foeAtk)} | ${c.recv1PerFire ?? '—'} (${c.recvPerSec}) | ${c.mordWinPerMin} | ${c.win} · ${c.lose} |`);
+    }
+    const bins = [0.8, 1.1, 1.25, 1.4, 1.7, 9];
+    console.log('\n낸 때 가슴 사이 → 맞음 (모든 파일)');
+    for (let k = 0; k < bins.length - 1; k++) {
+      const F = allF.filter((f) => f.d0 > bins[k] && f.d0 <= bins[k + 1]);
+      const h = F.filter((f) => f.hits.some((x) => x.sev > 0));
+      const sev = F.reduce((a, f) => a + f.hits.reduce((b, x) => b + (x.sev ?? 0), 0), 0);
+      console.log(`${bins[k]}-${bins[k + 1]}: 낸 ${F.length} · 맞음 ${h.length} (${F.length ? Math.round((100 * h.length) / F.length) : '—'} %) · 낸 것당 심각도 ${F.length ? r3(sev / F.length) : '—'} · 머리 ${h.filter((f) => f.hits.find((x) => x.sev > 0).zone === 'head').length}`);
     }
   } else throw new Error(`판 ${mode}?`);
 }
