@@ -1,6 +1,6 @@
 # 이탈리아 자리 바꿈 — 칼끝 돌려 빼기 기본 기술 · 비껴서며 찌르기 특수 공격 · 내려 찌르기 · 헛누름 (2026-10-31)
 
-작업 가지 `wk/it-swap` (개발 가지 2e467fdb 에서) — 본판 아님. 근거 표: `docs/strike/school_kit_map.md` 10/31 줄 · `docs/decisions.md` 10/31 12:xx · 확인표 3180 ~ 3199.
+작업 가지 `wk/it-swap` (개발 가지 2e467fdb 에서) — 본판 아님. 근거 표: `docs/strike/school_kit_map.md` 10/31 줄 · `docs/decisions.md` 10/31 12:xx · 확인표 3240 ~ 3259.
 
 ## 0. 사장님 말 (원문)
 

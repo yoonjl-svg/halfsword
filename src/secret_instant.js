@@ -859,21 +859,36 @@ export function iaiReadyPose(f, on, dt) {
  *   그래서 손을 쉬고 기다리다 낸 발도는 그 자세(왼 허리)에서 나간다(requestIai player 길 — 지금 손 → 왼 허리 → 가로, iaiPlayerTime 그대로).
  *  ③ 탭 · 손잡이 찍기 · 비기 · 약한 자세 간격 맞추기가 덧씌우기 칸을 쓰는 동안은 칸을 건드리지 않음(그 동작이 칸을 가짐) · 발도 중이면 0(AI 와 같음).
  *  AI 와 다른 것: 들어갈 때 앞발 내딛기(stance.iai.step)는 안 함 — 사람 발은 스틱만 움직임(2 s 서 있다가 몸이 저절로 상대 쪽으로 나가지 않게).
+ *  standing (10/31 사장님 08:xx '웅크리기를 없앴더니 고노센 발동창이 안열려.' — SECRET.gnsReadyHip · 웅크림 gnsCrouch 0 일 때): ① 몸 웅크림 없음(iaiReadyW 0 — stanceTick · AI crouchLow 그대로 쉼) ·
+ *   ② 손 · 칼 · 몸 비틂만 위와 같이(왼 허리 발도 대기 · 몸 숙임 · 낮춤 0) — 준비가 칼 자리로 보이고, 칼끝이 상대를 안 겨눠 상대에게 빈틈으로 보임(웅크림 판과 같음).
+ *   웅크림 판의 몸은 숙인 가슴이 상대 쪽으로 0.2 m · 그 자세로 0.5 m 남짓 저절로 다가가 발도가 낮게 나갔다(docs/strike/gonosen_window_2026-10-31.md) — 선 채 판은 그 둘이 없음
  */
-export function iaiReadyPosePlayer(f, on, handFree, dt) {
+/** 사람 발도 대기의 자세 이름 (① 자세 칸 — main.js updateGuardName · 10/31 13:xx 사장님 '1-2번 다 고쳐' — 확인표 3201): 칼이 왼 허리 발도 대기에 있는 동안(손 몫 iaiHandW > 0.5) '가운데 겨눔' 대신.
+ *  이름은 이 저장소가 이 자세를 부르는 말(AI 발도 대기 · iaiReadyPose — 원어 쪽 출처 없음 · 사장님 확인 전) · 칼을 쥐면 손 몫이 곧장 0 이라 보통 자세 이름으로 돌아감 */
+export const IAI_READY_STANCE = Object.freeze({ name: '발도 대기', desc: '왼 허리에서 뽑을 때를 기다린다' });
+/** 사람 칼이 지금 발도 대기 자리에 있나 (손 덧씌우기 몫 — 웅크림 판 · 허리 대기 판 같음 · 발도 중 · 다른 덧씌우기 동작 중이면 아님) */
+export function iaiReadyShown(f) {
+  const sk = f?.skill;
+  return (f?.iaiHandW ?? 0) > 0.5 && !!sk && !sk.tap && !sk.pom && !sk.sec && !iaiBusy(f);
+}
+
+export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false) {
   const sk = f.skill;
   const own = !sk.tap && !sk.pom && !sk.sec && !sk.vitalRange && !sk.vitalRelease;
   if (iaiBusy(f)) {
     f.iaiReadyW = 0;
+    f.iaiReadyR = 0;
     f.iaiHandW = 0;
     return;
   }
-  const w0 = f.iaiReadyW ?? 0;
+  // 준비 무게 r (켜짐 0.35 s · 풀림 gnsCrouchOut) — 웅크림 판이면 그대로 몸 웅크림 무게(iaiReadyW · stanceTick), 선 채 판(standing — SECRET.gnsReadyHip)이면 몸은 0 이고 손 몫의 한도로만
+  const w0 = f.iaiReadyR ?? f.iaiReadyW ?? 0;
   const h0 = f.iaiHandW ?? 0;
   if (!on && w0 <= 0 && h0 <= 0) return;
   const w = on ? Math.min(1, w0 + dt / 0.35) : Math.max(0, w0 - dt / SECRET.gnsCrouchOut);
   const h = handFree || !on ? (handFree ? 0 : Math.min(h0, w)) : Math.min(w, h0 + dt / 0.35);
-  f.iaiReadyW = w;
+  f.iaiReadyR = w;
+  f.iaiReadyW = standing ? 0 : w;
   f.iaiHandW = h;
   if (!own) return;
   const R = SECRET.iaiReady;
@@ -888,8 +903,9 @@ export function iaiReadyPosePlayer(f, on, handFree, dt) {
   th.dir[2] = D.z;
   th.pelvisYaw = R.body.pelvisYaw * D2R;
   th.chestYaw = R.body.chestYaw * D2R;
-  th.pitch = R.body.pitch * D2R;
-  th.drop = R.body.drop;
+  // 선 채 허리 대기 (10/31 — SECRET.gnsReadyHip): 몸 숙임 · 낮춤 없이(골반 높이 그대로 — 덧씌우기 몸 낮춤의 바탕 0.06 · fighter.js) 몸 비틂만 — 발도 길은 가슴 기준이라 서 있는 높이에서 나간다
+  th.pitch = standing ? 0 : R.body.pitch * D2R;
+  th.drop = standing ? 0.06 : R.body.drop;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1267,8 +1283,8 @@ function comboNext(f, I) {
     for (const sg of I.segs) sg.T *= k;
     span *= k;
     I.slide.span = span;
-  } else if (I.slide && I.slide.slide < 0) I.slide.span = Math.max(1e-3, span); // 물러남(10/12 3 연격 마지막 수): 그 수 시간 내내 뒤로 — 벰은 옆으로 가로질러 칼끝 길은 그대로 둔다
-  else if (I.slide) I.slide.span = Math.max(1e-3, span * SECRET.iaiSlideShare); // 패드 길: 그 수 시간의 발도와 같은 몫 안에 (10/12 01:1x 그대로)
+  } else if (I.slide && I.slide.slide < 0 && !I.slide.keep) I.slide.span = Math.max(1e-3, span); // 물러남(10/12 3 연격 마지막 수) · keep = 길을 짤 때 정한 span 그대로(죽음의 일격 머리 뚫음 막기 반걸음 — 10/31 시제품 · 기본 끔): 그 수 시간 내내 뒤로 — 벰은 옆으로 가로질러 칼끝 길은 그대로 둔다
+  else if (I.slide && !I.slide.keep) I.slide.span = Math.max(1e-3, span * SECRET.iaiSlideShare); // 패드 길: 그 수 시간의 발도와 같은 몫 안에 (10/12 01:1x 그대로) · keep = 길을 짤 때 정한 span 그대로(죽음의 일격 폼멜 찍기 반걸음 — 10/31 시제품)
   return true;
 }
 
@@ -1438,12 +1454,25 @@ function comboPlanMord(f, I, m, A) {
     f.padPose(p[0], p[1], B.H, B.D);
     return B;
   };
-  const pts = [m.from, ...m.path].map(pose);
-  const home = pose(m.from); // 다시 세우기 끝 = 옮기기 전 시작 자세 (굳음 붙잡기 · 원래 쥠으로 돌아가는 자리)
+  let pts = [m.from, ...m.path].map(pose);
+  let home = pose(m.from); // 다시 세우기 끝 = 옮기기 전 시작 자세 (굳음 붙잡기 · 원래 쥠으로 돌아가는 자리)
+  const R = M.regrip; // 자연스러운 쥠 바꿈 (10/31 시제품 — SECRET.mord.regrip · 기본 끔): 길 · 겨눔 · 토막 시간은 끝 쥠(G)의 칼자루 길이로
+  const Lc = R ? R.G.g - R.HL : M.Lc;
+  const Lp = R ? R.G.g - R.yp : M.Lp;
+  if (M.pommel) {
+    // 폼멜 찍기 (10/31 시제품 — SECRET.mord.pommel · 기본 끔 · 사장님 '칼은 그대로 쥐고 폼멜이나 손잡이 하단부로 찍기'): 쥠 그대로 · D = 폼멜 쪽(칼날은 위 뒤로 섬) —
+    //  머리 위에서(손 이마 앞 위) 폼멜 끝을 앞 아래로 내려찍는 길 (몸 틀 · 칼 든 쪽 z = side). 'pull' 겨눔 · 머리 따라 겨눔 · 머리 뚫음 막기는 같은 셈
+    const z = f.side ?? 1;
+    const mk = (h, d) => ({ H: new THREE.Vector3(h[0], h[1], h[2] * z), D: new THREE.Vector3(d[0], d[1], d[2] * z).normalize(), px: m.from[0], pad: m.from });
+    pts = [mk([0.26, 0.6, 0.1], [0.15, -1, 0]), mk([0.4, 0.42, 0.06], [0.45, -0.9, 0]), mk([0.42, 0.1, 0.04], [0.75, -0.65, 0])];
+    home = mk([0.26, 0.6, 0.1], [0.15, -1, 0]);
+  }
+  M.start = pts[0]; // 재기 (시작 자세 · 다시 세우기 끝 — 옮김 delta = start.H − home.H)
+  M.home = home;
   if (M.pull && f.foe?.bodies.head) {
     const c = tv(f.bodies.chest.translation(), new THREE.Vector3());
     const P = tv(f.foe.bodies.head.translation(), new THREE.Vector3()).sub(c).applyQuaternion(I.yaw.clone().invert());
-    const r = (M.Lc + M.Lp) / 2;
+    const r = M.pommel ? Lp * 0.8 : (Lc + Lp) / 2; // 폼멜 찍기: 폼멜 공 가운데 쯤
     let best = null;
     for (let k = 0; k + 1 < pts.length; k++) {
       for (let i = 0; i <= 8; i++) {
@@ -1457,23 +1486,172 @@ function comboPlanMord(f, I, m, A) {
       const delta = P.clone().sub(best.C);
       // 머리 따라 겨눔 (10/30 시제품 — SECRET.mord.track · 기본 끔): 옮기기 전 길 · 겨눈 길 자리(토막 k 의 i/8)를 두었다가 stepCombo 가 스텝마다 그때 머리로 다시 옮김 (mordTrack)
       if (SECRET.mord.track) M.trk = { pts, base: pts.map((B) => ({ H: B.H.clone(), D: B.D.clone() })), k: best.k, w: best.i / 8, r, seg: null, tAim: null, done: false, n: 0, moved: 0 };
-      for (const B of pts) B.H.add(delta);
+      if (SECRET.mord.noSelfClip) M.clip = mordClipPlan(f, I, pts, M.trk?.base ?? pts.map((B) => ({ H: B.H.clone(), D: B.D.clone() })), best.k, best.i / 8, P, r); // 내 머리 뚫음 막기 (10/31 시제품 · 기본 끔 — 아래)
+      else for (const B of pts) B.H.add(delta);
       M.pullD = delta.length(); // 재기 (옮긴 거리 m)
     }
   }
   const segs = [];
   let cur = A;
-  const push = (B, cut) => {
+  const push = (B, cut, rg = null) => {
     const sg = { cut, A: cur, B };
-    sg.T = comboSegLen(f, sg, M.Lp) / I.v;
+    sg.T = rg ? rg.T : (M.pommel ? Math.max(comboSegLen(f, sg, Lp), comboSegLen(f, sg, 0)) : comboSegLen(f, sg, Lp)) / I.v; // 폼멜 찍기: 폼멜 끝 길이 짧아(손이 0.4 m 드는데 0.02 s) 손 길이 쪽으로
+    if (rg) sg.rg = rg;
     segs.push(sg);
     cur = B;
   };
+  if (R) {
+    // 쥠 바꿈 토막 셋 (맞힘 없음 · 시간 R.T 를 0.4 · 0.3 · 0.3): ① 칼이 칼끝 위로 서며(칼자루 아래) 손이 오른 어깨 앞으로 · 빈손이 먼저 칼날을 타고 오름 · 칼 든 손은 뒤에 코등이까지
+    //  ② 칼자루가 칼 든 쪽으로 눕고(칼끝은 왼쪽 아래) ③ 칼자루가 섬(시작 자세의 칼자루 쪽) — ②③ 동안 두 손이 함께 칼날의 끝 자리(G)로. 앞 면(상대 쪽)에서 옆으로 도는 뒤집기 —
+    //  칼이 상대 몸 · 내 머리 쪽으로 휩쓸리지 않게. 끝 = 시작 자세 쪽으로 준비 토막(아래 pts[0])이 이어 받음
+    const z = f.side ?? 1;
+    const px = pts[0].px;
+    const mk = (h, d) => ({ H: new THREE.Vector3(h[0], h[1], h[2] * z), D: new THREE.Vector3(d[0], d[1], d[2] * z).normalize(), px, pad: m.from });
+    const gF = R.G.g;
+    const oF = R.G.gOff;
+    const dO = oF - gF; // 빈손은 칼 든 손보다 칼끝 쪽으로 이만큼
+    const gM = (R.HL + gF) / 2;
+    const T = R.T;
+    const up = (M.trk?.base?.[0]?.D ?? pts[0].D).clone();
+    push(mk([0.3, 0.12, 0.12], [0.1, -1, 0]), false, { T: T * 0.4, g: [R.g0, R.g0], o: [R.o0, R.HL + dO], ow: [0, 0.8], in: true }); // ① 반손 쥠: 칼 든 손은 손잡이 그대로 · 빈손이 칼날(코등이 위)로
+    push(mk([0.3, 0.2, 0.1], [0.1, 0.05, 1]), false, { T: T * 0.3, g: [R.g0, R.HL], o: [R.HL + dO, R.HL + dO], gw: [0.2, 1], in: true }); // ② 칼자루가 옆으로 눕는 동안 칼 든 손이 코등이까지
+    push({ ...mk([0.3, 0.3, 0.08], [0, 1, 0]), D: up.normalize() }, false, { T: T * 0.3, g: [R.HL, gF], o: [R.HL + dO, oF], in: true }); // ③ 칼자루가 서며 두 손이 함께 끝 쥠으로
+  }
+  const pre = segs.length; // 쥠 바꿈 토막 수 (없으면 0 — 아래 토막 번호는 지금 판 그대로)
   push(pts[0], false);
   for (let k = 1; k < pts.length; k++) push(pts[k], true);
   push({ ...home, back: true }, false);
-  if (M.trk) M.trk.seg = segs[M.trk.k + 1]; // 겨눈 자리가 든 토막 (pts[k] → pts[k + 1])
+  if (R) {
+    // 다시 세우기 뒤 거꾸로 쥠 바꿈 (같은 시간 · 0.5 · 0.5): 칼자루가 칼 든 쪽으로 눕고 → 아래로(칼끝 곧게 위 — mordEnd 의 원래 쥠과 같은 자세) · 칼 든 손이 먼저 손잡이로 · 빈손이 뒤에 폼멜 쪽으로
+    const z = f.side ?? 1;
+    const gF = R.G.g;
+    const dO = R.G.gOff - gF;
+    const gM = (R.HL + gF) / 2;
+    const h = home.H;
+    push({ H: new THREE.Vector3(h.x - 0.02, h.y - 0.12, h.z), D: new THREE.Vector3(0.1, 0.05, z).normalize(), px: home.px, pad: home.pad }, false, { T: R.T * 0.5, g: [gF, gM], o: [R.G.gOff, gM + dO], out: true });
+    push({ H: new THREE.Vector3(h.x - 0.04, h.y - 0.2, h.z), D: new THREE.Vector3(0, -1, 0), px: home.px, pad: home.pad, regripEnd: true }, false, { T: R.T * 0.5, g: [gM, 0], o: [gM + dO, R.o0], gw: [0, 0.7], ow: [0.3, 1], out: true });
+  }
+  M.pre = pre;
+  if (M.trk) M.trk.seg = segs[pre + M.trk.k + 1]; // 겨눈 자리가 든 토막 (pts[k] → pts[k + 1])
+  if (M.clip && I.slide?.keep) {
+    // 내 머리 뚫음 막기 반걸음: 칼자루가 겨눈 자리에 닿는 때까지 다 물러남 (준비 토막 + 겨눈 토막 앞 토막들 + 겨눈 토막의 w 몫)
+    let t = 0;
+    for (let s = 0; s <= pre + M.clip.k && s < segs.length; s++) t += segs[s].T;
+    I.slide.span = Math.max(1e-3, t + M.clip.w * (segs[pre + M.clip.k + 1]?.T ?? 0));
+  }
   return segs;
+}
+
+/** 쥠 바꿈 토막의 u 자리 쥠 (칼 축 — 칼 든 손 g · 빈손 o): 토막의 창(gw · ow) 안에서 부드럽게 */
+function regripAt(rg, u) {
+  const e = (a, w) => {
+    const x = clamp((u - (w?.[0] ?? 0)) / Math.max(1e-6, (w?.[1] ?? 1) - (w?.[0] ?? 0)), 0, 1);
+    return a[0] + (a[1] - a[0]) * x * x * (3 - 2 * x);
+  };
+  return { g: e(rg.g, rg.gw), o: e(rg.o, rg.ow) };
+}
+
+/**
+ * 쥠 바꿈 한 스텝 (10/31 시제품 — SECRET.mord.regrip · 기본 끔 · stepCombo 가 놓기 전에 부름): 쥠 바꿈 토막이면 그 자리 쥠으로 I.mord(g · gOff · Lc · Lp)를 옮기고
+ *  (placeIai 가 칼 원점 = 손목 + 칼자루 쪽 × g · 빈손 = 손목 + 칼자루 쪽 × (g − gOff) 로 놓음 — g 0 이 원래 쥠), 들어가는 쥠 바꿈을 다 지난 첫 스텝에 몸의 쥠을 바꿈
+ *  (fighter.reverseGrip — 칼이 이미 그 자세라 옮김 없음 · 손목 관절 · 밧줄 닻 · 손 기준 관성)
+ */
+function mordRegripStep(f, I, sg, u) {
+  const M = I.mord;
+  const R = M.regrip;
+  let g = R.G.g;
+  let o = R.G.gOff;
+  if (sg.rg) ({ g, o } = regripAt(sg.rg, u));
+  else if (!R.done) ({ g, o } = { g: R.g0, o: R.o0 }); // 아직 쥠 바꿈 앞(없음 — 쥠 바꿈 토막이 맨 앞)
+  if (!R.done && !sg.rg?.in && I.segs.indexOf(sg) >= (M.pre ?? 0)) {
+    g = R.G.g;
+    o = R.G.gOff;
+    const Dw = I.cur.D.clone().applyQuaternion(I.yaw).normalize();
+    R.done = f.reverseGrip(R.G, Dw.negate()) || !!f.mordGrip;
+    R.doneT = I.t;
+  }
+  M.g = g;
+  M.gOff = o;
+  M.Lc = g - R.HL;
+  M.Lp = g - R.yp;
+  // 손목 관절 닻도 같은 칼 축 자리로 (팔 · 칼은 스텝마다 놓이는 동역학 몸 — SECRET.iaiKinematic 0: 닻이 놓인 쥠과 어긋나면 관절이 팔 · 몸을 홱 당김)
+  if (sg.rg && f.gripJoint) f.gripJoint.setAnchor2({ x: 0, y: g, z: 0 });
+}
+
+/**
+ * 내 머리 뚫음 막기 (10/31 시제품 — 사장님 확인 전 · 기본 끔 SECRET.mord.noSelfClip · 확인표 3110 ~ 3116): 사장님 10/31 02:xx '가까이서 보면 팔이 나의 머리를 뚫고 뒤로 갔다가 다시 적을 강타하는 것처럼 보여'.
+ *  까닭: 거꾸로 쥔 칼(at 0.6)의 칼자루 가운데가 손에서 (Lc + Lp)/2 ≈ 0.76 m(롱소드) — 지붕 자세 손(내 이마 앞 위)에서 휘두르면 그 점이 가슴 사이 약 1.05 m 의 머리를 지나는데,
+ *   창은 가슴 사이 0.8 m 안이라 'pull' 이 길 전체를 0.3 ~ 0.8 m 뒤로 옮긴다 → 두 손이 내 머리 위 · 속(0.75 ~ 0.8 m) · 머리 뒤 목덜미(0.45 ~ 0.65 m)를 지나 내리친다.
+ *  B = 옮기기 전 길(손 H · 칼자루 쪽 D — 몸 틀), (k, w) = 겨눈 자리(토막 k 의 w 몫), P = 상대 머리 가운데(몸 틀), r = 손 → 칼자루 가운데. 셋:
+ *   ① 앞뒤 묶음: 옮긴 길의 두 손(칼 든 손 · 빈손 — 시작 자세 + 기술 길, 토막마다 8 조각)이 내 머리 가운데보다 몸 앞으로 SECRET.mord.clipX 밖에 있게 — 앞뒤 옮김(d.x)만 묶음 · 위아래 · 옆 그대로
+ *   ② 기울임: 묶어서 못 옮긴 몫은 겨눈 자리의 칼자루 방향을 손 → 상대 머리 줄로 돌려 메움 — 길 전체 D 를 같은 돌림으로(손 자리 그대로) · 머리에 닿는 칼자루 자리 = 손 ~ 머리 거리
+ *   ③ 반걸음 뒤로(mordClipPlan 만): 묶어서 못 옮긴 몫(앞뒤 m)을 SECRET.mord.clipStep 까지 몸을 상대 반대쪽으로 미끄러뜨려 메움(칼자루가 겨눈 자리에 닿는 때까지 — 1 − (1 − x)² 꼴 · 경기장 테두리 안)
+ *  { d (손 옮김), q (D 돌림), short (못 옮긴 앞뒤 m — 걸음 앞), xMin }
+ */
+function mordClipSolve(f, I, B, k, w, P, r) {
+  const M = I.mord;
+  const X = SECRET.mord.clipX ?? 0.16;
+  const Hh = tv(f.bodies.head.translation(), new THREE.Vector3()).sub(tv(f.bodies.chest.translation(), new THREE.Vector3())).applyQuaternion(I.yaw.clone().invert()); // 내 머리 가운데 (몸 틀)
+  const off = (M.g ?? 0) - (M.gOff ?? 0); // 빈손 = 칼 든 손 + D × (g − gOff) — placeIai 와 같은 자리(거꾸로 쥐면 칼끝 쪽 −0.14)
+  const Q = comboLerp({ A: B[k], B: B[k + 1] }, w);
+  const d = P.clone().sub(Q.H.clone().addScaledVector(Q.D, r));
+  const want = d.x;
+  let xMin = -Infinity;
+  for (let j = 0; j < B.length; j++) {
+    const n = j + 1 < B.length ? 8 : 1;
+    for (let i = 0; i < n; i++) {
+      const S = j + 1 < B.length ? comboLerp({ A: B[j], B: B[j + 1] }, i / 8) : B[j];
+      xMin = Math.max(xMin, X - (S.H.x - Hh.x), X - (S.H.x + S.D.x * off - Hh.x));
+    }
+  }
+  if (d.x < xMin) d.x = xMin;
+  const q = new THREE.Quaternion();
+  if (d.x > want + 1e-4) {
+    const u = P.clone().sub(Q.H.clone().add(d));
+    if (u.lengthSq() > 1e-8) q.setFromUnitVectors(Q.D.clone().normalize(), u.normalize());
+  }
+  return { d, q, short: d.x - want, xMin };
+}
+function mordClipPut(pts, base, sol) {
+  for (let j = 0; j < pts.length; j++) {
+    pts[j].H.copy(base[j].H).add(sol.d);
+    pts[j].D.copy(base[j].D).applyQuaternion(sol.q);
+  }
+}
+function mordClipPlan(f, I, pts, base, k, w, P, r) {
+  let sol = mordClipSolve(f, I, base, k, w, P, r);
+  let s = Math.min(SECRET.mord.clipStep ?? 0, Math.max(0, sol.short));
+  let e = null;
+  let dir = -1; // −1 = 뒤로(못 옮긴 몫) · +1 = 앞으로(폼멜 찍기 — 팔이 안 닿는 몫)
+  if (I.mord.pommel && s <= 1e-3) {
+    // 폼멜 찍기 (10/31 시제품): 옮긴 길의 겨눈 자리 손이 칼 어깨에서 팔 길이(comboArmLen) 밖이면 그만큼 앞으로 반걸음(clipStep 까지 · 같은 미끄러짐 틀)
+    const Q = comboLerp({ A: base[k], B: base[k + 1] }, w);
+    const H = Q.H.clone().add(sol.d);
+    const S = comboShoulder(f, I.yaw);
+    const need = H.distanceTo(S) - comboArmLen();
+    if (need > 1e-3) {
+      s = Math.min(SECRET.mord.clipStep ?? 0, need);
+      dir = 1;
+    }
+  }
+  if (s > 1e-3 && f.foe) {
+    const c = f.bodies.chest.translation();
+    const fc = f.foe.bodies.chest.translation();
+    let dx = fc.x - c.x;
+    let dz = fc.z - c.z;
+    const dl = Math.max(1e-3, Math.hypot(dx, dz));
+    dx /= dl;
+    dz /= dl;
+    if (dir < 0 && Math.hypot(c.x - dx * s, c.z - dz * s) > ARENA.radius) s = Math.max(0, Math.min(s, ARENA.radius - Math.hypot(c.x, c.z))); // 경기장 테두리 (comboMoveStart 물러남과 같은 규칙)
+    if (dir > 0) s = Math.min(s, Math.max(0, dl - (f.swordArt?.measure?.clinch ?? 0) * 0.5)); // 앞으로는 상대 몸을 뚫지 않게 (붙은 거리의 반까지)
+    if (s > 1e-3) {
+      e = new THREE.Vector3(dx, 0, dz).applyQuaternion(I.yaw.clone().invert()); // 몸 틀에서 상대 쪽 (물러나면 상대 머리가 이쪽으로 s 만큼 멀어짐)
+      I.slide = { dx, dz, slide: dir * s, t0: I.t, span: 1, done: 0, keep: true }; // span 은 길을 다 짠 뒤 (comboPlanMord 끝)
+      sol = mordClipSolve(f, I, base, k, w, P.clone().addScaledVector(e, -dir * s), r);
+    } else s = 0;
+  } else s = 0;
+  mordClipPut(pts, base, sol);
+  return { base, k, w, r, s, e, dir, short0: sol.short, d0: sol.d.clone(), tilt: (2 * Math.acos(Math.min(1, Math.abs(sol.q.w))) * 180) / Math.PI };
 }
 
 /**
@@ -1490,12 +1668,25 @@ function mordTrack(f, I) {
     let t = I.segT0;
     for (let s = 0; s < j; s++) t += I.segs[s].T;
     T.tCut = I.segT0 + (I.segs[0]?.cut ? 0 : I.segs[0].T);
+    if (I.mord.pre > 0) for (let s = 1; s < I.segs.length && !I.segs[s].cut; s++) T.tCut += I.segs[s].T; // 쥠 바꿈 토막 (10/31 시제품) 뒤 첫 베는 토막까지
     T.tAim = t + T.w * T.seg.T;
   }
   const until = SECRET.mord.trackUntil === 'cut' ? T.tCut : T.tAim - (SECRET.mord.trackCommit ?? 0);
   if (I.mordBacked || I.hitM || I.blockM || I.t >= until || !f.foe?.bodies.head) return void (T.done = true);
   const c = tv(f.bodies.chest.translation(), new THREE.Vector3());
   const P = tv(f.foe.bodies.head.translation(), new THREE.Vector3()).sub(c).applyQuaternion(I.yaw.clone().invert());
+  const C = I.mord.clip;
+  if (C) {
+    // 내 머리 뚫음 막기 (10/31 시제품 · 기본 끔): 같은 셈(묶음 · 기울임)을 그때 머리로 — 남은 반걸음만큼 상대 머리를 멀리 둔 자리(물러난 뒤의 자리)로 겨눔
+    const rem = C.e && I.slide?.keep ? C.s - Math.abs(I.slide.done) : 0; // 남은 걸음 (뒤로면 상대 머리가 그만큼 멀어질 것 · 앞으로면 가까워질 것)
+    const sol = mordClipSolve(f, I, T.base, T.k, T.w, rem > 0 ? P.clone().addScaledVector(C.e, -(C.dir ?? -1) * rem) : P, T.r);
+    T.moved += T.pts[0].H.distanceTo(T.base[0].H.clone().add(sol.d));
+    mordClipPut(T.pts, T.base, sol);
+    C.short = sol.short;
+    C.tiltMax = Math.max(C.tiltMax ?? 0, (2 * Math.acos(Math.min(1, Math.abs(sol.q.w))) * 180) / Math.PI);
+    T.n++;
+    return;
+  }
   const Q = comboLerp({ A: T.base[T.k], B: T.base[T.k + 1] }, T.w);
   const delta = P.sub(Q.H.addScaledVector(Q.D, T.r));
   for (let j = 0; j < T.pts.length; j++) {
@@ -1511,6 +1702,12 @@ function comboMordBack(f, I) {
   const last = I.segs[I.segs.length - 1];
   const sg = { cut: false, A: I.cur, B: last.B };
   sg.T = comboSegLen(f, sg, I.mord.Lp) / I.v;
+  const R = I.mord.regrip;
+  if (R?.done) {
+    // 쥠 바꿈 (10/31 시제품): 지금 자리에서 원래 쥠(칼끝 위)으로 곧장 — 칼 든 손이 먼저 손잡이로 · 빈손이 뒤에 (시간 = 쥠 바꿈 시간 이상)
+    sg.rg = { T: Math.max(sg.T, R.T), g: [I.mord.g, 0], o: [I.mord.gOff, R.o0], gw: [0, 0.7], ow: [0.3, 1], out: true };
+    sg.T = sg.rg.T;
+  }
   I.segs = [sg];
   I.si = 0;
   I.ts = I.t;
@@ -2351,6 +2548,7 @@ function stepCombo(f, combat) {
     I.body = { pelvisYaw: b0.pelvisYaw + (bp[0] - b0.pelvisYaw) * w, chestYaw: b0.chestYaw + (bp[1] - b0.chestYaw) * w, pitch: b0.pitch + (bp[2] - b0.pitch) * w, drop: b0.drop + (bp[3] - b0.drop) * w };
   } else I.body = comboBody(P.px);
   I.cur = P;
+  if (I.mord?.regrip) mordRegripStep(f, I, sg, u); // 죽음의 일격 자연스러운 쥠 바꿈 (10/31 시제품 — SECRET.mord.regrip · 기본 끔)
   // 제비 베기 되돌림 칼(cutSweep — 10/25): 날이 칼끝이 가는 쪽(길 위 이 자리 칼끝 − 지난 스텝 칼끝)을 향하게 (날 세우기)
   if (I.moves[I.mi]?.cutSweep && I.prev?.tip) {
     const Dw = P.D.clone().applyQuaternion(I.yaw).normalize();
@@ -2537,6 +2735,15 @@ function endCombo(f, combat) {
   }
   if (I.mord) {
     // 죽음의 일격: 원래 쥠으로(칼끝 곧게 위 — mordschlag.js mordEnd) 돌아간 뒤 뗀 밧줄을 다시 건다 (굳음 붙잡기 방향 = 시작 자세의 칼자루 쪽 → 이제 칼끝 쪽 — 지붕)
+    const R = I.mord.regrip;
+    if (R && !R.done && I.mord.g > 1e-3) {
+      // 쥠 바꿈 (10/31 시제품) 도중 끊김: 몸의 쥠은 아직 원래 — 칼을 칼 축 그대로 손잡이가 손목에 오게 옮김 (손목 관절이 칼을 홱 당기지 않게)
+      const q = f.sword.rotation();
+      const y = new THREE.Vector3(0, 1, 0).applyQuaternion(tq(q, new THREE.Quaternion()));
+      const t = f.sword.translation();
+      f.sword.setTranslation({ x: t.x + y.x * I.mord.g, y: t.y + y.y * I.mord.g, z: t.z + y.z * I.mord.g }, true);
+      f.gripJoint?.setAnchor2({ x: 0, y: 0, z: 0 });
+    }
     I.mord.end?.(f);
     if (f.iaiRopes) {
       if (f.iaiRopes.grip && f.armed && !f.gripCone) f.gripConeOn();
@@ -2557,9 +2764,10 @@ function endCombo(f, combat) {
   th.hand[0] = E.H.x;
   th.hand[1] = E.H.y;
   th.hand[2] = E.H.z;
-  th.dir[0] = E.D.x;
-  th.dir[1] = E.D.y;
-  th.dir[2] = E.D.z;
+  const flipDir = I.mord && (I.mord.regrip || I.mord.pommel) ? -1 : 1; // 쥠 바꿈 · 폼멜 찍기 (10/31 시제품): 끝 자세가 원래 쥠이라 D(칼자루 쪽)의 반대가 칼끝 쪽
+  th.dir[0] = E.D.x * flipDir;
+  th.dir[1] = E.D.y * flipDir;
+  th.dir[2] = E.D.z * flipDir;
   const K = I.body;
   th.pelvisYaw = K.pelvisYaw * D2R;
   th.chestYaw = K.chestYaw * D2R;
@@ -2576,7 +2784,7 @@ function endCombo(f, combat) {
   f.hitPointPrev = f.bladePoint(0.7, new THREE.Vector3());
   f.tipVel.set(0, 0, 0);
   f.hitPointVel.set(0, 0, 0);
-  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech, aim: I.aim ?? null, sev: I.sev ?? 0, ...(I.mord ? { mord: true, pullD: I.mord.pullD ?? 0, wPart: I.wPart ?? null, hy: I.hy ?? null, ...(I.mord.trk ? { trackN: I.mord.trk.n, trackMoved: I.mord.trk.moved } : {}) } : {}), ...(I.dup ? { dup: I.dup, glided: I.glided ?? 0 } : {}), ...(I.moves.some((m) => m.lunge) ? { lunge: true, glided: I.glided ?? 0, slide: I.slide?.slide ?? 0, foot: I.footStep ?? 0, tipV: I.tipT > 0 ? I.tipL / I.tipT : 0, tipVmax: I.tipVmax ?? 0, v: I.v } : {}) };
+  f.instantResult = { ok: true, hit: I.hits > 0, hits: I.hits, energy: I.E, Emax: I.Emax, part: I.part, zone: I.zone, type: I.type, blocked: I.blocked > 0, combo: true, T: I.t, tech: I.tech, aim: I.aim ?? null, sev: I.sev ?? 0, ...(I.mord ? { mord: true, pullD: I.mord.pullD ?? 0, wPart: I.wPart ?? null, hy: I.hy ?? null, ...(I.mord.trk ? { trackN: I.mord.trk.n, trackMoved: I.mord.trk.moved } : {}), ...(I.mord.clip ? { clip: { step: +I.mord.clip.s.toFixed(3), short0: +I.mord.clip.short0.toFixed(3), short: +(I.mord.clip.short ?? I.mord.clip.short0).toFixed(3), tilt: +Math.max(I.mord.clip.tilt, I.mord.clip.tiltMax ?? 0).toFixed(1) } } : {}) } : {}), ...(I.dup ? { dup: I.dup, glided: I.glided ?? 0 } : {}), ...(I.moves.some((m) => m.lunge) ? { lunge: true, glided: I.glided ?? 0, slide: I.slide?.slide ?? 0, foot: I.footStep ?? 0, tipV: I.tipT > 0 ? I.tipL / I.tipT : 0, tipVmax: I.tipVmax ?? 0, v: I.v } : {}) };
   f.iai = null;
   f.artTech = null;
 }
@@ -2645,9 +2853,9 @@ export function requestArtFold(f, { share, maxT, tech, step = null }) {
  *  길 = comboPlanDup (맞물린 자리에서 칼을 떼지 않고 상대 칼 뒤 — 상대 칼과 몸 사이 — 로 밀어 넣은 뒤 맞닿은 자리를 축으로 칼자루를 오른쪽(폼멜이 오른팔 밑)으로 돌려
  *   칼날 앞몫이 얼굴을 지나는 사선 베기 · 손이 엇갈림) · 날 = edge(1 긴 날 · −1 짧은 날 — 날 세우기 쪽) · 몸 = bodyPose · 끝나도 손 목표 그대로(keepAim). 이미 끌고 가는 중이면 거절(false)
  */
-export function requestArtDup(f, { share, maxT, tech, face = 0, follow = 25, plan = null, body = null, edge = 1 }) {
+export function requestArtDup(f, { share, maxT, tech, face = 0, follow = 25, plan = null, body = null, edge = 1, step = null }) {
   if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.head || !f.foe.armed || !f.foe.sword) return false;
-  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, dup: true, edge, plan, bodyPose: body, dyn: { kind: 'dup', face, follow } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true });
+  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, dup: true, edge, plan, bodyPose: body, ...(step ? { step: { ...step, close: true } } : {}), dyn: { kind: 'dup', face, follow } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true }); // step: 시제품 앞 걸음(10/31 UNIQUE_ASSIST.dupStep — 기본 없음)
   return true;
 }
 /**

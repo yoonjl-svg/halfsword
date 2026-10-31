@@ -29,7 +29,7 @@ import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸�
 import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — 내 공격이 상대 칼에 막히면 막은 쪽 기력 −, afterStrike)
 import { schoolPassiveOn } from './school_passive.js'; // 유파 패시브 스위치 (10/21 — 이베리아 손목 힘 · 나머지 넷은 fighter.schoolPassive)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 AI 몫 — 상대 두 팔 늦춤 (10/31)
-import { aiUniqueStages, PLAYER_UNIQUE } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
+import { aiUniqueStages, PLAYER_UNIQUE, specialShare } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
 import { MEASURED } from './weapon_measured.js';
 import { routeAroundStageObstacle, obstacleSegmentBlocked, OBSTACLE_ROUTE } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 막힌 길이면 스틱 방향만 둘레로 (석상 없는 무대는 아무 일 없음)
@@ -40,8 +40,9 @@ import { gunAI } from './gun.js';
 import { FINISH, cleaveFinish } from './finish.js';
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
-import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
-import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
+import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, requestArtRedondo, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
+import { windStart, windEnd, windRopesBack, windLoopOf, windSpec, windWoundT } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 08:xx — UNIQUE_ASSIST.rdAiWind · 사람과 같은 감기 · 내려침)
+import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret, gnsHumanMoving } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -67,6 +68,9 @@ const SPECIAL_FEINT = new Map(Object.values(TRADITIONS).flatMap((T) => (T.unique
 /** 패시브 P 가 특수 공격의 AI 몫이면 그 이름 (같은 이름 · 그 기술 · 그 속임) — 아니면 null */
 const passiveSpecial = (P) => (SPECIALS.has(P.name) ? P.name : [].concat(P.do?.tech ?? []).find((n) => SPECIALS.has(n)) ?? (P.do?.feint ? SPECIAL_FEINT.get(P.do.feint) ?? null : null));
 const STEP_T = 0.3; // 기술 걸음 'strike'(유파 고유 동작 step 칸): 닿는 거리여도 내딛는 시간 (보통 내딛기의 최대와 같다)
+// 느긋한 틈 (startAttack why): 빈틈을 보고 골라 든 공격 — 준비 자세를 보통 빠르기로 잡는다. 나머지 why(recover · press · stepin · counter · riposte · shove · stop · windup · follow · finish · 패시브 까닭 …)는
+//  빠른 틈(this.quick — 그 순간을 놓치지 않게 빠르게 친다). 풍차 베기 AI 몫(10/31 13:4x — rdSkipWhy)도 같은 셈으로 빠른 틈을 가른다
+const SLOW_WHY = new Set(['patience', 'open', 'weak', 'offbalance', 'drill']);
 // 무기별 간격 실측표(MEASURED)는 weapon_measured.js 한 곳에 있다 (10/8 ① 구조 — 전엔 이 파일과 schools.js MEASURES 두 벌).
 //  간격을 무기에 맞춰 늘이고 줄이는 일은 sword_art.js 가 한다. 옛 이름 MEASURED 는 여기서도 그대로 내보낸다 —
 //  도구(proto_weapons·r2p_ai_*·shove_check)가 이 이름으로 읽고 고쳐 쓴다(같은 객체)
@@ -329,6 +333,7 @@ export class AI {
    *  둘 다 자기 무대에서만 일한다(습지 · 화산섬은 함께 나오지 않음) — 용암 피하기를 마지막에 둬 안전 쪽이 이긴다 */
   update(dt) {
     this.specTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:4x · 19:5x 사람과 같게)
+    if (this.rd || this.me.rdWind) this.rdKeep(dt); // 풍차 베기 AI 몫 (10/31): 감기 지킴 · 덧씌우기 칸 내려놓기 · 뗀 밧줄 다시
     if (this.secret && !this.secretRun && secretSpent(this.me)) this.dropSecret(); // 이 판 비기를 다 씀 (10/29 19:5x 판당 쓸 수 — 비기 없는 AI 와 같은 길)
     // 동방 AI 걸음 박자 (10/15 — GAIT.cnLightAi · docs/strike/cn_light_feet_2026-10-15.md §7): 가벼운 발 몸(유파 걸음 칸 light)의 AI 는 공격 꼴(준비·다가가기·벰·뒤따름)일 때만 가벼운 발 —
     //  간 보기·막기·물러남(비기 꼴 포함)의 발놀림 박자(간격 비례 제어·잔걸음·'관성으로 너무 멀리 가지 않게' 늦추는 물러남)는 옛 가속(3.2 m/s²) 몸에 맞춘 값이라 그 꼴에서는 옛 가속으로 민다
@@ -401,7 +406,7 @@ export class AI {
     //  사정거리 안까지 다가온 적은 아래에서도 위협하거나 짧게 친다 (발놀림은 아래에서 0으로 막는다)
     const kneeling = me.state !== 'stand';
     if (STAMINA.on) {
-      const limit = this.pers.aggr * L.aggression > 1.15 ? STAMINA.aiAggressiveRestAt : STAMINA.aiRestAt;
+      const limit = this.restAt; // 공격적 기질 −10 · 아니면 20 (아래 aggressiveTemper)
       if (me.stamina.value < limit) this.staminaRest = true;
       else if (me.stamina.value >= STAMINA.aiResumeAt) this.staminaRest = false;
       if (this.staminaRest && this.mode === 'watch') this.startWithdraw(0.8, this.school.withdraw.calm[0]);
@@ -798,7 +803,7 @@ export class AI {
       const down = !foe.alive || !foe.armed || foe.state !== 'stand' || secretSpent(foe); // 10/29 19:5x: 이 판 비기를 다 쓴 사람은 준비가 아님 (사람 창이 무장을 안 거는 것과 같게)
       const foeHurt = foe.pain > (W.pain ?? foe.pain) + 0.05; // 사람이 맞음 (사람 창과 같은 셈 — 10/25 22:3x 'idle')
       W.pain = foe.pain;
-      gnsArmTick(A, dt, down || gnsHumanUnsettled(foe, foeHurt), gnsMoving(foe), { outside: gnsOutside(d, V, A.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: down || !!foe.skill?.swinging || !!foe.skill?.sec }, armHold(foe)); // 'idle' — 거리 안 봄 · 'dist' 옛 셈
+      gnsArmTick(A, dt, down || gnsHumanUnsettled(foe, foeHurt), gnsHumanMoving(foe), { outside: gnsOutside(d, V, A.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: down || !!foe.skill?.swinging || !!foe.skill?.sec }, armHold(foe)); // 'idle' — 거리 안 봄 · 'dist' 옛 셈
       W.ready = !!SECRET.iai && A.armed;
     }
     if (hurt && iaiBusy(foe)) {
@@ -1176,6 +1181,17 @@ export class AI {
   /** 공격 시작. why: 어떤 기회였나 (recover/stepin/finish/patience/counter/...) */
   startAttack(tech, why, opt = {}) {
     if (!tech || !this.me.armed || this.me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false; // 칼이 없으면 칠 수 없다
+    // 풍차 베기 AI 몫 (사장님 10/31 13:4x 'a는 기본 적용하고 c는 성향마다 달랐음 좋겠어. 싸움을 풀어가는 방식에 따라 자율적으로.' — 확인표 3133 · 3134):
+    //  빠른 틈이거나(a) 기력이 이 성향의 감기 몫보다 적으면(c) 머리 위 돌려 베기 대신 바탕 동작(plain — 왼 가로베기 · 식는 동안과 같은 자리)
+    if (tech.name === 'redondo') {
+      const skip = this.rdSkipWhy(why, opt);
+      if (skip) {
+        const st = (this.stats.rdWind ??= { begin: 0, fire: 0, cancel: {} });
+        (st.skip ??= {})[skip] = (st.skip[skip] ?? 0) + 1;
+        tech = tech.plain ?? null;
+        if (!tech) return false;
+      }
+    }
     if (this.secretRun && !opt.secret) this.secretAbort(); // 비기가 아닌 공격이 시작되면 비기는 끝 (보통은 걸쇠로 오지 않는다)
     if (!opt.chain && !opt.secret) this.restBefore = this.sense.t - this.lastAtkT; // 중국 연환삼격: 이번 칼 앞에 쉰 시간
     this.atkClash = false;
@@ -1232,16 +1248,49 @@ export class AI {
     // 준비 자세가 가까우면 곧바로 친다 (숙련자는 크게 들어 올리지 않는다)
     const cd = padDist(hand, this.tech.from);
     this.phase = cd > 0.06 && !opt.skipChamber ? 'windup' : 'approach';
-    this.quick = why !== 'patience' && why !== 'open' && why !== 'weak' && why !== 'offbalance' && why !== 'drill'; // 헛스윙 연습 공격도 보통 빠르기로 준비 자세를 잡는다 (읽히는 공격)
+    this.quick = !SLOW_WHY.has(why); // 헛스윙 연습 공격도 보통 빠르기로 준비 자세를 잡는다 (읽히는 공격) — 셈은 SLOW_WHY (전 이 줄의 같은 다섯 이름)
     // 빈틈을 잡아 순간적으로 치는 공격(recover/stepin/press/counter/stop 등)은 준비 자세로 옮기는 손도
     //  빠르게 움직여야 한다. 느린 chamberSpeed로 챔버하면 정작 순간을 놓친다
     this.fastChamber = !!opt.fastChamber || this.quick;
     this.timer = this.phase === 'approach' && !this.quick ? realS(L.windup * 0.15) : 0; // 준비 자세 멈칫 = 실제 초
+    // 풍차 베기 AI 몫 (사장님 10/31 08:xx '누가봐도 레돈두 준비처럼' — UNIQUE_ASSIST.rdAiWind): 머리 위 돌려 베기는 패드 길 대신 사람과 같은 감기로 (아래 rdWindTick)
+    if (UA.rdAiWind && this.tech?.name === 'redondo' && !this.feint && !this.secretRun && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin(); // 부러진 칼은 옛 길 (사람도 부러지면 감기를 그만둠 — windStop 'armed')
     // 기술 알림: 고유 동작 이름은 칼이 실제로 나갈 때(startStrike — 10/9 13:xx 옮김). 패시브 이름은 passiveFired 가 여기(결정)에서
     return true;
   }
 
   /** 패시브가 낸 공격의 걸쇠 (0.5 s): 준비·다가가는 동안 새 위협에 공격을 거두지 않는다 (맞는 것은 물리 그대로 끊는다) */
+  /** 공격적 기질 (기력 쉼 문턱과 같은 셈 — 공격 성향 pers.aggr × 실력 aggression > 1.15 면 기력 −10 까지 새 공격 · 아니면 20 에서 쉼) */
+  get aggressiveTemper() {
+    return this.pers.aggr * this.level.aggression > 1.15;
+  }
+  /** 이 AI 가 새 공격을 멈추고 물러나는 기력 (STAMINA.aiRestAt · aiAggressiveRestAt) */
+  get restAt() {
+    return this.aggressiveTemper ? STAMINA.aiAggressiveRestAt : STAMINA.aiRestAt;
+  }
+
+  /** 풍차 베기 감기 기력 아낌 0 ~ 1 (사장님 10/31 13:4x 'c는 성향마다 … 싸움을 풀어가는 방식에 따라 자율적으로' — 확인표 3134 · 셈은 사장님 확인 전):
+   *  공격적 기질(aggressiveTemper) = 0(아끼지 않음 — 사람처럼 기력 0 까지 감고 저절로 내려침) · 아니면 규율(level.discipline — 간격을 지키는 정도, 1 위는 1) ×
+   *  (1 − 지금 분노) × (1 − 지금 집념) — 발끈하거나 피를 보고 물고 늘어지는 동안은 덜 아낌 (감정 문턱 pers.angry · dogged 가 정함 · 감정 없는 바탕 AI 는 0) */
+  rdThrift() {
+    if (!UA.rdAiThrift || this.aggressiveTemper) return 0;
+    return clamp(this.level.discipline ?? 0, 0, 1) * (1 - (this.anger ?? 0)) * (1 - (this.obsession ?? 0));
+  }
+  /** 감기 한 번 몫 기력: 감는 동안(rdDrain × '감음'까지 게임 초 windWoundT) + 내려침 베기(cutCost) — 츠바이핸더 안 B 12 + 12 = 24 */
+  rdWindCost() {
+    return UA.rdDrain * windWoundT(windSpec()) + STAMINA.cutCost;
+  }
+  /** 머리 위 돌려 베기를 감기 대신 바탕 동작으로 바꿀 까닭 — 'quick'(a) · 'low'(c) · null (감기 길 rdAiWind 일 때만 · 비기 칼 · 속임은 아님)
+   *  (a) 빠른 틈 = this.quick 과 같은 셈(SLOW_WHY 밖의 why — 상대 헛친 뒤 recover · 들어옴 stepin · 맞받기 counter · stop · 이어 치기 follow · 패시브 …) 또는 이어 치기(opt.chain) — 감기 1.2 ~ 1.4 s 가 못 끝나는 틈
+   *  (c) 기력 < 아낌 × (쉼 기력 restAt + 감기 한 번 몫) — 감고 벤 뒤에도 쉼 줄 위에 남을 만큼 (아낌 1 · 안 B = 44 · 규율 0.85 = 37 · 공격적 · 아낌 0 = 늘 감음) */
+  rdSkipWhy(why, opt = {}) {
+    if (!UA.rdAiWind || opt.secret) return null;
+    if (UA.rdAiQuick && (!SLOW_WHY.has(why) || opt.chain > 0)) return 'quick';
+    const S = this.me.stamina;
+    if (STAMINA.on && !S.infinite && S.value < this.rdThrift() * (this.restAt + this.rdWindCost())) return 'low';
+    return null;
+  }
+
   get passiveLocked() {
     return !!this.passiveLock && this.mode === 'attack';
   }
@@ -1280,6 +1329,8 @@ export class AI {
     const me = this.me;
     const t = this.tech;
     this.attackT += dt;
+    if (this.phase === 'rdWind') return this.rdWindTick(dt, d, th); // 풍차 베기 AI 몫 감기 (10/31 — 아래)
+    if (this.phase === 'rdStrike') return this.rdStrikeTick();
     // 약한 자세 겨눔: 준비하는 동안 다시 본다 (늦게 본 모습으로). 빈틈이 닫히면 보정만 내려놓고 하던 공격은 그대로 (치기 시작한 뒤엔 고정)
     if (this.vital && !this.vital.started && (this.phase === 'windup' || this.phase === 'approach')) this.vital = aiVitalPrepare(this, s, t);
     if (this.phase === 'windup') {
@@ -1447,6 +1498,122 @@ export class AI {
     if (this.natDef.t > BIND.holdMax) return false;
     this.timer = Math.max(this.timer, 0.05);
     return true;
+  }
+
+  // ───────────────────────── 풍차 베기 AI 몫 (사장님 10/31 08:xx '풍차 b는 칼을 어깨 위로 올리거나 들지 않던데? 플레이어만 그런 건가? 누가봐도 레돈두 준비처럼 보여야해.') ─────────────────────────
+  //  UNIQUE_ASSIST.rdAiWind (확인표 3127 · 기록 docs/strike/redondo_hold_2026-10-29.md §8-12): 머리 위 돌려 베기(redondo — 왼 가로베기 강화동작)를 고르면 사람과 같은 감기(iberian_redondo.js windStart —
+  //   rdWindMode 꼴 · 물리 스텝마다 skill.js update 가 windStep 으로 두 팔 · 칼을 놓음)로 다가가며, 감은 셈 ≥ 1(사람 흐름 셈 '감음')이고 닿는 거리면 사람과 같은 내려침(requestArtRedondo — 곧장 사선).
+  //   감는 동안: 발은 다가감(approach 와 같은 걸음) · 기력 rdDrain 초당(바닥이면 저절로 내려침 — 사람과 같음) · 위협을 보거나 맞거나 넘어지거나 칼을 세게 맞으면 그만둠(식힘 없음 — 사람 windStop) ·
+  //   감음 뒤 rdAiMaxT 넘게 못 닿으면 그만둠. 뗀 밧줄은 내려침 · 덧씌우기 칸 내려놓기가 끝나면 다시 (rdKeep — update 머리)
+  rdBegin() {
+    const me = this.me;
+    if (this.rd?.ropes) { windRopesBack(me, this.rd.ropes); this.rd.ropes = null; } // 앞 감기에 뗀 밧줄이 아직이면 먼저 되걸고
+    windStart(me);
+    this.rd = { ropes: null, fade: 0, wounds0: me.wounds?.length ?? 0, woundT: null };
+    this.phase = 'rdWind';
+    if (this.tech?.from) this.hand.set(this.tech.from[0], this.tech.from[1]); // 손 목표 = 오른 어깨 지붕 (그만두면 서보가 그리로 — 놓는 동안은 읽지 않음)
+    (this.stats.rdWind ??= { begin: 0, fire: 0, cancel: {} }).begin++;
+  }
+
+  /** 감기 그만둠 (식힘 없음) — 팔 · 칼은 서보로 (덧씌우기 칸 0.12 s 에 내려놓음 · 밧줄은 그 뒤) */
+  rdCancel(why) {
+    const me = this.me;
+    const R = windEnd(me, true);
+    this.rd = { ...(this.rd ?? {}), ropes: R ?? this.rd?.ropes ?? null, fade: 0.12 };
+    if (!me.alive || !me.armed) { windRopesBack(me, this.rd.ropes); this.rd.ropes = null; }
+    const C = (this.stats.rdWind ??= { begin: 0, fire: 0, cancel: {} }).cancel;
+    C[why] = (C[why] ?? 0) + 1;
+  }
+
+  /** update 머리: 감기 지킴(공격 꼴을 벗어났는데 감고 있으면 그만둠) · 덧씌우기 칸 내려놓기 · 뗀 밧줄 다시 걸기 (사람 holdTick 머리 · ropesBack 과 같은 셈) */
+  rdKeep(dt) {
+    const me = this.me;
+    if (me.rdWind && !(this.mode === 'attack' && this.phase === 'rdWind')) this.rdCancel('mode');
+    const R = this.rd;
+    if (!R) return;
+    const busy = !!me.iai || !!me.iaiReq || me.iaiHoldT > 0 || me.iaiFade > 0;
+    if (R.fade > 0 && !busy && !me.rdWind) {
+      R.fade = Math.max(0, R.fade - dt);
+      const th = me.skill.thrustPose;
+      th.w = Math.min(th.w, R.fade / 0.12);
+    }
+    if (R.ropes && !me.rdWind && !busy && !(R.fade > 0)) {
+      windRopesBack(me, R.ropes);
+      R.ropes = null;
+    }
+  }
+
+  /** 감는 동안 (attack 꼴 · phase 'rdWind') */
+  rdWindTick(dt, d, th) {
+    const me = this.me;
+    const W = me.rdWind;
+    if (!W) return this.abortAttack();
+    const stop = !me.alive || !me.armed || !me.sword || me.weaponBroken ? 'armed' : me.state !== 'stand' ? 'down' : (me.wounds?.length ?? 0) > this.rd.wounds0 ? 'hit' : me.jolt > 0.5 ? 'jolt' : null;
+    if (stop) {
+      this.rdCancel(stop);
+      return this.abortAttack();
+    }
+    if (th && this.noticedThreat(th)) {
+      // 상대 칼이 들어옴: 감기를 그만두고 막는다 (사람이 막기 단추로 그만두는 것과 같은 뜻)
+      this.rdCancel('parry');
+      if (this.respond(th, d)) return;
+      return this.abortAttack();
+    }
+    const S = me.stamina;
+    S.spent.wind ??= 0;
+    S.spend('wind', UA.rdDrain * dt);
+    if (STAMINA.on && !S.infinite && S.value <= 0) return this.rdFire('empty');
+    const t = this.tech;
+    this.need = this.M.contact + (t?.reach ?? 0) * this.reachScale + 0.05;
+    // (c) 아끼는 성향 (10/31 13:4x — 확인표 3134): 기력이 아낌 × 쉼 기력(restAt) 아래로 내려가면 더 감지 않음 — 감았고 닿으면 지금 벰 · 아니면 그만둠 (아낌 0 = 사람처럼 0 까지)
+    const keep = this.rdThrift() * this.restAt;
+    if (STAMINA.on && !S.infinite && keep > 0 && S.value < keep) {
+      if (W.turns >= 1 && this.contactDist() <= this.need) return this.rdFire('low');
+      this.rdCancel('low');
+      return this.abortAttack();
+    }
+    if (W.turns >= 1) {
+      this.rd.woundT ??= this.attackT;
+      if (this.contactDist() <= this.need) return this.rdFire('release');
+      if (this.attackT - this.rd.woundT > UA.rdAiMaxT || d > this.holdDist() + 1.4) {
+        this.rdCancel('far');
+        return this.abortAttack();
+      }
+    } else if (d > this.holdDist() + 2.0) {
+      this.rdCancel('far');
+      return this.abortAttack();
+    }
+  }
+
+  /** 내려침 (사람 windFire 와 같은 칼 — 운동학 · 식힘 · 기술 알림 · 기력) */
+  rdFire(why) {
+    const me = this.me;
+    const W = me.rdWind;
+    const R = windEnd(me, true);
+    this.rd = { ...(this.rd ?? {}), ropes: R ?? this.rd?.ropes ?? null, fade: 0.12 };
+    const ok = UA.enhance > 0 && requestArtRedondo(me, { share: specialShare('redondo'), maxT: UA.rdSnapTime, tech: 'redondo', arc: UA.rdArc, loop: windLoopOf(W?.M), diag: UA.rdRelease === 'chamber' ? null : UA.rdDiag });
+    if (!ok) {
+      const C = (this.stats.rdWind ??= { begin: 0, fire: 0, cancel: {} }).cancel;
+      C.noStrike = (C.noStrike ?? 0) + 1;
+      return this.abortAttack();
+    }
+    me.stamina.attack('cut');
+    this.phase = 'rdStrike';
+    this.path.length = 0;
+    this.strikeCue(this.tech);
+    const sp = this.specialNow();
+    if (sp) this.specStart(sp);
+    const st = (this.stats.rdWind ??= { begin: 0, fire: 0, cancel: {} });
+    st.fire++;
+    (st.why ??= {})[why] = (st.why[why] ?? 0) + 1;
+  }
+
+  /** 내려침이 끝날 때까지 (운동학 칼) → 뒤따름 (follow — 칼이 다 지나가면 afterStrike) */
+  rdStrikeTick() {
+    const me = this.me;
+    if (me.iai || me.iaiReq) return;
+    this.phase = 'follow';
+    this.timer = 0.05;
   }
 
   abortAttack() {
@@ -3090,7 +3257,7 @@ export class AI {
         if (GP === 'commit' && d > want) fwd = 1; // 고노센 경계 결행 (10/25): 선 사이를 기어 들지 않고 스틱 끝으로
         else if (GP === 'feint') fwd = -0.21; // 고노센 경계 속임: 선 밖 제자리에서 든다 (위 '제자리'와 같은 당김)
         if (this.secretRun?.S.do.release) fwd = this.secretHoldFeet(); // 비기 터뜨림 창: 고리를 돌며 간격을 맞춘다
-      } else if (this.phase === 'approach') {
+      } else if (this.phase === 'approach' || this.phase === 'rdWind') { // rdWind = 풍차 베기 AI 몫 감기 (10/31) — 감으며 다가감
         // 성큼성큼이 아니라 미끄러지듯 (빨리 달려들면 베는 동안 멈추지 못하고 상대 몸에 부딪친다).
         //  상대가 다가오고 있으면 제자리에서 기다린다 (뒤로 살짝 당겨 검술 층의 자동 내딛기도 막는다)
         const gap = this.contactDist() - (this.need ?? this.M.contact);
@@ -3198,7 +3365,7 @@ export class AI {
     }
     // 근접 밀치기: 닿는 거리 안에서 스틱만 (벽 처리 뒤라 side 를 ±k 로 바꾸지 못한다). 걸쇠가 꺼져 있으면 한 스텝 0 으로 장전,
     //  켜져 있으면 1 로 발사, 밀치는 동안 closeWant 면 1 유지(누르기). 휘두르는 중·베는 중(strike·follow, 팔이 묶임)은 미룬다
-    const armsBusy = this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow');
+    const armsBusy = this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow' || this.phase === 'rdWind' || this.phase === 'rdStrike'); // 풍차 베기 감기 · 내려침도 팔이 묶임 (10/31)
     if (CLOSE.on && this.closeInside && !me.skill.swinging && (me.barge || (this.closeWant && !armsBusy))) {
       fwd = me.barge ? (this.closeWant ? 1 : 0) : me.closeArmed ? 1 : 0; // 밀치는 중엔 closeWant 동안만 누른다 (풀리면 release)
       side = 0;
@@ -3329,7 +3496,7 @@ export class AI {
    */
   dryFeet(ds) {
     const me = this.me;
-    const closing = this.mode === 'attack' && (this.phase === 'windup' || this.phase === 'approach') && this.sideStepT == null;
+    const closing = this.mode === 'attack' && (this.phase === 'windup' || this.phase === 'approach' || this.phase === 'rdWind') && this.sideStepT == null;
     if ((this.mode !== 'watch' && this.mode !== 'withdraw' && this.mode !== 'defend' && !closing) || me.state !== 'stand' || me.feetHeld || me.revival || !this.foe.alive || me.weapon?.gun) return;
     const D = DRYPATH;
     let sy = me.move.y;

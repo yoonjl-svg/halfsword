@@ -1,0 +1,233 @@
+{
+ "pommel_still": {
+  "tag": "pommel_still",
+  "info": {
+   "state": "fight",
+   "weapon": "longsword",
+   "tradition": "german",
+   "secret": "mordschlag",
+   "pommel": 1,
+   "noSelfClip": 1,
+   "regrip": 0,
+   "rule": "close",
+   "closeN": 0.8,
+   "press": 2.2,
+   "foe": "하인리히 도른",
+   "url": "http://127.0.0.1:4187/"
+  },
+  "fired": true,
+  "opened": true,
+  "firstOpenT": 13.95,
+  "stages": [
+   "instant",
+   "stiff"
+  ],
+  "hits": [
+   {
+    "zone": "head",
+    "part": "hilt",
+    "E": 259.1
+   }
+  ],
+  "R": {
+   "hit": true,
+   "part": "head",
+   "wPart": "hilt",
+   "E": 259.1
+  },
+  "rev": false,
+  "front": 0.24,
+  "fell": false,
+  "minD": 0.406,
+  "closeFrac": 0.19,
+  "pressMax": 2.2,
+  "stamina": {
+   "min": 130,
+   "notReady": 0
+  },
+  "frames": 812,
+  "errors": [
+   "console The script has an unsupported MIME type ('text/html')."
+  ]
+ },
+ "pommel_ai": {
+  "tag": "pommel_ai",
+  "info": {
+   "state": "fight",
+   "weapon": "longsword",
+   "tradition": "german",
+   "secret": "mordschlag",
+   "pommel": 1,
+   "noSelfClip": 1,
+   "regrip": 0,
+   "rule": "close",
+   "closeN": 0.8,
+   "press": 2.2,
+   "foe": "하인리히 도른",
+   "url": "http://127.0.0.1:4187/"
+  },
+  "fired": true,
+  "opened": true,
+  "firstOpenT": 15.2,
+  "stages": [
+   "instant",
+   "stiff"
+  ],
+  "hits": [
+   {
+    "zone": "head",
+    "part": "hilt",
+    "E": 213.3
+   }
+  ],
+  "R": {
+   "hit": true,
+   "part": "head",
+   "wPart": "hilt",
+   "E": 213.3
+  },
+  "rev": false,
+  "front": 0.224,
+  "fell": false,
+  "minD": 0.378,
+  "closeFrac": 0.21,
+  "pressMax": 2.19,
+  "stamina": {
+   "min": 130,
+   "notReady": 0
+  },
+  "frames": 888,
+  "errors": [
+   "console The script has an unsupported MIME type ('text/html')."
+  ]
+ },
+ "main_still": {
+  "tag": "main_still",
+  "info": {
+   "state": "fight",
+   "weapon": "longsword",
+   "tradition": "german",
+   "secret": "mordschlag",
+   "rule": "close",
+   "closeN": 0.8,
+   "press": 2.2,
+   "foe": "하인리히 도른",
+   "url": "http://127.0.0.1:4188/"
+  },
+  "fired": true,
+  "opened": true,
+  "firstOpenT": 13.95,
+  "stages": [
+   "instant",
+   "stiff"
+  ],
+  "hits": [
+   {
+    "zone": "head",
+    "part": "hilt",
+    "E": 237
+   },
+   {
+    "zone": "arm",
+    "part": "hilt",
+    "E": 9.2
+   }
+  ],
+  "R": {
+   "hit": true,
+   "part": "head",
+   "wPart": "hilt",
+   "E": 237
+  },
+  "rev": true,
+  "front": -0.368,
+  "fell": false,
+  "minD": 0.406,
+  "closeFrac": 0.24,
+  "pressMax": 2.2,
+  "stamina": {
+   "min": 130,
+   "notReady": 0
+  },
+  "frames": 898,
+  "errors": [
+   "console The script has an unsupported MIME type ('text/html')."
+  ]
+ },
+ "main_ai": {
+  "tag": "main_ai",
+  "info": {
+   "state": "fight",
+   "weapon": "longsword",
+   "tradition": "german",
+   "secret": "mordschlag",
+   "rule": "close",
+   "closeN": 0.8,
+   "press": 2.2,
+   "foe": "하인리히 도른",
+   "url": "http://127.0.0.1:4188/"
+  },
+  "fired": true,
+  "opened": true,
+  "firstOpenT": 8.89,
+  "stages": [
+   "instant",
+   "stiff"
+  ],
+  "hits": [],
+  "R": {
+   "hit": false,
+   "part": null,
+   "wPart": null,
+   "E": 0
+  },
+  "rev": true,
+  "front": -0.3,
+  "fell": false,
+  "minD": 0.442,
+  "closeFrac": 0.27,
+  "pressMax": 2.2,
+  "stamina": {
+   "min": 130,
+   "notReady": 0
+  },
+  "frames": 509,
+  "errors": [
+   "console The script has an unsupported MIME type ('text/html')."
+  ]
+ },
+ "main_noG10": {
+  "tag": "main_noG10",
+  "info": {
+   "state": "fight",
+   "weapon": "longsword",
+   "tradition": "german",
+   "secret": null,
+   "rule": "close",
+   "closeN": 0.8,
+   "press": 2.2,
+   "foe": "하인리히 도른",
+   "url": "http://127.0.0.1:4188/"
+  },
+  "fired": false,
+  "opened": false,
+  "firstOpenT": null,
+  "stages": [],
+  "hits": [],
+  "R": null,
+  "rev": false,
+  "front": null,
+  "fell": false,
+  "minD": 0.365,
+  "closeFrac": 0.58,
+  "pressMax": 0,
+  "stamina": {
+   "min": 130,
+   "notReady": 0
+  },
+  "frames": 1500,
+  "errors": [
+   "console The script has an unsupported MIME type ('text/html')."
+  ]
+ }
+}

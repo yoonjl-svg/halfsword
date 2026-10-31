@@ -14,6 +14,8 @@ class Still {
   constructor(me) { this.me = me; }
   update() { this.me.move.set(0, 0); }
 }
+/** SECRET.mord 칸을 잠깐 바꿔 fn 을 돌리고 되돌림 (10/31 14:xx 폼멜 찍기 기본 뒤 거꾸로 쥔 판 시험을 pommel 0 으로 묶음) */
+const withMord = (set, fn) => { const keep = { ...SECRET.mord }; Object.assign(SECRET.mord, set); try { return fn(); } finally { Object.assign(SECRET.mord, keep); } };
 function fixture(weapon = 'longsword', gap = 0.75) {
   const g = newRound({ weapon, weapon2: 'longsword', gap, seed: 7, walls: false, AIClass: Still });
   const P = g.player, E = g.enemy;
@@ -193,7 +195,7 @@ test('조건 (사장님 10/29 20:0x — mordRule close 기본): 가슴 사이 �
   } finally { delete P.foeDistance; P.skill.swinging = false; g.world.free(); }
 });
 
-test('칼날 거꾸로 쥐기: 손목 관절이 그 자리에서 맞음 · 칼끝 아래 · 원래 쥠으로 돌아오면 관성 · 닻 그대로', () => {
+test('칼날 거꾸로 쥐기: 손목 관절이 그 자리에서 맞음 · 칼끝 아래 · 원래 쥠으로 돌아오면 관성 · 닻 그대로 (거꾸로 쥔 판 — pommel 0 · 10/31 14:xx 폼멜 찍기 기본 뒤 `?mordPommel=0` 판 지킴)', () => withMord({ pommel: 0 }, () => {
   const { g, P } = fixture();
   try {
     for (let i = 0; i < 60; i++) g.step();
@@ -218,9 +220,9 @@ test('칼날 거꾸로 쥐기: 손목 관절이 그 자리에서 맞음 · 칼�
   } finally { g.world.free(); }
   const ls = fixture('lightsaber');
   try { assert.equal(mordMode(ls.P), 'hilt'); } finally { ls.g.world.free(); } // 칼날을 잡을 수 없는 칼은 쥠 그대로
-});
+}));
 
-test('비기 흐름: 준비 → 베기 길 → 따라 지나감 → 다시 세우기 → 굳음 0.4 s · 끝나면 원래 쥠 · 겨눔 · NaN 없음', () => {
+test('비기 흐름: 준비 → 베기 길 → 따라 지나감 → 다시 세우기 → 굳음 0.4 s · 끝나면 원래 쥠 · 겨눔 · NaN 없음 (거꾸로 쥔 판 — pommel 0 · 10/31 14:xx 폼멜 찍기 기본 뒤 `?mordPommel=0` 판 지킴)', () => withMord({ pommel: 0 }, () => {
   SECRET.mord.kin = 0; SECRET.mord.aim = 'pad'; try { // 서보 길 시험 (10/23 판 기본은 운동학 kin 0.3 · pull)
   const { g, P } = fixture('longsword', 0.75);
   try {
@@ -247,7 +249,7 @@ test('비기 흐름: 준비 → 베기 길 → 따라 지나감 → 다시 세�
     assert.equal(P.secretHit, 1);
   } finally { g.world.free(); }
   } finally { SECRET.mord.kin = 0.3; SECRET.mord.aim = 'pull'; }
-});
+}));
 
 test('넘어 들어감 규칙 (mordOver — 기본 끔): 켜면 내리치는 동안만 내 칼이 상대 칼과 부딪히지 않고, 끝나면 원래 그룹', () => {
   SECRET.mord.kin = 0; SECRET.mord.aim = 'pad'; try { // 서보 길 시험 (10/23 판 기본은 운동학 kin 0.3 · pull)
@@ -290,7 +292,7 @@ test('가볍고 느림을 고칠 안 (10/23 확정 — kin 0.3 · aim pull): kin
   } finally { g.world.free(); }
 });
 
-test('운동학 길 (kin 0.6): 쥠 바꿈 → instant(연환 틀) → 원래 쥠 · 밧줄 다시 · 굳음 0.4 s · 입력 → 굳음 끝 1 s 안 · pull 이면 칼자루가 머리에', () => {
+test('운동학 길 (kin 0.6): 쥠 바꿈 → instant(연환 틀) → 원래 쥠 · 밧줄 다시 · 굳음 0.4 s · 입력 → 굳음 끝 1 s 안 · pull 이면 칼자루가 머리에 (거꾸로 쥔 판 — pommel 0 · 10/31 14:xx 폼멜 찍기 기본 뒤 `?mordPommel=0` 판 지킴)', () => withMord({ pommel: 0, noSelfClip: 0 }, () => {
   for (const aim of ['pad', 'pull']) {
     const { g, P } = fixture('longsword', 0.65);
     SECRET.mord.kin = 0.6;
@@ -328,7 +330,7 @@ test('운동학 길 (kin 0.6): 쥠 바꿈 → instant(연환 틀) → 원래 쥠
       }
     } finally { SECRET.mord.kin = 0.3; SECRET.mord.aim = 'pull'; g.world.free(); }
   }
-});
+}));
 
 test('머리 따라 겨눔 (10/30 사장님 \'모르트가 빗나가는 경우는 어떤거지?\' · 08:2x \'머리를 끝까지 따라가게 해.\' — SECRET.mord.track 기본 켬 · commit 0): 끄면 결과에 따라 겨눔 셈 없음 · 켜면 겨눈 자리까지 스텝마다 그때 머리로 다시 옮김(trackN) · trackUntil cut 은 베는 토막 전까지만(더 적음) · 머리 맞음', () => {
   assert.equal(SECRET.mord.track, 1);
@@ -356,7 +358,88 @@ test('머리 따라 겨눔 (10/30 사장님 \'모르트가 빗나가는 경우�
   assert.ok(cut.R.trackN > 0 && cut.R.trackN < on.R.trackN, `베기 전까지 ${cut.R.trackN} < 겨눈 자리까지 ${on.R.trackN}`);
 });
 
-test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누르기 mordPress(2 s) → 창 → 머리가 닿으면 곧장 냄(사람과 같은 실행부) → 굳음 → 끝 · 끊기면 셈 0 · 머리가 멀면 안 냄', () => {
+test('내 머리 뚫음 막기 시제품 (10/31 사장님 \'팔이 나의 머리를 뚫고 뒤로 갔다가 다시 적을 강타하는 것처럼 보여\' — SECRET.mord.noSelfClip · 사장님 확인 전 · 기본 끔): 끄면 가슴 사이 0.65 m 에서 두 손이 내 머리 가운데 뒤로 감(지금 판) · 켜면 두 손이 늘 머리 앞 · 반걸음 ≤ clipStep · 결과에 clip 칸 · 머리에 닿음 (거꾸로 쥔 판 — pommel 0 · 10/31 14:xx 폼멜 찍기 기본 뒤 `?mordPommel=0` 판 지킴)', () => withMord({ pommel: 0 }, () => {
+  assert.equal(SECRET.mord.noSelfClip, 1); // 10/31 14:xx 사장님 결정 — 기본 켬 (폼멜 찍기와 함께)
+  const run = (on) => {
+    const { g, P } = fixture('longsword', 0.65);
+    SECRET.mord.noSelfClip = on;
+    try {
+      for (let i = 0; i < Math.round(2.4 / DT); i++) g.step();
+      const hits = [];
+      g.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === P) hits.push({ zone: r.zone, part: pr.w.part }); };
+      assert.equal(P.skill.secret({ S: TRADITIONS.german.playerSecret, ctx: { ev: 'press' } }), true);
+      let front = Infinity;
+      for (let i = 0; i < Math.round(3 / DT) && P.skill.sec; i++) {
+        g.step();
+        const I = P.iai;
+        if (!I?.mord) continue;
+        const hd = new THREE.Vector3().copy(P.bodies.head.translation()), yi = I.yaw.clone().invert();
+        const wS = new THREE.Vector3(0.13, 0, 0).applyQuaternion(q(P.bodies.farmS.rotation())).add(P.bodies.farmS.translation());
+        const wO = new THREE.Vector3(0, -0.13, 0).applyQuaternion(q(P.bodies.farmO.rotation())).add(P.bodies.farmO.translation());
+        front = Math.min(front, wS.sub(hd).applyQuaternion(yi).x, wO.sub(hd).applyQuaternion(yi).x); // 두 손이 내 머리 가운데보다 몸 앞(+) · 뒤(−) (m)
+      }
+      return { R: P.instantResult, hits, front };
+    } finally { SECRET.mord.noSelfClip = 1; g.world.free(); }
+  };
+  const off = run(0);
+  assert.ok(off.R?.mord && off.R.clip === undefined && off.front < -0.1, `지금 판: 손이 머리 뒤 ${off.front.toFixed(2)} m`);
+  const on = run(1);
+  assert.ok(on.front > 0.05, `켜면 손이 머리 앞 ${on.front.toFixed(2)} m`);
+  assert.ok(on.R.clip && on.R.clip.step <= SECRET.mord.clipStep + 1e-9, JSON.stringify(on.R.clip));
+  assert.ok(on.hits.some((h) => h.zone === 'head'), JSON.stringify(on.hits));
+}));
+
+test('자연스러운 쥠 바꿈 · 강제 뒤 박차기 · 폼멜 찍기 시제품 (10/31 08:xx 사장님 \'칼등을 거꾸로 쥐는 동작이 자연스러워야 돼 … 박차기 강제 발동과 함께 한걸음 물러나며 일격\' — SECRET.mord.regrip · burstBack · pommel · 사장님 확인 전 · 기본 끔): 낸 스텝에 칼이 옮겨지지 않고 쥠 자리가 스텝마다 조금씩 · 쥠 바꿈 뒤 거꾸로 · 박찬 걸음 한 번(기력 pushCost) · 가슴 사이가 늘어남 · 칼자루로 머리 · 서 있음 · 끝나면 원래 쥠 · 폼멜 찍기는 쥠 그대로 폼멜로 머리', () => {
+  assert.equal(SECRET.mord.regrip, 0);
+  assert.equal(SECRET.mord.burstBack, 0);
+  assert.equal(SECRET.mord.burstFree, 0);
+  assert.equal(SECRET.mord.pommel, 1); // 10/31 14:xx 사장님 결정 — 폼멜 찍기 기본
+  const keep = { ...SECRET.mord };
+  const run = (set, gap) => {
+    const { g, P, E } = fixture('longsword', gap);
+    Object.assign(SECRET.mord, set);
+    try {
+      for (let i = 0; i < Math.round(2.4 / DT); i++) g.step();
+      const hits = [];
+      g.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === P) hits.push({ zone: r.zone, part: pr.w.part }); };
+      const push0 = P.stamina.counts?.push ?? 0;
+      const d0 = P.foeDistance();
+      assert.equal(P.skill.secret({ S: TRADITIONS.german.playerSecret, ctx: { ev: 'press' } }), true);
+      const out = { gripAtFire: P.mordGrip, gMaxStep: 0, revSeen: false, fell: false, dCut: null, front: Infinity };
+      let gPrev = null;
+      for (let i = 0; i < Math.round(3 / DT) && P.skill.sec; i++) {
+        g.step();
+        const I = P.iai;
+        if (P.state !== 'stand') out.fell = true;
+        if (P.mordGrip) out.revSeen = true;
+        if (!I?.mord) continue;
+        if (gPrev != null) out.gMaxStep = Math.max(out.gMaxStep, Math.abs(I.mord.g - gPrev));
+        gPrev = I.mord.g;
+        if (I.cutting && out.dCut == null) out.dCut = P.foeDistance();
+        const hd = new THREE.Vector3().copy(P.bodies.head.translation()), yi = I.yaw.clone().invert();
+        const wS = new THREE.Vector3(0.13, 0, 0).applyQuaternion(q(P.bodies.farmS.rotation())).add(P.bodies.farmS.translation());
+        out.front = Math.min(out.front, wS.sub(hd).applyQuaternion(yi).x);
+      }
+      return { ...out, R: P.instantResult, hits, pushN: (P.stamina.counts?.push ?? 0) - push0, d0, gripEnd: P.mordGrip };
+    } finally { Object.assign(SECRET.mord, keep); g.world.free(); }
+  };
+  const best = run({ pommel: 0, regrip: CONFIG.realS(0.4), burstBack: 1, noSelfClip: 1, clipStep: 0 }, 0.6);
+  assert.equal(best.gripAtFire, null, '낸 스텝에 칼을 옮기지 않음 (쥠 바꿈은 운동학 토막에서)');
+  assert.ok(best.gMaxStep < 0.06, `쥠 자리가 스텝마다 조금씩 (가장 큰 한 스텝 ${best.gMaxStep.toFixed(3)} m — 지금 판은 0.88 m 한 번)`);
+  assert.ok(best.revSeen && best.gripEnd === null, '쥠 바꿈 뒤 거꾸로 · 끝나면 원래 쥠');
+  assert.equal(best.pushN, 1, '박찬 걸음 한 번 (기력 pushCost)');
+  assert.ok(best.dCut > best.d0 + 0.15, `물러나 가슴 사이가 늘어남 ${best.d0.toFixed(2)} → ${best.dCut?.toFixed(2)}`);
+  assert.ok(!best.fell, '서 있음');
+  assert.ok(best.front > 0.1, `손이 머리 앞 ${best.front.toFixed(2)}`);
+  assert.ok(best.hits.some((h) => h.zone === 'head' && h.part === 'hilt'), JSON.stringify(best.hits));
+  const free = run({ pommel: 0, regrip: CONFIG.realS(0.4), burstBack: 1, burstFree: 1, noSelfClip: 1, clipStep: 0 }, 0.6);
+  assert.equal(free.pushN, 0, 'burstFree 면 박찬 걸음 기력 안 냄');
+  const pom = run({ pommel: 1, noSelfClip: 1, clipStep: 0 }, 0.45);
+  assert.ok(!pom.revSeen && pom.gripEnd === null, '폼멜 찍기는 쥠 그대로');
+  assert.ok(pom.hits.some((h) => h.zone === 'head' && h.part === 'hilt'), JSON.stringify(pom.hits));
+});
+
+test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누르기 mordPress(2 s) → 창 → 머리가 닿으면 곧장 냄(사람과 같은 실행부) → 굳음 → 끝 · 끊기면 셈 0 · 머리가 멀면 안 냄 (10/31 14:xx 뒤 기본 폼멜 찍기 — 닿는 거리 = 팔 + 폼멜 + 앞 반걸음)', () => {
   const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 } } });
   const P = g.player, E = g.enemy, ai = g.ai;
   try {
@@ -457,4 +540,64 @@ test('AI 자연스럽게 가까울 때만 밀기 (10/24 14:2x 사장님 \'무작
     SECRET.mordNear = 0;
     try { ai.press.go = true; ai.press.goWhy = 'clinch'; ai.mordTick(DT, false); assert.equal(ai.press.go, true, '12:0x 판은 칠 거리 안이면 이어 감'); } finally { SECRET.mordNear = 1; ai.press.go = false; }
   } finally { E.barge = null; g.world.free(); }
+});
+
+test('폼멜 찍기 기본 (10/31 14:xx 사장님 \'폼멜 찍기로 바꿔서 본판에 올려.\' — SECRET.mord.pommel 1 · noSelfClip 1): 사람 — 가슴 사이 0.45 · 0.6 · 0.75 m 에서 내면 쥠 그대로 폼멜로 머리 · 두 손이 늘 내 머리 앞 · 넘어지지 않음 · 굳음까지 끝 · AI — 누르기 창 안에서 내 폼멜로 상대 머리', () => {
+  assert.equal(SECRET.mord.pommel, 1);
+  assert.equal(SECRET.mord.noSelfClip, 1);
+  assert.equal(SECRET.mord.regrip, 0);
+  assert.equal(SECRET.mord.burstBack, 0);
+  assert.equal(SECRET.mord.clipStep, 0.3); // 팔이 안 닿으면 앞 반걸음 끝
+  for (const gap of [0.45, 0.6, 0.75]) {
+    const { g, P } = fixture('longsword', gap);
+    try {
+      for (let i = 0; i < Math.round(2.4 / DT); i++) g.step();
+      const hits = [];
+      g.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === P) hits.push({ zone: r.zone, part: pr.w.part, E: r.energy }); };
+      assert.equal(P.skill.secret({ S: TRADITIONS.german.playerSecret, ctx: { ev: 'press' } }), true);
+      assert.equal(mordMode(P), 'hilt');
+      let front = Infinity, rev = false, fell = false, stiff = false;
+      for (let i = 0; i < Math.round(3 / DT) && P.skill.sec; i++) {
+        g.step();
+        if (P.mordGrip) rev = true;
+        if (P.state !== 'stand') fell = true;
+        if (P.skill.sec?.stage === 'stiff') stiff = true;
+        const I = P.iai;
+        if (!I?.mord) continue;
+        const hd = new THREE.Vector3().copy(P.bodies.head.translation()), yi = I.yaw.clone().invert();
+        const wS = new THREE.Vector3(0.13, 0, 0).applyQuaternion(q(P.bodies.farmS.rotation())).add(P.bodies.farmS.translation());
+        const wO = new THREE.Vector3(0, -0.13, 0).applyQuaternion(q(P.bodies.farmO.rotation())).add(P.bodies.farmO.translation());
+        front = Math.min(front, wS.sub(hd).applyQuaternion(yi).x, wO.sub(hd).applyQuaternion(yi).x);
+      }
+      assert.ok(!rev, `${gap}: 쥠 그대로 (칼날을 거꾸로 쥐지 않음)`);
+      assert.ok(hits.some((h) => h.zone === 'head' && h.part === 'hilt'), `${gap}: 폼멜로 머리 ${JSON.stringify(hits)}`);
+      assert.ok(front > 0.05, `${gap}: 두 손이 내 머리 앞 ${front.toFixed(2)} m`);
+      assert.ok(!fell, `${gap}: 서 있음`);
+      assert.ok(stiff && P.skill.sec === null, `${gap}: 굳음까지 끝`);
+      assert.ok(P.instantResult?.mord && P.instantResult.clip, JSON.stringify(P.instantResult?.clip));
+    } finally { g.world.free(); }
+  }
+  // AI (같은 실행부): 누르기 창 → 머리가 닿는 거리(팔 + 폼멜 + 앞 반걸음)면 냄 → 폼멜로 머리
+  const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 } } });
+  const P = g.player, E = g.enemy, ai = g.ai;
+  try {
+    ai.watch = () => {};
+    ai.moveFeet = function () { this.me.move.set(0, 0); this.me.stickX = 0; this.me.stickY = 0; };
+    for (let i = 0; i < Math.round(0.3 / DT); i++) g.step();
+    assert.equal(mordHeadReach(E), true, '가슴 0.7 m — 폼멜이 닿는 거리');
+    const hits = [];
+    g.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === E && E.skill.sec) hits.push({ zone: r.zone, part: pr.w.part }); };
+    E.barge = { phase: 'press' };
+    let fired = false, rev = false, fell = false;
+    for (let i = 0; i < Math.round((SECRET.mordPress + 1.5) / DT); i++) {
+      g.step();
+      if (ai.secretRun?.stage === 'mord') fired = true;
+      if (E.mordGrip) rev = true;
+      if (fired && E.state !== 'stand') fell = true;
+    }
+    assert.ok(fired, 'AI 가 창 안에서 냄');
+    assert.ok(!rev, 'AI 도 쥠 그대로');
+    assert.ok(!fell, 'AI 서 있음');
+    assert.ok(hits.some((h) => h.zone === 'head' && h.part === 'hilt'), `AI 폼멜로 머리 ${JSON.stringify(hits)}`);
+  } finally { g.world.free(); }
 });

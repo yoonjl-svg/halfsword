@@ -1,0 +1,216 @@
+{
+ "tag": "before",
+ "summary": [
+  {
+   "who": "ai",
+   "tag": "before",
+   "info": {
+    "ok": true,
+    "tradition": "iberian",
+    "mode": "shoulder",
+    "aiWind": 0
+   },
+   "shots": [
+    {
+     "k": 0,
+     "label": "AI +0s",
+     "pose": {
+      "tip": [
+       1.52,
+       0.92,
+       0.02
+      ],
+      "hand": [
+       0.39,
+       0.21,
+       0.02
+      ],
+      "wind": null,
+      "iai": false,
+      "thW": 0,
+      "held": false,
+      "aiPhase": "attack/windup",
+      "simT": 3.32
+     }
+    },
+    {
+     "k": 1,
+     "label": "AI +0.2s",
+     "pose": {
+      "tip": [
+       0.59,
+       1.41,
+       0.55
+      ],
+      "hand": [
+       0.3,
+       0.16,
+       0.19
+      ],
+      "wind": null,
+      "iai": false,
+      "thW": 0,
+      "held": false,
+      "aiPhase": "attack/approach",
+      "simT": 3.57
+     }
+    },
+    {
+     "k": 2,
+     "label": "AI +0.4s",
+     "pose": {
+      "tip": [
+       -1.22,
+       0.4,
+       0.65
+      ],
+      "hand": [
+       0.08,
+       0.4,
+       0.35
+      ],
+      "wind": null,
+      "iai": false,
+      "thW": 0,
+      "held": false,
+      "aiPhase": "attack/approach",
+      "simT": 3.77
+     }
+    },
+    {
+     "k": 3,
+     "label": "AI +0.7s",
+     "pose": {
+      "tip": [
+       -0.97,
+       -0.01,
+       0.86
+      ],
+      "hand": [
+       0.1,
+       0.33,
+       0.13
+      ],
+      "wind": null,
+      "iai": false,
+      "thW": 0,
+      "held": false,
+      "aiPhase": "attack/approach",
+      "simT": 4.12
+     }
+    },
+    {
+     "k": 4,
+     "label": "AI +1s",
+     "pose": {
+      "tip": [
+       -0.99,
+       0.03,
+       0.9
+      ],
+      "hand": [
+       0.08,
+       0.35,
+       0.18
+      ],
+      "wind": null,
+      "iai": false,
+      "thW": 0,
+      "held": false,
+      "aiPhase": "attack/approach",
+      "simT": 4.44
+     }
+    },
+    {
+     "k": 5,
+     "label": "AI +1.4s",
+     "pose": {
+      "tip": [
+       0.3,
+       0.54,
+       1.44
+      ],
+      "hand": [
+       0.3,
+       0.3,
+       0.13
+      ],
+      "wind": null,
+      "iai": false,
+      "thW": 0,
+      "held": false,
+      "aiPhase": "attack/strike",
+      "simT": 4.9
+     }
+    },
+    {
+     "k": 6,
+     "label": "AI +1.8s",
+     "pose": {
+      "tip": [
+       -0.84,
+       0.51,
+       -0.92
+      ],
+      "hand": [
+       0.2,
+       0.08,
+       -0.21
+      ],
+      "wind": null,
+      "iai": false,
+      "thW": 0,
+      "held": false,
+      "aiPhase": "attack/follow",
+      "simT": 5.33
+     }
+    },
+    {
+     "k": 7,
+     "label": "AI +2.2s",
+     "pose": {
+      "tip": [
+       -0.41,
+       -0.08,
+       -1.32
+      ],
+      "hand": [
+       0.26,
+       0.12,
+       -0.18
+      ],
+      "wind": null,
+      "iai": false,
+      "thW": 0,
+      "held": false,
+      "aiPhase": "withdraw/ready",
+      "simT": 5.75
+     }
+    },
+    {
+     "k": 8,
+     "label": "AI +2.6s",
+     "pose": {
+      "tip": [
+       -0.59,
+       -0.19,
+       -1.2
+      ],
+      "hand": [
+       0.2,
+       -0.01,
+       -0.14
+      ],
+      "wind": null,
+      "iai": false,
+      "thW": 0,
+      "held": false,
+      "aiPhase": "withdraw/ready",
+      "simT": 6.19
+     }
+    }
+   ]
+  }
+ ],
+ "errors": []
+}

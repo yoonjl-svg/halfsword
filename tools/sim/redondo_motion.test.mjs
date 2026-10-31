@@ -12,6 +12,8 @@ import { windSpec, windRate } from '../../src/iberian_redondo.js';
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, IB_FLOW } = CONFIG;
 const R2D = 180 / Math.PI;
+// 뗌 → 벰 상한: 칼끝 몫 0.5(10/30 · 10/31 판 시험을 맞춘 값)에서 잡은 수를 지금 칼끝 몫에 맞춰 늘림 — 드는 길은 같은 길을 칼끝 빠르기로 감 (10/31 13:5x 0.5 → 0.3 · 꼴은 그대로 지킴)
+const LEAD_MAX = (s05) => s05 * 0.5 / UA.specialShare.redondo;
 
 /** 사람 몸 + 풍차 베기만 · 상대는 멀리 서 있음 · 누르는 동안 손가락 닿음(handHeld) · set = 이 판만 바꿀 UNIQUE_ASSIST 칸 */
 function body({ weapon = 'zweihander', set = {}, kit = null, seed = 3 } = {}) {
@@ -166,7 +168,9 @@ test('안 B shoulder — 오른 어깨에 얹어 멈춤(칼끝이 거의 안 움
   };
   const long = run(1.4); // 감기 1.4 s = 섞기 0.6 + 얹은 채 0.8
   assert.ok(long.tipV < 1.0, `얹은 칼끝 ${long.tipV.toFixed(2)} m/s`);
-  assert.ok(long.tip.x < -0.5, '칼끝은 뒤');
+  // 10/31 08:xx 보이는 꼴 (사장님 '누가봐도 레돈두 준비처럼'): 칼끝이 칼 든 어깨 뒤 위로 머리 위 1 m 넘게 솟음 (10/31 02:xx 판은 가슴 위 0.43 m · 뒤 1.0 m — 게임 카메라에서 숨음)
+  assert.ok(long.tip.x < -0.2, `칼끝은 뒤 ${long.tip.x.toFixed(2)}`);
+  assert.ok(long.tip.y > 1.2, `칼끝은 위 ${long.tip.y.toFixed(2)}`);
   assert.ok(long.turns >= 1, '얹은 채 0.6 s 넘음 = 감음');
   assert.equal(long.fired, 1);
   const mid = run(1.0); // 얹은 채 0.4 s
@@ -204,8 +208,8 @@ test('내려침 길 [안 A 고리] (사장님 10/30 00:1x \'궤적이 8자 모�
     const m = figure8(r);
     assert.equal(r.fell, false);
     assert.ok(m.leadLow > 0.9, `${release} s — 드는 동안 칼끝 가장 낮은 곳 가슴 위 ${m.leadLow} m (머리 위에 머묾)`);
-    assert.ok(r.tCut != null && r.tCut < 0.12, `${release} s — 뗌 → 벰 ${r.tCut} s`);
-    assert.ok(m.cutY[0] - m.cutY[1] > 1.2, `내려 벰 — 칼끝 높이 ${m.cutY}`);
+    assert.ok(r.tCut != null && r.tCut < LEAD_MAX(0.12), `${release} s — 뗌 → 벰 ${r.tCut} s (상한 ${LEAD_MAX(0.12).toFixed(3)} — 칼끝 몫에 맞춤)`);
+    assert.ok(m.cutY[0] - m.cutY[1] > 1.2, `내려 벰 — 칼끝 높이 ${m.cutY} (벰이 끝까지 — 시간 상한에 안 끊김)`);
     assert.ok(m.cutZ[0] < -0.6 && m.cutZ[1] > 0.2, `왼 → 오른 — 칼끝 옆 ${m.cutZ}`);
   }
   const keep = UA.rdRelease;
@@ -218,17 +222,141 @@ test('내려침 길 [안 A 고리] (사장님 10/30 00:1x \'궤적이 8자 모�
   } finally { UA.rdWindMode = keepWind; }
 });
 
-test('내려침 길 [안 B 어깨 — 10/31 기본] 곧장 사선 60°: 어깨에 얹은 칼을 떼어 들면 칼끝이 얹은 자리보다 더 뒤 · 더 아래로 가지 않고(어깨 뒤 고리 · 8 자 없음) 머리 위로 들려 왼 위 → 오른 아래로 벰 · 칼날이 제 몸을 지나지 않음 · 섞는 첫머리에 떼어도 같음', async () => {
+test('내려침 길 [안 B 어깨 — 10/31 기본] 곧장 사선 60°: 어깨에 얹은 칼을 떼어 들면 칼끝이 얹은 자리보다 더 뒤로 가지 않고 머리 위에 머문 채(어깨 뒤 고리 · 8 자 없음) 왼 위 → 오른 아래로 벰 · 칼날이 제 몸을 지나지 않음 · 섞는 첫머리에 떼어도 같음', async () => {
   const { traceRun, figure8 } = await import('./redondo_trace.mjs');
   assert.equal(UA.rdWindMode, 'shoulder');
   for (const release of [0.4, 1.4]) { // 0.4 s = 아직 어깨로 섞는 중 · 1.4 s = 얹은 채 0.8 s
     const r = traceRun({ w: 'zweihander', release });
     const m = figure8(r);
     assert.equal(r.fell, false, `${release} s`);
-    assert.ok(m.liftBack < 0.05 && m.liftDrop < 0.05, `${release} s — 드는 동안 뗀 자리보다 더 뒤 ${m.liftBack} m · 더 아래 ${m.liftDrop} m`);
-    assert.ok(r.tCut != null && r.tCut < 0.15, `${release} s — 뗌 → 벰 ${r.tCut} s`);
+    assert.ok(m.liftBack < 0.05, `${release} s — 드는 동안 뗀 자리보다 더 뒤 ${m.liftBack} m`);
+    assert.ok(m.leadLow > 0.9, `${release} s — 드는 동안 칼끝 가장 낮은 곳 가슴 위 ${m.leadLow} m (머리 위에 머묾 — 10/31 08:xx 꼴은 칼을 세워 얹어 처음부터 머리 위)`);
+    assert.ok(r.tCut != null && r.tCut < LEAD_MAX(0.15), `${release} s — 뗌 → 벰 ${r.tCut} s (상한 ${LEAD_MAX(0.15).toFixed(3)} — 칼끝 몫에 맞춤)`);
     assert.ok(m.cutY[0] - m.cutY[1] > 1.2, `내려 벰 — 칼끝 높이 ${m.cutY}`);
     assert.ok(m.cutZ[0] < -0.5 && m.cutZ[1] > 0.2, `왼 → 오른 — 칼끝 옆 ${m.cutZ}`);
     assert.ok(r.selfBlade > 0.05, `${release} s — 칼날 ↔ 내 몸 가장 가까이 ${r.selfBlade} m`);
   }
+});
+
+test('AI 풍차 베기 (사장님 10/31 08:xx \'플레이어만 그런 건가? 누가봐도 레돈두 준비처럼 보여야해.\' — UNIQUE_ASSIST.rdAiWind): 머리 위 돌려 베기를 고르면 사람과 같은 감기(안 B 어깨에 얹음 — 칼끝이 머리 위로 솟음)로 다가가 감음 뒤 닿는 거리에서 같은 곧장 사선 내려침 · 밧줄 다시 · 0 = 옛 패드 길', async () => {
+  const { TRADITIONS } = await import('../../src/schools.js');
+  const t = TRADITIONS.iberian.unique.find((u) => u.name === 'redondo');
+  const run = (on) => {
+    const keep = UA.rdAiWind;
+    UA.rdAiWind = on;
+    const G = newRound({ walls: true, seed: 1, weapon: 'longsword', weapon2: 'zweihander', gap: 2.3, persona: { proficiency: 4 } });
+    try {
+      const E = G.enemy;
+      for (let i = 0; i < Math.round(2.0 / DT); i++) G.step();
+      assert.ok(G.ai.startAttack({ ...t, plain: null }, 'open', { noFeint: true }));
+      const o = { phases: new Set(), restTipY: null, rdMove: false, wound: false, ropesBack: null, kind: E.rdWind?.M?.kind ?? null };
+      const w0 = G.wounds.length;
+      for (let i = 0; i < Math.round(4.0 / DT); i++) {
+        G.step();
+        o.phases.add(G.ai.phase);
+        const W = E.rdWind;
+        if (W && W.k >= 1 && o.restTipY == null) {
+          const c = E.bodies.chest.translation();
+          o.restTipY = E.bladePoint(1, new THREE.Vector3()).y - c.y;
+          o.placed = E.armsPlaced();
+        }
+        if (E.iai?.moves?.[0]?.rd) o.rdMove = true;
+        if (o.rdMove && !E.iai && o.ropesBack == null && G.ai.phase !== 'rdStrike') o.ropesBack = false;
+        if (o.ropesBack === false && E.shoulderRopes?.length && E.gripCone?.length) o.ropesBack = true;
+      }
+      o.wound = G.wounds.slice(w0).some((x) => x.att === E);
+      o.stats = G.ai.stats.rdWind ?? null;
+      return o;
+    } finally { G.world.free(); UA.rdAiWind = keep; }
+  };
+  assert.equal(UA.rdAiWind, 1);
+  const on = run(1);
+  assert.equal(on.kind, 'shoulder', '사람과 같은 감기 꼴');
+  assert.ok(on.phases.has('rdWind') && on.phases.has('rdStrike'), [...on.phases].join(','));
+  assert.equal(on.placed, true, '감는 동안 두 팔 · 칼을 놓음');
+  assert.ok(on.restTipY > 1.2, `얹은 칼끝 가슴 위 ${on.restTipY?.toFixed(2)} m`);
+  assert.equal(on.rdMove, true, '내려침 = 사람 풍차 베기 운동학 칼');
+  assert.equal(on.wound, true, '서 있는 사람을 벰');
+  assert.equal(on.ropesBack, true, '내려침 뒤 밧줄 다시');
+  assert.equal(on.stats.fire, 1);
+  const off = run(0);
+  assert.equal(off.kind, null);
+  assert.ok(!off.phases.has('rdWind') && off.phases.has('strike'), `옛 패드 길 — ${[...off.phases].join(',')}`);
+  assert.equal(off.rdMove, false);
+});
+
+test('AI 풍차 베기 빠른 틈 · 성향 기력 아낌 (사장님 10/31 13:4x \'a는 기본 적용하고 c는 성향마다 달랐음 좋겠어. 싸움을 풀어가는 방식에 따라 자율적으로.\' — rdAiQuick · rdAiThrift): 빠른 틈 · 기력 모자람은 바탕 동작 · 공격적 기질 · 분노는 감음 · 감는 중 기력이 아낌 줄 아래면 그만둠', () => {
+  const mk = () => {
+    const G = newRound({ walls: true, seed: 1, weapon: 'longsword', weapon2: 'zweihander', gap: 2.3, persona: { proficiency: 4 } });
+    for (let i = 0; i < Math.round(2.0 / DT); i++) G.step();
+    const rd = G.ai.school.tech.find((x) => x.name === 'redondo');
+    assert.ok(rd?.plain, '머리 위 돌려 베기 강화동작 · 바탕 동작');
+    return { G, ai: G.ai, E: G.enemy, rd };
+  };
+  const once = (fn) => {
+    const o = mk();
+    try { return fn(o); } finally { o.G.world.free(); }
+  };
+  assert.equal(UA.rdAiQuick, 1);
+  assert.equal(UA.rdAiThrift, 1);
+  // (a) 빠른 틈 — 상대 헛친 뒤(recover) · 이어 치기 → 바탕 동작 · 느긋한 틈(open) → 감기
+  once(({ ai, E, rd }) => {
+    assert.ok(ai.startAttack(rd, 'recover', { noFeint: true }));
+    assert.equal(ai.tech.name, rd.plain.name, '빠른 틈 = 바탕 동작');
+    assert.ok(!E.rdWind && ai.phase !== 'rdWind');
+    assert.equal(ai.stats.rdWind.skip.quick, 1);
+  });
+  once(({ ai, rd }) => {
+    assert.ok(ai.startAttack(rd, 'open', { noFeint: true, chain: 1 }));
+    assert.equal(ai.tech.name, rd.plain.name, '이어 치기 = 빠른 틈');
+  });
+  once(({ ai, E, rd }) => {
+    assert.ok(ai.startAttack(rd, 'open', { noFeint: true }));
+    assert.equal(ai.phase, 'rdWind');
+    assert.ok(E.rdWind);
+  });
+  // (c) 기력 30 — 바탕 AI(규율 0.85 · 공격적 기질 아님): 아낌 0.85 × (쉼 20 + 감기 24) ≈ 37 > 30 → 바탕 동작
+  once(({ ai, E, rd }) => {
+    assert.equal(ai.aggressiveTemper, false);
+    assert.ok(Math.abs(ai.rdWindCost() - 24) < 0.5, `감기 한 번 몫 ${ai.rdWindCost()}`);
+    E.stamina.value = 30;
+    assert.ok(ai.startAttack(rd, 'open', { noFeint: true }));
+    assert.equal(ai.tech.name, rd.plain.name);
+    assert.equal(ai.stats.rdWind.skip.low, 1);
+  });
+  // 공격적 기질(공격 성향 × aggression > 1.15) · 지금 분노 0.6 → 같은 기력에도 감음
+  once(({ ai, E, rd }) => {
+    ai.pers.aggr = 1.4;
+    assert.equal(ai.aggressiveTemper, true);
+    assert.equal(ai.rdThrift(), 0);
+    E.stamina.value = 30;
+    assert.ok(ai.startAttack(rd, 'open', { noFeint: true }));
+    assert.equal(ai.phase, 'rdWind');
+  });
+  once(({ ai, E, rd }) => {
+    ai.anger = 0.6;
+    E.stamina.value = 30;
+    assert.ok(ai.startAttack(rd, 'open', { noFeint: true }));
+    assert.equal(ai.phase, 'rdWind', `분노 아낌 ${ai.rdThrift().toFixed(2)}`);
+  });
+  // 감는 중 기력이 아낌 × 쉼 기력(≈ 17) 아래 · 감기 전 → 그만둠 'low' (아낌 0 이면 0 까지 감음)
+  once(({ G, ai, E, rd }) => {
+    assert.ok(ai.startAttack(rd, 'open', { noFeint: true }));
+    G.step();
+    E.stamina.value = 10;
+    for (let i = 0; i < 3; i++) G.step();
+    assert.equal(ai.stats.rdWind.cancel.low, 1, JSON.stringify(ai.stats.rdWind));
+    assert.ok(!E.rdWind);
+  });
+  // 끔: 빠른 틈 · 기력 모자람에도 감음 (10/31 08:xx 판)
+  const keep = [UA.rdAiQuick, UA.rdAiThrift];
+  UA.rdAiQuick = 0;
+  UA.rdAiThrift = 0;
+  try {
+    once(({ ai, E, rd }) => {
+      E.stamina.value = 30;
+      assert.ok(ai.startAttack(rd, 'recover', { noFeint: true }));
+      assert.equal(ai.phase, 'rdWind');
+    });
+  } finally { [UA.rdAiQuick, UA.rdAiThrift] = keep; }
 });
