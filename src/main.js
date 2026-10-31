@@ -366,6 +366,12 @@ if (params.has('rdHold')) CONFIG.UNIQUE_ASSIST.rdHold = +params.get('rdHold') ? 
 if (params.has('dupGrace')) CONFIG.UNIQUE_ASSIST.dupGrace = Math.max(0, +params.get('dupGrace') || 0); // 겹치기 시제품: 닿음이 끝난 뒤 받는 초 (10/31 · 기본 0 · 사장님 확인 전 — 확인표 3100)
 if (params.has('dupAny')) CONFIG.UNIQUE_ASSIST.dupAny = +params.get('dupAny') ? 1 : 0; // 겹치기 시제품: 칼끼리 닿음이면 모두 (기본 0 · 확인표 3101)
 if (params.has('dupStep')) CONFIG.UNIQUE_ASSIST.dupStep = Math.max(0, +params.get('dupStep') || 0); // 겹치기 시제품: 앞 걸음 m (기본 0 · 확인표 3102)
+// 겹치기 자동 (사장님 10/31 16:xx — 시제품 · 기본 0 = 지금 탭 · 확인표 3220 ~ 3229): `?dupAuto=bind` · `?dupAuto=clash2` · 수는 실제 초 · m
+if (params.has('dupAuto')) CONFIG.UNIQUE_ASSIST.dupAuto = ['bind', 'clash2'].includes(params.get('dupAuto')) ? params.get('dupAuto') : 0;
+for (const k of ['dupStackS', 'dupStackGap', 'dupClashT', 'dupClashGap']) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST[k] = CONFIG.realS(+params.get(k)); // 실제 초
+for (const k of ['dupBandMax', 'dupClashMax']) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST[k] = +params.get(k); // 가슴 사이 m (dupClashMax 0 = 위 끝 없음)
+if (params.has('dupBandMin')) CONFIG.UNIQUE_ASSIST.dupBandMin = +params.get('dupBandMin') > 0 ? +params.get('dupBandMin') : null; // null = 죽음의 일격 거리(SECRET.mordCloseN)
+for (const k of ['dupAutoParry', 'dupAutoHint']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0;
 if (params.has('stickGuard')) CONFIG.INPUT.stickGuardPx = Math.max(0, +params.get('stickGuard') || 0); // 이동 스틱 둘레 (px — 10/31 08:xx 사장님 '+10~20px 정도' · 기본 15 · 0 = 전 판) [확인표 3096]
 if (params.has('stickGuardGrab')) CONFIG.INPUT.stickGuardGrab = +params.get('stickGuardGrab') ? 1 : 0; // 둘레에 닿은 손가락이 스틱을 쥠 (기본 1 · 0 = 버리기만) [사장님 확인 전 — 확인표 3097]
 if (params.has('holdPx') && +params.get('holdPx') > 0) CONFIG.INPUT.holdPx = +params.get('holdPx'); // 길게 누름 떠돎 한도 (손가락 px — 10/31 · 기본 24 · 12 = 전 판 탭 문턱) [사장님 확인 전 — 확인표 3090]
@@ -2697,10 +2703,11 @@ function updateGuardName() {
     return;
   }
   // 이어 긋기 창 (10/21 강화동작 · 명령 — unique_assist.js readyChain): 앞 동작 뒤 이어 그을 수 있는 동안 자세 칸에 그 기술 이름 · '이어 긋기'
-  const uqReady = playerUnique?.ready;
+  //  겹치기 자동 'bind' (10/31 16:xx 시제품 — UNIQUE_ASSIST.dupAutoHint): 맞댄 채 쌓임이 절반 넘으면 같은 칸에 '겹치기' · '맞물림' (새 그림 없음 · 끔이면 dupCue 없음)
+  const uqReady = playerUnique?.ready ?? playerUnique?.dupCue;
   if (uqReady && player.alive) {
-    const key = `uq:${uqReady.name}`;
-    if (key !== guardShown) paintGuard(key, uqReady.nameKo, '이어 긋기');
+    const key = uqReady.sub ? `uq:${uqReady.name}:${uqReady.sub}` : `uq:${uqReady.name}`;
+    if (key !== guardShown) paintGuard(key, uqReady.nameKo, uqReady.sub ?? '이어 긋기');
     return;
   }
   // 고노센 발도 대기 (10/31 13:xx 사장님 '1-2번 다 고쳐' — 확인표 3201): 준비된 채 칼이 왼 허리에 있는 동안(허리 대기 · 웅크림 판) '발도 대기' — 칼을 쥐면(손 몫 0) 아래 보통 자세 이름으로 돌아옴

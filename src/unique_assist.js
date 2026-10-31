@@ -267,6 +267,7 @@ const TAP_TRIG = {
   },
   // 겹치기 (10/28 01:2x 사장님 '지금대로'): 내 긋기(탭 · 찌르기 · 강화 탭 칼 빼고)가 상대 칼에 맞물렸고(track — 칼끼리 0.07 m 안) 지금도 닿아 있는(같은 거리 안) 동안의 탭 · 한 맞물림에 한 번
   dup(uq) {
+    if (UA.dupAuto) return null; // 겹치기 자동 (10/31 16:xx 시제품 — dupAutoTick): 탭으로는 안 냄 (탭 = 보통 탭 찌르기)
     const rec = uq.cur && !uq.repos(uq.cur) ? uq.cur : uq.prevAtk();
     if (UA.dupAny || UA.dupGrace > 0) {
       // 시제품 (10/31 — 기본 끔): 닿음 덩이(drive 의 dupC — 칼끼리 닿음이 시작된 때 · 끝난 때)로 · 끝난 뒤 dupGrace 초까지 · dupAny 면 내 베기 맞물림이 아니어도 · 한 닿음에 한 번
@@ -324,6 +325,9 @@ export class PlayerUniqueAssist {
     this.planFade = null; // 길 덧칸 놓기 { tilt, reach, turn, t } (planStep — 10/25 18:0x)
     this.stats = { strokes: 0, techs: {}, fired: {}, ends: {}, steps: 0, power: 0 };
     this.holdE = this.list.find((e) => e.hold) ?? null; // 길게 눌러 내는 특수 공격 (풍차 베기 B4 — 10/29)
+    this.dupE = this.list.find((e) => e.tapKey === 'dup') ?? null; // 겹치기 (자동 판 dupAutoTick — 10/31 16:xx 시제품)
+    this.dupA = null; // 겹치기 자동 셈 { st 쌓임 · off 끊긴 시간 · since 쌓기 시작 · on 닿는 중 · t0 · prev 닿음 시작 · tEnd 떨어진 때 · pair 짝이 찬 닿음 }
+    this.dupCue = null; // 자세 칸 알림 { name, nameKo, sub } (쌓임 절반부터 — main.js updateGuardName)
     this.press = { down: false, still: false, secretOpen: false }; // main.js holdInput — 탭 입력을 누르고 있나 · 탭 문턱(끌지 않음) 안인가 · 비기 창이 열렸나
     this.hold = { st: 'idle', t: 0 }; // 누름 셈 · 감기 ('idle' · 'press' · 'spent' 이 누름은 감지 않음 · 'wind' 감는 중)
     this.coolT = {}; // 특수 공격(표 칸 special)마다 식힘을 세기 시작한 때 (사장님 10/28 02:0x 나간 순간 → 10/29 19:5x 끝난 때 — UNIQUE_ASSIST.specialCooldown · specialCoolFrom · 도는 동안 Infinity)
@@ -489,41 +493,53 @@ export class PlayerUniqueAssist {
       //  전 판은 막기 단추를 쥐고 있으면 늘 버려져 '한 번도 안 나감' — 사장님 10/30 00:4x 보고) · 날개 접기 · 겹치기도 같게 (10/30 08:2x 사장님 '날개접기랑 겹치기도 같게해' — UNIQUE_ASSIST.tapHeld)
       if (this.busy(!!(cav ? UA.cavHeld : UA.tapHeld)) || f.foe?.state !== 'stand' || f.stamina.exhausted) return false;
       ok.spend();
-      this.coolStart(e);
-      const U = e.U;
-      if (this.cur) this.closeStroke(now); // 긋던 것은 여기서 끝 (이 탭이 다음 칼)
-      const rec = { tech: 'tap', kind: cav ? 'thrust' : 'cut', tap: true, t0: now, dir: [0, 0], start: null, landed: false, bound: false, tEnd: null, unique: U.name };
-      this.tapRec = rec; // 앞 칼 기록 (운동학 칼이면 track 이 다음 스텝에 끝냄 — 맞힘 · 맞물림은 그 뒤 last 로 이어 적음 · 이 기록은 다음 기회를 열지 않음)
-      this.stats.fired[U.name] = (this.stats.fired[U.name] ?? 0) + 1;
-      this.stats.tapFired = (this.stats.tapFired ?? 0) + 1;
-      f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
-      f.stamina.attack(cav ? 'thrust' : 'cut'); // 탭 하나 (끌고 가는 칼은 같은 공격 — same)
-      if (e.tapSnap && UA.cavSnap && UA.enhance > 0 && requestArtThrust(f, { share: specialShare(e.name), maxT: UA.cavSnapTime, tech: U.name, under: true, capFromCut: !!UA.cavCapCut })) {
+      return this.launchTap(e, now);
+    }
+    return false;
+  }
+
+  /**
+   * 탭 특수 공격을 냄 (tapChain 이 조건을 받아들인 뒤 · 겹치기 자동 dupAutoTick — 10/31): 식힘 시작 · 긋던 것 끝 · 앞 칼 기록 · 알림 · 탭 하나 기력 · 운동학 칼(없으면 탭 찌르기 덧씌우기에 이름만).
+   *  auto = 탭 없이 저절로 나감(겹치기 자동 — 재기 stats.autoFired). 냈으면 true
+   */
+  launchTap(e, now = this.t, auto = false) {
+    const f = this.f;
+    const cav = e.tapKey === 'cav';
+    this.coolStart(e);
+    const U = e.U;
+    if (auto) this.stats.autoFired = (this.stats.autoFired ?? 0) + 1;
+    if (this.cur) this.closeStroke(now); // 긋던 것은 여기서 끝 (이 탭이 다음 칼)
+    const rec = { tech: 'tap', kind: cav ? 'thrust' : 'cut', tap: true, t0: now, dir: [0, 0], start: null, landed: false, bound: false, tEnd: null, unique: U.name };
+    this.tapRec = rec; // 앞 칼 기록 (운동학 칼이면 track 이 다음 스텝에 끝냄 — 맞힘 · 맞물림은 그 뒤 last 로 이어 적음 · 이 기록은 다음 기회를 열지 않음)
+    this.stats.fired[U.name] = (this.stats.fired[U.name] ?? 0) + 1;
+    this.stats.tapFired = (this.stats.tapFired ?? 0) + 1;
+    f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
+    f.stamina.attack(cav ? 'thrust' : 'cut'); // 탭 하나 (끌고 가는 칼은 같은 공격 — same)
+    if (e.tapSnap && UA.cavSnap && UA.enhance > 0 && requestArtThrust(f, { share: specialShare(e.name), maxT: UA.cavSnapTime, tech: U.name, under: true, capFromCut: !!UA.cavCapCut })) {
+      this.stats.snap = (this.stats.snap ?? 0) + 1;
+      return true;
+    }
+    // 날개 접기 (사장님 10/28 00:3x): 오른 허리 옆으로 거뒀다 앞으로 반걸음 들며 허리를 오른 → 왼 가로 호로 — 고노센 칼끝 × specialShare.lianchi (10/29 02:0x)
+    if (e.tapFold && UA.enhance > 0) {
+      if (requestArtFold(f, { share: specialShare(e.name), maxT: UA.lianSnapTime, tech: U.name, step: { kind: 'lunge', fwd: UA.lianStep ?? SECRET.chineseStep } })) { // 앞 걸음 = 날개 접기만의 lianStep 0.45 (10/29 14:3x)
         this.stats.snap = (this.stats.snap ?? 0) + 1;
         return true;
       }
-      // 날개 접기 (사장님 10/28 00:3x): 오른 허리 옆으로 거뒀다 앞으로 반걸음 들며 허리를 오른 → 왼 가로 호로 — 고노센 칼끝 × specialShare.lianchi (10/29 02:0x)
-      if (e.tapFold && UA.enhance > 0) {
-        if (requestArtFold(f, { share: specialShare(e.name), maxT: UA.lianSnapTime, tech: U.name, step: { kind: 'lunge', fwd: UA.lianStep ?? SECRET.chineseStep } })) { // 앞 걸음 = 날개 접기만의 lianStep 0.45 (10/29 14:3x)
-          this.stats.snap = (this.stats.snap ?? 0) + 1;
-          return true;
-        }
-      }
-      // 겹치기 (10/28): 맞물린 자리에서 상대 칼 뒤로 밀어 넣어 엇갈린 손으로 얼굴을 사선으로 — 고노센 칼끝 × specialShare.duplieren (10/29 02:0x)
-      if (e.tapDup && UA.enhance > 0) {
-        if (requestArtDup(f, { share: specialShare(e.name), maxT: UA.dupSnapTime, tech: U.name, face: UA.dupFace, follow: UA.dupFollow, plan: UA.dupPlan, body: UA.dupBody, edge: UA.dupEdge, step: UA.dupStep > 0 ? { kind: 'lunge', fwd: UA.dupStep } : null })) {
-          this.stats.snap = (this.stats.snap ?? 0) + 1;
-          return true;
-        }
-      }
-      // 운동학 칼이 없으면(끔 · 이미 끌고 가는 중) 탭 찌르기 덧씌우기에 이름만
-      if (f.skill.thrust({ uniq: false, charged: true })) {
-        if (f.skill.tap) f.skill.tap.uniqTech = U.name; // (걸어 맞추기 판 vitalRange 면 탭이 아직 없음)
+    }
+    // 겹치기 (10/28): 맞물린 자리에서 상대 칼 뒤로 밀어 넣어 엇갈린 손으로 얼굴을 사선으로 — 고노센 칼끝 × specialShare.duplieren (10/29 02:0x)
+    if (e.tapDup && UA.enhance > 0) {
+      if (requestArtDup(f, { share: specialShare(e.name), maxT: UA.dupSnapTime, tech: U.name, face: UA.dupFace, follow: UA.dupFollow, plan: UA.dupPlan, body: UA.dupBody, edge: UA.dupEdge, step: UA.dupStep > 0 ? { kind: 'lunge', fwd: UA.dupStep } : null })) {
+        this.stats.snap = (this.stats.snap ?? 0) + 1;
         return true;
       }
-      this.tapRec = null;
-      return false;
     }
+    if (auto) return false; // 저절로 낸 칼은 탭 찌르기로 바꾸지 않음 (dupAutoTick 이 운동학 칼이 나갈 수 있을 때만 부름)
+    // 운동학 칼이 없으면(끔 · 이미 끌고 가는 중) 탭 찌르기 덧씌우기에 이름만
+    if (f.skill.thrust({ uniq: false, charged: true })) {
+      if (f.skill.tap) f.skill.tap.uniqTech = U.name; // (걸어 맞추기 판 vitalRange 면 탭이 아직 없음)
+      return true;
+    }
+    this.tapRec = null;
     return false;
   }
 
@@ -758,6 +774,67 @@ export class PlayerUniqueAssist {
     return segDist(f.bladePoint(0.1, _a), f.bladePoint(1, _d), foe.bladePoint(0.1, _b), foe.bladePoint(1, _c)) < 0.07;
   }
 
+  /**
+   * 겹치기 자동 (사장님 10/31 16:xx '추가 커맨드 없이 일정 조건 충족하면 자동으로' — UNIQUE_ASSIST.dupAuto · 시제품 기본 끔 · 기록 docs/strike/duplieren_auto_2026-10-31.md): drive 가 물리 스텝마다.
+   *  띠 = 가슴 사이(fighter.foeDistance — 죽음의 일격 'close' 와 같은 잣대) dupBandMin(null = SECRET.mordCloseN 0.8) 초과 ~ 위 끝 이하 · 닿음 = bladeTouch(몸이 느끼는 맞댐 · 칼날 선분 0.07 m).
+   *  'bind'  : 닿아 있고 띠 안인 스텝마다 쌓임 += dt · 끊기면(떨어짐 · 띠 밖) dupStackGap 안엔 쌓임을 쥠(안 셈 — 죽음의 일격 mordGrace 와 같은 틀) · 넘으면 0 ·
+   *            손가락이 쌓는 동안 새 긋기를 시작하면 0(맞댄 칼을 떼고 다른 데를 치려는 손 — 쌓기 전에 시작한 맞물린 긋기는 그대로) · 쌓임 ≥ dupStackS 이고 지금 닿아 있고 띠 안이면 냄.
+   *  'clash2': 닿음 덩이(떨어진 틈이 dupClashGap 이상이어야 새 덩이 — 한 맞댐의 떨림을 둘로 세지 않음)의 시작이 앞 덩이 시작부터 dupClashT 안이고 띠 안이면 그 덩이가 닿아 있는 동안 냄.
+   *  셈 0(쌓임 · 짝 버림): 식힘 중 · 끌고 가는 칼(iaiBusy — 겹치기 · 다른 특수 공격 · 고노센) · 비기 · 나 · 상대가 서 있지 않음 · 칼 없음 · 탈진 · 막기 단추(dupAutoParry 0).
+   *  냄 막음(쌓임은 쥠 — 풀리면 그때 냄): 몸이 바쁨(busy — 탭 찌르기 · 손잡이 찍기 · 걸어 맞추기 등) · 운동학 칼을 못 냄(상대 칼 없음 · 세기 0).
+   *  냄 = 탭 판과 같은 칼(launchTap — 식힘 · 기력 탭 하나 · 알림 · requestArtDup). 자세 칸 알림 dupCue = 'bind' 쌓임 절반부터(dupAutoHint)
+   */
+  dupAutoTick(dt) {
+    const f = this.f;
+    const e = this.dupE;
+    const mode = UA.dupAuto;
+    const A = (this.dupA ??= { st: 0, off: 0, since: null, on: false, t0: null, prev: null, tEnd: null, pair: false });
+    const foe = f.foe;
+    const touch = this.bladeTouch();
+    const d = f.foeDistance();
+    const lo = UA.dupBandMin ?? SECRET.mordCloseN ?? 0;
+    const hi = mode === 'clash2' ? (UA.dupClashMax > 0 ? UA.dupClashMax : Infinity) : UA.dupBandMax;
+    const band = d > lo && d <= hi;
+    const parry = !UA.dupAutoParry && this.blocked;
+    const dead = !UA.on || this.cooling(e) || iaiBusy(f) || !!f.skill.sec || !f.alive || f.state !== 'stand' || !foe || foe.state !== 'stand' || !f.armed || !foe.armed || f.weaponBroken || f.stamina.exhausted || parry;
+    let ready = false;
+    if (mode === 'bind') {
+      const live = touch && band && !dead;
+      if (live) {
+        if (!(A.st > 0)) A.since = this.t;
+        A.off = 0;
+        A.st += dt;
+      } else if (A.st > 0 && !dead && (A.off += dt) <= UA.dupStackGap) {
+        // 너그러움: 쥔 채 기다림 (안 셈)
+      } else (A.st = 0), (A.off = 0), (A.since = null);
+      // 새 긋기 = 다른 뜻: 쌓기 시작한 뒤 시작한 긋기가 휘두르는 중이면 0 (맞물린 채 미는 느린 손은 휘두르기 문턱 SKILL.swingSpeed 아래)
+      if (A.st > 0 && this.cur && A.since != null && this.cur.t0 > A.since && f.skill.inputSwinging) (A.st = 0), (A.off = 0), (A.since = null), (this.stats.dupReset = (this.stats.dupReset ?? 0) + 1);
+      ready = A.st >= UA.dupStackS && touch && band;
+      this.dupCue = UA.dupAutoHint && !dead && A.st >= UA.dupStackS * 0.5 ? { name: e.U.name, nameKo: e.U.nameKo, sub: '맞물림' } : null;
+    } else if (mode === 'clash2') {
+      if (touch && !A.on) {
+        A.on = true;
+        if (A.tEnd == null || this.t - A.tEnd >= UA.dupClashGap) {
+          A.prev = A.t0;
+          A.t0 = this.t;
+          A.pair = A.prev != null && this.t - A.prev <= UA.dupClashT && band;
+        }
+      } else if (!touch && A.on) (A.on = false), (A.tEnd = this.t); // 짝은 쥠 — dupClashGap 안에 다시 닿으면 같은 덩이(냄은 닿아 있을 때만)
+      if (dead) (A.pair = false), (A.prev = A.t0 = null);
+      ready = A.pair && touch && band;
+      this.dupCue = null;
+    }
+    if (!ready || dead) return false;
+    if (this.busy(!!UA.dupAutoParry) || f.iai || f.iaiReq || !(specialShare(e.name) > 0) || !(UA.enhance > 0) || !foe.sword || !foe.bodies?.head) return false;
+    A.st = 0;
+    A.off = 0;
+    A.since = null;
+    A.pair = false;
+    A.prev = A.t0 = null;
+    this.dupCue = null;
+    return this.launchTap(e, this.t, true);
+  }
+
   /** 물러남 (날개 접기 — 10/28 01:2x): 스틱 뒤 몫 ≥ 0.5 이고 옆 몫보다 큼 (stickOk 'fwd' 의 거울) */
   backNow() {
     const x = this.f.stickX ?? 0, y = this.f.stickY ?? 0;
@@ -914,6 +991,7 @@ export class PlayerUniqueAssist {
       if (this.bladeTouch()) { if (!this.dupC || this.dupC.end != null) this.dupC = { t0: this.t, end: null, spent: false }; } else if (this.dupC && this.dupC.end == null) this.dupC.end = this.t;
     }
     this.coolTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:5x)
+    if (UA.dupAuto && this.dupE) this.dupAutoTick(dt); // 겹치기 자동 (10/31 16:xx 시제품 — 기본 끔이면 셈도 안 함)
     // 물러남이 풀린 때 (날개 접기 탭 조건 TAP_TRIG 'lian' — 10/28 01:2x): 스틱 뒤가 풀린 스텝
     const back = this.backNow();
     if (this.backOn && !back) this.backOff = this.t;
