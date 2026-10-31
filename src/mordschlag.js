@@ -183,13 +183,13 @@ export function mordBurstTick(f, run, dt) {
     return;
   }
   if (B.phase === 'go') {
-    // 물러날 거리: 머리 뚫음 막기(noSelfClip)가 켜져 있으면 그 셈의 '못 옮긴 몫'(I.mord.clip.short — 머리 따라 겨눔이 스텝마다 그때 머리로 셈)이 0 이 될 때까지만 —
-    //  박찬 발이 디딘 뒤에도 모자라면 스틱을 뒤로 둔 채(보통 뒷걸음) 이어 가고, 상대도 물러나 일찍 넉넉해지면 박찬 걸음 도중이라도 놓음(세게 멈춤). 셈이 없으면 박찬 발이 디딜 때 놓음
+    // 한 걸음만: 박찬 발이 디디면 놓음 · 머리 뚫음 막기(noSelfClip)가 켜져 있으면 그 셈의 '못 옮긴 몫'(I.mord.clip.short — 머리 따라 겨눔이 스텝마다 그때 머리로 셈)이
+    //  먼저 0 이 되면(상대도 물러나 일찍 넉넉해짐) 박찬 걸음 도중이라도 놓음(세게 멈춤). 디딘 뒤 더 물러나지는 않음(뒷걸음을 이어 가면 판 싸움에서 넘어짐 2 ~ 4 / 30 — 확인표 3143)
     const C = f.iai?.mord?.clip;
-    const room = C && C.short != null ? C.short <= ROOM_TOL : null;
+    const room = C && C.short != null && C.short <= ROOM_TOL;
     if (g.burstLeg) B.used = true;
     else if (!B.used && !g.burst && !g.burstStep) g.burst = { fore: -1, side: 0, lat: 0, ...(SECRET.mord.burstFree ? { free: true } : {}) };
-    if (B.used && (room === true || (room === null && !g.burstLeg))) {
+    if (B.used && (room || !g.burstLeg)) {
       B.phase = 'hold';
       B.landT = B.t;
     }

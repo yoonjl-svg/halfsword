@@ -19,6 +19,8 @@ except Exception:
     font = big = ImageFont.load_default()
 BOX = (172, 0, 672, 390)  # 844 × 390 가운데 (머리 둘레)
 SC = 0.5
+BOXES = {'game': (282, 40, 562, 390)}  # 게임 카메라(뒤 어깨 너머 · 멀리)는 가운데를 좁게 잘라 크게
+SCS = {'game': 0.72}
 VIEW = {'side': 'left side', 'q34': 'front-left 3/4', 'back': 'behind, over right shoulder', 'game': 'game camera'}
 for tag in tags:
     meta = json.load(open(f'{D}/{tag}_frames.json'))
@@ -39,7 +41,8 @@ for tag in tags:
     title = f"{name} - chest gap {inf['gap']} m - at {inf['at']}"
     stat = f"min arm-head gap {S['minArm']:.2f} m · min hand-head centre {S['minHandHead']:.2f} m · deepest wrist behind head centre {S['deepestBehind']:.2f} m · hilt-side vs own head {S['minHilt']:.2f} m · result {S['result']}"
     for view in [v for v in ('game', 'side', 'q34', 'back') if os.path.exists(f"{D}/{tag}_{v}_{pick[0]['k']}.png")]:
-        tw, th = int((BOX[2] - BOX[0]) * SC), int((BOX[3] - BOX[1]) * SC)
+        bx, sc = BOXES.get(view, BOX), SCS.get(view, SC)
+        tw, th = int((bx[2] - bx[0]) * sc), int((bx[3] - bx[1]) * sc)
         cols = min(len(pick), 7)
         rows = (len(pick) + cols - 1) // cols
         top, lab = 42, 30
@@ -48,7 +51,7 @@ for tag in tags:
         d.text((6, 4), f'{title} - {VIEW.get(view, view)} view', fill=(255, 220, 120), font=big)
         d.text((6, 23), stat, fill=(200, 200, 200), font=font)
         for i, s in enumerate(pick):
-            im = Image.open(f"{D}/{tag}_{view}_{s['k']}.png").convert('RGB').crop(BOX).resize((tw, th))
+            im = Image.open(f"{D}/{tag}_{view}_{s['k']}.png").convert('RGB').crop(bx).resize((tw, th))
             x, y = (i % cols) * tw, top + (i // cols) * (th + lab)
             out.paste(im, (x, y))
             ph = 'pre (before fire)' if s.get('pre') else (s.get('ph') or 'after')

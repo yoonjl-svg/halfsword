@@ -1238,7 +1238,7 @@ function comboNext(f, I) {
     span *= k;
     I.slide.span = span;
   } else if (I.slide && I.slide.slide < 0 && !I.slide.keep) I.slide.span = Math.max(1e-3, span); // 물러남(10/12 3 연격 마지막 수) · keep = 길을 짤 때 정한 span 그대로(죽음의 일격 머리 뚫음 막기 반걸음 — 10/31 시제품 · 기본 끔): 그 수 시간 내내 뒤로 — 벰은 옆으로 가로질러 칼끝 길은 그대로 둔다
-  else if (I.slide) I.slide.span = Math.max(1e-3, span * SECRET.iaiSlideShare); // 패드 길: 그 수 시간의 발도와 같은 몫 안에 (10/12 01:1x 그대로)
+  else if (I.slide && !I.slide.keep) I.slide.span = Math.max(1e-3, span * SECRET.iaiSlideShare); // 패드 길: 그 수 시간의 발도와 같은 몫 안에 (10/12 01:1x 그대로) · keep = 길을 짤 때 정한 span 그대로(죽음의 일격 폼멜 찍기 반걸음 — 10/31 시제품)
   return true;
 }
 
@@ -1449,7 +1449,7 @@ function comboPlanMord(f, I, m, A) {
   let cur = A;
   const push = (B, cut, rg = null) => {
     const sg = { cut, A: cur, B };
-    sg.T = rg ? rg.T : comboSegLen(f, sg, Lp) / I.v;
+    sg.T = rg ? rg.T : (M.pommel ? Math.max(comboSegLen(f, sg, Lp), comboSegLen(f, sg, 0)) : comboSegLen(f, sg, Lp)) / I.v; // 폼멜 찍기: 폼멜 끝 길이 짧아(손이 0.4 m 드는데 0.02 s) 손 길이 쪽으로
     if (rg) sg.rg = rg;
     segs.push(sg);
     cur = B;
@@ -1576,6 +1576,18 @@ function mordClipPlan(f, I, pts, base, k, w, P, r) {
   let sol = mordClipSolve(f, I, base, k, w, P, r);
   let s = Math.min(SECRET.mord.clipStep ?? 0, Math.max(0, sol.short));
   let e = null;
+  let dir = -1; // −1 = 뒤로(못 옮긴 몫) · +1 = 앞으로(폼멜 찍기 — 팔이 안 닿는 몫)
+  if (I.mord.pommel && s <= 1e-3) {
+    // 폼멜 찍기 (10/31 시제품): 옮긴 길의 겨눈 자리 손이 칼 어깨에서 팔 길이(comboArmLen) 밖이면 그만큼 앞으로 반걸음(clipStep 까지 · 같은 미끄러짐 틀)
+    const Q = comboLerp({ A: base[k], B: base[k + 1] }, w);
+    const H = Q.H.clone().add(sol.d);
+    const S = comboShoulder(f, I.yaw);
+    const need = H.distanceTo(S) - comboArmLen();
+    if (need > 1e-3) {
+      s = Math.min(SECRET.mord.clipStep ?? 0, need);
+      dir = 1;
+    }
+  }
   if (s > 1e-3 && f.foe) {
     const c = f.bodies.chest.translation();
     const fc = f.foe.bodies.chest.translation();
@@ -1584,15 +1596,16 @@ function mordClipPlan(f, I, pts, base, k, w, P, r) {
     const dl = Math.max(1e-3, Math.hypot(dx, dz));
     dx /= dl;
     dz /= dl;
-    if (Math.hypot(c.x - dx * s, c.z - dz * s) > ARENA.radius) s = Math.max(0, Math.min(s, ARENA.radius - Math.hypot(c.x, c.z))); // 경기장 테두리 (comboMoveStart 물러남과 같은 규칙)
+    if (dir < 0 && Math.hypot(c.x - dx * s, c.z - dz * s) > ARENA.radius) s = Math.max(0, Math.min(s, ARENA.radius - Math.hypot(c.x, c.z))); // 경기장 테두리 (comboMoveStart 물러남과 같은 규칙)
+    if (dir > 0) s = Math.min(s, Math.max(0, dl - (f.swordArt?.measure?.clinch ?? 0) * 0.5)); // 앞으로는 상대 몸을 뚫지 않게 (붙은 거리의 반까지)
     if (s > 1e-3) {
       e = new THREE.Vector3(dx, 0, dz).applyQuaternion(I.yaw.clone().invert()); // 몸 틀에서 상대 쪽 (물러나면 상대 머리가 이쪽으로 s 만큼 멀어짐)
-      I.slide = { dx, dz, slide: -s, t0: I.t, span: 1, done: 0, keep: true }; // span 은 길을 다 짠 뒤 (comboPlanMord 끝)
-      sol = mordClipSolve(f, I, base, k, w, P.clone().addScaledVector(e, s), r);
+      I.slide = { dx, dz, slide: dir * s, t0: I.t, span: 1, done: 0, keep: true }; // span 은 길을 다 짠 뒤 (comboPlanMord 끝)
+      sol = mordClipSolve(f, I, base, k, w, P.clone().addScaledVector(e, -dir * s), r);
     } else s = 0;
   } else s = 0;
   mordClipPut(pts, base, sol);
-  return { base, k, w, r, s, e, short0: sol.short, d0: sol.d.clone(), tilt: (2 * Math.acos(Math.min(1, Math.abs(sol.q.w))) * 180) / Math.PI };
+  return { base, k, w, r, s, e, dir, short0: sol.short, d0: sol.d.clone(), tilt: (2 * Math.acos(Math.min(1, Math.abs(sol.q.w))) * 180) / Math.PI };
 }
 
 /**
@@ -1619,8 +1632,8 @@ function mordTrack(f, I) {
   const C = I.mord.clip;
   if (C) {
     // 내 머리 뚫음 막기 (10/31 시제품 · 기본 끔): 같은 셈(묶음 · 기울임)을 그때 머리로 — 남은 반걸음만큼 상대 머리를 멀리 둔 자리(물러난 뒤의 자리)로 겨눔
-    const rem = C.e && I.slide?.keep ? C.s + I.slide.done : 0;
-    const sol = mordClipSolve(f, I, T.base, T.k, T.w, rem > 0 ? P.clone().addScaledVector(C.e, rem) : P, T.r);
+    const rem = C.e && I.slide?.keep ? C.s - Math.abs(I.slide.done) : 0; // 남은 걸음 (뒤로면 상대 머리가 그만큼 멀어질 것 · 앞으로면 가까워질 것)
+    const sol = mordClipSolve(f, I, T.base, T.k, T.w, rem > 0 ? P.clone().addScaledVector(C.e, -(C.dir ?? -1) * rem) : P, T.r);
     T.moved += T.pts[0].H.distanceTo(T.base[0].H.clone().add(sol.d));
     mordClipPut(T.pts, T.base, sol);
     C.short = sol.short;
