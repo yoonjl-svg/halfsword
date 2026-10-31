@@ -540,7 +540,7 @@ export class Gait {
         this.fastSide = B.side;
         this.rhyTrail = !!PR;
         this.burstStep = true; // 부른 쪽(update ③)이 이 걸음의 발을 burstLeg 로 적는다
-        this.f.stamina?.burst(); // 기력: 박찬 걸음을 뗄 때 한 번 12 (STAMINA.pushCost — 설계안 §1 · docs/strike/stamina_import_2026-10-15.md). 기력 끔이면 아무 일도 없다
+        if (!B.free) this.f.stamina?.burst(); // 기력: 박찬 걸음을 뗄 때 한 번 12 (STAMINA.pushCost — 설계안 §1 · docs/strike/stamina_import_2026-10-15.md). 기력 끔이면 아무 일도 없다 · free = 죽음의 일격 강제 뒤 박차기(10/31 시제품 SECRET.mord.burstFree — 비기 값에 든 것으로)
         // 발 뜬 시간은 절대값 burstT(그 걸음 제 시간보다 길게는 안 함) — 몸 빠르기 배율로 나누면(÷ fastK) 걸음이 너무 짧아(0.15 s) 몸이 박찬 빠르기에 닿기 전에 걸음이 끝난다
         return Math.min(Tstep, GAIT.burstT);
       }

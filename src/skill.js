@@ -36,7 +36,7 @@ import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gil
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 이탈리아 거침없이 나아가 찌르기 — 상대 팔 늦춤 (흘림과 같은 장치, 10/22)
 import { requestSpin, spinAbort, spinCutPose, spinCap, spinHandRest, spinLid } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 (10/22 — 한 바퀴 도는 대본)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain, gnsBlockOf } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
-import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
+import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf, mordBurstTick } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
 
 const D2R = Math.PI / 180;
@@ -882,6 +882,7 @@ export class Skill {
     const g = f.gait;
     const ask = (o) => !!(g?.requestStep && g.active && g.requestStep(o));
     if (run.mord) mordStep(f, run); // 죽음의 일격: 넘어 들어감 규칙 창 (스위치 SECRET.mordOver — 기본 끔)
+    if (run.mord?.burst) mordBurstTick(f, run, dt); // 죽음의 일격 강제 뒤 박차기 (10/31 시제품 — SECRET.mord.burstBack · 기본 끔)
     if (run.stage === 'riso') {
       // 이탈리아 거침없이 나아가 찌르기: 탭 찌르기(updateThrust)가 도는 동안 비기 배율 — 끝나면 굳음 (SECRET.stiff.italian)
       if (this.tap || this.vitalRange) {

@@ -155,6 +155,11 @@ if (['aim', 'cut'].includes(params.get('mordTrackUntil'))) CONFIG.SECRET.mord.tr
 if (params.has('mordNoClip')) CONFIG.SECRET.mord.noSelfClip = +params.get('mordNoClip') ? 1 : 0;
 if (params.has('mordClipX') && Number.isFinite(+params.get('mordClipX'))) CONFIG.SECRET.mord.clipX = +params.get('mordClipX');
 if (params.has('mordClipStep') && +params.get('mordClipStep') >= 0) CONFIG.SECRET.mord.clipStep = +params.get('mordClipStep');
+// 죽음의 일격 자연스러운 쥠 바꿈 · 강제 뒤 박차기 · 폼멜 찍기 (10/31 08:xx 시제품 — 사장님 확인 전 · 기본 끔): `?mordRegrip=0.4` (실제 초) · `?mordBurst=1` · `?mordBurstFree=1` · `?mordPommel=1`
+if (params.has('mordRegrip') && +params.get('mordRegrip') >= 0) CONFIG.SECRET.mord.regrip = CONFIG.realS(+params.get('mordRegrip'));
+if (params.has('mordBurst')) CONFIG.SECRET.mord.burstBack = +params.get('mordBurst') ? 1 : 0;
+if (params.has('mordBurstFree')) CONFIG.SECRET.mord.burstFree = +params.get('mordBurstFree') ? 1 : 0;
+if (params.has('mordPommel')) CONFIG.SECRET.mord.pommel = +params.get('mordPommel') ? 1 : 0;
 //  가볍고 느림을 고칠 안 (10/22 밤 — 스위치 · 기본 끔 · 사장님 확인 전): `?mordKin=0.6` 운동학 길(칼자루 끝 = 고노센 칼끝 빠르기 몫) · `?mordAt=0.5` 쥔 자리 · `?mordAim=pull` 머리 겨눔 · `?mordPow=finish` 판정 × FINISH.power
 if (params.has('mordKin')) CONFIG.SECRET.mord.kin = Math.max(0, +params.get('mordKin') || 0);
 if (+params.get('mordAt') > 0) CONFIG.SECRET.mord.at = +params.get('mordAt');

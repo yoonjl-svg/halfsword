@@ -12,6 +12,14 @@ import { TRADITIONS } from '../../src/schools.js';
 const GAPS = (process.argv[2] || '0.5,0.6,0.7,0.8').split(',').map(Number);
 const GUARDS = (process.env.GUARDS || 'home,high,low').split(',');
 if (process.env.MORD_JSON) Object.assign(SECRET.mord, JSON.parse(process.env.MORD_JSON));
+// 10/31 08:xx 시제품: REGRIP=0.4(실제 초 — 쥠 바꿈) · BURST=1(강제 뒤 박차기) · BURSTFREE=1 · POMMEL=1(폼멜 찍기) · NOCLIP=1 · CLIPSTEP=
+{ const { realS } = await import('../../src/config.js');
+  if (process.env.REGRIP) SECRET.mord.regrip = realS(+process.env.REGRIP);
+  if (process.env.BURST) SECRET.mord.burstBack = +process.env.BURST;
+  if (process.env.BURSTFREE) SECRET.mord.burstFree = +process.env.BURSTFREE;
+  if (process.env.POMMEL) SECRET.mord.pommel = +process.env.POMMEL;
+  if (process.env.NOCLIP) SECRET.mord.noSelfClip = +process.env.NOCLIP;
+  if (process.env.CLIPSTEP) SECRET.mord.clipStep = +process.env.CLIPSTEP; }
 const TRACE = !!process.env.TRACE;
 class Still {
   constructor(me) { this.me = me; }
@@ -71,13 +79,18 @@ for (const gap of GAPS) for (const gd of GUARDS) {
     const gp = new THREE.Vector3(0, P.mordGrip ? P.mordGrip.g : 0, 0).applyQuaternion(sq).add(sp); // 칼 든 손이 쥔 자리
     const swH = segDist(pom, gp, hd) - headR - 0.02, swT = segDist(gp, tip, hd) - headR - 0.02; // 칼자루 쪽(손 → 폼멜 끝 — 치는 막대) · 칼끝 쪽(손 → 칼끝 — 내 쪽으로 남는 꼬리)
     // 옮김 delta (몸 틀): 시작 자세(옮긴 뒤 — segs[0].B) − home(다시 세우기 끝 — 옮기기 전 시작 자세)
-    const s0 = I.segs[0]?.B, sh = I.segs.find((sg) => sg.B.back)?.B;
+    const s0 = I.mord.start ?? I.segs[0]?.B, sh = I.mord.home ?? I.segs.find((sg) => sg.B.back)?.B;
     const delta = s0 && sh && !I.mordBacked ? s0.H.clone().sub(sh.H) : null;
     if (delta && row.d0 == null) { row.d0 = delta.clone(); plan = { start: s0.H.clone(), home: sh.H.clone(), headC: hd.clone().sub(c).applyQuaternion(yi) }; }
     if (delta && (!row.dMax || delta.length() > row.dMax.length())) row.dMax = delta.clone();
     const t = G.t - tFire;
     const segI = I.si, cut = !!I.segs[I.si]?.cut, back = !!I.segs[I.si]?.B?.back;
-    const ph = back ? 'back' : cut ? 'cut' : 'wind';
+    const rgS = I.segs[I.si]?.rg;
+    const ph = rgS ? (rgS.in ? 'grip' : 'gripOut') : back ? 'back' : cut ? 'cut' : 'wind';
+    row.st0 ??= P.stamina.value; row.stMin = Math.min(row.stMin ?? Infinity, P.stamina.value); row.push0 ??= P.stamina.counts?.push ?? 0;
+    row.c0 ??= c.clone(); row.backMax = Math.max(row.backMax ?? 0, -c.clone().sub(row.c0).applyQuaternion(yi).x); // 내 가슴이 뒤로 간 거리 (몸 틀 · m)
+    if (P.state !== 'stand') row.fell = P.state;
+    if (ph === 'cut' && row.cutT == null) row.cutT = +t.toFixed(3);
     const lS = L(wS), lO = L(wO), lE = L(elS);
     if (arm < row.minArm) { row.minArm = arm; row.minArmAt = { t: +t.toFixed(3), ph, part: armPart, wristS: f3(lS), wristO: f3(lO) }; }
     if (sw < row.minSword) { row.minSword = sw; row.minSwordAt = { t: +t.toFixed(3), ph }; }
@@ -88,6 +101,8 @@ for (const gap of GAPS) for (const gd of GUARDS) {
     if (TRACE) console.log(`t${t.toFixed(3)} ${ph.padEnd(4)} seg${segI} wristS(head) ${f3(lS)} wristO ${f3(lO)} elbowS ${f3(lE)} arm-head ${f2(arm)} ${armPart} sword-head ${f2(sw)} (hilt ${f2(swH)} tip ${f2(swT)}) delta ${delta ? f3(delta) + ' |' + f2(delta.length()) : '-'}`);
   }
   const R = P.instantResult ?? {};
+  for (let i = 0; i < Math.round(1.0 / DT); i++) { G.step(); if (P.state !== 'stand') row.fell = P.state; } // 끝난 뒤 1 s — 넘어짐
+  row.stEnd = +P.stamina.value.toFixed(1); row.pushN = (P.stamina.counts?.push ?? 0) - (row.push0 ?? 0); row.st0 = +(row.st0 ?? 0).toFixed(1); row.stMin = +(row.stMin ?? 0).toFixed(1); row.backMax = +(row.backMax ?? 0).toFixed(3); delete row.c0; delete row.push0;
   rows.push({ ...row, dt: DT, clipT: +(row.clipSteps * DT).toFixed(3), minArm: +row.minArm.toFixed(3), minSword: +row.minSword.toFixed(3), minHiltSide: +row.minHiltSide.toFixed(3), minTipSide: +row.minTipSide.toFixed(3), behindS: +row.behindS.toFixed(3), behindO: +row.behindO.toFixed(3), behindElbow: +row.behindElbow.toFixed(3),
     d0: row.d0 ? f3(row.d0) + ' |' + f2(row.d0.length()) : null, dMax: row.dMax ? f3(row.dMax) + ' |' + f2(row.dMax.length()) : null, plan: plan ? { start: f3(plan.start), home: f3(plan.home), myHead: f3(plan.headC) } : null,
     hit: !!R.hit, part: R.part ?? null, wPart: R.wPart ?? null, pullD: R.pullD != null ? +R.pullD.toFixed(3) : null, clip: R.clip ?? null, hits: hits.join(' ') });
