@@ -10,7 +10,7 @@
 //  실행: 빌드(vite build --outDir <폴더>) → vite preview --outDir <폴더> --port <빌드 포트> & · 개발 서버(배우기만 — 파일 감시 끈 설정) --port <개발 포트> &
 //        node tools/browser/gonosen_window_probe.mjs http://127.0.0.1:<빌드 포트> http://127.0.0.1:<개발 포트> [결과 json (기본 .tmp/gns_window/probe.json)]
 //   환경: CROUCH(1,0 — ?gnsCrouch=) · SCEN(none,stick,sword,both,play) · DUR(40 게임 초 한 판) · K(0.2) · FIRE(0 — 1 이면 창에서 그어 냄) · REACT(0.25 실제 초)
-//         STICKOFF(4 px) · DRIFT(4 px) · JIT(0.6 px) · EXTRA(주소 덧붙임) · WEAPON(uchigatana) · FOE(longsword) · NODRAW(1 — 그리기 건너뜀 · 0 = 그림)
+//         STICKOFF(4 px) · DRIFT(4 px) · JIT(0.6 px) · EXTRA(주소 덧붙임) · WEAPON(uchigatana) · FOE(longsword) · NODRAW(1 — 그리기 건너뜀 · 0 = 그림) · SHOT(그림 앞 이름 — 준비 · 첫 창 한 장씩)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 const base = process.argv[2] || 'http://127.0.0.1:5872';
@@ -29,7 +29,8 @@ const JIT = +(E.JIT ?? 0.6);
 const EXTRA = E.EXTRA || '';
 const WEAPON = E.WEAPON || 'uchigatana';
 const FOE = E.FOE || 'longsword';
-const NODRAW = E.NODRAW !== '0'; // 기본 그리지 않음 (재기만 — 그림이 필요하면 NODRAW=0)
+const NODRAW = E.NODRAW !== '0';
+const SHOT = E.SHOT || ''; // 그림 앞 이름 (예 .tmp/gns_window/shot) — 준비 1 s 뒤 · 첫 창 // 기본 그리지 않음 (재기만 — 그림이 필요하면 NODRAW=0)
 const W = 844, H = 390;
 fs.mkdirSync(outFile.replace(/\/[^/]*$/, ''), { recursive: true });
 const browser = await chromium.launch({ executablePath: E.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
@@ -164,11 +165,22 @@ async function run(crouch, scen) {
   if (useStick) { thumbDown = true; await touch('touchStart', pts(g0)); }
   if (useSword) { fingerDown = true; await touch('touchStart', pts(g0)); }
   let due = null, seen = 0, fired = 0, lastLog = g0;
+  const shot = { armed: false, open: false, armT: null };
   const w0 = Date.now();
   for (;;) {
     await sleep(Math.max(8, 16 / K));
     const s = await st();
     if (!s.fight || s.T - g0 > DUR) break;
+    // SHOT: 준비가 켜지고 1 게임 초 뒤 한 장 (그 동안만 그림 — NODRAW 여도) · 창이 열린 첫 때 한 장
+    if (SHOT && ((s.armed && !shot.armed && (shot.armT ??= s.T) + 1.0 <= s.T) || (s.open && !shot.open))) {
+      const k = s.open ? 'open' : 'armed';
+      shot[k] = true;
+      await page.evaluate(() => { window.__timeK = 0; window.__draw = true; });
+      await sleep(1500);
+      await page.screenshot({ path: `${SHOT}_${crouch}_${scen}_${k}.png` });
+      await page.evaluate((k0) => { window.__draw = false; window.__timeK = k0; }, K);
+    }
+    if (!s.armed) shot.armT = null;
     if (s.T - lastLog > 5) { lastLog = s.T; console.log(`  … ${crouch}/${scen} T ${(s.T - g0).toFixed(1)} armed ${s.armed} opened ${s.opened} d ${s.d.toFixed(2)} wall ${((Date.now() - w0) / 1000).toFixed(0)} s`); }
     // play: 멀면 스틱으로 다가감(엄지를 스틱 위로 · 가슴 사이가 발도 선 + 0.6 m 안이 될 때까지) · 그 뒤 엄지를 뗌
     if (scen === 'play') {
