@@ -301,8 +301,10 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
   assert.equal(body(on).length, 0, JSON.stringify(on.it.knock));
   const sf = UA.cavSelfFree;
   const sm = UA.cavSpeedMul;
+  const bn = CONFIG.BIND.natural;
   UA.cavSelfFree = 0;
   UA.cavSpeedMul = 1; // 전 판 넘어짐 재현은 고칠 때의 빠르기(× 1 — 10/31 18:xx 기본 × 1.2 전)로: 판이 달라지면 씨앗 902 의 그 수가 안 나옴
+  CONFIG.BIND.natural = 0; // 같은 까닭으로 고칠 때의 칼 물리(자연 바인드 끔 — 10/31 19:xx 본판 전)로 (켜면 칼끼리 덜 튕겨 씨앗 902 의 그 수 · 넘어짐이 안 나옴)
   try {
     const b = watch();
     const off = fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: b.probe });
@@ -311,6 +313,7 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
   } finally {
     UA.cavSelfFree = sf;
     UA.cavSpeedMul = sm;
+    CONFIG.BIND.natural = bn;
   }
 });
 
