@@ -2,7 +2,7 @@
 //  실제 빌드(주소 판 ?weapon=<무기>&stage=poseidon&foe=heinrich · 844 × 390 · CDP 터치)에서 상대 AI 를 멈추고 사람 몸 겨눔을 장면마다 잰다(가슴 틀 [앞, 위, 칼 든 쪽] 두 손 · 팔꿈치 각 · 칼 올림/방위 ·
 //   쉼 무게 bodyPose.idle · handHeld · handGrip) · 그림 셋(게임 카메라 뒤 · 옆 · 앞 — 멈춤 KeyP 동안).
 //  장면: idle(손 뗌) · rest(엄지를 얹고 2 s — 안 끔: 사장님 화면) · drag(40 px 천천히 끈 뒤 댄 채 1.5 s) · swipeRest(가로 긋고 곧 다시 얹어 2.5 s) ·
-//   wind(얹고 1.6 s — 풍차 베기 감기 · 떼고 1.5 s 뒤 서 있나, 그림 없음) · pad:x:y(패드를 그 자리에 놓고 손 뗌)
+//   jitter(얹은 엄지가 ±1 px 떨고 4 px 까지 떠돎 2 s) · wind(얹고 1.6 s — 풍차 베기 감기 · 떼고 1.5 s 뒤 서 있나, 그림 없음) · pad:x:y(패드를 그 자리에 놓고 손 뗌)
 //  실행 (자기 포트): npx vite build && npx http-server dist -p 4472 -s &
 //        node tools/browser/guard_arms_shots.mjs http://127.0.0.1:4472 zweihander after idle,rest,drag,swipeRest [주소 덧붙임 예 restTouch=0] [그림 폴더 (기본 .tmp/shots)]
 //  끝 줄 = JSON { tag, weapon, extra, out: [장면마다 수], errors(콘솔 · 페이지 오류 — 404 빼고) }
@@ -79,6 +79,12 @@ for (const sc of scenes) {
   if (sc === 'idle') { await waitSim(1.0); out.push({ sc, ...(await probe()) }); await views(sc); continue; }
   if (sc === 'rest') {
     await touch('touchStart', x, y); await waitSim(2.0);
+    out.push({ sc, ...(await probe()) }); await views(sc); await touch('touchEnd'); await waitSim(1.5); continue;
+  }
+  if (sc === 'jitter') { // 얹은 엄지 떨림 · 떠돎 (±1 px 흔들림 + 4 px 까지 떠돎 — 확인표 3154 실측 꼴) 2 s
+    await touch('touchStart', x, y);
+    const t0 = await simNow();
+    for (let i = 0; (await simNow()) < t0 + 2.0; i++) { await touch('touchMove', x + (i % 2 ? 1 : -1) + Math.min(4, i * 0.1), y + (i % 3) - 1); await page.waitForTimeout(50); }
     out.push({ sc, ...(await probe()) }); await views(sc); await touch('touchEnd'); await waitSim(1.5); continue;
   }
   if (sc === 'wind') {
