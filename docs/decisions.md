@@ -2870,4 +2870,4 @@
 - 메기 `rdWindMode` 'load'(오른 어깨에 메어 칼끝이 머리 뒤 · 땅 쪽 −32°) · 내려침 `rdRelease` 'tajo' 60°(감독 추천 — 45 · 60 · 75 · 90 · 옛 판 견줌) · 정수리 겨눔 · 드는 몫 × 2(뗌 → 벰 0.098 s — 옛 판 0.106) · 빠르기 0.3 · 상한 0.4 s 그대로 · 흐름 `windmillChain` 0 · `windmillApart` 1(B4 는 사슬을 세지도 늘이지도 끊지도 않음) · AI 도 같은 꼴(`rdAiOld` 0 — 관문 그대로) · 옛 판 `?b4Old=1`.
 - 재기: 메기 · 내려침 팔 ↔ 머리 뚫음 0(옛 내려침 −2 cm 뚫음) · 휘청 · 넘어짐 0 · 첫 상처 머리 · 싸움 48 판 B4 맞음 68 %(옛 판 44 %) · 막힘 6(32) · 옆걸음 하며 뗌 55 %(42 %).
 - 이름 · 오의(피 복ⅩⅤ altibaxo [풀이]) · 효과 글 초안(검수 전 — '칼을 어깨에 메었다가 정수리를 비스듬히 내려 가른다') · 열쇠 redondo · rd* 그대로.
-- 관문: fights12 768085f3 · live_battery e8127a92 · finish_thrust ad302969 · corr 12/12 · smoke 34/34 그대로. 기록 `docs/strike/b4_rework_2026-10-31.md` · 그림 `docs/handoff/b4_rework_2026-10-31/` · 확인표 3290 ~ 3300.
+- 관문: fights12 768085f3 · live_battery e8127a92 · finish_thrust ad302969 · corr 12/12 · smoke 34/34 그대로 · 시험 622 / 622 · school_ai_fights 86ad3e8d → f9e3f4c2(AI 새 꼴 — `rdAiOld=1` 이면 그대로 · 사장님 확인 전). 기록 `docs/strike/b4_rework_2026-10-31.md` · 그림 `docs/handoff/b4_rework_2026-10-31/` · 확인표 3290 ~ 3300.
