@@ -3,7 +3,7 @@
 //  ② 칼끝 돌려 빼기 한 번: 판(레이피어 · 상대 이졸데 롱소드 · ?skillNodes=all · 상대 AI 그대로) — 조이스틱(CDP)으로 걸어 들어가 막기 단추(CDP 손가락 1)를 쥐고 받다가
 //     칼끼리 닿음(touchTick — 막고 서 있다 닿음)이 열리면 실제 0.45 s 뒤 칼 쪽 화면 탭(CDP 손가락 2 — 막기 쥔 채) → 나감 · 그 순간 그림
 //  ③ 비껴서며 찌르기 한 번: 같은 판 · 상대 AI 그대로(공격해 옴) · 위협이 읽히면 조이스틱(CDP 손가락 1)을 옆으로 밀고 칼 쪽 화면 탭(CDP 손가락 2 — touchMove 로 더하고 뺌) → 나감 · 잔상 그림
-//  ④ 내려 찌르기: 같은 판 · 상대 세움 · 손가락 긋기(CDP 터치 끌기 — 실제 손 빠르기) ↓ · ↙ · ↘ 를 높이 · 가운데 · 낮게 시작해 각 4 번 + 수평 · 올려 긋기 견줌 → 내려 찌르기로 읽힌 수
+//  ④ 내려 찌르기: 같은 판 · 상대 세움 · 손가락 긋기(CDP 터치 끌기 — 게임 화면 박자마다 한 번 움직임) ↓ · ↙ · ↘ 를 높이 · 가운데 · 낮게 시작해 각 DOWN_REP(2) 번 + 수평 ← · 올려 ↑ 견줌 → 내려 찌르기로 읽힌 수
 //  실행: npm run build → (cd dist && python3 -m http.server 5631) &  node tools/browser/italian_swap_shots.mjs http://127.0.0.1:5631 docs/handoff/italian_swap_2026-10-31
 import { chromium } from 'playwright';
 import fs from 'node:fs';
@@ -71,7 +71,7 @@ if (ONLY.includes('tree')) {
 }
 
 /** 판 열기 (터치 기기 · 이탈리아 칸 모두) */
-async function fight(name) {
+async function fight(name, gap = 2.0) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
   await ctx.route('https://*.supabase.co/**', (r) => r.abort());
   const p = await ctx.newPage();
@@ -79,6 +79,7 @@ async function fight(name) {
   p.on('console', (m) => { if (m.type() === 'error' && !/supabase|Failed to load resource/.test(m.text())) errors.push(`${name} ${m.text()}`); });
   await p.goto(`${base}/?weapon=rapier&foe=isolde&foeWeapon=longsword&skillNodes=all&slowMo=0`, { waitUntil: 'networkidle' });
   await p.waitForFunction(() => window.game?.player?.sword, null, { timeout: 180000 });
+  await p.evaluate((g) => { window.game.config.ARENA.startGap = g; window.game.config.ARENA.startHold = 0; }, gap); // 가슴 사이 gap 에서 시작 (이 상자는 브라우저 물리가 아주 느려 — 걸어 들어갈 시간을 아낌 · cavazione_probe 와 같은 손)
   await p.getByText('여정 시작').tap();
   await p.waitForFunction(() => window.game.state === 'fight' && window.game.playerUnique, null, { timeout: 180000 });
   await p.waitForFunction(() => !window.game.player.openHold && window.game.stats.simTime > 1.5, null, { timeout: 180000 });
@@ -89,6 +90,8 @@ async function fight(name) {
   const stickBox = await p.locator('#moveStick').boundingBox();
   const S0 = { x: stickBox.x + stickBox.width / 2, y: stickBox.y + stickBox.height / 2, id: 1 };
   const sim = () => p.evaluate(() => window.game.stats.simTime);
+  /** 물리가 n 스텝 넘게 갈 때까지 (손가락 움직임을 게임 화면 박자에 맞춤 — 느린 상자에서 한 화면에 끌기가 몰리지 않게) */
+  const frame = async (n = 2) => { const t0 = await sim(); await p.waitForFunction(([t, dt]) => window.game.stats.simTime >= t + dt, [t0, n * (1 / 120)], { timeout: 120000, polling: 'raf' }); };
   const waitSim = async (s) => { const t0 = await sim(); await p.waitForFunction((t) => window.game.stats.simTime >= t, t0 + s, { timeout: 120000, polling: 'raf' }); };
   /** 조이스틱 손가락으로 걸어 들어감 (가슴 사이 gap 까지) */
   const walkIn = async (gap) => {
@@ -97,30 +100,29 @@ async function fight(name) {
     try { await p.waitForFunction((g) => window.game.player.foeDistance() <= g, gap, { timeout: 60000, polling: 'raf' }); } catch { /* 벽 · 상대가 물러섬 */ }
     await touch('touchEnd', []);
   };
-  return { ctx, p, cdp, touch, tap, TAP, S0, stickBox, sim, waitSim, walkIn };
+  return { ctx, p, cdp, touch, tap, TAP, S0, stickBox, sim, waitSim, walkIn, frame };
 }
 
 // ── ② 칼끝 돌려 빼기 ── (상대 AI 그대로 — 공격해 옴 · 막기 단추(CDP 손가락 1)를 쥐고 받다가 칼끼리 닿으면 실제 0.45 s 뒤 칼 쪽 화면 탭(CDP 손가락 2 — 막기 쥔 채 · cavHeld))
 if (ONLY.includes('cav')) {
-  const F = await fight('cav');
+  const F = await fight('cav', 1.9);
   const { p, touch, TAP } = F;
   await p.evaluate(() => { const g = window.game; g.player.applyWound = () => {}; });
   const bp = await p.locator('#btnParry').boundingBox();
   const P1 = { x: bp.x + bp.width / 2, y: bp.y + bp.height / 2, id: 1 };
-  await F.walkIn(1.9);
   let res = null;
-  for (let k = 0; k < 30 && !res; k++) {
+  for (let k = 0; k < 12 && !res; k++) {
     const n0 = await p.evaluate(() => window.game.playerUnique.stats.fired.cavazione ?? 0);
     await touch('touchStart', [P1]); // 막기 단추를 쥠
     let C = null;
-    try { C = await p.waitForFunction(() => { const u = window.game.playerUnique, T = u.touch; return T && !T.cut && !T.cavSpent && u.t - T.t1 < 0.1 ? { t0: T.t0 } : null; }, null, { timeout: 8000, polling: 'raf' }).then((h) => h.jsonValue()); } catch { /* 안 닿음 */ }
+    try { C = await p.waitForFunction(() => { const u = window.game.playerUnique, T = u.touch; return T && !T.cut && !T.cavSpent && u.t - T.t1 < 0.1 ? { t0: T.t0 } : null; }, null, { timeout: 180000, polling: 'raf' }).then((h) => h.jsonValue()); } catch { /* 안 닿음 */ }
     if (C) {
-      await p.waitForFunction((t0) => window.game.playerUnique.t - t0 >= 0.45 * 1.1, C.t0, { timeout: 10000, polling: 'raf' }).catch(() => {}); // 닿음 처음부터 실제 0.45 s
+      await p.waitForFunction((t0) => window.game.playerUnique.t - t0 >= 0.45 * 1.1, C.t0, { timeout: 120000, polling: 'raf' }).catch(() => {}); // 닿음 처음부터 실제 0.45 s
       const t1 = await p.evaluate(() => window.game.playerUnique.t);
       await touch('touchMove', [P1, TAP]); // 막기를 쥔 채 둘째 손가락 탭
       await p.waitForTimeout(50);
       await touch('touchMove', [P1]);
-      const ok = await p.waitForFunction((n) => (window.game.playerUnique.stats.fired.cavazione ?? 0) > n, n0, { timeout: 1500, polling: 'raf' }).then(() => true, () => false);
+      const ok = await p.waitForFunction((n) => (window.game.playerUnique.stats.fired.cavazione ?? 0) > n, n0, { timeout: 60000, polling: 'raf' }).then(() => true, () => false);
       if (ok) {
         await p.waitForFunction(() => !!window.game.player.iai, null, { timeout: 3000, polling: 'raf' }).catch(() => {});
         await shot(p, 'cav_fire_844x390');
@@ -138,14 +140,13 @@ if (ONLY.includes('cav')) {
 
 // ── ③ 비껴서며 찌르기 ──
 if (ONLY.includes('inq')) {
-  const F = await fight('inq');
+  const F = await fight('inq', 2.0);
   const { p, touch, S0, stickBox, TAP } = F;
   await p.evaluate(() => { const g = window.game; g.player.applyWound = () => {}; window.inqLog = []; });
-  await F.walkIn(2.0);
   let res = null;
-  for (let k = 0; k < 40 && !res; k++) {
+  for (let k = 0; k < 12 && !res; k++) {
     // 상대 칼이 들어오는 걸 막기 단추 눈(위협)으로 기다림
-    try { await p.waitForFunction(() => window.game.playerGuard.noThreat === 0, null, { timeout: 15000, polling: 'raf' }); } catch { continue; }
+    try { await p.waitForFunction(() => window.game.playerGuard.noThreat === 0, null, { timeout: 240000, polling: 'raf' }); } catch { continue; }
     const n0 = await p.evaluate(() => window.game.playerUnique.stats.fired.inquartata ?? 0);
     const side = k % 2 ? -1 : 1;
     const S1 = { ...S0, x: S0.x + side * stickBox.width * 0.45 };
@@ -154,7 +155,8 @@ if (ONLY.includes('inq')) {
     await touch('touchMove', [S1, TAP]); // 둘째 손가락 — 칼 쪽 화면 탭
     await p.waitForTimeout(50);
     await touch('touchMove', [S1]);
-    const ok = await p.waitForFunction((n) => (window.game.playerUnique.stats.fired.inquartata ?? 0) > n, n0, { timeout: 1500, polling: 'raf' }).then(() => true, () => false);
+    const ok = await p.waitForFunction((n) => (window.game.playerUnique.stats.fired.inquartata ?? 0) > n, n0, { timeout: 60000, polling: 'raf' }).then(() => true, () => false);
+    if (!ok) say(`  비껴서며 찌르기 시도 ${k} 안 나감 ${JSON.stringify(await p.evaluate(() => { const g = window.game; return { nt: +g.playerGuard.noThreat.toFixed(3), sx: g.player.stickX, tap: !!g.player.skill.tap, cool: g.playerUnique.coolLeft('inquartata'), early: g.playerUnique.stats.tapEarly ?? 0, fired: g.playerUnique.stats.fired }; }))}`);
     if (ok) {
       await p.waitForFunction(() => !!window.game.player.iai, null, { timeout: 3000, polling: 'raf' }).catch(() => {});
       await p.waitForTimeout(60);
@@ -173,18 +175,17 @@ if (ONLY.includes('inq')) {
 
 // ── ④ 내려 찌르기 (손가락 긋기) ──
 if (ONLY.includes('down')) {
-  const F = await fight('down');
+  const F = await fight('down', 1.7);
   const { p, touch } = F;
   await p.evaluate(() => { const g = window.game; g.ai.update = () => { g.enemy.move.set(0, 0); g.enemy.handOffset.set(0, -0.45); }; g.player.applyWound = () => {}; g.enemy.applyWound = () => {}; });
-  await F.walkIn(1.7);
   // 화면 끌기 → 손 목표 (input.js: 화면 픽셀 → 패드 m — 화면 높이 기준) · 시작 자리로 천천히 옮긴 뒤(휘두르기 문턱 밑) 멈추고 실제 손 빠르기로 긋기
   const pxPerPad = await p.evaluate(() => { const g = window.game; return g.config.INPUT?.touchPx ?? null; });
   const cx = W * 0.62, cy = H * 0.5;
   const K = 380; // 패드 m 당 화면 px (대략 — 끌기 길이만 가늠)
   const STARTS = { high: 0.28, mid: 0.06, low: -0.18 };
-  const DIRS = { '↓': [0, -1], '↙': [-0.7071, -0.7071], '↘': [0.7071, -0.7071], '←': [-1, 0], '↗': [0.7071, 0.7071], '↑': [0, 1] };
+  const DIRS = { '↓': [0, -1], '↙': [-0.7071, -0.7071], '↘': [0.7071, -0.7071], '←': [-1, 0], '↑': [0, 1] };
   const rows = [];
-  for (const [hn, hy] of Object.entries(STARTS)) for (const [dn, d] of Object.entries(DIRS)) for (let rep = 0; rep < (['↓', '↙', '↘'].includes(dn) ? 4 : 2); rep++) {
+  for (const [hn, hy] of Object.entries(STARTS)) for (const [dn, d] of Object.entries(DIRS)) for (let rep = 0; rep < (['↓', '↙', '↘'].includes(dn) ? +(process.env.DOWN_REP ?? 2) : 1); rep++) {
     await p.waitForFunction(() => !window.game.player.skill.tap && !window.game.player.iai, null, { timeout: 15000, polling: 'raf' }).catch(() => {});
     // 손을 시작 자리로 (느리게 · 손가락 한 번)
     const here = await p.evaluate(() => [window.game.player.handOffset.x, window.game.player.handOffset.y]);
@@ -192,14 +193,14 @@ if (ONLY.includes('down')) {
     const mv = [(sx - here[0]) * K, -(hy - here[1]) * K];
     let x = cx, y = cy;
     await touch('touchStart', [{ x, y, id: 3 }]);
-    for (let i = 1; i <= 24; i++) { await touch('touchMove', [{ x: x + (mv[0] * i) / 24, y: y + (mv[1] * i) / 24, id: 3 }]); await p.waitForTimeout(16); }
+    for (let i = 1; i <= 24; i++) { await touch('touchMove', [{ x: x + (mv[0] * i) / 24, y: y + (mv[1] * i) / 24, id: 3 }]); await F.frame(2); }
     x += mv[0]; y += mv[1];
-    await p.waitForTimeout(120);
+    await F.frame(12);
     const n0 = await p.evaluate(() => ({ imb: window.game.playerUnique.stats.fired.imbroccata ?? 0, strokes: window.game.playerUnique.stats.strokes }));
     const L = 0.34 * K; // 긋기 길이
-    for (let i = 1; i <= 9; i++) { await touch('touchMove', [{ x: x + (d[0] * L * i) / 9, y: y - (d[1] * L * i) / 9, id: 3 }]); await p.waitForTimeout(16); }
+    for (let i = 1; i <= 9; i++) { await touch('touchMove', [{ x: x + (d[0] * L * i) / 9, y: y - (d[1] * L * i) / 9, id: 3 }]); await F.frame(2); }
     await touch('touchEnd', []);
-    await p.waitForTimeout(400);
+    await F.frame(48);
     const n1 = await p.evaluate(() => ({ imb: window.game.playerUnique.stats.fired.imbroccata ?? 0, strokes: window.game.playerUnique.stats.strokes, last: window.game.playerUnique.last && { tech: window.game.playerUnique.last.tech, kind: window.game.playerUnique.last.kind, pad: window.game.playerUnique.last.pad, unique: window.game.playerUnique.last.unique } }));
     rows.push({ start: hn, dir: dn, imb: n1.imb > n0.imb, strokes: n1.strokes - n0.strokes, last: n1.last });
     if (rows.length === 1) await shot(p, 'down_first_844x390');
