@@ -2776,3 +2776,8 @@
 - ① **걸음 뜻 = 스틱이 몸을 걷게 할 때만** `SECRET.gnsStickWalk` 1(`src/secret.js` `gnsHumanMoving` — 가려는 빠르기 > `GAIT.walkMin` · 새 수 없음 · 사람 창 · AI 가 읽는 사람 준비 · `?gnsStickWalk=0` = 전 판 · 확인표 3200). 실제 빌드 CDP 터치: 얹은 엄지 약 9 px(스틱 0.10) 전 판 준비 0 → 켜짐 · 창 / 25 px 민 걸음은 그대로 준비 안 됨. 문턱 아래 앞 스틱은 몸을 천천히 밂(3202).
 - ② **① 자세 칸 '발도 대기'**(`src/secret_instant.js` `IAI_READY_STANCE` · `iaiReadyShown` → `src/main.js` `updateGuardName` — 칼이 왼 허리에 있는 동안 · 쥐면 보통 이름 · 3201). 이름은 저장소가 이 자세를 부르는 말(원어 출처 없음).
 - 그대로: AI 자기 준비(`gnsMoving`) · 스틱 데드존 · 걸음 · 다른 고노센 규칙 · 관문 다섯. 시험 ⑧ 더함 · 관문(올리기 없이 · ce704176 위) 이름 0 · fights12 768085f3 · live e8127a92 · ft ad302969 · corr 12 · smoke 34 · 빌드 0 · name_policy 0 그대로 · 시험 594 / 594(0 실패). 기록 `docs/strike/gonosen_window_2026-10-31.md` §10 · 확인표 3200 ~ 3203.
+
+### 10/31 13:5x 사장님 결정 — 풍차 베기 칼끝 빠르기 고노센의 0.3
+
+- 사장님: "근데 풍차베기가 너무 세긴 해. 거의 즉사 나던데?" → "잴 필요 없어. 배율을 0.5에서 0.3으로 낮춰."
+- 값: `UNIQUE_ASSIST.specialShare.redondo` 0.5 → 0.3 (칼끝 칼돌려 빼기 옛 몫과 같은 칸).

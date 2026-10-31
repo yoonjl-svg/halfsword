@@ -19,7 +19,7 @@ test('기본값 — 길게 누름 실제 0.6 s · 기력 초당 붙어 버티기
   assert.equal(UA.rdHold, 1);
   assert.ok(Math.abs(UA.rdHoldTime - realS(0.6)) < 1e-12); // 사장님 '0.6초'
   assert.equal(UA.rdDrain, STAMINA.clinchPerSecond);
-  assert.equal(UA.specialShare.redondo, 0.5); // 10/29 02:0x 사장님 '풍차베기는 50%' (전 싱지르 × 0.6 = 고노센 × 0.42)
+  assert.equal(UA.specialShare.redondo, 0.3); // 10/31 13:5x 사장님 '배율을 0.5에서 0.3으로 낮춰' (전 0.5) // 10/29 02:0x 사장님 '풍차베기는 50%' (전 싱지르 × 0.6 = 고노센 × 0.42)
   assert.ok(Math.abs(UA.rdSnapTime - realS(0.2)) < 1e-12);
   assert.ok(Math.abs(UA.specialCooldown - realS(3.0)) < 1e-12); // 10/29 19:5x 사장님 '특수공격 3초(발동이 완료된 시점부터)' (전 6 s · 나간 순간부터)
   assert.equal(UA.specialCoolFrom, 'free');
