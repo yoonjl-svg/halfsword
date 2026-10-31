@@ -537,7 +537,10 @@ export const SWING_TURN = { on: false, rate: 30, from: 'windup' };
 //  windmillChain = 풍차 베기(B4)와 사슬 (01:5x '한 바퀴 이상 돌렸을 때 한 번만' · 08:3x 사장님 'simple' 결정): 머리 위로 한 바퀴 넘게 돌린 뒤 낸 칼만 이어 그은 칼 하나로 셈 —
 //   'simple' = 늘 n 1(× 1.2) · 그 칼부터 새 사슬(앞 사슬과 상관없이 — 세 칼 셈도 풍차 베기를 1 번째로 다시 · 풍차 베기 칼은 기력 0 자리가 아님) · 'inside' = 이어 긋기 창 안에서 누르기 시작했으면(누르고 도는 동안 사슬이 안 끊김) 그 사슬의 다음 수 n + 1 · 밖이면 n 1 (사장님 확인 전 견줌 판) ·
 //   0 = 셈 없음 · `?ibWindChain=simple|inside|0`. 감는 동안 기력(rdDrain)은 그대로. 흐름이 끊긴 뒤 1.2 s 이어받기는 넣지 않음(여쭘 남음)
-export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps: 2, cutSpeed: 5, chainStack: 1, freeEvery: 3, windmillChain: 'simple' };
+//  windmillPower (10/31 14:xx 사장님 결정 '그럼 흐름보너스 주지 않는 대신 흐름의 첫 칼로는 인정하도록 해' — 확인표 3138): 0 = 풍차 베기 내려침 자체는 흐름 위력 없음(× 1.0 — 싱지르 같은 비기 칼이
+//   combat.js analyze 에서 빠지는 것과 같은 뜻) · 사슬 자리는 그대로(windmillChain 'simple' — 새 사슬의 첫 칼 · 다음 이은 긋기 n 2 × 1.4(B6) · 세 칼 셈도 풍차 베기가 1 번째) ·
+//   1 = 10/29 판(풍차 베기 칼도 이어 그은 칼 n 1 위력 × 1.2 · inside 판 n + 1) `?ibWindPower=1` (fighter.js ibFlowK)
+export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps: 2, cutSpeed: 5, chainStack: 1, freeEvery: 3, windmillChain: 'simple', windmillPower: 0 };
 // 이베리아 날 세우기 시험 (10/22 — 사장님 10/21 23:5x '이베리아 유파가 유독 칼면이 맞는 경우가 많았어 특히 수직베기에서', docs/strike/iberian_flat_hits_2026-10-22.md · 확인표 2167~ · **기본 끔 · 사장님 확인 전**).
 //  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
 //   다른 유파 · 무기는 그대로. 끄면(on false) 판 그대로(같은 float). `?ibEdge=motor` · `?ibEdge=pre` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=ibEdge=motor
@@ -1583,7 +1586,15 @@ export const UNIQUE_ASSIST = {
   //  위협을 보면 · 맞으면 · 넘어지면 그만둠(사람 windStop 과 같은 뜻 — 식힘 없음) · 감음 뒤 rdAiMaxT(실제 1.5 s — 시간 사다리) 넘게 못 닿으면 그만둠 · 0 = 옛 판 `?rdAiWind=0` [사장님 결정 — 감독 전달]
   rdAiWind: 1,
   rdAiMaxT: realS(1.5),
-  rdSnapTime: realS(0.2), // 시간 상한 (실제 초 — 시간 사다리 0.2 · 베는 몫부터 — 날개 접기 capFromCut 과 같음) · 감독 전달(사장님 10/29). 머리 위 길 · 떨어뜨림은 셈 밖(같은 빠르기)
+  // 사장님 10/31 13:4x 'a는 기본 적용하고 c는 성향마다 달랐음 좋겠어. 싸움을 풀어가는 방식에 따라 자율적으로.' (확인표 3133 · 3134 — 기록 docs/strike/redondo_hold_2026-10-29.md §8-14):
+  //  rdAiQuick 1 = (a) 빠른 틈(ai.js SLOW_WHY 밖 · 이어 치기)엔 머리 위 돌려 베기 대신 바탕 동작(왼 가로베기) — 0 = 10/31 08:xx 판(빠른 틈에도 감음) `?rdAiQuick=0` [사장님 결정]
+  //  rdAiThrift 1 = (c) 성향마다 기력 아낌(ai.js rdThrift — 공격적 기질 0 · 아니면 규율 × (1 − 분노) × (1 − 집념)): 기력 < 아낌 × (쉼 기력 + 감기 한 번 몫)이면 안 감음 ·
+  //   감는 중 기력 < 아낌 × 쉼 기력이면 감았고 닿으면 벰 · 아니면 그만둠 — 0 = 성향 없이 늘 감음(기력 0 저절로 내려침) `?rdAiThrift=0` [c 를 성향으로 = 사장님 결정 · 셈 = 사장님 확인 전]
+  rdAiQuick: 1,
+  rdAiThrift: 1,
+  rdSnapTime: realS(0.4), // [사장님 10/31 14:xx '상한 0.4초로' 결정] 시간 상한 (실제 초 — 시간 사다리 · 베는 몫부터 — 날개 접기 capFromCut 과 같음) · 0.2 = 감독 전달(사장님 10/29). 머리 위 길 · 떨어뜨림은 셈 밖(같은 빠르기)
+  //  10/31 0.2 → 0.4 [사장님 확인 전]: 칼끝 몫 0.5 → 0.3(13:5x) 로 베는 몫이 0.159 → 0.265 s 로 길어져 0.2 s 상한이 벰 가운데를 끊음(칼끝이 가슴 높이 · 몸 가운데에서 멈춤 — 오른 아래까지 못 감) ·
+  //  0.5 판에선 상한이 걸린 적 없음(0.159 s < 0.2) → 다음 사다리 0.4 면 다시 안 걸리고 벰 끝까지(0.265 s) — docs/strike/redondo_hold_2026-10-29.md §8-13 · 확인표 3139
   // 요격(동방 강화동작) 깊은 출혈 (10/21 사장님 '요격에 출혈 보너스를 줘. 너무 밸런스 붕괴가 되진 않도록 적정 값' · 확인표 2111): 요격 칼날이 몸통(가슴 · 배 · 허리)에 들면
   //  그 상처의 출혈 × k. 측정(동방 AI 숙련도 4 · 36 판): 요격은 판당 5.8 번 나와 0.6 번 상처 · 몸통 상처 피 판당 2.6 % (상대가 판에 잃는 피 13.9 %) →
   //  k 1.5 = 판당 +1.3 %(출혈 약 +9 %) · 깊은 몸통 상처 하나(심각도 1 — 피 21 %)는 31 %. 배 · 허리만으로는 36 판에 2 번이라 몸통으로 · AI 도. `?yaojiBleed=` (1 = 끔)
