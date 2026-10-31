@@ -24,16 +24,18 @@ test('걸음 칸: 이탈리아만 backCap 4 · idle 0.6 s(박자 걸음 멈춤 �
   }
 });
 
-test('셈 규칙 (backStep): 뒤 디딤 +1 · 앞 디딤 · 옆 몫이 큰 디딤은 0 · 기술 걸음 · 자세 고치기 · 서 있을 때 catch 는 그대로', () => {
-  const s = (o, kind) => {
+test('셈 규칙 (backStep): 뒤 디딤 +1 · 앞 · 옆 · 빈 스틱 디딤은 몸이 더는 물러나지 않을 때만 0(아직 뒤로 가면 그대로) · 기술 걸음 · 자세 고치기 · 서 있을 때 catch 는 그대로', () => {
+  const s = (o, kind, vb = 0) => {
     const me = { backN: 2, walking: true, ...o };
-    Gait.prototype.backStep.call(me, kind);
+    Gait.prototype.backStep.call(me, kind, vb);
     return me.backN;
   };
-  assert.equal(s({ backWf: -1, backWl: 0.3 }, 'walk'), 3);
-  assert.equal(s({ backWf: -1, backWl: 0.3 }, 'catch'), 3);
-  assert.equal(s({ backWf: 1, backWl: 0 }, 'walk'), 0); // 앞
-  assert.equal(s({ backWf: -0.3, backWl: 0.5 }, 'walk'), 0); // 옆 몫이 큼
+  assert.equal(s({ backWf: -1, backWl: 0.3 }, 'walk', -1.2), 3);
+  assert.equal(s({ backWf: -1, backWl: 0.3 }, 'catch', -1.2), 3);
+  assert.equal(s({ backWf: 1, backWl: 0 }, 'walk'), 0); // 앞 · 몸 섬
+  assert.equal(s({ backWf: -0.3, backWl: 0.5 }, 'walk', -0.1), 0); // 옆 몫이 큼 · 몸이 거의 안 물러남
+  assert.equal(s({ backWf: 0, backWl: 0 }, 'walk', 0.3), 0); // 빈 스틱 · 몸이 앞으로
+  for (const [o, vb] of [[{ backWf: 1, backWl: 0 }, -1.0], [{ backWf: 0, backWl: 0 }, -1.2], [{ backWf: -0.2, backWl: 0.7 }, -0.9]]) assert.equal(s(o, 'walk', vb), 2, JSON.stringify(o)); // 아직 뒤로 미끄러짐
   for (const k of ['req', 'draw', 'settle']) assert.equal(s({ backWf: 1, backWl: 0 }, k), 2, k);
   assert.equal(s({ backWf: 1, backWl: 0, walking: false }, 'catch'), 2);
 });

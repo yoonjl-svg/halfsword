@@ -569,12 +569,15 @@ export class Gait {
   /**
    * 물러서기 걸음 수 셈 (10/31 08:xx 사장님 '이탈리아도 네걸음 이후에는 (다섯 걸음째부터) 70% 적용' — 걸음 칸 backCap · update ③ 이 새 걸음을 뗄 때 부름):
    *  박자 걸음(fastBegin)과 같은 디딤 셈 — 걷는 걸음(walk · 걷는 중 catch) 디딤 하나 = 한 걸음(짝걸음의 이끄는 발 · 따라붙는 발도 하나씩).
-   *  앞뒤 몫이 옆 몫보다 큰 뒤 걸음이면 +1 · 앞 걸음 · 옆 몫이 큰 걸음이면 0 으로(물러서기 끝). 몫은 이번 스텝 가려는 속도의 뒤 느려짐 없애기 전 값(backWf · backWl).
+   *  앞뒤 몫이 옆 몫보다 큰 뒤 걸음이면 +1 · 앞 걸음 · 옆 몫이 큰 걸음 · 빈 스틱 걸음은 몸이 더는 물러나지 않을 때(걸러진 골반 빠르기의 뒤 몫 < GAIT.walkMin — 걷기 문턱)만 0 으로
+   *  (물러서기 끝) — 아직 뒤로 미끄러지는 동안이면 세지도 끊지도 않는다: 스틱을 잠깐 놓거나 옆으로 한 디딤 틀어 셈만 지우고 물러선 빠르기는 그대로 갖고 가는 꼴을 막는다
+   *  (재 봄: 넷째 디딤마다 놓기 · 옆 한 디딤이 곧게 물러서기보다 +31 · +26 % 빨랐다). 몫은 이번 스텝 가려는 속도의 뒤 느려짐 없애기 전 값(backWf · backWl) · vb = 걸러진 골반 빠르기의 앞 몫.
    *  기술 걸음(req · draw) · 자세 고치기(settle)는 세지도 끊지도 않는다(박자 걸음과 같음)
    */
-  backStep(kind) {
+  backStep(kind, vb) {
     if (!(kind === 'walk' || (kind === 'catch' && this.walking))) return;
-    this.backN = this.backWf < 0 && -this.backWf > this.backWl ? this.backN + 1 : 0;
+    if (this.backWf < 0 && -this.backWf > this.backWl) this.backN++;
+    else if (-vb < GAIT.walkMin) this.backN = 0;
   }
 
   /**
@@ -1098,7 +1101,7 @@ export class Gait {
         const l = L[next];
         // 빠른 걸음: 이 걸음을 세고(박자 걸음) 받을 창을 쓰고(간격 잡기) 박차기를 쓰고(첫 걸음) 빠른 걸음인지 정한다 (앞뒤 가름은 위 짝걸음 PR 과 같은 셈). 빠른 걸음 중이면 끝내는 것도 여기
         if (RH || CH || this.burst || this.fastK > 1) Tstep = this.fastBegin(RH, CH, kind, PR, want.x * fwd.x + want.z * fwd.z, vLat, this.vf.x * fwd.x + this.vf.z * fwd.z, Tstep);
-        if (this.P.backCap && this.P.backMul === 'flat') this.backStep(kind);
+        if (this.P.backCap && this.P.backMul === 'flat') this.backStep(kind, this.vf.x * fwd.x + this.vf.z * fwd.z);
         if (kind === 'walk' || kind === 'catch') Tstep /= 1 + hurry;
         this.begin(l, kind, Tstep);
         if (this.burstStep) {
