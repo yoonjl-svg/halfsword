@@ -2423,13 +2423,13 @@ function comboPlanDup(f, I, m, A) {
 
 /**
  * 사람 겹치기 단순 길 (10/31 19:xx 사장님 '겹치기의 발동 경로가 좀 어색하더라 … 컨셉에 맞게 가장 효율적이고 단순한 움직임' — UNIQUE_ASSIST.dupOld 0 · 기록 docs/strike/duplieren_simple_2026-10-31.md):
- *  맞물린 자리(지금 손가락 패드 p0)에서 **패드 곧은 줄 하나**로 칼날이 얼굴을 지나는 패드 p1 까지 · 같은 줄로 dyn.follow ° 만큼 더(칼날이 얼굴을 다 지나게) — 감는 둘레 길 · 밀어 넣는 토막 · 꺾임 없음.
+ *  맞물린 자리(지금 놓인 칼에 가장 가까운 자세 지도 패드 p0)에서 **패드 곧은 줄 하나**로 칼날이 얼굴을 지나는 패드 p1 까지 · 같은 줄로 dyn.follow ° 만큼 더(칼날이 얼굴을 다 지나게) — 감는 둘레 길 · 밀어 넣는 토막 · 꺾임 없음.
  *   패드 → 손 · 칼 방향은 몸이 늘 쓰는 자세 지도(f.padPose — 제비 베기 곧은 길과 같은 틀)라 손목이 사람 범위 안 · 손이 팔 길이 안. 맞물린 칼에서 얼굴로 가장 가까운(패드 거리 가장 짧은) 줄 =
  *   상대 칼을 떼지 않고 그 칼과 사람 사이로 들어가 얼굴을 침(Liechtenauer 두플리렌 — 다시 침). 처음 붙어 있던 상대 칼에 닿아 있는 동안은 막힘이 아님(dupGlide — comboPlanDup 과 같음).
  *   p1 = 칼날(코등이 ~ 칼끝)이 얼굴에서 가장 가까이 지나는 패드들(가장 가까운 것 + 2 cm 안) 가운데 p0 에서 가장 가까운 것 (0.05 칸 → 0.01 칸).
- *   앞 박차기(I.slide — 이 수 동안 몸이 상대 쪽으로 고르게 미끄러짐)가 있으면 얼굴 = 칼날이 얼굴을 지나는 때(칼 시간 몫 k)의 다가온 자리 — 몫 k 와 p1 을 네 번 맞춤(손과 몸이 같은 때 닿게).
+ *   앞 박차기(I.slide — 이 수 동안 몸이 상대 쪽으로 고르게 미끄러짐)가 있으면 칼날이 얼굴을 지나는 때 = 앞발 디딤 = 미끄러짐 끝 → 얼굴은 다 다가온 자리 (아래 때 맞춤).
  *   토막 시간 = 칼끝 길 · 손 길 가운데 긴 것 ÷ I.v.
- *  재기: I.dup = { p0, p1, p2, padLen, dFace(칼날 ↔ 얼굴 m), sweep(칼 방향 돈 각 °), k, line: 1 }
+ *  재기: I.dup = { p0, p1, p2, padLen, dFace(칼날 ↔ 얼굴 m), sweep(칼 방향 돈 각 °), k, tFace, Tstep, slow(얼굴까지 늦춘 배), fit(놓인 칼 ↔ p0 자세 m), line: 1 }
  */
 function comboPlanDupLine(f, I, m, A) {
   const D = m.dyn;
@@ -2443,7 +2443,6 @@ function comboPlanDupLine(f, I, m, A) {
   const hup = new THREE.Vector3(0, 1, 0).applyQuaternion(tq(hb.rotation(), new THREE.Quaternion()));
   const P0 = body(tv(hb.translation(), new THREE.Vector3()).addScaledVector(hup, -(D.face ?? 0)));
   const sl = I.slide && I.slide.slide > 0 ? new THREE.Vector3(I.slide.dx, 0, I.slide.dz).applyQuaternion(inv).multiplyScalar(I.slide.slide) : null; // 앞 박차기 (몸 틀 — 상대가 다가오는 몫)
-  const tCap = I.maxT > 0 ? Math.max(1e-3, I.maxT - I.t) : Infinity;
   const PM = 0.6; // 패드 끝 (comboPad 와 같은 한도)
   const pose = (p) => {
     const B = { H: new THREE.Vector3(), D: new THREE.Vector3(), px: p[0], pad: [p[0], p[1]] };
@@ -2503,7 +2502,7 @@ function comboPlanDupLine(f, I, m, A) {
       for (let e = 0.02; e <= 0.5 + 1e-9; e += 0.02) {
         const q = [clamp(p1[0] + u[0] * e, -PM, PM), clamp(p1[1] + u[1] * e, -PM, PM)];
         p2 = q;
-        if (Math.acos(clamp(pose(q).D.dot(B1.D), -1, 1)) >= fol || (q[0] === p2[0] && Math.abs(q[0]) >= PM && Math.abs(q[1]) >= PM)) break;
+        if (Math.acos(clamp(pose(q).D.dot(B1.D), -1, 1)) >= fol || Math.abs(q[0]) >= PM || Math.abs(q[1]) >= PM) break; // follow ° 만큼 돌았거나 패드 끝
       }
     }
     // 토막: A(지금 칼) → p0 → p1 줄 위 0.05 칸 → p2
