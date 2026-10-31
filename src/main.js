@@ -333,7 +333,7 @@ if (params.has('schielPlayer')) CONFIG.UNIQUE_ASSIST.schielPlayer = +params.get(
 if (params.has('schielPlayerK') && Number.isFinite(+params.get('schielPlayerK'))) CONFIG.UNIQUE_ASSIST.schielPlayerK = +params.get('schielPlayerK'); // 사람 곁눈 베기 세기 손잡이 (사장님 10/25 20:2x 결정 — 기본 1 = 세기 100 % · `?schielPlayerK=0.5` = 시험용 50 % · combat.js analyze)
 if (params.has('schielPlayerTip')) CONFIG.UNIQUE_ASSIST.schielPlayerTip = +params.get('schielPlayerTip') ? 1 : 0; // 사람 곁눈 베기 칼끝 들기 (사장님 10/25 20:2x 결정 '칼끝 들기 빼지 마' — 기본 1 = AI 와 같은 덧칸 셋 · `?schielPlayerTip=0` = 시험용 칼끝 들기 없음 · unique_assist.js planStep)
 for (const k of ['tsuRuler', 'tsuSnap', 'tsuAim', 'tsuBand', 'tsuHook']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 제비 베기 세 해법 (사장님 10/25 21:1x '해법 1~3 좋아' — 기본 1 · 0 = 그 해법만 끔 · unique_assist.js) · tsuHook (사장님 10/31 16:xx '곧은 길로' — 기본 0 = 곧은 길 · `?tsuHook=1` = 10/25 갈고리 길)
-// 겹치기 단순 길 · 앞 박차기 (사장님 10/31 19:xx — 확인표 3300 ~ 3309): `?dupOld=1` = 10/28 길 그대로 견줌(감기 · 밀어 넣기 · 박차기 없음 · 몫 전 0.5 — 아래 specialShare 를 함께 주면 그 몫) · `?dupBurst=` m · `?dupBurstFree=1`
+// 겹치기 단순 길 · 앞 박차기 (사장님 10/31 19:xx — 확인표 3301 ~ 3309): `?dupOld=1` = 10/28 길 그대로 견줌(감기 · 밀어 넣기 · 박차기 없음 · 몫 전 0.5 — 아래 specialShare 를 함께 주면 그 몫) · `?dupBurst=` m · `?dupBurstFree=1`
 if (params.has('dupOld') && +params.get('dupOld')) {
   CONFIG.UNIQUE_ASSIST.dupOld = 1;
   CONFIG.UNIQUE_ASSIST.specialShare.duplieren = CONFIG.UNIQUE_ASSIST.dupOldShare;

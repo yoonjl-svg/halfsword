@@ -6,7 +6,7 @@
 //    칼끝 · 손(칼자루) · 골반 · 가슴(세계 — 낸 때 몸 틀: x 상대 쪽 · y 위 · z 칼 든 쪽 옆) · 발(딛음 · 디딘 자리 · 걸음 갈래) · 운동학 칼(끄는 중 · 베는 토막) · 손목(wrist_audit) · 날 앞장 cos ·
 //    상대 칼 지나감(duplieren_check sample far) · 넘어짐 · 기울기 · 맞음(때 · 곳 · 에너지 · 심각도)
 //   잼: 휨(tsubame_trace bendOf — 칼끝 길의 곧은 줄 대비 몫 · 꺾임 · 몸 틀(가슴 따라)과 세계 둘) · 때 맞춤(칼 시작 · 첫 맞음 · 칼 끝 ↔ 앞발 뜸 · 디딤) · 손 ↔ 골반 빠르기(앞 몫 상관 · 늦음)
-//  갈래: old = 10/28 길 · 몫 0.5 · 박차기 없음 (`?dupOld=1`) · new:<몫>:<박차기 m>[:<축 고르기 °>[:<끄는 시간 상한 실제 초>]] (예 new:0.1:0.45 · new:0.5:0 = 단순 길만 · new:0.1:0.45:0:0.4)
+//  갈래: old = 10/28 길 · 몫 0.5 · 박차기 없음 (`?dupOld=1`) · new:<몫>:<박차기 m>[::<끄는 시간 상한 실제 초>] (예 new:0.1:0.45 · new:0.5:0 = 단순 길만 · new:0.1:0.45::0.4)
 //  node tools/sim/duplieren_simple.mjs [--variants=old,new:0.1:0.45] [--weapons=longsword,sabre,kriegsmesser] [--opps=longsword,uchigatana,zweihander,rapier] [--seeds=901,902,903,904] [--dur=30] [--json=파일] [--v]
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
@@ -20,14 +20,14 @@ import { isMain } from './is_main.mjs';
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const r3 = (x) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(3));
-const KEYS = ['dupOld', 'dupBurst', 'dupBurstFree', 'dupAxisMax', 'dupSnapTime'];
+const KEYS = ['dupOld', 'dupBurst', 'dupBurstFree', 'dupSnapTime'];
 
 /** 갈래 → 게임 값 (old · new:몫:박차기) */
 export function parseVariant(v) {
   if (typeof v === 'object') return v;
   if (v === 'old') return { key: v, dupOld: 1, share: UA.dupOldShare ?? 0.5, dupBurst: 0 };
-  const [, s, b, ax, cap] = String(v).split(':');
-  return { key: v, dupOld: 0, share: s != null && s !== '' ? +s : UA.specialShare.duplieren, dupBurst: b != null && b !== '' ? +b : UA.dupBurst, ...(ax != null && ax !== '' ? { dupAxisMax: +ax } : {}), ...(cap ? { dupSnapTime: CONFIG.realS(+cap) } : {}) };
+  const [, s, b, , cap] = String(v).split(':');
+  return { key: v, dupOld: 0, share: s != null && s !== '' ? +s : UA.specialShare.duplieren, dupBurst: b != null && b !== '' ? +b : UA.dupBurst, ...(cap ? { dupSnapTime: CONFIG.realS(+cap) } : {}) };
 }
 function apply(v) {
   const save = { ...Object.fromEntries(KEYS.map((k) => [k, UA[k]])), share: UA.specialShare.duplieren };
@@ -35,7 +35,6 @@ function apply(v) {
   UA.dupOld = p.dupOld;
   UA.dupBurst = p.dupBurst;
   if (p.dupBurstFree != null) UA.dupBurstFree = p.dupBurstFree;
-  if (p.dupAxisMax != null) UA.dupAxisMax = p.dupAxisMax;
   if (p.dupSnapTime != null) UA.dupSnapTime = p.dupSnapTime;
   UA.specialShare.duplieren = p.share;
   return () => {
@@ -51,6 +50,7 @@ export function recorder({ after = 1.2 } = {}) {
   const out = [];
   let tr = null;
   let G, P, A;
+  const lastRecv = { t: -1, E: 0 };
   let c0 = null;
   let yaw = 0;
   let p7 = null;
@@ -70,11 +70,13 @@ export function recorder({ after = 1.2 } = {}) {
       const pw = G.combat.hooks.onWound;
       G.combat.hooks.onWound = (att, vic, r, ...rest) => {
         pw?.(att, vic, r, ...rest);
+        if (vic === P) (lastRecv.t = G.t), (lastRecv.E = r.energy);
         if (tr && !tr.closed && att === P && vic === A && strokeTechOf(P) === 'duplieren') tr.hits.push({ t: r3(G.t - tr.tF), zone: r.zone, part: rest[1]?.v?.part ?? null, type: r.type, E: r3(r.energy), sev: r3(r.type === 'blunt' ? 0 : r.severity ?? 0) });
       };
       const kd = P.knockDown.bind(P);
       P.knockDown = (heavy = true) => {
-        if (tr) tr.knock.push({ t: G.t, heavy });
+        // 넘어짐 까닭 (special_balance.mjs 와 같은 칸): 기울기 · 휘청 게이지 · 발 밖 시간 · 칼에 맞음(이 스텝 받은 에너지)
+        if (tr) tr.knock.push({ t: G.t, rel: r3(G.t - tr.tF), heavy, tilt: r3(P.tiltDeg()), balance: r3(P.balance), off: r3(P.offBalanceTime), recvE: r3(lastRecv.t === G.t ? lastRecv.E : 0) });
         return kd(heavy);
       };
     },
@@ -125,6 +127,13 @@ export function recorder({ after = 1.2 } = {}) {
         roll: w ? +w.roll.toFixed(1) : null, oor: w ? +outOfRange(w).toFixed(1) : null, edge: ec == null ? null : r3(ec),
         far: sm.far != null && Number.isFinite(sm.far) ? r3(sm.far) : null,
         state: P.state, tilt: r3(P.tiltDeg()), d: r3(P.foeDistance()),
+        // 길 위 칼끝 · 손 (운동학 칼이 이 스텝에 놓으려던 자리 — 몸 틀 I.cur: 가슴 원점 · I.yaw) → 세계 → 낸 때 틀 · 손목 교정 각 (재기)
+        ...(on && P.iai.cur ? (() => {
+          const c = P.bodies.chest.translation();
+          const Hw = P.iai.cur.H.clone().applyQuaternion(P.iai.yaw).add(new THREE.Vector3(c.x, c.y, c.z));
+          const Dw = P.iai.cur.D.clone().normalize().applyQuaternion(P.iai.yaw);
+          return { pTip: loc(Hw.clone().addScaledVector(Dw, P.weaponCfg.hiltLength + P.weaponCfg.bladeLength)), pHand: loc(Hw), fix: +(P.wristFixDeg ?? 0).toFixed(1) };
+        })() : {}),
       });
       if (!on && !tr.res && P.instantResult?.combo && P.instantResult.tech === 'duplieren') tr.res = { hits: P.instantResult.hits, zone: P.instantResult.zone, blocked: P.instantResult.blocked, E: r3(P.instantResult.energy), T: r3(P.instantResult.T), burst: P.instantResult.burst ?? null, dup: P.instantResult.dup ?? null };
     },

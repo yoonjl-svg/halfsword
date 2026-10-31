@@ -1,5 +1,5 @@
 // 겹치기 단순 길 · 앞 박차기 시험 (사장님 10/31 19:xx '겹치기의 발동 경로가 좀 어색하더라 … 컨셉에 맞게 가장 효율적이고 단순한 움직임 … 속도는 … 낮추는 대신 박차기를 앞으로 쓰면서 치는 효과 …
-//   앞 박차기는 … 겹치기와 함께만 발동' · '손 동작과 발 동작이 어우러져야 하니까. 그게 최우선.' — 기록 docs/strike/duplieren_simple_2026-10-31.md · 확인표 3300 ~ 3309):
+//   앞 박차기는 … 겹치기와 함께만 발동' · '손 동작과 발 동작이 어우러져야 하니까. 그게 최우선.' — 기록 docs/strike/duplieren_simple_2026-10-31.md · 확인표 3301 ~ 3309):
 //   기본 = 단순 길(dupOld 0 — 맞닿은 자리 축 한 축 돌림) · 앞 박차기 dupBurst(걸음 사다리 칸 · 죽음의 일격 거리에서 멈춤 · 칼과 같은 시간에 고르게 미끄러짐 · 앞발이 같은 시간에 내딛음 · 기력 pushCost — dupBurstFree 면 안 냄)
 //   · `?dupOld=1` 판은 10/28 길 그대로(박차기 없음). 작게 · 빠르게: 판을 돌리지 않고 닿음을 손으로 놓고 겹치기를 낸 뒤 스텝을 몇 번 돌림.  node --test tools/sim/duplieren_simple.test.mjs
 import test from 'node:test';
@@ -23,7 +23,7 @@ test('기본값 — 단순 길(dupOld 0) · 앞 박차기 걸음 사다리 칸 �
 
 /** 사람 롱소드 몸 + 겹치기 (판을 돌리지 않음 — 가슴 사이를 d 로 두고 겹치기를 바로 냄) */
 function body(set = {}, gap = 1.25) {
-  const keys = ['dupOld', 'dupBurst', 'dupBurstFree', 'dupAxisMax', 'specialCooldown'];
+  const keys = ['dupOld', 'dupBurst', 'dupBurstFree', 'specialCooldown'];
   const save = Object.fromEntries(keys.map((k) => [k, UA[k]]));
   const share0 = UA.specialShare.duplieren;
   Object.assign(UA, { specialCooldown: 0, ...set });
@@ -44,14 +44,14 @@ function body(set = {}, gap = 1.25) {
     for (let i = 0; i < 60; i++) {
       G.step();
       const I = P.iai;
-      out.steps.push({ t: G.t, on: !!(I && I.tech === 'duplieren'), slide: I?.slide ? { ...I.slide } : null, dup: I?.dup ?? null, burst: I?.burst ?? null, ax: I?.dupAx ? I.dupAx.clone() : null, segs: I?.segs ? I.segs.map((s) => ({ D: s.B.D.clone(), T: s.T })) : null, legs: P.gait?.legs ? { F: !!P.gait.legs.F.stance, B: !!P.gait.legs.B.stance, kF: P.gait.legs.F.kind, kB: P.gait.legs.B.kind } : null, d: P.foeDistance(), req: P.gait?.req ? { ...P.gait.req } : null });
+      out.steps.push({ t: G.t, on: !!(I && I.tech === 'duplieren'), slide: I?.slide ? { ...I.slide } : null, dup: I?.dup ?? null, burst: I?.burst ?? null,  segs: I?.segs ? I.segs.map((s) => ({ D: s.B.D.clone(), T: s.T, pad: s.B.pad })) : null, cut: I?.segs ? I.segs.map((s) => s.cut) : null, legs: P.gait?.legs ? { F: !!P.gait.legs.F.stance, B: !!P.gait.legs.B.stance, kF: P.gait.legs.F.kind, kB: P.gait.legs.B.kind } : null, d: P.foeDistance(), req: P.gait?.req ? { ...P.gait.req } : null });
     }
     return out;
   };
   return { G, P, E, uq, fire, free: () => (Object.assign(UA, save), (UA.specialShare.duplieren = share0), G.world.free()) };
 }
 
-test('단순 길 — 맞닿은 자리 축 한 축 돌림 (토막 칼 방향이 모두 같은 축 둘레 · 따로 밀어 넣는 토막 없음 · 모두 베는 토막) · 앞 박차기 = 칼이 끌리는 시간 동안 고르게 · 앞발이 같은 때 뜸', () => {
+test('단순 길 — 맞물린 패드에서 얼굴로 가는 패드 곧은 줄 하나 (토막 패드가 한 줄 위 · 따로 밀어 넣는 토막 없음 · 모두 베는 토막 · 칼날이 얼굴 곁을 지남) · 앞 박차기 = 칼이 끌리는 시간 동안 고르게 · 앞발이 같은 때 뜸', () => {
   const B = body({ dupBurst: 0.45, share: 0.2 });
   try {
     const R = B.fire();
@@ -59,12 +59,20 @@ test('단순 길 — 맞닿은 자리 축 한 축 돌림 (토막 칼 방향이 �
     const first = R.steps.find((s) => s.on);
     assert.ok(first, '운동학 칼');
     assert.equal(first.dup.line, 1, '단순 길');
-    // 한 축: 토막 끝 칼 방향이 모두 같은 축(I.dupAx)과 같은 각 (한 축 돌림 — 원뿔 · 큰 원)
+    // 패드 곧은 줄 하나: 토막 끝 패드가 모두 p0 → p2 줄 위 (꺾임 없음) · 모두 베는 토막
     const segs = first.segs;
     assert.ok(segs.length >= 3);
-    const ax = first.ax;
-    const c0 = segs[0].D.dot(ax);
-    for (const s of segs) assert.ok(Math.abs(s.D.dot(ax) - c0) < 1e-6, `한 축 ${s.D.dot(ax)} · ${c0}`);
+    const [x0, y0] = first.dup.p0;
+    const [x2, y2] = first.dup.p2;
+    const L2 = Math.hypot(x2 - x0, y2 - y0);
+    assert.ok(L2 > 0.02, `패드 길 ${L2}`);
+    for (const sg of segs) {
+      const [x, y] = sg.pad;
+      const off = Math.abs((x - x0) * (y2 - y0) - (y - y0) * (x2 - x0)) / L2;
+      assert.ok(off < 0.011, `패드 줄 밖 ${off}`); // 0.01 칸 반올림 (I.dup 은 둘째 자리)
+    }
+    assert.ok(first.cut.every(Boolean), '모두 베는 토막');
+    assert.ok(first.dup.dFace < 0.15, `칼날 ↔ 얼굴 ${first.dup.dFace}`);
     // 박차기: 고르게 · 칼 시간에 맞춤 (상한 안)
     const S = first.slide;
     assert.ok(S && S.slide > 0.3 && S.slide <= 0.45 + 1e-9, `미끄러짐 ${S?.slide}`);

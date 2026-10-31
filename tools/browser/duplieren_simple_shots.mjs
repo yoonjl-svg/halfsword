@@ -13,9 +13,11 @@ const GAP = +(process.env.GAP || 1.25);
 const STEP = +(process.env.STEP || 6); // 찍는 간격 (물리 스텝 — 6 = 0.05 게임 초)
 const N = +(process.env.N || 7);
 const PAD = (process.env.PAD || '-0.05,0.2').split(',').map(Number); // 맞대는 손 자리 (패드)
+const SH = (process.env.SHARES || '').split(',').filter(Boolean); // 몫 견줌 (예 SHARES=0.1,0.2,0.3 → new_0.1 · new_0.2 · …)
 const CASES = [
   ['old', '&dupOld=1'],
   ['new', ''],
+  ...SH.map((x) => [`new_${x}`, `&specialShare=duplieren:${x}`]),
 ].filter(([t]) => !process.env.TAGS || process.env.TAGS.split(',').includes(t));
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader'] });
 const res = {};
