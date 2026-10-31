@@ -317,7 +317,7 @@ const COMBO = (() => {
  * 사람 제비 베기 한 판 (playerRun 과 같은 꼴 — 공격 = 한 벌): 아래 칼(내려베기 — 제비 베기가 아직 아님) 첫 몸 맞음 · 위 칼(제비 베기로 강화된 긋기) 첫 몸 맞음 · 두 칼 상처 합.
  *  rows[].hit = 위 칼 첫 맞음(duelSummary 의 공격당 · 맞음 · 빠르기 · 에너지) · down = 아래 칼 첫 맞음 · sevDown · sevUp · sevAll(= 둘 합) · fired = 위 칼이 제비 베기로 강화됨
  */
-export function tsubameRun(seed, { dur = 40, foe = 'still', spd = [3, 5.5], jit = 0.04, foeW = 'longsword', low = LOW, immortal = false, weapon = 'uchigatana', trad = null, ghostDown = false } = {}) {
+export function tsubameRun(seed, { dur = 40, foe = 'still', spd = [3, 5.5], jit = 0.04, foeW = 'longsword', low = LOW, immortal = false, weapon = 'uchigatana', trad = null, ghostDown = false, onStep = null } = {}) {
   const G = newRound({ walls: true, seed, weapon, weapon2: foeW, AIClass: foe === 'ai' ? LowFoe : AI, persona: { proficiency: 4 } });
   const P = G.player;
   const D = G.enemy;
@@ -432,6 +432,7 @@ export function tsubameRun(seed, { dur = 40, foe = 'still', spd = [3, 5.5], jit 
       if (cur && strokeTechOf(P) === 'tsubameGaeshi') cur.tip = Math.max(cur.tip, P.tipVel.length());
       if (cur && !queue.length && closeT == null) closeT = G.t;
       if (cur) rollTrack(cur, P);
+      onStep?.(G, P, cur); // 재는 도구 몫 (10/31 곧은 제비 베기 — 끌고 가는 칼 칼끝 길 · tools/sim/tsubame_trace.mjs fightBend)
     }
     return { rows, dead: !D.alive, t: G.t, drawn, fired: uq.stats.fired.tsubameGaeshi ?? 0, falls, meDead: !P.alive };
   } finally {
