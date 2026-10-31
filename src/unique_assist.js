@@ -33,6 +33,7 @@ import { TRADITIONS } from './schools.js';
 import { segDist } from './skill.js';
 import { requestArtReturn, requestArtSnap, requestArtThrust, requestArtFold, requestArtDup, requestArtRedondo, setArtTechOf, iaiBusy } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21) · 제비 베기 되돌림 칼 (10/25 해법 ②) · 칼끝 돌려 빼기 운동학 찌름 (10/28)
 import { perkOff, kitOff } from './skill_kit.js';
+import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 — 상대 두 팔 늦춤 (흘림과 같은 장치 · 10/31)
 import { windStart, windStep, windEnd, windLoopOf, windRopesBack } from './iberian_redondo.js'; // 풍차 베기 머리 위 감기 (B4 — 10/29) // 플레이어 스킬트리 몫 (10/21 — 돌려 베기 쌓기 = 이베리아 심화 B6)
 
 // ── 고유 동작 표 (디렉터 안 → 사장님 확정 10/13 22:3x. 바뀌면 여기 한 곳만 고친다) ──
@@ -90,12 +91,16 @@ export const PLAYER_UNIQUE = {
   ],
   italian: [
     // 10/31 이탈리아 자리 바꿈 (사장님 10/31 12:xx — 칼끝 돌려 빼기 = 기본 고유 공격 I2 · 비껴서며 찌르기 = 특수 공격 I9 · config UNIQUE_ASSIST cav* · inq* · docs/strike/italian_swap_2026-10-31.md):
-    //  단계(AI 숙련도 거르기)도 자리를 따름 — 칼끝 돌려 빼기 1 · 비껴서며 찌르기 3 (다른 유파 특수 공격과 같은 3)
-    { stage: 1, name: 'cavazione', role: 'chain', hint: '칼이 상대 칼에 닿은 채 박자를 맞추어 탭', nameKo: '칼끝 돌려 빼기 (카바치오네)', orig: 'cavazione', body: [5, 8, 4, 0.02], on: [], // 칼끝 돌려 빼기 — 사람은 탭으로만 (AI 는 schools.js 속임 · 빼서 찌르기 패시브 그대로 — 이 칸을 안 읽음)
+    //  단계(AI 숙련도 거르기)도 칸 깊이를 따름(전 판도 단계 = 칸 깊이 − 1 이었음 — 비껴서며 찌르기 d 2 = 1 · 내려 찌르기 d 3 = 2 · 돌려 빼기 d 4 = 3) — 10/31 12:xx 사장님 '임브로카타를 먼저 배우고 카바치오네를 배우고':
+    //  위에서 내려 찌르기 I2 d 2 = 1 · 칼끝 돌려 빼기 I7 d 3 = 2 · 비껴서며 찌르기 I9 d 4 = 3 (다른 유파 특수 공격과 같은 3)
+    { stage: 2, name: 'cavazione', role: 'chain', hint: '칼이 상대 칼에 닿은 채 박자를 맞추어 탭', nameKo: '칼끝 돌려 빼기 (카바치오네)', orig: 'cavazione', body: [5, 8, 4, 0.02], on: [], // 칼끝 돌려 빼기 — 사람은 탭으로만 (AI 는 schools.js 속임 · 빼서 찌르기 패시브 그대로 — 이 칸을 안 읽음)
       // tapKey = 탭으로 내는 조건 (TAP_TRIG 'cav' — 10/31 칼끼리 닿음 뒤 cavFrom ~ cavTo 의 탭 · 내 긋기 동안의 닿음은 셈 밖) · tapSnap = 상대 칼 밑으로 돌려 빼 반대쪽을 찌르는 운동학 칼(requestArtThrust — 보통 찌르기 빠르기 · 잔상 없음)
       //  special 없음 = 특수 공격 식힘 · 잔상 · 고노센 몫 없음 (10/31 사장님 '카바치오네는 이제 특수공격이 아니고')
       tapKey: 'cav', tapSnap: 1 },
-    { stage: 2, name: 'imbroccata', role: 'enh', replaces: 'stichOchs', hint: '강화동작 · 황소 찌르기 대신 · 옷과 갑옷 틈을 더 파고듦', body: [10, 12, 8, 0.04], on: [{ tech: 'stichOchs' }], // 위에서 내려 찌르기 ← 황소 찌르기 (늘)
+    // 10/31 12:xx 사장님 'I7은 어떤 방향이나 높이에서든 다른 유파의 내려 긋는 베기에 해당하는 커맨드를 내려찌르기로 전환해 주도록 하자. 어차피 지금 이탈리아 수직 베기는 거의 공격으로서 의미가 없잖아':
+    //  사람 = 황소 찌르기 긋기(stichOchs) · 그 거울(stichOchsL — 왼 황소에서 내려 찌르는 긋기) · 아래로 가는 베기(down — 곧장 아래 ↓ · 사선 아래 ↙/↘ · 어느 자세 · 높이에서든: UNIQUE_ASSIST.imbroDown) 모두 →
+    //  위에서 내려 찌르기 탭 찌르기(아래 tap). 수평 · 올려 긋기 · 다른 찌르는 긋기 · 탭은 그대로. AI 는 replaces 그대로(황소 찌르기 자리만 — sword_art.js) · 전 on [{ tech: 'stichOchs' }] · `?imbroDown=0`
+    { stage: 1, name: 'imbroccata', role: 'enh', replaces: 'stichOchs', hint: '강화동작 · 내려 긋는 칼 대신', body: [10, 12, 8, 0.04], on: [{ tech: 'stichOchs' }, { tech: 'stichOchsL', down: true }, { down: true }], // 위에서 내려 찌르기 ← 황소 찌르기 (늘) · 10/31 내려 긋는 칼 모두 (down 칸 — condOk)
       // tap = 읽힌 순간 탭 찌르기 덧씌우기로 찌름 (사장님 10/27 23:5x '찌르기 뻗게 고치고' — config UNIQUE_ASSIST.imbroReach · AI 임브로카타와 같은 길 · 기록 docs/strike/imbroccata_2026-10-27.md)
       tap: 1 },
     { stage: 3, name: 'inquartata', role: 'step', hint: '상대가 공격해 올 때 옆으로 움직이며 탭', nameKo: '비껴서며 찌르기 (인콰르타타)', orig: 'inquartata', body: [18, 10, 5, 0.025], bodyMirror: 1, /* 몸을 칼 줄 밖으로 빼는 쪽 = 디딘 쪽(10/21 — 스틱 쪽) */ on: [], // 비껴서며 찌르기 — 사람은 탭으로만 (10/31 · 전 판 걸음 명령 '옆 + 쟁기 찌르기 긋기'는 사람 몫에서 뺌 — on 없음 · stick 없음 · role 'step' 은 카드 갈래 '걸음 기술' 글만 · AI 는 schools.js 걸음 기술 그대로)
@@ -415,6 +420,11 @@ export class PlayerUniqueAssist {
   }
 
   condOk(c, cur, dir, now) {
+    // down (10/31 이탈리아 위에서 내려 찌르기 — UNIQUE_ASSIST.imbroDown): 아래로 가는 긋기 — 손가락 첫 방향이 곧장 아래에서 imbroDown° 안(수평 띠 밖) · tech 가 없으면 베기 꼴(찌르는 긋기 · 탭은 아님)만 · 0 = 끔
+    if (c.down) {
+      if (!(UA.imbroDown > 0) || angDeg(dir, [0, -1]) > UA.imbroDown) return false;
+      if (!c.tech && cur.kind !== 'cut') return false;
+    }
     if (c.tech && cur.tech !== c.tech) return false;
     if (c.pad && cur.pad !== c.pad) return false;
     if (c.dir && !dirOk(dir, c.dir)) return false;
@@ -512,6 +522,8 @@ export class PlayerUniqueAssist {
       f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
       f.stamina.attack(thrustTap ? 'thrust' : 'cut'); // 탭 하나 (끌고 가는 칼은 같은 공격 — same) · 찌르기 10 · 베기 12
       // 칼끝 돌려 빼기 (10/31 — 기본 고유 공격): 같은 돌려 빼기 길 · 보통 찌르기 빠르기(cavTipSpeed) · 잔상 없음 · 비킨 쪽은 닿았을 때 상대 칼 쪽(cavSide 'contact')
+      // 칼끝 돌려 빼기 심화 · 헛누름 (I8 — 사장님 10/31 '1로 해. 단 효과가 체감되려면 1초로 해.'): 돌려 빼는 순간(맞힘과 상관없이) 누르거나 닿아 있던 상대 칼이 허공으로 — 상대 두 팔 늦춤 cavArmSlow (흘림 장치)
+      if (cav && UA.cavArmSlow > 0 && !perkOff(f, 'cavazione') && f.foe && beginFlowRecovery(f.foe, f, UA.cavArmSlow)) this.stats.armSlow = (this.stats.armSlow ?? 0) + 1;
       if (e.tapSnap && UA.cavSnap && UA.enhance > 0) {
         const side = UA.cavSide === 'contact' ? ok.touch?.n ?? null : null;
         if (requestArtThrust(f, { v: cavTipSpeed(), trail: false, maxT: UA.cavSnapTime, tech: U.name, under: true, capFromCut: !!UA.cavCapCut, side })) {

@@ -116,6 +116,25 @@ export function migrateSkillBooks({ storage = globalThis.localStorage, today = n
   }
   return info;
 }
+/**
+ * 이탈리아 왼 줄 자리 옮기기 (10/31 12:xx 사장님 '임브로카타를 먼저 배우고 카바치오네를 배우고 틈 파고들기는 카바치오네 강화로 바꿔.' — 감독 '익힌 자리는 그 자리 그대로'):
+ *  옛 왼 줄 I2(d 2) → I7(d 3) → I8(d 4) → I4 가 새 줄 I7(d 2 · 위에서 내려 찌르기) → I2(d 3 · 칼끝 돌려 빼기) → I8(d 4 · 헛누름) → I4 — 칸 id 는 기술을 따르고(I7 = 내려 찌르기) 자리가 바뀐 둘(I2 · I7)만 맞바꿈.
+ *  옛 저장에서 앞 칸 규칙상 가능한 꼴은 {} · {I2} · {I2, I7} 뿐이고 {I2, I7} 은 새 줄에서도 d 2 · d 3 둘 — 그대로. {I2} 만(d 2 하나) 이면 새 줄에서는 앞 칸(I7) 없는 I2 라 있을 수 없는 꼴 →
+ *  그 영수증(skill:italian:I2)을 skill:italian:I7 로 바꿈(낸 값 그대로 — d 2 값 200 이 같음). 새 저장에서는 I7 없이 I2 를 익힐 수 없어 몇 번 불러도 같음(멱등). 금화 · 머리는 건드리지 않음.
+ *  돌려줌 { moved: 바꾼 수, saved }
+ */
+export function migrateItalianSlots() {
+  let moved = 0;
+  const r = update((p) => {
+    const it = p.acquisitions.filter((a) => a.kind === 'skill' && parseSkillReceipt(a.receipt)?.school === 'italian');
+    const has = (id) => it.some((a) => a.receipt === skillReceipt('italian', id));
+    if (!has('I2') || has('I7')) return false;
+    for (const a of it) if (a.receipt === skillReceipt('italian', 'I2')) (a.receipt = skillReceipt('italian', 'I7')), moved++;
+    return moved > 0;
+  });
+  return { moved, saved: r.saved };
+}
+
 /** 옮긴 알림 한 번 (대기실 — lobby.js): 아직 안 띄웠으면 { books, coins, heads, bonus } 를 돌려주고 띄운 것으로 적는다 · 없으면 null */
 export function takeTreeNotice() {
   const t = readProgress().tree;

@@ -28,6 +28,7 @@ import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
 import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — 내 공격이 상대 칼에 막히면 막은 쪽 기력 −, afterStrike)
 import { schoolPassiveOn } from './school_passive.js'; // 유파 패시브 스위치 (10/21 — 이베리아 손목 힘 · 나머지 넷은 fighter.schoolPassive)
+import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 AI 몫 — 상대 두 팔 늦춤 (10/31)
 import { aiUniqueStages, PLAYER_UNIQUE } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
 import { MEASURED } from './weapon_measured.js';
@@ -259,6 +260,7 @@ export class AI {
     const SBo = me.weapon?.secretBlade?.open ? me.weapon.secretBlade.tech : null; // 무기 비검이 여는 기술 (10/21 — 숙련도와 상관없이)
     const UQ = SKILL.schoolArt ? (TRADITIONS[art.tradition]?.unique ?? []).filter((u) => u.ai !== false && !u.counter && !ST.retired.has(u.name) && (open(ST.unique, u.name) || u.name === SBo)) : []; // 숙련도로 뺀 것 · 통폐합으로 뺀 것(10/21)은 꾸러미에 없다
     this.uniqueByName = new Map(UQ.map((u) => [u.feint ? u.feint.name : u.name, u]));
+    this.cavDeep = UQ.some((u) => u.name === 'cavazione'); // 칼끝 돌려 빼기가 꾸러미에 듦 (숙련도 ≥ 단계) — 심화 · 헛누름 AI 몫 (10/31)
     this.standoffArmed = true; // standoff: 대치 한 번에 한 번만 굴린다
     // 유파 비기 (10/9 유파 설계 v3 — schools.js *_SECRET, docs/strike/school_secret_2026-10-09.md): 이 유파의 비기 하나 (SKILL.schoolArt·schoolSecret 일 때).
     //  굴림이 없다 — 조건이 차면 확정. 무유파는 null → 아래 비기 자리들은 난수도 코드 길도 전과 같다
@@ -1464,6 +1466,9 @@ export class AI {
     this.strikeCue(t); // 기술 알림 (고유 동작 — 칼이 실제로 나가는 순간)
     const sp = this.specialNow(); // 특수 공격 AI 몫이 나감 → 식힘 (10/29 19:4x — 사람과 같게)
     if (sp) this.specStart(sp);
+    // 칼끝 돌려 빼기 심화 · 헛누름 (10/31 사장님 '1초로 해' — config UNIQUE_ASSIST.cavArmSlow): 빼서 찌르기 패시브(칼이 맞물린 뒤 — parried · bindDef)가 나가는 순간 상대 두 팔 늦춤 ·
+    //  칼끝 돌려 빼기가 숙련도 꾸러미에 든 AI 만(cavDeep — 곁눈 베기 무릎 꺾기 · 허리 베기 출혈처럼 AI 는 그 기술이 있으면 심화 이점도)
+    if (this.passiveAtk === 'cavazione' && this.cavDeep && UA.cavArmSlowAi && UA.cavArmSlow > 0 && beginFlowRecovery(this.foe, this.me, UA.cavArmSlow)) this.stats.cavArmSlow = (this.stats.cavArmSlow ?? 0) + 1;
     if (this.feint) {
       // 속임수: 가짜 기술의 앞부분만 가다가(내딛지 않고) 진짜 길로 바꾼다
       const f = this.feint;
