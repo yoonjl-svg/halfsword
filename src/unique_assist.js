@@ -527,7 +527,7 @@ export class PlayerUniqueAssist {
       if (e.tapSnap && UA.cavSnap && UA.enhance > 0) {
         const side = UA.cavSide === 'contact' ? ok.touch?.n ?? null : null;
         const tapT = UA.cavSpeed === 'tap'; // 탭 찌르기 박자 — 길 끝(거둠)까지 시간 상한 없음: 상한에서 끊으면 뻗은 칼이 상대 몸 · 칼 안에 든 채 충돌이 돌아와 내 몸이 튕겨 넘어졌음(싸움 판 넘어짐 8 / 9 판 — 낸 뒤 0.25 ~ 0.35 s)
-        if (requestArtThrust(f, { v: cavTipSpeed(), trail: false, maxT: tapT ? 0 : UA.cavSnapTime, tech: U.name, under: true, capFromCut: !tapT && !!UA.cavCapCut, side, tapTiming: tapT })) {
+        if (requestArtThrust(f, { v: cavTipSpeed(), trail: false, maxT: tapT ? 0 : UA.cavSnapTime, tech: U.name, under: true, capFromCut: !tapT && !!UA.cavCapCut, side, tapTiming: tapT, selfFree: UA.cavSelfFree })) {
           this.stats.snap = (this.stats.snap ?? 0) + 1;
           return true;
         }

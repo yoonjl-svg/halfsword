@@ -466,11 +466,32 @@ function ropes(f, on) {
 }
 
 function setKinematic(f, on) {
+  selfFree(f, on && (f.iai?.selfFree ?? 0) >= 2); // iaiKinematic 0(동역학 팔에 스텝마다 자리 · 속도를 놓음)이어도 — 놓은 팔이 몸통에 박히면 풀이가 몸통을 밀어냄
   if (!SECRET.iaiKinematic) return;
   const R = f.R;
   const parts = [...ARM_PARTS, ...(f.iai?.off ? OFF_PARTS : [])];
   for (const n of parts) f.bodies[n]?.setBodyType(on ? R.RigidBodyType.KinematicPositionBased : R.RigidBodyType.Dynamic, true);
   f.sword.setBodyType(on ? R.RigidBodyType.KinematicPositionBased : R.RigidBodyType.Dynamic, true);
+}
+
+/** 끌고 가는 칼팔 ↔ 제 몸통 충돌 끔 (10/31 칼끝 돌려 빼기 — UNIQUE_ASSIST.cavSelfFree · requestArtThrust selfFree): 칼팔(uarmS · farmS) 몸체 충돌 거름에서 제 몸통 비트(fighter.torsoBit)를 뺌 · off 면 되돌림(그 수가 켰을 때만) */
+function selfFree(f, on) {
+  const bit = f.torsoBit ?? 0;
+  if (!bit) return;
+  for (const n of ARM_PARTS) {
+    const b = f.bodies[n];
+    if (!b) continue;
+    for (let i = 0; i < b.numColliders(); i++) {
+      const c = b.collider(i);
+      if (on && c.selfFreeG == null) {
+        c.selfFreeG = c.collisionGroups();
+        c.setCollisionGroups(c.selfFreeG & ~bit);
+      } else if (!on && c.selfFreeG != null) {
+        c.setCollisionGroups(c.selfFreeG);
+        c.selfFreeG = null;
+      }
+    }
+  }
 }
 
 /** 굴림 묶음 (placeIai rollCap): 칼 면 z(zS)를 칼 축(Dw) 둘레로 아래팔 z(zF) 쪽에 돌려 zF · zS ≥ lim 이 되는 가장 작은 돌림 각(rad · 부호 = Dw 둘레 오른손) — 이미 안이면 0,
@@ -1097,7 +1118,7 @@ const COMBO_TURN = 0.35; // 손이 있는 쪽으로 몸을 트는 계수 (rad / 
 
 /** 빠른 연환을 걸어 둔다. opt.moves = 두 수 (schools.js 막기 연환 seq 꼴, step.fwd 는 m 로 푼 것) */
 export function requestCombo(f, opt = {}) {
-  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, effMul: opt.effMul, width: opt.width, tech: opt.tech, mord: opt.mord ?? null, arcCut: !!opt.arcCut, face: opt.face || null, min: opt.min ?? 0, maxT: opt.maxT ?? 0, keepAim: !!opt.keepAim, attack: !!opt.attack, speed: opt.speed > 0 ? opt.speed : 0, noArc: !!opt.noArc }; // speed: 칼끝 빠르기 m/s 를 바로 (share 대신 — 10/31 칼끝 돌려 빼기 = 보통 찌르기 빠르기) · noArc: 잔상 없음 (10/31 — 특수 공격이 아닌 끌고 가는 칼) // width: 잔상 굵기 몫 (격살 시험 — sword_trail.js) · mord: 죽음의 일격 운동학 길(10/22 밤 — mordschlag.js) · arcCut: 잔상은 베는 토막만 · face: 마주 보는 띠('path' 치는 끝 길 · 'line' 찌르는 줄) · min: 잔상 밝기 바닥 (10/23 비기 잔상 점검 — 사람 비기만, 아래 stepCombo · sword_trail.js)
+  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, effMul: opt.effMul, width: opt.width, tech: opt.tech, mord: opt.mord ?? null, arcCut: !!opt.arcCut, face: opt.face || null, min: opt.min ?? 0, maxT: opt.maxT ?? 0, keepAim: !!opt.keepAim, attack: !!opt.attack, speed: opt.speed > 0 ? opt.speed : 0, noArc: !!opt.noArc, selfFree: +opt.selfFree || 0 }; // speed: 칼끝 빠르기 m/s 를 바로 (share 대신 — 10/31 칼끝 돌려 빼기 = 보통 찌르기 빠르기) · noArc: 잔상 없음 (10/31 — 특수 공격이 아닌 끌고 가는 칼) // width: 잔상 굵기 몫 (격살 시험 — sword_trail.js) · mord: 죽음의 일격 운동학 길(10/22 밤 — mordschlag.js) · arcCut: 잔상은 베는 토막만 · face: 마주 보는 띠('path' 치는 끝 길 · 'line' 찌르는 줄) · min: 잔상 밝기 바닥 (10/23 비기 잔상 점검 — 사람 비기만, 아래 stepCombo · sword_trail.js)
   f.instantResult = null;
 }
 
@@ -1198,7 +1219,15 @@ function startCombo(f, combat, req) {
     keepAim: !!req.keepAim, // 끝나도 손 목표를 옮기지 않음 (탭으로 낸 칼 — 날개 접기 10/28: 손 목표 뜀이 긋기로 읽히지 않게)
     attack: !!req.attack, // 탭으로 낸 특수 공격 칼 (10/28): 끄는 동안 공격 중(stamina.attacking — 유파 패시브 인데스 · 몸 돌림 묶기 · 막아 받기 값이 보통 긋기 · 탭과 같게)
     noArc: !!req.noArc, // 잔상 없음 (10/31 칼끝 돌려 빼기 — 특수 공격이 아님)
+    selfFree: req.selfFree ?? 0, // 10/31 칼끝 돌려 빼기 넘어짐 고침 (UNIQUE_ASSIST.cavSelfFree): ≥ 1 = 이 수 동안 칼 어깨 면 밧줄을 뗌(아래) · 2 = 칼팔 ↔ 제 몸통 충돌도 끔(setKinematic)
   };
+  if (req.selfFree >= 1 && f.shoulderRopes && !f.iaiRopes) {
+    // 칼 어깨 면 밧줄(가슴 ↔ 위팔 — BODY.humanLimits)을 이 수 동안 뗌 (휩쓸기 · 풍차 감기 · 죽음의 일격과 같은 까닭): 돌려 빼는 위팔이 면 한도 밖을 지나면 밧줄이 스텝마다 가슴을 잡아채고
+    //  놓인 팔 빠르기는 가슴 빠르기로 되돌려져(placeIai) 반작용만 몸에 남음 — 골반이 0.09 s 에 초속 5 m 로 뒤로 밀려 넘어졌다 · 끝나면 다시 건다(endCombo — iaiRopes) · 손목 원뿔은 그대로
+    f.iaiRopes = { grip: false, shoulder: true };
+    for (const j of f.shoulderRopes) f.world.removeImpulseJoint(j, true);
+    f.shoulderRopes = null;
+  }
   if (!req.arcCut && !req.noArc) f.instantArc = f.iai.arc; // 베는 토막만(arcCut)이면 첫 베는 점에서 건다 (stepCombo — 섬광 · 남는 시간이 베는 순간부터)
   f.artTech = req.tech ?? null; // 이 끌고 가는 칼이 어떤 기술인가 (unique_assist.js strokeTechOf — 진 · 츠바메가에시 피해 × 3)
   setKinematic(f, true);
@@ -2515,6 +2544,11 @@ function endCombo(f, combat) {
       f.iaiRopes = null;
     }
   }
+  if (I.selfFree >= 1 && f.iaiRopes) {
+    // 10/31 칼끝 돌려 빼기: 뗀 칼 어깨 면 밧줄을 다시 건다 (startCombo — UNIQUE_ASSIST.cavSelfFree)
+    if (f.iaiRopes.shoulder && !f.shoulderRopes) f.shoulderOn();
+    f.iaiRopes = null;
+  }
   // 끝 자세를 경직 동안 붙잡는다 (발도와 같음) · 손 목표도 지금 토막 끝 길 점으로 (붙잡기가 풀린 뒤 칼이 막기 자리로 튀어 돌아가지 않게)
   const last = I.last ?? I.cur;
   const E = I.cur ?? last;
@@ -2581,14 +2615,15 @@ export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, 
  *  plane = 아래팔을 칼 줄에 맞추는 팔꿈치 · 손목이 사람 범위 안인 칼 면(iaiSolve — fighter.js armIK alignDir · wristPlane) · roll = 굴림 묶음(그런 면이 없을 때) ·
  *  dyn.thrust = 겨눈 찌름과 같이 찌르는 토막 첫 자리부터 쓸린 자리(thrustSweep) · 손목 교정은 칼을 줄에서 비키지 않음(iaiSolve thrustSeg). 이미 끌고 가는 중이면 거절(false)
  */
-export function requestArtThrust(f, { share = 0, v = 0, trail = true, maxT, tech, under = false, capFromCut = false, side = null, voidStep = null, bodyPose = null, tapTiming = false }) {
+export function requestArtThrust(f, { share = 0, v = 0, trail = true, maxT, tech, under = false, capFromCut = false, side = null, voidStep = null, bodyPose = null, tapTiming = false, selfFree = 0 }) {
   if (f.iai || f.iaiReq || !(share > 0 || v > 0) || !f.foe?.bodies?.chest) return false;
   // capFromCut (10/30 — UNIQUE_ASSIST.cavCapCut): 시간 상한을 찌르는 토막부터 셈 (돌려 빼기 · 겨눔 토막은 셈 밖 — 날개 접기 · 풍차 베기와 같은 셈) — 가까우면 돌려 빼기 길이 길어 상한 안에 찌름까지 못 갔다
   // 10/31 이탈리아 자리 바꿈: v = 칼끝 빠르기 m/s 를 바로(share 대신 — 칼끝 돌려 빼기 = 보통 찌르기 빠르기) · trail false = 잔상 없음 · side = 비킨 쪽(월드 — 닿았을 때 상대 칼 쪽) ·
   //  voidStep { lat, fwd } = 비껴서며 찌르기 몸 빼기(스틱 쪽 옆 + 앞 m — 몸 미끄러짐 · 뒷발 걸음) · bodyPose = 이 수 동안 몸 꼴 [골반 °, 가슴 °, 숙임 °, 낮춤 m] (겹치기 dupBody 와 같은 칸)
   //  tapTiming = 탭 찌르기와 같은 박자(겨눔 THRUST.aim · 뻗음 THRUST.extend · 버팀 · 거둠 — 10/31 칼끝 돌려 빼기: 보통 찌르기 · v 는 이때 겨눔 길 짜기의 잣대만)
+  //  selfFree = 10/31 칼끝 돌려 빼기 넘어짐 고침 (UNIQUE_ASSIST.cavSelfFree): 1 = 이 수 동안 칼 어깨 면 밧줄을 뗌 · 2 = 칼팔 ↔ 제 몸통 충돌도 끔 · 0 = 전 판
   const dyn = { kind: 'artThrust', thrust: true, target: 'lung', under, ...(side?.isVector3 ? { side: side.clone() } : {}), ...(voidStep ? { void: { ...voidStep } } : {}), ...(tapTiming ? { tapTiming: true } : {}) };
-  requestCombo(f, { moves: [{ name: tech, kind: 'thrust', same: true, artThrust: true, roll: true, plane: true, ...(capFromCut ? { capFromCut: true } : {}), ...(bodyPose ? { bodyPose } : {}), dyn }], share: share > 0 ? share : 1, speed: v, noArc: !trail, hold: 0, hitMul: 1, tech, maxT, attack: true });
+  requestCombo(f, { moves: [{ name: tech, kind: 'thrust', same: true, artThrust: true, roll: true, plane: true, ...(capFromCut ? { capFromCut: true } : {}), ...(bodyPose ? { bodyPose } : {}), dyn }], share: share > 0 ? share : 1, speed: v, noArc: !trail, hold: 0, hitMul: 1, tech, maxT, attack: true, selfFree });
   return true;
 }
 /**

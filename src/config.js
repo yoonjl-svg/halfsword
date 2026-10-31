@@ -1459,6 +1459,12 @@ export const UNIQUE_ASSIST = {
   //    잔상 없음 · 식힘 없음. 비킨 쪽 cavSide: 'contact' = 닿았을 때 상대 칼이 있던 쪽(feel.normal 의 반대 — 상대 칼 밑을 지나 그 너머 열린 줄로) · 'free' = 10/28 판(내는 때 상대 칼이 없는 쪽)
   cavSpeed: 'tap', // [감독 해석 — '보통 찌르기 빠르기' 사장님 10/31 · 수 확인 전] · 숫자(m/s)를 주면 그 빠르기 · `?cavSpeed=`
   cavSide: 'contact', // [감독 안 — 확인 전] `?cavSide=free`
+  //  칼끝 돌려 빼기 넘어짐 고침 (10/31): 끌고 가는 칼의 팔은 스텝마다 길이 자리를 놓고 빠르기를 가슴 빠르기로 되돌린다(secret_instant.js placeIai · SECRET.iaiKinematic 0).
+  //   돌려 빼는 위팔이 칼 어깨 면 한도(BODY.humanLimits 밧줄 — 가슴 ↔ 위팔) 밖을 지나면 밧줄이 스텝마다 팔과 가슴을 서로 잡아채고, 팔이 얻은 빠르기는 되돌림에 지워져
+  //   반작용만 몸에 남음 — 골반이 0.09 s 에 초속 0.2 → 5 m 로 뒤로 밀려 발 밖으로 0.25 s 넘게 나가 넘어짐(knockDown(false) — lostFooting · 츠바이핸더 판 9 판에 넘어짐 6).
+  //   1 = 이 수 동안 칼 어깨 면 밧줄을 뗌(휩쓸기 · 풍차 감기 · 죽음의 일격과 같은 손 — 끝나면 다시 검 · 손목 원뿔은 그대로) ·
+  //   2 = 더해 칼팔 ↔ 제 몸통 충돌도 끔(시험 — setKinematic selfFree) · 0 = 전 판 `?cavSelfFree=0`
+  cavSelfFree: 1, // [감독 고침 — 사장님 확인 전]
   //  칼끝 돌려 빼기 심화 · 헛누름 (I8 — 사장님 10/31 12:xx '임브로카타를 먼저 배우고 카바치오네를 배우고 틈 파고들기는 카바치오네 강화로 바꿔.' · 효과 '1로 해. 단 효과가 체감되려면 1초로 해.' → '1.2초로 할게'):
   //   칼끝 돌려 빼기가 나가는(돌려 빼는) 순간 — 맞힘과 상관없이 — 내 칼을 누르거나 닿아 있던 상대 칼이 허공으로 쏠려 상대 두 팔이 이 초 동안 늦음(흘림과 같은 장치 nagashi_recovery.js beginFlowRecovery ·
   //   바닥 FLOW_RECOVERY.floor 그대로 · 처음 1/3 바닥 → 남은 2/3 에 회복). 사람 = I8 을 익혀야(skill_kit.js perkOff 'cavazione') · AI = 칼끝 돌려 빼기가 숙련도 꾸러미에 든 AI 의 빼서 찌르기 패시브

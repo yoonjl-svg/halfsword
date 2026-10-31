@@ -28,6 +28,11 @@ export function summarize(row, runs) {
     win: runs.filter((r) => r.win).length, lose: runs.filter((r) => r.lose).length,
     dealt: r3(sum(runs, (r) => r.dealt) / n), recv: r3(sum(runs, (r) => r.recv) / n),
     falls: sum(runs, (r) => r.it?.falls?.length ?? 0),
+    // 넘어짐 까닭 (11/01): 몸 균형(footing 발 밖 · tilt 기울기)으로 넘어진 수 · 그 가운데 낸 뒤 0.4 s 안 · 맞아서(hit · gauge) 넘어진 수 — 낸 뒤 0.4 s 안 넘어짐 전체도
+    fallsBody: sum(runs, (r) => (r.it?.knock ?? []).filter((k) => k.why === 'footing' || k.why === 'tilt').length),
+    fallsBodyNearFire: sum(runs, (r) => (r.it?.knock ?? []).filter((k) => (k.why === 'footing' || k.why === 'tilt') && (r.it?.fireT ?? []).some((t) => k.t >= t && k.t <= t + 0.4)).length),
+    fallsHit: sum(runs, (r) => (r.it?.knock ?? []).filter((k) => k.why === 'hit' || k.why === 'gauge').length),
+    fallsNearFire: sum(runs, (r) => (r.it?.falls ?? []).filter((k) => (r.it?.fireT ?? []).some((t) => k.t >= t && k.t <= t + 0.4)).length),
     kill3: sum(runs, (r) => r.it?.kill3 ?? 0), // 낸 뒤 3 s 안에 상대가 죽은 낸 수
     armSlow: sum(runs, (r) => r.it?.armSlow ?? 0), // 헛누름 팔 늦춤을 건 수
     sevPerHit: r3(sum(res, (x) => x.sev ?? 0) / Math.max(1, hit)), EperHit: r3(sum(res.filter((x) => x.hits > 0), (x) => x.E ?? 0) / Math.max(1, hit)),

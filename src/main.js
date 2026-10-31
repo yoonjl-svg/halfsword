@@ -338,6 +338,7 @@ if (params.has('cavArmSlow') && +params.get('cavArmSlow') >= 0) CONFIG.UNIQUE_AS
 if (params.has('cavArmSlowAi')) CONFIG.UNIQUE_ASSIST.cavArmSlowAi = +params.get('cavArmSlowAi') ? 1 : 0; // 그 AI 몫 (10/31 — 기본 1)
 if (params.has('imbroDown') && +params.get('imbroDown') >= 0) CONFIG.UNIQUE_ASSIST.imbroDown = +params.get('imbroDown'); // 이탈리아 위에서 내려 찌르기 — 아래로 가는 긋기 각 (10/31 사장님 · 기본 67.5 · 0 = 황소 찌르기 긋기만)
 if (params.has('cavSide')) CONFIG.UNIQUE_ASSIST.cavSide = params.get('cavSide') === 'free' ? 'free' : 'contact'; // 칼끝 돌려 빼기 비킨 쪽 (10/31 — 'contact' 닿았을 때 상대 칼 쪽 · 'free' 10/28 판)
+if (params.has('cavSelfFree')) CONFIG.UNIQUE_ASSIST.cavSelfFree = +params.get('cavSelfFree') || 0; // 칼끝 돌려 빼기 넘어짐 고침 (10/31 — 1 칼 어깨 면 밧줄 뗌 · 2 칼팔 ↔ 몸통 충돌도 끔 · 0 전 판)
 if (params.has('cavSpeed')) CONFIG.UNIQUE_ASSIST.cavSpeed = +params.get('cavSpeed') > 0 ? +params.get('cavSpeed') : 'tap'; // 칼끝 돌려 빼기 칼끝 빠르기 m/s (10/31 — 기본 'tap' = 보통 탭 찌르기 빠르기)
 if (params.has('lianTap')) CONFIG.UNIQUE_ASSIST.lianTap = +params.get('lianTap') ? 1 : 0; // 사람 날개 접기 탭 (사장님 10/28 01:2x — 물러나며 탭 · 기본 1)
 if (params.has('lianStep') && +params.get('lianStep') >= 0) CONFIG.UNIQUE_ASSIST.lianStep = +params.get('lianStep'); // 사람 날개 접기 앞 걸음 (m — 기본 0.45 · 사장님 10/29 14:3x)

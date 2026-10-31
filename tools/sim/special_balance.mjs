@@ -580,7 +580,7 @@ function itStats(IT, uq, fires) {
   const recvIn = (t0, w = 0.6) => IT.recvLog.filter(([t]) => t >= t0 && t <= t0 + w).reduce((a, [, sv]) => a + sv, 0);
   const inq = IT.inq.map((x) => ({ ...x, recv: r3(recvIn(x.t)), hit: recvIn(x.t) > 0, fall: IT.falls.some((f) => f.t >= x.t && f.t <= x.t + 1) }));
   const kill3 = fires.filter((x) => IT.foeDeadT != null && IT.foeDeadT >= x.t && IT.foeDeadT <= x.t + 3).length; // 낸 뒤 3 s 안에 상대가 죽은 낸 수 (헛누름 견줌 — 10/31)
-  return { touches: S.touches ?? 0, touchCut: S.touchCut ?? 0, early: S.tapEarly ?? 0, touchTaps: IT.touchTaps, armSlow: S.armSlow ?? 0, inq, falls: IT.falls, fires: fires.map((x) => x.res), fireT: fires.map((x) => r3(x.t)), foeDeadT: IT.foeDeadT ?? null, kill3, recvLog: IT.recvLog.map(([t, sv, z, ty, E]) => [r3(t), r3(sv), z, ty, E]) };
+  return { touches: S.touches ?? 0, touchCut: S.touchCut ?? 0, early: S.tapEarly ?? 0, touchTaps: IT.touchTaps, armSlow: S.armSlow ?? 0, inq, falls: IT.falls, knock: IT.knock ?? [], fires: fires.map((x) => x.res), fireT: fires.map((x) => r3(x.t)), foeDeadT: IT.foeDeadT ?? null, kill3, recvLog: IT.recvLog.map(([t, sv, z, ty, E]) => [r3(t), r3(sv), z, ty, E]) };
 }
 
 // ── fight: 손가락 봇 대 치고 막는 AI ──
@@ -617,6 +617,21 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
   startAdd += R.startAdd ?? 0; // 풍차 베기: 감고 걸어 들어갈 몫
   // 10/31 줄 cavTouch · inqVoid 손 (위 ROWS 머리말)
   const IT = R.touch || R.inq ? { touchTaps: 0, inq: [], recvLog: [], falls: [], st: 'stand' } : null;
+  // 넘어짐 까닭 (11/01 칼끝 돌려 빼기 넘어짐 고침 재기): knockDown 을 부른 곳 — 'footing'(발 밖 lostFooting) · 'tilt'(기울기) · 'gauge'(맞아 깎인 휘청 게이지) · 'legs' · 'hit'(머리 세게 맞음 · 팔다리 잘림 · 그 밖)
+  if (IT) {
+    const kd = P.knockDown.bind(P);
+    P.knockDown = (heavy = true) => {
+      if (P.state === 'stand') {
+        const st = new Error().stack ?? '';
+        const upd = /updateState/.test(st.split('\n').slice(2, 3).join(''));
+        const tilt = P.tiltDeg() - (P.hunch ?? 0) * (180 / Math.PI);
+        const why = !upd ? 'hit' : P.offBalanceTime > CONFIG.BALANCE.fallDelay ? 'footing' : tilt > CONFIG.BODY.fallTiltDeg ? 'tilt' : P.balance <= 0 ? 'gauge' : P.legsCannotSupport ? 'legs' : 'other';
+        IT.knock = IT.knock ?? [];
+        IT.knock.push({ t: r3(G.t), heavy, why });
+      }
+      return kd(heavy);
+    };
+  }
   let touchSeen = null;
   let tapAt = null;
   let inqHand = null;
