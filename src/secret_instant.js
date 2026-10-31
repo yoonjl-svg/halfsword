@@ -1281,16 +1281,14 @@ function comboPlanPad(f, I, m, A) {
   const last = pts[pts.length - 1];
   const kx = Math.abs(last[1] - pts[0][1]) > 1e-6 ? (last[0] - pts[0][0]) / (last[1] - pts[0][1]) : 0; // 줄 기울기 (패드 x / 높이)
   const pivot = (dy) => m.shift === 'pivot' || (m.shift === 'slide' && dy < 0);
-  const build = (dy = 0) => {
-    const P = pts.map((p0, k) => {
+  const build = (dy = 0) =>
+    pts.map((p0, k) => {
       const p = !dy ? p0 : pivot(dy) ? [p0[0], p0[1] + (dy * cum[k]) / Math.max(1e-6, cum[cum.length - 1])] : m.shift === 'slide' ? [p0[0] + dy * kx, p0[1] + dy] : [p0[0], p0[1] + dy];
       const B = { H: new THREE.Vector3(), D: new THREE.Vector3(), px: p[0], pad: p };
       f.padPose(p[0], p[1], B.H, B.D);
       if (m.plan?.[k]) comboPlanAdd(B, m.plan[k]); // 길 덧칸 ([from, ...path] 점마다 — 제비 베기 되돌림 칼만)
       return B;
     });
-    return P;
-  };
   const poses = m.band ? comboBandShift(f, I, A, build) : build(); // 몸통 띠 겨눔 (제비 베기 되돌림 칼 — 10/25 23:1x)
   poses.forEach((B, k) => {
     const sg = { cut: k > 0, A: cur, B };
@@ -2544,7 +2542,7 @@ function stepCombo(f, combat) {
     const Dw = P.D.clone().applyQuaternion(I.yaw).normalize();
     const tipP = P.H.clone().applyQuaternion(I.yaw).add(tv(f.bodies.chest.translation(), new THREE.Vector3())).addScaledVector(Dw, f.weaponCfg.hiltLength + f.weaponCfg.bladeLength);
     //  pathHint (곧은 제비 베기 — 10/31): 칼끝이 가는 쪽 = 길 위 이 자리 − 길 위 지난 자리 (놓인 칼끝이 아니라) — 손목 교정이 놓인 칼끝을 옮기면 다음 스텝 날 쪽이 비틀려
-    //   쪽 · 교정이 스텝마다 오가며 곧은 길이 꺾였다. 없으면 10/25 그대로(놓인 지난 칼끝)
+    //   날 쪽 · 손목 교정이 스텝마다 오가며 곧은 길이 꺾였다. 없으면 10/25 그대로(놓인 지난 칼끝)
     const ref = I.moves[I.mi]?.pathHint ? I.pathTip ?? I.prev.tip : I.prev.tip;
     const hint = tipP.clone().sub(ref);
     if (I.moves[I.mi]?.pathHint) I.pathTip = tipP;
