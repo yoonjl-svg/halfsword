@@ -838,21 +838,27 @@ export function iaiReadyPose(f, on, dt) {
  *   그래서 손을 쉬고 기다리다 낸 발도는 그 자세(왼 허리)에서 나간다(requestIai player 길 — 지금 손 → 왼 허리 → 가로, iaiPlayerTime 그대로).
  *  ③ 탭 · 손잡이 찍기 · 비기 · 약한 자세 간격 맞추기가 덧씌우기 칸을 쓰는 동안은 칸을 건드리지 않음(그 동작이 칸을 가짐) · 발도 중이면 0(AI 와 같음).
  *  AI 와 다른 것: 들어갈 때 앞발 내딛기(stance.iai.step)는 안 함 — 사람 발은 스틱만 움직임(2 s 서 있다가 몸이 저절로 상대 쪽으로 나가지 않게).
+ *  standing (10/31 사장님 08:xx '웅크리기를 없앴더니 고노센 발동창이 안열려.' — SECRET.gnsReadyHip · 웅크림 gnsCrouch 0 일 때): ① 몸 웅크림 없음(iaiReadyW 0 — stanceTick · AI crouchLow 그대로 쉼) ·
+ *   ② 손 · 칼 · 몸 비틂만 위와 같이(왼 허리 발도 대기 · 몸 숙임 · 낮춤 0) — 준비가 칼 자리로 보이고, 칼끝이 상대를 안 겨눠 상대에게 빈틈으로 보임(웅크림 판과 같음).
+ *   웅크림 판의 몸은 숙인 가슴이 상대 쪽으로 0.2 m · 그 자세로 0.5 m 남짓 저절로 다가가 발도가 낮게 나갔다(docs/strike/gonosen_window_2026-10-31.md) — 선 채 판은 그 둘이 없음
  */
-export function iaiReadyPosePlayer(f, on, handFree, dt) {
+export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false) {
   const sk = f.skill;
   const own = !sk.tap && !sk.pom && !sk.sec && !sk.vitalRange && !sk.vitalRelease;
   if (iaiBusy(f)) {
     f.iaiReadyW = 0;
+    f.iaiReadyR = 0;
     f.iaiHandW = 0;
     return;
   }
-  const w0 = f.iaiReadyW ?? 0;
+  // 준비 무게 r (켜짐 0.35 s · 풀림 gnsCrouchOut) — 웅크림 판이면 그대로 몸 웅크림 무게(iaiReadyW · stanceTick), 선 채 판(standing — SECRET.gnsReadyHip)이면 몸은 0 이고 손 몫의 한도로만
+  const w0 = f.iaiReadyR ?? f.iaiReadyW ?? 0;
   const h0 = f.iaiHandW ?? 0;
   if (!on && w0 <= 0 && h0 <= 0) return;
   const w = on ? Math.min(1, w0 + dt / 0.35) : Math.max(0, w0 - dt / SECRET.gnsCrouchOut);
   const h = handFree || !on ? (handFree ? 0 : Math.min(h0, w)) : Math.min(w, h0 + dt / 0.35);
-  f.iaiReadyW = w;
+  f.iaiReadyR = w;
+  f.iaiReadyW = standing ? 0 : w;
   f.iaiHandW = h;
   if (!own) return;
   const R = SECRET.iaiReady;
@@ -867,8 +873,9 @@ export function iaiReadyPosePlayer(f, on, handFree, dt) {
   th.dir[2] = D.z;
   th.pelvisYaw = R.body.pelvisYaw * D2R;
   th.chestYaw = R.body.chestYaw * D2R;
-  th.pitch = R.body.pitch * D2R;
-  th.drop = R.body.drop;
+  // 선 채 허리 대기 (10/31 — SECRET.gnsReadyHip): 몸 숙임 · 낮춤 없이(골반 높이 그대로 — 덧씌우기 몸 낮춤의 바탕 0.06 · fighter.js) 몸 비틂만 — 발도 길은 가슴 기준이라 서 있는 높이에서 나간다
+  th.pitch = standing ? 0 : R.body.pitch * D2R;
+  th.drop = standing ? 0.06 : R.body.drop;
 }
 
 // ─────────────────────────────────────────────────────────────
