@@ -321,7 +321,7 @@ const CHINESE_TEMPER = { ...GERMAN_TEMPER, margin: [0.1, 0.3], circleRate: [0.2,
 //  보폭 규칙 strideK (10/15 20:3x 사장님 '보폭 규칙안대로 가자' — docs/strike/stride_rule_2026-10-15.md · config GAIT.strideRule · `?strideRule=0` = 아래 칸 값 그대로):
 //   걷는 최고 빠르기는 모든 유파 같고(moveSpeed 등 그대로 — 10/29 부터 일본만 speedMul 로 줄임) 보폭 상한 maxStride = 0.62 × k · 1 m/s 박자 cadence0 = 2.05 ÷ k(박자는 빠르기 ÷ 보폭) — gait.js gaitParams 가 맨 끝에 덮음
 //   (사람·AI 같음 — 이탈리아 player 칸의 maxStride·cadence0 도 이것으로, 다른 덮어쓰기 칸·이베리아 옆걸음 sideStride·sideMul·모노호시자오 byFrame 은 그대로).
-//   k 는 컨셉에서 0.1 단위: 이탈리아 0.7(작게 빨리 — 0.434 m · 2.93) · 일본 0.8(0.496 · 2.56 — 10/29 뺌: 칸 설계 박자 2.2 · 보폭 0.5 + speedMul 0.67 · 아래 JAPANESE_GAIT) · 동방 0.9(0.558 · 2.28 — 10/29 0.75: 0.465 · 2.73 · 아래 CHINESE_GAIT) · 독일 1.0(칸 없음 = 기본 0.62 · 2.05) · 이베리아 1.2(크게 느리게 — 0.744 · 1.71)
+//   k 는 컨셉에서 0.1 단위: 이탈리아 0.7(작게 빨리 — 0.434 m · 2.93) · 일본 0.8(0.496 · 2.56 — 10/29 뺌: 칸 설계 박자 2.2 · 보폭 0.5 + speedMul 0.67(10/31 0.70) · 아래 JAPANESE_GAIT) · 동방 0.9(0.558 · 2.28 — 10/29 0.75: 0.465 · 2.73 · 아래 CHINESE_GAIT) · 독일 1.0(칸 없음 = 기본 0.62 · 2.05) · 이베리아 1.2(크게 느리게 — 0.744 · 1.71)
 //  ⓐ 이탈리아 (카포 페로): 곧은 선 위 좁은 너비·무게 조금 뒤·뒷무릎 굽힘 [원전 2차] · 짧고 잦은 걸음(파브리스) [원전 2차] — 수는 [추정]
 //  짝걸음 pair (10/10 사장님 '다리를 저는 것처럼 — 리듬감·탄력감이 없다' · '동작이 빨라야 해'): follow 를 앞뒤로 갈 때 '따·닥' 두 박 한 짝으로 — gait.js update ③.
 //   이끄는 발(가는 쪽 발) Tsw × lead → 두 발 디딤 Tds × inner 만에 따라붙는 발 Tsw × trail('착') → 짝 사이 쉼(한 짝 = 걸음 두 개 시간이 되게).
@@ -386,7 +386,15 @@ const GERMAN_CHASE = { window: realS(0.6), steps: 2, mul: 1.5, brake: 0.2, accel
 //  even: 고른 바탕 걸음 (10/15 — config GAIT.itEven 1 일 때 gait.js gaitParams 가 위에 덮음 · `?itGait=old` = 덮지 않음, 옛 짝걸음 바이트 같음 · docs/strike/italian_rhythm_2026-10-15.md §10):
 //   짝걸음(가까이 · 앞뒤로 천천히)을 고른 짝(ITALIAN_PAIR_EVEN)으로. 지나 딛기(멀리·빨리)의 보폭·박자는 보폭 규칙(strideK 0.7 — 아래 칸 · config GAIT.strideRule)이 맡는다. 값은 사장님 확인 전 (확인표 1710~)
 const ITALIAN_EVEN = { pair: ITALIAN_PAIR_EVEN, dsFrac: 0.21, player: { dsFrac: 0.21 } };
-const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 }, strideK: 0.85, backMul: 'flat', even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375 · `?itStride=0` 이면 0.7)
+//  backCap: 뒤 느려짐 없앰(backMul 'flat')에 걸음 수 한도 (10/31 08:xx 사장님 결정 '다른 모든 유파는 물러설 때 70%이지? 그럼 이탈리아도 네걸음 이후에는 (다섯 걸음째부터) 70% 적용'):
+//   이어 물러서는 뒤 디딤 steps(4)번까지는 뒤 느려짐 없음(앞과 같은 빠르기) · 다섯째 뒤 디딤을 뗄 때부터 모든 유파와 같은 뒷걸음 × 0.7(GAIT.backFactor). 사람(I3 물러서기) · AI 같이.
+//   셈(gait.js backStep): 박자 걸음과 같은 디딤 셈 — 걷는 걸음(walk · 걷는 중 catch) 디딤 하나 = 한 걸음, 짝걸음의 이끄는 발 · 따라붙는 발도 하나씩. 가려는 속도(뒤 느려짐 없애기 전)의
+//   앞뒤 몫이 옆 몫보다 크고 뒤쪽이면 +1 · 앞 걸음 · 옆 몫이 큰 걸음 · 빈 스틱 걸음은 몸이 더는 물러나지 않을 때(골반 뒤 빠르기 < GAIT.walkMin 걷기 문턱)만 0 으로
+//   (아직 뒤로 미끄러지면 그대로 — 잠깐 놓기 · 옆 한 디딤으로 셈만 지우는 꼴 막음) · 걸음이 끝난 뒤 idle s 안에 새 걸음이 없으면(멈춤) 0 으로 —
+//   idle = 박자 걸음 멈춤 기준 0.6 s(사장님 결정 10/17 14:5x) 그대로 · 기술 걸음 · 자세 고치기는 세지도 끊지도 않음(새 문턱 없음 — 셈 규칙은 사장님 확인 전).
+//   `?itBackCap=0` = 10/21 판(늘 뒤 느려짐 없음) · `?itBackCap=N` = N 걸음까지 (setItalianBackCap)
+const ITALIAN_BACK_CAP = { steps: 4, idle: ITALIAN_RHYTHM.idle };
+const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 }, strideK: 0.85, backMul: 'flat', backCap: ITALIAN_BACK_CAP, even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375 · `?itStride=0` 이면 0.7)
 //  ⓐ′ 중국 (조선세법): 체보 (掣步) — 앞발 내딛고 뒷발 끌어붙임 [원문 무비지 쪽155·156] · 진보 (進步) 로 들어가며 침 [원문 쪽158] — 수는 [추정]
 //   10/10 사장님 12:5x~13:0x (docs/strike/school_gait_iberian_chinese_2026-10-10.md):
 //   간수세 낮춤 guardLow — 바탕 자세표 '옆 지킴'(중국 이름 看守勢 · 자세 虎蹲 '웅크린 범', 무비지 쪽163 · 무도 권2 p039 「左脚右手虎蹲勢」 [원문 이름])에 있을 때 골반 +0.04 m (확인표 628)
@@ -431,13 +439,15 @@ const IBERIAN_GAIT = { guardLength: 0.62, guardWidth: 0.34, weightFront: 0.5, ma
 //  버티기 steady (10/15 사장님 '휘청·넘어짐 저항으로 가자' — 25 % 는 감독 권고 수치, 미세 조정은 나중 · docs/strike/japanese_steady_2026-10-15.md · 확인표 1520~): · 10/30 00:1x 사장님 '흔들림 저항도 30%로 늘려' → steady 0.25 → 0.3
 //   균형이 흔들리는 양을 이 몫만큼 덜 받는다(× 0.75 — fighter.js swayScale 이 '발 밖으로 벗어난 몫 offBalance'와 '맞아 깎이는 휘청임 게이지'에 곱함).
 //   몸의 일이라 사람·AI 같이, 두 일본 무기(byFrame·player 덮개가 안 건드림) 모두. `?jpSteady=0` = 끔
-export const JAPANESE_GAIT = { guardHeight: 0.75, walkHeight: 0.818, reachMax: 0.7, guardLength: 0.45, guardWidth: 0.18, weightFront: 0.5, maxStride: 0.5, cadence0: 2.2, dsFrac: 0.25, width: 0.08, minWidth: 0.12, lift: 0.035, liftSettle: 0.015, toeUp: 0.06, sway: 0.01, bobAdd: 0.005, dsLow: 0.5, footwork: 'follow', followIn: 3.5, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, steady: 0.3, byFrame: { heavy: { guardLength: 0.5, footwork: 'pass' } }, player: { trailReach: 0.36 }, speedMul: 0.67, settleStance: true };
+export const JAPANESE_GAIT = { guardHeight: 0.75, walkHeight: 0.818, reachMax: 0.7, guardLength: 0.45, guardWidth: 0.18, weightFront: 0.5, maxStride: 0.5, cadence0: 2.2, dsFrac: 0.25, width: 0.08, minWidth: 0.12, lift: 0.035, liftSettle: 0.015, toeUp: 0.06, sway: 0.01, bobAdd: 0.005, dsLow: 0.5, footwork: 'follow', followIn: 3.5, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, steady: 0.3, byFrame: { heavy: { guardLength: 0.5, footwork: 'pass' } }, player: { trailReach: 0.36 }, speedMul: 0.7, settleStance: true };
 //  ↑ 10/29 21:0x 사장님 '일본 걸음 설계대로 고쳐' · '다른 유파보다 확연히 느려도 돼. 10%~50% 사이로 일본 걸음의 맛을 살렸을 때 가장 자연스러운 쪽으로' (docs/strike/jp_gait_2026-10-29.md):
 //   보폭 규칙 strideK 0.8 뺌(보폭 상한 0.496 · 1 m/s 박자 2.56 으로 설계 박자 2.2 · 보폭 0.5 를 덮어 — 같은 꼭대기를 짧은 보폭으로 내느라 사람은 독일보다 잦은 박자, AI 는 두 발 디딤 0.25 · 들기 0.035 로
 //   초당 5.2 잔걸음이 되어 꼭대기 −33 %) · 설계 박자 2.2 · 보폭 상한 0.5 그대로 · speedMul = 가려는 빠르기 × (꼭대기 약 −30 % — 확연히 느리고 잰 걸음) ·
 //   사람 칸의 두 발 디딤 0.18 · 들기 0.05 뺌(사람도 설계 0.25 · 0.035 — 스리아시) · settleStance = 서 있는 자세를 자세 길이 0.45 로(판 시작 0.31 에서 안 고쳐지던 것). 전 판 = `?jpGait=old`
+//   speedMul **0.67 → 0.70** (10/31 08:xx 사장님 결정 '일본은 70%가 아니라 67%네? … ' · '일본 바로잡아' — 10/30 00:1x '일본 -30% 적용해' 의 −30 % 를 배율 그대로 0.70 으로).
+//    0.67 은 10/29 표에서 앞 꼭대기가 독일의 −30 %(1.41 · 2.00 m/s)로 잰 자리였다 — 0.70 은 배율이 앞걸음 × 0.7(뒷걸음 GAIT.backFactor 와 같은 몫). `?jpWalk=0.67` = 10/30 판
 export const JAPANESE_GAIT_OLD = { strideK: 0.8, player: { trailReach: 0.36, dsFrac: 0.18, lift: 0.05 }, speedMul: undefined, settleStance: undefined };
-/** 일본 걸음 비교 (주소 `?jpGait=old` = 10/29 전 판 · `?jpWalk=0.67` = speedMul 시험 — 판을 세우기 전에 한 번) */
+/** 일본 걸음 비교 (주소 `?jpGait=old` = 10/29 전 판 · `?jpWalk=0.67` = speedMul 시험(0.67 = 10/30 판 · 판 값 0.70) — 판을 세우기 전에 한 번) */
 export function setJapaneseGait(o) {
   if (o === 'old') for (const [k, v] of Object.entries(JAPANESE_GAIT_OLD)) { if (v === undefined) delete JAPANESE_GAIT[k]; else JAPANESE_GAIT[k] = v; }
   else if (+o > 0) JAPANESE_GAIT.speedMul = +o;
@@ -1482,6 +1492,22 @@ export function setItalianWalk(v) {
   if (!m || !(+m[2] > 0) || !(+m[3] > 0) || (m[4] != null && !(+m[4] > 0))) return false;
   Object.assign(m[1] ? g.player : g, { foreMul: +m[2], backMul: +m[3] });
   if (m[4] != null) g.rhythm.accel = +m[4];
+  return true;
+}
+
+/**
+ * 이탈리아 물러서기 걸음 수 한도 비교 (10/31 — ITALIAN_GAIT.backCap · 주소 `?itBackCap=` · 판을 세우기 전에 한 번): '0' = 10/21 판(한도 없음 — 늘 뒤 느려짐 없음) ·
+ *  'N'(1 이상 정수) = 이어 물러서는 뒤 디딤 N 번까지 뒤 느려짐 없음(판 값 4). 못 읽으면 그대로 두고 false
+ */
+export function setItalianBackCap(v) {
+  const g = TRADITIONS.italian.gait;
+  const s = String(v ?? '').trim();
+  if (s === '0') {
+    delete g.backCap;
+    return true;
+  }
+  if (!/^\d+$/.test(s) || !(+s >= 1)) return false;
+  g.backCap = { ...ITALIAN_BACK_CAP, steps: +s };
   return true;
 }
 

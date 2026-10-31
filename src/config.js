@@ -60,8 +60,12 @@ export const STAMINA = {
   //  탭 찌르기 10 · 베기 12 는 그대로 · 칼이 닿으면 짧아도 청구(contactAttack 그대로) · AI · 시뮬 대본 몸은 strokeTravel 그대로(관문 그대로). `?strokeMin=0` = 전 판 [사장님 확인 전 — 확인표 3092]
   humanStrokeMin: 0.15,
   weaponReferenceMass: 1.6, // 무게 = √(처음 쥔 칼 질량 ÷ 1.6 kg) 0.75 ~ 1.5 — 칼이 부러져도 처음 질량(사장님 결정)
-  // 걷기: 골반 수평 이동 0.62 m 마다 보통 1.4 · 동방 0.7 · 일본 2.1(사장님 결정 §0 15 · 16 — 유파 열쇠 swordArt.tradition · docs/strike/school_kit_map.md 보법 칸) · 한 스텝 거리 상한 3 m/s(튐 막기)
-  stepDistance: 0.62, stepCosts: { default: 1.4, chinese: 0.7, japanese: 2.1 }, maxWalkSpeed: 3,
+  // 걷기: 골반 수평 이동 0.6 m 마다 보통 4 · 동방 2 · 일본 6(유파 열쇠 swordArt.tradition · docs/strike/school_kit_map.md 보법 칸) · 한 스텝 거리 상한 3 m/s(튐 막기)
+  //  **10/31 09:xx 사장님 결정** '기력 단위 0.6으로 맞추고, 동방은 2 독일이탈리아이베리아는 4 일본은 6으로 해 뒷걸음은 항상 1.5배' — 0.62 m → 0.6 m(걸음 사다리 한 걸음 0.6 · GAIT.stepRungs) ·
+  //   보통 1.4 → 4 · 동방 0.7 → 2 · 일본 2.1 → 6(전: 사장님 결정 §0 15 · 16) · 뒷걸음은 첫 걸음부터 늘 × backStepCostMul(사람 · AI · 모든 유파 — stamina.js step):
+  //   뒤 = 스틱의 뒤 몫(× GAIT.backFactor)이 옆 몫(× GAIT.sideFactor)보다 큰 걸음 — gait.js 걸음 셈(앞뒤 몫 > 옆 몫)과 같은 가름 · 옆걸음 · 비스듬히 옆은 뒤 아님 ·
+  //   셈은 뒤로 간 거리를 × 1.5 로 쌓음(뒤로만 걸으면 0.4 m 마다 한 번 = 0.6 m 마다 × 1.5)
+  stepDistance: 0.6, stepCosts: { default: 4, chinese: 2, japanese: 6 }, backStepCostMul: 1.5, maxWalkSpeed: 3,
   // 회복: 0.6 s 동안 공격·막아 받기·박차기·비기·클린치를 안 쓰면 AI 초당 15 · 사람 21(샛별 저장소 c76b4a6f — 설계안은 모두 15, 사장님 확인 전 · 10/29 17:5x 사람 입력 몸은 아래 25 — 21 은 시뮬 대본 몸) · 막기 유지 중엔 멈춤
   recoverPerSecond: realRate(15), playerRecoverPerSecond: realRate(21), recoverDelay: realS(0.6), // 표준 시간: 실제 초당 · 실제 초 (10/25)
   // 사람 회복 (사장님 10/29 17:5x '인간 플레이어의 기력 회복 속도 25로 상승시켜.' — 확인표 2922): 사람 입력이 모는 몸(main.js 플레이어 — fighter.humanInput)만 초당 21 → 25 · AI 15 그대로 ·
@@ -489,14 +493,14 @@ export const NAGASHI = { on: 1, slideK: 0.8, joltCut: 0.5, poseT: realS(0.35), m
 //  사장님 10/18 22:1x "흘림으로 나에게 손해가 발생하지 않으면서 상대의 기력을 뺏을 수 있기 때문 … 판정 개편이든 뭐든 흘림 빈도를 높일 수 있는 방안이 있다면 그렇게 개편 ·
 //   팔을 0.36초 늦추는 효과와 흘림당한 상대 기력을 40 빼앗는 효과 모두 적용"
 //  on = 새 판정(칼끼리 실제 접촉 · 들어오는 칼 기하 · 접촉 창 window s 안에 몸 바깥으로 빠지나) — `?flowJudge=0` = 옛 판정(NAGASHI — 내려 베기 · 칼 지붕 · 새로 부딪힌 순간만)
-//  penalty = 흘림당한 쪽(공격한 쪽) 기력 청구 — 공격 하나에 한 번(옛 · 새 판정 같음) · `?flowCost=0` = 끔
+//  penalty = 흘림당한 쪽(공격한 쪽) 기력 청구 — 공격 하나에 한 번(옛 · 새 판정 같음) · `?flowCost=0` = 끔 · 10/31 09:xx 40 → 60(사장님 결정 — `?flowCost=40` = 전 판)
 //  min… / maxHeight / exit… / sideGain / frontClearance = 판정 기하 허용치 — 샛별 연구의 첫 설계 값 그대로(사장님 '판정 개편' 채택 · docs/strike/owner_defaults_table.md)
 //  threatEnd = 공격이 끝났는지를 공격 번호 시간(stamina.attackUntil) 대신 실제 칼 기하(들어오는 칼 — 위 min… 조건)로 본다 — 감독 측정 10/18 23:1x(닿은 공격 중 흘림이 안 된 까닭 1 위 39 % = 공격 번호 시간이 끝남)
 //   → 사장님 3 '흘림 빈도를 높일 수 있는 방안이 있다면 그렇게 개편'. 기력은 그대로 공격 번호 하나에 한 번. `?flowEnd=timer` = 공격 번호 시간으로(샛별 연구 그대로)
 //  flowDmgCut = 흘린 공격의 피해 감소 (사장님 10/18 23:4x '흘린 공격의 피해 80% 줄여'): 받는 쪽이 흘린 그 공격(공격 번호)이 몸에 닿으면 칼날 상처 심각도 · 둔타 에너지 × (1 − 0.8) —
 //   사람 · AI 같게(흘린 쪽 누구나) · 다음 공격(새 번호)부터는 그대로 · `?flowDmgCut=0` = 끔 (combat.js analyze · 흘림 표시 flowShield)
 export const FLOW_REDESIGN = {
-  on: true, window: realS(0.2), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' · '흘림 접촉도 그냥 0.2로 통일' — 0.12 → 0.2 (반응 칸) */ penalty: 40, threatEnd: true, flowDmgCut: 0.8,
+  on: true, window: realS(0.2), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' · '흘림 접촉도 그냥 0.2로 통일' — 0.12 → 0.2 (반응 칸) */ penalty: 60, /* 10/31 09:xx 사장님 결정 '일본 흘림의 상대 기력 소모는 60으로 증가' — 40 → 60 (흘림 = 일본 막기 칸 우케나가시만 · TRADITIONS.japanese.parryCover.highC nagashi) */ threatEnd: true, flowDmgCut: 0.8,
   minSpeed: 2.5, minApproach: 0.5, minSweep: 1.5, minSweepRatio: 0.4,
   minImpact: 0.5, upperHeight: -0.15, maxHeight: 0.85,
   minTangent: 0.25, exitDistance: 0.30, exitGain: 0.015, sideGain: 0.06, frontClearance: 0.10,

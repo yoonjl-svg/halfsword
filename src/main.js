@@ -65,7 +65,7 @@ import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
-import { TRADITIONS, setChineseGait, setItalianRhythm, setItalianStride, setItalianWalk, setJapaneseGait, traditionOf } from './schools.js';
+import { TRADITIONS, setChineseGait, setItalianBackCap, setItalianRhythm, setItalianStride, setItalianWalk, setJapaneseGait, traditionOf } from './schools.js';
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
 import { portraitIdOf, portraitSrc, portraitMode, portraitGrid } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
 import { WhiffDrill } from './whiff_drill.js'; // 시험: 헛스윙 연습 상대 (?foeWhiff=1 — test.html '상대 헛스윙', docs/strike/german_hold_2026-10-15.md §7)
@@ -161,7 +161,7 @@ if (params.has('kron')) CONFIG.SKILL.deKron = +params.get('kron') ? 1 : 0; // �
 if (params.has('gyeoksal')) CONFIG.SECRET.gyeoksal.on = +params.get('gyeoksal') ? 1 : 0; // 동방 막아 죽이기 (10/22 — 사람 동방 비기): `?gyeoksal=0` = 옛 판(막기 연환)
 if (params.has('talhoApproach')) CONFIG.SKILL.talhoApproach = +params.get('talhoApproach') ? 1 : 0; // 나선 걸음 베기 '먼저 비껴 딛고 벤다'(AI — 10/29 18:4x 사장님): `?talhoApproach=0` = 전처럼 베며 딛음 (비교용)
 if (params.get('jpGait') === 'old') setJapaneseGait('old'); // 일본 걸음 (10/29 21:0x 사장님 '설계대로'): `?jpGait=old` = 전 판 (비교용)
-if (params.has('jpWalk')) setJapaneseGait(+params.get('jpWalk')); // 일본 걸음 빠르기 시험: `?jpWalk=0.81` 처럼 speedMul (가려는 빠르기 ×)
+if (params.has('jpWalk')) setJapaneseGait(+params.get('jpWalk')); // 일본 걸음 빠르기 시험: `?jpWalk=0.81` 처럼 speedMul (가려는 빠르기 ×) · 판 값 0.70(10/31 사장님 '일본 바로잡아') · `?jpWalk=0.67` = 10/30 판
 if (params.get('cnGait') === 'old') setChineseGait('old'); // 동방 박자 (10/29 21:0x 사장님 '동방 박자도 바꾸고'): `?cnGait=old` = 전 판 strideK 0.9 (비교용)
 if (params.has('passAsRung')) CONFIG.GAIT.passAsRung = +params.get('passAsRung') ? 1 : 0; // follow 안 pass → lunge + 끌어붙임 걸음 길이: 1 = 사다리 한 칸 아래(10/29 18:5x 사장님) · `?passAsRung=0` = 옛 × 0.85 (비교용)
 if (params.get('gyeoksalPow') === 'hit' || +params.get('gyeoksalPow') > 0) CONFIG.SECRET.gyeoksal.power = params.get('gyeoksalPow') === 'hit' ? 'hit' : +params.get('gyeoksalPow'); // 격살 판정 시험 (기본 'finish' = FINISH.power 2.5 · 'hit' = 다른 비기와 같은 hitMul 1.3)
@@ -185,7 +185,7 @@ if (params.get('itParryBeat') === '1') CONFIG.SKILL.itParryBeat = 1; // 막기�
 if (+params.get('cnParrySpeed') > 0) CONFIG.SKILL.cnParrySpeedK = +params.get('cnParrySpeed'); // 동방 막기 단추 손 빠르기 배율(10/17 — 판 값 1 = 끔, 사장님 확인 전): `?cnParrySpeed=1.3` = 동방 막기 책 플레이어의 막기 단추 손 옮김 4.5 → 5.85 m/s (docs/strike/chinese_parry_speed_2026-10-17.md)
 if (+params.get('cnBrace') > 0) CONFIG.SKILL.cnBraceK = +params.get('cnBrace'); // 동방 버티는 힘(10/17 연구 — 판 값 0 = 끔, 사장님 확인 전): `?cnBrace=0.5` = 동방 막기 책 플레이어가 막기 단추로 막는 중 서보 힘 × 1.5 (docs/strike/chinese_parry_brace_2026-10-17.md)
 if (params.has('cnParryCut') && +params.get('cnParryCut') >= 0 && +params.get('cnParryCut') <= 1) CONFIG.SKILL.cnParryDmgCut = +params.get('cnParryCut'); // 동방 막는 동안 피해 감소(10/17 — 판 값 0.5, 사장님 22:1x 결정): `?cnParryCut=0` = 끔 · `?cnParryCut=0.25` = 막는 중 입는 칼날 상처 심각도 × 0.75 (몫이라 0~1 만 읽음)
-// 일본 흘림 묶음 (사장님 10/18 22:1x — docs/strike/japanese_flow_adopt_2026-10-18.md): 판정 개편 · 팔 늦춤 0.36 s · 흘림당한 쪽 기력 40 · 자연 회복 탈진 · 일본/이베리아 막는 동안 피해 20 % 감소 — 모두 기본 켬
+// 일본 흘림 묶음 (사장님 10/18 22:1x — docs/strike/japanese_flow_adopt_2026-10-18.md): 판정 개편 · 팔 늦춤 0.36 s · 흘림당한 쪽 기력 40(10/31 09:xx 사장님 결정 60 — config FLOW_REDESIGN.penalty) · 자연 회복 탈진 · 일본/이베리아 막는 동안 피해 20 % 감소 — 모두 기본 켬
 if (params.has('flowJudge')) FLOW_REDESIGN.on = params.get('flowJudge') !== '0'; // `?flowJudge=0` = 옛 흘림 판정(내려 베기 · 칼 지붕 · 새로 부딪힌 순간만)
 if (params.has('flowDmgCut') && +params.get('flowDmgCut') >= 0 && +params.get('flowDmgCut') <= 1) FLOW_REDESIGN.flowDmgCut = +params.get('flowDmgCut'); // 흘린 공격의 피해 감소(판 값 0.8) — `?flowDmgCut=0` = 끔
 if (params.get('flowEnd') === 'timer') FLOW_REDESIGN.threatEnd = false; // `?flowEnd=timer` = 공격 끝을 공격 번호 시간으로(샛별 연구 그대로 — 판 값은 실제 칼 기하)
@@ -196,7 +196,7 @@ if (params.has('burstWalkSide')) CONFIG.GAIT.burstWalkSide = params.get('burstWa
 if (params.has('burstFwdDeg') && +params.get('burstFwdDeg') >= 0 && +params.get('burstFwdDeg') <= 60) CONFIG.GAIT.burstFwdDeg = +params.get('burstFwdDeg'); // 비스듬히 앞으로 박차기 각(°, 판 값 30 · 0 = 곧장 옆)
 if (params.has('aiReact') && +params.get('aiReact') >= 0 && +params.get('aiReact') <= 0.6) Object.assign(CONFIG.AI_REACT, { on: +params.get('aiReact') > 0, face: CONFIG.realS(+params.get('aiReact')) || CONFIG.AI_REACT.face }); // AI 반응 시간 s (판 값 0.2 · 0 = 끔)
 if (['strike', 'approach', 'windup'].includes(params.get('swingTurnFrom'))) CONFIG.SWING_TURN.from = params.get('swingTurnFrom'); // 묶기 시작: windup(기본 — 칼 드는 때부터) · approach(들어오는 단계부터) · strike(긋기부터)
-if (params.has('flowCost') && +params.get('flowCost') >= 0 && +params.get('flowCost') <= 100) FLOW_REDESIGN.penalty = +params.get('flowCost'); // `?flowCost=0` = 흘림당한 쪽 기력 청구 끔 · `?flowCost=20` = 20
+if (params.has('flowCost') && +params.get('flowCost') >= 0 && +params.get('flowCost') <= 100) FLOW_REDESIGN.penalty = +params.get('flowCost'); // `?flowCost=0` = 흘림당한 쪽 기력 청구 끔 · `?flowCost=20` = 20 · `?flowCost=40` = 10/31 전 판(판 값 60)
 if (params.get('exhaust') === 'fixed') CONFIG.STAMINA.exhaustNatural = false; // `?exhaust=fixed` = 옛 탈진(2.5 s 숨 고르기 뒤 0)
 if (params.get('thrustCost') === '7') CONFIG.STAMINA.thrustCost = 7; // `?thrustCost=7` = 옛 찌르기 기력 7 (10/24 사장님 결정 전)
 if (params.has('jpParryCut') && +params.get('jpParryCut') >= 0 && +params.get('jpParryCut') <= 1) CONFIG.SKILL.jpParryDmgCut = +params.get('jpParryCut'); // 일본 막는 동안 피해 감소(판 값 0.2) — `?jpParryCut=0` = 끔
@@ -401,6 +401,7 @@ if (params.has('jpSteady')) CONFIG.BALANCE.schoolSteady = +params.get('jpSteady'
 if (params.has('itStride')) setItalianStride(params.get('itStride')); // 이탈리아 보폭 박자(10/15 22:1x · 22:5x — 짧은 디딤 둘 0.8 + 몸 ×1.3 → 긴 디딤 둘 1.1): `?itStride=0` = 22:0x 판(속도 ×1.5 · 계수 0.7) · `?itStride=a,b[,c[,p]]` = 짧은·긴 계수·짧은 디딤 빠르기 · 가까이 짝걸음 보폭 상한(예 0.8,1.1 = 보폭만 · 0.7,1.2 · 0.8,0.8,1.5 · 0.62,0.85,1.3,0.44)
 if (params.has('itRhythm')) setItalianRhythm(params.get('itRhythm'));
 if (params.has('itWalk')) setItalianWalk(params.get('itWalk')); // 이탈리아 보법 빠르기 시험(10/21 — 판 값 없음): `?itWalk=1,1.15,1.5` = 앞 · 뒤 걷는 빠르기 배율 · 짧은 디딤 가속 한도 배율(사람 · AI) · `?itWalk=p:1,1.15` = 앞뒤 배율만 플레이어만 — 제안 갈래(10/21 재기): R0 `?itStride=0.62,0.85,1.3,0.44&itWalk=1,1,1.5` · R `?itStride=0.62,0.85,1.3,0.44&itWalk=1,1.1,1.5`
+if (params.has('itBackCap')) setItalianBackCap(params.get('itBackCap')); // 이탈리아 물러서기 걸음 수 한도(10/31 08:xx 사장님 '네걸음 이후에는 (다섯 걸음째부터) 70% 적용' — schools.js ITALIAN_GAIT.backCap): `?itBackCap=0` = 10/21 판(늘 뒤 느려짐 없음) · `?itBackCap=N` = N 걸음까지
 if (params.has('itGait')) CONFIG.GAIT.itEven = params.get('itGait') === 'old' ? 0 : 1; // 이탈리아 고른 바탕 걸음(10/15 19:3x 사장님 '이탈리아 보법 자체가 이미 불균질' — 고른 짝걸음, docs/strike/italian_rhythm_2026-10-15.md §10): 기본 켬, `?itGait=old` = 옛 짝걸음('따·닥 + 쉼')
 if (params.has('deChase')) CONFIG.GAIT.deChase = +params.get('deChase') ? 1 : 0; // 독일 간격 잡기의 빠른 디딤(10/15 — 상대 헛침 뒤 앞 두 걸음 빠른 걸음, docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기'): 기본 1, `?deChase=0` = 끔(잡기도 없음)
 if (params.has('deHold')) CONFIG.GAIT.deHold = +params.get('deHold') ? 1 : 0; // 독일 간격 잡기의 잡기(10/15 18:0x — 칼이 제대로 들어가는 거리 contact 에서 서고 0.6 s 앞 몫 0 · 스틱 놓았다 밀면 풀림 · 플레이어만, docs/strike/german_hold_2026-10-15.md): 기본 1, `?deHold=0` = 끔(빠른 디딤만 — 지금 판)

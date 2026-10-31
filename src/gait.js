@@ -128,7 +128,7 @@ function mkLeg(k, side) {
  *  even: GAIT.itEven(10/15 이탈리아 '고른 바탕 걸음' — `?itGait=old` 면 0)일 때 그 위에 다시 덮는 값(even.player 는 플레이어만) — 끄면 덮지 않아 옛 걸음 그대로
  *  보폭 규칙 (10/15 20:3x 사장님 — GAIT.strideRule, docs/strike/stride_rule_2026-10-15.md): 칸에 strideK(k)가 있으면 맨 끝에 보폭 상한 = GAIT.maxStride × k · 1 m/s 박자 = GAIT.cadence0 ÷ k 로
  *   (덮어쓰기 칸 byFrame·player 의 그 두 값도 이것으로 — 사람·AI 같은 보폭 · 박자는 빠르기 ÷ 보폭). 끄면(0) 칸 값 그대로(바이트 같음) — 일본은 10/29 strideK 뺌(설계 박자 · 보폭 칸 그대로)
- *  speedMul: 가려는 빠르기 배율(update — 일본 0.67 · 10/29 사장님 '확연히 느려도 돼') · settleStance: 서 있는 자세 길이 고쳐 딛기(settleLeg · target — 일본)
+ *  speedMul: 가려는 빠르기 배율(update — 일본 0.70 · 10/29 사장님 '확연히 느려도 돼' · 10/31 '일본 바로잡아' 0.67 → 0.70) · settleStance: 서 있는 자세 길이 고쳐 딛기(settleLeg · target — 일본)
  */
 export function gaitParams(f, isPlayer = false) {
   if (!GAIT.school) return GAIT;
@@ -151,7 +151,7 @@ export function gaitParams(f, isPlayer = false) {
     P.maxStride = GAIT.maxStride * g.strideK;
     P.cadence0 = GAIT.cadence0 / g.strideK;
   }
-  // 스킬트리 (10/21 — 사람만 · skill_kit.js): 보법 I 은 유파 걸음 칸 전부, 보법 II 칸 몫만 따로 — 이탈리아 I3 물러서기 = 뒤 느려짐 없앰(backMul) ·
+  // 스킬트리 (10/21 — 사람만 · skill_kit.js): 보법 I 은 유파 걸음 칸 전부, 보법 II 칸 몫만 따로 — 이탈리아 I3 물러서기 = 뒤 느려짐 없앰(backMul — 10/31 부터 이어 물러선 네 디딤까지 · backCap) ·
   //  이베리아 B2 옆 박차기 = burstSide(첫 걸음 옆 박차기 · 옆 누르면 늘 박차기 · 비스듬히 앞으로). 그 칸을 안 익혔으면 그 몫만 걸음 칸에서 뺀다. AI 는 skillKit 이 없어 그대로
   if (kitOff(f, 'backFlat')) P.backMul = undefined;
   if (kitOff(f, 'burstSide')) P.burstSide = false;
@@ -224,6 +224,11 @@ export class Gait {
     this.burst = this.burstLeg = this.burstBrake = null;
     this.lungeBrake = null; // 안다레 리솔루토 런지 걸음 몸 가속 (아래 req.accel)
     this.fastFore = false; // 첫 걸음 박차기 비스듬히 뒤(이베리아 아님): 몸 빠르기의 앞뒤 몫만 × fastK — fastBegin 이 정함
+    // 물러서기 걸음 수 한도 (10/31 — 걸음 칸 backCap · 이탈리아 backMul 'flat'): backN = 이어 물러선 뒤 디딤 수(backStep) · backIdle = 걸음이 끝난 뒤 지난 시간 ·
+    //  backWf · backWl = 이번 스텝 가려는 속도(뒤 느려짐 없애기 전)의 앞뒤 몫(부호) · 옆 몫(크기) — 칸 없으면 늘 0
+    this.backN = 0;
+    this.backIdle = 0;
+    this.backWf = this.backWl = 0;
   }
 
   /** 서기 시작(라운드 시작, 일어선 직후): 두 발을 지금 자리에 딛고, 보조 힘을 천천히 줄인다 */
@@ -282,6 +287,8 @@ export class Gait {
     this.hold = this.holdBrake = null;
     this.burst = this.burstLeg = this.burstBrake = null;
     this.lungeBrake = null; // 안다레 리솔루토 런지 걸음 몸 가속 (아래 req.accel)
+    this.backN = 0; // 물러서기 걸음 수 (backCap): 새로 서면 처음부터
+    this.backIdle = 0;
   }
 
   exit() {
@@ -296,6 +303,7 @@ export class Gait {
     this.hold = this.holdBrake = null;
     this.burst = this.burstLeg = this.burstBrake = null;
     this.lungeBrake = null; // 안다레 리솔루토 런지 걸음 몸 가속 (아래 req.accel)
+    this.backN = 0;
     const J = this.f.jointByName;
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
@@ -559,6 +567,33 @@ export class Gait {
   }
 
   /**
+   * 물러서기 걸음 수 셈 (10/31 08:xx 사장님 '이탈리아도 네걸음 이후에는 (다섯 걸음째부터) 70% 적용' — 걸음 칸 backCap · update ③ 이 새 걸음을 뗄 때 부름):
+   *  박자 걸음(fastBegin)과 같은 디딤 셈 — 걷는 걸음(walk · 걷는 중 catch) 디딤 하나 = 한 걸음(짝걸음의 이끄는 발 · 따라붙는 발도 하나씩).
+   *  앞뒤 몫이 옆 몫보다 큰 뒤 걸음이면 +1 · 앞 걸음 · 옆 몫이 큰 걸음 · 빈 스틱 걸음은 몸이 더는 물러나지 않을 때(걸러진 골반 빠르기의 뒤 몫 < GAIT.walkMin — 걷기 문턱)만 0 으로
+   *  (물러서기 끝) — 아직 뒤로 미끄러지는 동안이면 세지도 끊지도 않는다: 스틱을 잠깐 놓거나 옆으로 한 디딤 틀어 셈만 지우고 물러선 빠르기는 그대로 갖고 가는 꼴을 막는다
+   *  (재 봄: 넷째 디딤마다 놓기 · 옆 한 디딤이 곧게 물러서기보다 +31 · +26 % 빨랐다). 몫은 이번 스텝 가려는 속도의 뒤 느려짐 없애기 전 값(backWf · backWl) · vb = 걸러진 골반 빠르기의 앞 몫.
+   *  기술 걸음(req · draw) · 자세 고치기(settle)는 세지도 끊지도 않는다(박자 걸음과 같음)
+   */
+  backStep(kind, vb) {
+    if (!(kind === 'walk' || (kind === 'catch' && this.walking))) return;
+    if (this.backWf < 0 && -this.backWf > this.backWl) this.backN++;
+    else if (-vb < GAIT.walkMin) this.backN = 0;
+  }
+
+  /**
+   * 물러서기 걸음 수 끊기 (10/31 — backCap.idle): 걸음(자세 고치기 빼고)이 끝난 뒤 idle s(박자 걸음 멈춤 기준 0.6 s — 사장님 결정 10/17) 안에 새 걸음을 떼지 않으면 처음부터 ·
+   *  판 시작 정지 · 마무리 중에도 처음부터(박자 걸음과 같음). 발이 떠 있는 동안은 재지 않는다
+   */
+  backTick(dt, swing) {
+    const f = this.f;
+    if (f.feetHeld || f.finish?.amt > 0.5) {
+      this.backN = 0;
+      this.backIdle = 0;
+    } else if (swing && swing.kind !== 'settle') this.backIdle = 0;
+    else if ((this.backIdle += dt) > this.P.backCap.idle) this.backN = 0;
+  }
+
+  /**
    * 박자 걸음 셈 맞추기 (10/17 이탈리아 물러서기 연구 — parry_button.js 가 부름, 스위치 SKILL.itRetreat · itParryBeat 판 값 끔 · docs/strike/italian_retreat_2026-10-17.md):
    *  'retreat' = 다음 앞뒤 디딤 둘(물러서는 한 짝 — 뒷발 · 앞발)을 짧은 디딤으로 센다 → 그 다음 디딤 둘이 긴 디딤(나아가는 한 짝)
    *  'parry' = 막기를 짧은 박자로 본다 — 짧은 디딤 둘을 막 마친 셈(보통 디딤 0 · 남은 빠른 디딤 0) → 다음 앞뒤 디딤 둘이 긴 디딤
@@ -690,9 +725,16 @@ export class Gait {
     }
     // 이탈리아 보법 빠르기 시험 (10/21 — 판 값: 이탈리아 backMul 'flat' = 뒤 느려짐 없앰 · 시험 schools.js setItalianWalk · `?itWalk=`): 걸음 칸 foreMul · backMul 이 있으면 가려는 속도의 앞 · 뒤 몫을 그 배율로(옆 몫 그대로).
     //  박자는 아래 cad(빠르기 ÷ 보폭)가 따라 올린다. 칸 없으면 셈하지 않는다(바이트 같음)
+    //  'flat' 의 걸음 수 한도(P.backCap — 10/31 08:xx 사장님 '네걸음 이후에는 (다섯 걸음째부터) 70% 적용'): 이어 물러선 뒤 디딤이 backCap.steps 를 넘으면(다섯째 뒤 디딤을 뗀 때부터)
+    //  없애지 않는다 — 모든 유파와 같은 뒷걸음 × GAIT.backFactor. 셈은 아래 ③ backStep · 끊기는 backTick (셈이 읽는 앞뒤 · 옆 몫은 배율 전 값 — 한도가 셈을 흔들지 않게)
     if ((this.P.foreMul || this.P.backMul) && !f.feetHeld) {
       const wf = want.x * fwd.x + want.z * fwd.z;
-      const k = wf > 0 ? this.P.foreMul ?? 1 : this.P.backMul === 'flat' ? 1 / GAIT.backFactor : this.P.backMul ?? 1; // 'flat' = 뒤 느려짐(GAIT.backFactor) 없앰 — 이탈리아 10/21
+      const flat = this.P.backMul === 'flat';
+      if (flat && this.P.backCap) {
+        this.backWf = wf;
+        this.backWl = Math.abs(want.x * rgt.x + want.z * rgt.z);
+      }
+      const k = wf > 0 ? this.P.foreMul ?? 1 : flat ? (this.backN > (this.P.backCap?.steps ?? Infinity) ? 1 : 1 / GAIT.backFactor) : this.P.backMul ?? 1; // 'flat' = 뒤 느려짐(GAIT.backFactor) 없앰 — 이탈리아 10/21 · 10/31 부터 네 디딤까지
       if (k !== 1) want.addScaledVector(fwd, wf * (k - 1));
     }
     // 유파 걸음 빠르기 (10/29 21:0x 사장님 '일본 걸음 … 다른 유파보다 확연히 느려도 돼' — P.speedMul · docs/strike/jp_gait_2026-10-29.md): 가려는 빠르기 전부(앞 · 뒤 · 옆)에 곱한다.
@@ -1059,6 +1101,7 @@ export class Gait {
         const l = L[next];
         // 빠른 걸음: 이 걸음을 세고(박자 걸음) 받을 창을 쓰고(간격 잡기) 박차기를 쓰고(첫 걸음) 빠른 걸음인지 정한다 (앞뒤 가름은 위 짝걸음 PR 과 같은 셈). 빠른 걸음 중이면 끝내는 것도 여기
         if (RH || CH || this.burst || this.fastK > 1) Tstep = this.fastBegin(RH, CH, kind, PR, want.x * fwd.x + want.z * fwd.z, vLat, this.vf.x * fwd.x + this.vf.z * fwd.z, Tstep);
+        if (this.P.backCap && this.P.backMul === 'flat') this.backStep(kind, this.vf.x * fwd.x + this.vf.z * fwd.z);
         if (kind === 'walk' || kind === 'catch') Tstep /= 1 + hurry;
         this.begin(l, kind, Tstep);
         if (this.burstStep) {
@@ -1104,6 +1147,7 @@ export class Gait {
         this.fastK = 1;
       }
     }
+    if (this.P.backCap && this.P.backMul === 'flat') this.backTick(dt, swing);
     // 간격 잡기 받을 창: 받기 전엔 헛침 뒤 window s 안에 앞으로 걷기 시작하지 않으면 사라짐 · 받은 뒤엔 걸음(자세 고치기 빼고)이 끝나고 window s 안에
     //  새 걸음을 떼지 않으면(멈춤) 남은 걸음도 사라짐. 창이 없으면 셈하지 않는다
     if (CH && this.chase === CH) {

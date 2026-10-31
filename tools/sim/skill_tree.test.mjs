@@ -469,7 +469,7 @@ test('실제 몸 — 독일 간격 잡기: G1 만이면 상대 헛침에 창이 
     } finally { g.world.free(); }
   }
 });
-test('실제 몸 — 걷기 기력: 동방 C1 만 = 보통 1.4 · C1 + C2 = 0.7 · 일본 J1 = 2.1', () => {
+test('실제 몸 — 걷기 기력: 동방 C1 만 = 보통 4 · C1 + C2 = 2 · 일본 J1 = 6 (10/31 — 전 1.4 · 0.7 · 2.1)', () => {
   const actor = (kit) => {
     const pos = { x: 0, y: 1, z: 0 };
     const f = { alive: true, armed: true, state: 'stand', heading: 0, swordMass: 1.6, move: new Vector2(0, 1), handOffset: new Vector2(), skill: { vel: new Vector2(), swinging: false }, bodies: { pelvis: { translation: () => pos } }, swordArt: { tradition: kit.school }, skillKit: kit, schoolFootwork: kit.footwork ? undefined : false, aiControlled: false };
