@@ -507,7 +507,7 @@ const GERMAN_UNIQUE = [
 // 이탈리아 (카포 페로 1610 — 레이피어, 한손 찌르기). 찌르기 방식 꾸러미의 실제 찌르기 base(stichPflug 0.63·stichAlber 0.54)에 맞춤
 const ITALIAN_UNIQUE = [
   // 임브로카타: 프리마(지붕 자리)에서 손을 돌리지 않은 채 상대 왼 어깨에서 오른 무릎 쪽으로 내리꽂는 찌르기
-  { name: 'imbroccata', nameKo: '위에서 내려 찌르기 (임브로카타)', orig: 'imbroccata', from: G.tag, path: [[0.12, 0.3], [0.04, -0.06]], open: 'UL', kind: 'thrust', reach: 0.1, base: 0.55, src: 'Capo Ferro 1610 용어 풀이 「l\'imbroccata si parte dalla prima guardia, & và à ferire dalla spalla sinistra dell\'avversario fino al suo ginocchio dritto … e vuol esser buttata」 PDF 53쪽 [원문] · 길의 수 [추정]' },
+  { name: 'imbroccata', nameKo: '내려 찌르기 (임브로카타)', orig: 'imbroccata', /* 10/31 13:xx 사장님 '스킬 이름도 내려 찌르기로 바꿔' (전 '위에서 내려 찌르기') */ from: G.tag, path: [[0.12, 0.3], [0.04, -0.06]], open: 'UL', kind: 'thrust', reach: 0.1, base: 0.55, src: 'Capo Ferro 1610 용어 풀이 「l\'imbroccata si parte dalla prima guardia, & và à ferire dalla spalla sinistra dell\'avversario fino al suo ginocchio dritto … e vuol esser buttata」 PDF 53쪽 [원문] · 길의 수 [추정]' },
   // 파사타 소토(아래로 빠져 찌르기): 몸을 낮춰 상대 칼 밑으로 — 몸 낮추기는 기술 꼴로 못 그린다(찌르기 방식 런지 덧씌우기가 이미 0.16 m 낮춘다).
   //  그래서 낮은 오른쪽(바꿈 자리)에서 아래로 처져 올려 찌르는 길로 둔다. 상대 칼이 높을 때(아래 빈틈 ×1.8) 고르기 쉽다
   { name: 'passataSotto', nameKo: '밑으로 들어가 찌르기 (파사타 소토)', orig: 'passata sotto', from: G.wechselR, path: [[0.2, -0.36], [0.04, -0.16]], open: 'LL', kind: 'thrust', reach: 0.15, base: 0.5, fit: { high: 1.6 }, src: 'Capo Ferro 1610 「punta in falso, che vien di giù in su, verso il petto … ritrovandosi la spada in guardia bassa」 PDF 53쪽 [원문] · 이름 passata sotto [원전 2차] · 몸 낮춤 없음 = 런지 덧씌우기 몫 [해석]' },

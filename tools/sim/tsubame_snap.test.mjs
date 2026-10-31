@@ -3,7 +3,9 @@
 //   ③ 올려 긋는 길 끝을 아래팔 · 겨드랑이 · 가슴 높이로 + 손 돌리기(손목 사람 범위). AI 길(schools.js) · 진 · 츠바메가에시(모노호시자오 kin)는 그대로. 셋 다 끄면 10/25 전 판.
 //   ③ 몸통 띠(사장님 10/25 23:1x — UNIQUE_ASSIST.tsuBand): 올려 긋는 길이 처음 닿을 곳을 미리 끌고 가 보아 몸통 띠(골반 ~ 목 아래 가슴) 밖이면 길 높이를 가장 적게 옮김 · 운동학 칼 굴림 묶음.
 //    끄면(`tsuBand` 0) 10/25 21:1x 판(가슴 높이 끝 점)
-//  작게 · 빠르게(사장님): 씨앗 하나 · 14 s 판 둘.  node --test tools/sim/tsubame_snap.test.mjs
+//   ③ 곧은 길(사장님 10/31 16:xx '제비 베기는 곧은 길로 바꿔' — UNIQUE_ASSIST.tsuHook 0 · docs/strike/tsubame_straight_2026-10-31.md): 꺾은 자리에서 왼 위로 곧게 한 번(TSU_AIM.line) ·
+//    `tsuHook` 1 = 10/25 갈고리 길(TSU_AIM.band — 아래 시험이 그 판도 지킴)
+//  작게 · 빠르게(사장님): 씨앗 하나 · 14 s 판 셋 · 칼끝 길 판 넷.  node --test tools/sim/tsubame_snap.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT } from './harness_m.mjs';
@@ -12,6 +14,7 @@ import { TRADITIONS, JAPANESE_GAIT, setJapaneseGait } from '../../src/schools.js
 import { G } from '../../src/ai_techniques.js';
 import { PLAYER_UNIQUE, uniqueDef, PlayerUniqueAssist, TSU_AIM } from '../../src/unique_assist.js';
 import { HUMAN } from '../../src/fighter.js';
+import { traceRun, bend, bendTrail } from './tsubame_trace.mjs';
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const TSU = PLAYER_UNIQUE.japanese.find((e) => e.name === 'tsubameGaeshi');
@@ -43,20 +46,32 @@ test('기본값 — 세 해법 켬 · 0.6 · 0.2 s (사장님 10/25 결정) · A
   assert.equal(UA.tsuSnap, 1);
   assert.equal(UA.tsuAim, 1);
   assert.equal(UA.tsuBand, 1);
+  assert.equal(UA.tsuHook, 0, '곧은 길 (사장님 10/31 16:xx)');
+  assert.deepEqual(TSU_AIM.line, { path: [[-0.3, 0.25]], plan: [[0, 0, 0], [0, 0, 0]], shift: 'slide', pathHint: true, arcCut: true });
+  assert.deepEqual(TSU_AIM.band.path, [[0.2, -0.2], [0, 0.1]], '갈고리 길은 `?tsuHook=1` 로 그대로');
   assert.equal(UA.specialShare.tsubameGaeshi, 0.6); // 10/29 02:0x 특수 공격 칼끝 = 고노센 × n 한 표 (제비 베기는 전과 같은 0.6)
   assert.equal(UA.tsuSnapTime, 0.2);
   const u = TRADITIONS.japanese.unique.find((x) => x.name === 'tsubameGaeshi');
   assert.deepEqual([u.from, ...u.path], [G.tag, [0.0, 0.14], G.alber, [0.06, -0.15], G.ochsR]); // AI 가 읽는 길은 그대로
 });
 
-test('③ 사람 잣대 길: 꺾는 자리까지 그대로 · 그 뒤 몸통 띠 길(band) · 덧칸 [꺾은 자리, ...길] — tsuBand 0 이면 21:1x 길 · tsuAim 0 이면 전 길 · 덧칸 없음', () => {
-  const on = uniqueDef('japanese', TSU);
+test('③ 사람 잣대 길: 꺾는 자리까지 그대로 · 그 뒤 곧은 길(line) — tsuHook 1 이면 갈고리 몸통 띠 길(band) · tsuBand 0 이면 21:1x 길 · tsuAim 0 이면 전 길 · 덧칸 없음', () => {
+  const ln = uniqueDef('japanese', TSU);
+  assert.deepEqual(ln.pts.slice(0, 3), [G.tag, [0.0, 0.14], G.alber]);
+  assert.deepEqual(ln.pts.slice(3), TSU_AIM.line.path, '꺾은 자리 다음은 점 하나 — 꺾은 자리가 어디든 곧은 줄');
+  assert.equal(ln.plan.length, ln.pts.length);
+  assert.deepEqual(ln.plan, ln.pts.map(() => [0, 0, 0]), '손가락 몫 덧칸 0');
+  assert.deepEqual(ln.snapPlan.slice(2), TSU_AIM.line.plan, '끌고 가는 칼 덧칸 0');
+  assert.equal(ln.band, true, '몸통 띠 · 굴림 묶음 그대로');
+  assert.deepEqual(ln.snapOpt, { shift: 'slide', pathHint: true, arcCut: true });
+  const on = withUA({ tsuHook: 1 }, () => uniqueDef('japanese', TSU));
   assert.deepEqual(on.pts.slice(0, 3), [G.tag, [0.0, 0.14], G.alber]);
   assert.deepEqual(on.pts.slice(3), TSU_AIM.band.path);
   assert.equal(on.plan.length, on.pts.length);
   assert.deepEqual(on.plan.slice(2), TSU_AIM.plan, '손가락 몫 덧칸은 21:1x 그대로');
   assert.deepEqual(on.snapPlan.slice(2), TSU_AIM.band.plan, '끌고 가는 칼 덧칸');
   assert.equal(on.band, true);
+  assert.equal(on.snapOpt, undefined, '갈고리 판은 10/25 그대로 (띠 옮김 꼴 · 날 쪽 셈 · 잔상)');
   const old = withUA({ tsuBand: 0 }, () => uniqueDef('japanese', TSU));
   assert.deepEqual(old.pts.slice(3), TSU_AIM.path);
   assert.deepEqual(old.plan.slice(2), TSU_AIM.plan);
@@ -94,7 +109,17 @@ test('① 끝 힘 잣대 = 꺾은 자리부터 (끄면 내려베기 몫)', () =>
   }
 });
 
-test('② 꺾는 순간 끌고 감: 몫 0.6 · 0.2 s 상한 · 붙잡기 0 · 손가락 긋기와 같은 공격 · 덧칸 — 끝나면 0.2 s 에 손가락으로 · 끄면 요청 없음', () => {
+test('② 꺾는 순간 끌고 감: 몫 0.6 · 0.2 s 상한 · 붙잡기 0 · 손가락 긋기와 같은 공격 · 덧칸 — 끝나면 0.2 s 에 손가락으로 · 끄면 요청 없음 · 갈고리 판(tsuHook 1) 요청 그대로', () => {
+  const h = withUA({ tsuHook: 1 }, fire);
+  try {
+    const m = h.P.iaiReq.moves[0];
+    assert.deepEqual(m.path, TSU_AIM.band.path);
+    assert.deepEqual(m.plan, TSU_AIM.band.plan);
+    assert.equal(m.band, true);
+    assert.ok(!m.shift && !m.pathHint && !m.cleanArc && !m.roll && !h.P.iaiReq.arcCut, '10/25 갈고리 판 그대로');
+  } finally {
+    h.g.world.free();
+  }
   const a = fire();
   try {
     const R = a.P.iaiReq;
@@ -103,12 +128,16 @@ test('② 꺾는 순간 끌고 감: 몫 0.6 · 0.2 s 상한 · 붙잡기 0 · �
     assert.equal(R.maxT, 0.2);
     assert.equal(R.hold, 0);
     assert.equal(R.hitMul, 1);
+    assert.equal(R.arcCut, true, '잔상은 베는 토막만');
     const m = R.moves[0];
     assert.ok(m.same && m.cutSweep);
     assert.deepEqual(m.from, [0, -0.5]);
-    assert.deepEqual(m.path, TSU_AIM.band.path);
-    assert.deepEqual(m.plan, TSU_AIM.band.plan);
-    assert.equal(m.band, true, '몸통 띠 겨눔');
+    assert.deepEqual(m.path, TSU_AIM.line.path);
+    assert.deepEqual(m.plan, TSU_AIM.line.plan);
+    assert.equal(m.band, true, '몸통 띠 겨눔 · 굴림 묶음');
+    assert.equal(m.shift, 'slide');
+    assert.equal(m.pathHint, true);
+    assert.equal(m.cleanArc, true);
     assert.ok(a.uq.r, '강화는 그대로');
     let n = 0;
     a.g.step();
@@ -143,9 +172,10 @@ test('진 · 츠바메가에시(모노호시자오 무기 비검 kin)는 그대�
   }
 });
 
-test('한 판 견줌 (씨앗 1 · 14 s · 상대 상처 끔 · 아래 칼 빗나감): 공격당 심각도 10 배 넘게 · 몸통 띠(다리 없음 · 팔보다 몸통) · 손목 범위 안 · 굴림 한도 안', () => {
+/** 한 판 견줌 몫: 공격당 심각도 10 배 넘게(셋 다 끈 10/25 전 판 대비) · 몸통 띠(다리 없음 · 팔보다 몸통) · 손목 범위 안 · 굴림 한도 안 */
+function oneFight(ua) {
   const run = () => withJpOld(() => tsubameRun(1, { immortal: true, dur: 14, ghostDown: true }));
-  const R = run();
+  const R = withUA(ua, run);
   const on = tsubameSummary([R]);
   const off = tsubameSummary([withUA(OFF, run)]);
   assert.ok(on.perAtk >= 10 * Math.max(off.perAtk, 0.02), `켬 ${on.perAtk} · 끔 ${off.perAtk}`);
@@ -160,4 +190,28 @@ test('한 판 견줌 (씨앗 1 · 14 s · 상대 상처 끔 · 아래 칼 빗나
   assert.equal(on.oor, 0);
   const rolls = R.rows.map((r) => r.hit?.s?.roll).filter((x) => x != null);
   assert.ok(Math.max(...rolls) <= HUMAN.forearmRoll + 1, `굴림 ${Math.max(...rolls)}° (손목 밧줄 ${HUMAN.forearmRoll}°)`);
+}
+
+test('한 판 견줌 (씨앗 1 · 14 s · 상대 상처 끔 · 아래 칼 빗나감) — 곧은 길(기본): 10 배 넘게 · 몸통 띠 · 손목 범위 안 · 굴림 한도 안', () => oneFight({}));
+
+test('한 판 견줌 — 갈고리 길(`tsuHook` 1 — 10/25 판)도 그대로', () => oneFight({ tsuHook: 1 }));
+
+test('곧은 길 꼴 (tsubame_trace — 가만히 선 상대 · 가슴 사이 1.15 · 1.3 m · 손가락 그대로 · 흔들림): 칼끝 · 잔상 곧음 · 날 앞장 · 손목 범위 안 · 굴림 한도 안 · 갈고리 판은 휨', () => {
+  const k = CONFIG.STRIKE.edgeAlign;
+  for (const [gap, seed] of [[1.15, 701], [1.3, 702]]) {
+    const tr = traceRun('line', seed, gap);
+    assert.ok(tr.fired, `${gap} m`);
+    const b = bend(tr);
+    const t = bendTrail(tr);
+    assert.ok(b.devShare < 0.12 && b.kinkDeg < 15, `칼끝 길 ${gap} m: ${JSON.stringify(b)}`);
+    assert.ok(t.devShare < 0.12 && t.kinkDeg < 15, `잔상 ${gap} m: ${JSON.stringify(t)}`);
+    const W = tr.wr.filter((w) => w && w[1]);
+    assert.ok(W.every((w) => w[3] <= 1), '끌고 가는 동안 손목 범위 안');
+    assert.ok(W.every((w) => w[2] <= HUMAN.forearmRoll + 1), '끌고 가는 동안 굴림 한도 안');
+    assert.ok(W.filter((w) => w[5] > k).length >= 0.8 * W.length, `날 앞장 ${W.map((w) => w[5]).join(',')}`);
+    const h = tr.hits[0];
+    assert.ok(h && ['pelvis', 'abdomen', 'chest'].includes(h.part) && h.edge > k, JSON.stringify(tr.hits));
+    const hk = traceRun('hook', seed, gap);
+    assert.ok(bend(hk).devShare > 0.4, `갈고리 판 휨 ${JSON.stringify(bend(hk))}`);
+  }
 });

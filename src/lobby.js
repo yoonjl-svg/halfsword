@@ -31,7 +31,7 @@ import { TITLE_NOTICE_HEAD, NO_TITLE_TEXT } from './title_rules.js'; // 호칭 �
 import { WANDER_NOTICE_TEXT } from './wander_rules.js'; // 방랑 알림 창 글 (결과 창 위 알림 창과 같은 글)
 import { mountSkillTree } from './skill_tree.js';
 import { convertSeals, takeSealNotice } from './seal_coins.js';
-import { migrateSkillBooks, takeTreeNotice, treeNoticeText } from './skill_tree_store.js'; // 옛 스킬북 → 스킬트리 (10/21 — 한 번)
+import { migrateSkillBooks, migrateItalianSlots, takeTreeNotice, treeNoticeText } from './skill_tree_store.js'; // 옛 스킬북 → 스킬트리 (10/21 — 한 번)
 import { getWeapon, TIER_LABEL, weaponSpecText } from './weapons.js';
 import { COIN_ICON, POUCH_ICON, HORN_ICON } from './wallet_icons.js'; // 금화 · 머리 그림 — 결과 창 금화 줄과 같은 그림 · 뿔피리(10/30 상점)
 import { SHOP } from './config.js';
@@ -111,7 +111,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, tab
   //  알림은 아직 안 띄운 바꿈이 있을 때 한 번 (takeSealNotice). 테스트 경로에서는 바꾸지도 알리지도 않는다
   const converted = ctx.test ? null : (convertSeals(), takeSealNotice());
   // 옛 스킬북 → 스킬트리 (사장님 10/21 — skill_tree_store.js): 옮기기는 판을 처음 연 때 main.js 가 이미 했다 — 여기선 남은 것만(안전). 알림은 아직 안 띄웠으면 한 번(창). 테스트 경로는 안 함
-  const treeNotice = ctx.test ? null : (migrateSkillBooks(), takeTreeNotice());
+  const treeNotice = ctx.test ? null : (migrateSkillBooks(), migrateItalianSlots(), takeTreeNotice()); // 10/31 이탈리아 왼 줄 자리 옮기기 (한 번 더 안전하게 — 멱등)
   checkTitles(); // 호칭 (10/24): 조건을 이미 채운 옛 저장(유파 칸 모두 · 방랑 열림 …)에 한 번 — 알림 창은 아래(다른 창 뒤에 차례로)
   const profile = readProfile();
   const status = (text, tone = '') => { $('lobbyStatus').textContent = text; if (tone) $('lobbyStatus').dataset.tone = tone; else delete $('lobbyStatus').dataset.tone; };

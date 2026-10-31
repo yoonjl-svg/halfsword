@@ -1,5 +1,5 @@
 // AI 특수 공격 식힘 시험 (사장님 10/29 19:4x 'AI의 모든 쿨타임은 사람과 맞춰.' · 19:5x 특수공격 3초 · 끝난 때부터 — ai.js specCooling · techNow · specStart · specTick · 사장님 10/29 20:5x 확인):
-//   AI 몫 = 제비 베기 길 · 되받아 치기 패시브(kaeshi — 제비 베기) / 칼끝 돌려 빼기 속임 · 빼서 찌르기 패시브(cavazione) / 날개 접기 속임 / 겹치기 길 · 겹치기 패시브 / 머리 위 돌려 베기 강화동작(왼 가로베기 자리)
+//   AI 몫 = 제비 베기 길 · 되받아 치기 패시브(kaeshi — 제비 베기) / 비껴서며 찌르기 걸음 기술(inquartata — 10/31 · 전 칼끝 돌려 빼기 속임 · 빼서 찌르기 패시브는 이제 보통 기술) / 날개 접기 속임 / 겹치기 길 · 겹치기 패시브 / 머리 위 돌려 베기 강화동작(왼 가로베기 자리)
 //   식는 동안: 고르지 않음(강화동작은 바탕 왼 가로베기로) · 패시브 · 속임 없음 · 나간 공격이 끝날 때까지 식힘 중 → 끝난 때부터 3 s.  node --test tools/sim/ai_special_cooldown.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -32,8 +32,8 @@ test('강화동작(머리 위 돌려 베기): 식는 동안 그 자리는 바탕
   }
 });
 
-test('패시브(겹치기 · 되받아 치기 · 빼서 찌르기)는 식는 동안 없음 — 다른 패시브는 그대로', () => {
-  for (const [id, key, name] of [['margarethe', 'parried', 'duplieren'], ['minami', 'bindDef', 'kaeshi'], ['eira', 'parried', 'cavazione']]) {
+test('패시브(겹치기 · 되받아 치기)는 식는 동안 없음 — 다른 패시브는 그대로', () => {
+  for (const [id, key, name] of [['margarethe', 'parried', 'duplieren'], ['minami', 'bindDef', 'kaeshi']]) {
     const { G, ai } = aiOf(id);
     try {
       const P0 = ai.passiveFor(key);
@@ -44,6 +44,26 @@ test('패시브(겹치기 · 되받아 치기 · 빼서 찌르기)는 식는 동
     } finally {
       G.world.free();
     }
+  }
+});
+
+test('이탈리아 (10/31 자리 바꿈): 비껴서며 찌르기 기술은 식는 동안 고르지 않음(바탕 없음) · 빼서 찌르기 패시브 · 칼끝 돌려 빼기 속임은 특수 공격이 아님(식힘과 상관없음)', () => {
+  const { G, ai } = aiOf('julia');
+  try {
+    const t = ai.school.techByName.inquartata;
+    assert.ok(t, '비껴서며 찌르기 (숙련도 4 ≥ 단계 3)');
+    assert.equal(ai.techNow(t), t);
+    ai.specCool.inquartata = ai.sense.t;
+    assert.equal(ai.techNow(t), null, '식는 동안 고르지 않음');
+    const s = ai.sense.seen(0);
+    for (let k = 0; k < 200; k++) assert.notEqual(ai.pickTech(s, 'patience')?.name, 'inquartata');
+    const P0 = ai.passiveFor('parried');
+    ai.specCool.cavazione = ai.sense.t; // 특수 공격이 아니면 이 칸은 아무것도 막지 않음
+    if (P0?.name === 'cavazione') assert.equal(ai.passiveFor('parried')?.name, 'cavazione', '빼서 찌르기는 식힘과 상관없음');
+    assert.ok(ai.passives.some((x) => x.name === 'cavazione'), '빼서 찌르기 패시브 그대로');
+    assert.ok(ai.uniqueByName.has('칼끝 돌려 빼기 (카바치오네)') && ai.cavDeep, '칼끝 돌려 빼기 속임 · 헛누름 AI 몫 (숙련도 ≥ 단계 2)');
+  } finally {
+    G.world.free();
   }
 });
 

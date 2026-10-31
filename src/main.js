@@ -29,7 +29,7 @@ import { HORN_ICON } from './wallet_icons.js'; // 결과 창 뿔피리 (10/30 �
 import { SHOP } from './config.js'; // 상점 — 왕을 이긴 판의 뿔피리 (10/30 · SHOP.enabled 일 때만 — 본판은 끔)
 import { awardKingHorn } from './lobby_progress.js';
 import { HORN_REWARD_LABEL } from './shop_text.js';
-import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, playerLetters } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
+import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, migrateItalianSlots, playerLetters } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
 import { letterMul } from './skill_tree_data.js'; // 편지 — 카드 뽑기 유파 무게 (10/21)
 import { convertSeals } from './seal_coins.js'; // 이미 받은 인장 → 금화 한 번 — 판을 처음 연 때 어느 길이든 (아래 testRoute 다음 · 10/16 08:1x 인장 없앰)
 import { InputTrail } from './trail.js';
@@ -100,6 +100,7 @@ if (!testRoute.active) convertSeals();
 // 옛 스킬북 → 스킬트리 옮기기 (사장님 10/21 — skill_tree_store.js): 이 판을 처음 연 때 한 번(모든 플레이어 · 새 플레이어도 · 어느 길이든 · 테스트 경로만 빼고) — 산 책을 거두고 쓴 금화를 돌려준 뒤 금화 500.
 //  두 번 일하지 않는다(진행 저장 안의 기록 · 짝 열쇠). 알림은 다음 대기실이 한 번 (lobby.js takeTreeNotice)
 if (!testRoute.active) migrateSkillBooks();
+if (!testRoute.active) migrateItalianSlots(); // 10/31 이탈리아 왼 줄 자리 옮기기 (옛 d 2 자리 I2 만 익힌 저장 → I7 — skill_tree_store.js)
 // 테스트용 ?morgTorque=33 : 모르겐슈테른 손목 겨눔 토크 상한(기본 22 = 한손 무기 공통, 확인표 169)을 이번 실행에만 바꾼다 — 사장님 비교용, 저장하지 않는다
 const morgTorque = +params.get('morgTorque');
 if (morgTorque > 0) getWeapon('morgenstern').controlOverrides.maxAimTorque = morgTorque;
@@ -331,10 +332,10 @@ if (params.has('schielPath')) CONFIG.UNIQUE_ASSIST.schielPath = +params.get('sch
 if (params.has('schielPlayer')) CONFIG.UNIQUE_ASSIST.schielPlayer = +params.get('schielPlayer') ? 1 : 0; // 사람 곁눈 베기 같은 길 (사장님 10/25 18:0x '같은 길 입혀' — 기본 1 · `?schielPlayer=0` = 사람은 옛 길 잣대 · 덧칸 없음 · unique_assist.js uniqueDef · planStep)
 if (params.has('schielPlayerK') && Number.isFinite(+params.get('schielPlayerK'))) CONFIG.UNIQUE_ASSIST.schielPlayerK = +params.get('schielPlayerK'); // 사람 곁눈 베기 세기 손잡이 (사장님 10/25 20:2x 결정 — 기본 1 = 세기 100 % · `?schielPlayerK=0.5` = 시험용 50 % · combat.js analyze)
 if (params.has('schielPlayerTip')) CONFIG.UNIQUE_ASSIST.schielPlayerTip = +params.get('schielPlayerTip') ? 1 : 0; // 사람 곁눈 베기 칼끝 들기 (사장님 10/25 20:2x 결정 '칼끝 들기 빼지 마' — 기본 1 = AI 와 같은 덧칸 셋 · `?schielPlayerTip=0` = 시험용 칼끝 들기 없음 · unique_assist.js planStep)
-for (const k of ['tsuRuler', 'tsuSnap', 'tsuAim', 'tsuBand']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 제비 베기 세 해법 (사장님 10/25 21:1x '해법 1~3 좋아' — 기본 1 · 0 = 그 해법만 끔 · unique_assist.js)
+for (const k of ['tsuRuler', 'tsuSnap', 'tsuAim', 'tsuBand', 'tsuHook']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 제비 베기 세 해법 (사장님 10/25 21:1x '해법 1~3 좋아' — 기본 1 · 0 = 그 해법만 끔 · unique_assist.js) · tsuHook (사장님 10/31 16:xx '곧은 길로' — 기본 0 = 곧은 길 · `?tsuHook=1` = 10/25 갈고리 길)
 // 특수 공격 칼끝 빠르기 몫 (사장님 10/29 02:0x — 같은 칼 고노센 칼끝 × 몫 · config UNIQUE_ASSIST.specialShare 한 곳): `?specialShare=redondo:0.5,lianchi:0.5` · 옛 이름 `?tsuSnapShare=` · `?cavSnapShare=` · `?lianSnapShare=` · `?dupSnapShare=` · `?rdSnapShare=` 도 그 칸(값 = 고노센 몫)
 {
-  const SPK = { tsuSnapShare: 'tsubameGaeshi', cavSnapShare: 'cavazione', lianSnapShare: 'lianchi', dupSnapShare: 'duplieren', rdSnapShare: 'redondo' };
+  const SPK = { tsuSnapShare: 'tsubameGaeshi', cavSnapShare: 'cavazione', lianSnapShare: 'lianchi', dupSnapShare: 'duplieren', rdSnapShare: 'redondo', inqSnapShare: 'inquartata' }; // inqSnapShare: 비껴서며 찌르기 (10/31 — 이탈리아 특수 공격) · cavSnapShare 는 칸만 남음(칼끝 돌려 빼기는 10/31 부터 특수 공격 아님 — cavSpeed)
   for (const [k, name] of Object.entries(SPK)) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST.specialShare[name] = +params.get(k);
   for (const kv of String(params.get('specialShare') ?? '').split(',').filter(Boolean)) {
     const [name, v] = kv.split(':');
@@ -343,9 +344,20 @@ for (const k of ['tsuRuler', 'tsuSnap', 'tsuAim', 'tsuBand']) if (params.has(k))
 }
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
-for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
+for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld', 'inqTap']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
 if (params.has('cavFrom') && +params.get('cavFrom') >= 0) CONFIG.UNIQUE_ASSIST.cavFrom = CONFIG.realS(+params.get('cavFrom')); // 칼끝 돌려 빼기 탭 창 처음 (실제 초 — 기본 0.2 · 10/29 20:0x · 옛 판 0.6)
 if (params.has('cavTo') && +params.get('cavTo') > 0) CONFIG.UNIQUE_ASSIST.cavTo = CONFIG.realS(+params.get('cavTo')); // 칼끝 돌려 빼기 탭 창 끝 (실제 초 — 기본 1.2 · 사장님 10/28 01:1x)
+if (params.has('cavArmSlow') && +params.get('cavArmSlow') >= 0) CONFIG.UNIQUE_ASSIST.cavArmSlow = CONFIG.realS(+params.get('cavArmSlow')); // 칼끝 돌려 빼기 심화 · 헛누름 상대 팔 늦춤 (실제 초 — 기본 1.2 · 사장님 10/31 '1.2초로 할게' · 0 = 끔)
+if (params.has('cavArmSlowAi')) CONFIG.UNIQUE_ASSIST.cavArmSlowAi = +params.get('cavArmSlowAi') ? 1 : 0; // 그 AI 몫 (10/31 — 기본 1)
+if (params.has('imbroDown') && +params.get('imbroDown') >= 0) CONFIG.UNIQUE_ASSIST.imbroDown = +params.get('imbroDown'); // 이탈리아 위에서 내려 찌르기 — 아래로 가는 긋기 각 (10/31 사장님 · 기본 67.5 · 0 = 황소 찌르기 긋기만)
+if (params.has('cavSide')) CONFIG.UNIQUE_ASSIST.cavSide = params.get('cavSide') === 'free' ? 'free' : 'contact'; // 칼끝 돌려 빼기 비킨 쪽 (10/31 — 'contact' 닿았을 때 상대 칼 쪽 · 'free' 10/28 판)
+if (params.has('cavSelfFree')) CONFIG.UNIQUE_ASSIST.cavSelfFree = +params.get('cavSelfFree') || 0; // 칼끝 돌려 빼기 넘어짐 고침 (10/31 — 1 칼 어깨 면 밧줄 뗌 · 0 전 판)
+if (params.has('cavSpeedMul')) CONFIG.UNIQUE_ASSIST.cavSpeedMul = +params.get('cavSpeedMul') || 1; // 칼끝 돌려 빼기 시제품 A (10/31 — 칼끝 빠르기 배 · 1 = 끔)
+if (params.has('cavGap')) CONFIG.UNIQUE_ASSIST.cavGap = +params.get('cavGap') || 0; // 시제품 B (틈 파고들기 · 0 = 끔)
+if (params.has('cavParryLock')) CONFIG.UNIQUE_ASSIST.cavParryLock = CONFIG.realS(+params.get('cavParryLock') || 0); // 시제품 C (상대 반응 묶음 실제 초 · 0 = 끔)
+if (params.has('cavHitMul')) CONFIG.UNIQUE_ASSIST.cavHitMul = +params.get('cavHitMul') || 1; // 시제품 D (판정 배율 · 1 = 끔)
+if (params.has('cavCancel')) CONFIG.UNIQUE_ASSIST.cavCancel = +params.get('cavCancel') || 0; // 시제품 E (끄는 동안 막기로 거둠 · 0 = 끔)
+if (params.has('cavSpeed')) CONFIG.UNIQUE_ASSIST.cavSpeed = +params.get('cavSpeed') > 0 ? +params.get('cavSpeed') : 'tap'; // 칼끝 돌려 빼기 칼끝 빠르기 m/s (10/31 — 기본 'tap' = 보통 탭 찌르기 빠르기)
 if (params.has('lianTap')) CONFIG.UNIQUE_ASSIST.lianTap = +params.get('lianTap') ? 1 : 0; // 사람 날개 접기 탭 (사장님 10/28 01:2x — 물러나며 탭 · 기본 1)
 if (params.has('lianStep') && +params.get('lianStep') >= 0) CONFIG.UNIQUE_ASSIST.lianStep = +params.get('lianStep'); // 사람 날개 접기 앞 걸음 (m — 기본 0.45 · 사장님 10/29 14:3x)
 if (params.has('specialCooldown')) CONFIG.UNIQUE_ASSIST.specialCooldown = CONFIG.realS(Math.max(0, +params.get('specialCooldown') || 0)); // 특수 공격 공통 식힘 (실제 초 — 기본 6 · 0 = 끔 · 사장님 10/28 02:0x)

@@ -74,7 +74,7 @@ test('투야나 숙련도 3(사장님 10/25) · 광기의 투야나 4(얼터 규
   assert.ok(tm.appearanceOnly);
   assert.deepEqual(tm.ai.persona.level, t.ai.persona.level); // 외양만 얼터 — 실력 숫자 +20 % 없음
   const a = aiOf('eira').ai, b = aiOf('eira_mad').ai;
-  assert.ok(a.uniqueByName.has('칼끝 돌려 빼기 (카바치오네)')); // 3 에서 열림 (2 = 비껴서며 찌르기 · 위에서 내려 찌르기)
+  assert.ok(a.uniqueByName.has('칼끝 돌려 빼기 (카바치오네)') && a.uniqueByName.has('inquartata')); // 10/31 자리 바꿈: 칼끝 돌려 빼기 2 · 비껴서며 찌르기(특수 공격) 3 에서 열림 (1 = 내려 찌르기 · 전 1 비껴서며 찌르기 · 2 내려 찌르기 · 3 칼끝 돌려 빼기)
   assert.ok(a.proficiency < SCHOOL_PASSIVE.at && b.proficiency >= SCHOOL_PASSIVE.at); // 얼터만 패시브 칸(곧은 선)
   assert.equal(b.secret, null);
 });
