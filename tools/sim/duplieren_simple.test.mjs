@@ -11,19 +11,20 @@ const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, SECRET, STAMINA } = CONFIG;
 const LADDER = [0.3, 0.45, 0.6, 0.9];
 
-test('기본값 — 단순 길(dupOld 0) · 앞 박차기 걸음 사다리 칸 · 기력 냄(dupBurstFree 0) · 견줌 몫 0.5 · 끄는 시간 상한 실제 0.2 s 그대로', () => {
+test('기본값 — 단순 길(dupOld 0) · 앞 박차기 걸음 사다리 칸 · 기력 냄(dupBurstFree 0) · 때 맞춤(dupBurstSync 1) · 몫 0.3 · 견줌 몫 0.5 · 끄는 시간 상한 실제 0.2 s 그대로', () => {
   assert.equal(UA.dupOld, 0);
   assert.ok(LADDER.includes(UA.dupBurst), `dupBurst ${UA.dupBurst}`);
   assert.equal(UA.dupBurstFree, 0);
   assert.equal(UA.dupOldShare, 0.5);
-  assert.ok(UA.specialShare.duplieren > 0 && UA.specialShare.duplieren < 0.5, `몫 ${UA.specialShare.duplieren}`);
+  assert.equal(UA.specialShare.duplieren, 0.3, `몫 ${UA.specialShare.duplieren}`); // 사장님 확인 전 (말씀은 '10% 정도?')
+  assert.equal(UA.dupBurstSync, 1, '칼날이 얼굴을 지나는 때 = 앞발 디딤');
   assert.ok(Math.abs(UA.dupSnapTime - realS(0.2)) < 1e-12);
   assert.equal(UA.dupEdge, 1);
 });
 
 /** 사람 롱소드 몸 + 겹치기 (판을 돌리지 않음 — 가슴 사이를 d 로 두고 겹치기를 바로 냄) */
 function body(set = {}, gap = 1.25) {
-  const keys = ['dupOld', 'dupBurst', 'dupBurstFree', 'specialCooldown'];
+  const keys = ['dupOld', 'dupBurst', 'dupBurstFree', 'dupBurstSync', 'specialCooldown'];
   const save = Object.fromEntries(keys.map((k) => [k, UA[k]]));
   const share0 = UA.specialShare.duplieren;
   Object.assign(UA, { specialCooldown: 0, ...set });
@@ -136,5 +137,19 @@ test('박차기 0 = 걸음 · 미끄러짐 없음 (단순 길만) · dupOld 1 = 
     } finally {
       B.free();
     }
+  }
+});
+
+test('때 맞춤 끔(dupBurstSync 0) = 칼은 몫 빠르기 그대로 — 얼굴까지 늦추지 않음(slow 1) · 얼굴을 디딤과 같거나 먼저 지남 · 박차기 시간은 그대로(박찬 걸음 GAIT.burstT 이상)', () => {
+  const B = body({ dupBurst: 0.45, dupBurstSync: 0, share: 0.3 });
+  try {
+    const R = B.fire();
+    const first = R.steps.find((s) => s.on);
+    assert.ok(first?.dup?.line === 1);
+    assert.equal(first.dup.slow, 1);
+    assert.ok(first.dup.tFace <= first.dup.Tstep + 1e-6, `얼굴 ${first.dup.tFace} · 박차기 ${first.dup.Tstep}`);
+    assert.ok(first.dup.Tstep >= CONFIG.GAIT.burstT - 1e-9);
+  } finally {
+    B.free();
   }
 });

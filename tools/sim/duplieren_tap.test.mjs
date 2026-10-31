@@ -15,9 +15,10 @@ const UA = CONFIG.UNIQUE_ASSIST;
 UA.dupAuto = 0;
 const { realS, SECRET } = CONFIG;
 
-test('기본값 — 겹치기 탭 켬 · 고노센 칼끝 × 0.5(10/29 02:0x) · 실제 0.2 s · 긴 날 · 긋기 조건 없음 (탭으로만)', () => {
+test('기본값 — 겹치기 탭 켬 · 고노센 칼끝 × 0.3(10/31 19:xx — 전 0.5) · 실제 0.2 s · 긴 날 · 긋기 조건 없음 (탭으로만)', () => {
   assert.equal(UA.dupTap, 1);
-  assert.equal(UA.specialShare.duplieren, 0.5); // 10/29 02:0x 사장님 '두플리렌 50%' (전 모르트슐라크 × 0.6 = 고노센 × 0.18)
+  assert.equal(UA.specialShare.duplieren, 0.3); // 10/31 19:xx 단순 길 · 앞 박차기와 함께 0.3 [사장님 확인 전 — duplieren_simple_2026-10-31.md] (10/29 02:0x 사장님 '두플리렌 50%' · 전 모르트슐라크 × 0.6 = 고노센 × 0.18)
+  assert.equal(UA.dupOldShare, 0.5); // `?dupOld=1` 견줌 몫
   assert.ok(Math.abs(UA.dupSnapTime - realS(0.2)) < 1e-12);
   assert.equal(UA.dupEdge, 1);
   const e = PLAYER_UNIQUE.german.find((x) => x.name === 'duplieren');
@@ -54,14 +55,14 @@ function body() {
   return { G, P, uq, cut, tap, setTouch: (v) => (touch = v), free: () => ((UA.specialCooldown = cd), G.world.free()) };
 }
 
-test('맞물린 긋기가 닿아 있는 동안 탭 = 겹치기 (운동학 칼 요청 · 고노센 × 0.5 · 실제 0.2 s · 같은 공격 · 긴 날) · 한 맞물림에 한 번', () => {
+test('맞물린 긋기가 닿아 있는 동안 탭 = 겹치기 (운동학 칼 요청 · 고노센 × 몫 · 실제 0.2 s · 같은 공격 · 긴 날) · 한 맞물림에 한 번', () => {
   const B = body();
   try {
     B.cut();
     assert.equal(B.tap(), true);
     const R = B.P.iaiReq;
     assert.ok(R?.combo && R.tech === 'duplieren');
-    assert.ok(Math.abs(R.share - 0.5) < 1e-12); // 고노센 × 0.5 (모르트슐라크 빠르기와 따로 — 10/29 02:0x)
+    assert.ok(Math.abs(R.share - UA.specialShare.duplieren) < 1e-12); // 고노센 × 몫 (모르트슐라크 빠르기와 따로 — 10/29 02:0x · 10/31 19:xx 0.3)
     assert.equal(R.maxT, UA.dupSnapTime);
     assert.equal(R.hold, 0);
     assert.equal(R.hitMul, 1);
