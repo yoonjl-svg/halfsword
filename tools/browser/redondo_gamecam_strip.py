@@ -15,8 +15,8 @@ try:
 except Exception:
     font = big = ImageFont.load_default()
 TITLE = {'player': 'PLAYER (game camera, 844x390 touch, real long press via CDP)', 'ai': 'AI foe windmill (game camera - foe faces the player)'}
-box = {'player': (212, 0, 632, 390), 'ai': (232, 20, 612, 330)}
-sc = {'player': 0.47, 'ai': 0.55}
+box = {'player': (212, 0, 632, 390), 'ai': (300, 20, 580, 330)}  # AI: 상대 둘레 (상대는 화면 가운데 조금 오른쪽)
+sc = {'player': 0.47, 'ai': 0.7}
 for s in meta['summary']:
     if only and s['who'] not in only:
         continue

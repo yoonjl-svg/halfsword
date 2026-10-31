@@ -130,7 +130,7 @@ if (who.includes('ai')) {
   page.on('console', (m) => { if (m.type() === 'error') errors.push('ai ' + m.text()); });
   await page.goto(`${dev}/?weapon=longsword&foeWeapon=zweihander&slowMo=0&camOpen=old${EXTRA}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 180000 });
-  await page.evaluate(() => { game.config.ARENA.startGap = 2.3; game.config.ARENA.startHold = 0; });
+  await page.evaluate(() => { game.config.ARENA.startGap = 2.6; game.config.ARENA.startHold = 0; });
   await page.getByText('여정 시작', { exact: true }).click();
   await page.waitForFunction(() => window.game?.state === 'fight', null, { timeout: 180000 });
   await page.waitForFunction(() => window.game?.stats?.simTime > 2.0 && !window.game.enemy.feetHeld, null, { timeout: 300000 });
