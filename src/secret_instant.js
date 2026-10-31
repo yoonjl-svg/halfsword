@@ -1097,7 +1097,7 @@ const COMBO_TURN = 0.35; // 손이 있는 쪽으로 몸을 트는 계수 (rad / 
 
 /** 빠른 연환을 걸어 둔다. opt.moves = 두 수 (schools.js 막기 연환 seq 꼴, step.fwd 는 m 로 푼 것) */
 export function requestCombo(f, opt = {}) {
-  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, effMul: opt.effMul, width: opt.width, tech: opt.tech, mord: opt.mord ?? null, arcCut: !!opt.arcCut, face: opt.face || null, min: opt.min ?? 0, maxT: opt.maxT ?? 0, keepAim: !!opt.keepAim, attack: !!opt.attack }; // width: 잔상 굵기 몫 (격살 시험 — sword_trail.js) · mord: 죽음의 일격 운동학 길(10/22 밤 — mordschlag.js) · arcCut: 잔상은 베는 토막만 · face: 마주 보는 띠('path' 치는 끝 길 · 'line' 찌르는 줄) · min: 잔상 밝기 바닥 (10/23 비기 잔상 점검 — 사람 비기만, 아래 stepCombo · sword_trail.js)
+  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, effMul: opt.effMul, width: opt.width, tech: opt.tech, mord: opt.mord ?? null, arcCut: !!opt.arcCut, face: opt.face || null, min: opt.min ?? 0, maxT: opt.maxT ?? 0, keepAim: !!opt.keepAim, attack: !!opt.attack, speed: opt.speed > 0 ? opt.speed : 0, noArc: !!opt.noArc }; // speed: 칼끝 빠르기 m/s 를 바로 (share 대신 — 10/31 칼끝 돌려 빼기 = 보통 찌르기 빠르기) · noArc: 잔상 없음 (10/31 — 특수 공격이 아닌 끌고 가는 칼) // width: 잔상 굵기 몫 (격살 시험 — sword_trail.js) · mord: 죽음의 일격 운동학 길(10/22 밤 — mordschlag.js) · arcCut: 잔상은 베는 토막만 · face: 마주 보는 띠('path' 치는 끝 길 · 'line' 찌르는 줄) · min: 잔상 밝기 바닥 (10/23 비기 잔상 점검 — 사람 비기만, 아래 stepCombo · sword_trail.js)
   f.instantResult = null;
 }
 
@@ -1184,7 +1184,7 @@ function startCombo(f, combat, req) {
     ropes(f, false);
   }
   const share = req.share ?? SECRET.cnFastShare; // 빠르기 · 잔상 몫 (연환 cnFastShare · 진 · 츠바메가에시 되돌림 칼 secretBlade.kin — 10/21)
-  const v = Math.max(1e-3, share * iaiTipSpeed(f));
+  const v = Math.max(1e-3, req.speed > 0 ? req.speed : share * iaiTipSpeed(f)); // speed: 칼끝 빠르기를 바로 준 칼 (10/31 칼끝 돌려 빼기)
   if (!req.moves.length) {
     f.instantResult = { ok: false, hit: false };
     return;
@@ -1197,8 +1197,9 @@ function startCombo(f, combat, req) {
     maxT: req.maxT ?? 0, // 끌고 가는 시간 상한 (s — 제비 베기 되돌림 칼 requestArtSnap · 0 = 없음, 길 끝까지)
     keepAim: !!req.keepAim, // 끝나도 손 목표를 옮기지 않음 (탭으로 낸 칼 — 날개 접기 10/28: 손 목표 뜀이 긋기로 읽히지 않게)
     attack: !!req.attack, // 탭으로 낸 특수 공격 칼 (10/28): 끄는 동안 공격 중(stamina.attacking — 유파 패시브 인데스 · 몸 돌림 묶기 · 막아 받기 값이 보통 긋기 · 탭과 같게)
+    noArc: !!req.noArc, // 잔상 없음 (10/31 칼끝 돌려 빼기 — 특수 공격이 아님)
   };
-  if (!req.arcCut) f.instantArc = f.iai.arc; // 베는 토막만(arcCut)이면 첫 베는 점에서 건다 (stepCombo — 섬광 · 남는 시간이 베는 순간부터)
+  if (!req.arcCut && !req.noArc) f.instantArc = f.iai.arc; // 베는 토막만(arcCut)이면 첫 베는 점에서 건다 (stepCombo — 섬광 · 남는 시간이 베는 순간부터)
   f.artTech = req.tech ?? null; // 이 끌고 가는 칼이 어떤 기술인가 (unique_assist.js strokeTechOf — 진 · 츠바메가에시 피해 × 3)
   setKinematic(f, true);
   f.instantGhost = Math.ceil(SECRET.instantNoCollide / (combat.dt || 1 / 120)) + 1; // 수를 짤 때마다·스텝마다 다시 채운다 (stepCombo)
@@ -1893,7 +1894,15 @@ function comboPlanArtThrust(f, I, m, A) {
     const dX = Math.max(1e-3, X.length());
     const xh = X.clone().divideScalar(dX);
     let side = null;
-    if (D.under && fb) {
+    if (D.under && D.side) {
+      // 10/31 칼끝 돌려 빼기 (UNIQUE_ASSIST.cavSide 'contact'): 비킨 쪽 = 닿았을 때 상대 칼이 있던 쪽(feel.normal 의 반대 — 월드 → 몸 틀) — 상대 칼 밑을 지나 그 너머 열린 줄로 · 위 몫은 아래 규칙대로 뺌
+      const w = D.side.clone().applyQuaternion(inv);
+      w.addScaledVector(xh, -w.dot(xh));
+      if (w.y > 0) w.y = 0;
+      w.addScaledVector(xh, -w.dot(xh));
+      if (w.lengthSq() > 1e-4) side = w.normalize();
+    }
+    if (!side && D.under && fb) {
       // 비킨 쪽 = 상대 칼이 없는 쪽: 상대 칼 날 선분에서 S → P 줄에 가장 가까운 점(8 조각)이 줄에서 비킨 쪽의 반대
       let best = null;
       for (let i = 0; i <= 8; i++) {
@@ -1942,6 +1951,37 @@ function comboPlanArtThrust(f, I, m, A) {
     const r = comboAimPoint(f, I, 'lung'); // 몸 틀 · 미끄러짐 당김 그대로 — 세상 위쪽 0.05 m 를 몸 틀 위쪽 0.05 m 로 바꿈
     return r.P.sub(new THREE.Vector3(0, 0.05, 0).applyQuaternion(I.yaw.clone().invert())).add(up.multiplyScalar(0.05).applyQuaternion(I.yaw.clone().invert()));
   };
+  // 10/31 비껴서며 찌르기 몸 빼기 (D.void { lat 스틱 쪽 옆 · fwd 앞 m — schools.js inquartata step}): 이 수 동안 몸을 상대 칼 줄 밖으로 미끄러뜨리고(몸 · 두 발 — shiftFighter · 운동학 칼의 물리 예외) ·
+  //  뒷발을 그쪽으로 돌려 디딤(gait 'retreat' 걸음 — 뒷발만 옆으로) · 길은 미끄러진 뒤 자리로 짬(comboAimPoint 가 I.slide 를 뺌) · 모자라면 앞 몫에 런지(THRUST.step 까지 — 아래 런지와 같은 한도)
+  if (D.void && f.foe?.bodies?.chest && !I.slide) {
+    const c1 = f.bodies.chest.translation();
+    const fc = f.foe.bodies.chest.translation();
+    const ux = fc.x - c1.x;
+    const uz = fc.z - c1.z;
+    const d = Math.max(1e-3, Math.hypot(ux, uz));
+    const M = f.swordArt.measure;
+    const fx = ux / d;
+    const fz = uz / d;
+    const rx = -fz; // 몸 기준 오른쪽 (상대 쪽 수평 단위의 오른쪽 — gait 걸음 side + 와 같은 쪽)
+    const rz = fx;
+    const lat = D.void.lat ?? 0;
+    const fwdMax = Math.max(0, d - M.clinch);
+    const mk = (fwd) => {
+      const vx = fx * fwd + rx * lat;
+      const vz = fz * fwd + rz * lat;
+      const L = Math.hypot(vx, vz);
+      return L > 1e-3 ? { dx: vx / L, dz: vz / L, slide: L, t0: I.t, span: 1, done: 0, void: true } : null;
+    };
+    I.slide = mk(Math.min(D.void.fwd ?? 0, fwdMax));
+    if (I.slide) {
+      const P0 = aimAt();
+      const Z0 = solve(P0);
+      const short = Z0.dP - (f.weaponCfg.hiltLength + f.weaponCfg.bladeLength);
+      if (short > 1e-3) I.slide = mk(Math.min((D.void.fwd ?? 0) + Math.min(short, THRUST.step), fwdMax, Math.max(0, d - M.contact) + (D.void.fwd ?? 0)));
+      I.artVoid = { lat, fwd: I.slide ? +(I.slide.slide ** 2 - lat * lat > 0 ? Math.sqrt(I.slide.slide ** 2 - lat * lat) : 0).toFixed(3) : 0 }; // 재기
+      if (f.gait?.active) f.gait.requestStep({ kind: 'retreat', fwd: 0, side: lat, duration: 0.35 }); // 뒷발을 몸 뺀 쪽으로 돌려 디딤 (뒷발 — retreat 걸음은 앞발이 아닌 발)
+    }
+  }
   let P = aimAt();
   I.aim = 'lung';
   let Z = solve(P);
@@ -1993,7 +2033,9 @@ function comboPlanArtThrust(f, I, m, A) {
   }
   push(H0.clone(), false);
   for (let k = 1; k <= 4; k++) push(H0.clone().lerp(H1, k / 4), true);
-  if (I.slide && I.slide.slide > 0) {
+  if (I.slide?.void) {
+    // 비껴서며 찌르기 몸 빼기 (10/31): 이 수 내내(겨눔 · 찌름 · 뻗은 채 · 거둠 — 아래 끝에서 정함) 미끄러짐 — 옆으로 빠지는 몸이라 칼끝 빠르기 맞춤(아래 런지 k)은 하지 않음 (찌름은 고노센 × 몫 그대로)
+  } else if (I.slide && I.slide.slide > 0) {
     // 런지: 겨눔 · 찌름 동안 다 미끄러지고 칼끝이 땅에 대해 지나는 길(몸 틀 길 + 미끄러짐)의 빠르기가 I.v 그대로 (comboNext 의 그때 계산 길과 같은 셈)
     const T = segs.reduce((a, sg) => a + sg.T, 0);
     const k = T > 0 ? (T * I.v + I.slide.slide) / (T * I.v) : 1;
@@ -2002,6 +2044,7 @@ function comboPlanArtThrust(f, I, m, A) {
   }
   push(H1.clone(), false, null, THRUST.hold); // 뻗은 채 둠 (같은 자리 토막은 칼끝 길이 0 — 탭 찌르기 버팀 시간)
   push(H0.clone(), false); // 손 목표는 그대로 (손가락이 둔 자리 — 탭으로 낸 칼이라 손 목표를 옮기면 그 뜀이 긋기로 읽혔다) · 끝 자세에서 0.2 s 에 서보로
+  if (I.slide?.void) I.slide.span = Math.max(1e-3, segs.reduce((a, sg) => a + sg.T, 0)); // 비껴서며 찌르기 몸 빼기 (10/31): 이 수 내내
   I.overshoot = H1.clone().addScaledVector(dc, L).sub(P).dot(dc); // 재기 (판정에는 안 씀): 다 뻗은 칼끝이 겨눈 곳을 지난 길이 (m — 음수면 못 닿음)
   I.artReach = { dX, el: Math.asin(clamp(dc.y, -1, 1)) / D2R, lift: Z.ph / D2R, hand: H1.distanceTo(S) }; // 재기: 어깨 → P · 칼 높이각(°) · 팔을 든 각 φ(°) · 끝 손 ↔ 어깨
   return segs;
@@ -2280,7 +2323,7 @@ function stepCombo(f, combat) {
     const D = I.prev.D.clone().lerp(cur.D, w).normalize();
     const tip = B.clone().addScaledVector(D, I.mord ? I.mord.Lp : f.weaponCfg.bladeLength); // 죽음의 일격: 손 → 칼자루 끝 (치는 막대)
     // 잔상 (10/23 사장님 '잔상과 궤적도 비기에 걸맞는지 체크해'): 사람 비기(모르트슐라크 · 격살 — arcCut)는 베는 토막(맞음이 날 수 있는 몫)만 — 준비 · 다시 세우기는 그리지 않는다
-    if (!I.arcCut || sg.cut) {
+    if (!I.noArc && (!I.arcCut || sg.cut)) {
       I.arc.pts.push([B.x, B.y, B.z, tip.x, tip.y, tip.z]);
       if (I.arcCut && f.instantArc !== I.arc) f.instantArc = I.arc;
     }
@@ -2381,8 +2424,10 @@ function lungeSweep(f, I, combat, t0, t1) {
     const { B, D } = q;
     const tip = B.clone().addScaledVector(D, BL);
     if (q.sg.cut) {
-      I.arc.pts.push([B.x, B.y, B.z, tip.x, tip.y, tip.z]);
-      if (f.instantArc !== I.arc) f.instantArc = I.arc;
+      if (!I.noArc) {
+        I.arc.pts.push([B.x, B.y, B.z, tip.x, tip.y, tip.z]);
+        if (f.instantArc !== I.arc) f.instantArc = I.arc;
+      }
       // 재기 (판정에는 안 씀): 찌르는 토막 칼끝 빠르기 (월드 — 조각 사이 칼끝 옮김 ÷ 실제 시간) — 같은 칼 고노센 칼끝 iaiTipSpeed 와 견줌
       const dtq = (t - prev.t) / rate;
       if (dtq > 1e-6) {
@@ -2518,10 +2563,13 @@ export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, 
  *  plane = 아래팔을 칼 줄에 맞추는 팔꿈치 · 손목이 사람 범위 안인 칼 면(iaiSolve — fighter.js armIK alignDir · wristPlane) · roll = 굴림 묶음(그런 면이 없을 때) ·
  *  dyn.thrust = 겨눈 찌름과 같이 찌르는 토막 첫 자리부터 쓸린 자리(thrustSweep) · 손목 교정은 칼을 줄에서 비키지 않음(iaiSolve thrustSeg). 이미 끌고 가는 중이면 거절(false)
  */
-export function requestArtThrust(f, { share, maxT, tech, under = false, capFromCut = false }) {
-  if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.chest) return false;
+export function requestArtThrust(f, { share = 0, v = 0, trail = true, maxT, tech, under = false, capFromCut = false, side = null, voidStep = null, bodyPose = null }) {
+  if (f.iai || f.iaiReq || !(share > 0 || v > 0) || !f.foe?.bodies?.chest) return false;
   // capFromCut (10/30 — UNIQUE_ASSIST.cavCapCut): 시간 상한을 찌르는 토막부터 셈 (돌려 빼기 · 겨눔 토막은 셈 밖 — 날개 접기 · 풍차 베기와 같은 셈) — 가까우면 돌려 빼기 길이 길어 상한 안에 찌름까지 못 갔다
-  requestCombo(f, { moves: [{ name: tech, kind: 'thrust', same: true, artThrust: true, roll: true, plane: true, ...(capFromCut ? { capFromCut: true } : {}), dyn: { kind: 'artThrust', thrust: true, target: 'lung', under } }], share, hold: 0, hitMul: 1, tech, maxT, attack: true });
+  // 10/31 이탈리아 자리 바꿈: v = 칼끝 빠르기 m/s 를 바로(share 대신 — 칼끝 돌려 빼기 = 보통 찌르기 빠르기) · trail false = 잔상 없음 · side = 비킨 쪽(월드 — 닿았을 때 상대 칼 쪽) ·
+  //  voidStep { lat, fwd } = 비껴서며 찌르기 몸 빼기(스틱 쪽 옆 + 앞 m — 몸 미끄러짐 · 뒷발 걸음) · bodyPose = 이 수 동안 몸 꼴 [골반 °, 가슴 °, 숙임 °, 낮춤 m] (겹치기 dupBody 와 같은 칸)
+  const dyn = { kind: 'artThrust', thrust: true, target: 'lung', under, ...(side?.isVector3 ? { side: side.clone() } : {}), ...(voidStep ? { void: { ...voidStep } } : {}) };
+  requestCombo(f, { moves: [{ name: tech, kind: 'thrust', same: true, artThrust: true, roll: true, plane: true, ...(capFromCut ? { capFromCut: true } : {}), ...(bodyPose ? { bodyPose } : {}), dyn }], share: share > 0 ? share : 1, speed: v, noArc: !trail, hold: 0, hitMul: 1, tech, maxT, attack: true });
   return true;
 }
 /**

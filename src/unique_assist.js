@@ -27,7 +27,7 @@ import { classifyStroke } from './attack_stroke.js';
 //  수는 config.js UNIQUE_ASSIST (확인표 1040~1047 · 10/14 강화 수는 owner_defaults_table.md 끝, 사장님 확인 전). 끄기 `?uniqueAssist=0`.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { UNIQUE_ASSIST as UA, SKILL, SECRET, STAMINA, IB_FLOW } from './config.js';
+import { UNIQUE_ASSIST as UA, SKILL, SECRET, STAMINA, IB_FLOW, THRUST } from './config.js';
 import { G, TECH, TECH_BY_NAME } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js';
 import { segDist } from './skill.js';
@@ -89,14 +89,18 @@ export const PLAYER_UNIQUE = {
     { stage: 4, name: 'schielhau', role: 'enh', replaces: 'zornhau', hint: '강화동작 · 분노의 베기 대신 · 맞은 상대가 무릎을 꿇기도 함', body: [-12, -8, 2, 0.02], /* 10/21 전수 조사: 오른쪽 위 → 왼쪽 아래 긋기라 몸도 왼쪽(−) — 전 +12 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 곁눈 베기 ← 분노의 베기 (늘 — 같은 시작 자리 오른쪽 머리 위 · 10/21 사장님 '분노의 베기를 바꾸는 걸로' · 전 황소 찌르기는 찌르기 → 베기로 어긋나 AI 손해)
   ],
   italian: [
-    { stage: 1, name: 'inquartata', role: 'step', stick: 'side', hint: '옆으로 걸으며 찌르기', body: [18, 10, 5, 0.025], bodyMirror: 1, /* 몸을 칼 줄 밖으로 빼는 쪽 = 디딘 쪽(10/21 — 걸음이 스틱 쪽을 따르므로 몸도) */ on: [{ tech: 'stichPflugL' }, { tech: 'stichPflug' }] }, // 비껴서며 찌르기 ← 옆 + 쟁기 찌르기(왼 · 오른)
+    // 10/31 이탈리아 자리 바꿈 (사장님 10/31 12:xx — 칼끝 돌려 빼기 = 기본 고유 공격 I2 · 비껴서며 찌르기 = 특수 공격 I9 · config UNIQUE_ASSIST cav* · inq* · docs/strike/italian_swap_2026-10-31.md):
+    //  단계(AI 숙련도 거르기)도 자리를 따름 — 칼끝 돌려 빼기 1 · 비껴서며 찌르기 3 (다른 유파 특수 공격과 같은 3)
+    { stage: 1, name: 'cavazione', role: 'chain', hint: '칼이 상대 칼에 닿은 채 박자를 맞추어 탭', nameKo: '칼끝 돌려 빼기 (카바치오네)', orig: 'cavazione', body: [5, 8, 4, 0.02], on: [], // 칼끝 돌려 빼기 — 사람은 탭으로만 (AI 는 schools.js 속임 · 빼서 찌르기 패시브 그대로 — 이 칸을 안 읽음)
+      // tapKey = 탭으로 내는 조건 (TAP_TRIG 'cav' — 10/31 칼끼리 닿음 뒤 cavFrom ~ cavTo 의 탭 · 내 긋기 동안의 닿음은 셈 밖) · tapSnap = 상대 칼 밑으로 돌려 빼 반대쪽을 찌르는 운동학 칼(requestArtThrust — 보통 찌르기 빠르기 · 잔상 없음)
+      //  special 없음 = 특수 공격 식힘 · 잔상 · 고노센 몫 없음 (10/31 사장님 '카바치오네는 이제 특수공격이 아니고')
+      tapKey: 'cav', tapSnap: 1 },
     { stage: 2, name: 'imbroccata', role: 'enh', replaces: 'stichOchs', hint: '강화동작 · 황소 찌르기 대신 · 옷과 갑옷 틈을 더 파고듦', body: [10, 12, 8, 0.04], on: [{ tech: 'stichOchs' }], // 위에서 내려 찌르기 ← 황소 찌르기 (늘)
       // tap = 읽힌 순간 탭 찌르기 덧씌우기로 찌름 (사장님 10/27 23:5x '찌르기 뻗게 고치고' — config UNIQUE_ASSIST.imbroReach · AI 임브로카타와 같은 길 · 기록 docs/strike/imbroccata_2026-10-27.md)
       tap: 1 },
-    { stage: 3, name: 'cavazione', role: 'chain', hint: '찌르기가 맞물리거나 꺾인 뒤 찌르기', nameKo: '칼끝 돌려 빼기 (카바치오네)', orig: 'cavazione', body: [5, 8, 4, 0.02], on: [], // 칼끝 돌려 빼기 — 사람은 탭으로만 (10/28 01:2x 사장님: 맞물림 · 꺾음 긋기 입력은 뺌 · AI 는 schools.js 그대로 — 이 칸을 안 읽음)
-      // tapKey = 탭으로 내는 조건 (TAP_TRIG 'cav' — 사장님 10/28 01:2x · 01:1x — config UNIQUE_ASSIST.cavTap · cavFrom · cavTo): 상처를 못 낸 막아찌르기(I6)가 끝난 때부터 실제 0.6 ~ 1.2 s 의 탭 ·
-      //  tapSnap = 상대 칼 밑으로 돌려 빼 가슴을 찌르는 운동학 칼(cavSnap — requestArtThrust)
-      tapKey: 'cav', tapSnap: 1, special: true }, // special = 특수 공격 공통 식힘(UNIQUE_ASSIST.specialCooldown — 사장님 10/28 02:0x)
+    { stage: 3, name: 'inquartata', role: 'step', hint: '상대가 공격해 올 때 옆으로 움직이며 탭', nameKo: '비껴서며 찌르기 (인콰르타타)', orig: 'inquartata', body: [18, 10, 5, 0.025], bodyMirror: 1, /* 몸을 칼 줄 밖으로 빼는 쪽 = 디딘 쪽(10/21 — 스틱 쪽) */ on: [], // 비껴서며 찌르기 — 사람은 탭으로만 (10/31 · 전 판 걸음 명령 '옆 + 쟁기 찌르기 긋기'는 사람 몫에서 뺌 — on 없음 · stick 없음 · role 'step' 은 카드 갈래 '걸음 기술' 글만 · AI 는 schools.js 걸음 기술 그대로)
+      // tapKey = 탭으로 내는 조건 (TAP_TRIG 'inq' — 상대 칼이 들어오는 동안 스틱 옆의 탭) · tapVoid = 스틱 쪽으로 몸을 빼며(뒷발을 돌려 디딤) 넷째 자세로 가슴을 찌르는 운동학 칼(requestArtThrust void · 고노센 × specialShare.inquartata · 잔상)
+      tapKey: 'inq', tapVoid: 1, special: true }, // special = 특수 공격 공통 식힘(UNIQUE_ASSIST.specialCooldown) · AI 특수 공격 몫도 이 이름(ai.js SPECIALS — schools.js 걸음 기술 inquartata)
   ],
   iberian: [
     { stage: 1, name: 'talhoRodeado', role: 'step', stick: 'side', hint: '옆으로 걸으며 사선 내려 긋기', body: [-15, -8, 4, 0.02], /* 10/21 전수 조사: 탈류(오른쪽 위 → 왼쪽 아래) · 원전 「왼쪽 위로 나사처럼」 — 몸 왼쪽(−) · 전 +15 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 옆 + 분노의 베기
@@ -252,13 +256,24 @@ export function uniqueDef(tradition, e) {
  *  (uq, now) → null(이 탭은 아님 — 보통 탭 찌르기) | { spend() } (이 탭이 그 기술 — 내면 spend 로 그 기회를 씀). 이른 탭이 기회를 없애는 규칙도 여기 안에서.
  */
 const TAP_TRIG = {
-  // 칼끝 돌려 빼기 (10/28 01:2x 사장님 '그냥 찌르기 x' · 01:1x 0.6 ~ 1.2): 막아찌르기(I6 — 막기 단추 새 누름의 짧은 찌르기 · italian_opposition.js)가 상처(심각도 > 0)를 못 내고 끝난 때(다 마침 · 끊김 —
-  //  헛침 · 막힘 · 칼끼리 맞닿음 모두)부터 cavFrom ~ cavTo(10/29 20:0x 실제 0.2 ~ 1.2 s · 전 0.6 ~ 1.2) 의 탭 · 이른 탭은 보통 탭이고 그 기회를 없앰(연타로는 안 나감) · 상처를 낸 막아찌르기는 안 엶 · 시계 = 막기 단추 시계(guard.clock)
+  // 칼끝 돌려 빼기 (10/31 사장님 '내 칼이 상대 칼과 닿았을 때 박자에 맞춰 찌르면 발동 … 베기에서의 닿음이나 막힘은 빼야' — 감독 '내 긋기 동안의 닿음은 뺌'):
+  //  한 닿음(touchTick — 칼끼리 실제 닿음 feel.touching · 떨어졌다 새로 닿으면 새 닿음)의 처음부터 cavFrom 이 지나고 마지막 닿은 때부터 cavTo 안의 탭 ·
+  //  cavFrom 전의 탭은 보통 탭이고 그 닿음의 기회를 없앰(연타로는 안 나감 — 10/28 '박자' 규칙 그대로) · 내 긋기 동안 닿은 닿음은 안 엶 · 한 닿음에 한 번 · 시계 = 이 강화 시계(uq.t)
+  //  (10/28 ~ 10/30 판 조건 — 상처를 못 낸 막아찌르기 끝 · 그때 특수 공격 — 은 없앰: 기록 docs/strike/cavazione_2026-10-28.md)
   cav(uq) {
-    const O = uq.f.parryGuard?.opposition;
-    const E = O?.lastEnd;
-    if (!E || E.dealt || E.cavSpent || O.run) return null; // 새 막아찌르기가 도는 중이면 그 끝을 기다림
-    return uq.windowed(E, 'cavSpent', O.guard.clock - E.t, UA.cavFrom, UA.cavTo);
+    const C = uq.touch;
+    if (!C || C.cut || C.cavSpent) return null;
+    if (uq.t - C.t0 < UA.cavFrom) return uq.windowed(C, 'cavSpent', uq.t - C.t0, UA.cavFrom, Infinity); // 이른 탭 — 기회를 없앰
+    if (uq.t - C.t1 > UA.cavTo) return null;
+    return { spend: () => (C.cavSpent = true), touch: C };
+  },
+  // 비껴서며 찌르기 (10/31 — 특수 공격 · 카드 글 '상대가 공격해 올 때 옆으로 움직이며(←/→) 탭'): 상대 칼이 들어오는 동안(막기 단추가 읽는 위협 — parry_button.js threatNow · 마지막 위협에서 inqThreat 안)
+  //  스틱 옆(걸음 명령 'side' 와 같은 문턱)인 채의 탭 · 한 공격(위협 번호)에 한 번
+  inq(uq) {
+    const G = uq.f.parryGuard;
+    if (!G || !(G.noThreat <= UA.inqThreat) || !uq.stickOk('side')) return null;
+    if (uq.inqSeen === G.threatId) return null;
+    return { spend: () => (uq.inqSeen = G.threatId) };
   },
   // 날개 접기 (10/28 01:2x): 물러남 = 스틱 뒤(뒤 몫 ≥ 0.5 · 옆 몫보다 큼 — 걸음 명령 stickOk 'fwd' 의 거울) — 물러나는 동안의 탭 · 스틱을 놓고(뒤가 풀리고) lianWindow 안의 탭 (상대 칼 닿음 없이 내 명령만)
   lian(uq, now) {
@@ -272,7 +287,9 @@ const TAP_TRIG = {
     return { spend: () => (rec.dupSpent = true) };
   },
 };
-const TAP_ON = { cav: 'cavTap', lian: 'lianTap', dup: 'dupTap' }; // 탭 조건마다 켜는 칸 (config UNIQUE_ASSIST)
+const TAP_ON = { cav: 'cavTap', lian: 'lianTap', dup: 'dupTap', inq: 'inqTap' }; // 탭 조건마다 켜는 칸 (config UNIQUE_ASSIST)
+/** 칼끝 돌려 빼기 칼끝 빠르기 (m/s — 10/31 '보통 찌르기 빠르기'): UNIQUE_ASSIST.cavSpeed 'tap' = 탭 찌르기가 칼 선을 따라 뻗는 몫 (THRUST.reach + THRUST.chamber) ÷ THRUST.extend · 숫자면 그것 */
+export const cavTipSpeed = () => (typeof UA.cavSpeed === 'number' && UA.cavSpeed > 0 ? UA.cavSpeed : (THRUST.reach + THRUST.chamber) / THRUST.extend);
 
 /**
  * 플레이어 한 명의 고유 동작 강화 (10/14 — 궤적은 손가락, 고유 동작은 손가락으로 못 하는 몫만). 붙이면(f.skill.uniq = this) 검술 층이 매 스텝
@@ -316,6 +333,10 @@ export class PlayerUniqueAssist {
     this.planFade = null; // 길 덧칸 놓기 { tilt, reach, turn, t } (planStep — 10/25 18:0x)
     this.stats = { strokes: 0, techs: {}, fired: {}, ends: {}, steps: 0, power: 0 };
     this.holdE = this.list.find((e) => e.hold) ?? null; // 길게 눌러 내는 특수 공격 (풍차 베기 B4 — 10/29)
+    // 탭으로 내는 동작 (tapChain): 특수 공격이 먼저 (10/31 이탈리아 — 비껴서며 찌르기 조건과 칼끝 돌려 빼기 닿음 조건이 함께 차면 스틱 옆을 민 비껴서며 찌르기 · 식는 동안은 칼끝 돌려 빼기)
+    this.tapList = this.list.filter((e) => e.tapKey).sort((a, b) => (b.special ? 1 : 0) - (a.special ? 1 : 0));
+    this.touch = null; // 칼끼리 한 닿음 (칼끝 돌려 빼기 탭 조건 — touchTick · 10/31): { t0 처음 · t1 마지막 닿은 때 · cut 내 긋기 동안 닿음 · n 상대 칼 쪽(월드 — feel.normal 의 반대) · cavSpent }
+    this.inqSeen = -1; // 비껴서며 찌르기를 낸 위협 번호 (한 공격에 한 번)
     this.press = { down: false, still: false, secretOpen: false }; // main.js holdInput — 탭 입력을 누르고 있나 · 탭 문턱(끌지 않음) 안인가 · 비기 창이 열렸나
     this.hold = { st: 'idle', t: 0 }; // 누름 셈 · 감기 ('idle' · 'press' · 'spent' 이 누름은 감지 않음 · 'wind' 감는 중)
     this.coolT = {}; // 특수 공격(표 칸 special)마다 식힘을 세기 시작한 때 (사장님 10/28 02:0x 나간 순간 → 10/29 19:5x 끝난 때 — UNIQUE_ASSIST.specialCooldown · specialCoolFrom · 도는 동안 Infinity)
@@ -470,9 +491,9 @@ export class PlayerUniqueAssist {
    */
   tapChain() {
     const now = this.t;
-    for (const e of this.list) {
-      if (!e.tapKey) continue;
+    for (const e of this.tapList) {
       const cav = e.tapKey === 'cav';
+      const thrustTap = cav || e.tapKey === 'inq'; // 찌르는 탭 칼 (칼끝 돌려 빼기 · 비껴서며 찌르기 — 기력 · 앞 칼 기록 꼴)
       if (!UA[TAP_ON[e.tapKey]] || this.cooling(e, now)) continue; // 식힘 중: 조건을 보지 않음(이른 탭 규칙도) — 이 탭은 보통 탭 찌르기 (10/28 02:0x)
       const ok = TAP_TRIG[e.tapKey]?.(this, now);
       if (!ok) continue;
@@ -484,15 +505,29 @@ export class PlayerUniqueAssist {
       this.coolStart(e);
       const U = e.U;
       if (this.cur) this.closeStroke(now); // 긋던 것은 여기서 끝 (이 탭이 다음 칼)
-      const rec = { tech: 'tap', kind: cav ? 'thrust' : 'cut', tap: true, t0: now, dir: [0, 0], start: null, landed: false, bound: false, tEnd: null, unique: U.name };
+      const rec = { tech: 'tap', kind: thrustTap ? 'thrust' : 'cut', tap: true, t0: now, dir: [0, 0], start: null, landed: false, bound: false, tEnd: null, unique: U.name };
       this.tapRec = rec; // 앞 칼 기록 (운동학 칼이면 track 이 다음 스텝에 끝냄 — 맞힘 · 맞물림은 그 뒤 last 로 이어 적음 · 이 기록은 다음 기회를 열지 않음)
       this.stats.fired[U.name] = (this.stats.fired[U.name] ?? 0) + 1;
       this.stats.tapFired = (this.stats.tapFired ?? 0) + 1;
       f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
-      f.stamina.attack(cav ? 'thrust' : 'cut'); // 탭 하나 (끌고 가는 칼은 같은 공격 — same)
-      if (e.tapSnap && UA.cavSnap && UA.enhance > 0 && requestArtThrust(f, { share: specialShare(e.name), maxT: UA.cavSnapTime, tech: U.name, under: true, capFromCut: !!UA.cavCapCut })) {
-        this.stats.snap = (this.stats.snap ?? 0) + 1;
-        return true;
+      f.stamina.attack(thrustTap ? 'thrust' : 'cut'); // 탭 하나 (끌고 가는 칼은 같은 공격 — same) · 찌르기 10 · 베기 12
+      // 칼끝 돌려 빼기 (10/31 — 기본 고유 공격): 같은 돌려 빼기 길 · 보통 찌르기 빠르기(cavTipSpeed) · 잔상 없음 · 비킨 쪽은 닿았을 때 상대 칼 쪽(cavSide 'contact')
+      if (e.tapSnap && UA.cavSnap && UA.enhance > 0) {
+        const side = UA.cavSide === 'contact' ? ok.touch?.n ?? null : null;
+        if (requestArtThrust(f, { v: cavTipSpeed(), trail: false, maxT: UA.cavSnapTime, tech: U.name, under: true, capFromCut: !!UA.cavCapCut, side })) {
+          this.stats.snap = (this.stats.snap ?? 0) + 1;
+          return true;
+        }
+      }
+      // 비껴서며 찌르기 (10/31 — 특수 공격): 스틱 쪽으로 몸을 빼며(옆 · 앞 = schools.js inquartata step · 뒷발을 그쪽으로 돌려 디딤) 넷째 자세로 가슴 — 고노센 칼끝 × specialShare.inquartata · 잔상
+      if (e.tapVoid && UA.enhance > 0) {
+        const st = U.step ?? { lat: 0.3, fwd: 0.15 };
+        const sg = Math.sign(f.stickX ?? 0) || 1;
+        const B = e.body ? [Math.abs(e.body[0]) * sg * (e.bodyMirror ?? 1), Math.abs(e.body[1]) * sg * (e.bodyMirror ?? 1), e.body[2], e.body[3]] : null;
+        if (requestArtThrust(f, { share: specialShare(e.name), maxT: UA.inqSnapTime, tech: U.name, under: false, capFromCut: true, voidStep: { lat: Math.abs(st.lat) * sg, fwd: st.fwd ?? 0 }, bodyPose: B })) {
+          this.stats.snap = (this.stats.snap ?? 0) + 1;
+          return true;
+        }
       }
       // 날개 접기 (사장님 10/28 00:3x): 오른 허리 옆으로 거뒀다 앞으로 반걸음 들며 허리를 오른 → 왼 가로 호로 — 고노센 칼끝 × specialShare.lianchi (10/29 02:0x)
       if (e.tapFold && UA.enhance > 0) {
@@ -750,6 +785,42 @@ export class PlayerUniqueAssist {
     return segDist(f.bladePoint(0.1, _a), f.bladePoint(1, _d), foe.bladePoint(0.1, _b), foe.bladePoint(1, _c)) < 0.07;
   }
 
+  /**
+   * 내 긋기가 도는 중인가 (칼끝 돌려 빼기 닿음 조건 — 10/31 사장님 '베기에서의 닿음이나 막힘은 빼야' · 감독 '내 긋기 동안의 닿음은 뺌'):
+   *  손가락 휘두름이 찌르기 꼴(찌르는 긋기 — 시작 자세 + 첫 방향이 찌르기 기본 동작)이 아닌 긋기로 읽혀 도는 중(this.cur — 끝은 onsetQuiet 쉼) · 또는 끌고 가는 베는 칼(f.iai 의 지금 수가 베기)
+   */
+  cutting() {
+    const c = this.cur;
+    if (c && c.kind !== 'thrust') return true;
+    const I = this.f.iai;
+    const m = I?.moves?.[I.mi];
+    return !!m && m.kind === 'cut';
+  }
+
+  /**
+   * 칼끼리 닿음 (물리 스텝마다 — drive 머리 · 10/31 칼끝 돌려 빼기 탭 조건): 내 칼이 상대 칼에 실제로 닿은 스텝(combat.js bladeClash 의 feel.touching — 가까움만으로는 아님)마다
+   *  지금 닿음을 잇고(t1) · 새로 닿은 스텝(feel.time 0 — 떨어져 있다가 새로 부딪힘 · combat.js STEEL.rearmSteps)이면 새 닿음(t0)을 엶. 까닭은 묻지 않음 —
+   *  내 찌르기(탭 · 찌르는 긋기)가 상대 칼에 부딪힘 · 막고 서 있다 닿음 · 상대가 내 칼을 누름 · 묶음 · 내 찌르기가 막힘 모두. 다만 내 긋기가 도는 동안 닿은 스텝이 하나라도 있으면
+   *  그 닿음은 통째로 셈 밖(cut — 재기 stats.touchCut). 상대 칼 쪽 n = 닿은 스텝 feel.normal(상대 칼이 내 칼을 미는 쪽)의 반대 — 돌려 빼 그 너머 열린 줄로 (cavSide 'contact')
+   */
+  touchTick() {
+    const f = this.f;
+    const fe = f.feel;
+    if (!fe?.touching || !f.armed || !f.foe?.armed) return;
+    let C = this.touch;
+    if (!C || fe.time === 0 || this.t - C.t1 > UA.cavTo) {
+      C = this.touch = { t0: this.t, t1: this.t, cut: false, cavSpent: false, n: null, steps: 0 };
+      this.stats.touches = (this.stats.touches ?? 0) + 1;
+    }
+    C.t1 = this.t;
+    C.steps++;
+    if (!C.cut && this.cutting()) {
+      C.cut = true;
+      this.stats.touchCut = (this.stats.touchCut ?? 0) + 1;
+    }
+    if (fe.normal && fe.normal.lengthSq() > 1e-8) C.n = (C.n ?? new THREE.Vector3()).copy(fe.normal).negate();
+  }
+
   /** 물러남 (날개 접기 — 10/28 01:2x): 스틱 뒤 몫 ≥ 0.5 이고 옆 몫보다 큼 (stickOk 'fwd' 의 거울) */
   backNow() {
     const x = this.f.stickX ?? 0, y = this.f.stickY ?? 0;
@@ -902,6 +973,7 @@ export class PlayerUniqueAssist {
     const f = this.f;
     if (this.holdE) this.holdTick(dt); // 풍차 베기 (B4 — 길게 눌러 감다 떼면 내려침 · 10/29)
     this.coolTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:5x)
+    this.touchTick(); // 칼끼리 닿음 (칼끝 돌려 빼기 탭 조건 — 10/31)
     // 물러남이 풀린 때 (날개 접기 탭 조건 TAP_TRIG 'lian' — 10/28 01:2x): 스틱 뒤가 풀린 스텝
     const back = this.backNow();
     if (this.backOn && !back) this.backOff = this.t;
