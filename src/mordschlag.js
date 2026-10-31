@@ -183,11 +183,16 @@ export function mordBurstTick(f, run, dt) {
     return;
   }
   if (B.phase === 'go') {
+    // 물러날 거리: 머리 뚫음 막기(noSelfClip)가 켜져 있으면 그 셈의 '못 옮긴 몫'(I.mord.clip.short — 머리 따라 겨눔이 스텝마다 그때 머리로 셈)이 0 이 될 때까지만 —
+    //  박찬 발이 디딘 뒤에도 모자라면 스틱을 뒤로 둔 채(보통 뒷걸음) 이어 가고, 상대도 물러나 일찍 넉넉해지면 박찬 걸음 도중이라도 놓음(세게 멈춤). 셈이 없으면 박찬 발이 디딜 때 놓음
+    const C = f.iai?.mord?.clip;
+    const room = C && C.short != null ? C.short <= ROOM_TOL : null;
     if (g.burstLeg) B.used = true;
-    else if (B.used) {
+    else if (!B.used && !g.burst && !g.burstStep) g.burst = { fore: -1, side: 0, lat: 0, ...(SECRET.mord.burstFree ? { free: true } : {}) };
+    if (B.used && (room === true || (room === null && !g.burstLeg))) {
       B.phase = 'hold';
       B.landT = B.t;
-    } else if (!g.burst && !g.burstStep) g.burst = { fore: -1, side: 0, lat: 0, ...(SECRET.mord.burstFree ? { free: true } : {}) };
+    }
     if (B.phase === 'go' && B.t > BURST_MAX) {
       B.phase = 'hold';
       B.timeout = true;
@@ -198,7 +203,8 @@ export function mordBurstTick(f, run, dt) {
   f.stickX = 0;
   f.stickY = back ? -1 : 0;
 }
-const BURST_MAX = realS(0.6); // 실제 초 — 시간 사다리 0.6 칸 (박찬 발이 이 안에 못 디디면 놓음)
+const BURST_MAX = realS(0.6); // 실제 초 — 시간 사다리 0.6 칸 (이 안에 못 디디거나 거리가 안 나면 놓음)
+const ROOM_TOL = 0.02; // m — '넉넉함' 판정 여유 (칼자루 가운데 ↔ 머리 가운데 못 옮긴 몫 · 머리 공 반지름 0.1 의 몫)
 
 /**
  * 상대 머리가 칼자루 길에 닿나 (10/24 — AI 가 창 안에서 낼 때 · ai.js mordTick): 운동학 길의 머리 겨눔('pull' — secret_instant.js comboPlanMord)은 칼자루 가운데
