@@ -796,17 +796,24 @@ export class Combat {
   /** 칼끼리 맞댄 채(바인드)엔 반발을 끈다: 누를 때마다 접촉점이 새로 생기며 튕겨 떨리지 않게 */
   armSteel() {
     const armed = this.stepNo - this.bladeLast > STEEL.rearmSteps;
-    // 자연 바인드 실험 (BIND.natural ①): 처음 한 번 칼 반발을 BIND.restitution 으로 다시 건다 (끄면 이 줄을 지나치기만 한다)
-    if (BIND.natural && !this.natSurface) (this.natSurface = true), (this.steelArmed = null);
+    // 자연 바인드 (BIND.natural ① — 10/31 본판): 처음 한 번 칼 반발을 BIND.restitution 으로 다시 건다 (끄면 이 줄을 지나치기만 한다)
+    if (BIND.natural && !this.natSurface) (this.natSurface = true), (this.steelArmed = null), (this.natBase = new Map());
     if (armed === this.steelArmed) return;
     this.steelArmed = armed;
     // 무기마다 재질이 다를 수 있어(강철/나무/고무…) 되돌릴 때도 각자 자기 재질 반발값을 쓴다
     for (const f of this.fighters) {
       const mat = f.restitution ?? STEEL.restitution;
-      const e = armed ? (BIND.natural ? Math.min(mat, BIND.restitution) : mat) : 0;
       for (const c of f.swordColliders || []) {
-        c.setRestitution(e);
-        if (BIND.natural) c.setFriction(armed ? 0.4 : BIND.friction); // 붙어 있는 동안만 칼끼리 더 문다 (0.4 = fighter.js 칼 콜라이더 마찰 그대로)
+        if (!BIND.natural) {
+          c.setRestitution(armed ? mat : 0);
+          continue;
+        }
+        // 콜라이더마다 처음 본 제 반발 · 마찰이 바탕 (10/31 고침: 10/11 판은 되돌릴 때 마찰을 0.4 로 박아 두어 덩굴 채찍 마디(druid_whip.js WHIP 반발 0.08 · 마찰 0.65)가
+        //  칼끼리 한 번 닿은 뒤로 칼 값으로 바뀌었다. 보통 칼 부품은 반발 = 무기 재질 값 · 마찰 0.4(fighter.js) 그대로라 10/11 판과 같음)
+        let B = this.natBase.get(c.handle);
+        if (!B) this.natBase.set(c.handle, (B = armed ? { e: c.restitution(), mu: c.friction() } : { e: mat, mu: 0.4 }));
+        c.setRestitution(armed ? Math.min(B.e, BIND.restitution) : 0);
+        c.setFriction(armed ? B.mu : BIND.friction); // 붙어 있는 동안만 칼끼리 더 문다
       }
     }
   }
