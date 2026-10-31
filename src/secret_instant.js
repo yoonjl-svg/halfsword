@@ -2802,15 +2802,16 @@ export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, 
  *  plane = 아래팔을 칼 줄에 맞추는 팔꿈치 · 손목이 사람 범위 안인 칼 면(iaiSolve — fighter.js armIK alignDir · wristPlane) · roll = 굴림 묶음(그런 면이 없을 때) ·
  *  dyn.thrust = 겨눈 찌름과 같이 찌르는 토막 첫 자리부터 쓸린 자리(thrustSweep) · 손목 교정은 칼을 줄에서 비키지 않음(iaiSolve thrustSeg). 이미 끌고 가는 중이면 거절(false)
  */
-export function requestArtThrust(f, { share = 0, v = 0, trail = true, maxT, tech, under = false, capFromCut = false, side = null, voidStep = null, bodyPose = null, tapTiming = false, selfFree = 0 }) {
+export function requestArtThrust(f, { share = 0, v = 0, trail = true, maxT, tech, under = false, capFromCut = false, side = null, voidStep = null, bodyPose = null, tapTiming = false, selfFree = 0, hitMul = 1 }) {
   if (f.iai || f.iaiReq || !(share > 0 || v > 0) || !f.foe?.bodies?.chest) return false;
   // capFromCut (10/30 — UNIQUE_ASSIST.cavCapCut): 시간 상한을 찌르는 토막부터 셈 (돌려 빼기 · 겨눔 토막은 셈 밖 — 날개 접기 · 풍차 베기와 같은 셈) — 가까우면 돌려 빼기 길이 길어 상한 안에 찌름까지 못 갔다
   // 10/31 이탈리아 자리 바꿈: v = 칼끝 빠르기 m/s 를 바로(share 대신 — 칼끝 돌려 빼기 = 보통 찌르기 빠르기) · trail false = 잔상 없음 · side = 비킨 쪽(월드 — 닿았을 때 상대 칼 쪽) ·
   //  voidStep { lat, fwd } = 비껴서며 찌르기 몸 빼기(스틱 쪽 옆 + 앞 m — 몸 미끄러짐 · 뒷발 걸음) · bodyPose = 이 수 동안 몸 꼴 [골반 °, 가슴 °, 숙임 °, 낮춤 m] (겹치기 dupBody 와 같은 칸)
   //  tapTiming = 탭 찌르기와 같은 박자(겨눔 THRUST.aim · 뻗음 THRUST.extend · 버팀 · 거둠 — 10/31 칼끝 돌려 빼기: 보통 찌르기 · v 는 이때 겨눔 길 짜기의 잣대만)
   //  selfFree = 10/31 칼끝 돌려 빼기 넘어짐 고침 (UNIQUE_ASSIST.cavSelfFree): 1 = 이 수 동안 칼 어깨 면 밧줄을 뗌 · 0 = 전 판
+  //  hitMul = 이 찌르기 상처 판정 배율 (10/31 시제품 — UNIQUE_ASSIST.cavHitMul · 기본 1)
   const dyn = { kind: 'artThrust', thrust: true, target: 'lung', under, ...(side?.isVector3 ? { side: side.clone() } : {}), ...(voidStep ? { void: { ...voidStep } } : {}), ...(tapTiming ? { tapTiming: true } : {}) };
-  requestCombo(f, { moves: [{ name: tech, kind: 'thrust', same: true, artThrust: true, roll: true, plane: true, ...(capFromCut ? { capFromCut: true } : {}), ...(bodyPose ? { bodyPose } : {}), dyn }], share: share > 0 ? share : 1, speed: v, noArc: !trail, hold: 0, hitMul: 1, tech, maxT, attack: true, selfFree });
+  requestCombo(f, { moves: [{ name: tech, kind: 'thrust', same: true, artThrust: true, roll: true, plane: true, ...(capFromCut ? { capFromCut: true } : {}), ...(bodyPose ? { bodyPose } : {}), dyn }], share: share > 0 ? share : 1, speed: v, noArc: !trail, hold: 0, hitMul: hitMul > 0 ? hitMul : 1, tech, maxT, attack: true, selfFree });
   return true;
 }
 /**

@@ -317,7 +317,8 @@ export class Combat {
     if (att.weaponCfg.ignoreArmor) (guard = 1), (plateGuard = 0); // 라이트세이버 등: 갑옷·투구가 막아주지 않는다
     else if (att.weaponCfg.ignoreArmorDamage) plateGuard = 0; // 모르겐슈테른: 판금은 막아주지 않되 누비옷(guard)은 그대로
     // 찌르기 무기의 찌르기는 옷·투구의 틈을 파고든다: 옷이 막아주는 몫(0.55 위)의 gap 비율, 투구·판금은 gap 의 절반을 무시한다
-    else if (type === 'stab' && (gapV = strokeTechOf(att) === 'imbroccata' && !perkOff(att, 'imbroccata') ? Math.max(ts?.gap ?? 0, UA.imbroccataGap ?? 0) : ts?.gap)) {
+    else if (type === 'stab' && (gapV = strokeTechOf(att) === 'imbroccata' && !perkOff(att, 'imbroccata') ? Math.max(ts?.gap ?? 0, UA.imbroccataGap ?? 0) : UA.cavGap > 0 && strokeTechOf(att) === 'cavazione' ? Math.max(ts?.gap ?? 0, UA.cavGap) : ts?.gap)) {
+      // 칼끝 돌려 빼기 틈 파고들기 (10/31 시제품 B — UNIQUE_ASSIST.cavGap · 기본 0 = 끔): 이 찌르기만 gap 을 cavGap 으로
       // 위에서 내려 찌르기(이탈리아 강화동작 — 10/21 사장님 '파고드는 값 0.6'): 이 찌르기만 gap 을 UA.imbroccataGap 으로 (다른 찌르기 · 다른 무기는 그대로)
       if (helmOn) guard *= 1 - 0.5 * gapV;
       else if (body) {

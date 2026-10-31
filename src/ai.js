@@ -2058,6 +2058,7 @@ export class AI {
    */
   respond(th, d) {
     const L = this.level;
+    if (this.me.parryLockUntil != null && this.me.fightT < this.me.parryLockUntil) return false; // 칼끝 돌려 빼기 C (10/31 시제품 — UNIQUE_ASSIST.cavParryLock · 기본 끔): 누르던 칼이 빠진 동안 반응을 새로 시작하지 못함 (이 위협은 묶음이 풀린 뒤 다시 봄)
     if (th.id === this.threatSeen) return false;
     this.threatSeen = th.id;
     if (Math.random() > L.guardChance) return false; // 못 봤거나 늦었다

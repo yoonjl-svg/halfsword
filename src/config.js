@@ -1500,6 +1500,18 @@ export const UNIQUE_ASSIST = {
   //   반작용만 몸에 남음 — 골반이 0.09 s 에 초속 0.2 → 5 m 로 뒤로 밀려 발 밖으로 0.25 s 넘게 나가 넘어짐(knockDown(false) — lostFooting · 츠바이핸더 판 9 판에 넘어짐 6).
   //   1 = 이 수 동안 칼 어깨 면 밧줄을 뗌(휩쓸기 · 풍차 감기 · 죽음의 일격과 같은 손 — 끝나면 다시 검 · 손목 원뿔 · 칼팔 ↔ 몸통 충돌은 그대로) · 0 = 전 판 `?cavSelfFree=0`
   cavSelfFree: 1, // [감독 고침 — 사장님 확인 전]
+  //  칼끝 돌려 빼기 세게 하는 시제품 (사장님 10/31 16:xx '칼끝 돌려 빼기는 이제 특수공격이 아닌데 인위적으로 위력을 높일 방법이 있나? 일반 탭보다 약한 건 문제적이긴 해.' — 감독 다음 차례 ·
+  //   재기만 · 기본 모두 끔 = 지금 판 그대로 · 기록 docs/strike/italian_swap_2026-10-31.md §6 · 확인표 3263 ~):
+  //   A cavSpeedMul — 칼끝 빠르기 = 보통 찌르기 빠르기(cavTipSpeed 4.43 m/s) × 이 배(찌르는 토막만 빨라짐 · 겨눔 · 거둠 박자 그대로) · 1 = 끔 `?cavSpeedMul=1.5`
+  //   B cavGap — 이 찌르기만 옷 · 투구 틈 파고들기 = 무기 THRUST_STYLE gap 과 이 값 가운데 큰 쪽(내려 찌르기 imbroccataGap 0.6 과 같은 틀 · combat.js) · 0 = 끔 `?cavGap=0.6`
+  //   C cavParryLock — 낸 순간부터 이 실제 초 동안 상대가 막기 · 피하기 · 맞받아치기 반응을 새로 시작하지 못함(누르던 칼이 빠짐 — ai.js respond · 이미 막는 중이면 그대로) · 0 = 끔 `?cavParryLock=0.2`
+  //   D cavHitMul — 이 찌르기 상처 에너지 판정 배율(비기 SECRET.hitMul 1.3 과 같은 자리 · combat.js secretHit) · 1 = 끔 `?cavHitMul=1.3`
+  //   E cavCancel — 끄는 동안 막기 단추를 새로 누르거나(쥔 채면 새 위협이 올 때) 그 자리에서 칼을 거둠 → 막기로 · 0 = 끔 `?cavCancel=1`
+  cavSpeedMul: 1, // [시제품 · 사장님 확인 전]
+  cavGap: 0, // [시제품 · 사장님 확인 전]
+  cavParryLock: 0, // [시제품 · 사장님 확인 전 — 켜면 사다리 realS(0.2)]
+  cavHitMul: 1, // [시제품 · 견줌용 · 사장님 확인 전]
+  cavCancel: 0, // [시제품 · 사장님 확인 전]
   //  칼끝 돌려 빼기 심화 · 헛누름 (I8 — 사장님 10/31 12:xx '임브로카타를 먼저 배우고 카바치오네를 배우고 틈 파고들기는 카바치오네 강화로 바꿔.' · 효과 '1로 해. 단 효과가 체감되려면 1초로 해.' → '1.2초로 할게'):
   //   칼끝 돌려 빼기가 나가는(돌려 빼는) 순간 — 맞힘과 상관없이 — 내 칼을 누르거나 닿아 있던 상대 칼이 허공으로 쏠려 상대 두 팔이 이 초 동안 늦음(흘림과 같은 장치 nagashi_recovery.js beginFlowRecovery ·
   //   바닥 FLOW_RECOVERY.floor 그대로 · 처음 1/3 바닥 → 남은 2/3 에 회복). 사람 = I8 을 익혀야(skill_kit.js perkOff 'cavazione') · AI = 칼끝 돌려 빼기가 숙련도 꾸러미에 든 AI 의 빼서 찌르기 패시브

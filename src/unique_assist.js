@@ -535,8 +535,13 @@ export class PlayerUniqueAssist {
       if (e.tapSnap && UA.cavSnap && UA.enhance > 0) {
         const side = UA.cavSide === 'contact' ? ok.touch?.n ?? null : null;
         const tapT = UA.cavSpeed === 'tap'; // 탭 찌르기 박자 — 길 끝(거둠)까지 시간 상한 없음: 상한에서 끊으면 뻗은 칼이 상대 몸 · 칼 안에 든 채 충돌이 돌아와 내 몸이 튕겨 넘어졌음(싸움 판 넘어짐 8 / 9 판 — 낸 뒤 0.25 ~ 0.35 s)
-        if (requestArtThrust(f, { v: cavTipSpeed(), trail: false, maxT: tapT ? 0 : UA.cavSnapTime, tech: U.name, under: true, capFromCut: !tapT && !!UA.cavCapCut, side, tapTiming: tapT, selfFree: UA.cavSelfFree })) {
+        // 세게 하는 시제품 (10/31 16:xx 사장님 물음 — config UNIQUE_ASSIST cavSpeedMul · cavHitMul · cavParryLock · cavCancel · combat.js cavGap · 기본 모두 끔): A 빠르기 배 · D 판정 배율
+        const vMul = UA.cavSpeedMul > 0 ? UA.cavSpeedMul : 1;
+        if (requestArtThrust(f, { v: cavTipSpeed() * vMul, trail: false, maxT: tapT ? 0 : UA.cavSnapTime, tech: U.name, under: true, capFromCut: !tapT && !!UA.cavCapCut, side, tapTiming: tapT, selfFree: UA.cavSelfFree, hitMul: UA.cavHitMul > 0 ? UA.cavHitMul : 1 })) {
           this.stats.snap = (this.stats.snap ?? 0) + 1;
+          // C 상대 반응 묶음: 누르던 칼이 빠져 이 실제 초 동안 막기 · 피하기 · 맞받아치기를 새로 시작하지 못함 (ai.js respond — I8 헛누름의 팔 늦춤과 따로)
+          if (UA.cavParryLock > 0 && f.foe) f.foe.parryLockUntil = (f.foe.fightT ?? 0) + UA.cavParryLock;
+          this.cavFire = { threat: f.parryGuard?.threatId ?? null, held: !!f.parryGuard?.held }; // E 거둠 판단의 기준 (낸 때 위협 번호 · 막기 단추)
           return true;
         }
       }
@@ -819,6 +824,30 @@ export class PlayerUniqueAssist {
   }
 
   /**
+   * E 칼끝 돌려 빼기 거둠 (10/31 시제품 — UNIQUE_ASSIST.cavCancel · 기본 끔): 끄는 동안 막기 단추를 새로 누르거나(낸 때 떼고 있었으면) · 쥔 채 새 위협이 오면(낸 때 위협 번호와 다름)
+   *  그 스텝에서 칼을 거둬 끝냄(끌고 가는 칼의 시간 상한을 지금으로 — secret_instant.js stepCombo 가 이 스텝 자리에서 endCombo) → 막기 단추가 손을 받음
+   */
+  cavCancelTick() {
+    const f = this.f;
+    const I = f.iai;
+    if (!I && f.iaiReq?.tech === 'cavazione') return; // 걸어 둔 칼이 아직 시작 전 (combat.afterStep 이 시작)
+    if (!I || I.tech !== 'cavazione') {
+      this.cavFire = null;
+      return;
+    }
+    const G = f.parryGuard;
+    if (!G?.held) {
+      this.cavFire.held = false;
+      return;
+    }
+    const fresh = !this.cavFire.held || (G.noThreat === 0 && G.threatId !== this.cavFire.threat);
+    if (!fresh) return;
+    I.maxT = Math.max(1e-6, I.t);
+    this.cavFire = null;
+    this.stats.cavCancel = (this.stats.cavCancel ?? 0) + 1;
+  }
+
+  /**
    * 칼끼리 닿음 (물리 스텝마다 — drive 머리 · 10/31 칼끝 돌려 빼기 탭 조건): 내 칼이 상대 칼에 실제로 닿은 스텝(combat.js bladeClash 의 feel.touching — 가까움만으로는 아님)마다
    *  지금 닿음을 잇고(t1) · 새로 닿은 스텝(feel.time 0 — 떨어져 있다가 새로 부딪힘 · combat.js STEEL.rearmSteps)이면 새 닿음(t0)을 엶. 까닭은 묻지 않음 —
    *  내 찌르기(탭 · 찌르는 긋기)가 상대 칼에 부딪힘 · 막고 서 있다 닿음 · 상대가 내 칼을 누름 · 묶음 · 내 찌르기가 막힘 모두. 다만 내 긋기가 도는 동안 닿은 스텝이 하나라도 있으면
@@ -992,6 +1021,7 @@ export class PlayerUniqueAssist {
   drive(dt) {
     this.t += dt;
     const f = this.f;
+    if (UA.cavCancel && this.cavFire) this.cavCancelTick();
     if (this.holdE) this.holdTick(dt); // 풍차 베기 (B4 — 길게 눌러 감다 떼면 내려침 · 10/29)
     if ((UA.dupAny || UA.dupGrace > 0) && UA.dupTap && this.list.some((x) => x.tapKey === 'dup')) {
       // 겹치기 시제품 닿음 덩이 (10/31 — 기본 끔이면 셈도 안 함): 칼끼리 닿음이 시작된 때 · 끝난 때

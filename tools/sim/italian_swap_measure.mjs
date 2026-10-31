@@ -37,6 +37,7 @@ export function summarize(row, runs) {
     // 팔 묶임 (11/01): 칼끝 돌려 빼기 낸 때 ~ 끌고 가는 칼 끝 · 보통 탭 찌르기 선 때 ~ 끝 — 가운데 값 · 평균 (s)
     armLockCav: med(runs.flatMap((r) => (r.it?.fireDur ?? []).filter((x) => x != null))), armLockTap: med(runs.flatMap((r) => r.it?.tapDur ?? [])),
     tapsDonePerFight: r3(sum(runs, (r) => (r.it?.tapDur ?? []).length) / n),
+    cancelPerFight: r3(sum(runs, (r) => r.it?.cavCancel ?? 0) / n), // 시제품 E 거둠 수 (10/31)
     kill3: sum(runs, (r) => r.it?.kill3 ?? 0), // 낸 뒤 3 s 안에 상대가 죽은 낸 수
     armSlow: sum(runs, (r) => r.it?.armSlow ?? 0), // 헛누름 팔 늦춤을 건 수
     sevPerHit: r3(sum(res, (x) => x.sev ?? 0) / Math.max(1, hit)), EperHit: r3(sum(res.filter((x) => x.hits > 0), (x) => x.E ?? 0) / Math.max(1, hit)),

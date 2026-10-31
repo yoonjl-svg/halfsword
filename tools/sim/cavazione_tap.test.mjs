@@ -311,6 +311,41 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
   }
 });
 
+test('② 세게 하는 시제품 A ~ E (10/31 16:xx 사장님 물음 · 확인표 3263 ~ · 기본 모두 끔): A 빠르기 배 · D 판정 배율 → 요청 · C 상대 반응 묶음(ai.js respond) · E 막기 단추로 거둠 · B 는 combat.js(재기로 봄)', () => {
+  assert.deepEqual([UA.cavSpeedMul, UA.cavGap, UA.cavParryLock, UA.cavHitMul, UA.cavCancel], [1, 0, 0, 1, 0], '기본 끔');
+  const keep = { cavSpeedMul: UA.cavSpeedMul, cavHitMul: UA.cavHitMul, cavParryLock: UA.cavParryLock, cavCancel: UA.cavCancel };
+  const B = body();
+  try {
+    B.touch(realS(0.5));
+    assert.equal(B.tap(), true);
+    assert.ok(Math.abs(B.P.iaiReq.speed - cavTipSpeed()) < 1e-9 && B.P.iaiReq.hitMul === 1 && B.G.enemy.parryLockUntil == null, '끔 = 지금 판');
+    Object.assign(UA, { cavSpeedMul: 1.5, cavHitMul: 1.3, cavParryLock: realS(0.2), cavCancel: 1 });
+    B.touch(realS(0.5));
+    assert.equal(B.tap(), true);
+    const R = B.P.iaiReq;
+    assert.ok(Math.abs(R.speed - 1.5 * cavTipSpeed()) < 1e-9, `A 빠르기 × 1.5 (${R.speed})`);
+    assert.equal(R.hitMul, 1.3, 'D 판정 배율');
+    const E = B.G.enemy;
+    assert.ok(Math.abs(E.parryLockUntil - (E.fightT + realS(0.2))) < 1e-9, 'C 묶음 끝 = 낸 때 + 실제 0.2 s');
+    const ai = B.G.ai;
+    const seen = ai.threatSeen;
+    assert.equal(ai.respond({ id: 9999, line: 'high', thrust: true }, 1.2), false, 'C 묶인 동안 반응 못 함');
+    assert.equal(ai.threatSeen, seen, 'C 이 위협은 묶음이 풀린 뒤 다시 봄');
+    // E: 끄는 동안 막기 단추를 새로 누르면 그 스텝에 거둠
+    B.guard.held = false;
+    B.G.step();
+    assert.equal(B.P.iai?.tech, 'cavazione', '끄는 칼 시작');
+    B.guard.held = true;
+    B.uq.drive(DT);
+    assert.equal(B.uq.stats.cavCancel, 1, 'E 거둠');
+    B.G.step();
+    assert.equal(B.P.iai, null, 'E 그 스텝 자리에서 끝');
+  } finally {
+    Object.assign(UA, keep);
+    B.free();
+  }
+});
+
 test('①② 탭이 걸어 맞추기 판(무릎 꿇은 상대 약한 자리 — skill.thrust 가 참이어도 탭이 아직 없음)이면 이름을 달지 않고 넘어감 (10/28 싸움 재기에서 떨어진 오류)', () => {
   const B = body(['imbroccata', 'cavazione']);
   try {
