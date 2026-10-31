@@ -194,6 +194,17 @@ export function enhancedMoves(tradition) {
 const D2R = Math.PI / 180;
 /** 특수 공격 칼끝 빠르기 몫 (사장님 10/29 02:0x '모든 유파 특수공격을 고노센 곱하기 n으로' — config UNIQUE_ASSIST.specialShare · 확인표 2734): 끌고 가는 칼 칼끝 = 같은 칼 고노센 칼끝 × 이 몫 */
 export const specialShare = (name) => UA.specialShare?.[name] ?? 0;
+/**
+ * B4 내려침 길 고르기 (사람 windFire · AI rdFire 같은 셈 — requestArtRedondo 의 칸): UNIQUE_ASSIST.rdRelease 'tajo'(10/31 19:xx 기본 — 멘 어깨에서 반대쪽 아래로 · rdTajo ·
+ *  몸 = 이 감기 꼴 body 에서 풂) · 'direct'(10/30 곧장 사선 rdDiag) · 'chamber'(10/29 판 rdArc). '먼저 머리 위로' 자리 = 이 감기 꼴의 고리 (어깨 꼴은 10/29 판 고리 — windLoopOf).
+ *  AI 옛 판(rdAiOld 1)이면 AI 는 'direct'
+ */
+export function rdReleaseOpt(f, W, base) {
+  const rel = f?.aiControlled && UA.rdAiOld > 0 ? 'direct' : UA.rdRelease;
+  const o = { ...base, arc: UA.rdArc, loop: windLoopOf(W?.M) };
+  if (rel === 'tajo' && UA.rdTajo) return { ...o, tajo: UA.rdTajo, bodyFrom: W?.M?.body ?? null };
+  return { ...o, diag: rel === 'chamber' ? null : UA.rdDiag };
+}
 const _v = new THREE.Vector3();
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -779,7 +790,7 @@ export class PlayerUniqueAssist {
     const chain = !!mode && IB_FLOW.a && turns >= 1 && f.swordArt?.tradition === 'iberian' && !kitOff(f, 'ibFlow');
     const n = !chain ? 0 : mode === 'inside' && this.hold.chainN >= 0 ? this.hold.chainN + 1 : 1;
     f.ibStrike = chain ? { n, t0: this.t, newChain: !(mode === 'inside' && this.hold.chainN >= 0) } : null; // fighter.js updateIbFlow 가 칼이 끄는 동안 흐름을 켬 · newChain = 이 칼이 새 사슬의 첫 칼(세 칼 셈 — 10/29 14:2x)
-    const ok = UA.enhance > 0 && requestArtRedondo(f, { share: specialShare(e.name), maxT: UA.rdSnapTime, tech: U.name, arc: UA.rdArc, loop: windLoopOf(W?.M), diag: UA.rdRelease === 'chamber' ? null : UA.rdDiag }); // '먼저 머리 위로' 자리 = 이 감기 꼴의 고리 (어깨 꼴은 10/29 판 고리 — 10/29 20:0x) · 길 = 곧장 사선(10/30 rdRelease 'direct' — rdDiag) · 'chamber' 면 10/29 판 왼 어깨 뒤 길
+    const ok = UA.enhance > 0 && requestArtRedondo(f, rdReleaseOpt(f, W, { share: specialShare(e.name), maxT: UA.rdSnapTime, tech: U.name })); // 길 = rdReleaseOpt (10/31 19:xx 기본 'tajo' 멘 어깨에서 내려침 · 'direct' 10/30 곧장 사선 · 'chamber' 10/29 판)
     if (!ok) {
       f.ibStrike = null;
       this.stats.windCancel ??= {};

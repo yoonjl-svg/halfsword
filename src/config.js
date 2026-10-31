@@ -540,7 +540,12 @@ export const SWING_TURN = { on: false, rate: 30, from: 'windup' };
 //  windmillPower (10/31 14:xx 사장님 결정 '그럼 흐름보너스 주지 않는 대신 흐름의 첫 칼로는 인정하도록 해' — 확인표 3138): 0 = 풍차 베기 내려침 자체는 흐름 위력 없음(× 1.0 — 싱지르 같은 비기 칼이
 //   combat.js analyze 에서 빠지는 것과 같은 뜻) · 사슬 자리는 그대로(windmillChain 'simple' — 새 사슬의 첫 칼 · 다음 이은 긋기 n 2 × 1.4(B6) · 세 칼 셈도 풍차 베기가 1 번째) ·
 //   1 = 10/29 판(풍차 베기 칼도 이어 그은 칼 n 1 위력 × 1.2 · inside 판 n + 1) `?ibWindPower=1` (fighter.js ibFlowK)
-export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps: 2, cutSpeed: 5, chainStack: 1, freeEvery: 3, windmillChain: 'simple', windmillPower: 0 };
+// 10/31 19:xx 사장님 '풍차베기가 이어지는 흐름의 첫 공격이 되기엔 그 이후의 공격에서 연계성이 보이지 않더라. 풍차베기는 이어지는 흐름과 무관한 게 낫겠어.' (B4 다시 짬 — 기록 docs/strike/b4_rework_2026-10-31.md §4 · 확인표 3292):
+//  windmillChain 'simple' → **0** = B4 내려침은 흐름의 첫 칼이 아님(새 사슬을 열지 않음 · 사슬 셈 n 없음 — 다음 긋기는 B4 와 상관없이 셈) ·
+//  windmillApart **1** = B4 와 흐름은 서로 닿지 않음: 감는 동안 · 내려침 동안 흐름이 켜져 있어도 B4 칼은 흐름 위력 × 1(fighter.js ibFlowK) · 세 칼마다 기력 0 자리가 아님(ibChainCostK — 늘 보통 기력) ·
+//   흐름 시계(이어짐 창)는 B4 를 모르는 채 그대로 흐름 — B4 가 사슬을 늘이지도 · 멈추지도 · 끊지도 않음. 길게 누름(실제 0.6 s)이 이어짐 창(실제 0.6 s)과 같아 감기가 시작될 때 앞 사슬은 이미 닫혀 있음 →
+//   B4 뒤 첫 긋기는 새 사슬의 첫 칼 [감독 판단 · 사장님 확인 전]. 0 = 10/31 14:xx 판(windmillChain 'simple' 과 함께 — `?b4Old=1`) · `?ibWindApart=0`
+export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps: 2, cutSpeed: 5, chainStack: 1, freeEvery: 3, windmillChain: 0, windmillPower: 0, windmillApart: 1 };
 // 이베리아 날 세우기 시험 (10/22 — 사장님 10/21 23:5x '이베리아 유파가 유독 칼면이 맞는 경우가 많았어 특히 수직베기에서', docs/strike/iberian_flat_hits_2026-10-22.md · 확인표 2167~ · **기본 끔 · 사장님 확인 전**).
 //  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
 //   다른 유파 · 무기는 그대로. 끄면(on false) 판 그대로(같은 float). `?ibEdge=motor` · `?ibEdge=pre` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=ibEdge=motor
@@ -1603,7 +1608,9 @@ export const UNIQUE_ASSIST = {
   // 감기 꼴 (사장님 10/29 20:0x '좀 더 천천히 큰 동작으로 돌리거나 어깨에 얹는 고정 준비동작으로 바꿀 필요가 있을 듯해' — 두 안 · 감독 안 · 사장님 확인 전 · 기록 §8 · 확인표 2942 ~ 2947):
   //  'spin' = 10/29 판(위 rdLoopT · rdLoop · rdWindIn) · 'slowSpin' = 안 A(rdSlow) · 'shoulder' = 안 B(rdShoulder). `?rdWind=spin|slowSpin|shoulder`
   //  10/30 00:1x 사장님 'A로' — 기본 'slowSpin'(확인표 2948) → **10/31 02:xx 사장님 '풍차 베기. 아까 b안으로 본판 적용해.' — 기본 'shoulder'(안 B)** (확인표 3120 · `?rdWind=slowSpin` = 안 A)
-  rdWindMode: 'shoulder',
+  //  **10/31 19:xx 사장님 '풍차베기가 여전히 마음에 안들어. 칼을 더 들어올리거나 아예 어깨에 얹거나. 그리고 칼 끝이 머리 뒤로 넘어와서 땅쪽으로 기울어 있어야 해. 그래야 '그냥 칼을 높이 든 자세'와 구분됨.'**
+  //   — 기본 'load'(rdLoad — 어깨에 메기 · 아래) [사장님 확인 전 — 확인표 3291] · 'shoulder' = 10/31 08:xx 판(`?rdWind=shoulder` · `?b4Old=1`)
+  rdWindMode: 'load',
   //  안 A 느리고 큰 고리: 한 바퀴 loopT(실제 1.2 s — 시간 사다리) · 칼을 곧게 선 축에서 cone ° 눕힘(10/29 판 30 — 칼끝 원 반지름 츠바이핸더 0.67 → 0.99 m) · 고리 축을 뒤로 lean ° (칼끝 원 가운데를 머리 쪽으로) ·
   //   두 손 hand [앞, 위, 칼 든 쪽] m(가슴 기준 — 이마 앞 · 팔을 더 뻗음: 10/29 판 [0.28, 0.33, 0.06]) · handR 손 원 m(0 — 손이 원을 그리면 손목이 사람 범위 밖) · 섞기 windIn(실제 0.6 s)
   //   (몸 검사 — 손을 정수리 위로 올리거나 칼을 더 눕히면 손목이 범위 끝을 오가며 칼이 스텝마다 튀어 몸이 넘어짐 · 기록 §8)
@@ -1618,6 +1625,12 @@ export const UNIQUE_ASSIST = {
   //    손을 오른 뺨 앞 위로(팔꿈치가 어깨 높이 가까이) · 칼을 60° 세워 칼 든 어깨 뒤 위로(가로 130° — 칼끝이 머리 위로 1 m 넘게 솟음 · 화면 146 px · 머리 위로 141 px) ·
   //    몸 꼬임 body(덧씌우기 몸 — 가슴 20° · 골반 8° 를 칼 든 쪽으로 · 무릎 3 cm — 실제 가슴 16°) [사장님 확인 전 — 확인표 3126]. 섞기 · via · 감음 셈은 그대로
   rdShoulder: { hand: [0.2, 0.3, 0.12], blade: [60, 130], body: { chestYaw: 20, pelvisYaw: 8, pitch: 0, drop: 0.03 }, via: { hand: [0.24, 0.3, 0.12], blade: [75, 170] }, windIn: realS(0.6), woundT: realS(0.6), woundFrom: 'rest' },
+  //  B4 어깨에 메기 'load' (10/31 19:xx — 기록 docs/strike/b4_rework_2026-10-31.md §2 · 확인표 3291 · 사장님 확인 전): 칼을 칼 든 어깨(오른 어깨 — 오른손이 날밑 쪽 · 왼손이 폼멜 쪽인 쥠이라
+  //   어깨에 메도 손목이 굽힘 · 폄 · 치우침 안에 있고 두 팔이 엇갈리지 않음 · 왼 어깨는 오른팔이 왼팔 위로 엇갈리는 레베스 자리)에 메어 칼날이 어깨 위를 지나 머리 뒤로 넘어가고 칼끝은 등 뒤 땅 쪽으로 기움 —
+  //   고디뉴 규칙 4 「zum Tajo aufgezogen … Ort zum Boden … Parierstange den Kopf deckt」(탈류로 감아 올림 · 칼끝은 땅으로 · 날밑이 머리를 덮음 — guards.js 이베리아 '오른 베기 준비' 칸과 같은 원전)를
+  //   더 깊게(칼끝 −15° → 아래 blade[0]) · 칼날이 머리 뒤를 가로지름(가로 각 > 180 — 칼끝이 머리 뒤 · 칼 안 든 쪽) · 몸을 칼 든 쪽으로 감아 무릎을 굽혀 힘을 모음(body).
+  //   손 hand [앞, 위, 칼 든 쪽] m · 칼 blade [높이 °, 가로 °] · via · windIn · woundT · woundFrom 은 rdShoulder 와 같은 뜻 (iberian_redondo.js windSpec — 꼴 'shoulder' 와 같은 놓기)
+  rdLoad: { hand: [0.06, 0.36, 0.14], blade: [-35, 190], body: { chestYaw: 25, pelvisYaw: 10, pitch: 0, drop: 0.05 }, via: { hand: [0.14, 0.34, 0.12], blade: [80, 170] }, windIn: realS(0.6), woundT: realS(0.6), woundFrom: 'rest' },
   rdSteady: 1, // 감기 휘청 고침 (사장님 10/29 20:0x '처음 발동을 시작할 때 캐릭터가 크게 휘청거려. 이 문제를 반드시 고쳐야' — 고친 버그 · 기록 §8 · 확인표 2940):
   //  ① 감는 동안 손목 원뿔 · 칼 어깨 면 밧줄을 뗌(iberian_redondo.js windStart — 손가락을 댄 쉼 자세에서 머리 위로 섞을 때 놓은 위팔이 어깨 면 한도 밖을 지나 밧줄이 매 스텝 가슴을 잡아챔 · 내려침이 끝나면 다시)
   //  ② 대본이 놓은 두 팔 · 칼의 헛힘 끔(fighter.js armsPlaced — 팔 관절 목표 빠르기 0 · 손목 겨눔 · 감쇠 · 날 비틀기 힘 없음 · 빈팔 목표 = 놓인 칼자루 끝) · 0 = 10/29 판 `?rdSteady=0`
@@ -1629,7 +1642,9 @@ export const UNIQUE_ASSIST = {
   // 내려침 길 고르기 (사장님 10/30 00:1x '근데 궤적이 8자 모양으로 현란해 보이는데. 바로 내려치는 게 아닌가?' · 기록 docs/strike/redondo_hold_2026-10-29.md §8-9 · 확인표 2949 ~ 2951):
   //  'direct' = 머리 위에서 돌던 칼을 그 자리에서 곧장 왼 위로 들어 왼 위 → 오른 아래 사선으로 내려 벰(rdDiag) · 'chamber' = 10/29 판(rdArc — 머리 위 → 왼 어깨 뒤 → 왼팔 위 → 호:
   //   어깨 뒤로 넘기는 고리가 머리 위 원에 하나 더 붙어 8 자로 보이던 길). `?rdRelease=direct|chamber`
-  rdRelease: 'direct',
+  //  **10/31 19:xx 사장님 '온몸으로 대검의 힘을 응축해서 수직으로 강하고 재빠르게 치는 일격' → 19:xx 고침 '수직 말고 45도~90도 사이로 적정 길을 유지해. 살짝 사선이어야 어깨에 얹고 있다가 치는 게 자연스럽고
+  //   사이드 스텝 밟으면서 발동해서 더 잘 맞출 수 있어.'** — 기본 'tajo'(rdTajo — 멘 어깨에서 내려 반대쪽으로 · 아래) [사장님 확인 전 — 확인표 3293] · 'direct' = 10/30 판 왼 위 → 오른 아래 60°(`?rdRelease=direct` · `?b4Old=1`)
+  rdRelease: 'tajo',
   //  곧장 사선 내려침 (secret_instant.js comboPlanRdDiag — 몸 틀): 벰 면 = 어깨 → 겨눈 곳(target — 상대 가슴 위 'lung' 점) 줄 dc 와 그에 수직인 '왼 위' 축 u 가 펼친 면 ·
   //   u = 칼 안 든 쪽(왼) 가로에서 하늘 쪽으로 angle ° 세운 쪽 — 벰 면이 땅과 이루는 각(90 = 곧게 내려침 · 0 = 가로 베기 · 45 = 사선) · 칼 = dc 에서 u 쪽으로 θ ° (from → to — + 왼 위 · − 오른 아래 · 0 = 겨눈 곳) ·
   //   **angle 60 — 사장님 10/30 01:3x '그래 60도로 진행해'**(45 → 60 — 더 세워 내려침에 가깝게 · 확인표 2956 · 10/30 00:1x 판 칸 이름 tilt 는 하늘에서 잰 각 — 45 는 둘이 같음)
@@ -1637,6 +1652,12 @@ export const UNIQUE_ASSIST = {
   //   벰 끝에서 빈팔 아래팔이 제 배를 6 cm 지나고 칼끝 길이 갈고리로 꺾임) · 떼는 순간 칼이 아직 들리지 않았으면(칼 위 성분 < lowY — 섞는 첫머리) 먼저 머리 위로.
   //   잔상은 베는 토막만(arcCut — 드는 이음은 그리지 않음) [angle 외 사장님 확인 전 — 확인표 2950 · 2951]
   rdDiag: { angle: 60, from: 95, to: -45, at: 0.7, pull: 0, target: 'lung', lowY: 0.35 },
+  //  B4 멘 어깨에서 내려침 'tajo' (10/31 19:xx — secret_instant.js comboPlanRdTajo · 기록 docs/strike/b4_rework_2026-10-31.md §3 · 확인표 3293 · 3294 · 사장님 확인 전):
+  //   벰 면 = 어깨 → 겨눈 곳(target) 줄 dc 와 칼 **든** 쪽(오른 — 멘 어깨) 가로에서 하늘 쪽으로 angle ° 세운 u 가 펼친 면(rdDiag 와 같은 틀 · 쪽만 반대) — 칼은 오른 위 → 왼 아래(탈류) ·
+  //   angle 90 = 곧게 내려침 · 45 = 사선 (사장님 45 ~ 90 사이) · 칼 = dc 에서 u 쪽으로 θ ° (from → to) · 손 = 어깨에서 θ ÷ 2 쪽 · 칼날 at 자리가 겨눈 곳 · pull = 마지막 ⅓ 손 당김 몫.
+  //   뗀 순간: 멘 칼(칼끝 뒤 아래)을 머리 위로 들어(맞힘 없음 — 칼끝이 뒤 → 위로 · 어깨 뒤 고리 없음) θ = from 자리 → 벰(맞힘 6 토막). 섞는 첫머리에 떼어 칼이 아직 앞 아래면 먼저 감는 고리 손 자리로 세움(rdDiag lowY 와 같음).
+  //   body = 그 칼 동안 몸 [골반 °, 가슴 °, 숙임 °, 낮춤 m] — 멘 몸 꼬임(rdLoad.body)에서 이 꼴로 풀며 앉음(온몸 — 가슴을 칼 안 든 쪽으로 돌리고 무릎을 굽혀 몸을 떨굼 · 겹치기 dupBody 와 같은 칸)
+  rdTajo: { angle: 75, from: 110, to: -45, at: 0.7, pull: 0, target: 'lung', lowY: 0.35, body: [-8, -15, 8, 0.07] },
   // AI 풍차 베기 (사장님 10/31 08:xx '플레이어만 그런 건가? 누가봐도 레돈두 준비처럼 보여야해.' — 감독 전달 'AI 도 같은 B 감기' · 확인표 3127): AI 가 머리 위 돌려 베기(redondo —
   //  왼 가로베기 강화동작)를 고르면 패드 길(머리 위 두 번 둘러 베기) 대신 사람과 같은 감기(rdWindMode · iberian_redondo.js windStart · windStep — 안 B 어깨에 얹음)로 다가가며
   //  감은 셈 ≥ 1(사람 흐름 셈과 같은 '감음')이고 닿는 거리면 사람과 같은 내려침(secret_instant.js requestArtRedondo — 곧장 사선 · 고노센 × specialShare.redondo) · 감는 동안 기력 rdDrain ·
@@ -1649,6 +1670,9 @@ export const UNIQUE_ASSIST = {
   //   감는 중 기력 < 아낌 × 쉼 기력이면 감았고 닿으면 벰 · 아니면 그만둠 — 0 = 성향 없이 늘 감음(기력 0 저절로 내려침) `?rdAiThrift=0` [c 를 성향으로 = 사장님 결정 · 셈 = 사장님 확인 전]
   rdAiQuick: 1,
   rdAiThrift: 1,
+  // AI B4 (10/31 19:xx — 기록 docs/strike/b4_rework_2026-10-31.md §5 · 확인표 3295): 0 = AI 도 사람과 같은 새 꼴(rdWindMode · rdRelease — 어깨에 메기 · 멘 어깨에서 내려침) · 1 = AI 만 10/31 14:xx 판(어깨 'shoulder' · 곧장 사선 'direct')
+  //  관문 다섯은 바탕 AI 라 이 칸에 안 닿음 [감독 판단 · 사장님 확인 전] `?rdAiOld=1`
+  rdAiOld: 0,
   rdSnapTime: realS(0.4), // [사장님 10/31 14:xx '상한 0.4초로' 결정] 시간 상한 (실제 초 — 시간 사다리 · 베는 몫부터 — 날개 접기 capFromCut 과 같음) · 0.2 = 감독 전달(사장님 10/29). 머리 위 길 · 떨어뜨림은 셈 밖(같은 빠르기)
   //  10/31 0.2 → 0.4 [사장님 확인 전]: 칼끝 몫 0.5 → 0.3(13:5x) 로 베는 몫이 0.159 → 0.265 s 로 길어져 0.2 s 상한이 벰 가운데를 끊음(칼끝이 가슴 높이 · 몸 가운데에서 멈춤 — 오른 아래까지 못 감) ·
   //  0.5 판에선 상한이 걸린 적 없음(0.159 s < 0.2) → 다음 사다리 0.4 면 다시 안 걸리고 벰 끝까지(0.265 s) — docs/strike/redondo_hold_2026-10-29.md §8-13 · 확인표 3139
@@ -1669,6 +1693,17 @@ export const UNIQUE_ASSIST = {
   //  p = 사장님 10/24 결정 · 부위 · 사람만(ai 0 — AI 가 모는 몸은 굴리지 않음) · judge · once = 감독 — 사장님 확인 전 (확인표 2396 · 2397 · 2415 ~ 2418). 0 = 끔 (`?koteDrop=0` · `?koteJudge=cut|arm|all`)
   koteDrop: { p: 0.5, parts: ['farmS', 'farmO'], ai: 0, judge: 'all', swordHalf: 0.5, swordVn: 3, once: 1 },
 };
+
+/**
+ * B4 옛 판 (10/31 19:xx 사장님 견줌용 — `?b4Old=1` · main.js · 재는 도구): 10/31 14:xx 판 그대로 — 어깨에 얹음 'shoulder'(칼 60° · 130°) · 곧장 사선 60°(왼 위 → 오른 아래) ·
+ *  흐름의 첫 칼(windmillChain 'simple') · 흐름과 닿음(windmillApart 0). 다른 칸(빠르기 몫 0.3 · 벰 상한 0.4 s · 길게 누름 · AI ⓐ ⓒ)은 그대로. on = false 면 새 판 값으로 되돌림
+ */
+export function applyB4Old(on = true) {
+  UNIQUE_ASSIST.rdWindMode = on ? 'shoulder' : 'load';
+  UNIQUE_ASSIST.rdRelease = on ? 'direct' : 'tajo';
+  IB_FLOW.windmillChain = on ? 'simple' : 0;
+  IB_FLOW.windmillApart = on ? 0 : 1;
+}
 
 // 몸이 자세를 따라가는 빠르기(rad/s). 골반이 가장 빠르고 → 가슴 → 손(SKILL.aimFilter) 순서라
 // 베기를 시작하면 허리가 먼저 돌고 팔과 칼이 뒤따른다
