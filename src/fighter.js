@@ -1960,6 +1960,7 @@ export class Fighter {
   /** 흐르는 긋기 위력 (combat.js analyze): 흐름이 켜진 채 맞힌 긋기 × IB_FLOW.power · 이어지는 흐름(B6)이면 더하기 1 + (power − 1) × n (상한 없음 — 사장님 10/29 01:5x) */
   ibFlowK() {
     if (!this.ibFlowOn || !IB_FLOW.a) return 1;
+    if (this.ibStrike && !IB_FLOW.windmillPower) return 1; // 풍차 베기 내려침 자체는 흐름 위력 없음 — 사슬 자리(n · 세 칼 셈)는 그대로 (10/31 14:xx 사장님 '흐름보너스 주지 않는 대신 흐름의 첫 칼로는 인정' · IB_FLOW.windmillPower 0)
     if (!this.ibChainOn()) return IB_FLOW.power;
     return 1 + (IB_FLOW.power - 1) * Math.max(1, this.ibCutN ?? 1);
   }

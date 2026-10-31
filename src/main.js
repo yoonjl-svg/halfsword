@@ -378,6 +378,7 @@ if (params.has('rdRamp')) CONFIG.UNIQUE_ASSIST.rdRamp = +params.get('rdRamp') ? 
 if (params.has('ibChain')) CONFIG.IB_FLOW.chainStack = +params.get('ibChain') ? 1 : 0; // 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:4x · 01:5x · 기본 1)
 if (params.has('ibFreeEvery')) CONFIG.IB_FLOW.freeEvery = Math.max(0, Math.round(+params.get('ibFreeEvery') || 0)); // 이어지는 흐름 — 사슬 세 칼마다 기력 0 (사장님 10/29 14:2x · 기본 3 · 0 = 끔)
 if (params.has('ibWindChain')) CONFIG.IB_FLOW.windmillChain = ['simple', 'inside'].includes(params.get('ibWindChain')) ? params.get('ibWindChain') : 0; // 풍차 베기를 이어 그은 칼 하나로 셈 (사장님 10/29 01:5x · 08:3x 'simple' — 기본 'simple' · 'inside' 견줌 · 0 끔)
+if (params.has('ibWindPower')) CONFIG.IB_FLOW.windmillPower = +params.get('ibWindPower') ? 1 : 0; // 풍차 베기 내려침 자체 흐름 위력 (사장님 10/31 14:xx — 기본 0 = 없음 · 사슬 첫 칼 자리는 그대로 · 1 = 10/29 판 × 1.2)
 if (params.has('dupEdge')) CONFIG.UNIQUE_ASSIST.dupEdge = +params.get('dupEdge') < 0 ? -1 : 1; // 겹치기 날 (1 긴 날 · −1 짧은 날)
 if (params.has('koteDrop')) CONFIG.UNIQUE_ASSIST.koteDrop.p = +params.get('koteDrop') || 0; // 손목 치기 칼 떨구기 확률(10/24 J8 — 판 값 0.5 · `?koteDrop=0` 끔)
 if (['cut', 'arm', 'all'].includes(params.get('koteJudge'))) CONFIG.UNIQUE_ASSIST.koteDrop.judge = params.get('koteJudge'); // 칼 떨구기 닿음 판정(10/24 12:3x — 판 값 'all' · 'cut' = 11:5x 판 · 'arm' = 아래팔 닿음만)

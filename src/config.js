@@ -537,7 +537,10 @@ export const SWING_TURN = { on: false, rate: 30, from: 'windup' };
 //  windmillChain = 풍차 베기(B4)와 사슬 (01:5x '한 바퀴 이상 돌렸을 때 한 번만' · 08:3x 사장님 'simple' 결정): 머리 위로 한 바퀴 넘게 돌린 뒤 낸 칼만 이어 그은 칼 하나로 셈 —
 //   'simple' = 늘 n 1(× 1.2) · 그 칼부터 새 사슬(앞 사슬과 상관없이 — 세 칼 셈도 풍차 베기를 1 번째로 다시 · 풍차 베기 칼은 기력 0 자리가 아님) · 'inside' = 이어 긋기 창 안에서 누르기 시작했으면(누르고 도는 동안 사슬이 안 끊김) 그 사슬의 다음 수 n + 1 · 밖이면 n 1 (사장님 확인 전 견줌 판) ·
 //   0 = 셈 없음 · `?ibWindChain=simple|inside|0`. 감는 동안 기력(rdDrain)은 그대로. 흐름이 끊긴 뒤 1.2 s 이어받기는 넣지 않음(여쭘 남음)
-export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps: 2, cutSpeed: 5, chainStack: 1, freeEvery: 3, windmillChain: 'simple' };
+//  windmillPower (10/31 14:xx 사장님 결정 '그럼 흐름보너스 주지 않는 대신 흐름의 첫 칼로는 인정하도록 해' — 확인표 3138): 0 = 풍차 베기 내려침 자체는 흐름 위력 없음(× 1.0 — 싱지르 같은 비기 칼이
+//   combat.js analyze 에서 빠지는 것과 같은 뜻) · 사슬 자리는 그대로(windmillChain 'simple' — 새 사슬의 첫 칼 · 다음 이은 긋기 n 2 × 1.4(B6) · 세 칼 셈도 풍차 베기가 1 번째) ·
+//   1 = 10/29 판(풍차 베기 칼도 이어 그은 칼 n 1 위력 × 1.2 · inside 판 n + 1) `?ibWindPower=1` (fighter.js ibFlowK)
+export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps: 2, cutSpeed: 5, chainStack: 1, freeEvery: 3, windmillChain: 'simple', windmillPower: 0 };
 // 이베리아 날 세우기 시험 (10/22 — 사장님 10/21 23:5x '이베리아 유파가 유독 칼면이 맞는 경우가 많았어 특히 수직베기에서', docs/strike/iberian_flat_hits_2026-10-22.md · 확인표 2167~ · **기본 끔 · 사장님 확인 전**).
 //  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
 //   다른 유파 · 무기는 그대로. 끄면(on false) 판 그대로(같은 float). `?ibEdge=motor` · `?ibEdge=pre` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=ibEdge=motor
