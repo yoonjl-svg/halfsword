@@ -6,6 +6,7 @@
 //   still — 손을 뗀 채 서서 기다림 · 창이 뜨면 REACT 초 뒤 탭 (gonosen_play stand 와 같음)
 //   rest  — 칼 쪽 화면에 손가락을 얹은 채(떨림 JIT px · 천천히 떠돎 DRIFT px) 기다림 · 창이 뜨면 REACT 초 뒤 그 자리에서 아래로 긋기
 //   human — rest 에 더해, 멀면(가슴 사이 > 발도 선 + 0.5) 준비 전엔 스틱으로 다가감(엄지 0.6) · 손가락은 얹은 채 · IMPATIENT 초(기본 0 = 안 함) 창이 없으면 보통 긋기 한 번
+//   walk  — rest 에 더해, 준비가 켜진 것을 보면 발도 선 − 0.1 m 까지 스틱 WALK(0.5)로 걸어 들어감(준비된 뒤엔 걸어도 유지 — 카드 글 그대로의 쓰임) · 준비 전엔 서 있음
 //  잼(판마다 — 비기를 아직 쓸 수 있는 동안만 셈): 서 있는 때 · 준비된 때 몫 · 준비 켜짐 · 셈이 0 으로 돌아간 까닭 · 창(사건별) · 낸 · 맞힘 · 맞은 곳 · 1 s 안 죽임 ·
 //   AI 공격 시작(그때 준비였나 · 발도 선 안이었나) · 웅크림 무게 · 손 덧씌우기 무게(준비된 동안 평균) · 비기를 낸 뒤 2 s 에 그 판을 끝냄(판당 1 번)
 //  실행: node tools/sim/gonosen_touch.mjs [씨앗 3] [초 40] [무기 uchigatana] [인물 isolde,heinrich,artoria,ratna,tome,omari,roland,bernardo] [운전 rest] [REACT 0.3]
@@ -18,7 +19,7 @@ import { PlayerSecretWatch } from '../../src/secret.js';
 const [seedsArg = '3', simArg = '40', wArg = 'uchigatana', fArg = 'isolde,heinrich,artoria,ratna,tome,omari,roland,bernardo', driveArg = 'rest', rArg = '0.3'] = process.argv.slice(2);
 const E = process.env;
 const SEEDS = +seedsArg, SIM = +simArg, DRIVE = driveArg, REACT = +rArg;
-const JIT = +(E.JIT ?? 0.5), DRIFT = +(E.DRIFT ?? 4), IMPATIENT = +(E.IMPATIENT ?? 0);
+const JIT = +(E.JIT ?? 0.5), DRIFT = +(E.DRIFT ?? 4), IMPATIENT = +(E.IMPATIENT ?? 0), WALK = +(E.WALK ?? 0.5);
 const S0 = CONFIG.SECRET;
 const H = 390; // 폰 가로 화면 높이 (px)
 const PX = CONFIG.INPUT.touchSensitivity / H; // 1 px = 이만큼 패드 m (input.js mapMobileHandDelta — 가로)
@@ -90,6 +91,7 @@ for (const w of weapons) for (const id of foes) {
         // 발 (human: 준비 전 · 멀면 다가감)
         let fwd = 0;
         if (DRIVE === 'human' && !ps.iaiArm.armed && !secBusy && chest() > line + 0.5) fwd = 0.6;
+        if (DRIVE === 'walk' && ps.iaiArm.armed && !secBusy && !ps.open && chest() > line - 0.1) fwd = WALK; // 준비가 켜진 걸 보고 걸어 들어감 (준비된 뒤엔 걸어도 유지)
         p.move.set(0, fwd); p.stickX = 0; p.stickY = fwd;
         // 창이 뜨면 REACT 실제 초 뒤 (still = 탭 · rest · human = 얹은 손가락으로 긋기)
         if (ps.opened !== seenOpen) {
