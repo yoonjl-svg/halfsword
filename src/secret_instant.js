@@ -2033,7 +2033,14 @@ function comboPlanArtThrust(f, I, m, A) {
   }
   push(H0.clone(), false);
   for (let k = 1; k <= 4; k++) push(H0.clone().lerp(H1, k / 4), true);
-  if (I.slide?.void) {
+  if (D.tapTiming) {
+    // 10/31 칼끝 돌려 빼기 (기본 고유 공격 — '보통 찌르기 빠르기'): 찌르는 토막은 보통 찌르기 빠르기(I.v = cavTipSpeed) 그대로 · 맞힘 없는 토막(돌려 빼기 · 겨눔)은 다 해서 탭 찌르기 겨눔 시간
+    //  THRUST.aim 안(길면 줄임 — 가까우면 칼을 크게 당기는 길이라 보통 빠르기로는 1 s 넘게 팔이 묶였음) · 아래 거둠 = THRUST.recover × 무기 thrustStyle(skill.js thrust 의 K 와 같은 수 · 새 수 없음) · 런지 미끄러짐도 겨눔 + 찌름 안에
+    const lead = segs.filter((sg) => !sg.cut);
+    const Tl = lead.reduce((a, sg) => a + sg.T, 0);
+    if (Tl > THRUST.aim) for (const sg of lead) sg.T = (sg.T * THRUST.aim) / Tl;
+    if (I.slide) I.slide.span = Math.max(1e-3, segs.reduce((a, sg) => a + sg.T, 0));
+  } else if (I.slide?.void) {
     // 비껴서며 찌르기 몸 빼기 (10/31): 이 수 내내(겨눔 · 찌름 · 뻗은 채 · 거둠 — 아래 끝에서 정함) 미끄러짐 — 옆으로 빠지는 몸이라 칼끝 빠르기 맞춤(아래 런지 k)은 하지 않음 (찌름은 고노센 × 몫 그대로)
   } else if (I.slide && I.slide.slide > 0) {
     // 런지: 겨눔 · 찌름 동안 다 미끄러지고 칼끝이 땅에 대해 지나는 길(몸 틀 길 + 미끄러짐)의 빠르기가 I.v 그대로 (comboNext 의 그때 계산 길과 같은 셈)
@@ -2043,8 +2050,8 @@ function comboPlanArtThrust(f, I, m, A) {
     I.slide.span = Math.max(1e-3, T * k);
   }
   push(H1.clone(), false, null, THRUST.hold); // 뻗은 채 둠 (같은 자리 토막은 칼끝 길이 0 — 탭 찌르기 버팀 시간)
-  push(H0.clone(), false); // 손 목표는 그대로 (손가락이 둔 자리 — 탭으로 낸 칼이라 손 목표를 옮기면 그 뜀이 긋기로 읽혔다) · 끝 자세에서 0.2 s 에 서보로
-  if (I.slide?.void) I.slide.span = Math.max(1e-3, segs.reduce((a, sg) => a + sg.T, 0)); // 비껴서며 찌르기 몸 빼기 (10/31): 이 수 내내
+  push(H0.clone(), false, null, D.tapTiming ? THRUST.recover * (f.weaponCfg.thrustStyle?.recover ?? 1) : null); // 손 목표는 그대로 (tapTiming — 10/31 칼끝 돌려 빼기: 탭 찌르기 거둠 시간) (손가락이 둔 자리 — 탭으로 낸 칼이라 손 목표를 옮기면 그 뜀이 긋기로 읽혔다) · 끝 자세에서 0.2 s 에 서보로
+  if (I.slide?.void && !D.tapTiming) I.slide.span = Math.max(1e-3, segs.reduce((a, sg) => a + sg.T, 0)); // 비껴서며 찌르기 몸 빼기 (10/31): 이 수 내내
   I.overshoot = H1.clone().addScaledVector(dc, L).sub(P).dot(dc); // 재기 (판정에는 안 씀): 다 뻗은 칼끝이 겨눈 곳을 지난 길이 (m — 음수면 못 닿음)
   I.artReach = { dX, el: Math.asin(clamp(dc.y, -1, 1)) / D2R, lift: Z.ph / D2R, hand: H1.distanceTo(S) }; // 재기: 어깨 → P · 칼 높이각(°) · 팔을 든 각 φ(°) · 끝 손 ↔ 어깨
   return segs;
@@ -2563,12 +2570,13 @@ export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, 
  *  plane = 아래팔을 칼 줄에 맞추는 팔꿈치 · 손목이 사람 범위 안인 칼 면(iaiSolve — fighter.js armIK alignDir · wristPlane) · roll = 굴림 묶음(그런 면이 없을 때) ·
  *  dyn.thrust = 겨눈 찌름과 같이 찌르는 토막 첫 자리부터 쓸린 자리(thrustSweep) · 손목 교정은 칼을 줄에서 비키지 않음(iaiSolve thrustSeg). 이미 끌고 가는 중이면 거절(false)
  */
-export function requestArtThrust(f, { share = 0, v = 0, trail = true, maxT, tech, under = false, capFromCut = false, side = null, voidStep = null, bodyPose = null }) {
+export function requestArtThrust(f, { share = 0, v = 0, trail = true, maxT, tech, under = false, capFromCut = false, side = null, voidStep = null, bodyPose = null, tapTiming = false }) {
   if (f.iai || f.iaiReq || !(share > 0 || v > 0) || !f.foe?.bodies?.chest) return false;
   // capFromCut (10/30 — UNIQUE_ASSIST.cavCapCut): 시간 상한을 찌르는 토막부터 셈 (돌려 빼기 · 겨눔 토막은 셈 밖 — 날개 접기 · 풍차 베기와 같은 셈) — 가까우면 돌려 빼기 길이 길어 상한 안에 찌름까지 못 갔다
   // 10/31 이탈리아 자리 바꿈: v = 칼끝 빠르기 m/s 를 바로(share 대신 — 칼끝 돌려 빼기 = 보통 찌르기 빠르기) · trail false = 잔상 없음 · side = 비킨 쪽(월드 — 닿았을 때 상대 칼 쪽) ·
   //  voidStep { lat, fwd } = 비껴서며 찌르기 몸 빼기(스틱 쪽 옆 + 앞 m — 몸 미끄러짐 · 뒷발 걸음) · bodyPose = 이 수 동안 몸 꼴 [골반 °, 가슴 °, 숙임 °, 낮춤 m] (겹치기 dupBody 와 같은 칸)
-  const dyn = { kind: 'artThrust', thrust: true, target: 'lung', under, ...(side?.isVector3 ? { side: side.clone() } : {}), ...(voidStep ? { void: { ...voidStep } } : {}) };
+  //  tapTiming = 탭 찌르기와 같은 박자(겨눔 THRUST.aim · 뻗음 THRUST.extend · 버팀 · 거둠 — 10/31 칼끝 돌려 빼기: 보통 찌르기 · v 는 이때 겨눔 길 짜기의 잣대만)
+  const dyn = { kind: 'artThrust', thrust: true, target: 'lung', under, ...(side?.isVector3 ? { side: side.clone() } : {}), ...(voidStep ? { void: { ...voidStep } } : {}), ...(tapTiming ? { tapTiming: true } : {}) };
   requestCombo(f, { moves: [{ name: tech, kind: 'thrust', same: true, artThrust: true, roll: true, plane: true, ...(capFromCut ? { capFromCut: true } : {}), ...(bodyPose ? { bodyPose } : {}), dyn }], share: share > 0 ? share : 1, speed: v, noArc: !trail, hold: 0, hitMul: 1, tech, maxT, attack: true });
   return true;
 }

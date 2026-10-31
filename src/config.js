@@ -1459,11 +1459,11 @@ export const UNIQUE_ASSIST = {
   //    잔상 없음 · 식힘 없음. 비킨 쪽 cavSide: 'contact' = 닿았을 때 상대 칼이 있던 쪽(feel.normal 의 반대 — 상대 칼 밑을 지나 그 너머 열린 줄로) · 'free' = 10/28 판(내는 때 상대 칼이 없는 쪽)
   cavSpeed: 'tap', // [감독 해석 — '보통 찌르기 빠르기' 사장님 10/31 · 수 확인 전] · 숫자(m/s)를 주면 그 빠르기 · `?cavSpeed=`
   cavSide: 'contact', // [감독 안 — 확인 전] `?cavSide=free`
-  //  칼끝 돌려 빼기 심화 · 헛누름 (I8 — 사장님 10/31 12:xx '임브로카타를 먼저 배우고 카바치오네를 배우고 틈 파고들기는 카바치오네 강화로 바꿔.' · 효과 '1로 해. 단 효과가 체감되려면 1초로 해.'):
+  //  칼끝 돌려 빼기 심화 · 헛누름 (I8 — 사장님 10/31 12:xx '임브로카타를 먼저 배우고 카바치오네를 배우고 틈 파고들기는 카바치오네 강화로 바꿔.' · 효과 '1로 해. 단 효과가 체감되려면 1초로 해.' → '1.2초로 할게'):
   //   칼끝 돌려 빼기가 나가는(돌려 빼는) 순간 — 맞힘과 상관없이 — 내 칼을 누르거나 닿아 있던 상대 칼이 허공으로 쏠려 상대 두 팔이 이 초 동안 늦음(흘림과 같은 장치 nagashi_recovery.js beginFlowRecovery ·
   //   바닥 FLOW_RECOVERY.floor 그대로 · 처음 1/3 바닥 → 남은 2/3 에 회복). 사람 = I8 을 익혀야(skill_kit.js perkOff 'cavazione') · AI = 칼끝 돌려 빼기가 숙련도 꾸러미에 든 AI 의 빼서 찌르기 패시브
   //   (칼이 맞물린 뒤 — parried · bindDef · 곁눈 베기 무릎 꺾기 G6 · 허리 베기 출혈 C4 처럼 AI 는 그 기술이 있으면 · cavArmSlowAi). 0 = 끔 `?cavArmSlow=0` (실제 초)
-  cavArmSlow: realS(1.0), // [사장님 10/31 12:xx 결정 '1초로 해' — 시간 사다리에 1.0 (사장님이 준 칸 — 2.0 · 3.0 · 10.0 과 같은 꼴)]
+  cavArmSlow: realS(1.2), // [사장님 10/31 12:xx 결정 '1.2초로 할게' — 시간 사다리 1.2 칸 (전 같은 날 '1초로 해' 1.0 → 바로잡음)]
   cavArmSlowAi: 1, // AI 도 (위 — 심화 이점의 AI 몫 규칙 · 0 = 사람만 `?cavArmSlowAi=0`)
   //  비껴서며 찌르기 (I9 — 이탈리아 특수 공격 · 식힘 · 잔상 · 고노센 × specialShare.inquartata):
   //   ① 조건(inqTap · 사장님 글 '상대가 공격해 올 때 옆으로 움직이며(←/→) 탭'): 상대 칼이 들어오는 동안(막기 단추와 같은 눈 — parry_button.js threatNow · 누르지 않아도 셈 ·
@@ -1471,7 +1471,7 @@ export const UNIQUE_ASSIST = {
   //   ② 그 칼 = 몸 빼기(스틱 쪽으로 몸 미끄러짐 — schools.js inquartata step 옆 0.3 · 앞 0.15 · 뒷발을 그쪽으로 돌려 디딤 'retreat' 걸음) + 넷째 자세 찌름(cavSnap 과 같은 운동학 찌름 길 · 가슴 띠 겨눔 · 돌려 빼기 없음) ·
   //    시간 상한 inqSnapTime(찌르는 토막부터) · 몸 꼴 = 표 body(디딘 쪽 — bodyMirror). 0 = 끔 `?inqTap=0`
   inqTap: 1,
-  inqThreat: realS(0.12), // 위협이 그친 뒤 이 초까지는 '공격해 오는 중' (ai.js · parry_button.js QUIET_T 와 같은 수 — 새 수 없음)
+  inqThreat: realS(0.25), // 위협이 그친 뒤 이 초까지는 '공격해 오는 중' = 같은 공격 (ai.js · parry_button.js NEW_THREAT_T — '잠깐 조용했다가 다시 오면 새 공격'과 같은 틈 · 새 수 없음) · 0.12(QUIET_T)면 사람 같은 봇 탭 16 번에 3 번만(위협 읽힘이 0 ~ 0.07 s · 탭은 그 뒤 0.13 ~ 0.28 s)
   inqSnapTime: realS(0.2), // 끌고 가는 시간 상한 (실제 초 — cavSnapTime · lianSnapTime 과 같은 0.2)
   // 사람 날개 접기 (C6 염시 斂翅 — 동방 특수 공격 · 사장님 10/28 00:2x ~ 00:3x · 01:0x — 기록 docs/strike/lianchi_2026-10-28.md · 확인표 2694 ~ 2699). 사람 강화(unique_assist.js)만 · AI 염시(속임 길)는 그대로.
   //  ① lianTap: 물러나는 동안(스틱 뒤 — 뒤 몫 ≥ 0.5 · 옆 몫보다 큼, 걸음 명령 '앞'의 거울) · 스틱 뒤를 놓고 lianWindow 안의 탭 = 보통 탭 찌르기 대신 날개 접기 (상대 칼 닿음 없이 내 명령만 —

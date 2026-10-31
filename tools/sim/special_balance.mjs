@@ -579,7 +579,8 @@ function itStats(IT, uq, fires) {
   const S = uq.stats ?? {};
   const recvIn = (t0, w = 0.6) => IT.recvLog.filter(([t]) => t >= t0 && t <= t0 + w).reduce((a, [, sv]) => a + sv, 0);
   const inq = IT.inq.map((x) => ({ ...x, recv: r3(recvIn(x.t)), hit: recvIn(x.t) > 0, fall: IT.falls.some((f) => f.t >= x.t && f.t <= x.t + 1) }));
-  return { touches: S.touches ?? 0, touchCut: S.touchCut ?? 0, early: S.tapEarly ?? 0, touchTaps: IT.touchTaps, inq, falls: IT.falls, fires: fires.map((x) => x.res) };
+  const kill3 = fires.filter((x) => IT.foeDeadT != null && IT.foeDeadT >= x.t && IT.foeDeadT <= x.t + 3).length; // 낸 뒤 3 s 안에 상대가 죽은 낸 수 (헛누름 견줌 — 10/31)
+  return { touches: S.touches ?? 0, touchCut: S.touchCut ?? 0, early: S.tapEarly ?? 0, touchTaps: IT.touchTaps, armSlow: S.armSlow ?? 0, inq, falls: IT.falls, fires: fires.map((x) => x.res), fireT: fires.map((x) => r3(x.t)), foeDeadT: IT.foeDeadT ?? null, kill3 };
 }
 
 // ── fight: 손가락 봇 대 치고 막는 AI ──
@@ -674,6 +675,7 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
     cav?.step();
     fireTick();
     if (IT) {
+      if (!A.alive && IT.foeDeadT == null) IT.foeDeadT = r3(t);
       if (P.state !== IT.st) {
         if (IT.st === 'stand' && P.state !== 'stand') IT.falls.push({ t: r3(t), to: P.state });
         IT.st = P.state;
@@ -694,8 +696,9 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
         inqHand.tapped = true;
         P.skill.thrust();
         const fired = (uq.stats.fired?.inquartata ?? 0) > inqHand.fired0;
-        IT.inq.push({ t: r3(t), fired, threat: (guard.noThreat ?? 9) <= CONFIG.UNIQUE_ASSIST.inqThreat, cool: (uq.coolLeft?.('inquartata') ?? 0) > 0 && !fired });
+        IT.inq.push({ t: r3(t), fired, threat: (guard.noThreat ?? 9) <= CONFIG.UNIQUE_ASSIST.inqThreat, noThreat: r3(Math.min(9, guard.noThreat ?? 9)), threatT: r3(inqHand.threatT ?? 0), cool: (uq.coolLeft?.('inquartata') ?? 0) > 0 && !fired });
       }
+      if (inqHand && !inqHand.tapped && guard.noThreat === 0) inqHand.threatT = (inqHand.threatT ?? 0) + DT; // 맞받기 손 동안 위협이 읽힌 시간 (재기)
       if (inqHand && t >= inqHand.until) inqHand = null;
     }
     if (cur && !cur.cav && !bot.queue.length && cur.tq == null) cur.tq = t;

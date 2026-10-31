@@ -1466,7 +1466,7 @@ export class AI {
     this.strikeCue(t); // 기술 알림 (고유 동작 — 칼이 실제로 나가는 순간)
     const sp = this.specialNow(); // 특수 공격 AI 몫이 나감 → 식힘 (10/29 19:4x — 사람과 같게)
     if (sp) this.specStart(sp);
-    // 칼끝 돌려 빼기 심화 · 헛누름 (10/31 사장님 '1초로 해' — config UNIQUE_ASSIST.cavArmSlow): 빼서 찌르기 패시브(칼이 맞물린 뒤 — parried · bindDef)가 나가는 순간 상대 두 팔 늦춤 ·
+    // 칼끝 돌려 빼기 심화 · 헛누름 (10/31 사장님 '1.2초로 할게' — config UNIQUE_ASSIST.cavArmSlow): 빼서 찌르기 패시브(칼이 맞물린 뒤 — parried · bindDef)가 나가는 순간 상대 두 팔 늦춤 ·
     //  칼끝 돌려 빼기가 숙련도 꾸러미에 든 AI 만(cavDeep — 곁눈 베기 무릎 꺾기 · 허리 베기 출혈처럼 AI 는 그 기술이 있으면 심화 이점도)
     if (this.passiveAtk === 'cavazione' && this.cavDeep && UA.cavArmSlowAi && UA.cavArmSlow > 0 && beginFlowRecovery(this.foe, this.me, UA.cavArmSlow)) this.stats.cavArmSlow = (this.stats.cavArmSlow ?? 0) + 1;
     if (this.feint) {

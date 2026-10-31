@@ -28,6 +28,9 @@ export function summarize(row, runs) {
     win: runs.filter((r) => r.win).length, lose: runs.filter((r) => r.lose).length,
     dealt: r3(sum(runs, (r) => r.dealt) / n), recv: r3(sum(runs, (r) => r.recv) / n),
     falls: sum(runs, (r) => r.it?.falls?.length ?? 0),
+    kill3: sum(runs, (r) => r.it?.kill3 ?? 0), // 낸 뒤 3 s 안에 상대가 죽은 낸 수
+    armSlow: sum(runs, (r) => r.it?.armSlow ?? 0), // 헛누름 팔 늦춤을 건 수
+    sevPerHit: r3(sum(res, (x) => x.sev ?? 0) / Math.max(1, hit)), EperHit: r3(sum(res.filter((x) => x.hits > 0), (x) => x.E ?? 0) / Math.max(1, hit)),
   };
   if (row === 'cavTouch') {
     const touches = sum(runs, (r) => r.it?.touches ?? 0);
@@ -59,6 +62,15 @@ function parseArgs() {
 
 if (isMain(import.meta.url)) {
   const args = parseArgs();
+  // --set=UNIQUE_ASSIST.cavArmSlow=0,… : 게임 값을 바꿔 견줌 (special_balance.mjs --set 과 같은 꼴 · 숫자는 그대로 — realS 를 거치지 않음)
+  const { CONFIG } = await import('./harness_m.mjs');
+  for (const kv of String(args.set ?? '').split(',').filter(Boolean)) {
+    const [path, v] = kv.split('=');
+    const ks = path.split('.');
+    let o = CONFIG;
+    for (const k of ks.slice(0, -1)) o = o[k];
+    o[ks.at(-1)] = isNaN(+v) ? v : +v;
+  }
   if (args._[0] === 'agg') {
     const by = new Map();
     for (const fn of args._.slice(1)) for (const x of JSON.parse(readFileSync(fn, 'utf8')).res) by.set(`${x.row}|${x.variant}`, [...(by.get(`${x.row}|${x.variant}`) ?? []), ...x.runs]);
@@ -79,8 +91,8 @@ if (isMain(import.meta.url)) {
           delete r.atts;
           runs.push(r);
         }
-        out.res.push({ row, variant, runs });
-        console.log(`${row} ${variant}: ${JSON.stringify(summarize(row, runs))}  (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
+        out.res.push({ row, variant: variant + (args.tag ? `_${args.tag}` : ''), runs });
+        console.log(`${row} ${variant}${args.tag ? `_${args.tag}` : ''}: ${JSON.stringify(summarize(row, runs))}  (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
         if (args.json) writeFileSync(String(args.json), JSON.stringify(out)); // 판마다 적음 (컨테이너가 다시 서도 남게)
       }
   }

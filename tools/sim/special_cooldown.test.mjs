@@ -1,6 +1,6 @@
 // 특수 공격 공통 식힘 시험 (사장님 10/28 02:0x 6 s · 나간 순간부터 → 10/29 19:5x '쿨타임은 특수공격 3초(발동이 완료된 시점부터 카운트, 경직시간을 포함할지 말지는 너가 판단)' —
 //   config UNIQUE_ASSIST.specialCooldown · specialCoolFrom 'free' 사장님 10/29 20:5x 확인):
-//   다섯(제비 베기 · 겹치기 · 날개 접기 · 칼끝 돌려 빼기 · 풍차 베기 — 풍차 베기는 redondo_hold.test.mjs) 마다: 나간 뒤 그 동작이 끝날 때까지 + 끝난 때(몸이 다시 자유로울 때 — 운동학 칼 · 풀기 0.2 s ·
+//   다섯(제비 베기 · 겹치기 · 날개 접기 · 비껴서며 찌르기(10/31 — 전 칼끝 돌려 빼기) · 풍차 베기 — 풍차 베기는 redondo_hold.test.mjs) 마다: 나간 뒤 그 동작이 끝날 때까지 + 끝난 때(몸이 다시 자유로울 때 — 운동학 칼 · 풀기 0.2 s ·
 //   탭 찌르기 · 강화 긋기 끝)부터 실제 3 s 안에 조건이 다시 차면 보통 동작 · 3 s 뒤면 다시 나감 · 기술마다 따로 · 식힘 중 탭은 조건을 보지 않음(칼끝 돌려 빼기의 이른 탭 규칙도 안 걸림) ·
 //   'motion' = 동작 끝부터(풀기 빼고) · 'fire' = 나간 순간부터(10/28 판)
 //  실제 물리 스텝으로 시간이 감 (상대는 서 있음).  node --test tools/sim/special_cooldown.test.mjs
@@ -14,11 +14,11 @@ const UA = CONFIG.UNIQUE_ASSIST;
 const { realS } = CONFIG;
 const CD = realS(3.0);
 
-test('기본값 — 식힘 실제 3 s · 끝난 때(몸이 자유로울 때 free)부터 · 표 칸 special = 제비 베기 · 겹치기 · 날개 접기 · 칼끝 돌려 빼기 · 풍차 베기 다섯뿐', () => {
+test('기본값 — 식힘 실제 3 s · 끝난 때(몸이 자유로울 때 free)부터 · 표 칸 special = 제비 베기 · 겹치기 · 날개 접기 · 비껴서며 찌르기 · 풍차 베기 다섯뿐 (10/31 — 칼끝 돌려 빼기는 특수 공격 아님)', () => {
   assert.ok(Math.abs(UA.specialCooldown - CD) < 1e-12);
   assert.equal(UA.specialCoolFrom, 'free');
   const sp = Object.values(PLAYER_UNIQUE).flat().filter((e) => e.special).map((e) => e.name).sort();
-  assert.deepEqual(sp, ['cavazione', 'duplieren', 'lianchi', 'redondo', 'tsubameGaeshi']);
+  assert.deepEqual(sp, ['duplieren', 'inquartata', 'lianchi', 'redondo', 'tsubameGaeshi']);
 });
 
 /** 몸 하나 + 한 기술만 연 강화 · 실제 스텝 */
@@ -39,7 +39,13 @@ function body(weapon, name) {
 }
 
 const TAPS = {
-  cavazione: ['rapier', (B) => (B.guard.opposition.lastEnd = { t: B.guard.clock - realS(0.8), reason: 'complete', dealt: false })],
+  // 비껴서며 찌르기 (10/31): 상대 칼이 들어오는 중(막기 단추가 읽은 위협 — 새 위협 번호) · 스틱 옆
+  inquartata: ['rapier', (B) => {
+    B.guard.noThreat = 0;
+    B.guard.threatId++;
+    B.P.stickX = 0.9;
+    B.P.stickY = 0;
+  }],
   lianchi: ['hwando', (B) => (B.uq.backOff = B.uq.t - realS(0.2))],
   duplieren: ['longsword', (B) => {
     B.uq.bladeTouch = () => true;
@@ -79,23 +85,15 @@ for (const [name, [weapon, arm]] of Object.entries(TAPS))
     }
   });
 
-test('칼끝 돌려 빼기: 식힘 중의 이른 탭은 조건을 보지 않아 기회를 없애지 않음 (식힘이 끝난 뒤 같은 막아찌르기 끝에서 창 안 탭이면 나감)', () => {
+test('칼끝 돌려 빼기 (10/31 — 특수 공격 아님): 식힘 없이 칼끼리 새 닿음마다 다시 나감 · 식힘 칸(coolT) 없음', () => {
   const B = body('rapier', 'cavazione');
   try {
-    assert.equal(tapper(B, 'cavazione', TAPS.cavazione[1])(), true);
-    B.until(() => B.uq.coolT.cavazione !== Infinity, 3);
-    const tEnd = B.uq.coolT.cavazione;
-    B.until(() => B.uq.t - tEnd >= CD - realS(0.3) && B.free(), 6);
-    const E = (B.guard.opposition.lastEnd = { t: B.guard.clock - realS(0.1), reason: 'complete', dealt: false }); // 식힘 끝 0.3 s 전에 끝난 막아찌르기
-    const n0 = B.uq.stats.fired.cavazione;
-    B.P.skill.thrust();
-    assert.equal(B.uq.stats.fired.cavazione, n0, '식힘 중 (이른 탭이기도 함)');
-    assert.ok(!E.cavSpent, '기회를 없애지 않음');
-    const tEarly = B.uq.t;
-    B.P.skill.tap = null; // 보통 탭 찌르기는 거둠 (몸을 비움 — 다음 탭을 막지 않게)
-    B.until(() => B.uq.t - tEarly >= realS(0.6), 2); // 끝난 때부터 0.7 s(창 안) · 식힘은 0.3 s 전에 끝남
-    B.P.skill.thrust();
-    assert.equal(B.uq.stats.fired.cavazione, n0 + 1);
+    const touch = () => (B.uq.touch = { t0: B.uq.t - realS(0.5), t1: B.uq.t - realS(0.1), cut: false, cavSpent: false, n: null, steps: 3 });
+    assert.equal(tapper(B, 'cavazione', touch)(), true, '처음');
+    assert.equal(B.uq.coolT.cavazione, undefined, '식힘 칸 없음');
+    assert.equal(B.uq.cooling(B.e), false);
+    B.until(() => B.free(), 3);
+    assert.equal(tapper(B, 'cavazione', touch)(), true, '곧 다시 (새 닿음)');
   } finally {
     B.G.world.free();
   }
@@ -176,7 +174,7 @@ test('기술마다 따로 · 몸마다 따로 · 0 = 끔', () => {
     assert.equal(tapper(B, 'lianchi', TAPS.lianchi[1])(), true);
     const lian = B.e;
     assert.ok(B.uq.cooling(lian));
-    for (const n of ['tsubameGaeshi', 'duplieren', 'cavazione', 'redondo']) assert.equal(B.uq.cooling({ name: n, special: true }), false, n);
+    for (const n of ['tsubameGaeshi', 'duplieren', 'inquartata', 'redondo']) assert.equal(B.uq.cooling({ name: n, special: true }), false, n);
     const C = body('hwando', 'lianchi');
     try {
       assert.equal(C.uq.cooling(C.e), false);

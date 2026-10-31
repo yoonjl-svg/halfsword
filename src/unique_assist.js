@@ -522,11 +522,11 @@ export class PlayerUniqueAssist {
       f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
       f.stamina.attack(thrustTap ? 'thrust' : 'cut'); // 탭 하나 (끌고 가는 칼은 같은 공격 — same) · 찌르기 10 · 베기 12
       // 칼끝 돌려 빼기 (10/31 — 기본 고유 공격): 같은 돌려 빼기 길 · 보통 찌르기 빠르기(cavTipSpeed) · 잔상 없음 · 비킨 쪽은 닿았을 때 상대 칼 쪽(cavSide 'contact')
-      // 칼끝 돌려 빼기 심화 · 헛누름 (I8 — 사장님 10/31 '1로 해. 단 효과가 체감되려면 1초로 해.'): 돌려 빼는 순간(맞힘과 상관없이) 누르거나 닿아 있던 상대 칼이 허공으로 — 상대 두 팔 늦춤 cavArmSlow (흘림 장치)
+      // 칼끝 돌려 빼기 심화 · 헛누름 (I8 — 사장님 10/31 '1로 해. … 1초로 해.' → '1.2초로 할게'): 돌려 빼는 순간(맞힘과 상관없이) 누르거나 닿아 있던 상대 칼이 허공으로 — 상대 두 팔 늦춤 cavArmSlow (흘림 장치)
       if (cav && UA.cavArmSlow > 0 && !perkOff(f, 'cavazione') && f.foe && beginFlowRecovery(f.foe, f, UA.cavArmSlow)) this.stats.armSlow = (this.stats.armSlow ?? 0) + 1;
       if (e.tapSnap && UA.cavSnap && UA.enhance > 0) {
         const side = UA.cavSide === 'contact' ? ok.touch?.n ?? null : null;
-        if (requestArtThrust(f, { v: cavTipSpeed(), trail: false, maxT: UA.cavSnapTime, tech: U.name, under: true, capFromCut: !!UA.cavCapCut, side })) {
+        if (requestArtThrust(f, { v: cavTipSpeed(), trail: false, maxT: UA.cavSnapTime, tech: U.name, under: true, capFromCut: !!UA.cavCapCut, side, tapTiming: UA.cavSpeed === 'tap' })) {
           this.stats.snap = (this.stats.snap ?? 0) + 1;
           return true;
         }
