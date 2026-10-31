@@ -3,7 +3,8 @@
 //   판을 세우고(상대 세움 · 패드 (0.15, 0) = 판 시작 자리) t 초 뒤 가슴 틀 [앞, 위, 칼 든 쪽] 으로 두 손 · 두 팔꿈치 · 칼 방향 · 팔꿈치 각 · 손 사이를 한 줄 JSON 으로.
 //   --hold=초: 끝에서 그만큼 앞부터 손가락이 닿음(handHeld) — 폰에서 엄지를 얹어 둔 꼴 · --grip=0|1: 그 손가락의 main.js handGrip(0 = 얹기만 · 1 = 끈 손가락 · 안 주면 두지 않음 = 시뮬 대본 몸)
 //   --root=<나무>: 다른 체크아웃(옛 커밋을 git archive 로 푼 곳 — node_modules 는 이어 둠)의 src 로 잰다 — 언제부터인지 가를 때
-//  node tools/sim/guard_arms_probe.mjs [무기=zweihander] [--t=4.5] [--hold=2] [--grip=0|1] [--root=.]
+//   --pad=x,y: 판을 세운 뒤 패드를 그 자리에 둠(corr_lib setPad 와 같음 — 자세 자리마다 잴 때)
+//  node tools/sim/guard_arms_probe.mjs [무기=zweihander] [--t=4.5] [--hold=2] [--grip=0|1] [--pad=x,y] [--root=.]
 // ─────────────────────────────────────────────────────────────
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,6 +24,15 @@ const { newRound, DT, THREE } = await import(path.join(root, 'tools/sim/harness_
 const G = newRound({ weapon, weapon2: 'longsword', seed: 1 });
 G.parkEnemy = true;
 const f = G.player;
+if (args.pad) {
+  const [px, py] = String(args.pad).split(',').map(Number);
+  f.handOffset.set(px, py);
+  const k = f.skill;
+  for (const v of [k.prev, k.aim, k.aimRaw, k.anchor]) v?.set(px, py);
+  k.aimVel?.set(0, 0);
+  k.vel?.set(0, 0);
+  k.follow?.set(0, 0);
+}
 const n = Math.round(T / DT);
 const nHold = Math.round(HOLD / DT);
 for (let i = 0; i < n; i++) {
