@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "status": "published",
+  "date": "2026-11-02",
+  "report_id": "yoonjl-svg/halfsword@2026-11-02T23:30+09:00",
+  "team": "uhwa",
+  "repo": "yoonjl-svg/halfsword",
+  "window": {
+    "start_exclusive": "2026-11-01T23:30:00+09:00",
+    "end_inclusive": "2026-11-02T23:30:00+09:00"
+  },
+  "technical_base": "14bcf1fe6bd205c775db91aa4ca36b9841b6d2bd",
+  "source_sha": "10afcb65930f502b732ed8b0163736e6bada31e6",
+  "source_observed_head": "10afcb65930f502b732ed8b0163736e6bada31e6",
+  "source_observed_at": "2026-11-03T00:21:25+09:00",
+  "selection_basis": "director session publishes from the dev branch head at 23:22-23:30 KST; the same commit is pushed to main",
+  "authored_decision_record": "present",
+  "notes_path": "docs/dev_exchange/notes/2026-11-02.md",
+  "notes_blob_sha": "76ea4ea7f1371975a456c80a3c1999912645e614",
+  "notes_sha256": "9ba2999de9c2db9b79ce1650642257c6e1f8b0225354f014f86ed25fea807c34",
+  "markdown_sha256": "9ba2999de9c2db9b79ce1650642257c6e1f8b0225354f014f86ed25fea807c34",
+  "previous_report_id": "yoonjl-svg/halfsword@2026-11-01T23:30+09:00",
+  "previous_source_sha": "04f3e1cba22d5e330977249071ccfd80a71d5320"
+}
