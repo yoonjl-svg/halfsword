@@ -316,6 +316,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('risoStreak')) CONFIG.SECRET.risoStreak = +params.get('risoStreak') ? 1 : 0;
   if (params.has('risoGlint')) CONFIG.SECRET.risoGlintLife = Math.max(0, +params.get('risoGlint') || 0); // 빛줄기 끝 반짝임만: 0 = 끔 · `?risoGlint=0.2` 처럼 s 로 견주기
   if (params.has('thrustArm')) CONFIG.SECRET.thrustArm = +params.get('thrustArm') ? 1 : 0; // 10/24 15:5x 운동학 겨눈 찌름(런지 · 격살 허파 찌르기) — 0 = 전 손 자리(어깨 가까이 · 칼이 새끼 쪽으로 꺾여 거꾸로 쥔 꼴)
+  if (params.has('sweepCap')) CONFIG.SECRET.sweepCap = +params.get('sweepCap') ? 1 : 0; // 11/04 끌고 가는 칼 맞음 빠르기 묶음 (기본 1 — 손목 교정 튐이 1470 ~ 4965 J 로 읽히던 결함 고침) · `?sweepCap=0` = 전 판
   if (params.has('holdDepth')) CONFIG.SECRET.holdDepth = +params.get('holdDepth') ? 1 : 0; // 시험 (10/24 17:2x 뒤 · 기본 끔): 1 = 맞힌 겨눈 찌름(런지 · 격살 허파 찌르기)의 굳음 동안 칼끝이 겨눈 곳(상대 몸통 가운데)을 넘지 않게 손을 칼 줄을 따라 거둠 (fighter.js holdDepthHand — 끄면 런지 앞발을 따라 칼이 상대 등 뒤로 나옴)
 }
 {
