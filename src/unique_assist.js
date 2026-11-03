@@ -962,7 +962,8 @@ export class PlayerUniqueAssist {
     const fe = f.feel;
     if (!fe?.touching || !f.armed || !f.foe?.armed) return;
     let C = this.touch;
-    if (!C || fe.time === 0 || this.t - C.t1 > UA.cavTo) {
+    const merge = UA.cavMerge > 0 && !!C && this.t - C.t1 <= UA.cavMerge; // 닿음 이어 붙임 (11/04 제안 · 기본 끔 — config UNIQUE_ASSIST.cavMerge): 곧 다시 닿은 것은 같은 닿음
+    if (!C || (fe.time === 0 && !merge) || this.t - C.t1 > UA.cavTo) {
       C = this.touch = { t0: this.t, t1: this.t, cut: false, cavSpent: false, n: null, steps: 0 };
       this.stats.touches = (this.stats.touches ?? 0) + 1;
     }

@@ -76,7 +76,7 @@ const TSU = (() => {
 const KOTE = { from: PAD.langort, path: [[0.02, -0.22]] };
 
 /** 한 판 */
-export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5] }) {
+export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [] }) {
   const rnd = rng(seed * 7919 + 101);
   const kit = kitFromNodes(school, allNodeIds(school)); // 무유파는 null (나무 없음 — 고유 · 비기 없음)
   const G = newRound({ seed, weapon, weapon2: opp, walls: true, ...(kit ? { kit } : {}), look: LOOKS.player, look2: LOOKS.enemy, persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
@@ -87,8 +87,8 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   P.canShove = true;
-  const uq = new PlayerUniqueAssist(P, { names: kit?.unique ?? new Set() });
-  const W = new PlayerSecretWatch(P, A, { locked: !kit?.secret });
+  const uq = new PlayerUniqueAssist(P, { names: new Set([...(kit?.unique ?? [])].filter((n) => !drop.includes(n))) }); // drop = 안 익힌 고유 공격 (견줌 — --drop=imbroccata)
+  const W = new PlayerSecretWatch(P, A, { locked: !kit?.secret || !secret }); // secret false = 비기 안 익힘 (견줌 — --secret=0)
   const guard = new PlayerParryGuard(P, A);
   P.stamina.controller = guard;
   const input = inputEnv(() => new Input(canvas, new URLSearchParams('')));
@@ -155,8 +155,11 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     if (['stroke', 'tap', 'hold', 'circle', 'bind', 'sideTap'].includes(a.kind)) ev('pointerdown');
   };
   const side = () => (rnd() < 0.5 ? -0.9 : 0.9);
+  // focus 'step' (걸음 공격 견줌): 기술 몫 = 반은 그 유파 걸음 명령(스틱 옆 · 앞) · 반은 같은 바탕 긋기(스틱 없음 — want '<바탕>Plain')
+  const STEP = { german: ['zwerch', 'zwerchAbtritt', 'side'], iberian: ['zornhau', 'talhoRodeado', 'side'], japanese: ['zornhauL', 'hirakiGiri', 'side'], chinese: ['zwerch', 'chebuYaoji', 'fwd'] }[school];
   const schoolTech = (S) => {
     const L = S.left > 0 && !!secretName;
+    if (focus === 'step' && STEP) return rnd() < 0.5 ? stroke(STEP[0], { ...(STEP[2] === 'side' ? { side: side() } : { fwd: 1 }), want: STEP[1] }) : stroke(STEP[0], { fwd: 0, want: `${STEP[0]}Plain` });
     if (school === 'german') {
       const n = Math.floor(rnd() * (L ? 4 : 3));
       if (n === 0) return stroke('zwerch', { side: side(), want: 'zwerchAbtritt' });
@@ -412,7 +415,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       const a = attackNow();
       if (a && a.id !== cur?.id && cur && cur.name === 'basic' && cur.contacts === 0 && G.t - cur.t < 0.15 * K) Object.assign(cur, { id: a.id, name: a.name, cls: a.cls }); // 긋기가 곧 강화 탭 · 끌고 가는 칼로 바뀜 (위에서 내려 찌르기 등 — 한 기술)
       else if (a && a.id !== cur?.id) {
-        cur = { id: a.id, t: G.t, name: a.name, cls: a.cls, dist0: P.foeDistance(), base: act?.base ?? act?.kind ?? null, stick: [r3(P.stickX), r3(P.stickY)], dis1: false, contacts: 0, wounds: 0, sev: 0, cons: 0, Emax: 0, types: {}, recv1: 0, consR1: 0, recvN1: 0, fall1: false, kill1: false, st0: P.stamina.value };
+        cur = { id: a.id, t: G.t, name: a.name, cls: a.cls, dist0: P.foeDistance(), base: act?.base ?? act?.kind ?? null, want: act?.want ?? null, stick: [r3(P.stickX), r3(P.stickY)], dis1: false, contacts: 0, wounds: 0, sev: 0, cons: 0, Emax: 0, types: {}, recv1: 0, consR1: 0, recvN1: 0, fall1: false, kill1: false, st0: P.stamina.value };
         fires.push(cur);
         if (fires.length > 1) fires[fires.length - 2].st1 ??= P.stamina.value;
       } else if (a && cur && (cur.name === 'basic' || cur.name === 'tap') && a.name !== cur.name && G.t - cur.t < 0.3 * K) cur.name = a.name; // 강화 · 걸음 기술 이름이 몇 스텝 늦게 섬
@@ -441,7 +444,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       dealt: r3(wounds.dealt), recv: r3(wounds.recv), dealtN: wounds.dealtN, recvN: wounds.recvN, consD: r3(wounds.consD), consR: r3(wounds.consR), falls, exh: r3(exhT / K / Math.max(1e-6, T)),
       secretFired: fires.filter((f) => f.cls === 'secret').length, brk, disarms,
       secretLeft: secretLeft(P), wants, acts,
-      fires: fires.map((f) => ({ t: r3(f.t / K), name: f.name, cls: f.cls, d: r3(f.dist0), c: f.contacts, w: f.wounds, sev: r3(f.sev), cons: r3(f.cons), E: r3(f.Emax), ty: f.types, r1: r3(f.recv1), cr1: r3(f.consR1), rn1: f.recvN1, f1: f.fall1, k1: f.kill1, dis1: f.dis1, base: f.base, stick: f.stick, st: r3(f.st0 - (f.st1 ?? P.stamina.value)) })),
+      fires: fires.map((f) => ({ t: r3(f.t / K), name: f.name, cls: f.cls, d: r3(f.dist0), c: f.contacts, w: f.wounds, sev: r3(f.sev), cons: r3(f.cons), E: r3(f.Emax), ty: f.types, r1: r3(f.recv1), cr1: r3(f.consR1), rn1: f.recvN1, f1: f.fall1, k1: f.kill1, dis1: f.dis1, base: f.base, want: f.want, stick: f.stick, st: r3(f.st0 - (f.st1 ?? P.stamina.value)) })),
     };
   } finally {
     G.world.free();
@@ -500,7 +503,7 @@ if (isMain(import.meta.url)) {
     for (const c of cells) {
       const [school, weapon, opp] = c.split(':');
       for (const seed of seeds) {
-        const r = fightOne({ school, weapon, opp, seed, dur: +arg('dur', 30), tech: +arg('tech', 0.35) });
+        const r = fightOne({ school, weapon, opp, seed, dur: +arg('dur', 30), tech: +arg('tech', 0.35), focus: arg('focus', null), secret: arg('secret', '1') !== '0', drop: arg('drop', '').split(',').filter(Boolean) });
         runs.push(r);
         console.error(JSON.stringify({ c, seed, win: r.win, lose: r.lose, T: r.T, dealt: r.dealt, recv: r.recv, fires: r.fires.length, ms: Date.now() - t0 }));
       }
