@@ -514,6 +514,11 @@ if (params.has('wristPronate')) CONFIG.JOINTS.wristPronate = +params.get('wristP
 if (params.has('swivelHuman')) CONFIG.JOINTS.swivelHuman = +params.get('swivelHuman') ? 1 : 0; // 10/25 01:2x (기본 켬 · `?swivelHuman=0` = 10/24 17:2x 뒤 판): 한손 무기 팔꿈치 돌림이 팔꿈치를 줄 위로 · 아래팔 굴림 · 위팔 돌림을 한도 밖으로 밀지 않게 (fighter.js elbowSwivel armOk)
 if (params.has('cutPronate')) CONFIG.JOINTS.cutPronate = +params.get('cutPronate') ? 1 : 0; // 10/25 19:0x (기본 켬 · `?cutPronate=0` = 10/25 전 판): 엎친 손 길은 손이 자세에 쉬는 동안만 — 칼을 끄는 동안(감기 · 긋기 · 자세 사이 옮김)은 팔꿈치 돌림 + 굴림 0 손 면 교정 (fighter.js pronateRest · 사람 · AI 한손 무기)
 if (params.has('itThrust')) CONFIG.THRUST.itLunge = +params.get('itThrust') ? 1 : 0; // 10/25 08:0x 사장님 '이탈리아 찌르기 손봐' (기본 켬 · `?itThrust=0` = 10/25 아침 판): 이탈리아 유파 탭 찌르기 · AI 찌르기 기술 = 몸통 겨눔 · 당기지 않음 · 몸이 실린 런지 · 몸이 다 실릴 때까지 뻗은 채 (skill.js thrust · updateThrust · ai.js startStrike · gaitStep)
+// 11/05 찌르기 막기 재기 스위치 (모두 기본 끔 · docs/strike/rapier_defence_2026-11-05.md · 확인표 3370 ~ 3379): 런지 걸음 상한 · 막힌 런지 거둠 · AI 런지 간격 어림 · AI 런지 막기
+if (params.has('itStep')) CONFIG.THRUST.itStep = +params.get('itStep') || null;
+if (params.has('itClashEnd')) CONFIG.THRUST.itClashEnd = +params.get('itClashEnd') ? 1 : 0;
+if (params.has('lungeReach')) CONFIG.AI_THRUST_DEF.lungeReach = +params.get('lungeReach') || 0;
+if (params.has('lungeParry')) CONFIG.AI_THRUST_DEF.lungeParry = +params.get('lungeParry') ? 1 : 0;
 if (params.has('wristSwing')) CONFIG.JOINTS.wristSwing = Math.max(0, Math.min(2, Math.round(+params.get('wristSwing') || 0))); // 시험 (10/25 · 기본 0): 베는 동안 손목 교정 — 1 = 칼 면 안에서만 · 2 = 안 함 (fighter.js wristGuardAim · cutSwing · 기록 wrist_audit §11)
 if (params.has('wristRope')) CONFIG.JOINTS.wristRope = +params.get('wristRope') ? 1 : 0; // 시험 (10/24 17:2x · 기본 끔 · `?wristRope=1` = 손목 치우침 밧줄 둘 — fighter.js gripDevOn · 기록 §9)
 if (CONFIG.JOINTS.presets[params.get('joints')]) CONFIG.JOINTS.mode = params.get('joints'); // 칼 팔 관절 가동 범위 교정 시제품(10/9, docs/motion/joint_range_2026-10-09.md): `?joints=off|anat|hard|soft|reach`, 없으면 기본 anat(켬)

@@ -1885,6 +1885,16 @@ export const AI_PROFICIENCY = {
 //  뜻은 10/24 롤랑 · 베르나르도 1.1 과 같다: 초당 잃는 피 · 머리를 맞아 잃는 의식 ÷ vitality(fighter.js) — 피가 10 % 많은 것과 같음
 export const PROF6_VITALITY = 1.1;
 
+// AI 의 이탈리아 런지 찌르기 막기 (11/05 — 사장님 11/04 '찌르기가 막기를 뚫는 까닭 이어서 재.' · docs/strike/rapier_defence_2026-11-05.md · 확인표 3370 ~ 3379 · 모두 기본 끔 — 사장님 결정 전).
+//  '런지 찌르는 상대' = 이탈리아 찌르기(THRUST.itLunge)를 쓰는 몸(swordArt.tradition 'italian' — 레이피어 · 달타냥 · 발리사르다 · 파펜하이머). 다른 상대에게는 아무 일 없음.
+//  lungeReach  AI 가 그 상대 칼이 닿는 거리를 어림할 때(foeReach — 간 보는 거리 · 피하기 · 위협 읽기 거리) 무기 간격에 더하는 몫 (m · 걸음 사다리 0.3 / 0.45 / 0.6) · 0 = 지금 `?lungeReach=0.3`
+//   (런지 찌르기는 무기 간격 1.98 m 보다 0.3 ~ 0.5 m 더 닿는다 — 낸 거리 p90 2.16 · 가장 먼 맞음 2.56 m)
+//  lungeParry  1 = 그 상대의 찌르기 · 간격 끝 공격을 물러나 피하기(0.8)보다 칼로 막기 쪽으로 — 피하기 몫을 가운데 베기와 같은 0.3 으로 (새 수 없음) · 0 = 지금 `?lungeParry=1`
+export const AI_THRUST_DEF = {
+  lungeReach: 0,
+  lungeParry: 0,
+};
+
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)
 //  ai.js 는 인물 표식 persona.terrainSense === 'wetland' 이고 그 몸이 진흙 감속을 받는 무대(fighter.movementSurface === 'wetland' — 잠든 습지)일 때만 이 묶음을 읽는다.
 //  둘 중 하나라도 아니면 옛 길을 바이트 그대로 지난다. 판단 근거는 물리와 같은 젖음 지도(wetland_ground.js wetlandWetness — 그림의 디딤돌이 아니다).
@@ -1959,6 +1969,13 @@ export const THRUST = {
   //     칼이 상대 몸에 판정을 내면(combat.js strike) 곧장 자세로 (시간 값 없음)
   //  1 = 켬 · 0 = 10/25 아침 판 (`?itThrust=0` — 판 해시 바이트 같음)
   itLunge: 1,
+  // 찌르기가 막기를 뚫는 까닭 재기 (11/05 — 사장님 11/04 '찌르기가 막기를 뚫는 까닭 이어서 재.' · docs/strike/rapier_defence_2026-11-05.md · 확인표 3370 ~ 3379 · 모두 기본 끔 — 사장님 결정 전):
+  //  itDrop     재기 스위치: 이탈리아 찌르기 ①~④ 가운데 끌 것 ('aim' 몸통 겨눔 · 'chamber' 당기지 않음 · 'lunge' 거리만큼 몸이 실린 런지 · 'hold' 뻗은 채 머묾 — '+' 로 여럿) · '' = 모두 켬(지금)
+  //  itStep     이탈리아 런지 걸음 상한 (m · 걸음 사다리 0.3 / 0.45 / 0.6) — null = 런지 덧씌우기 걸음(frames.js OVERLAY.thrust 0.6) 그대로. 사람 · AI 이탈리아 찌르기 모두 `?itStep=0.45`
+  //  itClashEnd 1 = 뻗은 채 머무는 동안(④) 칼끼리 닿으면 닿은 것으로 보고 자세로 (막힌 찌르기가 밀고 들어가지 않음) · 0 = 지금 `?itClashEnd=1`
+  itDrop: '',
+  itStep: null,
+  itClashEnd: 0,
   // 이탈리아 유파 무기 간격 줄 세 판 (10/25 — 파펜하이머 들임 중 간격 생성기가 이탈리아 무기를 못 잼 · docs/strike/italian_measure_2026-10-25.md · 확인표 2556 ~ 2560 · 사장님 확인 전 — 고르실 때까지 기본 'old'):
   //  'old' = 지금 판(10/8 ~ 10/25 분노의 베기 줄 — 판 바이트 같음) · 'contact' = 맞닿음(contact)만 찌르기 잣대 값(한 걸음 · 맞붙음 · 베는 시간은 지금 그대로) + 안다레 리솔루토 창 최소 간격 · 런지 미끄러짐은 지금 맞닿음 그대로 ·
   //  'full' = 찌르기 잣대 줄 통째(contact · reach · clinch · 베는 시간 — 파펜하이머 포함 · 리솔루토도 새 맞닿음을 따름). 찌르기 잣대 = 3번 자세 탭 찌르기의 칼날 70 % 지점 ÷ 같은 실행 롱소드 찌르기 × 롱소드 손 값(weapon_measured.js ITALIAN_THRUST).

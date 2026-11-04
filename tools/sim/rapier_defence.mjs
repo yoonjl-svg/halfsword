@@ -111,7 +111,7 @@ export function makeProbe() {
       if (!G) return;
       if (cur && !recs.has(cur)) {
         if (R) R.closed = true;
-        R = { t0: G.t, d0: P.foeDistance(), gap0: tipGap(), gapMin: tipGap(), dMin: P.foeDistance(), ai0: aiNow(), tipMax: 0, tFast: null, nullWhy: {}, resps: [], hits: [], clashN: 0, bodyN: 0, sevBlade: 0, closed: false, tapIt: !!P.skill.tap?.it, itFwd: P.skill.tap?.it?.fwd ?? null };
+        R = { t0: G.t, d0: P.foeDistance(), gap0: tipGap(), gapMin: tipGap(), dMin: P.foeDistance(), ai0: aiNow(), tipMax: 0, tFast: null, nullWhy: {}, resps: [], hits: [], clashN: 0, bodyN: 0, sevBlade: 0, closed: false, tapIt: !!P.skill.tap?.it, itFwd: P.skill.tap?.it?.fwd ?? null, foeReach: ai.foeReach, hold: ai.holdDist() }; // AI 가 어림한 내 칼 거리 · 간 보는 거리 (읽기만 — holdDist 는 난수 없음)
         recs.set(cur, R);
       }
       if (!live()) return;
@@ -143,7 +143,7 @@ export function makeProbe() {
         const out = hit ? (Q.clashT != null && Q.clashT <= (Q.bodyT ?? Infinity) ? 'hitAfterClash' : 'hit') : Q.bodyT != null ? 'touch' : Q.clashT != null ? 'blocked' : 'whiff';
         return {
           t: r3(f.t / K), name: f.name, cls: f.cls, out, sev: r3(f.sev),
-          d0: r3(Q.d0), dMin: r3(Q.dMin), gap0: r3(Q.gap0), gapMin: r3(Q.gapMin), tipMax: r3(Q.tipMax), fast: rel(Q.tFast, Q.t0), ai0: Q.ai0, ai02: Q.ai02 ?? null, aiBack: r3(Q.aiBack), tapIt: Q.tapIt, itFwd: r3(Q.itFwd),
+          d0: r3(Q.d0), dMin: r3(Q.dMin), gap0: r3(Q.gap0), gapMin: r3(Q.gapMin), tipMax: r3(Q.tipMax), fast: rel(Q.tFast, Q.t0), ai0: Q.ai0, ai02: Q.ai02 ?? null, aiBack: r3(Q.aiBack), tapIt: Q.tapIt, itFwd: r3(Q.itFwd), foeReach: r3(Q.foeReach), hold: r3(Q.hold),
           th: rel(Q.thT, Q.t0), thThrust: Q.thThrust ?? null, thLine: Q.thLine ?? null, thAi: Q.thAi ?? null, nullWhy: Q.nullWhy,
           resp: Q.resp ?? null, respT: rel(Q.respT, Q.t0), respAi: Q.respAi ?? null, respThrust: Q.respThrust ?? null, resps: Q.resps, noRead: rel(Q.noReadT, Q.t0),
           clash: rel(Q.clashT, Q.t0), clashN: Q.clashN, clashFresh: Q.clashFresh ?? null, clashJ: r3(Q.clashJ), clashVn: r3(Q.clashVn), clashTP: r3(Q.clashTP), clashTA: r3(Q.clashTA), clashAi: Q.clashAi ?? null, clashD: r3(Q.clashD), clashTap: Q.clashTap ?? null,
