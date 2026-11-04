@@ -16,7 +16,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { PICKUP, VITALS, realS } from './config.js';
-import { startSwordReturn, flySword, attachSword } from './revive.js';
+import { startSwordReturn, flySword, attachSword, holdRot } from './revive.js';
 
 const _g = new THREE.Vector3();
 const _h = new THREE.Vector3();
@@ -100,6 +100,7 @@ export function pickupTick(f, dt) {
     P.sword = startSwordReturn(f);
     P.sword.fly = realS(PICKUP.lift);
     P.sword.arc = 0;
+    P.sword.hold = holdRot(f, new THREE.Quaternion()); // 쥐는 자세를 지금 정해 둠 (보간 끝이 고정 — 뒤집힘 없음)
     P.phase = 'lift';
     P.t = 0;
     P.face = P.g.clone(); // 올리는 동안도 쥔 자리 쪽을 본다: 몸이 돌면 쥐는 자세(revive.js holdRot — 몸 방향 기준)가 돌아 땅 자세 ↔ 쥐는 자세 사이 구면 보간이 반대쪽으로 뒤집혀 칼이 한 스텝에 0.4 m 튐(재기 11/05)
