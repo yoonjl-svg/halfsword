@@ -76,7 +76,7 @@ const TSU = (() => {
 const KOTE = { from: PAD.langort, path: [[0.02, -0.22]] };
 
 /** 한 판 */
-export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [] }) {
+export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], probe = null }) { // probe = 재기 꽂개 (rapier_defence.mjs — init · step · done · 없으면 그대로)
   const rnd = rng(seed * 7919 + 101);
   const kit = kitFromNodes(school, allNodeIds(school)); // 무유파는 null (나무 없음 — 고유 · 비기 없음)
   const G = newRound({ seed, weapon, weapon2: opp, walls: true, ...(kit ? { kit } : {}), look: LOOKS.player, look2: LOOKS.enemy, persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
@@ -397,6 +397,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   const brk = { P: null, A: null };
   let armedA = A.armed;
   let disarms = 0; // 칼 부러짐 (판 시작부터 실제 s) — 부러진 칼은 고유 공격이 안 남 (unique_assist busy)
+  probe?.init?.({ G, P, A, uq, W, guard }); // 읽기만 (난수 · 몸 그대로)
   try {
     while (activeStart == null || G.t < tEnd()) {
       if (G.t / K >= nextFrame - 1e-8) {
@@ -419,6 +420,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
         fires.push(cur);
         if (fires.length > 1) fires[fires.length - 2].st1 ??= P.stamina.value;
       } else if (a && cur && (cur.name === 'basic' || cur.name === 'tap') && a.name !== cur.name && G.t - cur.t < 0.3 * K) cur.name = a.name; // 강화 · 걸음 기술 이름이 몇 스텝 늦게 섬
+      probe?.step?.(cur, act);
       for (const who of ['P', 'A']) {
         const f = who === 'P' ? P : A;
         if (stand0[who] === 'stand' && f.state !== 'stand' && f.state !== 'dead') {
@@ -445,6 +447,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       secretFired: fires.filter((f) => f.cls === 'secret').length, brk, disarms,
       secretLeft: secretLeft(P), wants, acts,
       fires: fires.map((f) => ({ t: r3(f.t / K), name: f.name, cls: f.cls, d: r3(f.dist0), c: f.contacts, w: f.wounds, sev: r3(f.sev), cons: r3(f.cons), E: r3(f.Emax), ty: f.types, r1: r3(f.recv1), cr1: r3(f.consR1), rn1: f.recvN1, f1: f.fall1, k1: f.kill1, dis1: f.dis1, base: f.base, want: f.want, stick: f.stick, st: r3(f.st0 - (f.st1 ?? P.stamina.value)) })),
+      ...(probe?.done ? { probe: probe.done(fires) } : {}),
     };
   } finally {
     G.world.free();
