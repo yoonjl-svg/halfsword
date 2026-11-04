@@ -948,9 +948,7 @@ export class PlayerSecretWatch {
     //  셈 · 너그러움(mordGrace) · 창은 같은 pressStep(첫 걸음 멈춤 mordStepPause 는 밀치기 걸음 몫이라 안 씀)
     const n = SECRET.mordCloseN ?? CLOSE.reach(me.armed ? me.weapon : null);
     const foe = this.foe;
-    // 밀치기도 붙음 (11/05 SECRET.mordBarge · 기본 끔 — docs/strike/jp_de_basics_2026-11-05.md): 1 = 내 밀치기(fighter.barge — 딛기 · 누르기)가 이어지는 동안도 붙음으로 셈
-    //  (닿는 거리 안에서 스틱을 밀면 곧장 밀치기라 — CLOSE.latch 0 — 붙으려 민 스틱이 상대를 0.8 m 밖으로 밀어내 셈이 끊기던 몫) · 0 = 전 판(거리만)
-    const close = me.state === 'stand' && foe.alive && foe.state === 'stand' && (me.foeDistance() <= n || (!!SECRET.mordBarge && !!me.barge));
+    const close = me.state === 'stand' && foe.alive && foe.state === 'stand' && me.foeDistance() <= n;
     if (pressStep(this, dt, close, busy, !!this.open, secretVal(this.S.cond.press), null)) this.openWindow({ ev: 'press', held: this.pressHeld, close: true });
   }
 
