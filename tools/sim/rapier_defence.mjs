@@ -266,7 +266,7 @@ if (isMain(import.meta.url)) {
     for (const c of cells) {
       const [school, weapon, opp] = c.split(':');
       for (const seed of seeds) {
-        const r = fightOne({ school, weapon, opp, seed, dur: +arg('dur', 30), tech: +arg('tech', 0.35), secret: arg('secret', '1') !== '0', drop: arg('drop', '').split(',').filter(Boolean), probe: makeProbe() });
+        const r = fightOne({ school, weapon, opp, seed, dur: +arg('dur', 30), tech: +arg('tech', 0.35), secret: arg('secret', '1') !== '0', drop: arg('drop', '').split(',').filter(Boolean), probe: makeProbe(), attrib: arg('attrib', 'new') }); // attrib old = 11/04 기술 기록 셈 (school_balance · step_input 기록 §1)
         runs.push(r);
         console.error(JSON.stringify({ c, seed, win: r.win, lose: r.lose, T: r.T, dealt: r.dealt, recv: r.recv, fires: r.fires.length, ms: Date.now() - t0 }));
       }

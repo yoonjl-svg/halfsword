@@ -228,6 +228,12 @@ function dirOk(d, want) {
   if (want === 'horiz') return Math.min(angDeg(d, [1, 0]), angDeg(d, [-1, 0])) <= UA.angle;
   return true;
 }
+/** 스틱 [x, y] 가 걸음 명령 쪽인가: 'side' = 옆 몫 ≥ T 이고 앞뒤 몫 이상 · 'fwd' = 앞 몫 ≥ T 이고 옆 몫보다 큼 (stickOk · stickTick) */
+export function stickDir(want, x, y, T) {
+  if (want === 'side') return Math.abs(x) >= T && Math.abs(x) >= Math.abs(y);
+  if (want === 'fwd') return y >= T && y > Math.abs(x);
+  return false;
+}
 /** 토막 AB 에서 p 에 가장 가까운 점 */
 function closest(A, B, p) {
   const ex = B[0] - A[0];
@@ -376,6 +382,12 @@ export class PlayerUniqueAssist {
     this.tapList = this.list.filter((e) => e.tapKey).sort((a, b) => (b.special ? 1 : 0) - (a.special ? 1 : 0));
     this.touch = null; // 칼끼리 한 닿음 (칼끝 돌려 빼기 탭 조건 — touchTick · 10/31): { t0 처음 · t1 마지막 닿은 때 · cut 내 긋기 동안 닿음 · n 상대 칼 쪽(월드 — feel.normal 의 반대) · cavSpent }
     this.inqSeen = -1; // 비껴서며 찌르기를 낸 위협 번호 (한 공격에 한 번)
+    // 걸음 공격 스틱 읽기 (11/05 — UNIQUE_ASSIST.stepIn · stickOk · stickTick · stepLateTick): 쪽마다 마지막으로 스틱이 그 쪽이던 때 { t, v [x, y] } ·
+    //  stickUsed = 마지막으로 받아들인 스틱 [x, y] (걸음 · 몸 빼기 좌우) · stepLate = 긋기 시작 때 스틱이 안 맞은 걸음 명령 긋기 { cur, t0 시작 때, list 기다리는 걸음 명령 }
+    this.stickMem = { side: null, fwd: null };
+    this.stickUsed = null;
+    this.stickVia = null;
+    this.stepLate = null;
     this.press = { down: false, still: false, secretOpen: false }; // main.js holdInput — 탭 입력을 누르고 있나 · 탭 문턱(끌지 않음) 안인가 · 비기 창이 열렸나
     this.hold = { st: 'idle', t: 0 }; // 누름 셈 · 감기 ('idle' · 'press' · 'spent' 이 누름은 감지 않음 · 'wind' 감는 중)
     this.coolT = {}; // 특수 공격(표 칸 special)마다 식힘을 세기 시작한 때 (사장님 10/28 02:0x 나간 순간 → 10/29 19:5x 끝난 때 — UNIQUE_ASSIST.specialCooldown · specialCoolFrom · 도는 동안 Infinity)
@@ -588,7 +600,7 @@ export class PlayerUniqueAssist {
     // 비껴서며 찌르기 (10/31 — 특수 공격): 스틱 쪽으로 몸을 빼며(옆 · 앞 = schools.js inquartata step · 뒷발을 그쪽으로 돌려 디딤) 넷째 자세로 가슴 — 고노센 칼끝 × specialShare.inquartata · 잔상
     if (e.tapVoid && UA.enhance > 0) {
       const st = U.step ?? { lat: 0.3, fwd: 0.15 };
-      const sg = Math.sign(f.stickX ?? 0) || 1;
+      const sg = Math.sign(UA.stepIn && this.stickUsed ? this.stickUsed[0] : f.stickX ?? 0) || 1; // 새 판(11/05): 조건이 받아들인 스틱 쪽 (밀었다 놓은 엄지도)
       const B = e.body ? [Math.abs(e.body[0]) * sg * (e.bodyMirror ?? 1), Math.abs(e.body[1]) * sg * (e.bodyMirror ?? 1), e.body[2], e.body[3]] : null;
       if (requestArtThrust(f, { share: specialShare(e.name), maxT: UA.inqSnapTime, tech: U.name, under: false, capFromCut: true, voidStep: { lat: Math.abs(st.lat) * sg, fwd: st.fwd ?? 0 }, bodyPose: B })) {
         this.stats.snap = (this.stats.snap ?? 0) + 1;
@@ -982,12 +994,56 @@ export class PlayerUniqueAssist {
     return -y >= 0.5 && -y > Math.abs(x);
   }
 
-  /** 걸음 명령의 스틱: 'side' = 옆 몫이 0.5 넘고 앞뒤 몫 이상 · 'fwd' = 앞 몫이 0.5 넘고 옆 몫보다 큼 (플레이어 스틱 원값 f.stickX · stickY — 키도 같은 값) */
+  /**
+   * 걸음 명령의 스틱: 'side' = 옆 몫이 문턱 넘고 앞뒤 몫 이상 · 'fwd' = 앞 몫이 문턱 넘고 옆 몫보다 큼 (플레이어 스틱 원값 f.stickX · stickY — 키도 같은 값).
+   *  전 판(UNIQUE_ASSIST.stepIn 0): 지금 스틱만 · 문턱 0.5. 새 판(11/05 — stepIn 1): 문턱 stepStick · 지금 안 맞아도 stepPre 초 안에 그 쪽이었으면(밀었다 놓은 엄지 — 앞 창 · 기본 끔) 맞음.
+   *  받아들인 스틱은 stickUsed (걸음 · 몸 빼기 좌우) · stickVia 'now' | 'mem'
+   */
   stickOk(want) {
     const x = this.f.stickX ?? 0, y = this.f.stickY ?? 0;
-    if (want === 'side') return Math.abs(x) >= 0.5 && Math.abs(x) >= Math.abs(y);
-    if (want === 'fwd') return y >= 0.5 && y > Math.abs(x);
-    return true;
+    if (want !== 'side' && want !== 'fwd') return true;
+    if (stickDir(want, x, y, UA.stepIn ? UA.stepStick : 0.5)) {
+      this.stickUsed = [x, y];
+      this.stickVia = 'now';
+      return true;
+    }
+    const M = UA.stepIn ? this.stickMem[want] : null;
+    if (M && UA.stepPre > 0 && this.t - M.t <= UA.stepPre) {
+      this.stickUsed = M.v;
+      this.stickVia = 'mem';
+      return true;
+    }
+    return false;
+  }
+
+  /** 스틱 기억 (새 판 stepIn 만 · 스텝마다 drive 머리): 쪽마다 마지막으로 스틱이 그 쪽(문턱 stepStick)이던 때 */
+  stickTick() {
+    const x = this.f.stickX ?? 0, y = this.f.stickY ?? 0;
+    for (const want of ['side', 'fwd']) if (stickDir(want, x, y, UA.stepStick)) this.stickMem[want] = { t: this.t, v: [x, y] };
+  }
+
+  /**
+   * 늦은 스틱 (새 판 stepIn · stepPost — 11/05): 긋기 시작 때 스틱이 안 맞아 기본 동작(또는 강화동작)으로 읽힌 걸음 명령 긋기 —
+   *  같은 긋기가 이어지는 동안 시작 뒤 stepPost 초 안에 스틱이 그 쪽이 되면 그 긋기를 걸음 공격으로 바꾼다(순위 그대로 — 명령(걸음) > 강화동작).
+   *  덧씌운 강화동작이 끌고 가는 칼 · 탭을 냈으면 바꾸지 않는다. 바꾸면 stats.stepLate
+   */
+  stepLateTick(now) {
+    const L = this.stepLate;
+    if (this.cur !== L.cur || now - L.t0 > UA.stepPost) {
+      this.stepLate = null;
+      return;
+    }
+    const R = this.r;
+    const soft = !R || (R.part === 1 && R.e.role === 'enh' && !R.e.tap && !R.e.snap && !this.f.artTech);
+    if (!soft || this.busy()) return;
+    for (const e of L.list) {
+      if (this.cooling(e, now) || !this.stickOk(e.stick)) continue;
+      if (R) this.end('stepLate', now);
+      this.start(e, L.cur, 1);
+      this.stats.stepLate = (this.stats.stepLate ?? 0) + 1;
+      this.stepLate = null;
+      return;
+    }
   }
 
   /** 이어 긋기 창이 열렸나 (자세 칸 표시 — main.js updateGuardName): 잇는 동작의 뒷몫(chainFrom · chainWait) 또는 앞 동작 조건(맞물림 · 빗나감 · 아무거나 — afterWindow)이 찬 이어 긋기. 없으면 null */
@@ -1037,6 +1093,7 @@ export class PlayerUniqueAssist {
   detect(dt, swinging, inputVelocity = this.f.skill.vel) {
     const now = this.t;
     this.track();
+    if (this.stepLate) this.stepLateTick(now); // 늦은 스틱 (새 판 stepIn — 11/05): 같은 긋기가 이어지는 동안 stepPost 안
     const was = this.wasSwing;
     this.wasSwing = swinging;
     const f = this.f;
@@ -1073,6 +1130,11 @@ export class PlayerUniqueAssist {
     if (C && now - C.tEnd <= UA.chainWait && (!C.e.chain.dir || dirOk(dir, C.e.chain.dir))) return this.start(C.e, cur, 2);
     const pick = this.choose(cur, hand, dir, now);
     if (pick) this.start(pick.e, cur, 1);
+    // 늦은 스틱을 기다릴 걸음 명령 (새 판 — 11/05): 긋기 조건은 맞는데 스틱만 안 맞은 것
+    if (UA.stepIn && UA.stepPost > 0 && pick?.e.role !== 'step') {
+      const list = this.list.filter((e) => e.role === 'step' && e.stick && !this.cooling(e, now) && e.on.some((c) => this.condOk(c, cur, dir, now)));
+      if (list.length) this.stepLate = { cur, t0: now, list };
+    }
   }
 
   /** 강화 시작: part 1 = 고유 동작으로 읽힌 긋기 · part 2 = 잇는 동작의 뒷몫 (플레이어가 이어 그은 긋기) */
@@ -1095,8 +1157,10 @@ export class PlayerUniqueAssist {
     this.stats.fired[U.name] = (this.stats.fired[U.name] ?? 0) + 1;
     this.coolStart(e);
     f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
-    // 걸음 명령의 옆 걸음은 스틱 쪽으로(표의 lat 크기 · 부호는 스틱) — 10/21
-    if (U.step && e.stick === 'side' && Math.abs(this.f.stickX ?? 0) > 0.01) this.r.step = { ...U.step, lat: Math.abs(U.step.lat) * Math.sign(this.f.stickX) };
+    // 걸음 명령의 옆 걸음은 스틱 쪽으로(표의 lat 크기 · 부호는 스틱) — 10/21 · 새 판(stepIn — 11/05)은 받아들인 스틱(stickUsed — 밀었다 놓은 엄지도 그 쪽)
+    const sx = UA.stepIn && e.role === 'step' && this.stickUsed ? this.stickUsed[0] : this.f.stickX ?? 0;
+    if (U.step && e.stick === 'side' && Math.abs(sx) > 0.01) this.r.step = { ...U.step, lat: Math.abs(U.step.lat) * Math.sign(sx) };
+    if (e.role === 'step' && e.stick && this.stickVia === 'mem') this.stats.stepMem = (this.stats.stepMem ?? 0) + 1; // 기억한 스틱으로 읽힘 (재기)
     if (U.step && UA.enhance > 0) this.r.stepAsked = this.askStep(this.r.step ?? U.step);
     // 진 · 츠바메가에시 (10/21 — 무기 비검 kin): 되돌림 칼을 고노센의 kin 몫 빠르기로 끌고 간다 (길 = 이 기술의 되돌림 몫 — 이어 긋기 at 부터)
     const SB = f.weapon?.secretBlade;
@@ -1127,6 +1191,7 @@ export class PlayerUniqueAssist {
   drive(dt) {
     this.t += dt;
     const f = this.f;
+    if (UA.stepIn && UA.stepPre > 0) this.stickTick(); // 걸음 공격 스틱 기억 (11/05 — 앞 창 stepPre · 기본 끔)
     if (UA.cavCancel && this.cavFire) this.cavCancelTick();
     if (this.holdE) this.holdTick(dt); // 풍차 베기 (B4 — 길게 눌러 감다 떼면 내려침 · 10/29)
     if ((UA.dupAny || UA.dupGrace > 0) && UA.dupTap && this.list.some((x) => x.tapKey === 'dup')) {
