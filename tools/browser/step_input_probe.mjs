@@ -1,4 +1,4 @@
-// 걸음 공격 입력 읽힘 — 본판 빌드(dist/)를 브라우저에서 두 엄지(CDP 터치 — 손가락 둘: 왼 엄지 = 이동 스틱 원 #moveStick · 오른 엄지 = 칼 쪽 화면)로 (11/05 — 기록 docs/strike/step_input_2026-11-05.md)
+// 걸음 공격 입력 읽힘 — 본판 빌드(dist/)를 브라우저에서 두 엄지(오른 엄지 = 칼 쪽 화면에 CDP 터치 · 왼 엄지 = 이동 스틱 원 #moveStick 에 터치 포인터 사건)로 (11/05 — 기록 docs/strike/step_input_2026-11-05.md)
 //  판: 독일 롱소드(?skillNodes=all — 비껴 딛는 가로베기) · 상대 롱소드(AI 멈춤 · 가슴 사이 3.2 m — 칼이 안 닿음) · 844 × 390 터치 기기.
 //  시계: 이 컨테이너의 소프트웨어 GL 은 2 ~ 3 fps 라(프레임 dt 상한 0.1 s — 긋기 한 획이 한두 프레임에 몰림) 폰과 같은 60 fps 로 보려고 Playwright 가짜 시계로 프레임을 하나씩 돌린다
 //   (page.clock — rAF · performance.now · Date 가 1/60 s 씩). 사건은 프레임 사이에 보낸다(실제 폰도 rAF 사이에 쌓인 사건을 다음 프레임이 읽음). 게임 코드 · 입력 길은 그대로.
@@ -54,10 +54,14 @@ if (!stickBox) throw Error('스틱 원 없음');
 const SC = { x: stickBox.x + stickBox.width / 2, y: stickBox.y + stickBox.height / 2 };
 const PX = 2.6 / H; // 패드 m / px (INPUT.touchSensitivity ÷ 화면 높이)
 const VG = 1.35; // 폰 세로 배율 (mobile_intent.js)
-let R = null; // 오른 엄지 { x, y } (없으면 뗌)
-let L = null; // 왼 엄지
-const pts = () => [...(L ? [{ x: L.x, y: L.y, id: 2 }] : []), ...(R ? [{ x: R.x, y: R.y, id: 1 }] : [])];
-const send = (type) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts() });
+let R = null; // 오른 엄지 { x, y } (없으면 뗌) — CDP 터치
+let L = null; // 왼 엄지 { x, y } — 스틱 원(#moveStick)에 포인터 사건(pointerType 'touch')을 바로 보냄: CDP 는 두 손가락 가운데 하나만 떼지 못함(cavazione_probe.mjs 와 같은 까닭) · 스틱 쪽 받는 길(attachStick)은 같음
+const send = (type) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' || !R ? [] : [{ x: R.x, y: R.y, id: 1 }] });
+const stickEv = (type) =>
+  page.evaluate(([type, x, y]) => {
+    const pad = document.getElementById('moveStick');
+    pad.dispatchEvent(new PointerEvent(type, { pointerId: 77, pointerType: 'touch', isPrimary: false, clientX: x, clientY: y, bubbles: true, cancelable: true }));
+  }, [type, L?.x ?? 0, L?.y ?? 0]);
 const hand = () => page.evaluate(() => [game.player.handOffset.x, game.player.handOffset.y]);
 /** 오른 엄지로 손을 패드 자리 p 로 천천히 (0.9 패드 m/s — 휘두르기 문턱 1.5 밑 · 프레임마다) */
 async function moveHandTo(p) {
@@ -130,16 +134,16 @@ for (const tr of trialsOf()) {
   for (let f = fs0; f <= fs1; f++) {
     for (const e of at.get(f) ?? []) {
       if (e.k === 'R') { R = e.p; await send('touchMove'); }
-      else if (e.k === 'Ldown') { L = e.p; await send('touchStart'); }
-      else if (e.k === 'L') { L = e.p; await send('touchMove'); }
-      else if (e.k === 'Lup') { L = null; await send('touchEnd'); }
+      else if (e.k === 'Ldown') { L = e.p; await stickEv('pointerdown'); }
+      else if (e.k === 'L') { L = e.p; await stickEv('pointermove'); }
+      else if (e.k === 'Lup') { await stickEv('pointerup'); L = null; }
     }
     await frames(1);
   }
   await frames(6);
   R = null;
   await send('touchEnd');
-  if (L) { L = null; await send('touchEnd'); }
+  if (L) { await stickEv('pointerup'); L = null; }
   await frames(40);
   const after = await page.evaluate((n) => ({ fired: { ...game.playerUnique.stats.fired }, strokes: window.stLog.slice(n), dist: +game.player.foeDistance().toFixed(2), state: game.player.state }), before.n);
   const fired = Object.entries(after.fired).flatMap(([k, v]) => Array.from({ length: v - (before.fired[k] ?? 0) }, () => k));
@@ -152,10 +156,10 @@ for (const tr of trialsOf()) {
     if (Math.abs(d - 3.2) < 0.25) break;
     const first = !L;
     L = { x: SC.x, y: SC.y + (d > 3.2 ? -30 : 30) };
-    await send(first ? 'touchStart' : 'touchMove');
+    await stickEv(first ? 'pointerdown' : 'pointermove');
     await frames(1);
   }
-  if (L) { L = null; await send('touchEnd'); await frames(30); }
+  if (L) { await stickEv('pointerup'); L = null; await frames(30); }
 }
 const by = {};
 for (const r of results) {

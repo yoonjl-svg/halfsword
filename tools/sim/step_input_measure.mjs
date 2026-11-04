@@ -214,6 +214,7 @@ export function runTrials(school, trials, { seed = 1, gap = 3.2, rest = 0.7 } = 
       }
       const T = TECH_BY_NAME[tr.base];
       const fired0 = { ...uq.stats.fired };
+      const steps0 = uq.stats.steps; // 걸음 공격 걸음이 받아들여진 수 (askStep — 몸이 다른 걸음 중이면 거절될 수 있음)
       strokes = [];
       hand('pointerdown');
       const { q, swipeAt, end } = strokeQ(T, tr.sjit ?? 0.03, tr.pause ?? 4);
@@ -264,7 +265,7 @@ export function runTrials(school, trials, { seed = 1, gap = 3.2, rest = 0.7 } = 
       if (back) run(0.5);
       const fired = Object.entries(uq.stats.fired).flatMap(([k, v]) => Array.from({ length: v - (fired0[k] ?? 0) }, () => k));
       for (const s of strokes) s.unique = s.rec.unique, delete s.rec;
-      out.push({ ...tr, read: fired.includes(S.name), fired, strokes, tSwipe, exhausted: exh });
+      out.push({ ...tr, read: fired.includes(S.name), stepped: uq.stats.steps > steps0, fired, strokes, tSwipe, exhausted: exh });
     }
   } finally {
     G.world.free();
@@ -343,7 +344,7 @@ const pct = (n, d) => (d ? `${Math.round((100 * n) / d)}%` : '–');
 export function summarize(rows) {
   const ok = rows.filter((r) => !r.skipped && !r.exhausted);
   const base = ok.filter((r) => r.strokes.some((s) => s.tech === r.base));
-  return { n: ok.length, read: ok.filter((r) => r.read).length, base: base.length, readOfBase: base.filter((r) => r.read).length, skipped: rows.length - ok.length };
+  return { n: ok.length, read: ok.filter((r) => r.read).length, base: base.length, readOfBase: base.filter((r) => r.read).length, skipped: rows.length - ok.length, stepped: ok.filter((r) => r.read && r.stepped).length };
 }
 export function gridTable(rows) {
   const out = [];
@@ -380,7 +381,7 @@ if (isMain(import.meta.url)) {
     all[school] = rows;
     const s = summarize(rows);
     console.log(`## ${school} · ${STEP_OF[school].name} (${STEP_OF[school].stick} + ${STEP_OF[school].base}) — ${mode}`);
-    console.log(`읽힘 ${s.read}/${s.n} (${pct(s.read, s.n)}) · 바탕 긋기로 읽힘 ${s.base}/${s.n} · 그 가운데 걸음 공격 ${s.readOfBase}/${s.base} (${pct(s.readOfBase, s.base)})${s.skipped ? ` · 건너뜀 ${s.skipped}` : ''}`);
+    console.log(`읽힘 ${s.read}/${s.n} (${pct(s.read, s.n)}) · 바탕 긋기로 읽힘 ${s.base}/${s.n} · 그 가운데 걸음 공격 ${s.readOfBase}/${s.base} (${pct(s.readOfBase, s.base)}) · 읽힌 것 가운데 걸음 받아들여짐 ${s.stepped}/${s.read}${s.skipped ? ` · 건너뜀 ${s.skipped}` : ''}`);
     if (mode === 'grid') console.log(gridTable(rows));
     if (mode === 'fp') console.log(fpTable(rows));
     console.log('');

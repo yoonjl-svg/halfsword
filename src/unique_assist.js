@@ -383,7 +383,7 @@ export class PlayerUniqueAssist {
     this.touch = null; // 칼끼리 한 닿음 (칼끝 돌려 빼기 탭 조건 — touchTick · 10/31): { t0 처음 · t1 마지막 닿은 때 · cut 내 긋기 동안 닿음 · n 상대 칼 쪽(월드 — feel.normal 의 반대) · cavSpent }
     this.inqSeen = -1; // 비껴서며 찌르기를 낸 위협 번호 (한 공격에 한 번)
     // 걸음 공격 스틱 읽기 (11/05 — UNIQUE_ASSIST.stepIn · stickOk · stickTick · stepLateTick): 쪽마다 마지막으로 스틱이 그 쪽이던 때 { t, v [x, y] } ·
-    //  stickUsed = 마지막으로 받아들인 스틱 [x, y] (걸음 · 몸 빼기 좌우) · stepLate = 긋기 시작 때 스틱이 안 맞은 걸음 명령 긋기 { cur, until, list }
+    //  stickUsed = 마지막으로 받아들인 스틱 [x, y] (걸음 · 몸 빼기 좌우) · stepLate = 긋기 시작 때 스틱이 안 맞은 걸음 명령 긋기 { cur, t0 시작 때, list 기다리는 걸음 명령 }
     this.stickMem = { side: null, fwd: null };
     this.stickUsed = null;
     this.stickVia = null;
