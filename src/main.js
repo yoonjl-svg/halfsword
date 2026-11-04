@@ -65,6 +65,7 @@ import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
 import { IAI_READY_STANCE, iaiReadyShown } from './secret_instant.js'; // 고노센 발도 대기 자세 이름 (① 자세 칸 — 10/31 13:xx)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
+import { pickupReady } from './pickup.js'; // 떨어진 칼 줍기 (11/05 — 막기 단추 글 '줍기')
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { TRADITIONS, setChineseGait, setItalianBackCap, setItalianRhythm, setItalianStride, setItalianWalk, setJapaneseGait, traditionOf } from './schools.js';
 import { createMatch, stepMatch, spawnSpots, orderControllers, pairFoe, matchResult } from './match.js'; // 동시 대전 판 (10/29 3단계 — 2:2 · 2:1 · 1:2 · 지켜보기)
@@ -431,6 +432,9 @@ if (params.has('ibWindChain')) CONFIG.IB_FLOW.windmillChain = ['simple', 'inside
 if (params.has('ibWindPower')) CONFIG.IB_FLOW.windmillPower = +params.get('ibWindPower') ? 1 : 0; // 풍차 베기 내려침 자체 흐름 위력 (사장님 10/31 14:xx — 기본 0 = 없음 · 사슬 첫 칼 자리는 그대로 · 1 = 10/29 판 × 1.2)
 if (params.has('dupEdge')) CONFIG.UNIQUE_ASSIST.dupEdge = +params.get('dupEdge') < 0 ? -1 : 1; // 겹치기 날 (1 긴 날 · −1 짧은 날)
 if (params.has('koteDrop')) CONFIG.UNIQUE_ASSIST.koteDrop.p = +params.get('koteDrop') || 0; // 손목 치기 칼 떨구기 확률(10/24 J8 — 판 값 0.5 · `?koteDrop=0` 끔)
+if (params.has('koteEase')) CONFIG.UNIQUE_ASSIST.koteDrop.ease = +params.get('koteEase') ? 1 : 0; // 손목 치기 떨굼 완화(11/05 — 판 값 1 · `?koteEase=0` = 10/24 판 · 기록 docs/strike/kote_pickup_2026-11-05.md)
+if (['block', 'auto', '0'].includes(params.get('pickup'))) CONFIG.PICKUP.mode = params.get('pickup') === '0' ? 0 : params.get('pickup'); // 떨어진 칼 줍기(11/05 — 판 값 끔 · `?pickup=block` 칼 곁에서 막기 단추 · `?pickup=auto` 곁에 가면 저절로 · src/pickup.js)
+if (params.has('pickupAi')) CONFIG.PICKUP.ai = +params.get('pickupAi') ? 1 : 0; // 칼을 놓친 AI 도 걸어가 주움(11/05 — 판 값 끔 · `?pickupAi=1`)
 if (['cut', 'arm', 'all'].includes(params.get('koteJudge'))) CONFIG.UNIQUE_ASSIST.koteDrop.judge = params.get('koteJudge'); // 칼 떨구기 닿음 판정(10/24 12:3x — 판 값 'all' · 'cut' = 11:5x 판 · 'arm' = 아래팔 닿음만)
 if (params.has('uniqueAssist')) CONFIG.UNIQUE_ASSIST.on = +params.get('uniqueAssist') ? 1 : 0; // 플레이어 고유 동작 강화(10/14 — 10/13 이어 주기): 기본 1, `?uniqueAssist=0` = 끔 (기술 이름 알림도 없음)
 // 테스트 경로도 기본 켬 (사장님 10/14 03:1x '테스트에서 켜' — 10/14 02:0x 부터 '궤적은 내 것' 강화 판으로 다시 만드는 동안 꺼 두었던 것). 끄려면 `?uniqueAssist=0`
@@ -3474,6 +3478,7 @@ function playerInputFrame(dt, now) {
   // 막기 버튼 (10/11): 누르는 동안 손은 막기가 쥔다 (느린 끌기는 버림). 누른 채 휘두르거나(swipe — 비기 입력과 같은 문턱) 톡 치면 그 공격이 끝날 때까지 놓는다 —
   //  공격이 끝남 = 검술 층의 휘두르기·찌르기가 꺼짐 (지난 스텝 값). 막기 연환 창이 열려 있었으면 위에서 이미 비기로 나갔다
   let guardHold = false;
+  player.pickupPress = (parryHold.btn != null || parryHold.key) && !roundOver; // 떨어진 칼 줍기 'block' (11/05 — src/pickup.js): 칼을 놓친 동안 막기 단추 · F 가 줍기 (막기는 칼이 없으면 아무 일도 안 함)
   if (playerGuard) {
     const G = playerGuard;
     G.held = (parryHold.btn != null || parryHold.key) && !roundOver;
@@ -3514,9 +3519,22 @@ function playerInputFrame(dt, now) {
   player.stickX = feet ? m.x : 0; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
   player.stickY = feet ? m.y : 0;
   updateGuardName();
+  updateParryLabel();
   // 마우스로 조작할 땐 손가락 흔적 대신 오른쪽 아래 원판에 손 위치의 흔적을 그린다
   const mouseMode = !input.isTouchDevice;
   if (mouseMode && player.alive) trail.addPad(player.skill.aim.x, player.skill.aim.y, now / 1000);
+}
+
+// 막기 단추 글 (11/05 떨어진 칼 줍기 'block' — src/pickup.js): 칼을 놓쳤고 제 칼 곁(주울 수 있음)이거나 줍는 중이면 '줍기', 아니면 '막기'. 바뀔 때만 DOM 을 고친다
+let parryLabel = '막기';
+function updateParryLabel() {
+  const want = CONFIG.PICKUP.mode === 'block' && player && !player.armed && (player.pickup || pickupReady(player)) ? '줍기' : '막기';
+  if (want === parryLabel) return;
+  parryLabel = want;
+  const b = $('btnParry');
+  b.textContent = want;
+  b.setAttribute('aria-label', want === '줍기' ? '줍기 (떨어진 칼 곁에서 누르기)' : '막기 (누르고 있기)');
+  b.classList.toggle('pick', want === '줍기');
 }
 
 function frame(now) {

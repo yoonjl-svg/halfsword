@@ -339,6 +339,7 @@
       #btnParry { position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); width: 84px; height: 84px; border-radius: 50%; border: 1px solid var(--line); background: rgba(24, 18, 14, 0.45); color: var(--c-text); font-family: inherit; font-size: var(--fs-m); font-weight: var(--fw-head); letter-spacing: var(--ls-label); text-shadow: var(--hud-outline); display: none; touch-action: none; padding: 0; }
       #btnParry.show { display: block; }
       #btnParry.on { background: rgba(243, 230, 200, 0.32); border-color: var(--c-text); }
+      #btnParry.pick { border-color: var(--c-text); box-shadow: 0 0 0 2px rgba(243, 230, 200, 0.35); } /* 떨어진 칼 곁 — 단추가 '줍기' (11/05 src/pickup.js) */
       #moveKnob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); pointer-events: none; }
 
       /* 메뉴 */

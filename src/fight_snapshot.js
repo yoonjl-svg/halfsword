@@ -1,11 +1,11 @@
 // 싸움 몸 상태 사본 — 방랑 '이어하면 그 상황 그대로'의 (b) 몸 상태 이어받기 (사장님 10/30 01:1x · 감독 안 — wander_rules.js WANDER.resumeState 스위치)
 //  셈 칸만 읽고 쓴다 (그림 · 물리 · 난수 없음 — 자리 · 속도 · 휘두르던 칼 · AI 기억은 옮기지 않는다 = 새 판의 시작 자리에서 그 몸으로 다시 시작):
-//   피 · 출혈 · 의식 · 아픔 · 팔다리 기능 · 상처 목록 · 무기 부러짐 · 기력 · 쓴 비기 수 · 남은 부활 수
+//   피 · 출혈 · 의식 · 아픔 · 팔다리 기능 · 상처 목록 · 무기 부러짐 · 기력 · 쓴 비기 수 · 남은 부활 수 · 칼 놓침(disarmed — 11/05 줍기가 켜진 몸만 다시 놓침)
 //  동시 대전 가지(wk/team-fight)의 fighter.snapshot · applySnapshot 과 같은 꼴(v 1 — 몸 칸만) + 기력 · 비기 · 부활. fighter.js 는 고치지 않는다(바깥에서 같은 칸을 씀).
 //  상처 자국(그림)은 다시 그리지 않는다 — 상처 셈(팔다리 기능 · 출혈)만.
 //  생사전 (사장님 10/30 08:2x "몸 상태 이어받기 방랑 · 생사전 둘 다 켜."): 넷의 몸을 같은 꼴로 · 들고 온 상처 표시(carried — 경기 전 부상: 판 끝 결과에서 다시 세지 않음) · 죽은 몸은 죽은 채(dead)
 import * as THREE from 'three';
-import { VITALS } from './config.js';
+import { VITALS, PICKUP } from './config.js';
 
 /** 몸 → 사본 (JSON 으로 저장 가능) */
 export function snapshotFighter(f) {
@@ -24,6 +24,7 @@ export function snapshotFighter(f) {
     })),
     weaponBroken: !!f.weaponBroken,
     ...(f.alive === false ? { dead: true, cause: f.causeOfDeath ?? null } : {}),
+    ...(f.armed === false && f.alive !== false ? { disarmed: true } : {}), // 칼을 놓친 채 (11/05 떨어진 칼 줍기 — 줍기가 켜진 몸만 이어받을 때 다시 놓침 · 아래)
     stamina: Number.isFinite(f.stamina?.value) ? f.stamina.value : null,
     secretUsed: f.secretUsed ?? 0,
     reviveLeft: f.revive?.left ?? null,
@@ -59,6 +60,9 @@ export function applyFighterSnapshot(f, s) {
   if (Number.isSafeInteger(s.secretUsed) && s.secretUsed > 0) f.secretUsed = s.secretUsed;
   if (Number.isSafeInteger(s.reviveLeft) && f.revive) f.revive.left = Math.min(f.revive.left, Math.max(0, s.reviveLeft));
   if ((f.limbs?.armS ?? 1) < VITALS.dropSwordArm && f.armed && typeof f.dropSword === 'function') f.dropSword();
+  // 칼을 놓친 채 그만둔 몸 (11/05 — config PICKUP · src/pickup.js): 줍기가 켜진 몸이면 새 판도 칼을 놓친 채 시작(칼은 발 앞에 떨어짐 — 주워야 함).
+  //  줍기가 꺼진 몸은 오늘처럼 칼을 쥔 채 (못 줍는 칼을 판 내내 놓친 채 두지 않게). 사람 = PICKUP.mode · AI(또는 사람 아닌 몸) = PICKUP.ai
+  if (s.disarmed && f.armed && (f.aiControlled || f.human === false ? PICKUP.ai : PICKUP.mode) && typeof f.dropSword === 'function') f.dropSword();
   if (s.dead && f.alive !== false && typeof f.setState === 'function') { // 죽은 몸은 죽은 채 (부활 · 흙 몸 규칙을 다시 타지 않음 — 이미 셈이 끝난 죽음)
     f.causeOfDeath = s.cause ?? f.causeOfDeath ?? null;
     f.setState('dead');

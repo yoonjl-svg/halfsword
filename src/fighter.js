@@ -31,6 +31,7 @@ import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩�
 // 방어구 겉모습(찌그러짐·금): 전투 쪽이 투구·판금 내구도가 바뀔 때마다 부른다
 import { decorateOutfit, polishOutfit, setHelmetWear, setPlateWear } from './outfits.js';
 import { reviveOf, tryRevive, reviveTick } from './revive.js';
+import { pickupOn, pickupTick, pickupHand } from './pickup.js'; // 떨어진 칼 줍기 (11/05 — config PICKUP · 끔이면 부르지 않는다)
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 이베리아 이어 긋기 흐름 B5)
 import { SchoolPassive, schoolPassiveOn } from './school_passive.js'; // 유파 패시브 넷 (10/21 — 이탈리아 · 일본 · 독일 · 동방, config SCHOOL_PASSIVE)
 import { fighterWetlandMoveScale } from './wetland_ground.js';
@@ -921,7 +922,8 @@ export class Fighter {
     if (this.state === 'stand' || this.state === 'getup' || this.state === 'kneel') {
       if (this.faceTarget) {
         const p = this.bodies.pelvis.translation();
-        const tg = this.aiControlled && AI_REACT.on ? this.reactTarget(dt) : this.faceTarget; // AI 반응 시간(AI_REACT): face s 전의 상대 자리를 본다
+        const tg0 = this.aiControlled && AI_REACT.on ? this.reactTarget(dt) : this.faceTarget; // AI 반응 시간(AI_REACT): face s 전의 상대 자리를 본다
+        const tg = this.pickup?.face ?? tg0; // 떨어진 칼을 줍는 동안(웅크려 손을 뻗는 동안만)은 칼 쪽으로 (src/pickup.js)
         const want = Math.atan2(-(tg.z - p.z), tg.x - p.x);
         let diff = want - this.heading;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
@@ -1449,6 +1451,7 @@ export class Fighter {
     this.lastDt = dt;
     this.stateTime += dt;
     this.updateState(dt);
+    if (this.pickup || (!this.armed && pickupOn(this))) pickupTick(this, dt); // 떨어진 칼 줍기 (11/05 — src/pickup.js · PICKUP 끔이면 안 부름)
 
     // 상태에 따른 근육 힘 목표치
     let targetMuscle = 1;
@@ -3437,6 +3440,7 @@ export class Fighter {
       handLocal.lerp(_v6.set(0.23, -0.26 + breath, this.side * 0.17), this.stamina.pose);
     }
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
+    if (this.pickup) pickupHand(this, target); // 떨어진 칼 줍기: 칼 손을 칼자루로 (src/pickup.js)
     if (mus >= 0.12 && this.state !== 'dead') this.armIK(target);
     else this.armFull = false;
     this.rollTgtOk = false; // 굴림 목표는 armIK 가 지난 스텝 것을 읽은 뒤 아래에서 새로 남김 (이 스텝 거기까지 못 가면 다음 스텝 돌림은 굴림 어림 없이)

@@ -15,6 +15,9 @@ const D = await import('../../src/skill_tree_data.js');
 const S = await import('../../src/skill_tree_store.js');
 const { readProgress, recordAcquisition, PROGRESS_KEY } = await import('../../src/lobby_progress.js');
 const { SECRET, STAMINA, GAIT, LETTER, UNIQUE_ASSIST, IB_FLOW } = await import('../../src/config.js');
+// 손목 치기 떨구기 10/24 판 시험들(사람만 굴림 · 칼 없는 AI 는 물러남)은 그때 규칙으로 — 11/05 기본 AI 손목 치기 떨굼(koteDrop.ai 1) · 줍기(PICKUP)는 tools/sim/kote_pickup.test.mjs 가 본다
+UNIQUE_ASSIST.koteDrop.ai = 0;
+{ const { PICKUP } = await import('../../src/config.js'); PICKUP.mode = 0; PICKUP.ai = 0; }
 const { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_DRAW, RETIRED_WEAPONS } = await import('../../src/weapons.js');
 const { traditionOf, TRADITIONS } = await import('../../src/schools.js');
 const { PLAYER_UNIQUE, PlayerUniqueAssist, strokeHitK, enhancedMoves } = await import('../../src/unique_assist.js');
@@ -733,7 +736,7 @@ test('실제 몸 — 칼 떨구기 판정(10/24 12:3x 판정 완화): cut = 칼�
   assert.equal(run((g) => clash(g)).at(-1).kind, 'sword');
   K.judge = 'all'; assert.equal(run((g) => clash(g, { at: 0.8 })).length, 0, '칼끝 쪽 절반은 아님');
   K.judge = 'all'; assert.equal(run((g) => clash(g, { at: -0.05 })).length, 1, '코등이 · 자루 쪽도 손 쪽');
-  K.judge = 'all'; assert.equal(run((g) => clash(g, { vn: K.swordVn })).length, 0, '맞부딪는 빠르기가 문턱 이하');
+  K.judge = 'all'; assert.equal(run((g) => clash(g, { vn: K.ease ? K.easeVn : K.swordVn })).length, 0, '맞부딪는 빠르기가 문턱 이하'); // 11/05 완화(koteDrop.ease)면 문턱 easeVn — kote_pickup.test.mjs
   K.judge = 'all'; assert.equal(run((g) => clash(g, { v: 0.4 })).length, 0, '내 칼이 들어간 맞부딪힘이 아님');
   K.judge = 'arm'; assert.equal(run((g) => { clash(g); assert.equal(g.combat.koteProbe.at(-1).kind, 'sword'); }).length, 0, 'arm 판은 칼 닿음을 굴리지 않음');
   K.judge = 'all'; assert.equal(run((g) => { g.player.aiControlled = true; clash(g); }).length, 0, 'AI 가 모는 몸은 아님');

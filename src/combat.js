@@ -67,6 +67,15 @@ const _k1 = new THREE.Vector3(); // 손목 치기 칼 떨구기 (Combat.koteSwor
 const _k2 = new THREE.Vector3();
 
 /** 강체 상태(p, q, com, v, w)에서 한 점의 속도 */
+/** 손목 치기 긋기가 막 끝났나 (koteDrop.ease — 11/05): 사람 고유 공격 기록(unique_assist.js skill.uniq)의 바로 앞 긋기가 손목 치기이고 끝난 지 T 실제 초 안 · 새 긋기 · 탭 · 끌고 가는 칼이 없음.
+ *  긋기 기록 시계(u.t)는 손가락 프레임 실제 초 — strokeTechOf 의 0.2 s 창과 같은 시계 */
+function koteAfter(f, T) {
+  const u = f.skill?.uniq;
+  if (!u || u.cur || u.r || f.skill.tap || f.artTech) return false;
+  const L = u.last;
+  return L?.unique === 'kote' && L.tEnd != null && u.t - L.tEnd <= T;
+}
+
 function velAt(st, point, out) {
   return out.copy(point).sub(st.com).cross(st.w).negate().add(st.v); // v + w × r
 }
@@ -959,7 +968,10 @@ export class Combat {
       return r;
     }
     const r = this.analyze(pr, point, S, P);
-    if (!r || r.energy < STRIKE.minEnergy) return null;
+    if (!r || r.energy < STRIKE.minEnergy) {
+      if (r && UA.koteDrop?.ease && r.energy >= UA.koteDrop.easeE) this.koteCheck(att, vic, pr.v.part, r); // 손목 치기 떨굼 완화(11/05 — koteDrop.ease): 판정 문턱(minEnergy) 밑이라도 easeE 넘게 아래팔을 친 손목 치기는 굴림 (상처 · 판정은 그대로 없음)
+      return null;
+    }
     if (att.skill?.tap?.it && vic === att.foe) att.skill.tap.it.landed = true; // 이탈리아 찌르기 ④ (config THRUST.itLunge — 10/25): 칼이 상대 몸에 판정을 냄 = 찌르기가 닿음 — 런지로 뻗은 채 머물기를 거둠 (skill.js updateThrust)
     att.stamina.contactAttack(r.type === 'stab' ? 'thrust' : 'cut');
     vic.hitCooldowns.set(key, STRIKE.hitCooldown);
@@ -1043,7 +1055,7 @@ export class Combat {
    */
   koteSword(A, B, SA, SB, point, nrm, vn) {
     const K = UA.koteDrop;
-    if (!K || !(vn > K.swordVn)) return;
+    if (!K || !(vn > (K.ease ? K.easeVn : K.swordVn))) return; // 완화(ease)면 맞부딪는 빠르기 문턱 easeVn (11/05)
     for (const [att, vic, S, sg] of [[A.fighter, B.fighter, SA, 1], [B.fighter, A.fighter, SB, -1]]) {
       if (!this.koteOn(att, vic) || !vic.sword || !vic.weaponCfg) continue;
       if (sg * velAt(S, point, _k1).dot(nrm) <= 0.5) continue; // 내 칼이 들어간 맞부딪힘만 (받는 쪽의 멈춘 칼은 아님)
@@ -1056,11 +1068,12 @@ export class Combat {
     }
   }
 
-  /** 칼 떨구기를 굴릴 수 있는 둘인가: 친 쪽 = 손목 치기 중인 사람(J8) · 맞은 쪽 = 살아 칼을 쥐고 부활 중이 아님 */
+  /** 칼 떨구기를 굴릴 수 있는 둘인가: 친 쪽 = 손목 치기 중인 사람(J8) · 맞은 쪽 = 살아 칼을 쥐고 부활 중이 아님.
+   *  완화(koteDrop.ease — 11/05)면 손목 치기 긋기가 끝난 뒤 easeAfter 실제 초 안의 닿음도 (다음 긋기 · 탭이 시작되기 전 — koteAfter) */
   koteOn(att, vic) {
     const K = UA.koteDrop;
     if (!vic?.alive || !vic.armed || vic.revival) return false;
-    return !(att.aiControlled && !K.ai) && strokeTechOf(att) === 'kote' && !perkOff(att, 'kote');
+    return !(att.aiControlled && !K.ai) && (strokeTechOf(att) === 'kote' || (K.ease > 0 && koteAfter(att, K.easeAfter))) && !perkOff(att, 'kote');
   }
 
   /**

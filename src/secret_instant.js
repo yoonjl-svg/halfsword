@@ -1014,6 +1014,9 @@ function stanceTick(f, dt) {
     key = 'lunge';
     want = 1;
     f.lungeT -= dt;
+  } else if (f.pickW > 0) {
+    key = 'pickup'; // 떨어진 칼 줍기 웅크림 (11/05 — src/pickup.js · 비기는 아님, 같은 틀만)
+    want = f.pickW;
   }
   if (!f.alive || f.state !== 'stand') {
     key = null;

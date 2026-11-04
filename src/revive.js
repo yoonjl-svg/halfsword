@@ -162,7 +162,8 @@ const _qh = new THREE.Quaternion();
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const UP = new THREE.Vector3(0, 1, 0);
 
-function startSwordReturn(f) {
+/** 놓친 칼을 손으로 끌어올 준비: 충돌을 끄고(그룹 0) 중력을 끈다 — 줍기(pickup.js)도 같은 길 */
+export function startSwordReturn(f) {
   const sw = f.sword;
   for (const col of f.swordColliders) col.setCollisionGroups(0);
   sw.setGravityScale(0, true);
@@ -180,25 +181,26 @@ function wristOf(f, out) {
 }
 
 /** 쥐었을 때의 칼 자세: 생성자의 준비 자세 (몸이 바라보는 쪽으로 칼끝이 앞을 향함) */
-function holdRot(f, out) {
+export function holdRot(f, out) {
   return out.setFromAxisAngle(UP, f.heading).multiply(_qc.setFromAxisAngle(Z_AXIS, -1.45));
 }
 
-function flySword(f, V, dt) {
+/** 날아오는 칼 한 스텝. S.fly · S.arc · S.hold 가 있으면 그 시간 · 높이 · 쥐는 자세(줍기 — pickup.js), 없으면 부활 값(f.revive) · 지금 몸 방향 */
+export function flySword(f, V, dt) {
   const S = V.sword;
   S.t += dt;
-  const u = Math.min(1, S.t / f.revive.swordFly);
+  const u = Math.min(1, S.t / (S.fly ?? f.revive.swordFly));
   if (u >= 1) return attachSword(f, V);
   const e = u * u * (3 - 2 * u);
   // 이번 스텝이 끝날 때 있어야 할 자리 → 속도
   const target = wristOf(f, _p);
   target.sub(S.p0).multiplyScalar(e).add(S.p0);
-  target.y += f.revive.swordArc * Math.sin(Math.PI * u);
+  target.y += (S.arc ?? f.revive.swordArc) * Math.sin(Math.PI * u);
   const sw = f.sword;
   const p = sw.translation();
   sw.setLinvel({ x: (target.x - p.x) / dt, y: (target.y - p.y) / dt, z: (target.z - p.z) / dt }, true);
   // 자세: 처음 자세 → 쥐는 자세 (구면 보간) 로 이번 스텝만큼 돌린다
-  _q.copy(S.q0).slerp(holdRot(f, _qh), e);
+  _q.copy(S.q0).slerp(S.hold ?? holdRot(f, _qh), e); // S.hold: 쥘 때 정해 둔 쥐는 자세(줍기 — 끝이 움직이면 보간이 반대쪽으로 뒤집힐 수 있다) · 없으면 지금 몸 방향 기준(부활)
   const r = sw.rotation();
   _qc.set(r.x, r.y, r.z, r.w).invert();
   _q.multiply(_qc); // 지금 → 목표 회전
@@ -209,15 +211,16 @@ function flySword(f, V, dt) {
   sw.setAngvel(ang > 1e-5 ? { x: _q.x * k, y: _q.y * k, z: _q.z * k } : { x: 0, y: 0, z: 0 }, true);
 }
 
-/** 칼을 손에 쥔다: 손목 자리·쥐는 자세에 맞춰 놓고 생성자와 같은 손목 관절을 다시 만든다 */
-function attachSword(f, V) {
+/** 칼을 손에 쥔다: 손목 자리·쥐는 자세에 맞춰 놓고 생성자와 같은 손목 관절을 다시 만든다 (V.groups — 부활 유령 그룹 · 줍기는 null) */
+export function attachSword(f, V) {
+  const S = V.sword;
   V.sword = null;
   f.aimLagMap = 0;
   f.aimLagBehind = 0;
   const sw = f.sword;
   const w = wristOf(f, _p);
   sw.setTranslation({ x: w.x, y: w.y, z: w.z }, true);
-  const q = holdRot(f, _qh);
+  const q = S?.hold ?? holdRot(f, _qh); // 줍기는 올리기 끝과 같은 자세 (pickup.js — 쥘 때 정해 둔 쥐는 자세)
   sw.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }, true);
   const v = f.bodies.farmS.linvel();
   sw.setLinvel({ x: v.x, y: v.y, z: v.z }, true);
