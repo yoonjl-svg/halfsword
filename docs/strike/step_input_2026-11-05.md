@@ -193,6 +193,9 @@
 - 관문(가지 끝 · 바탕 2e7660b4 위): fights12 `ee193a89` · live_battery `e8127a92` · finish_thrust 1 --stand `9630b5d3` · corr_s0 `--limits=off,on` 12/12 IDENTICAL · weapon_smoke 34/34 ·
   school_ai_fights `130bd875` — **기준 그대로**(사람 입력만 바뀜 — AI 끼리 판은 안 탐).
 - 시험 전체 `node --test tools/sim/*.test.mjs` **707 / 707 통과 · 실패 0** · `npx vite build` 0 · 이름 규칙 위반 0.
+- 끝에 dev `fc3b4af9`(찌르기 막기 재기 · 이탈리아 보통 찌르기 몸 박차기 뺌)를 이 가지로 받아 합침 — 겹친 곳은 확인표 끝 줄과 `school_balance.mjs`(꽂개 probe + attrib) 둘뿐.
+  합친 뒤: 관문 다섯 그대로(위와 같은 해시 · 12/12 · 34/34) · 사람 손 섞음 재기(독일 · 동방) 시도마다 바이트 같음 · 시험 전체 **712 / 712** · 빌드 0.
+  `rapier_defence.mjs` 는 `school_balance.mjs fightOne` 을 쓰므로 기록 이름 고침(§1)이 그 기술별 표를 조금 바꿀 수 있다 — `--attrib=old` 를 넘기면 전 셈.
 
 ## 9. 도구 · 다시 재기
 
