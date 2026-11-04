@@ -162,7 +162,8 @@ const _qh = new THREE.Quaternion();
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const UP = new THREE.Vector3(0, 1, 0);
 
-function startSwordReturn(f) {
+/** 놓친 칼을 손으로 끌어올 준비: 충돌을 끄고(그룹 0) 중력을 끈다 — 줍기(pickup.js)도 같은 길 */
+export function startSwordReturn(f) {
   const sw = f.sword;
   for (const col of f.swordColliders) col.setCollisionGroups(0);
   sw.setGravityScale(0, true);
@@ -184,16 +185,17 @@ function holdRot(f, out) {
   return out.setFromAxisAngle(UP, f.heading).multiply(_qc.setFromAxisAngle(Z_AXIS, -1.45));
 }
 
-function flySword(f, V, dt) {
+/** 날아오는 칼 한 스텝. S.fly · S.arc 가 있으면 그 시간 · 높이(줍기 — pickup.js), 없으면 부활 값(f.revive) */
+export function flySword(f, V, dt) {
   const S = V.sword;
   S.t += dt;
-  const u = Math.min(1, S.t / f.revive.swordFly);
+  const u = Math.min(1, S.t / (S.fly ?? f.revive.swordFly));
   if (u >= 1) return attachSword(f, V);
   const e = u * u * (3 - 2 * u);
   // 이번 스텝이 끝날 때 있어야 할 자리 → 속도
   const target = wristOf(f, _p);
   target.sub(S.p0).multiplyScalar(e).add(S.p0);
-  target.y += f.revive.swordArc * Math.sin(Math.PI * u);
+  target.y += (S.arc ?? f.revive.swordArc) * Math.sin(Math.PI * u);
   const sw = f.sword;
   const p = sw.translation();
   sw.setLinvel({ x: (target.x - p.x) / dt, y: (target.y - p.y) / dt, z: (target.z - p.z) / dt }, true);
@@ -209,8 +211,8 @@ function flySword(f, V, dt) {
   sw.setAngvel(ang > 1e-5 ? { x: _q.x * k, y: _q.y * k, z: _q.z * k } : { x: 0, y: 0, z: 0 }, true);
 }
 
-/** 칼을 손에 쥔다: 손목 자리·쥐는 자세에 맞춰 놓고 생성자와 같은 손목 관절을 다시 만든다 */
-function attachSword(f, V) {
+/** 칼을 손에 쥔다: 손목 자리·쥐는 자세에 맞춰 놓고 생성자와 같은 손목 관절을 다시 만든다 (V.groups — 부활 유령 그룹 · 줍기는 null) */
+export function attachSword(f, V) {
   V.sword = null;
   f.aimLagMap = 0;
   f.aimLagBehind = 0;

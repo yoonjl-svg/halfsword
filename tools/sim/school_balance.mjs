@@ -76,7 +76,7 @@ const TSU = (() => {
 const KOTE = { from: PAD.langort, path: [[0.02, -0.22]] };
 
 /** 한 판 */
-export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [] }) {
+export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], onRound = null }) { // onRound = 재는 도구가 판을 세운 뒤 한 번 받는 갈고리 ({ G, P, A, uq, guard, W } — kote_pickup.mjs 탐침) · 없으면 그대로
   const rnd = rng(seed * 7919 + 101);
   const kit = kitFromNodes(school, allNodeIds(school)); // 무유파는 null (나무 없음 — 고유 · 비기 없음)
   const G = newRound({ seed, weapon, weapon2: opp, walls: true, ...(kit ? { kit } : {}), look: LOOKS.player, look2: LOOKS.enemy, persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
@@ -93,6 +93,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   P.stamina.controller = guard;
   const input = inputEnv(() => new Input(canvas, new URLSearchParams('')));
   input.enabled = true;
+  onRound?.({ G, P, A, uq, guard, W });
   const M = P.swordArt.measure;
   const secretName = W.S?.name ?? null;
   // ── 손가락 (화면 px) ──
@@ -176,6 +177,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       return rnd() < 0.5 ? { kind: 'hold', seconds: 4, fwd: 0.6, want: 'redondo', releaseAt: M.contact + rnd() * (M.reach + 0.15 - M.contact) } : stroke('zornhau', { side: side(), want: 'talhoRodeado' });
     }
     if (school === 'japanese') {
+      if (focus === 'kote') return stroke('kote', { S: KOTE, want: 'kote' }); // focus 'kote' (11/05 손목 치기 떨굼 재기 — kote_pickup.mjs): 유파 기술 몫은 모두 손목 치기
       if (L && rnd() < 0.3) return { kind: 'wait', seconds: S.iai ? 0.8 : 2.4, fwd: 0, want: secretName }; // 아무것도 안 함 2 s → 고노센 준비
       const n = Math.floor(rnd() * 3);
       return n === 0 ? stroke('kote', { S: KOTE, want: 'kote' }) : n === 1 ? stroke('zornhauL', { side: side(), want: 'hirakiGiri' }) : stroke('tsubame', { S: TSU, want: 'tsubameGaeshi' });

@@ -44,6 +44,8 @@ import { requestInstant, requestIai, requestSweep, requestCombo, requestArtRetur
 import { windStart, windEnd, windRopesBack, windLoopOf, windSpec, windWoundT } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 08:xx — UNIQUE_ASSIST.rdAiWind · 사람과 같은 감기 · 내려침)
 import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret, gnsHumanMoving } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
+import { PICKUP } from './config.js'; // 떨어진 칼 줍기 (11/05)
+import { aiPickup } from './pickup.js'; // 떨어진 칼 줍기 — AI 몫 (11/05 · PICKUP.ai)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -497,6 +499,7 @@ export class AI {
     }
     this.updateCombat(dt);
     this.techPlanStep(dt); // 기술 길 덧칸 (10/25 곁눈 베기 다시 그린 길 — 덧칸 없는 기술이면 아무것도 안 함)
+    if (PICKUP.ai) aiPickup(this); // 떨어진 칼 줍기 (11/05 — src/pickup.js · 끔이면 안 부름): 칼을 놓쳤으면 제 칼로 걸어가 곁에서 줍는다
     const ds = this.drySense;
     if (ds) this.dryRouteSide(ds);
     routeAroundStageObstacle(this);
