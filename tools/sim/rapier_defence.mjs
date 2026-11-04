@@ -9,7 +9,8 @@
 //        공격 중 읽기 굴림 실패 · 베는 중이라 안 봄) · 반응한 때 · 그때 AI 꼴
 //   때 = 낸 뒤 칼끝이 3.5 m/s(AI 위협 문턱)를 넘은 때 · 첫 칼끼리 닿음 · 첫 몸 닿음 (실제 s) · 거리 = 낸 때 · 닿은 때 · 칼끝 → 상대 가슴 (낸 때 · 가장 가까움)
 //   닿음 꼴 = 몸 닿음 종류(찌르기 · 베기 · 둔타) · 칼날 자리(t) · 칼 축 맞음(along) · 빠르기 · 부위 / 칼끼리 닿음 = 내 칼 자리 · 상대 칼 자리 · 충격량
-//  node tools/sim/rapier_defence.mjs fight --cells=italian:rapier:longsword,... [--seeds=1-24] [--set=A.b=1,...] [--secret=0] [--drop=x] [--tag=이름] [--json=파일]
+//  node tools/sim/rapier_defence.mjs fight --cells=italian:rapier:longsword,... [--seeds=1-24] [--set=A.b=1,...] [--ts=rapier.window=0.06,...] [--secret=0] [--drop=x] [--tag=이름] [--json=파일]
+//   (--ts = 찌르기 무기 장점 weapons.js THRUST_STYLE 을 이 프로세스 안에서만 · 까닭 나누기 --secret=0 --set=THRUST.itDrop=accel)
 //  node tools/sim/rapier_defence.mjs agg <json ...> [--by=name|cls|kind]   (Markdown 표)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync } from 'node:fs';

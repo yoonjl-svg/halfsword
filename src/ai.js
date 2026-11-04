@@ -2264,7 +2264,7 @@ export class AI {
     this.parryComboReset();
     // 2) 간격 끝에서 오는 공격, 찌르기는 물러나 헛치게 한다 (피하기). 가까우면 칼로 막는다
     const edge = d > this.foeReach - 0.35;
-    // AI_THRUST_DEF.lungeParry (11/05 · 기본 끔): 런지 찌르는 상대에게는 물러나 피하기 몫을 가운데 베기와 같게 — 런지는 물러나는 몸을 따라잡는다(피하기 뒤 맞음 50 % · 다른 찌르기 0 ~ 6 %)
+    // AI_THRUST_DEF.lungeParry (11/05 · 기본 끔): 런지 찌르는 상대에게는 물러나 피하기 몫을 가운데 베기와 같게 — 런지는 물러나는 몸을 따라잡는다(피하기 뒤 맞음 57 % · 다른 찌르기 0 ~ 9 % — 재 보니 판 차이는 작음: 기록 §5)
     const pVoid = (edge || th.thrust) && !(AI_THRUST_DEF.lungeParry && lungeFoe(this.foe)) ? 0.8 : 0.3;
     // 칼이 없으면 막을 수 없으니 물러난다. 겁먹었을 때도 칼로 받기보다 물러나 피한다
     this.defVoid = !this.me.armed || Math.random() < pVoid + (1 - pVoid) * this.fear * 0.8;
