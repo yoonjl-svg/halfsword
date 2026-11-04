@@ -81,7 +81,7 @@ const risolutoLungeReq = () => {
   const st = SECRET.risolutoStep ?? {};
   const step = { kind: 'lunge', fwd: secVal(st.slide ?? 'iaiStep'), foot: secVal(st.foot ?? 'italianStep'), ...(st.draw ? { draw: true } : {}), ...(st.room ? { room: true } : {}), ...(st.push ? { push: secVal(st.push) } : {}), ...(st.accel ? { accel: true } : {}) };
   const moves = [{ name: 'risolutoLunge', nameKo: '런지', kind: 'thrust', lunge: true, glide: !!SECRET.risolutoGlide, step, dyn: { kind: 'aim', target: 'lung', thrust: true, back: true } }];
-  return { moves, share: SECRET.risolutoShare ?? 1, hitMul: SECRET.hitMul, hold: risolutoStiff(), arcCut: true, face: SECRET.secretStreak ? 'line' : null, min: SECRET.secretArcMin ?? 0 };
+  return { moves, share: SECRET.risolutoShare ?? 1, hitMul: SECRET.risolutoHitMul ?? SECRET.hitMul, hold: risolutoStiff(), arcCut: true, face: SECRET.secretStreak ? 'line' : null, min: SECRET.secretArcMin ?? 0 };
 };
 const _ps = new THREE.Vector3();
 const _pd = new THREE.Vector3();
