@@ -3,7 +3,7 @@
 //   재기만 한다 — 게임 값은 건드리지 않는다(--set 은 이 프로세스 안에서만). 판 = school_balance.mjs fightOne 그대로(사람 손가락 봇 대 숙련 3 AI · 자연 바인드 · 지금 기본값).
 //   꽂개(probe — 읽기만): 내 몸의 넘어짐(서 있음 → 다른 상태)을 부른 곳으로 가른다 —
 //    'tilt' 몸 기울기(fighter.updateState — fallTiltDeg) · 'feet' 발 밖 벗어남(offBalanceTime > fallDelay) · 'gauge' 휘청 게이지(맞은 에너지 × staggerPerJoule — 맞아서) ·
-//    'legs' 다리 못 버팀 · 'head' 머리 둔타(applyWound) · 'buckle' 무릎 꺾기 · 'revive' 죽었다 되살아남(맞아서) · 그 밖.
+//    'legs' 다리 못 버팀 · 'head' 머리 둔타(applyWound) · 'sever' 다리 잘림 · 'buckle' 무릎 꺾기 · 'revive' 죽었다 되살아남(맞아서) · 그 밖.
 //   싱지르 하나마다: 낸 때부터 1.6 실제 s 동안 차례(먼저 감기 pre · 돌기 spin · 받아 멈춤 settle · 따라 지나감 follow · 굳음 stiff · 뒤 after) ·
 //    차례마다 몸 기울기 최대 · 발 밖 벗어남 최대 · 골반 수평 빠르기 최대 · 받은 맞음(에너지 · 부위) · 내 칼 ↔ 상대 몸 · 칼 닿음 · 넘어짐(그때 차례 · 까닭).
 //  node tools/sim/singir_fall.mjs run [--cells=iberian:zweihander:longsword,...] [--seeds=1-12] [--dur=30] [--set=SECRET.ibSpin.x=1] [--exp=nospin|still|nohit|ropes] [--json=파일] [--trace]
@@ -44,6 +44,7 @@ function stageOf(P) {
 function fallWhy(P, stack) {
   if (stack.includes('revive')) return 'revive';
   if (stack.includes('buckleCheck') || stack.includes('whipKneel')) return 'buckle';
+  if (/\bsever\b|\.sever /.test(stack)) return 'sever'; // 팔다리 잘림 (다리를 잃으면 서지 않음 — fighter.sever)
   if (stack.includes('applyWound')) return 'head';
   if (stack.includes('updateState')) {
     const tilt = P.tiltDeg() - THREE.MathUtils.radToDeg(P.hunch ?? 0);
@@ -206,7 +207,7 @@ export function runOne({ school = 'iberian', weapon, opp, seed, dur = 30, trace 
 // ── 묶음 ──
 const pct = (n, d) => (d ? `${Math.round((100 * n) / d)}%` : '–');
 const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
-const HIT = new Set(['gauge', 'head', 'buckle', 'revive']);
+const HIT = new Set(['gauge', 'head', 'sever', 'buckle', 'revive']);
 export function summarize(runs) {
   const out = [];
   const cells = {};
