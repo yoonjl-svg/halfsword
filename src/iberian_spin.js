@@ -173,7 +173,8 @@ function feetStep(f, S) {
 
 /**
  * 가까운 상대 (11/05 — SECRET.ibSpin.near · 사장님 확인 전 · docs/strike/singir_fall_2026-11-05.md): 낼 때 상대 가슴이 '내 맞닿기 거리(검술 풀이 measure.contact) + 나아감
- *  (SECRET.ibSpin.advance)' 안이면 true — 앞발 축으로 다 나아가면 맞닿기 거리 안으로 들어가는 거리 (모두 있는 수 · 새 수 없음).
+ *  (SECRET.ibSpin.advance)' 안이고(앞발 축으로 다 나아가면 맞닿기 거리 안으로 들어감) 내 칼끝 거리(measure.reach) 안이면(나아가지 않아도 칼이 닿음) true — 모두 있는 수 · 새 수 없음.
+ *  (칼끝 거리 밖이면 전 판처럼 나아가야 닿는다 — 서 있는 과녁 뒤랑달 2.13 m: 제자리 벰 0 · 앞발 축 5)
  *  잰 원인 — 싱지르를 낸 뒤 1 s 안 넘어짐은 모두 맞아서(휘청 게이지 · 머리 둔타)였고 몸 균형(발 밖 · 기울기)은 0. 앞발 축 대본은 처음 0.1 ~ 0.2 s 에 무게를 앞발로 옮기며
  *  골반을 상대 쪽으로 0.3 m(대본 골반 3.5 m/s · 실제 5 ~ 6 m/s) 내밀고 도는 다리 · 허리를 상대 칼 쪽으로 쓸어 넣어, 이미 들어오던 상대 칼에 내 몸이 들이받아 맞음 에너지가 커졌다
  *  (내 몸 빠르기를 맞음 셈에서 빼면 롱소드 AI 상대 1 s 안 넘어짐 14 → 6 / 93). 가까우면 뒷발을 축으로 제자리(나아감 0)에서 돈다 — 무게는 뒷발 쪽(상대에게서 멀어지는 쪽)으로 옮겨지고
@@ -185,7 +186,9 @@ export function spinNear(f) {
   if (!S.near) return false;
   const M = f.swordArt?.measure;
   if (!M?.contact || !f.foe) return false;
-  return f.foeDistance() < M.contact + (S.near === 'contact' ? 0 : S.advance ?? 0);
+  const d = f.foeDistance();
+  if (S.near === 'contact') return d < M.contact; // 견줌: 맞닿기 거리만
+  return d < Math.min(M.reach ?? Infinity, M.contact + (S.advance ?? 0)); // 제자리에서도 칼이 닿는 거리(reach) 안 — 그 밖이면 나아가야 닿는다
 }
 
 /**
