@@ -297,7 +297,8 @@ function runInstant(f, combat) {
 }
 
 /** 쓸린 자리의 첫 부위에 기존 상처 함수(combat.analyze → applyWound)로 상처. 에너지 = instantJ × hitMul 이 나오게 분석 속도를 고른다 */
-function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, hitMul = SECRET.hitMul, effMul = null, grip = null) {
+function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, hitMul = SECRET.hitMul, effMul = null, grip = null, plan = null) {
+  // plan (11/04 — SECRET.sweepCap · stepCombo): 이 조각의 짠 길 칼 자세 둘 [앞, 뒤] (월드 — 칼 밑동 B · 칼 축 D · 놓인 칼과 같은 꼴). 있으면 맞은 점의 쓸린 길이를 짠 길이 같은 점을 옮긴 길이까지만 (아래)
   const { i, best } = hit;
   const P = cut[i];
   const P0 = cut[i - 1];
@@ -314,7 +315,19 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, 
   // 그 점이 쓸려 온 방향 (앞 조각의 같은 칼날 자리 → 이 조각)
   const prev = P0.B.clone().addScaledVector(P0.D, len * t);
   const tang = point.clone().sub(prev);
-  const swept = tang.length(); // 그 점이 이 조각에 쓸려 온 길이 (m) — dtSub 가 있으면 빠르기 = swept / dtSub (중국 빠른 연환)
+  let swept = tang.length(); // 그 점이 이 조각에 쓸려 온 길이 (m) — dtSub 가 있으면 빠르기 = swept / dtSub (중국 빠른 연환)
+  if (plan && dtSub > 0) {
+    // 끌고 가는 칼 맞음 빠르기 묶음 (11/04 결함 고침 — SECRET.sweepCap): 놓인 칼은 손목 교정(wristClamp)이 한 스텝에 켜지고 꺼지거나 팔이 못 닿던 길 자리에서 다시 따라붙으면
+    //  한 스텝에 30 ~ 57° 돌거나 0.3 m 옮겨진다 — 그 튐이 칼 빠르기(40 ~ 56 m/s)로 읽혀 1470 ~ 4965 J 가 났다. 짠 길이 같은 칼날 자리를 옮긴 길이보다 길면 그 길이 · 그 방향으로 (교정은 늦출 수만)
+    const q0 = plan[0].B.clone().addScaledVector(plan[0].D, len * t);
+    const pd = plan[1].B.clone().addScaledVector(plan[1].D, len * t).sub(q0);
+    const ps = pd.length();
+    if (f.iai) f.iai.sweepV = { act: swept / dtSub, plan: ps / dtSub }; // 재기 (판정에는 안 씀): 맞은 점의 놓인 칼 빠르기 · 짠 길 빠르기 (m/s)
+    if (swept > ps) {
+      swept = ps;
+      if (ps > 1e-6) tang.copy(pd);
+    }
+  }
   if (tang.lengthSq() < 1e-8) tang.set(0, -1, 0);
   tang.normalize();
   let wCol = f.bladeColliders[0];
@@ -1122,6 +1135,21 @@ function comboTip(f, H, D, out = new THREE.Vector3(), L = f.weaponCfg.hiltLength
   return out.copy(H).addScaledVector(D, L);
 }
 
+/**
+ * 짠 길 칼 자세 (월드 — 11/04 SECRET.sweepCap): 길 위 자리 P(몸 틀 손 H · 칼날 D)를 지금 가슴 자리로 옮긴 칼 밑동 B · 칼 축 D — placeIai 가 놓는 칼과 같은 꼴(손 = 팔 IK 목표 · 밑동 = 손 + 칼자루)이되
+ *  팔 IK 가 못 닿은 몫 · 손목 교정(wristClamp)을 넣지 않은 것. 죽음의 일격은 placeIai 처럼 B = 손목 · D = 칼자루 쪽. 읽기만
+ */
+function comboPlanW(f, I, P) {
+  const D = P.D.clone().applyQuaternion(I.yaw).normalize();
+  const B = P.H.clone().applyQuaternion(I.yaw).add(tv(f.bodies.chest.translation(), new THREE.Vector3()));
+  if (!I.mord) B.addScaledVector(D, f.weaponCfg.hiltLength);
+  return { B, D };
+}
+/** 두 칼 자세 사이 (밑동 lerp · 칼 축 lerp — stepCombo 맞음 조각과 같은 보간) */
+function planLerp(A, Bp, w) {
+  return { B: A.B.clone().lerp(Bp.B, w), D: A.D.clone().lerp(Bp.D, w).normalize() };
+}
+
 /** 토막 안 u 자리: 손 lerp · 칼날 slerp (iaiPose 와 같은 보간) · 패드 x (몸 돌림) · 손 돌리기 rad (길 덧칸이 있는 수만 — 없으면 0) */
 function comboLerp(sg, u) {
   const H = sg.A.H.clone().lerp(sg.B.H, u);
@@ -1228,6 +1256,7 @@ function startCombo(f, combat, req) {
   setKinematic(f, true);
   f.instantGhost = Math.ceil(SECRET.instantNoCollide / (combat.dt || 1 / 120)) + 1; // 수를 짤 때마다·스텝마다 다시 채운다 (stepCombo)
   f.iai.prev = placeIai(f, AH, AD, true);
+  if (SECRET.sweepCap) f.iai.planPrev = comboPlanW(f, f.iai, f.iai.cur); // 짠 길 지난 자세 (11/04 — 맞음 빠르기 묶음 · stepCombo)
   comboNext(f, f.iai);
 }
 
@@ -2954,6 +2983,7 @@ function stepCombo(f, combat) {
       const A = I.segs[k].A;
       const D = A.D.clone().applyQuaternion(I.yaw).normalize();
       I.prev = { B: A.H.clone().applyQuaternion(I.yaw).add(tv(f.bodies.chest.translation(), new THREE.Vector3())).addScaledVector(D, f.weaponCfg.hiltLength), D };
+      if (SECRET.sweepCap) I.planPrev = { B: I.prev.B.clone(), D: D.clone() }; // 짠 길도 같은 자리부터 (11/04 — 이 자리는 팔이 못 닿는 길 자리일 수 있어 놓인 칼과 0.3 m 어긋남: 그 어긋남은 빠르기로 안 셈)
     }
   }
   // 반걸음 몸 미끄러짐 (발도와 같은 꼴 — 부드럽게 줄며)
@@ -3009,6 +3039,7 @@ function stepCombo(f, combat) {
     if (hint && hint.lengthSq() > 1e-8) I.edgeHint = hint;
   }
   const cur = placeIai(f, P.H, P.D, false, P.turn, I.moves[I.mi]?.cutSweep ? I.edgeHint ?? null : null, !!(I.moves[I.mi]?.band || I.moves[I.mi]?.roll)); // roll: 굴림 묶음만 (칼끝 돌려 빼기 — 10/28)
+  const planCur = SECRET.sweepCap && I.planPrev ? comboPlanW(f, I, P) : null; // 짠 길 이 스텝 자세 (11/04 — 맞음 빠르기 묶음 · instantWound plan)
   const subs = I.moves[I.mi]?.lunge ? 0 : 3; // 런지는 아래 lungeSweep (지나온 토막 길을 따라)
   // 제비 베기 되돌림 칼(10/25 — requestArtSnap 의 cutSweep): 꺾은 자리로 거두는 준비 토막(맞힘 없음)에서 베는 토막으로 넘어온 스텝은 맞힘을 보지 않는다 —
   //  그 스텝 쓸린 자리가 준비 토막(내려간 칼 자리 — 상대 다리 곁)부터 베기로 셈됐다 (겨눈 찌름 thrustSweep 과 같은 까닭 · 길 점 자리는 팔이 다 닿지 않아 실제 놓인 칼과 달라 그 자리부터 재지 않음)
@@ -3048,7 +3079,8 @@ function stepCombo(f, combat) {
       const prevW = Math.max(0, w - 1 / subs);
       const P0 = { B: I.prev.B.clone().lerp(cur.B, prevW), D: I.prev.D.clone().lerp(cur.D, prevW).normalize() };
       I.hitM = true;
-      const res = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, 0, dt / subs, I.hitMul, I.effMul, I.mord);
+      const plan = planCur ? [planLerp(I.planPrev, planCur, prevW), planLerp(I.planPrev, planCur, w)] : null;
+      const res = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, 0, dt / subs, I.hitMul, I.effMul, I.mord, plan);
       if (res) {
         I.hits++;
         I.E += res.energy;
@@ -3061,6 +3093,7 @@ function stepCombo(f, combat) {
     }
   }
   I.prev = cur;
+  if (planCur) I.planPrev = planCur;
   // 막힘: 이 수의 남은 길을 건너뛰고 다음 수를 지금 자리에서 짠다 (다음 수가 없으면 끝) · 죽음의 일격은 다시 세우기 토막으로 (한 번)
   if (I.blockM && I.mord && !I.mordBacked) {
     I.mordBacked = true;
