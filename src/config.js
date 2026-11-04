@@ -1833,8 +1833,9 @@ export const UNIQUE_ASSIST = {
 //  ai: 1 = 칼을 놓친 AI 도 제 칼로 걸어가 같은 동작으로 줍는다 · 0 = 오늘(물러나기만) — `?pickupAi=1|0`
 //  reach: 골반에서 칼자루(쥐는 자리)까지 수평 거리 (m — 걸음 사다리 0.3 · 0.45 · 0.6 · 0.9) · bend · lift: 실제 초 (시간 사다리 0.2 · 0.4 · 0.6) — [모두 사장님 확인 전]
 //  grab: 손이 칼자루에서 이 안이면 bend 를 다 채우기 전에 쥔다 (m — 웅크린 손은 땅까지 못 닿아 남은 틈은 lift 가 메움) · settle: 칼이 이보다 느릴 때만 시작(m/s — 날아가는 칼은 안 주움) [감독]
+//  settleMax: 쥔 뒤 칼이 상대 몸 · 칼 · 제 몸통과 겹친 동안은 칼 충돌을 켜지 않고 기다리는 최대 실제 초 (겹친 채 켜면 튐 — 그동안 칼은 베지도 막지도 못함) [감독]
 //  웅크림 몸꼴은 SECRET.stance.pickup (비기 자세와 같은 틀 — 골반 낮춤 · 몸통 숙임)
-export const PICKUP = { mode: 0, ai: 0, reach: 0.6, bend: 0.4, lift: 0.2, grab: 0.3, settle: 0.6 };
+export const PICKUP = { mode: 0, ai: 0, reach: 0.6, bend: 0.4, lift: 0.2, grab: 0.3, settle: 0.6, settleMax: 0.4 };
 
 /**
  * B4 옛 판 (10/31 19:xx 사장님 견줌용 — `?b4Old=1` · main.js · 재는 도구): 10/31 14:xx 판 그대로 — 어깨에 얹음 'shoulder'(칼 60° · 130°) · 곧장 사선 60°(왼 위 → 오른 아래) ·

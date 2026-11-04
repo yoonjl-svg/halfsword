@@ -10,7 +10,8 @@
 //        칼 손 목표를 칼자루로(pickupHand — fighter.driveSword). 손이 칼자루 grab 안에 오거나 bend 가 차면 쥔다
 //   lift (PICKUP.lift 0.2 s): 일어서며 칼이 손으로 올라온다 — 부활 때 칼이 돌아오는 길 그대로(revive.js startSwordReturn · flySword: 충돌 끔 · 중력 끔 · 스텝마다 빠르기로
 //        손목 자리 · 쥐는 자세까지) → attachSword(생성자와 같은 손목 관절 · 손목 원뿔 · armed · 칼끝 추정 리셋) → 칼 충돌 그룹을 되돌림
-//  그동안 칼은 상처를 내지도 막지도 못한다(armed 거짓 · 날아오는 칼은 충돌 없음). 넘어지면(state ≠ stand) 그만두고 칼은 땅에 남는다(lift 중이면 마저 쥔다 — 이미 손 앞).
+//   settle: 쥔 칼이 상대 몸 · 칼 · 제 몸통과 겹치지 않을 때 칼 충돌을 켠다(늦어도 PICKUP.settleMax) — 켜는 순간 겹친 칼이 튀지 않게
+//  그동안 칼은 상처를 내지도 막지도 못한다(armed 거짓 · 날아오는 칼 · 쥔 직후 칼은 충돌 없음). 넘어지면(state ≠ stand) 그만두고 칼은 땅에 남는다(lift 중이면 마저 쥔다 — 이미 손 앞).
 //  f.pickupLog = [{ t0, t1, ok, why, reach, hand }] — 재는 도구가 읽는다
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -106,8 +107,30 @@ export function pickupTick(f, dt) {
     P.t += dt;
     P.wHand = 1 - smooth(P.t / P.sword.fly); // 손은 쥔 자리에서 자세 자리로 (칼은 손목을 따라온다)
     flySword(f, P, dt); // 다 오면 attachSword (P.sword = null · armed)
-    if (!P.sword) pickupEnd(f, true, 'ok');
+    if (P.sword) return;
+    P.phase = 'settle';
+    P.t = 0;
+    P.t1 = f.fightT;
+    P.wHand = 0;
   }
+  if (P.phase === 'settle') {
+    // 쥔 칼은 아직 충돌이 꺼져 있다(날아오던 칼): 칼이 상대 몸 · 칼 · 제 몸통에 겹친 채 충돌을 켜면 한 스텝에 밀려 튄다(상대 다리에 30 J 둔타 — 재기 11/05) →
+    //  원래 충돌 그룹으로 부딪힐 것과 겹치지 않을 때 켠다. 늦어도 settle 실제 초 뒤엔 켠다(그동안 칼은 베지도 막지도 못함)
+    P.t += dt;
+    if (P.t < realS(PICKUP.settleMax) && swordOverlaps(f, P.saved)) return;
+    pickupEnd(f, true, P.t < realS(PICKUP.settleMax) ? 'ok' : 'ok-forced');
+  }
+}
+
+/** 쥔 칼(충돌 꺼짐)이 원래 그룹이면 부딪힐 것과 겹쳐 있나 (칼 몸체는 뺌) */
+function swordOverlaps(f, saved) {
+  let hit = false;
+  for (const [col, g] of saved) {
+    if (!col.isEnabled() || f.colliderInfo?.get(col.handle)?.detached) continue;
+    f.world.intersectionsWithShape(col.translation(), col.rotation(), col.shape, () => ((hit = true), false), undefined, g, undefined, f.sword);
+    if (hit) return true;
+  }
+  return false;
 }
 
 /** 줍기 끝: ok 면 칼 충돌 그룹을 되돌림. 아니면(넘어짐 · 죽음 · 칼이 멀어짐) 칼은 땅에 — 올리던 칼이면 충돌 · 중력을 되돌려 떨어뜨린다 */
@@ -115,7 +138,7 @@ function pickupEnd(f, ok, why) {
   const P = f.pickup;
   if (P.saved) for (const [col, g] of P.saved) if (col.isEnabled() && !f.colliderInfo?.get(col.handle)?.detached) col.setCollisionGroups(g); // 파손으로 떼어 낸 부품은 그대로 (revive.js ghost 와 같은 거름)
   if (!ok && P.sword) f.sword.setGravityScale(1, true);
-  (f.pickupLog ??= []).push({ t0: +P.t0.toFixed(3), t1: +f.fightT.toFixed(3), ok, why, reach: +P.reach.toFixed(3), hand: P.hand });
+  (f.pickupLog ??= []).push({ t0: +P.t0.toFixed(3), t1: +(P.t1 ?? f.fightT).toFixed(3), t2: +f.fightT.toFixed(3), ok, why, reach: +P.reach.toFixed(3), hand: P.hand }); // t1 = 다시 쥔 때 · t2 = 칼 충돌을 켠 때
   f.pickup = null;
   f.pickW = 0;
 }

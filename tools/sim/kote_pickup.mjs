@@ -124,6 +124,90 @@ export function funnelMarkdown(groups) {
   return out.join('\n');
 }
 
+// ── 줍기 재기 ──
+//  pick   : 사람 몸(손가락 봇 — fightOne) 칼을 판 시작 dropAt 실제 s 뒤에 떨굼(dropSword — 손목 치기 떨굼과 같은 길) → 봇은 react 실제 s 뒤 제 칼로 걸어가
+//           (스틱 = 몸 틀 앞 · 옆 몫) 'block' 이면 주울 수 있을 때(단추 글 '줍기' — pickupReady) 막기 단추 · 'auto' 면 걷기만 · 0 = 줍기 끔(견줌 — 그대로 맞섬)
+//  aipick : 상대 AI 칼을 dropAt 에 떨굼 · PICKUP.ai 1 이면 AI 가 걸어가 주움 (봇은 보통대로 침)
+//  잰 것: 다시 쥠까지(실제 s) · 줍는 동작(굽힘 ~ 쥠) · 그동안 받은 칼날 심각도 · 의식 · 맞음 수 · 넘어짐 · 상대 공격 시작 수 · 한 스텝 칼 옮김 최대(순간이동 검사) ·
+//         쥔 뒤 0.6 s(충돌을 켠 뒤) 제 칼 ↔ 제 몸통 · 허벅지 닿음(제 몸 충돌) · 쥔 뒤 0.6 s 칼이 상대에게 낸 판정(상처 · 둔타) · 값 깨짐(NaN) · 판 결과
+import { pickupReady, canPickup } from '../../src/pickup.js';
+export function pickOne({ school, weapon, opp, seed, dur = 20, tech = 0.35, dropAt = 6, mode = 'block', react = 0.22, who = 'P', window = 4 }) {
+  const PU = CONFIG.PICKUP;
+  const keep = { mode: PU.mode, ai: PU.ai };
+  if (who === 'P') PU.mode = mode; else PU.ai = mode ? 1 : 0;
+  let G, P, A, X, tOpen = null, td = null, ta = null, prevS = null, cons0 = null, armT = null;
+  const m = { seed, cell: `${school}:${weapon}:${opp}`, who, mode, dropT: null, rearm: null, motion: null, sev: 0, cons: 0, hits: 0, falls: 0, foeAtk: 0, maxStep: 0, selfTouch: 0, attachWound: 0, nan: false, swordDist: null, log: null, end: null };
+  const own = () => ['pelvis', 'abdomen', 'chest', 'thighF', 'thighB'].map((k) => X.bodies[k].collider(0));
+  const botHook = ({ t }) => {
+    if (who !== 'P' || td == null || P.armed || !P.alive || !PU.mode) return null;
+    if (t < td + react) return { sx: 0, sy: 0, guardPress: false };
+    if (!canPickup(P)) return { sx: 0, sy: 0, guardPress: false };
+    const p = P.bodies.pelvis.translation(), g = P.sword.translation();
+    const dx = g.x - p.x, dz = g.z - p.z, d = Math.hypot(dx, dz);
+    if (P.pickup || d <= PU.reach * 0.75) return { sx: 0, sy: 0, guardPress: PU.mode === 'block' && (!!P.pickup || pickupReady(P)) };
+    const F = P.forward(), R = P.right(), k = 0.9;
+    return { sx: ((dx * R.x + dz * R.z) / d) * k, sy: ((dx * F.x + dz * F.z) / d) * k, guardPress: false };
+  };
+  const onRound = (o) => {
+    ({ G, P, A } = o);
+    X = who === 'P' ? P : A;
+    const step0 = G.step;
+    G.step = () => {
+      if (tOpen == null && !P.openHold) tOpen = G.t;
+      if (td == null && tOpen != null && (G.t - tOpen) / K >= dropAt && X.alive && X.armed && X.state === 'stand' && P.alive && A.alive) {
+        X.dropSword();
+        td = G.t / K; m.dropT = r3(td); cons0 = X.consciousness;
+      }
+      const wasArmed = X.armed, st0 = X.state, mode0 = G.ai.mode;
+      step0();
+      if (td == null) return;
+      const s = X.sword.translation();
+      if (![s.x, s.y, s.z].every(Number.isFinite)) m.nan = true;
+      if (prevS && ta == null) m.maxStep = Math.max(m.maxStep, Math.hypot(s.x - prevS.x, s.y - prevS.y, s.z - prevS.z));
+      prevS = { x: s.x, y: s.y, z: s.z };
+      if (m.swordDist == null && X.sword.linvel().y > -0.05 && G.t / K > td + 0.6) { const p = X.bodies.pelvis.translation(); m.swordDist = r3(Math.hypot(s.x - p.x, s.z - p.z)); }
+      const inWin = ta == null && G.t / K <= td + window;
+      if (inWin) {
+        if (st0 === 'stand' && X.state !== 'stand' && X.alive) m.falls++;
+        if (who === 'P' && G.ai.mode === 'attack' && mode0 !== 'attack') m.foeAtk++;
+      }
+      if (!wasArmed && X.armed && ta == null) { ta = G.t / K; m.rearm = r3(ta - td); armT = G.t; m.cons = r3(Math.max(0, cons0 - X.consciousness)); }
+      if (armT != null && G.t - armT <= 0.6 * K && !X.pickup) for (const sc of X.swordColliders) for (const oc of own()) G.world.contactPair(sc, oc, (mf) => { for (let j = 0; j < mf.numContacts(); j++) if (mf.contactDist(j) < 0.002) m.selfTouch++; });
+    };
+    G.onWound = (att, vic, r) => {
+      if (td == null) return;
+      const t = G.t / K;
+      if (vic === X && att !== X && (ta == null ? t <= td + window : false)) { m.sev += r.type === 'blunt' ? 0 : r.severity ?? 0; if ((r.severity ?? 0) > 0) m.hits++; }
+      if (att === X && armT != null && G.t - armT <= 0.6 * K) { m.attachWound++; (m.attachW ??= []).push([r.zone, r.type, r3(r.energy), r3(r.severity), r3((G.t - armT) / K)]); }
+      if (vic === X && att !== X && td != null && (ta == null ? G.t / K <= td + window : false)) (m.hitW ??= []).push([r.zone, r.type, r3(r.energy), r3(r.severity), r3(G.t / K - td)]);
+    };
+  };
+  let r;
+  try {
+    r = fightOne({ school, weapon, opp, seed, dur, tech, onRound, botHook });
+  } finally {
+    PU.mode = keep.mode; PU.ai = keep.ai;
+  }
+  if (cons0 != null && m.rearm == null) m.cons = r3(Math.max(0, cons0 - X.consciousness));
+  m.sev = r3(m.sev);
+  m.maxStep = r3(m.maxStep);
+  m.log = X.pickupLog ?? null;
+  m.motion = m.log?.find((x) => x.ok) ? r3((m.log.find((x) => x.ok).t1 - m.log.find((x) => x.ok).t0) / K) : null;
+  m.end = { win: r.win, lose: r.lose, T: r.T, alive: X.alive, armed: X.armed };
+  return m;
+}
+export function pickMarkdown(groups) {
+  const q = (a, p) => { const s = a.filter((x) => x != null).sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor(p * s.length))] : null; };
+  const f2 = (x) => (x == null ? '–' : x.toFixed(2));
+  const out = ['| 묶음 | 판 | 떨굼 | 다시 쥠 | 다시 쥠까지 실제 s (가운데 · 90 %) | 줍는 동작 실제 s (가운데) | 떨굼 → 쥠(또는 4 s) 받은 심각도/판 | 받은 맞음/판 | 의식/판 | 넘어짐 | 상대 공격 시작/판 | 칼 한 스텝 최대 m | 제 몸 닿음 스텝 | 쥔 뒤 0.6 s 판정 | NaN | 떨어진 칼 거리 (가운데) | 이김 · 짐 |', '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|'];
+  for (const [name, ms] of groups) {
+    const D = ms.filter((x) => x.dropT != null), n = D.length || 1;
+    const R = D.filter((x) => x.rearm != null);
+    out.push(`| ${name} | ${ms.length} | ${D.length} | ${R.length} | ${f2(q(R.map((x) => x.rearm), 0.5))} · ${f2(q(R.map((x) => x.rearm), 0.9))} | ${f2(q(R.map((x) => x.motion), 0.5))} | ${f2(D.reduce((s, x) => s + x.sev, 0) / n)} | ${f2(D.reduce((s, x) => s + x.hits, 0) / n)} | ${f2(D.reduce((s, x) => s + (x.cons ?? 0), 0) / n)} | ${D.reduce((s, x) => s + x.falls, 0)} | ${f2(D.reduce((s, x) => s + x.foeAtk, 0) / n)} | ${f2(Math.max(0, ...D.map((x) => x.maxStep)))} | ${D.reduce((s, x) => s + x.selfTouch, 0)} | ${D.reduce((s, x) => s + x.attachWound, 0)} | ${D.filter((x) => x.nan).length} | ${f2(q(D.map((x) => x.swordDist), 0.5))} | ${ms.filter((x) => x.end.win).length} · ${ms.filter((x) => x.end.lose).length} |`);
+  }
+  return out.join('\n');
+}
+
 if (isMain(import.meta.url)) {
   const [mode, ...rest] = process.argv.slice(2);
   const arg = (k, d) => { const a = rest.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
@@ -151,5 +235,27 @@ if (isMain(import.meta.url)) {
     const json = arg('json', null);
     if (json) writeFileSync(json, JSON.stringify({ tag: arg('tag', ''), set: arg('set', ''), cells, seeds, runs }));
     console.log(funnelMarkdown([[arg('tag', 'run'), runs]]));
-  } else console.log('modes: rate | agg');
+  } else if (mode === 'pick' || mode === 'aipick') {
+    applySets(arg('set', ''));
+    const cells = arg('cells', 'german:longsword:longsword,japanese:uchigatana:longsword').split(',');
+    const seeds = range(arg('seeds', '1-8'));
+    const pm = arg('mode', 'block');
+    const ms = [];
+    const t0 = Date.now();
+    for (const c of cells) {
+      const [school, weapon, opp] = c.split(':');
+      for (const seed of seeds) {
+        const r = pickOne({ school, weapon, opp, seed, dur: +arg('dur', 20), tech: +arg('tech', 0.35), dropAt: +arg('dropAt', 6), mode: pm === '0' ? 0 : pm, who: mode === 'pick' ? 'P' : 'A' });
+        ms.push(r);
+        console.error(JSON.stringify({ c, seed, rearm: r.rearm, sev: r.sev, falls: r.falls, ms: Date.now() - t0 }));
+      }
+    }
+    const json = arg('json', null);
+    if (json) writeFileSync(json, JSON.stringify({ tag: arg('tag', ''), mode: pm, who: mode, runs: ms }));
+    console.log(pickMarkdown([[arg('tag', `${mode} ${pm}`), ms]]));
+  } else if (mode === 'pickagg') {
+    const groups = new Map();
+    for (const p of rest.filter((x) => !x.startsWith('--'))) { const J = JSON.parse(readFileSync(p, 'utf8')); const g = J.tag || p; groups.set(g, [...(groups.get(g) ?? []), ...J.runs]); }
+    console.log(pickMarkdown([...groups]));
+  } else console.log('modes: rate | agg | pick | aipick | pickagg');
 }
