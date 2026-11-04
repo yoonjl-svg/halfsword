@@ -1540,6 +1540,7 @@ export class Skill {
     const f = this.f;
     if (!(CS?.fwd > 0) || f.aiControlled || !f.gait?.active || f.gait.req || this.sec || this.tap || f.finish?.amt > 0.5) return false;
     if (!CS.schools?.includes(f.swordArt?.tradition)) return false;
+    if (Array.isArray(CS.frames) && !CS.frames.includes(f.swordArt?.frame)) return false; // 받는 몸 틀 (null = 그 유파 모든 칼)
     const M = f.swordArt.measure;
     if (!M || !(d > M.contact) || !(d - CS.fwd < M.reach)) return false;
     if (!f.gait.requestStep({ kind: 'lunge', fwd: CS.fwd, duration: 0.3 })) return false;

@@ -16,7 +16,8 @@ const { SKILL, SECRET } = CONFIG;
 
 test('기본값: 새 스위치 끔 · 죽음의 일격 조건 그대로', () => {
   assert.equal(SKILL.cutStepIn.fwd, 0);
-  assert.deepEqual(SKILL.cutStepIn.schools, ['japanese']);
+  assert.deepEqual(SKILL.cutStepIn.schools, ['german']);
+  assert.deepEqual(SKILL.cutStepIn.frames, ['two']);
   assert.equal(SECRET.mordRule, 'close');
   assert.equal(SECRET.mordCloseN, 0.8);
 });
@@ -46,7 +47,7 @@ function humanRound(school, weapon) {
 
 test('cutStepIn: 맞는 거리 밖 · 한 걸음 안이면 lunge 걸음 · 그 밖은 없음', () => {
   const was = { ...SKILL.cutStepIn };
-  const { G, P, A } = humanRound('japanese', 'uchigatana');
+  const { G, P, A } = humanRound('german', 'longsword');
   try {
     const M = P.swordArt.measure;
     const reqs = [];
@@ -65,7 +66,10 @@ test('cutStepIn: 맞는 거리 밖 · 한 걸음 안이면 lunge 걸음 · 그 �
     assert.equal(P.skill.cutStepIn(M.contact + 0.05), false, '걸음이 이미 부탁돼 있으면 덮지 않음');
     P.gait.req = null;
     assert.equal(A.skill.cutStepIn(A.swordArt.measure.contact + 0.05), false, 'AI 몸은 없음');
-    SKILL.cutStepIn.schools = ['german'];
+    SKILL.cutStepIn.frames = ['one'];
+    assert.equal(P.skill.cutStepIn(M.contact + 0.05), false, '받는 몸 틀이 아님');
+    SKILL.cutStepIn.frames = null;
+    SKILL.cutStepIn.schools = ['japanese'];
     assert.equal(P.skill.cutStepIn(M.contact + 0.05), false, '받는 유파가 아님');
   } finally {
     Object.assign(SKILL.cutStepIn, was);

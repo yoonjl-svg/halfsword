@@ -448,6 +448,10 @@ export const JAPANESE_GAIT = { guardHeight: 0.75, walkHeight: 0.818, reachMax: 0
 //    0.67 은 10/29 표에서 앞 꼭대기가 독일의 −30 %(1.41 · 2.00 m/s)로 잰 자리였다 — 0.70 은 배율이 앞걸음 × 0.7(뒷걸음 GAIT.backFactor 와 같은 몫). `?jpWalk=0.67` = 10/30 판
 export const JAPANESE_GAIT_OLD = { strideK: 0.8, player: { trailReach: 0.36, dsFrac: 0.18, lift: 0.05 }, speedMul: undefined, settleStance: undefined };
 /** 일본 걸음 비교 (주소 `?jpGait=old` = 10/29 전 판 · `?jpWalk=0.67` = speedMul 시험(0.67 = 10/30 판 · 판 값 0.70) — 판을 세우기 전에 한 번) */
+/** 사람 몸만 일본 걸음 빠르기 (11/05 시험 — docs/strike/jp_de_basics_2026-11-05.md · 주소 `?jpPlayerWalk=0.85` · 기본 없음 = 사람도 칸 값 0.70): gait.js gaitParams 의 player 덮어쓰기 칸 — AI 일본 몸은 그대로 */
+export function setJapanesePlayerWalk(x) {
+  if (+x > 0) JAPANESE_GAIT.player = { ...(JAPANESE_GAIT.player ?? {}), speedMul: +x };
+}
 export function setJapaneseGait(o) {
   if (o === 'old') for (const [k, v] of Object.entries(JAPANESE_GAIT_OLD)) { if (v === undefined) delete JAPANESE_GAIT[k]; else JAPANESE_GAIT[k] = v; }
   else if (+o > 0) JAPANESE_GAIT.speedMul = +o;

@@ -16,7 +16,7 @@ import { fightOne, cellRow } from './school_balance.mjs';
 import { makeProbe, respBefore, kindOf, applySets } from './rapier_defence.mjs';
 import { isMain } from './is_main.mjs';
 import { WEAPONS } from '../../src/weapons.js';
-import { setJapaneseGait } from '../../src/schools.js';
+import { setJapaneseGait, setJapanesePlayerWalk } from '../../src/schools.js';
 
 const K = CONFIG.TIME.k; // 실제 초 → 게임 초
 const WIN = 1.0; // 낸 것 하나의 창 (실제 s — 다음 낸 것이 먼저 오면 거기까지 · rapier_defence 와 같음)
@@ -312,6 +312,7 @@ if (isMain(import.meta.url)) {
     // --jpGait=old (10/29 전 판 일본 걸음) · --jpWalk=1 (일본 걸음 빠르기 배율 — 판 값 0.70) — 견줌만 (main.js ?jpGait · ?jpWalk 와 같은 함수)
     if (arg('jpGait', null)) setJapaneseGait(arg('jpGait'));
     if (arg('jpWalk', null)) setJapaneseGait(arg('jpWalk'));
+    if (arg('jpPlayerWalk', null)) setJapanesePlayerWalk(arg('jpPlayerWalk')); // 사람 몸만 (AI 일본 그대로)
     const cells = arg('cells', 'japanese:uchigatana:longsword,german:longsword:longsword').split(',');
     const seeds = range(arg('seeds', '1-24'));
     const runs = [];
@@ -325,7 +326,7 @@ if (isMain(import.meta.url)) {
       }
     }
     const json = arg('json', null);
-    if (json) writeFileSync(json, JSON.stringify({ tag: arg('tag', ''), set: arg('set', ''), wset: arg('wset', ''), jpGait: arg('jpGait', ''), jpWalk: arg('jpWalk', ''), cells, seeds, runs }));
+    if (json) writeFileSync(json, JSON.stringify({ tag: arg('tag', ''), set: arg('set', ''), wset: arg('wset', ''), jpGait: arg('jpGait', ''), jpWalk: arg('jpWalk', ''), jpPlayerWalk: arg('jpPlayerWalk', ''), cells, seeds, runs }));
     console.log(deepMarkdown(runs, arg('by', 'name')));
   }
 }
