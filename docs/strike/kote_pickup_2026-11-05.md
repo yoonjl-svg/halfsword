@@ -165,6 +165,7 @@
 
 - 새 시험 `tools/sim/kote_pickup.test.mjs` 9 개(기본값 · 문턱 밑 닿음 굴림 · 끝난 뒤 창 · 칼 반쪽 문턱 · 줍기 끔 · 저절로 · 막기 단추 · 못 주움 · AI 줍기 · 몸 사본).
 - `tools/sim/skill_tree.test.mjs` 칼 떨구기 시험 한 줄을 넓힌 문턱에 맞춤(칼 반쪽 문턱 = `easeVn`).
+- 시험 전체 `node --test tools/sim/*.test.mjs` **711 / 711 통과 · 실패 0**.
 - 관문(가지 끝 — measure_only 와 같은 셈): fights12 `ee193a89` · live_battery `e8127a92` · finish_thrust 1 --stand `9630b5d3` · corr_s0 12/12 · weapon_smoke 34/34 · 이름 규칙 0 · 표기 방침 통과 · 빌드 0 — **기준 그대로 · 바꿀 것 없음**.
   줍기를 켜도(`with_config.mjs PICKUP.mode=block PICKUP.ai=1 fights12.mjs`) `ee193a89` — 그 열두 판엔 주울 수 있는 칼 놓침이 없음. 부활 점검 `revive_check.mjs 8` 은 dev 와 바이트 같음(그 도구의 한 판 FAIL 은 dev 에도 있음).
 
