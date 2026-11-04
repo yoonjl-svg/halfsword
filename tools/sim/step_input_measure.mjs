@@ -199,7 +199,7 @@ export function runTrials(school, trials, { seed = 1, gap = 3.2, rest = 0.7 } = 
     const c = uq.cur;
     if (c && c !== seen) {
       seen = c;
-      strokes.push({ tech: c.tech, pad: c.pad, t: +(G.t / K).toFixed(3), sx: +(P.stickX ?? 0).toFixed(2), sy: +(P.stickY ?? 0).toFixed(2), unique: null, rec: c });
+      strokes.push({ tech: c.tech, pad: c.pad, t: +(G.t / K).toFixed(3), sx: +(P.stickX ?? 0).toFixed(2), sy: +(P.stickY ?? 0).toFixed(2), busy: uq.busy(), d: +P.foeDistance().toFixed(2), unique: null, rec: c });
     }
   };
   const out = [];
@@ -253,6 +253,15 @@ export function runTrials(school, trials, { seed = 1, gap = 3.2, rest = 0.7 } = 
       if (down) hand('pointerup');
       if (thumb) stickAt(null);
       run(rest);
+      // 거리 되돌리기 (앞 걸음 공격이 상대 쪽으로 다가감 — 다음 시도도 같은 거리에서): 스틱 앞뒤로 · 그 뒤 가만히
+      let back = 0;
+      while (Math.abs(P.foeDistance() - gap) > 0.25 && back < 120 && P.alive) {
+        stickAt([0, P.foeDistance() > gap ? 0.8 : -0.8]);
+        run(FR);
+        back++;
+      }
+      if (thumb) stickAt(null);
+      if (back) run(0.5);
       const fired = Object.entries(uq.stats.fired).flatMap(([k, v]) => Array.from({ length: v - (fired0[k] ?? 0) }, () => k));
       for (const s of strokes) s.unique = s.rec.unique, delete s.rec;
       out.push({ ...tr, read: fired.includes(S.name), fired, strokes, tSwipe, exhausted: exh });
@@ -314,6 +323,20 @@ export function fpTrials(school, reps = 4) {
   return out;
 }
 
+/** 걷다가 긋기 (뜻 없음 — 스틱은 걸음에만): 같은 바탕 긋기 · 스틱은 아무 쪽(360° 고르게) · 세기 0.4 ~ 1 · 긋기 시작에 견줘 −1.2 ~ +0.6 s 에 밀기 시작 · 0.2 ~ 0.8 s 밂.
+ *  읽힘 = 걸음 공격이 난 몫 (스틱이 긋기 시작 때 마침 그 쪽이면 전 판도 남 — 새 판이 더하는 몫을 잼) */
+export function walkTrials(school, n = 60, seed = 1) {
+  const S = STEP_OF[school];
+  const r = rng(seed * 7727 + school.length);
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const ang = r() * 360;
+    // dirOf 는 'side' 축에서 ang° (앞쪽으로) — 360° 를 고르게 덮도록 side 부호 · 각을 그대로 씀
+    out.push({ kind: 'walk', base: S.base, stick: { dt: +(-1.2 + r() * 1.8).toFixed(3), a: +(0.4 + r() * 0.6).toFixed(2), ang: +ang.toFixed(1), side: 1, want: 'side', flick: +(0.2 + r() * 0.6).toFixed(3) } });
+  }
+  return out;
+}
+
 // ── 표 ──
 const pct = (n, d) => (d ? `${Math.round((100 * n) / d)}%` : '–');
 /** 읽힘 = 걸음 공격 냄 · 바탕 = 게임이 그 바탕 긋기로 읽은 시도(시작 자리 · 첫 방향) · 바탕 안 읽힘 = 바탕으로 읽힌 시도 가운데 걸음 공격 */
@@ -352,7 +375,7 @@ if (isMain(import.meta.url)) {
   const all = {};
   for (const school of schools) {
     const seed = +arg('seed', 1);
-    const trials = mode === 'grid' ? gridTrials(school, +arg('reps', 2)) : mode === 'fp' ? fpTrials(school, +arg('reps', 4)) : humanTrials(school, +arg('n', 60), seed);
+    const trials = mode === 'grid' ? gridTrials(school, +arg('reps', 2)) : mode === 'fp' ? fpTrials(school, +arg('reps', 4)) : mode === 'walk' ? walkTrials(school, +arg('n', 60), seed) : humanTrials(school, +arg('n', 60), seed);
     const rows = runTrials(school, trials, { seed });
     all[school] = rows;
     const s = summarize(rows);

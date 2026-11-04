@@ -76,7 +76,7 @@ const TSU = (() => {
 const KOTE = { from: PAD.langort, path: [[0.02, -0.22]] };
 
 /** 한 판 */
-export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [] }) {
+export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], attrib = 'new' }) {
   const rnd = rng(seed * 7919 + 101);
   const kit = kitFromNodes(school, allNodeIds(school)); // 무유파는 null (나무 없음 — 고유 · 비기 없음)
   const G = newRound({ seed, weapon, weapon2: opp, walls: true, ...(kit ? { kit } : {}), look: LOOKS.player, look2: LOOKS.enemy, persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
@@ -147,9 +147,20 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   let cavTapAt = null;
   const wants = {};
   const acts = {};
+  // 낸 뜻마다 게임이 읽은 것 (11/05 — docs/strike/step_input_2026-11-05.md §1): 봇 한 번(act) 동안 unique_assist 가 낸 고유 공격(stats.fired 늘어난 것) — 기술 기록(fires)의 이름과 따로
+  const reads = [];
+  const readEnd = (A) => {
+    if (!A?.fired0) return;
+    const fired = Object.entries(uq.stats.fired).flatMap(([k, v]) => Array.from({ length: v - (A.fired0[k] ?? 0) }, () => k));
+    reads.push({ t: r3(A.t), kind: A.kind, want: A.want ?? null, base: A.base ?? null, side: A.side ?? null, fwd: A.fwd ?? null, fired });
+    A.fired0 = null;
+  };
+  let prevAct = null;
   const begin = (a) => {
     if (hand) ev('pointerup');
-    act = { ...a, t: G.t / K };
+    readEnd(prevAct);
+    readEnd(act);
+    act = { ...a, t: G.t / K, fired0: { ...uq.stats.fired } };
     acts[a.kind] = (acts[a.kind] ?? 0) + 1;
     if (a.want) wants[a.want] = (wants[a.want] ?? 0) + 1;
     if (['stroke', 'tap', 'hold', 'circle', 'bind', 'sideTap'].includes(a.kind)) ev('pointerdown');
@@ -219,7 +230,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       cavTapAt = null;
       begin({ kind: 'tap', seconds: 0.07, want: 'cavazione' });
     }
-    if (school === 'iberian' && seen?.spin && act?.kind === 'move') (act = null), (nextDec = t); // 무장 표시를 보면 걸음을 멈추고 원 (사람 — 창이 열린 동안)
+    if (school === 'iberian' && seen?.spin && act?.kind === 'move') readEnd(act), (act = null), (nextDec = t); // 무장 표시를 보면 걸음을 멈추고 원 (사람 — 창이 열린 동안)
     if (activeStart != null && P.alive && A.alive && !busy && !act && t >= nextDec && seen) {
       begin(decide(seen));
       nextDec = t + 0.35;
@@ -283,7 +294,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
         sy = -0.8;
         if (age >= act.seconds) {
           ev('pointerdown');
-          act = { kind: 'tap', seconds: 0.07, t, want: act.want };
+          act = { kind: 'tap', seconds: 0.07, t, want: act.want, fired0: act.fired0 };
         }
       } else if (act.kind === 'wait') {
         sx = 0;
@@ -291,6 +302,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       } else done = age >= (act.seconds ?? 0.5);
       if (done && act) {
         if (hand) ev('pointerup');
+        prevAct = act; // 읽힘은 다음 뜻이 시작될 때 닫음 (늦은 스틱 — 긋기가 끝나 가며 읽힌 것까지)
         act = null;
         nextDec = Math.max(nextDec, t + 0.25);
       }
@@ -419,6 +431,11 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
         fires.push(cur);
         if (fires.length > 1) fires[fires.length - 2].st1 ??= P.stamina.value;
       } else if (a && cur && (cur.name === 'basic' || cur.name === 'tap') && a.name !== cur.name && G.t - cur.t < 0.3 * K) cur.name = a.name; // 강화 · 걸음 기술 이름이 몇 스텝 늦게 섬
+      else if (attrib !== 'old' && a && cur && a.id === cur.id && a.cls === 'swing' && cur.name === 'basic' && a.name !== 'basic') {
+        // 같은 봇 긋기인데 게임이 기술로 읽은 것이 0.3 s 넘어 늦음 (11/05 고침 — 시작 자리로 가는 손이 휘두르기(skill.swinging — 기력 박자로 빨라 보임)로 잡혀 기록이 거기서 'basic' 으로 열렸음:
+        //  걸음 공격 읽힘이 15 ~ 33 % 로 적혔던 몫의 대부분). 기록을 읽힌 때로 옮기고 그 전 몫(가는 손)은 버림 · `--attrib=old` = 전 판
+        Object.assign(cur, { name: a.name, t: G.t, dist0: P.foeDistance(), stick: [r3(P.stickX), r3(P.stickY)], contacts: 0, wounds: 0, sev: 0, cons: 0, Emax: 0, types: {}, recv1: 0, consR1: 0, recvN1: 0, fall1: false, kill1: false, dis1: false, st0: P.stamina.value });
+      }
       for (const who of ['P', 'A']) {
         const f = who === 'P' ? P : A;
         if (stand0[who] === 'stand' && f.state !== 'stand' && f.state !== 'dead') {
@@ -437,13 +454,15 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       if ((!P.alive || !A.alive) && end == null) end = G.t + 0.5;
       if (end != null && G.t >= end) break;
     }
+    readEnd(prevAct);
+    readEnd(act);
     const T = ((Math.min(G.t, tEnd()) - (activeStart ?? 0)) / K);
     return {
       school, weapon, opp, seed, T: r3(T),
       win: !A.alive && P.alive, lose: !P.alive && A.alive,
       dealt: r3(wounds.dealt), recv: r3(wounds.recv), dealtN: wounds.dealtN, recvN: wounds.recvN, consD: r3(wounds.consD), consR: r3(wounds.consR), falls, exh: r3(exhT / K / Math.max(1e-6, T)),
       secretFired: fires.filter((f) => f.cls === 'secret').length, brk, disarms,
-      secretLeft: secretLeft(P), wants, acts,
+      secretLeft: secretLeft(P), wants, acts, reads,
       fires: fires.map((f) => ({ t: r3(f.t / K), name: f.name, cls: f.cls, d: r3(f.dist0), c: f.contacts, w: f.wounds, sev: r3(f.sev), cons: r3(f.cons), E: r3(f.Emax), ty: f.types, r1: r3(f.recv1), cr1: r3(f.consR1), rn1: f.recvN1, f1: f.fall1, k1: f.kill1, dis1: f.dis1, base: f.base, want: f.want, stick: f.stick, st: r3(f.st0 - (f.st1 ?? P.stamina.value)) })),
     };
   } finally {
@@ -485,7 +504,31 @@ export function aggMarkdown(runs) {
     out.push('', `### ${k}`, '', '| 기술 | 낸 수 | 분당 | 몸 닿음 | 맞음 | 맞음당 심각도 | 맞음당 의식 | 닿음당 J | 가장 큰 J | 1 s 안 쓰러뜨림 | 1 s 안 받은 심각도 | 1 s 안 맞받음 | 1 s 안 넘어짐 |', '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|');
     for (const t of techRows(rs)) out.push(`| ${t.name} | ${t.n} | ${f1(t.perMin, 1)} | ${pct(t.contact * t.n, t.n)} | ${pct(t.hit * t.n, t.n)} | ${f1(t.sevHit)} | ${f1(t.consHit)} | ${f1(t.Ehit, 0)} | ${f1(t.Emax, 0)} | ${pct(t.kill1 * t.n, t.n)} | ${f1(t.recv1)} | ${pct(t.hitBack1 * t.n, t.n)} | ${pct(t.fall1 * t.n, t.n)} |`);
   }
+  const R = readsMarkdown(runs);
+  if (R) out.push('', R);
   return out.join('\n');
+}
+/**
+ * 낸 뜻 → 게임이 읽은 것 (11/05 — 판 결과의 reads · 봇 한 번 동안 unique_assist 가 낸 고유 공격): 칸마다 고유 공격 이름 하나씩 —
+ *  뜻 = 봇이 그 이름을 내려 한 수 · 읽힘 = 그 가운데 게임이 그 이름을 낸 수 · 뜻 없이 = 봇이 다른 것(기본 긋기 · 다른 기술 · 막기 등)을 하려 한 수 가운데 그 이름이 난 수 (긋기 · 탭인 뜻 수 중)
+ */
+export function readsMarkdown(runs) {
+  const cells = {};
+  for (const r of runs) if (r.reads) (cells[`${r.school}:${r.weapon}:${r.opp}`] ??= []).push(...r.reads);
+  const out = [];
+  for (const [k, rd] of Object.entries(cells)) {
+    const names = new Set(rd.flatMap((x) => x.fired));
+    for (const x of rd) if (x.want && rd.some((y) => y.fired.includes(x.want))) names.add(x.want);
+    const strokeLike = rd.filter((x) => ['stroke', 'tap', 'sideTap', 'retreatTap'].includes(x.kind));
+    const rows = [...names].map((n) => {
+      const want = rd.filter((x) => x.want === n);
+      const other = strokeLike.filter((x) => x.want !== n);
+      return `| ${k} | ${n} | ${want.length} | ${want.filter((x) => x.fired.includes(n)).length} (${pct(want.filter((x) => x.fired.includes(n)).length, want.length)}) | ${other.filter((x) => x.fired.includes(n)).length} / ${other.length} (${pct(other.filter((x) => x.fired.includes(n)).length, other.length)}) |`;
+    });
+    if (rows.length) out.push(...rows);
+  }
+  if (!out.length) return '';
+  return ['### 낸 뜻 → 게임이 읽은 고유 공격', '', '| 칸 | 고유 공격 | 뜻 | 읽힘 | 뜻 없이 남 (다른 긋기 · 탭 가운데) |', '|---|---|---:|---:|---:|', ...out].join('\n');
 }
 
 if (isMain(import.meta.url)) {
@@ -503,7 +546,7 @@ if (isMain(import.meta.url)) {
     for (const c of cells) {
       const [school, weapon, opp] = c.split(':');
       for (const seed of seeds) {
-        const r = fightOne({ school, weapon, opp, seed, dur: +arg('dur', 30), tech: +arg('tech', 0.35), focus: arg('focus', null), secret: arg('secret', '1') !== '0', drop: arg('drop', '').split(',').filter(Boolean) });
+        const r = fightOne({ school, weapon, opp, seed, dur: +arg('dur', 30), tech: +arg('tech', 0.35), focus: arg('focus', null), secret: arg('secret', '1') !== '0', drop: arg('drop', '').split(',').filter(Boolean), attrib: arg('attrib', 'new') });
         runs.push(r);
         console.error(JSON.stringify({ c, seed, win: r.win, lose: r.lose, T: r.T, dealt: r.dealt, recv: r.recv, fires: r.fires.length, ms: Date.now() - t0 }));
       }
