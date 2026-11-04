@@ -525,6 +525,10 @@ if (params.has('itAccel')) CONFIG.THRUST.itAccel = +params.get('itAccel') ? 1 : 
 if (params.has('rapierWindow')) THRUST_STYLE.rapier.window = Math.max(0, +params.get('rapierWindow') || 0); // 레이피어 찌르기 판정 폭 (weapons.js THRUST_STYLE.rapier.window 0.12 — 달타냥 · 발리사르다 등 같은 객체를 쥔 칼 모두 · 재기 `?rapierWindow=0.06`)
 if (params.has('lungeReach')) CONFIG.AI_THRUST_DEF.lungeReach = +params.get('lungeReach') || 0;
 if (params.has('lungeParry')) CONFIG.AI_THRUST_DEF.lungeParry = +params.get('lungeParry') ? 1 : 0;
+// 11/05 일본 · 독일 롱소드 기본 공격 재기 스위치 (모두 기본 끔 · docs/strike/jp_de_basics_2026-11-05.md · 확인표 3400 ~ 3409)
+if (params.has('cutStepIn')) CONFIG.SKILL.cutStepIn.fwd = Math.max(0, +params.get('cutStepIn') || 0); // 베며 내딛기 걸음 (m — 걸음 사다리 0.3 · 0.45 · 0 = 끔)
+if (params.has('cutStepSchools')) CONFIG.SKILL.cutStepIn.schools = params.get('cutStepSchools').split(',').filter(Boolean);
+if (params.has('mordBarge')) CONFIG.SECRET.mordBarge = +params.get('mordBarge') ? 1 : 0; // 죽음의 일격 셈: 내 밀치기도 붙음
 if (params.has('wristSwing')) CONFIG.JOINTS.wristSwing = Math.max(0, Math.min(2, Math.round(+params.get('wristSwing') || 0))); // 시험 (10/25 · 기본 0): 베는 동안 손목 교정 — 1 = 칼 면 안에서만 · 2 = 안 함 (fighter.js wristGuardAim · cutSwing · 기록 wrist_audit §11)
 if (params.has('wristRope')) CONFIG.JOINTS.wristRope = +params.get('wristRope') ? 1 : 0; // 시험 (10/24 17:2x · 기본 끔 · `?wristRope=1` = 손목 치우침 밧줄 둘 — fighter.js gripDevOn · 기록 §9)
 if (CONFIG.JOINTS.presets[params.get('joints')]) CONFIG.JOINTS.mode = params.get('joints'); // 칼 팔 관절 가동 범위 교정 시제품(10/9, docs/motion/joint_range_2026-10-09.md): `?joints=off|anat|hard|soft|reach`, 없으면 기본 anat(켬)

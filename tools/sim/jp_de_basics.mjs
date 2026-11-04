@@ -67,6 +67,7 @@ export function deepProbe() {
           if (r.type !== 'blunt' && r.severity > 0) (aRec.sev += r.severity), aRec.cutN++;
           else aRec.bluntN++;
           aRec.bodyT ??= r3((G.t - aRec.t0) / K);
+          if (aRec.w.length < 3) aRec.w.push([r.type, r.zone, r3(r.energy), r3(r.severity), r3(r.speed), r3(r.eff), r3(r.thr)]); // [종류 · 부위 · 판정 J · 심각도 · 빠르기 · 실효 · 문턱]
         }
       };
       const oc = G.combat.hooks.onClash;
@@ -132,7 +133,7 @@ export function deepProbe() {
       const ph = G.ai.phase;
       const tap = A.skill.tap ?? null;
       if ((ph === 'strike' && prevPhase !== 'strike') || (tap && tap !== prevTap)) {
-        aRec = { t0: G.t, d: r3(d), guard: !!guardObj?.held, pAct: act?.kind ?? null, pSwing: !!P.skill.swinging, tap: !!tap, n: 0, sev: 0, cutN: 0, bluntN: 0, clashT: null, bodyT: null, pState: P.state };
+        aRec = { t0: G.t, d: r3(d), guard: !!guardObj?.held, pAct: act?.kind ?? null, pSwing: !!P.skill.swinging, tap: !!tap, n: 0, sev: 0, cutN: 0, bluntN: 0, clashT: null, bodyT: null, pState: P.state, w: [], tech: G.ai.tech?.name ?? null };
         AT.push(aRec);
       }
       prevPhase = ph;
@@ -187,7 +188,7 @@ export function deepProbe() {
           aiAtk: AT.map((a) => ({ ...a, t0: r3(a.t0 / K), sev: r3(a.sev) })),
           falls: FALLS,
           closeActs: CL.map((c) => ({ t0: r3(c.t0 / K), minD: r3(c.minD), maxRun: r3((c.maxRun * DT) / K), dur: r3((c.steps * DT) / K), modes: Object.fromEntries(Object.entries(c.modes).map(([k, v]) => [k, r3(v / Math.max(1, c.steps))])), aiBarge: r3(c.aiBarge / Math.max(1, c.steps)), pBarge: r3(c.pBarge / Math.max(1, c.steps)), opened: c.opened, fell: c.fell })),
-          reach: r3(M.reach), contact: r3(M.contact),
+          reach: r3(M.reach), contact: r3(M.contact), swings: P.skill.swings ?? null, cutSteps: P.skill.cutSteps ?? 0,
         },
       };
     },
