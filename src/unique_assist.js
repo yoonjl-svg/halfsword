@@ -996,7 +996,7 @@ export class PlayerUniqueAssist {
 
   /**
    * 걸음 명령의 스틱: 'side' = 옆 몫이 문턱 넘고 앞뒤 몫 이상 · 'fwd' = 앞 몫이 문턱 넘고 옆 몫보다 큼 (플레이어 스틱 원값 f.stickX · stickY — 키도 같은 값).
-   *  전 판(UNIQUE_ASSIST.stepIn 0): 지금 스틱만 · 문턱 0.5. 새 판(11/05 — stepIn 1): 문턱 stepStick · 지금 안 맞아도 stepPre 초 안에 그 쪽이었으면(밀었다 놓은 엄지) 맞음.
+   *  전 판(UNIQUE_ASSIST.stepIn 0): 지금 스틱만 · 문턱 0.5. 새 판(11/05 — stepIn 1): 문턱 stepStick · 지금 안 맞아도 stepPre 초 안에 그 쪽이었으면(밀었다 놓은 엄지 — 앞 창 · 기본 끔) 맞음.
    *  받아들인 스틱은 stickUsed (걸음 · 몸 빼기 좌우) · stickVia 'now' | 'mem'
    */
   stickOk(want) {
@@ -1008,7 +1008,7 @@ export class PlayerUniqueAssist {
       return true;
     }
     const M = UA.stepIn ? this.stickMem[want] : null;
-    if (M && this.t - M.t <= UA.stepPre) {
+    if (M && UA.stepPre > 0 && this.t - M.t <= UA.stepPre) {
       this.stickUsed = M.v;
       this.stickVia = 'mem';
       return true;
@@ -1191,7 +1191,7 @@ export class PlayerUniqueAssist {
   drive(dt) {
     this.t += dt;
     const f = this.f;
-    if (UA.stepIn) this.stickTick(); // 걸음 공격 스틱 기억 (11/05 — stepPre)
+    if (UA.stepIn && UA.stepPre > 0) this.stickTick(); // 걸음 공격 스틱 기억 (11/05 — 앞 창 stepPre · 기본 끔)
     if (UA.cavCancel && this.cavFire) this.cavCancelTick();
     if (this.holdE) this.holdTick(dt); // 풍차 베기 (B4 — 길게 눌러 감다 떼면 내려침 · 10/29)
     if ((UA.dupAny || UA.dupGrace > 0) && UA.dupTap && this.list.some((x) => x.tapKey === 'dup')) {
