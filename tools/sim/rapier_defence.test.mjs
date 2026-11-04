@@ -20,7 +20,7 @@ test('기본값: 새 스위치 모두 끔 · 레이피어 찌르기 장점 그�
   assert.equal(THRUST.itDrop, '');
   assert.equal(THRUST.itStep, null);
   assert.equal(THRUST.itClashEnd, 0);
-  assert.equal(THRUST.itAccel, 1);
+  assert.equal(THRUST.itAccel, 0); // 11/05 사장님 결정 — 이탈리아 보통 찌르기 몸 박차기 뺌
   assert.equal(AI_THRUST_DEF.lungeReach, 0);
   assert.equal(AI_THRUST_DEF.lungeParry, 0);
   assert.deepEqual({ ...THRUST_STYLE.rapier }, { recover: 0.6, reach: 0.1, gap: 0.3, window: 0.12 });
@@ -67,10 +67,11 @@ function italianTapStep() {
 }
 
 test('itAccel 0: 이탈리아 탭 런지 부탁에서 몸 가속만 빠짐', () => {
-  const on = italianTapStep();
-  const was = THRUST.itAccel;
-  let off;
+  const was = THRUST.itAccel; // 11/05 기본 0 — 켠 판(1)과 견줌
+  let on, off;
   try {
+    THRUST.itAccel = 1;
+    on = italianTapStep();
     THRUST.itAccel = 0;
     off = italianTapStep();
   } finally {
