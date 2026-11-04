@@ -1973,9 +1973,12 @@ export const THRUST = {
   //  itDrop     재기 스위치: 이탈리아 찌르기 ①~④ 가운데 끌 것 ('aim' 몸통 겨눔 · 'chamber' 당기지 않음 · 'lunge' 거리만큼 몸이 실린 런지 · 'hold' 뻗은 채 머묾 — '+' 로 여럿) · '' = 모두 켬(지금)
   //  itStep     이탈리아 런지 걸음 상한 (m · 걸음 사다리 0.3 / 0.45 / 0.6) — null = 런지 덧씌우기 걸음(frames.js OVERLAY.thrust 0.6) 그대로. 사람 · AI 이탈리아 찌르기 모두 `?itStep=0.45`
   //  itClashEnd 1 = 뻗은 채 머무는 동안(④) 칼끼리 닿으면 닿은 것으로 보고 자세로 (막힌 찌르기가 밀고 들어가지 않음) · 0 = 지금 `?itClashEnd=1`
+  //  itAccel    1 = 지금 (③ 런지 걸음에 몸 가속 — 비기 런지 · 고노센 걸음과 같은 몸 가속 한도 × GAIT.burstAccel · gait.lungeBrake — ④ 뻗은 채 머묾도 이 가속 동안) ·
+  //             0 = 보통 탭 · 내려 찌르기 · AI 찌르기 기술의 런지는 몸 가속 없이 (걸음 길이 · 몸 따라감 stepPush 그대로 — 비기 리솔루토는 그대로) `?itAccel=0`
   itDrop: '',
   itStep: null,
   itClashEnd: 0,
+  itAccel: 1,
   // 이탈리아 유파 무기 간격 줄 세 판 (10/25 — 파펜하이머 들임 중 간격 생성기가 이탈리아 무기를 못 잼 · docs/strike/italian_measure_2026-10-25.md · 확인표 2556 ~ 2560 · 사장님 확인 전 — 고르실 때까지 기본 'old'):
   //  'old' = 지금 판(10/8 ~ 10/25 분노의 베기 줄 — 판 바이트 같음) · 'contact' = 맞닿음(contact)만 찌르기 잣대 값(한 걸음 · 맞붙음 · 베는 시간은 지금 그대로) + 안다레 리솔루토 창 최소 간격 · 런지 미끄러짐은 지금 맞닿음 그대로 ·
   //  'full' = 찌르기 잣대 줄 통째(contact · reach · clinch · 베는 시간 — 파펜하이머 포함 · 리솔루토도 새 맞닿음을 따름). 찌르기 잣대 = 3번 자세 탭 찌르기의 칼날 70 % 지점 ÷ 같은 실행 롱소드 찌르기 × 롱소드 손 값(weapon_measured.js ITALIAN_THRUST).

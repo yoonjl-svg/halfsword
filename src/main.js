@@ -38,7 +38,7 @@ import { LOOKS, getLook } from './looks.js';
 import { AI } from './ai.js';
 import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, savedFoeWeapon, randomLine, lineSourceOf, aiAtProficiency } from './characters.js';
 import { Emotions, EMO_ABILITY } from './emotions.js';
-import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, setGripTorque, RETIRED_WEAPONS } from './weapons.js';
+import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, setGripTorque, RETIRED_WEAPONS, THRUST_STYLE } from './weapons.js';
 import { attachAura, AURA_VIEW } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
 import { bloodPalette } from './blood_palette.js'; // 피 색 (10/27 — 광기의 병마용은 흰 피 · 그 밖은 붉은 피 그대로)
@@ -517,6 +517,8 @@ if (params.has('itThrust')) CONFIG.THRUST.itLunge = +params.get('itThrust') ? 1 
 // 11/05 찌르기 막기 재기 스위치 (모두 기본 끔 · docs/strike/rapier_defence_2026-11-05.md · 확인표 3370 ~ 3379): 런지 걸음 상한 · 막힌 런지 거둠 · AI 런지 간격 어림 · AI 런지 막기
 if (params.has('itStep')) CONFIG.THRUST.itStep = +params.get('itStep') || null;
 if (params.has('itClashEnd')) CONFIG.THRUST.itClashEnd = +params.get('itClashEnd') ? 1 : 0;
+if (params.has('itAccel')) CONFIG.THRUST.itAccel = +params.get('itAccel') ? 1 : 0;
+if (params.has('rapierWindow')) THRUST_STYLE.rapier.window = Math.max(0, +params.get('rapierWindow') || 0); // 레이피어 찌르기 판정 폭 (weapons.js THRUST_STYLE.rapier.window 0.12 — 달타냥 · 발리사르다 등 같은 객체를 쥔 칼 모두 · 재기 `?rapierWindow=0.06`)
 if (params.has('lungeReach')) CONFIG.AI_THRUST_DEF.lungeReach = +params.get('lungeReach') || 0;
 if (params.has('lungeParry')) CONFIG.AI_THRUST_DEF.lungeParry = +params.get('lungeParry') ? 1 : 0;
 if (params.has('wristSwing')) CONFIG.JOINTS.wristSwing = Math.max(0, Math.min(2, Math.round(+params.get('wristSwing') || 0))); // 시험 (10/25 · 기본 0): 베는 동안 손목 교정 — 1 = 칼 면 안에서만 · 2 = 안 함 (fighter.js wristGuardAim · cutSwing · 기록 wrist_audit §11)

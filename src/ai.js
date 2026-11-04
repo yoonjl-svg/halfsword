@@ -3588,7 +3588,7 @@ export class AI {
       return;
     }
     const itl = this.tech?.kind === 'thrust' ? this.me.skill.tap?.it : null; // 이탈리아 찌르기 ③: 거리만큼(0.6 m 까지) · 몸이 앞발을 따라 실리는 런지 (skill.js 탭 찌르기와 같은 걸음 장치)
-    if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: itl?.fwd > 0 ? Math.min(0.6, itl.fwd) : 0.6, hold: 0.3, leg, ...(itl?.fwd > 0 ? { push: SECRET.stepPush, accel: true } : {}) })) this.requestedStep = true;
+    if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: itl?.fwd > 0 ? Math.min(0.6, itl.fwd) : 0.6, hold: 0.3, leg, ...(itl?.fwd > 0 ? { push: SECRET.stepPush, ...(THRUST.itAccel ? { accel: true } : {}) } : {}) })) this.requestedStep = true; // THRUST.itAccel 0 (11/05 스위치 · 기본 1) = 사람 탭과 같게 몸 가속 없음
   }
 
   // ───────────────────────── 기술 걸음 (10/9 — 사장님 '비껴 들어가 베기', docs/strike/school_step_2026-10-09.md) ─────────────────────────

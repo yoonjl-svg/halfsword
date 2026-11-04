@@ -123,7 +123,7 @@ function padStar(f, out) {
   return out;
 }
 
-/** 이탈리아 찌르기 ①~④ 가운데 k('aim' · 'chamber' · 'lunge' · 'hold')가 켜졌나 — THRUST.itDrop(재기 스위치 · 기본 '' = 모두 켬 · '+' 로 여럿)에 있으면 꺼짐 (11/05 찌르기 막기 재기 — docs/strike/rapier_defence_2026-11-05.md) */
+/** 이탈리아 찌르기 ①~④ 가운데 k('aim' · 'chamber' · 'lunge' · 'hold' · ③ 의 'push' 몸 따라감 2.0 · 'accel' 몸 가속)가 켜졌나 — THRUST.itDrop(재기 스위치 · 기본 '' = 모두 켬 · '+' 로 여럿)에 있으면 꺼짐 (11/05 찌르기 막기 재기 — docs/strike/rapier_defence_2026-11-05.md) */
 export const itPartOn = (k) => !THRUST.itDrop || !String(THRUST.itDrop).split('+').includes(k);
 
 /** 이탈리아 찌르기 ④ (THRUST.itLunge): 런지가 아직 안 끝났나 — 몸이 실리는 런지 걸음(accel) 부탁이 딛기를 기다리거나(걷던 발이 아직 떠 있음 — gait.req) 그 몸 가속(gait.lungeBrake — 앞발이 나가는 동안 · 디딘 뒤 몸이 따라잡을 때까지)이 안 끝남 */
@@ -287,7 +287,7 @@ export class Skill {
       const il = this.tap.it;
       if (f.gait?.active) {
         if (!il || !itPartOn('lunge')) f.gait.requestStep({ kind: 'lunge', fwd: THRUST.step, duration: 0.3 }); // itDrop 'lunge' = 보통 찌르기 걸음 (재기)
-        else if (il.fwd > 0) f.gait.requestStep({ kind: 'lunge', fwd: il.fwd, duration: 0.3, push: SECRET.stepPush, accel: true }); // 이탈리아 찌르기 ③: 거리만큼 런지 · 몸이 앞발을 따라 실림 (거리 안이면 걸음 없이 팔만)
+        else if (il.fwd > 0) f.gait.requestStep({ kind: 'lunge', fwd: il.fwd, duration: 0.3, ...(itPartOn('push') ? { push: SECRET.stepPush } : {}), ...(itPartOn('accel') && THRUST.itAccel ? { accel: true } : {}) }); // 이탈리아 찌르기 ③: 거리만큼 런지 · 몸이 앞발을 따라 실림 (거리 안이면 걸음 없이 팔만) · itDrop 'push' · 'accel' = 그 몫 없이 (재기) · THRUST.itAccel 0 = 몸 가속 없음 (스위치)
       } else this.lunge = SKILL.lungeTime;
     }
     return true;
