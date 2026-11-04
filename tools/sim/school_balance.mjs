@@ -76,7 +76,7 @@ const TSU = (() => {
 const KOTE = { from: PAD.langort, path: [[0.02, -0.22]] };
 
 /** 한 판 */
-export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], attrib = 'new' }) {
+export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], probe = null, attrib = 'new' }) { // probe = 재기 꽂개 (rapier_defence.mjs — init · step · done · 없으면 그대로) · attrib 'old' = 11/04 기술 기록 셈 (step_input 기록 §1)
   const rnd = rng(seed * 7919 + 101);
   const kit = kitFromNodes(school, allNodeIds(school)); // 무유파는 null (나무 없음 — 고유 · 비기 없음)
   const G = newRound({ seed, weapon, weapon2: opp, walls: true, ...(kit ? { kit } : {}), look: LOOKS.player, look2: LOOKS.enemy, persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
@@ -409,6 +409,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   const brk = { P: null, A: null };
   let armedA = A.armed;
   let disarms = 0; // 칼 부러짐 (판 시작부터 실제 s) — 부러진 칼은 고유 공격이 안 남 (unique_assist busy)
+  probe?.init?.({ G, P, A, uq, W, guard }); // 읽기만 (난수 · 몸 그대로)
   try {
     while (activeStart == null || G.t < tEnd()) {
       if (G.t / K >= nextFrame - 1e-8) {
@@ -436,6 +437,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
         //  걸음 공격 읽힘이 15 ~ 33 % 로 적혔던 몫의 대부분). 기록을 읽힌 때로 옮기고 그 전 몫(가는 손)은 버림 · `--attrib=old` = 전 판
         Object.assign(cur, { name: a.name, t: G.t, dist0: P.foeDistance(), stick: [r3(P.stickX), r3(P.stickY)], contacts: 0, wounds: 0, sev: 0, cons: 0, Emax: 0, types: {}, recv1: 0, consR1: 0, recvN1: 0, fall1: false, kill1: false, dis1: false, st0: P.stamina.value });
       }
+      probe?.step?.(cur, act);
       for (const who of ['P', 'A']) {
         const f = who === 'P' ? P : A;
         if (stand0[who] === 'stand' && f.state !== 'stand' && f.state !== 'dead') {
@@ -464,6 +466,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       secretFired: fires.filter((f) => f.cls === 'secret').length, brk, disarms,
       secretLeft: secretLeft(P), wants, acts, reads,
       fires: fires.map((f) => ({ t: r3(f.t / K), name: f.name, cls: f.cls, d: r3(f.dist0), c: f.contacts, w: f.wounds, sev: r3(f.sev), cons: r3(f.cons), E: r3(f.Emax), ty: f.types, r1: r3(f.recv1), cr1: r3(f.consR1), rn1: f.recvN1, f1: f.fall1, k1: f.kill1, dis1: f.dis1, base: f.base, want: f.want, stick: f.stick, st: r3(f.st0 - (f.st1 ?? P.stamina.value)) })),
+      ...(probe?.done ? { probe: probe.done(fires) } : {}),
     };
   } finally {
     G.world.free();
