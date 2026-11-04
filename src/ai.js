@@ -21,7 +21,7 @@ import { STAMINA } from './config.js';
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME } from './config.js';
+import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
@@ -56,6 +56,13 @@ const foeAttackingMe = (g, me) => g.foe === me && (g.aiCtl ? g.aiCtl.mode === 'a
 /** g 의 칼끝 거리 (targeting.js reachOf 와 같음) */
 const reachOfFoe = (g) => g.aiCtl?.M?.reach ?? g.swordArt?.measure?.reach ?? 1.8;
 const rand = (a, b) => a + Math.random() * (b - a);
+/** 이탈리아 런지 찌르는 상대인가 (config AI_THRUST_DEF — 11/05 · THRUST.itLunge 를 쓰는 몸) */
+const lungeFoe = (f) => !!THRUST.itLunge && f?.swordArt?.tradition === 'italian';
+/** AI 가 어림하는 상대 칼 닿는 거리의 바탕 = 무기 간격 + 0.05 · 런지 찌르는 상대면 + AI_THRUST_DEF.lungeReach (기본 0 = 지금 그대로) */
+const foeReachBase = (foeM, f) => {
+  const b = foeM.reach + 0.05;
+  return AI_THRUST_DEF.lungeReach > 0 && lungeFoe(f) ? b + AI_THRUST_DEF.lungeReach : b;
+};
 // 표준 시간 (10/25 22:3x — config.js TIME): AI 판단 박자 · 막기 · 물러남 · 걸쇠 · 눈의 기억은 실제 초로 적고 한 번 게임 초로 바꾼다 (realS).
 //  몸 · 칼 움직임 시간(기술 걸음 STEP_T · 따라 지나감 0.3 · 내딛기 늦춤 0.04 · 떨림 박자 · 비기 동작 단계)은 그대로 — 지금 빠르기가 표준.
 const DEF_T = realS(0.65); // 막기 한 번의 길이 (parry_button.js 와 같은 수)
@@ -227,7 +234,7 @@ export class AI {
     this.guard = null; // 간 볼 때의 자세
     this.guardTimer = realS(rand(0.3, 1.0));
     this.patience = rand(0.55, 0.85); // 처음엔 조금 간을 보다가 들어간다
-    this.foeReach = this.foeM.reach + 0.05; // 상대 칼이 닿는 거리 추정 (생각보다 멀리서 맞으면 늘린다)
+    this.foeReach = foeReachBase(this.foeM, foe); // 상대 칼이 닿는 거리 추정 (생각보다 멀리서 맞으면 늘린다)
     this.decideTimer = 0;
     this.timer = 0;
     this.attackT = 0;
@@ -334,7 +341,7 @@ export class AI {
     sense.t = this.sense.t; // 같은 시계
     const foeM = this.art.measureFor(f.weapon);
     // 처음 값 = 생성자의 처음 값과 같은 칸 (위협 번호 0 · 본 번호 −1 · 낌새 걸쇠 열림 · 조용한 시간 1 s)
-    this.foeRecs.push({ foe: f, sense, foeM, foeReach: foeM.reach + 0.05, foeBrokeM: undefined, prevFoePain: f.pain, threatId: 0, threatSeen: -1, readRollId: -1, readRollOk: false, preArmed: true, preOff: 1, noThreat: 1, foeClosing: 0, foeAggro: 0, gnsW: undefined, lastSeen: undefined });
+    this.foeRecs.push({ foe: f, sense, foeM, foeReach: foeReachBase(foeM, f), foeBrokeM: undefined, prevFoePain: f.pain, threatId: 0, threatSeen: -1, readRollId: -1, readRollOk: false, preArmed: true, preOff: 1, noThreat: 1, foeClosing: 0, foeAggro: 0, gnsW: undefined, lastSeen: undefined });
   }
 
   /** 겨눌 상대를 f 로 (지금 상대와 같으면 아무 일 없음 — 1:1 은 늘 그렇다). 처음 보는 상대면 addFoe 부터 */
@@ -573,7 +580,7 @@ export class AI {
     if (foe.weaponBroken && !this.foeBrokeM) {
       this.foeBrokeM = brokenLoss(foe);
       this.foeM = shrinkM(this.foeM, this.foeBrokeM);
-      this.foeReach = Math.min(this.foeReach, this.foeM.reach + 0.05);
+      this.foeReach = Math.min(this.foeReach, foeReachBase(this.foeM, foe));
     }
 
     // 쓰러진 상대: 서 있는 상대의 간격 대신 누운 몸을 내려칠 간격(finish.js FINISH.ai × 무기 배율, 파이터의 finish.gap)을 쓴다
@@ -629,7 +636,7 @@ export class AI {
       if (this.mode !== 'attack') this.foeReach = clamp(Math.max(this.foeReach, d + 0.1), this.foeM.reach, 2.5);
       if ((this.mode !== 'attack' || this.phase !== 'strike') && this.secretRun?.stage !== 'stiff' && this.secretRun?.stage !== 'instant' && this.secretRun?.stage !== 'spin' && this.secretRun?.stage !== 'mord') this.startWithdraw(0.8); // 순간 베기·발도 도중(instant)도 끊지 않는다 — 그 몇 스텝은 대본 // 비기 경직 동안은 물러나지도 못한다 (핸디캡)
     }
-    this.foeReach += (this.foeM.reach + 0.05 - this.foeReach) * dt * realRate(0.03); // 천천히 원래 생각으로
+    this.foeReach += (foeReachBase(this.foeM, foe) - this.foeReach) * dt * realRate(0.03); // 천천히 원래 생각으로
     if (SECRET.gnsWary) this.gnsWatch(dt, d, hurt); // 고노센 경계 (10/25 08:0x 사장님 '⑤'): 상대가 고노센 쓰는 몸이 아니면 아무 일 없음 · 끄면 이 줄을 안 타 옛 판 그대로
 
     // 인내심: 시간이 지나면 줄어든다 → 판이 늘어지지 않는다
@@ -830,7 +837,7 @@ export class AI {
     this.threatSeen = this.threatId;
     this.noThreat = 1;
     this.emoCore.parryTimes.length = 0;
-    this.foeReach = this.foeM.reach + 0.05;
+    this.foeReach = foeReachBase(this.foeM, this.foe);
     this.prevFoePain = this.foe.pain;
     this.prevMyPain = this.me.pain;
   }
@@ -2257,7 +2264,8 @@ export class AI {
     this.parryComboReset();
     // 2) 간격 끝에서 오는 공격, 찌르기는 물러나 헛치게 한다 (피하기). 가까우면 칼로 막는다
     const edge = d > this.foeReach - 0.35;
-    const pVoid = edge || th.thrust ? 0.8 : 0.3;
+    // AI_THRUST_DEF.lungeParry (11/05 · 기본 끔): 런지 찌르는 상대에게는 물러나 피하기 몫을 가운데 베기와 같게 — 런지는 물러나는 몸을 따라잡는다(피하기 뒤 맞음 57 % · 다른 찌르기 0 ~ 9 % — 재 보니 판 차이는 작음: 기록 §5)
+    const pVoid = (edge || th.thrust) && !(AI_THRUST_DEF.lungeParry && lungeFoe(this.foe)) ? 0.8 : 0.3;
     // 칼이 없으면 막을 수 없으니 물러난다. 겁먹었을 때도 칼로 받기보다 물러나 피한다
     this.defVoid = !this.me.armed || Math.random() < pVoid + (1 - pVoid) * this.fear * 0.8;
     if (this.defVoid) this.stats.voids++;
@@ -3580,7 +3588,7 @@ export class AI {
       return;
     }
     const itl = this.tech?.kind === 'thrust' ? this.me.skill.tap?.it : null; // 이탈리아 찌르기 ③: 거리만큼(0.6 m 까지) · 몸이 앞발을 따라 실리는 런지 (skill.js 탭 찌르기와 같은 걸음 장치)
-    if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: itl?.fwd > 0 ? Math.min(0.6, itl.fwd) : 0.6, hold: 0.3, leg, ...(itl?.fwd > 0 ? { push: SECRET.stepPush, accel: true } : {}) })) this.requestedStep = true;
+    if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: itl?.fwd > 0 ? Math.min(0.6, itl.fwd) : 0.6, hold: 0.3, leg, ...(itl?.fwd > 0 ? { push: SECRET.stepPush, ...(THRUST.itAccel ? { accel: true } : {}) } : {}) })) this.requestedStep = true; // THRUST.itAccel 0 (11/05 스위치 · 기본 1) = 사람 탭과 같게 몸 가속 없음
   }
 
   // ───────────────────────── 기술 걸음 (10/9 — 사장님 '비껴 들어가 베기', docs/strike/school_step_2026-10-09.md) ─────────────────────────
