@@ -874,7 +874,7 @@ export const SKILL = {
   //  (탭 찌르기 걸음 THRUST.step 과 같은 lunge 걸음 · 몸 박차기 없음 · 걷기 빠르기는 그대로). fwd 0 = 끔 · 걸음 사다리 0.3 / 0.45 · schools = 받는 유파 (무기 유파 — swordArt.tradition) ·
   //  frames = 받는 몸 틀 (swordArt.frame — 'two' 두손 칼 · null = 그 유파 모든 칼). 재 보니 칼이 상대 AI 만큼 긴 독일 롱소드는 나아지고(48 판 12 · 17 · 19 → 20 · 8 · 20) 짧은 칼(우치가타나 · 세이버)은 덜 맞히고 더 맞음 → 독일 두손 칼만
   //  `?cutStepIn=0.3` · `?cutStepSchools=german,japanese` · `?cutStepFrames=two` (`?cutStepFrames=all` = 모든 칼)
-  cutStepIn: { fwd: 0, schools: ['german'], frames: ['two'] },
+  cutStepIn: { fwd: 0.3, schools: ['german'], frames: ['two'] }, // 11/05 사장님 '독일 반걸음 넣고' (확인표 3364 · 전 fwd 0)
   homeGuard: [0.18, -0.28], // 베고 나서 돌아갈 기본 자세의 패드 위치 (쟁기 Pflug: 칼끝이 상대 얼굴을 겨눈다)
   recoverDelay: realS(0.25), // 손가락을 떼고(또는 멈추고) 이만큼 지나면 자세로 돌아간다 (초)
   recoverSpeed: 1.2, // 자세로 돌아가는 손 빠르기 (m/s, 휘두르기 기준 swingSpeed보다 느리게)
