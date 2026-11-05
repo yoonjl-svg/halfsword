@@ -320,7 +320,8 @@ test('몸통 뚜껑 (10/24 lid): 놓은 칼끝이 몸통 위 끝 쪽으로 오�
 // 10/24 기록 장면 (표준 시간 전 판의 게임 초 — 싱지르 무장 ibSpin.armTime 1.5): 옛 결함 재현 판 둘(아래 '칼 높이' 의 고침 끈 판 · '땅' 의 손목 옛 판 · 땅 끔)은 원을 다 그려 내는 때가 10/24 그림 판과 같아야
 //  칼이 솟고(본판 10/27 대검 몸 뒤 — 표준 시간으론 셋 중 하나만 솟음) · 칼끝이 땅을 스친다 — 표준 시간(무장 게임 1.65)으로는 그 때가 0.15 s 늦어 옛 결함이 안 보인다(옛 결함 재현만의 장면 · docs/strike/time_standard_2026-10-25.md §4). 고친 판(땅 · 발디딤)은 표준 시간 그대로 본다
 const withScene1024 = async (fn) => {
-  const a = SECRET.ibSpin.armTime, f = SECRET.armAtFight, fs = SKILL.frameScale, sh = SECRET.ibSpin.share;
+  const a = SECRET.ibSpin.armTime, f = SECRET.armAtFight, fs = SKILL.frameScale, sh = SECRET.ibSpin.share, fc = { ...SKILL.fingerCut };
+  Object.assign(SKILL.fingerCut, { arm: 1, gain: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면 (원을 그리는 동안은 보통 휘두름 — 감도 · 팔 힘 2 면 낼 때 손 · 칼 자리가 달라 옛 결함(솟음 셋 중 하나만 · 땅 막힘 없음)이 안 남)
   SECRET.ibSpin.armTime = 1.5;
   SECRET.ibSpin.share = 0.7; // 10/24 장면의 빠르기 몫 (11/05 0.5 전 — 느린 한 바퀴면 옛 결함(솟음)이 덜 보임)
   SECRET.armAtFight = 0; // 10/24 장면은 판 시작부터 무장 시계가 감 (10/27 23:0x 전 판 — 공격이 풀린 때부터 세면 원을 긋는 때가 정지 뒤로 밀려 옛 결함 장면이 아님)
@@ -332,6 +333,7 @@ const withScene1024 = async (fn) => {
     SECRET.armAtFight = f;
     SKILL.frameScale = fs;
     SECRET.ibSpin.share = sh;
+    Object.assign(SKILL.fingerCut, fc);
   }
 };
 test('원 입력 싱지르 칼 높이 (10/24): 전에 머리 위로 솟던 큰 원 셋 — 고친 판은 한 바퀴 다 돌고 칼 가장 높은 점 ≤ 가슴 + 0.45 m · 고침을 끄면 솟음', async () => {

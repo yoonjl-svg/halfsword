@@ -111,14 +111,20 @@ test('멀면(맞닿기 + 나아감 밖) 전 판 그대로 — 앞발 축 · 나�
 });
 
 test('넘어지던 판 (티소나 대 롱소드 AI 씨앗 3 — 사람 손가락 봇): 끄면 돌기 0.13 s 에 맞아 넘어짐 · 켜면 1 s 안 안 넘어짐', async () => {
-  const off = await withNear(0, () => runOne({ weapon: 'tizona', opp: 'longsword', seed: 3, dur: 5 }));
-  const s0 = off.probe.spins[0];
-  assert.ok(s0?.fall && s0.fall.dt <= 1 && s0.fall.why === 'gauge' && s0.fall.stage === 'spin', `끔 ${JSON.stringify(s0?.fall)}`);
-  const on = runOne({ weapon: 'tizona', opp: 'longsword', seed: 3, dur: 5 });
-  const s1 = on.probe.spins[0];
-  assert.equal(s1.near, true);
-  assert.ok(!(s1.fall && s1.fall.dt <= 1), `켬 ${JSON.stringify(s1.fall)}`);
-  assert.ok(s1.dealt.some((d) => d.sev > 0), '켬 벰');
+  const fc = { ...SKILL.fingerCut };
+  Object.assign(SKILL.fingerCut, { arm: 1, gain: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면 (손가락 봇 긋기가 세지면 씨앗 3 판이 달라져 그 넘어짐 장면이 안 나옴 — 끔 · 켬 같은 판)
+  try {
+    const off = await withNear(0, () => runOne({ weapon: 'tizona', opp: 'longsword', seed: 3, dur: 5 }));
+    const s0 = off.probe.spins[0];
+    assert.ok(s0?.fall && s0.fall.dt <= 1 && s0.fall.why === 'gauge' && s0.fall.stage === 'spin', `끔 ${JSON.stringify(s0?.fall)}`);
+    const on = runOne({ weapon: 'tizona', opp: 'longsword', seed: 3, dur: 5 });
+    const s1 = on.probe.spins[0];
+    assert.equal(s1.near, true);
+    assert.ok(!(s1.fall && s1.fall.dt <= 1), `켬 ${JSON.stringify(s1.fall)}`);
+    assert.ok(s1.dealt.some((d) => d.sev > 0), '켬 벰');
+  } finally {
+    Object.assign(SKILL.fingerCut, fc);
+  }
 });
 
 test('재기 꽂개는 읽기만: singir_fall runOne 판 = school_balance fightOne 판 (이베리아 · 롱소드 AI 씨앗 3 · 5 s)', () => {

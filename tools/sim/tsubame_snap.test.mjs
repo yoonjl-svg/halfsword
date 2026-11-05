@@ -172,12 +172,23 @@ test('진 · 츠바메가에시(모노호시자오 무기 비검 kin)는 그대�
   }
 });
 
-/** 한 판 견줌 몫: 공격당 심각도 10 배 넘게(셋 다 끈 10/25 전 판 대비) · 몸통 띠(다리 없음 · 팔보다 몸통) · 손목 범위 안 · 굴림 한도 안 */
+// 견줌 잣대 = 10/25 전 판 그대로: 그 판은 손가락 긋기 세기(SKILL.fingerCut)가 없던 판 — 11/06 기본 켬(감도 · 팔 힘 2)이면 손가락만으로 올려 긋는 전 판 칼도 세져 잣대가 옮겨감
+const withFc1105 = (fn) => {
+  const FC = CONFIG.SKILL.fingerCut;
+  const keep = { ...FC };
+  Object.assign(FC, { arm: 1, gain: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면
+  try {
+    return fn();
+  } finally {
+    Object.assign(FC, keep);
+  }
+};
+/** 한 판 견줌 몫: 공격당 심각도 10 배 넘게(셋 다 끈 10/25 전 판 대비 — 전 판은 손가락 긋기 세기 끈 판) · 몸통 띠(다리 없음 · 팔보다 몸통) · 손목 범위 안 · 굴림 한도 안 */
 function oneFight(ua) {
   const run = () => withJpOld(() => tsubameRun(1, { immortal: true, dur: 14, ghostDown: true }));
   const R = withUA(ua, run);
   const on = tsubameSummary([R]);
-  const off = tsubameSummary([withUA(OFF, run)]);
+  const off = tsubameSummary([withFc1105(() => withUA(OFF, run))]);
   assert.ok(on.perAtk >= 10 * Math.max(off.perAtk, 0.02), `켬 ${on.perAtk} · 끔 ${off.perAtk}`);
   assert.ok(on.snapHits >= 1);
   const P = on.parts;

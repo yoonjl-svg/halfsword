@@ -203,7 +203,20 @@ test('사람 곁눈 베기 맞는 순간 (손가락 봇 · 분노의 베기 길 
       Object.assign(ST, { stepDistance: keep.d, stepCosts: keep.c, backStepCostMul: keep.b });
     }
   };
-  const fair = () => walk1030(() => duelSummary([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((s) => playerRun(s, { foe: 'still', dur: 14, immortal: true })).map((r) => ({ ...r, rows: r.rows.slice(0, 5) }))));
+  // 손가락 긋기 세기도 11/06 전 판 값으로 묶어 둠(기본 켬 arm 2 · gain 2 — 칼 팔 · 손목 힘 2 배면 칼끝 들기 없는 3 은 맞는 순간 손목이 범위 밖 24 / 57 · 거꾸로 13 / 57 로 이 견줌의 잣대가 옮겨감 ·
+  //  세 판 모두 같은 손가락 값 — 지금 판(기본 켬)의 같은 길은 아래 now 가 따로 봄)
+  const fc1105 = (fn) => {
+    const FC = CONFIG.SKILL.fingerCut;
+    const keep = { ...FC };
+    Object.assign(FC, { arm: 1, gain: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면
+    try {
+      return fn();
+    } finally {
+      Object.assign(FC, keep);
+    }
+  };
+  const runs = () => walk1030(() => duelSummary([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((s) => playerRun(s, { foe: 'still', dur: 14, immortal: true })).map((r) => ({ ...r, rows: r.rows.slice(0, 5) }))));
+  const fair = () => fc1105(runs);
   const withTip = (v, fn) => {
     const old = UA.schielPlayerTip;
     UA.schielPlayerTip = v;
@@ -224,6 +237,11 @@ test('사람 곁눈 베기 맞는 순간 (손가락 봇 · 분노의 베기 길 
   assert.ok(old.oor >= 0.25 * old.contacts, `전 판 범위 밖 ${old.oor} / ${old.contacts} (옛 꼴이 보여야 시험이 산다)`);
   assert.ok(Math.abs(opt3.perAtk / old.perAtk - 1) <= 0.25, `3 공격당 심각도 ${opt3.perAtk} · 전 판 ${old.perAtk} (손목 고침으로 세지지도 약해지지도 않게)`);
   assert.ok(full.perAtk > opt3.perAtk, `같은 길 ${full.perAtk} · 3 ${opt3.perAtk} (칼끝 들기가 세기 몫)`);
+  // 지금 판 (손가락 긋기 기본 켬 — 게임 그대로): 같은 길은 같은 문턱 안
+  const now = runs();
+  assert.ok(now.contacts >= 15, `지금 판 맞음 ${now.contacts}`);
+  assert.ok(now.oor <= 0.15 * now.contacts, `지금 판 같은 길 범위 밖 ${now.oor} / ${now.contacts}`);
+  assert.ok(now.rev <= 0.05 * now.contacts, `지금 판 같은 길 거꾸로 ${now.rev} / ${now.contacts}`);
 });
 
 test('사람 곁눈 베기 세기 손잡이 (schielPlayerK — 18:5x 50 % 조건부): 0.5 면 첫 맞음 심각도만 × k · 맞는 빠르기 · 에너지 · 손목 그대로 · AI 곁눈 베기 그대로 · schielPlayer 0 이면 안 걸림', () => {

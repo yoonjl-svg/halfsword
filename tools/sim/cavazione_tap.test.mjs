@@ -266,11 +266,14 @@ test('① 내려 찌르기 닿게 (씨앗 1 · 서 있는 상대): 찌른 상처
   const stab = on.atts.flatMap((a) => a.hits).filter((h) => h.tech === 'imbroccata' && h.type === 'stab' && h.sev > 0);
   assert.ok(stab.length >= 1, `찌른 상처 ${stab.length}`);
   UA.imbroReach = 0;
+  const fc = { ...CONFIG.SKILL.fingerCut };
+  Object.assign(CONFIG.SKILL.fingerCut, { arm: 1, gain: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면 (감도 2 면 손가락 길만으로도 손이 두 배로 가 칼끝이 머리에 닿아 옛 결함 '옆으로 쓸고 지나감'이 안 남)
   try {
     const off = drillRun('italian', 1, { foe: 'still', variant: 'on', dur: 14 });
     assert.equal(off.atts.flatMap((a) => a.hits).filter((h) => h.sev > 0).length, 0);
   } finally {
     UA.imbroReach = 1;
+    Object.assign(CONFIG.SKILL.fingerCut, fc);
   }
   assert.equal(typeof strokeTechOf, 'function');
 });
