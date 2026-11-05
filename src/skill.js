@@ -1529,6 +1529,26 @@ export class Skill {
   }
 
   /**
+   * 베며 내딛기 (11/05 — 일본 · 독일 롱소드 기본 공격 재기 · docs/strike/jp_de_basics_2026-11-05.md · SKILL.cutStepIn · 기본 끔):
+   *  사람 몸(AI 아님)이 잠깐 멈췄다 새로 휘두르기 시작할 때(위 내딛기와 같은 때), 상대가 내 칼이 맞는 거리(measure.contact) 밖이고
+   *  한 걸음(fwd — 걸음 사다리 0.3 / 0.45)으로 내 칼끝 거리(measure.reach) 안에 들 수 있으면 앞발을 그만큼 내딛는다 (탭 찌르기 걸음과 같은 lunge 걸음 · 몸 박차기 없음).
+   *  걷기 빠르기(일본 −30 %)는 그대로 — 베는 순간의 한 걸음만. 유파 걸음 · 다른 기술 걸음이 이미 부탁돼 있으면(걸음 공격 · 겹치기 박차기 등) 덮지 않는다.
+   *  비기 · 탭 · 마무리 · 물러나는 스틱(gait.requestStep 이 거절)이면 없음. 새 거리 수 없음(무기 간격 표 그대로)
+   */
+  cutStepIn(d) {
+    const CS = SKILL.cutStepIn;
+    const f = this.f;
+    if (!(CS?.fwd > 0) || f.aiControlled || !f.gait?.active || f.gait.req || this.sec || this.tap || f.finish?.amt > 0.5) return false;
+    if (!CS.schools?.includes(f.swordArt?.tradition)) return false;
+    if (Array.isArray(CS.frames) && !CS.frames.includes(f.swordArt?.frame)) return false; // 받는 몸 틀 (null = 그 유파 모든 칼)
+    const M = f.swordArt.measure;
+    if (!M || !(d > M.contact) || !(d - CS.fwd < M.reach)) return false;
+    if (!f.gait.requestStep({ kind: 'lunge', fwd: CS.fwd, duration: 0.3 })) return false;
+    this.cutSteps = (this.cutSteps ?? 0) + 1; // 재기 (판정에는 안 씀)
+    return true;
+  }
+
+  /**
    * 들어가며 막기(R3 — 짧은 한손 칼, weapons.js enterParry): 상대가 휘두른 칼을 내 칼로 받아 낸 순간 한 걸음 앞으로 들어간다.
    *  긴 칼이 닿고 짧은 칼은 못 닿는 띠를 막은 칼로 덮은 채 건너, 긴 칼이 옹색한 안쪽으로 간다 (AI 는 거기서 되받아 친다).
    *  내가 휘두르던 중(내 공격이 막힌 것)이면 아니다
@@ -1757,6 +1777,7 @@ export class Skill {
           f.gait.requestStep({ kind: 'pass', leg: vx < -0.3 ? 'left' : vx > 0.3 ? 'right' : null, fwd: 0.6, duration: SKILL.lungeTime });
         }
       }
+      this.cutStepIn(d);
     }
     this.quiet = swinging ? 0 : this.quiet + dt;
 

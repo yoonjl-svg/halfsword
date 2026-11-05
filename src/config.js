@@ -869,6 +869,12 @@ export const SKILL = {
   lungeMax: 2.4, // 이 거리보다 가까우면 휘두르며 한 걸음 내딛는다
   lungeTime: 0.3, // 내딛는 시간(초)
   lungeMove: 0.9, // 내딛는 세기 (조이스틱 앞으로 민 정도와 같은 단위)
+  // 베며 내딛기 (11/05 — 일본 · 독일 롱소드 기본 공격 재기 · docs/strike/jp_de_basics_2026-11-05.md · 확인표 3400 ~ 3409 · 사장님 확인 전 — 기본 끔):
+  //  사람 몸이 새로 휘두르기 시작할 때 상대가 내 칼이 맞는 거리(무기 간격 표 contact) 밖이고 한 걸음으로 칼끝 거리(reach) 안에 들면 앞발을 fwd m 내딛는다
+  //  (탭 찌르기 걸음 THRUST.step 과 같은 lunge 걸음 · 몸 박차기 없음 · 걷기 빠르기는 그대로). fwd 0 = 끔 · 걸음 사다리 0.3 / 0.45 · schools = 받는 유파 (무기 유파 — swordArt.tradition) ·
+  //  frames = 받는 몸 틀 (swordArt.frame — 'two' 두손 칼 · null = 그 유파 모든 칼). 재 보니 칼이 상대 AI 만큼 긴 독일 롱소드는 나아지고(48 판 12 · 17 · 19 → 20 · 8 · 20) 짧은 칼(우치가타나 · 세이버)은 덜 맞히고 더 맞음 → 독일 두손 칼만
+  //  `?cutStepIn=0.3` · `?cutStepSchools=german,japanese` · `?cutStepFrames=two` (`?cutStepFrames=all` = 모든 칼)
+  cutStepIn: { fwd: 0, schools: ['german'], frames: ['two'] },
   homeGuard: [0.18, -0.28], // 베고 나서 돌아갈 기본 자세의 패드 위치 (쟁기 Pflug: 칼끝이 상대 얼굴을 겨눈다)
   recoverDelay: realS(0.25), // 손가락을 떼고(또는 멈추고) 이만큼 지나면 자세로 돌아간다 (초)
   recoverSpeed: 1.2, // 자세로 돌아가는 손 빠르기 (m/s, 휘두르기 기준 swingSpeed보다 느리게)

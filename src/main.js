@@ -67,7 +67,7 @@ import { IAI_READY_STANCE, iaiReadyShown } from './secret_instant.js'; // 고노
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
 import { pickupReady } from './pickup.js'; // 떨어진 칼 줍기 (11/05 — 막기 단추 글 '줍기')
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
-import { TRADITIONS, setChineseGait, setItalianBackCap, setItalianRhythm, setItalianStride, setItalianWalk, setJapaneseGait, traditionOf } from './schools.js';
+import { TRADITIONS, setChineseGait, setItalianBackCap, setItalianRhythm, setItalianStride, setItalianWalk, setJapaneseGait, setJapanesePlayerWalk, traditionOf } from './schools.js';
 import { createMatch, stepMatch, spawnSpots, orderControllers, pairFoe, matchResult } from './match.js'; // 동시 대전 판 (10/29 3단계 — 2:2 · 2:1 · 1:2 · 지켜보기)
 import { createTeamHud, teamFramePull } from './team_hud.js';
 import { shortNameOf } from './short_names.js'; // 체력 목록 짧은 이름 (사장님 10/30 01:0x) // 동시 대전 화면 (위 막대 넷 · 화면 밖 화살표 · 카메라 물러남)
@@ -179,6 +179,7 @@ if (params.has('gyeoksal')) CONFIG.SECRET.gyeoksal.on = +params.get('gyeoksal') 
 if (params.has('talhoApproach')) CONFIG.SKILL.talhoApproach = +params.get('talhoApproach') ? 1 : 0; // 나선 걸음 베기 '먼저 비껴 딛고 벤다'(AI — 10/29 18:4x 사장님): `?talhoApproach=0` = 전처럼 베며 딛음 (비교용)
 if (params.get('jpGait') === 'old') setJapaneseGait('old'); // 일본 걸음 (10/29 21:0x 사장님 '설계대로'): `?jpGait=old` = 전 판 (비교용)
 if (params.has('jpWalk')) setJapaneseGait(+params.get('jpWalk')); // 일본 걸음 빠르기 시험: `?jpWalk=0.81` 처럼 speedMul (가려는 빠르기 ×) · 판 값 0.70(10/31 사장님 '일본 바로잡아') · `?jpWalk=0.67` = 10/30 판
+if (params.has('jpPlayerWalk')) setJapanesePlayerWalk(+params.get('jpPlayerWalk')); // 사람 몸만 일본 걸음 빠르기 (11/05 시험 — AI 일본은 0.70 그대로 · docs/strike/jp_de_basics_2026-11-05.md)
 if (params.get('cnGait') === 'old') setChineseGait('old'); // 동방 박자 (10/29 21:0x 사장님 '동방 박자도 바꾸고'): `?cnGait=old` = 전 판 strideK 0.9 (비교용)
 if (params.has('passAsRung')) CONFIG.GAIT.passAsRung = +params.get('passAsRung') ? 1 : 0; // follow 안 pass → lunge + 끌어붙임 걸음 길이: 1 = 사다리 한 칸 아래(10/29 18:5x 사장님) · `?passAsRung=0` = 옛 × 0.85 (비교용)
 if (params.get('gyeoksalPow') === 'hit' || +params.get('gyeoksalPow') > 0) CONFIG.SECRET.gyeoksal.power = params.get('gyeoksalPow') === 'hit' ? 'hit' : +params.get('gyeoksalPow'); // 격살 판정 시험 (기본 'finish' = FINISH.power 2.5 · 'hit' = 다른 비기와 같은 hitMul 1.3)
@@ -529,6 +530,10 @@ if (params.has('itAccel')) CONFIG.THRUST.itAccel = +params.get('itAccel') ? 1 : 
 if (params.has('rapierWindow')) THRUST_STYLE.rapier.window = Math.max(0, +params.get('rapierWindow') || 0); // 레이피어 찌르기 판정 폭 (weapons.js THRUST_STYLE.rapier.window 0.12 — 달타냥 · 발리사르다 등 같은 객체를 쥔 칼 모두 · 재기 `?rapierWindow=0.06`)
 if (params.has('lungeReach')) CONFIG.AI_THRUST_DEF.lungeReach = +params.get('lungeReach') || 0;
 if (params.has('lungeParry')) CONFIG.AI_THRUST_DEF.lungeParry = +params.get('lungeParry') ? 1 : 0;
+// 11/05 일본 · 독일 롱소드 기본 공격 재기 스위치 (모두 기본 끔 · docs/strike/jp_de_basics_2026-11-05.md · 확인표 3400 ~ 3409)
+if (params.has('cutStepIn')) CONFIG.SKILL.cutStepIn.fwd = Math.max(0, +params.get('cutStepIn') || 0); // 베며 내딛기 걸음 (m — 걸음 사다리 0.3 · 0.45 · 0 = 끔)
+if (params.has('cutStepSchools')) CONFIG.SKILL.cutStepIn.schools = params.get('cutStepSchools').split(',').filter(Boolean);
+if (params.has('cutStepFrames')) CONFIG.SKILL.cutStepIn.frames = params.get('cutStepFrames') === 'all' ? null : params.get('cutStepFrames').split(',').filter(Boolean);
 if (params.has('wristSwing')) CONFIG.JOINTS.wristSwing = Math.max(0, Math.min(2, Math.round(+params.get('wristSwing') || 0))); // 시험 (10/25 · 기본 0): 베는 동안 손목 교정 — 1 = 칼 면 안에서만 · 2 = 안 함 (fighter.js wristGuardAim · cutSwing · 기록 wrist_audit §11)
 if (params.has('wristRope')) CONFIG.JOINTS.wristRope = +params.get('wristRope') ? 1 : 0; // 시험 (10/24 17:2x · 기본 끔 · `?wristRope=1` = 손목 치우침 밧줄 둘 — fighter.js gripDevOn · 기록 §9)
 if (CONFIG.JOINTS.presets[params.get('joints')]) CONFIG.JOINTS.mode = params.get('joints'); // 칼 팔 관절 가동 범위 교정 시제품(10/9, docs/motion/joint_range_2026-10-09.md): `?joints=off|anat|hard|soft|reach`, 없으면 기본 anat(켬)
