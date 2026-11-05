@@ -172,6 +172,26 @@ function feetStep(f, S) {
 }
 
 /**
+ * 가까운 상대 — 뒷발 축 (11/05 — SECRET.ibSpin.near · 사장님 확인 전 · docs/strike/singir_fall_2026-11-05.md): 낼 때 두 발로 서 있고 상대 가슴이
+ *  '내 맞닿기 거리(검술 풀이 measure.contact) + 나아감(SECRET.ibSpin.advance)' 안이면(앞발 축으로 나아가면 맞닿기 거리 안으로 들어가는 거리) true — 모두 있는 수 · 새 수 없음.
+ *  잰 원인 — 싱지르를 낸 뒤 1 s 안 넘어짐은 모두 맞아서(휘청 게이지 · 머리 둔타)였고 몸 균형(발 밖 · 기울기)은 0. 앞발 축 대본은 처음 0.1 ~ 0.2 s 에 무게를 앞발로 옮기며
+ *  골반을 상대 쪽으로 0.3 m(대본 골반 3.5 m/s · 실제 5 ~ 6 m/s) 내밀어, 이미 들어오던 상대 칼에 내 허리 · 도는 다리 · 배가 들이받아 맞음 에너지가 커졌다
+ *  (내 몸 빠르기를 맞음 셈에서 빼면 롱소드 AI 상대 1 s 안 넘어짐 14 → 6 / 93). 가까우면 뒷발을 축으로 돈다 — 처음 무게는 상대에게서 먼 뒷발로 옮겨지고(물러남),
+ *  나아감은 그대로라 한 바퀴 끝에 칼과 함께 앞으로 나간다(끝난 골반 · 두 발 자리는 전 판과 같음 — feetPlan). 멀면 전 판 그대로(앞발 축).
+ *  near 1 = 위 · 'place' = 뒷발 축 · 제자리(나아감 0 — 칼끝 거리 안일 때만 · 견줌) · 'contact' = 제자리 · 맞닿기 거리 안만(견줌) · 0 = 전 판(늘 앞발 축) · `?ibNear=0`
+ */
+export function spinNear(f) {
+  const S = SECRET.ibSpin;
+  if (!S.near) return false;
+  const M = f.swordArt?.measure;
+  if (!M?.contact || !f.foe) return false;
+  const d = f.foeDistance();
+  if (S.near === 'contact') return d < M.contact; // 견줌
+  if (S.near === 'place') return d < Math.min(M.reach ?? Infinity, M.contact + (S.advance ?? 0)); // 견줌: 제자리에서도 칼이 닿는 거리(칼끝 거리) 안
+  return d < M.contact + (S.advance ?? 0);
+}
+
+/**
  * 대본을 건다 (플레이어 비기 — skill.js secret). 서서 한 발 이상 딛고 있어야 한다. 시작했으면 true.
  *  dir: 도는 쪽 (+1 = heading + = 왼쪽으로 — 칼 든 쪽이 오른쪽인 몸은 왼쪽으로 돌며 칼이 오른쪽 뒤에 감겨 따라오다 오른쪽 → 왼쪽으로 가로 벤다 = 탈류)
  *  want: 바라는 쪽 (10/23 스틱 판 — 돌린 쪽 · ±1). SECRET.ibSpin.reverse 면 그쪽으로(칼 든 쪽의 반대면 ws = −1 — 감는 자세 · 끝 각 · 몸 비틀기 거울 = 레베스), 아니면 칼 든 쪽이 정함
@@ -188,7 +208,10 @@ export function requestSpin(f, want = 0) {
   const fwd = f.forward(new THREE.Vector3());
   const rgt = f.right(new THREE.Vector3());
   // 축발 = 앞발 (펜싱 자세면 칼 든 쪽). 걷는 중이면 디딘 발이 축 — 떠 있던 발은 그 자리에서 도는 발로 이어받는다
-  const pk = G.legs.F.stance && G.legs.B.stance ? G.frontLeg(fwd) : G.legs.F.stance ? 'F' : 'B';
+  const both = G.legs.F.stance && G.legs.B.stance;
+  const near = both && spinNear(f);
+  const pk0 = both ? G.frontLeg(fwd) : G.legs.F.stance ? 'F' : 'B';
+  const pk = near ? (pk0 === 'F' ? 'B' : 'F') : pk0; // 11/05 near: 상대가 가까우면 뒷발이 축 (위 spinNear)
   const sk = pk === 'F' ? 'B' : 'F';
   const Lp = G.legs[pk];
   const Ls = G.legs[sk];
@@ -201,8 +224,9 @@ export function requestSpin(f, want = 0) {
   // 도는 발이 딛는 자리: 10/22 판 = 축발 앞 lon(앞뒤가 뒤집힌 채 끝남 — 걸음이 펜싱 자세로 고쳐 딛으며 앞에 딛은 뒷발을 몸 뒤로 물리면 몸이 두 발 앞에 남아
   //  균형 걸음이 0.3 m 더 끌려 나갔다: 비기 끝 + 0.6 s 골반 옮김 0.57 ~ 0.85 m — docs/strike/iberian_spin_2026-10-22.md §13) ·
   //  10/24 upright = 나아간 골반 바로 옆(옆 거리 그대로): 골반은 두 발 위에 서고, 걸음은 칼 든 쪽 앞발만 앞으로 고쳐 딛는다(몸은 그 자리 — 서 있는 과녁 앞 0.43 ~ 0.51 m)
-  const adv = S.upright ? Math.min(lon, S.advance ?? lon) : lon; // 골반이 나아가는 거리 (10/24 upright: 상한 advance — 걷다 내면 두 발 앞뒤가 0.65 m 까지 벌어져 그만큼 나아갔다)
-  let B1 = P.clone().addScaledVector(fwd, S.upright ? adv - lon : lon).addScaledVector(rgt, lat); // upright: 나아간 골반 바로 옆 (adv = lon 이면 축발 옆 · 못 미치면 그만큼 축발 뒤 — 축발이 앞발인 펜싱 자세)
+  const place = near && (S.near === 'place' || S.near === 'contact'); // 11/05 견줌: 뒷발 축 · 제자리 (나아감 0)
+  const adv = place ? 0 : S.upright ? Math.min(lon, S.advance ?? lon) : lon; // 골반이 나아가는 거리 (10/24 upright: 상한 advance — 걷다 내면 두 발 앞뒤가 0.65 m 까지 벌어져 그만큼 나아갔다)
+  let B1 = near ? B0.clone().addScaledVector(fwd, adv) : P.clone().addScaledVector(fwd, S.upright ? adv - lon : lon).addScaledVector(rgt, lat); // upright: 나아간 골반 바로 옆 (adv = lon 이면 축발 옆 · 못 미치면 그만큼 축발 뒤 — 축발이 앞발인 펜싱 자세) · near(뒷발 축): 도는 앞발은 제 자리 + 나아감 (feet 1 이면 아래 feetPlan 이 덮음)
   const nat = f.side >= 0 ? 1 : -1; // 칼 든 쪽이 정하는 쪽 (10/22 판)
   const dir = S.reverse && (want === 1 || want === -1) ? want : nat;
   const pre = S.torso && f.armed && swordTop(f) > f.bodies.chest.translation().y ? r : 0;
@@ -225,7 +249,7 @@ export function requestSpin(f, want = 0) {
   f.ibSpin = {
     t: 0, T, r, dir, ws: dir * nat, pre, tp: 0, settle: null, h0: f.heading, q: 0, rate: 0, vmax: plan.v, v0: plan.v0,
     pk, sk, P, B0, B1, br0: Math.hypot(b0.x, b0.z), br1: Math.hypot(b1.x, b1.z), a0, da,
-    c0, D, lon,
+    c0, D, lon, near, // near: 11/05 가까운 상대 — 뒷발 축 (spinNear)
     o0: new THREE.Vector3(c0.x - P.x, 0, c0.z - P.z), o1: new THREE.Vector3(c0.x + D.x - P.x, 0, c0.z + D.z - P.z),
     oM: rgt.clone().multiplyScalar(-Lp.side * HIP_W), // 축발 엉덩이가 축발 바로 위 (골반 가운데 = 축발에서 엉덩이 폭만큼 안쪽)
     arm: null, // 두 팔 · 칼 대본: 처음 손 · 칼날 (몸 기준) · 지난 스텝 놓은 자리 (빠르기 셈)
