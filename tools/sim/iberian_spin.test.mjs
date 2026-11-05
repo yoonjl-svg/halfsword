@@ -162,7 +162,7 @@ test('한 바퀴: 대본이 몸을 2π 돌리고 · 한 걸음쯤 나아가고 �
 test('빠르기 몫 (10/24 share): 한 바퀴 = ramp + 2π · 칼끝 거리 ÷ (share × 고노센 칼끝) · 칼마다 · share 0 = 0.6 s 판', async () => {
   const { spinPlan } = await import('../../src/iberian_spin.js');
   const { iaiTipSpeed } = await import('../../src/secret_instant.js');
-  assert.equal(SECRET.ibSpin.share, 0.7); // 사장님 10/24 10:5x '싱지르 고노센의 70%로' (전 0.6)
+  assert.equal(SECRET.ibSpin.share, 0.5); // 사장님 11/05 '싱지르 0.5로 넣고' (전 0.7 — 10/24 10:5x '싱지르 고노센의 70%로')
   const share = SECRET.ibSpin.share;
   for (const w of ['zweihander', 'flamberge', 'tizona']) {
     const G = newRound({ seed: 1, weapon: w, weapon2: 'longsword' });
@@ -172,7 +172,7 @@ test('빠르기 몫 (10/24 share): 한 바퀴 = ramp + 2π · 칼끝 거리 ÷ (
     assert.ok(Math.abs(p.v - share * v0) < 1e-9, w);
     assert.ok(Math.abs(p.w - p.v / P.swordArt.measure.reach) < 1e-9, w);
     assert.ok(Math.abs(p.T - (0.2 + (2 * Math.PI) / p.w)) < 1e-9, w);
-    assert.ok(p.T > 0.6 && p.T < 0.75, `${w} ${p.T}`); // 0.6 s 보다 느림 (0.7 몫 — 0.62 ~ 0.65 s · 10/25 손맛 뒤 플랑베르주 0.72 s: 칼날 1.30 m · 간격 reach 2.57)
+    assert.ok(p.T > 0.75 && p.T < 1.0, `${w} ${p.T}`); // 0.6 s 보다 느림 (0.5 몫 — 츠바이핸더 0.78 s · 전 0.7 몫 0.62 ~ 0.72 s: 칼날 1.30 m · 간격 reach 2.57)
     SECRET.ibSpin.share = 0;
     try {
       const q = spinPlan(P);
@@ -320,8 +320,9 @@ test('몸통 뚜껑 (10/24 lid): 놓은 칼끝이 몸통 위 끝 쪽으로 오�
 // 10/24 기록 장면 (표준 시간 전 판의 게임 초 — 싱지르 무장 ibSpin.armTime 1.5): 옛 결함 재현 판 둘(아래 '칼 높이' 의 고침 끈 판 · '땅' 의 손목 옛 판 · 땅 끔)은 원을 다 그려 내는 때가 10/24 그림 판과 같아야
 //  칼이 솟고(본판 10/27 대검 몸 뒤 — 표준 시간으론 셋 중 하나만 솟음) · 칼끝이 땅을 스친다 — 표준 시간(무장 게임 1.65)으로는 그 때가 0.15 s 늦어 옛 결함이 안 보인다(옛 결함 재현만의 장면 · docs/strike/time_standard_2026-10-25.md §4). 고친 판(땅 · 발디딤)은 표준 시간 그대로 본다
 const withScene1024 = async (fn) => {
-  const a = SECRET.ibSpin.armTime, f = SECRET.armAtFight, fs = SKILL.frameScale;
+  const a = SECRET.ibSpin.armTime, f = SECRET.armAtFight, fs = SKILL.frameScale, sh = SECRET.ibSpin.share;
   SECRET.ibSpin.armTime = 1.5;
+  SECRET.ibSpin.share = 0.7; // 10/24 장면의 빠르기 몫 (11/05 0.5 전 — 느린 한 바퀴면 옛 결함(솟음)이 덜 보임)
   SECRET.armAtFight = 0; // 10/24 장면은 판 시작부터 무장 시계가 감 (10/27 23:0x 전 판 — 공격이 풀린 때부터 세면 원을 긋는 때가 정지 뒤로 밀려 옛 결함 장면이 아님)
   SKILL.frameScale = 'off'; // 10/24 장면의 손 매핑 배수 (10/31 대검 배수 'heavy' 전 — docs/motion/guard_arms_2026-10-31.md: 대검 손이 13 % 멀어져 '땅' 의 옛 결함(칼끝 땅 스침)이 안 남)
   try {
@@ -330,6 +331,7 @@ const withScene1024 = async (fn) => {
     SECRET.ibSpin.armTime = a;
     SECRET.armAtFight = f;
     SKILL.frameScale = fs;
+    SECRET.ibSpin.share = sh;
   }
 };
 test('원 입력 싱지르 칼 높이 (10/24): 전에 머리 위로 솟던 큰 원 셋 — 고친 판은 한 바퀴 다 돌고 칼 가장 높은 점 ≤ 가슴 + 0.45 m · 고침을 끄면 솟음', async () => {

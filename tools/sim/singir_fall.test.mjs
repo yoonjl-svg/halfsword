@@ -67,7 +67,7 @@ function standSpin(weapon, gap) {
 
 test('기본값: 가까운 상대 뒷발 축 near 1 (11/05 · 사장님 확인 전)', () => {
   assert.equal(SECRET.ibSpin.near, 1);
-  assert.equal(SECRET.ibSpin.share, 0.7); // 빠르기 몫 · 굳음은 그대로 (사장님 값)
+  assert.equal(SECRET.ibSpin.share, 0.5); // 빠르기 몫 (사장님 11/05 '싱지르 0.5로 넣고')
 });
 
 test('가까우면(맞닿기 + 나아감 안) 뒷발 축: 처음엔 상대에게서 물러나고 끝에 칼과 함께 나아감 · 한 바퀴 · 서 있음 · 벰 · 발 자리 — 끄면 앞발 축(처음에 다가감)', async () => {
@@ -100,10 +100,10 @@ test('가까우면(맞닿기 + 나아감 안) 뒷발 축: 처음엔 상대에게
 });
 
 test('멀면(맞닿기 + 나아감 밖) 전 판 그대로 — 앞발 축 · 나아감 (켬 · 끔 같은 몸)', async () => {
-  const on = standSpin('zweihander', 2.4);
+  const on = standSpin('zweihander', 2.2); // 11/05 몫 0.5 뒤 2.4 m(가슴 2.53)면 칼이 닿지 않음 → 2.2 m(가슴 2.33 — 여전히 맞닿기 + 나아감 밖)
   assert.ok(on.d0 >= on.contact + SECRET.ibSpin.advance, `가슴 거리 ${on.d0}`);
   assert.equal(on.near, false);
-  const off = await withNear(0, () => standSpin('zweihander', 2.4));
+  const off = await withNear(0, () => standSpin('zweihander', 2.2));
   assert.equal(off.pk, on.pk);
   assert.equal(off.end.travel.toFixed(6), on.end.travel.toFixed(6), '골반 옮김 바이트 같음');
   assert.equal(off.cuts, on.cuts);
