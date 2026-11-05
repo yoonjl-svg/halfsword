@@ -348,7 +348,7 @@ export function gnsHumanMoving(f) {
  */
 export function gnsHumanUnsettled(f, hurt) {
   const sk = f.skill;
-  return !!(sk?.swinging || sk?.tap || sk?.pom || sk?.sec) || !!f.parryGuard?.held || !!hurt;
+  return !!(sk?.swinging || sk?.tap || sk?.pom || sk?.sec) || !!f.parryGuard?.held || (!!hurt && !SECRET.gnsHurtKeep); // gnsHurtKeep (11/05 일본 강화 길 · 기본 0): 1 = 맞음으로는 안 풀림 (사람 창 · AI 가 읽는 사람 준비 같은 셈)
 }
 
 /** 비기 조건 (cond) — 굴림 없음. view = { reach, foeReach, clinch } */

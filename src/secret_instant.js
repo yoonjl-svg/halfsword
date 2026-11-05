@@ -669,6 +669,7 @@ function startIai(f, combat) {
   const rise = !!SECRET.iaiRise;
   const oneHand = rise && !!f.weaponCfg.twoHand && f.weapon?.frame !== 'heavy';
   f.iai = { kind: 'iai', K: rise ? SECRET.iaiPathRise : SECRET.iaiPath, oneHand, J: SECRET.instantJ, body: SECRET.iaiPath.E.body, hold: SECRET.stiff.japanese, pose: (I, u) => iaiReach(f, I, iaiPose(I, u), u), t: 0, T, ab: far ? SECRET.iaiDrawShare : 0, A: { H: AH, D: AD }, DB, yaw, slide, dx, dz, off: !oneHand && !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hit: null, res: null, arc: null };
+  if (SECRET.gnsThrough && req.player) f.iai.through = true; // 베고 지나감 (11/05 일본 강화 길 — 사람 발도만 · 기본 0 · stepIai)
   if (req.block) f.iai.block = true; // 고노센 B (SECRET.gnsEnterBlock — 천천히 걸어 든 들어옴 창에서 낸 발도): 몸보다 먼저 상대 칼에 닿으면 막힘 (아래 stepIai — 밀어냄은 휩쓸기만)
   if (req.block === 'cover') f.iai.cover = true; // gnsEnterBlock 2: 칼끝이 내 몸을 겨눈 채 천천히 든 상대 — 몸에 닿는 자리에서 막힘
   setKinematic(f, true);
@@ -731,6 +732,25 @@ function stepIai(f, combat) {
           const P0 = { B: I.prev.B.clone().lerp(cur.B, prevW), D: I.prev.D.clone().lerp(cur.D, prevW).normalize() };
           I.hit = best;
           I.res = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, I.J);
+          // 베고 지나감 (11/05 일본 강화 길 — SECRET.gnsThrough · 사람 발도만 · 기본 0): 팔을 가르고 지나간 칼(베기 · 남은 에너지 > 그 부위가 받는 몫 absorb — 보통 칼이 박히지 않는 셈 combat.js strike 와 같음)은
+          //  남은 에너지(판정 에너지 − absorb)로 길 위의 몸(팔이 아닌 부위)에 한 번 더 닿을 수 있다 — 새 수 없음
+          if (I.through && I.res?.type === 'cut' && best.info.kind === 'arm' && I.res.energy > I.res.absorb) I.left = I.res.energy - I.res.absorb;
+        }
+      } else if (I.left > 0 && !I.hit2 && !I.blocked && foe.alive && foe.state !== 'dead') {
+        let best = null;
+        for (const [h, info] of f.colliderInfo) {
+          if (info.fighter !== foe || info.kind === 'weapon' || info.kind === 'arm' || info.detached || h === I.hit.h) continue;
+          const col = f.world.getCollider(h);
+          if (!col) continue;
+          const r = segToCollider(B, tip, col);
+          if (r <= SECRET.instantTouch && (!best || r < best.r)) best = { h, info, col, r };
+        }
+        if (best) {
+          const prevW = Math.max(0, w - 1 / subs);
+          const P0 = { B: I.prev.B.clone().lerp(cur.B, prevW), D: I.prev.D.clone().lerp(cur.D, prevW).normalize() };
+          I.hit2 = best;
+          I.res2 = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, I.left / SECRET.hitMul); // 남은 에너지 그대로 (instantWound 가 hitMul 을 곱함)
+          f.gnsThroughN = (f.gnsThroughN ?? 0) + 1; // 재기 (판정에는 안 씀)
         }
       }
     }
@@ -3298,10 +3318,11 @@ export function requestArtReturn(f, from, path, SB) {
  * 사람 제비 베기 되돌림 칼 (사장님 10/25 21:1x '해법 1~3 좋아' — 해법 ② 중력과 관성을 거스름 · config UNIQUE_ASSIST.tsuSnap · unique_assist.js start):
  *  꺾는 순간 from(손가락이 꺾은 자리 — 패드) → path(올려 긋는 길 패드들)를 진 · 츠바메가에시와 같은 틀(연환 — 운동학 · 쓸린 자리의 실제 빠르기 · 판정 배율 1)로 끌고 간다.
  *  칼끝 빠르기 = 고노센 발도 칼끝 빠르기 × share · 시간 상한 maxT · 끝 자세 붙잡기 없음(곧장 0.2 s 에 손가락으로). 이미 끌고 가는 중이면 거절(false)
+ *  step = 수의 걸음 칸 { fwd } (11/05 제비 베기 미끄러져 들어감 — UNIQUE_ASSIST.tsuStep · comboMoveStart: 몸 미끄러짐 + 앞발 · 맞는 거리에서 멈춤) · 없으면 전과 같음
  */
-export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, band = false, roll = false, shift = null, pathHint = false, arcCut = false }) {
+export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, band = false, roll = false, shift = null, pathHint = false, arcCut = false, step = null }) {
   if (f.iai || f.iaiReq || !path?.length || !(share > 0)) return false;
-  requestCombo(f, { moves: [{ from, path, plan, kind: 'cut', name: tech, cutSweep: true, same: true, band, ...(roll ? { roll: true } : {}), ...(shift ? { shift } : {}), ...(pathHint ? { pathHint: true } : {}), ...(arcCut ? { cleanArc: true } : {}) }], share, hold: 0, hitMul: 1, tech, maxT, arcCut }); // plan = [from, ...path] 점마다 길 덧칸 (comboPlanAdd) · cutSweep = 날 세우기 · 준비 토막에서 넘어온 스텝은 맞힘 안 봄 (stepCombo) · same = 손가락 긋기와 같은 공격 (comboMoveStart) · band = 몸통 띠 겨눔(comboBandShift) · 굴림 묶음(placeIai) · 곧은 길 (10/31): roll = 띠 옮김 없이 굴림 묶음만 · shift = 띠 높이 옮김 꼴 · pathHint = 날 쪽을 길 위 칼끝으로 · arcCut = 잔상은 베는 토막만(꺾은 자리로 거두는 준비 토막 · 거기서 넘어온 스텝은 안 그림)
+  requestCombo(f, { moves: [{ from, path, plan, kind: 'cut', name: tech, cutSweep: true, same: true, band, ...(roll ? { roll: true } : {}), ...(shift ? { shift } : {}), ...(pathHint ? { pathHint: true } : {}), ...(arcCut ? { cleanArc: true } : {}), ...(step ? { step } : {}) }], share, hold: 0, hitMul: 1, tech, maxT, arcCut }); // plan = [from, ...path] 점마다 길 덧칸 (comboPlanAdd) · cutSweep = 날 세우기 · 준비 토막에서 넘어온 스텝은 맞힘 안 봄 (stepCombo) · same = 손가락 긋기와 같은 공격 (comboMoveStart) · band = 몸통 띠 겨눔(comboBandShift) · 굴림 묶음(placeIai) · 곧은 길 (10/31): roll = 띠 옮김 없이 굴림 묶음만 · shift = 띠 높이 옮김 꼴 · pathHint = 날 쪽을 길 위 칼끝으로 · arcCut = 잔상은 베는 토막만(꺾은 자리로 거두는 준비 토막 · 거기서 넘어온 스텝은 안 그림)
   return true;
 }
 /**

@@ -1300,6 +1300,13 @@ export const SECRET = {
   //  스틱에 얹은 엄지가 데드존(6 px) 밖으로 조금 떠돌아도 준비가 쌓임(일본 걸음 빠르기 0.67 에서 가운데로부터 앞 약 12 px · 뒤 약 14 px · 옆 약 20 px 까지 — 스틱 반지름 40 px). 0 = 0 이 아니면 걸음(10/25 판) `?gnsStickWalk=0`
   gnsStickWalk: 1, // [사장님 10/31 13:xx '1-2번 다 고쳐' · 본판 미리 허락 — 규칙은 사장님 확인 전 · 확인표 3200]
   gnsRaiseLatch: 1, // [사장님 10/31 12:1x '고노센 고친 거 나오면 바로 본판에 올려' — 값은 사장님 확인 전 · 확인표 3152]
+  // 일본 강화 길 (11/05 사장님 '걸음 속도가 특색이니 유지하면서 다른 방법으로 강화할 방법을 찾음 좋겠는데' — docs/strike/jp_strength_2026-11-05.md · 확인표 3420 ~ · 모두 기본 끔 = 지금 판):
+  //  맞아도 준비 이어 셈 (secret.js PlayerSecretWatch.update · ai.js gnsWatch 가 읽는 사람 준비도 같은 셈): 1 = 사람 고노센 준비 'idle' 셈이 내가 맞음(아픔 +0.05)으로는 0 으로 돌아가지 않음 —
+  //   내가 치거나 · 막거나(막기 단추) · 비기를 내거나 · 걸음 뜻(준비 전) · 넘어짐이면 그대로 풀림. 새 수 없음 · 0 = 지금 판(맞으면 풀림) `?gnsHurtKeep=1`
+  gnsHurtKeep: 0, // [사장님 확인 전 — 확인표 3420]
+  //  고노센 베고 지나감 (secret_instant.js stepIai · 사람 발도만 · AI 발도는 그대로): 1 = 발도가 상대 팔을 가르고 지나가면(베기 · 판정 에너지 > 그 부위 absorb — 보통 칼이 박히지 않는 셈과 같음)
+  //   남은 에너지(판정 에너지 − absorb)로 길 위의 몸(가슴 · 배 · 목 · 머리 · 골반 · 다리 — 팔이 아닌 부위)에 한 번 더 닿는다. 길 · 시간 · 빠르기 그대로 · 새 수 없음 · 0 = 지금 판(첫 닿음에서 끝) `?gnsThrough=1`
+  gnsThrough: 0, // [사장님 확인 전 — 확인표 3423]
   // AI 가 웅크린 사람을 칠 때 길을 낮춤 (10/27 21:4x 사장님 '다른 건 네 말대로 하고' — 웅크림만 끄면 서서 기다리는 봇 창 3.37 → 0.95: 웅크린 몸 위로 AI 칼이 지나감 · ai.js crouchLow):
   //  상대가 사람이고 (반응 시간만큼 늦게 본) 고노센 웅크림(f.iaiReadyW)이면 베기 길(패드 y — 손 높이 1 m 당 1 · fighter.js rawHand)을 내 가슴과 그 상대 가슴의 높이 차만큼 내림 —
   //  새 수 없음(실제 몸 높이) · 서 있는 상대 · AI 끼리는 그대로 · 0 = 7b02877 판 `?gnsCrouchAim=0`
@@ -1529,6 +1536,9 @@ export const UNIQUE_ASSIST = {
   //  ② tsuSnap: 꺾는 순간 내려가던 칼의 기세를 지우고 올려 긋는 길을 고노센 발도 칼끝 빠르기(secret_instant.js iaiTipSpeed)의 specialShare.tsubameGaeshi 몫으로 tsuSnapTime 초까지 끌고 간다 —
   //   비기 · 진 · 츠바메가에시와 같은 운동학 틀(requestCombo — 맞음은 쓸린 자리의 실제 빠르기 · 판정 배율 1 · 끝 자세 붙잡기 없이 곧장 손가락에 돌려줌). 무기 비검 kin(모노호시자오 진)이 있으면 그것이 먼저. 0 = 전 판 `?tsuSnap=0`
   tsuSnap: 1,
+  //  제비 베기 미끄러져 들어감 (11/05 — 일본 강화 길 · docs/strike/jp_strength_2026-11-05.md · 확인표 3421 · 기본 끔): 끌고 가는 되돌림 칼(tsuSnap)을 낼 때 상대 가슴이 내 칼이 맞는 거리(measure.contact) 밖이면
+  //   몸이 그 칼과 함께 상대 쪽으로 미끄러져 앞발을 디딤(고노센 발도 · 끌고 가는 칼 걸음 수 step 과 같은 꼴 — 맞는 거리에서 멈춤 · clinch 안 금지) — tsuStep m 까지(걸음 사다리 0.3 · 0.45). 0 = 끔 `?tsuStep=0.3`
+  tsuStep: 0, // [사장님 확인 전 — 확인표 3421]
   //  칼끝 빠르기 = specialShare.tsubameGaeshi 0.6 (고노센 칼끝의 몫 — 10/25 결정 tsuSnapShare 0.6 그대로 · 10/29 02:0x 한 표로)
   tsuSnapTime: 0, // 11/01 00:xx 사장님 '공격이 몇 초 안에 끝나야한다 이런 기준 없애라고 햇지 내가 그딴건 필요없어' → 0 = 상한 없음(길 끝까지 · 확인표 3276) · 전: 끌고 가는 시간 상한 (s — 시간 사다리 0.2 반응) — 사장님 10/25 결정. 길이 먼저 끝나면 거기서 끝
   //  ③ tsuAim: 올려 긋는 길 끝을 다리에서 상대 아래팔 · 겨드랑이 · 가슴 높이로 (PLAYER_UNIQUE tsubameGaeshi aim 칸 — 사람 표만 · schools.js AI 길 그대로) + 손 돌리기 덧칸(곁눈 베기 같은 길 덧칸 planStep)으로
@@ -1939,6 +1949,10 @@ export const AI_THRUST_DEF = {
   lungeReach: 0,
   lungeParry: 0,
 };
+// 일본 칼끝 거리 숨김 (11/05 — 일본 강화 길 · docs/strike/jp_strength_2026-11-05.md · 확인표 3422 · 기본 끔): AI 가 어림하는 상대 칼 닿는 거리의 바탕(ai.js foeReachBase)을
+//  상대가 일본 유파(swordArt.tradition)면 hide m 만큼 짧게 본다 — 생각보다 멀리서 맞으면 늘리는 셈(ai.js — 맞은 거리 + 0.1 · 상대 무기 간격 아래로는 안 내려감)과 천천히 되돌아오는 셈은 그대로.
+//  0 = 끔 · 걸음 사다리 0.3 `?jpMaaiHide=0.3`
+export const AI_MAAI = { hide: 0 }; // [사장님 확인 전 — 확인표 3422]
 
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)
 //  ai.js 는 인물 표식 persona.terrainSense === 'wetland' 이고 그 몸이 진흙 감속을 받는 무대(fighter.movementSurface === 'wetland' — 잠든 습지)일 때만 이 묶음을 읽는다.

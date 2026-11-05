@@ -21,7 +21,7 @@ import { STAMINA } from './config.js';
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF } from './config.js';
+import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF, AI_MAAI } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
@@ -61,8 +61,9 @@ const rand = (a, b) => a + Math.random() * (b - a);
 /** 이탈리아 런지 찌르는 상대인가 (config AI_THRUST_DEF — 11/05 · THRUST.itLunge 를 쓰는 몸) */
 const lungeFoe = (f) => !!THRUST.itLunge && f?.swordArt?.tradition === 'italian';
 /** AI 가 어림하는 상대 칼 닿는 거리의 바탕 = 무기 간격 + 0.05 · 런지 찌르는 상대면 + AI_THRUST_DEF.lungeReach (기본 0 = 지금 그대로) */
-const foeReachBase = (foeM, f) => {
-  const b = foeM.reach + 0.05;
+export const foeReachBase = (foeM, f) => { // 시험이 읽음 (tools/sim/jp_strength.test.mjs)
+  let b = foeM.reach + 0.05;
+  if (AI_MAAI.hide > 0 && f?.swordArt?.tradition === 'japanese') b -= AI_MAAI.hide; // 일본 칼끝 거리 숨김 (11/05 일본 강화 길 · 기본 0): 일본 칼을 hide m 짧게 봄 — 멀리서 맞으면 늘리는 셈은 그대로
   return AI_THRUST_DEF.lungeReach > 0 && lungeFoe(f) ? b + AI_THRUST_DEF.lungeReach : b;
 };
 // 표준 시간 (10/25 22:3x — config.js TIME): AI 판단 박자 · 막기 · 물러남 · 걸쇠 · 눈의 기억은 실제 초로 적고 한 번 게임 초로 바꾼다 (realS).
