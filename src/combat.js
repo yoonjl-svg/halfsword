@@ -33,6 +33,7 @@ import { runInstants, artFlash } from './secret_instant.js'; // artFlash: 이점
 import { FINISH, cleaveFoe } from './finish.js'; // 마무리 스위치 entry·mode·power (10/12, 기본 끔)
 import { lowFinishOn, lowFinishPosture, downLowTarget } from './finish_entry.js';
 import { UNIQUE_ASSIST as UA, IB_FLOW } from './config.js'; // IB_FLOW.power: 이베리아 흐르는 긋기 위력 (10/28 — analyze)
+import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 판정 배율 (11/06 — SKILL.fingerCut.hit · 기본 1 = 끔)
 import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
 import { kitOff, perkOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4)
 import { MAX_FIGHTERS } from './team.js'; // 셋 이상 판: 같은 편도 적과 똑같이 상처 · 칼 겨루기 (사장님 10/29 22:3x — 제 몸끼리만 버린다)
@@ -246,7 +247,8 @@ export class Combat {
     // 조금 낮아서, 상처 문턱값(ANATOMY)과 기절·비틀거림 같은 효과가 예전과 같은 세기로 나오게 맞춘 값이다
     // 결정타 (10/9 23:5x — 유파 비기, AI·플레이어 공통): 비기 베기 동안 공격자 secretHit(SECRET.hitMul)를 상처 에너지에 곱한다. 물리(속도·질량)는 그대로, 판정만. 1 이면 그대로
     // 이어 그을수록 강해짐 (이베리아 머리 위 돌려 베기 — 10/21 사장님 '너의 제안대로'): 이어 그은 수 × stack 만큼 같은 자리(판정 에너지)에 곱한다 · 물리는 그대로
-    const hk = (att.secretHit ?? 1) * strokeHitK(att);
+    //  손가락 긋기 판정 배율 (11/06 — finger_cut.js · SKILL.fingerCut.hit · 기본 1 = 끔): 사람 손가락 긋기 동안 · 그 끝 recoverDelay 안의 닿음만 같은 자리에 × hit · 물리는 그대로
+    const hk = (att.secretHit ?? 1) * strokeHitK(att) * fingerCutK(att, 'hit');
     let energy = ephys * STRIKE.energyScale * hk;
     let assisted = null; // 찌르기 팔 유효 질량을 실었으면 싣기 전 값 (멍으로 바뀌면 되돌린다)
 

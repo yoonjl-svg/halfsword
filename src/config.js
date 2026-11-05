@@ -875,6 +875,10 @@ export const SKILL = {
   //  frames = 받는 몸 틀 (swordArt.frame — 'two' 두손 칼 · null = 그 유파 모든 칼). 재 보니 칼이 상대 AI 만큼 긴 독일 롱소드는 나아지고(48 판 12 · 17 · 19 → 20 · 8 · 20) 짧은 칼(우치가타나 · 세이버)은 덜 맞히고 더 맞음 → 독일 두손 칼만
   //  `?cutStepIn=0.3` · `?cutStepSchools=german,japanese` · `?cutStepFrames=two` (`?cutStepFrames=all` = 모든 칼)
   cutStepIn: { fwd: 0.3, schools: ['german'], frames: ['two'] }, // 11/05 사장님 '독일 반걸음 넣고' (확인표 3364 · 전 fwd 0)
+  // 손가락 긋기 세기 (11/06 사장님 '손가락 베기 세기 -> 이건 최소한, 상처의 최소 문턱과 비슷해져야해' — src/finger_cut.js · docs/strike/finger_cut_2026-11-06.md · 확인표 3430 ~):
+  //  사람이 손가락으로 긋는 보통 베기(기본 · 강화 · 걸음 공격 긋기)만. arm = 긋는 동안 칼 팔 · 손목 힘 배율(몸의 힘 자리) · gain = 긋는 동안 손가락 감도 배율 · hit = 그 닿음의 판정 에너지 배율 ·
+  //  ai = 1 이면 AI 보통 긋기에도 arm · hit. **기본 모두 1 · 0 = 끔(지금 판과 바이트 같음 — 사장님 확인 전)** · `?fcArm=` · `?fcGain=` · `?fcHit=` · `?fcAi=1`
+  fingerCut: { arm: 1, gain: 1, hit: 1, ai: 0 },
   homeGuard: [0.18, -0.28], // 베고 나서 돌아갈 기본 자세의 패드 위치 (쟁기 Pflug: 칼끝이 상대 얼굴을 겨눈다)
   recoverDelay: realS(0.25), // 손가락을 떼고(또는 멈추고) 이만큼 지나면 자세로 돌아간다 (초)
   recoverSpeed: 1.2, // 자세로 돌아가는 손 빠르기 (m/s, 휘두르기 기준 swingSpeed보다 느리게)
