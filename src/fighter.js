@@ -32,6 +32,7 @@ import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩�
 import { decorateOutfit, polishOutfit, setHelmetWear, setPlateWear } from './outfits.js';
 import { reviveOf, tryRevive, reviveTick } from './revive.js';
 import { pickupOn, pickupTick, pickupHand } from './pickup.js'; // 떨어진 칼 줍기 (11/05 — config PICKUP · 끔이면 부르지 않는다)
+import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 세기 (11/06 — config SKILL.fingerCut · 기본 1 = 끔 — 몸의 힘이 들어가는 세 자리에 긋는 동안만 × arm)
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 이베리아 이어 긋기 흐름 B5)
 import { SchoolPassive, schoolPassiveOn } from './school_passive.js'; // 유파 패시브 넷 (10/21 — 이탈리아 · 일본 · 독일 · 동방, config SCHOOL_PASSIVE)
 import { fighterWetlandMoveScale } from './wetland_ground.js';
@@ -3022,12 +3023,13 @@ export class Fighter {
     const inv = this.lastDt > 0 ? 1 / this.lastDt : 0;
     const placed = this.armsPlaced(); // 풍차 베기 감기 (10/29 20:0x 휘청 고침): 대본이 놓은 두 팔은 목표 빠르기 0 — 아래 armsPlaced
     const armBoost = (this.armBoost = plungeBoost(this, 'strikeArm')); // 10/13 FINISH.lift (finish.js) — 중력 보상(manualMuscle)은 이 배율을 빼고 그대로
+    const fcArm = fingerCutK(this, 'arm'); // 손가락 긋기 팔 힘 (11/06 — 긋는 동안만 칼 팔 근육 × arm · 끔 = 1)
     for (const j of this.joints) {
       const n = j.name;
       const isLeg = n.startsWith('thigh') || n.startsWith('shin') || n.startsWith('foot');
       let mus = isLeg ? legsMus * (0.6 + 0.4 * this.legHealth) : Math.max(0.1, this.muscle);
       if (n === 'uarmO' || n === 'farmO') mus *= 0.15 + 0.85 * this.limbs.armO; // 다친 팔은 힘이 없다
-      if (n === 'uarmS' || n === 'farmS') mus *= (0.3 + 0.7 * this.limbs.armS) * this.strength;
+      if (n === 'uarmS' || n === 'farmS') mus *= (0.3 + 0.7 * this.limbs.armS) * this.strength * fcArm;
       if (n === 'uarmS' || n === 'farmS' || n === 'uarmO' || n === 'farmO') mus *= armBoost; // 10/13 내려찍기: 찍는 동안만 두 팔 근육 × FINISH.strikeArm (그 밖엔 1)
       if (n === 'uarmS' || n === 'farmS' || n === 'uarmO' || n === 'farmO') mus *= this.stamina.power;
       if (n === 'uarmS' || n === 'farmS' || n === 'uarmO' || n === 'farmO') mus *= this.flowArmScale ?? 1; // 흘림당한 뒤 팔 늦춤 (두 팔만 — 걸음 · 몸통 그대로)
@@ -3454,7 +3456,8 @@ export class Fighter {
       this.prevAim = null; // 손목 제어가 멈춘 동안의 묵은 목표를 버린다 — 안 버리면 재개 첫 스텝에 지난 목표와의 차를 한 스텝 각속도(최대 120 rad/s)로 읽는다 (10/7; 샛별 A-021 뒤 injury_followup 과 같은 결함)
       return; // 쓰러지거나 칼을 놓치면 손목에 힘을 쓰지 않는다
     }
-    const str = this.strength * (this.powerMul ?? 1) * plungeBoost(this, 'strikeWrist') * mus * (0.35 + 0.65 * this.armHealth) * this.stamina.power * (this.flowArmScale ?? 1); // 기력 지침의 공통 힘 배율 · 흘림당한 뒤 팔 늦춤(nagashi_recovery.js). 유파 목표는 유지
+    const fcArm = fingerCutK(this, 'arm'); // 손가락 긋기 팔 힘 (11/06 — 긋는 동안만 손목 힘 · 손목 빠르기 한계 √ 에 × arm · 끔 = 1)
+    const str = this.strength * fcArm * (this.powerMul ?? 1) * plungeBoost(this, 'strikeWrist') * mus * (0.35 + 0.65 * this.armHealth) * this.stamina.power * (this.flowArmScale ?? 1); // 기력 지침의 공통 힘 배율 · 흘림당한 뒤 팔 늦춤(nagashi_recovery.js). 유파 목표는 유지
     const forearm = this.bodies.farmS;
 
     // 칼끝 방향: 손 위치가 곧 검술의 자세(가드)다.
@@ -3751,7 +3754,7 @@ export class Fighter {
     const vAlong = tl > 1e-6 ? ((w.x - fw.x) * torque.x + (w.y - fw.y) * torque.y + (w.z - fw.z) * torque.z) / tl : 0;
     // 손목 각속도 한계는 힘(strength)의 제곱근에 비례한다 (감독 확정 V1, docs/characters.md "관절 각속도 한계를 힘에 묶는 실험"):
     //  힘이 세면 더 빠른 칼끝까지 힘이 실려 한 방이 실제로 세진다. 힘 1.0이면 예전과 같다 (기본 AI 회귀 동일)
-    const h = hill(vAlong, this.weaponCfg.wristVmax * Math.sqrt(this.strength) * (this.stamina.exhausted || (STAMINA.attackTempo && !this.stamina.guarding && !STAMINA.tempoCaps) ? 1 : this.stamina.motorSpeed), 0.25, this.weaponCfg.brakeEcc);
+    const h = hill(vAlong, this.weaponCfg.wristVmax * Math.sqrt(this.strength * fcArm) * (this.stamina.exhausted || (STAMINA.attackTempo && !this.stamina.guarding && !STAMINA.tempoCaps) ? 1 : this.stamina.motorSpeed), 0.25, this.weaponCfg.brakeEcc);
     this.wristHill = (this.wristHill ?? h) + (h - (this.wristHill ?? h)) * Math.min(1, (this.lastDt || 1 / 120) / 0.03);
     cap *= this.wristHill;
     if (tl > cap) torque.setLength(cap);

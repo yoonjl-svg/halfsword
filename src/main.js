@@ -534,6 +534,9 @@ if (params.has('lungeParry')) CONFIG.AI_THRUST_DEF.lungeParry = +params.get('lun
 if (params.has('cutStepIn')) CONFIG.SKILL.cutStepIn.fwd = Math.max(0, +params.get('cutStepIn') || 0); // 베며 내딛기 걸음 (m — 걸음 사다리 0.3 · 0.45 · 0 = 끔)
 if (params.has('cutStepSchools')) CONFIG.SKILL.cutStepIn.schools = params.get('cutStepSchools').split(',').filter(Boolean);
 if (params.has('cutStepFrames')) CONFIG.SKILL.cutStepIn.frames = params.get('cutStepFrames') === 'all' ? null : params.get('cutStepFrames').split(',').filter(Boolean);
+// 손가락 긋기 세기 (11/06 — src/finger_cut.js · 기본 모두 1 = 끔 · 사장님 확인 전): 긋는 동안 칼 팔 · 손목 힘 · 손가락 감도 · 판정 에너지 배율 · AI 보통 긋기도(fcAi=1)
+for (const [q, k] of [['fcArm', 'arm'], ['fcGain', 'gain'], ['fcHit', 'hit']]) if (params.has(q) && +params.get(q) > 0) CONFIG.SKILL.fingerCut[k] = +params.get(q);
+if (params.has('fcAi')) CONFIG.SKILL.fingerCut.ai = +params.get('fcAi') ? 1 : 0;
 if (params.has('wristSwing')) CONFIG.JOINTS.wristSwing = Math.max(0, Math.min(2, Math.round(+params.get('wristSwing') || 0))); // 시험 (10/25 · 기본 0): 베는 동안 손목 교정 — 1 = 칼 면 안에서만 · 2 = 안 함 (fighter.js wristGuardAim · cutSwing · 기록 wrist_audit §11)
 if (params.has('wristRope')) CONFIG.JOINTS.wristRope = +params.get('wristRope') ? 1 : 0; // 시험 (10/24 17:2x · 기본 끔 · `?wristRope=1` = 손목 치우침 밧줄 둘 — fighter.js gripDevOn · 기록 §9)
 if (CONFIG.JOINTS.presets[params.get('joints')]) CONFIG.JOINTS.mode = params.get('joints'); // 칼 팔 관절 가동 범위 교정 시제품(10/9, docs/motion/joint_range_2026-10-09.md): `?joints=off|anat|hard|soft|reach`, 없으면 기본 anat(켬)
