@@ -1,5 +1,5 @@
 // 손가락 긋기 세기 시험 (11/06 — 사장님 '손가락 베기 세기 -> 이건 최소한, 상처의 최소 문턱과 비슷해져야해' · 기록 docs/strike/finger_cut_2026-11-06.md · 확인표 3430 ~)
-//  ① 기본값: SKILL.fingerCut 모두 끔 (arm · gain · hit 1 · ai 0)
+//  ① 기본값: SKILL.fingerCut arm 2 · gain 2 · hit 1 · ai 0 (11/06 사장님 '바로 기본으로 켜')
 //  ② fingerCutK: 끄면 늘 1 · 켜면 사람 손가락 팔(autoGuard)이 긋는 동안만 · AI 는 ai 켬일 때만(gain 은 사람만) · 비기 · 끌고 가는 칼 · 찌르기 · 막기 단추 등은 1 · hit 는 긋기 끝 recoverDelay 안까지
 //  ③ 켜도 사람 몸이 긋지 않으면 판이 같음 (AI 대 가만히 선 사람 — AI 몸은 그대로) · ai 켬이면 AI 판이 바뀜
 //  ④ 켬 = 의도대로 (서 있는 상대 과녁): arm · gain 은 칼끝이 더 빨라짐 · hit 는 같은 닿음의 판정 J 가 정확히 × hit
@@ -21,14 +21,14 @@ const withFC = (o, fn) => {
   }
 };
 
-test('기본값: 손가락 긋기 세기 스위치 모두 끔', () => {
-  assert.deepEqual(SKILL.fingerCut, { arm: 1, gain: 1, hit: 1, ai: 0 });
+test('기본값: 손가락 긋기 세기 arm 2 · gain 2 (11/06 사장님) · hit 1 · ai 0', () => {
+  assert.deepEqual(SKILL.fingerCut, { arm: 2, gain: 2, hit: 1, ai: 0 });
 });
 
 test('fingerCutK: 사람 손가락 팔이 긋는 동안만 · AI 는 ai 켬일 때만 · 다른 동작은 1', () => {
   const body = (o = {}) => ({ alive: true, armed: true, weapon: {}, ...o, skill: { autoGuard: true, swinging: true, quiet: 0, ...(o.skill ?? {}) } });
   const H = body();
-  for (const k of ['arm', 'gain', 'hit']) assert.equal(fingerCutK(H, k), 1, `끔 ${k}`);
+  withFC({ arm: 1, gain: 1, hit: 1 }, () => { for (const k of ['arm', 'gain', 'hit']) assert.equal(fingerCutK(H, k), 1, `끔 ${k}`); });
   withFC({ arm: 1.5, gain: 1.3, hit: 2 }, () => {
     assert.equal(fingerCutK(H, 'arm'), 1.5);
     assert.equal(fingerCutK(H, 'gain'), 1.3);
@@ -86,9 +86,9 @@ test('켜도 사람 몸이 긋지 않으면 판이 같음 (AI 몸 그대로) · 
 
 test('켬 = 의도대로: 허공 긋기 — arm · gain 은 칼끝 · 손이 빨라짐 (롱소드 · 우치가타나)', () => {
   for (const [weapon, school] of [['longsword', 'german'], ['uchigatana', 'japanese']]) {
-    const base = airSwing({ weapon, school, v: 4.5 });
-    const arm = withFC({ arm: 2 }, () => airSwing({ weapon, school, v: 4.5 }));
-    const gain = withFC({ gain: 1.5 }, () => airSwing({ weapon, school, v: 4.5 }));
+    const base = withFC({ arm: 1, gain: 1, hit: 1 }, () => airSwing({ weapon, school, v: 4.5 })); // 끈 판 (기본은 11/06 부터 켬)
+    const arm = withFC({ arm: 2, gain: 1 }, () => airSwing({ weapon, school, v: 4.5 }));
+    const gain = withFC({ arm: 1, gain: 1.5 }, () => airSwing({ weapon, school, v: 4.5 }));
     assert.ok(arm.tip > base.tip && arm.hand > base.hand, `${weapon} arm 2: ${JSON.stringify([base, arm])}`);
     assert.ok(gain.tip > base.tip && gain.hand > base.hand, `${weapon} gain 1.5: ${JSON.stringify([base, gain])}`);
     assert.deepEqual(withFC({ arm: 1, gain: 1, hit: 1 }, () => airSwing({ weapon, school, v: 4.5 })), base, `${weapon} 1 = 끔`);
