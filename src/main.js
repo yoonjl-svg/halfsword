@@ -195,6 +195,7 @@ if (params.has('cnPath')) CONFIG.SECRET.cnPath = +params.get('cnPath') ? 1 : 0; 
 if (['cutFirst', 'thrustFirst'].includes(params.get('cnGeojeongOrder'))) CONFIG.SECRET.cnGeojeongOrder = params.get('cnGeojeongOrder'); // 거정세 연환 순서: 기본 원문대로 벰 → 찌름
 if (params.has('secretReach')) CONFIG.SECRET.secretReach = +params.get('secretReach') ? 1 : 0; // 비기 동안 팔 끝까지 펴짐(10/12 03:0x·03:1x): 기본 1, `?secretReach=0` = 평소 제한
 if (params.has('iaiRise')) CONFIG.SECRET.iaiRise = +params.get('iaiRise') ? 1 : 0; // 고노센 올려베기·한 손(10/12 03:2x): 기본 1, `?iaiRise=0` = 가로 휩쓸기·두 손
+if (params.has('iaiBelly')) CONFIG.SECRET.iaiBelly = +params.get('iaiBelly') ? 1 : 0; // 고노센 배 높이 길 (11/06 사장님 '그래 배 쪽으로 재봐' — 기본 0 · 사장님 확인 전 · 확인표 3450 · docs/strike/gns_belly_2026-11-06.md)
 if (params.has('kronH')) CONFIG.SKILL.deKronH = +params.get('kronH') ? 1 : 0; // 왕관 손·칼끝 자리(10/12 08:2x): 기본 1 = 쓸어 고른 자리, `?kronH=0` = 00:1x 값
 if (['true', 'pad'].includes(params.get('kronShape'))) CONFIG.SKILL.deKronShape = params.get('kronShape'); // 왕관 꼴(10/12 00:1x 사장님): 기본 'true'(진짜 왕관 꼴 — 코등이 가로), `?kronShape=pad` = 10/11 패드 꼴 (docs/strike/kron_shape_2026-10-12.md)
 if (params.get('itRetreat') === '1' || params.get('itRetreat') === '2') CONFIG.SKILL.itRetreat = +params.get('itRetreat'); // 이탈리아 물러서기 연구(10/17 — 판 값 끔, 사장님 확인 전): `?itRetreat=1` = 막기 단추가 약한 길에서 실제 디딤 두 번 물러섬 · `?itRetreat=2` = 막는 동안 스틱을 뒤로 당긴 두 디딤을 물러서는 한 짝으로 셈(스틱은 플레이어 것) (docs/strike/italian_retreat_2026-10-17.md)

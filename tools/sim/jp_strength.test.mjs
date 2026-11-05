@@ -93,7 +93,8 @@ test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄�
     let r = null;
     try {
       UA.tsuStep = v;
-      r = fightOne({ school: 'japanese', weapon: 'uchigatana', opp: 'longsword', seed: 2, dur: 20, onRound(o) { uq = o.uq; } });
+      // 씨앗 4 (11/06 wk/gns-belly 병합 — 손가락 긋기 세기 기본 켬 b9d6126f 판에서는 씨앗 2 의 20 s 안에 제비 베기 되돌림 칼이 없어짐 · 씨앗 4 는 되돌림 칼 2 · 켜면 미끄러짐 1)
+      r = fightOne({ school: 'japanese', weapon: 'uchigatana', opp: 'longsword', seed: 4, dur: 20, onRound(o) { uq = o.uq; } });
     } finally {
       allOff();
     }

@@ -668,7 +668,10 @@ function startIai(f, combat) {
   //  틀이 무거운 칼(frame 'heavy' — 모노호시자오)은 한 손이 무리라 두 손 그대로 (무기 표에 이미 있는 틀 값을 읽음 — 새 규칙 없음). 다시 쥐기는 발도 뒤(경직 붙잡기) — iai 가 끝나면 offHand 가 다시 쥔다
   const rise = !!SECRET.iaiRise;
   const oneHand = rise && !!f.weaponCfg.twoHand && f.weapon?.frame !== 'heavy';
-  f.iai = { kind: 'iai', K: rise ? SECRET.iaiPathRise : SECRET.iaiPath, oneHand, J: SECRET.instantJ, body: SECRET.iaiPath.E.body, hold: SECRET.stiff.japanese, pose: (I, u) => iaiReach(f, I, iaiPose(I, u), u), t: 0, T, ab: far ? SECRET.iaiDrawShare : 0, A: { H: AH, D: AD }, DB, yaw, slide, dx, dz, off: !oneHand && !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hit: null, res: null, arc: null };
+  // 11/06 사장님 '그래 배 쪽으로 재봐. 사선 베기의 모양도 지금보다는 완만해져도 돼' (SECRET.iaiBelly · 기본 0): 올려베기 길을 배 높이 길 iaiPathBelly 로 — 선 몸에서 뽑는 사람 발도만.
+  //  AI 고노센(숙련 5 일본)과 웅크림 판 사람(SECRET.gnsCrouch 1)은 웅크린 발도 대기(iaiReady — 낮춤 0.16 · 숙임 14°)에서 뽑아 지금 길이 이미 상대 골반 높이(롱소드 과녁 가운데 줄 0.91 m)를 지남 — 배 길이면 허벅지(0.80)로 내려감 (gns_belly.mjs stand crouch)
+  const riseK = SECRET.iaiBelly && req.player && !SECRET.gnsCrouch ? SECRET.iaiPathBelly : SECRET.iaiPathRise;
+  f.iai = { kind: 'iai', K: rise ? riseK : SECRET.iaiPath, oneHand, J: SECRET.instantJ, body: SECRET.iaiPath.E.body, hold: SECRET.stiff.japanese, pose: (I, u) => iaiReach(f, I, iaiPose(I, u), u), t: 0, T, ab: far ? SECRET.iaiDrawShare : 0, A: { H: AH, D: AD }, DB, yaw, slide, dx, dz, off: !oneHand && !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hit: null, res: null, arc: null };
   if (SECRET.gnsThrough && req.player) f.iai.through = true; // 베고 지나감 (11/05 일본 강화 길 — 사람 발도만 · 기본 0 · stepIai)
   if (req.block) f.iai.block = true; // 고노센 B (SECRET.gnsEnterBlock — 천천히 걸어 든 들어옴 창에서 낸 발도): 몸보다 먼저 상대 칼에 닿으면 막힘 (아래 stepIai — 밀어냄은 휩쓸기만)
   if (req.block === 'cover') f.iai.cover = true; // gnsEnterBlock 2: 칼끝이 내 몸을 겨눈 채 천천히 든 상대 — 몸에 닿는 자리에서 막힘

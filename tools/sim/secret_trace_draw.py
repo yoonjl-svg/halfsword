@@ -1,6 +1,6 @@
 # 비기 길 흔적 그림 (10/12 — tools/sim/secret_trace.mjs 가 쓴 JSON 둘을 전/후 나란히). 읽기만.
 #  칸 넷: 전 옆 · 전 앞 · 후 옆 · 후 앞. 옆 = x(앞) 가로 · y(위) 세로 / 앞 = 뒤에서 상대 쪽을 봄, z(칼 든 쪽) 가로 · y 세로.
-#  회색 굵은 줄 = 상대 몸통(가슴 → 골반, 처음과 끝) · 엷은 → 짙은 선 = 칼(칼자루 끝 → 칼끝, 스텝 둘마다) · 빨강 = 칼끝 길 · 파랑 = 칼 팔(어깨 → 팔꿈치 → 손목, 처음·가운데·끝) · 초록 = 빈팔 (같은 때).
+#  회색 굵은 줄 = 상대 몸통(가슴 → 골반, 처음과 끝) · (있으면) 주황 = 상대 배 · 짙은 회색 점 = 상대 팔 · 엷은 → 짙은 선 = 칼(칼자루 끝 → 칼끝, 스텝 둘마다) · 빨강 = 칼끝 길 · 파랑 = 칼 팔(어깨 → 팔꿈치 → 손목, 처음·가운데·끝) · 초록 = 빈팔 (같은 때).
 #  실행: python3 tools/sim/secret_trace_draw.py <전 json> <후 json> <열쇠 geojeong|pyodu|bongdu|iai> <나갈 png> [제목]
 import json, sys
 from PIL import Image, ImageDraw
@@ -27,6 +27,17 @@ def panel(ox, run, view):
         P = lambda p: (ox + W * 0.5 + p[2] * S, 18 + H * 0.62 - p[1] * S)
     for f in (fr[0], fr[-1]):
         d.line([P(f['fc']), P(f['fp'])], fill=(170, 170, 170), width=7)
+    # 11/06 (tools/sim/gns_belly.mjs --trace — 있을 때만): 상대 배(주황 · 배 몸체 높이 ± 0.07) · 상대 팔 몸체 가운데(짙은 회색 점 — 처음)
+    f0 = fr[0]
+    if 'fa' in f0:
+        a0, a1 = list(f0['fa']), list(f0['fa'])
+        a0[1] += 0.07
+        a1[1] -= 0.07
+        d.line([P(a0), P(a1)], fill=(240, 150, 40), width=9)
+    for k in ('fua', 'ffa', 'fuo', 'ffo'):
+        if k in f0:
+            x, y = P(f0[k])
+            d.ellipse([x - 4, y - 4, x + 4, y + 4], fill=(90, 90, 90))
     n = len(fr)
     for i in range(0, n, 2):
         f = fr[i]
