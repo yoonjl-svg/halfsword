@@ -534,6 +534,11 @@ if (params.has('lungeParry')) CONFIG.AI_THRUST_DEF.lungeParry = +params.get('lun
 if (params.has('cutStepIn')) CONFIG.SKILL.cutStepIn.fwd = Math.max(0, +params.get('cutStepIn') || 0); // 베며 내딛기 걸음 (m — 걸음 사다리 0.3 · 0.45 · 0 = 끔)
 if (params.has('cutStepSchools')) CONFIG.SKILL.cutStepIn.schools = params.get('cutStepSchools').split(',').filter(Boolean);
 if (params.has('cutStepFrames')) CONFIG.SKILL.cutStepIn.frames = params.get('cutStepFrames') === 'all' ? null : params.get('cutStepFrames').split(',').filter(Boolean);
+// 일본 강화 길 (11/05 사장님 '걸음 속도가 특색이니 유지하면서 다른 방법으로' — docs/strike/jp_strength_2026-11-05.md · 모두 기본 끔 · 사장님 확인 전)
+if (params.has('gnsHurtKeep')) CONFIG.SECRET.gnsHurtKeep = +params.get('gnsHurtKeep') ? 1 : 0; // 맞아도 고노센 준비 이어 셈 (확인표 3420)
+if (params.has('gnsThrough')) CONFIG.SECRET.gnsThrough = +params.get('gnsThrough') ? 1 : 0; // 고노센 베고 지나감 — 팔을 가르고 몸까지 (확인표 3423)
+if (params.has('tsuStep')) CONFIG.UNIQUE_ASSIST.tsuStep = Math.max(0, +params.get('tsuStep') || 0); // 제비 베기 미끄러져 들어감 (m — 걸음 사다리 0.3 · 0.45 · 확인표 3421)
+if (params.has('jpMaaiHide')) CONFIG.AI_MAAI.hide = Math.max(0, +params.get('jpMaaiHide') || 0); // AI 가 일본 칼끝 거리를 짧게 봄 (m — 걸음 사다리 0.3 · 확인표 3422)
 if (params.has('wristSwing')) CONFIG.JOINTS.wristSwing = Math.max(0, Math.min(2, Math.round(+params.get('wristSwing') || 0))); // 시험 (10/25 · 기본 0): 베는 동안 손목 교정 — 1 = 칼 면 안에서만 · 2 = 안 함 (fighter.js wristGuardAim · cutSwing · 기록 wrist_audit §11)
 if (params.has('wristRope')) CONFIG.JOINTS.wristRope = +params.get('wristRope') ? 1 : 0; // 시험 (10/24 17:2x · 기본 끔 · `?wristRope=1` = 손목 치우침 밧줄 둘 — fighter.js gripDevOn · 기록 §9)
 if (CONFIG.JOINTS.presets[params.get('joints')]) CONFIG.JOINTS.mode = params.get('joints'); // 칼 팔 관절 가동 범위 교정 시제품(10/9, docs/motion/joint_range_2026-10-09.md): `?joints=off|anat|hard|soft|reach`, 없으면 기본 anat(켬)
