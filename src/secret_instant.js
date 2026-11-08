@@ -503,6 +503,140 @@ function rollToCap(zF, zS, Dw, lim) {
 }
 const _wz = new THREE.Vector3(); // placeIai 손목 교정 (칼 면 · 날)
 const _wx = new THREE.Vector3();
+const _atE = new THREE.Vector3(); // armTurn (팔꿈치 돌려 날 세우기 — 제비 베기 낮은 시작 11/08)
+const _atS = new THREE.Vector3();
+const _atF = new THREE.Vector3();
+const _atX = new THREE.Vector3();
+const _atU = new THREE.Vector3();
+const _atU0 = new THREE.Vector3();
+const _atN = new THREE.Vector3();
+const _atP = new THREE.Vector3();
+const _atZ = new THREE.Vector3();
+const _atC = new THREE.Vector3();
+const _atQ = new THREE.Quaternion();
+const _atI = new THREE.Quaternion();
+const _atR = new THREE.Quaternion();
+/**
+ * 팔꿈치 돌려 날 세우기 (사장님 11/08 '낮은 데서 시작해도 날이 앞장서도록 고쳐' — 사람 제비 베기 곧은 길 · requestArtSnap armTurn · config UNIQUE_ASSIST.tsuArm · 기록 docs/strike/tsubame_low_2026-11-08.md):
+ *  칼끝이 가는 쪽으로 날이 앞장서려면 날 앞장 칼 면 z 와 아래팔 z(팔꿈치 경첩 축)의 굴림이 손목 밧줄(HUMAN.forearmRoll) 안이어야 한다. 손이 낮으면(내려 벤 칼이 깊이 내려가 꺾음 —
+ *  손가락 긋기 감도 2 · 손가락을 깊이 내림) 아래팔 z 가 칼 든 쪽 옆을 가리켜 왼 위로 올려 베는 날 앞장 칼 면과 140 ~ 160° 어긋나, 굴림 묶음(placeIai rollCap)이 밧줄 끝까지 돌려도
+ *  날 맞춤이 판정 문턱(STRIKE.edgeAlign) 밖 → 덜 도는 쪽(등)을 앞세웠다.
+ *  이 셈: 지금 팔(armIK 가 푼 것)을 어깨 → 손 줄 둘레로 th 돌렸을 때(위팔 돌림 — 손 자리 · 칼날 그대로 · elbowSwivel 과 같은 1 자유도) 날 앞장 굴림이 밧줄 안이고 손목이 사람 범위 안
+ *  (placeIai 손목 교정 wristClamp 가 칼날을 옮기지 않음 — 옮기면 칼끝 길이 휨)이고 팔이 사람 범위 안(팔꿈치가 어깨 → 손 줄 위로 안 듦 · 위팔 돌림 JOINTS.twist — elbowSwivel armOk 와 같은 잣대 ·
+ *  칼 어깨 들림 면 HUMAN.shoulderPlane — 운동학 위팔이 그 밖이면 어깨 면 밧줄이 가슴을 잡아채 몸이 초속 3 ~ 5 m 로 뒤로 밀림)인 돌림을 th0(지난 스텝 돌림)에서 가장 가까운 것으로
+ *  (2° 풀이 — elbowSwivel 과 같은 해상도 · 갈래를 건너뛰지 않게) — 없으면 아래 ② ~ ④. { th, ok, best, keep(th0 이 아직 팔 범위 안), Dn, qi } · 새 수 없음
+ */
+function armTurn(f, qc, c, target, Dw, edgeHint, turn, th0 = 0) {
+  const J = f.jointByName;
+  const e = _atE.copy(edgeHint).addScaledVector(Dw, -edgeHint.dot(Dw));
+  if (e.lengthSq() < 1e-8) return null;
+  e.normalize();
+  if (turn) e.applyAxisAngle(Dw, f.side * turn); // placeIai 와 같은 날 (길 덧칸 손 돌리기)
+  const zS = _atS.crossVectors(e, Dw).normalize(); // 날 앞장 칼 면 z (swordQuat — z = 날 × 칼 축)
+  const qu = _atQ.copy(qc).multiply(J.uarmS.target);
+  const qf = _atI.copy(qu).multiply(J.farmS.target);
+  const zF = _atF.set(0, 0, 1).applyQuaternion(qf);
+  const fx0 = _atX.set(1, 0, 0).applyQuaternion(qf); // 아래팔 x (손목 범위 셈)
+  const u0 = _atU0.set(1, 0, 0).applyQuaternion(qu); // 위팔 방향 (월드)
+  const lim = Math.cos(f.rollMax() * D2R);
+  const qi = _atI.copy(qc).invert();
+  const S = _atP.set(ARM.shoulder[0], ARM.shoulder[1], f.side * ARM.shoulder[2]).applyQuaternion(qc).add(c);
+  const Dn = _atN.copy(target).sub(S);
+  if (Dn.lengthSq() < 1e-8) return null;
+  Dn.normalize(); // 어깨 → 손 (월드 — armIK 의 돌림 축)
+  const inRange = (th) => {
+    if (!th) return true; // armIK 가 푼 팔 그대로
+    const u = _atU.copy(u0).applyAxisAngle(Dn, th);
+    const p = _atC.copy(u).addScaledVector(Dn, -u.dot(Dn)).applyQuaternion(qi);
+    if (p.y > 0) return false; // 팔꿈치가 어깨 → 손 줄 위로
+    return f.armRangeOk(u.applyQuaternion(qi), _atZ.copy(zF).applyAxisAngle(Dn, th).applyQuaternion(qi));
+  };
+  // 돌림 th 에서 placeIai 가 놓을 칼 면: 굴림 묶음(rollToCap — 아래팔 z 쪽으로 밧줄 끝까지) 뒤 날 cos(= 날 앞장 몫) · 손목 교정(wristClamp)이 칼날을 옮기나(옮기면 칼끝 길이 휨)
+  const zFt = new THREE.Vector3();
+  const zSc = new THREE.Vector3();
+  const look = (th) => {
+    zFt.copy(zF).applyAxisAngle(Dn, th);
+    const rot = rollToCap(zFt, zS, Dw, lim);
+    zSc.copy(zS);
+    if (rot) zSc.applyAxisAngle(Dw, rot);
+    const w = !JOINTS.wristGuard || !f.wristClamp(_atU.copy(fx0).applyAxisAngle(Dn, th), _atC.copy(Dw), _atZ.copy(zSc), 0);
+    return { full: !rot, c: Math.cos(rot), w };
+  };
+  const res = (th, ok) => ({ th, ok, keep: inRange(th0), Dn: Dn.clone(), qi: qi.clone() });
+  const STEP = 2 * D2R;
+  //  ① 지난 돌림 th0 에서 가장 가까운 — 날 앞장 굴림이 밧줄 안(묶음이 안 돎) · 손목 범위 안 · 팔 범위 안 (2° 풀이 · 갈래를 건너뛰지 않게)
+  let best = null;
+  let bestC = -2;
+  for (let n = 0; n * STEP <= Math.PI; n++) {
+    for (const sg of n ? [1, -1] : [1]) {
+      const th = th0 + sg * n * STEP;
+      if (!inRange(th)) continue;
+      const v = look(th);
+      if (!v.w) continue;
+      if (v.full) return res(th, true);
+      if (v.c > bestC + 1e-9) {
+        bestC = v.c;
+        best = th;
+      }
+    }
+  }
+  //  ② 없으면 armIK 팔 그대로(돌림 0)가 묶음 뒤에도 날을 문턱 안에 두고 손목 범위 안이면 그것(놓아 줌) · ③ 아니면 팔 · 손목 범위 안에서 묶음 뒤 날 맞춤이 가장 좋은 돌림 · ④ 그것도 없으면 지난 돌림/0
+  const v0 = look(0);
+  if (v0.w && v0.c >= STRIKE.edgeAlign) return res(0, true);
+  return best == null ? res(th0, false) : { ...res(best, false), best: true };
+}
+/** 끌고 가는 스텝마다 (iaiSolve): 지난 스텝 돌림 I.atTh 에서 가장 가까운 armTurn 돌림을 팔 관절 목표에 얹는다 — 안 되면 지난 돌림 그대로(아직 팔 범위 안이면) · 아니면 armIK 팔 그대로 */
+function armTurnStep(f, I, qc, c, target, Dw, edgeHint, turn) {
+  const r = armTurn(f, qc, c, target, Dw, edgeHint, turn, I.atTh ?? 0);
+  if (!r) return;
+  const th = r.ok || r.best ? r.th : r.keep ? I.atTh ?? 0 : 0;
+  I.atTh = th;
+  if (th) f.jointByName.uarmS.target.premultiply(_atR.setFromAxisAngle(_atC.copy(r.Dn).applyQuaternion(r.qi), th));
+}
+/** 길을 짤 때의 팔 셈 몫: 몸 틀 길 첫 자리 P0 에 팔을 놓고(armIK — 팔 관절 목표 · 팔꿈치 돌림 · 칼날 읽기 칸은 되돌림 · bandFirstSegs 와 같음) fn(qc, c, target, Dw, 날 쪽) — 날 쪽 = P0 → P1 토막 첫 조각
+ *  (comboSegLen 과 같은 8 조각의 첫)의 칼끝 움직임. 팔이 다 펴지면 'full' */
+function armTurnAt(f, I, P0, P1, fn) {
+  const J = f.jointByName;
+  const yaw = I.yaw;
+  const c = tv(f.bodies.chest.translation(), new THREE.Vector3());
+  const qc = tq(f.bodies.chest.rotation(), new THREE.Quaternion());
+  const tip = (P) => comboTip(f, P.H, P.D, new THREE.Vector3()).applyQuaternion(yaw).add(c);
+  const hint = tip(comboLerp({ A: P0, B: P1 }, 1 / 8)).sub(tip(P0));
+  const Dw = P0.D.clone().applyQuaternion(yaw).normalize();
+  const keep = { u: J.uarmS.target.clone(), fa: J.farmS.target.clone(), sw: f.swivelTh, full: f.armFull, raw: f.aimRawW?.clone() ?? null };
+  try {
+    (f.aimRawW ||= new THREE.Vector3()).copy(Dw); // iaiSolve 와 같게 (팔꿈치 돌림이 읽음)
+    const target = P0.H.clone().applyQuaternion(yaw).add(c);
+    f.armIK(target);
+    if (f.armFull && !keep.full) return 'full';
+    return fn(qc, c, target, Dw, hint);
+  } finally {
+    J.uarmS.target.copy(keep.u);
+    J.farmS.target.copy(keep.fa);
+    f.swivelTh = keep.sw;
+    f.armFull = keep.full;
+    if (keep.raw) f.aimRawW.copy(keep.raw);
+  }
+}
+/**
+ * 낮은 시작 판 (armTurn 을 켤지 — 길을 짤 때 한 번): 길 첫 자리에서 굴림 묶음(placeIai)이 등을 앞세우나 — 같은 셈(밧줄 끝까지 돌린 날 cos < STRIKE.edgeAlign 이고 등 쪽이 덜 돎).
+ *  첫 스텝의 날 쪽(놓인 칼끝 → 길 — 몸이 손 목표를 못 따라간 몫)으로 재지 않는 까닭: 보통 높이 판도 그 한 스텝은 등 쪽이라 판이 흔들림
+ */
+function armTurnLow(f, I, P0, P1) {
+  return (
+    armTurnAt(f, I, P0, P1, (qc, c, target, Dw, hint) => {
+      const e = hint.addScaledVector(Dw, -hint.dot(Dw));
+      if (e.lengthSq() < 1e-8) return false;
+      e.normalize();
+      if (P0.turn) e.applyAxisAngle(Dw, f.side * P0.turn);
+      const zS = new THREE.Vector3().crossVectors(e, Dw).normalize();
+      const zF = new THREE.Vector3(0, 0, 1).applyQuaternion(qc.clone().multiply(f.jointByName.uarmS.target).multiply(f.jointByName.farmS.target));
+      const lim = Math.cos(f.rollMax() * D2R);
+      const rot = rollToCap(zF, zS, Dw, lim);
+      return Math.cos(rot) < STRIKE.edgeAlign && Math.abs(rollToCap(zF, zS.clone().negate(), Dw, lim)) < Math.abs(rot);
+    }) === true
+  );
+}
 /**
  * 손 자리 H·칼날 D(몸 기준)에 칼이 놓일 자세를 셈한다 (placeIai 의 셈 — 팔 IK · 칼 면 · 굴림 묶음 · 손목 교정). 팔 관절 목표(armIK)를 쓰고 몸은 놓지 않는다.
  *  { M, Dw(교정 뒤 칼날 — 월드), up, fp, wrist, qu, qf, qs, fix(손목 교정 각) }
@@ -519,6 +653,7 @@ function iaiSolve(f, H, D, turn = 0, edgeHint = null, rollCap = false, I = f.iai
   if (!M) (f.aimRawW ||= new THREE.Vector3()).copy(Dw); // 팔꿈치 돌림(armIK)이 이 칼날을 읽는다 (교정 전)
   const planeMove = !M && I.kind === 'combo' && !!I.moves?.[I.mi]?.plane; // 칼끝 돌려 빼기 (10/28): 아래팔을 칼 줄에 맞추는 팔꿈치 · 아래 손 면 찾기
   f.armIK(target, planeMove ? Dw : null);
+  if (!M && rollCap && edgeHint && f.rollMax && f.armRangeOk && I.kind === 'combo' && I.armTurnMi === I.mi && I.moves?.[I.mi]?.armTurn) armTurnStep(f, I, qc, c, target, Dw, edgeHint, turn); // 팔꿈치 돌려 날 세우기 (제비 베기 낮은 시작 — 11/08 · 판은 길을 짤 때 armTurnLow)
   const S = new THREE.Vector3(ARM.shoulder[0], ARM.shoulder[1], f.side * ARM.shoulder[2]).applyQuaternion(qc).add(c);
   const qu = qc.clone().multiply(J.uarmS.target);
   const qf = qu.clone().multiply(J.farmS.target);
@@ -1322,6 +1457,16 @@ function comboPlanPad(f, I, m, A) {
       if (m.plan?.[k]) comboPlanAdd(B, m.plan[k]); // 길 덧칸 ([from, ...path] 점마다 — 제비 베기 되돌림 칼만)
       return B;
     });
+  // 낮은 시작 (사장님 11/08 '낮은 데서 시작해도 날이 앞장서도록 고쳐' — 곧은 길 armTurn · 기록 docs/strike/tsubame_low_2026-11-08.md): 베는 줄 첫 자리(꺾은 자리 from → 끝 점)에서
+  //  굴림 묶음이 등을 앞세울 판(armTurnLow)이면 그 수 동안(준비 토막 포함) 스텝마다 팔꿈치를 돌려 날 앞장 굴림을 손목 밧줄 안에(armTurnStep — 길 · 빠르기 · 손 자리 · 띠 옮김 그대로).
+  //  아니면(보통 높이) 전과 같음. 준비 토막 첫 자리(지금 칼 → from)로는 재지 않음 — 그 방향은 몸이 손 목표를 못 따라간 몫이라 보통 높이 판도 흔들림
+  //  판은 띠 옮김 앞에(옮기기 전 길로) — 띠 겨눔의 미리 끌고 가 보기(bandFirst)도 팔꿈치 돌림을 넣어 셈 (손목 교정이 칼날을 옮기는 몫이 달라짐)
+  I.armTurnMi = null;
+  I.atTh = 0;
+  if (m.armTurn && pts.length >= 2 && A?.H && A?.D) {
+    const P0 = build(0);
+    if (armTurnLow(f, I, P0[0], P0[1])) I.armTurnMi = I.mi;
+  }
   const poses = m.band ? comboBandShift(f, I, A, build) : build(); // 몸통 띠 겨눔 (제비 베기 되돌림 칼 — 10/25 23:1x)
   poses.forEach((B, k) => {
     const sg = { cut: k > 0, A: cur, B };
@@ -1359,7 +1504,7 @@ function bandFirstSegs(f, I, segs, slide = null) {
   const L = HL + f.weaponCfg.bladeLength;
   const c = tv(f.bodies.chest.translation(), new THREE.Vector3());
   const slAt = (t) => (slide ? slide.slide * (1 - (1 - clamp((t - I.t) / slide.span, 0, 1)) ** 2) : 0);
-  const keep = { u: J.uarmS.target.clone(), fa: J.farmS.target.clone(), sw: f.swivelTh, full: f.armFull, raw: f.aimRawW?.clone() ?? null };
+  const keep = { u: J.uarmS.target.clone(), fa: J.farmS.target.clone(), sw: f.swivelTh, full: f.armFull, raw: f.aimRawW?.clone() ?? null, at: I.atTh };
   const dt = (f.lastDt || 1 / 120) * f.stamina.attackSpeed;
   const vRel = tv(f.bodies.chest.linvel(), new THREE.Vector3()).sub(tv(foe.bodies.chest.linvel(), new THREE.Vector3())); // 두 몸이 서로 다가오는 빠르기 (맞힘을 볼 때만 칼을 그만큼 옮김 — 끌고 가는 동안 가슴이 스텝마다 0.5 cm 안팎 감)
   let prev = I.prev;
@@ -1412,6 +1557,7 @@ function bandFirstSegs(f, I, segs, slide = null) {
     f.swivelTh = keep.sw;
     f.armFull = keep.full;
     if (keep.raw) f.aimRawW.copy(keep.raw);
+    I.atTh = keep.at; // 팔꿈치 돌려 날 세우기 갈래 (셈 안에서 옮긴 것은 되돌림)
   }
   return hit && !hit.blocked ? hit : null;
 }
@@ -3299,9 +3445,9 @@ export function requestArtReturn(f, from, path, SB) {
  *  꺾는 순간 from(손가락이 꺾은 자리 — 패드) → path(올려 긋는 길 패드들)를 진 · 츠바메가에시와 같은 틀(연환 — 운동학 · 쓸린 자리의 실제 빠르기 · 판정 배율 1)로 끌고 간다.
  *  칼끝 빠르기 = 고노센 발도 칼끝 빠르기 × share · 시간 상한 maxT · 끝 자세 붙잡기 없음(곧장 0.2 s 에 손가락으로). 이미 끌고 가는 중이면 거절(false)
  */
-export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, band = false, roll = false, shift = null, pathHint = false, arcCut = false }) {
+export function requestArtSnap(f, from, path, { share, maxT, tech, plan = null, band = false, roll = false, shift = null, pathHint = false, arcCut = false, armTurn = false }) {
   if (f.iai || f.iaiReq || !path?.length || !(share > 0)) return false;
-  requestCombo(f, { moves: [{ from, path, plan, kind: 'cut', name: tech, cutSweep: true, same: true, band, ...(roll ? { roll: true } : {}), ...(shift ? { shift } : {}), ...(pathHint ? { pathHint: true } : {}), ...(arcCut ? { cleanArc: true } : {}) }], share, hold: 0, hitMul: 1, tech, maxT, arcCut }); // plan = [from, ...path] 점마다 길 덧칸 (comboPlanAdd) · cutSweep = 날 세우기 · 준비 토막에서 넘어온 스텝은 맞힘 안 봄 (stepCombo) · same = 손가락 긋기와 같은 공격 (comboMoveStart) · band = 몸통 띠 겨눔(comboBandShift) · 굴림 묶음(placeIai) · 곧은 길 (10/31): roll = 띠 옮김 없이 굴림 묶음만 · shift = 띠 높이 옮김 꼴 · pathHint = 날 쪽을 길 위 칼끝으로 · arcCut = 잔상은 베는 토막만(꺾은 자리로 거두는 준비 토막 · 거기서 넘어온 스텝은 안 그림)
+  requestCombo(f, { moves: [{ from, path, plan, kind: 'cut', name: tech, cutSweep: true, same: true, band, ...(roll ? { roll: true } : {}), ...(shift ? { shift } : {}), ...(pathHint ? { pathHint: true } : {}), ...(arcCut ? { cleanArc: true } : {}), ...(armTurn ? { armTurn: true } : {}) }], share, hold: 0, hitMul: 1, tech, maxT, arcCut }); // plan = [from, ...path] 점마다 길 덧칸 (comboPlanAdd) · cutSweep = 날 세우기 · 준비 토막에서 넘어온 스텝은 맞힘 안 봄 (stepCombo) · same = 손가락 긋기와 같은 공격 (comboMoveStart) · band = 몸통 띠 겨눔(comboBandShift) · 굴림 묶음(placeIai) · 곧은 길 (10/31): roll = 띠 옮김 없이 굴림 묶음만 · shift = 띠 높이 옮김 꼴 · pathHint = 날 쪽을 길 위 칼끝으로 · arcCut = 잔상은 베는 토막만(꺾은 자리로 거두는 준비 토막 · 거기서 넘어온 스텝은 안 그림) · armTurn (11/08) = 낮은 시작이면 팔꿈치 돌려 날 세우기 (armTurnLow · armTurnStep)
   return true;
 }
 /**

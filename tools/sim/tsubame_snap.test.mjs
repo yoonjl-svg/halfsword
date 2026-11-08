@@ -5,6 +5,8 @@
 //    끄면(`tsuBand` 0) 10/25 21:1x 판(가슴 높이 끝 점)
 //   ③ 곧은 길(사장님 10/31 16:xx '제비 베기는 곧은 길로 바꿔' — UNIQUE_ASSIST.tsuHook 0 · docs/strike/tsubame_straight_2026-10-31.md): 꺾은 자리에서 왼 위로 곧게 한 번(TSU_AIM.line) ·
 //    `tsuHook` 1 = 10/25 갈고리 길(TSU_AIM.band — 아래 시험이 그 판도 지킴)
+//   ③ 낮은 시작(사장님 11/08 '낮은 데서 시작해도 날이 앞장서도록 고쳐' — UNIQUE_ASSIST.tsuArm · docs/strike/tsubame_low_2026-11-08.md): 꺾은 자리가 낮아 손목 밧줄 끝에서도 날이 문턱 밖이면
+//    끌고 가는 동안 팔꿈치를 돌려(사람 팔 범위 안) 날 앞장 — 맨 아래 시험(감도 1 · 손가락 −0.7)
 //  작게 · 빠르게(사장님): 씨앗 하나 · 14 s 판 셋 · 칼끝 길 판 넷.  node --test tools/sim/tsubame_snap.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -225,4 +227,41 @@ test('곧은 길 꼴 (tsubame_trace — 가만히 선 상대 · 가슴 사이 1.
     const hk = traceRun('hook', seed, gap);
     assert.ok(bend(hk).devShare > 0.4, `갈고리 판 휨 ${JSON.stringify(bend(hk))}`);
   }
+});
+
+// 낮은 시작 (사장님 11/08 '낮은 데서 시작해도 날이 앞장서도록 고쳐' — UNIQUE_ASSIST.tsuArm · secret_instant.js armTurn · docs/strike/tsubame_low_2026-11-08.md):
+//  손가락 긋기 세기 끈 판(감도 1 · 팔 힘 1 — 11/06 전 장면)에서 손가락을 −0.7 까지 내려 꺾으면 손 목표가 원 바닥(패드 −0.47)에서 꺾임 — 전엔 손목 밧줄 안에서 날이 앞장서지 못해 칼등이 앞장(첫 맞음 등).
+//  켜면 끌고 가는 칼 날 앞장 · 손목 범위 안 · 굴림 한도 안 · 첫 맞음은 날로(1.15 m 는 몸통) · 1.3 m 는 칼끝 · 잔상도 곧음. 끄면(tsuArm 0 — 11/08 전 판) 등 앞장. 보통 높이(손가락 그대로)는 켜든 끄든 칼끝 길이 같음
+test('낮은 시작 (감도 1 · 손가락 −0.7 · 가슴 사이 1.15 · 1.3 m): 날 앞장 · 손목 · 굴림 한도 안 · 첫 맞음 날 — 끄면 등 앞장 · 보통 높이 판은 그대로', () => {
+  assert.equal(UA.tsuArm, 1, '낮은 시작 날 앞장 (사장님 11/08) — 기본 켬');
+  const k = CONFIG.STRIKE.edgeAlign;
+  const lead = (tr) => {
+    const W = tr.wr.filter((w) => w && w[1]);
+    return { W, n: W.filter((w) => w[5] > k).length };
+  };
+  withFc1105(() => {
+    for (const [gap, seed] of [[1.15, 701], [1.3, 702]]) {
+      const tr = traceRun('line', seed, gap, { low: -0.7 });
+      assert.ok(tr.fired, `${gap} m`);
+      const { W, n } = lead(tr);
+      assert.ok(W.every((w) => w[3] <= 1), '끌고 가는 동안 손목 범위 안');
+      assert.ok(W.every((w) => w[2] <= HUMAN.forearmRoll + 1), '끌고 가는 동안 굴림 한도 안');
+      assert.ok(n >= 0.8 * W.length, `날 앞장 ${gap} m: ${W.map((w) => w[5]).join(',')}`);
+      const h = tr.hits[0];
+      assert.ok(h && h.edge > k, `첫 맞음 날 ${gap} m: ${JSON.stringify(tr.hits)}`);
+      if (gap < 1.2) assert.ok(['pelvis', 'abdomen', 'chest'].includes(h.part), JSON.stringify(tr.hits));
+      else {
+        const b = bend(tr);
+        const t = bendTrail(tr);
+        assert.ok(b.devShare < 0.12 && b.kinkDeg < 15, `칼끝 길 ${gap} m: ${JSON.stringify(b)}`);
+        assert.ok(t.devShare < 0.12 && t.kinkDeg < 15, `잔상 ${gap} m: ${JSON.stringify(t)}`);
+      }
+      const old = traceRun('lineNoArm', seed, gap, { low: -0.7 }); // tsuArm 0 (11/08 전 판)
+      const o = lead(old);
+      assert.ok(o.n < 0.8 * o.W.length, `끄면 등 앞장 ${gap} m: ${o.W.map((w) => w[5]).join(',')}`);
+    }
+    const on = traceRun('line', 701, 1.15);
+    const off = traceRun('lineNoArm', 701, 1.15);
+    assert.deepEqual(on.tip, off.tip, '보통 높이(손가락 그대로) — 팔꿈치 돌림이 안 켜짐');
+  });
 });

@@ -5,6 +5,7 @@
 //   손목(끌고 가는 스텝마다 · 첫 맞음 때 — wrist_audit.mjs 잣대): 범위 밖(> 1°) · 아래팔 굴림 ≥ 78 · 날 앞장(칼날 0.7 자리 움직임과 날 cos > STRIKE.edgeAlign — 외날의 날 쪽) · 등 앞장(cos < −문턱)
 //  갈래 VARIANTS (아래 표): hook(10/25 갈고리 — `?tsuHook=1`) · old(10/25 전 길 — tsuAim 0) · line(곧은 길 — 지금 기본) · 그 밖 시험 길 · 띠 옮김 꼴 · 날 쪽 셈
 //  node tools/sim/tsubame_trace.mjs [--variants=hook,line,old] [--seeds=4] [--gaps=1.0,1.15,1.3] [--json=파일]  (씨앗 1 = 손가락 길 그대로 · 2 부터 점마다 ± 0.04 흔들림)
+//   [--low=-0.7] 손가락 바닥 높이 · [--fc=1,1] 손가락 긋기 세기 팔 힘 · 감도 (SKILL.fingerCut — 기본 = 게임 값) — 11/08 낮은 시작 재기 (lineNoArm = 팔꿈치 돌림 끈 전 판)
 //   --sum 이면 갈래마다 묶음 한 줄(JSON) — 12 번(사이 셋 × 씨앗 넷)이 기록 표의 판
 import { writeFileSync } from 'node:fs';
 import { newRound, DT, CONFIG, AI, THREE } from './harness_m.mjs';
@@ -16,7 +17,7 @@ import { isMain } from './is_main.mjs';
 const UA = CONFIG.UNIQUE_ASSIST;
 const U = TRADITIONS.japanese.unique.find((x) => x.name === 'tsubameGaeshi');
 const r3 = (x) => +x.toFixed(3);
-const KEEP = { band: JSON.parse(JSON.stringify(TSU_AIM.band)), line: JSON.parse(JSON.stringify(TSU_AIM.line)), ua: { tsuAim: UA.tsuAim, tsuBand: UA.tsuBand, tsuHook: UA.tsuHook } };
+const KEEP = { band: JSON.parse(JSON.stringify(TSU_AIM.band)), line: JSON.parse(JSON.stringify(TSU_AIM.line)), ua: { tsuAim: UA.tsuAim, tsuBand: UA.tsuBand, tsuHook: UA.tsuHook, tsuArm: UA.tsuArm } };
 const OLD = [[0.06, -0.15], [0.22, 0.26]]; // AI 길 (schools.js — 10/25 전 사람 길)
 const BARE = { plan: [[0, 0, 0], [0, 0, 0], [0, 0, 0]], finger: undefined, shift: null, arcCut: false, pathHint: false }; // 곧은 길 칸을 비우고 시험 길만
 /** 갈래: ua = 스위치 · band = 갈고리 길(TSU_AIM.band) 덮음 · line = 곧은 길(TSU_AIM.line) 칸 덮음 */
@@ -24,6 +25,7 @@ export const VARIANTS = {
   hook: { ua: { tsuHook: 1 } }, // 10/25 해법 ③ 갈고리 — [0.2, −0.2] → [0, 0.1] (`?tsuHook=1`)
   old: { ua: { tsuAim: 0 } }, // 10/25 전 길 — 덧칸 · 띠 · 굴림 묶음 없음 (`?tsuAim=0`)
   line: { ua: { tsuHook: 0 } }, // 곧은 길 (TSU_AIM.line 그대로 — 지금 기본)
+  lineNoArm: { ua: { tsuHook: 0, tsuArm: 0 } }, // 곧은 길 · 낮은 시작 팔꿈치 돌림 끔 (11/08 전 판 — `?tsuArm=0`)
   diag: { ua: { tsuHook: 0 }, line: { ...BARE, path: OLD } }, // 10/31 점검의 'diag' — 전 길 + 띠 옮김 · 굴림 묶음 (날 쪽 = 놓인 칼끝)
   diagHint: { ua: { tsuHook: 0 }, line: { ...BARE, path: OLD, pathHint: true } }, // + 날 쪽 = 길 위 칼끝
   diagFix: { ua: { tsuHook: 0 }, line: { ...BARE, path: OLD, pathHint: true, shift: 'slide', arcCut: true } }, // + 줄 따라 옮김 · 잔상은 베는 토막만
@@ -63,7 +65,8 @@ function edgeAt(f) {
   return pl > 1e-3 ? r3(p.dot(ed) / pl) : null;
 }
 
-export function traceRun(variant, seed, GAP) {
+/** opt.low = 손가락이 내려 긋는 바닥 높이(패드 y — 기본 = 길 그대로 G.alber −0.5) · opt.onStep(G, P, tr) = 스텝마다 재기 (11/08 낮은 시작 재기) */
+export function traceRun(variant, seed, GAP, opt = {}) {
   apply(variant);
   let rs = (seed * 7919 + 17) >>> 0;
   const rnd = () => (rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296;
@@ -99,7 +102,7 @@ export function traceRun(variant, seed, GAP) {
     if (!started && G.t > 1.2 && P.foeDistance() < GAP + 0.05) {
       started = true;
       queue = [...to(U.from, 1.6, false), ...Array(4).fill([0, 0, false])];
-      for (const p of U.path) queue.push(...to([p[0] + (rnd() * 2 - 1) * J, p[1] + (rnd() * 2 - 1) * J], 4.5, true));
+      for (const [i, p] of U.path.entries()) queue.push(...to([p[0] + (rnd() * 2 - 1) * J, (i === 1 && opt.low != null ? opt.low : p[1]) + (rnd() * 2 - 1) * J], 4.5, true));
       queue.push(...Array(8).fill([0, 0, false]));
     }
     if ((G.stepN = (G.stepN ?? 0) + 1) % 2 === 1) {
@@ -129,6 +132,7 @@ export function traceRun(variant, seed, GAP) {
   try {
     while (G.t < 6) {
       G.step();
+      opt.onStep?.(G, P, tr); // 재기 몫 (11/08 — 탐침이 스텝마다 몸을 읽음 · 기본 없음)
       const on = uq.r?.e.name === 'tsubameGaeshi';
       if (on && tr.snapT == null) {
         tr.snapT = G.t;
@@ -255,11 +259,16 @@ if (isMain(import.meta.url)) {
     const path = arg('path').split(';').map((p) => p.split(',').map(Number));
     VARIANTS.custom = { ua: { tsuHook: 0 }, line: { ...BARE, path, plan: Array.from({ length: path.length + 1 }, () => [0, 0, 0]), shift: arg('shift', null), arcCut: arg('arcCut') === '1', pathHint: arg('hint') === '1' } };
   }
-  const out = { gaps: GAPS, runs: [], sum: {} };
+  const low = arg('low') != null ? +arg('low') : undefined;
+  if (arg('fc')) {
+    const [a, g] = arg('fc').split(',').map(Number);
+    Object.assign(CONFIG.SKILL.fingerCut, { arm: a, gain: g });
+  }
+  const out = { gaps: GAPS, low: low ?? null, fc: { arm: CONFIG.SKILL.fingerCut.arm, gain: CONFIG.SKILL.fingerCut.gain }, runs: [], sum: {} };
   for (const variant of names) {
     const runs = [];
     for (const gap of GAPS) for (let s = 1; s <= SEEDS; s++) {
-      const tr = traceRun(variant, 700 + s, gap);
+      const tr = traceRun(variant, 700 + s, gap, { low });
       const row = { variant, seed: 700 + s, gap, fired: tr.fired, bend: bend(tr), bendCut: bendCut(tr), bendTrail: bendTrail(tr), hits: tr.hits, bandDy: tr.bandDy, bandFrom: tr.bandFrom, tip: tr.tip, hand: tr.hand, pad: tr.pad, wr: tr.wr };
       runs.push(row);
       out.runs.push(row);

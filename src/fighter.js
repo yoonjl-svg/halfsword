@@ -2317,6 +2317,16 @@ export class Fighter {
     return HUMAN.forearmRoll;
   }
 
+  /** 위팔 사람 범위 (u = 위팔 방향 · z = 아래팔 z, 가슴 틀 단위): 위팔 돌림(아래 모듈 armTwistOk — 팔꿈치 돌림 armOk ③ 과 같은 잣대) · 칼 어깨 들림 면(HUMAN.shoulderPlane —
+   *  shoulderOn 밧줄의 두 반공간 u·n ≥ 0, 위 어깨 면 넘침 셈 phiOut 과 같은 식). 운동학 칼 secret_instant.js iaiSolve 의 팔꿈치 돌려 날 세우기(제비 베기 낮은 시작 — 11/08)가 부른다
+   *  (운동학 위팔이 어깨 면 밧줄 밖이면 밧줄이 스텝마다 가슴을 잡아챔 · 그 모듈이 fighter.js 를 부르면 모듈 차례가 꼬여서) */
+  armRangeOk(u, z) {
+    const s = this.side;
+    const [p0, p1] = HUMAN.shoulderPlane;
+    if ([p1 - 90, p0 + 90].some((c) => Math.sin(c * HD) * u.x + s * Math.cos(c * HD) * u.z < 0)) return false;
+    return armTwistOk(u, z, s);
+  }
+
   gripDevOff() {
     if (!this.gripDev) return;
     for (const j of this.gripDev) {
@@ -4421,6 +4431,13 @@ const _sw8 = new THREE.Vector3();
 const _sw9 = new THREE.Vector3();
 const _swQ = new THREE.Quaternion();
 const _swDown = new THREE.Vector3(0, -1, 0);
+/** 위팔 돌림이 사람 범위 안인가 (elbowSwivel armOk ③ — AAOS JOINTS.twist 안쪽 70 · 바깥 90, anatSoft 와 같은 정의): u = 위팔 방향 · z = 팔꿈치 경첩 축(아래팔 z) — 가슴 틀 단위 */
+function armTwistOk(u, z, side) {
+  if (u.y > 0.5) return true; // 들림 120° 위 — 돌림 기준이 방위에 따라 크게 돎(코드먼 역설 · joint_range ROT_ELEV)
+  const r = _sw8.set(0, 0, side).applyQuaternion(_swQ.setFromUnitVectors(_swDown, u));
+  const tw = (side * Math.atan2(_sw9.crossVectors(r, z).dot(u), r.dot(z))) / HD;
+  return tw >= JOINTS.twist[0] && tw <= JOINTS.twist[1];
+}
 function elbowSwivel(pDir, Dn, S, d, alpha, D, a, th0 = 0, k = 1, align = 0, side = 1, human = false, nF = null, pronOk = true) {
   // human: 사람 팔 범위를 봄(false = 10/24 17:2x 뒤 판). nF = 굴림 목표 칼 면 법선(가슴 틀 단위 · 없으면 null) · pronOk: 엎친 손 길을 셈에 넣나(손이 자세에 쉬는 동안만 — pronateRest · JOINTS.cutPronate)
   if (alpha < 1e-3) return th0; // 팔이 곧으면 돌려도 같다
@@ -4441,10 +4458,7 @@ function elbowSwivel(pDir, Dn, S, d, alpha, D, a, th0 = 0, k = 1, align = 0, sid
     if (y.lengthSq() < 1e-9) return true;
     const z = _sw6.crossVectors(u, y.normalize()).normalize(); // 경첩 축 (armIK zA) = 아래팔 z
     if (nF && z.dot(nF) < COS_ROLL) return false; // ② 칼 면(쪽까지 — 목표 칼 면은 driveSword 가 지금 칼 면 쪽으로 고른 것)
-    if (u.y > 0.5) return true; // 들림 120° 위 — 돌림 기준이 방위에 따라 크게 돎(코드먼 역설 · joint_range ROT_ELEV)
-    const r = _sw8.set(0, 0, side).applyQuaternion(_swQ.setFromUnitVectors(_swDown, u));
-    const tw = (side * Math.atan2(_sw9.crossVectors(r, z).dot(u), r.dot(z))) / HD;
-    return tw >= JOINTS.twist[0] && tw <= JOINTS.twist[1];
+    return armTwistOk(u, z, side); // ③
   };
   // 엎친 손 길 (JOINTS.wristPronate): 그 돌림에서 손 면만 돌려(엎침 · 뒤침) 손목이 사람 범위 안이 되나 (wristPlane) — 기본 팔꿈치(0)에서 되면 팔꿈치를 돌리지 않는다(사람 꼴 먼저)
   const reach = (th) => {

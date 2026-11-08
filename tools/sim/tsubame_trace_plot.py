@@ -1,12 +1,14 @@
 # 제비 베기 칼끝 길 그림 (tools/sim/tsubame_trace.mjs --json 결과) — 갈래마다 옆(상대 쪽 x · 높이 y) · 앞(내 등 뒤에서 — 칼 든 쪽 z · 높이 y) 두 칸
 #  굵은 파란 점 = 운동학 칼이 끄는 스텝 · 가는 노란 점 = 그 뒤 손가락 몫 · 회색 = 칼자루(손) 길 · 숫자 = 첫 맞음 부위
-#  python3.12 tools/sim/tsubame_trace_plot.py <json> <png|webp> [사이 m (기본: 갈래마다 처음 제비 베기가 난 판)] [씨앗]   (PIL — 이 컨테이너는 python3.12 에 있음 · .webp 면 WebP)
+#  python3.12 tools/sim/tsubame_trace_plot.py <json> <png|webp> [사이 m (기본: 갈래마다 처음 제비 베기가 난 판)] [씨앗 | -] [edge]   (PIL — 이 컨테이너는 python3.12 에 있음 · .webp 면 WebP)
+#   edge (11/08 낮은 시작): 운동학 칼 점을 날 앞장으로 칠함 — 파랑 = 날 앞장(칼날 0.7 자리 움직임과 날 cos > 0.6) · 빨강 = 등 앞장(< −0.6) · 흰 = 그 사이 · 첫 맞음 날 · 굴림 · 날 앞장 스텝 수
 import json, sys
 from PIL import Image, ImageDraw
 
 J = json.load(open(sys.argv[1]))
 GAP = float(sys.argv[3]) if len(sys.argv) > 3 else None
-SEED = int(sys.argv[4]) if len(sys.argv) > 4 else None
+SEED = int(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] != '-' else None
+EDGE = len(sys.argv) > 5 and sys.argv[5] == 'edge'
 runs = {}
 for r in J['runs']:
     if not r.get('fired') or (GAP is not None and abs(r['gap'] - GAP) > 1e-6) or (SEED is not None and r['seed'] != SEED):
@@ -43,9 +45,13 @@ for row, (name, r) in enumerate(runs.items()):
                 d.line([prev, q], fill=(110, 110, 110), width=1)
             prev = q
         prev = None
-        for p in r['tip']:
+        wr = r.get('wr') or []
+        for i, p in enumerate(r['tip']):
             q = P(p)
             col = (120, 200, 255) if p[4] else (255, 200, 90)
+            if EDGE and p[4]:
+                e = wr[i][5] if i < len(wr) and wr[i] and wr[i][5] is not None else 0
+                col = (120, 200, 255) if e > 0.6 else (255, 90, 90) if e < -0.6 else (220, 220, 220)
             if prev:
                 d.line([prev, q], fill=col, width=3 if p[4] else 1)
             rr = 3 if p[4] else 1.5
@@ -54,6 +60,12 @@ for row, (name, r) in enumerate(runs.items()):
         b = r.get('bend') or {}
         d.text((ox + 6, oy + 18), f"dev {b.get('dev')} m ({b.get('devShare')})  kink {b.get('kinkDeg')} deg  kin {b.get('dur')} s", fill=(200, 200, 200))
         hits = r.get('hits') or []
-        d.text((ox + 6, oy + 32), 'hit ' + (','.join(h['zone'] for h in hits[:3]) or '-'), fill=(255, 120, 120))
+        if EDGE:
+            K = [w for w in (r.get('wr') or []) if w and w[1]]
+            n = sum(1 for w in K if w[5] is not None and w[5] > 0.6)
+            h0 = hits[0] if hits else None
+            d.text((ox + 6, oy + 32), f"edge lead {n}/{len(K)}  first hit " + (f"{h0.get('part') or h0['zone']} edge {h0.get('edge')} roll {h0.get('roll')}" if h0 else '-'), fill=(255, 120, 120))
+        else:
+            d.text((ox + 6, oy + 32), 'hit ' + (','.join(h['zone'] for h in hits[:3]) or '-'), fill=(255, 120, 120))
 img.save(sys.argv[2], **({'quality': 80, 'method': 6} if sys.argv[2].endswith('.webp') else {}))
 print('saved', sys.argv[2])
