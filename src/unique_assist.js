@@ -1173,7 +1173,14 @@ export class PlayerUniqueAssist {
       const at = Math.min(e.chain?.at ?? 2, U.pts.length - 2);
       //  길 덧칸(해법 ③ 손 돌리기 등)은 끌고 가는 칼에도 같은 점마다 (U.plan 의 꺾은 자리부터)
       const so = U.snapOpt; // 곧은 길 (10/31): shift 'none' = 띠 높이 옮김 없이 굴림 묶음만
-      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band && so?.shift !== 'none', roll: !!U.band && so?.shift === 'none', shift: so?.shift && so.shift !== 'none' ? so.shift : null, pathHint: !!so?.pathHint, arcCut: !!so?.arcCut })) this.stats.snap = (this.stats.snap ?? 0) + 1;
+      //  미끄러져 들어감 (11/05 일본 강화 길 — UNIQUE_ASSIST.tsuStep · 기본 0): 상대 가슴이 내 칼이 맞는 거리 밖이면 그 거리까지(tsuStep m 한도) 몸이 칼과 함께 미끄러지고 앞발을 디딤 (끌고 가는 칼 걸음 수 step — comboMoveStart)
+      const M = f.swordArt?.measure;
+      const gap = UA.tsuStep > 0 && M && f.foe ? f.foeDistance() - M.contact : 0;
+      const step = gap > 1e-3 ? { fwd: Math.min(UA.tsuStep, gap) } : null;
+      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band && so?.shift !== 'none', roll: !!U.band && so?.shift === 'none', shift: so?.shift && so.shift !== 'none' ? so.shift : null, pathHint: !!so?.pathHint, arcCut: !!so?.arcCut, step })) {
+        this.stats.snap = (this.stats.snap ?? 0) + 1;
+        if (step) this.stats.tsuStep = (this.stats.tsuStep ?? 0) + 1; // 재기 (판정에는 안 씀)
+      }
     } else if (e.tap && UA.imbroReach) {
       // 위에서 내려 찌르기 닿게 (사장님 10/27 23:5x '찌르기 뻗게 고치고'): 읽힌 순간 탭 찌르기 덧씌우기로 찌른다 — AI 임브로카타(ai.js startStrike → skill.thrust)와 같은 길
       //  (이탈리아 찌르기 THRUST.itLunge — 몸통 겨눔 · 팔만으로 안 닿으면 거리만큼 런지). 그 탭이 도는 동안 강화(몸 · 끝 힘)는 물러남(busy) · 맞은 상처는 이 기술(strokeTechOf — I8 틈 파고들기).

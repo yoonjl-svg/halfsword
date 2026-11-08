@@ -195,6 +195,7 @@ if (params.has('cnPath')) CONFIG.SECRET.cnPath = +params.get('cnPath') ? 1 : 0; 
 if (['cutFirst', 'thrustFirst'].includes(params.get('cnGeojeongOrder'))) CONFIG.SECRET.cnGeojeongOrder = params.get('cnGeojeongOrder'); // 거정세 연환 순서: 기본 원문대로 벰 → 찌름
 if (params.has('secretReach')) CONFIG.SECRET.secretReach = +params.get('secretReach') ? 1 : 0; // 비기 동안 팔 끝까지 펴짐(10/12 03:0x·03:1x): 기본 1, `?secretReach=0` = 평소 제한
 if (params.has('iaiRise')) CONFIG.SECRET.iaiRise = +params.get('iaiRise') ? 1 : 0; // 고노센 올려베기·한 손(10/12 03:2x): 기본 1, `?iaiRise=0` = 가로 휩쓸기·두 손
+if (params.has('iaiBelly')) CONFIG.SECRET.iaiBelly = +params.get('iaiBelly') ? 1 : 0; // 고노센 배 높이 길 (11/06 사장님 '그래 배 쪽으로 재봐' — 기본 0 · 사장님 확인 전 · 확인표 3450 · docs/strike/gns_belly_2026-11-06.md)
 if (params.has('kronH')) CONFIG.SKILL.deKronH = +params.get('kronH') ? 1 : 0; // 왕관 손·칼끝 자리(10/12 08:2x): 기본 1 = 쓸어 고른 자리, `?kronH=0` = 00:1x 값
 if (['true', 'pad'].includes(params.get('kronShape'))) CONFIG.SKILL.deKronShape = params.get('kronShape'); // 왕관 꼴(10/12 00:1x 사장님): 기본 'true'(진짜 왕관 꼴 — 코등이 가로), `?kronShape=pad` = 10/11 패드 꼴 (docs/strike/kron_shape_2026-10-12.md)
 if (params.get('itRetreat') === '1' || params.get('itRetreat') === '2') CONFIG.SKILL.itRetreat = +params.get('itRetreat'); // 이탈리아 물러서기 연구(10/17 — 판 값 끔, 사장님 확인 전): `?itRetreat=1` = 막기 단추가 약한 길에서 실제 디딤 두 번 물러섬 · `?itRetreat=2` = 막는 동안 스틱을 뒤로 당긴 두 디딤을 물러서는 한 짝으로 셈(스틱은 플레이어 것) (docs/strike/italian_retreat_2026-10-17.md)
@@ -537,6 +538,11 @@ if (params.has('cutStepFrames')) CONFIG.SKILL.cutStepIn.frames = params.get('cut
 // 손가락 긋기 세기 (11/06 — src/finger_cut.js · 기본 모두 1 = 끔 · 사장님 확인 전): 긋는 동안 칼 팔 · 손목 힘 · 손가락 감도 · 판정 에너지 배율 · AI 보통 긋기도(fcAi=1)
 for (const [q, k] of [['fcArm', 'arm'], ['fcGain', 'gain'], ['fcHit', 'hit']]) if (params.has(q) && +params.get(q) > 0) CONFIG.SKILL.fingerCut[k] = +params.get(q);
 if (params.has('fcAi')) CONFIG.SKILL.fingerCut.ai = +params.get('fcAi') ? 1 : 0;
+// 일본 강화 길 (11/05 사장님 '걸음 속도가 특색이니 유지하면서 다른 방법으로' — docs/strike/jp_strength_2026-11-05.md · 모두 기본 끔 · 사장님 확인 전)
+if (params.has('gnsHurtKeep')) CONFIG.SECRET.gnsHurtKeep = +params.get('gnsHurtKeep') ? 1 : 0; // 맞아도 고노센 준비 이어 셈 (확인표 3420)
+if (params.has('gnsThrough')) CONFIG.SECRET.gnsThrough = +params.get('gnsThrough') ? 1 : 0; // 고노센 베고 지나감 — 팔을 가르고 몸까지 (확인표 3423)
+if (params.has('tsuStep')) CONFIG.UNIQUE_ASSIST.tsuStep = Math.max(0, +params.get('tsuStep') || 0); // 제비 베기 미끄러져 들어감 (m — 걸음 사다리 0.3 · 0.45 · 확인표 3421)
+if (params.has('jpMaaiHide')) CONFIG.AI_MAAI.hide = Math.max(0, +params.get('jpMaaiHide') || 0); // AI 가 일본 칼끝 거리를 짧게 봄 (m — 걸음 사다리 0.3 · 확인표 3422)
 if (params.has('wristSwing')) CONFIG.JOINTS.wristSwing = Math.max(0, Math.min(2, Math.round(+params.get('wristSwing') || 0))); // 시험 (10/25 · 기본 0): 베는 동안 손목 교정 — 1 = 칼 면 안에서만 · 2 = 안 함 (fighter.js wristGuardAim · cutSwing · 기록 wrist_audit §11)
 if (params.has('wristRope')) CONFIG.JOINTS.wristRope = +params.get('wristRope') ? 1 : 0; // 시험 (10/24 17:2x · 기본 끔 · `?wristRope=1` = 손목 치우침 밧줄 둘 — fighter.js gripDevOn · 기록 §9)
 if (CONFIG.JOINTS.presets[params.get('joints')]) CONFIG.JOINTS.mode = params.get('joints'); // 칼 팔 관절 가동 범위 교정 시제품(10/9, docs/motion/joint_range_2026-10-09.md): `?joints=off|anat|hard|soft|reach`, 없으면 기본 anat(켬)
