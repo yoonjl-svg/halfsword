@@ -1173,11 +1173,12 @@ export class PlayerUniqueAssist {
       const at = Math.min(e.chain?.at ?? 2, U.pts.length - 2);
       //  길 덧칸(해법 ③ 손 돌리기 등)은 끌고 가는 칼에도 같은 점마다 (U.plan 의 꺾은 자리부터)
       const so = U.snapOpt; // 곧은 길 (10/31): shift 'none' = 띠 높이 옮김 없이 굴림 묶음만
+      //  armTurn (사장님 11/08 '낮은 데서 시작해도 날이 앞장서도록' — UNIQUE_ASSIST.tsuArm): 곧은 길만 — 손이 낮아 밧줄 끝에서도 날이 문턱 밖이면 팔꿈치를 돌려 날 앞장 (secret_instant.js armTurn)
       //  미끄러져 들어감 (11/05 일본 강화 길 — UNIQUE_ASSIST.tsuStep · 기본 0): 상대 가슴이 내 칼이 맞는 거리 밖이면 그 거리까지(tsuStep m 한도) 몸이 칼과 함께 미끄러지고 앞발을 디딤 (끌고 가는 칼 걸음 수 step — comboMoveStart)
       const M = f.swordArt?.measure;
       const gap = UA.tsuStep > 0 && M && f.foe ? f.foeDistance() - M.contact : 0;
       const step = gap > 1e-3 ? { fwd: Math.min(UA.tsuStep, gap) } : null;
-      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band && so?.shift !== 'none', roll: !!U.band && so?.shift === 'none', shift: so?.shift && so.shift !== 'none' ? so.shift : null, pathHint: !!so?.pathHint, arcCut: !!so?.arcCut, step })) {
+      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band && so?.shift !== 'none', roll: !!U.band && so?.shift === 'none', shift: so?.shift && so.shift !== 'none' ? so.shift : null, pathHint: !!so?.pathHint, arcCut: !!so?.arcCut, step, armTurn: !!so && !!U.band && !!UA.tsuArm })) {
         this.stats.snap = (this.stats.snap ?? 0) + 1;
         if (step) this.stats.tsuStep = (this.stats.tsuStep ?? 0) + 1; // 재기 (판정에는 안 씀)
       }
