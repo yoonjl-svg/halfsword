@@ -21,13 +21,20 @@ const TRIALS = [
   tr('plain', null), // 스틱 없음
   tr('away', { dt: 0.35, a: 0.8, side: -1, hold: 0.3 }), // 긋고 0.35 s 뒤 비켜 걷기
 ];
+// 시도 여섯을 한 판에 이어서 냄 — 앞 시도 몸 상태(손 자리 · 자세로 돌아가는 중 · 거리)가 다음 시도 때를 정하는 장면 재현:
+//  11/08 손가락 긋기 팔 힘 '손 목표에 닿을 때까지'(docs/strike/fc_arm_reach_2026-11-08.md) 판에서는 다섯째(스틱 없는 긋기)가 자세로 돌아가는 중에 시작해 시작 자리로 옮기는 손이 따로 읽힘
+//  (그 시도만 따로 내면 가로베기로 읽힘) → 이 시험이 만들어진 11/05 장면(손가락 긋기 세기 끈 판)에 묶음. 걸음 공격 입력 읽기는 손가락 긋기 세기와 따로
 function run(set) {
   const was = { ...UA };
+  const FC = CONFIG.SKILL.fingerCut;
+  const fc = { ...FC };
   Object.assign(UA, set);
+  Object.assign(FC, { arm: 1, gain: 1 });
   try {
     return Object.fromEntries(runTrials('german', TRIALS, { seed: 3 }).map((r) => [r.kind, r]));
   } finally {
     for (const k of Object.keys(set)) UA[k] = was[k];
+    Object.assign(FC, fc);
   }
 }
 

@@ -1,6 +1,7 @@
 // 손가락 긋기 세기 시험 (11/06 — 사장님 '손가락 베기 세기 -> 이건 최소한, 상처의 최소 문턱과 비슷해져야해' · 기록 docs/strike/finger_cut_2026-11-06.md · 확인표 3430 ~)
 //  ① 기본값: SKILL.fingerCut arm 2 · gain 2 · hit 1 · ai 0 (11/06 사장님 '바로 기본으로 켜')
 //  ② fingerCutK: 끄면 늘 1 · 켜면 사람 손가락 팔(autoGuard)이 긋는 동안만 · AI 는 ai 켬일 때만(gain 은 사람만) · 비기 · 끌고 가는 칼 · 찌르기 · 막기 단추 등은 1 · hit 는 긋기 끝 recoverDelay 안까지
+//     · 칼 팔 근육(armReach — 11/08)은 손이 손 목표로 다가가는 동안 · 닿기 전만
 //  ③ 켜도 사람 몸이 긋지 않으면 판이 같음 (AI 대 가만히 선 사람 — AI 몸은 그대로) · ai 켬이면 AI 판이 바뀜
 //  ④ 켬 = 의도대로 (서 있는 상대 과녁): arm · gain 은 칼끝이 더 빨라짐 · hit 는 같은 닿음의 판정 J 가 정확히 × hit
 //  node --test tools/sim/finger_cut.test.mjs
@@ -38,6 +39,19 @@ test('fingerCutK: 사람 손가락 팔이 긋는 동안만 · AI 는 ai 켬일 �
     const tail = body({ skill: { swinging: false, quiet: SKILL.recoverDelay * 0.5 } });
     assert.equal(fingerCutK(tail, 'hit'), 2, '긋기 끝 recoverDelay 안 닿음');
     assert.equal(fingerCutK(tail, 'arm'), 1, '팔 힘은 긋는 동안만');
+    // 칼 팔 근육(armReach — 11/08 사장님 '1로 해봐'): 손이 손 목표로 다가가는 동안 · 아직 닿지 않음(손목이 손 목표에서 SECRET.mord.ready 밖)만 · 손목(arm)은 긋는 동안 그대로
+    assert.equal(fingerCutK(H, 'armReach'), 1.5, '몸 · 손 목표 없는 꼴은 다가가는 중으로 봄');
+    const R = CONFIG.SECRET.mord.ready;
+    const arm = (tx, vx) => body({
+      handTarget: { x: 0.13 + tx, y: 0, z: 0 }, // 손목 = 아래팔 앞끝 (0.13, 0, 0)
+      bodies: { farmS: { rotation: () => ({ x: 0, y: 0, z: 0, w: 1 }), translation: () => ({ x: 0, y: 0, z: 0 }), velocityAtPoint: () => ({ x: vx, y: 0, z: 0 }) }, chest: { linvel: () => ({ x: 0.5, y: 0, z: 0 }) } },
+    });
+    assert.equal(fingerCutK(arm(3 * R, 2), 'armReach'), 1.5, '다가감 · 닿기 전');
+    assert.equal(fingerCutK(arm(3 * R, 0.3), 'armReach'), 1, '가슴 대비 멀어짐 (몸 옮김 몫을 뺌)');
+    assert.equal(fingerCutK(arm(-3 * R, 2), 'armReach'), 1, '손 목표를 지나쳐 멀어짐');
+    assert.equal(fingerCutK(arm(0.5 * R, 2), 'armReach'), 1, '닿음 (손 목표에서 SECRET.mord.ready 안)');
+    assert.equal(fingerCutK(arm(-3 * R, 2), 'arm'), 1.5, '손목은 긋는 동안 그대로');
+    assert.equal(fingerCutK(body({ skill: { swinging: false, quiet: 1 } }), 'armReach'), 1, '긋지 않음 armReach');
     const AIb = body({ aiControlled: true, skill: { autoGuard: false } });
     for (const k of ['arm', 'gain', 'hit']) assert.equal(fingerCutK(AIb, k), 1, `AI ${k}`);
     withFC({ ai: 1 }, () => {

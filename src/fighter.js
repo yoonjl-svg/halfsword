@@ -3033,7 +3033,7 @@ export class Fighter {
     const inv = this.lastDt > 0 ? 1 / this.lastDt : 0;
     const placed = this.armsPlaced(); // 풍차 베기 감기 (10/29 20:0x 휘청 고침): 대본이 놓은 두 팔은 목표 빠르기 0 — 아래 armsPlaced
     const armBoost = (this.armBoost = plungeBoost(this, 'strikeArm')); // 10/13 FINISH.lift (finish.js) — 중력 보상(manualMuscle)은 이 배율을 빼고 그대로
-    const fcArm = fingerCutK(this, 'arm'); // 손가락 긋기 팔 힘 (11/06 — 긋는 동안만 칼 팔 근육 × arm · 끔 = 1)
+    const fcArm = fingerCutK(this, 'armReach'); // 손가락 긋기 팔 힘 (11/06 — 긋는 동안만 칼 팔 근육 × arm · 끔 = 1 · 11/08 손이 손 목표에 닿을 때까지만 — finger_cut.js reaching)
     for (const j of this.joints) {
       const n = j.name;
       const isLeg = n.startsWith('thigh') || n.startsWith('shin') || n.startsWith('foot');
@@ -3466,7 +3466,7 @@ export class Fighter {
       this.prevAim = null; // 손목 제어가 멈춘 동안의 묵은 목표를 버린다 — 안 버리면 재개 첫 스텝에 지난 목표와의 차를 한 스텝 각속도(최대 120 rad/s)로 읽는다 (10/7; 샛별 A-021 뒤 injury_followup 과 같은 결함)
       return; // 쓰러지거나 칼을 놓치면 손목에 힘을 쓰지 않는다
     }
-    const fcArm = fingerCutK(this, 'arm'); // 손가락 긋기 팔 힘 (11/06 — 긋는 동안만 손목 힘 · 손목 빠르기 한계 √ 에 × arm · 끔 = 1)
+    const fcArm = fingerCutK(this, 'arm'); // 손가락 긋기 팔 힘 (11/06 — 긋는 동안만 손목 힘 · 손목 빠르기 한계 √ 에 × arm · 끔 = 1 · 11/08 손목은 그대로 — 칼 무게를 붙잡는 몫)
     const str = this.strength * fcArm * (this.powerMul ?? 1) * plungeBoost(this, 'strikeWrist') * mus * (0.35 + 0.65 * this.armHealth) * this.stamina.power * (this.flowArmScale ?? 1); // 기력 지침의 공통 힘 배율 · 흘림당한 뒤 팔 늦춤(nagashi_recovery.js). 유파 목표는 유지
     const forearm = this.bodies.farmS;
 

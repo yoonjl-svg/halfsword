@@ -88,15 +88,21 @@ test('켜도 일본이 아닌 칸은 그대로: 네 스위치를 켠 독일 롱�
 
 test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄러져 들어감 (끄면 0)', () => {
   const runs = {};
+  const FC = CONFIG.SKILL.fingerCut;
+  const fc = { ...FC };
   for (const v of [0, 0.3]) {
     let uq = null;
     let r = null;
     try {
       UA.tsuStep = v;
       // 씨앗 4 (11/06 wk/gns-belly 병합 — 손가락 긋기 세기 기본 켬 b9d6126f 판에서는 씨앗 2 의 20 s 안에 제비 베기 되돌림 칼이 없어짐 · 씨앗 4 는 되돌림 칼 2 · 켜면 미끄러짐 1)
+      // 11/08 손가락 긋기 팔 힘 '손 목표에 닿을 때까지'(docs/strike/fc_arm_reach_2026-11-08.md) 판에서는 씨앗 4 의 되돌림 칼이 없어짐 → 장면 재현으로 손가락 긋기 세기 끈 판(11/06 전)에 묶음
+      //  (tsuStep 은 손가락 긋기 세기와 따로 — 끈 판 씨앗 4 는 되돌림 칼 1 · 켜면 미끄러짐 1)
+      Object.assign(FC, { arm: 1, gain: 1 });
       r = fightOne({ school: 'japanese', weapon: 'uchigatana', opp: 'longsword', seed: 4, dur: 20, onRound(o) { uq = o.uq; } });
     } finally {
       allOff();
+      Object.assign(FC, fc);
     }
     runs[v] = { tsu: uq.stats.tsuStep ?? 0, snap: uq.stats.snap ?? 0, r };
   }

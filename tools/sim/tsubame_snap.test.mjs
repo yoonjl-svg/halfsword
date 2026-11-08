@@ -224,7 +224,9 @@ test('곧은 길 꼴 (tsubame_trace — 가만히 선 상대 · 가슴 사이 1.
     assert.ok(W.filter((w) => w[5] > k).length >= 0.8 * W.length, `날 앞장 ${W.map((w) => w[5]).join(',')}`);
     const h = tr.hits[0];
     assert.ok(h && ['pelvis', 'abdomen', 'chest'].includes(h.part) && h.edge > k, JSON.stringify(tr.hits));
-    const hk = traceRun('hook', seed, gap);
+    // 갈고리 판(10/25 · `?tsuHook=1`)은 옛 장면 재현 — 손가락 긋기 세기 끈 판(11/06 전)에 묶음: 팔 힘 · 감도 2 배 판에서는 꺾는 순간 손이 다른 자리라 갈고리 휨 몫이 판마다 달라짐
+    //  (11/08 손 목표 닿음 판 1.15 m 0.37 · 1.3 m 0.48 · 그 전 판 0.25 · 0.28 — docs/strike/fc_arm_reach_2026-11-08.md). 곧은 길 잣대(위)는 게임 값 그대로
+    const hk = withFc1105(() => traceRun('hook', seed, gap));
     assert.ok(bend(hk).devShare > 0.4, `갈고리 판 휨 ${JSON.stringify(bend(hk))}`);
   }
 });
