@@ -537,6 +537,7 @@ if (params.has('cutStepSchools')) CONFIG.SKILL.cutStepIn.schools = params.get('c
 if (params.has('cutStepFrames')) CONFIG.SKILL.cutStepIn.frames = params.get('cutStepFrames') === 'all' ? null : params.get('cutStepFrames').split(',').filter(Boolean);
 // 손가락 긋기 세기 (11/06 — src/finger_cut.js · 기본 모두 1 = 끔 · 사장님 확인 전): 긋는 동안 칼 팔 · 손목 힘 · 손가락 감도 · 판정 에너지 배율 · AI 보통 긋기도(fcAi=1)
 for (const [q, k] of [['fcArm', 'arm'], ['fcGain', 'gain'], ['fcHit', 'hit']]) if (params.has(q) && +params.get(q) > 0) CONFIG.SKILL.fingerCut[k] = +params.get(q);
+if (params.has('fcFloor')) CONFIG.SKILL.fingerCut.floor = params.get('fcFloor') === 'none' ? null : params.get('fcFloor') !== '' && Number.isFinite(+params.get('fcFloor')) ? +params.get('fcFloor') : CONFIG.SKILL.fingerCut.floor; // 감도 바닥 (11/09 — ?fcFloor=-0.45 · none = 끔)
 if (params.has('fcAi')) CONFIG.SKILL.fingerCut.ai = +params.get('fcAi') ? 1 : 0;
 // 일본 강화 길 (11/05 사장님 '걸음 속도가 특색이니 유지하면서 다른 방법으로' — docs/strike/jp_strength_2026-11-05.md · 모두 기본 끔 · 사장님 확인 전)
 if (params.has('gnsHurtKeep')) CONFIG.SECRET.gnsHurtKeep = +params.get('gnsHurtKeep') ? 1 : 0; // 맞아도 고노센 준비 이어 셈 (확인표 3420)

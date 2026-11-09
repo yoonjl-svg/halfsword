@@ -6,10 +6,12 @@
 //    gain — 긋는 동안 손가락이 옮긴 손 목표 몫을 × gain (skill.js update 처음 — 빠른 끌기만 감도를 올림 · 손 목표 반지름 WEAPON.reach 그대로)
 //    hit  — 긋는 동안과 그 끝 recoverDelay 안의 닿음(combat.js analyze)의 판정 에너지를 × hit — 물리(빠르기 · 질량 · 가르나 튕기나 판단 앞 에너지)는 그대로, 판정만 (마지막 수단 — 보이는 움직임은 그대로)
 //    ai   — 1 이면 AI 몸의 보통 긋기(AI 가 손 목표를 옮기는 휘두름 — 비기 · 끌고 가는 칼 아님)에도 arm · hit 를 건다 (gain 은 손가락이 없어 사람만). 기본 0 = 사람만
-//   주소 손잡이 (main.js): ?fcArm= · ?fcGain= · ?fcHit= · ?fcAi=1
+//    floor — 감도 바닥 (11/09 사장님 '감도 2배는 두되 손이 원 바닥에 닿기 전에서 멈추게 해' · 기록 docs/strike/fc_gain_edge_2026-11-09.md): 감도로 더 간 손 목표가 이 높이(패드 y) 밑으로 내려가지 않는다 —
+//           감도 1 이었으면 갔을 자리(같은 손가락 길을 감도 1 로 옮긴 그림자 패드)는 그대로 간다. 바닥만(위 · 옆 끝은 그대로 — 기록 §3). null = 끔(11/09 전 판)
+//   주소 손잡이 (main.js): ?fcArm= · ?fcGain= · ?fcHit= · ?fcAi=1 · ?fcFloor= (none = 끔)
 //   새 문턱 · 상한 · 시간 없음 — '긋는 동안'은 skill.swinging(SKILL.swingSpeed), 끝 몫은 SKILL.recoverDelay(손가락을 떼고 자세로 돌아가기까지) 를 그대로 읽는다
 // ─────────────────────────────────────────────────────────────
-import { SKILL } from './config.js';
+import { SKILL, WEAPON } from './config.js';
 
 /** 이 몸이 지금 손가락 긋기 길을 받을 몸인가 (사람 손가락 팔 — skill.autoGuard · ai 켬이면 AI 몸도) — 칼 · 살아 있음 · 비기 · 끌고 가는 칼 · 찌르기 · 찍기 · 채찍 톡 · 감기 · 칼자루 치기 아님 */
 function strokeBody(f, F, human) {
@@ -32,4 +34,26 @@ export function fingerCutK(f, key) {
   if (!strokeBody(f, F, human)) return 1;
   if (key === 'hit') return sk.swinging || sk.quiet <= SKILL.recoverDelay ? k : 1;
   return sk.swinging ? k : 1;
+}
+
+/** 감도 바닥 (SKILL.fingerCut.floor — 11/09): skill.js update 가 손가락 몫 · 감도 몫을 손 목표에 더한 뒤 · 원(WEAPON.reach) 자르기 앞에 부른다.
+ *  dx · dy = 지난 스텝 끝 손 목표(sk.fcOff) 뒤 손가락이 옮긴 몫 (감도 앞). 그림자 패드 sk.fcBase = 같은 손가락 길을 감도 1 로 옮긴 자리(원 자르기도 같게).
+ *  손 목표가 내려가는 몫은 min(바닥, 그림자 높이, 지난 손 목표 높이) 에서 멈춘다 — 감도로 더 간 몫만 바닥을 못 넘고, 감도 1 로도 갔을 자리 · 이미 그 밑에 있던 손은 그대로.
+ *  사람 손가락으로 긋는 몸(감도를 받는 몸 — 비기 · 끌고 가는 칼 · 찌르기 등 아님)이 손가락을 댄 동안만 · 손가락을 떼거나 자세로 돌아가면 그림자를 손 목표에 다시 맞춘다.
+ *  끔(floor null · 수 아님) · 감도 1 · AI 몸이면 아무것도 하지 않는다 (그림자도 없음) */
+export function fingerCutFloor(f, sk, dx, dy) {
+  const F = SKILL.fingerCut;
+  const fl = F?.floor;
+  if (!Number.isFinite(fl) || (F.gain ?? 1) === 1 || !sk.fcOff || !f.handHeld || sk.recovering || sk.autoGuard !== true || !strokeBody(f, F, true)) {
+    sk.fcBase = null;
+    return;
+  }
+  const prev = sk.fcOff;
+  const B = (sk.fcBase ??= prev.clone());
+  B.x += dx;
+  B.y += dy;
+  if (B.length() > WEAPON.reach) B.setLength(WEAPON.reach);
+  if (!f.inputActive) return;
+  const lim = Math.min(fl, B.y, prev.y);
+  if (f.handOffset.y < lim) f.handOffset.y = lim;
 }

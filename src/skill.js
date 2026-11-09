@@ -1,5 +1,5 @@
 import { tempoHand, observeTempoInput } from './attack_tempo.js';
-import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 감도 (11/06 — config SKILL.fingerCut.gain · 기본 1 = 끔)
+import { fingerCutK, fingerCutFloor } from './finger_cut.js'; // 손가락 긋기 감도 (11/06 — config SKILL.fingerCut.gain · 기본 1 = 끔) · 감도 바닥 (11/09 — SKILL.fingerCut.floor)
 import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — 사람 공격이 상대 칼에 막히면 막은 쪽 기력 −, whiffEnd)
 // ─────────────────────────────────────────────────────────────
 //  검술 층 (숙련도 보정)
@@ -1680,10 +1680,13 @@ export class Skill {
     // 손가락 긋기 감도 (11/06 — finger_cut.js · SKILL.fingerCut.gain · 기본 1 = 끔): 사람 손가락으로 긋는 동안(지난 스텝 휘두르기) 지난 스텝 뒤 손가락이 옮긴 손 목표 몫을 × gain.
     //  손 목표 반지름(WEAPON.reach — 아래 자름)은 그대로. 끄면 이 몫은 아무것도 하지 않는다 (fcOff 도 만들지 않음)
     const fcG = fingerCutK(f, 'gain');
+    const fcDx = this.fcOff ? f.handOffset.x - this.fcOff.x : 0; // 지난 스텝 뒤 손가락이 옮긴 몫 (감도 앞)
+    const fcDy = this.fcOff ? f.handOffset.y - this.fcOff.y : 0;
     if (fcG !== 1 && f.inputActive && this.fcOff) {
-      f.handOffset.x += (f.handOffset.x - this.fcOff.x) * (fcG - 1);
-      f.handOffset.y += (f.handOffset.y - this.fcOff.y) * (fcG - 1);
+      f.handOffset.x += fcDx * (fcG - 1);
+      f.handOffset.y += fcDy * (fcG - 1);
     }
+    fingerCutFloor(f, this, fcDx, fcDy); // 감도 바닥 (11/09 — SKILL.fingerCut.floor): 감도로 더 간 손 목표가 바닥 밑으로 안 감 · 감도 1 로 갔을 자리는 그대로 (끔 · AI 는 아무것도 안 함)
     const R = WEAPON.reach;
     if (f.handOffset.length() > R) f.handOffset.setLength(R);
     if ((SKILL.fingerCut?.gain ?? 1) !== 1) (this.fcOff ??= f.handOffset.clone()).copy(f.handOffset);
