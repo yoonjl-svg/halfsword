@@ -16,7 +16,7 @@ import { TRADITIONS, JAPANESE_GAIT, setJapaneseGait } from '../../src/schools.js
 import { G } from '../../src/ai_techniques.js';
 import { PLAYER_UNIQUE, uniqueDef, PlayerUniqueAssist, TSU_AIM } from '../../src/unique_assist.js';
 import { HUMAN } from '../../src/fighter.js';
-import { traceRun, bend, bendTrail } from './tsubame_trace.mjs';
+import { traceRun, bend, bendCut, bendTrail } from './tsubame_trace.mjs';
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const TSU = PLAYER_UNIQUE.japanese.find((e) => e.name === 'tsubameGaeshi');
@@ -214,17 +214,18 @@ test('곧은 길 꼴 (tsubame_trace — 가만히 선 상대 · 가슴 사이 1.
   for (const [gap, seed] of [[1.15, 701], [1.3, 702]]) {
     const tr = traceRun('line', seed, gap);
     assert.ok(tr.fired, `${gap} m`);
-    const b = bend(tr);
+    // 11/10 사장님 '1로 해' — 칼끝 휨은 베는 토막만 셈(잔상과 같은 범위 · 꺾은 자리로 거두는 준비 토막은 뺌) · 휨 몫 기준 0.12 → 0.16(손가락 긋기 세기 켬 뒤 1.15 m 판의 완만한 활 휨 0.13 ~ 0.15 를 받아들임) · 꺾임 15° 그대로
+    const b = bendCut(tr);
     const t = bendTrail(tr);
-    assert.ok(b.devShare < 0.12 && b.kinkDeg < 15, `칼끝 길 ${gap} m: ${JSON.stringify(b)}`);
-    assert.ok(t.devShare < 0.12 && t.kinkDeg < 15, `잔상 ${gap} m: ${JSON.stringify(t)}`);
+    assert.ok(b.devShare < 0.16 && b.kinkDeg < 15, `칼끝 길(베는 토막) ${gap} m: ${JSON.stringify(b)}`);
+    assert.ok(t.devShare < 0.16 && t.kinkDeg < 15, `잔상 ${gap} m: ${JSON.stringify(t)}`);
     const W = tr.wr.filter((w) => w && w[1]);
     assert.ok(W.every((w) => w[3] <= 1), '끌고 가는 동안 손목 범위 안');
     assert.ok(W.every((w) => w[2] <= HUMAN.forearmRoll + 1), '끌고 가는 동안 굴림 한도 안');
     assert.ok(W.filter((w) => w[5] > k).length >= 0.8 * W.length, `날 앞장 ${W.map((w) => w[5]).join(',')}`);
     const h = tr.hits[0];
     assert.ok(h && ['pelvis', 'abdomen', 'chest'].includes(h.part) && h.edge > k, JSON.stringify(tr.hits));
-    const hk = traceRun('hook', seed, gap);
+    const hk = withFc1105(() => traceRun('hook', seed, gap)); // 견줌 = 10/25 갈고리 길 옛 장면 (11/06 손가락 긋기 기본 켬 전 장면 — 켠 판은 갈고리도 0.25 · 83°)
     assert.ok(bend(hk).devShare > 0.4, `갈고리 판 휨 ${JSON.stringify(bend(hk))}`);
   }
 });
