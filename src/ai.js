@@ -1846,7 +1846,7 @@ export class AI {
     this.stepT = 0;
     this.hand.set(me.handOffset.x, me.handOffset.y);
     this.specStart('cingir');
-    this.setTechCue(PLAYER_UNIQUE.iberian?.find((e) => e.name === 'cingir')?.nameKo ?? tech?.nameKo ?? '싱지르', 'unique');
+    this.setTechCue(PLAYER_UNIQUE.iberian?.find((e) => e.name === 'cingir')?.nameKo ?? tech?.nameKo ?? '풍차 베기 (싱지르)', 'unique');
     (this.stats.cingir ??= { fired: 0, refused: 0 }).fired++;
     return true;
   }
