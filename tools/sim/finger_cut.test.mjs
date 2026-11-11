@@ -1,5 +1,5 @@
 // 손가락 긋기 세기 시험 (11/06 — 사장님 '손가락 베기 세기 -> 이건 최소한, 상처의 최소 문턱과 비슷해져야해' · 기록 docs/strike/finger_cut_2026-11-06.md · 확인표 3430 ~)
-//  ① 기본값: SKILL.fingerCut arm 2 · gain 2 · hit 1 · ai 0 (11/06 사장님 '바로 기본으로 켜')
+//  ① 기본값: SKILL.fingerCut arm 1 · gain 1 · hit 2 · ai 0 (11/11 사장님 — 조작 예전 · 판정 2 배 · 전 11/06 arm 2 · gain 2)
 //  ② fingerCutK: 끄면 늘 1 · 켜면 사람 손가락 팔(autoGuard)이 긋는 동안만 · AI 는 ai 켬일 때만(gain 은 사람만) · 비기 · 끌고 가는 칼 · 찌르기 · 막기 단추 등은 1 · hit 는 긋기 끝 recoverDelay 안까지
 //  ③ 켜도 사람 몸이 긋지 않으면 판이 같음 (AI 대 가만히 선 사람 — AI 몸은 그대로) · ai 켬이면 AI 판이 바뀜
 //  ④ 켬 = 의도대로 (서 있는 상대 과녁): arm · gain 은 칼끝이 더 빨라짐 · hit 는 같은 닿음의 판정 J 가 정확히 × hit
@@ -21,8 +21,8 @@ const withFC = (o, fn) => {
   }
 };
 
-test('기본값: 손가락 긋기 세기 arm 2 · gain 2 (11/06 사장님) · hit 1 · ai 0', () => {
-  assert.deepEqual(SKILL.fingerCut, { arm: 2, gain: 2, hit: 1, ai: 0 });
+test('기본값: 손가락 긋기 세기 hit 2 (11/11 사장님 — 조작 예전) · arm · gain 1 · ai 0', () => {
+  assert.deepEqual(SKILL.fingerCut, { arm: 1, gain: 1, hit: 2, ai: 0 }); // 11/11 사장님 — 조작 예전 · 판정 2 배
 });
 
 test('fingerCutK: 사람 손가락 팔이 긋는 동안만 · AI 는 ai 켬일 때만 · 다른 동작은 1', () => {
