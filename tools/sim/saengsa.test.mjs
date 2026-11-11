@@ -1,5 +1,7 @@
 // 생사전 1단계 (사장님 10/29 14:1x · 14:2x · 14:5x — docs/design/saengsa_2026-10-29.md): 시계(신청 창 · 첫 대진 · 쉬는 시간) · 대진표 만들기 · 저절로 끝내기 · 기권 ·
 //  빠른 셈 고정 · 부상 회복(경상 2번 쉬면 · 중상 그대로) · 하사품 · 저장 왕복. 시각은 모두 현지 시각으로 만든다(new Date(y, m, d, h, mi)) — 기기 시간대와 무관
+//  11/12 바로 시작 (사장님 '그리고 생사전 플레이어가 참여하면 바로 시작되도록 바꿔. 대신 특정 시간에만 열리게. 밤 10시부터 새벽 2시 사이.' — docs/design/saengsa_instant_2026-11-12.md):
+//   본판 기본(SAENGSA.instant true)은 경기 사이 기다림이 없다. 옛 규칙(아침 10시 첫 대진 · 2시간 쉼)을 지키던 시험은 새 규칙으로 고치고, 옛 셈은 OLD(instant false — 스위치)로 그대로 본다.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -16,10 +18,12 @@ const ROSTER = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k'];
 const PROF = { german: 2, italian: 1, iberian: 1, japanese: 0, chinese: 0, none: 1 };
 const DATA = { roster: ROSTER, drawWeapon: (r) => ['w1', 'w2', 'w3'][Math.floor(r() * 3)], weaponInfo: () => ({ school: 'german', tier: 'common' }), profOf: () => ({ ...PROF }) };
 const make = (seed = 7, extra = {}) => R.createTournament({ day: '2026-10-30', seed, at: at(29, 23), companions: ['a', 'b'], ...DATA, ...extra });
+const OLD = { ...SAENGSA, instant: false }; // 옛 규칙 (11/12 전 — 아침 10시 첫 대진 · 대진 2시간마다 · 결과 뒤 2시간 쉼) — 스위치가 그대로 도는지
 /** 내 경기를 이 쪽이 이긴 결과로 (체력 · 부상은 넘긴 대로) */
 const winFor = (t, m, fighters = {}) => ({ winner: R.sidesOf(t, m)[0] === 0 ? 'a' : 'b', fighters });
 
 test('시계: 신청 창은 밤 10시 ~ 새벽 2시(자정을 넘김) · 첫 대진 10시 · 대진 2시간마다', () => {
+  // 11/12: 신청 창 = 생사전이 열리는 때(그대로) · startAt · roundAt 는 옛 규칙(instant false)에서만 쓰는 셈 — 시계 함수는 그대로 본다
   assert.deepEqual({ ...C.signupWindow(at(29, 21, 59)) }, { day: '2026-10-30', from: at(29, 22), to: at(30, 2), open: false });
   assert.equal(C.signupWindow(at(29, 22)).open, true);
   assert.equal(C.signupWindow(at(30, 1, 59)).open, true);
@@ -56,33 +60,55 @@ test('대진표: 16 팀 · 15 경기 · 이름난 인물은 한 번씩 · 남는
   assert.notDeepEqual(make(12), t);
 });
 
-test('저절로 끝내기: 10시 전엔 없음 · 10시에 상대끼리 7 경기 · 내 경기는 기다림(입장 가능)', () => {
-  const t = make();
-  assert.equal(R.advance(t, at(30, 9, 59)), 0);
-  assert.equal(R.advance(t, at(30, 10)), 7);
+test('저절로 끝내기: 신청하면 곧바로 상대끼리 7 경기 · 내 경기는 입장 가능 · 8강 상대끼리는 16강이 다 끝나야 (11/12 바로 시작)', () => {
+  // 11/12 전 이 시험은 '10시 전엔 없음 · 10시에 7 경기'(아침 10시 첫 대진)를 봤다 — 사장님 11/12 '참여하면 바로 시작'으로 신청한 때(밤 11시) 바로 끝난다. 옛 셈은 아래 OLD 로 그대로
+  const t = make(), now = at(29, 23);
+  assert.equal(R.advance(t, now), 7);
   const m = R.myMatch(t);
   assert.equal(m.round, 0);
-  assert.equal(R.matchState(t, m, at(30, 10)), 'ready');
-  assert.ok(t.matches.filter((x) => x.result).every((x) => x.result.at === at(30, 10) && x.result.by === 'quick' && Number.isInteger(x.result.seed) && x.result.ver && x.result.pre.a.length === 3));
-  assert.equal(R.advance(t, at(30, 12)), 3); // 8강 가운데 상대끼리 셋 (내 쪽 하나는 내 결과를 기다림)
+  assert.equal(R.readyAt(t, m), 0);
+  assert.equal(R.matchState(t, m, now), 'ready');
+  assert.ok(t.matches.filter((x) => x.result).every((x) => x.result.at === now && x.result.by === 'quick' && Number.isInteger(x.result.seed) && x.result.ver && x.result.pre.a.length === 3)); // 결과 시각 = 셈한 때
+  assert.equal(R.advance(t, at(30, 12)), 0); // 8강 상대끼리는 내 16강 결과를 기다림 (시각이 지나도)
+  assert.ok(R.finishMine(t, m, ['0-0'], at(29, 23, 5), winFor(t, m)));
+  assert.equal(R.advance(t, at(29, 23, 5)), 3); // 16강이 다 끝나자 8강 가운데 상대끼리 셋 (내 쪽 하나는 내 결과를 기다림)
+  // 옛 규칙 (instant false): 10시 전엔 없음 · 10시에 7 경기(결과 시각 = 10시) · 12시에 8강 상대끼리 셋
+  const o = make();
+  assert.equal(R.advance(o, at(30, 9, 59), OLD), 0);
+  assert.equal(R.advance(o, at(30, 10), OLD), 7);
+  assert.equal(R.matchState(o, R.myMatch(o), at(30, 10), OLD), 'ready');
+  assert.ok(o.matches.filter((x) => x.result).every((x) => x.result.at === at(30, 10)));
+  assert.equal(R.advance(o, at(30, 12), OLD), 3);
 });
 
-test('쉬는 시간: 늦게 저장한 결과에서 2시간 · 그 전엔 다음 경기 못 함', () => {
-  const t = make();
-  R.advance(t, at(30, 11, 30));
-  const m0 = R.myMatch(t), picks = ['0-0', '0-1'];
-  assert.ok(R.finishMine(t, m0, picks, at(30, 11, 30), winFor(t, m0)));
-  R.advance(t, at(30, 13));
+test('쉬는 시간 없음: 결과를 적으면 다음 경기를 곧바로 (11/12 바로 시작) · 옛 규칙은 늦게 저장한 결과에서 2시간', () => {
+  // 11/12 전 이 시험은 '늦게 저장한 결과에서 2시간 · 그 전엔 다음 경기 못 함'(restH)을 봤다 — 사장님 11/12 '참여하면 바로 시작'으로 다음 경기도 기다림 없이. 옛 셈은 아래 OLD 로 그대로
+  const t = make(), picks = ['0-0', '0-1'];
+  R.advance(t, at(29, 23, 30));
+  const m0 = R.myMatch(t);
+  assert.ok(R.finishMine(t, m0, picks, at(29, 23, 30), winFor(t, m0)));
+  R.advance(t, at(29, 23, 30));
   const m1 = R.myMatch(t);
   assert.equal(m1.round, 1);
-  assert.equal(R.readyAt(t, m1), at(30, 13, 30));
-  assert.equal(R.matchState(t, m1, at(30, 13)), 'soon');
-  assert.equal(R.matchSetup(t, m1, picks, at(30, 13)), null);
-  assert.equal(R.matchState(t, m1, at(30, 13, 30)), 'ready');
-  const setup = R.matchSetup(t, m1, picks, at(30, 13, 30));
+  assert.equal(R.readyAt(t, m1), 0);
+  assert.equal(R.matchState(t, m1, at(29, 23, 30)), 'ready'); // 같은 때 곧바로
+  const setup = R.matchSetup(t, m1, picks, at(29, 23, 30));
   assert.equal(setup.control, 'player');
   assert.ok(setup.entrants[setup.mineSide === 'a' ? 'b' : 'a'].length >= 1);
-  assert.equal(R.matchSetup(t, m1, ['0-1'], at(30, 13, 30)).control, 'watch');
+  assert.equal(R.matchSetup(t, m1, ['0-1'], at(29, 23, 30)).control, 'watch');
+  // 옛 규칙 (instant false)
+  const o = make();
+  R.advance(o, at(30, 11, 30), OLD);
+  const o0 = R.myMatch(o);
+  assert.ok(R.finishMine(o, o0, picks, at(30, 11, 30), winFor(o, o0), OLD));
+  R.advance(o, at(30, 13), OLD);
+  const o1 = R.myMatch(o);
+  assert.equal(o1.round, 1);
+  assert.equal(R.readyAt(o, o1, OLD), at(30, 13, 30));
+  assert.equal(R.matchState(o, o1, at(30, 13), OLD), 'soon');
+  assert.equal(R.matchSetup(o, o1, picks, at(30, 13), OLD), null);
+  assert.equal(R.matchState(o, o1, at(30, 13, 30), OLD), 'ready');
+  assert.equal(R.matchSetup(o, o1, picks, at(30, 13, 30), OLD).control, 'player');
 });
 
 test('기권: 내 경기를 밤 10시(다음 신청 창)까지 안 하면 진다 · 대회는 끝까지 간다', () => {

@@ -38,7 +38,8 @@ export const SAENGSA_TEXT = Object.freeze({
   open: '열기',
   noTournament: '신청한 대회가 없습니다.',
   pickTwo: '동료 둘을 고르십시오.',
-  willSign: '입장하면 이 팀으로 신청합니다.',
+  willSign: '입장하면 이 팀으로 신청합니다.', // 옛 규칙(SAENGSA.instant false — 아침 10시 첫 대진)
+  willSignNow: '입장하면 이 팀으로 신청하고 곧바로 첫 경기를 치릅니다.', // 바로 시작 (사장님 11/12 '참여하면 바로 시작') · 시험판
   signed: '생사전에 신청했습니다.',
   noCoins: '금화가 모자랍니다.',
   busy: '진행 중인 대회가 있습니다.',
@@ -49,6 +50,7 @@ export const SAENGSA_TEXT = Object.freeze({
   resumeHint: '싸우던 경기입니다. 같은 사람 · 같은 무기로 그 상황 그대로 이어 싸웁니다.', // 고르기 · 무기 배정 잠금
   ready: '입장 가능',
   nextCup: '다음 대회', // 시험판(SAENGSA.testMode) — 대회가 끝나면 바로 다음 대회 (사장님 10/29 17:5x)
+  nextMatch: '다음 경기', // 경기 결과 뒤 — 내 다음 경기가 바로 열려 있으면 곧장 그 경기 화면으로 (사장님 11/12 바로 시작 · '확인'은 대진표로 — 쉬었다 이어 함)
 });
 export const INJURY_KO = Object.freeze({ arm: '팔', leg: '다리', torso: '몸통', head: '머리' });
 /** 무명 검객 옷 색 이름 (config SAENGSA.nameless.cloth 차례 — 화면 읽기 글에서 같은 팀 무명 검객을 가름) */
@@ -83,8 +85,7 @@ export function stateLine(s) {
     case 'signup': return s.until == null ? '신청 받는 중' : `신청 받는 중 · ${hourWords(s.until)}까지`; // 시험판은 창이 늘 열림(until 없음)
     case 'waiting': return `첫 대진 ${hourWords(s.startAt)}`;
     case 'running': return '대회 진행 중';
-    case 'done': return '대회 끝';
-    default: return `다음 신청 · ${hourWords(s.opensAt)}`;
+    default: return `다음 신청 · ${hourWords(s.opensAt)}`; // 'closed' · 'done'(대회를 마친 뒤 — 다음에 새로 들어갈 수 있는 때 · 사장님 11/12 '특정 시간에만 열리게') — 전 'done' 은 '대회 끝'
   }
 }
 /** 신청 창 안내 */

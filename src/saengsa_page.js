@@ -6,6 +6,8 @@
 //     내 경기면 내 카드를 한두 장 골라 '전투 입장' — 상대는 가린 채 함께 고르고 입장 때 함께 보인다(사장님 10/29 14:5x). 결과는 카드 위에 그대로(경기 뒤 체력 · 부상 · 죽음 · 출전 표시).
 //     '무기 배정'(사장님 10/29 18:2x 경기마다 내가 배정): 살아 있는 내 팀 세 사람마다 가진 무기 한 자루 — 카드에 바로 보이고 '전투 입장' 때 저장.
 //     내 경기는 실제 2:2 싸움(saengsa_engine.js — game.launchSaengsa · 나섬 = 내 몸 · 동료만 = 지켜봄) · 엔진이 없으면 빠른 셈 · 상대끼리 경기는 빠른 셈.
+//  바로 시작 (사장님 11/12 '참여하면 바로 시작'): 막 신청하고 열면(openMine) 내 첫 경기 화면을 곧바로 · 결과 뒤 내 다음 경기가 열려 있으면 '다음 경기'(곧장 그 경기 화면) · '확인'은 대진표로(쉬었다 이어 함) ·
+//     경기 사이 기다림이 없어 대진표 · 경기 화면에 시각을 보이지 않는다(시험판과 같음 — saengsa_rules.js noWait).
 import uiStyle from './entrance_ui.css?inline';
 import lobbyStyle from './lobby.css?inline';
 import sgStyle from './saengsa.css?inline';
@@ -13,7 +15,7 @@ import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { SAENGSA } from './config.js';
 import { clockFrom, signupWindow, roundAt } from './saengsa_clock.js';
-import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, isMine, assignWeapons, validAssignment, lockedSignatures, resumeOf } from './saengsa_rules.js';
+import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, isMine, assignWeapons, validAssignment, lockedSignatures, resumeOf, noWait } from './saengsa_rules.js';
 import { syncSaengsa, readSaengsa, playMine, claimChests, signUp, newSeed, saveResume } from './saengsa_store.js';
 import { fighterName, portraitOf, weaponName, weaponThumb, weaponInfo, SAENGSA_DATA, ownedWeapons, entryState, hireCostOf } from './saengsa_roster.js';
 import { makeNamelessFaces } from './saengsa_nameless.js';
@@ -22,10 +24,10 @@ import { makeEngine } from './saengsa_engine.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const SCHOOL_CELLS = ['german', 'italian', 'iberian', 'japanese', 'chinese'];
-const clockText = (at) => (SAENGSA.testMode ? '' : clockWords(at)); // 시험판은 시각을 보이지 않는다(모든 경기 바로 — 사장님 10/29 17:5x)
+const clockText = (at) => (noWait() ? '' : clockWords(at)); // 기다림 없는 판은 시각을 보이지 않는다(모든 경기 바로 — 시험판 사장님 10/29 17:5x · 본판 바로 시작 11/12)
 
-/** root: 덮개 Shadow root · game: 게임 모듈(2단계 launchSaengsa) · onBack(): 대기실로 */
-export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
+/** root: 덮개 Shadow root · game: 게임 모듈(2단계 launchSaengsa) · onBack(): 대기실로 · openMine: 열자마자 내 경기 화면(막 신청함 — 바로 시작) */
+export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine = false }) {
   root.innerHTML = `<style>${uiStyle}\n${lobbyStyle}\n${sgStyle}\n${typeStyle}</style><main class="saengsa" aria-labelledby="sgHeading">
     <canvas class="lobby-backdrop" id="sgGrove" aria-hidden="true"></canvas><div class="lobby-shade" aria-hidden="true"></div>
     <header class="lobby-header sg-header"><div class="sg-titles"><h1 id="sgHeading" tabindex="-1"><span>${T.title}</span></h1><span class="sg-sub">${T.subtitle}</span></div>
@@ -41,7 +43,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
       <div class="sg-rows"><div class="sg-row"><p class="sg-row-label" id="sgRowA"></p><div class="sg-cards" id="sgCardsA"></div></div>
         <div class="sg-row"><p class="sg-row-label" id="sgRowB"></p><div class="sg-cards" id="sgCardsB"></div></div></div>
       <footer class="sg-mf"><p class="sg-outcome" id="sgOutcome" hidden><b id="sgOutBig"></b><span id="sgOutLine"></span></p><p class="sg-hint" id="sgHint"></p>
-        <button type="button" class="secondary" id="sgArmBtn" hidden>${T.arm}</button><button type="button" class="primary" id="sgFight">${T.fightEnter}</button><button type="button" class="primary" id="sgDone" hidden>${T.confirm}</button></footer>
+        <button type="button" class="secondary" id="sgArmBtn" hidden>${T.arm}</button><button type="button" class="primary" id="sgFight">${T.fightEnter}</button><button type="button" class="primary" id="sgDone" hidden>${T.confirm}</button><button type="button" class="primary" id="sgNextMatch" hidden>${T.nextMatch}</button></footer>
       <section class="sg-armbox" id="sgArm" hidden aria-labelledby="sgArmTitle"><button type="button" class="detail-close" id="sgArmClose" aria-label="닫기">×</button>
         <b class="sg-pick-title" id="sgArmTitle" tabindex="-1">${T.arm}</b><div class="sg-arm-rows" id="sgArmRows"></div>
         <div class="sg-pick-actions"><button type="button" class="primary" id="sgArmOk">${T.confirm}</button></div></section>
@@ -218,6 +220,11 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
     $('sgArmBtn').hidden = !playable || !!R;
     $('sgFight').disabled = !(open.picks.length >= 1 && open.picks.length <= SAENGSA.entrantsMax) || !armsOk || busy;
     $('sgDone').hidden = !open.result;
+    // 바로 시작 (사장님 11/12): 내 경기 결과 뒤 다음 경기가 지금 열려 있으면 '다음 경기' — '확인'은 대진표로(쉬었다 이어 함 · 버금 단추 꼴)
+    const next = open.result && mineSide ? myMatch(t) : null, goOn = !!next && next.id !== m.id && matchState(t, next, t0) === 'ready';
+    $('sgNextMatch').hidden = !goOn;
+    $('sgDone').classList.toggle('primary', !goOn);
+    $('sgDone').classList.toggle('secondary', goOn);
     $('sgHint').textContent = playable ? (R ? T.resumeHint : armsOk ? `${T.pickHint} ${T.foeHidden}` : T.pickWeapons) : '';
     $('sgHint').hidden = !playable;
     const out = $('sgOutcome');
@@ -302,10 +309,11 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
       render();
       open.result = result;
       renderMatch();
-      $('sgDone').focus({ preventScroll: true });
+      ($('sgNextMatch').hidden ? $('sgDone') : $('sgNextMatch')).focus({ preventScroll: true });
     } finally { busy = false; if (open) renderMatch(); }
   });
   on($('sgDone'), 'click', closeMatch);
+  on($('sgNextMatch'), 'click', () => { const n = myMatch(t); if (!n || busy) return; closeMatch(); openMatch(n.id); }); // 곧장 다음 경기 화면 (사장님 11/12 바로 시작)
   on($('sgMatchBack'), 'click', closeMatch);
   on(root, 'keydown', (e) => { if (e.key !== 'Escape' || !open) return; e.preventDefault(); if (armDraft) closeArm(false); else closeMatch(); });
   on($('sgBack'), 'click', () => onBack?.());
@@ -313,6 +321,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom() }) {
   render({ scroll: true });
   makeNamelessFaces().then((ok) => { if (!ok) return; render(); if (open) renderMatch(); }); // 무명 검객 얼굴(옷 색마다)을 칠한 뒤 다시 그림
   $('sgHeading').focus({ preventScroll: true });
+  if (openMine && t) { const m = myMatch(t); if (m && matchState(t, m, now()) === 'ready') openMatch(m.id); } // 막 신청함 — 내 첫 경기 화면을 곧바로 (사장님 11/12 '참여하면 바로 시작')
   const timer = setInterval(() => render(), 30e3);
   return {
     refresh: () => render(),

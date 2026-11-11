@@ -222,7 +222,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, onS
   // 상점 칸 (10/30): 무기를 사면 지갑 · 레벨(얻은 것 하나 = Lv +1)을 다시 그림 · 알림 줄에 '구입했습니다.'
   const shop = shopOn ? mountShopPanel($('shopHost'), { status: (text, tone) => status(text, tone), onWallet: () => { renderWallet(); showTitleNotice(); } }) : null;
   // 생사전 칸 (10/29): 입장 → 생사전 화면(onSaengsa) · 신청하면 금화가 줄어 내 정보 칸을 다시 그림
-  const saengsa = mountSaengsaPanel($('saengsaHost'), { chip: $('saengsaState'), status: (text, tone) => status(text, tone), onWallet: () => renderWallet(), onEnter: () => { if (onSaengsa && !departing) onSaengsa(); } });
+  const saengsa = mountSaengsaPanel($('saengsaHost'), { chip: $('saengsaState'), status: (text, tone) => status(text, tone), onWallet: () => renderWallet(), onEnter: (opts) => { if (onSaengsa && !departing) onSaengsa(opts); } }); // opts.fresh = 막 신청함 → 내 첫 경기 화면 (사장님 11/12 바로 시작)
   const tabs = [...root.querySelectorAll('.lobby-tabs [role=tab]')]; // 차례 = 2 × 2 칸 차례(윗줄 아이템 · 상점 · 아랫줄 스킬북 · 이벤트) — ↑ ↓ 는 같은 칸 줄, ← → 는 다음 · 앞
   function selectTab(tab) {
     for (const item of tabs) {

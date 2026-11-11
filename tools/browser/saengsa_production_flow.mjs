@@ -1,4 +1,6 @@
 // 정식 본판 생사전 통합 검사: 시험 모드 없이 신청·입장 조건·2:2·이어받기·결과 저장·휴식.
+// 11/12 바로 시작(사장님 '참여하면 바로 시작 … 밤 10시부터 새벽 2시 사이' — docs/design/saengsa_instant_2026-11-12.md): 전에는 신청 뒤 10시까지 기다림 · 결과 뒤 2시간 쉼을 봤다 →
+//  신청하면 내 첫 경기 화면이 곧바로 열림 · 결과 뒤 다음 경기가 곧바로 입장 가능('다음 경기')을 본다. 시계 00:10 은 열린 때(22 ~ 2시) 안.
 // 고립된 새 브라우저 문맥에 자격/무기 저장과 시계를 주입한다. 승패 저장 검사는 상대 사망을 주입하므로 밸런스 측정이 아니다.
 // node tools/browser/saengsa_production_flow.mjs <빌드/개발 서버 주소> <결과 폴더> (playwright 별도 설치)
 import {chromium} from 'playwright';
@@ -46,12 +48,12 @@ try{
  const after=await p.evaluate(()=>JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).coins);
  assert.equal(before-after,40);
  const t=await p.evaluate(()=>JSON.parse(localStorage.getItem('stillness.saengsa.v1')).current);
- assert.equal(t.teams.length,16);assert.equal(t.matches.length,15);assert.equal(await p.locator('.sg-m[data-state="ready"]').count(),0);
- await p.screenshot({path:out+'/bracket-waiting.png'});checks.push('signup charges two nameless hires and creates a 16-team tournament, matches wait for 10:00');
- await p.clock.fastForward(10*3600*1000);
- await until(()=>!!document.querySelector('#gameEntrance')?.shadowRoot?.querySelector('.sg-m[data-state="ready"]'));
- await p.screenshot({path:out+'/bracket-ready.png'});
- await tap('.sg-m[data-state="ready"]');await tap('button.sg-card[data-key="0-0"]');await tap('button.sg-card[data-key="0-1"]');
+ assert.equal(t.teams.length,16);assert.equal(t.matches.length,15);
+ // 11/12 전: 첫 대진(10시)까지 입장 가능 0 · 10시간 앞으로 감기 → 이제 신청 그 때 내 경기가 입장 가능하고 경기 화면이 곧바로 열린다
+ await until(()=>{const r=document.querySelector('#gameEntrance')?.shadowRoot;return r&&!r.getElementById('sgMatch').hidden&&!r.getElementById('sgFight').hidden;});
+ assert.equal(await p.locator('.sg-m[data-state="ready"]').count(),1);assert.equal(t.matches.filter(m=>m.result).length,7);
+ await p.screenshot({path:out+'/match-open-at-signup.png'});checks.push('signup charges two nameless hires and creates a 16-team tournament, first match screen opens at once (11/12 instant start)');
+ await tap('button.sg-card[data-key="0-0"]');await tap('button.sg-card[data-key="0-1"]');
  await p.screenshot({path:out+'/entrants.png'});
  await p.evaluate(()=>{game.renderCap.tick=()=>false;});await tap('#sgFight');
  await until(()=>window.game?.state==='fight'&&!!window.game.teamRun);
@@ -72,14 +74,15 @@ try{
  await until(()=>{const root=document.querySelector('#gameEntrance')?.shadowRoot;return root?.querySelector('#sgDone')&&!root.querySelector('#sgDone').hidden;});
  const settled=await p.evaluate(()=>JSON.parse(localStorage.getItem('stillness.saengsa.v1')).current);
  assert.ok(settled.matches.some(m=>m.result));assert.equal(settled.resume,undefined);
- await tap('#sgDone');assert.equal(await p.locator('.sg-m[data-state="ready"]').count(),0);
- await p.screenshot({path:out+'/result-cooldown.png'});
+ assert.ok(await p.locator('#sgNextMatch').isVisible()); // 11/12: 결과 뒤 '다음 경기' (전: 2시간 쉼)
+ await tap('#sgDone');assert.equal(await p.locator('.sg-m[data-state="ready"]').count(),1);
+ await p.screenshot({path:out+'/result-next-ready.png'});
  await p.reload({waitUntil:'domcontentloaded'});await until(()=>!!document.querySelector('#gameEntrance')?.shadowRoot?.querySelector('#enterLobby'));
  if(await p.locator('#confirmNotices').isVisible())await tap('#confirmNotices');await tap('#enterLobby');
  await until(()=>!!document.querySelector('#gameEntrance')?.shadowRoot?.querySelector('#tabEvent'));await tap('#tabEvent');await tap('#saengsaEnter');
  const persisted=await p.evaluate(()=>JSON.parse(localStorage.getItem('stillness.saengsa.v1')).current);
  assert.deepEqual(persisted.matches.filter(m=>m.result).map(m=>m.result),settled.matches.filter(m=>m.result).map(m=>m.result));
- checks.push('resume can re-enter, controlled outcome persists after reload, completed resume cleared, next round enforces two-hour rest');
+ checks.push('resume can re-enter, controlled outcome persists after reload, completed resume cleared, next round is ready at once (11/12 — was two-hour rest)');
  assert.deepEqual(errors,[]);
  fs.writeFileSync(out+'/result.json',JSON.stringify({passed:true,checks,errors,tournamentTeams:t.teams.length,hirePaid:before-after,resumeKeys:Object.keys(resumed.bodies)},null,2));
  console.log(JSON.stringify({passed:true,checks,errors}));

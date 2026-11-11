@@ -2,6 +2,7 @@
 //  ⓪ 입장 조건을 못 채운 저장(호칭 · 무기 둘) — 안내 줄 · '생사전 입장' 꺼짐 · '대진표' (사장님 10/29 18:2x)
 //  ① 정복자 호칭 + 무기 다섯을 저장에 넣고 신청 창(10/29 23:00 — ?saengsaNow) 대기실 생사전 칸 빈 판 · 동료 고르기 카드(둘째 자리 = 무명 검객 · 무기 배정) · 다 고른 판 → 입장(신청) → 생사전 화면(첫 대진 전)
 //  ② 다음 날 10:05 — 대진표(상대끼리 첫 대진 끝 · 내 경기 '입장 가능') · 무기 배정 창 · 경기 화면(나 + 무명 검객 카드 고름) · 결과 · 대기실 칸(대회 진행 중)
+//  11/12 바로 시작(SAENGSA.instant): 상대끼리 16강은 신청 때 끝나고 내 경기는 신청 때부터 '입장 가능'(① 의 생사전 화면 사진도 그 꼴) · 대진표에 시각 없음 — ② 는 다음 날 이어 하기로 남김
 //  점검: 화면이 옆 · 아래로 넘치지 않는가(대기실 · 생사전 화면 · 경기 화면) · 입장 단추가 칸 안인가 · 카드 · 경기 칸이 서로 겹치지 않는가 · 글이 잘리는가(말줄임 수)
 //  node node_modules/vite/bin/vite.js --port 5391 → node tools/browser/saengsa_capture.mjs http://127.0.0.1:5391 dist/saengsa_shots
 import { chromium } from 'playwright';
@@ -86,6 +87,7 @@ for (const [size, width, height, phone] of SIZES) {
   await shot('panel-ready');
   await tap('#saengsaEnter');
   await p.locator('.sg-bracket').waitFor({ state: 'visible', timeout: 30000 });
+  if (await inRoot(p, `return !root.getElementById('sgMatch').hidden;`)) await tap('#sgMatchBack'); // 11/12 바로 시작: 신청하면 내 첫 경기 화면이 곧바로 열림(첫 대진 기다림 없음) → 대진표로
   await shot('page-waiting');
   // ② 다음 날 10:05
   await toLobby('2026-10-30T10:05', false);

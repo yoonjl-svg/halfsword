@@ -8,6 +8,7 @@
 //   부러진 무기 (사장님 10/29 20:1x): 사람 broken(지금 든 무기가 부러짐) · 내 팀 = 대회 t.broken [무기 id] · 상대 팀 = pool[].broken — 대회 끝까지 그대로 · 결과 fighters[key].broken
 //   상대 팀 = { mine false, members, pool: [{ weapon, school, tier }] } — 무기 다섯(전용무기 + 카드 확률 뽑기 · ??? 뺌 — 사장님 10/29 19:5x · makePool) · 사람 무기 = aiArm(신청 때 · 경기 뒤마다)
 //  시험판(cfg.testMode — 사장님 10/29 17:5x): 신청 창 늘 열림 · 내 경기는 두 팀을 알면 바로 · 상대끼리 경기는 앞 대진이 다 끝나면 바로 · 쉬는 시간 · 대진 시각 · 기권 없음 · 결과 시각 = 셈한 때
+//  바로 시작(cfg.instant — 사장님 11/12 '참여하면 바로 시작 … 밤 10시부터 새벽 2시 사이'): 경기 차례 · 결과 시각은 시험판과 같다(noWait) · 신청 창(열리는 때) · 기권 마감 · 한 열림에 대회 하나는 그대로
 //   부상 = { part 'arm' | 'leg' | 'torso' | 'head', sev(상처 심각도 — combat.js 와 같은 잣대), rests(다친 뒤 쉰 수) } · 중상 = sev ≥ SAENGSA.seriousAt
 //   팀 0 = 내 팀(자리 0 = 나) · 대진표 자리는 씨앗으로 섞는다 · 첫 대진 경기만 a · b(팀 번호)를 적고, 다음 대진은 앞 두 경기의 이긴 팀(sidesOf).
 //  경기 = { id 'r<대진>m<번호>', round, index, a, b, result } · 결과 = { at(저장 시각), winner 'a' | 'b', entrants { a: [key], b: [key] }, fighters { key: { hp, injuries, alive } },
@@ -230,16 +231,18 @@ function lastResultAt(t, team, round) {
   for (const m of t.matches) if (m.round < round && m.result && sidesOf(t, m).includes(team)) at = Math.max(at ?? -Infinity, m.result.at);
   return at;
 }
-/** 앞 대진이 다 끝났나 (시험판의 상대끼리 경기 차례) */
+/** 앞 대진이 다 끝났나 (기다림 없는 판의 상대끼리 경기 차례) */
 const roundDone = (t, round) => t.matches.every((m) => m.round !== round || m.result);
+/** 경기 사이 기다림이 없나 — 대진 시각 · 쉬는 시간 없이 바로 (본판 cfg.instant — 사장님 11/12 · 시험판 cfg.testMode) */
+export const noWait = (cfg = SAENGSA) => !!(cfg.instant || cfg.testMode);
 /**
  * 이 경기를 시작할 수 있는 시각 = max(대진 시각, 두 팀 저마다 마지막 결과 + 쉬는 시간) · 두 팀을 아직 모르면 null
- *  시험판: 시각 없음 — 내 경기는 두 팀을 알면 0(바로) · 상대끼리 경기는 앞 대진이 다 끝나야 0 (아니면 null)
+ *  기다림 없음(noWait — 바로 시작 · 시험판): 시각 없음 — 내 경기는 두 팀을 알면 0(바로) · 상대끼리 경기는 앞 대진이 다 끝나야 0 (아니면 null)
  */
 export function readyAt(t, m, cfg = SAENGSA) {
   const [A, B] = sidesOf(t, m);
   if (A == null || B == null) return null;
-  if (cfg.testMode) return isMine(t, m) || m.round === 0 || roundDone(t, m.round - 1) ? 0 : null;
+  if (noWait(cfg)) return isMine(t, m) || m.round === 0 || roundDone(t, m.round - 1) ? 0 : null;
   let at = roundAt(t.day, m.round, cfg);
   for (const team of [A, B]) {
     const last = lastResultAt(t, team, m.round);
@@ -247,7 +250,7 @@ export function readyAt(t, m, cfg = SAENGSA) {
   }
   return at;
 }
-/** 내 경기 마감 = 다음 신청 창이 열리는 때(대회 날 밤 10시 — 사장님 10/29 14:5x). 이때까지 하지 않은 내 경기는 기권 */
+/** 내 경기 마감 = 다음 신청 창이 열리는 때(대회 날 밤 10시 — 사장님 10/29 14:5x). 이때까지 하지 않은 내 경기는 기권 (바로 시작에서도 그대로 — 새벽 2시 뒤에도 이때까지 이어 함) */
 export const deadlineOf = (t, cfg = SAENGSA) => windowOf(shiftDay(t.day, 1), cfg).from;
 /** 내 팀이 든 경기인가 */
 export const isMine = (t, m) => sidesOf(t, m).includes(0);
@@ -405,7 +408,7 @@ const membersOf = (t, team, keys) => keys.map((k) => t.teams[team].members.find(
  */
 export function advance(t, now, cfg = SAENGSA) {
   if (!t || t.status === 'done') return 0;
-  const deadline = cfg.testMode ? Infinity : deadlineOf(t, cfg); // 시험판은 기권 없음
+  const deadline = cfg.testMode ? Infinity : deadlineOf(t, cfg); // 시험판은 기권 없음 (바로 시작은 기권 그대로 — 결과 시각 = 마감)
   const dueAt = (m) => {
     const at = readyAt(t, m, cfg);
     if (at == null) return Infinity;
@@ -416,7 +419,7 @@ export function advance(t, now, cfg = SAENGSA) {
   for (;;) {
     const m = t.matches.find((x) => { if (x.result) return false; const d = dueAt(x); return Number.isFinite(d) && d <= now; }); // 끝없음(두 팀 모름 · 시험판 내 경기)은 now = Infinity 여도 끝내지 않음
     if (!m) break;
-    const [A, B] = sidesOf(t, m), at = cfg.testMode ? now : dueAt(m); // 시험판은 셈한 때
+    const [A, B] = sidesOf(t, m), at = noWait(cfg) && !isMine(t, m) ? now : dueAt(m); // 기다림 없는 판의 상대끼리 경기는 셈한 때 (시험판 내 경기는 여기 오지 않음)
     if (isMine(t, m)) {
       const mineSide = A === 0 ? 'a' : 'b';
       applyResult(t, m, { winner: mineSide === 'a' ? 'b' : 'a', fighters: {}, entrants: { a: [], b: [] }, by: 'forfeit' }, at, cfg);
@@ -461,7 +464,7 @@ export function resumeOf(t, matchId, cfg = SAENGSA) {
   if (!Array.isArray(R.picks) || !R.picks.length || !Array.isArray(R.arms) || !R.bodies || typeof R.bodies !== 'object') return null;
   return R;
 }
-/** 내 경기 결과 적기 (엔진 결과 — 없으면 빠른 셈). 저장 시각 = now (쉬는 시간이 여기서부터 — 사장님 10/29) · 돌려줌: 경기 결과 · 판이 틀리면 null */
+/** 내 경기 결과 적기 (엔진 결과 — 없으면 빠른 셈). 저장 시각 = now (옛 규칙의 쉬는 시간이 여기서부터 — 사장님 10/29) · 돌려줌: 경기 결과 · 판이 틀리면 null */
 export function finishMine(t, m, picks, now, engineResult = null, cfg = SAENGSA) {
   const setup = matchSetup(t, m, picks, now, cfg);
   if (!setup) return null;
@@ -499,16 +502,17 @@ export function canSignUp(now, t, cfg = SAENGSA) {
 }
 /**
  * 일정 상태 (대기실 칸 · 생사전 화면 머리줄): kind
- *  'signup' 신청 받는 중(until 창 닫힘) · 'waiting' 신청함 · 첫 대진 전(startAt) · 'running' 대회 진행 중 · 'done' 내 대회 끝 · 'closed' 신청 창 밖(opensAt 다음 창)
+ *  'signup' 신청 받는 중(until 창 닫힘) · 'waiting' 신청함 · 첫 대진 전(startAt — 옛 규칙만) · 'running' 대회 진행 중(새벽 2시 뒤에도) · 'done' 내 대회 끝 · 'closed' 신청 창 밖
+ *  'done' · 'closed' 의 opensAt = 다음에 새로 들어갈 수 있는 때(바로 시작에서 오늘 밤 대회를 마쳤으면 다음 날 밤)
  */
 export function scheduleState(now, t, cfg = SAENGSA) {
   const w = signupWindow(now, cfg);
   if (t && t.status !== 'done' && !myTeamOut(t)) {
     const s = startAt(t.day, cfg);
-    return now < s && !cfg.testMode ? { kind: 'waiting', startAt: s } : { kind: 'running' };
+    return now < s && !noWait(cfg) ? { kind: 'waiting', startAt: s } : { kind: 'running' };
   }
   if (canSignUp(now, t, cfg)) return { kind: 'signup', until: w.to, day: w.day };
-  if (t && t.day === w.day && w.open) return { kind: 'waiting', startAt: startAt(t.day, cfg) };
+  if (!noWait(cfg) && t && t.day === w.day && w.open) return { kind: 'waiting', startAt: startAt(t.day, cfg) }; // 옛 규칙: 이 창의 대회에 들었고 첫 대진 전
   if (t && t.status !== 'done') return { kind: 'running' };
   return { kind: t ? 'done' : 'closed', opensAt: w.open ? signupWindow(w.to, cfg).from : w.from };
 }

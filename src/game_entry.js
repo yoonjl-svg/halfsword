@@ -119,13 +119,13 @@ if (skipsTitle(params)) {
       const gone = lobby;
       await depart(game, how, () => { gone.destroy(); if (lobby === gone) lobby = null; }, root.querySelector('.lobby'));
     };
-    lobby = mountLobby({ root, game, choice, tab, onBack: showTitle, onDepart: () => leave(game.canContinueJourney() ? 'continue' : 'new'), onWander: () => leave('wander'), onSaengsa: () => showSaengsa(game) });
+    lobby = mountLobby({ root, game, choice, tab, onBack: showTitle, onDepart: () => leave(game.canContinueJourney() ? 'continue' : 'new'), onWander: () => leave('wander'), onSaengsa: (opts) => showSaengsa(game, opts) });
   }
-  // 생사전 화면 (대기실 '생사전 입장') — 같은 덮개 안. '대기실'로 돌아가면 생사전 칸이 열린 대기실
-  async function showSaengsa(game) {
+  // 생사전 화면 (대기실 '생사전 입장') — 같은 덮개 안. '대기실'로 돌아가면 생사전 칸이 열린 대기실 · opts.fresh(막 신청함) = 내 첫 경기 화면을 곧바로 (사장님 11/12 바로 시작)
+  async function showSaengsa(game, { fresh = false } = {}) {
     const { mountSaengsa } = await import('./saengsa_page.js');
     lobby?.destroy(); lobby = null;
-    saengsa = mountSaengsa({ root, game, onBack: () => showLobby(game, 'continue', 'Event') });
+    saengsa = mountSaengsa({ root, game, onBack: () => showLobby(game, 'continue', 'Event'), openMine: fresh });
   }
   // 싸움 → 대기실 (main.js toLobby 가 부른다): 이어하기 지점은 지금 무대 시작(이긴 판이면 다음 무대)
   async function backToLobby() {

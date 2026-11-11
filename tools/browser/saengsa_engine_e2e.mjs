@@ -80,6 +80,7 @@ try {
   await tap('.sg-slot[data-slot="2"]'); await tap('.sg-pick[data-id="nameless"]'); await tap('.sg-chip-btn[data-weapon="uchigatana"]'); await tap('#sgPickOk');
   await tap('#saengsaEnter');
   await until(() => !!document.querySelector('#gameEntrance').shadowRoot.querySelector('.sg-m[data-state="ready"]'), 100, 300);
+  if (await inRoot(`return !root.getElementById('sgMatch').hidden;`)) await tap('#sgMatchBack'); // 11/12 바로 시작: 신청하면 내 첫 경기 화면이 곧바로 열림 → 대진표로 (아래 차례 그대로)
   await shot('e1_bracket');
   // ② 지켜보기 경기: 동료 둘만
   const m1 = await inRoot(`return root.querySelector('.sg-m[data-state="ready"]').dataset.match;`);

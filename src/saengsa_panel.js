@@ -4,9 +4,11 @@
 //  신청 창(밤 10시 ~ 새벽 2시) 안에서 '생사전 입장' = 이 팀으로 신청(고용 금화를 냄) + 생사전 화면 · 창 밖이거나 신청한 뒤에는 화면만 연다.
 //  입장 조건(18:2x — 정복자 호칭 · 가진 무기 5 개)을 못 채우면 안내 줄에 모자란 것 · '생사전 입장'은 꺼짐 · '대진표' 단추로 화면을 보기만.
 //  신청한 대회가 있으면 팀 칸은 그 대회의 팀(배정한 무기)을 보이기만 한다(경기마다 무기는 생사전 화면에서).
+//  바로 시작 (사장님 11/12 '참여하면 바로 시작 … 밤 10시부터 새벽 2시 사이'): 신청하면 생사전 화면이 내 첫 경기 화면을 곧바로 연다(onEnter({ fresh: true })) ·
+//   열린 때 밖(새로 들어갈 수 없음 · 이어 할 대회도 없음)에는 '생사전 입장'이 꺼지고 일정 알약이 다음 열림 · 지난 대회가 있으면 '대진표'로 보기만 · 시작한 대회는 새벽 2시 뒤에도 '생사전 입장'으로 이어 함.
 import { SAENGSA } from './config.js';
 import { clockFrom, signupWindow } from './saengsa_clock.js';
-import { scheduleState, canSignUp, myMatch, myTeamOut, sidesOf, winnerOf, readyAt, matchState, chestCount, seatOrder } from './saengsa_rules.js';
+import { scheduleState, canSignUp, myMatch, myTeamOut, sidesOf, winnerOf, readyAt, matchState, chestCount, seatOrder, noWait } from './saengsa_rules.js';
 import { syncSaengsa, readSaengsa, saveDraft, signUp, newSeed } from './saengsa_store.js';
 import { SAENGSA_DATA, HIRE_ROSTER, ownedWeapons, entryState, hireCostOf, nameOf, spokenName, fighterName, portraitOf, weaponName } from './saengsa_roster.js';
 import { NAMELESS, validAssignment } from './saengsa_rules.js';
@@ -52,9 +54,11 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
     chip.dataset.kind = sched.kind;
     const editable = !t || canSignUp(t0, t); // 신청할 수 있거나(창 안) 신청한 대회가 없을 때(창 밖 — 미리 골라 둠)
     const draft = st.draft, arms = draft.weapons, entry = entryState(), blocked = editable && entry.missing.length > 0;
+    // 열린 때 밖 (사장님 11/12 '특정 시간에만 열리게'): 새로 들어갈 수 없고 이어 할 내 대회도 없음 — 입장 꺼짐 · 지난 대회는 '대진표'로 보기만
+    const shut = !blocked && !canSignUp(t0, t) && !(t && t.status !== 'done' && !myTeamOut(t));
     view = { editable, draft, t, blocked };
-    $('#saengsaEnter').disabled = blocked; // 입장 조건을 못 채움 — 신청은 못 하고 대진표 보기만(사장님 10/29 18:2x)
-    $('#sgLook').hidden = !blocked;
+    $('#saengsaEnter').disabled = blocked || shut; // 입장 조건을 못 채움 — 신청은 못 하고 대진표 보기만(사장님 10/29 18:2x)
+    $('#sgLook').hidden = !(blocked || (shut && t));
     if (editable) {
       // 신청 전: 고른 것(draft)
       const ids = ['player', ...draft.companions];
@@ -73,7 +77,7 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
       $('#sgCost').setAttribute('aria-label', hireLine(cost));
       const full = draft.companions.every(Boolean), armed = validAssignment(arms, entry.owned);
       const poor = readProgress().coins < cost;
-      $('#sgNote').textContent = blocked ? entryLine(entry.missing) : !w.open ? signupHours(w.from, w.to) : !full ? T.pickTwo : !armed ? T.pickWeapons : poor ? T.noCoins : T.willSign;
+      $('#sgNote').textContent = blocked ? entryLine(entry.missing) : !w.open ? signupHours(w.from, w.to) : !full ? T.pickTwo : !armed ? T.pickWeapons : poor ? T.noCoins : noWait() ? T.willSignNow : T.willSign;
       $('#sgNote').dataset.tone = blocked || (w.open && full && armed && poor) ? 'alert' : '';
     } else {
       // 신청한 대회 (또는 끝난 대회): 그 팀 그대로 · 누를 수 없음
@@ -150,10 +154,11 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
   on($('#sgPickClose'), 'click', () => closePicker(false));
   on(host, 'keydown', (e) => { if (e.key === 'Escape' && picker) { e.preventDefault(); e.stopPropagation(); closePicker(false); } });
 
-  // ── 생사전 입장: 신청 창 안 · 신청 전이면 신청 → 화면 / 그 밖은 화면만 ──
+  // ── 생사전 입장: 신청 창 안 · 신청 전이면 신청 → 화면(내 첫 경기) / 진행 중인 내 대회는 화면만(새벽 2시 뒤에도) / 열린 때 밖은 들어가지 않음 ──
   on($('#saengsaEnter'), 'click', () => {
     const t0 = now(), st = readSaengsa();
-    if (canSignUp(t0, st.current) && view?.editable) {
+    if (canSignUp(t0, st.current)) {
+      if (!view?.editable) { render(); return; } // 그 사이 열린 때가 됨 — 다시 그린 판(팀 고르기)으로
       const d = st.draft, entry = entryState();
       if (entry.missing.length) { status(entryLine(entry.missing)); render(); return; }
       if (!d.companions.every(Boolean)) { status(T.pickTwo); return; }
@@ -162,11 +167,15 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
       if (!res.ok) { status({ coins: T.noCoins, busy: T.busy, team: T.pickTwo, weapons: T.pickWeapons, entry: entryLine(entryState().missing), closed: signupHours(signupWindow(t0).from, signupWindow(t0).to) }[res.why] ?? T.saveFail); render(); return; }
       onWallet();
       status(T.signed, 'notice');
+      onEnter({ fresh: true }); // 바로 시작 — 생사전 화면이 내 첫 경기를 곧바로 연다 (사장님 11/12)
+      return;
     }
+    const t = st.current;
+    if (!(t && t.status !== 'done' && !myTeamOut(t))) { const w = signupWindow(t0); status(signupHours(w.from, w.to)); render(); return; } // 그 사이 열린 때가 지남(꺼지기 전에 누름) — 들어가지 않음
     onEnter();
   });
 
-  on($('#sgLook'), 'click', () => onEnter()); // 입장 조건을 못 채웠을 때 — 신청 없이 대진표만 본다
+  on($('#sgLook'), 'click', () => onEnter()); // 입장 조건을 못 채웠을 때 · 열린 때 밖에 지난 대회 — 신청 없이 대진표만 본다
 
   render();
   makeNamelessFaces().then((ok) => { if (ok) { if (picker) drawPicker(); else render(); } }); // 무명 검객 얼굴(옷 색마다)을 칠한 뒤 다시 그림

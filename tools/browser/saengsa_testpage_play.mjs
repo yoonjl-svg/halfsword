@@ -84,6 +84,7 @@ await tap('#sgPickOk');
 await shot('tp3_panel_ready');
 await tap('#saengsaEnter');
 await until(() => !!document.querySelector('#gameEntrance').shadowRoot.querySelector('.sg-m[data-state="ready"]'), 100, 300);
+if (await inRoot(`return !root.getElementById('sgMatch').hidden;`)) await tap('#sgMatchBack'); // 11/12 바로 시작: 신청하면 내 첫 경기 화면이 곧바로 열림 → 대진표로 (아래 차례 그대로)
 await shot('tp4_bracket');
 
 let cups = 0, matches = 0, prize = false, firstMatch = true; // prize = 하사품을 받는 자리(우승 · 준우승)
