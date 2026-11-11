@@ -149,7 +149,8 @@ test('사람 길만: 이탈리아 무기 사람 비기 = 거침없이 나아가 
   }
 });
 
-test('10/23 판(?risoLunge=0) 실제 몸 실행: 탭 찌르기 하나 · 기력은 비기 값 하나 · 상대 팔 늦춤(흘림 장치 0.4 s) · 찌르는 동안 비기 배율 · 패시브 곧은 선 안 실림 · 끝나면 굳음 0.4 s', () => withCfg(TAP1023, () => {
+// 11/11 사장님 '리솔루토를 70%로 상향하고 파괴력을 0.5로 해.' (SECRET.risolutoHitMul 0.5): 이 시험은 10/23 판 장면 그대로라 그 판 배율 1.3 으로 묶음 — 기본 배율 0.5 는 riso_reach.test.mjs
+test('10/23 판(?risoLunge=0) 실제 몸 실행: 탭 찌르기 하나 · 기력은 비기 값 하나 · 상대 팔 늦춤(흘림 장치 0.4 s) · 찌르는 동안 비기 배율 · 패시브 곧은 선 안 실림 · 끝나면 굳음 0.4 s', () => withCfg({ ...TAP1023, risolutoHitMul: 1.3 }, () => {
   const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: 1.8, seed: 9 });
   const p = g.player, e = g.enemy;
   g.ai.update = () => {}; p.foe = e; e.foe = p;
@@ -173,7 +174,7 @@ test('10/23 판(?risoLunge=0) 실제 몸 실행: 탭 찌르기 하나 · 기력�
     for (let i = 0; i < Math.round(1.5 / DT) && p.skill.sec; i++) {
       g.step();
       if (p.skill.sec?.stage === 'riso' && p.skill.tap) {
-        sawPower ||= p.powerMul === SECRET.power && p.secretHit === SECRET.hitMul;
+        sawPower ||= p.powerMul === SECRET.power && p.secretHit === SECRET.risolutoHitMul; // 리솔루토 판정 배율 (이 장면 1.3 — 11/11 전 · SECRET.hitMul 과 같은 수)
         sawTip ||= p.schoolPassive.thrustTarget() != null;
       }
       if (p.skill.sec?.stage === 'stiff') {
@@ -252,11 +253,12 @@ function lungeRun(w, { gap = 2.2, seed = 9, foeW = 'longsword', cfg = {} } = {})
 
 test('10/24 런지 값 (사장님 \'런지로 진행해. 단 런지 동작이 고노센처럼 빠르게 나가야 의미가 있어. 상대 팔 늦어지는 효과는 0.6초 내 경직도 0.6초\')', () => {
   assert.equal(SECRET.risolutoLunge, 1);
-  assert.equal(SECRET.risolutoShare, 0.5); // 11/04 사장님 '리솔루토 빠르기 0.5로' // 10/31 01:2x 사장님 '리솔루토 70%' (전 0.8 — 10/30 22:2x · 그 전 0.9 — 20:0x · 그 전 1 — 고노센 칼끝 빠르기 그대로)
+  assert.equal(SECRET.risolutoShare, 0.7); // 11/11 사장님 '리솔루토를 70%로 상향하고 파괴력을 0.5로 해.' (전 0.5 — 11/04 사장님 '리솔루토 빠르기 0.5로') // 10/31 01:2x 사장님 '리솔루토 70%' (전 0.8 — 10/30 22:2x · 그 전 0.9 — 20:0x · 그 전 1 — 고노센 칼끝 빠르기 그대로)
   assert.equal(SECRET.risolutoArmSlow, 0); // 10/30 20:0x 사장님 — 팔 늦춤 없앰 (전 0.6)
   assert.equal(SECRET.risolutoGlide, 1); // 붙은 칼 미끄러짐은 그대로
   assert.equal(SECRET.risolutoStiff, rs(0.6));
-  assert.equal(SECRET.hitMul, 1.3); // 판정 배율 그대로 (사장님 지시 — 바꾸지 않음)
+  assert.equal(SECRET.hitMul, 1.3); // 다른 비기 판정 배율 그대로 (사장님 지시 — 바꾸지 않음)
+  assert.equal(SECRET.risolutoHitMul, 0.5); // 11/11 사장님 '… 파괴력을 0.5로 해.' — 리솔루토만 0.5 (같은 날 앞 결정 '1.3도 없애' = 1 을 바꿈)
   // 걸음은 있던 수: 몸 미끄러짐 = 고노센 발도 iaiStep · 앞발 = 이탈리아 런지 italianStep · 디딘 뒤 뒷발 끌어붙임
   // 10/24 14:0x: 디딘 뒤 뒷발 끌어붙임(draw) 대신 앞발을 뒤로 거둠(recover — 걸음 시간 0.4 사다리) · 걸음 동안 몸 따라감 배율 stepPush(엇박 찌르기 런지와 같은 2.0) · 몸 가속 한도 × burstAccel(accel)
   assert.deepEqual(SECRET.risolutoStep, { slide: 'iaiStep', foot: 'italianStep', draw: 0, room: 0, push: 'stepPush', accel: 1, recover: 1, recoverT: 0.4 }); // room 1 = 앞발도 clinch 밖까지만 (?risoRoom=1)
@@ -276,7 +278,7 @@ test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝
     const m = o.req?.moves?.[0];
     assert.ok(o.req?.combo && m?.lunge && m.kind === 'thrust', '운동학 찌르기 한 수');
     assert.equal(o.req.share, SECRET.risolutoShare);
-    assert.equal(o.req.hitMul, SECRET.hitMul);
+    assert.equal(o.req.hitMul, SECRET.risolutoHitMul); // 11/11 리솔루토 판정 배율 (기본 0.5 — 전 SECRET.hitMul 1.3)
     assert.equal(o.req.hold, rs(0.6));
     assert.deepEqual([m.step.fwd, m.step.foot, !!m.step.draw, !!m.step.room, m.step.push, !!m.step.accel], [SECRET.iaiStep, SECRET.italianStep, false, false, SECRET.stepPush, true]);
     assert.equal(m.glide, true);
