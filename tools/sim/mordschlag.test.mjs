@@ -32,9 +32,11 @@ const wristGap = (P) => {
   return w.distanceTo(gp);
 };
 
-test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 2 s — 10/25 23:1x · 끊김 너그러움 0.4 s — 10/27 21:4x · 창 0.6 s · 굳음 0.4 s) · 사람 비기 열림에 독일 · AI 도 독일 (10/24)', () => {
+const KIN0 = SECRET.mord.kin; // 판 값 (11/11 0.35 — 시험이 바꾼 뒤 이 값으로 되돌림 · 전 0.3 을 적어 되돌렸음)
+
+test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 1.5 s — 11/11 · 전 2 s 10/25 23:1x · 끊김 너그러움 0.4 s — 10/27 21:4x · 창 0.6 s · 굳음 0.4 s) · 사람 비기 열림에 독일 · AI 도 독일 (10/24)', () => {
   assert.equal(SECRET.deMord, 1);
-  assert.equal(SECRET.mordPress, CONFIG.realS(2)); // 10/25 23:1x 사장님 '1초 말고 2초로 하고, 대신 리솔루토처럼 0.2초 안에 다시 붙으면 이어서 세.' (전 1.5) · 표준 시간(10/25): 적힌 수는 실제 초 — 게임 값 = × 1.1
+  assert.equal(SECRET.mordPress, CONFIG.realS(1.5)); // 11/11 사장님 '1.5초로 해.' (전 2 — 10/25 23:1x 사장님 '1초 말고 2초로 하고, 대신 리솔루토처럼 0.2초 안에 다시 붙으면 이어서 세.' (전 1.5) · 표준 시간(10/25): 적힌 수는 실제 초 — 게임 값 = × 1.1
   assert.equal(SECRET.mordGrace, CONFIG.realS(0.4)); // 10/27 21:4x 사장님 '0.2초 간격을 0.4초로 늘려' (전 0.2)
   assert.equal(SECRET.playerWindow, CONFIG.realS(0.6));
   assert.equal(SECRET.stiff.german, CONFIG.realS(0.4));
@@ -248,7 +250,7 @@ test('비기 흐름: 준비 → 베기 길 → 따라 지나감 → 다시 세�
     assert.equal(P.powerMul, 1);
     assert.equal(P.secretHit, 1);
   } finally { g.world.free(); }
-  } finally { SECRET.mord.kin = 0.3; SECRET.mord.aim = 'pull'; }
+  } finally { SECRET.mord.kin = KIN0; SECRET.mord.aim = 'pull'; }
 }));
 
 test('넘어 들어감 규칙 (mordOver — 기본 끔): 켜면 내리치는 동안만 내 칼이 상대 칼과 부딪히지 않고, 끝나면 원래 그룹', () => {
@@ -270,14 +272,17 @@ test('넘어 들어감 규칙 (mordOver — 기본 끔): 켜면 내리치는 동
     assert.ok(off);
     assert.deepEqual(P.swordColliders.map((c) => c.collisionGroups()), g0);
   } finally { SECRET.mordOver = 0; g.world.free(); }
-  } finally { SECRET.mord.kin = 0.3; SECRET.mord.aim = 'pull'; }
+  } finally { SECRET.mord.kin = KIN0; SECRET.mord.aim = 'pull'; }
 });
 
-test('가볍고 느림을 고칠 안 (10/23 확정 — kin 0.3 · aim pull): kin · aim · power hit = 판정 배율 hitMul 그대로 · finish = FINISH.power · 수 = 그 수', () => {
-  assert.equal(SECRET.mord.kin, 0.3); // 사장님 10/23 '죽음의 일격 30%'
+test('가볍고 느림을 고칠 안 (10/23 확정 — kin · aim pull · 11/11 kin 0.35 · 판정 1): kin · aim · power hit = 죽음의 일격 판정 배율 mordHitMul(1 — 고노센만 1.3) · finish = FINISH.power · 수 = 그 수', () => {
+  assert.equal(SECRET.mord.kin, 0.35); // 11/11 사장님 '빠르기 35%로 하자.' (전 0.3 — 10/23 '죽음의 일격 30%')
   assert.equal(SECRET.mord.aim, 'pull');
   assert.equal(SECRET.mord.power, 'hit');
-  assert.equal(mordHitMul(), SECRET.hitMul);
+  assert.equal(mordHitMul(), 1); // 11/11 사장님 '죽음의 일격도 1.0으로 해.' (전 SECRET.hitMul 1.3)
+  assert.equal(SECRET.mordHitMul, 1);
+  SECRET.mordHitMul = null; // null = 비기 공통 hitMul (전 판)
+  try { assert.equal(mordHitMul(), SECRET.hitMul); } finally { SECRET.mordHitMul = 1; }
   SECRET.mord.power = 'finish';
   try { assert.equal(mordHitMul(), FINISH.power); } finally { SECRET.mord.power = 'hit'; }
   SECRET.mord.power = 2;
@@ -328,7 +333,7 @@ test('운동학 길 (kin 0.6): 쥠 바꿈 → instant(연환 틀) → 원래 쥠
         assert.ok(P.instantResult.pullD > 0);
         assert.ok(hits.some((h) => h.zone === 'head' && h.part === 'hilt'), JSON.stringify(hits));
       }
-    } finally { SECRET.mord.kin = 0.3; SECRET.mord.aim = 'pull'; g.world.free(); }
+    } finally { SECRET.mord.kin = KIN0; SECRET.mord.aim = 'pull'; g.world.free(); }
   }
 }));
 

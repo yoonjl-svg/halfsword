@@ -8,6 +8,9 @@ import { TRADITIONS } from '../../src/schools.js';
 import { PlayerSecretWatch } from '../../src/secret.js';
 import { spinProgress, spinRate } from '../../src/iberian_spin.js';
 import * as D from '../../src/skill_tree_data.js';
+// 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본 · 싱지르 = 특수 공격): 이 파일은 싱지르 비기 판 장면(무장 창 · 비기 몫 0.5 · 11/05 대본)이라
+//  그 판('spin')으로 묶는다. 특수 공격 판(무장 없음 · 0.3 · 한 걸음 나가며)의 같은 성질은 tools/sim/ib_swap.test.mjs
+SECRET.iberianSecret = 'spin';
 
 /** 손목 값을 잠깐 바꿔 fn (10/24 17:2x 팔꿈치 돌림 · 손목 교정 · 손목 치우침 밧줄 — 몸이 만들어질 때 밧줄을 거니 판을 만들기 전에) */
 const withJoints = async (vals, fn) => {

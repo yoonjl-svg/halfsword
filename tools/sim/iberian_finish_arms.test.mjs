@@ -6,6 +6,9 @@ import assert from 'node:assert/strict';
 import { spinRun, armSample, RANGE } from './iberian_finish_arms.mjs';
 import { newRound } from './harness_m.mjs';
 import { SECRET, JOINTS } from '../../src/config.js';
+// 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본 · 싱지르 = 특수 공격): 이 파일은 싱지르 비기 판 장면(무장 창 · 비기 몫 0.5 · 11/05 대본)이라
+//  그 판('spin')으로 묶는다. 특수 공격 판(무장 없음 · 0.3 · 한 걸음 나가며)의 같은 성질은 tools/sim/ib_swap.test.mjs
+SECRET.iberianSecret = 'spin';
 
 test('잣대: 선 자세 팔 — 과신전 · 경첩 밖 · 손목 범위 안 (재는 식이 맞나)', () => {
   const G = newRound({ seed: 7, weapon: 'zweihander', weapon2: 'longsword', gap: 6, walls: false });

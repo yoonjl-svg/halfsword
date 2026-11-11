@@ -100,16 +100,17 @@ test('이탈리아 줄기: 보법 II(물러서기)를 거쳐야 찌르기 · 막
 });
 test('이베리아: 손목 힘 패시브는 보법 바로 아래 · 비기는 패시브 + 둥근 걸음 + 이어 긋기 흐름 모두', () => {
   assert.equal(D.nodeState('iberian', D.nodeOf('iberian', 'B10'), ids('B1')), 'open');
-  assert.deepEqual([...D.nodeOf('iberian', 'B7').pre], ['B10', 'B3', 'B5']);
+  assert.deepEqual([...D.nodeOf('iberian', 'B4').pre], ['B10', 'B3', 'B5']); // 11/11 비기 칸 = B4 알티바슈 포르트 (전 B7 싱지르 — 자리 · 앞 칸 그대로 맞바꿈)
   assert.deepEqual([...D.nodeOf('japanese', 'J5').pre], ['J4']); // 일본 막기 줄기 셋 → 고노센
 });
 
 // ── 닫힌 칸 ──
 test('닫힌 칸: 비기는 열린 유파만(SECRET.openSchools — 10/22 사람 쪽 다섯 유파 — 일본 고노센 · 독일 죽음의 일격 · 이탈리아 거침없이 나아가 찌르기 · 이베리아 휘감아 돌기 · 동방 막아 죽이기) · 일본 손목 치기 심화(J8)는 10/24 칼 떨구기로 열림 · 닫힌 칸은 못 배우고 판 몫도 없음', () => {
   const closed = D.TREE_SCHOOLS.flatMap((s) => D.nodesOf(s).filter((n) => D.isClosed(s, n)).map((n) => n.id));
-  const SECRET_NODE = { german: 'G10', italian: 'I4', iberian: 'B7', japanese: 'J5', chinese: 'C9' };
+  const SECRET_NODE = { german: 'G10', italian: 'I4', iberian: 'B4', japanese: 'J5', chinese: 'C9' }; // 11/11 이베리아 비기 칸 B7 → B4
   assert.deepEqual(closed.sort(), D.TREE_SCHOOLS.filter((s) => !SECRET.openSchools.includes(s)).map((s) => SECRET_NODE[s]).sort()); // 10/24 J8 열림 — 닫힌 칸은 열린 유파 밖 비기뿐
-  assert.equal(D.isClosed('iberian', D.nodeOf('iberian', 'B7')), false); // 10/22 휘감아 돌기 열림
+  assert.equal(D.isClosed('iberian', D.nodeOf('iberian', 'B4')), false); // 10/22 휘감아 돌기 열림 · 11/11 비기 칸 B4 (알티바슈 포르트)
+  assert.equal(D.isClosed('iberian', D.nodeOf('iberian', 'B7')), false); // 11/11 싱지르 = 특수 공격 (닫히지 않음)
   assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false);
   assert.equal(D.kitFromNodes('italian', D.allNodeIds('italian')).secret, true);
   assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german']); // AI 는 일본 · 이베리아(10/24 싱지르) · 독일(10/24 모르트슐라크)만 (ai.js 는 aiOpenSchools 만 본다)
@@ -134,7 +135,7 @@ test('닫힌 칸: 비기는 열린 유파만(SECRET.openSchools — 10/22 사람
   SECRET.openSchools = [...D.TREE_SCHOOLS];
   try { assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false); assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J8')), false); } finally { SECRET.openSchools = keep; }
   wallet(99999, 999);
-  { const keepOpen = SECRET.openSchools; SECRET.openSchools = keepOpen.filter((x) => x !== 'iberian'); try { assert.deepEqual(S.learnNode('iberian', 'B7'), { ok: false, saved: false, why: 'closed' }); } finally { SECRET.openSchools = keepOpen; } } // 닫힌 칸은 못 배움 — 10/22 다섯 유파 모두 열림, 시험 안에서만 이베리아를 닫아 본다
+  { const keepOpen = SECRET.openSchools; SECRET.openSchools = keepOpen.filter((x) => x !== 'iberian'); try { assert.deepEqual(S.learnNode('iberian', 'B4'), { ok: false, saved: false, why: 'closed' }); } finally { SECRET.openSchools = keepOpen; } } // 닫힌 칸은 못 배움 — 10/22 다섯 유파 모두 열림, 시험 안에서만 이베리아를 닫아 본다
   for (const id of ['G1', 'G2', 'G5', 'G8', 'G3', 'G6', 'G4', 'G7', 'G9']) assert.equal(S.learnNode('german', id).ok, true, id);
   assert.equal(S.learnNode('german', 'G10').ok, true); // 비기 칸 값 그대로 (금화 400 + 머리 20)
 });
@@ -403,7 +404,8 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('iberian', 'B5'), ['ibFlow']);
   assert.deepEqual(on('iberian', 'B9'), ['parryCut']);
   assert.deepEqual(on('iberian', 'B6'), ['ibChain']); // 10/29 01:5x 이어지는 흐름 (전: 돌려 베기 쌓기 perk redondo)
-  assert.deepEqual(on('iberian', 'B4'), ['u:redondo']); // 10/29 풍차 베기 = 특수 공격 (같은 이름 열쇠 redondo — 사람은 길게 눌러 냄)
+  assert.deepEqual(on('iberian', 'B4'), ['secret', 'u:redondo']); // 11/11 비기 알티바슈 포르트 (비기 몫 + 실행 칸 redondo — 무장 창에서 길게 눌러 냄 · 전 10/29 특수 공격 ['u:redondo'])
+  assert.deepEqual(on('iberian', 'B7'), ['u:cingir']); // 11/11 특수 공격 싱지르 (전 비기 ['secret'])
   assert.deepEqual(on('japanese', 'J1'), ['footwork', 'stepCost']);
   assert.deepEqual(on('japanese', 'J2'), ['parry', 'parryCover', 'parryCut']);
   assert.deepEqual(on('japanese', 'J3'), ['flow']);
@@ -595,7 +597,8 @@ test('칸 효과 글 — 사장님 글 그대로 (10/29 14:1x · 14:2x — 특�
 });
 test('B4 이름 · 효과 글 (10/31 19:xx 사장님 이름 \'정수리 가르기 (알티바슈 포르트)\' · 효과 글 \'칼을 어깨에 메었다가 온 몸으로 비스듬히 내려 가른다\'): 칸 이름 · 두 줄 · 효과 한 줄 · 설계 자료와 같음', () => {
   const n = D.nodeOf('iberian', 'B4');
-  assert.deepEqual([n.name, n.l1, n.l2, n.u], ['정수리 가르기', '정수리', '가르기', 'redondo']);
+  // 11/11 비기가 됨 — 이름 = 비기 원어 독음 '알티바슈 포르트'(화면 글 지침 §1 · 사장님 11/11 말씀의 이름) · 두 줄 '비기' / 이름 [사장님 확인 전] (전 10/31 '정수리 가르기' · '정수리' / '가르기') · 효과 글은 사장님 글 그대로
+  assert.deepEqual([n.name, n.l1, n.l2, n.u], ['알티바슈 포르트', '비기', '알티바슈 포르트', 'redondo']);
   assert.equal(n.eff, '칼을 어깨에 메었다가 온 몸으로 비스듬히 내려 가른다');
   assert.equal(DESIGN.find((x) => x.id === 'iberian').nodes.find((x) => x.id === 'B4').eff, n.eff, '설계 자료');
   assert.ok(!/풍차|머리 위로 돌려/.test(n.eff + n.lore), '옛 감기 말 없음');
@@ -821,7 +824,7 @@ test('칸 오의(lore · src — 사장님 10/22 00:5x 원전의 오의를 밝�
 test('10/23 비기 이름 = 원어 독음 (동방은 한자 한국식 독음) · 스킬 화면 제목은 원어를 괄호로 함께', async () => {
   const { nodeTitle } = await import('../../src/skill_tree.js');
   const { TREE } = await import('../../src/skill_tree_data.js');
-  const want = { german: ['모르트슐라크', 'Mordschlag'], italian: ['안다레 리솔루토', 'andare risoluto'], iberian: ['싱지르', 'cingir'], japanese: ['고노센', '後の先'], chinese: ['격살', '格殺'] };
+  const want = { german: ['모르트슐라크', 'Mordschlag'], italian: ['안다레 리솔루토', 'andare risoluto'], iberian: ['알티바슈 포르트', 'altibaxo forte'] /* 11/11 비기 = 알티바슈 포르트 (전 싱지르 · cingir) */, japanese: ['고노센', '後の先'], chinese: ['격살', '格殺'] };
   for (const [school, [ko, orig]] of Object.entries(want)) {
     const n = TREE[school].nodes.find((x) => x.cat === 'secret');
     assert.equal(n.name, ko, school);

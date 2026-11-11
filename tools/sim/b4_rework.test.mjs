@@ -9,6 +9,9 @@ import { applyB4Old } from '../../src/config.js';
 import { b4Run, b4Sum } from './b4_probe.mjs';
 
 const UA = CONFIG.UNIQUE_ASSIST;
+// 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 10/31 B4 특수 공격 장면(무장 없이 길게 눌러 냄 · specialShare.redondo)이라
+//  그 판('spin')으로 묶는다. 비기가 된 판(무장 창에서만 · 칼끝 0.35 · 기력 몫 · 기력 0)은 tools/sim/ib_swap.test.mjs
+CONFIG.SECRET.iberianSecret = 'spin';
 
 test('메기 꼴 — 네 칼 모두 칼 든(오른) 어깨에 메어 칼끝이 머리 뒤로 넘어가 땅 쪽으로 기욺 · 팔 · 칼이 머리 · 목을 안 뚫음 · 칼이 몸통에 안 닿음 · 손목 교정 없음 · 빈손 쥠 · 휘청 · 넘어짐 없음', () => {
   for (const w of ['zweihander', 'flamberge', 'tizona', 'durandal']) {

@@ -151,7 +151,7 @@ function makeProbe({ trace = false, exp = new Set() } = {}) {
         else if (!P.ibSpin && P._ropesOff) (P._ropesOff = null), P.alive && P.armed && armRopes(P, true);
       }
       const would = P._wouldSpin != null && P._wouldSpin !== live?.t0 ? P._wouldSpin : null;
-      if ((cur?.name === 'ibSpin' && cur !== live?.cur) || would != null) {
+      if (((cur?.name === 'ibSpin' || cur?.name === 'cingir') && cur !== live?.cur) || would != null) { // 11/11 특수 공격 싱지르 = 'cingir'
         if (would == null) P._wouldSpin = null;
         live = { cur: would != null ? null : cur, t0: would ?? cur.t, d0: r3(would != null ? P.foeDistance() : cur.dist0), st: {}, hits: [], dealt: [], fall: null, steel: 0, steelStage: {}, done: null, minD: Infinity, foeAtk: 0 };
         spins.push(live);
@@ -197,10 +197,10 @@ function makeProbe({ trace = false, exp = new Set() } = {}) {
   };
 }
 
-export function runOne({ school = 'iberian', weapon, opp, seed, dur = 30, trace = false, exp = new Set() }) {
+export function runOne({ school = 'iberian', weapon, opp, seed, dur = 30, trace = false, exp = new Set(), secret = true }) {
   const probe = makeProbe({ trace, exp });
-  const r = fightOne({ school, weapon, opp, seed, dur, probe });
-  const sp = r.fires.filter((f) => f.name === 'ibSpin');
+  const r = fightOne({ school, weapon, opp, seed, dur, probe, secret });
+  const sp = r.fires.filter((f) => f.name === 'ibSpin' || f.name === 'cingir'); // 11/11 특수 공격 싱지르 = 'cingir' (비기 판 'ibSpin')
   return { weapon, opp, seed, win: r.win, lose: r.lose, T: r.T, dealt: r.dealt, recv: r.recv, falls: r.falls, fires: sp, probe: r.probe };
 }
 
@@ -266,7 +266,7 @@ if (isMain(import.meta.url)) {
     for (const c of cells) {
       const [school, weapon, opp] = c.split(':');
       for (const seed of seeds) {
-        const r = runOne({ school, weapon, opp, seed, dur: +arg('dur', 30), trace: rest.includes('--trace'), exp: new Set(arg('exp', '').split(',').filter(Boolean)) });
+        const r = runOne({ school, weapon, opp, seed, dur: +arg('dur', 30), trace: rest.includes('--trace'), exp: new Set(arg('exp', '').split(',').filter(Boolean)), secret: arg('secret', '1') !== '0' }); // --secret=0 = 비기 안 익힘 (11/11 특수 공격 싱지르만 견줌)
         runs.push(r);
         console.error(JSON.stringify({ c, seed, win: r.win, lose: r.lose, spins: r.probe.spins.length, fall: r.probe.spins.map((s) => s.fall && `${s.fall.why}@${s.fall.stage}+${s.fall.dt}`), ms: Date.now() - t0 }));
       }

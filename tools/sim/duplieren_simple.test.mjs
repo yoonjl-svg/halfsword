@@ -22,7 +22,7 @@ test('기본값 — 단순 길(dupOld 0) · 앞 박차기 걸음 사다리 칸 �
   assert.equal(UA.dupFitPoint, 0.2, '길이 맞춤 칼날 자리 — 잘 드는 몫의 코등이 쪽 끝 (사장님 확인 전)');
   assert.equal(UA.dupFitFloor, 0.5, '몸통이 맞닿는 가슴 사이까지 (죽음의 일격 거리 한도 없음 — 사장님 11/01 00:xx)');
   assert.equal(UA.dupOldShare, 0.5);
-  assert.equal(UA.specialShare.duplieren, 0.25, `몫 ${UA.specialShare.duplieren}`); // 사장님 11/01 00:xx '겹치기도 25%로 테이블 맞추자'
+  assert.equal(UA.specialShare.duplieren, 0.3, `몫 ${UA.specialShare.duplieren}`); // 11/11 사장님 '겹치기 30으로.' (전 0.25 — 11/01 00:xx '겹치기도 25%로 테이블 맞추자')
   assert.equal(UA.dupBurstSync, 1, '몸 · 발 먼저 · 칼은 디딤에 출발');
   assert.equal(UA.dupSnapTime, 0, '시간 상한 없음 (사장님 11/01 00:xx)');
   assert.equal(UA.dupEdge, 1);

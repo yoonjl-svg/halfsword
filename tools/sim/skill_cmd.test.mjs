@@ -24,6 +24,7 @@ const DRAFT = {
   I2: '칼이 상대 칼에 닿은 채 박자를 맞추어 탭',
   I9: '상대가 공격해 올 때 옆으로 움직이며(←/→) 탭',
   I7: '아래로 내려 긋기(↓/↙/↘)',
+  B7: '원을 그리며 긋기(↻/↺)', // 11/11 이베리아 자리 바꿈 안 (사장님 확인 전): 특수 공격이 된 싱지르 — 사장님 10/25 확정 비기 글의 발동 토막(원 화살표 ↻/↺ 그대로) · 도식 규칙의 화살표 여덟 밖(↻/↺) 이라 글 그대로 본다
 };
 const { TECH_BY_NAME, G } = await import('../../src/ai_techniques.js');
 const { playerSecretDef } = await import('../../src/schools.js');
@@ -37,12 +38,13 @@ const WITH_CMD = ['G1', 'G2', 'G5', 'G8', 'G7', 'G10', 'I2', 'I7', 'I6', 'I9', '
 //  글 그대로 — ② 의 도식 규칙(33 자 · 숫자 없음 · 기호 · 낱말) 밖. 코드 조건은 아래 비기 시험이 본다. G10 은 23:1x
 const OWNER = {
   I4: '칼을 맞대고 상대 걸음 따라 움직이면(↑/↓) 비기 활성화', // 10/28 18:3x 사장님 '라솔루토 설명은 1' (전 10/25 22:3x '칼 길이 바깥에서 칼을 맞대고 움직이면(↑/↓) 비기 활성화')
-  B7: '칼 길이 바깥에서 2초 기다리면 비기 활성화 · 원을 그리며 긋기(↻/↺)로 발동',
+  // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자') — 비기 칸이 B7 → B4: 무장 = 10/25 확정 글 앞 토막 그대로 · 발동 = 10/29 B4 글(길게 누름) [이어 붙인 안 — 사장님 확인 전]
+  //  전 B7 '칼 길이 바깥에서 2초 기다리면 비기 활성화 · 원을 그리며 긋기(↻/↺)로 발동' · 전 B4 '탭을 길게 누르다 떼기'
+  B4: '칼 길이 바깥에서 2초 기다리면 비기 활성화 · 탭을 길게 누르다 떼기로 발동',
   J5: '아무 행동 없이 2초 기다리면 준비 활성화, 상대가 내 간격에서 공격을 시도하거나 빠르게 움직이면 비기 활성화',
   C9: '앞으로 움직이며(↑) 상대 공격을 정확한 타이밍에 막으면 자동 발동',
-  G10: '상대와 몸이 붙은 채 2초 이상 밀치면(↑) 비기 활성화', // 10/25 23:1x (감독 전달) — 글 속 시간 = SECRET.mordPress
-  // 10/29 14:1x · 14:2x 사장님 글 (감독 전달) — 특수 공격 넷: 풍차 베기(길게 누름) · 탭으로 내는 셋
-  B4: '탭을 길게 누르다 떼기',
+  G10: '상대와 몸이 붙은 채 1.5초 이상 밀치면(↑) 비기 활성화', // 10/25 23:1x (감독 전달) — 글 속 시간 = SECRET.mordPress · 11/11 사장님 '1.5초로 해.' 로 숫자만 (전 '2초')
+  // 10/29 14:1x · 14:2x 사장님 글 (감독 전달) — 특수 공격 넷: 풍차 베기(길게 누름 — 11/11 비기가 되어 위 B4) · 탭으로 내는 셋
   C6: '뒤로 움직이며(↓) 탭',
   G7: '가까이서 칼을 맞댄 채 버티면 자동 발동', // 10/31 18:xx 사장님 '초안 ok.' — 겹치기 자동 (UNIQUE_ASSIST.dupAuto 'bind') · 전 10/29 14:1x 글 '긋기가 상대 칼에 닿은 채 탭' = D.G7_CMD_TAP (dupAuto 0)
 };
@@ -100,7 +102,7 @@ test("글 꼴: 한 줄(33 자 안) · 숫자 · 원어 글자 없음 · 쓰는 �
     // 10/31 I7 '아래로 내려 긋기(↓/↙/↘)' (감독 안 · 사장님 검수 전 — 글 그대로): 도식 규칙 둘 밖 — 긋기(…) 앞 꼴 낱말이 '내려'(사선 · 수직 · 수평 아님) · 괄호 안 화살표 셋에 꼴 둘(수직 ↓ · 사선 ↙/↘).
     //  아래로 가는 긋기 모두를 한 줄로 적는 꼴이라 비기 확정 글처럼 글 그대로 보고 · 원어 글자 · 33 자만 본다 (여쭐 것 — 규칙에 맞추면 '수직 긋기(↓)나 사선 긋기(↙/↘)')
     //  I9 '상대가 공격해 올 때 옆으로 움직이며(←/→) 탭' 도 같음 — '움직이며(…)' 는 사장님 확정 글 C6 '뒤로 움직이며(↓) 탭' 꼴(이동(…) · 긋기(…) 밖)
-    if (OWNER[n.id] || n.id === 'I7' || n.id === 'I9') {
+    if (OWNER[n.id] || n.id === 'I7' || n.id === 'I9' || n.id === 'B7') {
       assert.equal(c, OWNER[n.id] ?? DRAFT[n.id], `${n.id} — 정해진 글 그대로 (10/25 22:3x 사장님 확정 · 10/31 I7 · I9 검수 전)`);
       if (!OWNER[n.id]) assert.ok([...c].length <= 33, `${id} — ${[...c].length} 자`);
       assert.ok(!/[\p{Script=Latin}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(c), `${id} — 원어 글자`);
@@ -160,13 +162,22 @@ test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · �
     const e = PLAYER_UNIQUE[s].find((u) => u.name === x.u);
     assert.ok(e, `${x.id} ${x.u}`);
     const c = x.cmd, id = `${x.id} ${c}`;
+    if (e.role === 'circle') {
+      // 11/11 특수 공격 싱지르 (unique_assist.js circleTick — 무장 없이 공격 손으로 원 한 바퀴 · 어느 쪽이든 · main.js 가 프레임마다): 원 긋기만 받음 · 긋기 조건 · 탭 조건 없음
+      assert.ok(!e.on.length && !e.tapKey && !e.stick, `${x.id} 원 긋기 칸은 긋기 조건 · 탭 조건 · 걸음 명령 없음`);
+      assert.equal(c, DRAFT[x.id], `${id} — 원 긋기`);
+      assert.ok(src('main.js').includes('player.skill.uniq.circleTick(dt, d, handDown, !secBusy && player.alive)'), 'main.js — 프레임마다 원 긋기');
+      assert.match(ua, /circleTick\(dt, d, down, can\) \{[\s\S]{0,900}circleStep\(st, dt, d\.x, d\.y, down, \{ time: V\.circleTime, need: 2 \* Math\.PI/, 'unique_assist.js circleTick — 비기 판 원과 같은 셈(한 바퀴 · circleTime)');
+      continue;
+    }
     if (e.role === 'hold') {
-      // 길게 눌러 내는 특수 공격 (풍차 베기 B4 — 10/29): 탭을 끌지 않고 길게 눌러 감고 · 그동안 이동 그대로 · 떼면 냄 (unique_assist.js holdTick · main.js holdInput — 긋기 · 탭 하나로는 안 남)
+      // 길게 눌러 내는 칸 (전 특수 공격 풍차 베기 B4 — 10/29 · 11/11 비기 알티바슈 포르트의 실행 칸): 탭을 끌지 않고 길게 눌러 감고 · 그동안 이동 그대로 · 떼면 냄 (unique_assist.js holdTick · main.js holdInput — 긋기 · 탭 하나로는 안 남)
       assert.ok(e.hold && !e.on.length && !e.tapKey, `${x.id} 길게 누름 칸은 긋기 조건 · 탭 조건 없음`);
-      assert.ok(c.startsWith('탭을 길게 ') && c.endsWith('떼기'), `${id} — 탭을 길게 누르다 떼기`);
-      assert.ok(!c.includes('긋기') && !c.includes('공격'), `${id} — 긋기 · 공격으로는 안 남`);
+      const hc = x.cat === 'secret' ? c.split(' · ').at(-1).replace(/로 발동$/, '') : c; // 11/11 비기 칸: 무장 토막 뒤 발동 토막
+      assert.ok(hc.startsWith('탭을 길게 ') && hc.endsWith('떼기'), `${id} — 탭을 길게 누르다 떼기`);
+      assert.ok(!hc.includes('긋기') && !hc.includes('공격'), `${id} — 긋기 · 공격으로는 안 남`);
       assert.match(ua, /holdTick\(dt\) \{[\s\S]{0,1600}if \(!P\.still\) \{/, 'unique_assist.js holdTick — 끈 누름은 감지 않음'); // 창 1200 → 1600: 개발 가지 621a1011 이 holdTick 앞에 메는 동안 기력 줄을 넣어 1219 자가 됨
-      assert.ok(src('main.js').includes('player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open);'), 'main.js — 누름 상태 · 비기 창');
+      assert.ok(src('main.js').includes('player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open, !!playerSecret?.holdOwns());'), 'main.js — 누름 상태 · 비기 창 · 알티바슈 포르트 무장 창(11/11)');
       continue;
     }
     if (e.tapKey === 'dup' && UA.dupAuto === 'bind') {
@@ -240,7 +251,7 @@ test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · �
       }
     }
   }
-  assert.equal(n, 14); // 고유 공격 칸 (u) — 이베리아 흐르는 긋기(B5)는 몫 열쇠 ibFlow
+  assert.equal(n, 15); // 고유 공격 칸 (u) — 이베리아 흐르는 긋기(B5)는 몫 열쇠 ibFlow · 11/11 자리 바꿈: 비기 B4 도 실행 칸 u redondo 를 가짐 + B7 싱지르 cingir (전 14)
   // B5 흐름: 휘두르기(긋기)만 셈 — 탭 찌르기는 휘두르기가 아님 → '긋기'
   const flow = /updateIbFlow\(dt\) \{([\s\S]*?)\n  \}/.exec(src('fighter.js'))?.[1] ?? '';
   assert.ok(flow.includes('sk.swinging') && !flow.includes('sk.tap'), 'fighter.js updateIbFlow = 휘두르기만');
@@ -260,7 +271,7 @@ test('걸음 · 막기 칸 글 = 코드 스위치: 뒤 박차기(독일 보법) 
   assert.equal(cmdOf('italian', 'I6'), '막기');
 });
 
-test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · config SECRET 기본값) · 10/25 22:3x · 23:1x 사장님 확정 글 다섯(I4 · B7 · J5 · C9 · G10)은 글 속 시간 · 스틱 · 받는 입력이 코드와 맞는지", async () => {
+test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · config SECRET 기본값) · 10/25 22:3x · 23:1x 사장님 확정 글 다섯(I4 · B7 → 11/11 B4 · J5 · C9 · G10)은 글 속 시간 · 스틱 · 받는 입력이 코드와 맞는지", async () => {
   // 비기 창: 탭(taps) 또는 긋기(secSwipe — tapOnly 면 긋기는 보통 공격) · 이베리아 원 판은 원 긋기만(atkWin 이 circleOwns 를 뺌) (main.js)
   const main = src('main.js');
   assert.ok(main.includes('const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly;'), 'main.js — 긋기는 tapOnly 가 아닐 때만 비기');
@@ -284,12 +295,14 @@ test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · confi
   assert.ok(SECRET.risolutoLunge && SECRET.risolutoGap, '런지 간격 조건(가슴 사이 ≥ 맞닿기 거리 — italian_risoluto.js lungeGapOk) — 10/28 글에서는 뺐지만 조건은 그대로');
   assert.equal(SECRET.risolutoMirror, 1, "I4 '상대 걸음 따라' = 상대가 물러서면 앞 · 들어오면 뒤 (italian_risoluto.js risolutoMirror — 10/28 01:4x)");
   assert.equal(sec('italian').cmd, OWNER.I4);
-  // 이베리아: 칼끝 거리 밖 ibSpin.armTime 초 무장(비기 활성화) → 공격으로 원 한 바퀴(어느 쪽이든 — ↻/↺)
+  // 이베리아 (11/11 자리 바꿈 — 비기 = 알티바슈 포르트 B4): 칼끝 거리 밖 ibSpin.armTime 초 무장(비기 활성화) → 그 창에서 탭을 길게 누르다 떼기(메고 내려침) · 톡 · 끌기 · 원으로는 안 남
   const ib = playerSecretDef('iberian');
-  assert.ok(SECRET.iberianSecret === 'spin' && ib.do.spin && SECRET.ibSpin.input === 'attackCircle', '이베리아 = 무장 → 긋기로 원 한 바퀴');
-  assert.ok(src('secret.js').includes('this.spinArm.tick(dt, d0 > V.reach,'), "B7 '칼 길이 바깥' = 내 칼끝 거리(reach) 밖에서 무장");
-  assert.equal(realS(secs(OWNER.B7)), SECRET.ibSpin.armTime, 'B7 글 속 시간(실제 초) = SECRET.ibSpin.armTime');
-  assert.equal(sec('iberian').cmd, OWNER.B7);
+  assert.ok(SECRET.iberianSecret === 'altib' && ib.do.altib && ib.when === 'spinArm', '이베리아 = 무장 → 길게 눌러 메고 떼기');
+  assert.ok(src('secret.js').includes('this.spinArm.tick(dt, d0 > V.reach,'), "B4 '칼 길이 바깥' = 내 칼끝 거리(reach) 밖에서 무장");
+  assert.ok(main.includes('!playerSecret.holdOwns()'), 'main.js — 알티바슈 포르트 창은 탭 · 긋기 하나로 안 남');
+  assert.equal(realS(secs(OWNER.B4)), SECRET.ibSpin.armTime, 'B4 글 속 시간(실제 초) = SECRET.ibSpin.armTime');
+  assert.equal(sec('iberian').id, 'B4');
+  assert.equal(sec('iberian').cmd, OWNER.B4);
   // 일본 (10/25 22:3x · 22:5x): 거리와 상관없이 iaiArmTime 초 이동 입력 · 공격 · 막기 · 맞음 · 비기 없음(아무 행동 없이 — gnsReady 'idle' · 준비된 뒤엔 걸어도 유지) → 준비 → 상대가 칼을 듦 · 헛침(공격을 시도) · 빠르게 움직임(foeCharge) + 내 발도가 닿는 거리(내 간격) → 창(비기 활성화)
   const jp = playerSecretDef('japanese');
   assert.ok(jp.cond.armed && jp.do.instant && SECRET.iai && !jp.do.tapOnly, '일본 = 발도 대기 → 상대가 칠 때 창 · 탭도 긋기도');

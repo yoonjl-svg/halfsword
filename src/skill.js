@@ -642,7 +642,7 @@ export class Skill {
   secret(o) {
     const f = this.f;
     if (f.stamina.exhausted || this.sec || this.tap || this.pom || !o?.S || !f.alive || !f.armed || f.state !== 'stand' || !f.foe) return false;
-    if (!f.stamina.secretReady) return false; // 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써' · 18:3x '0 이하' — SECRET.secretStamina · 사람 창 · AI 는 그 앞에서 거름) — 아무것도 안 나감 · 판당 쓸 수 안 씀
+    if (!o.special && !f.stamina.secretReady) return false; // 특수 공격(11/11 싱지르 — o.special)은 이 문턱 없음 · 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써' · 18:3x '0 이하' — SECRET.secretStamina · 사람 창 · AI 는 그 앞에서 거름) — 아무것도 안 나감 · 판당 쓸 수 안 씀
     const S = o.S;
     const D = S.do;
     const school = f.swordArt?.school;
@@ -660,7 +660,7 @@ export class Skill {
       }
       return best;
     };
-    const run = { S, ctx: o.ctx ?? null, tr: f.swordArt.tradition, stage: null, t: 0, queue: [], cur: null, path: [], landed: false, bound: false, str0: f.strength, painFoe: f.foe.pain, painMe: f.pain };
+    const run = { S, ctx: o.ctx ?? null, tr: f.swordArt.tradition, stage: null, t: 0, queue: [], cur: null, path: [], landed: false, bound: false, str0: f.strength, painFoe: f.foe.pain, painMe: f.pain, special: o.special ?? null }; // special = 특수 공격이 이 실행부를 빌려 씀 (11/11 싱지르 'cingir' — 비기 셈 · 판정 배율 · 터뜨림 · 비기 기력 없음 · 굳음 SECRET.ibSpin.specialStiff)
     if (D.mord) {
       // 독일 죽음의 일격 (10/22 — mordschlag.js): 꾸러미의 기본 동작 하나(SECRET.mord.tech) 길을 — 베기 길을 열 때 칼날을 거꾸로 쥐고 겨눔을 뒤집어 칼자루로 휘두른다
       const t = mordTech(byName);
@@ -692,10 +692,10 @@ export class Skill {
       }
     } else if (D.spin) {
       // 이베리아 휘감아 돌기 (10/22): 앞발을 축으로 몸을 한 바퀴 돌리는 대본 (iberian_spin.js) — 두 발로 딛고 있어야 건다(못 걸면 비기 아님 · 창은 이미 썼다)
-      if (!requestSpin(f, run.ctx?.turnDir ?? 0)) return false; // 10/23 스틱 판: 스틱을 돌린 쪽 (ctx.turnDir — secret.js spinStick) · 공격 입력 판은 0 = 칼 든 쪽
+      if (!requestSpin(f, run.ctx?.turnDir ?? 0, run.special ? { share: UNIQUE_ASSIST.specialShare?.[run.special] ?? 0, special: true } : undefined)) return false; // 10/23 스틱 판: 스틱을 돌린 쪽 (ctx.turnDir — secret.js spinStick) · 공격 입력 판은 0 = 칼 든 쪽 · 11/11 특수 공격 싱지르 = 칼끝 고노센 × specialShare.cingir · 한 걸음 나가며(stride)
       if (SECRET.ibSpin.handRest && !f.aiControlled) spinHandRest(f); // 10/24 10:4x: 사람 손 목표를 쉼 자세로 (원을 그린 손 목표가 몸통을 원 끝 쪽으로 틀어 두어 놓은 칼이 머리 위로 솟았다 — iberian_spin.js)
       run.stage = 'spin';
-      this.secretBursts++;
+      if (!run.special) this.secretBursts++; // 특수 공격 싱지르(11/11)는 비기 연출 · 소리 없음
     } else if (D.break) {
       // 독일 Versetzen: 들어오는 줄을 깨는 비밀 베기 (창을 연 위협의 줄)
       const th = run.ctx ?? {};
@@ -762,7 +762,7 @@ export class Skill {
       run.queue.push(D.step ? { ...base, step: { ...D.step, fwd: secVal(D.step.fwd), push: secVal(D.step.push) } } : base);
     } else return false;
     this.sec = run;
-    f.stamina.secret();
+    if (!run.special) f.stamina.secret(); // 특수 공격 싱지르(11/11)는 비기 기력 없음 — 아래 베기 한 번 값
     if (run.risoluto) {
       if (run.lunge) {
         requestCombo(f, risolutoLungeReq());
@@ -776,10 +776,10 @@ export class Skill {
     }
     this.recovering = false;
     this.cutPending = true;
-    const st = (this.secretStats[S.name] ??= { fired: 0, landed: 0 });
+    const st = (this.secretStats[run.special ?? S.name] ??= { fired: 0, landed: 0 }); // 특수 공격(11/11 싱지르)은 그 이름 칸
     st.fired++;
     if (run.risoluto) st.armSlow = (st.armSlow ?? 0) + (run.armSlow ? 1 : 0);
-    if (run.stage === 'spin') f.stamina.attack('cut', true); // 휘감아 돌기: 기력은 큰 동작 · 비기 그대로 (위 secret() + 베기 한 번 — 흐름 토막과 같은 셈)
+    if (run.stage === 'spin') f.stamina.attack('cut', !run.special); // 휘감아 돌기: 기력은 큰 동작 · 비기 그대로 (위 secret() + 베기 한 번 — 흐름 토막과 같은 셈) · 11/11 특수 공격 싱지르 = 다른 특수 공격처럼 베기 한 번 값
     if (!run.stage) this.secretNextMove();
     return true;
   }
@@ -1049,7 +1049,7 @@ export class Skill {
       if ((run.t >= 0.3 && (run.mord ? !mordSwinging(f) : f.tipVel.length() < 6)) || run.t > 0.5) {
         f.secretHit = 1;
         if (f.effMul != null) f.effMul = null;
-        if (run.landed) this.secretStats[run.S.name].landed++;
+        if (run.landed) this.secretStats[run.special ?? run.S.name].landed++;
         if (run.mord) {
           run.stage = 'mordBack'; // 죽음의 일격: 칼자루를 다시 세운 뒤 원래 쥠으로 (아래)
           run.t = 0;
@@ -1057,7 +1057,8 @@ export class Skill {
         }
         run.stage = 'stiff';
         run.t = 0;
-        run.stiffT = SECRET.stiff[run.tr] ?? realS(0.3);
+        run.stiffT = run.special ? SECRET.ibSpin.specialStiff ?? SECRET.stiff[run.tr] ?? realS(0.3) : SECRET.stiff[run.tr] ?? realS(0.3); // 11/11 특수 공격 싱지르 = specialStiff (0 — 굳음 없음 · 비기 굳음은 알티바슈 포르트로)
+        if (!(run.stiffT > 0)) return this.secretEnd();
       }
       return;
     }

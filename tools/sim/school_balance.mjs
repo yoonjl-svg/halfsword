@@ -96,6 +96,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   onRound?.({ G, P, A, uq, guard, W });
   const M = P.swordArt.measure;
   const secretName = W.S?.name ?? null;
+  const ALTIB = school === 'iberian' && CONFIG.SECRET.iberianSecret === 'altib'; // 11/11 이베리아 자리 바꿈 판 (비기 알티바슈 포르트 · 특수 공격 싱지르)
   // ── 손가락 (화면 px) ──
   let x = 620;
   let y = 180;
@@ -184,7 +185,9 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       return stroke(rnd() < 0.5 ? 'oberhau' : 'stichOchs', { want: 'imbroccata' });
     }
     if (school === 'iberian') {
-      if (L && S.dist > M.reach && rnd() < 0.35) return { kind: 'wait', seconds: 1.6, fwd: -0.3, want: secretName }; // 칼끝 거리 밖 무장 → 원
+      if (L && S.dist > M.reach && rnd() < 0.35) return { kind: 'wait', seconds: 1.6, fwd: -0.3, want: secretName }; // 칼끝 거리 밖 무장 → 원 (11/11 'altib' 판: → 길게 눌러 메기)
+      // 11/11 'altib' 판 (SECRET.iberianSecret — 사장님 자리 바꿈): 고유 공격 몫의 반 = 싱지르 특수 공격(원 0.8 s — 칼끝 거리 + 0.3 안에서 · 전 비기 봇과 같은 손 · 그 밖이면 다가감) · 반 = 나선 걸음 베기 (정수리 가르기는 비기 — 무장 창에서만)
+      if (ALTIB) return rnd() < 0.5 ? (S.dist <= M.reach + 0.3 ? { kind: 'circle', seconds: 0.8, want: 'cingir' } : { kind: 'move', seconds: 0.35, fwd: 0.9 }) : stroke('zornhau', { side: side(), want: 'talhoRodeado' });
       return rnd() < 0.5 ? { kind: 'hold', seconds: 4, fwd: 0.6, want: 'redondo', releaseAt: M.contact + rnd() * (M.reach + 0.15 - M.contact) } : stroke('zornhau', { side: side(), want: 'talhoRodeado' });
     }
     if (school === 'japanese') {
@@ -201,7 +204,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   };
   const decide = (S) => {
     if (S.window && ['german', 'italian', 'japanese'].includes(school)) return { kind: 'tap', seconds: 0.07, want: secretName };
-    if (S.spin && school === 'iberian') return { kind: 'circle', seconds: 0.8, want: secretName };
+    if (S.spin && school === 'iberian') return ALTIB ? { kind: 'hold', seconds: 4, fwd: 0.6, want: secretName, releaseAt: M.contact + rnd() * (M.reach + 0.15 - M.contact) } : { kind: 'circle', seconds: 0.8, want: secretName }; // 11/11 'altib' 판: 무장 창 → 길게 눌러 메고 걸어 들어가 뗌 (전 판 정수리 가르기 봇과 같은 손)
     if (S.attack && S.dist < M.reach + 0.8) {
       if (school === 'italian' && rnd() < 0.35) return { kind: 'sideTap', seconds: 0.4, side: side(), tapAt: 0.03 + rnd() * 0.08, want: 'inquartata' };
       if (school === 'chinese' && S.left > 0 && rnd() < 0.5) return { kind: 'guard', seconds: 0.65, fwd: 1, want: secretName };
@@ -318,9 +321,10 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     let secBusy = busy;
     const swipe = Math.hypot(d.x, d.y) / FR >= CONFIG.SKILL.swingSpeed;
     input.stickMove = { x: sx, y: sy };
-    const atkWin = !!W.open && !W.stickOwns() && !W.circleOwns();
+    const atkWin = !!W.open && !W.stickOwns() && !W.circleOwns() && !W.holdOwns();
     const stickGo = !!W.spinStick(FR, input.move, !secBusy && P.alive);
     const circleGo = !!W.spinCircle(FR, d, hand, !secBusy && P.alive);
+    if (uq.cingirE && uq.circleTick(FR, d, hand, !secBusy && P.alive)) secBusy = true; // 11/11 싱지르 특수 공격 (main.js 와 같은 차례)
     const gilReady = !!W.S?.do?.gilmok && !!W.gilArm?.armed;
     const secArm = !(CONFIG.SECRET.secretHold && (P.skill.tap || P.skill.pom));
     if ((((atkWin || gilReady) && (taps > 0 || (swipe && !W.S?.do?.tapOnly))) || stickGo || circleGo) && !secBusy && P.alive && secArm) {
@@ -339,7 +343,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     uq.feed(d.x, d.y, FR, guardHold || bufHold || guard.held, guardHold || bufHold);
     if (uq.holdE) {
       const hs = input.holdState();
-      uq.holdInput(hs.down && !P.stamina.exhausted, hs.still, !!W.open);
+      uq.holdInput(hs.down && !P.stamina.exhausted, hs.still, !!W.open, W.holdOwns());
     }
     const winding = !!uq.winding;
     if (P.alive && !secBusy && !guardHold && !bufHold && !winding) (P.handOffset.x += d.x), (P.handOffset.y += d.y);
@@ -369,8 +373,8 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   let swingId = null; // 긋기 하나 = 봇 긋기 한 번 (모서리에서 손 빠르기가 문턱 밑으로 잠깐 내려가도 같은 기술 — 손가락 한 획)
   let wasSwing = false;
   const attackNow = () => {
-    if (P.skill.sec) return { id: P.skill.sec, name: P.skill.sec.S?.name ?? secretName ?? 'secret', cls: 'secret' };
-    if (P.iai?.tech) return { id: P.iai, name: P.iai.tech, cls: 'snap' };
+    if (P.skill.sec) return P.skill.sec.special ? { id: P.skill.sec, name: P.skill.sec.special, cls: 'snap' } : { id: P.skill.sec, name: P.skill.sec.S?.name ?? secretName ?? 'secret', cls: 'secret' }; // 11/11 싱지르 특수 공격 = 특수 공격 칸
+    if (P.iai?.tech) return P.iai.secret ? { id: P.iai, name: P.iai.secret, cls: 'secret' } : { id: P.iai, name: P.iai.tech, cls: 'snap' }; // 11/11 비기 알티바슈 포르트 (운동학 칼 · f.iai.secret)
     if (P.skill.tap) return { id: P.skill.tap, name: strokeTechOf(P) ?? 'tap', cls: 'tap' };
     if (P.skill.swinging && swingId) return { id: swingId, name: strokeTechOf(P) ?? 'basic', cls: 'swing' }; // 봇 긋기 동안의 휘두름만 (막기 단추 · 자동 막기가 손을 옮겨 휘두름이 서는 것은 낸 기술이 아님)
     return null;
@@ -468,7 +472,8 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       win: !A.alive && P.alive, lose: !P.alive && A.alive,
       dealt: r3(wounds.dealt), recv: r3(wounds.recv), dealtN: wounds.dealtN, recvN: wounds.recvN, consD: r3(wounds.consD), consR: r3(wounds.consR), falls, exh: r3(exhT / K / Math.max(1e-6, T)),
       secretFired: fires.filter((f) => f.cls === 'secret').length, brk, disarms,
-      secretLeft: secretLeft(P), wants, acts, reads,
+      secretLeft: secretLeft(P), wants, acts, reads, altib: uq.stats.altib ?? null, // 11/11 알티바슈 포르트: 낸 수 · 남은 기력 몫(k) · 뗀 까닭
+      aiStats: { altib: G.ai.stats.altib ?? null, cingir: G.ai.stats.cingir ?? null, specials: G.ai.stats.specials ?? null },
       fires: fires.map((f) => ({ t: r3(f.t / K), name: f.name, cls: f.cls, d: r3(f.dist0), c: f.contacts, w: f.wounds, sev: r3(f.sev), cons: r3(f.cons), E: r3(f.Emax), ty: f.types, r1: r3(f.recv1), cr1: r3(f.consR1), rn1: f.recvN1, f1: f.fall1, k1: f.kill1, dis1: f.dis1, base: f.base, want: f.want, stick: f.stick, st: r3(f.st0 - (f.st1 ?? P.stamina.value)) })),
       ...(probe?.done ? { probe: probe.done(fires) } : {}),
     };

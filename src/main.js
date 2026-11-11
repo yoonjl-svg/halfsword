@@ -225,7 +225,7 @@ if (['1', '2'].includes(params.get('itForte'))) CONFIG.SKILL.itForte = +params.g
 if (params.has('bind')) CONFIG.BIND.natural = +params.get('bind') ? 1 : 0; // 자연 바인드 (10/11 실험 — docs/strike/natural_bind_2026-10-11.md · 10/31 본판 — natural_bind_on_2026-10-31.md): 기본 1(사장님 10/31 19:xx), `?bind=0` = 전 물리(칼끼리 더 튕김 · AI 밀기 없음)
 if (params.has('bindRest')) CONFIG.BIND.restitution = +params.get('bindRest'); // 칼끼리 닿는 면 반발 (기본 0.2 — 사장님 10/31 19:xx · 10/11 실험 0.1)
 if (params.has('bindWill')) CONFIG.BIND.will.on = +params.get('bindWill') ? 1 : 0; // AI 미는 정도를 성향에 따라 (기본 1 · 0 = 모든 AI 10/11 실험 값 그대로 — 셈은 사장님 확인 전)
-if (['v4', 'flow', 'gilmok', 'spin'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 이베리아 비기 판(10/11 · 10/22): 기본 'spin'(휘감아 돌기 — docs/strike/iberian_spin_2026-10-22.md), `?ibSecret=gilmok` = v6 길목 지키기, `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
+if (['v4', 'flow', 'gilmok', 'spin', 'altib'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 11/11 기본 'altib'(알티바슈 포르트 비기 · 싱지르 특수 공격 — 사장님 자리 바꿈) · 'spin' = 전 판 // 이베리아 비기 판(10/11 · 10/22): 기본 'spin'(휘감아 돌기 — docs/strike/iberian_spin_2026-10-22.md), `?ibSecret=gilmok` = v6 길목 지키기, `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
 if (['stick', 'attack', 'attackCircle'].includes(params.get('ibInput'))) CONFIG.SECRET.ibSpin.input = params.get('ibInput'); // 싱지르 내는 조작: 기본 'attackCircle'(10/24 — 무장 동안 공격으로 원 한 바퀴) · `?ibInput=stick` = 10/23 판(이동 스틱 반 바퀴) · `?ibInput=attack` = 10/22 판(무장 동안 공격 입력 하나)
 if ([0.6, 1.5].includes(+params.get('ibCircleTime'))) CONFIG.SECRET.ibSpin.circleTime = +params.get('ibCircleTime'); // 원 한 바퀴를 이 초 안에 (판 값 1.5 — 사다리 칸만) · 시험 `?ibCircleTime=0.6`
 if (params.get('gyeoksalAuto') === '0') CONFIG.SECRET.gyeoksal.auto = 0; // 격살 저절로 끔 = 옛 판(창 안 공격 입력 — 10/24 사장님 결정 전)
@@ -236,6 +236,10 @@ if (params.get('ibLid') === '0') CONFIG.SECRET.ibSpin.lid = 0; // 싱지르 몸�
 if (params.get('ibWindSide') === '0') CONFIG.SECRET.ibSpin.windSide = 0; // 싱지르 칼 든 쪽으로 감을 때 손을 배 앞 가운데(10/22 판 wind.hand 0.06)에 — 판 값 1 = 칼 든 어깨 앞 (사장님 10/24 14:0x 결정)
 if (params.get('ibFloor') === '0') CONFIG.SECRET.ibSpin.floor = 0; // 싱지르 감는 동안 땅에 닿아도 막힘 (10/22 판 — 판 값 1 · 10/24 10:4x '작게 그으면 … 실패')
 if (params.has('ibNear')) CONFIG.SECRET.ibSpin.near = ['place', 'contact'].includes(params.get('ibNear')) ? params.get('ibNear') : +params.get('ibNear') || 0; // 싱지르 가까운 상대 뒷발 축 (11/05 — 1 판 값 · 0 = 늘 앞발 축 전 판 · place · contact = 제자리 견줌)
+if (params.has('ibStride') && +params.get('ibStride') >= 0) CONFIG.SECRET.ibSpin.stride = +params.get('ibStride'); // 싱지르 특수 공격 한 걸음 나가며 (11/11 — m · 0 = 11/05 판 near · advance)
+if (params.has('ibStrideAt') && +params.get('ibStrideAt') > 0) CONFIG.SECRET.ibSpin.strideAt = +params.get('ibStrideAt'); // 그 나아감을 마치는 돌기 진행 (11/11 · 1 = 돌기 끝)
+if (params.has('mordHitMul') && +params.get('mordHitMul') > 0) CONFIG.SECRET.mordHitMul = +params.get('mordHitMul'); // 죽음의 일격 판정 배율 (11/11 사장님 1.0 · `?mordHitMul=1.3` = 전 판)
+if (params.has('altibHitMul') && +params.get('altibHitMul') > 0) CONFIG.SECRET.altibHitMul = +params.get('altibHitMul'); // 알티바슈 포르트 판정 배율 (11/11 사장님 1.0)
 if (params.get('ibFeet') === '0') CONFIG.SECRET.ibSpin.feet = 0; // 싱지르 발디딤 고침 끔 (10/24 02:5x 판 — 도는 발이 축발 옆에 딛고 축발은 제자리 · 판 값 1 · 사장님 10/24 12:5x '두 다리가 딱 붙어서 곧게 편 채')
 if ([90, 180, 270, 360].includes(+params.get('ibTurn'))) CONFIG.SECRET.ibSpin.stickTurn = +params.get('ibTurn'); // 스틱 돌림 각 ° (판 값 180 — 사장님 10/23 '반 바퀴 이상') · 시험 `?ibTurn=360`
 if ([0.4, 0.6].includes(+params.get('ibTurnTime'))) CONFIG.SECRET.ibSpin.stickTime = +params.get('ibTurnTime'); // 그 각을 이 초 안에 (판 값 0.6 — 사다리 칸만) · 시험 `?ibTurnTime=0.4`
@@ -391,6 +395,7 @@ if (params.has('cavSide')) CONFIG.UNIQUE_ASSIST.cavSide = params.get('cavSide') 
 if (params.has('cavSelfFree')) CONFIG.UNIQUE_ASSIST.cavSelfFree = +params.get('cavSelfFree') || 0; // 칼끝 돌려 빼기 넘어짐 고침 (10/31 — 1 칼 어깨 면 밧줄 뗌 · 0 전 판)
 if (params.has('rdDrainCut')) CONFIG.UNIQUE_ASSIST.rdDrainCut = +params.get('rdDrainCut') ? 1 : 0; // 정수리 가르기 메는 동안 기력 = 초당 베기 한 번 값 (11/01 사장님 · 0 = 초당 10)
 if (params.has('cavSpeedMul')) CONFIG.UNIQUE_ASSIST.cavSpeedMul = +params.get('cavSpeedMul') || 1; // 칼끝 돌려 빼기 시제품 A (10/31 — 칼끝 빠르기 배 · 1 = 끔)
+if (params.has('cavShare')) CONFIG.UNIQUE_ASSIST.cavShare = +params.get('cavShare') ? 1 : 0; // 칼끝 돌려 빼기 칼끝 = 고노센 × specialShare.cavazione (11/11 사장님 '1.2배 없애고 35%로 해' · 0 = 보통 찌르기 빠르기 × cavSpeedMul)
 if (params.has('cavGap')) CONFIG.UNIQUE_ASSIST.cavGap = +params.get('cavGap') || 0; // 시제품 B (틈 파고들기 · 0 = 끔)
 if (params.has('cavParryLock')) CONFIG.UNIQUE_ASSIST.cavParryLock = CONFIG.realS(+params.get('cavParryLock') || 0); // 시제품 C (상대 반응 묶음 실제 초 · 0 = 끔)
 if (params.has('cavHitMul')) CONFIG.UNIQUE_ASSIST.cavHitMul = +params.get('cavHitMul') || 1; // 시제품 D (판정 배율 · 1 = 끔)
@@ -3482,10 +3487,13 @@ function playerInputFrame(dt, now) {
   //  (무장 동안의 톡 · 끌기는 보통 공격) 이동 스틱을 stickTime 초 안에 stickTurn° 돌리면 같은 길(fire → skill.secret → showPlayerCue)로 낸다. 몸짓 셈 = 실제 프레임 시간 (secret.js spinStick)
   //  10/24 공격 원 판 (사장님 02:5x '공격 동작 360도 원형 입력으로 변경' — 기본 'attackCircle'): 무장 창은 톡 · 끌기 하나로 나가지 않고(원이 아닌 공격은 보통 공격) 공격 손 움직임 d 로
   //  circleTime 초 안에 원 한 바퀴를 그리면 같은 길로 낸다 (secret.js spinCircle · src/attack_circle.js). 손가락이 닿아 있나 = 터치 손가락 · 잠긴 마우스(늘 — 멈춤으로 획을 가름)
-  const atkWin = !!playerSecret?.open && !playerSecret.stickOwns() && !playerSecret.circleOwns();
+  //  11/11 알티바슈 포르트 비기 (SECRET.iberianSecret 'altib'): 무장 창은 톡 · 끌기로 나가지 않고(holdOwns — 보통 공격) 길게 눌러 메기로만(아래 holdInput armed) ·
+  //  싱지르 특수 공격: 무장 없이 원 한 바퀴(unique_assist.js circleTick — 비기 판 원과 같은 셈 · 식힘) — 그 스텝은 비기 실행 중(secBusy)과 같게
+  const atkWin = !!playerSecret?.open && !playerSecret.stickOwns() && !playerSecret.circleOwns() && !playerSecret.holdOwns();
   const stickGo = !!playerSecret?.spinStick(dt, input.move, !secBusy && player.alive);
   const handDown = input.activeTouch !== null || document.pointerLockElement === canvas;
   const circleGo = !!playerSecret?.spinCircle(dt, d, handDown, !secBusy && player.alive);
+  if (player.skill.uniq?.cingirE && player.skill.uniq.circleTick(dt, d, handDown, !secBusy && player.alive)) secBusy = true;
   // 창 지킴 (10/25 21:0x — SECRET.secretHold): 보통 탭 찌르기 · 손잡이 찍기가 아직 도는 동안은 비기를 못 낸다(skill.secret 이 받지 않음) — 그 입력으로 창을 써 버리지 않고 남겨 둠 (`?secretHold=0` = 전: 창을 쓰고 비기 없음)
   const secArm = !(CONFIG.SECRET.secretHold && (player.skill.tap || player.skill.pom));
   if (((atkWin || gilReady) && (taps > 0 || secSwipe) || stickGo || circleGo) && !secBusy && player.alive && secArm) {
@@ -3520,7 +3528,7 @@ function playerInputFrame(dt, now) {
   //  감는 동안은 손가락 움직임을 손 목표에 더하지 않는다(손은 감기가 쥔다)
   if (player.skill.uniq?.holdE) {
     const hs = input.holdState();
-    player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open);
+    player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open, !!playerSecret?.holdOwns()); // 11/11 알티바슈 포르트 무장 창이면 길게 눌러 메기 = 비기
   }
   const winding = !!player.skill.uniq?.winding;
   // 권총: 자동 조준이라 끌기는 손을 움직이지 않는다 (빠른 끌기가 내딛기·자세 복귀를 부르지 않게)

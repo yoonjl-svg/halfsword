@@ -70,9 +70,9 @@ export function spinRate(t, T, r) {
  *   한 바퀴 T = ramp + 2π ÷ ω (spinProgress — 가운데 빠르기 = 2π ÷ (T − ramp)). 칼끝 빠르기는 v 로 자른다(spinCap — 두 쪽 모두).
  *  share 0 이면 10/22 판(한 바퀴 SECRET.ibSpin.time · 자름 없음). 돌려줌 { T, r, v(칼끝 상한 m/s — 없으면 ∞), w(가운데 rad/s), v0(고노센 칼끝 m/s) }
  */
-export function spinPlan(f) {
+export function spinPlan(f, shareOver = null) {
   const S = SECRET.ibSpin;
-  const share = +S.share || 0;
+  const share = shareOver != null ? +shareOver || 0 : +S.share || 0; // 11/11 특수 공격 싱지르 = specialShare.cingir (skill.js — requestSpin opt.share)
   if (!(share > 0)) {
     const r = Math.min(S.ramp, S.time / 2);
     return { T: S.time, r, v: Infinity, w: TAU / (S.time - r), v0: null };
@@ -123,7 +123,7 @@ const HIP_W = 0.095; // 골반 가운데 → 엉덩이 관절 옆 거리 (m — 
 const SHIFT = 0.25; // 무게를 축발로 옮기는 몫 · 끝에 내딛는 발로 옮기는 몫 (돌기 진행 q 의 — 시간 값 아님)
 function pelvisAt(S, q, out) {
   const m = smooth(q / SHIFT);
-  const n = smooth((q - (1 - SHIFT)) / SHIFT);
+  const n = smooth((q - ((S.sAt || 1) - SHIFT)) / SHIFT); // 11/11 stride: 끝으로 옮기기를 sAt(SECRET.ibSpin.strideAt) 까지 마침 — 칼이 앞을 가로지르기 전에 (전 판 sAt 1 = 돌기 마지막 몫)
   const ox = S.o0.x + (S.oM.x - S.o0.x) * m + (S.o1.x - S.oM.x) * n;
   const oz = S.o0.z + (S.oM.z - S.o0.z) * m + (S.o1.z - S.oM.z) * n;
   const a = S.dir * TAU * q;
@@ -197,19 +197,22 @@ export function spinNear(f) {
  *  want: 바라는 쪽 (10/23 스틱 판 — 돌린 쪽 · ±1). SECRET.ibSpin.reverse 면 그쪽으로(칼 든 쪽의 반대면 ws = −1 — 감는 자세 · 끝 각 · 몸 비틀기 거울 = 레베스), 아니면 칼 든 쪽이 정함
  *  (10/23 torso) 칼(손 · 칼날)이 내 가슴 점보다 높게 있으면 pre = ramp 초 동안 돌지 않고 먼저 감은 자세로 내린다 — 높은 자세에서 낸 칼이 도는 동안 머리 위로 치솟지 않게
  */
-export function requestSpin(f, want = 0) {
+export function requestSpin(f, want = 0, opt = {}) {
   const G = f.gait;
   if (!G?.active || f.state !== 'stand' || f.ibSpin) return false;
   if (!G.legs.F.stance && !G.legs.B.stance) return false; // 두 발이 다 떠 있으면(뛰듯 걷는 한순간) 축발이 없다
   const S = SECRET.ibSpin;
-  const plan = spinPlan(f); // 10/24 share 판: 칼마다 한 바퀴 시간 · 칼끝 상한 (share 0 = 10/22 판 time)
+  const plan = spinPlan(f, opt.share ?? null); // 10/24 share 판: 칼마다 한 바퀴 시간 · 칼끝 상한 (share 0 = 10/22 판 time) · 11/11 특수 공격 = specialShare.cingir
+  // 11/11 한 걸음 나가며 (사장님 '싱지르는 … 돌때 한 걸음 앞으로 나가며 치게 동작을 바꾸자. 지금 맞추기가 매우 어려움' — 특수 공격 싱지르만 · SECRET.ibSpin.stride):
+  //  거리와 상관없이 앞발 축(가까운 상대 뒷발 축 near 안 씀) · 골반은 한 바퀴에 stride m 상대 쪽으로(두 발 앞뒤 거리 · advance 상한 안 씀) · strideAt 까지 다 나아감
+  const stride = opt.special && S.stride > 0 ? S.stride : 0;
   const T = plan.T;
   const r = plan.r;
   const fwd = f.forward(new THREE.Vector3());
   const rgt = f.right(new THREE.Vector3());
   // 축발 = 앞발 (펜싱 자세면 칼 든 쪽). 걷는 중이면 디딘 발이 축 — 떠 있던 발은 그 자리에서 도는 발로 이어받는다
   const both = G.legs.F.stance && G.legs.B.stance;
-  const near = both && spinNear(f);
+  const near = both && !stride && spinNear(f);
   const pk0 = both ? G.frontLeg(fwd) : G.legs.F.stance ? 'F' : 'B';
   const pk = near ? (pk0 === 'F' ? 'B' : 'F') : pk0; // 11/05 near: 상대가 가까우면 뒷발이 축 (위 spinNear)
   const sk = pk === 'F' ? 'B' : 'F';
@@ -225,7 +228,7 @@ export function requestSpin(f, want = 0) {
   //  균형 걸음이 0.3 m 더 끌려 나갔다: 비기 끝 + 0.6 s 골반 옮김 0.57 ~ 0.85 m — docs/strike/iberian_spin_2026-10-22.md §13) ·
   //  10/24 upright = 나아간 골반 바로 옆(옆 거리 그대로): 골반은 두 발 위에 서고, 걸음은 칼 든 쪽 앞발만 앞으로 고쳐 딛는다(몸은 그 자리 — 서 있는 과녁 앞 0.43 ~ 0.51 m)
   const place = near && (S.near === 'place' || S.near === 'contact'); // 11/05 견줌: 뒷발 축 · 제자리 (나아감 0)
-  const adv = place ? 0 : S.upright ? Math.min(lon, S.advance ?? lon) : lon; // 골반이 나아가는 거리 (10/24 upright: 상한 advance — 걷다 내면 두 발 앞뒤가 0.65 m 까지 벌어져 그만큼 나아갔다)
+  const adv = stride > 0 ? stride : place ? 0 : S.upright ? Math.min(lon, S.advance ?? lon) : lon; // 골반이 나아가는 거리 (10/24 upright: 상한 advance — 걷다 내면 두 발 앞뒤가 0.65 m 까지 벌어져 그만큼 나아갔다)
   let B1 = near ? B0.clone().addScaledVector(fwd, adv) : P.clone().addScaledVector(fwd, S.upright ? adv - lon : lon).addScaledVector(rgt, lat); // upright: 나아간 골반 바로 옆 (adv = lon 이면 축발 옆 · 못 미치면 그만큼 축발 뒤 — 축발이 앞발인 펜싱 자세) · near(뒷발 축): 도는 앞발은 제 자리 + 나아감 (feet 1 이면 아래 feetPlan 이 덮음)
   const nat = f.side >= 0 ? 1 : -1; // 칼 든 쪽이 정하는 쪽 (10/22 판)
   const dir = S.reverse && (want === 1 || want === -1) ? want : nat;
@@ -250,6 +253,7 @@ export function requestSpin(f, want = 0) {
     t: 0, T, r, dir, ws: dir * nat, pre, tp: 0, settle: null, h0: f.heading, q: 0, rate: 0, vmax: plan.v, v0: plan.v0,
     pk, sk, P, B0, B1, br0: Math.hypot(b0.x, b0.z), br1: Math.hypot(b1.x, b1.z), a0, da,
     c0, D, lon, near, // near: 11/05 가까운 상대 — 뒷발 축 (spinNear)
+    stride, sAt: stride > 0 ? clamp(S.strideAt ?? 1, 2 * SHIFT, 1) : 1, // 11/11 한 걸음 나가며 (특수 공격 — 나아감 m · 끝으로 옮기기를 마치는 진행)
     o0: new THREE.Vector3(c0.x - P.x, 0, c0.z - P.z), o1: new THREE.Vector3(c0.x + D.x - P.x, 0, c0.z + D.z - P.z),
     oM: rgt.clone().multiplyScalar(-Lp.side * HIP_W), // 축발 엉덩이가 축발 바로 위 (골반 가운데 = 축발에서 엉덩이 폭만큼 안쪽)
     arm: null, // 두 팔 · 칼 대본: 처음 손 · 칼날 (몸 기준) · 지난 스텝 놓은 자리 (빠르기 셈)

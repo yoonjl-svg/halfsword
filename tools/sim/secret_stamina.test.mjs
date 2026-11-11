@@ -144,6 +144,9 @@ test('기력 0.5 에서 낸 비기 다섯 모두 끝까지 (사장님 10/30 18:3
     ['hwando', { ev: 'gyeoksal', slot: 'geojeong', stance: 'geojeong', line: 'highC', by: 'line' }],
   ];
   for (const [w, ctx] of cases) {
+    // 11/11 이베리아 자리 바꿈: 싱지르 비기 장면('spin' 판)으로 묶음 — 새 비기 알티바슈 포르트는 skill.secret 이 아닌 길게 누름(tools/sim/ib_swap.test.mjs)
+    const keepIb = CONFIG.SECRET.iberianSecret;
+    if (w === 'zweihander') CONFIG.SECRET.iberianSecret = 'spin';
     const G = newRound({ walls: true, seed: 3, weapon: w, weapon2: 'longsword', gap: w === 'longsword' ? 0.65 : 1.3 });
     try {
       const P = G.player;
@@ -173,6 +176,7 @@ test('기력 0.5 에서 낸 비기 다섯 모두 끝까지 (사장님 10/30 18:3
       assert.ok(stages.has('stiff'), `${w} 굳음까지 ${[...stages]}`);
     } finally {
       G.world.free();
+      CONFIG.SECRET.iberianSecret = keepIb;
     }
   }
 });

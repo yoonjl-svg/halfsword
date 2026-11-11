@@ -12,6 +12,9 @@ import { classifyStroke } from '../../src/attack_stroke.js';
 import { G as PAD } from '../../src/ai_techniques.js';
 import { windSpec } from '../../src/iberian_redondo.js';
 import { applyB4Old } from '../../src/config.js';
+// 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 정수리 가르기 특수 공격 장면(무장 없이 길게 눌러 냄 · specialShare.redondo · AI 왼 가로베기 강화동작 — 10/29 ~ 11/01)이라
+//  그 판('spin')으로 묶는다(이 파일 안에서만). 새 판(비기 알티바슈 포르트 · 특수 공격 싱지르 한 걸음)은 tools/sim/ib_swap.test.mjs
+(await import('../../src/config.js')).SECRET.iberianSecret = 'spin';
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, STAMINA, IB_FLOW, INPUT } = CONFIG;
@@ -35,12 +38,13 @@ test('기본값 — 길게 누름 실제 0.6 s · 기력 초당 붙어 버티기
   assert.equal(e.orig, 'altibaxo forte'); // 원어 글자는 대기실 스킬에서만 (화면 글 지침 §1) — 피게이레두 낱말 altibaxo 로 지은 이름
   const n = nodeOf('iberian', 'B4');
   assert.equal(n.u, 'redondo'); // 열쇠는 그대로 (10/31 — 이름만 바꿈)
-  assert.equal(n.name, '정수리 가르기');
-  assert.deepEqual([n.d, n.cx, [...n.pre]], [2, 560, ['B5']]); // 01:3x 흐르는 긋기와 자리 바꿈
+  // 칸 자리 · 이름 (스킬트리 자료는 판과 상관없이 하나 — 11/11 자리 바꿈 뒤: B4 = 비기 알티바슈 포르트 · 전 B4 자리(d 2 · cx 560 · B5 뒤)는 B7 싱지르 · 이어지는 흐름은 B7 뒤 — tools/sim/ib_swap.test.mjs)
+  assert.equal(n.name, '알티바슈 포르트'); // 전 '정수리 가르기' (10/31 19:xx)
+  assert.deepEqual([nodeOf('iberian', 'B7').d, nodeOf('iberian', 'B7').cx, [...nodeOf('iberian', 'B7').pre]], [2, 560, ['B5']]); // 01:3x 흐르는 긋기와 자리 바꿈 (그 자리 — 11/11 부터 B7)
   assert.deepEqual([nodeOf('iberian', 'B5').d, nodeOf('iberian', 'B5').cx, [...nodeOf('iberian', 'B5').pre]], [1, 588, ['B1']]);
-  assert.deepEqual([...nodeOf('iberian', 'B6').pre], ['B4']);
-  // AI 몫 그대로: 왼 가로베기 대신 머리 위 돌려 베기 (sword_art.js 가 읽는 표)
-  assert.deepEqual(enhancedMoves('iberian'), [{ base: 'zwerchL', name: 'redondo', stage: 3 }]);
+  assert.deepEqual([...nodeOf('iberian', 'B6').pre], ['B7']);
+  // AI 몫 그대로: 왼 가로베기 대신 머리 위 돌려 베기 (sword_art.js 가 읽는 표 — 11/11 표에 싱지르 칸이 더해짐 · 'spin' 판은 싱지르를 뺌 aiUniqueStages retired)
+  assert.deepEqual(enhancedMoves('iberian').filter((m) => m.name === 'redondo'), [{ base: 'zwerchL', name: 'redondo', stage: 3 }]);
 });
 
 /** 감기 시작부터 '한 바퀴' (게임 초 — 흐르는 긋기 셈 자리): 도는 꼴 = 꼴 한 바퀴 + 섞는 동안 도는 빠르기를 0 에서 올린 늦음(rdRamp — smooth 의 적분 = 섞기의 반) ·

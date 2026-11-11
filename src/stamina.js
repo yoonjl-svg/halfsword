@@ -235,6 +235,20 @@ export class Stamina {
     if (this.spend('secret', STAMINA.secretCost)) this.counts.secret++;
   }
 
+  /**
+   * 기력을 0 으로 (11/11 사장님 '기력을 다 소모해서 내리쳐서 발동 후에는 무조건 기력이 0이 됨' — 이베리아 비기 알티바슈 포르트 · config SECRET.altib.zero):
+   *  0 보다 많으면 그 몫을 kind 로 쓴 것으로 적고(spent · 회복 쉼 다시 셈 — spend 와 같음) · 0 보다 적으면(지침) 0 으로 올림('무조건 0'). 기력 끔 · 무한 · 탈진 · 죽음이면 아무 일 없음
+   */
+  zero(kind = 'secret') {
+    if (!STAMINA.on || this.infinite || this.exhausted || !this.fighter.alive) return false;
+    if (this.value > 0) this.spent[kind] = (this.spent[kind] ?? 0) + this.value;
+    this.value = 0;
+    this.rest = 0;
+    this.action = kind;
+    this.stages();
+    return true;
+  }
+
   /** 첫 걸음 박차기 (우리 본판 gait.js fastBegin — 박찬 걸음을 뗄 때 한 번): pushCost 12, 무게 배율 없음 · 회복 0.6 s 시계를 다시 센다(공격·막아 받기·비기와 같이).
    *  박차기가 걸리는 몸만 부른다 — 독일 뒤(비스듬히 뒤) · 이베리아 옆(비스듬히 옆) · 지금은 플레이어만(GAIT.stepBurst · burstDe). 박찬 걸음의 걸은 거리는 걷기 비용으로 따로 센다 */
   burst() {

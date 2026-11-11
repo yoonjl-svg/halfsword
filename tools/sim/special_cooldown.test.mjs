@@ -18,7 +18,7 @@ test('기본값 — 식힘 실제 3 s · 끝난 때(몸이 자유로울 때 free
   assert.ok(Math.abs(UA.specialCooldown - CD) < 1e-12);
   assert.equal(UA.specialCoolFrom, 'free');
   const sp = Object.values(PLAYER_UNIQUE).flat().filter((e) => e.special).map((e) => e.name).sort();
-  assert.deepEqual(sp, ['duplieren', 'inquartata', 'lianchi', 'redondo', 'tsubameGaeshi']);
+  assert.deepEqual(sp, ['cingir', 'duplieren', 'inquartata', 'lianchi', 'redondo', 'tsubameGaeshi']); // 11/11 싱지르 특수 공격 칸 더함 (redondo 칸은 'spin' 판 특수 공격 · 'altib' 판은 비기 실행 칸 — 식힘 없이 holdTick 이 비기로)
 });
 
 /** 몸 하나 + 한 기술만 연 강화 · 실제 스텝 */

@@ -35,13 +35,13 @@ export const SCHOOLS = [
     { id: 'B2', cat: 'foot', name: '보법 II', sub: '옆 박차기', eff: '옆으로 첫 걸음을 박찬다', pre: ['B1'], price: 100, st: 'split', opt: true, d: 1, cx: 84 },
     { id: 'B10', cat: 'passive', name: '패시브', sub: '손목 힘', eff: '손목 힘 30% — 큰 칼을 빨리 돌린다 (보법 바로 아래)', pre: ['B1'], price: 0, heads: 10, st: 'now', d: 1, cx: 252 },
     { id: 'B3', cat: 'atk', name: '둥근 걸음', sub: '탈류', eff: '옆으로 돌며 내려베기 (걸음 명령)', pre: ['B1'], price: 200, st: 'split', d: 1, cx: 420 },
-    { id: 'B4', cat: 'atk', name: '정수리', sub: '가르기', eff: '칼을 어깨에 메었다가 온 몸으로 비스듬히 내려 가른다', pre: ['B5'], price: 300, st: 'split', d: 2, cx: 560 }, // 10/31 19:xx 사장님 이름 '정수리 가르기' · 효과 글 사장님 글 · 흐름과 무관 (전 '풍차 베기') // 10/29 01:3x 사장님 '흐르는 긋기와 머리 위 돌려 베기 스킬 위치를 바꿔' · 레돈두 = 특수 공격 · 01:5x '풍차 베기' · 한 바퀴 넘게 돌리면 이어 그은 칼 하나(× 1.2)
+    { id: 'B4', cat: 'secret', name: '비기', sub: '알티바슈 포르트', eff: '칼을 어깨에 메었다가 온 몸으로 비스듬히 내려 가른다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 20, st: 'now', d: 3, cx: 420 }, // 11/11 사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — 전 B7 자리 · 값 (전 cat 'atk' · '정수리' / '가르기' · pre B5 · 금화 300 · d 2 · cx 560 — 10/31 19:xx 사장님 이름 '정수리 가르기')
     { id: 'B8', cat: 'parry', name: '막기 I', sub: '쳐내기', eff: '높이 오는 칼을 베어 쳐낸다', pre: ['B1'], price: 200, st: 'split', d: 1, cx: 756 },
     { id: 'B11', cat: 'letter', name: '리스본에서', sub: '온 편지', eff: '이베리아 무기가 나올 확률 ×2', pre: ['B1'], price: 100, st: 'new', opt: true, d: 0, cx: 250 },
     { id: 'B5', cat: 'atk', name: '이어 긋기', sub: '흐름', eff: '이어 그을 때 칼을 덜 세워 흐르듯', pre: ['B1'], price: 200, st: 'split', d: 1, cx: 588 }, // 10/29 01:3x 머리 위 돌려 베기와 자리 바꿈
     { id: 'B9', cat: 'parry', name: '막기 II', sub: '굳은 받기', eff: '막는 동안 피해 20% 감소', pre: ['B8'], price: 300, st: 'split', d: 2, cx: 800 },
-    { id: 'B7', closed: true, cat: 'secret', name: '비기', sub: '몰리네테 탈류', eff: '칼 호 안으로 들면 비켜 서며 가로 벤다', pre: ['B10', 'B3', 'B5'], price: 400, heads: 20, st: 'now', d: 3, cx: 420 },
-    { id: 'B6', cat: 'deep', name: '이어지는', sub: '흐름', eff: '이어 그을수록 세지고, 세 번째 긋기마다 기력을 쓰지 않는다', pre: ['B4'], price: 400, st: 'split', d: 3, cx: 680 }, // 10/29 01:4x · 01:5x 사장님 결정 (전: 돌려 베기 심화 · 쌓기)
+    { id: 'B7', cat: 'atk', name: '싱지르', sub: '돌며 베기', eff: '공격을 원을 그리듯 한 바퀴 돌리면, 한 걸음 나가며 몸을 한 바퀴 돌려 가로로 벤다', pre: ['B5'], price: 300, st: 'split', d: 2, cx: 560 }, // 11/11 사장님 자리 바꿈 — 특수 공격 · 전 B4 자리 · 값 (전 closed 비기 '몰리네테 탈류' · pre B10 · B3 · B5 · 금화 400 · 머리 20 · d 3 · cx 420)
+    { id: 'B6', cat: 'deep', name: '이어지는', sub: '흐름', eff: '이어 그을수록 세지고, 세 번째 긋기마다 기력을 쓰지 않는다', pre: ['B7'], price: 400, st: 'split', d: 3, cx: 680 }, // 10/29 01:4x · 01:5x 사장님 결정 (전: 돌려 베기 심화 · 쌓기) · 11/11 앞 칸 = 그 자리의 칸 B7 (자리 바꿈)
   ] },
   { id: 'japanese', ko: '일본', title: '일본 — 막기 줄기', shape: '받기를 세 번 깊이 익혀야 고노센(받아서 먼저 친다). 보법은 나누기 어려워 하나로 두고, 대신 막기를 셋으로 나눴다.', nodes: [
     { id: 'J1', cat: 'foot', name: '보법', sub: '낮게 깔린 걸음', eff: '흔들려도 버틴다 · 걷기 기력 1.5배', pre: [], price: 100, st: 'now', d: 0, cx: 500 },

@@ -50,7 +50,9 @@ test('호칭 표: 유파 다섯 = 비기 원전 책 이름 + 계승자 (04:0x �
   assert.deepEqual(Object.keys(R.TITLE_NAMES).slice(0, 5), D.TREE_SCHOOLS.map((s) => `school:${s}`));
   // 원전 = 그 유파 비기 칸의 출처 줄 책 (skill_tree_data.js NODE_LORE src)
   const book = { german: 'Kampffechten', italian: 'Lo Schermo', iberian: 'Arte de Esgrima', japanese: '오륜서', chinese: '무비지' };
-  for (const s of D.TREE_SCHOOLS) assert.match(D.nodesOf(s).find((n) => n.cat === 'secret').src, new RegExp(`『${book[s]}』`), s);
+  // 11/11 이베리아 자리 바꿈: 호칭을 지은 원전 칸은 전 비기 칸 B7 싱지르(고디뉴 『Arte de Esgrima』) — 비기가 된 B4 알티바슈 포르트의 원전은 피게이레두 『Memorial …』라 호칭 이름을 바꿀지 사장님께 여쭘(docs/strike/ib_swap_2026-11-11.md)
+  const titleNode = (s) => (s === 'iberian' ? D.nodeOf(s, 'B7') : D.nodesOf(s).find((n) => n.cat === 'secret'));
+  for (const s of D.TREE_SCHOOLS) assert.match(titleNode(s).src, new RegExp(`『${book[s]}』`), s);
   assert.equal(R.TITLE.countsLevel, true); assert.equal(R.TITLE.conquerWins, 10); // 사장님 10/29 18:2x '10연승' assert.equal(R.TITLE.butcherHeads, 100); assert.equal(R.TITLE.tycoonCoins, 10000);
   assert.deepEqual([...R.KING_FOES], ['artoria', 'roland', 'bernardo']);
 });

@@ -805,7 +805,7 @@ export class PlayerSecretWatch {
     //  비기가 나간 때(skill.secret 이 받아 me.skill.sec 에 새 실행이 걸린 때 — 창을 썼어도 skill.secret 이 받지 않았으면 아님) 한 번 셈(몸 fighter.secretUsed — 판마다 새 몸).
     //  다 쓰면 그 판엔 그 비기의 창 · 조건은 없는 것 = 비기가 도는 동안과 같은 '바쁨'(창을 새로 열지 않음 · 무장 · 누르기 셈 · 덮음 셈 · 격살 기다림이 안 걸림 · 고노센 웅크림도 풀림) — 공격 입력은 보통 공격
     const run = me.skill?.sec ?? null;
-    if (run && run !== this.secRun) useSecret(me);
+    if (run && run !== this.secRun && !run.special) useSecret(me); // 싱지르 특수 공격(11/11 — run.special)은 비기가 아님 · 알티바슈 포르트는 unique_assist.js altibFire 가 셈
     this.secRun = run;
     if (secretSpent(me)) {
       busy = true;
@@ -876,7 +876,7 @@ export class PlayerSecretWatch {
       this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy || armHold(me)); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖) · 판 시작 정지 동안 셈 0 (10/27 23:0x — 싱지르와 같은 무장 시계)
       this.gilmokRest(dt, was, s0, c, d0, V, sw || busy);
     }
-    if (S.do?.spin) this.spinTick(dt, d0, V, busy, sw);
+    if (S.do?.spin || S.do?.altib) this.spinTick(dt, d0, V, busy, sw); // 11/11 알티바슈 포르트도 싱지르 무장 그대로
     if (!sw && this.swing) {
       // 베기 하나가 끝났다
       const w = this.swing;
@@ -967,7 +967,16 @@ export class PlayerSecretWatch {
     // 공격 원 판 (10/24 — SECRET.ibSpin.input 'attackCircle'): 원을 그리는 손은 칼을 휘두른다 — 무장된 동안은 휘두름을 그 획이 끝날 때(손가락을 떼거나 멈춤 ·
     //  circleTime 초가 지남) 센다: 그 획이 원이 되면(spinCircle → fire) 무장은 비기로 쓰이고, 안 되면 그때 풀린다(보통 공격 — 스틱 판과 같은 규칙). 무장 전에는 전처럼 곧장 셈을 비운다
     let swing = sw;
-    if (SECRET.ibSpin.input === 'attackCircle' && this.spinArm.armed) {
+    const altib = !!this.S?.do?.altib; // 11/11 비기 알티바슈 포르트: 무장 셈은 같고 창 ev 'altib' · 무장된 채 길게 눌러 메기 시작하면(unique_assist.js holdTick — hold.secret) 그 무장을 씀
+    if (altib) {
+      const H = me.skill?.uniq?.hold;
+      if (H?.st === 'wind' && H.secret && this.open?.ctx?.ev === 'altib') {
+        this.fire(); // 한 번 무장에 한 번 (창을 닫고 무장을 씀 — 기력이 모자라 거절해도 이미 메는 칼은 그대로)
+        return;
+      }
+      if (me.skill?.uniq?.winding) swing = true; // 메는 동안은 무장 셈 0 (다음 무장은 그 칼이 끝난 뒤부터)
+    }
+    if (!altib && SECRET.ibSpin.input === 'attackCircle' && this.spinArm.armed) {
       if (sw) this.circSwung = true;
       const live = !!this.circ && circleLive(this.circ, SECRET.ibSpin.circleTime);
       swing = !!this.circSwung && !live;
@@ -975,14 +984,20 @@ export class PlayerSecretWatch {
     } else this.circSwung = false;
     this.spinArm.tick(dt, d0 > V.reach, busy || swing || hurt || armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x 사장님 '전투 시작 후, 실제 공격이 가능해진 때부터')
     const o = this.open;
+    const ev = altib ? 'altib' : 'spin';
     if (this.spinArm.armed) {
-      if (!o && !busy) this.openWindow({ ev: 'spin' }, Infinity);
-    } else if (o?.ctx?.ev === 'spin' && !this.holding()) this.open = null; // 무장이 풀림 (secretHold: 열린 뒤 playerWindow 초는 지킴)
+      if (!o && !busy) this.openWindow({ ev }, Infinity);
+    } else if (o?.ctx?.ev === ev && !this.holding()) this.open = null; // 무장이 풀림 (secretHold: 열린 뒤 playerWindow 초는 지킴)
   }
 
   /** 이베리아 휘감아 돌기 창이 스틱 판인가 (SECRET.ibSpin.input 'stick') — 참이면 그 창은 공격 입력으로 나가지 않는다(공격은 보통 공격 · main.js) */
   stickOwns() {
     return SECRET.ibSpin.input === 'stick' && this.open?.ctx?.ev === 'spin';
+  }
+
+  /** 알티바슈 포르트 무장 창인가 (11/11 — 비기 'altib'): 참이면 그 창은 톡 · 끌기로 나가지 않는다(보통 공격) — 길게 눌러 메기(unique_assist.js holdInput armed)로만 */
+  holdOwns() {
+    return this.open?.ctx?.ev === 'altib';
   }
 
   /** 싱지르 창이 공격 원 판인가 (10/24 — SECRET.ibSpin.input 'attackCircle') — 참이면 그 창은 톡 · 끌기 하나로 나가지 않는다(원이 아닌 공격은 보통 공격 · main.js) */
@@ -1334,7 +1349,7 @@ export class PlayerSecretWatch {
     if (o) {
       this.combo = 0;
       this.binds.reset(); // 비기를 내면 0
-      if (o.ctx?.ev === 'spin') this.spinArm.consume(); // 휘감아 돌기: 한 번 무장에 한 번 (10/22)
+      if (o.ctx?.ev === 'spin' || o.ctx?.ev === 'altib') this.spinArm.consume(); // 휘감아 돌기 · 알티바슈 포르트(11/11): 한 번 무장에 한 번 (10/22)
     }
     return o;
   }

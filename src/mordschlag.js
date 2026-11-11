@@ -135,7 +135,8 @@ const UP = { x: 0, y: 1, z: 0 };
 /** 판정 배율 (SECRET.mord.power): 'hit' = 결정타 SECRET.hitMul · 'finish' = 마무리 찍기 FINISH.power (겹치지 않고 그 자리에) · 수 = 그 수. 둔타도 듣는 자리(f.secretHit — combat.js hk) */
 export function mordHitMul() {
   const v = SECRET.mord.power;
-  return v === 'finish' ? FINISH.power : v === 'hit' || v == null ? SECRET.hitMul : +v || SECRET.hitMul;
+  const hit = SECRET.mordHitMul ?? SECRET.hitMul; // 11/11 사장님 '죽음의 일격도 1.0으로 해.' — 죽음의 일격만의 결정타 배율 SECRET.mordHitMul 1 (null 이면 비기 공통 hitMul 1.3 — 전 판)
+  return v === 'finish' ? FINISH.power : v === 'hit' || v == null ? hit : +v || hit;
 }
 
 /**

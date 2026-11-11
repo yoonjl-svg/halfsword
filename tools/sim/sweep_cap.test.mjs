@@ -14,6 +14,9 @@ const SECRET = CONFIG.SECRET;
 function rdDrill(seed, cap) {
   const was = SECRET.sweepCap;
   SECRET.sweepCap = cap;
+  // 11/11 이베리아 자리 바꿈: 이 장면은 정수리 가르기 특수 공격 판(drill rdHold — 무장 없이 길게 눌러 냄 · 'spin' 판)이라 그 판으로 묶음 (시험 안에서만)
+  const wasIb = SECRET.iberianSecret;
+  SECRET.iberianSecret = 'spin';
   const hits = [];
   let hooked = false;
   const probe = (G, P) => {
@@ -29,6 +32,7 @@ function rdDrill(seed, cap) {
     drillRun('rdHold', seed, { foe: 'still', probe });
   } finally {
     SECRET.sweepCap = was;
+    SECRET.iberianSecret = wasIb;
   }
   return hits;
 }

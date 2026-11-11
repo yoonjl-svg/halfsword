@@ -15,7 +15,31 @@ function aiOf(id, seed = 1, gap = undefined) {
   return { G, ai: G.ai };
 }
 
-test('강화동작(머리 위 돌려 베기): 식는 동안 그 자리는 바탕 왼 가로베기 · 다 식으면 다시 돌려 베기', () => {
+// 11/11 이베리아 자리 바꿈 (SECRET.iberianSecret 'altib' — 사장님 '싱지르를 제비베기와 같은 위계의 특수공격으로'): 왼 가로베기 자리 특수 공격이 싱지르(cingir)로 — 같은 성질을 새 칸으로 본다 ·
+//  옛 장면(머리 위 돌려 베기 = 특수 공격 — 'spin' 판)은 아래 시험 안에서만 옛 판으로 묶는다
+test('강화동작(싱지르 — 11/11 특수 공격): 식는 동안 그 자리는 바탕 왼 가로베기 · 다 식으면 다시 싱지르 · 정수리 가르기(비기)는 고르는 목록에 없음', () => {
+  assert.equal(CONFIG.SECRET.iberianSecret, 'altib');
+  const { G, ai } = aiOf('roland');
+  try {
+    const cg = ai.school.techByName.cingir;
+    assert.ok(cg && cg.plain?.name === 'zwerchL', '강화동작에 바탕 동작');
+    assert.equal(ai.techNow(cg), cg);
+    ai.specCool.cingir = ai.sense.t;
+    assert.equal(ai.techNow(cg).name, 'zwerchL');
+    const s = ai.sense.seen(0);
+    for (let k = 0; k < 200; k++) assert.ok(!['cingir', 'redondo'].includes(ai.pickTech(s, 'patience')?.name));
+    ai.specCool.cingir = ai.sense.t - UA.specialCooldown - 1e-6;
+    assert.equal(ai.techNow(cg), cg, '다 식음');
+    assert.ok(ai.school.techByName.redondo, '비기가 빌려 쓰는 길은 이름 표에 남음');
+    assert.ok(!ai.school.tech.some((t) => t.name === 'redondo'), '정수리 가르기(비기)는 고르는 목록에 없음');
+  } finally {
+    G.world.free();
+  }
+});
+
+test('옛 판 (11/11 전 — SECRET.iberianSecret \'spin\') 강화동작(머리 위 돌려 베기): 식는 동안 그 자리는 바탕 왼 가로베기 · 다 식으면 다시 돌려 베기', () => {
+  const keep = CONFIG.SECRET.iberianSecret;
+  CONFIG.SECRET.iberianSecret = 'spin';
   const { G, ai } = aiOf('roland');
   try {
     const rd = ai.school.techByName.redondo;
@@ -29,6 +53,7 @@ test('강화동작(머리 위 돌려 베기): 식는 동안 그 자리는 바탕
     assert.equal(ai.techNow(rd), rd, '다 식음');
   } finally {
     G.world.free();
+    CONFIG.SECRET.iberianSecret = keep;
   }
 });
 

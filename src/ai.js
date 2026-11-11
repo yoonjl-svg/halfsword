@@ -24,12 +24,12 @@ import * as THREE from 'three';
 import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF, AI_MAAI } from './config.js';
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
-import { TRADITIONS } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
+import { TRADITIONS, IBERIAN_SPIN_DEF } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
 import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — 내 공격이 상대 칼에 막히면 막은 쪽 기력 −, afterStrike)
 import { schoolPassiveOn } from './school_passive.js'; // 유파 패시브 스위치 (10/21 — 이베리아 손목 힘 · 나머지 넷은 fighter.schoolPassive)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 AI 몫 — 상대 두 팔 늦춤 (10/31)
-import { aiUniqueStages, PLAYER_UNIQUE, specialShare, rdReleaseOpt } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
+import { aiUniqueStages, PLAYER_UNIQUE, specialShare, rdReleaseOpt, altibHitMul, altibPower } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
 import { MEASURED } from './weapon_measured.js';
 import { routeAroundStageObstacle, obstacleSegmentBlocked, OBSTACLE_ROUTE } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 막힌 길이면 스틱 방향만 둘레로 (석상 없는 무대는 아무 일 없음)
@@ -302,7 +302,7 @@ export class AI {
     this.combo = 0; // 끊기지 않은 내 베기 수 (이베리아 옛 비기 조건 — 공격 꼴을 벗어나면 0)
     this.iaiArm = this.secret?.do?.instant ? new IaiArm() : null; // 일본 발도 대기 (10/10 02:4x — 상대 간격 밖 iaiArmTime 초 · 10/25 22:3x 부터 거리와 상관없이 침착하게 iaiArmTime 초 — secret.js gnsArmTick)
     this.gilArm = this.secret?.do?.gilmok ? new IaiArm('gilmokArmTime', 'gilmokArmGrace') : null; // 이베리아 길목 지키기 준비 (10/11 v6 — 내 칼끝 거리 밖 gilmokArmTime 초, 같은 셈)
-    this.spinArm = this.secret?.do?.spin ? new IaiArm('armTime', 'armGrace', 'ibSpin') : null; // 싱지르 무장 (10/24 사장님 '싱지르 ai에게도 열어' — 사람 PlayerSecretWatch.spinArm 과 같은 셈 · 내 칼끝 거리 밖 SECRET.ibSpin.armTime 초)
+    this.spinArm = this.secret?.do?.spin || this.secret?.do?.altib ? new IaiArm('armTime', 'armGrace', 'ibSpin') : null; // 싱지르 무장 (10/24 사장님 '싱지르 ai에게도 열어' — 사람 PlayerSecretWatch.spinArm 과 같은 셈 · 내 칼끝 거리 밖 SECRET.ibSpin.armTime 초)
     this.spinW = 0; // 무장 동안 상처 셈 (SECRET.ibSpin.hurtDisarm — 사람과 같은 규칙)
     this.press = this.secret?.when === 'press' ? { win: 0, wins: 0, go: false, goBarge: false, goes: 0, inClinch: false } : null; // 모르트슐라크 누르기 셈 · 창 (10/24 'ai도 비기 쓰게 해' — 사람 PlayerSecretWatch.pressTick 과 같은 셈 secret.js pressStep · win = 창 남은 초 · wins = 연 창 수)
     this.binds = this.secret?.when === 'bindCount' ? new BindCount() : null; // 이베리아 맺힘 셈 (10/10 — secret.js, 플레이어 창과 같은 셈)
@@ -1254,7 +1254,7 @@ export class AI {
     const me = this.me;
     const now = this.sense.t;
     const live = this.mode === 'attack' && this.atkSeq === R.seq;
-    const moving = (live && this.phase !== 'follow') || !!me.iai || !!me.iaiReq;
+    const moving = (live && this.phase !== 'follow') || !!me.iai || !!me.iaiReq || (!!this.secretRun?.special && this.secretRun.special === R.name); // 싱지르 특수 공격 (11/11): 검술 층 실행이 끝날 때까지
     if (R.motion == null) {
       if (moving) return;
       R.motion = now;
@@ -1535,6 +1535,7 @@ export class AI {
       // 달려드는 상대를 맞받을 때는 조금 일찍 친다: 상대가 휘두르기 전에 내 칼이 먼저 앞에 있어야 한다 (Vor)
       this.need = this.M.contact + t.reach * this.reachScale + 0.05 + (this.why === 'stop' ? 0.2 : 0);
       if (this.secretRun?.S.do.lead) this.need += this.secretVal(this.secretRun.S.do.lead); // 비기 앞당김: 긴 길(脇 → 上段 → 真向)이 닿기까지 다가오는 상대를 셈 — 그만큼 일찍 친다
+      if (t.name === 'cingir' && !this.feint) this.need = Math.max(this.need, this.M.reach + SECRET.ibSpin.aiFire); // 11/11 싱지르 특수 공격: 전 비기 AI 와 같은 내는 거리(칼끝 거리 + aiFire — 상대 가슴) · 한 걸음 나가며 돎
       if (this.gnsW?.plan?.kind === 'commit') this.need = Math.max(this.need, this.M.reach); // 고노센 경계 결행 (10/25): 내 칼끝 거리(간격 끝)에서 벤다 — 긴 칼은 상대 발도 선 밖에서
       // 기술 걸음 'approach'(유파 고유 동작 step 칸): 닿기 조금 전에 먼저 비껴 딛고, 발이 닿으면 곧장 친다 (step 칸 없는 기술은 이 줄을 지나치기만 한다)
       if (t.step?.when === 'approach' && !this.feint && !this.drillAtk && this.approachStep(dt, s, th, d)) return;
@@ -1743,11 +1744,12 @@ export class AI {
     const S = me.stamina;
     S.spent.wind ??= 0;
     S.spend('wind', (UA.rdDrainCut ? realRate(STAMINA.cutCost) * S.weight : UA.rdDrain) * dt); // 11/01 rdDrainCut — 사람과 같게
+    if (this.rd.secret) this.rd.base += (UA.rdDrainCut ? realRate(STAMINA.cutCost) : UA.rdDrain) * dt; // 11/11 알티바슈 포르트 무게 보정 셈 (사람 holdTick 과 같음)
     if (STAMINA.on && !S.infinite && S.value <= 0) return this.rdFire('empty');
     const t = this.tech;
     this.need = this.M.contact + (t?.reach ?? 0) * this.reachScale + 0.05;
     // (c) 아끼는 성향 (10/31 13:4x — 확인표 3134): 기력이 아낌 × 쉼 기력(restAt) 아래로 내려가면 더 감지 않음 — 감았고 닿으면 지금 벰 · 아니면 그만둠 (아낌 0 = 사람처럼 0 까지)
-    const keep = this.rdThrift() * this.restAt;
+    const keep = this.rd.secret ? 0 : this.rdThrift() * this.restAt; // 비기 알티바슈 포르트(11/11)는 아끼지 않음 — 사람처럼 0 까지 메고 저절로 내려침
     if (STAMINA.on && !S.infinite && keep > 0 && S.value < keep) {
       if (W.turns >= 1 && this.contactDist() <= this.need) return this.rdFire('low');
       this.rdCancel('low');
@@ -1768,6 +1770,7 @@ export class AI {
 
   /** 내려침 (사람 windFire 와 같은 칼 — 운동학 · 식힘 · 기술 알림 · 기력) */
   rdFire(why) {
+    if (this.rd?.secret) return this.altibFire(why); // 11/11 비기 알티바슈 포르트
     const me = this.me;
     const W = me.rdWind;
     const R = windEnd(me, true);
@@ -1792,6 +1795,62 @@ export class AI {
     (st.why ??= {})[why] = (st.why[why] ?? 0) + 1;
   }
 
+  /**
+   * 비기 알티바슈 포르트 내려침 (11/11 — 사람 unique_assist.js altibFire 와 같은 칼): 칼끝 고노센 × SECRET.altib.share · 판정 배율 altibHitMul × 남은 기력 몫(altibPower) ·
+   *  끝 자세 붙듦 altib.hold · 판당 쓸 수 · 비기 셈 · 터뜨림 수 · 비기 알림 · 칼 하나 기력 뒤 기력 0 · 특수 공격 식힘 없음. 못 내면 그만둠(쓸 수 안 씀)
+   */
+  altibFire(why) {
+    const me = this.me;
+    const W = me.rdWind;
+    const k = altibPower(me, this.rd);
+    const R = windEnd(me, true);
+    this.rd = { ...(this.rd ?? {}), ropes: R ?? this.rd?.ropes ?? null, fade: 0.12, secret: false };
+    const A = SECRET.altib;
+    const ok = UA.enhance > 0 && requestArtRedondo(me, rdReleaseOpt(me, W, { share: A.share, maxT: UA.rdSnapTime, tech: 'redondo', hitMul: altibHitMul() * k, hold: A.hold ?? SECRET.stiff.iberian ?? 0, secret: 'altib' }));
+    if (!ok) {
+      const C = (this.stats.rdWind ??= { begin: 0, fire: 0, cancel: {} }).cancel;
+      C.noStrike = (C.noStrike ?? 0) + 1;
+      return this.abortAttack();
+    }
+    me.stamina.attack('cut');
+    if (A.zero) me.stamina.zero('secret');
+    this.phase = 'rdStrike';
+    this.path.length = 0;
+    const S = this.secret;
+    this.secretStat(S).fired++;
+    useSecret(me);
+    this.secretBursts = (this.secretBursts ?? 0) + 1; // 결정타 연출 · 비기 소리 (낸 순간)
+    this.setTechCue(S.nameKo ?? S.name, 'secret');
+    const st = (this.stats.altib ??= { begin: 0, fired: 0, k: [] });
+    st.fired++;
+    st.k.push(+k.toFixed(3));
+    (st.why ??= {})[why] = (st.why[why] ?? 0) + 1;
+  }
+
+  /**
+   * 싱지르 특수 공격 (11/11 사장님 '싱지르를 제비베기와 같은 위계의 특수공격으로' — 'altib' 판 · 사람 unique_assist.js circleTick 과 같은 실행부): 왼 가로베기 자리에서 고른 싱지르(cingir)가
+   *  다가가 칼을 낼 거리(approach — 칼끝 거리 + SECRET.ibSpin.aiFire)에 들면 길 대신 skill.secret 의 싱지르 대본(special — 칼끝 고노센 × specialShare.cingir · 한 걸음 나가며 · 비기 셈 · 판정 배율 · 굳음 없음)으로.
+   *  특수 공격 식힘(specStart — 대본 · 따라 지나감이 끝난 때부터) · 기술 알림. 실행 동안은 전 비기 싱지르와 같은 꼴(mode 'secret' · secretRun stage 'spin' · special)
+   */
+  cingirGo() {
+    const me = this.me;
+    if (me.state !== 'stand' || !me.armed || !me.skill.secret({ S: IBERIAN_SPIN_DEF, ctx: { ev: 'spin', turnDir: me.side >= 0 ? 1 : -1 }, special: 'cingir' })) {
+      (this.stats.cingir ??= { fired: 0, refused: 0 }).refused++;
+      return false;
+    }
+    const tech = this.tech;
+    this.secretRun = { S: IBERIAN_SPIN_DEF, stage: 'spin', t: 0, landed: false, peakE: 0, tr: this.art.tradition, special: 'cingir' };
+    this.mode = 'secret';
+    this.phase = 'ready';
+    this.path.length = 0;
+    this.stepT = 0;
+    this.hand.set(me.handOffset.x, me.handOffset.y);
+    this.specStart('cingir');
+    this.setTechCue(PLAYER_UNIQUE.iberian?.find((e) => e.name === 'cingir')?.nameKo ?? tech?.nameKo ?? '싱지르', 'unique');
+    (this.stats.cingir ??= { fired: 0, refused: 0 }).fired++;
+    return true;
+  }
+
   /** 내려침이 끝날 때까지 (운동학 칼) → 뒤따름 (follow — 칼이 다 지나가면 afterStrike) */
   rdStrikeTick() {
     const me = this.me;
@@ -1809,6 +1868,10 @@ export class AI {
   }
 
   startStrike() {
+    if (this.tech?.name === 'cingir' && !this.feint && !this.secretRun) {
+      if (this.cingirGo()) return; // 11/11 싱지르 특수 공격 — 길 대신 한 바퀴 (못 내면 아래 왼 가로베기 길 그대로)
+      this.tech = this.tech.plain ?? this.tech;
+    }
     const t = this.tech;
     this.me.stamina.attack(t.kind === 'thrust' ? 'thrust' : 'cut');
     this.phase = 'strike';
@@ -2571,8 +2634,40 @@ export class AI {
     const busy = this.mode === 'attack' || this.mode === 'defend' || !!this.secretRun || this.drillOut || kneeling;
     this.spinArm.tick(dt, d0 > this.M.reach && !kneeling, busy || hurt || armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x 사장님 '실제 공격이 가능해진 때부터')
     if (!this.spinArm.armed || busy || !this.secretFree() || !this.foe.alive || s0.state !== 'stand' || !me.armed || me.state !== 'stand') return false;
+    if (this.secret.do.altib) {
+      // 11/11 비기 알티바슈 포르트 (사람과 같은 무장 · 같은 메기 · 같은 내려침): 무장된 채 상대 가슴이 칼끝 거리 + SECRET.altib.aiFire 안이면 메며 다가감(altibGo)
+      if (d0 > this.M.reach + (SECRET.altib?.aiFire ?? SECRET.ibSpin.aiFire)) return false;
+      return this.altibGo();
+    }
     if (d0 > this.M.reach + SECRET.ibSpin.aiFire) return false;
     return this.spinGo();
+  }
+
+  /**
+   * 비기 알티바슈 포르트를 연다 (11/11 사장님 '알티바슈 포르트를 고노센 급의 비기로' — SECRET.iberianSecret 'altib'): 정수리 가르기 길(이름 표 redondo — 'altib' 판엔 고르는 목록에서 뺀 길)로
+   *  공격을 시작해 사람과 같은 메기(rdBegin — 어깨에 멤 · 메는 동안 기력 rdDrainCut)로 다가가고, 닿으면 비기 내려침(rdFire — rd.secret). 무장은 여기서 씀(사람 — 메기 시작에 씀).
+   *  판당 쓸 수는 내려침이 나간 때 셈(사람과 같음). 기력 아낌(rdThrift)은 안 봄 — 비기는 기력을 다 쓰는 칼. 냈으면 true
+   */
+  altibGo() {
+    const me = this.me;
+    if (me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(me)) return false;
+    if (!me.stamina.secretReady) return this.secretPoor();
+    const t = this.school.techByName.redondo;
+    if (!t || !UA.rdAiWind || !this.startAttack(t, 'secret', { secret: true })) {
+      this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
+      return false;
+    }
+    if (this.phase !== 'rdWind' || !this.rd) {
+      this.abortAttack();
+      this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
+      return false;
+    }
+    this.rd.secret = true;
+    this.rd.s0 = me.stamina.value; // 멜 때 기력 (무게 보정 셈 — SECRET.altib.weightFix)
+    this.rd.base = 0;
+    this.spinArm.consume(); // 한 번 무장에 한 번
+    (this.stats.altib ??= { begin: 0, fired: 0, k: [] }).begin++;
+    return true;
   }
 
   /** 기력이 0 이하라 비기를 거절 (사장님 10/30 08:2x · 18:3x — SECRET.secretStamina · 사람 창과 같은 규칙): 재기 stats.secretPoor (0.3 s 안 다시 거절은 한 번) · false */
@@ -2983,7 +3078,8 @@ export class AI {
       const sec = this.me.skill.sec;
       if (sec?.landed) run.landed = true;
       if (sec) return;
-      if (run.landed) this.secretStat(run.S).landed++;
+      if (run.landed && !run.special) this.secretStat(run.S).landed++; // 싱지르 특수 공격(11/11)은 비기 셈 아님
+      if (run.special && run.landed) this.stats.cingir.landed = (this.stats.cingir.landed ?? 0) + 1;
       this.secretRun = null;
       this.me.powerMul = 1;
       this.me.secretHit = 1;
@@ -3120,7 +3216,7 @@ export class AI {
     this.me.powerMul = 1;
     this.me.secretHit = 1;
     if (run?.S.do.strength) this.secretStrength(1);
-    if (run && run.landed && run.stage !== 'stiff') {
+    if (run && run.landed && run.stage !== 'stiff' && !run.special) { // 싱지르 특수 공격(11/11)은 비기 셈 아님
       const st = this.secretStat(run.S);
       st.landed++;
       st.E += run.peakE;

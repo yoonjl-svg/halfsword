@@ -562,6 +562,9 @@ const IBERIAN_UNIQUE = [
   //  시작은 오른 어깨 지붕(앞무게가 간 보는 높은 자세) — 처음(오른 옆 자세 시작·base 0.6)엔 혼자 켜면 48 판에 한 번도 안 골랐다. 어깨로 옮겨도 0 →
   //  같은 자리의 분노의 베기(1.96)에 밀린 것이라 base 를 같은 몬탄테 여러 칼 길 talhoReves 와 같은 1.1 로 (10/9 잼)
   { name: 'redondo', nameKo: '머리 위 돌려 베기 (레돈두)', orig: 'redondo', from: G.tagR, path: [G.sideR, [0.0, 0.1], G.sideL, [-0.3, 0.45], [0.3, 0.45], G.sideR, [0.0, 0.1], G.sideL], open: 'UL', kind: 'cut', reach: 0.05, base: 1.1, chain: 2, src: '피 복Ⅱ 「pass it over the head and behind the shoulders, such that it falls over the left arm to give a circling revez」 · 고디뉴 규칙 4·5 탈류가 「läuft durch bis er über deinem Kopf dreht」 [원문 영역] · 길 [해석] · 수 [추정]' },
+  // 싱지르 AI 몫 (11/11 — 특수 공격이 된 싱지르 · SECRET.iberianSecret 'altib' 판만 고름 — unique_assist.js aiUniqueStages retired): 왼 가로베기 자리(강화동작 꼴 — PLAYER_UNIQUE cingir ai)에서 골라
+  //  다가가 상대 가슴이 내 칼끝 거리 + SECRET.ibSpin.aiFire 안이면 길 대신 한 바퀴(ai.js cingirGo — 사람과 같은 실행부 skill.secret · 대본 iberian_spin.js). 길 · reach 는 왼 가로베기 그대로(못 내면 그 길)
+  { name: 'cingir', nameKo: '싱지르', orig: 'cingir', from: G.sideL, path: [[0.0, 0.1], G.sideR], open: 'UR', kind: 'cut', reach: 0, base: 1.1 /* 전 이 자리 AI 몫 머리 위 돌려 베기(redondo)와 같은 수 — 새 수 없음 */, src: '고디뉴 1599 규칙 8 [원문 독일어 역] · AI 자리 [해석]' },
   // 내려 올려 베기(altibaixo): 지붕에서 곧게 내려베고(altabaixo) 같은 줄로 곧장 되올려 다시 지붕 — 흐름이 다음 내려베기로 잇는다
   { name: 'altibaixo', nameKo: '위아래 베기 (알티바슈)', orig: 'altibaxo', from: G.tag, path: [[0.0, 0.14], G.alber, [0.02, -0.1], [0.02, 0.3], G.tag], open: 'H', kind: 'cut', reach: 0, base: 0.9, presses: true, chain: 2, src: '피 단Ⅸ 「letting the montante fall to the same right side you will give on that side an altibaxo」·복Ⅰ·복ⅩⅤ(altibaxo 뒤 곧장 올려 벰) [원문 영역] · 되올림 [해석] · 수 [추정]' },
   // 바퀴로 받기: 맞받아 베기를 탈류→레베스(8자)로 — 몬탄테는 받는 칼도 멈추지 않고 돌린다. 맞받아치기 목록 꼴(같은 거리면 앞 이름이 이긴다)
@@ -784,6 +787,20 @@ const IBERIAN_SECRET_SPIN = {
   },
   src: '고디뉴 1599 규칙 8(갈비를 휘감고 온몸을 돌림) [원문 독일어 역] · 피게이레두 1651 단Ⅰ(몸은 베는 쪽으로 돈다)·단Ⅺ(가로 탈류)·복ⅩⅥ(감아 돎) [원문·원문 영역] · 무장 틀 · 한 바퀴 대본 [해석] · 수 [추정]',
 };
+// 이베리아 비기 '알티바슈 포르트' (11/11 사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자 … 알티바슈 포르트를 고노센 급의 비기로' — SECRET.iberianSecret 'altib' · 기록 docs/strike/ib_swap_2026-11-11.md):
+//  무장 = 싱지르 무장 그대로(내 칼끝 거리 밖 SECRET.ibSpin.armTime — secret.js spinTick · 창 ev 'altib') · 실행 = 전 B4 정수리 가르기 길(unique_assist.js holdTick — 무장된 채 길게 눌러 메고 떼면 내려침 ·
+//  AI ai.js altibGo) · 빠르기 SECRET.altib.share · 판정 = SECRET.hitMul × 남은 기력 몫 · 내려친 뒤 기력 0. 이름 = 원어 독음(화면 글 지침 §1 비기 · 사장님 11/11 말씀의 이름) [화면 이름 사장님 확인 전]
+const IBERIAN_SECRET_ALTIB = {
+  name: 'altib',
+  nameKo: '알티바슈 포르트', orig: 'altibaxo forte', // 전 특수 공격 이름 '정수리 가르기 (알티바슈 포르트)'(10/31 19:xx 사장님) — 비기는 원어 독음만
+  when: 'spinArm', // 상대 사건 없음 — 무장 셈만 (싱지르와 같은 셈)
+  do: {
+    altib: true, // 실행 = unique_assist.js holdTick(사람) · ai.js altibGo(AI) — skill.secret 은 받지 않음
+  },
+  src: '피게이레두 1651 단Ⅸ · 복ⅩⅤ(altibaxo — 어깨에 감아 두었다 위에서 아래로) [원문 영역] · forte 를 붙인 이름 · 무장 틀(싱지르 그대로) [해석] · 수 [사장님 11/11]',
+};
+/** 싱지르 실행 판 (11/11 — 특수 공격이 된 뒤에도 skill.secret 실행부 · 대본은 같은 것을 쓴다: unique_assist.js · ai.js cingirGo) */
+export const IBERIAN_SPIN_DEF = IBERIAN_SECRET_SPIN;
 // 일본 後の先 (가칭): 상대가 헛친 순간 ① 빠르게 물러서며 칼을 오른 허리 뒤(脇構え 꼴)로 끌어 담고 ② 앞발을 강하게 내딛으며 팔을 다 뻗어 真向 ③ 경직 ④ 맞았으면 残心
 const JAPANESE_SECRET = {
   name: 'goNoSen',
@@ -1093,7 +1110,7 @@ export const TRADITIONS = {
   italian: { id: 'italian', nameKo: '이탈리아', ...GERMAN, withdraw: { pressed: 'langort', calm: ['langort', 'pflugR'] }, rest: null, techNames: TECH_NAMES.italian, unique: ITALIAN_UNIQUE, passives: ITALIAN_PASSIVES, temper: ITALIAN_TEMPER, gait: ITALIAN_GAIT, secret: ITALIAN_SECRET },
   // 이베리아: 앞무게 베기·때리기(츠바이핸더·냉동 참치) — 몬탄테. 지금은 독일 내용 그대로(전 두 꾸러미 = 롱소드 꾸러미 + 간격) — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
   // 10/10 몬탄테 고증: 간 보는 자세(IBERIAN_GUARDS)·자세표(guardTable — guards.js IBERIAN_TABLE, 앞무게 틀 표를 고른 뒤 덮음)·기술 가중치(techK)·쉴 자세(곧은 자세 = 긴 자세 자리, 피 단Ⅰ '베기마다 얼굴 앞')
-  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, guards: IBERIAN_GUARDS, guardTable: IBERIAN_TABLE, techK: IBERIAN_TECHK, rest: 'langort', names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, gait: IBERIAN_GAIT, get secret() { return this.secretSet ?? (SECRET.iberianSecret === 'v4' ? IBERIAN_SECRET_V4 : SECRET.iberianSecret === 'flow' ? IBERIAN_SECRET : SECRET.iberianSecret === 'gilmok' ? IBERIAN_SECRET_GILMOK : IBERIAN_SECRET_SPIN); }, set secret(v) { this.secretSet = v; } }, // 비기 판 (10/11 · 10/22): SECRET.iberianSecret 'spin' 기본(휘감아 돌기 — 10/22) · 'gilmok' v6 길목 지키기 · 'flow' v5 · 'v4' 옛 판 — 읽는 때(AI·플레이어 창이 생길 때) 고른다
+  iberian: { id: 'iberian', nameKo: '이베리아', ...GERMAN, guards: IBERIAN_GUARDS, guardTable: IBERIAN_TABLE, techK: IBERIAN_TECHK, rest: 'langort', names: IBERIAN_NAMES, techNames: TECH_NAMES.iberian, unique: IBERIAN_UNIQUE, passives: IBERIAN_PASSIVES, temper: IBERIAN_TEMPER, gait: IBERIAN_GAIT, get secret() { return this.secretSet ?? (SECRET.iberianSecret === 'v4' ? IBERIAN_SECRET_V4 : SECRET.iberianSecret === 'flow' ? IBERIAN_SECRET : SECRET.iberianSecret === 'gilmok' ? IBERIAN_SECRET_GILMOK : SECRET.iberianSecret === 'altib' ? IBERIAN_SECRET_ALTIB : IBERIAN_SECRET_SPIN); }, set secret(v) { this.secretSet = v; } }, // 비기 판 (10/11 · 10/22 · 11/11): SECRET.iberianSecret 'altib' 기본(알티바슈 포르트 — 11/11 자리 바꿈) · 'spin' 휘감아 돌기(싱지르 — 10/22 ~ 11/11) · 'gilmok' v6 길목 지키기 · 'flow' v5 · 'v4' 옛 판 — 읽는 때(AI·플레이어 창이 생길 때) 고른다
   // 일본: 카타나 가족(지금 모노호시자오 — 스펙 school). 기술·속임수·막기 자리는 독일 내용 그대로, 그 위에 유파 자료.
   //  간 보는 자세 = JAPANESE_WATCH(10/10 원전 — 추단 위주 + 조단·핫소, 전 HIGH_GUARDS 의 황소 둘 뺌) · 자세표 = JAPANESE_GUARDTABLE · 속임수 = JAPANESE_FEINTS(Umschlagen 둘 → 갓토츠·니노코시) · 막기 = JAPANESE_PARRY(10/10 빌린 칸 걷어내기 — 줄마다 원전 받는 꼴의 자리).
   //  물러남 = 한 칼 자세(上段·八相 — 10라운드 6-7 무기 PM, 전 WEAPON_OVER.monohoshizao 그대로 옮김).

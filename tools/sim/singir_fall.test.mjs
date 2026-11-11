@@ -8,6 +8,9 @@ import { PlayerSecretWatch } from '../../src/secret.js';
 import { fightOne } from './school_balance.mjs';
 import { runOne } from './singir_fall.mjs';
 import { footSnap } from './iberian_spin_feet.mjs';
+// 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 싱지르 비기 넘어짐 장면(11/05 — 가까우면 뒷발 축 near · 무장 창 원 · 비기 몫)이라
+//  그 판('spin')으로 묶는다(이 파일 안에서만). 새 판(비기 알티바슈 포르트 · 특수 공격 싱지르 한 걸음)은 tools/sim/ib_swap.test.mjs
+(await import('../../src/config.js')).SECRET.iberianSecret = 'spin';
 
 const withNear = async (v, fn) => {
   const old = SECRET.ibSpin.near;

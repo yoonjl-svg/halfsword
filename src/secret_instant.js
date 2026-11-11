@@ -1287,7 +1287,7 @@ const COMBO_TURN = 0.35; // 손이 있는 쪽으로 몸을 트는 계수 (rad / 
 
 /** 빠른 연환을 걸어 둔다. opt.moves = 두 수 (schools.js 막기 연환 seq 꼴, step.fwd 는 m 로 푼 것) */
 export function requestCombo(f, opt = {}) {
-  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, effMul: opt.effMul, width: opt.width, tech: opt.tech, mord: opt.mord ?? null, arcCut: !!opt.arcCut, face: opt.face || null, min: opt.min ?? 0, maxT: opt.maxT ?? 0, keepAim: !!opt.keepAim, attack: !!opt.attack, speed: opt.speed > 0 ? opt.speed : 0, noArc: !!opt.noArc, selfFree: +opt.selfFree || 0 }; // speed: 칼끝 빠르기 m/s 를 바로 (share 대신 — 10/31 칼끝 돌려 빼기 = 보통 찌르기 빠르기) · noArc: 잔상 없음 (10/31 — 특수 공격이 아닌 끌고 가는 칼) // width: 잔상 굵기 몫 (격살 시험 — sword_trail.js) · mord: 죽음의 일격 운동학 길(10/22 밤 — mordschlag.js) · arcCut: 잔상은 베는 토막만 · face: 마주 보는 띠('path' 치는 끝 길 · 'line' 찌르는 줄) · min: 잔상 밝기 바닥 (10/23 비기 잔상 점검 — 사람 비기만, 아래 stepCombo · sword_trail.js)
+  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, effMul: opt.effMul, width: opt.width, tech: opt.tech, mord: opt.mord ?? null, arcCut: !!opt.arcCut, face: opt.face || null, min: opt.min ?? 0, maxT: opt.maxT ?? 0, keepAim: !!opt.keepAim, attack: !!opt.attack, speed: opt.speed > 0 ? opt.speed : 0, noArc: !!opt.noArc, selfFree: +opt.selfFree || 0, ...(opt.secret ? { secret: opt.secret } : {}) }; // speed: 칼끝 빠르기 m/s 를 바로 (share 대신 — 10/31 칼끝 돌려 빼기 = 보통 찌르기 빠르기) · noArc: 잔상 없음 (10/31 — 특수 공격이 아닌 끌고 가는 칼) // width: 잔상 굵기 몫 (격살 시험 — sword_trail.js) · mord: 죽음의 일격 운동학 길(10/22 밤 — mordschlag.js) · arcCut: 잔상은 베는 토막만 · face: 마주 보는 띠('path' 치는 끝 길 · 'line' 찌르는 줄) · min: 잔상 밝기 바닥 (10/23 비기 잔상 점검 — 사람 비기만, 아래 stepCombo · sword_trail.js)
   f.instantResult = null;
 }
 
@@ -1399,6 +1399,7 @@ function startCombo(f, combat, req) {
     body: comboBody(f.handOffset.x), bodyAt: null, hold: req.hold ?? SECRET.stiff[f.swordArt?.tradition] ?? 0.3, hitMul: req.hitMul ?? SECRET.hitMul, effMul: req.effMul ?? null, tech: req.tech ?? null,
     off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hits: 0, E: 0, Emax: 0, blocked: 0, part: null, zone: null, type: null,
     arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share, pts: [], ...(req.width > 0 && req.width < 1 ? { width: req.width } : {}), ...(req.face ? { face: req.face } : {}), ...(req.min > 0 ? { min: req.min } : {}), ...(req.moves.some((m) => m.lunge) ? { lunge: lungeFrom(f) } : {}) }, slide: null, mord: req.mord ?? null, arcCut: !!req.arcCut,
+    secret: req.secret ?? null, // 비기 이름 (11/11 알티바슈 포르트 — 재는 도구가 읽음 · 판정과 무관)
     maxT: req.maxT ?? 0, // 끌고 가는 시간 상한 (s — 제비 베기 되돌림 칼 requestArtSnap · 0 = 없음, 길 끝까지)
     keepAim: !!req.keepAim, // 끝나도 손 목표를 옮기지 않음 (탭으로 낸 칼 — 날개 접기 10/28: 손 목표 뜀이 긋기로 읽히지 않게)
     attack: !!req.attack, // 탭으로 낸 특수 공격 칼 (10/28): 끄는 동안 공격 중(stamina.attacking — 유파 패시브 인데스 · 몸 돌림 묶기 · 막아 받기 값이 보통 긋기 · 탭과 같게)
@@ -3536,15 +3537,15 @@ export function requestArtDup(f, { share, maxT, tech, face = 0, follow = 25, pla
  *  길 = comboPlanRd (arc = UNIQUE_ASSIST.rdArc) · 날 세우기 · 굴림 묶음 · 끝나도 손 목표 그대로(keepAim). 이미 끌고 가는 중이면 거절(false)
  *  diag 를 주면(10/30 rdRelease 'direct' — UNIQUE_ASSIST.rdDiag) 곧장 사선 내려침 comboPlanRdDiag · 잔상은 베는 토막만(arcCut)
  */
-export function requestArtRedondo(f, { share, maxT, tech, arc, loop = null, diag = null, tajo = null, bodyFrom = null }) {
+export function requestArtRedondo(f, { share, maxT, tech, arc, loop = null, diag = null, tajo = null, bodyFrom = null, hitMul = 1, hold = 0, secret = null }) { // 11/11 비기 알티바슈 포르트: hitMul = 비기 배율 × 남은 기력 몫 · hold = 끝 자세 붙듦(굳음) · secret = 비기 이름 (f.iai.secret — 재기 · 기본은 특수 공격 그대로 1 · 0 · null)
   if (f.iai || f.iaiReq || !(share > 0) || !f.foe?.bodies?.chest || !(arc || diag || tajo)) return false;
   if (tajo) {
     // 10/31 19:xx B4 멘 어깨에서 내려침 (comboPlanRdTajo): 몸 = 멘 몸 꼬임(bodyFrom — 감기 꼴 body)에서 tajo.body 로 풀며 앉음 · 잔상은 베는 토막만
     const bf = bodyFrom ? { pelvisYaw: bodyFrom.pelvisYaw ?? 0, chestYaw: bodyFrom.chestYaw ?? 0, pitch: bodyFrom.pitch ?? 0, drop: bodyFrom.drop ?? 0 } : null;
-    requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, capFromCut: true, rd: { loop, tajo }, ...(tajo.body ? { bodyPose: tajo.body } : {}), ...(bf ? { bodyFrom: bf } : {}) }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true, arcCut: true });
+    requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, capFromCut: true, rd: { loop, tajo }, ...(tajo.body ? { bodyPose: tajo.body } : {}), ...(bf ? { bodyFrom: bf } : {}) }], share, hold, hitMul, tech, maxT, keepAim: true, attack: true, arcCut: true, ...(secret ? { secret } : {}) });
     return true;
   }
-  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, capFromCut: true, rd: { arc, loop, diag } }], share, hold: 0, hitMul: 1, tech, maxT, keepAim: true, attack: true, arcCut: !!diag });
+  requestCombo(f, { moves: [{ name: tech, kind: 'cut', cutSweep: true, same: true, roll: true, capFromCut: true, rd: { arc, loop, diag } }], share, hold, hitMul, tech, maxT, keepAim: true, attack: true, arcCut: !!diag, ...(secret ? { secret } : {}) });
   return true;
 }
 export const ART_HIST = 0.3; // s — 잔상으로 그릴 지난 길 (감독 값)

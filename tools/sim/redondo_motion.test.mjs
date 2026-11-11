@@ -9,6 +9,9 @@ import { CONFIG, newRound, DT, THREE } from './harness_m.mjs';
 import { PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { windSpec, windRate } from '../../src/iberian_redondo.js';
 import { applyB4Old } from '../../src/config.js';
+// 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 풍차 베기 · 정수리 가르기 특수 공격 장면(무장 없이 길게 눌러 냄 · 10/29 ~ 10/31)이라
+//  그 판('spin')으로 묶는다(이 파일 안에서만). 비기가 된 판은 tools/sim/ib_swap.test.mjs
+(await import('../../src/config.js')).SECRET.iberianSecret = 'spin';
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, IB_FLOW } = CONFIG;

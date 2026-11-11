@@ -62,12 +62,12 @@ const nameOf = (n) => n.name ?? `${n.l1} ${n.l2}`;
 export function nodeTitle(school, n) {
   const cat = NODE_CAT[n.cat];
   if (isClosed(school, n)) return { title: nameOf(n), kind: cat.label };
+  if (n.cat === 'secret') { const S = playerSecretDef(school); return { title: `비기 · ${S ? withOrig(S.nameKo, S.orig) : n.l2}`, kind: cat.label }; } // 10/23 비기 이름 = 원어 독음 → '고노센 (後の先)' · 옛 '뜻 (소리)' 꼴이면 '뜻 (소리 · 원어)' · 11/11 실행 칸(u)이 있는 비기(이베리아 B4 알티바슈 포르트)도 비기 제목
   if (n.u) {
     const e = PLAYER_UNIQUE[school]?.find((x) => x.name === n.u), U = e && uniqueDef(school, e);
     return { title: U ? withOrig(U.nameKo, U.orig) : nameOf(n), kind: e ? `${cat.label} · ${ROLE_KO[e.role] ?? ''}`.replace(/ · $/, '') : cat.label };
   }
   if (n.cat === 'passive') { const [nm, o] = PASSIVE_NAME[school] ?? [n.l2, null]; return { title: `패시브 · ${withOrig(nm, o)}`, kind: cat.label }; }
-  if (n.cat === 'secret') { const S = playerSecretDef(school); return { title: `비기 · ${S ? withOrig(S.nameKo, S.orig) : n.l2}`, kind: cat.label }; } // 10/23 비기 이름 = 원어 독음 → '고노센 (後の先)' · 옛 '뜻 (소리)' 꼴이면 '뜻 (소리 · 원어)'
   return { title: withOrig(n.title ?? `${n.l1} · ${n.l2}`, n.orig), kind: cat.label };
 }
 

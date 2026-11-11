@@ -110,6 +110,8 @@ test('여덟 방향 키보드: W → WD → D → SD → S (45° 넷 = 반 바�
 test('사람 몸: 무장 창이 열린 동안 스틱 반 바퀴 → 참 (공격 입력 창 아님) · attack 판이면 거짓 · 창 없으면 셈 비움', async () => {
   const prevIn = SECRET.ibSpin.input;
   SECRET.ibSpin.input = 'stick'; // 10/24 부터 기본은 공격 원 판 — 스틱 판을 스위치로 켜고 잰다
+  const prevIb = SECRET.iberianSecret;
+  SECRET.iberianSecret = 'spin'; // 11/11 이베리아 자리 바꿈: 싱지르 비기 판 장면 (시험 안에서만 — 아래 끝에서 되돌림)
   const { newRound, DT } = await import('./harness_m.mjs');
   const { PlayerSecretWatch } = await import('../../src/secret.js');
   const G = newRound({ seed: 2, weapon: 'zweihander', weapon2: 'longsword', gap: 3.4 });
@@ -147,4 +149,5 @@ test('사람 몸: 무장 창이 열린 동안 스틱 반 바퀴 → 참 (공격 
   assert.ok(P.skill.secret(o), '휘감아 돌기 냄');
   G.world.free();
   SECRET.ibSpin.input = prevIn;
+  SECRET.iberianSecret = prevIb;
 });

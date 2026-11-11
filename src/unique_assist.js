@@ -29,9 +29,11 @@ import { classifyStroke } from './attack_stroke.js';
 import * as THREE from 'three';
 import { UNIQUE_ASSIST as UA, SKILL, SECRET, STAMINA, IB_FLOW, THRUST, realRate } from './config.js';
 import { G, TECH, TECH_BY_NAME } from './ai_techniques.js';
-import { TRADITIONS } from './schools.js';
+import { TRADITIONS, IBERIAN_SPIN_DEF } from './schools.js';
+import { useSecret } from './secret.js'; // 이베리아 비기 알티바슈 포르트 판당 쓸 수 (11/11 — windFire 비기 칼)
+import { circleState, circleStep, circleClear } from './attack_circle.js'; // 싱지르 특수 공격 원 긋기 몸짓 (11/11 — circleTick · 비기 판과 같은 셈)
 import { segDist } from './skill.js';
-import { requestArtReturn, requestArtSnap, requestArtThrust, requestArtFold, requestArtDup, requestArtRedondo, setArtTechOf, iaiBusy } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21) · 제비 베기 되돌림 칼 (10/25 해법 ②) · 칼끝 돌려 빼기 운동학 찌름 (10/28)
+import { requestArtReturn, requestArtSnap, requestArtThrust, requestArtFold, requestArtDup, requestArtRedondo, setArtTechOf, iaiBusy, iaiTipSpeed } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21) · 제비 베기 되돌림 칼 (10/25 해법 ②) · 칼끝 돌려 빼기 운동학 찌름 (10/28)
 import { perkOff, kitOff } from './skill_kit.js';
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 — 상대 두 팔 늦춤 (흘림과 같은 장치 · 10/31)
 import { windStart, windStep, windEnd, windLoopOf, windRopesBack } from './iberian_redondo.js'; // 풍차 베기 머리 위 감기 (B4 — 10/29) // 플레이어 스킬트리 몫 (10/21 — 돌려 베기 쌓기 = 이베리아 심화 B6)
@@ -53,6 +55,12 @@ import { windStart, windStep, windEnd, windLoopOf, windRopesBack } from './iberi
 // 통폐합으로 뺀 고유 동작 (10/21 — 사장님 'ai 도 줄이고'): AI 도 평소 고르는 꾸러미에서 뺀다. 다만 비기가 빌려 쓰는 길(이탈리아 엇박 찌르기 = passataSotto ·
 //  옛 판 비기 독일 v1 krumphau · 동방 v1 zuoyi)은 꾸러미의 이름 표(techByName)에만 남겨 둔다(고르는 목록 tech 에는 없음 — sword_art.js applySchoolArt)
 export const RETIRED_UNIQUE = new Set(['krumphau', 'passataSotto', 'altibaixo', 'talhoRevezBaixo', 'kokoRenda', 'zuoyi']);
+// 이베리아 자리 바꿈 (11/11 — SECRET.iberianSecret): 'altib' 판 = 정수리 가르기(redondo)는 비기라 AI 가 고르는 목록에서 뺌(비기 altibGo 가 이름 표에서 빌려 씀) · 'spin' 판 = 싱지르 AI 몫(cingir)을 뺌
+const RETIRED_ALTIB = new Set([...RETIRED_UNIQUE, 'redondo']);
+const RETIRED_SPIN = new Set([...RETIRED_UNIQUE, 'cingir']);
+/** 이 판의 이베리아 자리 바꿈인가 (11/11 — SECRET.iberianSecret 'altib': 비기 알티바슈 포르트 · 특수 공격 싱지르) */
+export const ibSwap = () => SECRET.iberianSecret === 'altib';
+const ibRetired = () => (ibSwap() ? RETIRED_ALTIB : RETIRED_SPIN);
 // 통폐합 (10/21 사장님 '판정표대로 통폐합 해' — 판정은 docs/strike/unique_attack_study_result_2026-10-20.md 뒤 의견 · 사람 기술 기준): 유파마다 넷 → 둘~셋.
 //  뺀 것: 독일 굽은 베기(분노의 베기와 구별 안 됨 · 쓰임 최저) · 이탈리아 밑으로 들어가 찌르기(드묾 · 비기 런지와 겹침) · 이베리아 위아래 사슬 · 번갈아 올려베기(이어 긋기 셋이
 //  비슷 — 머리 위 돌려 베기로 모음, 이어 그을수록 힘이 쌓이는 강화는 다음 단계) · 일본 코코 연타(이베리아 돌려 베기와 같은 몸 뒤집는 이어 긋기) · 동방 좌익격(일본 코테와 같은 동작).
@@ -123,6 +131,11 @@ export const PLAYER_UNIQUE = {
     // 10/31 19:xx 사장님 결정 — 이름 '정수리 가르기 (알티바슈 포르트)' (전 '풍차 베기 (레돈두)' · 확인표 3290): 원어 'altibaxo forte' 는 피게이레두의 낱말 altibaxo(위에서 아래로 내려 베기 — 피 단Ⅸ · 복ⅩⅤ)에
     //  forte(센)를 붙여 지은 이름이고 검술서에 그대로 나오는 말은 아님 · 원어 글자는 대기실 스킬에서만(화면 글 지침 §1). 열쇠 name 'redondo' 는 그대로(바꾸면 저장 · 주소 · 시험이 닿음 — 기록 docs/strike/b4_rework_2026-10-31.md §7)
     { stage: 3, name: 'redondo', role: 'hold', hold: 1, special: true, nameKo: '정수리 가르기 (알티바슈 포르트)', orig: 'altibaxo forte', hint: '탭을 길게 눌러 칼을 어깨에 메었다가 떼면 정수리로 내려 가른다', on: [], ai: { role: 'enh', replaces: 'zwerchL' }, stack: 0.1 },
+    // 11/11 사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' (SECRET.iberianSecret 'altib' — 기록 docs/strike/ib_swap_2026-11-11.md): 위 redondo 칸은 비기 알티바슈 포르트의 실행 칸이 됨
+    //  (특수 공격 식힘 · 이름 알림 · 흐름 셈 없음 — holdTick 이 비기 무장(창 ev 'altib')일 때만 메기 · windFire 가 비기 셈 · AI 는 ai.js altibGo) · AI 왼 가로베기 자리는 아래 싱지르가 이어받음(aiUniqueStages retired).
+    //  싱지르 = 이베리아 특수 공격 (role 'circle' — 원을 그리며 긋기(↻/↺) 한 바퀴면 무장 없이 냄 · circleTick · 칼끝 고노센 × specialShare.cingir · 식힘 specialCooldown · 실행부 = skill.secret 의 싱지르 대본(special — 비기 셈 · 판정 배율 없음))
+    //  ai = 왼 가로베기 자리 강화동작 꼴로 골라 칼끝 거리 + SECRET.ibSpin.aiFire 안이면 한 바퀴(ai.js cingirGo). 'spin' 판에선 이 칸은 아무 일도 안 함(사람 circleTick · AI retired)
+    { stage: 3, name: 'cingir', role: 'circle', special: true, nameKo: '싱지르', orig: 'cingir', hint: '원을 그리며 그으면 한 걸음 나가며 몸을 한 바퀴 돌려 가로로 벤다', on: [], ai: { role: 'enh', replaces: 'zwerchL' } },
   ],
   japanese: [
     { stage: 1, name: 'hirakiGiri', role: 'step', stick: 'side', hint: '옆으로 걸으며 왼 사선 내려 긋기', body: [-18, -12, 2, 0.02], bodyMirror: -1, /* 開き = 비스듬히 디딘 뒤 몸을 상대 쪽으로 엶 → 디딘 쪽의 반대로(오른쪽으로 디디면 왼쪽) · 원전에 몸 돌림 수 없음 — 10/21 확인 */ on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 옆 + 왼 분노의 베기
@@ -158,7 +171,7 @@ export function aiUniqueStages(tradition) {
     if (e.path) passive.set(e.name, e.stage);
     if (e.aiPassive) passive.set(e.aiPassive, e.stage); // 동방 자→격 패시브(yaoji 이음)는 요격 강화동작과 같은 단계
   }
-  return { unique, passive, retired: RETIRED_UNIQUE };
+  return { unique, passive, retired: ibRetired() };
 }
 
 /** 강화동작 (10/21): 유파 → [{ base 기본 동작, name 강화동작, stage }] — 기본 동작이 TECH 이름인 것만(일본 코테의 '가운데서 짧게 내려베기'는 AI 기술이 아님). sword_art.js 가 AI 꾸러미를 바꿀 때 읽는다 */
@@ -197,6 +210,19 @@ export function enhancedMoves(tradition) {
 const D2R = Math.PI / 180;
 /** 특수 공격 칼끝 빠르기 몫 (사장님 10/29 02:0x '모든 유파 특수공격을 고노센 곱하기 n으로' — config UNIQUE_ASSIST.specialShare · 확인표 2734): 끌고 가는 칼 칼끝 = 같은 칼 고노센 칼끝 × 이 몫 */
 export const specialShare = (name) => UA.specialShare?.[name] ?? 0;
+/** 알티바슈 포르트 판정 배율 (11/11 사장님 '비기 파괴력 배율 1.3배는 고노센에만 남긴다' — SECRET.altibHitMul 1 · null 이면 비기 공통 SECRET.hitMul) */
+export const altibHitMul = () => SECRET.altibHitMul ?? SECRET.hitMul;
+/**
+ * 알티바슈 포르트 위력 몫 (11/11 사장님 '남은 기력 만큼의 % 공격력' — SECRET.altib.staminaK): 뗀 순간 기력 ÷ 최대 기력(0 ~ 1 · 기력 끔 · 무한이면 1).
+ *  weightFix 1 (사장님 11/11 '무게 가중치는 재 보고 정해' — 견줌 스위치): (멜 때 기력 − 무게 1 값으로 메는 동안 뺀 기력 H.base) ÷ 최대 기력 — 무거운 칼이 메는 동안 더 잃은 몫을 위력에서는 빼지 않음(실제 기력은 무게대로 빠짐)
+ */
+export function altibPower(f, H = null) {
+  const A = SECRET.altib;
+  const S = f.stamina;
+  if (!A?.staminaK || !STAMINA.on || S.infinite || !(S.max > 0)) return 1;
+  const v = A.weightFix && H?.s0 != null ? H.s0 - (H.base ?? 0) : S.value;
+  return THREE.MathUtils.clamp(v / S.max, 0, 1);
+}
 /**
  * B4 내려침 길 고르기 (사람 windFire · AI rdFire 같은 셈 — requestArtRedondo 의 칸): UNIQUE_ASSIST.rdRelease 'tajo'(10/31 19:xx 기본 — 멘 어깨에서 반대쪽 아래로 · rdTajo ·
  *  몸 = 이 감기 꼴 body 에서 풂) · 'direct'(10/30 곧장 사선 rdDiag) · 'chamber'(10/29 판 rdArc). '먼저 머리 위로' 자리 = 이 감기 꼴의 고리 (어깨 꼴은 10/29 판 고리 — windLoopOf).
@@ -374,7 +400,9 @@ export class PlayerUniqueAssist {
     this.powV = 0; // 내가 둔 끝 힘 배율 (f.powerMul 이 아직 이 값일 때만 되돌린다)
     this.planFade = null; // 길 덧칸 놓기 { tilt, reach, turn, t } (planStep — 10/25 18:0x)
     this.stats = { strokes: 0, techs: {}, fired: {}, ends: {}, steps: 0, power: 0 };
-    this.holdE = this.list.find((e) => e.hold) ?? null; // 길게 눌러 내는 특수 공격 (풍차 베기 B4 — 10/29)
+    this.holdE = this.list.find((e) => e.hold) ?? null; // 길게 눌러 내는 특수 공격 (풍차 베기 B4 — 10/29) · 11/11 'altib' 판 = 비기 알티바슈 포르트의 실행 칸(holdTick — 비기 무장일 때만)
+    this.cingirE = this.list.find((e) => e.role === 'circle') ?? null; // 싱지르 특수 공격 (11/11 — 원 긋기 circleTick · 'altib' 판만)
+    this.circ = null; // 싱지르 원 긋기 셈 (attack_circle.js circleState)
     this.dupE = this.list.find((e) => e.tapKey === 'dup') ?? null; // 겹치기 (자동 판 dupAutoTick — 10/31 16:xx 시제품)
     this.dupA = null; // 겹치기 자동 셈 { st 쌓임 · off 끊긴 시간 · since 쌓기 시작 · on 닿는 중 · t0 · prev 닿음 시작 · tEnd 떨어진 때 · pair 짝이 찬 닿음 }
     this.dupCue = null; // 자세 칸 알림 { name, nameKo, sub } (쌓임 절반부터 — main.js updateGuardName)
@@ -388,7 +416,7 @@ export class PlayerUniqueAssist {
     this.stickUsed = null;
     this.stickVia = null;
     this.stepLate = null;
-    this.press = { down: false, still: false, secretOpen: false }; // main.js holdInput — 탭 입력을 누르고 있나 · 탭 문턱(끌지 않음) 안인가 · 비기 창이 열렸나
+    this.press = { down: false, still: false, secretOpen: false, armed: false }; // main.js holdInput — 탭 입력을 누르고 있나 · 탭 문턱(끌지 않음) 안인가 · 비기 창이 열렸나 · 알티바슈 포르트 무장 창인가(11/11)
     this.hold = { st: 'idle', t: 0 }; // 누름 셈 · 감기 ('idle' · 'press' · 'spent' 이 누름은 감지 않음 · 'wind' 감는 중)
     this.coolT = {}; // 특수 공격(표 칸 special)마다 식힘을 세기 시작한 때 (사장님 10/28 02:0x 나간 순간 → 10/29 19:5x 끝난 때 — UNIQUE_ASSIST.specialCooldown · specialCoolFrom · 도는 동안 Infinity)
     this.coolRun = {}; // 나갔는데 아직 안 끝난 특수 공격 { t0 나간 때, motion 동작 끝 } (coolTick)
@@ -589,7 +617,9 @@ export class PlayerUniqueAssist {
       const tapT = UA.cavSpeed === 'tap'; // 탭 찌르기 박자 — 길 끝(거둠)까지 시간 상한 없음: 상한에서 끊으면 뻗은 칼이 상대 몸 · 칼 안에 든 채 충돌이 돌아와 내 몸이 튕겨 넘어졌음(싸움 판 넘어짐 8 / 9 판 — 낸 뒤 0.25 ~ 0.35 s)
       // 세게 하는 시제품 (10/31 16:xx 사장님 물음 — config UNIQUE_ASSIST cavSpeedMul · cavHitMul · cavParryLock · cavCancel · combat.js cavGap · 기본 모두 끔): A 빠르기 배 · D 판정 배율
       const vMul = UA.cavSpeedMul > 0 ? UA.cavSpeedMul : 1;
-      if (requestArtThrust(f, { v: cavTipSpeed() * vMul, trail: false, maxT: tapT ? 0 : UA.cavSnapTime, tech: U.name, under: true, capFromCut: !tapT && !!UA.cavCapCut, side, tapTiming: tapT, selfFree: UA.cavSelfFree, hitMul: UA.cavHitMul > 0 ? UA.cavHitMul : 1 })) {
+      // 11/11 사장님 '1.2배 없애고 35%로 해' (UNIQUE_ASSIST.cavShare 1): 찌르는 토막 칼끝 = 같은 칼 고노센 칼끝 × specialShare.cavazione(0.35) — 겨눔 · 거둠 박자(탭 찌르기)는 그대로 · 0 = 10/31 판(보통 찌르기 빠르기 × cavSpeedMul)
+      const vCav = UA.cavShare ? specialShare(e.name) * iaiTipSpeed(f) * vMul : cavTipSpeed() * vMul;
+      if (requestArtThrust(f, { v: vCav, trail: false, maxT: tapT ? 0 : UA.cavSnapTime, tech: U.name, under: true, capFromCut: !tapT && !!UA.cavCapCut, side, tapTiming: tapT, selfFree: UA.cavSelfFree, hitMul: UA.cavHitMul > 0 ? UA.cavHitMul : 1 })) {
         this.stats.snap = (this.stats.snap ?? 0) + 1;
         // C 상대 반응 묶음: 누르던 칼이 빠져 이 실제 초 동안 막기 · 피하기 · 맞받아치기를 새로 시작하지 못함 (ai.js respond — I8 헛누름의 팔 늦춤과 따로)
         if (UA.cavParryLock > 0 && f.foe) f.foe.parryLockUntil = (f.foe.fightT ?? 0) + UA.cavParryLock;
@@ -663,7 +693,7 @@ export class PlayerUniqueAssist {
     const f = this.f;
     for (const name in this.coolRun) {
       const R = this.coolRun[name];
-      const moving = !!f.iai || !!f.iaiReq || f.skill.tap?.uniqTech === name || this.r?.e?.name === name;
+      const moving = !!f.iai || !!f.iaiReq || f.skill.tap?.uniqTech === name || this.r?.e?.name === name || (!!f.skill.sec?.special && f.skill.sec.special === name); // 싱지르 특수 공격 (11/11): 검술 층 실행(대본 · 따라 지나감 · 굳음)이 끝날 때까지
       if (R.motion == null) {
         if (moving) continue;
         R.motion = this.t;
@@ -685,12 +715,14 @@ export class PlayerUniqueAssist {
 
   /**
    * 탭 입력 누름 (main.js 프레임마다 · 재는 도구): down = 탭 손가락(PC 왼 단추)이 닿아 있나 · still = 그 누름이 탭 문턱(input.js tapPx · clickPx — 끌지 않음) 안인가 ·
-   *  secretOpen = 비기 창이 열렸나(싱지르 무장 — 열린 동안 길게 눌러도 감지 않음: 비기가 먼저)
+   *  secretOpen = 비기 창이 열렸나(싱지르 무장 — 열린 동안 길게 눌러도 감지 않음: 비기가 먼저) ·
+   *  armed = 알티바슈 포르트 무장 창인가(11/11 'altib' 판 — secret.js holdOwns: 이 창이 열린 동안만 길게 눌러 메기 = 비기 · 그 밖의 길게 누름은 아무 일도 안 함)
    */
-  holdInput(down, still, secretOpen = false) {
+  holdInput(down, still, secretOpen = false, armed = false) {
     this.press.down = !!down;
     this.press.still = !!still;
     this.press.secretOpen = !!secretOpen;
+    this.press.armed = !!armed;
   }
   /** 감는 중인가 (main.js — 그동안 손가락 움직임은 손 목표에 안 더함) */
   get winding() {
@@ -721,6 +753,7 @@ export class PlayerUniqueAssist {
       const S = f.stamina;
       S.spent.wind ??= 0;
       S.spend('wind', (UA.rdDrainCut ? realRate(STAMINA.cutCost) * S.weight : UA.rdDrain) * dt); // 회복 멈춤
+      if (H.secret) H.base += (UA.rdDrainCut ? realRate(STAMINA.cutCost) : UA.rdDrain) * dt; // 11/11 알티바슈 포르트 무게 보정 셈(SECRET.altib.weightFix — 무게 1 값으로 뺀 기력)
       if (STAMINA.on && !S.infinite && S.value <= 0) return this.windFire('empty');
       const hit = windStep(f, dt);
       if (hit) this.stats.windTouch = (this.stats.windTouch ?? 0) + 1; // 감는 칼이 무엇에 닿은 스텝 (재기만 — 닿아도 그대로 감음 · 세게 맞으면 windStop 의 jolt · 상처면 hit)
@@ -745,12 +778,14 @@ export class PlayerUniqueAssist {
     H.t += dt;
     if (H.t < UA.rdHoldTime) return;
     const e = this.holdE;
-    if (!UA.rdHold || this.cooling(e) || P.secretOpen || this.busy() || iaiBusy(f) || f.stamina.exhausted || !f.sword) {
+    // 11/11 'altib' 판 (SECRET.iberianSecret — 사장님 '알티바슈 포르트를 고노센 급의 비기로'): 알티바슈 포르트 무장 창(press.armed)이 열린 동안만 메기 = 비기 · 무장 없으면 이 누름은 아무 일도 안 함(특수 공격 아님 · 식힘 없음)
+    const sec = ibSwap();
+    if (!UA.rdHold || (sec ? !P.armed : this.cooling(e) || P.secretOpen) || this.busy() || iaiBusy(f) || f.stamina.exhausted || !f.sword) {
       H.st = 'spent';
       this.stats.holdRefused = (this.stats.holdRefused ?? 0) + 1;
       return;
     }
-    this.windBegin();
+    this.windBegin(sec);
   }
 
   /** 감기에 뗀 손목 원뿔 · 칼 어깨 면 밧줄 (10/29 20:0x 휘청 고침 — iberian_redondo.js windStart): 내려침 운동학 칼이 끝나고 · 그만둔 팔의 덧씌우기 칸을 다 내려놓은 뒤 다시 건다 */
@@ -762,10 +797,13 @@ export class PlayerUniqueAssist {
     H.ropes = null;
   }
 
-  windBegin() {
+  windBegin(secret = false) {
     const f = this.f;
     const H = this.hold;
     H.st = 'wind';
+    H.secret = !!secret; // 11/11 알티바슈 포르트 비기 메기 (secret.js PlayerSecretWatch.spinTick 이 보고 무장을 씀 — 한 번 무장에 한 번)
+    H.s0 = f.stamina.value; // 멜 때 기력 (무게 보정 셈 — SECRET.altib.weightFix)
+    H.base = 0;
     H.wounds0 = f.wounds?.length ?? 0;
     H.fade = 0;
     H.windT = 0;
@@ -809,6 +847,7 @@ export class PlayerUniqueAssist {
 
   /** 내려침 (떼었거나 기력이 바닥) — 운동학 칼 · 기술 알림 · 칼 하나 기력 · 식힘 시작 · 흐르는 긋기 셈 */
   windFire(why) {
+    if (this.hold.secret) return this.altibFire(why); // 11/11 비기 알티바슈 포르트
     const f = this.f;
     const e = this.holdE;
     const W = f.rdWind;
@@ -841,6 +880,78 @@ export class PlayerUniqueAssist {
     this.stats.windChain = [...(this.stats.windChain ?? []), n];
     f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
     f.stamina.attack('cut'); // 칼 하나 (끌고 가는 칼은 같은 공격 — same) · 풍차 베기 칼은 세 칼마다 기력 0 자리가 아님 (fighter.js ibChainCostK — 이어지는 흐름 B6)
+    return true;
+  }
+
+  /**
+   * 비기 알티바슈 포르트 내려침 (11/11 사장님 '알티바슈 포르트에는 기력 가중치를 넣어서 기력에 비례해 공격이 강하거나 약하게 해. 그리고 기력을 다 소모해서 내리쳐서 발동 후에는 무조건
+   *  기력이 0이 됨. 남은 기력 만큼의 % 공격력을 갖게 해. 빠르기는 고노센의 30%로.' — config SECRET.altib · 기록 docs/strike/ib_swap_2026-11-11.md):
+   *  길 = 전 B4 내려침 그대로(rdReleaseOpt — 멘 어깨에서 비스듬히) · 칼끝 고노센 × altib.share · 판정 배율 = altibHitMul() × 남은 기력 몫(altibPower) · 끝 자세 붙듦 altib.hold ·
+   *  판당 쓸 수 한 번(useSecret — 나간 때만) · 비기 알림(이름 = 비기 이름) · 터뜨림 수(소리 · 화면 늦춤) · 칼 하나 기력 뒤 기력 0 · 식힘 · 흐름 셈 없음. 못 내면 비기 아님(쓸 수 안 씀)
+   */
+  altibFire(why) {
+    const f = this.f;
+    const e = this.holdE;
+    const W = f.rdWind;
+    const H = this.hold;
+    const k = altibPower(f, H);
+    H.ropes = windEnd(f, true) ?? H.ropes;
+    H.st = this.press.down ? 'spent' : 'idle';
+    H.fade = 0.12;
+    H.secret = false;
+    f.ibStrike = null;
+    const A = SECRET.altib;
+    const ok = UA.enhance > 0 && requestArtRedondo(f, rdReleaseOpt(f, W, { share: A.share, maxT: UA.rdSnapTime, tech: e.U.name, hitMul: altibHitMul() * k, hold: A.hold ?? SECRET.stiff.iberian ?? 0, secret: 'altib' }));
+    if (!ok) {
+      this.stats.windCancel ??= {};
+      this.stats.windCancel.noStrike = (this.stats.windCancel.noStrike ?? 0) + 1;
+      return false;
+    }
+    useSecret(f);
+    f.skill.secretBursts = (f.skill.secretBursts ?? 0) + 1; // 결정타 연출 · 비기 소리 (main.js · secret_sfx.js — 낸 순간)
+    if (this.cur) this.closeStroke(this.t);
+    this.tapRec = { tech: 'tap', kind: 'cut', tap: true, t0: this.t, dir: [0, 0], start: null, landed: false, bound: false, tEnd: null, unique: e.U.name };
+    const st = (this.stats.altib ??= { fired: 0, why: {}, k: [], turns: [] });
+    st.fired++;
+    st.why[why] = (st.why[why] ?? 0) + 1;
+    st.k.push(+k.toFixed(3));
+    st.turns.push(+(W?.turns ?? 0).toFixed(2));
+    this.stats.windFire ??= {};
+    this.stats.windFire[why] = (this.stats.windFire[why] ?? 0) + 1;
+    const S = TRADITIONS.iberian?.secret;
+    f.uniqueCue = { text: S?.nameKo ?? e.U.nameKo, kind: 'secret', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: 'altib', t: this.t };
+    f.stamina.attack('cut');
+    if (A.zero) f.stamina.zero('secret');
+    return true;
+  }
+
+  /**
+   * 싱지르 특수 공격 원 긋기 (11/11 사장님 '싱지르를 제비베기와 같은 위계의 특수공격으로' — 'altib' 판 · main.js 가 프레임마다 · 재는 도구 school_balance 봇도 같은 차례):
+   *  비기 무장 없이 공격 손 움직임 d(패드 m) · 손가락이 닿았나(down)로 SECRET.ibSpin.circleTime 초 안에 원 한 바퀴(어느 쪽이든 — 비기 판 spinCircle 과 같은 셈 attack_circle.js)를 그리면
+   *  skill.secret 의 싱지르 실행부로 낸다(special — 비기 판당 쓸 수 · 판정 배율 · 굳음 없음 · 칼끝 고노센 × specialShare.cingir) · 식힘 specialCooldown · 기술 알림.
+   *  can = 낼 수 있는 몸(main.js: 비기 실행 중 아님 · 살아 있음). 식는 중 · 감는 중 · 끌고 가는 칼 · 탭 찌르기 · 탈진이면 셈을 비움. 냈으면 true
+   */
+  circleTick(dt, d, down, can) {
+    const f = this.f;
+    const e = this.cingirE;
+    const st = (this.circ ??= circleState());
+    const ok = !!e && ibSwap() && can && UA.on && UA.enhance > 0 && !this.cooling(e) && !this.winding && !iaiBusy(f) && !f.skill.sec && !f.skill.tap && !f.skill.pom && !f.ibSpin && f.alive && f.armed && f.state === 'stand' && !f.stamina.exhausted && !!f.foe;
+    if (!ok) {
+      circleClear(st);
+      st.t += dt;
+      return false;
+    }
+    const V = SECRET.ibSpin;
+    if (!circleStep(st, dt, d.x, d.y, down, { time: V.circleTime, need: 2 * Math.PI, rMin: V.circleR, gap: V.circleGap, inner: V.circleInner })) return false;
+    circleClear(st);
+    if (!f.skill.secret({ S: IBERIAN_SPIN_DEF, ctx: { ev: 'spin', turnDir: st.sgn }, special: e.name })) {
+      this.stats.circleRefused = (this.stats.circleRefused ?? 0) + 1;
+      return false;
+    }
+    this.coolStart(e);
+    if (this.cur) this.closeStroke(this.t);
+    this.stats.fired[e.name] = (this.stats.fired[e.name] ?? 0) + 1;
+    f.uniqueCue = { text: e.U?.nameKo ?? e.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: e.name, t: this.t };
     return true;
   }
 

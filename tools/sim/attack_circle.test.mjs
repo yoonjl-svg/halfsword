@@ -130,6 +130,10 @@ test('원 앞의 곧은 들머리(가운데에서 밀어 나감)는 버리고 �
 test('사람 몸: 무장 창이 열린 동안 원 한 바퀴 → 참 · 톡 · 끌기 창 아님(circleOwns) · 원을 그리는 휘두름은 획이 이어지는 동안 무장을 풀지 않음 · 원이 아닌 긋기는 획 끝에 풀림', async () => {
   const { newRound, DT } = await import('./harness_m.mjs');
   const { PlayerSecretWatch } = await import('../../src/secret.js');
+  // 11/11 이베리아 자리 바꿈: 이 장면은 싱지르 비기 판('spin' — 무장 창에서 원) — 시험 안에서만 그 판으로 묶음 (특수 공격 판 원 = tools/sim/ib_swap.test.mjs)
+  const keepMode = SECRET.iberianSecret;
+  SECRET.iberianSecret = 'spin';
+  try {
   const G = newRound({ seed: 2, weapon: 'zweihander', weapon2: 'longsword', gap: 3.4 });
   const P = G.player, E = G.enemy;
   P.skill.corr = SKILL.corr;
@@ -185,4 +189,7 @@ test('사람 몸: 무장 창이 열린 동안 원 한 바퀴 → 참 · 톡 · �
   assert.ok(P.skill.secret(o), '싱지르 냄');
   assert.equal(P.ibSpin.dir, -1); // 그린 쪽(시계)으로 돎
   G.world.free();
+  } finally {
+    SECRET.iberianSecret = keepMode;
+  }
 });

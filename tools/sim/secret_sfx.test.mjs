@@ -9,6 +9,9 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { newRound, DT, CONFIG, AI } from './harness_m.mjs';
 import { SecretSfxWatch, secretSfxFile, secretSfxMode, secretFizzled } from '../../src/secret_sfx.js';
+// 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 싱지르 비기 소리 장면(무장 창 · 비기 터뜨림 — 사람 · AI)이라
+//  그 판('spin')으로 묶는다(이 파일 안에서만). 새 판(비기 알티바슈 포르트 · 특수 공격 싱지르 한 걸음)은 tools/sim/ib_swap.test.mjs
+(await import('../../src/config.js')).SECRET.iberianSecret = 'spin';
 
 const { Sound } = await import('../../src/sound.js');
 const { TRADITIONS, playerSecretDef } = await import('../../src/schools.js');

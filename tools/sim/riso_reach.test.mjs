@@ -46,7 +46,7 @@ test("A [사장님 11/11 결정] '리솔루토를 70%로 상향하고 파괴력�
   assert.equal(SECRET.risolutoHitMul, 0.5);
   assert.equal(SECRET.hitMul, 1.3, '다른 비기 판정 배율 그대로');
   assert.equal(risoHitMul(), 0.5);
-  assert.equal(mordHitMul(), SECRET.hitMul, '죽음의 일격은 다른 비기 배율 그대로');
+  assert.equal(mordHitMul(), 1, '죽음의 일격 1 (11/11 사장님 \'죽음의 일격도 1.0으로 해.\' — 이 줄은 riso-reach 가지 때 1.3 이었음 · 고노센만 1.3)');
   withCfg({ risolutoHitMul: 1.3 }, () => assert.equal(risoHitMul(), 1.3)); // ?risoHitMul=1.3 = 전 판
   withCfg({ risolutoHitMul: null }, () => assert.equal(risoHitMul(), SECRET.hitMul));
   // 런지 요청 = 빠르기 0.7 · 판정 0.5
