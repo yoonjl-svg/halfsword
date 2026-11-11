@@ -178,7 +178,7 @@ test('진 · 츠바메가에시(모노호시자오 무기 비검 kin)는 그대�
 const withFc1105 = (fn) => {
   const FC = CONFIG.SKILL.fingerCut;
   const keep = { ...FC };
-  Object.assign(FC, { arm: 1, gain: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면
+  Object.assign(FC, { arm: 1, gain: 1, hit: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면 (11/11 부터 기본 hit 2 — 전 장면은 hit 1 도)
   try {
     return fn();
   } finally {
