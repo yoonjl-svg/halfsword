@@ -3261,7 +3261,7 @@ function stepCombo(f, combat) {
         I.zone = res.zone;
         I.type = res.type;
         I.sev = Math.max(I.sev ?? 0, res.severity ?? 0); // 격살 재기 (판정에는 안 씀)
-      }
+      } else weakTouch(I); // 11/11 헛맞음 고침 (SECRET.spendOnWound): 판정 문턱 밑 닿음은 '수마다 한 번'을 쓰지 않음 — 다음 조각 · 스텝 닿음을 봄
     }
   }
   I.prev = cur;
@@ -3373,11 +3373,22 @@ function lungeSweep(f, I, combat, t0, t1) {
           I.zone = res.zone;
           I.type = res.type;
           I.sev = Math.max(I.sev ?? 0, res.severity ?? 0);
-        }
+        } else weakTouch(I); // 11/11 헛맞음 고침 (stepCombo 와 같음)
       }
     }
     prev = q;
   }
+}
+
+/**
+ * 판정 문턱 밑 닿음 (11/11 격살 헛맞음 고침 — 사장님 '격살 오류 고쳐' · SECRET.spendOnWound · 기록 docs/strike/gk_ghost_2026-11-11.md): 끌고 가는 칼(stepCombo · lungeSweep)이 몸에 닿았으나
+ *  그 조각 빠르기로는 상처가 나지 않았으면(instantWound null — 에너지 < STRIKE.minEnergy) '수마다 한 번' 맞음(I.hitM)을 되돌려 다음 조각 · 스텝 닿음을 본다.
+ *  격살 허파 찌르기: 겨눔 → 찌름을 넘는 스텝이 찌름 토막에 조금만 들어가면 찌르는 토막 첫 자리(thrustSweep)부터의 옮김이 짧아 그 스텝 첫 조각 빠르기가 0.3 ~ 0.8 m/s 로 읽혔다(칼이 몸을 지나가는데 상처 없음).
+ *  0 = 전 판(닿기만 해도 씀 — `?spendOnWound=0`) · 셈 I.weakN 은 재기 (판정에는 안 씀)
+ */
+function weakTouch(I) {
+  I.weakN = (I.weakN ?? 0) + 1;
+  if (SECRET.spendOnWound) I.hitM = false;
 }
 
 function endCombo(f, combat) {

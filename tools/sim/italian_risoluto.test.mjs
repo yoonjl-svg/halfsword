@@ -261,8 +261,9 @@ test('10/24 런지 값 (사장님 \'런지로 진행해. 단 런지 동작이 �
   assert.equal(SECRET.risolutoHitMul, 0.5); // 11/11 사장님 '… 파괴력을 0.5로 해.' — 리솔루토만 0.5 (같은 날 앞 결정 '1.3도 없애' = 1 을 바꿈)
   // 걸음은 있던 수: 몸 미끄러짐 = 고노센 발도 iaiStep · 앞발 = 이탈리아 런지 italianStep · 디딘 뒤 뒷발 끌어붙임
   // 10/24 14:0x: 디딘 뒤 뒷발 끌어붙임(draw) 대신 앞발을 뒤로 거둠(recover — 걸음 시간 0.4 사다리) · 걸음 동안 몸 따라감 배율 stepPush(엇박 찌르기 런지와 같은 2.0) · 몸 가속 한도 × burstAccel(accel)
-  assert.deepEqual(SECRET.risolutoStep, { slide: 'iaiStep', foot: 'italianStep', draw: 0, room: 0, push: 'stepPush', accel: 1, recover: 1, recoverT: 0.4 }); // room 1 = 앞발도 clinch 밖까지만 (?risoRoom=1)
-  assert.equal(SECRET.iaiStep, 0.6); assert.equal(SECRET.italianStep, 0.9);
+  // 11/11 사장님 "런지 거리는 0.45로 해, 다른 거리 잴 필요 없어." — 몸 미끄러짐은 리솔루토 전용 SECRET.risolutoSlide 0.45 (전 고노센 발도와 같은 iaiStep 0.6 · 고노센은 0.6 그대로)
+  assert.deepEqual(SECRET.risolutoStep, { slide: 'risolutoSlide', foot: 'italianStep', draw: 0, room: 0, push: 'stepPush', accel: 1, recover: 1, recoverT: 0.4 }); // room 1 = 앞발도 clinch 밖까지만 (?risoRoom=1)
+  assert.equal(SECRET.risolutoSlide, 0.45); assert.equal(SECRET.iaiStep, 0.6); assert.equal(SECRET.italianStep, 0.9);
   // 다른 곳 값은 그대로 (흘림 팔 늦춤 · 이탈리아 비기 굳음 — 10/23 판 · AI 칸)
   assert.equal(CONFIG.FLOW_RECOVERY.seconds, rs(0.4)); assert.equal(SECRET.stiff.italian, rs(0.4));
 });
@@ -280,7 +281,7 @@ test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝
     assert.equal(o.req.share, SECRET.risolutoShare);
     assert.equal(o.req.hitMul, SECRET.risolutoHitMul); // 11/11 리솔루토 판정 배율 (기본 0.5 — 전 SECRET.hitMul 1.3)
     assert.equal(o.req.hold, rs(0.6));
-    assert.deepEqual([m.step.fwd, m.step.foot, !!m.step.draw, !!m.step.room, m.step.push, !!m.step.accel], [SECRET.iaiStep, SECRET.italianStep, false, false, SECRET.stepPush, true]);
+    assert.deepEqual([m.step.fwd, m.step.foot, !!m.step.draw, !!m.step.room, m.step.push, !!m.step.accel], [SECRET.risolutoSlide, SECRET.italianStep, false, false, SECRET.stepPush, true]); // 몸 미끄러짐 한도 = 리솔루토 전용 열쇠 (11/11 — 전 iaiStep)
     assert.equal(m.glide, true);
     assert.equal(o.armSlow, null, '상대 두 팔 늦춤 없음 (10/30 20:0x — 전 0.6 s)');
     assert.ok(o.lungeT > 0, '런지 자세 (SECRET.stance.lunge)');

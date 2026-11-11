@@ -77,7 +77,7 @@ const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? real
  *  한 수 = 격살 허파 찌르기와 같은 길(dyn 'aim' · thrust — secret_instant.js comboPlanAim): 어깨 → 상대 가슴(가슴 몸체 가운데 0.05 m 위) 줄 위로 칼을 눕혀(맞힘 없음 — 칼끝은 그 앞 0.35 m)
  *   그 줄을 따라 곧게 찌르고(칼 축 방향 — 찌르기로 닿음) 겨눈 자리로 뽑아 칼끝을 상대에게 둔 채 굳음 동안 붙잡음 (back — 몸통 가운데에 꽂힌 채 굳지 않게).
  *   (지금 칼끝에서 곧장 몸통 쪽으로 가는 연환 찌름 'thrust' 은 칼이 돌며 가로질러 닿아 둔타 40 J 로 그쳤다 — 탐침)
- *  걸음 = SECRET.risolutoStep: 몸 미끄러짐 한도 slide(고노센 발도 iaiStep — 맞닿기에서 멈춤 · clinch 안 금지) · 앞발 foot(이탈리아 런지 italianStep) · 디딘 뒤 뒷발 끌어붙임 draw.
+ *  걸음 = SECRET.risolutoStep: 몸 미끄러짐 한도 slide(리솔루토 전용 SECRET.risolutoSlide 0.45 m — 11/11 · 전 고노센 발도 iaiStep 0.6 · 맞닿기에서 멈춤 · clinch 안 금지) · 앞발 foot(이탈리아 런지 italianStep) · 디딘 뒤 뒷발 끌어붙임 draw.
  *  빠르기 = 고노센 칼끝 × risolutoShare · 판정 = 리솔루토 판정 배율 risoHitMul(11/11 사장님 '리솔루토를 70%로 상향하고 파괴력을 0.5로 해.' — 0.5) · 굳음 붙잡기 = risolutoStiff · 잔상 = 찌르는 토막만(arcCut) · 마주 보는 띠(face 'line') — 격살 허파 찌르기와 같음
  *  11/11 거리 판단 (스위치 SECRET.risolutoReach · 기본 끔 — 켜고 risolutoReachFixed 1 이면): 몸 미끄러짐을 늘 같은 길이(slide 한도 그대로 — 맞닿기에서 멈추지 않음 · clinch 안 금지는 그대로) —
  *   comboMoveStart 의 걸음 칸 close(날개 접기 10/28 과 같은 칸 · 새 수 없음). 끄면 전과 바이트 같음
@@ -87,7 +87,7 @@ export const risoHitMul = () => SECRET.risolutoHitMul ?? SECRET.hitMul;
 const risolutoLungeReq = () => {
   const st = SECRET.risolutoStep ?? {};
   const fixed = !!SECRET.risolutoReach && !!(SECRET.risolutoReachFixed ?? 1); // 11/11 거리 판단 ②: 미끄러짐 늘 같은 길이
-  const step = { kind: 'lunge', fwd: secVal(st.slide ?? 'iaiStep'), foot: secVal(st.foot ?? 'italianStep'), ...(st.draw ? { draw: true } : {}), ...(st.room ? { room: true } : {}), ...(st.push ? { push: secVal(st.push) } : {}), ...(st.accel ? { accel: true } : {}), ...(fixed ? { close: true } : {}) };
+  const step = { kind: 'lunge', fwd: secVal(st.slide ?? 'risolutoSlide'), foot: secVal(st.foot ?? 'italianStep'), ...(st.draw ? { draw: true } : {}), ...(st.room ? { room: true } : {}), ...(st.push ? { push: secVal(st.push) } : {}), ...(st.accel ? { accel: true } : {}), ...(fixed ? { close: true } : {}) };
   const moves = [{ name: 'risolutoLunge', nameKo: '런지', kind: 'thrust', lunge: true, glide: !!SECRET.risolutoGlide, step, dyn: { kind: 'aim', target: 'lung', thrust: true, back: true } }];
   return { moves, share: SECRET.risolutoShare ?? 1, hitMul: risoHitMul(), hold: risolutoStiff(), arcCut: true, face: SECRET.secretStreak ? 'line' : null, min: SECRET.secretArcMin ?? 0 };
 };

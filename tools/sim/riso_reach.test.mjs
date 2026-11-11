@@ -111,7 +111,7 @@ test('B 값 (스위치 · 기본 끔 — 사장님 확인 전): risolutoReach 0 
   assert.equal(off.req.moves[0].step.close, undefined, '끔 = 전 걸음 칸 그대로');
   const on = withCfg(REACH(), () => fireOnce());
   assert.equal(on.req.moves[0].step.close, true, '켬 = 맞닿기에서 멈추지 않음');
-  assert.equal(on.req.moves[0].step.fwd, SECRET.iaiStep, '미끄러짐 길이 한도 그대로 0.6 m');
+  assert.equal(on.req.moves[0].step.fwd, SECRET.risolutoSlide, '미끄러짐 길이 한도 그대로 (리솔루토 전용 열쇠 — 11/11 사장님 0.45 · 전 iaiStep 0.6)');
   assert.equal(on.req.share, off.req.share, '빠르기 그대로');
   assert.equal(on.req.hitMul, off.req.hitMul, '한 방 세기 그대로');
   const o1 = withCfg(REACH(0.4, 0), () => fireOnce());
@@ -167,7 +167,9 @@ test('B ① 이어진 창(0.6 s 지킴 밖)은 간격이 모자라면 닫힘 (�
   assert.ok(r.closed != null && Math.abs(r.closed - 0.8) <= 2 * DT, `닫힌 때 ${r.closed}`);
 }));
 
-test('B ② 미끄러짐 늘 같은 길이: 끄면 맞닿기에서 멈춤(가슴 사이 − 맞닿기) · 켜면 0.6 m (clinch 안 금지만) · 먼 데서는 둘 다 0.6 m', () => {
+// 11/11 사장님 "런지 거리는 0.45로 해" 뒤에도 아래 둘(B ② · B 켬)은 이 기록을 쓴 때의 장면(리솔루토 미끄러짐 0.6 = 고노센 iaiStep)으로 본다 — 옛 장면 재현 (0.45 판은 gk_ghost.test.mjs)
+const SLIDE06 = (fn) => withCfg({ risolutoSlide: 0.6 }, fn);
+test('B ② 미끄러짐 늘 같은 길이: 끄면 맞닿기에서 멈춤(가슴 사이 − 맞닿기) · 켜면 0.6 m (clinch 안 금지만) · 먼 데서는 둘 다 0.6 m', () => SLIDE06(() => {
   const offNear = lungeAt({ gap: 2.0 });
   const onNear = withCfg(REACH(), () => lungeAt({ gap: 2.0 }));
   assert.ok(offNear.slide < 0.45, `끔 2.0 m: ${offNear.slide}`);
@@ -178,9 +180,9 @@ test('B ② 미끄러짐 늘 같은 길이: 끄면 맞닿기에서 멈춤(가슴
   const onFar = withCfg(REACH(), () => lungeAt({ gap: 2.8 }));
   assert.ok(Math.abs(offFar.slide - 0.6) < 1e-3 && Math.abs(onFar.slide - 0.6) < 1e-3, `먼 데 ${offFar.slide} · ${onFar.slide}`);
   assert.equal(onFar.tipMax, offFar.tipMax, '빠르기 그대로');
-});
+}));
 
-test('B 켬: 가까우면 맞음 · 먼 데서 내면 칼끝이 모자라 빗나감 (자동 겨눔은 줄만 — 모자란 거리를 메우지 않음)', () => withCfg(REACH(), () => {
+test('B 켬: 가까우면 맞음 · 먼 데서 내면 칼끝이 모자라 빗나감 (자동 겨눔은 줄만 — 모자란 거리를 메우지 않음)', () => SLIDE06(() => withCfg(REACH(), () => {
   for (const gap of [1.9, 2.2]) {
     const r = lungeAt({ gap });
     assert.ok(r.hit && r.sev > 0, `${gap} m 맞음 ${JSON.stringify(r)}`);
@@ -191,4 +193,4 @@ test('B 켬: 가까우면 맞음 · 먼 데서 내면 칼끝이 모자라 빗나
     assert.equal(r.hit, false, `${gap} m 빗나감 ${JSON.stringify(r)}`);
     assert.ok(r.over < -0.1, `${gap} m 칼끝 모자람 ${r.over}`);
   }
-}));
+})));

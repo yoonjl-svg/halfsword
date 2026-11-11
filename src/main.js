@@ -309,6 +309,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   // 11/11 거리 판단 리솔루토 (스위치 · 기본 끔 — 사장님 '거리 판단에 맡기기 -> 진행하고'): `?risoReach=1` 켬 (칼이 떨어진 뒤에도 창 · 미끄러짐 늘 같은 길이) · `?risoReachKeep=0.6` 이어지는 시간(실제 초) · `?risoReachFixed=0` 창만
   if (params.has('risoReach')) CONFIG.SECRET.risolutoReach = +params.get('risoReach') ? 1 : 0;
   if (params.has('risoReachKeep') && +params.get('risoReachKeep') >= 0) CONFIG.SECRET.risolutoReachKeep = CONFIG.realS(+params.get('risoReachKeep'));
+  if (params.has('risoSlide') && +params.get('risoSlide') >= 0) CONFIG.SECRET.risolutoSlide = +params.get('risoSlide'); // 11/11 사장님 "런지 거리는 0.45로 해" — 리솔루토 런지 몸 미끄러짐 한도 (m · 기본 0.45 · `?risoSlide=0.6` = 전 판 — 고노센 발도 iaiStep 과 같던 수)
   if (params.has('risoReachFixed')) CONFIG.SECRET.risolutoReachFixed = +params.get('risoReachFixed') ? 1 : 0;
   if (params.has('risoShare') && +params.get('risoShare') > 0) CONFIG.SECRET.risolutoShare = +params.get('risoShare'); // 11/11 사장님 '리솔루토를 70%로 상향' 0.7 (전 0.5 — 11/04 · 그 전 0.7 · 0.8 · 0.9 · 1)
   if (params.has('risoArmSlow') && +params.get('risoArmSlow') >= 0) CONFIG.SECRET.risolutoArmSlow = CONFIG.realS(+params.get('risoArmSlow')); // 런지 상대 팔 늦춤 (실제 초 — 10/30 20:0x 사장님 0 · 전 0.6)
@@ -327,6 +328,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('risoGlint')) CONFIG.SECRET.risoGlintLife = Math.max(0, +params.get('risoGlint') || 0); // 빛줄기 끝 반짝임만: 0 = 끔 · `?risoGlint=0.2` 처럼 s 로 견주기
   if (params.has('thrustArm')) CONFIG.SECRET.thrustArm = +params.get('thrustArm') ? 1 : 0; // 10/24 15:5x 운동학 겨눈 찌름(런지 · 격살 허파 찌르기) — 0 = 전 손 자리(어깨 가까이 · 칼이 새끼 쪽으로 꺾여 거꾸로 쥔 꼴)
   if (params.has('sweepCap')) CONFIG.SECRET.sweepCap = +params.get('sweepCap') ? 1 : 0; // 11/04 끌고 가는 칼 맞음 빠르기 묶음 (기본 1 — 손목 교정 튐이 1470 ~ 4965 J 로 읽히던 결함 고침) · `?sweepCap=0` = 전 판
+  if (params.has('spendOnWound')) CONFIG.SECRET.spendOnWound = +params.get('spendOnWound') ? 1 : 0; // 11/11 끌고 가는 칼 헛맞음 고침 (기본 1 — 판정 문턱 밑 닿음은 '수마다 한 번'을 쓰지 않음) · `?spendOnWound=0` = 전 판
   if (params.has('holdDepth')) CONFIG.SECRET.holdDepth = +params.get('holdDepth') ? 1 : 0; // 시험 (10/24 17:2x 뒤 · 기본 끔): 1 = 맞힌 겨눈 찌름(런지 · 격살 허파 찌르기)의 굳음 동안 칼끝이 겨눈 곳(상대 몸통 가운데)을 넘지 않게 손을 칼 줄을 따라 거둠 (fighter.js holdDepthHand — 끄면 런지 앞발을 따라 칼이 상대 등 뒤로 나옴)
 }
 {

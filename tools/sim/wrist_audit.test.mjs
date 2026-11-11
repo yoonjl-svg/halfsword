@@ -53,7 +53,8 @@ test('값: 운동학 겨눈 찌름 팔 뻗음 SECRET.thrustArm 1 · 팔꿈치 �
 //  (docs/strike/time_standard_2026-10-25.md §4 — 사장님 · 감독께 여쭘). 팔 · 손목 규칙 시험이라 10/24 굳음 길이로 본다
 //  10/30 20:0x 사장님 '팔 느려짐 없애고 속도는 90%'(risolutoArmSlow 0 · risolutoShare 0.9) 뒤에도 이 팔 · 손목 시험은 10/24 런지 값(빠르기 1 · 팔 늦춤 0.6)으로 본다 — 손목 규칙이 그대로인지 보는 자리
 //  11/11 사장님 '리솔루토를 70%로 상향하고 파괴력을 0.5로 해.'(risolutoHitMul 0.5) 뒤에도 10/24 런지 값 판정 배율 1.3(그때 SECRET.hitMul) 으로 본다 — 옛 장면 재현 (배율 0.5 면 달타냥 옛 꼴 거꾸로 몫이 50 % 로 문턱에 걸림)
-const LUNGE1024 = [[SECRET, 'risolutoStiff', 0.6], [SECRET, 'risolutoArmSlow', 0.6], [SECRET, 'risolutoShare', 1], [SECRET, 'risolutoHitMul', 1.3]];
+//  11/11 사장님 "런지 거리는 0.45로 해, 다른 거리 잴 필요 없어."(risolutoSlide 0.45) 뒤에도 10/24 런지 값 몸 미끄러짐 0.6(그때 고노센 iaiStep 과 같은 수) 으로 본다 — 옛 장면 재현 (0.45 면 달타냥 2.2 m 런지가 닿는 끝 밖)
+const LUNGE1024 = [[SECRET, 'risolutoStiff', 0.6], [SECRET, 'risolutoArmSlow', 0.6], [SECRET, 'risolutoShare', 1], [SECRET, 'risolutoHitMul', 1.3], [SECRET, 'risolutoSlide', 0.6]];
 const withLunge1024 = (fn) => withSets(LUNGE1024, fn);
 test('10/24 런지 손목: 맞힌 자세 아래팔-칼 ≤ 135° · 손이 어깨 앞 팔 길이 0.8 이상 · 새끼 쪽 아님 · 굳음 동안 뻗은 채 (레이피어 · 달타냥 · 2.2 m)', () => {
   for (const w of ['rapier', 'dartagnan']) {
@@ -175,7 +176,8 @@ test('격살 허파 찌르기 맞닿기 언저리 (맞닿기 −0.1 ~ +0.1 m · 
     return T;
   };
   // 11/11 사장님 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' 뒤에도 이 시험은 10/24 thrustSweep 고침 장면(격살 빠르기 0.6 · 판정 배율 1.3)으로 본다 — 옛 장면 재현.
-  //  새 값(0.7 · 1)에서는 첫 맞음 베기 0 · 찌름 9 / 12 — 3 장면은 겨눔 → 찌름을 넘는 스텝의 찌름 첫 조각이 0.8 m/s 로 읽혀 상처 없이 '수마다 한 번'을 써 버림 (기록 docs/strike/riso_reach_2026-11-11.md §격살 · 여쭘)
+  //  새 값(0.7 · 1)에서는 첫 맞음 베기 0 · 찌름 9 / 12 였음 — 3 장면은 겨눔 → 찌름을 넘는 스텝의 찌름 첫 조각이 0.8 m/s 로 읽혀 상처 없이 '수마다 한 번'을 써 버림 (기록 docs/strike/riso_reach_2026-11-11.md §격살 · 여쭘)
+  //  → 11/11 사장님 '격살 오류 고쳐' 헛맞음 고침(SECRET.spendOnWound — 문턱 밑 닿음은 맞음을 쓰지 않음) 뒤 찌름 12 / 12 (tools/sim/gk_ghost.test.mjs · docs/strike/gk_ghost_2026-11-11.md)
   const GK1024 = [[SECRET.gyeoksal, 'share', 0.6], [SECRET, 'gyeoksalHitMul', 1.3]];
   const now = withSets(GK1024, run);
   assert.equal(now.cut, 0, `기본 첫 맞음 베기 ${now.cut} / ${now.n}`);
