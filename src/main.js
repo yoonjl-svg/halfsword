@@ -184,7 +184,8 @@ if (params.get('cnGait') === 'old') setChineseGait('old'); // 동방 박자 (10/
 if (params.has('passAsRung')) CONFIG.GAIT.passAsRung = +params.get('passAsRung') ? 1 : 0; // follow 안 pass → lunge + 끌어붙임 걸음 길이: 1 = 사다리 한 칸 아래(10/29 18:5x 사장님) · `?passAsRung=0` = 옛 × 0.85 (비교용)
 if (params.get('gyeoksalPow') === 'hit' || +params.get('gyeoksalPow') > 0) CONFIG.SECRET.gyeoksal.power = params.get('gyeoksalPow') === 'hit' ? 'hit' : +params.get('gyeoksalPow'); // 격살 판정 시험 (기본 'finish' = FINISH.power 2.5 · 'hit' = 다른 비기와 같은 hitMul 1.3)
 if (params.get('gyeoksalTrail') === '1') CONFIG.SECRET.gyeoksal.trailWidth = 1; // 격살 잔상 굵기도 빠르기 몫으로 (시험)
-if (+params.get('gyeoksalShare') > 0) CONFIG.SECRET.gyeoksal.share = +params.get('gyeoksalShare'); // 격살 칼끝 빠르기 몫 시험 (기본 = cnFastShare 0.3 · 0.5 진 · 1 고노센 발도)
+if (+params.get('gyeoksalShare') > 0) CONFIG.SECRET.gyeoksal.share = +params.get('gyeoksalShare'); // 격살 칼끝 빠르기 몫 (기본 0.7 — 11/11 사장님 '격살도 빠르기 70%로' · 전 0.6 · 0.5 진 · 1 고노센 발도)
+if (params.has('gyeoksalHitMul') && +params.get('gyeoksalHitMul') > 0) CONFIG.SECRET.gyeoksalHitMul = +params.get('gyeoksalHitMul'); // 격살 판정 배율 (기본 1 — 11/11 사장님 '파괴력 배율은 1.3에서 1로 변경') · `?gyeoksalHitMul=1.3` = 전 판
 if (params.get('gyeoksalArm') === 'down') CONFIG.SECRET.gyeoksal.armPath = 'down'; // 격살 어거(팔) 길 시험: 위에서 내려 깎음
 if (params.has('secretStreak')) CONFIG.SECRET.secretStreak = +params.get('secretStreak') ? 1 : 0; // 비기 잔상 마주 보는 띠 (10/23 — 사장님 확인 전): 기본 1, `?secretStreak=0` = 호만
 if (params.has('secretArcMin')) CONFIG.SECRET.secretArcMin = Math.max(0, Math.min(1, +params.get('secretArcMin') || 0)); // 결정타 잔상 바닥 (10/23 — 사장님 확인 전): 기본 0.6, `?secretArcMin=0` = 빠르기 몫 그대로
@@ -304,7 +305,12 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('risoClosing')) CONFIG.SECRET.risolutoClosing = +params.get('risoClosing') ? 1 : 0;
   // 10/24 런지 (사장님 '런지로 진행해 … 고노센처럼 빠르게 … 0.6초 내 경직도 0.6초'): `?risoLunge=0` = 10/23 판(탭 찌르기 · 팔 늦춤 FLOW_RECOVERY 0.4 · 굳음 stiff.italian 0.4) · `?risoShare=0.6` 칼끝 빠르기 몫 비교 · `?risoRoom=1` · `?risoGlide=0`
   if (params.get('risoLunge') === '0') Object.assign(CONFIG.SECRET, { risolutoLunge: 0, risolutoArmSlow: null, risolutoStiff: null });
-  if (params.has('risoShare') && +params.get('risoShare') > 0) CONFIG.SECRET.risolutoShare = +params.get('risoShare'); // 10/31 01:2x 사장님 0.7 (전 0.8 · 0.9 · 그 전 1)
+  if (params.has('risoHitMul') && +params.get('risoHitMul') > 0) CONFIG.SECRET.risolutoHitMul = +params.get('risoHitMul'); // 11/11 사장님 '리솔루토를 70%로 상향하고 파괴력을 0.5로 해.' (기본 0.5) · `?risoHitMul=1.3` = 전 판
+  // 11/11 거리 판단 리솔루토 (스위치 · 기본 끔 — 사장님 '거리 판단에 맡기기 -> 진행하고'): `?risoReach=1` 켬 (칼이 떨어진 뒤에도 창 · 미끄러짐 늘 같은 길이) · `?risoReachKeep=0.6` 이어지는 시간(실제 초) · `?risoReachFixed=0` 창만
+  if (params.has('risoReach')) CONFIG.SECRET.risolutoReach = +params.get('risoReach') ? 1 : 0;
+  if (params.has('risoReachKeep') && +params.get('risoReachKeep') >= 0) CONFIG.SECRET.risolutoReachKeep = CONFIG.realS(+params.get('risoReachKeep'));
+  if (params.has('risoReachFixed')) CONFIG.SECRET.risolutoReachFixed = +params.get('risoReachFixed') ? 1 : 0;
+  if (params.has('risoShare') && +params.get('risoShare') > 0) CONFIG.SECRET.risolutoShare = +params.get('risoShare'); // 11/11 사장님 '리솔루토를 70%로 상향' 0.7 (전 0.5 — 11/04 · 그 전 0.7 · 0.8 · 0.9 · 1)
   if (params.has('risoArmSlow') && +params.get('risoArmSlow') >= 0) CONFIG.SECRET.risolutoArmSlow = CONFIG.realS(+params.get('risoArmSlow')); // 런지 상대 팔 늦춤 (실제 초 — 10/30 20:0x 사장님 0 · 전 0.6)
   if (params.has('risoRoom')) CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, room: +params.get('risoRoom') ? 1 : 0 }; // 1 = 앞발 런지 걸음을 가슴 사이(clinch 밖까지)로 줄임
   if (params.has('risoGlide')) CONFIG.SECRET.risolutoGlide = +params.get('risoGlide') ? 1 : 0; // 0 = 붙은 칼 따라 미끄러짐 끔 (연환과 같은 막힘)

@@ -52,7 +52,8 @@ test('값: 운동학 겨눈 찌름 팔 뻗음 SECRET.thrustArm 1 · 팔꿈치 �
 //  상관없는 몫 — 까닭은 따로 볼 일). 굳음이 실제 0.6 s(게임 0.66 — 80 스텝)가 되면 돌아오는 몫이 평균에 더 들어가 달타냥 '굳음 손 앞 평균' 0.90 → 0.845
 //  (docs/strike/time_standard_2026-10-25.md §4 — 사장님 · 감독께 여쭘). 팔 · 손목 규칙 시험이라 10/24 굳음 길이로 본다
 //  10/30 20:0x 사장님 '팔 느려짐 없애고 속도는 90%'(risolutoArmSlow 0 · risolutoShare 0.9) 뒤에도 이 팔 · 손목 시험은 10/24 런지 값(빠르기 1 · 팔 늦춤 0.6)으로 본다 — 손목 규칙이 그대로인지 보는 자리
-const LUNGE1024 = [[SECRET, 'risolutoStiff', 0.6], [SECRET, 'risolutoArmSlow', 0.6], [SECRET, 'risolutoShare', 1]];
+//  11/11 사장님 '리솔루토를 70%로 상향하고 파괴력을 0.5로 해.'(risolutoHitMul 0.5) 뒤에도 10/24 런지 값 판정 배율 1.3(그때 SECRET.hitMul) 으로 본다 — 옛 장면 재현 (배율 0.5 면 달타냥 옛 꼴 거꾸로 몫이 50 % 로 문턱에 걸림)
+const LUNGE1024 = [[SECRET, 'risolutoStiff', 0.6], [SECRET, 'risolutoArmSlow', 0.6], [SECRET, 'risolutoShare', 1], [SECRET, 'risolutoHitMul', 1.3]];
 const withLunge1024 = (fn) => withSets(LUNGE1024, fn);
 test('10/24 런지 손목: 맞힌 자세 아래팔-칼 ≤ 135° · 손이 어깨 앞 팔 길이 0.8 이상 · 새끼 쪽 아님 · 굳음 동안 뻗은 채 (레이피어 · 달타냥 · 2.2 m)', () => {
   for (const w of ['rapier', 'dartagnan']) {
@@ -173,10 +174,15 @@ test('격살 허파 찌르기 맞닿기 언저리 (맞닿기 −0.1 ~ +0.1 m · 
     }
     return T;
   };
-  const now = run();
+  // 11/11 사장님 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' 뒤에도 이 시험은 10/24 thrustSweep 고침 장면(격살 빠르기 0.6 · 판정 배율 1.3)으로 본다 — 옛 장면 재현.
+  //  새 값(0.7 · 1)에서는 첫 맞음 베기 0 · 찌름 9 / 12 — 3 장면은 겨눔 → 찌름을 넘는 스텝의 찌름 첫 조각이 0.8 m/s 로 읽혀 상처 없이 '수마다 한 번'을 써 버림 (기록 docs/strike/riso_reach_2026-11-11.md §격살 · 여쭘)
+  const GK1024 = [[SECRET.gyeoksal, 'share', 0.6], [SECRET, 'gyeoksalHitMul', 1.3]];
+  const now = withSets(GK1024, run);
   assert.equal(now.cut, 0, `기본 첫 맞음 베기 ${now.cut} / ${now.n}`);
   assert.ok(now.stab >= 10, `기본 첫 맞음 찌름 ${now.stab} / ${now.n}`);
-  const off = withSets([[SECRET, 'thrustSweep', 0]], run);
+  const cur = run(); // 지금 기본값(11/11 격살 0.7 · 1)에서도 첫 맞음이 베기가 아님은 그대로
+  assert.equal(cur.cut, 0, `11/11 값 첫 맞음 베기 ${cur.cut} / ${cur.n}`);
+  const off = withSets([...GK1024, [SECRET, 'thrustSweep', 0]], run);
   assert.ok(off.cut >= 3, `thrustSweep 0: 첫 맞음 베기 ${off.cut} / ${off.n}`);
 });
 

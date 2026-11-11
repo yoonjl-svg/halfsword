@@ -155,8 +155,10 @@ test('한 칼 세기: 판정 에너지 × FINISH.power (결정타 hitMul 대신)
   }
 });
 
-test('스위치: 칼끝 빠르기 몫 SECRET.gyeoksal.share(10/22 확정 0.6) · 어거 길 armPath down · 잔상 굵기 trailWidth', () => {
-  assert.equal(SECRET.gyeoksal.share, 0.6); // 10/22 23:0x 사장님 확정 (전 null = 연환 0.3)
+test('스위치: 칼끝 빠르기 몫 SECRET.gyeoksal.share(11/11 0.7 · 10/22 확정 0.6) · 어거 길 armPath down · 잔상 굵기 trailWidth', () => {
+  assert.equal(SECRET.gyeoksal.share, 0.7); // 11/11 사장님 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' (전 0.6 — 10/22 23:0x 사장님 확정 · 그 전 null = 연환 0.3)
+  assert.equal(SECRET.gyeoksalHitMul, 1); // 같은 말씀 — 격살만 판정 배율 1 (다른 비기 SECRET.hitMul 1.3 그대로)
+  assert.equal(SECRET.hitMul, 1.3);
   assert.equal(SECRET.gyeoksal.trailWidth, 0);
   assert.equal(SECRET.gyeoksal.armPath, 'across');
   const S = TRADITIONS.chinese.playerSecret;
@@ -183,7 +185,7 @@ test('스위치: 칼끝 빠르기 몫 SECRET.gyeoksal.share(10/22 확정 0.6) ·
     assert.equal(arc.share, 0.6);
     assert.equal(arc.width, 0.6); // 켬 = 굵기도 빠르기 몫
   } finally {
-    SECRET.gyeoksal.share = 0.6;
+    SECRET.gyeoksal.share = 0.7; // 기본값으로 되돌림 (11/11)
     SECRET.gyeoksal.armPath = 'across';
     SECRET.gyeoksal.trailWidth = 0;
   }

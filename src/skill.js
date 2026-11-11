@@ -61,12 +61,14 @@ const secretEffMul = (D) => {
   const v = D.power === 'gyeoksal' ? SECRET.gyeoksal?.power : D.power;
   return v === 'finish' ? FINISH.power : v === 'hit' ? 1 : +v || 1;
 };
-/** 격살 판정 묶음 (requestCombo 칸): 'hit' = 다른 비기와 같은 결정타 SECRET.hitMul(판정 에너지 · secretHit) · 그 밖 = 결정타 없이 eff × secretEffMul · 시험 빠르기 몫 share · 잔상 굵기 width(trailWidth 켬일 때 = 빠르기 몫) */
+/** 격살 판정 배율 (11/11 사장님 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' — SECRET.gyeoksalHitMul 1 · null 이면 다른 비기와 같은 SECRET.hitMul · `?gyeoksalHitMul=1.3` = 전 판) — 운동학 길 · 서보 길 둘 다 */
+export const gyeoksalHitMul = () => SECRET.gyeoksalHitMul ?? SECRET.hitMul;
+/** 격살 판정 묶음 (requestCombo 칸): 'hit' = 결정타 격살 배율 gyeoksalHitMul(판정 에너지 · secretHit — 11/11 1 · 전 다른 비기와 같은 SECRET.hitMul 1.3) · 그 밖 = 결정타 없이 eff × secretEffMul · 시험 빠르기 몫 share · 잔상 굵기 width(trailWidth 켬일 때 = 빠르기 몫) */
 const gyeoksalReq = (D) => {
   const G = SECRET.gyeoksal ?? {};
   const pw = D.power === 'gyeoksal' ? G.power : D.power;
   const share = G.share > 0 ? G.share : SECRET.cnFastShare;
-  return { ...(pw === 'hit' ? { hitMul: SECRET.hitMul } : { hitMul: 1, effMul: secretEffMul(D) }), ...(G.share > 0 ? { share: G.share } : {}), ...(G.trailWidth ? { width: Math.min(1, share) } : {}) };
+  return { ...(pw === 'hit' ? { hitMul: gyeoksalHitMul() } : { hitMul: 1, effMul: secretEffMul(D) }), ...(G.share > 0 ? { share: G.share } : {}), ...(G.trailWidth ? { width: Math.min(1, share) } : {}) };
 };
 /** 안다레 리솔루토 굳음 (s): 10/24 런지 risolutoStiff 0.6 (사장님) · null 이면 이탈리아 비기 굳음 stiff.italian (10/23 판) */
 const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? realS(0.3); // 굳음은 실제 초 (표준 시간 10/25 — config 값도 realS)
@@ -76,13 +78,18 @@ const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? real
  *   그 줄을 따라 곧게 찌르고(칼 축 방향 — 찌르기로 닿음) 겨눈 자리로 뽑아 칼끝을 상대에게 둔 채 굳음 동안 붙잡음 (back — 몸통 가운데에 꽂힌 채 굳지 않게).
  *   (지금 칼끝에서 곧장 몸통 쪽으로 가는 연환 찌름 'thrust' 은 칼이 돌며 가로질러 닿아 둔타 40 J 로 그쳤다 — 탐침)
  *  걸음 = SECRET.risolutoStep: 몸 미끄러짐 한도 slide(고노센 발도 iaiStep — 맞닿기에서 멈춤 · clinch 안 금지) · 앞발 foot(이탈리아 런지 italianStep) · 디딘 뒤 뒷발 끌어붙임 draw.
- *  빠르기 = 고노센 칼끝 × risolutoShare · 판정 = 다른 비기와 같은 결정타 hitMul · 굳음 붙잡기 = risolutoStiff · 잔상 = 찌르는 토막만(arcCut) · 마주 보는 띠(face 'line') — 격살 허파 찌르기와 같음
+ *  빠르기 = 고노센 칼끝 × risolutoShare · 판정 = 리솔루토 판정 배율 risoHitMul(11/11 사장님 '리솔루토를 70%로 상향하고 파괴력을 0.5로 해.' — 0.5) · 굳음 붙잡기 = risolutoStiff · 잔상 = 찌르는 토막만(arcCut) · 마주 보는 띠(face 'line') — 격살 허파 찌르기와 같음
+ *  11/11 거리 판단 (스위치 SECRET.risolutoReach · 기본 끔 — 켜고 risolutoReachFixed 1 이면): 몸 미끄러짐을 늘 같은 길이(slide 한도 그대로 — 맞닿기에서 멈추지 않음 · clinch 안 금지는 그대로) —
+ *   comboMoveStart 의 걸음 칸 close(날개 접기 10/28 과 같은 칸 · 새 수 없음). 끄면 전과 바이트 같음
  */
+/** 안다레 리솔루토 판정 배율 (11/11 사장님 '리솔루토를 70%로 상향하고 파괴력을 0.5로 해.' — SECRET.risolutoHitMul 0.5 · null 이면 다른 비기와 같은 SECRET.hitMul · `?risoHitMul=1.3` = 전 판) — 런지 · 탭 찌르기(`?risoLunge=0`) 둘 다 */
+export const risoHitMul = () => SECRET.risolutoHitMul ?? SECRET.hitMul;
 const risolutoLungeReq = () => {
   const st = SECRET.risolutoStep ?? {};
-  const step = { kind: 'lunge', fwd: secVal(st.slide ?? 'iaiStep'), foot: secVal(st.foot ?? 'italianStep'), ...(st.draw ? { draw: true } : {}), ...(st.room ? { room: true } : {}), ...(st.push ? { push: secVal(st.push) } : {}), ...(st.accel ? { accel: true } : {}) };
+  const fixed = !!SECRET.risolutoReach && !!(SECRET.risolutoReachFixed ?? 1); // 11/11 거리 판단 ②: 미끄러짐 늘 같은 길이
+  const step = { kind: 'lunge', fwd: secVal(st.slide ?? 'iaiStep'), foot: secVal(st.foot ?? 'italianStep'), ...(st.draw ? { draw: true } : {}), ...(st.room ? { room: true } : {}), ...(st.push ? { push: secVal(st.push) } : {}), ...(st.accel ? { accel: true } : {}), ...(fixed ? { close: true } : {}) };
   const moves = [{ name: 'risolutoLunge', nameKo: '런지', kind: 'thrust', lunge: true, glide: !!SECRET.risolutoGlide, step, dyn: { kind: 'aim', target: 'lung', thrust: true, back: true } }];
-  return { moves, share: SECRET.risolutoShare ?? 1, hitMul: SECRET.hitMul, hold: risolutoStiff(), arcCut: true, face: SECRET.secretStreak ? 'line' : null, min: SECRET.secretArcMin ?? 0 };
+  return { moves, share: SECRET.risolutoShare ?? 1, hitMul: risoHitMul(), hold: risolutoStiff(), arcCut: true, face: SECRET.secretStreak ? 'line' : null, min: SECRET.secretArcMin ?? 0 };
 };
 const _ps = new THREE.Vector3();
 const _pd = new THREE.Vector3();
@@ -894,7 +901,7 @@ export class Skill {
       // 이탈리아 거침없이 나아가 찌르기: 탭 찌르기(updateThrust)가 도는 동안 비기 배율 — 끝나면 굳음 (SECRET.stiff.italian)
       if (this.tap || this.vitalRange) {
         f.powerMul = secVal(D.power ?? 'power');
-        f.secretHit = SECRET.hitMul;
+        f.secretHit = risoHitMul(); // 11/11 사장님 '파괴력을 0.5로 해.' (SECRET.risolutoHitMul 0.5 · 전 SECRET.hitMul 1.3)
         risolutoTrail(f, run); // 잔상 (10/23 점검): 찌르는 몫에 비기 잔상 — italian_risoluto.js
         return;
       }
@@ -989,7 +996,7 @@ export class Skill {
       const inLoop = !!run.cur?.pre?.length && run.path.length > run.cur.path.length; // 연환삼격 이음새 고리 동안 (10/10 04:4x): 검무 빠르기(loopHand), 힘 창·판정 배율 없음 — ai.js 와 같음
       f.powerMul = inLoop ? 1 : secVal(D.power ?? 'power') * (run.gain ?? 1); // run.gain: 독일 막기 연환 붙은 시간 어드밴티지 (없으면 1 — 다른 비기는 전과 같음)
       const gkHit = D.power && (D.power === 'gyeoksal' ? SECRET.gyeoksal?.power : D.power) === 'hit'; // 격살 시험 'hit' = 다른 비기와 같은 결정타
-      f.secretHit = inLoop ? 1 : D.power && !gkHit ? 1 : run.mord ? mordHitMul() : SECRET.hitMul * (run.gain ?? 1); // 죽음의 일격: SECRET.mord.power (기본 'hit' = hitMul 그대로)
+      f.secretHit = inLoop ? 1 : D.power && !gkHit ? 1 : run.mord ? mordHitMul() : (D.power === 'gyeoksal' ? gyeoksalHitMul() : SECRET.hitMul) * (run.gain ?? 1); // 죽음의 일격: SECRET.mord.power (기본 'hit' = hitMul 그대로) · 격살 'hit' = gyeoksalHitMul (11/11 1 — 서보 길 cnFast 0)
       if (D.power && !gkHit) f.effMul = secretEffMul(D); // 격살 서보 길(cnFast 0): 판정 에너지 × FINISH.power — 따라 지나감까지 (secretEnd 에서 지움)
       if (D.strength) f.strength = run.str0 * (inLoop ? 1 : secVal(D.strength));
       if (run.wantStep && !run.stepAsked && run.t >= 0.04 && run.t < 0.4) run.stepAsked = ask(run.wantStep);

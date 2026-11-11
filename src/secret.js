@@ -14,7 +14,7 @@ import { TRADITIONS, playerSecretDef } from './schools.js';
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
 import { segDist } from './skill.js';
 import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동방 막기 I(C7 — 몸꼴 parryCover)일 때만
-import { RisolutoWatch, lungeGapOk } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
+import { RisolutoWatch, lungeGapOk, bladesNear } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
 import { stickTurnState, stickTurnStep, stickTurnClear } from './stick_turn.js'; // 이베리아 휘감아 돌기 스틱 판 — 이동 스틱 돌리기 몸짓 (10/23)
 import { circleState, circleStep, circleClear, circleLive } from './attack_circle.js'; // 이베리아 싱지르 공격 원 판 — 공격 입력으로 원 그리기 몸짓 (10/24)
 import { iaiReadyPosePlayer } from './secret_instant.js'; // 사람 고노센 준비 웅크림 (10/25 23:0x — SECRET.gnsCrouch)
@@ -824,7 +824,8 @@ export class PlayerSecretWatch {
     recordFoeSenses(this, dt); // 1:1 = this.sense.record(dt) 그대로 (2:2 는 상대마다 — setFoe)
     if (this.open) {
       this.open.age = (this.open.age ?? 0) + dt;
-      if ((this.open.t -= dt) <= 0 && !this.holding()) this.open = null; // 창 끝 (secretHold: 열린 뒤 playerWindow 초까지는 짧은 창도 지킴)
+      if (this.riso && SECRET.risolutoReach) this.reachTick(dt); // 11/11 거리 판단 리솔루토 ① (스위치 · 기본 끔): 두 칼이 떨어진 뒤 지난 시간
+      if ((this.open.t -= dt) <= 0 && !this.holding() && !this.reachHolding()) this.open = null; // 창 끝 (secretHold: 열린 뒤 playerWindow 초까지는 짧은 창도 지킴 · 거리 판단 리솔루토: 칼이 떨어진 뒤 risolutoReachKeep 초까지)
     }
     const S = this.S;
     const painUp = foe.pain > this.prevFoePain + 0.05;
@@ -1292,6 +1293,23 @@ export class PlayerSecretWatch {
    */
   holding() {
     return !!SECRET.secretHold && !!this.open && (this.open.age ?? 0) < SECRET.playerWindow - 1e-6; // 1e-6: 스텝 시간 더하기의 떠다니는 소수 (창 끝과 같은 스텝에 닫히게)
+  }
+
+  /**
+   * 거리 판단 리솔루토 ① (11/11 — 사장님 '거리 제한을 풀어서 잘못 판단하면 빗나가게' → '거리 판단에 맡기기 -> 진행하고' · SECRET.risolutoReach 스위치 · 기본 끔):
+   *  열린 리솔루토 창의 '두 칼이 떨어진 뒤 지난 시간'(open.apart — 칼끼리 어느 부위든 가까움 bladesNear · 덮음 거리 risolutoCover 0.15 m · 실제 맞닿음이면 0 으로).
+   *  창은 연 뒤 playerWindow(0.6 s — secretHold)를 지키고, 그 뒤에는 두 칼이 가까운 동안 + 떨어진 뒤 risolutoReachKeep 초까지 이어진다(reachHolding).
+   *  지킴(holding) 밖이라 그동안 간격이 모자라거나(risolutoGap) 내가 베면 닫힌다(risoTick · fire 그대로). 재기: riso.reachExt = 0.6 s 를 넘어 이어진 창 수 · 끄면 이 함수를 안 부름
+   */
+  reachTick(dt) {
+    const O = this.open;
+    O.apart = bladesNear(this.me, this.foe) ? 0 : (O.apart ?? 0) + dt;
+    if (!O.ext && !this.holding() && this.reachHolding()) (O.ext = true), (this.riso.reachExt = (this.riso.reachExt ?? 0) + 1);
+  }
+
+  /** 거리 판단 리솔루토 ①: 칼이 떨어진 뒤 risolutoReachKeep 초가 안 됐으면 참 (스위치 끔 · 리솔루토 아님 · 창 없음이면 늘 거짓 — 전 판과 같음) */
+  reachHolding() {
+    return !!this.riso && !!SECRET.risolutoReach && !!this.open && (this.open.apart ?? 0) < (SECRET.risolutoReachKeep ?? 0) - 1e-6;
   }
 
   /** 창 안의 공격 입력: 열린 창을 닫고 그 비기 { S, ctx } 를 돌려준다 (없으면 null) */
