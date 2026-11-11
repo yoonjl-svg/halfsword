@@ -72,8 +72,8 @@ test('② 칼끼리 닿음 처음부터 실제 0.5 s 의 탭 = 칼끝 돌려 빼
     const R = B.P.iaiReq;
     assert.ok(R?.combo, '운동학 찌름 요청');
     assert.equal(R.tech, 'cavazione');
-    assert.ok(Math.abs(R.speed - UA.specialShare.cavazione * iaiTipSpeed(B.P)) < 1e-9 && R.noArc, '칼끝 = 고노센 × 0.35(사장님 11/11 \'1.2배 없애고 35%로 해\' — 전 보통 찌르기 빠르기 × 1.2) · 잔상 없음');
-    assert.deepEqual([UA.cavShare, UA.cavSpeedMul, UA.specialShare.cavazione], [1, 1, 0.35]);
+    assert.ok(Math.abs(R.speed - 1.2 * cavTipSpeed()) < 1e-9 && R.noArc, '보통 찌르기 빠르기 × 1.2(사장님 10/31 18:xx · 11/12 감독 보류로 그대로) · 잔상 없음');
+    assert.deepEqual([UA.cavShare, UA.cavSpeedMul], [0, 1.2]); // 11/12 감독 보류 — 10/31 판
     assert.equal(R.maxT, 0, '길 끝(거둠)까지');
     assert.ok(R.moves[0].same && R.moves[0].artThrust && R.moves[0].dyn.under && R.moves[0].dyn.tapTiming && R.moves[0].plane);
     assert.equal(R.selfFree, UA.cavSelfFree, '넘어짐 고침 (cavSelfFree — 그 수 동안 칼 어깨 면 밧줄 뗌)');
@@ -326,14 +326,14 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
 });
 
 test('② 세게 하는 시제품 A ~ E (10/31 16:xx 사장님 물음 · 확인표 3263 ~ · 기본 모두 끔): A 빠르기 배 · D 판정 배율 → 요청 · C 상대 반응 묶음(ai.js respond) · E 막기 단추로 거둠 · B 는 combat.js(재기로 봄)', () => {
-  assert.deepEqual([UA.cavSpeedMul, UA.cavGap, UA.cavParryLock, UA.cavHitMul, UA.cavCancel], [1, 0, 0, 1, 0], '기본: A × 1(사장님 11/11 \'1.2배 없애고 35%로 해\' — 전 10/31 18:xx × 1.2) · 나머지 끔');
-  assert.equal(UA.cavShare, 1, '칼끝 = 고노센 × specialShare.cavazione');
+  assert.deepEqual([UA.cavSpeedMul, UA.cavGap, UA.cavParryLock, UA.cavHitMul, UA.cavCancel], [1.2, 0, 0, 1, 0], '기본: A × 1.2(사장님 10/31 18:xx \'1.2배로 해\' · 11/12 감독 보류로 그대로) · 나머지 끔');
+  assert.equal(UA.cavShare, 0, '칼끝 = 보통 찌르기 빠르기 × cavSpeedMul (11/12 감독 보류 — 10/31 판)');
   const keep = { cavSpeedMul: UA.cavSpeedMul, cavHitMul: UA.cavHitMul, cavParryLock: UA.cavParryLock, cavCancel: UA.cavCancel, cavShare: UA.cavShare };
   const B = body();
   try {
     B.touch(realS(0.5));
     assert.equal(B.tap(), true);
-    assert.ok(Math.abs(B.P.iaiReq.speed - UA.specialShare.cavazione * iaiTipSpeed(B.P)) < 1e-9 && B.P.iaiReq.hitMul === 1 && B.G.enemy.parryLockUntil == null, '기본 = 고노센 × 0.35 · 나머지 끔');
+    assert.ok(Math.abs(B.P.iaiReq.speed - 1.2 * cavTipSpeed()) < 1e-9 && B.P.iaiReq.hitMul === 1 && B.G.enemy.parryLockUntil == null, '기본 = × 1.2 · 나머지 끔 (11/12 감독 보류 — 10/31 판)');
     Object.assign(UA, { cavSpeedMul: 1.5, cavHitMul: 1.3, cavParryLock: realS(0.2), cavCancel: 1, cavShare: 0 }); // A 는 10/31 바탕(보통 찌르기 빠르기)에서 봄
     B.touch(realS(0.5));
     assert.equal(B.tap(), true);
