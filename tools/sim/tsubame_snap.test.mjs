@@ -17,6 +17,7 @@ import { G } from '../../src/ai_techniques.js';
 import { PLAYER_UNIQUE, uniqueDef, PlayerUniqueAssist, TSU_AIM } from '../../src/unique_assist.js';
 import { HUMAN } from '../../src/fighter.js';
 import { traceRun, bend, bendCut, bendTrail } from './tsubame_trace.mjs';
+import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const TSU = PLAYER_UNIQUE.japanese.find((e) => e.name === 'tsubameGaeshi');
@@ -261,8 +262,9 @@ test('낮은 시작 (감도 1 · 손가락 −0.7 · 가슴 사이 1.15 · 1.3 m
       const o = lead(old);
       assert.ok(o.n < 0.8 * o.W.length, `끄면 등 앞장 ${gap} m: ${o.W.map((w) => w[5]).join(',')}`);
     }
-    const on = traceRun('line', 701, 1.15);
-    const off = traceRun('lineNoArm', 701, 1.15);
+    // 보통 높이 판 그대로는 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 손가락으로 끄는 동안 두 팔이 붙어 칼 팔꿈치 돌림이 바뀐 채 되돌림 칼을 짜서
+    //  씨앗 701 보통 높이도 낮은 시작 판(armTurnLow)이 켜짐 (위 낮은 시작 잣대 — 날 앞장 · 손목 · 굴림 · 첫 맞음 날 — 은 켠 판 그대로 지남 · 기록 arm_real §10)
+    const [on, off] = withArmOld(() => [traceRun('line', 701, 1.15), traceRun('lineNoArm', 701, 1.15)], ['armClear']);
     assert.deepEqual(on.tip, off.tip, '보통 높이(손가락 그대로) — 팔꿈치 돌림이 안 켜짐');
   });
 });
