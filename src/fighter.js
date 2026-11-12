@@ -329,6 +329,40 @@ function guardDir(x, y, oneHand = false) {
   return [c * Math.cos(az), Math.sin(el), c * Math.sin(az)];
 }
 
+/**
+ * 보정 v2 날것 매핑 배수 (corrScale c — padHand · driveSword 의 한 식): 손 = S + k · (날것 − S).
+ *  패드 끝 뻗음 (11/12 SKILL.edgeReach — 기본 0 = 끔 · docs/strike/arm_reach_audit_2026-11-12.md · [시험 스위치 · 사장님 확인 전]): 한손 칼(guardPose.oneHand)만,
+ *  쉼 자리 반지름(|SKILL.homeGuard|) → 패드 반지름(WEAPON.reach) 사이에서 배수를 '그 방향 날것 손이 팔 길이에 닿는 배수' 쪽으로 smoothstep 만큼 × edgeReach 섞는다 —
+ *  쉼 자리 안쪽(쉼 · 찌르기 가운데)은 그대로, 패드 끝은 팔이 다 펴짐(팔 IK 가 사람 칼 몫 0.975 로 자름). 배수가 이미 더 크면 그대로 (줄이지 않음)
+ */
+function corrMap(f, out, c, x, y) {
+  let k = c.k;
+  const er = SKILL.edgeReach;
+  if (er > 0 && f.guardPose?.oneHand) {
+    const R = WEAPON.reach;
+    const w = THREE.MathUtils.smoothstep(Math.hypot(x, y), Math.hypot(SKILL.homeGuard[0], SKILL.homeGuard[1]), R) * er;
+    if (w > 0) {
+      const kFull = (ARM.upper + ARM.fore) / Math.max(1e-6, out.distanceTo(c.S));
+      if (kFull > k) k += (kFull - k) * w;
+    }
+  }
+  return out.sub(c.S).multiplyScalar(k).add(c.S);
+}
+const _thq = new THREE.Quaternion(), _thy = new THREE.Quaternion(), _thS = new THREE.Vector3(), _thD = new THREE.Vector3(), _thP = new THREE.Vector3();
+/** 두손 칼 손 목표를 빈팔이 칼자루 끝을 쥘 수 있는 곳으로 (SKILL.twoHandReach — driveSword 머리말). hand = 몸 틀(헤딩 yaw · 가슴 원점) 손 목표 · off = 패드 */
+function twoHandReach(f, hand, off) {
+  const ch = f.bodies.chest;
+  rot(ch, _thq);
+  _thq.premultiply(_thy.copy(f.yaw).invert()); // 가슴 돌림을 헤딩 틀로
+  const So = _thS.set(ARM.shoulder[0], ARM.shoulder[1], -f.side * ARM.shoulder[2]).applyQuaternion(_thq); // 빈 어깨 (offArmIK 의 S)
+  const d = _thD.set(...guardDir(off.x, off.y, false));
+  const P = _thP.copy(hand).addScaledVector(d, f.weaponCfg.gripAlong ?? GRIP.along).sub(So); // 빈 어깨 → 칼자루 끝
+  const L = P.length();
+  const R = 0.3 + 0.275 - 0.005; // offArmIK 의 a + b − 여유 (같은 수)
+  f.thReach = L > R; // 넘쳐 옮긴 스텝: 팔꿈치 돌림도 한손 칼처럼 사람 팔 범위(swivelHuman)로 — 안 그러면 돌림이 칼 팔꿈치를 어깨 위로 세움 (armIK)
+  if (L > R) hand.addScaledVector(P, -(L - R) / L);
+}
+
 export class Fighter {
   /**
    * @param {object} o
@@ -986,10 +1020,15 @@ export class Fighter {
     const uq = this.skill?.uniq;
     const scripted = !!this.skill?.sec || (!!uq && (uq.hold?.st === 'press' || uq.hold?.st === 'wind' || uq.running));
     const useFrame = (fs === 'all' || (fs === 'heavy' && this.swordArt?.frame === 'heavy')) && !scripted;
-    if (c.s === s && c.table === gp.table && c.oneHand === gp.oneHand && c.useFrame === useFrame) return c;
+    // 한손 찌르기 칼(이탈리아 무기 — 레이피어 · 달타냥 · 발리사르다 · 파펜하이머)의 잣대 (11/12 SKILL.thrustScale — 사장님 11/12 '이탈리아 무기들 여전히 팔이 잘 안펴져 … 오른쪽으로 안 펴지는'
+    //  · docs/strike/arm_reach_audit_2026-11-12.md): 'base' = 무기별 바탕 표(한손 찌르기 표 — 싸움 방식 one:thrust 표 · 이탈리아 자세표가 쉼 자리 칸을 옆으로 60° 선 3번 자세로 덮기 전)로 잰다.
+    //  덮은 표로 재면 날것 매핑이 가슴 돌림 57.5° 로 돌고(다른 한손 칼 24.5°) 배수가 0.60(0.71) — 패드 오른쪽 끝이 앞 가운데(손이 칼 어깨보다 안쪽)로 · 가운데가 가슴 왼쪽으로 · 왼쪽 끝이 가슴 뒤로 가고 ·
+    //  어느 쪽으로 끌어도 팔꿈치가 89 ~ 103° 굽은 채(뻗음 0.62 ~ 0.71). 비기 · 고유 공격이 도는 동안은 덮은 표 그대로(위 frameScale 과 같은 규칙). 'off' = 전 판 · `?thrustScale=off`
+    const useBase = SKILL.thrustScale === 'base' && this.swordArt?.frame === 'one' && this.swordArt?.style === 'thrust' && !!this.swordArt?.baseTable && !scripted;
+    if (c.s === s && c.table === gp.table && c.oneHand === gp.oneHand && c.useFrame === useFrame && c.useBase === useBase) return c;
     const [hx, hy] = SKILL.homeGuard;
     const raw = rawHand(hx, hy, _cs1);
-    _csG.table = (useFrame && gp.table?.frameTable) || gp.table;
+    _csG.table = (useBase && this.swordArt.baseTable) || (useFrame && gp.table?.frameTable) || gp.table;
     _csG.oneHand = gp.oneHand;
     const G = guardAt(hx, hy, _csG);
     const gw = this.guardWeight(s);
@@ -1010,6 +1049,7 @@ export class Fighter {
     c.table = gp.table;
     c.oneHand = gp.oneHand;
     c.useFrame = useFrame;
+    c.useBase = useBase;
     return c;
   }
 
@@ -1117,7 +1157,7 @@ export class Fighter {
     rawHand(x, y, out);
     const c = this.corrScale(s);
     if (c.stC) out.applyAxisAngle(UP, c.stC); // 한손: 옆으로 선 가슴 틀 (corrScale)
-    return out.sub(c.S).multiplyScalar(c.k).add(c.S);
+    return corrMap(this, out, c, x, y);
   }
 
   /** 패드 (x, y) 가 휘두르는 동안 명령하는 손 목표·칼끝 방향 (몸 틀, 가슴 원점 — driveSword 의 날것 줄과 같은 식: 보정 v2 면 padHand, 칼끝 = guardDir).
@@ -3407,7 +3447,7 @@ export class Fighter {
       // 보정 v2: 손 당김 없음(한손 자세표도 함께). 날것 매핑은 어깨 둘레 한 배수 k(s) 로 (fix2 B, corrScale: 쉼 손이 옛 쉼과 같은 어깨 거리)
       const cs = this.corrScale(sv);
       if (cs.stC) handLocal.applyAxisAngle(UP, cs.stC); // 한손: 옆으로 선 가슴 틀에서 읽는다 (corrScale, padHand 와 같은 식)
-      handLocal.sub(cs.S).multiplyScalar(cs.k).add(cs.S);
+      corrMap(this, handLocal, cs, offH.x, offH.y);
       // 마무리만 예외(사장님 9/30 23:40): FINISH_GUARDS 몫만(finishAt) s·몫 으로 명령
       if (this.finish.amt > 0) {
         const F = finishAt(off.x, off.y, _finH, this.finish, this.guardPose);
@@ -3451,6 +3491,11 @@ export class Fighter {
       const breath = Math.sin(this.stamina.time * Math.PI * 2 / 0.85) * 0.025;
       handLocal.lerp(_v6.set(0.23, -0.26 + breath, this.side * 0.17), this.stamina.pose);
     }
+    // 두손 칼 빈팔 닿는 곳 (11/12 SKILL.twoHandReach — 기본 끔 · docs/strike/arm_reach_audit_2026-11-12.md): 패드 오른쪽 끝의 손 목표는 빈손이 쥘 칼자루 끝(손 + 칼 겨눔 × gripAlong)을
+    //  빈팔 길이 밖(빈 어깨에서 0.7 m 남짓)에 둬서, 빈팔 · 쥠 용수철이 칼 손을 몸 뒤로 끌어당기고 칼 팔꿈치가 앞으로 꺾임(뻗음 0.57 · 위팔 돌림 115°).
+    //  켜면 칼자루 끝이 빈팔 길이(offArmIK 와 같은 0.3 + 0.275 − 0.005) 안에 오도록 손 목표를 빈 어깨 쪽으로 그 넘친 만큼 옮긴다 — 사람 손가락 칼 · 빈손이 쥘 때만 (AI · 한손 칼 그대로)
+    if (SKILL.twoHandReach && playerArm(this) && this.weaponCfg.twoHand && GRIP.on && this.limbs.armO > 0.3 && !(this.iai?.oneHand || this.iaiOneHold) && !this.mordGrip) twoHandReach(this, handLocal, off);
+    else this.thReach = false;
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
     if (this.pickup) pickupHand(this, target); // 떨어진 칼 줍기: 칼 손을 칼자루로 (src/pickup.js)
     if (mus >= 0.12 && this.state !== 'dead') this.armIK(target);
@@ -4003,7 +4048,7 @@ export class Fighter {
       // 사람 팔 범위 (JOINTS.swivelHuman): 한손 무기만 (보통 길 · 찌르는 맞춤 길 둘 다). 두손 무기는 빈손이 칼자루 끝을 쥐어 팔이 덜 돌고, 황소처럼 두 손이 머리 곁 칼자루를 쥔
       //  자세는 칼 팔꿈치가 드는 꼴이 제 자세라 그대로 — 두손에도 켜면 롱소드 황소 탭 찌름이 무너짐(맞춤 길까지 0/5 · 보통 길만 켜도 서 있는 상대 2 → 0/3 · 기록 wrist_audit §10).
       //  굴림 목표 = 지난 스텝 driveSword 칼 면 목표(가슴 틀)
-      const human = !!JOINTS.swivelHuman && !this.weaponCfg.twoHand;
+      const human = !!JOINTS.swivelHuman && (!this.weaponCfg.twoHand || !!this.thReach); // 두손 칼은 빈팔 닿는 곳으로 옮긴 스텝만 (SKILL.twoHandReach — 기본 끔이면 늘 거짓)
       const nF = human && this.rollTgtOk ? _ik9.copy(this.rollTgtW).applyQuaternion(_q2) : null;
       this.swivelTh = elbowSwivel(pDir, Dn, S, d, alpha, _ik8.copy(this.aimRawW ?? this.aimDirW).applyQuaternion(_q2), a, tau > 0 ? this.swivelTh || 0 : 0, k, th ? (th.swAlign ? 2 : 1) : 0, this.side, human, nF, !JOINTS.cutPronate || pronateRest(this));
       if (th && _swAligned) th.swAlign = true; // 한 번 맞추기 시작하면 이 찌르기 끝까지 (뻗어 한도 안이 되어도 0 으로 튀지 않게)

@@ -308,10 +308,12 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
   const sm = UA.cavSpeedMul;
   const sh = UA.cavShare;
   const bn = CONFIG.BIND.natural;
+  const ts = CONFIG.SKILL.thrustScale;
   UA.cavSelfFree = 0;
   UA.cavSpeedMul = 1; // 전 판 넘어짐 재현은 고칠 때의 빠르기(× 1 — 10/31 18:xx 기본 × 1.2 전)로: 판이 달라지면 씨앗 902 의 그 수가 안 나옴
   UA.cavShare = 0; // 같은 까닭 — 고칠 때의 빠르기 바탕(보통 찌르기 빠르기 — 11/11 고노센 × 0.35 전)
   CONFIG.BIND.natural = 0; // 같은 까닭으로 고칠 때의 칼 물리(자연 바인드 끔 — 10/31 19:xx 본판 전)로 (켜면 칼끼리 덜 튕겨 씨앗 902 의 그 수 · 넘어짐이 안 나옴)
+  CONFIG.SKILL.thrustScale = 'off'; // 같은 까닭 — 고칠 때의 사람 레이피어 손 매핑(11/12 한손 찌르기 잣대 'base' 전 — docs/strike/arm_reach_audit_2026-11-12.md: 켜면 씨앗 902 판의 그 수 뒤 넘어짐이 안 나옴)
   try {
     const b = watch();
     const off = fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: b.probe });
@@ -322,6 +324,7 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
     UA.cavSpeedMul = sm;
     UA.cavShare = sh;
     CONFIG.BIND.natural = bn;
+    CONFIG.SKILL.thrustScale = ts;
   }
 });
 

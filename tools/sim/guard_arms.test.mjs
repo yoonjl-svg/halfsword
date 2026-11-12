@@ -62,8 +62,9 @@ test('② 대검 배수 = 롱소드 배수 (10/10 전) · off = 10/10 ~ 10/31 �
     assert.ok(Math.abs(kOf('zweihander') - 0.752) < 0.002, `off 이베리아 ${kOf('zweihander')}`);
     assert.ok(Math.abs(kOf('monohoshizao') - 0.760) < 0.002, `off 모노호시자오 ${kOf('monohoshizao')}`);
   });
-  // 다른 유파 자세표 무기는 'heavy' 에서 그대로 (10/10 ~ 10/31 값)
-  for (const [w, k] of [['uchigatana', 0.760], ['rapier', 0.602], ['qinggang', 0.666]]) assert.ok(Math.abs(kOf(w) - k) < 0.002, `${w} ${kOf(w)} ≠ ${k}`);
+  // 다른 유파 자세표 무기는 'heavy' 에서 그대로 (10/10 ~ 10/31 값) — 레이피어는 11/12 한손 찌르기 잣대(SKILL.thrustScale 'base' — arm_reach_audit.test.mjs)를 끈 판에서
+  //  (frameScale 'heavy' 가 레이피어를 건드리지 않음을 보는 시험 · 11/12 새 잣대의 값은 arm_reach_audit.test.mjs)
+  for (const [w, k] of [['uchigatana', 0.760], ['rapier', 0.602], ['qinggang', 0.666]]) withSkill({ thrustScale: 'off' }, () => assert.ok(Math.abs(kOf(w) - k) < 0.002, `${w} ${kOf(w)} ≠ ${k}`));
 });
 
 test('① 얹은 손가락 — 이베리아 곧은 자세 그대로 (칼 들림 · 손 얼굴 앞) · 끈 손가락은 날것 · 끄면 전 판', () => {
