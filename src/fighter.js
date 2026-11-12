@@ -366,13 +366,19 @@ function twoHandReach(f, hand, off, aiOnly = false) {
   const L = P.length();
   const R = 0.3 + 0.275 - 0.005; // offArmIK 의 a + b − 여유 (같은 수)
   // 앞 바닥은 두 팔 엇갈림 막기를 받는 동안만 (armClearOn — 비기 · 고유 공격 · 대본 손 동안은 전 판 A 그대로: 그 길은 전 판 팔 위에서 맞춘 값 · 메기 B4 칼 ↔ 머리 등).
-  //  사람은 손가락이 손을 쥔 동안만 (① 과 같은 규칙 — 손을 뗀 쉼 자세는 전 판 그대로): 쥐면 곧장 · 떼면 칼 팔꿈치 돌림 빠르기(JOINTS.swivelTau)로 풀어 쉼 자세로 (손 목표가 튀지 않게) · AI 는 늘
-  //  (쥘 때도 섞으면 빠르게 긋는 0.1 ~ 0.2 s 가 덜 켜진 채라 왼위 엇갈림 6 → 8 칸 — 기록 §2)
+  //  사람은 손가락이 손을 쥔 동안만 (① 과 같은 규칙 — 손을 뗀 쉼 자세는 전 판 그대로): 떼면 칼 팔꿈치 돌림 빠르기(JOINTS.swivelTau)로 풀어 쉼 자세로 (손 목표가 튀지 않게) · AI 는 늘.
+  //  쥐면 armClear.frontIn 초로 들임 (11/13 — 사장님 11/13 '새로 생긴 이상한 모양 고쳐' · docs/strike/arm_odd_2026-11-13.md): 쉼 자세 칼자루 끝이 앞 바닥 안쪽인 칼(대검 · 일본 두손 · 참치)은 쥐는 순간 손 목표가 한 스텝에 3 ~ 14 cm 앞으로 튀었고,
+  //   빠르게 긋기는 그 순간이 긋기 시작과 겹쳐 무거운 칼이 더 늦게 따라옴 — 뒤랑달 우하 거꾸로 쥠 · 츠바이핸더 · 티소나 우하 손목 범위 밖 · 플랑베르주 왼쪽 위팔 돌림 끝(기록 §1).
+  //   0 = 곧장(11/12 둘째 판). 들이는 동안(쥔 뒤 0.1 ~ 0.3 s) 덜 켜진 몫으로 빠르게 대검 왼위 엇갈림 몫이 12 ~ 13 → 14 ~ 17 %(칸 수 7 그대로) · 0.15 s 넘게 들이면
+  //   플랑베르주 왼쪽이 다시 걸리고 0.2 s 는 엇갈림 8 칸(둘째 기록 §2 · 이 기록 §2)
   const X0 = armClearOn(f) ? SKILL.armClear.front ?? 0 : 0;
   if (X0 > 0) {
     const tau = JOINTS.swivelTau;
+    const dt = f.lastDt || 1 / 120;
     const held = !playerArm(f) || f.handHeld || f.inputActive;
-    f.frontW = held ? 1 : (f.frontW ?? 0) * (tau > 0 ? Math.exp(-(f.lastDt || 1 / 120) / tau) : 0);
+    const tin = playerArm(f) ? SKILL.armClear.frontIn ?? 0 : 0; // AI 는 늘 곧장 (AI 몸 그대로)
+    const w0 = f.frontW ?? 0;
+    f.frontW = held ? (tin > 0 ? 1 - (1 - w0) * Math.exp(-dt / tin) : 1) : w0 * (tau > 0 ? Math.exp(-dt / tau) : 0);
   } else f.frontW = 0;
   if (X0 > 0 && f.frontW > 1e-4) {
     // 칼자루 끝 앞 바닥 (위 머리말): 가슴 틀에서 공(빈 어깨 · R) ∩ {앞 ≥ X0} 의 가장 가까운 점 · 섞음 frontW 로 공만의 점(아래 전 판 줄과 같은 점)과 섞음 (둘 다 공 안 — 섞어도 공 안)
