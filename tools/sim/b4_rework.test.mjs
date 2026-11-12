@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { CONFIG } from './harness_m.mjs';
 import { applyB4Old } from '../../src/config.js';
 import { b4Run, b4Sum } from './b4_probe.mjs';
+import { withArmOld } from './arm_real_pin.mjs';
 
 const UA = CONFIG.UNIQUE_ASSIST;
 // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 10/31 B4 특수 공격 장면(무장 없이 길게 눌러 냄 · specialShare.redondo)이라
@@ -15,7 +16,9 @@ CONFIG.SECRET.iberianSecret = 'spin';
 
 test('메기 꼴 — 네 칼 모두 칼 든(오른) 어깨에 메어 칼끝이 머리 뒤로 넘어가 땅 쪽으로 기욺 · 팔 · 칼이 머리 · 목을 안 뚫음 · 칼이 몸통에 안 닿음 · 손목 교정 없음 · 빈손 쥠 · 휘청 · 넘어짐 없음', () => {
   for (const w of ['zweihander', 'flamberge', 'tizona', 'durandal']) {
-    const L = b4Sum(b4Run({ w, loadOnly: true, hold: 1.6 })).load;
+    // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 — 서 있는 상대 롱소드도 AI 몸이라 그 팔이 바뀌어 판이 갈라짐: 뒤랑달 팔 ↔ 머리 0.032 → 0.000 m · 가슴 기울기 6.4°)
+    //  이 장면을 잰 때의 팔(11/12 첫 판 — arm_real_pin armClear2)로 묶음 · 메기 동안(고유 공격 길게 누름 · 감기)은 사람 쪽 새 칸이 안 걸림
+    const L = withArmOld(() => b4Sum(b4Run({ w, loadOnly: true, hold: 1.6 })).load, ['armClear2']);
     assert.ok(L.behind < -0.6, `${w} 칼끝이 머리 가운데보다 뒤 ${L.behind} m`);
     assert.ok(L.below > 0.4, `${w} 칼끝이 손보다 아래 ${L.below} m`);
     assert.ok(L.el <= -20, `${w} 칼 높이각 ${L.el}° (땅 쪽)`);

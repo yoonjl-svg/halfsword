@@ -14,6 +14,7 @@ import { drillRun, fightRun } from './special_balance.mjs';
 import { classifyStroke } from '../../src/attack_stroke.js';
 import { G as PAD } from '../../src/ai_techniques.js';
 import { iaiTipSpeed } from '../../src/secret_instant.js'; // 11/11 칼끝 돌려 빼기 = 고노센 칼끝 × specialShare.cavazione
+import { withArmOld } from './arm_real_pin.mjs';
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, THRUST } = CONFIG;
@@ -316,7 +317,8 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
   CONFIG.SKILL.thrustScale = 'off'; // 같은 까닭 — 고칠 때의 사람 레이피어 손 매핑(11/12 한손 찌르기 잣대 'base' 전 — docs/strike/arm_reach_audit_2026-11-12.md: 켜면 씨앗 902 판의 그 수 뒤 넘어짐이 안 나옴)
   try {
     const b = watch();
-    const off = fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: b.probe });
+    // 11/12 둘째 두 팔 엇갈림 막기(AI 몫 · 칼자루 끝 앞 바닥 — 상대 AI 팔 · 사람 두손 칼 손 목표가 바뀜)로도 그 수 뒤 넘어짐이 안 나옴 → 고칠 때의 팔(11/12 첫 판 — arm_real_pin armClear2)로 묶음
+    const off = withArmOld(() => fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: b.probe }), ['armClear2']);
     assert.ok(b.seen.during > 0 && b.seen.ropesDuring === b.seen.during, '전 판: 밧줄 그대로');
     assert.ok(body(off).some((k) => k.why === 'footing'), `전 판: 낸 뒤 발 밖 넘어짐 ${JSON.stringify(off.it.knock)}`);
   } finally {

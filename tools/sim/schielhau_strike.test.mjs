@@ -178,7 +178,8 @@ test('덧칸 셈: 토막에서 손이 간 몫만큼 섞음 · 따라 베기는 �
 });
 
 test('맞는 순간 손목 · 세기 (서 있는 상대 · 셸하우만 · 씨앗 넷): 새 길 = 손목 범위 밖 ≤ 10 % · 거꾸로 ≤ 5 % · 교정 안 걸림 · 공격당 심각도가 옛 길의 3 배 넘게', () => {
-  const run = (v) => withPath(v, () => duelSummary([1, 2, 3, 4].map((s) => duelRun(s, { foe: 'still', dur: 40 }))));
+  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 — 셸하우를 내는 AI 몸의 겨눔 · 다가감 팔이 바뀜)로 씨앗 넷 판이 갈라져 견줌 잣대가 옮겨감 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
+  const run = (v) => withArmOld(() => withPath(v, () => duelSummary([1, 2, 3, 4].map((s) => duelRun(s, { foe: 'still', dur: 40 })))), ['armClear2']);
   const neu = run(1);
   const old = run(0);
   assert.ok(neu.contacts >= 12 && old.contacts >= 12, `맞음 ${neu.contacts} · ${old.contacts}`); // 새 길은 상대가 일찍 쓰러져 맞음 수가 적다

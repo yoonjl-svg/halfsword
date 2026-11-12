@@ -912,8 +912,12 @@ export const SKILL = {
   //  on 1 = 켬 · gap = IK 자세에서 두 팔 겉끼리 둘 틈(m — 몸이 명령을 늦게 따라가는 몫 · 점검 잣대는 2 cm 넘게 뚫음) · near · hold = 손가락이 손을 쥔 동안 두손 칼 두 팔(지금 몸) 겉 틈이 near m 안이면 hold 초 동안 ① 을 켬
   //  (떨어져 있거나 손을 뗀 쉼이면 전 판 그대로) · yield = 한손 칼 빈손(이탈리아 빈팔 자리)이 칼 팔을 비키는 가장 먼 거리(m).
   //  ① 두손 칼: 칼 팔꿈치 돌림을 사람 팔 범위 안(JOINTS.swivelHuman 규칙 — 한손 칼과 같음)에서 빈팔과 틈 있는 돌림만 고름 — 두 손 쥠 그대로 ② 한손 칼: 빈손을 비킴(아래 먼저) (fighter.js armGap 머리말).
-  //  AI · 시뮬 대본 몸 · 비기 · 고유 공격 도는 동안은 그대로(사람 손가락 칼만). on 0 = 전 판 · `?armClear=0`
-  armClear: { on: 1, gap: 0.01, near: 0.03, hold: realS(0.4), yield: 0.3 },
+  //  시뮬 대본 몸 · 비기 · 고유 공격 도는 동안은 그대로. on 0 = 전 판 · `?armClear=0`
+  //  11/12 둘째 (사장님 11/12 22:1x '남은 팔 엇갈림 고치고 ai에도 넣어' — docs/strike/arm_clear2_2026-11-12.md · 확인표 3620 ~ 3629):
+  //  ai 1 = AI 몸에도 ([사장님 11/12 결정] — AI 는 늘 손을 모는 몸이라 hold 켜는 때는 두 팔이 near 안이면 늘 · AI 비기(secretRun) · 특수 공격 동작(specRun) · 대본 손 동안은 그대로 · 0 = 사람만 · `?armClearAI=0`) ·
+  //  body 1 = 돌림 고를 때 칼 손목 지금 몸에서도 틈 (0 = 손 목표 자세만 — 11/12 첫 판) · front = 두손 칼 칼자루 끝(빈손 쥠 자리)을 가슴 틀 앞 front m 밖으로 (0 = 끔 — fighter.js twoHandReach 머리말) ·
+  //  grip = 두 팔이 닿은 동안 빈손 목표를 칼 아래팔(지금 몸)에서 grip m 밖으로 (0 = 끔 — gripClear 머리말) · miss = 틈 있는 돌림이 없을 때 'base' 사람 범위 기본 돌림 | 'gap' 덜 겹치는 돌림(11/12 첫 판)
+  armClear: { on: 1, gap: 0.01, near: 0.03, hold: realS(0.4), yield: 0.3, ai: 1, body: 1, front: 0.24, grip: 0.13, miss: 'base' },
   // ── 검술 보정 방식 (docs/strike/correction_v2_design_2026-10-01.md). 'old' = 옛 보정(바이트까지 그대로), 'v2' = 휘두르는 동안
   //  자세 당김 없음 + 마지막 궤적의 날 맞춤 ① · 되돌아옴 ③ · 사람 관절 한도 · 몸통 돌기 결합 (세기 s = level 선형). with_config.mjs 로 뒤집는다 ──
   //  사장님 10/1 22:05 위임 → 디렉터 결정: 새 보정이 유일한 보정, 끝점 겨눔 끔 (docs/decisions.md 10/1 22:05).

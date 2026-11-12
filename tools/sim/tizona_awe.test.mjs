@@ -10,6 +10,7 @@ import { STAMINA, WEAPON_ABILITY, UNIQUE_ASSIST, realS } from '../../src/config.
 import { getWeapon, WEAPONS, WEAPON_ALIASES } from '../../src/weapons.js';
 import { Skill } from '../../src/skill.js';
 import { newRound, DT, AI } from './harness_m.mjs';
+import { withArmOld } from './arm_real_pin.mjs';
 
 const near = (a, b, e = 1e-7) => assert.ok(Math.abs(a - b) < e, `${a} != ${b}`);
 function actor(extra = {}) {
@@ -154,10 +155,11 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
     //  (10/27 표준 시간 — AI 판단 박자 · 반응 · 위세 틈이 실제 초가 되어 판이 바뀜: 상대 자리 씨앗 6 은 건너뜀 0 · 플레이어 자리 씨앗 1 은 깎음 0 → 이 파일째 돌려 다시 고름 — 상대 자리 씨앗 27 · 플레이어 자리 씨앗 10)
     //  (10/31 자연 바인드 본판(사장님 19:xx — 칼끼리 덜 튕기고 AI 가 막힌 칼을 밂)으로 판이 바뀜: 플레이어 자리 씨앗 10 은 깎음 0 → 이 파일째 1 ~ 30 을 돌려 다시 고름 — 씨앗 5 (깎음 1 · 건너뜀 1).
     //   30 씨앗 모두 위 규칙(티소나 막힌 끝에서만 · 한 번 · 8 · 1.5 s)은 그대로 맞음)
+    //  (11/12 둘째 두 팔 엇갈림 막기 AI 몫 — AI 두 팔이 바뀌어 씨앗 27 · 5 판이 갈라짐: 그 씨앗을 고른 때의 팔(arm_real_pin armClear2)로 묶음 · 규칙 셈은 그대로)
     for (const [w1, w2, seed, secs, minDrains, minSkipped] of [['longsword', 'tizona', 27, 11, 1, 1], ['tizona', 'longsword', 5, 11, 1, 0]]) {
       log.length = 0;
       const G = newRound({ walls: true, weapon: w1, weapon2: w2, seed, AI2Class: AI });
-      for (let i = 0; i < secs / DT; i++) G.step();
+      withArmOld(() => { for (let i = 0; i < secs / DT; i++) G.step(); }, ['armClear2']);
       const drains = log.filter((l) => l.drains);
       for (const l of drains) { assert.equal(l.who, 'tizona'); assert.equal(l.blocked, true); assert.equal(l.drains, 1); near(l.dv, 8, 1e-6); }
       let last = -Infinity, want = 0, skipped = 0; // 막힌 티소나 공격을 차례로: 지난 깎음에서 1.5 s 지났으면 깎음

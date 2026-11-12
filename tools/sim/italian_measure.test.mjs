@@ -8,6 +8,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG } from './harness_m.mjs';
 import { measureThrust, rulerOf } from './weapon_measure.mjs';
+import { withArmOld } from './arm_real_pin.mjs';
 import { MEASURED, CUT_TIME_30, ITALIAN_NOW, ITALIAN_THRUST, italianMeasureRows, risolutoContact } from '../../src/weapon_measured.js';
 
 const { JOINTS, ARENA, THRUST } = CONFIG;
@@ -54,7 +55,8 @@ test('판 스위치 세 판: old = 지금 줄 그대로 · contact = 맞닿음�
 });
 
 test('찌르기 잣대 줄 = 같은 실행 롱소드 찌르기 비율 × 롱소드 손 값 (contact · reach · clinch 0.005 안 · 베는 시간 0.01 안)', () => {
-  withSets(HOLD0, () => {
+  // 11/12 둘째(두 팔 엇갈림 막기 — 사람 두손 칼 칼자루 끝 앞 바닥 · AI 몫)로 같은 실행 롱소드 찌르기 잣대가 바뀜 — 줄(ITALIAN_THRUST.MEASURED)을 잰 때의 팔(arm_real_pin armClear2)로 묶음
+  withArmOld(() => withSets(HOLD0, () => {
     const L = measureThrust('longsword');
     const LS = MEASURED.longsword;
     for (const id of IT) {
@@ -69,7 +71,7 @@ test('찌르기 잣대 줄 = 같은 실행 롱소드 찌르기 비율 × 롱소�
       assert.ok(Math.abs(row[3] - LS[3] * kt) < 0.01, `${msg} · 시간 비 ${kt.toFixed(3)}`);
       assert.ok(Math.abs(ITALIAN_THRUST.CUT_TIME_30[id] - 0.3 * kt) < 0.01, `${id} CUT_TIME_30 ${ITALIAN_THRUST.CUT_TIME_30[id]} · 0.30 × ${kt.toFixed(3)}`);
     }
-  });
+  }), ['armClear2']);
 });
 
 test('찌르기 잣대는 팔 두 판(사람 팔 범위 swivelHuman · 엎친 손 wristPronate 켬 · 끔)에서 0.02 m 안으로 같다 — 분노의 베기 잣대처럼 팔 규칙에 깨지지 않음', () => {
