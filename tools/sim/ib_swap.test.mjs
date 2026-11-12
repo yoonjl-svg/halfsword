@@ -55,7 +55,7 @@ test('스킬트리 — B4 알티바슈 포르트가 비기 자리(전 B7 값) ·
   assert.equal(D.kitFromNodes('iberian', new Set(['B1', 'B5', 'B7'])).secret, false, '싱지르만 익히면 비기 없음');
   assert.equal(nodeTitle('iberian', b4).title, '비기 · 알티바슈 포르트 (altibaxo forte)');
   assert.equal(nodeTitle('iberian', b4).kind, '비기');
-  assert.equal(nodeTitle('iberian', b7).title, '싱지르 (cingir)');
+  assert.equal(nodeTitle('iberian', b7).title, '풍차 베기 (싱지르 · cingir)'); // 11/12 이름 '풍차 베기' (사장님) — 특수 공격 '뜻 (소리 · 원어)'
   assert.equal(nodeTitle('iberian', b7).kind, '고유 공격');
   assert.match(b4.cmd, /2초 기다리면 비기 활성화 · 탭을 길게 누르다 떼기로 발동/);
   assert.equal(b7.cmd, '원을 그리며 긋기(↻/↺)');
@@ -175,7 +175,7 @@ test('사람 특수 공격 싱지르 — 무장 없이 원 한 바퀴로 냄 · 
     assert.equal(P.ibSpin.near, false, '가까워도 앞발 축');
     assert.equal(P.ibSpin.stride, SECRET.ibSpin.stride);
     assert.equal(P.uniqueCue?.kind, 'unique');
-    assert.equal(P.uniqueCue?.text, '싱지르');
+    assert.equal(P.uniqueCue?.text, '풍차 베기 (싱지르)'); // 11/12 이름 (전투 화면은 splitName — 큰 줄 '풍차 베기' · 작은 줄 '싱지르')
     // 빠르기 = 고노센 × 0.3 → 비기 판(0.5)보다 한 바퀴가 김
     assert.ok(Math.abs(P.ibSpin.vmax / P.ibSpin.v0 - UA.specialShare.cingir) < 1e-9, `칼끝 상한 몫 ${P.ibSpin.vmax / P.ibSpin.v0}`);
     let maxHit = 0;

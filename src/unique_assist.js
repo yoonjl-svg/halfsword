@@ -135,7 +135,7 @@ export const PLAYER_UNIQUE = {
     //  (특수 공격 식힘 · 이름 알림 · 흐름 셈 없음 — holdTick 이 비기 무장(창 ev 'altib')일 때만 메기 · windFire 가 비기 셈 · AI 는 ai.js altibGo) · AI 왼 가로베기 자리는 아래 싱지르가 이어받음(aiUniqueStages retired).
     //  싱지르 = 이베리아 특수 공격 (role 'circle' — 원을 그리며 긋기(↻/↺) 한 바퀴면 무장 없이 냄 · circleTick · 칼끝 고노센 × specialShare.cingir · 식힘 specialCooldown · 실행부 = skill.secret 의 싱지르 대본(special — 비기 셈 · 판정 배율 없음))
     //  ai = 왼 가로베기 자리 강화동작 꼴로 골라 칼끝 거리 + SECRET.ibSpin.aiFire 안이면 한 바퀴(ai.js cingirGo). 'spin' 판에선 이 칸은 아무 일도 안 함(사람 circleTick · AI retired)
-    { stage: 3, name: 'cingir', role: 'circle', special: true, nameKo: '싱지르', orig: 'cingir', hint: '원을 그리며 그으면 한 걸음 나가며 몸을 한 바퀴 돌려 가로로 벤다', on: [], ai: { role: 'enh', replaces: 'zwerchL' } },
+    { stage: 3, name: 'cingir', role: 'circle', special: true, nameKo: '풍차 베기 (싱지르)', orig: 'cingir', /* 11/12 이름 '풍차 베기' (사장님 '싱지르 이름을 이제 풍차 베기로 바꿔야하지 않아?' — 특수 공격 '뜻 (소리)' 꼴 · 옛 정수리 가르기의 10/31 전 이름 '풍차 베기'(열쇠 redondo)와 다른 기술) */ hint: '원을 그리며 그으면 한 걸음 나가며 몸을 한 바퀴 돌려 가로로 벤다', on: [], ai: { role: 'enh', replaces: 'zwerchL' } },
   ],
   japanese: [
     { stage: 1, name: 'hirakiGiri', role: 'step', stick: 'side', hint: '옆으로 걸으며 왼 사선 내려 긋기', body: [-18, -12, 2, 0.02], bodyMirror: -1, /* 開き = 비스듬히 디딘 뒤 몸을 상대 쪽으로 엶 → 디딘 쪽의 반대로(오른쪽으로 디디면 왼쪽) · 원전에 몸 돌림 수 없음 — 10/21 확인 */ on: [{ tech: 'zornhauL' }] }, // 히라키기리 ← 옆 + 왼 분노의 베기
