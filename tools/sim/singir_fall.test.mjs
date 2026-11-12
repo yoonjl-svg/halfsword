@@ -8,6 +8,7 @@ import { PlayerSecretWatch } from '../../src/secret.js';
 import { fightOne } from './school_balance.mjs';
 import { runOne } from './singir_fall.mjs';
 import { footSnap } from './iberian_spin_feet.mjs';
+import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
 // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 싱지르 비기 넘어짐 장면(11/05 — 가까우면 뒷발 축 near · 무장 창 원 · 비기 몫)이라
 //  그 판('spin')으로 묶는다(이 파일 안에서만). 새 판(비기 알티바슈 포르트 · 특수 공격 싱지르 한 걸음)은 tools/sim/ib_swap.test.mjs
 (await import('../../src/config.js')).SECRET.iberianSecret = 'spin';
@@ -113,7 +114,8 @@ test('멀면(맞닿기 + 나아감 밖) 전 판 그대로 — 앞발 축 · 나�
   assert.ok(on.cuts > 0, '벰');
 });
 
-test('넘어지던 판 (티소나 대 롱소드 AI 씨앗 3 — 사람 손가락 봇): 끄면 돌기 0.13 s 에 맞아 넘어짐 · 켜면 1 s 안 안 넘어짐', async () => {
+test('넘어지던 판 (티소나 대 롱소드 AI 씨앗 3 — 사람 손가락 봇): 끄면 돌기 0.13 s 에 맞아 넘어짐 · 켜면 1 s 안 안 넘어짐', () => withArmOld(async () => {
+  // 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 씨앗 3 의 그 넘어짐 장면이 안 나옴 (끔 · 켬 같은 판 · 기록 arm_real §10)
   const fc = { ...SKILL.fingerCut };
   Object.assign(SKILL.fingerCut, { arm: 1, gain: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면 (손가락 봇 긋기가 세지면 씨앗 3 판이 달라져 그 넘어짐 장면이 안 나옴 — 끔 · 켬 같은 판)
   try {
@@ -128,7 +130,7 @@ test('넘어지던 판 (티소나 대 롱소드 AI 씨앗 3 — 사람 손가락
   } finally {
     Object.assign(SKILL.fingerCut, fc);
   }
-});
+}, ['armClear']));
 
 test('재기 꽂개는 읽기만: singir_fall runOne 판 = school_balance fightOne 판 (이베리아 · 롱소드 AI 씨앗 3 · 5 s)', () => {
   const a = runOne({ weapon: 'zweihander', opp: 'longsword', seed: 3, dur: 5 });

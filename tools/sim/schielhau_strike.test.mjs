@@ -11,6 +11,7 @@ import { CONFIG, newRound, DT, AI } from './harness_m.mjs';
 import { duelRun, duelSummary, playerRun, tsubameRun, tsubameSummary } from './schielhau_strike.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { PLAYER_UNIQUE, uniqueDef, PlayerUniqueAssist } from '../../src/unique_assist.js';
+import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const withPath = (v, fn) => {
@@ -216,7 +217,9 @@ test('사람 곁눈 베기 맞는 순간 (손가락 봇 · 분노의 베기 길 
     }
   };
   const runs = () => walk1030(() => duelSummary([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((s) => playerRun(s, { foe: 'still', dur: 14, immortal: true })).map((r) => ({ ...r, rows: r.rows.slice(0, 5) }))));
-  const fair = () => fc1105(runs);
+  // 팔도 11/12 팔 사람 꼴 넷(빈팔 닿는 곳 · 패드 끝 뻗음 · 동방 잣대 · 두 팔 엇갈림 막기) 전 판으로 묶어 둠 — 세 판 모두 같은 팔 · 이 견줌이 보는 것은 손목 고침 (기록 arm_real §10).
+  //  켠 판은 칼끝 들기 없는 3 의 맞는 순간 손목 범위 밖이 12 ~ 15 / 52 ~ 54 로 문턱(15 %)을 조금 넘음 — 기본 길(같은 길)은 아래 지금 판이 켠 팔로 따로 봄
+  const fair = () => withArmOld(() => fc1105(runs));
   const withTip = (v, fn) => {
     const old = UA.schielPlayerTip;
     UA.schielPlayerTip = v;

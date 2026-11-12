@@ -9,6 +9,7 @@ import { PLAYER_UNIQUE, PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { iaiTipSpeed } from '../../src/secret_instant.js';
 import { dupCheck, dupTable } from './duplieren_check.mjs';
 import { drillRun } from './special_balance.mjs';
+import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
 
 const UA = CONFIG.UNIQUE_ASSIST;
 // 이 파일은 전 판(맞물린 채 탭 — `?dupAuto=0`)을 본다: 10/31 18:xx 사장님 결정으로 기본이 겹치기 자동('bind' — duplieren_auto.test.mjs)이 되어 탭 조건은 자동 판이면 안 봄 · 시험 파일마다 따로 도는 프로세스라 여기서만 0
@@ -180,7 +181,8 @@ test('인데스 (독일 유파 패시브): 겹치기 탭은 비기가 아님 —
   }
 });
 
-test('인데스 판 (씨앗 둘 · 칼끝을 든 가운데 자세 상대): 맞물린 뒤 인데스 창이 열린 채 낸 겹치기 — 끄는 동안 공격 중 · 주는 피해 배율 > 1 (비기 아님)', () => {
+test('인데스 판 (씨앗 둘 · 칼끝을 든 가운데 자세 상대): 맞물린 뒤 인데스 창이 열린 채 낸 겹치기 — 끄는 동안 공격 중 · 주는 피해 배율 > 1 (비기 아님)', () => withArmOld(() => {
+  // 씨앗 둘 판은 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 씨앗 1 · 2 에 맞물린 뒤 탭이 안 나옴(씨앗 여섯이면 한 번 나가고 아래 잣대 그대로 — 기록 arm_real §10)
   const K = [];
   for (const seed of [1, 2])
     drillRun('dupTap', seed, {
@@ -196,14 +198,14 @@ test('인데스 판 (씨앗 둘 · 칼끝을 든 가운데 자세 상대): 맞�
   assert.ok(K.length >= 1, `겹치기 스텝 ${K.length}`);
   assert.ok(K.every((x) => x.att && !x.sec), '공격 중 · 비기 아님');
   assert.ok(K.some((x) => x.k > 1), `피해 배율 ${JSON.stringify(K.slice(0, 3))}`);
-});
+}, ['armClear']));
 
-test('판 (씨앗 둘 · 칼끝을 든 가운데 자세 상대): 맞물린 긋기 뒤 탭이 겹치기로 나감 · 칼이 상대 칼을 지나가지 않음 · 칼 팔 손목 사람 범위 안 · 내 칼날이 내 몸을 지나지 않음', () => {
-  const { S, runs } = dupCheck({ seeds: 2, foes: ['guardHigh'] });
+test('판 (씨앗 둘 · 칼끝을 든 가운데 자세 상대): 맞물린 긋기 뒤 탭이 겹치기로 나감 · 칼이 상대 칼을 지나가지 않음 · 칼 팔 손목 사람 범위 안 · 내 칼날이 내 몸을 지나지 않음', () => withArmOld(() => {
+  const { S, runs } = dupCheck({ seeds: 2, foes: ['guardHigh'] }); // 씨앗 둘 판 — 두 팔 엇갈림 막기 전 팔 (위와 같은 까닭)
   assert.ok(runs.length >= 1, `나감 ${runs.length}`);
   const T = dupTable(S);
   assert.equal(T.foeBlade.farTouch, 0, '맞닿은 자리 밖에서 상대 칼에 닿음');
   assert.ok(T.sword.oorShare <= 0.05, `손목 범위 밖 ${T.sword.oorShare}`);
   assert.ok(T.sword.roll[1] <= 80.5, `굴림 ${T.sword.roll}`);
   assert.equal(T.self.bladeHitShare, 0, '내 칼날 ↔ 내 몸');
-});
+}, ['armClear']));

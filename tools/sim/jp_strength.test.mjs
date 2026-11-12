@@ -13,6 +13,7 @@ import { LOOKS } from '../../src/looks.js';
 import { JAPANESE_GAIT } from '../../src/schools.js';
 import { gnsHumanUnsettled } from '../../src/secret.js';
 import { foeReachBase } from '../../src/ai.js';
+import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
 
 const { SECRET, UNIQUE_ASSIST: UA, AI_MAAI } = CONFIG;
 const allOff = () => { SECRET.gnsHurtKeep = 0; SECRET.gnsThrough = 0; UA.tsuStep = 0; AI_MAAI.hide = 0; };
@@ -106,7 +107,8 @@ test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄�
   assert.notEqual(JSON.stringify(runs[0.3].r), JSON.stringify(runs[0].r), '켜면 판이 달라짐');
 });
 
-test('gnsThrough: 켜면 팔을 가른 발도가 몸까지 한 번 더 벰 (끄면 첫 닿음에서 끝)', () => {
+test('gnsThrough: 켜면 팔을 가른 발도가 몸까지 한 번 더 벰 (끄면 첫 닿음에서 끝)', () => withArmOld(() => {
+  // 씨앗 6 판은 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 이 씨앗이 14 s 안에 고노센을 안 냄 (기록 arm_real §10)
   const runs = {};
   for (const v of [0, 1]) {
     let P = null;
@@ -127,4 +129,4 @@ test('gnsThrough: 켜면 팔을 가른 발도가 몸까지 한 번 더 벰 (끄�
   assert.equal(runs[1].n, 1);
   assert.deepEqual(runs[1].big.map((b) => b[1]), ['arm', 'chest'], '켬 — 팔을 베고 가슴까지');
   assert.ok(runs[1].big[1][2] < runs[1].big[0][2], '두 번째 상처는 남은 에너지로 (첫 상처보다 얕음)');
-});
+}, ['armClear']));

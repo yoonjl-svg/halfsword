@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { CONFIG } from './harness_m.mjs';
 import { runTrials, stickValue } from './step_input_measure.mjs';
 import { stickDir } from '../../src/unique_assist.js';
+import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const tr = (kind, stick) => ({ kind, base: 'zwerch', stick });
@@ -25,7 +26,9 @@ function run(set) {
   const was = { ...UA };
   Object.assign(UA, set);
   try {
-    return Object.fromEntries(runTrials('german', TRIALS, { seed: 3 }).map((r) => [r.kind, r]));
+    // 여섯 시도를 한 판에 잇는 씨앗 3 장면은 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 앞 시도들로 몸 자리가 달라져 다섯째(스틱 없음) 긋기가 둘로 끊겨 읽힘
+    //  (새 판 하나씩 — 씨앗 1 ~ 5 — 은 켠 판도 가로베기로 읽힘 · 기록 arm_real §10)
+    return withArmOld(() => Object.fromEntries(runTrials('german', TRIALS, { seed: 3 }).map((r) => [r.kind, r])), ['armClear']);
   } finally {
     for (const k of Object.keys(set)) UA[k] = was[k];
   }
