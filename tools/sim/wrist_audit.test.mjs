@@ -16,6 +16,7 @@ import { HUMAN, wristClamp } from '../../src/fighter.js';
 import { mordGripOf } from '../../src/mordschlag.js';
 import { standTrial } from './tap_thrust.mjs';
 import { TRADITIONS } from '../../src/schools.js';
+import { withArmOld } from './arm_real_pin.mjs';
 import { ITALIAN_NOW } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 'full' 이면 옛 판 재현을 그때 간격 줄로
 
 const { SECRET, JOINTS } = CONFIG;
@@ -88,13 +89,14 @@ test('10/24 런지 `?thrustArm=0&elbowSwivel=0&wristGuard=0` = 옛 꼴 그대로
       assert.ok(S.rev / S.n > 0.5, `${w} 옛 굳음 거꾸로 몫 ${((100 * S.rev) / S.n).toFixed(0)} %`);
     }
   });
-  withSets([[SECRET, 'thrustArm', 0], ...LUNGE1024.slice(1)], () => {
+  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 — 멈춰 선 상대 롱소드도 AI 몸이라 그 겨눔 칼 · 팔이 바뀜)로 런지가 상대 칼과 닿는 꼴이 달라져 굳음 손목이 옮겨감 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
+  withArmOld(() => withSets([[SECRET, 'thrustArm', 0], ...LUNGE1024.slice(1)], () => {
     const r = lungeRun('rapier', { gap: 2.2, measure: old('rapier') });
     assert.ok(r.fired && r.res?.ok && r.res.hit, '교정 켬 · 옛 팔 길 런지 맞힘');
     const S = ph(r.T, 'stiff');
     assert.ok(S.aSum / S.n < 0.5, `팔은 그대로 굽음 (팔을 펴게 하지 않음) ${(S.aSum / S.n).toFixed(2)}`);
     assert.ok(S.devSum / S.n >= ULNAR - 5 && S.rev / S.n < 0.1, `손목은 범위 안 dev ${(S.devSum / S.n).toFixed(0)}° · 거꾸로 ${S.rev} / ${S.n}`); // 옛 꼴 거꾸로 > 50 %
-  });
+  }), ['armClear2']);
 });
 
 test('격살 허파 찌르기(봉두세)도 같은 길: 굳음 동안 뻗은 채 · 새끼 쪽 아님 — `?thrustArm=0` 은 옛 꼴(새끼 쪽)', () => {
@@ -254,7 +256,9 @@ test('손목 교정 끔 · 켬 · 밧줄 — 자세표(롱소드 · 레이피어
 
 // 기본 판은 씨앗 셋(11 · 12 · 13) 합: 15 s 한 판은 누가 언제 쓰러지느냐로 자세 몫이 크게 바뀐다 (10/25 엎친 손 뒤 사브르 > 10° 씨앗 11 · 12 · 13 = 11.4 · 6.1 · 10.6 % — 엎친 손 전 7.3 · 4.2 · 11.6 % · 기록 §12)
 test('AI 끼리 15 s (롱소드 · 사브르 — 씨앗 셋 합): 기본 범위 밖 > 10° ≤ 10 % · 거꾸로 · 아래팔 섬 ≤ 6 % (10/25 한손 사람 팔 범위 뒤 사브르 3.4 → 5.1 % — 팔 비틀어 맞추던 몫이 손목으로 · 기록 §10-5) · 시험 밧줄 켜면(씨앗 11) > 10° ≤ 1 % · 거꾸로 ≤ 1 %', () => {
-  for (const w of ['longsword', 'sabre']) {
+  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫)로 AI 몸 팔이 바뀌어 씨앗 셋 판이 갈라짐(롱소드 > 10° 12.1 % — 씨앗 판 흔들림: 넓게 잰 AI 끼리 396 몸-판은 두손 보통 손목 범위 밖 8.7 → 8.2 % ·
+  //  docs/strike/arm_clear2_2026-11-12.md §4 · 새 AI 몫 잣대는 arm_clear2.test.mjs) — 씨앗 셋 판은 잰 때의 팔(arm_real_pin armClear2)로 묶음
+  for (const w of ['longsword', 'sabre']) withArmOld(() => {
     const T = new WristTally();
     for (const seed of [11, 12, 13]) T.merge(aiRun(w, { seed }).T, `${seed}:`);
     const s = shares(T);
@@ -262,7 +266,7 @@ test('AI 끼리 15 s (롱소드 · 사브르 — 씨앗 셋 합): 기본 범위 
     assert.ok(s.oorX <= 0.1 && s.revUp <= 0.06, `${w} 기본: > ${OOR_X}° ${pc(s.oorX)} % · 거꾸로 · 아래팔 섬 ${pc(s.revUp)} %`);
     const r = withSets(ROPE, () => shares(aiRun(w, { seed: 11 }).T));
     assert.ok(r.oorX <= 0.01 && r.rev <= 0.01, `${w} 밧줄: > ${OOR_X}° ${pc(r.oorX)} % · 거꾸로 ${pc(r.rev)} %`);
-  }
+  }, ['armClear2']);
 });
 
 test('시험 손목 치우침 밧줄: 켜면(`?wristRope=1`) 손목 원뿔에 둘 더 (gripDev — 척측 · 엄지 쪽) · 기본 · 전 판은 없음 · 칼날을 거꾸로 쥔 동안 떼고 돌아오면 다시', () => {

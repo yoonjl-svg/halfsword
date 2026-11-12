@@ -15,6 +15,7 @@ import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { PlayerSecretWatch, IaiArm, gnsArmTick, gnsMoving, gnsHumanMoving, gnsHumanUnsettled } from '../../src/secret.js';
 import { iaiReadyShown, IAI_READY_STANCE } from '../../src/secret_instant.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
+import { withArmOld } from './arm_real_pin.mjs';
 
 const { SECRET } = CONFIG;
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
@@ -156,7 +157,8 @@ test('③ AI: 같은 셈 — 일본 AI(숙련도 5)는 걸음 뜻이 없고 공�
   G.world.free();
 });
 
-test("④ 사람 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준비가 되면 웅크리게 해.' — SECRET.gnsCrouch): 준비 → AI 와 같은 발도 대기 자세 · 손을 쉬면 칼이 왼 허리(발도가 그 자리에서) · 칼을 쥐면 손은 곧장 사람 것 · 막기로 풀리면 gnsCrouchOut 에 풀림 · 끄면 표시만", async () => {
+test("④ 사람 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준비가 되면 웅크리게 해.' — SECRET.gnsCrouch): 준비 → AI 와 같은 발도 대기 자세 · 손을 쉬면 칼이 왼 허리(발도가 그 자리에서) · 칼을 쥐면 손은 곧장 사람 것 · 막기로 풀리면 gnsCrouchOut 에 풀림 · 끄면 표시만", () => withArmOld(async () => {
+  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫): 1.6 m 앞 서 있는 상대 롱소드도 AI 몸이라 겨눔 칼끝이 20 cm 남짓 바뀌어 사람 칼과 닿음이 달라짐 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
   const THREE = await import('three');
   assert.equal(SECRET.gnsCrouch, 0); // 10/31 01:0x 사장님 '플레이어만 웅크리기 꺼' — 기본 끔 · 아래는 켠 판(`?gnsCrouch=1`)을 본다
   const gnsWas = SECRET.gnsCrouch;
@@ -212,7 +214,7 @@ test("④ 사람 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준
   } finally {
     SECRET.gnsCrouch = gnsWas;
   }
-});
+}, ['armClear2']));
 
 test('⑤ 10/27 21:4x AI 가 웅크린 사람에게 낮게 침 (SECRET.gnsCrouchAim): 늦게 본 모습이 웅크림 · 상대가 사람이면 내 가슴 − 상대 가슴 · 서 있음 · AI 상대 · 끔이면 0', async () => {
   const { AI } = await import('../../src/ai.js');
@@ -255,7 +257,8 @@ test('⑥ 10/27 23:0x 무장 시계는 공격이 풀린 때(판 시작 정지 AR
   G.world.free();
 });
 
-test("⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창 (사장님 '웅크리기를 없앴더니 고노센 발동창이 안열려.' — SECRET.gnsReadyHip · docs/strike/gonosen_window_2026-10-31.md)", async () => {
+test("⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창 (사장님 '웅크리기를 없앴더니 고노센 발동창이 안열려.' — SECRET.gnsReadyHip · docs/strike/gonosen_window_2026-10-31.md)", () => withArmOld(async () => {
+  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫): 1.6 m 앞 서 있는 상대 롱소드도 AI 몸이라 겨눔 칼끝이 20 cm 남짓 바뀌어 사람 칼과 닿음이 달라짐 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
   const THREE = await import('three');
   assert.equal(SECRET.gnsCrouch, 0);
   assert.equal(SECRET.gnsReadyHip, 1);
@@ -340,7 +343,7 @@ test("⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창 (사장님 '웅크리�
     else assert.notEqual(ev?.ev, 'raise', `끄면 선 밖에서 든 칼은 '듦' 창 없음 (손이 멎으면 헛침 창은 그대로) ${JSON.stringify(ev)}`);
     R.G.world.free();
   }
-});
+}, ['armClear2']));
 
 test("⑧ 10/31 13:xx 사장님 '1-2번 다 고쳐': 스틱 위 엄지는 몸을 걷게 할 때만 걸음 뜻 (SECRET.gnsStickWalk) · 허리 대기 동안 자세 이름 '발도 대기'", () => {
   const { GAIT } = CONFIG;

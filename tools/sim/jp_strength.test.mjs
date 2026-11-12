@@ -87,7 +87,8 @@ test('켜도 일본이 아닌 칸은 그대로: 네 스위치를 켠 독일 롱�
   }
 });
 
-test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄러져 들어감 (끄면 0)', () => {
+test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄러져 들어감 (끄면 0)', () => withArmOld(() => {
+  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 · 사람 두손 칼 칼자루 끝 앞 바닥)로 씨앗 1 판에 제비 베기 되돌림 칼이 안 나옴 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
   const runs = {};
   for (const v of [0, 0.3]) {
     let uq = null;
@@ -105,7 +106,7 @@ test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄�
   assert.ok(runs[0].snap > 0, '이 씨앗에 제비 베기 되돌림 칼이 있음');
   assert.ok(runs[0.3].tsu > 0, `제비 베기 미끄러져 들어감 ${runs[0.3].tsu}`);
   assert.notEqual(JSON.stringify(runs[0.3].r), JSON.stringify(runs[0].r), '켜면 판이 달라짐');
-});
+}, ['armClear2']));
 
 test('gnsThrough: 켜면 팔을 가른 발도가 몸까지 한 번 더 벰 (끄면 첫 닿음에서 끝)', () => withArmOld(() => {
   // 씨앗 6 판은 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 이 씨앗이 14 s 안에 고노센을 안 냄 (기록 arm_real §10)

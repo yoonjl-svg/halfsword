@@ -188,7 +188,8 @@ const withFc1105 = (fn) => {
 };
 /** 한 판 견줌 몫: 공격당 심각도 10 배 넘게(셋 다 끈 10/25 전 판 대비 — 전 판은 손가락 긋기 세기 끈 판) · 몸통 띠(다리 없음 · 팔보다 몸통) · 손목 범위 안 · 굴림 한도 안 */
 function oneFight(ua) {
-  const run = () => withJpOld(() => tsubameRun(1, { immortal: true, dur: 14, ghostDown: true }));
+  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 · 사람 두손 칼 칼자루 끝 앞 바닥)로 씨앗 1 판이 갈라짐(갈고리 판 맞은 곳 골반 1 · 빈 위팔 1) — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
+  const run = () => withArmOld(() => withJpOld(() => tsubameRun(1, { immortal: true, dur: 14, ghostDown: true })), ['armClear2']);
   const R = withUA(ua, run);
   const on = tsubameSummary([R]);
   const off = tsubameSummary([withFc1105(() => withUA(OFF, run))]);
@@ -241,7 +242,8 @@ test('낮은 시작 (감도 1 · 손가락 −0.7 · 가슴 사이 1.15 · 1.3 m
     const W = tr.wr.filter((w) => w && w[1]);
     return { W, n: W.filter((w) => w[5] > k).length };
   };
-  withFc1105(() => {
+  // 11/12 둘째(사람 두손 칼 칼자루 끝 앞 바닥 — 손가락으로 끄는 동안 손 목표가 앞으로)로 1.3 m 판 칼끝 휨 몫이 0.121 (문턱 0.12 바로 위) — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
+  withArmOld(() => withFc1105(() => {
     for (const [gap, seed] of [[1.15, 701], [1.3, 702]]) {
       const tr = traceRun('line', seed, gap, { low: -0.7 });
       assert.ok(tr.fired, `${gap} m`);
@@ -266,5 +268,5 @@ test('낮은 시작 (감도 1 · 손가락 −0.7 · 가슴 사이 1.15 · 1.3 m
     //  씨앗 701 보통 높이도 낮은 시작 판(armTurnLow)이 켜짐 (위 낮은 시작 잣대 — 날 앞장 · 손목 · 굴림 · 첫 맞음 날 — 은 켠 판 그대로 지남 · 기록 arm_real §10)
     const [on, off] = withArmOld(() => [traceRun('line', 701, 1.15), traceRun('lineNoArm', 701, 1.15)], ['armClear']);
     assert.deepEqual(on.tip, off.tip, '보통 높이(손가락 그대로) — 팔꿈치 돌림이 안 켜짐');
-  });
+  }), ['armClear2']);
 });

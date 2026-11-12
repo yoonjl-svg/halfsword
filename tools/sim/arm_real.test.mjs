@@ -11,6 +11,7 @@ import { newRound, CONFIG } from './harness_m.mjs';
 import { runDir } from './arm_reach_audit.mjs';
 import { WEAPONS } from '../../src/weapons.js';
 import { traditionOf } from '../../src/schools.js';
+import { withArmOld } from './arm_real_pin.mjs';
 
 const { SKILL } = CONFIG;
 const withSkill = (o, fn) => {
@@ -130,5 +131,8 @@ test('D 두 팔 엇갈림 막기 — 손을 뗀 쉼 · 사람 아닌 몸(AI)은 
       G.world.free();
     }
   };
-  for (const w of ['longsword', 'zweihander', 'uchigatana', 'balisarda']) assert.deepEqual(rest(w), withClear(0, () => rest(w)), w);
+  // 11/12 둘째(armClear.ai — 사장님 '남은 팔 엇갈림 고치고 ai에도 넣어')부터 AI 몸도 엇갈림 막기를 탐 — 이 시험은 첫 판(사람만 · main 30929293) 잣대라 그 판으로 묶음 (arm_real_pin armClear2 · 새 AI 몫은 arm_clear2.test.mjs)
+  withArmOld(() => {
+    for (const w of ['longsword', 'zweihander', 'uchigatana', 'balisarda']) assert.deepEqual(rest(w), withClear(0, () => rest(w)), w);
+  }, ['armClear2']);
 });

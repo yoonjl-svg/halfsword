@@ -427,6 +427,7 @@ if (params.has('twoHandReach')) CONFIG.SKILL.twoHandReach = +params.get('twoHand
 if (params.has('edgeReach')) CONFIG.SKILL.edgeReach = Math.min(1, Math.max(0, +params.get('edgeReach') || 0)); // 한손 칼 패드 끝에서 팔이 다 펴지게 (11/12 · 기본 1 — 사장님 11/12 결정) · `?edgeReach=0` = 전 판
 if (['frame', 'off'].includes(params.get('eastScale'))) CONFIG.SKILL.eastScale = params.get('eastScale'); // 동방 한손 칼 날것 매핑 잣대 — 덮기 전 무기 틀 표로 (11/12 · 기본 'frame' — 사장님 11/12 결정) · `?eastScale=off` = 전 판
 if (params.has('armClear')) CONFIG.SKILL.armClear.on = +params.get('armClear') ? 1 : 0; // 두 팔 엇갈림 막기 (11/12 · 기본 1 · 사장님 확인 전) · `?armClear=0` = 전 판
+if (params.has('armClearAI')) CONFIG.SKILL.armClear.ai = +params.get('armClearAI') ? 1 : 0; // 두 팔 엇갈림 막기 AI 몫 (11/12 둘째 · 기본 1 · [사장님 11/12 결정]) · `?armClearAI=0` = 사람만
 if (params.has('restTouch')) CONFIG.SKILL.restTouch = +params.get('restTouch') ? 1 : 0; // 얹은 손가락은 뗀 것과 같게 — 쉼 자세 그대로 (10/31 · 기본 1 · 사장님 확인 전) · `?restTouch=0` = 전 판
 if (params.has('dupGrace')) CONFIG.UNIQUE_ASSIST.dupGrace = Math.max(0, +params.get('dupGrace') || 0); // 겹치기 시제품: 닿음이 끝난 뒤 받는 초 (10/31 · 기본 0 · 사장님 확인 전 — 확인표 3100)
 if (params.has('dupAny')) CONFIG.UNIQUE_ASSIST.dupAny = +params.get('dupAny') ? 1 : 0; // 겹치기 시제품: 칼끼리 닿음이면 모두 (기본 0 · 확인표 3101)
