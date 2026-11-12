@@ -68,7 +68,7 @@ for (const [size, width, height, touch] of SIZES.filter(([n]) => !process.env.ON
   const { ctx, p, tap, shot, toLobby } = await session(size, width, height, { qualified: true, touch });
   await toLobby('2026-11-12T22:30');
   assert.equal(await text(p, 'saengsaState'), '신청 받는 중 · 새벽 2시까지');
-  assert.equal(await text(p, 'sgNote'), '입장하면 이 팀으로 신청하고 곧바로 첫 경기를 치릅니다.');
+  assert.equal(await text(p, 'sgNote'), '입장하면 이 팀으로 첫 경기가 시작됩니다.');
   assert.equal(await inRoot(p, `return root.getElementById('saengsaEnter').disabled;`), false);
   await shot('2230_panel_open');
   await tap('#saengsaEnter');

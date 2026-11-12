@@ -39,7 +39,7 @@ export const SAENGSA_TEXT = Object.freeze({
   noTournament: '신청한 대회가 없습니다.',
   pickTwo: '동료 둘을 고르십시오.',
   willSign: '입장하면 이 팀으로 신청합니다.', // 옛 규칙(SAENGSA.instant false — 아침 10시 첫 대진)
-  willSignNow: '입장하면 이 팀으로 신청하고 곧바로 첫 경기를 치릅니다.', // 바로 시작 (사장님 11/12 '참여하면 바로 시작') · 시험판
+  willSignNow: '입장하면 이 팀으로 첫 경기가 시작됩니다.', // 바로 시작 (사장님 11/12 '참여하면 바로 시작') · 글은 사장님 11/12 08:0x 문장 그대로
   signed: '생사전에 신청했습니다.',
   noCoins: '금화가 모자랍니다.',
   busy: '진행 중인 대회가 있습니다.',

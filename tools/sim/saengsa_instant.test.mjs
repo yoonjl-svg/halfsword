@@ -71,7 +71,7 @@ test('들어가면 곧장 시작: 신청한 때 첫 경기 입장 가능 · 상�
   assert.equal(done.length, 7);
   assert.ok(done.every((x) => x.round === 0 && x.result.at === now && x.result.by === 'quick'));
   assert.equal(TX.nextMatchLine('16강', R.readyAt(t, m), 'ready', now), '내 경기 · 16강 · 지금 싸울 수 있습니다.');
-  assert.equal(TX.SAENGSA_TEXT.willSignNow, '입장하면 이 팀으로 신청하고 곧바로 첫 경기를 치릅니다.');
+  assert.equal(TX.SAENGSA_TEXT.willSignNow, '입장하면 이 팀으로 첫 경기가 시작됩니다.');
 });
 
 test('이어지는 경기 기다림 없음: 결과를 적으면 다음 경기가 곧바로 · 결승까지 · 상대끼리는 앞 대진이 끝나면 바로', () => {
