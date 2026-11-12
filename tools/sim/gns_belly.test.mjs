@@ -30,7 +30,8 @@ test('기본값: iaiBelly 켬 (11/08 사장님) · 전 올려베기 길 값 그�
   assert.ok(B.E.el > B.M.el && B.E.hand[1] > B.B.hand[1], '그래도 올려 벰 (왼 아래 → 오른 위)');
 });
 
-test('끔 = 전 판: 배 길 값을 바꿔도 끈 판 발도는 바이트 같음', () => withCfg({ iaiBelly: 0 }, () => {
+// 11/13 사람 발도 원전 꼴(SECRET.iaiReal — docs/strike/iai_real_2026-11-13.md)은 선 사람 발도 길을 iaiPathReal 로 바꿈 — 배 길을 잰 이 장면들은 그때 판(iaiReal 0)으로 묶음 (§7)
+test('끔 = 전 판: 배 길 값을 바꿔도 끈 판 발도는 바이트 같음', () => withCfg({ iaiBelly: 0, iaiReal: 0 }, () => {
   const a = standShot({ foeW: 'longsword', guard: 'langort', start: 'hip', gapAdd: 0.3 });
   const keep = SECRET.iaiPathBelly;
   try {
@@ -44,8 +45,8 @@ test('끔 = 전 판: 배 길 값을 바꿔도 끈 판 발도는 바이트 같음
 }));
 
 test('켬: 선 사람 발도 — 첫 닿음 배 · 가운데 줄이 배 높이 · 팔 다 펴짐 · 칼이 땅 · 제 다리에 안 닿음 · 서 있음', () => {
-  const off = withCfg({ iaiBelly: 0 }, () => standShot({ foeW: 'longsword', guard: 'langort', start: 'hip', gapAdd: 0.3 }));
-  const on = withCfg({ iaiBelly: 1 }, () => standShot({ foeW: 'longsword', guard: 'langort', start: 'hip', gapAdd: 0.3 }));
+  const off = withCfg({ iaiBelly: 0, iaiReal: 0 }, () => standShot({ foeW: 'longsword', guard: 'langort', start: 'hip', gapAdd: 0.3 }));
+  const on = withCfg({ iaiBelly: 1, iaiReal: 0 }, () => standShot({ foeW: 'longsword', guard: 'langort', start: 'hip', gapAdd: 0.3 }));
   assert.equal(on.first?.zone, 'abdomen', `첫 닿음 ${on.first?.zone}`);
   const ab = on.foeY.abdomen;
   assert.ok(on.crossY > ab - 0.07 && on.crossY < ab + 0.07, `가운데 줄 ${on.crossY} · 배 ${ab} ± 0.07`);
@@ -79,11 +80,11 @@ test('켬이어도 AI 발도(웅크린 대기에서 req.player 아님) · 웅크
 test('싸움 꽂개는 읽기만 · 씨앗 6 고노센 — 끔 팔 · 켬 배', () => withArmOld(() => {
   // 씨앗 6 판은 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 이 씨앗이 14 s 안에 고노센을 안 냄 (기록 arm_real §10)
   const o = { school: 'japanese', weapon: 'uchigatana', opp: 'longsword', seed: 6, dur: 14 };
-  const a = withCfg({ iaiBelly: 0 }, () => fightOne(o));
-  const b = withCfg({ iaiBelly: 0 }, () => fightOne({ ...o, probe: bellyProbe() }));
+  const a = withCfg({ iaiBelly: 0, iaiReal: 0 }, () => fightOne(o));
+  const b = withCfg({ iaiBelly: 0, iaiReal: 0 }, () => fightOne({ ...o, probe: bellyProbe() }));
   assert.equal(JSON.stringify({ ...b, probe: undefined }), JSON.stringify(a));
   assert.equal(b.probe.gns.length, 1, '이 씨앗은 14 s 안에 고노센을 냄');
   assert.equal(b.probe.gns[0].first, 'arm', `끔 — ${b.probe.gns[0].first}`);
-  const c = withCfg({ iaiBelly: 1 }, () => fightOne({ ...o, probe: bellyProbe() }));
+  const c = withCfg({ iaiBelly: 1, iaiReal: 0 }, () => fightOne({ ...o, probe: bellyProbe() }));
   assert.equal(c.probe.gns[0].first, 'abdomen', `켬 — ${c.probe.gns[0].first}`);
 }, ['armClear']));
