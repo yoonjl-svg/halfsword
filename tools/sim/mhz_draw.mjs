@@ -42,14 +42,21 @@ function offHandW(f) {
   return new THREE.Vector3(0, -0.135, 0).applyQuaternion(tq(f.bodies.farmO.rotation())).add(tv(f.bodies.farmO.translation()));
 }
 const dist3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+/** 몸 f 의 골반 몸체 틀로 (월드 점 → [앞, 위, 칼 든 쪽 +]) — 칼집 손 자리(SECRET.iaiSayaHip — 골반 틀) 견줌 (11/13 iai_saya) */
+function pelvisLocal(f, p) {
+  const c = tv(f.bodies.pelvis.translation());
+  const v = p.clone().sub(c).applyQuaternion(tq(f.bodies.pelvis.rotation()).invert());
+  return [v.x, v.y, v.z * f.side];
+}
 
 /** 빈손 · 칼 손 목표 기록: 몸의 offArmIK · armIK 를 감싸 이 스텝 마지막으로 간 점(가슴 몸체 틀)을 남긴다 (게임 셈은 그대로 부름) */
 function tapTargets(f) {
-  const rec = { off: null, arm: null };
+  const rec = { off: null, offP: null, arm: null };
   const o = f.offArmIK.bind(f);
   const a = f.armIK.bind(f);
   f.offArmIK = (t) => {
     rec.off = chestLocal(f, t);
+    rec.offP = pelvisLocal(f, t);
     return o(t);
   };
   f.armIK = (t, ...rest) => {
@@ -120,7 +127,7 @@ export function mhzShot({ weapon = 'monohoshizao', foeW = 'longsword', guard = '
   let freeT = null;
   let prevTip = P.bladePoint(1, new THREE.Vector3());
   for (let i = 0; i < Math.round(6 / DT); i++) {
-    rec.off = rec.arm = null;
+    rec.off = rec.offP = rec.arm = null;
     G.step();
     if (P.iai && P.iai.kind === 'iai') I = P.iai;
     const ph = P.iai ? 'draw' : P.iaiHoldT > 0 ? 'hold' : P.iaiFade > 0 ? 'fade' : 'free';
@@ -133,6 +140,7 @@ export function mhzShot({ weapon = 'monohoshizao', foeW = 'longsword', guard = '
       t: r3(G.t - t0), ph, cut: !!(P.iai && P.iai.u >= (P.iai.hitFrom ?? P.iai.ab)), ...pose(P, c0, inv),
       offT: rec.off && rec.off.map(r3), armT: rec.arm && rec.arm.map(r3), gap: r3(pm.distanceTo(oh)), grip: !!P.gripping,
       ohL: chestLocal(P, oh).map(r3), pmL: chestLocal(P, pm).map(r3), tipV: r3(tip.distanceTo(prevTip) / DT), rgK: P.iaiRegripT > 0 ? r3(1 - P.iaiRegripT / P.iaiRegripDur) : null,
+      offP: rec.offP && rec.offP.map(r3), ohP: pelvisLocal(P, oh).map(r3), pmP: pelvisLocal(P, pm).map(r3), // 골반 틀 (칼집 손 자리 견줌 — 11/13 iai_saya)
     });
     prevTip = tip;
     if (freeT != null && G.t - freeT > after) break;
@@ -185,6 +193,11 @@ export function mhzShot({ weapon = 'monohoshizao', foeW = 'longsword', guard = '
     regripGrip: gripI >= 0 ? r3(gripI * DT) : null, regripSeat: seatI >= 0 ? r3(seatI * DT) : null,
     offJump: jump('offT'), armJump: jump('armT'), ohVmax: r1(ohV),
     gapFree: after1.length ? r3(after1[Math.min(after1.length - 1, Math.round(1.0 / DT))].gap) : null,
+    // 칼집 손 (11/13 iai_saya): 빈손(아래팔 끝)이 빈손 목표에 3 cm 안으로 든 첫 때(낸 때부터 — 뽑기 · 굳음 동안) · 칼집을 떠난 때(베는 몫 첫 스텝) · 굳음 0.3 s 빈손 골반 틀 자리 · 굳음 동안 빈손 ↔ 목표 가장
+    sayaIn: (() => { const k = frames.findIndex((f, i) => i > 0 && (f.ph === 'draw' || f.ph === 'hold') && f.offT && dist3(f.ohL, f.offT) < 0.03); return k >= 0 ? frames[k].t : null; })(), // 첫 뽑기 스텝은 낸 스텝 앞 목표(칼자루 끝)라 뺌
+    cutT: cut.length ? cut[0].t : null,
+    ohPHold: h1 && h1.ohP, offPHold: h1 && h1.offP,
+    holdTgtGap: holdLate.length ? r3(Math.max(...holdLate.filter((f) => f.offT).map((f) => dist3(f.ohL, f.offT)))) : null, // 굳음 0.1 s 뒤부터
   };
   G.world.free();
   return { frames, sum, hit, pre };
@@ -306,7 +319,7 @@ if (isMain(import.meta.url)) {
       const r = mhzShot({ weapon: arg('weapon', 'monohoshizao'), foeW: arg('foe', 'longsword'), guard, start, gapAdd, after: +arg('after', 1.5) });
       rows.push({ guard, start, gapAdd, sum: r.sum, hit: r.hit, frames: arg('trace', null) ? r.frames : undefined });
       const s = r.sum;
-      console.log(`${guard.padEnd(7)} ${start.padEnd(6)} +${gapAdd} | 한 손 ${+s.oneHand} | 맞음 ${r.hit ? `${r.hit.zone}(${r.hit.part}) ${r.hit.E} J 심각도 ${r.hit.sev}` : '헛침'} | 칼끝 길 ${JSON.stringify(s.tipCut)} 빠르기 가장 ${s.tipVmax} | 쥠 뽑기 ${s.grip.draw}/${s.grip.nDraw} 굳음 ${s.grip.hold}/${s.grip.nHold} 풀기 ${s.grip.fade}/${s.grip.nFade} | 끝 굽힘 ${s.end?.flex}° 칼 ${s.end?.elev}° | 굳음 0.3 s 굽힘 ${s.hold?.flex}° (가장 ${s.holdFlexMax}) 칼 ${s.hold?.elev}° (${JSON.stringify(s.holdElev)}) 칼끝 ${JSON.stringify(s.hold?.tip)} 흔들림 ${s.holdTipV} m/s 빈손 ${JSON.stringify(s.ohdHold)} | 다시 쥠 ${s.regripGrip} s · 자리 ${s.regripSeat} s (뽑기 전 틈 ${s.pre0}) · 1 s 뒤 틈 ${s.gapFree} | 빈손 목표 튐 ${JSON.stringify(s.offJump)} · 칼 손 목표 튐 ${JSON.stringify(s.armJump)} · 빈손 빠르기 가장 ${s.ohVmax}`);
+      console.log(`${guard.padEnd(7)} ${start.padEnd(6)} +${gapAdd} | 한 손 ${+s.oneHand} | 맞음 ${r.hit ? `${r.hit.zone}(${r.hit.part}) ${r.hit.E} J 심각도 ${r.hit.sev}` : '헛침'} | 칼끝 길 ${JSON.stringify(s.tipCut)} 빠르기 가장 ${s.tipVmax} | 쥠 뽑기 ${s.grip.draw}/${s.grip.nDraw} 굳음 ${s.grip.hold}/${s.grip.nHold} 풀기 ${s.grip.fade}/${s.grip.nFade} | 끝 굽힘 ${s.end?.flex}° 칼 ${s.end?.elev}° | 굳음 0.3 s 굽힘 ${s.hold?.flex}° (가장 ${s.holdFlexMax}) 칼 ${s.hold?.elev}° (${JSON.stringify(s.holdElev)}) 칼끝 ${JSON.stringify(s.hold?.tip)} 흔들림 ${s.holdTipV} m/s 빈손 ${JSON.stringify(s.ohdHold)} | 다시 쥠 ${s.regripGrip} s · 자리 ${s.regripSeat} s (뽑기 전 틈 ${s.pre0}) · 1 s 뒤 틈 ${s.gapFree} | 빈손 목표 튐 ${JSON.stringify(s.offJump)} · 칼 손 목표 튐 ${JSON.stringify(s.armJump)} · 빈손 빠르기 가장 ${s.ohVmax} | 칼집 손: 3 cm 안 ${s.sayaIn} s · 칼집 떠남 ${s.cutT} s · 굳음 빈손 골반 틀 ${JSON.stringify(s.ohPHold)} (목표 ${JSON.stringify(s.offPHold)}) · 굳음 빈손 ↔ 목표 가장 ${s.holdTgtGap}`);
     }
     const json = arg('json', null);
     if (json) writeFileSync(json, JSON.stringify({ set: arg('set', ''), rows }));
