@@ -115,16 +115,19 @@ test('gnsThrough: 켜면 팔을 가른 발도가 몸까지 한 번 더 벰 (끄�
     let P = null;
     const belly = SECRET.iaiBelly;
     const real = SECRET.iaiReal;
+    const obi = SECRET.iaiObi;
     try {
       SECRET.gnsThrough = v;
       SECRET.iaiBelly = 0; // 11/08 고노센 배 길 기본 켬 전 장면 (씨앗 6 발도가 팔에 먼저 닿는 판 — 배 길이면 팔을 비켜 감)
       SECRET.iaiReal = 0; // 11/13 사람 발도 원전 꼴 전 장면 (docs/strike/iai_real_2026-11-13.md §7)
+      SECRET.iaiObi = 0; // 11/14 帯刀(대기 칼 배꼽 앞) 전 장면 — 켜면 대기 칼 자리 · 뽑는 길이 달라 이 씨앗 판이 달라짐 (docs/strike/iai_obi_2026-11-14.md §9)
       const r = fightOne({ school: 'japanese', weapon: 'uchigatana', opp: 'longsword', seed: 6, dur: 14, probe: strengthProbe(), onRound(o) { P = o.P; } });
       runs[v] = { n: P.gnsThroughN ?? 0, big: r.probe.big.dealt.filter((b) => b[3] === 'secret'), fired: r.secretFired };
     } finally {
       allOff();
       SECRET.iaiBelly = belly;
       SECRET.iaiReal = real;
+      SECRET.iaiObi = obi;
     }
   }
   assert.equal(runs[0].fired, 1, '이 씨앗은 14 s 안에 고노센을 냄');
