@@ -108,7 +108,7 @@ WEAPON_ABILITY.duelOneHand = 1.15; // 사장님 10/25 결정
 //  곁눈 베기 무릎 꺾기(UNIQUE_ASSIST.buckle · combat.js buckleCheck)와 같은 틀: 맞은 쪽 knockDown(false) · 꿇는 시간 kneel 초 · 맞는 쪽 버티기(fighter.swayScale)를 확률에 곱함 · 친 쪽 전용 난수 · 잔상(artFlash).
 //  다른 점: 부위 · 판정 종류(둔타 · 멍 · 상처)를 가리지 않는다 · 굴림은 한 획(휘두름 · 톡)에 한 번 — 그 획의 첫 맞음에서만(마디가 여러 번 닿아도) · 무기 칸 kneelHit 이 있는 무기만(채찍).
 //  p · kneel 은 곁눈 베기 값 그대로(0.5 · 0.4 s) · ai 기본 끔(사람 먼저 — `?whipKneelAi=1`) · `?whipKneel=0` 끔
-export const WHIP_KNEEL = { p: 0.5, kneel: realS(0.6), ai: false }; // kneel 0.4 → 0.6 [사장님 11/15 결정 '채찍도 같이 0.6초로 해' — 확인표 3861]
+export const WHIP_KNEEL = { p: 0.5, kneel: realS(0.6), ai: false }; // kneel 0.4 → 0.6 [사장님 11/14 결정 '채찍도 같이 0.6초로 해' — 확인표 3861]
 
 // 바닥 면적 2배: 길이는 √2배. 인물·무기·시작 간격은 확대하지 않는다.
 export const ARENA_SCALE = Math.SQRT2;
@@ -1671,7 +1671,7 @@ export const UNIQUE_ASSIST = {
   // 강화동작 이점 (10/21 사장님): 곁눈 베기(독일) 무릎 꺾기 — 칼날이 들어간 베기(심각도 > 0)가 머리 · 가슴(목 포함) · 위팔(어깨)에 맞으면 p 로 한쪽 무릎을 꿇는다.
   //  꿇는 시간 kneel 초(다리 · 기력이 약하면 넘어졌다 일어날 때와 같은 꼴로 더 길게) 뒤 보통 일어나기(riseTime). cool 초 안에는 그 상대에게 다시 걸리지 않는다(0 = 제한 없음 — 10/21 사장님).
   //  p · kneel = 사장님 10/21 (처음 15 % · 0.8 s → '전투에 다양성 … 25%로 강화하고 대신 시간을 절반인 0.4초로' → '50%로 늘려') · parts · cool = 감독 (확인표 2107 — 사장님 확인 전). AI 도 같은 규칙 (숙련도 4 이상 독일). 맞는 쪽 버티기(일본 steady)는 확률에 곱함(fighter.swayScale — 일본 50 % → 37.5 %). 0 = 끔 (`?buckle=0`)
-  buckle: { p: 0.5, kneel: realS(0.6) /* [사장님 11/15 결정] '무릎 꺾기 0.6초로 하자' — 0.4 → 0.6 · 확인표 3861 */, cool: realS(0), /* 10/21 14:0x 사장님 '다시 무릎 안 꿇음 제한은 아예 없애자' — 5 → 0(없음) */ parts: ['head', 'chest', 'uarmS', 'uarmO'] },
+  buckle: { p: 0.5, kneel: realS(0.6) /* [사장님 11/14 결정] '무릎 꺾기 0.6초로 하자' — 0.4 → 0.6 · 확인표 3861 */, cool: realS(0), /* 10/21 14:0x 사장님 '다시 무릎 안 꿇음 제한은 아예 없애자' — 5 → 0(없음) */ parts: ['head', 'chest', 'uarmS', 'uarmO'] },
   // 곁눈 베기 길 다시 그림 (사장님 10/25 08:0x '셸하우 3번 — 맞는 순간 손목이 사람 범위 안이면서 손목 교정 전처럼 세게' · 기록 docs/strike/wrist_audit_2026-10-24.md §13 · 확인표 2501 ~ 2505):
   //  1 = 다시 그린 길(schools.js GERMAN_UNIQUE schielhau 의 redraw — AI 길 점 + 길 덧칸 plan: 칼끝 들기 · 손 뻗기 · 손 돌리기, ai.js techPlanStep → fighter.js driveSword) ·
   //  0 = 10/25 전 길(`?schielPath=0` — 손목 교정이 맞는 순간 칼끝을 옆으로 돌리던 판, 바이트 같음 · AI · 사람 둘 다). AI 는 sword_art.js applySchoolArt 가 꾸러미에 넣을 때 · 사람은 아래 schielPlayer
