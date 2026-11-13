@@ -214,7 +214,9 @@ test('한 판 견줌 — 갈고리 길(`tsuHook` 1 — 10/25 판)도 그대로',
 test('곧은 길 꼴 (tsubame_trace — 가만히 선 상대 · 가슴 사이 1.15 · 1.3 m · 손가락 그대로 · 흔들림): 칼끝 · 잔상 곧음 · 날 앞장 · 손목 범위 안 · 굴림 한도 안 · 갈고리 판은 휨', () => {
   const k = CONFIG.STRIKE.edgeAlign;
   for (const [gap, seed] of [[1.15, 701], [1.3, 702]]) {
-    const tr = traceRun('line', seed, gap);
+    // 11/13 합침(쥘 때 칼자루 끝 앞 바닥 들임 frontIn 0.1 — docs/strike/arm_odd_2026-11-13.md §합침): 씨앗 701 판의 날 앞장이 7/9(0.78)로 갈라짐 — 이 장면을 잰 때의 팔(arm_real_pin armOdd · frontIn 0)로 묶음.
+    //  씨앗 701 ~ 724 × 1.15 · 1.3 m 48 판은 들임 판이 날 앞장 평균 0.957(0.8 밑 2 판) · 곧장 판 0.947(2 판) · 첫 맞음 날 48/48 · 46/48 — 한 씨앗의 흔들림
+    const tr = withArmOld(() => traceRun('line', seed, gap), ['armOdd']);
     assert.ok(tr.fired, `${gap} m`);
     // 11/10 사장님 '1로 해' — 칼끝 휨은 베는 토막만 셈(잔상과 같은 범위 · 꺾은 자리로 거두는 준비 토막은 뺌) · 휨 몫 기준 0.12 → 0.16(손가락 긋기 세기 켬 뒤 1.15 m 판의 완만한 활 휨 0.13 ~ 0.15 를 받아들임) · 꺾임 15° 그대로
     const b = bendCut(tr);

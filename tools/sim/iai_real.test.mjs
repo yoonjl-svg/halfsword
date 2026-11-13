@@ -14,6 +14,7 @@ import { gnsShot } from './iai_real.mjs';
 import { standShot } from './gns_belly.mjs';
 import { traceRun, bendCut, bendTrail } from './tsubame_trace.mjs';
 import { HUMAN } from '../../src/fighter.js';
+import { withArmOld } from './arm_real_pin.mjs'; // 11/13 합침 — 잰 때 팔로 묶기
 
 const { SECRET, UNIQUE_ASSIST: UA } = CONFIG;
 const withS = (vals, fn, O = SECRET) => {
@@ -87,7 +88,8 @@ test('③ AI 발도(웅크린 대기에서 — 사람 아님)는 켜든 끄든 �
 test('④ 제비 베기 되돌림 칼 — 칼끝 곧은 줄: 베는 토막 · 잔상 곧음 · 날 앞장 · 손목 범위 안 / 끄면 전 판 / 낮은 시작은 전 판 그대로', () => {
   const k = CONFIG.STRIKE.edgeAlign;
   for (const [gap, seed] of [[1.15, 701], [1.15, 702]]) {
-    const tr = traceRun('line', seed, gap);
+    // 11/13 합침(frontIn 0.1 — docs/strike/arm_odd_2026-11-13.md §합침): 씨앗 701 날 앞장 7/9 로 갈라짐 — 이 장면을 잰 때의 팔(arm_real_pin armOdd · frontIn 0)로 묶음 (48 판은 들임 판이 같거나 나음)
+    const tr = withArmOld(() => traceRun('line', seed, gap), ['armOdd']);
     assert.ok(tr.fired);
     const b = bendCut(tr);
     const t = bendTrail(tr);
