@@ -4346,6 +4346,14 @@ export class Fighter {
    *  - 빈팔을 크게 다치거나, 쓰러지거나, 칼을 놓치면 손을 놓는다.
    */
   offHand() {
+    // 앞무게 두손 칼 한 손 발도 뒤 다시 쥐기 (11/13 사장님 결정 '한손으로' — SECRET.iaiOneHeavy · iaiRegrip · secret_instant.js startRegrip): 빈손 목표를 칼집 손 자리 → 칼자루 끝으로
+    //  SECRET.iaiRegrip 초 동안 smoothstep 몫(rgK)으로 옮기고 쥐는 끈 힘도 그 몫으로 들임 — 곧장 쥐면 빈손 목표가 한 스텝에 0.4 ~ 0.5 m 튐. 시계는 쥐든 말든 흐름(넘어지면 그대로 끝남)
+    let rgK = 1;
+    if (this.iaiRegripT > 0) {
+      this.iaiRegripT = Math.max(0, this.iaiRegripT - (this.lastDt || 1 / 120));
+      const x = 1 - this.iaiRegripT / Math.max(1e-6, this.iaiRegripDur || 1);
+      rgK = x * x * (3 - 2 * x);
+    }
     const want =
       this.armed &&
       this.weaponCfg.twoHand && // 한손무기는 빈손이 칼자루를 잡지 않는다 (applyPose의 기본 손 자세를 그대로 쓴다)
@@ -4367,6 +4375,7 @@ export class Fighter {
     const gripAim = rg ? _gw.set(0, rg.g, 0).applyQuaternion(_q1).add(_v7.set(st.x, st.y, st.z)).addScaledVector(this.aimDirW, rg.gOff - rg.g) : _gw.copy(this.aimDirW).multiplyScalar(along).add(_v7.set(st.x, st.y, st.z));
     // 두 팔 엇갈림 막기 — 빈손 비킴 (SKILL.armClear.grip — gripClear 머리말): 두 팔이 붙은 동안(① 켜짐) 지금 몸 겉 틈이 gap 안이면
     if (this._clrOn && !this.armsPlaced() && SKILL.armClear.grip > 0 && this.armClrGap < SKILL.armClear.gap) gripClear(this, gripAim, SKILL.armClear.grip);
+    if (rgK < 1) gripAim.lerpVectors(regripFrom(this, _gr), gripAim, rgK); // 다시 쥐기 (위 rgK): 칼집 손 자리(한 손 발도 동안 빈손 목표와 같은 점) → 칼자루 끝
     this.offArmIK(this.armsPlaced() ? pommel : gripAim); // 대본이 놓은 칼(풍차 베기 감기 — armsPlaced)은 놓인 칼자루 끝으로 (놓은 빈팔과 같은 풀이 — 겨눔 쪽 gripAim 으로 풀면 놓인 팔과 어긋난 근육 힘이 가슴에 남음 · 10/29 20:0x)
     // 빈손 위치 (아래팔 끝)
     const fo = this.bodies.farmO;
@@ -4377,7 +4386,7 @@ export class Fighter {
     if (dist > GRIP.reach) return; // 아직 손이 멀면 뻗기만 한다
     this.gripping = true;
     // 스프링: 멀수록 약하게 시작해 손이 닿으면 단단히 쥔다
-    const grab = THREE.MathUtils.clamp((GRIP.reach - dist) / (GRIP.reach * 0.5), 0, 1) * Math.min(1, this.muscle) * (0.5 + 0.5 * this.limbs.armO);
+    const grab = THREE.MathUtils.clamp((GRIP.reach - dist) / (GRIP.reach * 0.5), 0, 1) * Math.min(1, this.muscle) * (0.5 + 0.5 * this.limbs.armO) * rgK; // rgK: 다시 쥐는 동안 끈 힘도 같은 몫으로 (끝나면 1 — 그대로)
     const vp = sword.velocityAtPoint(pommel);
     const vh = fo.velocityAtPoint(hand);
     const F = _gf.set(pommel.x - hand.x, pommel.y - hand.y, pommel.z - hand.z).multiplyScalar(GRIP.k);
@@ -5149,6 +5158,14 @@ const _oaP = new THREE.Vector3(); // 유파 빈팔 (offArmSchool)
 const _oaC = new THREE.Vector3();
 const _oaQ = new THREE.Quaternion();
 const _oaI = new THREE.Quaternion();
+const _gr = new THREE.Vector3(); // 한 손 발도 뒤 다시 쥐기 (offHand · regripFrom)
+const _grQ = new THREE.Quaternion();
+/** 다시 쥐기 시작 점 (11/13 — offHand rgK): 칼집 손 자리 SECRET.iaiSayaHand (가슴 몸체 기준 [앞, 위, 바깥] — 한 손 발도 동안 applyPose 의 offArmSchool 이 빈손 목표로 둔 점과 같은 셈) → 월드 */
+function regripFrom(f, out) {
+  const g = SECRET.iaiSayaHand;
+  const c = f.bodies.chest.translation();
+  return out.set(g[0], g[1], -f.side * g[2]).applyQuaternion(rot(f.bodies.chest, _grQ)).add(_oaC.set(c.x, c.y, c.z));
+}
 const _rgQ = new THREE.Quaternion(); // 칼날 거꾸로 쥐기 (reverseGrip — 죽음의 일격)
 const _rgW = new THREE.Vector3();
 const _rgV = new THREE.Vector3();
