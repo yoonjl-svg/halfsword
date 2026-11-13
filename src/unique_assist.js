@@ -1289,7 +1289,7 @@ export class PlayerUniqueAssist {
       const M = f.swordArt?.measure;
       const gap = UA.tsuStep > 0 && M && f.foe ? f.foeDistance() - M.contact : 0;
       const step = gap > 1e-3 ? { fwd: Math.min(UA.tsuStep, gap) } : null;
-      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band && so?.shift !== 'none', roll: !!U.band && so?.shift === 'none', shift: so?.shift && so.shift !== 'none' ? so.shift : null, pathHint: !!so?.pathHint, arcCut: !!so?.arcCut, step, armTurn: !!so && !!U.band && !!UA.tsuArm })) {
+      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band && so?.shift !== 'none', roll: !!U.band && so?.shift === 'none', shift: so?.shift && so.shift !== 'none' ? so.shift : null, pathHint: !!so?.pathHint, arcCut: !!so?.arcCut, step, armTurn: !!so && !!U.band && !!UA.tsuArm, tipLine: so && U.band ? +UA.tsuTip || 0 : 0 })) { // tipLine (11/13 — UNIQUE_ASSIST.tsuTip): 곧은 길 베는 토막을 칼끝 곧은 줄로
         this.stats.snap = (this.stats.snap ?? 0) + 1;
         if (step) this.stats.tsuStep = (this.stats.tsuStep ?? 0) + 1; // 재기 (판정에는 안 씀)
       }

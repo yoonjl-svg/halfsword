@@ -3733,7 +3733,9 @@ export class Fighter {
     // 두손 칼 빈팔 닿는 곳 (11/12 SKILL.twoHandReach — 기본 끔 · docs/strike/arm_reach_audit_2026-11-12.md): 패드 오른쪽 끝의 손 목표는 빈손이 쥘 칼자루 끝(손 + 칼 겨눔 × gripAlong)을
     //  빈팔 길이 밖(빈 어깨에서 0.7 m 남짓)에 둬서, 빈팔 · 쥠 용수철이 칼 손을 몸 뒤로 끌어당기고 칼 팔꿈치가 앞으로 꺾임(뻗음 0.57 · 위팔 돌림 115°).
     //  켜면 칼자루 끝이 빈팔 길이(offArmIK 와 같은 0.3 + 0.275 − 0.005) 안에 오도록 손 목표를 빈 어깨 쪽으로 그 넘친 만큼 옮긴다 — 사람 손가락 칼 · 빈손이 쥘 때만 (AI · 한손 칼 그대로)
-    if (SKILL.twoHandReach && playerArm(this) && this.weaponCfg.twoHand && GRIP.on && this.limbs.armO > 0.3 && !(this.iai?.oneHand || this.iaiOneHold) && !this.mordGrip) twoHandReach(this, handLocal, off);
+    //  사람 발도 원전 꼴(11/13 SECRET.iaiReal — secret_instant.js f.iaiReal: 뽑기 · 굳음 · 풀기 동안) 동안은 빠짐 — 두 손 발도(모노호시자오 · 틀 'heavy')의 굳음 손 목표를 칼자루 끝이 빈팔 길이 안에 오게 끌어
+    //   굳음 팔꿈치가 71 → 87° 로 더 굽었다(11/12 A 뒤 — docs/strike/iai_real_2026-11-13.md §1)
+    if (SKILL.twoHandReach && playerArm(this) && this.weaponCfg.twoHand && GRIP.on && this.limbs.armO > 0.3 && !(this.iai?.oneHand || this.iaiOneHold) && !this.mordGrip && !this.iaiReal) twoHandReach(this, handLocal, off);
     // AI 두손 칼 (11/12 둘째 — 두 팔 엇갈림 막기 AI 몫 armClear.ai): 빈팔 닿는 곳(A)은 안 타고 칼자루 끝 앞 바닥만 (twoHandReach 머리말 aiOnly). 비기 · 특수 공격 · 대본 손 동안은 전 판
     else if (this.weaponCfg.twoHand && GRIP.on && armClearOn(this) && !playerArm(this) && !(this.iai?.oneHand || this.iaiOneHold)) twoHandReach(this, handLocal, off, true);
     else this.thReach = false;
