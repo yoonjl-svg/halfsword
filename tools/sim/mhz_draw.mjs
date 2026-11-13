@@ -114,10 +114,15 @@ export function mhzShot({ weapon = 'monohoshizao', foeW = 'longsword', guard = '
     if (G.t > settle - 0.3) gap0.push(pommelW(P).distanceTo(offHandW(P)));
   }
   const pre0 = gap0.reduce((s, x) => s + x, 0) / Math.max(1, gap0.length);
+  // 자리 잡음 잣대 (11/14 iai_saya2): 발도 대기에서 왼손이 칼집 입을 쥔 판(iaiSayaW > 0)은 뽑기 전 칼자루 끝 틈이 두 손 쥠 틈이 아님 → 두 손 쥠 틈 0.01 (다른 판 pre0 0.004 ~ 0.011) · 아니면 pre0
+  const seatRef = (P.iaiSayaW ?? 0) > 0 ? 0.01 : pre0;
   const c0 = tv(P.bodies.chest.translation());
   const inv = P.yaw.clone().invert();
   const pre = pose(P, c0, inv);
   const preGrip = !!P.gripping;
+  // 발도 대기 왼손 (11/14 iai_saya2): 낸 때 빈손 · 칼집 입(칼 축 코등이 + SECRET.iaiSayaKoi) 골반 틀 · 칼 손 · 칼날 (가슴 원점 헤딩 틀 — startIai 의 AH · AD 와 같은 셈)
+  const koiW = new THREE.Vector3(0, P.weaponCfg.hiltLength + (CONFIG.SECRET.iaiSayaKoi ?? 0.05), 0).applyQuaternion(tq(P.sword.rotation())).add(tv(P.sword.translation()));
+  const preOff = { ohP: pelvisLocal(P, offHandW(P)).map(r3), koiP: pelvisLocal(P, koiW).map(r3), sayaW: r3(P.iaiSayaW ?? 0), AH: tv(P.sword.translation()).sub(c0).applyQuaternion(inv).toArray().map(r3), AD: P.bladePoint(1, new THREE.Vector3()).sub(P.bladePoint(0, new THREE.Vector3())).normalize().applyQuaternion(inv).toArray().map(r3) };
   const ok = ai ? (requestIai(P, {}), true) : P.skill.secret({ S: W.S, ctx: { ev: 'raise' } });
   fired = true;
   const frames = [];
@@ -141,6 +146,7 @@ export function mhzShot({ weapon = 'monohoshizao', foeW = 'longsword', guard = '
       offT: rec.off && rec.off.map(r3), armT: rec.arm && rec.arm.map(r3), gap: r3(pm.distanceTo(oh)), grip: !!P.gripping,
       ohL: chestLocal(P, oh).map(r3), pmL: chestLocal(P, pm).map(r3), tipV: r3(tip.distanceTo(prevTip) / DT), rgK: P.iaiRegripT > 0 ? r3(1 - P.iaiRegripT / P.iaiRegripDur) : null,
       offP: rec.offP && rec.offP.map(r3), ohP: pelvisLocal(P, oh).map(r3), pmP: pelvisLocal(P, pm).map(r3), // 골반 틀 (칼집 손 자리 견줌 — 11/13 iai_saya)
+      u: P.iai && P.iai.kind === 'iai' ? r3(P.iai.u) : null, // 뽑은 몫 (11/14 iai_saya2 — 鞘引き 몫 uB 견줌)
     });
     prevTip = tip;
     if (freeT != null && G.t - freeT > after) break;
@@ -157,7 +163,7 @@ export function mhzShot({ weapon = 'monohoshizao', foeW = 'longsword', guard = '
   const iF = frames.findIndex((f) => f.ph === 'free');
   const after1 = iF >= 0 ? frames.slice(iF) : [];
   const gripI = after1.findIndex((f) => f.grip);
-  const seatI = after1.findIndex((f) => f.gap != null && f.gap <= pre0 + 0.02);
+  const seatI = after1.findIndex((f) => f.gap != null && f.gap <= seatRef + 0.02);
   // 목표 튐 (굳음 끝 앞 0.1 s ~ 풀기 끝 뒤 1.5 s · 이웃 스텝 사이 가장 큰 옮김)
   const iH = frames.findIndex((f) => f.ph === 'fade');
   const win = frames.slice(Math.max(0, (iH >= 0 ? iH : iF) - Math.round(0.1 / DT)));
@@ -179,7 +185,7 @@ export function mhzShot({ weapon = 'monohoshizao', foeW = 'longsword', guard = '
   const elev = (f) => r1(Math.atan2(f.tip[1] - f.hi[1], Math.hypot(f.tip[0] - f.hi[0], f.tip[2] - f.hi[2])) * R2D);
   const holdLate = holdF.slice(Math.round(0.1 / DT));
   const sum = {
-    armed: ai ? true : !!W.iaiArm?.armed, ok: !!ok, stand: P.state === 'stand', pre0: r3(pre0), preGrip, oneHand: !!I?.oneHand, regrip: !!I?.regrip,
+    armed: ai ? true : !!W.iaiArm?.armed, ok: !!ok, stand: P.state === 'stand', pre0: r3(pre0), seatRef: r3(seatRef), preGrip, oneHand: !!I?.oneHand, regrip: !!I?.regrip,
     drawT: endT != null ? r3(endT - t0) : null, holdT: freeT != null && endT != null ? r3(freeT - endT) : null,
     tipCut: bendPts(cut.map((f) => f.tip)), tipVmax: r1(Math.max(...cut.map((f) => f.tipV))),
     grip: { draw: draw.filter((f) => f.grip).length, hold: holdF.filter((f) => f.grip).length, fade: fadeF.filter((f) => f.grip).length, nDraw: draw.length, nHold: holdF.length, nFade: fadeF.length },
@@ -198,9 +204,91 @@ export function mhzShot({ weapon = 'monohoshizao', foeW = 'longsword', guard = '
     cutT: cut.length ? cut[0].t : null,
     ohPHold: h1 && h1.ohP, offPHold: h1 && h1.offP,
     holdTgtGap: holdLate.length ? r3(Math.max(...holdLate.filter((f) => f.offT).map((f) => dist3(f.ohL, f.offT)))) : null, // 굳음 0.1 s 뒤부터
+    // 11/14 iai_saya2: 발도 대기 왼손(낸 때) · 뽑기 길 시작이 먼 판(ab > 0)인가 · 칼집을 떠나는 스텝 빈손 ↔ 왼 허리 · 다시 쥐기가 시작된 때(굳음 끝부터 · 단계) · 鞘戻し 점 지남(목표 · 빈손 가장 가까움)
+    preOff, far: !!(I && I.ab > 0), sayaUB: I?.saya ? r3(I.saya.uB) : null,
+    ohUBHip: (() => { const uB = I?.saya?.uB; const g = CONFIG.SECRET.iaiSayaHip; if (uB == null || !g) return null; const f = frames.find((x) => x.u != null && x.u >= uB - 1e-9); return f ? r3(dist3(f.ohP, [g[0], g[1], -g[2]])) : null; })(), // 칼집을 떠나는 몫(uB)에 닿은 스텝의 빈손 ↔ 왼 허리
+    ohCutHip: (() => { const f = cut[0]; const g = CONFIG.SECRET.iaiSayaHip; return f && g ? r3(dist3(f.ohP, [g[0], g[1], -g[2]])) : null; })(),
+    rgStart: (() => { const k = frames.findIndex((f) => f.rgK != null); const h = frames.findIndex((f) => f.ph === 'fade'); return k >= 0 ? { ph: frames[k].ph, t: h >= 0 ? r3(frames[k].t - frames[h].t) : null } : null; })(),
+    via: (() => { const g = CONFIG.SECRET.iaiSayaMouth; if (!g) return null; const V = [g[0], g[1], -g[2]]; const R = frames.filter((f) => f.rgK != null); if (!R.length) return null; return { tgt: r3(Math.min(...R.filter((f) => f.offP).map((f) => dist3(f.offP, V)))), hand: r3(Math.min(...R.map((f) => dist3(f.ohP, V)))) }; })(),
   };
   G.world.free();
   return { frames, sum, hit, pre };
+}
+
+/**
+ * 발도 대기에 들고 나기 (11/14 iai_saya2 — 대기 왼손 칼집 입 SECRET.iaiSayaReady): 서 있는 과녁 앞에서 발도 대기에 들어(사람 허리 대기 · AI 웅크린 대기) 머문 뒤
+ *  뽑지 않고 풀기(사람 = 손가락이 칼을 쥠 · AI = 대기 끔) — 스텝마다 빈손 · 칼집 입 · 칼자루 끝(골반 틀) · 빈손 목표(가슴 틀) · 쥠 · 칼 손 · 칼날. { frames, sum }
+ */
+export function readyShot({ weapon = 'uchigatana', foeW = 'longsword', guard = 'langort', start = 'hip', gapAdd = 0.3, seed = 1, hold = 1.5, after = 1.0 } = {}) {
+  const pad = guardsOf(foeW).find((g) => g.name === guard)?.pad;
+  const G0 = newRound({ walls: false, weapon, weapon2: foeW, seed });
+  const contact = G0.player.swordArt.measure.contact;
+  G0.world.free();
+  const ai = start === 'crouch';
+  const G = newRound({ walls: false, weapon, weapon2: foeW, seed, gap: contact + gapAdd, persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0 && !ai) f.humanInput = true; } });
+  const P = G.player;
+  const A = G.enemy;
+  G.ai.update = () => {
+    A.move.set(0, 0);
+    A.handOffset.set(pad[0], pad[1]);
+  };
+  let on = true;
+  let W = null;
+  if (ai) {
+    P.aiControlled = true;
+    G.before = () => iaiReadyPose(P, on, DT);
+  } else {
+    P.skill.corr = CONFIG.SKILL.corr;
+    P.skill.corrTip = CONFIG.SKILL.corrTip;
+    P.skill.autoGuard = true;
+    P.canShove = true;
+    W = new PlayerSecretWatch(P, A);
+    G.before = () => {
+      if (!on) {
+        P.handGrip = true;
+        P.inputActive = true;
+        P.handHeld = true;
+      }
+      W.update(DT, !!P.skill.sec);
+    };
+  }
+  const rec = tapTargets(P);
+  const t0 = CONFIG.ARENA.startHold + (ai ? 0 : CONFIG.SECRET.iaiArmTime);
+  const tOff = t0 + hold + (ai ? 0 : 0.6);
+  const frames = [];
+  while (G.t < tOff + after) {
+    rec.off = rec.offP = rec.arm = null;
+    if (G.t >= tOff) on = false;
+    G.step();
+    if (G.t < t0 - 0.3) continue;
+    const pm = pommelW(P);
+    const oh = offHandW(P);
+    const koi = new THREE.Vector3(0, P.weaponCfg.hiltLength + (CONFIG.SECRET.iaiSayaKoi ?? 0.05), 0).applyQuaternion(tq(P.sword.rotation())).add(tv(P.sword.translation()));
+    frames.push({ t: r3(G.t - tOff), on, sw: r3(P.iaiSayaW ?? 0), grip: !!P.gripping, offT: rec.off && rec.off.map(r3), ohL: chestLocal(P, oh).map(r3), ohP: pelvisLocal(P, oh).map(r3), koiP: pelvisLocal(P, koi).map(r3), pmP: pelvisLocal(P, pm).map(r3), gapPm: r3(oh.distanceTo(pm)), gapKoi: r3(oh.distanceTo(koi)), tipY: r3(P.bladePoint(1, new THREE.Vector3()).y) });
+  }
+  // 빈손 목표 이웃 스텝 옮김 가장 (가슴 틀): 전체 · 대기 동안(들어감 포함) · 푼 뒤 (iaiRegrip 의 2 배 안 — 칼자루로 돌아오는 몫)
+  const jumpIn = (pick) => {
+    let best = { d: 0, t: null };
+    for (let i = 1; i < frames.length; i++) {
+      const a = frames[i - 1].offT;
+      const b = frames[i].offT;
+      if (a && b && pick(frames[i]) && dist3(a, b) > best.d) best = { d: dist3(a, b), t: frames[i].t };
+    }
+    return { d: r3(best.d), t: best.t };
+  };
+  const best = jumpIn(() => true);
+  const RT = CONFIG.SECRET.iaiRegrip || 0.2;
+  const jumpOn = jumpIn((f) => f.on);
+  const jumpBack = jumpIn((f) => !f.on && f.t <= 2 * RT);
+  const onF = frames.filter((f) => f.on && f.sw >= 0.999);
+  const offF = frames.filter((f) => !f.on);
+  const sum = {
+    sayaMax: Math.max(...frames.map((f) => f.sw)), onGapKoi: onF.length ? r3(Math.max(...onF.map((f) => f.gapKoi))) : null, onGrip: onF.length ? onF.filter((f) => f.grip).length / onF.length : null,
+    onOhP: onF.length ? onF.at(-1).ohP : null, onKoiP: onF.length ? onF.at(-1).koiP : null,
+    jump: best, jumpOn, jumpBack, backGrip: (() => { const k = offF.findIndex((f) => f.sw <= 0 && f.grip && f.gapPm <= 0.03); return k >= 0 ? offF[k].t : null; })(), endGap: offF.length ? offF.at(-1).gapPm : null,
+  };
+  G.world.free();
+  return { frames, sum };
 }
 
 /**
@@ -317,9 +405,19 @@ if (isMain(import.meta.url)) {
     const rows = [];
     for (const guard of arg('guards', 'langort,ochsR,pflugR').split(',')) for (const start of arg('start', 'hip,held').split(',')) for (const gapAdd of arg('gap', '0.3').split(',').map(Number)) {
       const r = mhzShot({ weapon: arg('weapon', 'monohoshizao'), foeW: arg('foe', 'longsword'), guard, start, gapAdd, after: +arg('after', 1.5) });
-      rows.push({ guard, start, gapAdd, sum: r.sum, hit: r.hit, frames: arg('trace', null) ? r.frames : undefined });
+      rows.push({ guard, start, gapAdd, sum: r.sum, hit: r.hit, pre: r.pre, frames: arg('trace', null) ? r.frames : undefined });
       const s = r.sum;
-      console.log(`${guard.padEnd(7)} ${start.padEnd(6)} +${gapAdd} | 한 손 ${+s.oneHand} | 맞음 ${r.hit ? `${r.hit.zone}(${r.hit.part}) ${r.hit.E} J 심각도 ${r.hit.sev}` : '헛침'} | 칼끝 길 ${JSON.stringify(s.tipCut)} 빠르기 가장 ${s.tipVmax} | 쥠 뽑기 ${s.grip.draw}/${s.grip.nDraw} 굳음 ${s.grip.hold}/${s.grip.nHold} 풀기 ${s.grip.fade}/${s.grip.nFade} | 끝 굽힘 ${s.end?.flex}° 칼 ${s.end?.elev}° | 굳음 0.3 s 굽힘 ${s.hold?.flex}° (가장 ${s.holdFlexMax}) 칼 ${s.hold?.elev}° (${JSON.stringify(s.holdElev)}) 칼끝 ${JSON.stringify(s.hold?.tip)} 흔들림 ${s.holdTipV} m/s 빈손 ${JSON.stringify(s.ohdHold)} | 다시 쥠 ${s.regripGrip} s · 자리 ${s.regripSeat} s (뽑기 전 틈 ${s.pre0}) · 1 s 뒤 틈 ${s.gapFree} | 빈손 목표 튐 ${JSON.stringify(s.offJump)} · 칼 손 목표 튐 ${JSON.stringify(s.armJump)} · 빈손 빠르기 가장 ${s.ohVmax} | 칼집 손: 3 cm 안 ${s.sayaIn} s · 칼집 떠남 ${s.cutT} s · 굳음 빈손 골반 틀 ${JSON.stringify(s.ohPHold)} (목표 ${JSON.stringify(s.offPHold)}) · 굳음 빈손 ↔ 목표 가장 ${s.holdTgtGap}`);
+      console.log(`${guard.padEnd(7)} ${start.padEnd(6)} +${gapAdd} | 한 손 ${+s.oneHand} | 맞음 ${r.hit ? `${r.hit.zone}(${r.hit.part}) ${r.hit.E} J 심각도 ${r.hit.sev}` : '헛침'} | 칼끝 길 ${JSON.stringify(s.tipCut)} 빠르기 가장 ${s.tipVmax} | 쥠 뽑기 ${s.grip.draw}/${s.grip.nDraw} 굳음 ${s.grip.hold}/${s.grip.nHold} 풀기 ${s.grip.fade}/${s.grip.nFade} | 끝 굽힘 ${s.end?.flex}° 칼 ${s.end?.elev}° | 굳음 0.3 s 굽힘 ${s.hold?.flex}° (가장 ${s.holdFlexMax}) 칼 ${s.hold?.elev}° (${JSON.stringify(s.holdElev)}) 칼끝 ${JSON.stringify(s.hold?.tip)} 흔들림 ${s.holdTipV} m/s 빈손 ${JSON.stringify(s.ohdHold)} | 다시 쥠 ${s.regripGrip} s · 자리 ${s.regripSeat} s (뽑기 전 틈 ${s.pre0}) · 1 s 뒤 틈 ${s.gapFree} | 빈손 목표 튐 ${JSON.stringify(s.offJump)} · 칼 손 목표 튐 ${JSON.stringify(s.armJump)} · 빈손 빠르기 가장 ${s.ohVmax} | 칼집 손: 3 cm 안 ${s.sayaIn} s · 칼집 떠남 ${s.cutT} s · 굳음 빈손 골반 틀 ${JSON.stringify(s.ohPHold)} (목표 ${JSON.stringify(s.offPHold)}) · 굳음 빈손 ↔ 목표 가장 ${s.holdTgtGap} | 대기 왼손 ${JSON.stringify(s.preOff?.ohP)} 칼집 입 ${JSON.stringify(s.preOff?.koiP)} 몫 ${s.preOff?.sayaW} 먼 길 ${+s.far} · 떠날 때 빈손 ↔ 허리 ${s.ohCutHip} · 다시 쥐기 시작 ${JSON.stringify(s.rgStart)} · 鞘戻し ${JSON.stringify(s.via)}`);
+    }
+    const json = arg('json', null);
+    if (json) writeFileSync(json, JSON.stringify({ set: arg('set', ''), rows }));
+  } else if (mode === 'ready') {
+    const rows = [];
+    for (const guard of arg('guards', 'langort,ochsR,pflugR').split(',')) for (const start of arg('start', 'hip,crouch').split(',')) {
+      const r = readyShot({ weapon: arg('weapon', 'uchigatana'), foeW: arg('foe', 'longsword'), guard, start });
+      rows.push({ guard, start, sum: r.sum, frames: arg('trace', null) ? r.frames : undefined });
+      const s = r.sum;
+      console.log(`${guard.padEnd(7)} ${start.padEnd(6)} | 칼집 입 몫 가장 ${s.sayaMax} · 대기 빈손 ↔ 칼집 입 가장 ${s.onGapKoi} · 쥠 ${s.onGrip} · 빈손 ${JSON.stringify(s.onOhP)} 칼집 입 ${JSON.stringify(s.onKoiP)} | 빈손 목표 튐 ${JSON.stringify(s.jump)} (대기 동안 ${JSON.stringify(s.jumpOn)} · 푼 뒤 ${JSON.stringify(s.jumpBack)}) | 풀고 칼자루 다시 쥠 ${s.backGrip} s · 끝 틈 ${s.endGap}`);
     }
     const json = arg('json', null);
     if (json) writeFileSync(json, JSON.stringify({ set: arg('set', ''), rows }));
