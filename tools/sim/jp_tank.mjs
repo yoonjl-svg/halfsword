@@ -3,8 +3,9 @@
 //   재기만 한다 — 게임 값은 건드리지 않는다(판 스위치는 이 프로세스 안 --set 으로만). 싸움 = school_balance.mjs fightOne 그대로(사람 손가락 봇 · 실제 Input 터치 길 · 숙련 3 AI · 자연 바인드)
 //   + 일본 봇 '참고 · 막고 · 한 칼'(jpBot 'tank' — school_balance 머리 글). 꽂개 하나(읽기만 — 난수 · 몸 · 칼 그대로):
 //    기세 실은 칼(묶일 때 몫 > 0.005 — 끝난 뒤 몫 · 스택 · 썼나 · E 로 돌려받았나) · 스택 갈래(school_passive stats.stk) · 고노센 실행(창 꼴 — 'counter' = C 받아 치기) · 붙어 버티기 기력
-//  판(V — 아래): v1 지금 main(스택 0 · 낮은 걸음 0) · v2 스택(흘려 받기 3) · v3 스택(흘려 받기 2) · v4 + 낮은 걸음 기력(= 이 가지 기본) · v5 + B1 · v6 + C · v7 + E · v8 모두 · v1old 지금 main 전 봇
-//  node tools/sim/jp_tank.mjs fight --variant=v2 [--cells=…] [--seeds=1-24] [--json=파일]
+//  판(V — 아래): v1 지금 main(스택 0 · 바위 몸 0) · v2 스택(흘려 받기 3) · v3 스택(흘려 받기 2) · v4 + 밀치기 기력 0 · v5 + 바위 몸 스택당 −4 %(= 이 가지 기본) · v6 ⑤ + C · v7 ⑤ + E · v8 모두 · v1old 지금 main 전 봇
+//  node tools/sim/jp_tank.mjs fight --variant=v2 [--cells=…] [--seeds=1-24] [--stiff=0.6] [--json=파일]
+//   --stiff=0.6 (11/14 감독 — 사장님 '모든 비기 경직 0.6초로 통일' 이 본판에 들기 전 재기만): SECRET.stiff.japanese = realS(0.6) (고노센 굳음 · 기본 1.2) · 판 이름에 '@0.6'
 //  node tools/sim/jp_tank.mjs agg <json ...>   (Markdown 표 — 판 × 칸)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync } from 'node:fs';
@@ -16,16 +17,16 @@ import { isMain } from './is_main.mjs';
 const K = CONFIG.TIME.k; // 실제 초 → 게임 초
 const r3 = (x) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(3));
 export const CELLS = ['japanese:uchigatana:longsword', 'japanese:monohoshizao:longsword', 'japanese:uchigatana:uchigatana', 'japanese:monohoshizao:monohoshizao', 'japanese:uchigatana:rapier', 'japanese:monohoshizao:rapier'];
-const OLD = 'JP_TANK.stack=0,JP_TANK.lowShove=0';
+const OLD = 'JP_TANK.stack=0,JP_TANK.lowShove=0,JP_TANK.rock=0';
 export const V = {
   v1: { label: '① 지금 main', set: OLD, bot: 'tank' },
-  v2: { label: '② 스택 (흘려 받기 3)', set: 'JP_TANK.lowShove=0', bot: 'tank' },
-  v3: { label: '③ 스택 (흘려 받기 2)', set: 'JP_TANK.lowShove=0,JP_TANK.flow=2', bot: 'tank' },
-  v4: { label: '④ + 낮은 걸음 기력', set: '', bot: 'tank' },
-  v5: { label: '⑤ ④ + B1', set: 'JP_TANK.brace=1', bot: 'tank' },
-  v6: { label: '⑥ ④ + C', set: 'JP_TANK.counter=1', bot: 'tank' },
-  v7: { label: '⑦ ④ + E', set: 'JP_TANK.keep=1', bot: 'tank' },
-  v8: { label: '⑧ 모두', set: 'JP_TANK.brace=1,JP_TANK.counter=1,JP_TANK.keep=1', bot: 'tank' },
+  v2: { label: '② 스택 (흘려 받기 3)', set: 'JP_TANK.lowShove=0,JP_TANK.rock=0', bot: 'tank' },
+  v3: { label: '③ 스택 (흘려 받기 2)', set: 'JP_TANK.lowShove=0,JP_TANK.rock=0,JP_TANK.flow=2', bot: 'tank' },
+  v4: { label: '④ ② + 밀치기 기력 0', set: 'JP_TANK.rock=0', bot: 'tank' },
+  v5: { label: '⑤ ④ + 바위 몸 −4 %/스택', set: '', bot: 'tank' },
+  v6: { label: '⑥ ⑤ + C', set: 'JP_TANK.counter=1', bot: 'tank' },
+  v7: { label: '⑦ ⑤ + E (사장님 11/14 거둠)', set: 'JP_TANK.keep=1', bot: 'tank' }, // 11/14 사장님 '손목 치기 예외 없이.' — 견줌으로만 남김
+  v8: { label: '⑧ 모두 (E 포함 — 거둠 전 판)', set: 'JP_TANK.counter=1,JP_TANK.keep=1', bot: 'tank' }, // E 를 거둔 뒤 '모두' = ⑥
   v1old: { label: '① 지금 main · 전 봇', set: OLD, bot: '' },
 };
 
@@ -55,7 +56,7 @@ export function tankProbe() {
       const loaded = locks.filter((L) => L.ken > 0.005 || L.kept);
       const used = loaded.filter((L) => !L.kept);
       const sec = fires.filter((f) => f.cls === 'secret');
-      const gHit = (ev) => sec.filter((f) => f.w > 0 && runs.some((r) => (ev == null || r.ev === ev) && Math.abs(r.t - f.t) < 0.25)).length; // 기술 기록의 비기(실제 s)와 같은 때 낸 고노센
+      const gHit = (ev) => sec.filter((f) => f.wounds > 0 && runs.some((r) => (ev == null || r.ev === ev) && Math.abs(r.t - f.t / K) < 0.25)).length; // 기술 기록(fightOne 안 — t 게임 초 · wounds)의 비기와 같은 때(실제 s) 낸 고노센
       return {
         loaded: used.length,
         kenSum: r3(used.reduce((s, L) => s + L.ken, 0)),
@@ -67,6 +68,7 @@ export function tankProbe() {
         gnsCounter: runs.filter((r) => r.ev === 'counter').length,
         gnsHit: gHit(null),
         gnsCounterHit: gHit('counter'),
+        runs, // 고노센 실행 { t 실제 s, ev 창 꼴 }
         counterWins: W?.counterWins ?? 0,
         clinch: { P: r3(P.stamina.spent?.clinch ?? 0), A: r3(A.stamina.spent?.clinch ?? 0), secP: r3((P.stamina.clinchSeconds ?? 0) / K) },
       };
@@ -75,9 +77,10 @@ export function tankProbe() {
 }
 
 /** 한 프로세스 안에서 칸 × 씨앗 */
-export function runVariant(key, cells, seeds, { dur = 30 } = {}) {
+export function runVariant(key, cells, seeds, { dur = 30, stiff = null } = {}) {
   const v = V[key];
   applySets(v.set);
+  if (stiff != null) CONFIG.SECRET.stiff.japanese = CONFIG.realS(+stiff); // 고노센 굳음 (실제 s — 11/14 '모든 비기 경직 0.6초로 통일' 재기)
   const runs = [];
   const t0 = Date.now();
   for (const c of cells) {
@@ -85,7 +88,7 @@ export function runVariant(key, cells, seeds, { dur = 30 } = {}) {
     for (const seed of seeds) {
       const r = fightOne({ school, weapon, opp, seed, dur, probe: tankProbe(), jpBot: v.bot });
       delete r.reads;
-      r.variant = key;
+      r.variant = stiff != null ? `${key}@${stiff}` : key;
       runs.push(r);
       console.error(JSON.stringify({ v: key, c, seed, win: r.win, lose: r.lose, T: r.T, recv: r.recv, ms: Date.now() - t0 }));
     }
@@ -116,7 +119,7 @@ export function tankRow(rs) {
     spentFrac: loaded ? sum(pr.map((p) => p.spent)) / loaded : null,
     kept: mean(pr.map((p) => p.kept)),
     gns: gns / c.n,
-    gnsHit: gns ? sum(pr.map((p) => p.gnsHit)) / gns : null,
+    gnsHit: gns ? fires.filter((f) => f.cls === 'secret' && f.w > 0).length / gns : null, // 일본 비기 = 고노센 (판 결과 기술 기록 — 맞음 w)
     gnsC: gc / c.n,
     gnsCHit: gc ? sum(pr.map((p) => p.gnsCounterHit)) / gc : null,
     counterWins: mean(pr.map((p) => p.counterWins)),
@@ -134,7 +137,8 @@ export function tankRow(rs) {
 export function tankMarkdown(runs) {
   const by = {};
   for (const r of runs) ((by[r.variant] ??= {})[`${r.school}:${r.weapon}:${r.opp}`] ??= []).push(r);
-  const order = Object.keys(V).filter((k) => by[k]);
+  const lab = (k) => { const [b, st] = k.split('@'); return `${V[b].label}${st ? ` · 굳음 ${st}` : ''}`; };
+  const order = [...Object.keys(V).filter((k) => by[k]), ...Object.keys(V).flatMap((b) => Object.keys(by).filter((k) => k.startsWith(`${b}@`)))];
   const out = [];
   out.push('| 판 | 칸 | 판 수 | 이김 · 짐 · 비김 | 기세 실은 칼/판 | 실은 몫 평균 | 실은 스택 평균 | 실은 몫 씀 | 고노센/판 (맞음) | 받아 치기 고노센/판 (맞음) | 제비 베기/판 (맞음) | 준 심각도/판 | 받은 심각도/판 | 판 길이 s |');
   out.push('|---|---|---:|---|---:|---:|---:|---:|---|---|---|---:|---:|---:|');
@@ -142,15 +146,15 @@ export function tankMarkdown(runs) {
   for (const k of order) {
     for (const [cell, rs] of Object.entries(by[k])) {
       const s = tankRow(rs);
-      out.push(`| ${V[k].label} | ${cell.replace('japanese:', '')} | ${s.n} | ${s.win} · ${s.lose} · ${s.draw} | ${f2(s.loaded)} | ${pct(s.kenAvg)} | ${f2(s.stkAvg, 1)} | ${pct(s.spentFrac)} | ${f2(s.gns)} (${pct(s.gnsHit)}) | ${f2(s.gnsC)} (${pct(s.gnsCHit)}) | ${f2(s.tsu)} (${pct(s.tsuHit)}) | ${f2(s.dealt)} | ${f2(s.recv)} | ${f2(s.T, 1)} |`);
+      out.push(`| ${lab(k)} | ${cell.replace('japanese:', '')} | ${s.n} | ${s.win} · ${s.lose} · ${s.draw} | ${f2(s.loaded)} | ${pct(s.kenAvg)} | ${f2(s.stkAvg, 1)} | ${pct(s.spentFrac)} | ${f2(s.gns)} (${pct(s.gnsHit)}) | ${f2(s.gnsC)} (${pct(s.gnsCHit)}) | ${f2(s.tsu)} (${pct(s.tsuHit)}) | ${f2(s.dealt)} | ${f2(s.recv)} | ${f2(s.T, 1)} |`);
     }
     const s = tankRow(all(k));
-    out.push(`| **${V[k].label}** | **여섯 칸** | ${s.n} | ${s.win} · ${s.lose} · ${s.draw} | ${f2(s.loaded)} | ${pct(s.kenAvg)} | ${f2(s.stkAvg, 1)} | ${pct(s.spentFrac)} | ${f2(s.gns)} (${pct(s.gnsHit)}) | ${f2(s.gnsC)} (${pct(s.gnsCHit)}) | ${f2(s.tsu)} (${pct(s.tsuHit)}) | ${f2(s.dealt)} | ${f2(s.recv)} | ${f2(s.T, 1)} |`);
+    out.push(`| **${lab(k)}** | **여섯 칸** | ${s.n} | ${s.win} · ${s.lose} · ${s.draw} | ${f2(s.loaded)} | ${pct(s.kenAvg)} | ${f2(s.stkAvg, 1)} | ${pct(s.spentFrac)} | ${f2(s.gns)} (${pct(s.gnsHit)}) | ${f2(s.gnsC)} (${pct(s.gnsCHit)}) | ${f2(s.tsu)} (${pct(s.tsuHit)}) | ${f2(s.dealt)} | ${f2(s.recv)} | ${f2(s.T, 1)} |`);
   }
   out.push('', '| 판 (여섯 칸) | 스택 얻음/판 기다림 · 맞음 · 막기 · 흘려 받기 (넘침) | 일/판 맞음 · 막기 · 흘려 받기 | 낸 칼/판 | E 돌려받은 칼/판 | C 창/판 | 붙어 버티기 기력/판 나 · 상대 (버틴 s) |', '|---|---|---|---:|---:|---:|---|');
   for (const k of order) {
     const s = tankRow(all(k));
-    out.push(`| ${V[k].label} | ${s.src.slice(0, 4).map((x) => f2(x, 1)).join(' · ')} (${f2(s.src[4], 1)}) | ${s.ev.map((x) => f2(x, 1)).join(' · ')} | ${f2(s.swings, 1)} | ${f2(s.kept)} | ${f2(s.counterWins)} | ${f2(s.clinchP, 1)} · ${f2(s.clinchA, 1)} (${f2(s.clinchSec, 2)}) |`);
+    out.push(`| ${lab(k)} | ${s.src.slice(0, 4).map((x) => f2(x, 1)).join(' · ')} (${f2(s.src[4], 1)}) | ${s.ev.map((x) => f2(x, 1)).join(' · ')} | ${f2(s.swings, 1)} | ${f2(s.kept)} | ${f2(s.counterWins)} | ${f2(s.clinchP, 1)} · ${f2(s.clinchA, 1)} (${f2(s.clinchSec, 2)}) |`);
   }
   return out.join('\n');
 }
@@ -167,7 +171,7 @@ if (isMain(import.meta.url)) {
     const key = arg('variant', 'v4');
     if (!V[key]) throw new Error(`판 ${key} 없음 — ${Object.keys(V).join(' · ')}`);
     const cells = arg('cells', CELLS.join(',')).split(',');
-    const runs = runVariant(key, cells, range(arg('seeds', '1-24')), { dur: +arg('dur', 30) });
+    const runs = runVariant(key, cells, range(arg('seeds', '1-24')), { dur: +arg('dur', 30), stiff: arg('stiff', null) });
     const json = arg('json', null);
     if (json) writeFileSync(json, JSON.stringify({ variant: key, set: V[key].set, cells, runs }));
     console.log(tankMarkdown(runs));

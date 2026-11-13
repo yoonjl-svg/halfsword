@@ -21,11 +21,11 @@
 //   사람(humanInput) 일본은 쌓인 몫이 시간 곧은 오름 대신 스택 stk(0 ~ max) — 휘두르지 않은 per 초마다 +1(update · 판 시작 정지 동안 안 셈) · 맞음 +hit(tookHit — combat.js strike) ·
 //   막기 +block(guardEvent 'block' — stamina.js block) · 흘려 받기 +flow(guardEvent 'flow' — combat.js nagashi) · 한 상대 공격에 막기 · 흘려 받기가 함께 들면 큰 쪽 하나만.
 //   칼에 실리는 몫(charge) = stk × each · 묶음 · 씀 · 제비 베기 넘김 · 고노센은 위 켄타이 그대로. AI 는 JP_TANK.ai(견줌)일 때만 · 시뮬 대본 몸은 전 판.
-//   스위치: B1 takenK(받는 피해 — combat.js analyze) · E keep(손목 치기 · 비껴 베기는 스택을 안 씀 — keepCheck) · C 는 secret.js(흘려 받기 수 flowN 을 읽음)
+//   바위 몸(11/14 사장님 '스택당 피해 -4%' — JP_TANK.rock · 몫 열쇠 jpRock): takenK(받는 피해 — combat.js analyze) · 스위치: E keep(손목 치기 · 비껴 베기는 스택을 안 씀 — keepCheck) · C 는 secret.js(흘려 받기 수 flowN 을 읽음)
 import * as THREE from 'three';
 import { SCHOOL_PASSIVE as SP, UNIQUE_ASSIST as UA, THRUST, JP_TANK as JT } from './config.js';
 import { strokeTechOf } from './unique_assist.js';
-import { kitOff } from './skill_kit.js'; // 11/14 B1 몫 열쇠 jpBrace (새 칸 자리 대기 — 지금은 J1 과 함께)
+import { kitOff } from './skill_kit.js'; // 11/14 바위 몸 몫 열쇠 jpRock (새 칸 J12 · 임시로 J10 과 함께)
 
 /** 이 파일이 맡는 유파 (이베리아 손목 힘은 fighter.js wristK) */
 export const PASSIVE_SCHOOLS = Object.freeze(['italian', 'japanese', 'german', 'chinese']);
@@ -302,10 +302,13 @@ export class SchoolPassive {
     this.addStk(JT.hit, 'hit');
   }
 
-  /** B1 스택만큼 덜 다침 (11/14 설계안 — JP_TANK.brace · 기본 끔 · 몫 열쇠 jpBrace — 새 칸 자리 대기 · 지금은 J1 과 함께): 받는 칼날 상처 심각도 · 둔타 에너지 배율 (combat.js analyze). 칼을 내면 스택과 함께 0 → 1 */
+  /**
+   * 바위 몸 — 스택당 받는 피해 −4 % (사장님 11/14 '바위 몸은 … 스택당 피해 -4%로 해.(스택은 공격하면 사라지는 거야 알지?)' — JP_TANK.rock · rockEach · 몫 열쇠 jpRock):
+   *  받는 칼날 상처 심각도 · 둔타 에너지 배율 1 − rockEach × 스택 (10 스택 0.6 — combat.js analyze). 칼을 내면 스택과 함께 0 → 1
+   */
   takenK() {
-    if (!JT.brace || !(this.stk > 0) || !this.stackOn || kitOff(this.f, 'jpBrace')) return 1;
-    return 1 - (1 - JT.braceK) * Math.min(1, this.stk / JT.max);
+    if (!JT.rock || !(this.stk > 0) || !this.stackOn || kitOff(this.f, 'jpRock')) return 1;
+    return Math.max(0, 1 - JT.rockEach * this.stk);
   }
 
   /**

@@ -402,9 +402,9 @@ export class Combat {
     //  그 공격의 칼날 상처 심각도 · 둔타 에너지 × (1 − flowDmgCut). 새 공격(번호가 바뀜)부터는 그대로 · 물리(충격 · 가르나 튕기나)는 그대로
     const keepFlow = flowShieldKeep(pr.v.fighter, att);
     if (keepFlow !== 1) { if (type === 'blunt') energy *= keepFlow; else severity *= keepFlow; }
-    // 일본 B1 스택만큼 덜 다침 (11/14 설계안 — config JP_TANK.brace · 기본 끔 · school_passive.js takenK): 받는 쪽 사람 일본의 지금 스택 몫만큼 칼날 상처 심각도 · 둔타 에너지 × (1 − (1 − braceK) × 스택/max). 물리는 그대로
-    const braceK = vic.schoolPassive?.takenK?.() ?? 1;
-    if (braceK !== 1) { if (type === 'blunt') energy *= braceK; else severity *= braceK; }
+    // 일본 바위 몸 (사장님 11/14 '스택당 피해 -4%' — config JP_TANK.rock · school_passive.js takenK): 받는 쪽 사람 일본의 지금 스택 × 4 % 만큼 칼날 상처 심각도 · 둔타 에너지를 덜 받음. 물리는 그대로
+    const rockK = vic.schoolPassive?.takenK?.() ?? 1;
+    if (rockK !== 1) { if (type === 'blunt') energy *= rockK; else severity *= rockK; }
     // 이탈리아 막아찌르기(10/21 입력형 — 약한 찌르기): 찌르는 동안 주는 칼날 상처 심각도 · 둔타 에너지 × dealt(0.6). 물리는 그대로
     const oppK = att.parryGuard?.opposition?.dealtK?.() ?? 1;
     if (oppK !== 1) { if (type === 'blunt') energy *= oppK; else severity *= oppK; }

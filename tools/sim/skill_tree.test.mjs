@@ -43,7 +43,7 @@ test('설계 자료(data.mjs)와 같다: 유파마다 11 칸 · id · 갈래 · 
   assert.deepEqual(D.TREE_SCHOOLS, DESIGN.map((s) => s.id));
   for (const s of DESIGN) {
     const mine = D.nodesOf(s.id);
-    assert.equal(mine.length, 11, s.id);
+    assert.equal(mine.length, s.id === 'japanese' ? 12 : 11, s.id); // 11/14 사장님 '일본은 바위 몸 확정해' — 일본만 새 칸 J12 (설계 자료 data.mjs 에도 더함 · 전 11)
     for (const d of s.nodes) {
       const n = D.nodeOf(s.id, d.id);
       assert.ok(n, `${s.id} ${d.id}`);
@@ -406,7 +406,7 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('iberian', 'B6'), ['ibChain']); // 10/29 01:5x 이어지는 흐름 (전: 돌려 베기 쌓기 perk redondo)
   assert.deepEqual(on('iberian', 'B4'), ['secret', 'u:redondo']); // 11/11 비기 알티바슈 포르트 (비기 몫 + 실행 칸 redondo — 무장 창에서 길게 눌러 냄 · 전 10/29 특수 공격 ['u:redondo'])
   assert.deepEqual(on('iberian', 'B7'), ['u:cingir']); // 11/11 특수 공격 싱지르 (전 비기 ['secret'])
-  assert.deepEqual(on('japanese', 'J1'), ['footwork', 'stepCost', 'jpRock', 'jpBrace']); // 11/14 감독 — 새 몫 열쇠 둘(밀치기 기력 0 · B1) 새 칸 자리 대기: J1 과 함께 (전 ['footwork', 'stepCost'])
+  assert.deepEqual(on('japanese', 'J1'), ['footwork', 'stepCost']);
   assert.deepEqual(on('japanese', 'J2'), ['parry', 'parryCover', 'parryCut']);
   assert.deepEqual(on('japanese', 'J3'), ['flow', 'jpTaiSen']); // 11/14 감독 — 새 몫 열쇠 jpTaiSen(C) 새 칸 자리 대기: J3 과 함께 (전 ['flow'])
   assert.deepEqual(on('japanese', 'J4'), ['flowShield']);
@@ -818,7 +818,7 @@ test('칸 오의(lore · src — 사장님 10/22 00:5x 원전의 오의를 밝�
     if (x.letter) assert.equal(x.src, undefined, `${x.id} 편지 칸은 출처 없음`);
     else assert.ok(typeof x.src === 'string' && x.src.trim().length > 0, `${x.id} src`);
   }
-  assert.equal(n, 55);
+  assert.equal(n, 56); // 11/14 일본 J12 바위 몸 (전 55)
 });
 
 test('10/23 비기 이름 = 원어 독음 (동방은 한자 한국식 독음) · 스킬 화면 제목은 원어를 괄호로 함께', async () => {

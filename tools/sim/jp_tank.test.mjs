@@ -1,5 +1,6 @@
 // 일본 기다리는 중전차 (11/14 — 사장님 '기다림과 침을 단순히 시간이 아닌 스택 시스템으로 … 최대 10스택 중첩 +80%' · '낮은 걸음 … 밀치기에 기력이 소모되는 않는'):
-//  config JP_TANK · src/school_passive.js(스택 · B1 · E) · src/jp_tank.js(낮은 걸음) · src/secret.js(C) · 기록 docs/strike/jp_tank_2026-11-14.md
+//  · '바위 몸 확정해 … 밀치기에 기력 소모 없는 효과 더하기 스택당 피해 -4%로 해.'
+//  config JP_TANK · src/school_passive.js(스택 · 바위 몸 받는 피해 · E) · src/jp_tank.js(바위 몸 밀치기 기력) · src/secret.js(C) · 기록 docs/strike/jp_tank_2026-11-14.md
 //  실제 물리 몸(harness_m)에서 스택 셈 · 배율 · 스위치를 본다. 판의 크기는 tools/sim/jp_tank.mjs. 시간 상한 · '몇 초 안에' 기준 없음
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -33,14 +34,16 @@ function startTapThrust(f) {
 }
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 
-test('값: 사장님 11/14 — 1 초 · 맞음 1 · 막기 2 · 최대 10 · +8 %/스택 · 흘려 받기 3(감독 권고) · 낮은 걸음 켬 · B1 · C · E 끔', () => {
+test('값: 사장님 11/14 — 1 초 · 맞음 1 · 막기 2 · 최대 10 · +8 %/스택 · 흘려 받기 3(감독 권고) · 바위 몸(밀치기 기력 0 · −4 %/스택) 켬 · C · E 끔', () => {
   assert.equal(JT.stack, 1);
   assert.equal(JT.ai, 0);
   assert.ok(near(JT.per, CONFIG.realS(1.0)));
   assert.deepEqual([JT.hit, JT.block, JT.flow, JT.max], [1, 2, 3, 10]);
   assert.ok(near(JT.each * JT.max, 0.8));
   assert.equal(JT.lowShove, 1);
-  assert.deepEqual([JT.brace, JT.counter, JT.keep], [0, 0, 0]);
+  assert.equal(JT.rock, 1);
+  assert.ok(near(JT.rockEach, 0.04));
+  assert.deepEqual([JT.counter, JT.keep], [0, 0]);
   assert.ok(near(JT.counterWin, CONFIG.realS(0.6)));
 });
 
@@ -183,19 +186,23 @@ test('스위치 끔(JP_TANK.stack 0) · AI · 시뮬 대본 몸 = 전 판 (6 s �
   } finally { de.g.world.free(); }
 });
 
-test('B1 (끔이 기본): 켜면 받는 피해 × (1 − 0.3 × 스택/10)', () => {
+test('바위 몸 — 스택당 받는 피해 −4 % (10 스택 × 0.6) · 칼을 내면 함께 사라짐 · 끄면 1', () => {
   const fx = fixture();
   try {
     const { sp } = fx;
+    assert.equal(sp.takenK(), 1, '스택 0');
     tick(fx, sec(5.5));
-    assert.equal(sp.takenK(), 1, '끔');
-    JT.brace = 1;
-    assert.ok(near(sp.takenK(), 0.85));
+    assert.ok(near(sp.takenK(), 0.8), `5 스택 ${sp.takenK()}`);
     tick(fx, sec(5));
-    assert.ok(near(sp.takenK(), 0.7), '가득 × 0.7');
+    assert.ok(near(sp.takenK(), 0.6), '10 스택 × 0.6');
+    JT.rock = 0;
+    assert.equal(sp.takenK(), 1, '끔');
+    JT.rock = 1;
     startTapThrust(fx.f);
     assert.equal(sp.takenK(), 1, '칼을 내면 함께 사라짐');
   } finally { restore(); fx.g.world.free(); }
+  const sc = fixture('uchigatana', { human: false }); // 대본 몸 · AI 는 스택이 없어 늘 1
+  try { tick(sc, sec(8)); assert.equal(sc.sp.takenK(), 1); } finally { sc.g.world.free(); }
 });
 
 test('E (끔이 기본): 켜면 손목 치기 · 비껴 베기는 스택을 쓰지도 지우지도 않음', () => {
@@ -240,10 +247,10 @@ test('C (끔이 기본): 켜면 흘려 받기가 든 스텝에 비기 창 (count
   }
 });
 
-test('J1 낮은 걸음 — 사람 일본은 붙어 버티기(밀치기)에 기력 0 · 상대는 그대로 · 끄면 전 판', () => {
+test('바위 몸 — 사람 일본은 붙어 버티기(밀치기)에 기력 0 · 상대는 그대로 · 끄면 전 판', () => {
   const kitAll = kitFromNodes('japanese', allNodeIds('japanese'));
-  const kitNoFoot = kitFromNodes('japanese', new Set([...allNodeIds('japanese')].filter((n) => n !== 'J1')));
-  for (const [name, o, want] of [['사람 · 낮은 걸음', { kit: kitAll }, true], ['낮은 걸음 안 익힘', { kit: kitNoFoot }, false], ['대본 몸', { human: false }, false]]) {
+  const kitNoRock = kitFromNodes('japanese', new Set([...allNodeIds('japanese')].filter((n) => n !== 'J10' && n !== 'J12')));
+  for (const [name, o, want] of [['사람 · 바위 몸', { kit: kitAll }, true], ['바위 몸 · 기다림과 침 안 익힘', { kit: kitNoRock }, false], ['대본 몸', { human: false }, false]]) {
     const fx = fixture('uchigatana', o);
     try {
       assert.equal(lowShoveFree(fx.f), want, name);
@@ -276,24 +283,28 @@ test('다른 유파 · 전 봇 판은 바이트 같음 (스택 켬 · 끔 · 일
     assert.equal(h(one({ jpBot: 'tank' })), base, '독일 — 일본 봇 스위치');
     Object.assign(JT, { stack: 0, lowShove: 0 });
     assert.equal(h(one({})), base, '독일 — 스택 끔');
-    Object.assign(JT, { stack: 1, lowShove: 1, brace: 1, counter: 1, keep: 1, ai: 1 });
+    Object.assign(JT, { stack: 1, lowShove: 1, rock: 1, counter: 1, keep: 1, ai: 1 });
     assert.equal(h(one({})), base, '독일 — 모두 켬');
   } finally { restore(); }
 });
 
-test('새 몫 열쇠 (11/14 감독 — 새 칸 자리 대기): jpRock · jpBrace 는 J1 · jpTaiSen 은 J3 과 함께 · 안 익히면 꺼짐', () => {
+test('몫 열쇠 (11/14): 바위 몸 jpRock = 새 칸 J12(앞 칸 J10) · 임시로 J10 도 켬 · jpTaiSen(C) 은 J3 과 함께 · 안 익히면 꺼짐', () => {
   const all = [...allNodeIds('japanese')];
   const kit = (drop) => kitFromNodes('japanese', new Set(all.filter((n) => !drop.includes(n))));
-  assert.deepEqual(['jpRock', 'jpBrace', 'jpTaiSen'].map((k) => kit([])[k]), [true, true, true]);
-  assert.deepEqual(['jpRock', 'jpBrace', 'jpTaiSen'].map((k) => kit(['J1'])[k]), [false, false, true]);
-  assert.deepEqual(['jpRock', 'jpBrace', 'jpTaiSen'].map((k) => kit(['J3'])[k]), [true, true, false]);
-  // B1 — J1 없는 몸은 덜 다치지 않음
-  for (const [drop, want] of [[[], 0.7], [['J1'], 1]]) {
-    const fx = fixture('uchigatana', { kit: kit(drop) });
+  const keys = (k) => ['jpRock', 'jpTaiSen'].map((x) => k[x]);
+  assert.deepEqual(keys(kit([])), [true, true]);
+  assert.deepEqual(keys(kit(['J12'])), [true, true], 'J10 임시');
+  assert.deepEqual(keys(kit(['J10'])), [true, true], 'J12');
+  assert.deepEqual(keys(kit(['J10', 'J12'])), [false, true]);
+  assert.deepEqual(keys(kit(['J3'])), [true, false]);
+  assert.deepEqual(keys(kit(['J1'])), [true, true], 'J1 은 상관없음');
+  // 바위 몸 받는 피해 — 몫이 없으면 1 (스택은 J10 패시브로 쌓이니 견줌은 J12 · J10 둘 다 빼고 패시브만 남긴 몸)
+  for (const [drop, want] of [[[], 0.6], [['J10', 'J12'], 1]]) {
+    const k = kit(drop);
+    const fx = fixture('uchigatana', { kit: { ...k, passive: true } });
     try {
-      JT.brace = 1;
       tick(fx, sec(10.5));
-      assert.ok(near(fx.sp.takenK(), want), `B1 ${drop} ${fx.sp.takenK()}`);
+      assert.ok(near(fx.sp.takenK(), want), `바위 몸 ${drop} ${fx.sp.takenK()}`);
     } finally { restore(); fx.g.world.free(); }
   }
   // C — J3 없는 몸은 받아 치기 창 없음

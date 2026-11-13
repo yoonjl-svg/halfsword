@@ -11,7 +11,8 @@
 //    낸 뒤 1 실제 s 안에 상대 쓰러짐(죽음 · 기절) · 낸 뒤 1 실제 s 안에 내가 받은 심각도 · 맞음 · 넘어짐 · 판 = 이김 · 짐 · 준 · 받은 심각도
 //  node tools/sim/school_balance.mjs fight [--cells=german:longsword:longsword,...] [--seeds=1-24] [--dur=30] [--tech=0.35] [--set=SECRET.sweepCap=0] [--tag=이름] [--json=파일] [--jpbot=tank]
 //   --jpbot=tank (11/14 — docs/strike/jp_tank_2026-11-14.md §4): 일본 봇만 '참고 · 막고 · 한 칼' — 쳐 오면 0.85 막기 · 칼끝 거리 언저리에 서서 기다림(휘두르지 않음) ·
-//    기세가 가득(지금 판의 가득 — 스택 max · 전 판 full 초)하거나 3 ~ 9 s 참았으면 내려베기 한 칼 · 그 칼이 몫을 못 썼으면 곧장 제비 베기 · 칼끝 거리 안 견제(손목 치기 · 비껴 베기) 결정마다 0.025 ·
+//    칼끝 거리 + 0.6 m 안이면 가만히 섬(고노센 준비도 참) · 기세가 가득(지금 판의 가득 — 스택 max · 전 판 full 초)하거나 3 ~ 9 s 참았으면 칼끝 거리로 들어가 내려베기 한 칼 ·
+//    그 칼이 몫을 못 썼으면 곧장 제비 베기 · 칼끝 거리 안 견제(손목 치기 · 비껴 베기) 결정마다 0.025 · 비기가 남았으면 결정마다 0.1 몫 고노센을 노리는 기다림(전 봇과 같은 손 — 2.4 s 가만히 · 그동안 안 막음) ·
 //    비기 창이면 탭(그대로). 기본 ''(전 봇 — 다른 유파 · 일본 모두 바이트 같음)
 //  node tools/sim/school_balance.mjs agg <json ...>   (칸마다 판 표 + 기술 표 — Markdown)
 // ─────────────────────────────────────────────────────────────
@@ -218,8 +219,11 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     tk.tsu = null;
     if (S.attack && S.dist < M.reach + 0.8 && rnd() < 0.85) return { kind: 'guard', seconds: 0.6, fwd: S.dist < M.contact ? -0.5 : 0 };
     if (S.dist > M.reach + 1.0) return { kind: 'move', seconds: 0.35, fwd: 0.9 };
+    if (S.left > 0 && secretName && rnd() < 0.1) return { kind: 'wait', seconds: S.iai ? 0.8 : 2.4, fwd: 0, want: secretName }; // 고노센을 노리는 기다림 (전 봇과 같은 손 — 그동안 막지 않음)
     const sp = P.schoolPassive;
-    if (S.dist <= M.reach + 0.25 && (sp.charge >= fullCharge() - 1e-9 || S.t - tk.last >= tk.W)) {
+    const ready = sp.charge >= fullCharge() - 1e-9 || S.t - tk.last >= tk.W; // 기세가 가득 · 참은 시간이 참
+    if (ready && S.dist > M.reach + 0.25) return { kind: 'move', seconds: 0.35, fwd: 0.8 }; // 칠 때가 됨 — 칼끝 거리로 들어감
+    if (ready) {
       tk.last = S.t;
       tk.W = 3 + rnd() * 6;
       tk.big++;
@@ -229,7 +233,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       tk.harass++;
       return rnd() < 0.5 ? stroke('kote', { S: KOTE, want: 'kote' }) : stroke('zornhauL', { side: side(), want: 'hirakiGiri' }); // 견제
     }
-    return { kind: 'wait', seconds: 0.35, fwd: S.dist > M.reach + 0.15 ? 0.5 : S.dist < M.contact ? -0.4 : 0 }; // 기다림 (칼끝 거리 언저리 — 휘두르지 않음)
+    return { kind: 'wait', seconds: 0.35, fwd: S.dist > M.reach + 0.6 ? 0.6 : S.dist < M.contact ? -0.4 : 0 }; // 기다림 — 칼끝 거리 + 0.6 m 안이면 가만히 섬(고노센 준비도 참) · 더 멀면 다가감 · 맞닿기보다 가까우면 물러남 (휘두르지 않음)
   };
   const decide = (S) => {
     if (S.window && ['german', 'italian', 'japanese'].includes(school)) return { kind: 'tap', seconds: 0.07, want: secretName };
