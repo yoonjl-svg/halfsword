@@ -717,6 +717,21 @@ export function placeArmsAt(f, I, H, D, edgeHint = null) {
   return placeIai(f, H, D, false, 0, edgeHint, true, I);
 }
 /** 손 자리 H·칼날 D(몸 기준)로 팔·칼(·빈팔)을 놓는다 — now: 지금 자리로(첫 스텝), 아니면 다음 스텝 운동학 목표. 칼날 선분 { B, D, tip } (월드) */
+/**
+ * 鞘引き 빈손 자리 (11/14 사장님 '원전과 다른 셋 이어서 맞춰' ① — SECRET.iaiSayaReady · startIai I.saya): 뽑아 낸 몫 u 가 칼집을 떠나는 몫 uB 에 닿을 때까지
+ *  낸 때 빈손 자리 K0(골반 틀 — 발도 대기면 칼집 입) → 왼 허리 칼집 손 자리(SECRET.iaiSayaHip)를 smoothstep 으로 · uB 뒤는 왼 허리 → 월드
+ *  (원전: 鞘引きとともに刀を抜き出し … 鞘放れ — 칼집은 허리띠에 차므로 골반 틀)
+ */
+function sayaBikiW(f, I) {
+  const S = I.saya;
+  const g = SECRET.iaiSayaHip;
+  const x = clamp((I.u ?? 0) / S.uB, 0, 1);
+  const k = x * x * (3 - 2 * x);
+  const P = new THREE.Vector3(g[0], g[1], -f.side * g[2]);
+  const p = S.K0.clone().lerp(P, k);
+  return p.applyQuaternion(tq(f.bodies.pelvis.rotation(), new THREE.Quaternion())).add(tv(f.bodies.pelvis.translation(), new THREE.Vector3()));
+}
+
 function placeIai(f, H, D, now, turn = 0, edgeHint = null, rollCap = false, I = f.iai) {
   const J = f.jointByName;
   const chest = f.bodies.chest;
@@ -759,9 +774,9 @@ function placeIai(f, H, D, now, turn = 0, edgeHint = null, rollCap = false, I = 
   put(f.bodies.uarmS, up, qu);
   put(f.bodies.farmS, fp, qf);
   put(f.sword, M ? wrist.clone().addScaledVector(Dw, M.g) : wrist, qs);
-  if (I.off) {
-    const pommel = M ? wrist.clone().addScaledVector(Dw, M.g - M.gOff) : new THREE.Vector3(0, f.weaponCfg.gripAlong, 0).applyQuaternion(qs).add(wrist); // 죽음의 일격: 빈손 = 칼 축 gOff
-    f.offArmIK(pommel);
+  const offAt = I.off ? (M ? wrist.clone().addScaledVector(Dw, M.g - M.gOff) : new THREE.Vector3(0, f.weaponCfg.gripAlong, 0).applyQuaternion(qs).add(wrist)) : I.saya ? sayaBikiW(f, I) : null; // 죽음의 일격: 빈손 = 칼 축 gOff · 한 손 발도 鞘引き (11/14)
+  if (offAt) {
+    f.offArmIK(offAt);
     const So = new THREE.Vector3(0, 0.1, -f.side * 0.2).applyQuaternion(qc).add(c);
     const quo = qc.clone().multiply(J.uarmO.target);
     const qfo = quo.clone().multiply(J.farmO.target);
@@ -826,6 +841,18 @@ function startIai(f, combat) {
   setKinematic(f, true);
   // 칼집을 떠나는 자리부터 맞음 · 잔상 (원전 꼴 — 뽑아 내는 동안은 칼이 칼집 안)
   if (real && riseK.N) f.iai.hitFrom = f.iai.ab + (1 - f.iai.ab) * riseK.N.at;
+  // 11/14 사장님 '원전과 다른 셋 이어서 맞춰' ① (SECRET.iaiSayaReady — 鞘引き): 발도 대기에서(왼손이 칼집 입 鯉口 — fighter.js offHand iaiSayaW) 낸 한 손 발도면 뽑아 내는 동안
+  //  왼손(빈팔)을 칼집 입에서 왼 허리 칼집 손 자리로 — 칼이 칼집을 떠나는 몫(원전 꼴 hitFrom 과 같은 셈 ab + (1 − ab) × iaiPathReal.N.at · 새 수 없음)에서 다 닿게
+  //  스텝마다 놓음(placeIai — 두 손 발도 빈팔 I.off 와 같은 놓기) · 그 뒤 · 굳음은 그 자리. 칼자루를 쥔 채(대기 아님) 낸 발도는 11/13 그대로(빈팔 근육으로 감)
+  if (oneHand && SECRET.iaiSayaReady && SECRET.iaiSaya && SECRET.iaiSayaHip && (f.iaiSayaW ?? 0) > 0 && f.bodies.farmO && f.limbs?.armO > 0.3) {
+    const pc = tv(f.bodies.pelvis.translation(), new THREE.Vector3());
+    const qpi = tq(f.bodies.pelvis.rotation(), new THREE.Quaternion()).invert();
+    const fo = f.bodies.farmO;
+    const ho = new THREE.Vector3(0, -0.135, 0).applyQuaternion(tq(fo.rotation(), new THREE.Quaternion())).add(tv(fo.translation(), new THREE.Vector3()));
+    const K0 = ho.sub(pc).applyQuaternion(qpi);
+    const uB = f.iai.ab + (1 - f.iai.ab) * (SECRET.iaiPathReal?.N?.at ?? 0.35);
+    f.iai.saya = { K0, uB: Math.max(1e-3, uB) };
+  }
   f.iaiReal = real; // 비기 자세 숙임(stanceTick) · 굳음 팔 뻗음(holdIai)이 읽음 — 굳음 · 풀기가 끝나면 끔
   if (f.gait?.active && SECRET.iaiDrawStep > 0) f.gait.requestStep({ kind: 'lunge', fwd: SECRET.iaiDrawStep, duration: 0.3 }); // 발도 순간 앞발을 크게 (10/10 04:2x)
   f.instantGhost = Math.ceil((T + SECRET.instantNoCollide) / (combat.dt || 1 / 120)) + 1;
@@ -986,18 +1013,34 @@ function holdIai(f, dt) {
   if (f.iaiHoldT > 0) {
     f.iaiHoldT -= dt;
     th.w = 1;
-    if (f.iaiHoldT <= 0) f.iaiFade = 0.2;
+    if (f.iaiHoldT <= 0) {
+      f.iaiFade = 0.2;
+      // 11/14 사장님 '원전과 다른 셋 이어서 맞춰' ② (SECRET.iaiRegripFade): 두 손으로 가는 때를 원전처럼 振りかぶり(이 게임 = 풀기 0.2 s — 칼이 끝 자세에서 가운데로)와 겹침 —
+      //  다시 쥐기(iaiRegrip)를 풀기 동안 시작해 鞘戻し 점(③ — 다시 쥐기 몫 0.5)을 풀기가 끝나는 때(振りかぶり 끝) 지나게: 기다림 = 풀기 − 다시 쥐기 ÷ 2 (0.2 − 0.1 = 0.1 s · 새 수 없음).
+      //  풀기 끝에 칼 겨눔이 한 스텝에 바뀌는 몸(AI 가 손을 되찾는 때)도 그 순간 칼자루 끝 몫이 0 이라 빈손 목표가 튀지 않음 · 굳음 길이 · 풀기 길이 그대로 (전: 풀기가 끝난 뒤 시작)
+      if (SECRET.iaiRegripFade && f.iaiOneHold && f.iaiOneRegrip) f.iaiRegripWait = Math.max(0, 0.2 - (SECRET.iaiRegrip ?? 0) / 2);
+    }
     if (!f.alive || f.state !== 'stand') {
       f.iaiHoldT = 0;
       f.iaiFade = 0.01;
     }
     return;
   }
+  if (f.iaiRegripWait != null) {
+    // 11/14 ② 풀기와 겹친 다시 쥐기 (위 iaiRegripWait): 기다림이 다 되면 빈손이 칼집 손 자리를 떠나 칼자루로 (startRegrip — 鞘戻し 점을 지남)
+    if (f.iaiRegripWait <= 0 && f.iaiOneHold && f.iaiOneRegrip) {
+      startRegrip(f);
+      f.iaiOneRegrip = false;
+      f.iaiOneHold = false;
+    }
+    f.iaiRegripWait = f.iaiRegripWait <= 0 ? null : f.iaiRegripWait - dt;
+  }
   f.iaiFade -= dt;
   th.w = Math.max(0, f.iaiFade / 0.2);
   if (f.iaiFade <= 0) {
     f.iaiFade = 0;
     th.w = 0;
+    f.iaiRegripWait = null;
     if (f.iaiOneHold && f.iaiOneRegrip) startRegrip(f); // 한 손 발도 (11/13 — 앞무게 두손 칼 · iaiRegripAll 이면 모든 일본 칼): 빈손이 칼집 손 자리 → 칼자루 끝으로 부드럽게 (곧장 쥐면 빈손 목표가 한 스텝에 튐)
     f.iaiOneRegrip = false;
     f.iaiOneHold = false; // 한 손 발도 잔심 끝: 칼이 가운데로 돌아왔다 → 빈손이 다시 쥔다 (fighter.js offHand)
@@ -1014,6 +1057,13 @@ function startRegrip(f) {
   const T = SECRET.iaiRegrip ?? 0;
   f.iaiRegripT = T > 0 ? T : 0;
   f.iaiRegripDur = T > 0 ? T : 0;
+  f.iaiRegripVia = !!SECRET.iaiSayaModoshi; // 11/14 ③: 왼 허리 → 鞘戻し 점(칼집 입을 배꼽 앞으로 — SECRET.iaiSayaMouth) → 칼자루 끝 (fighter.js offHand)
+}
+
+/** 이 몸의 발도가 한 손인가 (startIai oneHand 와 같은 셈 — 11/14 발도 대기 왼손 칼집 입 SECRET.iaiSayaReady 가 읽음). player = 사람 발도(req.player) */
+export function iaiOneHandOf(f, player) {
+  const heavy = f.weapon?.frame === 'heavy';
+  return !!SECRET.iaiRise && !!f.weaponCfg?.twoHand && (!heavy || !!(player ? SECRET.iaiOneHeavy : SECRET.iaiOneHeavyAi));
 }
 
 /** 발도 중이거나 끝 자세를 붙잡는 중인가 (대기 자세·다른 덧씌우기가 칸을 건드리지 않게) */
@@ -1025,14 +1075,20 @@ export function iaiBusy(f) {
 export function iaiReadyPose(f, on, dt) {
   if (iaiBusy(f)) {
     f.iaiReadyW = 0;
+    f.iaiSayaReadyW = 0;
     return;
   }
   const w0 = f.iaiReadyW ?? 0;
-  if (!on && w0 <= 0) return;
+  if (!on && w0 <= 0) {
+    f.iaiSayaReadyW = 0;
+    return;
+  }
   // 대기에 들어가는 순간 앞발을 내딛어 발을 넓게 (GIF 첫 장면 — 10/10 04:2x)
   if (on && w0 <= 0 && f.gait?.active && SECRET.stance.iai.step > 0) f.gait.requestStep({ kind: 'lunge', fwd: SECRET.stance.iai.step, duration: 0.35 });
   const w = on ? Math.min(1, w0 + dt / 0.35) : Math.max(0, w0 - dt / 0.12);
   f.iaiReadyW = w;
+  // 11/14 ① (SECRET.iaiSayaReady): 발도 대기 동안 왼손은 칼자루를 놓고 칼집 입(鯉口)을 쥠 — 몫 = 대기 무게 (fighter.js offHand) · 한 손 발도일 때만
+  f.iaiSayaReadyW = SECRET.iaiSayaReady && iaiOneHandOf(f, false) ? w : 0;
   const R = SECRET.iaiReady;
   const th = f.skill.thrustPose;
   th.w = w;
@@ -1078,6 +1134,7 @@ export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false) {
     f.iaiReadyW = 0;
     f.iaiReadyR = 0;
     f.iaiHandW = 0;
+    f.iaiSayaReadyW = 0;
     return;
   }
   // 준비 무게 r (켜짐 0.35 s · 풀림 gnsCrouchOut) — 웅크림 판이면 그대로 몸 웅크림 무게(iaiReadyW · stanceTick), 선 채 판(standing — SECRET.gnsReadyHip)이면 몸은 0 이고 손 몫의 한도로만
@@ -1089,6 +1146,8 @@ export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false) {
   f.iaiReadyR = w;
   f.iaiReadyW = standing ? 0 : w;
   f.iaiHandW = h;
+  // 11/14 ① (SECRET.iaiSayaReady): 손을 쉬고 기다리는 발도 대기(손 몫 h) 동안 왼손은 칼집 입(鯉口) — 칼을 쥐면 h 0 → offHand 가 칼자루로 다시 쥠(iaiRegrip 초)
+  f.iaiSayaReadyW = own && SECRET.iaiSayaReady && iaiOneHandOf(f, true) ? h : 0;
   if (!own) return;
   const R = SECRET.iaiReady;
   const th = sk.thrustPose;
