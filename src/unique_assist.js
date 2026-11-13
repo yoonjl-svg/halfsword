@@ -36,6 +36,7 @@ import { segDist } from './skill.js';
 import { requestArtReturn, requestArtSnap, requestArtThrust, requestArtFold, requestArtDup, requestArtRedondo, setArtTechOf, iaiBusy, iaiTipSpeed } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21) · 제비 베기 되돌림 칼 (10/25 해법 ②) · 칼끝 돌려 빼기 운동학 찌름 (10/28)
 import { perkOff, kitOff } from './skill_kit.js';
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 — 상대 두 팔 늦춤 (흘림과 같은 장치 · 10/31)
+import { beatTick, beatOk, beatSide, itEdgeGrant, itStats } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14 — 박자 찌르기 B · 칼 우위 A: 헛누름이 들면 · config IT_OUTBOX)
 import { windStart, windStep, windEnd, windLoopOf, windRopesBack } from './iberian_redondo.js'; // 풍차 베기 머리 위 감기 (B4 — 10/29) // 플레이어 스킬트리 몫 (10/21 — 돌려 베기 쌓기 = 이베리아 심화 B6)
 
 // ── 고유 동작 표 (디렉터 안 → 사장님 확정 10/13 22:3x. 바뀌면 여기 한 곳만 고친다) ──
@@ -328,11 +329,17 @@ const TAP_TRIG = {
   },
   // 비껴서며 찌르기 (10/31 — 특수 공격 · 카드 글 '상대가 공격해 올 때 옆으로 움직이며(←/→) 탭'): 상대 칼이 들어오는 동안(막기 단추가 읽는 위협 — parry_button.js threatNow · 마지막 위협에서 inqThreat 안)
   //  스틱 옆(걸음 명령 'side' 와 같은 문턱)인 채의 탭 · 한 공격(위협 번호)에 한 번
+  //  11/14 박자 찌르기 (설계안 B — 사장님 '좋아' · '박자 찌르기는 비껴서며 찌르기를 대체하는 거지?' · config IT_OUTBOX.beat · italian_outbox.js beatOk): 상대가 치기 시작한(휘두름이 선) beat 초 안의 탭도
+  //   비껴서며 찌르기 — 스틱 옆이 아니어도 · 몸 빼는 쪽은 스틱이 옆이면 그쪽 · 아니면 들어오는 칼 반대쪽(beatSide — ok.side). 한 공격에 한 번(어느 길로 나가든 두 길 모두 그 공격은 씀) · 끄면(beat 0) 전 판 그대로
   inq(uq) {
     const G = uq.f.parryGuard;
+    if (beatOk(uq)) {
+      const side = uq.stickOk('side') ? Math.sign(uq.stickUsed[0]) || 1 : beatSide(uq.f);
+      return { spend: () => { uq.inqBeatSeen = uq.foeAtk.n; if (G) uq.inqSeen = G.threatId; }, beat: true, side };
+    }
     if (!G || !(G.noThreat <= UA.inqThreat) || !uq.stickOk('side')) return null;
     if (uq.inqSeen === G.threatId) return null;
-    return { spend: () => (uq.inqSeen = G.threatId) };
+    return { spend: () => { uq.inqSeen = G.threatId; if (uq.foeAtk) uq.inqBeatSeen = uq.foeAtk.n; } };
   },
   // 날개 접기 (10/28 01:2x): 물러남 = 스틱 뒤(뒤 몫 ≥ 0.5 · 옆 몫보다 큼 — 걸음 명령 stickOk 'fwd' 의 거울) — 물러나는 동안의 탭 · 스틱을 놓고(뒤가 풀리고) lianWindow 안의 탭 (상대 칼 닿음 없이 내 명령만)
   lian(uq, now) {
@@ -410,6 +417,10 @@ export class PlayerUniqueAssist {
     this.tapList = this.list.filter((e) => e.tapKey).sort((a, b) => (b.special ? 1 : 0) - (a.special ? 1 : 0));
     this.touch = null; // 칼끼리 한 닿음 (칼끝 돌려 빼기 탭 조건 — touchTick · 10/31): { t0 처음 · t1 마지막 닿은 때 · cut 내 긋기 동안 닿음 · n 상대 칼 쪽(월드 — feel.normal 의 반대) · cavSpent }
     this.inqSeen = -1; // 비껴서며 찌르기를 낸 위협 번호 (한 공격에 한 번)
+    this.inqE = this.list.find((e) => e.tapKey === 'inq') ?? null; // 비껴서며 찌르기 칸 (11/14 박자 찌르기 — beatTick) · foeAtk { n, t0 } 상대가 휘두르기 시작한 때 · inqBeatSeen 박자 찌르기를 낸 공격 번호
+    this.foeAtk = null;
+    this.foeSw = false;
+    this.inqBeatSeen = -1;
     // 걸음 공격 스틱 읽기 (11/05 — UNIQUE_ASSIST.stepIn · stickOk · stickTick · stepLateTick): 쪽마다 마지막으로 스틱이 그 쪽이던 때 { t, v [x, y] } ·
     //  stickUsed = 마지막으로 받아들인 스틱 [x, y] (걸음 · 몸 빼기 좌우) · stepLate = 긋기 시작 때 스틱이 안 맞은 걸음 명령 긋기 { cur, t0 시작 때, list 기다리는 걸음 명령 }
     this.stickMem = { side: null, fwd: null };
@@ -611,7 +622,10 @@ export class PlayerUniqueAssist {
     f.stamina.attack(thrustTap ? 'thrust' : 'cut'); // 탭 하나 (끌고 가는 칼은 같은 공격 — same) · 찌르기 10 · 베기 12
     // 칼끝 돌려 빼기 (10/31 — 기본 고유 공격): 같은 돌려 빼기 길 · 보통 찌르기 빠르기(cavTipSpeed) · 잔상 없음 · 비킨 쪽은 닿았을 때 상대 칼 쪽(cavSide 'contact')
     // 칼끝 돌려 빼기 심화 · 헛누름 (I8 — 사장님 10/31 '1로 해. … 1초로 해.' → '1.2초로 할게'): 돌려 빼는 순간(맞힘과 상관없이) 누르거나 닿아 있던 상대 칼이 허공으로 — 상대 두 팔 늦춤 cavArmSlow (흘림 장치)
-    if (cav && UA.cavArmSlow > 0 && !perkOff(f, 'cavazione') && f.foe && beginFlowRecovery(f.foe, f, UA.cavArmSlow)) this.stats.armSlow = (this.stats.armSlow ?? 0) + 1;
+    if (cav && UA.cavArmSlow > 0 && !perkOff(f, 'cavazione') && f.foe && beginFlowRecovery(f.foe, f, UA.cavArmSlow)) {
+      this.stats.armSlow = (this.stats.armSlow ?? 0) + 1;
+      itEdgeGrant(f, 'feint'); // 칼 우위 (11/14 설계안 A — 헛누름이 들면 · 사람 이탈리아만 · config IT_OUTBOX.edge)
+    }
     if (e.tapSnap && UA.cavSnap && UA.enhance > 0) {
       const side = UA.cavSide === 'contact' ? ok?.touch?.n ?? null : null;
       const tapT = UA.cavSpeed === 'tap'; // 탭 찌르기 박자 — 길 끝(거둠)까지 시간 상한 없음: 상한에서 끊으면 뻗은 칼이 상대 몸 · 칼 안에 든 채 충돌이 돌아와 내 몸이 튕겨 넘어졌음(싸움 판 넘어짐 8 / 9 판 — 낸 뒤 0.25 ~ 0.35 s)
@@ -630,7 +644,8 @@ export class PlayerUniqueAssist {
     // 비껴서며 찌르기 (10/31 — 특수 공격): 스틱 쪽으로 몸을 빼며(옆 · 앞 = schools.js inquartata step · 뒷발을 그쪽으로 돌려 디딤) 넷째 자세로 가슴 — 고노센 칼끝 × specialShare.inquartata · 잔상
     if (e.tapVoid && UA.enhance > 0) {
       const st = U.step ?? { lat: 0.3, fwd: 0.15 };
-      const sg = Math.sign(UA.stepIn && this.stickUsed ? this.stickUsed[0] : f.stickX ?? 0) || 1; // 새 판(11/05): 조건이 받아들인 스틱 쪽 (밀었다 놓은 엄지도)
+      const sg = ok?.side ?? (Math.sign(UA.stepIn && this.stickUsed ? this.stickUsed[0] : f.stickX ?? 0) || 1); // 새 판(11/05): 조건이 받아들인 스틱 쪽 (밀었다 놓은 엄지도) · 11/14 박자 찌르기는 ok.side (스틱 옆이면 그쪽 · 아니면 들어오는 칼 반대쪽)
+      if (ok?.beat) itStats(f).beatFired++; // 재기: 박자 찌르기 길로 나간 비껴서며 찌르기
       const B = e.body ? [Math.abs(e.body[0]) * sg * (e.bodyMirror ?? 1), Math.abs(e.body[1]) * sg * (e.bodyMirror ?? 1), e.body[2], e.body[3]] : null;
       if (requestArtThrust(f, { share: specialShare(e.name), maxT: UA.inqSnapTime, tech: U.name, under: false, capFromCut: true, voidStep: { lat: Math.abs(st.lat) * sg, fwd: st.fwd ?? 0 }, bodyPose: B })) {
         this.stats.snap = (this.stats.snap ?? 0) + 1;
@@ -1319,6 +1334,7 @@ export class PlayerUniqueAssist {
     }
     this.coolTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:5x)
     this.touchTick(); // 칼끼리 닿음 (칼끝 돌려 빼기 탭 조건 — 10/31)
+    if (this.inqE) beatTick(this); // 상대 휘두름이 선 때 (11/14 박자 찌르기 — 비껴서며 찌르기를 익힌 사람만 · italian_outbox.js)
     if (UA.dupAuto && this.dupE) this.dupAutoTick(dt); // 겹치기 자동 (사장님 10/31 18:xx 'bind' 기본 — 0 이면 셈도 안 함 · 겹치기를 익힌 독일 사람만)
     // 물러남이 풀린 때 (날개 접기 탭 조건 TAP_TRIG 'lian' — 10/28 01:2x): 스틱 뒤가 풀린 스텝
     const back = this.backNow();

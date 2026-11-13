@@ -22,7 +22,7 @@ export const NODE_CAT = Object.freeze({
 });
 
 /** 판 몫 열쇠 (skillKit 칸 — 칸이 없으면 false). unique · perk 는 이름 모음 */
-export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29)
+export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'itTempo']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29) · itTempo = 이탈리아 맞박자 찌르기 패시브 (11/14 — 새 칸 자리 대기 · 지금은 I1 과 함께)
 
 export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10/21)
 
@@ -50,7 +50,7 @@ const TREE_SRC = {
   },
   italian: {
     nodes: [
-      N({ id: 'I1', name: '박자 걸음', cat: 'foot', l1: '보법 I', l2: '박자 걸음', eff: '짧게 두 번, 길게 두 번 박자를 타며 걷는다', price: 100, d: 0, cx: 500, f: ['footwork'] }),
+      N({ id: 'I1', name: '박자 걸음', cat: 'foot', l1: '보법 I', l2: '박자 걸음', eff: '짧게 두 번, 길게 두 번 박자를 타며 걷는다', price: 100, d: 0, cx: 500, f: ['footwork', 'itTempo'] }), // 11/14 사장님 '이탈리아는 카운터 +30%를 패시브로 넣되 좀 빠르게 배울 수 있는 위치로. 스킬 이름은 원전애서 가져와.' — 맞박자 찌르기 몫 itTempo(config IT_OUTBOX.stop · italian_outbox.js)는 새 패시브 칸 자리 · 이름이 정해질 때까지 임시로 이 칸과 함께 켬 [새 칸 자리 대기 — 감독]
       N({ id: 'I11', name: '시에나에서 온 편지', cat: 'letter', l1: '시에나에서', l2: '온 편지', title: '시에나에서 온 편지', pre: ['I1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'I3', name: '물러서기', cat: 'foot', l1: '보법 II', l2: '물러서기', eff: '뒤로 걸어도 느려지지 않는다', pre: ['I1'], price: 100, d: 1, cx: 500, f: ['backFlat'] }),
       N({ id: 'I7', name: '내려 찌르기', cat: 'atk', l1: '내려', l2: '찌르기', eff: '내려 긋는 칼이 내려 찌르기로 나간다', pre: ['I3'], price: 200, d: 2, cx: 330, u: 'imbroccata' }), // 10/31 12:xx 사장님 '임브로카타를 먼저 배우고 카바치오네를 배우고 틈 파고들기는 카바치오네 강화로 바꿔.' — 왼 줄 첫 칸(d 2 · 금화 200 — 전 d 3 · 300 · I2 뒤) · 칸 id 는 기술을 따라 I7 그대로(사장님 · 감독이 부르는 이름) — 옛 저장의 d 2 자리(I2)는 skill_tree_store.js migrateItalianSlots 가 I7 로 옮김 · 10/31 12:xx 사장님 'I7은 어떤 방향이나 높이에서든 다른 유파의 내려 긋는 베기에 해당하는 커맨드를 내려찌르기로 전환해 주도록 하자' — 10/31 13:xx 사장님 '내려 긋는 칼이 내려 찌르기로 나간다 - 스킬 이름도 내려 찌르기로 바꿔' — 이름 '위에서 내려 찌르기' → '내려 찌르기' · 효과 글 사장님 확정 · 전 '황소 찌르기를 하면 위에서 내려 찌르기가 나간다'

@@ -97,6 +97,9 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   const M = P.swordArt.measure;
   const secretName = W.S?.name ?? null;
   const ALTIB = school === 'iberian' && CONFIG.SECRET.iberianSecret === 'altib'; // 11/11 이베리아 자리 바꿈 판 (비기 알티바슈 포르트 · 특수 공격 싱지르)
+  // 11/14 이탈리아 아웃복싱 봇 (SB_IT_BOT=outbox — docs/strike/it_outbox_2026-11-14.md §0): 거리를 지키다(맞닿기 ~ 칼끝 거리 띠) 쳐 오거나 걸어 들어오는 상대를 받아 찌름.
+  //  굴림 · 감각은 이 갈래 안에서만 — 다른 유파 · 전 이탈리아 봇(기본 '')은 난수 차례 · 판이 바이트 같음
+  const ITB = school === 'italian' && process.env.SB_IT_BOT === 'outbox';
   // ── 손가락 (화면 px) ──
   let x = 620;
   let y = 180;
@@ -205,6 +208,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   const decide = (S) => {
     if (S.window && ['german', 'italian', 'japanese'].includes(school)) return { kind: 'tap', seconds: 0.07, want: secretName };
     if (S.spin && school === 'iberian') return ALTIB ? { kind: 'hold', seconds: 4, fwd: 0.6, want: secretName, releaseAt: M.contact + rnd() * (M.reach + 0.15 - M.contact) } : { kind: 'circle', seconds: 0.8, want: secretName }; // 11/11 'altib' 판: 무장 창 → 길게 눌러 메고 걸어 들어가 뗌 (전 판 정수리 가르기 봇과 같은 손)
+    if (ITB) { const a = itDecide(S); if (a) return a; } // 11/14 이탈리아 아웃복싱 봇 (아래 itDecide — 없으면 전 봇 그대로)
     if (S.attack && S.dist < M.reach + 0.8) {
       if (school === 'italian' && rnd() < 0.35) return { kind: 'sideTap', seconds: 0.4, side: side(), tapAt: 0.03 + rnd() * 0.08, want: 'inquartata' };
       if (school === 'chinese' && S.left > 0 && rnd() < 0.5) return { kind: 'guard', seconds: 0.65, fwd: 1, want: secretName };
@@ -217,6 +221,25 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     }
     if (rnd() < 0.2) return { kind: 'tap', seconds: 0.07 };
     return stroke(BASIC[Math.floor(rnd() * BASIC.length)]);
+  };
+  // 11/14 이탈리아 아웃복싱 봇 (ITB): 쳐 오면(본 뒤) 반은 곧장 탭(그 박자에 찌름 — 박자 찌르기 켬이면 비껴서며 찌르기 · 끔이면 보통 탭 찌르기) · 다섯에 하나 옆 탭(전 비껴서며 찌르기 손) · 나머지 막기 단추(막아찌르기 I6) ·
+  //  걸어 들어오면(상대 골반이 내 쪽으로 걸음 문턱 GAIT.walkMin 넘게 · 걷는 중 · 칼끝 거리 + 0.3 안) 70 % 탭(맞박자 찌르기) · 맞닿기 거리 안이면 60 % 물러남 · 그 밖은 전 봇(기술 · 탭 · 긋기 · 다가감)
+  const itDecide = (S) => {
+    if (S.attack && S.dist < M.reach + 0.8) {
+      const r = rnd();
+      if (r < 0.5) return { kind: 'tap', seconds: 0.07, want: 'tempo' };
+      if (r < 0.7) return { kind: 'sideTap', seconds: 0.4, side: side(), tapAt: 0.03 + rnd() * 0.08, want: 'inquartata' };
+      return { kind: 'guard', seconds: 0.6, fwd: S.dist < M.contact ? -0.5 : 0 };
+    }
+    if (S.inV >= CONFIG.GAIT.walkMin && S.walk && S.dist < M.reach + 0.3 && rnd() < 0.7) return { kind: 'tap', seconds: 0.07, want: 'stop' };
+    if (S.dist < M.contact && rnd() < 0.6) return { kind: 'move', seconds: 0.35, fwd: -0.9 };
+    return null;
+  };
+  /** 11/14 아웃복싱 봇 감각 (ITB 만): 상대 골반 수평 빠르기의 내 쪽 몫 inV(게임 m/s) · 상대가 걷는 중 walk */
+  const itSense = () => {
+    const a = P.bodies.pelvis.translation(), b = A.bodies.pelvis.translation(), v = A.bodies.pelvis.linvel();
+    const L = Math.hypot(a.x - b.x, a.z - b.z) || 1;
+    return { inV: (v.x * (a.x - b.x) + v.z * (a.z - b.z)) / L, walk: !!A.gait?.walking };
   };
   const circlePt = (z) => [0.15 * (Math.cos(z * Math.PI * 2 * 1.35) - 1), 0.15 * Math.sin(z * Math.PI * 2 * 1.35)];
   let activeStart = null;
@@ -236,13 +259,14 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       begin({ kind: 'tap', seconds: 0.07, want: 'cavazione' });
     }
     if (school === 'iberian' && seen?.spin && act?.kind === 'move') readEnd(act), (act = null), (nextDec = t); // 무장 표시를 보면 걸음을 멈추고 원 (사람 — 창이 열린 동안)
+    if (ITB && seen && act?.kind === 'move' && ((seen.attack && seen.dist < M.reach + 0.8) || (seen.inV >= CONFIG.GAIT.walkMin && seen.walk && seen.dist < M.reach + 0.3))) readEnd(act), (act = null), (nextDec = t); // 11/14 아웃복싱 봇: 걷던 걸음을 멈추고 받아 찌름
     if (activeStart != null && P.alive && A.alive && !busy && !act && t >= nextDec && seen) {
       begin(decide(seen));
       nextDec = t + 0.35;
     }
     let guardPress = false;
     let sx = 0.14 * Math.sin(t * 0.65 + seed);
-    let sy = seen ? (seen.dist > M.contact + 0.18 ? 0.7 : seen.dist < 0.7 ? -0.4 : 0) : 0;
+    let sy = seen ? (ITB ? (seen.dist > M.reach + 0.05 ? 0.6 : seen.dist < M.contact ? -0.5 : 0) : seen.dist > M.contact + 0.18 ? 0.7 : seen.dist < 0.7 ? -0.4 : 0) : 0; // 11/14 아웃복싱 봇: 맞닿기 ~ 칼끝 거리 띠에 섬 (전 봇: 맞닿기 + 0.18 까지 늘 다가감)
     if (act) {
       const age = t - act.t;
       guardPress = act.kind === 'guard';
@@ -460,7 +484,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
         for (const x of fires) if (G.t - x.t <= K + 1e-9) x.dis1 = true; // 칼 떨굼 (손목 치기 등)
       }
       armedA = A.armed;
-      if (activeStart != null) hist.push(sense()), hist.length > 120 && hist.shift();
+      if (activeStart != null) hist.push(ITB ? { ...sense(), ...itSense() } : sense()), hist.length > 120 && hist.shift();
       if ((!P.alive || !A.alive) && end == null) end = G.t + 0.5;
       if (end != null && G.t >= end) break;
     }

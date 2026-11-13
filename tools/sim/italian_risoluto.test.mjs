@@ -514,7 +514,9 @@ test('10/25 칼끝 얽힘 창 (사장님 \'칼끝이 얽히자마자 그 순간�
   withCfg(OLD, () => { const b = tipTip(); assert.equal(new RisolutoWatch(b.me, b.foe).tick(DT, true), null); });
 });
 
-test('10/25 칼끝 얽힘 창 · 실제 몸: 맞닿기 거리 밖이면 첫 닿음에 금색 창 · 맞닿기 거리 안이면 그대로 막힘(간격 조건 — ?risoGap=0 이면 뜸) · ?risoTouch=0 이면 0.6 s 뒤', () => {
+// 11/14 그때 판으로 묶음 (기준은 안 고침 — docs/strike/it_outbox_2026-11-14.md §6): 이 장면은 칼 우위(설계안 A — config IT_OUTBOX.edgeRiso · 리솔루토 창은 칼 우위 동안만) 전 판의 창 규칙을 잰다 —
+//  칼 우위를 켜 둔 판에선 칼끝 돌려 빼기 · 막아찌르기 · 비껴서며 찌르기 · 헛누름이 든 적 없는 이 몸에 창이 안 열려(그것이 새 규칙) 첫 닿음 창을 잴 수 없음. 새 규칙은 it_outbox.test.mjs
+test('10/25 칼끝 얽힘 창 · 실제 몸: 맞닿기 거리 밖이면 첫 닿음에 금색 창 · 맞닿기 거리 안이면 그대로 막힘(간격 조건 — ?risoGap=0 이면 뜸) · ?risoTouch=0 이면 0.6 s 뒤 (11/14 칼 우위 전 판 — edgeRiso 0)', () => keep(CONFIG.IT_OUTBOX, 'edgeRiso', 0, () => {
   const at = (w, gap, fn) => {
     const g = newRound({ weapon: w, weapon2: 'longsword', gap, seed: 9 });
     const p = g.player, e = g.enemy;
@@ -553,7 +555,7 @@ test('10/25 칼끝 얽힘 창 · 실제 몸: 맞닿기 거리 밖이면 첫 닿�
     assert.equal(ps.open?.ctx?.path, 'hold');
     assert.ok(Math.abs(k * DT - SECRET.risolutoHold) < 2 * DT, `${k}`);
   }));
-});
+}));
 
 // 10/24 14:0x 런지 자세 (사장님 '런지할 때 런지 자세가 되려면 앞무릎을 굽히면서 자세 낮춰야 하는데 지금 그렇게 보여?'): 앞무릎 굽힘 · 뒷다리 펴짐 · 골반 낮춤 — 무릎 굽힘 = 넓적다리(엉덩이 → 무릎)와 정강이(무릎 → 발목) 사이 각
 function lungePose(cfg) {

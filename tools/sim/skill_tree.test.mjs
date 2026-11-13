@@ -393,7 +393,7 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('german', 'G7'), ['u:duplieren']);
   assert.deepEqual(on('german', 'G6'), ['perk:schielhau']);
   assert.deepEqual(on('german', 'G9'), ['passive']);
-  assert.deepEqual(on('italian', 'I1'), ['footwork']);
+  assert.deepEqual(on('italian', 'I1'), ['footwork', 'itTempo']); // 11/14 맞박자 찌르기 몫 itTempo — 새 패시브 칸 자리 대기 · 지금은 I1 과 함께 (감독 · docs/strike/it_outbox_2026-11-14.md — 표 칸이 바뀐 것 · 전 ['footwork'])
   assert.deepEqual(on('italian', 'I3'), ['backFlat']);
   assert.deepEqual(on('italian', 'I6'), ['opposition']);
   assert.deepEqual(on('italian', 'I8'), ['perk:cavazione']); // 10/31 헛누름 (전 내려 찌르기 틈 파고들기 perk imbroccata)
