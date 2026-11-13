@@ -2,6 +2,7 @@ import { classifyStroke } from './attack_stroke.js';
 import { STAMINA, GAIT, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY, SECRET, realS } from './config.js';
 import { entersAttackLine, isPreparation } from './stamina_stroke.js';
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
+import { lowShoveFree } from './jp_tank.js'; // J1 낮은 걸음 — 밀치기에 기력 안 씀 (11/14 사장님 · config JP_TANK.lowShove)
 // 표준 시간 (10/25 22:3x): 공격 번호가 살아 있는 시간 · 긋기 꼬리는 실제 초로 적는다 (STAMINA 의 초 · 초당 값은 config 에서 realS · realRate)
 const ATTACK_LIFE = realS(1.5); // 공격을 낸 뒤 그 공격 번호가 살아 있는 시간 (막아 받기 청구 · 옛 흘림 판정)
 const ATTACK_TAIL = realS(0.35); // 긋는 동안 · 긋기가 끝난 뒤 공격으로 셈하는 꼬리
@@ -151,7 +152,7 @@ export class Stamina {
         // 마지막 스텝도 실제 차감량이 같다. 부동소수점 잔차는 경계에서만 정리한다.
         const amount = Math.min(STAMINA.clinchPerSecond * dt, this.value - STAMINA.floor, other.value - STAMINA.floor);
         for (const s of [this, other]) {
-          s.spend('clinch', amount);
+          if (!lowShoveFree(s.fighter)) s.spend('clinch', amount); // 11/14 사장님 '낮은 걸음 … 밀치기에 기력이 소모되는 않는' (jp_tank.js — 사람 일본 낮은 걸음만 0 · 상대는 그대로)
           s.clinchSeconds += amount / STAMINA.clinchPerSecond;
           if (s.value < STAMINA.floor + 1e-9) { s.value = STAMINA.floor; s.stages(); }
         }
@@ -265,6 +266,7 @@ export class Stamina {
     if (this.controller?.opposition?.run) return; // 막아찌르기 동안 맞닿은 막아 받기는 그 찌르기 값에 들어 있다 (10/21 입력형)
     if (this.blockedAttack.get(attacker) === other.attackId) return;
     this.blockedAttack.set(attacker, other.attackId);
+    this.fighter.schoolPassive?.guardEvent?.('block', attacker, other.attackId); // 일본 스택 막기 (11/14 사장님 '막기나 흘려받기에 2스택' — 받아 막음이 든 때 · 상대 공격 하나에 한 번 · school_passive.js)
     if (this.spend('block', STAMINA.blockCost * this.weight)) {
       this.counts.block++;
       this.blockPayment = { attacker, id: other.attackId, amount: STAMINA.blockCost * this.weight };

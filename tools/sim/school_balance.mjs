@@ -9,7 +9,10 @@
 //    상대가 쳐 오면(본 뒤) 0.6 몫 막기 단추 0.6 s(이탈리아는 그 가운데 비껴서며 찌르기 · 동방은 비기가 남았으면 막기 + 앞 스틱 = 격살) · 칼끼리 닿음을 느끼면(이탈리아) 0.25 ~ 0.95 s 뒤 탭 (85 %)
 //   기술 하나(낸 것 — fire)마다: 이름(비기 · 끌고 가는 칼 tech · 강화 · 탭 · 기본 긋기) · 맞음(칼날 상처 > 0) · 심각도 합 · 에너지 가장 큰 것 ·
 //    낸 뒤 1 실제 s 안에 상대 쓰러짐(죽음 · 기절) · 낸 뒤 1 실제 s 안에 내가 받은 심각도 · 맞음 · 넘어짐 · 판 = 이김 · 짐 · 준 · 받은 심각도
-//  node tools/sim/school_balance.mjs fight [--cells=german:longsword:longsword,...] [--seeds=1-24] [--dur=30] [--tech=0.35] [--set=SECRET.sweepCap=0] [--tag=이름] [--json=파일]
+//  node tools/sim/school_balance.mjs fight [--cells=german:longsword:longsword,...] [--seeds=1-24] [--dur=30] [--tech=0.35] [--set=SECRET.sweepCap=0] [--tag=이름] [--json=파일] [--jpbot=tank]
+//   --jpbot=tank (11/14 — docs/strike/jp_tank_2026-11-14.md §4): 일본 봇만 '참고 · 막고 · 한 칼' — 쳐 오면 0.85 막기 · 칼끝 거리 언저리에 서서 기다림(휘두르지 않음) ·
+//    기세가 가득(지금 판의 가득 — 스택 max · 전 판 full 초)하거나 3 ~ 9 s 참았으면 내려베기 한 칼 · 그 칼이 몫을 못 썼으면 곧장 제비 베기 · 칼끝 거리 안 견제(손목 치기 · 비껴 베기) 결정마다 0.025 ·
+//    비기 창이면 탭(그대로). 기본 ''(전 봇 — 다른 유파 · 일본 모두 바이트 같음)
 //  node tools/sim/school_balance.mjs agg <json ...>   (칸마다 판 표 + 기술 표 — Markdown)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync } from 'node:fs';
@@ -76,7 +79,7 @@ const TSU = (() => {
 const KOTE = { from: PAD.langort, path: [[0.02, -0.22]] };
 
 /** 한 판 */
-export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], probe = null, onRound = null, botHook = null, attrib = 'new' }) { // probe = 재기 꽂개 (rapier_defence.mjs) · onRound · botHook = 코테 · 줍기 재기 (kote_pickup.mjs) · attrib 'old' = 11/04 기술 기록 셈 (step_input — 늦게 읽힌 긋기 이름 바꿈)
+export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], probe = null, onRound = null, botHook = null, attrib = 'new', jpBot = '' }) { // probe = 재기 꽂개 (rapier_defence.mjs) · onRound · botHook = 코테 · 줍기 재기 (kote_pickup.mjs) · attrib 'old' = 11/04 기술 기록 셈 (step_input — 늦게 읽힌 긋기 이름 바꿈)
   const rnd = rng(seed * 7919 + 101);
   const kit = kitFromNodes(school, allNodeIds(school)); // 무유파는 null (나무 없음 — 고유 · 비기 없음)
   const G = newRound({ seed, weapon, weapon2: opp, walls: true, ...(kit ? { kit } : {}), look: LOOKS.player, look2: LOOKS.enemy, persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
@@ -202,8 +205,35 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     }
     return null;
   };
+  // ── 일본 '참고 · 막고 · 한 칼' 봇 (11/14 — jpBot 'tank' · 위 머리 글) ── 굴림은 이 갈래 안에서만 (다른 유파 · 전 봇은 난수 차례 그대로)
+  const TANK = school === 'japanese' && jpBot === 'tank';
+  const tk = { last: 0, W: 0, tsu: null, big: 0, harass: 0 };
+  const TK_BIG = ['zornhau', 'zornhauL', 'oberhau'];
+  const fullCharge = () => (P.schoolPassive.stackOn ? CONFIG.JP_TANK.max * CONFIG.JP_TANK.each : CONFIG.SCHOOL_PASSIVE.japanese.gain);
+  const tankDecide = (S) => {
+    if (tk.tsu != null && S.t - tk.tsu < 0.4) {
+      tk.tsu = null;
+      return stroke('tsubame', { S: TSU, want: 'tsubameGaeshi' }); // 내려벤 칼이 몫을 못 씀 → 곧장 제비 베기 (몫을 들고 감)
+    }
+    tk.tsu = null;
+    if (S.attack && S.dist < M.reach + 0.8 && rnd() < 0.85) return { kind: 'guard', seconds: 0.6, fwd: S.dist < M.contact ? -0.5 : 0 };
+    if (S.dist > M.reach + 1.0) return { kind: 'move', seconds: 0.35, fwd: 0.9 };
+    const sp = P.schoolPassive;
+    if (S.dist <= M.reach + 0.25 && (sp.charge >= fullCharge() - 1e-9 || S.t - tk.last >= tk.W)) {
+      tk.last = S.t;
+      tk.W = 3 + rnd() * 6;
+      tk.big++;
+      return { ...stroke(TK_BIG[Math.floor(rnd() * TK_BIG.length)]), big: true }; // 한 칼
+    }
+    if (S.dist <= M.reach + 0.2 && rnd() < 0.025) {
+      tk.harass++;
+      return rnd() < 0.5 ? stroke('kote', { S: KOTE, want: 'kote' }) : stroke('zornhauL', { side: side(), want: 'hirakiGiri' }); // 견제
+    }
+    return { kind: 'wait', seconds: 0.35, fwd: S.dist > M.reach + 0.15 ? 0.5 : S.dist < M.contact ? -0.4 : 0 }; // 기다림 (칼끝 거리 언저리 — 휘두르지 않음)
+  };
   const decide = (S) => {
     if (S.window && ['german', 'italian', 'japanese'].includes(school)) return { kind: 'tap', seconds: 0.07, want: secretName };
+    if (TANK) return tankDecide(S);
     if (S.spin && school === 'iberian') return ALTIB ? { kind: 'hold', seconds: 4, fwd: 0.6, want: secretName, releaseAt: M.contact + rnd() * (M.reach + 0.15 - M.contact) } : { kind: 'circle', seconds: 0.8, want: secretName }; // 11/11 'altib' 판: 무장 창 → 길게 눌러 메고 걸어 들어가 뗌 (전 판 정수리 가르기 봇과 같은 손)
     if (S.attack && S.dist < M.reach + 0.8) {
       if (school === 'italian' && rnd() < 0.35) return { kind: 'sideTap', seconds: 0.4, side: side(), tapAt: 0.03 + rnd() * 0.08, want: 'inquartata' };
@@ -225,7 +255,10 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     if (TRACE && Math.floor(t * 4) !== Math.floor((t - FR) * 4)) console.error('TR', t.toFixed(2), P.state, 'sw', +!!P.skill.swinging, 'act', act?.kind ?? '-', act?.want ?? '', 'wind', +!!uq.winding, 'hold', uq.hold?.st ?? '-', 'st', P.stamina.value.toFixed(0), 'd', P.foeDistance().toFixed(2), 'hand', P.handOffset.x.toFixed(2), P.handOffset.y.toFixed(2), 'tilt', P.tiltDeg?.().toFixed(0), 'win', +!!W.open, 'arm', +!!W.spinArm?.armed);
     const seen = hist.findLast((s) => s.t <= t - REACT + 1e-8);
     const busy = P.stamina.exhausted || !!P.skill.secretPhase;
-    if (!P.openHold && activeStart == null) activeStart = G.t;
+    if (!P.openHold && activeStart == null) {
+      activeStart = G.t;
+      if (TANK) (tk.last = t), (tk.W = 3 + rnd() * 6); // 참을 시간 (판이 열린 때부터)
+    }
     // 칼끝 돌려 빼기 손 (이탈리아 — 칼끼리 새 닿음을 느끼면 0.25 ~ 0.95 s 뒤 탭 · 85 % — special_balance cavTouch 와 같은 손)
     if (school === 'italian' && seen?.touch && seen.touch !== touchSeen) {
       touchSeen = seen.touch;
@@ -306,6 +339,10 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
         done = age >= act.seconds || !!W.open;
       } else done = age >= (act.seconds ?? 0.5);
       if (done && act) {
+        if (TANK && act.big) {
+          const L = P.schoolPassive.lock;
+          if (L && L.n === P.schoolPassive.n && !L.spent && L.ken > 0) tk.tsu = t; // 한 칼이 몫을 못 씀(빗나감 · 막힘) → 다음 결정이 제비 베기
+        }
         if (hand) ev('pointerup');
         prevAct = act; // 읽힘은 다음 뜻이 시작될 때 닫음 (늦은 스틱 — 긋기가 끝나 가며 읽힌 것까지)
         act = null;
@@ -558,7 +595,7 @@ if (isMain(import.meta.url)) {
     for (const c of cells) {
       const [school, weapon, opp] = c.split(':');
       for (const seed of seeds) {
-        const r = fightOne({ school, weapon, opp, seed, dur: +arg('dur', 30), tech: +arg('tech', 0.35), focus: arg('focus', null), secret: arg('secret', '1') !== '0', drop: arg('drop', '').split(',').filter(Boolean), attrib: arg('attrib', 'new') });
+        const r = fightOne({ school, weapon, opp, seed, dur: +arg('dur', 30), tech: +arg('tech', 0.35), focus: arg('focus', null), secret: arg('secret', '1') !== '0', drop: arg('drop', '').split(',').filter(Boolean), attrib: arg('attrib', 'new'), jpBot: arg('jpbot', '') });
         runs.push(r);
         console.error(JSON.stringify({ c, seed, win: r.win, lose: r.lose, T: r.T, dealt: r.dealt, recv: r.recv, fires: r.fires.length, ms: Date.now() - t0 }));
       }

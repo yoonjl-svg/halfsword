@@ -356,6 +356,9 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('indesTouch')) CONFIG.SCHOOL_PASSIVE.german.touch = +params.get('indesTouch') ? 1 : 0;
   // 10/28 01:5x 사장님 '일본 기다림과 침도 고노센도 적용받게 해' — 고노센에도 켄타이 (기본): `?kenSecret=0` = 전(비기엔 안 실림)
   if (params.has('kenSecret')) CONFIG.SCHOOL_PASSIVE.japanese.secret = +params.get('kenSecret') ? 1 : 0;
+  // 11/14 일본 기다리는 중전차 (config JP_TANK · 사장님 11/14 '스택 시스템' · '낮은 걸음 … 밀치기에 기력이 소모되는 않는'): `?jpStack=0` = 전(시간 곧은 오름) · `?jpFlow=2` 흘려 받기 스택 ·
+  //  `?jpLowShove=0` = 전(밀치기 기력 그대로) · 견줌(기본 끔) `?jpStackAi=1` AI 도 스택 · `?jpBrace=1` B1 · `?jpCounter=1` C 받아 치기 고노센 · `?jpKeep=1` E
+  for (const [q, k] of [['jpStack', 'stack'], ['jpStackAi', 'ai'], ['jpFlow', 'flow'], ['jpLowShove', 'lowShove'], ['jpBrace', 'brace'], ['jpCounter', 'counter'], ['jpKeep', 'keep']]) if (params.has(q) && Number.isFinite(+params.get(q))) CONFIG.JP_TANK[k] = Math.max(0, +params.get(q));
 }
 if (params.has('whipKneel')) CONFIG.WHIP_KNEEL.p = +params.get('whipKneel') || 0; // 채찍 무릎 꿇리기 확률 (10/23 — 판 값 0.5 · `?whipKneel=0` 끔)
 if (params.get('whipKneelAi') === '1') CONFIG.WHIP_KNEEL.ai = true; // AI 가 든 채찍도 꿇리기 (기본 끔 — 사람 먼저)

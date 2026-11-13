@@ -22,7 +22,7 @@ export const NODE_CAT = Object.freeze({
 });
 
 /** 판 몫 열쇠 (skillKit 칸 — 칸이 없으면 false). unique · perk 는 이름 모음 */
-export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29)
+export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'jpRock', 'jpBrace', 'jpTaiSen']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29) · 11/14 일본 중전차 새 몫 셋(jp_tank.js · config JP_TANK — 새 칸 자리 대기: 지금은 jpRock 밀치기 기력 0 · jpBrace B1 은 J1 · jpTaiSen C 받아 치기 고노센은 J3 를 익히면 함께 켜짐)
 
 export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10/21)
 
@@ -80,14 +80,14 @@ const TREE_SRC = {
   },
   japanese: {
     nodes: [
-      N({ id: 'J1', name: '낮은 걸음', cat: 'foot', l1: '보법', l2: '낮은 걸음', eff: '낮게 걸어 흔들려도 잘 버티지만, 걸을 때 기력이 더 든다', price: 100, d: 0, cx: 500, f: ['footwork', 'stepCost'] }),
+      N({ id: 'J1', name: '낮은 걸음', cat: 'foot', l1: '보법', l2: '낮은 걸음', eff: '낮게 걸어 흔들려도 잘 버티지만, 걸을 때 기력이 더 든다', price: 100, d: 0, cx: 500, f: ['footwork', 'stepCost', 'jpRock', 'jpBrace'] }), // 11/14 jpRock · jpBrace = 새 칸 자리 대기 (감독 — 사장님 '새 스킬트리 칸으로 나눌 예정' · 칸이 생기면 그 칸 f 로 옮김)
       N({ id: 'J6', name: '비껴 베기', cat: 'atk', l1: '비껴 베기', l2: '걸음 기술', eff: '옆으로 걸으며 왼 사선으로 내려 긋는다', pre: ['J1'], price: 200, d: 1, cx: 120, u: 'hirakiGiri' }),
       N({ id: 'J7', name: '손목 치기', cat: 'atk', l1: '손목 치기', l2: '강화동작', eff: '가운데서 짧게 내려베면 더 힘 있는 손목 치기가 나간다', pre: ['J1'], price: 200, d: 1, cx: 360, u: 'kote' }),
       N({ id: 'J2', name: '머리 위 받기', cat: 'parry', l1: '막기 I', l2: '머리 위 받기', eff: '머리 위로 오는 칼을 받고, 막는 동안 받는 피해가 줄어든다', pre: ['J1'], price: 200, d: 1, cx: 650, f: ['parry', 'parryCover', 'parryCut'] }),
       N({ id: 'J11', name: '에도에서 온 편지', cat: 'letter', l1: '에도에서', l2: '온 편지', title: '에도에서 온 편지', pre: ['J1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'J9', name: '제비 베기', cat: 'atk', l1: '제비 베기', l2: '이어 긋기', eff: '내려벤 칼이 빗나가거나 막힌 뒤 위로 긋는다', pre: ['J6', 'J7'], price: 300, d: 2, cx: 200, u: 'tsubameGaeshi' }),
       N({ id: 'J8', name: '칼 떨구기', cat: 'deep', l1: '심화', l2: '칼 떨구기', title: '손목 치기 심화 · 칼 떨구기', eff: '손목을 맞은 상대가 칼을 놓치기도 한다', pre: ['J7'], price: 300, d: 2, cx: 420, perk: 'kote' }), // 10/24 열림 (사장님 11:4x · 11:5x '너무 강하면 50%로' — 칼 놓침 · config UNIQUE_ASSIST.koteDrop · combat.js koteCheck)
-      N({ id: 'J3', name: '흘려 받기', cat: 'parry', l1: '막기 II', l2: '흘려 받기', title: '막기 II · 흘려 받기 (우케나가시)', orig: '受け流し', eff: '흘려 받으면 상대 팔이 늦고 기력이 깎인다', pre: ['J2'], price: 300, d: 2, cx: 650, f: ['flow'] }),
+      N({ id: 'J3', name: '흘려 받기', cat: 'parry', l1: '막기 II', l2: '흘려 받기', title: '막기 II · 흘려 받기 (우케나가시)', orig: '受け流し', eff: '흘려 받으면 상대 팔이 늦고 기력이 깎인다', pre: ['J2'], price: 300, d: 2, cx: 650, f: ['flow', 'jpTaiSen'] }), // 11/14 jpTaiSen = 새 칸 자리 대기 (C 받아 치기 고노센 — 칸이 생기면 옮김)
       N({ id: 'J10', name: '기다림과 침', cat: 'passive', l1: '패시브', l2: '기다림과 침', eff: '치지 않고 기다릴수록 다음 칼의 피해가 증가한다', pre: ['J9'], price: 0, heads: 5, d: 3, cx: 200, f: ['passive'] }),
       N({ id: 'J4', name: '흘린 칼', cat: 'parry', l1: '막기 III', l2: '흘린 칼', eff: '흘린 공격의 피해가 크게 줄어든다', pre: ['J3'], price: 400, d: 3, cx: 650, f: ['flowShield'] }),
       N({ id: 'J5', name: '고노센', cat: 'secret', l1: '비기', l2: '고노센', eff: '기다리다 상대가 치려 하거나 빠르게 다가올 때 공격하면, 먼저 벤다', pre: ['J4'], price: 400, heads: 10, d: 4, cx: 650, f: ['secret'] }), // 10/31 01:3x 사장님 "'웅크리며' 빼 설명에서" (사람 웅크림 끈 뒤) · 10/25 22:5x 사장님 확정 글(감독 전달) · 전 '간격 밖에서 기다리다 상대가 치려 할 때 공격하면, 먼저 벤다'

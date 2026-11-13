@@ -406,9 +406,9 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('iberian', 'B6'), ['ibChain']); // 10/29 01:5x 이어지는 흐름 (전: 돌려 베기 쌓기 perk redondo)
   assert.deepEqual(on('iberian', 'B4'), ['secret', 'u:redondo']); // 11/11 비기 알티바슈 포르트 (비기 몫 + 실행 칸 redondo — 무장 창에서 길게 눌러 냄 · 전 10/29 특수 공격 ['u:redondo'])
   assert.deepEqual(on('iberian', 'B7'), ['u:cingir']); // 11/11 특수 공격 싱지르 (전 비기 ['secret'])
-  assert.deepEqual(on('japanese', 'J1'), ['footwork', 'stepCost']);
+  assert.deepEqual(on('japanese', 'J1'), ['footwork', 'stepCost', 'jpRock', 'jpBrace']); // 11/14 감독 — 새 몫 열쇠 둘(밀치기 기력 0 · B1) 새 칸 자리 대기: J1 과 함께 (전 ['footwork', 'stepCost'])
   assert.deepEqual(on('japanese', 'J2'), ['parry', 'parryCover', 'parryCut']);
-  assert.deepEqual(on('japanese', 'J3'), ['flow']);
+  assert.deepEqual(on('japanese', 'J3'), ['flow', 'jpTaiSen']); // 11/14 감독 — 새 몫 열쇠 jpTaiSen(C) 새 칸 자리 대기: J3 과 함께 (전 ['flow'])
   assert.deepEqual(on('japanese', 'J4'), ['flowShield']);
   assert.deepEqual(on('japanese', 'J5'), ['secret']);
   assert.deepEqual(on('chinese', 'C2'), ['stepCost']);
