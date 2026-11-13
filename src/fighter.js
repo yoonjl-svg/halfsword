@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS, DE_DIRTY } from './config.js';
+import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { MAX_FIGHTERS, teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
 import { Skill } from './skill.js';
@@ -37,7 +37,7 @@ import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21
 import { SchoolPassive, schoolPassiveOn } from './school_passive.js'; // 유파 패시브 넷 (10/21 — 이탈리아 · 일본 · 독일 · 동방, config SCHOOL_PASSIVE)
 import { fighterWetlandMoveScale } from './wetland_ground.js';
 import { closeStartD, closeHoldT, bargeHeld, closeLog, holdPushBack } from './close_hold.js'; // 밀치기 시작 거리 1.0 m · 최소 유지 · 맞밀기 (11/14 사장님 — config CLOSE.startD · holdMin)
-import { deDirtyOn, shoveLanded, ringCheck, ringStep } from './de_dirty.js'; // 독일 더티복싱 B1 · C1 — 밀치기가 상대 몸에 듦 · 칼 씨름 1] (11/14 설계안 · config DE_DIRTY · 기본 끔)
+import { ringCheck, ringStep } from './de_dirty.js'; // 독일 칼 씨름 1] (11/14 — config DE_DIRTY · 기본 켬)
 import { spinStep } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 — 한 바퀴 도는 대본 (10/22 · f.ibSpin 이 없으면 부르지 않는다) // 잠든 습지 진흙 웅덩이: 자발 이동만 줄인다 (다른 무대 배율 1 — 값이 비트 단위로 같다)
 
 const KNEEL_T = realS(1.1); // 넘어졌다 일어날 때 무릎 꿇은 채 기다림 (실제 초 — 표준 시간 10/25 · 곁눈 베기 꿇음은 UNIQUE_ASSIST.buckle.kneel)
@@ -1661,7 +1661,7 @@ export class Fighter {
         }
       }
       if (!end && keepAtk && (sk.swinging || sk.tap)) closeLog(this).trap.atk += dt;
-      if (!end && held && ringCheck(this, f)) end = 'ring'; // 칼 씨름 1] (11/14 — DE_DIRTY.ring · 기본 끔): 묶인 동안 상대가 지침이면 세게 밀쳐 묶임을 끝냄 (de_dirty.js)
+      if (!end && held && ringCheck(this, f)) end = 'ring'; // 칼 씨름 1] (11/14 — DE_DIRTY.ring · 기본 켬): 묶인 동안 상대가 지침이면 세게 밀쳐 묶임을 끝냄 (de_dirty.js)
       if (end && !this.aiControlled && b.hold > 0) closeLog(this).ends[end] = (closeLog(this).ends[end] ?? 0) + 1;
       if (end) {
         if (held && CLOSE.holdCool > 0) this.holdCool = CLOSE.holdCool; // 묶인 채 끝남(몸 상태) — 쿨타임 (11/14 '풀린 후 2초간 다시 강제로 묶이지 않아')
@@ -1721,11 +1721,10 @@ export class Fighter {
         b.holdT += dt;
         if (b.holdT >= b.hold && b.holdT - dt < b.hold && CLOSE.holdCool > 0) this.holdCool = CLOSE.holdCool; // 묶임이 풀림 → 쿨타임 (11/14 사장님 '2초간 다시 강제로 묶이지 않아')
       }
-      // 밀치기가 상대 몸에 듦 (사람만 — 누르기 중 내 팔 · 칼이 상대 몸(발 · 칼 빼고)에 처음 닿음 · 한 밀치기에 한 번): 재기 셈 · 독일 B1 · C1(de_dirty.js — 끄면 셈만)
-      if (!this.aiControlled && !b.landed && (b.hold > 0 || deDirtyOn()) && this.closeTouch(true)) {
+      // 밀치기가 상대 몸에 듦 (사람만 — 누르기 중 내 팔 · 칼이 상대 몸(발 · 칼 빼고)에 처음 닿음 · 한 밀치기에 한 번): 재기 셈만
+      if (!this.aiControlled && !b.landed && b.hold > 0 && this.closeTouch(true)) {
         b.landed = true;
         closeLog(this).landed++;
-        shoveLanded(this, f);
       }
     }
     // 되돌림 섞기: lift(접기 풀기)·closeW(누르기 무게)는 기존 몸 자세 따라가기 SKILL_BODY.chest(26/s, updateBodyPose 의
@@ -1988,7 +1987,6 @@ export class Fighter {
    */
   applyWound(h) {
     if (this.state === 'dead' || this.revival) return; // 부활하는 동안엔 상처를 받지 않는다
-    if ((DE_DIRTY.door > 0 || DE_DIRTY.mordIndes) && this.foe?.foe === this) this.foe.schoolPassive?.deHit(h.part); // 독일 더티복싱 C1 · C2 (11/14 — 상대 칼이 나에게 판정: 겹치기 맞음 → 빠른 문 · 모르트슐라크 머리 → 그 순간 창 · 운동학 칼 길(secret_instant)도 이 자리를 지남 · 기본 끔이면 안 부름)
     this.parryGuard?.opposition?.onWound(h);
     const sev = h.severity;
     const Z = h.zone;

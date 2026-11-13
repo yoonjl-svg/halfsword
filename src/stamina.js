@@ -1,7 +1,6 @@
 import { classifyStroke } from './attack_stroke.js';
 import { STAMINA, GAIT, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY, SECRET, realS } from './config.js';
 import { entersAttackLine, isPreparation } from './stamina_stroke.js';
-import { clinchRate } from './de_dirty.js'; // 독일 붙어 버티기 B2 (11/14 — 기본 끔 = 늘 1)
 import { bargeHeld, clinchHoldK } from './close_hold.js'; // 밀치기 묶임 기력 × 2 (11/14 사장님 — 묶임이 없으면 늘 1)
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
 // 표준 시간 (10/25 22:3x): 공격 번호가 살아 있는 시간 · 긋기 꼬리는 실제 초로 적는다 (STAMINA 의 초 · 초당 값은 config 에서 realS · realRate)
@@ -150,16 +149,13 @@ export class Stamina {
       this.clinchStep = other.clinchStep = pair;
       this.clinching = other.clinching = active;
       const kH = clinchHoldK(this.fighter, other.fighter);
-      if (active && (kH !== 1 || clinchRate(this.fighter) !== 1 || clinchRate(other.fighter) !== 1)) {
-        // 묶임 × holdDrain (11/14 사장님 '기력이 2배 소모돼' — close_hold.js clinchHoldK · 두 몸 모두) · 독일 붙어 버티기 B2 (11/14 설계안 — config DE_DIRTY.clinchK · de_dirty.js clinchRate · 기본 끔):
-        //  몸마다 제 빠짐 × 배율(묶임 × 2 · 독일 몸만 × 0.5 더) — 같은 시간을 버팀. 둘 다 1 이면 아래 옛 가지(바이트 같음)
-        const rate = (s) => STAMINA.clinchPerSecond * kH * clinchRate(s.fighter);
-        const T = Math.min(dt, ...[this, other].map((s) => (s.value - STAMINA.floor) / rate(s)));
+      if (active && kH !== 1) {
+        // 묶임 × holdDrain (11/14 사장님 '기력이 2배 소모돼' — close_hold.js clinchHoldK · 두 몸 모두): 두 몸 같은 빠짐 × 2 — 같은 시간을 버팀. 묶임이 아니면 아래 옛 가지(바이트 같음)
+        const rate = STAMINA.clinchPerSecond * kH;
+        const T = Math.min(dt, ...[this, other].map((s) => (s.value - STAMINA.floor) / rate));
         for (const s of [this, other]) {
-          const k = clinchRate(s.fighter);
-          s.spend('clinch', rate(s) * T);
+          s.spend('clinch', rate * T);
           s.clinchSeconds += T;
-          if (k !== 1 && s.fighter.deDirtyStats) s.fighter.deDirtyStats.clinchSaved += STAMINA.clinchPerSecond * kH * (1 - k) * T;
           if (s.value < STAMINA.floor + 1e-9) { s.value = STAMINA.floor; s.stages(); }
         }
         if (this.exhausted || other.exhausted) {

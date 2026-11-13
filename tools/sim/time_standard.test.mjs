@@ -65,9 +65,9 @@ test('비기 규칙 시간 열쇠는 config.js 에 realS( … ) 로 (맨 수 = �
   assert.deepEqual(bad, [], `실제 초로 적을 열쇠가 맨 수: ${bad.join(' · ')} — realS(초)로 감싸거나 KEEP 에 까닭과 함께`);
 });
 
-test('옛 판 TIME_STD=0: 적힌 수가 그대로 게임 값 (걷기 1.8 · 달려듦 1.2 · 창 0.6 · 일본 굳음 1.2)', () => {
+test('옛 판 TIME_STD=0: 적힌 수가 그대로 게임 값 (걷기 1.8 · 달려듦 1.2 · 창 0.6 · 일본 굳음 0.6)', () => { // 일본 굳음 1.2 → 0.6: 사장님 11/14 '모든 비기 경직 0.6초로 통일'(확인표 3860 — 개발 가지에서 이 줄만 안 고쳐져 있었음)
   const code = "import('./src/config.js').then((c) => console.log(JSON.stringify([c.TIME.k, c.GAIT.moveSpeed, c.SECRET.foeChargeSpeed, c.SECRET.playerWindow, c.SECRET.stiff.japanese, c.STAMINA.recoverPerSecond])))";
   const cwd = fileURLToPath(new URL('../../', import.meta.url));
   const out = JSON.parse(execFileSync(process.execPath, ['-e', code], { cwd, env: { ...process.env, TIME_STD: '0' } }).toString());
-  assert.deepEqual(out, [1, 1.8, 1.2, 0.6, 1.2, 15]);
+  assert.deepEqual(out, [1, 1.8, 1.2, 0.6, 0.6, 15]);
 });

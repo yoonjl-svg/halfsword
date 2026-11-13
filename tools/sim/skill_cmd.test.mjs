@@ -46,7 +46,7 @@ const OWNER = {
   G10: '상대와 몸이 붙은 채 1.5초 이상 밀치면(↑) 비기 활성화', // 10/25 23:1x (감독 전달) — 글 속 시간 = SECRET.mordPress · 11/11 사장님 '1.5초로 해.' 로 숫자만 (전 '2초')
   // 10/29 14:1x · 14:2x 사장님 글 (감독 전달) — 특수 공격 넷: 풍차 베기(길게 누름 — 11/11 비기가 되어 위 B4) · 탭으로 내는 셋
   C6: '뒤로 움직이며(↓) 탭',
-  G7: '가까이서 칼을 맞댄 채 버티면 자동 발동', // 10/31 18:xx 사장님 '초안 ok.' — 겹치기 자동 (UNIQUE_ASSIST.dupAuto 'bind') · 전 10/29 14:1x 글 '긋기가 상대 칼에 닿은 채 탭' = D.G7_CMD_TAP (dupAuto 0)
+  G7: '가까이서 칼을 맞대거나 연달아 부딪히면 자동 발동', // 11/14 사장님 결정 '겹치기 글. 저절로 나간다 말고 자동 발동' — 겹치기 자동 ⓒ 'both' · 전 10/31 18:xx '가까이서 칼을 맞댄 채 버티면 자동 발동'('bind' 판 — D.G7_CMD_AUTO.bind) · 그 전 10/29 '긋기가 상대 칼에 닿은 채 탭' = D.G7_CMD_TAP (dupAuto 0)
 };
 
 // ── 도식 낱말 ──
@@ -180,7 +180,7 @@ test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · �
       assert.ok(src('main.js').includes('player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open, !!playerSecret?.holdOwns());'), 'main.js — 누름 상태 · 비기 창 · 알티바슈 포르트 무장 창(11/11)');
       continue;
     }
-    if (e.tapKey === 'dup' && (UA.dupAuto === 'bind' || UA.dupAuto === 'both')) { // 11/14 사장님 'c로 해' — 기본 'both'(맞댐 또는 두 번 부딪힘) · 카드 글은 그대로 'bind' 글(nodeCmd — 'both' 글은 따로 없음 · 여쭐 것)
+    if (e.tapKey === 'dup' && UA.dupAuto === 'both') { // 11/14 사장님 'c로 해' — 기본 'both'(맞댐 또는 두 번 부딪힘) · 11/14 글 '… 맞대거나 연달아 부딪히면 자동 발동'
       // 겹치기 자동 (사장님 10/31 18:xx — UNIQUE_ASSIST.dupAuto 'bind' 기본): 탭 조건은 안 봄(TAP_TRIG.dup 이 자동 판이면 null) · 저절로 냄(dupAutoTick) → 받는 입력 없음 · C9 꼴 '… 자동 발동'
       assert.ok(!e.on.length && !e.stick, `${x.id} — 긋기 조건 · 걸음 명령 없음`);
       assert.ok(c === OWNER[x.id] && c.endsWith('자동 발동') && !/탭|긋기|공격/.test(c), `${id} — 저절로 냄 · 사장님 글`);

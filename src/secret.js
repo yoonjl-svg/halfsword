@@ -17,7 +17,6 @@ import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동
 import { RisolutoWatch, lungeGapOk, bladesNear } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
 import { stickTurnState, stickTurnStep, stickTurnClear } from './stick_turn.js'; // 이베리아 휘감아 돌기 스틱 판 — 이동 스틱 돌리기 몸짓 (10/23)
 import { circleState, circleStep, circleClear, circleLive } from './attack_circle.js'; // 이베리아 싱지르 공격 원 판 — 공격 입력으로 원 그리기 몸짓 (10/24)
-import { mordDoorTick, consumeDoor } from './de_dirty.js'; // 독일 모르트슐라크 빠른 문 C1 (11/14 — 기본 끔)
 import { iaiReadyPosePlayer } from './secret_instant.js'; // 사람 고노센 준비 웅크림 (10/25 23:0x — SECRET.gnsCrouch)
 
 const clamp = THREE.MathUtils.clamp;
@@ -952,14 +951,6 @@ export class PlayerSecretWatch {
     const foe = this.foe;
     const close = me.state === 'stand' && foe.alive && foe.state === 'stand' && me.foeDistance() <= n;
     if (pressStep(this, dt, close, busy, !!this.open, secretVal(this.S.cond.press), null)) this.openWindow({ ev: 'press', held: this.pressHeld, close: true });
-    else if (me.mordDoor) {
-      // 모르트슐라크 빠른 문 C1 (11/14 설계안 — config DE_DIRTY.door · de_dirty.js · 기본 끔이면 문이 안 열려 여기 안 옴): 독일 밀치기가 든 뒤 · 겹치기가 맞거나 막힌 뒤(가슴 사이 n 안) 문 시계 안이면 창 곧장
-      const D = mordDoorTick(me, dt, close);
-      if (D && !busy && !this.open && me.state === 'stand' && foe.alive && foe.state === 'stand') {
-        this.openWindow({ ev: 'press', door: D.kind, close });
-        if (this.open) consumeDoor(me, D);
-      }
-    }
   }
 
   /**

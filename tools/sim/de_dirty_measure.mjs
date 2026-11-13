@@ -16,31 +16,27 @@ import { isMain } from './is_main.mjs';
 const K = CONFIG.TIME.k;
 export const CELLS = ['german:longsword:longsword', 'german:sabre:longsword', 'german:sabre:sabre', 'german:longsword:rapier', 'german:longsword:uchigatana'];
 const OFF_CLOSE = 'CLOSE.startD=null,CLOSE.holdMin=0,CLOSE.nearHilt=0,CLOSE.holdLock=0,CLOSE.holdDrain=1,CLOSE.holdCool=0';
-const B = `DE_DIRTY.armSlow=${CONFIG.DE_DIRTY_ON.armSlow},DE_DIRTY.clinchK=${CONFIG.DE_DIRTY_ON.clinchK}`;
-const C = `DE_DIRTY.door=${CONFIG.DE_DIRTY_ON.door},DE_DIRTY.mordIndes=${CONFIG.DE_DIRTY_ON.mordIndes}`;
-const OLD3 = 'DE_DIRTY.ring=0,UNIQUE_ASSIST.dupBandMin=0.8';
-/** 판: ① 지금 main(파고들기 · 붙은 거리 규칙 · B · C 모두 끔) ② 파고들기만 ③ + 붙은 거리 규칙(사장님 11/14 — 기본) ④ + B ⑤ + C ⑥ 모두 · ⓪ 옛 봇 · ③A AI 도 같은 규칙 · n = 묶임 시간 견줌 (③ 위) */
+const OLD3 = 'DE_DIRTY.ring=0,UNIQUE_ASSIST.dupBandMin=0.8,UNIQUE_ASSIST.dupAuto=bind,UNIQUE_ASSIST.dupStackS=' + CONFIG.realS(0.6) + ',CLOSE.startAI=null';
+const OLD8 = 'CLOSE.startAI=null,UNIQUE_ASSIST.dupStackS=' + CONFIG.realS(0.6);
+/**
+ * 판 (11/14 정리 — 설계안 B · C 는 사장님 11/14 폐기라 그 판(④ ⑤ ⑥)은 기록에만 · 다시 낼 수 없음):
+ *  ① 지금 main(파고들기 · 붙은 거리 규칙 · 칼 씨름 끔) ② 파고들기만 ③ + 붙은 거리 규칙(사람만 · 그때 겹치기 bind 0.6 s · 띠 0.8) ·
+ *  ⑧ 11/14 가지 기본(③ + 칼 씨름 + 겹치기 ⓒ · 띠 1.0 · 사람만 · 쌓임 0.6 s) · ⑨ 지금 가지 기본(⑧ + AI 도 같은 규칙 · 겹치기 쌓임 0.4 s · 합친 판 — 비기 경직 0.6) ·
+ *  ⑨d6 = ⑨ 에서 겹치기 쌓임만 0.6 s · ⓪ 옛 독일 봇(SB_DE_BOT=0 으로 돌림) · n = 묶임 시간 견줌(③ 위)
+ *  비기 경직: 합친 판(11/14 — 0.6 s 통일) 위에서 돌리면 ①~⑧ 도 0.6 s — 11/14 기록 판(0.4 s)과 다름
+ */
 export const VARIANTS = {
-  '①': `GAIT.deDig=0,${OFF_CLOSE},DE_DIRTY.ring=0`,
-  '②': `GAIT.deDig=1,${OFF_CLOSE},DE_DIRTY.ring=0`,
-  '③': OLD3, // 11/14 첫 재기 판(칼 씨름 · 겹치기 띠 1.0 m 전) — 그때 ③ 그대로 다시 낼 수 있게
-  '④': `${OLD3},${B}`,
-  '⑤': `${OLD3},${C}`,
-  '⑥': `${OLD3},${B},${C}`,
-  '⑦': `DE_DIRTY.ringT=${CONFIG.realS(0.6)},DE_DIRTY.ringNoRecover=0,UNIQUE_ASSIST.dupAuto=bind`, // 중간 판 (③ + 칼 씨름 0.6 s + 겹치기 띠 1.0 m · 'bind') — 11/14 결정 사이
-  '⑧': '', // 지금 가지 기본 (③ + 칼 씨름 1.2 s · 기력 회복 막힘 2.0 s + 겹치기 자동 ⓒ 'both' · 띠 아래 끝 1.0 m)
-  '⑧bind': 'UNIQUE_ASSIST.dupAuto=bind', // ⑧ 에서 겹치기 자동만 옛 'bind' (ⓐ 견줌)
-  '⑧s': `SECRET.stiff.german=${CONFIG.realS(0.6)}`, // ⑧ + 비기 경직 독일 0.6 s (11/14 사장님 '모든 비기 경직 0.6초로 통일' — 본판에 들어갈 값 · 가지 기본값은 그대로 0.4)
-  '⑦링끔': 'DE_DIRTY.ring=0', // ⑦ 에서 칼 씨름만 끔
-  'dB': `UNIQUE_ASSIST.dupStackGap=${CONFIG.realS(0.4)}`, // 겹치기 자동 끊김 너그러움 0.2 → 0.4 s (⑦ 위)
-  'dC': 'UNIQUE_ASSIST.dupAuto=both', // 'bind' 또는 'clash2' 가운데 먼저 찬 쪽
-  'dD': `UNIQUE_ASSIST.dupAuto=both,UNIQUE_ASSIST.dupStackGap=${CONFIG.realS(0.4)}`,
-  '⓪': `GAIT.deDig=0,${OFF_CLOSE},DE_DIRTY.ring=0`, // ① 과 같은 값 — 옛 독일 봇(SB_DE_BOT=0 으로 돌림 · 11/04 재기와 같은 손)
-  '③A': `${OLD3},CLOSE.startAI=1`, // ③ + AI 도 같은 붙은 거리 규칙 (견줌 스위치 — 시작 1.0 m · 묶임 · 맞밀기 · 기력 × 2 · 쿨타임 · 묶인 동안 공격 안 함 · 1 m 안 손잡이 찍기)
+  '①': `GAIT.deDig=0,${OFF_CLOSE},DE_DIRTY.ring=0,CLOSE.startAI=null`,
+  '②': `GAIT.deDig=1,${OFF_CLOSE},DE_DIRTY.ring=0,CLOSE.startAI=null`,
+  '③': OLD3,
+  '⑧': OLD8,
+  '⑨': '',
+  '⑨d6': `UNIQUE_ASSIST.dupStackS=${CONFIG.realS(0.6)}`,
+  '⑨ai0': 'CLOSE.startAI=null', // ⑨ 에서 AI 규칙만 옛 판 (AI 도 같은 규칙 견줌)
+  '⓪': `GAIT.deDig=0,${OFF_CLOSE},DE_DIRTY.ring=0,CLOSE.startAI=null`,
   'n0.6': `${OLD3},CLOSE.holdMin=${CONFIG.realS(0.6)}`,
   'n1.5': `${OLD3},CLOSE.holdMin=${CONFIG.realS(1.5)}`,
   'n2.0': `${OLD3},CLOSE.holdMin=${CONFIG.realS(2.0)}`,
-  'cool0': `${OLD3},CLOSE.holdCool=0`,
 };
 function applySets(s) {
   for (const kv of (s ?? '').split(',').filter(Boolean)) {
@@ -136,7 +132,7 @@ function makeProbe() {
         mord: mord.length, mordHit: mord.filter((m) => m.w > 0 || m.cons > 0).length, mordHead: S.mordHead, dup: dup.length, dupMord: link,
         pushT: r3(S.pushT), block: Object.fromEntries(Object.entries(S.block).map(([k, v]) => [k, r3(v)])),
         clinchSt: r3(st.clinch ?? 0), pushSt: r3(st.push ?? 0), foeClinchSt: r3(A.stamina.spent.clinch ?? 0),
-        de: P.deDirtyStats ?? null, indesMord: P.schoolPassive?.stats.indes.mord ?? 0, indesRing: P.schoolPassive?.stats.indes.ring ?? 0,
+        de: P.deDirtyStats ?? null, indesRing: P.schoolPassive?.stats.indes.ring ?? 0,
         segs: segs.map((x) => [r3(x.dur), r3(x.band), x.dup ? 1 : 0, r3(x.swing)]), dupHit: dup.filter((x) => x.w > 0 || x.cons > 0).length,
       };
     },
@@ -169,7 +165,7 @@ export function aggRows(runs) {
       mord: m((r) => r.mord), mordHead: m((r) => r.mordHead), dupMord: m((r) => r.dupMord), dup: m((r) => r.dup),
       near08: m((r) => r.near08), near10: m((r) => r.near10), clinchSt: m((r) => r.clinchSt), foeClinchSt: m((r) => r.foeClinchSt), pushSt: m((r) => r.pushSt),
       pushT: m((r) => r.pushT), block: Object.fromEntries(['req', 'swing', 'tap', 'state', 'foe', 'other'].map((w) => [w, m((r) => r.block?.[w] ?? 0)])),
-      doorWin: m((r) => (r.de?.doorWin?.shove ?? 0) + (r.de?.doorWin?.dup ?? 0)), armSlow: m((r) => r.de?.armSlow ?? 0), indesMord: m((r) => r.indesMord ?? 0),
+      ring: m((r) => r.de?.ring ?? 0), indesRing: m((r) => r.indesRing ?? 0),
     };
   });
 }
@@ -179,9 +175,9 @@ export function aggMarkdown(runs) {
   out.push('| 판 | 칸 | 판수 | 이김·짐·비김 | 준 심각도 | 받은 심각도 | 준 의식 | 상대 넘어짐 | 내 넘어짐 | 파고들기 | 들어가다 맞음 | 밀치기 | 묶임 | 1 s 안 넘어뜨림 | 손잡이 찍기 (맞음) | 모르트슐라크 | 머리 | 겹치기→모르트 | 붙음 ≤0.8 | ≤1.0 | 붙어 버티기 기력 (상대) | 지침 몫 |');
   out.push('|---|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---|---:|');
   for (const r of rows) out.push(`| ${r.variant} | ${r.cell} | ${r.n} | ${r.win}·${r.lose}·${r.n - r.win - r.lose} | ${f2(r.dealt)} | ${f2(r.recv)} | ${f2(r.consD)} | ${f2(r.fallsA)} | ${f2(r.fallsP)} | ${f2(r.digs)} | ${f2(100 * r.digHit, 0)}% | ${f2(r.shoves)} | ${f2(r.holds)} | ${f2(100 * r.shoveFall, 0)}% | ${f2(r.pommels)} (${f2(100 * r.pommelHit, 0)}%) | ${f2(r.mord)} | ${f2(r.mordHead)} | ${f2(r.dupMord)} | ${f2(100 * r.near08, 0)}% | ${f2(100 * r.near10, 0)}% | ${f2(r.clinchSt, 1)} (${f2(r.foeClinchSt, 1)}) | ${f2(100 * r.exh, 0)}% |`);
-  out.push('', '| 판 | 칸 | 묶인 시간 s/판 | 갇힘(스틱 놓음 · 떨어짐 · 팔 펴짐) s | 묶인 동안 버린 공격 입력 수 | 칼자루만 거리 시간 s | 그 거리 공격 입력 수 | 찍기 맞음당 의식 | 찍기 1 s 안 넘어뜨림(합) | 쿨타임에 걸린 밀치기 | 밂 시간 s (막힘: 걸음 요청 · 휘두름 · 탭 · 몸 · 상대 · 그 밖) | 빠른 문 창 | 팔 늦춤 | 칼자루 뒤 창 |');
-  out.push('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|');
-  for (const r of rows) out.push(`| ${r.variant} | ${r.cell} | ${f2(r.holdT)} | ${f2(r.trapStick)} | ${f2(r.lockAtk)} | ${f2(r.nearT)} | ${f2(r.nearAtk)} | ${f2(r.pommelCons, 3)} | ${r.pommelFall} | ${f2(r.cooled)} | ${f2(r.pushT)} (${['req', 'swing', 'tap', 'state', 'foe', 'other'].map((w) => f2(r.block[w])).join(' · ')}) | ${f2(r.doorWin)} | ${f2(r.armSlow)} | ${f2(r.indesMord)} |`);
+  out.push('', '| 판 | 칸 | 묶인 시간 s/판 | 갇힘(스틱 놓음 · 떨어짐 · 팔 펴짐) s | 묶인 동안 버린 공격 입력 수 | 칼자루만 거리 시간 s | 그 거리 공격 입력 수 | 찍기 맞음당 의식 | 찍기 1 s 안 넘어뜨림(합) | 쿨타임에 걸린 밀치기 | 밂 시간 s (막힘: 걸음 요청 · 휘두름 · 탭 · 몸 · 상대 · 그 밖) | 칼 씨름 | 칼 씨름 창 |');
+  out.push('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|');
+  for (const r of rows) out.push(`| ${r.variant} | ${r.cell} | ${f2(r.holdT)} | ${f2(r.trapStick)} | ${f2(r.lockAtk)} | ${f2(r.nearT)} | ${f2(r.nearAtk)} | ${f2(r.pommelCons, 3)} | ${r.pommelFall} | ${f2(r.cooled)} | ${f2(r.pushT)} (${['req', 'swing', 'tap', 'state', 'foe', 'other'].map((w) => f2(r.block[w])).join(' · ')}) | ${f2(r.ring)} | ${f2(r.indesRing)} |`);
   return out.join('\n');
 }
 

@@ -152,7 +152,7 @@ if (params.has('mordStepPause')) CONFIG.SECRET.mordStepPause = +params.get('mord
 if (params.has('closeLatch')) CONFIG.CLOSE.latch = +params.get('closeLatch') ? 1 : 0; // 밀치기 걸쇠 (10/25 23:3x 사장님 '이 걸쇠 없애' — 기본 0 · `?closeLatch=1` = 놓았다 다시 밀어야)
 if (params.has('closeLatchAI')) CONFIG.CLOSE.latchAI = +params.get('closeLatchAI') ? 1 : 0; // AI 밀치기 걸쇠 (기본 = config CLOSE.latchAI)
 // 붙은 거리 규칙 (11/14 사장님 '밀치기 기준 1m' · '묶인 1.2초 동안은 아무 공격도 못하고 기력이 2배' · '1m 이내에서는 손잡이 찍기만' · '2초간 다시 강제로 묶이지 않아' — config CLOSE · src/close_hold.js):
-//  `?closeStart=0` = 옛 시작 거리(무기 reach) · `?closeStart=0.9` = 그 거리 · `?closeStartAI=1` = AI 도 같은 규칙(견줌) · `?closeHold=0` = 묶임 없음 · `?closeHold=1.5` = 그 실제 초 ·
+//  `?closeStart=0` = 옛 시작 거리(무기 reach) · `?closeStart=0.9` = 그 거리 · `?closeStartAI=0` = AI 규칙 끔(전 판 — 11/14 사장님 결정으로 AI 도 기본 켬) · `?closeHold=0` = 묶임 없음 · `?closeHold=1.5` = 그 실제 초 ·
 //  `?closeLock=0` = 묶인 동안 공격 막음 없음 · `?closeDrain=1` = 기력 그대로 · `?closeCool=0` = 쿨타임 없음 · `?closeHilt=0` = 칼자루만 거리 없음
 if (params.has('closeStart')) CONFIG.CLOSE.startD = +params.get('closeStart') > 0 ? +params.get('closeStart') : null;
 if (params.has('closeStartAI')) CONFIG.CLOSE.startAI = +params.get('closeStartAI') > 0 ? +params.get('closeStartAI') : null;
@@ -161,8 +161,6 @@ if (params.has('closeLock')) CONFIG.CLOSE.holdLock = +params.get('closeLock') ? 
 if (params.has('closeDrain')) CONFIG.CLOSE.holdDrain = +params.get('closeDrain') > 0 ? +params.get('closeDrain') : 1;
 if (params.has('closeCool')) CONFIG.CLOSE.holdCool = +params.get('closeCool') > 0 ? CONFIG.realS(+params.get('closeCool')) : 0;
 if (params.has('closeHilt')) CONFIG.CLOSE.nearHilt = +params.get('closeHilt') ? 1 : 0;
-// 독일 더티복싱 B · C (11/14 설계안 — config DE_DIRTY · 기본 끔 · 켤 때 값 DE_DIRTY_ON): `?deB1=1` 밀어 흔들기 · `?deB2=1` 붙어 버티기 · `?deC1=1` 모르트슐라크 빠른 문 · `?deC2=1` 칼자루 뒤 칼 · `?deDirty=all` = 넷 모두
-for (const [q, k] of [['deB1', 'armSlow'], ['deB2', 'clinchK'], ['deC1', 'door'], ['deC2', 'mordIndes']]) if (params.get(q) === '1' || params.get('deDirty') === 'all') CONFIG.DE_DIRTY[k] = CONFIG.DE_DIRTY_ON[k];
 if (params.has('deRing')) CONFIG.DE_DIRTY.ring = +params.get('deRing') ? 1 : 0; // 칼 씨름 1] (11/14 사장님 '1번으로 해' — 기본 켬 · 상대 지침이면 세게 밀쳐 0.6 m · 팔 벌어짐 0.6 s · 그 순간 창) · `?deRing=0` = 끔
 if (params.has('mordNear')) CONFIG.SECRET.mordNear = +params.get('mordNear') ? 1 : 0; // AI 몸 붙이기 자연스럽게 가까울 때만 (10/24 14:2x 사장님 · 0 = 멀리서 붙이러 걸어가는 옛 판)
 if (params.has('mordWalkStrike')) CONFIG.SECRET.mordWalkStrike = +params.get('mordWalkStrike') ? 1 : 0; // AI 몸 붙이기 걸어가며 치기 (10/24 13:3x 사장님 · 0 = 걸어가는 동안 안 침 옛 판)

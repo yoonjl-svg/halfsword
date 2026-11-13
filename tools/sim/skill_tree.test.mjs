@@ -392,7 +392,7 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('german', 'G4'), ['parryCover']);
   assert.deepEqual(on('german', 'G7'), ['u:duplieren']);
   assert.deepEqual(on('german', 'G6'), ['perk:schielhau']);
-  assert.deepEqual(on('german', 'G9'), ['passive', 'deClinch', 'deHilt', 'deRing']); // 11/14 독일 더티복싱 B · C 새 몫 열쇠 — 새 칸 자리 대기라 G9 에 임시로 이음 (감독 지시 · 칸이 생기면 그 칸으로)
+  assert.deepEqual(on('german', 'G9'), ['passive', 'deRing']); // 11/14 칼 씨름 새 몫 열쇠 — 새 칸 자리 대기라 G9 에 임시로 이음 (감독 지시 · 칸이 생기면 그 칸으로) · 11/14 B · C 열쇠 폐기
   assert.deepEqual(on('italian', 'I1'), ['footwork']);
   assert.deepEqual(on('italian', 'I3'), ['backFlat']);
   assert.deepEqual(on('italian', 'I6'), ['opposition']);

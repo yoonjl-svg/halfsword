@@ -31,7 +31,7 @@ function poseOf(f) {
   o.tip = [+tip.x.toFixed(3), +tip.y.toFixed(3), +tip.z.toFixed(3)];
   return o;
 }
-export function ringRun({ ring = 1, gap = 0.85, seed = 4, weapon = 'longsword', dur = 2.0, foeStamina = -10, poseAt = null } = {}) {
+export function ringRun({ ring = 1, gap = 0.85, seed = 4, weapon = 'longsword', dur = 2.0, foeStamina = -10, poseAt = null, again = false } = {}) { // again: 칼 씨름 뒤에도 스틱을 앞으로 밂 (무너진 상대에게 다시 밀치기 — 11/14 사장님 '또 나가야')
   const keep = { ...CONFIG.DE_DIRTY };
   CONFIG.DE_DIRTY.ring = ring ? 1 : 0;
   const G = newRound({ weapon, seed, gap, kit: kitFromNodes('german', allNodeIds('german')), onFighter(f) { if (f.index === 0) f.humanInput = true; } });
@@ -43,10 +43,10 @@ export function ringRun({ ring = 1, gap = 0.85, seed = 4, weapon = 'longsword', 
     A.stamina.value = foeStamina; // 지침 (0 아래)
     const rows = [];
     const poses = [];
-    let tRing = null, tPress = null, end = null, ringFrame = null;
+    let tRing = null, tPress = null, end = null, ringFrame = null, againInfo = null, shoves0 = null;
     const T = dur * K;
     for (let t = 0; t <= T + 1e-9; t += CONFIG.PHYSICS.timestep) {
-      const push = tRing == null ? 0.9 : 0; // 칼 씨름 뒤엔 스틱을 놓음 (계속 밀면 쿨타임 안 새 밀치기가 무너진 상대를 더 밂)
+      const push = tRing == null || again ? 0.9 : 0; // 칼 씨름 뒤엔 스틱을 놓음 (again 이면 계속 밂 — 쿨타임 안 새 밀치기가 무너진 상대를 더 밂)
       P.move.set(0, push); P.stickX = 0; P.stickY = push;
       A.stamina.value = Math.min(A.stamina.value, foeStamina);
       G.step();
@@ -58,6 +58,8 @@ export function ringRun({ ring = 1, gap = 0.85, seed = 4, weapon = 'longsword', 
       }
       if (poseAt && tRing != null) for (const at of poseAt) if (!poses.some((q) => q.at === at) && t / K >= tRing + at - 1e-9) poses.push({ at, P: poseOf(P), A: poseOf(A), ring: !!A.ringHit });
       if (!end && P.bargeEnd && !P.barge && tPress != null) end = P.bargeEnd;
+      if (again && tRing != null && !againInfo && P.barge && P.shoves > shoves0) againInfo = { shoves: P.shoves - shoves0, hold: P.barge.hold, ringHit: !!A.ringHit, t: +(t / K - tRing).toFixed(3) };
+      if (tRing != null && shoves0 == null) shoves0 = P.shoves;
       const ti = Math.round(t / K / 0.05);
       if (Math.abs(t / K - ti * 0.05) < CONFIG.PHYSICS.timestep / K / 2) {
         const tip = A.bladePoint(1, new THREE.Vector3());
@@ -66,7 +68,7 @@ export function ringRun({ ring = 1, gap = 0.85, seed = 4, weapon = 'longsword', 
     }
     const after = rows.filter((r) => tRing != null && r.t >= tRing);
     if (poseAt && tRing == null && rows.length) poses.push({ at: 0, P: poseOf(P), A: poseOf(A), ring: false });
-    return { ring, tPress, tRing, end, ringFrame, poses, contact: P.swordArt.measure.contact, d0: rows[0]?.d, dRing: after[0]?.d ?? null, dMax: after.length ? Math.max(...after.map((r) => r.d)) : null, fell: rows.some((r) => r.foeState !== 'stand'), indesRing: P.schoolPassive?.stats.indes.ring ?? 0, rows };
+    return { ring, tPress, tRing, end, ringFrame, poses, again: againInfo, contact: P.swordArt.measure.contact, d0: rows[0]?.d, dRing: after[0]?.d ?? null, dMax: after.length ? Math.max(...after.map((r) => r.d)) : null, fell: rows.some((r) => r.foeState !== 'stand'), indesRing: P.schoolPassive?.stats.indes.ring ?? 0, rows };
   } finally {
     G.world.free();
     Object.assign(CONFIG.DE_DIRTY, keep);

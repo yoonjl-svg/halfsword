@@ -22,7 +22,7 @@ export const NODE_CAT = Object.freeze({
 });
 
 /** 판 몫 열쇠 (skillKit 칸 — 칸이 없으면 false). unique · perk 는 이름 모음 */
-export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'deClinch', 'deHilt', 'deRing']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29) · deClinch · deHilt = 독일 더티복싱 B(밀어 흔들기 · 붙어 버티기) · C(모르트슐라크 빠른 문 · 칼자루 뒤 칼) · deRing = 칼 씨름 (링엔 암 슈베르트 — 11/14 사장님 이름 확정) 새 몫 (config DE_DIRTY · de_dirty.js · 새 칸 자리 대기 — 지금은 G9 에 임시로 이음)
+export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'deRing']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29) · deRing = 독일 칼 씨름 (링엔 암 슈베르트 — 11/14 사장님 이름 확정) 새 몫 (config DE_DIRTY · de_dirty.js · 새 칸 자리 대기 — 지금은 G9 에 임시로 이음 · 11/14 B · C 열쇠 deClinch · deHilt 는 폐기)
 
 export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10/21)
 
@@ -44,7 +44,7 @@ const TREE_SRC = {
       N({ id: 'G7', name: '겹치기', cat: 'atk', l1: '겹치기', l2: '이어 긋기', eff: '칼이 맞물리면 상대 칼 뒤로 들어가 얼굴을 벤다', pre: ['G4'], price: 300, d: 3, cx: 690, u: 'duplieren' }), // 10/28 00:5x 사장님 '겹치기는 왕관 아래로' — 특수공격(이어 긋기)이 된 뒤 자리 (전 2단계 관문 뒤 · cx 310) // 10/29 14:1x · 14:2x 사장님 글 (효과)
       N({ id: 'G6', name: '무릎 꺾기', cat: 'deep', l1: '심화', l2: '무릎 꺾기', title: '곁눈 베기 심화 · 무릎 꺾기', eff: '곁눈 베기에 맞은 상대가 무릎을 꿇기도 한다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 310, perk: 'schielhau' }), // 10/28 00:5x 사장님 '무릎 꺾기가 곁눈 베기 아래로' (전 cx 500)
       N({ id: 'G4', name: '왕관', cat: 'parry', l1: '막기 II', l2: '왕관', title: '막기 II · 왕관 (크론)', orig: 'Kron', eff: '머리 위로 오는 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 690, f: ['parryCover'] }),
-      N({ id: 'G9', name: '그 순간', cat: 'passive', l1: '패시브', l2: '그 순간', eff: '칼이 맞부딪히거나 상대가 헛친 직후에 친 칼은 피해가 증가한다', pre: ['G2'], price: 0, heads: 5, d: 2, cx: 100, f: ['passive', 'deClinch', 'deHilt', 'deRing'] }), // 11/14 deClinch · deHilt · deRing: 독일 더티복싱 B · C · 칼 씨름 새 몫 열쇠 — 사장님 '새 효과는 새 스킬트리 칸 1 ~ 2 개로' · 새 칸 자리 대기라 G9 에 임시로 이음(B · C 는 config DE_DIRTY 기본 끔 — 켜기 전엔 아무 일 없음) // 10/29 01:5x 사장님 '인데스만 독일어더라 그것도 바꿔' → '그 순간' (뜻 이름 — 대기실 스킬 '그 순간 (인데스)') · 10/28 23:4x 사장님 '그래 그 안으로 바꿔' — 칼끼리 닿음에도 창(10/28 01:4x · school_passive.js) · 전 '상대가 헛치거나 막힌 직후에 친 칼은 피해가 증가한다'
+      N({ id: 'G9', name: '그 순간', cat: 'passive', l1: '패시브', l2: '그 순간', eff: '칼이 맞부딪히거나 상대가 헛친 직후에 친 칼은 피해가 증가한다', pre: ['G2'], price: 0, heads: 5, d: 2, cx: 100, f: ['passive', 'deRing'] }), // 11/14 deRing: 독일 칼 씨름 새 몫 열쇠 (11/14 B · C 열쇠 폐기) — 사장님 '새 효과는 새 스킬트리 칸 1 ~ 2 개로' · 새 칸 자리 대기라 G9 에 임시로 이음(B · C 는 config DE_DIRTY 기본 끔 — 켜기 전엔 아무 일 없음) // 10/29 01:5x 사장님 '인데스만 독일어더라 그것도 바꿔' → '그 순간' (뜻 이름 — 대기실 스킬 '그 순간 (인데스)') · 10/28 23:4x 사장님 '그래 그 안으로 바꿔' — 칼끼리 닿음에도 창(10/28 01:4x · school_passive.js) · 전 '상대가 헛치거나 막힌 직후에 친 칼은 피해가 증가한다'
       N({ id: 'G10', name: '모르트슐라크', cat: 'secret', l1: '비기', l2: '모르트슐라크', eff: '초근접 상황에서 경합하면, 칼자루 끝을 망치처럼 정수리에 내리꽂는다', pre: ['G9', 'G6', 'G7'], price: 400, heads: 10, d: 4, cx: 420, f: ['secret'] }), // 10/28 00:5x 사장님 '무릎 꺾기와 겹치기를 다 배워야 죽음의 일격' · 인데스도 남김 (전 인데스 + 겹치기 + 왕관 · 3줄) // 10/22 사장님 '독일은 죽음의 일격으로 하자' (옛 받아 베기 — `?deMord=0` · 10/24 AI 도 같은 비기 — 사장님 'ai도 비기 쓰게 해')
     ],
   },
@@ -195,7 +195,7 @@ const NODE_CMD = {
   G2: '멈춘 상태에서 앞으로 이동(↑)', // 11/14 파고들기 (gait.js 걷기 시작 — 서 있던 몸 · 스틱 앞(앞 몫 ≥ 옆 몫) · burstStick 넘게 → 박찬 앞 걸음 둘 · GAIT.deDig) — G1 글의 거울 [감독 안 · 사장님 확인 전] · 전 '상대가 헛치면 앞으로 이동(↑)'
   G5: '사선 긋기(↙)', // 곁눈 베기 ← 분노의 베기(어깨 지붕 → 왼 아래 — ai_techniques.js zornhau)
   G8: '좌우 이동(←/→)과 동시에 수평 긋기(←)', // 걸음 명령 stick 'side'(옆 몫 ≥ 0.5 · 어느 쪽이든) + 가로베기(zwerch — 옆 자세 → 왼 옆)
-  G7: '가까이서 칼을 맞댄 채 버티면 자동 발동', // 겹치기 자동 (사장님 10/31 18:xx '… 초안 ok.' — 확인표 3272 · 3227): unique_assist.js dupAutoTick 'bind' — 가슴 사이 0.8 m 넘고 1.6 m 이하에서 칼끼리 맞댄 채 0.6 s 쌓이면 저절로 · C9 '… 자동 발동' 꼴 (전 '긋기가 상대 칼에 닿은 채 탭' — 아래 G7_CMD_TAP)
+  G7: '가까이서 칼을 맞대거나 연달아 부딪히면 자동 발동', // 11/14 사장님 결정 '겹치기 글. 저절로 나간다 말고 자동 발동' — 겹치기 자동 ⓒ 'both'(unique_assist.js dupAutoTick — 띠 안 맞댄 채 dupStackS · 또는 칼끼리 닿음 dupClashT 안 두 번) · 전 '가까이서 칼을 맞댄 채 버티면 자동 발동'(10/31 18:xx 사장님 '초안 ok.' — 'bind' 판 글 · 아래 G7_CMD_AUTO.bind)
   G10: '상대와 몸이 붙은 채 1.5초 이상 밀치면(↑) 비기 활성화', // 11/11 글 속 시간 = SECRET.mordPress (사장님 '1.5초로 해.' — 전 '2초' · 숫자만 바꿈 [사장님 확인 전]) // 10/25 23:1x 사장님 확정 글(감독 전달 — 글 속 시간 = SECRET.mordPress 2 · 걸쇠 없앰 CLOSE.latch 0) — secret.js pressTick 밀치기 누르기(fighter.js closeStep — 닿는 거리 안에서 스틱 앞 · 끊겨도 mordGrace 0.4 s(10/27 21:4x — 전 0.2) 안에 다시 누르면 이어 셈) mordPress 초 → 창(비기 활성화) → 탭 · 긋기 둘 다(main.js) · 전 '붙은 채 멈췄다 앞으로 이동(↑), 느낌표(!)가 뜨면 공격'
   // 이탈리아
   I7: '아래로 내려 긋기(↓/↙/↘)', // 10/31 12:xx 사장님 'I7은 어떤 방향이나 높이에서든 다른 유파의 내려 긋는 베기에 해당하는 커맨드를 내려찌르기로 전환' (글 = 감독 안 · 사장님 검수 전) — unique_assist.js PLAYER_UNIQUE imbroccata on { down } · 아래로 가는 긋기(곧장 아래 ↓ · 사선 아래 ↙/↘ — 아래 축에서 67.5° 안: 수평 22.5° 띠 밖) 모두 · 어느 자세 · 높이에서든 · 전 '머리 높이에서 사선 긋기(↙)'(황소 찌르기 긋기 stichOchs 만)
@@ -220,9 +220,9 @@ const NODE_CMD = {
   C6: '뒤로 움직이며(↓) 탭', // 탭으로 내는 특수 공격 — unique_assist.js TAP_TRIG.lian: 물러나는 동안(스틱 뒤) · 놓고 실제 0.6 s 안의 탭 (10/28 01:2x) · 10/29 14:1x · 14:2x 사장님 글 (전 '사선 긋기(↖) 도중 바로 방향 꺾기')
   C9: '앞으로 움직이며(↑) 상대 공격을 정확한 타이밍에 막으면 자동 발동', // 10/25 22:3x 사장님 확정 글(감독 전달) · 전 '앞으로 이동(↑)과 동시에, 칼이 닿기 직전 막기' — secret.js gyeoksalTick — 막기 새 누름 뒤 gyeoksal.press 초 안에 칼이 닿음 · 그때 스틱 앞 · 받아 내면 저절로(gyeoksal.auto — 공격 입력 없음)
 };
-// G7 다른 판 입력 줄 (UNIQUE_ASSIST.dupAuto 를 기본 'bind' 에서 바꿨을 때만 카드에 나옴 — nodeCmd): 0 = 전 판 맞물린 채 탭(10/29 14:1x · 14:2x 사장님 글) · 'clash2' = 두 번 맞부딪힘 시제품 초안(검수 전) · 효과 글(eff — 사장님 글)은 그대로
+// G7 다른 판 입력 줄 (UNIQUE_ASSIST.dupAuto 를 기본 'both'(11/14 — 전 'bind')에서 바꿨을 때만 카드에 나옴 — nodeCmd): 0 = 전 판 맞물린 채 탭(10/29 14:1x · 14:2x 사장님 글) · 'clash2' = 두 번 맞부딪힘 시제품 초안(검수 전) · 효과 글(eff — 사장님 글)은 그대로
 export const G7_CMD_TAP = '긋기가 상대 칼에 닿은 채 탭';
-export const G7_CMD_AUTO = { bind: NODE_CMD.G7, clash2: '칼끼리 연달아 부딪히면 자동 발동' /* [검수 전] */ };
+export const G7_CMD_AUTO = { both: NODE_CMD.G7, bind: '가까이서 칼을 맞댄 채 버티면 자동 발동' /* 10/31 사장님 '초안 ok.' */, clash2: '칼끼리 연달아 부딪히면 자동 발동' /* [검수 전] */ };
 /** 상세 카드 입력 줄 (skill_tree.js — 얼린 칸의 cmd · 겹치기 자동 판을 바꿨으면 G7 은 그 판 글) */
 export const nodeCmd = (n) => (n?.id !== 'G7' ? n?.cmd : !UNIQUE_ASSIST.dupAuto ? G7_CMD_TAP : G7_CMD_AUTO[UNIQUE_ASSIST.dupAuto] ?? n.cmd);
 /** 칸 + 오의 (lore · src — 편지는 lore 만) + 입력 줄 (cmd — 정해진 입력으로 내는 칸만) */

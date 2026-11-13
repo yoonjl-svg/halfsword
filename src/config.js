@@ -276,9 +276,9 @@ export const CLOSE = {
   // 시작 거리: 사람 밀치기는 가슴 사이 이 거리 안에서 상대 쪽으로 밀면 나간다(모든 유파 · 무기 한 값 — 걸어 들어가며 밀기) · 누르기의 떨어짐도 이 거리(무기 reach 가 더 길면 reach).
   //  null = 옛 판(무기 reach — 롱소드 0.77) `?closeStart=0`
   startD: 1.0, // [사장님 11/14 결정 '밀치기 기준 1m']
-  // AI 견줌 스위치 (기본 null = 지금 판): 수 = AI(persona.close 인물 · 독일 AI 몸 붙이기 — 같은 closeStep · ai.js closeQuarters 안쪽 셈)도 이 시작 거리 · 묶임 · 맞밀기 · 기력 × holdDrain · 쿨타임 ·
-  //  묶인 동안 공격 안 함 · 칼자루만 거리에선 공격 대신 손잡이 찍기(ai.js startAttack). `?closeStartAI=1` (= 1.0)
-  startAI: null,
+  // AI 도 같은 규칙 (11/14 기본 켬 · null = 전 판 — AI 는 지금 판 그대로): 수 = AI(persona.close 인물 · 독일 AI 몸 붙이기 — 같은 closeStep · ai.js closeQuarters 안쪽 셈)도 이 시작 거리 · 묶임 · 맞밀기 · 기력 × holdDrain · 쿨타임 ·
+  //  묶인 동안 공격 안 함 · 칼자루만 거리에선 공격 대신 손잡이 찍기(ai.js startAttack). `?closeStartAI=0` = 전 판(null)
+  startAI: 1.0, // [사장님 11/14 결정 '2는 ai도 동일하게' — 사람과 같은 1.0 m · 묶임 · 맞밀기 · 기력 × 2 · 쿨타임 · 묶인 동안 공격 안 함 · 1 m 안 손잡이 찍기 (전 null = 사람만)]
   // 묶임: 밀치기가 누르기에 들어가면 이 시간(실제 초) 동안 떨어짐 · 스틱 놓음 · 팔 다 펴짐 · 긋기 · 찌르기로 안 끝남(나 · 상대 넘어짐 · 쓰러짐 · 걸음 꺼짐 · 탈진만 끝냄). 0 = 옛 판 `?closeHold=0` (시간 사다리 1.2)
   holdMin: realS(1.2), // [사장님 11/14 결정 '1.2초로 해']
   holdPush: 1, // 맞밀기 ('서로 힘을 받아서'): 묶인 동안 상대 골반도 내 가슴 쪽으로 다리 밀기(legDrive × 상대 근육 · 힘 — 같은 값 · 상대 발이 땅에 있을 때). 0 = 끔 [사장님 11/14 결정 원문의 감독 해석 · 확인 전]
@@ -642,15 +642,8 @@ export const SCHOOL_PASSIVE = {
   german: { on: true, gain: 0.3, aiK: 1, touch: 1 }, // 사장님 10/21 '+30% · 창 0.6초(afterWindow)' · aiK 1 은 감독(반으로 줄일 자리) · touch: 10/28 01:4x 사장님 '무기가 맞부딪혔을 때로 하면?' — 1 = 칼끼리 닿아 있는 동안 창이 열려 있고 닿음이 끝나고 afterWindow 뒤 닫힘(헛침 · 막힘 길도 그대로) · 0 = 전(상대 공격이 실패할 때만 — `?indesTouch=0` · 확인표 2670)
   chinese: { on: true, clot: 2 }, // 숨 바꾸기 (토납) — 사장님 10/21 '휘두르지 않을 때 출혈 굳기 2배'
 };
-// 독일 더티복싱 B · C (11/14 설계안 docs/design/german_dirty_boxing_2026-11-14.md §2 B · C · 재기 docs/strike/de_dirty_2026-11-14.md · src/de_dirty.js):
-//  사람(사람 입력이 모는 몸 humanInput) · 무기 유파 독일 · 새 몫 열쇠(B = 'deClinch' · C = 'deHilt' — skill_tree_data.js KIT_KEYS · 11/14 사장님 '새 효과는 새 스킬트리 칸으로' · 새 칸 자리 대기라 지금은 G9 '그 순간'에 임시로 이음)를 가진 몸만.
-//  모두 기본 끔(견줌만) — 값은 설계안 그대로 [모두 사장님 확인 전]
-//  armSlow (B1 밀어 흔들기): 독일 밀치기가 상대 몸에 들면(누르기 중 내 팔 · 칼이 상대 몸에 처음 닿음 — 한 밀치기에 한 번) 상대 두 팔이 이 초 동안 늦음(헛누름 cavArmSlow 와 같은 장치
-//   nagashi_recovery.js beginFlowRecovery). 0 = 끔 `?deB1=1` (실제 초 — 시간 사다리 0.6)
-//  clinchK (B2 붙어 버티기): 붙어 버티는 동안 기력 빠짐(STAMINA.clinchPerSecond — 지금 두 몸 각각 초당 10) 가운데 독일 몸 몫만 × 이 값(상대는 그대로). 1 = 끔 `?deB2=1` (= 0.5)
-//  door (C1 모르트슐라크 빠른 문): 1.5 s 붙음(SECRET.mordPress)에 더해 ① 겹치기가 맞거나 막힌(칼에 닿은) 뒤 이 초 안에 가슴 사이 mordCloseN(0.8 m) 안 ② 독일 밀치기가 든 뒤 이 초 안이면
-//   모르트슐라크 창이 곧장 열림(창 길이 · 판당 한 번 · 기력 문턱은 그대로). 0 = 끔 `?deC1=1` (실제 초 0.6)
-//  mordIndes (C2 칼자루 뒤 칼): 모르트슐라크가 머리에 들면(칼자루 · 폼멜이 머리에 판정) '그 순간' 창(SCHOOL_PASSIVE.german — 0.6 s · +30 %)을 연다 — 비기가 도는 동안(굳음까지)은 창 시계가 멈춤. 0 = 끔 `?deC2=1`
+// 독일 칼 씨름 (링엔 암 슈베르트 — 11/14 · 재기 docs/strike/de_dirty_2026-11-14.md · src/de_dirty.js): 사람(사람 입력이 모는 몸 humanInput) · 무기 유파 독일 · 몫 열쇠 'deRing'(새 칸 자리 대기 — 지금은 G9 '그 순간'에 임시로 이음).
+//  설계안 B(밀어 흔들기 · 붙어 버티기 × 0.5) · C(모르트슐라크 빠른 문 · 칼자루 뒤 칼)는 사장님 11/14 결정 '3과 4는 모두 내 아이다어가 아니었으니 폐기' — 코드 · 스위치 · 열쇠를 걷어냄(확인표 3755 ~ 3758)
 //  ring (칼 씨름 '링엔 암 슈베르트' 1] — 기본 켬 · 사장님 11/14 '독일은 칼 씨름을 이름으로 해서 확정해. 밀치기 엮임 중 상대가 기력이 n 이하면 1] 상대를 순간적으로 아주 강하게 밀쳐서 자세를 무너뜨리고 …
 //   2] 겹치기 or 모르트슈라크 자동 발동. 1과 2중 머가 나을까?' — 감독 권고 1] · 사장님 답 전 · 몫 열쇠 'deRing'): 독일 사람의 밀치기 묶임(CLOSE.holdMin) 동안 상대 기력이 0 아래(지침 문턱 — 새 수 없음)면
 //   묶임을 끝내며 상대를 세게 밀침 — 상대 몸 빠르기에 내 쪽 → 상대 쪽으로 뒤 박차기 목표 빠르기(GAIT.burstBackV)를 더하고 상대 뒤 박찬 걸음 · ringDist(걸음 사다리 0.6 m)를 물러날 때까지 상대 스틱 뒤 ·
@@ -660,8 +653,7 @@ export const SCHOOL_PASSIVE = {
 //   [ring 켬 · ringT 1.2 s · ringNoRecover 2.0 s = 사장님 결정 · 0.6 m(원문 '약간의 거리' — 감독 안) · 지침 문턱 · 밀침 세기 · 옆 자세 자리는 사장님 확인 전]
 //   → 사장님 11/14 "칼 씨름으로 밀려난 상대는 n초간 기력회복 불가로 해 … 그리고 0.6초간 막지 멋하고 공격 못하눈 거 너무 짧아" — ringT 0.6 → 1.2 s(감독 안 · 시간 사다리 — 그동안 그 순간 창도 열어 둠) ·
 //   ringNoRecover 2.0 s(감독 안 — 밀려난 상대 기력 회복 막힘 · 묶임 쿨타임 2.0 s 와 같은 길이) → 사장님 11/14 결정 "견줄 필요 없이 권고대로 해." — 1.2 s · 그 순간 창 1.2 s · 2.0 s [사장님 11/14 결정]
-export const DE_DIRTY = { armSlow: 0, clinchK: 1, door: 0, mordIndes: 0, ring: 1, ringDist: 0.6, ringT: realS(1.2), ringNoRecover: realS(2.0) };
-export const DE_DIRTY_ON = { armSlow: realS(0.6), clinchK: 0.5, door: realS(0.6), mordIndes: 1, ring: 1 }; // 켤 때 값 (설계안 · 칼 씨름 1] — 사장님 확인 전) · main.js `?deB1=1` 등 · 재기 --set
+export const DE_DIRTY = { ring: 1, ringDist: 0.6, ringT: realS(1.2), ringNoRecover: realS(2.0) };
 // AI 반응 시간 (10/21 사장님 '당장해' — 옆 공략: 박찬 직후 짧게 옆이 열리고 그때 치는 플레이): AI 는 상대 쪽으로 몸을 돌릴 때 face s 전의 상대 자리를 본다
 //  (사람처럼 보고 알아채는 시간 — 서 있는 상대는 같은 자리라 그대로). AI 만(플레이어 몸은 그대로) · 감독 값 0.2 s — 사장님 확인 전. `?aiReact=0` = 끔 · `?aiReact=0.25`
 export const AI_REACT = { on: true, face: realS(0.2) };
@@ -1941,8 +1933,8 @@ export const UNIQUE_ASSIST = {
   //  dupBandMin null = SECRET.mordCloseN(0.8 — 죽음의 일격 거리 바로 밖 · 겹치지 않음). 'clash2' 도 띠를 봄(둘째 닿음이 띠 안) — dupClashMax 0 이면 위 끝 없음.
   //  막기 단추를 누른 동안: dupAutoParry 1 = 막기 단추로 맞댄 것도 쌓고 그때도 냄(사장님 18:xx '막기 단추로 맞댄 것도 쌓아') · 0 = 안 쌓고 안 냄(16:xx 시제품 판) · 'bind' 는 손가락이 긋는 중(휘두르기 문턱 위)이면 냄만 미룸(쌓임은 쥠 — 맞댄 채 멈추거나 느리게 밀면 나감) ·
   //  자세 칸 알림(dupAutoHint — 기본 0 = 없음 · 사장님 '자세에 안 띄워도 돼'): 1 이면 쌓임이 절반 넘을 때 이어 긋기 칸에 '겹치기 · 맞물림'. `?dupAuto=bind|clash2|0`(0 = 전 판 맞물린 채 탭) · `?dupStackS=` · `?dupStackGap=` · `?dupBandMax=` · `?dupClashT=` · `?dupAutoParry=` · `?dupAutoHint=`
-  dupAuto: 'both', // [사장님 11/14 결정 'c로 해' — 'bind'(맞댄 채 0.6 s) 또는 'clash2'(칼끼리 닿음 dupClashT 1.2 s 안 두 번) 가운데 먼저 찬 쪽 · 끊김 너그러움 dupStackGap 0.2 그대로] (전 'bind' — 사장님 10/31 18:xx 결정 · 확인표 3272 · 그 전 0 = 맞물린 채 탭) `?dupAuto=bind` = 전 판
-  dupStackS: realS(0.6), // 'bind' 쌓임 (실제 초 — 시간 사다리 0.6) [사장님 10/31 18:xx 결정 '0.6초 쌓이면 나가게']
+  dupAuto: 'both', // [사장님 11/14 결정 'c로 해' — 'bind'(맞댄 채 dupStackS — 11/14 0.6 → 0.4 s) 또는 'clash2'(칼끼리 닿음 dupClashT 1.2 s 안 두 번) 가운데 먼저 찬 쪽 · 끊김 너그러움 dupStackGap 0.2 그대로] (전 'bind' — 사장님 10/31 18:xx 결정 · 확인표 3272 · 그 전 0 = 맞물린 채 탭) `?dupAuto=bind` = 전 판
+  dupStackS: realS(0.4), // 'bind' 쌓임 (실제 초 — 시간 사다리 0.4) [사장님 11/14 결정 '겹치기 0.6초 제한은 좀 더 낮은 숫자 테이블로 교체하자' — 한 칸 아래 0.4 는 감독 고름] (전 0.6 — 사장님 10/31 18:xx 결정 '0.6초 쌓이면 나가게')
   dupStackGap: realS(0.2), // 'bind' 끊겨도 이 초(실제) 안에 다시 맞대면 쌓임을 쥠(그동안 안 셈) · 넘으면 0 (시간 사다리 0.2) [사장님 10/31 18:xx 결정 '0.2초 넘게 떨어지면 처음부터 다시 쌓고']
   dupStackDrain: 0, // 'bind' 끊김이 dupStackGap 을 넘으면 쌓임이 초당 이만큼 빠짐 (0 = 곧장 0 — 죽음의 일격 셈과 같은 틀) · 견줌 0.5 [사장님 10/31 18:xx 결정 — 처음부터 다시 = 0]
   dupBandMin: null, // 띠 아래 끝 (가슴 사이 m · 초과) — null = SECRET.mordCloseN 0.8 [사장님 10/31 18:xx 결정 '0.8~1.6'] · 11/14 붙은 거리 규칙(1 m 안은 손잡이 찍기만 — CLOSE.nearHilt)이 켜진 사람 몸은 null 이면 CLOSE.startD 1.0 (감독 '1 m 규칙과 맞게 · 함께 켬' — unique_assist.js dupAutoTick)
