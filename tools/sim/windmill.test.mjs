@@ -12,6 +12,9 @@ import { nodeTitle } from '../../src/skill_tree.js';
 import * as D from '../../src/skill_tree_data.js';
 import { windRun } from './windmill.mjs';
 import { runOne } from './singir_fall.mjs';
+import { IB_LINK } from '../../src/config.js';
+/** 11/14 이어 돌리기(B7 — IB_LINK.on) 전 판으로 잠깐 (풍차 베기 원 긋기 장면 시험 — docs/strike/ib_link_2026-11-14.md §7) */
+const withLinkOff = (fn) => { const k = IB_LINK.on; IB_LINK.on = 0; try { return fn(); } finally { IB_LINK.on = k; } };
 
 const W4 = ['zweihander', 'flamberge', 'tizona', 'durandal'];
 const LADDER = [0.2, 0.4, 0.6, 1.2, 1.5]; // 시간 사다리 (사장님 10/28 — 반응 · 짧은 효과 · 이어짐/입력 · 1.2 · 무장)
@@ -96,7 +99,7 @@ test('넘어짐 되살아나지 않음 (11/05 고친 것 — 손가락 봇 대 �
   const HIT = new Set(['gauge', 'head', 'sever', 'buckle', 'revive']);
   let n = 0;
   for (const seed of [1, 2, 3, 4, 5, 6]) {
-    const r = runOne({ weapon: 'zweihander', opp: 'longsword', seed, dur: 8, secret: false });
+    const r = withLinkOff(() => runOne({ weapon: 'zweihander', opp: 'longsword', seed, dur: 8, secret: false, ibBot: 'old' })); // 11/14 그때 판으로 묶음 (B7 = 풍차 베기 · 그때 봇 — 이어 돌리기 판엔 원 긋기 풍차 베기가 없음 · ib_link 기록 §7)
     for (const s of r.probe.spins) {
       n++;
       assert.ok(!(s.fall && s.fall.dt <= 1 && !HIT.has(s.fall.why)), `씨앗 ${seed} 몸 균형 넘어짐 ${JSON.stringify(s.fall)}`);

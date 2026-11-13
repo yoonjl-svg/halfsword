@@ -197,9 +197,9 @@ function makeProbe({ trace = false, exp = new Set() } = {}) {
   };
 }
 
-export function runOne({ school = 'iberian', weapon, opp, seed, dur = 30, trace = false, exp = new Set(), secret = true }) {
+export function runOne({ school = 'iberian', weapon, opp, seed, dur = 30, trace = false, exp = new Set(), secret = true, ibBot = undefined }) { // ibBot: 11/14 이베리아 봇 판 (school_balance fightOne — 'old' = 11/12 판 봇 · 없으면 그 기본)
   const probe = makeProbe({ trace, exp });
-  const r = fightOne({ school, weapon, opp, seed, dur, probe, secret });
+  const r = fightOne({ school, weapon, opp, seed, dur, probe, secret, ...(ibBot ? { ibBot } : {}) });
   const sp = r.fires.filter((f) => f.name === 'ibSpin' || f.name === 'cingir'); // 11/11 특수 공격 싱지르 = 'cingir' (비기 판 'ibSpin')
   return { weapon, opp, seed, win: r.win, lose: r.lose, T: r.T, dealt: r.dealt, recv: r.recv, falls: r.falls, fires: sp, probe: r.probe };
 }

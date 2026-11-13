@@ -76,7 +76,7 @@ const TSU = (() => {
 const KOTE = { from: PAD.langort, path: [[0.02, -0.22]] };
 
 /** 한 판 */
-export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], probe = null, onRound = null, botHook = null, attrib = 'new' }) { // probe = 재기 꽂개 (rapier_defence.mjs) · onRound · botHook = 코테 · 줍기 재기 (kote_pickup.mjs) · attrib 'old' = 11/04 기술 기록 셈 (step_input — 늦게 읽힌 긋기 이름 바꿈)
+export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], probe = null, onRound = null, botHook = null, attrib = 'new', ibBot = 'chain' }) { // ibBot (11/14 이베리아 B7 이어 돌리기 재기): 'chain' = 이베리아 봇이 큰 칼을 이어 그어 사슬을 만듦(아래 chainAct) · 'old' = 11/12 판 봇 (다른 유파는 늘 그대로) // probe = 재기 꽂개 (rapier_defence.mjs) · onRound · botHook = 코테 · 줍기 재기 (kote_pickup.mjs) · attrib 'old' = 11/04 기술 기록 셈 (step_input — 늦게 읽힌 긋기 이름 바꿈)
   const rnd = rng(seed * 7919 + 101);
   const kit = kitFromNodes(school, allNodeIds(school)); // 무유파는 null (나무 없음 — 고유 · 비기 없음)
   const G = newRound({ seed, weapon, weapon2: opp, walls: true, ...(kit ? { kit } : {}), look: LOOKS.player, look2: LOOKS.enemy, persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
@@ -114,7 +114,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     }
   };
   /** 긋기 프레임 (패드 m 옮김): 시작 자리(+ 가우스)로 천천히 · 4 프레임 멈춤 · 길 점마다 ± jit · 3 ~ 5.5 패드 m/s (special_balance 손가락 봇과 같은 손) */
-  const strokeQ = (S) => {
+  const strokeQ = (S, vOver = null) => { // vOver: 긋는 빠르기를 준 손 (11/14 이베리아 사슬 — 없으면 전과 같이 spd 에서 뽑음)
     let hx = P.handOffset.x;
     let hy = P.handOffset.y;
     const q = [];
@@ -132,11 +132,39 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     };
     to([S.from[0] + rnd.g() * sjit, S.from[1] + rnd.g() * sjit], CONFIG.SKILL.recoverSpeed);
     q.push(...Array.from({ length: 4 }, () => [0, 0]));
-    const v = spd[0] + rnd() * (spd[1] - spd[0]);
+    const v = vOver ?? spd[0] + rnd() * (spd[1] - spd[0]);
     for (const p of S.path) to([p[0] + (rnd() * 2 - 1) * jit, p[1] + (rnd() * 2 - 1) * jit], v);
     return q;
   };
   const stroke = (name, o = {}) => ({ kind: 'stroke', q: strokeQ(o.S ?? TECH_BY_NAME[name]), want: o.want ?? null, side: o.side ?? null, fwd: o.fwd ?? null, base: name });
+  // 이베리아 사슬 (11/14 — ibBot 'chain' · 이어 돌리기 재기): 큰 칼(탈류 ↔ 레베스 번갈아 · 가끔 정수리 · 가로) K = 2 ~ 4 를 이어 긋는다 — 첫 칼은 보통 긋기 손(strokeQ) ·
+  //  다음 칼은 앞 칼이 다 나간 뒤(휘두르기 · 이어 돌리기 끝) 0.1 ~ 0.2 s(사람 눈) 뒤에: 이어 돌리기가 있으면(B7 · IB_LINK.on) 시작 자리로 가지 않고 그 방향만 긋고(게임이 머리 위로 돌려 잇는다) ·
+  //  없으면 사람이 하던 대로 시작 자리로 손을 옮겨(자세로 돌아가는 빠르기 · 4 프레임 멈춤 — strokeQ) 긋는다. 빠르기 5 ~ 6 패드 m/s (진짜 긋기 문턱 IB_FLOW.cutSpeed 5 를 넘는 큰 칼)
+  const CHAIN_NEXT = { zornhau: 'zornhauL', zornhauL: 'zornhau', oberhau: 'zornhau', zwerch: 'zwerchL', zwerchL: 'zwerch' };
+  const chainAct = () => {
+    const nCut = 2 + Math.floor(rnd() * 3);
+    const cuts = [rnd() < 0.5 ? 'zornhau' : 'zornhauL'];
+    for (let k = 1; k < nCut; k++) {
+      const r = rnd();
+      cuts.push(r < 0.7 ? CHAIN_NEXT[cuts[k - 1]] : r < 0.8 ? cuts[k - 1] : r < 0.9 ? 'oberhau' : rnd() < 0.5 ? 'zwerch' : 'zwerchL');
+    }
+    return { kind: 'chain', cuts, k: 0, q: [], wait: null, want: 'chain', base: cuts[0] };
+  };
+  const linkOn = () => !!uq.cingirE && !!CONFIG.IB_LINK.on && CONFIG.SECRET.iberianSecret === 'altib';
+  const chainQ = (name, first) => {
+    const T = TECH_BY_NAME[name];
+    const v = 5 + rnd();
+    if (first || !linkOn()) return strokeQ(T, v); // 첫 칼 · 이어 돌리기 없는 판: 하던 대로 (시작 자리로 → 멈춤 → 긋기)
+    const q = [];
+    const pts = [T.from, ...T.path].map((p, i) => (i ? [p[0] + (rnd() * 2 - 1) * jit, p[1] + (rnd() * 2 - 1) * jit] : p));
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const dx = pts[i + 1][0] - pts[i][0];
+      const dy = pts[i + 1][1] - pts[i][1];
+      const n = Math.max(1, Math.round(Math.hypot(dx, dy) / (v * FR)));
+      for (let j = 0; j < n; j++) q.push([dx / n, dy / n]);
+    }
+    return q;
+  };
   // ── 봇 결정 ──
   const hist = [];
   const sense = () => {
@@ -165,7 +193,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     act = { ...a, t: G.t / K, fired0: { ...uq.stats.fired } };
     acts[a.kind] = (acts[a.kind] ?? 0) + 1;
     if (a.want) wants[a.want] = (wants[a.want] ?? 0) + 1;
-    if (['stroke', 'tap', 'hold', 'circle', 'bind', 'sideTap'].includes(a.kind)) ev('pointerdown');
+    if (['stroke', 'tap', 'hold', 'circle', 'bind', 'sideTap', 'chain'].includes(a.kind)) ev('pointerdown');
   };
   const side = () => (rnd() < 0.5 ? -0.9 : 0.9);
   // focus 'step' (걸음 공격 견줌): 기술 몫 = 반은 그 유파 걸음 명령(스틱 옆 · 앞) · 반은 같은 바탕 긋기(스틱 없음 — want '<바탕>Plain')
@@ -187,6 +215,13 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     if (school === 'iberian') {
       if (L && S.dist > M.reach && rnd() < 0.35) return { kind: 'wait', seconds: 1.6, fwd: -0.3, want: secretName }; // 칼끝 거리 밖 무장 → 원 (11/11 'altib' 판: → 길게 눌러 메기)
       // 11/11 'altib' 판 (SECRET.iberianSecret — 사장님 자리 바꿈): 고유 공격 몫의 반 = 싱지르 특수 공격(원 0.8 s — 칼끝 거리 + 0.3 안에서 · 전 비기 봇과 같은 손 · 그 밖이면 다가감) · 반 = 나선 걸음 베기 (정수리 가르기는 비기 — 무장 창에서만)
+      if (ALTIB && ibBot === 'chain') {
+        // 11/14 사슬 봇: 기술 몫의 0.4 = 큰 칼 사슬 · 0.3 = B7 (풍차 베기 판이면 원 · 이어 돌리기 판이면 사슬) · 0.3 = 나선 걸음 베기
+        const r = rnd();
+        if (r < 0.4) return S.dist <= M.reach + 0.3 ? chainAct() : { kind: 'move', seconds: 0.35, fwd: 0.9 };
+        if (r < 0.7) return S.dist <= M.reach + 0.3 ? (linkOn() ? chainAct() : { kind: 'circle', seconds: 0.8, want: 'cingir' }) : { kind: 'move', seconds: 0.35, fwd: 0.9 };
+        return stroke('zornhau', { side: side(), want: 'talhoRodeado' });
+      }
       if (ALTIB) return rnd() < 0.5 ? (S.dist <= M.reach + 0.3 ? { kind: 'circle', seconds: 0.8, want: 'cingir' } : { kind: 'move', seconds: 0.35, fwd: 0.9 }) : stroke('zornhau', { side: side(), want: 'talhoRodeado' });
       return rnd() < 0.5 ? { kind: 'hold', seconds: 4, fwd: 0.6, want: 'redondo', releaseAt: M.contact + rnd() * (M.reach + 0.15 - M.contact) } : stroke('zornhau', { side: side(), want: 'talhoRodeado' });
     }
@@ -260,6 +295,23 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
           done = !act.bindAfter || t - act.bindT >= act.bindAfter;
           if (act.bindAfter && !done) sy = 0.3;
         }
+      } else if (act.kind === 'chain') {
+        // 이베리아 사슬 (11/14): 칼마다 손가락 줄 · 앞 칼이 다 나간 뒤(휘두르기 · 이어 돌리기 끝) 사람 눈 0.1 ~ 0.2 s 뒤 다음 칼
+        if (act.q.length) {
+          if (!busy) {
+            const [dx, dy] = act.q.shift();
+            ev('pointermove', dx, dy);
+          }
+        } else if (act.k < act.cuts.length) {
+          if (P.skill.swinging || uq.link || P.ibLink) act.wait = null;
+          else if (act.wait == null) act.wait = t + (act.k ? 0.1 + rnd() * 0.1 : 0);
+          else if (t >= act.wait) {
+            act.q = chainQ(act.cuts[act.k], act.k === 0);
+            act.k++;
+            act.wait = null;
+          }
+        } else done = !P.skill.swinging && !uq.link && !P.ibLink;
+        if (age > 6) done = true;
       } else if (act.kind === 'circle') {
         const z = Math.min(1, age / act.seconds);
         const pt = circlePt(z);
@@ -417,6 +469,19 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   const brk = { P: null, A: null };
   let armedA = A.armed;
   let disarms = 0; // 칼 부러짐 (판 시작부터 실제 s) — 부러진 칼은 고유 공격이 안 남 (unique_assist busy)
+  // 이베리아 사슬 재기 (11/14 B7 이어 돌리기 — 이베리아 칸만 · 다른 유파 결과는 그대로): 진짜 긋기(fighter.js updateIbFlow — 휘두르기 끝마다 ibFlowWasCut) 줄 · 사슬 n · 그 칼을 낸 봇 뜻(사슬이면 그 번호)
+  const IBM = school === 'iberian' ? { cuts: [], cur: null, was: false, linkT: 0, linkOnT: null } : null;
+  const ibTrack = () => {
+    const sw = !!P.ibFlowSw;
+    const t = G.t / K;
+    if (sw && !IBM.was) IBM.cur = { t0: t, act: act?.kind === 'chain' ? act : null };
+    if (!sw && IBM.was && IBM.cur) {
+      if (P.ibFlowWasCut) IBM.cuts.push({ t0: IBM.cur.t0, t1: t, n: P.ibFlowChain ? P.ibCutN ?? 0 : 0, act: IBM.cur.act });
+      IBM.cur = null;
+    }
+    IBM.was = sw;
+    if (P.ibLink) IBM.linkT += DT / K;
+  };
   probe?.init?.({ G, P, A, uq, W, guard }); // 읽기만 (난수 · 몸 그대로)
   try {
     while (activeStart == null || G.t < tEnd()) {
@@ -431,8 +496,9 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       if (P.weaponBroken && brk.P == null) brk.P = r3((G.t - (activeStart ?? 0)) / K);
       if (A.weaponBroken && brk.A == null) brk.A = r3((G.t - (activeStart ?? 0)) / K);
       const sw = !!P.skill.swinging;
-      if (sw && !wasSwing) swingId = act?.kind === 'stroke' ? act : null;
+      if (sw && !wasSwing) swingId = act?.kind === 'stroke' || act?.kind === 'chain' ? act : null; // 11/14 이베리아 사슬 봇의 칼도 기술 기록에 (다른 유파는 사슬이 없어 그대로)
       wasSwing = sw;
+      if (IBM) ibTrack();
       const a = attackNow();
       if (a && a.id !== cur?.id && cur && cur.name === 'basic' && cur.contacts === 0 && G.t - cur.t < 0.15 * K) Object.assign(cur, { id: a.id, name: a.name, cls: a.cls }); // 긋기가 곧 강화 탭 · 끌고 가는 칼로 바뀜 (위에서 내려 찌르기 등 — 한 기술)
       else if (a && a.id !== cur?.id) {
@@ -474,12 +540,37 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       secretFired: fires.filter((f) => f.cls === 'secret').length, brk, disarms,
       secretLeft: secretLeft(P), wants, acts, reads, altib: uq.stats.altib ?? null, // 11/11 알티바슈 포르트: 낸 수 · 남은 기력 몫(k) · 뗀 까닭
       aiStats: { altib: G.ai.stats.altib ?? null, cingir: G.ai.stats.cingir ?? null, specials: G.ai.stats.specials ?? null },
+      ...(IBM ? { ib: ibResult(IBM, uq, W, T) } : {}),
       fires: fires.map((f) => ({ t: r3(f.t / K), name: f.name, cls: f.cls, d: r3(f.dist0), c: f.contacts, w: f.wounds, sev: r3(f.sev), cons: r3(f.cons), E: r3(f.Emax), ty: f.types, r1: r3(f.recv1), cr1: r3(f.consR1), rn1: f.recvN1, f1: f.fall1, k1: f.kill1, dis1: f.dis1, base: f.base, want: f.want, stick: f.stick, st: r3(f.st0 - (f.st1 ?? P.stamina.value)) })),
       ...(probe?.done ? { probe: probe.done(fires) } : {}),
     };
   } finally {
     G.world.free();
   }
+}
+
+/** 이베리아 사슬 재기 결과 (11/14 — fightOne ib): 진짜 긋기 수 · 분당 · 사슬(이은 칼로 이어진 진짜 긋기 덩이) 길이 · 사슬 봇 뜻 안 긋기 사이(앞 칼 끝 → 다음 칼 시작 s) · 모든 이은 칼 사이 · 이어 돌리기 · 알티바슈 · 사슬 무장 */
+function ibResult(M, uq, W, T) {
+  const cuts = M.cuts;
+  const chains = [];
+  let run = 0;
+  for (const c of cuts) {
+    if (c.n > 0 && run > 0) run++;
+    else {
+      if (run) chains.push(run);
+      run = 1;
+    }
+  }
+  if (run) chains.push(run);
+  const gapAct = [];
+  const gapAll = [];
+  for (let i = 0; i + 1 < cuts.length; i++) {
+    const g = cuts[i + 1].t0 - cuts[i].t1;
+    if (cuts[i].act && cuts[i].act === cuts[i + 1].act) gapAct.push(+g.toFixed(3));
+    if (cuts[i + 1].n > 0) gapAll.push(+g.toFixed(3));
+  }
+  const L = uq.stats.link ?? null;
+  return { cuts: cuts.length, perMin: +((cuts.length / Math.max(1e-6, T)) * 60).toFixed(2), chained: cuts.filter((c) => c.n > 0).length, chains, nMax: Math.max(0, ...cuts.map((c) => c.n)), gapAct, gapAll, link: L ? { fired: L.fired, done: L.done, cancel: L.cancel, touch: L.touch } : null, linkT: +M.linkT.toFixed(3), altib: uq.stats.altib?.fired ?? 0, chainArms: W.chainArms ?? 0, freeCuts: uq.f.ibFreeCuts ?? 0 };
 }
 
 // ── 묶음 · 표 ──

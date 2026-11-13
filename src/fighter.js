@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
+import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_LINK, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { MAX_FIGHTERS, teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
 import { Skill } from './skill.js';
@@ -1126,7 +1126,7 @@ export class Fighter {
   /** 피가 모자라거나 아프면 힘이 빠진다 (0~1) */
   get vigor() {
     const b = THREE.MathUtils.clamp((this.blood - VITALS.collapseBlood) / (VITALS.weakBlood - VITALS.collapseBlood), 0, 1);
-    return Math.min(1, 0.35 + 0.65 * b) * (1 - 0.4 * Math.min(1, this.pain));
+    return Math.min(1, 0.35 + 0.65 * b) * (this.ibTrade ? 1 : 1 - 0.4 * Math.min(1, this.pain)); // 11/14 맞바꿈 C' (IB_LINK.trade — 기본 끔): 흐름 사슬 중엔 아픔이 힘을 빼지 않음 (ibTrade — updateIbFlow 가 스텝마다)
   }
 
   get pelvisPos() {
@@ -2286,6 +2286,19 @@ export class Fighter {
     if (raw) this.ibFlowLow = 0;
     else if (this.ibFlowSw && (this.ibFlowLow = (this.ibFlowLow ?? 0) + 1) === 1) this.ibFlowLowT = t; // 문턱 밑으로 처음 내려간 때 = 끝난 때(굳으면)
     const sw = raw || (!!this.ibFlowSw && this.ibFlowLow <= IB_FLOW.endSteps);
+    // 이어 돌리기 (11/14 B7 — iberian_link.js · IB_LINK): 도는 동안은 긋기가 아님 — 원을 부른 손가락 첫머리(휘두르기로 읽혔어도)는 셈에서 빼고(ibCutN 은 앞 칼 그대로) ·
+    //  사슬을 쥔 채 이어짐 창 시계를 원 끝까지 미룸(마지막 진짜 긋기 끝 = 지금) — 원이 끝나고 그은 칼이 사슬의 다음 칼(n + 1)
+    if (this.ibLink) {
+      this.ibFlowSw = false;
+      this.ibFlowLow = 0;
+      this.ibCutN = this.ibLastN ?? 0;
+      this.ibFlowChain = true;
+      this.ibFlowWasCut = true;
+      this.ibFlowEnd = this.ibFlowCutEnd = t;
+      this.ibFlowOn = false;
+      this.ibTrade = this.ibTradeLive();
+      return;
+    }
     // 풍차 베기 내려침 (10/29 IB_FLOW.windmillChain — unique_assist.js windFire 가 ibStrike 를 둠): 한 바퀴 넘게 돌린 뒤 낸 운동학 칼 = 이어 그은 진짜 긋기 하나 —
     //  끄는 동안 흐름 켬 · 그 칼의 이어 그은 수 n · 끝난 때가 마지막 진짜 긋기 끝(사슬이 그 뒤로 이어짐). 손 목표는 안 움직여 아래 휘두르기 읽기는 그동안 쉼
     if (this.ibStrike) {
@@ -2333,6 +2346,21 @@ export class Fighter {
     const real = sw ? this.ibFlowPk >= IB_FLOW.cutSpeed : !!this.ibFlowWasCut && t - (this.ibFlowEnd ?? -9) <= win;
     this.ibFlowOn = !!this.ibFlowChain && real;
     if (!this.ibFlowOn && !sw) this.ibFlowChain = false;
+    if (IB_LINK.trade) this.ibTrade = this.ibTradeLive();
+  }
+
+  /** 맞바꿈 C' (11/14 IB_LINK.trade — 기본 끔 · 사장님 확인 전): 사람 이베리아 B6 몸이 흐름 사슬 중(흐름이 켜짐 · 이어 돌리는 중)인가 */
+  ibTradeLive() {
+    return !!IB_LINK.trade && this.ibChainOn() && (!!this.ibFlowOn || !!this.ibLink);
+  }
+  /** 받는 칼날 상처 심각도 배율 (combat.js analyze — 맞바꿈 C' 동안 × IB_LINK.tradeHurt · 아니면 1) */
+  ibTradeHurt() {
+    return this.ibTrade ? IB_LINK.tradeHurt : 1;
+  }
+  /** 세 번째 기력 0 칼이 듦 (stamina.js chargeAttack — 이어지는 흐름 B6): 스위치 B(IB_LINK.chainArm)면 알티바슈 포르트 곧장 무장을 부탁 (secret.js spinTick 이 읽음) */
+  ibFreeCut() {
+    this.ibFreeCuts = (this.ibFreeCuts ?? 0) + 1; // 재기
+    if (IB_LINK.chainArm) this.ibChainArmReq = true;
   }
 
   /**
@@ -4242,7 +4270,7 @@ export class Fighter {
    *  켠 동안: 두 팔 관절 목표 빠르기 0 · 손목 겨눔 · 감쇠 · 날 비틀기 힘 없음(칼 무게 버팀만) · 빈팔 목표 = 놓인 칼자루 끝 (자리 · 빈손 쥠 · 몸 · 다리 그대로)
    */
   armsPlaced() {
-    return !!this.rdWind && UNIQUE_ASSIST.rdSteady > 0;
+    return (!!this.rdWind || !!this.ibLink) && UNIQUE_ASSIST.rdSteady > 0; // 11/14 이어 돌리기 (iberian_link.js — 감기와 같은 놓기)
   }
 
   secretReaching() {

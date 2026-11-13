@@ -982,7 +982,23 @@ export class PlayerSecretWatch {
       swing = !!this.circSwung && !live;
       if (!live) this.circSwung = false;
     } else this.circSwung = false;
-    this.spinArm.tick(dt, d0 > V.reach, busy || swing || hurt || armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x 사장님 '전투 시작 후, 실제 공격이 가능해진 때부터')
+    // 스위치 B (11/14 IB_LINK.chainArm — 기본 끔 · 사장님 확인 전): 흐름 사슬의 세 번째 기력 0 칼이 들면(fighter.js ibFreeCut) 곧장 무장 — 지금 길(칼끝 거리 밖 2 s)은 그대로.
+    //  사슬로 든 무장은 사슬이 이어지는 동안(흐름 · 이어 돌리기 · 이어짐 창 안) 휘둘러도 풀리지 않고 거리와도 상관없음 · 사슬이 끝난 뒤엔 보통 규칙(휘두르면 풀림) · 비기 중 · 상처는 늘 풀림
+    if (me.ibChainArmReq) {
+      me.ibChainArmReq = false;
+      if (altib && !busy && !hurt && !this.spinArm.armed) {
+        this.spinArm.armed = true;
+        this.spinArm.t = SECRET.ibSpin.armTime;
+        this.spinArm.ons++;
+        this.chainArmed = true;
+        this.chainArms = (this.chainArms ?? 0) + 1; // 재기
+      }
+    }
+    if (this.chainArmed && (!this.spinArm.armed || busy || hurt)) this.chainArmed = false;
+    if (this.chainArmed) {
+      const live = !!me.ibLink || !!me.ibFlowOn || !!me.skill?.swinging || (me.ibFlowChainNow?.() ?? -1) >= 0;
+      this.spinArm.tick(dt, true, busy || (!live && swing) || hurt || armHold(me));
+    } else this.spinArm.tick(dt, d0 > V.reach, busy || swing || hurt || armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x 사장님 '전투 시작 후, 실제 공격이 가능해진 때부터')
     const o = this.open;
     const ev = altib ? 'altib' : 'spin';
     if (this.spinArm.armed) {
