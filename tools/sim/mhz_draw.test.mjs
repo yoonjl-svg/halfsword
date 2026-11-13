@@ -29,6 +29,9 @@ const shot = (o = {}) => mhzShot({ weapon: 'monohoshizao', foeW: 'longsword', gu
 const dist3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 /** 첫 뽑기 스텝은 낸 스텝 앞(그 스텝 offHand 가 이미 돈 뒤 발도가 걸림)이라 뺌 */
 const after1 = (frames, ph) => frames.filter((f) => f.ph === ph).slice(ph === 'draw' ? 1 : 0);
+/** 11/13 판으로 묶음 (11/14 iai_saya2 — 사장님 '원전과 다른 셋 이어서 맞춰': 발도 대기 왼손 칼집 입 · 뽑아 내는 동안 鞘引き · 풀기와 겹친 다시 쥐기 · 鞘戻し 점 —
+ *  이 시험 ② · ④ 는 그 전 판 장면(뽑기 · 풀기 내내 빈손 목표 = 칼집 손 자리 · 풀기 끝 뒤 곧은 다시 쥐기)을 잰 것이라 기준을 고치지 않고 그때 판으로 돌림 · 새 꼴은 iai_saya2.test) */
+const then1113 = (fn) => withS({ iaiSayaReady: 0, iaiRegripFade: 0, iaiSayaModoshi: 0 }, fn);
 
 test('① 기본값 — 사람 한 손 켬 · AI 켬([사장님 11/13 결정] \'ai 에도 적용하고\') · 다시 쥐는 시간은 사다리 값', () => {
   assert.equal(SECRET.iaiOneHeavy, 1);
@@ -44,7 +47,7 @@ test('① 기본값 — 사람 한 손 켬 · AI 켬([사장님 11/13 결정] \'
 
 test('② 사람 모노호시자오 발도 — 뽑아 냄 · 벰 · 굳음 · 풀기 동안 칼은 한 손 · 빈손은 칼집 손 자리 / 끄면 전 판(두 손)', () => {
   for (const start of ['hip', 'held']) {
-    const on = shot({ start });
+    const on = then1113(() => shot({ start })); // 11/13 판으로 묶음 (위 then1113)
     const s = on.sum;
     assert.ok(s.ok && s.oneHand && s.regrip, `한 손 발도 (${start})`);
     assert.ok(on.hit && TORSO.has(on.hit.part), JSON.stringify(on.hit));
@@ -82,7 +85,7 @@ test('③ 보통 싸움은 두 손 — 뽑기 전 두 손 쥠 · 풀기가 끝�
 });
 
 test('④ 돌아올 때 빈손 목표가 튀지 않음 — 곧장 쥐는 판(iaiRegrip 0)은 튐', () => {
-  const on = shot({ start: 'hip' });
+  const on = then1113(() => shot({ start: 'hip' })); // 11/13 판으로 묶음 (위 then1113)
   assert.ok(on.sum.offJump.d < 0.03, `빈손 목표 이웃 스텝 옮김 ${JSON.stringify(on.sum.offJump)}`);
   // 다시 쥐는 몫이 0 → 1 로 고르게 (첫 스텝 0 가까이 · 줄지 않음)
   const K = on.frames.map((f) => f.rgK).filter((k) => k != null);

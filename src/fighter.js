@@ -4355,6 +4355,20 @@ export class Fighter {
       const x = 1 - this.iaiRegripT / Math.max(1e-6, this.iaiRegripDur || 1);
       rgK = x * x * (3 - 2 * x);
     }
+    // 발도 대기 왼손 칼집 입 (11/14 사장님 '원전과 다른 셋 이어서 맞춰' ① — SECRET.iaiSayaReady · secret_instant.js iaiReadyPose(Player) 가 몫 iaiSayaReadyW 를 둠):
+    //  대기 무게만큼 왼손이 칼자루 끝을 놓고 칼집 입(코등이에서 칼날 쪽 SECRET.iaiSayaKoi m — 칼집째 칼을 쥠)을 쥠 (아래 koiOn — 쥐는 자리 · 곡선 · 끈 힘).
+    //  대기가 풀리면(칼을 쥠 · 공격 · 막기) 몫이 대기 무게를 따라 줄며 칼자루로 돌아옴 — 한 스텝에 0 이 되는 사람(칼을 쥠)은 SECRET.iaiRegrip 초에 걸쳐(한 스텝에 튀지 않게) · 발도 · 굳음 · 풀기 동안은 0 (발도 길이 왼손을 가짐)
+    let syK = 0;
+    {
+      const busy = !!this.iai || this.iaiHoldT > 0 || this.iaiFade > 0 || !!this.iaiOneHold; // 낸 스텝(iaiReq — 아직 발도 전)은 대기 몫을 그대로 줄여 감 (startIai 가 대기에서 낸 발도인지 읽음)
+      const t = busy ? 0 : this.iaiSayaReadyW ?? 0;
+      const s0 = busy ? 0 : this.iaiSayaW ?? 0;
+      const RT = SECRET.iaiRegrip > 0 ? SECRET.iaiRegrip : 0;
+      // 대기 무게가 고르게 줄면(AI 대기 풀림 0.12 s · 사람 웅크림 풀림) 그 무게를 그대로 따르고 · 한 스텝에 0 이 되면(사람이 칼을 쥠) RT 초에 걸쳐 줄임 (새 수 없음)
+      const sw = t >= s0 || t > 0 ? t : RT > 0 ? Math.max(0, s0 - (this.lastDt || 1 / 120) / RT) : 0;
+      this.iaiSayaW = sw;
+      syK = sw * sw * (3 - 2 * sw);
+    }
     const want =
       this.armed &&
       this.weaponCfg.twoHand && // 한손무기는 빈손이 칼자루를 잡지 않는다 (applyPose의 기본 손 자세를 그대로 쓴다)
@@ -4366,7 +4380,12 @@ export class Fighter {
     this.gripping = false;
     if (!want) return;
     const rg = this.mordGrip; // 칼날을 거꾸로 쥔 동안(죽음의 일격 — reverseGrip): 빈손은 칼날 위 gOff (칼 든 손 g 보다 칼끝 쪽). 없으면 아래 줄 그대로
-    const along = rg ? rg.gOff : this.weaponCfg.gripAlong;
+    const along0 = rg ? rg.gOff : this.weaponCfg.gripAlong;
+    // 발도 대기 칼집 입 (위 syK — 11/14 ①): 쥐는 자리를 칼자루 끝 → 칼집 입(칼 축 코등이 + SECRET.iaiSayaKoi — 칼집에 든 칼을 칼집 입째 쥠)으로 옮김 —
+    //  몫 0.5 까지 칼자루 끝을 놓고(끈 힘 1 → 0) · 0.5 부터 칼집 입을 쥠(0 → 1) · 그 사이 손은 칼 아래로 돌아 칼 든 손을 비킴(아래 곡선)
+    const koiOn = syK > 0 && !rg;
+    const alongK = this.weaponCfg.hiltLength + (SECRET.iaiSayaKoi ?? 0.05);
+    const along = koiOn && syK >= 0.5 ? alongK : along0;
     const sword = this.sword;
     rot(sword, _q1);
     const st = sword.translation();
@@ -4374,9 +4393,42 @@ export class Fighter {
     // 빈손은 칼자루가 "있어야 할 곳"(칼끝이 향해야 할 방향 기준)을 향해 뻗는다 → 두 손이 칼자루를 밀고 당겨
     //  (손 사이 지렛대) 칼을 돌린다. 손목 힘이 사람 수준이라도 칼끝이 흔들리지 않는 이유
     const gripAim = rg ? _gw.set(0, rg.g, 0).applyQuaternion(_q1).add(_v7.set(st.x, st.y, st.z)).addScaledVector(this.aimDirW, rg.gOff - rg.g) : _gw.copy(this.aimDirW).multiplyScalar(along).add(_v7.set(st.x, st.y, st.z));
+    if (koiOn) {
+      // 칼자루 끝 겨눔 자리 A(보통 두 손 쥠 목표) → 지금 칼집 입 K(칼 축 위 — 칼집에 든 칼을 칼집째 쥠: 겨눔이 아니라 지금 칼을 따름) 를 2 차 곡선으로 —
+      //  가운데 점 = 둘의 가운데 + 칼 축에 곧은 아래 × SECRET.iaiSayaKoiAround (곡선은 그 반만큼 칼 든 손을 비킴) · 몫 1 = K
+      //  (대기가 풀리는 순간 사람 칼 겨눔이 한 스텝에 바뀌어도 A 의 몫이 0 에서 시작해 빈손 목표가 튀지 않음)
+      const K = _gk2.set(0, alongK, 0).applyQuaternion(_q1).add(_v7.set(st.x, st.y, st.z));
+      if (syK >= 1) gripAim.copy(K);
+      else {
+        const A = _gk.copy(this.aimDirW).multiplyScalar(along0).add(_v7.set(st.x, st.y, st.z));
+        const ax = _gc.set(0, 1, 0).applyQuaternion(_q1);
+        const n = _gk3.set(0, -1, 0).addScaledVector(ax, ax.y);
+        if (n.lengthSq() < 1e-6) n.set(1, 0, 0);
+        const C = n.normalize().multiplyScalar(SECRET.iaiSayaKoiAround ?? 0.16).add(_gv.copy(A).add(K).multiplyScalar(0.5));
+        const u = syK;
+        gripAim.copy(A).multiplyScalar((1 - u) * (1 - u)).addScaledVector(C, 2 * u * (1 - u)).addScaledVector(K, u * u);
+      }
+    }
     // 두 팔 엇갈림 막기 — 빈손 비킴 (SKILL.armClear.grip — gripClear 머리말): 두 팔이 붙은 동안(① 켜짐) 지금 몸 겉 틈이 gap 안이면
     if (this._clrOn && !this.armsPlaced() && SKILL.armClear.grip > 0 && this.armClrGap < SKILL.armClear.gap) gripClear(this, gripAim, SKILL.armClear.grip);
-    if (rgK < 1) gripAim.lerpVectors(regripFrom(this, _gr), gripAim, rgK); // 다시 쥐기 (위 rgK): 칼집 손 자리(한 손 발도 동안 빈손 목표와 같은 점) → 칼자루 끝
+    if (rgK < 1) {
+      // 다시 쥐기 (위 rgK): 칼집 손 자리(한 손 발도 동안 빈손 목표와 같은 점) → 칼자루 끝
+      //  11/14 ③ (SECRET.iaiSayaModoshi — startRegrip iaiRegripVia): 원전 鞘戻し — 칼집 입을 배꼽 앞(SECRET.iaiSayaMouth · 골반 틀)으로 돌려 놓고 칼자루로:
+      //  그 점을 몫 0.5 에 지나는 2 차 곡선(가운데 점 C = 2V − (A + B) / 2) — 점에서 멈추지 않고 지나감
+      if (this.iaiRegripVia && SECRET.iaiSayaMouth) {
+        const A = regripFrom(this, _gr);
+        const V = sayaMouthW(this, _gv);
+        const C = _gc.copy(V).multiplyScalar(2).addScaledVector(A, -0.5).addScaledVector(gripAim, -0.5);
+        const u = rgK;
+        gripAim.multiplyScalar(u * u).addScaledVector(C, 2 * u * (1 - u)).addScaledVector(A, (1 - u) * (1 - u));
+        // 앞 반(왼 허리 → 鞘戻し 점 — 칼집을 쥔 손이 칼집 입을 배꼽 앞으로 돌려 놓는 몫)은 빈팔을 그 길에 놓음(두 손 발도 빈팔 · 鞘引き 와 같은 놓기 — 근육 뒤처짐으로 점을 질러가지 않게) ·
+        //  뒤 반(→ 칼자루)은 근육 그대로(쥐는 끈 힘이 같은 몫으로 들어옴)
+        if (u <= 0.5 && this.limbs.armO > 0.3 && (this.state === 'stand' || this.state === 'kneel' || this.state === 'getup')) {
+          this.offArmIK(gripAim);
+          placeOffArm(this);
+        }
+      } else gripAim.lerpVectors(regripFrom(this, _gr), gripAim, rgK);
+    } else this.iaiRegripVia = false;
     this.offArmIK(this.armsPlaced() ? pommel : gripAim); // 대본이 놓은 칼(풍차 베기 감기 — armsPlaced)은 놓인 칼자루 끝으로 (놓은 빈팔과 같은 풀이 — 겨눔 쪽 gripAim 으로 풀면 놓인 팔과 어긋난 근육 힘이 가슴에 남음 · 10/29 20:0x)
     // 빈손 위치 (아래팔 끝)
     const fo = this.bodies.farmO;
@@ -4387,7 +4439,7 @@ export class Fighter {
     if (dist > GRIP.reach) return; // 아직 손이 멀면 뻗기만 한다
     this.gripping = true;
     // 스프링: 멀수록 약하게 시작해 손이 닿으면 단단히 쥔다
-    const grab = THREE.MathUtils.clamp((GRIP.reach - dist) / (GRIP.reach * 0.5), 0, 1) * Math.min(1, this.muscle) * (0.5 + 0.5 * this.limbs.armO) * rgK; // rgK: 다시 쥐는 동안 끈 힘도 같은 몫으로 (끝나면 1 — 그대로)
+    const grab = THREE.MathUtils.clamp((GRIP.reach - dist) / (GRIP.reach * 0.5), 0, 1) * Math.min(1, this.muscle) * (0.5 + 0.5 * this.limbs.armO) * rgK * (koiOn ? Math.abs(1 - 2 * syK) : 1); // rgK: 다시 쥐는 동안 끈 힘도 같은 몫으로 (끝나면 1 — 그대로) · koiOn: 칼자루 끝을 놓고 칼집 입을 쥐는 동안 (11/14 — 대기 아니면 그대로)
     const vp = sword.velocityAtPoint(pommel);
     const vh = fo.velocityAtPoint(hand);
     const F = _gf.set(pommel.x - hand.x, pommel.y - hand.y, pommel.z - hand.z).multiplyScalar(GRIP.k);
@@ -5176,6 +5228,44 @@ function sayaHandW(f, out) {
   return out.set(g[0], g[1], -f.side * g[2]).applyQuaternion(rot(f.bodies.pelvis, _grQ)).add(_grP.set(p.x, p.y, p.z));
 }
 const _grP = new THREE.Vector3();
+const _gv = new THREE.Vector3(); // 鞘戻し 점 (offHand 다시 쥐기 — 11/14)
+const _gc = new THREE.Vector3();
+const _gk = new THREE.Vector3(); // 발도 대기 칼집 입 (offHand — 11/14)
+const _gk2 = new THREE.Vector3();
+const _gk3 = new THREE.Vector3();
+/** 빈팔을 지금 근육 목표(uarmO · farmO target — offArmIK 가 막 둔 자세) 자리에 놓음 (11/14 鞘戻し 앞 반 — secret_instant.js placeIai 의 두 손 발도 빈팔 놓기와 같은 셈 · 빠르기 = 가슴) */
+function placeOffArm(f) {
+  const J = f.jointByName;
+  const chest = f.bodies.chest;
+  const qc = rot(chest, _poQ);
+  const c = chest.translation();
+  const So = _poS.set(0, 0.1, -f.side * 0.2).applyQuaternion(qc).add(_poC.set(c.x, c.y, c.z));
+  const quo = _poU.copy(qc).multiply(J.uarmO.target);
+  const qfo = _poF.copy(quo).multiply(J.farmO.target);
+  const eo = _poE.set(0, -0.3, 0).applyQuaternion(quo).add(So);
+  const cv = chest.linvel();
+  const put = (b, p, q) => {
+    b.setTranslation({ x: p.x, y: p.y, z: p.z }, true);
+    b.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }, true);
+    b.setLinvel({ x: cv.x, y: cv.y, z: cv.z }, true);
+    b.setAngvel({ x: 0, y: 0, z: 0 }, true);
+  };
+  put(f.bodies.uarmO, _poP.set(0, -0.15, 0).applyQuaternion(quo).add(So), quo);
+  put(f.bodies.farmO, _poP.set(0, -0.14, 0).applyQuaternion(qfo).add(eo), qfo);
+}
+const _poQ = new THREE.Quaternion();
+const _poU = new THREE.Quaternion();
+const _poF = new THREE.Quaternion();
+const _poS = new THREE.Vector3();
+const _poC = new THREE.Vector3();
+const _poE = new THREE.Vector3();
+const _poP = new THREE.Vector3();
+/** 鞘戻し 점 (11/14 ③ — SECRET.iaiSayaMouth): 칼집 입을 배꼽 앞으로 돌려 놓은 자리 · 골반 몸체 기준 [앞, 위, 빈손 쪽 바깥] → 월드 */
+function sayaMouthW(f, out) {
+  const g = SECRET.iaiSayaMouth;
+  const p = f.bodies.pelvis.translation();
+  return out.set(g[0], g[1], -f.side * g[2]).applyQuaternion(rot(f.bodies.pelvis, _grQ)).add(_grP.set(p.x, p.y, p.z));
+}
 const _sgW = new THREE.Vector3();
 const _sgQ = new THREE.Quaternion();
 const _sgG = [0, 0, 0];
