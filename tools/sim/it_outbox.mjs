@@ -64,12 +64,14 @@ export async function runPreset(name, cells, seeds, log = () => {}) {
               const n0 = uq.stats.fired.inquartata ?? 0;
               const x = P.stickX ?? 0, y = P.stickY ?? 0;
               const why = !UA.inqTap ? 'off' : uq.cooling(e) ? 'cooling' : uq.busy(!!UA.tapHeld) ? 'busy' : P.foe?.state !== 'stand' ? 'foe' : P.stamina.exhausted ? 'exhausted' : null;
+              const sk = P.skill; // 바쁨 갈래 (unique_assist.js busy 와 같은 차례): 손을 쥠 · 비기 · 탭 찌르기 · 손잡이 찍기 · 걸어 맞추기 · 몸 상태 · 칼 · 마무리
+              const busyBy = why === 'busy' ? (uq.handHeld || uq.blocked ? 'held' : sk.sec ? 'sec' : sk.tap ? (sk.tap.uniqTech ? `tap:${sk.tap.uniqTech}` : 'tap') : sk.pom ? 'pom' : sk.vitalRange ? 'vital' : P.state !== 'stand' ? `state:${P.state}` : !P.armed || P.weaponBroken ? 'weapon' : (P.finish?.amt ?? 0) > 0.5 ? 'finish' : 'other') : null;
               const threat = !!G && G.noThreat <= UA.inqThreat;
               const side = Math.abs(x) >= (UA.stepIn ? UA.stepStick : 0.5) && Math.abs(x) >= Math.abs(y);
               const seen = !!G && uq.inqSeen === G.threatId;
               const ret = orig();
               const fired = (uq.stats.fired.inquartata ?? 0) > n0;
-              if (want === 'inquartata' || want === 'tempo' || fired) diag.push({ want, fired, why, threat, side, seen, sx: r3(x), sy: r3(y), age: G ? r3(G.noThreat / CONFIG.TIME.k) : null, beat: !!uq.foeAtk && r3((uq.t - uq.foeAtk.t0) / CONFIG.TIME.k) });
+              if (want === 'inquartata' || want === 'tempo' || fired) diag.push({ want, fired, why, busyBy, threat, side, seen, sx: r3(x), sy: r3(y), age: G ? r3(G.noThreat / CONFIG.TIME.k) : null, beat: !!uq.foeAtk && r3((uq.t - uq.foeAtk.t0) / CONFIG.TIME.k) });
               return ret;
             };
           },

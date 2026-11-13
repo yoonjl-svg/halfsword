@@ -17,6 +17,7 @@
 //  난수 없음. 비기가 아니면(요청 없음) 아무 일도 없다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14): 끌고 가는 칼의 상처도 칼 우위 · 재기 (combat.js strike 와 같은 자리)
 import { SECRET, ARM, STRIKE, GAIT, ARENA, JOINTS, THRUST } from './config.js';
 import { risolutoContact } from './weapon_measured.js'; // 10/25 THRUST.itMeasure 'contact' 판: 리솔루토 런지 미끄러짐은 지금 맞닿음 그대로
 const GAIT_REACH = GAIT.reachMax;
@@ -371,6 +372,7 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, 
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       foe.applyWound({ ...r, part: best.info.part, passing: true });
       if (r.schoolK) f.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (combat.js strike 와 같음 — 손가락 긋기를 이어 끄는 칼만 몫이 실림: 제비 베기 되돌림 칼의 켄타이 · 10/25)
+      itOnStrike(f, foe, r); // 이탈리아 아웃복싱 (11/14 — combat.js strike 와 같음): 끌고 가는 칼(칼끝 돌려 빼기 · 비껴서며 찌르기)이 상처를 내면 칼 우위 · 재기 (사람 이탈리아만)
     }
     combat.hooks.onWound?.(f, foe, r, point, pr);
     return r;
@@ -388,6 +390,7 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, 
   if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
     foe.applyWound({ ...r, part: best.info.part, passing: true });
     if (r.schoolK) f.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (위 갈래와 같음 — 10/28 고노센 발도의 켄타이: 첫 상처에 씀 · 다른 비기는 몫 없음)
+    itOnStrike(f, foe, r); // 이탈리아 아웃복싱 (11/14 — 위 갈래와 같음)
   }
   combat.hooks.onWound?.(f, foe, r, point, pr);
   return r;
