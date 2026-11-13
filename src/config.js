@@ -2008,7 +2008,7 @@ export const UNIQUE_ASSIST = {
   //  겹마다: 맞은 몸 자연 회복 × (1 − regen × n) (stamina.js recoverRate) · 그 몸을 겨눈 동방 격살 칼끝 빠르기 몫 × (1 + share × n) (skill.js gyeoksalReq — 0.7 × 1.4 = 0.98 at 5)
   //  uses: 사람 동방 비기(격살) 판당 쓸 수 (secret.js secretUsesOf — secretUses.chinese 3 을 사람만 덮음 · 칸과 상관없이) · null = secretUses 그대로.
   //  쌓는 몸: 사람 = 스킬트리 C12(skillKit.cnHunt) · AI · 시뮬 몸 = ai 스위치(기본 0 — 견줌만: 1 이면 AI 동방도 쌓고 판당 uses). on 0 = 모두 전 판 `?cnHunt=0`
-  cnHunt: { on: 1, max: 5, regen: 0.08, share: 0.08, uses: 1, ai: 0 }, // [사장님 11/14 결정 — regen · share 0.08 · uses 1 · 빠짐 없음 · 이름 · 자리] · max 5 · ai 0 [사장님 확인 전 — 확인표 3830 ~ 3836]
+  cnHunt: { on: 1, max: 5, regen: 0.08, share: 0.08, uses: 1, ai: 0 }, // [사장님 11/14 결정 — regen · share 0.08 · uses 1 · 빠짐 없음 · 이름 · 자리] · max 5 · ai 0 [사장님 확인 전 — 확인표 3835 · 3840 · 결정 3830 ~ 3834]
   // 손목 치기(일본 강화동작) 칼 떨구기 — 심화 칸 J8 (사장님 10/24 11:5x 'J8은 아예 칼 떨어트리는 건 줄 알았어 너무 강하면 50%로' · 12:0x '0.6초 동안 한 손을 놓음 이 효과는 빼' ·
   //   12:3x '손목 치기 걱정 1: 100% 떨어지게 하면? or 판정 완화' → 감독 추천 판정 완화 · 50 % 그대로 — combat.js koteCheck · koteSword · koteRoll):
   //  손목 치기가 닿으면 친 쪽 전용 난수로 굴려 p 로 맞은 쪽이 칼을 떨어뜨린다(fighter.dropSword — 칼 팔을 크게 다쳐 놓칠 때와 같은 길 · 줍기 없음: 부활하는 인물만 일어설 때 칼이 돌아온다 — revive.js).
