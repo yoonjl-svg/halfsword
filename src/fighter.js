@@ -3275,7 +3275,8 @@ export class Fighter {
     // 빈 손은 앞으로 들어 균형을 잡는다 (다친 팔은 힘없이 늘어진다)
     const armO = this.limbs.armO;
     const OA = this.swordArt?.offArm; // 유파 빈팔 (10/10 고증 — schools.js offArm: 이탈리아만). 없으면 아래 두 줄 그대로
-    if ((this.iai?.oneHand || this.iaiOneHold) && this.state === 'stand') this.offArmSchool({ guard: SECRET.iaiSayaHand }, armO); // 고노센 한 손 발도 (10/12 03:2x — secret_instant.js startIai): 빈손은 배 앞 (10/14 — 전 칼집을 뒤로 당기는 꼴 鞘引き, 뒷짐처럼 보여 몸통 앞으로)
+    if ((this.iai?.oneHand || this.iaiOneHold) && this.state === 'stand') this.offArmSchool({ guard: SECRET.iaiSaya && SECRET.iaiSayaHip ? sayaGuard(this) : SECRET.iaiSayaHand }, armO); // 고노센 한 손 발도 (10/12 03:2x — secret_instant.js startIai): 빈손은 배 앞 (10/14 — 전 칼집을 뒤로 당기는 꼴 鞘引き, 뒷짐처럼 보여 몸통 앞으로)
+    //  → 11/13 사장님 '욍손자리 원전대로' (SECRET.iaiSaya 1): 칼집 입을 쥐고 왼 허리(左帯)로 당긴 자리 iaiSayaHip — 골반 틀(칼집은 허리띠에 참)을 가슴 틀로 옮겨 넘김 (sayaGuard · 다시 쥐기 시작 점 regripFrom 과 같은 점)
     else if (OA && this.armed && this.state === 'stand') this.offArmSchool(OA, armO);
     else {
       setZ('uarmO', (this.secretStance?.offArm ?? 0.5) * armO); // 비기 런지: 빈팔을 뒤로 뻗어 균형 (secretStance.offArm, 없으면 오늘 그대로)
@@ -5160,11 +5161,32 @@ const _oaQ = new THREE.Quaternion();
 const _oaI = new THREE.Quaternion();
 const _gr = new THREE.Vector3(); // 한 손 발도 뒤 다시 쥐기 (offHand · regripFrom)
 const _grQ = new THREE.Quaternion();
-/** 다시 쥐기 시작 점 (11/13 — offHand rgK): 칼집 손 자리 SECRET.iaiSayaHand (가슴 몸체 기준 [앞, 위, 바깥] — 한 손 발도 동안 applyPose 의 offArmSchool 이 빈손 목표로 둔 점과 같은 셈) → 월드 */
+/** 다시 쥐기 시작 점 (11/13 — offHand rgK): 칼집 손 자리 (한 손 발도 동안 applyPose 의 offArmSchool 이 빈손 목표로 둔 점과 같은 셈) → 월드 —
+ *  SECRET.iaiSaya 1 = 원전 왼 허리 iaiSayaHip (골반 몸체 기준 [앞, 위, 바깥] · sayaHandW) · 0 = 10/14 배 앞 iaiSayaHand (가슴 몸체 기준 — 전 판 셈 그대로) */
 function regripFrom(f, out) {
+  if (SECRET.iaiSaya && SECRET.iaiSayaHip) return sayaHandW(f, out);
   const g = SECRET.iaiSayaHand;
   const c = f.bodies.chest.translation();
   return out.set(g[0], g[1], -f.side * g[2]).applyQuaternion(rot(f.bodies.chest, _grQ)).add(_oaC.set(c.x, c.y, c.z));
+}
+/** 원전 칼집 손 자리 (11/13 사장님 '욍손자리 원전대로' — SECRET.iaiSayaHip): 골반 몸체 기준 [앞, 위, 빈손 쪽 바깥] → 월드 (칼집은 허리띠에 차므로 골반을 따름) */
+function sayaHandW(f, out) {
+  const g = SECRET.iaiSayaHip;
+  const p = f.bodies.pelvis.translation();
+  return out.set(g[0], g[1], -f.side * g[2]).applyQuaternion(rot(f.bodies.pelvis, _grQ)).add(_grP.set(p.x, p.y, p.z));
+}
+const _grP = new THREE.Vector3();
+const _sgW = new THREE.Vector3();
+const _sgQ = new THREE.Quaternion();
+const _sgG = [0, 0, 0];
+/** 원전 칼집 손 자리를 offArmSchool 이 받는 가슴 몸체 기준 [앞, 위, 빈손 쪽 바깥] 으로 (applyPose — 이 스텝 몸 자리) */
+function sayaGuard(f) {
+  const c = f.bodies.chest.translation();
+  const v = sayaHandW(f, _sgW).sub(_grP.set(c.x, c.y, c.z)).applyQuaternion(rot(f.bodies.chest, _sgQ).invert());
+  _sgG[0] = v.x;
+  _sgG[1] = v.y;
+  _sgG[2] = -f.side * v.z;
+  return _sgG;
 }
 const _rgQ = new THREE.Quaternion(); // 칼날 거꾸로 쥐기 (reverseGrip — 죽음의 일격)
 const _rgW = new THREE.Vector3();

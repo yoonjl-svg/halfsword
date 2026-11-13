@@ -4,7 +4,8 @@
 //  ② 사람 발도: 뽑아 냄 · 벰 · 굳음 · 풀기 동안 빈손이 칼자루를 놓음(쥠 없음 · 빈손 목표 = 칼집 손 자리 iaiSayaHand) · 맞음 몸통 · 굳음 칼 팔 뻗음 — 끄면 전 판(두 손)
 //  ③ 보통 싸움은 두 손: 뽑기 전 두 손 쥠 · 풀기가 끝나면 빈손이 칼자루로 돌아와 다시 쥠(빈손 ↔ 칼자루 끝이 뽑기 전 틈 가까이)
 //  ④ 돌아올 때 튐 없음: 풀기 끝 앞뒤 빈손 목표 이웃 스텝 옮김이 작음 — 곧장 쥐는 판(iaiRegrip 0 — 우치가타나 등 지금 꼴)은 0.3 m 넘게 튐
-//  ⑤ 다른 칼 · AI 그대로: 우치가타나 발도는 스위치와 상관없이 같음 · AI 발도(웅크린 대기 — req.player 아님)는 AI 스위치를 켜야 한 손
+//  ⑤ 다른 칼 · AI 그대로: 우치가타나 발도는 앞무게 스위치와 상관없이 같음(11/13 '우치가타나 부드럽게' 뒤 다시 쥐기는 켬) · AI 발도(웅크린 대기 — req.player 아님)는 AI 스위치를 켜야 한 손
+//  (11/13 iai_saya: ① 칼집 손 자리 · ② 빈손 목표 자리 · ⑤ 우치가타나 다시 쥐기 — 사장님 결정으로 바뀐 기본값 줄만 고침)
 //  node --test tools/sim/mhz_draw.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -36,7 +37,9 @@ test('① 기본값 — 사람 한 손 켬 · AI 켬([사장님 11/13 결정] \'
   const W = WEAPONS.monohoshizao;
   assert.equal(W.frame, 'heavy', '모노호시자오 = 앞무게 틀');
   assert.equal(W.grip, 'two-hand', '보통 싸움은 두 손 칼 (사장님 11/12)');
-  assert.equal(SECRET.iaiSayaHand.join(','), '0.24,-0.28,0', '칼집 손 자리는 사장님 10/14 결정 그대로');
+  // 11/13 사장님 결정 '욍손자리 원전대로'로 칼집 손 기본 자리가 왼 허리(SECRET.iaiSaya 1 · iaiSayaHip — 골반 틀)로 바뀜 (iai_saya_2026-11-13 — 이 줄만 고침 · 전: 10/14 배 앞 iaiSayaHand 가 기본)
+  assert.equal(SECRET.iaiSaya, 1, '칼집 손 자리 원전대로 (사장님 11/13)');
+  assert.equal(SECRET.iaiSayaHand.join(','), '0.24,-0.28,0', '`?iaiSaya=0` 판 = 10/14 배 앞 그대로');
 });
 
 test('② 사람 모노호시자오 발도 — 뽑아 냄 · 벰 · 굳음 · 풀기 동안 칼은 한 손 · 빈손은 칼집 손 자리 / 끄면 전 판(두 손)', () => {
@@ -50,11 +53,12 @@ test('② 사람 모노호시자오 발도 — 뽑아 냄 · 벰 · 굳음 · �
       const F = after1(on.frames, ph);
       assert.ok(F.length > 0, ph);
       assert.equal(F.filter((f) => f.grip).length, 0, `${start} ${ph} 동안 빈손이 칼자루를 놓음`);
-      // 빈손 목표 = 칼집 손 자리 (가슴 몸체 틀 [앞, 위, 칼 든 쪽] — 빈손 쪽 바깥 0)
-      const sh = SECRET.iaiSayaHand;
-      assert.ok(F.every((f) => f.offT && dist3(f.offT, [sh[0], sh[1], -sh[2]]) < 1e-3), `${start} ${ph} 빈손 목표 = 칼집 손 자리`);
+      // 빈손 목표 = 칼집 손 자리 — 11/13 사장님 결정 '욍손자리 원전대로'로 기본 자리가 왼 허리(골반 몸체 틀 iaiSayaHip [앞, 위, 칼 든 쪽] — 빈손 쪽 바깥)로 바뀜
+      //  (iai_saya_2026-11-13 — 이 줄만 고침 · 전: 가슴 몸체 틀 iaiSayaHand 배 앞 — 그 판은 iai_saya.test ② 끈 판)
+      const sh = SECRET.iaiSayaHip;
+      assert.ok(F.every((f) => f.offP && dist3(f.offP, [sh[0], sh[1], -sh[2]]) < 1e-3), `${start} ${ph} 빈손 목표 = 칼집 손 자리`);
     }
-    // 굳음 동안 빈손은 배 앞 (칼자루 끝과 멀리)
+    // 굳음 동안 빈손은 칼집 손 자리 (칼자루 끝과 멀리)
     assert.ok(after1(on.frames, 'hold').every((f) => f.gap > 0.3), `${start} 굳음 동안 빈손 ↔ 칼자루 끝 떨어짐`);
     assert.ok(s.hold.flex < 35 && s.hold.ext > 0.93, `굳음 0.3 s 칼 팔 뻗음 ${s.hold.flex}° · ${s.hold.ext}`);
   }
@@ -90,9 +94,11 @@ test('④ 돌아올 때 빈손 목표가 튀지 않음 — 곧장 쥐는 판(iai
 test('⑤ 다른 칼 · AI 그대로 — 우치가타나 발도는 스위치와 상관없음 · AI 발도는 AI 스위치를 켜야 한 손', () => {
   const strip = (r) => JSON.stringify({ ...r, frames: r.frames.map((f) => ({ ...f, rgK: null })) });
   const u1 = mhzShot({ weapon: 'uchigatana' });
-  const u0 = withS({ iaiOneHeavy: 0, iaiRegrip: 0 }, () => mhzShot({ weapon: 'uchigatana' }));
+  // 11/13 사장님 결정 '우치가타나 부드럽게'(SECRET.iaiRegripAll 1)로 우치가타나도 다시 쥐기(iaiRegrip)를 씀 — 견줌 판에서 iaiRegrip 0 을 빼고 다시 쥐기 켬으로 고침
+  //  (iai_saya_2026-11-13 — 이 두 줄만 고침 · 전: iaiOneHeavy 0 · iaiRegrip 0 판과 바이트 같음 · 다시 쥐기 곧장. 우치가타나가 앞무게 스위치와 상관없는 것은 그대로 봄)
+  const u0 = withS({ iaiOneHeavy: 0 }, () => mhzShot({ weapon: 'uchigatana' }));
   assert.equal(strip(u1), strip(u0), '우치가타나 사람 발도 바이트 같음');
-  assert.ok(u1.sum.oneHand && !u1.sum.regrip, '우치가타나는 전부터 한 손 · 다시 쥐기 그대로(곧장)');
+  assert.ok(u1.sum.oneHand && u1.sum.regrip, '우치가타나는 전부터 한 손 · 다시 쥐기 부드럽게 (사장님 11/13 \'우치가타나 부드럽게\')');
   const a0 = withS({ iaiOneHeavyAi: 0 }, () => mhzShot({ start: 'crouch' }));
   const a0b = withS({ iaiOneHeavy: 0, iaiOneHeavyAi: 0 }, () => mhzShot({ start: 'crouch' }));
   assert.equal(JSON.stringify(a0), JSON.stringify(a0b), 'AI 발도는 사람 스위치와 상관없음');

@@ -38,7 +38,9 @@ test('① 기본값 — 원전 꼴 켬 · 뽑는 자리 · 배를 지나는 자�
   assert.ok(R.E.hand[1] > SECRET.iaiPathBelly.E.hand[1] && R.E.el > SECRET.iaiPathBelly.E.el, '끝이 어깨 위로 (7 시 → 1 시)');
   assert.ok(R.E.body.pitch + R.draw.pitch < SECRET.iaiPath.E.body.pitch + SECRET.stance.iai.draw.pitch, '숙임 합이 줄어듦');
   assert.deepEqual(R.ready, { pelvisYaw: 0, chestYaw: 0 }, '허리 대기 몸 비틂 없음 (正対)');
-  assert.equal(SECRET.iaiSayaHand.join(','), '0.24,-0.28,0', '빈손 자리는 사장님 10/14 결정 그대로');
+  // 11/13 사장님 결정 '욍손자리 원전대로'로 빈손 기본 자리가 왼 허리(SECRET.iaiSaya 1 · iaiSayaHip)로 바뀜 (iai_saya_2026-11-13 — 이 줄만 고침 · 전: 10/14 배 앞이 기본)
+  assert.equal(SECRET.iaiSaya, 1, '빈손 자리 원전대로 (사장님 11/13)');
+  assert.equal(SECRET.iaiSayaHand.join(','), '0.24,-0.28,0', '`?iaiSaya=0` 판 = 10/14 배 앞 그대로');
 });
 
 const shot = (o = {}) => gnsShot({ foeW: 'longsword', guard: 'langort', start: 'hip', gapAdd: 0.3, ...o });

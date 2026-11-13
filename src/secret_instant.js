@@ -51,7 +51,7 @@ export function runInstants(combat) {
       f.secretStance = null;
       f.instantReq = f.iaiReq = f.iai = null;
       f.instantGhost = f.iaiHoldT = f.iaiFade = f.holdGhost = 0;
-      if (f.iaiOneHold && f.iaiOneRegrip) startRegrip(f); // 앞무게 두손 칼 한 손 발도 (11/13): 지쳐 풀려도 빈손은 부드럽게 칼자루로
+      if (f.iaiOneHold && f.iaiOneRegrip) startRegrip(f); // 한 손 발도 (11/13 — 앞무게 두손 칼 · iaiRegripAll 이면 모든 일본 칼): 지쳐 풀려도 빈손은 부드럽게 칼자루로
       f.iaiOneRegrip = false;
       f.iaiOneHold = false;
       continue;
@@ -805,6 +805,7 @@ function startIai(f, combat) {
   const T = req.player || far ? SECRET.iaiPlayerTime : SECRET.iaiTime; // 대기 자세(손이 왼 허리)면 곧장 가로, 아니면 왼 허리를 거쳐
   // 10/12 03:2x 사장님 '기술길이 좀 더 상승하게 … 사선 올려베기처럼' · '한 팔 완전히 쭉 뻗어서 써야 맞는 거 아냐?' (SECRET.iaiRise): 길 = 올려베기 iaiPathRise ·
   //  한 손 = 칼 쪽 손만 쥐고 빈손은 칼을 놓고 배 앞으로(10/14 — 전 왼 허리 뒤 鞘引き · fighter.js applyPose 가 iai.oneHand 를 읽어 빈팔을 SECRET.iaiSayaHand 로 · offHand 쥐기 쉼).
+  //   11/13 사장님 '욍손자리 원전대로' (SECRET.iaiSaya 1): 빈손은 칼집 입을 쥐고 왼 허리(左帯)로 당긴 자리 SECRET.iaiSayaHip (골반 틀 — fighter.js sayaHandW)
   //  틀이 무거운 칼(frame 'heavy' — 모노호시자오)은 한 손이 무리라 두 손 그대로였음 (10/12 — 무기 표에 이미 있는 틀 값을 읽음 · 11/13 아래 iaiOneHeavy 로 사람은 한 손). 다시 쥐기는 발도 뒤(경직 붙잡기) — iai 가 끝나면 offHand 가 다시 쥔다
   //  11/13 사장님 결정 "… 한손으로." (SECRET.iaiOneHeavy · 사람 기본 1 / iaiOneHeavyAi · AI 기본 0 — 여쭐 것): 틀이 무거운 칼도 원전대로 한 손으로 뽑아 벰
   //   (전일본검도연맹 거합 1 · 5본 — 뽑아 벨 때 오른손 한 손 · 왼손 칼집 · 두 손은 내려 벨 때부터). 길 · 빠르기 · 판정 · 굳음은 한 손 발도 그대로 — 다시 쥐기만 부드럽게(regrip — SECRET.iaiRegrip · fighter.js offHand)
@@ -821,7 +822,7 @@ function startIai(f, combat) {
   if (SECRET.gnsThrough && req.player) f.iai.through = true; // 베고 지나감 (11/05 일본 강화 길 — 사람 발도만 · 기본 0 · stepIai)
   if (req.block) f.iai.block = true; // 고노센 B (SECRET.gnsEnterBlock — 천천히 걸어 든 들어옴 창에서 낸 발도): 몸보다 먼저 상대 칼에 닿으면 막힘 (아래 stepIai — 밀어냄은 휩쓸기만)
   if (req.block === 'cover') f.iai.cover = true; // gnsEnterBlock 2: 칼끝이 내 몸을 겨눈 채 천천히 든 상대 — 몸에 닿는 자리에서 막힘
-  if (oneHand && oneHeavy) f.iai.regrip = true; // 앞무게 두손 칼 한 손 발도 (11/13): 굳음 · 풀기 뒤 빈손이 칼자루로 부드럽게 돌아옴 (holdIai → fighter.js offHand)
+  if (oneHand && (oneHeavy || SECRET.iaiRegripAll)) f.iai.regrip = true; // 한 손 발도 (11/13): 굳음 · 풀기 뒤 빈손이 칼자루로 부드럽게 돌아옴 (holdIai → fighter.js offHand) — 앞무게 두손 칼(iaiOneHeavy) · 우치가타나 등 모든 일본 칼(SECRET.iaiRegripAll — 사장님 11/13 '우치가타나 부드럽게' · 사람 · AI)
   setKinematic(f, true);
   // 칼집을 떠나는 자리부터 맞음 · 잔상 (원전 꼴 — 뽑아 내는 동안은 칼이 칼집 안)
   if (real && riseK.N) f.iai.hitFrom = f.iai.ab + (1 - f.iai.ab) * riseK.N.at;
@@ -957,9 +958,9 @@ function endIai(f, combat) {
     if (L > 1e-3) f.iaiHoldArm = { dir: r.multiplyScalar(1 / L), L };
   }
   // 10/12 08:2x 사장님 '공격 후 경직 자세에서 바로 왼손이 따라 잡으니까 한 손으로 팔을 쭉 벌려서 비기를 쓴 당위성이 사라져': 한 손 발도면 경직(붙잡기) 동안도
-  //  오른팔 한 손으로 뻗은 끝 자세를 두고 빈손은 배 앞(iaiSayaHand)에 남긴다(잔심). 붙잡기가 풀리며(iaiFade) 칼이 가운데로 돌아온 뒤 빈손이 다시 쥔다 (holdIai)
+  //  오른팔 한 손으로 뻗은 끝 자세를 두고 빈손은 칼집 손 자리(11/13 원전 왼 허리 iaiSayaHip · 0 이면 10/14 배 앞 iaiSayaHand)에 남긴다(잔심). 붙잡기가 풀리며(iaiFade) 칼이 가운데로 돌아온 뒤 빈손이 다시 쥔다 (holdIai)
   f.iaiOneHold = !!I.oneHand;
-  f.iaiOneRegrip = !!(I.oneHand && I.regrip); // 앞무게 두손 칼 한 손 발도 (11/13 — SECRET.iaiOneHeavy): 풀기가 끝나면 빈손 다시 쥐기를 SECRET.iaiRegrip 초에 (holdIai)
+  f.iaiOneRegrip = !!(I.oneHand && I.regrip); // 한 손 발도 (11/13 — SECRET.iaiOneHeavy · iaiRegripAll): 풀기가 끝나면 빈손 다시 쥐기를 SECRET.iaiRegrip 초에 (holdIai)
   f.instantGhost = Math.max(f.instantGhost ?? 0, Math.ceil(SECRET.instantNoCollide / (combat.dt || 1 / 120)));
   f.tipPrev = f.bladePoint(1, new THREE.Vector3());
   f.hitPointPrev = f.bladePoint(0.7, new THREE.Vector3());
@@ -997,7 +998,7 @@ function holdIai(f, dt) {
   if (f.iaiFade <= 0) {
     f.iaiFade = 0;
     th.w = 0;
-    if (f.iaiOneHold && f.iaiOneRegrip) startRegrip(f); // 앞무게 두손 칼 (11/13): 빈손이 칼집 손 자리 → 칼자루 끝으로 부드럽게 (곧장 쥐면 빈손 목표가 한 스텝에 튐)
+    if (f.iaiOneHold && f.iaiOneRegrip) startRegrip(f); // 한 손 발도 (11/13 — 앞무게 두손 칼 · iaiRegripAll 이면 모든 일본 칼): 빈손이 칼집 손 자리 → 칼자루 끝으로 부드럽게 (곧장 쥐면 빈손 목표가 한 스텝에 튐)
     f.iaiOneRegrip = false;
     f.iaiOneHold = false; // 한 손 발도 잔심 끝: 칼이 가운데로 돌아왔다 → 빈손이 다시 쥔다 (fighter.js offHand)
     f.iaiHoldArm = null;
@@ -1006,8 +1007,8 @@ function holdIai(f, dt) {
 }
 
 /**
- * 앞무게 두손 칼 한 손 발도 뒤 다시 쥐기 (11/13 사장님 결정 '한손으로' — SECRET.iaiOneHeavy · iaiRegrip): 빈손 목표를 칼집 손 자리(SECRET.iaiSayaHand — 한 손 발도 동안 빈손 목표)에서
- *  칼자루 끝으로 SECRET.iaiRegrip 초 동안 옮긴다(fighter.js offHand — smoothstep 몫 · 쥐는 끈 힘도 같은 몫). 0 이면 곧장(우치가타나 등 한 손 발도와 같음)
+ * 한 손 발도 뒤 다시 쥐기 (11/13 사장님 결정 '한손으로' — SECRET.iaiOneHeavy · iaiRegrip · '우치가타나 부드럽게' — iaiRegripAll): 빈손 목표를 칼집 손 자리(한 손 발도 동안 빈손 목표 —
+ *  fighter.js sayaHandW: 원전 왼 허리 iaiSayaHip · 0 이면 배 앞 iaiSayaHand)에서 칼자루 끝으로 SECRET.iaiRegrip 초 동안 옮긴다(fighter.js offHand — smoothstep 몫 · 쥐는 끈 힘도 같은 몫). 0 이면 곧장
  */
 function startRegrip(f) {
   const T = SECRET.iaiRegrip ?? 0;
