@@ -30,6 +30,7 @@ export const VARIANTS = {
   '⑦': `DE_DIRTY.ringT=${CONFIG.realS(0.6)},DE_DIRTY.ringNoRecover=0,UNIQUE_ASSIST.dupAuto=bind`, // 중간 판 (③ + 칼 씨름 0.6 s + 겹치기 띠 1.0 m · 'bind') — 11/14 결정 사이
   '⑧': '', // 지금 가지 기본 (③ + 칼 씨름 1.2 s · 기력 회복 막힘 2.0 s + 겹치기 자동 ⓒ 'both' · 띠 아래 끝 1.0 m)
   '⑧bind': 'UNIQUE_ASSIST.dupAuto=bind', // ⑧ 에서 겹치기 자동만 옛 'bind' (ⓐ 견줌)
+  '⑧s': `SECRET.stiff.german=${CONFIG.realS(0.6)}`, // ⑧ + 비기 경직 독일 0.6 s (11/14 사장님 '모든 비기 경직 0.6초로 통일' — 본판에 들어갈 값 · 가지 기본값은 그대로 0.4)
   '⑦링끔': 'DE_DIRTY.ring=0', // ⑦ 에서 칼 씨름만 끔
   'dB': `UNIQUE_ASSIST.dupStackGap=${CONFIG.realS(0.4)}`, // 겹치기 자동 끊김 너그러움 0.2 → 0.4 s (⑦ 위)
   'dC': 'UNIQUE_ASSIST.dupAuto=both', // 'bind' 또는 'clash2' 가운데 먼저 찬 쪽

@@ -180,7 +180,7 @@ test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · �
       assert.ok(src('main.js').includes('player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open, !!playerSecret?.holdOwns());'), 'main.js — 누름 상태 · 비기 창 · 알티바슈 포르트 무장 창(11/11)');
       continue;
     }
-    if (e.tapKey === 'dup' && UA.dupAuto === 'bind') {
+    if (e.tapKey === 'dup' && (UA.dupAuto === 'bind' || UA.dupAuto === 'both')) { // 11/14 사장님 'c로 해' — 기본 'both'(맞댐 또는 두 번 부딪힘) · 카드 글은 그대로 'bind' 글(nodeCmd — 'both' 글은 따로 없음 · 여쭐 것)
       // 겹치기 자동 (사장님 10/31 18:xx — UNIQUE_ASSIST.dupAuto 'bind' 기본): 탭 조건은 안 봄(TAP_TRIG.dup 이 자동 판이면 null) · 저절로 냄(dupAutoTick) → 받는 입력 없음 · C9 꼴 '… 자동 발동'
       assert.ok(!e.on.length && !e.stick, `${x.id} — 긋기 조건 · 걸음 명령 없음`);
       assert.ok(c === OWNER[x.id] && c.endsWith('자동 발동') && !/탭|긋기|공격/.test(c), `${id} — 저절로 냄 · 사장님 글`);
