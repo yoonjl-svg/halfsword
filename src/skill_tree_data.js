@@ -22,7 +22,7 @@ export const NODE_CAT = Object.freeze({
 });
 
 /** 판 몫 열쇠 (skillKit 칸 — 칸이 없으면 false). unique · perk 는 이름 모음 */
-export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29)
+export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'cnHunt']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29) · cnHunt = 동방 C12 맹호은림 사냥 겹 (11/14 — cn_hunt.js)
 
 export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10/21)
 
@@ -105,6 +105,7 @@ const TREE_SRC = {
       N({ id: 'C6', name: '날개 접기', cat: 'atk', l1: '날개 접기', l2: '이어 긋기', eff: '물러나는 척 칼을 거두며 나아가 허리를 벤다', pre: ['C3'], price: 300, d: 2, cx: 310, u: 'lianchi' }), // 10/28 00:5x 체보요격과 자리 바꿈 — 특수공격(이어 긋기)은 비기와 다른 줄 (전 cx 490 · 격살 앞 칸) // 10/29 14:1x · 14:2x 사장님 글 (효과)
       N({ id: 'C8', name: '단단한 받기', cat: 'parry', l1: '막기 II', l2: '단단한 받기', eff: '막는 동안 받는 피해가 크게 줄어든다', pre: ['C7'], price: 300, d: 2, cx: 680, f: ['parryCut'] }),
       N({ id: 'C10', name: '숨 바꾸기', cat: 'passive', l1: '패시브', l2: '숨 바꾸기', eff: '휘두르지 않는 동안 출혈이 빨리 잦아든다', pre: ['C7'], price: 0, heads: 5, d: 2, cx: 880, f: ['passive'] }),
+      N({ id: 'C12', name: '맹호은림', cat: 'deep', l1: '심화', l2: '맹호은림', title: '허리 베기 심화 · 맹호은림', orig: '猛虎隱林', eff: '허리를 베는 칼이 몸통에 들 때마다 상대의 기력이 더디게 차고 격살이 빨라진다', pre: ['C4'], price: 400, d: 3, cx: 130, f: ['cnHunt'] }), // 11/14 사장님 '동방은 사냥감을 말려죽이는 고양이과 맹수야' · '이름와 위치는 좋음'(감독 안 — 출혈 심화 C4 다음 · 새 몫 cnHunt) — 사냥 겹(config UNIQUE_ASSIST.cnHunt · cn_hunt.js) · 금화 = 깊이 3(400 — B6 · J4 와 같음) · 효과 글 = 감독 안 [사장님 확인 전 — 확인표 3837 ~ 3839] · 원어(猛虎隱林)는 대기실 스킬에서만
       N({ id: 'C9', name: '격살', cat: 'secret', l1: '비기', l2: '격살', eff: '나서며 때맞춰 막으면, 받은 자세의 급소를 깊게 자른다', pre: ['C5', 'C8'], price: 400, heads: 10, d: 3, cx: 590, f: ['secret'] }), // 10/22 격살 (사람 — schools.js CHINESE_SECRET_GYEOKSAL) · 10/24 받아 내면 저절로(글 '막고 공격하면' → '막으면') · 전 '세 번 이어 치기'
     ],
   },
@@ -174,6 +175,7 @@ const NODE_LORE = {
   C6: { lore: '거짓으로 지는 척 적을 꾀어, 물러나다 문득 나아가 허리를 친다', src: '모원의 『무비지』(1621) 권86 조선세법 — 염시세' },
   C8: { lore: '솥을 들 듯 막아 위로 죽이는 것이 그 법이다', src: '『무예도보통지』(1790) 권2 예도 — 거정세' },
   C10: { lore: '숨을 불고 내쉬어, 묵은 것을 뱉고 새것을 들인다', src: '『장자』 각의편 — 토고납신' },
+  C12: { lore: '오른쪽으로 두 번 돌아, 사나운 범이 숲에 숨는 세를 짓는다', src: '『무예도보통지』(1790) 권3 본국검 — 맹호은림세' }, // 11/14 [풀이] 본국검 譜 p032/24 猛虎隱林(세 이름 · 오른쪽 두 번 돎 — docs/motion/schools/muyedobotongji_vol3.md:55) · 표 docs/text/skill_lore_2026-10-22.md · docs/strike/cn_hunt_2026-11-14.md §1
   C9: { lore: '수레를 몰 듯 막아, 가운데를 죽이고 두 손을 깎아 죽인다', src: '모원의 『무비지』(1621) 권86 조선세법 — 어거세' }, // 10/22 격살 (전 봉두세 「洗刺剪殺」 — 세 번 이어 치기)
 };
 // 칸 입력 줄 (사장님 10/24 14:1x '커맨드가 있는 공격은 스킬 설명 최하단에 커맨드 적어. 최대한 단순하고 이해하기 쉽게 적어봐' →

@@ -1999,6 +1999,16 @@ export const UNIQUE_ASSIST = {
   //  k 1.5 = 판당 +1.3 %(출혈 약 +9 %) · 깊은 몸통 상처 하나(심각도 1 — 피 21 %)는 31 %. 배 · 허리만으로는 36 판에 2 번이라 몸통으로 · AI 도. `?yaojiBleed=` (1 = 끔)
   //  10/28 01:1x 사장님 '체보요격과 염시에도 붙여': 허리를 베는 세 칼 — 요격(yaoji) · 끌어 딛고 허리 베기(chebuYaoji) · 날개 접기(lianchi) — 모두 (techs · 심화 칸 C4 하나가 셋을 켬 · AI 도)
   yaojiBleed: { k: 1.5, zones: ['chest', 'abdomen', 'pelvis'], techs: ['yaoji', 'chebuYaoji', 'lianchi'] },
+  // 동방 맹호은림 (猛虎隱林 — 새 칸 C12 · 출혈 심화 C4 다음 · 몫 열쇠 'cnHunt' · src/cn_hunt.js · 기록 docs/strike/cn_hunt_2026-11-14.md):
+  //  사장님 11/14 '동방은 사냥감을 말려죽이는 고양이과 맹수야. 요격 계열 공격이 성공할 때마다 … 1스택을 쌓고 스택마다 상대의 기력 회복 -10% 스택 개수에 따라 격살 빠르기 +5%' →
+  //  '빠지는 규칙은 안 둘게. 격살 빠르기 그대로 두고 스택당 +10% 할게. 이름와 위치는 좋음. 대신 격살이 세지는 만큼 3번 제한을 다른 비기처럼 1번으로 바꾸자.' →
+  //  '동방의 스택은 8%를 기준으로 하자. 스택당 기력 회복 -8% 격살 빠르기 +8%'.
+  //  쌓임: 허리를 베는 세 칼(yaojiBleed.techs)이 상대 몸통(yaojiBleed.zones)에 칼날 상처를 낸 맞음(심각도 > 0 — 출혈 × k 가 붙는 조건과 같음 · 새 J 문턱 없음) — 공격 하나(기력 장부 공격 번호)에 한 겹 ·
+  //   상한 max · 빠지지 않음(판 끝까지 — 판마다 새 몸). 겹은 맞은 몸(fighter.cnHunt)에.
+  //  겹마다: 맞은 몸 자연 회복 × (1 − regen × n) (stamina.js recoverRate) · 그 몸을 겨눈 동방 격살 칼끝 빠르기 몫 × (1 + share × n) (skill.js gyeoksalReq — 0.7 × 1.4 = 0.98 at 5)
+  //  uses: 사람 동방 비기(격살) 판당 쓸 수 (secret.js secretUsesOf — secretUses.chinese 3 을 사람만 덮음 · 칸과 상관없이) · null = secretUses 그대로.
+  //  쌓는 몸: 사람 = 스킬트리 C12(skillKit.cnHunt) · AI · 시뮬 몸 = ai 스위치(기본 0 — 견줌만: 1 이면 AI 동방도 쌓고 판당 uses). on 0 = 모두 전 판 `?cnHunt=0`
+  cnHunt: { on: 1, max: 5, regen: 0.08, share: 0.08, uses: 1, ai: 0 }, // [사장님 11/14 결정 — regen · share 0.08 · uses 1 · 빠짐 없음 · 이름 · 자리] · max 5 · ai 0 [사장님 확인 전 — 확인표 3830 ~ 3836]
   // 손목 치기(일본 강화동작) 칼 떨구기 — 심화 칸 J8 (사장님 10/24 11:5x 'J8은 아예 칼 떨어트리는 건 줄 알았어 너무 강하면 50%로' · 12:0x '0.6초 동안 한 손을 놓음 이 효과는 빼' ·
   //   12:3x '손목 치기 걱정 1: 100% 떨어지게 하면? or 판정 완화' → 감독 추천 판정 완화 · 50 % 그대로 — combat.js koteCheck · koteSword · koteRoll):
   //  손목 치기가 닿으면 친 쪽 전용 난수로 굴려 p 로 맞은 쪽이 칼을 떨어뜨린다(fighter.dropSword — 칼 팔을 크게 다쳐 놓칠 때와 같은 길 · 줍기 없음: 부활하는 인물만 일어설 때 칼이 돌아온다 — revive.js).

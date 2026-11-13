@@ -2,6 +2,7 @@ import { classifyStroke } from './attack_stroke.js';
 import { STAMINA, GAIT, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY, SECRET, realS } from './config.js';
 import { entersAttackLine, isPreparation } from './stamina_stroke.js';
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
+import { huntRegenK } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 몸은 자연 회복 × (1 − regen × 겹)
 // 표준 시간 (10/25 22:3x): 공격 번호가 살아 있는 시간 · 긋기 꼬리는 실제 초로 적는다 (STAMINA 의 초 · 초당 값은 config 에서 realS · realRate)
 const ATTACK_LIFE = realS(1.5); // 공격을 낸 뒤 그 공격 번호가 살아 있는 시간 (막아 받기 청구 · 옛 흘림 판정)
 const ATTACK_TAIL = realS(0.35); // 긋는 동안 · 긋기가 끝난 뒤 공격으로 셈하는 꼬리
@@ -10,7 +11,7 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 /** 자연 회복 빠르기 (게임 초당): AI 15 · 사람 입력이 모는 몸(fighter.humanInput — main.js 플레이어) 25(사장님 10/29 17:5x) · 그 밖(시뮬 대본 몸) 21 — 쉼 뒤 회복 · 자연 회복 탈진 모두 */
 export function recoverRate(f) {
-  return f.aiControlled ? STAMINA.recoverPerSecond : f.humanInput ? STAMINA.humanRecoverPerSecond : STAMINA.playerRecoverPerSecond;
+  return (f.aiControlled ? STAMINA.recoverPerSecond : f.humanInput ? STAMINA.humanRecoverPerSecond : STAMINA.playerRecoverPerSecond) * huntRegenK(f); // × 동방 맹호은림 사냥 겹 (11/14 — cn_hunt.js · 겹 없으면 1)
 }
 
 /** 공통 기력 장부. 유파의 동작/해금과 독립적이며 모든 시간은 물리 시간이다. */

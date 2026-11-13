@@ -9,7 +9,7 @@
 //    상대가 쳐 오면(본 뒤) 0.6 몫 막기 단추 0.6 s(이탈리아는 그 가운데 비껴서며 찌르기 · 동방은 비기가 남았으면 막기 + 앞 스틱 = 격살) · 칼끼리 닿음을 느끼면(이탈리아) 0.25 ~ 0.95 s 뒤 탭 (85 %)
 //   기술 하나(낸 것 — fire)마다: 이름(비기 · 끌고 가는 칼 tech · 강화 · 탭 · 기본 긋기) · 맞음(칼날 상처 > 0) · 심각도 합 · 에너지 가장 큰 것 ·
 //    낸 뒤 1 실제 s 안에 상대 쓰러짐(죽음 · 기절) · 낸 뒤 1 실제 s 안에 내가 받은 심각도 · 맞음 · 넘어짐 · 판 = 이김 · 짐 · 준 · 받은 심각도
-//  node tools/sim/school_balance.mjs fight [--cells=german:longsword:longsword,...] [--seeds=1-24] [--dur=30] [--tech=0.35] [--set=SECRET.sweepCap=0] [--tag=이름] [--json=파일]
+//  node tools/sim/school_balance.mjs fight [--cells=german:longsword:longsword,...] [--seeds=1-24] [--dur=30] [--tech=0.35] [--set=SECRET.sweepCap=0] [--hunt=1 (11/14 동방 사냥 봇)] [--tag=이름] [--json=파일]
 //  node tools/sim/school_balance.mjs agg <json ...>   (칸마다 판 표 + 기술 표 — Markdown)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync } from 'node:fs';
@@ -76,7 +76,7 @@ const TSU = (() => {
 const KOTE = { from: PAD.langort, path: [[0.02, -0.22]] };
 
 /** 한 판 */
-export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], probe = null, onRound = null, botHook = null, attrib = 'new' }) { // probe = 재기 꽂개 (rapier_defence.mjs) · onRound · botHook = 코테 · 줍기 재기 (kote_pickup.mjs) · attrib 'old' = 11/04 기술 기록 셈 (step_input — 늦게 읽힌 긋기 이름 바꿈)
+export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], probe = null, onRound = null, botHook = null, attrib = 'new', hunt = 0 }) { // probe = 재기 꽂개 (rapier_defence.mjs) · onRound · botHook = 코테 · 줍기 재기 (kote_pickup.mjs) · attrib 'old' = 11/04 기술 기록 셈 (step_input — 늦게 읽힌 긋기 이름 바꿈)
   const rnd = rng(seed * 7919 + 101);
   const kit = kitFromNodes(school, allNodeIds(school)); // 무유파는 null (나무 없음 — 고유 · 비기 없음)
   const G = newRound({ seed, weapon, weapon2: opp, walls: true, ...(kit ? { kit } : {}), look: LOOKS.player, look2: LOOKS.enemy, persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
@@ -141,7 +141,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   const hist = [];
   const sense = () => {
     const C = uq.touch;
-    return { t: G.t / K, dist: P.foeDistance(), attack: G.ai.mode === 'attack' || !!A.skill.tap || !!A.skill.swinging, window: !!W.open, spin: !!W.spinArm?.armed, iai: !!W.iaiArm?.armed, left: secretLeft(P), touch: C && !C.cut ? C : null };
+    return { t: G.t / K, dist: P.foeDistance(), attack: G.ai.mode === 'attack' || !!A.skill.tap || !!A.skill.swinging, window: !!W.open, spin: !!W.spinArm?.armed, iai: !!W.iaiArm?.armed, left: secretLeft(P), touch: C && !C.cut ? C : null, hunt: A.cnHunt?.n ?? 0 };
   };
   let act = null;
   let nextDec = 0;
@@ -202,16 +202,23 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     }
     return null;
   };
+  // 11/14 사냥 봇 (hunt 1 — 동방만 · docs/strike/cn_hunt_2026-11-14.md §3): 유파 기술 몫 HUNT_TECH(0.6 — 허리 베기 세 칼만 고름은 그대로)로 사냥 겹을 쌓고 ·
+  //  격살(상대가 쳐 올 때 막기 + 앞 스틱)은 겹이 HUNT_AT 이상이거나 판이 HUNT_LATE 실제 s 를 넘으면 0.8 · 그 전엔 0.1 (남은 판당 수를 아껴 둠). 다른 유파 · hunt 0 은 전 판 그대로(난수 차례 같음)
+  const HUNT = !!hunt && school === 'chinese';
+  const HUNT_TECH = 0.6;
+  const HUNT_AT = 3;
+  const HUNT_LATE = 20;
+  const huntGk = (S) => (S.hunt >= HUNT_AT || S.t - (activeStart ?? 0) / K >= HUNT_LATE ? 0.8 : 0.1);
   const decide = (S) => {
     if (S.window && ['german', 'italian', 'japanese'].includes(school)) return { kind: 'tap', seconds: 0.07, want: secretName };
     if (S.spin && school === 'iberian') return ALTIB ? { kind: 'hold', seconds: 4, fwd: 0.6, want: secretName, releaseAt: M.contact + rnd() * (M.reach + 0.15 - M.contact) } : { kind: 'circle', seconds: 0.8, want: secretName }; // 11/11 'altib' 판: 무장 창 → 길게 눌러 메고 걸어 들어가 뗌 (전 판 정수리 가르기 봇과 같은 손)
     if (S.attack && S.dist < M.reach + 0.8) {
       if (school === 'italian' && rnd() < 0.35) return { kind: 'sideTap', seconds: 0.4, side: side(), tapAt: 0.03 + rnd() * 0.08, want: 'inquartata' };
-      if (school === 'chinese' && S.left > 0 && rnd() < 0.5) return { kind: 'guard', seconds: 0.65, fwd: 1, want: secretName };
+      if (school === 'chinese' && S.left > 0 && rnd() < (HUNT ? huntGk(S) : 0.5)) return { kind: 'guard', seconds: 0.65, fwd: 1, want: secretName };
       if (rnd() < 0.6) return { kind: 'guard', seconds: 0.6, fwd: S.dist < M.contact ? -0.5 : 0 };
     }
     if (S.dist > M.reach + 0.55) return { kind: 'move', seconds: 0.5, fwd: 0.9 };
-    if (rnd() < tech) {
+    if (rnd() < (HUNT ? HUNT_TECH : tech)) {
       const a = schoolTech(S);
       if (a) return a;
     }
@@ -416,6 +423,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   let exhT = 0;
   const brk = { P: null, A: null };
   let armedA = A.armed;
+  let huntT5 = null; // 11/14 사냥 겹이 상한에 닿은 때 (판 시작부터 실제 s — 동방 칸만 적음)
   let disarms = 0; // 칼 부러짐 (판 시작부터 실제 s) — 부러진 칼은 고유 공격이 안 남 (unique_assist busy)
   probe?.init?.({ G, P, A, uq, W, guard }); // 읽기만 (난수 · 몸 그대로)
   try {
@@ -460,6 +468,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
         for (const x of fires) if (G.t - x.t <= K + 1e-9) x.dis1 = true; // 칼 떨굼 (손목 치기 등)
       }
       armedA = A.armed;
+      if (huntT5 == null && school === 'chinese' && (A.cnHunt?.n ?? 0) >= (UA.cnHunt?.max ?? Infinity)) huntT5 = r3((G.t - (activeStart ?? 0)) / K);
       if (activeStart != null) hist.push(sense()), hist.length > 120 && hist.shift();
       if ((!P.alive || !A.alive) && end == null) end = G.t + 0.5;
       if (end != null && G.t >= end) break;
@@ -474,6 +483,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       secretFired: fires.filter((f) => f.cls === 'secret').length, brk, disarms,
       secretLeft: secretLeft(P), wants, acts, reads, altib: uq.stats.altib ?? null, // 11/11 알티바슈 포르트: 낸 수 · 남은 기력 몫(k) · 뗀 까닭
       aiStats: { altib: G.ai.stats.altib ?? null, cingir: G.ai.stats.cingir ?? null, specials: G.ai.stats.specials ?? null },
+      ...(school === 'chinese' ? { hunt: { n: A.cnHunt?.n ?? 0, hits: A.cnHunt?.hits ?? 0, t5: huntT5, onMe: P.cnHunt?.n ?? 0, bot: hunt ? 1 : 0 } } : {}), // 11/14 사냥 겹 (cn_hunt.js — 상대 몸 겹 · 겹 붙은 맞음 · 상한 닿은 때 · AI 가 내게 쌓은 겹 · 사냥 봇)
       fires: fires.map((f) => ({ t: r3(f.t / K), name: f.name, cls: f.cls, d: r3(f.dist0), c: f.contacts, w: f.wounds, sev: r3(f.sev), cons: r3(f.cons), E: r3(f.Emax), ty: f.types, r1: r3(f.recv1), cr1: r3(f.consR1), rn1: f.recvN1, f1: f.fall1, k1: f.kill1, dis1: f.dis1, base: f.base, want: f.want, stick: f.stick, st: r3(f.st0 - (f.st1 ?? P.stamina.value)) })),
       ...(probe?.done ? { probe: probe.done(fires) } : {}),
     };
@@ -558,7 +568,7 @@ if (isMain(import.meta.url)) {
     for (const c of cells) {
       const [school, weapon, opp] = c.split(':');
       for (const seed of seeds) {
-        const r = fightOne({ school, weapon, opp, seed, dur: +arg('dur', 30), tech: +arg('tech', 0.35), focus: arg('focus', null), secret: arg('secret', '1') !== '0', drop: arg('drop', '').split(',').filter(Boolean), attrib: arg('attrib', 'new') });
+        const r = fightOne({ school, weapon, opp, seed, dur: +arg('dur', 30), tech: +arg('tech', 0.35), focus: arg('focus', null), secret: arg('secret', '1') !== '0', drop: arg('drop', '').split(',').filter(Boolean), attrib: arg('attrib', 'new'), hunt: +arg('hunt', 0) });
         runs.push(r);
         console.error(JSON.stringify({ c, seed, win: r.win, lose: r.lose, T: r.T, dealt: r.dealt, recv: r.recv, fires: r.fires.length, ms: Date.now() - t0 }));
       }

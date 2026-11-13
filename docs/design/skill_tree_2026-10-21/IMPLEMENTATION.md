@@ -89,6 +89,7 @@
 | C3 허리 베기 (강화동작) | `u: yaoji` | `PlayerUniqueAssist` |
 | C7 막기 I · 세 자세 받기 | `parry` + `parryCover` — 거정세 · 어거세 · 요략세 | `parry_button.js` |
 | C4 심화 · 출혈 | `perk: yaoji` — 몸통 출혈 × 1.5 · 잔상 | `combat.js bleedPerSev` |
+| C12 심화 · 맹호은림 (11/14) | `cnHunt` — 허리를 베는 세 칼이 몸통에 상처를 낸 맞음마다 상대에 사냥 한 겹(최대 5 · 판 끝까지) · 겹마다 상대 기력 회복 −8 % · 격살 빠르기 +8 % (`docs/strike/cn_hunt_2026-11-14.md`) | `cn_hunt.js` · `combat.js huntWound` · `stamina.js recoverRate` · `skill.js gyeoksalReq` |
 | C5 끌어 딛고 허리 베기 | `u: chebuYaoji` | `PlayerUniqueAssist` |
 | C6 날개 접기 (이어 긋기) | `u: lianchi` | 〃 |
 | C8 막기 II · 단단한 받기 | `parryCut` — 막는 동안 피해 50 % | `parry_button.js woundKeep` |

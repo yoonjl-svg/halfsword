@@ -36,6 +36,7 @@ import { UNIQUE_ASSIST as UA, IB_FLOW } from './config.js'; // IB_FLOW.power: �
 import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 판정 배율 (11/06 — SKILL.fingerCut.hit · 기본 1 = 끔)
 import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
 import { kitOff, perkOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4)
+import { huntHit } from './cn_hunt.js'; // 동방 맹호은림 사냥 겹 (11/14 — 출혈 이점이 붙는 맞음에서 · 쌓는 몸만)
 import { MAX_FIGHTERS } from './team.js'; // 셋 이상 판: 같은 편도 적과 똑같이 상처 · 칼 겨루기 (사장님 10/29 22:3x — 제 몸끼리만 버린다)
 
 /** 발도 충돌 끔 쌍: 서로 다른 싸움꾼이고, 충돌을 끄는 중인 쪽의 칼·칼 쪽 팔·빈팔이 낀 쌍 (팔 ↔ 몸, 칼 ↔ 칼) */
@@ -984,7 +985,7 @@ export class Combat {
       if (r.schoolK) att.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (켄타이는 여기서 씀 — school_passive.js)
       if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
       // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈
-      if (r.severity > 0) { const tn = strokeTechOf(att); if ((tn === 'imbroccata' && r.type === 'stab' && !perkOff(att, tn)) || (yaojiBleedTech(tn) && r.type === 'cut' && UA.yaojiBleed?.zones.includes(r.zone) && !perkOff(att, 'yaoji'))) artFlash(att, this.dt); }
+      if (r.severity > 0) { const tn = strokeTechOf(att); const yb = this.yaojiDeep(att, r, tn); if ((tn === 'imbroccata' && r.type === 'stab' && !perkOff(att, tn)) || yb) artFlash(att, this.dt); if (yb) huntHit(att, vic); } // 11/14 동방 맹호은림: 출혈 × k 가 붙는 같은 맞음에 사냥 한 겹 (cn_hunt.js — 쌓는 몸만 · 공격 하나에 한 겹)
     }
     if (att.weapon?.kneelHit) this.whipKneelCheck(att, vic, pr.v.part); // 채찍 무릎 꿇리기 (10/23 — 한 획에 한 번 · 아래)
     this.koteCheck(att, vic, pr.v.part, r); // 손목 치기 칼 떨구기 (J8 — 아래팔에 판정이 난 맞음: 10/24 12:3x 판정 완화 · 'cut' 판은 칼날 베기 · 심각도 > 0 만)
@@ -1020,6 +1021,16 @@ export class Combat {
    *  p 로 맞은 쪽이 한쪽 무릎을 꿇는다(knockDown(false) — 넘어졌다 일어날 때의 무릎 자세 · 꿇는 시간만 kneel 초 꼴). 그 상대에게는 cool 초 안에 다시 굴리지 않는다.
    *  굴림은 친 쪽 전용 난수(fighter.buckleRandom — Math.random 순서는 그대로). 기록 this.buckleLog { t, att, vic, part, hit }
    */
+  /** 요격 깊은 출혈이 붙는 맞음인가 (analyze bleedPerSev 의 UA.yaojiBleed 조건과 같음 — 허리를 베는 세 칼 · 칼날 베기 · 몸통 · 사람은 심화 C4): 잔상 · 11/14 사냥 겹이 읽음 */
+  yaojiDeep(att, r, tn = strokeTechOf(att)) {
+    return yaojiBleedTech(tn) && r.type === 'cut' && !!UA.yaojiBleed?.zones.includes(r.zone) && !perkOff(att, 'yaoji');
+  }
+
+  /** 11/14 동방 맹호은림: 운동학으로 끄는 칼(secret_instant.js — 날개 접기 등)이 낸 상처도 strike 와 같은 조건으로 사냥 한 겹 (cn_hunt.js huntHit — 쌓는 몸만) */
+  huntWound(att, vic, r) {
+    if (r?.severity > 0 && this.yaojiDeep(att, r)) huntHit(att, vic);
+  }
+
   buckleCheck(att, vic, part) {
     const B = UA.buckle;
     if (!(B?.p > 0) || !vic?.alive || vic.state !== 'stand' || vic.revival || !B.parts.includes(part)) return;

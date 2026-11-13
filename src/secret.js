@@ -14,6 +14,7 @@ import { TRADITIONS, playerSecretDef } from './schools.js';
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
 import { segDist } from './skill.js';
 import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동방 막기 I(C7 — 몸꼴 parryCover)일 때만
+import { huntUses } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사람 동방 비기 판당 쓸 수 1 (secretUsesOf)
 import { RisolutoWatch, lungeGapOk, bladesNear } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
 import { stickTurnState, stickTurnStep, stickTurnClear } from './stick_turn.js'; // 이베리아 휘감아 돌기 스틱 판 — 이동 스틱 돌리기 몸짓 (10/23)
 import { circleState, circleStep, circleClear, circleLive } from './attack_circle.js'; // 이베리아 싱지르 공격 원 판 — 공격 입력으로 원 그리기 몸짓 (10/24)
@@ -731,7 +732,7 @@ export function chainRange(d, view) {
 export function secretUsesOf(f) {
   const U = UNIQUE_ASSIST.secretUses;
   if (!U) return Infinity;
-  return U[f?.swordArt?.tradition] ?? U.default ?? Infinity;
+  return huntUses(f) ?? U[f?.swordArt?.tradition] ?? U.default ?? Infinity; // 11/14 사장님 '격살이 세지는 만큼 3번 제한을 다른 비기처럼 1번으로' — 사람 동방만 cnHunt.uses(1) 로 덮음 (cn_hunt.js · AI 는 ai 스위치)
 }
 /** 이 판에 남은 비기 수 */
 export const secretLeft = (f) => Math.max(0, secretUsesOf(f) - (f?.secretUsed ?? 0));
