@@ -1,6 +1,8 @@
 import { classifyStroke } from './attack_stroke.js';
 import { STAMINA, GAIT, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY, SECRET, realS } from './config.js';
 import { entersAttackLine, isPreparation } from './stamina_stroke.js';
+import { clinchRate } from './de_dirty.js'; // 독일 붙어 버티기 B2 (11/14 — 기본 끔 = 늘 1)
+import { bargeHeld, clinchHoldK } from './close_hold.js'; // 밀치기 묶임 기력 × 2 (11/14 사장님 — 묶임이 없으면 늘 1)
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
 // 표준 시간 (10/25 22:3x): 공격 번호가 살아 있는 시간 · 긋기 꼬리는 실제 초로 적는다 (STAMINA 의 초 · 초당 값은 config 에서 realS · realRate)
 const ATTACK_LIFE = realS(1.5); // 공격을 낸 뒤 그 공격 번호가 살아 있는 시간 (막아 받기 청구 · 옛 흘림 판정)
@@ -131,7 +133,7 @@ export class Stamina {
       if (!f.alive || f.revival || f.state !== 'stand' || f.feetHeld || s.exhausted || s.value <= STAMINA.floor || s.inSecret || sk?.swinging || sk?.tap || sk?.pom || (f.gun?.shots ?? 0) > s.lastShots) return false;
     }
     const pressing = (f) => f.canShove && f.barge?.phase === 'press' && f.stickY > 0 && f.foeDistance() <= CLOSE.reach(f.armed ? f.weapon : null) && f.closeTouch();
-    return !!(pressing(a) || pressing(b));
+    return !!(pressing(a) || pressing(b) || bargeHeld(a.barge) || bargeHeld(b.barge)); // 11/14 묶임(close_hold.js — 사장님 '묶인 1.2초 동안 … 기력이 2배 소모돼'): 묶인 동안은 스틱 · 닿음과 상관없이 버팀
   }
 
   /** 두 Fighter.step 중 먼저 오는 쪽이 양쪽 비용을 확정하고, 뒤쪽은 같은 결과를 소비한다.
@@ -147,7 +149,26 @@ export class Stamina {
       pair = { a: this, b: other, pending: other, active };
       this.clinchStep = other.clinchStep = pair;
       this.clinching = other.clinching = active;
-      if (active) {
+      const kH = clinchHoldK(this.fighter, other.fighter);
+      if (active && (kH !== 1 || clinchRate(this.fighter) !== 1 || clinchRate(other.fighter) !== 1)) {
+        // 묶임 × holdDrain (11/14 사장님 '기력이 2배 소모돼' — close_hold.js clinchHoldK · 두 몸 모두) · 독일 붙어 버티기 B2 (11/14 설계안 — config DE_DIRTY.clinchK · de_dirty.js clinchRate · 기본 끔):
+        //  몸마다 제 빠짐 × 배율(묶임 × 2 · 독일 몸만 × 0.5 더) — 같은 시간을 버팀. 둘 다 1 이면 아래 옛 가지(바이트 같음)
+        const rate = (s) => STAMINA.clinchPerSecond * kH * clinchRate(s.fighter);
+        const T = Math.min(dt, ...[this, other].map((s) => (s.value - STAMINA.floor) / rate(s)));
+        for (const s of [this, other]) {
+          const k = clinchRate(s.fighter);
+          s.spend('clinch', rate(s) * T);
+          s.clinchSeconds += T;
+          if (k !== 1 && s.fighter.deDirtyStats) s.fighter.deDirtyStats.clinchSaved += STAMINA.clinchPerSecond * kH * (1 - k) * T;
+          if (s.value < STAMINA.floor + 1e-9) { s.value = STAMINA.floor; s.stages(); }
+        }
+        if (this.exhausted || other.exhausted) {
+          for (const s of [this, other]) {
+            s.clinching = false;
+            if (s.fighter.barge) { s.fighter.barge = null; s.fighter.bargeEnd = 'exhausted'; }
+          }
+        }
+      } else if (active) {
         // 마지막 스텝도 실제 차감량이 같다. 부동소수점 잔차는 경계에서만 정리한다.
         const amount = Math.min(STAMINA.clinchPerSecond * dt, this.value - STAMINA.floor, other.value - STAMINA.floor);
         for (const s of [this, other]) {

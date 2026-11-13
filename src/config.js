@@ -269,6 +269,25 @@ export const CLOSE = {
   pommelAll: false,
   // AI 가 찍기를 시작하는 가슴~가슴 거리 상한 (m). 이보다 멀면 찍지 않는다(폼멜이 얼굴에 못 닿음 — 손 0.6 m + 폼멜 0.12 + 얼굴 앞면) [추정]
   pommelDist: 0.9,
+  // ── 붙은 거리 규칙 (11/14 — docs/strike/de_dirty_2026-11-14.md · fighter.js closeStep · src/close_hold.js) ──
+  //  사장님 11/14 결정: "밀치기 기준 1m로 하자. 그리고 한번 밀치기가 시작되면 서로 힘을 받아서 최소 n초 무조건 유지되게 해" → "1.2초로 해" →
+  //   "아니야 밀치기애 묶인 1.2초 동안은 아무 공격도 못하고 기력이 2배 소모돼. 밀치기가 발동하는 1m 이내에서는 손잡이 찍기만 가능해. 밀치기가 발동돼서 1.2초간 묶인 후에는 그게 풀린 후 2초간 다시 강제로 묶이지 않아. 쿨타임인 셈."
+  //  모두 사람(AI 가 몰지 않는 몸)만 · AI 는 startAI 견줌 스위치(기본 끔 — 관문 그대로)
+  // 시작 거리: 사람 밀치기는 가슴 사이 이 거리 안에서 상대 쪽으로 밀면 나간다(모든 유파 · 무기 한 값 — 걸어 들어가며 밀기) · 누르기의 떨어짐도 이 거리(무기 reach 가 더 길면 reach).
+  //  null = 옛 판(무기 reach — 롱소드 0.77) `?closeStart=0`
+  startD: 1.0, // [사장님 11/14 결정 '밀치기 기준 1m']
+  // AI 견줌 스위치 (기본 null = 지금 판): 수 = AI(persona.close 인물 · 독일 AI 몸 붙이기 — 같은 closeStep · ai.js closeQuarters 안쪽 셈)도 이 시작 거리 · 묶임 · 맞밀기 · 기력 × holdDrain · 쿨타임 ·
+  //  묶인 동안 공격 안 함 · 칼자루만 거리에선 공격 대신 손잡이 찍기(ai.js startAttack). `?closeStartAI=1` (= 1.0)
+  startAI: null,
+  // 묶임: 밀치기가 누르기에 들어가면 이 시간(실제 초) 동안 떨어짐 · 스틱 놓음 · 팔 다 펴짐 · 긋기 · 찌르기로 안 끝남(나 · 상대 넘어짐 · 쓰러짐 · 걸음 꺼짐 · 탈진만 끝냄). 0 = 옛 판 `?closeHold=0` (시간 사다리 1.2)
+  holdMin: realS(1.2), // [사장님 11/14 결정 '1.2초로 해']
+  holdPush: 1, // 맞밀기 ('서로 힘을 받아서'): 묶인 동안 상대 골반도 내 가슴 쪽으로 다리 밀기(legDrive × 상대 근육 · 힘 — 같은 값 · 상대 발이 땅에 있을 때). 0 = 끔 [사장님 11/14 결정 원문의 감독 해석 · 확인 전]
+  holdLock: 1, // 묶인 동안 어떤 공격 입력도 안 나감(손잡이 찍기 · 비기 포함 — main.js · close_hold.js closeInputGate). 0 = 끔(옛 판 — 긋기 · 찌르기가 밀치기를 끝냄) `?closeLock=0` [사장님 11/14 결정 '아무 공격도 못하고']
+  holdDrain: 2, // 묶인 동안 붙어 버티기 기력 빠짐 배율(STAMINA.clinchPerSecond 초당 10 → 20 · 두 몸 모두 · 묶인 동안은 스틱 · 닿음과 상관없이 버팀으로 셈 — stamina.js). 1 = 끔 `?closeDrain=1` [사장님 11/14 결정 '기력이 2배 소모돼']
+  holdCool: realS(2.0), // 쿨타임: 묶임이 풀린 뒤 이 시간(실제 초) 동안 새 밀치기에 묶임이 안 걸림(밀치기 걸음 · 밂 · 다리 밀기는 그대로). 0 = 없음 `?closeCool=0` [사장님 11/14 결정 '2초간 다시 강제로 묶이지 않아']
+  // 칼자루만: 묶여 있지 않고 가슴 사이 startD 안(나 · 상대 서 있음 · 칼을 쥠)이면 공격 입력(탭 · 빠른 끌기)은 손잡이 찍기(skill.pommel — 시제품 POMMEL 값 그대로)만 — 긴 베기 · 찌르기 · 고유 공격 · 비기는 안 나감
+  //  (독일 모르트슐라크 창이 열려 있으면 그것은 나감 — 칼자루 공격이라는 감독 해석 · 여쭐 것). 0 = 끔 `?closeHilt=0` [사장님 11/14 결정 '1m 이내에서는 손잡이 찍기만 가능해']
+  nearHilt: 1,
 };
 
 // 다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid', gait.js)
@@ -282,6 +301,14 @@ export const GAIT = {
   strideRule: 1,
   itEven: 1, // 이탈리아 '고른 바탕 걸음' (10/15 사장님 '이탈리아 보법 자체가 이미 불균질 … 런지를 흉내낸건가? … 보폭을 조금 줄일까? 작게 빨리' — docs/strike/italian_rhythm_2026-10-15.md §10): 1 = schools.js ITALIAN_GAIT.even 을 덮음(고른 짝걸음 — 디딤 간격이 늘 한 걸음 시간 · 몸 박자 없음 · 짝 보폭 0.36 → 0.28), 0 = 옛 짝걸음('따·닥 + 쉼' — 바이트 같음). `?itGait=old` = 0. 사람·AI 같이 · 지나 딛기(멀리·빨리) 보폭·박자는 보폭 규칙(strideRule — 이탈리아 k 0.7)
   deChase: 1, // 독일 보법 '간격 잡기'의 빠른 디딤 (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기', 10/15 18:0x 부터 '간격 잡기'): 1 = 상대 헛침 뒤 독일 유파 몸의 앞 두 걸음이 빠른 걸음(값 schools.js TRADITIONS.german.chase · gait.js foeWhiff·fastBegin), 0 = 끔(빠른 디딤도 잡기도 없음 — 전 판, 바이트 같음). `?deChase=0`
+  // 독일 보법 II '파고들기' (사장님 11/14 결정 "간격 잡기를 파고들기로 바꿔. '앞 박차기'인데 한 걸음이 아니라 두 걸음 빠르게 들어가는 기술이야. 거리 제한은 없음" — docs/strike/de_dirty_2026-11-14.md):
+  //  1 = 사람(AI 가 몰지 않는 몸 · 무기 유파 독일 · 스킬트리 G2 열쇠 'chase')이 거의 서서(뒤 박차기와 같은 조건 — 골반 burstStandV 아래 · 두 발 땅 · 스틱 burstStick 넘게) 스틱을 앞으로(앞 몫 ≥ 옆 몫) 밀면
+  //   앞 digSteps 걸음을 박찬 걸음 장치(gait.js fastBegin · burst — 몸 목표 빠르기 digV · 가속 한도 × burstAccel · 발 뜬 시간 burstT · 걸음마다 세게 멈춤)로 · 기력 pushCost 12 한 번(두 걸음 한 기술) ·
+  //   헛침 조건 · 칼 거리 잡기(deHold) 없음 · 사람의 옛 간격 잡기(상대 헛침 뒤 받을 창 — foeWhiff)는 거둠. 독일 AI 의 간격 잡기는 그대로(deChase).
+  //  0 = 옛 판(사람도 간격 잡기 — 바이트 같음) `?deDig=0`
+  deDig: 1, // [사장님 11/14 결정]
+  digSteps: 2, // 박찬 앞 걸음 수 [사장님 11/14 결정 '두 걸음']
+  digV: 2.5, // 앞 박찬 걸음 몸 목표 빠르기(m/s — 뒤 박차기 burstBackV 와 같은 절대 목표 · 앞 걷는 빠르기 1.82 의 1.375 배) [감독 안 · 사장님 확인 전]
   // 독일 간격 잡기의 '잡기' (10/15 18:0x 사장님 승인 "'간격 잡기'로 네가 잡은 기준으로 테스트 해봐" — docs/strike/german_hold_2026-10-15.md): 받을 창이 열려 있거나 빠른 디딤 중에
   //  '지금 거리 − 세게 멈춤으로 서는 거리'가 내 무기 measure.contact(칼이 제대로 들어가는 거리 — 롱소드 1.57 m) 안이 되면 남은 빠른 디딤을 버리고 세게 멈춤(가속 한도 × burstAccel) ·
   //  창과 같은 0.6 s 동안 조종 입력의 앞(상대 쪽) 몫만 0 — 스틱을 놓았다 다시 밀면 바로 풀림. 헛침 때 이미 contact 안이면 창을 열지 않음. 플레이어만(AI 가 몰지 않는 몸 — AI 는 그대로)
@@ -615,6 +642,17 @@ export const SCHOOL_PASSIVE = {
   german: { on: true, gain: 0.3, aiK: 1, touch: 1 }, // 사장님 10/21 '+30% · 창 0.6초(afterWindow)' · aiK 1 은 감독(반으로 줄일 자리) · touch: 10/28 01:4x 사장님 '무기가 맞부딪혔을 때로 하면?' — 1 = 칼끼리 닿아 있는 동안 창이 열려 있고 닿음이 끝나고 afterWindow 뒤 닫힘(헛침 · 막힘 길도 그대로) · 0 = 전(상대 공격이 실패할 때만 — `?indesTouch=0` · 확인표 2670)
   chinese: { on: true, clot: 2 }, // 숨 바꾸기 (토납) — 사장님 10/21 '휘두르지 않을 때 출혈 굳기 2배'
 };
+// 독일 더티복싱 B · C (11/14 설계안 docs/design/german_dirty_boxing_2026-11-14.md §2 B · C · 재기 docs/strike/de_dirty_2026-11-14.md · src/de_dirty.js):
+//  사람(사람 입력이 모는 몸 humanInput) · 무기 유파 독일 · 새 몫 열쇠(B = 'deClinch' · C = 'deHilt' — skill_tree_data.js KIT_KEYS · 11/14 사장님 '새 효과는 새 스킬트리 칸으로' · 새 칸 자리 대기라 지금은 G9 '그 순간'에 임시로 이음)를 가진 몸만.
+//  모두 기본 끔(견줌만) — 값은 설계안 그대로 [모두 사장님 확인 전]
+//  armSlow (B1 밀어 흔들기): 독일 밀치기가 상대 몸에 들면(누르기 중 내 팔 · 칼이 상대 몸에 처음 닿음 — 한 밀치기에 한 번) 상대 두 팔이 이 초 동안 늦음(헛누름 cavArmSlow 와 같은 장치
+//   nagashi_recovery.js beginFlowRecovery). 0 = 끔 `?deB1=1` (실제 초 — 시간 사다리 0.6)
+//  clinchK (B2 붙어 버티기): 붙어 버티는 동안 기력 빠짐(STAMINA.clinchPerSecond — 지금 두 몸 각각 초당 10) 가운데 독일 몸 몫만 × 이 값(상대는 그대로). 1 = 끔 `?deB2=1` (= 0.5)
+//  door (C1 모르트슐라크 빠른 문): 1.5 s 붙음(SECRET.mordPress)에 더해 ① 겹치기가 맞거나 막힌(칼에 닿은) 뒤 이 초 안에 가슴 사이 mordCloseN(0.8 m) 안 ② 독일 밀치기가 든 뒤 이 초 안이면
+//   모르트슐라크 창이 곧장 열림(창 길이 · 판당 한 번 · 기력 문턱은 그대로). 0 = 끔 `?deC1=1` (실제 초 0.6)
+//  mordIndes (C2 칼자루 뒤 칼): 모르트슐라크가 머리에 들면(칼자루 · 폼멜이 머리에 판정) '그 순간' 창(SCHOOL_PASSIVE.german — 0.6 s · +30 %)을 연다 — 비기가 도는 동안(굳음까지)은 창 시계가 멈춤. 0 = 끔 `?deC2=1`
+export const DE_DIRTY = { armSlow: 0, clinchK: 1, door: 0, mordIndes: 0 };
+export const DE_DIRTY_ON = { armSlow: realS(0.6), clinchK: 0.5, door: realS(0.6), mordIndes: 1 }; // 켤 때 값 (설계안 — 사장님 확인 전) · main.js `?deB1=1` 등 · 재기 --set
 // AI 반응 시간 (10/21 사장님 '당장해' — 옆 공략: 박찬 직후 짧게 옆이 열리고 그때 치는 플레이): AI 는 상대 쪽으로 몸을 돌릴 때 face s 전의 상대 자리를 본다
 //  (사람처럼 보고 알아채는 시간 — 서 있는 상대는 같은 자리라 그대로). AI 만(플레이어 몸은 그대로) · 감독 값 0.2 s — 사장님 확인 전. `?aiReact=0` = 끔 · `?aiReact=0.25`
 export const AI_REACT = { on: true, face: realS(0.2) };

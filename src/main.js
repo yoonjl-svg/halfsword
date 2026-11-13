@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as CONFIG from './config.js';
+import { closeInputGate, closeInputApply } from './close_hold.js'; // 붙은 거리 규칙 — 묶인 동안 공격 막음 · 1 m 안 손잡이 찍기만 (11/14 사장님)
 import { PHYSICS, ARENA, CAMERA, AI_PROFICIENCY } from './config.js';
 import { setWhipPreset } from './druid_whip.js'; // 드루이드의 채찍 덩굴 값 판 (`?whip=src` = 샛별 값 — 10/23)
 import { FINISH as FINISH_SWITCH } from './finish.js'; // 마무리 스위치 entry·mode·vital·plateNeck (주소 ?finishEntry · ?finishMode · ?vital · ?plateNeck)
@@ -150,6 +151,18 @@ if (params.has('armAtFight')) CONFIG.SECRET.armAtFight = +params.get('armAtFight
 if (params.has('mordStepPause')) CONFIG.SECRET.mordStepPause = +params.get('mordStepPause') ? 1 : 0; // 다시 붙는 밀치기 첫 걸음 동안 너그러움 시계 멈춤 (10/27 23:0x 사장님 결정 — 기본 1 · `?mordStepPause=0`)
 if (params.has('closeLatch')) CONFIG.CLOSE.latch = +params.get('closeLatch') ? 1 : 0; // 밀치기 걸쇠 (10/25 23:3x 사장님 '이 걸쇠 없애' — 기본 0 · `?closeLatch=1` = 놓았다 다시 밀어야)
 if (params.has('closeLatchAI')) CONFIG.CLOSE.latchAI = +params.get('closeLatchAI') ? 1 : 0; // AI 밀치기 걸쇠 (기본 = config CLOSE.latchAI)
+// 붙은 거리 규칙 (11/14 사장님 '밀치기 기준 1m' · '묶인 1.2초 동안은 아무 공격도 못하고 기력이 2배' · '1m 이내에서는 손잡이 찍기만' · '2초간 다시 강제로 묶이지 않아' — config CLOSE · src/close_hold.js):
+//  `?closeStart=0` = 옛 시작 거리(무기 reach) · `?closeStart=0.9` = 그 거리 · `?closeStartAI=1` = AI 도 같은 규칙(견줌) · `?closeHold=0` = 묶임 없음 · `?closeHold=1.5` = 그 실제 초 ·
+//  `?closeLock=0` = 묶인 동안 공격 막음 없음 · `?closeDrain=1` = 기력 그대로 · `?closeCool=0` = 쿨타임 없음 · `?closeHilt=0` = 칼자루만 거리 없음
+if (params.has('closeStart')) CONFIG.CLOSE.startD = +params.get('closeStart') > 0 ? +params.get('closeStart') : null;
+if (params.has('closeStartAI')) CONFIG.CLOSE.startAI = +params.get('closeStartAI') > 0 ? +params.get('closeStartAI') : null;
+if (params.has('closeHold')) CONFIG.CLOSE.holdMin = +params.get('closeHold') > 0 ? CONFIG.realS(+params.get('closeHold')) : 0;
+if (params.has('closeLock')) CONFIG.CLOSE.holdLock = +params.get('closeLock') ? 1 : 0;
+if (params.has('closeDrain')) CONFIG.CLOSE.holdDrain = +params.get('closeDrain') > 0 ? +params.get('closeDrain') : 1;
+if (params.has('closeCool')) CONFIG.CLOSE.holdCool = +params.get('closeCool') > 0 ? CONFIG.realS(+params.get('closeCool')) : 0;
+if (params.has('closeHilt')) CONFIG.CLOSE.nearHilt = +params.get('closeHilt') ? 1 : 0;
+// 독일 더티복싱 B · C (11/14 설계안 — config DE_DIRTY · 기본 끔 · 켤 때 값 DE_DIRTY_ON): `?deB1=1` 밀어 흔들기 · `?deB2=1` 붙어 버티기 · `?deC1=1` 모르트슐라크 빠른 문 · `?deC2=1` 칼자루 뒤 칼 · `?deDirty=all` = 넷 모두
+for (const [q, k] of [['deB1', 'armSlow'], ['deB2', 'clinchK'], ['deC1', 'door'], ['deC2', 'mordIndes']]) if (params.get(q) === '1' || params.get('deDirty') === 'all') CONFIG.DE_DIRTY[k] = CONFIG.DE_DIRTY_ON[k];
 if (params.has('mordNear')) CONFIG.SECRET.mordNear = +params.get('mordNear') ? 1 : 0; // AI 몸 붙이기 자연스럽게 가까울 때만 (10/24 14:2x 사장님 · 0 = 멀리서 붙이러 걸어가는 옛 판)
 if (params.has('mordWalkStrike')) CONFIG.SECRET.mordWalkStrike = +params.get('mordWalkStrike') ? 1 : 0; // AI 몸 붙이기 걸어가며 치기 (10/24 13:3x 사장님 · 0 = 걸어가는 동안 안 침 옛 판)
 if (['reverse', 'hilt'].includes(params.get('mordGrip'))) CONFIG.SECRET.mord.grip = params.get('mordGrip');
@@ -510,6 +523,7 @@ if (params.has('itWalk')) setItalianWalk(params.get('itWalk')); // 이탈리아 
 if (params.has('itBackCap')) setItalianBackCap(params.get('itBackCap')); // 이탈리아 물러서기 걸음 수 한도(10/31 08:xx 사장님 '네걸음 이후에는 (다섯 걸음째부터) 70% 적용' — schools.js ITALIAN_GAIT.backCap): `?itBackCap=0` = 10/21 판(늘 뒤 느려짐 없음) · `?itBackCap=N` = N 걸음까지
 if (params.has('itGait')) CONFIG.GAIT.itEven = params.get('itGait') === 'old' ? 0 : 1; // 이탈리아 고른 바탕 걸음(10/15 19:3x 사장님 '이탈리아 보법 자체가 이미 불균질' — 고른 짝걸음, docs/strike/italian_rhythm_2026-10-15.md §10): 기본 켬, `?itGait=old` = 옛 짝걸음('따·닥 + 쉼')
 if (params.has('deChase')) CONFIG.GAIT.deChase = +params.get('deChase') ? 1 : 0; // 독일 간격 잡기의 빠른 디딤(10/15 — 상대 헛침 뒤 앞 두 걸음 빠른 걸음, docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기'): 기본 1, `?deChase=0` = 끔(잡기도 없음)
+if (params.has('deDig')) CONFIG.GAIT.deDig = +params.get('deDig') ? 1 : 0; // 독일 보법 II 파고들기 (11/14 사장님 '간격 잡기를 파고들기로 바꿔' — 서서 앞으로 세게 밀면 두 걸음 박차고 들어감 · 거리 제한 없음, gait.js): 기본 1, `?deDig=0` = 옛 간격 잡기(헛침 뒤 0.6 s · 두 걸음 50 % · 칼 거리에서 섬)
 if (params.has('deHold')) CONFIG.GAIT.deHold = +params.get('deHold') ? 1 : 0; // 독일 간격 잡기의 잡기(10/15 18:0x — 칼이 제대로 들어가는 거리 contact 에서 서고 0.6 s 앞 몫 0 · 스틱 놓았다 밀면 풀림 · 플레이어만, docs/strike/german_hold_2026-10-15.md): 기본 1, `?deHold=0` = 끔(빠른 디딤만 — 지금 판)
 if (params.has('cnLight')) CONFIG.GAIT.cnLight = +params.get('cnLight') ? 1 : 0; // 동방 보법 가벼운 발(10/15 18:3x — 발로 내는 가속 한도의 보통 걸음 몫 × 1.5, 최고 빠르기 그대로 · 사람·AI 같이, docs/strike/cn_light_feet_2026-10-15.md): 기본 1, `?cnLight=0` = 끔(지금 판)
 if (params.has('cnLightAi')) CONFIG.GAIT.cnLightAi = +params.get('cnLightAi') ? 1 : 0; // 동방 AI 걸음 박자(10/15 — 가벼운 발 몸의 AI 는 공격 꼴에서만 가벼운 발 · 간 보기·막기·물러남은 옛 가속, docs/strike/cn_light_feet_2026-10-15.md §7): 기본 1, `?cnLightAi=0` = 끔(사람·AI 같이 — 지금 판)
@@ -3495,7 +3509,8 @@ function playerInputFrame(dt, now) {
   // 플레이어 비기 (10/9 23:5x): 창이 열려 있을 때 공격 입력(톡 = 찌르기, 휘두르기만큼 빠른 끌기 = 베기)이 오면 그 입력 대신 비기 완벽 실행.
   //  실행·경직 동안은 칼 입력(끌기·톡)을 무시한다 — 발(스틱)은 실행 동안 내 것, 경직 동안은 안 듣는다 (사장님 10/10 20:5x '잠깐 아예 못 움직이게' — 칼은 skill.js holdStiff 가 멈춰 둔다)
   const swipe = Math.hypot(d.x, d.y) / Math.max(dt, 1e-3) >= CONFIG.SKILL.swingSpeed;
-  let secBusy = exhausted || !!player.skill.secretPhase;
+  const closeGate = closeInputGate(player, playerSecret); // 붙은 거리 규칙 (11/14 — 묶임 lock · 칼자루만 near · close_hold.js)
+  let secBusy = exhausted || !!player.skill.secretPhase || closeGate.lock;
   // 이베리아 길목 (사장님 결정 10/11 13:2x): 준비(armed)가 켜져 있으면 창을 기다리지 않고 공격 입력 하나가 곧 길목 한 칼 (secret.js fireArmed — 플레이어만)
   const gilReady = !!playerSecret?.S?.do?.gilmok && !!playerSecret.gilArm?.armed;
   const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly; // tapOnly(이탈리아 안다레 리솔루토 전 판 — `?risoTap=1`)면 찌르기 입력(톡)만 · 10/25 21:0x 사장님 '공격하면 발동' 뒤 기본은 끌기도 비기 (schools.js tapOnly = SECRET.risolutoTap)
@@ -3506,13 +3521,13 @@ function playerInputFrame(dt, now) {
   //  11/11 알티바슈 포르트 비기 (SECRET.iberianSecret 'altib'): 무장 창은 톡 · 끌기로 나가지 않고(holdOwns — 보통 공격) 길게 눌러 메기로만(아래 holdInput armed) ·
   //  싱지르 특수 공격: 무장 없이 원 한 바퀴(unique_assist.js circleTick — 비기 판 원과 같은 셈 · 식힘) — 그 스텝은 비기 실행 중(secBusy)과 같게
   const atkWin = !!playerSecret?.open && !playerSecret.stickOwns() && !playerSecret.circleOwns() && !playerSecret.holdOwns();
-  const stickGo = !!playerSecret?.spinStick(dt, input.move, !secBusy && player.alive);
+  const stickGo = !!playerSecret?.spinStick(dt, input.move, !secBusy && player.alive && closeGate.secretOk);
   const handDown = input.activeTouch !== null || document.pointerLockElement === canvas;
-  const circleGo = !!playerSecret?.spinCircle(dt, d, handDown, !secBusy && player.alive);
-  if (player.skill.uniq?.cingirE && player.skill.uniq.circleTick(dt, d, handDown, !secBusy && player.alive)) secBusy = true;
+  const circleGo = !!playerSecret?.spinCircle(dt, d, handDown, !secBusy && player.alive && closeGate.secretOk);
+  if (player.skill.uniq?.cingirE && !closeGate.near && player.skill.uniq.circleTick(dt, d, handDown, !secBusy && player.alive)) secBusy = true; // 칼자루만 거리(11/14 — close_hold.js)에선 원 긋기를 안 봄
   // 창 지킴 (10/25 21:0x — SECRET.secretHold): 보통 탭 찌르기 · 손잡이 찍기가 아직 도는 동안은 비기를 못 낸다(skill.secret 이 받지 않음) — 그 입력으로 창을 써 버리지 않고 남겨 둠 (`?secretHold=0` = 전: 창을 쓰고 비기 없음)
   const secArm = !(CONFIG.SECRET.secretHold && (player.skill.tap || player.skill.pom));
-  if (((atkWin || gilReady) && (taps > 0 || secSwipe) || stickGo || circleGo) && !secBusy && player.alive && secArm) {
+  if (((atkWin || gilReady) && (taps > 0 || secSwipe) || stickGo || circleGo) && !secBusy && player.alive && secArm && closeGate.secretOk) {
     const o = playerSecret.open ? playerSecret.fire() : playerSecret.fireArmed();
     if (o) o.dir = [d.x, d.y]; // 비기를 낸 끌기의 방향 — 이베리아 흐름(10/11)이 이 칼의 흐름을 이어받는다 (톡이면 0 → 걸러진 손 목표 속도)
     if (player.skill.secret(o)) {
@@ -3520,6 +3535,9 @@ function playerInputFrame(dt, now) {
       showPlayerCue(o.S, 'secret');
     }
   }
+  // 붙은 거리 규칙 (11/14 사장님 '묶인 1.2초 동안은 아무 공격도 못하고' · '1m 이내에서는 손잡이 찍기만' — config CLOSE.holdLock · nearHilt · close_hold.js — 모든 유파 사람):
+  //  묶임 = 위에서 비기 실행 중처럼(secBusy — 손 · 공격 · 비기 모두 안 남) · 칼자루만 거리 = 공격 입력(탭 · 빠른 끌기)은 손잡이 찍기(모르트슐라크 창은 위 비기 차례가 먼저 — closeGate.secretOk)
+  if (player.alive && (closeGate.lock || !secBusy) && closeInputApply(player, closeGate, d, taps, swipe, dt)) taps = 0;
   // 중국 막기 연환 미리 받기 (10/12 — SECRET.cnBuffer, secret.js canBuffer): 정한 자세로 막아 칼이 맞닿은 동안 온 공격 입력을 받아 두고(칼이 떨어지는 스텝에 곧장 연환),
   //  받아 둔 동안은 칼 입력(끌기·톡)을 삼킨다 — 보통 공격·막기 풀림으로 새지 않게 (한 번 끈 손가락의 남은 움직임까지)
   if (!secBusy && player.alive && (taps > 0 || swipe) && playerSecret?.canBuffer()) playerSecret.buffer([d.x, d.y]);
@@ -3543,7 +3561,8 @@ function playerInputFrame(dt, now) {
   // 풍차 베기 (이베리아 B4 — 10/29 · unique_assist.js holdTick): 탭 입력을 끌지 않고 길게 누르면 감기 · 떼면 내려침 — 누름 상태를 알린다(비기 창이 열려 있으면 감지 않음 — 싱지르가 먼저).
   //  감는 동안은 손가락 움직임을 손 목표에 더하지 않는다(손은 감기가 쥔다)
   if (player.skill.uniq?.holdE) {
-    const hs = input.holdState();
+    const hs0 = input.holdState();
+    const hs = closeGate.lock || closeGate.near ? { ...hs0, down: false } : hs0; // 붙은 거리 규칙(11/14 — 묶임 · 칼자루만 거리)에선 길게 눌러 감지 않음 (놓은 것으로)
     player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open, !!playerSecret?.holdOwns()); // 11/11 알티바슈 포르트 무장 창이면 길게 눌러 메기 = 비기
   }
   const winding = !!player.skill.uniq?.winding;

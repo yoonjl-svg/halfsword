@@ -18,8 +18,9 @@
 //   · 동방 숨 바꾸기 (토납 — 『장자』 각의편 吐故納新, 10/21 사장님 이름) — clotK: 휘두르지 않는 동안 피 굳는 빠르기(VITALS.clotting — fighter.js updateVitals) × clot
 //  '휘두르는 중'(swingingNow) = 사람: 기력 장부의 공격 중(긋기 · 탭 · 손잡이 찍기 · 긋기 끝 0.35 s 꼬리) · 비기 · 막아찌르기 / AI: 공격의 긋기 · 지나감 단계 · 비기 · 탭 · 찍기
 import * as THREE from 'three';
-import { SCHOOL_PASSIVE as SP, UNIQUE_ASSIST as UA, THRUST } from './config.js';
+import { SCHOOL_PASSIVE as SP, UNIQUE_ASSIST as UA, THRUST, DE_DIRTY } from './config.js';
 import { strokeTechOf } from './unique_assist.js';
+import { deDirtyBody, deStats, openDoor, inMord } from './de_dirty.js'; // 독일 더티복싱 C1 · C2 (11/14 설계안 — config DE_DIRTY · 기본 끔)
 
 /** 이 파일이 맡는 유파 (이베리아 손목 힘은 fighter.js wristK) */
 export const PASSIVE_SCHOOLS = Object.freeze(['italian', 'japanese', 'german', 'chinese']);
@@ -228,6 +229,7 @@ export class SchoolPassive {
    *  독일만 — 창이 없으면 열고(stats.indes.touch) · 있으면 창 시계를 0 으로(닿아 있는 동안 늘 열림 · 닿음이 끝나고 afterWindow 뒤 닫힘). 두 몸 모두 부름(제 몸 창만)
    */
   bladeContact() {
+    if (DE_DIRTY.door > 0 && this.f.alive && strokeTechOf(this.f) === 'duplieren') openDoor(this.f, 'dup'); // C1 빠른 문 (11/14 — 끔이면 안 옴): 겹치기가 칼에 닿음(막힘 · 맞물림)
     if (!SP.german.touch || !this.on('german') || !this.f.alive) return;
     if (this.win) {
       this.win.t = 0;
@@ -244,8 +246,9 @@ export class SchoolPassive {
       this.win = null;
       return;
     }
+    if (W.mord && (this.f.skill?.sec || this.f.stamina?.inSecret)) return; // C2 칼자루 뒤 칼 (11/14): 모르트슐라크가 도는 동안(굳음까지)은 창 시계가 멈춤 — 비기가 끝난 뒤 afterWindow
     const g = this.f.gait;
-    const fast = !!g && g.fastK > 1 && !!g.chaseStep; // 간격 잡기 빠른 디딤 중
+    const fast = !!g && g.fastK > 1 && (!!g.chaseStep || !!g.digStep); // 간격 잡기 빠른 디딤 중 · 파고들기 박찬 앞 걸음 중(11/14 — gait.js digStep · 사람만 · 끄면 늘 false)
     const hold = !!g?.hold; // 잡기 중 (플레이어만)
     if (!W.chase && fast) {
       W.chase = true; // 창 안에서 빠른 디딤이 시작됨 → 빠른 디딤 · 잡기 동안 시계 멈춤
@@ -263,6 +266,27 @@ export class SchoolPassive {
       }
     }
     if ((W.t += dt) > UA.afterWindow) this.win = null;
+  }
+
+  /**
+   * 내 칼이 상대 몸에 판정을 냄 (combat.js strike — applyWound 뒤 · 11/14 독일 더티복싱 C1 · C2 가 켜졌을 때만 부름 · config DE_DIRTY):
+   *  C1 — 겹치기(duplieren)가 맞음 → 모르트슐라크 빠른 문('dup') · C2 — 모르트슐라크(비기 실행 run.mord)가 머리에 듦 → 그 순간 창(비기가 도는 동안 시계 멈춤 — tickIndes · 한 비기에 한 번)
+   */
+  deHit(part) {
+    const f = this.f;
+    if (!deDirtyBody(f, 'deHilt') || !f.alive) return; // C 몫 열쇠 (11/14 — 새 칸 자리 대기 · 지금은 G9 와 함께 켜짐)
+    if (DE_DIRTY.door > 0 && strokeTechOf(f) === 'duplieren') openDoor(f, 'dup');
+    if (part === 'head' && inMord(f)) {
+      const run = f.skill.sec;
+      if (run.deHead) return;
+      run.deHead = true;
+      deStats(f).mordHead++;
+      if (!DE_DIRTY.mordIndes || !this.on('german')) return;
+      this.win = { t: 0, chase: false, hold: false, mord: true };
+      this.stats.indes.opened++;
+      this.stats.indes.mord = (this.stats.indes.mord ?? 0) + 1;
+      deStats(f).mordIndes++;
+    }
   }
 
   /** 피 굳기 배율 (fighter.js updateVitals): 동방 숨 바꾸기 · 휘두르지 않는 동안 clot */

@@ -392,7 +392,7 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('german', 'G4'), ['parryCover']);
   assert.deepEqual(on('german', 'G7'), ['u:duplieren']);
   assert.deepEqual(on('german', 'G6'), ['perk:schielhau']);
-  assert.deepEqual(on('german', 'G9'), ['passive']);
+  assert.deepEqual(on('german', 'G9'), ['passive', 'deClinch', 'deHilt']); // 11/14 독일 더티복싱 B · C 새 몫 열쇠 — 새 칸 자리 대기라 G9 에 임시로 이음 (감독 지시 · 칸이 생기면 그 칸으로)
   assert.deepEqual(on('italian', 'I1'), ['footwork']);
   assert.deepEqual(on('italian', 'I3'), ['backFlat']);
   assert.deepEqual(on('italian', 'I6'), ['opposition']);
@@ -471,16 +471,22 @@ test('실제 몸 — 보법: 이탈리아 I1 = 박자 걸음(뒤 느려짐 그�
   const g = round('monohoshizao', kitOf('japanese'));
   try { g.step(); assert.equal(g.player.gait.P, GAIT); assert.equal(g.player.swayScale, 1); assert.equal(g.enemy.gait.P.tradition, 'japanese'); } finally { g.world.free(); }
 });
-test('실제 몸 — 독일 간격 잡기: G1 만이면 상대 헛침에 창이 안 열림 · G1 + G2 면 열림', () => {
-  for (const [kit, want] of [[kitOf('german', 'G1'), false], [kitOf('german', 'G1', 'G2'), true]]) {
-    const g = round('longsword', kit);
-    try {
-      for (let i = 0; i < 300; i++) g.step(); // 판 시작 정지 뒤 · 걸음 켬
-      g.player.gait.active = true; g.player.foeDistance = () => 9; // 멀리서 헛침
-      g.player.gait.foeWhiff();
-      assert.equal(!!g.player.gait.chase, want);
-    } finally { g.world.free(); }
-  }
+// 11/14 옛 장면 시험 — 그때 판으로 묶음(GAIT.deDig 0 · 기준은 안 고침): 사람의 옛 간격 잡기는 11/14 파고들기(사장님 '간격 잡기를 파고들기로 바꿔')로 거둠 → 이 시험은 `?deDig=0` 판에서 그대로 ·
+//  이 몸은 시뮬 몸(humanInput 없음)이라 deDig 와 상관없이도 같은 결과(사람 몸만 거둠) — 묶음은 뜻을 적어 둠. 새 판(파고들기 G2 몫)은 tools/sim/de_dirty.test.mjs
+test('실제 몸 — 독일 간격 잡기(옛 판 · deDig 0): G1 만이면 상대 헛침에 창이 안 열림 · G1 + G2 면 열림', () => {
+  const keep = GAIT.deDig;
+  GAIT.deDig = 0;
+  try {
+    for (const [kit, want] of [[kitOf('german', 'G1'), false], [kitOf('german', 'G1', 'G2'), true]]) {
+      const g = round('longsword', kit);
+      try {
+        for (let i = 0; i < 300; i++) g.step(); // 판 시작 정지 뒤 · 걸음 켬
+        g.player.gait.active = true; g.player.foeDistance = () => 9; // 멀리서 헛침
+        g.player.gait.foeWhiff();
+        assert.equal(!!g.player.gait.chase, want);
+      } finally { g.world.free(); }
+    }
+  } finally { GAIT.deDig = keep; }
 });
 test('실제 몸 — 걷기 기력: 동방 C1 만 = 보통 4 · C1 + C2 = 2 · 일본 J1 = 6 (10/31 — 전 1.4 · 0.7 · 2.1)', () => {
   const actor = (kit) => {
