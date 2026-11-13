@@ -18,20 +18,28 @@ export const CELLS = ['german:longsword:longsword', 'german:sabre:longsword', 'g
 const OFF_CLOSE = 'CLOSE.startD=null,CLOSE.holdMin=0,CLOSE.nearHilt=0,CLOSE.holdLock=0,CLOSE.holdDrain=1,CLOSE.holdCool=0';
 const B = `DE_DIRTY.armSlow=${CONFIG.DE_DIRTY_ON.armSlow},DE_DIRTY.clinchK=${CONFIG.DE_DIRTY_ON.clinchK}`;
 const C = `DE_DIRTY.door=${CONFIG.DE_DIRTY_ON.door},DE_DIRTY.mordIndes=${CONFIG.DE_DIRTY_ON.mordIndes}`;
+const OLD3 = 'DE_DIRTY.ring=0,UNIQUE_ASSIST.dupBandMin=0.8';
 /** 판: ① 지금 main(파고들기 · 붙은 거리 규칙 · B · C 모두 끔) ② 파고들기만 ③ + 붙은 거리 규칙(사장님 11/14 — 기본) ④ + B ⑤ + C ⑥ 모두 · ⓪ 옛 봇 · ③A AI 도 같은 규칙 · n = 묶임 시간 견줌 (③ 위) */
 export const VARIANTS = {
-  '①': `GAIT.deDig=0,${OFF_CLOSE}`,
-  '②': `GAIT.deDig=1,${OFF_CLOSE}`,
-  '③': '',
-  '④': B,
-  '⑤': C,
-  '⑥': `${B},${C}`,
-  '⓪': `GAIT.deDig=0,${OFF_CLOSE}`, // ① 과 같은 값 — 옛 독일 봇(SB_DE_BOT=0 으로 돌림 · 11/04 재기와 같은 손)
-  '③A': 'CLOSE.startAI=1', // ③ + AI 도 같은 붙은 거리 규칙 (견줌 스위치 — 시작 1.0 m · 묶임 · 맞밀기 · 기력 × 2 · 쿨타임 · 묶인 동안 공격 안 함 · 1 m 안 손잡이 찍기)
-  'n0.6': `CLOSE.holdMin=${CONFIG.realS(0.6)}`,
-  'n1.5': `CLOSE.holdMin=${CONFIG.realS(1.5)}`,
-  'n2.0': `CLOSE.holdMin=${CONFIG.realS(2.0)}`,
-  'cool0': 'CLOSE.holdCool=0',
+  '①': `GAIT.deDig=0,${OFF_CLOSE},DE_DIRTY.ring=0`,
+  '②': `GAIT.deDig=1,${OFF_CLOSE},DE_DIRTY.ring=0`,
+  '③': OLD3, // 11/14 첫 재기 판(칼 씨름 · 겹치기 띠 1.0 m 전) — 그때 ③ 그대로 다시 낼 수 있게
+  '④': `${OLD3},${B}`,
+  '⑤': `${OLD3},${C}`,
+  '⑥': `${OLD3},${B},${C}`,
+  '⑦': `DE_DIRTY.ringT=${CONFIG.realS(0.6)},DE_DIRTY.ringNoRecover=0,UNIQUE_ASSIST.dupAuto=bind`, // 중간 판 (③ + 칼 씨름 0.6 s + 겹치기 띠 1.0 m · 'bind') — 11/14 결정 사이
+  '⑧': '', // 지금 가지 기본 (③ + 칼 씨름 1.2 s · 기력 회복 막힘 2.0 s + 겹치기 자동 ⓒ 'both' · 띠 아래 끝 1.0 m)
+  '⑧bind': 'UNIQUE_ASSIST.dupAuto=bind', // ⑧ 에서 겹치기 자동만 옛 'bind' (ⓐ 견줌)
+  '⑦링끔': 'DE_DIRTY.ring=0', // ⑦ 에서 칼 씨름만 끔
+  'dB': `UNIQUE_ASSIST.dupStackGap=${CONFIG.realS(0.4)}`, // 겹치기 자동 끊김 너그러움 0.2 → 0.4 s (⑦ 위)
+  'dC': 'UNIQUE_ASSIST.dupAuto=both', // 'bind' 또는 'clash2' 가운데 먼저 찬 쪽
+  'dD': `UNIQUE_ASSIST.dupAuto=both,UNIQUE_ASSIST.dupStackGap=${CONFIG.realS(0.4)}`,
+  '⓪': `GAIT.deDig=0,${OFF_CLOSE},DE_DIRTY.ring=0`, // ① 과 같은 값 — 옛 독일 봇(SB_DE_BOT=0 으로 돌림 · 11/04 재기와 같은 손)
+  '③A': `${OLD3},CLOSE.startAI=1`, // ③ + AI 도 같은 붙은 거리 규칙 (견줌 스위치 — 시작 1.0 m · 묶임 · 맞밀기 · 기력 × 2 · 쿨타임 · 묶인 동안 공격 안 함 · 1 m 안 손잡이 찍기)
+  'n0.6': `${OLD3},CLOSE.holdMin=${CONFIG.realS(0.6)}`,
+  'n1.5': `${OLD3},CLOSE.holdMin=${CONFIG.realS(1.5)}`,
+  'n2.0': `${OLD3},CLOSE.holdMin=${CONFIG.realS(2.0)}`,
+  'cool0': `${OLD3},CLOSE.holdCool=0`,
 };
 function applySets(s) {
   for (const kv of (s ?? '').split(',').filter(Boolean)) {
@@ -49,10 +57,11 @@ const range = (s) => String(s).split(',').flatMap((p) => { const m = p.match(/^(
 function makeProbe() {
   let G, P, A;
   const S = { T: 0, near08: 0, near10: 0, digs: [], shoves: [], pommels: [], block: { req: 0, swing: 0, tap: 0, state: 0, foe: 0, cool: 0, other: 0 }, pushT: 0, recvAfterDig: 0, digHit: 0, foeFallAfterShove: 0, pommelHit: 0, pommelCons: 0, pommelFall: 0, mordHead: 0 };
-  let digN = 0, shoveN = 0, pomN = 0, aStand = true, consA = 1;
+  let digN = 0, shoveN = 0, pomN = 0, aStand = true, consA = 1, uq = null, seg = null;
+  const segs = [];
   return {
     init(o) {
-      ({ G, P, A } = o);
+      ({ G, P, A, uq } = o);
       consA = A.consciousness;
       const pw = G.combat.hooks.onWound;
       G.combat.hooks.onWound = (att, vic, r, point, pr, ...rest) => {
@@ -75,6 +84,20 @@ function makeProbe() {
       const both = P.state === 'stand' && A.state === 'stand';
       if (both && d <= 0.8) S.near08 += dtR; // 붙은 거리 시간 (둘 다 서 있을 때만 — 넘어진 상대 곁은 빼고)
       if (both && d <= 1.0) S.near10 += dtR;
+      // 칼끼리 닿음 한 덩이 (겹치기 자동이 보는 bladeTouch — 길이 · 띠 안 몫 · 그 덩이에 겹치기가 났나)
+      const touch = !!uq?.bladeTouch?.();
+      const lo = CONFIG.UNIQUE_ASSIST.dupBandMin ?? (CONFIG.CLOSE.nearHilt && CONFIG.CLOSE.startD > 0 ? CONFIG.CLOSE.startD : CONFIG.SECRET.mordCloseN);
+      const inBand = d > lo && d <= CONFIG.UNIQUE_ASSIST.dupBandMax;
+      if (touch) {
+        if (!seg) seg = { t0: t, dur: 0, band: 0, dup: false, swing: 0 };
+        seg.dur += dtR;
+        if (inBand) seg.band += dtR;
+        if (P.skill.inputSwinging) seg.swing += dtR;
+        if (P.iai?.tech === 'duplieren') seg.dup = true;
+      } else if (seg) {
+        segs.push(seg);
+        seg = null;
+      }
       const g = P.gait;
       if (g && g.digs > digN) { digN = g.digs; S.digs.push({ t, d0: r3(d), hit: false }); }
       if (P.shoves > shoveN) { shoveN = P.shoves; S.shoves.push({ t, d0: r3(d), held: !!P.barge?.hold, fall: false }); }
@@ -100,6 +123,7 @@ function makeProbe() {
       const mord = fires.filter((f) => f.name === 'mordschlag');
       const dup = fires.filter((f) => f.name === 'duplieren');
       const link = mord.filter((m) => dup.some((x) => m.t - x.t >= 0 && m.t - x.t <= 2.0)).length;
+      if (seg) segs.push(seg);
       const L = P.closeLog ?? {};
       const st = P.stamina.spent;
       return {
@@ -111,7 +135,8 @@ function makeProbe() {
         mord: mord.length, mordHit: mord.filter((m) => m.w > 0 || m.cons > 0).length, mordHead: S.mordHead, dup: dup.length, dupMord: link,
         pushT: r3(S.pushT), block: Object.fromEntries(Object.entries(S.block).map(([k, v]) => [k, r3(v)])),
         clinchSt: r3(st.clinch ?? 0), pushSt: r3(st.push ?? 0), foeClinchSt: r3(A.stamina.spent.clinch ?? 0),
-        de: P.deDirtyStats ?? null, indesMord: P.schoolPassive?.stats.indes.mord ?? 0,
+        de: P.deDirtyStats ?? null, indesMord: P.schoolPassive?.stats.indes.mord ?? 0, indesRing: P.schoolPassive?.stats.indes.ring ?? 0,
+        segs: segs.map((x) => [r3(x.dur), r3(x.band), x.dup ? 1 : 0, r3(x.swing)]), dupHit: dup.filter((x) => x.w > 0 || x.cons > 0).length,
       };
     },
   };

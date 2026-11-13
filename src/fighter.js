@@ -37,7 +37,7 @@ import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21
 import { SchoolPassive, schoolPassiveOn } from './school_passive.js'; // 유파 패시브 넷 (10/21 — 이탈리아 · 일본 · 독일 · 동방, config SCHOOL_PASSIVE)
 import { fighterWetlandMoveScale } from './wetland_ground.js';
 import { closeStartD, closeHoldT, bargeHeld, closeLog, holdPushBack } from './close_hold.js'; // 밀치기 시작 거리 1.0 m · 최소 유지 · 맞밀기 (11/14 사장님 — config CLOSE.startD · holdMin)
-import { deDirtyOn, shoveLanded } from './de_dirty.js'; // 독일 더티복싱 B1 · C1 — 밀치기가 상대 몸에 듦 (11/14 설계안 · config DE_DIRTY · 기본 끔)
+import { deDirtyOn, shoveLanded, ringCheck, ringStep } from './de_dirty.js'; // 독일 더티복싱 B1 · C1 — 밀치기가 상대 몸에 듦 · 칼 씨름 1] (11/14 설계안 · config DE_DIRTY · 기본 끔)
 import { spinStep } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 — 한 바퀴 도는 대본 (10/22 · f.ibSpin 이 없으면 부르지 않는다) // 잠든 습지 진흙 웅덩이: 자발 이동만 줄인다 (다른 무대 배율 1 — 값이 비트 단위로 같다)
 
 const KNEEL_T = realS(1.1); // 넘어졌다 일어날 때 무릎 꿇은 채 기다림 (실제 초 — 표준 시간 10/25 · 곁눈 베기 꿇음은 UNIQUE_ASSIST.buckle.kneel)
@@ -1661,6 +1661,7 @@ export class Fighter {
         }
       }
       if (!end && keepAtk && (sk.swinging || sk.tap)) closeLog(this).trap.atk += dt;
+      if (!end && held && ringCheck(this, f)) end = 'ring'; // 칼 씨름 1] (11/14 — DE_DIRTY.ring · 기본 끔): 묶인 동안 상대가 지침이면 세게 밀쳐 묶임을 끝냄 (de_dirty.js)
       if (end && !this.aiControlled && b.hold > 0) closeLog(this).ends[end] = (closeLog(this).ends[end] ?? 0) + 1;
       if (end) {
         if (held && CLOSE.holdCool > 0) this.holdCool = CLOSE.holdCool; // 묶인 채 끝남(몸 상태) — 쿨타임 (11/14 '풀린 후 2초간 다시 강제로 묶이지 않아')
@@ -1776,6 +1777,7 @@ export class Fighter {
     for (const { rb } of this.meshes) rb.resetForces(true), rb.resetTorques(true);
     this.jolt = Math.max(0, this.jolt - dt / RECOIL.joltTime);
 
+    if (this.ringHit) ringStep(this, dt); // 칼 씨름에 무너진 몸 (11/14 — de_dirty.js · 0.6 s 뒤로 물러남 · 칼 손 옆 지킴 · 없으면 안 부름)
     if (this.ibSpin) spinStep(this, dt); // 이베리아 휘감아 돌기 (10/22 — iberian_spin.js): 몸 방향 · 틀 빠르기를 대본이 (상대 쪽으로 천천히 돌기 대신)
     else this.updateHeading(dt);
     if (this.stamina.exhausted) {

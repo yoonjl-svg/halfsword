@@ -12,6 +12,8 @@ import { Stamina } from '../../src/stamina.js';
 import { closeStartD, closeHoldT, bargeHeld, closeInputGate, closeInputApply, clinchHoldK, closeRulesOn } from '../../src/close_hold.js';
 import { deDirtyBody, mordDoorTick, openDoor, clinchRate, shoveLanded } from '../../src/de_dirty.js';
 import { SchoolPassive } from '../../src/school_passive.js';
+import { ringRun } from './de_ring_feel.mjs';
+import { G as PAD } from '../../src/ai_techniques.js';
 
 const { GAIT, CLOSE, DE_DIRTY, DE_DIRTY_ON, STAMINA, SECRET, realS, TIME } = CONFIG;
 const K = TIME.k;
@@ -19,7 +21,7 @@ const near = (a, b, e = 1e-6) => assert.ok(Math.abs(a - b) < e, `${a} != ${b}`);
 const withCfg = (obj, patch, fn) => { const keep = Object.fromEntries(Object.keys(patch).map((k) => [k, obj[k]])); Object.assign(obj, patch); try { return fn(); } finally { Object.assign(obj, keep); } };
 
 // ── ① 파고들기 ──
-test('기본값: 파고들기 켬 · 두 걸음 · 목표 2.5 m/s (사장님 11/14 결정 · 빠르기는 감독 안) · 붙은 거리 규칙 1.0 m · 1.2 s · × 2 · 2.0 s · 칼자루만 켬 · AI 견줌 끔 · B · C 끔', () => {
+test('기본값: 파고들기 켬 · 두 걸음 · 목표 2.5 m/s (사장님 11/14 결정 · 빠르기는 감독 안) · 붙은 거리 규칙 1.0 m · 1.2 s · × 2 · 2.0 s · 칼자루만 켬 · AI 견줌 끔 · B · C 끔 · 칼 씨름 켬', () => {
   assert.equal(GAIT.deDig, 1);
   assert.equal(GAIT.digSteps, 2);
   assert.equal(GAIT.digV, GAIT.burstBackV, '앞 박찬 걸음 목표 = 뒤 박차기와 같은 절대 목표');
@@ -30,8 +32,8 @@ test('기본값: 파고들기 켬 · 두 걸음 · 목표 2.5 m/s (사장님 11/
   assert.equal(CLOSE.holdLock, 1);
   assert.equal(CLOSE.nearHilt, 1);
   assert.equal(CLOSE.startAI, null, 'AI 는 지금 판 (관문 그대로)');
-  assert.deepEqual({ ...DE_DIRTY }, { armSlow: 0, clinchK: 1, door: 0, mordIndes: 0 }, 'B · C 기본 끔');
-  near(DE_DIRTY_ON.armSlow, realS(0.6)); assert.equal(DE_DIRTY_ON.clinchK, 0.5); near(DE_DIRTY_ON.door, realS(0.6)); assert.equal(DE_DIRTY_ON.mordIndes, 1);
+  assert.deepEqual({ ...DE_DIRTY, ringT: 0, ringNoRecover: 0 }, { armSlow: 0, clinchK: 1, door: 0, mordIndes: 0, ring: 1, ringDist: 0.6, ringT: 0, ringNoRecover: 0 }, 'B · C 기본 끔 · 칼 씨름 기본 켬 (사장님 11/14 \'1번으로 해\')');
+  near(DE_DIRTY.ringT, realS(1.2)); near(DE_DIRTY.ringNoRecover, realS(2.0)); assert.equal(CONFIG.UNIQUE_ASSIST.dupAuto, 'both', '겹치기 자동 ⓒ (사장님 11/14 \'c로 해\')'); near(DE_DIRTY_ON.armSlow, realS(0.6)); assert.equal(DE_DIRTY_ON.clinchK, 0.5); near(DE_DIRTY_ON.door, realS(0.6)); assert.equal(DE_DIRTY_ON.mordIndes, 1); assert.equal(DE_DIRTY_ON.ring, 1);
 });
 
 test('파고들기 몸: 서서 앞으로 세게 밀면 박찬 앞 걸음 둘(× digV ÷ 앞 걷는 빠르기 · 파고들기 걸음 표시) · 기력 pushCost 한 번 · 셋째 걸음은 보통 · 넘어지지 않음 · 보통 걸음보다 1 m 에 빨리 닿음', () => {
@@ -340,4 +342,54 @@ test('그 순간 창 시계: 파고들기 박찬 앞 걸음(digStep) 동안 멈�
 test('SECRET 모르트슐라크 붙음 셈은 그대로 (1.5 s · 0.8 m — 빠른 문은 더하는 길)', () => {
   assert.equal(SECRET.mordCloseN, 0.8);
   near(SECRET.mordPress, realS(1.5));
+});
+
+test('칼 씨름 1] (기본 켬): 묶인 동안 상대가 지침(기력 0 아래)이면 묶임을 끝내며 세게 밀침 — 상대가 0.6 m 쯤 물러남(새 동작 없이 물리 밀침 + 균형 걸음) · 1.2 s 무너짐 · 그 순간 창 · 끄면 안 남', () => {
+  const on = ringRun({ ring: 1, dur: 1.5 });
+  assert.ok(on.tRing != null && on.tRing >= on.tPress, '누르기(묶임) 안에서 남');
+  assert.equal(on.indesRing, 1, '그 순간 창');
+  const hit = on.rows.filter((r) => r.ring);
+  const moved = Math.max(...hit.map((r) => r.moved ?? 0));
+  assert.ok(moved >= DE_DIRTY.ringDist && moved < DE_DIRTY.ringDist + 0.3, `물러남 ${moved} m`);
+  assert.ok(hit.length * 0.05 >= 1.15 && hit.length * 0.05 <= 1.3, `무너진 시간 ${hit.length * 0.05} s (실제 · 0.05 s 줄 — ringT 1.2 s)`);
+  assert.ok(on.dMax > on.dRing + 0.15, `가슴 사이 ${on.dRing} → ${on.dMax} (미는 쪽도 앞으로 흘러 몸 사이는 물러난 거리보다 덜 벌어짐)`);
+  const off = ringRun({ ring: 0, dur: 1.5 });
+  assert.equal(off.tRing, null);
+  assert.equal(off.indesRing, 0);
+});
+
+test('칼 씨름: 상대가 지침이 아니면 안 남 · 칼 씨름 몫 열쇠(deRing) 없으면 안 남 · 무너진 동안 칼 손 목표 = 옆 자세(sideR) · AI 는 공격 시작 안 함', async () => {
+  const fresh = ringRun({ ring: 1, dur: 1.0, foeStamina: 50 });
+  assert.equal(fresh.tRing, null, '상대 기력 50 — 안 남');
+  const { ringCheck, ringStep } = await import('../../src/de_dirty.js');
+  withCfg(DE_DIRTY, { ring: 1 }, () => {
+    const me = { humanInput: true, swordArt: { tradition: 'german' }, skillKit: { deRing: false } };
+    assert.equal(ringCheck(me, { alive: true, state: 'stand', stamina: { value: -5 } }), false, 'deRing 없음');
+    const f = { alive: true, state: 'stand', move: new Vector2(), handOffset: new Vector2(), bodies: { pelvis: { translation: () => ({ x: 0, z: 0 }) } }, ringHit: { t: 0, T: 1, x0: 0, z0: 0, dx: 1, dz: 0, dMax: 0 } };
+    ringStep(f, 0.01);
+    assert.deepEqual([f.handOffset.x, f.handOffset.y], PAD.sideR);
+    assert.equal(f.stickY, 0, '제 걸음 없음 — 밀린 몸은 균형 걸음으로만');
+  });
+  const { AI } = await import('../../src/ai.js');
+  assert.equal(AI.prototype.startAttack.call({ me: { armed: true, stamina: { exhausted: false }, ringHit: {} }, staminaRest: false }, { name: 'oberhau' }, 'x'), false);
+});
+
+test('칼 씨름: 밀려난 상대 기력 회복 2.0 s 막힘 · 그 순간 창은 상대가 무너진 동안 열려 있다 무너짐이 끝나면 닫힘', () => {
+  const st = new Stamina({ alive: true, armed: true, state: 'stand', heading: 0, swordMass: 1.6, aiControlled: true, move: new Vector2(), handOffset: new Vector2(), skill: { vel: new Vector2(), swinging: false }, bodies: { pelvis: { translation: () => ({ x: 0, y: 1, z: 0 }) } } });
+  st.value = -10; st.rest = 10; st.noRecover = realS(2.0);
+  const dt = 1 / 120;
+  for (let t = 0; t < realS(2.0) - 2 * dt; t += dt) st.step(dt);
+  assert.ok(Math.abs(st.value + 10) < 1e-9, `막힌 동안 ${st.value}`);
+  for (let i = 0; i < 30; i++) st.step(dt);
+  assert.ok(st.value > -10, '풀리면 회복');
+  const foe = { ringHit: { t: 0 } };
+  const f = { alive: true, gait: null, skill: {}, stamina: {} };
+  const sp = new SchoolPassive(f);
+  sp.set('german');
+  sp.ringOpen(foe);
+  sp.tickIndes(5);
+  assert.ok(sp.win, '상대가 무너진 동안 열림');
+  foe.ringHit = null;
+  sp.tickIndes(0.01);
+  assert.equal(sp.win, null, '무너짐이 끝나면 닫힘');
 });

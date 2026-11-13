@@ -14,7 +14,7 @@ const { realS, SECRET } = CONFIG;
 const KEYS = ['dupAuto', 'dupStackS', 'dupStackGap', 'dupStackDrain', 'dupBandMin', 'dupBandMax', 'dupClashT', 'dupClashGap', 'dupClashMax', 'dupAutoParry', 'dupAutoHint', 'specialCooldown', 'dupTap'];
 
 test("기본값 — 사장님 10/31 18:xx 결정: 'bind' · 띠 0.8 m 초과(죽음의 일격 거리 밖) ~ 1.6 m · 쌓임 0.6 s · 끊김 0.2 s 넘으면 처음부터 · 막기 단추 맞댐도 셈 · 자세 칸 알림 없음 · clash2 값은 사다리 칸", () => {
-  assert.equal(UA.dupAuto, 'bind');
+  assert.equal(UA.dupAuto, 'both'); // 11/14 사장님 'c로 해' — 'bind' 또는 'clash2' 먼저 찬 쪽 (전 'bind')
   assert.equal(UA.dupTap, 1); // 탭 조건 스위치는 그대로 (자동 판이면 TAP_TRIG.dup 이 안 봄 — dupAuto 0 이면 전 판 탭)
   assert.ok(Math.abs(UA.dupStackS - realS(0.6)) < 1e-9, `dupStackS ${UA.dupStackS}`);
   assert.ok(Math.abs(UA.dupStackGap - realS(0.2)) < 1e-9, `dupStackGap ${UA.dupStackGap}`);

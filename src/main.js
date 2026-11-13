@@ -163,6 +163,7 @@ if (params.has('closeCool')) CONFIG.CLOSE.holdCool = +params.get('closeCool') > 
 if (params.has('closeHilt')) CONFIG.CLOSE.nearHilt = +params.get('closeHilt') ? 1 : 0;
 // 독일 더티복싱 B · C (11/14 설계안 — config DE_DIRTY · 기본 끔 · 켤 때 값 DE_DIRTY_ON): `?deB1=1` 밀어 흔들기 · `?deB2=1` 붙어 버티기 · `?deC1=1` 모르트슐라크 빠른 문 · `?deC2=1` 칼자루 뒤 칼 · `?deDirty=all` = 넷 모두
 for (const [q, k] of [['deB1', 'armSlow'], ['deB2', 'clinchK'], ['deC1', 'door'], ['deC2', 'mordIndes']]) if (params.get(q) === '1' || params.get('deDirty') === 'all') CONFIG.DE_DIRTY[k] = CONFIG.DE_DIRTY_ON[k];
+if (params.has('deRing')) CONFIG.DE_DIRTY.ring = +params.get('deRing') ? 1 : 0; // 칼 씨름 1] (11/14 사장님 '1번으로 해' — 기본 켬 · 상대 지침이면 세게 밀쳐 0.6 m · 팔 벌어짐 0.6 s · 그 순간 창) · `?deRing=0` = 끔
 if (params.has('mordNear')) CONFIG.SECRET.mordNear = +params.get('mordNear') ? 1 : 0; // AI 몸 붙이기 자연스럽게 가까울 때만 (10/24 14:2x 사장님 · 0 = 멀리서 붙이러 걸어가는 옛 판)
 if (params.has('mordWalkStrike')) CONFIG.SECRET.mordWalkStrike = +params.get('mordWalkStrike') ? 1 : 0; // AI 몸 붙이기 걸어가며 치기 (10/24 13:3x 사장님 · 0 = 걸어가는 동안 안 침 옛 판)
 if (['reverse', 'hilt'].includes(params.get('mordGrip'))) CONFIG.SECRET.mord.grip = params.get('mordGrip');
@@ -453,7 +454,7 @@ if (params.has('dupGrace')) CONFIG.UNIQUE_ASSIST.dupGrace = Math.max(0, +params.
 if (params.has('dupAny')) CONFIG.UNIQUE_ASSIST.dupAny = +params.get('dupAny') ? 1 : 0; // 겹치기 시제품: 칼끼리 닿음이면 모두 (기본 0 · 확인표 3101)
 if (params.has('dupStep')) CONFIG.UNIQUE_ASSIST.dupStep = Math.max(0, +params.get('dupStep') || 0); // 겹치기 시제품: 앞 걸음 m (기본 0 · 확인표 3102)
 // 겹치기 자동 (사장님 10/31 16:xx — 시제품 · 기본 0 = 지금 탭 · 확인표 3220 ~ 3229): `?dupAuto=bind` · `?dupAuto=clash2` · 수는 실제 초 · m
-if (params.has('dupAuto')) CONFIG.UNIQUE_ASSIST.dupAuto = ['bind', 'clash2'].includes(params.get('dupAuto')) ? params.get('dupAuto') : 0;
+if (params.has('dupAuto')) CONFIG.UNIQUE_ASSIST.dupAuto = ['bind', 'clash2', 'both'].includes(params.get('dupAuto')) ? params.get('dupAuto') : 0; // both = 둘 가운데 먼저 찬 쪽 (11/14 견줌)
 for (const k of ['dupStackS', 'dupStackGap', 'dupClashT', 'dupClashGap']) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST[k] = CONFIG.realS(+params.get(k)); // 실제 초
 for (const k of ['dupBandMax', 'dupClashMax', 'dupStackDrain']) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST[k] = +params.get(k); // 가슴 사이 m (dupClashMax 0 = 위 끝 없음) · 빠짐 초당 몫 (0 = 곧장 0)
 if (params.has('dupBandMin')) CONFIG.UNIQUE_ASSIST.dupBandMin = +params.get('dupBandMin') > 0 ? +params.get('dupBandMin') : null; // null = 죽음의 일격 거리(SECRET.mordCloseN)

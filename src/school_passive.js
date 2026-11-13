@@ -246,6 +246,11 @@ export class SchoolPassive {
       this.win = null;
       return;
     }
+    if (W.ringFoe) {
+      if (W.ringFoe.ringHit) return; // 칼 씨름: 상대가 무너져 있는 동안 열어 둠
+      this.win = null; // 무너짐이 끝나면 닫힘
+      return;
+    }
     if (W.mord && (this.f.skill?.sec || this.f.stamina?.inSecret)) return; // C2 칼자루 뒤 칼 (11/14): 모르트슐라크가 도는 동안(굳음까지)은 창 시계가 멈춤 — 비기가 끝난 뒤 afterWindow
     const g = this.f.gait;
     const fast = !!g && g.fastK > 1 && (!!g.chaseStep || !!g.digStep); // 간격 잡기 빠른 디딤 중 · 파고들기 박찬 앞 걸음 중(11/14 — gait.js digStep · 사람만 · 끄면 늘 false)
@@ -287,6 +292,14 @@ export class SchoolPassive {
       this.stats.indes.mord = (this.stats.indes.mord ?? 0) + 1;
       deStats(f).mordIndes++;
     }
+  }
+
+  /** 칼 씨름 1] (11/14 — de_dirty.js ringThrow): 상대를 세게 밀친 순간 그 순간 창을 연다 — 상대가 무너져 있는 동안(foe.ringHit — DE_DIRTY.ringT 1.2 s) 열어 두고 무너짐이 끝나면 닫힘 (사장님 11/14 '0.6초 너무 짧아' → 감독 안) */
+  ringOpen(foe = null) {
+    if (!this.on('german') || !this.f.alive) return;
+    this.win = { t: 0, chase: false, hold: false, ringFoe: foe };
+    this.stats.indes.opened++;
+    this.stats.indes.ring = (this.stats.indes.ring ?? 0) + 1;
   }
 
   /** 피 굳기 배율 (fighter.js updateVitals): 동방 숨 바꾸기 · 휘두르지 않는 동안 clot */

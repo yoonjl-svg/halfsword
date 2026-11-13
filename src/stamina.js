@@ -446,7 +446,8 @@ export class Stamina {
     if (this.exhausted) return;
     const active = Math.max(0, this.rest + dt - STAMINA.recoverDelay) - Math.max(0, this.rest - STAMINA.recoverDelay);
     this.rest += dt;
-    if (!this.guarding) {
+    if (this.noRecover > 0) this.noRecover -= dt; // 칼 씨름에 밀려난 몸 (11/14 — de_dirty.js ringThrow · DE_DIRTY.ringNoRecover): 이 동안 자연 회복 없음 (쉼 시계는 그대로 흐름 — 끝나면 곧 회복)
+    else if (!this.guarding) {
       const before = this.value;
       const rate = recoverRate(f);
       this.value = Math.min(this.max, this.value + active * rate);
