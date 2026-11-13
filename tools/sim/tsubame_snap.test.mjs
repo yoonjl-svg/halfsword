@@ -214,7 +214,9 @@ test('한 판 견줌 — 갈고리 길(`tsuHook` 1 — 10/25 판)도 그대로',
 test('곧은 길 꼴 (tsubame_trace — 가만히 선 상대 · 가슴 사이 1.15 · 1.3 m · 손가락 그대로 · 흔들림): 칼끝 · 잔상 곧음 · 날 앞장 · 손목 범위 안 · 굴림 한도 안 · 갈고리 판은 휨', () => {
   const k = CONFIG.STRIKE.edgeAlign;
   for (const [gap, seed] of [[1.15, 701], [1.3, 702]]) {
-    const tr = traceRun('line', seed, gap);
+    // 그때 판으로 묶음 (11/13 — docs/strike/monohoshizao_draw_2026-11-13.md §7): 바탕 0355266a(칼끝 곧은 줄 tsuTip 1 + 칼자루 끝 앞 바닥 들임 frontIn 0.1 이 합쳐진 판)에서
+    //  1.15 m 판 날 앞장 스텝이 7/9(78 %)로 기준 80 % 아래 — 두 가지 따로는 8/9. 이 장면은 frontIn 0(11/12 둘째 판 · 'armOdd')에서 잰 것이라 그 팔로 (기준 그대로)
+    const tr = withArmOld(() => traceRun('line', seed, gap), ['armOdd']);
     assert.ok(tr.fired, `${gap} m`);
     // 11/10 사장님 '1로 해' — 칼끝 휨은 베는 토막만 셈(잔상과 같은 범위 · 꺾은 자리로 거두는 준비 토막은 뺌) · 휨 몫 기준 0.12 → 0.16(손가락 긋기 세기 켬 뒤 1.15 m 판의 완만한 활 휨 0.13 ~ 0.15 를 받아들임) · 꺾임 15° 그대로
     const b = bendCut(tr);

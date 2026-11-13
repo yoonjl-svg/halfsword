@@ -40,7 +40,7 @@ export function guardsOf(foeW) {
 }
 
 /** 몸 한 장면 (가슴 원점 · 낸 때 헤딩 틀) */
-function pose(P, c0, inv) {
+export function pose(P, c0, inv) {
   const B = P.bodies;
   const L = (v) => { const p = v.clone(); const y = p.y; p.sub(c0).applyQuaternion(inv); return [r3(p.x), r3(y), r3(p.z)]; };
   const qc = tq(B.chest.rotation());

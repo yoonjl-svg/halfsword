@@ -14,6 +14,7 @@ import { gnsShot } from './iai_real.mjs';
 import { standShot } from './gns_belly.mjs';
 import { traceRun, bendCut, bendTrail } from './tsubame_trace.mjs';
 import { HUMAN } from '../../src/fighter.js';
+import { withArmOld } from './arm_real_pin.mjs';
 
 const { SECRET, UNIQUE_ASSIST: UA } = CONFIG;
 const withS = (vals, fn, O = SECRET) => {
@@ -87,7 +88,9 @@ test('③ AI 발도(웅크린 대기에서 — 사람 아님)는 켜든 끄든 �
 test('④ 제비 베기 되돌림 칼 — 칼끝 곧은 줄: 베는 토막 · 잔상 곧음 · 날 앞장 · 손목 범위 안 / 끄면 전 판 / 낮은 시작은 전 판 그대로', () => {
   const k = CONFIG.STRIKE.edgeAlign;
   for (const [gap, seed] of [[1.15, 701], [1.15, 702]]) {
-    const tr = traceRun('line', seed, gap);
+    // 그때 판으로 묶음 (11/13 — docs/strike/monohoshizao_draw_2026-11-13.md §7): 이 장면은 c679bfa6(칼자루 끝 앞 바닥 들임 frontIn 0 — 11/12 둘째 판)에서 잰 것 —
+    //  바탕 0355266a(frontIn 0.1 이 합쳐진 판)에서는 1.15 m 날 앞장 7/9(78 %)로 기준 80 % 아래. 기준 그대로 · 그 팔('armOdd')로
+    const tr = withArmOld(() => traceRun('line', seed, gap), ['armOdd']);
     assert.ok(tr.fired);
     const b = bendCut(tr);
     const t = bendTrail(tr);
