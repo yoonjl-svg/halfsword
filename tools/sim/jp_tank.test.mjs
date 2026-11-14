@@ -318,3 +318,26 @@ test('몫 열쇠 (11/14 사장님 \'전부 권고대로\' · C 보류): 바위 �
     } finally { restore(); fx.g.world.free(); }
   }
 });
+
+test('바위 몸 — 묶인 동안(본판 독일 붙은 거리 규칙 · 기력 × 2 — close_hold.js)에도 밀치기 기력 0 · 상대는 × 2 그대로 (11/14 합침 고침)', () => {
+  const kitAll = kitFromNodes('japanese', allNodeIds('japanese'));
+  const run = (on) => {
+    const fx = fixture('uchigatana', { kit: kitAll });
+    try {
+      JT.lowShove = on;
+      const { f, a } = fx;
+      f.stamina.canClinch = () => true;
+      f.barge = { phase: 'press', hold: 10, holdT: 0 }; // 묶임 안 (bargeHeld)
+      const p0 = f.stamina.value, q0 = a.stamina.value;
+      for (let i = 0; i < 30; i++) { f.stamina.stepClinch(DT); a.stamina.stepClinch(DT); }
+      return { dP: p0 - f.stamina.value, dA: q0 - a.stamina.value };
+    } finally { restore(); fx.g.world.free(); }
+  };
+  const k = CONFIG.CLOSE.holdDrain;
+  assert.ok(k > 1, `묶임 기력 배율 ${k}`);
+  const on = run(1), off = run(0);
+  assert.equal(on.dP, 0, '바위 몸 — 묶인 동안도 0');
+  assert.ok(near(on.dA, off.dA, 1e-6), `상대 빠짐 그대로 ${on.dA} · ${off.dA}`);
+  assert.ok(near(off.dA, CONFIG.STAMINA.clinchPerSecond * k * 30 * DT, 1e-6), `× ${k}`);
+  assert.ok(near(off.dP, off.dA, 1e-6), '끄면 같이 빠짐');
+});
