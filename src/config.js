@@ -1108,7 +1108,7 @@ export const SECRET = {
   openSchools: ['japanese', 'german', 'italian', 'iberian', 'chinese'], // 10/22 사람 먼저 — 독일 죽음의 일격 · 이탈리아 거침없이 나아가 찌르기 · 이베리아 휘감아 돌기 · 동방 막아 죽이기(격살 — 아래 gyeoksal). AI 는 aiOpenSchools 로 따로(10/24 이베리아 엶)
   // AI 쪽 열린 비기 (10/22 사장님 '사람 먼저' — 독일 죽음의 일격 · 이탈리아 리솔루토를 사람에게 먼저 연다): ai.js 는 이 목록만 본다.
   //  openSchools 는 사람(스킬트리 비기 칸 · PlayerSecretWatch). `?secretOpen=` 은 둘 다 고친다 (main.js)
-  aiOpenSchools: ['japanese', 'iberian', 'german'], // 10/24 02:5x 사장님 '싱지르 ai에게도 열어' — 이베리아 추가 (ai.js spinTick · 숙련도 AI_PROFICIENCY.secretAt 이상만 — 롤랑 · 베르나르도 6) · 10/24 12:0x 사장님 'ai도 비기 쓰게 해' — 독일 모르트슐라크 추가 (ai.js mordTick · TRADITIONS.german.aiSecret · 숙련도 5 이상 — 아르토리아 · 광기의 아르토리아)
+  aiOpenSchools: ['japanese', 'iberian', 'german', 'italian'], // 11/14 사장님 '리솔루토도 쓰게해' — 이탈리아 추가 (안다레 리솔루토 · 사람과 같은 조건 · 같은 값 — ai.js risoTick · schools.js TRADITIONS.italian.aiSecret · 숙련도 AI_PROFICIENCY.secretAt 이상 · 확인표 3825) · 10/24 02:5x 사장님 '싱지르 ai에게도 열어' — 이베리아 추가 (ai.js spinTick · 숙련도 AI_PROFICIENCY.secretAt 이상만 — 롤랑 · 베르나르도 6) · 10/24 12:0x 사장님 'ai도 비기 쓰게 해' — 독일 모르트슐라크 추가 (ai.js mordTick · TRADITIONS.german.aiSecret · 숙련도 5 이상 — 아르토리아 · 광기의 아르토리아)
   // ── 독일 죽음의 일격 (모르트슐라크 · Mordschlag — 10/22 저녁 사장님 '독일은 죽음의 일격으로 하자. 막기로 버틸 때나 서로 몸이 맞붙어 클린치 상태일 때 밀기가 n초 이상 작동하면 발동' ·
   //  n '1.5로 해' · 사람 먼저 — src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md · 확인표 2183~2189). 10/24 AI 도 같은 칸을 본다(aiOpenSchools 'german' — ai.js mordTick · 확인표 2400~2405)
   deMord: 1, // 1 = 사람 독일 비기 = 죽음의 일격 (사장님 결정 · 10/24 AI 도) · 0 = 옛 판(deSecret — 받아 베기 · 감아 들기 — 사람 · AI). `?deMord=0`
@@ -1729,7 +1729,7 @@ export const IT_OUTBOX = {
   stopWalk: 1, // 그리고 상대가 걷는 중(gait.walking — 걸음 단계) [감독 안 · 사장님 확인 전 — 확인표 3804]
   stopSpecial: 1, // 특수 공격 비껴서며 찌르기도 받음(1 의 약화는 안 받음 — × (1 + stop)) · 비기 리솔루토는 늘 뺌 [감독 안 · 사장님 확인 전 — 확인표 3805]
   // 3 칼 우위 (설계안 A — 사장님 11/14 '좋아' [결정 — 확인표 3800]): 칼끝 돌려 빼기(I2) · 막아찌르기(I6) · 비껴서며 찌르기(I9)가 상처를 내면 · 헛누름(I8)이 들면 이 초 동안 칼 우위 —
-  //  리솔루토 창은 칼 우위 동안만 열림(지금 조건에 더함 · edgeRiso). 시간 사다리 2.0 [사장님 11/14 확인 '우위 2초 권고대로' — 확인표 3806 · 견줌 3.0 은 기록] `?itEdge=` (실제 초) · AI 는 리솔루토가 없어(aiOpenSchools) 빛 · 재기만
+  //  리솔루토 창은 칼 우위 동안만 열림(지금 조건에 더함 · edgeRiso). 시간 사다리 2.0 [사장님 11/14 확인 '우위 2초 권고대로' — 확인표 3806 · 견줌 3.0 은 기록] `?itEdge=` (실제 초) · AI 도 같음(11/14 사장님 '리솔루토도 쓰게해' — aiOpenSchools 'italian' · ai.js risoTick)
   edge: realS(2.0),
   edgeRiso: 1,
   edgeLook: 1, // 칼 우위 동안 칼날 둘레 옅은 빛 (main.js — 그림만 · 물리 · 판정 무관) [감독 안 · 사장님 확인 전 — 확인표 3807]

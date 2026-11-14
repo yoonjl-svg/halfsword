@@ -130,12 +130,12 @@ test('10/23 넓은 판정 (사장님 \'칼이 붙어 있는 상황에 대한 판
   });
 });
 
-test('사람 길만: 이탈리아 무기 사람 비기 = 거침없이 나아가 찌르기 · ?itSecret=contratempo = 옛 엇박 찌르기 · AI 이탈리아 비기는 옛 것 그대로 닫힘', () => {
+test('이탈리아 무기 사람 비기 = 거침없이 나아가 찌르기 · ?itSecret=contratempo = 옛 엇박 찌르기 · 11/14 사장님 \'리솔루토도 쓰게해\' — AI 이탈리아 숙련도 5 도 같은 비기', () => {
   assert.ok(SECRET.openSchools.includes('italian'));
-  assert.ok(!SECRET.aiOpenSchools.includes('italian'));
+  assert.ok(SECRET.aiOpenSchools.includes('italian'));
   assert.equal(playerSecretDef('italian').name, 'andareRisoluto');
   assert.equal(playerSecretDef('italian').nameKo, '안다레 리솔루토');
-  assert.equal(TRADITIONS.italian.secret.name, 'passataContratempo'); // AI 가 보는 칸 그대로
+  assert.equal(TRADITIONS.italian.secret.name, 'passataContratempo'); // 옛 비기 칸 그대로 (AI 는 aiSecret 을 먼저 봄 — 11/14)
   assert.equal(keep(SECRET, 'itSecret', 'contratempo', () => playerSecretDef('italian').name), 'passataContratempo');
   assert.equal(playerSecretDef('japanese'), TRADITIONS.japanese.secret);
   const C = CHARACTERS_BY_ID.tome;
@@ -144,7 +144,8 @@ test('사람 길만: 이탈리아 무기 사람 비기 = 거침없이 나아가 
     try {
       assert.equal(playerSecretOf(g.player)?.name, 'andareRisoluto', w);
       assert.equal(new PlayerSecretWatch(g.player, g.enemy).riso != null, true, w);
-      assert.equal(g.ai.secret, null, `${w} AI 이탈리아 숙련도 5 도 비기 없음`);
+      assert.equal(g.ai.secret?.name, 'andareRisoluto', `${w} AI 이탈리아 숙련도 5 = 리솔루토 (11/14)`);
+      assert.ok(g.ai.riso?.W, `${w} AI 덮인 채 나아가기 셈`);
     } finally { g.world.free(); }
   }
 });

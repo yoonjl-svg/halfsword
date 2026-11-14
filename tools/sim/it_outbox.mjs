@@ -33,6 +33,10 @@ export const PRESETS = {
   // 11/14 사장님 '기본찌르기는 0.6 위에서 내려찌르기는 0.9' — 판금 상대(하인리히 차림 · SB_FOE_LOOK=plate): finP = 새 틈(레이피어 0.6 · 내려 찌르기 0.9) · finPold = 옛 틈(0.3 · 0.6)
   finP: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 2.0, beat: 0.4, ai: 1 }, plate: 1, gap: { rapier: 0.6, estoc: 0.6, imbro: 0.9 } },
   finPold: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 2.0, beat: 0.4, ai: 1 }, plate: 1, gap: { rapier: 0.3, estoc: 0.5, imbro: 0.6 } },
+  // 11/14 사장님 '리솔루토도 쓰게해' — AI 이탈리아 숙련 5(비기 문 AI_PROFICIENCY.secretAt): R = 리솔루토 열림(본판 aiOpenSchools 'italian') · R0 = 닫힘(이탈리아를 뺌 — 견줌)
+  //  ai 칸(aiFight)은 prof = AI 이탈리아 숙련 · run 칸(손가락 봇)은 foeProf = 상대 AI 숙련(SB_FOE_PROF — 레이피어 거울)
+  aiR: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 2.0, beat: 0.4, ai: 1 }, prof: 5, foeProf: 5, open: 1 },
+  aiR0: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 2.0, beat: 0.4, ai: 1 }, prof: 5, foeProf: 5, open: 0 },
 };
 const range = (s) => String(s).split(',').flatMap((p) => { const m = p.match(/^(\d+)-(\d+)$/); if (!m) return [+p]; const o = []; for (let i = +m[1]; i <= +m[2]; i++) o.push(i); return o; });
 const r3 = (x) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(3));
@@ -43,6 +47,7 @@ export async function runPreset(name, cells, seeds, log = () => {}) {
   if (!P0) throw new Error(`모르는 판 ${name}`);
   process.env.SB_IT_BOT = P0.bot;
   process.env.SB_FOE_LOOK = P0.plate ? 'plate' : '';
+  process.env.SB_FOE_PROF = P0.foeProf ? String(P0.foeProf) : '';
   const { fightOne, CONFIG } = await loadSB();
   const IO = CONFIG.IT_OUTBOX;
   const keep = { ...IO };
@@ -54,21 +59,26 @@ export async function runPreset(name, cells, seeds, log = () => {}) {
   if (io.beat != null) io.beat = CONFIG.realS(io.beat);
   Object.assign(IO, io);
   const UA = CONFIG.UNIQUE_ASSIST;
+  const open0 = CONFIG.SECRET.aiOpenSchools;
+  if (P0.open === 0) CONFIG.SECRET.aiOpenSchools = open0.filter((x) => x !== 'italian');
   const runs = [];
   try {
     for (const c of cells) {
       const [school, weapon, opp] = c.split(':');
       for (const seed of seeds) {
-        let P = null, uq = null, lastAct = null;
+        let P = null, uq = null, lastAct = null, GA = null;
+        const fr = { sev: 0, hits: 0 }; // 상대 AI 리솔루토가 사람에게 낸 상처 (11/14)
         const plate = { hits: 0, sev: 0, pierce: 0, stopped: 0 };
         const diag = [];
         const probe = {
           init({ G, P: p, A, uq: u }) {
             P = p;
+            GA = G.ai;
             uq = u;
             const pw = G.combat.hooks.onWound; // 판금 재기 (11/14): 판 위 칼날 상처 · 판에 막힌 찌르기(멍으로 바뀜) · 상처 낸 맞음 수 · 심각도
             G.combat.hooks.onWound = (att, vic, r, ...rest) => {
               pw?.(att, vic, r, ...rest);
+              if (att === A && vic === P && G.ai.secretRun?.stage === 'riso' && r.severity > 0 && r.type !== 'blunt') (fr.hits++, (fr.sev += r.severity));
               if (att !== P || vic !== A) return;
               if (r.severity > 0 && r.type !== 'blunt') (plate.hits++, (plate.sev += r.severity));
               if (r.plate && r.type === 'stab' && r.severity > 0) plate.pierce++;
@@ -97,7 +107,9 @@ export async function runPreset(name, cells, seeds, log = () => {}) {
           step(cur, act) { lastAct = act; },
           done() {
             const o = P?.itOut ?? {};
-            return { plate, edge: o.edge ?? 0, by: o.by ?? {}, stopHits: o.stopHits ?? 0, thrustHits: o.thrustHits ?? 0, beatFired: o.beatFired ?? 0, risoWait: r3((o.risoWait ?? 0) / CONFIG.TIME.k), diag, tapFired: uq?.stats?.fired ?? {} };
+            const AR = GA?.stats?.riso;
+            const foeRiso = GA ? { on: !!AR, fired: GA.stats?.secrets?.andareRisoluto?.fired ?? 0, landed: GA.stats?.secrets?.andareRisoluto?.landed ?? 0, wins: AR?.wins ?? 0, gapBlocked: AR?.gapBlocked ?? 0, armT: r3((AR?.armT ?? 0) / CONFIG.TIME.k), edge: GA.me.itOut?.edge ?? 0, ...fr } : null;
+            return { foeRiso, plate, edge: o.edge ?? 0, by: o.by ?? {}, stopHits: o.stopHits ?? 0, thrustHits: o.thrustHits ?? 0, beatFired: o.beatFired ?? 0, risoWait: r3((o.risoWait ?? 0) / CONFIG.TIME.k), diag, tapFired: uq?.stats?.fired ?? {} };
           },
         };
         const r = fightOne({ school, weapon, opp, seed, probe });
@@ -108,6 +120,7 @@ export async function runPreset(name, cells, seeds, log = () => {}) {
     }
   } finally {
     Object.assign(IO, keep);
+    CONFIG.SECRET.aiOpenSchools = open0;
     [THRUST_STYLE.rapier.gap, THRUST_STYLE.estoc.gap, CONFIG.UNIQUE_ASSIST.imbroccataGap] = keepGap;
   }
   return runs;
@@ -126,15 +139,19 @@ export async function aiFight(preset, weapon, opp, seed) {
   if (io.edge != null) io.edge = CONFIG.realS(io.edge);
   if (io.beat != null) io.beat = CONFIG.realS(io.beat);
   Object.assign(IO, io);
+  const open0 = CONFIG.SECRET.aiOpenSchools;
+  if (P0.open === 0) CONFIG.SECRET.aiOpenSchools = open0.filter((x) => x !== 'italian');
   try {
-    const G = newRound({ walls: true, seed, weapon, weapon2: opp, AI2Class: AI, persona: { proficiency: 3 }, persona2: { proficiency: 3 } });
+    const G = newRound({ walls: true, seed, weapon, weapon2: opp, AI2Class: AI, persona: { proficiency: 3 }, persona2: { proficiency: P0.prof ?? 3 } }); // 11/14 AI 리솔루토 재기: AI 이탈리아 숙련 P0.prof (상대 AI 는 3 그대로)
     const P = G.player, E = G.enemy;
-    const w = { dealt: 0, recv: 0, inqHit: 0 };
+    const hasRiso = G.ai2.secret?.name === 'andareRisoluto'; // 숙련 5 · 열림이면 판 처음에 듦
+    const w = { dealt: 0, recv: 0, inqHit: 0, risoSev: 0, risoHits: 0 };
     const pw = G.combat.hooks.onWound;
     G.combat.hooks.onWound = (att, vic, r, ...rest) => {
       pw?.(att, vic, r, ...rest);
       const sv = r.type === 'blunt' ? 0 : r.severity ?? 0;
       if (att === P) w.dealt += sv;
+      if (att === P && G.ai2.secretRun?.stage === 'riso' && sv > 0) (w.risoHits++, (w.risoSev += sv));
       else w.recv += sv;
     };
     let T = 30;
@@ -144,11 +161,12 @@ export async function aiFight(preset, weapon, opp, seed) {
     }
     const o = P.itOut ?? {};
     const st = G.ai2.stats;
-    const r = { preset, c: `ai:${weapon}:${opp}`, seed, T: r3(T), win: !E.alive && P.alive, lose: !P.alive && E.alive, dealt: r3(w.dealt), recv: r3(w.recv), edge: o.edge ?? 0, by: o.by ?? {}, beatFired: o.beatFired ?? 0, stopHits: o.stopHits ?? 0, thrustHits: o.thrustHits ?? 0, inq: st.specials?.inquartata ?? 0, counters: st.counters ?? 0, specials: st.specials ?? null };
+    const r = { preset, c: `ai:${weapon}:${opp}`, seed, T: r3(T), win: !E.alive && P.alive, lose: !P.alive && E.alive, dealt: r3(w.dealt), recv: r3(w.recv), edge: o.edge ?? 0, by: o.by ?? {}, beatFired: o.beatFired ?? 0, stopHits: o.stopHits ?? 0, thrustHits: o.thrustHits ?? 0, inq: st.specials?.inquartata ?? 0, counters: st.counters ?? 0, specials: st.specials ?? null, riso: st.secrets?.andareRisoluto?.fired ?? 0, risoLanded: st.secrets?.andareRisoluto?.landed ?? 0, risoWins: st.riso?.wins ?? 0, risoGap: st.riso?.gapBlocked ?? 0, risoArmT: r3((st.riso?.armT ?? 0) / CONFIG.TIME.k), risoSev: r3(w.risoSev), risoHits: w.risoHits, hasRiso };
     G.world.free();
     return r;
   } finally {
     Object.assign(IO, keep);
+    CONFIG.SECRET.aiOpenSchools = open0;
   }
 }
 let SB = null;

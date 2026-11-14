@@ -87,7 +87,7 @@ const KOTE = { from: PAD.langort, path: [[0.02, -0.22]] };
 export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], probe = null, onRound = null, botHook = null, attrib = 'new', hunt = 0, jpBot = '' }) { // probe = 재기 꽂개 (rapier_defence.mjs) · onRound · botHook = 코테 · 줍기 재기 (kote_pickup.mjs) · attrib 'old' = 11/04 기술 기록 셈 (step_input — 늦게 읽힌 긋기 이름 바꿈)
   const rnd = rng(seed * 7919 + 101);
   const kit = kitFromNodes(school, allNodeIds(school)); // 무유파는 null (나무 없음 — 고유 · 비기 없음)
-  const G = newRound({ seed, weapon, weapon2: opp, walls: true, ...(kit ? { kit } : {}), look: LOOKS.player, look2: process.env.SB_FOE_LOOK === 'plate' ? CHARACTERS_BY_ID.heinrich.look : LOOKS.enemy, persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
+  const G = newRound({ seed, weapon, weapon2: opp, walls: true, ...(kit ? { kit } : {}), look: LOOKS.player, look2: process.env.SB_FOE_LOOK === 'plate' ? CHARACTERS_BY_ID.heinrich.look : LOOKS.enemy, persona: { proficiency: +(process.env.SB_FOE_PROF || 3) }, onFighter(f) { if (f.index === 0) f.humanInput = true; } }); // SB_FOE_PROF = 상대 AI 숙련도 (11/14 AI 리솔루토 재기 — 기본 3 그대로)
   applyWeaponMeasure(G.ai, opp);
   const P = G.player;
   const A = G.enemy;

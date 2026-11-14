@@ -114,11 +114,11 @@ test('닫힌 칸: 비기는 열린 유파만(SECRET.openSchools — 10/22 사람
   assert.equal(D.isClosed('iberian', D.nodeOf('iberian', 'B7')), false); // 11/11 싱지르 = 특수 공격 (닫히지 않음)
   assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false);
   assert.equal(D.kitFromNodes('italian', D.allNodeIds('italian')).secret, true);
-  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german']); // AI 는 일본 · 이베리아(10/24 싱지르) · 독일(10/24 모르트슐라크)만 (ai.js 는 aiOpenSchools 만 본다)
+  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german', 'italian']); // AI 는 일본 · 이베리아(10/24 싱지르) · 독일(10/24 모르트슐라크) · 이탈리아(11/14 사장님 '리솔루토도 쓰게해')만 (ai.js 는 aiOpenSchools 만 본다)
   for (const s of DESIGN) for (const d of s.nodes) if (d.closed && !(d.cat === 'secret' && SECRET.openSchools.includes(s.id))) assert.equal(D.isClosed(s.id, D.nodeOf(s.id, d.id)), true, d.id); // 설계 '준비 중'과 같음 (그 뒤 연 비기는 뺌)
   assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J5')), false);
   assert.equal(D.isClosed('german', D.nodeOf('german', 'G10')), false); // 10/22 독일 죽음의 일격 — 사람 먼저
-  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german']); // AI 는 일본 · 이베리아 · 독일(10/24 사장님 'ai도 비기 쓰게 해')만 (ai.js 는 이 목록만)
+  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german', 'italian']); // AI 는 일본 · 이베리아 · 독일(10/24 사장님 'ai도 비기 쓰게 해') · 이탈리아(11/14 '리솔루토도 쓰게해')만 (ai.js 는 이 목록만)
   const all = D.allNodeIds('german');
   assert.equal(D.nodeState('german', D.nodeOf('german', 'G10'), ids(...[...all].filter((x) => x !== 'G10'))), 'open');
   assert.equal(D.kitFromNodes('german', all).secret, true);

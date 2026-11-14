@@ -671,7 +671,7 @@ const ITALIAN_SECRET = {
 };
 // 이탈리아 사람 비기 — 거침없이 나아가 찌르기 (안다레 리솔루토) (사장님 10/22 '리솔루토 덮음은 모양으로 재고 사람 먼저' — src/italian_risoluto.js · docs/strike/italian_risoluto_2026-10-22.md):
 //  막지도 휘두르지도 않은 채 내 칼 손 쪽(강한 쪽)으로 상대 칼끝 쪽(약한 쪽)을 덮어 맞대고 걸어 들어간다 → 이어지면 창 → 탭 하나 = 상대 칼이 묶여 막을 수 없는 곧은 찌르기.
-//  사람 길만(playerSecretDef — SECRET.itSecret 'risoluto'). AI 는 위 ITALIAN_SECRET 그대로(aiOpenSchools 로 닫힘).
+//  사람 길(playerSecretDef — SECRET.itSecret 'risoluto'). 11/14 사장님 '리솔루토도 쓰게해' — AI 도 같은 비기(TRADITIONS.italian.aiSecret · SECRET.aiOpenSchools 'italian' · 숙련도 5 이상 — ai.js risoTick · 같은 조건 · 같은 실행부).
 //  찌르기 = 탭 찌르기 그대로(skill.js thrust — 걸음 · 겨눔 · 시간 · 패시브 곧은 선은 비기라 안 실림) + 찌르기가 시작될 때 상대 팔 늦춤(흘림과 같은 장치 nagashi_recovery.js
 //  beginFlowRecovery — FLOW_RECOVERY 0.4 s) + 비기 배율(SECRET.power 서보 힘 · hitMul 판정). 새 힘 · 새 문턱 없음. 끝나면 굳음 SECRET.stiff.italian
 const ITALIAN_RISOLUTO = {
@@ -1167,6 +1167,9 @@ Object.defineProperty(TRADITIONS.german, 'parryCover', {
 //   (보통 찌르기의 크게 내딛음은 판 5·10 D·16 C·18 C·19 C 와 §77 「the left arm … makes a straight line with the right arm」 = 빈팔을 뒤로 곧게 뻗음 — 이 게임에선 런지 자세가 비기 하나에만 걸려 쓰지 않는다)
 //   [모두 사장님 확인 전 — owner_defaults_table 600~]
 const ITALIAN_OFFARM = { guard: [0.35, 0.18, 0.12], lunge: [0.3, 0.36, 0.04] };
+// 11/14 사장님 '리솔루토도 쓰게해' — AI 이탈리아(숙련도 AI_PROFICIENCY.secretAt 이상 · SECRET.aiOpenSchools 'italian')도 사람과 같은 비기 안다레 리솔루토(ai.js risoTick — 같은 셈 italian_risoluto.js RisolutoWatch ·
+//  칼 우위 동안만 · 같은 실행부 skill.secret 런지). 읽을 때 정함(주소 스위치 `?itSecret=` 가 모듈을 읽은 뒤 바뀜) — 'risoluto' 가 아니면 없음 = 옛 비기 secret(파사타 인 콘트라템포) 그대로
+Object.defineProperty(TRADITIONS.italian, 'aiSecret', { get: () => (SECRET.itSecret === 'risoluto' ? ITALIAN_RISOLUTO : undefined), enumerable: false, configurable: true });
 TRADITIONS.italian.offArm = ITALIAN_OFFARM; // 이탈리아 줄(위)은 걸음 작업과 겹치지 않게 그대로 두고 여기서 더한다
 
 // 이탈리아 레이피어 자세표 (10/10 사장님 '저 대기자세 이상하지 않아? … 왜 팔을 저렇게 높이 들고 칼끝을 내리지' · '정확히 고증대로 해' — docs/motion/rapier_guards_2026-10-10.md §1·§2).

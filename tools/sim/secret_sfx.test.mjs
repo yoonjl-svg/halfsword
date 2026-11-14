@@ -1,5 +1,5 @@
 // 비기 소리 시험 (10/25 사장님 '샛별이 비기 소리 보낸 거 입혀' — 샛별 저장소 2fa0b2ae · docs/import/secret_audio_import_2026-10-25.md · 확인표 2542 ~ 2545):
-//  사람 비기 다섯(고노센 · 안다레 리솔루토 · 격살 · 싱지르 · 모르트슐라크)과 AI 비기 셋(고노센 · 싱지르 · 모르트슐라크 — 이탈리아 · 동방은 AI 에게 닫힘 SECRET.aiOpenSchools)을
+//  사람 비기 다섯(고노센 · 안다레 리솔루토 · 격살 · 싱지르 · 모르트슐라크)과 AI 비기 셋(고노센 · 싱지르 · 모르트슐라크 — 동방은 AI 에게 닫힘 SECRET.aiOpenSchools · 11/14 이탈리아 리솔루토는 AI 에게도 열림 — 사람과 같은 실행부)을
 //  머리 없는 판(harness_m)에서 실제 실행부로 내고, 물리 스텝마다 src/secret_sfx.js SecretSfxWatch.tick → src/sound.js Sound.secretSfx(소리 카드 없는 가짜)로 간 소리 요청을 센다:
 //  한 비기 = 정확히 한 번 · 낸 사람 유파의 파일 · 준비(창 · 고노센 / 싱지르 준비 · 누르기 창) · 못 냄 · 실행 실패 = 0 · 재생 빠르기 1 · 쇳소리 묶음 · 음량 SOUND.secretSfxGain
 //  node --test tools/sim/secret_sfx.test.mjs

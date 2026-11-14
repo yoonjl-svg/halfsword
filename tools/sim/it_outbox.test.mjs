@@ -193,6 +193,53 @@ test('3 리솔루토는 칼 우위 동안만 창: 덮인 채 나아가기 셈이
   }
 });
 
+test('5 AI 리솔루토 (11/14 사장님 \'리솔루토도 쓰게해\'): AI 이탈리아 숙련 5 = 사람과 같은 비기 · 숙련 4 · 닫음 = 없음 · 칼 우위 밖엔 창 없음 · 창이 열리면 곧장 같은 실행부 · 무장 동안 발은 상대 걸음을 맞받음', () => {
+  const mk = (prof) => newRound({ walls: true, seed: 9, weapon: 'longsword', weapon2: 'rapier', gap: 2.4, persona: { proficiency: { italian: prof } } });
+  for (const [prof, open, want] of [[5, true, 'andareRisoluto'], [4, true, null], [5, false, null]]) {
+    const open0 = CONFIG.SECRET.aiOpenSchools;
+    if (!open) CONFIG.SECRET.aiOpenSchools = open0.filter((x) => x !== 'italian');
+    const G = mk(prof);
+    try {
+      assert.equal(G.ai.secret?.name ?? null, want, `숙련 ${prof} · 열림 ${open}`);
+      assert.equal(!!G.ai.riso, !!want);
+    } finally { G.world.free(); CONFIG.SECRET.aiOpenSchools = open0; }
+  }
+  const G = mk(5);
+  try {
+    const ai = G.ai, E = G.enemy;
+    for (let i = 0; i < 3; i++) G.step();
+    const calls = [];
+    ai.riso.W.tick = (dt, can) => (calls.push(can), can ? { ev: 'risoluto', path: 'touch', held: 0 } : null); // 덮인 채 나아가기가 창을 열려는 스텝 (사람 시험과 같은 꼴)
+    const got = [];
+    E.skill.secret = (o) => (got.push(o), true); // 실행부는 사람과 같은 skill.secret — 받은 비기만 봄
+    ai.mode = 'watch';
+    ai.risoTick(1 / 60, false);
+    assert.deepEqual([calls.at(-1), got.length, ai.riso.armed], [false, 0, false], '칼 우위 없음 — 창 · 무장 없음');
+    itEdgeGrant(E, 'feint');
+    ai.risoTick(1 / 60, false);
+    assert.equal(calls.at(-1), true);
+    assert.equal(got.length, 1, '창 — 곧장 냄');
+    assert.equal(got[0].S, ai.secret);
+    assert.equal(got[0].S.do.risoluto, true);
+    assert.deepEqual([ai.secretRun?.stage, ai.mode, ai.stats.riso.wins, ai.stats.riso.fired, ai.stats.riso.by.touch, E.secretUsed], ['riso', 'secret', 1, 1, 1, 1]);
+  } finally { G.world.free(); }
+  const H = mk(5);
+  try {
+    const ai = H.ai, E = H.enemy, P = H.player;
+    for (let i = 0; i < 3; i++) H.step();
+    ai.mode = 'watch';
+    ai.riso.armed = true;
+    for (const [y, want] of [[-0.6, 0.6], [0.6, -0.6]]) {
+      P.move.set(0, y);
+      ai.moveFeet(1 / 60, ai.d);
+      assert.deepEqual([+E.stickY.toFixed(3), E.stickX], [want, 0], `상대 걸음 ${y} → 맞받음 ${want}`);
+    }
+    P.move.set(0, 0);
+    ai.riso.armed = false;
+    ai.moveFeet(1 / 60, ai.d); // 무장 밖 = 평소 걸음 (값은 보지 않음 — 굴림 차례만 같음)
+  } finally { H.world.free(); }
+});
+
 /** 사람 레이피어 몸 + 막기 단추 + 연 고유 공격 (cavazione_tap.test.mjs body 와 같은 꼴 — 판을 돌리지 않음) */
 function body(names = ['inquartata']) {
   const G = newRound({ walls: true, seed: 3, weapon: 'rapier', weapon2: 'longsword' });
