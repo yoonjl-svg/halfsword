@@ -33,7 +33,7 @@ const hipP = () => [SECRET.iaiSayaHip[0], SECRET.iaiSayaHip[1], -SECRET.iaiSayaH
 const PELVIS_HALF_W = 0.16; // fighter.js partDefs pelvis 상자 반 너비
 /** 11/13 판으로 묶음 (11/14 iai_saya2 — 사장님 '원전과 다른 셋 이어서 맞춰': 발도 대기 왼손 칼집 입 · 뽑아 내는 동안 鞘引き · 풀기와 겹친 다시 쥐기 · 鞘戻し 점 —
  *  ② · ③ 은 그 전 판 장면(뽑기 · 풀기 내내 빈손 목표 = 왼 허리)을 잰 것이라 기준을 고치지 않고 그때 판으로 돌림 · 새 꼴은 iai_saya2.test) */
-const then1113 = (fn) => withS({ iaiSayaReady: 0, iaiRegripFade: 0, iaiSayaModoshi: 0 }, fn);
+const then1113 = (fn) => withS({ iaiSayaReady: 0, iaiRegripFade: 0, iaiSayaModoshi: 0, stiff: { ...SECRET.stiff, japanese: CONFIG.realS(1.2) } }, fn); // 11/14 비기 경직 0.6 통일 전 판(고노센 굳음 1.2 s — 그 장면을 잰 때)
 
 test('① 기본값 — 칼집 손 자리 원전(왼 허리) 켬 · 우치가타나 등 다시 쥐기 부드럽게 켬 · 10/14 배 앞은 전 판 값', () => {
   assert.equal(SECRET.iaiSaya, 1);

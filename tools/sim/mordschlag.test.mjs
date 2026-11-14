@@ -39,7 +39,7 @@ test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 1.5 s — 1
   assert.equal(SECRET.mordPress, CONFIG.realS(1.5)); // 11/11 사장님 '1.5초로 해.' (전 2 — 10/25 23:1x 사장님 '1초 말고 2초로 하고, 대신 리솔루토처럼 0.2초 안에 다시 붙으면 이어서 세.' (전 1.5) · 표준 시간(10/25): 적힌 수는 실제 초 — 게임 값 = × 1.1
   assert.equal(SECRET.mordGrace, CONFIG.realS(0.4)); // 10/27 21:4x 사장님 '0.2초 간격을 0.4초로 늘려' (전 0.2)
   assert.equal(SECRET.playerWindow, CONFIG.realS(0.6));
-  assert.equal(SECRET.stiff.german, CONFIG.realS(0.4));
+  assert.equal(SECRET.stiff.german, CONFIG.realS(0.6)); // 11/14 사장님 '모든 비기 경직 0.6초로 통일' (전 0.4)
   assert.equal(SECRET.mordOver, 0); // 넘어 들어감 규칙 — 사장님 확인 전 · 기본 끔
   assert.ok(SECRET.openSchools.includes('german') && SECRET.openSchools.includes('japanese'));
   assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german']); // 10/24 이베리아 싱지르 · 독일 모르트슐라크 AI 열림 (사장님 12:0x 'ai도 비기 쓰게 해')
@@ -242,7 +242,7 @@ test('비기 흐름: 준비 → 베기 길 → 따라 지나감 → 다시 세�
     }
     assert.equal(P.skill.sec, null);
     for (const s of ['chamber', 'strike', 'follow', 'mordBack', 'stiff']) assert.ok(seen.has(s), s);
-    assert.equal(stiffT, CONFIG.realS(0.4));
+    assert.equal(stiffT, SECRET.stiff.german); // 굳음 = 비기 경직 (11/14 0.6 통일 — 전 0.4)
     assert.equal(P.mordGrip, null);
     assert.equal(P.mordAim, false);
     assert.equal(P.mordHold, null);
