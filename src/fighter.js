@@ -11,7 +11,8 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { STAMINA, BODY, WEAPON, VITALS, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_LINK, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
+import { runTick } from './dig_proto.js'; // 시제품 C 달림 (11/14 — config DIG_PROTO.run · 기본 끔)
+import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_LINK, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { MAX_FIGHTERS, teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
 import { Skill } from './skill.js';
@@ -3010,6 +3011,7 @@ export class Fighter {
     const side = mv.x * speed * (hybrid ? GAIT.sideFactor : 0.8);
     const want = _v4.set(fwd.x * along + rgt.x * side, 0, fwd.z * along + rgt.z * side);
     if (this.ibSpin && hybrid) want.copy(this.ibSpin.want); // 휘감아 돌기 (10/22): 골반이 가려는 빠르기 = 대본 (스틱 · 균형 걸음 대신)
+    if (DIG_PROTO.run && hybrid && !this.ibSpin) runTick(this, dt, want, fwd, mvIn); // 시제품 C (11/14 — 기본 끔 · src/dig_proto.js): 기력 문턱 위 · 스틱 앞 끝이면 달림 (사람 · AI 같게)
     this.updateFooting(dt, fwd, rgt, want);
     if (hybrid) G.update(dt, want, fwd, rgt);
     else if (G?.active) G.exit();
