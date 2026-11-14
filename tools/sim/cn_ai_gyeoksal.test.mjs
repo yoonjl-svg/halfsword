@@ -1,5 +1,5 @@
 // 동방 격살 AI 몫 시험 (11/14 사장님 '동방도 격살 쓰게 해' — ai.js gyeoksalAi · gkWant · secretGo · config SECRET.aiOpenSchools · SECRET.gyeoksalAi · UNIQUE_ASSIST.cnHunt.ai ·
-//  기록 docs/strike/cn_ai_gyeoksal_2026-11-14.md): 열림(숙련도 문) · 쓸 때(겹 3 · 10 s) · 나서며 받음(걸음 앞) · 사람과 같은 다섯 조건 · 갈라지면 저절로 · 사람과 같은 한 칼(판정 · 사냥 겹 빠르기) ·
+//  기록 docs/strike/cn_ai_gyeoksal_2026-11-14.md): 열림(숙련도 문) · 쓸 때(겹 1 · 10 s) · 나서며 받음(걸음 앞) · 사람과 같은 다섯 조건 · 갈라지면 저절로 · 사람과 같은 한 칼(판정 · 사냥 겹 빠르기) ·
 //  AI 쉼 걸쇠는 격살엔 안 걸림 · 판당 1 번.  node --test tools/sim/cn_ai_gyeoksal.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -48,7 +48,7 @@ test('열림: aiOpenSchools 에 동방 · AI 몫(aiSecret) = 격살 · 숙련도
   assert.ok(SECRET.aiOpenSchools.includes('chinese'));
   assert.equal(TRADITIONS.chinese.aiSecret.name, 'gyeoksal');
   assert.equal(UA.cnHunt.ai, 1);
-  assert.deepEqual(SECRET.gyeoksalAi, { stacks: 3, late: CONFIG.realS(10) });
+  assert.deepEqual(SECRET.gyeoksalAi, { stacks: 1, late: CONFIG.realS(10) }); // 11/14 사장님 '3스택 이상 -> 1스택 이상'
   for (const [prof, want] of [[5, 'gyeoksal'], [4, null]]) {
     const B = cnAi(prof);
     try { assert.equal(B.ai.secret?.name ?? null, want, `숙련도 ${prof}`); } finally { B.free(); }
@@ -59,14 +59,14 @@ test('열림: aiOpenSchools 에 동방 · AI 몫(aiSecret) = 격살 · 숙련도
   try { assert.equal(B.ai.secret.name, 'lianhuanParry', '`?gyeoksal=0` = 옛 막기 연환'); } finally { B.free(); SECRET.gyeoksal.on = keep; }
 });
 
-test('쓸 때 (gkWant — 판당 1 번이라 아낌): 상대 사냥 겹 3 이상 · 또는 판이 10 s 넘음 — 그 전엔 보통 막기', () => {
+test('쓸 때 (gkWant — 판당 1 번이라 아낌): 상대 사냥 겹 1 이상(11/14 사장님 — 전 3) · 또는 판이 10 s 넘음 — 그 전엔 보통 막기', () => {
   const B = cnAi();
   const { ai } = B;
   try {
     ai.me.fightT = 0;
-    ai.foe.cnHunt = { n: 2, hits: 2, last: new Map(), t5: null };
+    ai.foe.cnHunt = { n: 0, hits: 0, last: new Map(), t5: null };
     assert.equal(ai.gkWant(), false);
-    ai.foe.cnHunt.n = 3;
+    ai.foe.cnHunt.n = 1;
     assert.equal(ai.gkWant(), true);
     ai.foe.cnHunt.n = 0;
     ai.me.fightT = CONFIG.realS(10);

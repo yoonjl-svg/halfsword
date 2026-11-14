@@ -1725,7 +1725,7 @@ export const SECRET = {
   },
   // AI 격살 쓸 때 (11/14 사장님 '동방도 격살 쓰게 해' — ai.js gkWant · 판당 1 번이라 아껴 둠): 상대에 쌓인 사냥 겹이 stacks 이상이거나 판이 late 초를 넘으면 막을 때 나서며 받음(격살 시도) ·
   //  그 전엔 보통 막기(살짝 물러섬 그대로). 조건 · 칼 · 값은 사람 격살 그대로 (gyeoksal.press · 스틱 앞 · 상대 칼 들어옴 · 받은 자세 · 갈라지면 저절로). stacks 3 = 재기 사냥 봇의 문턱 · late = 시간 사다리 10.0 [사장님 확인 전 — 확인표]
-  gyeoksalAi: { stacks: 3, late: realS(10) },
+  gyeoksalAi: { stacks: 1, late: realS(10) }, // [사장님 11/14 '격살은 3스택 이상 -> 1스택 이상' · 'ai 또는 캐릭터마다 자유도와 불확실성으로 인한 재미를 주려는 취지' — 전 3]
   gyeoksalHitMul: 1, // 격살만의 비기 판정 배율 (판정 에너지 × — gyeoksal.power 'hit' 일 때 · skill.js gyeoksalHitMul): 사장님 11/11 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' — 1 · 다른 비기(싱지르 · 고노센 · 죽음의 일격)는 SECRET.hitMul 1.3 그대로 · 사람만(AI 는 격살을 쓰지 않음 — aiOpenSchools) · null = SECRET.hitMul 따름 · `?gyeoksalHitMul=1.3` = 전 판 (기록 docs/strike/riso_reach_2026-11-11.md) [사장님 11/11 결정 — 확인표 3511]
   // 비기 판정 배율 1.3 은 고노센에만 (11/11 사장님 '비기 파괴력 배율 1.3배는 고노센에만 남긴다.(이베리아 비기에 빼란 뜻) 어차피 격살도 빠졌으니.' · '죽음의 일격도 1.0으로 해.' — 확인표 3523 · 3524):
   //  비기마다 열쇠 (리솔루토 risolutoHitMul · 격살 gyeoksalHitMul 과 같은 꼴 — null 이면 비기 공통 hitMul). 고노센 = hitMul 1.3 그대로
