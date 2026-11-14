@@ -84,11 +84,14 @@ test("A [사장님 11/11 결정] '격살도 빠르기 70%로 올리고 파괴력
   assert.ok(!SECRET.aiOpenSchools.includes('chinese'), 'AI 동방 비기 닫힘 (격살은 사람만)');
 });
 
-test('A: AI 는 리솔루토를 쓰지 않음 — 사람 이탈리아 비기만 리솔루토 · AI 이탈리아 비기는 옛 엇박 찌르기(닫힘) · 배율은 사람 리솔루토에만', () => {
+test('A: 11/14 사장님 \'리솔루토도 쓰게해\' — AI 이탈리아 비기도 리솔루토(사람과 같은 칸 · aiSecret) · 옛 엇박 찌르기는 secret 칸에 남음 · ?itSecret=contratempo 면 AI 몫 없음', () => {
   assert.equal(playerSecretDef('italian').when, 'risoluto');
   assert.notEqual(TRADITIONS.italian.secret?.when, 'risoluto');
-  assert.ok(!(TRADITIONS.italian.aiSecret?.when === 'risoluto'));
-  assert.ok(!SECRET.aiOpenSchools.includes('italian'), 'AI 이탈리아 비기 닫힘');
+  assert.equal(TRADITIONS.italian.aiSecret, playerSecretDef('italian')); // 같은 비기 (같은 값 — risolutoShare · risolutoHitMul · risolutoStiff)
+  assert.ok(SECRET.aiOpenSchools.includes('italian'), 'AI 이탈리아 비기 열림');
+  const k = SECRET.itSecret;
+  SECRET.itSecret = 'contratempo';
+  try { assert.equal(TRADITIONS.italian.aiSecret, undefined); } finally { SECRET.itSecret = k; }
 });
 
 test('A: 같은 자리 같은 런지 — 판정 배율 0.5 의 심각도 < 1.3 의 심각도 (판정 에너지 × 배율 · 몸 · 칼 움직임은 같음)', () => {

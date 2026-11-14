@@ -1108,7 +1108,7 @@ export const SECRET = {
   openSchools: ['japanese', 'german', 'italian', 'iberian', 'chinese'], // 10/22 사람 먼저 — 독일 죽음의 일격 · 이탈리아 거침없이 나아가 찌르기 · 이베리아 휘감아 돌기 · 동방 막아 죽이기(격살 — 아래 gyeoksal). AI 는 aiOpenSchools 로 따로(10/24 이베리아 엶)
   // AI 쪽 열린 비기 (10/22 사장님 '사람 먼저' — 독일 죽음의 일격 · 이탈리아 리솔루토를 사람에게 먼저 연다): ai.js 는 이 목록만 본다.
   //  openSchools 는 사람(스킬트리 비기 칸 · PlayerSecretWatch). `?secretOpen=` 은 둘 다 고친다 (main.js)
-  aiOpenSchools: ['japanese', 'iberian', 'german'], // 10/24 02:5x 사장님 '싱지르 ai에게도 열어' — 이베리아 추가 (ai.js spinTick · 숙련도 AI_PROFICIENCY.secretAt 이상만 — 롤랑 · 베르나르도 6) · 10/24 12:0x 사장님 'ai도 비기 쓰게 해' — 독일 모르트슐라크 추가 (ai.js mordTick · TRADITIONS.german.aiSecret · 숙련도 5 이상 — 아르토리아 · 광기의 아르토리아)
+  aiOpenSchools: ['japanese', 'iberian', 'german', 'italian'], // 11/14 사장님 '리솔루토도 쓰게해' — 이탈리아 추가 (안다레 리솔루토 · 사람과 같은 조건 · 같은 값 — ai.js risoTick · schools.js TRADITIONS.italian.aiSecret · 숙련도 AI_PROFICIENCY.secretAt 이상 · 확인표 3825) · 10/24 02:5x 사장님 '싱지르 ai에게도 열어' — 이베리아 추가 (ai.js spinTick · 숙련도 AI_PROFICIENCY.secretAt 이상만 — 롤랑 · 베르나르도 6) · 10/24 12:0x 사장님 'ai도 비기 쓰게 해' — 독일 모르트슐라크 추가 (ai.js mordTick · TRADITIONS.german.aiSecret · 숙련도 5 이상 — 아르토리아 · 광기의 아르토리아)
   // ── 독일 죽음의 일격 (모르트슐라크 · Mordschlag — 10/22 저녁 사장님 '독일은 죽음의 일격으로 하자. 막기로 버틸 때나 서로 몸이 맞붙어 클린치 상태일 때 밀기가 n초 이상 작동하면 발동' ·
   //  n '1.5로 해' · 사람 먼저 — src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md · 확인표 2183~2189). 10/24 AI 도 같은 칸을 본다(aiOpenSchools 'german' — ai.js mordTick · 확인표 2400~2405)
   deMord: 1, // 1 = 사람 독일 비기 = 죽음의 일격 (사장님 결정 · 10/24 AI 도) · 0 = 옛 판(deSecret — 받아 베기 · 감아 들기 — 사람 · AI). `?deMord=0`
@@ -1714,6 +1714,31 @@ export const SECRET = {
   altibHitMul: 1, // 이베리아 알티바슈 포르트 (unique_assist.js altibHitMul — 사람 · AI · 전 비기 판 싱지르는 hit 'one' = 1) × 남은 기력 몫(SECRET.altib.staminaK) `?altibHitMul=1.3`
 };
 
+// ── 이탈리아 아웃복싱 (사장님 11/14 '이탈리아는 아웃복싱 스타일이야. 너의 제안과 목표는 같아. '찌르기' 자체를 너프하자. 지금보다 약하게 하고 대신 타이밍을 맞춰서 걸어들어오는 상대를 카운터하면 +30%.
+//    제안 A와 B 좋아. 박자 찌르기는 비껴서며 찌르기를 대체하는 거지?' — 설계안 docs/design/italian_point_control_2026-11-14.md · 실행 src/italian_outbox.js · 기록 docs/strike/it_outbox_2026-11-14.md · 확인표 3800 ~ 3829).
+//  사람 · AI 이탈리아 같게 (사장님 11/14 'ai에도 적용' — ai 1 · 0 = 사람만). 넷은 따로 끌 수 있음: thrustMul 1 · stop 0 · edge 0 · beat 0 = 그 하나 끔 · on 0 = 넷 모두 끔(전 판 — `?itOutbox=0`)
+export const IT_OUTBOX = {
+  on: 1,
+  // 1 찌르기 약하게: 보통 찌르기(탭 찌르기 · 내려 찌르기 · 칼끝 돌려 빼기 · 그어 찌르기 · 막아찌르기 — 비기 리솔루토 · 특수 공격 비껴서며 찌르기 빼고)의 판정 에너지 ×
+  //  (비기 배율 SECRET.risolutoHitMul 과 같은 자리 — combat.js analyze hk · 물리 빠르기 · 질량은 그대로) [사장님 11/14 확인 '이탈리아 찌르기 0.8로 해.' — 확인표 3802 · 견줌 0.7 · 0.9 는 기록] `?itThrustMul=`
+  thrustMul: 0.8,
+  // 2 맞박자 찌르기 (카운터 — 사장님 11/14 '걸어들어오는 상대를 카운터하면 +30%' [결정 — 확인표 3800] · 11/14 '패시브로 넣되 좀 빠르게 배울 수 있는 위치로' [결정 — 확인표 3801]):
+  //  내 찌르기가 드는 순간 상대가 내 쪽으로 걸어 들어오는 중이면 같은 자리에 × (1 + stop). 몫 열쇠 itTempo = 새 패시브 칸 I12 '맞박자 찌르기 (콘트라템포)'(보법 II 줄 · 사장님 11/14 '콘트라템포 ok' — 확인표 3801) · AI 는 늘 `?itStop=`
+  stop: 0.3,
+  stopV: null, // '걸어 들어옴' = 상대 골반 수평 빠르기의 내 쪽 몫 ≥ 이 값(게임 m/s) · null = GAIT.walkMin(0.2 — 걸음 문턱 · 새 수 없음) [감독 안 · 사장님 확인 전 — 확인표 3804]
+  stopWalk: 1, // 그리고 상대가 걷는 중(gait.walking — 걸음 단계) [감독 안 · 사장님 확인 전 — 확인표 3804]
+  stopSpecial: 1, // 특수 공격 비껴서며 찌르기도 받음(1 의 약화는 안 받음 — × (1 + stop)) · 비기 리솔루토는 늘 뺌 [감독 안 · 사장님 확인 전 — 확인표 3805]
+  // 3 칼 우위 (설계안 A — 사장님 11/14 '좋아' [결정 — 확인표 3800]): 칼끝 돌려 빼기(I2) · 막아찌르기(I6) · 비껴서며 찌르기(I9)가 상처를 내면 · 헛누름(I8)이 들면 이 초 동안 칼 우위 —
+  //  리솔루토 창은 칼 우위 동안만 열림(지금 조건에 더함 · edgeRiso). 시간 사다리 2.0 [사장님 11/14 확인 '우위 2초 권고대로' — 확인표 3806 · 견줌 3.0 은 기록] `?itEdge=` (실제 초) · AI 도 같음(11/14 사장님 '리솔루토도 쓰게해' — aiOpenSchools 'italian' · ai.js risoTick)
+  edge: realS(2.0),
+  edgeRiso: 1,
+  edgeLook: 1, // 칼 우위 동안 칼날 둘레 옅은 빛 (main.js — 그림만 · 물리 · 판정 무관) [감독 안 · 사장님 확인 전 — 확인표 3807]
+  // 4 박자 찌르기 (설계안 B — 사장님 11/14 '좋아' · '비껴서며 찌르기를 대체하는 거지?' [결정 — 확인표 3800]): 상대가 치기 시작한(휘두름이 선) 이 초 안의 탭 = 비껴서며 찌르기(I9 그대로 —
+  //  이름 · 식힘 · 칼끝 빠르기 같음) · 스틱 옆이 아니어도 · 몸 빼는 쪽 = 들어오는 칼 반대쪽(스틱이 옆이면 그쪽). 지금 조건(위협 + 스틱 옆)도 그대로. 시간 사다리 0.4 [사장님 확인 전 — 확인표 3808] `?itBeat=` (실제 초)
+  beat: realS(0.4),
+  ai: 1, // [사장님 11/14 결정 'ai에도 적용' — 확인표 3809] AI 이탈리아도 1 · 2 · 3 · 4 (italian_outbox.js — 찌르기 × thrustMul · 맞박자 · 칼 우위(빛 · 재기) · 맞받아 베기 칼이 박자 안이면 비껴서며 찌르기) · 0 = 사람만(11/14 첫 판) `?itAi=0`
+};
+
 // ── 플레이어 고유 동작 이어 주기 → 10/14 강화 (10/13 사장님 '플레이어가 긋는 동작이 고유 동작의 시작 자리·방향과 맞으면 그 고유 동작의 궤적으로 이어 준다' ·
 //    '이질감보다는 자연스러운 향상' — src/unique_assist.js · docs/strike/unique_player_2026-10-13.md). 플레이어만 (AI 는 읽지 않는다).
 //  표(어느 긋기가 어느 고유 동작을 여는가 — 사장님 확정 10/13 22:3x)는 unique_assist.js 한 곳. 수는 [추정] · 사장님 확인 전 (확인표 1040~1049)
@@ -1814,8 +1839,9 @@ export const UNIQUE_ASSIST = {
   //   미리 놓아 본 곧은 줄이 손목 교정을 1° 넘게 더 부르거나(secret_instant.js TIP_FIX_EPS) 날 앞장 스텝이 줄면 반 몫 → 전 판. 두 끝 자세 · 몸통 띠 · 빠르기 그대로 ·
   //   0 = 11/13 전 판 `?tsuTip=0` [사장님 확인 전 — 확인표 3664]
   tsuTip: 1,
-  // 위에서 내려 찌르기(이탈리아) — 옷 · 갑옷 틈을 파고드는 값(combat.js THRUST_STYLE gap 자리)을 이 찌르기만 이 값으로 (레이피어 기본 0.3 · 사장님 10/21 '파고드는 값 0.6으로 해' · 확인표 2107)
-  imbroccataGap: 0.6,
+  // 위에서 내려 찌르기(이탈리아) — 옷 · 갑옷 틈을 파고드는 값(combat.js THRUST_STYLE gap 자리)을 이 찌르기만 이 값으로 (레이피어 기본 0.6 — 11/14 · 사장님 10/21 '파고드는 값 0.6으로 해' · 확인표 2107)
+  //  11/14 사장님 '기본찌르기는 0.6 위에서 내려찌르기는 0.9' (확인표 3821 — 걸음 테이블에서 고름 · 판금 찌르기 문턱 47 × (1 − 0.5 × 0.9) ≈ 26 J) — 전 0.6 `?imbroccataGap=0.6`
+  imbroccataGap: 0.9,
   // 사람 위에서 내려 찌르기 닿게 (사장님 10/27 23:5x '임브로카타 찌르기 뻗게 고치고' — 기록 docs/strike/imbroccata_2026-10-27.md · 확인표 2660): 1 = 긋기가 내려 찌르기로 읽힌 순간
   //  탭 찌르기 덧씌우기로 찌른다(AI 임브로카타 ai.js startStrike → skill.thrust 와 같은 길 — 이탈리아 찌르기 THRUST.itLunge: 몸통 겨눔 · 팔만으로 안 닿으면 거리만큼 런지) · 그 탭의 찌른 상처에 I8 틈 파고들기 그대로.
   //  0 = 전 판(손가락 길만 — 칼끝이 머리 곁 18 cm · 가슴 곁 26 cm 를 옆으로 쓸고 지나감) `?imbroReach=0`. 같은 날 의논한 이어 찌르기 조건 · 빠르기 보정 · 잔상 · 길은 사장님 10/28 00:5x 결정으로 칼끝 돌려 빼기(I9 — 아래 cav*)로 옮김

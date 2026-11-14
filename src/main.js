@@ -69,6 +69,7 @@ import { IAI_READY_STANCE, iaiReadyShown } from './secret_instant.js'; // 고노
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
 import { pickupReady } from './pickup.js'; // 떨어진 칼 줍기 (11/05 — 막기 단추 글 '줍기')
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
+import { itEdgeLook } from './italian_outbox.js'; // 이탈리아 칼 우위 빛 (11/14 설계안 A — 그림만 · config IT_OUTBOX.edgeLook)
 import { TRADITIONS, setChineseGait, setItalianBackCap, setItalianRhythm, setItalianStride, setItalianWalk, setJapaneseGait, setJapanesePlayerWalk, traditionOf } from './schools.js';
 import { createMatch, stepMatch, spawnSpots, orderControllers, pairFoe, matchResult } from './match.js'; // 동시 대전 판 (10/29 3단계 — 2:2 · 2:1 · 1:2 · 지켜보기)
 import { createTeamHud, teamFramePull } from './team_hud.js';
@@ -320,6 +321,15 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   const so = params.get('secretOpen');
   if (so) CONFIG.SECRET.openSchools = CONFIG.SECRET.aiOpenSchools = so === 'all' ? ['german', 'italian', 'iberian', 'japanese', 'chinese'] : so.split(',').map((x) => x.trim()).filter(Boolean); // 사람 · AI 둘 다 (10/22 aiOpenSchools)
 }
+{ // 이탈리아 아웃복싱 (11/14 사장님 '이탈리아는 아웃복싱 스타일이야 … 찌르기 자체를 너프 … 걸어들어오는 상대를 카운터하면 +30%. 제안 A와 B 좋아.' — config IT_OUTBOX · src/italian_outbox.js):
+  //  `?itOutbox=0` 넷 모두 끔(전 판) · `?itThrustMul=0.7` 보통 찌르기 배율(1 = 끔) · `?itStop=0` 맞박자 찌르기 끔 · `?itEdge=3` 칼 우위 초(0 = 끔 — 리솔루토 전 조건) · `?itBeat=0` 박자 찌르기 끔 (실제 초) · `?itAi=0` 사람만
+  if (params.has('itOutbox')) CONFIG.IT_OUTBOX.on = +params.get('itOutbox') ? 1 : 0;
+  if (params.has('itThrustMul') && +params.get('itThrustMul') > 0) CONFIG.IT_OUTBOX.thrustMul = +params.get('itThrustMul');
+  if (params.has('itStop') && +params.get('itStop') >= 0) CONFIG.IT_OUTBOX.stop = +params.get('itStop');
+  if (params.has('itEdge') && +params.get('itEdge') >= 0) CONFIG.IT_OUTBOX.edge = CONFIG.realS(+params.get('itEdge'));
+  if (params.has('itBeat') && +params.get('itBeat') >= 0) CONFIG.IT_OUTBOX.beat = CONFIG.realS(+params.get('itBeat'));
+  if (params.has('itAi')) CONFIG.IT_OUTBOX.ai = +params.get('itAi') ? 1 : 0; // 11/14 사장님 'ai에도 적용' — 0 = 사람만
+}
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
   const its = params.get('itSecret');
   // 10/28 01:4x 사장님 '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로' (기본 — italian_risoluto.js mirrorOk): `?risoMirror=0` = 10/25 21:0x 판(스틱 앞이나 뒤만 · 다 붙음 창 켬 — 아래 ?risoClose 가 덮을 수 있게 먼저)
@@ -414,7 +424,7 @@ if (params.has('dupBurstMatch')) CONFIG.UNIQUE_ASSIST.dupBurstMatch = [0, 1, 2].
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
 if (params.has('cnHunt')) CONFIG.UNIQUE_ASSIST.cnHunt.on = +params.get('cnHunt') ? 1 : 0; // 동방 맹호은림 사냥 겹 (11/14 — `?cnHunt=0` = 겹 없음 · 격살 판당 수는 공용 표 secretUses — 전 판 `?secretUses=1,chinese:3`)
 if (params.has('cnHuntAi')) CONFIG.UNIQUE_ASSIST.cnHunt.ai = +params.get('cnHuntAi') ? 1 : 0; // AI 동방도 사냥 겹 (견줌 — 기본 0)
-if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
+if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6 · 11/14 사장님 0.9)
 for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld', 'inqTap']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
 if (params.has('cavFrom') && +params.get('cavFrom') >= 0) CONFIG.UNIQUE_ASSIST.cavFrom = CONFIG.realS(+params.get('cavFrom')); // 칼끝 돌려 빼기 탭 창 처음 (실제 초 — 기본 0.2 · 10/29 20:0x · 옛 판 0.6)
 if (params.has('cavMerge') && +params.get('cavMerge') >= 0) CONFIG.UNIQUE_ASSIST.cavMerge = CONFIG.realS(+params.get('cavMerge')); // 칼끝 돌려 빼기 닿음 이어 붙임 (11/04 제안 · 실제 초 — 기본 0 끔 · 0.2 = 시간 사다리)
@@ -3754,6 +3764,7 @@ function frame(now) {
   trail.enabled = state === 'fight';
   if (paint) trail.draw(now / 1000, !input.isTouchDevice);
   watchSecretFx(); // 비기 화면 연출 (발도 번쩍임 · 이베리아 카메라)
+  for (const f of fighters) itEdgeLook(f); // 이탈리아 칼 우위 빛 (11/14 — 칼 우위 동안 칼날 둘레 옅은 빛 · 사람 이탈리아만 켜짐)
   updateTechCue(dt); // 유파 기술 알림 — 싸움이 아닐 때(메뉴·일시정지)도 불러 숨긴다
   guardVisible(); // ① 자세 칸도 같다 — 싸움 화면에서만 보인다 (카드 고르기·메뉴에서 숨김)
   if (state === 'fight' || state === 'draw') tickHudTimers(dt); // 화면 글자 시계 (일시정지·메뉴면 멈춘다)

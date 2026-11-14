@@ -36,6 +36,7 @@ import { UNIQUE_ASSIST as UA, IB_FLOW } from './config.js'; // IB_FLOW.power: �
 import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 판정 배율 (11/06 — SKILL.fingerCut.hit · 기본 1 = 끔)
 import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
 import { kitOff, perkOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4)
+import { itThrust, itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14 — 사람 이탈리아 찌르기 판정 배율 · 맞박자 찌르기 · 칼 우위 — config IT_OUTBOX)
 import { huntHit } from './cn_hunt.js'; // 동방 맹호은림 사냥 겹 (11/14 — 출혈 이점이 붙는 맞음에서 · 쌓는 몸만)
 import { MAX_FIGHTERS } from './team.js'; // 셋 이상 판: 같은 편도 적과 똑같이 상처 · 칼 겨루기 (사장님 10/29 22:3x — 제 몸끼리만 버린다)
 
@@ -249,7 +250,10 @@ export class Combat {
     // 결정타 (10/9 23:5x — 유파 비기, AI·플레이어 공통): 비기 베기 동안 공격자 secretHit(SECRET.hitMul)를 상처 에너지에 곱한다. 물리(속도·질량)는 그대로, 판정만. 1 이면 그대로
     // 이어 그을수록 강해짐 (이베리아 머리 위 돌려 베기 — 10/21 사장님 '너의 제안대로'): 이어 그은 수 × stack 만큼 같은 자리(판정 에너지)에 곱한다 · 물리는 그대로
     //  손가락 긋기 판정 배율 (11/06 — finger_cut.js · SKILL.fingerCut.hit · 기본 1 = 끔): 사람 손가락 긋기 동안 · 그 끝 recoverDelay 안의 닿음만 같은 자리에 × hit · 물리는 그대로
-    const hk = (att.secretHit ?? 1) * strokeHitK(att) * fingerCutK(att, 'hit');
+    //  이탈리아 아웃복싱 (11/14 사장님 '찌르기 자체를 너프하자 … 걸어들어오는 상대를 카운터하면 +30%' — italian_outbox.js itThrust · config IT_OUTBOX): 사람 이탈리아 보통 찌르기 × thrustMul ·
+    //   걸어 들어오는 상대를 받아 찌름 × (1 + stop). 비기 배율과 같은 자리(판정 에너지) · 물리 그대로 · 사람 이탈리아가 아니면 null(× 1 — AI 판 그대로)
+    const itk = itThrust(att, pr.v.fighter);
+    const hk = (att.secretHit ?? 1) * strokeHitK(att) * fingerCutK(att, 'hit') * (itk ? itk.k : 1);
     let energy = ephys * STRIKE.energyScale * hk;
     let assisted = null; // 찌르기 팔 유효 질량을 실었으면 싣기 전 값 (멍으로 바뀌면 되돌린다)
 
@@ -452,6 +456,7 @@ export class Combat {
       ...(att.weapon?.woundRage ? { woundRage: rage } : {}), // 와신상담 배율 (그 능력이 있는 칼만 붙는다 — 시험·디버그가 읽는다)
       ...(duel !== 1 ? { duelOneHand: duel } : {}), // 총사의 결투 배율이 실렸을 때만 (달타냥이 한손검 상대를 쳤을 때 — 시험 · 잼이 읽는다)
       ...(spK !== 1 ? { schoolK: spK, schoolLock: att.schoolPassive.lastLock } : {}), // 유파 패시브 배율이 실렸을 때만 (strike → onHit 이 켄타이를 씀)
+      ...(itk ? { itThrust: itk } : {}), // 이탈리아 아웃복싱 배율이 실렸을 때만 (strike → itOnStrike 가 셈 · 칼 우위)
     };
   }
 
@@ -991,6 +996,7 @@ export class Combat {
       if (r.severity > 0) att.parryGuard?.opposition?.onDealt?.(r); // 막아찌르기가 상처를 냈나 (칼끝 돌려 빼기 탭 조건 — 실패한 막아찌르기만 엶 · 10/28 01:2x · 사람만)
       if (r.schoolK) att.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (켄타이는 여기서 씀 — school_passive.js)
       if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
+      itOnStrike(att, vic, r); // 이탈리아 아웃복싱 (11/14): 칼끝 돌려 빼기 · 막아찌르기 · 비껴서며 찌르기가 상처를 내면 칼 우위 · 재기 (사람 이탈리아만 — 그 밖은 곧장 돌아감)
       // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈
       if (r.severity > 0) { const tn = strokeTechOf(att); const yb = this.yaojiDeep(att, r, tn); if ((tn === 'imbroccata' && r.type === 'stab' && !perkOff(att, tn)) || yb) artFlash(att, this.dt); this.huntWound(att, vic, r, tn, yb); } // 11/14 동방 맹호은림: 허리를 베는 세 칼의 칼날 상처(몸 어디든)에 사냥 한 겹 (cn_hunt.js — 쌓는 몸만 · 공격 하나에 한 겹)
     }

@@ -58,6 +58,7 @@
 | I9 | 칼끝 돌려 빼기 | 그 순간 칼끝을 빼 돌리고 조이며 나아가, 가슴을 찔러라 | 리돌포 카포 페로 『Gran Simulacro』(1610) — 칼 빼기 | 「in quell'istante si caverà, & stringerà caminando innanzi … si ferirà di quarta di punta nel petto」 PDF 80쪽 — 저장소 `src/schools.js:481` | [원문] |
 | I4 | 거침없이 나아가 찌르기 (10/22 — 전 엇박 찌르기) | 팔을 굳게 두고 상대 칼날을 놓지 말고, 따라 미끄러져 몸까지 가라 | 살바토르 파브리스 『Lo Schermo』(1606) — 결연히 나아가기 | 둘째 책 첫째 규칙 [156] 「tenendo fermo il braccio andare scorrendo il filo di detta nimica sino al corpo auerso senza mai abbandonarla」 (Keeping your arm steady you should glide along his blade to his body, without ever leaving the blade — A. F. Johnson 영역). 같은 장 [155] 「che siano sempre unite」(두 칼이 늘 붙어 있게) · [156] 「quanto più uicina sarà alla lama nimica tanto meglio … guardare di toccarla niente」(가까울수록 좋되 닿지 말 것). 옛 줄(카포 페로 엇박)은 `?itSecret=contratempo` 옛 비기 몫 — 칸 글은 이 줄 하나. 출처 줄은 680 × 360 카드 넘침으로 '둘째 책'을 뺌 | [원문] |
 | I10 | 곧은 선 | 곧은 선은 하나이니, 기예를 아는 자만이 그것을 긋는다 | 리돌포 카포 페로 『Gran Simulacro』(1610) — 곧은 선 | 기술 ¶18 「una è la linea retta, la quale non sa fare se non l'artefice」 (one is the straight line, which none but the artful knows how to do). 사장님 승인 갈래(카포 페로 linea retta) | [원문] |
+| I12 | 맞박자 찌르기 (11/14 — 새 칸 · 사장님 '콘트라템포 ok') | 그가 발을 옮겨 네 칼에 제 칼을 얹으려는 그 박자에, 찔러라 | 리돌포 카포 페로 『Gran Simulacro』(1610) — 콘트라템포로 치기 | 쓰임 '몇 가지 권고' 10 「Del ferire di contratempo」 원판 30쪽 「venendo il tuo avversario per guadagnarla, tu, nell'istesso tempo che muoverà il piè destro a posar la sua spada nella tua, li spingerai d'una punta」 (your adversary coming to gain it, in the same tempo in which he moves his right foot in order to lay his sword upon yours, you will push a thrust — Swanger · Wilson 영역 · Wiktenauer 쓰임 [10]). 같은 책 용어 풀이 3(원판 33 ~ 34쪽) 「contra tempo: è quando nel medesimo tempo l'avversario mi vuol ferire io l'incontro in più breve tempo e misura」 · 파브리스 『Lo Schermo』(1606) 첫째 책 10장(원판 13 ~ 14쪽)은 같은 것을 ferita di tempo 라 함. lore 는 '오른발' 을 '발' 로 줄임 · 기록 `docs/strike/it_outbox_2026-11-14.md` §2 | [원문] |
 
 ### 이베리아
 
@@ -113,6 +114,7 @@
 
 - [원문] 45 · [풀이] 5(G1 · G6 · B10 · C2 · C5) · [편지] 5. (10/24 J8 칼 떨구기 — [풀이] → [원문]) · 11/14 J12 바위 몸 [원문 — 저장소 밖 · 확인 전] 하나 더
 - 11/14 C12 맹호은림 더함 → [원문] 47(+ J12 · C12 — 간수세 · 사장님 '전부 권고대로' · 처음 판은 본국검 [풀이]) · [풀이] 5 · [편지] 5 · J12 와 함께 모두 57 칸 (시험 `skill_tree.test.mjs` '칸 오의' 55 → 57).
+- 11/14 I12 맞박자 찌르기 더함 → [원문] 48(+ I12 — 카포 페로 쓰임 10 콘트라템포 · 사장님 '콘트라템포 ok') · [풀이] 5 · [편지] 5 · 모두 58 칸 (시험 '칸 오의' 57 → 58).
 - 출처 줄의 원어는 『』 안 책 이름에만(Zettel · Gran Simulacro · Arte de Esgrima · Memorial da Prattica do Montante — 옛 BOOK_TEXT 와 같은 꼴). lore 는 한글만.
 - 바탕 원전을 끝내 찾지 못한 칸은 없다. 가장 멀리 간 줄은 G1(운문에 뒤로 박차는 걸음이 없음) · B10(손목 말이 없음) · C2(조선세법 · 예도에 걷기 기력 대목이 없음) — 위 표에 실제 대목과 바꾼 곳을 적었다.
 

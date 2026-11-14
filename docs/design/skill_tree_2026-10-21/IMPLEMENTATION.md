@@ -48,6 +48,7 @@
 | I8 심화 · 틈 파고들기 | `perk: imbroccata` — 틈 0.6 · 잔상 | `combat.js` gap |
 | I9 칼끝 돌려 빼기 | `u: cavazione` | `PlayerUniqueAssist` |
 | I10 패시브 · 곧은 선 | `passive` | `school_passive.js` |
+| I12 패시브 · 맞박자 찌르기 (11/14) | `itTempo` — 걸어 들어오는 상대를 그 박자에 찌르면 판정 +30 % (콘트라템포 · 사람 · AI 같게 — AI 는 칸 없이 늘 받음) (`docs/strike/it_outbox_2026-11-14.md`) | `italian_outbox.js itThrust` · `combat.js analyze` |
 | I4 비기 | `secret` — 10/22 열림(사람 — 거침없이 나아가 찌르기 · `docs/strike/italian_risoluto_2026-10-22.md`) | |
 | I11 시에나에서 온 편지 | 카드 뽑기 | §5 |
 

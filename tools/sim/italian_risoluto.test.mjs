@@ -130,12 +130,12 @@ test('10/23 넓은 판정 (사장님 \'칼이 붙어 있는 상황에 대한 판
   });
 });
 
-test('사람 길만: 이탈리아 무기 사람 비기 = 거침없이 나아가 찌르기 · ?itSecret=contratempo = 옛 엇박 찌르기 · AI 이탈리아 비기는 옛 것 그대로 닫힘', () => {
+test('이탈리아 무기 사람 비기 = 거침없이 나아가 찌르기 · ?itSecret=contratempo = 옛 엇박 찌르기 · 11/14 사장님 \'리솔루토도 쓰게해\' — AI 이탈리아 숙련도 5 도 같은 비기', () => {
   assert.ok(SECRET.openSchools.includes('italian'));
-  assert.ok(!SECRET.aiOpenSchools.includes('italian'));
+  assert.ok(SECRET.aiOpenSchools.includes('italian'));
   assert.equal(playerSecretDef('italian').name, 'andareRisoluto');
   assert.equal(playerSecretDef('italian').nameKo, '안다레 리솔루토');
-  assert.equal(TRADITIONS.italian.secret.name, 'passataContratempo'); // AI 가 보는 칸 그대로
+  assert.equal(TRADITIONS.italian.secret.name, 'passataContratempo'); // 옛 비기 칸 그대로 (AI 는 aiSecret 을 먼저 봄 — 11/14)
   assert.equal(keep(SECRET, 'itSecret', 'contratempo', () => playerSecretDef('italian').name), 'passataContratempo');
   assert.equal(playerSecretDef('japanese'), TRADITIONS.japanese.secret);
   const C = CHARACTERS_BY_ID.tome;
@@ -144,7 +144,8 @@ test('사람 길만: 이탈리아 무기 사람 비기 = 거침없이 나아가 
     try {
       assert.equal(playerSecretOf(g.player)?.name, 'andareRisoluto', w);
       assert.equal(new PlayerSecretWatch(g.player, g.enemy).riso != null, true, w);
-      assert.equal(g.ai.secret, null, `${w} AI 이탈리아 숙련도 5 도 비기 없음`);
+      assert.equal(g.ai.secret?.name, 'andareRisoluto', `${w} AI 이탈리아 숙련도 5 = 리솔루토 (11/14)`);
+      assert.ok(g.ai.riso?.W, `${w} AI 덮인 채 나아가기 셈`);
     } finally { g.world.free(); }
   }
 });
@@ -514,7 +515,9 @@ test('10/25 칼끝 얽힘 창 (사장님 \'칼끝이 얽히자마자 그 순간�
   withCfg(OLD, () => { const b = tipTip(); assert.equal(new RisolutoWatch(b.me, b.foe).tick(DT, true), null); });
 });
 
-test('10/25 칼끝 얽힘 창 · 실제 몸: 맞닿기 거리 밖이면 첫 닿음에 금색 창 · 맞닿기 거리 안이면 그대로 막힘(간격 조건 — ?risoGap=0 이면 뜸) · ?risoTouch=0 이면 0.6 s 뒤', () => {
+// 11/14 그때 판으로 묶음 (기준은 안 고침 — docs/strike/it_outbox_2026-11-14.md §6): 이 장면은 칼 우위(설계안 A — config IT_OUTBOX.edgeRiso · 리솔루토 창은 칼 우위 동안만) 전 판의 창 규칙을 잰다 —
+//  칼 우위를 켜 둔 판에선 칼끝 돌려 빼기 · 막아찌르기 · 비껴서며 찌르기 · 헛누름이 든 적 없는 이 몸에 창이 안 열려(그것이 새 규칙) 첫 닿음 창을 잴 수 없음. 새 규칙은 it_outbox.test.mjs
+test('10/25 칼끝 얽힘 창 · 실제 몸: 맞닿기 거리 밖이면 첫 닿음에 금색 창 · 맞닿기 거리 안이면 그대로 막힘(간격 조건 — ?risoGap=0 이면 뜸) · ?risoTouch=0 이면 0.6 s 뒤 (11/14 칼 우위 전 판 — edgeRiso 0)', () => keep(CONFIG.IT_OUTBOX, 'edgeRiso', 0, () => {
   const at = (w, gap, fn) => {
     const g = newRound({ weapon: w, weapon2: 'longsword', gap, seed: 9 });
     const p = g.player, e = g.enemy;
@@ -553,7 +556,7 @@ test('10/25 칼끝 얽힘 창 · 실제 몸: 맞닿기 거리 밖이면 첫 닿�
     assert.equal(ps.open?.ctx?.path, 'hold');
     assert.ok(Math.abs(k * DT - SECRET.risolutoHold) < 2 * DT, `${k}`);
   }));
-});
+}));
 
 // 10/24 14:0x 런지 자세 (사장님 '런지할 때 런지 자세가 되려면 앞무릎을 굽히면서 자세 낮춰야 하는데 지금 그렇게 보여?'): 앞무릎 굽힘 · 뒷다리 펴짐 · 골반 낮춤 — 무릎 굽힘 = 넓적다리(엉덩이 → 무릎)와 정강이(무릎 → 발목) 사이 각
 function lungePose(cfg) {

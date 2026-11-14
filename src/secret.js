@@ -15,6 +15,7 @@ import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js
 import { segDist } from './skill.js';
 import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동방 막기 I(C7 — 몸꼴 parryCover)일 때만
 import { RisolutoWatch, lungeGapOk, bladesNear } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
+import { itEdgeOk, itStats } from './italian_outbox.js'; // 이탈리아 칼 우위 (11/14 설계안 A — 리솔루토 창은 칼 우위 동안만 · config IT_OUTBOX.edgeRiso)
 import { stickTurnState, stickTurnStep, stickTurnClear } from './stick_turn.js'; // 이베리아 휘감아 돌기 스틱 판 — 이동 스틱 돌리기 몸짓 (10/23)
 import { circleState, circleStep, circleClear, circleLive } from './attack_circle.js'; // 이베리아 싱지르 공격 원 판 — 공격 입력으로 원 그리기 몸짓 (10/24)
 import { iaiReadyPosePlayer } from './secret_instant.js'; // 사람 고노센 준비 웅크림 (10/25 23:0x — SECRET.gnsCrouch)
@@ -1277,7 +1278,11 @@ export class PlayerSecretWatch {
         R.gapClosed = (R.gapClosed ?? 0) + 1;
       }
     }
-    const ctx = R.tick(dt, !this.open);
+    // 칼 우위 (11/14 사장님 '제안 A 좋아' — italian_outbox.js itEdgeOk · config IT_OUTBOX.edge · edgeRiso): 창은 칼 우위 동안만 열림 — 덮인 채 나아가기 셈은 그대로 돌고(칼끝 얽힘 창은 아껴 둠)
+    //  칼 우위가 켜지는 스텝에 열림. 이미 열린 창은 secretHold 대로 지킴. 끄면(on 0 · edge 0 · edgeRiso 0) 늘 참 — 전 판
+    const edge = itEdgeOk(this.me);
+    if (!edge && !this.open && R.on) itStats(this.me).risoWait += dt; // 재기: 덮인 채 나아가는데 칼 우위가 없어 기다린 시간
+    const ctx = R.tick(dt, !this.open && edge);
     if (ctx && !gapOk) R.gapBlocked = (R.gapBlocked ?? 0) + 1;
     else if (ctx) this.openWindow(ctx);
   }

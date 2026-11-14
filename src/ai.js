@@ -47,6 +47,9 @@ import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretV
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 import { PICKUP } from './config.js'; // 떨어진 칼 줍기 (11/05)
 import { aiPickup } from './pickup.js'; // 떨어진 칼 줍기 — AI 몫 (11/05 · PICKUP.ai)
+import { IT_OUTBOX } from './config.js'; // 이탈리아 아웃복싱 AI 몫 (11/14 사장님 'ai에도 적용' — IT_OUTBOX.ai)
+import { aiBeatTick, aiBeatTech, itEdgeGrant, itStats, itEdgeOk } from './italian_outbox.js'; // 박자 찌르기 셈 · 칼 우위 (헛누름) · 재기 · 리솔루토 창 문 (11/14)
+import { RisolutoWatch, lungeGapOk, bladesNear, foeStep } from './italian_risoluto.js'; // AI 안다레 리솔루토 (11/14 사장님 '리솔루토도 쓰게해' — 사람과 같은 셈 · risoTick)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -306,6 +309,7 @@ export class AI {
     this.spinArm = this.secret?.do?.spin || this.secret?.do?.altib ? new IaiArm('armTime', 'armGrace', 'ibSpin') : null; // 싱지르 무장 (10/24 사장님 '싱지르 ai에게도 열어' — 사람 PlayerSecretWatch.spinArm 과 같은 셈 · 내 칼끝 거리 밖 SECRET.ibSpin.armTime 초)
     this.spinW = 0; // 무장 동안 상처 셈 (SECRET.ibSpin.hurtDisarm — 사람과 같은 규칙)
     this.press = this.secret?.when === 'press' ? { win: 0, wins: 0, go: false, goBarge: false, goes: 0, inClinch: false } : null; // 모르트슐라크 누르기 셈 · 창 (10/24 'ai도 비기 쓰게 해' — 사람 PlayerSecretWatch.pressTick 과 같은 셈 secret.js pressStep · win = 창 남은 초 · wins = 연 창 수)
+    this.riso = this.secret?.when === 'risoluto' ? { W: new RisolutoWatch(me, foe), win: 0, ctx: null, armed: false, st: (this.stats.riso = { wins: 0, gapBlocked: 0, armT: 0, fired: 0, by: {} }) } : null; // 안다레 리솔루토 덮인 채 나아가기 셈 · 창 (11/14 사장님 '리솔루토도 쓰게해' — 사람 PlayerSecretWatch.risoTick 과 같은 셈 italian_risoluto.js RisolutoWatch · win = 창 남은 초 · st = 재기 stats.riso — 다 쓴 뒤에도 남음)
     this.binds = this.secret?.when === 'bindCount' ? new BindCount() : null; // 이베리아 맺힘 셈 (10/10 — secret.js, 플레이어 창과 같은 셈)
     this.lastAtkT = -Infinity; // 마지막으로 공격 꼴이던 때 (중국 chineseRest)
     this.restBefore = Infinity; // 이번 공격을 시작하기 전 내 공격 없이 지난 시간 (s)
@@ -489,6 +493,8 @@ export class AI {
    *  둘 다 자기 무대에서만 일한다(습지 · 화산섬은 함께 나오지 않음) — 용암 피하기를 마지막에 둬 안전 쪽이 이긴다 */
   update(dt) {
     this.specTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:4x · 19:5x 사람과 같게)
+    // 이탈리아 박자 찌르기 셈 (11/14 사장님 'ai에도 적용' — italian_outbox.js aiBeatTick · IT_OUTBOX.ai · beat): 비껴서며 찌르기를 꾸러미에 가진 AI 만 · 상대 휘두름이 선 때를 셈(굴림 없음)
+    if (IT_OUTBOX.ai && IT_OUTBOX.beat > 0 && this.school?.techByName?.inquartata) aiBeatTick((this.itBeat ??= { f: this.me, t: 0, foeAtk: null, foeSw: false, inqBeatSeen: -1 }), dt);
     if (this.rd || this.me.rdWind) this.rdKeep(dt); // 풍차 베기 AI 몫 (10/31): 감기 지킴 · 덧씌우기 칸 내려놓기 · 뗀 밧줄 다시
     if (this.secret && !this.secretRun && secretSpent(this.me)) this.dropSecret(); // 이 판 비기를 다 씀 (10/29 19:5x 판당 쓸 수 — 비기 없는 AI 와 같은 길)
     // 동방 AI 걸음 박자 (10/15 — GAIT.cnLightAi · docs/strike/cn_light_feet_2026-10-15.md §7): 가벼운 발 몸(유파 걸음 칸 light)의 AI 는 공격 꼴(준비·다가가기·벰·뒤따름)일 때만 가벼운 발 —
@@ -520,7 +526,7 @@ export class AI {
     const me = this.me;
     const foe = this.foe;
     this.recordSenses(dt); // 1:1 = this.sense.record(dt) 그대로 (2:2 는 기록해 둔 다른 상대의 눈도)
-    me.secretActing = !!this.secretRun && this.secretRun.stage !== 'stiff' && this.secretRun.stage !== 'spin' && this.secretRun.stage !== 'mord'; // 비기 실행 중(경직 빼고) — fighter.secretReaching: 그동안 칼 팔이 끝까지 펴짐 (SECRET.secretReach, 10/12) · 싱지르 · 모르트슐라크는 사람과 같게(검술 층이 팔을 쥠 — 10/24)
+    me.secretActing = !!this.secretRun && this.secretRun.stage !== 'stiff' && this.secretRun.stage !== 'spin' && this.secretRun.stage !== 'mord' && this.secretRun.stage !== 'riso'; // 비기 실행 중(경직 빼고) — fighter.secretReaching: 그동안 칼 팔이 끝까지 펴짐 (SECRET.secretReach, 10/12) · 싱지르 · 모르트슐라크는 사람과 같게(검술 층이 팔을 쥠 — 10/24)
     this.coverLine = null; // 물러나며 가리는 줄 (withdraw 가 그 스텝에 정함 — frames.js installCover 의 watch 덮개가 읽음, 10/12 왕관)
     const L = this.level;
     // 패시브 확정(10/9 13:xx, docs/strike/passive_fire_2026-10-09.md): 패시브가 낸 공격의 걸쇠(0.5 s)와 미룬 패시브의 남은 시간을 줄인다
@@ -639,7 +645,7 @@ export class AI {
     if (hurt) {
       // 생각보다 멀리서 맞았으면 상대 칼이 더 멀리 닿는다고 고쳐 생각한다
       if (this.mode !== 'attack') this.foeReach = clamp(Math.max(this.foeReach, d + 0.1), this.foeM.reach, 2.5);
-      if ((this.mode !== 'attack' || this.phase !== 'strike') && this.secretRun?.stage !== 'stiff' && this.secretRun?.stage !== 'instant' && this.secretRun?.stage !== 'spin' && this.secretRun?.stage !== 'mord') this.startWithdraw(0.8); // 순간 베기·발도 도중(instant)도 끊지 않는다 — 그 몇 스텝은 대본 // 비기 경직 동안은 물러나지도 못한다 (핸디캡)
+      if ((this.mode !== 'attack' || this.phase !== 'strike') && this.secretRun?.stage !== 'stiff' && this.secretRun?.stage !== 'instant' && this.secretRun?.stage !== 'spin' && this.secretRun?.stage !== 'mord' && this.secretRun?.stage !== 'riso') this.startWithdraw(0.8); // 순간 베기·발도 도중(instant)도 끊지 않는다 — 그 몇 스텝은 대본 // 비기 경직 동안은 물러나지도 못한다 (핸디캡)
     }
     this.foeReach += (foeReachBase(this.foeM, foe) - this.foeReach) * dt * realRate(0.03); // 천천히 원래 생각으로
     if (SECRET.gnsWary) this.gnsWatch(dt, d, hurt); // 고노센 경계 (10/25 08:0x 사장님 '⑤'): 상대가 고노센 쓰는 몸이 아니면 아무 일 없음 · 끄면 이 줄을 안 타 옛 판 그대로
@@ -668,6 +674,7 @@ export class AI {
     if (kneeling && this.secretRun) this.secretAbort();
     if (this.secret && !kneeling && !this.secretRun && !this.drillOut) this.secretScan(dt, c, r); // 헛스윙 연습 동안은 비기 사건을 보지 않는다 (whiff_drill.js)
     if (this.spinArm) this.spinTick(dt, kneeling); // 싱지르 (10/24 AI 열림): 칼끝 거리 밖 무장 → 상대가 들어오면 한 바퀴 (상대 사건 없음 — secretScan 은 건너뜀)
+    if (this.riso) this.risoTick(dt, kneeling); // 안다레 리솔루토 (11/14 AI 열림): 칼 우위 동안 덮인 채 상대 걸음에 맞춰 오감 → 창 0.6 s → 곧장 런지 (상대 사건 없음)
     if (this.press) this.mordTick(dt, kneeling); // 모르트슐라크 (10/24 AI 열림): 밀치기 누르기 1.5 s → 창 0.6 s → 상대 머리가 닿으면 일격 (상대 사건 없음)
 
     if (kneeling) {
@@ -863,6 +870,8 @@ export class AI {
     //   true(기본 · 롤랑) = 칼끝 거리에서 서서 상대가 들어오기를 기다림(전 그대로) · false = 내가 걸어 들어가 상대를 칼끝 거리 안에 넣음(holdDist — 15:5x ~ 21:0x 베르나르도.
     //   21:0x '롤랑의 상극' 부터 베르나르도도 true — 쓰는 인물 없음 · 둘이 함께 내는 맞냄에서 걸어 들어간 쪽이 졌다: docs/characters/temperament_2026-10-29.md §7-5)
     if (this.spinArm?.armed) return;
+    // 안다레 리솔루토 무장 (11/14 사장님 '리솔루토도 쓰게해' — risoTick): 같은 걸쇠 — 칼 우위 동안 칼끼리 붙어 있으면 먼저 치지 않고(덮음을 베기로 끊지 않게 — 사람 조건 '휘두르지 않음') 발은 상대 걸음에 맞춘다(moveFeet). 들어오는 칼(위 respond)은 그대로 받는다
+    if (this.riso?.armed) return;
     // 모르트슐라크 몸 붙이기 (10/24): 같은 걸쇠 — 미는 동안은 먼저 치지 않는다(누르기가 베기로 끊기지 않게 — fighter.closeStep 'swing'). 들어오는 칼(위 respond)은 그대로 받는다.
     //  붙으러 걸어 들어가는 동안은 칠 때가 오면 친다(10/24 13:3x 사장님 '걸어가며 치기도 같이 넣어' — SECRET.mordWalkStrike · 0 이면 걸어가는 동안도 걸쇠 — 12:0x 판). 치면 붙이기는 끝(mordTick — 간 보기를 벗어남)
     if (this.press?.go && !(SECRET.mordWalkStrike && this.mordWalking())) return;
@@ -1279,6 +1288,7 @@ export class AI {
     if (this.iaiArm) iaiReadyPose(this.me, false, 1); // 발도 대기 웅크림이 남아 있으면 풀기 (덧씌우기 칸을 가졌을 때만 — iaiReadyW > 0)
     this.secret = null;
     this.iaiArm = this.gilArm = this.spinArm = this.binds = null;
+    this.riso = null; // 안다레 리솔루토 (11/14)
     if (this.press && !('tech' in this.press)) this.press = null; // 모르트슐라크 누르기 셈 (자연 바인드 밀기 칸은 10/31 부터 따로 this.natP — 이 칸에 tech 가 있는 꼴은 이제 없음)
     this.stats.secretDropped = (this.stats.secretDropped ?? 0) + 1;
   }
@@ -1891,7 +1901,10 @@ export class AI {
     if (sp) this.specStart(sp);
     // 칼끝 돌려 빼기 심화 · 헛누름 (10/31 사장님 '1.2초로 할게' — config UNIQUE_ASSIST.cavArmSlow): 빼서 찌르기 패시브(칼이 맞물린 뒤 — parried · bindDef)가 나가는 순간 상대 두 팔 늦춤 ·
     //  칼끝 돌려 빼기가 숙련도 꾸러미에 든 AI 만(cavDeep — 곁눈 베기 무릎 꺾기 · 허리 베기 출혈처럼 AI 는 그 기술이 있으면 심화 이점도)
-    if (this.passiveAtk === 'cavazione' && this.cavDeep && UA.cavArmSlowAi && UA.cavArmSlow > 0 && beginFlowRecovery(this.foe, this.me, UA.cavArmSlow)) this.stats.cavArmSlow = (this.stats.cavArmSlow ?? 0) + 1;
+    if (this.passiveAtk === 'cavazione' && this.cavDeep && UA.cavArmSlowAi && UA.cavArmSlow > 0 && beginFlowRecovery(this.foe, this.me, UA.cavArmSlow)) {
+      this.stats.cavArmSlow = (this.stats.cavArmSlow ?? 0) + 1;
+      itEdgeGrant(this.me, 'feint'); // 칼 우위 (11/14 'ai에도 적용' — 헛누름이 들면 · IT_OUTBOX.ai · 11/14 '리솔루토도 쓰게해' — 숙련도 5 AI 는 그동안 리솔루토 창이 열릴 수 있음 · risoTick)
+    }
     if (this.feint) {
       // 속임수: 가짜 기술의 앞부분만 가다가(내딛지 않고) 진짜 길로 바꾼다
       const f = this.feint;
@@ -1998,10 +2011,10 @@ export class AI {
       this.closeWant = false;
       // then 'cut': 밀고 곧장 벤다. 'recover' 는 손에서 가까운 기술, 'shove' 는 느린 이유 목록에 없어 바로 친다
       //  모르트슐라크를 내는 동안(10/24 — secretRun 'mord')은 밀치기가 끝나도 베지 · 찍지 않는다(검술 층이 칼을 쥠 — E4 굴림만)
-      cut = ended !== 'refused' && then === 'cut' && up && this.mode !== 'attack' && this.secretRun?.stage !== 'mord' && this.startAttack(this.pickTech(s, 'recover'), 'shove', { noFeint: true, fastChamber: true });
+      cut = ended !== 'refused' && then === 'cut' && up && this.mode !== 'attack' && this.secretRun?.stage !== 'mord' && this.secretRun?.stage !== 'riso' && this.startAttack(this.pickTech(s, 'recover'), 'shove', { noFeint: true, fastChamber: true });
       if (cut) this.closeEv.cut++;
       // then 'pommel': 밀고 곧장 폼멜로 찍는다 (베기 대신). 못 찍었으면(멀어짐·공격 중) 아래 E4 로 다시 굴린다
-      else if (ended !== 'refused' && then === 'pommel' && up && this.secretRun?.stage !== 'mord') cut = this.closePommel('shove');
+      else if (ended !== 'refused' && then === 'pommel' && up && this.secretRun?.stage !== 'mord' && this.secretRun?.stage !== 'riso') cut = this.closePommel('shove');
     }
     const inside = me.foeDistance() <= closeStartD(me, CLOSE.reach(me.armed ? me.weapon : null)); // 실제 가슴 거리 (플레이어와 같은 안쪽 · 11/14 CLOSE.startAI 견줌이면 그 거리 — 기본 null = reach 그대로)
     this.closeInside = inside;
@@ -2326,9 +2339,14 @@ export class AI {
     if (P && (!P.do.counter || this.counterRange(d)) && this.passiveRoll(P) && this.passiveThreat(P, th, d)) return true;
     // 1) 같은 순간에 맞받아 베기 (Indes): 들어오는 칼을 내 칼로 밀어내며 그대로 벤다 (겁먹으면 엄두를 못 낸다)
     if (!this.drillOut && Math.random() < L.counter * (1 - 0.8 * this.fear) && this.counterRange(d)) {
-      const t = this.counterTech(th);
+      // 11/14 박자 찌르기 (사장님 '박자 찌르기는 비껴서며 찌르기를 대체' · 'ai에도 적용' — italian_outbox.js aiBeatTech): 상대가 치기 시작한 beat 초 안이면 맞받아 베기 칼이 비껴서며 찌르기
+      //  (굴림 · 거리 그대로 — 칼만 바꿈 · 식는 동안 · 이 공격에 이미 썼으면 · 꾸러미에 없으면 전 판 목록)
+      const tq = this.itBeat ? this.school.techByName.inquartata : null;
+      const tb = tq && !this.specCooling(tq.name) ? aiBeatTech(this.itBeat, tq) : null;
+      const t = tb ?? this.counterTech(th);
       if (t && this.startAttack(t, 'counter', { noFeint: true, skipChamber: true })) {
         this.stats.counters++;
+        if (tb) (this.itBeat.inqBeatSeen = this.itBeat.foeAtk.n), itStats(this.me).beatFired++;
         return true;
       }
     }
@@ -2712,6 +2730,69 @@ export class AI {
   }
 
   /**
+   * 안다레 리솔루토 무장 · 창 · 내기 (11/14 사장님 '리솔루토도 쓰게해' — SECRET.aiOpenSchools 'italian' · 숙련도 AI_PROFICIENCY.secretAt 이상 · schools.js TRADITIONS.italian.aiSecret):
+   *  셈은 사람과 같다(secret.js PlayerSecretWatch.risoTick — italian_risoluto.js RisolutoWatch: 칼끼리 붙음 · 둘 다 휘두르지 않음 · 상대 걸음에 맞춘 스틱(AI 스틱 = moveFeet 걸음 뜻) ·
+   *   창은 칼 우위 동안만(italian_outbox.js itEdgeOk) · 런지 간격(lungeGapOk — 모자라면 창을 안 엶) · 창 SECRET.playerWindow · 기력 문턱 · 판당 쓸 수).
+   *  무장(armed) = 칼 우위 · 칼끼리 가까움(bladesNear — 덮음 거리 risolutoCover) 또는 덮인 채 나아가는 중: 그동안 먼저 치지 않고(watch 걸쇠) 발은 상대 걸음을 맞받는다(moveFeet).
+   *  창이 열리면 곧장(반응 지연 0 — 다른 비기와 같은 '완벽 실행') 사람과 같은 실행부(skill.secret — 런지 · 고노센 칼끝 × risolutoShare · 판정 risolutoHitMul · 굳음 risolutoStiff)로 낸다. 굴림 없음
+   */
+  risoTick(dt, kneeling) {
+    const me = this.me;
+    const R = this.riso;
+    const W = R.W;
+    W.foe = this.foe; // 2:2 겨눈 상대 바꿈도 (사람 setFoe 와 같음)
+    if (this.secretRun || this.drillOut || kneeling || !me.alive || !me.armed || me.state !== 'stand' || !this.foe.alive || secretSpent(me)) {
+      W.reset(); // 비기 · 굳음 동안 · 몸이 비기를 낼 수 없음 = 셈을 새로 (사람 risoTick busy · update 첫머리와 같음)
+      R.win = 0;
+      R.armed = false;
+      return false;
+    }
+    if (R.win > 0) R.win -= dt; // 사람 창과 같은 차례: 창 시간을 먼저 줄이고 셈
+    const edge = itEdgeOk(me);
+    R.armed = edge && (W.on || bladesNear(me, this.foe));
+    if (R.armed) R.st.armT += dt;
+    const gapOk = lungeGapOk(me);
+    const ctx = W.tick(dt, !(R.win > 0) && edge);
+    if (ctx && !gapOk) R.st.gapBlocked++;
+    else if (ctx) {
+      if (!me.stamina.secretReady) return this.secretPoor(); // 기력이 0 이하 (사장님 10/30 08:2x — 사람 openWindow 거절과 같음)
+      R.win = SECRET.playerWindow;
+      R.st.wins++;
+      R.ctx = ctx;
+    }
+    if (!(R.win > 0) || !this.secretFree() || this.foe.state !== 'stand') return false;
+    return this.risoGo(R.ctx);
+  }
+
+  /** 안다레 리솔루토를 낸다 — 검술 층 skill.secret (사람과 같은 실행부: 런지 · 상대 팔 늦춤 · 기력 · 굳음). 냈으면 true */
+  risoGo(ctx) {
+    const me = this.me;
+    const S = this.secret;
+    if (me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(me)) return false; // 판당 쓸 수 (10/29 19:5x)
+    if (!me.stamina.secretReady) return this.secretPoor();
+    if (!me.skill.secret({ S, ctx })) {
+      this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
+      return false;
+    }
+    const R = this.riso;
+    R.win = 0; // 창 하나에 한 번
+    R.armed = false;
+    R.st.fired++;
+    R.st.by[ctx?.path ?? '?'] = (R.st.by[ctx?.path ?? '?'] ?? 0) + 1;
+    this.secretRun = { S, stage: 'riso', t: 0, landed: false, peakE: 0, tr: this.art.tradition };
+    this.mode = 'secret';
+    this.phase = 'ready';
+    this.path.length = 0;
+    this.stepT = 0;
+    this.hand.set(me.handOffset.x, me.handOffset.y);
+    this.secretStat(S).fired++;
+    useSecret(me); // 판당 쓸 수 셈 (10/29 19:5x — 사람 창과 같은 칸 fighter.secretUsed)
+    this.secretBursts = (this.secretBursts ?? 0) + 1; // 결정타 연출 (터뜨림 = 낸 순간)
+    this.setTechCue(S.nameKo ?? S.name, 'secret');
+    return true;
+  }
+
+  /**
    * 모르트슐라크 누르기 · 창 · 내기 (10/24 사장님 12:0x 'ai도 비기 쓰게 해' — SECRET.aiOpenSchools 'german' · 숙련도 AI_PROFICIENCY.secretAt 이상 · TRADITIONS.german.aiSecret):
    *  셈은 사람과 같다(secret.js pressStep — 밀치기 누르기 fighter.barge 'press' 가 끊기지 않고 SECRET.mordPress 초 → 창 SECRET.playerWindow 초 · 창을 열면 셈 0 · 비기 · 굳음 동안 셈 0).
    *  창이 열린 동안 낼 수 있는 꼴이고(secretFree — 다른 비기와 같음) 상대 머리가 칼자루 길에 닿으면(mordschlag.js mordHeadReach) 곧장(반응 지연 0 — 다른 비기와 같은 '완벽 실행') 사람과 같은 실행부로 낸다.
@@ -3081,7 +3162,7 @@ export class AI {
       this.mode = 'watch';
       return;
     }
-    if (run.stage === 'spin' || run.stage === 'mord') {
+    if (run.stage === 'spin' || run.stage === 'mord' || run.stage === 'riso') { // riso = 안다레 리솔루토 (11/14 — 같은 꼴: 검술 층 런지 → 굳음 SECRET.risolutoStiff)
       // 싱지르 (10/24): 실행은 검술 층 skill.sec — 사람과 같은 길(iberian_spin.js 대본 → 따라 지나감 → 굳음 SECRET.stiff.iberian). 손 · 발은 쥐지 않고(moveHand · moveFeet) 끝나기를 기다린다
       //  모르트슐라크 (10/24): 같은 꼴 — 검술 층(mordschlag.js · 운동학 길 → 굳음 SECRET.stiff.german)이 손을 쥐고, 발은 누르기가 이어지면 그대로 민다(굳음 동안만 멈춤 — moveFeet)
       const sec = this.me.skill.sec;
@@ -3221,7 +3302,7 @@ export class AI {
   secretAbort() {
     const run = this.secretRun;
     this.secretRun = null;
-    if ((run?.stage === 'spin' || run?.stage === 'mord') && this.me.skill.sec) this.me.skill.secretEnd(); // 싱지르 · 모르트슐라크 (10/24): 검술 층 대본도 끊는다 (쓰러짐 · 탈진 — 검술 층도 스스로 끊지만 같은 스텝에)
+    if ((run?.stage === 'spin' || run?.stage === 'mord' || run?.stage === 'riso') && this.me.skill.sec) this.me.skill.secretEnd(); // 싱지르 · 모르트슐라크 (10/24): 검술 층 대본도 끊는다 (쓰러짐 · 탈진 — 검술 층도 스스로 끊지만 같은 스텝에)
     this.me.powerMul = 1;
     this.me.secretHit = 1;
     if (run?.S.do.strength) this.secretStrength(1);
@@ -3433,7 +3514,7 @@ export class AI {
     // 비기 경직 (사장님 10/10 20:5x '잠깐 아예 못 움직이게'): 손 목표를 그대로 둔다 — 떨림도 없음. 검술 층(skill.js update)이 secretStiff 를 보고 걸러진 목표까지 붙든다
     this.me.secretStiff = this.secretRun?.stage === 'stiff';
     if (this.me.secretStiff) return;
-    if (this.secretRun?.stage === 'spin' || this.secretRun?.stage === 'mord') return; // 싱지르 · 모르트슐라크 (10/24): 대본 · 따라 지나감 · 굳음 동안 손 목표는 검술 층(skill.sec — 덧씌우기 · holdStiff)이 쥔다
+    if (this.secretRun?.stage === 'spin' || this.secretRun?.stage === 'mord' || this.secretRun?.stage === 'riso') return; // 안다레 리솔루토(11/14)도 · 싱지르 · 모르트슐라크 (10/24): 대본 · 따라 지나감 · 굳음 동안 손 목표는 검술 층(skill.sec — 덧씌우기 · holdStiff)이 쥔다
     if (this.feintHold > 0) {
       this.feintHold -= dt;
       if (this.feintHold <= 0) this.stepT = this.stepTime(); // 이제 진짜로 내디디며 친다
@@ -3631,6 +3712,12 @@ export class AI {
       //  준비가 켜지면 다시 간 보기 걸음(걸어도 유지). 너무 붙음 · 울타리 · 밀치기 걸음(아래)은 그대로. 빈손 상대를 쫓을 때 · 'dist' 판 · 끄면 이 줄을 안 탐
       if (SECRET.gnsAiSettle && this.iaiArm && SECRET.iai && SECRET.gnsReady === 'idle' && !this.iaiArm.armed && !this.chasing) fwd = side = 0;
     }
+    // 안다레 리솔루토 무장 (11/14 사장님 '리솔루토도 쓰게해' — risoTick · 사람 조건 10/28 '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로'): 간 보기 · 물러남 동안
+    //  상대가 걷는 중이면(italian_risoluto.js foeStep — 걸음 뜻 ∓ 0.1) 그 걸음을 그대로 맞받아 — 스틱 앞뒤 = 상대 걸음 뜻의 반대(같은 크기 · 새 수 없음) · 옆 0(앞뒤 부채꼴). 상대가 서 있으면 평소 걸음
+    if (this.riso?.armed && (this.mode === 'watch' || this.mode === 'withdraw') && !this.chasing && foeStep(this.foe)) {
+      fwd = clamp(-(this.foe.move?.y ?? 0), -1, 1);
+      side = 0;
+    }
     // 너무 붙음 → 떨어진다 (밀쳐내기는 fighter.shove가 뒤로 물러날 때 자동으로)
     if (d < this.M.clinch && this.mode !== 'attack' && this.mode !== 'secret') {
       fwd = -1;
@@ -3663,7 +3750,7 @@ export class AI {
     }
     if (me.foes && !me.barge) [fwd, side] = this.teamFeet(fwd, side); // 2:2 (10/29): 둘러싸임 · 다른 상대 몸 막힘 · 같은 편 비킴 — 1:1 은 me.foes 가 없어 안 탐
     if (!this.foe.alive) fwd = side = 0;
-    if (this.secretRun?.stage === 'stiff' || this.secretRun?.stage === 'spin' || (this.secretRun?.stage === 'mord' && me.skill.sec?.stage === 'stiff')) fwd = side = 0; // 비기 경직: 걸음 없음 — 울타리 빠짐·근접 밀치기 스틱도 (10/10 20:5x) · 싱지르(10/24 — 검술 층 skill.sec 이 대본 · 굳음까지 몸을 쥔다) · 모르트슐라크(10/24 — 사람과 같게 굳음 동안만)
+    if (this.secretRun?.stage === 'stiff' || this.secretRun?.stage === 'spin' || ((this.secretRun?.stage === 'mord' || this.secretRun?.stage === 'riso') && me.skill.sec?.stage === 'stiff')) fwd = side = 0; // 비기 경직: 걸음 없음 — 울타리 빠짐·근접 밀치기 스틱도 (10/10 20:5x) · 싱지르(10/24 — 검술 층 skill.sec 이 대본 · 굳음까지 몸을 쥔다) · 모르트슐라크(10/24 — 사람과 같게 굳음 동안만)
     me.stickX = side; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
     me.stickY = fwd;
     const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)

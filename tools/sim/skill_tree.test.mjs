@@ -39,11 +39,11 @@ const HEADS_1025 = { passive: 5, secret: 10 }; // 사장님 10/25 01:5x '머리 
 const ids = (...a) => new Set(a);
 
 // ── 자료: 설계 data.mjs 와 같은 칸 · 앞 칸 · 값 · 모양 ──
-test('설계 자료(data.mjs)와 같다: 유파마다 11 칸(동방 12 — 11/14 C12 맹호은림) · id · 갈래 · 앞 칸(모두) · 금화 · 머리 · 곁가지 · 줄 · 가로 자리', () => {
+test('설계 자료(data.mjs)와 같다: 유파마다 11 칸(일본 · 동방 · 이탈리아 12 — 11/14 J12 · C12 · I12) · id · 갈래 · 앞 칸(모두) · 금화 · 머리 · 곁가지 · 줄 · 가로 자리', () => {
   assert.deepEqual(D.TREE_SCHOOLS, DESIGN.map((s) => s.id));
   for (const s of DESIGN) {
     const mine = D.nodesOf(s.id);
-    assert.equal(mine.length, s.id === 'japanese' || s.id === 'chinese' ? 12 : 11, s.id); // [사장님 11/14 결정] '일본은 바위 몸 확정해' · '전부 권고대로' — 일본 새 칸 J12 · 동방 새 칸 C12 맹호은림('이름와 위치는 좋음') (설계 자료 data.mjs 에도 더함 · 다른 유파 11 그대로)
+    assert.equal(mine.length, s.id === 'japanese' || s.id === 'chinese' || s.id === 'italian' ? 12 : 11, s.id); // [사장님 11/14 결정] '일본은 바위 몸 확정해' · '전부 권고대로' — 일본 새 칸 J12 · 동방 새 칸 C12 맹호은림('이름와 위치는 좋음') (설계 자료 data.mjs 에도 더함 · 다른 유파 11 그대로) · 이탈리아 새 칸 I12 맞박자 찌르기 (11/14 '콘트라템포 ok' — data.mjs 에도 더함)
     assert.equal(mine.length, s.nodes.length, `${s.id} 설계 칸 수`);
     for (const d of s.nodes) {
       const n = D.nodeOf(s.id, d.id);
@@ -114,11 +114,11 @@ test('닫힌 칸: 비기는 열린 유파만(SECRET.openSchools — 10/22 사람
   assert.equal(D.isClosed('iberian', D.nodeOf('iberian', 'B7')), false); // 11/11 싱지르 = 특수 공격 (닫히지 않음)
   assert.equal(D.isClosed('italian', D.nodeOf('italian', 'I4')), false);
   assert.equal(D.kitFromNodes('italian', D.allNodeIds('italian')).secret, true);
-  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german']); // AI 는 일본 · 이베리아(10/24 싱지르) · 독일(10/24 모르트슐라크)만 (ai.js 는 aiOpenSchools 만 본다)
+  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german', 'italian']); // AI 는 일본 · 이베리아(10/24 싱지르) · 독일(10/24 모르트슐라크) · 이탈리아(11/14 사장님 '리솔루토도 쓰게해')만 (ai.js 는 aiOpenSchools 만 본다)
   for (const s of DESIGN) for (const d of s.nodes) if (d.closed && !(d.cat === 'secret' && SECRET.openSchools.includes(s.id))) assert.equal(D.isClosed(s.id, D.nodeOf(s.id, d.id)), true, d.id); // 설계 '준비 중'과 같음 (그 뒤 연 비기는 뺌)
   assert.equal(D.isClosed('japanese', D.nodeOf('japanese', 'J5')), false);
   assert.equal(D.isClosed('german', D.nodeOf('german', 'G10')), false); // 10/22 독일 죽음의 일격 — 사람 먼저
-  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german']); // AI 는 일본 · 이베리아 · 독일(10/24 사장님 'ai도 비기 쓰게 해')만 (ai.js 는 이 목록만)
+  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german', 'italian']); // AI 는 일본 · 이베리아 · 독일(10/24 사장님 'ai도 비기 쓰게 해') · 이탈리아(11/14 '리솔루토도 쓰게해')만 (ai.js 는 이 목록만)
   const all = D.allNodeIds('german');
   assert.equal(D.nodeState('german', D.nodeOf('german', 'G10'), ids(...[...all].filter((x) => x !== 'G10'))), 'open');
   assert.equal(D.kitFromNodes('german', all).secret, true);
@@ -396,6 +396,7 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('german', 'G9'), ['passive', 'deRing']); // 11/14 칼 씨름 새 몫 열쇠 — 새 칸 자리 대기라 G9 에 임시로 이음 (감독 지시 · 칸이 생기면 그 칸으로) · 11/14 B · C 열쇠 폐기
   assert.deepEqual(on('italian', 'I1'), ['footwork']);
   assert.deepEqual(on('italian', 'I3'), ['backFlat']);
+  assert.deepEqual(on('italian', 'I12'), ['itTempo']); // 11/14 맞박자 찌르기 (콘트라템포) — 사장님 '콘트라템포 ok' · 보법 II 줄 패시브
   assert.deepEqual(on('italian', 'I6'), ['opposition']);
   assert.deepEqual(on('italian', 'I8'), ['perk:cavazione']); // 10/31 헛누름 (전 내려 찌르기 틈 파고들기 perk imbroccata)
   assert.deepEqual(on('italian', 'I7'), ['u:imbroccata']);
@@ -826,7 +827,7 @@ test('칸 오의(lore · src — 사장님 10/22 00:5x 원전의 오의를 밝�
     if (x.letter) assert.equal(x.src, undefined, `${x.id} 편지 칸은 출처 없음`);
     else assert.ok(typeof x.src === 'string' && x.src.trim().length > 0, `${x.id} src`);
   }
-  assert.equal(n, 57); // 11/14 일본 J12 바위 몸 · 동방 C12 맹호은림 (전 55)
+  assert.equal(n, 58); // 11/14 일본 J12 바위 몸 · 동방 C12 맹호은림 · 이탈리아 I12 맞박자 찌르기 (전 55)
 });
 
 test('10/23 비기 이름 = 원어 독음 (동방은 한자 한국식 독음) · 스킬 화면 제목은 원어를 괄호로 함께', async () => {
