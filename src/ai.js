@@ -60,7 +60,8 @@ import { planFor, tiltOf, luckOf, bandOf, distErrWidth, judgePhase, seenStep, pl
 import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, jpBeat, jpRead, jpTsubame, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep } from './ai_plan_jp.js'; // 2 단계 일본 플랜 몫 (11/14 — ai.planJp 일 때만)
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
-import { DIG_PROTO } from './config.js'; // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js)
+import { DIG_PROTO, CN_STEP } from './config.js'; // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
+import { cnSee, cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 — CN_STEP.mode · 기본 끔)
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
 
@@ -895,6 +896,7 @@ export class AI {
     // 상대 칼이 내 몸 쪽으로 오나
     const th = this.threat(s, c, r, d);
     this.noThreat = th ? 0 : this.noThreat + dt;
+    if (CN_STEP.mode) cnSee(me, th); // 동방 보법 회피 (11/15 시제품): 공격 창 — AI 가 본 위협
     this.emote(dt, hurt, !!th && d < this.M.clinch + 0.4);
     // 밀치는 중(me.barge)에도 모드 분기는 그대로 돈다: 베기·찌르기를 시작하면 'swing'·'thrust', 막으며 물러서면(defVoid)
     //  closeWant 가 풀려 스틱 0 → 'release' 로 끝난다 (버틴 상대에게 누르기가 끝없이 남지 않게. 새 숫자 없음)
@@ -4246,6 +4248,7 @@ export class AI {
     if (me.foes && !me.barge) [fwd, side] = this.teamFeet(fwd, side); // 2:2 (10/29): 둘러싸임 · 다른 상대 몸 막힘 · 같은 편 비킴 — 1:1 은 me.foes 가 없어 안 탐
     if (!this.foe.alive) fwd = side = 0;
     if (this.secretRun?.stage === 'stiff' || this.secretRun?.stage === 'spin' || ((this.secretRun?.stage === 'mord' || this.secretRun?.stage === 'riso') && me.skill.sec?.stage === 'stiff')) fwd = side = 0; // 비기 경직: 걸음 없음 — 울타리 빠짐·근접 밀치기 스틱도 (10/10 20:5x) · 싱지르(10/24 — 검술 층 skill.sec 이 대본 · 굳음까지 몸을 쥔다) · 모르트슐라크(10/24 — 사람과 같게 굳음 동안만)
+    if (CN_STEP.mode && !armsBusy) [fwd, side] = cnAiTurn(this, fwd, side); // 동방 보법 회피 (11/15 시제품 ⓐ ⓑ): 창에서 꺾음 — 띠 기울기 + 굴림
     me.stickX = side; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
     me.stickY = fwd;
     const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)

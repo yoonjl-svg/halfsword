@@ -28,7 +28,8 @@
 //   새 상한·쿨타임 없음. 놓으면 powerMul 1 (비기 중엔 버튼이 손을 안 쥐니 skill.js 의 비기 힘 창과 겹치지 않는다)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, SKILL, ARENA, realS } from './config.js';
+import { AI_LEVELS, SKILL, ARENA, realS, CN_STEP } from './config.js';
+import { cnSee } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
 import { threatNow } from './secret.js';
 import { TRADITIONS } from './schools.js';
@@ -152,6 +153,7 @@ export class PlayerParryGuard {
     const w = A > 0 ? Math.min(AV.wMax, Math.max(0, (me.swordIhand ?? AV.iRef) / AV.iRef - 1)) : 0; // 롱소드보다 무거운 몫
     const sr = A >= 2 && AV.lead > 0 ? this.ahead(s, AV.lead) : s; // ② 일찍 읽기
     const th = this.foe.alive ? threatNow(this.sense, this.foe, sr, c, me.right(_r), d, foeReach, this.lag) : null;
+    if (CN_STEP.mode) cnSee(me, th); // 동방 보법 회피 (11/15 시제품): 공격 창 — 사람도 보이는 칼 움직임으로 (AI 와 같은 눈)
     if (th) {
       if (this.noThreat > NEW_THREAT_T) this.threatId++;
       this.noThreat = 0;

@@ -25,7 +25,8 @@ import { TRADITIONS } from './schools.js';
 import * as THREE from 'three';
 import { beginFlowRecovery } from './nagashi_recovery.js';
 import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty, flowShieldKeep } from './nagashi_redesign.js';
-import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL , IB_PARRY_ARM, IB_PARRY_BEAT, WHIP_KNEEL } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL , IB_PARRY_ARM, IB_PARRY_BEAT, WHIP_KNEEL, CN_STEP } from './config.js';
+import { cnStepKeep } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
 import { WEAPON_ABILITY } from './config.js'; // 달타냥 '총사의 결투' 배율 (10/25 — duelOneHandMult)
 import { BREAK, isOneHandSword } from './weapons.js';
 import { updateGun } from './gun.js';
@@ -393,6 +394,7 @@ export class Combat {
         //  일본 · 이베리아도 같은 칸으로 × (1 − 0.2) (사장님 10/18 22:1x — SKILL.jpParryDmgCut · ibParryDmgCut)
         if (vic.parryGuard?.woundKeep) severity *= vic.parryGuard.woundKeep();
         else if (SKILL.aiParryCut && vic.aiCtl) severity *= aiWoundKeep(vic); // AI 몸도 사람과 같게 (11/15 시제품 — 기본 끔 · src/ai_block_cut.js)
+        if (CN_STEP.mode) severity *= cnStepKeep(vic); // 동방 보법 회피 편섬 (11/15 시제품 — 박찬 한 걸음 · 줄임 시간 안이면 스침)
       } else {
         const armorBlocks = finish && (plate || helmet) && !att.weaponCfg.ignoreArmor && !att.weaponCfg.ignoreArmorDamage;
         if (armorBlocks) finish = false; // 판금·투구가 내려찍기를 막았다 (사장님 10/1 C): 즉사 없음, 칼은 물리로 튕긴다.

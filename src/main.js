@@ -342,6 +342,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.get('aiPlanFree') === '0') CONFIG.AI_PLAN_FREE.on = 0; // `?aiPlanFree=0` = 무유파 플랜만 옛 판 (3 단계 · 11/14 — 플랜 · 굴림 · 거리 오차 · src/ai_plan_free.js)
   if (params.has('ibBlockRegen')) CONFIG.SKILL.ibBlockRegen = +params.get('ibBlockRegen') ? 1 : 0; // 이베리아 막아 내면 기력 되찾음 (11/15 — src/ib_block_regen.js · B9)
   if (['cut', 'fixed', 'foe2'].includes(params.get('ibBlockRegenN'))) CONFIG.SKILL.ibBlockRegenN = params.get('ibBlockRegenN'); // 되찾는 몫: 고정 30 · 상대 베기 × 2 (11/15 — 사장님 확인 전)
+  if (['a', 'b', 'c', '0'].includes(params.get('cnStep'))) CONFIG.CN_STEP.mode = params.get('cnStep') === '0' ? 0 : params.get('cnStep'); // 동방 보법 회피 편섬 시제품 (11/15 — src/cn_step.js · 기본 끔)
   if (params.has('aiParryCut')) CONFIG.SKILL.aiParryCut = +params.get('aiParryCut') ? 1 : 0; // AI 막는 동안 피해 감소 시제품 (11/15 — src/ai_block_cut.js · 기본 끔)
   for (const [q, k] of [['digAi', 'ai'], ['digStep', 'step'], ['digRun', 'run'], ['digReach', 'reach']]) if (params.has(q)) CONFIG.DIG_PROTO[k] = +params.get(q) ? 1 : 0; // 짧은 칼 파고들기 (11/14 — src/dig_proto.js): A 기본 켬 `?digAi=0` = 옛 판 · 시제품 B `?digStep=1` · C `?digRun=1` · 상대가 길 때의 대처 기울기(11/14 — 모든 AI) `?digReach=0` = 옛 문
   for (const [q, k] of [['aiRead', 'on'], ['aiFair', 'fair'], ['aiGns', 'gns']]) if (params.has(q)) CONFIG.AI_PLAN.read = { ...CONFIG.AI_PLAN.read, [k]: +params.get(q) ? 1 : 0 }; // 3 단계 (11/14): `?aiRead=0` = 읽기 몫(상대 유파 위험 · 대가 창 · 상대 기력) 끔 · `?aiFair=0` = 공정함 끔 (그 전 판 눈) · `?aiGns=0` = 일본 AI 고노센 준비 지키기 끔

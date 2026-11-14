@@ -12,7 +12,8 @@
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
 import { runTick } from './dig_proto.js'; // 시제품 C 달림 (11/14 — config DIG_PROTO.run · 기본 끔)
-import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_LINK, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
+import { cnStepTick, cnStepMove } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
+import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, CN_STEP, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_LINK, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { MAX_FIGHTERS, teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
 import { Skill } from './skill.js';
@@ -2989,7 +2990,8 @@ export class Fighter {
     const hybrid = !!G && this.state === 'stand';
     const speed = (hybrid ? GAIT.moveSpeed : BODY.moveSpeed) * (0.45 + 0.55 * this.legHealth) * (this.weapon.moveMul ?? 1) * (this.wearsPlate() ? ARMOR.moveMul : 1); // moveMul: 권총은 발이 빠르다 (weapons.js), 판금은 느리다 (config.js ARMOR)
     const st = this.stumble;
-    let mvIn = this.feetHeld ? HELD_MOVE : this.move; // 시작 정지: 조종 입력(플레이어·AI·기술 내딛기)만 0, 균형 잡는 걸음(stumble)은 그대로
+    if (CN_STEP.mode) cnStepTick(this, dt); // 동방 보법 회피 편섬 (11/15 시제품 — 기본 끔 · src/cn_step.js): 공격 창 · 꺾음 · 박찬 한 걸음
+    let mvIn = this.feetHeld ? HELD_MOVE : (CN_STEP.mode && cnStepMove(this)) || this.move; // 시작 정지: 조종 입력(플레이어·AI·기술 내딛기)만 0, 균형 잡는 걸음(stumble)은 그대로
     // 독일 간격 잡기의 잡기 (10/15 — GAIT.deHold, gait.js holdTick · docs/strike/german_hold_2026-10-15.md): 플레이어(AI 가 몰지 않는 몸)만 — 조종 입력을 읽기 전에 걸고·풀고·시간을 센다.
     //  잡는 동안 조종 입력의 앞(상대 쪽 — 몸은 늘 상대를 본다) 몫만 0 — 옆·뒤 몫·균형 걸음(stumble)·기술 걸음(gait req)은 그대로, 몸이 가진 빠르기는 물리대로(아래 가속 한도).
     //  끄면(0)·AI 는 부르지도 읽지도 않는다(바이트 같음)
