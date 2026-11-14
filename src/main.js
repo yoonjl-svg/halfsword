@@ -330,6 +330,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('itEdge') && +params.get('itEdge') >= 0) CONFIG.IT_OUTBOX.edge = CONFIG.realS(+params.get('itEdge'));
   if (params.has('itBeat') && +params.get('itBeat') >= 0) CONFIG.IT_OUTBOX.beat = CONFIG.realS(+params.get('itBeat'));
   if (params.has('itBeatHuman')) CONFIG.IT_OUTBOX.beatHuman = +params.get('itBeatHuman') ? 1 : 0; // 11/15 사장님 '사람 l9 이전처럼' — 1 = 사람 박자 찌르기(11/14 판)
+  if (params.has('itBeatAi')) CONFIG.IT_OUTBOX.beatAi = +params.get('itBeatAi') ? 1 : 0; // 11/15 사장님 'ai도 되돌려' — 1 = AI 박자 찌르기(11/14 판)
   if (params.has('itAi')) CONFIG.IT_OUTBOX.ai = +params.get('itAi') ? 1 : 0; // 11/14 사장님 'ai에도 적용' — 0 = 사람만
 }
 { // 유파 AI 기본 전투 흐름 (11/14 — config AI_PLAN · src/ai_plan.js · 설계안 docs/design/ai_school_baseline_2026-11-14.md §9): `?aiPlan=0` = 옛 판 (플랜 · 국면 · 이탈리아 거리 오차 모두 끔) ·
@@ -345,6 +346,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (['cut', 'fixed', 'foe2'].includes(params.get('ibBlockRegenN'))) CONFIG.SKILL.ibBlockRegenN = params.get('ibBlockRegenN'); // 되찾는 몫: 고정 30 · 상대 베기 × 2 (11/15 — 사장님 확인 전)
   if (params.has('aiParryCut')) CONFIG.SKILL.aiParryCut = +params.get('aiParryCut') ? 1 : 0; // AI 막는 동안 피해 감소 시제품 (11/15 — src/ai_block_cut.js · 기본 끔)
   for (const [q, k] of [['digAi', 'ai'], ['digStep', 'step'], ['digRun', 'run'], ['digReach', 'reach']]) if (params.has(q)) CONFIG.DIG_PROTO[k] = +params.get(q) ? 1 : 0; // 짧은 칼 파고들기 (11/14 — src/dig_proto.js): A 기본 켬 `?digAi=0` = 옛 판 · 시제품 B `?digStep=1` · C `?digRun=1` · 상대가 길 때의 대처 기울기(11/14 — 모든 AI) `?digReach=0` = 옛 문
+  if (params.has('aiItInq') && +params.get('aiItInq') >= 0) CONFIG.AI_PLAN.it = { ...CONFIG.AI_PLAN.it, inq: +params.get('aiItInq') }; // 이탈리아 AI 비껴서며 찌르기 기울기 (11/15 — ai_plan.js itInqP · 기본 0.6) `?aiItInq=0` = 끔
   for (const [q, k] of [['aiRead', 'on'], ['aiFair', 'fair'], ['aiGns', 'gns']]) if (params.has(q)) CONFIG.AI_PLAN.read = { ...CONFIG.AI_PLAN.read, [k]: +params.get(q) ? 1 : 0 }; // 3 단계 (11/14): `?aiRead=0` = 읽기 몫(상대 유파 위험 · 대가 창 · 상대 기력) 끔 · `?aiFair=0` = 공정함 끔 (그 전 판 눈) · `?aiGns=0` = 일본 AI 고노센 준비 지키기 끔
 }
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리

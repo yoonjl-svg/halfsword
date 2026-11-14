@@ -6,7 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { CONFIG, newRound, THREE } from './harness_m.mjs';
+import { CONFIG, newRound, THREE, AI } from './harness_m.mjs';
 import { itThrust, itThrustKind, foeWalkingIn, itEdgeGrant, itEdgeOn, itEdgeOk, itOnStrike, beatOk, beatSide, beatTick, aiBeatTick, aiBeatTech } from '../../src/italian_outbox.js';
 import { PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
@@ -14,6 +14,7 @@ import { PlayerSecretWatch } from '../../src/secret.js';
 import { kitFromNodes, allNodeIds, KIT_KEYS } from '../../src/skill_tree_data.js';
 import { fightOne } from './school_balance.mjs';
 import { THRUST_STYLE } from '../../src/weapons.js';
+import { SCHOOL_PLAN, tiltOf, luckOf, itInqP } from '../../src/ai_plan.js';
 
 const IO = CONFIG.IT_OUTBOX;
 const { realS, GAIT } = CONFIG;
@@ -42,7 +43,8 @@ test('기본값 (11/14 사장님 \'이탈리아 찌르기 0.8로 해. 우위 2�
   assert.equal(IO.stopV, null);
   assert.ok(Math.abs(IO.edge - realS(2.0)) < 1e-12 && Math.abs(IO.beat - realS(0.4)) < 1e-12);
   assert.equal(IO.ai, 1);
-  assert.equal(IO.beatHuman, 0, '11/15 사장님 \'l9는 이전처럼 되돌려\' — 사람 박자 찌르기 끔 · AI 는 그대로');
+  assert.equal(IO.beatHuman, 0, '11/15 사장님 \'l9는 이전처럼 되돌려\' — 사람 박자 찌르기 끔');
+  assert.equal(IO.beatAi, 0, '11/15 사장님 \'ai도 되돌려\' — AI 박자 찌르기 끔');
   assert.ok(KIT_KEYS.includes('itTempo'));
   assert.equal(kitFromNodes('italian', new Set(['I1', 'I12'])).itTempo, true);
   assert.equal(kitFromNodes('italian', new Set(['I1'])).itTempo, false, 'I1 임시 이음은 걷음 (새 칸 I12)');
@@ -338,7 +340,7 @@ test('4 박자 찌르기 셈 · 몸 빼는 쪽: 상대 휘두름이 선 스텝�
   assert.equal(beatSide(me), 1);
 });
 
-test('4 박자 찌르기 AI 몫: 상대 휘두름이 선 뒤 0.4 s 안이면 맞받아 베기 칼 = 비껴서며 찌르기 · 밖 · 이미 씀 · ai 0 · 끔 = 전 판 목록(null)', () => {
+test('4 박자 찌르기 AI 몫 (11/15 사장님 \'ai도 되돌려\' — 기본 beatAi 0 = 늘 전 판 목록 · 아래는 beatAi 1 = 11/14 판): 상대 휘두름이 선 뒤 0.4 s 안이면 맞받아 베기 칼 = 비껴서며 찌르기 · 밖 · 이미 씀 · ai 0 · 끔 = 전 판 목록(null)', () => withIO({ beatAi: 1 }, () => {
   const foe = { skill: {}, stamina: {}, aiControlled: true, aiCtl: { mode: 'watch', phase: 'ready' } };
   const B = { f: { foe }, t: 0, foeAtk: null, foeSw: false, inqBeatSeen: -1 };
   const inq = { name: 'inquartata' };
@@ -347,6 +349,7 @@ test('4 박자 찌르기 AI 몫: 상대 휘두름이 선 뒤 0.4 s 안이면 맞
   foe.aiCtl = { mode: 'attack', phase: 'strike' };
   aiBeatTick(B, 0.1);
   assert.equal(aiBeatTech(B, inq), inq, '치기 시작 — 비껴서며 찌르기');
+  withIO({ beatAi: 0 }, () => assert.equal(aiBeatTech(B, inq), null, 'beatAi 0 (기본 — 11/15 \'ai도 되돌려\') = 박자 안이어도 전 판 목록'));
   withIO({ ai: 0 }, () => assert.equal(aiBeatTech(B, inq), null, 'ai 0'));
   withIO({ beat: 0 }, () => assert.equal(aiBeatTech(B, inq), null, 'beat 0'));
   aiBeatTick(B, IO.beat + 0.01);
@@ -358,6 +361,73 @@ test('4 박자 찌르기 AI 몫: 상대 휘두름이 선 뒤 0.4 s 안이면 맞
   assert.equal(B.foeAtk.n, 2);
   B.inqBeatSeen = 2;
   assert.equal(aiBeatTech(B, inq), null, '이 공격에 이미 씀');
+}));
+
+/** AI 이탈리아(레이피어 · 숙련 prof — 자리 1 G.ai) 판 하나를 만들어 fn(ai) — 끝나면 지움 */
+function itAi(prof, fn) {
+  const G = newRound({ seed: 1, weapon: 'longsword', weapon2: 'rapier', AI2Class: AI, persona: { proficiency: prof }, persona2: { proficiency: 3 } });
+  try { return fn(G.ai, G); } finally { G.world.free(); }
+}
+/** 굴림을 묶고 위협 하나에 respond — 첫 굴림(위협을 알아챔) 0.01 · 그 뒤 v · 굴림 수도 셈 */
+function respondWith(ai, v, d, id = 101) {
+  const rnd = Math.random;
+  let n = 0;
+  Math.random = () => (n++ === 0 ? 0.01 : v);
+  try { return { ok: ai.respond({ id, line: 'highR', thrust: false }, d), n }; } finally { Math.random = rnd; }
+}
+
+test('11/15 AI 비껴서며 찌르기 기울기 (사장님 \'그냥 l9를 더 선호하게 하면 되잖아\' — ai_plan.js itInqP · AI_PLAN.it.inq 0.6): 몫 높음 0.6 · 가운데 0.5 · 지침 반 · 겁 × (1 − 0.8 공포) · 끔 0', () => {
+  assert.equal(CONFIG.AI_PLAN.it.inq, 0.6);
+  const fa = (prof, ph = 'contest', fear = 0) => ({ planC: SCHOOL_PLAN.italian[ph], planK: tiltOf(prof), planLuck: luckOf(prof), fear });
+  const near = (a, b) => Math.abs(a - b) < 1e-12;
+  assert.ok(near(itInqP(fa(5)), 0.6) && near(itInqP(fa(6)), 0.6), '높음 (기울기 1)');
+  assert.ok(near(itInqP(fa(3)), 0.5) && near(itInqP(fa(4)), 0.5), '가운데 (⅔ + ⅓ × 동전 0.5)');
+  assert.ok(near(itInqP(fa(5, 'tired')), 0.3), '지침 칸 0.5');
+  for (const ph of ['probe', 'contest', 'commit', 'ahead', 'finish', 'behind']) assert.equal(SCHOOL_PLAN.italian[ph].inq, 1, ph);
+  assert.ok(near(itInqP(fa(5, 'contest', 0.5)), 0.36), '겁 0.5 → × 0.6');
+  const AP = CONFIG.AI_PLAN, it0 = AP.it;
+  AP.it = { ...it0, inq: 0 };
+  try { assert.equal(itInqP(fa(5)), 0, '끔'); } finally { AP.it = it0; }
+});
+
+test('11/15 AI 비껴서며 찌르기 기울기 — 실제 AI respond: 굴림이 몫 안이면 맞받아 베기 앞에 비껴서며 찌르기(맞받아 베기 칼 · 굴림 하나 더) · 몫 밖 · 식는 동안 · 거리 밖 · 끔(굴림 수 그대로) = 전 판 · 박자 셈은 기본 안 돎', () => {
+  itAi(5, (ai) => {
+    assert.ok(ai.planIt && ai.school.techByName.inquartata, '숙련 5 이탈리아 플랜 몸 · 꾸러미에 비껴서며 찌르기');
+    const r = respondWith(ai, 0.01, ai.M.reach);
+    assert.equal(r.ok, true);
+    assert.equal(ai.tech.name, 'inquartata');
+    assert.equal(ai.why, 'counter');
+    assert.equal(ai.stats.plan.inq, 1);
+    assert.equal(ai.stats.counters, 1);
+  });
+  itAi(5, (ai) => {
+    respondWith(ai, 0.99, ai.M.reach);
+    assert.notEqual(ai.tech?.name, 'inquartata', '몫 밖');
+    assert.equal(ai.stats.plan.inq, 0);
+  });
+  const calls = (inq) => itAi(5, (ai) => {
+    const AP = CONFIG.AI_PLAN, it0 = AP.it;
+    AP.it = { ...it0, inq };
+    try { return respondWith(ai, 0.99, ai.M.reach).n; } finally { AP.it = it0; }
+  });
+  assert.equal(calls(0.6), calls(0) + 1, '끔이면 굴림을 안 함 (그 전 판과 굴림 차례 같음)');
+  itAi(5, (ai) => {
+    ai.specCool.inquartata = ai.sense.t; // 막 끝난 특수 공격 — 식는 중
+    respondWith(ai, 0.01, ai.M.reach);
+    assert.notEqual(ai.tech?.name, 'inquartata', '식는 동안');
+    assert.equal(ai.stats.plan.inq, 0);
+  });
+  itAi(5, (ai) => {
+    respondWith(ai, 0.01, ai.M.reach + 0.5);
+    assert.notEqual(ai.tech?.name, 'inquartata', '맞받아 벨 거리 밖');
+  });
+  itAi(2, (ai) => assert.equal(ai.school.techByName.inquartata, undefined, '숙련 2 — 꾸러미에 없음 (낮음 띠)'));
+  itAi(5, (ai, G) => {
+    for (let k = 0; k < 30; k++) G.step();
+    assert.equal(ai.itBeat, undefined, 'beatAi 0 — 박자 셈 안 돎');
+    withIO({ beatAi: 1 }, () => G.step());
+    assert.ok(ai.itBeat, 'beatAi 1 — 11/14 판 박자 셈');
+  });
 });
 
 const hash = (r) => createHash('sha256').update(JSON.stringify(r)).digest('hex').slice(0, 12);
