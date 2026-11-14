@@ -2298,12 +2298,20 @@ export const AI_MAAI = { hide: 0 }; // [사장님 확인 전 — 확인표 3422]
 //  digKeep   다가가다 위협이 오면 접지 않고 칼로 받으며 계속 들어갈 몫 = digKeep × 띠 기울기 (낮음 0.2 · 가운데 0.4 · 높음 0.6) [사장님 확인 전]
 export const AI_PLAN = {
   on: 1,
-  schools: ['italian', 'japanese'],
+  schools: ['italian', 'japanese', 'iberian'], // 2 단계 일본(AI_PLAN_JP · src/ai_plan_jp.js) · 이베리아(아래 ib · `?aiPlanIb=0` = 이베리아만 옛 판)
   bands: [0, 1, 1, 2, 2, 3, 3],
   tilt: [0, 1 / 3, 2 / 3, 1],
   errMax: 0.3,
   errClear: 5,
-  errSchools: ['italian', 'japanese'],
+  errSchools: ['italian', 'japanese', 'iberian'], // 2 단계 일본 · 이베리아 더함 (사장님 11/14 '거리 오차 0.3 m → 숙련 5 에서 0')
+  // ── 이베리아 플랜 (2 단계 · 11/14 — 사장님 '이베리아 = 거칠고 모험적인 슬러거' · 설계 §3-5 · src/ai_plan_ib.js · 기록 docs/strike/ai_plan_ib_2026-11-14.md · 확인표 4301 ~):
+  //  chainKeep  사슬을 이을 마음 — 이어 칠 몫 want 에 (1 − want) × chainKeep × 띠 세기 × 칸 chain × (½ + ½ × 이은 칼 몫) 을 얹음 (굴림은 남김 — '늘 이음'이 아님) [몫 — 파고들기 digKeep 0.6 과 같은 수 · 사장님 확인 전]
+  //  dashT      옆 박차기 — 스틱을 옆 끝으로 미는 시간 (시간 사다리 0.4 s — 이어 돌리기 원 한 번과 같은 칸) [사장님 확인 전]
+  //  armWait    알티바슈 무장 뒤 상대가 안 들어오면 사슬로 들어갈 마음이 생기는 때 (시간 사다리 3.0 s — 무장 2.0 s 다음 칸) [사장님 확인 전]
+  //  outStep    사슬 끝 → 내 칼끝 밖으로 빠져 무장할 때 칼끝 거리 밖 여유 (걸음 사다리 0.3 m) [사장님 확인 전]
+  //  readCut    수 읽기(가운데부터) — 원이 위험한 거리(이탈리아 칼끝 안 · 독일 앞 헛침 뒤 먼 거리) · 원 사이를 치는 버릇이 보이면 원을 고를 몫 × (1 − readCut × 띠 세기) [몫 · 사장님 확인 전]
+  //  chainBody  1 = 플랜이 있는 이베리아 AI 몸도 B6 이어지는 흐름(위력 1 + 0.2 n · 세 칼마다 기력 0 — 사람과 같은 규칙)을 받음 · 0 = 그 전 판(AI 몸은 흐름 위력만) [여쭐 것 · 사장님 확인 전]
+  ib: { chainKeep: 0.6, dashT: realS(0.4), armWait: realS(3.0), outStep: 0.3, readCut: 0.6, chainBody: 1 },
   tick: realS(0.2),
   hurtT: realS(1.2),
   beat: realS(0.6),
