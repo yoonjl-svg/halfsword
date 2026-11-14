@@ -77,6 +77,19 @@ test('1 찌르기 배율: 사람 이탈리아 보통 찌르기(탭 · 내려 찌
     assert.equal(itThrust(me, foe), null, 'AI 베기');
     me.aiCtl = { mode: 'attack', phase: 'strike', tech: { kind: 'thrust', name: 'stichPflug' } };
     withIO({ ai: 0 }, () => assert.equal(itThrust(me, foe), null, 'ai 0 = 사람만'));
+    // 11/15 고침: AI 레이피어 찌르기는 탭 길(ai.js startStrike → skill.thrust)이라 맞는 순간 skill.tap 이 있음 — 그래도 기술 이름으로 읽음 (전엔 모두 'ai')
+    me.skill.tap = {};
+    me.aiCtl = { mode: 'attack', phase: 'strike', tech: { kind: 'thrust', name: 'inquartata' } };
+    assert.equal(itThrustKind(me), 'special', '탭 길 AI 비껴서며 찌르기');
+    assert.equal(itThrust(me, foe), null, '× 0.8 안 걸림 (걸어 들어오지 않음)');
+    itOnStrike(me, foe, { severity: 1 });
+    assert.equal(itEdgeOn(me), true, '상처 → 칼 우위');
+    me.aiCtl = { mode: 'attack', phase: 'follow', tech: { kind: 'thrust', name: 'stichPflug' }, passiveAtk: 'cavazione' };
+    assert.equal(itThrustKind(me), 'cav', '탭 길 AI 빼서 찌르기');
+    me.aiCtl = { mode: 'attack', phase: 'strike', tech: { kind: 'thrust', name: 'stichPflug' } };
+    assert.equal(itThrust(me, foe)?.k, 0.8, '탭 길 AI 보통 찌르기 × 0.8 그대로');
+    me.aiCtl = { mode: 'watch', phase: 'ready' };
+    assert.equal(itThrustKind(me), 'ai', '기술 밖 탭 = 보통 찌르기 그대로');
   }
   assert.equal(itThrustKind(fake({ kind: 'secret' }).me), 'secret');
   const s = fake();

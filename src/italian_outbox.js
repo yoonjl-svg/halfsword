@@ -43,8 +43,10 @@ export function itThrustKind(f) {
   if (f.aiControlled) {
     const c = f.aiCtl;
     if (!c || c.secretRun || f.stamina?.inSecret) return c?.secretRun ? 'secret' : null;
-    if (sk?.tap) return 'ai';
+    // 11/15 고침: 공격 · 찌르기 기술 줄을 탭 줄보다 먼저 — AI 레이피어 찌르기는 탭 길(ai.js startStrike → skill.thrust)이라 전엔 비껴서며 찌르기 · 빼서 찌르기도 'ai' 로 읽힘
+    //  (상처를 내도 칼 우위가 안 켜지고 비껴서며 찌르기에 × thrustMul — 11/14 결정 '사람 · AI 같게'와 어긋남 · 기록 docs/strike/it_ai_i9_2026-11-15.md §4)
     if (c.mode === 'attack' && (c.phase === 'strike' || c.phase === 'follow') && c.tech?.kind === 'thrust') return c.tech.name === 'inquartata' ? 'special' : c.passiveAtk === 'cavazione' ? 'cav' : 'ai'; // 빼서 찌르기 패시브(AI 칼끝 돌려 빼기 — 칼이 맞물린 뒤)
+    if (sk?.tap) return 'ai'; // 기술 밖 탭 (쓰러진 상대 찍기 등)
     return null;
   }
   if (f.stamina?.inSecret || sk?.sec || f.iai?.secret || (f.secretHit ?? 1) !== 1) return 'secret';
