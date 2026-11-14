@@ -9,6 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { planFor, tiltOf, luckOf, distErrWidth, PHASES, SCHOOL_PLAN } from '../../src/ai_plan.js';
+import { readNote } from '../../src/ai_read.js';
 import { ibStats, chainWant, spinK, armK, habitN, ibTick, ibCircle, ibFeetV, schoolRead, swapReady, nextFree, ibSidePost, ibFwdPost, ibAfter, foeAtkN } from '../../src/ai_plan_ib.js';
 
 const { AI_PLAN, IB_LINK, STAMINA } = CONFIG;
@@ -315,14 +316,14 @@ test('넓게 돎 · 박자 흔들림 · 돌기 박자의 옆 박차기 (각을 �
   assert.equal(ibFwdPost(ai, 1), 1);
   beat(0); // 같은 쪽으로 계속 돎 — 각을 안 바꿈
   assert.equal(I.dash.on, false, '높음 — 각을 안 바꾸면 안 박참 (굴림 몫 0)');
-  I.atkT[0] = ai.sense.t - 3;
-  I.atkT[1] = ai.sense.t - 1;
+  readNote(ai, { id: 901, line: 'highL' }); // 3 단계(11/14): 상대가 낸 칼은 공통 읽기 그릇에 (readTick 이 적음)
+  readNote(ai, { id: 902, line: 'highR' });
   assert.equal(foeAtkN(ai), 2, '되풀이 — 10.0 s 안에 상대가 칼을 두 번 냄');
   beat(0.4);
   assert.equal(I.dash.on, true, '높음 — 되풀이에 맞춰 비켜 꾐');
   assert.equal(ai.stats.ib.bait, 1);
   I.dash.on = false;
-  I.atkT.fill(-Infinity);
+  ai.read.t.fill(-Infinity);
   I.lastCircle = -Math.sign(ai.pers.circleDir);
   ai.me.stamina.value = 10; // 쉼 문턱 + 박차기 값 밑
   beat(0);

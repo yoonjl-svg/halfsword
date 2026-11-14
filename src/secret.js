@@ -136,7 +136,7 @@ export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null, ex
   if (W.includes('inside')) return insideEvent(s0, c, d0, ex);
   if (W.includes('gilmok')) return gilmokEvent(s0, c, d0, ex);
   if (W.includes('threat')) {
-    const ctx = threatNow(sense, foe, s0, c, r, d0, foeReach);
+    const ctx = threatNow(sense, foe, s0, c, r, d0, foeReach, ex?.lag ?? 0); // ex.lag — AI 가 늦게 본 모습을 넘겼으면 (3 단계 11/14 공정함) · 사람 · 옛 판 0
     if (ctx && S.cond?.lethal && me) lethalPath(ctx, s0, me);
     return { on: !!ctx, ctx };
   }
@@ -160,7 +160,7 @@ export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null, ex
   if (on && S.cond?.commit && !charging && Math.hypot(s0.hvx, s0.hvy) < secretVal(S.cond.commit)) on = false;
   if (on) return { on, ctx: { ev: 'raise', charge: charging && !raising } }; // charge: 달려듦만으로 열림 (재기 — 판정에는 안 씀)
   // seize 의 recovering 과 같은 꼴(방금 크게 휘두르고 손이 멎음) — 늦지 않게 지금 모습으로 (일본은 들어 올림 다음 차례의 보조 사건)
-  if (W.includes('foeRecover') && sense.recentHandSpeed(0, RECENT) > 3.5 && Math.hypot(s0.hvx, s0.hvy) < 1.8) {
+  if (W.includes('foeRecover') && sense.recentHandSpeed(ex?.lag ?? 0, RECENT) > 3.5 && Math.hypot(s0.hvx, s0.hvy) < 1.8) {
     return { on: true, ctx: { ev: 'recover', tipE: foeRecentTipE(sense, foe, RECENT) } }; // 진짜 헛스윙인가 — 그 휘두름의 칼끝 추정 에너지 (cond.whiff)
   }
   return { on: false, ctx: null };
