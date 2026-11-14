@@ -16,18 +16,19 @@ import { G as PAD } from '../../src/ai_techniques.js';
 import { kitFromNodes, allNodeIds } from '../../src/skill_tree_data.js';
 import { airOne } from './ib_link.mjs';
 import { fightOne } from './school_balance.mjs';
+import { AI } from '../../src/ai.js';
 
 const LADDER = [0.2, 0.4, 0.6, 1.2, 1.5, 2.0, 3.0, 6.0, 10.0].map((s) => realS(s));
 const keep = () => ({ ...IB_LINK });
 const restore = (o) => Object.assign(IB_LINK, o);
 
-test('기본값 — 이어 돌리기 켬 (사장님 11/14 결정) · 원 시간 사다리 값 · 식힘 · B · AI 끔 · 맞바꿈 B12 켬 (사장님 11/14 확인)', () => {
+test('기본값 — 이어 돌리기 켬 (사장님 11/14 결정) · 원 시간 사다리 값 · 식힘 · B 끔 · 맞바꿈 B12 켬 · AI 도 켬 (사장님 11/14 \'모두 본판에 넣어 ai에게도 똑같이 적용해\')', () => {
   assert.equal(IB_LINK.on, 1);
   assert.ok(LADDER.some((x) => Math.abs(x - IB_LINK.time) < 1e-12), `원 시간 ${IB_LINK.time} — 시간 사다리 값`);
   assert.equal(IB_LINK.cool, 0, '공격이 아니므로 특수 공격 식힘 없음 (감독 안)');
   assert.equal(IB_LINK.chainArm, 0);
   assert.equal(IB_LINK.trade, 1, '맞바꿈 B12 칸 효과 켬 (칸을 익힌 사람만)');
-  assert.equal(IB_LINK.ai, 0);
+  assert.equal(IB_LINK.ai, 1, 'AI 이베리아도 이어 돌리기 · 맞바꿈 (11/14 사장님)');
   assert.equal(IB_LINK.tradeHurt, undefined, '옛 C\' 받는 피해 배율은 걷어냄 (사장님 11/14 \'권고대로 해\')');
 });
 
@@ -290,6 +291,42 @@ test('맞바꿈 B12 — 칼끼리 맞아 돌던 칼이 서는 것(jolt)은 넘�
     P.jolt = 0;
     assert.notEqual(uq.linkStop(), 'jolt');
   } finally {
+    P.ibLink = null;
+    restore(o);
+    G.world.free();
+  }
+});
+
+test('AI 에도 똑같이 (11/14 사장님 \'모두 본판에 넣어 ai에게도 똑같이 적용해\') — AI 이베리아가 이어 돌리기를 쓰고 풍차 베기는 안 냄 · 맞바꿈도 같은 규칙(칸 없이 늘)', () => {
+  const o = keep();
+  const G = newRound({ walls: false, weapon: 'longsword', weapon2: 'zweihander', seed: 2, gap: 2.4, persona: { proficiency: 5 }, AI2Class: AI }); // AI 대 AI (롱소드 AI 대 츠바이핸더 이베리아 AI)
+  const P = G.player;
+  const E = G.enemy;
+  try {
+    while (G.t < 20 && P.alive && E.alive && !(G.ai.stats.ibLink?.fired > 0)) G.step();
+    assert.ok(G.ai.stats.ibLink?.fired > 0, `AI 이어 돌리기 ${JSON.stringify(G.ai.stats.ibLink ?? null)}`);
+    assert.equal(G.ai.stats.cingir?.fired ?? 0, 0, 'AI 풍차 베기 없음 (IB_LINK.ai 1)');
+    // 맞바꿈 — AI 는 skillKit 이 없어 늘 가짐 · 사람과 같은 규칙
+    assert.equal(E.skillKit ?? null, null);
+    E.ibLink = { wounds0: E.wounds.length };
+    E.ibTradeUsed = false;
+    E.ibTradeHit = null;
+    E.stamina.value = STAMINA.max;
+    P.stamina.attackId = 777;
+    assert.equal(E.ibTradeTry(P, { type: 'cut', severity: 0.8 }), true, 'AI 이베리아 원 동안 첫 맞음 넘김');
+    assert.ok(Math.abs(STAMINA.max - E.stamina.value - STAMINA.cutCost * E.stamina.weight) < 1e-9, '기력 = 그 무기 베기 한 번 값');
+    P.stamina.attackId = 778;
+    assert.equal(E.ibTradeTry(P, { type: 'cut', severity: 0.8 }), false, '사슬당 한 번');
+    IB_LINK.trade = 0;
+    E.ibTradeUsed = false;
+    E.ibTradeHit = null;
+    P.stamina.attackId = 779;
+    assert.equal(E.ibTradeTry(P, { type: 'cut', severity: 0.8 }), false, '끄면 AI 도 없음');
+    IB_LINK.trade = 1;
+    P.ibLink = { wounds0: P.wounds.length };
+    assert.equal(P.ibTradeTry(E, { type: 'cut', severity: 0.8 }), false, '이베리아가 아닌 몸은 없음');
+  } finally {
+    E.ibLink = null;
     P.ibLink = null;
     restore(o);
     G.world.free();

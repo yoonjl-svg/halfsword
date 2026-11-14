@@ -620,8 +620,8 @@ export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps:
 //   이어 돌리기(머리 위 원) 동안 몸에 든 칼날 맞음 하나를 상처 · 의식 · 아픔 없이 넘기고, 대신 그 무기로 베기 한 번 값의 기력(STAMINA.cutCost × 무기 무게 배율 — 새 수 없음)을 씀 ·
 //   흐름 사슬 하나에 한 번(끊기면 다시) · 기력이 그 값보다 적으면 못 넘김 · 칼끼리 맞아 원이 멈춤은 안 넘김 · 원 동안 막기 안 됨은 B7 그대로. 칸을 익힌 사람만 · 0 = 칸이 있어도 효과 없음(`?ibTrade=0` — 견줌)
 //   [사장님 11/14 확인 '권고대로 해' — 3914] (전 11/14 C' 스위치 '사슬 중 맞아도 안 끊김 · 막기 불가 · 받는 피해 × 1.2' 는 걷어냄 — 3906 · 3907)
-//  ai 1 = AI 이베리아도 특수 공격 풍차 베기 대신 이어 돌리기 (기본 0 — 관문 · 판 견줌만) [사장님 확인 전 — 3908]
-export const IB_LINK = { on: 1, time: realS(0.4), handR: 0.25, cool: 0, chainArm: 0, trade: 1, ai: 0 };
+//  ai 1 = AI 이베리아도 특수 공격 풍차 베기 대신 이어 돌리기 · 맞바꿈도 사람과 같은 규칙(AI 는 칸 없이 늘 가짐 — 다른 유파 AI 패시브와 같은 꼴) [사장님 11/14 확인 '모두 본판에 넣어 ai에게도 똑같이 적용해' — 3922] (0 = 11/14 전 판 — AI 풍차 베기 · 견줌)
+export const IB_LINK = { on: 1, time: realS(0.4), handR: 0.25, cool: 0, chainArm: 0, trade: 1, ai: 1 };
 // 이베리아 날 세우기 시험 (10/22 — 사장님 10/21 23:5x '이베리아 유파가 유독 칼면이 맞는 경우가 많았어 특히 수직베기에서', docs/strike/iberian_flat_hits_2026-10-22.md · 확인표 2167~ · **기본 끔 · 사장님 확인 전**).
 //  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
 //   다른 유파 · 무기는 그대로. 끄면(on false) 판 그대로(같은 float). `?ibEdge=motor` · `?ibEdge=pre` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=ibEdge=motor

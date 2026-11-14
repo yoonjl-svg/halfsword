@@ -489,7 +489,7 @@ if (params.has('rdRamp')) CONFIG.UNIQUE_ASSIST.rdRamp = +params.get('rdRamp') ? 
 if (params.has('ibChain')) CONFIG.IB_FLOW.chainStack = +params.get('ibChain') ? 1 : 0; // 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:4x · 01:5x · 기본 1)
 if (params.has('ibFreeEvery')) CONFIG.IB_FLOW.freeEvery = Math.max(0, Math.round(+params.get('ibFreeEvery') || 0)); // 이어지는 흐름 — 사슬 세 칼마다 기력 0 (사장님 10/29 14:2x · 기본 3 · 0 = 끔)
 // B7 이어 돌리기 (11/14 사장님 '이베리아 이어 돌리기로 진행해.' — config IB_LINK · src/iberian_link.js): `?ibLink=0` = 11/12 판 풍차 베기(원 긋기) · `?ibLinkT=` 원 시간(실제 초) · `?ibLinkCool=1` 특수 공격 식힘 걸기 ·
-//  `?ibTrade=0` B12 맞바꿈 '멈추지 않는 칼' 효과 끔(기본 켬 — 칸을 익힌 사람만 · 견줌) · 스위치(사장님 확인 전 — 견줌): `?ibChainArm=1` B 사슬 세 칼 넘으면 알티바슈 포르트 곧장 무장 · `?ibLinkAi=1` AI 도 이어 돌리기
+//  `?ibTrade=0` B12 맞바꿈 '멈추지 않는 칼' 효과 끔(기본 켬 — 칸을 익힌 사람 · AI 이베리아 · 견줌) · `?ibLinkAi=0` AI 이어 돌리기 끔(기본 켬 — 11/14 사장님 'ai에게도 똑같이' · 0 = AI 풍차 베기 판) · 스위치(견줌 · 기본 끔): `?ibChainArm=1` B 사슬 세 칼 넘으면 알티바슈 포르트 곧장 무장
 if (params.has('ibLink')) CONFIG.IB_LINK.on = +params.get('ibLink') ? 1 : 0;
 if (params.has('ibLinkT')) CONFIG.IB_LINK.time = CONFIG.realS(Math.max(0.05, +params.get('ibLinkT') || 0.4));
 if (params.has('ibLinkCool')) CONFIG.IB_LINK.cool = +params.get('ibLinkCool') ? 1 : 0;

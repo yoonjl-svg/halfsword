@@ -2391,7 +2391,7 @@ export class Fighter {
    * 맞바꿈 (이베리아 B12 '멈추지 않는 칼' — 11/14 사장님 '맞바꿈 새 칸으로' · 새 안 '이어돌리기 중에 피격돼도 1회 무시하는 대신 기력 소모' · config IB_LINK.trade):
    *  이어 돌리기(머리 위 원 — f.ibLink) 동안 몸에 든 칼날 맞음 하나를 상처 · 의식 · 아픔 없이 넘기고, 그 대신 그 무기로 베기 한 번 값의 기력
    *  (STAMINA.cutCost × 무기 무게 배율 — config UNIQUE_ASSIST.rdDrainCut 줄과 같은 셈)을 씀. 흐름 사슬 하나에 한 번(사슬이 끊기면 다시 — updateIbFlow).
-   *  기력이 그 값보다 적으면 못 넘김(그대로 맞음). 사람만(AI 몸 그대로) · 스킬트리 B12 칸('ibTrade'). 칼끼리 맞음(돌던 칼을 쳐서 원이 멈춤)은 넘기지 않음 — combat.js strike 의 몸 맞음만.
+   *  기력이 그 값보다 적으면 못 넘김(그대로 맞음). 사람은 스킬트리 B12 칸('ibTrade') · AI 이베리아는 늘(11/14 사장님 'ai에게도 똑같이' — IB_LINK.ai 로 AI 도 이어 돌림). 칼끼리 맞음(돌던 칼을 쳐서 원이 멈춤)은 넘기지 않음 — combat.js strike 의 몸 맞음만.
    *  같은 칼(그 공격 번호)이 같은 길에 다른 부위를 잇달아 치는 것(넘긴 때부터 원 한 번 시간 IB_LINK.time 안)은 한 맞음으로 함께 넘김(기력은 한 번).
    *  combat.js strike 가 상처를 놓기 전에 부름: 넘기면 true (상처 · 의식 · 아픔 · 그 맞음에 딸린 무릎 꺾기 · 칼 떨구기 굴림 없음 · 물리 충돌은 그대로).
    */
@@ -2401,7 +2401,7 @@ export class Fighter {
       k.sev += r.type === 'blunt' ? 0 : r.severity ?? 0;
       return true;
     }
-    if (!IB_LINK.trade || !this.ibLink || this.ibTradeUsed || this.aiControlled || this.swordArt?.tradition !== 'iberian' || kitOff(this, 'ibTrade')) return false;
+    if (!IB_LINK.trade || !this.ibLink || this.ibTradeUsed || this.swordArt?.tradition !== 'iberian' || kitOff(this, 'ibTrade')) return false; // AI 도 같은 규칙 (11/14 사장님 'ai에게도 똑같이' — AI 는 칸 없이 늘 가짐: kitOff 는 skillKit 이 없으면 false)
     const S = this.stamina, cost = STAMINA.cutCost * (S.weight ?? 1);
     if (STAMINA.on && !S.infinite && S.value < cost) return false;
     S.spend('attack', cost);

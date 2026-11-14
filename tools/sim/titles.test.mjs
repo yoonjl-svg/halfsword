@@ -16,6 +16,7 @@ globalThis.localStorage = {
 const P = await import('../../src/lobby_progress.js');
 const R = await import('../../src/title_rules.js');
 const D = await import('../../src/skill_tree_data.js');
+const { IB_LINK } = await import('../../src/config.js'); // 11/14 B7 글 두 판 (아래 호칭 표 시험을 그때 판으로 묶음)
 const S = await import('../../src/skill_tree_store.js');
 const { STAGE_ORDER } = await import('../../src/stages.js');
 const { WANDER_HEAD } = await import('../../src/wander_rules.js'); // 방랑 참수 머리 (10/24 02:4x 부터 1 — 전 2)
@@ -41,7 +42,11 @@ const enc = (foe) => () => ({ stage: 'poseidon', foe, foeWeapon: 'tizona' });
 const unlockWander = () => { for (const s of STAGE_ORDER) P.recordCampaignStage(s, STAGE_ORDER); };
 const fight = (foe, win) => { P.ensureWanderRun(enc(foe)); return P.settleWander(win, () => 10); };
 
-test('호칭 표: 유파 다섯 = 비기 원전 책 이름 + 계승자 (04:0x 줄인 이름) · 소드마스터 · 방랑자 · 왕 시해자 · 정복자 · 도살자 · 대부호 · 나무꾼 · 이름은 표 하나', () => {
+test('호칭 표: 유파 다섯 = 비기 원전 책 이름 + 계승자 (04:0x 줄인 이름) · 소드마스터 · 방랑자 · 왕 시해자 · 정복자 · 도살자 · 대부호 · 나무꾼 · 이름은 표 하나', (t) => {
+  // 11/14 그때 판으로 묶음 (B7 오의 출처가 이어 돌리기 글 — 피게이레두 『Memorial …』로 바뀜 · `?ibLink=0` 판은 고디뉴 『Arte de Esgrima』 그대로 B7_WINDMILL · 호칭 이름은 그대로 · 기준은 안 고침 — docs/strike/ib_link_2026-11-14.md §11)
+  const linkK = IB_LINK.on;
+  IB_LINK.on = 0;
+  t.after(() => (IB_LINK.on = linkK));
   assert.deepEqual(R.TITLE_NAMES, {
     'school:german': '캄프페히텐 계승자', 'school:italian': '스케르모 계승자', 'school:iberian': '에스그리마 계승자', 'school:japanese': '오륜서 계승자', 'school:chinese': '무비지 계승자',
     swordmaster: '소드마스터', wander: '방랑자', regicide: '왕 시해자', conqueror: '정복자', butcher: '도살자', tycoon: '대부호', woodcutter: '나무꾼',

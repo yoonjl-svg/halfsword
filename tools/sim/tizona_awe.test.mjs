@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Vector2, Vector3 } from 'three';
 import { Stamina, spendAweDrain, applyAweStart } from '../../src/stamina.js';
-import { STAMINA, WEAPON_ABILITY, UNIQUE_ASSIST, realS } from '../../src/config.js'; // realS: 표준 시간(10/25) — 위세 틈 1.5 s 는 실제 초
+import { STAMINA, WEAPON_ABILITY, UNIQUE_ASSIST, IB_LINK, realS } from '../../src/config.js'; // realS: 표준 시간(10/25) — 위세 틈 1.5 s 는 실제 초
 import { getWeapon, WEAPONS, WEAPON_ALIASES } from '../../src/weapons.js';
 import { Skill } from '../../src/skill.js';
 import { newRound, DT, AI } from './harness_m.mjs';
@@ -141,6 +141,9 @@ test('AI 가 든 티소나 (상대 자리 · 플레이어 자리 모두): 막힘
 test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · 플레이어 자리 11 s): 기력 깎음은 티소나의 막힌 공격 끝에서만 · 공격 하나에 한 번 · 8 씩 · 1.5 s 안의 둘째 막힘은 없음', oldDrain(() => {
   const orig = AI.prototype.afterStrike;
   const log = [];
+  // 11/14 그때 판으로 묶음 (AI 이베리아 이어 돌리기 · 맞바꿈 켬 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해' · IB_LINK.ai 1 로 티소나 AI 판이 갈라짐: 씨앗 27 막힘 건너뜀 0 · 기준은 안 고침 — docs/strike/ib_link_2026-11-14.md §11)
+  const linkAi = IB_LINK.ai;
+  IB_LINK.ai = 0;
   AI.prototype.afterStrike = function (d) {
     const s = this.foe.stamina, c0 = s.counts.awe ?? 0, v0 = s.value, hit = this.hitLanded, bound = this.bound;
     const r = orig.call(this, d);
@@ -172,6 +175,7 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
     }
   } finally {
     AI.prototype.afterStrike = orig;
+    IB_LINK.ai = linkAi;
   }
 }));
 

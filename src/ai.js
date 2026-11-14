@@ -22,7 +22,7 @@ import { STAMINA } from './config.js';
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF, AI_MAAI, IB_LINK } from './config.js';
-import { linkStart, linkEnd } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — IB_LINK.ai · 기본 끔)
+import { linkStart, linkEnd } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — IB_LINK.ai · 기본 켬 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해')
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS, IBERIAN_SPIN_DEF } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
@@ -1426,7 +1426,7 @@ export class AI {
     this.timer = this.phase === 'approach' && !this.quick ? realS(L.windup * 0.15) : 0; // 준비 자세 멈칫 = 실제 초
     // 풍차 베기 AI 몫 (사장님 10/31 08:xx '누가봐도 레돈두 준비처럼' — UNIQUE_ASSIST.rdAiWind): 머리 위 돌려 베기는 패드 길 대신 사람과 같은 감기로 (아래 rdWindTick)
     if (UA.rdAiWind && this.tech?.name === 'redondo' && !this.feint && !this.secretRun && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin(); // 부러진 칼은 옛 길 (사람도 부러지면 감기를 그만둠 — windStop 'armed')
-    // 이어 돌리기 (11/14 IB_LINK.ai — 기본 끔 · 사장님 확인 전 · 사람 unique_assist.js linkTry 와 같은 뜻): 이베리아 AI 가 앞 공격이 끝나고 이어짐 창(afterWindow) 안에 큰 칼(시작 자리가 가슴 높이 이상인 베기)을
+    // 이어 돌리기 (11/14 IB_LINK.ai — 기본 켬 · 사장님 11/14 확인 'ai에게도 똑같이' · 사람 unique_assist.js linkTry 와 같은 뜻 · 원 동안 맞바꿈도 사람과 같음 — fighter.js ibTradeTry): 이베리아 AI 가 앞 공격이 끝나고 이어짐 창(afterWindow) 안에 큰 칼(시작 자리가 가슴 높이 이상인 베기)을
     //  새로 시작하는데 손이 그 시작 자리에서 떨어져 있으면 — 준비 자세로 손을 옮기는 대신 칼을 머리 위로 돌려 시작 자리로(iberian_link.js) · 다 돌면 곧장 친다(linkTick)
     else if (IB_LINK.ai && this.art.tradition === 'iberian' && this.phase === 'windup' && !opt.secret && !opt.passive && !this.feint && !this.secretRun && this.tech?.kind === 'cut' && this.tech.from[1] > 0 && cd > UA.padRadius && this.sense.t - this.lastAtkT <= UA.afterWindow && this.me.state === 'stand' && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.ibLink && !iaiBusy(this.me) && linkStart(this.me, this.tech.from, { tech: this.tech.name })) {
       this.phase = 'ibLink';
@@ -1863,7 +1863,7 @@ export class AI {
     this.stepT = 0;
     this.hand.set(me.handOffset.x, me.handOffset.y);
     this.specStart('cingir');
-    this.setTechCue(PLAYER_UNIQUE.iberian?.find((e) => e.name === 'cingir')?.nameKo ?? tech?.nameKo ?? '풍차 베기 (싱지르)', 'unique');
+    this.setTechCue(tech?.nameKo ?? '풍차 베기 (싱지르)', 'unique'); // 11/14 AI 풍차 베기는 IB_LINK.ai 0 판에만 — 사람 칸 이름은 '이어 돌리기 (싱지르)' 로 바뀌어 기술표 이름(schools.js cingir '풍차 베기 (싱지르)')을 씀
     (this.stats.cingir ??= { fired: 0, refused: 0 }).fired++;
     return true;
   }

@@ -42,7 +42,11 @@ test('기본값 — 사장님 11/11: 이베리아 비기 = 알티바슈 포르�
   assert.ok([0.3, 0.45, 0.6].includes(SECRET.ibSpin.stride), '걸음 사다리 가운데');
 });
 
-test('스킬트리 — B4 알티바슈 포르트가 비기 자리(전 B7 값) · B7 싱지르가 특수 공격 자리(전 B4 값) · 이어지는 흐름은 그 자리의 칸(B7) 뒤', () => {
+test('스킬트리 — B4 알티바슈 포르트가 비기 자리(전 B7 값) · B7 싱지르가 특수 공격 자리(전 B4 값) · 이어지는 흐름은 그 자리의 칸(B7) 뒤', (t) => {
+  // 11/14 그때 판으로 묶음 (B7 글이 이어 돌리기 글로 바뀜 — 사장님 '모두 본판에' · `?ibLink=0` 판은 11/12 풍차 베기 글 그대로 B7_WINDMILL · 기준은 안 고침 · docs/strike/ib_link_2026-11-14.md §11)
+  const linkK = CONFIG.IB_LINK.on;
+  CONFIG.IB_LINK.on = 0;
+  t.after(() => (CONFIG.IB_LINK.on = linkK));
   const b4 = D.nodeOf('iberian', 'B4');
   const b7 = D.nodeOf('iberian', 'B7');
   assert.deepEqual([b4.cat, [...b4.pre], b4.price, b4.heads, b4.d, b4.cx, [...b4.f], b4.u], ['secret', ['B10', 'B3', 'B5'], 400, 10, 3, 420, ['secret'], 'redondo']);

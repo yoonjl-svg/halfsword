@@ -11,7 +11,7 @@
 //  node tools/sim/ib_link.mjs agg <json …>
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync } from 'node:fs';
-import { newRound, DT, CONFIG, THREE } from './harness_m.mjs';
+import { newRound, DT, CONFIG, THREE, AI } from './harness_m.mjs';
 import { PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { kitFromNodes, allNodeIds } from '../../src/skill_tree_data.js';
 import { TECH_BY_NAME } from '../../src/ai_techniques.js';
@@ -228,6 +228,52 @@ export function aggTable(runs) {
   return out.join('\n');
 }
 
+/**
+ * AI 대 AI (11/14 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해' — 기록 §11): 이베리아 AI(적 자리 · weapon) 대 롱소드 AI(opp) · 둘 다 숙련 5 · 벽 있음 · dur 초 ·
+ *  판 'ai0' = AI 풍차 베기(11/14 전 판) · 'ai1' = AI 이어 돌리기 + 맞바꿈(기본) · 'ai1n' = AI 이어 돌리기만(맞바꿈 끔)
+ */
+export const AI_CFG = { ai0: { ai: 0, trade: 1 }, ai1: { ai: 1, trade: 1 }, ai1n: { ai: 1, trade: 0 } };
+export function aiFightOne({ weapon = 'zweihander', opp = 'longsword', seed = 1, dur = 30, prof = 5 }) {
+  const G = newRound({ walls: true, seed, weapon: opp, weapon2: weapon, AI2Class: AI, persona: { proficiency: prof }, persona2: { proficiency: prof } });
+  const P = G.player; // 롱소드 AI
+  const E = G.enemy; // 이베리아 AI
+  const sev = { E: 0, P: 0, En: 0, Pn: 0 };
+  const pw = G.combat.hooks.onWound;
+  G.combat.hooks.onWound = (att, vic, r, ...rest) => {
+    pw?.(att, vic, r, ...rest);
+    const sv = r.type === 'blunt' ? 0 : r.severity ?? 0;
+    if (vic === E) (sev.E += sv), (sev.En += sv > 0 ? 1 : 0);
+    if (vic === P) (sev.P += sv), (sev.Pn += sv > 0 ? 1 : 0);
+  };
+  const out = (f) => !f.alive || f.state === 'dead';
+  while (G.t < dur && !out(P) && !out(E)) G.step();
+  const st = G.ai.stats;
+  const L = E.ibTradeLog ?? [];
+  const r = { weapon, opp, seed, T: +G.t.toFixed(3), win: out(P) && !out(E), lose: out(E) && !out(P), recv: +sev.E.toFixed(4), recvN: sev.En, dealt: +sev.P.toFixed(4), dealtN: sev.Pn,
+    link: st.ibLink ? { fired: st.ibLink.fired, done: st.ibLink.done, cancel: st.ibLink.cancel } : { fired: 0, done: 0, cancel: {} }, cingir: st.cingir?.fired ?? 0,
+    trade: { n: L.length, sev: +L.reduce((a, k) => a + k.sev, 0).toFixed(4), cost: +(E.ibTradeCost ?? 0).toFixed(3) }, states: `${P.state}/${E.state}` };
+  G.world.free();
+  return r;
+}
+export function aiTable(runs) {
+  const by = {};
+  for (const r of runs) {
+    (by[`${r.cfg}|${r.weapon}:${r.opp}`] ??= []).push(r);
+    (by[`${r.cfg}|모두`] ??= []).push(r);
+  }
+  const out = ['| 판 | 칸 (이베리아 AI : 상대 AI) | 판 수 | 이김 · 짐 · 비김 | 받은 심각도/판 | 준 심각도/판 | 이어 돌리기/판 (끝까지 · 그만둠) | 풍차 베기/판 | 넘긴 맞음/판 | 아낀 심각도/판 | 쓴 기력/판 | 판 길이 s |', '|---|---|---:|---|---:|---:|---|---:|---:|---:|---:|---:|'];
+  for (const [k, rs] of Object.entries(by).sort()) {
+    const [cfg, cell] = k.split('|');
+    const n = rs.length;
+    const W = rs.filter((r) => r.win).length;
+    const Ls = rs.filter((r) => r.lose).length;
+    const lf = rs.reduce((x, r) => x + r.link.fired, 0);
+    const ld = rs.reduce((x, r) => x + r.link.done, 0);
+    out.push(`| ${cfg} | ${cell} | ${n} | ${W} · ${Ls} · ${n - W - Ls} | ${f2(mean(rs.map((r) => r.recv)))} | ${f2(mean(rs.map((r) => r.dealt)))} | ${f2(lf / n)} (${ld} · ${lf - ld}) | ${f2(mean(rs.map((r) => r.cingir)))} | ${f2(mean(rs.map((r) => r.trade.n)))} | ${f2(mean(rs.map((r) => r.trade.sev)))} | ${f2(mean(rs.map((r) => r.trade.cost)), 1)} | ${f2(mean(rs.map((r) => r.T)), 1)} |`);
+  }
+  return out.join('\n');
+}
+
 if (isMain(import.meta.url)) {
   const [mode, ...rest] = process.argv.slice(2);
   const arg = (k, d) => {
@@ -263,8 +309,25 @@ if (isMain(import.meta.url)) {
       }
     }
     console.log(aggTable(runs));
+  } else if (mode === 'aifight') {
+    const cfg = arg('cfg', 'ai1');
+    Object.assign(IB_LINK, AI_CFG[cfg]);
+    const cells = arg('cells', 'zweihander:longsword').split(',');
+    const seeds = range(arg('seeds', '1-12'));
+    const runs = [];
+    for (const c of cells) {
+      const [weapon, opp] = c.split(':');
+      for (const seed of seeds) {
+        const r = aiFightOne({ weapon, opp, seed, dur: +arg('dur', 30), prof: +arg('prof', 5) });
+        r.cfg = cfg;
+        runs.push(r);
+        console.error(JSON.stringify(r));
+        if (arg('json', null)) writeFileSync(arg('json'), JSON.stringify({ cfg, cells, seeds, runs }));
+      }
+    }
+    console.log(aiTable(runs));
   } else if (mode === 'agg') {
     const runs = rest.filter((x) => !x.startsWith('--')).flatMap((p) => JSON.parse(readFileSync(p, 'utf8')).runs);
-    console.log(arg('table', '') === 'trade' ? tradeTable(runs) : aggTable(runs));
+    console.log(arg('table', '') === 'trade' ? tradeTable(runs) : arg('table', '') === 'ai' ? aiTable(runs) : aggTable(runs));
   }
 }

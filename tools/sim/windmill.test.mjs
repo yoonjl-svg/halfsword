@@ -133,7 +133,11 @@ test('AI 도 같은 대본 — 숙련 3 이베리아 AI(왼 가로베기 자리 
   }
 });
 
-test('이름 — 풍차 베기 (특수 공격 뜻 이름 · 원어 cingir 그대로 · 효과 글 · 입력 글 · 오의 · 출처 그대로)', () => {
+test('이름 — 풍차 베기 (특수 공격 뜻 이름 · 원어 cingir 그대로 · 효과 글 · 입력 글 · 오의 · 출처 그대로)', (t) => {
+  // 11/14 그때 판으로 묶음 (B7 글이 이어 돌리기 글로 바뀜 — 사장님 '모두 본판에' · `?ibLink=0` 판은 11/12 풍차 베기 글 그대로 B7_WINDMILL · 기준은 안 고침 · docs/strike/ib_link_2026-11-14.md §11)
+  const k = IB_LINK.on;
+  IB_LINK.on = 0;
+  t.after(() => (IB_LINK.on = k));
   const e = PLAYER_UNIQUE.iberian.find((x) => x.name === 'cingir');
   assert.equal(e.nameKo, '풍차 베기 (싱지르)');
   assert.equal(e.orig, 'cingir');
