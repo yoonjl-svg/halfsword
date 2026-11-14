@@ -59,7 +59,9 @@ export const MEASURED = {
   lightsaber: [1.46, 1.65, 1.13, 0.24], // 한손 자세표를 쓰지 않는다 (weapons.js oneHandStance)
   tree_branch: [1.46, 1.61, 1.13, 0.29],
   rubber_chicken: [0.88, 1.24, 0.68, 0.18],
-  frozen_tuna: [1.36, 1.63, 1.05, 0.44],
+  // 냉동 참치 (사장님 11/14 '냉동 참치 고쳐' — 확인표 새 행): 싸움 잣대(tools/sim/ai_reach_fight.mjs — 참치 AI 대 롱소드 AI · 숙련 2 · 씨앗 1 ~ 6)에서 칼끝 남음이
+  //  롱소드보다 0.24 m 모자람(헛친 칼 모두 칼끝이 몸에 못 미침 — 길게 믿음) → 맞닿기 · 칼끝을 0.24 줄임. 붙음 · 베는 시간 그대로. 전 [1.36, 1.63, 1.05, 0.44] (docs/strike/ai_reach_fight_2026-11-14.md)
+  frozen_tuna: [1.12, 1.39, 1.05, 0.44],
   // 모르겐슈테른 (레어 둔기, 확인표 줄 144): hybrid weapon_measure.mjs 실측 contact 0.88 · clinch 0.68 · cutTime 0.39 날것 (머리가 무거워 0.35 s 베기에서 70 % 지점이 늦게 머리 높이를 지난다).
   //  reach 는 같은 날 도구가 모든 무기에서 내딛기 몫을 못 재어(롱소드도 1.62 = contact) 같은 틀(C 한손) 세이버의 reach/contact 비 1.58/1.39 로 유도한 값 [D]
   morgenstern: [0.88, 1.0, 0.68, 0.39],
