@@ -14,6 +14,7 @@ import { JAPANESE_GAIT } from '../../src/schools.js';
 import { gnsHumanUnsettled } from '../../src/secret.js';
 import { foeReachBase } from '../../src/ai.js';
 import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
+import { withJpOld } from './jp_tank_pin.mjs'; // 11/14 일본 스택 · 바위 몸 — 옛 장면은 잰 때 판으로 (docs/strike/jp_tank_2026-11-14.md §5)
 
 const { SECRET, UNIQUE_ASSIST: UA, AI_MAAI } = CONFIG;
 const allOff = () => { SECRET.gnsHurtKeep = 0; SECRET.gnsThrough = 0; UA.tsuStep = 0; AI_MAAI.hide = 0; };
@@ -87,7 +88,8 @@ test('켜도 일본이 아닌 칸은 그대로: 네 스위치를 켠 독일 롱�
   }
 });
 
-test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄러져 들어감 (끄면 0)', () => withArmOld(() => {
+test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄러져 들어감 (끄면 0)', () => withJpOld(() => withArmOld(() => {
+  // 11/14 일본 스택 · 바위 몸과 帯刀(대기 칼 자리)이 함께 켜진 판에서 씨앗 1 의 되돌림 칼이 안 나옴(둘 중 하나만이면 나옴) — 스택 전 판(jp_tank_pin)으로 묶음 · 기준은 그대로
   // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 · 사람 두손 칼 칼자루 끝 앞 바닥)로 씨앗 1 판에 제비 베기 되돌림 칼이 안 나옴 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
   const runs = {};
   for (const v of [0, 0.3]) {
@@ -106,25 +108,28 @@ test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄�
   assert.ok(runs[0].snap > 0, '이 씨앗에 제비 베기 되돌림 칼이 있음');
   assert.ok(runs[0.3].tsu > 0, `제비 베기 미끄러져 들어감 ${runs[0.3].tsu}`);
   assert.notEqual(JSON.stringify(runs[0.3].r), JSON.stringify(runs[0].r), '켜면 판이 달라짐');
-}, ['armClear2']));
+}, ['armClear2'])));
 
-test('gnsThrough: 켜면 팔을 가른 발도가 몸까지 한 번 더 벰 (끄면 첫 닿음에서 끝)', () => withArmOld(() => {
+test('gnsThrough: 켜면 팔을 가른 발도가 몸까지 한 번 더 벰 (끄면 첫 닿음에서 끝)', () => withJpOld(() => withArmOld(() => {
   // 씨앗 6 판은 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 이 씨앗이 14 s 안에 고노센을 안 냄 (기록 arm_real §10)
   const runs = {};
   for (const v of [0, 1]) {
     let P = null;
     const belly = SECRET.iaiBelly;
     const real = SECRET.iaiReal;
+    const obi = SECRET.iaiObi;
     try {
       SECRET.gnsThrough = v;
       SECRET.iaiBelly = 0; // 11/08 고노센 배 길 기본 켬 전 장면 (씨앗 6 발도가 팔에 먼저 닿는 판 — 배 길이면 팔을 비켜 감)
       SECRET.iaiReal = 0; // 11/13 사람 발도 원전 꼴 전 장면 (docs/strike/iai_real_2026-11-13.md §7)
+      SECRET.iaiObi = 0; // 11/14 帯刀(대기 칼 배꼽 앞) 전 장면 — 켜면 대기 칼 자리 · 뽑는 길이 달라 이 씨앗 판이 달라짐 (docs/strike/iai_obi_2026-11-14.md §9)
       const r = fightOne({ school: 'japanese', weapon: 'uchigatana', opp: 'longsword', seed: 6, dur: 14, probe: strengthProbe(), onRound(o) { P = o.P; } });
       runs[v] = { n: P.gnsThroughN ?? 0, big: r.probe.big.dealt.filter((b) => b[3] === 'secret'), fired: r.secretFired };
     } finally {
       allOff();
       SECRET.iaiBelly = belly;
       SECRET.iaiReal = real;
+      SECRET.iaiObi = obi;
     }
   }
   assert.equal(runs[0].fired, 1, '이 씨앗은 14 s 안에 고노센을 냄');
@@ -133,4 +138,4 @@ test('gnsThrough: 켜면 팔을 가른 발도가 몸까지 한 번 더 벰 (끄�
   assert.equal(runs[1].n, 1);
   assert.deepEqual(runs[1].big.map((b) => b[1]), ['arm', 'chest'], '켬 — 팔을 베고 가슴까지');
   assert.ok(runs[1].big[1][2] < runs[1].big[0][2], '두 번째 상처는 남은 에너지로 (첫 상처보다 얕음)');
-}, ['armClear']));
+}, ['armClear']))); // 11/14 그때 판 (스택 · 바위 몸 전)

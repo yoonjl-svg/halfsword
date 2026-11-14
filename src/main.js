@@ -14,6 +14,7 @@ import { FLOW_RECOVERY } from './nagashi_recovery.js'; // 흘림당한 뒤 팔 �
 import { skipIberianTable, useIberianTableV2, iberianTableV2 } from './guards.js'; // 이베리아 자세표 칸 걷기 시험 (10/22 — ?ibTableSkip) · 자세표 v2 (?ibTable=v2 | v2p) — 기본 끔
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { createStaminaHud } from './stamina_hud.js';
+import { createHuntHud } from './cn_hunt_hud.js'; // 동방 맹호은림 사냥 겹 표시 (11/14)
 import { applyAweStart } from './stamina.js'; // 티소나 '위세' 판 시작 깎임 (10/24)
 import { createScreenTint } from './screen_tint.js';
 import { createStrikeCue } from './strike_cue.js'; // 칠 때 알림 — 이어 긋기 · 비기 · 인데스 창 동안 상대 머리 위 '!' (10/21 · ?strikeCue=mark|edge|both|0)
@@ -95,6 +96,7 @@ if (params.get('aura') === '0') AURA_VIEW.on = false;
 if (params.has('auraTune')) { try { AURA_VIEW.tune = JSON.parse(params.get('auraTune')); } catch { AURA_VIEW.tune = null; } }
 const teamHud = createTeamHud(); // 동시 대전 위 막대 · 화면 밖 화살표 (1:1 은 숨긴 채 — team_hud.js)
 const staminaHud = createStaminaHud(document.getElementById('staminaHud')); // 두 검객 머리 위 기력 막대 (src/stamina_hud.js)
+const huntHud = createHuntHud(document.getElementById('staminaHud')); // 동방 맹호은림 사냥 겹 — 기력 막대 위 발톱 자국 (11/14 — src/cn_hunt_hud.js)
 const screenTint = createScreenTint(); // 출혈·감정 화면 물들임을 게임 캔버스에 합성 (샛별 저장소 2f593ba6 — 전엔 #vignette · #emotion CSS 층. 기력 스위치와 상관없이 늘 이 길)
 // 주인공은 판마다 무기 카드 세 장 중 하나를 골라 받는다 (아래 "무기 뽑기"). 주소에 ?weapon=을 적으면 뽑기 없이 그 무기로 고정.
 //  진짜 엑스칼리버는 주인공만 받을 수 있고, 복제품은 하인리히 몫이라 뽑기에서 뺀다
@@ -218,6 +220,9 @@ if (params.has('iaiSaya')) CONFIG.SECRET.iaiSaya = +params.get('iaiSaya') ? 1 : 
 if (params.has('iaiSayaReady')) CONFIG.SECRET.iaiSayaReady = +params.get('iaiSayaReady') ? 1 : 0; // 발도 대기 왼손 칼집 입 · 뽑을 때 鞘引き (사장님 11/13 '원전과 다른 셋 이어서 맞춰' ① — 기본 1 · `?iaiSayaReady=0` = 11/13 판 · 확인표 3720 · docs/strike/iai_saya2_2026-11-14.md)
 if (params.has('iaiRegripFade')) CONFIG.SECRET.iaiRegripFade = +params.get('iaiRegripFade') ? 1 : 0; // 두 손으로 가는 때를 풀기(振りかぶり)와 겹침 (② — 기본 1 · `?iaiRegripFade=0` = 풀기 끝난 뒤 · 확인표 3721)
 if (params.has('iaiSayaModoshi')) CONFIG.SECRET.iaiSayaModoshi = +params.get('iaiSayaModoshi') ? 1 : 0; // 다시 쥐는 길이 鞘戻し 점(배꼽 앞)을 지남 (③ — 기본 1 · `?iaiSayaModoshi=0` = 곧은 섞기 · 확인표 3722)
+if (params.has('iaiObi')) CONFIG.SECRET.iaiObi = +params.get('iaiObi') ? 1 : 0; // 帯刀 — 대기 칼 자리(칼집 입이 배꼽 앞 · 골반 틀) · 뽑는 자리 · 鞘戻し 점 (사장님 11/14 '권고대로 둘 다 진행해' ① — 기본 1 · `?iaiObi=0` = 11/14 판 · 확인표 3871 · docs/strike/iai_obi_2026-11-14.md)
+if (params.has('iaiObiSaya')) CONFIG.SECRET.iaiObiSaya = +params.get('iaiObiSaya') ? 1 : 0; // 일본 칼 넷의 빈 칼집 그림 (② — 기본 1 · `?iaiObiSaya=0` = 없음 · 확인표 3874)
+for (const k of ['iaiObiSageo', 'iaiObiOwn', 'iaiObiEdge', 'iaiObiDroop']) if (params.has(k)) CONFIG.SECRET[k] = +params.get(k) ? 1 : 0; // 11/14 사장님 '동방과 일본은 전부 권고대로' — 사게오 · 다라이시 검집 자리 · 날 위 · 누운 몸 처짐 (모두 기본 1 · 그림만 · 확인표 3886 ~ 3890)
 if (params.has('kronH')) CONFIG.SKILL.deKronH = +params.get('kronH') ? 1 : 0; // 왕관 손·칼끝 자리(10/12 08:2x): 기본 1 = 쓸어 고른 자리, `?kronH=0` = 00:1x 값
 if (['true', 'pad'].includes(params.get('kronShape'))) CONFIG.SKILL.deKronShape = params.get('kronShape'); // 왕관 꼴(10/12 00:1x 사장님): 기본 'true'(진짜 왕관 꼴 — 코등이 가로), `?kronShape=pad` = 10/11 패드 꼴 (docs/strike/kron_shape_2026-10-12.md)
 if (params.get('itRetreat') === '1' || params.get('itRetreat') === '2') CONFIG.SKILL.itRetreat = +params.get('itRetreat'); // 이탈리아 물러서기 연구(10/17 — 판 값 끔, 사장님 확인 전): `?itRetreat=1` = 막기 단추가 약한 길에서 실제 디딤 두 번 물러섬 · `?itRetreat=2` = 막는 동안 스틱을 뒤로 당긴 두 디딤을 물러서는 한 짝으로 셈(스틱은 플레이어 것) (docs/strike/italian_retreat_2026-10-17.md)
@@ -371,6 +376,9 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('indesTouch')) CONFIG.SCHOOL_PASSIVE.german.touch = +params.get('indesTouch') ? 1 : 0;
   // 10/28 01:5x 사장님 '일본 기다림과 침도 고노센도 적용받게 해' — 고노센에도 켄타이 (기본): `?kenSecret=0` = 전(비기엔 안 실림)
   if (params.has('kenSecret')) CONFIG.SCHOOL_PASSIVE.japanese.secret = +params.get('kenSecret') ? 1 : 0;
+  // 11/14 일본 기다리는 중전차 (config JP_TANK · 사장님 11/14 '스택 시스템' · '낮은 걸음 … 밀치기에 기력이 소모되는 않는'): `?jpStack=0` = 전(시간 곧은 오름) · `?jpFlow=2` 흘려 받기 스택 ·
+  //  바위 몸 `?jpLowShove=0` = 전(밀치기 기력 그대로) · `?jpRock=0` = 스택당 받는 피해 줄임 끔 · 견줌(기본 끔) `?jpStackAi=1` AI 도 스택 · `?jpCounter=1` C 받아 치기 고노센 · `?jpKeep=1` E
+  for (const [q, k] of [['jpStack', 'stack'], ['jpStackAi', 'ai'], ['jpFlow', 'flow'], ['jpLowShove', 'lowShove'], ['jpRock', 'rock'], ['jpCounter', 'counter'], ['jpKeep', 'keep']]) if (params.has(q) && Number.isFinite(+params.get(q))) CONFIG.JP_TANK[k] = Math.max(0, +params.get(q));
 }
 if (params.has('whipKneel')) CONFIG.WHIP_KNEEL.p = +params.get('whipKneel') || 0; // 채찍 무릎 꿇리기 확률 (10/23 — 판 값 0.5 · `?whipKneel=0` 끔)
 if (params.get('whipKneelAi') === '1') CONFIG.WHIP_KNEEL.ai = true; // AI 가 든 채찍도 꿇리기 (기본 끔 — 사람 먼저)
@@ -404,6 +412,8 @@ if (params.has('dupBurstMatch')) CONFIG.UNIQUE_ASSIST.dupBurstMatch = [0, 1, 2].
   }
 }
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
+if (params.has('cnHunt')) CONFIG.UNIQUE_ASSIST.cnHunt.on = +params.get('cnHunt') ? 1 : 0; // 동방 맹호은림 사냥 겹 (11/14 — `?cnHunt=0` = 겹 없음 · 격살 판당 수는 공용 표 secretUses — 전 판 `?secretUses=1,chinese:3`)
+if (params.has('cnHuntAi')) CONFIG.UNIQUE_ASSIST.cnHunt.ai = +params.get('cnHuntAi') ? 1 : 0; // AI 동방도 사냥 겹 (견줌 — 기본 0)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
 for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld', 'inqTap']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
 if (params.has('cavFrom') && +params.get('cavFrom') >= 0) CONFIG.UNIQUE_ASSIST.cavFrom = CONFIG.realS(+params.get('cavFrom')); // 칼끝 돌려 빼기 탭 창 처음 (실제 초 — 기본 0.2 · 10/29 20:0x · 옛 판 0.6)
@@ -3736,6 +3746,7 @@ function frame(now) {
   }
   updateCamera(dt); // 거르는 프레임에도: 흔들림 스프링·발걸음(player.footstep 소비)·소리 자리(sound.listener)가 여기 달려 있다
   staminaHud.update(fighters, camera, state === 'fight' && !roundOver);
+  huntHud.update(fighters, camera, state === 'fight' && !roundOver); // 사냥 겹이 쌓인 몸만 (11/14)
   if (teamRun) teamHud.update(camera, teamRun.focus, state === 'fight' && !roundOver, teamRun.human); // 동시 대전 화면 밖 화살표 · 상대 머리 위 붉은 세모 (체력 막대는 staminaHud)
   strikeCue.update(dt, camera, state === 'fight' && !roundOver && (!teamRun || !!teamRun.human), player, enemy, playerUnique, playerSecret); // 칠 때 알림: 카메라가 정해진 뒤 · 그리기 전
   screenTint.update(dt);

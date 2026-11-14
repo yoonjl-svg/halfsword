@@ -17,9 +17,15 @@
 //     창 안에서 간격 잡기 빠른 디딤(gait.js fastK · chaseStep)이 시작되면 빠른 디딤 · 잡기(gait.hold) 동안 창 시계가 멈추고, 잡기가 끝나면 닫힘(잡기 없이 빠른 디딤만 끝나면 남은 시계)
 //   · 동방 숨 바꾸기 (토납 — 『장자』 각의편 吐故納新, 10/21 사장님 이름) — clotK: 휘두르지 않는 동안 피 굳는 빠르기(VITALS.clotting — fighter.js updateVitals) × clot
 //  '휘두르는 중'(swingingNow) = 사람: 기력 장부의 공격 중(긋기 · 탭 · 손잡이 찍기 · 긋기 끝 0.35 s 꼬리) · 비기 · 막아찌르기 / AI: 공격의 긋기 · 지나감 단계 · 비기 · 탭 · 찍기
+//  11/14 일본 기다림과 침 → 스택 (사장님 11/14 '1초당 1스택, 피격에 1스택, 막기나 흘려받기에 2스택 … 최대 10스택 중첩 +80%' — config JP_TANK · 기록 docs/strike/jp_tank_2026-11-14.md):
+//   사람(humanInput) 일본은 쌓인 몫이 시간 곧은 오름 대신 스택 stk(0 ~ max) — 휘두르지 않은 per 초마다 +1(update · 판 시작 정지 동안 안 셈) · 맞음 +hit(tookHit — combat.js strike) ·
+//   막기 +block(guardEvent 'block' — stamina.js block) · 흘려 받기 +flow(guardEvent 'flow' — combat.js nagashi) · 한 상대 공격에 막기 · 흘려 받기가 함께 들면 큰 쪽 하나만.
+//   칼에 실리는 몫(charge) = stk × each · 묶음 · 씀 · 제비 베기 넘김 · 고노센은 위 켄타이 그대로. AI 는 JP_TANK.ai(견줌)일 때만 · 시뮬 대본 몸은 전 판.
+//   바위 몸(11/14 사장님 '스택당 피해 -4%' — JP_TANK.rock · 몫 열쇠 jpRock): takenK(받는 피해 — combat.js analyze) · 스위치: E keep(손목 치기 · 비껴 베기는 스택을 안 씀 — keepCheck) · C 는 secret.js(흘려 받기 수 flowN 을 읽음)
 import * as THREE from 'three';
-import { SCHOOL_PASSIVE as SP, UNIQUE_ASSIST as UA, THRUST } from './config.js';
+import { SCHOOL_PASSIVE as SP, UNIQUE_ASSIST as UA, THRUST, JP_TANK as JT } from './config.js';
 import { strokeTechOf } from './unique_assist.js';
+import { kitOff } from './skill_kit.js'; // 11/14 바위 몸 몫 열쇠 jpRock (새 칸 J12 · 임시로 J10 과 함께)
 
 /** 이 파일이 맡는 유파 (이베리아 손목 힘은 fighter.js wristK) */
 export const PASSIVE_SCHOOLS = Object.freeze(['italian', 'japanese', 'german', 'chinese']);
@@ -30,6 +36,7 @@ const _p = new THREE.Vector3();
 const _h = new THREE.Vector3();
 const _w = new THREE.Vector3();
 const _ax = new THREE.Vector3();
+const KEEP_TECH = new Set(['kote', 'hirakiGiri']); // E (11/14 설계안 — JP_TANK.keep): 손목 치기(J7) · 비껴 베기(J6) — 스택을 쓰지도 지우지도 않는 견제
 
 /** 유파 패시브 스위치 — 모두(SCHOOL_PASSIVE.on) · 그 유파(.on) */
 export function schoolPassiveOn(tradition) {
@@ -58,6 +65,11 @@ export class SchoolPassive {
     this.lock = null; // 지금 칼에 묶인 몫 { n, t0, ken, carry, indes, spent, hit, endT }
     this.lastLock = null; // 마지막으로 피해 배율을 낸 묶음 (dealtK → combat.js 결과 schoolLock)
     this.idle = 0; // 켄타이: 공격 없이 기다린 시간
+    this.stk = 0; // 일본 스택 (11/14 — JP_TANK · 사람 · stackOn 일 때만 셈)
+    this.stkT = 0; // 휘두르지 않은 시간 (다음 +1 까지 — JP_TANK.per)
+    this.guardBy = new Map(); // 상대 → { id 공격 번호, n 그 공격에 받은 막기 · 흘려 받기 스택, block · flow 그 일이 들었나(재기 셈), fN 흘려 받기 수에 셌나 }
+    this.hitBy = new Map(); // 상대 → '피격' 스택을 받은 공격 번호
+    this.flowN = 0; // 흘려 받기가 든 수 (상대 공격 하나에 한 번 — C 받아 치기 고노센 · secret.js counterTick 이 읽음)
     this.win = null; // 인데스 창 { t 지난 시간, chase 간격 잡기로 멈춤, hold 잡기를 봤나 }
     this.tipRv = new THREE.Vector3(); // 리네아 레타: 지금 돌림 (몸 틀 · 축 방향 × 각 rad — 처음 줄 → 고친 줄)
     this.tipRun = null; // 지금 찌르기 { max 가장 크게 돌린 각 rad }
@@ -67,6 +79,8 @@ export class SchoolPassive {
       indes: { opened: 0, whiff: 0, blocked: 0, touch: 0, paused: 0, strokes: 0, hits: 0, dup: 0 }, // touch = 칼끼리 닿아 새로 연 창 · dup = 창 밖 겹치기에 실림 (10/28)
       tip: { thrusts: 0, corrected: 0, sum: 0, max: 0 },
       clotT: 0,
+      // 일본 스택 (11/14): 얻은 수 갈래(idle · hit · block · flow — 상한에 막혀 버린 몫 over) · 일 수(ev) · 스택 실은 칼(strokes · 실은 스택 합 sum · 가장 큰 것 max) · E 로 돌려받은 수(kept) · 제비 베기로 넘긴 스택 합(carried)
+      stk: { idle: 0, hit: 0, block: 0, flow: 0, over: 0, ev: { hit: 0, block: 0, flow: 0 }, strokes: 0, sum: 0, max: 0, kept: 0, carried: 0, hitStk: 0 },
     };
   }
 
@@ -76,6 +90,9 @@ export class SchoolPassive {
     this.ai = ai;
     this.lock = this.win = this.tipRun = null;
     this.idle = 0;
+    this.stk = this.stkT = 0;
+    this.guardBy.clear();
+    this.hitBy.clear();
     this.tipRv.set(0, 0, 0);
   }
 
@@ -87,9 +104,20 @@ export class SchoolPassive {
     return this.ai ? SP[key]?.aiK ?? 1 : 1;
   }
 
-  /** 켄타이: 지금 쌓인 몫 (0 ~ gain) */
+  /** 일본 스택 판인가 (11/14 — JP_TANK.stack · 사람 = 사람 입력이 모는 몸 humanInput · AI 는 JP_TANK.ai 견줌일 때만 · 시뮬 대본 몸은 전 판) */
+  get stackOn() {
+    return !!JT.stack && this.on('japanese') && (this.ai ? !!JT.ai : !!this.f.humanInput);
+  }
+
+  /** 화면 표시 (stamina_hud.js — 스택 판일 때 지금 스택 수 · 아니면 null) */
+  get stackShow() {
+    return this.stackOn ? this.stk : null;
+  }
+
+  /** 켄타이: 지금 쌓인 몫 (0 ~ gain · 11/14 스택 판이면 stk × each — 0 ~ max × each) */
   get charge() {
     if (!this.on('japanese')) return 0;
+    if (this.stackOn) return JT.each * this.stk;
     const J = SP.japanese;
     return J.gain * Math.min(1, this.idle / J.full);
   }
@@ -113,6 +141,17 @@ export class SchoolPassive {
     const L = this.lock;
     if (L && L.endT == null && !sw) L.endT = this.t; // 묶인 칼이 끝남 (츠바메가에시로 넘길 창은 여기부터)
     if (this.on('japanese') && !sw) this.idle += dt;
+    if (this.stackOn) {
+      // 11/14 '1초당 1스택': 휘두르지 않은 per 초마다 +1 (판 시작 정지 fighter.openHold 동안은 안 셈 — 고노센 준비와 같은 규칙 · 휘두르면 strokeStart 가 0 으로)
+      if (!sw && !this.f.openHold) {
+        this.stkT += dt;
+        while (this.stkT >= JT.per - 1e-9) {
+          this.stkT -= JT.per;
+          this.addStk(1, 'idle');
+        }
+      }
+      if (JT.keep) this.keepCheck();
+    }
     if (this.win) this.tickIndes(dt);
     if (this.on('chinese') && !sw) this.stats.clotT += dt;
   }
@@ -129,7 +168,7 @@ export class SchoolPassive {
       this.n++;
       L.n = this.n;
       if (secret) {
-        if (!kenSec) L.ken = 0;
+        if (!kenSec) L.ken = L.stk = 0;
         L.carry = L.indes = 0;
         L.kenSec = kenSec;
         if (kenSec && L.ken > 0.005) this.stats.ken.secret++;
@@ -139,12 +178,19 @@ export class SchoolPassive {
     this.n++;
     this.stats.strokes++;
     // 켄타이: 지금 몫을 이 칼에 묶고 다시 0 부터 · 앞 칼이 못 맞히고 이어짐 창 안이면 그 몫을 들고 감(츠바메가에시일 때만 씀 — dealtK)
-    let ken = 0, carry = 0;
+    let ken = 0, carry = 0, stk = 0, carryStk = 0;
     if (this.on('japanese')) {
       ken = secret && !kenSec ? 0 : this.charge;
       this.idle = 0;
+      if (this.stackOn) {
+        // 11/14 스택: 지금 스택을 이 칼에 묶고 0 부터 (다음 +1 까지 시계도 0)
+        stk = secret && !kenSec ? 0 : this.stk;
+        this.stk = this.stkT = 0;
+        const S = this.stats.stk;
+        if (stk > 0) (S.strokes++), (S.sum += stk), (S.max = Math.max(S.max, stk));
+      }
       if (L && L.ken > 0 && !L.spent) {
-        if (!secret && (L.endT == null || this.t - L.endT <= UA.afterWindow)) carry = L.ken;
+        if (!secret && (L.endT == null || this.t - L.endT <= UA.afterWindow)) (carry = L.ken), (carryStk = L.stk ?? 0);
         else this.stats.ken.lost++;
       }
       if (ken > 0.005) this.stats.ken.charged++;
@@ -159,7 +205,7 @@ export class SchoolPassive {
       }
       this.win = null;
     }
-    this.lock = { n: this.n, t0: this.t, ken, carry, indes, spent: false, hit: false, endT: null, kenSec };
+    this.lock = { n: this.n, t0: this.t, ken, carry, indes, spent: false, hit: false, endT: null, kenSec, stk, carryStk };
   }
 
   /**
@@ -179,6 +225,7 @@ export class SchoolPassive {
     if (!L || L.n !== this.n || !this.school || !swingingNow(this.f)) return 1;
     const sec = !!this.f.stamina?.inSecret;
     if (sec && !L.kenSec) return 1; // 비기 칼 — 패시브 몫 없음 (인데스는 늘 · 켄타이는 고노센 빼고)
+    if (JT.keep && this.stackOn) this.keepCheck(); // E: 손목 치기 · 비껴 베기면 묶은 스택을 돌려받고 이 칼엔 안 실림 (맞는 순간에 이름이 먼저 섰을 때)
     let k = 1;
     if (this.on('japanese') && !L.spent) k += Math.max(L.ken, !sec && L.carry > 0 && strokeTechOf(this.f) === 'tsubameGaeshi' ? L.carry : 0);
     if (this.on('german') && !sec) {
@@ -203,7 +250,8 @@ export class SchoolPassive {
       L.spent = true;
       this.stats.ken.hits++;
       this.stats.ken.bonus += r.schoolK - 1;
-      if (L.carry > 0 && r.schoolK - 1 > L.ken + 1e-9) this.stats.ken.carried++;
+      if (L.carry > 0 && r.schoolK - 1 > L.ken + 1e-9) (this.stats.ken.carried++), (this.stats.stk.carried += L.carryStk ?? 0);
+      if (L.stk > 0 || L.carryStk > 0) this.stats.stk.hitStk += r.schoolK - 1 > L.ken + 1e-9 ? L.carryStk ?? 0 : L.stk ?? 0;
       if (L.kenSec) {
         this.stats.ken.secretHits++;
         this.stats.ken.secretBonus += r.schoolK - 1;
@@ -213,6 +261,73 @@ export class SchoolPassive {
       L.hit = true;
       this.stats.indes.hits++;
     }
+  }
+
+  /** 스택 더하기 (상한 max — 넘친 몫은 stats over) */
+  addStk(n, why) {
+    if (!(n > 0)) return;
+    const add = Math.min(n, Math.max(0, JT.max - this.stk));
+    this.stk += add;
+    this.stats.stk[why] += add;
+    if (n > add) this.stats.stk.over += n - add;
+  }
+
+  /**
+   * 막기 · 흘려 받기가 듦 (11/14 사장님 '막기나 흘려받기에 2스택' · '흘려받기는 3스택으로 할까?' — JP_TANK.block · flow):
+   *  'block' = 내 칼이 상대 공격을 받아 막음(stamina.js block — 막아 받기 기력을 청구하는 때와 같음 · 상대 공격 번호 하나에 한 번) ·
+   *  'flow' = 흘려 받기(combat.js nagashi — J3 우케나가시가 든 때). 같은 상대 공격에서 둘 다 들면 큰 쪽 하나만(먼저 든 몫을 빼고 더함).
+   *  흘려 받기 수(flowN — C 받아 치기 고노센)는 스택 판과 상관없이 일본 몸이면 셈. att = 상대 몸 · id = 그 공격 번호(stamina.attackId)
+   */
+  guardEvent(kind, att, id) {
+    if (!this.on('japanese') || !this.f.alive) return;
+    let r = this.guardBy.get(att);
+    if (!r || r.id !== id) this.guardBy.set(att, (r = { id, n: 0, flow: false, block: false, fN: false }));
+    if (kind === 'flow' && !r.fN) (r.fN = true), this.flowN++;
+    if (!this.stackOn) return;
+    if (!r[kind]) (r[kind] = true), this.stats.stk.ev[kind]++;
+    const gain = kind === 'flow' ? JT.flow : JT.block;
+    if (gain > r.n) {
+      this.addStk(gain - r.n, kind);
+      r.n = gain;
+    }
+  }
+
+  /** 맞음 (combat.js strike — applyWound 뒤 · real = 상처나 의식이 실제로 깎임): 11/14 '피격에 1스택' — 상대 공격 번호 하나에 한 번 (한 칼이 두 곳을 베어도 +1) */
+  tookHit(att, real) {
+    if (!real || !this.stackOn || !this.f.alive) return;
+    const id = att?.stamina?.attackId ?? 0;
+    if (this.hitBy.get(att) === id) return;
+    this.hitBy.set(att, id);
+    this.stats.stk.ev.hit++;
+    this.addStk(JT.hit, 'hit');
+  }
+
+  /**
+   * 바위 몸 — 스택당 받는 피해 −4 % (사장님 11/14 '바위 몸은 … 스택당 피해 -4%로 해.(스택은 공격하면 사라지는 거야 알지?)' — JP_TANK.rock · rockEach · 몫 열쇠 jpRock):
+   *  받는 칼날 상처 심각도 · 둔타 에너지 배율 1 − rockEach × 스택 (10 스택 0.6 — combat.js analyze). 칼을 내면 스택과 함께 0 → 1
+   */
+  takenK() {
+    if (!JT.rock || !(this.stk > 0) || !this.stackOn || kitOff(this.f, 'jpRock')) return 1;
+    return Math.max(0, 1 - JT.rockEach * this.stk);
+  }
+
+  /**
+   * E 잔기술은 견제로 (11/14 설계안 — JP_TANK.keep · 기본 끔): 지금 묶인 칼이 손목 치기(kote) · 비껴 베기(hirakiGiri)로 읽히면(unique_assist.js strokeTechOf — 긋기 시작 뒤 몇 스텝에 섬)
+   *  묶었던 스택을 돌려받고(상한 max) 그 칼의 몫은 0 — 스택을 쓰지도 지우지도 않음. 칼 하나에 한 번 (update · dealtK 가 부름)
+   */
+  keepCheck() {
+    const L = this.lock;
+    if (!L || L.kept || L.spent || !(L.stk > 0) || L.n !== this.n || !swingingNow(this.f)) return;
+    if (!KEEP_TECH.has(strokeTechOf(this.f))) return;
+    L.kept = true;
+    const S = this.stats.stk;
+    S.kept++;
+    S.strokes--;
+    S.sum -= L.stk;
+    if (L.ken > 0.005) this.stats.ken.charged--;
+    this.stk = Math.min(JT.max, this.stk + L.stk);
+    L.ken = 0;
+    L.stk = 0;
   }
 
   /** 상대 공격이 내게 실패 — 'whiff' 헛침 · 'blocked' 내 칼에 막힘 (ai.js afterStrike · skill.js whiffEnd). 독일만 창을 연다 */

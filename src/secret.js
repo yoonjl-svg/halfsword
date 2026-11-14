@@ -9,7 +9,7 @@
 //   플레이어는 검술 풀이의 measure(같은 꾸러미 값)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, SKILL, BIND, CLOSE, UNIQUE_ASSIST, GAIT, realS } from './config.js';
+import { SECRET, SKILL, BIND, CLOSE, UNIQUE_ASSIST, GAIT, realS, JP_TANK } from './config.js';
 import { TRADITIONS, playerSecretDef } from './schools.js';
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
 import { segDist } from './skill.js';
@@ -871,6 +871,7 @@ export class PlayerSecretWatch {
     //   칼을 쥠 = 손가락이 닿은 자리에서 길게 누름 한도(INPUT.holdPx)를 넘게 끌었음(main.js handGrip — 얹은 손가락의 떨림 · 떠돎은 쥠이 아님) · 막기 단추 · 휘두름. 손가락 몸이 없으면(시뮬 · 마우스) 손가락 움직임 그대로
     if (S.do?.instant && SECRET.iai && SECRET.gnsCrouch) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!me.inputActive || !!me.parryGuard?.held || sw, dt);
     else if (S.do?.instant && SECRET.iai && SECRET.gnsReadyHip) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!(me.handGrip ?? me.inputActive) || !!me.parryGuard?.held || sw, dt, true);
+    if (JP_TANK.counter && S.do?.instant) this.counterTick(busy); // 일본 C 받아 치기 고노센 (11/14 설계안 · 기본 끔): 흘려 받기가 든 뒤 창
     if (S.do?.gilmok) {
       const was = this.gilArm.armed;
       this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy || armHold(me)); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖) · 판 시작 정지 동안 셈 0 (10/27 23:0x — 싱지르와 같은 무장 시계)
@@ -1303,6 +1304,20 @@ export class PlayerSecretWatch {
     this.open = { S: this.S, ctx, t, age: 0 };
     this.opened++;
     return true;
+  }
+
+  /**
+   * 일본 C 받아 치기 고노센 (11/14 설계안 §2-C — config JP_TANK.counter · 기본 끔 · 사장님 확인 전): 흘려 받기(J3 우케나가시 — 상대 공격 하나에 한 번 · school_passive.js flowN)가 든 스텝에
+   *  비기 창을 counterWin 초 연다(ctx.ev 'counter') — 그 안의 공격 입력이 고노센(後の先 — 상대 공격을 받은 뒤의 먼저). 고노센 준비(iaiArm) · 거리 조건은 묻지 않음 ·
+   *  판당 쓸 수(busy — 다 씀) · 비기 실행 중 · 기력 문턱(openWindow) · 이미 열린 창은 그대로. 재기 counter { wins }
+   */
+  counterTick(busy) {
+    const n = this.me.schoolPassive?.flowN ?? 0;
+    if (n === (this.flowSeen ?? 0)) return;
+    this.flowSeen = n;
+    const K = this.me.skillKit; // 몫 열쇠 jpTaiSen — 사장님 11/14 보류('일본만 스킬이 하나 더 많은 거 아냐?'): 칸이 없어 KIT_KEYS 에 없음 → 늘 켬(스위치 JP_TANK.counter 만 · 견줌). 칸이 생겨 KIT_KEYS 에 들면 그 칸을 익혀야
+    if (busy || this.open || (K && 'jpTaiSen' in K && !K.jpTaiSen)) return;
+    if (this.openWindow({ ev: 'counter' }, JP_TANK.counterWin)) this.counterWins = (this.counterWins ?? 0) + 1;
   }
 
   /** 기력이 모자라 거절 (재기 poor.refused — 잇단 스텝 거절은 한 번 · 갈래 by[ctx.ev]) · false */

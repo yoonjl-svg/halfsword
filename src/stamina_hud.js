@@ -1,9 +1,10 @@
 import { Vector3 } from 'three';
-import { STAMINA } from './config.js';
+import { STAMINA, JP_TANK } from './config.js';
 
 /** 두 검객의 머리 위에 붙이는 화면 크기 고정 기력 바. 판마다 DOM을 만들지 않는다.
  *  동시 대전(10/29 — 넷까지): 셋째 · 넷째 바는 셋 이상 판이 처음 올 때만 만든다 (1:1 DOM 은 예전 그대로 둘).
- *   setTeam(true) 인 판(동시 대전 — main.js newTeamRound)은 이름표만 싸움꾼 이름으로. 체력은 왼쪽 위 목록(team_hud.js — 사장님 10/29 22:3x '체력창이 기력바 밑으로 가니까 너무 정신 없다') */
+ *   setTeam(true) 인 판(동시 대전 — main.js newTeamRound)은 이름표만 싸움꾼 이름으로. 체력은 왼쪽 위 목록(team_hud.js — 사장님 10/29 22:3x '체력창이 기력바 밑으로 가니까 너무 정신 없다')
+ *  11/14 일본 기다림과 침 스택 (config JP_TANK · school_passive.js stackShow — 스택 판인 몸만): 기력 막대 바로 밑에 같은 너비 · 같은 굵기의 칸 max 개 — 찬 칸 = 스택 수(가득이면 옅은 빛) */
 export function createStaminaHud(root) {
   const point = new Vector3();
   const viewPoint = new Vector3();
@@ -18,7 +19,16 @@ export function createStaminaHud(root) {
     const fill = document.createElement('span');
     bar.append(fill);
     root.append(bar);
-    return { bar, fill, name, who: null };
+    const ken = document.createElement('div'); // 일본 스택 칸 (11/14)
+    ken.className = 'ken-pips';
+    ken.hidden = true;
+    ken.setAttribute('role', 'meter');
+    ken.setAttribute('aria-label', `${name} 기다림과 침`);
+    ken.setAttribute('aria-valuemin', '0');
+    ken.setAttribute('aria-valuemax', String(JP_TANK.max));
+    for (let i = 0; i < JP_TANK.max; i++) ken.append(document.createElement('i'));
+    root.append(ken);
+    return { bar, fill, name, who: null, ken, kenN: -1 };
   };
   const bars = ['나', '상대'].map(make);
   const more = ['동료', '상대 2'];
@@ -33,9 +43,10 @@ export function createStaminaHud(root) {
       camera.updateMatrixWorld();
       while (bars.length < Math.min(4, fighters.length)) bars.push(make(more[bars.length - 2]));
       bars.forEach((b, i) => {
-        const { bar, fill } = b;
+        const { bar, fill, ken } = b;
         const f = fighters[i];
         bar.hidden = true;
+        ken.hidden = true;
         if (!visible || !STAMINA.on || !f?.alive || f.revival || f.decapitated) return;
         if (f.stamina.infinite) return; // 기력 무한(용사의 눈물 — 플레이어만): 그 사람 막대는 아예 없다 (사장님 10/17 '어차피 기력 무한이기 때문에 기력바 표시하지 않음' · 상대 막대는 그대로)
         const head = f.bodies.head.translation();
@@ -59,6 +70,18 @@ export function createStaminaHud(root) {
         bar.setAttribute('aria-valuenow', String(percent));
         bar.setAttribute('aria-valuetext', st.exhausted ? `탈진 회복 ${Math.round(st.progress * 100)}% · 이동 불가` : `${percent}%${st.level === 2 ? ' · 심한 지침' : st.level === 1 ? ' · 지침' : ''}`);
         fill.style.transform = `scaleX(${st.exhausted ? st.progress : st.ratio})`;
+        const n = f.schoolPassive?.stackShow; // 11/14 일본 스택 (스택 판이 아니면 null — 칸 없음)
+        if (n != null) {
+          ken.hidden = false;
+          ken.style.left = bar.style.left;
+          ken.style.top = bar.style.top;
+          if (n !== b.kenN) {
+            b.kenN = n;
+            [...ken.children].forEach((p, k) => (p.dataset.on = String(k < n)));
+            ken.dataset.full = String(n >= JP_TANK.max);
+            ken.setAttribute('aria-valuenow', String(n));
+          }
+        }
       });
     },
   };

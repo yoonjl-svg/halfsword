@@ -55,6 +55,7 @@ export const SCHOOLS = [
     { id: 'J3', cat: 'parry', name: '막기 II', sub: '흘려 받기', eff: '흘리면 상대 팔 늦춤 · 기력 −40', pre: ['J2'], price: 300, st: 'split', d: 2, cx: 650 },
     { id: 'J10', cat: 'passive', name: '패시브', sub: '켄타이', eff: '기다림과 침 (켄타이) — 공격 없이 기다린 만큼 다음 칼이 세다 (2초에 +30% — 10/25 23:1x · 전 1.5초) · 빗나가면 츠바메가에시로 이어짐 · 비기엔 안 실림', pre: ['J9'], price: 0, heads: 10, st: 'new', d: 3, cx: 200 },
     { id: 'J4', cat: 'parry', name: '막기 III', sub: '흘린 칼', eff: '흘린 공격의 피해 80% 감소', pre: ['J3'], price: 400, st: 'split', d: 3, cx: 650 },
+    { id: 'J12', cat: 'deep', name: '심화', sub: '바위 몸', eff: '바위 몸 (이와오노미 · 巌の身) — 밀치기에 기력 안 씀 · 기다림과 침 스택당 받는 피해 −4 % (11/14 사장님 \'일본은 바위 몸 확정해 … 기다림과 침 다음으로\' · \'전부 권고대로\' — 자리 · 금화 감독 안 그대로 · 유파 호칭에 듦 · docs/strike/jp_tank_2026-11-14.md)', pre: ['J10'], price: 400, st: 'new', d: 4, cx: 200 },
     { id: 'J5', cat: 'secret', name: '비기', sub: '뒤에서 앞서기', eff: '상대가 치려 할 때 먼저 벤다 (고노센)', pre: ['J4'], price: 400, heads: 20, st: 'now', d: 4, cx: 650 },
   ] },
   { id: 'chinese', ko: '동방', title: '동방 — 부채꼴', shape: '가벼운 발에서 공격(요격)과 막기(세 자세) 두 갈래가 활짝 펴지고, 둘이 비기 연환에서 만난다.', nodes: [
@@ -68,6 +69,7 @@ export const SCHOOLS = [
     { id: 'C6', cat: 'atk', name: '날개 접기', sub: '이어 긋기', eff: '물러나는 척 칼을 거두며 나아가 허리를 벤다', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 310 }, // 10/28 00:5x 체보요격과 자리 바꿈
     { id: 'C8', cat: 'parry', name: '막기 II', sub: '단단한 받기', eff: '막는 동안 피해 50% 감소', pre: ['C7'], price: 300, st: 'split', d: 2, cx: 680 },
     { id: 'C10', cat: 'passive', name: '패시브', sub: '토납', eff: '숨 바꾸기 (토납) — 칼을 휘두르지 않는 동안 피가 2배 빨리 멎는다', pre: ['C7'], price: 0, heads: 10, st: 'new', d: 2, cx: 880 },
+    { id: 'C12', cat: 'deep', name: '요격 심화', sub: '맹호은림', eff: '허리를 베는 세 칼이 몸 어디든 칼날 상처를 낼 때마다 사냥 한 겹(최대 5 · 판 끝까지) — 겹마다 상대 기력 회복 −8 % · 격살 빠르기 +8 %', pre: ['C4'], price: 400, st: 'new', d: 3, cx: 130 }, // 11/14 사장님 '이름와 위치는 좋음' · '스택당 기력 회복 -8% 격살 빠르기 +8%' (docs/strike/cn_hunt_2026-11-14.md)
     { id: 'C9', cat: 'secret', name: '비기', sub: '막아 죽이기', eff: '앞으로 나서며 때맞춰 막아 낸 직후 받은 자세가 노리는 급소를 깊게 친다', pre: ['C5', 'C8'], price: 400, heads: 20, st: 'now', d: 3, cx: 590 }, // 10/22 격살로 열림 (전 '연환' · 준비 중)
   ] },
 ];

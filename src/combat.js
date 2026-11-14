@@ -36,6 +36,7 @@ import { UNIQUE_ASSIST as UA, IB_FLOW } from './config.js'; // IB_FLOW.power: �
 import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 판정 배율 (11/06 — SKILL.fingerCut.hit · 기본 1 = 끔)
 import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
 import { kitOff, perkOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4)
+import { huntHit } from './cn_hunt.js'; // 동방 맹호은림 사냥 겹 (11/14 — 출혈 이점이 붙는 맞음에서 · 쌓는 몸만)
 import { MAX_FIGHTERS } from './team.js'; // 셋 이상 판: 같은 편도 적과 똑같이 상처 · 칼 겨루기 (사장님 10/29 22:3x — 제 몸끼리만 버린다)
 
 /** 발도 충돌 끔 쌍: 서로 다른 싸움꾼이고, 충돌을 끄는 중인 쪽의 칼·칼 쪽 팔·빈팔이 낀 쌍 (팔 ↔ 몸, 칼 ↔ 칼) */
@@ -402,6 +403,9 @@ export class Combat {
     //  그 공격의 칼날 상처 심각도 · 둔타 에너지 × (1 − flowDmgCut). 새 공격(번호가 바뀜)부터는 그대로 · 물리(충격 · 가르나 튕기나)는 그대로
     const keepFlow = flowShieldKeep(pr.v.fighter, att);
     if (keepFlow !== 1) { if (type === 'blunt') energy *= keepFlow; else severity *= keepFlow; }
+    // 일본 바위 몸 (사장님 11/14 '스택당 피해 -4%' — config JP_TANK.rock · school_passive.js takenK): 받는 쪽 사람 일본의 지금 스택 × 4 % 만큼 칼날 상처 심각도 · 둔타 에너지를 덜 받음. 물리는 그대로
+    const rockK = vic.schoolPassive?.takenK?.() ?? 1;
+    if (rockK !== 1) { if (type === 'blunt') energy *= rockK; else severity *= rockK; }
     // 이탈리아 막아찌르기(10/21 입력형 — 약한 찌르기): 찌르는 동안 주는 칼날 상처 심각도 · 둔타 에너지 × dealt(0.6). 물리는 그대로
     const oppK = att.parryGuard?.opposition?.dealtK?.() ?? 1;
     if (oppK !== 1) { if (type === 'blunt') energy *= oppK; else severity *= oppK; }
@@ -811,6 +815,7 @@ export class Combat {
       const recovery = Jt > 0 && beginFlowRecovery(O, D);
       const penalty = spendFlowPenalty(O, D);
       D.flowShield = { from: O, attackId: O.stamina?.attackId ?? 0 }; // 흘린 공격의 피해 감소 표시 (analyze — FLOW_REDESIGN.flowDmgCut)
+      D.schoolPassive?.guardEvent?.('flow', O, O.stamina?.attackId ?? 0); // 일본 스택 흘려 받기 (11/14 사장님 — JP_TANK.flow · 막기와 함께 들면 큰 쪽 하나 · school_passive.js)
       this.lastNagashi = { step: this.stepNo, d: D.index, Jt, vn, dir: dir.clone(), recovery, penalty };
       return D;
     }
@@ -840,6 +845,7 @@ export class Combat {
       const recovery = beginFlowRecovery(O, D);
       const penalty = spendFlowPenalty(O, D);
       D.flowShield = { from: O, attackId: O.stamina?.attackId ?? 0 }; // 흘린 공격의 피해 감소 표시 (analyze — FLOW_REDESIGN.flowDmgCut)
+      D.schoolPassive?.guardEvent?.('flow', O, O.stamina?.attackId ?? 0); // 일본 스택 흘려 받기 (11/14 사장님 — JP_TANK.flow · 막기와 함께 들면 큰 쪽 하나 · school_passive.js)
       this.lastNagashi = { step: this.stepNo, d: D.index, Jt, vn, dir: dir.clone(),
         recovery, redesign: true, penalty, age: candidate.age,
         entry: candidate.entry, exitGain: candidate.gain };
@@ -982,12 +988,14 @@ export class Combat {
     //  상처 · 의식 · 아픔 · 그 맞음에 딸린 굴림(무릎 꺾기 · 칼 떨구기 · 채찍)과 맞음 알림(onWound — 소리 · 피 · 멈칫 · 재기)이 없음. 칼과 몸의 물리 · 친 쪽 닿음 청구 · 같은 부위 쉼은 그대로
     if ((r.type !== 'blunt' || r.severity > 0 || r.energy > 10) && (vic.ibLink || vic.ibTradeHit) && vic.ibTradeTry?.(att, r)) { r.traded = true; return r; }
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
+      const cons0 = vic.consciousness;
       vic.applyWound({ ...r, part: pr.v.part, passing }); // passing: 칼이 가르고 지나가는 길(참수는 이 길만)
+      vic.schoolPassive?.tookHit?.(att, r.severity > 0 || vic.consciousness < cons0); // 일본 스택 '피격에 1스택' (11/14 사장님 — 상처나 의식이 실제로 깎인 맞음 · 상대 공격 하나에 한 번 · school_passive.js)
       if (r.severity > 0) att.parryGuard?.opposition?.onDealt?.(r); // 막아찌르기가 상처를 냈나 (칼끝 돌려 빼기 탭 조건 — 실패한 막아찌르기만 엶 · 10/28 01:2x · 사람만)
       if (r.schoolK) att.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (켄타이는 여기서 씀 — school_passive.js)
       if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
       // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈
-      if (r.severity > 0) { const tn = strokeTechOf(att); if ((tn === 'imbroccata' && r.type === 'stab' && !perkOff(att, tn)) || (yaojiBleedTech(tn) && r.type === 'cut' && UA.yaojiBleed?.zones.includes(r.zone) && !perkOff(att, 'yaoji'))) artFlash(att, this.dt); }
+      if (r.severity > 0) { const tn = strokeTechOf(att); const yb = this.yaojiDeep(att, r, tn); if ((tn === 'imbroccata' && r.type === 'stab' && !perkOff(att, tn)) || yb) artFlash(att, this.dt); this.huntWound(att, vic, r, tn, yb); } // 11/14 동방 맹호은림: 허리를 베는 세 칼의 칼날 상처(몸 어디든)에 사냥 한 겹 (cn_hunt.js — 쌓는 몸만 · 공격 하나에 한 겹)
     }
     if (att.weapon?.kneelHit) this.whipKneelCheck(att, vic, pr.v.part); // 채찍 무릎 꿇리기 (10/23 — 한 획에 한 번 · 아래)
     this.koteCheck(att, vic, pr.v.part, r); // 손목 치기 칼 떨구기 (J8 — 아래팔에 판정이 난 맞음: 10/24 12:3x 판정 완화 · 'cut' 판은 칼날 베기 · 심각도 > 0 만)
@@ -1023,6 +1031,21 @@ export class Combat {
    *  p 로 맞은 쪽이 한쪽 무릎을 꿇는다(knockDown(false) — 넘어졌다 일어날 때의 무릎 자세 · 꿇는 시간만 kneel 초 꼴). 그 상대에게는 cool 초 안에 다시 굴리지 않는다.
    *  굴림은 친 쪽 전용 난수(fighter.buckleRandom — Math.random 순서는 그대로). 기록 this.buckleLog { t, att, vic, part, hit }
    */
+  /** 요격 깊은 출혈이 붙는 맞음인가 (analyze bleedPerSev 의 UA.yaojiBleed 조건과 같음 — 허리를 베는 세 칼 · 칼날 베기 · 몸통 · 사람은 심화 C4): 잔상 · 11/14 사냥 겹이 읽음 */
+  yaojiDeep(att, r, tn = strokeTechOf(att)) {
+    return yaojiBleedTech(tn) && r.type === 'cut' && !!UA.yaojiBleed?.zones.includes(r.zone) && !perkOff(att, 'yaoji');
+  }
+
+  /**
+   * 11/14 동방 맹호은림 사냥 겹 (cn_hunt.js huntHit — 쌓는 몸만 · 공격 하나에 한 겹): 허리를 베는 세 칼(yaojiBleed.techs)의 칼날 베기 상처(심각도 > 0) — 몸 어디든
+   *  (사장님 11/14 '동방과 일본은 전부 권고대로' · 전 판 cnHunt.torso 1 = 출혈 × k 가 붙는 몸통 맞음만). strike 와 운동학으로 끄는 칼(secret_instant.js — 날개 접기 등)이 같이 부름
+   */
+  huntWound(att, vic, r, tn = strokeTechOf(att), deep = null) {
+    if (!(r?.severity > 0) || r.type !== 'cut' || !yaojiBleedTech(tn)) return;
+    if (UA.cnHunt?.torso && !(deep ?? this.yaojiDeep(att, r, tn))) return;
+    huntHit(att, vic);
+  }
+
   buckleCheck(att, vic, part) {
     const B = UA.buckle;
     if (!(B?.p > 0) || !vic?.alive || vic.state !== 'stand' || vic.revival || !B.parts.includes(part)) return;
