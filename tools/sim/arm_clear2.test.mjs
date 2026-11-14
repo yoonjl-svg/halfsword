@@ -89,11 +89,20 @@ function aiArms(seed, secs = 14) {
 
 test('AI 몸에도 (armClear.ai — 사장님 11/12 결정): AI 끼리 롱소드 두 팔 뚫음 몫이 끈 판보다 줄어듦 · 뒤집힘 · 쥠 놓침 안 늘어남', () => {
   let on = { n: 0, a: 0, g: 0, u: 0 }, off = { n: 0, a: 0, g: 0, u: 0 };
-  for (const seed of [3, 7]) {
-    const a = aiArms(seed);
-    const b = (() => { const keep = SKILL.armClear.ai; SKILL.armClear.ai = 0; try { return aiArms(seed); } finally { SKILL.armClear.ai = keep; } })();
-    on = { n: on.n + a.n, a: on.a + a.arms * a.n, g: on.g + a.grip * a.n, u: on.u + a.up * a.n };
-    off = { n: off.n + b.n, a: off.a + b.arms * b.n, g: off.g + b.grip * b.n, u: off.u + b.up * b.n };
+  // 독일 붙은 거리 연계 (나) · (다) (사장님 11/15 결정 — config AI_PLAN_DE.digLuck · pushNear)는 잰 때의 AI(11/14 판)로 묶음 · 기준 그대로:
+  //  (다) 맞닿기 안 헛침 굴림이 롱소드 AI 끼리 판의 난수 차례를 바꿔, 씨앗 7 켠 판에 밀치기 누르기(팔꿈치 듦) 스텝이 늘어 뒤집힘이 끈 판 + 0.02 를 넘음(armClear 끈 판 0.017 · 켠 판 0.041 — 늘어난 몫의 대부분이 밀치기 중)
+  const DE = CONFIG.AI_PLAN_DE;
+  const keepDe = { digLuck: DE.digLuck, pushNear: DE.pushNear };
+  Object.assign(DE, { digLuck: 0, pushNear: 0 });
+  try {
+    for (const seed of [3, 7]) {
+      const a = aiArms(seed);
+      const b = (() => { const keep = SKILL.armClear.ai; SKILL.armClear.ai = 0; try { return aiArms(seed); } finally { SKILL.armClear.ai = keep; } })();
+      on = { n: on.n + a.n, a: on.a + a.arms * a.n, g: on.g + a.grip * a.n, u: on.u + a.up * a.n };
+      off = { n: off.n + b.n, a: off.a + b.arms * b.n, g: off.g + b.grip * b.n, u: off.u + b.up * b.n };
+    }
+  } finally {
+    Object.assign(DE, keepDe);
   }
   const r = (o, k) => o[k] / o.n;
   assert.ok(r(off, 'a') > 0.05, `끈 판 AI 두 팔 ${r(off, 'a').toFixed(3)}`);

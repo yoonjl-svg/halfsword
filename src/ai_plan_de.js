@@ -7,14 +7,14 @@
 //
 //  플랜 칸
 //   edge   간 보기 — 상대 칼끝 바로 밖(여유 작게) · 상대가 먼저 휘두르게
-//   dig    파고들기 — 상대 헛침을 보면 두 걸음 박찬 앞 걸음(사람 파고들기와 같은 장치)
-//   push   인물 칸 없는 밀치기(독일 유파 몫) — 닿는 거리 안에서 밀어 묶음(묶임 1.2 s · 기력 × 2 → 칼 씨름 · 모르트슐라크)
+//   dig    파고들기 — 상대 헛침을 보면 두 걸음 박찬 앞 걸음(사람 파고들기와 같은 장치) · 낮은 띠는 굴림 몫만큼 동전으로 뛰어듦(digLuck — 11/15)
+//   push   인물 칸 없는 밀치기(독일 유파 몫) — 닿는 거리 안에서 밀어 묶음(묶임 1.2 s · 기력 × 2 → 칼 씨름 · 모르트슐라크) · 맞닿기 안 헛침에도 밀 마음(pushNear — 11/15)
 //   stick  붙음 물러남을 덜 함 (독일은 덜 떨어짐 — 끄지 않음)
 //   back   뒤 박차기 — 물러나 피하기로 정한 위협에 박찬 뒤 걸음으로 빠짐 (빠진 뒤 헛침을 꾐)
 //   lure   유도(가운데 끝 4 부터) — 바보 자세로 칼끝 끝에 서서 내려베기를 꾐
 //   stam   내 기력 ↔ 상대 기력의 차 (사장님 11/14 '기력 우위일 경우엔 밀지 않을 이유도 없는') — 우위면 밀어 묶고 열세면 칼끝 밖에서 숨 고름 · 띠가 높을수록 또렷 · 높음은 바위 몸 상대면 뒤집음
 // ─────────────────────────────────────────────────────────────
-import { AI_PLAN_DE as D, JP_TANK } from './config.js';
+import { AI_PLAN_DE as D, JP_TANK, AI_PLAN } from './config.js';
 import { lowShoveFree } from './jp_tank.js';
 
 const P = (o) => Object.freeze(o);
@@ -35,8 +35,8 @@ export const DE_PLAN = Object.freeze({
 export function deInit(ai) {
   ai.me.canShove = true; // 인물 칸 없는 밀치기 (독일 유파 몫 — fighter.closeStep 을 탐)
   ai.deClose = { rate: 0, then: 'pommel', pommel: 0 }; // closeQuarters 가 읽는 칸 (밀 몫은 deCloseCfg 가 사건마다 새로 — 객체는 하나)
-  ai.deDig = { t: 0, armed: true, after: 0 }; // after = 파고들기 뒤 밀치기를 크게 기울이는 남은 시간 (digT + AI_PLAN.beat)
-  ai.stats.plan.de = { digTry: 0, dig: 0, back: 0, lure: 0, diffUp: 0, diffDown: 0 };
+  ai.deDig = { t: 0, armed: true, after: 0, push: false }; // after = 파고들기 뒤 밀치기를 크게 기울이는 남은 시간 (digT + AI_PLAN.beat) · push = 밀 마음(pushNear — 맞닿기 안 헛침에서 굴려 났음 · 닿는 거리에 들면 굴림 없이 민다 · 밀거나 after 가 끝나면 지움)
+  ai.stats.plan.de = { digTry: 0, dig: 0, back: 0, lure: 0, diffUp: 0, diffDown: 0, pushTry: 0, pushGo: 0 };
 }
 
 /** 상대가 바위 몸(밀치기에 기력 안 씀 — 사람 · AI 일본 jp_tank.js lowShoveFree)인가 */
@@ -59,11 +59,15 @@ export function deDiff(ai) {
   return d * w;
 }
 
-/** closeQuarters 가 읽는 밀치기 칸 (인물 칸이 없는 독일 플랜 몸): 밀 몫 = push × 기울기 × 칸 × (1 + 기력 차) × (파고들기 뒤면 2 — 헛침 → 파고들기 → 밀치기) · 찍기 몫 = 공통 AI_PLAN.pommel */
+/** 밀 몫 0 ~ 0.95 = push × 기울기 × 칸 × (1 + 기력 차) × (파고들기 뒤면 2 — 헛침 → 파고들기 → 밀치기) */
+function pushRate(ai) {
+  return Math.max(0, Math.min(0.95, D.push * ai.planK * (ai.planC?.push ?? 0) * (1 + deDiff(ai)) * (ai.deDig.after > 0 ? 2 : 1)));
+}
+
+/** closeQuarters 가 읽는 밀치기 칸 (인물 칸이 없는 독일 플랜 몸): 밀 몫 pushRate (밀 마음이 이미 났으면 1 — 들어서면 민다) · 찍기 몫 = 공통 AI_PLAN.pommel */
 export function deCloseCfg(ai, pommel) {
-  const C = ai.planC;
   const R = ai.deClose;
-  R.rate = Math.max(0, Math.min(0.95, D.push * ai.planK * (C?.push ?? 0) * (1 + deDiff(ai)) * (ai.deDig.after > 0 ? 2 : 1)));
+  R.rate = ai.deDig.push ? 1 : pushRate(ai);
   R.pommel = pommel;
   return R;
 }
@@ -91,8 +95,45 @@ export function deStickK(ai) {
 }
 
 /**
+ * 파고들기 굴림 몫 (사장님 11/15 결정 (나) '낮음에서도 조금 크게' — D.digLuck): 계획 몫 dig × 기울기 × 칸 에 공통 틀의 굴림 몫(planLuck — 낮음 ⅔ · 가운데 ⅓ · 높음 0 · 1 − 기울기)을 섞음 —
+ *  계획 몫 × (1 − 굴림 몫) + 동전(AI_PLAN.coin) × 굴림 몫 × 칸 (무계획 — 헛침을 본 때 셈 없이 동전으로 뛰어듦 · 이베리아 · 무유파와 같은 꼴 · 새 값 없음).
+ *  칸 몫 1 에서 낮음 0.2 → 0.4 · 가운데 0.4 → 0.43 · 높음 0.6 그대로. 끄면(0) 계획 몫 그대로
+ */
+function digP(ai, cell) {
+  const p = D.dig * ai.planK * cell;
+  const Lk = D.digLuck ? ai.planLuck ?? 0 : 0;
+  return Lk > 0 ? p * (1 - Lk) + AI_PLAN.coin * Lk * cell : p;
+}
+
+/**
+ * 밀 마음 (사장님 11/15 결정 (다) — D.pushNear): 헛침이 내 맞닿기 거리(무기 간격표 contact — 롱소드 1.57 · 거리 오차 포함 · 내가 믿는 거리) 안이면 파고들기 대신
+ *  밀 몫(pushRate — 닿는 거리 안 사건과 같은 몫)으로 굴림. 나면 닿는 거리 안이면 곧장 밀고(closeWant), 밖이면 파고들기와 같은 창으로 걸어 들어감
+ *  (digT 동안 스틱 앞 끝 · 새 공격 미룸 → afterT 동안 밖이면 걸어 들어감 — deFeet) · 들어서면 굴림 없이 민다(deCloseCfg 1). 새 값 없음. 났으면 true
+ *  인물 칸(persona.close)이 있는 몸은 인물 칸 그대로(이 굴림 없음)
+ */
+function dePushNear(ai, s) {
+  const me = ai.me;
+  if (ai.persona.close || s.state !== 'stand' || !ai.foe.alive || me.state !== 'stand' || me.barge || ai.closeWant || me.stamina?.exhausted || ai.chasing || ai.Mup) return false;
+  const p = pushRate(ai);
+  if (!(p > 0)) return false;
+  ai.stats.plan.de.pushTry++;
+  if (!(Math.random() < p)) return false;
+  ai.stats.plan.de.pushGo++;
+  if (ai.closeInside) {
+    ai.closeWant = true; // 이미 닿는 거리 안 — 지금 민다 (closeQuarters 가 안쪽 · 서 있음을 다시 봄)
+    return true;
+  }
+  const G = ai.deDig;
+  G.t = D.digT;
+  G.after = D.digT + D.afterT;
+  G.push = true;
+  return true;
+}
+
+/**
  * 파고들기 (watch · seize 앞 — 상대 헛침을 본 한 번에 한 번 굴림): 상대가 휘두른 뒤 손이 멈춤(seize 의 recovering 과 같은 셈 — 늦게 본 모습) ·
- *  내 칼끝 안 아님 · 상대 칼끝 어림 + 1.0 안(두 걸음) → dig × 기울기 × 칸 몫으로 gait.deDigAi(두 걸음 박찬 앞 걸음) + digT 동안 스틱 앞 끝(deFeet). 걸었으면 true
+ *  내 칼끝 안 아님 · 상대 칼끝 어림 + 1.0 안(두 걸음) → 파고들기 몫(digP)으로 gait.deDigAi(두 걸음 박찬 앞 걸음) + digT 동안 스틱 앞 끝(deFeet). 걸었으면 true ·
+ *  내 맞닿기 안 헛침은 밀 마음(dePushNear — pushNear 켬)
  */
 export function deDigTry(ai, s, d, recovering) {
   const G = ai.deDig;
@@ -102,10 +143,11 @@ export function deDigTry(ai, s, d, recovering) {
   }
   if (!G.armed || G.t > 0) return false;
   G.armed = false;
+  if (D.pushNear && d < ai.M.contact) return dePushNear(ai, s);
   const C = ai.planC;
   if (!C?.dig || d < ai.M.contact || d > ai.foeReach + 1.0 || s.state !== 'stand' || !ai.me.armed) return false;
   ai.stats.plan.de.digTry++;
-  if (!(Math.random() < D.dig * ai.planK * C.dig)) return false;
+  if (!(Math.random() < digP(ai, C.dig))) return false;
   if (!ai.me.gait?.deDigAi?.()) return false;
   G.t = D.digT;
   G.after = D.digT + D.afterT;
@@ -115,11 +157,12 @@ export function deDigTry(ai, s, d, recovering) {
 
 /**
  * 파고들기 스틱 (moveFeet — 간 보기 · 물러남 · 막기 · 공격 준비 · 다가감): digT 동안 앞 끝(두 걸음 박찬 앞 걸음 — 그동안 ai.startAttack 이 새 공격을 미룸) · 그 뒤 afterT 동안은 밀치기 거리(붙은 거리 규칙 시작 거리) 밖이면
- *  걸어 들어감(헛침 → 파고들기 → 1 m 안 밀치기 — 안에 들면 closeQuarters 가 밀 몫 × 2 로 굴림). 덮었으면 앞뒤 스틱 값 · 아니면 null
+ *  걸어 들어감(헛침 → 파고들기 → 1 m 안 밀치기 — 안에 들면 closeQuarters 가 밀 몫 × 2 로 굴림 · 밀 마음이 났으면 굴림 없이 민다). 덮었으면 앞뒤 스틱 값 · 아니면 null
  */
 export function deFeet(ai, dt, d, startD) {
   const G = ai.deDig;
   if (G.after > 0) G.after -= dt;
+  if (G.push && (!(G.after > 0) || ai.closeWant || ai.me.barge)) G.push = false; // 밀 마음은 밀거나 창이 끝나면 지움
   if (G.t > 0) {
     G.t -= dt;
     if (d >= startD) return 1;

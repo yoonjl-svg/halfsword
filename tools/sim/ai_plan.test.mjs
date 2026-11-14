@@ -571,6 +571,69 @@ test('3 단계 독일 — 내 기력 ↔ 상대 기력의 차 (우위면 밀어 
   }
 });
 
+test('독일 붙은 거리 연계 (사장님 11/15 결정 (나) · (다)): 낮은 띠 파고들기 굴림 몫 · 맞닿기 안 헛침에 밀 마음 · 끄면 11/14 판', async () => {
+  const { deDigTry, deCloseCfg, deFeet } = await import('../../src/ai_plan_de.js');
+  const DE = CONFIG.AI_PLAN_DE;
+  const keep = { digLuck: DE.digLuck, pushNear: DE.pushNear };
+  const R = Math.random;
+  const s = { state: 'stand' };
+  /** 헛침 한 번 (거둠 → 멈춤) 을 굴림 값 u 로 — 건 수 · 밀 마음 */
+  const whiff = (x, d, u) => {
+    const ai = x.ai;
+    ai.me.gait.burst = null;
+    ai.deDig.t = ai.deDig.after = 0;
+    ai.deDig.push = false;
+    deDigTry(ai, s, d, false);
+    Math.random = () => u;
+    try {
+      return deDigTry(ai, s, d, true);
+    } finally {
+      Math.random = R;
+    }
+  };
+  const lo = deAi(2);
+  const hi = deAi(5);
+  try {
+    for (const x of [lo, hi]) x.ai.planC = x.ai.plan.contest;
+    // (나) 칸 몫 1 에서 낮음 0.2 → 0.4 (계획 몫 × (1 − 굴림 몫) + 동전 × 굴림 몫) · 높음 0.6 그대로 (굴림 몫 0)
+    const far = (x) => x.ai.M.contact + 0.2;
+    Object.assign(DE, { digLuck: 0, pushNear: 0 });
+    assert.equal(whiff(lo, far(lo), 0.3), false, '끔: 낮음 0.2 몫 — 0.3 굴림은 안 남');
+    Object.assign(DE, { digLuck: 1 });
+    assert.equal(whiff(lo, far(lo), 0.3), true, '(나): 낮음 0.4 몫 — 0.3 굴림이 남');
+    assert.equal(whiff(lo, far(lo), 0.41), false, '(나): 낮음 0.4 몫 위는 안 남 (기울기 — 늘은 아님)');
+    assert.equal(whiff(hi, far(hi), 0.59), true, '높음 0.6 그대로');
+    assert.equal(whiff(hi, far(hi), 0.61), false, '높음 0.6 그대로');
+    // (다) 맞닿기(무기 간격표 contact — 내가 믿는 거리) 안 헛침: 끄면 굴림 없음 · 켜면 밀 몫으로 굴려 걸어 들어감 → 들어서면 굴림 없이 밂
+    const near = (x) => x.ai.M.contact - 0.3;
+    Object.assign(DE, { pushNear: 0 });
+    hi.ai.closeInside = false;
+    assert.equal(whiff(hi, near(hi), 0), false, '끔: 1 m 밖 맞닿기 안 헛침엔 굴림 없음');
+    assert.equal(hi.ai.stats.plan.de.pushTry, 0);
+    Object.assign(DE, { pushNear: 1 });
+    assert.equal(whiff(hi, near(hi), 0.99), false, '켬: 밀 몫(늘은 아님)으로 굴림');
+    assert.equal(hi.ai.stats.plan.de.pushTry, 1);
+    assert.equal(whiff(hi, near(hi), 0), true, '켬: 밀 마음이 남');
+    assert.ok(hi.ai.deDig.push && hi.ai.deDig.t > 0, '밖이면 파고들기와 같은 창으로 걸어 들어감 (공격 미룸)');
+    assert.equal(hi.ai.me.gait.burst, null, '박찬 걸음은 아님 (걸어 들어감)');
+    assert.equal(deCloseCfg(hi.ai, 0).rate, 1, '들어서면 굴림 없이 민다');
+    assert.equal(deFeet(hi.ai, 0.01, 1.3, 1.0), 1, '닿는 거리 밖 — 스틱 앞 끝');
+    hi.ai.closeWant = true;
+    deFeet(hi.ai, 0.01, 0.9, 1.0);
+    assert.equal(hi.ai.deDig.push, false, '밀었으면 밀 마음을 지움');
+    assert.ok(deCloseCfg(hi.ai, 0).rate < 1, '그 뒤는 평소 밀 몫');
+    hi.ai.closeWant = false;
+    hi.ai.closeInside = true;
+    assert.equal(whiff(hi, 0.95, 0), true);
+    assert.equal(hi.ai.closeWant, true, '이미 닿는 거리 안이면 곧장 민다');
+  } finally {
+    Object.assign(DE, keep);
+    Math.random = R;
+    lo.free();
+    hi.free();
+  }
+});
+
 test('3 단계 — 숙련도 실력 숫자 새 띠 (3 = normal · 4 = hard) · 숙련도 0 = 유파 패시브 · schoolK 0 (권고대로 · 옛 판은 그대로)', () => {
   const lv = (p, on = 1) => withPlan({ on }, () => {
     const G = newRound({ weapon: 'longsword', weapon2: 'rapier', seed: 1 });
