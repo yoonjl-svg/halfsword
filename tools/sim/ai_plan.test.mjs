@@ -63,14 +63,14 @@ test('띠 · 기울기 · 거리 오차 — 사장님 11/14 띠(0 무 · 1 ~ 2 �
   assert.equal(axesOf(1, 'italian').link, true);
   assert.equal(axesOf(0, 'italian').link, false);
   assert.equal(AI_PLAN.on, 1, '1 단계 기본 켬');
-  assert.ok(['italian', 'japanese', 'iberian'].every((t) => AI_PLAN.schools.includes(t)), '1 단계 이탈리아 · 2 단계 일본 · 이베리아');
+  assert.ok(['italian', 'japanese', 'iberian', 'chinese'].every((t) => AI_PLAN.schools.includes(t)), '1 단계 이탈리아 · 2 단계 일본 · 이베리아 · 동방');
 });
 
 test('플랜 열림: 이탈리아 · 띠 무 아님 · 스위치 — 다른 유파는 없음', () => {
   assert.ok(planFor('italian', 2));
   assert.equal(planFor('italian', 0), null, '무 = 플랜 없음');
   for (const t of ['german', 'none']) assert.equal(planFor(t, 5), null, t);
-  for (const t of ['japanese', 'iberian']) assert.ok(planFor(t, 2), `2 단계 ${t}`);
+  for (const t of ['japanese', 'iberian', 'chinese']) assert.ok(planFor(t, 2), `2 단계 ${t}`);
   withPlan({ on: 0 }, () => assert.equal(planFor('italian', 5), null));
   const P = planFor('italian', 3);
   for (const ph of PHASES) assert.ok(P[ph], ph);

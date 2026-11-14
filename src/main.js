@@ -336,6 +336,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (!CONFIG.AI_PLAN.on) CONFIG.JP_TANK.ai = 0; // 2 단계 일본 (11/14): 옛 판이면 AI 일본 스택 · 바위 몸도 끔 (아래 `?jpStackAi=` 가 있으면 그 값)
   if (params.has('aiPlanTick') && +params.get('aiPlanTick') >= 0) CONFIG.AI_PLAN.tick = CONFIG.realS(+params.get('aiPlanTick'));
   if (params.has('aiPlanIb') && !+params.get('aiPlanIb')) for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'iberian'); // `?aiPlanIb=0` = 이베리아만 옛 판 (2 단계 11/14)
+  if (params.get('aiPlanCn') === '0') for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((t) => t !== 'chinese'); // `?aiPlanCn=0` = 동방 플랜만 옛 판 (2 단계 · 11/14 — 플랜 · 거리 오차 · 동방 몫 모두 끔 · 공통 파고들기는 그대로)
 }
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
   const its = params.get('itSecret');

@@ -7,7 +7,14 @@ import { CONFIG, newRound, DT, AI } from './harness_m.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { useSecret } from '../../src/secret.js';
 
-const { SECRET, UNIQUE_ASSIST: UA } = CONFIG;
+const { SECRET, UNIQUE_ASSIST: UA, AI_PLAN } = CONFIG;
+/** 옛 판(`?aiPlan=0` — 유파 플랜 끔)으로 fn: 11/14 사장님 '동방도 반드시 스택이 쌓여야 격살을 쓴다는 절대적 규칙은 지우자 마음의 기울기로 남겨둬' 뒤
+ *  플랜 몸(동방 숙련 1 ~ 6 · 기본 켬)의 격살 쓸 때는 마음의 기울기(ai_plan_cn.js cnWill · 시험 ai_plan_cn.test) — 옛 문(겹 1 · 10 s) 장면은 옛 판에서 그대로 봄 (기준 안 고침) */
+function oldPlan(fn) {
+  const keep = AI_PLAN.on;
+  AI_PLAN.on = 0;
+  try { return fn(); } finally { AI_PLAN.on = keep; }
+}
 
 /** AI 동방(숙련 5) 하나 — 칼 든 상대 앞 · 판 시작 정지는 지난 것으로 */
 function cnAi(prof = 5, weapon = 'qinggang') {
@@ -59,7 +66,7 @@ test('열림: aiOpenSchools 에 동방 · AI 몫(aiSecret) = 격살 · 숙련도
   try { assert.equal(B.ai.secret.name, 'lianhuanParry', '`?gyeoksal=0` = 옛 막기 연환'); } finally { B.free(); SECRET.gyeoksal.on = keep; }
 });
 
-test('쓸 때 (gkWant — 판당 1 번이라 아낌): 상대 사냥 겹 1 이상(11/14 사장님 — 전 3) · 또는 판이 10 s 넘음 — 그 전엔 보통 막기', () => {
+test('쓸 때 (gkWant — 판당 1 번이라 아낌): 상대 사냥 겹 1 이상(11/14 사장님 — 전 3) · 또는 판이 10 s 넘음 — 그 전엔 보통 막기 [옛 판 — 플랜 몸은 마음의 기울기 · ai_plan_cn.test]', () => oldPlan(() => {
   const B = cnAi();
   const { ai } = B;
   try {
@@ -72,9 +79,9 @@ test('쓸 때 (gkWant — 판당 1 번이라 아낌): 상대 사냥 겹 1 이상
     ai.me.fightT = CONFIG.realS(10);
     assert.equal(ai.gkWant(), true);
   } finally { B.free(); }
-});
+}));
 
-test('나서며 받음: 칼로 받기로 정한 막기(respond)에 격살 시도를 두고 걸음은 앞(스틱 1) — 칼이 닿거나 때(gyeoksal.press)가 지나면 보통 막기 걸음(−0.3) · 피하기 · 다 쓴 판은 시도 없음', () => {
+test('나서며 받음: 칼로 받기로 정한 막기(respond)에 격살 시도를 두고 걸음은 앞(스틱 1) — 칼이 닿거나 때(gyeoksal.press)가 지나면 보통 막기 걸음(−0.3) · 피하기 · 다 쓴 판은 시도 없음 [옛 판 — 쓸 때를 옛 문(10 s)으로 여는 장면 · 플랜 몸은 ai_plan_cn.test]', () => oldPlan(() => {
   const B = cnAi();
   const { ai } = B;
   try {
@@ -97,7 +104,7 @@ test('나서며 받음: 칼로 받기로 정한 막기(respond)에 격살 시도
     try { ai.respond({ id: 2, line: 'highR', thrust: false }, 1.35); } finally { Math.random = rnd; }
     assert.equal(ai.gk, null, '판당 1 번을 다 씀');
   } finally { B.free(); }
-});
+}));
 
 test('조건 (사람 gyeoksalTick 과 같음): 처음 닿음이 press 안 · 걸음 앞 · 상대 칼 들어옴 · 0.6 s 안 안 베임 · 받은 줄이 격살 자세 → 갈라지는 스텝에 받은 자세의 급소로 (ctx gk)', () => {
   const B = cnAi();
