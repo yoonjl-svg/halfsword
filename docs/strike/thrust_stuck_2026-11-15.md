@@ -124,5 +124,6 @@ node tools/sim/thrust_motion.mjs --kinds=tap,stich,cut --gap=air,contact [--set=
 ## 6 관문 · 시험
 
 - 스위치 끔(기본)으로 관문 명령을 이 작업 나무에서 그대로 돌림(마지막 소스 고침 뒤): fights12 `f8f2576a` · live_battery `02b66c1f` · finish_thrust 1 --stand `9630b5d3` · corr IDENTICAL 12/12 · weapon_smoke OK 34/34 · 빌드 0 · 이름 방침 0 — **그대로**.
+- `node --test tools/sim/*.test.mjs` — **1002 / 1002 · 실패 0**. 켜면 `hitKPhys` · `lodgeHold` 는 AI 판도 바뀜(물리 — 모두) · `drive` 는 사람 몸만.
 - 새 시험 `tools/sim/thrust_stuck.test.mjs` 6: 기본값 셋 끔 · `thrustDrive` (끔 · AI 몸 null · 칸) · 끄면 판 그대로(physE 없음 · 박힘 0.8) · `hitKPhys` physE = 판정 ÷ 0.8 · 박힘은 physE ≤ absorb · `lodgeHold` 다 쓴 박힘은 다음 스텝에 빠짐 · `drive` 당김 = 빠름 · 몸 싣기 = 멂.
 - 바꾼 파일: `src/combat.js`(hitKPhys · lodgeHold · drive 닿음) · `src/skill.js`(thrustDrive · 당김 · 런지 · 머묾) · `src/config.js`(STRIKE.hitKPhys · lodgeHold · THRUST.drive · driveChamber · driveStep) · `src/main.js`(주소 넷). `src/ai.js` · `src/italian_outbox.js` 는 안 건드림.
