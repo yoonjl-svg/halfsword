@@ -33,6 +33,7 @@
 | G6 심화 · 무릎 꺾기 | `perk: schielhau` — 곁눈 베기 무릎 꺾기 · 잔상 | `combat.js buckleCheck` |
 | G4 막기 II · 왕관 | `parryCover` — 왕관 몸꼴 | `parry_button.js` 덧씌우기 · `nameOf` |
 | G9 패시브 · 인데스 | `passive` | `fighter.js` · `school_passive.js` |
+| G12 심화 · 칼 씨름 (11/14) | `deRing` — 사람 독일 밀치기 묶임 동안 상대 기력이 0 아래면 세게 밀쳐 0.6 m 물림 · 1.2 s 막기 · 공격 못 함 · 그 순간 창 · 기력 회복 2.0 s 막힘 (`docs/strike/de_dirty_2026-11-14.md`) | `de_dirty.js ringCheck` · `fighter.js closeStep` |
 | G10 비기 · 받아 베기 | `secret` — **준비 중** | `PlayerSecretWatch` |
 | G11 뉘른베르크에서 온 편지 | 판 몫 없음 — 카드 뽑기 | §5 |
 

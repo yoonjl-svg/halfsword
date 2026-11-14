@@ -39,11 +39,11 @@ const HEADS_1025 = { passive: 5, secret: 10 }; // 사장님 10/25 01:5x '머리 
 const ids = (...a) => new Set(a);
 
 // ── 자료: 설계 data.mjs 와 같은 칸 · 앞 칸 · 값 · 모양 ──
-test('설계 자료(data.mjs)와 같다: 유파마다 11 칸(일본 · 동방 · 이탈리아 12 — 11/14 J12 · C12 · I12) · id · 갈래 · 앞 칸(모두) · 금화 · 머리 · 곁가지 · 줄 · 가로 자리', () => {
+test('설계 자료(data.mjs)와 같다: 유파마다 12 칸(11/14 J12 · C12 · I12 · B12 · G12 — 전 11) · id · 갈래 · 앞 칸(모두) · 금화 · 머리 · 곁가지 · 줄 · 가로 자리', () => {
   assert.deepEqual(D.TREE_SCHOOLS, DESIGN.map((s) => s.id));
   for (const s of DESIGN) {
     const mine = D.nodesOf(s.id);
-    assert.equal(mine.length, s.id === 'japanese' || s.id === 'chinese' || s.id === 'italian' || s.id === 'iberian' ? 12 : 11, s.id); // [사장님 11/14 결정] '일본은 바위 몸 확정해' · '전부 권고대로' — 일본 새 칸 J12 · 동방 새 칸 C12 맹호은림('이름와 위치는 좋음') (설계 자료 data.mjs 에도 더함 · 다른 유파 11 그대로) · 이탈리아 새 칸 I12 맞박자 찌르기 (11/14 '콘트라템포 ok' — data.mjs 에도 더함) · 이베리아 새 칸 B12 멈추지 않는 칼(맞바꿈)
+    assert.equal(mine.length, 12, s.id); // 11/14 다섯 유파 모두 12 칸 — 독일 G12 칼 씨름('독일 권고대로 해') 더함 · // [사장님 11/14 결정] '일본은 바위 몸 확정해' · '전부 권고대로' — 일본 새 칸 J12 · 동방 새 칸 C12 맹호은림('이름와 위치는 좋음') (설계 자료 data.mjs 에도 더함 · 다른 유파 11 그대로) · 이탈리아 새 칸 I12 맞박자 찌르기 (11/14 '콘트라템포 ok' — data.mjs 에도 더함) · 이베리아 새 칸 B12 멈추지 않는 칼(맞바꿈)
     assert.equal(mine.length, s.nodes.length, `${s.id} 설계 칸 수`);
     for (const d of s.nodes) {
       const n = D.nodeOf(s.id, d.id);
@@ -393,7 +393,8 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('german', 'G4'), ['parryCover']);
   assert.deepEqual(on('german', 'G7'), ['u:duplieren']);
   assert.deepEqual(on('german', 'G6'), ['perk:schielhau']);
-  assert.deepEqual(on('german', 'G9'), ['passive', 'deRing']); // 11/14 칼 씨름 새 몫 열쇠 — 새 칸 자리 대기라 G9 에 임시로 이음 (감독 지시 · 칸이 생기면 그 칸으로) · 11/14 B · C 열쇠 폐기
+  assert.deepEqual(on('german', 'G9'), ['passive']); // 11/14 칼 씨름 몫 임시 이음 걷음 (전 ['passive', 'deRing'])
+  assert.deepEqual(on('german', 'G12'), ['deRing']); // [사장님 11/14 결정] '독일 권고대로 해' — 칼 씨름 (링엔 암 슈베르트) 제 칸
   assert.deepEqual(on('italian', 'I1'), ['footwork']);
   assert.deepEqual(on('italian', 'I3'), ['backFlat']);
   assert.deepEqual(on('italian', 'I12'), ['itTempo']); // 11/14 맞박자 찌르기 (콘트라템포) — 사장님 '콘트라템포 ok' · 보법 II 줄 패시브
@@ -452,7 +453,7 @@ test('판 몫 차례: ?skillNodes → ?uniqueStage(옛 급 N 까지의 칸) → 
   const n = S.playerKit('german', learned, { upTo: 5, nodes: S.skillNodesParam('G1,G2,I1,nope', 'german') }); // ?skillNodes 가 가장 먼저 · 다른 유파 · 모르는 칸은 버림
   assert.deepEqual([n.footwork, n.chase, n.unique.size], [true, true, 0]);
   assert.equal(S.skillNodesParam(null, 'german'), null);
-  assert.equal(S.skillNodesParam('all', 'german').size, 11);
+  assert.equal(S.skillNodesParam('all', 'german').size, 12); // [사장님 11/14 결정] G12 칼 씨름 (전 11)
   assert.equal(S.skillNodesParam('', 'german').size, 0);
 });
 test('몫 읽기(skill_kit.js): skillKit 이 없는 몸(AI · 시뮬)은 늘 켜짐', () => {
@@ -829,7 +830,7 @@ test('칸 오의(lore · src — 사장님 10/22 00:5x 원전의 오의를 밝�
     if (x.letter) assert.equal(x.src, undefined, `${x.id} 편지 칸은 출처 없음`);
     else assert.ok(typeof x.src === 'string' && x.src.trim().length > 0, `${x.id} src`);
   }
-  assert.equal(n, 59); // 11/14 일본 J12 바위 몸 · 동방 C12 맹호은림 · 이탈리아 I12 맞박자 찌르기 · 이베리아 B12 멈추지 않는 칼 (전 55)
+  assert.equal(n, 60); // 11/14 일본 J12 바위 몸 · 동방 C12 맹호은림 · 이탈리아 I12 맞박자 찌르기 · 이베리아 B12 멈추지 않는 칼 · 독일 G12 칼 씨름 (전 55 — 다섯 유파 모두 12 칸)
 });
 
 test('10/23 비기 이름 = 원어 독음 (동방은 한자 한국식 독음) · 스킬 화면 제목은 원어를 괄호로 함께', async () => {

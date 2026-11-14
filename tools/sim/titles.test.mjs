@@ -64,7 +64,7 @@ test('호칭 표: 유파 다섯 = 비기 원전 책 이름 + 계승자 (04:0x �
 
 test('유파 호칭: 칸을 모두 익힌 저장에 얻음(칸을 산 저장과 같은 저장) · 하나 모자라면 없음 · 닫힌 칸은 뺌(10/24 일본 J8 열림 — 이제 듦) · 편지 · 곁가지는 듦', () => {
   fresh();
-  assert.deepEqual(R.titleNodes('german'), D.nodesOf('german').map((n) => n.id)); // 독일 11 칸 모두 (편지 G11 포함)
+  assert.deepEqual(R.titleNodes('german'), D.nodesOf('german').map((n) => n.id)); assert.equal(R.titleNodes('german').length, 12); // 독일 칸 모두 (편지 G11 포함) · [사장님 11/14 결정] G12 칼 씨름도 듦 (전 11)
   assert.equal(R.titleNodes('japanese').includes('J8'), true); assert.equal(R.titleNodes('japanese').length, 12); // 10/24 J8 칼 떨구기 열림 · [사장님 11/14 결정] J12 바위 몸도 듦 (전 11)
   assert.ok(R.titleNodes('iberian').includes('B2') && R.titleNodes('chinese').includes('C2')); // 곁가지 보법 II
   const order = learnOrder('german');
@@ -141,7 +141,7 @@ test('옛 저장: 이미 칸을 모두 익혔거나 방랑이 열린 저장은 �
   assert.deepEqual(P.titleNotices(), []); assert.equal(storage.get(KEY), before, '읽기만으로는 저장하지 않음');
   assert.deepEqual(P.checkTitles(), ['school:german', 'school:chinese', 'wander']);
   assert.deepEqual(P.titleNotices().map((n) => n.name), ['캄프페히텐 계승자', '무비지 계승자', '방랑자']);
-  assert.equal(P.readProgress().level, 1 + 11 + 12 + 1 + 3); // 11/14 동방 칸 12 (C12 맹호은림 — 전 1 + 11 + 11 + 1 + 3)
+  assert.equal(P.readProgress().level, 1 + 12 + 12 + 1 + 3); // 11/14 독일 칸 12 (G12 칼 씨름) · 동방 칸 12 (C12 맹호은림 — 전 1 + 11 + 11 + 1 + 3)
   assert.deepEqual(P.checkTitles(), [], '한 번만');
 });
 
@@ -192,6 +192,22 @@ test('동방 C12 맹호은림을 더한 뒤(11/14): 열한 칸(C12 빼고)으로
   assert.deepEqual(P.checkTitles(), [], '열한 칸만으로는 없음');
   assert.equal(S.learnNode('chinese', 'C12').ok, true);
   assert.deepEqual(events(), ['school:chinese']);
+});
+
+test('독일 G12 칼 씨름을 더한 뒤(11/14 사장님 \'독일 권고대로 해\' — J12 · C12 와 같은 꼴): 열한 칸(G12 빼고)으로 캄프페히텐 계승자를 이미 얻은 저장은 그대로 가짐(호칭 · 레벨 몫) · 열한 칸만 익히고 호칭이 없던 저장은 G12 를 익혀야 얻음', () => {
+  const eleven = skillSave('german').filter((a) => a.receipt !== 'skill:german:G12');
+  assert.equal(eleven.length, 11);
+  fresh({ acquisitions: eleven, titles: [{ event: 'school:german', name: '캄프페히텐 계승자', seen: true }], title: '캄프페히텐 계승자' });
+  assert.deepEqual(P.checkTitles(), []);
+  const p = P.readProgress();
+  assert.deepEqual(p.titles.map((t) => t.event), ['school:german']); assert.equal(p.title, '캄프페히텐 계승자');
+  assert.equal(p.level, 1 + 11 + 1, '칸 열하나 + 호칭 하나');
+  assert.equal(S.learnNode('german', 'G12').ok, true); // 그 저장도 G12 는 새로 익힐 수 있음 · 호칭은 하나 그대로
+  assert.deepEqual(events(), ['school:german']);
+  fresh({ acquisitions: eleven });
+  assert.deepEqual(P.checkTitles(), [], '열한 칸만으로는 없음');
+  assert.equal(S.learnNode('german', 'G12').ok, true);
+  assert.deepEqual(events(), ['school:german']);
 });
 
 test('내림 상자: 호칭이 없으면 빈 목록(여행자 없음) · 처음 얻은 호칭이 저절로 고른 호칭(칸을 산 저장과 같이) · 얻은 차례로 · 고를 수 있음 · 고른 것 저장', () => {
