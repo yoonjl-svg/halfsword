@@ -39,7 +39,7 @@ import { perkOff, kitOff } from './skill_kit.js';
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 — 상대 두 팔 늦춤 (흘림과 같은 장치 · 10/31)
 import { beatTick, beatOk, beatSide, itEdgeGrant, itStats } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14 — 박자 찌르기 B · 칼 우위 A: 헛누름이 들면 · config IT_OUTBOX)
 import { windStart, windStep, windEnd, windLoopOf, windRopesBack } from './iberian_redondo.js';
-import { linkNeed, linkStart, linkStep, linkEnd } from './iberian_link.js'; // B7 이어 돌리기 (11/14 — IB_LINK) // 풍차 베기 머리 위 감기 (B4 — 10/29) // 플레이어 스킬트리 몫 (10/21 — 돌려 베기 쌓기 = 이베리아 심화 B6)
+import { linkNeed, linkStart, linkStep, linkEnd, bridgeMode, bridgePlan, bridgeStep, techDir, bladeOff } from './iberian_link.js'; // B7 이어 돌리기 (11/14 — IB_LINK) // 풍차 베기 머리 위 감기 (B4 — 10/29) // 플레이어 스킬트리 몫 (10/21 — 돌려 베기 쌓기 = 이베리아 심화 B6)
 
 // ── 고유 동작 표 (디렉터 안 → 사장님 확정 10/13 22:3x. 바뀌면 여기 한 곳만 고친다) ──
 //  유파마다 넷 = 발 기술 1 · 공유 2 · 대표 1 (10/21 통폐합으로 둘~셋 — 아래 머리말). stage = 단계(1~4 — AI 는 숙련도로 거른다: 아래 aiUniqueStages · 플레이어는 스킬트리 칸마다 하나 — 10/21 skill_tree_data.js u 칸). name =schools.js 그 유파 unique 의 이름(path 가 있으면 그 이름의 길을 빌림).
@@ -452,7 +452,8 @@ export class PlayerUniqueAssist {
   feed(dx, dy, dt, blocked = false, handHeld = blocked) {
     this.blocked = blocked;
     this.handHeld = handHeld;
-    if (this.link?.phase === 'turn') (this.link.acc[0] += dx), (this.link.acc[1] += dy); // B7 이어 돌리기: 도는 동안의 손가락 몫을 받아 둠 (linkTick 이 물리 스텝마다 줄에 넣음)
+    if (this.linking) (this.link.acc[0] += dx), (this.link.acc[1] += dy); // B7 이어 돌리기: 도는 동안(11/15 넘기기 판 — 기다림 · 넘김 · 닿기 모두)의 손가락 몫을 받아 둠 (linkTick 이 물리 스텝마다 줄에 넣음)
+    if (Math.abs(dx) + Math.abs(dy) > 1e-6) (this.fRaw ??= [0, 0]), (this.fRaw[0] = dx), (this.fRaw[1] = dy); // 11/15 이번 프레임 손가락 방향 (거르지 않은 — 꺾인 뒤 새 방향을 늦지 않게 읽음 · linkWatch)
     if (!(dt > 0)) return;
     const k = 1 - Math.exp(-dt / UA.fingerTau);
     this.fv.x += (dx / dt - this.fv.x) * k;
@@ -982,22 +983,29 @@ export class PlayerUniqueAssist {
    */
   linkTry(cur, start, dir, now) {
     const f = this.f;
-    if (!ibSwap() || this.busy() || iaiBusy(f) || f.ibSpin || f.ibLink || this.winding || f.skill.sec || f.skill.tap || f.skill.pom || f.stamina.exhausted || f.state !== 'stand' || !f.sword || !f.armed) return false;
+    if (!ibSwap() || this.link || this.busy() || iaiBusy(f) || f.ibSpin || f.ibLink || this.winding || f.skill.sec || f.skill.tap || f.skill.pom || f.stamina.exhausted || f.state !== 'stand' || !f.sword || !f.armed) return false;
     if (IB_LINK.cool && this.cooling(this.cingirE)) return false;
-    if (!((f.ibFlowChainNow?.() ?? -1) >= 0)) return false;
-    const fd = this.fSpeed > SKILL.swingSpeed ? [this.fv.x / this.fSpeed, this.fv.y / this.fSpeed] : dir; // 손가락 그대로의 방향 (손 목표는 손 반지름에서 잘려 휠 수 있음 — 끝 자리에서 그은 칼)
+    // 앞 진짜 긋기가 끝나고 이어짐 창 안 · 11/15 또는 앞 진짜 긋기가 아직 휘두르는 중(손가락을 쉬지 않고 다음 칼을 그음 — 전엔 앞 칼이 끝나기 전에 그은 다음 칼은 원도 없고 손 반지름 끝에 막혀 안 나감)
+    if (!((f.ibFlowChainNow?.() ?? -1) >= 0) && !(f.ibFlowSw && (f.ibFlowPk ?? 0) >= IB_FLOW.cutSpeed)) return false;
+    const rn = this.fRaw ? Math.hypot(this.fRaw[0], this.fRaw[1]) : 0;
+    const fd = this.fSpeed > SKILL.swingSpeed ? (rn > 1e-9 ? [this.fRaw[0] / rn, this.fRaw[1] / rn] : [this.fv.x / this.fSpeed, this.fv.y / this.fSpeed]) : dir; // 손가락 그대로의 방향 (손 목표는 손 반지름에서 잘려 휠 수 있음 — 끝 자리에서 그은 칼) · 11/15 거르지 않은 이번 프레임 방향
     const t = linkNeed(start, fd);
     if (!t) return false;
     const n0 = f.ibLastN ?? 0;
     const pd = this.last?.dir; // 앞 칼이 가던 가로 쪽 (패드 x + = 칼 든 쪽 = 가로 각 +) — 원은 그 기세를 이어 돎 (iberian_link.js linkPlan)
-    if (!linkStart(f, t.from, { tech: t.name, sigma: pd && Math.abs(pd[0]) > 0.25 ? Math.sign(pd[0]) : 0 })) return false;
     const hold = [f.handOffset.x, f.handOffset.y];
+    // 11/15 넘기기 판 (기본 — iberian_link.js bridgePlan): 손 목표를 지금 자리 · 앞 칼이 남긴 빠르기(관성)에서 다음 칼 시작 자리 · 그은 손가락 빠르기(그 칼 첫 방향)로 —
+    //  앞 칼이 아직 끝 자리로 가는 중이면 먼저 기다림(wait — 앞 칼을 자르지 않음 · linkTick) · 길은 그때 짬
+    const bm = bridgeMode();
+    const vs = Math.max(this.fSpeed, IB_FLOW.cutSpeed);
+    if (!bm && !linkStart(f, t.from, { tech: t.name, sigma: pd && Math.abs(pd[0]) > 0.25 ? Math.sign(pd[0]) : 0 })) return false;
     // 원을 부른 손가락 첫머리(시작 자리 → 지금 손)도 받아 둠 — 손가락 빠르기로 그 스텝 수만큼 나눠 (다시 그을 때 한 스텝에 뛰지 않게 — 그은 빠르기 그대로)
     const lead = [hold[0] - start[0], hold[1] - start[1]];
     const per = (Math.max(this.fSpeed, SKILL.swingSpeed) * SKILL_DT) / realS(1);
     const nLead = Math.min(30, Math.max(1, Math.ceil(Math.hypot(lead[0], lead[1]) / per)));
     const q = Array.from({ length: nLead }, () => [lead[0] / nLead, lead[1] / nLead]);
-    this.link = { phase: 'turn', tech: t.name, to: t.from.slice(), hold, q, acc: [0, 0], t0: now, n0 };
+    this.link = { phase: bm ? 'wait' : 'turn', tech: t.name, to: t.from.slice(), hold, q, acc: [0, 0], t0: now, n0, vs, tw: now, wounds0: f.wounds?.length ?? 0 };
+    if (bm) f.ibLinkWait = true; // 넘기기 기다림 (fighter.js updateIbFlow · stamina.js — 다음 칼 손가락 첫머리를 긋기로 안 셈)
     cur.link = t.name; // 원을 부른 손가락 첫머리 (다음 칼은 원 뒤 새 긋기)
     if (this.cur) this.closeStroke(now);
     this.wasSwing = false;
@@ -1017,10 +1025,16 @@ export class PlayerUniqueAssist {
     const fast = this.fSpeed > SKILL.swingSpeed;
     const was = this.fFast;
     this.fFast = fast;
-    if (!fast || was) return;
     const f = this.f;
-    const start = this.restPos ?? [f.handOffset.x, f.handOffset.y];
-    const dir = [this.fv.x / this.fSpeed, this.fv.y / this.fSpeed];
+    if (!fast) return void (this.fDir0 = null);
+    const rn = this.fRaw ? Math.hypot(this.fRaw[0], this.fRaw[1]) : 0;
+    const dir = rn > 1e-9 ? [this.fRaw[0] / rn, this.fRaw[1] / rn] : [this.fv.x / this.fSpeed, this.fv.y / this.fSpeed]; // 11/15 거르지 않은 이번 프레임 방향 (걸러진 빠르기는 꺾이는 동안 가운데 쪽 — ↙ 뒤 → 가 ↘ 로 읽힘)
+    // 11/15 손가락이 쉬지 않고 꺾여 다음 칼로 감(빠른 채 꺾임 — detect 의 꺾임 각과 같음) = 그 꺾인 자리에서 새 긋기 (전엔 손가락이 한 번 느려져야만 봄 — 쉬지 않고 이어 그은 다음 칼이 안 나감)
+    const turn = was && this.fDir0 && angDeg(dir, this.fDir0) > UA.turnDeg;
+    if (was && !turn) return;
+    this.fDir0 = dir;
+    const start = turn ? [f.handOffset.x, f.handOffset.y] : this.restPos ?? [f.handOffset.x, f.handOffset.y];
+    if (this.link) return void (this.linkPend = { start, dir, t: this.t }); // 넘기는 중 · 받아 둔 칼을 다시 긋는 중에 든 새 긋기: 그 칼이 다 나간 뒤 (linkTick)
     const cur = { tech: null, kind: 'cut', pad: null, t0: this.t, dir, start, landed: false, bound: false, tEnd: null, unique: null };
     if (this.linkTry(cur, start, dir, this.t)) this.stats.link.watch = (this.stats.link.watch ?? 0) + 1;
   }
@@ -1031,10 +1045,10 @@ export class PlayerUniqueAssist {
     const sk = f.skill;
     if (!f.alive || !f.armed || f.weaponBroken || !f.sword) return 'armed';
     if (f.state !== 'stand') return 'down';
-    if ((f.wounds?.length ?? 0) > (f.ibLink?.wounds0 ?? 0)) return 'hit';
+    if ((f.wounds?.length ?? 0) > (f.ibLink?.wounds0 ?? this.link?.wounds0 ?? 0)) return 'hit';
     if (sk.sec || f.ibSpin) return 'secret';
     if (f.stamina.exhausted) return 'exhausted';
-    if (f.jolt > 0.5) return 'jolt'; // 칼을 세게 맞음 (풍차 감기 windStop 과 같은 문턱)
+    if (f.jolt > 0.5 && !bridgeMode()) return 'jolt'; // 칼을 세게 맞음 (풍차 감기 windStop 과 같은 문턱) · 11/15 넘기기 판은 서보가 칼을 몰아 칼끼리 닿아도 물리대로 (그만두지 않음)
     if (sk.tap || sk.pom || f.iai || f.iaiReq || !f.foe) return 'busy';
     if (!IB_LINK.on || !UA.on) return 'off';
     return null;
@@ -1044,12 +1058,51 @@ export class PlayerUniqueAssist {
   linkTick(dt) {
     const f = this.f;
     const L = this.link;
+    if (L.phase === 'wait') {
+      // 11/15 앞 칼이 끝 자리로 가는 동안 (무거운 칼은 손가락보다 늦음): 손 목표를 앞 칼 끝에 둔 채 손가락 몫을 받아 둠 · 칼이 그 자리 자세 허용 각(UNIQUE_ASSIST.angle) 안에
+      //  오거나 IB_LINK.bridgeMin 지나면 넘기기 시작 (앞 칼이 잘리지 않아 그 칼의 맞음 · 흐름 위력 그대로)
+      L.q.push([L.acc[0], L.acc[1]]);
+      L.acc[0] = L.acc[1] = 0;
+      const why = this.linkStop();
+      if (why) return this.linkCancel(why);
+      f.handOffset.set(L.hold[0], L.hold[1]);
+      if (IB_LINK.waitA && bladeOff(f, L.hold) > UA.angle && this.t - L.tw < IB_LINK.bridgeMin) return;
+      const sk = f.skill;
+      const t = TECH_BY_NAME[L.tech];
+      const td = techDir(t);
+      const bridge = bridgePlan(L.hold, [sk.aimVel.x, sk.aimVel.y], t.from, [td[0] * L.vs, td[1] * L.vs]);
+      f.ibLinkWait = false;
+      if (!linkStart(f, t.from, { tech: t.name, bridge })) return this.linkCancel('busy');
+      f.ibLink.wounds0 = L.wounds0;
+      L.phase = 'turn';
+      L.tw = this.t;
+      return;
+    }
+    if (L.phase === 'arrive') {
+      // 11/15 손 목표가 다음 칼 시작 자리에 왔는데 칼이 아직 오는 중: 칼이 그 자세 허용 각 안에 오거나 IB_LINK.bridgeMin 지나면 받아 둔 긋기를 곧장
+      L.q.push([L.acc[0], L.acc[1]]);
+      L.acc[0] = L.acc[1] = 0;
+      const why = this.linkStop();
+      if (why) return this.linkCancel(why);
+      f.handOffset.set(L.to[0], L.to[1]);
+      if (bladeOff(f, L.to) > UA.angle && this.t - L.tw < IB_LINK.bridgeMin) return;
+      return this.linkRelease(L, false);
+    }
     if (L.phase === 'turn') {
       L.q.push([L.acc[0], L.acc[1]]);
       L.acc[0] = L.acc[1] = 0;
       if (!f.ibLink) return this.linkCancel('lost');
       const why = this.linkStop();
       if (why) return this.linkCancel(why);
+      if (f.ibLink.bridge) {
+        // 11/15 넘기기 판: 손 목표를 넘기기 길 위로 (손가락이 더한 몫은 줄에 있음) · 다 오면 받아 둔 긋기를 같은 빠르기로 곧장 이어 그음 (멈추지 않음 — 손 목표를 붙들지 않음)
+        const p = bridgeStep(f, dt);
+        f.handOffset.set(p[0], p[1]);
+        if (!f.ibLink.done) return;
+        L.tw = this.t;
+        if (IB_LINK.arrive && bladeOff(f, L.to) > UA.angle) return void (L.phase = 'arrive'); // 칼이 아직 오는 중 — 시작 자리에서 잠깐 (위 arrive)
+        return this.linkRelease(L, true);
+      } else {
       f.handOffset.set(L.hold[0], L.hold[1]); // 손가락이 더한 몫은 줄에 있음
       if (linkStep(f, dt)) this.stats.link.touch++;
       if (!f.ibLink.done) return;
@@ -1066,29 +1119,79 @@ export class PlayerUniqueAssist {
       while (L.q.length && !L.q.at(-1)[0] && !L.q.at(-1)[1]) L.q.pop(); // 손가락이 멈춘 뒤 몫은 버림 (그 뒤는 손가락 그대로)
       this.stats.link.done++;
       if (IB_LINK.cool) this.coolT[this.cingirE.name] = this.t;
+      }
       // 첫 몫은 이 스텝에 (아래로)
     }
     if (L.phase === 'replay') {
       // 끈 손가락 몫을 다시 그음 (스텝마다 하나 — 그은 빠르기 그대로) · 다 그으면 끝 — 그 사이 새 손가락 몫은 main.js 가 그대로 더함
       const d = L.q.shift();
       if (d) (f.handOffset.x += d[0]), (f.handOffset.y += d[1]);
-      if (!L.q.length || f.state !== 'stand' || !f.armed) this.link = null;
+      if (!L.q.length || f.state !== 'stand' || !f.armed) {
+        this.link = null;
+        // 11/15 받아 둔 칼을 긋는 동안 든 새 긋기(linkWatch — linkPend): 그 칼이 다 나간 이제 (손가락이 아직 그쪽으로 가면)
+        const P = this.linkPend;
+        this.linkPend = null;
+        if (P && this.fSpeed > SKILL.swingSpeed && angDeg([this.fv.x / this.fSpeed, this.fv.y / this.fSpeed], P.dir) <= UA.turnDeg) {
+          const cur = { tech: null, kind: 'cut', pad: null, t0: this.t, dir: P.dir, start: P.start, landed: false, bound: false, tEnd: null, unique: null };
+          this.linkTry(cur, [f.handOffset.x, f.handOffset.y], P.dir, this.t);
+        }
+      }
     }
+  }
+
+  /**
+   * 11/15 넘기기 끝 → 받아 둔 긋기를 곧장 (replay): moving = 손 목표가 길 끝 빠르기로 오던 채(멈추지 않음) — 걸러진 빠르기는 길 끝에서 꺾이는 몫을 늦게 읽어(앞 몫 쪽)
+   *  다음 칼 첫 방향을 엇읽으므로 이음매의 참 빠르기(길 끝 빠르기 = 다음 칼 첫 방향 · 손가락 빠르기)로 맞춤 · 시작 자리에서 기다렸으면(arrive) 그대로
+   */
+  linkRelease(L, moving) {
+    const f = this.f;
+    if (f.ibLink?.touch) this.stats.link.touch += f.ibLink.touch;
+    const K = linkEnd(f);
+    if (moving && K?.bridge) {
+      const B = K.bridge;
+      const v3x = ((B.P[3][0] - B.P[2][0]) * 3) / B.T;
+      const v3y = ((B.P[3][1] - B.P[2][1]) * 3) / B.T;
+      const sk = f.skill;
+      sk.vel.set(v3x, v3y);
+      if (sk.inputMotion) sk.inputMotion.vel.set(v3x, v3y);
+    }
+    this.restPos = L.to.slice();
+    this.wasSwing = false;
+    if (this.cur) this.closeStroke(this.t);
+    L.phase = 'replay';
+    while (L.q.length && !L.q.at(-1)[0] && !L.q.at(-1)[1]) L.q.pop();
+    this.stats.link.done++;
+    if (IB_LINK.cool) this.coolT[this.cingirE.name] = this.t;
   }
 
   /** 이어 돌리기 그만둠: 놓기를 멈춤 (칼은 서보로 — 손 목표는 쥐었던 자리) · 받아 둔 긋기는 버림 */
   linkCancel(why) {
     const f = this.f;
-    linkEnd(f);
-    if (f.alive && f.armed) snapAim(f, this.link.hold);
-    this.link = null;
+    f.ibLinkWait = false;
+    const K = linkEnd(f);
+    if (f.alive && f.armed && K && !K.bridge) snapAim(f, this.link.hold); // 원 판: 쥐었던 자리로 · 11/15 넘기기 판은 손 목표가 이미 길 위 (서보가 칼을 몰았으니 그 자리 그대로)
     const st = this.stats.link;
     if (st) st.cancel[why] = (st.cancel[why] ?? 0) + 1;
+    // 11/15 넘기기 판 (사장님 "내가 실제로 조작한 다음칼이 나가지도 않았어"): 그만둬도 받아 둔 손가락 긋기는 버리지 않고 지금 자리에서 그대로 그음 — 이 스킬이 없을 때와 같은 손
+    //  (넘어짐 · 칼 없음 · 비기 · 탭 · 손잡이 찍기 · 발도처럼 칼을 못 쓰거나 다른 입력이 손을 가진 때만 버림)
+    const L = this.link;
+    if (bridgeMode() && L && (why === 'hit' || why === 'exhausted' || why === 'lost') && f.alive && f.armed && f.state === 'stand') {
+      L.q.push([L.acc[0], L.acc[1]]);
+      L.acc[0] = L.acc[1] = 0;
+      while (L.q.length && !L.q.at(-1)[0] && !L.q.at(-1)[1]) L.q.pop();
+      if (L.q.length) {
+        L.phase = 'replay';
+        this.wasSwing = false;
+        return;
+      }
+    }
+    this.link = null;
+    this.linkPend = null;
   }
 
   /** 이어 돌리는 중인가 (원 동안 — 재는 도구 · main.js 는 몰라도 됨: 손가락 몫은 feed 가 받음) */
   get linking() {
-    return this.link?.phase === 'turn';
+    return this.link?.phase === 'turn' || this.link?.phase === 'wait' || this.link?.phase === 'arrive';
   }
 
   /** 탭 창 (TAP_TRIG): age < from 이면 이른 탭 — 그 기회를 없앰(from > 0 일 때) · from ~ to 면 { spend } · 그 밖 null */
@@ -1349,7 +1452,7 @@ export class PlayerUniqueAssist {
   detect(dt, swinging, inputVelocity = this.f.skill.vel) {
     const now = this.t;
     this.track();
-    if (this.link?.phase === 'turn') {
+    if (this.linking) {
       // B7 이어 돌리기 동안: 손 목표를 쥐어 휘두르기가 잦아드는 몫은 긋기가 아님 (원 뒤 다시 긋는 칼이 새 긋기)
       this.wasSwing = false;
       this.quietT += dt;
@@ -1366,7 +1469,7 @@ export class PlayerUniqueAssist {
       this.ready = ready ? { name: ready.U.name, nameKo: ready.U.nameKo } : null;
       this.quietT += dt;
       if (this.cur && this.quietT >= UA.onsetQuiet) this.closeStroke(now - this.quietT);
-      if (this.fSpeed < SKILL.swingSpeed) this.restPos = hand; // 시작 자리 = 손가락이 빨라지기 직전 자리 (검술 층 휘두르기 판단은 손 목표 속도를 고르느라 한두 프레임 늦다)
+      if (this.fSpeed < SKILL.swingSpeed && this.link?.phase !== 'replay') this.restPos = hand; // 시작 자리 = 손가락이 빨라지기 직전 자리 (11/15 받아 둔 칼을 다시 긋는 동안은 그 칼 시작 자리 그대로 — 전엔 다시 긋기 첫머리에 자리가 밀려 왼 분노의 베기가 찌르기로 읽힘) (검술 층 휘두르기 판단은 손 목표 속도를 고르느라 한두 프레임 늦다)
       return;
     }
     this.quietT = 0;
@@ -1462,7 +1565,7 @@ export class PlayerUniqueAssist {
   drive(dt) {
     this.t += dt;
     const f = this.f;
-    if (this.cingirE && IB_LINK.on && !this.link) this.linkWatch(); // B7 이어 돌리기 (11/14): 손가락 긋기 시작을 손가락으로 봄 (손 목표가 손 반지름 끝에 막혀 못 움직여도)
+    if (this.cingirE && IB_LINK.on) this.linkWatch(); // B7 이어 돌리기 (11/14): 손가락 긋기 시작을 손가락으로 봄 (손 목표가 손 반지름 끝에 막혀 못 움직여도)
     if (this.link) this.linkTick(dt); // B7 이어 돌리기 (11/14): 도는 동안 손 목표를 쥐고 · 끝나면 받아 둔 긋기를 다시 그음
     if (UA.stepIn && UA.stepPre > 0) this.stickTick(); // 걸음 공격 스틱 기억 (11/05 — 앞 창 stepPre · 기본 끔)
     if (UA.cavCancel && this.cavFire) this.cavCancelTick();

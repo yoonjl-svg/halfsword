@@ -22,7 +22,7 @@ import { STAMINA } from './config.js';
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF, AI_MAAI, IB_LINK } from './config.js';
-import { linkStart, linkEnd } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — IB_LINK.ai · 기본 켬 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해')
+import { linkStart, linkEnd, bridgeMode, bridgePlan, bridgeStep, techDir } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — IB_LINK.ai · 기본 켬 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해')
 import { ibInit, ibAfter, ibTick, ibCircle, ibSide, ibFeetV, ibWatch, ibSidePost, ibFwdPost } from './ai_plan_ib.js'; // 유파 플랜 2 단계 이베리아 (11/14 — 플랜 표 ib 표식일 때만 this.ibPlan · 셈은 그 파일)
 import { readInit, readTick, readNeed, readFeetV, readTechK, readChainK } from './ai_read.js'; // 3 단계 수 읽기 그릇 (11/14 — 플랜이 있는 몸만 this.read · 셈은 그 파일)
 import { Senses } from './ai_sense.js';
@@ -1740,7 +1740,7 @@ export class AI {
     if (UA.rdAiWind && this.tech?.name === 'redondo' && !this.feint && !this.secretRun && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin(); // 부러진 칼은 옛 길 (사람도 부러지면 감기를 그만둠 — windStop 'armed')
     // 이어 돌리기 (11/14 IB_LINK.ai — 기본 켬 · 사장님 11/14 확인 'ai에게도 똑같이' · 사람 unique_assist.js linkTry 와 같은 뜻 · 원 동안 맞바꿈도 사람과 같음 — fighter.js ibTradeTry): 이베리아 AI 가 앞 공격이 끝나고 이어짐 창(afterWindow) 안에 큰 칼(시작 자리가 가슴 높이 이상인 베기)을
     //  새로 시작하는데 손이 그 시작 자리에서 떨어져 있으면 — 준비 자세로 손을 옮기는 대신 칼을 머리 위로 돌려 시작 자리로(iberian_link.js) · 다 돌면 곧장 친다(linkTick)
-    else if (IB_LINK.ai && this.art.tradition === 'iberian' && this.phase === 'windup' && !opt.secret && !opt.passive && !this.feint && !this.secretRun && this.tech?.kind === 'cut' && this.tech.from[1] > 0 && cd > UA.padRadius && this.sense.t - this.lastAtkT <= UA.afterWindow && this.me.state === 'stand' && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.ibLink && !iaiBusy(this.me) && linkStart(this.me, this.tech.from, { tech: this.tech.name })) {
+    else if (IB_LINK.ai && this.art.tradition === 'iberian' && this.phase === 'windup' && !opt.secret && !opt.passive && !this.feint && !this.secretRun && this.tech?.kind === 'cut' && this.tech.from[1] > 0 && cd > UA.padRadius && this.sense.t - this.lastAtkT <= UA.afterWindow && this.me.state === 'stand' && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.ibLink && !iaiBusy(this.me) && linkStart(this.me, this.tech.from, { tech: this.tech.name, bridge: this.linkBridge(L) })) {
       this.phase = 'ibLink';
       (this.stats.ibLink ??= { fired: 0, done: 0, cancel: {} }).fired++;
     }
@@ -1820,7 +1820,7 @@ export class AI {
     this.attackT += dt;
     if (this.phase === 'rdWind') return this.rdWindTick(dt, d, th); // 풍차 베기 AI 몫 감기 (10/31 — 아래)
     if (this.phase === 'rdStrike') return this.rdStrikeTick();
-    if (this.phase === 'ibLink') return this.linkTick(); // AI 이어 돌리기 (11/14 — IB_LINK.ai)
+    if (this.phase === 'ibLink') return this.linkTick(dt); // AI 이어 돌리기 (11/14 — IB_LINK.ai)
     // 약한 자세 겨눔: 준비하는 동안 다시 본다 (늦게 본 모습으로). 빈틈이 닫히면 보정만 내려놓고 하던 공격은 그대로 (치기 시작한 뒤엔 고정)
     if (this.vital && !this.vital.started && (this.phase === 'windup' || this.phase === 'approach')) this.vital = aiVitalPrepare(this, s, t);
     if (this.phase === 'windup') {
@@ -2195,15 +2195,36 @@ export class AI {
 
   /** 내려침이 끝날 때까지 (운동학 칼) → 뒤따름 (follow — 칼이 다 지나가면 afterStrike) */
   /** AI 이어 돌리기 끝 보기 (11/14 IB_LINK.ai — 놓기는 skill.js 가 스텝마다 linkStep): 맞음 · 넘어짐 · 칼을 세게 맞음 · 다른 칼 길이면 그만둠(공격을 거둠) · 다 돌면 손 목표를 시작 자리로 놓고 곧장 친다 */
-  linkTick() {
+  /** 넘기기 길 (11/15 넘기기 판 — iberian_link.js bridgePlan · 사람 unique_assist.js linkTry 와 같은 셈): 지금 손 목표 · 걸러진 손 목표 빠르기(관성) → 이 칼 시작 자리 · 이 칼 첫 방향 × 베기 손 빠르기. 원 판이면 null */
+  linkBridge(L) {
+    if (!bridgeMode()) return null;
+    const me = this.me;
+    const d = techDir(this.tech);
+    const v = L.strikeSpeed * me.stamina.attackSpeed;
+    return bridgePlan([me.handOffset.x, me.handOffset.y], [me.skill.aimVel.x, me.skill.aimVel.y], this.tech.from, [d[0] * v, d[1] * v]);
+  }
+  linkTick(dt) {
     const me = this.me;
     const K = me.ibLink;
     const st = (this.stats.ibLink ??= { fired: 0, done: 0, cancel: {} });
-    const why = !K ? 'lost' : !me.alive || !me.armed || !me.sword ? 'armed' : me.state !== 'stand' ? 'down' : (me.wounds?.length ?? 0) > K.wounds0 ? 'hit' : me.jolt > 0.5 ? 'jolt' : me.iai || me.iaiReq || me.skill.sec ? 'busy' : null;
+    const why = !K ? 'lost' : !me.alive || !me.armed || !me.sword ? 'armed' : me.state !== 'stand' ? 'down' : (me.wounds?.length ?? 0) > K.wounds0 ? 'hit' : me.jolt > 0.5 && !K.bridge ? 'jolt' : me.iai || me.iaiReq || me.skill.sec ? 'busy' : null;
     if (why) {
       if (K) linkEnd(me);
       st.cancel[why] = (st.cancel[why] ?? 0) + 1;
       return this.abortAttack();
+    }
+    if (K.bridge) {
+      // 11/15 넘기기 판: 손 목표를 길 위로 (서보가 칼을 몲) · 다 오면 붙들지 않고 곧장 친다(손 목표 빠르기 그대로 — 아래 approach 가 거리를 보고 strike)
+      const p = bridgeStep(me, dt);
+      me.handOffset.set(p[0], p[1]);
+      this.hand.set(p[0], p[1]);
+      if (!K.done) return;
+      linkEnd(me);
+      st.done++;
+      st.touch = (st.touch ?? 0) + K.touch;
+      this.phase = 'approach';
+      this.timer = 0;
+      return;
     }
     if (!K.done) return;
     linkEnd(me);

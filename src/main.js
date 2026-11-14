@@ -515,6 +515,8 @@ if (params.has('ibFreeEvery')) CONFIG.IB_FLOW.freeEvery = Math.max(0, Math.round
 //  `?ibTrade=0` B12 맞바꿈 '멈추지 않는 칼' 효과 끔(기본 켬 — 칸을 익힌 사람 · AI 이베리아 · 견줌) · `?ibLinkAi=0` AI 이어 돌리기 끔(기본 켬 — 11/14 사장님 'ai에게도 똑같이' · 0 = AI 풍차 베기 판) · 스위치(견줌 · 기본 끔): `?ibChainArm=1` B 사슬 세 칼 넘으면 알티바슈 포르트 곧장 무장
 if (params.has('ibLink')) CONFIG.IB_LINK.on = +params.get('ibLink') ? 1 : 0;
 if (params.has('ibLinkT')) CONFIG.IB_LINK.time = CONFIG.realS(Math.max(0.05, +params.get('ibLinkT') || 0.4));
+if (params.has('ibLinkMode')) CONFIG.IB_LINK.mode = params.get('ibLinkMode') === 'circle' ? 'circle' : 'bridge'; // 11/15 넘기기 판(기본) · 'circle' = 11/14 머리 위 원 판 (견줌)
+if (params.has('ibTradeT')) CONFIG.IB_LINK.tradeT = CONFIG.realS(Math.max(0.05, +params.get('ibTradeT') || 0.4)); // 11/15 맞바꿈 창 n 초 (넘기기 시작부터 · 기본 0.4 · 견줌 0.6)
 if (params.has('ibLinkCool')) CONFIG.IB_LINK.cool = +params.get('ibLinkCool') ? 1 : 0;
 if (params.has('ibChainArm')) CONFIG.IB_LINK.chainArm = +params.get('ibChainArm') ? 1 : 0;
 if (params.has('ibTrade')) CONFIG.IB_LINK.trade = +params.get('ibTrade') ? 1 : 0;

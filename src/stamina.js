@@ -340,7 +340,7 @@ export class Stamina {
   observeStroke(dt) {
     const f = this.fighter, sk = f.skill;
     if (f.aiControlled) return;
-    if (f.ibLink) {
+    if (f.ibLink || f.ibLinkWait) {
       // 이어 돌리기 (11/14 — iberian_link.js): 도는 칼은 공격이 아님 — 원을 부른 손가락 첫머리는 청구 없이 버리고(다음 칼이 다시 그어짐) 원이 끝날 때까지 셈 없음
       this.stroke = null;
       this.quiet = Infinity;

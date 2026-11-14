@@ -989,9 +989,9 @@ export class Combat {
     att.stamina.contactAttack(r.type === 'stab' ? 'thrust' : 'cut');
     vic.hitCooldowns.set(key, STRIKE.hitCooldown);
     if (passing) r.stuck = r.energy <= r.absorb; // 에너지가 모자라 칼이 박힘
-    // 맞바꿈 (이베리아 B12 '멈추지 않는 칼' — 11/14 사장님 · config IB_LINK.trade · fighter.js ibTradeTry): 이어 돌리기(머리 위 원) 동안 몸에 든 맞음 하나를 기력(베기 한 번 값)으로 넘김 —
+    // 맞바꿈 (이베리아 B12 '멈추지 않는 칼' — 11/14 사장님 · config IB_LINK.trade · fighter.js ibTradeTry): 넘기기를 시작한 때부터 n 초(IB_LINK.tradeT — 11/15) 안에 몸에 든 맞음 하나를 기력(베기 한 번 값)으로 넘김 —
     //  상처 · 의식 · 아픔 · 그 맞음에 딸린 굴림(무릎 꺾기 · 칼 떨구기 · 채찍)과 맞음 알림(onWound — 소리 · 피 · 멈칫 · 재기)이 없음. 칼과 몸의 물리 · 친 쪽 닿음 청구 · 같은 부위 쉼은 그대로
-    if ((r.type !== 'blunt' || r.severity > 0 || r.energy > 10) && (vic.ibLink || vic.ibTradeHit) && vic.ibTradeTry?.(att, r)) { r.traded = true; return r; }
+    if ((r.type !== 'blunt' || r.severity > 0 || r.energy > 10) && (vic.ibLink || vic.ibTradeOpen || vic.ibTradeHit) && vic.ibTradeTry?.(att, r)) { r.traded = true; return r; }
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       const cons0 = vic.consciousness;
       vic.applyWound({ ...r, part: pr.v.part, passing }); // passing: 칼이 가르고 지나가는 길(참수는 이 길만)
