@@ -223,21 +223,36 @@ test('5 AI 리솔루토 (11/14 사장님 \'리솔루토도 쓰게해\'): AI 이�
     assert.equal(got[0].S.do.risoluto, true);
     assert.deepEqual([ai.secretRun?.stage, ai.mode, ai.stats.riso.wins, ai.stats.riso.fired, ai.stats.riso.by.touch, E.secretUsed], ['riso', 'secret', 1, 1, 1, 1]);
   } finally { G.world.free(); }
-  const H = mk(5);
-  try {
-    const ai = H.ai, E = H.enemy, P = H.player;
-    for (let i = 0; i < 3; i++) H.step();
-    ai.mode = 'watch';
-    ai.riso.armed = true;
-    for (const [y, want] of [[-0.6, 0.6], [0.6, -0.6]]) {
-      P.move.set(0, y);
-      ai.moveFeet(1 / 60, ai.d);
-      assert.deepEqual([+E.stickY.toFixed(3), E.stickX], [want, 0], `상대 걸음 ${y} → 맞받음 ${want}`);
-    }
-    P.move.set(0, 0);
-    ai.riso.armed = false;
-    ai.moveFeet(1 / 60, ai.d); // 무장 밖 = 평소 걸음 (값은 보지 않음 — 굴림 차례만 같음)
-  } finally { H.world.free(); }
+  // 무장 동안 발은 상대 걸음을 맞받음 — 옛 판(AI_PLAN 끔)은 상대 스틱을 그대로 · 11/14 유파 플랜(이탈리아 · 기본 켬 — docs/design/ai_school_baseline_2026-11-14.md §4-3 · §9)은
+  //  사람 스틱 대신 늦게 본 다가옴(ai.foeClosing)으로 읽고 그 빠르기로 맞받음 (감독 지시 '리솔루토 맞춤 걸음을 사람 스틱 대신 본 걸음으로') — 두 판을 다 봄
+  const AP = CONFIG.AI_PLAN, apOn = AP.on;
+  for (const planOn of [0, 1]) {
+    AP.on = planOn;
+    const H = mk(5);
+    try {
+      const ai = H.ai, E = H.enemy, P = H.player;
+      for (let i = 0; i < 3; i++) H.step();
+      ai.mode = 'watch';
+      ai.riso.armed = true;
+      const sp = CONFIG.BODY.moveSpeed;
+      for (const [y, want] of [[-0.6, 0.6], [0.6, -0.6]]) {
+        if (planOn) {
+          P.move.set(0, -y); // 사람 스틱은 반대로 — 읽지 않음
+          ai.foeClosing = y; // 본 다가옴 (+ = 다가옴)
+          ai.moveFeet(1 / 60, ai.d);
+          const v = -y, stick = v >= 0 ? v / sp : v / (sp * 0.75);
+          assert.deepEqual([+E.stickY.toFixed(3), E.stickX], [+stick.toFixed(3), 0], `본 다가옴 ${y} → 맞받음 ${stick}`);
+        } else {
+          P.move.set(0, y);
+          ai.moveFeet(1 / 60, ai.d);
+          assert.deepEqual([+E.stickY.toFixed(3), E.stickX], [want, 0], `상대 걸음 ${y} → 맞받음 ${want}`);
+        }
+      }
+      P.move.set(0, 0);
+      ai.riso.armed = false;
+      ai.moveFeet(1 / 60, ai.d); // 무장 밖 = 평소 걸음 (값은 보지 않음 — 굴림 차례만 같음)
+    } finally { H.world.free(); AP.on = apOn; }
+  }
 });
 
 /** 사람 레이피어 몸 + 막기 단추 + 연 고유 공격 (cavazione_tap.test.mjs body 와 같은 꼴 — 판을 돌리지 않음) */
@@ -346,10 +361,15 @@ test('스위치 끔이면 전 판 (본판 c1cad826 과 판 바이트 같음 — 
   const UA = CONFIG.UNIQUE_ASSIST, keep = [THRUST_STYLE.rapier.gap, THRUST_STYLE.estoc.gap, UA.imbroccataGap];
   THRUST_STYLE.rapier.gap = 0.3; THRUST_STYLE.estoc.gap = 0.5; UA.imbroccataGap = 0.6;
   try {
-    withIO({ on: 0 }, () => {
-      assert.equal(hash(fightOne({ school: 'italian', weapon: 'rapier', opp: 'longsword', seed: 1 })), '905c89d08abf');
-      assert.equal(hash(fightOne({ school: 'italian', weapon: 'rapier', opp: 'rapier', seed: 2 })), '63a6e3dacbfe');
-    });
+    // 11/14 유파 AI 플랜(이탈리아 AI — config AI_PLAN · 기본 켬)도 그때 판(끔)으로 묶음: 거울 판의 AI 이탈리아가 본판 c1cad826 과 같은 몸이어야 해서 (플랜이 생긴 몫은 ai_plan.test 가 봄)
+    const AP = CONFIG.AI_PLAN, apOn = AP.on;
+    AP.on = 0;
+    try {
+      withIO({ on: 0 }, () => {
+        assert.equal(hash(fightOne({ school: 'italian', weapon: 'rapier', opp: 'longsword', seed: 1 })), '905c89d08abf');
+        assert.equal(hash(fightOne({ school: 'italian', weapon: 'rapier', opp: 'rapier', seed: 2 })), '63a6e3dacbfe');
+      });
+    } finally { AP.on = apOn; }
   } finally { [THRUST_STYLE.rapier.gap, THRUST_STYLE.estoc.gap, UA.imbroccataGap] = keep; }
   assert.notEqual(hash(fightOne({ school: 'italian', weapon: 'rapier', opp: 'longsword', seed: 1 })), '905c89d08abf', '켬 — 이탈리아 판은 바뀜');
   assert.equal(hash(fightOne({ school: 'german', weapon: 'sabre', opp: 'longsword', seed: 1 })), '436777985e44', '독일 — 켬이어도 같음 (본판 c1cad826 해시)');

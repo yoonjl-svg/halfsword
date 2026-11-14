@@ -330,6 +330,11 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('itBeat') && +params.get('itBeat') >= 0) CONFIG.IT_OUTBOX.beat = CONFIG.realS(+params.get('itBeat'));
   if (params.has('itAi')) CONFIG.IT_OUTBOX.ai = +params.get('itAi') ? 1 : 0; // 11/14 사장님 'ai에도 적용' — 0 = 사람만
 }
+{ // 유파 AI 기본 전투 흐름 (11/14 — config AI_PLAN · src/ai_plan.js · 설계안 docs/design/ai_school_baseline_2026-11-14.md §9): `?aiPlan=0` = 옛 판 (플랜 · 국면 · 이탈리아 거리 오차 모두 끔) ·
+  //  `?aiPlanTick=0` = 국면 판정을 매 스텝 (실제 초 — 기본 0.2)
+  if (params.has('aiPlan')) CONFIG.AI_PLAN.on = +params.get('aiPlan') ? 1 : 0;
+  if (params.has('aiPlanTick') && +params.get('aiPlanTick') >= 0) CONFIG.AI_PLAN.tick = CONFIG.realS(+params.get('aiPlanTick'));
+}
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
   const its = params.get('itSecret');
   // 10/28 01:4x 사장님 '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로' (기본 — italian_risoluto.js mirrorOk): `?risoMirror=0` = 10/25 21:0x 판(스틱 앞이나 뒤만 · 다 붙음 창 켬 — 아래 ?risoClose 가 덮을 수 있게 먼저)

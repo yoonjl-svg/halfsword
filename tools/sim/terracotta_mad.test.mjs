@@ -52,15 +52,17 @@ test('① 시트: 광기의 병마용 사람 몸 · 흰 피 · 목소리 없음 
   assert.deepEqual(TERRA.ai.persona.proficiency, { chinese: 2 });
 });
 
-test('① 얼터 숙련도: 광기의 병마용만 5(예외) — 다른 얼터는 모두 원본 +1(상한 5) · 광기의 랴오 4', () => {
+// 11/14 사장님 결정(숙련도 띠 새 배치 — docs/design/ai_school_baseline_2026-11-14.md §10): 못 박는 얼터에 광기의 다라이시 6(여정 끝판)이 더해짐 · 랴오 3 → 4 라 광기의 랴오 5
+test('① 얼터 숙련도: 못 박음은 광기의 병마용 5 · 광기의 다라이시 6(11/14) — 다른 얼터는 모두 원본 +1(상한 6) · 광기의 랴오 5(11/14)', () => {
   const alters = Object.values(C).filter((c) => c.variantOf);
   assert.ok(alters.length >= 16);
+  const fixed = { terracotta_mad: 5, silver_wanderer_mad: 6 };
   for (const c of alters) {
-    const want = c.id === 'terracotta_mad' ? 5 : Math.min(AI_PROFICIENCY.max, C[c.variantOf].ai.proficiency + 1);
+    const want = fixed[c.id] ?? Math.min(AI_PROFICIENCY.max, C[c.variantOf].ai.proficiency + 1);
     assert.equal(c.ai.proficiency, want, c.id);
-    if (c.id !== 'terracotta_mad') assert.equal(c.proficiencyFixed, undefined, c.id);
+    if (!(c.id in fixed)) assert.equal(c.proficiencyFixed, undefined, c.id);
   }
-  assert.equal(C.liao_mad.ai.proficiency, 4);
+  assert.equal(C.liao_mad.ai.proficiency, 5); // 11/14 (전 4 — 원본 3 + 1)
 });
 
 test('② 피 색: 흰 피는 광기의 병마용만 · 붉은 피 값은 예전 그대로', () => {

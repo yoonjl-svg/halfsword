@@ -142,7 +142,11 @@ export function foeStep(foe) {
 
 /** 상대 걸음에 맞춰 (10/28 사장님 '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로'): 물러섬 + 스틱 앞 · 들어옴 + 스틱 뒤 (부채꼴은 stickForward · stickBack 그대로) */
 export function mirrorOk(me, foe) {
-  const s = foeStep(foe);
+  return mirrorStep(me, foeStep(foe));
+}
+
+/** mirrorOk 의 셈을 상대 걸음 s 로 (11/14 — AI 가 본 걸음으로 셀 때 RisolutoWatch.stepOf) */
+export function mirrorStep(me, s) {
   return s === 'retreat' ? stickForward(me) : s === 'advance' ? stickBack(me) : false;
 }
 
@@ -170,6 +174,7 @@ export class RisolutoWatch {
     this.off = 0; // 너그러움 (SECRET.risolutoGrace): 덮음 · 가슴 사이가 끊긴 지 지난 시간 — 이 동안은 셈을 쥔 채 기다림
     this.bridged = 0; // 재기: 너그러움으로 이어 붙인 끊김 수
     this.closeArmed = false; // 다 붙음: 맞닿기 거리 밖에 있었나 (들어오는 순간만)
+    this.stepOf = null; // 상대 걸음을 읽는 함수 (11/14 유파 플랜 AI — 사람 스틱 대신 본 걸음 · ai.js) · null = foeStep(상대 스틱 — 사람 창 · 플랜 없는 AI 그대로)
   }
 
   reset() {
@@ -209,14 +214,15 @@ export class RisolutoWatch {
     const mine = meFree(me);
     const fwd = stickOk(me); // 10/25 21:0x 앞이나 뒤 (SECRET.risolutoStick — 'fwd' = 전 앞만)
     const foeFree = !swingingNow(foe);
-    const mir = !SECRET.risolutoMirror || mirrorOk(me, foe); // 10/28 상대 걸음에 맞춰 (끄면 늘 참 — 10/25 판)
+    const fstep = SECRET.risolutoMirror ? (this.stepOf ? this.stepOf() : foeStep(foe)) : null; // 상대 걸음 (11/14 — AI 유파 플랜은 본 걸음)
+    const mir = !SECRET.risolutoMirror || mirrorStep(me, fstep); // 10/28 상대 걸음에 맞춰 (끄면 늘 참 — 10/25 판)
     const on = cover && mine && foeFree && fwd && mir && (closing || !SECRET.risolutoClosing);
     if (on) {
       if (this.on && this.off > 0) this.bridged++;
       this.off = 0;
       this.held += dt;
       this.on = true;
-      if (SECRET.risolutoMirror) this.step = foeStep(foe);
+      if (SECRET.risolutoMirror) this.step = fstep;
       // 칼끝 얽힘 창 (10/25 사장님 '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — SECRET.risolutoTouch · `?risoTouch=0` = 10/24 판): 덮인 채 나아가기가 선 첫 스텝에 곧장 · 셈 시간 없음 ·
       //  덮인 채 나아가기 한 번에 한 번(같은 묶임에서 다시는 이어짐 · 상대 박자 창으로). 창이 이미 열려 있으면 그 창이 끝난 스텝에
       if (SECRET.risolutoTouch && canOpen && !this.touchDone) {

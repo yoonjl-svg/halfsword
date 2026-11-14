@@ -14,26 +14,27 @@ test("상한 6 · 숙련도 표마다 6 칸 ('상한 6으로 올려')", () => {
   for (const k of ['levels', 'schoolK', 'reaction']) assert.ok(AI_PROFICIENCY[k][6] != null, k);
 });
 
-test('얼터 = 원본 +1 (상한 6) · 광기의 병마용만 5 로 못 박음', () => {
+test('얼터 = 원본 +1 (상한 6) · 못 박음: 광기의 병마용 5 · 광기의 다라이시 6 (11/14)', () => {
   for (const c of all.filter((x) => x.variantOf)) {
     const want = c.proficiencyFixed ?? Math.min(6, C[c.variantOf].ai.proficiency + 1);
     assert.equal(c.ai.proficiency, want, c.id);
   }
   assert.equal(C.terracotta_mad.ai.proficiency, 5);
-  for (const [id, p] of [['artoria', 6], ['artoria_mad', 6], ['minami', 5], ['minami_mad', 6], ['omari', 2], ['omari_mad', 3], ['samira', 4], ['samira_mad', 5]]) assert.equal(C[id].ai.proficiency, p, id);
+  assert.equal(C.silver_wanderer_mad.ai.proficiency, 6); // 11/14 사장님 결정: 여정 끝판 — proficiencyFixed 6 (원본 4 + 1 = 5 의 예외 · docs/design/ai_school_baseline_2026-11-14.md §10)
+  for (const [id, p] of [['artoria', 6], ['artoria_mad', 6], ['minami', 5], ['minami_mad', 6], ['omari', 3], ['omari_mad', 4], ['samira', 4], ['samira_mad', 5]]) assert.equal(C[id].ai.proficiency, p, id);
 });
 
 test('숙련도 표의 열쇠 = 실제로 싸우는 유파 (광기의 마야 = 세이버 독일 5 · 마야 = 무유파 4)', () => {
   assert.deepEqual(C.samira.ai.persona.proficiency, { none: 4 });
   assert.deepEqual(C.samira_mad.ai.persona.proficiency, { german: 5 });
-  assert.deepEqual(C.omari.ai.persona.proficiency, { iberian: 2 });
+  assert.deepEqual(C.omari.ai.persona.proficiency, { iberian: 3 }); // 11/14 사장님 결정 2 → 3 (§10)
   assert.deepEqual(C.artoria.ai.persona.proficiency, { german: 6 });
 });
 
-test('숙련도 6 이면 버티는 힘 1.1 — 규칙 한 곳 (롤랑 · 베르나르도 · 아르토리아 · 광기의 아르토리아 · 광기의 미나미)', () => {
+test('숙련도 6 이면 버티는 힘 1.1 — 규칙 한 곳 (롤랑 · 베르나르도 · 아르토리아 · 광기의 아르토리아 · 광기의 미나미 · 광기의 다라이시)', () => {
   assert.equal(PROF6_VITALITY, 1.1);
   const six = all.filter((c) => c.ai?.proficiency === 6).map((c) => c.id).sort();
-  assert.deepEqual(six, ['artoria', 'artoria_mad', 'bernardo', 'minami_mad', 'roland']);
+  assert.deepEqual(six, ['artoria', 'artoria_mad', 'bernardo', 'minami_mad', 'roland', 'silver_wanderer_mad']); // 11/14 광기의 다라이시 6 더함 (§10)
   for (const c of all) assert.equal(c.vitality ?? 1, c.ai?.proficiency === 6 ? PROF6_VITALITY : 1, c.id);
 });
 
