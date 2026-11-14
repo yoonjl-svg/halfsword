@@ -14,6 +14,7 @@ import { FLOW_RECOVERY } from './nagashi_recovery.js'; // 흘림당한 뒤 팔 �
 import { skipIberianTable, useIberianTableV2, iberianTableV2 } from './guards.js'; // 이베리아 자세표 칸 걷기 시험 (10/22 — ?ibTableSkip) · 자세표 v2 (?ibTable=v2 | v2p) — 기본 끔
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { createStaminaHud } from './stamina_hud.js';
+import { createHuntHud } from './cn_hunt_hud.js'; // 동방 맹호은림 사냥 겹 표시 (11/14)
 import { applyAweStart } from './stamina.js'; // 티소나 '위세' 판 시작 깎임 (10/24)
 import { createScreenTint } from './screen_tint.js';
 import { createStrikeCue } from './strike_cue.js'; // 칠 때 알림 — 이어 긋기 · 비기 · 인데스 창 동안 상대 머리 위 '!' (10/21 · ?strikeCue=mark|edge|both|0)
@@ -95,6 +96,7 @@ if (params.get('aura') === '0') AURA_VIEW.on = false;
 if (params.has('auraTune')) { try { AURA_VIEW.tune = JSON.parse(params.get('auraTune')); } catch { AURA_VIEW.tune = null; } }
 const teamHud = createTeamHud(); // 동시 대전 위 막대 · 화면 밖 화살표 (1:1 은 숨긴 채 — team_hud.js)
 const staminaHud = createStaminaHud(document.getElementById('staminaHud')); // 두 검객 머리 위 기력 막대 (src/stamina_hud.js)
+const huntHud = createHuntHud(document.getElementById('staminaHud')); // 동방 맹호은림 사냥 겹 — 기력 막대 위 발톱 자국 (11/14 — src/cn_hunt_hud.js)
 const screenTint = createScreenTint(); // 출혈·감정 화면 물들임을 게임 캔버스에 합성 (샛별 저장소 2f593ba6 — 전엔 #vignette · #emotion CSS 층. 기력 스위치와 상관없이 늘 이 길)
 // 주인공은 판마다 무기 카드 세 장 중 하나를 골라 받는다 (아래 "무기 뽑기"). 주소에 ?weapon=을 적으면 뽑기 없이 그 무기로 고정.
 //  진짜 엑스칼리버는 주인공만 받을 수 있고, 복제품은 하인리히 몫이라 뽑기에서 뺀다
@@ -410,6 +412,8 @@ if (params.has('dupBurstMatch')) CONFIG.UNIQUE_ASSIST.dupBurstMatch = [0, 1, 2].
   }
 }
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
+if (params.has('cnHunt')) CONFIG.UNIQUE_ASSIST.cnHunt.on = +params.get('cnHunt') ? 1 : 0; // 동방 맹호은림 사냥 겹 (11/14 — `?cnHunt=0` = 겹 없음 · 격살 판당 수는 공용 표 secretUses — 전 판 `?secretUses=1,chinese:3`)
+if (params.has('cnHuntAi')) CONFIG.UNIQUE_ASSIST.cnHunt.ai = +params.get('cnHuntAi') ? 1 : 0; // AI 동방도 사냥 겹 (견줌 — 기본 0)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
 for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld', 'inqTap']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
 if (params.has('cavFrom') && +params.get('cavFrom') >= 0) CONFIG.UNIQUE_ASSIST.cavFrom = CONFIG.realS(+params.get('cavFrom')); // 칼끝 돌려 빼기 탭 창 처음 (실제 초 — 기본 0.2 · 10/29 20:0x · 옛 판 0.6)
@@ -3734,6 +3738,7 @@ function frame(now) {
   }
   updateCamera(dt); // 거르는 프레임에도: 흔들림 스프링·발걸음(player.footstep 소비)·소리 자리(sound.listener)가 여기 달려 있다
   staminaHud.update(fighters, camera, state === 'fight' && !roundOver);
+  huntHud.update(fighters, camera, state === 'fight' && !roundOver); // 사냥 겹이 쌓인 몸만 (11/14)
   if (teamRun) teamHud.update(camera, teamRun.focus, state === 'fight' && !roundOver, teamRun.human); // 동시 대전 화면 밖 화살표 · 상대 머리 위 붉은 세모 (체력 막대는 staminaHud)
   strikeCue.update(dt, camera, state === 'fight' && !roundOver && (!teamRun || !!teamRun.human), player, enemy, playerUnique, playerSecret); // 칠 때 알림: 카메라가 정해진 뒤 · 그리기 전
   screenTint.update(dt);

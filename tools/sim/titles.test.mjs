@@ -136,7 +136,7 @@ test('옛 저장: 이미 칸을 모두 익혔거나 방랑이 열린 저장은 �
   assert.deepEqual(P.titleNotices(), []); assert.equal(storage.get(KEY), before, '읽기만으로는 저장하지 않음');
   assert.deepEqual(P.checkTitles(), ['school:german', 'school:chinese', 'wander']);
   assert.deepEqual(P.titleNotices().map((n) => n.name), ['캄프페히텐 계승자', '무비지 계승자', '방랑자']);
-  assert.equal(P.readProgress().level, 1 + 11 + 11 + 1 + 3);
+  assert.equal(P.readProgress().level, 1 + 11 + 12 + 1 + 3); // 11/14 동방 칸 12 (C12 맹호은림 — 전 1 + 11 + 11 + 1 + 3)
   assert.deepEqual(P.checkTitles(), [], '한 번만');
 });
 
@@ -174,6 +174,21 @@ test('일본 J12 바위 몸을 연 뒤(11/14 사장님 \'전부 권고대로\' �
   assert.deepEqual(events(), ['school:japanese']);
 });
 
+test('동방 C12 맹호은림을 더한 뒤(11/14): 열한 칸(C12 빼고)으로 무비지 계승자를 이미 얻은 저장은 그대로 가짐 · 열한 칸만 익히고 호칭이 없던 옛 저장은 C12 를 익혀야 얻음 (J8 과 같은 규칙)', () => {
+  const eleven = skillSave('chinese').filter((a) => a.receipt !== 'skill:chinese:C12');
+  assert.equal(eleven.length, 11);
+  fresh({ acquisitions: eleven, titles: [{ event: 'school:chinese', name: '무비지 계승자', seen: true }], title: '무비지 계승자' });
+  assert.deepEqual(P.checkTitles(), []);
+  const p = P.readProgress();
+  assert.deepEqual(p.titles.map((t) => t.event), ['school:chinese']); assert.equal(p.title, '무비지 계승자');
+  assert.equal(S.learnNode('chinese', 'C12').ok, true);
+  assert.deepEqual(events(), ['school:chinese']);
+  fresh({ acquisitions: eleven });
+  assert.deepEqual(P.checkTitles(), [], '열한 칸만으로는 없음');
+  assert.equal(S.learnNode('chinese', 'C12').ok, true);
+  assert.deepEqual(events(), ['school:chinese']);
+});
+
 test('내림 상자: 호칭이 없으면 빈 목록(여행자 없음) · 처음 얻은 호칭이 저절로 고른 호칭(칸을 산 저장과 같이) · 얻은 차례로 · 고를 수 있음 · 고른 것 저장', () => {
   fresh();
   assert.deepEqual(P.titleOptions(), []); assert.equal(P.readProgress().title, '');
@@ -202,7 +217,7 @@ test('소드마스터: 유파 호칭 다섯 — 따로따로(초기화하며) �
   learnAll('chinese');
   assert.deepEqual(saved().titles.slice(-2).map((t) => t.event), ['school:chinese', 'swordmaster']);
   assert.deepEqual(P.titleNotices().map((n) => n.name), ['무비지 계승자', '소드마스터']);
-  assert.equal(P.readProgress().level, 1 + 11 + 6);
+  assert.equal(P.readProgress().level, 1 + 12 + 6); // 11/14 동방 칸 12 (C12 맹호은림 — 전 1 + 11 + 6)
 });
 
 test('방랑자: 30 무대를 처음 다 깬 판의 저장에 같이 · 옛 저장 인정(migrateCampaignStages)도', () => {

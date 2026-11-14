@@ -177,6 +177,11 @@
       .stamina-bar[data-exhausted="true"] > span { background: #948e7c; }
       @keyframes stamina-breath { 50% { opacity: .38; } }
       @media (prefers-reduced-motion: reduce) { .stamina-bar { animation: none !important; } }
+      /* 동방 맹호은림 사냥 겹 (11/14 — src/cn_hunt_hud.js): 겹이 쌓인 몸의 기력 막대 바로 위 작은 발톱 자국 다섯 · 찬 자국 = 겹 · 글 없음 */
+      .hunt-marks { position: absolute; display: flex; gap: 3px; transform: translate(-50%, calc(-100% - 5px)); }
+      .hunt-marks > i { display: block; width: 1.5px; height: 6px; border-radius: 1px; transform: skewX(-20deg); background: rgba(24,18,14,.35); box-shadow: 0 0 0 .25px var(--c-text); }
+      .hunt-marks > i[data-on="true"] { background: var(--c-alert); opacity: .8; }
+      .hunt-marks[data-full="true"] > i { opacity: 1; }
       /* ② 패시브·비기: 줄 하나(40px) — 자세 칸처럼 새 알림이 오면 그 자리에서 바꿔 끼운다. 10/14 03:1x: 마지막 기술이 계속 보인다(새 판에 비움),
          비기 창·고노센 준비만 잠깐 덮었다가 마지막 기술로 돌아온다 (main.js techPut · techTick) */
       .stack .slot { height: 40px; translate: 6px 0; }

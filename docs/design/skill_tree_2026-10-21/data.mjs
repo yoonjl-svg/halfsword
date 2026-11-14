@@ -68,6 +68,7 @@ export const SCHOOLS = [
     { id: 'C6', cat: 'atk', name: '날개 접기', sub: '이어 긋기', eff: '물러나는 척 칼을 거두며 나아가 허리를 벤다', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 310 }, // 10/28 00:5x 체보요격과 자리 바꿈
     { id: 'C8', cat: 'parry', name: '막기 II', sub: '단단한 받기', eff: '막는 동안 피해 50% 감소', pre: ['C7'], price: 300, st: 'split', d: 2, cx: 680 },
     { id: 'C10', cat: 'passive', name: '패시브', sub: '토납', eff: '숨 바꾸기 (토납) — 칼을 휘두르지 않는 동안 피가 2배 빨리 멎는다', pre: ['C7'], price: 0, heads: 10, st: 'new', d: 2, cx: 880 },
+    { id: 'C12', cat: 'deep', name: '요격 심화', sub: '맹호은림', eff: '허리를 베는 세 칼이 몸 어디든 칼날 상처를 낼 때마다 사냥 한 겹(최대 5 · 판 끝까지) — 겹마다 상대 기력 회복 −8 % · 격살 빠르기 +8 %', pre: ['C4'], price: 400, st: 'new', d: 3, cx: 130 }, // 11/14 사장님 '이름와 위치는 좋음' · '스택당 기력 회복 -8% 격살 빠르기 +8%' (docs/strike/cn_hunt_2026-11-14.md)
     { id: 'C9', cat: 'secret', name: '비기', sub: '막아 죽이기', eff: '앞으로 나서며 때맞춰 막아 낸 직후 받은 자세가 노리는 급소를 깊게 친다', pre: ['C5', 'C8'], price: 400, heads: 20, st: 'now', d: 3, cx: 590 }, // 10/22 격살로 열림 (전 '연환' · 준비 중)
   ] },
 ];

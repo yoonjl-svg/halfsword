@@ -40,6 +40,7 @@ import { windStep } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain, gnsBlockOf } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf, mordBurstTick } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
+import { huntShareK } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 상대를 겨눈 격살 칼끝 빠르기 몫 × (1 + share × 겹)
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -64,11 +65,13 @@ const secretEffMul = (D) => {
 /** 격살 판정 배율 (11/11 사장님 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' — SECRET.gyeoksalHitMul 1 · null 이면 다른 비기와 같은 SECRET.hitMul · `?gyeoksalHitMul=1.3` = 전 판) — 운동학 길 · 서보 길 둘 다 */
 export const gyeoksalHitMul = () => SECRET.gyeoksalHitMul ?? SECRET.hitMul;
 /** 격살 판정 묶음 (requestCombo 칸): 'hit' = 결정타 격살 배율 gyeoksalHitMul(판정 에너지 · secretHit — 11/11 1 · 전 다른 비기와 같은 SECRET.hitMul 1.3) · 그 밖 = 결정타 없이 eff × secretEffMul · 시험 빠르기 몫 share · 잔상 굵기 width(trailWidth 켬일 때 = 빠르기 몫) */
-const gyeoksalReq = (D) => {
+//  11/14 동방 맹호은림 (cn_hunt.js huntShareK — 사장님 '스택당 … 격살 빠르기 +8%'): 겨눈 상대에 쌓인 사냥 겹마다 몫 × (1 + share × 겹) · 겹 없으면 그대로(× 1)
+const gyeoksalReq = (D, f) => {
   const G = SECRET.gyeoksal ?? {};
   const pw = D.power === 'gyeoksal' ? G.power : D.power;
-  const share = G.share > 0 ? G.share : SECRET.cnFastShare;
-  return { ...(pw === 'hit' ? { hitMul: gyeoksalHitMul() } : { hitMul: 1, effMul: secretEffMul(D) }), ...(G.share > 0 ? { share: G.share } : {}), ...(G.trailWidth ? { width: Math.min(1, share) } : {}) };
+  const hk = huntShareK(f);
+  const share = (G.share > 0 ? G.share : SECRET.cnFastShare) * hk;
+  return { ...(pw === 'hit' ? { hitMul: gyeoksalHitMul() } : { hitMul: 1, effMul: secretEffMul(D) }), ...(G.share > 0 ? { share: G.share * hk } : {}), ...(G.trailWidth ? { width: Math.min(1, share) } : {}) };
 };
 /** 안다레 리솔루토 굳음 (s): 10/24 런지 risolutoStiff 0.6 (사장님) · null 이면 이탈리아 비기 굳음 stiff.italian (10/23 판) */
 const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? realS(0.3); // 굳음은 실제 초 (표준 시간 10/25 — config 값도 realS)
@@ -747,7 +750,7 @@ export class Skill {
         const moves = run.queue.splice(0);
         // 격살(10/22): 결정타 hitMul 대신 판정 에너지 × FINISH.power (시험 'hit' = 다른 비기와 같은 hitMul) · 시험 칼끝 빠르기 몫 SECRET.gyeoksal.share · 잔상 굵기 trailWidth ·
         //  잔상(10/23 점검): 베는 토막만(arcCut — 받은 자세에서 호 첫 자리로 옮기는 이음은 그리지 않음) · 허파 찌르기는 마주 보는 띠(face 'line' 찌르는 줄 — SECRET.secretStreak) · 밝기 바닥 SECRET.secretArcMin
-        requestCombo(f, { moves, ...(D.power ? { ...gyeoksalReq(D), arcCut: true, face: SECRET.secretStreak && moves.some((m) => m.kind === 'thrust') ? 'line' : null, min: SECRET.secretArcMin ?? 0 } : {}) });
+        requestCombo(f, { moves, ...(D.power ? { ...gyeoksalReq(D, f), arcCut: true, face: SECRET.secretStreak && moves.some((m) => m.kind === 'thrust') ? 'line' : null, min: SECRET.secretArcMin ?? 0 } : {}) });
         this.secretBursts++;
       }
       if (S.cond?.window === 'bind') run.gain = bindGain(run.ctx.held ?? 0); // 독일: 붙어 있던 만큼 판정 배율·힘 창 (secret.js bindGain)

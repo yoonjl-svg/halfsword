@@ -372,6 +372,7 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, 
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       foe.applyWound({ ...r, part: best.info.part, passing: true });
       if (r.schoolK) f.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (combat.js strike 와 같음 — 손가락 긋기를 이어 끄는 칼만 몫이 실림: 제비 베기 되돌림 칼의 켄타이 · 10/25)
+      combat.huntWound?.(f, foe, r); // 11/14 동방 맹호은림 사냥 겹 (combat.js — strike 와 같은 조건 · 날개 접기 등 운동학 칼)
     }
     combat.hooks.onWound?.(f, foe, r, point, pr);
     return r;
@@ -389,6 +390,7 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, 
   if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
     foe.applyWound({ ...r, part: best.info.part, passing: true });
     if (r.schoolK) f.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (위 갈래와 같음 — 10/28 고노센 발도의 켄타이: 첫 상처에 씀 · 다른 비기는 몫 없음)
+    combat.huntWound?.(f, foe, r); // 11/14 동방 맹호은림 사냥 겹 (위 갈래와 같음)
   }
   combat.hooks.onWound?.(f, foe, r, point, pr);
   return r;
