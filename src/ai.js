@@ -28,6 +28,7 @@ import { TRADITIONS, IBERIAN_SPIN_DEF } from './schools.js'; // 패시브 고유
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
 import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — 내 공격이 상대 칼에 막히면 막은 쪽 기력 −, afterStrike)
 import { schoolPassiveOn } from './school_passive.js'; // 유파 패시브 스위치 (10/21 — 이베리아 손목 힘 · 나머지 넷은 fighter.schoolPassive)
+import { closeStartD, bargeHeld, nearHilt } from './close_hold.js'; // 밀치기 시작 거리 (11/14 — AI 는 CLOSE.startAI 견줌 · 기본 null = 무기 reach 그대로)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 AI 몫 — 상대 두 팔 늦춤 (10/31)
 import { aiUniqueStages, PLAYER_UNIQUE, specialShare, rdReleaseOpt, altibHitMul, altibPower } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
@@ -1342,6 +1343,14 @@ export class AI {
   /** 공격 시작. why: 어떤 기회였나 (recover/stepin/finish/patience/counter/...) */
   startAttack(tech, why, opt = {}) {
     if (!tech || !this.me.armed || this.me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false; // 칼이 없으면 칠 수 없다
+    // 붙은 거리 규칙 AI 견줌 (11/14 — CLOSE.startAI · 기본 null 이면 안 탐 · close_hold.js): 묶인 동안(내 밀치기든 상대가 나를 민 밀치기든 — 맞밀기로 둘 다 묶임) 공격 안 함 ·
+    //  칼자루만 거리(가슴 사이 ≤ startAI)에선 공격 대신 손잡이 찍기
+    if (this.me.ringHit) return false; // 칼 씨름에 무너진 동안(11/14 — de_dirty.js ringStep · 0.6 s) 공격을 시작하지 않음 (기본 끔이면 ringHit 이 없음)
+    const held = bargeHeld(this.me.barge) || bargeHeld(this.foe?.barge);
+    if (CLOSE.startAI > 0 && (held || nearHilt(this.me))) {
+      if (!held && this.me.skill.pommel()) this.stats.closePommel = (this.stats.closePommel ?? 0) + 1;
+      return false;
+    }
     // 풍차 베기 AI 몫 (사장님 10/31 13:4x 'a는 기본 적용하고 c는 성향마다 달랐음 좋겠어. 싸움을 풀어가는 방식에 따라 자율적으로.' — 확인표 3133 · 3134):
     //  빠른 틈이거나(a) 기력이 이 성향의 감기 몫보다 적으면(c) 머리 위 돌려 베기 대신 바탕 동작(plain — 왼 가로베기 · 식는 동안과 같은 자리)
     if (tech.name === 'redondo') {
@@ -1994,7 +2003,7 @@ export class AI {
       // then 'pommel': 밀고 곧장 폼멜로 찍는다 (베기 대신). 못 찍었으면(멀어짐·공격 중) 아래 E4 로 다시 굴린다
       else if (ended !== 'refused' && then === 'pommel' && up && this.secretRun?.stage !== 'mord') cut = this.closePommel('shove');
     }
-    const inside = me.foeDistance() <= CLOSE.reach(me.armed ? me.weapon : null); // 실제 가슴 거리 (플레이어와 같은 안쪽)
+    const inside = me.foeDistance() <= closeStartD(me, CLOSE.reach(me.armed ? me.weapon : null)); // 실제 가슴 거리 (플레이어와 같은 안쪽 · 11/14 CLOSE.startAI 견줌이면 그 거리 — 기본 null = reach 그대로)
     this.closeInside = inside;
     // 풀림: 안쪽 밖, 누군가 stand 아님, 발 묶임, 쓰러진 상대 간격(downGap) → 다시 되면 들어섬(E1)으로 본다
     if (!inside || !up || me.feetHeld || this.Mup) {

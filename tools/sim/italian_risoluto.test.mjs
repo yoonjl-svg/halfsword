@@ -185,7 +185,7 @@ test('10/23 판(?risoLunge=0) 실제 몸 실행: 탭 찌르기 하나 · 기력�
     assert.ok(sawPower, '찌르는 동안 서보 힘 · 판정 배율 = SECRET.power · hitMul');
     assert.equal(sawTip, false, '곧은 선은 비기에 안 실림');
     assert.equal(p.skill.sec, null, '굳음 뒤 끝');
-    assert.equal(SECRET.stiff.italian, rs(0.4));
+    assert.equal(SECRET.stiff.italian, rs(0.6)); // 11/14 사장님 '모든 비기 경직 0.6초로 통일' (전 0.4)
   } finally { g.world.free(); }
 }));
 
@@ -265,7 +265,7 @@ test('10/24 런지 값 (사장님 \'런지로 진행해. 단 런지 동작이 �
   assert.deepEqual(SECRET.risolutoStep, { slide: 'risolutoSlide', foot: 'italianStep', draw: 0, room: 0, push: 'stepPush', accel: 1, recover: 1, recoverT: 0.4 }); // room 1 = 앞발도 clinch 밖까지만 (?risoRoom=1)
   assert.equal(SECRET.risolutoSlide, 0.45); assert.equal(SECRET.iaiStep, 0.6); assert.equal(SECRET.italianStep, 0.9);
   // 다른 곳 값은 그대로 (흘림 팔 늦춤 · 이탈리아 비기 굳음 — 10/23 판 · AI 칸)
-  assert.equal(CONFIG.FLOW_RECOVERY.seconds, rs(0.4)); assert.equal(SECRET.stiff.italian, rs(0.4));
+  assert.equal(CONFIG.FLOW_RECOVERY.seconds, rs(0.4)); assert.equal(SECRET.stiff.italian, rs(0.6)); /* 11/14 통일 (전 0.4) */
 });
 
 test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝 빠르기) · 몸 미끄러짐 + 앞발 런지 0.9 m · 상대 팔 늦춤 0.6 s · 굳음 0.6 s(끝 자세 붙잡음) · 굳음 뒤 앞발을 뒤로 거둠(14:0x) · 넘어지지 않음', () => {

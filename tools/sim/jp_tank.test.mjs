@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
 import { lowShoveFree } from '../../src/jp_tank.js';
+import * as D from '../../src/skill_tree_data.js';
 import { allNodeIds, kitFromNodes } from '../../src/skill_tree_data.js';
 import { fightOne } from './school_balance.mjs';
 const JT = CONFIG.JP_TANK;
@@ -288,35 +289,32 @@ test('다른 유파 · 전 봇 판은 바이트 같음 (스택 켬 · 끔 · 일
   } finally { restore(); }
 });
 
-test('몫 열쇠 (11/14): 바위 몸 jpRock = 새 칸 J12(앞 칸 J10) · 임시로 J10 도 켬 · jpTaiSen(C) 은 J3 과 함께 · 안 익히면 꺼짐', () => {
+test('몫 열쇠 (11/14 사장님 \'전부 권고대로\' · C 보류): 바위 몸 jpRock = 칸 J12 만 · C 는 칸 없음(jpTaiSen 은 KIT_KEYS 밖 — 스위치만) · 안 익히면 꺼짐', () => {
   const all = [...allNodeIds('japanese')];
   const kit = (drop) => kitFromNodes('japanese', new Set(all.filter((n) => !drop.includes(n))));
-  const keys = (k) => ['jpRock', 'jpTaiSen'].map((x) => k[x]);
-  assert.deepEqual(keys(kit([])), [true, true]);
-  assert.deepEqual(keys(kit(['J12'])), [true, true], 'J10 임시');
-  assert.deepEqual(keys(kit(['J10'])), [true, true], 'J12');
-  assert.deepEqual(keys(kit(['J10', 'J12'])), [false, true]);
-  assert.deepEqual(keys(kit(['J3'])), [true, false]);
-  assert.deepEqual(keys(kit(['J1'])), [true, true], 'J1 은 상관없음');
-  // 바위 몸 받는 피해 — 몫이 없으면 1 (스택은 J10 패시브로 쌓이니 견줌은 J12 · J10 둘 다 빼고 패시브만 남긴 몸)
-  for (const [drop, want] of [[[], 0.6], [['J10', 'J12'], 1]]) {
-    const k = kit(drop);
-    const fx = fixture('uchigatana', { kit: { ...k, passive: true } });
+  assert.equal(kit([]).jpRock, true);
+  assert.equal(kit(['J12']).jpRock, false, 'J12 를 안 익히면 꺼짐 (J10 임시 이음 걷음)');
+  assert.equal(kit(['J1']).jpRock, true, 'J1 은 상관없음');
+  assert.equal('jpTaiSen' in kit([]), false, 'C 몫 열쇠는 칸에 안 이음');
+  assert.equal(D.nodesOf('japanese').some((n) => n.id === 'J13' || n.f.includes('jpTaiSen')), false, '기다림의 선 칸 없음 (사장님 11/14 보류)');
+  // 바위 몸 받는 피해 — 몫이 없으면 1 (스택은 J10 패시브로 쌓임 — J12 만 뺀 몸)
+  for (const [drop, want] of [[[], 0.6], [['J12'], 1]]) {
+    const fx = fixture('uchigatana', { kit: kit(drop) });
     try {
       tick(fx, sec(10.5));
       assert.ok(near(fx.sp.takenK(), want), `바위 몸 ${drop} ${fx.sp.takenK()}`);
     } finally { restore(); fx.g.world.free(); }
   }
-  // C — J3 없는 몸은 받아 치기 창 없음
-  for (const [drop, want] of [[[], 'counter'], [['J3'], null]]) {
+  // C (보류 — 기본 끔): 켜면 칸과 상관없이(스위치만) 받아 치기 창 · 끄면 없음
+  for (const [on, drop, want] of [[1, [], 'counter'], [1, ['J3'], 'counter'], [0, [], null]]) {
     const fx = fixture('uchigatana', { kit: kit(drop) });
     try {
-      JT.counter = 1;
+      JT.counter = on;
       const W = new PlayerSecretWatch(fx.f, fx.a);
       W.update(DT, false);
       fx.sp.guardEvent('flow', fx.a, 3);
       W.update(DT, false);
-      assert.equal(W.open?.ctx?.ev ?? null, want, `C ${drop}`);
+      assert.equal(W.open?.ctx?.ev ?? null, want, `C ${on} ${drop}`);
     } finally { restore(); fx.g.world.free(); }
   }
 });

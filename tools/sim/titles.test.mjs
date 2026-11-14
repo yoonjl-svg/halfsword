@@ -60,7 +60,7 @@ test('호칭 표: 유파 다섯 = 비기 원전 책 이름 + 계승자 (04:0x �
 test('유파 호칭: 칸을 모두 익힌 저장에 얻음(칸을 산 저장과 같은 저장) · 하나 모자라면 없음 · 닫힌 칸은 뺌(10/24 일본 J8 열림 — 이제 듦) · 편지 · 곁가지는 듦', () => {
   fresh();
   assert.deepEqual(R.titleNodes('german'), D.nodesOf('german').map((n) => n.id)); // 독일 11 칸 모두 (편지 G11 포함)
-  assert.equal(R.titleNodes('japanese').includes('J8'), true); assert.equal(R.titleNodes('japanese').length, 11); // 10/24 J8 칼 떨구기 열림
+  assert.equal(R.titleNodes('japanese').includes('J8'), true); assert.equal(R.titleNodes('japanese').length, 12); // 10/24 J8 칼 떨구기 열림 · [사장님 11/14 결정] J12 바위 몸도 듦 (전 11)
   assert.ok(R.titleNodes('iberian').includes('B2') && R.titleNodes('chinese').includes('C2')); // 곁가지 보법 II
   const order = learnOrder('german');
   learnAll('german', order.length - 1);
@@ -141,7 +141,7 @@ test('옛 저장: 이미 칸을 모두 익혔거나 방랑이 열린 저장은 �
 });
 
 test('일본 J8 을 연 뒤(10/24): 열 칸(J8 빼고)으로 오륜서 계승자를 이미 얻은 저장은 그대로 가짐(호칭은 잃지 않음 · 레벨 몫도) · 열 칸만 익히고 호칭이 없던 옛 저장은 J8 을 익혀야 얻음', () => {
-  const ten = skillSave('japanese').filter((a) => a.receipt !== 'skill:japanese:J8');
+  const ten = skillSave('japanese').filter((a) => a.receipt !== 'skill:japanese:J8' && a.receipt !== 'skill:japanese:J12'); // 10/24 전 저장 — 11/14 J12 바위 몸도 아직 없던 때
   assert.equal(ten.length, 10);
   fresh({ acquisitions: ten, titles: [{ event: 'school:japanese', name: '오륜서 계승자', seen: true }], title: '오륜서 계승자' });
   assert.deepEqual(P.checkTitles(), []);
@@ -153,6 +153,24 @@ test('일본 J8 을 연 뒤(10/24): 열 칸(J8 빼고)으로 오륜서 계승자
   fresh({ acquisitions: ten });
   assert.deepEqual(P.checkTitles(), [], '열 칸만으로는 없음');
   assert.equal(S.learnNode('japanese', 'J8').ok, true);
+  assert.deepEqual(events(), [], '11/14 J12 바위 몸이 모자라면 없음');
+  assert.equal(S.learnNode('japanese', 'J12').ok, true);
+  assert.deepEqual(events(), ['school:japanese']);
+});
+
+test('일본 J12 바위 몸을 연 뒤(11/14 사장님 \'전부 권고대로\' — J8 때처럼): 열한 칸으로 오륜서 계승자를 이미 얻은 저장은 그대로 가짐(호칭 · 레벨 몫) · 열한 칸만 익히고 호칭이 없던 저장은 J12 를 익혀야 얻음', () => {
+  const eleven = skillSave('japanese').filter((a) => a.receipt !== 'skill:japanese:J12');
+  assert.equal(eleven.length, 11);
+  fresh({ acquisitions: eleven, titles: [{ event: 'school:japanese', name: '오륜서 계승자', seen: true }], title: '오륜서 계승자' });
+  assert.deepEqual(P.checkTitles(), []);
+  const p = P.readProgress();
+  assert.deepEqual(p.titles.map((t) => t.event), ['school:japanese']); assert.equal(p.title, '오륜서 계승자');
+  assert.equal(p.level, 1 + 11 + 1, '칸 열하나 + 호칭 하나');
+  assert.equal(S.learnNode('japanese', 'J12').ok, true); // 그 저장도 J12 는 새로 익힐 수 있음 · 호칭은 하나 그대로
+  assert.deepEqual(events(), ['school:japanese']);
+  fresh({ acquisitions: eleven });
+  assert.deepEqual(P.checkTitles(), [], '열한 칸만으로는 없음');
+  assert.equal(S.learnNode('japanese', 'J12').ok, true);
   assert.deepEqual(events(), ['school:japanese']);
 });
 

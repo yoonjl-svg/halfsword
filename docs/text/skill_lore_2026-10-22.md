@@ -32,7 +32,7 @@
 | id | 칸 | lore | src | 원문 (원어 · 자리 / 저장소 근거) | 신뢰도 |
 |---|---|---|---|---|---|
 | G1 | 뒤 박차기 | 걸음을 내딛거든 굼뜨지 마라 | 리히테나워 『Zettel』(14세기) — 속임 베기 | v57 「Zwifach es fürpas / Scheitt in linck vnd pis nicht las」 (Do it further twice, stride to the left and do not be slow) — 로마 사본. '왼쪽으로'를 빼고 '굼뜨지 마라'만 살림. 뒤로 박차는 걸음을 말하는 구절은 운문에 없다(Ringeck · Meyer 의 물러서기 대목은 이번에 확인 못 함) | [풀이] |
-| G2 | 간격 잡기 | 따라 들기는 두 겹으로 익혀라, 아니면 칼을 베어 들어라 | 리히테나워 『Zettel』(14세기) — 따라 들기 | v75 「Nach reyßenn lere czwiuach oder sneÿd in dÿ were」 (Learn the chasing twice, or slice into the weapon) — 고타 사본. 상대 헛침 뒤 두 걸음 빠르게 = 두 겹 따라 들기 | [원문] |
+| G2 | 파고들기 (11/14 — 전 간격 잡기 · 오의 · 출처 그대로) | 따라 들기는 두 겹으로 익혀라, 아니면 칼을 베어 들어라 | 리히테나워 『Zettel』(14세기) — 따라 들기 | v75 「Nach reyßenn lere czwiuach oder sneÿd in dÿ were」 (Learn the chasing twice, or slice into the weapon) — 고타 사본. 상대 헛침 뒤 두 걸음 빠르게 = 두 겹 따라 들기 | [원문] |
 | G5 | 곁눈 베기 | 곁눈 베기는 들소 같은 자가 치고 찌르는 것을 꺾는다 | 리히테나워 『Zettel』(14세기) — 곁눈 베기 | v58 「Schiler enpricht waß puffler slecht oder sticht」 (The squinter breaks into whatever the buffalo strikes or thrusts) · 저장소 `src/schools.js:462` · `docs/motion/longsword_cuts.md:100` | [원문] |
 | G8 | 비껴 딛는 가로베기 | 가로베기를 잘하는 자는 뛰어 딛으며 머리를 위협한다 | 리히테나워 『Zettel』(14세기) — 가로베기 | v52 「Was sich wol twert / mit sprüngen dem haupt gevert」 (He who thwarts well, with springing endangers the head) — 로마 사본. 같은 묶음 v49 「Zwerch benimpt / was vom tag dar kümpt」 는 `src/schools.js:470` · `docs/motion/longsword_cuts.md:89` | [원문] |
 | G3 | 세워 받기 | 젖혀 막기를 배워, 치고 찌르는 것을 솜씨 있게 막아라 | 리히테나워 『Zettel』(14세기) — 젖혀 막기 | v83 「leren abseczenn hawe stich chunstiglichenn leczenn」 (Learn to set aside, to skillfully hinder stroke and thrust) — 고타 사본 | [원문] |

@@ -1299,7 +1299,8 @@ export class PlayerSecretWatch {
     const n = this.me.schoolPassive?.flowN ?? 0;
     if (n === (this.flowSeen ?? 0)) return;
     this.flowSeen = n;
-    if (busy || this.open || kitOff(this.me, 'jpTaiSen')) return; // 몫 열쇠 jpTaiSen (11/14 감독 — 새 칸 자리 대기 · 지금은 J3 흘려 받기와 함께)
+    const K = this.me.skillKit; // 몫 열쇠 jpTaiSen — 사장님 11/14 보류('일본만 스킬이 하나 더 많은 거 아냐?'): 칸이 없어 KIT_KEYS 에 없음 → 늘 켬(스위치 JP_TANK.counter 만 · 견줌). 칸이 생겨 KIT_KEYS 에 들면 그 칸을 익혀야
+    if (busy || this.open || (K && 'jpTaiSen' in K && !K.jpTaiSen)) return;
     if (this.openWindow({ ev: 'counter' }, JP_TANK.counterWin)) this.counterWins = (this.counterWins ?? 0) + 1;
   }
 

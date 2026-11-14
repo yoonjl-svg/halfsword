@@ -169,5 +169,7 @@ function physicalClinch(mutual, exhaust = false) {
   } finally { g.world.free(); }
 }
 test('실물리: 한쪽 밀기·상대 버티기에서 양쪽 같은 비용, 회복·걸음 중복 없음', () => physicalClinch(false));
-test('실물리: 서로 밀어도10/s 한 번, 실제 접촉 시간만 소모', () => physicalClinch(true));
-test('실물리: 클린치로 상대 탈진·누르기 해제·막기 유지 중 강제 회복(자연 회복 −35 · 옛 2.5초)', () => physicalClinch(true, true));
+// 서로 미는 두 판은 AI 몸 밀치기라 11/14 사장님 결정('2는 ai도 동일하게' — CLOSE.startAI 1.0)부터 묶임 기력 × 2 가 걸림 → 그때 판(AI 규칙 끔)으로 묶음 · 기준 그대로
+const oldAI = (fn) => { const was = CLOSE.startAI; CLOSE.startAI = null; try { fn(); } finally { CLOSE.startAI = was; } };
+test('실물리: 서로 밀어도10/s 한 번, 실제 접촉 시간만 소모', () => oldAI(() => physicalClinch(true)));
+test('실물리: 클린치로 상대 탈진·누르기 해제·막기 유지 중 강제 회복(자연 회복 −35 · 옛 2.5초)', () => oldAI(() => physicalClinch(true, true)));
