@@ -24,6 +24,7 @@ import { TECH_BY_NAME, G as PAD } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { LOOKS } from '../../src/looks.js';
 import { isMain } from './is_main.mjs';
+import { closeInputGate, closeInputApply } from '../../src/close_hold.js'; // 붙은 거리 규칙 (11/14 — main.js playerInputFrame 과 같은 차례)
 
 const K = CONFIG.TIME.k; // 실제 초 → 게임 초
 const FR = 1 / 60; // 입력 프레임 (실제 s — main.js rAF 한 번)
@@ -31,6 +32,8 @@ const REACT = 0.22; // 사람 반응 (실제 s — 늦게 봄)
 const TRACE = !!process.env.SB_TRACE; // 진단 줄 (0.25 s 마다 몸 · 손 · 창)
 const TRACE2 = !!process.env.SB_TRACE2; // 진단 줄 (기술 긋기가 읽힌 꼴)
 const UA = CONFIG.UNIQUE_ASSIST;
+const DE_BOT = process.env.SB_DE_BOT !== '0'; // 11/14 독일 봇 (파고들기 · 밀치기 · 겹치기 → 붙음) — SB_DE_BOT=0 = 옛 독일 봇 (다른 유파 봇은 그대로)
+const GAIT_STAND = CONFIG.GAIT.burstStandV; // 박차기의 '서 있음' 골반 빠르기
 /** --set=SECRET.sweepCap=0,UNIQUE_ASSIST.x=1 — 이 프로세스 안에서만 (bind_on_measure.mjs applySets 와 같은 꼴) */
 function applySets(s) {
   for (const kv of (s ?? '').split(',').filter(Boolean)) {
@@ -144,10 +147,11 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   const hist = [];
   const sense = () => {
     const C = uq.touch;
-    return { t: G.t / K, dist: P.foeDistance(), attack: G.ai.mode === 'attack' || !!A.skill.tap || !!A.skill.swinging, window: !!W.open, spin: !!W.spinArm?.armed, iai: !!W.iaiArm?.armed, left: secretLeft(P), touch: C && !C.cut ? C : null };
+    return { t: G.t / K, dist: P.foeDistance(), attack: G.ai.mode === 'attack' || !!A.skill.tap || !!A.skill.swinging, window: !!W.open, spin: !!W.spinArm?.armed, iai: !!W.iaiArm?.armed, left: secretLeft(P), touch: C && !C.cut ? C : null, whiff: P.schoolPassive?.stats.indes.whiff ?? 0 };
   };
   let act = null;
   let nextDec = 0;
+  let lastWhiff = 0; // 11/14 독일 봇: 본 상대 헛침 셈
   let touchSeen = null;
   let cavTapAt = null;
   const wants = {};
@@ -177,10 +181,16 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     const L = S.left > 0 && !!secretName;
     if (focus === 'step' && STEP) return rnd() < 0.5 ? stroke(STEP[0], { ...(STEP[2] === 'side' ? { side: side() } : { fwd: 1 }), want: STEP[1] }) : stroke(STEP[0], { fwd: 0, want: `${STEP[0]}Plain` });
     if (school === 'german') {
+      if (DE_BOT) {
+        // 11/14 독일 봇 (더티복싱 재기 — 파고들기 · 밀치기 · 모르트슐라크를 실제로 씀 · DE_BOT 끔 = 옛 독일 봇): 칼 거리 밖이면 반은 파고들기(서서 앞으로 세게 — 들어가 밀치기까지) ·
+        //  칼 거리 안이면 넷에 하나 밀치기(걸어 들어가며 밂 1.4 s) · 나머지는 옛 넷(가로베기 · 곁눈 베기 · 겹치기 + 버팀 · 모르트슐라크 붙음)
+        if (S.dist > M.contact + 0.1 && rnd() < 0.5) return { kind: 'dig', seconds: 1.2, want: 'dig' };
+        if (S.dist <= M.contact + 0.1 && rnd() < 0.25) return { kind: 'close', seconds: 1.4, want: 'shove' };
+      }
       const n = Math.floor(rnd() * (L ? 4 : 3));
       if (n === 0) return stroke('zwerch', { side: side(), want: 'zwerchAbtritt' });
       if (n === 1) return stroke('zornhau', { want: 'schielhau' });
-      if (n === 2) return { ...stroke('zornhau', { want: 'duplieren' }), bindAfter: 1.0 }; // 긋고 맞댄 채 버팀 (겹치기 자동 — 맞댐 0.6 s)
+      if (n === 2) return { ...stroke('zornhau', { want: 'duplieren' }), bindAfter: 1.0, ...(DE_BOT ? { thenClose: !!L } : {}) }; // 긋고 맞댄 채 버팀 (겹치기 자동 — 맞댐 0.6 s) · 11/14 봇: 비기가 남았으면 겹치기 뒤 붙음(모르트슐라크 이음)
       return { kind: 'close', seconds: 2.8, want: secretName }; // 죽음의 일격 — 0.8 m 안 2 s
     }
     if (school === 'italian') {
@@ -207,6 +217,11 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   };
   const decide = (S) => {
     if (S.window && ['german', 'italian', 'japanese'].includes(school)) return { kind: 'tap', seconds: 0.07, want: secretName };
+    // 11/14 독일 봇: 상대 헛침을 봤고(그 순간 창 — 헛침 셈이 늘었음) 칼 거리 밖이면 파고듦 (70 %)
+    if (DE_BOT && school === 'german' && S.whiff > lastWhiff) {
+      lastWhiff = S.whiff;
+      if (S.dist > M.contact && rnd() < 0.7) return { kind: 'dig', seconds: 1.2, want: 'dig' };
+    }
     if (S.spin && school === 'iberian') return ALTIB ? { kind: 'hold', seconds: 4, fwd: 0.6, want: secretName, releaseAt: M.contact + rnd() * (M.reach + 0.15 - M.contact) } : { kind: 'circle', seconds: 0.8, want: secretName }; // 11/11 'altib' 판: 무장 창 → 길게 눌러 메고 걸어 들어가 뗌 (전 판 정수리 가르기 봇과 같은 손)
     if (ITB) { const a = itDecide(S); if (a) return a; } // 11/14 이탈리아 아웃복싱 봇 (아래 itDecide — 없으면 전 봇 그대로)
     if (S.attack && S.dist < M.reach + 0.8) {
@@ -283,6 +298,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
           if (act.bindAfter && !act.bindT) act.bindT = t;
           done = !act.bindAfter || t - act.bindT >= act.bindAfter;
           if (act.bindAfter && !done) sy = 0.3;
+          if (done && act.thenClose) { if (hand) ev('pointerup'); prevAct = act; act = { kind: 'close', seconds: 2.0, want: secretName, t, fired0: act.fired0 }; acts.close = (acts.close ?? 0) + 1; done = false; } // 11/14 독일 봇: 겹치기 뒤 붙음 (모르트슐라크 이음)
         }
       } else if (act.kind === 'circle') {
         const z = Math.min(1, age / act.seconds);
@@ -310,6 +326,13 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
         if (age > act.seconds || (!uq.winding && age > UA.rdHoldTime / K + 0.4)) done = true;
       } else if (act.kind === 'close') {
         sy = P.foeDistance() > 0.7 ? 0.9 : 0.3; // 붙어 있음 (0.8 m 안)
+        done = age >= act.seconds || !!W.open;
+      } else if (act.kind === 'dig') {
+        // 11/14 파고들기 (독일 봇): 서 있을 때까지 스틱 0(두 발 땅 · 골반 거의 멈춤 — 박차기의 '서 있음' · 0.5 s 까지) → 곧장 앞 1.0 (가슴 사이 1.0 m 안이 되면 밀치기가 남)
+        const g = P.gait;
+        if (!act.go && (age > 0.5 || (g && g.legs.F.stance && g.legs.B.stance && !g.walking && Math.hypot(g.vf.x, g.vf.z) < GAIT_STAND))) act.go = age;
+        sx = 0;
+        sy = act.go != null ? 1 : 0;
         done = age >= act.seconds || !!W.open;
       } else if (act.kind === 'sideTap') {
         sy = 0;
@@ -342,20 +365,22 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     const d = input.consumeHandDelta();
     let taps = input.consumeTaps();
     if (P.stamina.exhausted) (d.x = 0), (d.y = 0), (taps = 0);
-    let secBusy = busy;
+    const closeGate = closeInputGate(P, W); // 붙은 거리 규칙 (11/14 — main.js 와 같은 차례)
+    let secBusy = busy || closeGate.lock;
     const swipe = Math.hypot(d.x, d.y) / FR >= CONFIG.SKILL.swingSpeed;
     input.stickMove = { x: sx, y: sy };
     const atkWin = !!W.open && !W.stickOwns() && !W.circleOwns() && !W.holdOwns();
-    const stickGo = !!W.spinStick(FR, input.move, !secBusy && P.alive);
-    const circleGo = !!W.spinCircle(FR, d, hand, !secBusy && P.alive);
-    if (uq.cingirE && uq.circleTick(FR, d, hand, !secBusy && P.alive)) secBusy = true; // 11/11 싱지르 특수 공격 (main.js 와 같은 차례)
+    const stickGo = !!W.spinStick(FR, input.move, !secBusy && P.alive && closeGate.secretOk);
+    const circleGo = !!W.spinCircle(FR, d, hand, !secBusy && P.alive && closeGate.secretOk);
+    if (uq.cingirE && !closeGate.near && uq.circleTick(FR, d, hand, !secBusy && P.alive)) secBusy = true; // 11/11 싱지르 특수 공격 (main.js 와 같은 차례)
     const gilReady = !!W.S?.do?.gilmok && !!W.gilArm?.armed;
     const secArm = !(CONFIG.SECRET.secretHold && (P.skill.tap || P.skill.pom));
-    if ((((atkWin || gilReady) && (taps > 0 || (swipe && !W.S?.do?.tapOnly))) || stickGo || circleGo) && !secBusy && P.alive && secArm) {
+    if ((((atkWin || gilReady) && (taps > 0 || (swipe && !W.S?.do?.tapOnly))) || stickGo || circleGo) && !secBusy && P.alive && secArm && closeGate.secretOk) {
       const o = W.open ? W.fire() : W.fireArmed();
       if (o) o.dir = [d.x, d.y];
       if (P.skill.secret(o)) secBusy = true;
     }
+    if (P.alive && (closeGate.lock || !secBusy) && closeInputApply(P, closeGate, d, taps, swipe, FR)) taps = 0; // 붙은 거리 규칙 (11/14 — 묶임 · 칼자루만)
     if (!secBusy && P.alive && (taps > 0 || swipe) && W.canBuffer()) W.buffer([d.x, d.y]);
     const bufHold = !secBusy && !!W.bufferHold;
     if (secBusy || bufHold) taps = 0;
@@ -366,7 +391,8 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     const guardHold = guard.held && !guard.broken && !secBusy;
     uq.feed(d.x, d.y, FR, guardHold || bufHold || guard.held, guardHold || bufHold);
     if (uq.holdE) {
-      const hs = input.holdState();
+      const hs0 = input.holdState();
+      const hs = closeGate.lock || closeGate.near ? { ...hs0, down: false } : hs0; // 붙은 거리 규칙 (11/14 — main.js 와 같음)
       uq.holdInput(hs.down && !P.stamina.exhausted, hs.still, !!W.open, W.holdOwns());
     }
     const winding = !!uq.winding;
