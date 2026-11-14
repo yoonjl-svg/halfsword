@@ -1,5 +1,5 @@
 // 짧은 칼 파고들기 시제품 시험 (11/14 사장님 '짧은 무기 파고들기는 동방이 내 기대치보다 약한 면과도 연결되어 중요해 …' · src/dig_proto.js · config DIG_PROTO ·
-//  기록 docs/strike/ai_dig_2026-11-14.md): 셋 다 기본 끔 · 끄면 판이 바이트 같음 · A(AI 판단) 셈 · B(앞 박차기 — 사람 · AI 같은 조건 · 독일 두 걸음 그대로) ·
+//  기록 docs/strike/ai_dig_2026-11-14.md): A 기본 켬(사장님 11/14 'A안 켜고') · B · C 기본 끔 · 끄면 판이 바이트 같음 · A(AI 판단) 셈 · B(앞 박차기 — 사람 · AI 같은 조건 · 독일 두 걸음 그대로) ·
 //  C(달림 — 기력 문턱 · 스틱 · 휘두름 · 기력 대가) · 켜면 판에서 실제로 쓰임. 시간 상한 기준은 없다.  node --test tools/sim/ai_dig.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -44,15 +44,15 @@ function standing(weapon2 = 'hwando', human = true) {
   return { G, E, free: () => G.world.free() };
 }
 
-test('기본 끔 · 값은 사다리 칸 · 끄면 판이 바이트 같음 (값을 바꿔도 안 읽음)', () => {
-  assert.equal(D.ai, 0);
+test('A 기본 켬(사장님 11/14 \'A안 켜고\') · B · C 기본 끔 · 값은 사다리 칸 · 끄면 판이 바이트 같음 (값을 바꿔도 안 읽음)', () => {
+  assert.equal(D.ai, 1, '[사장님 11/14 결정] A안 켜고');
   assert.equal(D.step, 0);
   assert.equal(D.run, 0);
-  assert.equal(digProtoOn(), false);
+  assert.equal(withDig({ ai: 0 }, () => digProtoOn()), false);
   assert.ok([0.3, 0.45, 0.6, 0.9].includes(D.dashGap) && [0.3, 0.45, 0.6, 0.9].includes(D.runGap), '걸음 사다리');
   assert.ok(near(D.crossT, CONFIG.realS(0.6)) && near(D.dashWait, CONFIG.realS(0.2)), '시간 사다리');
-  const a = trace();
-  const b = withDig({ holdM: 0.9, stepN: 3, runAt: 0, runV: 9, keep: 1, wallNeed: 2, dashGap: 0.3, runGap: 0.3 }, () => trace());
+  const a = withDig({ ai: 0 }, () => trace());
+  const b = withDig({ ai: 0, holdM: 0.9, stepN: 3, runAt: 0, runV: 9, keep: 1, wallNeed: 2, dashGap: 0.3, runGap: 0.3, crossT: 9, stepIn: 3 }, () => trace());
   assert.equal(a.text, b.text, '스위치가 꺼져 있으면 값은 판에 안 닿음');
   assert.deepEqual(a.dP, {}, '재기 칸도 안 생김');
 });
@@ -62,7 +62,7 @@ test('A — AI 판단 셈: 헛친 틈 거리 · 걸음 실린 기술 · 붙은 �
   try {
     const ai = G.ai;
     assert.equal(ai.digNow(), true, '환도는 파고들기 판');
-    assert.equal(digRecoverReach(ai), Math.max(ai.M.reach, ai.foeReach), '끄면 옛 셈');
+    withDig({ ai: 0 }, () => assert.equal(digRecoverReach(ai), Math.max(ai.M.reach, ai.foeReach), '끄면 옛 셈'));
     withDig({ ai: 1 }, () => assert.ok(near(digRecoverReach(ai), Math.min(Math.max(ai.M.reach, ai.foeReach), ai.M.contact + 0.05 + D.crossT * GAIT.moveSpeed)), '건널 수 있는 거리까지만'));
     const T = ai.school.techByName;
     assert.ok(near(techStepFwd(T.chebuYaoji), 0.3), '체보요격 앞 걸음 0.3');
@@ -173,9 +173,9 @@ test('켜면 판에서 실제로 쓰임 — A 걸음 실린 칼 · 건넘 · B �
   };
   const a = first({ ai: 1 }, (r) => (r.dP.stepIn ?? 0) + (r.dP.cross ?? 0) + (r.dP.keep ?? 0) > 0);
   assert.ok(a, 'A 가 쓰인 판');
-  const b = first({ step: 1 }, (r) => (r.dP.dash ?? 0) > 0 && r.digs > 0);
+  const b = first({ ai: 0, step: 1 }, (r) => (r.dP.dash ?? 0) > 0 && r.digs > 0);
   assert.ok(b, 'B 박찬 판');
-  const c = first({ run: 1 }, (r) => (r.dP.runT ?? 0) > 0);
+  const c = first({ ai: 0, run: 1 }, (r) => (r.dP.runT ?? 0) > 0);
   assert.ok(c, 'C 달린 판');
-  for (const r of [a, b, c]) assert.notEqual(r.text, trace({ secs: 30, seed: r.seed }).text, '끈 판과 다름');
+  for (const r of [a, b, c]) assert.notEqual(r.text, withDig({ ai: 0 }, () => trace({ secs: 30, seed: r.seed })).text, '끈 판(A 도 끔)과 다름');
 });

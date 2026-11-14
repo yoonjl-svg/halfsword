@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────
 //  짧은 칼 파고들기 시제품 셋 (11/14 사장님 '짧은 무기 파고들기는 동방이 내 기대치보다 약한 면과도 연결되어 중요해. 방안을 마련해보고 정 안되면
 //   앞 박차기를 모든 캐릭터에 공통으로 주거나, 기력 n이상이면 빠르게 뛸 수 있게 하거나?' · 값 config DIG_PROTO · 기록 docs/strike/ai_dig_2026-11-14.md)
-//  셋 다 기본 끔 — 끄면 이 파일의 어떤 셈도 판에 닿지 않는다(부르는 자리마다 스위치를 먼저 봄 · 굴림 없음 · 관문 바이트 같음).
-//   A (DIG_PROTO.ai)  AI 판단 — 파고들기 판 몸(ai.dig — 내 칼이 상대 칼보다 뚜렷이 짧음)만: 상대 칼끝 바로 밖에 섬 · 건널 수 있는 헛친 틈만 노리고 스틱 끝으로 건넘 ·
+//  A 는 기본 켬(사장님 11/14 'A안 켜고') · B · C 는 기본 끔 — 끈 것은 이 파일의 어떤 셈도 판에 닿지 않는다(부르는 자리마다 스위치를 먼저 봄 · 굴림 없음).
+//   A (DIG_PROTO.ai)  AI 판단 — 파고들기 판 몸(ai.dig — 내 칼이 상대 칼보다 뚜렷이 짧음 · 쓰러진 상대를 내리칠 짧은 간격으로 바뀐 동안(ai.Mup)은 아님)만: 상대 칼끝 바로 밖에 섬 · 건널 수 있는 헛친 틈만 노리고 스틱 끝으로 건넘 ·
 //                     걸음 실린 기술을 칼끝 밖에서 냄 · 붙은 뒤 이어 침 · 상대 등이 울타리에 닿았거나 지쳤으면 몰아침. 몸 · 걸음 장치는 그대로(AI 고르기만)
 //   B (DIG_PROTO.step) 앞 박차기 모두에게 — 사람(gait.js 걷기 시작 · 독일 파고들기 다음 줄) · AI(aiFrontDash — 다가감 첫 걸음) 같은 조건 · 같은 장치(gait burst dig)
 //   C (DIG_PROTO.run)  기력 문턱 위에서 달림 — 사람 · AI 같은 몸 셈(fighter.js runTick — 가려는 앞 빠르기 × runV ÷ 걷는 빠르기 · 달린 거리 걸음 기력 × runCost) · AI 는 먼 다가감에서 스틱 끝
@@ -28,7 +28,7 @@ export function techStepFwd(t) {
 /** A2 헛친 틈을 노리는 거리 (opportunity — 파고들기 판): 끄면 옛 셈 그대로(내 칼끝 · 상대 칼끝 어림 가운데 먼 쪽) · 켜면 건널 수 있는 거리(칠 거리 + crossT × 앞 걷는 빠르기)까지만 */
 export function digRecoverReach(ai) {
   const r = Math.max(ai.M.reach, ai.foeReach);
-  if (!D.ai) return r;
+  if (!D.ai || ai.Mup) return r; // 쓰러진 상대 간격(Mup — 내리칠 짧은 간격으로 바뀐 동안)은 칼 길이 탓 파고들기가 아님 — 옛 셈
   return Math.min(r, ai.M.contact + 0.05 + D.crossT * GAIT.moveSpeed);
 }
 
@@ -101,7 +101,7 @@ export function digFeet(ai, fwd, gap) {
   }
   if (D.step && g && ((g.burst && g.burst.dig) || g.digStep)) fwd = 1;
   if (D.run && gap >= D.runGap && (ai.me.stamina?.value ?? 0) >= D.runAt) fwd = 1;
-  if (D.ai && ai.dig && (ai.why === 'recover' || ai.why === 'dig')) {
+  if (D.ai && ai.dig && !ai.Mup && (ai.why === 'recover' || ai.why === 'dig')) {
     const c = Math.min(1, Math.max(0.25, gap * 3));
     if (c > fwd) {
       fwd = c;
