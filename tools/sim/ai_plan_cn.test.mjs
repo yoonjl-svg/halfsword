@@ -123,7 +123,7 @@ test('허리 베기 몫 — 띠 기울기 × 칸 · 다른 칼 · 쓰러진 상�
     hi.free();
   }
   // 실제 기술 고르기: 같은 굴림 차례로 동방 몫 켬 · 끔 — 허리 베기 계열 몫이 늚
-  const G = newRound({ walls: true, seed: 2, weapon: 'longsword', weapon2: 'hwando', AI2Class: AI, persona: { proficiency: 5 }, persona2: { proficiency: 2 } });
+  const G = newRound({ walls: true, seed: 2, weapon: 'longsword', weapon2: 'hwando', AI2Class: AI, persona: { proficiency: 5 }, persona2: { proficiency: 2, planOff: true } }); // 3 단계(11/14): 상대 롱소드 AI 는 옛 판(planOff)
   while (G.t < 2) G.step();
   const ai = G.ai;
   const s = ai.lastSeen;
@@ -133,11 +133,18 @@ test('허리 베기 몫 — 띠 기울기 × 칸 · 다른 칼 · 쓰러진 상�
     for (let i = 0; i < 400; i++) if (UA.yaojiBleed.techs.includes(ai.pickTech(s, 'patience')?.name)) w++;
     return w;
   };
-  const on = count();
-  const keep = ai.planCn;
-  ai.planCn = undefined;
-  const off = count();
-  ai.planCn = keep;
+  const rd = AI_PLAN.read;
+  AI_PLAN.read = { ...rd, on: 0 }; // 3 단계(11/14) 수 읽기(독일 상대엔 칼끝 밖 큰 칼을 덜)가 같은 기술 고르기에 겹쳐 — 동방 몫만 보려고 읽기 끔으로 묶음 (기준은 안 고침)
+  let on, off;
+  try {
+    on = count();
+    const keep = ai.planCn;
+    ai.planCn = undefined;
+    off = count();
+    ai.planCn = keep;
+  } finally {
+    AI_PLAN.read = rd;
+  }
   G.world.free();
   assert.ok(on > off, `허리 베기 ${on} > ${off} / 400`);
   assert.ok(on < 400, '늘 그렇지는 않음 (기울기)');
@@ -472,8 +479,8 @@ test('다른 유파 판은 동방 몫과 상관없이 바이트 같음 · 동방
   assert.notEqual(cn1.text, cn0.text, '동방 켬은 판이 달라짐');
 });
 
-test('판 하나 — AI 동방(환도 숙련 5 · P 자리) 대 롱소드 AI(숙련 2) 씨앗 11: 허리 베기 → 사냥 겹 → 지치게 · 유도 · 노릴 마음 · 나서며 받기 · 격살 시도 · 국면이 실제로 남', () => {
-  const G = newRound({ walls: true, seed: 11, weapon: 'hwando', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 2 }, persona2: { proficiency: 5 } });
+test('판 하나 — AI 동방(환도 숙련 5 · P 자리) 대 롱소드 AI(숙련 2) 씨앗 11: 허리 베기 → 사냥 겹 → 지치게 · 유도 · 노릴 마음 · 나서며 받기 · 격살 시도 · 국면이 실제로 남', () => withPlan({ read: { ...AI_PLAN.read, on: 0, fair: 0 } }, () => { // 3 단계(11/14) 그때 판으로 묶음 (기준은 안 고침): 수 읽기 · 공정함으로 씨앗 11 판이 갈라짐 (사냥 겹 0)
+  const G = newRound({ walls: true, seed: 11, weapon: 'hwando', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 2, planOff: true }, persona2: { proficiency: 5 } }); // 3 단계(11/14): 상대 롱소드 AI 는 옛 판(planOff)
   const ai = G.ai2;
   let waist = 0;
   const sa = ai.startAttack;
@@ -493,4 +500,4 @@ test('판 하나 — AI 동방(환도 숙련 5 · P 자리) 대 롱소드 AI(숙
   assert.ok(C.lure > 0 && C.meet > 0 && C.want > 0, JSON.stringify(C));
   assert.ok(gkTry > 0, `격살 시도 막기 ${gkTry}`);
   assert.ok(P.judges > 0 && Object.values(P.t).reduce((x, y) => x + y, 0) > 0, '국면 시간이 쌓임');
-});
+}));

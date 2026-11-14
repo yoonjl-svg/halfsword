@@ -301,8 +301,9 @@ test('AI 에도 똑같이 (11/14 사장님 \'모두 본판에 넣어 ai에게도
   const o = keep();
   // 11/14 둘째 그때 판으로 묶음 (기준은 안 고침): 이베리아 플랜 변칙(옆 박차기 · 비스듬히 들어감 — src/ai_plan_ib.js)으로 씨앗 2 판이 갈라져 20 s 안에 이어 돌리기가 안 남 → 이베리아 플랜 전 판(`?aiPlanIb=0` 꼴)으로
   const AP = CONFIG.AI_PLAN;
-  const ap = [AP.schools, AP.errSchools];
-  for (const k of ['schools', 'errSchools']) AP[k] = AP[k].filter((x) => x !== 'iberian');
+  const ap = [AP.schools, AP.errSchools, AP.pommel];
+  for (const k of ['schools', 'errSchools']) AP[k] = AP[k].filter((x) => x !== 'iberian' && x !== 'german'); // 3 단계(11/14): 독일 플랜 · 모든 AI 손잡이 찍기도 그 전 판으로 (상대 롱소드 AI)
+  AP.pommel = 0;
   const G = newRound({ walls: false, weapon: 'longsword', weapon2: 'zweihander', seed: 2, gap: 2.4, persona: { proficiency: 5 }, AI2Class: AI }); // AI 대 AI (롱소드 AI 대 츠바이핸더 이베리아 AI)
   const P = G.player;
   const E = G.enemy;
@@ -333,7 +334,7 @@ test('AI 에도 똑같이 (11/14 사장님 \'모두 본판에 넣어 ai에게도
     E.ibLink = null;
     P.ibLink = null;
     restore(o);
-    [AP.schools, AP.errSchools] = ap;
+    [AP.schools, AP.errSchools, AP.pommel] = ap;
     G.world.free();
   }
 });

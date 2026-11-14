@@ -445,7 +445,7 @@ test('자연스러운 쥠 바꿈 · 강제 뒤 박차기 · 폼멜 찍기 시제
 });
 
 test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누르기 mordPress(2 s) → 창 → 머리가 닿으면 곧장 냄(사람과 같은 실행부) → 굳음 → 끝 · 끊기면 셈 0 · 머리가 멀면 안 냄 (10/31 14:xx 뒤 기본 폼멜 찍기 — 닿는 거리 = 팔 + 폼멜 + 앞 반걸음)', () => {
-  const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 } } });
+  const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 }, planOff: true } }); // 3 단계(11/14): 비기 셈을 보는 장면 — 독일 플랜 전 판(planOff · 인물 칸 없는 밀치기 몸 아님)
   const P = g.player, E = g.enemy, ai = g.ai;
   try {
     assert.equal(ai.secret?.name, 'mordschlag');
@@ -583,7 +583,7 @@ test('폼멜 찍기 기본 (10/31 14:xx 사장님 \'폼멜 찍기로 바꿔서 �
     } finally { g.world.free(); }
   }
   // AI (같은 실행부): 누르기 창 → 머리가 닿는 거리(팔 + 폼멜 + 앞 반걸음)면 냄 → 폼멜로 머리
-  const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 } } });
+  const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 }, planOff: true } }); // 3 단계(11/14): 비기 셈을 보는 장면 — 독일 플랜 전 판(planOff · 인물 칸 없는 밀치기 몸 아님)
   const P = g.player, E = g.enemy, ai = g.ai;
   try {
     ai.watch = () => {};

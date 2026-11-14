@@ -9,6 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { planFor, tiltOf, luckOf, distErrWidth, PHASES, SCHOOL_PLAN } from '../../src/ai_plan.js';
+import { readNote } from '../../src/ai_read.js';
 import { ibStats, chainWant, spinK, armK, habitN, ibTick, ibCircle, ibFeetV, schoolRead, swapReady, nextFree, ibSidePost, ibFwdPost, ibAfter, foeAtkN } from '../../src/ai_plan_ib.js';
 
 const { AI_PLAN, IB_LINK, STAMINA } = CONFIG;
@@ -83,7 +84,7 @@ function fake(p, o = {}) {
 }
 /** AI 둘 판 (자리 0 = 롱소드 AI 숙련 2 · 자리 1 = 이베리아 AI) — secs 초 돌리며 몸 자리 · 피를 30 스텝마다 적은 글 */
 function trace({ weapon2 = 'zweihander', prof = 2, secs = 6, seed = 2 } = {}) {
-  const G = newRound({ walls: true, seed, weapon: 'longsword', weapon2, AI2Class: AI, persona: { proficiency: prof }, persona2: { proficiency: 2 } });
+  const G = newRound({ walls: true, seed, weapon: 'longsword', weapon2, AI2Class: AI, persona: { proficiency: prof }, persona2: { proficiency: 2, planOff: true } }); // 3 단계(11/14): 상대 롱소드 AI 는 옛 판(planOff — 독일 플랜 전 판 그대로)
   const out = [];
   let i = 0;
   while (G.t < secs) {
@@ -315,14 +316,14 @@ test('넓게 돎 · 박자 흔들림 · 돌기 박자의 옆 박차기 (각을 �
   assert.equal(ibFwdPost(ai, 1), 1);
   beat(0); // 같은 쪽으로 계속 돎 — 각을 안 바꿈
   assert.equal(I.dash.on, false, '높음 — 각을 안 바꾸면 안 박참 (굴림 몫 0)');
-  I.atkT[0] = ai.sense.t - 3;
-  I.atkT[1] = ai.sense.t - 1;
+  readNote(ai, { id: 901, line: 'highL' }); // 3 단계(11/14): 상대가 낸 칼은 공통 읽기 그릇에 (readTick 이 적음)
+  readNote(ai, { id: 902, line: 'highR' });
   assert.equal(foeAtkN(ai), 2, '되풀이 — 10.0 s 안에 상대가 칼을 두 번 냄');
   beat(0.4);
   assert.equal(I.dash.on, true, '높음 — 되풀이에 맞춰 비켜 꾐');
   assert.equal(ai.stats.ib.bait, 1);
   I.dash.on = false;
-  I.atkT.fill(-Infinity);
+  ai.read.t.fill(-Infinity);
   I.lastCircle = -Math.sign(ai.pers.circleDir);
   ai.me.stamina.value = 10; // 쉼 문턱 + 박차기 값 밑
   beat(0);
@@ -462,7 +463,7 @@ test('판: AI 이베리아 숙련 2 대 롱소드 AI — 국면 · 이베리아 
 });
 
 test('판: AI 이베리아 숙련 2 대 롱소드 AI (씨앗 4) — 옆 박차기 → 나선 걸음 베기 · 비스듬히 들어감이 남 (11/14 둘째 — 종종)', () => {
-  const G = newRound({ walls: true, seed: 4, weapon: 'longsword', weapon2: 'zweihander', AI2Class: AI, persona: { proficiency: 2 }, persona2: { proficiency: 2 } });
+  const G = newRound({ walls: true, seed: 4, weapon: 'longsword', weapon2: 'zweihander', AI2Class: AI, persona: { proficiency: 2 }, persona2: { proficiency: 2, planOff: true } }); // 3 단계(11/14): 상대 롱소드 AI 는 옛 판(planOff)
   while (G.t < 20 && G.player.alive && G.enemy.alive) G.step();
   const st = G.ai.stats.ib;
   G.world.free();
@@ -473,7 +474,8 @@ test('판: AI 이베리아 숙련 2 대 롱소드 AI (씨앗 4) — 옆 박차�
 
 test('스위치 끔 = 옛 판 (이베리아 — `?aiPlan=0` · 이베리아만 뺌이 같고 켬은 다름) · 다른 유파는 이베리아 칸을 안 읽음', () => {
   const off = withPlan({ on: 0 }, () => trace({ prof: 2 }));
-  const none = withPlan({ schools: ['italian'], errSchools: ['italian'] }, () => trace({ prof: 2 }));
+  const noIb = (k) => AI_PLAN[k].filter((t) => t !== 'iberian');
+  const none = withPlan({ schools: noIb('schools'), errSchools: noIb('errSchools'), pommel: 0 }, () => trace({ prof: 2 })); // 3 단계(11/14): 모든 AI 손잡이 찍기도 뺌
   const on = trace({ prof: 2 });
   assert.equal(off.ib, false);
   assert.equal(off.chainOn, false, '옛 판 AI 몸 — B6 없음');
@@ -484,7 +486,7 @@ test('스위치 끔 = 옛 판 (이베리아 — `?aiPlan=0` · 이베리아만 �
   // 이탈리아 · 롱소드 판은 이베리아를 켜도 그대로
   for (const w of ['rapier', 'longsword']) {
     const a = trace({ weapon2: w, prof: 2, secs: 4 });
-    const b = withPlan({ schools: ['italian'], errSchools: ['italian'] }, () => trace({ weapon2: w, prof: 2, secs: 4 }));
+    const b = withPlan({ schools: noIb('schools'), errSchools: noIb('errSchools') }, () => trace({ weapon2: w, prof: 2, secs: 4 }));
     assert.equal(a.text, b.text, `${w} 판`);
   }
 });

@@ -2,7 +2,7 @@
 //  node --test tools/sim/singir_fall.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newRound, DT } from './harness_m.mjs';
+import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { SECRET, SKILL, ARENA } from '../../src/config.js';
 import { PlayerSecretWatch } from '../../src/secret.js';
 import { fightOne } from './school_balance.mjs';
@@ -69,6 +69,11 @@ function standSpin(weapon, gap) {
   return out;
 }
 
+// 3 단계(11/14) 그때 판으로 묶음 (기준은 안 고침): 롱소드 AI 의 독일 플랜 · 모든 AI 손잡이 찍기를 뺀 판 (이 장면을 잰 때의 상대)
+const deOff = () => { const P = CONFIG.AI_PLAN, k = [P.schools, P.errSchools, P.pommel]; for (const x of ['schools', 'errSchools']) P[x] = P[x].filter((t) => t !== 'german'); P.pommel = 0; return k; };
+const deOn = (k) => { const P = CONFIG.AI_PLAN; [P.schools, P.errSchools, P.pommel] = k; };
+const withDeOff = (fn) => { const k = deOff(); try { return fn(); } finally { deOn(k); } };
+
 test('기본값: 가까운 상대 뒷발 축 near 1 (11/05 · 사장님 확인 전)', () => {
   assert.equal(SECRET.ibSpin.near, 1);
   assert.equal(SECRET.ibSpin.share, 0.5); // 빠르기 몫 (사장님 11/05 '싱지르 0.5로 넣고')
@@ -115,6 +120,8 @@ test('멀면(맞닿기 + 나아감 밖) 전 판 그대로 — 앞발 축 · 나�
 });
 
 test('넘어지던 판 (티소나 대 롱소드 AI 씨앗 3 — 사람 손가락 봇): 끄면 돌기 0.13 s 에 맞아 넘어짐 · 켜면 1 s 안 안 넘어짐', () => withArmOld(async () => {
+  const deK = deOff();
+  try {
   // 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 씨앗 3 의 그 넘어짐 장면이 안 나옴 (끔 · 켬 같은 판 · 기록 arm_real §10)
   const fc = { ...SKILL.fingerCut };
   Object.assign(SKILL.fingerCut, { arm: 1, gain: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면 (손가락 봇 긋기가 세지면 씨앗 3 판이 달라져 그 넘어짐 장면이 안 나옴 — 끔 · 켬 같은 판)
@@ -130,6 +137,7 @@ test('넘어지던 판 (티소나 대 롱소드 AI 씨앗 3 — 사람 손가락
   } finally {
     Object.assign(SKILL.fingerCut, fc);
   }
+  } finally { deOn(deK); }
 }, ['armClear']));
 
 test('재기 꽂개는 읽기만: singir_fall runOne 판 = school_balance fightOne 판 (이베리아 · 롱소드 AI 씨앗 3 · 5 s)', () => {

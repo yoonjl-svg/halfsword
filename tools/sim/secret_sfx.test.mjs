@@ -267,7 +267,7 @@ test('AI 싱지르 (롤랑 — 이베리아 숙련도 6 · spinGo 가 skill.secr
 });
 
 test('AI 모르트슐라크 (독일 숙련도 5 · mordTick → mordGo): 누르기 · 창 동안 0 · 낸 순간 한 번 · g2', () => {
-  const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 } } });
+  const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 }, planOff: true } }); // 3 단계(11/14): 비기 셈을 보는 장면 — 독일 플랜 전 판(planOff · 인물 칸 없는 밀치기 몸 아님)
   const s = fakeSound();
   const { W, reqs } = watchRound(g, s);
   const E = g.enemy, ai = g.ai;

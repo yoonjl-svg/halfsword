@@ -2319,12 +2319,12 @@ export const AI_MAAI = { hide: 0 }; // [사장님 확인 전 — 확인표 3422]
 //               L = 상대 겹 ÷ SECRET.gyeoksalAi.stacks + 판 시간 ÷ late + 상대 지침 + (높음) 칠 낌새 — 겹 0 · 초반 0.2 · 기준점 하나 0.5 · 끝 0.8 · 위협 하나에 한 번 굴림 · 옛 판은 SECRET.gyeoksalAi 문 그대로 [사장님 확인 전]
 export const AI_PLAN = {
   on: 1,
-  schools: ['italian', 'japanese', 'iberian', 'chinese'], // 1 단계 이탈리아 · 2 단계 일본(AI_PLAN_JP · src/ai_plan_jp.js) · 이베리아(아래 ib · `?aiPlanIb=0`) · 동방(아래 cn · `?aiPlanCn=0`)
+  schools: ['italian', 'japanese', 'iberian', 'chinese', 'german'], // 3 단계 독일(AI_PLAN_DE · src/ai_plan_de.js · `?aiPlanDe=0`) · 1 단계 이탈리아 · 2 단계 일본(AI_PLAN_JP · src/ai_plan_jp.js) · 이베리아(아래 ib · `?aiPlanIb=0`) · 동방(아래 cn · `?aiPlanCn=0`)
   bands: [0, 1, 1, 2, 2, 3, 3],
   tilt: [0, 1 / 3, 2 / 3, 1],
   errMax: 0.3,
   errClear: 5,
-  errSchools: ['italian', 'japanese', 'iberian', 'chinese'], // 2 단계 일본 · 이베리아 · 동방 더함 (사장님 11/14 '거리 오차 0.3 m → 숙련 5 에서 0')
+  errSchools: ['italian', 'japanese', 'iberian', 'chinese', 'german'], // 3 단계 독일 더함 · 2 단계 일본 · 이베리아 · 동방 더함 (사장님 11/14 '거리 오차 0.3 m → 숙련 5 에서 0')
   // ── 이베리아 플랜 (2 단계 · 11/14 — 사장님 '이베리아 = 거칠고 모험적인 슬러거' · 설계 §3-5 · src/ai_plan_ib.js · 기록 docs/strike/ai_plan_ib_2026-11-14.md · 확인표 4301 ~):
   //  chainKeep  사슬을 이을 마음 — 이어 칠 몫 want 에 (1 − want) × chainKeep × 띠 세기 × 칸 chain × (½ + ½ × 이은 칼 몫) 을 얹음 (굴림은 남김 — '늘 이음'이 아님) [몫 — 파고들기 digKeep 0.6 과 같은 수 · 사장님 확인 전]
   //  dashT      옆 박차기 — 스틱을 옆 끝으로 미는 시간 (시간 사다리 0.4 s — 이어 돌리기 원 한 번과 같은 칸) [사장님 확인 전]
@@ -2333,6 +2333,16 @@ export const AI_PLAN = {
   //  readCut    수 읽기(가운데부터) — 원이 위험한 거리(이탈리아 칼끝 안 · 독일 앞 헛침 뒤 먼 거리) · 원 사이를 치는 버릇이 보이면 원을 고를 몫 × (1 − readCut × 띠 세기) [몫 · 사장님 확인 전]
   //  chainBody  1 = 플랜이 있는 이베리아 AI 몸도 B6 이어지는 흐름(위력 1 + 0.2 n · 세 칼마다 기력 0 — 사람과 같은 규칙)을 받음 · 0 = 그 전 판(AI 몸은 흐름 위력만) [여쭐 것 · 사장님 확인 전]
   ib: { chainKeep: 0.6, dashT: realS(0.4), armWait: realS(3.0), outStep: 0.3, readCut: 0.6, chainBody: 1 },
+  // ── 수 읽기 · 공정함 (3 단계 · 11/14 — 사장님 'A안 켜고 3단계 진행해' · 설계 §2-4 ③ · §4 · src/ai_read.js · 기록 docs/strike/ai_read_2026-11-14.md · 확인표 4401 ~):
+  //  on       1 = 읽기 그릇의 몫(상대 유파 대표 위험 — 가운데부터 · 대가 창 · 상대 기력 — 높음)을 씀 · 0 = 그 전 판 (버릇 · 되풀이 기억은 유파 몫이 그대로 읽음)
+  //  fair     1 = 공정함 (설계 §4-3): 고노센 경계가 사람 스틱 · 공격 상태 대신 늦게 본 준비 자세를 읽음 · 박자 찌르기가 기력 장부 대신 늦게 본 손 빠르기 ·
+  //           비기 조건을 알아채는 눈에 반응 시간(실행은 그대로 완벽) · 0 = 그 전 판 [사장님 11/14 '공정함' — 3 단계]
+  //  gns      1 = 일본 AI 고노센 준비를 지키며 기다리기 · 선 안으로 꾐 · 맞으러 나감 (src/ai_plan_jp.js jpGns* — 준비가 켜질 때 한 번 굴림 · 기울기) · 0 = 그 전 판 [사장님 확인 전]
+  //  habitT · repeatT  버릇 · 되풀이 기억 창 (시간 사다리 6.0 · 10.0 s — 설계 §2-4 값 그대로)
+  //  risk     상대 유파 대표 위험 — 문턱 · 곱 몫 = 띠 세기 × risk (일본 스택 문턱 stackAmp 0.3 과 같은 수) [사장님 확인 전]
+  //  cost     상대 대가 창(비기 뒤 굳음 · 이어 돌리기 원 — 반응 시간 뒤부터 보임) — 칠 마음 몫 = 띠 세기 × cost (같은 수 0.3) [사장님 확인 전]
+  //  stamina  상대 기력 (머리 위 막대 — 보임) — 문턱 − 띠 세기 × stamina × (내 기력 − 상대 기력) ÷ 최대 (지친 상대 몰아침 0.2 와 같은 수) [사장님 확인 전]
+  read: { on: 1, fair: 1, gns: 1, habitT: realS(6.0), repeatT: realS(10.0), risk: 0.3, cost: 0.3, stamina: 0.2 },
   tick: realS(0.2),
   hurtT: realS(1.2),
   beat: realS(0.6),
@@ -2344,6 +2354,12 @@ export const AI_PLAN = {
   digShort: 0.3,
   digCross: 0.6,
   digKeep: 0.6,
+  // 3 단계 (11/14 — 설계 §2-4 어긋남 표 '권고대로'): 숙련도 → 실력 이름 (3 = normal · 4 = hard — 가운데 · 높음의 차는 축 ③) · 전 AI_PROFICIENCY.levels(3 = hard) — 인물 시트가 숙련도 표에서 고른 이름일 때만 바꿈 (ai.js)
+  levels: ['easy', 'easy', 'normal', 'normal', 'hard', 'hard', 'hard'],
+  // 3 단계: 숙련도 0(무) = 유파 패시브 · schoolK 0 · 기질은 무유파 범위 (고유 동작은 이미 0 에서 없음) [권고대로 · 사장님 확인 전]
+  zeroPlain: 1,
+  // 3 단계: 붙은 거리 손잡이 찍기를 모든 AI 에 (인물 칸 · 독일 밀치기가 없는 몸도) — 닿는 거리 안 사건(들어섬 · 칼 맞물림)마다 이 몫으로 찍기 (CLOSE.pommelDist 0.9 m 안) [사장님 확인 전]
+  pommel: 0.5,
   cn: { close: 0.5, circle: 0.5, waist: 0.5, wear: 0.08, wearNext: 0.5, lureHold: realS(2.0), lureNeed: 0.5, meetFresh: 0.5, will0: 0.2 },
 };
 
@@ -2366,6 +2382,30 @@ export const AI_PLAN_JP = {
   repeatT: realS(10.0),
   pre: 0.5,
   lureT: realS(3.0),
+};
+
+// 유파 AI 3 단계 — 독일 '상대 리듬을 빼앗는 더티복서' 플랜 값 (11/14 — 설계안 §3-1 · §13 · src/ai_plan_de.js · 사장님 11/14 '독일 파고들기와 칼 씨름, 밀치기를 각 유파 단계에서 AI에게 켜' ·
+//  '독일은 내가 상대보다 기력 우위일 경우엔 밀지 않을 이유도 없는 거 같은데'). 모두 기울기 몫(띠 기울기 × 플랜 칸 × 이 값) — 절대 규칙 없음.
+//  push      인물 칸 없는 밀치기 — 닿는 거리 안 사건(들어섬 · 칼 맞물림 · 밀치기 뒤 아직 안쪽)마다 밀 몫 = push × 기울기 × 칸 × 기력 차 기울기 (인물 칸 persona.close 가 있으면 그것) [사장님 확인 전]
+//  diffK     기력 차 기울기 — 밀 몫 × (1 + clamp(diffK × (내 기력 − 상대 기력) ÷ 100, −1, 1) × 또렷함) · 또렷함 = 기울기 × (1 − 굴림 몫) (낮음 0.11 · 가운데 0.44 · 높음 1) · 높음은 바위 몸 상대면 차를 뒤집음 [사장님 확인 전]
+//  breath    기력 열세면 칼끝 밖에서 숨 고름 — 간 보는 여유 + breath × 또렷함 × 열세 몫 (걸음 사다리 0.6 m) [사장님 확인 전]
+//  edge      간 보기 — 상대 칼끝 바로 밖(간 보는 여유 × (1 − edge × 기울기 × 칸)) [사장님 확인 전]
+//  stick     붙음 물러남 기울기 — 너무 붙었을 때 물러나는 스틱 × (1 − stick × 기울기 × 칸) (독일은 덜 떨어짐 · 끄지 않음) [사장님 확인 전]
+//  dig       파고들기 — 상대 헛침을 본 한 번에 dig × 기울기 × 칸 몫으로 두 걸음 박찬 앞 걸음(사람 파고들기와 같은 장치 — gait.js deDigAi) [사장님 확인 전]
+//  digT      파고들기 스틱을 앞 끝으로 미는 시간 (시간 사다리 0.6 s — 두 걸음) [사장님 확인 전]
+//  back      뒤 박차기 — 물러나 피하기로 정한 위협에 back × 기울기 × 칸 몫으로 뒤 박찬 걸음 (상대가 칼을 들면 빠짐 · 빠진 뒤 헛침을 꾐) [사장님 확인 전]
+//  lure      유도(가운데 끝 4 부터) — 자세 박자마다 lure × 기울기 × 칸 몫으로 바보 자세(머리를 비움 — 간 보는 여유 −0.12 그대로) [사장님 확인 전]
+export const AI_PLAN_DE = {
+  push: 0.6,
+  diffK: 2,
+  breath: 0.6,
+  edge: 0.5,
+  stick: 0.6,
+  dig: 0.6,
+  digT: realS(0.6),
+  afterT: realS(0.6), // 파고들기 뒤 이 시간(시간 사다리 0.6 s)까지 밀 몫 × 2 (헛침 → 파고들기 → 밀치기) [사장님 확인 전]
+  back: 0.6,
+  lure: 0.5,
 };
 
 // 짧은 칼 파고들기 시제품 (11/14 사장님 '짧은 무기 파고들기는 동방이 내 기대치보다 약한 면과도 연결되어 중요해. 방안을 마련해보고 정 안되면 앞 박차기를 모든 캐릭터에 공통으로 주거나,
@@ -2403,6 +2443,28 @@ export const DIG_PROTO = {
   runV: 2.5,
   runCost: 1.5,
   runGap: 0.3,
+};
+
+// 유파 AI 3 단계 — 무유파 플랜 '막싸움꾼' (11/14 사장님 'A안 켜고 3단계 진행해' · '독일과 함께 무유파 무모함 켜' · src/ai_plan_free.js · 기록 docs/strike/ai_plan_free_2026-11-14.md ·
+//  확인표 4248 ~ · `?aiPlanFree=0` = 무유파만 옛 판 — 플랜 · 굴림 · 거리 오차 모두): 무유파(schools.js TRADITIONS.none — 둔기)는 고유 동작 · 패시브 · 비기 · 연계 · 유도가 없다.
+//  공통 틀의 굴림(무 · 낮음 '행운에 기대는 전투' — 무모 · 무계획 · 운) · 거리 오차 · 띠별 기력 · 수 읽기를 받고, 무 띠(숙련 0)에도 굴림을 탄다(ai_plan.js planFor — 무유파만).
+//  그 위 무유파 몫은 기울기 둘(몫 = 띠 기울기 또는 굴림 몫 × 국면 칸 × 이 값 — 절대 규칙 없음):
+//  beat     쳐내며 들어감 — 계획 몫: 상대 칼끝이 나를 겨누면 AI_PLAN.beat 마다 planK × 칸 × beat 로 그 칼을 내려쳐 비키며 한 걸음 내딛음 (둔기 파고들기 — 걸음 실린 기술이 없어 A 가 못 푼 몫) [몫 · 사장님 확인 전]
+//  wild     쳐내며 들어감 — 막 휘두름 몫: 때를 가리지 않고 planLuck × 칸 × wild (무 1 · 낮음 ⅔ · 가운데 ⅓ · 높음 0 쪽) [몫 — 동전 coin 과 같은 수 · 사장님 확인 전]
+//  beatOut  쳐내는 거리 — 상대 칼끝 어림 + 이만큼 안 (내 칼은 몸에 안 닿고 상대 칼에 닿는 창 · 걸음 사다리 0.3 m) [사장님 확인 전]
+//  beatGap  다가가다 상대 칼끝 안에서 막힘 — 내 칠 거리까지 이만큼 넘게 남으면 그 칼을 쳐내기로 냄 (걸음 사다리 0.3 m) [사장님 확인 전]
+//  go       쳐낸 칼이 끝나면 곧장 스틱 끝으로 건너 들어가 칠 몫 = planK × go + planLuck × AI_PLAN.coin [몫 — 파고들기 digKeep 0.6 과 같은 수 · 사장님 확인 전]
+//  press    붙어 두들김 — 붙은 거리(내 칼끝 + 0.3 안)에서 이어 칠 몫 want 에 (1 − want) × planK × 칸 × press 를 얹음 [몫 — 0.6 같은 수 · 사장님 확인 전]
+//  back     붙어 두들김 — 주고받은 뒤 물러나는 시간 × (1 − planK × 칸 × back) [몫 · 사장님 확인 전]
+export const AI_PLAN_FREE = {
+  on: 1,
+  beat: 0.5,
+  wild: 0.5,
+  beatOut: 0.3,
+  beatGap: 0.3,
+  go: 0.6,
+  press: 0.6,
+  back: 0.5,
 };
 
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)

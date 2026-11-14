@@ -19,8 +19,8 @@ import { AI_PLAN, UNIQUE_ASSIST as UA, SECRET, realS } from './config.js';
 import { huntN } from './cn_hunt.js';
 import { secretSpent } from './secret.js';
 import { bandOf, axesOf } from './ai_plan.js';
+import { readNote, readLineN } from './ai_read.js'; // 3 단계 (11/14): 버릇 · 되풀이 기억은 공통 읽기 그릇 하나로
 
-const RING = 4; // 본 상대 공격 기억 고리 (버릇 · 되풀이)
 const CN = () => AI_PLAN.cn;
 /** 사냥 겹을 쌓는 허리 베기 계열 (요격 · 체보요격 · 날개 접기 — cn_hunt.js 와 같은 목록) */
 const isWaist = (name) => !!name && (UA.yaojiBleed?.techs ?? []).includes(name);
@@ -41,10 +41,7 @@ export function cnInit(ai) {
     want: false,
     habitT: R.habit ? realS(R.mem) : 0, // 버릇 창 (가운데부터)
     repeatT: R.repeat ? realS(R.mem) : 0, // 되풀이 창 (높음)
-    thId: -1,
-    thT: new Float64Array(RING),
-    thL: new Array(RING).fill(null),
-    thN: 0,
+    thId: -1, // 버릇 · 되풀이 기억 칸은 3 단계부터 공통 읽기 그릇 ai.read (src/ai_read.js)
     quiet: false, // 안 치는 상대 (버릇)
     rep: null, // 되풀이 줄 (높음)
     repT: 0,
@@ -66,19 +63,12 @@ export function cnTick(ai, dt, d, s, th) {
   // 수 읽기 — 새 위협(늦게 본 칼끝)을 고리에 적음
   if (th && th.id !== S.thId) {
     S.thId = th.id;
-    if (S.repeatT > 0) {
-      for (let j = 0; j < Math.min(S.thN, RING); j++) {
-        if (S.thL[j] === th.line && t - S.thT[j] <= S.repeatT) {
-          S.rep = th.line; // 같은 줄이 되풀이 창 안에 두 번 — 그 줄을 나서며 받을 준비 (cnMeet)
-          S.repT = t;
-          st.rep++;
-          break;
-        }
-      }
+    readNote(ai, th, d); // 공통 읽기 그릇에 (readTick 이 이미 적었으면 같은 번호라 한 번)
+    if (S.repeatT > 0 && readLineN(ai, th.line, S.repeatT, th.id) >= 1) {
+      S.rep = th.line; // 같은 줄이 되풀이 창 안에 두 번 — 그 줄을 나서며 받을 준비 (cnMeet)
+      S.repT = t;
+      st.rep++;
     }
-    const i = S.thN++ % RING;
-    S.thT[i] = t;
-    S.thL[i] = th.line;
     if (S.lure > 0) {
       st.lureDraw++; // 끌어냄 — 유도는 여기서 끝 (막기 · 격살은 반사 층 respond 가 — 이 위협은 끌어낸 칼로 받음 drawnId)
       S.lure = 0;
@@ -87,7 +77,7 @@ export function cnTick(ai, dt, d, s, th) {
   }
   if (S.rep && t - S.repT > S.repeatT) S.rep = null;
   if (S.habitT > 0) {
-    const last = S.thN ? S.thT[(S.thN - 1) % RING] : -Infinity;
+    const last = ai.read?.lastT ?? -Infinity;
     S.quiet = ai.me.fightT > S.habitT && t - last > S.habitT; // 버릇 창 동안 칼을 안 냄 — 끌어낼 수 없는 상대
     if (S.quiet) st.quietT += dt;
   }

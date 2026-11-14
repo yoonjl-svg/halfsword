@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT, AI } from './harness_m.mjs';
 import { PlayerSecretWatch, secretLeft, secretUsesOf, useSecret, secretSpent } from '../../src/secret.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
+import { withReadOld } from './ai_read_pin.mjs'; // 11/14 유파 AI 3 단계 수 읽기 · 공정함 · AI 고노센 지키기 — 옛 장면은 잰 때 판으로 (docs/strike/ai_read_2026-11-14.md §6)
 // 준비까지 (11/14 사장님 '2초 후에 납도 시작' — 일본 준비는 iaiArmTime 뒤 납도 SECRET.iaiSheathe 가 끝나야 · 帯刀 끄면 납도 없음 · secret.js IaiArm.extra)
 const ARM = () => CONFIG.SECRET.iaiArmTime + (CONFIG.SECRET.iaiObi && CONFIG.SECRET.iaiSheathe > 0 ? CONFIG.SECRET.iaiSheathe : 0);
 
@@ -162,7 +163,8 @@ test('AI: 비기를 다 쓰면 비기 없는 AI 와 같은 길 (싱지르 무장
   }
 });
 
-test('AI 가 보는 사람 고노센 준비: 이 판 비기를 다 쓴 사람은 준비 아님 (ai.js gnsWatch)', () => {
+test('AI 가 보는 사람 고노센 준비: 이 판 비기를 다 쓴 사람은 준비 아님 (ai.js gnsWatch)', () => withReadOld(() => {
+  // 11/14 3 단계 공정함(AI_PLAN.read.fair) 전 눈(사람 스틱 셈 — 이 시험은 사람 몸 자세 없이 gnsWatch 만 돌림)으로 묶음 · 공정한 눈(늦게 본 준비 자세)의 같은 규칙은 ai_read.test '공정함' (기록 ai_read §6)
   const H = CHARACTERS_BY_ID.margarethe;
   const G = newRound({ seed: 2, weapon: 'uchigatana', weapon2: H.weapon, difficulty: H.ai.level, persona: H.ai.persona });
   try {
@@ -178,7 +180,7 @@ test('AI 가 보는 사람 고노센 준비: 이 판 비기를 다 쓴 사람은
   } finally {
     G.world.free();
   }
-});
+}));
 
 test("끝없음(null) · 'inf' : 판당 제한 없음", () => {
   const U = UA.secretUses;

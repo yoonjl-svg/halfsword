@@ -15,12 +15,18 @@ import { gnsHumanUnsettled } from '../../src/secret.js';
 import { foeReachBase } from '../../src/ai.js';
 import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
 import { withJpOld } from './jp_tank_pin.mjs'; // 11/14 일본 스택 · 바위 몸 — 옛 장면은 잰 때 판으로 (docs/strike/jp_tank_2026-11-14.md §5)
+import { withReadOld } from './ai_read_pin.mjs'; // 11/14 유파 AI 3 단계 수 읽기 · 공정함 · AI 고노센 지키기 — 옛 장면은 잰 때 판으로 (docs/strike/ai_read_2026-11-14.md §6)
 /** 11/14 칼집 각도 · 납도 전 판 (docs/strike/iai_obi_2026-11-14.md §13 — 납도 없음 · 쉬는 칼집 입 배꼽 앞 · 축 −121 / −15 — 鞘戻し 점(쉬는 칼집 입 쥠)이 빈손 다시 쥐는 길에 들어감) — 옛 장면만 */
 const OBI2_OLD = { iaiSheathe: 0, iaiObiSayaMouth: [0.21, 0.085, 0.02], iaiObiSayaAxis: { yaw: -121, el: -15 }, iaiObiPull: { yaw: -160, el: -25 }, iaiObiFollow: { m: 0.06, deg: 20 } };
 const withNoto0 = (fn) => { const S = CONFIG.SECRET; const was = {}; for (const k of Object.keys(OBI2_OLD)) (was[k] = S[k]), (S[k] = OBI2_OLD[k]); try { return fn(); } finally { Object.assign(S, was); } };
 
 const { SECRET, UNIQUE_ASSIST: UA, AI_MAAI } = CONFIG;
 const allOff = () => { SECRET.gnsHurtKeep = 0; SECRET.gnsThrough = 0; UA.tsuStep = 0; AI_MAAI.hide = 0; };
+
+// 3 단계(11/14) 그때 판으로 묶음 (기준은 안 고침): 롱소드 AI 의 독일 플랜 · 모든 AI 손잡이 찍기를 뺀 판 (이 장면을 잰 때의 상대)
+const deOff = () => { const P = CONFIG.AI_PLAN, k = [P.schools, P.errSchools, P.pommel]; for (const x of ['schools', 'errSchools']) P[x] = P[x].filter((t) => t !== 'german'); P.pommel = 0; return k; };
+const deOn = (k) => { const P = CONFIG.AI_PLAN; [P.schools, P.errSchools, P.pommel] = k; };
+const withDeOff = (fn) => { const k = deOff(); try { return fn(); } finally { deOn(k); } };
 
 test('기본값: 새 스위치 모두 끔 · 일본 걷기 빠르기 그대로', () => {
   assert.equal(SECRET.gnsHurtKeep, 0);
@@ -91,7 +97,7 @@ test('켜도 일본이 아닌 칸은 그대로: 네 스위치를 켠 독일 롱�
   }
 });
 
-test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄러져 들어감 (끄면 0)', () => withJpOld(() => withArmOld(() => withNoto0(() => {
+test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄러져 들어감 (끄면 0)', () => withJpOld(() => withArmOld(() => withNoto0(() => withDeOff(() => {
   // 11/14 일본 스택 · 바위 몸과 帯刀(대기 칼 자리)이 함께 켜진 판에서 씨앗 1 의 되돌림 칼이 안 나옴(둘 중 하나만이면 나옴) — 스택 전 판(jp_tank_pin)으로 묶음 · 기준은 그대로
   // 11/14 칼집 각도 · 납도(준비 2.0 → 2.6 s · 鞘戻し 점이 쉬는 칼집 입 쥠을 따라 배 왼쪽 앞으로)로 이 씨앗 판이 갈려 되돌림 칼이 안 나옴 — 그 전 판(OBI2_OLD)으로 묶음 · 기준은 그대로
   // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 · 사람 두손 칼 칼자루 끝 앞 바닥)로 씨앗 1 판에 제비 베기 되돌림 칼이 안 나옴 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
@@ -112,9 +118,10 @@ test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄�
   assert.ok(runs[0].snap > 0, '이 씨앗에 제비 베기 되돌림 칼이 있음');
   assert.ok(runs[0.3].tsu > 0, `제비 베기 미끄러져 들어감 ${runs[0.3].tsu}`);
   assert.notEqual(JSON.stringify(runs[0.3].r), JSON.stringify(runs[0].r), '켜면 판이 달라짐');
-}), ['armClear2'])));
+})), ['armClear2'])));
 
-test('gnsThrough: 켜면 팔을 가른 발도가 몸까지 한 번 더 벰 (끄면 첫 닿음에서 끝)', () => withJpOld(() => withArmOld(() => {
+test('gnsThrough: 켜면 팔을 가른 발도가 몸까지 한 번 더 벰 (끄면 첫 닿음에서 끝)', () => withReadOld(() => withJpOld(() => withArmOld(() => {
+  //  11/14 3 단계 공정함(AI_PLAN.read.fair — 상대 롱소드 AI 가 사람 준비를 늦게 본 준비 자세로 읽음) 뒤 이 씨앗 판이 갈려(14 s 안 고노센 0) 그때 판으로 묶음 (기록 ai_read §6)
   // 씨앗 6 판은 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 이 씨앗이 14 s 안에 고노센을 안 냄 (기록 arm_real §10)
   const runs = {};
   for (const v of [0, 1]) {
@@ -142,4 +149,4 @@ test('gnsThrough: 켜면 팔을 가른 발도가 몸까지 한 번 더 벰 (끄�
   assert.equal(runs[1].n, 1);
   assert.deepEqual(runs[1].big.map((b) => b[1]), ['arm', 'chest'], '켬 — 팔을 베고 가슴까지');
   assert.ok(runs[1].big[1][2] < runs[1].big[0][2], '두 번째 상처는 남은 에너지로 (첫 상처보다 얕음)');
-}, ['armClear']))); // 11/14 그때 판 (스택 · 바위 몸 전)
+}, ['armClear'])))); // 11/14 그때 판 (스택 · 바위 몸 전 · 3 단계 읽기 · 공정함 전)

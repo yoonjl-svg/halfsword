@@ -148,9 +148,11 @@ function foeSwinging(f) {
  * AI 박자 찌르기 셈 (ai.js update — 스텝마다 · AI 이탈리아가 비껴서며 찌르기를 꾸러미에 가졌을 때만): 사람 beatTick 과 같은 셈 · 몸 시계 t (게임 s)
  *  B = ai.itBeat { f, t, foeAtk, foeSw, inqBeatSeen } — ai.js 가 처음 부를 때 만듦
  */
-export function aiBeatTick(B, dt) {
+export function aiBeatTick(B, dt, sw) {
   B.t += dt;
-  beatTick(B);
+  if (sw === undefined) return beatTick(B); // 옛 판 — 상대 기력 장부 · 공격 꼴을 바로 읽음
+  if (sw && !B.foeSw) B.foeAtk = { n: (B.foeAtk?.n ?? 0) + 1, t0: B.t }; // 3 단계 공정함 (11/14 — 설계 §4-3): ai.js 가 늦게 본 손 빠르기로 넘긴 휘두름
+  B.foeSw = sw;
 }
 
 /**

@@ -146,8 +146,9 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
   IB_LINK.ai = 0;
   // 11/14 그때 판으로 묶음 (기준은 안 고침): 유파 플랜 2 단계 이베리아(티소나 AI — src/ai_plan_ib.js)로 판이 갈라짐(씨앗 27 깎음 0 · 건너뜀 0) → 이베리아 플랜 전 판(`?aiPlanIb=0` 꼴)
   const AP = AI_PLAN;
-  const ap = [AP.schools, AP.errSchools];
-  for (const k of ['schools', 'errSchools']) AP[k] = AP[k].filter((x) => x !== 'iberian');
+  const ap = [AP.schools, AP.errSchools, AP.pommel];
+  for (const k of ['schools', 'errSchools']) AP[k] = AP[k].filter((x) => x !== 'iberian' && x !== 'german'); // 3 단계(11/14): 독일 플랜 · 모든 AI 손잡이 찍기도 그 전 판으로 (상대 롱소드 AI)
+  AP.pommel = 0;
   AI.prototype.afterStrike = function (d) {
     const s = this.foe.stamina, c0 = s.counts.awe ?? 0, v0 = s.value, hit = this.hitLanded, bound = this.bound;
     const r = orig.call(this, d);
@@ -180,7 +181,7 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
   } finally {
     AI.prototype.afterStrike = orig;
     IB_LINK.ai = linkAi;
-    [AP.schools, AP.errSchools] = ap;
+    [AP.schools, AP.errSchools, AP.pommel] = ap;
   }
 }));
 

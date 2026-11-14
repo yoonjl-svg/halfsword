@@ -8,6 +8,7 @@ import { PlayerSecretWatch, secretEvent, gnsEnterLine, foeOnline, gnsUser, gnsBl
 import { playerSecretDef, JAPANESE_GAIT, setJapaneseGait } from '../../src/schools.js';
 import { requestIai } from '../../src/secret_instant.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
+import { withReadOld } from './ai_read_pin.mjs'; // 11/14 유파 AI 3 단계 수 읽기 · 공정함 · AI 고노센 지키기 — 옛 장면은 잰 때 판으로 (docs/strike/ai_read_2026-11-14.md §6)
 // 준비까지 (11/14 사장님 '2초 후에 납도 시작' — 일본 준비는 iaiArmTime 뒤 납도 SECRET.iaiSheathe 가 끝나야 · 帯刀 끄면 납도 없음 · secret.js IaiArm.extra)
 const ARM = () => CONFIG.SECRET.iaiArmTime + (CONFIG.SECRET.iaiObi && CONFIG.SECRET.iaiSheathe > 0 ? CONFIG.SECRET.iaiSheathe : 0);
 
@@ -290,7 +291,9 @@ test('⑤ 무모 (11/14 사장님 \'권고대로 고노센도 무모하게 넘�
   assert.equal(sum(mid, 'creep'), 0, `가운데 — 간 보기로는 선 밖 ${JSON.stringify(mid)}`);
 });
 
-test('⑤ 속임 → 결행: 속임은 준비 한 번에 한 번 (선 밖에서 들었다 거둠) · 다음 칠 때는 결행 — 상대가 고노센 쓰는 몸이 아니면 아무 일 없음', () => {
+test('⑤ 속임 → 결행: 속임은 준비 한 번에 한 번 (선 밖에서 들었다 거둠) · 다음 칠 때는 결행 — 상대가 고노센 쓰는 몸이 아니면 아무 일 없음', () => withReadOld(() => {
+  // 11/14 3 단계 공정함(AI_PLAN.read.fair)이면 사람 준비를 늦게 본 준비 자세(켜짐 0.35 s + 반응 시간)로 읽어 준비가 막 켜진 이 때엔 아직 안 보임 → 속임 표식이 지워짐 —
+  //  속임 → 결행 셈 시험이라 그 전 판 눈(사람 스틱 셈)으로 묶음 (기록 ai_read §6 · 공정한 눈의 준비 읽기는 ai_read.test '공정함')
   const G = newRound({ weapon: 'monohoshizao', weapon2: 'longsword', seed: 1, difficulty: 'normal' });
   const ai = G.ai;
   for (let i = 0; i < (CONFIG.ARENA.startHold + ARM() + 0.1) / DT; i++) G.step(); // 사람 준비가 켜질 때까지 (무장 시계는 판 시작 정지 뒤부터 — 10/27 23:0x · 실제 2 s)
@@ -321,4 +324,4 @@ test('⑤ 속임 → 결행: 속임은 준비 한 번에 한 번 (선 밖에서 
   assert.equal(K.ai.gnsW?.user, false);
   assert.equal(K.ai.holdDist(), withCfg({ gnsWary: 0 }, () => K.ai.holdDist()));
   K.world.free();
-});
+}));

@@ -283,7 +283,16 @@ test('① 내려 찌르기 닿게 (씨앗 1 · 서 있는 상대): 찌른 상처
 });
 
 test('② 판 (씨앗 901 · 롱소드 AI · 12 s · 칼끼리 닿음을 느끼면 0.25 ~ 0.95 s 뒤 탭하는 손): 실제 닿음 뒤 칼끝 돌려 빼기가 나감 · 셈 밖 닿음은 내 긋기 동안만', () => {
-  const r = fightRun('cavTouch', 901, 'longsword', { variant: 'on', dur: 12 });
+  // 3 단계(11/14) 그때 판으로 묶음 (기준은 안 고침): 롱소드 AI 의 독일 플랜 · 모든 AI 손잡이 찍기로 씨앗 901 판이 갈라짐 → 그 전 판(독일 · 찍기만 뺌)
+  const apD = [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools, CONFIG.AI_PLAN.pommel];
+  for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'german');
+  CONFIG.AI_PLAN.pommel = 0;
+  let r;
+  try {
+    r = fightRun('cavTouch', 901, 'longsword', { variant: 'on', dur: 12 });
+  } finally {
+    [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools, CONFIG.AI_PLAN.pommel] = apD;
+  }
   assert.ok((r.fired.cavazione ?? 0) >= 1, `나감 ${r.fired.cavazione}`);
   assert.ok(r.it.touches >= r.fired.cavazione && r.it.touchCut <= r.it.touches, JSON.stringify({ touches: r.it.touches, cut: r.it.touchCut }));
   assert.ok(r.it.fires.every((x) => !x || x.E >= 0), '낸 칼 결과');
@@ -302,13 +311,14 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
   };
   const a = watch();
   // 11/14 둘째 그때 판으로 묶음 (기준은 안 고침): 이베리아 플랜 변칙(옆 박차기 · 비스듬히 들어감 — src/ai_plan_ib.js)으로 씨앗 902 츠바이핸더 AI 판이 갈라져 칼끝 돌려 빼기 수가 안 나옴 → 이베리아 플랜 전 판(`?aiPlanIb=0` 꼴)으로
-  const ap0 = [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools];
-  for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'iberian');
+  const ap0 = [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools, CONFIG.AI_PLAN.pommel];
+  for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'iberian' && x !== 'german'); // 3 단계(11/14): 독일 플랜 · 모든 AI 손잡이 찍기도 그 전 판으로 (상대 롱소드 AI)
+  CONFIG.AI_PLAN.pommel = 0;
   let on;
   try {
     on = fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: a.probe });
   } finally {
-    [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools] = ap0;
+    [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools, CONFIG.AI_PLAN.pommel] = ap0;
   }
   assert.ok(a.seen.during > 0 && a.seen.ropesDuring === 0, `수 동안 밧줄 없음 ${JSON.stringify(a.seen)}`);
   assert.ok(a.seen.after > 0 && a.seen.ropesAfter === a.seen.after, `끝나면 다시 ${JSON.stringify(a.seen)}`);
