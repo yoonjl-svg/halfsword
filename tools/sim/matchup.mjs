@@ -6,6 +6,8 @@
 //  table : run 의 줄들을 모아 5 × 5 이김 몫 표(비김 = 반 이김 · 95 % 흔들림 = 1.96 × 판 점수 표준편차 ÷ √n) · 두 안의 화살표 · 짝마다 큰 기술
 //  node tools/sim/matchup.mjs run [--pairs=japanese-german,...|all] [--profs=3,5] [--seeds=1-6] [--dur=30] [--alt=german,japanese] > raw.jsonl
 //  node tools/sim/matchup.mjs table raw1.jsonl raw2.jsonl ...
+//  node tools/sim/matchup.mjs compare 첫판1.jsonl,첫판2.jsonl 둘째판1.jsonl,둘째판2.jsonl   (두 무기 판 견줌 — 같은 쪽 = 유파 상성 · 뒤집힘 = 무기 상성)
+//  --w=german:lightsaber,japanese:monohoshizao,… = 유파마다 무기 (둘째 등급 판)
 //  코드(판정 · AI)는 안 바꿈 — 재기만
 // ─────────────────────────────────────────────────────────────
 import fs from 'node:fs';
@@ -81,9 +83,10 @@ async function run() {
   const seeds = range(arg('seeds', '1-6'));
   const dur = +arg('dur', 30);
   const alt = new Set(arg('alt', '').split(',').filter(Boolean));
+  const over = Object.fromEntries(arg('w', '').split(',').filter(Boolean).map((x) => x.split(':'))); // --w=german:lightsaber,... (둘째 등급 판 — 유파마다 무기)
   const ps = arg('pairs', 'all');
   const pairs = ps === 'all' ? allPairs() : ps.split(',').map((p) => p.split('-'));
-  const W = (s) => (alt.has(s) ? ALT[s] : WEAPON[s]);
+  const W = (s) => over[s] ?? (alt.has(s) ? ALT[s] : WEAPON[s]);
   for (const prof of profs) for (const [x, y] of pairs) for (const seed of seeds) for (const swap of [false, true]) {
     const [a, b] = swap ? [y, x] : [x, y];
     const r = await fightOne({ a, b, wa: W(a), wb: W(b), seed, prof, dur });
@@ -145,6 +148,49 @@ function table() {
       const n = arrows.filter(([s, t]) => stat(s, t).m > 0.5).length;
       L.push(`- ${nm} 안 — 맞는 화살표 ${n} / 5: ${hits.join(' · ')}`);
     }
+    const full = SCHOOLS.every((x) => SCHOOLS.every((y) => x === y || stat(x, y).n));
+    if (full) {
+      const M = (x, y) => stat(x, y).m;
+      // 고리 스물넷 (일본에서 시작 · 방향 포함): 점수 = 화살표 (몫 − 50) 합 − 나머지 다섯 짝 |몫 − 50| 합
+      const rings = [];
+      const perm = (a) => (a.length <= 1 ? [a] : a.flatMap((x, i) => perm([...a.slice(0, i), ...a.slice(i + 1)]).map((r) => [x, ...r])));
+      for (const pm of perm(SCHOOLS.slice(1))) {
+        const cyc = [SCHOOLS[0], ...pm];
+        const ar = cyc.map((x, i) => [x, cyc[(i + 1) % 5]]);
+        const key = new Set(ar.map(([x, y]) => [x, y].sort().join()));
+        let sc = ar.reduce((u, [x, y]) => u + M(x, y) - 0.5, 0);
+        for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) if (!key.has([SCHOOLS[i], SCHOOLS[j]].sort().join())) sc -= Math.abs(M(SCHOOLS[i], SCHOOLS[j]) - 0.5);
+        rings.push({ sc, name: [...cyc, cyc[0]].map((x) => KO[x]).join(' > ') });
+      }
+      rings.sort((u, v) => v.sc - u.sc);
+      const rank = (arrows) => {
+        const r = rings.find((q) => q.name === [...arrows.map(([x]) => x), arrows[0][0]].map((x) => KO[x]).join(' > '));
+        const a = rings.findIndex((q) => Math.abs(q.sc - r.sc) < 1e-9) + 1;
+        const b = rings.length - [...rings].reverse().findIndex((q) => Math.abs(q.sc - r.sc) < 1e-9);
+        return a === b ? `${a}` : `${a} ~ ${b} (같은 점수)`;
+      };
+      L.push(`- 고리 스물넷 순위 — 감독 안 ${rank(PLANS.감독)} · 사장님 안 ${rank(PLANS.사장님)} · 1 위 ${rings[0].name} (점수 ${rings[0].sc.toFixed(2)})`);
+      // 사장님 기준 꼴 (강함 1 ~ 2 · 약함 1 ~ 2 · 무상성 1 ~ 2) 가운데 거리(유리 58 · 무상성 50) 합이 가장 작은 꼴
+      const P = [];
+      for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) P.push([SCHOOLS[i], SCHOOLS[j]]);
+      let best = null;
+      for (let code = 0; code < 3 ** 10; code++) {
+        const v = [];
+        let c = code;
+        for (let k = 0; k < 10; k++) (v.push((c % 3) - 1), (c = Math.floor(c / 3)));
+        const cnt = Object.fromEntries(SCHOOLS.map((x) => [x, [0, 0, 0]]));
+        P.forEach(([x, y], k) => {
+          if (v[k] === 1) (cnt[x][0]++, cnt[y][1]++);
+          else if (v[k] === -1) (cnt[y][0]++, cnt[x][1]++);
+          else (cnt[x][2]++, cnt[y][2]++);
+        });
+        if (Object.values(cnt).some((q) => q.some((z) => z < 1 || z > 2))) continue;
+        const cost = P.reduce((u, [x, y], k) => u + Math.abs(M(x, y) - (v[k] === 1 ? 0.58 : v[k] === -1 ? 0.42 : 0.5)), 0);
+        if (!best || cost < best.cost - 1e-12) best = { cost, v };
+      }
+      const desc = P.map(([x, y], k) => (best.v[k] === 1 ? `${KO[x]} > ${KO[y]}` : best.v[k] === -1 ? `${KO[y]} > ${KO[x]}` : `${KO[x]} = ${KO[y]}`));
+      L.push(`- 기준 꼴 가장 가까운 안 (거리 합 ${Math.round(best.cost * 100)}): ${desc.join(' · ')}`);
+    }
     L.push('');
     L.push(`#### 숙련 ${prof} — 짝마다 판 길이 · 맞힌 칼 · 비기 · 마지막 칼`, '');
     L.push('| 짝 | 판 길이 s | 맞힘/판 (앞 · 뒤) | 앞 유파 많이 맞힌 기술 | 뒤 유파 많이 맞힌 기술 | 비기 냄 · 맞힘 /판 (앞 · 뒤) | 끝낸 칼 (앞 · 뒤) | 비김 피 우세 (앞 · 뒤 / 비김) |', '|---|---|---|---|---|---|---|---|');
@@ -184,6 +230,33 @@ function table() {
   console.log(L.join('\n'));
 }
 
+/** compare 첫묶음.jsonl,… 둘째묶음.jsonl,… : 두 무기 판의 짝마다 몫을 나란히 · 같은 쪽(유파 상성) · 뒤집힘(무기 상성) */
+function compare() {
+  const load = (list) => list.split(',').flatMap((f) => fs.readFileSync(f, 'utf8').split('\n').filter((l) => l.trim().startsWith('{')).map((l) => JSON.parse(l)));
+  const A = load(args[1]);
+  const B = load(args[2]);
+  const share = (R, p, s, t) => {
+    const xs = R.filter((r) => r.prof === p && ((r.a === s && r.b === t) || (r.a === t && r.b === s))).map((r) => scoreOf(r, s));
+    return xs.length ? xs.reduce((u, v) => u + v, 0) / xs.length : NaN;
+  };
+  const L = ['| 짝 (앞 유파 몫 %) | 숙련 3 첫 · 둘째 | 숙련 3 갈래 | 숙련 5 첫 · 둘째 | 숙련 5 갈래 |', '|---|---|---|---|---|'];
+  const side = (m) => (m > 0.55 ? 1 : m < 0.45 ? -1 : 0); // 45 ~ 55 = 무상성 쪽
+  for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) {
+    const s = SCHOOLS[i];
+    const t = SCHOOLS[j];
+    const cells = [3, 5].map((p) => {
+      const [x, y] = [share(A, p, s, t), share(B, p, s, t)];
+      const [u, v] = [side(x), side(y)];
+      const who = (q) => (q > 0 ? KO[s] : KO[t]);
+      const kind = u && u === v ? `**같은 쪽 — 유파 상성 (${who(u)})**` : u && v ? '뒤집힘 — 무기 상성' : !u && !v ? '둘 다 무상성 쪽' : `한쪽만 (${who(u || v)} — ${u ? '첫' : '둘째'} 판)`;
+      return `${Math.round(x * 100)} · ${Math.round(y * 100)} | ${kind}`;
+    });
+    L.push(`| ${KO[s]} – ${KO[t]} | ${cells.join(' | ')} |`);
+  }
+  console.log(L.join('\n'));
+}
+
 if (mode === 'run') await run();
 else if (mode === 'table') table();
+else if (mode === 'compare') compare();
 else console.log('node tools/sim/matchup.mjs run|table ...');
