@@ -69,7 +69,10 @@ test('띠 · 기울기 · 거리 오차 — 사장님 11/14 띠(0 무 · 1 ~ 2 �
 test('플랜 열림: 이탈리아 · 띠 무 아님 · 스위치 — 다른 유파는 없음', () => {
   assert.ok(planFor('italian', 2));
   assert.equal(planFor('italian', 0), null, '무 = 플랜 없음');
+  const freeOn = CONFIG.AI_PLAN_FREE.on; // 3 단계(11/14): 무유파는 무유파 플랜(src/ai_plan_free.js)을 받음 — 이 줄은 그 전 장면이라 그 전 판(AI_PLAN_FREE.on 0)으로 묶음 · 기준 그대로
+  CONFIG.AI_PLAN_FREE.on = 0;
   for (const t of ['german', 'none']) assert.equal(planFor(t, 5), null, t);
+  CONFIG.AI_PLAN_FREE.on = freeOn;
   for (const t of ['japanese', 'iberian', 'chinese']) assert.ok(planFor(t, 2), `2 단계 ${t}`);
   withPlan({ on: 0 }, () => assert.equal(planFor('italian', 5), null));
   const P = planFor('italian', 3);
@@ -270,10 +273,14 @@ test('파고들기 (사장님 11/14 — 공통 틀): 내 칼이 상대 칼보다
   for (const w of ['longsword', 'rapier', 'monohoshizao', 'zweihander']) assert.equal(digOf(w).me, false, `${w} — 뚜렷이 짧지 않음 (롱소드끼리 거울 판은 그대로)`);
   assert.ok(near(digOf('morgenstern').k, 1 / 3), '띠 기울기 (낮음 ⅓ — 유파와 상관없이)');
   // 스위치 끔 · 문턱이 닿지 않으면 옛 판과 바이트 같음 · 켬은 다름 (무유파 냉동 참치 숙련 5 — 플랜 없는 유파 · 2 단계부터 일본은 플랜이 있어 뺌)
+  //  3 단계(11/14): 무유파도 플랜(src/ai_plan_free.js)을 받음 — '플랜 없는 유파' 장면이라 이 셋은 그 전 판(AI_PLAN_FREE.on 0)으로 묶음 · 기준 그대로
+  const freeOn = CONFIG.AI_PLAN_FREE.on;
+  CONFIG.AI_PLAN_FREE.on = 0;
   const off = withPlan({ on: 0 }, () => trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 }));
   const never = withPlan({ digShort: 99 }, () => trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 }));
   const on = trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 });
   assert.equal(never.text, off.text, '파고들기가 안 걸리면 옛 판');
+  CONFIG.AI_PLAN_FREE.on = freeOn;
   assert.notEqual(on.text, off.text, '파고들기 판은 달라짐');
 });
 
