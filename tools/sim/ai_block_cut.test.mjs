@@ -30,10 +30,10 @@ function trace({ weapon = 'longsword', weapon2 = 'qinggang', secs = 8, seed = 1 
 }
 const body = (tradition, mode = 'defend', defVoid = false) => ({ aiCtl: { mode, defVoid }, swordArt: { tradition } });
 
-test('기본 끔 · 끄면 AI 판은 유파 몫 값을 안 읽음 (바이트 같음)', () => {
-  assert.equal(S.aiParryCut, 0, '시제품 — 사장님 판정 전');
-  const a = trace();
-  const b = withSkill({ cnParryDmgCut: 0.9, jpParryDmgCut: 0.9, ibParryDmgCut: 0.9 }, () => trace());
+test('기본 켬(사장님 11/15) · 끄면 AI 판은 유파 몫 값을 안 읽음 (바이트 같음)', () => {
+  assert.equal(S.aiParryCut, 1, '사장님 11/15 결정 — 동방 ai 막기 감소 켜');
+  const a = withSkill({ aiParryCut: 0 }, () => trace());
+  const b = withSkill({ aiParryCut: 0, cnParryDmgCut: 0.9, jpParryDmgCut: 0.9, ibParryDmgCut: 0.9 }, () => trace());
   assert.equal(a, b);
 });
 
