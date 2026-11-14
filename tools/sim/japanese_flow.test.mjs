@@ -16,10 +16,10 @@ function actor(extra = {}) {
   f.stamina = new Stamina(f); return f;
 }
 
-test('판 값: 판정 개편 켬 · 공격 끝 = 실제 칼 기하 · 기력 60 · 창 0.2 s · 팔 늦춤 0.4 s(바닥 0.25 — 10/21 시간 통일) · 자연 회복 탈진 · 일본/이베리아 0.2 · 동방 0.5', () => {
+test('판 값: 판정 개편 켬 · 공격 끝 = 실제 칼 기하 · 기력 60 · 창 0.2 s · 팔 늦춤 0.4 s(바닥 0.25 — 10/21 시간 통일) · 자연 회복 탈진 · 일본 · 이베리아 0(11/15 사장님 결정 — 전 0.2) · 동방 0.5', () => {
   assert.equal(FLOW_REDESIGN.on, true); assert.equal(FLOW_REDESIGN.penalty, 60); assert.equal(FLOW_REDESIGN.window, realS(0.2)); assert.equal(FLOW_REDESIGN.threatEnd, true);
   assert.equal(FLOW_RECOVERY.seconds, realS(0.4)); assert.equal(FLOW_RECOVERY.floor, 0.25); assert.equal(STAMINA.exhaustNatural, true);
-  assert.equal(SKILL.jpParryDmgCut, 0.2); assert.equal(SKILL.ibParryDmgCut, 0.2); assert.equal(SKILL.cnParryDmgCut, 0.5);
+  assert.equal(SKILL.jpParryDmgCut, 0); assert.equal(SKILL.ibParryDmgCut, 0); assert.equal(SKILL.cnParryDmgCut, 0.5);
 });
 
 test('흘림당한 쪽 기력 60: 공격 번호 하나에 한 번 · 다른 방어자를 만나도 다시 안 냄 · 새 공격이면 다시 · 공격 번호 없으면 없음 · 0 이면 없음', () => {
@@ -50,21 +50,21 @@ test('팔 늦춤 0.4 s: 처음 1/3 은 0.25 · 끝에서 1 · 같은 공격 · �
   const was = FLOW_RECOVERY.seconds; try { FLOW_RECOVERY.seconds = 0; const P = actor({ index: 1 }); P.stamina.attack(); assert.equal(beginFlowRecovery(P, D), false); near(flowRecoveryScale(P), 1); } finally { FLOW_RECOVERY.seconds = was; }
 });
 
-test('막는 동안 피해 감소: 일본 · 이베리아 × 0.8 · 동방 × 0.5 · 다른 유파 · 책 해제 · 막는 중 아님 = 1 · 끄면 1', () => {
+test('막는 동안 피해 감소: 동방 × 0.5 · 일본 · 이베리아(11/15 없앰) · 다른 유파 · 책 해제 · 막는 중 아님 = 1 · 끄면 1', () => {
   const keep = (tradition, { mode = 'defend', schoolParry = true } = {}) => {
     const g = Object.create(PlayerParryGuard.prototype); g.me = { swordArt: { tradition }, schoolParry }; g.mode = mode; return g.woundKeep();
   };
-  near(keep('japanese'), 0.8); near(keep('iberian'), 0.8); near(keep('chinese'), 0.5);
+  near(keep('japanese'), 1); near(keep('iberian'), 1); near(keep('chinese'), 0.5); // 일본 · 이베리아 1 — 11/15 사장님 결정 둘
   for (const t of ['german', 'italian', 'none', undefined]) near(keep(t), 1);
   near(keep('japanese', { mode: 'idle' }), 1); near(keep('iberian', { schoolParry: false }), 1);
   const was = { ...SKILL }; try { SKILL.jpParryDmgCut = 0; SKILL.ibParryDmgCut = 0; near(keep('japanese'), 1); near(keep('iberian'), 1); near(keep('chinese'), 0.5); } finally { SKILL.jpParryDmgCut = was.jpParryDmgCut; SKILL.ibParryDmgCut = was.ibParryDmgCut; }
 });
 
-test('흘린 공격의 피해 감소 0.8 (사장님 10/18 23:4x): 흘린 그 공격 번호만 × 0.2 · 다른 칼 주인 · 새 공격 · 표시 없음 = 1 · 끄면 1', () => {
-  assert.equal(FLOW_REDESIGN.flowDmgCut, 0.8);
+test('흘린 공격의 피해 감소 0.7 (사장님 10/18 23:4x 0.8 → 11/15 \'70%로\'): 흘린 그 공격 번호만 × 0.3 · 다른 칼 주인 · 새 공격 · 표시 없음 = 1 · 끄면 1', () => {
+  assert.equal(FLOW_REDESIGN.flowDmgCut, 0.7); // 11/15 사장님 결정 (전 0.8)
   const O = actor({ index: 1 }), D = actor(), X = actor({ index: 2 });
   O.stamina.attack(); D.flowShield = { from: O, attackId: O.stamina.attackId };
-  near(flowShieldKeep(D, O), 0.2); near(flowShieldKeep(D, X), 1); near(flowShieldKeep(actor(), O), 1);
+  near(flowShieldKeep(D, O), 0.3); near(flowShieldKeep(D, X), 1); near(flowShieldKeep(actor(), O), 1);
   O.stamina.attack(); near(flowShieldKeep(D, O), 1); // 다음 공격(새 번호)
   D.flowShield = { from: O, attackId: O.stamina.attackId };
   const was = FLOW_REDESIGN.flowDmgCut; try { FLOW_REDESIGN.flowDmgCut = 0; near(flowShieldKeep(D, O), 1); } finally { FLOW_REDESIGN.flowDmgCut = was; }

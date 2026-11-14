@@ -557,15 +557,16 @@ export const NAGASHI = { on: 1, slideK: 0.8, joltCut: 0.5, poseT: realS(0.35), m
 //  min… / maxHeight / exit… / sideGain / frontClearance = 판정 기하 허용치 — 샛별 연구의 첫 설계 값 그대로(사장님 '판정 개편' 채택 · docs/strike/owner_defaults_table.md)
 //  threatEnd = 공격이 끝났는지를 공격 번호 시간(stamina.attackUntil) 대신 실제 칼 기하(들어오는 칼 — 위 min… 조건)로 본다 — 감독 측정 10/18 23:1x(닿은 공격 중 흘림이 안 된 까닭 1 위 39 % = 공격 번호 시간이 끝남)
 //   → 사장님 3 '흘림 빈도를 높일 수 있는 방안이 있다면 그렇게 개편'. 기력은 그대로 공격 번호 하나에 한 번. `?flowEnd=timer` = 공격 번호 시간으로(샛별 연구 그대로)
-//  flowDmgCut = 흘린 공격의 피해 감소 (사장님 10/18 23:4x '흘린 공격의 피해 80% 줄여'): 받는 쪽이 흘린 그 공격(공격 번호)이 몸에 닿으면 칼날 상처 심각도 · 둔타 에너지 × (1 − 0.8) —
+//  flowDmgCut = 흘린 공격의 피해 감소 (사장님 10/18 23:4x '흘린 공격의 피해 80% 줄여' → 11/15 '흘린 칼 감소는 70%로 해' 0.7): 받는 쪽이 흘린 그 공격(공격 번호)이 몸에 닿으면 칼날 상처 심각도 · 둔타 에너지 × (1 − 0.8) —
 //   사람 · AI 같게(흘린 쪽 누구나) · 다음 공격(새 번호)부터는 그대로 · `?flowDmgCut=0` = 끔 (combat.js analyze · 흘림 표시 flowShield)
 export const FLOW_REDESIGN = {
-  on: true, window: realS(0.2), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' · '흘림 접촉도 그냥 0.2로 통일' — 0.12 → 0.2 (반응 칸) */ penalty: 60, /* 10/31 09:xx 사장님 결정 '일본 흘림의 상대 기력 소모는 60으로 증가' — 40 → 60 (흘림 = 일본 막기 칸 우케나가시만 · TRADITIONS.japanese.parryCover.highC nagashi) */ threatEnd: true, flowDmgCut: 0.8,
+  on: true, window: realS(0.2), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' · '흘림 접촉도 그냥 0.2로 통일' — 0.12 → 0.2 (반응 칸) */ penalty: 60, /* 10/31 09:xx 사장님 결정 '일본 흘림의 상대 기력 소모는 60으로 증가' — 40 → 60 (흘림 = 일본 막기 칸 우케나가시만 · TRADITIONS.japanese.parryCover.highC nagashi) */ threatEnd: true, flowDmgCut: 0.7, /* [사장님 11/15 결정 '흘린 칼 감소는 70%로 해. 들어오는 피해가 0.3이 되는 셈.' — 전 0.8] */
   minSpeed: 2.5, minApproach: 0.5, minSweep: 1.5, minSweepRatio: 0.4,
   minImpact: 0.5, upperHeight: -0.15, maxHeight: 0.85,
   minTangent: 0.25, exitDistance: 0.30, exitGain: 0.015, sideGain: 0.06, frontClearance: 0.10,
 };
-// 흘림당한 쪽 팔 늦춤 (샛별 저장소 연구 들여옴 — src/nagashi_recovery.js): seconds 동안 두 팔 근육 · 손목 힘 × (floor → 1) — 사장님 10/18 22:1x 0.36 s · `?flowArm=0` = 끔
+// 흘림당한 쪽 팔 늦춤 (샛별 저장소 연구 들여옴 — src/nagashi_recovery.js): seconds 동안 두 팔 근육 · 손목 힘 × (floor → 1) — 사장님 10/18 22:1x 0.36 s → 10/21 시간 통일 0.4 s ·
+//  사장님 11/15 '흘림을 당한 상대 팔은 0.4초 늦어지게 해. 우리 시간테이블에 있는 숫자로' — 이미 realS(0.4) (시간 사다리 · 바꿀 값 없음) · `?flowArm=0` = 끔
 //  release = 옛 판정(`?flowJudge=0`)에서 받는 몸꼴(NAGASHI.poseT)을 쥔 동안 막기를 풀고 치면 그 몸꼴을 놓는다 (frames.js — 샛별 연구 그대로)
 export const FLOW_RECOVERY = { seconds: realS(0.4), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.36 → 0.4 (짧은 효과 칸) */ floor: 0.25, release: true, hold: null, recover: null };
 // 시험 (사장님 10/19 03:5x): hold · recover 를 주면 '처음 hold 초는 floor 로 유지 → recover 초 동안 부드럽게 회복'(합 hold + recover) — null 이면 위 seconds · floor 옛 꼴 (줄 때는 realS(초)로 — 표준 시간)
@@ -1091,8 +1092,18 @@ export const SKILL = {
   cnParryDmgCut: 0.5, // **판 값 0.5 — 사장님 10/17 22:1x '본판에 50%로 적용할게 너무 과한 거 같으면 나중에 조정하겠음'** (확인표 2068 · 버티는 힘 cnBraceK 는 그대로 끔)
   // 일본 · 이베리아 막는 동안 피해 감소 (사장님 10/18 22:1x '동방에서 막기 중 피해 50% 감소처럼, 일본과 이베리아도 막기 중 피해 20% 감소 부여' · docs/strike/japanese_flow_adopt_2026-10-18.md):
   //  동방과 같은 칸(parry_button.js woundKeep — 그 유파 막기 책을 쥔 플레이어가 막기 단추로 막는 중 · 칼날 상처 심각도 × (1 − cut)). `?jpParryCut=0` · `?ibParryCut=0` = 끔
-  jpParryDmgCut: 0.2,
-  ibParryDmgCut: 0.2,
+  jpParryDmgCut: 0, // [사장님 11/15 결정 '일본은 바위 몸도 생겼으니 막을 때 피해 감소 20%는 없애' — 전 0.2] (J2 몫 열쇠에서 parryCut 도 뺌 · 흘린 칼 J4 80 % 는 그대로)
+  ibParryDmgCut: 0, // [사장님 11/15 결정 '이베리아도 막기 20% 감소 없애' — 전 0.2] (B9 몫은 아래 막아 내면 기력 되찾음으로)
+  // 이베리아 막아 내면 기력 되찾음 (11/15 사장님 '대신 막기에 성공하면 기력 n 회복 어때' · src/ib_block_regen.js · 스킬트리 B9 '굳은 받기' 몫 열쇠 blockRegen):
+  //  상대 공격 하나를 칼로 받아 막고 그 공격이 끝날 때까지 칼날 상처가 없으면 기력 n 을 되찾음 · 한도 안 · 사람 · AI 같게. 1 = 켬 · 0 = 끔 (`?ibBlockRegen=0`)
+  //  n (사장님 11/15 'n은 상대 무기의 베기 기력 *2 어때. or 고정값 30. (일본 흘리기와 동일선상에서)' → 견줌 뒤 **'고정 30으로 해'**):
+  //   ibBlockRegenN 'fixed' = 고정 ibBlockRegenFixed 30 (일본 흘림이 상대 기력 60 을 깎는 것과 같은 줄의 고정값 — 기본) · 'foe2' = 상대 무기 베기 기력 × 2 (STAMINA.cutCost × 상대 무게 배율 × 2 — 롱소드 24 · 츠바이핸더 32) (`?ibBlockRegenN=foe2`)
+  ibBlockRegen: 1,
+  ibBlockRegenN: 'fixed',
+  ibBlockRegenFixed: 30, // [사장님 11/15 결정 '고정 30으로 해'] (ⓑ 'foe2' 는 견줌 스위치로만)
+  // AI 막는 동안 피해 감소 시제품 (11/15 사장님 '동방의 장점은 막을 때 피해 50% 감소인데 막기를 잘 활용 못하는 거 아닐까? …' · src/ai_block_cut.js · 기록 docs/strike/cn_block_2026-11-15.md):
+  //  위 세 몫은 사람 막기 단추에만 붙는다(AI 몸에는 칸이 없음). 1 = AI 가 막는 중(칼로 받기 · 피하기 아님)이면 같은 몫 — '사람과 같게' · 0 = 지금 판 (`?aiParryCut=1`) [시제품 — 사장님 판정 전]
+  aiParryCut: 0,
   flowParry: true, // AI: 칼로 받아 낸 순간 그대로 되받아 벤다 (막기 → 반격 흐름)
   flowReach: 0.3, // AI: 이어질 기술의 준비 자세가 지금 손에서 이 안(패드 m)이어야 흐른다
 

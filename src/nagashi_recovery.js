@@ -1,5 +1,5 @@
 // 흘림당한 쪽 팔 늦춤 — 샛별 저장소 연구(짧은 팔 회복 지연 `ad018bf7` · `15e18adf`) 들여옴 · docs/strike/japanese_flow_adopt_2026-10-18.md
-//  판 값 · 스위치는 config.js FLOW_RECOVERY (사장님 10/18 22:1x — 0.36 s · 바닥 0.25).
+//  판 값 · 스위치는 config.js FLOW_RECOVERY (사장님 10/18 22:1x — 0.36 s → 10/21 시간 통일 0.4 s · 11/15 '흘림을 당한 상대 팔은 0.4초' · 바닥 0.25).
 //  흘림이 일어나면 흘림당한 쪽(공격한 쪽)의 두 팔 근육 · 손목 힘이 seconds 동안 줄었다 돌아온다(fighter.js flowArmScale): 처음 1/3 은 floor · 남은 2/3 에 부드럽게 1 로.
 //   빠르기 초기화 · 손 순간이동 · 입력 지움 · 걸음 잠금 없음. 같은 공격으로는 한 번 · 돌아오는 중 다시 늘이지 않음.
 import { FLOW_RECOVERY, realS } from './config.js';

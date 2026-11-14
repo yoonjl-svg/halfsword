@@ -37,6 +37,8 @@ import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 판정 배율 
 import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
 import { kitOff, perkOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4)
 import { itThrust, itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14 — 사람 이탈리아 찌르기 판정 배율 · 맞박자 찌르기 · 칼 우위 — config IT_OUTBOX)
+import { aiWoundKeep } from './ai_block_cut.js';
+import { ibBlockHit } from './ib_block_regen.js'; // 이베리아 막아 내면 기력 되찾음 (11/15 — 기다리는 공격의 칼날 상처면 못 막아 냄) // AI 막는 동안 피해 감소 시제품 (11/15 — SKILL.aiParryCut · 기본 끔)
 import { huntHit } from './cn_hunt.js'; // 동방 맹호은림 사냥 겹 (11/14 — 출혈 이점이 붙는 맞음에서 · 쌓는 몸만)
 import { MAX_FIGHTERS } from './team.js'; // 셋 이상 판: 같은 편도 적과 똑같이 상처 · 칼 겨루기 (사장님 10/29 22:3x — 제 몸끼리만 버린다)
 
@@ -390,6 +392,7 @@ export class Combat {
         //  심각도에서 나와(fighter.applyWound) 같이 준다. 에너지 · 가르나 튕기나(pass) · 박힘은 그대로 — 칼과 몸의 물리(충격 · 휘청임 · 투구/판 닳음)는 바뀌지 않는다
         //  일본 · 이베리아도 같은 칸으로 × (1 − 0.2) (사장님 10/18 22:1x — SKILL.jpParryDmgCut · ibParryDmgCut)
         if (vic.parryGuard?.woundKeep) severity *= vic.parryGuard.woundKeep();
+        else if (SKILL.aiParryCut && vic.aiCtl) severity *= aiWoundKeep(vic); // AI 몸도 사람과 같게 (11/15 시제품 — 기본 끔 · src/ai_block_cut.js)
       } else {
         const armorBlocks = finish && (plate || helmet) && !att.weaponCfg.ignoreArmor && !att.weaponCfg.ignoreArmorDamage;
         if (armorBlocks) finish = false; // 판금·투구가 내려찍기를 막았다 (사장님 10/1 C): 즉사 없음, 칼은 물리로 튕긴다.
@@ -403,7 +406,7 @@ export class Combat {
       }
     }
     if (type === 'blunt') energy *= power * att.weaponCfg.mBlunt * emoDealt * emoTaken;
-    // 흘린 공격의 피해 감소 (사장님 10/18 23:4x '흘린 공격의 피해 80% 줄여' — config FLOW_REDESIGN.flowDmgCut): 받는 쪽이 이 칼 주인의 지금 공격(번호)을 흘렸으면
+    // 흘린 공격의 피해 감소 (사장님 10/18 23:4x '흘린 공격의 피해 80% 줄여' → 11/15 '70%로' — config FLOW_REDESIGN.flowDmgCut 0.7): 받는 쪽이 이 칼 주인의 지금 공격(번호)을 흘렸으면
     //  그 공격의 칼날 상처 심각도 · 둔타 에너지 × (1 − flowDmgCut). 새 공격(번호가 바뀜)부터는 그대로 · 물리(충격 · 가르나 튕기나)는 그대로
     const keepFlow = flowShieldKeep(pr.v.fighter, att);
     if (keepFlow !== 1) { if (type === 'blunt') energy *= keepFlow; else severity *= keepFlow; }
@@ -830,7 +833,7 @@ export class Combat {
   /**
    * 우케나가시 판정 개편 (샛별 연구 들여옴 — nagashi_redesign.js · docs/strike/japanese_flow_adopt_2026-10-18.md · 사장님 10/18 22:1x 기본):
    *  흘리는 미끄럼 충격 계수(NAGASHI.slideK)는 같고 · 칼끼리 실제 접촉만 · 받는 몸꼴로 강제로 옮기지 않는다(옛 판정의 poseT 없음 — 공격 입력과 부딪치지 않게).
-   *  흘림당한 쪽(O): 팔 늦춤(FLOW_RECOVERY 0.36 s) · 기력 −40(공격 하나에 한 번). 돌려줌: 흘려 받은 싸움꾼(D) · 없으면 null
+   *  흘림당한 쪽(O): 팔 늦춤(FLOW_RECOVERY 0.4 s — 10/21 시간 통일 · 11/15 사장님 '0.4초') · 기력 −40(공격 하나에 한 번). 돌려줌: 흘려 받은 싸움꾼(D) · 없으면 null
    */
   nagashiExpanded(A, B, SA, SB, point, nrm, vn) {
     for (const [D, O, SO] of [[A.fighter, B.fighter, SB], [B.fighter, A.fighter, SA]]) {
@@ -995,6 +998,7 @@ export class Combat {
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       const cons0 = vic.consciousness;
       vic.applyWound({ ...r, part: pr.v.part, passing }); // passing: 칼이 가르고 지나가는 길(참수는 이 길만)
+      ibBlockHit(vic, att, r); // 이베리아 막아 내면 기력 되찾음 (11/15) — 기다리는 공격이 칼날 상처를 냈으면 못 막아 냄
       vic.schoolPassive?.tookHit?.(att, r.severity > 0 || vic.consciousness < cons0); // 일본 스택 '피격에 1스택' (11/14 사장님 — 상처나 의식이 실제로 깎인 맞음 · 상대 공격 하나에 한 번 · school_passive.js)
       if (r.severity > 0) att.parryGuard?.opposition?.onDealt?.(r); // 막아찌르기가 상처를 냈나 (칼끝 돌려 빼기 탭 조건 — 실패한 막아찌르기만 엶 · 10/28 01:2x · 사람만)
       if (r.schoolK) att.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (켄타이는 여기서 씀 — school_passive.js)
