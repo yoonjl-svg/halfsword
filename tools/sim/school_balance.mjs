@@ -596,7 +596,7 @@ function ibResult(M, uq, W, T) {
     if (cuts[i + 1].n > 0) gapAll.push(+g.toFixed(3));
   }
   const L = uq.stats.link ?? null;
-  return { cuts: cuts.length, perMin: +((cuts.length / Math.max(1e-6, T)) * 60).toFixed(2), chained: cuts.filter((c) => c.n > 0).length, chains, nMax: Math.max(0, ...cuts.map((c) => c.n)), gapAct, gapAll, link: L ? { fired: L.fired, done: L.done, cancel: L.cancel, touch: L.touch } : null, linkT: +M.linkT.toFixed(3), altib: uq.stats.altib?.fired ?? 0, chainArms: W.chainArms ?? 0, freeCuts: uq.f.ibFreeCuts ?? 0 };
+  return { cuts: cuts.length, perMin: +((cuts.length / Math.max(1e-6, T)) * 60).toFixed(2), chained: cuts.filter((c) => c.n > 0).length, chains, nMax: Math.max(0, ...cuts.map((c) => c.n)), gapAct, gapAll, link: L ? { fired: L.fired, done: L.done, cancel: L.cancel, touch: L.touch } : null, linkT: +M.linkT.toFixed(3), altib: uq.stats.altib?.fired ?? 0, chainArms: W.chainArms ?? 0, freeCuts: uq.f.ibFreeCuts ?? 0, trade: { n: uq.f.ibTradeLog?.length ?? 0, sev: +(uq.f.ibTradeLog ?? []).reduce((a, k) => a + k.sev, 0).toFixed(4), cost: +(uq.f.ibTradeCost ?? 0).toFixed(3) } }; // trade = 맞바꿈 B12 (11/14) 넘긴 맞음 수 · 아낀 칼날 심각도 · 쓴 기력
 }
 
 // ── 묶음 · 표 ──

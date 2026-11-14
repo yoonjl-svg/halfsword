@@ -1010,13 +1010,13 @@ export class PlayerUniqueAssist {
     if (this.linkTry(cur, start, dir, this.t)) this.stats.link.watch = (this.stats.link.watch ?? 0) + 1;
   }
 
-  /** 이어 돌리기가 그만둘 까닭 (없으면 null) — 맞바꿈 C'(IB_LINK.trade · f.ibTrade)면 맞아도 그대로 */
+  /** 이어 돌리기가 그만둘 까닭 (없으면 null) — 몸에 상처가 들면 그만둠(맞바꿈 B12 가 넘긴 맞음은 상처가 없어 그대로 돎 · 칼끼리 세게 맞음 'jolt' 은 늘 그만둠) */
   linkStop() {
     const f = this.f;
     const sk = f.skill;
     if (!f.alive || !f.armed || f.weaponBroken || !f.sword) return 'armed';
     if (f.state !== 'stand') return 'down';
-    if (!f.ibTrade && (f.wounds?.length ?? 0) > (f.ibLink?.wounds0 ?? 0)) return 'hit';
+    if ((f.wounds?.length ?? 0) > (f.ibLink?.wounds0 ?? 0)) return 'hit';
     if (sk.sec || f.ibSpin) return 'secret';
     if (f.stamina.exhausted) return 'exhausted';
     if (f.jolt > 0.5) return 'jolt'; // 칼을 세게 맞음 (풍차 감기 windStop 과 같은 문턱)

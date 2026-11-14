@@ -22,7 +22,7 @@ export const NODE_CAT = Object.freeze({
 });
 
 /** 판 몫 열쇠 (skillKit 칸 — 칸이 없으면 false). unique · perk 는 이름 모음 */
-export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'deRing']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29) · deRing = 독일 칼 씨름 (링엔 암 슈베르트 — 11/14 사장님 이름 확정) 새 몫 (config DE_DIRTY · de_dirty.js · 새 칸 자리 대기 — 지금은 G9 에 임시로 이음 · 11/14 B · C 열쇠 deClinch · deHilt 는 폐기)
+export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'deRing', 'ibTrade']); // ibTrade = 이베리아 B12 맞바꿈 '멈추지 않는 칼' (11/14 사장님 '맞바꿈 새 칸으로' — config IB_LINK.trade · fighter.js ibTradeTry) · ibChain = 이베리아 B6 이어지는 흐름 (10/29) · deRing = 독일 칼 씨름 (링엔 암 슈베르트 — 11/14 사장님 이름 확정) 새 몫 (config DE_DIRTY · de_dirty.js · 새 칸 자리 대기 — 지금은 G9 에 임시로 이음 · 11/14 B · C 열쇠 deClinch · deHilt 는 폐기)
 
 export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10/21)
 
@@ -76,6 +76,7 @@ const TREE_SRC = {
       N({ id: 'B9', name: '굳은 받기', cat: 'parry', l1: '막기 II', l2: '굳은 받기', eff: '막는 동안 받는 피해가 줄어든다', pre: ['B8'], price: 300, d: 2, cx: 800, f: ['parryCut'] }),
       N({ id: 'B7', name: '풍차 베기', cat: 'atk', l1: '풍차 베기', l2: '돌며 베기', eff: '한 걸음 나가며 몸을 한 바퀴 돌려 가로로 벤다', pre: ['B5'], price: 300, d: 2, cx: 560, u: 'cingir' }), // 11/12 이름 '싱지르' → '풍차 베기' (사장님 '싱지르 이름을 이제 풍차 베기로 바꿔야하지 않아?' — 특수 공격 뜻 이름 · 원어 cingir 그대로 · l2 · 효과 글 그대로 — 새 동작 글 안은 docs/strike/windmill_2026-11-12.md) // 11/11 사장님 '싱지르를 제비베기와 같은 위계의 특수공격으로 … 싱지르는 비기의 지위에서 물러나는 대신 빠르기를 고노센의 30%로 낮추고 대신 돌때 한 걸음 앞으로 나가며 치게 동작을 바꾸자' — 전 B4 자리 · 값(pre B5 · 금화 300 · d 2 · cx 560) · u cingir(특수 공격 — unique_assist.js circleTick) · 두 줄 '싱지르' / '돌며 베기' · 효과 글 전 '칼끝 거리 밖에서 버티다 공격을 원을 그리듯 한 바퀴 돌리면, 몸을 한 바퀴 돌려 가로로 벤다'(사장님 10/25 확정 글 — 무장 조건이 없어지고 한 걸음이 붙어 고침) [두 줄 · 효과 글 사장님 확인 전 — 확인표 3527] // 10/22 이베리아 새 비기 (사장님 '빙글 한바퀴 돌면서 … 일격' — schools.js IBERIAN_SECRET_SPIN · 전 '길목 지키기')
       N({ id: 'B6', name: '이어지는 흐름', cat: 'deep', l1: '이어지는', l2: '흐름', title: '이어지는 흐름', eff: '이어 그을수록 세지고, 세 번째 긋기마다 기력을 쓰지 않는다', pre: ['B7'], price: 400, d: 3, cx: 680, f: ['ibChain'] }), // 11/11 앞 칸 = 그 자리(d 2 · cx 560)의 칸을 따라 B7 싱지르 (전 B4 — 자리 바꿈) [사장님 확인 전 — 확인표 3528] // 10/29 01:4x · 01:5x 사장님 결정 · 확인표 2735 ~ 2738 — 이어 그은 수마다 흐르는 긋기 위력 더하기 · 상한 없음 · 14:1x · 14:2x 사슬 세 칼마다 기력 0 (config IB_FLOW.chainStack · freeEvery — 전 01:5x 기력 × 0.9ⁿ · 그 전: 거듭 돌려 베기 · 돌려 베기 쌓기 perk redondo) · 효과 글 14:1x · 14:2x 사장님 글
+      N({ id: 'B12', name: '멈추지 않는 칼', cat: 'deep', l1: '멈추지 않는', l2: '칼', title: '멈추지 않는 칼 (노 아 데 파라르)', orig: 'no ha de parar', eff: '머리 위로 칼을 돌릴 때 맞으면, 한 번은 기력으로 버티고 멈추지 않는다', pre: ['B6'], price: 400, d: 4, cx: 680, f: ['ibTrade'] }), // 11/14 사장님 '맞바꿈 새 칸으로 넣되 이름은 원전에서 찾고' · 새 안 '이어돌리기 중에 피격돼도 1회 무시하는 대신 기력 소모' → '권고대로 해' — 자리 B6 다음(d 4 · cx 680 — 이베리아 빈 줄) · 이름 = 고디뉴 『Arte de Esgrima』(1599) 몬탄테 장 규칙 5 (BNP PBA 58 114 장 뒤) 「no a de parar hasta que bolba a medio reves sobre la cabeça」 — 뜻 (소리) 꼴 · 원어 = 오늘 철자 · 갈래 심화 · 금화 400 = B6 와 같음 [이름 · 글 · 값 사장님 확인 전 — 확인표 3915 · 기록 docs/strike/ib_link_2026-11-14.md §10]
     ],
   },
   japanese: {
@@ -151,6 +152,7 @@ const NODE_LORE = {
   B9: { lore: '큰 칼의 쳐내기와 막기와 치기는 모두 몸놀림이 거들어야 한다', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 6' },
   B7: { lore: '큰 칼로 갈비를 온통 휘감고, 온몸을 돌려라', src: '고디뉴 『Arte de Esgrima』(1599) — 몬탄테 장 규칙 8' }, // 10/22 휘감아 돌기 (전 길목 지키기 — 피게이레두 단순 규칙 7)
   B6: { lore: '걸음마다 한 칼씩, 늘 아래에서 위로, 사람들이 멈출 때까지 번갈아 쳐라', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 7' },
+  B12: { lore: '머리 위로 다 돌 때까지 칼을 멈추지 말고, 칼자루를 높여 머리를 지켜라', src: '고디뉴 『Arte de Esgrima』(1599) — 몬탄테 장 규칙 5' }, // 11/14 맞바꿈 — 「no a de parar hasta que bolba a medio reves sobre la cabeça … e las guarnisiones altas que reparen la cabeça del golpe」(BNP PBA 58 114 장 뒤 · 독일어 역 PDF 5 쪽) — 한 문장의 두 토막을 명령꼴로 [풀이]
   // 일본 — 오륜서 · 병법가전서 · 일본검도형 (사장님이 주신 원본 읽기표 — docs/motion/schools/)
   J1: { lore: '발끝을 조금 띄우고 뒤꿈치를 세게 디뎌, 늘 걷듯이 걸어라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 발 쓰기' },
   J6: { lore: '벨 때도 물러설 때도 받을 때도, 좌우를 번갈아 디뎌라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 음양의 발' },

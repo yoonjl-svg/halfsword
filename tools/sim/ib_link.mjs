@@ -31,8 +31,8 @@ export function applySets(s) {
     o[keys.at(-1)] = v === 'true' ? true : v === 'false' ? false : Number.isNaN(+v) ? v : +v;
   }
 }
-/** 판 ① ~ ⑤ (기록 §4): ① 지금(11/12 풍차 베기) · ② 이어 돌리기 · ③ + B · ④ + C' · ⑤ 모두 */
-export const CFG = { 1: { on: 0, chainArm: 0, trade: 0 }, 2: { on: 1, chainArm: 0, trade: 0 }, 3: { on: 1, chainArm: 1, trade: 0 }, 4: { on: 1, chainArm: 0, trade: 1 }, 5: { on: 1, chainArm: 1, trade: 1 } };
+/** 판 (기록 §4 · §10): ① 11/12 풍차 베기 · ② 이어 돌리기(맞바꿈 끔) · ③ + B · a = ⓐ 이어 돌리기 + 새 맞바꿈 B12(기본) · b = ⓑ 맞바꿈 없음(= ②) — 전 ④ ⑤(옛 C' 맞바꿈)는 11/14 걷어냄 */
+export const CFG = { 1: { on: 0, chainArm: 0, trade: 0 }, 2: { on: 1, chainArm: 0, trade: 0 }, 3: { on: 1, chainArm: 1, trade: 0 }, a: { on: 1, chainArm: 0, trade: 1 }, b: { on: 1, chainArm: 0, trade: 0 } };
 export function applyCfg(n) {
   const c = CFG[n];
   if (!c) return;
@@ -182,6 +182,29 @@ const mean = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
 const med = (a) => { const b = a.slice().sort((x, y) => x - y); return b.length ? b[Math.floor((b.length - 1) / 2)] : null; };
 const f2 = (x, k = 2) => (x == null || !Number.isFinite(x) ? '–' : x.toFixed(k));
 /** 판 ① ~ ⑤ 칸 묶음 표 (Markdown) — runs 에 cfg 가 적혀 있음 */
+/** 맞바꿈 표 (11/14 — 기록 §10): 판 결과 · 받은 피해 · 넘긴 맞음 · 아낀 심각도 · 쓴 기력 (칸마다 + 다섯 칸 모두) */
+export function tradeTable(runs) {
+  const by = {};
+  for (const r of runs) {
+    (by[`${r.cfg}|${r.weapon}:${r.opp}`] ??= []).push(r);
+    (by[`${r.cfg}|다섯 칸 모두`] ??= []).push(r);
+  }
+  const out = ['| 판 | 칸 (내 칼 : 상대) | 판 수 | 이김 · 짐 · 비김 | 받은 심각도/판 | 받은 맞음/판 | 받은 의식/판 | 준 심각도/판 | 넘긴 맞음/판 | 아낀 심각도/판 (넘긴 맞음당) | 쓴 기력/판 (넘긴 맞음당) | 이어 돌리기/판 (그만둠) | 판 길이 s |', '|---|---|---:|---|---:|---:|---:|---:|---:|---|---|---|---:|'];
+  for (const [k, rs] of Object.entries(by).sort()) {
+    const [cfg, cell] = k.split('|');
+    const n = rs.length;
+    const W = rs.filter((r) => r.win).length;
+    const Ls = rs.filter((r) => r.lose).length;
+    const tn = rs.reduce((x, r) => x + (r.ib?.trade?.n ?? 0), 0);
+    const ts = rs.reduce((x, r) => x + (r.ib?.trade?.sev ?? 0), 0);
+    const tc = rs.reduce((x, r) => x + (r.ib?.trade?.cost ?? 0), 0);
+    const lf = rs.reduce((x, r) => x + (r.ib?.link?.fired ?? 0), 0);
+    const ld = rs.reduce((x, r) => x + (r.ib?.link?.done ?? 0), 0);
+    out.push(`| ${cfg} | ${cell} | ${n} | ${W} · ${Ls} · ${n - W - Ls} | ${f2(mean(rs.map((r) => r.recv)))} | ${f2(mean(rs.map((r) => r.recvN)))} | ${f2(mean(rs.map((r) => r.consR ?? 0)))} | ${f2(mean(rs.map((r) => r.dealt)))} | ${f2(tn / n)} | ${f2(ts / n)} (${tn ? f2(ts / tn) : '—'}) | ${f2(tc / n, 1)} (${tn ? f2(tc / tn, 1) : '—'}) | ${f2(lf / n)} (${lf - ld}) | ${f2(mean(rs.map((r) => r.T)), 1)} |`);
+  }
+  return out.join('\n');
+}
+
 export function aggTable(runs) {
   const by = {};
   for (const r of runs) (by[`${r.cfg}${r.secretOn === false ? ' 비기 끔' : ''}|${r.weapon}:${r.opp}`] ??= []).push(r);
@@ -220,7 +243,7 @@ if (isMain(import.meta.url)) {
     const { rows, ...o } = r;
     console.log(JSON.stringify(o, null, 1));
   } else if (mode === 'fight') {
-    const cfg = +arg('cfg', 2);
+    const cfg = arg('cfg', '2');
     applyCfg(cfg);
     const { fightOne } = await import('./school_balance.mjs');
     const cells = arg('cells', 'iberian:zweihander:longsword').split(',');
@@ -242,6 +265,6 @@ if (isMain(import.meta.url)) {
     console.log(aggTable(runs));
   } else if (mode === 'agg') {
     const runs = rest.filter((x) => !x.startsWith('--')).flatMap((p) => JSON.parse(readFileSync(p, 'utf8')).runs);
-    console.log(aggTable(runs));
+    console.log(arg('table', '') === 'trade' ? tradeTable(runs) : aggTable(runs));
   }
 }

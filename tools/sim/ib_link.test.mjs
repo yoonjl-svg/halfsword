@@ -1,12 +1,13 @@
 // 이베리아 B7 '이어 돌리기' 시험 (11/14 사장님 '이베리아 이어 돌리기로 진행해.' — config IB_LINK · src/iberian_link.js · unique_assist.js linkTry · linkTick · 기록 docs/strike/ib_link_2026-11-14.md)
 //  새 공격이 아니라 사이동작: 앞 진짜 긋기가 끝나고 이어짐 창 안에 다음 큰 칼을 그었는데 손이 그 시작 자리에 없으면 칼이 머리 위로 돌아 시작 자리로 · 그은 칼이 거기서 나감 ·
-//  흐름 사슬의 다음 칼로 셈 · 원 동안 막기 안 됨 · 끄면(IB_LINK.on 0) 11/12 판 풍차 베기 · 다른 유파 그대로 · 스위치 B · C' 끄면 전 판.
+//  흐름 사슬의 다음 칼로 셈 · 원 동안 막기 안 됨 · 끄면(IB_LINK.on 0) 11/12 판 풍차 베기 · 다른 유파 그대로 · 스위치 B 끄면 전 판 ·
+//  B12 맞바꿈 '멈추지 않는 칼'(11/14 사장님 확인 — IB_LINK.trade · fighter.js ibTradeTry): 원 동안 몸에 든 맞음 한 번을 기력(그 무기 베기 한 번 값)으로 넘김 · 사슬당 한 번.
 //  시간 상한(몇 초 안에 끝나야 함)을 보는 시험은 없음.
 //  node --test tools/sim/ib_link.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG } from './harness_m.mjs';
-import { IB_LINK, IB_FLOW, SECRET, ARENA, UNIQUE_ASSIST as UA, realS } from '../../src/config.js';
+import { IB_LINK, IB_FLOW, SECRET, ARENA, STAMINA, UNIQUE_ASSIST as UA, realS } from '../../src/config.js';
 import { linkNeed, LINK_TECH, linkStart, linkEnd, linkPlan, linkNow } from '../../src/iberian_link.js';
 import { PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
@@ -20,14 +21,14 @@ const LADDER = [0.2, 0.4, 0.6, 1.2, 1.5, 2.0, 3.0, 6.0, 10.0].map((s) => realS(s
 const keep = () => ({ ...IB_LINK });
 const restore = (o) => Object.assign(IB_LINK, o);
 
-test('기본값 — 이어 돌리기 켬 (사장님 11/14 결정) · 원 시간 사다리 값 · 식힘 · B · C\' · AI 끔', () => {
+test('기본값 — 이어 돌리기 켬 (사장님 11/14 결정) · 원 시간 사다리 값 · 식힘 · B · AI 끔 · 맞바꿈 B12 켬 (사장님 11/14 확인)', () => {
   assert.equal(IB_LINK.on, 1);
   assert.ok(LADDER.some((x) => Math.abs(x - IB_LINK.time) < 1e-12), `원 시간 ${IB_LINK.time} — 시간 사다리 값`);
   assert.equal(IB_LINK.cool, 0, '공격이 아니므로 특수 공격 식힘 없음 (감독 안)');
   assert.equal(IB_LINK.chainArm, 0);
-  assert.equal(IB_LINK.trade, 0);
+  assert.equal(IB_LINK.trade, 1, '맞바꿈 B12 칸 효과 켬 (칸을 익힌 사람만)');
   assert.equal(IB_LINK.ai, 0);
-  assert.equal(IB_LINK.tradeHurt, 1.2);
+  assert.equal(IB_LINK.tradeHurt, undefined, '옛 C\' 받는 피해 배율은 걷어냄 (사장님 11/14 \'권고대로 해\')');
 });
 
 test('잇는 칼 고르기 — 큰 칼(내려 · 가로 베기)만 · 여기서 그대로 그어지는 칼이면 안 돌림', () => {
@@ -156,7 +157,7 @@ test('끄면(IB_LINK.on 0) 11/12 판 풍차 베기 — 원 긋기로 냄 · 이�
   }
 });
 
-test('다른 유파 그대로 — 이어 돌리기 · 스위치 B · C\' · AI 를 켜도 독일 칸 판은 같음', () => {
+test('다른 유파 그대로 — 이어 돌리기 · 스위치 B · 맞바꿈 · AI 를 켜도 독일 칸 판은 같음', () => {
   const o = keep();
   const one = () => JSON.stringify(fightOne({ school: 'german', weapon: 'longsword', opp: 'longsword', seed: 5, dur: 8 }));
   try {
@@ -170,7 +171,7 @@ test('다른 유파 그대로 — 이어 돌리기 · 스위치 B · C\' · AI �
   }
 });
 
-test('스위치 B · C\' 끄면 전 판 — 세 칼 기력 0 이 들어도 무장 없음 · 맞바꿈 없음 / 켜면 무장 · 맞바꿈', () => {
+test('스위치 B 끄면 전 판 — 세 칼 기력 0 이 들어도 무장 없음 / 켜면 곧장 무장', () => {
   const o = keep();
   const kit = kitFromNodes('iberian', allNodeIds('iberian'));
   const G = newRound({ walls: false, weapon: 'zweihander', weapon2: 'longsword', seed: 4, gap: 1.6, kit });
@@ -191,23 +192,105 @@ test('스위치 B · C\' 끄면 전 판 — 세 칼 기력 0 이 들어도 무�
     G.step();
     assert.equal(W.spinArm.armed, true, 'B 켬: 칼끝 거리 안이어도 곧장 무장');
     assert.equal(W.open?.ctx?.ev, 'altib');
-    // C'
-    IB_LINK.trade = 0;
-    P.ibFlowOn = true;
-    assert.equal(P.ibTradeLive(), false);
-    assert.equal(P.ibTradeHurt(), 1);
-    IB_LINK.trade = 1;
-    assert.equal(P.ibTradeLive(), true, '흐름 사슬 중');
-    P.ibTrade = P.ibTradeLive();
-    assert.equal(P.ibTradeHurt(), IB_LINK.tradeHurt);
-    const pain = P.pain;
-    P.pain = 1;
-    const vT = P.vigor;
-    P.ibTrade = false;
-    const v0 = P.vigor;
-    assert.ok(vT > v0, `맞바꿈 동안 아픔이 힘을 안 뺌 ${vT} > ${v0}`);
-    P.pain = pain;
   } finally {
+    restore(o);
+    G.world.free();
+  }
+});
+
+test('맞바꿈 B12 (사장님 11/14 확인) — 이어 돌리는 동안 몸에 든 맞음 한 번을 그 무기 베기 한 번 값의 기력으로 넘김 · 같은 칼이 마저 친 부위도 함께 · 사슬당 한 번 · 기력 모자람 · 끔 · 칸 없음 · 원 밖이면 그대로 맞음', () => {
+  const o = keep();
+  const all = allNodeIds('iberian');
+  const kit = kitFromNodes('iberian', all);
+  const G = newRound({ walls: false, weapon: 'zweihander', weapon2: 'longsword', seed: 4, gap: 1.6, kit });
+  const P = G.player;
+  const E = G.enemy;
+  const real = G.combat.analyze;
+  try {
+    let cap = null; // 상대 AI 가 실제로 몸에 넣은 칼날 맞음 하나 (그 판정 그대로 다시 넣어 봄)
+    const pw = G.combat.hooks.onWound;
+    G.combat.hooks.onWound = (att, vic, r, point, pr) => {
+      pw?.(att, vic, r, point, pr);
+      if (!cap && att === E && vic === P && r.type !== 'blunt' && r.severity > 0) cap = { r, point, pr };
+    };
+    while (!cap && G.t < 30) G.step();
+    assert.ok(cap, '상대 칼이 몸에 듦');
+    G.combat.hooks.onWound = pw;
+    G.combat.analyze = () => ({ ...cap.r });
+    let id = 9000;
+    const hit = (part = cap.pr.v.part, same = false) => {
+      if (!same) E.stamina.attackId = ++id;
+      P.hitCooldowns.clear();
+      return G.combat.strike({ ...cap.pr, v: { ...cap.pr.v, part } }, cap.point, false);
+    };
+    const cost = STAMINA.cutCost * P.stamina.weight;
+    assert.ok(cost > STAMINA.cutCost, `츠바이핸더 베기 한 번 값 ${cost.toFixed(1)} (무게 배율)`);
+    const fresh = () => { P.ibTradeUsed = false; P.ibTradeHit = null; P.stamina.value = STAMINA.max; };
+    // 원 동안 첫 맞음 — 넘김
+    IB_LINK.trade = 1;
+    P.ibLink = { wounds0: P.wounds.length };
+    fresh();
+    const w0 = P.wounds.length, c0 = P.consciousness, p0 = P.pain;
+    assert.equal(hit().traded, true, '원 동안 첫 맞음은 넘김');
+    assert.equal(P.wounds.length, w0, '상처 없음');
+    assert.equal(P.consciousness, c0, '의식 그대로');
+    assert.equal(P.pain, p0, '아픔 그대로');
+    assert.ok(Math.abs(STAMINA.max - P.stamina.value - cost) < 1e-9, `기력 = 베기 한 번 값 ${(STAMINA.max - P.stamina.value).toFixed(2)}`);
+    assert.equal(hit(cap.pr.v.part === 'chest' ? 'pelvis' : 'chest', true).traded, true, '같은 칼이 같은 길에 다른 부위를 마저 침 — 함께 넘김');
+    assert.ok(Math.abs(STAMINA.max - P.stamina.value - cost) < 1e-9, '기력은 한 번만');
+    // 같은 사슬의 다음 칼 — 그대로 맞음
+    assert.ok(!hit().traded, '사슬당 한 번');
+    assert.equal(P.wounds.length, w0 + 1, '두 번째 칼은 상처');
+    // 사슬이 끊기면 다시
+    P.ibLink = null;
+    P.ibFlowChain = false;
+    P.updateIbFlow(DT);
+    assert.equal(P.ibTradeUsed, false, '사슬이 끊기면 다시 한 번');
+    P.ibLink = { wounds0: P.wounds.length };
+    P.stamina.value = STAMINA.max;
+    assert.equal(hit().traded, true, '새 사슬의 원 — 다시 넘김');
+    // 기력이 베기 한 번 값보다 적으면 못 넘김
+    fresh();
+    P.stamina.value = cost - 0.5;
+    assert.ok(!hit().traded, '기력 모자람 — 그대로 맞음');
+    // 끔 · 원 밖 · 칸 없음
+    fresh();
+    IB_LINK.trade = 0;
+    assert.ok(!hit().traded, 'IB_LINK.trade 0 — 그대로 맞음');
+    IB_LINK.trade = 1;
+    fresh();
+    P.ibLink = null;
+    assert.ok(!hit().traded, '원 밖(이어 돌리는 중이 아님) — 그대로 맞음');
+    P.ibLink = { wounds0: P.wounds.length };
+    fresh();
+    P.skillKit = kitFromNodes('iberian', new Set([...all].filter((x) => x !== 'B12')));
+    assert.ok(!hit().traded, 'B12 칸 없음 — 그대로 맞음');
+  } finally {
+    P.ibLink = null;
+    G.combat.analyze = real;
+    restore(o);
+    G.world.free();
+  }
+});
+
+test('맞바꿈 B12 — 칼끼리 맞아 돌던 칼이 서는 것(jolt)은 넘기지 않음 (원이 그만둠 · 막을 길은 남김)', () => {
+  const o = keep();
+  const kit = kitFromNodes('iberian', allNodeIds('iberian'));
+  const G = newRound({ walls: false, weapon: 'zweihander', weapon2: 'longsword', seed: 4, gap: 3, kit });
+  const P = G.player;
+  const E = G.enemy;
+  try {
+    G.ai.update = () => E.move.set(0, 0);
+    while (G.t < ARENA.startHold + 0.3) G.step();
+    const uq = new PlayerUniqueAssist(P, { names: kit.unique });
+    IB_LINK.trade = 1;
+    P.ibLink = { wounds0: P.wounds.length };
+    P.jolt = 1;
+    assert.equal(uq.linkStop(), 'jolt', '맞바꿈이 켜져도 칼끼리 세게 맞으면 원이 그만둠');
+    P.jolt = 0;
+    assert.notEqual(uq.linkStop(), 'jolt');
+  } finally {
+    P.ibLink = null;
     restore(o);
     G.world.free();
   }
