@@ -227,11 +227,23 @@ test('⑤ 실제 몸: 경계를 끄면 AI 가 간 보기로 준비된 사람 발
   assert.equal(on.creep, 0);
   const rows = [];
   for (const id of ['tome', 'ratna']) {
-    const o = standoff(id, {});
+    const o = id === 'ratna' ? withoutIbPlan(() => standoff(id, {})) : standoff(id, {});
     rows.push(`${id} ${o.creep}`);
     assert.equal(o.creep, 0, rows.join(' · '));
   }
 });
+// 11/14 그때 판으로 묶음 (기준은 안 고침): 사장님 11/14 '고노센 경계 선도 무 · 낮음은 무모하게 넘는 쪽으로 기움' — 라트나(이베리아 숙련 2 = 낮음)는 유파 플랜 2 단계 이베리아(src/ai_plan_ib.js ibFeetV)에서
+//  준비된 발도 선을 넘는 쪽으로 기울어 이 장면(10/25 ⑤)에서 한 번 기어 듦 → 라트나 줄만 이베리아 플랜 전 판(`?aiPlanIb=0` 꼴)으로. 새 판의 넘음은 tools/sim/ai_plan_ib.test.mjs 가 봄
+function withoutIbPlan(fn) {
+  const P = CONFIG.AI_PLAN;
+  const keep = [P.schools, P.errSchools];
+  for (const k of ['schools', 'errSchools']) P[k] = P[k].filter((x) => x !== 'iberian');
+  try {
+    return fn();
+  } finally {
+    [P.schools, P.errSchools] = keep;
+  }
+}
 
 test('⑤ 속임 → 결행: 속임은 준비 한 번에 한 번 (선 밖에서 들었다 거둠) · 다음 칠 때는 결행 — 상대가 고노센 쓰는 몸이 아니면 아무 일 없음', () => {
   const G = newRound({ weapon: 'monohoshizao', weapon2: 'longsword', seed: 1, difficulty: 'normal' });

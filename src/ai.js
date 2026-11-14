@@ -23,6 +23,7 @@ import { STAMINA } from './config.js';
 import * as THREE from 'three';
 import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF, AI_MAAI, IB_LINK } from './config.js';
 import { linkStart, linkEnd } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — IB_LINK.ai · 기본 켬 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해')
+import { ibInit, ibAfter, ibTick, ibCircle, ibSide, ibFeetV, ibWatch } from './ai_plan_ib.js'; // 유파 플랜 2 단계 이베리아 (11/14 — 플랜 표 ib 표식일 때만 this.ibPlan · 셈은 그 파일)
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS, IBERIAN_SPIN_DEF } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
@@ -352,6 +353,7 @@ export class AI {
       this.stats.plan = planStats();
       if (this.riso) this.riso.W.stepOf = () => seenStep(this.foeClosing); // 리솔루토 맞춤 걸음: 사람 스틱 대신 본 걸음 (설계 §4-3)
     }
+    if (this.plan?.ib) ibInit(this); // 이베리아 플랜 (2 단계 11/14 — src/ai_plan_ib.js): this.ibPlan · 없으면 아래 이베리아 자리를 안 탐
     // 파고들기 (11/14 사장님 '파고드는 법도 개편에 넣어' — 공통 틀 · 모든 유파 · AI_PLAN.on): 내 칼이 상대 칼보다 뚜렷이 짧을 때만(digNow) — 롱소드끼리는 안 걸려 그 판은 그대로.
     //  digK = 띠 기울기(무 0 · 낮음 ⅓ · 가운데 ⅔ · 높음 1 — 유파와 상관없이) · dig = 이 스텝 파고들기 판인가(updateCombat) · digDef = 다가가다 받은 위협을 칼로 받으며 계속 들어가는 막기 · digD0 = 공격을 시작한 거리
     this.digK = tiltOf(this.proficiency);
@@ -897,6 +899,7 @@ export class AI {
     if (this.riso) this.risoTick(dt, kneeling); // 안다레 리솔루토 (11/14 AI 열림): 칼 우위 동안 덮인 채 상대 걸음에 맞춰 오감 → 창 0.6 s → 곧장 런지 (상대 사건 없음)
     if (this.press) this.mordTick(dt, kneeling); // 모르트슐라크 (10/24 AI 열림): 밀치기 누르기 1.5 s → 창 0.6 s → 상대 머리가 닿으면 일격 (상대 사건 없음)
     if (this.plan) this.planTick(dt, d, hurt, s); // 유파 플랜 전략 층 (11/14 — 국면 판정 0.2 s 마다 + 사건 때 곧장 · 반사 층(막기 · 피하기 · 맞받기 · 비기)은 위 · 아래 그대로 매 스텝)
+    if (this.ibPlan) ibTick(this, dt, th, hurt); // 이베리아 플랜 (2 단계): 원 사이를 치는 버릇 기억 · 옆 박차기 진행 · 무장 기다림 끝 (굴림 없음)
 
     if (kneeling) {
       // 다리를 못 쓰니 물러나거나 파고들 수 없다: 위험이 오면 그래도 막고, 아니면 사정거리 안에 있을 때만
@@ -1090,6 +1093,7 @@ export class AI {
     //  인물 손잡이 pers.spinHold (10/29 15:5x — 사장님 '롤랑과 베르나르도의 … 싸움 스타일도 바꾸도록 해'): 걸쇠는 둘 다 같고, 발만 다르다 —
     //   true(기본 · 롤랑) = 칼끝 거리에서 서서 상대가 들어오기를 기다림(전 그대로) · false = 내가 걸어 들어가 상대를 칼끝 거리 안에 넣음(holdDist — 15:5x ~ 21:0x 베르나르도.
     //   21:0x '롤랑의 상극' 부터 베르나르도도 true — 쓰는 인물 없음 · 둘이 함께 내는 맞냄에서 걸어 들어간 쪽이 졌다: docs/characters/temperament_2026-10-29.md §7-5)
+    if (this.ibPlan && ibWatch(this, s, d, CALM_T)) return; // 이베리아 플랜 (2 단계): 무장 뒤 안 들어오면 사슬로 · 칼끝 밖 무장 기다림 · 옆 박차기 뒤 나선 걸음 베기 · 원 돌려 보이기
     if (this.spinArm?.armed) return;
     // 안다레 리솔루토 무장 (11/14 사장님 '리솔루토도 쓰게해' — risoTick): 같은 걸쇠 — 칼 우위 동안 칼끼리 붙어 있으면 먼저 치지 않고(덮음을 베기로 끊지 않게 — 사람 조건 '휘두르지 않음') 발은 상대 걸음에 맞춘다(moveFeet). 들어오는 칼(위 respond)은 그대로 받는다
     if (this.riso?.armed) return;
@@ -2420,6 +2424,7 @@ export class AI {
         return;
       }
     }
+    if (this.ibPlan && ibAfter(this, d)) return; // 이베리아 플랜 (2 단계): 사슬을 이을 마음 · 원으로 큰 칼 잇기 · 사슬 끝 → 칼끝 밖 무장 (아래 옛 굴림 자리를 갈음)
     let want = (this.hitLanded || this.bound ? L.followUp : L.followUp * 0.4) + 0.2 * this.anger; // 화나면 더 이어 친다
     if (this.plan && this.planLuck > 0) want = want * (1 - this.planLuck) + AI_PLAN.coin * this.planLuck; // 무계획(11/14 — 유파 플랜 굴림 몫): 이어 치기 · 물러남을 칼 끝(맞힘 · 막힘 · 헛침)에 맞춰 고르지 않음
     if (canChain && Math.random() < want) {
@@ -4047,6 +4052,7 @@ export class AI {
       const GW = this.gnsW;
       if (GW && (GW.ready || GW.cut) && !this.chasing && d <= GW.line + 0.08) v = Math.min(v, 0); // 고노센 경계 (10/25): 준비된 고노센 상대의 선 언저리(최소 여유 0.08 안)에선 앞으로 안 감 — 잔걸음이 선 안으로 기어 들지 않게
       if (this.plan && !this.chasing) v = this.planFeet(v, d, hold, dt); // 유파 플랜 걸음 (11/14 이탈리아 — 물러서기 · 멈춤 · 꾐 · 칼 맞대기)
+      if (this.ibPlan) v = ibFeetV(this, v, d); // 이베리아 플랜 (2 단계): 칼끝 밖 무장 기다림 · 무 · 낮음은 고노센 선을 무모하게 넘음
       fwd = toStick(v);
       // 옆으로 돌기 (가끔 방향을 바꾸고 가끔 멈춘다)
       this.circleTimer -= dt;
@@ -4055,8 +4061,10 @@ export class AI {
         const x = Math.random();
         const ds = this.drySense; // 마른 길 (라트나 · 잠든 습지만): 같은 굴림 x 로 멈춤·도는 쪽을 땅에 맞춰 고른다 — 0 이면 아래 옛 줄 그대로
         this.circle = ds ? this.dryCircle(x, ds) : x < 0.45 ? 0 : (x < 0.85 ? this.pers.circleDir : -this.pers.circleDir) * this.pers.circleRate;
+        if (this.ibPlan) ibCircle(this, x); // 이베리아 플랜 (2 단계): 넓게 돎 · 옆 박차기 (같은 굴림 x)
       }
       if (d < hold + 0.6) side = this.circle;
+      if (this.ibPlan) side = ibSide(this, side, d, hold); // 이베리아 플랜: 옆 박차기 동안 옆 끝 · 넓게 돎
       // 고노센 준비 쌓기 (10/25 22:5x 사장님 '아무 행동 없이 2초' — SECRET.gnsReady 'idle' · 감독 'AI 도 같은 생각 — AI 의 걸음 뜻으로' · SECRET.gnsAiSettle):
       //  고노센 AI 가 준비 전이면 간 보기 동안 다가가기 · 잔걸음 · 옆 돌기 없이 제자리에 선다(스틱 0 — 사람이 스틱을 놓고 기다리는 것과 같은 셈 · 새 수 없음) ·
       //  준비가 켜지면 다시 간 보기 걸음(걸어도 유지). 너무 붙음 · 울타리 · 밀치기 걸음(아래)은 그대로. 빈손 상대를 쫓을 때 · 'dist' 판 · 끄면 이 줄을 안 탐
