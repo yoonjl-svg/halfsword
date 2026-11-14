@@ -6,6 +6,10 @@
 //   사슬이 끝나면 내 칼끝 밖으로 빠져 알티바슈 포르트를 무장했다가 들어오는 상대에 내려친다.
 //  모두 기울기(사장님 11/14 '절대적 규칙은 빼'): 칸 값 × 띠 세기(planK)를 확률 · 곱으로만 쓴다 — '사슬을 늘 이음'이 아니라 '이을 마음이 큼'.
 //  무 · 낮음 = '더 전략 없이 행운에 기대는 전투'(굴림 몫 planLuck — 무모 · 무계획 · 성급함 아님): 원을 아무 때나 · 이어 칠지 동전 쪽 · 기력 계획 없음(옆 박차기도 기력을 안 봄) · 고노센 선을 무모하게 넘음(11/14 합침 — 네 유파 같은 규칙 하나로: ai.js gnsWatch W.reck · 이 파일엔 없음).
+//  변칙성 (11/14 둘째 — 사장님 '이베리아의 특성에 변칙성을 추가하고 그 맥락에서 종종 사이드스텝을 쓰게 해'): 들어가는 각 · 박자 · 걸음이 고르지 않음 — 곧게 들어가지 않고
+//   비스듬히 · 옆으로 돌아 들어감 · 돌기 박자가 흔들림 · 원과 옆 박차기가 섞임. 원전: 피게이레두 1651 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 1599 규칙 10
+//   「sich selbst im Rad herumdrehend」(바퀴처럼 몸을 돌리며) — 몬탄테는 둘레를 쓸며 자리를 바꾸는 칼 · 이베리아 둥근 · 옆걸음(에텐하르트 1675 원서 55 ~ 56 쪽 — 이 유파 걸음 칸 schools.js IBERIAN_GAIT).
+//   옆 박차기 때: 돌기 박자에 각을 바꿀 때 · 상대 칼이 들어올 때 선 밖으로 · 사슬이 끝나고 빠질 때 · 상대가 되풀이하는 수에 맞춰 비켜 꾐(높음) → 나선 걸음 베기(사람 B2 · B3 와 같은 장치)
 //  ai.js 는 플랜 표에 ib 표식이 있을 때만(this.ibPlan) 이 파일의 셈을 부른다 — 다른 유파 · 옛 판(`?aiPlan=0` · `?aiPlanIb=0`)은 한 줄도 안 탄다(굴림 그대로).
 //  연산: 스텝마다 새 객체 · 배열 없음(옆 박차기 칸 · 버릇 고리 버퍼는 AI 하나에 한 번) · 탐색 없음. 반사 층(막기 · 피하기 · 맞받기 · 비기)은 건드리지 않는다.
 // ─────────────────────────────────────────────────────────────
@@ -20,7 +24,7 @@ const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
 
 /** 재기 칸 (AI 하나에 한 번) */
 export function ibStats() {
-  return { cont: 0, end: 0, spinPick: 0, nearPick: 0, out: 0, outArmed: 0, goIn: 0, dash: 0, slant: 0, lure: 0, habit: 0, freeWant: 0 };
+  return { cont: 0, end: 0, spinPick: 0, nearPick: 0, out: 0, outArmed: 0, goIn: 0, dash: 0, slant: 0, lure: 0, habit: 0, freeWant: 0, tryCircle: 0, tryDodge: 0, tryEnd: 0, bait: 0, odd: 0, jitter: 0, dashGo: 0 };
 }
 
 /** 플랜이 이베리아(ib 표식)인 AI 를 차린다 — 생성자에서 한 번 (this.plan 을 정한 뒤) */
@@ -44,6 +48,14 @@ export function ibInit(ai) {
     beatT: 0,
     lureArmed: true,
     lureT: -Infinity,
+    lastCircle: 0, // 지난 돌기 쪽 (각을 바꿈 — 옆 박차기)
+    dodgeId: -1, // 옆 박차기로 비킨 상대 칼 번호 (칼 하나에 한 번 굴림)
+    charge: false, // 상대 달려듦 (오르는 때 한 번 굴림)
+    atkT: new Float64Array(MEM).fill(-Infinity), // 상대가 칼을 낸 때 (되풀이 — 높음의 비켜 꾐)
+    atkI: 0,
+    atkId: -1,
+    ang: 0, // 비스듬히 들어감 — 이 공격의 옆 스틱 쪽 (0 = 곧게)
+    angSeq: -1,
   };
   ai.stats.ib = ibStats();
   if (AI_PLAN.ib.chainBody) ai.me.ibChainAi = true; // B6 이어지는 흐름 — 사람과 같은 규칙 (fighter.js ibChainOn)
@@ -197,6 +209,11 @@ export function ibAfter(ai, d) {
   st.end++;
   ai.patience = Math.max(ai.patience, rand(0.45, 0.75) * (1 - 0.7 * ai.anger));
   ai.startWithdraw(0.9 - 0.4 * ai.obsession);
+  const cd = ai.planC?.dash ?? 0; // 사슬 끝 — 옆으로 박차 빠짐 (변칙 · 곧게 물러나지 않음)
+  if (cd > 0) {
+    st.tryEnd++;
+    if (Math.random() < mixP(ai, ai.planK * cd * AI_PLAN.coin, cd)) dashStart(ai, Math.sign(ai.circle) || ai.pers.circleDir);
+  }
   if (aK > 0 && Math.random() < aK) {
     const I = ai.ibPlan;
     I.out = true;
@@ -206,7 +223,37 @@ export function ibAfter(ai, d) {
   return true;
 }
 
-/** 전략 층 덧칸 (스텝마다 — planTick 뒤): 버릇 기억 · 옆 박차기 진행 · 무장 기다림 끝. 굴림 없음 */
+/** 옆 박차기를 걺 (사람 B2 와 같은 장치 — 걷는 중에 gait.sideDash · 스틱 옆 끝 dashT): 간 보기 · 물러남 · 막기 꼴 · 서 있음. 가운데부터는 기력이 쉼 문턱 + 박차기 값(12)보다 많을 때만 — 무 · 낮음은 기력을 안 봄(무계획). 걸었으면 true */
+function dashStart(ai, side) {
+  const D = ai.ibPlan.dash;
+  if (D.on || !side || ai.chasing || ai.me.state !== 'stand' || !ai.me.gait || !(ai.mode === 'watch' || ai.mode === 'withdraw' || ai.mode === 'defend')) return false;
+  const S = ai.me.stamina;
+  if (bandOf(ai.proficiency) >= 2 && STAMINA.on && S && !S.infinite && S.value < ai.planRestAt() + STAMINA.pushCost) return false;
+  D.on = true;
+  D.side = Math.sign(side);
+  D.t = 0;
+  D.done = false;
+  ai.stats.ib.dashGo++;
+  return true;
+}
+
+/** 무계획 몫을 섞은 확률: 계획 몫 × (1 − 굴림 몫) + 굴림 몫 × coin × 칸 (무 · 낮음은 '아무 때나') */
+function mixP(ai, planned, cell) {
+  const Lk = ai.planLuck;
+  return planned * (1 - Lk) + Lk * AI_PLAN.coin * cell;
+}
+
+/** 되풀이 (높음) — 기억 창 안에 상대가 칼을 낸 수 */
+export function foeAtkN(ai) {
+  const I = ai.ibPlan;
+  if (!I.repeat) return 0;
+  const t0 = ai.sense.t - I.mem;
+  let n = 0;
+  for (let i = 0; i < MEM; i++) if (I.atkT[i] > t0) n++;
+  return n;
+}
+
+/** 전략 층 덧칸 (스텝마다 — planTick 뒤): 버릇 기억 · 옆 박차기 진행 · 무장 기다림 끝 · 상대 칼 · 달려듦에 선 밖으로 비킴 · 비스듬히 들어감 (굴림은 사건 하나에 한 번) */
 export function ibTick(ai, dt, th, hurt) {
   const I = ai.ibPlan;
   const me = ai.me;
@@ -223,18 +270,44 @@ export function ibTick(ai, dt, th, hurt) {
       ai.stats.ib.habit++;
     }
   } else I.inLink = false;
+  // 상대가 칼을 냄 (본 위협 — 새 번호): 되풀이 기억 · 선 밖으로 비킴 (칼 하나에 한 번 굴림)
+  if (th && th.id !== I.atkId) {
+    I.atkId = th.id;
+    I.atkT[I.atkI] = ai.sense.t;
+    I.atkI = (I.atkI + 1) % MEM;
+  }
+  const charge = ai.foeClosing > 0.9 && ai.d < ai.foeReach + 0.9; // 달려듦 (preThreat 와 같은 수 · 위협을 보는 거리 — threat 와 같은 상대 칼끝 어림 + 0.9 안)
+  const C = ai.planC;
+  const cd = C?.dash ?? 0;
+  if (cd > 0 && ((th && th.id !== I.dodgeId) || (charge && !I.charge)) && ai.mode !== 'attack' && ai.mode !== 'secret') {
+    if (th) I.dodgeId = th.id;
+    ai.stats.ib.tryDodge++;
+    if (Math.random() < ai.planK * cd * AI_PLAN.coin * (1 - ai.planLuck)) { // 위협 줄을 읽고 비킴 — 가운데 · 높음 몫 (무 · 낮음은 덜 읽음)
+      const L = th?.line ?? '';
+      dashStart(ai, L.endsWith('L') ? 1 : L.endsWith('R') ? -1 : Math.sign(ai.circle) || ai.pers.circleDir); // 내 왼쪽으로 오는 칼이면 오른쪽으로
+    }
+  }
+  I.charge = charge;
+  // 비스듬히 들어감 (변칙 — 새 공격 하나에 한 번): 준비 · 다가가는 동안 옆 스틱을 얹어 곧게 들어가지 않음
+  if (ai.mode === 'attack' && ai.atkSeq !== I.angSeq) {
+    I.angSeq = ai.atkSeq;
+    I.ang = 0;
+    const ko = C?.odd ?? 0;
+    if (ko > 0 && !ai.chain && !ai.secretRun && !ai.chasing && Math.random() < mixP(ai, ai.planK * ko, ko)) {
+      I.ang = Math.random() < 0.5 ? 1 : -1;
+      ai.stats.ib.odd++;
+    }
+  } else if (ai.mode !== 'attack') I.ang = 0;
   const D = I.dash;
   if (D.on) {
-    if (ai.mode !== 'watch') D.on = false;
+    if (ai.mode !== 'watch' && ai.mode !== 'withdraw' && ai.mode !== 'defend') D.on = false;
     else {
-      if (!D.done && me.gait?.walking && (D.done = !!me.gait.sideDash?.(D.side))) ai.stats.ib.dash++; // 박찬 걸음이 걸림 (걷는 중에만 — gait.js sideDash)
-      if ((D.t += dt) >= AI_PLAN.ib.dashT) {
-        D.on = false;
-        if (D.done) {
-          I.slantT = ai.sense.t;
-          I.slantArmed = true;
-        }
+      if (!D.done && me.gait?.walking && (D.done = !!me.gait.sideDash?.(D.side))) {
+        ai.stats.ib.dash++; // 박찬 걸음이 걸림 (걷는 중에만 — gait.js sideDash)
+        I.slantT = ai.sense.t + AI_PLAN.ib.dashT - D.t; // 나선 걸음 베기 창: 박찬 때부터 박차기 끝 + 2 beat (1.2 s) 까지
+        I.slantArmed = true;
       }
+      if ((D.t += dt) >= AI_PLAN.ib.dashT) D.on = false;
     }
   }
   if (I.out && (ai.sense.t > I.outUntil || !ai.spinArm)) I.out = false;
@@ -252,25 +325,44 @@ export function ibCircle(ai, x) {
     if (!c && x >= 0.45 * (1 - 0.5 * kw)) c = (x < 0.85 ? ai.pers.circleDir : -ai.pers.circleDir) * ai.pers.circleRate;
     ai.circle = c * (1 + 0.5 * kw);
   }
-  const kd = ai.planK * (C?.dash ?? 0);
-  const D = ai.ibPlan.dash;
-  if (!(kd > 0) || D.on || ai.mode !== 'watch' || ai.chasing || !(ai.d < ai.holdDist() + 0.6)) return;
-  const S = ai.me.stamina;
-  if (bandOf(ai.proficiency) >= 2 && STAMINA.on && S && !S.infinite && S.value < ai.planRestAt() + STAMINA.pushCost) return;
-  if (!(Math.random() < kd * AI_PLAN.coin)) return;
-  D.on = true;
-  D.side = Math.sign(ai.circle) || ai.pers.circleDir;
-  D.t = 0;
-  D.done = false;
+  const I = ai.ibPlan;
+  // 박자가 흔들림 (변칙): 다음 돌기 박자를 × (1 + odd × (u − ½)) — 높음 0.5 ~ 1.5 배 (잔걸음 · 돌기 사이 간격이 고르지 않음)
+  const ko = ai.planK * (C?.odd ?? 0) + ai.planLuck * (C?.odd ?? 0) * AI_PLAN.coin;
+  if (ko > 0) {
+    ai.circleTimer *= 1 + Math.min(1, ko) * (Math.random() - 0.5);
+    ai.stats.ib.jitter++;
+  }
+  const c = ai.circle;
+  const turn = !!c && Math.sign(c) !== Math.sign(I.lastCircle);
+  I.lastCircle = c;
+  // 옆 박차기 — 간 보기 · 거리 다툼(넓게 도는 거리 안)에서 돌기 박자마다: 각을 바꿀 때(계획) · 아무 때나(무계획) · 상대가 되풀이해 칼을 내면 비켜 꾐(높음)
+  const cd = C?.dash ?? 0;
+  if (!(cd > 0) || I.dash.on || ai.mode !== 'watch' || ai.chasing || !(ai.d < ai.holdDist() + 0.6 * (1 + kw))) return;
+  const bait = I.repeat && foeAtkN(ai) >= 2 ? ai.planK * AI_PLAN.coin : 0;
+  const p = mixP(ai, ai.planK * cd * AI_PLAN.coin * (turn ? 1 : 0), cd) + bait;
+  ai.stats.ib.tryCircle++;
+  if (!(Math.random() < p)) return;
+  if (dashStart(ai, Math.sign(c) || ai.pers.circleDir) && bait > 0) ai.stats.ib.bait++;
 }
 
-/** 간 보기 옆 스틱 (moveFeet — 옛 줄 뒤): 옆 박차기 동안 옆 끝 · 넓게 돎이면 돌기 거리를 간 보는 거리 + 0.6 × (1 + kw) 까지 */
+/** 간 보기 옆 스틱 (moveFeet — 옛 줄 뒤): 넓게 돎이면 돌기 거리를 간 보는 거리 + 0.6 × (1 + kw) 까지 (옆 박차기 · 비스듬히 들어감은 꼴 뒤 ibSidePost) */
 export function ibSide(ai, side, d, hold) {
-  const I = ai.ibPlan;
-  if (I.dash.on) return I.dash.side;
   const kw = ai.planK * (ai.planC?.wide ?? 0);
   if (!side && kw > 0 && d < hold + 0.6 * (1 + kw)) return ai.circle;
   return side;
+}
+
+/** 꼴 뒤 옆 스틱 (moveFeet — 꼴마다 걸음을 정한 뒤 · 울타리 · 붙음 줄 앞): 옆 박차기 동안 옆 끝 (간 보기 · 물러남 · 막기) · 비스듬히 들어감 — 준비 · 다가가는 동안 옆 0.6 (달려드는 몸을 맞받는 옆 비킴 0.6 과 같은 수) */
+export function ibSidePost(ai, side) {
+  const I = ai.ibPlan;
+  if (I.dash.on) return I.dash.side;
+  if (I.ang && ai.mode === 'attack' && (ai.phase === 'windup' || ai.phase === 'approach') && ai.sideStepT == null) return I.ang * 0.6;
+  return side;
+}
+
+/** 꼴 뒤 앞뒤 스틱: 옆 박차기 동안은 옆이 앞뒤보다 크게 (|앞뒤| ≤ 0.6 — 옆 박찬 걸음이 끊기지 않게) */
+export function ibFwdPost(ai, fwd) {
+  return ai.ibPlan.dash.on ? clamp(fwd, -0.6, 0.6) : fwd;
 }
 
 /**
@@ -295,8 +387,9 @@ function bigCut(ai, s, why) {
  * 간 보기 덧칸 (watch — 싱지르 · 알티바슈 무장 걸쇠 앞): 냈거나 이 스텝을 쥐었으면 true
  *  ① 무장된 뒤 상대가 armWait 넘게 안 들어오면(유도 ② — 4 부터) beat 마다 띠 세기 × 칸 lure × coin 으로 사슬로 들어감(무장은 휘두르면 풀림 — 사람과 같은 규칙) ·
  *  ② 칼끝 밖 무장 기다림 — 무장 전엔 먼저 치지 않음(상대가 내 칼끝 안으로 들면 풀림 · 들어오는 칼 받기는 위에서 그대로) ·
- *  ③ 옆 박차기 뒤 beat 안 — 띠 세기 × 칸 slant 로 나선 걸음 베기(비스듬히 들어감) ·
- *  ④ 원 돌려 보이기(유도 ① — 4 부터): 맞바꿈이 남았고 상대가 내 칼끝 밖 0.45 m 안에 막 들면 한 번 굴려 띠 세기 × 칸 lure × coin 로 큰 칼 사슬을 엶(원 사이로 들어오면 맞바꿈 · 다음 칼)
+ *  ③ 옆 박차기가 걸린 때부터 박차기 끝 + 2 beat(1.2 s) 안 — 칠 거리(+ 나선 걸음 베기의 앞 걸음)에 든 첫 때 띠 세기 × 칸 slant 로 나선 걸음 베기(박찬 각에서 비스듬히 들어감 — 사람 B2 → B3) ·
+ *  ④ 원 돌려 보이기(유도 ① — 4 부터): 맞바꿈이 남았고 상대가 내 칼끝 밖 0.45 m 안에 막 들면 한 번 굴려 띠 세기 × 칸 lure × coin 로 큰 칼 사슬을 엶(원 사이로 들어오면 맞바꿈 · 다음 칼) —
+ *   알티바슈 무장이 쌓이는 중(칼끝 밖 시간 > 0)이면 굴리지 않음 (11/14 둘째 — 무장 2 s 를 휘둘러 버리지 않게 · 무장 쪽이 먼저)
  */
 export function ibWatch(ai, s, d, CALM) {
   const I = ai.ibPlan;
@@ -324,17 +417,18 @@ export function ibWatch(ai, s, d, CALM) {
     if (d < ai.M.reach) I.out = false;
     else return true;
   }
-  if (I.slantArmed && ai.sense.t - I.slantT <= AI_PLAN.beat) {
-    I.slantArmed = false;
-    const t = ai.techNow(ai.uniqueByName.get('talhoRodeado') ?? null);
-    if (t && s.state === 'stand' && d < ai.holdDist() + ai.watchReachOut() && Math.random() < ai.planK * (C.slant ?? 0) && ai.startAttack(t, 'slant')) {
+  if (I.slantArmed && ai.sense.t - I.slantT > 2 * AI_PLAN.beat) I.slantArmed = false;
+  const tr = I.slantArmed ? ai.techNow(ai.uniqueByName.get('talhoRodeado') ?? null) : null;
+  if (tr && s.state === 'stand' && d < ai.holdDist() + ai.watchReachOut() + (tr.step?.fwd ?? 0)) {
+    I.slantArmed = false; // 칠 거리(+ 그 기술이 비껴 딛는 앞 걸음 0.45)에 든 첫 때 한 번 굴림 (박차는 동안도 — 박찬 각에서 곧장)
+    if (Math.random() < ai.planK * (C.slant ?? 0) && ai.startAttack(tr, 'slant')) {
       st.slant++;
       return true;
     }
   }
   const edge = d > ai.M.reach && d < ai.M.reach + 0.45;
   if (!edge) I.lureArmed = true;
-  else if (I.lureArmed && ai.planLure && ai.noThreat > CALM && s.state === 'stand') {
+  else if (I.lureArmed && ai.planLure && ai.noThreat > CALM && s.state === 'stand' && !(A?.t > 0)) { // 알티바슈 무장이 쌓이는 중이면 미룸 (휘두르면 풀림 — 무장 쪽이 먼저: 유도 ②)
     I.lureArmed = false;
     if (swapReady(ai.me) && Math.random() < ai.planK * (C.lure ?? 0) * AI_PLAN.coin) {
       const t = bigCut(ai, s, 'lure');

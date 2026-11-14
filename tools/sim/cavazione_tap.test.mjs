@@ -301,7 +301,15 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
     return { seen, probe };
   };
   const a = watch();
-  const on = fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: a.probe });
+  // 11/14 둘째 그때 판으로 묶음 (기준은 안 고침): 이베리아 플랜 변칙(옆 박차기 · 비스듬히 들어감 — src/ai_plan_ib.js)으로 씨앗 902 츠바이핸더 AI 판이 갈라져 칼끝 돌려 빼기 수가 안 나옴 → 이베리아 플랜 전 판(`?aiPlanIb=0` 꼴)으로
+  const ap0 = [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools];
+  for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'iberian');
+  let on;
+  try {
+    on = fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: a.probe });
+  } finally {
+    [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools] = ap0;
+  }
   assert.ok(a.seen.during > 0 && a.seen.ropesDuring === 0, `수 동안 밧줄 없음 ${JSON.stringify(a.seen)}`);
   assert.ok(a.seen.after > 0 && a.seen.ropesAfter === a.seen.after, `끝나면 다시 ${JSON.stringify(a.seen)}`);
   const body = (r) => (r.it.knock ?? []).filter((k) => (k.why === 'footing' || k.why === 'tilt') && r.it.fireT.some((t) => k.t >= t && k.t <= t + 0.4));

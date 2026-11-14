@@ -299,6 +299,10 @@ test('맞바꿈 B12 — 칼끼리 맞아 돌던 칼이 서는 것(jolt)은 넘�
 
 test('AI 에도 똑같이 (11/14 사장님 \'모두 본판에 넣어 ai에게도 똑같이 적용해\') — AI 이베리아가 이어 돌리기를 쓰고 풍차 베기는 안 냄 · 맞바꿈도 같은 규칙(칸 없이 늘)', () => {
   const o = keep();
+  // 11/14 둘째 그때 판으로 묶음 (기준은 안 고침): 이베리아 플랜 변칙(옆 박차기 · 비스듬히 들어감 — src/ai_plan_ib.js)으로 씨앗 2 판이 갈라져 20 s 안에 이어 돌리기가 안 남 → 이베리아 플랜 전 판(`?aiPlanIb=0` 꼴)으로
+  const AP = CONFIG.AI_PLAN;
+  const ap = [AP.schools, AP.errSchools];
+  for (const k of ['schools', 'errSchools']) AP[k] = AP[k].filter((x) => x !== 'iberian');
   const G = newRound({ walls: false, weapon: 'longsword', weapon2: 'zweihander', seed: 2, gap: 2.4, persona: { proficiency: 5 }, AI2Class: AI }); // AI 대 AI (롱소드 AI 대 츠바이핸더 이베리아 AI)
   const P = G.player;
   const E = G.enemy;
@@ -329,6 +333,7 @@ test('AI 에도 똑같이 (11/14 사장님 \'모두 본판에 넣어 ai에게도
     E.ibLink = null;
     P.ibLink = null;
     restore(o);
+    [AP.schools, AP.errSchools] = ap;
     G.world.free();
   }
 });
