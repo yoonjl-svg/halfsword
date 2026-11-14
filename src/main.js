@@ -326,6 +326,11 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   //  `?itOutbox=0` 넷 모두 끔(전 판) · `?itThrustMul=0.7` 보통 찌르기 배율(1 = 끔) · `?itStop=0` 맞박자 찌르기 끔 · `?itEdge=3` 칼 우위 초(0 = 끔 — 리솔루토 전 조건) · `?itBeat=0` 박자 찌르기 끔 (실제 초) · `?itAi=0` 사람만
   if (params.has('itOutbox')) CONFIG.IT_OUTBOX.on = +params.get('itOutbox') ? 1 : 0;
   if (params.has('itThrustMul') && +params.get('itThrustMul') > 0) CONFIG.IT_OUTBOX.thrustMul = +params.get('itThrustMul');
+  if (params.has('hitKPhys')) CONFIG.STRIKE.hitKPhys = +params.get('hitKPhys') ? 1 : 0; // 11/15 약화 배율은 상처에만 (STRIKE.hitKPhys — 찌르기 박힘 · 무시됨 고침 시제품 · 기본 0)
+  if (params.has('lodgeHold')) CONFIG.STRIKE.lodgeHold = +params.get('lodgeHold') ? 1 : 0; // 11/15 다 쓴 박힘 풀기 (STRIKE.lodgeHold — 기본 0)
+  if (params.has('thrustDrive')) CONFIG.THRUST.drive = Math.max(0, Math.min(3, Math.round(+params.get('thrustDrive') || 0))); // 11/15 사람 탭 찌르기 몸 싣기 (THRUST.drive — 1 당김 · 2 몸 싣기 · 3 둘 다 · 기본 0)
+  if (params.has('thrustDriveChamber') && +params.get('thrustDriveChamber') >= 0) CONFIG.THRUST.driveChamber = +params.get('thrustDriveChamber');
+  if (params.has('thrustDriveStep') && +params.get('thrustDriveStep') >= 0) CONFIG.THRUST.driveStep = +params.get('thrustDriveStep');
   if (params.has('itStop') && +params.get('itStop') >= 0) CONFIG.IT_OUTBOX.stop = +params.get('itStop');
   if (params.has('itEdge') && +params.get('itEdge') >= 0) CONFIG.IT_OUTBOX.edge = CONFIG.realS(+params.get('itEdge'));
   if (params.has('itBeat') && +params.get('itBeat') >= 0) CONFIG.IT_OUTBOX.beat = CONFIG.realS(+params.get('itBeat'));
