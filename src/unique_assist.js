@@ -27,7 +27,7 @@ import { classifyStroke } from './attack_stroke.js';
 //  수는 config.js UNIQUE_ASSIST (확인표 1040~1047 · 10/14 강화 수는 owner_defaults_table.md 끝, 사장님 확인 전). 끄기 `?uniqueAssist=0`.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { UNIQUE_ASSIST as UA, SKILL, SECRET, STAMINA, IB_FLOW, IB_LINK, THRUST, realRate, realS, PHYSICS, CLOSE } from './config.js';
+import { UNIQUE_ASSIST as UA, SKILL, SECRET, STAMINA, IB_FLOW, IB_LINK, THRUST, IT_OUTBOX, realRate, realS, PHYSICS, CLOSE } from './config.js';
 const SKILL_DT = PHYSICS.timestep; // 물리 한 스텝 (게임 초 — 이어 돌리기 손가락 첫머리 나눔)
 import { G, TECH, TECH_BY_NAME } from './ai_techniques.js';
 import { TRADITIONS, IBERIAN_SPIN_DEF } from './schools.js';
@@ -335,7 +335,7 @@ const TAP_TRIG = {
   //   비껴서며 찌르기 — 스틱 옆이 아니어도 · 몸 빼는 쪽은 스틱이 옆이면 그쪽 · 아니면 들어오는 칼 반대쪽(beatSide — ok.side). 한 공격에 한 번(어느 길로 나가든 두 길 모두 그 공격은 씀) · 끄면(beat 0) 전 판 그대로
   inq(uq) {
     const G = uq.f.parryGuard;
-    if (beatOk(uq)) {
+    if (IT_OUTBOX.beatHuman && beatOk(uq)) { // 11/15 사장님 '사람 l9 는 이전처럼 되돌려' — 사람 박자 길은 beatHuman 1 일 때만 (AI 는 italian_outbox.js aiBeatTech 그대로)
       const side = uq.stickOk('side') ? Math.sign(uq.stickUsed[0]) || 1 : beatSide(uq.f);
       return { spend: () => { uq.inqBeatSeen = uq.foeAtk.n; if (G) uq.inqSeen = G.threatId; }, beat: true, side };
     }
@@ -1473,7 +1473,7 @@ export class PlayerUniqueAssist {
     }
     this.coolTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:5x)
     this.touchTick(); // 칼끼리 닿음 (칼끝 돌려 빼기 탭 조건 — 10/31)
-    if (this.inqE) beatTick(this); // 상대 휘두름이 선 때 (11/14 박자 찌르기 — 비껴서며 찌르기를 익힌 사람만 · italian_outbox.js)
+    if (this.inqE && IT_OUTBOX.beatHuman) beatTick(this); // 상대 휘두름이 선 때 (11/14 박자 찌르기 — 비껴서며 찌르기를 익힌 사람만 · italian_outbox.js)
     if (UA.dupAuto && this.dupE) this.dupAutoTick(dt); // 겹치기 자동 (사장님 10/31 18:xx 'bind' 기본 — 0 이면 셈도 안 함 · 겹치기를 익힌 독일 사람만)
     // 물러남이 풀린 때 (날개 접기 탭 조건 TAP_TRIG 'lian' — 10/28 01:2x): 스틱 뒤가 풀린 스텝
     const back = this.backNow();

@@ -329,6 +329,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('itStop') && +params.get('itStop') >= 0) CONFIG.IT_OUTBOX.stop = +params.get('itStop');
   if (params.has('itEdge') && +params.get('itEdge') >= 0) CONFIG.IT_OUTBOX.edge = CONFIG.realS(+params.get('itEdge'));
   if (params.has('itBeat') && +params.get('itBeat') >= 0) CONFIG.IT_OUTBOX.beat = CONFIG.realS(+params.get('itBeat'));
+  if (params.has('itBeatHuman')) CONFIG.IT_OUTBOX.beatHuman = +params.get('itBeatHuman') ? 1 : 0; // 11/15 사장님 '사람 l9 이전처럼' — 1 = 사람 박자 찌르기(11/14 판)
   if (params.has('itAi')) CONFIG.IT_OUTBOX.ai = +params.get('itAi') ? 1 : 0; // 11/14 사장님 'ai에도 적용' — 0 = 사람만
 }
 { // 유파 AI 기본 전투 흐름 (11/14 — config AI_PLAN · src/ai_plan.js · 설계안 docs/design/ai_school_baseline_2026-11-14.md §9): `?aiPlan=0` = 옛 판 (플랜 · 국면 · 이탈리아 거리 오차 모두 끔) ·
