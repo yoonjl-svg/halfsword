@@ -30,8 +30,10 @@ const PH_KO = { probe: '간 보기', contest: '거리 다툼', commit: '들어�
 
 function withPlan(over, fn) {
   const keep = { ...AI_PLAN };
+  const jk = CONFIG.JP_TANK.ai;
   Object.assign(AI_PLAN, over);
-  try { return fn(); } finally { Object.assign(AI_PLAN, keep); }
+  if (!AI_PLAN.on) CONFIG.JP_TANK.ai = 0; // 옛 판 = AI 일본 스택 · 바위 몸도 끔 (main.js `?aiPlan=0` 과 같게 — 2 단계 일본)
+  try { return fn(); } finally { Object.assign(AI_PLAN, keep); CONFIG.JP_TANK.ai = jk; }
 }
 
 /** 한 판: 자리 0 롱소드 AI · 자리 1 이탈리아(레이피어) AI */
@@ -106,7 +108,8 @@ function perfOne({ dur = 20, count = 2 } = {}) {
 
 /** 파고들기 · 굴림 재기 — 한 무기 × 씨앗들 (subject = 그 무기 AI) */
 export function digRun(weapon, { seeds = [1, 2, 3, 4, 5, 6], prof = 2, dur = 30, foe = 'longsword' } = {}) {
-  const S = { n: 0, atk: 0, strikes: 0, out: { hit: 0, bound: 0, miss: 0 }, fold: 0, foldTime: 0, hurtIn: 0, dealt: 0, recv: 0, W: 0, L: 0, dig: { recover: 0, keep: 0, restart: 0, long: 0 }, luck: { blurFire: 0, blurMiss: 0, reckSkip: 0, restLow: 0 } };
+  const S = { n: 0, atk: 0, strikes: 0, out: { hit: 0, bound: 0, miss: 0 }, fold: 0, foldTime: 0, hurtIn: 0, dealt: 0, recv: 0, W: 0, L: 0, dig: { recover: 0, keep: 0, restart: 0, long: 0 }, luck: { blurFire: 0, blurMiss: 0, reckSkip: 0, restLow: 0 },
+    sch: { parries: 0, voids: 0, stkStrokes: 0, stkSum: 0, stkMax: 0, tsubame: 0, secret: 0, habit: 0, pre: 0, lure: 0, still: 0 } };
   for (const seed of seeds) {
     const subjE = seed % 2 === 1;
     const G = newRound({ seed, walls: true, weapon: subjE ? foe : weapon, weapon2: subjE ? weapon : foe, AI2Class: AI, difficulty: 'normal', persona: { proficiency: prof }, persona2: { proficiency: prof } });
@@ -135,17 +138,25 @@ export function digRun(weapon, { seeds = [1, 2, 3, 4, 5, 6], prof = 2, dur = 30,
     else if (!f.alive && o.alive) S.L++;
     for (const k in S.dig) S.dig[k] += ai.stats.dig?.[k] ?? 0;
     for (const k in S.luck) S.luck[k] += ai.stats.plan?.[k] ?? 0;
+    const st = ai.stats, stk = f.schoolPassive?.stats?.stk, jp = st.plan?.jp;
+    S.sch.parries += st.parries;
+    S.sch.voids += st.voids;
+    S.sch.stkStrokes += stk?.strokes ?? 0;
+    S.sch.stkSum += stk?.sum ?? 0;
+    S.sch.stkMax = Math.max(S.sch.stkMax, stk?.max ?? 0);
+    S.sch.secret += Object.values(st.secrets ?? {}).reduce((x, v) => x + (v.fired ?? 0), 0);
+    for (const k of ['tsubame', 'habit', 'pre', 'lure']) S.sch[k] += jp?.[k] ?? 0;
     G.world.free();
   }
   return S;
 }
 
 function digTable(rows) {
-  const L = [`| 무기 AI (숙련 ${rows[0]?.[3] ?? 2}) 대 롱소드 AI | 판 | 공격 시작 / 판 | 칼 냄 / 판 (맞힘 · 막힘 · 헛침 — 6 판 합) | 칼 내기 전 접음 / 판 (그 가운데 시간 넘음) | 다가가다 받은 상처 / 판 | 준 · 받은 상처 / 판 | 이김 · 짐 · 비김 | 파고들기 6 판 합: 헛친 틈 · 받으며 들어감 · 다시 들어감 · 늘린 한도 | 굴림 6 판 합: 흐림이 낸 · 흐림이 놓친 · 위협 넘김 · 바닥 가까이 씀 |`, '|---|---|---|---|---|---|---|---|---|---|'];
+  const L = [`| 무기 AI (숙련 ${rows[0]?.[3] ?? 2}) 대 롱소드 AI | 판 | 공격 시작 / 판 | 칼 냄 / 판 (맞힘 · 막힘 · 헛침 — 6 판 합) | 칼 내기 전 접음 / 판 (그 가운데 시간 넘음) | 다가가다 받은 상처 / 판 | 준 · 받은 상처 / 판 | 이김 · 짐 · 비김 | 파고들기 6 판 합: 헛친 틈 · 받으며 들어감 · 다시 들어감 · 늘린 한도 | 굴림 6 판 합: 흐림이 낸 · 흐림이 놓친 · 위협 넘김 · 바닥 가까이 씀 | 유파 6 판 합: 막기 · 피하기 · 스택 실은 칼(실은 스택 합 · 가장 큼) · 비기 · 제비 베기 고리 · 버릇 · 미리 받기 · 유도 |`, '|---|---|---|---|---|---|---|---|---|---|---|'];
   for (const [w, tag, S] of rows) {
     const n = S.n;
     const p = (x) => (x / n).toFixed(1);
-    L.push(`| ${w} | ${tag} | ${p(S.atk)} | ${p(S.strikes)} (${S.out.hit} · ${S.out.bound} · ${S.out.miss}) | ${p(S.fold)} (${p(S.foldTime)}) | ${p(S.hurtIn)} | ${p(S.dealt)} · ${p(S.recv)} | ${S.W} · ${S.L} · ${n - S.W - S.L} | ${S.dig.recover} · ${S.dig.keep} · ${S.dig.restart} · ${S.dig.long} | ${S.luck.blurFire} · ${S.luck.blurMiss} · ${S.luck.reckSkip} · ${S.luck.restLow} |`);
+    L.push(`| ${w} | ${tag} | ${p(S.atk)} | ${p(S.strikes)} (${S.out.hit} · ${S.out.bound} · ${S.out.miss}) | ${p(S.fold)} (${p(S.foldTime)}) | ${p(S.hurtIn)} | ${p(S.dealt)} · ${p(S.recv)} | ${S.W} · ${S.L} · ${n - S.W - S.L} | ${S.dig.recover} · ${S.dig.keep} · ${S.dig.restart} · ${S.dig.long} | ${S.luck.blurFire} · ${S.luck.blurMiss} · ${S.luck.reckSkip} · ${S.luck.restLow} | ${S.sch.parries} · ${S.sch.voids} · ${S.sch.stkStrokes}(${S.sch.stkSum} · ${S.sch.stkMax}) · ${S.sch.secret} · ${S.sch.tsubame} · ${S.sch.habit} · ${S.sch.pre} · ${S.sch.lure} |`);
   }
   return L.join('\n');
 }

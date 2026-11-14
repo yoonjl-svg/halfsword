@@ -333,6 +333,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
 { // 유파 AI 기본 전투 흐름 (11/14 — config AI_PLAN · src/ai_plan.js · 설계안 docs/design/ai_school_baseline_2026-11-14.md §9): `?aiPlan=0` = 옛 판 (플랜 · 국면 · 이탈리아 거리 오차 모두 끔) ·
   //  `?aiPlanTick=0` = 국면 판정을 매 스텝 (실제 초 — 기본 0.2)
   if (params.has('aiPlan')) CONFIG.AI_PLAN.on = +params.get('aiPlan') ? 1 : 0;
+  if (!CONFIG.AI_PLAN.on) CONFIG.JP_TANK.ai = 0; // 2 단계 일본 (11/14): 옛 판이면 AI 일본 스택 · 바위 몸도 끔 (아래 `?jpStackAi=` 가 있으면 그 값)
   if (params.has('aiPlanTick') && +params.get('aiPlanTick') >= 0) CONFIG.AI_PLAN.tick = CONFIG.realS(+params.get('aiPlanTick'));
 }
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리

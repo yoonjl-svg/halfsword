@@ -3,6 +3,7 @@
 //  전략 층은 반사 층 상태를 건드리지 않음 · 이탈리아 행동이 숙련도에 따라 열림 · 리솔루토 맞춤 걸음은 본 걸음 · 플랜 없는 유파는 바이트 같음 · 스위치 끔 = 옛 판.
 //  인물 숙련도 새 배치(§10 — 시트 · 얼터 · 생사전 카드 · 고용 금화).
 //  11/14 덧붙임(§11): 무 · 낮음 띠 '행운에 기대는 전투'(굴림 몫 · 무모 · 무계획 — 성급함 아님 · 플랜 유파만) · 띠별 기력 셈 · 파고들기(공통 틀 — 내 칼이 뚜렷이 짧을 때만).
+//  2 단계 일본(§12): 플랜 · 스택 · 바위 몸 AI · 스택 문턱 기울기 · 막기 쪽 · 버릇 · 되풀이 · 제비 베기 · 유도 · 옛 판 스위치.
 //  시간 상한 기준은 없다.  node --test tools/sim/ai_plan.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,16 +11,19 @@ import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { bandOf, tiltOf, luckOf, distErrWidth, planFor, judgePhase, seenStep, axesOf, PHASES } from '../../src/ai_plan.js';
 import { foeStep, mirrorOk, mirrorStep } from '../../src/italian_risoluto.js';
 
-const { AI_PLAN } = CONFIG;
+const { AI_PLAN, JP_TANK } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 /** AI_PLAN 칸을 잠깐 바꿔 fn 을 돌리고 되돌림 */
 function withPlan(over, fn) {
   const keep = { ...AI_PLAN };
+  const jk = JP_TANK.ai;
   Object.assign(AI_PLAN, over);
+  if (!AI_PLAN.on) JP_TANK.ai = 0; // 옛 판 = AI 일본 스택 · 바위 몸도 끔 (main.js `?aiPlan=0` 과 같게)
   try {
     return fn();
   } finally {
     Object.assign(AI_PLAN, keep);
+    JP_TANK.ai = jk;
   }
 }
 /** AI 둘 판 (자리 0 = 롱소드 AI · 자리 1 = weapon2 AI) — secs 초 돌리며 몸 자리 · 피를 30 스텝마다 적은 글 */
@@ -59,13 +63,14 @@ test('띠 · 기울기 · 거리 오차 — 사장님 11/14 띠(0 무 · 1 ~ 2 �
   assert.equal(axesOf(1, 'italian').link, true);
   assert.equal(axesOf(0, 'italian').link, false);
   assert.equal(AI_PLAN.on, 1, '1 단계 기본 켬');
-  assert.deepEqual(AI_PLAN.schools, ['italian']);
+  assert.ok(AI_PLAN.schools.includes('italian') && AI_PLAN.schools.includes('japanese'), '1 단계 이탈리아 · 2 단계 일본');
 });
 
 test('플랜 열림: 이탈리아 · 띠 무 아님 · 스위치 — 다른 유파는 없음', () => {
   assert.ok(planFor('italian', 2));
   assert.equal(planFor('italian', 0), null, '무 = 플랜 없음');
-  for (const t of ['german', 'japanese', 'chinese', 'iberian', 'none']) assert.equal(planFor(t, 5), null, t);
+  for (const t of ['german', 'none']) assert.equal(planFor(t, 5), null, t);
+  assert.ok(planFor('japanese', 2), '2 단계 일본');
   withPlan({ on: 0 }, () => assert.equal(planFor('italian', 5), null));
   const P = planFor('italian', 3);
   for (const ph of PHASES) assert.ok(P[ph], ph);
@@ -170,9 +175,9 @@ test('플랜 없는 유파는 바이트 같음 (롱소드 AI 끼리 · 켬 = 끔
   const off = withPlan({ on: 0 }, () => trace({ weapon2: 'longsword', prof: 2 }));
   assert.equal(on.plan, false);
   assert.equal(on.text, off.text);
-  const on5 = trace({ weapon2: 'monohoshizao', prof: 5, secs: 3 });
-  const off5 = withPlan({ on: 0 }, () => trace({ weapon2: 'monohoshizao', prof: 5, secs: 3 }));
-  assert.equal(on5.text, off5.text, '일본 숙련 5 (모노호시자오 — 칼이 짧지 않아 파고들기도 안 걸림)');
+  const on5 = trace({ weapon2: 'sabre', prof: 5, secs: 3 });
+  const off5 = withPlan({ on: 0 }, () => trace({ weapon2: 'sabre', prof: 5, secs: 3 }));
+  assert.equal(on5.text, off5.text, '독일 세이버 숙련 5 (플랜 없음 · 칼끝 차 0.27 — 파고들기도 안 걸림)');
 });
 
 test('스위치 끔 = 옛 판 (이탈리아 — 끔 · 플랜 유파 비움이 같고 켬은 다름)', () => {
@@ -264,10 +269,10 @@ test('파고들기 (사장님 11/14 — 공통 틀): 내 칼이 상대 칼보다
   }
   for (const w of ['longsword', 'rapier', 'monohoshizao', 'zweihander']) assert.equal(digOf(w).me, false, `${w} — 뚜렷이 짧지 않음 (롱소드끼리 거울 판은 그대로)`);
   assert.ok(near(digOf('morgenstern').k, 1 / 3), '띠 기울기 (낮음 ⅓ — 유파와 상관없이)');
-  // 스위치 끔 · 문턱이 닿지 않으면 옛 판과 바이트 같음 · 켬은 다름 (일본 우치가타나 숙련 5 — 플랜 없는 유파)
-  const off = withPlan({ on: 0 }, () => trace({ weapon2: 'uchigatana', prof: 5, secs: 12 }));
-  const never = withPlan({ digShort: 99 }, () => trace({ weapon2: 'uchigatana', prof: 5, secs: 12 }));
-  const on = trace({ weapon2: 'uchigatana', prof: 5, secs: 12 });
+  // 스위치 끔 · 문턱이 닿지 않으면 옛 판과 바이트 같음 · 켬은 다름 (무유파 냉동 참치 숙련 5 — 플랜 없는 유파 · 2 단계부터 일본은 플랜이 있어 뺌)
+  const off = withPlan({ on: 0 }, () => trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 }));
+  const never = withPlan({ digShort: 99 }, () => trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 }));
+  const on = trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 });
   assert.equal(never.text, off.text, '파고들기가 안 걸리면 옛 판');
   assert.notEqual(on.text, off.text, '파고들기 판은 달라짐');
 });
@@ -279,4 +284,112 @@ test('파고들기 판: 모르겐슈테른 AI 대 롱소드 AI — 헛친 틈 ·
   G.world.free();
   assert.ok(D, '파고들기 재기 칸');
   assert.ok(D.recover + D.keep + D.long > 0, JSON.stringify(D));
+});
+
+/** 판을 만들고 시작 정지를 지난 뒤 일본 AI 하나 — 상대 롱소드 */
+function jpAi(prof, weapon = 'uchigatana') {
+  const G = newRound({ weapon: 'longsword', weapon2: weapon, seed: 1, gap: 2.4 });
+  G.ai.update = () => {};
+  while (G.t < 0.3) G.step();
+  const ai = new AI(G.enemy, G.player, 'normal', { proficiency: prof });
+  return { G, ai, free: () => G.world.free() };
+}
+
+test('2 단계 일본 — 플랜 · 스택 · 바위 몸 AI (사장님 11/14 확인) · 숙련도 4 부터 스택 · 옛 판 스위치', async () => {
+  const { lowShoveFree } = await import('../../src/jp_tank.js');
+  assert.equal(JP_TANK.ai, 1);
+  const got = [0, 2, 3, 4, 5].map((p) => {
+    const { ai, free } = jpAi(p);
+    const r = { p, plan: !!ai.plan, jp: !!ai.planJp, stack: !!ai.me.schoolPassive?.stackOn, rock: lowShoveFree(ai.me), tsubame: !!ai.school.techByName.tsubameGaeshi, lure: !!ai.planLure, dig: ai.digNow() };
+    free();
+    return r;
+  });
+  assert.deepEqual(got.map((r) => r.jp), [false, true, true, true, true], '무 = 플랜 없음');
+  assert.deepEqual(got.map((r) => r.stack), [false, false, false, true, true], '스택 = 4 급 유파 패시브(숙련도 4 부터 — 사람 4 급 책과 같음)');
+  assert.deepEqual(got.map((r) => r.rock), [false, false, false, true, true], '바위 몸 밀치기 기력 0 도 스택 판인 AI');
+  assert.deepEqual(got.map((r) => r.lure), [false, false, false, true, true], '유도 4 부터');
+  assert.ok(got.every((r) => r.dig), '우치가타나 — 짧은 칼 파고들기는 플랜과 함께 그대로 걸림');
+  withPlan({ on: 0 }, () => {
+    const { ai, free } = jpAi(5);
+    assert.equal(ai.plan, null);
+    assert.equal(ai.me.schoolPassive.stackOn, false, '옛 판 = AI 스택 끔');
+    assert.equal(lowShoveFree(ai.me), false);
+    free();
+  });
+});
+
+test('2 단계 일본 — 기울기: 스택 문턱 · 막기 쪽 · 서 있기 · 기술 · 버릇 · 되풀이 · 제비 베기 (절대 규칙 없음)', async () => {
+  const { jpNeed, jpVoid, jpStill, jpTechK, jpSeeThreat, jpGuardChance, jpRead, jpTsubame } = await import('../../src/ai_plan_jp.js');
+  const { ai, free } = jpAi(5);
+  const rnd = Math.random;
+  try {
+    ai.planC = ai.plan.contest;
+    const sp = ai.me.schoolPassive;
+    sp.stk = 0;
+    const n0 = jpNeed(ai, { kind: 'patience' });
+    sp.stk = CONFIG.JP_TANK.max;
+    const n10 = jpNeed(ai, { kind: 'patience' });
+    assert.ok(n0 > 0 && n10 < 0, `스택 0 → 참음 ${n0} · 가득 → 먼저 ${n10}`);
+    assert.equal(jpNeed(ai, { kind: 'recover' }), 0, '헛친 뒤 같은 큰 틈엔 스택 몫을 안 얹음');
+    const heavy = Object.values(ai.school.techByName).find((t) => t.presses);
+    assert.ok(heavy && jpTechK(ai, heavy) > 1, '가득 — 크고 단순한 내려베기를 더 고름');
+    sp.stk = 0;
+    assert.ok(jpVoid(ai, 0.8) < 0.8 && jpVoid(ai, 0.8) > 0, '피하기 몫이 줄지만 0 은 아님');
+    assert.ok(jpStill(ai) > 0 && jpStill(ai) <= CONFIG.AI_PLAN_JP.still);
+    // 버릇 (가운데부터): 같은 줄이 다시 오면 막을 눈 몫이 큼 · 다른 줄은 그대로
+    const gc = 0.6;
+    jpSeeThreat(ai, { line: 'highL' });
+    assert.ok(jpGuardChance(ai, { line: 'highL' }, gc) > gc);
+    assert.equal(jpGuardChance(ai, { line: 'lowR' }, gc), gc);
+    // 되풀이 (높음): 같은 줄 두 번 → 그 줄이 새로 읽힐 때 한 번 굴려 흘려 받기 자리를 미리 (줄이 그대로면 다시 안 굴림)
+    jpSeeThreat(ai, { line: 'highL' });
+    Math.random = () => 0;
+    jpRead(ai);
+    assert.equal(ai.jpPre, 'highL');
+    Math.random = () => 0.999;
+    jpRead(ai);
+    assert.equal(ai.jpPre, 'highL', '같은 줄이면 다시 굴리지 않음');
+    ai.jpRep = null;
+    jpRead(ai);
+    assert.equal(ai.jpPre, null, '굴림 — 늘은 아님');
+    // 제비 베기: 내려벤 칼이 빗나감 → 굴림 몫으로 이어 냄
+    const down = Object.values(ai.school.techByName).find((t) => t.kind === 'cut' && t.from?.[1] > 0 && t.name !== 'tsubameGaeshi');
+    ai.tech = down;
+    ai.hitLanded = false;
+    ai.chain = 0;
+    Math.random = () => 0;
+    assert.equal(jpTsubame(ai, true), true);
+    assert.equal(ai.tech.name, 'tsubameGaeshi');
+    assert.equal(jpTsubame(ai, true), false, '제비 베기 다음엔 다시 안 냄');
+  } finally {
+    Math.random = rnd;
+    free();
+  }
+  // 낮음(숙련 2): 버릇 · 되풀이 몫 없음 · 스택 판 아님
+  const lo = jpAi(2);
+  try {
+    lo.ai.planC = lo.ai.plan.contest;
+    jpSeeThreat(lo.ai, { line: 'highL' });
+    assert.equal(jpGuardChance(lo.ai, { line: 'highL' }, 0.6), 0.6, '낮음 — 버릇 안 읽음');
+    assert.equal(jpNeed(lo.ai, { kind: 'patience' }), 0, '스택 판 아님 → 스택 몫 없음');
+  } finally {
+    lo.free();
+  }
+});
+
+test('2 단계 일본 — 옛 판 스위치: AI_PLAN.on 0 (+ JP_TANK.ai 0) = 일본을 플랜에서 뺀 판과 바이트 같음 · 켬은 다름', () => {
+  const off = withPlan({ on: 0 }, () => trace({ weapon2: 'monohoshizao', prof: 5, secs: 6 }));
+  const none = withPlan({ schools: ['italian'], errSchools: ['italian'] }, () => {
+    const jk = JP_TANK.ai;
+    JP_TANK.ai = 0;
+    try {
+      return trace({ weapon2: 'monohoshizao', prof: 5, secs: 6 });
+    } finally {
+      JP_TANK.ai = jk;
+    }
+  });
+  const on = trace({ weapon2: 'monohoshizao', prof: 5, secs: 6 });
+  assert.equal(off.text, none.text, '끔 = 일본 플랜 없는 길');
+  assert.equal(on.plan, true);
+  assert.notEqual(on.text, off.text, '켬은 판이 달라짐');
 });

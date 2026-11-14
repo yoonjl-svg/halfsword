@@ -3,11 +3,12 @@
 //
 //  세 층: ① 국면 판정(공통 — 본 것과 내 몸 상태만 · judgePhase) ② 유파 플랜(SCHOOL_PLAN — 국면마다 기울기 칸) ③ 숙련도 띠 · 세 축(bandOf · axesOf).
 //  플랜은 '반드시 · 절대'가 아니라 기울기다(사장님 11/14 '절대적 규칙은 빼'): 칸 값은 그 행동을 고를 몫이고, AI 가 띠 세기(tilt)를 곱해 확률 · 문턱으로 쓴다.
-//  1 단계: 이탈리아만 플랜이 있다(config AI_PLAN.schools). 플랜이 없는 유파는 ai.js 가 이 파일의 어떤 셈도 부르지 않는다(바이트 같음).
+//  1 단계: 이탈리아만 플랜이 있다(config AI_PLAN.schools). 2 단계(11/14): 일본(src/ai_plan_jp.js — 유파 몫은 유파 파일에). 플랜이 없는 유파는 ai.js 가 이 파일의 어떤 셈도 부르지 않는다(바이트 같음).
 //  연산(사장님 11/14 '랙이 생기진 않을까'): 국면 판정은 AI_PLAN.tick 마다 한 번 · 스텝마다 새 객체 · 배열을 만들지 않음 · 탐색 · 미리 돌려 보기 같은 무거운 셈 없음.
 // ─────────────────────────────────────────────────────────────
 import { AI_PLAN, STAMINA, GAIT } from './config.js';
 import { itEdgeOn } from './italian_outbox.js';
+import { JP_PLAN } from './ai_plan_jp.js'; // 2 단계 일본 플랜 칸 (11/14 — 유파 몫은 유파 파일에 묶음)
 
 /** 국면 일곱 (판정 차례는 judgePhase — 위에서부터) */
 export const PHASES = Object.freeze(['tired', 'behind', 'finish', 'ahead', 'commit', 'contest', 'probe']);
@@ -74,6 +75,7 @@ export const SCHOOL_PLAN = Object.freeze({
     behind: Object.freeze({ retreat: 1, receive: 1, link: 1, engage: 0, invite: 0 }),
     tired: Object.freeze({ retreat: 1, receive: 1, link: 0, engage: 0, invite: 0 }),
   }),
+  japanese: JP_PLAN, // 2 단계 (11/14) — src/ai_plan_jp.js (still · block · stack · link · lure)
 });
 
 /** 이 유파의 플랜 (스위치 · 유파 · 띠 무가 아니면) — 없으면 null */
