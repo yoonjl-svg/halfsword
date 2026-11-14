@@ -25,7 +25,7 @@ import { newFinish, updateFinish, FINISH, plungeBoost } from './finish.js';
 import { vitalHand, vitalAim, playerVitalUpdate } from './vital_target.js'; // 약한 자세 겨눔 덧씌우기 (FINISH.vital, 10/12)
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
 import { breakWeaponLook } from './weapon_looks.js';
-import { obiOn, obiGrip, pelvisToWorld, attachObiSaya, syncObiSaya, syncObiEdge } from './iai_obi.js'; // 帯刀 — 鞘戻し 점 · 빈 칼집 그림 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi · iaiObiSaya)
+import { obiOn, obiGrip, pelvisToWorld, attachObiSaya, syncObiSaya, syncObiEdge, notoKoiW } from './iai_obi.js'; // 帯刀 — 鞘戻し 점 · 빈 칼집 그림 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi · iaiObiSaya)
 import { attachDruidWhip } from './druid_whip.js'; // 휘는 마디 무기(드루이드의 채찍 — spec.flexible, 샛별 저장소 69ef7dac8)
 import { BLOOD_RED } from './blood_palette.js'; // 피 색 (10/27 — 칼에 묻는 피: 맞은 몸의 피 색, 광기의 병마용은 흰 피)
 import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩어지는 조각: 부러진 칼날 끝과 부서진 투구·판금을 한 모듈이 띄우고 치운다
@@ -4467,7 +4467,9 @@ export class Fighter {
     // 발도 대기 칼집 입 (위 syK — 11/14 ①): 쥐는 자리를 칼자루 끝 → 칼집 입(칼 축 코등이 + SECRET.iaiSayaKoi — 칼집에 든 칼을 칼집 입째 쥠)으로 옮김 —
     //  몫 0.5 까지 칼자루 끝을 놓고(끈 힘 1 → 0) · 0.5 부터 칼집 입을 쥠(0 → 1) · 그 사이 손은 칼 아래로 돌아 칼 든 손을 비킴(아래 곡선)
     const koiOn = syK > 0 && !rg;
-    const alongK = this.weaponCfg.hiltLength + (SECRET.iaiSayaKoi ?? 0.05);
+    // 11/14 납도 (SECRET.iaiSheathe — iai_obi.js notoPlan): 뒤 몫(칼끝부터 밀어 넣음) 동안 쥐는 칼집 입 = 칼 위 칼집 입 자리(칼끝 → 칼날 시작) · 앞 몫은 아래 K 를 칼집 그림 입으로
+    const notoAlong = this.noto?.w > 0 && this.noto.phase === 1 ? this.noto.along : null;
+    const alongK = (notoAlong ?? this.weaponCfg.hiltLength) + (SECRET.iaiSayaKoi ?? 0.05);
     const along = koiOn && syK >= 0.5 ? alongK : along0;
     const sword = this.sword;
     rot(sword, _q1);
@@ -4481,6 +4483,7 @@ export class Fighter {
       //  가운데 점 = 둘의 가운데 + 칼 축에 곧은 아래 × SECRET.iaiSayaKoiAround (곡선은 그 반만큼 칼 든 손을 비킴) · 몫 1 = K
       //  (대기가 풀리는 순간 사람 칼 겨눔이 한 스텝에 바뀌어도 A 의 몫이 0 에서 시작해 빈손 목표가 튀지 않음)
       const K = _gk2.set(0, alongK, 0).applyQuaternion(_q1).add(_v7.set(st.x, st.y, st.z));
+      if (notoKoiW(this, _gkN)) K.copy(_gkN); // 납도: 왼손은 칼자루 끝을 놓고 납도 길의 칼집 입으로 (앞 몫 — 쥐는 끈 힘은 몫 0.5 에서 0 · 뒤 몫 — 칼 위 칼집 입 자리를 쥐고 이끎 · 끝에 칼 위 자리로)
       if (syK >= 1) gripAim.copy(K);
       else {
         const A = _gk.copy(this.aimDirW).multiplyScalar(along0).add(_v7.set(st.x, st.y, st.z));
@@ -5318,6 +5321,7 @@ const _gc = new THREE.Vector3();
 const _gk = new THREE.Vector3(); // 발도 대기 칼집 입 (offHand — 11/14)
 const _gk2 = new THREE.Vector3();
 const _gk3 = new THREE.Vector3();
+const _gkN = new THREE.Vector3(); // 납도 앞 몫 칼집 입 쥠 자리 (offHand)
 /** 빈팔을 지금 근육 목표(uarmO · farmO target — offArmIK 가 막 둔 자세) 자리에 놓음 (11/14 鞘戻し 앞 반 — secret_instant.js placeIai 의 두 손 발도 빈팔 놓기와 같은 셈 · 빠르기 = 가슴) */
 function placeOffArm(f) {
   const J = f.jointByName;

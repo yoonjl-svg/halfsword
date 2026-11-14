@@ -48,9 +48,9 @@ export function obiReady(f, M = new THREE.Vector3(), D = new THREE.Vector3()) {
   obiDir(SECRET.iaiObiAxis, f.side, D);
   return { M, D };
 }
-/** ② 쉬는 칼집 (골반 몸체 틀): 칼집 입 = 대기 칼 자리의 칼집 입 · 축 = SECRET.iaiObiSayaAxis (없으면 대기 칼 축) */
+/** ② 쉬는 칼집 (골반 몸체 틀): 칼집 입 = SECRET.iaiObiSayaMouth (11/14 '각도가 벌어진 거 같은데' → 배 왼쪽 앞 · 없으면 대기 칼 자리의 칼집 입) · 축 = SECRET.iaiObiSayaAxis (없으면 대기 칼 축) */
 export function obiRest(f, M = new THREE.Vector3(), D = new THREE.Vector3()) {
-  obiPt(SECRET.iaiObiMouth, f.side, M);
+  obiPt(SECRET.iaiObiSayaMouth ?? SECRET.iaiObiMouth, f.side, M);
   obiDir(SECRET.iaiObiSayaAxis ?? SECRET.iaiObiAxis, f.side, D);
   return { M, D };
 }
@@ -102,6 +102,155 @@ export function obiPathB(f) {
   obiReadyInto(f, hand, dir);
   return { hand, yaw: Math.atan2(dir[2], dir[0]) / D2R, el: Math.asin(Math.max(-1, Math.min(1, dir[1]))) / D2R };
 }
+
+// ── 납도 (納刀) ────────────────────────────────────────────────
+//  11/14 사장님 '발도 대기 자세로 전환될 때 칼을 칼집에 넣는 모션이 없어서 어색하더라 0.4초나 0.6초 정도 그 시간을 부여해' · '아니야 2초 후에 납도 시작' (SECRET.iaiSheathe):
+//   고노센 준비 셈(secret.js IaiArm)이 iaiArmTime 을 넘으면 준비 전 iaiSheathe 초 동안 — 원전 納刀 꼴(왼손이 칼집 입 · 칼등을 칼집 입에 얹어 칼끝부터 칼집에 미끄러뜨려 넣음)을
+//   덧씌우기 칸(thrustPose)의 칼 손 · 칼날 목표로: 앞 몫(SECRET.iaiSheatheWay.at) = 칼끝을 칼집 입으로(칼 든 손이 앞 오른쪽 hand 로 나가며 칼 축이 그 손 → 칼집 입 줄로 ·
+//   왼손은 칼자루 끝을 놓고 칼집 입으로) · 뒤 몫 = 칼끝부터 밀어 넣음(칼 축 = 들어갈 축 → 대기 칼 축 · 칼끝이 칼집 입을 지나 칼날 길이만큼 — 대기 칼 자리 obiReady 에서 끝남 · 왼손이 칼집 입을 쥠).
+//   칼집 그림은 왼손이 쥔 입을 쉬는 자리 → 대기 칼 자리 입으로 옮기며 축을 들어갈 축으로 돌리고, 칼끝이 입을 지나면 지금 칼을 감쌈(obiSayaPose). 새 걸음 · 공격 시간 값 없음
+const _nr = new THREE.Vector3();
+const _ne = new THREE.Vector3();
+const _nm = new THREE.Vector3();
+const _nd = new THREE.Vector3();
+const _nq = new THREE.Quaternion();
+const _nq2 = new THREE.Quaternion();
+const _nv = new THREE.Vector3();
+const smooth01 = (x) => { const u = Math.max(0, Math.min(1, x)); return u * u * (3 - 2 * u); };
+/** 단위 벡터 a → b 를 몫 t 로 (큰 원 — 골반 틀) */
+function slerpDir(a, b, t, out) {
+  _nq.setFromUnitVectors(a, b);
+  _nq2.identity().slerp(_nq, t);
+  return out.copy(a).applyQuaternion(_nq2).normalize();
+}
+/** 골반 틀 칼 원점 O · 칼 축 D → 덧씌우기 칸 (가슴 원점 · 몸 헤딩 틀 — obiReadyInto 와 같은 셈) */
+function pelvisSwordInto(f, O, D, hand, dir) {
+  const r = f.bodies.pelvis.rotation();
+  const t = f.bodies.pelvis.translation();
+  const qp = _q.set(r.x, r.y, r.z, r.w);
+  const M = _a.copy(O).applyQuaternion(qp).add(_p.set(t.x, t.y, t.z));
+  const Dw = _d.copy(D).applyQuaternion(qp);
+  const c = f.bodies.chest.translation();
+  M.sub(_c.set(c.x, c.y, c.z));
+  const yi = _qi.copy(f.yaw).invert();
+  M.applyQuaternion(yi);
+  Dw.applyQuaternion(yi);
+  hand[0] = M.x;
+  hand[1] = M.y;
+  hand[2] = M.z;
+  dir[0] = Dw.x;
+  dir[1] = Dw.y;
+  dir[2] = Dw.z;
+}
+/**
+ * 납도 길 (골반 몸체 틀): 몫 p (0 ~ 1)에서 칼 원점 N.O · 칼 축 N.D · 칼집 그림 입 N.Ms · 축 N.Ds · 몸 비틂 몫 N.k · 날 위 몫 N.edge · 왼손 칼집 입 몫 N.left ·
+ *  칼집 입의 칼 위 자리 N.along (칼 원점에서 — 뒤 몫) · 감쌈 몫 N.wrap. 시작 칼 자리 N.O0 · N.D0 (notoStep 이 손을 놓은 첫 스텝에 잡음).
+ *  앞 몫: 칼을 '들이기 전 자리'로 — 칼 축 SECRET.iaiSheatheWay { yaw, el }(왼쪽 가로로 조금 아래 — 앞 오른쪽 손에서 몸 앞을 가로지름) · 칼 든 손 = 대기 칼집 입 − 그 축 × reach
+ *   (칼끝은 칼집 입을 칼 길이 − reach 만큼 지난 자리 — 이 게임 팔 길이 0.57 m 로 칼끝을 칼집 입에 댄 채 손을 뻗을 수 없어, 왼손이 칼집 입을 칼끝 쪽으로 당겨 받음 — 칼집 그림이 칼 위로 감).
+ *   칼집 그림은 쉬는 자리 → 대기 칼집 입 · 들일 축으로 돌고(왼손이 쥐어 옮김) 뒤 70 % 에 걸쳐 지금 칼을 감쌈(칼 위 reach 자리 = 칼집 입).
+ *  뒤 몫: 칼 든 손이 들이기 전 자리 → 대기 칼 자리(칼 축 → 대기 칼 축)로 밀어 넣는 동안 칼집 그림은 지금 칼을 감싼 채 입이 칼 위에서 reach → 칼날 시작으로 —
+ *   칼집 입은 대기 칼집 입 곁에 머물고 칼이 칼끝부터 칼집 축을 따라 들어감 (원전 納刀). 끝 = 대기 칼 자리 · 대기 감쌈(obiSayaPose)과 같은 자리
+ */
+export function notoPlan(f, p, N) {
+  const W = SECRET.iaiSheatheWay ?? {};
+  const a = Math.max(0.05, Math.min(0.95, W.at ?? 0.4));
+  const hilt = f.weaponCfg.hiltLength;
+  const L = hilt + f.weaponCfg.bladeLength; // 칼 원점(손) → 칼끝
+  const ext = Math.min(L, hilt + Math.max(0.05, W.reach ?? 0.37)); // 들이기 전 자리: 칼 원점 ↔ 칼집 입 = 대기 쥠(칼날 시작) + reach (칼끝은 칼집 입을 칼날 길이 − reach 만큼 지남)
+  const R = obiReady(f, _nm, _nd); // 대기 칼 자리 (칼집 입 · 칼 축) — 납도 끝
+  const De = obiDir({ yaw: W.yaw ?? -95, el: W.el ?? -12 }, f.side, _ne); // 들일 축 (칼끝 쪽)
+  const Oe = _nr.copy(R.M).addScaledVector(De, -ext); // 들이기 전 칼 원점
+  obiRest(f, _M0, _D0); // 쉬는 칼집 (그림 — 왼손이 쥐어 옮김)
+  N.p = p;
+  N.k = smooth01(p);
+  N.edge = smooth01(p / a);
+  if (p < a) {
+    const q = smooth01(p / a);
+    // 칼 축: 지금 축 → 들일 축 (두 축의 가운데가 뒤를 보면 — 칼끝이 몸 뒤 · 다리로 돌지 않게 — 앞 왼쪽 가로를 거침)
+    _nv.addVectors(N.D0, De);
+    if (_nv.lengthSq() > 1e-6 && _nv.x > 0.3 * _nv.length()) slerpDir(N.D0, De, q, N.D);
+    else {
+      obiDir({ yaw: -50, el: 0 }, f.side, _nv);
+      if (q < 0.5) slerpDir(N.D0, _nv, q * 2, N.D);
+      else slerpDir(_nv, De, q * 2 - 1, N.D);
+    }
+    N.O.copy(N.O0).lerp(Oe, q);
+    const qs = smooth01(p / a); // 칼집은 왼손이 쥐어 받을 자리로 (칼과 함께)
+    N.Ms.copy(_M0).lerp(R.M, qs);
+    slerpDir(_D0, De, qs, N.Ds);
+    N.wrap = smooth01((p / a - 0.3) / 0.7); // 앞 몫 뒤 70 % 에 걸쳐 지금 칼을 감싸 들어감 (칼이 늦게 와도 칼집이 한 번에 휙 돌지 않게)
+    N.along = ext;
+    N.left = 0.5 * (p / a);
+    N.phase = 0;
+  } else {
+    const r = smooth01((p - a) / (1 - a));
+    // 밀어 넣기: 칼 축은 뒤 40 % 에서야 대기 칼 축으로 (손이 몸 앞 가운데로 온 뒤 — 손이 오른쪽에 있는 채 칼끝을 뒤로 돌리면 칼 든 손목이 사람 범위 밖으로 꺾임 · 재기 §13)
+    slerpDir(De, R.D, smooth01((r - 0.6) / 0.4), N.D);
+    N.along = ext + (hilt - ext) * r; // 칼집 입의 칼 위 자리: reach → 칼날 시작 (칼이 칼끝부터 들어감)
+    N.O.copy(R.M).addScaledVector(N.D, -N.along); // 칼집 입은 대기 칼집 입에 머묾 — 칼 원점 = 입 − 축 × 칼집 입 자리
+    N.Ms.copy(R.M);
+    N.Ds.copy(N.D);
+    N.wrap = 1;
+    N.left = 0.5 + 0.5 * ((p - a) / (1 - a));
+    N.phase = 1;
+  }
+  return N;
+}
+/**
+ * 납도 한 스텝 (secret_instant.js iaiReadyPose · iaiReadyPosePlayer — 준비 전 납도 몫 s 0 → 1 · IaiArm.sheathe): hold = 손이 쉼(사람 — 칼을 쥐지 않음 · AI 늘 참).
+ *  손을 놓은 첫 스텝(덧씌우기 몫 0 에서)에 지금 칼 자리(골반 틀 칼 원점 · 칼 축)를 잡아 남은 몫 동안 납도 길(notoPlan)을 감 — 잡은 자리가 첫 목표라 덧씌우기 몫 1 로 들어가도 튀지 않음.
+ *  쥐면(hold 거짓) 몫 0 — 칼은 곧장 사람 손 (셈은 그대로 흐름 · 다시 놓으면 그 자리에서 이어감). hand · dir = 덧씌우기 칸. 돌려줌: 덧씌우기 몫
+ */
+export function notoStep(f, s, hold, hand, dir) {
+  const N = (f.noto ??= { w: 0, s0: 0, p: 0, k: 0, edge: 0, left: 0, along: 0, wrap: 0, phase: 0, O0: new THREE.Vector3(), D0: new THREE.Vector3(), O: new THREE.Vector3(), D: new THREE.Vector3(), Ms: new THREE.Vector3(), Ds: new THREE.Vector3() });
+  if (!hold || !f.sword || !f.armed) {
+    N.w = 0;
+    return 0;
+  }
+  if (!(N.w > 0)) {
+    // 지금 칼 자리 (골반 틀 — 칼 원점 · 칼 축)
+    const pr = f.bodies.pelvis.rotation();
+    const pt = f.bodies.pelvis.translation();
+    const qpi = _q.set(pr.x, pr.y, pr.z, pr.w).invert();
+    const r = f.sword.rotation();
+    const t = f.sword.translation();
+    N.O0.set(t.x - pt.x, t.y - pt.y, t.z - pt.z).applyQuaternion(qpi);
+    N.D0.set(0, 1, 0).applyQuaternion(_qi.set(r.x, r.y, r.z, r.w)).applyQuaternion(qpi).normalize();
+    N.s0 = Math.min(s, 0.999);
+  }
+  N.w = 1;
+  notoPlan(f, Math.max(0, Math.min(1, (s - N.s0) / (1 - N.s0))), N);
+  pelvisSwordInto(f, N.O, N.D, hand, dir);
+  return 1;
+}
+/** 납도 그만 (준비가 켜짐 · 셈이 풀림 · 발도): 덧씌우기 몫 0 — 돌려줌: 그만둔 스텝에 납도 중이었나 */
+export function notoStop(f) {
+  const N = f.noto;
+  if (!N || !(N.w > 0)) return false;
+  N.w = 0;
+  return true;
+}
+/**
+ * 납도 동안 왼손이 가는 칼집 입 쥠 자리 (월드 · fighter.js offHand): 납도 길의 칼집 입 + 축 × iaiSayaKoi — 왼손이 칼집 입을 쥐고 칼을 그리로 이끎(뒤 몫의 쥐는 끈은 칼 위 칼집 입 자리에) ·
+ *  끝 20 % 에 지금 칼 위 칼집 입 쥠 자리로 옮김 (대기에 들 때 빈손 목표가 한 스텝에 튀지 않게 — 대기 쥠은 칼 위 자리) · 납도 밖이면 null
+ */
+export function notoKoiW(f, out) {
+  const N = f.noto;
+  if (!N || !(N.w > 0)) return null;
+  const koi = SECRET.iaiSayaKoi ?? 0.05;
+  out.copy(N.Ms).addScaledVector(N.Ds, koi);
+  pelvisToWorld(f, out);
+  const e = N.phase === 1 ? smooth01((N.p - 0.8) / 0.2) : 0;
+  if (e > 0 && f.sword) {
+    const r = f.sword.rotation();
+    const t = f.sword.translation();
+    out.lerp(_nkw.set(0, N.along + koi, 0).applyQuaternion(_nkq.set(r.x, r.y, r.z, r.w)).add(_nkt.set(t.x, t.y, t.z)), e);
+  }
+  return out;
+}
+const _nkw = new THREE.Vector3();
+const _nkt = new THREE.Vector3();
+const _nkq = new THREE.Quaternion();
 
 // ── ② 빈 칼집 그림 ─────────────────────────────────────────────
 
@@ -501,6 +650,62 @@ export function obiSayaK(f) {
 }
 
 /**
+ * 납도 동안 칼집 그림 (11/14 — notoPlan): 왼손이 쥔 칼집을 납도 길의 입 N.Ms · 축 N.Ds 로 (쉬는 자리 → 대기 칼 자리 입 · 들어갈 축) ·
+ *  칼끝이 그 입을 지나면 지금 칼을 감쌈 — 칼집 입 = 칼 축 위 입에 가장 가까운 점(칼날 시작 ~ 칼끝) · 축 = 칼 축(날 위 그림 칼 굴림 포함 — 칼집 단면이 칼날 그림을 쟀으니 칼날이 칼집 안).
+ *  감쌈 몫: 칼끝이 입을 3 cm 지나며 0 → 1 · 칼 축이 입에서 SECRET.iaiObiFollow.m 넘게 비키면 덜 (두 배에서 0).
+ *  납도가 그치면(준비 · 셈 풀림) 마지막 자리를 iaiRegrip 초에 걷음(대기 감쌈이 이어 받음). 그림만
+ */
+function notoSaya(f, S, out) {
+  const N = f.noto;
+  const now = f.stamina?.time ?? 0;
+  const dt = S.nt != null ? Math.max(0, now - S.nt) : 0;
+  S.nt = now;
+  S.nPos ??= new THREE.Vector3();
+  S.nQuat ??= new THREE.Quaternion();
+  if (N && N.w > 0 && f.sword && f.armed) {
+    const edge = S.edge ?? 1;
+    const pos = _nsP.copy(N.Ms);
+    const quat = frameQ(N.Ds, _nsQ, edge);
+    if (N.wrap > 0) {
+      // 지금 칼을 감쌈: 칼집 입 = 칼 위 N.along 자리 · 축 = 칼 축 (날 위 그림 칼 굴림 포함) — 그 입이 납도 길 입에서 iaiObiFollow.m 의 두 배 넘게 비키면 덜 (네 배에서 0)
+      const pr = f.bodies.pelvis.rotation();
+      const pt = f.bodies.pelvis.translation();
+      const qpi = _qs.set(pr.x, pr.y, pr.z, pr.w).invert();
+      const r = f.sword.rotation();
+      const t = f.sword.translation();
+      const qw = _qw.set(r.x, r.y, r.z, r.w);
+      if (f.obiEdge?.roll) qw.multiply(_qr.setFromAxisAngle(_UP, f.obiEdge.roll));
+      // 칼집 틀은 칼 축만 따르고 굴림은 칼집 틀 꼴(날 쪽 = 축에 수직인 위 — frameQ · 날 위 그림 칼과 같은 쪽)로: 칼 굴림 그대로 섞으면 들일 축 ↔ 칼 틀 사이 굴림이 반 바퀴 곁일 때 축이 한 스텝에 휙 돎
+      const ql = frameQ(_nsD.set(0, 1, 0).applyQuaternion(qw).applyQuaternion(qpi), _ql, edge);
+      const Mw = _ms.set(0, N.along, 0).applyQuaternion(qw).add(_nsV.set(t.x, t.y, t.z)).sub(_nsV.set(pt.x, pt.y, pt.z)).applyQuaternion(qpi);
+      const Lm = 2 * (SECRET.iaiObiFollow ?? { m: 0.06 }).m;
+      const off = Mw.distanceTo(N.Ms);
+      const wT = N.wrap * smooth01(2 - off / Lm);
+      const ww = (S.nww = S.nww == null ? wT : S.nww + Math.max(-dt / 0.15, Math.min(dt / 0.15, wT - S.nww))); // 감쌈 몫은 0.15 s 에 다 바뀜 (한 스텝에 튀지 않게)
+      if (ww > 0) {
+        pos.lerp(Mw, ww);
+        quat.slerp(ql, ww);
+      }
+    }
+    S.nPos.copy(pos);
+    S.nQuat.copy(quat);
+    S.nw = 1;
+  } else {
+    S.nw = Math.max(0, (S.nw ?? 0) - dt / Math.max(1e-3, SECRET.iaiRegrip || 0.2));
+    S.nww = null;
+  }
+  if (S.nw > 0) {
+    out.pos.lerp(S.nPos, S.nw);
+    out.quat.slerp(S.nQuat, S.nw);
+    out.follow = Math.max(out.follow, S.nw);
+  }
+}
+const _nsP = new THREE.Vector3();
+const _nsQ = new THREE.Quaternion();
+const _nsV = new THREE.Vector3();
+const _nsD = new THREE.Vector3();
+
+/**
  * 칼집 자리 (골반 몸체 틀): 제자리 ↔ 鞘引き 끝을 k 로 섞고, 대기 동안(iaiObiW — 대기 칼 자리 몫) 칼을 감싸 지금 칼 자리로 —
  *  지금 칼이 대기 칼 자리(obiReady)에서 SECRET.iaiObiFollow 한도(칼집 입 m · 축 °)를 넘게 벗어나면 넘은 만큼 덜 따르고 한도 두 배에서 안 따름(허리띠를 떠나 떠 보이지 않게) ·
  *  뽑기 · 굳음 · 풀기 동안은 감싼 자리를 그대로 두되 鞘引き 몫(k)만큼 · iaiRegrip 초에 걷음.
@@ -525,6 +730,7 @@ export function obiSayaPose(f, out = { pos: new THREE.Vector3(), quat: new THREE
   out.push = 0;
   // 대기 동안 칼을 감쌈 (칼 원점 틀 → 골반 몸체 틀). 발도 · 굳음 · 풀기 동안은 감싼 자리를 그대로 두고(칼이 칼집 입에서 나감) 그 몫을 iaiRegrip 초에 걷음 — 鞘引き 가 칼집을 허리로 데려감
   const S = f.obiSaya;
+  if (S) notoSaya(f, S, out);
   const busy = !!f.iai || !!f.iaiReq || f.iaiHoldT > 0 || f.iaiFade > 0;
   const sw = busy ? 0 : f.iaiObiW ?? 0;
   if (S && busy && S.fw > 0) {
@@ -672,12 +878,18 @@ export function obiPush(f, pos, quat, quat0 = null) {
   _pl.set(0, 1, 0).applyQuaternion(quat).multiplyScalar(S.prof.len * 0.5).add(_po);
   const side = _pl.z < 0 ? -1 : 1;
   const ks = S.slideK ? [S.slideK, 1, 2, 3, 4, 5, 6, 7, 8] : [1, 2, 3, 4, 5, 6, 7, 8]; // 지난 스텝에 찾은 만큼부터
-  for (const k of ks) {
-    pos.copy(_po).add(_pl.set(0, 0, side * 0.03 * k));
-    [moved, left] = solve(ground);
-    if (left <= 0.002) { S.turn = null; S.slideK = k; return moved + 0.03 * k; }
+  // 뺄 쪽: 골반 옆(칼집 쪽) · 그래도 끼면(11/14 쉬는 칼집 입이 배 왼쪽 앞 모서리로 옮겨 — 왼쪽으로 누운 몸에서 칼집 입이 골반과 땅 사이에 낌) 배 앞 · 땅 위 쪽 · 둘 사이
+  const dirs = [_sd0.set(0, 0, side), _sd1.set(1, 0, 0), _sd2.copy(ground.up), _sd3.set(1, 0, 0).add(ground.up).normalize()];
+  const order = S.slideD ? [S.slideD, ...[0, 1, 2, 3].filter((i) => i !== S.slideD)] : [0, 1, 2, 3];
+  for (const di of order) {
+    for (const k of di === S.slideD || (!S.slideD && di === 0) ? ks : [1, 2, 3, 4, 5, 6, 7, 8]) {
+      pos.copy(_po).addScaledVector(dirs[di], 0.03 * k);
+      [moved, left] = solve(ground);
+      if (left <= 0.002) { S.turn = null; S.slideK = k; S.slideD = di; return moved + 0.03 * k; }
+    }
   }
   S.slideK = 0;
+  S.slideD = 0;
   // 그래도 끼면(왼쪽으로 누운 몸 — 칼집 쪽이 땅): 칼집을 땅 위에 뉘인 채 수평 방향을 돌려 몸 밖 · 땅 위 자리를 찾음 (30° 씩 · 찾은 방향은 다음 스텝에 먼저)
   if (quat0) {
     for (const a of TURNS) {
@@ -696,6 +908,10 @@ const _qs1 = new THREE.Quaternion();
 const TURNS = [30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180];
 const _po = new THREE.Vector3();
 const _pl = new THREE.Vector3();
+const _sd0 = new THREE.Vector3();
+const _sd1 = new THREE.Vector3();
+const _sd2 = new THREE.Vector3();
+const _sd3 = new THREE.Vector3();
 /**
  * 칼집 겉(단면 줄 사이 넷 · 칼집 끝 쇠까지)이 몸 상자 · 허벅지 캡슐 안으로 가장 깊이 든 값 (m — 음수면 가장 가까운 틈) · nW = 그 곳 몸 바깥 쪽
  *  boxes = [[중심 · 돌림 · 반 크기]] · legs = [[축 끝 A · B · 반지름]] — 모두 골반 틀
@@ -869,7 +1085,7 @@ export function obiEdgeRoll(f) {
   }
   E.iai = null;
   const busy = !!f.iaiReq || f.iaiHoldT > 0 || f.iaiFade > 0;
-  const w = busy ? 0 : f.iaiObiW ?? 0;
+  const w = busy ? 0 : Math.max(f.iaiObiW ?? 0, f.noto?.w > 0 ? f.noto.edge : 0); // 11/14 납도: 앞 몫 동안 날을 위로 (원전 納刀 — 칼등을 칼집 입에 얹음)
   let target = 0;
   if (w > 0) {
     const r = f.sword.rotation();
@@ -918,9 +1134,13 @@ export function syncObiSaya(f) {
 export function sageoPoints(f, S, P, out) {
   const C = S.cord;
   if (!C.A) {
+    // 매는 자리 = 쉬는 칼집 栗形 과 대기 칼집(대기 칼 자리) 栗形 사이(대기 쪽 6 할)를 허리띠 겉으로 (11/14 쉬는 칼집이 왼 허리 앞 모서리로 옮겨 대기 칼집과 멀어짐 — 두 자리 모두 끈 길이 안 · 처짐)
     obiRest(f, _M0, _D0);
     frameQ(_D0, _qa, S.edge);
     const K0 = _sg1.copy(S.knob).applyQuaternion(_qa).add(_M0);
+    obiReady(f, _M1, _D1);
+    frameQ(_D1, _qb, S.edge);
+    K0.multiplyScalar(0.4).addScaledVector(_sg4.copy(S.knob).applyQuaternion(_qb).add(_M1), 0.6); // 대기 쪽으로 6 할 (대기 · 낮은 걸음 동안 칼집이 대기 칼을 감싸 더 벌어짐)
     const H = S.garm?.pelvis ?? PELVIS_BOX; // 허리띠 · 옷 겉 (옷 두께 상자)
     const c = _sg2.set(Math.max(-H[0], Math.min(H[0], K0.x)), Math.max(-H[1], Math.min(H[1], K0.y)), Math.max(-H[2], Math.min(H[2], K0.z)));
     const n = _sg3.subVectors(K0, c);
@@ -960,6 +1180,9 @@ export function sageoPoints(f, S, P, out) {
     legs.push([A0.set(0, 0.15, 0).applyQuaternion(q).add(c), B0.set(0, -0.15, 0).applyQuaternion(q).add(c), S.legR?.[name] ?? 0.065]);
   }
   const rr = SAGEO.r + 0.002;
+  // 땅 (누운 몸 — 끈이 땅으로 들지 않게): 골반 틀 위 방향 · 골반 원점의 땅 위 높이 (obiPush 와 같은 셈)
+  const gUp = _sg6.set(0, 1, 0).applyQuaternion(qpi);
+  const gH = pt.y - (f.groundHeightAt?.(pt.x, pt.z) ?? 0);
   for (let i = 1; i < n - 1; i++) {
     const p = out[i];
     for (let it = 0; it < 4; it++) {
@@ -973,6 +1196,8 @@ export function sageoPoints(f, S, P, out) {
         const dl = d.length();
         if (dl > 1e-6 && dl < R + rr) p.addScaledVector(d, (R + rr - dl) / dl);
       }
+      const gh = gH + p.dot(gUp); // 땅 위로 (마지막 — 몸에 밀린 몫도)
+      if (gh < rr) p.addScaledVector(gUp, rr - gh);
     }
   }
   return out;
@@ -1012,5 +1237,6 @@ const _sg2 = new THREE.Vector3();
 const _sg3 = new THREE.Vector3();
 const _sg4 = new THREE.Vector3();
 const _sg5 = new THREE.Vector3();
+const _sg6 = new THREE.Vector3();
 const _sgq = new THREE.Quaternion();
 const _sgq2 = new THREE.Quaternion();

@@ -5,6 +5,7 @@
 #  python3.12 tools/sim/iai_obi_fig.py table <out.png> <제목> <saya json> [<saya json> …]   (JSON = node tools/sim/iai_obi.mjs saya --json=…)
 #  python3.12 tools/sim/iai_obi_fig.py pair <out.png> <제목> <그림:글> …   (나란히 — 글이 '전' 으로 시작하면 주황 · 아니면 파랑)
 #  python3.12 tools/sim/iai_obi_fig.py rows <out.png> <제목> <그림 이름 앞:글|둘째 줄> …   (줄마다 네 방향 — 전 · 후 · 인물 섞기)
+#  python3.12 tools/sim/iai_obi_fig.py seq <out.webp> <제목> <방향,…> <그림 이름 앞:글|둘째 줄> …   (칸 = 그림 이름 앞(시간 차례) · 줄 = 방향 — 11/14 납도 · 발도)
 import json
 import math
 import sys
@@ -190,6 +191,30 @@ def rows(out, title, specs):
     im.save(out, quality=88) if out.endswith('.webp') else im.save(out, optimize=True)
 
 
+def seq(out, title, views, specs):
+    # 칸마다 그림 이름 앞:글 (시간 차례 — 납도 0 · 0.2 · 0.4 · 0.6 s 등) · 줄마다 방향
+    cw = min(260, (W - 90) // max(1, len(specs)))
+    lw = 90
+    H = 60 + 52 + len(views) * cw + 10
+    im = Image.new('RGB', (lw + cw * len(specs), H), 'white')
+    d = ImageDraw.Draw(im)
+    text(d, (14, 14), title, F1)
+    for c, sp in enumerate(specs):
+        pre, lab = sp.split(':', 1)
+        for i, line in enumerate(lab.split('|')):
+            text(d, (lw + c * cw + 6, 56 + i * 20), line, F2 if not i else F3, BEFORE if lab.startswith('전') else INK)
+        for r, v in enumerate(views):
+            y = 112 + r * cw
+            if c == 0:
+                text(d, (10, y + cw // 2 - 10), VIEW_KO[v].split('(')[0], F2, INK2)
+            try:
+                t = Image.open(f'{pre}_{v}.png').convert('RGB').resize((cw, cw))
+                im.paste(t, (lw + c * cw, y))
+            except OSError:
+                d.rectangle([lw + c * cw, y, lw + (c + 1) * cw - 1, y + cw - 1], outline=GRID)
+    im.save(out, quality=88) if out.endswith('.webp') else im.save(out, optimize=True)
+
+
 def pair(out, title, specs):
     ims = []
     for s in specs:
@@ -219,3 +244,5 @@ if __name__ == '__main__':
         pair(sys.argv[2], sys.argv[3], sys.argv[4:])
     elif m == 'rows':
         rows(sys.argv[2], sys.argv[3], sys.argv[4:])
+    elif m == 'seq':
+        seq(sys.argv[2], sys.argv[3], sys.argv[4].split(','), sys.argv[5:])

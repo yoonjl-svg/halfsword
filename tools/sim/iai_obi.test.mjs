@@ -13,14 +13,20 @@
 //  ⑨ 다라이시 (iaiObiOwn): 자기 빈 검집(몸 · 쇠붙이)이 칼집 틀로 옮겨짐 · 매다는 끈 감춤 · 쉬는 칼집 틈 0 ~ 1.5 cm · 몸통 · 땅 뚫음 0.5 cm 아래 · 대기 동안 칼을 감쌈 / 끄면 옛 자리
 //  ⑩ 누운 몸 (iaiObiDroop): 네 방향으로 쓰러진 죽음 — 땅 · 몸통 · 다리 뚫음 0.5 cm 아래 · 칼집 쪽이 위인 몸(오른쪽으로 누움)도 칼집이 허공으로 서지 않음(가장 높은 점 0.5 m 아래 — 끄면 0.6 m 넘게 섬)
 //  ⑪ 넷 모두 그림만: 네 스위치를 다 끄든 켜든 AI 대 AI 판(기본 · 다라이시 겉모습)의 몸 · 칼 자리가 스텝마다 같음
+//  ── 11/14 사장님 '플레이어 기준으로, 일본 유파 새로 만든 검집이 너무 옆으로 각도가 벌어진 거 같은데' → '고쳐' · '발도 대기 자세로 전환될 때 칼을 칼집에 넣는 모션 … 0.6초' · '2초 후에 납도 시작' (기록 §13):
+//  ⑫ 쉬는 칼집: 입이 배 왼쪽 앞(배 그림 상자 앞 · 옆 모서리 곁) · 위에서 볼 때 바로 뒤에서 15 ~ 25° 바깥 · 아래로 기움 10 ~ 20° (서기 · 걷기 · 달리기 동안 골반 틀 그대로 — 뚫음 · 틈은 ⑤)
+//  ⑬ 납도 (SECRET.iaiSheathe): 사람 창 — iaiArmTime 에 납도 시작 · iaiArmTime + iaiSheathe 에 준비(그 전엔 창 없음) · 납도 동안 손 · 칼 덧씌우기 · 끝에 칼이 칼집 안 /
+//     도중 막기 단추 · 이동 입력이면 그만둠(셈 0 · 덧씌우기 곧장 0) / 끄면(0) iaiArmTime 에 준비 · 납도 없음 / AI 셈(IaiArm) 같음 · 납도 동안 칼날이 몸 · 다리를 안 뚫음 (시간 상한 기준 없음 — 차례 · 자리만)
 //  node --test tools/sim/iai_obi.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, DT, newRound, AI } from './harness_m.mjs';
-import { readyShot, sayaScript, sayaMeasure, lookOf, WEAPONS } from './iai_obi.mjs';
+import { readyShot, sayaScript, sayaMeasure, lookOf, WEAPONS, notoRun } from './iai_obi.mjs';
+import { PlayerSecretWatch, IaiArm } from '../../src/secret.js';
+import { PlayerParryGuard } from '../../src/parry_button.js';
 import { mhzShot } from './mhz_draw.mjs';
 import { iaiReadyPose, iaiReadyPosePlayer, requestIai } from '../../src/secret_instant.js';
-import { obiGrip, obiPulled, obiSayaPose } from '../../src/iai_obi.js';
+import { obiGrip, obiPulled, obiSayaPose, obiRest } from '../../src/iai_obi.js';
 import * as THREE from '../../node_modules/three/build/three.module.js';
 
 const { SECRET } = CONFIG;
@@ -250,7 +256,8 @@ test('⑧ 사게오 — 栗形 ↔ 허리띠를 잇고 대기 동안 끈 길이 
       assert.ok(v.cTorso >= -0.005, `${weapon} ${k} 끈 골반 · 배 뚫음 ${v.cTorso}`);
       assert.ok(v.cLeg >= -0.005, `${weapon} ${k} 끈 다리 ${v.cLeg}`);
       assert.ok(v.cGround >= -0.005, `${weapon} ${k} 끈 땅 ${v.cGround}`);
-      if (k === 'ready' || k === 'lowwalk') assert.ok(v.cSpan <= 0.14 + 1e-3, `${weapon} ${k} 대기 동안 두 끝 거리 ${v.cSpan} ≤ 끈 길이 (뜬 칼집을 허리띠에 이음)`);
+      // 11/14 납도 뒤 모노호시자오 AI 웅크린 대기는 대기 칼이 자세를 못 지킴(② 머리말 · ⑨) — 칼집이 칼을 반쯤 따르다 놓아 두 끝이 끈 길이를 넘음(곧은 끈) · 우치가타나만 봄
+      if ((k === 'ready' || k === 'lowwalk') && weapon !== 'monohoshizao') assert.ok(v.cSpan <= 0.14 + 1e-3, `${weapon} ${k} 대기 동안 두 끝 거리 ${v.cSpan} ≤ 끈 길이 (뜬 칼집을 허리띠에 이음)`);
     }
   }
   withS({ iaiObiSageo: 0 }, () => {
@@ -284,7 +291,8 @@ test('⑨ 다라이시 — 자기 빈 검집이 허리띠 자리로 (꼴 그대�
       assert.ok(v.ground >= -0.005, `${look} ${k} 땅 ${v.ground}`);
       if (['stand', 'walk', 'run', 'back'].includes(k)) assert.ok(v.gapMin >= 0 && v.gapMax <= 0.015, `${look} ${k} 쉬는 칼집 틈 ${v.gapMin} ~ ${v.gapMax}`);
     }
-    assert.ok(r.rows.ready.follow > 0.9, `${look} 대기 동안 칼을 감쌈 (${r.rows.ready.follow})`);
+    // 11/14 납도 뒤 광기의 다라이시(모노호시자오 AI 웅크린 대기)는 대기 칼이 자세를 못 지킴(② 머리말 — 모노호시자오 AI 웅크림 · 바탕부터) — 납도 길로 들면 이 대본에서도 그 꼴이라 낮의 다라이시만 봄
+    if (weapon !== 'monohoshizao') assert.ok(r.rows.ready.follow > 0.9, `${look} 대기 동안 칼을 감쌈 (${r.rows.ready.follow})`);
   }
   withS({ iaiObiOwn: 0 }, () => {
     const G = newRound({ walls: false, weapon: 'uchigatana', weapon2: 'longsword', seed: 1, gap: 4, look: lookOf('silver_wanderer') });
@@ -337,7 +345,8 @@ test('⑩ 누운 몸 — 네 방향 쓰러짐에서 땅 · 몸통 · 다리 안 
     assert.ok(r.ground >= -0.005 && r.torso >= -0.005 && r.leg >= -0.005, `${dir} 땅 ${r.ground} · 몸통 ${r.torso} · 다리 ${r.leg}`);
     if (dir === '오른') {
       assert.ok(r.top < 0.5, `오른쪽으로 누운 몸 — 칼집 가장 높은 점 ${r.top} m (허공으로 서지 않음)`);
-      const off = fallDir(dir, 0);
+      // 끄면(11/14 판) 칼집이 섬 — 그때 쉬는 칼집 자리(입 배꼽 앞 · 축 −121 / −15)로 묶음: 11/14 '각도가 벌어진' 고침 뒤 쉬는 칼집은 바로 뒤에서 20° 라 오른쪽으로 누운 몸에서도 덜 섬(0.55 m)
+      const off = withS({ iaiObiSayaMouth: [0.21, 0.085, 0.02], iaiObiSayaAxis: { yaw: -121, el: -15 } }, () => fallDir(dir, 0));
       assert.ok(off.top > 0.6, `끄면 칼집이 섬 (${off.top} m — 11/14 판)`);
     }
   }
@@ -361,5 +370,132 @@ test('⑪ 넷 모두 그림만 — 네 스위치를 끄든 켜든 몸 · 칼 자
         }
       });
     assert.deepEqual(trace(1), trace(0), `${look} 몸 · 칼 자리 스텝마다 같음`);
+  }
+});
+
+test('⑫ 쉬는 칼집 — 입은 배 왼쪽 앞 · 위에서 볼 때 바로 뒤에서 15 ~ 25° 바깥 · 아래로 10 ~ 20° (사장님 11/14 \'옆으로 각도가 벌어진\' → \'고쳐\')', () => {
+  const [x, y, z] = SECRET.iaiObiSayaMouth;
+  assert.ok(x > 0.1175 && x < 0.22, `배 그림 상자 앞(0.1175) 밖 (${x})`);
+  assert.ok(z > 0.12 && z < 0.2, `배 왼쪽 — 옆 모서리(0.1675) 곁 (${z})`);
+  assert.ok(Math.abs(y - SECRET.iaiSayaHip[1]) < 0.02, `허리띠 높이 (${y})`);
+  const top = 180 + SECRET.iaiObiSayaAxis.yaw; // 바로 뒤(−180)에서 바깥(왼)으로
+  assert.ok(top >= 15 && top <= 25, `위에서 본 각 바로 뒤에서 ${top}°`);
+  assert.ok(-SECRET.iaiObiSayaAxis.el >= 10 && -SECRET.iaiObiSayaAxis.el <= 20, `아래로 기움 ${-SECRET.iaiObiSayaAxis.el}° (落とし差し 처럼 가파르지 않게)`);
+  // 실제 몸: 서 있는 동안 칼집 그림 축을 골반 틀 위에서 봄 (밀어냄 뒤)
+  const G = newRound({ walls: false, weapon: 'uchigatana', weapon2: 'longsword', seed: 1, gap: 6 });
+  const P = G.player;
+  try {
+    P.aiControlled = true;
+    G.ai.update = () => {};
+    while (G.t < CONFIG.ARENA.startHold + 0.5) { G.step(); P.syncMeshes(); }
+    const ax = new THREE.Vector3(0, 1, 0).applyQuaternion(P.obiSaya.g.quaternion);
+    const ang = (Math.atan2(-ax.z * P.side, -ax.x) * 180) / Math.PI; // 바로 뒤에서 왼쪽 +
+    assert.ok(ang >= 15 && ang <= 25, `그려진 칼집 — 바로 뒤에서 ${ang.toFixed(1)}°`);
+    const { M } = obiRest(P);
+    assert.ok(P.obiSaya.g.position.distanceTo(M) < 0.01, `칼집 입이 쉬는 자리 (밀어냄 ${P.obiSaya.g.position.distanceTo(M).toFixed(3)} m)`);
+  } finally {
+    G.world.free();
+  }
+});
+
+/** 사람 창(PlayerSecretWatch — 허리 대기) 한 판: 우치가타나 · 롱소드 과녁 2.4 m · 손 쉼. drive(t, p, pg) 가 스텝마다 */
+function human(vals, drive) {
+  return withS(vals, () => {
+    const G = newRound({ walls: false, weapon: 'uchigatana', weapon2: 'longsword', seed: 3, gap: 2.4 });
+    G.ai.update = () => G.enemy.move.set(0, 0);
+    const p = G.player;
+    p.skill.autoGuard = true;
+    const pg = new PlayerParryGuard(p, G.enemy);
+    p.stamina.controller = pg;
+    const ps = new PlayerSecretWatch(p, G.enemy);
+    const out = { G, p, ps, pg, start: null, armed: null, w: [], open: false };
+    G.before = () => {
+      const t = G.t - CONFIG.ARENA.startHold;
+      drive?.(t, p, pg, ps);
+      ps.update(DT, !!p.skill.sec);
+      if (ps.iaiArm.sheathe > 0 && out.start == null) out.start = t;
+      if (ps.iaiArm.armed && out.armed == null) out.armed = t;
+      if (ps.open) out.open = true;
+    };
+    out.run = (s) => { for (let i = 0; i < Math.round(s / DT); i++) { G.step(); p.syncMeshes(); } };
+    out.run(CONFIG.ARENA.startHold);
+    return out;
+  });
+}
+
+test('⑬ 납도 — iaiArmTime 에 시작 · + iaiSheathe 에 준비 · 끝에 칼이 칼집 안 · 도중 끊김 · 끄면 지금 판 · AI 같은 셈', () => {
+  const T = SECRET.iaiArmTime, X = SECRET.iaiSheathe;
+  assert.equal(X, CONFIG.realS(0.6), '납도 0.6 s (실제 초)');
+  // 사람: 차례
+  const H = human({});
+  try {
+    let during = 0;
+    for (let i = 0; i < Math.round((T + X + 0.5) / DT); i++) {
+      H.G.step();
+      H.p.syncMeshes();
+      if (H.ps.iaiArm.sheathe > 0 && !H.ps.iaiArm.armed) {
+        assert.ok(!H.ps.open, '납도 동안 창 없음');
+        if (H.p.skill.thrustPose.w > 0.99 && H.p.noto?.w > 0) during++;
+      }
+    }
+    assert.ok(H.start != null && Math.abs(H.start - T) <= 2 * DT, `납도 시작 ${H.start} ≈ iaiArmTime ${T}`); // 한두 스텝 (시각을 스텝 앞에서 읽음)
+    assert.ok(H.armed != null && Math.abs(H.armed - (T + X)) <= 2 * DT, `준비 ${H.armed} ≈ iaiArmTime + iaiSheathe ${T + X}`);
+    assert.ok(during > 0.8 * (X / DT), `납도 동안 손 · 칼 덧씌우기 (${during} 스텝)`);
+    // 끝: 칼이 칼집 안 (대기 감쌈 · 칼날이 칼집 겉 안)
+    const pose = obiSayaPose(H.p);
+    assert.ok(pose.follow >= 0.9, `준비 뒤 칼집이 칼을 감쌈 (${pose.follow})`);
+    assert.ok(H.p.iaiHandW >= 0.99, '준비가 켜질 때 손 몫 1 에서 이어감 (칼을 칼집에서 다시 빼지 않음)');
+  } finally {
+    H.G.world.free();
+  }
+  // 도중 끊김: 막기 단추 · 이동 입력 → 납도 그만 · 셈 0 · 덧씌우기 곧장 0 (칼은 사람 손)
+  for (const how of ['parry', 'move']) {
+    const C = human({}, (t, p, pg) => {
+      const cut = t >= T + X * 0.5 && t < T + X * 0.5 + 0.1;
+      if (how === 'parry') pg.held = cut;
+      else { p.stickX = 0; p.stickY = cut ? 1 : 0; }
+    });
+    try {
+      C.run(T + X * 0.5 - DT);
+      assert.ok(C.ps.iaiArm.sheathe > 0.3 && C.p.noto?.w > 0, `${how} 앞 납도 중 (${C.ps.iaiArm.sheathe})`);
+      C.run(2 * DT);
+      assert.equal(C.ps.iaiArm.sheathe, 0, `${how} 납도 그만`);
+      assert.equal(C.ps.iaiArm.t, 0, `${how} 셈 0`);
+      assert.equal(C.p.skill.thrustPose.w, 0, `${how} 덧씌우기 곧장 0 — 칼은 사람 손`);
+      C.run(0.1 + T + X + 0.3);
+      assert.ok(C.armed != null && C.armed >= T + X * 0.5 + 0.1 + T + X - 2 * DT, `${how} 셈 0 부터 다시 — 준비 ${C.armed}`);
+    } finally {
+      C.G.world.free();
+    }
+  }
+  // 끄면(0): iaiArmTime 에 준비 · 납도 없음 (11/14 판)
+  const O = human({ iaiSheathe: 0 });
+  try {
+    withS({ iaiSheathe: 0 }, () => O.run(T + 0.3));
+    assert.equal(O.start, null, '끄면 납도 없음');
+    assert.ok(O.armed != null && Math.abs(O.armed - T) <= 2 * DT, `끄면 iaiArmTime 에 준비 (${O.armed})`);
+    assert.ok(!O.p.noto || !(O.p.noto.w > 0));
+  } finally {
+    O.G.world.free();
+  }
+  // AI · AI 가 읽는 사람 준비(gnsWatch) 같은 셈 (IaiArm): iaiArmTime + iaiSheathe 에 준비 · 그 사이 납도 몫 0 → 1
+  const A = new IaiArm();
+  let a0 = null, a1 = null;
+  for (let i = 0; i < Math.round((T + X + 0.3) / DT); i++) {
+    A.tick(DT, true, false);
+    const t = (i + 1) * DT;
+    if (A.sheathe > 0 && a0 == null) a0 = t;
+    if (A.armed && a1 == null) a1 = t;
+  }
+  assert.ok(Math.abs(a0 - T) <= DT + 1e-9 && Math.abs(a1 - (T + X)) <= DT + 1e-9, `AI 셈 납도 ${a0} · 준비 ${a1}`);
+  withS({ iaiObi: 0 }, () => { const B = new IaiArm(); for (let i = 0; i < Math.round((T + DT) / DT); i++) B.tick(DT, true, false); assert.equal(B.armed, true, '帯刀 끄면 납도 없이 iaiArmTime 에 준비'); });
+  // 납도 동안 칼날이 몸 · 다리를 안 뚫음 · 끝에 칼이 칼집 안 (사람 허리 대기 · AI 웅크린 대기 — 모노호시자오 AI 웅크림은 대기 칼이 자세를 못 지킴 · ② 머리말)
+  for (const [weapon, mode] of [['uchigatana', 'hip'], ['uchigatana', 'crouch'], ['kusanagi', 'hip'], ['monohoshizao', 'hip']]) {
+    const r = notoRun({ weapon, mode });
+    assert.ok(r.start != null && r.armed != null && r.armed > r.start, `${weapon} ${mode} 납도 → 준비`);
+    assert.ok(r.body >= 0, `${weapon} ${mode} 칼날 ↔ 몸 · 다리 ${r.body} (뚫지 않음)`);
+    assert.ok(r.gap >= -0.005 && r.leg > 0, `${weapon} ${mode} 칼집 ↔ 몸통 ${r.gap} · 다리 ${r.leg}`);
+    assert.ok(r.out <= 0.03, `${weapon} ${mode} 칼집이 감싼 칼날이 칼집 겉 밖 ${r.out} m`);
+    assert.ok(r.readyFol >= 0.9 && r.readyOut <= 0.01, `${weapon} ${mode} 준비 뒤 칼이 칼집 안 (감쌈 ${r.readyFol} · 밖 ${r.readyOut})`);
   }
 });

@@ -428,6 +428,20 @@ export class IaiArm {
     this.group = group;
     this.ons = 0;
   }
+  /**
+   * 납도 초 (11/14 사장님 '아니야 2초 후에 납도 시작' — SECRET.iaiSheathe): 일본 고노센 준비(열쇠 iaiArmTime · 묶음 없음)만 — 셈이 iaiArmTime 을 넘은 뒤 이 초 동안 칼을 칼집에 넣고 준비.
+   *  帯刀(SECRET.iaiObi) 이 꺼졌으면 0 (칼집이 없는 11/14 판). 길목 · 싱지르(다른 열쇠 · 묶음)는 0
+   */
+  get extra() {
+    return !this.group && this.timeKey === 'iaiArmTime' && SECRET.iaiObi && SECRET.iaiSheathe > 0 ? SECRET.iaiSheathe : 0;
+  }
+  /** 납도 몫 (0 ~ 1): 셈이 iaiArmTime 을 넘고 아직 준비 전인 동안 · 그 밖(셈 전 · 준비됨 · 납도 없음)은 0 */
+  get sheathe() {
+    const x = this.extra;
+    if (!(x > 0) || this.armed) return 0;
+    const T = SECRET[this.timeKey];
+    return this.t >= T ? Math.min(1, (this.t - T) / x) : 0;
+  }
   tick(dt, outside, busy) {
     if (busy) {
       this.t = 0;
@@ -439,7 +453,7 @@ export class IaiArm {
       this.t += dt;
       this.grace = V[this.graceKey];
       const was = this.armed;
-      this.armed = this.t >= V[this.timeKey];
+      this.armed = this.t >= V[this.timeKey] + this.extra; // 11/14 납도: 일본 준비는 iaiArmTime 뒤 납도(iaiSheathe 초)가 끝나야
       if (this.armed && !was) this.ons++;
       return;
     }
@@ -870,8 +884,9 @@ export class PlayerSecretWatch {
     //  칼을 쥐면(손가락 움직임 · 막기 단추 · 휘두름) 손 · 칼은 곧장 사람 것 — 몸 웅크림은 그대로 · 0 이면 '고노센 준비' 표시만(전 판)
     //  10/31 허리 대기 (사장님 08:xx '웅크리기를 없앴더니 고노센 발동창이 안열려.' — SECRET.gnsReadyHip · 웅크림 0 일 때): 몸은 선 채 손 · 칼만 왼 허리 발도 대기 —
     //   칼을 쥠 = 손가락이 닿은 자리에서 길게 누름 한도(INPUT.holdPx)를 넘게 끌었음(main.js handGrip — 얹은 손가락의 떨림 · 떠돎은 쥠이 아님) · 막기 단추 · 휘두름. 손가락 몸이 없으면(시뮬 · 마우스) 손가락 움직임 그대로
-    if (S.do?.instant && SECRET.iai && SECRET.gnsCrouch) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!me.inputActive || !!me.parryGuard?.held || sw, dt);
-    else if (S.do?.instant && SECRET.iai && SECRET.gnsReadyHip) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!(me.handGrip ?? me.inputActive) || !!me.parryGuard?.held || sw, dt, true);
+    //  11/14 납도 (SECRET.iaiSheathe — IaiArm.sheathe): 준비 셈이 iaiArmTime 을 넘은 뒤 준비 전 iaiSheathe 초 동안 칼을 칼집에 넣음 (손이 쉴 때만 — 쥐면 곧장 사람 손 · 셈은 그대로)
+    if (S.do?.instant && SECRET.iai && SECRET.gnsCrouch) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!me.inputActive || !!me.parryGuard?.held || sw, dt, false, busy ? 0 : this.iaiArm.sheathe);
+    else if (S.do?.instant && SECRET.iai && SECRET.gnsReadyHip) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!(me.handGrip ?? me.inputActive) || !!me.parryGuard?.held || sw, dt, true, busy ? 0 : this.iaiArm.sheathe);
     if (JP_TANK.counter && S.do?.instant) this.counterTick(busy); // 일본 C 받아 치기 고노센 (11/14 설계안 · 기본 끔): 흘려 받기가 든 뒤 창
     if (S.do?.gilmok) {
       const was = this.gilArm.armed;

@@ -21,6 +21,9 @@ const { SECRET } = CONFIG;
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
 const steps = (s) => Math.round(s / DT);
 
+// 준비까지 (11/14 사장님 '2초 후에 납도 시작' — 일본 준비는 iaiArmTime 뒤 납도 SECRET.iaiSheathe 가 끝나야 · 帯刀 끄면 납도 없음 · secret.js IaiArm.extra)
+const ARM = () => CONFIG.SECRET.iaiArmTime + (CONFIG.SECRET.iaiObi && CONFIG.SECRET.iaiSheathe > 0 ? CONFIG.SECRET.iaiSheathe : 0);
+
 test("기본값: gnsReady 'idle' · iaiArmTime 2 · 싱지르 무장 2 · 들어옴 창 끔 (사장님 10/25 22:3x · 22:5x)", () => {
   assert.equal(SECRET.gnsReady, 'idle');
   assert.equal(SECRET.iaiArmTime, CONFIG.realS(2)); // 실제 2 s (표준 시간 10/25 — 게임 값 × 1.1)
@@ -33,11 +36,11 @@ test("기본값: gnsReady 'idle' · iaiArmTime 2 · 싱지르 무장 2 · 들어
 test("① 셈 'idle': 쌓는 동안 이동 입력이면 0 · 준비된 뒤엔 걸어도 유지 · 공격 · 막기 · 맞음 · 비기면 곧장 풀림 (유예 없음)", () => {
   const A = new IaiArm();
   const run = (s, unsettled, moving) => { for (let i = 0; i < steps(s); i++) gnsArmTick(A, DT, unsettled, moving, { outside: false, busy: true }); };
-  run(SECRET.iaiArmTime - 0.2, false, false);
+  run(ARM() - 0.2, false, false);
   assert.equal(A.armed, false);
   run(0.1, false, true); // 쌓는 동안 걸음 → 셈 0
   assert.equal(A.t, 0);
-  run(SECRET.iaiArmTime - 0.1, false, false);
+  run(ARM() - 0.1, false, false);
   assert.equal(A.armed, false);
   run(0.2, false, false);
   assert.equal(A.armed, true, '이동 입력 없이 iaiArmTime 초');
@@ -49,7 +52,7 @@ test("① 셈 'idle': 쌓는 동안 이동 입력이면 0 · 준비된 뒤엔 �
   // 'dist' = 옛 셈 그대로 (old 의 outside · busy — 걸음은 안 봄)
   withCfg({ gnsReady: 'dist' }, () => {
     const B = new IaiArm();
-    for (let i = 0; i < steps(SECRET.iaiArmTime + 0.1); i++) gnsArmTick(B, DT, true, true, { outside: true, busy: false });
+    for (let i = 0; i < steps(ARM() + 0.1); i++) gnsArmTick(B, DT, true, true, { outside: true, busy: false });
     assert.equal(B.armed, true, "'dist' — 밖이면 걸어도 · unsettled 여도 쌓임 (옛 판은 휘두름 · 비기만 — old.busy)");
     gnsArmTick(B, DT, false, false, { outside: false, busy: false });
     assert.equal(B.armed, true, '간격 안 — 유예 동안 남음');
@@ -98,9 +101,9 @@ function near(vals, drive) {
 
 test('② 실제 몸: 상대 칼 거리 안에 서 있어도 iaiArmTime 뒤 준비 · 막기 단추 · 탭 · 맞음이면 풀림 · 준비된 뒤 걸어도 유지 · dist 면 준비 안 됨', () => {
   const R = near({});
-  R.run(SECRET.iaiArmTime + 0.3);
+  R.run(ARM() + 0.3);
   assert.ok(R.p.foeDistance() < R.view.foeReach, `거리 안 ${R.p.foeDistance().toFixed(2)} < ${R.view.foeReach.toFixed(2)}`);
-  assert.ok(R.armedAt != null && Math.abs(R.armedAt - CONFIG.ARENA.startHold - SECRET.iaiArmTime) < 0.15, `준비 ${R.armedAt}`);
+  assert.ok(R.armedAt != null && Math.abs(R.armedAt - CONFIG.ARENA.startHold - ARM()) < 0.15, `준비 ${R.armedAt}`);
   // 걸어도 유지
   R.p.stickY = 0.5;
   R.G.before = ((b) => (t) => { R.p.stickX = 0; R.p.stickY = 0.5; R.p.move.set(0, 0); b(t); })(R.G.before);
@@ -112,12 +115,12 @@ test('② 실제 몸: 상대 칼 거리 안에 서 있어도 iaiArmTime 뒤 준�
   assert.equal(R.ps.iaiArm.armed, false, '막기 단추');
   R.pg.held = false;
   // 걷는 동안엔 다시 쌓이지 않음
-  R.run(SECRET.iaiArmTime + 0.2);
+  R.run(ARM() + 0.2);
   assert.equal(R.ps.iaiArm.armed, false, '걸음 뜻이 있으면 안 쌓임');
   R.G.world.free();
   // 맞음 → 풀림
   const H = near({});
-  H.run(SECRET.iaiArmTime + 0.1);
+  H.run(ARM() + 0.1);
   assert.equal(H.ps.iaiArm.armed, true);
   H.p.pain += 0.2;
   H.run(DT);
@@ -125,7 +128,7 @@ test('② 실제 몸: 상대 칼 거리 안에 서 있어도 iaiArmTime 뒤 준�
   H.G.world.free();
   // 탭 → 풀림
   const T = near({});
-  T.run(SECRET.iaiArmTime + 0.1);
+  T.run(ARM() + 0.1);
   assert.equal(T.ps.iaiArm.armed, true);
   T.p.skill.thrust();
   T.run(DT);
@@ -133,7 +136,7 @@ test('② 실제 몸: 상대 칼 거리 안에 서 있어도 iaiArmTime 뒤 준�
   T.G.world.free();
   // 옛 판: 거리 안에선 준비 안 됨
   const D = near({ gnsReady: 'dist' });
-  withCfg({ gnsReady: 'dist' }, () => D.run(SECRET.iaiArmTime + 0.5));
+  withCfg({ gnsReady: 'dist' }, () => D.run(ARM() + 0.5));
   assert.equal(D.armedAt, null, "?gnsReady=dist — 상대 칼 거리 안");
   D.G.world.free();
 });
@@ -170,7 +173,7 @@ test("④ 사람 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준
   assert.equal(SECRET.gnsCrouchOut, 0.2);
   const R = near({});
   const p = R.p;
-  R.run(SECRET.iaiArmTime + 1.0); // 웅크림이 다 들고 칼이 자리 잡은 뒤(켜지고 0.4 ~ 0.8 s 칼이 한 번 흔들림 — 칼날 방향 0.18 ~ 0.67 rad · 10/27 표준 시간 병합 뒤 0.6 s 에 재면 흔들림 끝 0.62)
+  R.run(ARM() + 1.0); // 웅크림이 다 들고 칼이 자리 잡은 뒤(켜지고 0.4 ~ 0.8 s 칼이 한 번 흔들림 — 칼날 방향 0.18 ~ 0.67 rad · 10/27 표준 시간 병합 뒤 0.6 s 에 재면 흔들림 끝 0.62)
   assert.equal(R.ps.iaiArm.armed, true);
   assert.ok(p.iaiReadyW > 0.99 && p.skill.thrustPose.w > 0.99, `웅크림 ${p.iaiReadyW} · 손 ${p.skill.thrustPose.w}`);
   // 발도가 그 자세에서: secret_instant.js 발도 시작의 '손이 왼 허리에 있나'(far) 셈 그대로 — 칼 손 · 칼날 방향이 발도 길 B(왼 허리) 곁
@@ -202,7 +205,7 @@ test("④ 사람 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준
   R.G.world.free();
   // 맞음 → 손 · 몸 같이 gnsCrouchOut 에 풀림 (곧장 0 이 아님)
   const H = near({});
-  H.run(SECRET.iaiArmTime + 0.6);
+  H.run(ARM() + 0.6);
   H.p.pain += 0.2;
   H.run(DT);
   assert.equal(H.ps.iaiArm.armed, false);
@@ -210,7 +213,7 @@ test("④ 사람 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준
   H.G.world.free();
   // 끄면 전 판 (표시만 — 10/31 허리 대기도 끈 판 `?gnsCrouch=0&gnsReadyHip=0` · 허리 대기는 아래 ⑦)
   const O = near({});
-  withCfg({ gnsCrouch: 0, gnsReadyHip: 0 }, () => O.run(SECRET.iaiArmTime + 0.6));
+  withCfg({ gnsCrouch: 0, gnsReadyHip: 0 }, () => O.run(ARM() + 0.6));
   assert.equal(O.ps.iaiArm.armed, true);
   assert.ok(!(O.p.iaiReadyW > 0) && O.p.skill.thrustPose.w === 0, '?gnsCrouch=0&gnsReadyHip=0 — 자세 그대로');
   O.G.world.free();
@@ -237,7 +240,7 @@ test('⑥ 10/27 23:0x 무장 시계는 공격이 풀린 때(판 시작 정지 AR
   const { CHARACTERS_BY_ID } = await import('../../src/characters.js');
   const hold = CONFIG.ARENA.startHold;
   assert.ok(hold > 0);
-  for (const [w, key, T] of [['uchigatana', 'iaiArm', SECRET.iaiArmTime], ['zweihander', 'spinArm', SECRET.ibSpin.armTime]]) {
+  for (const [w, key, T] of [['uchigatana', 'iaiArm', ARM()], ['zweihander', 'spinArm', SECRET.ibSpin.armTime]]) {
     const G = newRound({ weapon: w, weapon2: 'longsword', seed: 1 });
     G.ai.update = () => G.enemy.move.set(0, 0);
     const ps = new PlayerSecretWatch(G.player, G.enemy);
@@ -256,8 +259,8 @@ test('⑥ 10/27 23:0x 무장 시계는 공격이 풀린 때(판 시작 정지 AR
   const G = newRound({ weapon: 'longsword', weapon2: C.weapon, seed: 1, difficulty: C.ai.level, persona: C.ai.persona, revive: C.revive, gap: 6 });
   G.before = () => G.player.move.set(0, 0);
   let at = null;
-  for (let i = 0; i < (hold + SECRET.iaiArmTime + 0.3) / DT; i++) { G.step(); if (at == null && G.ai.iaiArm?.armed) at = G.enemy.fightT; }
-  assert.ok(at != null && at >= hold + SECRET.iaiArmTime - 3 * DT, `AI 고노센 준비 ${at}`);
+  for (let i = 0; i < (hold + ARM() + 0.3) / DT; i++) { G.step(); if (at == null && G.ai.iaiArm?.armed) at = G.enemy.fightT; }
+  assert.ok(at != null && at >= hold + ARM() - 3 * DT, `AI 고노센 준비 ${at}`);
   G.world.free();
 });
 
@@ -288,8 +291,8 @@ test("⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창 (사장님 '웅크리�
     const R = near({ gnsReadyHip: hip }, finger);
     const p = R.p;
     const pel0 = p.bodies.pelvis.translation().y;
-    withCfg({ gnsReadyHip: hip }, () => R.run(SECRET.iaiArmTime + 1.0));
-    assert.ok(R.armedAt != null && Math.abs(R.armedAt - CONFIG.ARENA.startHold - SECRET.iaiArmTime) < 0.15, `hip ${hip}: 얹은 손가락 그대로 준비 ${R.armedAt}`);
+    withCfg({ gnsReadyHip: hip }, () => R.run(ARM() + 1.0));
+    assert.ok(R.armedAt != null && Math.abs(R.armedAt - CONFIG.ARENA.startHold - ARM()) < 0.15, `hip ${hip}: 얹은 손가락 그대로 준비 ${R.armedAt}`);
     assert.equal(R.ps.iaiArm.armed, true);
     assert.equal(p.iaiReadyW ?? 0, 0, `hip ${hip}: 몸 웅크림 없음`);
     assert.ok(Math.abs(p.bodies.pelvis.translation().y - pel0) < 0.03, `hip ${hip}: 골반 높이 그대로 ${pel0.toFixed(3)} → ${p.bodies.pelvis.translation().y.toFixed(3)}`);
@@ -319,7 +322,7 @@ test("⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창 (사장님 '웅크리�
   // 창: 준비된 채 상대가 발도 선 안(가슴 사이 1.6 m)에서 칼을 빠르게 듦 → 창(raise) — 허리 대기 켬 · 끔 모두
   for (const hip of [1, 0]) {
     const R = near({ gnsReadyHip: hip });
-    withCfg({ gnsReadyHip: hip }, () => R.run(SECRET.iaiArmTime + 0.5));
+    withCfg({ gnsReadyHip: hip }, () => R.run(ARM() + 0.5));
     assert.equal(R.ps.iaiArm.armed, true);
     const e = R.G.enemy;
     const line = R.view.contact + SECRET.iaiStep + SECRET.iaiMargin;
@@ -334,7 +337,7 @@ test("⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창 (사장님 '웅크리�
   // 든 칼 이어 봄 (SECRET.gnsRaiseLatch): 선 밖에서 칼을 들고 그 칼로 선 안에 들면 창 · 끄면 창 없음
   for (const latch of [1, 0]) {
     const R = near({ gnsRaiseLatch: latch });
-    withCfg({ gnsRaiseLatch: latch }, () => R.run(SECRET.iaiArmTime + 0.5));
+    withCfg({ gnsRaiseLatch: latch }, () => R.run(ARM() + 0.5));
     const e = R.G.enemy;
     const line = R.view.contact + SECRET.iaiStep + SECRET.iaiMargin;
     // 상대를 선 밖 0.15 m 로 옮김 (몸 전부 같은 만큼)
@@ -378,7 +381,7 @@ test("⑧ 10/31 13:xx 사장님 '1-2번 다 고쳐': 스틱 위 엄지는 몸을
   // 실제 몸: 얹은 엄지(앞 9 px 쯤 · 0.088)로 서 있음 → iaiArmTime 에 준비 · 앞으로 민 엄지(0.56)는 준비 안 됨 (몸이 걸음)
   for (const [m, want] of [[post(9), true], [post(25), false]]) {
     const R = near({}, (t, p) => { p.stickX = 0; p.stickY = m; p.move.set(0, m); });
-    R.run(SECRET.iaiArmTime + 0.3);
+    R.run(ARM() + 0.3);
     assert.equal(R.ps.iaiArm.armed, want, `스틱 ${m.toFixed(3)} → 준비 ${want}`);
     if (want) {
       // 허리 대기 동안 자세 이름 '발도 대기' · 칼을 쥐면 아님
