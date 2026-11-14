@@ -2,12 +2,14 @@
 //  플랜 열림(띠 무 · 스위치 · 이베리아만 뺌) · 표 칸 0 ~ 1 · 거리 오차 · 띠마다 차림(유도 4 부터 · 비기 5 부터 · B6 몸) · 사슬을 이을 마음(기울기 — 늘이 아님 · 기력 장치 · 무장 쪽 · 불리 · 무계획) ·
 //  원으로 이을 몫(맞바꿈 · 상대 유파 거리 · 버릇 6 s · 되풀이 10 s · 무계획) · 알티바슈 무장 쪽 몫(기력이 많을수록) · 버릇 고리 버퍼(굴림 없음 · 새 배열 없음) ·
 //  넓게 돎 · 옆 박차기 · 칼끝 밖 무장 기다림(고노센 선 무모는 11/14 합치며 공통 틀 — gonosen_risk.test '⑤ 무모') · 판에서 이베리아 행동이 남 · 스위치 끔 = 옛 판 · 다른 유파는 그대로.
+//  11/14 둘째 (사장님 '변칙성을 추가하고 그 맥락에서 종종 사이드스텝'): 박자 흔들림 · 돌기 박자의 옆 박차기(각을 바꿀 때 · 아무 때나 · 비켜 꾐) · 선 밖으로 비킴 · 사슬 끝에 옆으로 빠짐 ·
+//   비스듬히 들어감 · 판에서 옆 박차기 → 나선 걸음 베기가 남.
 //  시간 상한 기준은 없다.  node --test tools/sim/ai_plan_ib.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { planFor, tiltOf, luckOf, distErrWidth, PHASES, SCHOOL_PLAN } from '../../src/ai_plan.js';
-import { ibStats, chainWant, spinK, armK, habitN, ibTick, ibCircle, ibSide, ibFeetV, schoolRead, swapReady, nextFree } from '../../src/ai_plan_ib.js';
+import { ibStats, chainWant, spinK, armK, habitN, ibTick, ibCircle, ibFeetV, schoolRead, swapReady, nextFree, ibSidePost, ibFwdPost, ibAfter, foeAtkN } from '../../src/ai_plan_ib.js';
 
 const { AI_PLAN, IB_LINK, STAMINA } = CONFIG;
 /** AI_PLAN 칸을 잠깐 바꿔 fn 을 돌리고 되돌림 ('ib.x' = 이베리아 칸) */
@@ -21,6 +23,17 @@ function withPlan(over, fn) {
     return fn();
   } finally {
     Object.assign(AI_PLAN, keep);
+  }
+}
+/** Math.random 을 잠깐 바꿈 — 첫 굴림만 first · 그 뒤 rest (차례가 있는 셈) */
+function withRandomSeq(first, rest, fn) {
+  const rnd = Math.random;
+  let n = 0;
+  Math.random = () => (n++ === 0 ? first : rest);
+  try {
+    return fn();
+  } finally {
+    Math.random = rnd;
   }
 }
 /** Math.random 을 잠깐 바꿈 (값 고정 · 굴림 셈) */
@@ -249,6 +262,8 @@ test('버릇 고리 버퍼 — 원 한 번에 한 번 · 굴림 없음 · 새 �
   const { ai, free } = ibAi(5);
   const I = ai.ibPlan;
   const buf = I.hitT;
+  ai.mode = 'attack'; // 이어 돌리기 원은 공격 꼴 안 — 선 밖으로 비킴(11/14 둘째 — 칼 하나에 한 번 굴림)은 공격 꼴엔 없어 버릇 기억만 봄
+  I.angSeq = ai.atkSeq; // 비스듬히 들어감(새 공격 하나에 한 번 굴림)도 이 공격은 이미 굴린 것으로
   const { draws } = withRandom(null, () => {
     ai.me.ibLink = {};
     ibTick(ai, 1 / 120, { id: 1 }, false);
@@ -275,39 +290,146 @@ test('버릇 고리 버퍼 — 원 한 번에 한 번 · 굴림 없음 · 새 �
   free();
 });
 
-test('넓게 돎 · 옆 박차기 (같은 돌기 굴림 x · 가운데부터는 기력을 봄 — 낮음은 안 봄)', () => {
+test('넓게 돎 · 박자 흔들림 · 돌기 박자의 옆 박차기 (각을 바꿀 때 · 무 · 낮음은 아무 때나 · 높음은 되풀이에 비켜 꾐 · 가운데부터는 기력을 봄)', () => {
   const { ai, free } = ibAi(5);
+  const I = ai.ibPlan;
+  const beat = (r, x = 0.3) => {
+    ai.circle = 0; // 옛 줄: x 0.3 = 멈춤 (ibCircle 앞 — moveFeet 의 돌기 굴림 줄)
+    return withRandom(r, () => ibCircle(ai, x));
+  };
   ai.mode = 'watch';
   ai.planC = SCHOOL_PLAN.iberian.contest;
   ai.d = ai.holdDist();
-  ai.circle = 0;
-  withRandom(0.99, () => ibCircle(ai, 0.3)); // 옛 줄은 x 0.3 = 멈춤 → 넓게 돎: 멈춤 몫이 줄어 돎
-  assert.ok(Math.abs(ai.circle) > ai.pers.circleRate, `돎 ${ai.circle.toFixed(3)} (옆걸음 × 1.5)`);
-  assert.equal(ai.ibPlan.dash.on, false, '굴림이 크면 안 박참');
-  withRandom(0, () => ibCircle(ai, 0.3));
-  assert.equal(ai.ibPlan.dash.on, true, '옆 박차기 몫 (띠 세기 × 칸 dash)');
-  assert.equal(ibSide(ai, 0, ai.d, ai.holdDist()), ai.ibPlan.dash.side, '옆 박차기 동안 옆 끝');
-  ai.ibPlan.dash.on = false;
+  I.lastCircle = 0;
+  ai.circleTimer = 1;
+  beat(0.99);
+  assert.ok(Math.abs(ai.circle) > ai.pers.circleRate, `넓게 돎 ${ai.circle.toFixed(3)} (멈춤 몫이 줄고 옆걸음 × 1.5)`);
+  assert.ok(Math.abs(ai.circleTimer - 1.49) < 1e-9, `박자 흔들림 × (1 + 변칙 × (u − ½)) — ${ai.circleTimer}`);
+  assert.equal(I.dash.on, false, '굴림이 크면 안 박참 (각을 바꿈 — 띠 세기 × dash × coin 0.5)');
+  I.lastCircle = -Math.sign(ai.pers.circleDir);
+  beat(0.4);
+  assert.equal(I.dash.on, true, '각을 바꿀 때 옆 박차기');
+  assert.equal(ibSidePost(ai, 0), I.dash.side, '옆 박차기 동안 옆 끝 (꼴 뒤)');
+  assert.equal(ibFwdPost(ai, 1), 0.6, '앞뒤는 옆보다 작게');
+  I.dash.on = false;
+  assert.equal(ibFwdPost(ai, 1), 1);
+  beat(0); // 같은 쪽으로 계속 돎 — 각을 안 바꿈
+  assert.equal(I.dash.on, false, '높음 — 각을 안 바꾸면 안 박참 (굴림 몫 0)');
+  I.atkT[0] = ai.sense.t - 3;
+  I.atkT[1] = ai.sense.t - 1;
+  assert.equal(foeAtkN(ai), 2, '되풀이 — 10.0 s 안에 상대가 칼을 두 번 냄');
+  beat(0.4);
+  assert.equal(I.dash.on, true, '높음 — 되풀이에 맞춰 비켜 꾐');
+  assert.equal(ai.stats.ib.bait, 1);
+  I.dash.on = false;
+  I.atkT.fill(-Infinity);
+  I.lastCircle = -Math.sign(ai.pers.circleDir);
   ai.me.stamina.value = 10; // 쉼 문턱 + 박차기 값 밑
-  withRandom(0, () => ibCircle(ai, 0.3));
-  assert.equal(ai.ibPlan.dash.on, false, '높음 — 기력이 모자라면 안 박참');
+  beat(0);
+  assert.equal(I.dash.on, false, '높음 — 기력이 모자라면 안 박참');
   free();
   const lo = ibAi(2);
   lo.ai.mode = 'watch';
   lo.ai.planC = SCHOOL_PLAN.iberian.contest;
   lo.ai.d = lo.ai.holdDist();
   lo.ai.me.stamina.value = 10;
-  withRandom(0, () => ibCircle(lo.ai, 0.9));
-  assert.equal(lo.ai.ibPlan.dash.on, true, '낮음 — 기력을 안 봄 (무계획 · 바닥까지)');
+  lo.ai.ibPlan.lastCircle = lo.ai.pers.circleDir; // 같은 쪽 — 각을 안 바꿈
+  lo.ai.circle = 0;
+  withRandom(0.2, () => ibCircle(lo.ai, 0.3));
+  assert.equal(lo.ai.ibPlan.dash.on, true, '낮음 — 아무 때나 · 기력을 안 봄 (굴림 몫 × coin)');
   lo.free();
-  // 간 보기(멀리)에서는 박차지 않음 — 거리 다툼(간 보는 거리 + 0.6 안)에서
+  // 간 보기(멀리 — 넓게 도는 거리 밖)에서는 박차지 않음
   const far = ibAi(5);
   far.ai.mode = 'watch';
   far.ai.planC = SCHOOL_PLAN.iberian.probe;
-  far.ai.d = far.ai.holdDist() + 1.5;
-  withRandom(0, () => ibCircle(far.ai, 0.9));
+  far.ai.d = far.ai.holdDist() + 2;
+  far.ai.ibPlan.lastCircle = -far.ai.pers.circleDir;
+  far.ai.circle = 0;
+  withRandom(0, () => ibCircle(far.ai, 0.3));
   assert.equal(far.ai.ibPlan.dash.on, false);
   far.free();
+});
+
+test('선 밖으로 비킴 — 상대 칼이 내 왼쪽으로 오면 오른쪽으로 · 칼 하나에 한 번 굴림 · 공격 꼴엔 없음 · 무 · 낮음은 덜 읽음', () => {
+  const { ai, free } = ibAi(5);
+  const I = ai.ibPlan;
+  ai.mode = 'defend';
+  ai.planC = SCHOOL_PLAN.iberian.commit;
+  let r = withRandom(0, () => ibTick(ai, 1 / 120, { id: 7, line: 'highL' }, false));
+  assert.equal(r.draws(), 1);
+  assert.ok(I.dash.on && I.dash.side === 1, '내 왼쪽으로 오는 칼 → 오른쪽으로');
+  I.dash.on = false;
+  r = withRandom(0, () => ibTick(ai, 1 / 120, { id: 7, line: 'highL' }, false));
+  assert.equal(r.draws(), 0, '같은 칼엔 다시 안 굴림');
+  assert.equal(I.dash.on, false);
+  withRandom(0, () => ibTick(ai, 1 / 120, { id: 8, line: 'lowR' }, false));
+  assert.equal(I.dash.side, -1, '내 오른쪽으로 오는 칼 → 왼쪽으로');
+  I.dash.on = false;
+  withRandom(0.6, () => ibTick(ai, 1 / 120, { id: 9, line: 'highR' }, false));
+  assert.equal(I.dash.on, false, '높음 몫 = 띠 세기 × dash × coin 0.5');
+  ai.mode = 'attack';
+  I.angSeq = ai.atkSeq;
+  r = withRandom(0, () => ibTick(ai, 1 / 120, { id: 10, line: 'highL' }, false));
+  assert.equal(r.draws(), 0, '공격 꼴엔 비킴 굴림 없음');
+  assert.equal(I.dash.on, false);
+  free();
+  const lo = ibAi(2);
+  lo.ai.mode = 'defend';
+  lo.ai.planC = SCHOOL_PLAN.iberian.commit;
+  withRandom(0.1, () => ibTick(lo.ai, 1 / 120, { id: 3, line: 'highL' }, false));
+  assert.equal(lo.ai.ibPlan.dash.on, false, '낮음 — 위협 줄을 덜 읽음 (⅓ × 0.5 × (1 − ⅔))');
+  withRandom(0.05, () => ibTick(lo.ai, 1 / 120, { id: 4, line: 'highL' }, false));
+  assert.equal(lo.ai.ibPlan.dash.on, true);
+  lo.free();
+});
+
+test('비스듬히 들어감 — 새 공격 하나에 한 번 굴림 · 준비 · 다가가는 동안 옆 0.6 · 끝내기 · 이어 친 칼은 곧게', () => {
+  const { ai, free } = ibAi(5);
+  const I = ai.ibPlan;
+  ai.planC = SCHOOL_PLAN.iberian.commit;
+  ai.mode = 'attack';
+  ai.phase = 'windup';
+  ai.chain = 0;
+  ai.sideStepT = null;
+  withRandom(0.2, () => ibTick(ai, 1 / 120, null, false));
+  assert.equal(I.ang, 1);
+  assert.equal(ai.stats.ib.odd, 1);
+  assert.equal(ibSidePost(ai, 0), 0.6, '준비 동안 옆으로 돌아 들어감');
+  ai.phase = 'approach';
+  assert.equal(ibSidePost(ai, 0), 0.6);
+  ai.phase = 'strike';
+  assert.equal(ibSidePost(ai, 0), 0, '벨 때는 옛 걸음');
+  ai.phase = 'windup';
+  const r = withRandom(0, () => ibTick(ai, 1 / 120, null, false));
+  assert.equal(r.draws(), 0, '같은 공격엔 다시 안 굴림');
+  ai.atkSeq++;
+  ai.planC = SCHOOL_PLAN.iberian.finish;
+  withRandom(0, () => ibTick(ai, 1 / 120, null, false));
+  assert.equal(I.ang, 0, '끝내기 — 곧게');
+  ai.atkSeq++;
+  ai.planC = SCHOOL_PLAN.iberian.commit;
+  ai.chain = 1;
+  withRandom(0, () => ibTick(ai, 1 / 120, null, false));
+  assert.equal(I.ang, 0, '이어 친 칼 — 곧게');
+  ai.mode = 'watch';
+  ibTick(ai, 1 / 120, null, false);
+  assert.equal(I.ang, 0);
+  free();
+});
+
+test('사슬 끝 — 옆으로 박차 빠짐 (변칙 · 곧게 물러나지 않음)', () => {
+  const { ai, free } = ibAi(5);
+  ai.planC = SCHOOL_PLAN.iberian.commit;
+  ai.mode = 'attack';
+  ai.hitLanded = false;
+  ai.bound = false;
+  ai.chain = 0;
+  withRandomSeq(0.99, 0, () => ibAfter(ai, 1.8)); // 첫 굴림(이을지) 0.99 = 안 이음 · 그 뒤 0
+  assert.equal(ai.stats.ib.end, 1);
+  assert.equal(ai.mode, 'withdraw');
+  assert.equal(ai.stats.ib.tryEnd, 1);
+  assert.equal(ai.ibPlan.dash.on, true, '물러나며 옆 박차기');
+  free();
 });
 
 test('칼끝 밖 무장 기다림 (고노센 선 무모는 11/14 합치며 공통 틀 — gonosen_risk.test \'⑤ 무모\')', () => {
@@ -337,6 +459,16 @@ test('판: AI 이베리아 숙련 2 대 롱소드 AI — 국면 · 이베리아 
   assert.ok(tot.cont + tot.end > 0, `이베리아 사슬 판단 ${JSON.stringify(tot)}`);
   assert.ok(tot.link > 0, '이어 돌리기');
   assert.ok(tot.spin + tot.dash > 0, '원으로 이음 · 옆 박차기');
+});
+
+test('판: AI 이베리아 숙련 2 대 롱소드 AI (씨앗 4) — 옆 박차기 → 나선 걸음 베기 · 비스듬히 들어감이 남 (11/14 둘째 — 종종)', () => {
+  const G = newRound({ walls: true, seed: 4, weapon: 'longsword', weapon2: 'zweihander', AI2Class: AI, persona: { proficiency: 2 }, persona2: { proficiency: 2 } });
+  while (G.t < 20 && G.player.alive && G.enemy.alive) G.step();
+  const st = G.ai.stats.ib;
+  G.world.free();
+  assert.ok(st.dash >= 1, `옆 박차기 ${JSON.stringify(st)}`);
+  assert.ok(st.slant >= 1, '나선 걸음 베기');
+  assert.ok(st.odd >= 1, '비스듬히 들어감');
 });
 
 test('스위치 끔 = 옛 판 (이베리아 — `?aiPlan=0` · 이베리아만 뺌이 같고 켬은 다름) · 다른 유파는 이베리아 칸을 안 읽음', () => {

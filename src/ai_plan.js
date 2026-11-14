@@ -66,18 +66,19 @@ export function axesOf(p, tradition) {
 export const SCHOOL_PLAN = Object.freeze({
   // 이베리아 — 거칠고 모험적인 슬러거 (2 단계 11/14 · 설계 §3-5 · 셈은 src/ai_plan_ib.js — ai.js 는 ib 표식이 있는 플랜만 그 셈을 부름). 칸 = 고를 몫 0 ~ 1 (× 띠 세기 planK — 기울기 · '반드시'가 아님):
   //  wide 넓게 돎(멈춤이 줄고 옆걸음이 큼) · dash 옆 박차기 · slant 박차기 뒤 비스듬히 들어감(나선 걸음 베기) · chain 사슬을 이을 마음 · spin 원(이어 돌리기)으로 큰 칼을 이을 몫 ·
-  //  swap 맞바꿈이 남았을 때 원을 더 고름(쓴 뒤엔 덜) · arm 사슬 끝 → 내 칼끝 밖으로 빠져 알티바슈 무장 · lure 유도(원 돌려 보이기 · 무장 뒤 안 들어오면 사슬로 들어감 — 가운데 끝 4 부터)
+  //  swap 맞바꿈이 남았을 때 원을 더 고름(쓴 뒤엔 덜) · arm 사슬 끝 → 내 칼끝 밖으로 빠져 알티바슈 무장 · lure 유도(원 돌려 보이기 · 무장 뒤 안 들어오면 사슬로 들어감 — 가운데 끝 4 부터) ·
+  //  odd 변칙(11/14 둘째 — 사장님 '변칙성을 추가하고 그 맥락에서 종종 사이드스텝'): 비스듬히 · 옆으로 돌아 들어감 · 돌기 박자가 흔들림 · dash 는 각을 바꿀 때 · 선 밖으로 비킬 때 · 사슬 끝에 빠질 때
   iberian: Object.freeze({
     nameKo: '슬러거',
     lureAt: 4,
     ib: true,
-    probe: Object.freeze({ wide: 1, dash: 0.5, slant: 0.5, chain: 1, spin: 1, swap: 0.5, arm: 1, lure: 1 }),
-    contest: Object.freeze({ wide: 1, dash: 1, slant: 1, chain: 1, spin: 1, swap: 0.5, arm: 1, lure: 1 }),
-    commit: Object.freeze({ wide: 0, dash: 0, slant: 1, chain: 1, spin: 1, swap: 0.5, arm: 1, lure: 0 }),
-    ahead: Object.freeze({ wide: 0.5, dash: 0.5, slant: 1, chain: 1, spin: 1, swap: 0.5, arm: 0.5, lure: 0.5 }), // 사슬 · 상대가 더 흘림 — 이어 가는 쪽
-    finish: Object.freeze({ wide: 0, dash: 0, slant: 1, chain: 1, spin: 1, swap: 0, arm: 0, lure: 0 }), // 무너진 상대 — 무장(2 s)보다 곧장 사슬
-    behind: Object.freeze({ wide: 1, dash: 1, slant: 0.5, chain: 0.5, spin: 0.5, swap: 1, arm: 0.5, lure: 0 }), // 원 동안 막기 못 함 — 맞바꿈이 남았을 때 원을 더 · 쓴 뒤 맞으면 빠지는 쪽
-    tired: Object.freeze({ wide: 0.5, dash: 0, slant: 0, chain: 1, spin: 0.5, swap: 0.5, arm: 0, lure: 0 }), // 셋째 칼 기력 0 — 알티바슈보다 사슬 쪽
+    probe: Object.freeze({ wide: 1, dash: 1, slant: 0.5, chain: 1, spin: 1, swap: 0.5, arm: 1, lure: 1, odd: 1 }),
+    contest: Object.freeze({ wide: 1, dash: 1, slant: 1, chain: 1, spin: 1, swap: 0.5, arm: 1, lure: 1, odd: 1 }),
+    commit: Object.freeze({ wide: 0, dash: 1, slant: 1, chain: 1, spin: 1, swap: 0.5, arm: 1, lure: 0, odd: 1 }), // dash = 막는 동안 선 밖으로 · 사슬 끝에 옆으로 빠짐 · odd = 비스듬히 들어감
+    ahead: Object.freeze({ wide: 0.5, dash: 0.5, slant: 1, chain: 1, spin: 1, swap: 0.5, arm: 0.5, lure: 0.5, odd: 0.5 }), // 사슬 · 상대가 더 흘림 — 이어 가는 쪽
+    finish: Object.freeze({ wide: 0, dash: 0, slant: 1, chain: 1, spin: 1, swap: 0, arm: 0, lure: 0, odd: 0 }), // 무너진 상대 — 무장(2 s)보다 곧장 사슬 · 곧게 들어감
+    behind: Object.freeze({ wide: 1, dash: 1, slant: 0.5, chain: 0.5, spin: 0.5, swap: 1, arm: 0.5, lure: 0, odd: 1 }), // 원 동안 막기 못 함 — 맞바꿈이 남았을 때 원을 더 · 쓴 뒤 맞으면 빠지는 쪽
+    tired: Object.freeze({ wide: 0.5, dash: 0.5, slant: 0, chain: 1, spin: 0.5, swap: 0.5, arm: 0, lure: 0, odd: 0.5 }), // 셋째 칼 기력 0 — 알티바슈보다 사슬 쪽 (옆 박차기는 가운데부터 기력을 봄)
   }),
   italian: Object.freeze({
     nameKo: '아웃복서',
