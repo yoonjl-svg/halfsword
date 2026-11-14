@@ -1088,12 +1088,14 @@ function notosPose(f, w, body, standing, oneHand) {
   const th = f.skill.thrustPose;
   const N = f.noto;
   const k = (N?.k ?? 0) * w;
+  // 11/14 사장님 '허공에 붕 떠보이는데' 뒤: 칼끝을 허리띠 곁 칼집 입에 대는 몫은 몸으로 — 가슴을 틀어 칼 든 어깨를 앞으로 · 숙임 (SECRET.iaiSheatheWay.twist ° × 납도 몸 비틂 몫 N.tw)
+  const TW = SECRET.iaiSheatheWay?.twist;
+  const tw = TW ? (N?.tw ?? 0) * w : 0;
   th.w = w;
-  th.pelvisYaw = body.pelvisYaw * D2R * k;
-  th.chestYaw = body.chestYaw * D2R * k;
-  th.pitch = standing ? 0 : body.pitch * D2R * k;
+  th.pelvisYaw = body.pelvisYaw * D2R * k + (TW?.pelvis ?? 0) * D2R * tw;
+  th.chestYaw = body.chestYaw * D2R * k + (TW?.chest ?? 0) * D2R * tw;
+  th.pitch = standing ? (TW?.pitch ?? 0) * D2R * tw : body.pitch * D2R * k; // 숙임 덧은 선 채 대기만 (웅크린 대기는 이미 숙임 — 더 숙이면 배가 칼날에 닿음 · 재기)
   th.drop = standing ? 0.06 : 0.06 + (body.drop - 0.06) * k;
-  if (N) N.stand = !!standing; // 선 채 대기(사람 허리 대기)인가 — 왼손 몫 꼴이 다름 (fighter.js offHand)
   f.iaiSayaReadyW = SECRET.iaiSayaReady && oneHand && w > 0 ? N?.left ?? 0 : 0;
 }
 

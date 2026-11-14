@@ -7,7 +7,7 @@
 #  python3.12 tools/sim/iai_obi_fig.py rows <out.png> <제목> <그림 이름 앞:글|둘째 줄> …   (줄마다 네 방향 — 전 · 후 · 인물 섞기)
 #  python3.12 tools/sim/iai_obi_fig.py seq <out.webp> <제목> <방향,…> <그림 이름 앞:글|둘째 줄> …   (칸 = 그림 이름 앞(시간 차례) · 줄 = 방향 — 11/14 납도 · 발도)
 #  python3.12 tools/sim/iai_obi_fig.py grid <out.webp> <제목> <둘째 줄> <값:글,…> <줄 글:그림 길({c} = 칸 값)> …   (11/14 납도 고른 밀도 그림 11 — 칸 = 시간 · 줄 = 몸 × 방향)
-#  python3.12 tools/sim/iai_obi_fig.py curve <out.webp> <전 json> <후 json>   (11/14 납도 고른 밀도 — 칼끝 ↔ 칼집 입 거리 · JSON = node tools/sim/iai_obi.mjs noto --json=…)
+#  python3.12 tools/sim/iai_obi_fig.py curve <out.webp> <전 json> <후 json> [전 글] [후 글]   (11/14 납도 고른 밀도 — 칼끝 ↔ 칼집 입 거리 · JSON = node tools/sim/iai_obi.mjs noto --json=…)
 import json
 import math
 import sys
@@ -242,7 +242,7 @@ def grid(out, title, sub, cols, rows, cw=200):
     im.save(out, quality=86) if out.endswith('.webp') else im.save(out, optimize=True)
 
 
-def curve(out, before, after):
+def curve(out, before, after, labB=None, labA=None):
     """납도 동안 그림 칼끝 ↔ 칼집 입 거리 (cm — 입 밖 + · 칼집 안 − 깊이) · 실제 초 · 칸 = 무기 · 줄 = 사람 허리 대기 / AI 웅크린 대기 · 점 = 칼끝이 칼집 안으로 든 첫 스텝"""
     B = {(r['weapon'], r['mode']): r for r in json.load(open(before))['out']}
     A = {(r['weapon'], r['mode']): r for r in json.load(open(after))['out']}
@@ -253,7 +253,7 @@ def curve(out, before, after):
     d = ImageDraw.Draw(im)
     text(d, (24, 14), '납도 동안 칼끝 ↔ 칼집 입(鯉口) 거리 — 0 을 지나는 때가 칼끝이 칼집 입을 지나는 때', F1)
     text(d, (24, 46), '세로 = 칼끝이 칼집 입 밖이면 + (입까지 · 옆 겉까지 거리) · 칼집 안이면 - (들어간 깊이) cm · 가로 = 납도 시작 뒤 실제 초 · 점 = 칼끝이 칼집 안으로 든 첫 스텝', F3, INK2)
-    text(d, (24, 68), '주황 = 전(7370994a — 칼끝이 칼집 옆 겉 곁에서 곧장 안으로: 순간이동) · 파랑 = 후(칼끝이 입 밖에서 0 으로 내려와 입을 지남)', F3, INK2)
+    text(d, (24, 68), f"주황 = 전({labB or '7370994a — 칼끝이 칼집 옆 겉 곁에서 곧장 안으로: 순간이동'}) · 파랑 = 후({labA or '칼끝이 입 밖에서 0 으로 내려와 입을 지남'})", F3, INK2)
     y0, y1 = -90.0, 40.0
     for row, mode in enumerate(['hip', 'crouch']):
         oy = 98 + row * (PH + 126)
@@ -326,4 +326,4 @@ if __name__ == '__main__':
     elif m == 'grid':
         grid(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5].split(','), sys.argv[6:])
     elif m == 'curve':
-        curve(sys.argv[2], sys.argv[3], sys.argv[4])
+        curve(sys.argv[2], sys.argv[3], sys.argv[4], *(sys.argv[5:7]))

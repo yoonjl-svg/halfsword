@@ -4471,7 +4471,7 @@ export class Fighter {
     const notoAlong = this.noto?.w > 0 && this.noto.phase >= 2 ? this.noto.ym : null;
     // 납도 동안 왼손 (몫 = 납도 왼손 몫 iaiSayaW — iai_obi.js notoPlan left): 목표는 0.45 에 칼집 입 K 까지 다 · ① ② (칼끝이 아직 칼집 밖)는 칼을 쥐지 않음(칼집만) ·
     //  ③ 칼끝이 들면 칼 위 칼집 입 자리(ym)를 쥐는 끈 힘이 몫 0.45 → 1 에 0 → 1 (두 손으로 밀어 넣음) · 납도가 도중에 끊기면 목표 몫을 iaiRegrip 초에 보통 몫으로 (한 스텝에 튀지 않게)
-    const nOn = koiOn && this.noto?.w > 0 && !!this.noto.stand; // 선 채 대기(사람 허리 대기)만 — 웅크린 대기는 몸을 낮추며 앞발을 내딛는 동안 왼손이 칼자루를 반쯤 쥔 채(아래 보통 몫 syK) 칼을 받쳐 넣음 (재기: 웅크림에 칼집만 쥐면 준비 때 칼끝이 섬 −70 / +10)
+    const nOn = koiOn && this.noto?.w > 0; // 선 채 · 웅크린 대기 같음 (11/14 '허공에 붕 떠보이는데' 뒤 칼집이 허리띠 곁이라 웅크림에도 칼끝이 서지 않음)
     const nGrip = nOn ? (this.noto.phase >= 2 ? THREE.MathUtils.clamp((this.iaiSayaW - 0.45) / 0.55, 0, 1) : 0) : null;
     let uAim = syK;
     if (nOn) uAim = this.notoAimU = THREE.MathUtils.smoothstep(this.iaiSayaW, 0, 0.45);

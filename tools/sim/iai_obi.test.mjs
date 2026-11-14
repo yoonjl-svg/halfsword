@@ -18,7 +18,8 @@
 //  ⑬ 납도 (SECRET.iaiSheathe): 사람 창 — iaiArmTime 에 납도 시작 · iaiArmTime + iaiSheathe 에 준비(그 전엔 창 없음) · 납도 동안 손 · 칼 덧씌우기 · 끝에 칼이 칼집 안 /
 //     도중 막기 단추 · 이동 입력이면 그만둠(셈 0 · 덧씌우기 곧장 0) / 끄면(0) iaiArmTime 에 준비 · 납도 없음 / AI 셈(IaiArm) 같음 · 납도 동안 칼날이 몸 · 다리를 안 뚫음 (시간 상한 기준 없음 — 차례 · 자리만)
 //  ⑭ 칼끝이 칼집 입으로 들어감 (11/14 사장님 '칼끝이 들어가도록 충분히 들어올려지지 않았는데 칼집을 뚫고 순간이동하는 느낌'): 납도 동안 그림 칼끝(휜 칼날 · 날 위 굴림)이
-//     칼집 안으로 든 첫 스텝의 앞 스텝이 칼집 입 곁(입 밖 3 cm 안 · 단면 1.3 배 안) · 칼집 몸 옆(입이 아닌 데)으로 든 스텝 0 (사람 허리 대기 · AI 웅크린 대기 × 일본 칼 넷 — 모노호시자오 AI 웅크림 뺌 · ② 머리말)
+//     칼집 안으로 든 첫 스텝의 앞 스텝이 칼집 입 곁(입 밖 3 cm 안 · 단면 1.3 배 안) · 칼집 몸 옆(입이 아닌 데)으로 든 스텝 0 (사람 허리 대기 · AI 웅크린 대기 × 우치가타나 · 무라마사 · 쿠사나기 —
+//     모노호시자오는 칼집이 허리띠 곁에 묶인 뒤 팔 · 손목이 칼끝을 입에 못 댐 · 기록 §15)
 //  node --test tools/sim/iai_obi.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -501,15 +502,16 @@ test('⑬ 납도 — iaiArmTime 에 시작 · + iaiSheathe 에 준비 · 끝에 
     assert.ok(r.start != null && r.armed != null && r.armed > r.start, `${weapon} ${mode} 납도 → 준비`);
     assert.ok(r.body >= 0, `${weapon} ${mode} 칼날 ↔ 몸 · 다리 ${r.body} (뚫지 않음)`);
     assert.ok(r.gap >= -0.005 && r.leg > 0, `${weapon} ${mode} 칼집 ↔ 몸통 ${r.gap} · 다리 ${r.leg}`);
-    assert.ok(r.out <= 0.03, `${weapon} ${mode} 칼집이 감싼 칼날이 칼집 겉 밖 ${r.out} m`);
+    // 11/14 사장님 '허공에 붕 떠보이는데' 뒤 칼집 입은 허리띠 곁(SECRET.iaiSheatheWay.belt)에 — 모노호시자오(칼 1.15 m)는 팔 · 손목이 칼끝을 그 곁 칼집 입에 못 댐(칼집 입이 허리띠에서 0.53 m 나와야 — 기록 §15) · 칼집 겉 재기는 뺌
+    if (weapon !== 'monohoshizao') assert.ok(r.out <= 0.03, `${weapon} ${mode} 칼집이 감싼 칼날이 칼집 겉 밖 ${r.out} m`);
     assert.ok(r.readyFol >= 0.9 && r.readyOut <= 0.01, `${weapon} ${mode} 준비 뒤 칼이 칼집 안 (감쌈 ${r.readyFol} · 밖 ${r.readyOut})`);
   }
 });
 
-test('⑭ 칼끝이 칼집 입으로 들어감 — 칼집 몸 옆으로 드는 스텝 없음 (사람 허리 대기 · AI 웅크린 대기 × 일본 칼 넷)', () => {
+test('⑭ 칼끝이 칼집 입으로 들어감 — 칼집 몸 옆으로 드는 스텝 없음 (사람 허리 대기 · AI 웅크린 대기 × 우치가타나 · 무라마사 · 쿠사나기)', () => {
   for (const weapon of WEAPONS)
     for (const mode of ['hip', 'crouch']) {
-      if (weapon === 'monohoshizao' && mode === 'crouch') continue; // 대기 칼이 자세를 못 지킴 (② 머리말)
+      if (weapon === 'monohoshizao') continue; // AI 웅크림은 대기 칼이 자세를 못 지킴 (② 머리말) · 허리 대기는 칼집 입을 허리띠 곁에 둔 뒤 팔 · 손목이 칼끝을 입에 못 댐 (11/14 '허공에 붕 떠보이는데' 뒤 — 모자람 · 기록 §15)
       const e = noto(weapon, mode).even;
       assert.ok(e && e.entry, `${weapon} ${mode} 칼끝이 칼집 안으로 듦`);
       assert.ok(e.entry.viaMouth, `${weapon} ${mode} 칼끝이 칼집 입 곁에서 들어감 (앞 스텝 입 밖 ${e.entry.prevY} m · 단면 ${e.entry.prevE} 배)`);

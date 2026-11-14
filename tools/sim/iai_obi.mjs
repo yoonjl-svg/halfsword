@@ -20,7 +20,7 @@ import { applySets } from './rapier_defence.mjs';
 import { iaiReadyPose, iaiReadyPosePlayer, requestIai } from '../../src/secret_instant.js';
 import { PlayerSecretWatch, IaiArm } from '../../src/secret.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
-import { obiReady, obiSayaPose, sageoPoints } from '../../src/iai_obi.js';
+import { obiReady, obiSayaPose, sageoPoints, notoBelt } from '../../src/iai_obi.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { LOOKS } from '../../src/looks.js';
 import { isMain } from './is_main.mjs';
@@ -528,7 +528,7 @@ export function notoRun({ weapon = 'uchigatana', mode = 'hip', seed = 1, look = 
     arm = ps.iaiArm;
     G.before = () => ps.update(DT, !!P.skill.sec);
   }
-  const o = { weapon, mode, start: null, armed: null, body: Infinity, bodyAt: null, out: 0, gap: Infinity, leg: Infinity, chest: Infinity, jumpM: 0, jumpA: 0, tipV: 0, n: 0, readyOut: 0, readyFol: 1, bodyNoto: Infinity, bodyReady: Infinity };
+  const o = { weapon, mode, start: null, armed: null, body: Infinity, bodyAt: null, out: 0, gap: Infinity, leg: Infinity, chest: Infinity, jumpM: 0, jumpA: 0, tipV: 0, n: 0, readyOut: 0, readyFol: 1, bodyNoto: Infinity, bodyReady: Infinity, belt: 0, handGap: 0 };
   let prev = null;
   let tipPrev = null;
   const trace = [];
@@ -551,6 +551,19 @@ export function notoRun({ weapon = 'uchigatana', mode = 'hip', seed = 1, look = 
       if (bb.d < o.body) (o.body = bb.d), (o.bodyAt = bb.at);
       if (on) o.bodyNoto = Math.min(o.bodyNoto, bb.d);
       else o.bodyReady = Math.min(o.bodyReady, bb.d);
+      // 11/14 '허공에 붕 떠보이는데' 뒤: 칼집 입 ↔ 허리띠 자리(쉬는 ↔ 대기 칼집 입 사이 줄) · 왼손 ↔ 칼집 입 쥠 자리 (칼집 그림 입 + 축 × iaiSayaKoi)
+      if (P.obiSaya) {
+        const sp = obiSayaPose(P);
+        o.belt = Math.max(o.belt, notoBelt(P, sp.pos.clone(), 0));
+        const koiW = sp.pos.clone().add(new THREE.Vector3(0, CONFIG.SECRET.iaiSayaKoi ?? 0.05, 0).applyQuaternion(sp.quat));
+        const pq = tq(P.bodies.pelvis.rotation());
+        const kw = koiW.applyQuaternion(pq).add(tv(P.bodies.pelvis.translation()));
+        const fo = P.bodies.farmO;
+        const hand = new THREE.Vector3(0, -0.135, 0).applyQuaternion(tq(fo.rotation())).add(tv(fo.translation()));
+        const hg = hand.distanceTo(kw);
+        if (on ? (P.noto?.u ?? 0) >= 0.3 : (P.iaiSayaW ?? 0) >= 0.99) o.handGap = Math.max(o.handGap, hg); // 왼손이 칼자루 끝을 놓고 칼집 입으로 옮긴 뒤(길 몫 0.3 — ① 앞 반 끝)부터 · 준비 뒤는 칼집 입을 쥔 동안
+        if (on) (o.handTr ??= []).push([r3(t - (o.start ?? t)), r3(hg), r3(P.noto?.u ?? 0)]);
+      }
       if (row.out != null) o.out = Math.max(o.out, row.out);
       if (m) { o.gap = Math.min(o.gap, m.gap); o.leg = Math.min(o.leg, m.leg); o.chest = Math.min(o.chest, m.chest); }
       if (!on) { o.readyOut = Math.max(o.readyOut, row.out ?? 0); o.readyFol = Math.min(o.readyFol, m?.follow ?? 1); }
@@ -567,7 +580,7 @@ export function notoRun({ weapon = 'uchigatana', mode = 'hip', seed = 1, look = 
   G.world.free();
   o.even = notoEven(trace);
   if (keepTrace) o.trace = trace;
-  for (const k of ['body', 'bodyNoto', 'bodyReady', 'out', 'gap', 'leg', 'chest', 'jumpM', 'readyOut', 'readyFol']) o[k] = Number.isFinite(o[k]) ? r3(o[k]) : null;
+  for (const k of ['body', 'bodyNoto', 'bodyReady', 'belt', 'handGap', 'out', 'gap', 'leg', 'chest', 'jumpM', 'readyOut', 'readyFol']) o[k] = Number.isFinite(o[k]) ? r3(o[k]) : null;
   o.jumpA = r1(o.jumpA);
   o.tipV = r1(o.tipV);
   return o;
