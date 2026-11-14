@@ -1,11 +1,13 @@
 // 유파 AI 기본 전투 흐름 1 단계 시험 (11/14 — src/ai_plan.js · ai.js plan* · config AI_PLAN · 설계안 docs/design/ai_school_baseline_2026-11-14.md §9):
 //  띠 · 기울기 · 거리 오차 값 · 플랜 열림(유파 · 띠 무 · 스위치) · 국면 판정 일곱 · 사건이 나면 같은 스텝에 다시 판정 · 0.2 s 박자는 굴림을 안 더함 ·
 //  전략 층은 반사 층 상태를 건드리지 않음 · 이탈리아 행동이 숙련도에 따라 열림 · 리솔루토 맞춤 걸음은 본 걸음 · 플랜 없는 유파는 바이트 같음 · 스위치 끔 = 옛 판.
-//  인물 숙련도 새 배치(§10 — 시트 · 얼터 · 생사전 카드 · 고용 금화). 시간 상한 기준은 없다.  node --test tools/sim/ai_plan.test.mjs
+//  인물 숙련도 새 배치(§10 — 시트 · 얼터 · 생사전 카드 · 고용 금화).
+//  11/14 덧붙임(§11): 무 · 낮음 띠 '행운에 기대는 전투'(굴림 몫 · 무모 · 무계획 — 성급함 아님 · 플랜 유파만) · 띠별 기력 셈 · 파고들기(공통 틀 — 내 칼이 뚜렷이 짧을 때만).
+//  시간 상한 기준은 없다.  node --test tools/sim/ai_plan.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
-import { bandOf, tiltOf, distErrWidth, planFor, judgePhase, seenStep, axesOf, PHASES } from '../../src/ai_plan.js';
+import { bandOf, tiltOf, luckOf, distErrWidth, planFor, judgePhase, seenStep, axesOf, PHASES } from '../../src/ai_plan.js';
 import { foeStep, mirrorOk, mirrorStep } from '../../src/italian_risoluto.js';
 
 const { AI_PLAN } = CONFIG;
@@ -168,9 +170,9 @@ test('플랜 없는 유파는 바이트 같음 (롱소드 AI 끼리 · 켬 = 끔
   const off = withPlan({ on: 0 }, () => trace({ weapon2: 'longsword', prof: 2 }));
   assert.equal(on.plan, false);
   assert.equal(on.text, off.text);
-  const on5 = trace({ weapon2: 'uchigatana', prof: 5, secs: 3 });
-  const off5 = withPlan({ on: 0 }, () => trace({ weapon2: 'uchigatana', prof: 5, secs: 3 }));
-  assert.equal(on5.text, off5.text, '일본 숙련 5');
+  const on5 = trace({ weapon2: 'monohoshizao', prof: 5, secs: 3 });
+  const off5 = withPlan({ on: 0 }, () => trace({ weapon2: 'monohoshizao', prof: 5, secs: 3 }));
+  assert.equal(on5.text, off5.text, '일본 숙련 5 (모노호시자오 — 칼이 짧지 않아 파고들기도 안 걸림)');
 });
 
 test('스위치 끔 = 옛 판 (이탈리아 — 끔 · 플랜 유파 비움이 같고 켬은 다름)', () => {
@@ -198,4 +200,83 @@ test('인물 숙련도 새 배치 (사장님 11/14 — §10): 시트 · 얼터 +
   for (const [id, school, p] of [['bran', 'none', 0], ['heinrich', 'german', 3], ['margarethe', 'german', 4], ['omari', 'iberian', 3], ['renji', 'none', 3], ['liao', 'chinese', 4], ['eira', 'italian', 2], ['silver_wanderer_mad', 'japanese', 6]]) assert.equal(proficiencyOf(id)[school], p, `${id} 카드`);
   // 고용 금화 = 바탕 + 걸음 × 가장 높은 숙련도
   for (const [id, best] of [['bran', 0], ['heinrich', 3], ['margarethe', 4], ['liao', 4], ['eira', 2]]) assert.equal(hireCostOf(id).coins, SAENGSA.hire.base + SAENGSA.hire.step * best, `${id} 고용`);
+});
+
+test('무 · 낮음 띠 = 행운에 기대는 전투 (사장님 11/14): 굴림 몫 · 무모 · 무계획 — 성급함 아님 · 플랜 유파만', () => {
+  assert.deepEqual([0, 1, 2, 3, 4, 5, 6].map(luckOf).map((x) => +x.toFixed(4)), [1, 0.6667, 0.6667, 0.3333, 0.3333, 0, 0], '1 − 기울기');
+  assert.equal(+axesOf(2, 'italian').luck.toFixed(4), 0.6667);
+  const lo = itAi(2);
+  const hi = itAi(5);
+  const rnd = Math.random;
+  let draws = 0;
+  Math.random = () => (draws++, rnd());
+  try {
+    assert.ok(near(lo.ai.planLuck, 2 / 3) && hi.ai.planLuck === 0);
+    // 빈틈 판단 흐림: 높음은 굴리지 않고 그대로 · 낮음은 beat 마다 한 번 굴려 붙잡음 (같은 장면에서도 판마다 다름)
+    assert.equal(hi.ai.planGamble(0.7), 0.7);
+    assert.equal(draws, 0, '높음 — 굴림 없음');
+    const a = lo.ai.planGamble(0.7);
+    const b = lo.ai.planGamble(0.7);
+    assert.equal(draws, 1, 'beat 안에서는 한 번만');
+    assert.equal(a, b);
+    assert.ok(Math.abs(a - 0.7) <= AI_PLAN.luckAmp * lo.ai.planLuck + 1e-12, '흐림 폭 = luckAmp × 굴림 몫');
+    // 무모: 위협 하나에 한 번 굴림 · 높음은 늘 접음(굴림 없음)
+    draws = 0;
+    assert.equal(hi.ai.planReck({ id: 7 }), false);
+    assert.equal(draws, 0);
+    const r1 = lo.ai.planReck({ id: 7 });
+    assert.equal(lo.ai.planReck({ id: 7 }), r1, '같은 위협은 같은 답');
+    assert.equal(draws, 1);
+  } finally {
+    Math.random = rnd;
+  }
+  // 무모: 상대 칼끝 밖 여유를 덜 셈 (굴림 몫만큼) — 참을성 · 박자(기질)는 그대로
+  const h0 = lo.ai.holdDist();
+  const keepLuck = lo.ai.planLuck;
+  lo.ai.planLuck = 0;
+  const h1 = lo.ai.holdDist();
+  lo.ai.planLuck = keepLuck;
+  assert.ok(h0 < h1, `여유 ${h0.toFixed(3)} < ${h1.toFixed(3)}`);
+  // 기력 (① 무기 이해 — 기력): 무계획은 쉼 문턱이 바닥 쪽 · 높음 + 비기 남음은 비기 몫(35)을 남겨 둠
+  lo.ai.d = 1.0; // 상대 칼끝 안 — 안전하지 않음
+  lo.ai.foeClosing = 0;
+  const r0 = lo.ai.restAt;
+  const rl = lo.ai.planRestAt();
+  assert.ok(rl <= r0 && (r0 > CONFIG.STAMINA.aiAggressiveRestAt ? rl < r0 : true), `낮음 쉼 문턱 ${rl} ≤ ${r0}`);
+  hi.ai.d = 1.0;
+  hi.ai.foeClosing = 0;
+  assert.ok(hi.ai.riso && hi.ai.planRestAt() >= CONFIG.STAMINA.secretCost, '높음 · 비기 남음 → 비기 몫을 남김');
+  lo.free();
+  hi.free();
+});
+
+test('파고들기 (사장님 11/14 — 공통 틀): 내 칼이 상대 칼보다 뚜렷이 짧을 때만 · 모든 유파 · 스위치 끔 = 옛 판', () => {
+  const digOf = (w, foe = 'longsword') => {
+    const G = newRound({ seed: 1, weapon: foe, weapon2: w, AI2Class: AI, persona: { proficiency: 2 }, persona2: { proficiency: 2 } });
+    const r = { me: G.ai.digNow(), foe: G.ai2.digNow(), k: G.ai.digK };
+    G.world.free();
+    return r;
+  };
+  for (const w of ['morgenstern', 'frozen_tuna', 'rubber_chicken', 'uchigatana']) {
+    const r = digOf(w);
+    assert.equal(r.me, true, `${w} AI 대 롱소드`);
+    assert.equal(r.foe, false, `롱소드 AI 대 ${w} — 긴 쪽은 아님`);
+  }
+  for (const w of ['longsword', 'rapier', 'monohoshizao', 'zweihander']) assert.equal(digOf(w).me, false, `${w} — 뚜렷이 짧지 않음 (롱소드끼리 거울 판은 그대로)`);
+  assert.ok(near(digOf('morgenstern').k, 1 / 3), '띠 기울기 (낮음 ⅓ — 유파와 상관없이)');
+  // 스위치 끔 · 문턱이 닿지 않으면 옛 판과 바이트 같음 · 켬은 다름 (일본 우치가타나 숙련 5 — 플랜 없는 유파)
+  const off = withPlan({ on: 0 }, () => trace({ weapon2: 'uchigatana', prof: 5, secs: 12 }));
+  const never = withPlan({ digShort: 99 }, () => trace({ weapon2: 'uchigatana', prof: 5, secs: 12 }));
+  const on = trace({ weapon2: 'uchigatana', prof: 5, secs: 12 });
+  assert.equal(never.text, off.text, '파고들기가 안 걸리면 옛 판');
+  assert.notEqual(on.text, off.text, '파고들기 판은 달라짐');
+});
+
+test('파고들기 판: 모르겐슈테른 AI 대 롱소드 AI — 헛친 틈 · 늘린 시간 한도 · 받으며 들어감이 쓰임', () => {
+  const G = newRound({ seed: 1, walls: true, weapon: 'longsword', weapon2: 'morgenstern', AI2Class: AI, difficulty: 'normal', persona: { proficiency: 5 }, persona2: { proficiency: 5 } });
+  while (G.t < 20 && G.player.alive && G.enemy.alive) G.step();
+  const D = G.ai.stats.dig;
+  G.world.free();
+  assert.ok(D, '파고들기 재기 칸');
+  assert.ok(D.recover + D.keep + D.long > 0, JSON.stringify(D));
 });

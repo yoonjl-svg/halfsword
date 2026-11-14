@@ -7,6 +7,10 @@
 //            1:1 한 판 + 넷이 싸우는 판(2:2 — jelly_harness newMatch) 한 판 · 물리 한 스텝 · 한 화면(1/60 s) 전체 시간과 견준 몫. 이 기계의 Node 값(폰은 따로)
 //  node tools/sim/ai_plan_measure.mjs fight [--profs=2,5] [--seeds=1-6] [--dur=30]
 //  node tools/sim/ai_plan_measure.mjs perf [--dur=20]
+//   dig    — 무 · 낮음 띠 '행운에 기대는 전투'(이탈리아 플랜) · 파고들기(공통 틀 — 짧은 칼) 재기 (11/14): 그 무기 AI 숙련 2 대 롱소드 AI 숙련 2 · 씨앗 1 ~ 6 · 30 s ·
+//            홀수 씨앗 = 그 무기가 E 자리 (tools/sim/morg_weight.mjs fight 와 같은 판) — 새 판 · 옛 판(`AI_PLAN.on` 0) 한 줄씩:
+//            공격 시작 · 칼 냄(맞힘 · 막힘 · 헛침) · 칼 내기 전 접음 · 그 가운데 시간 넘음 · 다가가다(준비 · 다가감) 받은 상처 · 준 / 받은 상처 · 이김 · 짐 · 비김 · 파고들기 · 굴림 행동
+//  node tools/sim/ai_plan_measure.mjs dig [--weapons=rapier,frozen_tuna,morgenstern,rubber_chicken] [--seeds=1-6] [--prof=2]
 // ─────────────────────────────────────────────────────────────
 import { performance } from 'node:perf_hooks';
 import { newRound, DT, AI, CONFIG } from './harness_m.mjs';
@@ -100,7 +104,64 @@ function perfOne({ dur = 20, count = 2 } = {}) {
   return r;
 }
 
-if (mode === 'fight') {
+/** 파고들기 · 굴림 재기 — 한 무기 × 씨앗들 (subject = 그 무기 AI) */
+export function digRun(weapon, { seeds = [1, 2, 3, 4, 5, 6], prof = 2, dur = 30, foe = 'longsword' } = {}) {
+  const S = { n: 0, atk: 0, strikes: 0, out: { hit: 0, bound: 0, miss: 0 }, fold: 0, foldTime: 0, hurtIn: 0, dealt: 0, recv: 0, W: 0, L: 0, dig: { recover: 0, keep: 0, restart: 0, long: 0 }, luck: { blurFire: 0, blurMiss: 0, reckSkip: 0, restLow: 0 } };
+  for (const seed of seeds) {
+    const subjE = seed % 2 === 1;
+    const G = newRound({ seed, walls: true, weapon: subjE ? foe : weapon, weapon2: subjE ? weapon : foe, AI2Class: AI, difficulty: 'normal', persona: { proficiency: prof }, persona2: { proficiency: prof } });
+    const ai = subjE ? G.ai : G.ai2;
+    const f = subjE ? G.enemy : G.player;
+    const o = subjE ? G.player : G.enemy;
+    const sa = ai.startAttack, ss = ai.startStrike, af = ai.afterStrike, ab = ai.abortAttack;
+    ai.startAttack = function (...a) { const r = sa.apply(this, a); if (r && this.mode === 'attack') S.atk++; return r; };
+    ai.startStrike = function (...a) { S.strikes++; return ss.apply(this, a); };
+    ai.afterStrike = function (...a) { S.out[this.hitLanded ? 'hit' : this.bound ? 'bound' : 'miss']++; return af.apply(this, a); };
+    ai.abortAttack = function (...a) { if (this.phase === 'approach' && this.attackT > 1.3) S.foldTime++; return ab.apply(this, a); };
+    G.onWound = (att, vic, r) => {
+      if (vic === f) { S.recv++; if (ai.mode === 'attack' && (ai.phase === 'windup' || ai.phase === 'approach')) S.hurtIn++; }
+      if (vic === o) S.dealt++;
+    };
+    let pm = ai.mode, pp = ai.phase;
+    for (let i = 0; i < Math.round(dur / DT); i++) {
+      G.step();
+      if (pm === 'attack' && ai.mode !== 'attack' && (pp === 'windup' || pp === 'approach')) S.fold++;
+      pm = ai.mode;
+      pp = ai.phase;
+      if (!f.alive || !o.alive) break;
+    }
+    S.n++;
+    if (f.alive && !o.alive) S.W++;
+    else if (!f.alive && o.alive) S.L++;
+    for (const k in S.dig) S.dig[k] += ai.stats.dig?.[k] ?? 0;
+    for (const k in S.luck) S.luck[k] += ai.stats.plan?.[k] ?? 0;
+    G.world.free();
+  }
+  return S;
+}
+
+function digTable(rows) {
+  const L = [`| 무기 AI (숙련 ${rows[0]?.[3] ?? 2}) 대 롱소드 AI | 판 | 공격 시작 / 판 | 칼 냄 / 판 (맞힘 · 막힘 · 헛침 — 6 판 합) | 칼 내기 전 접음 / 판 (그 가운데 시간 넘음) | 다가가다 받은 상처 / 판 | 준 · 받은 상처 / 판 | 이김 · 짐 · 비김 | 파고들기 6 판 합: 헛친 틈 · 받으며 들어감 · 다시 들어감 · 늘린 한도 | 굴림 6 판 합: 흐림이 낸 · 흐림이 놓친 · 위협 넘김 · 바닥 가까이 씀 |`, '|---|---|---|---|---|---|---|---|---|---|'];
+  for (const [w, tag, S] of rows) {
+    const n = S.n;
+    const p = (x) => (x / n).toFixed(1);
+    L.push(`| ${w} | ${tag} | ${p(S.atk)} | ${p(S.strikes)} (${S.out.hit} · ${S.out.bound} · ${S.out.miss}) | ${p(S.fold)} (${p(S.foldTime)}) | ${p(S.hurtIn)} | ${p(S.dealt)} · ${p(S.recv)} | ${S.W} · ${S.L} · ${n - S.W - S.L} | ${S.dig.recover} · ${S.dig.keep} · ${S.dig.restart} · ${S.dig.long} | ${S.luck.blurFire} · ${S.luck.blurMiss} · ${S.luck.reckSkip} · ${S.luck.restLow} |`);
+  }
+  return L.join('\n');
+}
+
+if (mode === 'dig') {
+  const ws = arg('weapons', 'rapier,frozen_tuna,morgenstern,rubber_chicken').split(',');
+  const seeds = range(arg('seeds', '1-6'));
+  const prof = +arg('prof', 2);
+  const rows = [];
+  for (const w of ws) for (const [tag, over] of [['새 판', { on: 1 }], ...(w === 'rapier' ? [['1 단계 판 (굴림 몫 0)', { on: 1, luck: [0, 0, 0, 0] }]] : []), ['옛 판', { on: 0 }]]) {
+    const S = withPlan(over, () => digRun(w, { seeds, prof }));
+    rows.push([w, tag, S, prof]);
+    console.error(w, tag, JSON.stringify(S));
+  }
+  console.log(digTable(rows));
+} else if (mode === 'fight') {
   const profs = arg('profs', '2,5').split(',').map(Number);
   const seeds = range(arg('seeds', '1-6'));
   const dur = +arg('dur', 30);

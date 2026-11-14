@@ -26,6 +26,11 @@ export function tiltOf(p) {
   return AI_PLAN.tilt[bandOf(p)] ?? 0;
 }
 
+/** 띠의 굴림 몫 0 ~ 1 (무 1 · 낮음 ⅔ · 가운데 ⅓ · 높음 0 — 사장님 11/14 '더 전략없이 행운에 기대는 전투': 무모 · 무계획 — 성급함 아님) */
+export function luckOf(p) {
+  return AI_PLAN.luck[bandOf(p)] ?? 0;
+}
+
 /** ① 무기 이해 — 거리 오차 폭 m (0 = 굴리지 않음): 스위치 · 그 유파(1 단계 — 이탈리아) · 숙련도 (높음부터 0) */
 export function distErrWidth(p, tradition) {
   if (!AI_PLAN.on || !AI_PLAN.errSchools.includes(tradition)) return 0;
@@ -41,6 +46,7 @@ export function axesOf(p, tradition) {
   return {
     band,
     tilt: AI_PLAN.tilt[band] ?? 0,
+    luck: AI_PLAN.luck[band] ?? 0,
     weapon: { err: distErrWidth(p, tradition) },
     link: band >= 1,
     lure: (p ?? 0) >= 4,
@@ -102,5 +108,10 @@ export function seenStep(closing) {
 
 /** 국면 시간 재기 칸 (AI 하나에 한 번 만듦) */
 export function planStats() {
-  return { t: { tired: 0, behind: 0, finish: 0, ahead: 0, commit: 0, contest: 0, probe: 0 }, judges: 0, events: 0, retreat: 0, stop: 0, invite: 0, engage: 0, engageTouch: 0, link: 0, stepin: 0 };
+  return { t: { tired: 0, behind: 0, finish: 0, ahead: 0, commit: 0, contest: 0, probe: 0 }, judges: 0, events: 0, retreat: 0, stop: 0, invite: 0, engage: 0, engageTouch: 0, link: 0, stepin: 0, blurFire: 0, blurMiss: 0, reckSkip: 0, restLow: 0 };
+}
+
+/** 파고들기 재기 칸 (파고들기가 처음 걸린 AI 에 한 번 만듦) — recover: 헛친 틈 공격 · keep: 위협을 칼로 받으며 계속 · restart: 받은 뒤 곧장 다시 들어감 · long: 늘린 시간 한도 덕에 접지 않은 다가감 */
+export function digStats() {
+  return { recover: 0, keep: 0, restart: 0, long: 0 };
 }
