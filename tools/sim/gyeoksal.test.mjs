@@ -12,15 +12,19 @@ const { AI } = await import('../../src/ai.js');
 const { FINISH } = await import('../../src/finish.js');
 const D = await import('../../src/skill_tree_data.js');
 
-test('사람 길만 격살 — AI 는 옛 막기 연환 그대로 · 비기 닫힘 (aiOpenSchools)', () => {
+// 11/14 옛 장면 시험 — 그때 판으로 묶음(aiOpenSchools 에 동방 없음 · 기준은 안 고침): 사장님 11/14 '동방도 격살 쓰게 해'로 AI 동방도 격살(aiSecret — tools/sim/cn_ai_gyeoksal.test.mjs)
+test('사람 길만 격살 — AI 는 옛 막기 연환 그대로 · 비기 닫힘 (aiOpenSchools · 옛 판 — 동방 없음)', () => {
   const T = TRADITIONS.chinese;
+  const open0 = SECRET.aiOpenSchools;
+  SECRET.aiOpenSchools = open0.filter((s) => s !== 'chinese');
+  try {
   assert.equal(T.playerSecret.name, 'gyeoksal');
-  assert.equal(T.secret.name, 'lianhuanParry'); // AI 길 (ai.js 는 secret 만 본다)
+  assert.equal(T.secret.name, 'lianhuanParry'); // 옛 AI 길 (전 판 — ai.js 는 aiSecret ?? secret)
   assert.ok(SECRET.openSchools.includes('chinese'));
   assert.ok(!SECRET.aiOpenSchools.includes('chinese'));
   const G = newRound({ weapon: 'qinggang', weapon2: 'qinggang', seed: 1 });
   const ai = new AI(G.player, G.enemy, 'expert', { proficiency: 5 });
-  assert.equal(ai.secret, null); // AI 동방은 숙련도 5 라도 비기 없음
+  assert.equal(ai.secret, null); // AI 동방은 숙련도 5 라도 비기 없음 (옛 판)
   assert.equal(new PlayerSecretWatch(G.player, G.enemy).S.name, 'gyeoksal');
   assert.equal(new PlayerSecretWatch(G.player, G.enemy, { locked: true }).S, null); // 비기 칸이 없으면 창 없음
   const keep = SECRET.gyeoksal.on;
@@ -30,6 +34,7 @@ test('사람 길만 격살 — AI 는 옛 막기 연환 그대로 · 비기 닫�
   } finally {
     SECRET.gyeoksal.on = keep;
   }
+  } finally { SECRET.aiOpenSchools = open0; }
 });
 
 test('자세 → 겨눌 곳: 거정(위 가운데 · 위 오른) 머리 · 어거(찌르기) 팔 · 요략(아래 둘) 다리 · 봉두(위 왼) 허파 — 한 칼씩', () => {

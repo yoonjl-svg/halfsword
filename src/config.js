@@ -1108,7 +1108,7 @@ export const SECRET = {
   openSchools: ['japanese', 'german', 'italian', 'iberian', 'chinese'], // 10/22 사람 먼저 — 독일 죽음의 일격 · 이탈리아 거침없이 나아가 찌르기 · 이베리아 휘감아 돌기 · 동방 막아 죽이기(격살 — 아래 gyeoksal). AI 는 aiOpenSchools 로 따로(10/24 이베리아 엶)
   // AI 쪽 열린 비기 (10/22 사장님 '사람 먼저' — 독일 죽음의 일격 · 이탈리아 리솔루토를 사람에게 먼저 연다): ai.js 는 이 목록만 본다.
   //  openSchools 는 사람(스킬트리 비기 칸 · PlayerSecretWatch). `?secretOpen=` 은 둘 다 고친다 (main.js)
-  aiOpenSchools: ['japanese', 'iberian', 'german'], // 10/24 02:5x 사장님 '싱지르 ai에게도 열어' — 이베리아 추가 (ai.js spinTick · 숙련도 AI_PROFICIENCY.secretAt 이상만 — 롤랑 · 베르나르도 6) · 10/24 12:0x 사장님 'ai도 비기 쓰게 해' — 독일 모르트슐라크 추가 (ai.js mordTick · TRADITIONS.german.aiSecret · 숙련도 5 이상 — 아르토리아 · 광기의 아르토리아)
+  aiOpenSchools: ['japanese', 'iberian', 'german', 'chinese'], // 11/14 사장님 '동방도 격살 쓰게 해' — 동방 추가 (TRADITIONS.chinese.aiSecret = 격살 · ai.js gyeoksalAi · 사람과 같은 조건 · 같은 값 · 숙련도 AI_PROFICIENCY.secretAt 이상 — 광기의 병마용 5) · 10/24 02:5x 사장님 '싱지르 ai에게도 열어' — 이베리아 추가 (ai.js spinTick · 숙련도 AI_PROFICIENCY.secretAt 이상만 — 롤랑 · 베르나르도 6) · 10/24 12:0x 사장님 'ai도 비기 쓰게 해' — 독일 모르트슐라크 추가 (ai.js mordTick · TRADITIONS.german.aiSecret · 숙련도 5 이상 — 아르토리아 · 광기의 아르토리아)
   // ── 독일 죽음의 일격 (모르트슐라크 · Mordschlag — 10/22 저녁 사장님 '독일은 죽음의 일격으로 하자. 막기로 버틸 때나 서로 몸이 맞붙어 클린치 상태일 때 밀기가 n초 이상 작동하면 발동' ·
   //  n '1.5로 해' · 사람 먼저 — src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md · 확인표 2183~2189). 10/24 AI 도 같은 칸을 본다(aiOpenSchools 'german' — ai.js mordTick · 확인표 2400~2405)
   deMord: 1, // 1 = 사람 독일 비기 = 죽음의 일격 (사장님 결정 · 10/24 AI 도) · 0 = 옛 판(deSecret — 받아 베기 · 감아 들기 — 사람 · AI). `?deMord=0`
@@ -1707,6 +1707,9 @@ export const SECRET = {
     armPath: 'across', // 어거 → 팔 길: 'across' = 가로 호(오른 → 왼) · 'down' = 위에서 아래로 내려 깎음(削) `?gyeoksalArm=down`
     power: 'hit', // 사장님 10/22 23:0x 확정 — 결정타 판정 배율(힘은 빠르기에서 · 11/11 부터 격살만의 배율 SECRET.gyeoksalHitMul 1 — 전 다른 비기와 같은 hitMul 1.3). 판정 에너지 배율: 'finish' = 마무리 찍기와 같은 FINISH.power(2.5 — 결정타 hitMul 1.3 대신, 겹치지 않음) · 'hit' = 다른 비기와 같은 결정타 hitMul(판정 에너지 · secretHit) · 수를 적으면 그 수(시험 `?gyeoksalPow=`) [사장님 확인 전 — 확인표 2199]
   },
+  // AI 격살 쓸 때 (11/14 사장님 '동방도 격살 쓰게 해' — ai.js gkWant · 판당 1 번이라 아껴 둠): 상대에 쌓인 사냥 겹이 stacks 이상이거나 판이 late 초를 넘으면 막을 때 나서며 받음(격살 시도) ·
+  //  그 전엔 보통 막기(살짝 물러섬 그대로). 조건 · 칼 · 값은 사람 격살 그대로 (gyeoksal.press · 스틱 앞 · 상대 칼 들어옴 · 받은 자세 · 갈라지면 저절로). stacks 3 = 재기 사냥 봇의 문턱 · late = 시간 사다리 10.0 [사장님 확인 전 — 확인표]
+  gyeoksalAi: { stacks: 3, late: realS(10) },
   gyeoksalHitMul: 1, // 격살만의 비기 판정 배율 (판정 에너지 × — gyeoksal.power 'hit' 일 때 · skill.js gyeoksalHitMul): 사장님 11/11 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' — 1 · 다른 비기(싱지르 · 고노센 · 죽음의 일격)는 SECRET.hitMul 1.3 그대로 · 사람만(AI 는 격살을 쓰지 않음 — aiOpenSchools) · null = SECRET.hitMul 따름 · `?gyeoksalHitMul=1.3` = 전 판 (기록 docs/strike/riso_reach_2026-11-11.md) [사장님 11/11 결정 — 확인표 3511]
   // 비기 판정 배율 1.3 은 고노센에만 (11/11 사장님 '비기 파괴력 배율 1.3배는 고노센에만 남긴다.(이베리아 비기에 빼란 뜻) 어차피 격살도 빠졌으니.' · '죽음의 일격도 1.0으로 해.' — 확인표 3523 · 3524):
   //  비기마다 열쇠 (리솔루토 risolutoHitMul · 격살 gyeoksalHitMul 과 같은 꼴 — null 이면 비기 공통 hitMul). 고노센 = hitMul 1.3 그대로
@@ -2117,7 +2120,7 @@ export const UNIQUE_ASSIST = {
   //   상한 max · 빠지지 않음(판 끝까지 — 판마다 새 몸). 겹은 맞은 몸(fighter.cnHunt)에. 출혈 × k(yaojiBleed — 몸통 · C4)는 그대로 몸통만. torso 1 = 전 판(몸통 · 출혈 × k 가 붙는 맞음만 — 11/14 첫 판)
   //  겹마다: 맞은 몸 자연 회복 × (1 − regen × n) (stamina.js recoverRate) · 그 몸을 겨눈 동방 격살 칼끝 빠르기 몫 × (1 + share × n) (skill.js gyeoksalReq — 0.7 × 1.4 = 0.98 at 5)
   //  격살 판당 1 번은 공용 표 secretUses.chinese (사람 · AI 같음 — 위 칸) · 쌓는 몸: 사람 = 스킬트리 C12(skillKit.cnHunt) · AI · 시뮬 몸 = ai 스위치(기본 0 — 견줌만). on 0 = 겹 전 판 `?cnHunt=0`
-  cnHunt: { on: 1, max: 5, regen: 0.08, share: 0.08, torso: 0, ai: 0 }, // [사장님 11/14 결정 — regen · share 0.08 · 빠짐 없음 · 이름 · 자리 · 몸 어디든(torso 0) · max 5 · ai 0 — 확인표 3830 ~ 3836 · 3846 ~]
+  cnHunt: { on: 1, max: 5, regen: 0.08, share: 0.08, torso: 0, ai: 1 }, // 11/14 ai 0 → 1 (사장님 '동방도 격살 쓰게 해' — 사람과 똑같이: AI 동방도 사냥 겹을 쌓음 · 전 판 `?cnHuntAi=0`) · [사장님 11/14 결정 — regen · share 0.08 · 빠짐 없음 · 이름 · 자리 · 몸 어디든(torso 0) · max 5 · ai 0 — 확인표 3830 ~ 3836 · 3846 ~]
   // 손목 치기(일본 강화동작) 칼 떨구기 — 심화 칸 J8 (사장님 10/24 11:5x 'J8은 아예 칼 떨어트리는 건 줄 알았어 너무 강하면 50%로' · 12:0x '0.6초 동안 한 손을 놓음 이 효과는 빼' ·
   //   12:3x '손목 치기 걱정 1: 100% 떨어지게 하면? or 판정 완화' → 감독 추천 판정 완화 · 50 % 그대로 — combat.js koteCheck · koteSword · koteRoll):
   //  손목 치기가 닿으면 친 쪽 전용 난수로 굴려 p 로 맞은 쪽이 칼을 떨어뜨린다(fighter.dropSword — 칼 팔을 크게 다쳐 놓칠 때와 같은 길 · 줍기 없음: 부활하는 인물만 일어설 때 칼이 돌아온다 — revive.js).
