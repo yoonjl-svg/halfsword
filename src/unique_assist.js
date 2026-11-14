@@ -27,7 +27,7 @@ import { classifyStroke } from './attack_stroke.js';
 //  수는 config.js UNIQUE_ASSIST (확인표 1040~1047 · 10/14 강화 수는 owner_defaults_table.md 끝, 사장님 확인 전). 끄기 `?uniqueAssist=0`.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { UNIQUE_ASSIST as UA, SKILL, SECRET, STAMINA, IB_FLOW, IB_LINK, THRUST, realRate, realS, PHYSICS } from './config.js';
+import { UNIQUE_ASSIST as UA, SKILL, SECRET, STAMINA, IB_FLOW, IB_LINK, THRUST, realRate, realS, PHYSICS, CLOSE } from './config.js';
 const SKILL_DT = PHYSICS.timestep; // 물리 한 스텝 (게임 초 — 이어 돌리기 손가락 첫머리 나눔)
 import { G, TECH, TECH_BY_NAME } from './ai_techniques.js';
 import { TRADITIONS, IBERIAN_SPIN_DEF } from './schools.js';
@@ -1114,13 +1114,14 @@ export class PlayerUniqueAssist {
     const foe = f.foe;
     const touch = this.bladeTouch();
     const d = f.foeDistance();
-    const lo = UA.dupBandMin ?? SECRET.mordCloseN ?? 0;
+    const lo = UA.dupBandMin ?? (CLOSE.nearHilt && f.humanInput && CLOSE.startD > 0 ? CLOSE.startD : SECRET.mordCloseN ?? 0); // 11/14 1 m 규칙(1 m 안은 손잡이 찍기만)이 켜진 사람 몸은 띠 아래 끝 1.0 m — 그 안에선 긴 칼이 안 나가니
     const hi = mode === 'clash2' ? (UA.dupClashMax > 0 ? UA.dupClashMax : Infinity) : UA.dupBandMax;
     const band = d > lo && d <= hi;
+    const bandC = mode === 'both' ? d > lo && d <= (UA.dupClashMax > 0 ? UA.dupClashMax : Infinity) : band; // 'both'(11/14 견줌): clash2 몫은 제 띠
     const parry = !UA.dupAutoParry && this.blocked;
     const dead = !UA.on || this.cooling(e) || iaiBusy(f) || !!f.skill.sec || !f.alive || f.state !== 'stand' || !foe || foe.state !== 'stand' || !f.armed || !foe.armed || f.weaponBroken || f.stamina.exhausted || parry;
     let ready = false;
-    if (mode === 'bind') {
+    if (mode === 'bind' || mode === 'both') {
       const live = touch && band && !dead;
       if (live) {
         if (!(A.st > 0)) A.since = this.t;
@@ -1135,18 +1136,26 @@ export class PlayerUniqueAssist {
       // 손가락이 휘두르는 동안(긋는 중 — 휘두르기 문턱 SKILL.swingSpeed 위)은 냄만 미룸(쌓임은 쥠): 맞댄 칼을 떼고 다른 데를 치려는 손을 겹치기가 가로채지 않게 · 맞댄 채 멈추거나 느리게 밀면 나감
       ready = A.st >= UA.dupStackS && touch && band && !f.skill.inputSwinging;
       this.dupCue = UA.dupAutoHint && !dead && A.st >= UA.dupStackS * 0.5 ? { name: e.U.name, nameKo: e.U.nameKo, sub: '맞물림' } : null;
-    } else if (mode === 'clash2') {
+    }
+    if (mode === 'clash2' || mode === 'both') {
       if (touch && !A.on) {
         A.on = true;
         if (A.tEnd == null || this.t - A.tEnd >= UA.dupClashGap) {
           A.prev = A.t0;
           A.t0 = this.t;
-          A.pair = A.prev != null && this.t - A.prev <= UA.dupClashT && band;
+          A.pair = A.prev != null && this.t - A.prev <= UA.dupClashT && bandC;
         }
       } else if (!touch && A.on) (A.on = false), (A.tEnd = this.t); // 짝은 쥠 — dupClashGap 안에 다시 닿으면 같은 덩이(냄은 닿아 있을 때만)
       if (dead) (A.pair = false), (A.prev = A.t0 = null);
-      ready = A.pair && touch && band;
-      this.dupCue = null;
+      const readyC = A.pair && touch && bandC;
+      if (mode === 'both') {
+        if (readyC && !ready) this.dupWhy = 'clash2';
+        else if (ready) this.dupWhy = 'bind';
+        ready = ready || readyC;
+      } else {
+        ready = readyC;
+        this.dupCue = null;
+      }
     }
     if (!ready || dead) return false;
     if (this.busy(UA.dupAutoParry ? 'any' : false) || f.iai || f.iaiReq || !(specialShare(e.name) > 0) || !(UA.enhance > 0) || !foe.sword || !foe.bodies?.head) return false;

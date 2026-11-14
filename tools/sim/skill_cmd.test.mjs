@@ -2,7 +2,7 @@
 //  10/25 17:3x '스킬창에서 모든 커맨드 설명은 도식으로 단순화 해. 이런 구조로 써. - 커맨드: 우측 이동(→)과 동시에 베기' · ''커맨드'는 '입력'으로 바꾸자' ·
 //  17:4x '베기는 사선 베기 수직 베기 수평 베기 이렇게 구분해. 찌르기는 그냥 찌르기' · 17:5x ''아무 베기'가 찌르기까지 포함하는 아무 공격인 것이면 베기 대신 공격이라고 써' ·
 //  18:3x '그럼 입력 설명에서는 베기와 찌르기라는 말 대신 긋기와 탭이라고 하자' — src/skill_tree_data.js NODE_CMD · 화면 src/skill_tree.js 이름표 '입력:'):
-//  ① 정해진 입력으로 내는 칸(고유 공격 · 비기 · 막아찌르기 · 박차기 걸음 · 간격 잡기)만 cmd 가 있고 저절로 붙는 칸(패시브 · 심화 · 편지 · 걷기 맛 · 막기 자리 · 피해 감소 · 흘림)은 없다
+//  ① 정해진 입력으로 내는 칸(고유 공격 · 비기 · 막아찌르기 · 박차기 걸음 · 파고들기 — 11/14 전 간격 잡기)만 cmd 가 있고 저절로 붙는 칸(패시브 · 심화 · 편지 · 걷기 맛 · 막기 자리 · 피해 감소 · 흘림)은 없다
 //  ② 글 꼴: 33 자 안(카드 맨 아래 한 줄 — 680 × 360 에서도 '입력:' 과 한 줄) · 숫자 · 원어 글자 없음 · 쓰는 기호는 화살표 · '/' · 괄호 · 쉼표 · '!' 만 ·
 //     손이 하는 낱말만(앞으로 이동(↑) · 뒤로 이동(↓) · 좌우 이동(←/→) · 사선/수직/수평 긋기(화살표) · 긋기 · 탭 · 공격 · 막기 · 느낌표(!)) — 칼 동작 말 '베기' · '찌르기' 는 안 씀 ·
 //     화살표 꼴과 긋기 꼴이 맞음
@@ -46,7 +46,7 @@ const OWNER = {
   G10: '상대와 몸이 붙은 채 1.5초 이상 밀치면(↑) 비기 활성화', // 10/25 23:1x (감독 전달) — 글 속 시간 = SECRET.mordPress · 11/11 사장님 '1.5초로 해.' 로 숫자만 (전 '2초')
   // 10/29 14:1x · 14:2x 사장님 글 (감독 전달) — 특수 공격 넷: 풍차 베기(길게 누름 — 11/11 비기가 되어 위 B4) · 탭으로 내는 셋
   C6: '뒤로 움직이며(↓) 탭',
-  G7: '가까이서 칼을 맞댄 채 버티면 자동 발동', // 10/31 18:xx 사장님 '초안 ok.' — 겹치기 자동 (UNIQUE_ASSIST.dupAuto 'bind') · 전 10/29 14:1x 글 '긋기가 상대 칼에 닿은 채 탭' = D.G7_CMD_TAP (dupAuto 0)
+  G7: '가까이서 칼을 맞대거나 연달아 부딪히면 자동 발동', // 11/14 사장님 결정 '겹치기 글. 저절로 나간다 말고 자동 발동' — 겹치기 자동 ⓒ 'both' · 전 10/31 18:xx '가까이서 칼을 맞댄 채 버티면 자동 발동'('bind' 판 — D.G7_CMD_AUTO.bind) · 그 전 10/29 '긋기가 상대 칼에 닿은 채 탭' = D.G7_CMD_TAP (dupAuto 0)
 };
 
 // ── 도식 낱말 ──
@@ -74,7 +74,7 @@ function techShape(name) {
 const DIR_ARROW = { up: '↑', down: '↓' }; // 조건 방향 (unique_assist.js dirOk — 위 · 아래)
 const typed = (arrows) => `${CUT_OF_ARROW[arrows[0]]} 긋기(${[...arrows].sort((a, b) => ARROW_ORDER.indexOf(a) - ARROW_ORDER.indexOf(b)).join('/')})`;
 
-test('입력 줄이 있는 칸 = 정해진 입력으로 내는 칸: 고유 공격 · 비기는 모두 · 걸음은 박차기 · 간격 잡기만 · 막기는 막아찌르기만 · 패시브 · 심화 · 편지는 없음', () => {
+test('입력 줄이 있는 칸 = 정해진 입력으로 내는 칸: 고유 공격 · 비기는 모두 · 걸음은 박차기 · 파고들기만 · 막기는 막아찌르기만 · 패시브 · 심화 · 편지는 없음', () => {
   const have = all().filter(({ n }) => n.cmd !== undefined).map(({ n }) => n.id).sort();
   assert.deepEqual(have, [...WITH_CMD].sort());
   for (const { n } of all()) {
@@ -180,7 +180,7 @@ test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · �
       assert.ok(src('main.js').includes('player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open, !!playerSecret?.holdOwns());'), 'main.js — 누름 상태 · 비기 창 · 알티바슈 포르트 무장 창(11/11)');
       continue;
     }
-    if (e.tapKey === 'dup' && UA.dupAuto === 'bind') {
+    if (e.tapKey === 'dup' && UA.dupAuto === 'both') { // 11/14 사장님 'c로 해' — 기본 'both'(맞댐 또는 두 번 부딪힘) · 11/14 글 '… 맞대거나 연달아 부딪히면 자동 발동'
       // 겹치기 자동 (사장님 10/31 18:xx — UNIQUE_ASSIST.dupAuto 'bind' 기본): 탭 조건은 안 봄(TAP_TRIG.dup 이 자동 판이면 null) · 저절로 냄(dupAutoTick) → 받는 입력 없음 · C9 꼴 '… 자동 발동'
       assert.ok(!e.on.length && !e.stick, `${x.id} — 긋기 조건 · 걸음 명령 없음`);
       assert.ok(c === OWNER[x.id] && c.endsWith('자동 발동') && !/탭|긋기|공격/.test(c), `${id} — 저절로 냄 · 사장님 글`);
@@ -259,14 +259,15 @@ test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · �
   assert.equal(cmdOf('iberian', 'B5'), '긋기를 쉬지 않고 이어 가기');
 });
 
-test('걸음 · 막기 칸 글 = 코드 스위치: 뒤 박차기(독일 보법) · 옆 박차기(옆 누르면 늘) · 간격 잡기(상대 헛침 뒤 앞 걸음) · 막아찌르기(막기 새 누름)', () => {
+test('걸음 · 막기 칸 글 = 코드 스위치: 뒤 박차기(독일 보법) · 옆 박차기(옆 누르면 늘) · 파고들기(멈춘 채 앞 — 11/14 · 전 간격 잡기 상대 헛침 뒤 앞 걸음) · 막아찌르기(막기 새 누름)', () => {
   assert.ok(GAIT.stepBurst && GAIT.burstDe, '뒤 박차기 = 서 있다 뒤로 (독일만)');
   assert.equal(cmdOf('german', 'G1'), '멈춘 상태에서 뒤로 이동(↓)');
   assert.ok(GAIT.burstWalkSide, '옆 박차기 = 옆 누르면 늘 (서 있든 걷든 · 어느 쪽이든)');
   assert.ok(D.nodeOf('iberian', 'B2').f.includes('burstSide'));
   assert.equal(cmdOf('iberian', 'B2'), '좌우 이동(←/→)');
-  assert.ok(GAIT.deChase && D.nodeOf('german', 'G2').f.includes('chase'));
-  assert.equal(cmdOf('german', 'G2'), '상대가 헛치면 앞으로 이동(↑)');
+  // 11/14 사장님 '간격 잡기를 파고들기로 바꿔' (GAIT.deDig — 서서 앞으로 세게 밀면 두 걸음 · 헛침 조건 없음): G1 글의 거울 · 몫 열쇠 'chase' 그대로 · 전 글 '상대가 헛치면 앞으로 이동(↑)'(`?deDig=0` 판)
+  assert.ok(GAIT.deDig && GAIT.digSteps === 2 && D.nodeOf('german', 'G2').f.includes('chase'));
+  assert.equal(cmdOf('german', 'G2'), '멈춘 상태에서 앞으로 이동(↑)');
   assert.ok(SKILL.itOpposition && D.nodeOf('italian', 'I6').f.includes('opposition'));
   assert.equal(cmdOf('italian', 'I6'), '막기');
 });

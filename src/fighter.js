@@ -36,6 +36,8 @@ import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 세기 (11/06 
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 이베리아 이어 긋기 흐름 B5)
 import { SchoolPassive, schoolPassiveOn } from './school_passive.js'; // 유파 패시브 넷 (10/21 — 이탈리아 · 일본 · 독일 · 동방, config SCHOOL_PASSIVE)
 import { fighterWetlandMoveScale } from './wetland_ground.js';
+import { closeStartD, closeHoldT, bargeHeld, closeLog, holdPushBack } from './close_hold.js'; // 밀치기 시작 거리 1.0 m · 최소 유지 · 맞밀기 (11/14 사장님 — config CLOSE.startD · holdMin)
+import { ringCheck, ringStep } from './de_dirty.js'; // 독일 칼 씨름 1] (11/14 — config DE_DIRTY · 기본 켬)
 import { spinStep } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 — 한 바퀴 도는 대본 (10/22 · f.ibSpin 이 없으면 부르지 않는다) // 잠든 습지 진흙 웅덩이: 자발 이동만 줄인다 (다른 무대 배율 1 — 값이 비트 단위로 같다)
 
 const KNEEL_T = realS(1.1); // 넘어졌다 일어날 때 무릎 꿇은 채 기다림 (실제 초 — 표준 시간 10/25 · 곁눈 베기 꿇음은 UNIQUE_ASSIST.buckle.kneel)
@@ -1618,11 +1620,15 @@ export class Fighter {
    */
   closeStep() {
     const dt = this.lastDt;
+    if (this.holdCool > 0) this.holdCool -= dt; // 묶임 쿨타임 (11/14 — CLOSE.holdCool · 다 줄면 새 밀치기에 묶임)
     const f = this.foe;
     const g = this.gait;
     const sk = this.skill;
     const d = this.foeDistance();
     const reach = CLOSE.reach(this.armed ? this.weapon : null); // 빈손은 맨몸 (칼자루 0)
+    // 11/14 사장님 '밀치기 기준 1m로 하자' (CLOSE.startD — 사람 · AI 는 startAI 견줌만): 시작 거리 · 누르기 떨어짐 거리. 끄면(null) 둘 다 reach (같은 수)
+    const startD = closeStartD(this, reach);
+    const apartD = Math.max(reach, startD);
     const push = this.stickY > Math.abs(this.stickX); // 밂 = 상대 쪽 90° 부채꼴 (기하, 감정 배수와 무관)
     const idle = this.stickY <= 0; // 안 밂. 그 사이(대각선 앞)는 걸쇠를 그대로 둔다 (숫자 없는 히스테리시스)
     const foeUp = !!f && f.alive && f.state === 'stand' && !f.revival; // 상대 kneel·getup 은 아님
@@ -1630,9 +1636,13 @@ export class Fighter {
     if (b) {
       // 끝 = 물리 사건 (시간값 없음). 먼저: 나·상대 stand 아님, 베기·찌르기 시작
       let end = null;
+      // 묶임 (11/14 사장님 '최소 n초 무조건 유지' → '1.2초로 해' · '묶인 1.2초 동안은 아무 공격도 못하고' — CLOSE.holdMin · holdLock · close_hold.js): 누르기에 든 뒤 hold 초 동안은
+      //  몸 상태(나 · 상대 넘어짐 · 쓰러짐 · 걸음 꺼짐)만 끝냄 — 떨어짐 · 스틱 놓음 · 팔 다 펴짐 · 긋기 · 찌르기는 안 끝냄(묶인 동안 공격 입력은 안 나감 — 남은 휘두름이 있어도 그대로)
+      const held = bargeHeld(b);
+      const keepAtk = held && !!CLOSE.holdLock;
       if (this.state !== 'stand' || !foeUp || !g?.active) end = 'state';
-      else if (sk.swinging) end = 'swing';
-      else if (sk.tap) end = 'thrust';
+      else if (sk.swinging && !keepAtk) end = 'swing';
+      else if (sk.tap && !keepAtk) end = 'thrust';
       else if (b.phase === 'step' && g.req !== b.req) {
         // req 다리 착지는 touchdown 이 req 를 지운다 (gait.js touchdown). 오래돼 버려진 요청(기존 req.age > 1 s)이나
         //  다른 요청이 덮어쓴 것이면 밀치기 끝 (발 없는 팔 밀기는 없다)
@@ -1640,13 +1650,21 @@ export class Fighter {
         else b.phase = 'press';
       }
       if (!end && b.phase === 'press') {
-        if (d > reach) end = 'apart'; // 떨어짐: 팔·칼자루가 더는 닿지 않는다
+        if (d > apartD) end = 'apart'; // 떨어짐: 팔·칼자루가 더는 닿지 않는다 (11/14 사람은 시작 거리 1.0 m 밖 — 무기 reach 가 더 길면 reach)
         else if (idle) end = 'release'; // 밂이 풀림
         else if (this.armFull && b.bent && !this.closeTouch()) end = 'armFull'; // 팔이 다 펴졌는데 닿은 것 없음 (밂을 다 씀)
         // 다 펴짐은 누르기 중의 사건: 누르기 중 굽어 있던 팔이 다 펴진 때만. 처음부터 팔 길이 끝인 자세(지붕 등)는 밂을 쓴 게 아니다
         if (!this.armFull) b.bent = true;
+        if (held && end) {
+          if (!this.aiControlled) closeLog(this).trap[end] += dt; // 묶여서 안 끝남 = 입력(스틱 놓음 등)이 먹지 않은 시간 (재기만)
+          end = null;
+        }
       }
+      if (!end && keepAtk && (sk.swinging || sk.tap)) closeLog(this).trap.atk += dt;
+      if (!end && held && ringCheck(this, f)) end = 'ring'; // 칼 씨름 1] (11/14 — DE_DIRTY.ring · 기본 켬): 묶인 동안 상대가 지침이면 세게 밀쳐 묶임을 끝냄 (de_dirty.js)
+      if (end && !this.aiControlled && b.hold > 0) closeLog(this).ends[end] = (closeLog(this).ends[end] ?? 0) + 1;
       if (end) {
+        if (held && CLOSE.holdCool > 0) this.holdCool = CLOSE.holdCool; // 묶인 채 끝남(몸 상태) — 쿨타임 (11/14 '풀린 후 2초간 다시 강제로 묶이지 않아')
         this.barge = b = null;
         this.bargeEnd = end;
       }
@@ -1655,7 +1673,7 @@ export class Fighter {
       // 걸쇠: 밀치는 중엔 건드리지 않는다 (1단계 중 엄지가 가운데를 지나도 재발사 없음) — 걸쇠 판(CLOSE.latch · AI 는 latchAI)만 발사에 씀 · closeArmed 는 늘 같은 셈(AI moveFeet 이 읽는다)
       // 탈진으로 풀린 누르기(stamina.js stepClinch — '누르기 해제')는 걸쇠 판처럼 스틱을 한 번 놓아야 다시 — 걸쇠 없는 판이 같은 스텝에 곧장 다시 눌러 풀림이 사라지지 않게 (새 수 없음)
       const latch = (this.aiControlled ? CLOSE.latchAI : CLOSE.latch) || this.bargeEnd === 'exhausted';
-      if (!(d <= reach)) this.closeArmed = false;
+      if (!(d <= startD)) this.closeArmed = false;
       else if (idle) this.closeArmed = true;
       else if (push && (this.closeArmed || (!latch && !g?.req))) {
         // 밀면 걸쇠를 쓴다 (준비가 안 된 밂 — 베는 중·찌르는 중·발 묶임 등 — 이 나중에 저절로 밀치기가 되지 않게) · 걸쇠 없는 판은 준비가 되는 스텝에 곧장
@@ -1666,7 +1684,8 @@ export class Fighter {
           // 걸음 길이 L: 몸통 닿는 선(shove() 의 0.55)까지 남은 거리, 발 한 번(GAIT.maxReach). 0 이면 몸통이 이미 닿아 걸음 없음
           const L = THREE.MathUtils.clamp(d - 0.55, 0, GAIT.maxReach);
           this.shoves++;
-          b = this.barge = { phase: L > 0 ? 'step' : 'press', L, stepOk: null, d0: d, req: null, bent: false };
+          b = this.barge = { phase: L > 0 ? 'step' : 'press', L, stepOk: null, d0: d, req: null, bent: false, hold: closeHoldT(this), holdT: 0 }; // hold: 묶임(게임 초 — 누르기에 든 뒤 셈 · 0 = 없음 · 쿨타임 안이면 0)
+          if (!b.hold && this.holdCool > 0 && !this.aiControlled) closeLog(this).cooled++;
           if (L > 0) {
             // 찌르기 걸음과 같은 요청 (skill.js thrust: lunge, 0.3 s. 랴오만 pass). 거절되면 밀치기 끝
             b.stepOk = g.requestStep({ kind: this.closeStepKind, fwd: L, duration: 0.3 });
@@ -1694,6 +1713,20 @@ export class Fighter {
         this.bodies.pelvis.addForce({ x: dx * k, y: 0, z: dz * k }, true);
       }
     }
+    if (b?.phase === 'press') {
+      // 최소 유지 시계 (누르기에 든 뒤 · 이 스텝까지) · 재기 셈(사람만 — 읽기만)
+      if (b.hold > 0) {
+        if (!b.holdT && !this.aiControlled) closeLog(this).holds++;
+        if (b.holdT < b.hold && !this.aiControlled) closeLog(this).holdT += dt;
+        b.holdT += dt;
+        if (b.holdT >= b.hold && b.holdT - dt < b.hold && CLOSE.holdCool > 0) this.holdCool = CLOSE.holdCool; // 묶임이 풀림 → 쿨타임 (11/14 사장님 '2초간 다시 강제로 묶이지 않아')
+      }
+      // 밀치기가 상대 몸에 듦 (사람만 — 누르기 중 내 팔 · 칼이 상대 몸(발 · 칼 빼고)에 처음 닿음 · 한 밀치기에 한 번): 재기 셈만
+      if (!this.aiControlled && !b.landed && b.hold > 0 && this.closeTouch(true)) {
+        b.landed = true;
+        closeLog(this).landed++;
+      }
+    }
     // 되돌림 섞기: lift(접기 풀기)·closeW(누르기 무게)는 기존 몸 자세 따라가기 SKILL_BODY.chest(26/s, updateBodyPose 의
     //  임계 감쇠 2차 필터)로 목표를 따라간다. 밀치는 동안 lift → 1, 누르기에서 closeW → 1, 끝나면 둘 다 0 으로 (잠그지 않는다)
     const w = SKILL_BODY.chest;
@@ -1705,14 +1738,14 @@ export class Fighter {
     this.closeW += this.closeWV * dt;
   }
 
-  /** 누르기: 내 팔·칼이 상대 몸(발 빼고)이나 칼에 닿아 있나 (Rapier 접촉을 읽기만 한다) */
-  closeTouch() {
+  /** 누르기: 내 팔·칼이 상대 몸(발 빼고)이나 칼에 닿아 있나 (Rapier 접촉을 읽기만 한다) · bodyOnly = 상대 칼은 빼고 몸만 (11/14 — 밀치기가 몸에 듦) */
+  closeTouch(bodyOnly = false) {
     const f = this.foe;
     if (!f) return false;
     const mine = [this.bodies.uarmS, this.bodies.farmS, this.bodies.uarmO, this.bodies.farmO].map((rb) => rb.collider(0)).concat(this.armed ? this.swordColliders : []);
     const theirs = [];
     for (const [k, rb] of Object.entries(f.bodies)) if (!k.startsWith('foot')) theirs.push(rb.collider(0));
-    theirs.push(...f.swordColliders);
+    if (!bodyOnly) theirs.push(...f.swordColliders);
     let hit = false;
     for (const a of mine) {
       for (const c of theirs) {
@@ -1743,6 +1776,7 @@ export class Fighter {
     for (const { rb } of this.meshes) rb.resetForces(true), rb.resetTorques(true);
     this.jolt = Math.max(0, this.jolt - dt / RECOIL.joltTime);
 
+    if (this.ringHit) ringStep(this, dt); // 칼 씨름에 무너진 몸 (11/14 — de_dirty.js · 0.6 s 뒤로 물러남 · 칼 손 옆 지킴 · 없으면 안 부름)
     if (this.ibSpin) spinStep(this, dt); // 이베리아 휘감아 돌기 (10/22 — iberian_spin.js): 몸 방향 · 틀 빠르기를 대본이 (상대 쪽으로 천천히 돌기 대신)
     else this.updateHeading(dt);
     if (this.stamina.exhausted) {
@@ -1760,6 +1794,7 @@ export class Fighter {
     if (this.gait?.active) this.gait.pinFeet();
     this.applyPose(dt);
     if (this.canShove && CLOSE.on) this.closeStep(); // 근접 밀치기: 누르기 동안 다리 밀기만 더한다 (shove() 의 힘 순서 그대로)
+    if (CLOSE.holdPush && CLOSE.on) holdPushBack(this); // 맞밀기 (11/14 — 상대가 나를 밀치는 최소 유지 안이면 내 골반도 상대 쪽으로 · close_hold.js — 아니면 아무것도 안 함)
     this.shove();
     this.updateIbFlow(dt); // 이베리아 이어 긋기 흐름 (시험 IB_FLOW — 끄면 아무것도 안 함)
     this.driveSword(); // 팔 목표(IK)를 정한 뒤
