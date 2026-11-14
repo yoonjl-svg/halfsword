@@ -1,6 +1,7 @@
 import { classifyStroke } from './attack_stroke.js';
 import { STAMINA, GAIT, UNIQUE_ASSIST, CLOSE, WEAPON_ABILITY, SECRET, realS } from './config.js';
 import { entersAttackLine, isPreparation } from './stamina_stroke.js';
+import { bargeHeld, clinchHoldK } from './close_hold.js'; // 밀치기 묶임 기력 × 2 (11/14 사장님 — 묶임이 없으면 늘 1)
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
 import { huntRegenK } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 몸은 자연 회복 × (1 − regen × 겹)
 // 표준 시간 (10/25 22:3x): 공격 번호가 살아 있는 시간 · 긋기 꼬리는 실제 초로 적는다 (STAMINA 의 초 · 초당 값은 config 에서 realS · realRate)
@@ -132,7 +133,7 @@ export class Stamina {
       if (!f.alive || f.revival || f.state !== 'stand' || f.feetHeld || s.exhausted || s.value <= STAMINA.floor || s.inSecret || sk?.swinging || sk?.tap || sk?.pom || (f.gun?.shots ?? 0) > s.lastShots) return false;
     }
     const pressing = (f) => f.canShove && f.barge?.phase === 'press' && f.stickY > 0 && f.foeDistance() <= CLOSE.reach(f.armed ? f.weapon : null) && f.closeTouch();
-    return !!(pressing(a) || pressing(b));
+    return !!(pressing(a) || pressing(b) || bargeHeld(a.barge) || bargeHeld(b.barge)); // 11/14 묶임(close_hold.js — 사장님 '묶인 1.2초 동안 … 기력이 2배 소모돼'): 묶인 동안은 스틱 · 닿음과 상관없이 버팀
   }
 
   /** 두 Fighter.step 중 먼저 오는 쪽이 양쪽 비용을 확정하고, 뒤쪽은 같은 결과를 소비한다.
@@ -148,7 +149,23 @@ export class Stamina {
       pair = { a: this, b: other, pending: other, active };
       this.clinchStep = other.clinchStep = pair;
       this.clinching = other.clinching = active;
-      if (active) {
+      const kH = clinchHoldK(this.fighter, other.fighter);
+      if (active && kH !== 1) {
+        // 묶임 × holdDrain (11/14 사장님 '기력이 2배 소모돼' — close_hold.js clinchHoldK · 두 몸 모두): 두 몸 같은 빠짐 × 2 — 같은 시간을 버팀. 묶임이 아니면 아래 옛 가지(바이트 같음)
+        const rate = STAMINA.clinchPerSecond * kH;
+        const T = Math.min(dt, ...[this, other].map((s) => (s.value - STAMINA.floor) / rate));
+        for (const s of [this, other]) {
+          s.spend('clinch', rate * T);
+          s.clinchSeconds += T;
+          if (s.value < STAMINA.floor + 1e-9) { s.value = STAMINA.floor; s.stages(); }
+        }
+        if (this.exhausted || other.exhausted) {
+          for (const s of [this, other]) {
+            s.clinching = false;
+            if (s.fighter.barge) { s.fighter.barge = null; s.fighter.bargeEnd = 'exhausted'; }
+          }
+        }
+      } else if (active) {
         // 마지막 스텝도 실제 차감량이 같다. 부동소수점 잔차는 경계에서만 정리한다.
         const amount = Math.min(STAMINA.clinchPerSecond * dt, this.value - STAMINA.floor, other.value - STAMINA.floor);
         for (const s of [this, other]) {
@@ -426,7 +443,8 @@ export class Stamina {
     if (this.exhausted) return;
     const active = Math.max(0, this.rest + dt - STAMINA.recoverDelay) - Math.max(0, this.rest - STAMINA.recoverDelay);
     this.rest += dt;
-    if (!this.guarding) {
+    if (this.noRecover > 0) this.noRecover -= dt; // 칼 씨름에 밀려난 몸 (11/14 — de_dirty.js ringThrow · DE_DIRTY.ringNoRecover): 이 동안 자연 회복 없음 (쉼 시계는 그대로 흐름 — 끝나면 곧 회복)
+    else if (!this.guarding) {
       const before = this.value;
       const rate = recoverRate(f);
       this.value = Math.min(this.max, this.value + active * rate);

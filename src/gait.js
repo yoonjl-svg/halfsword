@@ -216,6 +216,9 @@ export class Gait {
     this.rhyTrail = false;
     this.chase = null;
     this.chaseStep = false;
+    this.digStep = false; // 지금 걸음이 파고들기 박찬 앞 걸음인가 (11/14 — fastBegin · 그 순간 창 시계가 멈춤 school_passive.js)
+    this.digs = 0; // 파고들기를 낸 수 (첫 박찬 앞 걸음을 뗀 수 — 재기만)
+    this.digSteps = 0; // 파고들기 박찬 앞 걸음 수 (재기만)
     // 간격 잡기의 잡기(10/15 — GAIT.deHold, holdTick · 플레이어만): hold = 잡는 중 { t 지난 시간, T 잡는 시간 } · holdBrake = 걸 때 상대 쪽 단위 벡터(세게 멈춤 — 몸이 설 때까지) ·
     //  holdEnd = 마지막 잡기가 풀린 까닭('time' · 'stick' · 'state' — 읽기만 하는 표시)
     this.hold = this.holdBrake = this.holdEnd = null;
@@ -385,6 +388,7 @@ export class Gait {
    */
   foeWhiff() {
     if (!GAIT.deChase || !this.active || this.f.state !== 'stand') return;
+    if (GAIT.deDig && this.f.humanInput) return; // 11/14 사장님 '간격 잡기를 파고들기로 바꿔' — 사람(사람 입력이 모는 몸 humanInput — main.js 플레이어)의 옛 간격 잡기(받을 창 · 빠른 디딤 · 잡기)는 거둠(GAIT.deDig · 파고들기는 update 걷기 시작) · AI · 시뮬 대본 몸은 그대로
     const def = TRADITIONS[footworkTradition(this.f)]?.chase; // 독일 간격 잡기 — 보법 I 을 안 익힌 플레이어는 없음
     if (!def || kitOff(this.f, 'chase')) return; // 사람은 스킬트리 G2 '보법 II · 간격 잡기' (10/21 — G1 은 뒤 박차기만)
     if (GAIT.deHold && !this.f.aiControlled && this.f.foeDistance() <= this.f.swordArt.measure.contact) return;
@@ -465,6 +469,7 @@ export class Gait {
     const k0 = this.fastK;
     this.fastFore = false; // 첫 걸음 박차기의 '앞뒤 몫만 빠르게'(이베리아 아닌 유파 비스듬히 뒤) — 아래 박차기 가지만 켬
     this.chaseStep = false; // 이 걸음이 간격 잡기 빠른 디딤인가 — 아래 C 가지만 켬 (잡기 걸기 holdTick 이 읽음)
+    this.digStep = false; // 이 걸음이 파고들기 박찬 앞 걸음인가 — 아래 박차기 가지의 dig 만 켬 (11/14)
     const foot = RH?.count === 'foot'; // 디딤 셈(기본) — 짝걸음 따라붙는 발·catch 도 센다
     this.fastTimeOnly = false; // 박자 걸음 보폭 박자(RH.timeOnly — 10/15 22:1x 이탈리아 시험): 빠른 몫이 발 박자만 ×mul(몸 빠르기 그대로 → 보폭이 짧아짐)
     if (Math.abs(wf) > vLat && (PR && !foot ? kind === 'walk' && this.pairStep === 'lead' : kind === 'walk' || (kind === 'catch' && this.walking))) {
@@ -533,10 +538,33 @@ export class Gait {
     //  박찬 발 디딤만: 다음 걸음은 fastK 1 이라 update ③ 이 그 발의 fastStep 을 지움). 박자 걸음 셈은 위에서 그대로(이 걸음도 센다), 배율만 덮는다.
     //  fastK = 절대 목표 빠르기 ÷ 그 쪽 걷는 빠르기(뒤 burstBackV ÷ (moveSpeed × backFactor) · 옆 burstSideV ÷ (moveSpeed × sideFactor) — 스틱의 옆 몫 비율 lat 로 섞음, 1 아래로는 안 내림)
     //  끝: 다음 걸음을 뗄 때(위 가지들이 fastK 를 다시 정함 — 이어 걷는 걸음은 제 빠르기) · 스틱이 거꾸로 가면 · 멈추면(update). 첫 걸음이 기술 걸음이면 박차기는 버린다
+    //  파고들기 (11/14 사장님 '간격 잡기를 파고들기로 바꿔 … 두 걸음 빠르게 들어가는 기술' — B.dig = 남은 박찬 앞 걸음 수, update 걷기 시작이 걺): 같은 장치로 앞 걸음을 박찬다 —
+    //   fastK = digV ÷ 앞 걷는 빠르기(moveSpeed) · 앞 걸음(wf > 0)만(아니면 버림) · 기력은 첫 걸음만(다음 걸음은 free) · 남은 걸음이 있으면 다음 걸음에 다시 걺(그 걸음도 걷는 걸음이어야 —
+    //   기술 걸음 · 자세 고치기 · 멈춤 · 스틱 뒤집힘이면 끝). 그 순간 창 시계는 이 걸음 동안 멈춤(digStep — school_passive.js)
     const B = this.burst;
-    if (B) {
+    if (B?.dig && !(wf > 0)) this.burst = null;
+    else if (B) {
       this.burst = null;
       if ((kind === 'walk' || kind === 'catch') && (!PR || this.pairStep === 'lead')) {
+        if (B.dig) {
+          this.fastK = Math.max(1, GAIT.digV / GAIT.moveSpeed);
+          this.fastFore = !!B.foreOnly;
+          this.fastAcc = GAIT.burstAccel;
+          this.fastTimeOnly = false;
+          this.fastAccent = FAST_ACCENT;
+          this.fastDir = 1;
+          this.fastSide = 0;
+          this.rhyTrail = !!PR;
+          this.burstStep = true;
+          this.digStep = true;
+          this.digSteps++;
+          if (!B.free) {
+            this.digs++;
+            this.f.stamina?.burst(); // 기력: 박찬 걸음 pushCost 12 를 한 번 (두 걸음 한 기술 — 다음 걸음은 free)
+          }
+          if (B.dig > 1) this.burst = { ...B, dig: B.dig - 1, free: true };
+          return Math.min(Tstep, GAIT.burstT);
+        }
         const kB = GAIT.burstBackV / (GAIT.moveSpeed * GAIT.backFactor);
         const kS = GAIT.burstSideV / (GAIT.moveSpeed * GAIT.sideFactor * (this.P.sideMul || 1)); // 이베리아 옆 빠르기(P.sideMul × 1.3)도 박찬 걸음은 같은 절대 목표 — 걷는 옆걸음만 빠르다
         this.fastK = Math.max(1, kB + (kS - kB) * B.lat);
@@ -874,6 +902,14 @@ export class Gait {
         } else if (this.P.burstSide) this.burst = { fore: Math.sign(mv.y), side, lat: (mv.x * mv.x) / (m * m) };
         else if (!side && mv.y < 0) this.burst = { fore: -1, side: 0, lat: 0, foreOnly: mv.x !== 0 };
       }
+    }
+    // 파고들기 (11/14 사장님 결정 "간격 잡기를 파고들기로 바꿔. '앞 박차기'인데 한 걸음이 아니라 두 걸음 빠르게 들어가는 기술이야. 거리 제한은 없음" — GAIT.deDig):
+    //  사람(사람 입력이 모는 몸 humanInput — main.js 플레이어 · 시뮬 대본 몸 · AI 는 아님) · 무기 유파 독일(보법 I 을 익힌 몸 — footworkTradition) · 스킬트리 G2(열쇠 'chase' — 옛 이름 그대로)가 뒤 박차기와 같은 '서 있음'(걷지 않았고 골반 burstStandV 아래 ·
+    //  두 발 땅)에서 스틱을 burstStick 넘게 앞으로(앞 몫 > 0 · 앞 몫 ≥ 옆 몫) 밀며 걷기 시작하면 → 앞 digSteps 걸음을 박찬 걸음으로(fastBegin). 헛침 조건 · 거리 제한(칼 거리 잡기) 없음 ·
+    //  비스듬히 앞이면 앞 몫만 빠르게(foreOnly — 뒤 박차기와 같은 꼴). 박찬 몸이 아직 박찬 빠르기를 다 줄이기 전(burstBrake) · 판 시작 정지 · 마무리 중엔 걸지 않음. 끄면(0) 셈하지 않는다
+    if (GAIT.deDig && walkNow && !this.walking && f.humanInput && mv && !this.burst && !this.burstBrake && !f.feetHeld && !(f.finish?.amt > 0.5) && footworkTradition(f) === 'german' && !kitOff(f, 'chase')) {
+      const m = mv.length();
+      if (m >= GAIT.burstStick && mv.y > 0 && mv.y >= Math.abs(mv.x) && Math.hypot(this.vf.x, this.vf.z) < GAIT.burstStandV && this.legs.F.stance && this.legs.B.stance) this.burst = { fore: 1, side: 0, lat: 0, foreOnly: mv.x !== 0, dig: GAIT.digSteps };
     }
     // 옆 누르면 첫 걸음에 늘 옆 박차기 (10/21 GAIT.burstWalkSide — 사장님 '그냥 옆 누르면 첫 걸음에 무조건 나가야지'): 스틱이 옆으로 바뀌는 순간(옆 몫 > 앞뒤 몫 ·
     //  burstStick 넘게 · 앞 몫 < burstFwdMax — 서 있든 걷든 · 거꾸로 옆으로 틀어도) 다음에 떼는 걸음을 옆 박찬 걸음으로(sideDash — 이베리아만). 아직 걷기 문턱 전이면
