@@ -54,7 +54,13 @@ test('띠 · 기울기 · 거리 오차 — 사장님 11/14 띠(0 무 · 1 ~ 2 �
   assert.deepEqual([0, 1, 2, 3, 4, 5, 6].map(tiltOf).map((x) => +x.toFixed(4)), [0, 0.3333, 0.3333, 0.6667, 0.6667, 1, 1]);
   const w = [0, 1, 2, 3, 4, 5, 6].map((p) => +distErrWidth(p, 'italian').toFixed(4));
   assert.deepEqual(w, [0.3, 0.24, 0.18, 0.12, 0.06, 0, 0], '0.3 m × (1 − 숙련도 ÷ 5) · 높음 0');
-  assert.equal(distErrWidth(2, 'none'), 0, '플랜 유파만 (3 단계까지 다섯 유파 · 무유파는 아님)');
+  const freeOn = CONFIG.AI_PLAN_FREE.on; // 3 단계 무유파(11/14)는 AI_PLAN_FREE.on 으로 거리 오차를 받음(ai_plan_free.test) — 이 줄은 플랜 유파 목록 장면이라 그 스위치를 끔
+  CONFIG.AI_PLAN_FREE.on = 0;
+  try {
+    assert.equal(distErrWidth(2, 'none'), 0, '플랜 유파만 (3 단계까지 다섯 유파 · 무유파는 무유파 스위치로)');
+  } finally {
+    CONFIG.AI_PLAN_FREE.on = freeOn;
+  }
   withPlan({ on: 0 }, () => assert.equal(distErrWidth(0, 'italian'), 0, '스위치 끔'));
   const A = axesOf(4, 'italian');
   assert.equal(A.band, 2);
@@ -69,7 +75,10 @@ test('띠 · 기울기 · 거리 오차 — 사장님 11/14 띠(0 무 · 1 ~ 2 �
 test('플랜 열림: 이탈리아 · 띠 무 아님 · 스위치 — 다른 유파는 없음', () => {
   assert.ok(planFor('italian', 2));
   assert.equal(planFor('italian', 0), null, '무 = 플랜 없음');
+  const freeOn = CONFIG.AI_PLAN_FREE.on; // 3 단계(11/14): 무유파는 무유파 플랜(src/ai_plan_free.js)을 받음 — 이 줄은 그 전 장면이라 그 전 판(AI_PLAN_FREE.on 0)으로 묶음 · 기준 그대로
+  CONFIG.AI_PLAN_FREE.on = 0;
   for (const t of ['none']) assert.equal(planFor(t, 5), null, t);
+  CONFIG.AI_PLAN_FREE.on = freeOn;
   for (const t of ['japanese', 'iberian', 'chinese', 'german']) assert.ok(planFor(t, 2), `2 · 3 단계 ${t}`);
   withPlan({ on: 0 }, () => assert.equal(planFor('italian', 5), null));
   const P = planFor('italian', 3);
@@ -177,7 +186,14 @@ test('플랜 없는 몸은 바이트 같음 (유파 플랜 비움 · 손잡이 �
   const off = withPlan({ on: 0 }, () => trace({ weapon2: 'longsword', prof: 2 }));
   assert.equal(on.plan, false);
   assert.equal(on.text, off.text);
-  const on5 = withPlan(bare, () => trace({ weapon2: 'tree_branch', prof: 5, secs: 3 }));
+  const freeOn = CONFIG.AI_PLAN_FREE.on; // 3 단계 무유파 플랜(11/14 — AI_PLAN_FREE.on)도 끈 판 (무유파 몫 바이트는 ai_plan_free.test)
+  CONFIG.AI_PLAN_FREE.on = 0;
+  let on5;
+  try {
+    on5 = withPlan(bare, () => trace({ weapon2: 'tree_branch', prof: 5, secs: 3 }));
+  } finally {
+    CONFIG.AI_PLAN_FREE.on = freeOn;
+  }
   const off5 = withPlan({ on: 0 }, () => trace({ weapon2: 'tree_branch', prof: 5, secs: 3 }));
   assert.equal(on5.text, off5.text, '무유파 나뭇가지 숙련 5 (플랜 없음 · 칼끝 차 0.24 — 파고들기도 안 걸림)');
   assert.notEqual(trace({ weapon2: 'longsword', prof: 2 }).text, off.text, '3 단계 — 롱소드(독일) AI 는 플랜이 있어 판이 달라짐');
@@ -273,10 +289,14 @@ test('파고들기 (사장님 11/14 — 공통 틀): 내 칼이 상대 칼보다
   for (const w of ['longsword', 'rapier', 'monohoshizao', 'zweihander']) assert.equal(digOf(w).me, false, `${w} — 뚜렷이 짧지 않음 (롱소드끼리 거울 판은 그대로)`);
   assert.ok(near(digOf('morgenstern').k, 1 / 3), '띠 기울기 (낮음 ⅓ — 유파와 상관없이)');
   // 스위치 끔 · 문턱이 닿지 않으면 옛 판과 바이트 같음 · 켬은 다름 (무유파 냉동 참치 숙련 5 — 플랜 없는 유파 · 2 단계부터 일본은 플랜이 있어 뺌)
+  //  3 단계(11/14): 무유파도 플랜(src/ai_plan_free.js)을 받음 — '플랜 없는 유파' 장면이라 이 셋은 그 전 판(AI_PLAN_FREE.on 0)으로 묶음 · 기준 그대로
+  const freeOn = CONFIG.AI_PLAN_FREE.on;
+  CONFIG.AI_PLAN_FREE.on = 0;
   const off = withPlan({ on: 0 }, () => trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 }));
   const never = withPlan({ digShort: 99, schools: AI_PLAN.schools.filter((t) => t !== 'german'), errSchools: AI_PLAN.errSchools.filter((t) => t !== 'german'), pommel: 0 }, () => trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 })); // 3 단계: 상대 롱소드(독일) 플랜 · 손잡이 찍기도 뺌
   const on = trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 });
   assert.equal(never.text, off.text, '파고들기가 안 걸리면 옛 판');
+  CONFIG.AI_PLAN_FREE.on = freeOn;
   assert.notEqual(on.text, off.text, '파고들기 판은 달라짐');
 });
 

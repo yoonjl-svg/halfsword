@@ -2445,6 +2445,28 @@ export const DIG_PROTO = {
   runGap: 0.3,
 };
 
+// 유파 AI 3 단계 — 무유파 플랜 '막싸움꾼' (11/14 사장님 'A안 켜고 3단계 진행해' · '독일과 함께 무유파 무모함 켜' · src/ai_plan_free.js · 기록 docs/strike/ai_plan_free_2026-11-14.md ·
+//  확인표 4248 ~ · `?aiPlanFree=0` = 무유파만 옛 판 — 플랜 · 굴림 · 거리 오차 모두): 무유파(schools.js TRADITIONS.none — 둔기)는 고유 동작 · 패시브 · 비기 · 연계 · 유도가 없다.
+//  공통 틀의 굴림(무 · 낮음 '행운에 기대는 전투' — 무모 · 무계획 · 운) · 거리 오차 · 띠별 기력 · 수 읽기를 받고, 무 띠(숙련 0)에도 굴림을 탄다(ai_plan.js planFor — 무유파만).
+//  그 위 무유파 몫은 기울기 둘(몫 = 띠 기울기 또는 굴림 몫 × 국면 칸 × 이 값 — 절대 규칙 없음):
+//  beat     쳐내며 들어감 — 계획 몫: 상대 칼끝이 나를 겨누면 AI_PLAN.beat 마다 planK × 칸 × beat 로 그 칼을 내려쳐 비키며 한 걸음 내딛음 (둔기 파고들기 — 걸음 실린 기술이 없어 A 가 못 푼 몫) [몫 · 사장님 확인 전]
+//  wild     쳐내며 들어감 — 막 휘두름 몫: 때를 가리지 않고 planLuck × 칸 × wild (무 1 · 낮음 ⅔ · 가운데 ⅓ · 높음 0 쪽) [몫 — 동전 coin 과 같은 수 · 사장님 확인 전]
+//  beatOut  쳐내는 거리 — 상대 칼끝 어림 + 이만큼 안 (내 칼은 몸에 안 닿고 상대 칼에 닿는 창 · 걸음 사다리 0.3 m) [사장님 확인 전]
+//  beatGap  다가가다 상대 칼끝 안에서 막힘 — 내 칠 거리까지 이만큼 넘게 남으면 그 칼을 쳐내기로 냄 (걸음 사다리 0.3 m) [사장님 확인 전]
+//  go       쳐낸 칼이 끝나면 곧장 스틱 끝으로 건너 들어가 칠 몫 = planK × go + planLuck × AI_PLAN.coin [몫 — 파고들기 digKeep 0.6 과 같은 수 · 사장님 확인 전]
+//  press    붙어 두들김 — 붙은 거리(내 칼끝 + 0.3 안)에서 이어 칠 몫 want 에 (1 − want) × planK × 칸 × press 를 얹음 [몫 — 0.6 같은 수 · 사장님 확인 전]
+//  back     붙어 두들김 — 주고받은 뒤 물러나는 시간 × (1 − planK × 칸 × back) [몫 · 사장님 확인 전]
+export const AI_PLAN_FREE = {
+  on: 1,
+  beat: 0.5,
+  wild: 0.5,
+  beatOut: 0.3,
+  beatGap: 0.3,
+  go: 0.6,
+  press: 0.6,
+  back: 0.5,
+};
+
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)
 //  ai.js 는 인물 표식 persona.terrainSense === 'wetland' 이고 그 몸이 진흙 감속을 받는 무대(fighter.movementSurface === 'wetland' — 잠든 습지)일 때만 이 묶음을 읽는다.
 //  둘 중 하나라도 아니면 옛 길을 바이트 그대로 지난다. 판단 근거는 물리와 같은 젖음 지도(wetland_ground.js wetlandWetness — 그림의 디딤돌이 아니다).

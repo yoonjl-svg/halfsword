@@ -339,6 +339,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('aiPlanIb') && !+params.get('aiPlanIb')) for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'iberian'); // `?aiPlanIb=0` = 이베리아만 옛 판 (2 단계 11/14)
   if (params.get('aiPlanCn') === '0') for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((t) => t !== 'chinese'); // `?aiPlanCn=0` = 동방 플랜만 옛 판 (2 단계 · 11/14 — 플랜 · 거리 오차 · 동방 몫 모두 끔 · 공통 파고들기는 그대로)
   if (params.get('aiPlanDe') === '0') for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((t) => t !== 'german'); // `?aiPlanDe=0` = 독일 플랜만 옛 판 (3 단계 · 11/14 — 독일 플랜 · 거리 오차 · 독일 몫 모두 · 손잡이 찍기 · 실력 이름 · 숙련도 0 은 `?aiPlan=0` 이 끔)
+  if (params.get('aiPlanFree') === '0') CONFIG.AI_PLAN_FREE.on = 0; // `?aiPlanFree=0` = 무유파 플랜만 옛 판 (3 단계 · 11/14 — 플랜 · 굴림 · 거리 오차 · src/ai_plan_free.js)
   for (const [q, k] of [['digAi', 'ai'], ['digStep', 'step'], ['digRun', 'run']]) if (params.has(q)) CONFIG.DIG_PROTO[k] = +params.get(q) ? 1 : 0; // 짧은 칼 파고들기 (11/14 — src/dig_proto.js): A 기본 켬 `?digAi=0` = 옛 판 · 시제품 B `?digStep=1` · C `?digRun=1`
   for (const [q, k] of [['aiRead', 'on'], ['aiFair', 'fair'], ['aiGns', 'gns']]) if (params.has(q)) CONFIG.AI_PLAN.read = { ...CONFIG.AI_PLAN.read, [k]: +params.get(q) ? 1 : 0 }; // 3 단계 (11/14): `?aiRead=0` = 읽기 몫(상대 유파 위험 · 대가 창 · 상대 기력) 끔 · `?aiFair=0` = 공정함 끔 (그 전 판 눈) · `?aiGns=0` = 일본 AI 고노센 준비 지키기 끔
 }
