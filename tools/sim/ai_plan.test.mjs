@@ -116,6 +116,24 @@ test('리솔루토 맞춤 걸음은 본 걸음 — 사람 스틱을 읽지 않�
   free();
 });
 
+test('3 단계 셋 합침 (감독 11/14 — 공정함 ①): 플랜 없는 몸(planOff · 무 띠)의 리솔루토 맞춤 걸음도 공정함 스위치가 켜졌으면 본 걸음 · 끄면(또는 옛 판) 사람 스틱', () => {
+  for (const [over, seen] of [[{}, true], [{ read: { ...AI_PLAN.read, fair: 0 } }, false], [{ on: 0 }, false]]) {
+    withPlan(over, () => {
+      const G = newRound({ weapon: 'longsword', weapon2: 'rapier', seed: 1, gap: 2.4 });
+      G.ai.update = () => {};
+      while (G.t < 0.3) G.step();
+      const ai = new AI(G.enemy, G.player, 'normal', { proficiency: 5, planOff: true }); // 플랜 없는 몸(planOff — 무 띠와 같은 길) · 비기(리솔루토)는 숙련 5
+      const free = () => G.world.free();
+      assert.equal(ai.plan, null, '플랜 없음');
+      assert.equal(typeof ai.riso?.W.stepOf, 'function', '리솔루토 AI');
+      ai.foe.move.set(0, 1); // 사람 스틱은 앞(들어옴)
+      ai.foeClosing = 0; // 본 다가옴은 0
+      assert.equal(ai.riso.W.stepOf(), seen ? null : 'advance', seen ? '본 것만' : '옛 줄 — 사람 스틱');
+      free();
+    });
+  }
+});
+
 test('이탈리아 행동이 숙련도(띠)에 따라 열림', () => {
   const got = [0, 1, 2, 3, 4, 5, 6].map((p) => {
     const { ai, free } = itAi(p);

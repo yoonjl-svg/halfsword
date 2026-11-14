@@ -361,8 +361,9 @@ export class AI {
       this.planReckId = -1; // 무모: 위협 하나에 한 번 굴림 (planReck)
       this.planReckOk = false;
       this.stats.plan = planStats();
-      if (this.riso) this.riso.W.stepOf = () => seenStep(this.foeClosing); // 리솔루토 맞춤 걸음: 사람 스틱 대신 본 걸음 (설계 §4-3)
     }
+    // 리솔루토 맞춤 걸음: 사람 스틱 대신 본 걸음 (설계 §4-3) — 플랜 몸(1 단계)과 함께 플랜 없는 몸(무 띠 · planOff)도 공정함 스위치(AI_PLAN.read.fair)가 켜졌으면 본 걸음 (감독 11/14 3 단계 셋 합침 결정 · 새 값 없음 · `?aiFair=0` · `?aiPlan=0` 이면 플랜 없는 몸은 옛 줄)
+    if (this.riso) this.riso.W.stepOf = () => (this.risoSeen() ? seenStep(this.foeClosing) : foeStep(this.foe));
     this.planJp = !!this.plan && art.tradition === 'japanese'; // 2 단계 일본 '기다리는 중전차' (11/14 — src/ai_plan_jp.js · 아래 planJp 자리만)
     if (this.planJp) jpInit(this);
     if (this.plan?.ib) ibInit(this); // 이베리아 플랜 (2 단계 11/14 — src/ai_plan_ib.js): this.ibPlan · 없으면 아래 이베리아 자리를 안 탐
@@ -3082,6 +3083,11 @@ export class AI {
     return o;
   }
 
+  /** 리솔루토 맞춤 걸음을 본 걸음으로 읽나 — 플랜 몸(1 단계)은 늘 · 플랜 없는 몸은 공정함 스위치가 켜졌을 때 (3 단계 셋 합침 감독 11/14 결정 — 공정함 ①) */
+  risoSeen() {
+    return !!this.plan || !!(AI_PLAN.on && AI_PLAN.read.fair);
+  }
+
   /** 상대가 휘두르는 중인가 — 늦게 본 손 빠르기 (3 단계 공정함 — 박자 찌르기 셈 · 위협 · 헛친 뒤와 같은 3.5 패드 m/s) */
   seenSwing() {
     const s = this.sense.seen(this.level.reaction);
@@ -4192,9 +4198,10 @@ export class AI {
     if (this.ibPlan) (side = ibSidePost(this, side)), (fwd = ibFwdPost(this, fwd)); // 이베리아 플랜 (11/14 둘째 — 변칙): 옆 박차기 동안 옆 끝(간 보기 · 물러남 · 막기) · 비스듬히 들어감
     // 안다레 리솔루토 무장 (11/14 사장님 '리솔루토도 쓰게해' — risoTick · 사람 조건 10/28 '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로'): 간 보기 · 물러남 동안
     //  상대가 걷는 중이면(italian_risoluto.js foeStep — 걸음 뜻 ∓ 0.1) 그 걸음을 그대로 맞받아 — 스틱 앞뒤 = 상대 걸음 뜻의 반대(같은 크기 · 새 수 없음) · 옆 0(앞뒤 부채꼴). 상대가 서 있으면 평소 걸음
-    //  유파 플랜이 있는 몸(11/14 — 설계 §4-3 공정함)은 사람 스틱 대신 늦게 본 다가옴(this.foeClosing)으로 걸음을 읽고 그 빠르기로 맞받는다 (플랜 없는 몸은 옛 줄 그대로)
-    if (this.riso?.armed && (this.mode === 'watch' || this.mode === 'withdraw') && !this.chasing && (this.plan ? seenStep(this.foeClosing) : foeStep(this.foe))) {
-      fwd = this.plan ? clamp(toStick(-this.foeClosing), -1, 1) : clamp(-(this.foe.move?.y ?? 0), -1, 1);
+    //  유파 플랜이 있는 몸(11/14 — 설계 §4-3 공정함)과 공정함 스위치가 켜진 플랜 없는 몸(risoSeen — 3 단계 셋 합침)은 사람 스틱 대신 늦게 본 다가옴(this.foeClosing)으로 걸음을 읽고 그 빠르기로 맞받는다 (옛 판은 옛 줄 그대로)
+    const rSeen = !!this.riso?.armed && this.risoSeen();
+    if (this.riso?.armed && (this.mode === 'watch' || this.mode === 'withdraw') && !this.chasing && (rSeen ? seenStep(this.foeClosing) : foeStep(this.foe))) {
+      fwd = rSeen ? clamp(toStick(-this.foeClosing), -1, 1) : clamp(-(this.foe.move?.y ?? 0), -1, 1);
       side = 0;
     }
     // 너무 붙음 → 떨어진다 (밀쳐내기는 fighter.shove가 뒤로 물러날 때 자동으로)
