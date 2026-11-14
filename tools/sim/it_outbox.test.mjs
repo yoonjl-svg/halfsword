@@ -372,10 +372,18 @@ test('스위치 끔이면 전 판 (본판 c1cad826 과 판 바이트 같음 — 
     } finally { AP.on = apOn; }
   } finally { [THRUST_STYLE.rapier.gap, THRUST_STYLE.estoc.gap, UA.imbroccataGap] = keep; }
   assert.notEqual(hash(fightOne({ school: 'italian', weapon: 'rapier', opp: 'longsword', seed: 1 })), '905c89d08abf', '켬 — 이탈리아 판은 바뀜');
-  const AP2 = CONFIG.AI_PLAN, k2 = [AP2.schools, AP2.errSchools, AP2.pommel]; // 3 단계(11/14): 독일 판은 독일 플랜 · 모든 AI 손잡이 찍기를 뺀 판으로 (이 줄은 이탈리아 스위치가 독일 판을 안 건드림을 봄)
+  // 11/14 짧은 칼 파고들기 A(사장님 'A안 켜고' — config DIG_PROTO.ai 기본 켬)는 이 판에서 칼이 부러져 짧아진 롱소드 AI(파고들기 판 몸)에도 걸려 판이 바뀜 —
+  //  이 줄은 '이탈리아 스위치가 독일 판을 안 건드림'을 보는 옛 장면이라 A 끔(그때 판)으로 묶음 (기준 해시 그대로 · A 몫은 ai_dig.test 가 봄)
+  //  3 단계(11/14): 독일 판은 독일 플랜 · 모든 AI 손잡이 찍기도 뺀 판으로
+  const DP = CONFIG.DIG_PROTO, dpAi = DP.ai;
+  const AP2 = CONFIG.AI_PLAN, k2 = [AP2.schools, AP2.errSchools, AP2.pommel];
+  DP.ai = 0;
   for (const k of ['schools', 'errSchools']) AP2[k] = AP2[k].filter((x) => x !== 'german');
   AP2.pommel = 0;
   try {
     assert.equal(hash(fightOne({ school: 'german', weapon: 'sabre', opp: 'longsword', seed: 1 })), '436777985e44', '독일 — 켬이어도 같음 (본판 c1cad826 해시)');
-  } finally { [AP2.schools, AP2.errSchools, AP2.pommel] = k2; }
+  } finally {
+    DP.ai = dpAi;
+    [AP2.schools, AP2.errSchools, AP2.pommel] = k2;
+  }
 });

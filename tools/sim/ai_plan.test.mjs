@@ -382,7 +382,8 @@ test('2 단계 일본 — 기울기: 스택 문턱 · 막기 쪽 · 서 있기 �
 
 test('2 단계 일본 — 옛 판 스위치: AI_PLAN.on 0 (+ JP_TANK.ai 0) = 일본을 플랜에서 뺀 판과 바이트 같음 · 켬은 다름', () => {
   const off = withPlan({ on: 0 }, () => trace({ weapon2: 'monohoshizao', prof: 5, secs: 6 }));
-  const none = withPlan({ schools: ['italian'], errSchools: ['italian'], pommel: 0 }, () => {
+  // 3 단계(11/14) 공정함은 플랜과 상관없이 모든 AI 몸에 걸림(롱소드 AI 가 일본 상대의 준비를 보는 눈 · 비기 조건을 보는 눈) — 일본 뺀 판에 공정함도 끔으로 묶음 (기준은 안 고침) · 독일 플랜 · 모든 AI 손잡이 찍기도 뺌
+  const none = withPlan({ schools: ['italian'], errSchools: ['italian'], pommel: 0, read: { ...AI_PLAN.read, fair: 0 } }, () => {
     const jk = JP_TANK.ai;
     JP_TANK.ai = 0;
     try {
@@ -408,6 +409,8 @@ test('합침 (11/14): 플랜 유파(이탈리아 · 일본 · 이베리아 · �
       assert.ok(G.ai2.iaiArm, '상대 = 고노센 쓰는 AI (모노호시자오 숙련 5)');
       const rnd = Math.random;
       let draws = 0;
+      const rd = AI_PLAN.read;
+      AI_PLAN.read = { ...rd, fair: 0 }; // 3 단계(11/14) 공정함은 상대 준비를 보이는 자세로 읽음 — 여기는 무모 굴림 규칙을 보려고 속 셈(iaiArm)을 바꾸는 판이라 공정함 끔으로 묶음 (기준은 안 고침)
       try {
         Math.random = () => (draws++, 0);
         G.ai2.iaiArm.armed = false;
@@ -427,6 +430,7 @@ test('합침 (11/14): 플랜 유파(이탈리아 · 일본 · 이베리아 · �
         }
       } finally {
         Math.random = rnd;
+        AI_PLAN.read = rd;
         G.world.free();
       }
     }

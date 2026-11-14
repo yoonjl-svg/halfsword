@@ -17,6 +17,7 @@ import { AI_PLAN, IB_LINK, IB_FLOW, SECRET, STAMINA, GAIT } from './config.js';
 import { bandOf, axesOf } from './ai_plan.js';
 import { secretSpent } from './secret.js';
 import { padDist } from './ai_techniques.js';
+import { readAtkN } from './ai_read.js'; // 3 단계 (11/14): 되풀이 기억은 공통 읽기 그릇 하나로
 
 const MEM = 4; // 버릇 고리 버퍼 칸 — 상대가 내 원(이어 돌리기) 사이를 친 때 (10 s 창에 넉넉)
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -51,9 +52,6 @@ export function ibInit(ai) {
     lastCircle: 0, // 지난 돌기 쪽 (각을 바꿈 — 옆 박차기)
     dodgeId: -1, // 옆 박차기로 비킨 상대 칼 번호 (칼 하나에 한 번 굴림)
     charge: false, // 상대 달려듦 (오르는 때 한 번 굴림)
-    atkT: new Float64Array(MEM).fill(-Infinity), // 상대가 칼을 낸 때 (되풀이 — 높음의 비켜 꾐)
-    atkI: 0,
-    atkId: -1,
     ang: 0, // 비스듬히 들어감 — 이 공격의 옆 스틱 쪽 (0 = 곧게)
     angSeq: -1,
   };
@@ -245,12 +243,7 @@ function mixP(ai, planned, cell) {
 
 /** 되풀이 (높음) — 기억 창 안에 상대가 칼을 낸 수 */
 export function foeAtkN(ai) {
-  const I = ai.ibPlan;
-  if (!I.repeat) return 0;
-  const t0 = ai.sense.t - I.mem;
-  let n = 0;
-  for (let i = 0; i < MEM; i++) if (I.atkT[i] > t0) n++;
-  return n;
+  return ai.ibPlan.repeat ? readAtkN(ai, AI_PLAN.read.repeatT) : 0; // 공통 읽기 그릇 (3 단계 — 상대가 낸 칼은 readTick 이 적음)
 }
 
 /** 전략 층 덧칸 (스텝마다 — planTick 뒤): 버릇 기억 · 옆 박차기 진행 · 무장 기다림 끝 · 상대 칼 · 달려듦에 선 밖으로 비킴 · 비스듬히 들어감 (굴림은 사건 하나에 한 번) */
@@ -271,11 +264,6 @@ export function ibTick(ai, dt, th, hurt) {
     }
   } else I.inLink = false;
   // 상대가 칼을 냄 (본 위협 — 새 번호): 되풀이 기억 · 선 밖으로 비킴 (칼 하나에 한 번 굴림)
-  if (th && th.id !== I.atkId) {
-    I.atkId = th.id;
-    I.atkT[I.atkI] = ai.sense.t;
-    I.atkI = (I.atkI + 1) % MEM;
-  }
   const charge = ai.foeClosing > 0.9 && ai.d < ai.foeReach + 0.9; // 달려듦 (preThreat 와 같은 수 · 위협을 보는 거리 — threat 와 같은 상대 칼끝 어림 + 0.9 안)
   const C = ai.planC;
   const cd = C?.dash ?? 0;
