@@ -393,3 +393,39 @@ test('2 단계 일본 — 옛 판 스위치: AI_PLAN.on 0 (+ JP_TANK.ai 0) = 일
   assert.equal(on.plan, true);
   assert.notEqual(on.text, off.text, '켬은 판이 달라짐');
 });
+
+test('합침 (11/14): 네 유파 플랜이 다 켜짐 · 고노센 선 무모는 네 유파 같은 공통 규칙 (무 · 낮음만 · 준비가 켜질 때 한 번 · 굴림 몫 ⅔ · 가운데 · 높음 굴림 없음)', () => {
+  const W = { italian: 'rapier', japanese: 'uchigatana', iberian: 'zweihander', chinese: 'qinggang' };
+  for (const [t, w] of Object.entries(W)) {
+    for (const p of [2, 4]) {
+      const G = newRound({ seed: 1, weapon: 'monohoshizao', weapon2: w, AI2Class: AI, persona: { proficiency: p }, persona2: { proficiency: 5 } });
+      const ai = G.ai;
+      assert.equal(ai.art.tradition, t, w);
+      assert.ok(ai.plan, `${t} 숙련 ${p} 플랜 켬`);
+      assert.ok(G.ai2.iaiArm, '상대 = 고노센 쓰는 AI (모노호시자오 숙련 5)');
+      const rnd = Math.random;
+      let draws = 0;
+      try {
+        Math.random = () => (draws++, 0);
+        G.ai2.iaiArm.armed = false;
+        ai.gnsWatch(1 / 120, 3, false);
+        G.ai2.iaiArm.armed = true; // 상대 준비가 켜짐
+        draws = 0;
+        ai.gnsWatch(1 / 120, 3, false);
+        if (p === 2) {
+          assert.equal(ai.gnsW.reck, true, `${t} 낮음 — 경계를 접고 선을 넘는 쪽`);
+          assert.equal(draws, 1, '준비가 켜질 때 한 번 굴림');
+          assert.ok(near(ai.planLuck, 2 / 3), '굴림 몫 = 공통 틀 (낮음 ⅔)');
+          ai.gnsWatch(1 / 120, 3, false);
+          assert.equal(draws, 1, '같은 준비 동안 다시 안 굴림');
+        } else {
+          assert.equal(ai.gnsW.reck, false, `${t} 가운데 — 경계 그대로`);
+          assert.equal(draws, 0, '가운데 — 굴림 없음');
+        }
+      } finally {
+        Math.random = rnd;
+        G.world.free();
+      }
+    }
+  }
+});

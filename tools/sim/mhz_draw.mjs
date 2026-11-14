@@ -263,8 +263,10 @@ export function readyShot({ weapon = 'uchigatana', foeW = 'longsword', guard = '
     if (G.t < t0 - 0.3) continue;
     const pm = pommelW(P);
     const oh = offHandW(P);
-    const koi = new THREE.Vector3(0, P.weaponCfg.hiltLength + (CONFIG.SECRET.iaiSayaKoi ?? 0.05), 0).applyQuaternion(tq(P.sword.rotation())).add(tv(P.sword.translation()));
-    frames.push({ t: r3(G.t - tOff), on, sw: r3(P.iaiSayaW ?? 0), grip: !!P.gripping, offT: rec.off && rec.off.map(r3), ohL: chestLocal(P, oh).map(r3), ohP: pelvisLocal(P, oh).map(r3), koiP: pelvisLocal(P, koi).map(r3), pmP: pelvisLocal(P, pm).map(r3), gapPm: r3(oh.distanceTo(pm)), gapKoi: r3(oh.distanceTo(koi)), tipY: r3(P.bladePoint(1, new THREE.Vector3()).y) });
+    // 칼집 입 쥠 자리 (fighter.js offHand alongK): 칼 위 칼날 시작 + iaiSayaKoi · 11/14 납도 ③ 동안은 칼 위 칼집 입 자리(noto.ym — 칼끝 → 칼날 시작)
+    const koiY = (P.noto?.w > 0 && P.noto.phase >= 2 ? P.noto.ym : P.weaponCfg.hiltLength) + (CONFIG.SECRET.iaiSayaKoi ?? 0.05);
+    const koi = new THREE.Vector3(0, koiY, 0).applyQuaternion(tq(P.sword.rotation())).add(tv(P.sword.translation()));
+    frames.push({ t: r3(G.t - tOff), on, noto: (P.noto?.w ?? 0) > 0, sw: r3(P.iaiSayaW ?? 0), grip: !!P.gripping, offT: rec.off && rec.off.map(r3), ohL: chestLocal(P, oh).map(r3), ohP: pelvisLocal(P, oh).map(r3), koiP: pelvisLocal(P, koi).map(r3), pmP: pelvisLocal(P, pm).map(r3), gapPm: r3(oh.distanceTo(pm)), gapKoi: r3(oh.distanceTo(koi)), tipY: r3(P.bladePoint(1, new THREE.Vector3()).y) });
   }
   // 빈손 목표 이웃 스텝 옮김 가장 (가슴 틀): 전체 · 대기 동안(들어감 포함) · 푼 뒤 (iaiRegrip 의 2 배 안 — 칼자루로 돌아오는 몫)
   const jumpIn = (pick) => {
@@ -283,7 +285,8 @@ export function readyShot({ weapon = 'uchigatana', foeW = 'longsword', guard = '
   const onF = frames.filter((f) => f.on && f.sw >= 0.999);
   const offF = frames.filter((f) => !f.on);
   const sum = {
-    sayaMax: Math.max(...frames.map((f) => f.sw)), onGapKoi: onF.length ? r3(Math.max(...onF.map((f) => f.gapKoi))) : null, onGrip: onF.length ? onF.filter((f) => f.grip).length / onF.length : null,
+    // 11/14 납도: 대기 빈손 ↔ 칼집 입 틈 · 쥠은 납도가 끝난 대기에서만 (납도 ③ 동안 왼손은 칼 위를 미끄러지는 칼집 입을 쥐고 따라감 — 칼 위 자리 ym 이 스텝마다 2 ~ 5 cm 옮겨 손이 늦음 · 그 틈은 notoGapKoi)
+    sayaMax: Math.max(...frames.map((f) => f.sw)), onGapKoi: onF.some((f) => !f.noto) ? r3(Math.max(...onF.filter((f) => !f.noto).map((f) => f.gapKoi))) : null, notoGapKoi: onF.some((f) => f.noto) ? r3(Math.max(...onF.filter((f) => f.noto).map((f) => f.gapKoi))) : null, onGrip: onF.some((f) => !f.noto) ? onF.filter((f) => !f.noto && f.grip).length / onF.filter((f) => !f.noto).length : null,
     onOhP: onF.length ? onF.at(-1).ohP : null, onKoiP: onF.length ? onF.at(-1).koiP : null,
     jump: best, jumpOn, jumpBack, backGrip: (() => { const k = offF.findIndex((f) => f.sw <= 0 && f.grip && f.gapPm <= 0.03); return k >= 0 ? offF[k].t : null; })(), endGap: offF.length ? offF.at(-1).gapPm : null,
   };

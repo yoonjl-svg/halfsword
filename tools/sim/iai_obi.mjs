@@ -11,12 +11,16 @@
 //  node tools/sim/iai_obi.mjs ready [--weapons=uchigatana,muramasa,kusanagi,monohoshizao] [--set=…] [--json=…]
 //  node tools/sim/iai_obi.mjs saya [--weapons=…] [--looks=player,minami,…] [--set=…] [--json=…]
 //  node tools/sim/iai_obi.mjs fight [--weapons=…] [--seeds=1-6] [--look=…] [--set=…] [--json=…]
+//  node tools/sim/iai_obi.mjs noto [--weapons=…] [--modes=hip,crouch] [--set=…] [--json=…] — 11/14 납도(SECRET.iaiSheathe): 사람 창 · AI 셈으로 납도 시작 · 준비 시각 ·
+//   칼날 ↔ 몸 · 다리 · 칼집이 감싼 칼날이 칼집 겉 밖 · 준비 뒤 칼이 칼집 안 · 칼집 ↔ 몸 · 한 스텝 옮김(튐) · 칼끝 빠르기 (대본 saya 에도 '납도' 동작)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
 import { newRound, DT, CONFIG, THREE, AI } from './harness_m.mjs';
 import { applySets } from './rapier_defence.mjs';
 import { iaiReadyPose, iaiReadyPosePlayer, requestIai } from '../../src/secret_instant.js';
-import { obiReady, obiSayaPose, sageoPoints } from '../../src/iai_obi.js';
+import { PlayerSecretWatch, IaiArm } from '../../src/secret.js';
+import { PlayerParryGuard } from '../../src/parry_button.js';
+import { obiReady, obiSayaPose, sageoPoints, notoBelt } from '../../src/iai_obi.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { LOOKS } from '../../src/looks.js';
 import { isMain } from './is_main.mjs';
@@ -135,7 +139,7 @@ export function sayaMeasure(f) {
 }
 
 /** 칼날 ↔ 칼집 (대기 동안 — 칼이 칼집 안으로 보이나): 칼날 축 점(칼날 시작 → 칼끝 · 날 쪽 · 등 쪽 점)이 칼집 단면(같은 높이 줄의 타원) 밖으로 나온 가장 큰 몫 (m) */
-export function bladeOutside(f) {
+export function bladeOutside(f, insertedOnly = false) { // insertedOnly (11/14 납도): 칼집 입 안으로 든 칼날 몫만 (입 밖 몫은 아직 안 들어간 것)
   const P = obiSayaPose(f, _sp);
   const prof = f.obiSaya.prof;
   const R = prof.rows;
@@ -151,6 +155,7 @@ export function bladeOutside(f) {
       const w = new THREE.Vector3(x, row.y, 0).applyQuaternion(q).add(o);
       const s = toSaya(w);
       // 칼집 틀: y 0 = 입 · 단면 줄은 칼 원점 틀 y — 입 기준 높이로
+      if (insertedOnly && s.y < 0.01) continue;
       const yy = s.y + R[0].y;
       const j = Math.max(0, Math.min(R.length - 1, Math.round(((yy - R[0].y) / (R.at(-1).y - R[0].y)) * (R.length - 1))));
       const rr = R[j];
@@ -237,7 +242,8 @@ export function lookCross(f, tris, axis) {
 
 // ── 동작 대본 (브라우저 도구 tools/browser/iai_obi_shots.mjs 와 같은 몰기) ──
 export const SCRIPT = [
-  ['stand', 1.2], ['walk', 1.6], ['run', 1.6], ['lowwalk', 1.6], ['ready', 1.6], ['draw', 0], ['zanshin', 0], ['regrip', 0], ['back', 1.0], ['clinch', 2.5], ['hit', 1.2], ['fall', 2.5], ['dead', 3.0],
+  // noto (11/14 납도 — SECRET.iaiSheathe 초 동안 칼을 칼집에 · 이어 대기)
+  ['stand', 1.2], ['walk', 1.6], ['run', 1.6], ['noto', 0.9], ['lowwalk', 1.6], ['ready', 1.6], ['draw', 0], ['zanshin', 0], ['regrip', 0], ['back', 1.0], ['clinch', 2.5], ['hit', 1.2], ['fall', 2.5], ['dead', 3.0],
 ];
 /**
  * 대본 한 판: 내 자리(P — AI 몸 표시 · 겉모습 look)를 스텝마다 몰고 상대(롱소드)는 서 있음. 동작마다 칼집 셈의 가장 값.
@@ -256,6 +262,7 @@ export function sayaScript({ weapon = 'uchigatana', look = 'player', seed = 1, v
   let t = 0;
   let fired = null;
   let doneDraw = false;
+  let swOff = null; // 밀치기 동안 끈 칼 충돌 (되돌릴 [콜라이더, 묶음])
   const T = new THREE.Vector3();
   G.before = () => {
     const m = st;
@@ -263,12 +270,18 @@ export function sayaScript({ weapon = 'uchigatana', look = 'player', seed = 1, v
     if (m === 'walk') P.move.set(0, 0.45);
     else if (m === 'run') P.move.set(0, 1);
     else if (m === 'back') P.move.set(0, -0.6);
+    else if (m === 'noto') { const sh = (CONFIG.SECRET.iaiSheathe || 0) > 0 ? t / CONFIG.SECRET.iaiSheathe : 1; iaiReadyPose(P, sh >= 1, DT, sh < 1 ? sh : 0); }
     else if (m === 'lowwalk') { iaiReadyPose(P, true, DT); P.move.set(0.55, 0); }
     else if (m === 'ready') iaiReadyPose(P, true, DT);
     else if (m === 'draw' && fired == null) { iaiReadyPose(P, true, DT); if (t > 1.2 && !P.iai && !P.iaiReq) { requestIai(P, {}); fired = t; } }
-    else if (m === 'clinch') P.move.set(0, 0.8);
+    else if (m === 'clinch') {
+      P.move.set(0, 0.8);
+      // 11/14: 다가붙는 동안 두 칼 부딪힘을 끔 (브라우저 찍기 iai_obi_shots.mjs clinch 와 같이 — 긴 칼끝이 상대 칼 · 몸에 걸려 1.3 ~ 1.6 m 에서 같이 밀려 나가 0.7 m 안으로 못 드는 판이 앞 장면 끝 칼 자리 1 cm 차이로 갈림) · 맞음 장면에서 되돌림
+      if (!swOff) { swOff = []; for (const w of [A.sword, P.sword]) for (let i = 0; w && i < w.numColliders(); i++) { const c = w.collider(i); swOff.push([c, c.collisionGroups()]); c.setCollisionGroups(0); } }
+    }
+    if (m === 'hit' && swOff) { for (const [c, g] of swOff) c.setCollisionGroups(g); swOff = null; }
     // 대기 · 낮은 걸음 · 뽑기 앞이 아니면 발도 대기를 풂 (게임 AI 가 스텝마다 iaiReadyPose(…, false) 로 푸는 것과 같이)
-    if (m !== 'lowwalk' && m !== 'ready' && !(m === 'draw' && fired == null)) iaiReadyPose(P, false, DT);
+    if (m !== 'noto' && m !== 'lowwalk' && m !== 'ready' && !(m === 'draw' && fired == null)) iaiReadyPose(P, false, DT);
     if (m === 'hit' && fired == null && t > 0.3) { const c = P.bodies.chest; const p = c.translation(); const o = A.bodies.chest.translation(); T.set(p.x - o.x, 0, p.z - o.z).normalize(); c.applyImpulseAtPoint({ x: T.x * 70, y: 0, z: T.z * 70 }, { x: p.x, y: p.y + 0.1, z: p.z }, true); fired = t; }
     if (m === 'fall' && fired == null && t > 0.3) { P.knockDown(true); fired = t; }
     if (m === 'dead' && fired == null && t > 0.3) { P.die('obi-test', true); fired = t; }
@@ -293,7 +306,7 @@ export function sayaScript({ weapon = 'uchigatana', look = 'player', seed = 1, v
       if (!take) continue;
       const m = sayaMeasure(P);
       row.n++;
-      const resting = !(P.iaiObiW > 0) && !P.iai; // 쉬는 칼집 (대기 칼을 감싸지 않음 · 뽑는 중 아님)
+      const resting = !(P.iaiObiW > 0) && !P.iai && !(P.noto?.w > 0) && !(P.obiSaya?.nw > 0); // 쉬는 칼집 (대기 칼을 감싸지 않음 · 뽑는 중 · 납도 중 아님)
       if (P.state !== 'dead' && P.state !== 'down') {
         row.gapMin = Math.min(row.gapMin, m.gap);
         if (resting || m.follow > 0) row.gapMax = Math.max(row.gapMax, m.gap);
@@ -405,6 +418,174 @@ export function readyShot({ weapon = 'uchigatana', mode = 'hip', seed = 1, look 
   return { weapon, mode, mouth: L.M.map(r3), tsuba: L.tsu.map(r3), yaw: r1(L.yaw), el: r1(L.el), dm: r3(mx('dm')), da: r1(mx('da')), bladeOut: has ? r3(mx('out')) : null, follow: has ? r3(mn('fol')) : null, edge: r3(L.edge), edgeMin: r3(mn('edge')) };
 }
 
+/** 칼날 ↔ 몸 (11/14 납도 — 칼이 몸 · 다리를 뚫나): 칼날 축 점(칼날 시작 → 칼끝 24 점)이 몸 조각 겉에서 가장 가까운 부호 거리 (칼날 반폭 0.015 를 뺌 · − = 뚫음) · 그 조각 */
+export function bladeBody(f, parts = ['pelvis', 'abdomen', 'chest', 'thighF', 'thighB', 'shinF', 'shinB', 'uarmO']) { // 빈손 아래팔(farmO)은 뺌 — 납도 동안 왼손이 칼집 입째 칼날을 쥠
+  const q = tq(f.sword.rotation());
+  const o = tv(f.sword.translation());
+  const ax = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+  let best = Infinity;
+  let at = null;
+  for (let i = 0; i <= 24; i++) {
+    const p = o.clone().addScaledVector(ax, f.weaponCfg.hiltLength + (i / 24) * f.weaponCfg.bladeLength);
+    for (const n of parts) {
+      const d = sdPart(f, n, p) - 0.015;
+      if (d < best) (best = d), (at = n);
+    }
+  }
+  return { d: best, at };
+}
+/**
+ * 납도 한 스텝 표본 (11/14 사장님 '사진상으로는 납도가 0.2초~0.4초 사이 국면이 다른 데에 비해 다소 급작스러워보여. 칼끝이 … 칼집을 뚫고 순간이동하는 느낌'):
+ *  t (납도 시작 뒤 게임 s) · 칼끝 골반 틀 자리 · 칼집 축(골반 틀) · 칼끝을 칼집 틀로 — y = 입에서 칼집 안쪽으로(− = 입 밖) · 단면 밖 몫 e(1 = 단면 겉) · 칼끝 ↔ 입 거리(입 밖 + · 안 −)
+ */
+/** 그림 칼끝 (월드): 칼집 단면 줄 끝(칼날 끝 가운데 — 휜 칼날의 x 자리)을 날 위로 굴린 그림 칼 틀로 */
+export function visTip(f) {
+  const R = f.obiSaya.prof.rows;
+  const q = tq(f.sword.rotation());
+  if (f.obiEdge?.roll) q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.obiEdge.roll));
+  return new THREE.Vector3(R.at(-1).cx, R.at(-1).y, 0).applyQuaternion(q).add(tv(f.sword.translation()));
+}
+export function notoSample(P, t, tip) {
+  const S = P.obiSaya;
+  const pose = obiSayaPose(P, _sp);
+  const pq = tq(P.bodies.pelvis.rotation()).invert();
+  const pt = tv(P.bodies.pelvis.translation());
+  const tipP = tip.clone().sub(pt).applyQuaternion(pq);
+  const ax = new THREE.Vector3(0, 1, 0).applyQuaternion(pose.quat);
+  const s = tipP.clone().sub(pose.pos).applyQuaternion(pose.quat.clone().invert());
+  const R = S.prof.rows;
+  const j = Math.max(0, Math.min(R.length - 1, Math.round((s.y / Math.max(1e-6, R.at(-1).y - R[0].y)) * (R.length - 1))));
+  const e = Math.hypot((s.x - R[j].cx) / R[j].hw, s.z / R[j].ht);
+  const inside = s.y > 0.005 && s.y < S.prof.len && e < 1;
+  const dist = inside ? -s.y : s.y < 0 ? tipP.distanceTo(pose.pos) : Math.hypot(Math.max(0, e - 1) * Math.min(R[j].hw, R[j].ht), 0) + (s.y > S.prof.len ? s.y - S.prof.len : 0);
+  return { t, tip: tipP, ax, y: s.y, e, inside, dist, mouth: pose.pos.clone() };
+}
+/**
+ * 고른 밀도 · 입으로 들어감 (notoSample 줄): 스텝마다 칼끝 옮김(골반 틀) · 칼집 축 돎(°)의 가운데 · 가장 큼 · 0.1 실제 초(= iaiSheathe / 6) 칸마다 칼끝 옮김 몫 ·
+ *  칼끝이 칼집 안으로 든 첫 스텝의 앞 스텝이 입 곁(입 밖 3 cm 안 · 단면 안 1.3 배)이었나(입으로 들어감) · 칼끝이 칼집 몸 옆으로 든 스텝 수(입이 아닌 데로 — 앞 스텝 단면 밖 · 깊이 3 cm 넘게)
+ */
+export function notoEven(tr) {
+  if (tr.length < 3) return null;
+  const X = CONFIG.SECRET.iaiSheathe || 0.66;
+  const dTip = [];
+  const dAng = [];
+  const bins = new Array(6).fill(0);
+  const mBins = new Array(6).fill(0); // 칼집 입 옮김
+  const aBins = new Array(6).fill(0); // 칼집 축 돎
+  const dM = [];
+  let entry = null;
+  const side = [];
+  for (let i = 1; i < tr.length; i++) {
+    const a = tr[i - 1], b = tr[i];
+    const d = b.tip.distanceTo(a.tip);
+    dTip.push(d);
+    dAng.push(Math.acos(Math.max(-1, Math.min(1, a.ax.dot(b.ax)))) * R2D);
+    dM.push(b.mouth.distanceTo(a.mouth));
+    const k = Math.min(5, Math.max(0, Math.floor((b.t / X) * 6)));
+    bins[k] += d;
+    mBins[k] += dM.at(-1);
+    aBins[k] += dAng.at(-1);
+    if (b.inside && !a.inside) {
+      const viaMouth = a.y <= 0.03 && a.e <= 1.3;
+      if (entry == null) entry = { t: r3(b.t), prevY: r3(a.y), prevE: r1(a.e), viaMouth };
+      if (!viaMouth) side.push([r3(b.t), r3(a.y), r1(a.e), r3(b.y), r1(b.e)]);
+    }
+  }
+  // 칼집 위에서 본 각 (곧장 뒤 0° · 옆 90° · 앞 > 90°) 가장 큼 (11/14 사장님 '너무 옆으로 각도가 벌어진')
+  const topMax = r1(Math.max(...tr.map((r) => (Math.atan2(Math.hypot(r.ax.z), -r.ax.x) * R2D))));
+  const sum = dTip.reduce((x, y) => x + y, 0);
+  const share = (v) => { const t = v.reduce((x, y) => x + y, 0); return v.map((x) => r3(x / Math.max(1e-9, t))); };
+  const med = (v) => { const q = [...v].sort((x, y) => x - y); return q[Math.floor(q.length / 2)]; };
+  return {
+    n: tr.length, tipStepMed: r3(med(dTip)), tipStepMax: r3(Math.max(...dTip)), angStepMed: r1(med(dAng)), angStepMax: r1(Math.max(...dAng)),
+    bins: bins.map((x) => r3(x / Math.max(1e-9, sum))), tipPath: r3(sum), mouthStepMed: r3(med(dM)), mouthStepMax: r3(Math.max(...dM)), mouthBins: share(mBins), angBins: share(aBins), mouthPath: r3(dM.reduce((x, y) => x + y, 0)), angPath: r1(dAng.reduce((x, y) => x + y, 0)), topMax, entry, sideEntries: side.length, sideAt: side,
+    curve: tr.filter((_, i) => i % 3 === 0).map((r) => [r3(r.t), r3(r.dist)]),
+  };
+}
+
+/**
+ * 납도 한 판 (11/14 사장님 '2초 후에 납도 시작' — SECRET.iaiSheathe): mode 'hip' = 사람 창(PlayerSecretWatch — 허리 대기) · 'crouch' = AI 몸 셈(IaiArm + iaiReadyPose — 웅크린 대기).
+ *  서 있는 롱소드 과녁(2.4 m) · 손 쉼. 스텝마다: 납도 몫 · 준비 · 칼날 ↔ 몸 · 칼집 입 안 칼날이 칼집 겉 밖 · 칼집 ↔ 몸 · 칼집 입 · 축이 한 스텝에 옮긴 길이 · 각(튐) · 칼끝 빠르기.
+ *  onStep(t, P, row) — 그림 도구가 읽음
+ */
+export function notoRun({ weapon = 'uchigatana', mode = 'hip', seed = 1, look = 'player', tEnd = 3.3, after = 0.3, gap = 2.4, keepTrace = false, onStep = null } = {}) {
+  const ai = mode === 'crouch';
+  const G = newRound({ walls: false, weapon, weapon2: 'longsword', seed, gap, look: lookOf(look), persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0 && !ai) f.humanInput = true; } });
+  const P = G.player;
+  const A = G.enemy;
+  G.ai.update = () => { A.move.set(0, 0); A.handOffset.set(0, 0); };
+  let arm = null;
+  let ps = null;
+  if (ai) {
+    P.aiControlled = true;
+    arm = new IaiArm();
+    G.before = () => { arm.tick(DT, true, P.openHold); iaiReadyPose(P, arm.armed, DT, arm.sheathe); };
+  } else {
+    P.skill.corr = CONFIG.SKILL.corr; P.skill.corrTip = CONFIG.SKILL.corrTip; P.skill.autoGuard = true;
+    const pg = new PlayerParryGuard(P, A);
+    P.stamina.controller = pg;
+    ps = new PlayerSecretWatch(P, A);
+    arm = ps.iaiArm;
+    G.before = () => ps.update(DT, !!P.skill.sec);
+  }
+  const o = { weapon, mode, start: null, armed: null, body: Infinity, bodyAt: null, out: 0, gap: Infinity, leg: Infinity, chest: Infinity, jumpM: 0, jumpA: 0, tipV: 0, n: 0, readyOut: 0, readyFol: 1, bodyNoto: Infinity, bodyReady: Infinity, belt: 0, handGap: 0 };
+  let prev = null;
+  let tipPrev = null;
+  const trace = [];
+  while (G.t < CONFIG.ARENA.startHold + tEnd) {
+    G.step();
+    P.syncMeshes?.();
+    const t = G.t - CONFIG.ARENA.startHold;
+    const sh = arm.sheathe;
+    if (sh > 0 && o.start == null) o.start = r3(t);
+    if (arm.armed && o.armed == null) o.armed = r3(t);
+    const on = (P.noto?.w ?? 0) > 0;
+    const tip = P.bladePoint ? P.bladePoint(1, new THREE.Vector3()) : null;
+    if (on && P.obiSaya && tip) trace.push(notoSample(P, t - (o.start ?? t), visTip(P))); // 그림 칼끝 (휜 칼날 · 날 위 굴림) // 11/14 고른 밀도 · 칼끝이 입으로 (사장님 '0.2초~0.4초 사이 … 칼집을 뚫고 순간이동')
+    if (on || (o.armed != null && t < o.armed + after)) {
+      const bb = bladeBody(P);
+      const m = P.obiSaya ? sayaMeasure(P) : null;
+      const wrapped = !on || (P.obiSaya?.nww ?? 0) >= 0.99; // 칼집이 칼을 다 감싼 때만 (납도 앞 몫 — 칼끝이 아직 칼집 밖 · 감싸 들어가는 중 — 은 뺌)
+      const row = { t, sh, p: P.noto?.p ?? 1, body: bb.d, bodyAt: bb.at, out: P.obiSaya && wrapped ? bladeOutside(P, true) : null, gap: m?.gap, leg: m?.leg, chest: m?.chest, follow: m?.follow };
+      o.n++;
+      if (bb.d < o.body) (o.body = bb.d), (o.bodyAt = bb.at);
+      if (on) o.bodyNoto = Math.min(o.bodyNoto, bb.d);
+      else o.bodyReady = Math.min(o.bodyReady, bb.d);
+      // 11/14 '허공에 붕 떠보이는데' 뒤: 칼집 입 ↔ 허리띠 자리(쉬는 ↔ 대기 칼집 입 사이 줄) · 왼손 ↔ 칼집 입 쥠 자리 (칼집 그림 입 + 축 × iaiSayaKoi)
+      if (P.obiSaya) {
+        const sp = obiSayaPose(P);
+        o.belt = Math.max(o.belt, notoBelt(P, sp.pos.clone(), 0));
+        const koiW = sp.pos.clone().add(new THREE.Vector3(0, CONFIG.SECRET.iaiSayaKoi ?? 0.05, 0).applyQuaternion(sp.quat));
+        const pq = tq(P.bodies.pelvis.rotation());
+        const kw = koiW.applyQuaternion(pq).add(tv(P.bodies.pelvis.translation()));
+        const fo = P.bodies.farmO;
+        const hand = new THREE.Vector3(0, -0.135, 0).applyQuaternion(tq(fo.rotation())).add(tv(fo.translation()));
+        const hg = hand.distanceTo(kw);
+        if (on ? (P.noto?.u ?? 0) >= 0.3 : (P.iaiSayaW ?? 0) >= 0.99) o.handGap = Math.max(o.handGap, hg); // 왼손이 칼자루 끝을 놓고 칼집 입으로 옮긴 뒤(길 몫 0.3 — ① 앞 반 끝)부터 · 준비 뒤는 칼집 입을 쥔 동안
+        if (on) (o.handTr ??= []).push([r3(t - (o.start ?? t)), r3(hg), r3(P.noto?.u ?? 0)]);
+      }
+      if (row.out != null) o.out = Math.max(o.out, row.out);
+      if (m) { o.gap = Math.min(o.gap, m.gap); o.leg = Math.min(o.leg, m.leg); o.chest = Math.min(o.chest, m.chest); }
+      if (!on) { o.readyOut = Math.max(o.readyOut, row.out ?? 0); o.readyFol = Math.min(o.readyFol, m?.follow ?? 1); }
+      // 칼집 그림이 한 스텝에 옮긴 몫 (튐): 입 m · 축 °
+      const P2 = obiSayaPose(P);
+      const ax = new THREE.Vector3(0, 1, 0).applyQuaternion(P2.quat);
+      if (prev) { o.jumpM = Math.max(o.jumpM, P2.pos.distanceTo(prev.pos)); const ja = Math.acos(Math.min(1, ax.dot(prev.ax))) * R2D; if (ja > o.jumpA) (o.jumpA = ja), (o.jumpT = r3(t)), (o.jumpP = r3(P.noto?.w > 0 ? P.noto.p : 1)); }
+      prev = { pos: P2.pos.clone(), ax };
+      if (tip && tipPrev) o.tipV = Math.max(o.tipV, tip.distanceTo(tipPrev) / DT);
+      onStep?.(t, P, row);
+    }
+    tipPrev = tip?.clone() ?? null;
+  }
+  G.world.free();
+  o.even = notoEven(trace);
+  if (keepTrace) o.trace = trace;
+  for (const k of ['body', 'bodyNoto', 'bodyReady', 'belt', 'handGap', 'out', 'gap', 'leg', 'chest', 'jumpM', 'readyOut', 'readyFol']) o[k] = Number.isFinite(o[k]) ? r3(o[k]) : null;
+  o.jumpA = r1(o.jumpA);
+  o.tipV = r1(o.tipV);
+  return o;
+}
+
 if (isMain(import.meta.url)) {
   const [mode, ...rest] = process.argv.slice(2);
   const arg = (k, d) => { const a = rest.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
@@ -427,6 +608,15 @@ if (isMain(import.meta.url)) {
       out.push({ look, weapon, ...r });
       if (r.none) { console.log(`${look} ${weapon} | 칼집 없음`); continue; }
       for (const [k, v] of Object.entries(r.rows)) console.log(`${look.padEnd(16)} ${weapon.padEnd(13)} ${k.padEnd(8)} n ${String(v.n).padStart(4)} | 골반 · 배 틈 ${v.gapMin} ~ ${v.gapMax} m · 다리 ${v.leg} · 가슴 ${v.chest} · 칼 팔 ${v.armS} · 땅 ${v.ground} (눕힘 ${Math.round(v.swing)}°) | 끈 몸통 ${v.cTorso} · 다리 ${v.cLeg} · 가슴 ${v.cChest} · 땅 ${v.cGround} · 두 끝 ${v.cSpan} m · 끈 지남 ${JSON.stringify(v.cCross)} | 감쌈 ${r3(v.follow)} · 밀어냄 ${r3(v.push)} | 그림 지남 ${JSON.stringify(v.cross)}`);
+    }
+    if (json) writeFileSync(json, JSON.stringify({ set: arg('set', ''), out }));
+  } else if (mode === 'noto') {
+    const out = [];
+    for (const weapon of weapons) for (const m of arg('modes', 'hip,crouch').split(',')) {
+      const r = notoRun({ weapon, mode: m, look: arg('look', 'player') });
+      out.push(r);
+      if (r.even) console.log(`${weapon.padEnd(13)} ${m.padEnd(6)} | 고른 밀도: 칼끝 스텝 가운데 ${r.even.tipStepMed} · 가장 ${r.even.tipStepMax} m · 칼집 축 가운데 ${r.even.angStepMed} · 가장 ${r.even.angStepMax}° · 0.1 s 칸 몫 칼끝 ${JSON.stringify(r.even.bins)} · 칼집 입 ${JSON.stringify(r.even.mouthBins)} · 칼집 축 ${JSON.stringify(r.even.angBins)} · 칼끝 길 ${r.even.tipPath} m · 칼집 입 길 ${r.even.mouthPath} m (스텝 가장 ${r.even.mouthStepMax}) · 칼집 축 돎 ${r.even.angPath}° · 위에서 본 칼집 각 가장 ${r.even.topMax}° | 입으로 듦 ${JSON.stringify(r.even.entry)} · 옆으로 듦 ${r.even.sideEntries}`);
+      console.log(`${weapon.padEnd(13)} ${m.padEnd(6)} | 납도 시작 ${r.start} s · 준비 ${r.armed} s | 칼날 ↔ 몸 가장 가까움 ${r.body} m (${r.bodyAt}) | 칼집 입 안 칼날이 칼집 겉 밖 ${r.out} m (대기 ${r.readyOut}) · 대기 감쌈 가장 낮음 ${r.readyFol} | 칼집 ↔ 골반 · 배 ${r.gap} · 다리 ${r.leg} · 가슴 ${r.chest} | 칼집 한 스텝 옮김 ${r.jumpM} m · ${r.jumpA}° (t ${r.jumpT} · 몫 ${r.jumpP}) | 칼끝 가장 빠르기 ${r.tipV} m/s`);
     }
     if (json) writeFileSync(json, JSON.stringify({ set: arg('set', ''), out }));
   } else if (mode === 'fight') {

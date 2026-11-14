@@ -10,7 +10,7 @@
 //   block  피하기 대신 칼로 받기(막기 +2 · 흘려 받기 +3 스택)
 //   stack  스택이 적을수록 참고 쌓일수록 먼저 칠 마음 · 쌓일수록 크고 단순한 한 칼(내려베기)
 //   link   빗나가거나 막힌 내려벤 칼 → 제비 베기 (스택을 들고 감) · 칼이 맞닿으면 되받아 치기(공통 planBind — 일본 bindDef 패시브)
-//   lure   유도(가운데 끝 4 부터) — 준비 자세로 서서 상대를 칼끝 밖에 묶음 (2 s 서 있으면 고노센 준비)
+//   lure   유도(가운데 끝 4 부터) — 준비 자세로 서서 상대를 칼끝 밖에 묶음 (2.6 s 서 있으면 고노센 준비 — 2.0 + 납도 0.6)
 // ─────────────────────────────────────────────────────────────
 import { AI_PLAN, AI_PLAN_JP as J, JP_TANK } from './config.js';
 
@@ -118,7 +118,7 @@ export function jpRead(ai) {
   if (ai.jpPre) ai.stats.plan.jp.pre++;
 }
 
-/** 자세 박자마다 (watch — 자세를 새로 고른 때): 유도(4 부터) — lure × 기울기 몫으로 준비 자세로 서서 lureT 동안 멈춤(공통 planFeet 'stop' — 고노센 준비 2 s). 굴림은 그 조건일 때만 */
+/** 자세 박자마다 (watch — 자세를 새로 고른 때): 유도(4 부터) — lure × 기울기 몫으로 준비 자세로 서서 lureT(3.0 s) 동안 멈춤(공통 planFeet 'stop' — 고노센 준비 2.6 s 를 넘김). 굴림은 그 조건일 때만 */
 export function jpBeat(ai) {
   const C = ai.planC;
   const R = ai.planR;

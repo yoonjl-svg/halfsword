@@ -7,6 +7,8 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT, AI } from './harness_m.mjs';
 import { PlayerSecretWatch, secretLeft, secretUsesOf, useSecret, secretSpent } from '../../src/secret.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
+// 준비까지 (11/14 사장님 '2초 후에 납도 시작' — 일본 준비는 iaiArmTime 뒤 납도 SECRET.iaiSheathe 가 끝나야 · 帯刀 끄면 납도 없음 · secret.js IaiArm.extra)
+const ARM = () => CONFIG.SECRET.iaiArmTime + (CONFIG.SECRET.iaiObi && CONFIG.SECRET.iaiSheathe > 0 ? CONFIG.SECRET.iaiSheathe : 0);
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { SECRET } = CONFIG;
@@ -95,7 +97,7 @@ test('일본 고노센 · 이베리아 싱지르: 한 번 쓴 판엔 준비 · �
     const B = body(w);
     const { P, W, upd, until } = B;
     try {
-      assert.ok(until(() => armed(W), 2.5) != null, `${w} 처음`);
+      assert.ok(until(() => armed(W), Math.max(2.5, ARM() + 0.3)) != null, `${w} 처음`); // 기다리는 끝 (11/14 납도 — 일본 준비가 iaiArmTime + iaiSheathe 에)
       const o = W.open ? W.fire() : null;
       P.skill.sec = { S: o?.S ?? W.S };
       upd();
@@ -167,7 +169,7 @@ test('AI 가 보는 사람 고노센 준비: 이 판 비기를 다 쓴 사람은
     const P = G.player;
     P.fightT = 1e3;
     const ai = G.ai;
-    for (let t = 0; t < SECRET.iaiArmTime + 0.2; t += DT) ai.gnsWatch(DT, 3, false);
+    for (let t = 0; t < ARM() + 0.2; t += DT) ai.gnsWatch(DT, 3, false);
     assert.equal(ai.gnsW.user, true);
     assert.equal(ai.gnsW.ready, true, '준비로 봄');
     useSecret(P);

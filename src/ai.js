@@ -939,7 +939,7 @@ export class AI {
       const busy = this.mode === 'attack' || this.mode === 'defend' || (!!this.secretRun && this.secretRun.stage !== 'instant') || this.drillOut; // 헛스윙 연습 동안은 대기하지 않는다
       const outside = SECRET.gnsEnterAI ? gnsOutside(d, { foeReach: this.foeReach, reach: this.M.reach, contact: this.M.contact }, this.iaiArm.armed, SECRET.gnsLong) : d > this.foeReach; // 고노센 들어옴 AI 판(10/25 — 기본 끔)의 긴 칼 상대 규칙 · 끄면 옛 셈
       gnsArmTick(this.iaiArm, dt, busy || kneeling || hurt, gnsMoving(me), { outside: outside && !kneeling, busy }, armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x — 서 있는 모습 인물은 그동안 여기 안 옴 · 기본 AI 몫)
-      iaiReadyPose(me, this.iaiArm.armed && this.mode !== 'attack', dt);
+      iaiReadyPose(me, this.iaiArm.armed && this.mode !== 'attack', dt, this.mode !== 'attack' ? this.iaiArm.sheathe : 0); // 11/14 납도 (SECRET.iaiSheathe): 준비 전 iaiSheathe 초 동안 칼을 칼집에 (사람과 같은 셈)
     }
     // 이베리아 길목 지키기 준비 (10/11 v6): 상대가 내 칼끝 거리(reach) 밖에 gilmokArmTime 초 머물면 칼을 몸 옆으로 감아 뒤로 둔 옆 자세(가로 탈류·가로 레베스)로 길목을 지킨다.
     //  쪽 = 준비가 켜질 때 지금 간 보는 자세의 쪽(가운데면 오른쪽 — 피 단Ⅰ 탈류부터). 간 보기·물러남 동안만 손 목표를 덮는다(자세 고르기는 그대로 — 풀리면 그 자세로 돌아감)

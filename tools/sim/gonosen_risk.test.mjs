@@ -8,6 +8,8 @@ import { PlayerSecretWatch, secretEvent, gnsEnterLine, foeOnline, gnsUser, gnsBl
 import { playerSecretDef, JAPANESE_GAIT, setJapaneseGait } from '../../src/schools.js';
 import { requestIai } from '../../src/secret_instant.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
+// 준비까지 (11/14 사장님 '2초 후에 납도 시작' — 일본 준비는 iaiArmTime 뒤 납도 SECRET.iaiSheathe 가 끝나야 · 帯刀 끄면 납도 없음 · secret.js IaiArm.extra)
+const ARM = () => CONFIG.SECRET.iaiArmTime + (CONFIG.SECRET.iaiObi && CONFIG.SECRET.iaiSheathe > 0 ? CONFIG.SECRET.iaiSheathe : 0);
 
 const { SECRET } = CONFIG;
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
@@ -233,7 +235,9 @@ test('⑤ 실제 몸: 경계를 끄면 AI 가 간 보기로 준비된 사람 발
   const off = withJpOld(() => standoff('isolde', { gnsWary: 0 }));
   assert.equal(off.W, null); // 끄면 경계 칸 자체가 없다 (옛 판 그대로)
   assert.ok(off.creep > 0, `off creep ${off.creep}`);
-  const on = standoff('isolde', {});
+  // 11/14 칼집 각도 · 납도(준비 2.0 → 2.6 s)로 이 씨앗 판이 갈려 이솔데가 11.6 s 에 간 보기(holdDist 2.52 · 스틱 0 곁) 동안 걸음 한 번에 선 안 6 cm 로 듦 — 경계 셈은 그대로라
+  //  이 씨앗 장면은 그 전 판(납도 없음 · 쉬는 칼집 11/14 자리)으로 묶음 · 기준은 그대로 (docs/strike/iai_obi_2026-11-14.md §13-5) · 토메 · 라트나는 지금 판
+  const on = standoff('isolde', { iaiSheathe: 0, iaiObiSayaMouth: [0.21, 0.085, 0.02], iaiObiSayaAxis: { yaw: -121, el: -15 }, iaiObiPull: { yaw: -160, el: -25 }, iaiObiFollow: { m: 0.06, deg: 20 } });
   assert.ok(on.W?.user && on.ready > 0, JSON.stringify(on.W?.n));
   assert.equal(on.creep, 0);
   const rows = [];
@@ -289,7 +293,7 @@ test('⑤ 무모 (11/14 사장님 \'권고대로 고노센도 무모하게 넘�
 test('⑤ 속임 → 결행: 속임은 준비 한 번에 한 번 (선 밖에서 들었다 거둠) · 다음 칠 때는 결행 — 상대가 고노센 쓰는 몸이 아니면 아무 일 없음', () => {
   const G = newRound({ weapon: 'monohoshizao', weapon2: 'longsword', seed: 1, difficulty: 'normal' });
   const ai = G.ai;
-  for (let i = 0; i < (CONFIG.ARENA.startHold + SECRET.iaiArmTime + 0.1) / DT; i++) G.step(); // 사람 준비가 켜질 때까지 (무장 시계는 판 시작 정지 뒤부터 — 10/27 23:0x · 실제 2 s)
+  for (let i = 0; i < (CONFIG.ARENA.startHold + ARM() + 0.1) / DT; i++) G.step(); // 사람 준비가 켜질 때까지 (무장 시계는 판 시작 정지 뒤부터 — 10/27 23:0x · 실제 2 s)
   ai.gnsWatch(DT, ai.d, false);
   const W = ai.gnsW;
   assert.equal(W.user, true);
