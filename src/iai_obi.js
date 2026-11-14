@@ -16,6 +16,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { SECRET } from './config.js';
+import { DARAISHI_SCABBARD, placeDaraishiScabbard } from './outfit_silver_wanderer.js'; // 다라이시 빈 검집 자리 (11/14 — daraishiSaya)
 
 const D2R = Math.PI / 180;
 /** 帯刀 칼집을 다는 무기 (일본 유파 칼 넷 — weapons.js school 'japanese') */
@@ -106,11 +107,13 @@ export function obiPathB(f) {
 
 /** 무기마다 칼집 빛깔 (그림만) — 칼자루 · 쇠붙이 색을 따름 [추정 — 그림으로 고름] */
 const SAYA_LOOK = {
-  uchigatana: { body: 0x17171a, fit: 0x2b2e33, rough: 0.32 }, // 검은 옻칠 · 쇠 (츠바 · 카시라 0x2b2e33)
-  muramasa: { body: 0x2a1615, fit: 0x9b7c51, rough: 0.34 }, // 검붉은 옻칠 · 청동 (하바키 · 띠 0x9b7c51)
-  kusanagi: { body: 0x1d3a37, fit: 0xb49b60, rough: 0.5 }, // 짙은 청록 · 금 (KUSANAGI_COLORS grip · gold)
-  monohoshizao: { body: 0x141416, fit: 0xc9a14a, rough: 0.3 }, // 검은 옻칠 · 금 테 (츠바 금 테 0xc9a14a)
+  uchigatana: { body: 0x17171a, fit: 0x2b2e33, rough: 0.32, cord: 0x23263a }, // 검은 옻칠 · 쇠 (츠바 · 카시라 0x2b2e33) · 사게오 쪽빛
+  muramasa: { body: 0x2a1615, fit: 0x9b7c51, rough: 0.34, cord: 0x5a1f1c }, // 검붉은 옻칠 · 청동 (하바키 · 띠 0x9b7c51) · 사게오 검붉음
+  kusanagi: { body: 0x1d3a37, fit: 0xb49b60, rough: 0.5, cord: 0x8a7444 }, // 짙은 청록 · 금 (KUSANAGI_COLORS grip · gold) · 사게오 금빛 갈색
+  monohoshizao: { body: 0x141416, fit: 0xc9a14a, rough: 0.3, cord: 0x2e2a20 }, // 검은 옻칠 · 금 테 (츠바 금 테 0xc9a14a) · 사게오 검은 갈색
 };
+/** 사게오(下緒) — 칼집 栗形 에서 허리띠로 잇는 끈 (그림만): 끈 길이 m · 굵기(반지름) m [추정 — 그림으로 고름 · 확인표 3887] */
+const SAGEO = { len: 0.14, r: 0.0035, seg: 12, sides: 6 };
 
 /**
  * 칼날 그림을 칼 원점 틀에서 재서 칼집 단면 줄을 짓는다: 칼날 시작(hiltLength)부터 칼끝까지 N 칸 — 칸마다 날 쪽 x 가운데(휨) · 반폭 · 반두께.
@@ -232,6 +235,7 @@ function sayaGroup(prof, look) {
   const knob = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.022, 0.008), fit);
   knob.position.set(qk.cx - qk.hw * 0.35, 0.1, -(qk.ht + 0.002));
   g.add(knob);
+  g.userData.knob = knob.position.clone().setZ(knob.position.z - 0.004); // 사게오가 매이는 자리 (栗形 바깥)
   return g;
 }
 
@@ -242,22 +246,174 @@ function sayaGroup(prof, look) {
 export function attachObiSaya(f, look) {
   f.obiSaya = null;
   if (!SECRET.iaiObiSaya || !obiOn(f) || !f.groups?.pelvis || !f.swordGroup) return null;
-  if (ownScabbard(f, look)) return null;
-  const prof = bladeProfile(f.swordGroup, f.bladeMesh, f.weaponCfg.hiltLength, f.weaponCfg.bladeLength);
-  if (!prof) return null;
-  const g = sayaGroup(prof, SAYA_LOOK[f.weapon.id] ?? SAYA_LOOK.uchigatana);
-  f.groups.pelvis.add(g);
+  // 옷 두께 (누운 몸 밀어냄 — obiPush): 칼집을 달기 전 그림으로 잼
+  const garm = {
+    pelvis: partHalf(f.groups.pelvis, PELVIS_BOX),
+    abdomen: partHalf(f.groups.abdomen, ABDOMEN_BOX),
+    chest: partHalf(f.groups.chest, CHEST_BOX),
+  };
+  const skirt = skirtProfile(f.groups.pelvis);
   const legR = { thighF: legRadius(f.groups.thighF), thighB: legRadius(f.groups.thighB) };
-  f.obiSaya = { g, prof, k: 0, t: null, pulled: false, fw: 0, fPos: new THREE.Vector3(), fQuat: new THREE.Quaternion(), edge: f.weapon.id === 'monohoshizao' ? 1 : -1, legR }; // edge: 날 쪽 (obiSayaPose) · legR: 허벅지 그림 반지름 (obiPush)
+  const legRF = { thighF: legRadius(f.groups.thighF, -1), thighB: legRadius(f.groups.thighB, -1) };
+  const shinR = { shinF: legRadius(f.groups.shinF, -1, 0.05), shinB: legRadius(f.groups.shinB, -1, 0.05) };
+  let g = null;
+  let prof = null;
+  const lk = SAYA_LOOK[f.weapon.id] ?? SAYA_LOOK.uchigatana;
+  if (ownScabbard(f, look)) {
+    // 다라이시 (11/14 사장님 '다라이시 검집 모양은 그대로 두고 자리만 다른 인물처럼 허리띠로'): 자기 빈 검집 그림을 칼집 틀로 옮겨 같은 몰기 · 밀어냄 · 땅 셈 (daraishiSaya)
+    const own = SECRET.iaiObiOwn ? daraishiSaya(f, look) : null;
+    if (!own) return null;
+    ({ g, prof } = own);
+  } else {
+    prof = bladeProfile(f.swordGroup, f.bladeMesh, f.weaponCfg.hiltLength, f.weaponCfg.bladeLength);
+    if (!prof) return null;
+    g = sayaGroup(prof, lk);
+  }
+  f.groups.pelvis.add(g);
+  const edge = SECRET.iaiObiEdge ? 1 : f.weapon.id === 'monohoshizao' ? 1 : -1; // 날 쪽 — 날 위(iaiObiEdge — 원전 「刃を上に」)면 처음부터 위
+  f.obiSaya = { g, prof, k: 0, t: null, pulled: false, fw: 0, fPos: new THREE.Vector3(), fQuat: new THREE.Quaternion(), edge, legR, legRF, shinR, garm, skirt, knob: g.userData.knob ?? null, cord: null, own: !!g.userData.own }; // edge: 날 쪽 (obiSayaPose) · legR: 허벅지 그림 반지름 (obiPush) · garm: 누운 몸 옷 두께 상자
+  if (SECRET.iaiObiSageo && f.obiSaya.knob) f.obiSaya.cord = sageoCord(f, g.userData.cordColor ?? lk.cord ?? lk.body);
   syncObiSaya(f);
   return g;
+}
+
+/**
+ * 다라이시 빈 검집을 칼집 틀로 (11/14 — SECRET.iaiObiOwn): 옷 모듈이 이름 붙여 둔 검집 몸 · 쇠붙이(outfit_silver_wanderer.js · _detail.js 'daraishi-scabbard*')를
+ *  그 자리(검집 좌표 → 골반 — placeDaraishiScabbard)에서 빼 칼집 틀(입 = 원점 · +y = 끝 쪽)로 옮김 — 꼴 · 길이 · 입 쇠 · 끝 쇠 · 끈 띠 · 빛깔 그대로.
+ *  매다는 끈 둘(옛 자리의 허리띠 → 검집)은 감추고 사게오가 잇는다. 둥근 검집이라 단면 줄은 반지름 그대로(입 0.025 → 끝 0.02 · 입 쇠 0.027).
+ *  v7 아래(굵은 옛 판 — 이름 없음)는 null → 옛 자리 그대로
+ */
+function daraishiSaya(f, look) {
+  const pel = f.groups.pelvis;
+  const parts = [];
+  pel.traverse((o) => { if (o.isMesh && /^daraishi-scabbard/.test(o.name)) parts.push(o); });
+  if (!parts.length) return null;
+  const DS = DARAISHI_SCABBARD;
+  const SL = look?.daraishiScabbardLen ?? DS.length;
+  // 검집 좌표 → 옷 층 좌표 (placeDaraishiScabbard 를 점 넷에 걸어 읽음 — 입 · 기울임 · 안쪽 들임 그대로)
+  const probe = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1], 3));
+  const bakeFn = (geo, pos, rot) => geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(...(pos ?? [0, 0, 0])), new THREE.Quaternion().setFromEuler(new THREE.Euler(...(rot ?? [0, 0, 0]))), new THREE.Vector3(1, 1, 1)));
+  const P = placeDaraishiScabbard(THREE, bakeFn, probe, look).attributes.position;
+  const o = new THREE.Vector3().fromBufferAttribute(P, 0);
+  const ax = [1, 2, 3].map((i) => new THREE.Vector3().fromBufferAttribute(P, i).sub(o));
+  const T = new THREE.Matrix4().makeBasis(ax[0], ax[1], ax[2]).setPosition(o);
+  // 검집 좌표 → 칼집 틀: 입(y = top)을 원점으로 · y 를 뒤집음(끝 쪽 +) · x 도 뒤집어 오른손 틀
+  const A = new THREE.Matrix4().makeRotationZ(Math.PI).multiply(new THREE.Matrix4().makeTranslation(0, -DS.top, 0));
+  const M = A.multiply(T.invert());
+  const g = new THREE.Group();
+  g.name = 'iai-obi-saya';
+  g.userData.visualOnly = true;
+  g.userData.own = true;
+  let cordColor = null;
+  for (const m of parts) {
+    if (/strap/.test(m.name)) { m.visible = false; cordColor ??= m.material?.color?.getHex?.() ?? null; continue; } // 옛 자리 매다는 끈
+    m.parent.remove(m);
+    m.matrixAutoUpdate = false;
+    m.matrix.copy(M);
+    g.add(m);
+  }
+  g.userData.cordColor = cordColor;
+  g.userData.knob = new THREE.Vector3(0, DS.top - 0.27, -0.031); // 검집 끈 띠(검집 좌표 y 0.27 — 입 쇠 아래) 겉
+  const N = 18;
+  const rows = [];
+  for (let k = 0; k <= N; k++) {
+    const y = (k / N) * (SL - 0.01);
+    const r = 0.025 + (0.02 - 0.025) * (y / SL) + (y < 0.043 ? 0.002 : 0); // 몸 cyl(0.025 → 0.02) · 입 쇠 0.027
+    rows.push({ y, cx: 0, hw: r, ht: r });
+  }
+  return { g, prof: { rows, len: SL, bladeLen: f.weaponCfg.bladeLength } };
+}
+
+/** 몸 조각 그림(옷 포함)의 반 크기 (몸체 틀 축마다 꼭짓점 가장 먼 값) — 몸 그림 상자 h 아래로 안 내림 · h + 0.05 에서 자름 (누운 몸 밀어냄) */
+function partHalf(group, h) {
+  const out = [...h];
+  if (!group) return out;
+  const v = new THREE.Vector3();
+  const inv = new THREE.Matrix4();
+  group.updateMatrixWorld(true);
+  inv.copy(group.matrixWorld).invert();
+  group.traverse((o) => {
+    const pos = o.isMesh && o.visible !== false && !/^iai-obi|^daraishi-scabbard/.test(o.name) && o.geometry?.attributes?.position;
+    if (!pos) return;
+    const m = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
+    for (let i = 0; i < pos.count; i += 3) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(m);
+      out[0] = Math.max(out[0], Math.min(h[0] + 0.05, Math.abs(v.x)));
+      out[1] = Math.max(out[1], Math.min(h[1] + 0.05, Math.abs(v.y)));
+      out[2] = Math.max(out[2], Math.min(h[2] + 0.05, Math.abs(v.z)));
+    }
+  });
+  return out;
+}
+
+/**
+ * 골반 옷 자락 꼴 (누운 몸 밀어냄 — 그림만): 골반 그림(옷 자락 · 갑옷 자락 포함)을 허리띠 아래 높이 띠 8 칸으로 나눠 칸마다 앞뒤 · 옆 반지름(꼭짓점 가장 먼 |x| · |z|) —
+ *  누운 몸에서 칼집이 자락 겉에 얹히게(자락을 뚫지 않게). 몸 그림 상자 아래로 안 내림 · 0.25 m 에서 자름. 자락이 없으면(그림 상자 안) null
+ */
+function skirtProfile(group) {
+  if (!group) return null;
+  const v = new THREE.Vector3();
+  const inv = new THREE.Matrix4();
+  group.updateMatrixWorld(true);
+  inv.copy(group.matrixWorld).invert();
+  let y0 = 0;
+  const pts = [];
+  group.traverse((o) => {
+    const pos = o.isMesh && o.visible !== false && !/^iai-obi|^daraishi-scabbard/.test(o.name) && o.geometry?.attributes?.position;
+    if (!pos) return;
+    const m = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(m);
+      if (v.y > PELVIS_BOX[1] || Math.abs(v.x) > 0.3 || Math.abs(v.z) > 0.3) continue;
+      pts.push(v.x, v.y, v.z);
+      y0 = Math.min(y0, v.y);
+    }
+  });
+  if (y0 > -PELVIS_BOX[1] - 0.02) return null;
+  const N = 8;
+  const top = PELVIS_BOX[1];
+  const rx = new Array(N).fill(PELVIS_BOX[0]);
+  const rz = new Array(N).fill(PELVIS_BOX[2]);
+  for (let i = 0; i < pts.length; i += 3) {
+    const k = Math.max(0, Math.min(N - 1, Math.floor(((top - pts[i + 1]) / (top - y0)) * N)));
+    rx[k] = Math.min(0.25, Math.max(rx[k], Math.abs(pts[i])));
+    rz[k] = Math.min(0.25, Math.max(rz[k], Math.abs(pts[i + 2])));
+  }
+  return { top, bot: y0, rx, rz };
+}
+
+/**
+ * 사게오(下緒 — 11/14 사장님 '칼집과 허리띠를 잇는 끈' · 그림만): 칼집 栗形(입에서 0.1 m — 칼집 겉)에서 허리띠 위 매는 자리(쉬는 칼집 栗形 바로 안쪽 몸 겉)까지
+ *  끈 길이 SAGEO.len 의 처진 끈(두 끝 사이 V 처짐 — 땅 쪽으로). 발도 대기 동안 칼집이 대기 칼을 감싸 허리에서 뜬 틈을 잇는다. 끈 점은 골반 · 배 · 허벅지 밖으로 밀어냄
+ */
+function sageoCord(f, color) {
+  const n = SAGEO.seg + 1;
+  const sides = SAGEO.sides;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(n * sides * 3), 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(new Float32Array(n * sides * 3), 3));
+  const idx = [];
+  for (let i = 0; i < n - 1; i++)
+    for (let j = 0; j < sides; j++) {
+      const a = i * sides + j;
+      const b = i * sides + ((j + 1) % sides);
+      idx.push(a, b, a + sides, b, b + sides, a + sides);
+    }
+  geo.setIndex(idx);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0 }));
+  mesh.name = 'iai-obi-sageo';
+  mesh.userData.visualOnly = true;
+  mesh.frustumCulled = false;
+  mesh.castShadow = true;
+  f.groups.pelvis.add(mesh);
+  return { mesh, geo, A: null, pts: Array.from({ length: n }, () => new THREE.Vector3()) };
 }
 /**
  * 허벅지 그림(옷 — 하카마 · 자락 · 갑옷 포함)의 윗반 반지름: 허벅지 몸체 틀(축 = y)에서 엉덩이 쪽 반(y > −0.05)의 꼭짓점이 축에서 가장 먼 거리 —
  *  칼집을 그 굵기의 허벅지 캡슐 밖으로 밀어냄(obiPush — 다리를 들거나 비틀 때 칼집이 옷을 뚫지 않고 밀려남 · 다라이시 자락 셈의 교훈). 몸 캡슐 0.065 아래로는 안 내림 · 0.16 에서 자름
  */
-function legRadius(group) {
-  let r = 0.065;
+function legRadius(group, yMin = -0.05, r0 = 0.065) {
+  let r = r0;
   if (!group) return r;
   const v = new THREE.Vector3();
   const inv = new THREE.Matrix4();
@@ -269,7 +425,7 @@ function legRadius(group) {
     const m = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i).applyMatrix4(m);
-      if (v.y > -0.05) r = Math.max(r, Math.hypot(v.x, v.z));
+      if (yMin < 0 ? v.y > yMin : true) r = Math.max(r, Math.hypot(v.x, v.z));
     }
   });
   return Math.min(0.16, r);
@@ -384,6 +540,7 @@ export function obiSayaPose(f, out = { pos: new THREE.Vector3(), quat: new THREE
     const r = f.sword.rotation();
     const t = f.sword.translation();
     const qw = _qw.set(r.x, r.y, r.z, r.w);
+    if (f.obiEdge?.roll) qw.multiply(_qr.setFromAxisAngle(_UP, f.obiEdge.roll)); // 날 위 (그림 칼 — obiEdgeRoll): 칼집이 그림 칼을 감쌈 (칼 축 둘레라 입 자리 그대로)
     const ql = _ql.copy(qpi).multiply(qw);
     const Ms = _ms.set(0, f.weaponCfg.hiltLength, 0).applyQuaternion(qw).add(_sp.set(t.x, t.y, t.z)).sub(_sp.set(pt.x, pt.y, pt.z)).applyQuaternion(qpi);
     const Ds = _ds.set(0, 1, 0).applyQuaternion(ql);
@@ -458,8 +615,11 @@ export function obiPush(f, pos, quat, quat0 = null) {
   const pr = f.bodies.pelvis.rotation();
   const pt = f.bodies.pelvis.translation();
   const qpi = _qs.set(pr.x, pr.y, pr.z, pr.w).invert();
-  const boxes = [[_zero, _ident, PELVIS_BOX]];
-  for (const [name, H, C, Q] of [['abdomen', ABDOMEN_BOX, _ac, _aq], ['chest', CHEST_BOX, _cc, _cq]]) {
+  // 누운 몸(골반 위 축이 누움 — 넘어짐 · 죽음): 옷 두께 상자 · 허벅지 온 길이 굵기 · 정강이까지 (서 있을 땐 그림 상자 · 허벅지 윗반 그대로 — 쉬는 칼집 자리 그대로)
+  const lie = !!SECRET.iaiObiDroop && lieOf(f) > 0.5 && !!S.garm;
+  const boxes = [[_zero, _ident, lie ? S.garm.pelvis : PELVIS_BOX]];
+  for (const [name, H0, C, Q] of [['abdomen', ABDOMEN_BOX, _ac, _aq], ['chest', CHEST_BOX, _cc, _cq]]) {
+    const H = lie ? S.garm[name] ?? H0 : H0;
     const b = f.bodies[name];
     if (!b) continue;
     const at = b.translation();
@@ -468,16 +628,17 @@ export function obiPush(f, pos, quat, quat0 = null) {
   }
   // 허벅지 캡슐 (축 = 허벅지 몸체 y · 반 길이 0.15 — fighter.js partDefs · 반지름 = 그림 윗반 반지름 legR) — 골반 틀
   const legs = [];
-  for (const [name, A0, B0] of [['thighF', _la, _lb], ['thighB', _lc, _ld]]) {
+  for (const [name, A0, B0, hl] of [['thighF', _la, _lb, 0.15], ['thighB', _lc, _ld, 0.15], ['shinF', _le, _lf, 0.16], ['shinB', _lg, _lh, 0.16]]) {
     const b = f.bodies[name];
     if (!b) continue;
     const at = b.translation();
     const ar = b.rotation();
     const q = _lq.copy(qpi).multiply(_qw.set(ar.x, ar.y, ar.z, ar.w));
     const c = _lo.set(at.x - pt.x, at.y - pt.y, at.z - pt.z).applyQuaternion(qpi);
-    A0.set(0, 0.15, 0).applyQuaternion(q).add(c);
-    B0.set(0, -0.15, 0).applyQuaternion(q).add(c);
-    legs.push([A0, B0, S.legR?.[name] ?? 0.065]);
+    A0.set(0, hl, 0).applyQuaternion(q).add(c);
+    B0.set(0, -hl, 0).applyQuaternion(q).add(c);
+    const r = name.startsWith('shin') ? S.shinR?.[name] ?? 0.05 : lie ? S.legRF?.[name] ?? S.legR?.[name] ?? 0.065 : S.legR?.[name] ?? 0.065;
+    legs.push([A0, B0, r]);
   }
   // 땅 (골반 틀 — 위 방향 · 골반 원점의 땅 위 높이): 몸 상자에 밀려 땅으로 든 몫도 같은 셈으로 밀어냄 (평지 무대 0 · 지형 무대는 골반 아래 땅 높이)
   const ground = _gp;
@@ -487,12 +648,12 @@ export function obiPush(f, pos, quat, quat0 = null) {
     let moved = 0;
     let worst = 0;
     for (let it = 0; it < 10; it++) {
-      worst = sayaPen(S, pos, quat, boxes, legs, skin, _bs, g);
+      worst = sayaPen(S, pos, quat, boxes, legs, skin, _bs, g, lie ? S.skirt : null);
       if (worst <= 1e-5) break;
       pos.addScaledVector(_bs, worst + 0.001); // 1 mm 더 (골반 · 배 두 상자가 맞닿는 모서리에서 번갈아 밀리며 덜 빠지지 않게)
       moved += worst + 0.001;
     }
-    return [moved, sayaPen(S, pos, quat, boxes, legs, skin, _bs, g)];
+    return [moved, sayaPen(S, pos, quat, boxes, legs, skin, _bs, g, lie ? S.skirt : null)];
   };
   _po.copy(pos);
   _qs1.copy(quat);
@@ -539,7 +700,7 @@ const _pl = new THREE.Vector3();
  * 칼집 겉(단면 줄 사이 넷 · 칼집 끝 쇠까지)이 몸 상자 · 허벅지 캡슐 안으로 가장 깊이 든 값 (m — 음수면 가장 가까운 틈) · nW = 그 곳 몸 바깥 쪽
  *  boxes = [[중심 · 돌림 · 반 크기]] · legs = [[축 끝 A · B · 반지름]] — 모두 골반 틀
  */
-function sayaPen(S, pos, quat, boxes, legs, skin, nW, ground = null) {
+function sayaPen(S, pos, quat, boxes, legs, skin, nW, ground = null, skirt = null) {
   const R = S.prof.rows;
   _bx.set(1, 0, 0).applyQuaternion(quat);
   _bz.set(0, 0, 1).applyQuaternion(quat);
@@ -582,6 +743,21 @@ function sayaPen(S, pos, quat, boxes, legs, skin, nW, ground = null) {
         nW.copy(_bn);
       }
     }
+    if (skirt && _bp.y < skirt.top && _bp.y > skirt.bot) {
+      // 옷 자락 (누운 몸만 — skirtProfile): 그 높이 띠의 타원 기둥 밖으로 (가로로)
+      const k = Math.max(0, Math.min(skirt.rx.length - 1, Math.floor(((skirt.top - _bp.y) / (skirt.top - skirt.bot)) * skirt.rx.length)));
+      const ax = skirt.rx[k], az = skirt.rz[k];
+      const e = Math.hypot(_bp.x / ax, _bp.z / az);
+      if (e > 1e-6) {
+        _bn.set(_bp.x / (ax * ax), 0, _bp.z / (az * az)).normalize();
+        const rr = Math.hypot(row.hw * _bn.dot(_bx), row.ht * _bn.dot(_bz)) + skin;
+        const pen = rr - (e - 1) * Math.min(ax, az);
+        if (pen > worst) {
+          worst = pen;
+          nW.copy(_bn);
+        }
+      }
+    }
     if (ground) {
       const rr = Math.hypot(row.hw * ground.up.dot(_bx), row.ht * ground.up.dot(_bz)) + skin;
       const pen = rr - (ground.h + _bp.dot(ground.up));
@@ -613,8 +789,13 @@ function obiGround(f, pos, quat, turn = 0, force = false) {
   const L = S.prof.len;
   const gy = Math.max(f.groundHeightAt?.(M.x, M.z) ?? 0, f.groundHeightAt?.(M.x + D.x * L, M.z + D.z * L) ?? 0);
   const need = (S.gR + (SECRET.iaiObiSkin ?? 0.006) + gy - M.y) / L; // 칼집 끝이 땅 위에 남는 가장 작은 위 성분
-  if (D.y >= need && !force) return 0;
-  const yN = Math.min(0.9, Math.max(need, force ? Math.min(D.y, 0.9) : need));
+  // 처짐 (11/14 — SECRET.iaiObiDroop): 누운 몸(골반 위 축 y 0.5 → 0.2)에서 칼집이 위로 서면(칼 끝 쪽이 하늘로 — 칼집 쪽이 위인 옆으로 누운 몸) 띠에 낀 칼집이 제 무게로 처져
+  //  누운 몫만큼 수평까지 내림 — 몸 위(엉덩이 · 허벅지 겉)에 얹힘. 이미 수평 아래면 그대로(땅 셈이 맡음)
+  const lie = SECRET.iaiObiDroop ? lieOf(f) : 0;
+  const yD = D.y > 0 ? D.y * (1 - lie) : D.y;
+  if (D.y >= need && !force && lie <= 0) return 0;
+  const yN = Math.min(0.9, Math.max(need, force ? Math.min(yD, 0.9) : yD));
+  if (!force && Math.abs(yN - D.y) < 1e-4) return 0;
   let h = Math.hypot(D.x, D.z);
   if (h < 1e-4) { D.set(0, 0, -1).applyQuaternion(qp); D.y = 0; h = Math.hypot(D.x, D.z) || 1; } // 곧장 아래면 골반 왼쪽으로 눕힘
   if (turn) D.applyAxisAngle(_UP, turn * D2R); // 수평 방향을 돌림 (obiPush — 몸과 땅 사이에 끼었을 때 땅 위로 뉘일 쪽 찾기)
@@ -637,6 +818,10 @@ const _la = new THREE.Vector3();
 const _lb = new THREE.Vector3();
 const _lc = new THREE.Vector3();
 const _ld = new THREE.Vector3();
+const _le = new THREE.Vector3();
+const _lf = new THREE.Vector3();
+const _lg = new THREE.Vector3();
+const _lh = new THREE.Vector3();
 const _lq = new THREE.Quaternion();
 const _lo = new THREE.Vector3();
 const _ls = new THREE.Vector3();
@@ -652,13 +837,180 @@ const _ds = new THREE.Vector3();
 const _dk = new THREE.Vector3();
 const _mr = new THREE.Vector3();
 const _ex = new THREE.Vector3();
+const _qr = new THREE.Quaternion();
+
+/** 누운 몫 (0 = 섬 · 1 = 누움): 골반 위 축의 세계 위 성분 0.5 → 0.2 (넘어짐 · 죽음 — 그림만) */
+export function lieOf(f) {
+  const r = f.bodies?.pelvis?.rotation();
+  if (!r) return 0;
+  const upY = 1 - 2 * (r.x * r.x + r.z * r.z); // 골반 y 축의 세계 y
+  return Math.min(1, Math.max(0, (0.5 - upY) / 0.3));
+}
+
+/**
+ * ③ 날 위 (11/14 사장님 '칼날 방향 원전대로 — 대기 때 날이 위' · SECRET.iaiObiEdge — 그림만): 칼 그림을 칼 축 둘레로 돌려 발도 대기 동안 외날(칼 +x — weapon_looks bladeGeometry)이
+ *  칼 축에 수직인 위로. 일본 칼 넷의 콜라이더는 칼 축 위 상자 · 공 · 캡슐(fighter.js parts — partCollider 없음)이라 칼 축 둘레 반 바퀴에 같은 꼴 → 물리 · 판정 · 뽑는 길 그대로.
+ *  (물리 칼을 굴려 날을 위로 하면 사람 손목 굴림 80° · 어깨 면 한도로 칼이 대기 자리에서 16 ~ 70 cm 벗어남 — 기록 §3)
+ *  대기 몫(iaiObiW)만큼 · 대기에서 낸 발도는 칼이 칼집을 떠나는 몫(길 N.at — 없으면 M 까지 0.5)에 걸쳐 0 으로(뽑으며 날이 돌아 섬 — 抜き付け) ·
+ *  대기가 풀리면 iaiRegrip 초에 반 바퀴 빠르기로 0 으로(사람이 칼을 쥐어 대기 몫이 한 스텝에 0 이 되어도 튀지 않게 · 새 시간 값 없음). 돌린 각(rad — 칼 y 둘레)
+ */
+export function obiEdgeRoll(f) {
+  const E = (f.obiEdge ??= { roll: 0, roll0: 0, iai: null, t: null });
+  const now = f.stamina?.time ?? 0;
+  const dt = E.t != null ? Math.max(0, now - E.t) : 0;
+  E.t = now;
+  if (!SECRET.iaiObiEdge || !obiOn(f) || !f.sword || !f.armed) return (E.roll = 0);
+  const I = f.iai;
+  if (I && I.kind === 'iai') {
+    if (E.iai !== I) { E.iai = I; E.roll0 = E.roll; }
+    const end = I.K?.N?.at ?? 0.5;
+    const u = Math.min(1, Math.max(0, (I.u ?? 0) / Math.max(1e-3, end)));
+    return (E.roll = E.roll0 * (1 - u * u * (3 - 2 * u)));
+  }
+  E.iai = null;
+  const busy = !!f.iaiReq || f.iaiHoldT > 0 || f.iaiFade > 0;
+  const w = busy ? 0 : f.iaiObiW ?? 0;
+  let target = 0;
+  if (w > 0) {
+    const r = f.sword.rotation();
+    const q = _qe.set(r.x, r.y, r.z, r.w);
+    const b = _eb.set(0, 1, 0).applyQuaternion(q);
+    const e = _ee.set(1, 0, 0).applyQuaternion(q);
+    const u = _eu.set(0, 1, 0).addScaledVector(b, -b.y);
+    if (u.lengthSq() > 1e-4) {
+      u.normalize();
+      let phi = Math.atan2(_ec.crossVectors(e, u).dot(b), e.dot(u)); // 물리 날 → 위 (칼 축 둘레)
+      if (Math.abs(phi) > 0.8 * Math.PI && E.roll !== 0 && Math.sign(phi) !== Math.sign(E.roll)) phi += Math.sign(E.roll) * 2 * Math.PI; // 반 바퀴 곁에서 돌 쪽이 뒤바뀌지 않게
+      target = phi * w;
+    }
+  }
+  const rate = Math.PI / Math.max(1e-3, SECRET.iaiRegrip || 0.2); // 반 바퀴 / iaiRegrip 초
+  const d = target - E.roll;
+  E.roll = Math.abs(d) <= rate * dt || dt <= 0 && w > 0 ? target : E.roll + Math.sign(d) * rate * dt;
+  return E.roll;
+}
+const _qe = new THREE.Quaternion();
+const _eb = new THREE.Vector3();
+const _ee = new THREE.Vector3();
+const _eu = new THREE.Vector3();
+const _ec = new THREE.Vector3();
+/** 그릴 때마다 (fighter.js syncMeshes — 무기 그림 자리를 놓은 뒤): 칼 그림을 날 위로 돌림 (obiEdgeRoll) */
+export function syncObiEdge(f) {
+  const roll = obiEdgeRoll(f);
+  if (roll && f.swordGroup) f.swordGroup.quaternion.multiply(_qr.setFromAxisAngle(_UP, roll));
+}
 
 const _pose = { pos: new THREE.Vector3(), quat: new THREE.Quaternion(), follow: 0, k: 0 };
-/** 그릴 때마다 (fighter.js syncMeshes — 그림만): 칼집 그룹을 골반 그림 그룹 안 자리로 */
+/** 그릴 때마다 (fighter.js syncMeshes — 그림만): 칼집 그룹을 골반 그림 그룹 안 자리로 · 사게오 */
 export function syncObiSaya(f) {
   const S = f.obiSaya;
   if (!S) return;
   const P = obiSayaPose(f, _pose);
   S.g.position.copy(P.pos);
   S.g.quaternion.copy(P.quat);
+  if (S.cord) syncSageo(f, S, P);
 }
+
+/**
+ * 사게오 끈 (그림만): 栗形 K(지금 칼집) ↔ 허리띠 매는 자리 A(붙일 때 쉬는 칼집 栗形을 골반 그림 상자 겉으로 · 골반 틀 고정) — 두 끝 사이 거리 d 가 끈 길이 Lr 보다 짧으면
+ *  가운데가 땅 쪽(골반 틀로 옮긴 세계 아래 — 끈 줄에 수직)으로 √(Lr² − d²)/2 처짐 (두 곧은 반쪽의 V) · 두 끝과 처진 가운데를 지나는 2차 곡선 · 점마다 골반 · 배 · 허벅지 밖으로
+ */
+export function sageoPoints(f, S, P, out) {
+  const C = S.cord;
+  if (!C.A) {
+    obiRest(f, _M0, _D0);
+    frameQ(_D0, _qa, S.edge);
+    const K0 = _sg1.copy(S.knob).applyQuaternion(_qa).add(_M0);
+    const H = S.garm?.pelvis ?? PELVIS_BOX; // 허리띠 · 옷 겉 (옷 두께 상자)
+    const c = _sg2.set(Math.max(-H[0], Math.min(H[0], K0.x)), Math.max(-H[1], Math.min(H[1], K0.y)), Math.max(-H[2], Math.min(H[2], K0.z)));
+    const n = _sg3.subVectors(K0, c);
+    C.A = n.lengthSq() > 1e-8 ? c.addScaledVector(n.normalize(), SAGEO.r + 0.003).clone() : K0.clone();
+  }
+  const K = _sg1.copy(S.knob).applyQuaternion(P.quat).add(P.pos);
+  const A = C.A;
+  const d = K.distanceTo(A);
+  const sag = d < SAGEO.len ? Math.sqrt(SAGEO.len * SAGEO.len - d * d) / 2 : 0;
+  const pr = f.bodies.pelvis.rotation();
+  const down = _sg2.set(0, -1, 0).applyQuaternion(_sgq.set(pr.x, pr.y, pr.z, pr.w).invert());
+  const ln = _sg3.subVectors(K, A);
+  if (ln.lengthSq() > 1e-8) down.addScaledVector(ln.normalize(), -down.dot(ln));
+  if (down.lengthSq() < 1e-8) down.set(0, -1, 0);
+  down.normalize();
+  const mid = _sg4.addVectors(A, K).multiplyScalar(0.5).addScaledVector(down, 2 * sag); // 2차 곡선 조절점 (t 0.5 에서 처짐 sag)
+  const n = out.length;
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const a = (1 - t) * (1 - t), b = 2 * t * (1 - t), c = t * t;
+    out[i].set(a * A.x + b * mid.x + c * K.x, a * A.y + b * mid.y + c * K.y, a * A.z + b * mid.z + c * K.z);
+  }
+  // 몸 밖으로 (골반 · 배 옷 두께 상자 · 허벅지 캡슐(옷 굵기) — 끈 반지름 + 0.002 · 네 번)
+  const pt = f.bodies.pelvis.translation();
+  const qpi = _sgq.set(pr.x, pr.y, pr.z, pr.w).invert();
+  const ab = f.bodies.abdomen;
+  const abC = ab ? _sg5.set(ab.translation().x - pt.x, ab.translation().y - pt.y, ab.translation().z - pt.z).applyQuaternion(qpi) : null;
+  const abQ = ab ? _sgq2.copy(qpi).multiply(_qw.set(ab.rotation().x, ab.rotation().y, ab.rotation().z, ab.rotation().w)) : null;
+  const HP = S.garm?.pelvis ?? PELVIS_BOX;
+  const HA = S.garm?.abdomen ?? ABDOMEN_BOX;
+  const legs = [];
+  for (const [name, A0, B0] of [['thighF', _la, _lb], ['thighB', _lc, _ld]]) {
+    const b = f.bodies[name];
+    if (!b) continue;
+    const q = _lq.copy(qpi).multiply(_qw.set(b.rotation().x, b.rotation().y, b.rotation().z, b.rotation().w));
+    const c = _lo.set(b.translation().x - pt.x, b.translation().y - pt.y, b.translation().z - pt.z).applyQuaternion(qpi);
+    legs.push([A0.set(0, 0.15, 0).applyQuaternion(q).add(c), B0.set(0, -0.15, 0).applyQuaternion(q).add(c), S.legR?.[name] ?? 0.065]);
+  }
+  const rr = SAGEO.r + 0.002;
+  for (let i = 1; i < n - 1; i++) {
+    const p = out[i];
+    for (let it = 0; it < 4; it++) {
+      let sd = boxSd(p, _zero, _ident, HP, _bn);
+      if (sd < rr) p.addScaledVector(_bn, rr - sd);
+      if (abC) { sd = boxSd(p, abC, abQ, HA, _bn); if (sd < rr) p.addScaledVector(_bn, rr - sd); }
+      for (const [A0, B0, R] of legs) {
+        _ls.subVectors(B0, A0);
+        const v = Math.max(0, Math.min(1, _sg3.subVectors(p, A0).dot(_ls) / Math.max(1e-9, _ls.lengthSq())));
+        const d = _sg3.copy(A0).addScaledVector(_ls, v).sub(p).negate();
+        const dl = d.length();
+        if (dl > 1e-6 && dl < R + rr) p.addScaledVector(d, (R + rr - dl) / dl);
+      }
+    }
+  }
+  return out;
+}
+function syncSageo(f, S, P) {
+  const C = S.cord;
+  const pts = sageoPoints(f, S, P, C.pts);
+  const pos = C.geo.attributes.position.array;
+  const nor = C.geo.attributes.normal.array;
+  const sides = SAGEO.sides;
+  const r = SAGEO.r;
+  for (let i = 0; i < pts.length; i++) {
+    const t = _sg1.subVectors(pts[Math.min(pts.length - 1, i + 1)], pts[Math.max(0, i - 1)]);
+    if (t.lengthSq() < 1e-10) t.set(0, 1, 0);
+    t.normalize();
+    const ref = Math.abs(t.y) < 0.9 ? _sg2.set(0, 1, 0) : _sg2.set(1, 0, 0);
+    const nx = _sg3.crossVectors(t, ref).normalize();
+    const ny = _sg4.crossVectors(t, nx);
+    for (let j = 0; j < sides; j++) {
+      const a = (j / sides) * Math.PI * 2;
+      const cx = Math.cos(a), cy = Math.sin(a);
+      const k = (i * sides + j) * 3;
+      const ox = nx.x * cx + ny.x * cy, oy = nx.y * cx + ny.y * cy, oz = nx.z * cx + ny.z * cy;
+      pos[k] = pts[i].x + ox * r;
+      pos[k + 1] = pts[i].y + oy * r;
+      pos[k + 2] = pts[i].z + oz * r;
+      nor[k] = ox;
+      nor[k + 1] = oy;
+      nor[k + 2] = oz;
+    }
+  }
+  C.geo.attributes.position.needsUpdate = true;
+  C.geo.attributes.normal.needsUpdate = true;
+}
+const _sg1 = new THREE.Vector3();
+const _sg2 = new THREE.Vector3();
+const _sg3 = new THREE.Vector3();
+const _sg4 = new THREE.Vector3();
+const _sg5 = new THREE.Vector3();
+const _sgq = new THREE.Quaternion();
+const _sgq2 = new THREE.Quaternion();

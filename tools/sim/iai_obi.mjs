@@ -16,7 +16,7 @@ import { writeFileSync } from 'node:fs';
 import { newRound, DT, CONFIG, THREE, AI } from './harness_m.mjs';
 import { applySets } from './rapier_defence.mjs';
 import { iaiReadyPose, iaiReadyPosePlayer, requestIai } from '../../src/secret_instant.js';
-import { obiReady, obiSayaPose } from '../../src/iai_obi.js';
+import { obiReady, obiSayaPose, sageoPoints } from '../../src/iai_obi.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { LOOKS } from '../../src/looks.js';
 import { isMain } from './is_main.mjs';
@@ -119,6 +119,18 @@ export function sayaMeasure(f) {
   m.ground = g; // 땅 위 높이 가장 낮음 (− = 땅으로 듦 · 넘어짐 · 죽음)
   m.swing = pose.ground ?? 0; // 땅 때문에 눕힌 각 (도)
   m.axis = axis;
+  // 사게오 끈 (11/14 — src/iai_obi.js sageoPoints): 끈 가운데 줄 점(월드) ↔ 골반 · 배 · 다리 · 가슴 · 땅 (끈 반지름 0.0035 를 뺀 겉 거리)
+  const S = f.obiSaya;
+  if (S?.cord) {
+    const pts = sageoPoints(f, S, pose, Array.from({ length: 13 }, () => new THREE.Vector3()));
+    const pq = tq(f.bodies.pelvis.rotation());
+    const pt = tv(f.bodies.pelvis.translation());
+    const W = pts.map((p) => p.clone().applyQuaternion(pq).add(pt));
+    const mn = (names) => { let b = Infinity; for (const n of names) for (const p of W.slice(1, -1)) b = Math.min(b, sdPart(f, n, p) - 0.0035); return b; };
+    let g2 = Infinity;
+    for (const p of W) g2 = Math.min(g2, p.y - (f.groundHeightAt?.(p.x, p.z) ?? 0) - 0.0035);
+    m.cord = { torso: mn(['pelvis', 'abdomen']), leg: mn(['thighF', 'thighB', 'shinF', 'shinB']), chest: mn(['chest']), ground: g2, len: W[0].distanceTo(W.at(-1)), axis: W };
+  }
   return m;
 }
 
@@ -131,6 +143,7 @@ export function bladeOutside(f) {
   const pt = tv(f.bodies.pelvis.translation());
   const toSaya = (w) => w.clone().sub(pt).applyQuaternion(pq.clone().invert()).sub(P.pos).applyQuaternion(P.quat.clone().invert());
   const q = tq(f.sword.rotation());
+  if (f.obiEdge?.roll) q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.obiEdge.roll)); // 날 위 그림 칼 (obiEdgeRoll — 칼집은 그림 칼을 감쌈)
   const o = tv(f.sword.translation());
   let worst = 0;
   for (const row of R) {
@@ -164,8 +177,8 @@ export function lookTris(f, parts = ['pelvis', 'abdomen', 'thighF', 'thighB', 's
     g.updateMatrixWorld(true);
     const arr = [];
     g.traverse((o) => {
-      if (!o.isMesh || !o.visible || o.name === 'iai-obi-saya') return;
-      for (let p = o.parent; p; p = p.parent) if (p.name === 'iai-obi-saya' || p.visible === false) return;
+      if (!o.isMesh || !o.visible || /^iai-obi/.test(o.name)) return;
+      for (let p = o.parent; p; p = p.parent) if (/^iai-obi/.test(p.name) || p.visible === false) return;
       const geo = o.geometry;
       const pos = geo?.attributes?.position;
       if (!pos) return;
@@ -266,7 +279,7 @@ export function sayaScript({ weapon = 'uchigatana', look = 'player', seed = 1, v
     st = name; t = 0; fired = null;
     const lim = name === 'draw' || name === 'zanshin' || name === 'regrip' || name === 'clinch' ? 8 : dur;
     let touch = null;
-    const row = (rows[name] = { n: 0, gapMin: Infinity, gapMax: -Infinity, leg: Infinity, torso: Infinity, chest: Infinity, armS: Infinity, ground: Infinity, follow: 0, push: 0, swing: 0, cross: {} });
+    const row = (rows[name] = { n: 0, gapMin: Infinity, gapMax: -Infinity, leg: Infinity, torso: Infinity, chest: Infinity, armS: Infinity, ground: Infinity, follow: 0, push: 0, swing: 0, cross: {}, cTorso: Infinity, cLeg: Infinity, cChest: Infinity, cGround: Infinity, cSpan: 0, cCross: {} });
     while (t < lim) {
       G.step();
       t += DT;
@@ -291,6 +304,14 @@ export function sayaScript({ weapon = 'uchigatana', look = 'player', seed = 1, v
       row.armS = Math.min(row.armS, m.armS);
       row.ground = Math.min(row.ground, m.ground);
       row.swing = Math.max(row.swing, m.swing);
+      if (m.cord) {
+        row.cTorso = Math.min(row.cTorso, m.cord.torso);
+        row.cLeg = Math.min(row.cLeg, m.cord.leg);
+        row.cChest = Math.min(row.cChest, m.cord.chest);
+        row.cGround = Math.min(row.cGround, m.cord.ground);
+        row.cSpan = Math.max(row.cSpan, m.cord.len);
+        if (tris) for (const part of lookCross(P, tris, m.cord.axis)) row.cCross[part] = (row.cCross[part] ?? 0) + 1;
+      }
       row.follow = Math.max(row.follow, m.follow);
       row.push = Math.max(row.push, m.push);
       if (tris) for (const part of lookCross(P, tris, m.axis)) row.cross[part] = (row.cross[part] ?? 0) + 1;
@@ -300,7 +321,7 @@ export function sayaScript({ weapon = 'uchigatana', look = 'player', seed = 1, v
     if (name === 'draw') doneDraw = true;
   }
   G.world.free();
-  for (const r of Object.values(rows)) for (const k of ['gapMin', 'gapMax', 'leg', 'torso', 'chest', 'armS', 'ground']) r[k] = Number.isFinite(r[k]) ? r3(r[k]) : null;
+  for (const r of Object.values(rows)) for (const k of ['gapMin', 'gapMax', 'leg', 'torso', 'chest', 'armS', 'ground', 'cTorso', 'cLeg', 'cChest', 'cGround', 'cSpan']) r[k] = Number.isFinite(r[k]) ? r3(r[k]) : null;
   return { rows, doneDraw };
 }
 
@@ -369,7 +390,11 @@ export function readyShot({ weapon = 'uchigatana', mode = 'hip', seed = 1, look 
       P.syncMeshes?.();
       const out = P.obiSaya ? bladeOutside(P) : null;
       const fol = P.obiSaya ? obiSayaPose(P).follow : null;
-      e.push({ dm: Math.hypot(M[0] - Rz[0], M[1] - Rz[1], M[2] - Rz[2]), da: Math.acos(Math.min(1, d.x * Dz[0] + d.y * Dz[1] + d.z * Dz[2])) * R2D, M, tsu, yaw: Math.atan2(d.z, d.x) * R2D, el: Math.asin(Math.max(-1, Math.min(1, d.y))) * R2D, out, fol });
+      // 날 쪽 (칼 +x = 외날 날 — weapon_looks bladeGeometry): 칼 축에 수직인 위 쪽과의 cos (+1 = 날이 위 · 원전 「刃を上に」 · −1 = 아래)
+      const ex = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+      const upP = new THREE.Vector3(0, 1, 0).addScaledVector(ax, -ax.y);
+      const edge = upP.lengthSq() > 1e-6 ? ex.dot(upP.normalize()) : 0;
+      e.push({ dm: Math.hypot(M[0] - Rz[0], M[1] - Rz[1], M[2] - Rz[2]), da: Math.acos(Math.min(1, d.x * Dz[0] + d.y * Dz[1] + d.z * Dz[2])) * R2D, M, tsu, yaw: Math.atan2(d.z, d.x) * R2D, el: Math.asin(Math.max(-1, Math.min(1, d.y))) * R2D, out, fol, edge });
     }
   }
   G.world.free();
@@ -377,7 +402,7 @@ export function readyShot({ weapon = 'uchigatana', mode = 'hip', seed = 1, look 
   const mx = (k) => Math.max(...e.map((x) => x[k] ?? 0));
   const mn = (k) => Math.min(...e.map((x) => x[k] ?? 1));
   const has = e.some((x) => x.fol != null);
-  return { weapon, mode, mouth: L.M.map(r3), tsuba: L.tsu.map(r3), yaw: r1(L.yaw), el: r1(L.el), dm: r3(mx('dm')), da: r1(mx('da')), bladeOut: has ? r3(mx('out')) : null, follow: has ? r3(mn('fol')) : null };
+  return { weapon, mode, mouth: L.M.map(r3), tsuba: L.tsu.map(r3), yaw: r1(L.yaw), el: r1(L.el), dm: r3(mx('dm')), da: r1(mx('da')), bladeOut: has ? r3(mx('out')) : null, follow: has ? r3(mn('fol')) : null, edge: r3(L.edge), edgeMin: r3(mn('edge')) };
 }
 
 if (isMain(import.meta.url)) {
@@ -392,7 +417,7 @@ if (isMain(import.meta.url)) {
     for (const weapon of weapons) for (const m of arg('modes', 'hip,crouch').split(',')) {
       const r = readyShot({ weapon, mode: m, look: arg('look', 'player') });
       rows.push(r);
-      console.log(`${weapon.padEnd(13)} ${m.padEnd(6)} | 칼집 입(골반 틀 앞 · 위 · 칼 든 쪽 +) ${JSON.stringify(r.mouth)} · 코등이 ${JSON.stringify(r.tsuba)} · 칼 축 yaw ${r.yaw}° el ${r.el}° | 목표와 어긋남 가장 ${r.dm} m · ${r.da}° | 칼집이 칼을 감싼 몫 가장 낮음 ${r.follow} · 칼날이 칼집 겉 밖으로 가장 ${r.bladeOut} m`);
+      console.log(`${weapon.padEnd(13)} ${m.padEnd(6)} | 칼집 입(골반 틀 앞 · 위 · 칼 든 쪽 +) ${JSON.stringify(r.mouth)} · 코등이 ${JSON.stringify(r.tsuba)} · 칼 축 yaw ${r.yaw}° el ${r.el}° | 목표와 어긋남 가장 ${r.dm} m · ${r.da}° | 칼집이 칼을 감싼 몫 가장 낮음 ${r.follow} · 칼날이 칼집 겉 밖으로 가장 ${r.bladeOut} m | 날 위 cos ${r.edge} (가장 낮음 ${r.edgeMin})`);
     }
     if (json) writeFileSync(json, JSON.stringify({ set: arg('set', ''), rows }));
   } else if (mode === 'saya') {
@@ -401,7 +426,7 @@ if (isMain(import.meta.url)) {
       const r = sayaScript({ weapon, look, visual: arg('visual', '1') !== '0' });
       out.push({ look, weapon, ...r });
       if (r.none) { console.log(`${look} ${weapon} | 칼집 없음`); continue; }
-      for (const [k, v] of Object.entries(r.rows)) console.log(`${look.padEnd(16)} ${weapon.padEnd(13)} ${k.padEnd(8)} n ${String(v.n).padStart(4)} | 골반 · 배 틈 ${v.gapMin} ~ ${v.gapMax} m · 다리 ${v.leg} · 가슴 ${v.chest} · 칼 팔 ${v.armS} · 땅 ${v.ground} (눕힘 ${Math.round(v.swing)}°) | 감쌈 ${r3(v.follow)} · 밀어냄 ${r3(v.push)} | 그림 지남 ${JSON.stringify(v.cross)}`);
+      for (const [k, v] of Object.entries(r.rows)) console.log(`${look.padEnd(16)} ${weapon.padEnd(13)} ${k.padEnd(8)} n ${String(v.n).padStart(4)} | 골반 · 배 틈 ${v.gapMin} ~ ${v.gapMax} m · 다리 ${v.leg} · 가슴 ${v.chest} · 칼 팔 ${v.armS} · 땅 ${v.ground} (눕힘 ${Math.round(v.swing)}°) | 끈 몸통 ${v.cTorso} · 다리 ${v.cLeg} · 가슴 ${v.cChest} · 땅 ${v.cGround} · 두 끝 ${v.cSpan} m · 끈 지남 ${JSON.stringify(v.cCross)} | 감쌈 ${r3(v.follow)} · 밀어냄 ${r3(v.push)} | 그림 지남 ${JSON.stringify(v.cross)}`);
     }
     if (json) writeFileSync(json, JSON.stringify({ set: arg('set', ''), out }));
   } else if (mode === 'fight') {

@@ -25,7 +25,7 @@ import { newFinish, updateFinish, FINISH, plungeBoost } from './finish.js';
 import { vitalHand, vitalAim, playerVitalUpdate } from './vital_target.js'; // 약한 자세 겨눔 덧씌우기 (FINISH.vital, 10/12)
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
 import { breakWeaponLook } from './weapon_looks.js';
-import { obiOn, obiGrip, pelvisToWorld, attachObiSaya, syncObiSaya } from './iai_obi.js'; // 帯刀 — 鞘戻し 점 · 빈 칼집 그림 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi · iaiObiSaya)
+import { obiOn, obiGrip, pelvisToWorld, attachObiSaya, syncObiSaya, syncObiEdge } from './iai_obi.js'; // 帯刀 — 鞘戻し 점 · 빈 칼집 그림 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi · iaiObiSaya)
 import { attachDruidWhip } from './druid_whip.js'; // 휘는 마디 무기(드루이드의 채찍 — spec.flexible, 샛별 저장소 69ef7dac8)
 import { BLOOD_RED } from './blood_palette.js'; // 피 색 (10/27 — 칼에 묻는 피: 맞은 몸의 피 색, 광기의 병마용은 흰 피)
 import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩어지는 조각: 부러진 칼날 끝과 부서진 투구·판금을 한 모듈이 띄우고 치운다
@@ -4598,7 +4598,8 @@ export class Fighter {
       group.quaternion.set(r.x, r.y, r.z, r.w);
     }
     this.flexWeapon?.sync(); // 휘는 마디 무기: 덩굴 메쉬를 마디 자리대로 휜다
-    if (this.obiSaya) syncObiSaya(this); // 빈 칼집 (11/14 帯刀 ② — 그림만): 鞘引き · 대기 칼 감쌈
+    if (obiOn(this)) syncObiEdge(this); // 날 위 (11/14 帯刀 — 그림만: 칼 그림을 칼 축 둘레로 · SECRET.iaiObiEdge)
+    if (this.obiSaya) syncObiSaya(this); // 빈 칼집 (11/14 帯刀 ② — 그림만): 鞘引き · 대기 칼 감쌈 · 사게오
   }
 }
 

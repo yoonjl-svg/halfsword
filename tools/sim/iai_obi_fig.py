@@ -4,6 +4,7 @@
 #  python3.12 tools/sim/iai_obi_fig.py sheet <out.png> <그림 폴더> <인물> <무기> <동작,…> <제목>   (그림 = tools/browser/iai_obi_shots.mjs)
 #  python3.12 tools/sim/iai_obi_fig.py table <out.png> <제목> <saya json> [<saya json> …]   (JSON = node tools/sim/iai_obi.mjs saya --json=…)
 #  python3.12 tools/sim/iai_obi_fig.py pair <out.png> <제목> <그림:글> …   (나란히 — 글이 '전' 으로 시작하면 주황 · 아니면 파랑)
+#  python3.12 tools/sim/iai_obi_fig.py rows <out.png> <제목> <그림 이름 앞:글|둘째 줄> …   (줄마다 네 방향 — 전 · 후 · 인물 섞기)
 import json
 import math
 import sys
@@ -26,7 +27,7 @@ BEFORE, AFTER, SRC = (235, 104, 52), (42, 120, 214), (27, 175, 122)
 WEAPON_KO = {'uchigatana': '우치가타나', 'muramasa': '무라마사', 'kusanagi': '쿠사나기', 'monohoshizao': '모노호시자오'}
 MODE_KO = {'hip': '사람 허리 대기', 'crouch': 'AI 웅크린 대기'}
 STATE_KO = {'stand': '서기', 'walk': '걷기', 'run': '달리기', 'lowwalk': '낮은 걸음', 'ready': '발도 대기', 'draw': '뽑는 순간', 'zanshin': '잔심(굳음)', 'regrip': '다시 쥐기',
-            'back': '물러서기', 'clinch': '밀치기 묶임', 'hit': '맞음', 'fall': '넘어짐', 'dead': '쓰러져 죽음'}
+            'back': '물러서기', 'clinch': '밀치기 묶임', 'hit': '맞음', 'fall': '넘어짐', 'dead': '쓰러져 죽음', 'deadR': '오른쪽으로 쓰러짐', 'deadL': '왼쪽으로 쓰러짐'}
 VIEW_KO = {'front': '앞', 'side': '옆(왼 — 칼집 쪽)', 'back': '뒤', 'top': '위'}
 # 골반 틀 몸 (fighter.js partDefs · 기본 겉모습 그림 상자)
 PELVIS = (0.105, 0.09, 0.165)
@@ -104,7 +105,7 @@ def ready(out, before, after):
 def sheet(out, folder, who, weapon, states, title):
     views = ['front', 'side', 'back', 'top']
     cw = 240
-    lw = 120
+    lw = 160
     H = 60 + 26 + len(states) * cw
     im = Image.new('RGB', (lw + cw * 4, H), 'white')
     d = ImageDraw.Draw(im)
@@ -126,7 +127,7 @@ def sheet(out, folder, who, weapon, states, title):
 def table(out, title, files):
     # 파일 하나 = 판 하나 (위아래로 쌓음 — 가로가 너무 길어지지 않게)
     panels = [[o for o in json.load(open(f))['out'] if not o.get('none')] for f in files]
-    states = list(STATE_KO)
+    states = [st for st in STATE_KO if any(o['rows'].get(st) for p in panels for o in p)]
     cw = 230
     lw = 110
     ph = 40 + 30 * len(states)
@@ -164,6 +165,31 @@ def table(out, title, files):
     im.save(out)
 
 
+def rows(out, title, specs):
+    # 줄마다 그림 이름 앞(…_<front|side|back|top>.png 앞까지):글 — 네 방향을 한 줄로 (전 · 후 · 인물을 섞어 늘어놓기)
+    views = ['front', 'side', 'back', 'top']
+    cw = 240
+    lw = 170
+    H = 60 + 26 + len(specs) * cw
+    im = Image.new('RGB', (lw + cw * 4, H), 'white')
+    d = ImageDraw.Draw(im)
+    text(d, (14, 14), title, F1)
+    for c, v in enumerate(views):
+        text(d, (lw + c * cw + 8, 60), VIEW_KO[v], F3, INK2)
+    for r, sp in enumerate(specs):
+        pre, lab = sp.split(':', 1)
+        y = 86 + r * cw
+        for i, line in enumerate(lab.split('|')):
+            text(d, (10, y + cw // 2 - 20 + i * 22), line, F3 if i else F2, BEFORE if lab.startswith('전') else INK)
+        for c, v in enumerate(views):
+            try:
+                t = Image.open(f'{pre}_{v}.png').convert('RGB').resize((cw, cw))
+                im.paste(t, (lw + c * cw, y))
+            except OSError:
+                d.rectangle([lw + c * cw, y, lw + (c + 1) * cw - 1, y + cw - 1], outline=GRID)
+    im.save(out, quality=88) if out.endswith('.webp') else im.save(out, optimize=True)
+
+
 def pair(out, title, specs):
     ims = []
     for s in specs:
@@ -191,3 +217,5 @@ if __name__ == '__main__':
         table(sys.argv[2], sys.argv[3], sys.argv[4:])
     elif m == 'pair':
         pair(sys.argv[2], sys.argv[3], sys.argv[4:])
+    elif m == 'rows':
+        rows(sys.argv[2], sys.argv[3], sys.argv[4:])

@@ -67,6 +67,14 @@ await page.evaluate(async ({ subj }) => {
     if (m === 'hit') { if (!S.fired && S.t > 0.4) { const c = F.bodies.chest; const p = c.translation(); const o = other.bodies.chest.translation(); const d = new T.Vector3(p.x - o.x, 0, p.z - o.z).normalize(); c.applyImpulseAtPoint({ x: d.x * 70, y: 0, z: d.z * 70 }, { x: p.x, y: p.y + 0.1, z: p.z }, true); S.fired = S.t; } }
     else if (m === 'fall') { if (!S.fired && S.t > 0.3) { F.knockDown(true); S.fired = S.t; } }
     else if (m === 'dead') { if (!S.fired && S.t > 0.3) { F.die('obi-test', true); S.fired = S.t; } }
+    else if (m === 'deadR' || m === 'deadL') { // 옆으로 밀어 쓰러뜨린 죽음 (오른 = 칼집 쪽이 위로 누움 · 왼 = 칼집 쪽이 땅)
+      if (!S.fired && S.t > 0.3) {
+        const c = F.bodies.chest; const p = c.translation(); const o = other.bodies.chest.translation();
+        const fw = new T.Vector3(o.x - p.x, 0, o.z - p.z).normalize(); const lf = new T.Vector3(0, 1, 0).cross(fw).multiplyScalar(m === 'deadL' ? 1 : -1);
+        c.applyImpulseAtPoint({ x: lf.x * 70, y: 0, z: lf.z * 70 }, { x: p.x, y: p.y + 0.1, z: p.z }, true);
+        F.die('obi-test', true); S.fired = S.t;
+      }
+    }
     // 멈출 때
     const W = S.want;
     let stop = false;
@@ -78,7 +86,7 @@ await page.evaluate(async ({ subj }) => {
     else if (m === 'clinch') { if (S.touch == null && F.foeDistance() < 0.5) S.touch = S.t; stop = (S.touch != null && S.t - S.touch > 0.5) || S.t > 12; } // 맞닿아 밀고 0.5 s
     else if (m === 'hit') stop = S.fired && S.t - S.fired > 0.12;
     else if (m === 'fall') stop = S.fired && S.t - S.fired > 1.8;
-    else if (m === 'dead') stop = S.fired && S.t - S.fired > 1.5; // 판 끝(죽고 3.5 s) 뒤 결과 창 · 쪽이 바뀌기 전에 멈춤
+    else if (m === 'dead' || m === 'deadR' || m === 'deadL') stop = S.fired && S.t - S.fired > 1.5; // 판 끝(죽고 3.5 s) 뒤 결과 창 · 쪽이 바뀌기 전에 멈춤
     if (stop) {
       const p = pelv();
       const sp = F.obiSaya ? O.obiSayaPose(F) : null;

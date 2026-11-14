@@ -7,11 +7,17 @@
 //     다시 쥘 때 빈손 목표가 鞘戻し 점 = 쉬는 칼집 입 쥠(obiGrip)을 지남 (칼집 입을 제자리로 돌려 놓음)
 //  ⑤ 뚫음 · 틈 한도 (동작 대본 — 서기 ~ 쓰러져 죽음): 쉬는 칼집이 골반 · 배 겉에서 0 ~ 1.5 cm (떠 보이지 않음) · 몸통 뚫음 0.5 cm 아래 · 다리 · 가슴은 안 닿음 · 땅으로 0.5 cm 넘게 안 듦
 //  ⑥ 스위치 끔이면 전 판 · 칼집은 그림만: iaiObi 0 = 칼집 없음 · 대기 칼 자리 iaiReady · 뽑는 자리 iaiPath.B / iaiObiSaya 0 · 1 의 몸 · 칼 자리가 스텝마다 같음
+//  ── 11/14 사장님 '동방과 일본은 전부 권고대로' (감독 권고 넷 — 기록 §12 · 확인표 3886 ~):
+//  ⑦ 날 위 (iaiObiEdge — 그림만): 발도 대기 끝에 칼 그림의 날(칼 +x)이 위(칼 축에 수직인 위와 cos 0.95 넘게) · 뽑아 굳음에 들면 돌림 0 · 끄면 날 아래(그림 = 물리)
+//  ⑧ 사게오 (iaiObiSageo): 끈이 칼집 栗形 ↔ 허리띠 매는 자리를 잇고(대기 동안 두 끝 거리가 끈 길이 안 — 뜬 틈을 이음) · 끈이 골반 · 배 · 다리를 0.5 cm 넘게 안 뚫음 · 끄면 끈 없음
+//  ⑨ 다라이시 (iaiObiOwn): 자기 빈 검집(몸 · 쇠붙이)이 칼집 틀로 옮겨짐 · 매다는 끈 감춤 · 쉬는 칼집 틈 0 ~ 1.5 cm · 몸통 · 땅 뚫음 0.5 cm 아래 · 대기 동안 칼을 감쌈 / 끄면 옛 자리
+//  ⑩ 누운 몸 (iaiObiDroop): 네 방향으로 쓰러진 죽음 — 땅 · 몸통 · 다리 뚫음 0.5 cm 아래 · 칼집 쪽이 위인 몸(오른쪽으로 누움)도 칼집이 허공으로 서지 않음(가장 높은 점 0.5 m 아래 — 끄면 0.6 m 넘게 섬)
+//  ⑪ 넷 모두 그림만: 네 스위치를 다 끄든 켜든 AI 대 AI 판(기본 · 다라이시 겉모습)의 몸 · 칼 자리가 스텝마다 같음
 //  node --test tools/sim/iai_obi.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, DT, newRound, AI } from './harness_m.mjs';
-import { readyShot, sayaScript, WEAPONS } from './iai_obi.mjs';
+import { readyShot, sayaScript, sayaMeasure, lookOf, WEAPONS } from './iai_obi.mjs';
 import { mhzShot } from './mhz_draw.mjs';
 import { iaiReadyPose, iaiReadyPosePlayer, requestIai } from '../../src/secret_instant.js';
 import { obiGrip, obiPulled, obiSayaPose } from '../../src/iai_obi.js';
@@ -199,4 +205,161 @@ test('⑥ 끄면 전 판 · 칼집은 그림만 — iaiObi 0 = 칼집 없음 · 
   const b = trace(0);
   assert.ok(a.has && !b.has, '칼집 그림 켬 · 끔');
   assert.deepEqual(a.out, b.out, '몸 · 칼 자리 스텝마다 같음');
+});
+
+// ── 11/14 감독 권고 넷 ──
+const NEW4 = ['iaiObiSageo', 'iaiObiOwn', 'iaiObiEdge', 'iaiObiDroop'];
+const edgeCos = (f) => {
+  const q = f.swordGroup.quaternion;
+  const b = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+  const e = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+  const u = new THREE.Vector3(0, 1, 0).addScaledVector(b, -b.y).normalize();
+  return e.dot(u);
+};
+
+test('⑦ 날 위 (그림만) — 대기 끝에 칼 그림의 날이 위 · 뽑아 굳음에 들면 돌림 0 · 끄면 날 아래', () => {
+  for (const weapon of ['uchigatana', 'monohoshizao'])
+    for (const on of [1, 0])
+      withS({ iaiObiEdge: on }, () => {
+        const G = newRound({ walls: false, weapon, weapon2: 'longsword', seed: 1, gap: 2.4 });
+        const P = G.player;
+        try {
+          P.aiControlled = true;
+          G.ai.update = () => { G.enemy.move.set(0, 0); };
+          let fired = false;
+          G.before = () => { if (!fired) iaiReadyPose(P, true, DT); };
+          while (G.t < CONFIG.ARENA.startHold + 1.5) { G.step(); P.syncMeshes(); }
+          const c = edgeCos(P);
+          if (on) assert.ok(c > 0.95, `${weapon} 대기 끝 날 위 (cos ${c.toFixed(3)})`);
+          else assert.ok(c < 0, `${weapon} 끄면 날 아래 — 그림 = 물리 (cos ${c.toFixed(3)})`);
+          fired = true;
+          requestIai(P, {});
+          for (let i = 0; i < Math.round(1.2 / DT) && !(P.iaiHoldT > 0); i++) { G.step(); P.syncMeshes(); }
+          assert.ok(P.iaiHoldT > 0, `${weapon} 뽑아 굳음`);
+          assert.ok(Math.abs(P.obiEdge?.roll ?? 0) < 1e-6, `${weapon} 굳음에 들면 돌림 0 (${P.obiEdge?.roll})`);
+        } finally {
+          G.world.free();
+        }
+      });
+});
+
+test('⑧ 사게오 — 栗形 ↔ 허리띠를 잇고 대기 동안 끈 길이 안 · 몸을 안 뚫음 / 끄면 없음', () => {
+  for (const weapon of ['uchigatana', 'monohoshizao']) {
+    const r = script(weapon);
+    for (const [k, v] of Object.entries(r.rows)) {
+      assert.ok(v.cTorso >= -0.005, `${weapon} ${k} 끈 골반 · 배 뚫음 ${v.cTorso}`);
+      assert.ok(v.cLeg >= -0.005, `${weapon} ${k} 끈 다리 ${v.cLeg}`);
+      assert.ok(v.cGround >= -0.005, `${weapon} ${k} 끈 땅 ${v.cGround}`);
+      if (k === 'ready' || k === 'lowwalk') assert.ok(v.cSpan <= 0.14 + 1e-3, `${weapon} ${k} 대기 동안 두 끝 거리 ${v.cSpan} ≤ 끈 길이 (뜬 칼집을 허리띠에 이음)`);
+    }
+  }
+  withS({ iaiObiSageo: 0 }, () => {
+    const G = newRound({ walls: false, weapon: 'uchigatana', weapon2: 'longsword', seed: 1, gap: 4 });
+    try {
+      assert.ok(G.player.obiSaya && !G.player.obiSaya.cord, '끄면 끈 없음');
+      assert.equal(G.player.groups.pelvis.getObjectByName('iai-obi-sageo'), undefined);
+    } finally {
+      G.world.free();
+    }
+  });
+});
+
+test('⑨ 다라이시 — 자기 빈 검집이 허리띠 자리로 (꼴 그대로) · 틈 · 뚫음 한도 / 끄면 옛 자리', () => {
+  for (const [look, weapon] of [['silver_wanderer', 'uchigatana'], ['silver_wanderer_mad', 'monohoshizao']]) {
+    const G = newRound({ walls: false, weapon, weapon2: 'longsword', seed: 1, gap: 4, look: lookOf(look) });
+    try {
+      const S = G.player.obiSaya;
+      assert.ok(S && S.own, `${look} 자기 검집을 칼집으로`);
+      const moved = [];
+      S.g.traverse((o) => { if (o.isMesh) moved.push(o.name); });
+      assert.ok(moved.includes('daraishi-scabbard') && moved.includes('daraishi-scabbard-fit'), `${look} 검집 몸 · 쇠붙이를 칼집 틀로 옮김 (${moved})`);
+      const strap = G.player.groups.pelvis.getObjectByName('daraishi-scabbard-strap');
+      assert.ok(!strap || strap.visible === false, '옛 자리 매다는 끈 감춤');
+    } finally {
+      G.world.free();
+    }
+    const r = sayaScript({ weapon, look, visual: false });
+    for (const [k, v] of Object.entries(r.rows)) {
+      assert.ok(v.torso >= -0.005, `${look} ${k} 골반 · 배 뚫음 ${v.torso}`);
+      assert.ok(v.ground >= -0.005, `${look} ${k} 땅 ${v.ground}`);
+      if (['stand', 'walk', 'run', 'back'].includes(k)) assert.ok(v.gapMin >= 0 && v.gapMax <= 0.015, `${look} ${k} 쉬는 칼집 틈 ${v.gapMin} ~ ${v.gapMax}`);
+    }
+    assert.ok(r.rows.ready.follow > 0.9, `${look} 대기 동안 칼을 감쌈 (${r.rows.ready.follow})`);
+  }
+  withS({ iaiObiOwn: 0 }, () => {
+    const G = newRound({ walls: false, weapon: 'uchigatana', weapon2: 'longsword', seed: 1, gap: 4, look: lookOf('silver_wanderer') });
+    try {
+      assert.equal(G.player.obiSaya, null, '끄면 칼집 없음 (옛 자리 검집)');
+      const sc = G.player.groups.pelvis.getObjectByName('daraishi-scabbard');
+      assert.ok(sc && sc.visible !== false && !/iai-obi/.test(sc.parent?.name ?? ''), '옛 자리 검집 그대로');
+    } finally {
+      G.world.free();
+    }
+  });
+});
+
+const fallDir = (dir, droop) =>
+  withS({ iaiObiDroop: droop }, () => {
+    const G = newRound({ walls: false, weapon: 'uchigatana', weapon2: 'longsword', seed: 1, gap: 7.0 });
+    const P = G.player;
+    try {
+      P.aiControlled = true;
+      G.ai.update = () => { G.enemy.move.set(0, 0); };
+      G.before = () => { P.move.set(0, 0); };
+      while (G.t < CONFIG.ARENA.startHold + 0.3) G.step();
+      const c = P.bodies.chest;
+      const p = c.translation();
+      const o = G.enemy.bodies.chest.translation();
+      const fw = new THREE.Vector3(o.x - p.x, 0, o.z - p.z).normalize();
+      const lf = new THREE.Vector3(0, 1, 0).cross(fw);
+      const d = { 앞: fw, 뒤: fw.clone().negate(), 왼: lf, 오른: lf.clone().negate() }[dir];
+      c.applyImpulseAtPoint({ x: d.x * 70, y: 0, z: d.z * 70 }, { x: p.x, y: p.y + 0.1, z: p.z }, true);
+      P.die('obi-test', true);
+      const r = { ground: 1, torso: 1, leg: 1, top: -1 };
+      for (let i = 0; i < Math.round(3.0 / DT); i++) {
+        G.step();
+        if (i % 4) continue;
+        const m = sayaMeasure(P);
+        r.ground = Math.min(r.ground, m.ground);
+        r.torso = Math.min(r.torso, m.gap);
+        r.leg = Math.min(r.leg, m.leg);
+        if (i > 1.5 / DT) r.top = Math.max(r.top, Math.max(...m.axis.map((q) => q.y)));
+      }
+      return r;
+    } finally {
+      G.world.free();
+    }
+  });
+
+test('⑩ 누운 몸 — 네 방향 쓰러짐에서 땅 · 몸통 · 다리 안 뚫음 · 칼집 쪽이 위인 몸도 칼집이 허공으로 서지 않음', () => {
+  for (const dir of ['앞', '뒤', '왼', '오른']) {
+    const r = fallDir(dir, 1);
+    assert.ok(r.ground >= -0.005 && r.torso >= -0.005 && r.leg >= -0.005, `${dir} 땅 ${r.ground} · 몸통 ${r.torso} · 다리 ${r.leg}`);
+    if (dir === '오른') {
+      assert.ok(r.top < 0.5, `오른쪽으로 누운 몸 — 칼집 가장 높은 점 ${r.top} m (허공으로 서지 않음)`);
+      const off = fallDir(dir, 0);
+      assert.ok(off.top > 0.6, `끄면 칼집이 섬 (${off.top} m — 11/14 판)`);
+    }
+  }
+});
+
+test('⑪ 넷 모두 그림만 — 네 스위치를 끄든 켜든 몸 · 칼 자리가 스텝마다 같음 (기본 · 다라이시 겉모습)', () => {
+  for (const look of ['player', 'silver_wanderer']) {
+    const trace = (on) =>
+      withS(Object.fromEntries(NEW4.map((k) => [k, on])), () => {
+        const G = newRound({ walls: true, seed: 3, weapon: 'uchigatana', weapon2: 'longsword', look: lookOf(look), AI2Class: AI, persona: { proficiency: 3 }, persona2: { proficiency: 5 } });
+        const out = [];
+        try {
+          for (let i = 0; i < Math.round(8 / DT); i++) {
+            G.step();
+            G.player.syncMeshes();
+            if (i % 20 === 0) for (const f of [G.player, G.enemy]) for (const b of [f.bodies.pelvis, f.bodies.farmS, f.sword]) { const t = b.translation(); out.push(t.x, t.y, t.z); }
+          }
+          return out;
+        } finally {
+          G.world.free();
+        }
+      });
+    assert.deepEqual(trace(1), trace(0), `${look} 몸 · 칼 자리 스텝마다 같음`);
+  }
 });
