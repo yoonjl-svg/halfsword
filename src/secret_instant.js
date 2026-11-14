@@ -1093,6 +1093,7 @@ function notosPose(f, w, body, standing, oneHand) {
   th.chestYaw = body.chestYaw * D2R * k;
   th.pitch = standing ? 0 : body.pitch * D2R * k;
   th.drop = standing ? 0.06 : 0.06 + (body.drop - 0.06) * k;
+  if (N) N.stand = !!standing; // 선 채 대기(사람 허리 대기)인가 — 왼손 몫 꼴이 다름 (fighter.js offHand)
   f.iaiSayaReadyW = SECRET.iaiSayaReady && oneHand && w > 0 ? N?.left ?? 0 : 0;
 }
 

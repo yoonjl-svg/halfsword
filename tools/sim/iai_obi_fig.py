@@ -6,6 +6,8 @@
 #  python3.12 tools/sim/iai_obi_fig.py pair <out.png> <제목> <그림:글> …   (나란히 — 글이 '전' 으로 시작하면 주황 · 아니면 파랑)
 #  python3.12 tools/sim/iai_obi_fig.py rows <out.png> <제목> <그림 이름 앞:글|둘째 줄> …   (줄마다 네 방향 — 전 · 후 · 인물 섞기)
 #  python3.12 tools/sim/iai_obi_fig.py seq <out.webp> <제목> <방향,…> <그림 이름 앞:글|둘째 줄> …   (칸 = 그림 이름 앞(시간 차례) · 줄 = 방향 — 11/14 납도 · 발도)
+#  python3.12 tools/sim/iai_obi_fig.py grid <out.webp> <제목> <둘째 줄> <값:글,…> <줄 글:그림 길({c} = 칸 값)> …   (11/14 납도 고른 밀도 그림 11 — 칸 = 시간 · 줄 = 몸 × 방향)
+#  python3.12 tools/sim/iai_obi_fig.py curve <out.webp> <전 json> <후 json>   (11/14 납도 고른 밀도 — 칼끝 ↔ 칼집 입 거리 · JSON = node tools/sim/iai_obi.mjs noto --json=…)
 import json
 import math
 import sys
@@ -215,6 +217,81 @@ def seq(out, title, views, specs):
     im.save(out, quality=88) if out.endswith('.webp') else im.save(out, optimize=True)
 
 
+def grid(out, title, sub, cols, rows, cw=200):
+    """칸 = cols('값:글' — 그림 길의 {c} 자리) · 줄 = rows('글:그림 길' — {c} 를 칸 값으로) · 줄 글이 '|' 를 품으면 둘째 줄 (11/14 납도 고른 밀도 그림 11)"""
+    cols = [c.split(':', 1) for c in cols]
+    rows = [r.split(':', 1) for r in rows]
+    lw = 120
+    H = 92 + 34 + len(rows) * (cw + 4) + 10
+    im = Image.new('RGB', (lw + cw * len(cols), H), 'white')
+    d = ImageDraw.Draw(im)
+    text(d, (14, 14), title, F1)
+    text(d, (14, 48), sub, F3, INK2)
+    for c, (_, lab) in enumerate(cols):
+        text(d, (lw + c * cw + 8, 96), lab, F2)
+    for r, (lab, path) in enumerate(rows):
+        y = 126 + r * (cw + 4)
+        for i, line in enumerate(lab.split('|')):
+            text(d, (10, y + cw // 2 - 20 + i * 20), line, F2 if not i else F3, INK2)
+        for c, (cv, _) in enumerate(cols):
+            try:
+                t = Image.open(path.replace('{c}', cv)).convert('RGB').resize((cw, cw))
+                im.paste(t, (lw + c * cw, y))
+            except OSError:
+                d.rectangle([lw + c * cw, y, lw + (c + 1) * cw - 1, y + cw - 1], outline=GRID)
+    im.save(out, quality=86) if out.endswith('.webp') else im.save(out, optimize=True)
+
+
+def curve(out, before, after):
+    """납도 동안 그림 칼끝 ↔ 칼집 입 거리 (cm — 입 밖 + · 칼집 안 − 깊이) · 실제 초 · 칸 = 무기 · 줄 = 사람 허리 대기 / AI 웅크린 대기 · 점 = 칼끝이 칼집 안으로 든 첫 스텝"""
+    B = {(r['weapon'], r['mode']): r for r in json.load(open(before))['out']}
+    A = {(r['weapon'], r['mode']): r for r in json.load(open(after))['out']}
+    ws = ['uchigatana', 'muramasa', 'kusanagi', 'monohoshizao']
+    PW, PH, PAD = 216, 220, 52
+    H = 110 + 2 * (PH + 126)
+    im = Image.new('RGB', (W + 40, H), 'white')
+    d = ImageDraw.Draw(im)
+    text(d, (24, 14), '납도 동안 칼끝 ↔ 칼집 입(鯉口) 거리 — 0 을 지나는 때가 칼끝이 칼집 입을 지나는 때', F1)
+    text(d, (24, 46), '세로 = 칼끝이 칼집 입 밖이면 + (입까지 · 옆 겉까지 거리) · 칼집 안이면 - (들어간 깊이) cm · 가로 = 납도 시작 뒤 실제 초 · 점 = 칼끝이 칼집 안으로 든 첫 스텝', F3, INK2)
+    text(d, (24, 68), '주황 = 전(7370994a — 칼끝이 칼집 옆 겉 곁에서 곧장 안으로: 순간이동) · 파랑 = 후(칼끝이 입 밖에서 0 으로 내려와 입을 지남)', F3, INK2)
+    y0, y1 = -90.0, 40.0
+    for row, mode in enumerate(['hip', 'crouch']):
+        oy = 98 + row * (PH + 126)
+        text(d, (24, oy), MODE_KO[mode], F2)
+        for k, w in enumerate(ws):
+            ox = 24 + PAD + k * (PW + PAD)
+            top = oy + 50
+            d.rectangle([ox, top, ox + PW, top + PH], outline=GRID)
+            X = lambda t: ox + t / 0.6 * PW
+            Y = lambda v: top + (y1 - max(y0, min(y1, v))) / (y1 - y0) * PH
+            for gv in (-80, -40, 0, 40):
+                d.line([ox, Y(gv), ox + PW, Y(gv)], fill=(205, 205, 205) if gv == 0 else GRID, width=1)
+                text(d, (ox - 38, Y(gv) - 8), f'{gv:+d}' if gv else '0', F3, MUTED)
+            text(d, (ox + PW - 58, Y(0) - 20), '칼집 입', F3, MUTED)
+            for gx in (0, 0.2, 0.4, 0.6):
+                text(d, (X(gx) - 10, top + PH + 4), f'{gx:.1f}', F3, MUTED)
+            text(d, (ox, top - 22), WEAPON_KO[w], F3, INK)
+            notes = []
+            for src, col, name in ((B, BEFORE, '전'), (A, AFTER, '후')):
+                r = src.get((w, mode))
+                if not r or not r.get('even'):
+                    continue
+                kk = (r['start'] / 2.0) if r.get('start') else 1.104  # 게임 초 / 실제 초 (iaiArmTime 실제 2.0 s)
+                pts = [(X(t / kk), Y(v * 100)) for t, v in r['even']['curve'] if t / kk <= 0.62]
+                if len(pts) > 1:
+                    d.line(pts, fill=col, width=2, joint='curve')
+                e = r['even'].get('entry')
+                if e:
+                    ex = X(e['t'] / kk)
+                    d.ellipse([ex - 5, Y(0) - 5, ex + 5, Y(0) + 5], fill=col, outline='white', width=2)
+                    notes.append(f"{name}: {e['t'] / kk:.2f} s " + ('입으로' if e['viaMouth'] and r['even']['sideEntries'] == 0 else f"옆으로 {r['even']['sideEntries']}"))
+            if w == 'monohoshizao' and mode == 'crouch':
+                notes.append('대기 칼 자세 못 지킴(알려진 꼴)')
+            for i, n in enumerate(notes):
+                text(d, (ox, top + PH + 24 + i * 18), n, F3, INK2)
+    im.save(out, quality=90) if out.endswith('.webp') else im.save(out)
+
+
 def pair(out, title, specs):
     ims = []
     for s in specs:
@@ -246,3 +323,7 @@ if __name__ == '__main__':
         rows(sys.argv[2], sys.argv[3], sys.argv[4:])
     elif m == 'seq':
         seq(sys.argv[2], sys.argv[3], sys.argv[4].split(','), sys.argv[5:])
+    elif m == 'grid':
+        grid(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5].split(','), sys.argv[6:])
+    elif m == 'curve':
+        curve(sys.argv[2], sys.argv[3], sys.argv[4])

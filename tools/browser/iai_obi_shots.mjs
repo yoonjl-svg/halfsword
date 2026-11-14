@@ -6,7 +6,8 @@
 //  출력: <폴더>/<인물>_<무기>_<동작>_<front|side|back|top>.png (480×480) + <폴더>/<인물>_<무기>.json (동작마다 멈춘 때 몸 · 칼집 값)
 //  11/14 (기록 §13): 동작 noto@0.2 = 납도(SECRET.iaiSheathe) 시작 뒤 0.2 실제 초에 멈춤 (AI 몸 셈 iaiReadyPose · 사람 몸이면 허리 대기 iaiReadyPosePlayer) · noto 는 납도 뒤 대기 0.3 s ·
 //   drawH@0.3 = 사람 허리 대기에서 낸 발도(requestIai player)를 길 몫 0.3 에서 · draw@0.3 도 같은 꼴 (AI 발도).
-//   환경 OBI_SET='{"iaiObiSayaAxis":{"yaw":-121,"el":-15},…}' = 찍기 전 SECRET 을 바꿈(전 판 그림 — 사게오 매는 자리도 다시 셈)
+//   환경 OBI_SET='{"iaiObiSayaAxis":{"yaw":-121,"el":-15},…}' = 찍기 전 SECRET 을 바꿈(전 판 그림 — 사게오 매는 자리도 다시 셈) ·
+//   OBI_VIEWS=front,side,top = 찍을 방향만 · OBI_FIT=1 = 칼끝 · 칼집 입이 다 들게 당겨 찍음 (11/14 납도 고른 밀도 그림)
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 const { chromium } = createRequire(import.meta.url)('playwright'); // 전역 playwright (NODE_PATH) — 설치하지 않음
@@ -19,6 +20,8 @@ const states = (process.argv[6] || ALL.join(',')).split(',');
 const SET = process.env.OBI_SET ? JSON.parse(process.env.OBI_SET) : null; // 전 판 그림 — 찍기 전 SECRET 바꿈
 const extra = process.argv[7] ? `&${process.argv[7]}` : '';
 const tag = process.argv[8] ? `${who}_${process.argv[8]}` : who; // 파일 이름 앞 (전 판을 따로 찍을 때 — 예 before)
+const VIEWS = process.env.OBI_VIEWS ? process.env.OBI_VIEWS.split(',') : null; // 11/14: 찍을 방향만 (예 front,side,top)
+const FIT = process.env.OBI_FIT === '1'; // 11/14: 칼끝 · 칼집 입이 다 들게 당겨 찍음 (그림 11)
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
 const errors = [];
@@ -121,19 +124,28 @@ async function shoot(state) {
   await page.setViewportSize({ width: 480, height: 480 });
   await nextFrames(4);
   const info = info0;
-  for (const [view, cam] of [['front', [0, 0.2, 1.45]], ['side', [-1, 0.2, 0]], ['back', [Math.PI, 0.2, 1.45]], ['top', [0, 1.45, 0.25]]]) {
-    await page.evaluate(([view, cam]) => {
+  for (const [view, cam] of [['front', [0, 0.2, 1.45]], ['side', [-1, 0.2, 0]], ['back', [Math.PI, 0.2, 1.45]], ['top', [0, 1.45, 0.25]]].filter(([v]) => !VIEWS || VIEWS.includes(v))) {
+    await page.evaluate(([view, cam, fit]) => {
       const g = window.game, T = g.THREE, F = window.__obi.F;
       const c = F.bodies.pelvis.translation();
       const fw = new T.Vector3(1, 0, 0).applyQuaternion(F.yaw ?? new T.Quaternion()).setY(0).normalize();
       const left = new T.Vector3(0, 1, 0).cross(fw).normalize(); // 몸 왼쪽 (y × 앞)
       g.freeCam = true;
-      const at = new T.Vector3(c.x, Math.max(0.35, c.y + 0.02), c.z);
-      if (view === 'side') g.camera.position.copy(at).addScaledVector(left, 1.45).setY(at.y + 0.2);
-      else if (view === 'top') g.camera.position.copy(at).addScaledVector(fw, cam[2]).setY(at.y + cam[1]);
-      else g.camera.position.copy(at).addScaledVector(fw.clone().applyAxisAngle(new T.Vector3(0, 1, 0), cam[0]), cam[2]).setY(at.y + cam[1]);
+      let at = new T.Vector3(c.x, Math.max(0.35, c.y + 0.02), c.z);
+      let d = 1.45;
+      if (fit && F.obiSaya?.g) {
+        // 11/14 (그림 11): 칼끝 · 칼집 입(鯉口 — 칼집 틀 원점)이 다 들게 당겨 찍음 — 가운데 = 둘의 가운데 · 거리 = 둘 사이 + 0.3 m 가 화면 높이의 80 %
+        const tip = F.bladePoint(1, new T.Vector3());
+        const koi = F.obiSaya.g.getWorldPosition(new T.Vector3());
+        at = tip.clone().add(koi).multiplyScalar(0.5);
+        const fov = ((g.camera.fov ?? 50) * Math.PI) / 180;
+        d = Math.max(0.55, Math.min(1.6, (tip.distanceTo(koi) + 0.3) / 0.8 / 2 / Math.tan(fov / 2)));
+      }
+      if (view === 'side') g.camera.position.copy(at).addScaledVector(left, d).setY(at.y + 0.2 * (d / 1.45));
+      else if (view === 'top') { const hy = F.bodies.head ? F.bodies.head.translation().y + 0.3 : 0; g.camera.position.copy(at).addScaledVector(fw, cam[2] * (d / 1.45)).setY(Math.max(at.y + d, hy)); } // 위: 머리 위에서 (당겨 찍어도 머리가 가리지 않게)
+      else g.camera.position.copy(at).addScaledVector(fw.clone().applyAxisAngle(new T.Vector3(0, 1, 0), cam[0]), d).setY(at.y + cam[1] * (d / 1.45));
       g.camera.lookAt(at);
-    }, [view, cam]);
+    }, [view, cam, FIT]);
     await nextFrames(3);
     await page.screenshot({ path: `${out}/${tag}_${weapon}_${state}_${view}.png` });
   }

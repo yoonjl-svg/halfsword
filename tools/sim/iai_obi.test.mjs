@@ -17,6 +17,8 @@
 //  ⑫ 쉬는 칼집: 입이 배 왼쪽 앞(배 그림 상자 앞 · 옆 모서리 곁) · 위에서 볼 때 바로 뒤에서 15 ~ 25° 바깥 · 아래로 기움 10 ~ 20° (서기 · 걷기 · 달리기 동안 골반 틀 그대로 — 뚫음 · 틈은 ⑤)
 //  ⑬ 납도 (SECRET.iaiSheathe): 사람 창 — iaiArmTime 에 납도 시작 · iaiArmTime + iaiSheathe 에 준비(그 전엔 창 없음) · 납도 동안 손 · 칼 덧씌우기 · 끝에 칼이 칼집 안 /
 //     도중 막기 단추 · 이동 입력이면 그만둠(셈 0 · 덧씌우기 곧장 0) / 끄면(0) iaiArmTime 에 준비 · 납도 없음 / AI 셈(IaiArm) 같음 · 납도 동안 칼날이 몸 · 다리를 안 뚫음 (시간 상한 기준 없음 — 차례 · 자리만)
+//  ⑭ 칼끝이 칼집 입으로 들어감 (11/14 사장님 '칼끝이 들어가도록 충분히 들어올려지지 않았는데 칼집을 뚫고 순간이동하는 느낌'): 납도 동안 그림 칼끝(휜 칼날 · 날 위 굴림)이
+//     칼집 안으로 든 첫 스텝의 앞 스텝이 칼집 입 곁(입 밖 3 cm 안 · 단면 1.3 배 안) · 칼집 몸 옆(입이 아닌 데)으로 든 스텝 0 (사람 허리 대기 · AI 웅크린 대기 × 일본 칼 넷 — 모노호시자오 AI 웅크림 뺌 · ② 머리말)
 //  node --test tools/sim/iai_obi.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -423,6 +425,10 @@ function human(vals, drive) {
   });
 }
 
+/** 납도 한 판 (iai_obi.mjs notoRun — ⑬ · ⑭ 가 같은 판을 읽음) */
+const notoRuns = {};
+const noto = (weapon, mode) => (notoRuns[`${weapon} ${mode}`] ??= notoRun({ weapon, mode }));
+
 test('⑬ 납도 — iaiArmTime 에 시작 · + iaiSheathe 에 준비 · 끝에 칼이 칼집 안 · 도중 끊김 · 끄면 지금 판 · AI 같은 셈', () => {
   const T = SECRET.iaiArmTime, X = SECRET.iaiSheathe;
   assert.equal(X, CONFIG.realS(0.6), '납도 0.6 s (실제 초)');
@@ -491,11 +497,22 @@ test('⑬ 납도 — iaiArmTime 에 시작 · + iaiSheathe 에 준비 · 끝에 
   withS({ iaiObi: 0 }, () => { const B = new IaiArm(); for (let i = 0; i < Math.round((T + DT) / DT); i++) B.tick(DT, true, false); assert.equal(B.armed, true, '帯刀 끄면 납도 없이 iaiArmTime 에 준비'); });
   // 납도 동안 칼날이 몸 · 다리를 안 뚫음 · 끝에 칼이 칼집 안 (사람 허리 대기 · AI 웅크린 대기 — 모노호시자오 AI 웅크림은 대기 칼이 자세를 못 지킴 · ② 머리말)
   for (const [weapon, mode] of [['uchigatana', 'hip'], ['uchigatana', 'crouch'], ['kusanagi', 'hip'], ['monohoshizao', 'hip']]) {
-    const r = notoRun({ weapon, mode });
+    const r = noto(weapon, mode);
     assert.ok(r.start != null && r.armed != null && r.armed > r.start, `${weapon} ${mode} 납도 → 준비`);
     assert.ok(r.body >= 0, `${weapon} ${mode} 칼날 ↔ 몸 · 다리 ${r.body} (뚫지 않음)`);
     assert.ok(r.gap >= -0.005 && r.leg > 0, `${weapon} ${mode} 칼집 ↔ 몸통 ${r.gap} · 다리 ${r.leg}`);
     assert.ok(r.out <= 0.03, `${weapon} ${mode} 칼집이 감싼 칼날이 칼집 겉 밖 ${r.out} m`);
     assert.ok(r.readyFol >= 0.9 && r.readyOut <= 0.01, `${weapon} ${mode} 준비 뒤 칼이 칼집 안 (감쌈 ${r.readyFol} · 밖 ${r.readyOut})`);
   }
+});
+
+test('⑭ 칼끝이 칼집 입으로 들어감 — 칼집 몸 옆으로 드는 스텝 없음 (사람 허리 대기 · AI 웅크린 대기 × 일본 칼 넷)', () => {
+  for (const weapon of WEAPONS)
+    for (const mode of ['hip', 'crouch']) {
+      if (weapon === 'monohoshizao' && mode === 'crouch') continue; // 대기 칼이 자세를 못 지킴 (② 머리말)
+      const e = noto(weapon, mode).even;
+      assert.ok(e && e.entry, `${weapon} ${mode} 칼끝이 칼집 안으로 듦`);
+      assert.ok(e.entry.viaMouth, `${weapon} ${mode} 칼끝이 칼집 입 곁에서 들어감 (앞 스텝 입 밖 ${e.entry.prevY} m · 단면 ${e.entry.prevE} 배)`);
+      assert.equal(e.sideEntries, 0, `${weapon} ${mode} 칼집 몸 옆으로 든 스텝 ${JSON.stringify(e.sideAt)}`);
+    }
 });
