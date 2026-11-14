@@ -7,12 +7,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { CONFIG, newRound, THREE } from './harness_m.mjs';
-import { itThrust, itThrustKind, foeWalkingIn, itEdgeGrant, itEdgeOn, itEdgeOk, itOnStrike, beatOk, beatSide, beatTick } from '../../src/italian_outbox.js';
+import { itThrust, itThrustKind, foeWalkingIn, itEdgeGrant, itEdgeOn, itEdgeOk, itOnStrike, beatOk, beatSide, beatTick, aiBeatTick, aiBeatTech } from '../../src/italian_outbox.js';
 import { PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { PlayerSecretWatch } from '../../src/secret.js';
 import { kitFromNodes, allNodeIds, KIT_KEYS } from '../../src/skill_tree_data.js';
 import { fightOne } from './school_balance.mjs';
+import { THRUST_STYLE } from '../../src/weapons.js';
 
 const IO = CONFIG.IT_OUTBOX;
 const { realS, GAIT } = CONFIG;
@@ -34,16 +35,16 @@ function fake({ kind = 'tap', foeV = [0, 0, 0], walking = true, school = 'italia
   return { me, foe };
 }
 
-test('기본값 (11/14): 넷 모두 켬 · 찌르기 × 0.8 · 맞박자 +30 % · 칼 우위 2.0 s · 박자 0.4 s (실제 초 — 시간 사다리) · AI 끔 · 몫 열쇠 itTempo 는 I1 과 함께(새 칸 자리 대기)', () => {
+test('기본값 (11/14 사장님 \'이탈리아 찌르기 0.8로 해. 우위 2초 권고대로. ai에도 적용. 콘트라템포 ok\'): 넷 모두 켬 · 찌르기 × 0.8 · 맞박자 +30 % · 칼 우위 2.0 s · 박자 0.4 s (실제 초 — 시간 사다리) · AI 에도 · 몫 열쇠 itTempo = 새 칸 I12 맞박자 찌르기', () => {
   assert.equal(IO.on, 1);
   assert.equal(IO.thrustMul, 0.8);
   assert.equal(IO.stop, 0.3);
   assert.equal(IO.stopV, null);
   assert.ok(Math.abs(IO.edge - realS(2.0)) < 1e-12 && Math.abs(IO.beat - realS(0.4)) < 1e-12);
-  assert.equal(IO.ai, 0);
+  assert.equal(IO.ai, 1);
   assert.ok(KIT_KEYS.includes('itTempo'));
-  assert.equal(kitFromNodes('italian', new Set(['I1'])).itTempo, true);
-  assert.equal(kitFromNodes('italian', new Set(['I3'])).itTempo, false);
+  assert.equal(kitFromNodes('italian', new Set(['I1', 'I12'])).itTempo, true);
+  assert.equal(kitFromNodes('italian', new Set(['I1'])).itTempo, false, 'I1 임시 이음은 걷음 (새 칸 I12)');
 });
 
 test('1 찌르기 배율: 사람 이탈리아 보통 찌르기(탭 · 내려 찌르기 · 돌려 빼기 · 막아찌르기 · 그어 찌르기) × thrustMul · 비기 · 베기 · AI · 다른 유파 · 끔 = 배율 없음(null)', () => {
@@ -57,15 +58,23 @@ test('1 찌르기 배율: 사람 이탈리아 보통 찌르기(탭 · 내려 찌
   assert.equal(itThrust(...Object.values(fake({ kind: 'secret' }))), null, '비기(리솔루토) 뺌');
   assert.equal(itThrust(...Object.values(fake({ kind: 'special' }))), null, '특수 공격 — 약화 없음(맞박자 아니면 배율 없음)');
   assert.equal(itThrust(...Object.values(fake({ kind: 'cut' }))), null, '긋기');
-  assert.equal(itThrust(...Object.values(fake({ ai: true }))), null, 'AI (ai 0)');
+  assert.equal(itThrust(...Object.values(fake({ ai: true }))), null, 'AI 가 찌르는 중이 아님');
   assert.equal(itThrust(...Object.values(fake({ school: 'german' }))), null, '다른 유파');
   withIO({ on: 0 }, () => assert.equal(itThrust(...Object.values(fake())), null, '끔'));
   withIO({ thrustMul: 1 }, () => assert.equal(itThrust(...Object.values(fake())), null, '배율 1 = 그대로'));
-  withIO({ ai: 1 }, () => {
-    const { me, foe } = fake({ ai: true });
+  { // AI 에도 (11/14 사장님 'ai에도 적용' — IT_OUTBOX.ai 1): AI 찌르기 기술 × 0.8 · 빼서 찌르기(칼끝 돌려 빼기) 'cav' · 비껴서며 찌르기 'special' · ai 0 = 사람만
+    const { me, foe } = fake({ ai: true, kind: 'none' });
     me.aiCtl = { mode: 'attack', phase: 'strike', tech: { kind: 'thrust', name: 'stichPflug' } };
-    assert.equal(itThrust(me, foe)?.k, 0.8, 'AI 견줌 스위치');
-  });
+    assert.equal(itThrust(me, foe)?.k, 0.8, 'AI 찌르기');
+    me.aiCtl.passiveAtk = 'cavazione';
+    assert.equal(itThrust(me, foe)?.kind, 'cav', 'AI 빼서 찌르기 = 칼끝 돌려 빼기');
+    me.aiCtl = { mode: 'attack', phase: 'strike', tech: { kind: 'thrust', name: 'inquartata' } };
+    assert.equal(itThrustKind(me), 'special');
+    me.aiCtl = { mode: 'attack', phase: 'strike', tech: { kind: 'cut', name: 'zornhau' } };
+    assert.equal(itThrust(me, foe), null, 'AI 베기');
+    me.aiCtl = { mode: 'attack', phase: 'strike', tech: { kind: 'thrust', name: 'stichPflug' } };
+    withIO({ ai: 0 }, () => assert.equal(itThrust(me, foe), null, 'ai 0 = 사람만'));
+  }
   assert.equal(itThrustKind(fake({ kind: 'secret' }).me), 'secret');
   const s = fake();
   s.me.secretHit = 0.5; // 리솔루토 탭 찌르기 판(?risoLunge=0)도 비기 배율이 걸리면 비기
@@ -122,17 +131,17 @@ test('2 맞박자 찌르기 +30 %: 상대가 내 쪽으로 걸음 문턱 넘게 
   down.foe.state = 'kneel';
   assert.equal(foeWalkingIn(down.me, down.foe), false, '선 상대만');
   // 몫 열쇠: 스킬트리 몫이 있는 사람 몸은 itTempo(지금 I1)를 익혀야
-  const noKit = fake({ foeV: walkIn, kit: kitFromNodes('italian', new Set(['I3'])) });
+  const noKit = fake({ foeV: walkIn, kit: kitFromNodes('italian', new Set(['I1', 'I3'])) });
   assert.equal(itThrust(noKit.me, noKit.foe).stop, false);
   assert.equal(itThrust(noKit.me, noKit.foe).k, 0.8);
-  const kit = fake({ foeV: walkIn, kit: kitFromNodes('italian', new Set(['I1'])) });
+  const kit = fake({ foeV: walkIn, kit: kitFromNodes('italian', new Set(['I1', 'I12'])) }); // 새 칸 I12 맞박자 찌르기 (콘트라템포)
   assert.equal(itThrust(kit.me, kit.foe).stop, true);
   withIO({ stop: 0 }, () => assert.equal(itThrust(a.me, a.foe).stop, false, 'stop 0 = 끔'));
   // 다른 상대(2:2 — 겨눈 상대가 아님)는 안 받음
   assert.equal(itThrust(a.me, { ...a.foe }).stop, false);
 });
 
-test('3 칼 우위: I2 · I6 · I9 가 상처를 내면 · I8 헛누름이 들면 2.0 s 켜짐 · 탭 찌르기 · 상처 없음 · AI · 다른 유파 · 끔 = 안 켜짐', () => {
+test('3 칼 우위: I2 · I6 · I9 가 상처를 내면 · I8 헛누름이 들면 2.0 s 켜짐 · AI 도 · 탭 찌르기 · 상처 없음 · 다른 유파 · 끔 · ai 0 의 AI = 안 켜짐', () => {
   for (const kind of ['cav', 'opp', 'special']) {
     const { me, foe } = fake({ kind });
     itOnStrike(me, foe, { severity: 0.3, itThrust: itThrust(me, foe) ?? undefined });
@@ -150,7 +159,8 @@ test('3 칼 우위: I2 · I6 · I9 가 상처를 내면 · I8 헛누름이 들�
   const n = fake({ kind: 'cav' });
   itOnStrike(n.me, n.foe, { severity: 0 });
   assert.equal(itEdgeOn(n.me), false, '상처 없음');
-  assert.equal(itEdgeGrant(fake({ ai: true }).me, 'cav'), false, 'AI');
+  assert.equal(itEdgeGrant(fake({ ai: true }).me, 'cav'), true, 'AI 에도 (ai 1)');
+  withIO({ ai: 0 }, () => assert.equal(itEdgeGrant(fake({ ai: true }).me, 'cav'), false, 'ai 0 = 사람만'));
   assert.equal(itEdgeGrant(fake({ school: 'german' }).me, 'cav'), false, '다른 유파');
   withIO({ edge: 0 }, () => assert.equal(itEdgeGrant(fake().me, 'cav'), false, 'edge 0 = 끔'));
   const f = fake().me;
@@ -261,12 +271,39 @@ test('4 박자 찌르기 셈 · 몸 빼는 쪽: 상대 휘두름이 선 스텝�
   assert.equal(beatSide(me), 1);
 });
 
+test('4 박자 찌르기 AI 몫: 상대 휘두름이 선 뒤 0.4 s 안이면 맞받아 베기 칼 = 비껴서며 찌르기 · 밖 · 이미 씀 · ai 0 · 끔 = 전 판 목록(null)', () => {
+  const foe = { skill: {}, stamina: {}, aiControlled: true, aiCtl: { mode: 'watch', phase: 'ready' } };
+  const B = { f: { foe }, t: 0, foeAtk: null, foeSw: false, inqBeatSeen: -1 };
+  const inq = { name: 'inquartata' };
+  aiBeatTick(B, 0.1);
+  assert.equal(aiBeatTech(B, inq), null, '상대가 안 휘두름');
+  foe.aiCtl = { mode: 'attack', phase: 'strike' };
+  aiBeatTick(B, 0.1);
+  assert.equal(aiBeatTech(B, inq), inq, '치기 시작 — 비껴서며 찌르기');
+  withIO({ ai: 0 }, () => assert.equal(aiBeatTech(B, inq), null, 'ai 0'));
+  withIO({ beat: 0 }, () => assert.equal(aiBeatTech(B, inq), null, 'beat 0'));
+  aiBeatTick(B, IO.beat + 0.01);
+  assert.equal(aiBeatTech(B, inq), null, '0.4 s 밖');
+  foe.aiCtl = { mode: 'watch', phase: 'ready' };
+  aiBeatTick(B, 0.1);
+  foe.aiCtl = { mode: 'attack', phase: 'strike' };
+  aiBeatTick(B, 0.1);
+  assert.equal(B.foeAtk.n, 2);
+  B.inqBeatSeen = 2;
+  assert.equal(aiBeatTech(B, inq), null, '이 공격에 이미 씀');
+});
+
 const hash = (r) => createHash('sha256').update(JSON.stringify(r)).digest('hex').slice(0, 12);
-test('스위치 끔이면 전 판 (바탕 bf1b94f2 와 판 바이트 같음 — 사람 이탈리아 손가락 봇 판 둘) · 다른 유파 판은 켬 그대로 같음', () => {
-  withIO({ on: 0 }, () => {
-    assert.equal(hash(fightOne({ school: 'italian', weapon: 'rapier', opp: 'longsword', seed: 1 })), '905c89d08abf');
-    assert.equal(hash(fightOne({ school: 'italian', weapon: 'rapier', opp: 'rapier', seed: 2 })), '63a6e3dacbfe');
-  });
+test('스위치 끔이면 전 판 (본판 c1cad826 과 판 바이트 같음 — 사람 이탈리아 손가락 봇 판 둘 · 거울은 AI 이탈리아도) · 다른 유파 판은 켬 그대로 같음', () => {
+  // 11/14 틈 파고들기(사장님 '기본찌르기는 0.6 위에서 내려찌르기는 0.9' — 무기 값 · IT_OUTBOX 밖)는 그때 값으로 묶어 본판과 견줌 (레이피어 0.3 · 에스톡 0.5 · 내려 찌르기 0.6)
+  const UA = CONFIG.UNIQUE_ASSIST, keep = [THRUST_STYLE.rapier.gap, THRUST_STYLE.estoc.gap, UA.imbroccataGap];
+  THRUST_STYLE.rapier.gap = 0.3; THRUST_STYLE.estoc.gap = 0.5; UA.imbroccataGap = 0.6;
+  try {
+    withIO({ on: 0 }, () => {
+      assert.equal(hash(fightOne({ school: 'italian', weapon: 'rapier', opp: 'longsword', seed: 1 })), '905c89d08abf');
+      assert.equal(hash(fightOne({ school: 'italian', weapon: 'rapier', opp: 'rapier', seed: 2 })), '63a6e3dacbfe');
+    });
+  } finally { [THRUST_STYLE.rapier.gap, THRUST_STYLE.estoc.gap, UA.imbroccataGap] = keep; }
   assert.notEqual(hash(fightOne({ school: 'italian', weapon: 'rapier', opp: 'longsword', seed: 1 })), '905c89d08abf', '켬 — 이탈리아 판은 바뀜');
-  assert.equal(hash(fightOne({ school: 'german', weapon: 'sabre', opp: 'longsword', seed: 1 })), '059c0ee0d630', '독일 — 켬이어도 같음');
+  assert.equal(hash(fightOne({ school: 'german', weapon: 'sabre', opp: 'longsword', seed: 1 })), '436777985e44', '독일 — 켬이어도 같음 (본판 c1cad826 해시)');
 });

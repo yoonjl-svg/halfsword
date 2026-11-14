@@ -15,6 +15,7 @@ import { classifyStroke } from '../../src/attack_stroke.js';
 import { G as PAD } from '../../src/ai_techniques.js';
 import { iaiTipSpeed } from '../../src/secret_instant.js'; // 11/11 칼끝 돌려 빼기 = 고노센 칼끝 × specialShare.cavazione
 import { withArmOld } from './arm_real_pin.mjs';
+import { THRUST_STYLE } from '../../src/weapons.js'; // 11/14 틈 파고들기 그때 값으로 묶음 (아래 ② 넘어짐 전 판)
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, THRUST } = CONFIG;
@@ -314,6 +315,9 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
   UA.cavSpeedMul = 1; // 전 판 넘어짐 재현은 고칠 때의 빠르기(× 1 — 10/31 18:xx 기본 × 1.2 전)로: 판이 달라지면 씨앗 902 의 그 수가 안 나옴
   UA.cavShare = 0; // 같은 까닭 — 고칠 때의 빠르기 바탕(보통 찌르기 빠르기 — 11/11 고노센 × 0.35 전)
   CONFIG.BIND.natural = 0; // 같은 까닭으로 고칠 때의 칼 물리(자연 바인드 끔 — 10/31 19:xx 본판 전)로 (켜면 칼끼리 덜 튕겨 씨앗 902 의 그 수 · 넘어짐이 안 나옴)
+  const gp = [THRUST_STYLE.rapier.gap, UA.imbroccataGap];
+  THRUST_STYLE.rapier.gap = 0.3; // 11/14 그때 판으로 묶음 (기준은 안 고침): 사장님 '기본찌르기는 0.6 위에서 내려찌르기는 0.9' 로 레이피어 틈 0.3 → 0.6 · 내려 찌르기 0.6 → 0.9 — 판이 달라져 씨앗 902 의 그 수 뒤 넘어짐이 안 나옴 → 고칠 때의 값으로
+  UA.imbroccataGap = 0.6;
   CONFIG.SKILL.thrustScale = 'off'; // 같은 까닭 — 고칠 때의 사람 레이피어 손 매핑(11/12 한손 찌르기 잣대 'base' 전 — docs/strike/arm_reach_audit_2026-11-12.md: 켜면 씨앗 902 판의 그 수 뒤 넘어짐이 안 나옴)
   try {
     const b = watch();
@@ -327,6 +331,7 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
     UA.cavShare = sh;
     CONFIG.BIND.natural = bn;
     CONFIG.SKILL.thrustScale = ts;
+    [THRUST_STYLE.rapier.gap, UA.imbroccataGap] = gp;
   }
 });
 

@@ -50,9 +50,10 @@ const TREE_SRC = {
   },
   italian: {
     nodes: [
-      N({ id: 'I1', name: '박자 걸음', cat: 'foot', l1: '보법 I', l2: '박자 걸음', eff: '짧게 두 번, 길게 두 번 박자를 타며 걷는다', price: 100, d: 0, cx: 500, f: ['footwork', 'itTempo'] }), // 11/14 사장님 '이탈리아는 카운터 +30%를 패시브로 넣되 좀 빠르게 배울 수 있는 위치로. 스킬 이름은 원전애서 가져와.' — 맞박자 찌르기 몫 itTempo(config IT_OUTBOX.stop · italian_outbox.js)는 새 패시브 칸 자리 · 이름이 정해질 때까지 임시로 이 칸과 함께 켬 [새 칸 자리 대기 — 감독]
+      N({ id: 'I1', name: '박자 걸음', cat: 'foot', l1: '보법 I', l2: '박자 걸음', eff: '짧게 두 번, 길게 두 번 박자를 타며 걷는다', price: 100, d: 0, cx: 500, f: ['footwork'] }),
       N({ id: 'I11', name: '시에나에서 온 편지', cat: 'letter', l1: '시에나에서', l2: '온 편지', title: '시에나에서 온 편지', pre: ['I1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'I3', name: '물러서기', cat: 'foot', l1: '보법 II', l2: '물러서기', eff: '뒤로 걸어도 느려지지 않는다', pre: ['I1'], price: 100, d: 1, cx: 500, f: ['backFlat'] }),
+      N({ id: 'I12', name: '맞박자 찌르기', nameKo: '맞박자 찌르기 (콘트라템포)', orig: 'contratempo', cat: 'passive', l1: '패시브', l2: '맞박자 찌르기', eff: '걸어 들어오는 상대를 그 박자에 찌르면 피해가 증가한다', pre: ['I1'], price: 0, heads: 5, d: 1, cx: 750, f: ['itTempo'] }), // 11/14 사장님 '이탈리아는 카운터 +30%를 패시브로 넣되 좀 빠르게 배울 수 있는 위치로. 스킬 이름은 원전애서 가져와.' → '콘트라템포 ok' — 보법 II 줄(d 1 · 박자 걸음 뒤 · 패시브 값 머리 5) · 몫 itTempo(config IT_OUTBOX.stop · italian_outbox.js — 곧은 선 I10 의 tipAim 'passive' 몫과 따로) · 이름 '뜻 (소리)' — 화면 칸 이름은 뜻만, 원어 contratempo 는 스킬 화면 제목에서만(skill_tree.js withOrig) · 효과 글 = 감독 안(사장님 검수 전) · 원전 카포 페로 쓰임 10 「Del ferire di contratempo」 원판 30쪽 (docs/strike/it_outbox_2026-11-14.md §2)
       N({ id: 'I7', name: '내려 찌르기', cat: 'atk', l1: '내려', l2: '찌르기', eff: '내려 긋는 칼이 내려 찌르기로 나간다', pre: ['I3'], price: 200, d: 2, cx: 330, u: 'imbroccata' }), // 10/31 12:xx 사장님 '임브로카타를 먼저 배우고 카바치오네를 배우고 틈 파고들기는 카바치오네 강화로 바꿔.' — 왼 줄 첫 칸(d 2 · 금화 200 — 전 d 3 · 300 · I2 뒤) · 칸 id 는 기술을 따라 I7 그대로(사장님 · 감독이 부르는 이름) — 옛 저장의 d 2 자리(I2)는 skill_tree_store.js migrateItalianSlots 가 I7 로 옮김 · 10/31 12:xx 사장님 'I7은 어떤 방향이나 높이에서든 다른 유파의 내려 긋는 베기에 해당하는 커맨드를 내려찌르기로 전환해 주도록 하자' — 10/31 13:xx 사장님 '내려 긋는 칼이 내려 찌르기로 나간다 - 스킬 이름도 내려 찌르기로 바꿔' — 이름 '위에서 내려 찌르기' → '내려 찌르기' · 효과 글 사장님 확정 · 전 '황소 찌르기를 하면 위에서 내려 찌르기가 나간다'
       N({ id: 'I5', name: '뻗어 받기', cat: 'parry', l1: '막기 I', l2: '막기 자리', eff: '팔을 뻗고 칼끝을 곧게 둔 채 받는다', pre: ['I3'], price: 200, d: 2, cx: 670, f: ['parry', 'parryCover'] }),
       N({ id: 'I2', name: '칼끝 돌려 빼기', cat: 'atk', l1: '칼끝', l2: '돌려 빼기', eff: '맞닿은 상대 칼 밑으로 칼끝을 돌려 빼 반대쪽을 찌른다', pre: ['I7'], price: 300, d: 3, cx: 330, u: 'cavazione' }), // 10/31 12:xx 사장님 '카바치오네가 발전해서 리솔루토가 되는 게 더 멋지고' · '임브로카타를 먼저 배우고 카바치오네를 배우고' — 기본 고유 공격(d 3 · 금화 300 · 전 I9 특수 공격) · 칸 id I2(10/31 첫 안 — 전 비껴서며 찌르기 d 2 · 옛 저장의 d 3 자리(I7)는 migrateItalianSlots 가 I2 로) · 효과 글 = 감독 안(사장님 검수 전)
@@ -139,6 +140,7 @@ const NODE_LORE = {
   I9: { lore: '몸을 비켜 빼며, 넷째 자세로 돌려 찌른다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 그림 풀이' }, // 10/31 비껴서며 찌르기와 함께 I2 에서 옮김
   I4: { lore: '팔을 굳게 두고 상대 칼날을 놓지 말고, 따라 미끄러져 몸까지 가라', src: '살바토르 파브리스 『Lo Schermo』(1606) — 결연히 나아가기' }, // 10/22 거침없이 나아가 찌르기 (전 엇박 찌르기 — 카포 페로)
   I10: { lore: '곧은 선은 하나이니, 기예를 아는 자만이 그것을 긋는다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 곧은 선' },
+  I12: { lore: '그가 발을 옮겨 네 칼에 제 칼을 얹으려는 그 박자에, 찔러라', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 콘트라템포로 치기' }, // 11/14 맞박자 찌르기 — 쓰임 10 「nell'istesso tempo che muoverà il piè destro a posar la sua spada nella tua, li spingerai d'una punta」 원판 30쪽
   // 이베리아 — 피게이레두 몬탄테 (Wiktenauer 'Diogo Gomes de Figueyredo' · Myers · Hick 영역) · 고디뉴 몬탄테 장 (저장소 독일어 역 인용)
   B1: { lore: '박자 맞고 무게 실린 잰 걸음으로 가되, 춤추듯 걷지 마라', src: '고디뉴 『Arte de Esgrima』(1599) — 몬탄테 장' },
   B2: { lore: '오른발을 오른쪽 끝없는 선으로 옮기고, 왼발이 따르게 하라', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 12' },

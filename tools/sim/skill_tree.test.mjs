@@ -35,6 +35,7 @@ const fresh = (p = { version: 1, acquisitions: [], coins: 100, heads: 0, titles:
   readProgress();
 };
 const wallet = (coins, heads = 0) => fresh({ version: 1, acquisitions: [], coins, heads, titles: [], title: '여행자' });
+const ADDED_1114 = { italian: ['I12'] }; // 설계 자료(data.mjs) 뒤에 더한 칸 (11/14 이탈리아 맞박자 찌르기 — 보법 II 줄 패시브)
 const HEADS_1025 = { passive: 5, secret: 10 }; // 사장님 10/25 01:5x '머리 패시브 5개 비기 10개로' — 설계 자료(data.mjs)의 10 · 20 을 덮음
 const ids = (...a) => new Set(a);
 
@@ -43,7 +44,7 @@ test('설계 자료(data.mjs)와 같다: 유파마다 11 칸 · id · 갈래 · 
   assert.deepEqual(D.TREE_SCHOOLS, DESIGN.map((s) => s.id));
   for (const s of DESIGN) {
     const mine = D.nodesOf(s.id);
-    assert.equal(mine.length, 11, s.id);
+    assert.equal(mine.length, 11 + (ADDED_1114[s.id]?.length ?? 0), s.id); // 11/14 사장님 '카운터 +30%를 패시브로 … 콘트라템포 ok' — 이탈리아 맞박자 찌르기 I12 를 설계 자료 밖에 더함 (아래 ADDED_1114)
     for (const d of s.nodes) {
       const n = D.nodeOf(s.id, d.id);
       assert.ok(n, `${s.id} ${d.id}`);
@@ -395,6 +396,7 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('german', 'G9'), ['passive', 'deRing']); // 11/14 칼 씨름 새 몫 열쇠 — 새 칸 자리 대기라 G9 에 임시로 이음 (감독 지시 · 칸이 생기면 그 칸으로) · 11/14 B · C 열쇠 폐기
   assert.deepEqual(on('italian', 'I1'), ['footwork']);
   assert.deepEqual(on('italian', 'I3'), ['backFlat']);
+  assert.deepEqual(on('italian', 'I12'), ['itTempo']); // 11/14 맞박자 찌르기 (콘트라템포) — 사장님 '콘트라템포 ok' · 보법 II 줄 패시브
   assert.deepEqual(on('italian', 'I6'), ['opposition']);
   assert.deepEqual(on('italian', 'I8'), ['perk:cavazione']); // 10/31 헛누름 (전 내려 찌르기 틈 파고들기 perk imbroccata)
   assert.deepEqual(on('italian', 'I7'), ['u:imbroccata']);
@@ -824,7 +826,7 @@ test('칸 오의(lore · src — 사장님 10/22 00:5x 원전의 오의를 밝�
     if (x.letter) assert.equal(x.src, undefined, `${x.id} 편지 칸은 출처 없음`);
     else assert.ok(typeof x.src === 'string' && x.src.trim().length > 0, `${x.id} src`);
   }
-  assert.equal(n, 55);
+  assert.equal(n, 55 + Object.values(ADDED_1114).flat().length); // 11/14 맞박자 찌르기 I12 (칸 수 = 설계 55 + 더한 칸)
 });
 
 test('10/23 비기 이름 = 원어 독음 (동방은 한자 한국식 독음) · 스킬 화면 제목은 원어를 괄호로 함께', async () => {

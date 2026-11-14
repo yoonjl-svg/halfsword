@@ -27,6 +27,12 @@ export const PRESETS = {
   all3: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 3.0, beat: 0.4 } },
   all07: { bot: 'outbox', io: { on: 1, thrustMul: 0.7, stop: 0.3, edge: 2.0, beat: 0.4 } },
   all09: { bot: 'outbox', io: { on: 1, thrustMul: 0.9, stop: 0.3, edge: 2.0, beat: 0.4 } },
+  // 11/14 사장님 '이탈리아 찌르기 0.8로 해. 우위 2초 권고대로. ai에도 적용.' — fin = 본판 값(사람 · AI 같게) · hum = 사람만(11/14 첫 판 · ai 0)
+  fin: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 2.0, beat: 0.4, ai: 1 } },
+  hum: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 2.0, beat: 0.4, ai: 0 } },
+  // 11/14 사장님 '기본찌르기는 0.6 위에서 내려찌르기는 0.9' — 판금 상대(하인리히 차림 · SB_FOE_LOOK=plate): finP = 새 틈(레이피어 0.6 · 내려 찌르기 0.9) · finPold = 옛 틈(0.3 · 0.6)
+  finP: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 2.0, beat: 0.4, ai: 1 }, plate: 1, gap: { rapier: 0.6, estoc: 0.6, imbro: 0.9 } },
+  finPold: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 2.0, beat: 0.4, ai: 1 }, plate: 1, gap: { rapier: 0.3, estoc: 0.5, imbro: 0.6 } },
 };
 const range = (s) => String(s).split(',').flatMap((p) => { const m = p.match(/^(\d+)-(\d+)$/); if (!m) return [+p]; const o = []; for (let i = +m[1]; i <= +m[2]; i++) o.push(i); return o; });
 const r3 = (x) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(3));
@@ -36,9 +42,13 @@ export async function runPreset(name, cells, seeds, log = () => {}) {
   const P0 = PRESETS[name];
   if (!P0) throw new Error(`모르는 판 ${name}`);
   process.env.SB_IT_BOT = P0.bot;
+  process.env.SB_FOE_LOOK = P0.plate ? 'plate' : '';
   const { fightOne, CONFIG } = await loadSB();
   const IO = CONFIG.IT_OUTBOX;
   const keep = { ...IO };
+  const { THRUST_STYLE } = await import('../../src/weapons.js');
+  const keepGap = [THRUST_STYLE.rapier.gap, THRUST_STYLE.estoc.gap, CONFIG.UNIQUE_ASSIST.imbroccataGap];
+  if (P0.gap) (THRUST_STYLE.rapier.gap = P0.gap.rapier), (THRUST_STYLE.estoc.gap = P0.gap.estoc), (CONFIG.UNIQUE_ASSIST.imbroccataGap = P0.gap.imbro);
   const io = { ...P0.io };
   if (io.edge != null) io.edge = CONFIG.realS(io.edge);
   if (io.beat != null) io.beat = CONFIG.realS(io.beat);
@@ -50,11 +60,20 @@ export async function runPreset(name, cells, seeds, log = () => {}) {
       const [school, weapon, opp] = c.split(':');
       for (const seed of seeds) {
         let P = null, uq = null, lastAct = null;
+        const plate = { hits: 0, sev: 0, pierce: 0, stopped: 0 };
         const diag = [];
         const probe = {
-          init({ P: p, uq: u }) {
+          init({ G, P: p, A, uq: u }) {
             P = p;
             uq = u;
+            const pw = G.combat.hooks.onWound; // 판금 재기 (11/14): 판 위 칼날 상처 · 판에 막힌 찌르기(멍으로 바뀜) · 상처 낸 맞음 수 · 심각도
+            G.combat.hooks.onWound = (att, vic, r, ...rest) => {
+              pw?.(att, vic, r, ...rest);
+              if (att !== P || vic !== A) return;
+              if (r.severity > 0 && r.type !== 'blunt') (plate.hits++, (plate.sev += r.severity));
+              if (r.plate && r.type === 'stab' && r.severity > 0) plate.pierce++;
+              if (r.plate && r.type === 'blunt' && (P.skill?.tap || P.iai || P.skill?.sec || P.stamina?.stroke?.kind === 'thrust')) plate.stopped++;
+            };
             const e = uq.tapList?.find((x) => x.tapKey === 'inq');
             if (!e) return;
             const orig = uq.tapChain.bind(uq);
@@ -78,7 +97,7 @@ export async function runPreset(name, cells, seeds, log = () => {}) {
           step(cur, act) { lastAct = act; },
           done() {
             const o = P?.itOut ?? {};
-            return { edge: o.edge ?? 0, by: o.by ?? {}, stopHits: o.stopHits ?? 0, thrustHits: o.thrustHits ?? 0, beatFired: o.beatFired ?? 0, risoWait: r3((o.risoWait ?? 0) / CONFIG.TIME.k), diag, tapFired: uq?.stats?.fired ?? {} };
+            return { plate, edge: o.edge ?? 0, by: o.by ?? {}, stopHits: o.stopHits ?? 0, thrustHits: o.thrustHits ?? 0, beatFired: o.beatFired ?? 0, risoWait: r3((o.risoWait ?? 0) / CONFIG.TIME.k), diag, tapFired: uq?.stats?.fired ?? {} };
           },
         };
         const r = fightOne({ school, weapon, opp, seed, probe });
@@ -89,8 +108,48 @@ export async function runPreset(name, cells, seeds, log = () => {}) {
     }
   } finally {
     Object.assign(IO, keep);
+    [THRUST_STYLE.rapier.gap, THRUST_STYLE.estoc.gap, CONFIG.UNIQUE_ASSIST.imbroccataGap] = keepGap;
   }
   return runs;
+}
+/**
+ * AI 대 AI 한 판 (11/14 'ai에도 적용' 재기): 자리 0 = AI 이탈리아(weapon) · 자리 1 = 상대 AI(opp) · 둘 다 숙련 3(손가락 봇 판의 상대와 같은 몸) · 30 s.
+ *  → 이김 · 짐 · 준 · 받은 심각도(칼날) · 칼 우위 켜진 수(갈래) · 박자 찌르기 · 맞박자 맞음 · 비껴서며 찌르기 낸 수(AI 특수 공격 셈) · 맞받아 베기 수
+ */
+export async function aiFight(preset, weapon, opp, seed) {
+  const P0 = PRESETS[preset];
+  const h = await import('./harness_m.mjs');
+  const { newRound, DT, AI, CONFIG } = h;
+  const IO = CONFIG.IT_OUTBOX;
+  const keep = { ...IO };
+  const io = { ...P0.io };
+  if (io.edge != null) io.edge = CONFIG.realS(io.edge);
+  if (io.beat != null) io.beat = CONFIG.realS(io.beat);
+  Object.assign(IO, io);
+  try {
+    const G = newRound({ walls: true, seed, weapon, weapon2: opp, AI2Class: AI, persona: { proficiency: 3 }, persona2: { proficiency: 3 } });
+    const P = G.player, E = G.enemy;
+    const w = { dealt: 0, recv: 0, inqHit: 0 };
+    const pw = G.combat.hooks.onWound;
+    G.combat.hooks.onWound = (att, vic, r, ...rest) => {
+      pw?.(att, vic, r, ...rest);
+      const sv = r.type === 'blunt' ? 0 : r.severity ?? 0;
+      if (att === P) w.dealt += sv;
+      else w.recv += sv;
+    };
+    let T = 30;
+    for (let k = 0; k < Math.round(30 / DT); k++) {
+      G.step();
+      if (!P.alive || !E.alive) { T = G.t; break; }
+    }
+    const o = P.itOut ?? {};
+    const st = G.ai2.stats;
+    const r = { preset, c: `ai:${weapon}:${opp}`, seed, T: r3(T), win: !E.alive && P.alive, lose: !P.alive && E.alive, dealt: r3(w.dealt), recv: r3(w.recv), edge: o.edge ?? 0, by: o.by ?? {}, beatFired: o.beatFired ?? 0, stopHits: o.stopHits ?? 0, thrustHits: o.thrustHits ?? 0, inq: st.specials?.inquartata ?? 0, counters: st.counters ?? 0, specials: st.specials ?? null };
+    G.world.free();
+    return r;
+  } finally {
+    Object.assign(IO, keep);
+  }
 }
 let SB = null;
 async function loadSB() {
@@ -115,7 +174,7 @@ export function summarize(r) {
     riso: riso.length, risoSev: r3(riso.reduce((s, f) => s + sev(f), 0)), firesSev: r3(all),
     inq: inq.length, inqHit: inq.filter((f) => f.w > 0).length, inqSev: r3(inq.reduce((s, f) => s + sev(f), 0)),
     edge: pr.edge ?? 0, by: pr.by ?? {}, stopHits: pr.stopHits ?? 0, thrustHits: pr.thrustHits ?? 0, beatFired: pr.beatFired ?? 0, risoWait: pr.risoWait ?? 0,
-    diag: pr.diag ?? [], wants: r.wants,
+    diag: pr.diag ?? [], wants: r.wants, plate: pr.plate ?? null,
   };
 }
 
@@ -186,7 +245,18 @@ export function diagMarkdown(runs) {
 if (isMain(import.meta.url)) {
   const [mode, ...rest] = process.argv.slice(2);
   const arg = (k, d) => { const a = rest.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
-  if (mode === 'work') {
+  if (mode === 'ai') {
+    const presets = arg('presets', 'main,fin').split(',');
+    const cells = arg('cells', 'rapier:longsword,rapier:sabre').split(',');
+    const seeds = range(arg('seeds', '1-12'));
+    const out = arg('out', null);
+    for (const p of presets) for (const c of cells) for (const seed of seeds) {
+      const [wpn, opp] = c.split(':');
+      const r = await aiFight(p, wpn, opp, seed);
+      console.error(JSON.stringify({ p, c, seed, win: r.win, lose: r.lose, edge: r.edge, beat: r.beatFired, stop: r.stopHits }));
+      if (out) appendFileSync(out, JSON.stringify(r) + '\n');
+    }
+  } else if (mode === 'work') {
     const presets = arg('presets', Object.keys(PRESETS).join(',')).split(',');
     const cells = arg('cells', CELLS.join(',')).split(',');
     const seeds = range(arg('seeds', '1-24'));

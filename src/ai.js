@@ -47,6 +47,8 @@ import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretV
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 import { PICKUP } from './config.js'; // 떨어진 칼 줍기 (11/05)
 import { aiPickup } from './pickup.js'; // 떨어진 칼 줍기 — AI 몫 (11/05 · PICKUP.ai)
+import { IT_OUTBOX } from './config.js'; // 이탈리아 아웃복싱 AI 몫 (11/14 사장님 'ai에도 적용' — IT_OUTBOX.ai)
+import { aiBeatTick, aiBeatTech, itEdgeGrant, itStats } from './italian_outbox.js'; // 박자 찌르기 셈 · 칼 우위 (헛누름) · 재기
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -489,6 +491,8 @@ export class AI {
    *  둘 다 자기 무대에서만 일한다(습지 · 화산섬은 함께 나오지 않음) — 용암 피하기를 마지막에 둬 안전 쪽이 이긴다 */
   update(dt) {
     this.specTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:4x · 19:5x 사람과 같게)
+    // 이탈리아 박자 찌르기 셈 (11/14 사장님 'ai에도 적용' — italian_outbox.js aiBeatTick · IT_OUTBOX.ai · beat): 비껴서며 찌르기를 꾸러미에 가진 AI 만 · 상대 휘두름이 선 때를 셈(굴림 없음)
+    if (IT_OUTBOX.ai && IT_OUTBOX.beat > 0 && this.school?.techByName?.inquartata) aiBeatTick((this.itBeat ??= { f: this.me, t: 0, foeAtk: null, foeSw: false, inqBeatSeen: -1 }), dt);
     if (this.rd || this.me.rdWind) this.rdKeep(dt); // 풍차 베기 AI 몫 (10/31): 감기 지킴 · 덧씌우기 칸 내려놓기 · 뗀 밧줄 다시
     if (this.secret && !this.secretRun && secretSpent(this.me)) this.dropSecret(); // 이 판 비기를 다 씀 (10/29 19:5x 판당 쓸 수 — 비기 없는 AI 와 같은 길)
     // 동방 AI 걸음 박자 (10/15 — GAIT.cnLightAi · docs/strike/cn_light_feet_2026-10-15.md §7): 가벼운 발 몸(유파 걸음 칸 light)의 AI 는 공격 꼴(준비·다가가기·벰·뒤따름)일 때만 가벼운 발 —
@@ -1891,7 +1895,10 @@ export class AI {
     if (sp) this.specStart(sp);
     // 칼끝 돌려 빼기 심화 · 헛누름 (10/31 사장님 '1.2초로 할게' — config UNIQUE_ASSIST.cavArmSlow): 빼서 찌르기 패시브(칼이 맞물린 뒤 — parried · bindDef)가 나가는 순간 상대 두 팔 늦춤 ·
     //  칼끝 돌려 빼기가 숙련도 꾸러미에 든 AI 만(cavDeep — 곁눈 베기 무릎 꺾기 · 허리 베기 출혈처럼 AI 는 그 기술이 있으면 심화 이점도)
-    if (this.passiveAtk === 'cavazione' && this.cavDeep && UA.cavArmSlowAi && UA.cavArmSlow > 0 && beginFlowRecovery(this.foe, this.me, UA.cavArmSlow)) this.stats.cavArmSlow = (this.stats.cavArmSlow ?? 0) + 1;
+    if (this.passiveAtk === 'cavazione' && this.cavDeep && UA.cavArmSlowAi && UA.cavArmSlow > 0 && beginFlowRecovery(this.foe, this.me, UA.cavArmSlow)) {
+      this.stats.cavArmSlow = (this.stats.cavArmSlow ?? 0) + 1;
+      itEdgeGrant(this.me, 'feint'); // 칼 우위 (11/14 'ai에도 적용' — 헛누름이 들면 · IT_OUTBOX.ai · AI 는 리솔루토가 없어 빛 · 재기만)
+    }
     if (this.feint) {
       // 속임수: 가짜 기술의 앞부분만 가다가(내딛지 않고) 진짜 길로 바꾼다
       const f = this.feint;
@@ -2326,9 +2333,14 @@ export class AI {
     if (P && (!P.do.counter || this.counterRange(d)) && this.passiveRoll(P) && this.passiveThreat(P, th, d)) return true;
     // 1) 같은 순간에 맞받아 베기 (Indes): 들어오는 칼을 내 칼로 밀어내며 그대로 벤다 (겁먹으면 엄두를 못 낸다)
     if (!this.drillOut && Math.random() < L.counter * (1 - 0.8 * this.fear) && this.counterRange(d)) {
-      const t = this.counterTech(th);
+      // 11/14 박자 찌르기 (사장님 '박자 찌르기는 비껴서며 찌르기를 대체' · 'ai에도 적용' — italian_outbox.js aiBeatTech): 상대가 치기 시작한 beat 초 안이면 맞받아 베기 칼이 비껴서며 찌르기
+      //  (굴림 · 거리 그대로 — 칼만 바꿈 · 식는 동안 · 이 공격에 이미 썼으면 · 꾸러미에 없으면 전 판 목록)
+      const tq = this.itBeat ? this.school.techByName.inquartata : null;
+      const tb = tq && !this.specCooling(tq.name) ? aiBeatTech(this.itBeat, tq) : null;
+      const t = tb ?? this.counterTech(th);
       if (t && this.startAttack(t, 'counter', { noFeint: true, skipChamber: true })) {
         this.stats.counters++;
+        if (tb) (this.itBeat.inqBeatSeen = this.itBeat.foeAtk.n), itStats(this.me).beatFired++;
         return true;
       }
     }

@@ -2,7 +2,9 @@
 //  이탈리아 아웃복싱 — 칼끝으로 거리를 재고, 걸어 들어오는 상대를 그 박자에 찌른다 (사장님 11/14 '이탈리아는 아웃복싱 스타일이야. 너의 제안과 목표는 같아.
 //   '찌르기' 자체를 너프하자. 지금보다 약하게 하고 대신 타이밍을 맞춰서 걸어들어오는 상대를 카운터하면 +30%. 제안 A와 B 좋아.' — 값 config IT_OUTBOX ·
 //   설계안 docs/design/italian_point_control_2026-11-14.md · 기록 docs/strike/it_outbox_2026-11-14.md).
-//  사람 이탈리아(AI 가 아닌 몸 · 무기 유파 italian)만. AI 는 IT_OUTBOX.ai 1 일 때만 1 · 2 (견줌 — 기본 끔이라 AI 판은 한 비트도 안 바뀜).
+//  이탈리아 몸(무기 유파 italian) — 사람 · AI 같게 (사장님 11/14 'ai에도 적용' — IT_OUTBOX.ai 1 · 0 이면 사람만 = 11/14 첫 판).
+//   AI 몫: 1 · 2 = AI 찌르기 기술(빼서 찌르기 패시브 = 칼끝 돌려 빼기 · 비껴서며 찌르기 = 특수) · 3 = AI 빼서 찌르기 · 비껴서며 찌르기가 상처를 내면 · 헛누름이 들면 칼 우위(AI 는 리솔루토가 없어 —
+//   SECRET.aiOpenSchools — 칼 우위는 빛 · 재기만) · 4 = AI 맞받아 베기(respond — 굴림 그대로)가 상대가 치기 시작한 beat 초 안이면 그 칼이 비껴서며 찌르기(aiBeatTick · aiBeatTech)
 //   1 찌르기 약하게 — itThrust: 보통 찌르기(탭 찌르기 · 내려 찌르기 · 칼끝 돌려 빼기 · 그어 찌르기 · 막아찌르기)의 판정 에너지 × thrustMul.
 //      자리 = combat.js analyze 의 hk(비기 배율 secretHit — SECRET.risolutoHitMul 과 같은 자리 · 칼날 상처 · 둔타 모두 그 에너지에서 · 물리 빠르기 · 질량은 그대로).
 //      비기(리솔루토)는 빼고 · 특수 공격(비껴서며 찌르기)도 빼고(제 칼끝 빠르기 몫 specialShare 가 따로).
@@ -41,7 +43,7 @@ export function itThrustKind(f) {
     const c = f.aiCtl;
     if (!c || c.secretRun || f.stamina?.inSecret) return c?.secretRun ? 'secret' : null;
     if (sk?.tap) return 'ai';
-    if (c.mode === 'attack' && (c.phase === 'strike' || c.phase === 'follow') && c.tech?.kind === 'thrust') return c.tech.name === 'inquartata' ? 'special' : 'ai';
+    if (c.mode === 'attack' && (c.phase === 'strike' || c.phase === 'follow') && c.tech?.kind === 'thrust') return c.tech.name === 'inquartata' ? 'special' : c.passiveAtk === 'cavazione' ? 'cav' : 'ai'; // 빼서 찌르기 패시브(AI 칼끝 돌려 빼기 — 칼이 맞물린 뒤)
     return null;
   }
   if (f.stamina?.inSecret || sk?.sec || f.iai?.secret || (f.secretHit ?? 1) !== 1) return 'secret';
@@ -100,7 +102,7 @@ export function itEdgeOk(f) {
 
 /** 칼 우위 켬 (사람 이탈리아만 · why = 'cav' I2 · 'opp' I6 · 'special' I9 · 'feint' I8 헛누름) — 켜진 동안 다시 들면 그때부터 다시 edge 초 */
 export function itEdgeGrant(f, why) {
-  if (!IO.on || !(IO.edge > 0) || !f || f.aiControlled || !isIt(f)) return false;
+  if (!(IO.edge > 0) || !itBody(f)) return false;
   f.itEdge = { until: (f.fightT ?? 0) + IO.edge, why, t0: f.fightT ?? 0 };
   const S = itStats(f);
   S.edge++;
@@ -113,7 +115,7 @@ export function itEdgeGrant(f, why) {
  *  r.itThrust = analyze 가 붙인 배율 (없으면 지금 갈래를 다시 읽음)
  */
 export function itOnStrike(att, vic, r) {
-  if (!IO.on || att.aiControlled || !isIt(att) || vic !== att.foe) return;
+  if (!itBody(att) || vic !== att.foe) return;
   const S = itStats(att);
   if (!(r.severity > 0)) return;
   if (r.itThrust?.stop) S.stopHits++;
@@ -140,6 +142,24 @@ function foeSwinging(f) {
     return !!c && c.mode === 'attack' && (c.phase === 'strike' || c.phase === 'follow');
   }
   return !!(st?.attacking || f.parryGuard?.opposition?.run);
+}
+
+/**
+ * AI 박자 찌르기 셈 (ai.js update — 스텝마다 · AI 이탈리아가 비껴서며 찌르기를 꾸러미에 가졌을 때만): 사람 beatTick 과 같은 셈 · 몸 시계 t (게임 s)
+ *  B = ai.itBeat { f, t, foeAtk, foeSw, inqBeatSeen } — ai.js 가 처음 부를 때 만듦
+ */
+export function aiBeatTick(B, dt) {
+  B.t += dt;
+  beatTick(B);
+}
+
+/**
+ * AI 맞받아 베기 칼 (ai.js respond — 맞받아 베기 굴림이 나온 뒤 · 굴림 그대로): 스위치 · AI 몫 켬 · 상대가 치기 시작한 beat 초 안 · 이 공격에 아직 안 씀 · 비껴서며 찌르기가 식지 않았으면
+ *  그 기술(techNow 가 식힘을 거른 것) · 아니면 null(전 판 — 유파 맞받아 베기 목록 counterTech)
+ */
+export function aiBeatTech(B, tech) {
+  if (!B || !tech || !IO.ai || !beatOk(B)) return null;
+  return tech;
 }
 
 /** 박자 찌르기 조건 (TAP_TRIG.inq — 스위치 · 이 공격에 아직 안 씀 · 치기 시작한 뒤 beat 초 안) */

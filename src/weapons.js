@@ -414,9 +414,11 @@ const GRIP_TORQUE = { 'one-hand': 22, 'hand-and-half': 22, 'two-hand': 26 }; // 
 //   gap    : 찌르기가 옷·투구의 틈을 파고드는 정도 — 막아주는 몫의 이 비율을 무시한다 (combat.js)
 //   window : 칼끝 판정 폭 — 찌르기로 치는 칼날 위치(t > 0.8)와 칼축 방향(> 0.75) 기준을 이만큼 낮춘다 (combat.js)
 //  에스톡: 판금 틈을 노리던 찌르기검 → 틈 파고들기가 가장 크다. 레이피어: 가볍고 빠른 결투검 → 가장 빠르고 판정 폭이 넓다
+//  11/14 사장님 '기본찌르기는 0.6 위에서 내려찌르기는 0.9' (확인표 3821 — 걸음 테이블 0.3 · 0.45 · 0.6 · 0.9 에서 고름): 기본 찌르기 틈 파고들기는 모두 0.6 (레이피어 0.3 · 에스톡 0.5 → 0.6) ·
+//   판금 찌르기 문턱 47 × (1 − 0.5 × gap) = 레이피어 40 → 33 J (내려 찌르기 UNIQUE_ASSIST.imbroccataGap 0.9 → 26 J · 판금 베기 70 J) · 무기 값이라 사람 · AI 같게
 export const THRUST_STYLE = {
-  estoc: { recover: 0.7, reach: 0.12, gap: 0.5, window: 0.1 },
-  rapier: { recover: 0.6, reach: 0.1, gap: 0.3, window: 0.12 },
+  estoc: { recover: 0.7, reach: 0.12, gap: 0.6, window: 0.1 }, // gap 11/14 0.5 → 0.6 (사장님 '기본찌르기는 0.6')
+  rapier: { recover: 0.6, reach: 0.1, gap: 0.6, window: 0.12 }, // gap 11/14 0.3 → 0.6 (사장님 '기본찌르기는 0.6')
 };
 
 function finalizeSpec(id, s) {

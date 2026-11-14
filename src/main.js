@@ -317,12 +317,13 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (so) CONFIG.SECRET.openSchools = CONFIG.SECRET.aiOpenSchools = so === 'all' ? ['german', 'italian', 'iberian', 'japanese', 'chinese'] : so.split(',').map((x) => x.trim()).filter(Boolean); // 사람 · AI 둘 다 (10/22 aiOpenSchools)
 }
 { // 이탈리아 아웃복싱 (11/14 사장님 '이탈리아는 아웃복싱 스타일이야 … 찌르기 자체를 너프 … 걸어들어오는 상대를 카운터하면 +30%. 제안 A와 B 좋아.' — config IT_OUTBOX · src/italian_outbox.js):
-  //  `?itOutbox=0` 넷 모두 끔(전 판) · `?itThrustMul=0.7` 보통 찌르기 배율(1 = 끔) · `?itStop=0` 맞박자 찌르기 끔 · `?itEdge=3` 칼 우위 초(0 = 끔 — 리솔루토 전 조건) · `?itBeat=0` 박자 찌르기 끔 (실제 초)
+  //  `?itOutbox=0` 넷 모두 끔(전 판) · `?itThrustMul=0.7` 보통 찌르기 배율(1 = 끔) · `?itStop=0` 맞박자 찌르기 끔 · `?itEdge=3` 칼 우위 초(0 = 끔 — 리솔루토 전 조건) · `?itBeat=0` 박자 찌르기 끔 (실제 초) · `?itAi=0` 사람만
   if (params.has('itOutbox')) CONFIG.IT_OUTBOX.on = +params.get('itOutbox') ? 1 : 0;
   if (params.has('itThrustMul') && +params.get('itThrustMul') > 0) CONFIG.IT_OUTBOX.thrustMul = +params.get('itThrustMul');
   if (params.has('itStop') && +params.get('itStop') >= 0) CONFIG.IT_OUTBOX.stop = +params.get('itStop');
   if (params.has('itEdge') && +params.get('itEdge') >= 0) CONFIG.IT_OUTBOX.edge = CONFIG.realS(+params.get('itEdge'));
   if (params.has('itBeat') && +params.get('itBeat') >= 0) CONFIG.IT_OUTBOX.beat = CONFIG.realS(+params.get('itBeat'));
+  if (params.has('itAi')) CONFIG.IT_OUTBOX.ai = +params.get('itAi') ? 1 : 0; // 11/14 사장님 'ai에도 적용' — 0 = 사람만
 }
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
   const its = params.get('itSecret');
@@ -413,7 +414,7 @@ if (params.has('dupBurstMatch')) CONFIG.UNIQUE_ASSIST.dupBurstMatch = [0, 1, 2].
   }
 }
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
-if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6)
+if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6 · 11/14 사장님 0.9)
 for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld', 'inqTap']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
 if (params.has('cavFrom') && +params.get('cavFrom') >= 0) CONFIG.UNIQUE_ASSIST.cavFrom = CONFIG.realS(+params.get('cavFrom')); // 칼끝 돌려 빼기 탭 창 처음 (실제 초 — 기본 0.2 · 10/29 20:0x · 옛 판 0.6)
 if (params.has('cavMerge') && +params.get('cavMerge') >= 0) CONFIG.UNIQUE_ASSIST.cavMerge = CONFIG.realS(+params.get('cavMerge')); // 칼끝 돌려 빼기 닿음 이어 붙임 (11/04 제안 · 실제 초 — 기본 0 끔 · 0.2 = 시간 사다리)

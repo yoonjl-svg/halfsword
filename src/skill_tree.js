@@ -67,7 +67,7 @@ export function nodeTitle(school, n) {
     const e = PLAYER_UNIQUE[school]?.find((x) => x.name === n.u), U = e && uniqueDef(school, e);
     return { title: U ? withOrig(U.nameKo, U.orig) : nameOf(n), kind: e ? `${cat.label} · ${ROLE_KO[e.role] ?? ''}`.replace(/ · $/, '') : cat.label };
   }
-  if (n.cat === 'passive') { const [nm, o] = PASSIVE_NAME[school] ?? [n.l2, null]; return { title: `패시브 · ${withOrig(nm, o)}`, kind: cat.label }; }
+  if (n.cat === 'passive') { const [nm, o] = n.nameKo ? [n.nameKo, n.orig ?? null] : PASSIVE_NAME[school] ?? [n.l2, null]; return { title: `패시브 · ${withOrig(nm, o)}`, kind: cat.label }; } // 유파 패시브는 PASSIVE_NAME · 칸이 제 이름을 가지면 그 이름 (11/14 이탈리아 맞박자 찌르기 I12)
   return { title: withOrig(n.title ?? `${n.l1} · ${n.l2}`, n.orig), kind: cat.label };
 }
 
