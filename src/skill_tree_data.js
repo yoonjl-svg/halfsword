@@ -22,7 +22,7 @@ export const NODE_CAT = Object.freeze({
 });
 
 /** 판 몫 열쇠 (skillKit 칸 — 칸이 없으면 false). unique · perk 는 이름 모음 */
-export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'deRing']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29) · deRing = 독일 칼 씨름 (링엔 암 슈베르트 — 11/14 사장님 이름 확정) 새 몫 (config DE_DIRTY · de_dirty.js · 새 칸 자리 대기 — 지금은 G9 에 임시로 이음 · 11/14 B · C 열쇠 deClinch · deHilt 는 폐기)
+export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'jpRock', 'deRing']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29) · jpRock = 일본 바위 몸 J12 (11/14 사장님 '바위 몸 확정' — 밀치기 기력 0 · 스택당 받는 피해 −4 % · config JP_TANK) · deRing = 독일 칼 씨름 (링엔 암 슈베르트 — 11/14 사장님 이름 확정) 새 몫 (config DE_DIRTY · de_dirty.js · 새 칸 자리 대기 — 지금은 G9 에 임시로 이음 · 11/14 B · C 열쇠 deClinch · deHilt 는 폐기)
 
 export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10/21)
 
@@ -88,8 +88,9 @@ const TREE_SRC = {
       N({ id: 'J9', name: '제비 베기', cat: 'atk', l1: '제비 베기', l2: '이어 긋기', eff: '내려벤 칼이 빗나가거나 막힌 뒤 위로 긋는다', pre: ['J6', 'J7'], price: 300, d: 2, cx: 200, u: 'tsubameGaeshi' }),
       N({ id: 'J8', name: '칼 떨구기', cat: 'deep', l1: '심화', l2: '칼 떨구기', title: '손목 치기 심화 · 칼 떨구기', eff: '손목을 맞은 상대가 칼을 놓치기도 한다', pre: ['J7'], price: 300, d: 2, cx: 420, perk: 'kote' }), // 10/24 열림 (사장님 11:4x · 11:5x '너무 강하면 50%로' — 칼 놓침 · config UNIQUE_ASSIST.koteDrop · combat.js koteCheck)
       N({ id: 'J3', name: '흘려 받기', cat: 'parry', l1: '막기 II', l2: '흘려 받기', title: '막기 II · 흘려 받기 (우케나가시)', orig: '受け流し', eff: '흘려 받으면 상대 팔이 늦고 기력이 깎인다', pre: ['J2'], price: 300, d: 2, cx: 650, f: ['flow'] }),
-      N({ id: 'J10', name: '기다림과 침', cat: 'passive', l1: '패시브', l2: '기다림과 침', eff: '치지 않고 기다릴수록 다음 칼의 피해가 증가한다', pre: ['J9'], price: 0, heads: 5, d: 3, cx: 200, f: ['passive'] }),
+      N({ id: 'J10', name: '기다림과 침', cat: 'passive', l1: '패시브', l2: '기다림과 침', eff: '기다리고 막고 흘려 받을수록 기세가 쌓여 다음 칼의 피해가 크게 증가한다', pre: ['J9'], price: 0, heads: 5, d: 3, cx: 200, f: ['passive'] }), // [사장님 11/14 결정 '전부 권고대로' — 효과 글 (전 '치지 않고 기다릴수록 다음 칼의 피해가 증가한다') · 스택 시스템 — config JP_TANK]
       N({ id: 'J4', name: '흘린 칼', cat: 'parry', l1: '막기 III', l2: '흘린 칼', eff: '흘린 공격의 피해가 크게 줄어든다', pre: ['J3'], price: 400, d: 3, cx: 650, f: ['flowShield'] }),
+      N({ id: 'J12', name: '바위 몸', cat: 'deep', l1: '심화', l2: '바위 몸', title: '기다림과 침 심화 · 바위 몸 (이와오노미)', orig: '巌の身', eff: '기세가 쌓인 만큼 받는 피해가 줄고, 밀치기에 기력이 들지 않는다', pre: ['J10'], price: 400, d: 4, cx: 200, f: ['jpRock'] }), // 11/14 사장님 '일본은 바위 몸 확정해. … 기다림과 침 다음으로 가야함. 꽤 상위 스킬이 되는 셈. … 밀치기에 기력 소모 없는 효과 더하기 스택당 피해 -4%로 해.' · '전부 권고대로' — 자리 · 값(d 4 · cx 200 · 금화 400 · 갈래 심화) · 이름 · 효과 글 그대로 · 유파 호칭(오륜서 계승자)에 듦(10/24 J8 처럼 — 이미 얻은 저장은 그대로) · 기록 docs/strike/jp_tank_2026-11-14.md
       N({ id: 'J5', name: '고노센', cat: 'secret', l1: '비기', l2: '고노센', eff: '기다리다 상대가 치려 하거나 빠르게 다가올 때 공격하면, 먼저 벤다', pre: ['J4'], price: 400, heads: 10, d: 4, cx: 650, f: ['secret'] }), // 10/31 01:3x 사장님 "'웅크리며' 빼 설명에서" (사람 웅크림 끈 뒤) · 10/25 22:5x 사장님 확정 글(감독 전달) · 전 '간격 밖에서 기다리다 상대가 치려 할 때 공격하면, 먼저 벤다'
     ],
   },
@@ -161,6 +162,7 @@ const NODE_LORE = {
   J8: { lore: '적의 칼을 세게 치고 그대로 붙어 칼끝을 내려 치면, 칼은 반드시 떨어진다', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 단풍 치기' }, // 10/24 칼 떨구기로 열며 (전: 다섯 겉 셋째 '손을 친 칼을 적이 쳐 떨구려 하면, …' — 다른 기술)
   J3: { lore: '적의 눈을 찌르듯 하며, 그 칼을 오른 어깨로 끌어 흘려 받아라', src: '미야모토 무사시 『오륜서』(1645) — 세 가지 받기' },
   J10: { lore: '몸과 발은 걸어 들고, 칼은 기다린다', src: '야규 무네노리 『병법가전서』(1632) — 걸기와 기다림' },
+  J12: { lore: '바위 같은 몸이란, 움직이지 않으면서 굳세고 큰 마음이다', src: '미야모토 무사시 『병법삼십오개조』(1641) — 바위 같은 몸' }, // 11/14 바위 몸 (이와오노미 · 巌の身) — 원문 「巌の身と云は、動く事なくして、強く大なる心也」 · 저장소 밖 원문(감독 인용 — 확인 전 · docs/text/skill_lore_2026-10-22.md)
   J4: { lore: '몸을 왼쪽으로 열며, 칼 옆면으로 흘려 받는다', src: '『일본검도형』(1912) — 소태도 둘째 본' },
   J5: { lore: '적이 내게 걸어올 때의 앞섬, 이를 기다림의 앞섬이라 한다', src: '미야모토 무사시 『오륜서』(1645) — 불의 권 세 가지 앞섬' },
   // 동방 — 조선세법(무비지) · 무예도보통지 예도 · 장자 (사장님이 주신 원본 읽기표 — docs/motion/schools/)

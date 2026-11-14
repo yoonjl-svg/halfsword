@@ -402,6 +402,9 @@ export class Combat {
     //  그 공격의 칼날 상처 심각도 · 둔타 에너지 × (1 − flowDmgCut). 새 공격(번호가 바뀜)부터는 그대로 · 물리(충격 · 가르나 튕기나)는 그대로
     const keepFlow = flowShieldKeep(pr.v.fighter, att);
     if (keepFlow !== 1) { if (type === 'blunt') energy *= keepFlow; else severity *= keepFlow; }
+    // 일본 바위 몸 (사장님 11/14 '스택당 피해 -4%' — config JP_TANK.rock · school_passive.js takenK): 받는 쪽 사람 일본의 지금 스택 × 4 % 만큼 칼날 상처 심각도 · 둔타 에너지를 덜 받음. 물리는 그대로
+    const rockK = vic.schoolPassive?.takenK?.() ?? 1;
+    if (rockK !== 1) { if (type === 'blunt') energy *= rockK; else severity *= rockK; }
     // 이탈리아 막아찌르기(10/21 입력형 — 약한 찌르기): 찌르는 동안 주는 칼날 상처 심각도 · 둔타 에너지 × dealt(0.6). 물리는 그대로
     const oppK = att.parryGuard?.opposition?.dealtK?.() ?? 1;
     if (oppK !== 1) { if (type === 'blunt') energy *= oppK; else severity *= oppK; }
@@ -811,6 +814,7 @@ export class Combat {
       const recovery = Jt > 0 && beginFlowRecovery(O, D);
       const penalty = spendFlowPenalty(O, D);
       D.flowShield = { from: O, attackId: O.stamina?.attackId ?? 0 }; // 흘린 공격의 피해 감소 표시 (analyze — FLOW_REDESIGN.flowDmgCut)
+      D.schoolPassive?.guardEvent?.('flow', O, O.stamina?.attackId ?? 0); // 일본 스택 흘려 받기 (11/14 사장님 — JP_TANK.flow · 막기와 함께 들면 큰 쪽 하나 · school_passive.js)
       this.lastNagashi = { step: this.stepNo, d: D.index, Jt, vn, dir: dir.clone(), recovery, penalty };
       return D;
     }
@@ -840,6 +844,7 @@ export class Combat {
       const recovery = beginFlowRecovery(O, D);
       const penalty = spendFlowPenalty(O, D);
       D.flowShield = { from: O, attackId: O.stamina?.attackId ?? 0 }; // 흘린 공격의 피해 감소 표시 (analyze — FLOW_REDESIGN.flowDmgCut)
+      D.schoolPassive?.guardEvent?.('flow', O, O.stamina?.attackId ?? 0); // 일본 스택 흘려 받기 (11/14 사장님 — JP_TANK.flow · 막기와 함께 들면 큰 쪽 하나 · school_passive.js)
       this.lastNagashi = { step: this.stepNo, d: D.index, Jt, vn, dir: dir.clone(),
         recovery, redesign: true, penalty, age: candidate.age,
         entry: candidate.entry, exitGain: candidate.gain };
@@ -979,7 +984,9 @@ export class Combat {
     vic.hitCooldowns.set(key, STRIKE.hitCooldown);
     if (passing) r.stuck = r.energy <= r.absorb; // 에너지가 모자라 칼이 박힘
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
+      const cons0 = vic.consciousness;
       vic.applyWound({ ...r, part: pr.v.part, passing }); // passing: 칼이 가르고 지나가는 길(참수는 이 길만)
+      vic.schoolPassive?.tookHit?.(att, r.severity > 0 || vic.consciousness < cons0); // 일본 스택 '피격에 1스택' (11/14 사장님 — 상처나 의식이 실제로 깎인 맞음 · 상대 공격 하나에 한 번 · school_passive.js)
       if (r.severity > 0) att.parryGuard?.opposition?.onDealt?.(r); // 막아찌르기가 상처를 냈나 (칼끝 돌려 빼기 탭 조건 — 실패한 막아찌르기만 엶 · 10/28 01:2x · 사람만)
       if (r.schoolK) att.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (켄타이는 여기서 씀 — school_passive.js)
       if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
