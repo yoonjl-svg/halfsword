@@ -4,6 +4,7 @@ import { entersAttackLine, isPreparation } from './stamina_stroke.js';
 import { bargeHeld, clinchHoldK } from './close_hold.js'; // 밀치기 묶임 기력 × 2 (11/14 사장님 — 묶임이 없으면 늘 1)
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
 import { huntRegenK } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 몸은 자연 회복 × (1 − regen × 겹)
+import { ibBlockMark, ibBlockTick } from './ib_block_regen.js'; // 이베리아 막아 내면 기력 되찾음 (11/15 사장님 — SKILL.ibBlockRegen · B9)
 import { lowShoveFree } from './jp_tank.js'; // 일본 바위 몸 — 밀치기에 기력 안 씀 (11/14 사장님 · config JP_TANK.lowShove · 묶임 × 2 갈래에도)
 // 표준 시간 (10/25 22:3x): 공격 번호가 살아 있는 시간 · 긋기 꼬리는 실제 초로 적는다 (STAMINA 의 초 · 초당 값은 config 에서 realS · realRate)
 const ATTACK_LIFE = realS(1.5); // 공격을 낸 뒤 그 공격 번호가 살아 있는 시간 (막아 받기 청구 · 옛 흘림 판정)
@@ -286,6 +287,7 @@ export class Stamina {
     if (this.controller?.opposition?.run) return; // 막아찌르기 동안 맞닿은 막아 받기는 그 찌르기 값에 들어 있다 (10/21 입력형)
     if (this.blockedAttack.get(attacker) === other.attackId) return;
     this.blockedAttack.set(attacker, other.attackId);
+    ibBlockMark(this.fighter, attacker, other.attackId); // 이베리아 막아 내면 기력 되찾음 (11/15 — 그 공격이 칼날 상처 없이 끝나면 · ib_block_regen.js)
     this.fighter.schoolPassive?.guardEvent?.('block', attacker, other.attackId); // 일본 스택 막기 (11/14 사장님 '막기나 흘려받기에 2스택' — 받아 막음이 든 때 · 상대 공격 하나에 한 번 · school_passive.js)
     if (this.spend('block', STAMINA.blockCost * this.weight)) {
       this.counts.block++;
@@ -404,6 +406,7 @@ export class Stamina {
       return;
     }
     if (!f.alive || f.revival) return;
+    ibBlockTick(f); // 이베리아 막아 내면 기력 되찾음 (11/15 — 기다리던 공격이 끝났나 · 없으면 아무 일 없음)
     this.stages();
     if (this.exhausted) {
       const slice = Math.min(dt, this.exhaustLeft);

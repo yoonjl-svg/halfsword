@@ -74,12 +74,12 @@
 | J1 보법 · 낮은 걸음 | `footwork` + `stepCost` — 낮은 자세 · 버티기 · 걷기 기력 2.1(설계대로 한 칸) | `gait.js` · `fighter.js swayScale` · `stamina.js` |
 | J6 비껴 베기 (걸음 명령) | `u: hirakiGiri` | `PlayerUniqueAssist` |
 | J7 손목 치기 (강화동작) | `u: kote` | 〃 |
-| J2 막기 I · 머리 위 받기 | `parry` + `parryCover` + `parryCut` — 자리 + 우케나가시 몸꼴 + 막는 동안 피해 20 % | `parry_button.js` |
+| J2 막기 I · 머리 위 받기 | `parry` + `parryCover` — 자리 + 우케나가시 몸꼴 (11/15 사장님 결정 '일본은 바위 몸도 생겼으니 막을 때 피해 감소 20%는 없애' — 전 + `parryCut` 막는 동안 피해 20 %) | `parry_button.js` |
 | J9 제비 베기 (이어 긋기) | `u: tsubameGaeshi` (모노호시자오 비검은 칸과 상관없이 그대로) | `PlayerUniqueAssist` |
 | J8 심화 · 칼 떨구기 (10/24 열림) | `perk: 'kote'` → combat.js `koteCheck`(손목 치기 칼날이 칼 쥔 아래팔에 들면 50 % 로 상대가 칼을 떨굼 · 사람만 — 확인표 2396 · 2397) | 전: 몫 없음 — 준비 중(이점 미정 · 확인표 2107) |
 | J3 막기 II · 흘려 받기 | `flow` — 흘림 판정(팔 늦춤 · 기력 −40) | `nagashi_redesign.js flowCandidate` · `combat.js` 옛 판정 |
 | J10 패시브 · 기다림과 침 | `passive` | `school_passive.js` |
-| J4 막기 III · 흘린 칼 | `flowShield` — 흘린 공격 피해 80 % 감소 | `nagashi_redesign.js flowShieldKeep` |
+| J4 막기 III · 흘린 칼 | `flowShield` — 흘린 공격 피해 70 % 감소 (11/15 사장님 결정 — 전 80 %) | `nagashi_redesign.js flowShieldKeep` |
 | J5 비기 · 뒤에서 앞서기 | `secret` — 열림 | `PlayerSecretWatch` |
 | J11 에도에서 온 편지 | 카드 뽑기 | §5 |
 

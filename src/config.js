@@ -557,15 +557,16 @@ export const NAGASHI = { on: 1, slideK: 0.8, joltCut: 0.5, poseT: realS(0.35), m
 //  min… / maxHeight / exit… / sideGain / frontClearance = 판정 기하 허용치 — 샛별 연구의 첫 설계 값 그대로(사장님 '판정 개편' 채택 · docs/strike/owner_defaults_table.md)
 //  threatEnd = 공격이 끝났는지를 공격 번호 시간(stamina.attackUntil) 대신 실제 칼 기하(들어오는 칼 — 위 min… 조건)로 본다 — 감독 측정 10/18 23:1x(닿은 공격 중 흘림이 안 된 까닭 1 위 39 % = 공격 번호 시간이 끝남)
 //   → 사장님 3 '흘림 빈도를 높일 수 있는 방안이 있다면 그렇게 개편'. 기력은 그대로 공격 번호 하나에 한 번. `?flowEnd=timer` = 공격 번호 시간으로(샛별 연구 그대로)
-//  flowDmgCut = 흘린 공격의 피해 감소 (사장님 10/18 23:4x '흘린 공격의 피해 80% 줄여'): 받는 쪽이 흘린 그 공격(공격 번호)이 몸에 닿으면 칼날 상처 심각도 · 둔타 에너지 × (1 − 0.8) —
+//  flowDmgCut = 흘린 공격의 피해 감소 (사장님 10/18 23:4x '흘린 공격의 피해 80% 줄여' → 11/15 '흘린 칼 감소는 70%로 해' 0.7): 받는 쪽이 흘린 그 공격(공격 번호)이 몸에 닿으면 칼날 상처 심각도 · 둔타 에너지 × (1 − 0.8) —
 //   사람 · AI 같게(흘린 쪽 누구나) · 다음 공격(새 번호)부터는 그대로 · `?flowDmgCut=0` = 끔 (combat.js analyze · 흘림 표시 flowShield)
 export const FLOW_REDESIGN = {
-  on: true, window: realS(0.2), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' · '흘림 접촉도 그냥 0.2로 통일' — 0.12 → 0.2 (반응 칸) */ penalty: 60, /* 10/31 09:xx 사장님 결정 '일본 흘림의 상대 기력 소모는 60으로 증가' — 40 → 60 (흘림 = 일본 막기 칸 우케나가시만 · TRADITIONS.japanese.parryCover.highC nagashi) */ threatEnd: true, flowDmgCut: 0.8,
+  on: true, window: realS(0.2), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' · '흘림 접촉도 그냥 0.2로 통일' — 0.12 → 0.2 (반응 칸) */ penalty: 60, /* 10/31 09:xx 사장님 결정 '일본 흘림의 상대 기력 소모는 60으로 증가' — 40 → 60 (흘림 = 일본 막기 칸 우케나가시만 · TRADITIONS.japanese.parryCover.highC nagashi) */ threatEnd: true, flowDmgCut: 0.7, /* [사장님 11/15 결정 '흘린 칼 감소는 70%로 해. 들어오는 피해가 0.3이 되는 셈.' — 전 0.8] */
   minSpeed: 2.5, minApproach: 0.5, minSweep: 1.5, minSweepRatio: 0.4,
   minImpact: 0.5, upperHeight: -0.15, maxHeight: 0.85,
   minTangent: 0.25, exitDistance: 0.30, exitGain: 0.015, sideGain: 0.06, frontClearance: 0.10,
 };
-// 흘림당한 쪽 팔 늦춤 (샛별 저장소 연구 들여옴 — src/nagashi_recovery.js): seconds 동안 두 팔 근육 · 손목 힘 × (floor → 1) — 사장님 10/18 22:1x 0.36 s · `?flowArm=0` = 끔
+// 흘림당한 쪽 팔 늦춤 (샛별 저장소 연구 들여옴 — src/nagashi_recovery.js): seconds 동안 두 팔 근육 · 손목 힘 × (floor → 1) — 사장님 10/18 22:1x 0.36 s → 10/21 시간 통일 0.4 s ·
+//  사장님 11/15 '흘림을 당한 상대 팔은 0.4초 늦어지게 해. 우리 시간테이블에 있는 숫자로' — 이미 realS(0.4) (시간 사다리 · 바꿀 값 없음) · `?flowArm=0` = 끔
 //  release = 옛 판정(`?flowJudge=0`)에서 받는 몸꼴(NAGASHI.poseT)을 쥔 동안 막기를 풀고 치면 그 몸꼴을 놓는다 (frames.js — 샛별 연구 그대로)
 export const FLOW_RECOVERY = { seconds: realS(0.4), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.36 → 0.4 (짧은 효과 칸) */ floor: 0.25, release: true, hold: null, recover: null };
 // 시험 (사장님 10/19 03:5x): hold · recover 를 주면 '처음 hold 초는 floor 로 유지 → recover 초 동안 부드럽게 회복'(합 hold + recover) — null 이면 위 seconds · floor 옛 꼴 (줄 때는 realS(초)로 — 표준 시간)
@@ -623,10 +624,10 @@ export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps:
 //  ai 1 = AI 이베리아도 특수 공격 풍차 베기 대신 이어 돌리기 · 맞바꿈도 사람과 같은 규칙(AI 는 칸 없이 늘 가짐 — 다른 유파 AI 패시브와 같은 꼴) [사장님 11/14 확인 '모두 본판에 넣어 ai에게도 똑같이 적용해' — 3922] (0 = 11/14 전 판 — AI 풍차 베기 · 견줌)
 //  11/15 넘기기 판 (사장님 11/15 "'원'을 공격과 다음 공격을 잇기 위한 브릿지로서의 메타포로 이해해 … 최소의 동작" — iberian_link.js bridgePlan · 기록 §12):
 //   mode 'bridge' = 손 목표를 앞 칼 관성 → 다음 칼 첫 빠르기로 잇는 가장 짧은 길(서보가 칼을 몲 — 놓기 없음) · 'circle' = 11/14 머리 위 원 판(견줌 — `?ibLinkMode=circle`)
-//   [사장님 11/15 방향 · 값은 사장님 확인 전 — 4351] · time = 넘기기 위 한도(실제 0.4 s — 전 원 시간) · bridgeMin = 아래 한도 · 칼을 기다리는 한도(실제 0.2 s — 시간 사다리) [4352]
-//   arrive 1 = 손 목표가 다음 칼 시작 자리에 와도 칼(무거운 칼은 손 목표보다 늦음)이 그 자세 허용 각(UNIQUE_ASSIST.angle) 안에 오기까지(bridgeMin 한도) 기다렸다 그음 — 0 이면 곧장(칼이 덜 들려 다음 칼이 약함) [4354]
-//   waitA 0 = 앞 칼이 끝 자리로 가는 중이어도 곧장 넘김(그 기세를 꺾어 실음) · 1 = 앞 칼 칼날이 끝 자세 허용 각 안에 오기까지 기다렸다 넘김(견줌 — 다음 칼이 0.07 s 늦음) [4355]
-//   tradeT = 맞바꿈 창(사장님 11/15 '공격 사이의 n초, 이런 식으로 고정해' — 넘기기를 시작한 때부터 n 초 · 넘김이 짧아져도 줄지 않음 · 실제 0.4 s 기본 · 견줌 0.6 `?ibTradeT=0.6`) [4353]
+//   [사장님 11/15 결정 — 권고대로 — 4351] · time = 넘기기 위 한도(실제 0.4 s — 전 원 시간) · bridgeMin = 아래 한도 · 칼을 기다리는 한도(실제 0.2 s — 시간 사다리) [사장님 11/15 결정 — 권고대로 — 4352]
+//   arrive 1 = 손 목표가 다음 칼 시작 자리에 와도 칼(무거운 칼은 손 목표보다 늦음)이 그 자세 허용 각(UNIQUE_ASSIST.angle) 안에 오기까지(bridgeMin 한도) 기다렸다 그음 — 0 이면 곧장(칼이 덜 들려 다음 칼이 약함) [사장님 11/15 결정 — 권고대로 — 4354]
+//   waitA 0 = 앞 칼이 끝 자리로 가는 중이어도 곧장 넘김(그 기세를 꺾어 실음) · 1 = 앞 칼 칼날이 끝 자세 허용 각 안에 오기까지 기다렸다 넘김(견줌 — 다음 칼이 0.07 s 늦음) [사장님 11/15 결정 — 권고대로 — 4355]
+//   tradeT = 맞바꿈 창(사장님 11/15 '공격 사이의 n초, 이런 식으로 고정해' — 넘기기를 시작한 때부터 n 초 · 넘김이 짧아져도 줄지 않음 · 실제 0.4 s 기본 · 견줌 0.6 `?ibTradeT=0.6`) [사장님 11/15 결정 — 권고대로 — 4353]
 export const IB_LINK = { on: 1, mode: 'bridge', time: realS(0.4), bridgeMin: realS(0.2), waitA: 0, arrive: 1, tradeT: realS(0.4), handR: 0.25, cool: 0, chainArm: 0, trade: 1, ai: 1 };
 // 이베리아 날 세우기 시험 (10/22 — 사장님 10/21 23:5x '이베리아 유파가 유독 칼면이 맞는 경우가 많았어 특히 수직베기에서', docs/strike/iberian_flat_hits_2026-10-22.md · 확인표 2167~ · **기본 끔 · 사장님 확인 전**).
 //  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
@@ -1097,8 +1098,18 @@ export const SKILL = {
   cnParryDmgCut: 0.5, // **판 값 0.5 — 사장님 10/17 22:1x '본판에 50%로 적용할게 너무 과한 거 같으면 나중에 조정하겠음'** (확인표 2068 · 버티는 힘 cnBraceK 는 그대로 끔)
   // 일본 · 이베리아 막는 동안 피해 감소 (사장님 10/18 22:1x '동방에서 막기 중 피해 50% 감소처럼, 일본과 이베리아도 막기 중 피해 20% 감소 부여' · docs/strike/japanese_flow_adopt_2026-10-18.md):
   //  동방과 같은 칸(parry_button.js woundKeep — 그 유파 막기 책을 쥔 플레이어가 막기 단추로 막는 중 · 칼날 상처 심각도 × (1 − cut)). `?jpParryCut=0` · `?ibParryCut=0` = 끔
-  jpParryDmgCut: 0.2,
-  ibParryDmgCut: 0.2,
+  jpParryDmgCut: 0, // [사장님 11/15 결정 '일본은 바위 몸도 생겼으니 막을 때 피해 감소 20%는 없애' — 전 0.2] (J2 몫 열쇠에서 parryCut 도 뺌 · 흘린 칼 J4 80 % 는 그대로)
+  ibParryDmgCut: 0, // [사장님 11/15 결정 '이베리아도 막기 20% 감소 없애' — 전 0.2] (B9 몫은 아래 막아 내면 기력 되찾음으로)
+  // 이베리아 막아 내면 기력 되찾음 (11/15 사장님 '대신 막기에 성공하면 기력 n 회복 어때' · src/ib_block_regen.js · 스킬트리 B9 '굳은 받기' 몫 열쇠 blockRegen):
+  //  상대 공격 하나를 칼로 받아 막고 그 공격이 끝날 때까지 칼날 상처가 없으면 기력 n 을 되찾음 · 한도 안 · 사람 · AI 같게. 1 = 켬 · 0 = 끔 (`?ibBlockRegen=0`)
+  //  n (사장님 11/15 'n은 상대 무기의 베기 기력 *2 어때. or 고정값 30. (일본 흘리기와 동일선상에서)' → 견줌 뒤 **'고정 30으로 해'**):
+  //   ibBlockRegenN 'fixed' = 고정 ibBlockRegenFixed 30 (일본 흘림이 상대 기력 60 을 깎는 것과 같은 줄의 고정값 — 기본) · 'foe2' = 상대 무기 베기 기력 × 2 (STAMINA.cutCost × 상대 무게 배율 × 2 — 롱소드 24 · 츠바이핸더 32) (`?ibBlockRegenN=foe2`)
+  ibBlockRegen: 1,
+  ibBlockRegenN: 'cut', // [사장님 11/15 결정 '권고대로 무기 베기 한 번 값으로 해' — 전 'fixed' 30 ('b9에서 기력 30회복은 과한 거 같다')] · `?ibBlockRegenN=fixed` = 30 판
+  ibBlockRegenFixed: 30, // 'fixed' 판 값 (11/15 첫 결정 '고정 30으로 해' → 같은 날 '무기 베기 한 번 값'으로 바꿈 — 견줌 스위치로만)
+  // AI 막는 동안 피해 감소 시제품 (11/15 사장님 '동방의 장점은 막을 때 피해 50% 감소인데 막기를 잘 활용 못하는 거 아닐까? …' · src/ai_block_cut.js · 기록 docs/strike/cn_block_2026-11-15.md):
+  //  위 세 몫은 사람 막기 단추에만 붙는다(AI 몸에는 칸이 없음). 1 = AI 가 막는 중(칼로 받기 · 피하기 아님)이면 같은 몫 — '사람과 같게' · 0 = 지금 판 (`?aiParryCut=1`) [시제품 — 사장님 판정 전]
+  aiParryCut: 1, // [사장님 11/15 결정 '동방 ai 막기 감소 켜' — 지금 몫은 동방 0.5 만(일본 · 이베리아 0 — 11/15)]
   flowParry: true, // AI: 칼로 받아 낸 순간 그대로 되받아 벤다 (막기 → 반격 흐름)
   flowReach: 0.3, // AI: 이어질 기술의 준비 자세가 지금 손에서 이 안(패드 m)이어야 흐른다
 
@@ -1771,6 +1782,9 @@ export const IT_OUTBOX = {
   // 4 박자 찌르기 (설계안 B — 사장님 11/14 '좋아' · '비껴서며 찌르기를 대체하는 거지?' [결정 — 확인표 3800]): 상대가 치기 시작한(휘두름이 선) 이 초 안의 탭 = 비껴서며 찌르기(I9 그대로 —
   //  이름 · 식힘 · 칼끝 빠르기 같음) · 스틱 옆이 아니어도 · 몸 빼는 쪽 = 들어오는 칼 반대쪽(스틱이 옆이면 그쪽). 지금 조건(위협 + 스틱 옆)도 그대로. 시간 사다리 0.4 [사장님 확인 전 — 확인표 3808] `?itBeat=` (실제 초)
   beat: realS(0.4),
+  // 사람 박자 찌르기 (11/15 사장님 '지금 사람 기준으로는 l9가 너무 쉽게, 많이 나가. l9는 이전처럼 되돌려. ai가 l9를 못 쓰는 문제는 별도로 해결해.' — 확인표 4424):
+  //  0 = 사람 비껴서며 찌르기는 전 조건(상대 칼이 들어오는 동안 · 스틱 옆인 채의 탭 — 카드 글 그대로) · AI 박자 찌르기(ai 1 · beat 0.4 s — 맞받아 베기 칼이 박자 안이면 비껴서며 찌르기)는 그대로. 1 = 11/14 판 `?itBeatHuman=1`
+  beatHuman: 0, // [사장님 11/15 결정 — 사람만 되돌림]
   ai: 1, // [사장님 11/14 결정 'ai에도 적용' — 확인표 3809] AI 이탈리아도 1 · 2 · 3 · 4 (italian_outbox.js — 찌르기 × thrustMul · 맞박자 · 칼 우위(빛 · 재기) · 맞받아 베기 칼이 박자 안이면 비껴서며 찌르기) · 0 = 사람만(11/14 첫 판) `?itAi=0`
 };
 

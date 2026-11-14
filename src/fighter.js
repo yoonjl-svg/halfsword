@@ -1793,7 +1793,7 @@ export class Fighter {
     this.skill.update(dt);
     this.stamina.step(dt);
     this.schoolPassive?.update(dt); // 유파 패시브: 켄타이 쌓임 · 인데스 창 시계 · 휘두르는 중 (기력 장부의 공격 중을 읽는다)
-    this.flowArmScale = flowRecoveryScale(this); // 흘림당한 뒤 팔 늦춤 (nagashi_recovery.js — 사장님 10/18 22:1x 0.36 s · 없으면 1)
+    this.flowArmScale = flowRecoveryScale(this); // 흘림당한 뒤 팔 늦춤 (nagashi_recovery.js — 사장님 10/18 22:1x 0.36 s → 10/21 시간 통일 0.4 s · 11/15 '0.4초' · 없으면 1)
     this.updateBodyPose(dt);
     this.driveBalance(dt);
     if (this.gait?.active) this.gait.pinFeet();
