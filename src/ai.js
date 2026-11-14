@@ -3002,7 +3002,7 @@ export class AI {
     if (!foeEv) return false;
     const E = this.secretEv;
     const lag = this.secretLag(); // 공정함 (3 단계 11/14): 비기 조건을 알아채는 눈에 반응 시간 — 실행은 그대로 완벽 (옛 판 0)
-    const s0 = this.sense.seen(lag);
+    const s0 = this.secretSeen(); // 손 · 칼 · 자세는 늦게 · 몸 자리는 간 보기 거리 셈처럼 앞질러 봄
     const dx = s0.cx - c.x;
     const dz = s0.cz - c.z;
     const d0 = Math.max(0.01, Math.hypot(dx, dz));
@@ -3030,6 +3030,22 @@ export class AI {
   /** 비기 조건을 알아채는 눈의 늦음 (3 단계 11/14 공정함 — AI_PLAN.read.fair: 숙련도 반응 시간 · 5 = 0.1 s · 6 = 0.05 s) · 옛 판 0 (완벽한 눈) */
   secretLag() {
     return AI_PLAN.on && AI_PLAN.read.fair ? this.level.reaction : 0;
+  }
+
+  /**
+   * 비기 조건을 보는 눈의 모습 (3 단계 공정함): 반응 시간만큼 늦게 본 모습 — 몸 자리(가슴 cx · cz)만은 간 보기 거리 셈(update — 본 자리 + 골반 속도 × 반응 시간 × predict ·
+   *  쫓을 땐 1)과 같은 꼴로 앞질러 봄(걸어오는 사람이 지금 어디쯤인지는 사람도 내다봄). 손 · 칼 · 자세 · 상태는 늦은 그대로. 옛 판(늦음 0)은 지금 모습 그대로.
+   *  AI 하나에 덧칸 하나를 다시 씀 (새 객체 없음 — 이 스텝 안에서만 읽음)
+   */
+  secretSeen() {
+    const lag = this.secretLag();
+    const s = this.sense.seen(lag);
+    if (!(lag > 0)) return s;
+    const a = lag * (this.chasing ? 1 : this.level.predict);
+    const o = Object.assign((this.secretSnap ??= {}), s);
+    o.cx = s.cx + s.vx * a;
+    o.cz = s.cz + s.vz * a;
+    return o;
   }
 
   /** 상대가 휘두르는 중인가 — 늦게 본 손 빠르기 (3 단계 공정함 — 박자 찌르기 셈 · 위협 · 헛친 뒤와 같은 3.5 패드 m/s) */
@@ -3064,7 +3080,7 @@ export class AI {
    */
   spinTick(dt, kneeling) {
     const me = this.me;
-    const s0 = this.sense.seen(this.secretLag()); // 공정함 (3 단계): 상대가 들어옴을 알아채는 눈에 반응 시간 (옛 판 0)
+    const s0 = this.secretSeen(); // 공정함 (3 단계): 상대가 들어옴을 알아채는 눈에 반응 시간 — 몸 자리는 앞질러 봄 (옛 판 지금 모습)
     const c = me.bodies.chest.translation();
     const d0 = Math.hypot(s0.cx - c.x, s0.cz - c.z);
     const nw = me.wounds?.length ?? 0;

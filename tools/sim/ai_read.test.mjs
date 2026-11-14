@@ -256,7 +256,7 @@ test('스위치 — read.on 0 이면 읽기 몫 0 · 곱 1 (그릇은 유파 버
   assert.equal(off.lag, 0, '`?aiPlan=0` — 옛 판 눈');
 });
 
-test('공정함 — 비기 조건을 알아채는 눈에 반응 시간 · 박자 찌르기는 늦게 본 휘두름 · 고노센 경계는 늦게 본 준비 자세 (스틱 · 속 셈 아님) · 끄면 옛 판', () => {
+test('공정함 — 비기 조건을 알아채는 눈에 반응 시간(몸 자리는 앞질러) · 박자 찌르기는 늦게 본 휘두름 · 고노센 경계는 늦게 본 준비 자세 (스틱 · 속 셈 아님) · 끄면 옛 판', () => {
   // ① 비기 조건 눈 (secretScan · spinTick — 실행은 그대로)
   const G = newRound({ weapon: 'uchigatana', weapon2: 'longsword', seed: 1 });
   try {
@@ -266,6 +266,14 @@ test('공정함 — 비기 조건을 알아채는 눈에 반응 시간 · 박자
     assert.ok(ai.level.reaction > 0);
     assert.equal(ai.secretLag(), ai.level.reaction);
     assert.equal(withRead({ fair: 0 }, () => ai.secretLag()), 0, 'fair 0 — 옛 판 (지금 모습)');
+    // 손 · 칼 · 자세는 늦게 · 몸 자리는 간 보기 거리 셈처럼 앞질러 (본 자리 + 골반 속도 × 반응 시간 × predict)
+    const sv = ai.sense.seen(ai.level.reaction);
+    const o = ai.secretSeen();
+    const a = ai.level.reaction * ai.level.predict;
+    assert.ok(near(o.cx, sv.cx + sv.vx * a) && near(o.cz, sv.cz + sv.vz * a), '몸 자리 앞질러 봄');
+    assert.deepEqual([o.hx, o.hy, o.hvx, o.hvy, o.state, o.tx, o.tz], [sv.hx, sv.hy, sv.hvx, sv.hvy, sv.state, sv.tx, sv.tz], '손 · 칼 · 자세는 늦은 그대로');
+    assert.equal(ai.secretSeen(), o, '덧칸 하나를 다시 씀 (새 객체 없음)');
+    assert.equal(withRead({ fair: 0 }, () => ai.secretSeen()), ai.sense.seen(0), 'fair 0 — 지금 모습');
     // ② 박자 찌르기 — 늦게 본 손 빠르기
     const seen = ai.sense.seen.bind(ai.sense);
     let hand = 4;
