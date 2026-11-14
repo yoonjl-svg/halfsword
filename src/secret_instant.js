@@ -19,6 +19,7 @@
 import * as THREE from 'three';
 import { itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14): 끌고 가는 칼의 상처도 칼 우위 · 재기 (combat.js strike 와 같은 자리)
 import { SECRET, ARM, STRIKE, GAIT, ARENA, JOINTS, THRUST } from './config.js';
+import { obiOn, obiReadyInto, obiPathB } from './iai_obi.js'; // 帯刀 — 대기 칼 자리 · 뽑는 자리 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi)
 import { risolutoContact } from './weapon_measured.js'; // 10/25 THRUST.itMeasure 'contact' 판: 리솔루토 런지 미끄러짐은 지금 맞닿음 그대로
 const GAIT_REACH = GAIT.reachMax;
 
@@ -373,6 +374,7 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, 
       foe.applyWound({ ...r, part: best.info.part, passing: true });
       if (r.schoolK) f.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (combat.js strike 와 같음 — 손가락 긋기를 이어 끄는 칼만 몫이 실림: 제비 베기 되돌림 칼의 켄타이 · 10/25)
       itOnStrike(f, foe, r); // 이탈리아 아웃복싱 (11/14 — combat.js strike 와 같음): 끌고 가는 칼(칼끝 돌려 빼기 · 비껴서며 찌르기)이 상처를 내면 칼 우위 · 재기 (사람 이탈리아만)
+      combat.huntWound?.(f, foe, r); // 11/14 동방 맹호은림 사냥 겹 (combat.js — strike 와 같은 조건 · 날개 접기 등 운동학 칼)
     }
     combat.hooks.onWound?.(f, foe, r, point, pr);
     return r;
@@ -391,6 +393,7 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, 
     foe.applyWound({ ...r, part: best.info.part, passing: true });
     if (r.schoolK) f.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (위 갈래와 같음 — 10/28 고노센 발도의 켄타이: 첫 상처에 씀 · 다른 비기는 몫 없음)
     itOnStrike(f, foe, r); // 이탈리아 아웃복싱 (11/14 — 위 갈래와 같음)
+    combat.huntWound?.(f, foe, r); // 11/14 동방 맹호은림 사냥 겹 (위 갈래와 같음)
   }
   combat.hooks.onWound?.(f, foe, r, point, pr);
   return r;
@@ -817,7 +820,9 @@ function startIai(f, combat) {
   const sw = tv(f.sword.translation(), new THREE.Vector3());
   const AH = sw.clone().sub(tv(c, new THREE.Vector3())).applyQuaternion(inv);
   const AD = f.bladePoint(1, new THREE.Vector3()).sub(f.bladePoint(0, new THREE.Vector3())).normalize().applyQuaternion(inv);
-  const K = SECRET.iaiPath;
+  // 11/14 帯刀 (SECRET.iaiObi — iai_obi.js): 뽑는 자리 B = 대기 칼 자리(칼집 입이 배꼽 앞 · 골반 몸체 틀 — 지금 골반에서 셈) · 끄면 iaiPath.B (모든 길이 같은 B)
+  const obiB = obiOn(f) ? obiPathB(f) : null;
+  const K = obiB ? { ...SECRET.iaiPath, B: obiB } : SECRET.iaiPath;
   const DB = dirOf(K.B.yaw, K.B.el);
   const far = AH.distanceTo(new THREE.Vector3(...K.B.hand)) > 0.12 || AD.angleTo(DB) > 0.6;
   const T = req.player || far ? SECRET.iaiPlayerTime : SECRET.iaiTime; // 대기 자세(손이 왼 허리)면 곧장 가로, 아니면 왼 허리를 거쳐
@@ -835,8 +840,9 @@ function startIai(f, combat) {
   //  AI 고노센(숙련 5 일본)과 웅크림 판 사람(SECRET.gnsCrouch 1)은 웅크린 발도 대기(iaiReady — 낮춤 0.16 · 숙임 14°)에서 뽑아 지금 길이 이미 상대 골반 높이(롱소드 과녁 가운데 줄 0.91 m)를 지남 — 배 길이면 허벅지(0.80)로 내려감 (gns_belly.mjs stand crouch)
   //  11/13 사장님 '실제 발도슬이나 원전이 재현되도록' (SECRET.iaiReal · 기본 1): 같은 사람 발도를 원전 꼴 길 iaiPathReal 로 (뽑아 냄 → 칼집을 떠남 → 배를 지나 오른 어깨 위로 · 몸 숙임 줄임 · 허리 대기 正対 · 굳음 동안 팔 뻗음)
   const real = rise && !!SECRET.iaiReal && !!SECRET.iaiPathReal && req.player && !SECRET.gnsCrouch;
-  const riseK = real ? SECRET.iaiPathReal : SECRET.iaiBelly && req.player && !SECRET.gnsCrouch ? SECRET.iaiPathBelly : SECRET.iaiPathRise;
-  f.iai = { kind: 'iai', K: rise ? riseK : SECRET.iaiPath, oneHand, J: SECRET.instantJ, body: real ? riseK.E.body : SECRET.iaiPath.E.body, real, hold: SECRET.stiff.japanese, pose: (I, u) => iaiReach(f, I, iaiPose(I, u), u), t: 0, T, ab: far ? SECRET.iaiDrawShare : 0, A: { H: AH, D: AD }, DB, yaw, slide, dx, dz, off: !oneHand && !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hit: null, res: null, arc: null };
+  const riseK0 = real ? SECRET.iaiPathReal : SECRET.iaiBelly && req.player && !SECRET.gnsCrouch ? SECRET.iaiPathBelly : SECRET.iaiPathRise;
+  const riseK = obiB ? { ...riseK0, B: obiB } : riseK0; // 帯刀 뽑는 자리 (위 obiB — N · M · E 그대로)
+  f.iai = { kind: 'iai', K: rise ? riseK : K, oneHand, J: SECRET.instantJ, body: real ? riseK.E.body : SECRET.iaiPath.E.body, real, hold: SECRET.stiff.japanese, pose: (I, u) => iaiReach(f, I, iaiPose(I, u), u), t: 0, T, ab: far ? SECRET.iaiDrawShare : 0, A: { H: AH, D: AD }, DB, yaw, slide, dx, dz, off: !oneHand && !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hit: null, res: null, arc: null };
   if (SECRET.gnsThrough && req.player) f.iai.through = true; // 베고 지나감 (11/05 일본 강화 길 — 사람 발도만 · 기본 0 · stepIai)
   if (req.block) f.iai.block = true; // 고노센 B (SECRET.gnsEnterBlock — 천천히 걸어 든 들어옴 창에서 낸 발도): 몸보다 먼저 상대 칼에 닿으면 막힘 (아래 stepIai — 밀어냄은 휩쓸기만)
   if (req.block === 'cover') f.iai.cover = true; // gnsEnterBlock 2: 칼끝이 내 몸을 겨눈 채 천천히 든 상대 — 몸에 닿는 자리에서 막힘
@@ -1079,11 +1085,13 @@ export function iaiReadyPose(f, on, dt) {
   if (iaiBusy(f)) {
     f.iaiReadyW = 0;
     f.iaiSayaReadyW = 0;
+    f.iaiObiW = 0;
     return;
   }
   const w0 = f.iaiReadyW ?? 0;
   if (!on && w0 <= 0) {
     f.iaiSayaReadyW = 0;
+    f.iaiObiW = 0;
     return;
   }
   // 대기에 들어가는 순간 앞발을 내딛어 발을 넓게 (GIF 첫 장면 — 10/10 04:2x)
@@ -1095,13 +1103,18 @@ export function iaiReadyPose(f, on, dt) {
   const R = SECRET.iaiReady;
   const th = f.skill.thrustPose;
   th.w = w;
-  th.hand[0] = R.hand[0];
-  th.hand[1] = R.hand[1];
-  th.hand[2] = R.hand[2];
-  const D = dirOf(R.yaw, R.el);
-  th.dir[0] = D.x;
-  th.dir[1] = D.y;
-  th.dir[2] = D.z;
+  // 11/14 帯刀 (SECRET.iaiObi): 칼 손 · 칼날 = 골반 몸체 틀 칼집 자리 (칼집 입 배꼽 앞 — iai_obi.js obiReadyInto) · 끄면 iaiReady 손 · 칼날
+  f.iaiObiW = obiOn(f) ? w : 0;
+  if (f.iaiObiW > 0) obiReadyInto(f, th.hand, th.dir);
+  else {
+    th.hand[0] = R.hand[0];
+    th.hand[1] = R.hand[1];
+    th.hand[2] = R.hand[2];
+    const D = dirOf(R.yaw, R.el);
+    th.dir[0] = D.x;
+    th.dir[1] = D.y;
+    th.dir[2] = D.z;
+  }
   th.pelvisYaw = R.body.pelvisYaw * D2R;
   th.chestYaw = R.body.chestYaw * D2R;
   th.pitch = R.body.pitch * D2R;
@@ -1138,6 +1151,7 @@ export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false) {
     f.iaiReadyR = 0;
     f.iaiHandW = 0;
     f.iaiSayaReadyW = 0;
+    f.iaiObiW = 0;
     return;
   }
   // 준비 무게 r (켜짐 0.35 s · 풀림 gnsCrouchOut) — 웅크림 판이면 그대로 몸 웅크림 무게(iaiReadyW · stanceTick), 선 채 판(standing — SECRET.gnsReadyHip)이면 몸은 0 이고 손 몫의 한도로만
@@ -1151,17 +1165,21 @@ export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false) {
   f.iaiHandW = h;
   // 11/14 ① (SECRET.iaiSayaReady): 손을 쉬고 기다리는 발도 대기(손 몫 h) 동안 왼손은 칼집 입(鯉口) — 칼을 쥐면 h 0 → offHand 가 칼자루로 다시 쥠(iaiRegrip 초)
   f.iaiSayaReadyW = own && SECRET.iaiSayaReady && iaiOneHandOf(f, true) ? h : 0;
+  f.iaiObiW = own && obiOn(f) ? h : 0; // 11/14 帯刀 (SECRET.iaiObi — 아래 · iai_obi.js): 칼집 그림이 대기 칼을 감싸는 몫
   if (!own) return;
   const R = SECRET.iaiReady;
   const th = sk.thrustPose;
   th.w = h;
-  th.hand[0] = R.hand[0];
-  th.hand[1] = R.hand[1];
-  th.hand[2] = R.hand[2];
-  const D = dirOf(R.yaw, R.el);
-  th.dir[0] = D.x;
-  th.dir[1] = D.y;
-  th.dir[2] = D.z;
+  if (f.iaiObiW > 0) obiReadyInto(f, th.hand, th.dir); // 11/14 帯刀: 칼 손 · 칼날 = 골반 몸체 틀 칼집 자리 (칼집 입 배꼽 앞)
+  else {
+    th.hand[0] = R.hand[0];
+    th.hand[1] = R.hand[1];
+    th.hand[2] = R.hand[2];
+    const D = dirOf(R.yaw, R.el);
+    th.dir[0] = D.x;
+    th.dir[1] = D.y;
+    th.dir[2] = D.z;
+  }
   // 선 채 허리 대기를 원전 꼴로 (11/13 SECRET.iaiReal — iaiPathReal.ready): 몸 비틂 없이 상대를 바로 봄 (웅크림 판 · AI 는 그대로)
   const RB = standing && SECRET.iaiReal && SECRET.iaiPathReal?.ready ? SECRET.iaiPathReal.ready : R.body;
   th.pelvisYaw = RB.pelvisYaw * D2R;

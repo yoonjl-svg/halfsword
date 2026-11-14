@@ -168,7 +168,8 @@ export function createSilverWandererOutfit(h) {
     //  look.daraishiScabbardLen (10/30 00:4x 사장님 '무기 바꾼 거 그대로 넣고 어긋나는 … 설정 최소 수정으로 모순만 덜어내는 방식으로'): 낮의 다라이시 시트 겉모습만 우치가타나 길이로 — 없으면 0.94 (광기의 다라이시 · 모노호시자오)
     const S = DARAISHI_SCABBARD, SL = look?.daraishiScabbardLen ?? S.length, scabbard = slim ? placeDaraishiScabbard(THREE, bake, bake(cyl(.025, .02, SL, 10, false), [0, S.top - SL / 2, 0]), look)
       : bake(cyl(.025, .02, .66, 10, false), [-.018, -.22, -.24], [0, 0, -.23]);
-    addMerged(l, [scabbard], 0x655047, cloth);
+    const scM = addMerged(l, [scabbard], 0x655047, cloth);
+    if (slim && scM) scM.name = 'daraishi-scabbard'; // 11/14 帯刀 (iai_obi.js daraishiSaya): 이름으로 찾아 칼집 틀로 옮김 · 합치지 않음(_detail mergeLayers)
     if (!slim) addMerged(l, [bake(cyl(.027, .027, .019, 10, false), [.057, .101, -.24], [0, 0, -.23]),
       bake(cyl(.021, .014, .04, 10, false), [-.088, -.527, -.24], [0, 0, -.23])], GOLD, steel);
   }

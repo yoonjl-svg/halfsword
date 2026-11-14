@@ -48,6 +48,7 @@
 | I8 심화 · 틈 파고들기 | `perk: imbroccata` — 틈 0.6 · 잔상 | `combat.js` gap |
 | I9 칼끝 돌려 빼기 | `u: cavazione` | `PlayerUniqueAssist` |
 | I10 패시브 · 곧은 선 | `passive` | `school_passive.js` |
+| I12 패시브 · 맞박자 찌르기 (11/14) | `itTempo` — 걸어 들어오는 상대를 그 박자에 찌르면 판정 +30 % (콘트라템포 · 사람 · AI 같게 — AI 는 칸 없이 늘 받음) (`docs/strike/it_outbox_2026-11-14.md`) | `italian_outbox.js itThrust` · `combat.js analyze` |
 | I4 비기 | `secret` — 10/22 열림(사람 — 거침없이 나아가 찌르기 · `docs/strike/italian_risoluto_2026-10-22.md`) | |
 | I11 시에나에서 온 편지 | 카드 뽑기 | §5 |
 
@@ -89,6 +90,7 @@
 | C3 허리 베기 (강화동작) | `u: yaoji` | `PlayerUniqueAssist` |
 | C7 막기 I · 세 자세 받기 | `parry` + `parryCover` — 거정세 · 어거세 · 요략세 | `parry_button.js` |
 | C4 심화 · 출혈 | `perk: yaoji` — 몸통 출혈 × 1.5 · 잔상 | `combat.js bleedPerSev` |
+| C12 심화 · 맹호은림 (11/14) | `cnHunt` — 허리를 베는 세 칼이 몸 어디든 칼날 상처를 낸 맞음마다(11/14 넓힘) 상대에 사냥 한 겹(최대 5 · 판 끝까지) · 겹마다 상대 기력 회복 −8 % · 격살 빠르기 +8 % (`docs/strike/cn_hunt_2026-11-14.md`) | `cn_hunt.js` · `combat.js huntWound` · `stamina.js recoverRate` · `skill.js gyeoksalReq` |
 | C5 끌어 딛고 허리 베기 | `u: chebuYaoji` | `PlayerUniqueAssist` |
 | C6 날개 접기 (이어 긋기) | `u: lianchi` | 〃 |
 | C8 막기 II · 단단한 받기 | `parryCut` — 막는 동안 피해 50 % | `parry_button.js woundKeep` |

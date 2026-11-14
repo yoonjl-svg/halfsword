@@ -35,16 +35,16 @@ const fresh = (p = { version: 1, acquisitions: [], coins: 100, heads: 0, titles:
   readProgress();
 };
 const wallet = (coins, heads = 0) => fresh({ version: 1, acquisitions: [], coins, heads, titles: [], title: '여행자' });
-const ADDED_1114 = { italian: ['I12'] }; // 설계 자료(data.mjs) 뒤에 더한 칸 (11/14 이탈리아 맞박자 찌르기 — 보법 II 줄 패시브)
 const HEADS_1025 = { passive: 5, secret: 10 }; // 사장님 10/25 01:5x '머리 패시브 5개 비기 10개로' — 설계 자료(data.mjs)의 10 · 20 을 덮음
 const ids = (...a) => new Set(a);
 
 // ── 자료: 설계 data.mjs 와 같은 칸 · 앞 칸 · 값 · 모양 ──
-test('설계 자료(data.mjs)와 같다: 유파마다 11 칸 · id · 갈래 · 앞 칸(모두) · 금화 · 머리 · 곁가지 · 줄 · 가로 자리', () => {
+test('설계 자료(data.mjs)와 같다: 유파마다 11 칸(일본 · 동방 · 이탈리아 12 — 11/14 J12 · C12 · I12) · id · 갈래 · 앞 칸(모두) · 금화 · 머리 · 곁가지 · 줄 · 가로 자리', () => {
   assert.deepEqual(D.TREE_SCHOOLS, DESIGN.map((s) => s.id));
   for (const s of DESIGN) {
     const mine = D.nodesOf(s.id);
-    assert.equal(mine.length, 11 + (ADDED_1114[s.id]?.length ?? 0), s.id); // 11/14 사장님 '카운터 +30%를 패시브로 … 콘트라템포 ok' — 이탈리아 맞박자 찌르기 I12 를 설계 자료 밖에 더함 (아래 ADDED_1114)
+    assert.equal(mine.length, s.id === 'japanese' || s.id === 'chinese' || s.id === 'italian' ? 12 : 11, s.id); // [사장님 11/14 결정] '일본은 바위 몸 확정해' · '전부 권고대로' — 일본 새 칸 J12 · 동방 새 칸 C12 맹호은림('이름와 위치는 좋음') (설계 자료 data.mjs 에도 더함 · 다른 유파 11 그대로) · 이탈리아 새 칸 I12 맞박자 찌르기 (11/14 '콘트라템포 ok' — data.mjs 에도 더함)
+    assert.equal(mine.length, s.nodes.length, `${s.id} 설계 칸 수`);
     for (const d of s.nodes) {
       const n = D.nodeOf(s.id, d.id);
       assert.ok(n, `${s.id} ${d.id}`);
@@ -415,6 +415,7 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('japanese', 'J5'), ['secret']);
   assert.deepEqual(on('chinese', 'C2'), ['stepCost']);
   assert.deepEqual(on('chinese', 'C4'), ['perk:yaoji']);
+  assert.deepEqual(on('chinese', 'C12'), ['cnHunt']); // 11/14 맹호은림 사냥 겹 (cn_hunt.js)
   { // 10/28 01:1x 사장님 '체보요격과 염시에도 붙여' — 깊은 허리 베기(C4) 출혈은 허리를 베는 세 칼 모두 · 다른 칼은 아님
     const { yaojiBleedTech } = await import('../../src/combat.js');
     for (const t of ['yaoji', 'chebuYaoji', 'lianchi']) assert.equal(yaojiBleedTech(t), true, t);
@@ -826,7 +827,7 @@ test('칸 오의(lore · src — 사장님 10/22 00:5x 원전의 오의를 밝�
     if (x.letter) assert.equal(x.src, undefined, `${x.id} 편지 칸은 출처 없음`);
     else assert.ok(typeof x.src === 'string' && x.src.trim().length > 0, `${x.id} src`);
   }
-  assert.equal(n, 55 + Object.values(ADDED_1114).flat().length); // 11/14 맞박자 찌르기 I12 (칸 수 = 설계 55 + 더한 칸)
+  assert.equal(n, 58); // 11/14 일본 J12 바위 몸 · 동방 C12 맹호은림 · 이탈리아 I12 맞박자 찌르기 (전 55)
 });
 
 test('10/23 비기 이름 = 원어 독음 (동방은 한자 한국식 독음) · 스킬 화면 제목은 원어를 괄호로 함께', async () => {

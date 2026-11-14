@@ -21,6 +21,7 @@ export const SCHOOLS = [
     { id: 'I1', cat: 'foot', name: '보법 I', sub: '박자 걸음', eff: '짧게 둘 · 길게 둘, 잦은 걸음', pre: [], price: 100, st: 'split', d: 0, cx: 500 },
     { id: 'I11', cat: 'letter', name: '시에나에서', sub: '온 편지', eff: '이탈리아 무기가 나올 확률 ×2', pre: ['I1'], price: 100, st: 'new', opt: true, d: 0, cx: 250 },
     { id: 'I3', cat: 'foot', name: '보법 II', sub: '물러서기', eff: '뒤로 걸어도 느려지지 않는다 — 이탈리아는 반드시 거친다', pre: ['I1'], price: 100, st: 'split', d: 1, cx: 500 },
+    { id: 'I12', cat: 'passive', name: '패시브', sub: '맞박자 찌르기', eff: '맞박자 찌르기 (콘트라템포) — 걸어 들어오는 상대를 그 박자에 찌르면 피해가 증가한다 (+30 %)', pre: ['I1'], price: 0, heads: 5, st: 'new', d: 1, cx: 750 }, // 11/14 사장님 '이탈리아는 카운터 +30%를 패시브로' · '콘트라템포 ok' · '모두 본판에 넣어 ai에게도 똑같이 적용해' — 보법 II 줄 · 몫 itTempo (docs/strike/it_outbox_2026-11-14.md)
     { id: 'I7', cat: 'atk', name: '내려', sub: '찌르기', eff: '내려 긋는 칼이 내려 찌르기로 나간다', pre: ['I3'], price: 200, st: 'split', d: 2, cx: 330 }, // 10/31 12:xx 사장님 '임브로카타를 먼저 배우고 카바치오네를 배우고 틈 파고들기는 카바치오네 강화로 바꿔.' · 'I7은 어떤 방향이나 높이에서든 … 내려찌르기로' · 13:xx '스킬 이름도 내려 찌르기로' — 왼 줄 첫 칸 (전 이 자리 I2 비껴서며 찌르기 · I7 은 d 3 '높은 찌르기가 내려 찌르기로 (강화동작)')
     { id: 'I5', cat: 'parry', name: '막기 I', sub: '막기 자리', eff: '막기 단추로 이탈리아 막기 자리를 잡는다', pre: ['I3'], price: 200, st: 'split', d: 2, cx: 670 },
     { id: 'I2', cat: 'atk', name: '칼끝', sub: '돌려 빼기', eff: '맞닿은 상대 칼 밑으로 칼끝을 돌려 빼 반대쪽을 찌른다', pre: ['I7'], price: 300, st: 'split', d: 3, cx: 330 }, // 10/31 사장님 '카바치오네가 발전해서 리솔루토가 되는 게 더 멋지고' — 기본 고유 공격 (전 I9 특수 공격)
@@ -54,6 +55,7 @@ export const SCHOOLS = [
     { id: 'J3', cat: 'parry', name: '막기 II', sub: '흘려 받기', eff: '흘리면 상대 팔 늦춤 · 기력 −40', pre: ['J2'], price: 300, st: 'split', d: 2, cx: 650 },
     { id: 'J10', cat: 'passive', name: '패시브', sub: '켄타이', eff: '기다림과 침 (켄타이) — 공격 없이 기다린 만큼 다음 칼이 세다 (2초에 +30% — 10/25 23:1x · 전 1.5초) · 빗나가면 츠바메가에시로 이어짐 · 비기엔 안 실림', pre: ['J9'], price: 0, heads: 10, st: 'new', d: 3, cx: 200 },
     { id: 'J4', cat: 'parry', name: '막기 III', sub: '흘린 칼', eff: '흘린 공격의 피해 80% 감소', pre: ['J3'], price: 400, st: 'split', d: 3, cx: 650 },
+    { id: 'J12', cat: 'deep', name: '심화', sub: '바위 몸', eff: '바위 몸 (이와오노미 · 巌の身) — 밀치기에 기력 안 씀 · 기다림과 침 스택당 받는 피해 −4 % (11/14 사장님 \'일본은 바위 몸 확정해 … 기다림과 침 다음으로\' · \'전부 권고대로\' — 자리 · 금화 감독 안 그대로 · 유파 호칭에 듦 · docs/strike/jp_tank_2026-11-14.md)', pre: ['J10'], price: 400, st: 'new', d: 4, cx: 200 },
     { id: 'J5', cat: 'secret', name: '비기', sub: '뒤에서 앞서기', eff: '상대가 치려 할 때 먼저 벤다 (고노센)', pre: ['J4'], price: 400, heads: 20, st: 'now', d: 4, cx: 650 },
   ] },
   { id: 'chinese', ko: '동방', title: '동방 — 부채꼴', shape: '가벼운 발에서 공격(요격)과 막기(세 자세) 두 갈래가 활짝 펴지고, 둘이 비기 연환에서 만난다.', nodes: [
@@ -67,6 +69,7 @@ export const SCHOOLS = [
     { id: 'C6', cat: 'atk', name: '날개 접기', sub: '이어 긋기', eff: '물러나는 척 칼을 거두며 나아가 허리를 벤다', pre: ['C3'], price: 300, st: 'split', d: 2, cx: 310 }, // 10/28 00:5x 체보요격과 자리 바꿈
     { id: 'C8', cat: 'parry', name: '막기 II', sub: '단단한 받기', eff: '막는 동안 피해 50% 감소', pre: ['C7'], price: 300, st: 'split', d: 2, cx: 680 },
     { id: 'C10', cat: 'passive', name: '패시브', sub: '토납', eff: '숨 바꾸기 (토납) — 칼을 휘두르지 않는 동안 피가 2배 빨리 멎는다', pre: ['C7'], price: 0, heads: 10, st: 'new', d: 2, cx: 880 },
+    { id: 'C12', cat: 'deep', name: '요격 심화', sub: '맹호은림', eff: '허리를 베는 세 칼이 몸 어디든 칼날 상처를 낼 때마다 사냥 한 겹(최대 5 · 판 끝까지) — 겹마다 상대 기력 회복 −8 % · 격살 빠르기 +8 %', pre: ['C4'], price: 400, st: 'new', d: 3, cx: 130 }, // 11/14 사장님 '이름와 위치는 좋음' · '스택당 기력 회복 -8% 격살 빠르기 +8%' (docs/strike/cn_hunt_2026-11-14.md)
     { id: 'C9', cat: 'secret', name: '비기', sub: '막아 죽이기', eff: '앞으로 나서며 때맞춰 막아 낸 직후 받은 자세가 노리는 급소를 깊게 친다', pre: ['C5', 'C8'], price: 400, heads: 20, st: 'now', d: 3, cx: 590 }, // 10/22 격살로 열림 (전 '연환' · 준비 중)
   ] },
 ];
