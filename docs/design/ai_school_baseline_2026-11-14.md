@@ -815,7 +815,7 @@
 
 ### 12-6. 합침 — 일본 · 동방 · 이베리아 · 개발 가지 (11/14 감독)
 
-감독 지시 순서대로 merge 했다(rebase 없음): `wk/ai-ib`(662b65f2) → `wk/ai-cn`(1ca947ca) → `claude/first-game-development-2q36ha`(006cfe15). 개발 가지에는 칼집 · 납도 합침 d0990048 과 결정 기록이 들어 있다.
+감독 지시 순서대로 merge 했다(rebase 없음): `wk/ai-ib`(662b65f2) → `wk/ai-cn`(1ca947ca) → 개발 가지 머리(006cfe15). 개발 가지에는 칼집 · 납도 합침 d0990048 과 결정 기록이 들어 있다.
 
 - **충돌은 모두 둘 다 살렸다.**
   - config: `AI_PLAN.schools` · `errSchools` = italian · japanese · iberian · chinese, 그리고 `AI_PLAN.ib` · `AI_PLAN.cn` · `AI_PLAN_JP`.
@@ -829,6 +829,11 @@
   - 걷은 것: 동방 `cnTick` 의 gnsSkip(낮음 ⅓)과 그 시험, 이베리아 `ibFeetV` 의 gnsCross(beat 마다)와 그 시험, `gonosen_risk.test` ⑤ 의 라트나 줄 따로 묶음(⑤ 전체가 옛 판으로 묶여 있음).
   - 새 시험 '합침': 네 유파 낮음은 굴림 한 번으로 경계를 접고, 가운데는 굴림 없이 경계를 지킨다.
 - **칼집 · 납도와 겹치는 곳**: 고노센 준비가 2.0 → 2.6 s(납도 0.6)가 되었다. 그래서 일본 유도 멈춤 `AI_PLAN_JP.lureT` 를 2.0 → 3.0 s(시간 사다리 다음 칸)로 올려 준비가 켜질 만큼 서게 했다. gonosen 시험들(⑤ · ⑤ 무모 · 준비 · 들어옴)은 합친 판에서 그대로 통과한다.
+- **관문 · 시험 (합친 판 — 직접)**:
+  - 관문 다섯 그대로: fights12 `e4322cc5` · live_battery `02b66c1f` · finish_thrust `9630b5d3` · corr IDENTICAL 12 / 12 · weapon_smoke OK 34 / 34.
+  - 보조 school_ai_fights 는 `537bf3fa` → `9c9951ec` 로 바뀌었다(동방 · 이베리아 플랜과 칼집 합침).
+  - 시험 전체 960 / 960 통과 · 실패 0.
+  - `npx vite build` exit 0 · 이름 방침 위반 0.
 
 ## 부록 A. 조사 자리 (코드)
 
