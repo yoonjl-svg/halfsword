@@ -233,9 +233,9 @@ if (params.get('itParryBeat') === '1') CONFIG.SKILL.itParryBeat = 1; // 막기�
 if (+params.get('cnParrySpeed') > 0) CONFIG.SKILL.cnParrySpeedK = +params.get('cnParrySpeed'); // 동방 막기 단추 손 빠르기 배율(10/17 — 판 값 1 = 끔, 사장님 확인 전): `?cnParrySpeed=1.3` = 동방 막기 책 플레이어의 막기 단추 손 옮김 4.5 → 5.85 m/s (docs/strike/chinese_parry_speed_2026-10-17.md)
 if (+params.get('cnBrace') > 0) CONFIG.SKILL.cnBraceK = +params.get('cnBrace'); // 동방 버티는 힘(10/17 연구 — 판 값 0 = 끔, 사장님 확인 전): `?cnBrace=0.5` = 동방 막기 책 플레이어가 막기 단추로 막는 중 서보 힘 × 1.5 (docs/strike/chinese_parry_brace_2026-10-17.md)
 if (params.has('cnParryCut') && +params.get('cnParryCut') >= 0 && +params.get('cnParryCut') <= 1) CONFIG.SKILL.cnParryDmgCut = +params.get('cnParryCut'); // 동방 막는 동안 피해 감소(10/17 — 판 값 0.5, 사장님 22:1x 결정): `?cnParryCut=0` = 끔 · `?cnParryCut=0.25` = 막는 중 입는 칼날 상처 심각도 × 0.75 (몫이라 0~1 만 읽음)
-// 일본 흘림 묶음 (사장님 10/18 22:1x — docs/strike/japanese_flow_adopt_2026-10-18.md): 판정 개편 · 팔 늦춤 0.36 s · 흘림당한 쪽 기력 40(10/31 09:xx 사장님 결정 60 — config FLOW_REDESIGN.penalty) · 자연 회복 탈진 · 일본/이베리아 막는 동안 피해 20 % 감소 — 모두 기본 켬
+// 일본 흘림 묶음 (사장님 10/18 22:1x — docs/strike/japanese_flow_adopt_2026-10-18.md): 판정 개편 · 팔 늦춤 0.4 s(10/21 시간 통일 — 전 0.36) · 흘림당한 쪽 기력 40(10/31 09:xx 사장님 결정 60 — config FLOW_REDESIGN.penalty) · 자연 회복 탈진 · 일본/이베리아 막는 동안 피해 20 % 감소 — 모두 기본 켬
 if (params.has('flowJudge')) FLOW_REDESIGN.on = params.get('flowJudge') !== '0'; // `?flowJudge=0` = 옛 흘림 판정(내려 베기 · 칼 지붕 · 새로 부딪힌 순간만)
-if (params.has('flowDmgCut') && +params.get('flowDmgCut') >= 0 && +params.get('flowDmgCut') <= 1) FLOW_REDESIGN.flowDmgCut = +params.get('flowDmgCut'); // 흘린 공격의 피해 감소(판 값 0.8) — `?flowDmgCut=0` = 끔
+if (params.has('flowDmgCut') && +params.get('flowDmgCut') >= 0 && +params.get('flowDmgCut') <= 1) FLOW_REDESIGN.flowDmgCut = +params.get('flowDmgCut'); // 흘린 공격의 피해 감소(판 값 0.7 — 11/15 사장님 결정 · 전 0.8) — `?flowDmgCut=0` = 끔
 if (params.get('flowEnd') === 'timer') FLOW_REDESIGN.threatEnd = false; // `?flowEnd=timer` = 공격 끝을 공격 번호 시간으로(샛별 연구 그대로 — 판 값은 실제 칼 기하)
 if (params.has('flowArm') && +params.get('flowArm') >= 0 && +params.get('flowArm') <= 2) FLOW_RECOVERY.seconds = CONFIG.realS(+params.get('flowArm')); // `?flowArm=0` = 팔 늦춤 끔 · `?flowArm=0.18` = 0.18 s
 if (params.has('ibBeat') && +params.get('ibBeat') >= 0 && +params.get('ibBeat') <= 3) Object.assign(CONFIG.IB_PARRY_BEAT, { on: +params.get('ibBeat') > 0, k: +params.get('ibBeat') || CONFIG.IB_PARRY_BEAT.k }); // 이베리아 탈류 · 레베스 쳐내기 튕김 세기 k (판 값 1.6 — 사장님 10/20) · `?ibBeat=0` = 끔
@@ -340,6 +340,9 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.get('aiPlanCn') === '0') for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((t) => t !== 'chinese'); // `?aiPlanCn=0` = 동방 플랜만 옛 판 (2 단계 · 11/14 — 플랜 · 거리 오차 · 동방 몫 모두 끔 · 공통 파고들기는 그대로)
   if (params.get('aiPlanDe') === '0') for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((t) => t !== 'german'); // `?aiPlanDe=0` = 독일 플랜만 옛 판 (3 단계 · 11/14 — 독일 플랜 · 거리 오차 · 독일 몫 모두 · 손잡이 찍기 · 실력 이름 · 숙련도 0 은 `?aiPlan=0` 이 끔)
   if (params.get('aiPlanFree') === '0') CONFIG.AI_PLAN_FREE.on = 0; // `?aiPlanFree=0` = 무유파 플랜만 옛 판 (3 단계 · 11/14 — 플랜 · 굴림 · 거리 오차 · src/ai_plan_free.js)
+  if (params.has('ibBlockRegen')) CONFIG.SKILL.ibBlockRegen = +params.get('ibBlockRegen') ? 1 : 0; // 이베리아 막아 내면 기력 되찾음 (11/15 — src/ib_block_regen.js · B9)
+  if (['fixed', 'foe2'].includes(params.get('ibBlockRegenN'))) CONFIG.SKILL.ibBlockRegenN = params.get('ibBlockRegenN'); // 되찾는 몫: 고정 30 · 상대 베기 × 2 (11/15 — 사장님 확인 전)
+  if (params.has('aiParryCut')) CONFIG.SKILL.aiParryCut = +params.get('aiParryCut') ? 1 : 0; // AI 막는 동안 피해 감소 시제품 (11/15 — src/ai_block_cut.js · 기본 끔)
   for (const [q, k] of [['digAi', 'ai'], ['digStep', 'step'], ['digRun', 'run'], ['digReach', 'reach']]) if (params.has(q)) CONFIG.DIG_PROTO[k] = +params.get(q) ? 1 : 0; // 짧은 칼 파고들기 (11/14 — src/dig_proto.js): A 기본 켬 `?digAi=0` = 옛 판 · 시제품 B `?digStep=1` · C `?digRun=1` · 상대가 길 때의 대처 기울기(11/14 — 모든 AI) `?digReach=0` = 옛 문
   for (const [q, k] of [['aiRead', 'on'], ['aiFair', 'fair'], ['aiGns', 'gns']]) if (params.has(q)) CONFIG.AI_PLAN.read = { ...CONFIG.AI_PLAN.read, [k]: +params.get(q) ? 1 : 0 }; // 3 단계 (11/14): `?aiRead=0` = 읽기 몫(상대 유파 위험 · 대가 창 · 상대 기력) 끔 · `?aiFair=0` = 공정함 끔 (그 전 판 눈) · `?aiGns=0` = 일본 AI 고노센 준비 지키기 끔
 }

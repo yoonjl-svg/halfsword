@@ -405,14 +405,14 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('italian', 'I9'), ['u:inquartata']);
   assert.deepEqual(on('iberian', 'B2'), ['burstSide']);
   assert.deepEqual(on('iberian', 'B5'), ['ibFlow']);
-  assert.deepEqual(on('iberian', 'B9'), ['parryCut']);
+  assert.deepEqual(on('iberian', 'B9'), ['blockRegen']); // 11/15 사장님 '이베리아도 막기 20% 감소 없애. 대신 막기에 성공하면 기력 n 회복' (전 parryCut)
   assert.deepEqual(on('iberian', 'B6'), ['ibChain']); // 10/29 01:5x 이어지는 흐름 (전: 돌려 베기 쌓기 perk redondo)
   assert.deepEqual(on('iberian', 'B12'), ['ibTrade']); // 11/14 맞바꿈 '멈추지 않는 칼' (사장님 '맞바꿈 새 칸으로' — config IB_LINK.trade · fighter.js ibTradeTry)
   assert.deepEqual([...D.nodeOf('iberian', 'B12').pre], ['B6']); // 자리 = B6 이어지는 흐름 다음
   assert.deepEqual(on('iberian', 'B4'), ['secret', 'u:redondo']); // 11/11 비기 알티바슈 포르트 (비기 몫 + 실행 칸 redondo — 무장 창에서 길게 눌러 냄 · 전 10/29 특수 공격 ['u:redondo'])
   assert.deepEqual(on('iberian', 'B7'), ['u:cingir']); // 11/11 특수 공격 싱지르 (전 비기 ['secret'])
   assert.deepEqual(on('japanese', 'J1'), ['footwork', 'stepCost']);
-  assert.deepEqual(on('japanese', 'J2'), ['parry', 'parryCover', 'parryCut']);
+  assert.deepEqual(on('japanese', 'J2'), ['parry', 'parryCover']); // 11/15 사장님 결정 — 피해 감소 몫 parryCut 뺌
   assert.deepEqual(on('japanese', 'J3'), ['flow']);
   assert.deepEqual(on('japanese', 'J4'), ['flowShield']);
   assert.deepEqual(on('japanese', 'J5'), ['secret']);
@@ -508,7 +508,7 @@ test('실제 몸 — 걷기 기력: 동방 C1 만 = 보통 4 · C1 + C2 = 2 · �
   near(actor(kitOf('chinese', 'C1', 'C2')), STAMINA.stepCosts.chinese);
   near(actor(kitOf('japanese', 'J1')), STAMINA.stepCosts.japanese);
 });
-test('실제 몸 — 막기: 독일 G3 = 독일 자리만(왕관 몸꼴 없음) · G4 = 왕관 / 일본 J2 = 우케나가시 + 피해 20 % / 이베리아 B8 만 = 피해 감소 없음 · B9 = 20 %', () => {
+test('실제 몸 — 막기: 독일 G3 = 독일 자리만(왕관 몸꼴 없음) · G4 = 왕관 / 일본 J2 = 우케나가시(피해 감소 없음 — 11/15) / 이베리아 B8 · B9 = 피해 감소 없음(11/15)', () => {
   for (const [kit, kron] of [[kitOf('german', 'G1', 'G3'), false], [kitOf('german', 'G1', 'G3', 'G4'), true]]) {
     const g = round('longsword', kit, 5);
     try {
@@ -519,9 +519,9 @@ test('실제 몸 — 막기: 독일 G3 = 독일 자리만(왕관 몸꼴 없음) 
     } finally { g.world.free(); }
   }
   const cut = (weapon, kit) => { const g = round(weapon, kit, 5); try { const guard = new PlayerParryGuard(g.player, g.enemy); guard.mode = 'defend'; return guard.woundKeep(); } finally { g.world.free(); } };
-  assert.equal(cut('monohoshizao', kitOf('japanese', 'J1', 'J2')), 0.8);
+  assert.equal(cut('monohoshizao', kitOf('japanese', 'J1', 'J2')), 1); // 11/15 사장님 '일본은 … 막을 때 피해 감소 20%는 없애'
   assert.equal(cut('zweihander', kitOf('iberian', 'B1', 'B8')), 1);
-  assert.equal(cut('zweihander', kitOf('iberian', 'B1', 'B8', 'B9')), 0.8);
+  assert.equal(cut('zweihander', kitOf('iberian', 'B1', 'B8', 'B9')), 1); // 11/15 — B9 는 막아 내면 기력 되찾음 (ib_block_regen.test)
   assert.equal(cut('qinggang', kitOf('chinese', 'C1', 'C7')), 1);
   assert.equal(cut('qinggang', kitOf('chinese', 'C1', 'C7', 'C8')), 0.5);
   const g = round('rapier', kitOf('italian', 'I1', 'I3', 'I5'), 5);
@@ -531,9 +531,9 @@ test('실제 몸 — 흘린 칼(J4): 흘린 공격 피해 감소는 J4 를 익�
   const att = { stamina: { attackId: 7 } };
   const vic = (kit) => ({ flowShield: { from: att, attackId: 7 }, ...(kit ? { skillKit: kit } : {}) });
   const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} vs ${b}`);
-  near(flowShieldKeep(vic(null), att), 0.2);
+  near(flowShieldKeep(vic(null), att), 0.3); // 11/15 흘린 칼 감소 70 % (전 0.2)
   assert.equal(flowShieldKeep(vic(kitOf('japanese', 'J1', 'J2', 'J3')), att), 1);
-  near(flowShieldKeep(vic(kitOf('japanese', 'J1', 'J2', 'J3', 'J4')), att), 0.2);
+  near(flowShieldKeep(vic(kitOf('japanese', 'J1', 'J2', 'J3', 'J4')), att), 0.3);
 });
 test('실제 몸 — 강화동작 이점은 심화 칸: 곁눈 베기 무릎 꺾기(G6) / 이어 긋기 흐름(B5) · 사람은 돌려 베기 쌓기 없음(10/29 — B6 이어지는 흐름 · AI 쌓기 그대로)', async () => {
   const g = round('longsword', kitOf('german', 'G1', 'G5'), 9);
