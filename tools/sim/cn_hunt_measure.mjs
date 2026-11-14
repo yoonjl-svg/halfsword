@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  cn_hunt_measure.mjs — 동방 맹호은림 사냥 겹 재기 (11/14 — 기록 docs/strike/cn_hunt_2026-11-14.md · 게임 src/cn_hunt.js · config UNIQUE_ASSIST.cnHunt)
 //   재기만 한다 — 판 값은 이 프로세스 안에서만 바꾼다. 몸 · 봇 = school_balance.mjs fightOne (사람 손가락 봇 · 스킬트리 모두 익힘 · 상대 숙련 3 AI · 30 실제 s).
-//   판(cfg): 1 = 지금 main(사냥 끔 · 옛 봇) · 1b = 사냥 끔 · 사냥 봇 · 2 = 겹(기력 회복)만 · 3 = + 격살 빠르기 · 4 = + 격살 판당 1 번(= 가지 기본) · 5 = 4 + AI 스위치(AI 동방도 쌓음)
+//   판(cfg): 1 = 전 main(사냥 끔 · 판당 3 · 옛 봇) · 1b = 사냥 끔 · 사냥 봇 · 2 = 겹(기력 회복)만 · 3 = + 격살 빠르기 · 4 = + 격살 판당 1 번 · 5 = 4 + AI 스위치 (2 ~ 5 = 몸통만 — 11/14 첫 판) · 6 = 몸 어디든(11/14 둘째 가지 기본)
 //   모든 판: 비기 굳음 SECRET.stiff.chinese = 실제 0.6 s (감독 11/14 — 사장님 '모든 비기 경직 0.6초로 통일'이 본판에 들어오기 전이라 재기 설정으로만)
 //  node tools/sim/cn_hunt_measure.mjs run --cfg=4 --cells=chinese:hwando:longsword --seeds=1-24 --json=.tmp/x.json
 //  node tools/sim/cn_hunt_measure.mjs par [--cfgs=1,1b,2,3,4,5] [--cells=…] [--seeds=1-24] [--jobs=4] [--out=.tmp/cn_hunt]
@@ -18,13 +18,15 @@ const UA = CONFIG.UNIQUE_ASSIST;
 /** 재는 칸: 환도 · 청강검 대 롱소드 AI · 거울 둘 · 대 독일(세이버 AI) · 대 일본(우치가타나 AI) */
 export const HUNT_CELLS = ['chinese:hwando:longsword', 'chinese:qinggang:longsword', 'chinese:hwando:hwando', 'chinese:qinggang:qinggang', 'chinese:hwando:sabre', 'chinese:hwando:uchigatana'];
 /** 판 (cnHunt 덮는 값 · 사냥 봇) */
+//  11/14 둘째 판 (사장님 '동방과 일본은 전부 권고대로'): 6 = 새 가지 기본(몸 어디든 · 판당 1 번 공용 표) · 1 ~ 5 = 첫 판(몸통만 torso 1 — uses = 동방 판당 수 secretUses.chinese)
 export const CFGS = {
-  1: { label: '① 지금 main (사냥 끔 · 옛 봇)', set: { on: 0 }, bot: 0 },
-  '1b': { label: '①b 사냥 끔 · 사냥 봇', set: { on: 0 }, bot: 1 },
-  2: { label: '② 겹(기력 회복)만', set: { on: 1, share: 0, uses: null }, bot: 1 },
-  3: { label: '③ + 격살 빠르기', set: { on: 1, uses: null }, bot: 1 },
-  4: { label: '④ + 격살 판당 1 번 (가지 기본)', set: { on: 1 }, bot: 1 },
-  5: { label: '⑤ 모두 + AI 스위치', set: { on: 1, ai: 1 }, bot: 1 },
+  1: { label: '① 전 main (사냥 끔 · 판당 3 · 옛 봇)', set: { on: 0 }, uses: 3, bot: 0 },
+  '1b': { label: '①b 사냥 끔 · 판당 3 · 사냥 봇', set: { on: 0 }, uses: 3, bot: 1 },
+  2: { label: '② 겹(기력 회복)만 · 몸통', set: { on: 1, share: 0, torso: 1 }, uses: 3, bot: 1 },
+  3: { label: '③ + 격살 빠르기 · 몸통', set: { on: 1, torso: 1 }, uses: 3, bot: 1 },
+  4: { label: '④ + 격살 판당 1 번 · 몸통 (11/14 첫 가지 기본)', set: { on: 1, torso: 1 }, uses: 1, bot: 1 },
+  5: { label: '⑤ ④ + AI 스위치', set: { on: 1, torso: 1, ai: 1 }, uses: 1, bot: 1 },
+  6: { label: '⑥ 몸 어디든 · 판당 1 번 (11/14 둘째 가지 기본)', set: { on: 1, torso: 0 }, uses: 1, bot: 1 },
 };
 const range = (s) => String(s).split(',').flatMap((p) => { const m = p.match(/^(\d+)-(\d+)$/); if (!m) return [+p]; const out = []; for (let i = +m[1]; i <= +m[2]; i++) out.push(i); return out; });
 
@@ -33,7 +35,8 @@ export function applyCfg(cfg) {
   const C = CFGS[cfg];
   if (!C) throw new Error(`cfg ${cfg}`);
   Object.assign(UA.cnHunt, C.set);
-  CONFIG.SECRET.stiff.chinese = CONFIG.realS(0.6); // 감독 11/14: 비기 굳음 0.6 s 로 잼 (본판 기본값은 합칠 때 감독이 맞춤)
+  if (C.uses != null) UA.secretUses = { ...UA.secretUses, chinese: C.uses };
+  CONFIG.SECRET.stiff.chinese = CONFIG.realS(0.6); // 감독 11/14: 비기 굳음 0.6 s 로 잼 (11/14 본판 기본값도 0.6 — c1cad826)
   return C;
 }
 

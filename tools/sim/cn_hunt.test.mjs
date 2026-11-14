@@ -1,11 +1,12 @@
 // 동방 맹호은림 사냥 겹 시험 (11/14 — src/cn_hunt.js · config UNIQUE_ASSIST.cnHunt · 새 칸 C12 · 기록 docs/strike/cn_hunt_2026-11-14.md):
 //  사장님 11/14 '동방은 사냥감을 말려죽이는 고양이과 맹수야' · '빠지는 규칙은 안 둘게' · '3번 제한을 다른 비기처럼 1번으로' · '스택당 기력 회복 -8% 격살 빠르기 +8%'.
-//  쌓임 조건(허리를 베는 세 칼 · 칼날 베기 · 몸통 · 상처 > 0 · 사람은 C12 · 공격 하나에 한 겹) · 상한 5 · 빠지지 않음 · 기력 회복 −8 %/겹 · 격살 빠르기 × (1 + 0.08 n) ·
-//  사람 격살 판당 1 번 · 스위치 끔이면 전 판 · AI 스위치 · 다른 유파 바이트 같음.  node --test tools/sim/cn_hunt.test.mjs
+//  11/14 '동방과 일본은 전부 권고대로' — 쌓임은 몸 어디든 칼날 상처(전 판 몸통만 = torso 1) · 격살 판당 1 번은 공용 표(사람 · AI 같음).
+//  쌓임 조건(허리를 베는 세 칼 · 칼날 베기 · 상처 > 0 · 사람은 C12 · 공격 하나에 한 겹) · 상한 5 · 빠지지 않음 · 기력 회복 −8 %/겹 · 격살 빠르기 × (1 + 0.08 n) ·
+//  격살 판당 1 번 · 스위치 끔이면 겹 전 판 · AI 스위치 · 다른 유파 바이트 같음.  node --test tools/sim/cn_hunt.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT } from './harness_m.mjs';
-import { huntOn, huntHit, huntRegenK, huntShareK, huntUses, huntN } from '../../src/cn_hunt.js';
+import { huntOn, huntHit, huntRegenK, huntShareK, huntN } from '../../src/cn_hunt.js';
 import { recoverRate } from '../../src/stamina.js';
 import { Combat } from '../../src/combat.js';
 import { secretUsesOf, secretLeft, useSecret } from '../../src/secret.js';
@@ -23,42 +24,46 @@ const body = ({ tr = 'chinese', kit = kitAll(tr), tech = 'yaoji', id = 1 } = {})
 const C = Object.create(Combat.prototype); // huntWound · yaojiDeep 은 this 의 다른 칸을 안 씀
 const cut = (zone = 'abdomen', o = {}) => ({ type: 'cut', zone, severity: 0.4, ...o });
 
-test('기본값 — 켬 · 상한 5 · 기력 회복 −8 %/겹 · 격살 빠르기 +8 %/겹 · 사람 판당 1 번 · AI 스위치 끔 [사장님 11/14]', () => {
-  assert.deepEqual(UA.cnHunt, { on: 1, max: 5, regen: 0.08, share: 0.08, uses: 1, ai: 0 });
-  assert.deepEqual(UA.secretUses, { default: 1, chinese: 3 }); // 공용 표는 그대로 — 사람 동방만 cnHunt.uses 로 덮음(AI · 시뮬 몸은 ai 스위치)
+test('기본값 — 켬 · 상한 5 · 기력 회복 −8 %/겹 · 격살 빠르기 +8 %/겹 · 몸 어디든 · AI 스위치 끔 · 동방 판당 1 번(공용 표) [사장님 11/14]', () => {
+  assert.deepEqual(UA.cnHunt, { on: 1, max: 5, regen: 0.08, share: 0.08, torso: 0, ai: 0 });
+  assert.deepEqual(UA.secretUses, { default: 1, chinese: 1 }); // 11/14 '다른 비기처럼 1번으로' — 사람 · AI 같은 표 (전 chinese 3)
   assert.deepEqual(UA.yaojiBleed.techs, ['yaoji', 'chebuYaoji', 'lianchi']);
   assert.deepEqual(UA.yaojiBleed.zones, ['chest', 'abdomen', 'pelvis']);
 });
 
-test('칸 C12 맹호은림: 출혈 심화 C4 다음 · 심화 · 깊이 3 · 금화 400 · 몫 cnHunt 하나 · 오의 출처 본국검', () => {
+test('칸 C12 맹호은림: 출혈 심화 C4 다음 · 심화 · 깊이 3 · 금화 400 · 몫 cnHunt 하나 · 오의 간수세(호준)', () => {
   const n = nodeOf('chinese', 'C12');
   assert.deepEqual([n.name, n.cat, [...n.pre], n.d, n.cx, n.price, n.heads, [...n.f]], ['맹호은림', 'deep', ['C4'], 3, 130, 400, 0, ['cnHunt']]);
   assert.ok(KIT_KEYS.includes('cnHunt'));
   assert.equal(kitAll().cnHunt, true);
   assert.equal(kitNo12().cnHunt, false);
-  assert.match(n.src, /본국검 — 맹호은림세/);
+  assert.match(n.src, /권2 예도 — 간수세/); // 11/14 '전부 권고대로' — 간수세(호준) [원문] (전 본국검 맹호은림세 [풀이])
+  assert.equal(n.lore, '병기를 지켜 살펴 나아가지 못하게 하고, 기미를 보아 형세를 따라 굴려 죽인다');
   assert.ok(!/[0-9]/.test(n.eff) && !n.eff.includes(' · '), '효과 글: 숫자 · 꼬리 없음');
 });
 
-test('쌓임 조건: 허리를 베는 세 칼 · 칼날 베기 · 몸통 셋 · 상처 > 0 · 출혈 심화(C4) · 맹호은림(C12) — 하나라도 빠지면 없음', () => {
+test('쌓임 조건: 허리를 베는 세 칼 · 칼날 베기 · 몸 어디든 · 상처 > 0 · 맹호은림(C12) — 하나라도 빠지면 없음 · torso 1(전 판)이면 몸통 · C4 만', () => {
+  const none = (att, r) => { const v = {}; C.huntWound(att, v, r); return huntN(v); };
   try {
-    for (const tech of ['yaoji', 'chebuYaoji', 'lianchi']) for (const zone of ['chest', 'abdomen', 'pelvis']) {
+    for (const tech of ['yaoji', 'chebuYaoji', 'lianchi']) for (const zone of ['chest', 'abdomen', 'pelvis', 'arm', 'head', 'neck', 'leg']) {
       const v = {};
       C.huntWound(body({ tech }), v, cut(zone));
       assert.equal(huntN(v), 1, `${tech} ${zone}`);
     }
-    const none = (att, r) => { const v = {}; C.huntWound(att, v, r); return huntN(v); };
-    assert.equal(none(body(), cut('arm')), 0, '팔');
-    assert.equal(none(body(), cut('head')), 0, '머리');
-    assert.equal(none(body(), cut('leg')), 0, '다리');
+    UA.cnHunt.torso = 1; // 전 판 (11/14 첫 판 — 출혈 × k 가 붙는 몸통 맞음만)
+    for (const zone of ['chest', 'abdomen', 'pelvis']) assert.equal(none(body(), cut(zone)), 1, `torso 1 ${zone}`);
+    assert.equal(none(body(), cut('arm')), 0, 'torso 1 팔');
+    assert.equal(none(body(), cut('head')), 0, 'torso 1 머리');
+    assert.equal(none(body(), cut('leg')), 0, 'torso 1 다리');
+    const ids = allNodeIds('chinese');
+    ids.delete('C4');
+    assert.equal(none(body({ kit: kitFromNodes('chinese', ids) }), cut()), 0, 'torso 1 · C4 안 익힘 (출혈 × k 가 안 붙음)');
+    UA.cnHunt.torso = 0;
     assert.equal(none(body(), cut('abdomen', { type: 'stab' })), 0, '찌르기');
     assert.equal(none(body(), cut('abdomen', { type: 'blunt' })), 0, '둔타');
     assert.equal(none(body(), cut('abdomen', { severity: 0 })), 0, '상처 없음');
     for (const tech of ['zwerch', 'zwerchL', 'schielhau', 'gyeoksal', null]) assert.equal(none(body({ tech }), cut()), 0, String(tech));
     assert.equal(none(body({ kit: kitNo12() }), cut()), 0, 'C12 안 익힘');
-    const ids = allNodeIds('chinese');
-    ids.delete('C4');
-    assert.equal(none(body({ kit: kitFromNodes('chinese', ids) }), cut()), 0, 'C4 안 익힘 (출혈 × k 가 안 붙음)');
     assert.equal(none(body({ tr: 'german' }), cut()), 0, '동방 무기가 아님');
     assert.equal(huntHit(body(), null), false);
     const self = body();
@@ -138,21 +143,24 @@ test('격살 칼끝 빠르기 × (1 + 0.08 n) — 겨눈 상대의 겹 · 0.7 ×
   assert.equal(huntShareK({ swordArt: { tradition: 'chinese' }, skillKit: kitAll(), foe: { cnHunt: { n: 5 } } }), 1.4);
 });
 
-test('격살 판당 1 번: 사람 동방(스킬트리가 있는 몸 — C12 와 상관없이) 1 · AI · 시뮬 몸은 공용 표 3 · AI 스위치면 1 · 다른 유파 1 그대로', () => {
+test('격살 판당 1 번 (공용 표 — 사람 · AI 같음 · C12 · 사냥 스위치와 상관없이) · 다른 유파 1 그대로 · 전 판 표(chinese 3) · 끝없음 판', () => {
+  const U0 = UA.secretUses;
   try {
-    assert.equal(secretUsesOf(body()), 1);
+    assert.equal(secretUsesOf(body()), 1, '사람');
     assert.equal(secretUsesOf(body({ kit: kitNo12() })), 1, 'C12 와 상관없이');
-    assert.equal(secretUsesOf(body({ kit: null })), 3, 'AI · 시뮬 몸');
+    assert.equal(secretUsesOf(body({ kit: null })), 1, 'AI · 시뮬 몸');
+    UA.cnHunt.on = 0;
+    assert.equal(secretUsesOf(body()), 1, '사냥 끔이어도');
+    reset();
     for (const tr of ['german', 'italian', 'iberian', 'japanese']) assert.equal(secretUsesOf(body({ tr })), 1, tr);
     const P = body();
     useSecret(P);
     assert.equal(secretLeft(P), 0, '한 번 쓰면 끝');
-    UA.cnHunt.ai = 1;
-    assert.equal(secretUsesOf(body({ kit: null })), 1, 'AI 스위치');
-    assert.equal(huntUses(body({ tr: 'german', kit: null })), null);
+    UA.secretUses = { default: 1, chinese: 3 }; // 전 판 (`?secretUses=1,chinese:3`)
+    assert.equal(secretUsesOf(body()), 3);
     UA.secretUses = null; // 끝없음 판은 그대로 끝없음
     assert.equal(secretUsesOf(body()), Infinity);
-  } finally { reset(); UA.secretUses = { default: 1, chinese: 3 }; }
+  } finally { reset(); UA.secretUses = U0; }
 });
 
 test('AI 스위치: 끔(기본)이면 스킬트리 없는 몸(AI · 시뮬)은 안 쌓음 · 켜면 쌓음', () => {
@@ -169,7 +177,7 @@ test('AI 스위치: 끔(기본)이면 스킬트리 없는 몸(AI · 시뮬)은 �
   } finally { reset(); }
 });
 
-test('스위치 끔(on 0 — `?cnHunt=0`)이면 전 판: 안 쌓음 · 회복 · 빠르기 · 판당 수(3) 그대로', () => {
+test('스위치 끔(on 0 — `?cnHunt=0`)이면 겹 전 판: 안 쌓음 · 회복 · 빠르기 그대로', () => {
   try {
     UA.cnHunt.on = 0;
     const v = {};
@@ -177,7 +185,6 @@ test('스위치 끔(on 0 — `?cnHunt=0`)이면 전 판: 안 쌓음 · 회복 ·
     assert.equal(huntN(v), 0);
     assert.equal(huntRegenK({ cnHunt: { n: 5 } }), 1);
     assert.equal(huntShareK({ swordArt: { tradition: 'chinese' }, skillKit: kitAll(), foe: { cnHunt: { n: 5 } } }), 1);
-    assert.equal(secretUsesOf(body()), 3);
   } finally { reset(); }
 });
 

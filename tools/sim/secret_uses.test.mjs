@@ -11,10 +11,10 @@ import { CHARACTERS_BY_ID } from '../../src/characters.js';
 const UA = CONFIG.UNIQUE_ASSIST;
 const { SECRET } = CONFIG;
 
-test('기본값 — 판당 1 번 · 동방 3 번 · 비기 식힘 칸(secretCooldown)은 없음', () => {
-  assert.deepEqual(UA.secretUses, { default: 1, chinese: 3 });
+test('기본값 — 판당 1 번 · 동방도 1 번(11/14 — 전 3) · 비기 식힘 칸(secretCooldown)은 없음', () => {
+  assert.deepEqual(UA.secretUses, { default: 1, chinese: 1 }); // 사장님 11/14 '격살이 세지는 만큼 3번 제한을 다른 비기처럼 1번으로 바꾸자' · '동방과 일본은 전부 권고대로' (전 { default: 1, chinese: 3 } — 10/29 19:5x)
   assert.equal('secretCooldown' in UA, false);
-  for (const [tr, n] of [['german', 1], ['italian', 1], ['iberian', 1], ['japanese', 1], ['chinese', 3]]) assert.equal(secretUsesOf({ swordArt: { tradition: tr } }), n, tr);
+  for (const [tr, n] of [['german', 1], ['italian', 1], ['iberian', 1], ['japanese', 1], ['chinese', 1]]) assert.equal(secretUsesOf({ swordArt: { tradition: tr } }), n, tr);
 });
 
 /** 몸 하나 + 비기 창 (판 시작 정지는 지난 것으로) */
@@ -112,7 +112,10 @@ test('일본 고노센 · 이베리아 싱지르: 한 번 쓴 판엔 준비 · �
   }
 });
 
-test('동방 격살 3 번: 두 번 쓴 뒤에도 조건을 보고(바쁨 아님) · 세 번째 뒤엔 바쁨', () => {
+// 11/14 옛 장면 시험 — 그때 판으로 묶음(secretUses.chinese 3 · 기준은 안 고침): 동방 판당 수는 11/14 사장님 결정으로 1 (판당 1 번 길은 위 독일 · 일본 시험과 같은 길 · tools/sim/cn_hunt.test.mjs)
+test('동방 격살 3 번 (옛 판 · secretUses.chinese 3): 두 번 쓴 뒤에도 조건을 보고(바쁨 아님) · 세 번째 뒤엔 바쁨', () => {
+  const U0 = UA.secretUses;
+  UA.secretUses = { ...U0, chinese: 3 };
   const B = body('qinggang');
   const { P, W, upd } = B;
   try {
@@ -130,6 +133,7 @@ test('동방 격살 3 번: 두 번 쓴 뒤에도 조건을 보고(바쁨 아님)
     assert.equal(secretLeft(P), 0);
   } finally {
     B.free();
+    UA.secretUses = U0;
   }
 });
 

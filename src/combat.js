@@ -985,7 +985,7 @@ export class Combat {
       if (r.schoolK) att.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (켄타이는 여기서 씀 — school_passive.js)
       if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
       // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈
-      if (r.severity > 0) { const tn = strokeTechOf(att); const yb = this.yaojiDeep(att, r, tn); if ((tn === 'imbroccata' && r.type === 'stab' && !perkOff(att, tn)) || yb) artFlash(att, this.dt); if (yb) huntHit(att, vic); } // 11/14 동방 맹호은림: 출혈 × k 가 붙는 같은 맞음에 사냥 한 겹 (cn_hunt.js — 쌓는 몸만 · 공격 하나에 한 겹)
+      if (r.severity > 0) { const tn = strokeTechOf(att); const yb = this.yaojiDeep(att, r, tn); if ((tn === 'imbroccata' && r.type === 'stab' && !perkOff(att, tn)) || yb) artFlash(att, this.dt); this.huntWound(att, vic, r, tn, yb); } // 11/14 동방 맹호은림: 허리를 베는 세 칼의 칼날 상처(몸 어디든)에 사냥 한 겹 (cn_hunt.js — 쌓는 몸만 · 공격 하나에 한 겹)
     }
     if (att.weapon?.kneelHit) this.whipKneelCheck(att, vic, pr.v.part); // 채찍 무릎 꿇리기 (10/23 — 한 획에 한 번 · 아래)
     this.koteCheck(att, vic, pr.v.part, r); // 손목 치기 칼 떨구기 (J8 — 아래팔에 판정이 난 맞음: 10/24 12:3x 판정 완화 · 'cut' 판은 칼날 베기 · 심각도 > 0 만)
@@ -1026,9 +1026,14 @@ export class Combat {
     return yaojiBleedTech(tn) && r.type === 'cut' && !!UA.yaojiBleed?.zones.includes(r.zone) && !perkOff(att, 'yaoji');
   }
 
-  /** 11/14 동방 맹호은림: 운동학으로 끄는 칼(secret_instant.js — 날개 접기 등)이 낸 상처도 strike 와 같은 조건으로 사냥 한 겹 (cn_hunt.js huntHit — 쌓는 몸만) */
-  huntWound(att, vic, r) {
-    if (r?.severity > 0 && this.yaojiDeep(att, r)) huntHit(att, vic);
+  /**
+   * 11/14 동방 맹호은림 사냥 겹 (cn_hunt.js huntHit — 쌓는 몸만 · 공격 하나에 한 겹): 허리를 베는 세 칼(yaojiBleed.techs)의 칼날 베기 상처(심각도 > 0) — 몸 어디든
+   *  (사장님 11/14 '동방과 일본은 전부 권고대로' · 전 판 cnHunt.torso 1 = 출혈 × k 가 붙는 몸통 맞음만). strike 와 운동학으로 끄는 칼(secret_instant.js — 날개 접기 등)이 같이 부름
+   */
+  huntWound(att, vic, r, tn = strokeTechOf(att), deep = null) {
+    if (!(r?.severity > 0) || r.type !== 'cut' || !yaojiBleedTech(tn)) return;
+    if (UA.cnHunt?.torso && !(deep ?? this.yaojiDeep(att, r, tn))) return;
+    huntHit(att, vic);
   }
 
   buckleCheck(att, vic, part) {
