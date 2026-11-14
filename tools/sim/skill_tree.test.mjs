@@ -43,7 +43,7 @@ test('설계 자료(data.mjs)와 같다: 유파마다 11 칸(동방 12 — 11/14
   assert.deepEqual(D.TREE_SCHOOLS, DESIGN.map((s) => s.id));
   for (const s of DESIGN) {
     const mine = D.nodesOf(s.id);
-    assert.equal(mine.length, s.id === 'chinese' ? 12 : 11, s.id); // 11/14 사장님 '이름와 위치는 좋음' — 동방 새 칸 C12 (설계 data.mjs 에도 더함 · 다른 유파 11 그대로)
+    assert.equal(mine.length, s.id === 'japanese' || s.id === 'chinese' ? 12 : 11, s.id); // [사장님 11/14 결정] '일본은 바위 몸 확정해' · '전부 권고대로' — 일본 새 칸 J12 · 동방 새 칸 C12 맹호은림('이름와 위치는 좋음') (설계 자료 data.mjs 에도 더함 · 다른 유파 11 그대로)
     assert.equal(mine.length, s.nodes.length, `${s.id} 설계 칸 수`);
     for (const d of s.nodes) {
       const n = D.nodeOf(s.id, d.id);
@@ -826,7 +826,7 @@ test('칸 오의(lore · src — 사장님 10/22 00:5x 원전의 오의를 밝�
     if (x.letter) assert.equal(x.src, undefined, `${x.id} 편지 칸은 출처 없음`);
     else assert.ok(typeof x.src === 'string' && x.src.trim().length > 0, `${x.id} src`);
   }
-  assert.equal(n, 56); // 11/14 동방 C12 맹호은림 (전 55)
+  assert.equal(n, 57); // 11/14 일본 J12 바위 몸 · 동방 C12 맹호은림 (전 55)
 });
 
 test('10/23 비기 이름 = 원어 독음 (동방은 한자 한국식 독음) · 스킬 화면 제목은 원어를 괄호로 함께', async () => {

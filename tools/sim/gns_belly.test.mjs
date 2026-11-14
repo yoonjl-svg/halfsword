@@ -11,6 +11,7 @@ import { CONFIG } from './harness_m.mjs';
 import { fightOne } from './school_balance.mjs';
 import { standShot, guardsOf, bellyProbe } from './gns_belly.mjs';
 import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
+import { withJpOld } from './jp_tank_pin.mjs'; // 11/14 일본 스택 · 바위 몸 — 옛 장면은 잰 때 판으로 (docs/strike/jp_tank_2026-11-14.md §5)
 
 const { SECRET } = CONFIG;
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
@@ -77,7 +78,7 @@ test('켬이어도 AI 발도(웅크린 대기에서 req.player 아님) · 웅크
   assert.equal(strip(d), strip(c), '웅크림 판 사람 그대로');
 });
 
-test('싸움 꽂개는 읽기만 · 씨앗 6 고노센 — 끔 팔 · 켬 배', () => withArmOld(() => {
+test('싸움 꽂개는 읽기만 · 씨앗 6 고노센 — 끔 팔 · 켬 배', () => withJpOld(() => withArmOld(() => {
   // 씨앗 6 판은 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 이 씨앗이 14 s 안에 고노센을 안 냄 (기록 arm_real §10)
   const o = { school: 'japanese', weapon: 'uchigatana', opp: 'longsword', seed: 6, dur: 14 };
   const a = withCfg({ iaiBelly: 0, iaiReal: 0 }, () => fightOne(o));
@@ -87,4 +88,4 @@ test('싸움 꽂개는 읽기만 · 씨앗 6 고노센 — 끔 팔 · 켬 배', 
   assert.equal(b.probe.gns[0].first, 'arm', `끔 — ${b.probe.gns[0].first}`);
   const c = withCfg({ iaiBelly: 1, iaiReal: 0 }, () => fightOne({ ...o, probe: bellyProbe() }));
   assert.equal(c.probe.gns[0].first, 'abdomen', `켬 — ${c.probe.gns[0].first}`);
-}, ['armClear']));
+}, ['armClear']))); // 11/14 그때 판 (스택 · 바위 몸 전)

@@ -54,6 +54,7 @@ export const SCHOOLS = [
     { id: 'J3', cat: 'parry', name: '막기 II', sub: '흘려 받기', eff: '흘리면 상대 팔 늦춤 · 기력 −40', pre: ['J2'], price: 300, st: 'split', d: 2, cx: 650 },
     { id: 'J10', cat: 'passive', name: '패시브', sub: '켄타이', eff: '기다림과 침 (켄타이) — 공격 없이 기다린 만큼 다음 칼이 세다 (2초에 +30% — 10/25 23:1x · 전 1.5초) · 빗나가면 츠바메가에시로 이어짐 · 비기엔 안 실림', pre: ['J9'], price: 0, heads: 10, st: 'new', d: 3, cx: 200 },
     { id: 'J4', cat: 'parry', name: '막기 III', sub: '흘린 칼', eff: '흘린 공격의 피해 80% 감소', pre: ['J3'], price: 400, st: 'split', d: 3, cx: 650 },
+    { id: 'J12', cat: 'deep', name: '심화', sub: '바위 몸', eff: '바위 몸 (이와오노미 · 巌の身) — 밀치기에 기력 안 씀 · 기다림과 침 스택당 받는 피해 −4 % (11/14 사장님 \'일본은 바위 몸 확정해 … 기다림과 침 다음으로\' · \'전부 권고대로\' — 자리 · 금화 감독 안 그대로 · 유파 호칭에 듦 · docs/strike/jp_tank_2026-11-14.md)', pre: ['J10'], price: 400, st: 'new', d: 4, cx: 200 },
     { id: 'J5', cat: 'secret', name: '비기', sub: '뒤에서 앞서기', eff: '상대가 치려 할 때 먼저 벤다 (고노센)', pre: ['J4'], price: 400, heads: 20, st: 'now', d: 4, cx: 650 },
   ] },
   { id: 'chinese', ko: '동방', title: '동방 — 부채꼴', shape: '가벼운 발에서 공격(요격)과 막기(세 자세) 두 갈래가 활짝 펴지고, 둘이 비기 연환에서 만난다.', nodes: [
