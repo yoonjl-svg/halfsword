@@ -2368,6 +2368,43 @@ export const AI_PLAN_JP = {
   lureT: realS(3.0),
 };
 
+// 짧은 칼 파고들기 시제품 (11/14 사장님 '짧은 무기 파고들기는 동방이 내 기대치보다 약한 면과도 연결되어 중요해. 방안을 마련해보고 정 안되면 앞 박차기를 모든 캐릭터에 공통으로 주거나,
+//  기력 n이상이면 빠르게 뛸 수 있게 하거나?' · src/dig_proto.js · 기록 docs/strike/ai_dig_2026-11-14.md) — 끄면 굴림 · 셈 · 관문 바이트 그대로.
+//  ── A. AI 판단 (파고들기 판 몸만 — 내 칼이 상대 칼보다 AI_PLAN.digShort 넘게 짧음 · ai.js this.dig) — [사장님 11/14 결정 'A안 켜고'] 기본 켬 · `?digAi=0` = 옛 판
+//  ── B · C 는 기본 끔 그대로 (사장님 11/14 — A 만 켬)
+//  holdM      A1 상대 칼끝 바로 밖에 섬 — 간 보는 여유 상한 (0 → 상대 칼끝 어림 + 최소 여유 0.08) [사장님 확인 전]
+//  crossT     A2 상대가 헛친 틈은 건널 수 있는 거리에서만 노림 — 칠 거리 + crossT × 앞 걷는 빠르기 안 · 그 공격은 스틱 끝으로 건넘 (시간 사다리 0.6 s) [사장님 확인 전]
+//  stepIn     A3 걸음이 실린 기술(기술 걸음 'strike' — 체보요격 · 비껴 딛는 가로베기 …)은 그 앞 걸음 몫 × stepIn 만큼 일찍(칼끝 밖에서) 냄 · 그런 기술을 (1 + 띠 기울기) 배 더 고름 [사장님 확인 전]
+//  keep       A4 붙은 뒤(맞힘 · 막힘) 이어 칠 몫 + (1 − 몫) × keep × 띠 기울기 — 들어간 거리를 지킴 [사장님 확인 전]
+//  wall · wallNeed  A5 상대 등이 울타리 가까이(가운데에서 반지름 wall m — 울타리 몰림 4.6 − 걸음 사다리 0.6)거나 상대가 지쳤으면 공격 문턱 − wallNeed × 띠 기울기 (물러섬 끝을 노림) [사장님 확인 전]
+//  ── B. 앞 박차기 모두에게 (사람 · AI 같게) `?digStep=1`
+//  stepN      박찬 앞 걸음 수 — 독일 파고들기(G2 · GAIT.digSteps 2)를 안 받는 몸 · 독일은 두 걸음 그대로 (서 있다가 스틱을 앞으로 세게 — 뒤 박차기 · 파고들기와 같은 조건 · 기력 pushCost 12) [사장님 확인 전]
+//  dashGap · dashWait  AI: 칠 거리까지 dashGap(걸음 사다리 0.45 m) 넘게 남은 다가감이면 첫 걸음을 박참 · 사람과 같은 '서 있음'이 아니면 dashWait(시간 사다리 0.2 s) 동안 발을 멈춰 섰다 박참 [사장님 확인 전]
+//  ── C. 기력 문턱 위에서 달림 (사람 · AI 같게) `?digRun=1`
+//  runAt · runStick  기력이 runAt 이상이고 스틱 앞 몫이 runStick 넘으면 달림 [기력 50 = 막대의 반 — 사장님 확인 전]
+//  runV       달리는 앞 빠르기 목표 (m/s — 박차기 digV · burstBackV 와 같은 절대 목표) [사장님 확인 전]
+//  runCost    달린 거리의 걸음 기력 × runCost (뒷걸음 backStepCostMul 1.5 와 같은 꼴) [사장님 확인 전]
+//  runGap     AI: 칠 거리까지 이만큼 넘게 남은 다가감이면 달려 건넘 (걸음 사다리 0.3 m) [사장님 확인 전]
+export const DIG_PROTO = {
+  ai: 1, // [사장님 11/14 결정 'A안 켜고' — 전 0]
+  holdM: 0,
+  crossT: realS(0.6),
+  stepIn: 1,
+  keep: 0.5,
+  wall: 4.0,
+  wallNeed: 0.45,
+  step: 0,
+  stepN: 1,
+  dashGap: 0.45,
+  dashWait: realS(0.2),
+  run: 0,
+  runAt: 50,
+  runStick: 0.9,
+  runV: 2.5,
+  runCost: 1.5,
+  runGap: 0.3,
+};
+
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)
 //  ai.js 는 인물 표식 persona.terrainSense === 'wetland' 이고 그 몸이 진흙 감속을 받는 무대(fighter.movementSurface === 'wetland' — 잠든 습지)일 때만 이 묶음을 읽는다.
 //  둘 중 하나라도 아니면 옛 길을 바이트 그대로 지난다. 판단 근거는 물리와 같은 젖음 지도(wetland_ground.js wetlandWetness — 그림의 디딤돌이 아니다).
