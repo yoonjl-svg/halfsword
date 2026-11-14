@@ -394,7 +394,7 @@ export class Combat {
         //  일본 · 이베리아도 같은 칸으로 × (1 − 0.2) (사장님 10/18 22:1x — SKILL.jpParryDmgCut · ibParryDmgCut)
         if (vic.parryGuard?.woundKeep) severity *= vic.parryGuard.woundKeep();
         else if (SKILL.aiParryCut && vic.aiCtl) severity *= aiWoundKeep(vic); // AI 몸도 사람과 같게 (11/15 시제품 — 기본 끔 · src/ai_block_cut.js)
-        if (CN_STEP.mode) severity *= cnStepKeep(vic); // 동방 보법 회피 편섬 (11/15 시제품 — 박찬 한 걸음 · 줄임 시간 안이면 스침)
+        if (CN_STEP.mode) severity *= cnStepKeep(vic); // 동방 편섬 (11/15 사장님 '0.4초 50% 감소 (칼날 피해에 찌르기도 포함 맞지?)' — 베기 · 찌르기 둘 다 · 둔기 빼고): 꺾은 때부터 줄임 시간 안이면 × (1 − cut)
       } else {
         const armorBlocks = finish && (plate || helmet) && !att.weaponCfg.ignoreArmor && !att.weaponCfg.ignoreArmorDamage;
         if (armorBlocks) finish = false; // 판금·투구가 내려찍기를 막았다 (사장님 10/1 C): 즉사 없음, 칼은 물리로 튕긴다.

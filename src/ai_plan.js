@@ -95,17 +95,18 @@ export const SCHOOL_PLAN = Object.freeze({
   }),
   japanese: JP_PLAN, // 2 단계 (11/14) — src/ai_plan_jp.js (still · block · stack · link · lure)
   german: DE_PLAN, // 3 단계 (11/14) — src/ai_plan_de.js (edge · dig · push · stick · back · lure · stam)
-  // 동방 (2 단계 — 사장님 11/14 '사냥감을 말려 죽이는 고양이과 맹수' · 설계 §3-4 · 칸 뜻 · 셈은 src/ai_plan_cn.js · 값 config AI_PLAN.cn): close 가까운 간격 · circle 많이 돎 · waist 허리 베기 계열 · wear 겹이 쌓이면 몰아치기를 줄이고 돌며 지치게 · meet 나서며 받아 격살 · lure 유도(겹을 쌓은 뒤 간격 끝에서 끌어냄)
+  // 동방 (2 단계 — 사장님 11/14 '사냥감을 말려 죽이는 고양이과 맹수' · 설계 §3-4 · 칸 뜻 · 셈은 src/ai_plan_cn.js · 값 config AI_PLAN.cn): close 가까운 간격 · circle 많이 돎 · waist 허리 베기 계열 · wear 겹이 쌓이면 몰아치기를 줄이고 돌며 지치게 · meet 나서며 받아 격살 · lure 유도(겹을 쌓은 뒤 간격 끝에서 끌어냄) ·
+  //  dive 偏閃奏進 (11/15 사장님 '동방 유파 설계에 이것도 감안한 전투 스타일과 뛰어들기가 나오도록 해' — 상대 칼을 보면 걸음을 꺾어 비키고 곧장 뛰어들어 벰 · 값 config AI_PLAN.cn.dive · 편섬 꺾음 CN_STEP.mode 'turn' 일 때만)
   chinese: Object.freeze({
     nameKo: '고양이과 맹수',
     lureAt: 4,
-    probe: Object.freeze({ close: 1, circle: 1, waist: 1, wear: 1, meet: 1, lure: 1 }),
-    contest: Object.freeze({ close: 1, circle: 1, waist: 1, wear: 1, meet: 1, lure: 1 }),
-    commit: Object.freeze({ close: 0, circle: 0, waist: 1, wear: 0, meet: 1, lure: 0 }),
-    ahead: Object.freeze({ close: 0, circle: 1, waist: 1, wear: 1, meet: 1, lure: 1 }), // 상대가 더 흘림 — 돌며 기다리는 쪽 · 받는 쪽
-    finish: Object.freeze({ close: 1, circle: 0, waist: 1, wear: 0, meet: 1, lure: 1 }), // 지친 · 무너진 상대 — 지치게 하기를 멈추고 칠 때 나서며 받음
-    behind: Object.freeze({ close: 0, circle: 1, waist: 1, wear: 1, meet: 1, lure: 1 }), // 맞바꾸기 싫음 — 날개 접기(물러나다 거두어 허리) · 간격 끝에서 받는 쪽
-    tired: Object.freeze({ close: 0, circle: 1, waist: 0, wear: 0, meet: 1, lure: 0 }), // 휘두름을 덜하고 도는 쪽
+    probe: Object.freeze({ close: 1, circle: 1, waist: 1, wear: 1, meet: 1, lure: 1, dive: 1 }),
+    contest: Object.freeze({ close: 1, circle: 1, waist: 1, wear: 1, meet: 1, lure: 1, dive: 1 }),
+    commit: Object.freeze({ close: 0, circle: 0, waist: 1, wear: 0, meet: 1, lure: 0, dive: 1 }),
+    ahead: Object.freeze({ close: 0, circle: 1, waist: 1, wear: 1, meet: 1, lure: 1, dive: 1 }), // 상대가 더 흘림 — 돌며 기다리는 쪽 · 받는 쪽
+    finish: Object.freeze({ close: 1, circle: 0, waist: 1, wear: 0, meet: 1, lure: 1, dive: 1 }), // 지친 · 무너진 상대 — 지치게 하기를 멈추고 칠 때 나서며 받음
+    behind: Object.freeze({ close: 0, circle: 1, waist: 1, wear: 1, meet: 1, lure: 1, dive: 1 }), // 맞바꾸기 싫음 — 날개 접기(물러나다 거두어 허리) · 간격 끝에서 받는 쪽
+    tired: Object.freeze({ close: 0, circle: 1, waist: 0, wear: 0, meet: 1, lure: 0, dive: 0 }), // 휘두름을 덜하고 도는 쪽 (뛰어들기도 안 함 — 박찰 기력이 모자람)
   }),
 });
 

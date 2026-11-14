@@ -13,9 +13,14 @@
 //  무 · 낮음 '행운에 기대는 전투'(무모 · 무계획) · 띠별 기력(planRestAt) · 거리 오차는 공통 틀(ai.js · ai_plan.js)이 그대로 맡는다 — 여기는 그 위 동방 몫:
 //   무계획 = 겹 · 유도 · 격살 때를 셈하지 않음(기울기가 작음) · 무모 = 고노센 경계 선을 넘는 쪽(11/14 합치며 공통 틀 하나로 — ai.js gnsWatch W.reck · 이 파일엔 없음).
 //  수 읽기의 동방 몫(본 것만 — 늦게 본 위협 줄): 가운데부터 버릇(최근 6.0 s 상대 공격 — 안 치는 상대면 기다리지 않고 허리 견제) · 높음 되풀이(같은 줄 두 번 10.0 s 안 — 그 줄을 나서며 받을 준비).
+//  偏閃奏進 (11/15 사장님 '동방 유파 설계에 이것도 감안한 전투 스타일과 뛰어들기가 나오도록 해' — 편섬 꺾음 CN_STEP.mode 'turn' 일 때만 · cnDive · cnDiveTick):
+//   상대 칼을 보면(respond — 늦게 본 위협 하나에 한 번) 굴려 → 칼이 오는 반대쪽 옆으로 걸음을 꺾음(aiT — 걷던 중이면 꺾음 줄임이 걸림 · 손은 막는 자리) →
+//   곧장 앞 박찬 걸음(걸음 장치 파고들기 한 걸음 · 기력 12)으로 뛰어들어 허리 베기(체보요격 — 끌어 딛는 걸음 0.3 · 식는 중이면 요격). 격살 마음이 난 위협은 옛 길(나서며 받기).
+//   몫 = 띠 기울기 × 칸 dive × AI_PLAN.cn.dive + 굴림 몫 × 동전 — 무 · 낮음은 운에 기대 아무 때나 · 숙련 5 는 늘(칸 1 이면).
 //  연산: 스텝마다 새 객체 · 배열 없음(기억은 길이 4 고리) · 굴림은 유도(간 보기 · 물러남 한 번) · 위협 하나 · 기술 고르기 · 속임 고르기에만.
 // ─────────────────────────────────────────────────────────────
-import { AI_PLAN, UNIQUE_ASSIST as UA, SECRET, realS } from './config.js';
+import { AI_PLAN, UNIQUE_ASSIST as UA, SECRET, CN_STEP, STAMINA, realS } from './config.js';
+import { cnStepOn, awaySide } from './cn_step.js'; // 편섬 꺾음 (11/15 — 偏閃奏進 뛰어들기)
 import { huntN } from './cn_hunt.js';
 import { secretSpent } from './secret.js';
 import { bandOf, axesOf } from './ai_plan.js';
@@ -45,7 +50,7 @@ export function cnInit(ai) {
     quiet: false, // 안 치는 상대 (버릇)
     rep: null, // 되풀이 줄 (높음)
     repT: 0,
-    st: (ai.stats.cn = { lure: 0, lureDraw: 0, meet: 0, rep: 0, wearT: 0, quietT: 0, lianchi: 0, wantRoll: 0, want: 0 }),
+    st: (ai.stats.cn = { lure: 0, lureDraw: 0, meet: 0, rep: 0, wearT: 0, quietT: 0, lianchi: 0, wantRoll: 0, want: 0, diveRoll: 0, dive: 0, diveGo: 0 }),
   };
 }
 
@@ -202,4 +207,51 @@ export function cnWant(ai, th) {
     if (S.want) S.st.want++;
   }
   return S.want;
+}
+
+/** 뛰어들 칼 — 체보요격(掣步 — 끌어 딛는 걸음 0.3 · 걸음 사다리) · 식는 중이면 요격 */
+const DIVE_TECHS = ['chebuYaoji', 'yaoji'];
+function diveTech(ai) {
+  for (const n of DIVE_TECHS) {
+    const t = ai.techNow(ai.school.techByName[n]);
+    if (t) return t;
+  }
+  return null;
+}
+
+/**
+ * 偏閃奏進 굴림 (ai.js respond — 맞받아 베기를 안 낸 뒤 · 위협 하나에 한 번): 뛰어들면 { t, side } (respond 가 막기 꼴로 두고 ai.cnDive 에) · 아니면 null.
+ *  편섬 꺾음('turn')이 켜진 동방 몸 · 칼을 쥐고 서 있음 · 기력이 박차기 값(12) 이상 · 쉬는 중 아님 · 뛰어들 칼이 있음 (거리는 안 봄 — 동방은 가까운 간격에서 받는 칼이 많음).
+ *  격살 마음이 난 위협(cnWant)은 나서며 받기 쪽(옛 길)으로 둠. 꺾을 쪽 = 칼이 오는 반대쪽 옆 — 지금 걷는 방향과 45° 안이면(꺾음이 안 됨) 반대쪽
+ */
+export function cnDive(ai, th, d) {
+  const C = ai.planC;
+  if (CN_STEP.mode !== 'turn' || !C?.dive || !CN().dive) return null;
+  const me = ai.me;
+  if (!cnStepOn(me) || !me.armed || me.state !== 'stand' || me.stamina?.exhausted || ai.staminaRest || (me.stamina?.value ?? 0) < STAMINA.pushCost || !diveTech(ai)) return null;
+  if (gkLeft(ai) && cnWant(ai, th)) return null;
+  const S = ai.planCn;
+  S.st.diveRoll++;
+  if (!(Math.random() < Math.min(1, ai.planK * C.dive * CN().dive + (ai.planLuck ?? 0) * AI_PLAN.coin))) return null;
+  S.st.dive++;
+  let side = awaySide(th, ai.pers?.circleDir || 1);
+  const mv = me.move;
+  const m = Math.hypot(mv.x, mv.y);
+  if (m > 1e-6 && (mv.x * side) / m > Math.cos(CN_STEP.turn)) side = -side;
+  return { t: 0, side };
+}
+
+/** 偏閃奏進 다음 (ai.js defend 맨 앞 — 막기 꼴인 동안): 꺾는 시간(aiT)이 지나면 곧장 앞 박찬 걸음 + 허리 베기. 냈으면 true (못 내면 막기 · 물러나 피하기 그대로) */
+export function cnDiveTick(ai, dt) {
+  const D = ai.cnDive;
+  D.t += dt;
+  if (D.t < CN_STEP.aiT) return false;
+  ai.cnDive = null;
+  const me = ai.me;
+  if (me.state !== 'stand' || !ai.foe.alive) return false;
+  if (!ai.startAttack(diveTech(ai), 'dive', { noFeint: true, fastChamber: true })) return false;
+  const g = me.gait;
+  if (g?.active && !g.burst && !g.burstBrake && !(g.fastK > 1) && !me.feetHeld && !(me.finish?.amt > 0.5)) g.burst = { fore: 1, side: 0, lat: 0, foreOnly: false, dig: 1, ai: 2 }; // 앞 박찬 걸음 한 번 (파고들기 장치 — 꺾던 옆 걸음이 둘까지 지나가도 남김)
+  ai.planCn.st.diveGo++;
+  return true;
 }

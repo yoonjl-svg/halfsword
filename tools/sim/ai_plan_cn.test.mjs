@@ -67,7 +67,7 @@ test('동방 플랜 열림 — 숙련도(무 = 없음) · 스위치 · 거리 �
   assert.deepEqual([0, 1, 2, 3, 4, 5, 6].map((p) => +distErrWidth(p, 'chinese').toFixed(4)), [0.3, 0.24, 0.18, 0.12, 0.06, 0, 0], '0.3 m × (1 − 숙련도 ÷ 5) · 높음 0');
   const P = SCHOOL_PLAN.chinese;
   for (const ph of PHASES) {
-    assert.deepEqual(Object.keys(P[ph]).sort(), ['circle', 'close', 'lure', 'meet', 'waist', 'wear'], ph);
+    assert.deepEqual(Object.keys(P[ph]).sort(), ['circle', 'close', 'dive', 'lure', 'meet', 'waist', 'wear'], ph); // 11/15 칸 dive 더함 (偏閃奏進 — 사장님 '동방 유파 설계에 이것도 감안한 전투 스타일과 뛰어들기가 나오도록 해' · cn_step.test)
     for (const v of Object.values(P[ph])) assert.ok(v >= 0 && v <= 1, '칸 = 고를 몫 0 ~ 1 (기울기)');
   }
   const got = [0, 1, 2, 3, 4, 5, 6].map((p) => {
@@ -310,10 +310,17 @@ test('나서며 받기 — 격살이 남았고 이 위협에 노릴 마음이 �
     ai.planCn.drawnId = -1;
     // respond 안에서: 굴림 차례 = 알아챔 · 맞받아 베기 · 피하기 · 노릴 마음 · 나서며 받기
     const d = ai.foeReach; // 간격 끝 — 피하기 몫 0.8
+    // 11/15 偏閃奏進(ai_plan_cn.js cnDive — respond 의 맞받아 베기 뒤 굴림)이 굴림 차례를 바꿔 이 장면은 偏閃奏進 없는 판(`AI_PLAN.cn.dive` 0 — 그때 판)으로 묶음 · 기준 그대로
     const resp = (rolls) => withRolls(rolls, () => {
-      ai.mode = 'watch';
-      assert.ok(ai.respond(th(), d));
-      return { void: ai.defVoid, gk: !!ai.gk };
+      const keepDive = AI_PLAN.cn.dive;
+      AI_PLAN.cn.dive = 0;
+      try {
+        ai.mode = 'watch';
+        assert.ok(ai.respond(th(), d));
+        return { void: ai.defVoid, gk: !!ai.gk };
+      } finally {
+        AI_PLAN.cn.dive = keepDive;
+      }
     });
     assert.deepEqual(resp([0, 0.99, 0, 0, 0]), { void: false, gk: true }, '피하기 → 칼로 받아 나서며 받음');
     assert.deepEqual(resp([0, 0.99, 0, 0, 0.99]), { void: true, gk: false }, '마음은 났지만 나서지 않음 (기울기)');
