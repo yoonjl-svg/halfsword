@@ -301,7 +301,15 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
     return { seen, probe };
   };
   const a = watch();
-  const on = fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: a.probe });
+  // 11/14 둘째 그때 판으로 묶음 (기준은 안 고침): 이베리아 플랜 변칙(옆 박차기 · 비스듬히 들어감 — src/ai_plan_ib.js)으로 씨앗 902 츠바이핸더 AI 판이 갈라져 칼끝 돌려 빼기 수가 안 나옴 → 이베리아 플랜 전 판(`?aiPlanIb=0` 꼴)으로
+  const ap0 = [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools];
+  for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'iberian');
+  let on;
+  try {
+    on = fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: a.probe });
+  } finally {
+    [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools] = ap0;
+  }
   assert.ok(a.seen.during > 0 && a.seen.ropesDuring === 0, `수 동안 밧줄 없음 ${JSON.stringify(a.seen)}`);
   assert.ok(a.seen.after > 0 && a.seen.ropesAfter === a.seen.after, `끝나면 다시 ${JSON.stringify(a.seen)}`);
   const body = (r) => (r.it.knock ?? []).filter((k) => (k.why === 'footing' || k.why === 'tilt') && r.it.fireT.some((t) => k.t >= t && k.t <= t + 0.4));
@@ -319,6 +327,8 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
   THRUST_STYLE.rapier.gap = 0.3; // 11/14 그때 판으로 묶음 (기준은 안 고침): 사장님 '기본찌르기는 0.6 위에서 내려찌르기는 0.9' 로 레이피어 틈 0.3 → 0.6 · 내려 찌르기 0.6 → 0.9 — 판이 달라져 씨앗 902 의 그 수 뒤 넘어짐이 안 나옴 → 고칠 때의 값으로
   UA.imbroccataGap = 0.6;
   CONFIG.SKILL.thrustScale = 'off'; // 같은 까닭 — 고칠 때의 사람 레이피어 손 매핑(11/12 한손 찌르기 잣대 'base' 전 — docs/strike/arm_reach_audit_2026-11-12.md: 켜면 씨앗 902 판의 그 수 뒤 넘어짐이 안 나옴)
+  const ap = [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools];
+  for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'iberian'); // 11/14 그때 판으로 묶음 (기준은 안 고침): 유파 플랜 2 단계 이베리아(츠바이핸더 AI)가 판을 바꿔 씨앗 902 의 그 수 뒤 넘어짐이 안 나옴 → 이베리아 플랜 전 판으로
   try {
     const b = watch();
     // 11/12 둘째 두 팔 엇갈림 막기(AI 몫 · 칼자루 끝 앞 바닥 — 상대 AI 팔 · 사람 두손 칼 손 목표가 바뀜)로도 그 수 뒤 넘어짐이 안 나옴 → 고칠 때의 팔(11/12 첫 판 — arm_real_pin armClear2)로 묶음
@@ -332,6 +342,7 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
     CONFIG.BIND.natural = bn;
     CONFIG.SKILL.thrustScale = ts;
     [THRUST_STYLE.rapier.gap, UA.imbroccataGap] = gp;
+    [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools] = ap;
   }
 });
 

@@ -37,7 +37,7 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 
 test('값: 사장님 11/14 — 1 초 · 맞음 1 · 막기 2 · 최대 10 · +8 %/스택 · 흘려 받기 3(감독 권고) · 바위 몸(밀치기 기력 0 · −4 %/스택) 켬 · C · E 끔', () => {
   assert.equal(JT.stack, 1);
-  assert.equal(JT.ai, 0);
+  assert.equal(JT.ai, 1, '11/14 2 단계 일본 — AI 스택 · 바위 몸 켬 (사장님 확인 — 전 0 견줌)');
   assert.ok(near(JT.per, CONFIG.realS(1.0)));
   assert.deepEqual([JT.hit, JT.block, JT.flow, JT.max], [1, 2, 3, 10]);
   assert.ok(near(JT.each * JT.max, 0.8));
@@ -160,8 +160,9 @@ test('스택 — 고노센에도 실림 (지금 규칙 그대로 — SCHOOL_PASS
   } finally { fx.f.skill.sec = null; fx.g.world.free(); }
 });
 
-test('스위치 끔(JP_TANK.stack 0) · AI · 시뮬 대본 몸 = 전 판 (6 s 곧은 오름 +30 %)', () => {
-  const cases = [['끔', { human: true }, () => (JT.stack = 0)], ['대본 몸', { human: false }, () => {}], ['AI 몫', { human: true }, (fx) => (fx.sp.ai = true)]];
+test('스위치 끔(JP_TANK.stack 0) · AI(JP_TANK.ai 0 — 옛 판) · 시뮬 대본 몸 = 전 판 (6 s 곧은 오름 +30 %)', () => {
+  // 11/14 2 단계 일본 (사장님 '일본 스택과 바위 몸 AI 켜는 것도 이번 개편에 함께'): JP_TANK.ai 기본 1 — 'AI 몫' 줄은 옛 판(JP_TANK.ai 0)으로 묶어 본다
+  const cases = [['끔', { human: true }, () => (JT.stack = 0)], ['대본 몸', { human: false }, () => {}], ['AI 몫 (JP_TANK.ai 0)', { human: true }, (fx) => ((JT.ai = 0), (fx.sp.ai = true))]];
   for (const [name, o, set] of cases) {
     const fx = fixture('uchigatana', o);
     try {
@@ -177,8 +178,9 @@ test('스위치 끔(JP_TANK.stack 0) · AI · 시뮬 대본 몸 = 전 판 (6 s �
   }
   const fa = fixture();
   try {
-    JT.ai = 1; fa.sp.ai = true;
-    assert.equal(fa.sp.stackOn, true, 'AI 견줌 스위치');
+    assert.equal(JT.ai, 1, '2 단계 일본 — AI 스택 기본 켬');
+    fa.sp.ai = true;
+    assert.equal(fa.sp.stackOn, true, 'AI 스택');
   } finally { restore(); fa.g.world.free(); }
   const de = fixture('longsword');
   try {

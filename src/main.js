@@ -331,6 +331,14 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('itBeat') && +params.get('itBeat') >= 0) CONFIG.IT_OUTBOX.beat = CONFIG.realS(+params.get('itBeat'));
   if (params.has('itAi')) CONFIG.IT_OUTBOX.ai = +params.get('itAi') ? 1 : 0; // 11/14 사장님 'ai에도 적용' — 0 = 사람만
 }
+{ // 유파 AI 기본 전투 흐름 (11/14 — config AI_PLAN · src/ai_plan.js · 설계안 docs/design/ai_school_baseline_2026-11-14.md §9): `?aiPlan=0` = 옛 판 (플랜 · 국면 · 이탈리아 거리 오차 모두 끔) ·
+  //  `?aiPlanTick=0` = 국면 판정을 매 스텝 (실제 초 — 기본 0.2)
+  if (params.has('aiPlan')) CONFIG.AI_PLAN.on = +params.get('aiPlan') ? 1 : 0;
+  if (!CONFIG.AI_PLAN.on) CONFIG.JP_TANK.ai = 0; // 2 단계 일본 (11/14): 옛 판이면 AI 일본 스택 · 바위 몸도 끔 (아래 `?jpStackAi=` 가 있으면 그 값)
+  if (params.has('aiPlanTick') && +params.get('aiPlanTick') >= 0) CONFIG.AI_PLAN.tick = CONFIG.realS(+params.get('aiPlanTick'));
+  if (params.has('aiPlanIb') && !+params.get('aiPlanIb')) for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'iberian'); // `?aiPlanIb=0` = 이베리아만 옛 판 (2 단계 11/14)
+  if (params.get('aiPlanCn') === '0') for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((t) => t !== 'chinese'); // `?aiPlanCn=0` = 동방 플랜만 옛 판 (2 단계 · 11/14 — 플랜 · 거리 오차 · 동방 몫 모두 끔 · 공통 파고들기는 그대로)
+}
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
   const its = params.get('itSecret');
   // 10/28 01:4x 사장님 '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로' (기본 — italian_risoluto.js mirrorOk): `?risoMirror=0` = 10/25 21:0x 판(스틱 앞이나 뒤만 · 다 붙음 창 켬 — 아래 ?risoClose 가 덮을 수 있게 먼저)

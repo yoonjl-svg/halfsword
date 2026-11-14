@@ -220,7 +220,18 @@ const withJpOld = (fn) => {
   }
 };
 
-test('⑤ 실제 몸: 경계를 끄면 AI 가 간 보기로 준비된 사람 발도 선 안에 기어 든다(10/25 01:3x 판) · 켜면 간 보기로는 선 밖에서 기다림', () => {
+// 11/14 (사장님 '권고대로 고노센도 무모하게 넘고'): 유파 플랜 무 · 낮음 띠는 굴림 몫만큼 선을 넘는다 — 이 시험은 10/25 결정 장면이라 옛 판(AI_PLAN.on 0)으로 묶어 기준 그대로 본다 (아래 '무모' 시험이 새 판)
+const withPlanOff = (fn) => {
+  const keep = CONFIG.AI_PLAN.on;
+  CONFIG.AI_PLAN.on = 0;
+  try {
+    return fn();
+  } finally {
+    CONFIG.AI_PLAN.on = keep;
+  }
+};
+
+test('⑤ 실제 몸: 경계를 끄면 AI 가 간 보기로 준비된 사람 발도 선 안에 기어 든다(10/25 01:3x 판) · 켜면 간 보기로는 선 밖에서 기다림 (옛 판 — AI_PLAN.on 0)', () => withPlanOff(() => {
   const off = withJpOld(() => standoff('isolde', { gnsWary: 0 }));
   assert.equal(off.W, null); // 끄면 경계 칸 자체가 없다 (옛 판 그대로)
   assert.ok(off.creep > 0, `off creep ${off.creep}`);
@@ -235,6 +246,48 @@ test('⑤ 실제 몸: 경계를 끄면 AI 가 간 보기로 준비된 사람 발
     rows.push(`${id} ${o.creep}`);
     assert.equal(o.creep, 0, rows.join(' · '));
   }
+}));
+
+/** 무모 판 (11/14): 서서 기다리는 모노호시자오 사람 대 이탈리아 레이피어 AI(숙련 prof — 플랜 켬) — 씨앗 seed · 사람 들어옴 창이 열리면 곧장 고노센을 냄(fire) · 기어 듦 수 · 굴림이 경계를 접은 준비 수 · 고노센에 베인 수 */
+function reckStandoff(prof, seed) {
+  const G = newRound({ weapon: 'monohoshizao', weapon2: 'rapier', seed, persona: { proficiency: prof }, walls: true });
+  const p = G.player;
+  p.skill.autoGuard = true;
+  const ps = new PlayerSecretWatch(p, G.enemy);
+  const L = gnsEnterLine(ps.view());
+  const out = { creep: 0, reck: 0, ready: 0, fired: 0, cut: 0 };
+  let prev = null, pending = false, wasReady = false;
+  G.before = () => {
+    ps.update(DT, !!p.skill.sec);
+    p.move.set(0, 0);
+    const W = G.ai.gnsW;
+    if (W?.ready && !wasReady) (out.ready++, W.reck && out.reck++);
+    wasReady = !!W?.ready;
+    if (ps.open && !p.skill.sec) {
+      const o = ps.fire();
+      if (o) (p.skill.secret(o), out.fired++);
+    }
+    const d = p.foeDistance();
+    if (prev != null && prev > L && d <= L && ps.iaiArm.armed && (!W || W.ready) && G.ai.mode === 'watch') pending = true;
+    if (d > L) pending = false;
+    else if (pending && d <= L - DEEP) (out.creep++, (pending = false));
+    prev = d;
+  };
+  for (let i = 0; i < 16 / DT && p.alive && G.enemy.alive; i++) G.step();
+  out.cut = G.ai.gnsW?.n.cut ?? 0;
+  G.world.free();
+  return out;
+}
+
+test('⑤ 무모 (11/14 사장님 \'권고대로 고노센도 무모하게 넘고\'): 플랜 유파 낮은 띠는 가끔 선을 넘다 고노센에 걸림 · 가운데는 지금처럼 선 밖', () => {
+  const lo = [1, 2, 3, 4].map((seed) => reckStandoff(2, seed));
+  const sum = (a, k) => a.reduce((x, o) => x + o[k], 0);
+  assert.ok(sum(lo, 'ready') > 0, JSON.stringify(lo));
+  assert.ok(sum(lo, 'reck') > 0, `낮음 — 굴림이 경계를 접은 준비가 있음 ${JSON.stringify(lo)}`);
+  assert.ok(sum(lo, 'creep') + sum(lo, 'cut') > 0, `낮음 — 선을 넘고 고노센에 걸림 ${JSON.stringify(lo)}`);
+  const mid = [1, 2, 3, 4].map((seed) => reckStandoff(4, seed));
+  assert.equal(sum(mid, 'reck'), 0, '가운데 — 굴리지 않음 (경계 그대로)');
+  assert.equal(sum(mid, 'creep'), 0, `가운데 — 간 보기로는 선 밖 ${JSON.stringify(mid)}`);
 });
 
 test('⑤ 속임 → 결행: 속임은 준비 한 번에 한 번 (선 밖에서 들었다 거둠) · 다음 칠 때는 결행 — 상대가 고노센 쓰는 몸이 아니면 아무 일 없음', () => {

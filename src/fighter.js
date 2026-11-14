@@ -2420,9 +2420,10 @@ export class Fighter {
 
   /**
    * 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:5x '상한 없음' · config IB_FLOW.chainStack): 이 몸이 받나 — 사람만(AI 몸 그대로 · 관문 판 그대로) · 스킬트리 B6 칸 · 흐름 읽기 'a'(진짜 이어 긋기)
+   *  11/14 유파 플랜 2 단계: 플랜이 있는 이베리아 AI 몸(ibChainAi — ai_plan_ib.js ibInit · config AI_PLAN.ib.chainBody)도 사람과 같은 규칙 (셋째 칼 기력 0 — 띠별 기력의 '유파 기력 장치')
    */
   ibChainOn() {
-    return !!IB_FLOW.chainStack && IB_FLOW.a && IB_FLOW.detect !== 'old' && !this.aiControlled && this.swordArt?.tradition === 'iberian' && !kitOff(this, 'ibFlow') && !kitOff(this, 'ibChain');
+    return !!IB_FLOW.chainStack && IB_FLOW.a && IB_FLOW.detect !== 'old' && (!this.aiControlled || !!this.ibChainAi) && this.swordArt?.tradition === 'iberian' && !kitOff(this, 'ibFlow') && !kitOff(this, 'ibChain');
   }
   /** 지금 칼의 이어 그은 수 n (이어 그은 진짜 긋기가 아니면 0) — 흐름이 켜진 동안 · 휘두르기가 막 시작돼 읽기가 아직 못 본 스텝은 미리 셈 (stamina.js 가 같은 스텝에 긋기를 청구할 때) */
   ibChainN() {

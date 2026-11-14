@@ -55,7 +55,7 @@ export const CHARACTERS = [
     //  칼을 주워 들어도 · 광기의 브론이 팔쉬온을 들어도 유파 꾸러미는 나뭇가지(무유파) 그대로 — main.js · 시뮬 쌍둥이가 꾸러미를 무기 것으로 바꾸지 않는다
     noSwordsmanship: true,
     ai: {
-      proficiency: 1, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다
+      proficiency: 0, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다 // 11/14 사장님 결정: 1 → 0 (무 — 검술을 배운 적 없음 · 숙련도 띠 새 배치 §10)
       persona: {
         school: 'tree_branch',
         startEmotion: { anger: 0.7 }, // 사장 지시: 서사대로 '분노' 상태로 결투를 시작한다 (은화 걸고 막대기 하나 들고 선 촌놈의 발끈)
@@ -195,7 +195,7 @@ export const CHARACTERS = [
     weaknesses: '정석 간격 관리를 안 배워 규율(discipline)이 낮다 — 덤벼들 때 살짝 과하게 들어오는 버릇이 있어, 그 순간을 미리 알고 맞받아치면(Vor) 잡을 수 있다. 힘 자체는 평범해 묵직한 반격 한 방에 균형이 잘 무너진다.',
     weapon: 'qinggang', // 청강검 (에픽 등급): 물리는 지안, 이름값대로 잘 벤다. 진품이냐 물으면 대답하지 않는다
     ai: {
-      proficiency: 3, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다
+      proficiency: 4, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다 // 11/14 사장님 결정: 3 → 4 (3 막 · 수년째 현상금 결투 — §10)
       persona: {
         school: 'qinggang',
         level: { reaction: 0.25, guardChance: 0.55, counter: 0.15, feint: 0.36, followUp: 0.62, read: 0.6, discipline: 0.55, strength: 1.1, aggression: 1.05, windup: 0.5, strikeSpeed: 13, skill: 0.75 },
@@ -262,7 +262,7 @@ export const CHARACTERS = [
     //  (10/10: 샛별 저장소에서 가져온 아르토리아도 진품을 든다 — 그쪽 설정 '진품은 플레이어와 아르토리아', 하인리히는 복제품 그대로)
     weapon: 'excalibur_replica',
     ai: {
-      proficiency: 2, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다
+      proficiency: 3, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다 // 11/14 사장님 결정: 2 → 3 ('하인리히 3으로' — §10)
       persona: {
         school: 'excalibur_replica',
         level: { reaction: 0.21, guardChance: 0.66, counter: 0.32, feint: 0.46, followUp: 0.72, read: 0.72, discipline: 0.75, strength: 1.15, aggression: 1.15, windup: 0.45, strikeSpeed: 13, skill: 0.82 },
@@ -327,7 +327,7 @@ export const CHARACTERS = [
     weaknesses: '스스로 먼저 판을 깨지 않는다 — 상대가 절대 먼저 들어오지 않고 완벽하게 간격만 지키면 좀처럼 기회를 만들지 못한다(물론 그러면 판이 길어진다). 화려한 잔기술은 거의 안 쓴다(feint 낮음). 쉬지 않고 밀어붙이는 저돌형 앞에서는 "물러나 되받기" 성격이 맞받기로 덮어씌워져 서로 베이기 쉽다.',
     weapon: 'longsword',
     ai: {
-      proficiency: 3, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다
+      proficiency: 4, // 숙련도 (사장님 결정 10/13) — 실력 숫자 이름 ai.level · persona.proficiency 는 아래 finishAI 가 채운다 // 11/14 사장님 결정: 3 → 4 (재미 예외 — 1 막 끝 · 리히테나워의 정수 — §10)
       persona: {
         school: 'longsword',
         level: { reaction: 0.11, guardChance: 0.96, counter: 0.68, feint: 0.1, followUp: 0.88, read: 0.98, discipline: 1.05, strength: 1.1, aggression: 1.0, windup: 0.28, strikeSpeed: 14, skill: 0.97 },
@@ -400,7 +400,7 @@ export const CHARACTERS = [
     epithet: '빚 없는 선장', // 사장님 10/10 19:4x (샛별 저장소 칭호)
     weapon: 'zweihander', // 이베리아 유파 (사장님: 이베리아 비기를 볼 수 있게. 샛별 설정은 펄션)
     voice: 'omari', // 목소리: 오마리 전용 녹음(CC0) — 10/12 사장님 지시로 샛별 저장소 1ea73c5·200269d 를 가져옴 (전 'bran')
-    ai: { proficiency: 2, persona: { school: 'zweihander', pers: {} } }, // 숙련도 2 (사장님 10/29 22:5x '오마리 숙련도 이베리아 2, 광기의 오마리 숙련도 이베리아 3으로' — 전 1 · 얼터는 원본 +1 = 3)
+    ai: { proficiency: 3, persona: { school: 'zweihander', pers: {} } }, // 숙련도 2 (사장님 10/29 22:5x '오마리 숙련도 이베리아 2, 광기의 오마리 숙련도 이베리아 3으로' — 전 1 · 얼터는 원본 +1 = 3) // 11/14 사장님 결정: 2 → 3 (2 막 첫 상대 — §10)
     look: getLook('omari'),
     lookVersion: CHARACTER_LOOK_VERSION.omari,
     // 대사 (10/10 19:4x 사장님 — 작가 제안 §4-2 그대로: 느낌표 없는 짧은 반말, 물때·닻·뭍·셈 같은 뱃사람 낱말)
@@ -518,7 +518,7 @@ export const CHARACTERS = [
     weaknesses: '짧은 철퇴가 닿기 전의 거리와 빗나간 뒤의 빈틈.',
     weapon: 'morgenstern', // 레어 둔기 → 무유파
     voice: 'tome', // 목소리: 토메 묶음(토메와 같이) — 10/12 사장님 지시로 샛별 저장소 04311ff 배정을 가져옴 (전 'liao')
-    ai: { proficiency: 2, persona: {
+    ai: { proficiency: 3, persona: { // 11/14 사장님 결정: 2 → 3 (2 막 끝 — §10)
       school: 'morgenstern', // 그쪽은 옛 꾸러미 이름 'tree_branch'(나뭇가지 간격) — 우리는 무기 id 꾸러미(무유파 + 철퇴 실측 간격)
       level: { skill: 0.76, discipline: 0.84, strength: 1, aggression: 0.8 },
       pers: { precision: 0.8, guardStick: 2.7, fearful: 0.22, angry: 0.2, dogged: 0.4, rhythm: 2.8, aggr: 0.84, vor: 0.45,
@@ -547,7 +547,7 @@ export const CHARACTERS = [
     weaknesses: '칼끝 안쪽으로 깊게 붙는 압박.',
     weapon: 'rapier', // 이탈리아 유파
     voice: 'soft_female', // 목소리: 조용한 들숨·한숨 묶음(Reitanna, CC0 — 아르토리아와 같이) — 10/12 사장님 지시로 샛별 저장소 77db8c5 배정을 가져옴 (전 'isolde')
-    ai: { proficiency: 3, persona: { // 숙련도 3 (사장님 10/25 18:5x '투야나 숙련도 1 올려' — 전 2) = 실력 숫자 hard · 이탈리아 고유 동작 셋(칼끝 돌려 빼기 더함). 광기의 투야나는 얼터 규칙대로 4 (패시브 칸 곧은 선)
+    ai: { proficiency: 2, persona: { // 숙련도 3 (사장님 10/25 18:5x '투야나 숙련도 1 올려' — 전 2) = 실력 숫자 hard · 이탈리아 고유 동작 셋(칼끝 돌려 빼기 더함). 광기의 투야나는 얼터 규칙대로 4 (패시브 칸 곧은 선) // 11/14 사장님 결정: 3 → 2 (재미 예외 — 3 막의 서툰 칼 · 몸을 지키려 배운 레이피어 — §10)
       school: 'rapier',
       level: { skill: 0.78, discipline: 0.88, strength: 1, aggression: 0.75 },
       pers: { precision: 0.85, guardStick: 3.2, fearful: 0.25, angry: 0.1, dogged: 0.3, rhythm: 3.2, aggr: 0.78, vor: 0.35,
@@ -973,7 +973,8 @@ const daraishiBase=CHARACTER_GUESTS.find(c=>c.id==='silver_wanderer');
 // 광기의 다라이시는 모노호시자오 그대로 (사장님 10/29 22:5x '낮의 다라이시는 우치가타나를 들게 해' — 낮만 바뀜 · 얼터는 원본을 복사하므로 무기 · 꾸러미를 되적음)
 const daraishiSchool=daraishiBase.school; // 시트 글(모노호시자오) — 광기의 다라이시가 그대로 씀
 daraishiBase.school=daraishiSchool.replace('모노호시자오','우치가타나'); // 낮의 다라이시 = 우치가타나 (사장님 10/30 00:4x '… 설정 최소 수정으로 모순만 덜어내는 방식으로 고쳐.' — 무기 이름만)
-const daraishiAlter={...daraishiBase,weapon:'monohoshizao',school:daraishiSchool,id:'silver_wanderer_mad',variantOf:'silver_wanderer',mad:true,appearanceOnly:true,
+// 11/14 사장님 결정(숙련도 띠 새 배치 §10): 광기의 다라이시 = 여정 끝판이라 숙련도 6 으로 못 박음(proficiencyFixed — 광기의 병마용과 같은 꼴 · 원본 + 1 = 5 의 예외)
+const daraishiAlter={...daraishiBase,weapon:'monohoshizao',school:daraishiSchool,id:'silver_wanderer_mad',variantOf:'silver_wanderer',mad:true,appearanceOnly:true,proficiencyFixed:6,
  name:`광기의 ${daraishiBase.name}`,ai:JSON.parse(JSON.stringify(daraishiBase.ai)),
  look:alterLook({...getLook('silver_wanderer','v7-silver-c'),daraishiBlack:1},'silver_wanderer'),lookVersion:'v7-alter2',eyes:'madGlow',
  backstory:'흑의에 애쉬 실버 머리의 검사. 머리 뒤에는 짧고 해진 붉은 끈이 묶여 있다. 무엇을 기억하려는 매듭인지 자신도 알지 못한다. 이름을 잃어도, 검을 쥐는 손은 망설이지 않는다.'};
