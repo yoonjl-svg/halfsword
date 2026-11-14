@@ -22,7 +22,7 @@ export const NODE_CAT = Object.freeze({
 });
 
 /** 판 몫 열쇠 (skillKit 칸 — 칸이 없으면 false). unique · perk 는 이름 모음 */
-export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'jpRock', 'deRing', 'cnHunt']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29) · cnHunt = 동방 C12 맹호은림 사냥 겹 (11/14 — cn_hunt.js) · jpRock = 일본 바위 몸 J12 (11/14 사장님 '바위 몸 확정' — 밀치기 기력 0 · 스택당 받는 피해 −4 % · config JP_TANK) · deRing = 독일 칼 씨름 (링엔 암 슈베르트 — 11/14 사장님 이름 확정) 새 몫 (config DE_DIRTY · de_dirty.js · 새 칸 자리 대기 — 지금은 G9 에 임시로 이음 · 11/14 B · C 열쇠 deClinch · deHilt 는 폐기)
+export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'jpRock', 'deRing', 'cnHunt']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29) · cnHunt = 동방 C12 맹호은림 사냥 겹 (11/14 — cn_hunt.js) · jpRock = 일본 바위 몸 J12 (11/14 사장님 '바위 몸 확정' — 밀치기 기력 0 · 스택당 받는 피해 −4 % · config JP_TANK) · deRing = 독일 칼 씨름 (링엔 암 슈베르트 — 11/14 사장님 이름 확정) 몫 (config DE_DIRTY · de_dirty.js · 칸 G12 — [사장님 11/14 결정] '독일 권고대로 해' · 전 G9 임시 이음 걷음 · 11/14 B · C 열쇠 deClinch · deHilt 는 폐기)
 
 export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10/21)
 
@@ -44,7 +44,8 @@ const TREE_SRC = {
       N({ id: 'G7', name: '겹치기', cat: 'atk', l1: '겹치기', l2: '이어 긋기', eff: '칼이 맞물리면 상대 칼 뒤로 들어가 얼굴을 벤다', pre: ['G4'], price: 300, d: 3, cx: 690, u: 'duplieren' }), // 10/28 00:5x 사장님 '겹치기는 왕관 아래로' — 특수공격(이어 긋기)이 된 뒤 자리 (전 2단계 관문 뒤 · cx 310) // 10/29 14:1x · 14:2x 사장님 글 (효과)
       N({ id: 'G6', name: '무릎 꺾기', cat: 'deep', l1: '심화', l2: '무릎 꺾기', title: '곁눈 베기 심화 · 무릎 꺾기', eff: '곁눈 베기에 맞은 상대가 무릎을 꿇기도 한다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 310, perk: 'schielhau' }), // 10/28 00:5x 사장님 '무릎 꺾기가 곁눈 베기 아래로' (전 cx 500)
       N({ id: 'G4', name: '왕관', cat: 'parry', l1: '막기 II', l2: '왕관', title: '막기 II · 왕관 (크론)', orig: 'Kron', eff: '머리 위로 오는 칼을 칼자루로 받는다', pre: ['G5', 'G8', 'G3'], price: 300, d: 2, cx: 690, f: ['parryCover'] }),
-      N({ id: 'G9', name: '그 순간', cat: 'passive', l1: '패시브', l2: '그 순간', eff: '칼이 맞부딪히거나 상대가 헛친 직후에 친 칼은 피해가 증가한다', pre: ['G2'], price: 0, heads: 5, d: 2, cx: 100, f: ['passive', 'deRing'] }), // 11/14 deRing: 독일 칼 씨름 새 몫 열쇠 (11/14 B · C 열쇠 폐기) — 사장님 '새 효과는 새 스킬트리 칸 1 ~ 2 개로' · 새 칸 자리 대기라 G9 에 임시로 이음(B · C 는 config DE_DIRTY 기본 끔 — 켜기 전엔 아무 일 없음) // 10/29 01:5x 사장님 '인데스만 독일어더라 그것도 바꿔' → '그 순간' (뜻 이름 — 대기실 스킬 '그 순간 (인데스)') · 10/28 23:4x 사장님 '그래 그 안으로 바꿔' — 칼끼리 닿음에도 창(10/28 01:4x · school_passive.js) · 전 '상대가 헛치거나 막힌 직후에 친 칼은 피해가 증가한다'
+      N({ id: 'G9', name: '그 순간', cat: 'passive', l1: '패시브', l2: '그 순간', eff: '칼이 맞부딪히거나 상대가 헛친 직후에 친 칼은 피해가 증가한다', pre: ['G2'], price: 0, heads: 5, d: 2, cx: 100, f: ['passive'] }), // 11/14 칼 씨름 몫 deRing 임시 이음 걷음 — 제 칸 G12 로 ([사장님 11/14 결정] '독일 권고대로 해') // 10/29 01:5x 사장님 '인데스만 독일어더라 그것도 바꿔' → '그 순간' (뜻 이름 — 대기실 스킬 '그 순간 (인데스)') · 10/28 23:4x 사장님 '그래 그 안으로 바꿔' — 칼끼리 닿음에도 창(10/28 01:4x · school_passive.js) · 전 '상대가 헛치거나 막힌 직후에 친 칼은 피해가 증가한다'
+      N({ id: 'G12', name: '칼 씨름', cat: 'deep', l1: '심화', l2: '칼 씨름', title: '그 순간 심화 · 칼 씨름 (링엔 암 슈베르트)', orig: 'Ringen am Schwert', eff: '밀치기로 엮인 상대가 지치면, 세게 밀쳐 자세를 무너뜨린다', pre: ['G9'], price: 400, d: 3, cx: 100, f: ['deRing'] }), // [사장님 11/14 결정] '독일 권고대로 해' — 칼 씨름(링엔 암 슈베르트 · 몫 열쇠 deRing · de_dirty.js ringCheck)에 제 칸: 그 순간(G9) 다음 · 심화 · 금화 400(다른 유파 12 번째 칸과 같음 — J12 · C12) · 다섯 유파 12 칸 맞춤 · 이름 '칼 씨름 (링엔 암 슈베르트)' 감독 확정 · 효과 글 · 오의 = 작업자 안(사장님 글 검수 전) · 유파 호칭에 듦(J12 와 같은 꼴 — 이미 얻은 저장은 그대로)
       N({ id: 'G10', name: '모르트슐라크', cat: 'secret', l1: '비기', l2: '모르트슐라크', eff: '초근접 상황에서 경합하면, 칼자루 끝을 망치처럼 정수리에 내리꽂는다', pre: ['G9', 'G6', 'G7'], price: 400, heads: 10, d: 4, cx: 420, f: ['secret'] }), // 10/28 00:5x 사장님 '무릎 꺾기와 겹치기를 다 배워야 죽음의 일격' · 인데스도 남김 (전 인데스 + 겹치기 + 왕관 · 3줄) // 10/22 사장님 '독일은 죽음의 일격으로 하자' (옛 받아 베기 — `?deMord=0` · 10/24 AI 도 같은 비기 — 사장님 'ai도 비기 쓰게 해')
     ],
   },
@@ -127,6 +128,7 @@ const NODE_LORE = {
   G6: { lore: '세게 몰아치려거든 온몸으로 싸워라', src: '리히테나워 『Zettel』(14세기) — 긴 칼 첫 가르침' },
   G4: { lore: '그에게서 오는 것은 무엇이든 왕관이 걷어 낸다', src: '리히테나워 『Zettel』(14세기) — 정수리 베기와 왕관' },
   G9: { lore: '앞과 뒤가 모든 기예의 샘이니, 약함과 셈, 그 사이라는 말을 새겨라', src: '리히테나워 『Zettel』(14세기) — 앞과 뒤 · 인데스' },
+  G12: { lore: '씨름하려거든 칼자루 끝으로 잡고, 누가 맞서 힘을 쓰거든 뚫고 들기를 새겨라', src: '리히테나워 『Zettel』(14세기) — 뚫고 들기' }, // 11/14 칼 씨름 (링엔 암 슈베르트) — [원문] v91~92 「Durchlauff las hangen / Mit dein knopff greiff wiltu rangen / Wer gegen dir sterckt / durchlauff do mit merck」(로마 사본 05v) · 이 두 짝의 주해(링엑 · 단치히)가 칼 씨름 — 오의 표 docs/text/skill_lore_2026-10-22.md
   G10: { lore: '위 자세에서 때가 맞거든, 칼자루 끝으로 쳐라', src: '지그문트 링엑 『Kampffechten』(15세기) — 갑옷 싸움' }, // 10/22 죽음의 일격 (전: 받아 베기 — 리히테나워 v70)
   // 이탈리아 — 카포 페로 (Wiktenauer 'Ridolfo Capoferro' · Wilson · Swanger 영역 / 저장소 원문 PDF 쪽) · 비기 I4 = 파브리스 (Wiktenauer 'Salvator Fabris' 전사 · A. F. Johnson 영역 — 10/22)
   I1: { lore: '박자란 고요와 움직임을 재는 것일 뿐이다', src: '리돌포 카포 페로 『Gran Simulacro』(1610) — 박자' },

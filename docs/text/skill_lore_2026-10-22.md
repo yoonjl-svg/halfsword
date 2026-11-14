@@ -42,6 +42,7 @@
 | G4 | 왕관 | 그에게서 오는 것은 무엇이든 왕관이 걷어 낸다 | 리히테나워 『Zettel』(14세기) — 정수리 베기와 왕관 | v65 「waß võ Im chömet dy kron das abnymet」 (Whatever comes from him, the crown will take it) · Ringeck 주해 「versetzt er mit dem gehiltz hoch ob seinem haupt, die versatzung heist die kran」 — 저장소 `docs/strike/kron_shape_2026-10-12.md:23` · `src/schools.js:983` | [원문] |
 | G9 | 그 순간 (10/29 — 전 인데스) | 앞과 뒤가 모든 기예의 샘이니, 약함과 셈, 그 사이라는 말을 새겨라 | 리히테나워 『Zettel』(14세기) — 앞과 뒤 · 인데스 | v17~18 「Vor und nach dy zway ding」 · 「Swech vnd sterck / Inndes Das wort do mit merck」 (Before and after, these two things … weak and strong, the word 'within' remember) — 로마 사본. 사장님 승인 갈래(리히테나워 인데스 · Ringeck) | [원문] |
 | G10 | 죽음의 일격 (10/22 — 전 받아 베기) | 위 자세에서 때가 맞거든, 칼자루 끝으로 쳐라 | 지그문트 링엑 『Kampffechten』(15세기) — 갑옷 싸움 | 링엑 갑옷 싸움 주해 §35 — 드레스덴 사본(Mscr.Dresd.C.487 · 1504~1519) 99v 「magst du vsß der obern hůt mitt dem knopff wol schlachen wann es dir eben ist」(Rawlings 영역 'you'll also strike him with the pommel from the upper guard' · Castro 2024) · 로스토크 사본 108v 같은 대목 — Wiktenauer 'Sigmund ain Ringeck' 전사 · 영역에서 확인. 죽음의 일격(칼날을 거꾸로 쥐고 코등이 · 폼멜로 치기) 자체를 말하는 글귀는 탈호퍼 그림책(1459 · 1467 — 짧은 그림 풀이 · Hull 정리 'mortschlag · mordstreich · tunrschlag')에서 원문을 찾지 못해 같은 갑옷 싸움 전통의 가장 가까운 대목(위 자세에서 칼자루 끝으로 치기)을 씀. 옛 칸 글(받아 베기 — v70)은 커밋 기록 | [풀이] |
+| G12 | 칼 씨름 (11/14 새 칸 — 사장님 '독일 권고대로 해' · 그 순간 다음) | 씨름하려거든 칼자루 끝으로 잡고, 누가 맞서 힘을 쓰거든 뚫고 들기를 새겨라 | 리히테나워 『Zettel』(14세기) — 뚫고 들기 | v91~92(Wiktenauer 'Johannes Liechtenauer' 표 번호) 로마 사본(Cod.44.A.8) 05v 「Von durchlauffen」 「Durchlauff las hangen / Mit dein knopff greiff wiltu rangen / Wer gegen dir sterckt / durchlauff do mit merck」 (Trosclair 영역 'Run-through, allow to hang / With the pommel, grasp if you wish to wrestle' · Chidester 'When strength would press and oppress you, / Remember this: just run on through') · 드레스덴 사본(Mscr.Dresd.C.487) 42r 「Durchlauff lauß hangen / mitt dem knopffe grÿff wilt du range~ / Wer gegen dir störcke / durchlauff damitt mörcke」 — 이 두 짝의 주해가 칼 씨름(링엔 암 슈베르트): 「Glosa Mörck dz ist Wann aine~ dem andern einlauffe」 · 상대가 「will dich oben mitt störck überdringen」(위에서 힘으로 덮어 누르려 함) 할 때 · 「fasse in also vff dem rechten hüffe vñ wirff in für dich」(오른 엉덩이에 걸어 앞으로 던짐) — Wiktenauer 'Sigmund ain Ringeck' 전사(Hagedorn) · 영역에서 확인. 첫 반 줄('뚫고 들어 늘어뜨려라')은 줄이고 둘째 반 줄과 다음 짝을 차례 그대로 옮김 | [원문] |
 
 ### 이탈리아
 
@@ -113,6 +114,7 @@
 
 - [원문] 45 · [풀이] 5(G1 · G6 · B10 · C2 · C5) · [편지] 5. (10/24 J8 칼 떨구기 — [풀이] → [원문]) · 11/14 J12 바위 몸 [원문 — 저장소 밖 · 확인 전] 하나 더
 - 11/14 C12 맹호은림 더함 → [원문] 47(+ J12 · C12 — 간수세 · 사장님 '전부 권고대로' · 처음 판은 본국검 [풀이]) · [풀이] 5 · [편지] 5 · J12 와 함께 모두 57 칸 (시험 `skill_tree.test.mjs` '칸 오의' 55 → 57).
+- 11/14 G12 칼 씨름 더함(사장님 '독일 권고대로 해') → [원문] 48(+ G12 — 리히테나워 뚫고 들기 v91~92 · 주해가 칼 씨름) · [풀이] 5 · [편지] 5 · 모두 58 칸 (시험 '칸 오의' 57 → 58).
 - 출처 줄의 원어는 『』 안 책 이름에만(Zettel · Gran Simulacro · Arte de Esgrima · Memorial da Prattica do Montante — 옛 BOOK_TEXT 와 같은 꼴). lore 는 한글만.
 - 바탕 원전을 끝내 찾지 못한 칸은 없다. 가장 멀리 간 줄은 G1(운문에 뒤로 박차는 걸음이 없음) · B10(손목 말이 없음) · C2(조선세법 · 예도에 걷기 기력 대목이 없음) — 위 표에 실제 대목과 바꾼 곳을 적었다.
 
