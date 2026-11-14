@@ -1099,8 +1099,8 @@ export const SKILL = {
   //  n (사장님 11/15 'n은 상대 무기의 베기 기력 *2 어때. or 고정값 30. (일본 흘리기와 동일선상에서)' → 견줌 뒤 **'고정 30으로 해'**):
   //   ibBlockRegenN 'fixed' = 고정 ibBlockRegenFixed 30 (일본 흘림이 상대 기력 60 을 깎는 것과 같은 줄의 고정값 — 기본) · 'foe2' = 상대 무기 베기 기력 × 2 (STAMINA.cutCost × 상대 무게 배율 × 2 — 롱소드 24 · 츠바이핸더 32) (`?ibBlockRegenN=foe2`)
   ibBlockRegen: 1,
-  ibBlockRegenN: 'fixed',
-  ibBlockRegenFixed: 30, // [사장님 11/15 결정 '고정 30으로 해'] (ⓑ 'foe2' 는 견줌 스위치로만)
+  ibBlockRegenN: 'cut', // [사장님 11/15 결정 '권고대로 무기 베기 한 번 값으로 해' — 전 'fixed' 30 ('b9에서 기력 30회복은 과한 거 같다')] · `?ibBlockRegenN=fixed` = 30 판
+  ibBlockRegenFixed: 30, // 'fixed' 판 값 (11/15 첫 결정 '고정 30으로 해' → 같은 날 '무기 베기 한 번 값'으로 바꿈 — 견줌 스위치로만)
   // AI 막는 동안 피해 감소 시제품 (11/15 사장님 '동방의 장점은 막을 때 피해 50% 감소인데 막기를 잘 활용 못하는 거 아닐까? …' · src/ai_block_cut.js · 기록 docs/strike/cn_block_2026-11-15.md):
   //  위 세 몫은 사람 막기 단추에만 붙는다(AI 몸에는 칸이 없음). 1 = AI 가 막는 중(칼로 받기 · 피하기 아님)이면 같은 몫 — '사람과 같게' · 0 = 지금 판 (`?aiParryCut=1`) [시제품 — 사장님 판정 전]
   aiParryCut: 1, // [사장님 11/15 결정 '동방 ai 막기 감소 켜' — 지금 몫은 동방 0.5 만(일본 · 이베리아 0 — 11/15)]

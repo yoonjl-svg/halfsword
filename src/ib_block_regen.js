@@ -4,7 +4,7 @@
 //  막기 성공 = 상대 공격(공격 번호 하나에 한 번)을 칼로 받아 막았고(stamina.js block — 일본 스택 막기 guardEvent 'block' 과 같은 사건 · 쳐내기 B8 꼴도 막는 중이면 같음)
 //   그 공격이 끝날 때까지(상대 공격 번호가 바뀌거나 공격 시간이 지남) 내 몸에 칼날 상처(베기 · 찌르기 심각도 > 0)가 들지 않은 때.
 //  되찾는 몫 n (사장님 11/15 'n은 상대 무기의 베기 기력 *2 어때. or 고정값 30. (일본 흘리기와 동일선상에서)' → '고정 30으로 해'): SKILL.ibBlockRegenN
-//   'fixed' = 고정 SKILL.ibBlockRegenFixed 30(확정 · 기본) · 'foe2' = 상대 무기 베기 기력 × 2(견줌 스위치로만). 기력 한도는 넘지 않음 · 탈진 중은 없음.
+//   'fixed' = 고정 SKILL.ibBlockRegenFixed 30(11/15 첫 결정 — 전 판) · 'foe2' = 상대 무기 베기 기력 × 2(견줌) · 'cut' = 내 무기 베기 한 번 값(11/15 사장님 'b9에서 기력 30회복은 과한 거 같다' → '권고대로 무기 베기 한 번 값으로 해' · 기본 — 롱소드 12 · 츠바이핸더 16.1 · 플랑베르주 17.0). 기력 한도는 넘지 않음 · 탈진 중은 없음.
 //  사람 · AI 같게: 무기 유파 이베리아 몸 · 사람은 막기 책을 쥐고(schoolParry) B9 몫 열쇠 'blockRegen' 을 익힌 몸만(AI 는 늘).
 // ─────────────────────────────────────────────────────────────
 import { STAMINA, SKILL } from './config.js';
@@ -15,9 +15,12 @@ export function ibBlockOn(f) {
   return !!SKILL.ibBlockRegen && !!STAMINA.on && f?.swordArt?.tradition === 'iberian' && f.schoolParry !== false && !kitOff(f, 'blockRegen');
 }
 
-/** 되찾는 몫 n — 고정 30 · 또는 상대 무기 베기 기력 × 2 */
-export function regenN(att) {
-  return SKILL.ibBlockRegenN === 'foe2' ? STAMINA.cutCost * (att?.stamina?.weight ?? 1) * 2 : SKILL.ibBlockRegenFixed;
+/** 되찾는 몫 n — 'cut' = 내 무기로 베기 한 번 값(11/15 사장님 '권고대로 무기 베기 한 번 값으로 해' · 맞바꿈과 같은 셈 · 기본) · 'fixed' = 고정 30(전 판) · 'foe2' = 상대 무기 베기 기력 × 2(견줌) */
+export function regenN(att, f) {
+  const N = SKILL.ibBlockRegenN;
+  if (N === 'foe2') return STAMINA.cutCost * (att?.stamina?.weight ?? 1) * 2;
+  if (N === 'fixed') return SKILL.ibBlockRegenFixed;
+  return STAMINA.cutCost * (f?.stamina?.weight ?? 1);
 }
 
 /** 막아 받음이 듦 (stamina.js block — 상대 공격 번호 하나에 한 번): 그 공격이 끝날 때까지 기다림 */
@@ -43,7 +46,7 @@ export function ibBlockTick(f) {
     const S = f.stamina;
     if (p.cut || !f.alive || !S || S.exhausted || S.infinite) continue;
     const before = S.value;
-    S.value = Math.min(S.max, S.value + regenN(att));
+    S.value = Math.min(S.max, S.value + regenN(att, f));
     const got = S.value - before;
     S.counts.blockRegen = (S.counts.blockRegen ?? 0) + 1;
     S.blockRegenSum = (S.blockRegenSum ?? 0) + got;

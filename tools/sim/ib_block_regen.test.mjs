@@ -1,5 +1,5 @@
 // 이베리아 막아 내면 기력 되찾음 시험 (11/15 사장님 '이베리아도 막기 20% 감소 없애. 대신 막기에 성공하면 기력 n 회복 어때.' · src/ib_block_regen.js ·
-//  config SKILL.ibBlockRegen · ibBlockRegenN · 스킬트리 B9 몫 열쇠 blockRegen · 기록 docs/strike/cn_block_2026-11-15.md §5): 기본 켬 · n = 고정 30(기본) · 상대 베기 × 2 · 한도 ·
+//  config SKILL.ibBlockRegen · ibBlockRegenN · 스킬트리 B9 몫 열쇠 blockRegen · 기록 docs/strike/cn_block_2026-11-15.md §5): 기본 켬 · n = 내 무기 베기 한 번 값(기본 · 11/15) · 고정 30(전 판) · 상대 베기 × 2 · 한도 ·
 //  그 공격이 칼날 상처 없이 끝나야 · 사람은 B9 · AI 는 늘 · 다른 유파 없음 · 끄면 없음 · 판에서 실제로 쓰임. 시간 상한 기준은 없다.  node --test tools/sim/ib_block_regen.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -24,7 +24,7 @@ test('값 · 켬: 이베리아 막는 동안 피해 감소 0(11/15) · 막아 �
   try { assert.equal(ibBlockOn(body('iberian')), false); } finally { SKILL.ibBlockRegen = 1; }
 });
 
-test('셈: 막아 받은 공격이 칼날 상처 없이 끝나면 n(고정 30 · 상대 베기 × 2) · 한도 · 그 공격 칼날 상처면 없음 · 둔타 · 다른 공격 상처는 셈 안 함', () => {
+test('셈: 막아 받은 공격이 칼날 상처 없이 끝나면 n(내 무기 베기 한 번 값 · 전 판 고정 30 · 상대 베기 × 2) · 한도 · 그 공격 칼날 상처면 없음 · 둔타 · 다른 공격 상처는 셈 안 함', () => {
   const f = body();
   const a = foe(3, 1, 2);
   ibBlockMark(f, a, 3);
@@ -32,15 +32,18 @@ test('셈: 막아 받은 공격이 칼날 상처 없이 끝나면 n(고정 30 ·
   assert.equal(f.stamina.value, 50, '아직 그 공격');
   a.stamina.time = 2.5; // 공격 시간 지남
   ibBlockTick(f);
-  near(f.stamina.value, 50 + SKILL.ibBlockRegenFixed, 1e-9);
-  assert.equal(SKILL.ibBlockRegenN, 'fixed');
-  assert.equal(SKILL.ibBlockRegenFixed, 30, '[사장님 11/15 결정] 고정 30');
-  SKILL.ibBlockRegenN = 'foe2';
+  near(f.stamina.value, 50 + STAMINA.cutCost * 1.34, 1e-9); // 내 무기 베기 한 번 값 (몸 무게 배율 1.34)
+  assert.equal(SKILL.ibBlockRegenN, 'cut', '[사장님 11/15 결정] 무기 베기 한 번 값 (전 고정 30)');
+  near(regenN(foe(1, 1, 2, 1.0), body('iberian', { stamina: { weight: 1.0 } })), STAMINA.cutCost, 1e-9); // 롱소드 몸 12 — 상대 무기와 상관없음
+  SKILL.ibBlockRegenN = 'fixed';
   try {
+    assert.equal(regenN(foe(), body()), SKILL.ibBlockRegenFixed);
+    assert.equal(SKILL.ibBlockRegenFixed, 30, '전 판 고정 30');
+    SKILL.ibBlockRegenN = 'foe2';
     near(regenN(foe(1, 1, 2, 1)), STAMINA.cutCost * 2, 1e-9); // 롱소드 24
     near(regenN(foe(1, 1, 2, 1.34)), STAMINA.cutCost * 1.34 * 2, 1e-9);
   } finally {
-    SKILL.ibBlockRegenN = 'fixed';
+    SKILL.ibBlockRegenN = 'cut';
   }
   assert.equal(f.stamina.counts.blockRegen, 1);
   f.stamina.value = 95; // 한도
