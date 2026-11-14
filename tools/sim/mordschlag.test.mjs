@@ -42,7 +42,7 @@ test('값: 사람 독일 비기 = 죽음의 일격 (사장님 결정 1.5 s — 1
   assert.equal(SECRET.stiff.german, CONFIG.realS(0.6)); // 11/14 사장님 '모든 비기 경직 0.6초로 통일' (전 0.4)
   assert.equal(SECRET.mordOver, 0); // 넘어 들어감 규칙 — 사장님 확인 전 · 기본 끔
   assert.ok(SECRET.openSchools.includes('german') && SECRET.openSchools.includes('japanese'));
-  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german', 'italian']); // 10/24 이베리아 싱지르 · 독일 모르트슐라크 AI 열림 (사장님 12:0x 'ai도 비기 쓰게 해') · 11/14 이탈리아 리솔루토 ('리솔루토도 쓰게해')
+  assert.deepEqual(SECRET.aiOpenSchools, ['japanese', 'iberian', 'german', 'italian', 'chinese']); // 10/24 이베리아 싱지르 · 독일 모르트슐라크 AI 열림 (사장님 12:0x 'ai도 비기 쓰게 해') · 11/14 이탈리아 리솔루토 ('리솔루토도 쓰게해') · 동방 격살 ('동방도 격살 쓰게 해')
   const S = TRADITIONS.german.playerSecret;
   assert.equal(S.name, 'mordschlag');
   assert.equal(S.nameKo, '모르트슐라크');

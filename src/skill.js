@@ -74,6 +74,8 @@ const gyeoksalReq = (D, f) => {
   const share = (G.share > 0 ? G.share : SECRET.cnFastShare) * hk;
   return { ...(pw === 'hit' ? { hitMul: gyeoksalHitMul() } : { hitMul: 1, effMul: secretEffMul(D) }), ...(G.share > 0 ? { share: G.share * hk } : {}), ...(G.trailWidth ? { width: Math.min(1, share) } : {}) };
 };
+/** 격살 한 칼 requestCombo 덧칸 (사람 skill.js · 11/14 AI ai.js secretGo 같이 — 사람과 같은 값): 판정 묶음(gyeoksalReq — 사냥 겹 빠르기 포함) · 잔상은 베는 토막만 · 찌르기면 마주 보는 띠 · 밝기 바닥 */
+export const gyeoksalComboOpt = (D, f, moves) => ({ ...gyeoksalReq(D, f), arcCut: true, face: SECRET.secretStreak && moves.some((m) => m.kind === 'thrust') ? 'line' : null, min: SECRET.secretArcMin ?? 0 });
 /** 안다레 리솔루토 굳음 (s): 10/24 런지 risolutoStiff 0.6 (사장님) · null 이면 이탈리아 비기 굳음 stiff.italian (10/23 판) */
 const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? realS(0.3); // 굳음은 실제 초 (표준 시간 10/25 — config 값도 realS)
 /**
@@ -751,7 +753,7 @@ export class Skill {
         const moves = run.queue.splice(0);
         // 격살(10/22): 결정타 hitMul 대신 판정 에너지 × FINISH.power (시험 'hit' = 다른 비기와 같은 hitMul) · 시험 칼끝 빠르기 몫 SECRET.gyeoksal.share · 잔상 굵기 trailWidth ·
         //  잔상(10/23 점검): 베는 토막만(arcCut — 받은 자세에서 호 첫 자리로 옮기는 이음은 그리지 않음) · 허파 찌르기는 마주 보는 띠(face 'line' 찌르는 줄 — SECRET.secretStreak) · 밝기 바닥 SECRET.secretArcMin
-        requestCombo(f, { moves, ...(D.power ? { ...gyeoksalReq(D, f), arcCut: true, face: SECRET.secretStreak && moves.some((m) => m.kind === 'thrust') ? 'line' : null, min: SECRET.secretArcMin ?? 0 } : {}) });
+        requestCombo(f, { moves, ...(D.power ? gyeoksalComboOpt(D, f, moves) : {}) });
         this.secretBursts++;
       }
       if (S.cond?.window === 'bind') run.gain = bindGain(run.ctx.held ?? 0); // 독일: 붙어 있던 만큼 판정 배율·힘 창 (secret.js bindGain)

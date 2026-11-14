@@ -44,13 +44,15 @@ import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } fro
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, requestArtRedondo, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy, snapAim } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
 import { windStart, windEnd, windRopesBack, windLoopOf, windSpec, windWoundT } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 08:xx — UNIQUE_ASSIST.rdAiWind · 사람과 같은 감기 · 내려침)
-import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret, gnsHumanMoving } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
+import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret, gnsHumanMoving, foeRecentTipSp } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 import { PICKUP } from './config.js'; // 떨어진 칼 줍기 (11/05)
 import { aiPickup } from './pickup.js'; // 떨어진 칼 줍기 — AI 몫 (11/05 · PICKUP.ai)
 import { IT_OUTBOX } from './config.js'; // 이탈리아 아웃복싱 AI 몫 (11/14 사장님 'ai에도 적용' — IT_OUTBOX.ai)
 import { aiBeatTick, aiBeatTech, itEdgeGrant, itStats, itEdgeOk } from './italian_outbox.js'; // 박자 찌르기 셈 · 칼 우위 (헛누름) · 재기 · 리솔루토 창 문 (11/14)
 import { RisolutoWatch, lungeGapOk, bladesNear, foeStep } from './italian_risoluto.js'; // AI 안다레 리솔루토 (11/14 사장님 '리솔루토도 쓰게해' — 사람과 같은 셈 · risoTick)
+import { gyeoksalComboOpt } from './skill.js'; // 동방 격살 AI 몫 (11/14 사장님 '동방도 격살 쓰게 해') — 사람과 같은 한 칼 덧칸 (판정 · 사냥 겹 빠르기 · 잔상)
+import { huntN } from './cn_hunt.js'; // 동방 격살 AI 쓸 때 — 상대에 쌓인 사냥 겹 (11/14)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -670,10 +672,17 @@ export class AI {
       this.binds.tick(dt, bt);
       if (bt && this.mode === 'attack') this.atkClash = true; // 이 공격 동안 칼끼리 부딪힘 (맺힘 셈 — checkBind 의 기하보다 넓게, 실제 접촉도)
     }
+    if (this.secret?.when === 'gyeoksal') {
+      // 동방 격살 AI (11/14): 내가 마지막으로 베인 뒤 지난 시간 — 사람 gyeoksalTick 의 woundAge 와 같은 셈 (격살 AI 만 · 다른 AI 판은 그대로)
+      const nw = me.wounds?.length ?? 0;
+      this.gkWoundAge = nw > (this.gkNw ?? nw) ? 0 : (this.gkWoundAge ?? Infinity) + dt;
+      this.gkNw = nw;
+    }
     if (!this.secretRun && me.powerMul !== 1) me.powerMul = 1;
     if (!this.secretRun && me.secretHit !== 1) me.secretHit = 1; // 결정타 판정 배율도 비기 밖에선 1
     if (kneeling && this.secretRun) this.secretAbort();
     if (this.secret && !kneeling && !this.secretRun && !this.drillOut) this.secretScan(dt, c, r); // 헛스윙 연습 동안은 비기 사건을 보지 않는다 (whiff_drill.js)
+    if (this.gk && !kneeling && !this.secretRun && !this.drillOut) this.gyeoksalAi(d, dt); // 동방 격살 (11/14): 나서며 받은 막기 — 막기 꼴이 끝나도 기다림은 칼이 갈라질 때까지 (사람 창과 같음)
     if (this.spinArm) this.spinTick(dt, kneeling); // 싱지르 (10/24 AI 열림): 칼끝 거리 밖 무장 → 상대가 들어오면 한 바퀴 (상대 사건 없음 — secretScan 은 건너뜀)
     if (this.riso) this.risoTick(dt, kneeling); // 안다레 리솔루토 (11/14 AI 열림): 칼 우위 동안 덮인 채 상대 걸음에 맞춰 오감 → 창 0.6 s → 곧장 런지 (상대 사건 없음)
     if (this.press) this.mordTick(dt, kneeling); // 모르트슐라크 (10/24 AI 열림): 밀치기 누르기 1.5 s → 창 0.6 s → 상대 머리가 닿으면 일격 (상대 사건 없음)
@@ -2393,8 +2402,66 @@ export class AI {
     this.defVoid = !this.me.armed || Math.random() < pVoid + (1 - pVoid) * this.fear * 0.8;
     if (this.defVoid) this.stats.voids++;
     else this.stats.parries++;
+    // 동방 격살 (11/14 사장님 '동방도 격살 쓰게 해'): 칼로 받기로 정했고 이 판 격살이 남았으면, 쓸 때(gkWant)엔 나서며 받는다 — 굴림 없음 (gyeoksalAi · moveFeet)
+    if (!this.defVoid && this.secret?.when === 'gyeoksal' && !secretSpent(this.me) && this.gkWant()) {
+      this.gk = { t: 0, seen: false, pend: null };
+      this.stats.gkTry = (this.stats.gkTry ?? 0) + 1;
+    }
     this.timer = DEF_T;
     return true;
+  }
+
+  /** 격살 막기의 칼끼리 닿음 (사람 gyeoksalTick 과 같은 기하 — secret.js bladesTouch · 시험이 갈아 끼울 수 있게 메서드) */
+  gkTouch() {
+    return bladesTouch(this.me, this.foe);
+  }
+
+  /** 격살을 지금 쓸까 (11/14 — 판당 1 번이라 아껴 둠 · SECRET.gyeoksalAi): 상대에 쌓인 사냥 겹이 stacks 이상 · 또는 판이 late 초를 넘음 */
+  gkWant() {
+    const C = SECRET.gyeoksalAi ?? { stacks: 0, late: 0 };
+    return huntN(this.foe) >= C.stacks || this.me.fightT >= C.late;
+  }
+
+  /**
+   * 동방 격살 AI (11/14 사장님 '동방도 격살 쓰게 해' — 사람 secret.js PlayerSecretWatch.gyeoksalTick 과 같은 조건 · 같은 칼):
+   *  나서며 받는 막기(respond 가 gk 를 둠 · moveFeet 가 앞으로 — 사람의 스틱 앞) → 이 막기에서 칼끼리 처음 닿은 스텝에 ① 막기를 시작한 뒤 gyeoksal.press 초 안 ·
+   *  ② 스틱(걸음)이 상대 쪽(stickY > |stickX|) · ③ 상대 칼이 들어오던 중(최근 0.6 s 칼끝 3.5 m/s 이상) · ④ 0.6 s 안에 베이지 않음 · ⑤ 받은 줄이 격살 자세(cond.stances) →
+   *  기다림 → 그 사이 베이지 않고 칼이 갈라지는 스텝에 곧장(사람 gyeoksal.auto 와 같음 — 받은 자세의 급소). 냈으면 true. 굴림 없음
+   */
+  gyeoksalAi(d, dt) {
+    const G = this.gk;
+    const me = this.me;
+    const K = (this.stats.gk ??= { edges: 0, late: 0, notFwd: 0, slow: 0, hurt: 0, noStance: 0, pend: 0, cut: 0, open: 0 });
+    G.t += dt;
+    if (this.mode === 'attack' || !this.secret || me.state !== 'stand' || !me.armed || !this.foe.alive) {
+      this.gk = null; // 내가 공격 · 넘어짐 · 칼 없음 — 사람과 같이 없던 일
+      return false;
+    }
+    const touch = this.gkTouch();
+    if (G.pend) {
+      if (this.gkWoundAge === 0) {
+        K.cut++;
+        this.gk = null; // 뚫림 — 창 없음
+        return false;
+      }
+      if (touch) return false;
+      const st = G.pend;
+      this.gk = null;
+      K.open++;
+      return this.secretGo(this.secret, { slot: st.stance, stance: st.stance, line: st.line, gk: true });
+    }
+    if (G.seen || !touch) return false;
+    G.seen = true;
+    K.edges++;
+    if (!(G.t <= SECRET.gyeoksal.press)) return void K.late++, false;
+    if (!(me.stickY > Math.abs(me.stickX))) return void K.notFwd++, false;
+    if (!(foeRecentTipSp(this.sense, realS(0.6)) >= 3.5)) return void K.slow++, false; // secret.js RECENT(실제 0.6 s) · 3.5 m/s — 사람과 같은 수
+    if ((this.gkWoundAge ?? Infinity) < realS(0.6)) return void K.hurt++, false;
+    const stance = this.secret.cond.stances[this.defLine];
+    if (!stance) return void K.noStance++, false;
+    K.pend++;
+    G.pend = { stance, line: this.defLine };
+    return false;
   }
 
   defend(dt, s, d) {
@@ -2412,7 +2479,7 @@ export class AI {
     }
     // 막기 연환 비기 (10/11 — schools.js *_SECRET_PARRY): 정한 자리로 받아 낸 막기 → 독일은 맞붙은 그 순간, 중국은 칼이 갈라진 순간 곧장. 버릇(bindDef)·흐름 되받기보다 먼저
     if (this.secret?.when === 'parry' && !this.defVoid && this.parryCombo(d, dt)) return;
-    const pcWait = !!this.pcPend; // 기다리는 동안(중국 갈라짐 · 독일 붙음 이어짐)은 맞닿음에 거는 버릇·흐름 되받기를 걸지 않는다 (막기 연환이 그 자리를 맡음)
+    const pcWait = !!this.pcPend || !!this.gk?.pend; // 격살 기다림도 막기 연환처럼 버릇 · 흐름 되받기를 걸지 않음 // 기다리는 동안(중국 갈라짐 · 독일 붙음 이어짐)은 맞닿음에 거는 버릇·흐름 되받기를 걸지 않는다 (막기 연환이 그 자리를 맡음)
     // 패시브 bindDef (이번 막기의 처음 맞닿음에 한 번): 받은 칼로 곧장 (返し·cavazione)
     if (!pcWait && this.passives.length && !this.defBindSeen && this.passiveBindDef(s, d)) return;
     // 흐름(SKILL.flow): 칼로 받아 낸 순간(칼끼리 맞닿음) 받은 칼이 멈추지 않고 그대로 되받아 벤다
@@ -2431,6 +2498,7 @@ export class AI {
     this.pcW0 = this.me.wounds?.length ?? 0;
     this.pcDone = false;
     this.pcPend = null;
+    this.gk = null; // 동방 격살 시도 (11/14 — respond 가 막기로 정한 뒤 다시 정함)
   }
 
   /**
@@ -2922,7 +2990,7 @@ export class AI {
 
   /** 비기를 낸다 (조건은 이미 찼다). 냈으면 true — 기술이 꾸러미에 없거나 공격을 못 열면 false (아무것도 바꾸지 않는다) */
   secretGo(S, ctx = {}) {
-    if (this.me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(this.me)) return false; // 판당 쓸 수 (10/29 19:5x)
+    if (this.me.stamina.exhausted || (STAMINA.on && this.staminaRest && !ctx.gk) || secretSpent(this.me)) return false; // 판당 쓸 수 (10/29 19:5x) · 격살(ctx.gk — 11/14)은 사람과 같게 기력 0 이하만 막음(아래 secretReady) — AI 쉼 걸쇠(staminaRest)는 새 공격을 여는 몫이라 받아 낸 뒤 저절로 나가는 격살엔 안 걸림
     if (!this.me.stamina.secretReady) return this.secretPoor(); // 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써' · 18:3x '0 이하' — 사람과 같은 규칙 · 판당 쓸 수 안 씀)
     const D = S.do;
     const run = { S, stage: 'strike', t: 0, landed: false, peakE: 0, tr: this.art.tradition };
@@ -3009,7 +3077,8 @@ export class AI {
         const last = run.queue[run.queue.length - 1].path;
         run.end = last[last.length - 1];
         this.hand.set(run.end[0], run.end[1]);
-        requestCombo(this.me, { moves: run.queue.splice(0) });
+        const moves = run.queue.splice(0);
+        requestCombo(this.me, { moves, ...(D.power ? gyeoksalComboOpt(D, this.me, moves) : {}) }); // 격살(11/14 AI 도): 사람과 같은 판정 · 사냥 겹 빠르기 · 잔상 (skill.js gyeoksalComboOpt) — 막기 연환은 그대로
         this.secretBursts = (this.secretBursts ?? 0) + 1;
         ok = true;
       } else ok = this.secretNext();
@@ -3700,7 +3769,7 @@ export class AI {
       //  (-0.2보다 더 당겨야 검술 층이 손 움직임을 휘두르기로 보고 앞으로 내딛지 않는다)
       fwd = Math.min(-0.25, toStick(clamp((d - this.holdDist() - 0.05) * 3, -1.9, -0.3)));
     } else if (this.mode === 'defend') {
-      fwd = this.defVoid ? -1 : -0.3; // 막을 때도 살짝 물러선다 (앞으로 쏠리지 않게)
+      fwd = this.defVoid ? -1 : this.gk && !this.gk.seen && this.gk.t <= SECRET.gyeoksal.press ? 1 : -0.3; // 막을 때도 살짝 물러선다 (앞으로 쏠리지 않게) · 동방 격살 시도(11/14)는 나서며 받음 — 칼이 닿거나 때(gyeoksal.press)가 지나면 그대로
     } else if (this.mode === 'secret') {
       // 비기 꼴 (일본 後の先): ① 물러서며 끌어 담기 — 뒤로 (뒷발 걸음은 gait 'retreat' 가 딛는다) · 경직 — 걸음 없음
       fwd = this.secretRun?.stage === 'back' ? -0.3 : this.secretRun?.stage === 'hold' ? this.secretHoldFeet() : 0;

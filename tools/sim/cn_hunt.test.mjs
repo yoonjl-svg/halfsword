@@ -24,8 +24,8 @@ const body = ({ tr = 'chinese', kit = kitAll(tr), tech = 'yaoji', id = 1 } = {})
 const C = Object.create(Combat.prototype); // huntWound · yaojiDeep 은 this 의 다른 칸을 안 씀
 const cut = (zone = 'abdomen', o = {}) => ({ type: 'cut', zone, severity: 0.4, ...o });
 
-test('기본값 — 켬 · 상한 5 · 기력 회복 −8 %/겹 · 격살 빠르기 +8 %/겹 · 몸 어디든 · AI 스위치 끔 · 동방 판당 1 번(공용 표) [사장님 11/14]', () => {
-  assert.deepEqual(UA.cnHunt, { on: 1, max: 5, regen: 0.08, share: 0.08, torso: 0, ai: 0 });
+test('기본값 — 켬 · 상한 5 · 기력 회복 −8 %/겹 · 격살 빠르기 +8 %/겹 · 몸 어디든 · AI 도 쌓음(11/14 — 전 끔) · 동방 판당 1 번(공용 표) [사장님 11/14]', () => {
+  assert.deepEqual(UA.cnHunt, { on: 1, max: 5, regen: 0.08, share: 0.08, torso: 0, ai: 1 }); // ai 1 = 사장님 11/14 '동방도 격살 쓰게 해' — 사람과 똑같이 (전 0)
   assert.deepEqual(UA.secretUses, { default: 1, chinese: 1 }); // 11/14 '다른 비기처럼 1번으로' — 사람 · AI 같은 표 (전 chinese 3)
   assert.deepEqual(UA.yaojiBleed.techs, ['yaoji', 'chebuYaoji', 'lianchi']);
   assert.deepEqual(UA.yaojiBleed.zones, ['chest', 'abdomen', 'pelvis']);
@@ -163,9 +163,10 @@ test('격살 판당 1 번 (공용 표 — 사람 · AI 같음 · C12 · 사냥 �
   } finally { reset(); UA.secretUses = U0; }
 });
 
-test('AI 스위치: 끔(기본)이면 스킬트리 없는 몸(AI · 시뮬)은 안 쌓음 · 켜면 쌓음', () => {
+test('AI 스위치: 켬(기본 — 11/14)이면 스킬트리 없는 몸(AI · 시뮬)도 쌓음 · 끄면(`?cnHuntAi=0`) 안 쌓음', () => {
   try {
     const ai = body({ kit: null });
+    UA.cnHunt.ai = 0;
     assert.equal(huntOn(ai), false);
     const v = {};
     C.huntWound(ai, v, cut());
@@ -200,8 +201,9 @@ function trace(o, steps = 420) {
     return JSON.stringify(out);
   } finally { G.world.free(); }
 }
-test('다른 유파 · AI 판은 바이트 같음: 사냥 켬과 끔이 같은 판 (독일 · 일본 사람 몫 · 동방 AI 끼리)', () => {
+test('다른 유파 · AI 판은 바이트 같음: 사냥 켬과 끔이 같은 판 (독일 · 일본 사람 몫 · 동방 AI 끼리 — AI 사냥 겹 끔 판에서 · 켬이면 AI 동방이 쌓아 다름)', () => {
   try {
+    UA.cnHunt.ai = 0;
     for (const o of [{ weapon: 'longsword', weapon2: 'longsword', kit: kitAll('german') }, { weapon: 'uchigatana', weapon2: 'hwando', kit: kitAll('japanese') }, { weapon: 'hwando', weapon2: 'hwando' }]) {
       UA.cnHunt.on = 1;
       const a = trace(o);

@@ -81,7 +81,7 @@ test("A [사장님 11/11 결정] '격살도 빠르기 70%로 올리고 파괴력
   assert.equal(now.hitMul, 1);
   assert.equal(now.share, 0.7);
   assert.equal(req({ gyeoksalHitMul: 1.3 }).hitMul, 1.3, '?gyeoksalHitMul=1.3 = 전 판');
-  assert.ok(!SECRET.aiOpenSchools.includes('chinese'), 'AI 동방 비기 닫힘 (격살은 사람만)');
+  assert.ok(SECRET.aiOpenSchools.includes('chinese'), 'AI 동방 격살 열림 (11/14 사장님 \'동방도 격살 쓰게 해\' — 전 닫힘 · 사람만)');
 });
 
 test('A: 11/14 사장님 \'리솔루토도 쓰게해\' — AI 이탈리아 비기도 리솔루토(사람과 같은 칸 · aiSecret) · 옛 엇박 찌르기는 secret 칸에 남음 · ?itSecret=contratempo 면 AI 몫 없음', () => {
