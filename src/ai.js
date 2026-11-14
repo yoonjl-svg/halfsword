@@ -61,7 +61,7 @@ import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, j
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
 import { DIG_PROTO } from './config.js'; // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js)
-import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet } from './dig_proto.js';
+import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
@@ -376,6 +376,8 @@ export class AI {
     //  digK = 띠 기울기(무 0 · 낮음 ⅓ · 가운데 ⅔ · 높음 1 — 유파와 상관없이) · dig = 이 스텝 파고들기 판인가(updateCombat) · digDef = 다가가다 받은 위협을 칼로 받으며 계속 들어가는 막기 · digD0 = 공격을 시작한 거리
     this.digK = tiltOf(this.proficiency);
     this.dig = false;
+    this.digW = 0; // 상대가 길 때의 대처 (11/14 — 모든 AI): 이 스텝 파고들기 몫 0 ~ 1 = 길이 모자람 digS × 띠 세기 (dig_proto.js digWeight)
+    this.digS = 0;
     this.digDef = false;
     this.digD0 = 0;
     // ① 무기 이해 — 거리 오차 (1 단계 이탈리아만 · 높음부터 0 — 굴리지 않음): 한 판 동안 내 칼 · 상대 칼 어림을 같은 몫만큼 길게/짧게 믿는다 (띠 무 0.3 m — 플랜이 없어도)
@@ -858,7 +860,8 @@ export class AI {
     const ux = dx / d; // 나 → 상대 방향
     const uz = dz / d;
     this.d = d;
-    this.dig = this.planOn ? this.digNow() : false; // 파고들기 판 (11/14 — 내 칼이 뚜렷이 짧을 때만 · 끄면 옛 판)
+    this.digW = this.planOn ? digWeight(this) : 0; // 파고들기 몫 (11/14 사장님 '상대 무기가 나보다 길 때의 대처 … 모든 ai에게 기본으로' — 문 → 기울기 · DIG_PROTO.reach 0 = 옛 문 digNow)
+    this.dig = this.digW > 0; // 파고들기 판 (몫이 있음)
     this.foeClosing = -(s.vx * ux + s.vz * uz); // 상대가 나에게 다가오는 빠르기 (m/s)
     const mv = me.bodies.pelvis.linvel();
     this.myClosing = mv.x * ux + mv.z * uz; // 내가 상대에게 다가가는 빠르기
@@ -1210,7 +1213,7 @@ export class AI {
     if (this.plan && this.planLuck > 0) m *= 1 - 0.5 * this.planLuck; // 무모 (11/14 — 유파 플랜 굴림 몫): 상대 칼끝 거리 밖 여유를 덜 셈 (낮음 ⅔ → 여유 ⅔) · 플랜 없는 몸은 이 줄을 안 탐
     if (this.planCn) m = cnHoldM(this, m); // 동방 플랜 (11/14): 가까운 간격 · 유도 동안 상대 칼끝 바로 밖
     if (this.planDe) m = deHoldM(this, m); // 독일 플랜 (11/14 3 단계): 상대 칼끝 바로 밖 · 기력 열세면 칼끝 밖에서 숨 고름
-    if (DIG_PROTO.ai && this.dig && !this.Mup && !this.chasing) m = Math.min(m, DIG_PROTO.holdM); // 파고들기 A1 (11/14 사장님 'A안 켜고' — 기본 켬): 짧은 칼은 상대 칼끝 바로 밖에 섬
+    if (DIG_PROTO.ai && this.dig && !this.Mup && !this.chasing) m = digMix(m, Math.min(m, DIG_PROTO.holdM), this.digW); // 파고들기 A1 (11/14 사장님 'A안 켜고' — 기본 켬): 짧은 칼은 상대 칼끝 바로 밖에 섬
     // 빈손 상대는 칼이 닿지 않는다: 내 칼이 닿는 거리까지 다가선다
     const W = this.gnsW;
     const wary = !!W && ((W.ready && !W.reck) || W.cut) && !this.chasing; // 무모(W.reck — 11/14 플랜 유파 무 · 낮음)는 준비된 선을 안 셈 (그 발도에 막 베인 뒤 W.cut 은 그대로 물러섬) · 고노센 경계 (10/25): 준비된 고노센 상대(또는 그 발도에 막 베임)면 상대 발도 선 밖에 선다 — 여유는 위와 같은 m (최소 0.08)
@@ -1459,8 +1462,8 @@ export class AI {
     const onl = cls.online ? Lk : 1;
     // 1) 헛친 뒤: 칼이 길 밖에 있고 손이 멈췄다 (다시 자세를 잡기 전) → 뒤(Nach)
     //  파고들기(11/14 — this.dig · 내 칼이 뚜렷이 짧음): 상대 칼끝 어림 + 0.45 안이면 그 틈에 건너 들어감 · 점수에 띠 기울기(digK)
-    const rr = this.dig ? digRecoverReach(this) : this.M.reach; // 파고들기 A2(11/14 사장님 'A안 켜고' · DIG_PROTO.ai 기본 켬 — 끄면 옛 셈 그대로: 내 칼끝 · 상대 칼끝 어림 가운데 먼 쪽): 건널 수 있는 거리까지만
-    if (swungRecently && handSp < 1.8 && onl > 0 && d < rr + 0.45) add((0.7 + 0.3 * L.read) * onl * (this.dig ? 1 + this.digK : 1), 'recover');
+    const rr = this.dig ? digMix(this.M.reach, digRecoverReach(this), this.digW) : this.M.reach; // 파고들기 A2(11/14 사장님 'A안 켜고' · DIG_PROTO.ai 기본 켬 — 끄면 옛 셈 그대로: 내 칼끝 · 상대 칼끝 어림 가운데 먼 쪽): 건널 수 있는 거리까지만
+    if (swungRecently && handSp < 1.8 && onl > 0 && d < rr + 0.45) add((0.7 + 0.3 * L.read) * onl * (this.dig ? 1 + this.digK * this.digS : 1), 'recover'); // 상대가 길 때의 대처 (11/14): 띠 기울기 × 길이 몫
     // 2) 간격 안으로 걸어 들어온다 → 들어오는 순간(Vor)
     //  유파 플랜 받기 (11/14 이탈리아 — planC.receive): 문턱을 걸음 문턱(GAIT.walkMin) · 내 칼끝 거리로 옮기고 점수에 띠 기울기 — 플랜 없는 유파는 아래 옛 줄 그대로
     const RC = this.plan ? this.planC?.receive ?? 0 : 0;
@@ -1886,7 +1889,7 @@ export class AI {
         const dl = (1.4 * keep * (this.digD0 - this.need)) / AI_PLAN.digCross + hold;
         if (dl > lim) {
           if (this.attackT > realS(lim) && this.attackT - dt <= realS(lim)) (this.stats.dig ??= digStats()).long++; // 재기: 옛 한도였으면 여기서 접었음
-          lim = dl;
+          lim = digMix(lim, dl, this.digW); // 상대가 길 때의 대처 (11/14): 몫만큼 늘림
         }
       }
       if (this.attackT > realS(lim) || d > this.holdDist() + (this.chasing ? 1.4 : 0.8) * keep + hold) this.abortAttack();
@@ -2717,7 +2720,7 @@ export class AI {
       }
     }
     // 파고들기 (11/14 — this.dig): 다가가다(공격 준비 · 다가감) 받은 위협이면 접지 않고 칼로 받으며 계속 들어감 — 몫 digKeep × 띠 기울기 (파고들기 판에서만 굴림)
-    const digKeep = this.dig && this.mode === 'attack' && (this.phase === 'approach' || this.phase === 'windup') && this.me.armed && Math.random() < AI_PLAN.digKeep * this.digK;
+    const digKeep = this.dig && this.mode === 'attack' && (this.phase === 'approach' || this.phase === 'windup') && this.me.armed && Math.random() < AI_PLAN.digKeep * this.digK * this.digS; // 상대가 길 때의 대처 (11/14): × 길이 몫
     this.mode = 'defend';
     this.phase = 'guard';
     this.path.length = 0;

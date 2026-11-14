@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI, DT, THREE } from './harness_m.mjs';
-import { digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, aiFrontDash, runTick, techStepFwd, digProtoOn } from '../../src/dig_proto.js';
+import { digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, aiFrontDash, runTick, techStepFwd, digProtoOn, digWeight, digShortM, digMix } from '../../src/dig_proto.js';
 
 const { DIG_PROTO: D, GAIT, SECRET } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -62,6 +62,7 @@ test('A — AI 판단 셈: 헛친 틈 거리 · 걸음 실린 기술 · 붙은 �
   try {
     const ai = G.ai;
     assert.equal(ai.digNow(), true, '환도는 파고들기 판');
+    ai.digS = ai.digW = 1; // 몫 1 (11/14 상대가 길 때의 대처 — 환도 대 롱소드 모자람 0.30 = reachRef · 높음): 아래 셈은 판정된 스텝처럼 몫을 둠 (옛 판 셈 그대로)
     withDig({ ai: 0 }, () => assert.equal(digRecoverReach(ai), Math.max(ai.M.reach, ai.foeReach), '끄면 옛 셈'));
     withDig({ ai: 1 }, () => assert.ok(near(digRecoverReach(ai), Math.min(Math.max(ai.M.reach, ai.foeReach), ai.M.contact + 0.05 + D.crossT * GAIT.moveSpeed)), '건널 수 있는 거리까지만'));
     const T = ai.school.techByName;
@@ -178,4 +179,86 @@ test('켜면 판에서 실제로 쓰임 — A 걸음 실린 칼 · 건넘 · B �
   const c = first({ ai: 0, run: 1 }, (r) => (r.dP.runT ?? 0) > 0);
   assert.ok(c, 'C 달린 판');
   for (const r of [a, b, c]) assert.notEqual(r.text, withDig({ ai: 0 }, () => trace({ secs: 30, seed: r.seed })).text, '끈 판(A 도 끔)과 다름');
+});
+
+test('상대가 길 때의 대처 — 모든 AI 기본 (11/14 사장님): 문 → 기울기 · 몫 = 길이 모자람 s × 띠 세기(+ 굴림) · 같은 칼은 0 · 끄면 · 쓰러진 상대 간격은 옛 문', () => {
+  assert.equal(D.reach, 1, '[11/14 사장님] 모든 AI 기본');
+  assert.ok([0.3, 0.45, 0.6, 0.9].includes(D.reachRef), '걸음 사다리');
+  assert.equal(digMix(0.2, 0.9, 1), 0.9);
+  assert.equal(digMix(0.2, 0.9, 0), 0.2);
+  assert.ok(near(digMix(0.2, 0.9, 0.5), 0.55));
+  /** 짧은 쪽 AI (자리 1 · weapon2) 대 긴 쪽 AI — 0.5 s 지나 판정된 몫 */
+  const pair = (short, long, prof, fn) => {
+    const G = newRound({ seed: 1, weapon: long, weapon2: short, AI2Class: AI, persona: { proficiency: prof }, persona2: { proficiency: prof } });
+    try {
+      while (G.t < 0.5) G.step();
+      return fn(G.ai, G.ai2);
+    } finally {
+      G.world.free();
+    }
+  };
+  // 같은 칼 — 모자람 0 · 몫 0 (굴림 없음) · 긴 쪽도 0
+  pair('longsword', 'longsword', 2, (a, b) => {
+    assert.equal(digShortM(a), 0);
+    assert.equal(a.digW, 0);
+    assert.equal(a.dig, false);
+    assert.equal(b.digW, 0);
+  });
+  // 조금 모자람 (롱소드 대 츠바이핸더 0.21 m — 옛 문 밖): 높음은 s 그대로 · 긴 쪽은 0 · 끄면 옛 문(0)
+  pair('longsword', 'zweihander', 5, (a, b) => {
+    assert.ok(near(digShortM(a), 0.21, 1e-6), `${digShortM(a)}`);
+    assert.ok(near(a.digS, 0.21 / D.reachRef, 1e-6) && near(a.digW, a.digS, 1e-9), `높음 몫 ${a.digW}`);
+    assert.equal(b.digW, 0, '긴 쪽은 아님');
+    assert.equal(withDig({ ai: 1, reach: 0 }, () => digWeight(a)), 0, '옛 문 — 0.26 < 0.3');
+  });
+  // 꽤 모자람 (우치가타나 대 롱소드 0.52 m): 기준점 넘음 s 1 · 끄면 옛 문 1
+  pair('uchigatana', 'longsword', 5, (a) => {
+    assert.equal(a.digS, 1);
+    assert.equal(a.digW, 1);
+    assert.equal(withDig({ ai: 1, reach: 0 }, () => digWeight(a)), 1);
+  });
+  // 띠 세기: 가운데 ⅔ (+ 굴림 몫 ⅓ — 동전) · 무 0 (+ 굴림 몫 1) — 굴림은 AI_PLAN.beat 마다 한 번
+  pair('longsword', 'zweihander', 3, (a) => {
+    const s = a.digS;
+    const r = Math.random;
+    try {
+      a.digLuckT = 0;
+      Math.random = () => 0.99;
+      assert.ok(near(digWeight(a), s * (2 / 3)), '동전 안 나옴 — 기울기만');
+      Math.random = () => 0;
+      assert.ok(near(digWeight(a), s * (2 / 3)), '박자 안에서는 다시 안 굴림');
+      a.digLuckT = 0;
+      assert.ok(near(digWeight(a), s), '동전 — 기울기 + 굴림 몫');
+    } finally {
+      Math.random = r;
+    }
+  });
+  pair('longsword', 'zweihander', 0, (a) => {
+    const r = Math.random;
+    try {
+      a.digLuckT = 0;
+      Math.random = () => 0.99;
+      assert.equal(digWeight(a), 0, '무 — 계획 몫 0');
+      a.digLuckT = 0;
+      Math.random = () => 0;
+      assert.ok(near(digWeight(a), a.digS), '무 — 굴림이 나오면 그 박자는 함');
+    } finally {
+      Math.random = r;
+    }
+  });
+  // 쓰러진 상대 간격: 옛 문
+  pair('longsword', 'zweihander', 5, (a) => {
+    a.Mup = a.M;
+    assert.equal(digWeight(a), 0, '쓰러진 상대 간격은 옛 문');
+    a.Mup = null;
+  });
+});
+
+test('상대가 길 때의 대처 — 같은 칼끼리 판은 켜든 끄든 바이트 같음 · 끄면 기준점 값을 바꿔도 안 읽음', () => {
+  const mirror = (on, ref) => withDig({ ai: 1, reach: on, reachRef: ref }, () => trace({ weapon2: 'longsword', secs: 6 }));
+  const a = mirror(0, 0.3);
+  assert.equal(mirror(1, 0.3).text, a.text, '같은 칼 — 모자람 0');
+  const b = withDig({ ai: 1, reach: 0, reachRef: 0.3 }, () => trace({ weapon2: 'zweihander', secs: 6 }));
+  const c = withDig({ ai: 1, reach: 0, reachRef: 0.9 }, () => trace({ weapon2: 'zweihander', secs: 6 }));
+  assert.equal(b.text, c.text, '끄면 기준점은 판에 안 닿음');
 });

@@ -121,6 +121,9 @@ test('멀면(맞닿기 + 나아감 밖) 전 판 그대로 — 앞발 축 · 나�
 
 test('넘어지던 판 (티소나 대 롱소드 AI 씨앗 3 — 사람 손가락 봇): 끄면 돌기 0.13 s 에 맞아 넘어짐 · 켜면 1 s 안 안 넘어짐', () => withArmOld(async () => {
   const deK = deOff();
+  // 11/14 상대가 길 때의 대처(모든 AI — DIG_PROTO.reach): 롱소드 AI 가 상대 칼보다 짧아 파고들기 몫을 받아 이 판이 갈라짐 → 그 전 판(옛 문 reach 0)으로도 묶음 · 기준 그대로
+  const reachOn = CONFIG.DIG_PROTO.reach;
+  CONFIG.DIG_PROTO.reach = 0;
   try {
   // 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 씨앗 3 의 그 넘어짐 장면이 안 나옴 (끔 · 켬 같은 판 · 기록 arm_real §10)
   const fc = { ...SKILL.fingerCut };
@@ -137,7 +140,7 @@ test('넘어지던 판 (티소나 대 롱소드 AI 씨앗 3 — 사람 손가락
   } finally {
     Object.assign(SKILL.fingerCut, fc);
   }
-  } finally { deOn(deK); }
+  } finally { deOn(deK); CONFIG.DIG_PROTO.reach = reachOn; }
 }, ['armClear']));
 
 test('재기 꽂개는 읽기만: singir_fall runOne 판 = school_balance fightOne 판 (이베리아 · 롱소드 AI 씨앗 3 · 5 s)', () => {

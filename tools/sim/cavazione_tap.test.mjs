@@ -287,11 +287,15 @@ test('② 판 (씨앗 901 · 롱소드 AI · 12 s · 칼끼리 닿음을 느끼�
   const apD = [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools, CONFIG.AI_PLAN.pommel];
   for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'german');
   CONFIG.AI_PLAN.pommel = 0;
+  // 11/14 상대가 길 때의 대처(모든 AI — DIG_PROTO.reach): 롱소드 AI 가 레이피어 사람보다 0.18 m 짧아 파고들기 몫을 받아 씨앗 901 판이 갈라짐 → 그 전 판(옛 문 reach 0)으로도 묶음 · 기준 그대로
+  const reachOn = CONFIG.DIG_PROTO.reach;
+  CONFIG.DIG_PROTO.reach = 0;
   let r;
   try {
     r = fightRun('cavTouch', 901, 'longsword', { variant: 'on', dur: 12 });
   } finally {
     [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools, CONFIG.AI_PLAN.pommel] = apD;
+    CONFIG.DIG_PROTO.reach = reachOn;
   }
   assert.ok((r.fired.cavazione ?? 0) >= 1, `나감 ${r.fired.cavazione}`);
   assert.ok(r.it.touches >= r.fired.cavazione && r.it.touchCut <= r.it.touches, JSON.stringify({ touches: r.it.touches, cut: r.it.touchCut }));

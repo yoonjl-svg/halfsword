@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Vector2, Vector3 } from 'three';
 import { Stamina, spendAweDrain, applyAweStart } from '../../src/stamina.js';
-import { STAMINA, WEAPON_ABILITY, UNIQUE_ASSIST, IB_LINK, AI_PLAN, realS } from '../../src/config.js'; // realS: 표준 시간(10/25) — 위세 틈 1.5 s 는 실제 초
+import { STAMINA, WEAPON_ABILITY, UNIQUE_ASSIST, IB_LINK, AI_PLAN, DIG_PROTO, realS } from '../../src/config.js'; // realS: 표준 시간(10/25) — 위세 틈 1.5 s 는 실제 초
 import { getWeapon, WEAPONS, WEAPON_ALIASES } from '../../src/weapons.js';
 import { Skill } from '../../src/skill.js';
 import { newRound, DT, AI } from './harness_m.mjs';
@@ -149,6 +149,9 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
   const ap = [AP.schools, AP.errSchools, AP.pommel];
   for (const k of ['schools', 'errSchools']) AP[k] = AP[k].filter((x) => x !== 'iberian' && x !== 'german'); // 3 단계(11/14): 독일 플랜 · 모든 AI 손잡이 찍기도 그 전 판으로 (상대 롱소드 AI)
   AP.pommel = 0;
+  // 11/14 상대가 길 때의 대처(모든 AI — DIG_PROTO.reach): 롱소드 AI 가 상대 칼보다 짧아 파고들기 몫을 받아 이 판이 갈라짐 → 그 전 판(옛 문 reach 0)으로도 묶음 · 기준 그대로
+  const reachOn = DIG_PROTO.reach;
+  DIG_PROTO.reach = 0;
   AI.prototype.afterStrike = function (d) {
     const s = this.foe.stamina, c0 = s.counts.awe ?? 0, v0 = s.value, hit = this.hitLanded, bound = this.bound;
     const r = orig.call(this, d);
@@ -182,6 +185,7 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
     AI.prototype.afterStrike = orig;
     IB_LINK.ai = linkAi;
     [AP.schools, AP.errSchools, AP.pommel] = ap;
+    DIG_PROTO.reach = reachOn;
   }
 }));
 
