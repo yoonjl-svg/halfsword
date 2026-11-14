@@ -304,6 +304,9 @@ test('AI 에도 똑같이 (11/14 사장님 \'모두 본판에 넣어 ai에게도
   const ap = [AP.schools, AP.errSchools, AP.pommel];
   for (const k of ['schools', 'errSchools']) AP[k] = AP[k].filter((x) => x !== 'iberian' && x !== 'german'); // 3 단계(11/14): 독일 플랜 · 모든 AI 손잡이 찍기도 그 전 판으로 (상대 롱소드 AI)
   AP.pommel = 0;
+  // 11/14 상대가 길 때의 대처(모든 AI — DIG_PROTO.reach): 롱소드 AI 가 상대 칼보다 짧아 파고들기 몫을 받아 이 판이 갈라짐 → 그 전 판(옛 문 reach 0)으로도 묶음 · 기준 그대로
+  const reachOn = CONFIG.DIG_PROTO.reach;
+  CONFIG.DIG_PROTO.reach = 0;
   const G = newRound({ walls: false, weapon: 'longsword', weapon2: 'zweihander', seed: 2, gap: 2.4, persona: { proficiency: 5 }, AI2Class: AI }); // AI 대 AI (롱소드 AI 대 츠바이핸더 이베리아 AI)
   const P = G.player;
   const E = G.enemy;
@@ -335,6 +338,7 @@ test('AI 에도 똑같이 (11/14 사장님 \'모두 본판에 넣어 ai에게도
     P.ibLink = null;
     restore(o);
     [AP.schools, AP.errSchools, AP.pommel] = ap;
+    CONFIG.DIG_PROTO.reach = reachOn;
     G.world.free();
   }
 });

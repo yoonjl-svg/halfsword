@@ -378,12 +378,15 @@ test('스위치 끔이면 전 판 (본판 c1cad826 과 판 바이트 같음 — 
   const DP = CONFIG.DIG_PROTO, dpAi = DP.ai;
   const AP2 = CONFIG.AI_PLAN, k2 = [AP2.schools, AP2.errSchools, AP2.pommel];
   DP.ai = 0;
+  const dpReach = DP.reach; // 11/14 상대가 길 때의 대처(모든 AI — reach): 부러져 짧아진 롱소드 AI 의 1 단계 공통 파고들기 몫도 옛 문으로 (같은 장면 · 기준 그대로)
+  DP.reach = 0;
   for (const k of ['schools', 'errSchools']) AP2[k] = AP2[k].filter((x) => x !== 'german');
   AP2.pommel = 0;
   try {
     assert.equal(hash(fightOne({ school: 'german', weapon: 'sabre', opp: 'longsword', seed: 1 })), '436777985e44', '독일 — 켬이어도 같음 (본판 c1cad826 해시)');
   } finally {
     DP.ai = dpAi;
+    DP.reach = dpReach;
     [AP2.schools, AP2.errSchools, AP2.pommel] = k2;
   }
 });

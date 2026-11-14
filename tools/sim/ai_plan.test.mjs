@@ -219,7 +219,11 @@ test('플랜 없는 몸은 바이트 같음 (유파 플랜 비움 · 손잡이 �
 
 test('스위치 끔 = 옛 판 (이탈리아 — 끔 · 플랜 유파 비움이 같고 켬은 다름)', () => {
   const off = withPlan({ on: 0 }, () => trace({ weapon2: 'rapier', prof: 2 }));
+  // 11/14 상대가 길 때의 대처(모든 AI — AI_PLAN.on 아래 공통 틀 · DIG_PROTO.reach): 롱소드 AI 대 레이피어(모자람 0.18 m)는 옛 문 밖이던 장면이라 비움 판을 그 전 판(reach 0)으로 묶음 · 기준 그대로
+  const reachOn = CONFIG.DIG_PROTO.reach;
+  CONFIG.DIG_PROTO.reach = 0;
   const none = withPlan({ schools: [], errSchools: [], pommel: 0 }, () => trace({ weapon2: 'rapier', prof: 2 }));
+  CONFIG.DIG_PROTO.reach = reachOn;
   const on = trace({ weapon2: 'rapier', prof: 2 });
   assert.equal(off.plan, false);
   assert.equal(off.text, none.text, '끔 = 옛 길');
@@ -308,13 +312,17 @@ test('파고들기 (사장님 11/14 — 공통 틀): 내 칼이 상대 칼보다
   assert.ok(near(digOf('morgenstern').k, 1 / 3), '띠 기울기 (낮음 ⅓ — 유파와 상관없이)');
   // 스위치 끔 · 문턱이 닿지 않으면 옛 판과 바이트 같음 · 켬은 다름 (무유파 냉동 참치 숙련 5 — 플랜 없는 유파 · 2 단계부터 일본은 플랜이 있어 뺌)
   //  3 단계(11/14): 무유파도 플랜(src/ai_plan_free.js)을 받음 — '플랜 없는 유파' 장면이라 이 셋은 그 전 판(AI_PLAN_FREE.on 0)으로 묶음 · 기준 그대로
+  //  11/14 상대가 길 때의 대처(모든 AI — DIG_PROTO.reach): 'digShort 99 = 문이 안 닿음'은 옛 문 장면이라 그 전 판(reach 0)으로 묶음 · 기준 그대로
   const freeOn = CONFIG.AI_PLAN_FREE.on;
+  const reachOn = CONFIG.DIG_PROTO.reach;
   CONFIG.AI_PLAN_FREE.on = 0;
+  CONFIG.DIG_PROTO.reach = 0;
   const off = withPlan({ on: 0 }, () => trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 }));
   const never = withPlan({ digShort: 99, schools: AI_PLAN.schools.filter((t) => t !== 'german'), errSchools: AI_PLAN.errSchools.filter((t) => t !== 'german'), pommel: 0 }, () => trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 })); // 3 단계: 상대 롱소드(독일) 플랜 · 손잡이 찍기도 뺌
   const on = trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 });
   assert.equal(never.text, off.text, '파고들기가 안 걸리면 옛 판');
   CONFIG.AI_PLAN_FREE.on = freeOn;
+  CONFIG.DIG_PROTO.reach = reachOn;
   assert.notEqual(on.text, off.text, '파고들기 판은 달라짐');
 });
 
