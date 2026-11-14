@@ -9,6 +9,7 @@
 import { AI_PLAN, STAMINA, GAIT } from './config.js';
 import { itEdgeOn } from './italian_outbox.js';
 import { JP_PLAN } from './ai_plan_jp.js'; // 2 단계 일본 플랜 칸 (11/14 — 유파 몫은 유파 파일에 묶음)
+import { DE_PLAN } from './ai_plan_de.js'; // 3 단계 독일 플랜 칸 (11/14 — 유파 몫은 유파 파일에 묶음)
 
 /** 국면 일곱 (판정 차례는 judgePhase — 위에서부터) */
 export const PHASES = Object.freeze(['tired', 'behind', 'finish', 'ahead', 'commit', 'contest', 'probe']);
@@ -92,6 +93,7 @@ export const SCHOOL_PLAN = Object.freeze({
     tired: Object.freeze({ retreat: 1, receive: 1, link: 0, engage: 0, invite: 0 }),
   }),
   japanese: JP_PLAN, // 2 단계 (11/14) — src/ai_plan_jp.js (still · block · stack · link · lure)
+  german: DE_PLAN, // 3 단계 (11/14) — src/ai_plan_de.js (edge · dig · push · stick · back · lure · stam)
   // 동방 (2 단계 — 사장님 11/14 '사냥감을 말려 죽이는 고양이과 맹수' · 설계 §3-4 · 칸 뜻 · 셈은 src/ai_plan_cn.js · 값 config AI_PLAN.cn): close 가까운 간격 · circle 많이 돎 · waist 허리 베기 계열 · wear 겹이 쌓이면 몰아치기를 줄이고 돌며 지치게 · meet 나서며 받아 격살 · lure 유도(겹을 쌓은 뒤 간격 끝에서 끌어냄)
   chinese: Object.freeze({
     nameKo: '고양이과 맹수',

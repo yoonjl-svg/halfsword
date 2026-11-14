@@ -542,7 +542,7 @@ export class Gait {
     //   fastK = digV ÷ 앞 걷는 빠르기(moveSpeed) · 앞 걸음(wf > 0)만(아니면 버림) · 기력은 첫 걸음만(다음 걸음은 free) · 남은 걸음이 있으면 다음 걸음에 다시 걺(그 걸음도 걷는 걸음이어야 —
     //   기술 걸음 · 자세 고치기 · 멈춤 · 스틱 뒤집힘이면 끝). 그 순간 창 시계는 이 걸음 동안 멈춤(digStep — school_passive.js)
     const B = this.burst;
-    if (B?.dig && !(wf > 0)) this.burst = null;
+    if (B?.dig && !(wf > 0)) this.burst = B.ai > 0 ? { ...B, ai: B.ai - 1 } : null; // AI 파고들기(deDigAi — 11/14 3 단계): 걸 때 디디던 걸음(물러서던 · 옆 걸음)이 둘까지 지나가도 남김 (스틱을 앞으로 바꾼 뒤 첫 앞 걸음에)
     else if (B) {
       this.burst = null;
       if ((kind === 'walk' || kind === 'catch') && (!PR || this.pairStep === 'lead')) {
@@ -705,6 +705,24 @@ export class Gait {
     const f = this.f;
     if (!side || !this.P.burstSide || !GAIT.stepBurst || f.feetHeld || f.finish?.amt > 0.5 || this.burstBrake || this.burst || this.fastK > 1) return false;
     this.burst = { fore: 0, side: Math.sign(side), lat: 1 };
+    return true;
+  }
+
+  /**
+   * 독일 파고들기 · 뒤 박차기 명령 — AI 몫 (11/14 3 단계 독일 플랜 · src/ai_plan_de.js): 사람 장치(파고들기 GAIT.deDig — 앞 digSteps 걸음 박찬 걸음 · 뒤 박차기 GAIT.burstDe)와 같은 this.burst 를
+   *  다음에 떼는 걸음에 건다(옆 박차기 sideDash 와 같은 꼴 — 걷는 중에도). 무기 유파 독일 · 판 시작 정지 · 마무리 · 박찬 뒤 세게 멈춤 · 이미 박찬 걸음 중이면 무시. 걸었으면 true
+   */
+  deDigAi() {
+    const f = this.f;
+    if (!GAIT.deDig || !GAIT.stepBurst || footworkTradition(f) !== 'german' || f.feetHeld || f.finish?.amt > 0.5 || this.burstBrake || this.burst || this.fastK > 1) return false;
+    this.burst = { fore: 1, side: 0, lat: 0, foreOnly: false, dig: GAIT.digSteps, ai: 2 };
+    return true;
+  }
+
+  backBurstAi() {
+    const f = this.f;
+    if (!GAIT.burstDe || !GAIT.stepBurst || footworkTradition(f) !== 'german' || f.feetHeld || f.finish?.amt > 0.5 || this.burstBrake || this.burst || this.fastK > 1) return false;
+    this.burst = { fore: -1, side: 0, lat: 0 };
     return true;
   }
 

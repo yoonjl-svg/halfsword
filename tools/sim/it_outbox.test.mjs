@@ -372,5 +372,10 @@ test('스위치 끔이면 전 판 (본판 c1cad826 과 판 바이트 같음 — 
     } finally { AP.on = apOn; }
   } finally { [THRUST_STYLE.rapier.gap, THRUST_STYLE.estoc.gap, UA.imbroccataGap] = keep; }
   assert.notEqual(hash(fightOne({ school: 'italian', weapon: 'rapier', opp: 'longsword', seed: 1 })), '905c89d08abf', '켬 — 이탈리아 판은 바뀜');
-  assert.equal(hash(fightOne({ school: 'german', weapon: 'sabre', opp: 'longsword', seed: 1 })), '436777985e44', '독일 — 켬이어도 같음 (본판 c1cad826 해시)');
+  const AP2 = CONFIG.AI_PLAN, k2 = [AP2.schools, AP2.errSchools, AP2.pommel]; // 3 단계(11/14): 독일 판은 독일 플랜 · 모든 AI 손잡이 찍기를 뺀 판으로 (이 줄은 이탈리아 스위치가 독일 판을 안 건드림을 봄)
+  for (const k of ['schools', 'errSchools']) AP2[k] = AP2[k].filter((x) => x !== 'german');
+  AP2.pommel = 0;
+  try {
+    assert.equal(hash(fightOne({ school: 'german', weapon: 'sabre', opp: 'longsword', seed: 1 })), '436777985e44', '독일 — 켬이어도 같음 (본판 c1cad826 해시)');
+  } finally { [AP2.schools, AP2.errSchools, AP2.pommel] = k2; }
 });

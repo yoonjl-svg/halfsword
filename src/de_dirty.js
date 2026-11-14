@@ -9,7 +9,7 @@ import { G as PAD } from './ai_techniques.js'; // 옆 자세 자리 sideR (칼 �
 import { kitOff } from './skill_kit.js';
 
 /** 이 몸이 독일 몫 key('deRing' 칼 씨름)를 받나: 사람(사람 입력이 모는 몸 humanInput) · 무기 유파 독일 · 그 몫 열쇠(skillKit 이 없는 몸은 켜짐) */
-export const deDirtyBody = (f, key) => !!f?.humanInput && f.swordArt?.tradition === 'german' && !kitOff(f, key);
+export const deDirtyBody = (f, key) => (f?.aiControlled ? !!f.aiCtl?.planDe : !!f?.humanInput && !kitOff(f, key)) && f.swordArt?.tradition === 'german'; // 11/14 3 단계: 독일 플랜 AI 몸도 (사장님 '칼 씨름 … AI에게 켜' — ai.js planDe · src/ai_plan_de.js)
 
 /** 재기 셈 (읽기만 — 판정에 안 씀) */
 export function deStats(f) {

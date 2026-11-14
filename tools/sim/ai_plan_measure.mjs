@@ -11,6 +11,8 @@
 //            홀수 씨앗 = 그 무기가 E 자리 (tools/sim/morg_weight.mjs fight 와 같은 판) — 새 판 · 옛 판(`AI_PLAN.on` 0) 한 줄씩:
 //            공격 시작 · 칼 냄(맞힘 · 막힘 · 헛침) · 칼 내기 전 접음 · 그 가운데 시간 넘음 · 다가가다(준비 · 다가감) 받은 상처 · 준 / 받은 상처 · 이김 · 짐 · 비김 · 파고들기 · 굴림 행동
 //  node tools/sim/ai_plan_measure.mjs dig [--weapons=rapier,frozen_tuna,morgenstern,rubber_chicken] [--seeds=1-6] [--prof=2]
+//   de     — 3 단계 독일(11/14): 롱소드(독일) AI 숙련 2 · 5 — 새 판 · 옛 판 — 대 롱소드 AI 옛 판(persona.planOff) · 씨앗 1 ~ 6 · 독일 행동 수 · 이김 · 짐 · 비김
+//  node tools/sim/ai_plan_measure.mjs de [--profs=2,5] [--seeds=1-6]
 // ─────────────────────────────────────────────────────────────
 import { performance } from 'node:perf_hooks';
 import { newRound, DT, AI, CONFIG } from './harness_m.mjs';
@@ -161,7 +163,55 @@ function digTable(rows) {
   return L.join('\n');
 }
 
-if (mode === 'dig') {
+/**
+ * 독일 재기 (3 단계 11/14): 롱소드(독일) AI 숙련 prof — 새 판(플랜) 또는 옛 판(persona.planOff) — 대 롱소드 AI 옛 판(persona.planOff) · 씨앗들 · 30 s · 홀수 씨앗은 그 AI 가 E 자리
+ *  독일 행동: 파고들기(굴림 · 건 수 · 박찬 걸음 수) · 뒤 박차기 · 바보 자세 · 밀치기(이긴 굴림 · 낸 수) · 칼 씨름 · 손잡이 찍기 · 모르트슐라크 · 기력 차 판단(우위 · 열세 쪽)
+ */
+export function deRun({ seeds = [1, 2, 3, 4, 5, 6], prof = 2, dur = 30, subjOff = false } = {}) {
+  const S = { n: 0, W: 0, L: 0, dealt: 0, recv: 0, strikes: 0, de: { digTry: 0, dig: 0, digSteps: 0, back: 0, lure: 0, pushWon: 0, shoves: 0, ring: 0, pommel: 0, mord: 0, diffUp: 0, diffDown: 0 }, foe: { pommel: 0, shoves: 0 } };
+  for (const seed of seeds) {
+    const subjE = seed % 2 === 1;
+    const ps = { proficiency: prof, ...(subjOff ? { planOff: true } : {}) };
+    const po = { proficiency: prof, planOff: true };
+    const G = newRound({ seed, walls: true, weapon: 'longsword', weapon2: 'longsword', AI2Class: AI, difficulty: 'normal', persona: subjE ? ps : po, persona2: subjE ? po : ps });
+    const ai = subjE ? G.ai : G.ai2, fo = subjE ? G.ai2 : G.ai;
+    const f = ai.me, o = fo.me;
+    const ss = ai.startStrike;
+    ai.startStrike = function (...a) { S.strikes++; return ss.apply(this, a); };
+    G.onWound = (att, vic) => { if (vic === f) S.recv++; if (vic === o) S.dealt++; };
+    for (let i = 0; i < Math.round(dur / DT); i++) {
+      G.step();
+      if (!f.alive || !o.alive) break;
+    }
+    S.n++;
+    if (f.alive && !o.alive) S.W++;
+    else if (!f.alive && o.alive) S.L++;
+    const pd = ai.stats.plan?.de ?? {};
+    for (const k of ['digTry', 'dig', 'back', 'lure', 'diffUp', 'diffDown']) S.de[k] += pd[k] ?? 0;
+    S.de.digSteps += f.gait?.digs ?? 0;
+    S.de.pushWon += ai.closeEv?.won ?? 0;
+    S.de.shoves += f.shoves ?? 0;
+    S.de.ring += f.deDirtyStats?.ring ?? 0;
+    S.de.pommel += ai.stats.pommels ?? 0;
+    S.de.mord += Object.entries(ai.stats.secrets ?? {}).reduce((x, [, v]) => x + (v.fired ?? 0), 0);
+    S.foe.pommel += fo.stats.pommels ?? 0;
+    S.foe.shoves += o.shoves ?? 0;
+    G.world.free();
+  }
+  return S;
+}
+
+if (mode === 'de') {
+  const seeds = range(arg('seeds', '1-6'));
+  const L = ['| 판 (롱소드 AI 숙련 · 대 롱소드 AI 옛 판) | 판 | 이김 · 짐 · 비김 | 준 · 받은 상처 / 판 | 칼 냄 / 판 | 파고들기 굴림 · 건 수 · 박찬 걸음 | 뒤 박차기 | 바보 자세 | 밀치기 이긴 굴림 · 낸 수 | 칼 씨름 | 손잡이 찍기 (상대) | 비기(모르트슐라크) | 기력 차 판단 우위 · 열세 쪽 |', '|---|---|---|---|---|---|---|---|---|---|---|---|---|'];
+  for (const prof of arg('profs', '2,5').split(',').map(Number)) for (const [tag, off] of [['새 판 독일', false], ['옛 판 (둘 다)', true]]) {
+    const S = deRun({ seeds, prof, subjOff: off });
+    console.error(prof, tag, JSON.stringify(S));
+    const n = S.n, p = (x) => (x / n).toFixed(1), D = S.de;
+    L.push(`| ${tag} 숙련 ${prof} | ${n} | ${S.W} · ${S.L} · ${n - S.W - S.L} | ${p(S.dealt)} · ${p(S.recv)} | ${p(S.strikes)} | ${D.digTry} · ${D.dig} · ${D.digSteps} | ${D.back} | ${D.lure} | ${D.pushWon} · ${D.shoves} | ${D.ring} | ${D.pommel} (${S.foe.pommel}) | ${D.mord} | ${D.diffUp} · ${D.diffDown} |`);
+  }
+  console.log(L.join('\n'));
+} else if (mode === 'dig') {
   const ws = arg('weapons', 'rapier,frozen_tuna,morgenstern,rubber_chicken').split(',');
   const seeds = range(arg('seeds', '1-6'));
   const prof = +arg('prof', 2);

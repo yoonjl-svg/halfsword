@@ -123,7 +123,7 @@ test('허리 베기 몫 — 띠 기울기 × 칸 · 다른 칼 · 쓰러진 상�
     hi.free();
   }
   // 실제 기술 고르기: 같은 굴림 차례로 동방 몫 켬 · 끔 — 허리 베기 계열 몫이 늚
-  const G = newRound({ walls: true, seed: 2, weapon: 'longsword', weapon2: 'hwando', AI2Class: AI, persona: { proficiency: 5 }, persona2: { proficiency: 2 } });
+  const G = newRound({ walls: true, seed: 2, weapon: 'longsword', weapon2: 'hwando', AI2Class: AI, persona: { proficiency: 5 }, persona2: { proficiency: 2, planOff: true } }); // 3 단계(11/14): 상대 롱소드 AI 는 옛 판(planOff)
   while (G.t < 2) G.step();
   const ai = G.ai;
   const s = ai.lastSeen;
@@ -473,7 +473,7 @@ test('다른 유파 판은 동방 몫과 상관없이 바이트 같음 · 동방
 });
 
 test('판 하나 — AI 동방(환도 숙련 5 · P 자리) 대 롱소드 AI(숙련 2) 씨앗 11: 허리 베기 → 사냥 겹 → 지치게 · 유도 · 노릴 마음 · 나서며 받기 · 격살 시도 · 국면이 실제로 남', () => {
-  const G = newRound({ walls: true, seed: 11, weapon: 'hwando', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 2 }, persona2: { proficiency: 5 } });
+  const G = newRound({ walls: true, seed: 11, weapon: 'hwando', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 2, planOff: true }, persona2: { proficiency: 5 } }); // 3 단계(11/14): 상대 롱소드 AI 는 옛 판(planOff)
   const ai = G.ai2;
   let waist = 0;
   const sa = ai.startAttack;

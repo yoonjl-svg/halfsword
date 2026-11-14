@@ -2319,12 +2319,12 @@ export const AI_MAAI = { hide: 0 }; // [사장님 확인 전 — 확인표 3422]
 //               L = 상대 겹 ÷ SECRET.gyeoksalAi.stacks + 판 시간 ÷ late + 상대 지침 + (높음) 칠 낌새 — 겹 0 · 초반 0.2 · 기준점 하나 0.5 · 끝 0.8 · 위협 하나에 한 번 굴림 · 옛 판은 SECRET.gyeoksalAi 문 그대로 [사장님 확인 전]
 export const AI_PLAN = {
   on: 1,
-  schools: ['italian', 'japanese', 'iberian', 'chinese'], // 1 단계 이탈리아 · 2 단계 일본(AI_PLAN_JP · src/ai_plan_jp.js) · 이베리아(아래 ib · `?aiPlanIb=0`) · 동방(아래 cn · `?aiPlanCn=0`)
+  schools: ['italian', 'japanese', 'iberian', 'chinese', 'german'], // 3 단계 독일(AI_PLAN_DE · src/ai_plan_de.js · `?aiPlanDe=0`) · 1 단계 이탈리아 · 2 단계 일본(AI_PLAN_JP · src/ai_plan_jp.js) · 이베리아(아래 ib · `?aiPlanIb=0`) · 동방(아래 cn · `?aiPlanCn=0`)
   bands: [0, 1, 1, 2, 2, 3, 3],
   tilt: [0, 1 / 3, 2 / 3, 1],
   errMax: 0.3,
   errClear: 5,
-  errSchools: ['italian', 'japanese', 'iberian', 'chinese'], // 2 단계 일본 · 이베리아 · 동방 더함 (사장님 11/14 '거리 오차 0.3 m → 숙련 5 에서 0')
+  errSchools: ['italian', 'japanese', 'iberian', 'chinese', 'german'], // 3 단계 독일 더함 · 2 단계 일본 · 이베리아 · 동방 더함 (사장님 11/14 '거리 오차 0.3 m → 숙련 5 에서 0')
   // ── 이베리아 플랜 (2 단계 · 11/14 — 사장님 '이베리아 = 거칠고 모험적인 슬러거' · 설계 §3-5 · src/ai_plan_ib.js · 기록 docs/strike/ai_plan_ib_2026-11-14.md · 확인표 4301 ~):
   //  chainKeep  사슬을 이을 마음 — 이어 칠 몫 want 에 (1 − want) × chainKeep × 띠 세기 × 칸 chain × (½ + ½ × 이은 칼 몫) 을 얹음 (굴림은 남김 — '늘 이음'이 아님) [몫 — 파고들기 digKeep 0.6 과 같은 수 · 사장님 확인 전]
   //  dashT      옆 박차기 — 스틱을 옆 끝으로 미는 시간 (시간 사다리 0.4 s — 이어 돌리기 원 한 번과 같은 칸) [사장님 확인 전]
@@ -2344,6 +2344,12 @@ export const AI_PLAN = {
   digShort: 0.3,
   digCross: 0.6,
   digKeep: 0.6,
+  // 3 단계 (11/14 — 설계 §2-4 어긋남 표 '권고대로'): 숙련도 → 실력 이름 (3 = normal · 4 = hard — 가운데 · 높음의 차는 축 ③) · 전 AI_PROFICIENCY.levels(3 = hard) — 인물 시트가 숙련도 표에서 고른 이름일 때만 바꿈 (ai.js)
+  levels: ['easy', 'easy', 'normal', 'normal', 'hard', 'hard', 'hard'],
+  // 3 단계: 숙련도 0(무) = 유파 패시브 · schoolK 0 · 기질은 무유파 범위 (고유 동작은 이미 0 에서 없음) [권고대로 · 사장님 확인 전]
+  zeroPlain: 1,
+  // 3 단계: 붙은 거리 손잡이 찍기를 모든 AI 에 (인물 칸 · 독일 밀치기가 없는 몸도) — 닿는 거리 안 사건(들어섬 · 칼 맞물림)마다 이 몫으로 찍기 (CLOSE.pommelDist 0.9 m 안) [사장님 확인 전]
+  pommel: 0.5,
   cn: { close: 0.5, circle: 0.5, waist: 0.5, wear: 0.08, wearNext: 0.5, lureHold: realS(2.0), lureNeed: 0.5, meetFresh: 0.5, will0: 0.2 },
 };
 
@@ -2366,6 +2372,30 @@ export const AI_PLAN_JP = {
   repeatT: realS(10.0),
   pre: 0.5,
   lureT: realS(3.0),
+};
+
+// 유파 AI 3 단계 — 독일 '상대 리듬을 빼앗는 더티복서' 플랜 값 (11/14 — 설계안 §3-1 · §13 · src/ai_plan_de.js · 사장님 11/14 '독일 파고들기와 칼 씨름, 밀치기를 각 유파 단계에서 AI에게 켜' ·
+//  '독일은 내가 상대보다 기력 우위일 경우엔 밀지 않을 이유도 없는 거 같은데'). 모두 기울기 몫(띠 기울기 × 플랜 칸 × 이 값) — 절대 규칙 없음.
+//  push      인물 칸 없는 밀치기 — 닿는 거리 안 사건(들어섬 · 칼 맞물림 · 밀치기 뒤 아직 안쪽)마다 밀 몫 = push × 기울기 × 칸 × 기력 차 기울기 (인물 칸 persona.close 가 있으면 그것) [사장님 확인 전]
+//  diffK     기력 차 기울기 — 밀 몫 × (1 + clamp(diffK × (내 기력 − 상대 기력) ÷ 100, −1, 1) × 또렷함) · 또렷함 = 기울기 × (1 − 굴림 몫) (낮음 0.11 · 가운데 0.44 · 높음 1) · 높음은 바위 몸 상대면 차를 뒤집음 [사장님 확인 전]
+//  breath    기력 열세면 칼끝 밖에서 숨 고름 — 간 보는 여유 + breath × 또렷함 × 열세 몫 (걸음 사다리 0.6 m) [사장님 확인 전]
+//  edge      간 보기 — 상대 칼끝 바로 밖(간 보는 여유 × (1 − edge × 기울기 × 칸)) [사장님 확인 전]
+//  stick     붙음 물러남 기울기 — 너무 붙었을 때 물러나는 스틱 × (1 − stick × 기울기 × 칸) (독일은 덜 떨어짐 · 끄지 않음) [사장님 확인 전]
+//  dig       파고들기 — 상대 헛침을 본 한 번에 dig × 기울기 × 칸 몫으로 두 걸음 박찬 앞 걸음(사람 파고들기와 같은 장치 — gait.js deDigAi) [사장님 확인 전]
+//  digT      파고들기 스틱을 앞 끝으로 미는 시간 (시간 사다리 0.6 s — 두 걸음) [사장님 확인 전]
+//  back      뒤 박차기 — 물러나 피하기로 정한 위협에 back × 기울기 × 칸 몫으로 뒤 박찬 걸음 (상대가 칼을 들면 빠짐 · 빠진 뒤 헛침을 꾐) [사장님 확인 전]
+//  lure      유도(가운데 끝 4 부터) — 자세 박자마다 lure × 기울기 × 칸 몫으로 바보 자세(머리를 비움 — 간 보는 여유 −0.12 그대로) [사장님 확인 전]
+export const AI_PLAN_DE = {
+  push: 0.6,
+  diffK: 2,
+  breath: 0.6,
+  edge: 0.5,
+  stick: 0.6,
+  dig: 0.6,
+  digT: realS(0.6),
+  afterT: realS(0.6), // 파고들기 뒤 이 시간(시간 사다리 0.6 s)까지 밀 몫 × 2 (헛침 → 파고들기 → 밀치기) [사장님 확인 전]
+  back: 0.6,
+  lure: 0.5,
 };
 
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)
