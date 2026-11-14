@@ -25,7 +25,7 @@ import { newFinish, updateFinish, FINISH, plungeBoost } from './finish.js';
 import { vitalHand, vitalAim, playerVitalUpdate } from './vital_target.js'; // 약한 자세 겨눔 덧씌우기 (FINISH.vital, 10/12)
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
 import { breakWeaponLook } from './weapon_looks.js';
-import { obiOn, obiGrip, pelvisToWorld, attachObiSaya, syncObiSaya, syncObiEdge } from './iai_obi.js'; // 帯刀 — 鞘戻し 점 · 빈 칼집 그림 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi · iaiObiSaya)
+import { obiOn, obiGrip, pelvisToWorld, attachObiSaya, syncObiSaya, syncObiEdge, notoKoiW } from './iai_obi.js'; // 帯刀 — 鞘戻し 점 · 빈 칼집 그림 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi · iaiObiSaya)
 import { attachDruidWhip } from './druid_whip.js'; // 휘는 마디 무기(드루이드의 채찍 — spec.flexible, 샛별 저장소 69ef7dac8)
 import { BLOOD_RED } from './blood_palette.js'; // 피 색 (10/27 — 칼에 묻는 피: 맞은 몸의 피 색, 광기의 병마용은 흰 피)
 import { spawnDebris, scatterDebris, debrisEnabled } from './debris.js'; // 흩어지는 조각: 부러진 칼날 끝과 부서진 투구·판금을 한 모듈이 띄우고 치운다
@@ -4467,8 +4467,18 @@ export class Fighter {
     // 발도 대기 칼집 입 (위 syK — 11/14 ①): 쥐는 자리를 칼자루 끝 → 칼집 입(칼 축 코등이 + SECRET.iaiSayaKoi — 칼집에 든 칼을 칼집 입째 쥠)으로 옮김 —
     //  몫 0.5 까지 칼자루 끝을 놓고(끈 힘 1 → 0) · 0.5 부터 칼집 입을 쥠(0 → 1) · 그 사이 손은 칼 아래로 돌아 칼 든 손을 비킴(아래 곡선)
     const koiOn = syK > 0 && !rg;
-    const alongK = this.weaponCfg.hiltLength + (SECRET.iaiSayaKoi ?? 0.05);
-    const along = koiOn && syK >= 0.5 ? alongK : along0;
+    // 11/14 납도 (SECRET.iaiSheathe — iai_obi.js notoPlan): ③ 칼끝이 들어가는 동안 쥐는 칼집 입 = 칼 위 칼집 입 자리(칼끝 → 칼날 시작) · ① ② 는 아래 K 를 칼집 입으로(칼은 쥐지 않음 — 몫 0.45)
+    const notoAlong = this.noto?.w > 0 && this.noto.phase >= 2 ? this.noto.ym : null;
+    // 납도 동안 왼손 (몫 = 납도 왼손 몫 iaiSayaW — iai_obi.js notoPlan left): 목표는 0.45 에 칼집 입 K 까지 다 · ① ② (칼끝이 아직 칼집 밖)는 칼을 쥐지 않음(칼집만) ·
+    //  ③ 칼끝이 들면 칼 위 칼집 입 자리(ym)를 쥐는 끈 힘이 몫 0.45 → 1 에 0 → 1 (두 손으로 밀어 넣음) · 납도가 도중에 끊기면 목표 몫을 iaiRegrip 초에 보통 몫으로 (한 스텝에 튀지 않게)
+    const nOn = koiOn && this.noto?.w > 0; // 선 채 · 웅크린 대기 같음 (11/14 '허공에 붕 떠보이는데' 뒤 칼집이 허리띠 곁이라 웅크림에도 칼끝이 서지 않음)
+    const nGrip = nOn ? (this.noto.phase >= 2 ? THREE.MathUtils.clamp((this.iaiSayaW - 0.45) / 0.55, 0, 1) : 0) : null;
+    let uAim = syK;
+    if (nOn) uAim = this.notoAimU = THREE.MathUtils.smoothstep(this.iaiSayaW, 0, 0.45);
+    else if (this.notoAimU > syK && koiOn) uAim = this.notoAimU = Math.max(syK, this.notoAimU - (this.lastDt || 1 / 120) / (SECRET.iaiRegrip > 0 ? SECRET.iaiRegrip : 0.2));
+    else this.notoAimU = 0;
+    const alongK = (notoAlong ?? this.weaponCfg.hiltLength) + (SECRET.iaiSayaKoi ?? 0.05);
+    const along = koiOn && (nOn ? this.noto.phase >= 2 : syK >= 0.5) ? alongK : along0;
     const sword = this.sword;
     rot(sword, _q1);
     const st = sword.translation();
@@ -4481,17 +4491,25 @@ export class Fighter {
       //  가운데 점 = 둘의 가운데 + 칼 축에 곧은 아래 × SECRET.iaiSayaKoiAround (곡선은 그 반만큼 칼 든 손을 비킴) · 몫 1 = K
       //  (대기가 풀리는 순간 사람 칼 겨눔이 한 스텝에 바뀌어도 A 의 몫이 0 에서 시작해 빈손 목표가 튀지 않음)
       const K = _gk2.set(0, alongK, 0).applyQuaternion(_q1).add(_v7.set(st.x, st.y, st.z));
-      if (syK >= 1) gripAim.copy(K);
+      if (notoKoiW(this, _gkN)) K.copy(_gkN); // 납도: 왼손은 칼자루 끝을 놓고 납도 길의 칼집 입으로 (앞 몫 — 쥐는 끈 힘은 몫 0.5 에서 0 · 뒤 몫 — 칼 위 칼집 입 자리를 쥐고 이끎 · 끝에 칼 위 자리로)
+      if (uAim >= 1) gripAim.copy(K);
       else {
         const A = _gk.copy(this.aimDirW).multiplyScalar(along0).add(_v7.set(st.x, st.y, st.z));
         const ax = _gc.set(0, 1, 0).applyQuaternion(_q1);
         const n = _gk3.set(0, -1, 0).addScaledVector(ax, ax.y);
         if (n.lengthSq() < 1e-6) n.set(1, 0, 0);
         const C = n.normalize().multiplyScalar(SECRET.iaiSayaKoiAround ?? 0.16).add(_gv.copy(A).add(K).multiplyScalar(0.5));
-        const u = syK;
+        const u = uAim;
         gripAim.copy(A).multiplyScalar((1 - u) * (1 - u)).addScaledVector(C, 2 * u * (1 - u)).addScaledVector(K, u * u);
       }
     }
+    // 납도 동안 빈손 목표는 한 스텝에 3.5 cm 까지 (칼집 입이 물리 칼을 따라 빨리 옮는 몇 스텝 — 긴 칼 — 손 목표가 튀지 않게 · 칼집 그림은 그대로)
+    if (nOn && this._notoAim) {
+      const d = gripAim.distanceTo(this._notoAim);
+      if (d > 0.035) gripAim.lerpVectors(this._notoAim, gripAim, 0.035 / d);
+    }
+    if (nOn) (this._notoAim ??= new THREE.Vector3()).copy(gripAim);
+    else if (this._notoAim) this._notoAim = null;
     // 두 팔 엇갈림 막기 — 빈손 비킴 (SKILL.armClear.grip — gripClear 머리말): 두 팔이 붙은 동안(① 켜짐) 지금 몸 겉 틈이 gap 안이면
     if (this._clrOn && !this.armsPlaced() && SKILL.armClear.grip > 0 && this.armClrGap < SKILL.armClear.gap) gripClear(this, gripAim, SKILL.armClear.grip);
     if (rgK < 1) {
@@ -4519,10 +4537,10 @@ export class Fighter {
     const ft = fo.translation();
     const hand = _gh.set(0, -0.135, 0).applyQuaternion(_q2).add(_v7.set(ft.x, ft.y, ft.z));
     const dist = hand.distanceTo(pommel);
-    if (dist > GRIP.reach) return; // 아직 손이 멀면 뻗기만 한다
+    if (dist > GRIP.reach || nGrip === 0) return; // 아직 손이 멀면 뻗기만 한다 (납도 ① ② — 칼집만 쥠)
     this.gripping = true;
     // 스프링: 멀수록 약하게 시작해 손이 닿으면 단단히 쥔다
-    const grab = THREE.MathUtils.clamp((GRIP.reach - dist) / (GRIP.reach * 0.5), 0, 1) * Math.min(1, this.muscle) * (0.5 + 0.5 * this.limbs.armO) * rgK * (koiOn ? Math.abs(1 - 2 * syK) : 1); // rgK: 다시 쥐는 동안 끈 힘도 같은 몫으로 (끝나면 1 — 그대로) · koiOn: 칼자루 끝을 놓고 칼집 입을 쥐는 동안 (11/14 — 대기 아니면 그대로)
+    const grab = THREE.MathUtils.clamp((GRIP.reach - dist) / (GRIP.reach * 0.5), 0, 1) * Math.min(1, this.muscle) * (0.5 + 0.5 * this.limbs.armO) * rgK * (nGrip != null ? nGrip : koiOn ? Math.abs(1 - 2 * syK) : 1); // rgK: 다시 쥐는 동안 끈 힘도 같은 몫으로 (끝나면 1 — 그대로) · koiOn: 칼자루 끝을 놓고 칼집 입을 쥐는 동안 (11/14 — 대기 아니면 그대로)
     const vp = sword.velocityAtPoint(pommel);
     const vh = fo.velocityAtPoint(hand);
     const F = _gf.set(pommel.x - hand.x, pommel.y - hand.y, pommel.z - hand.z).multiplyScalar(GRIP.k);
@@ -5318,6 +5336,7 @@ const _gc = new THREE.Vector3();
 const _gk = new THREE.Vector3(); // 발도 대기 칼집 입 (offHand — 11/14)
 const _gk2 = new THREE.Vector3();
 const _gk3 = new THREE.Vector3();
+const _gkN = new THREE.Vector3(); // 납도 앞 몫 칼집 입 쥠 자리 (offHand)
 /** 빈팔을 지금 근육 목표(uarmO · farmO target — offArmIK 가 막 둔 자세) 자리에 놓음 (11/14 鞘戻し 앞 반 — secret_instant.js placeIai 의 두 손 발도 빈팔 놓기와 같은 셈 · 빠르기 = 가슴) */
 function placeOffArm(f) {
   const J = f.jointByName;

@@ -19,7 +19,7 @@
 import * as THREE from 'three';
 import { itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14): 끌고 가는 칼의 상처도 칼 우위 · 재기 (combat.js strike 와 같은 자리)
 import { SECRET, ARM, STRIKE, GAIT, ARENA, JOINTS, THRUST } from './config.js';
-import { obiOn, obiReadyInto, obiPathB } from './iai_obi.js'; // 帯刀 — 대기 칼 자리 · 뽑는 자리 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi)
+import { obiOn, obiReadyInto, obiPathB, notoStep, notoStop } from './iai_obi.js'; // 帯刀 — 대기 칼 자리 · 뽑는 자리 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi)
 import { risolutoContact } from './weapon_measured.js'; // 10/25 THRUST.itMeasure 'contact' 판: 리솔루토 런지 미끄러짐은 지금 맞닿음 그대로
 const GAIT_REACH = GAIT.reachMax;
 
@@ -1080,16 +1080,63 @@ export function iaiBusy(f) {
   return !!f.iai || !!f.iaiReq || f.iaiHoldT > 0 || f.iaiFade > 0;
 }
 
+/**
+ * 납도 동안 덧씌우기 칸 몸 · 왼손 (11/14 — iai_obi.js notoStep 이 손 · 칼날을 둔 뒤): w = 덧씌우기 몫(0 = 사람 손) · 몸 비틂 · 숙임 · 낮춤은 납도 몫만큼 대기 자세(body)로 ·
+ *  왼손 칼집 입 몫(iaiSayaReadyW — fighter.js offHand)은 한 손 발도일 때 납도 길 몫(앞 몫 0 → 0.5 칼자루 끝을 놓음 · 뒤 몫 0.5 → 1 칼집 입을 쥠)
+ */
+function notosPose(f, w, body, standing, oneHand) {
+  const th = f.skill.thrustPose;
+  const N = f.noto;
+  const k = (N?.k ?? 0) * w;
+  // 11/14 사장님 '허공에 붕 떠보이는데' 뒤: 칼끝을 허리띠 곁 칼집 입에 대는 몫은 몸으로 — 가슴을 틀어 칼 든 어깨를 앞으로 · 숙임 (SECRET.iaiSheatheWay.twist ° × 납도 몸 비틂 몫 N.tw)
+  const TW = SECRET.iaiSheatheWay?.twist;
+  const tw = TW ? (N?.tw ?? 0) * w : 0;
+  th.w = w;
+  th.pelvisYaw = body.pelvisYaw * D2R * k + (TW?.pelvis ?? 0) * D2R * tw;
+  th.chestYaw = body.chestYaw * D2R * k + (TW?.chest ?? 0) * D2R * tw;
+  th.pitch = standing ? (TW?.pitch ?? 0) * D2R * tw : body.pitch * D2R * k; // 숙임 덧은 선 채 대기만 (웅크린 대기는 이미 숙임 — 더 숙이면 배가 칼날에 닿음 · 재기)
+  th.drop = standing ? 0.06 : 0.06 + (body.drop - 0.06) * k;
+  f.iaiSayaReadyW = SECRET.iaiSayaReady && oneHand && w > 0 ? N?.left ?? 0 : 0;
+}
+
 /** 발도 대기 자세 (AI 일본, 대기 IaiArm 이 찼을 때): 덧씌우기 칸에 웅크린 왼 허리 자세를 on 이면 0.35 s 에 켜고, 아니면 0.12 s 에 끈다 */
-export function iaiReadyPose(f, on, dt) {
+export function iaiReadyPose(f, on, dt, sheathe = 0) {
   if (iaiBusy(f)) {
     f.iaiReadyW = 0;
+    f.iaiSayaReadyW = 0;
+    f.iaiObiW = 0;
+    notoStop(f);
+    f.notoSeat = 0;
+    return;
+  }
+  // 11/14 납도 (SECRET.iaiSheathe — sheathe = IaiArm.sheathe 몫): 준비 전 iaiSheathe 초 동안 칼을 칼집에 (iai_obi.js notoStep) · 몸 비틂은 몫만큼 대기 자세로 · 웅크림 · 앞발 내딛기도 납도와 함께
+  if (!on && sheathe > 0 && obiOn(f)) {
+    notosPose(f, notoStep(f, sheathe, true, f.skill.thrustPose.hand, f.skill.thrustPose.dir), SECRET.iaiReady.body, false, iaiOneHandOf(f, false));
+    // 웅크림 · 앞발 내딛기는 납도와 함께 0.35 s (준비가 켜질 때 웅크리면 그 몸 낮춤 · 숙임에 칼집에 든 대기 칼이 밀려 칼끝이 위로 섬 — 재기 기록 §13)
+    const w0 = f.iaiReadyW ?? 0;
+    if (w0 <= 0 && f.gait?.active && SECRET.stance.iai.step > 0) f.gait.requestStep({ kind: 'lunge', fwd: SECRET.stance.iai.step, duration: 0.35 });
+    f.iaiReadyW = Math.min(1, w0 + dt / 0.35);
+    f.iaiObiW = 0;
+    return;
+  }
+  // 납도가 끝나 준비가 켜짐: 칼집에 든 칼 그대로 (덧씌우기 몫 1 에서 이어감 — 몸 웅크림만 0.35 s) · 도중에 풀리면(셈 0) 대기 풀림과 같이 0.12 s 에 놓음 (마지막 납도 목표 그대로)
+  const th0 = f.skill.thrustPose;
+  if (notoStop(f)) {
+    if (on) f.notoSeat = 1;
+    else f.notoFade = th0.w;
+  }
+  if (on) f.notoFade = 0;
+  else f.notoSeat = Math.max(0, (f.notoSeat ?? 0) - dt / 0.12);
+  if (f.notoFade > 0) {
+    f.notoFade = Math.max(0, f.notoFade - dt / 0.12);
+    th0.w = f.notoFade;
+    f.iaiReadyW = Math.min(f.iaiReadyW ?? 0, f.notoFade); // 납도와 함께 든 웅크림도 같이 풀림 (덧씌우기 목표는 마지막 납도 자리 그대로)
     f.iaiSayaReadyW = 0;
     f.iaiObiW = 0;
     return;
   }
   const w0 = f.iaiReadyW ?? 0;
-  if (!on && w0 <= 0) {
+  if (!on && w0 <= 0 && !(f.notoSeat > 0)) {
     f.iaiSayaReadyW = 0;
     f.iaiObiW = 0;
     return;
@@ -1098,13 +1145,14 @@ export function iaiReadyPose(f, on, dt) {
   if (on && w0 <= 0 && f.gait?.active && SECRET.stance.iai.step > 0) f.gait.requestStep({ kind: 'lunge', fwd: SECRET.stance.iai.step, duration: 0.35 });
   const w = on ? Math.min(1, w0 + dt / 0.35) : Math.max(0, w0 - dt / 0.12);
   f.iaiReadyW = w;
+  const hw = Math.max(w, f.notoSeat ?? 0); // 손 · 칼 덧씌우기 몫 (납도로 칼집에 든 채 켜졌으면 1 — 웅크림 몫 w 는 그대로 0.35 s)
   // 11/14 ① (SECRET.iaiSayaReady): 발도 대기 동안 왼손은 칼자루를 놓고 칼집 입(鯉口)을 쥠 — 몫 = 대기 무게 (fighter.js offHand) · 한 손 발도일 때만
-  f.iaiSayaReadyW = SECRET.iaiSayaReady && iaiOneHandOf(f, false) ? w : 0;
+  f.iaiSayaReadyW = SECRET.iaiSayaReady && iaiOneHandOf(f, false) ? hw : 0;
   const R = SECRET.iaiReady;
   const th = f.skill.thrustPose;
-  th.w = w;
+  th.w = hw;
   // 11/14 帯刀 (SECRET.iaiObi): 칼 손 · 칼날 = 골반 몸체 틀 칼집 자리 (칼집 입 배꼽 앞 — iai_obi.js obiReadyInto) · 끄면 iaiReady 손 · 칼날
-  f.iaiObiW = obiOn(f) ? w : 0;
+  f.iaiObiW = obiOn(f) ? hw : 0;
   if (f.iaiObiW > 0) obiReadyInto(f, th.hand, th.dir);
   else {
     th.hand[0] = R.hand[0];
@@ -1143,7 +1191,7 @@ export function iaiReadyShown(f) {
   return (f?.iaiHandW ?? 0) > 0.5 && !!sk && !sk.tap && !sk.pom && !sk.sec && !iaiBusy(f);
 }
 
-export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false) {
+export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false, sheathe = 0) {
   const sk = f.skill;
   const own = !sk.tap && !sk.pom && !sk.sec && !sk.vitalRange && !sk.vitalRelease;
   if (iaiBusy(f)) {
@@ -1152,14 +1200,30 @@ export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false) {
     f.iaiHandW = 0;
     f.iaiSayaReadyW = 0;
     f.iaiObiW = 0;
+    notoStop(f); // 발도 · 굳음 · 풀기가 덧씌우기 칸을 가짐
+    f.notoSeat = 0;
     return;
   }
+  // 11/14 납도 (SECRET.iaiSheathe — sheathe = IaiArm.sheathe 몫): 준비 전 iaiSheathe 초 동안 손이 쉬면 칼을 칼집에 (iai_obi.js notoStep) · 칼을 쥐면 곧장 사람 손(덧씌우기 0) — 셈은 그대로 흐름
+  if (!on && sheathe > 0 && own && obiOn(f)) {
+    const RB = standing && SECRET.iaiReal && SECRET.iaiPathReal?.ready ? SECRET.iaiPathReal.ready : SECRET.iaiReady.body;
+    notosPose(f, notoStep(f, sheathe, !handFree, sk.thrustPose.hand, sk.thrustPose.dir), RB, standing, iaiOneHandOf(f, true));
+    f.iaiReadyW = f.iaiReadyR = f.iaiHandW = 0;
+    f.iaiObiW = 0;
+    return;
+  }
+  // 납도가 끝나 준비가 켜짐: 칼집에 든 칼 그대로 손 몫 1 에서 이어감 (칼을 쥐거나 준비가 풀리면 끝) · 도중에 풀리면(셈 0) 덧씌우기를 곧장 놓음 (칼은 사람 손 — 칼을 쥘 때와 같음)
+  if (notoStop(f)) {
+    if (on && !handFree) f.notoSeat = 1;
+    else if (own) sk.thrustPose.w = 0;
+  }
+  if (!on || handFree) f.notoSeat = 0;
   // 준비 무게 r (켜짐 0.35 s · 풀림 gnsCrouchOut) — 웅크림 판이면 그대로 몸 웅크림 무게(iaiReadyW · stanceTick), 선 채 판(standing — SECRET.gnsReadyHip)이면 몸은 0 이고 손 몫의 한도로만
   const w0 = f.iaiReadyR ?? f.iaiReadyW ?? 0;
   const h0 = f.iaiHandW ?? 0;
   if (!on && w0 <= 0 && h0 <= 0) return;
   const w = on ? Math.min(1, w0 + dt / 0.35) : Math.max(0, w0 - dt / SECRET.gnsCrouchOut);
-  const h = handFree || !on ? (handFree ? 0 : Math.min(h0, w)) : Math.min(w, h0 + dt / 0.35);
+  const h = handFree || !on ? (handFree ? 0 : Math.min(h0, w)) : f.notoSeat ? 1 : Math.min(w, h0 + dt / 0.35);
   f.iaiReadyR = w;
   f.iaiReadyW = standing ? 0 : w;
   f.iaiHandW = h;

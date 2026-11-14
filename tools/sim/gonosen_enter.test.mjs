@@ -6,6 +6,8 @@ import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { PlayerSecretWatch, secretEvent, secretCond, gnsEnterLine, gnsOutside } from '../../src/secret.js';
 import { playerSecretDef } from '../../src/schools.js';
+// 준비까지 (11/14 사장님 '2초 후에 납도 시작' — 일본 준비는 iaiArmTime 뒤 납도 SECRET.iaiSheathe 가 끝나야 · 帯刀 끄면 납도 없음 · secret.js IaiArm.extra)
+const ARM = () => CONFIG.SECRET.iaiArmTime + (CONFIG.SECRET.iaiObi && CONFIG.SECRET.iaiSheathe > 0 ? CONFIG.SECRET.iaiSheathe : 0);
 
 const { SECRET } = CONFIG;
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
@@ -124,7 +126,7 @@ function walkIn(vals, { meWalks = false } = {}) {
 
 test('실제 몸: (gnsWalkIn 1) 준비된 채 상대가 걸어 들어오면 창이 한 번 (들어옴) · ?gnsEnter=0 이면 창 없음 (옛 판 그대로) · 기본(gnsWalkIn 0)도 창 없음', () => {
   const on = walkIn({ gnsWalkIn: 1 });
-  assert.ok(on.armedAt != null && on.armedAt <= CONFIG.ARENA.startHold + SECRET.iaiArmTime + 0.1, `준비 ${on.armedAt}`); // 판 시작 정지 뒤부터 셈 (10/27 23:0x)
+  assert.ok(on.armedAt != null && on.armedAt <= CONFIG.ARENA.startHold + ARM() + 0.1, `준비 ${on.armedAt}`); // 판 시작 정지 뒤부터 셈 (10/27 23:0x)
   assert.equal(on.wins[0]?.ev, 'enter', JSON.stringify(on.wins)); // 첫 창 = 선을 넘을 때
   assert.equal(on.wins.filter((w) => w.ev === 'enter').length, 1, JSON.stringify(on.wins)); // 한 번만
   assert.ok(on.wins[0].d <= on.L + 0.05 && on.wins[0].d > on.L - 0.2, `${on.wins[0].d} L ${on.L}`);
