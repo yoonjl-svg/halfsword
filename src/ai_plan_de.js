@@ -114,7 +114,7 @@ export function deDigTry(ai, s, d, recovering) {
 }
 
 /**
- * 파고들기 스틱 (moveFeet — 간 보기 · 물러남 · 막기 · 공격 준비 · 다가감): digT 동안 앞 끝(두 걸음 박찬 앞 걸음) · 그 뒤 afterT 동안은 밀치기 거리(붙은 거리 규칙 시작 거리) 밖이면
+ * 파고들기 스틱 (moveFeet — 간 보기 · 물러남 · 막기 · 공격 준비 · 다가감): digT 동안 앞 끝(두 걸음 박찬 앞 걸음 — 그동안 ai.startAttack 이 새 공격을 미룸) · 그 뒤 afterT 동안은 밀치기 거리(붙은 거리 규칙 시작 거리) 밖이면
  *  걸어 들어감(헛침 → 파고들기 → 1 m 안 밀치기 — 안에 들면 closeQuarters 가 밀 몫 × 2 로 굴림). 덮었으면 앞뒤 스틱 값 · 아니면 null
  */
 export function deFeet(ai, dt, d, startD) {

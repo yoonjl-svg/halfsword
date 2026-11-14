@@ -258,7 +258,10 @@ test('손목 교정 끔 · 켬 · 밧줄 — 자세표(롱소드 · 레이피어
 test('AI 끼리 15 s (롱소드 · 사브르 — 씨앗 셋 합): 기본 범위 밖 > 10° ≤ 10 % · 거꾸로 · 아래팔 섬 ≤ 6 % (10/25 한손 사람 팔 범위 뒤 사브르 3.4 → 5.1 % — 팔 비틀어 맞추던 몫이 손목으로 · 기록 §10-5) · 시험 밧줄 켜면(씨앗 11) > 10° ≤ 1 % · 거꾸로 ≤ 1 %', () => {
   // 11/12 둘째(두 팔 엇갈림 막기 AI 몫)로 AI 몸 팔이 바뀌어 씨앗 셋 판이 갈라짐(롱소드 > 10° 12.1 % — 씨앗 판 흔들림: 넓게 잰 AI 끼리 396 몸-판은 두손 보통 손목 범위 밖 8.7 → 8.2 % ·
   //  docs/strike/arm_clear2_2026-11-12.md §4 · 새 AI 몫 잣대는 arm_clear2.test.mjs) — 씨앗 셋 판은 잰 때의 팔(arm_real_pin armClear2)로 묶음
-  for (const w of ['longsword', 'sabre']) withArmOld(() => {
+  //  11/14 유파 AI 3 단계(독일 플랜 · 모든 AI 손잡이 찍기)로 두 무기(독일 유파) AI 의 판이 바뀜(사브르 > 10° 11.0 %) — 잰 때의 AI(독일 플랜 · 찍기 뺌)로 묶음 · 기준은 그대로
+  const P = CONFIG.AI_PLAN;
+  const DE_OLD = [[P, 'schools', P.schools.filter((t) => t !== 'german')], [P, 'errSchools', P.errSchools.filter((t) => t !== 'german')], [P, 'pommel', 0]];
+  for (const w of ['longsword', 'sabre']) withSets(DE_OLD, () => withArmOld(() => {
     const T = new WristTally();
     for (const seed of [11, 12, 13]) T.merge(aiRun(w, { seed }).T, `${seed}:`);
     const s = shares(T);
@@ -266,7 +269,7 @@ test('AI 끼리 15 s (롱소드 · 사브르 — 씨앗 셋 합): 기본 범위 
     assert.ok(s.oorX <= 0.1 && s.revUp <= 0.06, `${w} 기본: > ${OOR_X}° ${pc(s.oorX)} % · 거꾸로 · 아래팔 섬 ${pc(s.revUp)} %`);
     const r = withSets(ROPE, () => shares(aiRun(w, { seed: 11 }).T));
     assert.ok(r.oorX <= 0.01 && r.rev <= 0.01, `${w} 밧줄: > ${OOR_X}° ${pc(r.oorX)} % · 거꾸로 ${pc(r.rev)} %`);
-  }, ['armClear2']);
+  }, ['armClear2']));
 });
 
 test('시험 손목 치우침 밧줄: 켜면(`?wristRope=1`) 손목 원뿔에 둘 더 (gripDev — 척측 · 엄지 쪽) · 기본 · 전 판은 없음 · 칼날을 거꾸로 쥔 동안 떼고 돌아오면 다시', () => {
