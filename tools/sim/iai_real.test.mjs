@@ -48,7 +48,7 @@ const TORSO = new Set(['abdomen', 'pelvis', 'chest']);
 
 test('② 사람 발도 — 원전 꼴: 맞음 몸통 · 끝 주먹 어깨 위 오른쪽 · 굳음 팔 뻗음 · 숙임 작음 · 옆 밀림 없음 / 끄면 전 판', () => {
   const on = shot();
-  const off = withS({ iaiReal: 0 }, () => shot());
+  const off = withS({ iaiReal: 0, iaiObi: 0 }, () => shot()); // 끈 판(11/13 전 판) 장면은 그때 판으로 — 11/14 帯刀(SECRET.iaiObi) 뒤 iaiReal 0 · iaiObi 1 은 굳음 옆 밀림이 0.2 m 아래로 갈림 (기록 docs/strike/iai_obi_2026-11-14.md §7)
   for (const r of [on, off]) {
     assert.ok(r.sum.armed && r.sum.ok, '준비 · 비기 냄');
     assert.ok(r.hit && TORSO.has(r.hit.part), JSON.stringify(r.hit));

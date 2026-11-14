@@ -74,9 +74,10 @@ test('③ 鞘引き — 칼이 칼집을 떠나는 몫에서 왼손이 이미 �
     assert.ok(s.ohUBHip < 0.03, `${weapon} ${start} 칼집을 떠날 때 빈손 ↔ 왼 허리 ${s.ohUBHip}`);
     if (start === 'hip') assert.ok(Math.abs(s.sayaUB - r.frames.find((f) => f.cut).u) < 0.07, `${weapon} 사람 원전 꼴: 鞘引き 끝 = 칼집을 떠나 맞음 · 잔상이 켜지는 몫`);
   }
+  // 11/14 帯刀(SECRET.iaiObi) 뒤: 대기 칼 자리가 바뀌어 세 스위치를 끈 판(대기 동안 두 손)과 켠 판의 사람 발도 맞는 곳이 갈림(골반 · 배) — 이 견줌은 그때 판(iaiObi 0)으로 묶음 (기록 docs/strike/iai_obi_2026-11-14.md §7)
   for (const [weapon, guard] of [['uchigatana', 'langort'], ['uchigatana', 'ochsR'], ['monohoshizao', 'langort']]) {
-    const on = shot({ weapon, guard });
-    const off = withS(OFF, () => shot({ weapon, guard }));
+    const on = withS({ iaiObi: 0 }, () => shot({ weapon, guard }));
+    const off = withS({ ...OFF, iaiObi: 0 }, () => shot({ weapon, guard }));
     assert.equal(on.sum.far, off.sum.far, `${weapon} ${guard} 뽑는 길 시작 같음`);
     assert.equal(on.hit?.part, off.hit?.part, `${weapon} ${guard} 맞는 곳`);
     assert.ok(Math.abs(on.hit.E - off.hit.E) < 1, `${weapon} ${guard} 판정 에너지`);
@@ -88,7 +89,8 @@ test('③ 鞘引き — 칼이 칼집을 떠나는 몫에서 왼손이 이미 �
   assert.ok(held.sum.preOff.sayaW === 0 && held.sum.sayaUB == null, '칼자루를 쥔 채 낸 발도는 鞘引き 놓기 없음 (11/13 그대로)');
 });
 
-test('④ 두 손으로 돌아오는 때 — 풀기(振りかぶり) 동안 시작 · 鞘戻し 점을 풀기 끝에 지남 · 굳음 · 풀기 길이 그대로 · 튐 없음', () => {
+test('④ 두 손으로 돌아오는 때 — 풀기(振りかぶり) 동안 시작 · 鞘戻し 점을 풀기 끝에 지남 · 굳음 · 풀기 길이 그대로 · 튐 없음', () => withS({ iaiObi: 0 }, () => {
+  // 11/14 帯刀(SECRET.iaiObi) 뒤 鞘戻し 점은 대기 칼집 입 쥠(iai_obi.js obiGrip — iai_obi.test ④)으로 옮겨 이 장면(iaiSayaMouth 를 잼)은 그때 판으로 묶음 (기록 docs/strike/iai_obi_2026-11-14.md §7)
   for (const [weapon, start] of [['uchigatana', 'hip'], ['uchigatana', 'held'], ['uchigatana', 'crouch'], ['monohoshizao', 'hip'], ['kusanagi', 'held']]) {
     const r = shot({ weapon, start });
     const s = r.sum;
@@ -105,7 +107,7 @@ test('④ 두 손으로 돌아오는 때 — 풀기(振りかぶり) 동안 시�
     const last = r.frames.filter((f) => f.ph === 'free').at(-1);
     assert.ok(last.grip && last.gap <= s.seatRef + 0.03 && last.rgK == null, `${weapon} ${start} 다시 쥐고 자리 잡음 (틈 ${last.gap})`);
   }
-});
+}));
 
 test('⑤ 끄면 11/13 판 — 대기 동안 두 손 · 鞘引き 놓기 없음 · 풀기 끝 뒤 곧은 다시 쥐기', () => {
   const r = withS(OFF, () => shot({ start: 'hip' }));

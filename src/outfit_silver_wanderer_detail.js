@@ -230,13 +230,15 @@ export function createSilverWandererDetail(h) {
     const place=geo=>bake(geo,[-.018,-.22,-.24],[0,0,-.23]);
     if(look?.daraishiRevision>=7) { // ── v7: 입 쇠·끝 쇠(10 각)·끈 띠 둘·매다는 끈만 — 가는 테 넷·끈 고리·덩굴 잎은 뺀다. 끝 쇠는 늘인 검집(DARAISHI_SCABBARD) 끝으로
       const S=DARAISHI_SCABBARD, chape=S.top-(look?.daraishiScabbardLen??S.length)+.0295, put=geo=>placeDaraishiScabbard(THREE,bake,geo,look); // ── v8: 기울인 검집을 따른다 (v7 도 10/15 부터 v8 자리 — daraishiScabbard 8)
-      addMerged(l,[put(cyl(.027,.027,.043,10,true,[0,.315,0])),put(cyl(.022,.018,.059,10,false,[0,chape,0]))],GOLD,metal);
-      addMerged(l,[put(bake(new THREE.CircleGeometry(.024,10),[0,.331,0],[-Math.PI/2,0,0]))],0x221a21,leather);
-      addMerged(l,[.27,.19].map(y=>put(cyl(.027,.027,.023,10,true,[0,y,0]))),0x30242d,leather);
+      const scFit=[addMerged(l,[put(cyl(.027,.027,.043,10,true,[0,.315,0])),put(cyl(.022,.018,.059,10,false,[0,chape,0]))],GOLD,metal),
+        addMerged(l,[put(bake(new THREE.CircleGeometry(.024,10),[0,.331,0],[-Math.PI/2,0,0]))],0x221a21,leather),
+        addMerged(l,[.27,.19].map(y=>put(cyl(.027,.027,.023,10,true,[0,y,0]))),0x30242d,leather)];
+      for(const m of scFit) if(m) m.name='daraishi-scabbard-fit'; // 11/14 帯刀 (iai_obi.js daraishiSaya): 검집과 함께 칼집 틀로 옮김
       const sz=(look.daraishiRevision>=8||look.daraishiLower===10||look.daraishiScabbard===8)?[-.252,-.258]:[-.24,-.24]; // ── v8: 바깥으로 옮기고 기울인 검집까지 매다는 끈을 늘인다 (── v10 · v7(10/15) 도 v8 자리)
       for(let i=0;i<sz.length;i++)sz[i]+=look.daraishiScabbardInset||0; // 칼집 몸 · 쇠붙이와 함께 끈 끝도 안쪽으로 (v7-front4 8 mm — 사장님 10/16 '칼집은 관통을 피하며 최소한만 붙이도록', 샛별 쪽). 허리띠에 맨 자리는 그대로
-      addMerged(l,[line([[.028,.079,-.177],[.063,.068,-.213],[.049,.054,sz[0]]],.005),
+      const strap=addMerged(l,[line([[.028,.079,-.177],[.063,.068,-.213],[.049,.054,sz[0]]],.005),
         line([[-.033,.067,-.179],[.018,-.022,-.218],[.029,-.03,sz[1]]],.005)],0x4e3541,leather);
+      if(strap) strap.name='daraishi-scabbard-strap'; // 11/14 帯刀: 옛 자리 매다는 끈 (허리띠 자리로 옮기면 감추고 사게오가 이음)
       return;
     }
     trim.push(place(cyl(.027,.027,.043,16,true,[0,.315,0])));
@@ -380,6 +382,7 @@ export function createSilverWandererDetail(h) {
       if (!layer.isGroup || !layer.name.startsWith('silver-wanderer-')) continue;
       for (const mesh of [...layer.children]) {
         if (!mesh.isMesh || mesh.isSkinnedMesh) continue; // ── v8: 카바 자락(스키닝)은 합치지 않는다
+        if (/^daraishi-scabbard/.test(mesh.name)) continue; // 11/14 帯刀: 빈 검집 몸 · 쇠붙이 · 끈은 따로 (iai_obi.js daraishiSaya 가 이름으로 찾아 옮김)
         if (!mesh.visible) { layer.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); continue; }
         const m = mesh.material, key = [m.color.getHex(), m.metalness, m.roughness, m.side, m.envMapIntensity, !!m.envMap].join('|');
         if (!groups.has(key)) groups.set(key, []);

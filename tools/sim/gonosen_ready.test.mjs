@@ -163,6 +163,9 @@ test("④ 사람 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준
   assert.equal(SECRET.gnsCrouch, 0); // 10/31 01:0x 사장님 '플레이어만 웅크리기 꺼' — 기본 끔 · 아래는 켠 판(`?gnsCrouch=1`)을 본다
   const gnsWas = SECRET.gnsCrouch;
   SECRET.gnsCrouch = 1;
+  // 11/14 帯刀(SECRET.iaiObi) 뒤 대기 칼 자리 · 뽑는 자리 B 가 칼집 자리로 옮겨 '손이 발도 길 B(iaiPath.B — 왼 허리) 곁'을 잰 이 장면은 그때 판으로 묶음 (기록 docs/strike/iai_obi_2026-11-14.md §9)
+  const obiWas = SECRET.iaiObi;
+  SECRET.iaiObi = 0;
   try {
   assert.equal(SECRET.gnsCrouchOut, 0.2);
   const R = near({});
@@ -213,6 +216,7 @@ test("④ 사람 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준
   O.G.world.free();
   } finally {
     SECRET.gnsCrouch = gnsWas;
+    SECRET.iaiObi = obiWas;
   }
 }, ['armClear2']));
 
@@ -259,6 +263,10 @@ test('⑥ 10/27 23:0x 무장 시계는 공격이 풀린 때(판 시작 정지 AR
 
 test("⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창 (사장님 '웅크리기를 없앴더니 고노센 발동창이 안열려.' — SECRET.gnsReadyHip · docs/strike/gonosen_window_2026-10-31.md)", () => withArmOld(async () => {
   // 11/12 둘째(두 팔 엇갈림 막기 AI 몫): 1.6 m 앞 서 있는 상대 롱소드도 AI 몸이라 겨눔 칼끝이 20 cm 남짓 바뀌어 사람 칼과 닿음이 달라짐 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
+  // 11/14 帯刀(SECRET.iaiObi) 뒤 — '손이 발도 길 B(iaiPath.B) 곁'을 잰 장면이라 그때 판으로 묶음 (④ 와 같음 · 기록 docs/strike/iai_obi_2026-11-14.md §9)
+  const obiWas = SECRET.iaiObi;
+  SECRET.iaiObi = 0;
+  try {
   const THREE = await import('three');
   assert.equal(SECRET.gnsCrouch, 0);
   assert.equal(SECRET.gnsReadyHip, 1);
@@ -342,6 +350,9 @@ test("⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창 (사장님 '웅크리�
     if (latch) assert.ok(ev?.ev === 'raise' && ev.latched != null, `이어 봄 → 창 ${JSON.stringify(ev)}`);
     else assert.notEqual(ev?.ev, 'raise', `끄면 선 밖에서 든 칼은 '듦' 창 없음 (손이 멎으면 헛침 창은 그대로) ${JSON.stringify(ev)}`);
     R.G.world.free();
+  }
+  } finally {
+    SECRET.iaiObi = obiWas;
   }
 }, ['armClear2']));
 
