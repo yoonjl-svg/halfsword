@@ -74,6 +74,18 @@ export const SCHOOL_PLAN = Object.freeze({
     behind: Object.freeze({ retreat: 1, receive: 1, link: 1, engage: 0, invite: 0 }),
     tired: Object.freeze({ retreat: 1, receive: 1, link: 0, engage: 0, invite: 0 }),
   }),
+  // 동방 (2 단계 — 사장님 11/14 '사냥감을 말려 죽이는 고양이과 맹수' · 설계 §3-4 · 칸 뜻 · 셈은 src/ai_plan_cn.js · 값 config AI_PLAN.cn): close 가까운 간격 · circle 많이 돎 · waist 허리 베기 계열 · wear 겹이 쌓이면 몰아치기를 줄이고 돌며 지치게 · meet 나서며 받아 격살 · lure 유도(겹을 쌓은 뒤 간격 끝에서 끌어냄)
+  chinese: Object.freeze({
+    nameKo: '고양이과 맹수',
+    lureAt: 4,
+    probe: Object.freeze({ close: 1, circle: 1, waist: 1, wear: 1, meet: 1, lure: 1 }),
+    contest: Object.freeze({ close: 1, circle: 1, waist: 1, wear: 1, meet: 1, lure: 1 }),
+    commit: Object.freeze({ close: 0, circle: 0, waist: 1, wear: 0, meet: 1, lure: 0 }),
+    ahead: Object.freeze({ close: 0, circle: 1, waist: 1, wear: 1, meet: 1, lure: 1 }), // 상대가 더 흘림 — 돌며 기다리는 쪽 · 받는 쪽
+    finish: Object.freeze({ close: 1, circle: 0, waist: 1, wear: 0, meet: 1, lure: 1 }), // 지친 · 무너진 상대 — 지치게 하기를 멈추고 칠 때 나서며 받음
+    behind: Object.freeze({ close: 0, circle: 1, waist: 1, wear: 1, meet: 1, lure: 1 }), // 맞바꾸기 싫음 — 날개 접기(물러나다 거두어 허리) · 간격 끝에서 받는 쪽
+    tired: Object.freeze({ close: 0, circle: 1, waist: 0, wear: 0, meet: 1, lure: 0 }), // 휘두름을 덜하고 도는 쪽
+  }),
 });
 
 /** 이 유파의 플랜 (스위치 · 유파 · 띠 무가 아니면) — 없으면 null */

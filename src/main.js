@@ -334,6 +334,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   //  `?aiPlanTick=0` = 국면 판정을 매 스텝 (실제 초 — 기본 0.2)
   if (params.has('aiPlan')) CONFIG.AI_PLAN.on = +params.get('aiPlan') ? 1 : 0;
   if (params.has('aiPlanTick') && +params.get('aiPlanTick') >= 0) CONFIG.AI_PLAN.tick = CONFIG.realS(+params.get('aiPlanTick'));
+  if (params.get('aiPlanCn') === '0') for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((t) => t !== 'chinese'); // `?aiPlanCn=0` = 동방 플랜만 옛 판 (2 단계 · 11/14 — 플랜 · 거리 오차 · 동방 몫 모두 끔 · 공통 파고들기는 그대로)
 }
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
   const its = params.get('itSecret');

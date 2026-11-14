@@ -2296,14 +2296,25 @@ export const AI_MAAI = { hide: 0 }; // [사장님 확인 전 — 확인표 3422]
 //  digShort  상대 칼끝 어림 − 내 칼끝 거리가 이만큼 넘으면 파고들기 (걸음 사다리 0.3 m) [사장님 확인 전]
 //  digCross  다가감 시간 한도 1.4 s 가 건너는 거리 — 건널 거리 ÷ 이 값만큼 한도를 늘림 (걸음 사다리 0.6 m) [사장님 확인 전]
 //  digKeep   다가가다 위협이 오면 접지 않고 칼로 받으며 계속 들어갈 몫 = digKeep × 띠 기울기 (낮음 0.2 · 가운데 0.4 · 높음 0.6) [사장님 확인 전]
+//  ── 동방 플랜 (2 단계 — 사장님 11/14 '동방은 사냥감을 말려 죽이는 고양이과 맹수' · src/ai_plan_cn.js · 기록 docs/strike/ai_plan_cn_2026-11-14.md · schools · errSchools 에 'chinese' — 기본 켬 · `?aiPlanCn=0` = 동방만 옛 판)
+//  cn.close     가까운 간격 — 간 보는 여유 × (1 − close × 띠 기울기 × 칸) [사장님 확인 전]
+//  cn.circle    많이 돎 — 옆 돌기 빠르기 × (1 + circle × 띠 기울기 × 칸) · 멈춤 몫 일부를 돎으로 (같은 굴림) [사장님 확인 전]
+//  cn.waist     허리 베기 계열(UNIQUE_ASSIST.yaojiBleed.techs — 사냥 겹을 쌓는 세 칼) 고를 몫 × (1 + waist × 띠 기울기 × 칸) [사장님 확인 전]
+//  cn.wear      겹이 쌓이면 몰아치기를 줄이고 돌며 지치게 — 상대가 지치지 않은 동안 겹마다 공격 문턱 + wear × 띠 기울기 × 칸 (겹당 8 % — 사냥 겹과 같은 잣대 · 큰 틈은 그대로) [사장님 확인 전]
+//  cn.wearNext  겹을 쌓은 뒤 맞혔으면 이어 치기 몫 × (1 − wearNext × 띠 기울기 × 칸) — 주고받기보다 빠져 돎 [사장님 확인 전]
+//  cn.lureHold  유도(가운데 끝 4 부터) — 겹이 있거나 지친 상대 · 격살 쓰는 때면 간 보기 · 물러남 한 번에 한 번 띠 기울기 × 칸 몫으로 굴려 이 초(시간 사다리 2.0 s) 동안 상대 칼끝 바로 밖에 서서 공격을 끌어냄 [사장님 확인 전]
+//  cn.lureNeed  유도 동안 공격 문턱 + lureNeed × 띠 기울기 (먼저 치지 않는 쪽 · 큰 틈은 그대로) [사장님 확인 전]
+//  cn.meetFresh 나서며 받기 — 격살을 노릴 마음이 난 위협(cnWant)이면 물러나 피하기를 칼로 받기로 바꿀 몫 = 띠 기울기 × 칸 × (상대 지침 · 유도 중 · 유도가 끌어낸 칼 1 · 아니면 meetFresh) [사장님 확인 전]
+//  cn.will0     격살을 노릴 마음의 바닥 · 꼭대기 (사장님 11/14 '동방도 반드시 스택이 쌓여야 격살을 쓴다는 절대적 규칙은 지우자 마음의 기울기로 남겨둬'): 마음 = will0 + (1 − 2 · will0) × (1 − 2^−L) ·
+//               L = 상대 겹 ÷ SECRET.gyeoksalAi.stacks + 판 시간 ÷ late + 상대 지침 + (높음) 칠 낌새 — 겹 0 · 초반 0.2 · 기준점 하나 0.5 · 끝 0.8 · 위협 하나에 한 번 굴림 · 옛 판은 SECRET.gyeoksalAi 문 그대로 [사장님 확인 전]
 export const AI_PLAN = {
   on: 1,
-  schools: ['italian'],
+  schools: ['italian', 'chinese'],
   bands: [0, 1, 1, 2, 2, 3, 3],
   tilt: [0, 1 / 3, 2 / 3, 1],
   errMax: 0.3,
   errClear: 5,
-  errSchools: ['italian'],
+  errSchools: ['italian', 'chinese'],
   tick: realS(0.2),
   hurtT: realS(1.2),
   beat: realS(0.6),
@@ -2315,6 +2326,7 @@ export const AI_PLAN = {
   digShort: 0.3,
   digCross: 0.6,
   digKeep: 0.6,
+  cn: { close: 0.5, circle: 0.5, waist: 0.5, wear: 0.08, wearNext: 0.5, lureHold: realS(2.0), lureNeed: 0.5, meetFresh: 0.5, will0: 0.2 },
 };
 
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)
