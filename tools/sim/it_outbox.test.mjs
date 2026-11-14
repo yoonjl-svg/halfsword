@@ -42,6 +42,7 @@ test('기본값 (11/14 사장님 \'이탈리아 찌르기 0.8로 해. 우위 2�
   assert.equal(IO.stopV, null);
   assert.ok(Math.abs(IO.edge - realS(2.0)) < 1e-12 && Math.abs(IO.beat - realS(0.4)) < 1e-12);
   assert.equal(IO.ai, 1);
+  assert.equal(IO.beatHuman, 0, '11/15 사장님 \'l9는 이전처럼 되돌려\' — 사람 박자 찌르기 끔 · AI 는 그대로');
   assert.ok(KIT_KEYS.includes('itTempo'));
   assert.equal(kitFromNodes('italian', new Set(['I1', 'I12'])).itTempo, true);
   assert.equal(kitFromNodes('italian', new Set(['I1'])).itTempo, false, 'I1 임시 이음은 걷음 (새 칸 I12)');
@@ -285,6 +286,9 @@ test('4 박자 찌르기: 상대가 치기 시작한 0.4 s 안의 탭 = 비껴�
     B.P.stickX = 0;
     B.P.stickY = 0;
     const swing = (age) => (B.uq.foeAtk = { n: (B.uq.foeAtk?.n ?? 0) + 1, t0: B.uq.t - age });
+    swing(realS(0.3));
+    assert.equal(B.tap(), false, '기본(beatHuman 0 — 11/15 사장님 \'l9는 이전처럼\') = 사람은 전 조건만: 위협 없음 · 스틱 가운데면 안 나감');
+    IO.beatHuman = 1; // 아래는 11/14 판 (사람 박자 찌르기 — 스위치로만)
     swing(realS(0.5));
     assert.equal(B.tap(), false, '0.4 s 밖');
     swing(realS(0.3));
@@ -305,6 +309,7 @@ test('4 박자 찌르기: 상대가 치기 시작한 0.4 s 안의 탭 = 비껴�
     assert.equal(B.P.iaiReq.moves[0].dyn.void.lat, -0.3);
     assert.equal(B.uq.stats.fired.inquartata, 3, '같은 I9 (이름 그대로)');
   } finally {
+    IO.beatHuman = 0;
     CONFIG.UNIQUE_ASSIST.specialCooldown = cd;
     B.free();
   }
