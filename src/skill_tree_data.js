@@ -5,7 +5,7 @@
 //  칸 → 판 몫(아래 f · u · perk): 칸 하나가 제 몫 하나만 켠다 — 몫 열쇠는 skill_kit.js kitOff 가 싸움 코드에서 읽는다(사람만 · AI 는 숙련도 그대로).
 //   표 · 근거: IMPLEMENTATION.md §2 · docs/strike/school_kit_map.md §2 '스킬트리'. 글(l1 · l2 · eff)은 화면 글 지침(docs/text/editing_guide.md) — data.mjs eff 는 설계 메모라 고쳐 씀.
 //  이 파일은 저장 · 화면을 모른다(시험이 바로 읽음) — 저장은 skill_tree_store.js · 화면은 skill_tree.js.
-import { SECRET, LETTER, UNIQUE_ASSIST } from './config.js';
+import { SECRET, LETTER, UNIQUE_ASSIST, IB_LINK } from './config.js';
 
 /** 탭 차례 (감독 10/16: 독일 · 이탈리아 · 이베리아 · 일본 · 동방) */
 export const TREE_SCHOOLS = Object.freeze(['german', 'italian', 'iberian', 'japanese', 'chinese']);
@@ -22,7 +22,7 @@ export const NODE_CAT = Object.freeze({
 });
 
 /** 판 몫 열쇠 (skillKit 칸 — 칸이 없으면 false). unique · perk 는 이름 모음 */
-export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'jpRock', 'deRing', 'cnHunt', 'itTempo']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29) · cnHunt = 동방 C12 맹호은림 사냥 겹 (11/14 — cn_hunt.js) · jpRock = 일본 바위 몸 J12 (11/14 사장님 '바위 몸 확정' — 밀치기 기력 0 · 스택당 받는 피해 −4 % · config JP_TANK) · deRing = 독일 칼 씨름 (링엔 암 슈베르트 — 11/14 사장님 이름 확정) 새 몫 (config DE_DIRTY · de_dirty.js · 새 칸 자리 대기 — 지금은 G9 에 임시로 이음 · 11/14 B · C 열쇠 deClinch · deHilt 는 폐기) · itTempo = 이탈리아 맞박자 찌르기 패시브 (11/14 사장님 '콘트라템포 ok' — 보법 II 줄 새 칸 I12)
+export const KIT_KEYS = Object.freeze(['footwork', 'chase', 'backFlat', 'burstSide', 'stepCost', 'parry', 'parryCover', 'parryCut', 'opposition', 'flow', 'flowShield', 'ibFlow', 'ibChain', 'passive', 'secret', 'jpRock', 'deRing', 'cnHunt', 'itTempo', 'ibTrade']); // ibChain = 이베리아 B6 이어지는 흐름 (10/29) · cnHunt = 동방 C12 맹호은림 사냥 겹 (11/14 — cn_hunt.js) · jpRock = 일본 바위 몸 J12 (11/14 사장님 '바위 몸 확정' — 밀치기 기력 0 · 스택당 받는 피해 −4 % · config JP_TANK) · deRing = 독일 칼 씨름 (링엔 암 슈베르트 — 11/14 사장님 이름 확정) 새 몫 (config DE_DIRTY · de_dirty.js · 새 칸 자리 대기 — 지금은 G9 에 임시로 이음 · 11/14 B · C 열쇠 deClinch · deHilt 는 폐기) · itTempo = 이탈리아 맞박자 찌르기 패시브 (11/14 사장님 '콘트라템포 ok' — 보법 II 줄 새 칸 I12) · ibTrade = 이베리아 B12 맞바꿈 '멈추지 않는 칼' (11/14 사장님 '맞바꿈 새 칸으로' — config IB_LINK.trade · fighter.js ibTradeTry) · ibChain = 이베리아 B6 이어지는 흐름 (10/29) · cnHunt = 동방 C12 맹호은림 사냥 겹 (11/14 — cn_hunt.js) · jpRock = 일본 바위 몸 J12 (11/14 사장님 '바위 몸 확정' — 밀치기 기력 0 · 스택당 받는 피해 −4 % · config JP_TANK) · deRing = 독일 칼 씨름 (링엔 암 슈베르트 — 11/14 사장님 이름 확정) 새 몫 (config DE_DIRTY · de_dirty.js · 새 칸 자리 대기 — 지금은 G9 에 임시로 이음 · 11/14 B · C 열쇠 deClinch · deHilt 는 폐기)
 
 export const RESET_HEADS = 1; // 유파 초기화 값 — 머리 1 (사장님 10/21)
 
@@ -75,8 +75,9 @@ const TREE_SRC = {
       N({ id: 'B11', name: '리스본에서 온 편지', cat: 'letter', l1: '리스본에서', l2: '온 편지', title: '리스본에서 온 편지', pre: ['B1'], price: 100, opt: true, d: 0, cx: 250, letter: true }),
       N({ id: 'B5', name: '흐르는 긋기', cat: 'atk', l1: '이어 긋기', l2: '흐름', eff: '이어 그을 때 칼이 멈추지 않고 다음 긋기로 흐른다', pre: ['B1'], price: 200, d: 1, cx: 588, f: ['ibFlow'] }), // 10/29 01:3x 머리 위 돌려 베기와 자리 바꿈 (전 d 2 · cx 560 · B4 뒤 · 금화 300)
       N({ id: 'B9', name: '굳은 받기', cat: 'parry', l1: '막기 II', l2: '굳은 받기', eff: '막는 동안 받는 피해가 줄어든다', pre: ['B8'], price: 300, d: 2, cx: 800, f: ['parryCut'] }),
-      N({ id: 'B7', name: '풍차 베기', cat: 'atk', l1: '풍차 베기', l2: '돌며 베기', eff: '한 걸음 나가며 몸을 한 바퀴 돌려 가로로 벤다', pre: ['B5'], price: 300, d: 2, cx: 560, u: 'cingir' }), // 11/12 이름 '싱지르' → '풍차 베기' (사장님 '싱지르 이름을 이제 풍차 베기로 바꿔야하지 않아?' — 특수 공격 뜻 이름 · 원어 cingir 그대로 · l2 · 효과 글 그대로 — 새 동작 글 안은 docs/strike/windmill_2026-11-12.md) // 11/11 사장님 '싱지르를 제비베기와 같은 위계의 특수공격으로 … 싱지르는 비기의 지위에서 물러나는 대신 빠르기를 고노센의 30%로 낮추고 대신 돌때 한 걸음 앞으로 나가며 치게 동작을 바꾸자' — 전 B4 자리 · 값(pre B5 · 금화 300 · d 2 · cx 560) · u cingir(특수 공격 — unique_assist.js circleTick) · 두 줄 '싱지르' / '돌며 베기' · 효과 글 전 '칼끝 거리 밖에서 버티다 공격을 원을 그리듯 한 바퀴 돌리면, 몸을 한 바퀴 돌려 가로로 벤다'(사장님 10/25 확정 글 — 무장 조건이 없어지고 한 걸음이 붙어 고침) [두 줄 · 효과 글 사장님 확인 전 — 확인표 3527] // 10/22 이베리아 새 비기 (사장님 '빙글 한바퀴 돌면서 … 일격' — schools.js IBERIAN_SECRET_SPIN · 전 '길목 지키기')
+      N({ id: 'B7', name: '이어 돌리기', cat: 'atk', l1: '이어', l2: '돌리기', eff: '이어 그으면 칼이 머리 위로 돌아 다음 칼로 넘어간다', pre: ['B5'], price: 300, d: 2, cx: 560, u: 'cingir' }), // 11/14 사장님 '모두 본판에 넣어' — 이어 돌리기 글(기록 docs/strike/ib_link_2026-11-14.md §6 안 확정 · 확인표 3923) · `?ibLink=0` 판은 아래 B7_WINDMILL(11/12 풍차 베기 글 그대로 — withLore 가 읽을 때 고름) // 11/12 이름 '싱지르' → '풍차 베기' (사장님 '싱지르 이름을 이제 풍차 베기로 바꿔야하지 않아?' — 특수 공격 뜻 이름 · 원어 cingir 그대로 · l2 · 효과 글 그대로 — 새 동작 글 안은 docs/strike/windmill_2026-11-12.md) // 11/11 사장님 '싱지르를 제비베기와 같은 위계의 특수공격으로 … 싱지르는 비기의 지위에서 물러나는 대신 빠르기를 고노센의 30%로 낮추고 대신 돌때 한 걸음 앞으로 나가며 치게 동작을 바꾸자' — 전 B4 자리 · 값(pre B5 · 금화 300 · d 2 · cx 560) · u cingir(특수 공격 — unique_assist.js circleTick) · 두 줄 '싱지르' / '돌며 베기' · 효과 글 전 '칼끝 거리 밖에서 버티다 공격을 원을 그리듯 한 바퀴 돌리면, 몸을 한 바퀴 돌려 가로로 벤다'(사장님 10/25 확정 글 — 무장 조건이 없어지고 한 걸음이 붙어 고침) [두 줄 · 효과 글 사장님 확인 전 — 확인표 3527] // 10/22 이베리아 새 비기 (사장님 '빙글 한바퀴 돌면서 … 일격' — schools.js IBERIAN_SECRET_SPIN · 전 '길목 지키기')
       N({ id: 'B6', name: '이어지는 흐름', cat: 'deep', l1: '이어지는', l2: '흐름', title: '이어지는 흐름', eff: '이어 그을수록 세지고, 세 번째 긋기마다 기력을 쓰지 않는다', pre: ['B7'], price: 400, d: 3, cx: 680, f: ['ibChain'] }), // 11/11 앞 칸 = 그 자리(d 2 · cx 560)의 칸을 따라 B7 싱지르 (전 B4 — 자리 바꿈) [사장님 확인 전 — 확인표 3528] // 10/29 01:4x · 01:5x 사장님 결정 · 확인표 2735 ~ 2738 — 이어 그은 수마다 흐르는 긋기 위력 더하기 · 상한 없음 · 14:1x · 14:2x 사슬 세 칼마다 기력 0 (config IB_FLOW.chainStack · freeEvery — 전 01:5x 기력 × 0.9ⁿ · 그 전: 거듭 돌려 베기 · 돌려 베기 쌓기 perk redondo) · 효과 글 14:1x · 14:2x 사장님 글
+      N({ id: 'B12', name: '멈추지 않는 칼', cat: 'deep', l1: '멈추지 않는', l2: '칼', title: '멈추지 않는 칼 (노 아 데 파라르)', orig: 'no ha de parar', eff: '머리 위로 칼을 돌릴 때 맞으면, 한 번은 기력으로 버티고 멈추지 않는다', pre: ['B6'], price: 400, d: 4, cx: 680, f: ['ibTrade'] }), // 11/14 사장님 '맞바꿈 새 칸으로 넣되 이름은 원전에서 찾고' · 새 안 '이어돌리기 중에 피격돼도 1회 무시하는 대신 기력 소모' → '권고대로 해' — 자리 B6 다음(d 4 · cx 680 — 이베리아 빈 줄) · 이름 = 고디뉴 『Arte de Esgrima』(1599) 몬탄테 장 규칙 5 (BNP PBA 58 114 장 뒤) 「no a de parar hasta que bolba a medio reves sobre la cabeça」 — 뜻 (소리) 꼴 · 원어 = 오늘 철자 · 갈래 심화 · 금화 400 = B6 와 같음 [이름 · 글 · 값 사장님 확인 전 — 확인표 3915 · 기록 docs/strike/ib_link_2026-11-14.md §10]
     ],
   },
   japanese: {
@@ -153,8 +154,9 @@ const NODE_LORE = {
   B11: { lore: '부두에 큰 칼이 내릴 때마다, 선원들이 네게 먼저 보이자고 한다' }, // 10/23 (전 '리스본 항구에 큰 칼이 들거든, …')
   B5: { lore: '탈류에서 다른 탈류가 나고, 레베스에서 다른 레베스가 난다', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 맺음말' },
   B9: { lore: '큰 칼의 쳐내기와 막기와 치기는 모두 몸놀림이 거들어야 한다', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 6' },
-  B7: { lore: '큰 칼로 갈비를 온통 휘감고, 온몸을 돌려라', src: '고디뉴 『Arte de Esgrima』(1599) — 몬탄테 장 규칙 8' }, // 10/22 휘감아 돌기 (전 길목 지키기 — 피게이레두 단순 규칙 7)
+  B7: { lore: '칼을 머리 위로 넘겨 둘러, 탈류와 레베스를 이어 주어라', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 2' }, // 11/14 이어 돌리기 (사장님 '모두 본판에' — 「passandoo por sima da cabeça se dará hũ talho cingido e hũ revez」 줄여 옮김) · `?ibLink=0` = B7_WINDMILL (10/22 휘감아 돌기 — 고디뉴 규칙 8 · 전 길목 지키기 — 피게이레두 단순 규칙 7)
   B6: { lore: '걸음마다 한 칼씩, 늘 아래에서 위로, 사람들이 멈출 때까지 번갈아 쳐라', src: '피게이레두 『Memorial da Prattica do Montante』(1651) — 복합 규칙 7' },
+  B12: { lore: '머리 위로 다 돌 때까지 칼을 멈추지 말고, 칼자루를 높여 머리를 지켜라', src: '고디뉴 『Arte de Esgrima』(1599) — 몬탄테 장 규칙 5' }, // 11/14 맞바꿈 — 「no a de parar hasta que bolba a medio reves sobre la cabeça … e las guarnisiones altas que reparen la cabeça del golpe」(BNP PBA 58 114 장 뒤 · 독일어 역 PDF 5 쪽) — 한 문장의 두 토막을 명령꼴로 [풀이]
   // 일본 — 오륜서 · 병법가전서 · 일본검도형 (사장님이 주신 원본 읽기표 — docs/motion/schools/)
   J1: { lore: '발끝을 조금 띄우고 뒤꿈치를 세게 디뎌, 늘 걷듯이 걸어라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 발 쓰기' },
   J6: { lore: '벨 때도 물러설 때도 받을 때도, 좌우를 번갈아 디뎌라', src: '미야모토 무사시 『오륜서』(1645) — 물의 권 음양의 발' },
@@ -214,7 +216,7 @@ const NODE_CMD = {
   B3: '좌우 이동(←/→)과 동시에 사선 긋기(↙)', // 걸음 명령 stick 'side' + 분노의 베기(zornhau)
   B4: '칼 길이 바깥에서 2초 기다리면 비기 활성화 · 탭을 길게 누르다 떼기로 발동', // 11/11 비기가 됨 (사장님 '알티바슈 포르트를 고노센 급의 비기로') — 무장 = 전 싱지르 비기 글 앞 토막 그대로(사장님 10/25 확정 꼴 — secret.js spinTick · SECRET.ibSpin.armTime 2 s · 금빛 '!') · 발동 = 전 B4 글(unique_assist.js holdTick — 무장 창이 열린 동안 끌지 않고 rdHoldTime 넘게 누르면 메기 · 떼면 내려침) [사장님 확인 전 — 확인표 3529] · 전 '탭을 길게 누르다 떼기'(10/29 14:1x · 14:2x 사장님 글 — 특수 공격)
   B5: '긋기를 쉬지 않고 이어 가기', // fighter.js updateIbFlow — 앞 휘두르기(긋기) 뒤 이어짐 창 안에 다시 휘두름 · 휘두르며 둥글게 꺾음(탭은 휘두르기가 아님)
-  B7: '원을 그리며 긋기(↻/↺)', // 11/11 특수 공격이 됨 (사장님 '싱지르를 제비베기와 같은 위계의 특수공격으로') — 무장 없이 원 한 바퀴(unique_assist.js circleTick — 비기 판과 같은 attack_circle.js 셈 · 어느 쪽이든) · 전 사장님 10/25 확정 글의 발동 토막에서 '로 발동'을 뺌 [사장님 확인 전 — 확인표 3529] · 전 '칼 길이 바깥에서 2초 기다리면 비기 활성화 · 원을 그리며 긋기(↻/↺)로 발동'
+  B7: '긋기 뒤 곧장 다음 긋기', // 11/14 이어 돌리기 (사장님 '모두 본판에' — 앞 진짜 긋기 뒤 이어짐 창 안에 다음 큰 칼을 그으면 머리 위로 돌아 그 칼이 나감 · unique_assist.js linkTry) · `?ibLink=0` = B7_WINDMILL.cmd (전 11/11 '원을 그리며 긋기(↻/↺)')
   // 일본
   J6: '좌우 이동(←/→)과 동시에 사선 긋기(↘)', // 걸음 명령 stick 'side' + 왼 분노의 베기(zornhauL)
   J7: '가운데서 짧게 수직 긋기(↓)', // 손목 치기 ← 긴 자세(가운데) 자리에서 아래로(pad langort · dir down)
@@ -231,8 +233,24 @@ export const G7_CMD_TAP = '긋기가 상대 칼에 닿은 채 탭';
 export const G7_CMD_AUTO = { both: NODE_CMD.G7, bind: '가까이서 칼을 맞댄 채 버티면 자동 발동' /* 10/31 사장님 '초안 ok.' */, clash2: '칼끼리 연달아 부딪히면 자동 발동' /* [검수 전] */ };
 /** 상세 카드 입력 줄 (skill_tree.js — 얼린 칸의 cmd · 겹치기 자동 판을 바꿨으면 G7 은 그 판 글) */
 export const nodeCmd = (n) => (n?.id !== 'G7' ? n?.cmd : !UNIQUE_ASSIST.dupAuto ? G7_CMD_TAP : G7_CMD_AUTO[UNIQUE_ASSIST.dupAuto] ?? n.cmd);
+/**
+ * B7 글 두 판 (11/14 사장님 '모두 본판에 넣어' — 이어 돌리기 글 확정): 기본(IB_LINK.on 1) = 이어 돌리기 글(위 칸 · NODE_LORE · NODE_CMD) ·
+ *  `?ibLink=0`(11/12 풍차 베기 판 — 견줌) = 아래 그때 글 그대로. 판을 고르는 주소는 main.js 가 이 파일을 읽은 뒤 config 를 바꾸므로 글은 읽을 때 고름(칸의 그 글 칸만 getter).
+ */
+export const B7_WINDMILL = Object.freeze({ name: '풍차 베기', l1: '풍차 베기', l2: '돌며 베기', eff: '한 걸음 나가며 몸을 한 바퀴 돌려 가로로 벤다', lore: '큰 칼로 갈비를 온통 휘감고, 온몸을 돌려라', src: '고디뉴 『Arte de Esgrima』(1599) — 몬탄테 장 규칙 8', cmd: '원을 그리며 긋기(↻/↺)' });
+const twoTexts = (x, old) => {
+  for (const k of Object.keys(old)) {
+    const now = x[k];
+    delete x[k];
+    Object.defineProperty(x, k, { get: () => (IB_LINK.on ? now : old[k]), enumerable: true });
+  }
+  return Object.freeze(x);
+};
 /** 칸 + 오의 (lore · src — 편지는 lore 만) + 입력 줄 (cmd — 정해진 입력으로 내는 칸만) */
-const withLore =(n) => Object.freeze({ ...n, ...NODE_LORE[n.id], ...(NODE_CMD[n.id] ? { cmd: NODE_CMD[n.id] } : {}) });
+const withLore = (n) => {
+  const x = { ...n, ...NODE_LORE[n.id], ...(NODE_CMD[n.id] ? { cmd: NODE_CMD[n.id] } : {}) };
+  return n.id === 'B7' ? twoTexts(x, B7_WINDMILL) : Object.freeze(x);
+};
 /** 유파 → { gate?, nodes } (얼림) */
 export const TREE = Object.freeze(Object.fromEntries(Object.entries(TREE_SRC).map(([s, t]) => [s, Object.freeze({ ...t, nodes: Object.freeze(t.nodes.map(withLore)) })])));
 

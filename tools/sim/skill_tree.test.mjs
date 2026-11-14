@@ -43,7 +43,7 @@ test('설계 자료(data.mjs)와 같다: 유파마다 11 칸(일본 · 동방 ·
   assert.deepEqual(D.TREE_SCHOOLS, DESIGN.map((s) => s.id));
   for (const s of DESIGN) {
     const mine = D.nodesOf(s.id);
-    assert.equal(mine.length, s.id === 'japanese' || s.id === 'chinese' || s.id === 'italian' ? 12 : 11, s.id); // [사장님 11/14 결정] '일본은 바위 몸 확정해' · '전부 권고대로' — 일본 새 칸 J12 · 동방 새 칸 C12 맹호은림('이름와 위치는 좋음') (설계 자료 data.mjs 에도 더함 · 다른 유파 11 그대로) · 이탈리아 새 칸 I12 맞박자 찌르기 (11/14 '콘트라템포 ok' — data.mjs 에도 더함)
+    assert.equal(mine.length, s.id === 'japanese' || s.id === 'chinese' || s.id === 'italian' || s.id === 'iberian' ? 12 : 11, s.id); // [사장님 11/14 결정] '일본은 바위 몸 확정해' · '전부 권고대로' — 일본 새 칸 J12 · 동방 새 칸 C12 맹호은림('이름와 위치는 좋음') (설계 자료 data.mjs 에도 더함 · 다른 유파 11 그대로) · 이탈리아 새 칸 I12 맞박자 찌르기 (11/14 '콘트라템포 ok' — data.mjs 에도 더함) · 이베리아 새 칸 B12 멈추지 않는 칼(맞바꿈)
     assert.equal(mine.length, s.nodes.length, `${s.id} 설계 칸 수`);
     for (const d of s.nodes) {
       const n = D.nodeOf(s.id, d.id);
@@ -406,6 +406,8 @@ test('칸 → 몫 표 (IMPLEMENTATION.md §2): 보기 칸들 · 사람 고유 �
   assert.deepEqual(on('iberian', 'B5'), ['ibFlow']);
   assert.deepEqual(on('iberian', 'B9'), ['parryCut']);
   assert.deepEqual(on('iberian', 'B6'), ['ibChain']); // 10/29 01:5x 이어지는 흐름 (전: 돌려 베기 쌓기 perk redondo)
+  assert.deepEqual(on('iberian', 'B12'), ['ibTrade']); // 11/14 맞바꿈 '멈추지 않는 칼' (사장님 '맞바꿈 새 칸으로' — config IB_LINK.trade · fighter.js ibTradeTry)
+  assert.deepEqual([...D.nodeOf('iberian', 'B12').pre], ['B6']); // 자리 = B6 이어지는 흐름 다음
   assert.deepEqual(on('iberian', 'B4'), ['secret', 'u:redondo']); // 11/11 비기 알티바슈 포르트 (비기 몫 + 실행 칸 redondo — 무장 창에서 길게 눌러 냄 · 전 10/29 특수 공격 ['u:redondo'])
   assert.deepEqual(on('iberian', 'B7'), ['u:cingir']); // 11/11 특수 공격 싱지르 (전 비기 ['secret'])
   assert.deepEqual(on('japanese', 'J1'), ['footwork', 'stepCost']);
@@ -827,7 +829,7 @@ test('칸 오의(lore · src — 사장님 10/22 00:5x 원전의 오의를 밝�
     if (x.letter) assert.equal(x.src, undefined, `${x.id} 편지 칸은 출처 없음`);
     else assert.ok(typeof x.src === 'string' && x.src.trim().length > 0, `${x.id} src`);
   }
-  assert.equal(n, 58); // 11/14 일본 J12 바위 몸 · 동방 C12 맹호은림 · 이탈리아 I12 맞박자 찌르기 (전 55)
+  assert.equal(n, 59); // 11/14 일본 J12 바위 몸 · 동방 C12 맹호은림 · 이탈리아 I12 맞박자 찌르기 · 이베리아 B12 멈추지 않는 칼 (전 55)
 });
 
 test('10/23 비기 이름 = 원어 독음 (동방은 한자 한국식 독음) · 스킬 화면 제목은 원어를 괄호로 함께', async () => {

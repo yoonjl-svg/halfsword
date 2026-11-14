@@ -498,6 +498,14 @@ if (params.has('rdSteady')) CONFIG.UNIQUE_ASSIST.rdSteady = +params.get('rdStead
 if (params.has('rdRamp')) CONFIG.UNIQUE_ASSIST.rdRamp = +params.get('rdRamp') ? 1 : 0; // 감기 첫머리 도는 빠르기 부드럽게 (10/29 20:0x — 기본 1)
 if (params.has('ibChain')) CONFIG.IB_FLOW.chainStack = +params.get('ibChain') ? 1 : 0; // 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:4x · 01:5x · 기본 1)
 if (params.has('ibFreeEvery')) CONFIG.IB_FLOW.freeEvery = Math.max(0, Math.round(+params.get('ibFreeEvery') || 0)); // 이어지는 흐름 — 사슬 세 칼마다 기력 0 (사장님 10/29 14:2x · 기본 3 · 0 = 끔)
+// B7 이어 돌리기 (11/14 사장님 '이베리아 이어 돌리기로 진행해.' — config IB_LINK · src/iberian_link.js): `?ibLink=0` = 11/12 판 풍차 베기(원 긋기) · `?ibLinkT=` 원 시간(실제 초) · `?ibLinkCool=1` 특수 공격 식힘 걸기 ·
+//  `?ibTrade=0` B12 맞바꿈 '멈추지 않는 칼' 효과 끔(기본 켬 — 칸을 익힌 사람 · AI 이베리아 · 견줌) · `?ibLinkAi=0` AI 이어 돌리기 끔(기본 켬 — 11/14 사장님 'ai에게도 똑같이' · 0 = AI 풍차 베기 판) · 스위치(견줌 · 기본 끔): `?ibChainArm=1` B 사슬 세 칼 넘으면 알티바슈 포르트 곧장 무장
+if (params.has('ibLink')) CONFIG.IB_LINK.on = +params.get('ibLink') ? 1 : 0;
+if (params.has('ibLinkT')) CONFIG.IB_LINK.time = CONFIG.realS(Math.max(0.05, +params.get('ibLinkT') || 0.4));
+if (params.has('ibLinkCool')) CONFIG.IB_LINK.cool = +params.get('ibLinkCool') ? 1 : 0;
+if (params.has('ibChainArm')) CONFIG.IB_LINK.chainArm = +params.get('ibChainArm') ? 1 : 0;
+if (params.has('ibTrade')) CONFIG.IB_LINK.trade = +params.get('ibTrade') ? 1 : 0;
+if (params.has('ibLinkAi')) CONFIG.IB_LINK.ai = +params.get('ibLinkAi') ? 1 : 0;
 if (params.has('ibWindChain')) CONFIG.IB_FLOW.windmillChain = ['simple', 'inside'].includes(params.get('ibWindChain')) ? params.get('ibWindChain') : 0; // 풍차 베기를 이어 그은 칼 하나로 셈 (사장님 10/29 01:5x · 08:3x 'simple' — 기본 'simple' · 'inside' 견줌 · 0 끔)
 if (params.has('ibWindPower')) CONFIG.IB_FLOW.windmillPower = +params.get('ibWindPower') ? 1 : 0; // 풍차 베기 내려침 자체 흐름 위력 (사장님 10/31 14:xx — 기본 0 = 없음 · 사슬 첫 칼 자리는 그대로 · 1 = 10/29 판 × 1.2)
 if (params.has('dupEdge')) CONFIG.UNIQUE_ASSIST.dupEdge = +params.get('dupEdge') < 0 ? -1 : 1; // 겹치기 날 (1 긴 날 · −1 짧은 날)

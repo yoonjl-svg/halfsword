@@ -192,7 +192,7 @@ export function windRopesBack(f, R) {
 }
 
 /** 감는 칼이 지난 물리 스텝에 무엇에 닿았나 (iberian_spin.js swordContact 와 같은 셈 — 내 몸은 뺌): 'body' · 'blade' · 'other'(벽 · 땅) · null */
-function windContact(f) {
+export function windContact(f) { // 11/14 이어 돌리기도 읽음 (iberian_link.js linkStep)
   const Wd = f.world;
   const foe = f.foe;
   if (!Wd || !f.armed || !f.swordColliders) return null;

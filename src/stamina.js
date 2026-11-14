@@ -241,6 +241,7 @@ export class Stamina {
     if (chainK === 0) {
       this.rest = 0;
       this.action = 'attack';
+      this.fighter.ibFreeCut?.(); // 11/14 스위치 B (IB_LINK.chainArm — 기본 끔): 세 번째 기력 0 칼이 듦 → 알티바슈 포르트 곧장 무장 부탁 (fighter.js)
       return;
     }
     this.spend('attack', Math.max(0, (kind === 'thrust' ? STAMINA.thrustCost : STAMINA.cutCost) * this.weight * chainK - credit));
@@ -339,6 +340,13 @@ export class Stamina {
   observeStroke(dt) {
     const f = this.fighter, sk = f.skill;
     if (f.aiControlled) return;
+    if (f.ibLink) {
+      // 이어 돌리기 (11/14 — iberian_link.js): 도는 칼은 공격이 아님 — 원을 부른 손가락 첫머리는 청구 없이 버리고(다음 칼이 다시 그어짐) 원이 끝날 때까지 셈 없음
+      this.stroke = null;
+      this.quiet = Infinity;
+      this.strokeStart = f.handOffset ? [f.handOffset.x, f.handOffset.y] : null;
+      return;
+    }
     if (this.guarding || this.inSecret || sk.tap || sk.pom || sk.recovering || !f.armed || f.weapon?.gun) {
       if (!this.inSecret && !sk.tap && !sk.pom) this.finishStroke();
       else this.stroke = null;
