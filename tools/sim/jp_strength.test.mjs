@@ -15,6 +15,7 @@ import { gnsHumanUnsettled } from '../../src/secret.js';
 import { foeReachBase } from '../../src/ai.js';
 import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
 import { withJpOld } from './jp_tank_pin.mjs'; // 11/14 일본 스택 · 바위 몸 — 옛 장면은 잰 때 판으로 (docs/strike/jp_tank_2026-11-14.md §5)
+const withObiOld = (fn) => { const keep = SECRET.iaiObi; SECRET.iaiObi = 0; try { return fn(); } finally { SECRET.iaiObi = keep; } }; // 11/14 帯刀 전 판 (아래 tsuStep — 그때 판으로 묶음)
 
 const { SECRET, UNIQUE_ASSIST: UA, AI_MAAI } = CONFIG;
 const allOff = () => { SECRET.gnsHurtKeep = 0; SECRET.gnsThrough = 0; UA.tsuStep = 0; AI_MAAI.hide = 0; };
@@ -88,7 +89,9 @@ test('켜도 일본이 아닌 칸은 그대로: 네 스위치를 켠 독일 롱�
   }
 });
 
-test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄러져 들어감 (끄면 0)', () => withArmOld(() => {
+// 11/14 옛 장면 시험 — 그때 판으로 묶음(SECRET.iaiObi 0 · 기준은 안 고침): 개발 가지 84380875 의 帯刀(대기 칼 자리 원전대로 — iaiObi 1)로 씨앗 1 판이 갈려
+//  되돌림 칼이 안 나옴(53f6dc46 에선 지남 · 84380875 그대로에서도 실패 — 동방 가지가 만든 것 아님). 이 장면은 帯刀 전에 잰 판
+test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄러져 들어감 (끄면 0) (옛 판 · iaiObi 0)', () => withObiOld(() => withArmOld(() => {
   // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 · 사람 두손 칼 칼자루 끝 앞 바닥)로 씨앗 1 판에 제비 베기 되돌림 칼이 안 나옴 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
   const runs = {};
   for (const v of [0, 0.3]) {
@@ -107,7 +110,7 @@ test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄�
   assert.ok(runs[0].snap > 0, '이 씨앗에 제비 베기 되돌림 칼이 있음');
   assert.ok(runs[0.3].tsu > 0, `제비 베기 미끄러져 들어감 ${runs[0.3].tsu}`);
   assert.notEqual(JSON.stringify(runs[0.3].r), JSON.stringify(runs[0].r), '켜면 판이 달라짐');
-}, ['armClear2']));
+}, ['armClear2'])));
 
 test('gnsThrough: 켜면 팔을 가른 발도가 몸까지 한 번 더 벰 (끄면 첫 닿음에서 끝)', () => withJpOld(() => withArmOld(() => {
   // 씨앗 6 판은 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 이 씨앗이 14 s 안에 고노센을 안 냄 (기록 arm_real §10)
