@@ -8,6 +8,7 @@
 //  node tools/sim/matchup.mjs table raw1.jsonl raw2.jsonl ...
 //  node tools/sim/matchup.mjs compare 첫판1.jsonl,첫판2.jsonl 둘째판1.jsonl,둘째판2.jsonl   (두 무기 판 견줌 — 같은 쪽 = 유파 상성 · 뒤집힘 = 무기 상성)
 //  --w=german:lightsaber,japanese:monohoshizao,… = 유파마다 무기 (둘째 등급 판)
+//  node tools/sim/matchup.mjs target 파일들 [--wx=lightsaber] [--prof=5]   (사장님 11/15 목표: 고리 짝 유리한 쪽 55 ~ 85 % · 무상성 짝 35 ~ 65 %)
 //  코드(판정 · AI)는 안 바꿈 — 재기만
 // ─────────────────────────────────────────────────────────────
 import fs from 'node:fs';
@@ -256,7 +257,43 @@ function compare() {
   console.log(L.join('\n'));
 }
 
+/**
+ * target 파일들 [--wx=무기,…] [--prof=5] : 사장님 11/15 목표와 견줌 — 고리(일본 > 독일 > 이탈리아 > 동방 > 이베리아 > 일본) 다섯 짝은 유리한 쪽 55 ~ 85 % ·
+ *  나머지 다섯 짝(무상성)은 35 ~ 65 %. --wx = 뺄 무기(예: 라이트세이버 판을 빼고 독일 다른 무기로)
+ */
+function target() {
+  const files = args.slice(1).filter((x) => !x.startsWith('--'));
+  const wx = new Set(arg('wx', '').split(',').filter(Boolean));
+  const prof = +arg('prof', 5);
+  const rows = files.flatMap((f) => fs.readFileSync(f, 'utf8').split('\n').filter((l) => l.trim().startsWith('{')).map((l) => JSON.parse(l))).filter((r) => r.prof === prof && !wx.has(r.wa) && !wx.has(r.wb));
+  const ring = PLANS.사장님;
+  const L = ['| 짝 | 목표 | 잰 몫 (유리해야 할 쪽 · 무상성은 앞 유파) | ± 95 % | 이김-비김-짐 / 판 | 무기 | 목표 안? |', '|---|---|---|---|---|---|---|'];
+  let out = 0;
+  for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) {
+    let s = SCHOOLS[i];
+    let t = SCHOOLS[j];
+    const arrow = ring.find(([x, y]) => (x === s && y === t) || (x === t && y === s));
+    if (arrow) [s, t] = arrow;
+    const xs = rows.filter((r) => (r.a === s && r.b === t) || (r.a === t && r.b === s));
+    if (!xs.length) continue;
+    const sc = xs.map((r) => scoreOf(r, s));
+    const n = sc.length;
+    const m = sc.reduce((u, v) => u + v, 0) / n;
+    const sd = Math.sqrt(sc.reduce((u, v) => u + (v - m) ** 2, 0) / Math.max(1, n - 1));
+    const W = xs.filter((r) => r.win !== 'D' && scoreOf(r, s) === 1).length;
+    const D = xs.filter((r) => r.win === 'D').length;
+    const [lo, hi] = arrow ? [0.55, 0.85] : [0.35, 0.65];
+    const ok = m >= lo - 1e-9 && m <= hi + 1e-9;
+    if (!ok) out++;
+    const ws = [...new Set(xs.map((r) => (r.a === s ? `${r.wa} : ${r.wb}` : `${r.wb} : ${r.wa}`)))].join(' / ');
+    L.push(`| ${KO[s]} ${arrow ? '>' : '='} ${KO[t]} | ${arrow ? '55 ~ 85' : '35 ~ 65'} | ${Math.round(m * 100)} | ${Math.round(((1.96 * sd) / Math.sqrt(n)) * 100)} | ${W}-${D}-${n - W - D} / ${n} | ${ws} | ${ok ? '안' : m < lo ? '**밖 — 모자람**' : '**밖 — 넘침**'} |`);
+  }
+  L.push('', `목표 밖 ${out} / 10`);
+  console.log(L.join('\n'));
+}
+
 if (mode === 'run') await run();
+else if (mode === 'target') target();
 else if (mode === 'table') table();
 else if (mode === 'compare') compare();
 else console.log('node tools/sim/matchup.mjs run|table ...');
