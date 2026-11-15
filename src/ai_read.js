@@ -6,7 +6,8 @@
 //  ① 버릇 · 되풀이 (유파마다 따로 있던 기억을 여기 하나로 — 일본 jpGuardChance · jpRead · 동방 cnTick · 이베리아 foeAtkN 이 이 그릇을 읽음):
 //     상대가 낸 칼(새 위협 번호)의 때 · 줄 · 거리 고리(RING) — 가운데 버릇 habitT 6.0 s · 높음 되풀이 repeatT 10.0 s · 상대가 칼을 드는 거리(일본 고노센이 서는 자리를 고름)
 //  ② 상대 유파의 대표 위험 (가운데부터 · 설계 §4-2 표 — 보이는 표식으로만 · 모두 기울기 r = 띠 세기 × risk):
-//     이탈리아 — 곧게 걸어 들지 않음(상대 칼끝 어림 + 0.3 안에서 다가가는 빠르기 × (1 − r)) · 칼 우위 빛 동안 들어가지 않고 거리를 벌림
+//     이탈리아 — 곧게 걸어 들지 않음(상대 칼끝 어림 + 0.3 안에서 다가가는 빠르기 × (1 − r)) · 칼 우위 빛 동안 들어가지 않고 거리를 벌림 ·
+//       (11/16 시제품 AI_PLAN.read.riso — 기본 끔) 칼 우위 빛 + 칼이 붙어 있으면 물러서지 않고 발을 묶음(리솔루토 맞춰 걷기를 끊음)
 //     일본 — 준비된 고노센 선 언저리에서 함부로 안 듦 · 스택 빛이 적을 때 견제(쌓이기 전에)
 //     독일 — 헛치지 않음(내 칼끝 밖에서 칼을 덜 냄 · 그 거리의 큰 칼을 덜 고름 · 헛친 뒤 이어 치기를 덜 — 파고들기 두 걸음)
 //     동방 — 큰 칼을 아낌(내 몸에 발톱 자국이 쌓이고 · 내가 지쳤을수록 크게 휘두르기를 덜 — 지친 채 휘두르면 격살)
@@ -19,6 +20,7 @@
 import { AI_PLAN, SECRET, STAMINA, JP_TANK } from './config.js';
 import { axesOf } from './ai_plan.js';
 import { itEdgeOn } from './italian_outbox.js';
+import { bladesNear } from './italian_risoluto.js';
 import { huntN } from './cn_hunt.js';
 
 const RING = 8; // 본 상대 공격 · 칼 들기 기억 칸
@@ -218,6 +220,12 @@ export function readFeetV(ai, v, d) {
   const r = ai.planK * P().risk;
   const t = school(ai);
   if (t === 'italian') {
+    if (itEdgeOn(ai.foe) && P().riso && bladesNear(ai.me, ai.foe)) {
+      // 11/16 3안 리솔루토 위험 (AI_PLAN.read.riso — 기본 0 끔): 칼 우위 빛 + 칼이 붙어 있음(둘 다 보임) — 물러서면 상대가 맞춰 들어와 리솔루토 셈이 돎(상대 걸음에 맞춘 덮인 채 나아가기) →
+      //  물러서지 않고 발을 묶음(걸음 × (1 − 띠 세기 × riso)). 칼을 내지 않는 것(칼 우위 빛 — readNeed)은 그대로
+      R.st.risoHold = (R.st.risoHold ?? 0) + 1;
+      return v * Math.max(0, 1 - ai.planK * P().riso);
+    }
     if (itEdgeOn(ai.foe)) return Math.min(v, -r); // 칼 우위 빛 — 거리를 벌림
     if (v > 0 && d < ai.foeReach + 0.3) return v * (1 - r); // 맞박자 — 곧게 걸어 들지 않음
   } else if (t === 'iberian' && ibArmed(ai)) {

@@ -335,6 +335,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   for (const [q, k] of [['tellAi', 'ai'], ['tellGuard', 'guard']]) if (params.has(q)) CONFIG.AI_TELL[k] = +params.get(q) ? 1 : 0; // 11/15 시제품 찌르기 낌새 눈 (src/thrust_tell.js — 기본 끔)
   if (params.has('tellLatch') && +params.get('tellLatch') >= 0) CONFIG.AI_TELL.latch = CONFIG.realS(+params.get('tellLatch')); // 11/15 시제품 막기 단추 낌새 붙잡기 (실제 초 — 기본 0)
   if (params.has('inqMul') && +params.get('inqMul') > 0) CONFIG.IT_OUTBOX.inqMul = +params.get('inqMul'); // 11/15 시제품 비껴서며 찌르기 판정 배율 (사람 · AI — 기본 1)
+  if (params.has('itEdgeFrom') && ['', 'stop', 'counter'].includes(params.get('itEdgeFrom'))) CONFIG.IT_OUTBOX.edgeFrom = params.get('itEdgeFrom'); // 11/16 시제품 1안 칼 우위가 켜지는 길 (사람 · AI — 기본 '' 지금)
   if (params.has('itStop') && +params.get('itStop') >= 0) CONFIG.IT_OUTBOX.stop = +params.get('itStop');
   if (params.has('itEdge') && +params.get('itEdge') >= 0) CONFIG.IT_OUTBOX.edge = CONFIG.realS(+params.get('itEdge'));
   if (params.has('itBeat') && +params.get('itBeat') >= 0) CONFIG.IT_OUTBOX.beat = CONFIG.realS(+params.get('itBeat'));
@@ -392,6 +393,9 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.get('risoRecover') === '0') CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, draw: 1, recover: 0, push: 0, accel: 0 }; // 10/24 14:0x 전 걸음 = 디딘 뒤 뒷발 끌어붙임 (몸 따라감 배율 · 몸 가속 · 앞발 거둠은 없음)
   if (params.has('risoGap')) CONFIG.SECRET.risolutoGap = +params.get('risoGap') ? 1 : 0; // 10/24 13:2x 런지 간격 조건 — 0 = 간격 조건 없음 (12:1x 판 — 가까워도 창)
   if (params.has('risoTouch')) CONFIG.SECRET.risolutoTouch = +params.get('risoTouch') ? 1 : 0; // 10/25 01:0x 칼끝 얽힘 창 — 0 = 10/24 판 (이어짐 0.6 s 를 기다림)
+  if (params.has('risoTouchMin') && +params.get('risoTouchMin') >= 0) CONFIG.SECRET.risolutoTouchMin = CONFIG.realS(+params.get('risoTouchMin')); // 11/16 시제품 2안 칼끝 얽힘 창까지 덮인 채 나아가기 (실제 초 — 사람 · AI · 기본 0)
+  if (params.has('risoAiWait') && +params.get('risoAiWait') >= 0) CONFIG.SECRET.risoAiWait = CONFIG.realS(+params.get('risoAiWait')); // 11/16 시제품 3안 AI 리솔루토 박자 싸움 (실제 초 — AI 만 · 기본 0)
+  if (params.has('aiReadRiso') && +params.get('aiReadRiso') >= 0) CONFIG.AI_PLAN.read.riso = +params.get('aiReadRiso'); // 11/16 시제품 3안 다른 유파 AI 리솔루토 위험 읽기 (기본 0)
   // 10/25 21:0x 사장님 조건 셋 · 창 지킴 (기본 — 확인표 2563 ~ 2569): `?risoStick=fwd` 스틱 앞만(전) · `?risoTap=1` 탭만(전) · `?risoCover=0.07` 덮음 거리(전 — 위 줄) · `?secretHold=0` 열린 창을 조건이 바뀌면 바로 닫음(전 — 모든 사람 비기 창)
   if (params.get('risoStick') === 'fwd' || params.get('risoStick') === 'both') CONFIG.SECRET.risolutoStick = params.get('risoStick');
   if (params.has('risoTap')) CONFIG.SECRET.risolutoTap = +params.get('risoTap') ? 1 : 0;

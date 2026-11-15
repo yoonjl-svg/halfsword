@@ -1,5 +1,6 @@
 // 찌르기를 막을 수 있게 — 시제품 시험 (11/15 사장님 '찌르기의 맛은 살려야 해. 혹은 찌르기를 더 잘 방어할 방법? 지금 찌르기 막기 거의 불가능하지 않아?' ·
 //  config AI_TELL · THRUST.driveAi · src/thrust_tell.js · 기록 docs/strike/it_tone_2026-11-15.md): 기본 끔 · 낌새 셈(앞 · 뒤 칼날 줄 빠르기 · 몸통 원통) · AI 위협 읽기 자리 · AI 몸 싣기 칸
+//  11/16 리솔루토 세 안 (사장님 1안 · 2안 · 3안 — IT_OUTBOX.edgeFrom · SECRET.risolutoTouchMin · risoAiWait · AI_PLAN.read.riso · 기록 §8): 기본 끔 · 칼 우위 길 · 칼끝 얽힘 시간 · AI 박자 싸움 · 리솔루토 위험 읽기
 //  node --test tools/sim/it_tone.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -102,4 +103,98 @@ test('막기 단추 낌새 붙잡기 AI_TELL.latch (기본 0 = 끔 · guard 1 �
     g.held = true; g.step(1 / 120); g.held = false;
     assert.equal(with_(T, 'guard', 0, () => with_(T, 'latch', CONFIG.realS(0.6), () => g.step(1 / 120))), false, 'guard 0 = 그대로');
   } finally { G.world.free(); }
+});
+
+// ── 11/16 리솔루토 세 안 (기록 §8 — 모두 기본 끔) ──
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+/** 칼이 붙은 두 몸 (덮음 0.05 m · 실제 맞닿음) — 상대는 물러서는 중 · 나는 스틱 앞 */
+const bound = () => {
+  const me = { armed: true, weapon: { id: 'rapier' }, bladePoint: (t, v) => v.set(0, 1.3, t), foeDistance: () => 2.0, stickY: 1, stickX: 0, skill: {}, stamina: {}, feel: { touching: true } };
+  const foe = { armed: true, weapon: { id: 'longsword' }, bladePoint: (t, v) => v.set(0.05, 1.3, 1.5 - t), skill: {}, stamina: {}, move: { y: -0.5 }, feel: {} };
+  return { me, foe };
+};
+
+test('세 안 기본값 — 모두 끔 (칼 우위 길 지금 · 칼끝 얽힘 곧장 · AI 곧장 냄 · 리솔루토 위험 읽기 없음)', () => {
+  assert.equal(CONFIG.IT_OUTBOX.edgeFrom, '');
+  assert.equal(CONFIG.SECRET.risolutoTouchMin, 0);
+  assert.equal(CONFIG.SECRET.risoAiWait, 0);
+  assert.equal(CONFIG.AI_PLAN.read.riso, 0);
+});
+
+test('1안 IT_OUTBOX.edgeFrom: stop = 맞박자 찌르기 상처만 칼 우위 · counter = 맞박자 + 비껴서며 찌르기 · 헛누름 · I2 · I6 은 안 켬 · 끄면 그대로', async () => {
+  const { itEdgeGrant, itOnStrike, itEdgeOn } = await import('../../src/italian_outbox.js');
+  const IO = CONFIG.IT_OUTBOX;
+  const mk = () => { const vic = {}; const att = { swordArt: { tradition: 'italian' }, aiControlled: false, fightT: 5, foe: vic, skill: {}, stamina: {} }; return { att, vic }; };
+  const hit = (kind, stop) => ({ severity: 0.3, itThrust: { kind, stop, k: 1 } });
+  for (const F of ['', 'stop', 'counter']) {
+    const run = (fn) => with_(IO, 'edgeFrom', F, fn);
+    let { att, vic } = mk();
+    run(() => itEdgeGrant(att, 'feint'));
+    assert.equal(itEdgeOn(att), F === '', `${F || '지금'} — 헛누름`);
+    ({ att, vic } = mk());
+    run(() => itOnStrike(att, vic, hit('cav', false)));
+    assert.equal(itEdgeOn(att), F === '', `${F || '지금'} — 빼서 찌르기 (맞박자 아님)`);
+    ({ att, vic } = mk());
+    run(() => itOnStrike(att, vic, hit('special', false)));
+    assert.equal(itEdgeOn(att), F !== 'stop', `${F || '지금'} — 비껴서며 찌르기`);
+    ({ att, vic } = mk());
+    run(() => itOnStrike(att, vic, hit('tap', true)));
+    assert.equal(itEdgeOn(att), F !== '', `${F || '지금'} — 맞박자 탭 찌르기`);
+    if (F) assert.equal(att.itEdge.why, 'stop');
+  }
+});
+
+test('2안 SECRET.risolutoTouchMin: 0 = 덮인 채 나아가기 첫 스텝에 칼끝 얽힘 창 · 0.2 s = 창을 열 수 있는 동안(칼 우위) 0.2 s 이어진 뒤', async () => {
+  const { RisolutoWatch } = await import('../../src/italian_risoluto.js');
+  const S = CONFIG.SECRET;
+  const dt = CONFIG.realS(0.05);
+  const { me, foe } = bound();
+  const W0 = new RisolutoWatch(me, foe);
+  assert.equal(W0.tick(dt, true)?.path, 'touch', '지금 — 곧장');
+  with_(S, 'risolutoTouchMin', CONFIG.realS(0.2), () => {
+    const W = new RisolutoWatch(me, foe);
+    for (let k = 0; k < 4; k++) assert.equal(W.tick(dt, false), null, '칼 우위 없음 — 셈만');
+    for (let k = 0; k < 3; k++) assert.equal(W.tick(dt, true), null, `칼 우위 ${k + 1} 스텝 — 0.2 s 전`);
+    assert.equal(W.tick(dt, true)?.path, 'touch', '0.2 s');
+    assert.equal(W.opens.touch, 1);
+  });
+});
+
+test('3안 AI 박자 싸움 SECRET.risoAiWait: 창이 열리고 0.2 s 전엔 안 냄 · 박자 싸움 몫이면 본 휘두름 · 칼 듦 · 걸어 들어옴에만 · 아니면 0.2 s 에 곧장', () => {
+  const S = CONFIG.SECRET;
+  const fake = (o = {}) => ({ sense: { seen: () => ({ hvx: 0, hvy: o.hvy ?? 0, hy: o.hy ?? 0 }) }, level: { reaction: 0.1 }, seenSwing: () => !!o.swing, foeClosing: o.closing ?? 0 });
+  const R = (age, tgame) => ({ win: S.playerWindow - CONFIG.realS(age), tgame });
+  with_(S, 'risoAiWait', CONFIG.realS(0.2), () => {
+    const go = (f, r) => AI.prototype.risoTiming.call(f, r);
+    assert.equal(go(fake({ swing: true }), R(0.1, true)), null, '0.2 s 전');
+    assert.equal(go(fake(), R(0.1, false)), null, '0.2 s 전 (곧장 몫도)');
+    assert.equal(go(fake(), R(0.3, false)), 'plain', '박자 싸움 밖 몫 — 0.2 s 뒤 곧장');
+    assert.equal(go(fake(), R(0.3, true)), null, '상대가 박자를 안 냄 — 기다림');
+    assert.equal(go(fake({ swing: true }), R(0.3, true)), 'swing');
+    assert.equal(go(fake({ hvy: 2, hy: 0.1 }), R(0.3, true)), 'raise');
+    assert.equal(go(fake({ closing: 1 }), R(0.3, true)), 'step');
+    assert.equal(go(fake({ closing: -1 }), R(0.3, true)), null, '물러섬은 박자 아님');
+  });
+});
+
+test('3안 리솔루토 위험 읽기 AI_PLAN.read.riso: 칼 우위 빛 + 칼 붙음이면 발을 묶음(띠 세기만큼) · 칼이 떨어져 있으면 지금처럼 거리를 벌림 · 끄면 그대로', async () => {
+  const { readFeetV } = await import('../../src/ai_read.js');
+  const RD = CONFIG.AI_PLAN.read;
+  const mk = (planK, near) => {
+    const { me, foe } = bound();
+    me.feel.touching = near;
+    if (!near) foe.bladePoint = (t, v) => v.set(1, 1.3, 1.5 - t);
+    Object.assign(foe, { swordArt: { tradition: 'italian' }, itEdge: { until: 10 }, fightT: 5 });
+    return { me, foe, planK, chasing: false, read: { school: true, st: {} } };
+  };
+  const r = RD.risk;
+  assert.equal(readFeetV(mk(1, true), -0.6, 1.5), -0.6, '끔 — 칼 우위 빛: 거리를 벌림 (이미 물러섬)');
+  assert.equal(readFeetV(mk(1, true), 0.5, 1.5), -r, '끔 — 칼 우위 빛: 거리를 벌림');
+  with_(RD, 'riso', 1, () => {
+    const a = mk(1, true);
+    assert.equal(readFeetV(a, -0.6, 1.5) + 0, 0, '높음 — 발을 묶음');
+    assert.equal(a.read.st.risoHold, 1);
+    assert.ok(Math.abs(readFeetV(mk(2 / 3, true), -0.6, 1.5) + 0.2) < 1e-12, '가운데 — ⅓ 만');
+    assert.equal(readFeetV(mk(1, false), 0.5, 1.5), -r, '칼이 떨어짐 — 지금처럼 거리를 벌림');
+  });
 });

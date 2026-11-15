@@ -9,6 +9,9 @@
 //  node tools/sim/it_tone_measure.mjs bot [--cells=def:german:longsword:rapier,atk:italian:rapier:longsword] [--vars=0,…] [--seeds=1-12] --out=x.jsonl
 //  node tools/sim/it_tone_measure.mjs agg x.jsonl …
 //  판(vars — '+' 로 여럿): 0 = 지금 · tell = AI 찌르기 낌새 눈(AI_TELL.ai) · guard = 사람 막기 단추 낌새(AI_TELL.guard) · drive = AI 찌르기 몸 싣기(THRUST.driveAi 3)
+//   11/16 리솔루토 세 안 (기록 §8): stop · counter = 1안 칼 우위 길 · touch2 = 2안 칼끝 얽힘 0.2 s · wait = 3안 AI 박자 싸움 0.2 s · aware = 3안 다른 유파 리솔루토 위험 읽기
+//   이탈리아 몸 재기 it: 칼 우위가 켜진 길(새로 · 켜진 채 다시) · 켜진 시간 · 맞박자 맞음 · 창 길별 열림 · 흘려보냄 · 낸 길 · 박자 싸움 까닭 / risoHold = 받는 쪽이 발을 묶은 스텝
+//  node tools/sim/it_tone_measure.mjs riso x.jsonl … — 리솔루토 · 칼 우위 표 (§8)
 // ─────────────────────────────────────────────────────────────
 import { appendFileSync, readFileSync } from 'node:fs';
 import { newRound, AI, CONFIG } from './harness_m.mjs';
@@ -23,7 +26,7 @@ const WIN_T = CONFIG.realS(1.5); // 공격 하나의 창 (다음 공격이 먼�
 
 //  진단용 (있던 스위치 — 새 값 없음): noriso = AI 이탈리아 리솔루토 닫음(SECRET.aiOpenSchools) · inq0 = AI 비껴서며 찌르기 기울기 끔(AI_PLAN.it.inq 0) · inq3 = 기울기 0.3 · inqold = 옛 칼(UNIQUE_ASSIST.inqAi 0)
 export function withVar(v, fn) {
-  const keep = { ai: CONFIG.AI_TELL.ai, guard: CONFIG.AI_TELL.guard, latch: CONFIG.AI_TELL.latch, drive: CONFIG.THRUST.driveAi, hdrive: CONFIG.THRUST.drive, kphys: CONFIG.STRIKE.hitKPhys, inqMul: CONFIG.IT_OUTBOX.inqMul, open: CONFIG.SECRET.aiOpenSchools, it: CONFIG.AI_PLAN.it, inqAi: CONFIG.UNIQUE_ASSIST.inqAi };
+  const keep = { ai: CONFIG.AI_TELL.ai, guard: CONFIG.AI_TELL.guard, latch: CONFIG.AI_TELL.latch, drive: CONFIG.THRUST.driveAi, hdrive: CONFIG.THRUST.drive, kphys: CONFIG.STRIKE.hitKPhys, inqMul: CONFIG.IT_OUTBOX.inqMul, open: CONFIG.SECRET.aiOpenSchools, it: CONFIG.AI_PLAN.it, inqAi: CONFIG.UNIQUE_ASSIST.inqAi, from: CONFIG.IT_OUTBOX.edgeFrom, tmin: CONFIG.SECRET.risolutoTouchMin, wait: CONFIG.SECRET.risoAiWait, aware: CONFIG.AI_PLAN.read.riso };
   const p = String(v).split('+');
   CONFIG.AI_TELL.ai = p.includes('tell') ? 1 : 0;
   CONFIG.AI_TELL.guard = p.includes('guard') ? 1 : 0;
@@ -37,7 +40,13 @@ export function withVar(v, fn) {
   if (p.includes('inq0')) CONFIG.AI_PLAN.it = { ...keep.it, inq: 0 };
   if (p.includes('inq3')) CONFIG.AI_PLAN.it = { ...keep.it, inq: 0.3 }; // 기울기 반 (0.3 — 있던 수)
   if (p.includes('inqold')) CONFIG.UNIQUE_ASSIST.inqAi = 0;
-  try { return fn(); } finally { Object.assign(CONFIG.AI_TELL, { ai: keep.ai, guard: keep.guard, latch: keep.latch }); CONFIG.THRUST.driveAi = keep.drive; CONFIG.THRUST.drive = keep.hdrive; CONFIG.STRIKE.hitKPhys = keep.kphys; CONFIG.IT_OUTBOX.inqMul = keep.inqMul; CONFIG.SECRET.aiOpenSchools = keep.open; CONFIG.AI_PLAN.it = keep.it; CONFIG.UNIQUE_ASSIST.inqAi = keep.inqAi; }
+  // 11/16 리솔루토 세 안 (§8): stop · counter = 1안 칼 우위 길(IT_OUTBOX.edgeFrom) · touch2 = 2안 칼끝 얽힘 0.2 s(SECRET.risolutoTouchMin) · wait = 3안 AI 박자 싸움 0.2 s(SECRET.risoAiWait) · aware = 3안 다른 유파 읽기(AI_PLAN.read.riso 1)
+  CONFIG.IT_OUTBOX.edgeFrom = p.includes('stop') ? 'stop' : p.includes('counter') ? 'counter' : keep.from;
+  CONFIG.SECRET.risolutoTouchMin = p.includes('touch2') ? CONFIG.realS(0.2) : keep.tmin;
+  CONFIG.SECRET.risoAiWait = p.includes('wait') ? CONFIG.realS(0.2) : keep.wait;
+  CONFIG.AI_PLAN.read.riso = p.includes('aware') ? 1 : keep.aware;
+  try { return fn(); } finally {
+    CONFIG.IT_OUTBOX.edgeFrom = keep.from; CONFIG.SECRET.risolutoTouchMin = keep.tmin; CONFIG.SECRET.risoAiWait = keep.wait; CONFIG.AI_PLAN.read.riso = keep.aware; Object.assign(CONFIG.AI_TELL, { ai: keep.ai, guard: keep.guard, latch: keep.latch }); CONFIG.THRUST.driveAi = keep.drive; CONFIG.THRUST.drive = keep.hdrive; CONFIG.STRIKE.hitKPhys = keep.kphys; CONFIG.IT_OUTBOX.inqMul = keep.inqMul; CONFIG.SECRET.aiOpenSchools = keep.open; CONFIG.AI_PLAN.it = keep.it; CONFIG.UNIQUE_ASSIST.inqAi = keep.inqAi; }
 }
 
 /**
@@ -82,7 +91,30 @@ function tracker(G, sides) {
       const rq = g.requestStep.bind(g);
       g.requestStep = (o = {}) => { const ok = rq(o); const r = live(S); if (ok && r && r.ts != null && r.tFoot == null && (o.fwd ?? 0) > 0) r.tFoot = G.t; return ok; };
     }
-    S.prev = { tap: false, iai: null, sec: false, riso: false, gid: S.guard?.threatId ?? 0 };
+    S.prev = { tap: false, iai: null, sec: false, riso: false, gid: S.guard?.threatId ?? 0, eo: null };
+    // 리솔루토 재기 (§8 — 이탈리아 몸만): 칼 우위가 켜진 길(새로 켜짐 fresh · 켜진 채 다시 refresh) · 켜진 시간 · 창 길별 열림 · 흘려보냄 · 낸 길
+    if (S.school === 'italian') {
+      S.it = { fresh: {}, refresh: {}, edgeT: 0, opened: {}, lapsed: {}, path: null };
+      const R = (S.R = S.ai?.riso); // 다 쓰면 ai.riso 가 비므로 처음 것을 쥠
+      if (R) {
+        const rt = S.ai.risoTick;
+        S.ai.risoTick = function (...a) {
+          const w0 = R.st.wins, f0 = R.st.fired, on0 = R.win > 0, p0 = R.ctx?.path;
+          const out = rt.apply(this, a);
+          if (R.st.wins > w0) S.it.opened[R.ctx?.path] = (S.it.opened[R.ctx?.path] ?? 0) + 1;
+          if (R.st.fired > f0) S.it.path = R.ctx?.path ?? null;
+          else if (on0 && !(R.win > 0) && R.st.wins === w0) S.it.lapsed[p0] = (S.it.lapsed[p0] ?? 0) + 1;
+          return out;
+        };
+      }
+      const W = S.W;
+      if (W?.riso) {
+        const ow = W.openWindow;
+        W.openWindow = function (ctx, ...a) { const ok = ow.call(this, ctx, ...a); if (ok && ctx?.ev === 'risoluto') S.it.opened[ctx.path] = (S.it.opened[ctx.path] ?? 0) + 1; return ok; };
+        const fi = W.fire;
+        W.fire = function (...a) { const p = this.open?.ctx?.ev === 'risoluto' ? this.open.ctx.path : null; const o = fi.apply(this, a); if (o && p) S.it.path = p; return o; };
+      }
+    }
   }
   const pw = G.combat.hooks.onWound;
   G.combat.hooks.onWound = (att, vic, r, ...rest) => {
@@ -139,9 +171,20 @@ function tracker(G, sides) {
         if (!S.ai) {
           if (iai && iai !== S.prev.iai) begin(S, { kind: iai === 'inquartata' ? 'I9' : 'thrust', tech: iai, ts: G.t });
           else if (tap && !S.prev.tap && !iai) begin(S, { kind: 'thrust', tech: 'tap', ts: G.t });
-          else if (sec && !S.prev.sec) begin(S, { kind: 'riso', tech: 'secret', ts: G.t });
-        } else if (riso && !S.prev.riso) begin(S, { kind: 'riso', tech: 'risoluto', ts: G.t });
+          else if (sec && !S.prev.sec) begin(S, { kind: 'riso', tech: 'secret', ts: G.t, why: S.it?.path ?? null });
+        } else if (riso && !S.prev.riso) begin(S, { kind: 'riso', tech: 'risoluto', ts: G.t, why: S.it?.path ?? null });
         S.prev.tap = tap; S.prev.iai = iai; S.prev.sec = sec; S.prev.riso = riso;
+        if (S.it) {
+          const e = f.itEdge;
+          if (e && e !== S.prev.eo) {
+            const was = S.prev.eo && e.t0 < S.prev.eo.until - 1e-9;
+            const B = was ? S.it.refresh : S.it.fresh;
+            B[e.why] = (B[e.why] ?? 0) + 1;
+            S.prev.eo = e;
+          }
+          if (itEdgeOn(f)) S.it.edgeT += G.t - (S.it.lt ?? G.t);
+          S.it.lt = G.t;
+        }
         const r = live(S);
         if (r && r.ts != null && r.tTip == null && f.tipVel && f.tipVel.length() > 3.5) r.tTip = G.t;
         // 받는 쪽 꼴 (이 공격 창 안 처음 막기 · 피하기 · 물러남 · 맞받아 침)
@@ -157,6 +200,17 @@ function tracker(G, sides) {
         if (D.guard?.held) D.lastHeld = G.t;
       }
     },
+    /** 이탈리아 몸 리솔루토 · 칼 우위 재기 (§8) */
+    itInfo() {
+      const S = sides.find((x) => x.it);
+      if (!S) return null;
+      const o = S.f.itOut ?? {};
+      const R = S.R;
+      const W = R?.W ?? S.W?.riso;
+      return { fresh: S.it.fresh, refresh: S.it.refresh, edgeT: +(S.it.edgeT / K).toFixed(2), stopHits: o.stopHits ?? 0, thrustHits: o.thrustHits ?? 0, opened: S.it.opened, lapsed: S.it.lapsed, tries: W ? { ...W.opens } : null, gapBlocked: R ? R.st.gapBlocked : W?.gapBlocked ?? 0, cue: R?.st.cue ?? null, side: S.ai ? 'ai' : 'bot', runs: W ? runHist(W.runs) : null };
+    },
+    /** 받는 쪽 리솔루토 위험 읽기 (§8 — 발을 묶은 스텝 수) */
+    risoHold() { return sides.reduce((a, S) => a + (S.ai?.read?.st.risoHold ?? 0), 0); },
     finish() {
       for (const S of sides) { const r = cur.get(S); if (r) r.tEnd ??= G.t; }
       for (const a of atks) {
@@ -169,6 +223,13 @@ function tracker(G, sides) {
   };
 }
 
+/** 끝난 덮인 채 나아가기 길이 (실제 초) — 0.2 s 밑 · 0.2 ~ 0.6 · 0.6 이상 */
+function runHist(runs) {
+  const h = [0, 0, 0];
+  for (const x of runs ?? []) h[x / K < 0.2 - 1e-9 ? 0 : x / K < 0.6 - 1e-9 ? 1 : 2]++;
+  return h;
+}
+
 /** 고리 한 판 (ai_ring_measure.mjs ringFight 와 같은 판) + 재기 */
 export function ringFightT({ a, b, wa, wb, seed, swap, dur = 30 }) {
   const G = newRound({ seed, walls: true, weapon: swap ? wb : wa, weapon2: swap ? wa : wb, AI2Class: AI, persona: { proficiency: 5 }, persona2: { proficiency: 5 } });
@@ -177,7 +238,7 @@ export function ringFightT({ a, b, wa, wb, seed, swap, dur = 30 }) {
   const T = tracker(G, [SA, SB]);
   const out = (f) => !f.alive || f.state === 'dead';
   while (G.t < dur && !out(SA.f) && !out(SB.f)) { G.step(); T.step(); }
-  const res = { win: out(SB.f) && !out(SA.f), lose: out(SA.f) && !out(SB.f), T: +(G.t / K).toFixed(2), tellA: SA.ai.stats.tell ?? 0, tellB: SB.ai.stats.tell ?? 0, ...T.finish() };
+  const res = { win: out(SB.f) && !out(SA.f), lose: out(SA.f) && !out(SB.f), T: +(G.t / K).toFixed(2), tellA: SA.ai.stats.tell ?? 0, tellB: SB.ai.stats.tell ?? 0, it: T.itInfo(), risoHold: T.risoHold(), ...T.finish() };
   G.world.free();
   return res;
 }
@@ -191,8 +252,8 @@ export function botFightT(fightOne, { school, weapon, opp, seed, foeSchool }) {
   let ctx = null;
   const r = fightOne({
     school, weapon, opp, seed,
-    onRound: ({ G, P, A, guard }) => {
-      const SP = { f: P, guard, school };
+    onRound: ({ G, P, A, guard, W }) => {
+      const SP = { f: P, guard, school, W };
       const SA = { f: A, ai: G.ai, school: foeSchool };
       T = tracker(G, [SP, SA]);
       ctx = { G, P, A, guard, SA };
@@ -200,7 +261,7 @@ export function botFightT(fightOne, { school, weapon, opp, seed, foeSchool }) {
       G.step = (...x) => { const o = st(...x); T.step(); return o; };
     },
   });
-  const res = { win: r.win ?? null, lose: r.lose ?? null, T: r.T ?? null, tellAi: ctx?.SA.ai.stats.tell ?? 0, tellGuard: ctx?.guard.stats.tell ?? 0, ...T.finish() };
+  const res = { win: r.win ?? null, lose: r.lose ?? null, T: r.T ?? null, tellAi: ctx?.SA.ai.stats.tell ?? 0, tellGuard: ctx?.guard.stats.tell ?? 0, it: T.itInfo(), risoHold: T.risoHold(), ...T.finish() };
   return res;
 }
 
@@ -274,6 +335,30 @@ if (isMain(import.meta.url)) {
       const row = { mode: 'bot', v, role, school, weapon, opp, seed, ...r };
       if (out) appendFileSync(out, JSON.stringify(row) + '\n');
       console.error(v, c, seed, 'atk', r.atks.length, 'tell', r.tellAi, r.tellGuard);
+    }
+  } else if (mode === 'riso') {
+    // 리솔루토 · 칼 우위 표 (§8): 판 · 짝마다 — 이김 몫 · 칼 우위 켜진 길(판당 — 새로 켜짐 · 켜진 채 다시) · 맞박자 맞음 · 창 길별 · 낸 것 · 맞힌 것 · 흘려보냄 · 리솔루토 상처 몫
+    const rows = args.slice(1).filter((x) => !x.startsWith('--')).flatMap((p) => readFileSync(p, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)));
+    const key = (r) => (r.mode === 'ring' ? `${r.v}|${KO[r.a]} 대 ${KO[r.b]}` : `${r.v}|사람 봇 이탈리아 대 ${r.opp}`);
+    const groups = [...new Set(rows.map(key))];
+    const per = (R, f) => (R.length ? (R.reduce((a, r) => a + f(r), 0) / R.length).toFixed(2) : '-');
+    const sum = (o) => Object.values(o ?? {}).reduce((a, b) => a + b, 0);
+    const PATHS = ['touch', 'hold', 'beat'];
+    const SRC = ['cav', 'opp', 'special', 'feint', 'stop'];
+    console.log('| 판 | 짝 | 판 | 앞 쪽 이김 몫 | 칼 우위 새로 켜짐 (판당 — I2 · I6 · I9 · I8 · 맞박자) | 켜진 채 다시 | 켜진 시간 s | 맞박자 맞음 | 창 ① · ② · ③ (판당) | 낸 ① · ② · ③ | 맞힘 ① · ② · ③ | 흘려보냄 | 리솔루토 상처 몫 | 발 묶음 스텝 |');
+    console.log('|---|---|---:|---:|---|---:|---:|---:|---|---|---|---:|---:|---:|');
+    for (const g of groups) {
+      const R = rows.filter((r) => key(r) === g);
+      const [v, pair] = g.split('|');
+      const W = R.filter((r) => r.win).length, Ls = R.filter((r) => r.lose).length;
+      const share = Math.round((100 * (W + (R.length - W - Ls) / 2)) / R.length);
+      const rs = (r) => r.atks.filter((a) => a.kind === 'riso' && a.by === 'italian');
+      const fired = (p) => per(R, (r) => rs(r).filter((a) => a.why === p).length);
+      const landed = (p) => per(R, (r) => rs(r).filter((a) => a.why === p && a.out === 'landed').length);
+      const itW = (r) => r.wounds.filter((w) => w.by === 'italian');
+      const sv = R.reduce((a, r) => a + itW(r).reduce((b, w) => b + w.sv, 0), 0);
+      const svR = R.reduce((a, r) => a + itW(r).filter((w) => w.src === 'riso').reduce((b, w) => b + w.sv, 0), 0);
+      console.log(`| ${v} | ${pair} | ${R.length} | ${share} % | ${SRC.map((k) => per(R, (r) => r.it?.fresh[k] ?? 0)).join(' · ')} | ${per(R, (r) => sum(r.it?.refresh))} | ${per(R, (r) => r.it?.edgeT ?? 0)} | ${per(R, (r) => r.it?.stopHits ?? 0)} | ${PATHS.map((p) => per(R, (r) => r.it?.opened[p] ?? 0)).join(' · ')} | ${PATHS.map(fired).join(' · ')} | ${PATHS.map(landed).join(' · ')} | ${per(R, (r) => sum(r.it?.lapsed))} | ${sv > 0 ? Math.round((100 * svR) / sv) : 0} % | ${per(R, (r) => r.risoHold ?? 0)} |`);
     }
   } else if (mode === 'agg') {
     const rows = args.slice(1).filter((x) => !x.startsWith('--')).flatMap((p) => readFileSync(p, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)));

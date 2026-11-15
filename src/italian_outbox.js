@@ -12,6 +12,7 @@
 //      보통 찌르기 = thrustMul × (1 + stop) (0.8 × 1.3 = 1.04) · 비껴서며 찌르기 = 1 × (1 + stop) (stopSpecial) · 비기 = 받지 않음.
 //      원전: 카포 페로 『Gran Simulacro』(1610) 쓰임 10 「Del ferire di contratempo」(원판 30쪽) — 상대가 칼을 얻으러 오른발을 옮기는 바로 그 박자에 찌른다.
 //   3 칼 우위 (설계안 A) — itOnStrike · itEdgeGrant: I2 · I6 · I9 가 상처를 내면 · I8 헛누름이 들면 edge 초. 리솔루토 창은 칼 우위 동안만(itEdgeOk — secret.js risoTick).
+//      11/16 시제품 1안 (IT_OUTBOX.edgeFrom — 기본 '' 끔): 'stop' = 맞박자 찌르기가 상처를 낼 때만 · 'counter' = 그것과 I9 (itEdgeFromOk).
 //   4 박자 찌르기 (설계안 B) — beatTick · beatOk · beatSide: 상대가 치기 시작한 beat 초 안의 탭 = 비껴서며 찌르기(I9 — unique_assist.js TAP_TRIG.inq).
 //      11/15 사장님 'l9는 이전처럼 되돌려' · 'ai도 되돌려' — 사람 몫 beatHuman 0 · AI 몫 beatAi 0 (둘 다 기본 끔 · 1 = 11/14 판). AI 가 비껴서며 찌르기를 더 고르는 것은 유파 플랜 기울기(ai_plan.js itInqP)
 //  재기(판정엔 안 씀): 몸의 itOut { edge 켜진 수 · by 갈래 · stopHits 맞박자 맞음 · thrustHits 약해진 찌르기 맞음 · beatFired · risoWait 칼 우위 없어 리솔루토 셈이 기다린 시간 }
@@ -104,9 +105,15 @@ export function itEdgeOk(f) {
   return !IO.on || !(IO.edge > 0) || !IO.edgeRiso || itEdgeOn(f);
 }
 
-/** 칼 우위 켬 (사람 이탈리아만 · why = 'cav' I2 · 'opp' I6 · 'special' I9 · 'feint' I8 헛누름) — 켜진 동안 다시 들면 그때부터 다시 edge 초 */
+/** 칼이 우위를 켜는 길인가 (11/16 시제품 IT_OUTBOX.edgeFrom — '' = 다 · 'stop' = 맞박자 찌르기만 · 'counter' = 맞박자 + 비껴서며 찌르기) */
+export function itEdgeFromOk(why) {
+  const F = IO.edgeFrom;
+  return !F || why === 'stop' || (F === 'counter' && why === 'special');
+}
+
+/** 칼 우위 켬 (사람 이탈리아만 · why = 'cav' I2 · 'opp' I6 · 'special' I9 · 'feint' I8 헛누름 · 'stop' 맞박자 찌르기 — edgeFrom 판만) — 켜진 동안 다시 들면 그때부터 다시 edge 초 */
 export function itEdgeGrant(f, why) {
-  if (!(IO.edge > 0) || !itBody(f)) return false;
+  if (!(IO.edge > 0) || !itBody(f) || !itEdgeFromOk(why)) return false;
   f.itEdge = { until: (f.fightT ?? 0) + IO.edge, why, t0: f.fightT ?? 0 };
   const S = itStats(f);
   S.edge++;
@@ -125,6 +132,12 @@ export function itOnStrike(att, vic, r) {
   if (r.itThrust?.stop) S.stopHits++;
   if (r.itThrust && r.itThrust.kind !== 'special') S.thrustHits++;
   const kind = r.itThrust?.kind ?? itThrustKind(att);
+  if (IO.edgeFrom) {
+    // 11/16 시제품 1안 (edgeFrom): 맞박자 찌르기가 상처를 내면 칼 우위 · 'counter' 면 비껴서며 찌르기도 (I2 · I6 · I8 헛누름은 안 켬)
+    if (r.itThrust?.stop) itEdgeGrant(att, 'stop');
+    else if (kind === 'special') itEdgeGrant(att, 'special');
+    return;
+  }
   if (kind === 'cav' || kind === 'opp' || kind === 'special') itEdgeGrant(att, kind);
 }
 
