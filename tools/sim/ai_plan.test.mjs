@@ -10,6 +10,9 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { bandOf, tiltOf, luckOf, distErrWidth, planFor, judgePhase, seenStep, axesOf, PHASES } from '../../src/ai_plan.js';
 import { foeStep, mirrorOk, mirrorStep } from '../../src/italian_risoluto.js';
+// 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
+//  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
+const pinLodge0 = (t) => { const lh = CONFIG.STRIKE.lodgeHold; CONFIG.STRIKE.lodgeHold = 0; t.after(() => { CONFIG.STRIKE.lodgeHold = lh; }); };
 
 const { AI_PLAN, JP_TANK } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -326,7 +329,7 @@ test('파고들기 (사장님 11/14 — 공통 틀): 내 칼이 상대 칼보다
   assert.notEqual(on.text, off.text, '파고들기 판은 달라짐');
 });
 
-test('파고들기 판: 모르겐슈테른 AI 대 롱소드 AI — 헛친 틈 · 늘린 시간 한도 · 받으며 들어감이 쓰임', () => {
+test('파고들기 판: 모르겐슈테른 AI 대 롱소드 AI — 헛친 틈 · 늘린 시간 한도 · 받으며 들어감이 쓰임', (t) => { pinLodge0(t);
   const G = newRound({ seed: 1, walls: true, weapon: 'longsword', weapon2: 'morgenstern', AI2Class: AI, difficulty: 'normal', persona: { proficiency: 5 }, persona2: { proficiency: 5 } });
   while (G.t < 20 && G.player.alive && G.enemy.alive) G.step();
   const D = G.ai.stats.dig;

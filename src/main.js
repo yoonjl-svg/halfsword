@@ -327,7 +327,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('itOutbox')) CONFIG.IT_OUTBOX.on = +params.get('itOutbox') ? 1 : 0;
   if (params.has('itThrustMul') && +params.get('itThrustMul') > 0) CONFIG.IT_OUTBOX.thrustMul = +params.get('itThrustMul');
   if (params.has('hitKPhys')) CONFIG.STRIKE.hitKPhys = +params.get('hitKPhys') ? 1 : 0; // 11/15 약화 배율은 상처에만 (STRIKE.hitKPhys — 찌르기 박힘 · 무시됨 고침 시제품 · 기본 0)
-  if (params.has('lodgeHold')) CONFIG.STRIKE.lodgeHold = +params.get('lodgeHold') ? 1 : 0; // 11/15 다 쓴 박힘 풀기 (STRIKE.lodgeHold — 기본 0)
+  if (params.has('lodgeHold')) CONFIG.STRIKE.lodgeHold = +params.get('lodgeHold') ? 1 : 0; // 11/15 다 쓴 박힘 풀기 (STRIKE.lodgeHold — 기본 1 · 사장님 11/15 결정 · `?lodgeHold=0` = 전 판)
   if (params.has('thrustDrive')) CONFIG.THRUST.drive = Math.max(0, Math.min(3, Math.round(+params.get('thrustDrive') || 0))); // 11/15 사람 탭 찌르기 몸 싣기 (THRUST.drive — 1 당김 · 2 몸 싣기 · 3 둘 다 · 기본 0)
   if (params.has('thrustDriveChamber') && +params.get('thrustDriveChamber') >= 0) CONFIG.THRUST.driveChamber = +params.get('thrustDriveChamber');
   if (params.has('thrustDriveStep') && +params.get('thrustDriveStep') >= 0) CONFIG.THRUST.driveStep = +params.get('thrustDriveStep');

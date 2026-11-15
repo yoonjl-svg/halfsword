@@ -4,6 +4,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, AI, THREE } from './harness_m.mjs';
 import { TRADITIONS } from '../../src/schools.js';
+// 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
+//  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
+const pinLodge0 = (t) => { const lh = CONFIG.STRIKE.lodgeHold; CONFIG.STRIKE.lodgeHold = 0; t.after(() => { CONFIG.STRIKE.lodgeHold = lh; }); };
 const SP = CONFIG.SCHOOL_PASSIVE;
 const UA = CONFIG.UNIQUE_ASSIST;
 const D2R = Math.PI / 180;
@@ -371,7 +374,7 @@ test('indes: 10/28 a stroke started mid-bind gets ×1.3 · 0.7 s after contact e
   }, 0);
 });
 
-test('indes: 10/28 real fight — combat.js blade contact opens windows for both German bodies (switch off: none)', () => {
+test('indes: 10/28 real fight — combat.js blade contact opens windows for both German bodies (switch off: none)', (t) => { pinLodge0(t);
   for (const touch of [1, 0]) {
     const keep = SP.german.touch;
     SP.german.touch = touch;

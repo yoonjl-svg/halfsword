@@ -47,9 +47,9 @@ function tapScene() {
   }
 }
 
-test('기본값: 고침 시제품 셋 모두 끔 (사장님 확인 전 — 확인표 4440 ~ 4448)', () => {
+test('기본값: 다 쓴 박힘 풀기 켬(사장님 11/15 결정 \'3-1과 3-2만 해\') · 몸 싣기 끔(해 보신 뒤) · 약화 배율 상처만 끔(안 함) — 확인표 4440 ~ 4448', () => {
   assert.equal(ST.hitKPhys, 0);
-  assert.equal(ST.lodgeHold, 0);
+  assert.equal(ST.lodgeHold, 1);
   assert.equal(TH.drive, 0);
   assert.equal(TH.driveChamber, 0.3, '걸음 사다리 0.3');
   assert.equal(TH.driveStep, 0.45, '걸음 사다리 0.45');
@@ -61,20 +61,21 @@ test('THRUST.drive: 끄면 · AI 몸이면 늘 null(AI 찌르기 그대로) · 1
   assert.equal(thrustDrive(human), null);
   withSet(TH, { drive: 3 }, () => {
     assert.equal(thrustDrive(ai), null, 'AI 는 켜도 그대로');
-    assert.deepEqual(thrustDrive(human), { chamber: 0.3, step: 0.45, ride: true, landed: false });
+    assert.deepEqual(thrustDrive(human), { chamber: 0.3, step: 0.45, ride: true, landed: false, passed: false });
   });
-  withSet(TH, { drive: 1 }, () => assert.deepEqual(thrustDrive(human), { chamber: 0.3, step: null, ride: false, landed: false }));
-  withSet(TH, { drive: 2 }, () => assert.deepEqual(thrustDrive(human), { chamber: null, step: 0.45, ride: true, landed: false }));
+  withSet(TH, { drive: 1 }, () => assert.deepEqual(thrustDrive(human), { chamber: 0.3, step: null, ride: false, landed: false, passed: false }));
+  withSet(TH, { drive: 2 }, () => assert.deepEqual(thrustDrive(human), { chamber: null, step: 0.45, ride: true, landed: false, passed: false }));
 });
 
-test('끄면 판 그대로: 사람 이탈리아 탭 장면이 스위치를 0 으로 둔 것과 같음 · 이탈리아 보통 찌르기 배율 0.8 이 판정 에너지에 · physE 없음', () => {
+test('기본 판 = hitKPhys 0 · lodgeHold 1 · drive 0 · 이탈리아 보통 찌르기 배율 0.8 이 판정 에너지에 · physE 없음 · lodgeHold 0 이면 다 쓴 박힘이 장부에 남음(전 판)', () => {
   const a = tapScene();
-  const b = withSet(ST, { hitKPhys: 0, lodgeHold: 0 }, () => withSet(TH, { drive: 0 }, () => tapScene()));
+  const b = withSet(ST, { hitKPhys: 0, lodgeHold: 1 }, () => withSet(TH, { drive: 0 }, () => tapScene()));
   assert.deepEqual(a, b);
   assert.ok(a.hits.length > 0, '닿음이 있어야 함');
-  assert.ok(a.hits.every((h) => h.physE === undefined), '끄면 physE 를 붙이지 않음');
+  assert.ok(a.hits.every((h) => h.physE === undefined), 'hitKPhys 끄면 physE 를 붙이지 않음');
   assert.ok(a.hits.some((h) => h.type === 'stab' && h.itk === 0.8 && h.stuck), '박힌 찌르기 (배율 0.8)');
-  assert.ok(a.spent > 0, '끄면 다 쓴 박힘이 장부에 남음 (칼이 몸을 맞부딪힘 없이 지나감)');
+  const old = withSet(ST, { lodgeHold: 0 }, () => tapScene());
+  assert.ok(old.spent > 0, 'lodgeHold 0(전 판)이면 다 쓴 박힘이 장부에 남음 (칼이 몸을 맞부딪힘 없이 지나감)');
 });
 
 test('STRIKE.hitKPhys 1: 약화 배율(0.8) 찌르기는 physE = 판정 에너지 ÷ 0.8 · 박힘은 physE 로 셈', () => {
@@ -88,7 +89,7 @@ test('STRIKE.hitKPhys 1: 약화 배율(0.8) 찌르기는 physE = 판정 에너�
 });
 
 test('STRIKE.lodgeHold 1: 붙잡는 시간을 다 쓴 박힘은 다음 스텝에 장부에서 빠짐 (붙잡는 동안은 그대로)', () => {
-  const off = tapScene();
+  const off = withSet(ST, { lodgeHold: 0 }, () => tapScene());
   const r = withSet(ST, { lodgeHold: 1 }, () => tapScene());
   assert.ok(r.spent <= 2, `다 쓴 박힘은 다음 물리 스텝(맞부딪힘 거르개)에서 빠짐 — ${r.spent} 스텝`);
   assert.ok(off.spent > 10 * r.spent + 5, `끄면 남음 — ${off.spent} 스텝`);
@@ -101,4 +102,20 @@ test('THRUST.drive: 당김 = 칼끝이 더 빠름 · 몸 싣기 = 칼끝이 더 
   assert.ok(it1.vMax > it0.vMax * 1.3, `이탈리아 당김 ${it0.vMax} → ${it1.vMax}`);
   const de0 = run(0, 'german', 'longsword'), de2 = run(2, 'german', 'longsword');
   assert.ok(de2.tip > de0.tip * 1.5, `독일 몸 싣기 ${de0.tip} → ${de2.tip} cm`);
+});
+
+test('THRUST.drive 겹침 막기 (사장님 11/15 \'런지가 이탈리아 보법이나 런지와 겹쳐서 움직임이 이상해지는지 확인 필요\'): 이탈리아 잰 런지 · 걷던 몸은 제 걸음 그대로 · 리솔루토가 탭 런지를 덮지 않음 · 옆걸음 뒤 오래 안 머묾', async () => {
+  const { sceneRun } = await import('./thrust_drive_check.mjs');
+  const it0 = await sceneRun({ school: 'italian', weapon: 'rapier', scene: 'stand', drive: 0 });
+  const it3 = await sceneRun({ school: 'italian', weapon: 'rapier', scene: 'stand', drive: 3 });
+  assert.equal(it3.taps[0].reqFwd, it0.taps[0].reqFwd, '이탈리아는 잰 런지 그대로 (0.45 로 바꾸지 않음)');
+  const de3 = await sceneRun({ school: 'german', weapon: 'longsword', scene: 'stand', drive: 3 });
+  assert.equal(de3.taps[0].reqFwd, 0.45, '선 몸 보통 탭은 몸 싣기 걸음');
+  assert.equal(de3.reqs.filter((e) => e.src === 'tap').length, 1, '탭 하나에 걸음 부탁 하나');
+  const cn3 = await sceneRun({ school: 'chinese', weapon: 'hwando', scene: 'walk', drive: 3 });
+  assert.equal(cn3.taps[0].reqPush, null, '걷던 몸은 몸 실림 없이 (걸음 길이만)');
+  const riso = await sceneRun({ school: 'italian', weapon: 'rapier', scene: 'riso', drive: 3 });
+  assert.equal(riso.taps[0].an.stack, false, '리솔루토 걸음이 탭 런지를 덮지 않음 (런지를 딛은 뒤 탭이 끝남)');
+  const ib = await sceneRun({ school: 'iberian', weapon: 'zweihander', scene: 'side', drive: 3 });
+  assert.ok(ib.taps[0].freeze < 0.3, `옆걸음 뒤 탭: 런지 발이 뜨기 전엔 안 머묾 — ${ib.taps[0].freeze} s`);
 });

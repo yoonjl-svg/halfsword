@@ -144,10 +144,14 @@ export const itPartOn = (k) => !THRUST.itDrop || !String(THRUST.itDrop).split('+
  *  config THRUST.drive · 기본 0 = 끔 · 기록 docs/strike/thrust_stuck_2026-11-15.md §2): 사람이 내는 보통 탭 찌르기(쓰러진 상대 찍기 · 약한 자세 겨눔 · 간격 맞추기 뒤는 빼고)만 —
  *  AI 찌르기(ai.js startStrike 도 skill.thrust 를 부름)는 늘 null(그대로). → { chamber, step, ride } 또는 null
  */
+/** 부탁한 걸음(req — 탭 런지)을 딛는 발이 떠 있나 (몸 싣기 머묾 — 부탁이 다른 걸음 뒤에 기다리는 동안 · 두 발 다 디딘 동안은 false) */
+function lungeSwing(g) {
+  return (!g.legs.F.stance && g.legs.F.kind === 'req') || (!g.legs.B.stance && g.legs.B.kind === 'req');
+}
 export function thrustDrive(f) {
   const D = THRUST.drive;
   if (!D || f.aiControlled) return null;
-  return { chamber: D & 1 ? THRUST.driveChamber : null, step: D & 2 ? THRUST.driveStep : null, ride: !!(D & 2), landed: false };
+  return { chamber: D & 1 ? THRUST.driveChamber : null, step: D & 2 ? THRUST.driveStep : null, ride: !!(D & 2), landed: false, passed: false };
 }
 
 /** 이탈리아 찌르기 ④ (THRUST.itLunge): 런지가 아직 안 끝났나 — 몸이 실리는 런지 걸음(accel) 부탁이 딛기를 기다리거나(걷던 발이 아직 떠 있음 — gait.req) 그 몸 가속(gait.lungeBrake — 앞발이 나가는 동안 · 디딘 뒤 몸이 따라잡을 때까지)이 안 끝남 */
@@ -311,7 +315,11 @@ export class Skill {
     } else if (step && f.state === 'stand' && !rangeCommit) {
       // 한 걸음 내딛으며 찌른다 (약한 자세 간격 맞추기 뒤엔 이미 걸었다 — 내딛지 않는다)
       const il = this.tap.it;
-      if (f.gait?.active && dv?.step != null) f.gait.requestStep({ kind: 'lunge', fwd: dv.step, duration: 0.3, push: SECRET.stepPush }); // 몸 싣기 (THRUST.drive 걸음 칸): 걸음 사다리 한 칸 · 몸이 앞발을 따라 실림(리솔루토 런지 · 이탈리아 찌르기 ③ 과 같은 걸음 장치)
+      // 몸 싣기 (THRUST.drive 걸음 칸): 걸음 사다리 한 칸 · 몸이 앞발을 따라 실림(리솔루토 런지 · 이탈리아 찌르기 ③ 과 같은 걸음 장치) — 탭의 제 걸음(THRUST.step)을 바꿀 뿐 하나 더 내지 않음.
+      //  겹침 막기 (11/15 사장님 '런지가 이탈리아 보법이나 런지와 겹쳐서 움직임이 이상해지는지 확인 필요' — 기록 §7): 이탈리아 런지(THRUST.itLunge — 거리를 재어 그만큼 · 몸 실림)가 걷는 몸은
+      //  제 걸음 그대로(이탈리아 잰 런지를 0.45 로 바꾸지 않음). 걷던 몸은 몸 실림 없이 걸음 길이만(걷던 몸에 몸 실림 2.0 을 얹으면 한 런지보다 멀리 미끄러짐 — 동방 걷다 탭 골반 0.97 → 1.50 m)
+      const ownLunge = !!il && itPartOn('lunge');
+      if (f.gait?.active && dv?.step != null && !ownLunge) f.gait.requestStep({ kind: 'lunge', fwd: dv.step, duration: 0.3, ...(f.gait.walking ? {} : { push: SECRET.stepPush }) });
       else if (f.gait?.active) {
         if (!il || !itPartOn('lunge')) f.gait.requestStep({ kind: 'lunge', fwd: THRUST.step, duration: 0.3 }); // itDrop 'lunge' = 보통 찌르기 걸음 (재기)
         else if (il.fwd > 0) f.gait.requestStep({ kind: 'lunge', fwd: il.fwd, duration: 0.3, ...(itPartOn('push') ? { push: SECRET.stepPush } : {}), ...(itPartOn('accel') && THRUST.itAccel ? { accel: true } : {}) }); // 이탈리아 찌르기 ③: 거리만큼 런지 · 몸이 앞발을 따라 실림 (거리 안이면 걸음 없이 팔만) · itDrop 'push' · 'accel' = 그 몫 없이 (재기) · THRUST.itAccel 0 = 몸 가속 없음 (스위치)
@@ -463,8 +471,13 @@ export class Skill {
         tp.t = K.aim + K.extend + K.hold - 1e-6;
         tp.it.hold += dt;
       }
-      // 몸 싣기 (THRUST.drive 걸음 칸 — 11/15): 뻗은 칼끝을 런지 몸이 싣고 감 — 런지 걸음 부탁이 남아 있는 동안(발이 딛기 전) 뻗은 채 머묾 · 칼이 상대 몸에 판정을 내면(combat.js strike — drive.landed) 곧장 자세로 (시간 값 없음 — 이탈리아 ④ 와 같은 꼴)
-      if (tp.drive?.ride && !tp.drive.landed && !tp.down && tp.t >= K.aim + K.extend + K.hold && f.gait?.req?.kind === 'lunge') tp.t = K.aim + K.extend + K.hold - 1e-6;
+      // 몸 싣기 (THRUST.drive 걸음 칸 — 11/15): 뻗은 칼끝을 런지 몸이 싣고 감 — 탭 런지 발이 떠 있는 동안(그 걸음을 딛기 전) 뻗은 채 머묾 · 칼이 상대 몸에 판정을 내면(combat.js strike — drive.landed) 곧장 자세로 (시간 값 없음 — 이탈리아 ④ 와 같은 꼴)
+      //  런지 부탁이 걷던 걸음 · 옆걸음 뒤에 기다리는 동안(발이 아직 안 뜸)은 머물지 않음 (11/15 겹침 재기 — 그 걸음이 끝날 때까지 칼을 뻗은 채 0.4 ~ 0.5 s 서 있던 것: 이베리아 옆걸음 뒤 탭)
+      //  뻗기 끝에 닿은 그 스텝에 런지 발이 안 떠 있으면 머물지 않고 그대로 거둠(passed) — 거두던 팔이 늦게 뜬 런지 발에 다시 뻗지 않게
+      if (tp.drive?.ride && !tp.drive.landed && !tp.drive.passed && !tp.down && tp.t >= K.aim + K.extend + K.hold) {
+        if (f.gait?.req?.kind === 'lunge' && lungeSwing(f.gait)) tp.t = K.aim + K.extend + K.hold - 1e-6;
+        else tp.drive.passed = true;
+      }
     }
     this.thrustPush = false;
     // 찍기(tp.down)의 끝은 시간이 아니라 몸의 일(plungePose 의 tEnd): 끝난 뒤 자세로 돌아오는 시간만 잰다

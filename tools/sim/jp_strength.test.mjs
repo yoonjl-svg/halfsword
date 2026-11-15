@@ -18,6 +18,9 @@ import { withJpOld } from './jp_tank_pin.mjs'; // 11/14 일본 스택 · 바위 
 import { withReadOld } from './ai_read_pin.mjs'; // 11/14 유파 AI 3 단계 수 읽기 · 공정함 · AI 고노센 지키기 — 옛 장면은 잰 때 판으로 (docs/strike/ai_read_2026-11-14.md §6)
 /** 11/14 칼집 각도 · 납도 전 판 (docs/strike/iai_obi_2026-11-14.md §13 — 납도 없음 · 쉬는 칼집 입 배꼽 앞 · 축 −121 / −15 — 鞘戻し 점(쉬는 칼집 입 쥠)이 빈손 다시 쥐는 길에 들어감) — 옛 장면만 */
 const OBI2_OLD = { iaiSheathe: 0, iaiObiSayaMouth: [0.21, 0.085, 0.02], iaiObiSayaAxis: { yaw: -121, el: -15 }, iaiObiPull: { yaw: -160, el: -25 }, iaiObiFollow: { m: 0.06, deg: 20 } };
+// 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
+//  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
+const pinLodge0 = (t) => { const lh = CONFIG.STRIKE.lodgeHold; CONFIG.STRIKE.lodgeHold = 0; t.after(() => { CONFIG.STRIKE.lodgeHold = lh; }); };
 const withNoto0 = (fn) => { const S = CONFIG.SECRET; const was = {}; for (const k of Object.keys(OBI2_OLD)) (was[k] = S[k]), (S[k] = OBI2_OLD[k]); try { return fn(); } finally { Object.assign(S, was); } };
 
 const { SECRET, UNIQUE_ASSIST: UA, AI_MAAI } = CONFIG;
@@ -97,7 +100,7 @@ test('켜도 일본이 아닌 칸은 그대로: 네 스위치를 켠 독일 롱�
   }
 });
 
-test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄러져 들어감 (끄면 0)', () => withJpOld(() => withArmOld(() => withNoto0(() => withDeOff(() => {
+test('tsuStep: 켜면 제비 베기 되돌림 칼이 맞는 거리까지 미끄러져 들어감 (끄면 0)', (t) => pinLodge0(t) || withJpOld(() => withArmOld(() => withNoto0(() => withDeOff(() => {
   // 11/14 일본 스택 · 바위 몸과 帯刀(대기 칼 자리)이 함께 켜진 판에서 씨앗 1 의 되돌림 칼이 안 나옴(둘 중 하나만이면 나옴) — 스택 전 판(jp_tank_pin)으로 묶음 · 기준은 그대로
   // 11/14 칼집 각도 · 납도(준비 2.0 → 2.6 s · 鞘戻し 점이 쉬는 칼집 입 쥠을 따라 배 왼쪽 앞으로)로 이 씨앗 판이 갈려 되돌림 칼이 안 나옴 — 그 전 판(OBI2_OLD)으로 묶음 · 기준은 그대로
   // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 · 사람 두손 칼 칼자루 끝 앞 바닥)로 씨앗 1 판에 제비 베기 되돌림 칼이 안 나옴 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
