@@ -56,7 +56,7 @@ import { RisolutoWatch, lungeGapOk, bladesNear, foeStep } from './italian_risolu
 import { gyeoksalComboOpt } from './skill.js'; // 동방 격살 AI 몫 (11/14 사장님 '동방도 격살 쓰게 해') — 사람과 같은 한 칼 덧칸 (판정 · 사냥 겹 빠르기 · 잔상)
 import { huntN } from './cn_hunt.js'; // 동방 격살 AI 쓸 때 — 상대에 쌓인 사냥 겹 (11/14)
 import { AI_PLAN } from './config.js'; // 유파 AI 기본 전투 흐름 (11/14 — 설계안 docs/design/ai_school_baseline_2026-11-14.md §9)
-import { planFor, tiltOf, luckOf, bandOf, distErrWidth, judgePhase, seenStep, planStats, digStats } from './ai_plan.js'; // 국면 판정 · 유파 플랜 · 숙련도 띠 (플랜 없는 유파는 안 부름)
+import { planFor, tiltOf, luckOf, bandOf, distErrWidth, judgePhase, seenStep, planStats, digStats, itInqP } from './ai_plan.js'; // 국면 판정 · 유파 플랜 · 숙련도 띠 (플랜 없는 유파는 안 부름)
 import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, jpBeat, jpRead, jpTsubame, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep } from './ai_plan_jp.js'; // 2 단계 일본 플랜 몫 (11/14 — ai.planJp 일 때만)
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
@@ -368,6 +368,7 @@ export class AI {
     if (this.planJp) jpInit(this);
     if (this.plan?.ib) ibInit(this); // 이베리아 플랜 (2 단계 11/14 — src/ai_plan_ib.js): this.ibPlan · 없으면 아래 이베리아 자리를 안 탐
     this.planDe = !!this.plan && art.tradition === 'german'; // 3 단계 독일 '더티복서' (11/14 — src/ai_plan_de.js · 아래 planDe 자리만)
+    this.planIt = !!this.plan && art.tradition === 'italian'; // 이탈리아 비껴서며 찌르기 기울기 (11/15 — ai_plan.js itInqP · 아래 respond 한 자리만)
     if (this.planDe) deInit(this);
     if (this.plan) readInit(this); // 수 읽기 그릇 (3 단계 11/14 — src/ai_read.js): 플랜이 있는 몸만 this.read (버릇 · 되풀이 기억 · 상대 유파 · 대가 창 · 상대 기력)
     if (this.plan && art.tradition === 'chinese') cnInit(this); // 동방 플랜 (2 단계 · 11/14 — src/ai_plan_cn.js): 이 몸만 this.planCn — 아래 동방 자리를 탐
@@ -727,7 +728,8 @@ export class AI {
   update(dt) {
     this.specTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:4x · 19:5x 사람과 같게)
     // 이탈리아 박자 찌르기 셈 (11/14 사장님 'ai에도 적용' — italian_outbox.js aiBeatTick · IT_OUTBOX.ai · beat): 비껴서며 찌르기를 꾸러미에 가진 AI 만 · 상대 휘두름이 선 때를 셈(굴림 없음)
-    if (IT_OUTBOX.ai && IT_OUTBOX.beat > 0 && this.school?.techByName?.inquartata) aiBeatTick((this.itBeat ??= { f: this.me, t: 0, foeAtk: null, foeSw: false, inqBeatSeen: -1 }), dt, AI_PLAN.on && AI_PLAN.read.fair ? this.seenSwing() : undefined); // 공정함 (3 단계 — 설계 §4-3 셋째 곳): 상대 휘두름을 기력 장부 대신 늦게 본 손 빠르기로
+    //  11/15 사장님 'ai도 되돌려' — IT_OUTBOX.beatAi 1 일 때만 (기본 0 = 셈도 안 돎 — 11/14 전 판)
+    if (IT_OUTBOX.ai && IT_OUTBOX.beatAi && IT_OUTBOX.beat > 0 && this.school?.techByName?.inquartata) aiBeatTick((this.itBeat ??= { f: this.me, t: 0, foeAtk: null, foeSw: false, inqBeatSeen: -1 }), dt, AI_PLAN.on && AI_PLAN.read.fair ? this.seenSwing() : undefined); // 공정함 (3 단계 — 설계 §4-3 셋째 곳): 상대 휘두름을 기력 장부 대신 늦게 본 손 빠르기로
     if (this.rd || this.me.rdWind) this.rdKeep(dt); // 풍차 베기 AI 몫 (10/31): 감기 지킴 · 덧씌우기 칸 내려놓기 · 뗀 밧줄 다시
     if (this.secret && !this.secretRun && secretSpent(this.me)) this.dropSecret(); // 이 판 비기를 다 씀 (10/29 19:5x 판당 쓸 수 — 비기 없는 AI 와 같은 길)
     // 동방 AI 걸음 박자 (10/15 — GAIT.cnLightAi · docs/strike/cn_light_feet_2026-10-15.md §7): 가벼운 발 몸(유파 걸음 칸 light)의 AI 는 공격 꼴(준비·다가가기·벰·뒤따름)일 때만 가벼운 발 —
@@ -2727,6 +2729,17 @@ export class AI {
     //  시험: 헛스윙 연습 동안(drillOut)은 패시브·맞받아 베기 없이 받기만 (whiff_drill.js — 내 헛스윙이 상대 칼을 쳐 그 칼이 내 쪽으로 튄 것도 위협으로 읽혀 맞받아 들어가 베곤 했다)
     const P = this.passives.length && !this.drillOut ? this.passiveFor('threat', th) : null;
     if (P && (!P.do.counter || this.counterRange(d)) && this.passiveRoll(P) && this.passiveThreat(P, th, d)) return true;
+    // 0) 비껴서며 찌르기 기울기 (11/15 사장님 'ai야말로 커맨드를 기계적으로 잘 낼텐데 뭐가 문제야? … 그냥 l9를 더 선호하게 하면 되잖아.' — ai_plan.js itInqP · config AI_PLAN.it.inq):
+    //  이탈리아 플랜 몸 · 꾸러미에 있고 · 식지 않고 · 맞받아 벨 거리면 이 위협에 한 번 그 몫(높음 0.6 · 가운데 0.5)으로 비껴서며 찌르기 — 안 나오면 아래 맞받아 베기 · 막기 그대로 (몫 0 이면 굴리지 않음)
+    if (this.planIt && !this.drillOut && this.counterRange(d)) {
+      const tq = this.school.techByName.inquartata;
+      const p = tq && !this.specCooling(tq.name) ? itInqP(this) : 0;
+      if (p > 0 && Math.random() < p && this.startAttack(tq, 'counter', { noFeint: true, skipChamber: true })) {
+        this.stats.counters++;
+        this.stats.plan.inq++;
+        return true;
+      }
+    }
     // 1) 같은 순간에 맞받아 베기 (Indes): 들어오는 칼을 내 칼로 밀어내며 그대로 벤다 (겁먹으면 엄두를 못 낸다)
     if (!this.drillOut && Math.random() < L.counter * (1 - 0.8 * this.fear) && this.counterRange(d)) {
       // 11/14 박자 찌르기 (사장님 '박자 찌르기는 비껴서며 찌르기를 대체' · 'ai에도 적용' — italian_outbox.js aiBeatTech): 상대가 치기 시작한 beat 초 안이면 맞받아 베기 칼이 비껴서며 찌르기
