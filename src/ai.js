@@ -60,7 +60,8 @@ import { planFor, tiltOf, luckOf, bandOf, distErrWidth, judgePhase, seenStep, pl
 import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, jpBeat, jpRead, jpTsubame, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep } from './ai_plan_jp.js'; // 2 단계 일본 플랜 몫 (11/14 — ai.planJp 일 때만)
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
-import { DIG_PROTO, CN_STEP, AI_ARC, PHYSICS } from './config.js'; // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
+import { DIG_PROTO, CN_STEP, AI_ARC, PHYSICS, AI_TELL } from './config.js';
+import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 눈 (11/15 시제품 — AI_TELL.ai · 기본 끔) // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
 import { cnSee, cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 — CN_STEP.mode · 기본 끔)
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
@@ -2409,7 +2410,7 @@ export class AI {
     if (t.kind === 'thrust' && !this.feint && (this.me.weaponCfg.thrustStyle || V?.kind === 'thrust')) {
       this.me.skill.thrust({ step: false, vital: V?.kind === 'thrust' ? V : null });
       // 이탈리아 찌르기 ③ (config THRUST.itLunge — 10/25): 팔만으로 안 닿으면(skill.js itMeasure > 0) 팔을 뻗은 뒤 몸 · 발이 따라가는 런지로 딛는다 — stepTime 이 0 이어도 (기술 걸음 'strike' 와 같은 STEP_T · 걸음은 gaitStep)
-      if (this.me.skill.tap?.it?.fwd > 0) this.stepT = Math.max(this.stepT, STEP_T);
+      if (this.me.skill.tap?.it?.fwd > 0 || (this.me.skill.tap?.drive?.step != null && !this.me.skill.tap.it)) this.stepT = Math.max(this.stepT, STEP_T); // AI 몸 싣기 (11/15 시제품 — THRUST.driveAi 걸음 칸)도 늘 한 걸음
     }
     // 10/22 대검 마무리 (finish.js FINISH.cleave.ai, 기본 끔 — 끄면 이 줄은 아무것도 하지 않는다): 쓰러진 · 낮은 상대를 마무리하는 칼이면 플레이어 탭과 같은
     //  쪼개 내려치기 (skill.cleavePose). 마무리가 안 열리면(finishOnly) 그대로 기술 길만 간다
@@ -3134,6 +3135,7 @@ export class AI {
       if (!hit || tc < hit.tc) hit = { tc, hx, hy, hz, vx, vy, vz, sp };
     }
     if (!hit && AI_ARC.on) hit = this.arcHit(s, c); // ① 둥근 칼 읽기 (11/15 — 곧은 줄이 못 잡을 때만 · 같은 늦게 본 모습)
+    if (!hit && AI_TELL.ai && d < this.foeReach + 0.3) hit = thrustTell(s, c); // 찌르기 낌새 (11/15 시제품 — 칼이 칼날 줄로 나오기 시작함 · 같은 늦게 본 모습 · 상대 칼끝 어림 + 0.3 안)
     if (!hit) return null;
     if (this.noThreat > NEW_THREAT_T) this.threatId++; // 잠깐 조용했다가 다시 오면 새 공격
     const lat = hit.hx * r.x + hit.hz * r.z; // + = 내 오른쪽
@@ -3142,7 +3144,8 @@ export class AI {
     const by = s.ty - s.my;
     const bz = s.tz - s.mz;
     const along = (bx * hit.vx + by * hit.vy + bz * hit.vz) / ((Math.hypot(bx, by, bz) || 1) * hit.sp);
-    const thrust = along > 0.75;
+    const thrust = !!hit.tell || along > 0.75;
+    if (hit.tell) this.stats.tell = (this.stats.tell ?? 0) + 1; // 재기: 낌새로 본 스텝
     let line;
     if (thrust) line = 'thrust';
     else {
@@ -3420,9 +3423,31 @@ export class AI {
       R.win = SECRET.playerWindow;
       R.st.wins++;
       R.ctx = ctx;
+      if (SECRET.risoAiWait > 0) R.tgame = Math.random() < (this.planK ?? 1) * (SECRET.risoAiGame ?? 1); // 11/16 3안: 이 창에서 박자 싸움을 할지 (띠 기울기 × risoAiGame — 창 하나에 한 번 굴림 · 끄면 굴림 없음)
     }
     if (!(R.win > 0) || !this.secretFree() || this.foe.state !== 'stand') return false;
-    return this.risoGo(R.ctx);
+    if (!(SECRET.risoAiWait > 0)) return this.risoGo(R.ctx);
+    const cue = this.risoTiming(R);
+    if (!cue || !this.risoGo(R.ctx)) return false;
+    const C = (R.st.cue ??= {});
+    C[cue] = (C[cue] ?? 0) + 1;
+    return true;
+  }
+
+  /**
+   * 리솔루토 박자 싸움 (사장님 11/16 3안 '길이 열리고 최소 0.2초 후에 발동 가능하도록 함(ai만) … 이탈리아는 리솔루토를 바로 내지 않고 타이밍 싸움을 할 수 있음' → "3안도 넣어." · SECRET.risoAiWait · 0 = 전 판):
+   *  창이 열리고 risoAiWait 초 전에는 내지 않음 · 그 뒤 박자 싸움 몫(R.tgame — 띠 기울기 planK × risoAiGame 로 창 하나에 한 번 굴림)이면 상대가 박자를 낼 때 냄 —
+   *  늦게 본 휘두름(seenSwing) · 늦게 본 칼 듦(손이 위로 · readTick 과 같은 꼴) · 늦게 본 걸어 들어옴(seenStep — 걸음 문턱) · 안 나오면 창이 끝나며 흘려보냄
+   *  (risoAiMax > 0 이면 창이 열린 지 그 초가 되도록 열려 있을 때 그대로 냄 — 'late'). 나머지 몫은 risoAiWait 에 곧장.
+   *  본 것만 읽음(공정함) → 낼 까닭('plain' 곧장 · 'swing' · 'raise' · 'step' · 'late') 또는 null(기다림) · 재기 R.st.cue
+   */
+  risoTiming(R) {
+    const age = SECRET.playerWindow - R.win;
+    if (age < SECRET.risoAiWait - 1e-9) return null;
+    if (!R.tgame) return 'plain';
+    const s = this.sense.seen(this.level.reaction);
+    const cue = this.seenSwing() ? 'swing' : s.hvy > 1.6 && s.hy > 0.05 ? 'raise' : seenStep(this.foeClosing) === 'advance' ? 'step' : null;
+    return cue ?? (SECRET.risoAiMax > 0 && age >= SECRET.risoAiMax - 1e-9 ? 'late' : null);
   }
 
   /** 안다레 리솔루토를 낸다 — 검술 층 skill.secret (사람과 같은 실행부: 런지 · 상대 팔 늦춤 · 기력 · 굳음). 냈으면 true */
@@ -4467,6 +4492,11 @@ export class AI {
       const bt = g.P.bow?.tech?.[this.tech?.name]; // 중국 표두격: 가까우면 반걸음(bt.fwd), 멀면 보통 베기 걸음
       const fw = bt?.fwd && this.foe && this.me.foeDistance() < this.M.contact - 0.1 ? bt.fwd : cs.fwd;
       if (g.requestStep({ kind: cs.kind, fwd: fw, hold: 0.3, leg, draw: !!cs.draw, tech: this.tech?.name })) this.requestedStep = true; // tech: 기술 이름(중국 활 자세가 표두격 oberhau 에서 더 오래 버팀 — gait P.bow.tech)
+      return;
+    }
+    const dv = this.tech?.kind === 'thrust' ? this.me.skill.tap?.drive : null; // AI 찌르기 몸 싣기 (11/15 시제품 — THRUST.driveAi 2 · 3): 이탈리아 잰 런지가 없으면 걸음 사다리 0.45 런지 · 선 몸은 몸이 실림 (사람 탭과 같은 걸음 장치 · 하나 더 내지 않음)
+    if (dv?.step != null && !this.me.skill.tap?.it) {
+      if (g.requestStep({ kind: 'lunge', fwd: dv.step, hold: 0.3, leg, duration: 0.3, ...(g.walking ? {} : { push: SECRET.stepPush }) })) this.requestedStep = true;
       return;
     }
     const itl = this.tech?.kind === 'thrust' ? this.me.skill.tap?.it : null; // 이탈리아 찌르기 ③: 거리만큼(0.6 m 까지) · 몸이 앞발을 따라 실리는 런지 (skill.js 탭 찌르기와 같은 걸음 장치)
