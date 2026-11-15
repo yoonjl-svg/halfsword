@@ -6,11 +6,12 @@ import * as CONFIG from '../../src/config.js';
 import { simPath } from './is_main.mjs';
 const args = process.argv.slice(2);
 const sets = [];
-while (args.length && /^[A-Z_]+\.[A-Za-z0-9_]+=/.test(args[0])) sets.push(args.shift());
+while (args.length && /^[A-Z_]+(\.[A-Za-z0-9_]+)+=/.test(args[0])) sets.push(args.shift());
 for (const s of sets) {
   const [path, v] = s.split('=');
-  const [grp, key] = path.split('.');
-  CONFIG[grp][key] = v === 'true' ? true : v === 'false' ? false : Number.isNaN(+v) ? v : +v; // 예: ARMOR.on=false
+  const [grp, ...keys] = path.split('.'); // 11/16 — 겹친 칸도 (예: AI_PLAN.read.riso=0)
+  const o = keys.slice(0, -1).reduce((a, k) => a[k], CONFIG[grp]);
+  o[keys[keys.length - 1]] = v === 'true' ? true : v === 'false' ? false : Number.isNaN(+v) ? v : +v; // 예: ARMOR.on=false
 }
 const [script, ...rest] = args;
 process.argv = [process.argv[0], simPath(script), ...rest]; // 절대 경로로 넘긴다 (대상 스크립트의 직접 실행 확인이 맞게)

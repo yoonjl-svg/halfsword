@@ -326,15 +326,15 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   //  `?itOutbox=0` 넷 모두 끔(전 판) · `?itThrustMul=0.7` 보통 찌르기 배율(1 = 끔) · `?itStop=0` 맞박자 찌르기 끔 · `?itEdge=3` 칼 우위 초(0 = 끔 — 리솔루토 전 조건) · `?itBeat=0` 박자 찌르기 끔 (실제 초) · `?itAi=0` 사람만
   if (params.has('itOutbox')) CONFIG.IT_OUTBOX.on = +params.get('itOutbox') ? 1 : 0;
   if (params.has('itThrustMul') && +params.get('itThrustMul') > 0) CONFIG.IT_OUTBOX.thrustMul = +params.get('itThrustMul');
-  if (params.has('hitKPhys')) CONFIG.STRIKE.hitKPhys = +params.get('hitKPhys') ? 1 : 0; // 11/15 약화 배율은 상처에만 (STRIKE.hitKPhys — 찌르기 박힘 · 무시됨 고침 시제품 · 기본 0)
+  if (params.has('hitKPhys')) CONFIG.STRIKE.hitKPhys = +params.get('hitKPhys') ? 1 : 0; // 11/15 약화 배율은 상처에만 (STRIKE.hitKPhys — 찌르기 박힘 · 무시됨 고침 · 사장님 11/16 결정 기본 1 · 0 = 전 판)
   if (params.has('lodgeHold')) CONFIG.STRIKE.lodgeHold = +params.get('lodgeHold') ? 1 : 0; // 11/15 다 쓴 박힘 풀기 (STRIKE.lodgeHold — 기본 1 · 사장님 11/15 결정 · `?lodgeHold=0` = 전 판)
-  if (params.has('thrustDrive')) CONFIG.THRUST.drive = Math.max(0, Math.min(3, Math.round(+params.get('thrustDrive') || 0))); // 11/15 사람 탭 찌르기 몸 싣기 (THRUST.drive — 1 당김 · 2 몸 싣기 · 3 둘 다 · 기본 0)
+  if (params.has('thrustDrive')) CONFIG.THRUST.drive = Math.max(0, Math.min(3, Math.round(+params.get('thrustDrive') || 0))); // 11/15 사람 탭 찌르기 몸 싣기 (THRUST.drive — 1 당김 · 2 몸 싣기 · 3 둘 다 · 사장님 11/16 결정 기본 3 · 0 = 전 판)
   if (params.has('thrustDriveChamber') && +params.get('thrustDriveChamber') >= 0) CONFIG.THRUST.driveChamber = +params.get('thrustDriveChamber');
   if (params.has('thrustDriveStep') && +params.get('thrustDriveStep') >= 0) CONFIG.THRUST.driveStep = +params.get('thrustDriveStep');
-  if (params.has('thrustDriveAi')) CONFIG.THRUST.driveAi = Math.max(0, Math.min(3, Math.round(+params.get('thrustDriveAi') || 0))); // 11/15 시제품 AI 찌르기 몸 싣기 (THRUST.driveAi — 기본 0)
-  for (const [q, k] of [['tellAi', 'ai'], ['tellGuard', 'guard']]) if (params.has(q)) CONFIG.AI_TELL[k] = +params.get(q) ? 1 : 0; // 11/15 시제품 찌르기 낌새 눈 (src/thrust_tell.js — 기본 끔)
+  if (params.has('thrustDriveAi')) CONFIG.THRUST.driveAi = Math.max(0, Math.min(3, Math.round(+params.get('thrustDriveAi') || 0))); // 11/15 시제품 AI 찌르기 몸 싣기 (THRUST.driveAi — 사장님 11/16 결정 기본 3 · 0 = 전 판)
+  for (const [q, k] of [['tellAi', 'ai'], ['tellGuard', 'guard']]) if (params.has(q)) CONFIG.AI_TELL[k] = +params.get(q) ? 1 : 0; // 11/15 시제품 찌르기 낌새 눈 (src/thrust_tell.js — 사장님 11/16 결정 기본 켬 · 0 = 전 판)
   if (params.has('tellLatch') && +params.get('tellLatch') >= 0) CONFIG.AI_TELL.latch = CONFIG.realS(+params.get('tellLatch')); // 11/15 시제품 막기 단추 낌새 붙잡기 (실제 초 — 기본 0)
-  if (params.has('inqMul') && +params.get('inqMul') > 0) CONFIG.IT_OUTBOX.inqMul = +params.get('inqMul'); // 11/15 시제품 비껴서며 찌르기 판정 배율 (사람 · AI — 기본 1)
+  if (params.has('inqMul') && +params.get('inqMul') > 0) CONFIG.IT_OUTBOX.inqMul = +params.get('inqMul'); // 11/15 시제품 비껴서며 찌르기 판정 배율 (사람 · AI — 사장님 11/16 결정 기본 0.5 · 1 = 전 판)
   if (params.has('itEdgeFrom') && ['', 'stop', 'counter'].includes(params.get('itEdgeFrom'))) CONFIG.IT_OUTBOX.edgeFrom = params.get('itEdgeFrom'); // 11/16 시제품 1안 칼 우위가 켜지는 길 (사람 · AI — 기본 '' 지금)
   if (params.has('itStop') && +params.get('itStop') >= 0) CONFIG.IT_OUTBOX.stop = +params.get('itStop');
   if (params.has('itEdge') && +params.get('itEdge') >= 0) CONFIG.IT_OUTBOX.edge = CONFIG.realS(+params.get('itEdge'));
@@ -394,8 +394,10 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('risoGap')) CONFIG.SECRET.risolutoGap = +params.get('risoGap') ? 1 : 0; // 10/24 13:2x 런지 간격 조건 — 0 = 간격 조건 없음 (12:1x 판 — 가까워도 창)
   if (params.has('risoTouch')) CONFIG.SECRET.risolutoTouch = +params.get('risoTouch') ? 1 : 0; // 10/25 01:0x 칼끝 얽힘 창 — 0 = 10/24 판 (이어짐 0.6 s 를 기다림)
   if (params.has('risoTouchMin') && +params.get('risoTouchMin') >= 0) CONFIG.SECRET.risolutoTouchMin = CONFIG.realS(+params.get('risoTouchMin')); // 11/16 시제품 2안 칼끝 얽힘 창까지 덮인 채 나아가기 (실제 초 — 사람 · AI · 기본 0)
-  if (params.has('risoAiWait') && +params.get('risoAiWait') >= 0) CONFIG.SECRET.risoAiWait = CONFIG.realS(+params.get('risoAiWait')); // 11/16 시제품 3안 AI 리솔루토 박자 싸움 (실제 초 — AI 만 · 기본 0)
-  if (params.has('aiReadRiso') && +params.get('aiReadRiso') >= 0) CONFIG.AI_PLAN.read.riso = +params.get('aiReadRiso'); // 11/16 시제품 3안 다른 유파 AI 리솔루토 위험 읽기 (기본 0)
+  if (params.has('risoAiWait') && +params.get('risoAiWait') >= 0) CONFIG.SECRET.risoAiWait = CONFIG.realS(+params.get('risoAiWait')); // 11/16 3안 AI 리솔루토 박자 싸움 (실제 초 — AI 만 · 사장님 11/16 결정 기본 0.2 · 0 = 전 판)
+  if (params.has('risoAiMax') && +params.get('risoAiMax') >= 0) CONFIG.SECRET.risoAiMax = CONFIG.realS(+params.get('risoAiMax')); // 11/16 3안 손잡이: 박자를 기다리다 그대로 낼 때 (실제 초 · 기본 0 = 흘려보냄)
+  if (params.has('risoAiGame') && +params.get('risoAiGame') >= 0) CONFIG.SECRET.risoAiGame = +params.get('risoAiGame'); // 11/16 3안 손잡이: 박자 싸움 몫 곱 (기본 1)
+  if (params.has('aiReadRiso') && +params.get('aiReadRiso') >= 0) CONFIG.AI_PLAN.read.riso = +params.get('aiReadRiso'); // 11/16 3안 다른 유파 AI 리솔루토 위험 읽기 (사장님 11/16 결정 기본 1 · 0 = 전 판)
   // 10/25 21:0x 사장님 조건 셋 · 창 지킴 (기본 — 확인표 2563 ~ 2569): `?risoStick=fwd` 스틱 앞만(전) · `?risoTap=1` 탭만(전) · `?risoCover=0.07` 덮음 거리(전 — 위 줄) · `?secretHold=0` 열린 창을 조건이 바뀌면 바로 닫음(전 — 모든 사람 비기 창)
   if (params.get('risoStick') === 'fwd' || params.get('risoStick') === 'both') CONFIG.SECRET.risolutoStick = params.get('risoStick');
   if (params.has('risoTap')) CONFIG.SECRET.risolutoTap = +params.get('risoTap') ? 1 : 0;

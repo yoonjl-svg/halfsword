@@ -3419,7 +3419,7 @@ export class AI {
       R.win = SECRET.playerWindow;
       R.st.wins++;
       R.ctx = ctx;
-      if (SECRET.risoAiWait > 0) R.tgame = Math.random() < (this.planK ?? 1); // 11/16 3안: 이 창에서 박자 싸움을 할지 (띠 기울기 — 창 하나에 한 번 굴림 · 끄면 굴림 없음)
+      if (SECRET.risoAiWait > 0) R.tgame = Math.random() < (this.planK ?? 1) * (SECRET.risoAiGame ?? 1); // 11/16 3안: 이 창에서 박자 싸움을 할지 (띠 기울기 × risoAiGame — 창 하나에 한 번 굴림 · 끄면 굴림 없음)
     }
     if (!(R.win > 0) || !this.secretFree() || this.foe.state !== 'stand') return false;
     if (!(SECRET.risoAiWait > 0)) return this.risoGo(R.ctx);
@@ -3431,16 +3431,19 @@ export class AI {
   }
 
   /**
-   * 리솔루토 박자 싸움 (11/16 시제품 3안 — 사장님 '길이 열리고 최소 0.2초 후에 발동 가능하도록 함(ai만) … 이탈리아는 리솔루토를 바로 내지 않고 타이밍 싸움을 할 수 있음' · SECRET.risoAiWait · 기본 0 끔):
-   *  창이 열리고 risoAiWait 초 전에는 내지 않음 · 그 뒤 박자 싸움 몫(R.tgame — 띠 기울기 planK 로 창 하나에 한 번 굴림)이면 상대가 박자를 낼 때 냄 —
-   *  늦게 본 휘두름(seenSwing) · 늦게 본 칼 듦(손이 위로 · readTick 과 같은 꼴) · 늦게 본 걸어 들어옴(seenStep — 걸음 문턱) · 안 나오면 창이 끝나며 흘려보냄.
-   *  나머지 몫은 risoAiWait 에 곧장. 본 것만 읽음(공정함) → 낼 까닭('plain' 곧장 · 'swing' · 'raise' · 'step') 또는 null(기다림) · 재기 R.st.cue
+   * 리솔루토 박자 싸움 (사장님 11/16 3안 '길이 열리고 최소 0.2초 후에 발동 가능하도록 함(ai만) … 이탈리아는 리솔루토를 바로 내지 않고 타이밍 싸움을 할 수 있음' → "3안도 넣어." · SECRET.risoAiWait · 0 = 전 판):
+   *  창이 열리고 risoAiWait 초 전에는 내지 않음 · 그 뒤 박자 싸움 몫(R.tgame — 띠 기울기 planK × risoAiGame 로 창 하나에 한 번 굴림)이면 상대가 박자를 낼 때 냄 —
+   *  늦게 본 휘두름(seenSwing) · 늦게 본 칼 듦(손이 위로 · readTick 과 같은 꼴) · 늦게 본 걸어 들어옴(seenStep — 걸음 문턱) · 안 나오면 창이 끝나며 흘려보냄
+   *  (risoAiMax > 0 이면 창이 열린 지 그 초가 되도록 열려 있을 때 그대로 냄 — 'late'). 나머지 몫은 risoAiWait 에 곧장.
+   *  본 것만 읽음(공정함) → 낼 까닭('plain' 곧장 · 'swing' · 'raise' · 'step' · 'late') 또는 null(기다림) · 재기 R.st.cue
    */
   risoTiming(R) {
-    if (SECRET.playerWindow - R.win < SECRET.risoAiWait - 1e-9) return null;
+    const age = SECRET.playerWindow - R.win;
+    if (age < SECRET.risoAiWait - 1e-9) return null;
     if (!R.tgame) return 'plain';
     const s = this.sense.seen(this.level.reaction);
-    return this.seenSwing() ? 'swing' : s.hvy > 1.6 && s.hy > 0.05 ? 'raise' : seenStep(this.foeClosing) === 'advance' ? 'step' : null;
+    const cue = this.seenSwing() ? 'swing' : s.hvy > 1.6 && s.hy > 0.05 ? 'raise' : seenStep(this.foeClosing) === 'advance' ? 'step' : null;
+    return cue ?? (SECRET.risoAiMax > 0 && age >= SECRET.risoAiMax - 1e-9 ? 'late' : null);
   }
 
   /** 안다레 리솔루토를 낸다 — 검술 층 skill.secret (사람과 같은 실행부: 런지 · 상대 팔 늦춤 · 기력 · 굳음). 냈으면 true */

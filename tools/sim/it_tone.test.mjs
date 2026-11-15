@@ -1,6 +1,6 @@
 // 찌르기를 막을 수 있게 — 시제품 시험 (11/15 사장님 '찌르기의 맛은 살려야 해. 혹은 찌르기를 더 잘 방어할 방법? 지금 찌르기 막기 거의 불가능하지 않아?' ·
-//  config AI_TELL · THRUST.driveAi · src/thrust_tell.js · 기록 docs/strike/it_tone_2026-11-15.md): 기본 끔 · 낌새 셈(앞 · 뒤 칼날 줄 빠르기 · 몸통 원통) · AI 위협 읽기 자리 · AI 몸 싣기 칸
-//  11/16 리솔루토 세 안 (사장님 1안 · 2안 · 3안 — IT_OUTBOX.edgeFrom · SECRET.risolutoTouchMin · risoAiWait · AI_PLAN.read.riso · 기록 §8): 기본 끔 · 칼 우위 길 · 칼끝 얽힘 시간 · AI 박자 싸움 · 리솔루토 위험 읽기
+//  config AI_TELL · THRUST.driveAi · src/thrust_tell.js · 기록 docs/strike/it_tone_2026-11-15.md): 11/16 묶음 P 기본 켬(사장님 결정 · 붙잡기 latch 는 끔) · 낌새 셈(앞 · 뒤 칼날 줄 빠르기 · 몸통 원통) · AI 위협 읽기 자리 · AI 몸 싣기 칸
+//  11/16 리솔루토 세 안 (사장님 1안 · 2안 · 3안 — IT_OUTBOX.edgeFrom · SECRET.risolutoTouchMin · risoAiWait · AI_PLAN.read.riso · 기록 §8 · §9): 1안 · 2안 끔 · 3안 켬(사장님 11/16 결정) · 칼 우위 길 · 칼끝 얽힘 시간 · AI 박자 싸움 · 손잡이 둘 · 리솔루토 위험 읽기
 //  node --test tools/sim/it_tone.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,12 +14,16 @@ const with_ = (o, k, v, fn) => { const old = o[k]; o[k] = v; try { return fn(); 
 const seen = ({ v = 2, tipX = 0.9, side = 0, armed = true } = {}) => ({ armed, tx: tipX, ty: 0, tz: side, mx: tipX + 0.5, my: 0, mz: side, tvx: -v, tvy: 0, tvz: 0 });
 const C = { x: 0, y: 0, z: 0 };
 
-test('기본값 — 모두 끔 (관문 판 그대로) · 문턱은 있던 수 (칼 드는 낌새 1.6 m/s · 걸음 사다리 0.9)', () => {
-  assert.equal(T.ai, 0);
-  assert.equal(T.guard, 0);
+test('기본값 — 묶음 P 켬 (사장님 11/16 결정 "묶음 P 넣어.") · 붙잡기는 끔 · 문턱은 있던 수 (칼 드는 낌새 1.6 m/s · 걸음 사다리 0.9)', () => {
+  assert.equal(T.ai, 1);
+  assert.equal(T.guard, 1);
+  assert.equal(T.latch, 0);
   assert.equal(T.v, 1.6);
   assert.equal(T.ray, 0.9);
-  assert.equal(CONFIG.THRUST.driveAi, 0);
+  assert.equal(CONFIG.THRUST.driveAi, 3);
+  assert.equal(CONFIG.THRUST.drive, 3);
+  assert.equal(CONFIG.STRIKE.hitKPhys, 1);
+  assert.equal(CONFIG.IT_OUTBOX.inqMul, 0.5);
 });
 
 test('낌새 셈: 칼이 칼날 줄로 나오기 시작(1.6 m/s 이상 — 앞 · 당김 모두) · 그 줄이 몸통 원통을 지나야 · 느림 · 비낌 · 멂 · 칼 없음 = 없음', () => {
@@ -52,17 +56,17 @@ test('AI 찌르기 몸 싣기: driveAi 0 이면 AI 몸은 null (사람 drive 와
   const ai = { aiControlled: true };
   const hu = { aiControlled: false };
   const D = CONFIG.THRUST;
-  assert.equal(with_(D, 'drive', 3, () => thrustDrive(ai)), null, '사람 스위치는 AI 를 안 건드림');
+  assert.equal(with_(D, 'driveAi', 0, () => with_(D, 'drive', 3, () => thrustDrive(ai))), null, '사람 스위치는 AI 를 안 건드림');
   const a = with_(D, 'driveAi', 3, () => thrustDrive(ai));
   assert.ok(a && a.chamber === D.driveChamber && a.step === D.driveStep && a.ride);
-  assert.equal(with_(D, 'driveAi', 3, () => thrustDrive(hu)), null, 'AI 스위치는 사람을 안 건드림 (drive 0)');
+  assert.equal(with_(D, 'drive', 0, () => with_(D, 'driveAi', 3, () => thrustDrive(hu))), null, 'AI 스위치는 사람을 안 건드림 (drive 0)');
   assert.equal(with_(D, 'driveAi', 1, () => thrustDrive(ai)).step, null, '1 = 당김만');
 });
 
-test('비껴서며 찌르기 배율 IT_OUTBOX.inqMul (기본 1 = 그대로): 사람 · AI 같게 판정 배율 — 0.5 · 0.8 · 맞박자와 곱 · 다른 찌르기는 thrustMul 그대로', async () => {
+test('비껴서며 찌르기 배율 IT_OUTBOX.inqMul (기본 0.5 — 사장님 11/16 결정 · 1 = 전 판): 사람 · AI 같게 판정 배율 — 0.5 · 0.8 · 맞박자와 곱 · 다른 찌르기는 thrustMul 그대로', async () => {
   const { itThrust } = await import('../../src/italian_outbox.js');
   const IO = CONFIG.IT_OUTBOX;
-  assert.equal(IO.inqMul, 1);
+  assert.equal(IO.inqMul, 0.5);
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
   const mk = (ai) => {
     const foe = { alive: true, state: 'stand', gait: { walking: false }, cache: { parts: { pelvis: { p: V(1.8, 0.9, 0), v: V(0, 0, 0) } } } };
@@ -73,7 +77,8 @@ test('비껴서며 찌르기 배율 IT_OUTBOX.inqMul (기본 1 = 그대로): 사
   };
   for (const ai of [false, true]) {
     const { me, foe } = mk(ai);
-    assert.equal(itThrust(me, foe), null, '1 = 배율 없음');
+    assert.equal(with_(IO, 'inqMul', 1, () => itThrust(me, foe)), null, '1 = 배율 없음');
+    assert.equal(itThrust(me, foe)?.k, 0.5, `${ai ? 'AI' : '사람'} 기본 × 0.5`);
     for (const m of [0.5, 0.8]) assert.equal(with_(IO, 'inqMul', m, () => itThrust(me, foe)?.k), m, `${ai ? 'AI' : '사람'} × ${m}`);
     foe.gait.walking = true;
     foe.cache.parts.pelvis.v = V(-0.5, 0, 0);
@@ -114,11 +119,13 @@ const bound = () => {
   return { me, foe };
 };
 
-test('세 안 기본값 — 모두 끔 (칼 우위 길 지금 · 칼끝 얽힘 곧장 · AI 곧장 냄 · 리솔루토 위험 읽기 없음)', () => {
+test('세 안 기본값 — 1안 · 2안 끔 · 3안 켬 (사장님 11/16 "3안도 넣어." — AI 0.2 s 뒤 박자 싸움 · 리솔루토 위험 읽기) · 손잡이 둘은 지금 그대로', () => {
   assert.equal(CONFIG.IT_OUTBOX.edgeFrom, '');
   assert.equal(CONFIG.SECRET.risolutoTouchMin, 0);
-  assert.equal(CONFIG.SECRET.risoAiWait, 0);
-  assert.equal(CONFIG.AI_PLAN.read.riso, 0);
+  assert.equal(CONFIG.SECRET.risoAiWait, CONFIG.realS(0.2));
+  assert.equal(CONFIG.AI_PLAN.read.riso, 1);
+  assert.equal(CONFIG.SECRET.risoAiMax, 0);
+  assert.equal(CONFIG.SECRET.risoAiGame, 1);
 });
 
 test('1안 IT_OUTBOX.edgeFrom: stop = 맞박자 찌르기 상처만 칼 우위 · counter = 맞박자 + 비껴서며 찌르기 · 헛누름 · I2 · I6 은 안 켬 · 끄면 그대로', async () => {
@@ -160,7 +167,7 @@ test('2안 SECRET.risolutoTouchMin: 0 = 덮인 채 나아가기 첫 스텝에 �
   });
 });
 
-test('3안 AI 박자 싸움 SECRET.risoAiWait: 창이 열리고 0.2 s 전엔 안 냄 · 박자 싸움 몫이면 본 휘두름 · 칼 듦 · 걸어 들어옴에만 · 아니면 0.2 s 에 곧장', () => {
+test('3안 AI 박자 싸움 SECRET.risoAiWait (기본 0.2 s): 창이 열리고 0.2 s 전엔 안 냄 · 박자 싸움 몫이면 본 휘두름 · 칼 듦 · 걸어 들어옴에만 · 아니면 0.2 s 에 곧장', () => {
   const S = CONFIG.SECRET;
   const fake = (o = {}) => ({ sense: { seen: () => ({ hvx: 0, hvy: o.hvy ?? 0, hy: o.hy ?? 0 }) }, level: { reaction: 0.1 }, seenSwing: () => !!o.swing, foeClosing: o.closing ?? 0 });
   const R = (age, tgame) => ({ win: S.playerWindow - CONFIG.realS(age), tgame });
@@ -174,10 +181,47 @@ test('3안 AI 박자 싸움 SECRET.risoAiWait: 창이 열리고 0.2 s 전엔 안
     assert.equal(go(fake({ hvy: 2, hy: 0.1 }), R(0.3, true)), 'raise');
     assert.equal(go(fake({ closing: 1 }), R(0.3, true)), 'step');
     assert.equal(go(fake({ closing: -1 }), R(0.3, true)), null, '물러섬은 박자 아님');
+    // 손잡이 risoAiMax (기본 0 = 창 끝까지 기다림): 0.4 s 면 그때 창이 열려 있으면 그대로 냄
+    assert.equal(go(fake(), R(0.5, true)), null, '기본 — 0.5 s 에도 기다림');
+    with_(S, 'risoAiMax', CONFIG.realS(0.4), () => {
+      assert.equal(go(fake(), R(0.3, true)), null, '0.4 s 전 — 기다림');
+      assert.equal(go(fake(), R(0.45, true)), 'late', '0.4 s 뒤 — 그대로 냄');
+      assert.equal(go(fake({ closing: 1 }), R(0.45, true)), 'step', '박자가 있으면 그 까닭');
+    });
   });
 });
 
-test('3안 리솔루토 위험 읽기 AI_PLAN.read.riso: 칼 우위 빛 + 칼 붙음이면 발을 묶음(띠 세기만큼) · 칼이 떨어져 있으면 지금처럼 거리를 벌림 · 끄면 그대로', async () => {
+test('3안 손잡이 risoAiGame (기본 1): 창이 열릴 때 박자 싸움 몫 = 띠 기울기 × 이 값 — 숙련 5 · 6 은 1 이면 늘 기다림 · 0.5 면 창 둘에 하나', () => {
+  const G = newRound({ seed: 2, weapon: 'longsword', weapon2: 'rapier', AI2Class: AI, persona: { proficiency: 5 }, persona2: { proficiency: 5 } });
+  try {
+    const ai = G.ai2.riso ? G.ai2 : G.ai;
+    assert.ok(ai.riso, '레이피어 숙련 5 AI 는 리솔루토 셈이 있음');
+    assert.equal(ai.planK, 1);
+    const S = CONFIG.SECRET;
+    const roll = (game, n = 400) => {
+      let k = 0;
+      with_(S, 'risoAiGame', game, () => {
+        for (let i = 0; i < n; i++) {
+          const R = ai.riso;
+          R.win = 0;
+          R.W.tick = () => ({ ev: 'risoluto', path: 'touch' }); // 창이 열린다고 침 (셈은 위 시험)
+          ai.risoTick(1 / 120, false);
+          k += R.tgame ? 1 : 0;
+        }
+      });
+      return k / n;
+    };
+    const keep = { w: ai.riso.W.tick, go: ai.risoGo, free: ai.secretFree };
+    ai.risoGo = () => false;
+    try {
+      assert.equal(roll(1), 1, '기본 — 늘 기다림');
+      const h = roll(0.5);
+      assert.ok(h > 0.4 && h < 0.6, `0.5 — 반쯤 (${h})`);
+    } finally { ai.riso.W.tick = keep.w; ai.risoGo = keep.go; }
+  } finally { G.world.free(); }
+});
+
+test('3안 리솔루토 위험 읽기 AI_PLAN.read.riso (기본 1): 칼 우위 빛 + 칼 붙음이면 발을 묶음(띠 세기만큼) · 칼이 떨어져 있으면 거리를 벌림 · 0 = 전 판', async () => {
   const { readFeetV } = await import('../../src/ai_read.js');
   const RD = CONFIG.AI_PLAN.read;
   const mk = (planK, near) => {
@@ -188,8 +232,9 @@ test('3안 리솔루토 위험 읽기 AI_PLAN.read.riso: 칼 우위 빛 + 칼 �
     return { me, foe, planK, chasing: false, read: { school: true, st: {} } };
   };
   const r = RD.risk;
-  assert.equal(readFeetV(mk(1, true), -0.6, 1.5), -0.6, '끔 — 칼 우위 빛: 거리를 벌림 (이미 물러섬)');
-  assert.equal(readFeetV(mk(1, true), 0.5, 1.5), -r, '끔 — 칼 우위 빛: 거리를 벌림');
+  assert.equal(RD.riso, 1, '기본 켬 (사장님 11/16 결정)');
+  assert.equal(with_(RD, 'riso', 0, () => readFeetV(mk(1, true), -0.6, 1.5)), -0.6, '끔 — 칼 우위 빛: 거리를 벌림 (이미 물러섬)');
+  assert.equal(with_(RD, 'riso', 0, () => readFeetV(mk(1, true), 0.5, 1.5)), -r, '끔 — 칼 우위 빛: 거리를 벌림');
   with_(RD, 'riso', 1, () => {
     const a = mk(1, true);
     assert.equal(readFeetV(a, -0.6, 1.5) + 0, 0, '높음 — 발을 묶음');

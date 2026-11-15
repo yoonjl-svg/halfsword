@@ -8,7 +8,7 @@
 //  node tools/sim/it_tone_measure.mjs ring [--pairs=german:italian,…] [--vars=0,tell,…] [--seeds=1-3] --out=x.jsonl
 //  node tools/sim/it_tone_measure.mjs bot [--cells=def:german:longsword:rapier,atk:italian:rapier:longsword] [--vars=0,…] [--seeds=1-12] --out=x.jsonl
 //  node tools/sim/it_tone_measure.mjs agg x.jsonl …
-//  판(vars — '+' 로 여럿): 0 = 지금 · tell = AI 찌르기 낌새 눈(AI_TELL.ai) · guard = 사람 막기 단추 낌새(AI_TELL.guard) · drive = AI 찌르기 몸 싣기(THRUST.driveAi 3)
+//  판(vars — '+' 로 여럿): 0 = 11/16 묶음 P 전 판(묶음 몫 모두 끔) · P = 묶음 P(11/16 기본) · tell = AI 찌르기 낌새 눈(AI_TELL.ai) · guard = 사람 막기 단추 낌새(AI_TELL.guard) · drive = AI 찌르기 몸 싣기(THRUST.driveAi 3)
 //   11/16 리솔루토 세 안 (기록 §8): stop · counter = 1안 칼 우위 길 · touch2 = 2안 칼끝 얽힘 0.2 s · wait = 3안 AI 박자 싸움 0.2 s · aware = 3안 다른 유파 리솔루토 위험 읽기
 //   이탈리아 몸 재기 it: 칼 우위가 켜진 길(새로 · 켜진 채 다시) · 켜진 시간 · 맞박자 맞음 · 창 길별 열림 · 흘려보냄 · 낸 길 · 박자 싸움 까닭 / risoHold = 받는 쪽이 발을 묶은 스텝
 //  node tools/sim/it_tone_measure.mjs riso x.jsonl … — 리솔루토 · 칼 우위 표 (§8)
@@ -26,16 +26,18 @@ const WIN_T = CONFIG.realS(1.5); // 공격 하나의 창 (다음 공격이 먼�
 
 //  진단용 (있던 스위치 — 새 값 없음): noriso = AI 이탈리아 리솔루토 닫음(SECRET.aiOpenSchools) · inq0 = AI 비껴서며 찌르기 기울기 끔(AI_PLAN.it.inq 0) · inq3 = 기울기 0.3 · inqold = 옛 칼(UNIQUE_ASSIST.inqAi 0)
 export function withVar(v, fn) {
-  const keep = { ai: CONFIG.AI_TELL.ai, guard: CONFIG.AI_TELL.guard, latch: CONFIG.AI_TELL.latch, drive: CONFIG.THRUST.driveAi, hdrive: CONFIG.THRUST.drive, kphys: CONFIG.STRIKE.hitKPhys, inqMul: CONFIG.IT_OUTBOX.inqMul, open: CONFIG.SECRET.aiOpenSchools, it: CONFIG.AI_PLAN.it, inqAi: CONFIG.UNIQUE_ASSIST.inqAi, from: CONFIG.IT_OUTBOX.edgeFrom, tmin: CONFIG.SECRET.risolutoTouchMin, wait: CONFIG.SECRET.risoAiWait, aware: CONFIG.AI_PLAN.read.riso };
-  const p = String(v).split('+');
+  const keep = { ai: CONFIG.AI_TELL.ai, guard: CONFIG.AI_TELL.guard, latch: CONFIG.AI_TELL.latch, drive: CONFIG.THRUST.driveAi, hdrive: CONFIG.THRUST.drive, kphys: CONFIG.STRIKE.hitKPhys, inqMul: CONFIG.IT_OUTBOX.inqMul, open: CONFIG.SECRET.aiOpenSchools, it: CONFIG.AI_PLAN.it, inqAi: CONFIG.UNIQUE_ASSIST.inqAi, from: CONFIG.IT_OUTBOX.edgeFrom, tmin: CONFIG.SECRET.risolutoTouchMin, wait: CONFIG.SECRET.risoAiWait, aware: CONFIG.AI_PLAN.read.riso, max: CONFIG.SECRET.risoAiMax, game: CONFIG.SECRET.risoAiGame };
+  // 11/16 묶음 P 기본(사장님 결정) 뒤로: 판 글자에 없는 묶음 몫은 전 판(끔 · 0 · 1) — 판 글자의 뜻은 §7 · §8 그대로 · 'P' = 묶음 P 다(tell · guard · drive · hdrive · kphys · inq5 — 붙잡기 latch 는 뺌)
+  const p0 = String(v).split('+');
+  const p = [...p0, ...(p0.includes('P') || p0.includes('D') ? ['tell', 'guard', 'drive', 'hdrive', 'kphys', 'inq5'] : []), ...(p0.includes('D') ? ['wait', 'aware'] : [])]; // D = 11/16 기본(묶음 P + 3안)
   CONFIG.AI_TELL.ai = p.includes('tell') ? 1 : 0;
   CONFIG.AI_TELL.guard = p.includes('guard') ? 1 : 0;
   CONFIG.THRUST.driveAi = p.includes('drive') ? 3 : 0;
   CONFIG.AI_TELL.latch = p.includes('latch') ? CONFIG.realS(0.6) : 0; // 막기 단추 낌새 붙잡기 0.6 s (시간 사다리)
   VAR.guardP = p.includes('gp1') ? '1' : ''; // 재기 봇만 (판 값 아님)
-  CONFIG.THRUST.drive = p.includes('hdrive') ? 3 : keep.hdrive; // 사람 탭 찌르기 몸 싣기 (THRUST.drive 3)
-  CONFIG.STRIKE.hitKPhys = p.includes('kphys') ? 1 : keep.kphys; // 배율은 상처에만
-  CONFIG.IT_OUTBOX.inqMul = p.includes('inq8') ? 0.8 : p.includes('inq5') ? 0.5 : keep.inqMul; // 비껴서며 찌르기 배율 (사람 · AI)
+  CONFIG.THRUST.drive = p.includes('hdrive') ? 3 : 0; // 사람 탭 찌르기 몸 싣기 (THRUST.drive 3)
+  CONFIG.STRIKE.hitKPhys = p.includes('kphys') ? 1 : 0; // 배율은 상처에만
+  CONFIG.IT_OUTBOX.inqMul = p.includes('inq8') ? 0.8 : p.includes('inq5') ? 0.5 : 1; // 비껴서며 찌르기 배율 (사람 · AI)
   if (p.includes('noriso')) CONFIG.SECRET.aiOpenSchools = keep.open.filter((x) => x !== 'italian');
   if (p.includes('inq0')) CONFIG.AI_PLAN.it = { ...keep.it, inq: 0 };
   if (p.includes('inq3')) CONFIG.AI_PLAN.it = { ...keep.it, inq: 0.3 }; // 기울기 반 (0.3 — 있던 수)
@@ -43,10 +45,12 @@ export function withVar(v, fn) {
   // 11/16 리솔루토 세 안 (§8): stop · counter = 1안 칼 우위 길(IT_OUTBOX.edgeFrom) · touch2 = 2안 칼끝 얽힘 0.2 s(SECRET.risolutoTouchMin) · wait = 3안 AI 박자 싸움 0.2 s(SECRET.risoAiWait) · aware = 3안 다른 유파 읽기(AI_PLAN.read.riso 1)
   CONFIG.IT_OUTBOX.edgeFrom = p.includes('stop') ? 'stop' : p.includes('counter') ? 'counter' : keep.from;
   CONFIG.SECRET.risolutoTouchMin = p.includes('touch2') ? CONFIG.realS(0.2) : keep.tmin;
-  CONFIG.SECRET.risoAiWait = p.includes('wait') ? CONFIG.realS(0.2) : keep.wait;
-  CONFIG.AI_PLAN.read.riso = p.includes('aware') ? 1 : keep.aware;
+  CONFIG.SECRET.risoAiWait = p.includes('wait') ? CONFIG.realS(0.2) : 0; // 11/16 3안 기본 켬 뒤로: 판 글자에 없으면 전 판(끔)
+  CONFIG.AI_PLAN.read.riso = p.includes('aware') ? 1 : 0;
+  CONFIG.SECRET.risoAiMax = p.includes('max4') ? CONFIG.realS(0.4) : 0; // 3안 손잡이: 0.4 s 에 그대로 냄
+  CONFIG.SECRET.risoAiGame = p.includes('game5') ? 0.5 : 1; // 3안 손잡이: 박자 싸움 몫 반
   try { return fn(); } finally {
-    CONFIG.IT_OUTBOX.edgeFrom = keep.from; CONFIG.SECRET.risolutoTouchMin = keep.tmin; CONFIG.SECRET.risoAiWait = keep.wait; CONFIG.AI_PLAN.read.riso = keep.aware; Object.assign(CONFIG.AI_TELL, { ai: keep.ai, guard: keep.guard, latch: keep.latch }); CONFIG.THRUST.driveAi = keep.drive; CONFIG.THRUST.drive = keep.hdrive; CONFIG.STRIKE.hitKPhys = keep.kphys; CONFIG.IT_OUTBOX.inqMul = keep.inqMul; CONFIG.SECRET.aiOpenSchools = keep.open; CONFIG.AI_PLAN.it = keep.it; CONFIG.UNIQUE_ASSIST.inqAi = keep.inqAi; }
+    CONFIG.IT_OUTBOX.edgeFrom = keep.from; CONFIG.SECRET.risolutoTouchMin = keep.tmin; CONFIG.SECRET.risoAiWait = keep.wait; CONFIG.AI_PLAN.read.riso = keep.aware; CONFIG.SECRET.risoAiMax = keep.max; CONFIG.SECRET.risoAiGame = keep.game; Object.assign(CONFIG.AI_TELL, { ai: keep.ai, guard: keep.guard, latch: keep.latch }); CONFIG.THRUST.driveAi = keep.drive; CONFIG.THRUST.drive = keep.hdrive; CONFIG.STRIKE.hitKPhys = keep.kphys; CONFIG.IT_OUTBOX.inqMul = keep.inqMul; CONFIG.SECRET.aiOpenSchools = keep.open; CONFIG.AI_PLAN.it = keep.it; CONFIG.UNIQUE_ASSIST.inqAi = keep.inqAi; }
 }
 
 /**
@@ -211,6 +215,8 @@ function tracker(G, sides) {
     },
     /** 받는 쪽 리솔루토 위험 읽기 (§8 — 발을 묶은 스텝 수) */
     risoHold() { return sides.reduce((a, S) => a + (S.ai?.read?.st.risoHold ?? 0), 0); },
+    /** 받는 쪽이 칼 우위 빛을 보고 칼을 참은 셈 (readNeed — 공격 문턱에 얹은 수) */
+    riskIt() { return sides.reduce((a, S) => a + (S.ai?.read?.st.risk?.italian ?? 0), 0); },
     finish() {
       for (const S of sides) { const r = cur.get(S); if (r) r.tEnd ??= G.t; }
       for (const a of atks) {
@@ -231,14 +237,17 @@ function runHist(runs) {
 }
 
 /** 고리 한 판 (ai_ring_measure.mjs ringFight 와 같은 판) + 재기 */
-export function ringFightT({ a, b, wa, wb, seed, swap, dur = 30 }) {
-  const G = newRound({ seed, walls: true, weapon: swap ? wb : wa, weapon2: swap ? wa : wb, AI2Class: AI, persona: { proficiency: 5 }, persona2: { proficiency: 5 } });
+export function ringFightT({ a, b, wa, wb, seed, swap, dur = 30, prof2 = 5 }) {
+  // prof2 = 이탈리아가 아닌 쪽 숙련 (11/16 — 띠별 리솔루토 위험 읽기 재기 · 기본 5 = 전과 같음)
+  const pa = a === 'italian' ? 5 : prof2;
+  const pb = b === 'italian' ? 5 : prof2;
+  const G = newRound({ seed, walls: true, weapon: swap ? wb : wa, weapon2: swap ? wa : wb, AI2Class: AI, persona: { proficiency: swap ? pa : pb }, persona2: { proficiency: swap ? pb : pa } }); // persona = 적 몸(G.ai) · persona2 = 사람 몸(G.ai2) — 바꾸지 않으면 A 가 사람 몸
   const SA = { f: swap ? G.enemy : G.player, ai: swap ? G.ai : G.ai2, school: a };
   const SB = { f: swap ? G.player : G.enemy, ai: swap ? G.ai2 : G.ai, school: b };
   const T = tracker(G, [SA, SB]);
   const out = (f) => !f.alive || f.state === 'dead';
   while (G.t < dur && !out(SA.f) && !out(SB.f)) { G.step(); T.step(); }
-  const res = { win: out(SB.f) && !out(SA.f), lose: out(SA.f) && !out(SB.f), T: +(G.t / K).toFixed(2), tellA: SA.ai.stats.tell ?? 0, tellB: SB.ai.stats.tell ?? 0, it: T.itInfo(), risoHold: T.risoHold(), ...T.finish() };
+  const res = { win: out(SB.f) && !out(SA.f), lose: out(SA.f) && !out(SB.f), T: +(G.t / K).toFixed(2), tellA: SA.ai.stats.tell ?? 0, tellB: SB.ai.stats.tell ?? 0, it: T.itInfo(), risoHold: T.risoHold(), riskIt: T.riskIt(), ...T.finish() };
   G.world.free();
   return res;
 }
@@ -261,7 +270,7 @@ export function botFightT(fightOne, { school, weapon, opp, seed, foeSchool }) {
       G.step = (...x) => { const o = st(...x); T.step(); return o; };
     },
   });
-  const res = { win: r.win ?? null, lose: r.lose ?? null, T: r.T ?? null, tellAi: ctx?.SA.ai.stats.tell ?? 0, tellGuard: ctx?.guard.stats.tell ?? 0, it: T.itInfo(), risoHold: T.risoHold(), ...T.finish() };
+  const res = { win: r.win ?? null, lose: r.lose ?? null, T: r.T ?? null, tellAi: ctx?.SA.ai.stats.tell ?? 0, tellGuard: ctx?.guard.stats.tell ?? 0, it: T.itInfo(), risoHold: T.risoHold(), riskIt: T.riskIt(), ...T.finish() };
   return res;
 }
 
@@ -315,8 +324,9 @@ if (isMain(import.meta.url)) {
       for (const wa of WEAPONS[a]) for (const wb of WEAPONS[b]) {
         for (const seed of seeds) {
           const swap = (ci + seed) % 2 === 1;
-          const r = withVar(v, () => ringFightT({ a, b, wa, wb, seed, swap }));
-          const row = { mode: 'ring', v, a, b, wa, wb, seed, swap, ...r };
+          const prof2 = +arg('prof2', 5);
+          const r = withVar(v, () => ringFightT({ a, b, wa, wb, seed, swap, prof2 }));
+          const row = { mode: 'ring', v, a, b, wa, wb, seed, swap, ...(prof2 !== 5 ? { prof2 } : {}), ...r };
           if (out) appendFileSync(out, JSON.stringify(row) + '\n');
           console.error(v, a, b, wa, wb, seed, r.win ? 'W' : r.lose ? 'L' : 'D', 'atk', r.atks.length, 'tell', r.tellA, r.tellB);
         }
