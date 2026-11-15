@@ -184,6 +184,13 @@ export class Combat {
     const key = `${pr.wc}:${pr.vc}`;
     let cut = this.cutting.get(key);
     if (cut) {
+      // 다 쓴 박힘 풀기 (11/15 사장님 '찌르기가 … 상대 몸에 박혀서 안 뽑히기도 하고 그러다 칼을 떨어뜨리기도 함. 공격이 종종 무시될 때도' — STRIKE.lodgeHold · 기본 0 = 끔 ·
+      //  기록 docs/strike/thrust_stuck_2026-11-15.md): 박힌 칼(stuck)이 끌림(Eleft)과 붙잡는 시간(stuckTime)을 다 쓰면 장부를 지우고 이 짝을 다시 맞부딪히게 한다 — 칼이 몸에서 밀려 나옴.
+      //  끄면 몸과 겹치는 동안 장부가 남아 칼이 몸을 맞부딪힘 없이 지나가(두 몸이 가슴 사이 0.4 m 까지 붙음) 안 뽑힌 것처럼 보이고, 그동안 같은 부위의 새 찌르기는 판정이 안 났다
+      if (STRIKE.lodgeHold && cut.applied && cut.stuck && !(cut.Eleft > 0) && !(cut.stuckT > 0)) {
+        this.cutting.delete(key);
+        return 1;
+      }
       cut.seen = this.stepNo;
       return 0; // 0 = 부딪히는 힘 없음 → 칼이 살을 가르고 지나감
     }
@@ -258,6 +265,10 @@ export class Combat {
     const itk = itThrust(att, pr.v.fighter);
     const hk = (att.secretHit ?? 1) * strokeHitK(att) * fingerCutK(att, 'hit') * (itk ? itk.k : 1);
     let energy = ephys * STRIKE.energyScale * hk;
+    // 약화 배율은 상처에만 (11/15 사장님 '찌르기가 상대 몸에 박혀서 안 뽑히기도 … 공격이 종종 무시될 때도' — STRIKE.hitKPhys · 기본 0 = 끔 · 기록 docs/strike/thrust_stuck_2026-11-15.md):
+    //  1 이면 1 보다 작은 판정 배율(이탈리아 보통 찌르기 IT_OUTBOX.thrustMul 0.8 · 리솔루토 SECRET.risolutoHitMul 0.5)은 상처(심각도 · 둔타 에너지)에만 걸고, 칼과 몸의 물리 —
+    //  가름(pass) · 판정 문턱(STRIKE.minEnergy) · 박힘(absorb) · 가르는 끌림(afterStep Eleft) — 는 배율 전 에너지(physK 를 되곱함)로. 1 보다 큰 배율(비기 1.3 · 맞박자 등)은 그대로. 0 = 지금(배율이 물리까지)
+    const physK = STRIKE.hitKPhys && hk > 0 && hk < 1 ? 1 / hk : 1;
     let assisted = null; // 찌르기 팔 유효 질량을 실었으면 싣기 전 값 (멍으로 바뀌면 되돌린다)
 
     let type = 'blunt';
@@ -387,7 +398,7 @@ export class Combat {
       if (att.effMul) eff *= att.effMul; // 동방 격살 (10/22 — secret_instant.js instantWound · skill.js): 그 한 칼 동안만 같은 자리에 FINISH.power(SECRET.gyeoksal.power) · 다른 칼은 없음(그대로)
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
-        pass = eff > thr * (1.25 - emoPass); // 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
+        pass = eff * physK > thr * (1.25 - emoPass); // (physK — 위 hitKPhys · 끄면 1) 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
         // 동방 막는 동안 피해 감소 (10/17 연구 — SKILL.cnParryDmgCut, 판 값 0 = 끔 · docs/strike/chinese_parry_brace_2026-10-17.md): 받는 쪽이 동방 막기 책을 쥐고
         //  막기 단추로 막는 중(parry_button.js woundKeep)이면 이 칼날 상처의 심각도만 × (1 − cut). 팔다리 기능 · 피 흘림 · 의식 · 목/머리 죽음 문턱 · 절단이 모두
         //  심각도에서 나와(fighter.applyWound) 같이 준다. 에너지 · 가르나 튕기나(pass) · 박힘은 그대로 — 칼과 몸의 물리(충격 · 휘청임 · 투구/판 닳음)는 바뀌지 않는다
@@ -462,6 +473,7 @@ export class Combat {
       ...(duel !== 1 ? { duelOneHand: duel } : {}), // 총사의 결투 배율이 실렸을 때만 (달타냥이 한손검 상대를 쳤을 때 — 시험 · 잼이 읽는다)
       ...(spK !== 1 ? { schoolK: spK, schoolLock: att.schoolPassive.lastLock } : {}), // 유파 패시브 배율이 실렸을 때만 (strike → onHit 이 켄타이를 씀)
       ...(itk ? { itThrust: itk } : {}), // 이탈리아 아웃복싱 배율이 실렸을 때만 (strike → itOnStrike 가 셈 · 칼 우위)
+      ...(physK !== 1 ? { physE: energy * physK } : {}), // 약화 배율 전 에너지 (STRIKE.hitKPhys 일 때만 붙음 — strike 판정 문턱 · 박힘 · afterStep 끌림이 읽음 · 없으면 energy)
     };
   }
 
@@ -496,7 +508,7 @@ export class Combat {
         c.applied = true;
         const r = this.strike(c.pr, point, true); // 상처는 처음 닿는 순간에 한 번
         // 몸이 흡수할 실제 에너지 (판정용 보정 전 값)
-        c.Eleft = r ? Math.min(r.energy, r.absorb) / STRIKE.energyScale : 0;
+        c.Eleft = r ? Math.min(r.physE ?? r.energy, r.absorb) / STRIKE.energyScale : 0; // physE: 약화 배율 전 에너지 (STRIKE.hitKPhys — 끄면 없음 = energy)
         c.stuck = r ? r.stuck : false;
         c.mFree = r ? r.mFree : 0.3;
         c.stuckT = 0;
@@ -509,6 +521,12 @@ export class Combat {
       const vv = vb.velocityAtPoint(vp(point));
       const rel = _e.set(va.x - vv.x, va.y - vv.y, va.z - vv.z);
       const s = rel.length();
+      // 다 쓴 박힘 풀기 (STRIKE.lodgeHold — 위 filterContactPair): 박힌 칼이 몸 안에서 거의 멈추면(판정 빠르기 바닥 0.5 m/s 밑 — analyze 와 같은 수) 남은 끌림을 다 쓴 것으로 보고 붙잡는 시간으로 —
+      //  끄면 멈춘 칼은 끌림이 끝나지 않아(흡수 = c · 빠르기² · dt) 칼을 대고 미는 동안 몇 초씩 몸 안에 남았다
+      if (STRIKE.lodgeHold && c.stuck && c.Eleft > 0 && s < 0.5) {
+        c.Eleft = 0;
+        c.stuckT = STRIKE.stuckTime;
+      }
       if (s < 1e-3) continue;
       const dir = rel.divideScalar(s);
       let J = 0;
@@ -982,21 +1000,22 @@ export class Combat {
       // 같은 부위에 방금 상처가 났으면 새 상처는 없지만, 가르고 지나가는 칼은 여전히 저항을 받는다
       if (!passing) return null;
       const r = this.analyze(pr, point, S, P);
-      if (r) r.stuck = r.energy <= r.absorb;
+      if (r) r.stuck = (r.physE ?? r.energy) <= r.absorb;
       return r;
     }
     const r = this.analyze(pr, point, S, P);
-    if (!r || r.energy < STRIKE.minEnergy) {
+    if (!r || (r.physE ?? r.energy) < STRIKE.minEnergy) { // physE: 약화 배율 전 에너지 (STRIKE.hitKPhys — 끄면 없음 = energy)
       if (r && UA.koteDrop?.ease && r.energy >= UA.koteDrop.easeE) this.koteCheck(att, vic, pr.v.part, r); // 손목 치기 떨굼 완화(11/05 — koteDrop.ease): 판정 문턱(minEnergy) 밑이라도 easeE 넘게 아래팔을 친 손목 치기는 굴림 (상처 · 판정은 그대로 없음)
       return null;
     }
+    if (att.skill?.tap?.drive && vic === att.foe) att.skill.tap.drive.landed = true; // 사람 탭 찌르기 몸 싣기 (11/15 — THRUST.drive · 끄면 drive 없음): 판정이 났으면 뻗은 채 머물기를 거둠 (skill.js updateThrust)
     if (att.skill?.tap?.it && vic === att.foe) att.skill.tap.it.landed = true; // 이탈리아 찌르기 ④ (config THRUST.itLunge — 10/25): 칼이 상대 몸에 판정을 냄 = 찌르기가 닿음 — 런지로 뻗은 채 머물기를 거둠 (skill.js updateThrust)
     att.stamina.contactAttack(r.type === 'stab' ? 'thrust' : 'cut');
     vic.hitCooldowns.set(key, STRIKE.hitCooldown);
-    if (passing) r.stuck = r.energy <= r.absorb; // 에너지가 모자라 칼이 박힘
-    // 맞바꿈 (이베리아 B12 '멈추지 않는 칼' — 11/14 사장님 · config IB_LINK.trade · fighter.js ibTradeTry): 이어 돌리기(머리 위 원) 동안 몸에 든 맞음 하나를 기력(베기 한 번 값)으로 넘김 —
+    if (passing) r.stuck = (r.physE ?? r.energy) <= r.absorb; // 에너지가 모자라 칼이 박힘 (physE — 위)
+    // 맞바꿈 (이베리아 B12 '멈추지 않는 칼' — 11/14 사장님 · config IB_LINK.trade · fighter.js ibTradeTry): 넘기기를 시작한 때부터 n 초(IB_LINK.tradeT — 11/15) 안에 몸에 든 맞음 하나를 기력(베기 한 번 값)으로 넘김 —
     //  상처 · 의식 · 아픔 · 그 맞음에 딸린 굴림(무릎 꺾기 · 칼 떨구기 · 채찍)과 맞음 알림(onWound — 소리 · 피 · 멈칫 · 재기)이 없음. 칼과 몸의 물리 · 친 쪽 닿음 청구 · 같은 부위 쉼은 그대로
-    if ((r.type !== 'blunt' || r.severity > 0 || r.energy > 10) && (vic.ibLink || vic.ibTradeHit) && vic.ibTradeTry?.(att, r)) { r.traded = true; return r; }
+    if ((r.type !== 'blunt' || r.severity > 0 || r.energy > 10) && (vic.ibLink || vic.ibTradeOpen || vic.ibTradeHit) && vic.ibTradeTry?.(att, r)) { r.traded = true; return r; }
     if (r.type !== 'blunt' || r.severity > 0 || r.energy > 10) {
       const cons0 = vic.consciousness;
       vic.applyWound({ ...r, part: pr.v.part, passing }); // passing: 칼이 가르고 지나가는 길(참수는 이 길만)

@@ -14,6 +14,9 @@ import { PLAYER_UNIQUE, uniqueDef, PlayerUniqueAssist } from '../../src/unique_a
 import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
 
 const UA = CONFIG.UNIQUE_ASSIST;
+// 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
+//  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
+const pinLodge0 = (t) => { const lh = CONFIG.STRIKE.lodgeHold; CONFIG.STRIKE.lodgeHold = 0; t.after(() => { CONFIG.STRIKE.lodgeHold = lh; }); };
 const withPath = (v, fn) => {
   const old = UA.schielPath;
   UA.schielPath = v;
@@ -192,7 +195,7 @@ test('맞는 순간 손목 · 세기 (서 있는 상대 · 셸하우만 · 씨�
 
 // 씨앗 여섯 → 열둘 (10/27 표준 시간 — 적힌 시간이 실제 초가 되어 손가락 봇 판 · 과녁 몸 돌기가 바뀜: 여섯 씨앗으론 3 판 범위 밖 4 / 23 = 17 % · 3 ÷ 전 판 세기 1.38 로 문턱을 넘고
 //  옛 판도 여섯 씨앗 2 / 24 · 0.80 처럼 출렁임 — 열둘이면 표준 시간 5 / 46 · 1.23 · 옛 판 5 / 48 · 0.91 로 둘 다 문턱 안 · 문턱 그대로 · 기록 docs/strike/time_standard_2026-10-25.md §4)
-test('사람 곁눈 베기 맞는 순간 (손가락 봇 · 분노의 베기 길 · 고른 견줌 — 상대 상처 끔 · 씨앗 열둘 × 앞 다섯 칼): 같은 길(기본 · 덧칸 셋)과 3(칼끝 들기 없음) 모두 손목 범위 밖 ≤ 15 % · 거꾸로 ≤ 5 % · 3 은 공격당 심각도가 18:0x 전 판의 ± 25 % 안 · 같은 길은 더 셈 / 전 판은 범위 밖 ≥ 25 %', () => {
+test('사람 곁눈 베기 맞는 순간 (손가락 봇 · 분노의 베기 길 · 고른 견줌 — 상대 상처 끔 · 씨앗 열둘 × 앞 다섯 칼): 같은 길(기본 · 덧칸 셋)과 3(칼끝 들기 없음) 모두 손목 범위 밖 ≤ 15 % · 거꾸로 ≤ 5 % · 3 은 공격당 심각도가 18:0x 전 판의 ± 25 % 안 · 같은 길은 더 셈 / 전 판은 범위 밖 ≥ 25 %', (t) => { pinLodge0(t);
   // 걷기 기력은 10/30 판 값으로 묶어 둠(10/31 09:xx 사장님 걷기 기력 0.6 m · 4 · 뒷걸음 × 1.5 — 손가락 봇이 앞뒤로 걸으며 치다 지침에 드는 때가 바뀌어 3 ÷ 전 판 세기가 1.23 → 1.31 로 문턱을 넘음 ·
   //  이 시험이 보는 것은 손목 고침(같은 길 · 3 · 전 판)이지 기력이 아님 — 세 판 모두 같은 기력 값)
   const ST = CONFIG.STAMINA;

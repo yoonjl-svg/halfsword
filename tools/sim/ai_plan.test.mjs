@@ -10,6 +10,9 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { bandOf, tiltOf, luckOf, distErrWidth, planFor, judgePhase, seenStep, axesOf, PHASES } from '../../src/ai_plan.js';
 import { foeStep, mirrorOk, mirrorStep } from '../../src/italian_risoluto.js';
+// 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
+//  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
+const pinLodge0 = (t) => { const lh = CONFIG.STRIKE.lodgeHold; CONFIG.STRIKE.lodgeHold = 0; t.after(() => { CONFIG.STRIKE.lodgeHold = lh; }); };
 
 const { AI_PLAN, JP_TANK } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -326,7 +329,7 @@ test('파고들기 (사장님 11/14 — 공통 틀): 내 칼이 상대 칼보다
   assert.notEqual(on.text, off.text, '파고들기 판은 달라짐');
 });
 
-test('파고들기 판: 모르겐슈테른 AI 대 롱소드 AI — 헛친 틈 · 늘린 시간 한도 · 받으며 들어감이 쓰임', () => {
+test('파고들기 판: 모르겐슈테른 AI 대 롱소드 AI — 헛친 틈 · 늘린 시간 한도 · 받으며 들어감이 쓰임', (t) => { pinLodge0(t);
   const G = newRound({ seed: 1, walls: true, weapon: 'longsword', weapon2: 'morgenstern', AI2Class: AI, difficulty: 'normal', persona: { proficiency: 5 }, persona2: { proficiency: 5 } });
   while (G.t < 20 && G.player.alive && G.enemy.alive) G.step();
   const D = G.ai.stats.dig;
@@ -568,6 +571,69 @@ test('3 단계 독일 — 내 기력 ↔ 상대 기력의 차 (우위면 밀어 
     assert.ok(deDiff(ai) < 0, '바위 몸 상대 — 셈이 뒤집힘');
   } finally {
     G.world.free();
+  }
+});
+
+test('독일 붙은 거리 연계 (사장님 11/15 결정 (나) · (다)): 낮은 띠 파고들기 굴림 몫 · 맞닿기 안 헛침에 밀 마음 · 끄면 11/14 판', async () => {
+  const { deDigTry, deCloseCfg, deFeet } = await import('../../src/ai_plan_de.js');
+  const DE = CONFIG.AI_PLAN_DE;
+  const keep = { digLuck: DE.digLuck, pushNear: DE.pushNear };
+  const R = Math.random;
+  const s = { state: 'stand' };
+  /** 헛침 한 번 (거둠 → 멈춤) 을 굴림 값 u 로 — 건 수 · 밀 마음 */
+  const whiff = (x, d, u) => {
+    const ai = x.ai;
+    ai.me.gait.burst = null;
+    ai.deDig.t = ai.deDig.after = 0;
+    ai.deDig.push = false;
+    deDigTry(ai, s, d, false);
+    Math.random = () => u;
+    try {
+      return deDigTry(ai, s, d, true);
+    } finally {
+      Math.random = R;
+    }
+  };
+  const lo = deAi(2);
+  const hi = deAi(5);
+  try {
+    for (const x of [lo, hi]) x.ai.planC = x.ai.plan.contest;
+    // (나) 칸 몫 1 에서 낮음 0.2 → 0.4 (계획 몫 × (1 − 굴림 몫) + 동전 × 굴림 몫) · 높음 0.6 그대로 (굴림 몫 0)
+    const far = (x) => x.ai.M.contact + 0.2;
+    Object.assign(DE, { digLuck: 0, pushNear: 0 });
+    assert.equal(whiff(lo, far(lo), 0.3), false, '끔: 낮음 0.2 몫 — 0.3 굴림은 안 남');
+    Object.assign(DE, { digLuck: 1 });
+    assert.equal(whiff(lo, far(lo), 0.3), true, '(나): 낮음 0.4 몫 — 0.3 굴림이 남');
+    assert.equal(whiff(lo, far(lo), 0.41), false, '(나): 낮음 0.4 몫 위는 안 남 (기울기 — 늘은 아님)');
+    assert.equal(whiff(hi, far(hi), 0.59), true, '높음 0.6 그대로');
+    assert.equal(whiff(hi, far(hi), 0.61), false, '높음 0.6 그대로');
+    // (다) 맞닿기(무기 간격표 contact — 내가 믿는 거리) 안 헛침: 끄면 굴림 없음 · 켜면 밀 몫으로 굴려 걸어 들어감 → 들어서면 굴림 없이 밂
+    const near = (x) => x.ai.M.contact - 0.3;
+    Object.assign(DE, { pushNear: 0 });
+    hi.ai.closeInside = false;
+    assert.equal(whiff(hi, near(hi), 0), false, '끔: 1 m 밖 맞닿기 안 헛침엔 굴림 없음');
+    assert.equal(hi.ai.stats.plan.de.pushTry, 0);
+    Object.assign(DE, { pushNear: 1 });
+    assert.equal(whiff(hi, near(hi), 0.99), false, '켬: 밀 몫(늘은 아님)으로 굴림');
+    assert.equal(hi.ai.stats.plan.de.pushTry, 1);
+    assert.equal(whiff(hi, near(hi), 0), true, '켬: 밀 마음이 남');
+    assert.ok(hi.ai.deDig.push && hi.ai.deDig.t > 0, '밖이면 파고들기와 같은 창으로 걸어 들어감 (공격 미룸)');
+    assert.equal(hi.ai.me.gait.burst, null, '박찬 걸음은 아님 (걸어 들어감)');
+    assert.equal(deCloseCfg(hi.ai, 0).rate, 1, '들어서면 굴림 없이 민다');
+    assert.equal(deFeet(hi.ai, 0.01, 1.3, 1.0), 1, '닿는 거리 밖 — 스틱 앞 끝');
+    hi.ai.closeWant = true;
+    deFeet(hi.ai, 0.01, 0.9, 1.0);
+    assert.equal(hi.ai.deDig.push, false, '밀었으면 밀 마음을 지움');
+    assert.ok(deCloseCfg(hi.ai, 0).rate < 1, '그 뒤는 평소 밀 몫');
+    hi.ai.closeWant = false;
+    hi.ai.closeInside = true;
+    assert.equal(whiff(hi, 0.95, 0), true);
+    assert.equal(hi.ai.closeWant, true, '이미 닿는 거리 안이면 곧장 민다');
+  } finally {
+    Object.assign(DE, keep);
+    Math.random = R;
+    lo.free();
+    hi.free();
   }
 });
 

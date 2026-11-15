@@ -7,6 +7,9 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI, seedRandom } from './harness_m.mjs';
 import { planFor, distErrWidth, PHASES, SCHOOL_PLAN } from '../../src/ai_plan.js';
 import { cnTechW, cnNeed, cnHoldM, cnCircle, cnMeet, cnTick, cnFeint, cnNext, cnWill, cnWant } from '../../src/ai_plan_cn.js';
+// 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
+//  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
+const pinLodge0 = (t) => { const lh = CONFIG.STRIKE.lodgeHold; CONFIG.STRIKE.lodgeHold = 0; t.after(() => { CONFIG.STRIKE.lodgeHold = lh; }); };
 
 const { AI_PLAN, UNIQUE_ASSIST: UA, realS } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -486,7 +489,7 @@ test('다른 유파 판은 동방 몫과 상관없이 바이트 같음 · 동방
   assert.notEqual(cn1.text, cn0.text, '동방 켬은 판이 달라짐');
 });
 
-test('판 하나 — AI 동방(환도 숙련 5 · P 자리) 대 롱소드 AI(숙련 2) 씨앗 11: 허리 베기 → 사냥 겹 → 지치게 · 유도 · 노릴 마음 · 나서며 받기 · 격살 시도 · 국면이 실제로 남', () => withPlan({ read: { ...AI_PLAN.read, on: 0, fair: 0 } }, () => { // 3 단계(11/14) 그때 판으로 묶음 (기준은 안 고침): 수 읽기 · 공정함으로 씨앗 11 판이 갈라짐 (사냥 겹 0)
+test('판 하나 — AI 동방(환도 숙련 5 · P 자리) 대 롱소드 AI(숙련 2) 씨앗 11: 허리 베기 → 사냥 겹 → 지치게 · 유도 · 노릴 마음 · 나서며 받기 · 격살 시도 · 국면이 실제로 남', (t) => pinLodge0(t) || withPlan({ read: { ...AI_PLAN.read, on: 0, fair: 0 } }, () => { // 3 단계(11/14) 그때 판으로 묶음 (기준은 안 고침): 수 읽기 · 공정함으로 씨앗 11 판이 갈라짐 (사냥 겹 0)
   const G = newRound({ walls: true, seed: 11, weapon: 'hwando', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 2, planOff: true }, persona2: { proficiency: 5 } }); // 3 단계(11/14): 상대 롱소드 AI 는 옛 판(planOff)
   const ai = G.ai2;
   let waist = 0;

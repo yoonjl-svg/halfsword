@@ -326,10 +326,16 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   //  `?itOutbox=0` 넷 모두 끔(전 판) · `?itThrustMul=0.7` 보통 찌르기 배율(1 = 끔) · `?itStop=0` 맞박자 찌르기 끔 · `?itEdge=3` 칼 우위 초(0 = 끔 — 리솔루토 전 조건) · `?itBeat=0` 박자 찌르기 끔 (실제 초) · `?itAi=0` 사람만
   if (params.has('itOutbox')) CONFIG.IT_OUTBOX.on = +params.get('itOutbox') ? 1 : 0;
   if (params.has('itThrustMul') && +params.get('itThrustMul') > 0) CONFIG.IT_OUTBOX.thrustMul = +params.get('itThrustMul');
+  if (params.has('hitKPhys')) CONFIG.STRIKE.hitKPhys = +params.get('hitKPhys') ? 1 : 0; // 11/15 약화 배율은 상처에만 (STRIKE.hitKPhys — 찌르기 박힘 · 무시됨 고침 시제품 · 기본 0)
+  if (params.has('lodgeHold')) CONFIG.STRIKE.lodgeHold = +params.get('lodgeHold') ? 1 : 0; // 11/15 다 쓴 박힘 풀기 (STRIKE.lodgeHold — 기본 1 · 사장님 11/15 결정 · `?lodgeHold=0` = 전 판)
+  if (params.has('thrustDrive')) CONFIG.THRUST.drive = Math.max(0, Math.min(3, Math.round(+params.get('thrustDrive') || 0))); // 11/15 사람 탭 찌르기 몸 싣기 (THRUST.drive — 1 당김 · 2 몸 싣기 · 3 둘 다 · 기본 0)
+  if (params.has('thrustDriveChamber') && +params.get('thrustDriveChamber') >= 0) CONFIG.THRUST.driveChamber = +params.get('thrustDriveChamber');
+  if (params.has('thrustDriveStep') && +params.get('thrustDriveStep') >= 0) CONFIG.THRUST.driveStep = +params.get('thrustDriveStep');
   if (params.has('itStop') && +params.get('itStop') >= 0) CONFIG.IT_OUTBOX.stop = +params.get('itStop');
   if (params.has('itEdge') && +params.get('itEdge') >= 0) CONFIG.IT_OUTBOX.edge = CONFIG.realS(+params.get('itEdge'));
   if (params.has('itBeat') && +params.get('itBeat') >= 0) CONFIG.IT_OUTBOX.beat = CONFIG.realS(+params.get('itBeat'));
   if (params.has('itBeatHuman')) CONFIG.IT_OUTBOX.beatHuman = +params.get('itBeatHuman') ? 1 : 0; // 11/15 사장님 '사람 l9 이전처럼' — 1 = 사람 박자 찌르기(11/14 판)
+  if (params.has('itBeatAi')) CONFIG.IT_OUTBOX.beatAi = +params.get('itBeatAi') ? 1 : 0; // 11/15 사장님 'ai도 되돌려' — 1 = AI 박자 찌르기(11/14 판)
   if (params.has('itAi')) CONFIG.IT_OUTBOX.ai = +params.get('itAi') ? 1 : 0; // 11/14 사장님 'ai에도 적용' — 0 = 사람만
 }
 { // 유파 AI 기본 전투 흐름 (11/14 — config AI_PLAN · src/ai_plan.js · 설계안 docs/design/ai_school_baseline_2026-11-14.md §9): `?aiPlan=0` = 옛 판 (플랜 · 국면 · 이탈리아 거리 오차 모두 끔) ·
@@ -347,6 +353,7 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('cnDive')) CONFIG.AI_PLAN.cn = { ...CONFIG.AI_PLAN.cn, dive: +params.get('cnDive') || 0 }; // 동방 AI 偏閃奏進 (11/15 — ai_plan_cn.js cnDive) `?cnDive=0` = 꺾음만
   if (params.has('aiParryCut')) CONFIG.SKILL.aiParryCut = +params.get('aiParryCut') ? 1 : 0; // AI 막는 동안 피해 감소 시제품 (11/15 — src/ai_block_cut.js · 기본 끔)
   for (const [q, k] of [['digAi', 'ai'], ['digStep', 'step'], ['digRun', 'run'], ['digReach', 'reach']]) if (params.has(q)) CONFIG.DIG_PROTO[k] = +params.get(q) ? 1 : 0; // 짧은 칼 파고들기 (11/14 — src/dig_proto.js): A 기본 켬 `?digAi=0` = 옛 판 · 시제품 B `?digStep=1` · C `?digRun=1` · 상대가 길 때의 대처 기울기(11/14 — 모든 AI) `?digReach=0` = 옛 문
+  if (params.has('aiItInq') && +params.get('aiItInq') >= 0) CONFIG.AI_PLAN.it = { ...CONFIG.AI_PLAN.it, inq: +params.get('aiItInq') }; // 이탈리아 AI 비껴서며 찌르기 기울기 (11/15 — ai_plan.js itInqP · 기본 0.6) `?aiItInq=0` = 끔
   for (const [q, k] of [['aiRead', 'on'], ['aiFair', 'fair'], ['aiGns', 'gns']]) if (params.has(q)) CONFIG.AI_PLAN.read = { ...CONFIG.AI_PLAN.read, [k]: +params.get(q) ? 1 : 0 }; // 3 단계 (11/14): `?aiRead=0` = 읽기 몫(상대 유파 위험 · 대가 창 · 상대 기력) 끔 · `?aiFair=0` = 공정함 끔 (그 전 판 눈) · `?aiGns=0` = 일본 AI 고노센 준비 지키기 끔
 }
 { // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
@@ -444,7 +451,7 @@ if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('y
 if (params.has('cnHunt')) CONFIG.UNIQUE_ASSIST.cnHunt.on = +params.get('cnHunt') ? 1 : 0; // 동방 맹호은림 사냥 겹 (11/14 — `?cnHunt=0` = 겹 없음 · 격살 판당 수는 공용 표 secretUses — 전 판 `?secretUses=1,chinese:3`)
 if (params.has('cnHuntAi')) CONFIG.UNIQUE_ASSIST.cnHunt.ai = +params.get('cnHuntAi') ? 1 : 0; // AI 동방도 사냥 겹 (견줌 — 기본 0)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6 · 11/14 사장님 0.9)
-for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld', 'inqTap']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
+for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld', 'inqTap', 'inqAi']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js) · inqAi(11/15 — AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 · 0 = 옛 판)
 if (params.has('cavFrom') && +params.get('cavFrom') >= 0) CONFIG.UNIQUE_ASSIST.cavFrom = CONFIG.realS(+params.get('cavFrom')); // 칼끝 돌려 빼기 탭 창 처음 (실제 초 — 기본 0.2 · 10/29 20:0x · 옛 판 0.6)
 if (params.has('cavMerge') && +params.get('cavMerge') >= 0) CONFIG.UNIQUE_ASSIST.cavMerge = CONFIG.realS(+params.get('cavMerge')); // 칼끝 돌려 빼기 닿음 이어 붙임 (11/04 제안 · 실제 초 — 기본 0 끔 · 0.2 = 시간 사다리)
 if (params.has('stepIn')) CONFIG.UNIQUE_ASSIST.stepIn = +params.get('stepIn') ? 1 : 0; // 걸음 공격 입력 읽기 (11/05 — 기본 1 · 0 = 전 판: 긋기 시작 순간의 스틱만 · 문턱 0.5)
@@ -521,6 +528,8 @@ if (params.has('ibFreeEvery')) CONFIG.IB_FLOW.freeEvery = Math.max(0, Math.round
 //  `?ibTrade=0` B12 맞바꿈 '멈추지 않는 칼' 효과 끔(기본 켬 — 칸을 익힌 사람 · AI 이베리아 · 견줌) · `?ibLinkAi=0` AI 이어 돌리기 끔(기본 켬 — 11/14 사장님 'ai에게도 똑같이' · 0 = AI 풍차 베기 판) · 스위치(견줌 · 기본 끔): `?ibChainArm=1` B 사슬 세 칼 넘으면 알티바슈 포르트 곧장 무장
 if (params.has('ibLink')) CONFIG.IB_LINK.on = +params.get('ibLink') ? 1 : 0;
 if (params.has('ibLinkT')) CONFIG.IB_LINK.time = CONFIG.realS(Math.max(0.05, +params.get('ibLinkT') || 0.4));
+if (params.has('ibLinkMode')) CONFIG.IB_LINK.mode = params.get('ibLinkMode') === 'circle' ? 'circle' : 'bridge'; // 11/15 넘기기 판(기본) · 'circle' = 11/14 머리 위 원 판 (견줌)
+if (params.has('ibTradeT')) CONFIG.IB_LINK.tradeT = CONFIG.realS(Math.max(0.05, +params.get('ibTradeT') || 0.4)); // 11/15 맞바꿈 창 n 초 (넘기기 시작부터 · 기본 0.4 · 견줌 0.6)
 if (params.has('ibLinkCool')) CONFIG.IB_LINK.cool = +params.get('ibLinkCool') ? 1 : 0;
 if (params.has('ibChainArm')) CONFIG.IB_LINK.chainArm = +params.get('ibChainArm') ? 1 : 0;
 if (params.has('ibTrade')) CONFIG.IB_LINK.trade = +params.get('ibTrade') ? 1 : 0;

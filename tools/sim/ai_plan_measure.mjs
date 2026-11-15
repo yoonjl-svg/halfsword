@@ -13,6 +13,8 @@
 //  node tools/sim/ai_plan_measure.mjs dig [--weapons=rapier,frozen_tuna,morgenstern,rubber_chicken] [--seeds=1-6] [--prof=2]
 //   de     — 3 단계 독일(11/14): 롱소드(독일) AI 숙련 2 · 5 — 새 판 · 옛 판 — 대 롱소드 AI 옛 판(persona.planOff) · 씨앗 1 ~ 6 · 독일 행동 수 · 이김 · 짐 · 비김
 //  node tools/sim/ai_plan_measure.mjs de [--profs=2,5] [--seeds=1-6]
+//   declose — 독일 붙은 거리 연계 (11/15 사장님 결정 (나) · (다) — 기록 docs/strike/de_close_2026-11-15.md): de 와 같은 판을 세 갈래로 — 개발 가지 머리(AI_PLAN_DE.digLuck · pushNear 끔) · (나) · (나) + (다)
+//  node tools/sim/ai_plan_measure.mjs declose [--profs=2,5] [--seeds=1-12]
 // ─────────────────────────────────────────────────────────────
 import { performance } from 'node:perf_hooks';
 import { newRound, DT, AI, CONFIG } from './harness_m.mjs';
@@ -168,7 +170,7 @@ function digTable(rows) {
  *  독일 행동: 파고들기(굴림 · 건 수 · 박찬 걸음 수) · 뒤 박차기 · 바보 자세 · 밀치기(이긴 굴림 · 낸 수) · 칼 씨름 · 손잡이 찍기 · 모르트슐라크 · 기력 차 판단(우위 · 열세 쪽)
  */
 export function deRun({ seeds = [1, 2, 3, 4, 5, 6], prof = 2, dur = 30, subjOff = false } = {}) {
-  const S = { n: 0, W: 0, L: 0, dealt: 0, recv: 0, strikes: 0, de: { digTry: 0, dig: 0, digSteps: 0, back: 0, lure: 0, pushWon: 0, shoves: 0, ring: 0, pommel: 0, mord: 0, diffUp: 0, diffDown: 0 }, foe: { pommel: 0, shoves: 0 } };
+  const S = { n: 0, W: 0, L: 0, dealt: 0, recv: 0, strikes: 0, de: { digTry: 0, dig: 0, digSteps: 0, back: 0, lure: 0, pushWon: 0, shoves: 0, ring: 0, pommel: 0, mord: 0, diffUp: 0, diffDown: 0, pushTry: 0, pushGo: 0, binds: 0 }, foe: { pommel: 0, shoves: 0 } };
   for (const seed of seeds) {
     const subjE = seed % 2 === 1;
     const ps = { proficiency: prof, ...(subjOff ? { planOff: true } : {}) };
@@ -179,15 +181,18 @@ export function deRun({ seeds = [1, 2, 3, 4, 5, 6], prof = 2, dur = 30, subjOff 
     const ss = ai.startStrike;
     ai.startStrike = function (...a) { S.strikes++; return ss.apply(this, a); };
     G.onWound = (att, vic) => { if (vic === f) S.recv++; if (vic === o) S.dealt++; };
+    let lastB = null; // 묶임 셈 (11/15): 내 밀치기 하나가 누르기에 들며 묶임(hold > 0)이 걸리면 하나 (밀치기마다 새 barge — fighter.js closeStep)
     for (let i = 0; i < Math.round(dur / DT); i++) {
       G.step();
+      const b = f.barge;
+      if (b && b !== lastB && b.phase === 'press' && b.hold > 0) (S.de.binds++, (lastB = b));
       if (!f.alive || !o.alive) break;
     }
     S.n++;
     if (f.alive && !o.alive) S.W++;
     else if (!f.alive && o.alive) S.L++;
     const pd = ai.stats.plan?.de ?? {};
-    for (const k of ['digTry', 'dig', 'back', 'lure', 'diffUp', 'diffDown']) S.de[k] += pd[k] ?? 0;
+    for (const k of ['digTry', 'dig', 'back', 'lure', 'diffUp', 'diffDown', 'pushTry', 'pushGo']) S.de[k] += pd[k] ?? 0;
     S.de.digSteps += f.gait?.digs ?? 0;
     S.de.pushWon += ai.closeEv?.won ?? 0;
     S.de.shoves += f.shoves ?? 0;
@@ -209,6 +214,20 @@ if (mode === 'de') {
     console.error(prof, tag, JSON.stringify(S));
     const n = S.n, p = (x) => (x / n).toFixed(1), D = S.de;
     L.push(`| ${tag} 숙련 ${prof} | ${n} | ${S.W} · ${S.L} · ${n - S.W - S.L} | ${p(S.dealt)} · ${p(S.recv)} | ${p(S.strikes)} | ${D.digTry} · ${D.dig} · ${D.digSteps} | ${D.back} | ${D.lure} | ${D.pushWon} · ${D.shoves} | ${D.ring} | ${D.pommel} (${S.foe.pommel}) | ${D.mord} | ${D.diffUp} · ${D.diffDown} |`);
+  }
+  console.log(L.join('\n'));
+} else if (mode === 'declose') {
+  const seeds = range(arg('seeds', '1-12'));
+  const DE = CONFIG.AI_PLAN_DE;
+  const keep = { digLuck: DE.digLuck, pushNear: DE.pushNear };
+  const L = ['| 숙련 · 갈래 | 판 | 이김 · 짐 · 비김 | 파고들기 굴림 · 건 수 · 박찬 걸음 | 밀 마음 굴림 · 남 (다) | 밀치기 이긴 굴림 · 낸 수 | 묶임 | 칼 씨름 | 모르트슐라크 | 손잡이 찍기 | 준 · 받은 상처 / 판 |', '|---|---|---|---|---|---|---|---|---|---|---|'];
+  for (const prof of arg('profs', '2,5').split(',').map(Number)) for (const [tag, dl, pn] of [['개발 가지 머리', 0, 0], ['(나)', 1, 0], ['(나) + (다)', 1, 1]]) {
+    Object.assign(DE, { digLuck: dl, pushNear: pn });
+    let S;
+    try { S = deRun({ seeds, prof }); } finally { Object.assign(DE, keep); }
+    console.error(prof, tag, JSON.stringify(S));
+    const n = S.n, p = (x) => (x / n).toFixed(1), D = S.de;
+    L.push(`| ${prof} · ${tag} | ${n} | ${S.W} · ${S.L} · ${n - S.W - S.L} | ${D.digTry} · ${D.dig} · ${D.digSteps} | ${D.pushTry} · ${D.pushGo} | ${D.pushWon} · ${D.shoves} | ${D.binds} | ${D.ring} | ${D.mord} | ${D.pommel} | ${p(S.dealt)} · ${p(S.recv)} |`);
   }
   console.log(L.join('\n'));
 } else if (mode === 'dig') {

@@ -462,7 +462,11 @@ test('판: AI 이베리아 숙련 2 대 롱소드 AI — 국면 · 이베리아 
   assert.ok(tot.spin + tot.dash > 0, '원으로 이음 · 옆 박차기');
 });
 
-test('판: AI 이베리아 숙련 2 대 롱소드 AI (씨앗 4) — 옆 박차기 → 나선 걸음 베기 · 비스듬히 들어감이 남 (11/14 둘째 — 종종)', () => {
+test('판: AI 이베리아 숙련 2 대 롱소드 AI (씨앗 4) — 옆 박차기 → 나선 걸음 베기 · 비스듬히 들어감이 남 (11/14 둘째 — 종종)', (t) => {
+  // 11/15 그때 판으로 묶음 (이어 돌리기 = 넘기기 판 기본 — 사장님 11/15 '브릿지로서의 메타포' · AI 이어 돌리기 길이 바뀌어 이 씨앗 판이 갈라짐: 비스듬히 들어감 0 · 기준은 안 고침 — docs/strike/ib_link_2026-11-14.md §12)
+  const mk = IB_LINK.mode;
+  IB_LINK.mode = 'circle';
+  t.after(() => (IB_LINK.mode = mk));
   const G = newRound({ walls: true, seed: 4, weapon: 'longsword', weapon2: 'zweihander', AI2Class: AI, persona: { proficiency: 2 }, persona2: { proficiency: 2, planOff: true } }); // 3 단계(11/14): 상대 롱소드 AI 는 옛 판(planOff)
   while (G.t < 20 && G.player.alive && G.enemy.alive) G.step();
   const st = G.ai.stats.ib;

@@ -64,6 +64,7 @@ export function axesOf(p, tradition) {
  *  link     첫 고리 — 칼이 맞닿으면 빼서 찌르기 (헛누름 → 칼 우위)
  *  engage   유도 — 상대 칼끝이 나를 겨누면 칼끝을 겨눈 채 칼이 닿을 때까지 조금씩 다가가 칼을 맞댐
  *  invite   유도 — 상대가 조용히 서 있으면 한 걸음 물러섰다 멈춰 들어오게 꾐
+ *  inq      비껴서며 찌르기 (11/15 사장님 '그냥 l9를 더 선호하게 하면 되잖아' — itInqP): 상대 칼이 들어오면 맞받아 베기 앞에 비껴서며 찌르기를 고를 몫 (지쳤을 때만 반)
  */
 export const SCHOOL_PLAN = Object.freeze({
   // 이베리아 — 거칠고 모험적인 슬러거 (2 단계 11/14 · 설계 §3-5 · 셈은 src/ai_plan_ib.js — ai.js 는 ib 표식이 있는 플랜만 그 셈을 부름). 칸 = 고를 몫 0 ~ 1 (× 띠 세기 planK — 기울기 · '반드시'가 아님):
@@ -85,13 +86,13 @@ export const SCHOOL_PLAN = Object.freeze({
   italian: Object.freeze({
     nameKo: '아웃복서',
     lureAt: 4, // 유도는 가운데 끝(4)부터 (설계 §2-4)
-    probe: Object.freeze({ retreat: 0, receive: 1, link: 1, engage: 0, invite: 0 }),
-    contest: Object.freeze({ retreat: 1, receive: 1, link: 1, engage: 1, invite: 1 }),
-    commit: Object.freeze({ retreat: 0, receive: 1, link: 1, engage: 0, invite: 0 }),
-    ahead: Object.freeze({ retreat: 0, receive: 1, link: 0, engage: 0, invite: 0 }), // 칼 우위 — 리솔루토 무장(지금 비기 셈)이 먼저 · 빼서 찌르기로 덮음을 끊지 않게 덜 고름
-    finish: Object.freeze({ retreat: 0, receive: 1, link: 1, engage: 0, invite: 0 }),
-    behind: Object.freeze({ retreat: 1, receive: 1, link: 1, engage: 0, invite: 0 }),
-    tired: Object.freeze({ retreat: 1, receive: 1, link: 0, engage: 0, invite: 0 }),
+    probe: Object.freeze({ retreat: 0, receive: 1, link: 1, engage: 0, invite: 0, inq: 1 }),
+    contest: Object.freeze({ retreat: 1, receive: 1, link: 1, engage: 1, invite: 1, inq: 1 }),
+    commit: Object.freeze({ retreat: 0, receive: 1, link: 1, engage: 0, invite: 0, inq: 1 }),
+    ahead: Object.freeze({ retreat: 0, receive: 1, link: 0, engage: 0, invite: 0, inq: 1 }), // 칼 우위 — 리솔루토 무장(지금 비기 셈)이 먼저 · 빼서 찌르기로 덮음을 끊지 않게 덜 고름 · 들어오는 칼엔 비껴서며 찌르기 그대로(맞으면 칼 우위가 다시 켜짐)
+    finish: Object.freeze({ retreat: 0, receive: 1, link: 1, engage: 0, invite: 0, inq: 1 }),
+    behind: Object.freeze({ retreat: 1, receive: 1, link: 1, engage: 0, invite: 0, inq: 1 }),
+    tired: Object.freeze({ retreat: 1, receive: 1, link: 0, engage: 0, invite: 0, inq: 0.5 }), // 지침 — 비켜 딛고 찌르기보다 받는 쪽을 조금 더
   }),
   japanese: JP_PLAN, // 2 단계 (11/14) — src/ai_plan_jp.js (still · block · stack · link · lure)
   german: DE_PLAN, // 3 단계 (11/14) — src/ai_plan_de.js (edge · dig · push · stick · back · lure · stam)
@@ -141,9 +142,20 @@ export function seenStep(closing) {
   return closing >= GAIT.walkMin ? 'advance' : closing <= -GAIT.walkMin ? 'retreat' : null;
 }
 
+/**
+ * 이탈리아 비껴서며 찌르기를 고를 몫 0 ~ 1 (11/15 사장님 'ai야말로 커맨드를 기계적으로 잘 낼텐데 뭐가 문제야? … 그냥 l9를 더 선호하게 하면 되잖아.' — ai.js respond 가 위협 하나에 한 번 굴림 · 읽기만):
+ *  AI_PLAN.it.inq × 국면 칸 inq × (띠 기울기 + 굴림 몫 × coin) × (1 − 0.8 × 공포 — 맞받아 베기 굴림과 같은 몫). 띠 세기 = 기울기에 굴림 몫이 동전으로 섞인 기댓값(파고들기 digWeight 와 같은 꼴 — 굴림 하나로)
+ *  → 높음 0.6 · 가운데 0.5 (비껴서며 찌르기는 숙련 3 부터 꾸러미에 듦 — 낮음 띠는 없음). 위협 · 거리는 늦게 본 모습(threat)으로만 — 공정함
+ */
+export function itInqP(ai) {
+  const w = AI_PLAN.it?.inq ?? 0;
+  if (!(w > 0)) return 0;
+  return w * (ai.planC?.inq ?? 0) * Math.min(1, (ai.planK ?? 0) + (ai.planLuck ?? 0) * AI_PLAN.coin) * (1 - 0.8 * (ai.fear ?? 0));
+}
+
 /** 국면 시간 재기 칸 (AI 하나에 한 번 만듦) */
 export function planStats() {
-  return { t: { tired: 0, behind: 0, finish: 0, ahead: 0, commit: 0, contest: 0, probe: 0 }, judges: 0, events: 0, retreat: 0, stop: 0, invite: 0, engage: 0, engageTouch: 0, link: 0, stepin: 0, blurFire: 0, blurMiss: 0, reckSkip: 0, restLow: 0 };
+  return { t: { tired: 0, behind: 0, finish: 0, ahead: 0, commit: 0, contest: 0, probe: 0 }, judges: 0, events: 0, retreat: 0, stop: 0, invite: 0, engage: 0, engageTouch: 0, link: 0, stepin: 0, blurFire: 0, blurMiss: 0, reckSkip: 0, restLow: 0, inq: 0 };
 }
 
 /** 파고들기 재기 칸 (파고들기가 처음 걸린 AI 에 한 번 만듦) — recover: 헛친 틈 공격 · keep: 위협을 칼로 받으며 계속 · restart: 받은 뒤 곧장 다시 들어감 · long: 늘린 시간 한도 덕에 접지 않은 다가감 */

@@ -15,6 +15,8 @@ import { PlayerSecretWatch } from '../../src/secret.js';
 import { G as PAD } from '../../src/ai_techniques.js';
 import { kitFromNodes, allNodeIds } from '../../src/skill_tree_data.js';
 import { airOne } from './ib_link.mjs';
+import { inputOne } from './ib_link_input.mjs';
+import { bridgeOne } from './ib_link_bridge.mjs';
 import { fightOne } from './school_balance.mjs';
 import { AI } from '../../src/ai.js';
 
@@ -71,7 +73,11 @@ test('머리 위 원 길 — 앞 칼이 가던 쪽으로 · 탈류 뒤 레베스
   }
 });
 
-test('이어 돌리기 — 앞 칼 뒤 이어짐 창 안에 큰 칼을 그으면 머리 위로 돌아 시작 자리에서 그 칼이 나감 · 흐름 사슬의 다음 칼(위력 · n)로 셈', () => {
+test('이어 돌리기 — 앞 칼 뒤 이어짐 창 안에 큰 칼을 그으면 머리 위로 돌아 시작 자리에서 그 칼이 나감 · 흐름 사슬의 다음 칼(위력 · n)로 셈', (t) => {
+  // 11/15 그때 판으로 묶음 (머리 위 원 판 — IB_LINK.mode 'circle' · 기본은 넘기기 판 · 기준은 안 고침 — 기록 §12 · 넘기기 판은 아래 '넘기기' 시험)
+  const mk = IB_LINK.mode;
+  IB_LINK.mode = 'circle';
+  t.after(() => (IB_LINK.mode = mk));
   const r = airOne({ next: ['zornhauL', 'zornhau', 'zornhau'], v: 5.5 });
   assert.equal(r.stats?.fired, 3, JSON.stringify(r.stats));
   assert.equal(r.stats.done, 3);
@@ -276,6 +282,7 @@ test('맞바꿈 B12 (사장님 11/14 확인) — 이어 돌리는 동안 몸에 
 
 test('맞바꿈 B12 — 칼끼리 맞아 돌던 칼이 서는 것(jolt)은 넘기지 않음 (원이 그만둠 · 막을 길은 남김)', () => {
   const o = keep();
+  IB_LINK.mode = 'circle'; // 11/15 그때 판으로 묶음 (머리 위 원 판 — 놓인 칼은 칼끼리 세게 맞으면 그만둠 · 넘기기 판은 서보가 칼을 몰아 물리대로 — 아래 '넘기기' 시험)
   const kit = kitFromNodes('iberian', allNodeIds('iberian'));
   const G = newRound({ walls: false, weapon: 'zweihander', weapon2: 'longsword', seed: 4, gap: 3, kit });
   const P = G.player;
@@ -339,6 +346,93 @@ test('AI 에도 똑같이 (11/14 사장님 \'모두 본판에 넣어 ai에게도
     restore(o);
     [AP.schools, AP.errSchools, AP.pommel] = ap;
     CONFIG.DIG_PROTO.reach = reachOn;
+    G.world.free();
+  }
+});
+
+// ── 11/15 넘기기 판 (사장님 11/15 "내가 실제로 조작한 다음칼이 나가지도 않았어" · "'원'을 … 브릿지로서의 메타포로 이해해 … 최소의 동작" — 기록 §12) ──
+test('넘기기 — 기본 판 · 다음 칼 입력(큰 칼 다섯)은 그 칼로 나감 · 올려 베기는 원을 부르지 않고 그 칼 · 탭은 찌르기', () => {
+  assert.equal(IB_LINK.mode, 'bridge');
+  for (const next of ['zornhau', 'zornhauL', 'oberhau', 'zwerch', 'zwerchL']) {
+    const r = inputOne({ first: 'zornhau', next, gap: 0.1 });
+    assert.equal(r.link?.tech, next, `${next} 넘기기 ${JSON.stringify(r.link)}`);
+    assert.equal(r.exe, next, `${next} 나간 칼 ${r.exe}`);
+  }
+  const up = inputOne({ first: 'zornhau', next: 'unterhauL', gap: 0.1 });
+  assert.equal(up.link, null, '올려 베기 — 넘기기 없음');
+  assert.equal(up.exe, 'unterhauL');
+  const tap = inputOne({ first: 'zornhau', next: 'tap', gap: 0.1 });
+  assert.equal(tap.exe, 'tap');
+});
+
+test('넘기기 — 앞 칼이 아직 휘두르는 중에(손가락을 쉬지 않고) 꺾어 그은 다음 칼도 나감 · 그은 방향의 칼 (꺾이는 동안의 걸러진 방향이 아님)', () => {
+  for (const next of ['zornhauL', 'zwerchL', 'oberhau']) {
+    const r = inputOne({ first: 'zornhau', next, gap: 0 });
+    assert.equal(r.link?.tech, next, `${next} ${JSON.stringify(r.link)}`);
+    assert.equal(r.exe, next, `${next} 나간 칼 ${r.exe}`);
+  }
+});
+
+test('넘기기 — 이음매에서 칼이 서지 않고 튐 없음 · 넘긴 칼이 그 기술 · 사슬의 다음 칼 (흐름 위력 1 + 0.2 n)', () => {
+  const r = airOne({ next: ['zornhauL', 'zornhau', 'zornhau'], v: 5.5 });
+  assert.equal(r.stats?.fired, 3, JSON.stringify(r.stats));
+  assert.equal(r.stats.done, 3);
+  assert.deepEqual(r.cuts.map((c) => c.tech), ['zornhau', 'zornhauL', 'zornhau', 'zornhau'], '넘긴 칼이 그 기술로 읽힘');
+  assert.deepEqual(r.cuts.map((c) => c.n), [0, 1, 2, 3], '사슬의 다음 칼');
+  if (IB_FLOW.chainStack) assert.deepEqual(r.cuts.map((c) => c.k), [1, 1.2, 1.4, 1.6], '이어지는 흐름 위력 1 + 0.2 n');
+  const b = bridgeOne({ a: 'zornhau', b: 'zwerch', on: 1 });
+  assert.ok(b.link, '넘기기가 듦');
+  assert.equal(b.jumpTip + b.jumpHand, 0, `튐 ${b.jumpTip} · ${b.jumpHand}`);
+  assert.ok(b.peak?.vt > 5, `다음 칼이 나감 ${JSON.stringify(b.peak)}`);
+});
+
+test('넘기기 — 칼끼리 세게 맞아도 그만두지 않음(서보가 칼을 몲 — 물리대로) · 그만둬도(맞음) 받아 둔 긋기는 그대로 나감', () => {
+  const kit = kitFromNodes('iberian', allNodeIds('iberian'));
+  const G = newRound({ walls: false, weapon: 'zweihander', weapon2: 'longsword', seed: 4, gap: 3, kit });
+  const P = G.player;
+  const E = G.enemy;
+  try {
+    G.ai.update = () => E.move.set(0, 0);
+    while (G.t < ARENA.startHold + 0.3) G.step();
+    const uq = new PlayerUniqueAssist(P, { names: kit.unique });
+    uq.link = { phase: 'turn', tech: 'zwerch', to: [0.52, 0.06], hold: [0, 0], q: [[0.01, 0], [0.01, 0]], acc: [0, 0], wounds0: P.wounds.length };
+    P.ibLink = { bridge: { P: [[0, 0], [0, 0], [0.52, 0.06], [0.52, 0.06]], T: 0.2 }, t: 0, T: 0.2, wounds0: P.wounds.length, touch: 0 };
+    P.jolt = 1;
+    assert.equal(uq.linkStop(), null, '칼끼리 세게 맞아도 그만두지 않음');
+    P.jolt = 0;
+    uq.linkCancel('hit');
+    assert.equal(uq.link?.phase, 'replay', '맞아 그만둬도 받아 둔 긋기는 그대로');
+    assert.equal(P.ibLink, null);
+  } finally {
+    P.ibLink = null;
+    G.world.free();
+  }
+});
+
+test('맞바꿈 창 (사장님 11/15 \'공격 사이의 n초, 이런 식으로 고정해\') — 넘기기를 시작한 때부터 IB_LINK.tradeT(0.4 s) · 넘김이 끝나도 창은 끝까지 · 시간 사다리 값', () => {
+  assert.ok(LADDER.some((x) => Math.abs(x - IB_LINK.tradeT) < 1e-12), `${IB_LINK.tradeT}`);
+  assert.ok(Math.abs(IB_LINK.tradeT - realS(0.4)) < 1e-12, '기본 0.4 s (전 원 시간과 같음)');
+  const kit = kitFromNodes('iberian', allNodeIds('iberian'));
+  const G = newRound({ walls: false, weapon: 'zweihander', weapon2: 'longsword', seed: 4, gap: 3, kit });
+  const P = G.player;
+  const E = G.enemy;
+  try {
+    P.ibLink = null;
+    P.ibFlowT = 10;
+    P.ibTradeOpen = { t0: 10 };
+    P.ibTradeUsed = false;
+    P.ibTradeHit = null;
+    P.stamina.value = STAMINA.max;
+    E.stamina.attackId = 501;
+    P.ibFlowT = 10 + IB_LINK.tradeT * 0.9;
+    assert.equal(P.ibTradeTry(E, { type: 'cut', severity: 0.5 }), true, '넘김이 끝났어도 창 안');
+    P.ibTradeUsed = false;
+    P.ibTradeHit = null;
+    E.stamina.attackId = 502;
+    P.ibFlowT = 10 + IB_LINK.tradeT * 1.1;
+    assert.equal(P.ibTradeTry(E, { type: 'cut', severity: 0.5 }), false, '창 밖');
+  } finally {
+    P.ibTradeOpen = null;
     G.world.free();
   }
 });
