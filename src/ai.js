@@ -22,7 +22,7 @@ import { STAMINA } from './config.js';
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF, AI_MAAI, IB_LINK } from './config.js';
-import { linkStart, linkEnd, bridgeMode, bridgePlan, bridgeStep, techDir } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — IB_LINK.ai · 기본 켬 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해')
+import { linkStart, linkEnd, bridgeMode, bridgePlan, bridgeStep, techDir, linkBoost } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — IB_LINK.ai · 기본 켬 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해')
 import { ibInit, ibAfter, ibTick, ibCircle, ibSide, ibFeetV, ibWatch, ibSidePost, ibFwdPost } from './ai_plan_ib.js'; // 유파 플랜 2 단계 이베리아 (11/14 — 플랜 표 ib 표식일 때만 this.ibPlan · 셈은 그 파일)
 import { readInit, readTick, readNeed, readFeetV, readTechK, readChainK } from './ai_read.js'; // 3 단계 수 읽기 그릇 (11/14 — 플랜이 있는 몸만 this.read · 셈은 그 파일)
 import { Senses } from './ai_sense.js';
@@ -2324,6 +2324,7 @@ export class AI {
       this.hand.set(p[0], p[1]);
       if (!K.done) return;
       linkEnd(me);
+      linkBoost(me); // 사슬 칼 빠르기 시제품 (IB_LINK.chainSpeed — 기본 끔 · 사람 linkRelease 와 같은 셈)
       st.done++;
       st.touch = (st.touch ?? 0) + K.touch;
       this.phase = 'approach';

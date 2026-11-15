@@ -558,6 +558,8 @@ if (params.has('ibFreeEvery')) CONFIG.IB_FLOW.freeEvery = Math.max(0, Math.round
 if (params.has('ibLink')) CONFIG.IB_LINK.on = +params.get('ibLink') ? 1 : 0;
 if (params.has('ibLinkT')) CONFIG.IB_LINK.time = CONFIG.realS(Math.max(0.05, +params.get('ibLinkT') || 0.4));
 if (params.has('ibLinkMode')) CONFIG.IB_LINK.mode = params.get('ibLinkMode') === 'circle' ? 'circle' : 'bridge'; // 11/15 넘기기 판(기본) · 'circle' = 11/14 머리 위 원 판 (견줌)
+if (params.has('ibArrive') && +params.get('ibArrive') === 40) Object.assign(CONFIG.IB_LINK, { arriveDeg: CONFIG.UNIQUE_ASSIST.angle, arriveT: CONFIG.IB_LINK.bridgeMin }); // 11/15 (2) 넘기기 닿기 문 견줌 — 전 판 40° · 0.2 s
+if (params.has('ibChainSpeed')) CONFIG.IB_LINK.chainSpeed.on = +params.get('ibChainSpeed') ? 1 : 0; // 11/16 사슬 칼 빠르기 (기본 켬 — 사장님 11/16 결정) · 0 = 끔 (견줌)
 if (params.has('ibTradeT')) CONFIG.IB_LINK.tradeT = CONFIG.realS(Math.max(0.05, +params.get('ibTradeT') || 0.4)); // 11/15 맞바꿈 창 n 초 (넘기기 시작부터 · 기본 0.4 · 견줌 0.6)
 if (params.has('ibLinkCool')) CONFIG.IB_LINK.cool = +params.get('ibLinkCool') ? 1 : 0;
 if (params.has('ibChainArm')) CONFIG.IB_LINK.chainArm = +params.get('ibChainArm') ? 1 : 0;

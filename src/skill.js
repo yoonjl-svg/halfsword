@@ -1858,8 +1858,11 @@ export class Skill {
     //  손을 쥐는 다른 길은 그대로 쥠(11/01): 막기 단추가 이 스텝 손을 쥠(parryGuard.active — 단추가 inputActive 를 켜 쉼 무게를 비킴) · 채찍 톡(flick — 손가락이 움직이는 것처럼 알림) ·
     //  손가락이 닿지 않은 때(handHeld 거짓 — main.js handGrip 이 inputActive 를 그대로 받음)
     const restFinger = !!SKILL.restTouch && !!f.handHeld && f.handGrip === false && !this.uniq?.winding && !this.flick && !f.parryGuard?.active;
-    const touched = !!f.handHeld && !restFinger;
-    const moved = !!f.inputActive && !restFinger;
+    // 11/15 (2) 이베리아 이어 돌리기 지연 줄(unique_assist.js linkTickBridge — 넘기기 판: link.pos)이 손 목표를 쥔 동안 = 손가락이 닿아 긋는 것과 같음 —
+    //  손을 뗐어도 받아 둔 긋기가 다 나갈 때까지 자세로 돌아가기가 끼어들지 않음(끼어들면 그 몫이 손가락 몫으로 줄에 들어 다시 그어짐) · 줄이 끝난 뒤부터 recoverDelay
+    const linkHeld = !!this.uniq?.link?.pos;
+    const touched = (!!f.handHeld && !restFinger) || linkHeld;
+    const moved = (!!f.inputActive && !restFinger) || linkHeld;
     this.idle = moved || this.tempoInput?.pending ? 0 : this.idle + dt;
     // 보정 v2 사건: 손 뗌 = 손가락이 화면에서 떨어진 스텝 (handHeld 참 → 거짓, main.js — 입력 쪽 사건이라 공포 떨림에 속지 않음)
     this.lift = !!this.heldPrev && !f.handHeld;
