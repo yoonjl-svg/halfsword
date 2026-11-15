@@ -1068,11 +1068,12 @@ export class Combat {
   }
 
   /**
-   * 11/14 동방 맹호은림 사냥 겹 (cn_hunt.js huntHit — 쌓는 몸만 · 공격 하나에 한 겹): 허리를 베는 세 칼(yaojiBleed.techs)의 칼날 베기 상처(심각도 > 0) — 몸 어디든
+   * 11/14 동방 맹호은림 사냥 겹 (cn_hunt.js huntHit — 쌓는 몸만 · 공격 하나에 한 겹): 11/16 부터 칼날 상처(베기 · 찌르기 · 심각도 > 0)를 낸 공격 모두(cnHunt.any — 전 판 허리를 베는 세 칼의 베기만) — 몸 어디든
    *  (사장님 11/14 '동방과 일본은 전부 권고대로' · 전 판 cnHunt.torso 1 = 출혈 × k 가 붙는 몸통 맞음만). strike 와 운동학으로 끄는 칼(secret_instant.js — 날개 접기 등)이 같이 부름
    */
   huntWound(att, vic, r, tn = strokeTechOf(att), deep = null) {
-    if (!(r?.severity > 0) || r.type !== 'cut' || !yaojiBleedTech(tn)) return;
+    if (!(r?.severity > 0) || r.type === 'blunt') return;
+    if (!UA.cnHunt?.any && (r.type !== 'cut' || !yaojiBleedTech(tn))) return; // 11/16 사장님 '동방 스탯을 모든 공격 성공으로 쌓이게' (cnHunt.any 1) — 칼날 상처(베기 · 찌르기)를 낸 공격이면 겹 · 0 = 전 판(허리 베기 셋의 베기만)
     if (UA.cnHunt?.torso && !(deep ?? this.yaojiDeep(att, r, tn))) return;
     huntHit(att, vic);
   }

@@ -12,7 +12,7 @@
 //  ai.js 는 this.planCn(동방 플랜 몸만 — cnInit)이 있을 때만 여기를 부른다 — 다른 유파 · 옛 판(`?aiPlan=0` · `?aiPlanCn=0`)은 굴림 · 셈 그대로.
 //  무 · 낮음 '행운에 기대는 전투'(무모 · 무계획) · 띠별 기력(planRestAt) · 거리 오차는 공통 틀(ai.js · ai_plan.js)이 그대로 맡는다 — 여기는 그 위 동방 몫:
 //   무계획 = 겹 · 유도 · 격살 때를 셈하지 않음(기울기가 작음) · 무모 = 고노센 경계 선을 넘는 쪽(11/14 합치며 공통 틀 하나로 — ai.js gnsWatch W.reck · 이 파일엔 없음).
-//  수 읽기의 동방 몫(본 것만 — 늦게 본 위협 줄): 가운데부터 버릇(최근 6.0 s 상대 공격 — 안 치는 상대면 기다리지 않고 허리 견제) · 높음 되풀이(같은 줄 두 번 10.0 s 안 — 그 줄을 나서며 받을 준비).
+//  수 읽기의 동방 몫(본 것만 — 늦게 본 위협 줄): 가운데부터 버릇(최근 6.0 s 상대 공격 — 안 치는 상대면 기다리지 않고 허리 견제) · 높음 되풀이(같은 줄 두 번 8.0 s 안 — 그 줄을 나서며 받을 준비).
 //  偏閃奏進 (11/15 사장님 '동방 유파 설계에 이것도 감안한 전투 스타일과 뛰어들기가 나오도록 해' — 편섬 꺾음 CN_STEP.mode 'turn' 일 때만 · cnDive · cnDiveTick):
 //   상대 칼을 보면(respond — 늦게 본 위협 하나에 한 번) 굴려 → 칼이 오는 반대쪽 옆으로 걸음을 꺾음(aiT — 걷던 중이면 꺾음 줄임이 걸림 · 손은 막는 자리) →
 //   곧장 앞 박찬 걸음(걸음 장치 파고들기 한 걸음 · 기력 12)으로 뛰어들어 허리 베기(체보요격 — 끌어 딛는 걸음 0.3 · 식는 중이면 요격). 격살 마음이 난 위협은 옛 길(나서며 받기).
@@ -37,7 +37,7 @@ const gkLeft = (ai) => ai.secret?.when === 'gyeoksal' && !secretSpent(ai.me) && 
 
 /** 동방 플랜 상태 칸 (ai 생성자 — this.plan 이 동방 플랜일 때만 · 한 번 만듦) */
 export function cnInit(ai) {
-  const R = axesOf(ai.proficiency).read; // 기억 창 — 가운데 6.0 s · 높음 10.0 s (공통 틀 그릇의 값 · 실제 초 · 설계 §4-2)
+  const R = axesOf(ai.proficiency).read; // 기억 창 — 가운데 6.0 s · 높음 8.0 s(11/16 — 전 10.0) (공통 틀 그릇의 값 · 실제 초 · 설계 §4-2)
   ai.planCn = {
     lure: 0, // 유도 남은 게임 초 (0 = 아님)
     lureArmed: true, // 이번 간 보기 · 물러남에서 아직 유도를 굴리지 않음 (공격 · 막기로 나가면 다시)
@@ -186,7 +186,7 @@ export function cnNext(ai, want) {
  *  무계획(굴림 몫 Lk — 무 · 낮음이 큼): Lk 만큼은 동전(AI_PLAN.coin)으로 — 아무 때나 노리기도 함. 가운데는 겹 · 시간 · 기력만 · 높음은 낌새까지
  */
 export function cnWill(ai, th) {
-  const G = SECRET.gyeoksalAi ?? { stacks: 1, late: realS(10) };
+  const G = SECRET.gyeoksalAi ?? { stacks: 1, late: realS(8.0) }; // 11/16 사장님 — 10초 사다리 없앰 · 8초
   const S = ai.planCn;
   // 격살 풀기 (11/16 — SECRET.gkFree · 감독 '아껴 두기 대신 기울기'): 판 시간 몫(late — 판당 1 번이라 아껴 둠)을 빼고 겹 · 지침 · 낌새만 — 겹이 많을수록 나서며 받음 (띠 기울기 · 굴림 몫은 아래 그대로)
   let L = huntN(ai.foe) / Math.max(1, G.stacks) + (gkFreeOn() ? 0 : Math.max(0, ai.me.fightT ?? 0) / Math.max(1e-6, G.late)) + (foeTired(ai) ? 1 : 0);

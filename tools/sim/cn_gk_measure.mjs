@@ -21,14 +21,14 @@ const range = (s) => { const [a, b] = s.split('-').map(Number); return Array.fro
 const K = CONFIG.TIME.k;
 const KO = { german: '독일', italian: '이탈리아', iberian: '이베리아', japanese: '일본' };
 const TARGET = { german: [35, 65], italian: [15, 45], iberian: [55, 85], japanese: [35, 65] }; // 동방 이김 몫 — 고리 '일본 > 독일 > 이탈리아 > 동방 > 이베리아 > 일본'
-const VK = { cur: '지금 (판당 1 번)', A: 'A 0.35 + 0.08 · 3 s', B: 'B 0.50 + 0.05 · 6 s' };
+const VK = { cur: '전 판 (판당 1 번)', A: 'A 0.35 + 0.08 · 3 s', B: 'B 0.50 + 0.05 · 6 s', def: '11/16 기본 (격살 A · 꺾음 · 偏閃奏進)' };
 const f2 = (x) => (Number.isFinite(x) ? x.toFixed(2) : '-');
 
 export function withGk(v, fn) {
   const G = CONFIG.SECRET.gkFree;
   const keep = { ...G };
   if (v === 'A' || v === 'B') Object.assign(G, { on: 1, ...CONFIG.SECRET.gkFreeSets[v] });
-  else G.on = 0;
+  else if (v !== 'def') G.on = 0; // def = 기본값 그대로 (11/16 — 격살 A · 편섬 꺾음 · 偏閃奏進 켬)
   try { return fn(); } finally { Object.assign(G, keep); }
 }
 
@@ -87,7 +87,8 @@ export function aiFight({ wa, wb, seed, swap, dur = 30 }) {
   const { st, step } = gkTap(G, me, op, ai, null);
   const out = (f) => !f.alive || f.state === 'dead';
   while (G.t < dur && !out(me) && !out(op)) { G.step(); step(); }
-  const r = { win: out(op) && !out(me), lose: out(me) && !out(op), dealt: st.dealt, taken: st.taken, fires: st.fires.map(({ n, landed, peak }) => ({ n, landed, peak })), normPeak: st.normPeak, iaiV: iaiTipSpeed(me) };
+  const cs = me.cnStep?.n ?? {};
+  const r = { win: out(op) && !out(me), lose: out(me) && !out(op), dealt: st.dealt, taken: st.taken, fires: st.fires.map(({ n, landed, peak }) => ({ n, landed, peak })), normPeak: st.normPeak, iaiV: iaiTipSpeed(me), turn: { trig: cs.trig ?? 0, cut: cs.cut ?? 0, onT: cs.onT ?? 0, T: cs.T ?? 0 }, dive: { ...(ai.stats.cn ? { yes: ai.stats.cn.dive ?? 0, go: ai.stats.cn.diveGo ?? 0 } : {}) } };
   G.world.free();
   return r;
 }
@@ -104,14 +105,14 @@ export function aiTables(runs) {
     L.push(`| ${KO[b] ?? b} | ${T[0]} ~ ${T[1]} % | ${vs.map((v) => { const rs = runs.filter((r) => r.b === b && r.v === v); const x = share(rs); const ok = x >= T[0] && x <= T[1]; if (ok) inN[v]++; const W = rs.filter((r) => r.win).length, Ls = rs.filter((r) => r.lose).length; return `${x.toFixed(0)} %${ok ? ' ✓' : ''} (${W} · ${Ls} · ${rs.length - W - Ls})`; }).join(' | ')} |`);
   }
   L.push(`| 목표 안 | | ${vs.map((v) => `${inN[v]} / ${foes.length}`).join(' | ')} |`);
-  const M = ['| 판 | 판 수 | 격살 / 판: 나감 · 맞힘 · 겹 0 에서 나감 | 준 심각도 / 판 | 받은 심각도 / 판 | 격살 칼끝 최고(가운데 · m/s): 겹 0 · 모두 | 보통 베기 칼끝 최고(가운데 · m/s) | 발도 칼끝 빠르기(환도 · 청강검) |', '|---|---|---|---|---|---|---|---|'];
+  const M = ['| 판 | 판 수 | 격살 / 판: 나감 · 맞힘 · 겹 0 에서 나감 | 준 심각도 / 판 | 받은 심각도 / 판 | 격살 칼끝 최고(가운데 · m/s): 겹 0 · 모두 | 보통 베기 칼끝 최고(가운데 · m/s) | 발도 칼끝 빠르기(환도 · 청강검) | 꺾음 줄임 / 판: 건 수 · 줄인 상처 · 켜진 몫 | 偏閃奏進 / 판: 나옴 · 낸 칼 |', '|---|---|---|---|---|---|---|---|---|---|'];
   for (const v of vs) {
     const rs = runs.filter((r) => r.v === v);
     const n = rs.length;
     const F = rs.flatMap((r) => r.fires);
     const iai = {};
     for (const r of rs) iai[r.wa] ??= r.iaiV;
-    M.push(`| ${VK[v] ?? v} | ${n} | ${f2(F.length / n)} · ${f2(F.filter((x) => x.landed).length / n)} · ${f2(F.filter((x) => x.n === 0).length / n)} | ${f2(rs.reduce((a, r) => a + r.dealt, 0) / n)} | ${f2(rs.reduce((a, r) => a + r.taken, 0) / n)} | ${f2(med(F.filter((x) => x.n === 0 && x.peak > 0).map((x) => x.peak)))} · ${f2(med(F.filter((x) => x.peak > 0).map((x) => x.peak)))} | ${f2(med(rs.flatMap((r) => r.normPeak)))} | ${Object.entries(iai).map(([w, x]) => `${w} ${f2(x)}`).join(' · ')} |`);
+    M.push(`| ${VK[v] ?? v} | ${n} | ${f2(F.length / n)} · ${f2(F.filter((x) => x.landed).length / n)} · ${f2(F.filter((x) => x.n === 0).length / n)} | ${f2(rs.reduce((a, r) => a + r.dealt, 0) / n)} | ${f2(rs.reduce((a, r) => a + r.taken, 0) / n)} | ${f2(med(F.filter((x) => x.n === 0 && x.peak > 0).map((x) => x.peak)))} · ${f2(med(F.filter((x) => x.peak > 0).map((x) => x.peak)))} | ${f2(med(rs.flatMap((r) => r.normPeak)))} | ${Object.entries(iai).map(([w, x]) => `${w} ${f2(x)}`).join(' · ')} | ${f2(rs.reduce((a, r) => a + (r.turn?.trig ?? 0), 0) / n)} · ${f2(rs.reduce((a, r) => a + (r.turn?.cut ?? 0), 0) / n)} · ${((100 * rs.reduce((a, r) => a + (r.turn?.onT ?? 0), 0)) / Math.max(1e-9, rs.reduce((a, r) => a + (r.turn?.T ?? 0), 0))).toFixed(0)} % | ${f2(rs.reduce((a, r) => a + (r.dive?.yes ?? 0), 0) / n)} · ${f2(rs.reduce((a, r) => a + (r.dive?.go ?? 0), 0) / n)} |`);
   }
   return `${L.join('\n')}\n\n${M.join('\n')}`;
 }
