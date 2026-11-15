@@ -279,6 +279,7 @@ if (params.has('gnsDraw') && Number.isFinite(+params.get('gnsDraw'))) CONFIG.SEC
 if (params.has('altibFree')) CONFIG.SECRET.altib.free = +params.get('altibFree') ? 1 : 0; // `?altibFree=0` = 판당 secretUses 그대로
 if (params.has('altibDrop')) CONFIG.SECRET.altib.drop = params.get('altibDrop') === 'zero' ? null : Number.isFinite(+params.get('altibDrop')) ? +params.get('altibDrop') : CONFIG.SECRET.altib.drop; // `?altibDrop=zero` = 11/11 판(기력 0)
 if (['f1', 'f2', '0'].includes(params.get('altibSpeed'))) CONFIG.SECRET.altib.speed = params.get('altibSpeed') === '0' ? 0 : params.get('altibSpeed'); // 'f2' 기본 · 'f1' 견줌 · 0 = 11/11 판(기력 몫 위력)
+if (params.has('jpSpeed')) CONFIG.JP_TANK.speed = +params.get('jpSpeed') ? 1 : 0; // 11/16 일본 스택 = 빠르기 (`?jpSpeed=0` = 11/14 판 공격력 +8 % / 스택)
 if (params.has('mordFree')) CONFIG.SECRET.mord.free = +params.get('mordFree') ? 1 : 0; // 죽음의 일격 판당 쓸 수 (`?mordFree=0` = 판당 1)
 if (params.has('mordCost') && Number.isFinite(+params.get('mordCost'))) CONFIG.SECRET.mord.cost = +params.get('mordCost') > 0 ? +params.get('mordCost') : null; // 죽음의 일격 기력 (`?mordCost=0` = 비기 공통)
 if (params.has('mordGuard') && Number.isFinite(+params.get('mordGuard'))) CONFIG.SECRET.mord.guard = +params.get('mordGuard') > 0 ? CONFIG.realS(+params.get('mordGuard')) : 0; // 다시 세우기 (실제 초 · `?mordGuard=0` = 11/15 판 굳음)

@@ -21,7 +21,7 @@
 //   사람(humanInput) 일본은 쌓인 몫이 시간 곧은 오름 대신 스택 stk(0 ~ max) — 휘두르지 않은 per 초마다 +1(update · 판 시작 정지 동안 안 셈) · 맞음 +hit(tookHit — combat.js strike) ·
 //   막기 +block(guardEvent 'block' — stamina.js block) · 흘려 받기 +flow(guardEvent 'flow' — combat.js nagashi) · 한 상대 공격에 막기 · 흘려 받기가 함께 들면 큰 쪽 하나만.
 //   칼에 실리는 몫(charge) = stk × each · 묶음 · 씀 · 제비 베기 넘김 · 고노센은 위 켄타이 그대로. AI 는 JP_TANK.ai(견줌)일 때만 · 시뮬 대본 몸은 전 판.
-//   바위 몸(11/14 사장님 '스택당 피해 -4%' — JP_TANK.rock · 몫 열쇠 jpRock): takenK(받는 피해 — combat.js analyze) · 스위치: E keep(손목 치기 · 비껴 베기는 스택을 안 씀 — keepCheck) · C 는 secret.js(흘려 받기 수 flowN 을 읽음)
+//   바위 몸(11/14 사장님 '스택당 피해 -4%' → 11/16 '바위 몸 배율 0.04를 0.05로 바꿔' — JP_TANK.rock · rockEach · 몫 열쇠 jpRock): takenK(받는 피해 — combat.js analyze) · 스위치: E keep(손목 치기 · 비껴 베기는 스택을 안 씀 — keepCheck) · C 는 secret.js(흘려 받기 수 flowN 을 읽음)
 import * as THREE from 'three';
 import { SCHOOL_PASSIVE as SP, UNIQUE_ASSIST as UA, THRUST, JP_TANK as JT } from './config.js';
 import { strokeTechOf } from './unique_assist.js';
@@ -114,6 +114,20 @@ export class SchoolPassive {
     return this.stackOn ? this.stk : null;
   }
 
+  /**
+   * 스택 빠르기 (11/16 사장님 '… ai는 스택마다 +2.5%로 하고 사람은 +5%로 할까? 곱연산 말고 합연산.' → '그렇게 해. 고노센과 제비베기에도 적용돼야해.' — JP_TANK.speed):
+   *  지금 칼에 묶인 스택 n(고노센은 고노센에 묶인 스택 · 제비 베기면 빗나간 앞 칼에서 이어짐 창 안에 들고 온 스택과 큰 쪽) → 1 + k × n (k = 사람 speedHuman · AI speedAi) ·
+   *  스택 빠르기 판이 아니거나 묶인 칼이 없으면 1. tech = 지금 칼 이름 (제비 베기 'tsubameGaeshi' 를 가름)
+   */
+  speedOf(tech = null) {
+    if (!JT.speed || !this.stackOn) return 1;
+    const L = this.lock;
+    if (!L || L.n !== this.n || L.kept) return 1;
+    let n = L.stk ?? 0;
+    if (tech === 'tsubameGaeshi' && (L.carryStk ?? 0) > n) n = L.carryStk;
+    return n > 0 ? 1 + (this.ai ? JT.speedAi : JT.speedHuman) * n : 1;
+  }
+
   /** 켄타이: 지금 쌓인 몫 (0 ~ gain · 11/14 스택 판이면 stk × each — 0 ~ max × each) */
   get charge() {
     if (!this.on('japanese')) return 0;
@@ -154,6 +168,19 @@ export class SchoolPassive {
     }
     if (this.win) this.tickIndes(dt);
     if (this.on('chinese') && !sw) this.stats.clotT += dt;
+    // 11/16 스택 빠르기 (JP_TANK.speed — speedOf): 묶인 칼이 휘두르는 동안 빠르기 s · 서보 힘 s² (finger_cut.js fingerCutK 'arm' · ai.js moveHand 가 읽음 — 아니면 1)
+    if (JT.speed && this.stackOn) {
+      const s = sw ? this.speedOf(this.f.aiControlled ? this.f.aiCtl?.tech?.name ?? null : strokeTechOf(this.f)) : 1;
+      this.f.jpSpeedS = s;
+      this.f.jpArmK = s * s;
+    } else if (this.f.jpSpeedS !== undefined && this.f.jpSpeedS !== 1) this.f.jpSpeedS = this.f.jpArmK = 1;
+  }
+
+  /** 묶인 칼이 상처를 냄 (11/16 스택 빠르기 판 — combat.js strike 가 패시브 배율 없는 맞음에 부름): 이어짐 창 안 제비 베기로 넘길 스택은 빗나간 칼만 (공격력 판 onHit 의 씀과 같은 표시) */
+  landed() {
+    const L = this.lock;
+    if (!JT.speed || !this.stackOn || !L || L.n !== this.n || L.spent || !swingingNow(this.f)) return;
+    L.spent = true;
   }
 
   /**
@@ -227,7 +254,7 @@ export class SchoolPassive {
     if (sec && !L.kenSec) return 1; // 비기 칼 — 패시브 몫 없음 (인데스는 늘 · 켄타이는 고노센 빼고)
     if (JT.keep && this.stackOn) this.keepCheck(); // E: 손목 치기 · 비껴 베기면 묶은 스택을 돌려받고 이 칼엔 안 실림 (맞는 순간에 이름이 먼저 섰을 때)
     let k = 1;
-    if (this.on('japanese') && !L.spent) k += Math.max(L.ken, !sec && L.carry > 0 && strokeTechOf(this.f) === 'tsubameGaeshi' ? L.carry : 0);
+    if (this.on('japanese') && !L.spent && !(JT.speed && this.stackOn)) k += Math.max(L.ken, !sec && L.carry > 0 && strokeTechOf(this.f) === 'tsubameGaeshi' ? L.carry : 0); // 11/16 스택 빠르기 판(JP_TANK.speed)은 공격력 몫 없음 — speedOf
     if (this.on('german') && !sec) {
       // 10/28 '겹치기는 맞물리면 인데스 늘 붙게 해': 겹치기(duplieren — 앞 칼이 맞물린 뒤 낸 칼 · unique_assist.js strokeTechOf)는 창이 닫혀 있어도 몫 (touch 판만 —
       //  겹치기는 앞 긋기가 끝나고 afterWindow 안에 나가 닿음이 그보다 먼저 끝났을 수 있음: AI 겹치기 13 가운데 창 안 2 — 문서 decisions 10/28)
@@ -303,8 +330,8 @@ export class SchoolPassive {
   }
 
   /**
-   * 바위 몸 — 스택당 받는 피해 −4 % (사장님 11/14 '바위 몸은 … 스택당 피해 -4%로 해.(스택은 공격하면 사라지는 거야 알지?)' — JP_TANK.rock · rockEach · 몫 열쇠 jpRock):
-   *  받는 칼날 상처 심각도 · 둔타 에너지 배율 1 − rockEach × 스택 (10 스택 0.6 — combat.js analyze). 칼을 내면 스택과 함께 0 → 1
+   * 바위 몸 — 스택당 받는 피해 −5 % (사장님 11/14 '바위 몸은 … 스택당 피해 -4%로 해.(스택은 공격하면 사라지는 거야 알지?)' → 11/16 '바위 몸 배율 0.04를 0.05로 바꿔' — JP_TANK.rock · rockEach · 몫 열쇠 jpRock):
+   *  받는 칼날 상처 심각도 · 둔타 에너지 배율 1 − rockEach × 스택 (10 스택 0.5 — combat.js analyze). 칼을 내면 스택과 함께 0 → 1
    */
   takenK() {
     if (!JT.rock || !(this.stk > 0) || !this.stackOn || kitOff(this.f, 'jpRock')) return 1;

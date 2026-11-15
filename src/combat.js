@@ -423,7 +423,7 @@ export class Combat {
     //  그 공격의 칼날 상처 심각도 · 둔타 에너지 × (1 − flowDmgCut). 새 공격(번호가 바뀜)부터는 그대로 · 물리(충격 · 가르나 튕기나)는 그대로
     const keepFlow = flowShieldKeep(pr.v.fighter, att);
     if (keepFlow !== 1) { if (type === 'blunt') energy *= keepFlow; else severity *= keepFlow; }
-    // 일본 바위 몸 (사장님 11/14 '스택당 피해 -4%' — config JP_TANK.rock · school_passive.js takenK): 받는 쪽 사람 일본의 지금 스택 × 4 % 만큼 칼날 상처 심각도 · 둔타 에너지를 덜 받음. 물리는 그대로
+    // 일본 바위 몸 (사장님 11/14 '스택당 피해 -4%' → 11/16 '바위 몸 배율 0.04를 0.05로 바꿔' — config JP_TANK.rock · rockEach · school_passive.js takenK): 받는 쪽 일본의 지금 스택 × rockEach(5 %) 만큼 칼날 상처 심각도 · 둔타 에너지를 덜 받음. 물리는 그대로
     const rockK = vic.schoolPassive?.takenK?.() ?? 1;
     if (rockK !== 1) { if (type === 'blunt') energy *= rockK; else severity *= rockK; }
     // 이탈리아 막아찌르기(10/21 입력형 — 약한 찌르기): 찌르는 동안 주는 칼날 상처 심각도 · 둔타 에너지 × dealt(0.6). 물리는 그대로
@@ -1023,6 +1023,7 @@ export class Combat {
       vic.schoolPassive?.tookHit?.(att, r.severity > 0 || vic.consciousness < cons0); // 일본 스택 '피격에 1스택' (11/14 사장님 — 상처나 의식이 실제로 깎인 맞음 · 상대 공격 하나에 한 번 · school_passive.js)
       if (r.severity > 0) att.parryGuard?.opposition?.onDealt?.(r); // 막아찌르기가 상처를 냈나 (칼끝 돌려 빼기 탭 조건 — 실패한 막아찌르기만 엶 · 10/28 01:2x · 사람만)
       if (r.schoolK) att.schoolPassive?.onHit(r); // 유파 패시브 몫이 실린 맞음 (켄타이는 여기서 씀 — school_passive.js)
+      else att.schoolPassive?.landed?.(); // 11/16 일본 스택 빠르기 판 (JP_TANK.speed): 묶인 칼이 맞힘 — 제비 베기로 스택을 넘기지 않음 (school_passive.js landed)
       if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
       itOnStrike(att, vic, r); // 이탈리아 아웃복싱 (11/14): 칼끝 돌려 빼기 · 막아찌르기 · 비껴서며 찌르기가 상처를 내면 칼 우위 · 재기 (사람 이탈리아만 — 그 밖은 곧장 돌아감)
       // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈

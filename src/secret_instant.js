@@ -825,7 +825,7 @@ function startIai(f, combat) {
   const K = obiB ? { ...SECRET.iaiPath, B: obiB } : SECRET.iaiPath;
   const DB = dirOf(K.B.yaw, K.B.el);
   const far = AH.distanceTo(new THREE.Vector3(...K.B.hand)) > 0.12 || AD.angleTo(DB) > 0.6;
-  const T = req.player || far ? SECRET.iaiPlayerTime : SECRET.iaiTime; // 대기 자세(손이 왼 허리)면 곧장 가로, 아니면 왼 허리를 거쳐
+  const T = (req.player || far ? SECRET.iaiPlayerTime : SECRET.iaiTime) / (f.schoolPassive?.speedOf?.() ?? 1); // 대기 자세(손이 왼 허리)면 곧장 가로, 아니면 왼 허리를 거쳐 · 11/16 일본 스택 빠르기(JP_TANK.speed — 고노센에 묶인 스택 · 없으면 1)
   // 10/12 03:2x 사장님 '기술길이 좀 더 상승하게 … 사선 올려베기처럼' · '한 팔 완전히 쭉 뻗어서 써야 맞는 거 아냐?' (SECRET.iaiRise): 길 = 올려베기 iaiPathRise ·
   //  한 손 = 칼 쪽 손만 쥐고 빈손은 칼을 놓고 배 앞으로(10/14 — 전 왼 허리 뒤 鞘引き · fighter.js applyPose 가 iai.oneHand 를 읽어 빈팔을 SECRET.iaiSayaHand 로 · offHand 쥐기 쉼).
   //   11/13 사장님 '욍손자리 원전대로' (SECRET.iaiSaya 1): 빈손은 칼집 입을 쥐고 왼 허리(左帯)로 당긴 자리 SECRET.iaiSayaHip (골반 틀 — fighter.js sayaHandW)
@@ -1648,7 +1648,8 @@ function startCombo(f, combat, req) {
     ropes(f, false);
   }
   const share = req.share ?? SECRET.cnFastShare; // 빠르기 · 잔상 몫 (연환 cnFastShare · 진 · 츠바메가에시 되돌림 칼 secretBlade.kin — 10/21)
-  const v = Math.max(1e-3, req.speed > 0 ? req.speed : share * iaiTipSpeed(f)); // speed: 칼끝 빠르기를 바로 준 칼 (10/31 칼끝 돌려 빼기)
+  const jk = req.tech === 'tsubameGaeshi' ? f.schoolPassive?.speedOf?.('tsubameGaeshi') ?? 1 : 1; // 11/16 일본 스택 빠르기 (JP_TANK.speed): 제비 베기 되돌림 칼 — 빗나간 앞 칼에서 들고 온 스택 (없으면 1)
+  const v = Math.max(1e-3, (req.speed > 0 ? req.speed : share * iaiTipSpeed(f)) * jk); // speed: 칼끝 빠르기를 바로 준 칼 (10/31 칼끝 돌려 빼기)
   if (!req.moves.length) {
     f.instantResult = { ok: false, hit: false };
     return;

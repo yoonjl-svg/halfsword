@@ -11,11 +11,12 @@ import { lowShoveFree } from '../../src/jp_tank.js';
 import * as D from '../../src/skill_tree_data.js';
 import { allNodeIds, kitFromNodes } from '../../src/skill_tree_data.js';
 import { fightOne } from './school_balance.mjs';
+import { withJpSpeedOff } from './secret_free_off.mjs'; // 11/16 옛 스택 공격력 장면 시험을 스택 빠르기 끈 판으로
 const JT = CONFIG.JP_TANK;
 const SP = CONFIG.SCHOOL_PASSIVE;
 const UA = CONFIG.UNIQUE_ASSIST;
 const J0 = { ...JT };
-const restore = () => Object.assign(JT, J0);
+const restore = () => Object.assign(JT, { ...J0, speed: JT.speed }); // 11/16 스택 빠르기 스위치(JP_TANK.speed)는 그 시험이 묶은 판 그대로 (withJpSpeedOff)
 
 /** 사람(humanInput) 일본 몸 weapon · 상대 롱소드(AI 멈춤) · 판 시작 정지 지남 */
 function fixture(weapon = 'uchigatana', { human = true, ...opts } = {}) {
@@ -43,7 +44,7 @@ test('값: 사장님 11/14 — 1 초 · 맞음 1 · 막기 2 · 최대 10 · +8 
   assert.ok(near(JT.each * JT.max, 0.8));
   assert.equal(JT.lowShove, 1);
   assert.equal(JT.rock, 1);
-  assert.ok(near(JT.rockEach, 0.04));
+  assert.ok(near(JT.rockEach, 0.05), '11/16 사장님 "바위 몸 배율 0.04를 0.05로 바꿔" — 10 스택 −50 %');
   assert.deepEqual([JT.counter, JT.keep], [0, 0]);
   assert.ok(near(JT.counterWin, CONFIG.realS(0.6)));
 });
@@ -108,7 +109,7 @@ test('스택 — 막기 +2 · 흘려 받기 +3 · 한 공격에 둘이 함께 �
   }
 });
 
-test('스택 — 칼을 내면 그 칼에 실리고(10 스택 × 1.8) 0 부터 · 휘두르는 동안 안 쌓임 · 맞으면 씀', () => {
+test('스택 — 칼을 내면 그 칼에 실리고(10 스택 × 1.8) 0 부터 · 휘두르는 동안 안 쌓임 · 맞으면 씀', () => withJpSpeedOff(() => { // 11/16 그때 판(스택 빠르기 끔 — JP_TANK.speed 0 · tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   const fx = fixture();
   try {
     const { f, sp } = fx;
@@ -125,9 +126,9 @@ test('스택 — 칼을 내면 그 칼에 실리고(10 스택 × 1.8) 0 부터 �
     assert.equal(sp.stats.stk.strokes, 1);
     assert.equal(sp.stats.stk.sum, 10);
   } finally { fx.g.world.free(); }
-});
+}));
 
-test('스택 — 빗나간 칼의 몫은 afterWindow 안 제비 베기가 들고 감 (밖이면 버림)', () => {
+test('스택 — 빗나간 칼의 몫은 afterWindow 안 제비 베기가 들고 감 (밖이면 버림)', () => withJpSpeedOff(() => { // 11/16 그때 판(스택 빠르기 끔 — JP_TANK.speed 0 · tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   for (const [gap, tsu, want] of [[0.3, true, 0.4], [0.3, false, null], [UA.afterWindow + 0.1, true, null]]) {
     const fx = fixture();
     try {
@@ -145,9 +146,9 @@ test('스택 — 빗나간 칼의 몫은 afterWindow 안 제비 베기가 들고
       else assert.ok(near(k, 1 + fresh), `fresh only ${k}`);
     } finally { fx.g.world.free(); }
   }
-});
+}));
 
-test('스택 — 고노센에도 실림 (지금 규칙 그대로 — SCHOOL_PASSIVE.japanese.secret)', () => {
+test('스택 — 고노센에도 실림 (지금 규칙 그대로 — SCHOOL_PASSIVE.japanese.secret)', () => withJpSpeedOff(() => { // 11/16 그때 판(스택 빠르기 끔 — JP_TANK.speed 0 · tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   const fx = fixture();
   try {
     const { f, sp } = fx;
@@ -158,7 +159,7 @@ test('스택 — 고노센에도 실림 (지금 규칙 그대로 — SCHOOL_PASS
     assert.ok(near(sp.dealtK(), 1.48), `× ${sp.dealtK()}`);
     assert.equal(sp.stk, 0);
   } finally { fx.f.skill.sec = null; fx.g.world.free(); }
-});
+}));
 
 test('스위치 끔(JP_TANK.stack 0) · AI(JP_TANK.ai 0 — 옛 판) · 시뮬 대본 몸 = 전 판 (6 s 곧은 오름 +30 %)', () => {
   // 11/14 2 단계 일본 (사장님 '일본 스택과 바위 몸 AI 켜는 것도 이번 개편에 함께'): JP_TANK.ai 기본 1 — 'AI 몫' 줄은 옛 판(JP_TANK.ai 0)으로 묶어 본다
@@ -189,15 +190,15 @@ test('스위치 끔(JP_TANK.stack 0) · AI(JP_TANK.ai 0 — 옛 판) · 시뮬 �
   } finally { de.g.world.free(); }
 });
 
-test('바위 몸 — 스택당 받는 피해 −4 % (10 스택 × 0.6) · 칼을 내면 함께 사라짐 · 끄면 1', () => {
+test('바위 몸 — 스택당 받는 피해 −5 % (10 스택 × 0.5 — 11/16 사장님 \'바위 몸 배율 0.04를 0.05로 바꿔\' · 전 −4 % × 0.6) · 칼을 내면 함께 사라짐 · 끄면 1', () => {
   const fx = fixture();
   try {
     const { sp } = fx;
     assert.equal(sp.takenK(), 1, '스택 0');
     tick(fx, sec(5.5));
-    assert.ok(near(sp.takenK(), 0.8), `5 스택 ${sp.takenK()}`);
+    assert.ok(near(sp.takenK(), 0.75), `5 스택 ${sp.takenK()}`);
     tick(fx, sec(5));
-    assert.ok(near(sp.takenK(), 0.6), '10 스택 × 0.6');
+    assert.ok(near(sp.takenK(), 0.5), '10 스택 × 0.5');
     JT.rock = 0;
     assert.equal(sp.takenK(), 1, '끔');
     JT.rock = 1;
@@ -208,7 +209,7 @@ test('바위 몸 — 스택당 받는 피해 −4 % (10 스택 × 0.6) · 칼을
   try { tick(sc, sec(8)); assert.equal(sc.sp.takenK(), 1); } finally { sc.g.world.free(); }
 });
 
-test('E (끔이 기본): 켜면 손목 치기 · 비껴 베기는 스택을 쓰지도 지우지도 않음', () => {
+test('E (끔이 기본): 켜면 손목 치기 · 비껴 베기는 스택을 쓰지도 지우지도 않음', () => withJpSpeedOff(() => { // 11/16 그때 판(스택 빠르기 끔 — JP_TANK.speed 0 · tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   for (const [keep, tech] of [[0, 'kote'], [1, 'kote'], [1, 'hirakiGiri'], [1, 'zornhau']]) {
     const fx = fixture();
     try {
@@ -224,7 +225,7 @@ test('E (끔이 기본): 켜면 손목 치기 · 비껴 베기는 스택을 쓰�
       f.artTech = null;
     } finally { restore(); fx.g.world.free(); }
   }
-});
+}));
 
 test('C (끔이 기본): 켜면 흘려 받기가 든 스텝에 비기 창 (counterWin) — 그 안 공격이 고노센', () => {
   for (const on of [0, 1]) {
@@ -300,7 +301,7 @@ test('몫 열쇠 (11/14 사장님 \'전부 권고대로\' · C 보류): 바위 �
   assert.equal('jpTaiSen' in kit([]), false, 'C 몫 열쇠는 칸에 안 이음');
   assert.equal(D.nodesOf('japanese').some((n) => n.id === 'J13' || n.f.includes('jpTaiSen')), false, '기다림의 선 칸 없음 (사장님 11/14 보류)');
   // 바위 몸 받는 피해 — 몫이 없으면 1 (스택은 J10 패시브로 쌓임 — J12 만 뺀 몸)
-  for (const [drop, want] of [[[], 0.6], [['J12'], 1]]) {
+  for (const [drop, want] of [[[], 0.5], [['J12'], 1]]) { // 10 스택 × 0.5 (11/16 rockEach 0.05)
     const fx = fixture('uchigatana', { kit: kit(drop) });
     try {
       tick(fx, sec(10.5));

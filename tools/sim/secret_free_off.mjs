@@ -4,7 +4,7 @@
 //   죽음의 일격 SECRET.mord.free · cost · guard · 리솔루토 SECRET.risolutoFree · risolutoCost · risolutoBack (기록 docs/strike/secret_free_2026-11-16.md)
 //  withSecretFreeOff(fn) — fn 이 끝나면(던져도) 되돌림 · async fn 이면 기다림 · secretFreeOff() — 끄고 되돌리는 함수를 돌려줌
 // ─────────────────────────────────────────────────────────────
-import { SECRET, AI_PLAN_JP } from '../../src/config.js';
+import { SECRET, AI_PLAN_JP, JP_TANK } from '../../src/config.js';
 
 export function secretFreeOff() {
   const A = SECRET.altib;
@@ -33,5 +33,23 @@ export function withSecretFreeOff(fn) {
   }
   if (r && typeof r.then === 'function') return r.finally(back);
   back();
+  return r;
+}
+
+/**
+ * 11/16 일본 기다림과 침 스택 = 빠르기(JP_TANK.speed)를 끈 판(11/14 판 — 스택 공격력 each)으로 잠깐 (옛 스택 공격력 장면 시험을 그때 판으로 묶을 때 — 기준 그대로)
+ */
+export function withJpSpeedOff(fn) {
+  const keep = JP_TANK.speed;
+  JP_TANK.speed = 0;
+  let r;
+  try {
+    r = fn();
+  } catch (e) {
+    JP_TANK.speed = keep;
+    throw e;
+  }
+  if (r && typeof r.then === 'function') return r.finally(() => (JP_TANK.speed = keep));
+  JP_TANK.speed = keep;
   return r;
 }

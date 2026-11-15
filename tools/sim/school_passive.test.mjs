@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, AI, THREE } from './harness_m.mjs';
 import { TRADITIONS } from '../../src/schools.js';
+import { withJpSpeedOff } from './secret_free_off.mjs'; // 11/16 옛 스택 공격력 장면 시험을 스택 빠르기 끈 판으로
 // 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
 //  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
 const pinLodge0 = (t) => { const lh = CONFIG.STRIKE.lodgeHold; CONFIG.STRIKE.lodgeHold = 0; t.after(() => { CONFIG.STRIKE.lodgeHold = lh; }); };
@@ -407,7 +408,7 @@ test('chinese: bleeding clots ×2 only while not swinging', () => {
 });
 
 // ── 실제 판 (AI 대 AI · 숙련도 4) — 배율이 실제 맞음에 실린다 ──
-test('real fight: kentai and indes bonuses reach real wounds', () => {
+test('real fight: kentai and indes bonuses reach real wounds', () => withJpSpeedOff(() => { // 11/16 그때 판(스택 빠르기 끔 — JP_TANK.speed 0 · tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   // 씨앗 셋 가운데 한 판에서 (10/29 걸음 사다리 — 한 씨앗에 기대지 않게: 일본 AI 베기 걸음 0.5 → 0.45 만으로도 1011 판이 갈려 켄타이 맞음 0 ·
   //  씨앗 1011 ~ 1016 에서 켄타이가 실리는 판 수는 전 · 후 모두 4 / 6). 전: 한 씨앗 1001 → 1002(10/24) → 1011(10/27 표준 시간)
   for (const [w, key] of [['uchigatana', 'ken'], ['longsword', 'indes']]) {
@@ -425,4 +426,4 @@ test('real fight: kentai and indes bonuses reach real wounds', () => {
     }
     assert.ok(ok, `${key} hits and a wound carried schoolK (seeds 1011 ~ 1013 · 1017)`);
   }
-});
+}));

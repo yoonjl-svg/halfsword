@@ -204,3 +204,40 @@ test('AI 뽑기 — 칼집에 든 AI 의 공격 · 막기는 뽑기부터 (공�
     G.world.free();
   }
 });
+
+test('일본 기다림과 침 스택 = 빠르기 [사장님 11/16 결정] — 사람 +5 % · AI +2.5 % / 스택 (합연산) · 스택 공격력 없음 · 고노센 · 제비 베기(들고 온 스택) · 서보 힘 × 빠르기²', async () => {
+  const { JP_TANK } = await import('../../src/config.js');
+  const { fingerCutK } = await import('../../src/finger_cut.js');
+  const { allNodeIds, kitFromNodes } = await import('../../src/skill_tree_data.js');
+  assert.equal(JP_TANK.speed, 1);
+  assert.equal(JP_TANK.speedHuman, 0.05);
+  assert.equal(JP_TANK.speedAi, 0.025);
+  const kit = kitFromNodes('japanese', allNodeIds('japanese'));
+  const G = newRound({ weapon: 'uchigatana', weapon2: 'longsword', seed: 1, gap: 3, kit, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
+  try {
+    const P = G.player;
+    const SP = P.schoolPassive;
+    assert.ok(SP.stackOn);
+    SP.stk = 10;
+    P.stamina.attack('cut'); // 칼 하나에 10 스택을 묶음
+    assert.equal(SP.lock.stk, 10);
+    assert.ok(Math.abs(SP.speedOf() - 1.5) < 1e-12, '사람 1 + 0.05 × 10');
+    SP.ai = true;
+    assert.ok(Math.abs(SP.speedOf() - 1.25) < 1e-12, 'AI 1 + 0.025 × 10');
+    SP.ai = false;
+    SP.lock.stk = 0;
+    SP.lock.carryStk = 6;
+    assert.equal(SP.speedOf(), 1, '보통 칼은 들고 온 스택 안 씀');
+    assert.ok(Math.abs(SP.speedOf('tsubameGaeshi') - 1.3) < 1e-12, '제비 베기 = 들고 온 스택');
+    SP.lock.stk = 10;
+    P.skill.tap = {}; // 묶인 칼이 휘두르는 중 (swingingNow)
+    assert.equal(SP.dealtK(), 1, '스택 공격력 없음');
+    P.skill.tap = null;
+    P.jpArmK = 2.25;
+    assert.equal(fingerCutK(P, 'arm'), 2.25, '서보 힘 × 빠르기²');
+    assert.equal(fingerCutK(P, 'hit'), 1);
+    P.jpArmK = 1;
+  } finally {
+    G.world.free();
+  }
+});

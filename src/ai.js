@@ -4214,7 +4214,8 @@ export class AI {
     const dx = tx - off.x;
     const dy = ty - off.y;
     const dd = Math.hypot(dx, dy);
-    const step = this.handSpeed * dt * (this.mode === 'attack' || this.mode === 'secret' ? this.me.stamina.attackSpeed : 1);
+    let step = this.handSpeed * dt * (this.mode === 'attack' || this.mode === 'secret' ? this.me.stamina.attackSpeed : 1);
+    if (striking && this.me.jpSpeedS > 1) step *= this.me.jpSpeedS; // 11/16 일본 스택 빠르기 (JP_TANK.speed — school_passive.js): 베는 길 손 빠르기 × (1 + speedAi × 묶인 스택)
     if (dd > step) {
       off.x += (dx / dd) * step;
       off.y += (dy / dd) * step;

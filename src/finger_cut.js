@@ -23,6 +23,11 @@ function strokeBody(f, F, human) {
 
 /** 손가락 긋기 배율 (key = 'arm' | 'gain' | 'hit'): 켜지 않았거나 그 몸 · 그때가 아니면 1 — 곱해도 값이 바뀌지 않는다 */
 export function fingerCutK(f, key) {
+  const b = key === 'arm' ? f?.jpArmK ?? 1 : 1; // 11/16 일본 스택 빠르기 (JP_TANK.speed — school_passive.js update): 묶인 칼이 휘두르는 동안 칼 팔 · 손목 서보 힘 × 빠르기² (아니면 1)
+  if (b !== 1) return b * fingerCutRaw(f, key);
+  return fingerCutRaw(f, key);
+}
+function fingerCutRaw(f, key) {
   const F = SKILL.fingerCut;
   const k = F?.[key] ?? 1;
   if (k === 1 || !f) return 1;
