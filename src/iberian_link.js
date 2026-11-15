@@ -286,18 +286,21 @@ export function bridgeStep(f, dt) {
 }
 
 /**
- * 사슬 칼 빠르기 시제품 (11/15 사장님 "이 검토와 함께 이어돌리기로 이어진 칼의 속도를 인위적으로 좀 더 빠르게 하면 어떨지도 검토해봐. 최대 3~4번까지 매번 이어질 때마다 +5~10% 합산." —
- *  IB_LINK.chainSpeed · 기본 끔 · 기록 docs/strike/ib_link_2026-11-15.md): 넘기기로 이은 칼(이 사슬 k 번째 넘김 — f.ibLinkK)이 나가는 동안(넘김 끝 → 그 칼 휘두르기가 끝날 때까지 — fighter.js updateIbFlow)
- *  칼 팔 · 손목 서보 힘(fighter.js — 몸의 힘이 들어가는 자리: 손가락 긋기 팔 힘 SKILL.fingerCut.arm 과 같은 자리) × s^pow(기본 2) · s = 1 + p × min(k, n).
- *  그은 길(손 목표)은 그대로 — 길을 빨리 감기지 않고 힘만 더함: 같은 길을 s 배 빠르게 지나려면 운동 에너지 s² 배 = 같은 길 위에서 힘 s² 배.
+ * 사슬 칼 빠르기 (11/15 사장님 "이어돌리기로 이어진 칼의 속도를 인위적으로 좀 더 빠르게 하면 어떨지도 검토해봐." → 11/16 결정 "빨라지는 칼은 이어질 때마다 +10%로. 상한은 1.3배." —
+ *  IB_LINK.chainSpeed · 기록 docs/strike/ib_link_2026-11-15.md §9): 넘기기로 이은 칼(이 사슬 k 번째 넘김 — f.ibLinkK)이 나가는 동안(넘김 끝 → 그 칼 휘두르기가 끝날 때까지 — fighter.js updateIbFlow)
+ *  칼 팔 · 손목 서보 힘(fighter.js — 몸의 힘이 들어가는 자리: 손가락 긋기 팔 힘 SKILL.fingerCut.arm 과 같은 자리)에 × drive[k] — 실제 칼끝 빠르기가 같은 긋기의 안 빨라진 칼의
+ *  s = min(1 + p × k, cap) 배가 되게 무기마다 재어 맞춘 힘 배율(사람 drive · AI driveAi — 칸 끝 값이 그 뒤 넘김 · 표에 없는 무기 def). 그은 길(손 목표)과 박자는 그대로 — 힘만 더함.
  *  기력 (사장님 11/15 "숫자로 견주지 않아도 됨. 네 의견은 알겠다." — 더한 빠르기만큼 늘어남): 베기 한 번 값(STAMINA.cutCost × 무기 무게 — 맞바꿈 B12 와 같은 셈) × (s² − 1)
  *  을 그 칼을 낼 때 더 씀(더한 운동 에너지 몫) · 모자라면 힘을 더하지 않음. 사람(unique_assist.js linkRelease) · AI(ai.js linkTick) 같은 셈. 돌려줌 f.ibBoost 또는 null
  */
 export function linkBoost(f) {
   const C = IB_LINK.chainSpeed;
   if (!C?.on) return null;
-  const k = Math.min(f.ibLinkK ?? 1, C.n);
-  const s = 1 + C.p * k;
+  const k = Math.max(1, f.ibLinkK ?? 1);
+  const s = Math.min(1 + C.p * k, C.cap);
+  const T = (f.aiControlled ? C.driveAi : C.drive) ?? {};
+  const D = Array.isArray(T) ? T : T[f.weapon?.id] ?? T.def ?? [];
+  const m = D.length ? D[Math.min(k, D.length) - 1] : s * s;
   const S = f.stamina;
   const cost = STAMINA.cutCost * (S?.weight ?? 1) * (s * s - 1);
   const log = (f.ibBoostLog ??= { n: 0, cost: 0, skip: 0, k: {} }); // 재기 (ib_link_speed.mjs)
@@ -309,8 +312,8 @@ export function linkBoost(f) {
   log.n++;
   log.cost += cost;
   log.k[k] = (log.k[k] ?? 0) + 1;
-  f.ibBoost = { k, s, cost, on: false };
-  f.ibBoostK = s ** (C.pow ?? 2); // 힘 배율 (pow 2 = 같은 길 위 운동 에너지 s² — 견줌 4)
+  f.ibBoost = { k, s, m, cost, on: false };
+  f.ibBoostK = m;
   return f.ibBoost;
 }
 
