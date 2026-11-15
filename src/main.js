@@ -444,7 +444,7 @@ if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('y
 if (params.has('cnHunt')) CONFIG.UNIQUE_ASSIST.cnHunt.on = +params.get('cnHunt') ? 1 : 0; // 동방 맹호은림 사냥 겹 (11/14 — `?cnHunt=0` = 겹 없음 · 격살 판당 수는 공용 표 secretUses — 전 판 `?secretUses=1,chinese:3`)
 if (params.has('cnHuntAi')) CONFIG.UNIQUE_ASSIST.cnHunt.ai = +params.get('cnHuntAi') ? 1 : 0; // AI 동방도 사냥 겹 (견줌 — 기본 0)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6 · 11/14 사장님 0.9)
-for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld', 'inqTap']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js)
+for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld', 'inqTap', 'inqAi']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js) · inqAi(11/15 — AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 · 0 = 옛 판)
 if (params.has('cavFrom') && +params.get('cavFrom') >= 0) CONFIG.UNIQUE_ASSIST.cavFrom = CONFIG.realS(+params.get('cavFrom')); // 칼끝 돌려 빼기 탭 창 처음 (실제 초 — 기본 0.2 · 10/29 20:0x · 옛 판 0.6)
 if (params.has('cavMerge') && +params.get('cavMerge') >= 0) CONFIG.UNIQUE_ASSIST.cavMerge = CONFIG.realS(+params.get('cavMerge')); // 칼끝 돌려 빼기 닿음 이어 붙임 (11/04 제안 · 실제 초 — 기본 0 끔 · 0.2 = 시간 사다리)
 if (params.has('stepIn')) CONFIG.UNIQUE_ASSIST.stepIn = +params.get('stepIn') ? 1 : 0; // 걸음 공격 입력 읽기 (11/05 — 기본 1 · 0 = 전 판: 긋기 시작 순간의 스틱만 · 문턱 0.5)

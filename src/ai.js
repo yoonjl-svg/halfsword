@@ -44,7 +44,7 @@ import { gunAI } from './gun.js';
 import { FINISH, cleaveFinish } from './finish.js';
 import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js'; // 낮은 상대 진입 (10/12, 기본 끔)
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
-import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, requestArtRedondo, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy, snapAim } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
+import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, requestArtRedondo, requestArtThrust, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy, snapAim } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
 import { windStart, windEnd, windRopesBack, windLoopOf, windSpec, windWoundT } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 08:xx — UNIQUE_ASSIST.rdAiWind · 사람과 같은 감기 · 내려침)
 import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret, gnsHumanMoving, foeRecentTipSp } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
@@ -1699,6 +1699,7 @@ export class AI {
     this.drillAtk = !!opt.drill; // 시험: 헛스윙 연습 공격 — 그 자리에서 친다 (attack 다가가기·stepTime·moveFeet)
     this.tech = tech;
     this.why = why;
+    this.inqRun = false; // 운동학 비껴서며 찌르기가 끄는 중 (11/15 — inqGo)
     this.hitLanded = false;
     this.bound = false;
     this.chain = opt.chain ?? 0;
@@ -1872,8 +1873,11 @@ export class AI {
       if (DIG_PROTO.ai && this.dig && !this.Mup) this.need += digStepIn(this, t); // 파고들기 A3 (11/14 사장님 'A안 켜고' — 기본 켬): 걸음 실린 기술은 그 앞 걸음 몫만큼 칼끝 밖에서 냄
       if (this.planFree) freeBeatOnWay(this, s, d); // 무유파 플랜 (3 단계): 다가가다 상대 칼끝 안에서 막히면 그 칼을 쳐내기로 (굴림 — AI_PLAN.beat 마다 한 번)
       if (this.planFree) this.need = freeNeed(this, this.need); // 무유파 플랜 (3 단계): 쳐내기 칼은 지금 거리에서 곧장 (상대 칼을 침)
+      // 비껴서며 찌르기 = 사람과 같은 운동학 칼 (11/15 — UNIQUE_ASSIST.inqAi · inqGo): 몸 빼기 · 찌름이 한 칼이라 먼저 비껴 딛지 않음 — 옛 판이 비껴 딛기 시작하던 거리(+ 걸음 앞 몫)에서 곧장 냄
+      const inqArt = this.inqArtOn(t);
+      if (inqArt) this.need += Math.max(0, t.step?.fwd ?? 0);
       // 기술 걸음 'approach'(유파 고유 동작 step 칸): 닿기 조금 전에 먼저 비껴 딛고, 발이 닿으면 곧장 친다 (step 칸 없는 기술은 이 줄을 지나치기만 한다)
-      if (t.step?.when === 'approach' && !this.feint && !this.drillAtk && this.approachStep(dt, s, th, d)) return;
+      if (!inqArt && t.step?.when === 'approach' && !this.feint && !this.drillAtk && this.approachStep(dt, s, th, d)) return;
       if (this.timer <= 0 && (this.drillAtk || this.contactDist() <= this.need)) { // 헛스윙 연습 공격은 닿는 거리를 기다리지 않는다 (그 자리에서 — 허공)
         // 상대 칼끝이 나를 겨누고 있으면 베며 내딛지 않는다 (칼끝으로 뛰어드는 꼴). 먼저 그 칼을 쳐서 비킨다
         this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
@@ -1896,6 +1900,14 @@ export class AI {
       }
       if (this.attackT > realS(lim) || d > this.holdDist() + (this.chasing ? 1.4 : 0.8) * keep + hold) this.abortAttack();
     } else if (this.phase === 'strike') {
+      if (this.inqRun) {
+        // 운동학 비껴서며 찌르기가 끄는 동안 (11/15 — inqGo): 칼 · 팔 · 몸 빼기는 검술 층(secret_instant.js)이 쥠 · 끝나면 뒤따름(칼이 다 지나가면 afterStrike — 풍차 베기 rdStrikeTick 과 같음)
+        if (me.iai || me.iaiReq) return;
+        this.inqRun = false;
+        this.phase = 'follow';
+        this.timer = 0.05;
+        return;
+      }
       this.handSpeed = L.strikeSpeed;
       if (this.secretRun) this.secretStrike(dt); // 비기: 손 속도 배율 · 서보 힘 창 · 재기
       this.checkBind();
@@ -2176,6 +2188,57 @@ export class AI {
    *  다가가 칼을 낼 거리(approach — 칼끝 거리 + SECRET.ibSpin.aiFire)에 들면 길 대신 skill.secret 의 싱지르 대본(special — 칼끝 고노센 × specialShare.cingir · 한 걸음 나가며 · 비기 셈 · 판정 배율 · 굳음 없음)으로.
    *  특수 공격 식힘(specStart — 대본 · 따라 지나감이 끝난 때부터) · 기술 알림. 실행 동안은 전 비기 싱지르와 같은 꼴(mode 'secret' · secretRun stage 'spin' · special)
    */
+  /** 이 기술을 사람과 같은 운동학 비껴서며 찌르기로 내나 (11/15 — UNIQUE_ASSIST.inqAi · 속임 · 비기 · 헛스윙 연습 칼은 아님) */
+  inqArtOn(t) {
+    return !!UA.inqAi && UA.enhance > 0 && t?.name === 'inquartata' && !this.feint && !this.secretRun && !this.drillAtk;
+  }
+
+  /**
+   * 비껴서며 찌르기 = 사람과 같은 운동학 칼 (11/15 감독 — 사장님 '1. 모두 해' 뒤 · 사람 unique_assist.js launchTap 의 tapVoid 와 같은 부름): 몸을 상대 칼 줄 밖으로 빼며(옆 · 앞 = schools.js inquartata step ·
+   *  뒷발을 그쪽으로 돌려 디딤) 넷째 자세로 가슴을 찌름 — 칼끝 = 고노센 × specialShare.inquartata · 시간 상한 inqSnapTime · 몸 꼴 = 사람 표 body. 이름 · 식힘 · 칼 우위는 그대로(startStrike 와 같은 셈).
+   *  빼는 쪽 = 늦게 본 상대 칼(타격점)의 반대쪽 (공정함 — 반응 시간만큼 늦은 눈 · 칼을 못 보면 오른쪽 = 기술 표 쪽). 못 내면(끌고 가는 칼이 있음 · 서 있지 않음 · 상대가 서 있지 않게 보임) false
+   */
+  inqGo() {
+    const me = this.me;
+    const s = this.sense.seen(this.level.reaction);
+    if (me.state !== 'stand' || !me.armed || !me.sword || me.weaponBroken || s.state !== 'stand') return this.inqRefuse();
+    const t = this.tech;
+    const e = PLAYER_UNIQUE.italian?.find((x) => x.name === 'inquartata');
+    const st = t.step ?? { lat: 0.3, fwd: 0.15 };
+    const sg = this.inqSide(s);
+    const B = e?.body ? [Math.abs(e.body[0]) * sg * (e.bodyMirror ?? 1), Math.abs(e.body[1]) * sg * (e.bodyMirror ?? 1), e.body[2], e.body[3]] : null;
+    if (!requestArtThrust(me, { share: specialShare('inquartata'), maxT: UA.inqSnapTime, tech: 'inquartata', under: false, capFromCut: true, voidStep: { lat: Math.abs(st.lat) * sg, fwd: st.fwd ?? 0 }, bodyPose: B })) return this.inqRefuse();
+    me.stamina.attack('thrust'); // 찌르기 한 번 (사람 탭 하나와 같은 값)
+    this.phase = 'strike';
+    this.inqRun = true;
+    this.path.length = 0;
+    this.sbFired = false;
+    this.stepT = 0; // 걸음은 칼이 딛음 (몸 빼기 · 모자라면 런지)
+    this.feintPts = 0;
+    this.strikeCue(t); // 기술 알림 = 옛 판과 같은 이름 (schools.js 기술 이름)
+    const sp = this.specialNow(); // 'inquartata' → 식힘 (사람과 같은 수)
+    if (sp) this.specStart(sp);
+    const S = (this.stats.inqArt ??= { fired: 0, refused: 0, left: 0 });
+    S.fired++;
+    if (sg < 0) S.left++;
+    return true;
+  }
+
+  inqRefuse() {
+    (this.stats.inqArt ??= { fired: 0, refused: 0, left: 0 }).refused++;
+    return false;
+  }
+
+  /** 몸 빼는 쪽 (+1 오른쪽 · −1 왼쪽 — italian_outbox.js beatSide 와 같은 부호 · 같은 셈을 늦게 본 모습으로): 본 상대 칼 타격점이 내 가슴 → 본 상대 가슴 줄의 오른쪽이면 왼쪽으로 */
+  inqSide(s) {
+    if (!s.armed || s.mx == null) return 1;
+    const c = this.me.bodies.chest.translation();
+    const ux = s.cx - c.x;
+    const uz = s.cz - c.z;
+    const d = Math.hypot(ux, uz) || 1;
+    return (s.mx - c.x) * (-uz / d) + (s.mz - c.z) * (ux / d) > 0 ? -1 : 1;
+  }
+
   cingirGo() {
     const me = this.me;
     if (me.state !== 'stand' || !me.armed || !me.skill.secret({ S: IBERIAN_SPIN_DEF, ctx: { ev: 'spin', turnDir: me.side >= 0 ? 1 : -1 }, special: 'cingir' })) {
@@ -2258,6 +2321,7 @@ export class AI {
       if (!IB_LINK.ai && this.cingirGo()) return; // 11/11 싱지르 특수 공격 — 길 대신 한 바퀴 (못 내면 아래 왼 가로베기 길 그대로) · 11/14 IB_LINK.ai 면 풍차 베기 없음(왼 가로베기 그대로 — 이어 돌리기가 잇는 칼)
       this.tech = this.tech.plain ?? this.tech;
     }
+    if (this.inqArtOn(this.tech) && this.inqGo()) return; // 11/15 비껴서며 찌르기 = 사람과 같은 운동학 칼 (못 내면 아래 옛 길 — 탭 찌르기)
     const t = this.tech;
     this.me.stamina.attack(t.kind === 'thrust' ? 'thrust' : 'cut');
     this.phase = 'strike';
