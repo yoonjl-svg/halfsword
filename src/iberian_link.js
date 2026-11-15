@@ -20,7 +20,7 @@
 //   길이 끝나는 스텝에 받아 둔 손가락 긋기가 같은 빠르기 · 방향으로 이어서 나간다(멈춤 없음). 'circle' = 11/14 머리 위 원 판(견줌 — `?ibLinkMode=circle`).
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { IB_LINK, UNIQUE_ASSIST as UA, WEAPON } from './config.js';
+import { IB_LINK, UNIQUE_ASSIST as UA, WEAPON, STAMINA } from './config.js';
 import { placeArmsAt, armRopes } from './secret_instant.js';
 import { windRopesBack, windContact } from './iberian_redondo.js';
 import { TECH } from './ai_techniques.js';
@@ -216,6 +216,8 @@ export function linkStart(f, to, { T = IB_LINK.time, tech = null, sigma = 0, bri
   if (bridge) {
     // 넘기기 판 (11/15): 놓기 없음 — 손 목표만 길로(부른 쪽이 스텝마다 bridgeStep) · 밧줄 · 덧씌우기 그대로
     f.ibLink = { t: 0, T: bridge.T, bridge, to: [to[0], to[1]], tech, wounds0: f.wounds?.length ?? 0, touch: 0, x: 0 };
+    f.ibLinkK = (f.ibLinkK ?? 0) + 1; // 이 흐름 사슬에서 몇 번째 넘김인가 (fighter.js updateIbFlow 가 사슬이 끊기면 0 — 사슬 칼 빠르기 linkBoost)
+    if (f.ibBoost) f.ibBoost = f.ibBoostK = null; // 넘기는 동안은 더하지 않음 (이은 칼에만)
     f.ibTradeOpen = { t0: f.ibFlowT ?? 0 }; // 맞바꿈 창 (11/15 사장님 '공격 사이의 n초, 이런 식으로 고정해' — 넘김을 시작한 때부터 IB_LINK.tradeT · fighter.js ibTradeTry)
     return f.ibLink;
   }
@@ -281,6 +283,35 @@ export function bridgeStep(f, dt) {
   K.x = Math.min(1, K.t / K.T);
   if (K.t >= K.T - 1e-9) K.done = true;
   return bridgeAt(K.bridge, K.t);
+}
+
+/**
+ * 사슬 칼 빠르기 시제품 (11/15 사장님 "이 검토와 함께 이어돌리기로 이어진 칼의 속도를 인위적으로 좀 더 빠르게 하면 어떨지도 검토해봐. 최대 3~4번까지 매번 이어질 때마다 +5~10% 합산." —
+ *  IB_LINK.chainSpeed · 기본 끔 · 기록 docs/strike/ib_link_2026-11-15.md): 넘기기로 이은 칼(이 사슬 k 번째 넘김 — f.ibLinkK)이 나가는 동안(넘김 끝 → 그 칼 휘두르기가 끝날 때까지 — fighter.js updateIbFlow)
+ *  칼 팔 · 손목 서보 힘(fighter.js — 몸의 힘이 들어가는 자리: 손가락 긋기 팔 힘 SKILL.fingerCut.arm 과 같은 자리) × s^pow(기본 2) · s = 1 + p × min(k, n).
+ *  그은 길(손 목표)은 그대로 — 길을 빨리 감기지 않고 힘만 더함: 같은 길을 s 배 빠르게 지나려면 운동 에너지 s² 배 = 같은 길 위에서 힘 s² 배.
+ *  기력 (사장님 11/15 "숫자로 견주지 않아도 됨. 네 의견은 알겠다." — 더한 빠르기만큼 늘어남): 베기 한 번 값(STAMINA.cutCost × 무기 무게 — 맞바꿈 B12 와 같은 셈) × (s² − 1)
+ *  을 그 칼을 낼 때 더 씀(더한 운동 에너지 몫) · 모자라면 힘을 더하지 않음. 사람(unique_assist.js linkRelease) · AI(ai.js linkTick) 같은 셈. 돌려줌 f.ibBoost 또는 null
+ */
+export function linkBoost(f) {
+  const C = IB_LINK.chainSpeed;
+  if (!C?.on) return null;
+  const k = Math.min(f.ibLinkK ?? 1, C.n);
+  const s = 1 + C.p * k;
+  const S = f.stamina;
+  const cost = STAMINA.cutCost * (S?.weight ?? 1) * (s * s - 1);
+  const log = (f.ibBoostLog ??= { n: 0, cost: 0, skip: 0, k: {} }); // 재기 (ib_link_speed.mjs)
+  if (STAMINA.on && S && !S.infinite && S.value < cost) {
+    log.skip++;
+    return null;
+  }
+  S?.spend?.('attack', cost);
+  log.n++;
+  log.cost += cost;
+  log.k[k] = (log.k[k] ?? 0) + 1;
+  f.ibBoost = { k, s, cost, on: false };
+  f.ibBoostK = s ** (C.pow ?? 2); // 힘 배율 (pow 2 = 같은 길 위 운동 에너지 s² — 견줌 4)
+  return f.ibBoost;
 }
 
 /** 이어 돌리기 끝 (다 돌았든 그만두든): 대본 놓기를 멈춤 · 덧씌우기 칸을 곧장 내려놓음(다음 칼은 손가락 · 서보가) · 뗀 밧줄을 다시 (칼을 잃었으면 손목 원뿔은 안 검) */

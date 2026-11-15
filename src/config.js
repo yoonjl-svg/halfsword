@@ -637,7 +637,16 @@ export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps:
 //   arrive 1 = 손 목표가 다음 칼 시작 자리에 와도 칼(무거운 칼은 손 목표보다 늦음)이 그 자세 허용 각(UNIQUE_ASSIST.angle) 안에 오기까지(bridgeMin 한도) 기다렸다 그음 — 0 이면 곧장(칼이 덜 들려 다음 칼이 약함) [사장님 11/15 결정 — 권고대로 — 4354]
 //   waitA 0 = 앞 칼이 끝 자리로 가는 중이어도 곧장 넘김(그 기세를 꺾어 실음) · 1 = 앞 칼 칼날이 끝 자세 허용 각 안에 오기까지 기다렸다 넘김(견줌 — 다음 칼이 0.07 s 늦음) [사장님 11/15 결정 — 권고대로 — 4355]
 //   tradeT = 맞바꿈 창(사장님 11/15 '공격 사이의 n초, 이런 식으로 고정해' — 넘기기를 시작한 때부터 n 초 · 넘김이 짧아져도 줄지 않음 · 실제 0.4 s 기본 · 견줌 0.6 `?ibTradeT=0.6`) [사장님 11/15 결정 — 권고대로 — 4353]
-export const IB_LINK = { on: 1, mode: 'bridge', time: realS(0.4), bridgeMin: realS(0.2), waitA: 0, arrive: 1, tradeT: realS(0.4), handR: 0.25, cool: 0, chainArm: 0, trade: 1, ai: 1 };
+//  11/15 (2) 사슬 칼 (사장님 11/15 "몇번째 칼이든 그은 그대로 칼이 나가야 하고 이어돌리기는 그 사이의 힌지일 뿐이야." — 기록 docs/strike/ib_link_2026-11-15.md): 사람 넘기기 판은 손가락 몫을
+//   지연 줄로 받아 그은 박자 그대로 냄(unique_assist.js linkTickBridge — 새 수 없음) · arriveDeg · arriveT = 넘기기 닿기 문: 칼날이 다음 칼 시작 자세에서 arriveDeg(20°) 안에 오기까지
+//   (arriveT 실제 0.4 s 한도 — 시간 사다리 · IB_LINK.time 과 같은 값) 받아 둔 긋기를 내지 않음 — 전 40°(UNIQUE_ASSIST.angle) · 0.2 s(bridgeMin) 는 칼이 덜 와 넘기기 남은 몫이 그 칼에 섞임
+//   [사장님 확인 전 — 4504 · 4505] (견줌 `?ibArrive=40` = 전 판 40° · 0.2 s)
+//  chainSpeed = 사슬 칼 빠르기 시제품 (사장님 11/15 "이어돌리기로 이어진 칼의 속도를 인위적으로 좀 더 빠르게 하면 어떨지도 검토해봐. 최대 3~4번까지 매번 이어질 때마다 +5~10% 합산." —
+//   iberian_link.js linkBoost): on 0 = 끔(기본 — 판 그대로) · 1 = 사슬 k 번째 넘김으로 이은 칼에 칼 팔 · 손목 서보 힘 × s² (s = 1 + p × min(k, n) — 그은 길 그대로 힘만) ·
+//   그 칼 기력 + 베기 한 번 값 × (s² − 1) (더한 운동 에너지 — 사장님 11/15 "숫자로 견주지 않아도 됨. 네 의견은 알겠다.") · p 0.05 · n 3 [사장님 확인 전 — 4507 ~ 4511] ·
+//   pow 2 = 힘 배율 s^pow (같은 길을 s 배로 지나는 운동 에너지 — 손가락이 손 목표를 그은 빠르기로 끌어 실제 칼끝은 그 반쯤 · 견줌 4)
+//   `?ibChainSpeed=0.1` (p — 켬) · `?ibChainN=4` · `?ibChainPow=4`
+export const IB_LINK = { on: 1, mode: 'bridge', time: realS(0.4), bridgeMin: realS(0.2), waitA: 0, arrive: 1, tradeT: realS(0.4), handR: 0.25, cool: 0, chainArm: 0, trade: 1, ai: 1, arriveDeg: 20, arriveT: realS(0.4), chainSpeed: { on: 0, p: 0.05, n: 3, pow: 2 } };
 // 이베리아 날 세우기 시험 (10/22 — 사장님 10/21 23:5x '이베리아 유파가 유독 칼면이 맞는 경우가 많았어 특히 수직베기에서', docs/strike/iberian_flat_hits_2026-10-22.md · 확인표 2167~ · **기본 끔 · 사장님 확인 전**).
 //  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
 //   다른 유파 · 무기는 그대로. 끄면(on false) 판 그대로(같은 float). `?ibEdge=motor` · `?ibEdge=pre` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=ibEdge=motor
