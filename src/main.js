@@ -331,6 +331,8 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('thrustDrive')) CONFIG.THRUST.drive = Math.max(0, Math.min(3, Math.round(+params.get('thrustDrive') || 0))); // 11/15 사람 탭 찌르기 몸 싣기 (THRUST.drive — 1 당김 · 2 몸 싣기 · 3 둘 다 · 기본 0)
   if (params.has('thrustDriveChamber') && +params.get('thrustDriveChamber') >= 0) CONFIG.THRUST.driveChamber = +params.get('thrustDriveChamber');
   if (params.has('thrustDriveStep') && +params.get('thrustDriveStep') >= 0) CONFIG.THRUST.driveStep = +params.get('thrustDriveStep');
+  if (params.has('thrustDriveAi')) CONFIG.THRUST.driveAi = Math.max(0, Math.min(3, Math.round(+params.get('thrustDriveAi') || 0))); // 11/15 시제품 AI 찌르기 몸 싣기 (THRUST.driveAi — 기본 0)
+  for (const [q, k] of [['tellAi', 'ai'], ['tellGuard', 'guard']]) if (params.has(q)) CONFIG.AI_TELL[k] = +params.get(q) ? 1 : 0; // 11/15 시제품 찌르기 낌새 눈 (src/thrust_tell.js — 기본 끔)
   if (params.has('itStop') && +params.get('itStop') >= 0) CONFIG.IT_OUTBOX.stop = +params.get('itStop');
   if (params.has('itEdge') && +params.get('itEdge') >= 0) CONFIG.IT_OUTBOX.edge = CONFIG.realS(+params.get('itEdge'));
   if (params.has('itBeat') && +params.get('itBeat') >= 0) CONFIG.IT_OUTBOX.beat = CONFIG.realS(+params.get('itBeat'));

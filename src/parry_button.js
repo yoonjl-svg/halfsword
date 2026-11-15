@@ -28,7 +28,8 @@
 //   새 상한·쿨타임 없음. 놓으면 powerMul 1 (비기 중엔 버튼이 손을 안 쥐니 skill.js 의 비기 힘 창과 겹치지 않는다)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, SKILL, ARENA, realS, CN_STEP } from './config.js';
+import { AI_LEVELS, SKILL, ARENA, realS, CN_STEP, AI_TELL } from './config.js';
+import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 (11/15 시제품 — AI_TELL.guard · 기본 끔)
 import { cnSee } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
 import { threatNow } from './secret.js';
@@ -152,7 +153,12 @@ export class PlayerParryGuard {
     const AV = SKILL.parryAssistVals;
     const w = A > 0 ? Math.min(AV.wMax, Math.max(0, (me.swordIhand ?? AV.iRef) / AV.iRef - 1)) : 0; // 롱소드보다 무거운 몫
     const sr = A >= 2 && AV.lead > 0 ? this.ahead(s, AV.lead) : s; // ② 일찍 읽기
-    const th = this.foe.alive ? threatNow(this.sense, this.foe, sr, c, me.right(_r), d, foeReach, this.lag) : null;
+    let th = this.foe.alive ? threatNow(this.sense, this.foe, sr, c, me.right(_r), d, foeReach, this.lag) : null;
+    // 찌르기 낌새 (11/15 시제품 — AI_TELL.guard · 기본 끔): 곧은 줄 눈이 못 잡은 칼이 칼날 줄로 나오기 시작하면 찌르기 줄로 (AI 눈과 같은 셈 · 같은 모습)
+    if (!th && AI_TELL.guard && this.foe.alive && d < foeReach + 0.3) {
+      const h = thrustTell(sr, c);
+      if (h) (th = { line: 'thrust', thrust: true, sp: h.sp, E: 0.5 * (this.foe.swordProps?.m ?? 1.5) * h.sp * h.sp, high: sr.hy > 0.15, tell: true }), (this.stats.tell = (this.stats.tell ?? 0) + 1);
+    }
     if (CN_STEP.mode) cnSee(me, th); // 동방 보법 회피 (11/15 시제품): 공격 창 — 사람도 보이는 칼 움직임으로 (AI 와 같은 눈)
     if (th) {
       if (this.noThreat > NEW_THREAT_T) this.threatId++;

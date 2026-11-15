@@ -142,15 +142,15 @@ export const itPartOn = (k) => !THRUST.itDrop || !String(THRUST.itDrop).split('+
 /**
  * 사람 탭 찌르기 몸 싣기 (11/15 사장님 '베기에 비해 동작이 너무 작고 느린 거 같아. 이탈리아 뿐만 아니라 모든 찌르기 동작을 강화하고 좀 빠르게 혹은 힘있게 찌르게 하는 것도 고려해.' —
  *  config THRUST.drive · 기본 0 = 끔 · 기록 docs/strike/thrust_stuck_2026-11-15.md §2): 사람이 내는 보통 탭 찌르기(쓰러진 상대 찍기 · 약한 자세 겨눔 · 간격 맞추기 뒤는 빼고)만 —
- *  AI 찌르기(ai.js startStrike 도 skill.thrust 를 부름)는 늘 null(그대로). → { chamber, step, ride } 또는 null
+ *  AI 찌르기(ai.js startStrike 도 skill.thrust 를 부름)는 THRUST.driveAi(11/15 시제품 · 기본 0 = null 그대로)를 읽음. → { chamber, step, ride } 또는 null
  */
 /** 부탁한 걸음(req — 탭 런지)을 딛는 발이 떠 있나 (몸 싣기 머묾 — 부탁이 다른 걸음 뒤에 기다리는 동안 · 두 발 다 디딘 동안은 false) */
 function lungeSwing(g) {
   return (!g.legs.F.stance && g.legs.F.kind === 'req') || (!g.legs.B.stance && g.legs.B.kind === 'req');
 }
 export function thrustDrive(f) {
-  const D = THRUST.drive;
-  if (!D || f.aiControlled) return null;
+  const D = f.aiControlled ? THRUST.driveAi : THRUST.drive; // AI 는 driveAi (11/15 시제품 — 기본 0 = 그대로)
+  if (!D) return null;
   return { chamber: D & 1 ? THRUST.driveChamber : null, step: D & 2 ? THRUST.driveStep : null, ride: !!(D & 2), landed: false, passed: false };
 }
 

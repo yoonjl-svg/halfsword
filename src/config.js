@@ -2566,6 +2566,19 @@ export const AI_ARC = {
   gap: 0.3,
 };
 
+// 찌르기 낌새 눈 (11/15 시제품 — 사장님 '찌르기의 맛은 살려야 해. 혹은 찌르기를 더 잘 방어할 방법? 지금 찌르기 막기 거의 불가능하지 않아?' · src/thrust_tell.js ·
+//  기록 docs/strike/it_tone_2026-11-15.md · 모두 기본 끔 — 사장님 확인 전): 칼끝 3.5 m/s 대신 '칼이 제 칼날 줄을 따라 내 몸 쪽으로 나오기 시작함'(팔 뻗기 · 런지)을 읽음.
+//  ai     1 = AI 위협 읽기(ai.js threat)가 곧은 줄 · 둥근 눈이 못 잡은 칼을 낌새로도 봄 (늦게 본 모습 — 공정) `?tellAi=1`
+//  guard  1 = 사람 막기 단추(parry_button.js)도 같은 낌새로 막는 줄(찌르기)을 잡음 — 누르고 있을 때만 `?tellGuard=1`
+//  v      칼끝의 칼날 줄 몫 빠르기 문턱 (m/s — 칼을 드는 낌새 ai.js preThreat 1.6 과 같은 수)
+//  ray    칼끝에서 앞으로 칼날 줄을 보는 길이 (m — 걸음 사다리 0.9)
+export const AI_TELL = {
+  ai: 0,
+  guard: 0,
+  v: 1.6,
+  ray: 0.9,
+};
+
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)
 //  ai.js 는 인물 표식 persona.terrainSense === 'wetland' 이고 그 몸이 진흙 감속을 받는 무대(fighter.movementSurface === 'wetland' — 잠든 습지)일 때만 이 묶음을 읽는다.
 //  둘 중 하나라도 아니면 옛 길을 바이트 그대로 지난다. 판단 근거는 물리와 같은 젖음 지도(wetland_ground.js wetlandWetness — 그림의 디딤돌이 아니다).
@@ -2658,6 +2671,10 @@ export const THRUST = {
   drive: 0,
   driveChamber: 0.3, // 당김 (m — 걸음 사다리 0.3 칸 · 지금 보통 0.22 · 이탈리아 0) `?thrustDriveChamber=`
   driveStep: 0.45, // 런지 걸음 (m — 걸음 사다리 0.45 칸 · 지금 보통 0.3) `?thrustDriveStep=`
+  // AI 찌르기 몸 싣기 (11/15 시제품 — 사장님 '찌르기의 맛은 살려야 해. 혹은 찌르기를 더 잘 방어할 방법?' · 기록 docs/strike/it_tone_2026-11-15.md · 기본 0 = 끔 — 사장님 확인 전):
+  //  drive 와 같은 칸(1 당김 · 2 몸 싣기 · 3 둘 다)을 찌르기 무기 AI 의 탭 찌르기(ai.js startStrike → skill.thrust)에 — 같은 값(driveChamber · driveStep). 이탈리아 잰 런지는 제 걸음 그대로(사람과 같은 겹침 막기) ·
+  //  운동학 비껴서며 찌르기 · 리솔루토 런지는 탭이 아니라 그대로 `?thrustDriveAi=3`
+  driveAi: 0,
   itAccel: 0, // 11/05 사장님 '이탈리아 보통 찌르기에서 몸 박차기를 뺄게' (확인표 3361 — 전 1 · 재기: 비기 없이 21-2-1 → 11-3-10 · 맞힘 47 → 28 %)
   // 이탈리아 유파 무기 간격 줄 세 판 (10/25 — 파펜하이머 들임 중 간격 생성기가 이탈리아 무기를 못 잼 · docs/strike/italian_measure_2026-10-25.md · 확인표 2556 ~ 2560 · 사장님 확인 전 — 고르실 때까지 기본 'old'):
   //  'old' = 지금 판(10/8 ~ 10/25 분노의 베기 줄 — 판 바이트 같음) · 'contact' = 맞닿음(contact)만 찌르기 잣대 값(한 걸음 · 맞붙음 · 베는 시간은 지금 그대로) + 안다레 리솔루토 창 최소 간격 · 런지 미끄러짐은 지금 맞닿음 그대로 ·
