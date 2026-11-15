@@ -1,6 +1,7 @@
 // 찌르기 박힘 · 무시됨 고침 시제품 · 사람 탭 찌르기 몸 싣기 시험 (사장님 11/15 '지금 찌르기가 좀 이상해. 상대 몸에 박혀서 안 뽑히기도 하고 그러다 칼을 떨어뜨리기도 함.
 //  공격이 종종 무시될 때도 있어.' · '베기에 비해 동작이 너무 작고 느린 거 같아 … 모든 찌르기 동작을 강화하고 좀 빠르게 혹은 힘있게' — 기록 docs/strike/thrust_stuck_2026-11-15.md):
-//   스위치 셋 기본 끔 · 끄면 판 그대로 · STRIKE.hitKPhys(약화 배율은 상처에만) · STRIKE.lodgeHold(다 쓴 박힘 풀기) · THRUST.drive(사람 탭 찌르기 당김 · 몸 싣기 — AI 는 늘 그대로)
+//   스위치 셋 · 끄면 판 그대로 · STRIKE.hitKPhys(약화 배율은 상처에만) · STRIKE.lodgeHold(다 쓴 박힘 풀기) · THRUST.drive(사람 탭 찌르기 당김 · 몸 싣기 — AI 는 THRUST.driveAi 따로)
+//   11/16 묶음 P(사장님 '묶음 P 넣어.')로 hitKPhys 1 · drive 3 기본 — 끔(0)이 기준인 옛 장면은 그때 판(p_pin.mjs pinPOff)으로 묶음 · 기준 그대로
 //  node --test tools/sim/thrust_stuck.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,6 +9,7 @@ import { CONFIG, newRound, DT } from './harness_m.mjs';
 import { thrustDrive } from '../../src/skill.js';
 import { allNodeIds, kitFromNodes } from '../../src/skill_tree_data.js';
 import { strokeRun } from './thrust_motion.mjs';
+import { pinPOff } from './p_pin.mjs';
 
 const ST = CONFIG.STRIKE;
 const TH = CONFIG.THRUST;
@@ -47,15 +49,15 @@ function tapScene() {
   }
 }
 
-test('기본값: 다 쓴 박힘 풀기 켬(사장님 11/15 결정 \'3-1과 3-2만 해\') · 몸 싣기 끔(해 보신 뒤) · 약화 배율 상처만 끔(안 함) — 확인표 4440 ~ 4448', () => {
-  assert.equal(ST.hitKPhys, 0);
+test('기본값: 다 쓴 박힘 풀기 켬(사장님 11/15 결정 \'3-1과 3-2만 해\') · 몸 싣기 3 · 약화 배율 상처만 켬(사장님 11/16 결정 \'묶음 P 넣어.\') — 확인표 4440 ~ 4448 · 4570 ~', () => {
+  assert.equal(ST.hitKPhys, 1);
   assert.equal(ST.lodgeHold, 1);
-  assert.equal(TH.drive, 0);
+  assert.equal(TH.drive, 3);
   assert.equal(TH.driveChamber, 0.3, '걸음 사다리 0.3');
   assert.equal(TH.driveStep, 0.45, '걸음 사다리 0.45');
 });
 
-test('THRUST.drive: 끄면 · AI 몸이면 늘 null(AI 찌르기 그대로) · 1 당김 · 2 몸 싣기 · 3 둘 다', () => {
+test('THRUST.drive: 끄면 · AI 몸이면 늘 null(AI 찌르기 그대로) · 1 당김 · 2 몸 싣기 · 3 둘 다', (t) => { pinPOff(t); // 11/16 그때 판(drive · driveAi 0)으로 — AI 몸 싣기는 it_tone.test 가 봄
   const human = { aiControlled: false };
   const ai = { aiControlled: true };
   assert.equal(thrustDrive(human), null);
@@ -67,7 +69,7 @@ test('THRUST.drive: 끄면 · AI 몸이면 늘 null(AI 찌르기 그대로) · 1
   withSet(TH, { drive: 2 }, () => assert.deepEqual(thrustDrive(human), { chamber: null, step: 0.45, ride: true, landed: false, passed: false }));
 });
 
-test('기본 판 = hitKPhys 0 · lodgeHold 1 · drive 0 · 이탈리아 보통 찌르기 배율 0.8 이 판정 에너지에 · physE 없음 · lodgeHold 0 이면 다 쓴 박힘이 장부에 남음(전 판)', () => {
+test('기본 판 = hitKPhys 0 · lodgeHold 1 · drive 0 · 이탈리아 보통 찌르기 배율 0.8 이 판정 에너지에 · physE 없음 · lodgeHold 0 이면 다 쓴 박힘이 장부에 남음(전 판)', (t) => { pinPOff(t); // 11/16 '기본 판' = 묶음 P 전(그때 판)
   const a = tapScene();
   const b = withSet(ST, { hitKPhys: 0, lodgeHold: 1 }, () => withSet(TH, { drive: 0 }, () => tapScene()));
   assert.deepEqual(a, b);
@@ -88,7 +90,7 @@ test('STRIKE.hitKPhys 1: 약화 배율(0.8) 찌르기는 physE = 판정 에너�
   }
 });
 
-test('STRIKE.lodgeHold 1: 붙잡는 시간을 다 쓴 박힘은 다음 스텝에 장부에서 빠짐 (붙잡는 동안은 그대로)', () => {
+test('STRIKE.lodgeHold 1: 붙잡는 시간을 다 쓴 박힘은 다음 스텝에 장부에서 빠짐 (붙잡는 동안은 그대로)', (t) => { pinPOff(t); // 11/16 묶음 P(hitKPhys 1 — 박힘이 덜 생김) 전 판으로 잰 장면
   const off = withSet(ST, { lodgeHold: 0 }, () => tapScene());
   const r = withSet(ST, { lodgeHold: 1 }, () => tapScene());
   assert.ok(r.spent <= 2, `다 쓴 박힘은 다음 물리 스텝(맞부딪힘 거르개)에서 빠짐 — ${r.spent} 스텝`);
