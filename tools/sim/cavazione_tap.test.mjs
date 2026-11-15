@@ -16,6 +16,7 @@ import { G as PAD } from '../../src/ai_techniques.js';
 import { iaiTipSpeed } from '../../src/secret_instant.js'; // 11/11 칼끝 돌려 빼기 = 고노센 칼끝 × specialShare.cavazione
 import { withArmOld } from './arm_real_pin.mjs';
 import { THRUST_STYLE } from '../../src/weapons.js'; // 11/14 틈 파고들기 그때 값으로 묶음 (아래 ② 넘어짐 전 판)
+import { withPOff } from './p_pin.mjs'; // 11/16 묶음 P · 3안 전 판으로 묶음 (아래 ② 판 · ② 넘어짐 전 판)
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, THRUST } = CONFIG;
@@ -292,7 +293,7 @@ test('② 판 (씨앗 901 · 롱소드 AI · 12 s · 칼끼리 닿음을 느끼�
   CONFIG.DIG_PROTO.reach = 0;
   let r;
   try {
-    r = fightRun('cavTouch', 901, 'longsword', { variant: 'on', dur: 12 });
+    r = withPOff(() => fightRun('cavTouch', 901, 'longsword', { variant: 'on', dur: 12 })); // 11/16 그때 판으로 묶음 (기준은 안 고침): 묶음 P(사람 탭 찌르기 몸 싣기 · AI 몸 싣기 · 낌새 눈)로 씨앗 901 판이 갈라져 칼끝 돌려 빼기가 안 나옴
   } finally {
     [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools, CONFIG.AI_PLAN.pommel] = apD;
     CONFIG.DIG_PROTO.reach = reachOn;
@@ -346,7 +347,8 @@ test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼�
   try {
     const b = watch();
     // 11/12 둘째 두 팔 엇갈림 막기(AI 몫 · 칼자루 끝 앞 바닥 — 상대 AI 팔 · 사람 두손 칼 손 목표가 바뀜)로도 그 수 뒤 넘어짐이 안 나옴 → 고칠 때의 팔(11/12 첫 판 — arm_real_pin armClear2)로 묶음
-    const off = withArmOld(() => fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: b.probe }), ['armClear2']);
+    // 11/16 묶음 P(사람 탭 찌르기 몸 싣기 · 낌새 눈)로도 그 수 뒤 넘어짐이 안 나옴 → 묶음 P · 3안 전 판으로도 묶음 (기준은 안 고침)
+    const off = withPOff(() => withArmOld(() => fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: b.probe }), ['armClear2']));
     assert.ok(b.seen.during > 0 && b.seen.ropesDuring === b.seen.during, '전 판: 밧줄 그대로');
     assert.ok(body(off).some((k) => k.why === 'footing'), `전 판: 낸 뒤 발 밖 넘어짐 ${JSON.stringify(off.it.knock)}`);
   } finally {

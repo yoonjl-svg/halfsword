@@ -55,7 +55,7 @@ const ladder = (v, rungs) => rungs.map(CONFIG.realS).some((r) => Math.abs(r - v)
 test('기본 켬(11/16 사장님 결정 \'동방 보법 개편도 켜. 45도 기준.\' · \'그럼 1.2초로 해\') · 사장님 값 0.4 s · 50 % · 끄면(0) 동방 판은 값을 안 읽음 · 켜도 동방이 아닌 판(롱소드끼리)은 그대로', () => {
   assert.equal(C.mode, 'turn', '[사장님 11/16 결정] 켬 (전 11/15 감독 끔)');
   assert.equal(CONFIG.AI_PLAN.cn.dive, 1, '[사장님 11/16 결정] 偏閃奏進도 켬 (전 끔)');
-  near(C.keepT, CONFIG.realS(0.4));
+  near(C.keepT, CONFIG.realS(0.6)); // 11/16 사장님 '보법을 0.4초 말고 0.6초' (전 0.4)
   near(C.cut, 0.5);
   near(C.turn, Math.PI / 4);
   assert.ok(ladder(C.turnT, [0.2]) && ladder(C.rearm, [1.2]) && C.straight === 0, '꺾음 시간 0.2 s 시간 사다리 · 다시 걸기 1.2 s [사장님 11/16 결정]');

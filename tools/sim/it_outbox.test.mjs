@@ -14,6 +14,7 @@ import { PlayerSecretWatch } from '../../src/secret.js';
 import { kitFromNodes, allNodeIds, KIT_KEYS } from '../../src/skill_tree_data.js';
 import { fightOne } from './school_balance.mjs';
 import { THRUST_STYLE } from '../../src/weapons.js';
+import { pinPOff } from './p_pin.mjs'; // 11/16 묶음 P · 3안(사장님 결정)이 바꾼 옛 장면은 그때 판(끔)으로 묶음 · 기준 그대로
 import { SCHOOL_PLAN, tiltOf, luckOf, itInqP } from '../../src/ai_plan.js';
 import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
@@ -55,7 +56,7 @@ test('기본값 (11/14 사장님 \'이탈리아 찌르기 0.8로 해. 우위 2�
   assert.equal(kitFromNodes('italian', new Set(['I1'])).itTempo, false, 'I1 임시 이음은 걷음 (새 칸 I12)');
 });
 
-test('1 찌르기 배율: 사람 이탈리아 보통 찌르기(탭 · 내려 찌르기 · 돌려 빼기 · 막아찌르기 · 그어 찌르기) × thrustMul · 비기 · 베기 · AI · 다른 유파 · 끔 = 배율 없음(null)', () => {
+test('1 찌르기 배율: 사람 이탈리아 보통 찌르기(탭 · 내려 찌르기 · 돌려 빼기 · 막아찌르기 · 그어 찌르기) × thrustMul · 비기 · 베기 · AI · 다른 유파 · 끔 = 배율 없음(null)', (t) => { pinPOff(t); // 11/16 비껴서며 찌르기 배율 inqMul 1 (그때 판 — 0.5 몫은 it_tone.test 가 봄)
   for (const kind of ['tap', 'imbro', 'cav', 'opp', 'stroke']) {
     const { me, foe } = fake({ kind });
     const r = itThrust(me, foe);
@@ -132,7 +133,7 @@ test('1 찌르기 배율 = 판정 에너지 자리 (combat.js analyze hk — 같
   }
 });
 
-test('2 맞박자 찌르기 +30 %: 상대가 내 쪽으로 걸음 문턱 넘게 · 걷는 중이면 × 1.3 (보통 찌르기 0.8 × 1.3 · 비껴서며 찌르기 1 × 1.3 · 비기 없음) · 몫 열쇠 itTempo 를 익혀야', () => {
+test('2 맞박자 찌르기 +30 %: 상대가 내 쪽으로 걸음 문턱 넘게 · 걷는 중이면 × 1.3 (보통 찌르기 0.8 × 1.3 · 비껴서며 찌르기 1 × 1.3 · 비기 없음) · 몫 열쇠 itTempo 를 익혀야', (t) => { pinPOff(t); // 11/16 inqMul 1 (그때 판)
   const walkIn = [-(GAIT.walkMin + 0.05), 0, 0]; // 상대(+x)가 나(원점) 쪽으로
   const a = fake({ foeV: walkIn });
   assert.equal(foeWalkingIn(a.me, a.foe), true);
@@ -214,7 +215,7 @@ test('3 리솔루토는 칼 우위 동안만 창: 덮인 채 나아가기 셈이
   }
 });
 
-test('5 AI 리솔루토 (11/14 사장님 \'리솔루토도 쓰게해\'): AI 이탈리아 숙련 5 = 사람과 같은 비기 · 숙련 4 · 닫음 = 없음 · 칼 우위 밖엔 창 없음 · 창이 열리면 곧장 같은 실행부 · 무장 동안 발은 상대 걸음을 맞받음', () => {
+test('5 AI 리솔루토 (11/14 사장님 \'리솔루토도 쓰게해\'): AI 이탈리아 숙련 5 = 사람과 같은 비기 · 숙련 4 · 닫음 = 없음 · 칼 우위 밖엔 창 없음 · 창이 열리면 곧장 같은 실행부 · 무장 동안 발은 상대 걸음을 맞받음', (t) => { pinPOff(t); // 11/16 '창이 열리면 곧장' 은 3안 끔(그때 판 — 박자 싸움은 it_tone.test 가 봄)
   const mk = (prof) => newRound({ walls: true, seed: 9, weapon: 'longsword', weapon2: 'rapier', gap: 2.4, persona: { proficiency: { italian: prof } } });
   for (const [prof, open, want] of [[5, true, 'andareRisoluto'], [4, true, null], [5, false, null]]) {
     const open0 = CONFIG.SECRET.aiOpenSchools;
@@ -499,7 +500,7 @@ test('11/15 둘째 AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 (U
 });
 
 const hash = (r) => createHash('sha256').update(JSON.stringify(r)).digest('hex').slice(0, 12);
-test('스위치 끔이면 전 판 (본판 c1cad826 과 판 바이트 같음 — 사람 이탈리아 손가락 봇 판 둘 · 거울은 AI 이탈리아도) · 다른 유파 판은 켬 그대로 같음', (t) => withSecretFreeOff(() => { pinLodge0(t); pinArc0(t); // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
+test('스위치 끔이면 전 판 (본판 c1cad826 과 판 바이트 같음 — 사람 이탈리아 손가락 봇 판 둘 · 거울은 AI 이탈리아도) · 다른 유파 판은 켬 그대로 같음', (t) => withSecretFreeOff(() => { pinLodge0(t); pinArc0(t); pinPOff(t); // 11/16 묶음 P · 3안도 그때 판(끔)으로 · 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   // 11/14 틈 파고들기(사장님 '기본찌르기는 0.6 위에서 내려찌르기는 0.9' — 무기 값 · IT_OUTBOX 밖)는 그때 값으로 묶어 본판과 견줌 (레이피어 0.3 · 에스톡 0.5 · 내려 찌르기 0.6)
   const UA = CONFIG.UNIQUE_ASSIST, keep = [THRUST_STYLE.rapier.gap, THRUST_STYLE.estoc.gap, UA.imbroccataGap];
   THRUST_STYLE.rapier.gap = 0.3; THRUST_STYLE.estoc.gap = 0.5; UA.imbroccataGap = 0.6;

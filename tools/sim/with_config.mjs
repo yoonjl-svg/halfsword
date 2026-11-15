@@ -10,10 +10,9 @@ const sets = [];
 while (args.length && /^[A-Z_]+(\.[A-Za-z0-9_]+)+=/.test(args[0])) sets.push(args.shift());
 for (const s of sets) {
   const [path, v] = s.split('=');
-  const keys = path.split('.'); // 11/16 세 마디 이상도 (예: SECRET.altib.speed=0) · 'null' 은 null
-  let o = CONFIG[keys[0]];
-  for (const k of keys.slice(1, -1)) o = o[k];
-  o[keys.at(-1)] = v === 'true' ? true : v === 'false' ? false : v === 'null' ? null : Number.isNaN(+v) ? v : +v; // 예: ARMOR.on=false
+  const [grp, ...keys] = path.split('.'); // 11/16 — 겹친 칸도 (예: AI_PLAN.read.riso=0 · SECRET.altib.speed=0) · 'null' 은 null
+  const o = keys.slice(0, -1).reduce((a, k) => a[k], CONFIG[grp]);
+  o[keys[keys.length - 1]] = v === 'true' ? true : v === 'false' ? false : v === 'null' ? null : Number.isNaN(+v) ? v : +v; // 예: ARMOR.on=false
 }
 const [script, ...rest] = args;
 process.argv = [process.argv[0], simPath(script), ...rest]; // 절대 경로로 넘긴다 (대상 스크립트의 직접 실행 확인이 맞게)

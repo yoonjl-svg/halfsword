@@ -28,7 +28,8 @@
 //   새 상한·쿨타임 없음. 놓으면 powerMul 1 (비기 중엔 버튼이 손을 안 쥐니 skill.js 의 비기 힘 창과 겹치지 않는다)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, SKILL, ARENA, realS, CN_STEP } from './config.js';
+import { AI_LEVELS, SKILL, ARENA, realS, CN_STEP, AI_TELL } from './config.js';
+import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 (11/15 시제품 — AI_TELL.guard · 기본 끔)
 import { cnSee } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
 import { threatNow } from './secret.js';
@@ -108,6 +109,17 @@ export class PlayerParryGuard {
   }
 
   /** 줄 → 그 자리 패드 */
+  /** 막기 단추 낌새 붙잡기 (AI_TELL.latch): 지금 들어오는 찌르기(곧은 줄 눈의 찌르기 · 낌새)가 있나 — 아래 위협 읽기와 같은 모습 · 셈만 */
+  thrustSoon(me) {
+    const s = this.sense.seen(this.lag);
+    const c = me.bodies.chest.translation();
+    const d = Math.max(0.01, Math.hypot(s.cx - c.x, s.cz - c.z));
+    const foeReach = (me.swordArt?.measureFor?.(this.foe.weapon)?.reach ?? 1) + 0.05;
+    if (d >= foeReach + 0.3) return null;
+    const th = threatNow(this.sense, this.foe, s, c, me.right(_r), d, foeReach, this.lag);
+    return th ? (th.thrust ? th : null) : thrustTell(s, c);
+  }
+
   padOf(line) {
     const S = this.school;
     if (!S) return null;
@@ -141,7 +153,11 @@ export class PlayerParryGuard {
     this.opposition.beginGuardStep();
     recordFoeSenses(this, dt); // 1:1 = this.sense.record(dt) 그대로 (2:2 는 상대마다 — setFoe)
     sk.guardDrive = 0;
-    const can = !me.stamina.exhausted && this.held && !this.broken && me.alive && me.armed && !me.weapon?.gun && !sk.sec && !sk.tap && !sk.pom && (me.state === 'stand' || me.state === 'kneel') && !!this.school && !me.ibLink; // 11/14 이어 돌리기(머리 위 원) 동안 막기 안 됨 — 슬러거의 대가 (iberian_link.js · IB_LINK)
+    // 막기 단추 낌새 붙잡기 (11/15 시제품 — AI_TELL.latch · guard 1 일 때만): 놓은 뒤 latch 초 안에 찌르기(낌새 · 곧은 줄)가 오면 누른 것처럼 그 찌르기를 막음
+    if (this.held) this.heldAt = this.clock;
+    const latched = !this.held && AI_TELL.guard && AI_TELL.latch > 0 && this.heldAt != null && this.clock - this.heldAt <= AI_TELL.latch && (this.latchRun || (!!this.foe.alive && !!this.thrustSoon(me)));
+    this.latchRun = latched;
+    const can = !me.stamina.exhausted && (this.held || latched) && !this.broken && me.alive && me.armed && !me.weapon?.gun && !sk.sec && !sk.tap && !sk.pom && (me.state === 'stand' || me.state === 'kneel') && !!this.school && !me.ibLink; // 11/14 이어 돌리기(머리 위 원) 동안 막기 안 됨 — 슬러거의 대가 (iberian_link.js · IB_LINK)
     // 위협 읽기 (누르지 않아도 센다 — 누르는 순간 이미 오는 칼을 읽게. 번호는 ai.js threat 와 같은 규칙)
     const L = this.L;
     const s = this.sense.seen(this.lag);
@@ -152,7 +168,12 @@ export class PlayerParryGuard {
     const AV = SKILL.parryAssistVals;
     const w = A > 0 ? Math.min(AV.wMax, Math.max(0, (me.swordIhand ?? AV.iRef) / AV.iRef - 1)) : 0; // 롱소드보다 무거운 몫
     const sr = A >= 2 && AV.lead > 0 ? this.ahead(s, AV.lead) : s; // ② 일찍 읽기
-    const th = this.foe.alive ? threatNow(this.sense, this.foe, sr, c, me.right(_r), d, foeReach, this.lag) : null;
+    let th = this.foe.alive ? threatNow(this.sense, this.foe, sr, c, me.right(_r), d, foeReach, this.lag) : null;
+    // 찌르기 낌새 (11/15 시제품 — AI_TELL.guard · 기본 끔): 곧은 줄 눈이 못 잡은 칼이 칼날 줄로 나오기 시작하면 찌르기 줄로 (AI 눈과 같은 셈 · 같은 모습)
+    if (!th && AI_TELL.guard && this.foe.alive && d < foeReach + 0.3) {
+      const h = thrustTell(sr, c);
+      if (h) (th = { line: 'thrust', thrust: true, sp: h.sp, E: 0.5 * (this.foe.swordProps?.m ?? 1.5) * h.sp * h.sp, high: sr.hy > 0.15, tell: true }), (this.stats.tell = (this.stats.tell ?? 0) + 1);
+    }
     if (CN_STEP.mode) cnSee(me, th); // 동방 보법 회피 (11/15 시제품): 공격 창 — 사람도 보이는 칼 움직임으로 (AI 와 같은 눈)
     if (th) {
       if (this.noThreat > NEW_THREAT_T) this.threatId++;

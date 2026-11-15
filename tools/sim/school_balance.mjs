@@ -306,7 +306,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     if (S.attack && S.dist < M.reach + 0.8) {
       if (school === 'italian' && rnd() < 0.35) return { kind: 'sideTap', seconds: 0.4, side: side(), tapAt: 0.03 + rnd() * 0.08, want: 'inquartata' };
       if (school === 'chinese' && S.left > 0 && rnd() < (HUNT ? huntGk(S) : 0.5)) return { kind: 'guard', seconds: 0.65, fwd: 1, want: secretName };
-      if (rnd() < 0.6) return { kind: 'guard', seconds: 0.6, fwd: S.dist < M.contact ? -0.5 : 0 };
+      if (rnd() < +(process.env.SB_GUARD_P || 0.6)) return { kind: 'guard', seconds: 0.6, fwd: S.dist < M.contact ? -0.5 : 0 }; // 0.6 (11/15 재기 — SB_GUARD_P: 쳐 오면 막기 단추를 누르는 몫 · it_tone_measure.mjs '막는 사람' 봇 · 굴림 수 그대로)
     }
     if (S.dist > M.reach + 0.55) return { kind: 'move', seconds: 0.5, fwd: 0.9 };
     if (rnd() < (HUNT ? HUNT_TECH : tech)) {

@@ -19,6 +19,7 @@ import { TRADITIONS } from '../../src/schools.js';
 import { withArmOld } from './arm_real_pin.mjs';
 import { ITALIAN_NOW } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 'full' 이면 옛 판 재현을 그때 간격 줄로
 import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
+import { pinPOff } from './p_pin.mjs'; // 11/16 묶음 P · 리솔루토 3안이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
@@ -114,7 +115,8 @@ test('격살 허파 찌르기(봉두세)도 같은 길: 굳음 동안 뻗은 채
   });
 });
 
-test('10/24 17:2x 뒤 탭 찌르기 (롱소드 황소 → 칼 내린 상대 · 1.5 ~ 2.3 m): 기본 찌름 판정 수 ≥ 전 판(돌림 · 교정 끔) · 머묾 손목 범위 안 — JOINTS.swivelThrust 0(17:2x 판)은 찌름 0', () => {
+test('10/24 17:2x 뒤 탭 찌르기 (롱소드 황소 → 칼 내린 상대 · 1.5 ~ 2.3 m): 기본 찌름 판정 수 ≥ 전 판(돌림 · 교정 끔) · 머묾 손목 범위 안 — JOINTS.swivelThrust 0(17:2x 판)은 찌름 0', (t) => {
+  pinPOff(t); // 11/16 묶음 P(사람 탭 찌르기 몸 싣기 — 당김 · 런지)로 이 장면의 거리 · 찌름이 바뀜 → 그때 판(끔)으로 묶음 · 기준 그대로
   const run = () => {
     let stab = 0, dev = 0, n = 0;
     for (const gap of [1.5, 1.7, 1.9, 2.1, 2.3]) {

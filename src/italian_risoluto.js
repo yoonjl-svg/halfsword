@@ -169,6 +169,7 @@ export class RisolutoWatch {
     this.opens = { hold: 0, beat: 0, close: 0, touch: 0 };
     this.closeDone = false; // 다 붙음 창 (SECRET.risolutoClose): 이번 덮인 채 나아가기에서 이미 열었나
     this.touchDone = false; // 칼끝 얽힘 창 (SECRET.risolutoTouch — 10/25): 이번 덮인 채 나아가기에서 이미 셈했나 (열렸든 가까워 막혔든)
+    this.touchT = 0; // 11/16 2안 (SECRET.risolutoTouchMin): 이번 덮인 채 나아가기에서 창을 열 수 있는 동안(칼 우위 · 창 없음) 이어진 시간
     this.lineSteps = 0; // 재기: 줄 막기로만 덮음이 된 스텝
     this.anySteps = 0; // 재기: 칼 어느 부위든(넓은 판정)으로만 덮음이 된 스텝
     this.off = 0; // 너그러움 (SECRET.risolutoGrace): 덮음 · 가슴 사이가 끊긴 지 지난 시간 — 이 동안은 셈을 쥔 채 기다림
@@ -184,6 +185,7 @@ export class RisolutoWatch {
     this.gap = null;
     this.closeDone = false;
     this.touchDone = false;
+    this.touchT = 0;
     this.off = 0;
     this.step = null;
   }
@@ -223,9 +225,11 @@ export class RisolutoWatch {
       this.held += dt;
       this.on = true;
       if (SECRET.risolutoMirror) this.step = fstep;
+      if (canOpen) this.touchT += dt;
       // 칼끝 얽힘 창 (10/25 사장님 '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — SECRET.risolutoTouch · `?risoTouch=0` = 10/24 판): 덮인 채 나아가기가 선 첫 스텝에 곧장 · 셈 시간 없음 ·
       //  덮인 채 나아가기 한 번에 한 번(같은 묶임에서 다시는 이어짐 · 상대 박자 창으로). 창이 이미 열려 있으면 그 창이 끝난 스텝에
-      if (SECRET.risolutoTouch && canOpen && !this.touchDone) {
+      //  11/16 2안 (SECRET.risolutoTouchMin — 기본 0 끔): 창을 열 수 있는 동안(칼 우위 · 창 없음) 덮인 채 나아가기가 이 초 이어진 뒤에
+      if (SECRET.risolutoTouch && canOpen && !this.touchDone && this.touchT >= (SECRET.risolutoTouchMin ?? 0) - 1e-9) {
         this.touchDone = true;
         this.opens.touch++;
         return { ev: 'risoluto', path: 'touch', held: this.held, ...this.foeCtx() };
@@ -262,6 +266,7 @@ export class RisolutoWatch {
     this.on = false;
     this.closeDone = false;
     this.touchDone = false;
+    this.touchT = 0;
     // 두 번째 길: 상대 박자(칼을 냄 · 칼을 빼 덮음이 풀림) — 내가 휘두르거나 스틱을 놓아 끝난 것은 아님
     if (SECRET.risolutoBeat && canOpen && held >= SECRET.risolutoBeatMin && (why === 'foeSwing' || why === 'uncover')) {
       this.opens.beat++;
