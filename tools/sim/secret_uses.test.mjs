@@ -9,13 +9,15 @@ import { PlayerSecretWatch, secretLeft, secretUsesOf, useSecret, secretSpent } f
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { withReadOld } from './ai_read_pin.mjs'; // 11/14 유파 AI 3 단계 수 읽기 · 공정함 · AI 고노센 지키기 — 옛 장면은 잰 때 판으로 (docs/strike/ai_read_2026-11-14.md §6)
 import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
+import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 // 준비까지 (11/14 사장님 '2초 후에 납도 시작' — 일본 준비는 iaiArmTime 뒤 납도 SECRET.iaiSheathe 가 끝나야 · 帯刀 끄면 납도 없음 · secret.js IaiArm.extra)
 const ARM = () => CONFIG.SECRET.iaiArmTime + (CONFIG.SECRET.iaiObi && CONFIG.SECRET.iaiSheathe > 0 ? CONFIG.SECRET.iaiSheathe : 0);
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { SECRET } = CONFIG;
 
-test('기본값 — 판당 1 번 · 동방도 1 번(11/14 — 전 3) · 비기 식힘 칸(secretCooldown)은 없음', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
+test('기본값 — 판당 1 번 · 동방도 1 번(11/14 — 전 3) · 비기 식힘 칸(secretCooldown)은 없음', (t) => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   assert.deepEqual(UA.secretUses, { default: 1, chinese: 1 }); // 사장님 11/14 '격살이 세지는 만큼 3번 제한을 다른 비기처럼 1번으로 바꾸자' · '동방과 일본은 전부 권고대로' (전 { default: 1, chinese: 3 } — 10/29 19:5x)
   assert.equal('secretCooldown' in UA, false);
   for (const [tr, n] of [['german', 1], ['italian', 1], ['iberian', 1], ['japanese', 1], ['chinese', 1]]) assert.equal(secretUsesOf({ swordArt: { tradition: tr } }), n, tr);
@@ -117,7 +119,8 @@ test('일본 고노센 · 이베리아 싱지르: 한 번 쓴 판엔 준비 · �
 }));
 
 // 11/14 옛 장면 시험 — 그때 판으로 묶음(secretUses.chinese 3 · 기준은 안 고침): 동방 판당 수는 11/14 사장님 결정으로 1 (판당 1 번 길은 위 독일 · 일본 시험과 같은 길 · tools/sim/cn_hunt.test.mjs)
-test('동방 격살 3 번 (옛 판 · secretUses.chinese 3): 두 번 쓴 뒤에도 조건을 보고(바쁨 아님) · 세 번째 뒤엔 바쁨', () => {
+test('동방 격살 3 번 (옛 판 · secretUses.chinese 3): 두 번 쓴 뒤에도 조건을 보고(바쁨 아님) · 세 번째 뒤엔 바쁨', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   const U0 = UA.secretUses;
   UA.secretUses = { ...U0, chinese: 3 };
   const B = body('qinggang');

@@ -13,6 +13,7 @@ import { secretUsesOf, secretLeft, useSecret } from '../../src/secret.js';
 import { kitFromNodes, allNodeIds, nodeOf, KIT_KEYS } from '../../src/skill_tree_data.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
+import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { SECRET, STAMINA } = CONFIG;
@@ -25,8 +26,8 @@ const body = ({ tr = 'chinese', kit = kitAll(tr), tech = 'yaoji', id = 1 } = {})
 const C = Object.create(Combat.prototype); // huntWound · yaojiDeep 은 this 의 다른 칸을 안 씀
 const cut = (zone = 'abdomen', o = {}) => ({ type: 'cut', zone, severity: 0.4, ...o });
 
-test('기본값 — 켬 · 상한 5 · 기력 회복 −8 %/겹 · 격살 빠르기 +8 %/겹 · 몸 어디든 · AI 도 쌓음(11/14 — 전 끔) · 동방 판당 1 번(공용 표) [사장님 11/14]', () => {
-  assert.deepEqual(UA.cnHunt, { on: 1, max: 5, regen: 0.08, share: 0.08, torso: 0, ai: 1 }); // ai 1 = 사장님 11/14 '동방도 격살 쓰게 해' — 사람과 똑같이 (전 0)
+test('기본값 — 켬 · 상한 5 · 기력 회복 −10 %/겹(11/16 — 전 −8 %) · 격살 빠르기 몫 share 0.08(풀기 끔 판) · 몸 어디든 · AI 도 쌓음 · 모든 칼날 상처로 쌓임 · 8.0 s 뒤 사라짐(11/16) · 동방 판당 1 번(공용 표) [사장님 11/14 · 11/16]', (t) => {
+  assert.deepEqual(UA.cnHunt, { on: 1, max: 5, regen: 0.1, share: 0.08, torso: 0, ai: 1, life: CONFIG.realS(8.0), any: 1 }); // 11/16 사장님 결정 '대신 기력 회복 -10%' · '8초로 하자' · '모든 공격 성공으로 쌓이게' — regen 0.08 → 0.10 · life · any 더함 (ai 1 = 11/14 '동방도 격살 쓰게 해')
   assert.deepEqual(UA.secretUses, { default: 1, chinese: 1 }); // 11/14 '다른 비기처럼 1번으로' — 사람 · AI 같은 표 (전 chinese 3)
   assert.deepEqual(UA.yaojiBleed.techs, ['yaoji', 'chebuYaoji', 'lianchi']);
   assert.deepEqual(UA.yaojiBleed.zones, ['chest', 'abdomen', 'pelvis']);
@@ -43,7 +44,8 @@ test('칸 C12 맹호은림: 출혈 심화 C4 다음 · 심화 · 깊이 3 · 금
   assert.ok(!/[0-9]/.test(n.eff) && !n.eff.includes(' · '), '효과 글: 숫자 · 꼬리 없음');
 });
 
-test('쌓임 조건: 허리를 베는 세 칼 · 칼날 베기 · 몸 어디든 · 상처 > 0 · 맹호은림(C12) — 하나라도 빠지면 없음 · torso 1(전 판)이면 몸통 · C4 만', () => {
+test('쌓임 조건: 허리를 베는 세 칼 · 칼날 베기 · 몸 어디든 · 상처 > 0 · 맹호은림(C12) — 하나라도 빠지면 없음 · torso 1(전 판)이면 몸통 · C4 만', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   const none = (att, r) => { const v = {}; C.huntWound(att, v, r); return huntN(v); };
   try {
     for (const tech of ['yaoji', 'chebuYaoji', 'lianchi']) for (const zone of ['chest', 'abdomen', 'pelvis', 'arm', 'head', 'neck', 'leg']) {
@@ -84,7 +86,8 @@ test('공격 하나에 한 겹 (같은 공격 번호의 두 번째 상처는 셈
   assert.equal(v.cnHunt.t5, 7);
 });
 
-test('기력 회복 −8 %/겹 (stamina.js recoverRate) · 겹 없으면 같은 수 · 0 밑으로 안 내려감', () => {
+test('기력 회복 −8 %/겹 (stamina.js recoverRate) · 겹 없으면 같은 수 · 0 밑으로 안 내려감', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   try {
     for (const f of [{ aiControlled: true }, { humanInput: true }, {}]) {
       const base = recoverRate(f);
@@ -101,7 +104,8 @@ test('기력 회복 −8 %/겹 (stamina.js recoverRate) · 겹 없으면 같은 
   } finally { reset(); }
 });
 
-test('실제 판: 겹은 판 끝까지 빠지지 않음 · 겹이 쌓인 몸은 쉼 뒤 회복이 1 − 0.08 n 배', () => {
+test('실제 판: 겹은 판 끝까지 빠지지 않음 · 겹이 쌓인 몸은 쉼 뒤 회복이 1 − 0.08 n 배', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   const run = (n) => {
     const G = newRound({ weapon: 'hwando', weapon2: 'longsword', seed: 2, kit: kitAll() });
     try {
@@ -122,7 +126,8 @@ test('실제 판: 겹은 판 끝까지 빠지지 않음 · 겹이 쌓인 몸은 
   for (const n of [1, 5]) assert.ok(Math.abs(run(n) / d0 - (1 - 0.08 * n)) < 0.02, `${n} 겹`);
 });
 
-test('격살 칼끝 빠르기 × (1 + 0.08 n) — 겨눈 상대의 겹 · 0.7 × 1.4 = 0.98 at 5 · 겹 없음 · C12 없음이면 그대로', () => {
+test('격살 칼끝 빠르기 × (1 + 0.08 n) — 겨눈 상대의 겹 · 0.7 × 1.4 = 0.98 at 5 · 겹 없음 · C12 없음이면 그대로', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   const S = TRADITIONS.chinese.playerSecret;
   const T = (n, kit = kitAll()) => {
     const G = newRound({ weapon: 'qinggang', weapon2: 'longsword', seed: 1, gap: 1.35, kit });
@@ -144,7 +149,8 @@ test('격살 칼끝 빠르기 × (1 + 0.08 n) — 겨눈 상대의 겹 · 0.7 ×
   assert.equal(huntShareK({ swordArt: { tradition: 'chinese' }, skillKit: kitAll(), foe: { cnHunt: { n: 5 } } }), 1.4);
 });
 
-test('격살 판당 1 번 (공용 표 — 사람 · AI 같음 · C12 · 사냥 스위치와 상관없이) · 다른 유파 1 그대로 · 전 판 표(chinese 3) · 끝없음 판', () => {
+test('격살 판당 1 번 (공용 표 — 사람 · AI 같음 · C12 · 사냥 스위치와 상관없이) · 다른 유파 1 그대로 · 전 판 표(chinese 3) · 끝없음 판', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   const U0 = UA.secretUses;
   try {
     assert.equal(secretUsesOf(body()), 1, '사람');

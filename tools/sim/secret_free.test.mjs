@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { newRound, CONFIG, THREE } from './harness_m.mjs';
 import { SECRET, STAMINA, UNIQUE_ASSIST as UA, AI_PLAN_JP, realS } from '../../src/config.js';
 import { TRADITIONS, playerSecretDef } from '../../src/schools.js';
-import { PlayerSecretWatch, secretUsesOf, secretCostOf, secretFree } from '../../src/secret.js';
+import { PlayerSecretWatch, secretUsesOf, secretCostOf, secretFree, gkFreeOn } from '../../src/secret.js';
 import { drawInput, drawTapTake, iaiSeated } from '../../src/iai_obi.js';
 import { altibShot } from '../../src/unique_assist.js';
 import { iaiTipSpeed } from '../../src/secret_instant.js';
@@ -32,7 +32,7 @@ test('기본값 — [사장님 11/16 결정] 고노센 · 알티바슈 · 죽음
   assert.equal(AI_PLAN_JP.drawRead, 1);
   for (const tr of ['japanese', 'iberian', 'german', 'italian']) assert.equal(secretUsesOf(body(tr)), Infinity, tr);
   assert.equal(secretFree('chinese'), false); // 동방 격살은 다른 일 — 공용 표 그대로
-  assert.equal(secretUsesOf(body('chinese')), UA.secretUses?.chinese ?? Infinity);
+  assert.equal(secretUsesOf(body('chinese')), gkFreeOn() ? Infinity : UA.secretUses?.chinese ?? Infinity); // 격살 끝없음은 격살 풀기(SECRET.gkFree — 개발 가지 머리 11/16 동방 묶음)가 맡음
   assert.equal(secretCostOf(TRADITIONS.japanese.secret), 50);
   assert.equal(secretCostOf(TRADITIONS.german.playerSecret), 35);
   assert.equal(secretCostOf(playerSecretDef('italian')), 50);

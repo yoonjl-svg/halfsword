@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
+import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 
 const A = CONFIG.AI_ARC;
 function withArc(o, fn) {
@@ -110,7 +111,8 @@ test('칼끝 틈: 상대 칼이 0.3 m 넘게 길고 내 칼끝 밖이면 보통 
   assert.ok(lo > 0.2 && lo < 0.47 && mid > 0.55 && mid < 0.8, `${lo} ${mid}`);
 });
 
-test('판에서 쓰임 — 동방 AI 숙련 5 대 츠바이핸더 AI (씨앗 2 · 20 s): 둥근 눈이 칼을 봄 · 칼끝 틈에서 참음 · 같은 길이 칼끼리(롱소드)는 칼끝 틈 셈 없음', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — 기준 그대로)으로 묶음
+test('판에서 쓰임 — 동방 AI 숙련 5 대 츠바이핸더 AI (씨앗 2 · 20 s): 둥근 눈이 칼을 봄 · 칼끝 틈에서 참음 · 같은 길이 칼끼리(롱소드)는 칼끝 틈 셈 없음', (t) => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — 기준 그대로)으로 묶음
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   const { G, ai, free } = round(5, 'zweihander', 2);
   while (G.t < 20) G.step();
   assert.ok((ai.stats.arcSeen ?? 0) > 0 && (ai.stats.arcGap ?? 0) > 0, JSON.stringify({ arc: ai.stats.arcSeen, gap: ai.stats.arcGap }));

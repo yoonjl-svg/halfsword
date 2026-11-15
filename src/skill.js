@@ -41,7 +41,7 @@ import { linkStep } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — 
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain, gnsBlockOf, secretCostOf } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf, mordBurstTick, mordMode } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
-import { huntShareK } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 상대를 겨눈 격살 칼끝 빠르기 몫 × (1 + share × 겹)
+import { huntShareK, huntStacksFor } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 상대를 겨눈 격살 칼끝 빠르기 몫 × (1 + share × 겹)
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -70,6 +70,12 @@ export const gyeoksalHitMul = () => SECRET.gyeoksalHitMul ?? SECRET.hitMul;
 const gyeoksalReq = (D, f) => {
   const G = SECRET.gyeoksal ?? {};
   const pw = D.power === 'gyeoksal' ? G.power : D.power;
+  const F = SECRET.gkFree;
+  if (F?.on) {
+    // 격살 풀기 (11/16 — SECRET.gkFree · 사장님 '고노센의 35%면 … 스택 하나당 +5~8%'): 몫 = share + add × 겹 (더함 — 지금 판은 0.7 × (1 + 0.08 × 겹) 곱)
+    const sh = F.share + F.add * huntStacksFor(f);
+    return { ...(pw === 'hit' ? { hitMul: gyeoksalHitMul() } : { hitMul: 1, effMul: secretEffMul(D) }), share: sh, ...(G.trailWidth ? { width: Math.min(1, sh) } : {}) };
+  }
   const hk = huntShareK(f);
   const share = (G.share > 0 ? G.share : SECRET.cnFastShare) * hk;
   return { ...(pw === 'hit' ? { hitMul: gyeoksalHitMul() } : { hitMul: 1, effMul: secretEffMul(D) }), ...(G.share > 0 ? { share: G.share * hk } : {}), ...(G.trailWidth ? { width: Math.min(1, share) } : {}) };

@@ -747,8 +747,8 @@ export function secretUsesOf(f) {
   const tr = f?.swordArt?.tradition;
   if (secretFree(tr)) return Infinity; // 11/16 끝없는 고노센 · 알티바슈 포르트 (SECRET.gnsFree · altib.free — 아래)
   const U = UNIQUE_ASSIST.secretUses;
-  if (!U) return Infinity;
-  return U[tr] ?? U.default ?? Infinity;
+  if (!U || (gkFreeOn() && f?.swordArt?.tradition === 'chinese')) return Infinity; // 격살 풀기 (11/16 — SECRET.gkFree): 동방 격살 끝없음 · 대신 식힘(gkCooling)
+  return U[f?.swordArt?.tradition] ?? U.default ?? Infinity;
 }
 /**
  * 판당 쓸 수가 끝없는 유파 비기인가 (사장님 11/16 '고노센을 … 무한으로 풀어주고' · '알티바슈는 -35까지 기력 강제 소진으로 해.' — 대신 유파마다 대가):
@@ -770,6 +770,14 @@ export function secretCostOf(S) {
   if (S?.name === 'mordschlag' && SECRET.mord?.cost > 0) return SECRET.mord.cost;
   if (S?.when === 'risoluto' && SECRET.risolutoCost > 0) return SECRET.risolutoCost;
   return undefined;
+}
+/** 격살 풀기 (11/15–16 사장님 '격살은 … 무한으로 쓸 수 있게 풀어 … 대신 쿨타임' — SECRET.gkFree · 기본 끔) 켬인가 */
+export const gkFreeOn = () => !!SECRET.gkFree?.on;
+/** 격살 식히는 중인가 (풀기 판만 · 몸 시계 fightT — 판마다 새 몸) */
+export const gkCooling = (f) => gkFreeOn() && (f?.fightT ?? 0) < (f?.gkCoolUntil ?? -Infinity);
+/** 격살 칼이 끝나 몸이 다시 자유로운 때 — 그때부터 SECRET.gkFree.cool 동안 식힘 (특수 공격 식힘 'free' 와 같은 셈) */
+export function gkCoolFrom(f) {
+  if (gkFreeOn() && f) f.gkCoolUntil = (f.fightT ?? 0) + SECRET.gkFree.cool;
 }
 /** 이 판에 남은 비기 수 */
 export const secretLeft = (f) => Math.max(0, secretUsesOf(f) - (f?.secretUsed ?? 0));
@@ -844,6 +852,15 @@ export class PlayerSecretWatch {
     //  다 쓰면 그 판엔 그 비기의 창 · 조건은 없는 것 = 비기가 도는 동안과 같은 '바쁨'(창을 새로 열지 않음 · 무장 · 누르기 셈 · 덮음 셈 · 격살 기다림이 안 걸림 · 고노센 웅크림도 풀림) — 공격 입력은 보통 공격
     const run = me.skill?.sec ?? null;
     if (run && run !== this.secRun && !run.special) useSecret(me); // 싱지르 특수 공격(11/11 — run.special)은 비기가 아님 · 알티바슈 포르트는 unique_assist.js altibFire 가 셈
+    if (gkFreeOn() && this.S?.when === 'gyeoksal') {
+      // 격살 풀기 (11/16 — SECRET.gkFree): 격살 칼이 나갔다가 몸이 다시 자유로운 때(비기 실행 · 운동학 칼 끝)부터 식힘 · 식히는 동안은 다 쓴 판과 같은 '바쁨'
+      if (run && run !== this.secRun && !run.special) this.gkRun = true;
+      if (this.gkRun && !run && !me.iai && !me.iaiReq) {
+        this.gkRun = false;
+        gkCoolFrom(me);
+      }
+      if (gkCooling(me)) busy = true;
+    }
     this.secRun = run;
     if (secretSpent(me)) {
       busy = true;
