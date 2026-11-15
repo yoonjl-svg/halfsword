@@ -18,20 +18,26 @@ import { WEAPONS, PAIRS } from './ai_ring_measure.mjs';
 
 const K = CONFIG.TIME.k;
 const KO = { german: '독일', italian: '이탈리아', iberian: '이베리아', japanese: '일본', chinese: '동방' };
+const VAR = { guardP: '' }; // 재기 봇 손 (판 값 아님)
 const WIN_T = CONFIG.realS(1.5); // 공격 하나의 창 (다음 공격이 먼저 시작하면 거기까지)
 
 //  진단용 (있던 스위치 — 새 값 없음): noriso = AI 이탈리아 리솔루토 닫음(SECRET.aiOpenSchools) · inq0 = AI 비껴서며 찌르기 기울기 끔(AI_PLAN.it.inq 0) · inq3 = 기울기 0.3 · inqold = 옛 칼(UNIQUE_ASSIST.inqAi 0)
 export function withVar(v, fn) {
-  const keep = { ai: CONFIG.AI_TELL.ai, guard: CONFIG.AI_TELL.guard, drive: CONFIG.THRUST.driveAi, open: CONFIG.SECRET.aiOpenSchools, it: CONFIG.AI_PLAN.it, inqAi: CONFIG.UNIQUE_ASSIST.inqAi };
+  const keep = { ai: CONFIG.AI_TELL.ai, guard: CONFIG.AI_TELL.guard, latch: CONFIG.AI_TELL.latch, drive: CONFIG.THRUST.driveAi, hdrive: CONFIG.THRUST.drive, kphys: CONFIG.STRIKE.hitKPhys, inqMul: CONFIG.IT_OUTBOX.inqMul, open: CONFIG.SECRET.aiOpenSchools, it: CONFIG.AI_PLAN.it, inqAi: CONFIG.UNIQUE_ASSIST.inqAi };
   const p = String(v).split('+');
   CONFIG.AI_TELL.ai = p.includes('tell') ? 1 : 0;
   CONFIG.AI_TELL.guard = p.includes('guard') ? 1 : 0;
   CONFIG.THRUST.driveAi = p.includes('drive') ? 3 : 0;
+  CONFIG.AI_TELL.latch = p.includes('latch') ? CONFIG.realS(0.6) : 0; // 막기 단추 낌새 붙잡기 0.6 s (시간 사다리)
+  VAR.guardP = p.includes('gp1') ? '1' : ''; // 재기 봇만 (판 값 아님)
+  CONFIG.THRUST.drive = p.includes('hdrive') ? 3 : keep.hdrive; // 사람 탭 찌르기 몸 싣기 (THRUST.drive 3)
+  CONFIG.STRIKE.hitKPhys = p.includes('kphys') ? 1 : keep.kphys; // 배율은 상처에만
+  CONFIG.IT_OUTBOX.inqMul = p.includes('inq8') ? 0.8 : p.includes('inq5') ? 0.5 : keep.inqMul; // 비껴서며 찌르기 배율 (사람 · AI)
   if (p.includes('noriso')) CONFIG.SECRET.aiOpenSchools = keep.open.filter((x) => x !== 'italian');
   if (p.includes('inq0')) CONFIG.AI_PLAN.it = { ...keep.it, inq: 0 };
   if (p.includes('inq3')) CONFIG.AI_PLAN.it = { ...keep.it, inq: 0.3 }; // 기울기 반 (0.3 — 있던 수)
   if (p.includes('inqold')) CONFIG.UNIQUE_ASSIST.inqAi = 0;
-  try { return fn(); } finally { CONFIG.AI_TELL.ai = keep.ai; CONFIG.AI_TELL.guard = keep.guard; CONFIG.THRUST.driveAi = keep.drive; CONFIG.SECRET.aiOpenSchools = keep.open; CONFIG.AI_PLAN.it = keep.it; CONFIG.UNIQUE_ASSIST.inqAi = keep.inqAi; }
+  try { return fn(); } finally { Object.assign(CONFIG.AI_TELL, { ai: keep.ai, guard: keep.guard, latch: keep.latch }); CONFIG.THRUST.driveAi = keep.drive; CONFIG.THRUST.drive = keep.hdrive; CONFIG.STRIKE.hitKPhys = keep.kphys; CONFIG.IT_OUTBOX.inqMul = keep.inqMul; CONFIG.SECRET.aiOpenSchools = keep.open; CONFIG.AI_PLAN.it = keep.it; CONFIG.UNIQUE_ASSIST.inqAi = keep.inqAi; }
 }
 
 /**
@@ -86,6 +92,7 @@ function tracker(G, sides) {
     const sv = r.type === 'blunt' ? 0 : r.severity ?? 0;
     const rec = live(S) ?? cur.get(S);
     if (rec && G.t - rec.t0 <= WIN_T * 1.5) {
+      gDiag(rec, other(S));
       rec.touch++;
       rec.tTouch ??= G.t;
       rec.sev += sv;
@@ -102,10 +109,19 @@ function tracker(G, sides) {
       const r = live(S);
       if (!r || !info || !((info.a === S.f && info.b === other(S).f) || (info.b === S.f && info.a === other(S).f))) continue;
       if (r.ts == null && r.kind !== 'riso') continue;
+      gDiag(r, other(S));
       r.clash++;
       if (r.tClash == null) (r.tClash = G.t), (r.defMode = dState(other(S)));
     }
   };
+  /** 사람 막기 단추 진단 (처음 닿은 때): 누름 · 줄 · 막는 자리까지 손 거리(패드 m) · 막기에 든 뒤 지난 때 */
+  function gDiag(r, D) {
+    const g = D.guard;
+    if (!g || r.gd) return;
+    const p = g.line ? g.padOf(g.line) : null;
+    const o = D.f.handOffset;
+    r.gd = { held: !!g.held, active: !!g.active, mode: g.mode, line: g.line, pd: p ? +Math.hypot(p[0] - o.x, p[1] - o.y).toFixed(3) : null, sinceDef: r.gDef != null ? +((G.t - r.gDef) / K).toFixed(3) : null, heldAgo: D.lastHeld != null ? +((G.t - D.lastHeld) / K).toFixed(3) : null, broken: !!g.broken, tap: !!D.f.skill?.tap, swing: !!D.f.skill?.swinging };
+  }
   function dState(D) {
     if (D.ai) { const a = D.ai; return a.mode === 'defend' ? (a.defVoid ? 'void' : 'parry') : a.mode === 'attack' ? (a.phase === 'strike' || a.phase === 'follow' ? 'striking' : 'attack') : a.mode; }
     if (D.guard) return D.guard.active && D.guard.mode === 'defend' ? 'parry' : D.guard.active ? 'held' : D.f.skill?.tap || D.f.skill?.swinging ? 'striking' : 'free';
@@ -134,9 +150,11 @@ function tracker(G, sides) {
           const st = dState(D);
           if (r.def == null && (st === 'parry' || st === 'void' || st === 'withdraw')) r.def = st;
           if (D.guard && D.guard.threatId !== D.prev.gid && r.tSeen == null) r.tSeen = G.t;
+          if (D.guard && D.guard.mode === 'defend' && r.gDef == null) r.gDef = G.t;
           if (itEdgeOn(f)) r.edge = true;
         }
         if (D.guard) D.prev.gid = D.guard.threatId;
+        if (D.guard?.held) D.lastHeld = G.t;
       }
     },
     finish() {
@@ -168,6 +186,7 @@ export function ringFightT({ a, b, wa, wb, seed, swap, dur = 30 }) {
 export function botFightT(fightOne, { school, weapon, opp, seed, foeSchool }) {
   process.env.SB_FOE_PROF = '5';
   process.env.SB_IT_BOT = school === 'italian' ? 'outbox' : '';
+  process.env.SB_GUARD_P = VAR.guardP; // 'gp1' 판: 쳐 오면 늘 막기 단추 (막는 사람 — 기본 0.6)
   let T = null;
   let ctx = null;
   const r = fightOne({

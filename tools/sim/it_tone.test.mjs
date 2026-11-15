@@ -57,3 +57,49 @@ test('AI 찌르기 몸 싣기: driveAi 0 이면 AI 몸은 null (사람 drive 와
   assert.equal(with_(D, 'driveAi', 3, () => thrustDrive(hu)), null, 'AI 스위치는 사람을 안 건드림 (drive 0)');
   assert.equal(with_(D, 'driveAi', 1, () => thrustDrive(ai)).step, null, '1 = 당김만');
 });
+
+test('비껴서며 찌르기 배율 IT_OUTBOX.inqMul (기본 1 = 그대로): 사람 · AI 같게 판정 배율 — 0.5 · 0.8 · 맞박자와 곱 · 다른 찌르기는 thrustMul 그대로', async () => {
+  const { itThrust } = await import('../../src/italian_outbox.js');
+  const IO = CONFIG.IT_OUTBOX;
+  assert.equal(IO.inqMul, 1);
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const mk = (ai) => {
+    const foe = { alive: true, state: 'stand', gait: { walking: false }, cache: { parts: { pelvis: { p: V(1.8, 0.9, 0), v: V(0, 0, 0) } } } };
+    const me = { swordArt: { tradition: 'italian' }, aiControlled: ai, skill: {}, stamina: {}, foe, cache: { parts: { pelvis: { p: V(0, 0.9, 0), v: V(0, 0, 0) } } }, fightT: 5 };
+    if (ai) me.aiCtl = { mode: 'attack', phase: 'strike', tech: { kind: 'thrust', name: 'inquartata' } };
+    else me.iai = { tech: 'inquartata' };
+    return { me, foe };
+  };
+  for (const ai of [false, true]) {
+    const { me, foe } = mk(ai);
+    assert.equal(itThrust(me, foe), null, '1 = 배율 없음');
+    for (const m of [0.5, 0.8]) assert.equal(with_(IO, 'inqMul', m, () => itThrust(me, foe)?.k), m, `${ai ? 'AI' : '사람'} × ${m}`);
+    foe.gait.walking = true;
+    foe.cache.parts.pelvis.v = V(-0.5, 0, 0);
+    assert.ok(Math.abs(with_(IO, 'inqMul', 0.5, () => itThrust(me, foe).k) - 0.5 * (1 + IO.stop)) < 1e-12, '맞박자와 곱');
+  }
+});
+
+test('막기 단추 낌새 붙잡기 AI_TELL.latch (기본 0 = 끔 · guard 1 일 때만): 놓은 뒤 latch 안에 찌르기 낌새면 막기 꼴 · 밖 · guard 0 = 그대로', async () => {
+  const { PlayerParryGuard } = await import('../../src/parry_button.js');
+  assert.equal(T.latch, 0);
+  const G = newRound({ seed: 1, weapon: 'longsword', weapon2: 'rapier' });
+  try {
+    const P = G.player;
+    const g = new PlayerParryGuard(P, G.enemy);
+    for (let k = 0; k < 10; k++) G.step();
+    g.held = true;
+    g.step(1 / 120);
+    g.held = false;
+    g.thrustSoon = () => ({ tell: true }); // 찌르기 낌새가 왔다고 침 (셈은 위 시험)
+    assert.equal(with_(T, 'guard', 1, () => g.step(1 / 120)), false, 'latch 0 = 놓으면 끝');
+    g.held = true; g.step(1 / 120); g.held = false;
+    const on = () => with_(T, 'guard', 1, () => with_(T, 'latch', CONFIG.realS(0.6), () => g.step(1 / 120)));
+    assert.equal(on(), true, '놓은 뒤 0.6 s 안 · 찌르기 낌새 = 막기 단추를 쥔 것처럼');
+    g.heldAt = g.clock - CONFIG.realS(0.7);
+    g.latchRun = false;
+    assert.equal(on(), false, '0.6 s 밖');
+    g.held = true; g.step(1 / 120); g.held = false;
+    assert.equal(with_(T, 'guard', 0, () => with_(T, 'latch', CONFIG.realS(0.6), () => g.step(1 / 120))), false, 'guard 0 = 그대로');
+  } finally { G.world.free(); }
+});

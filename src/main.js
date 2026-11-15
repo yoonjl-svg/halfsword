@@ -333,6 +333,8 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('thrustDriveStep') && +params.get('thrustDriveStep') >= 0) CONFIG.THRUST.driveStep = +params.get('thrustDriveStep');
   if (params.has('thrustDriveAi')) CONFIG.THRUST.driveAi = Math.max(0, Math.min(3, Math.round(+params.get('thrustDriveAi') || 0))); // 11/15 시제품 AI 찌르기 몸 싣기 (THRUST.driveAi — 기본 0)
   for (const [q, k] of [['tellAi', 'ai'], ['tellGuard', 'guard']]) if (params.has(q)) CONFIG.AI_TELL[k] = +params.get(q) ? 1 : 0; // 11/15 시제품 찌르기 낌새 눈 (src/thrust_tell.js — 기본 끔)
+  if (params.has('tellLatch') && +params.get('tellLatch') >= 0) CONFIG.AI_TELL.latch = CONFIG.realS(+params.get('tellLatch')); // 11/15 시제품 막기 단추 낌새 붙잡기 (실제 초 — 기본 0)
+  if (params.has('inqMul') && +params.get('inqMul') > 0) CONFIG.IT_OUTBOX.inqMul = +params.get('inqMul'); // 11/15 시제품 비껴서며 찌르기 판정 배율 (사람 · AI — 기본 1)
   if (params.has('itStop') && +params.get('itStop') >= 0) CONFIG.IT_OUTBOX.stop = +params.get('itStop');
   if (params.has('itEdge') && +params.get('itEdge') >= 0) CONFIG.IT_OUTBOX.edge = CONFIG.realS(+params.get('itEdge'));
   if (params.has('itBeat') && +params.get('itBeat') >= 0) CONFIG.IT_OUTBOX.beat = CONFIG.realS(+params.get('itBeat'));

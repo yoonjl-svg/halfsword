@@ -88,7 +88,7 @@ export function itThrust(att, vic) {
   if (!itBody(att)) return null;
   const kind = itThrustKind(att);
   if (!kind || kind === 'secret') return null;
-  let k = kind === 'special' ? 1 : IO.thrustMul;
+  let k = kind === 'special' ? IO.inqMul ?? 1 : IO.thrustMul; // 비껴서며 찌르기 배율 (11/15 시제품 — IT_OUTBOX.inqMul · 기본 1 = 그대로 · 사람 · AI 같게)
   const stop = IO.stop > 0 && (kind !== 'special' || !!IO.stopSpecial) && !kitOff(att, 'itTempo') && vic === att.foe && foeWalkingIn(att, vic);
   if (stop) k *= 1 + IO.stop;
   return k === 1 && !stop ? null : { k, kind, stop };
