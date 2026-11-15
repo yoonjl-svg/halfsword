@@ -459,7 +459,10 @@ if (params.has('dupBurstMatch')) CONFIG.UNIQUE_ASSIST.dupBurstMatch = [0, 1, 2].
   }
 }
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
+if (['A', 'B'].includes(params.get('gkFree'))) Object.assign(CONFIG.SECRET.gkFree, { on: 1, ...CONFIG.SECRET.gkFreeSets[params.get('gkFree')] }); // 격살 풀기 (11/16 — 안 A 0.35 + 0.08 × 겹 · 식힘 3 s [사장님 11/16 결정 — 기본] / 안 B 0.50 + 0.05 × 겹 · 식힘 6 s)
+if (params.get('gkFree') === '0') CONFIG.SECRET.gkFree.on = 0; // `?gkFree=0` = 전 판 (판당 1 번)
 if (params.has('cnHunt')) CONFIG.UNIQUE_ASSIST.cnHunt.on = +params.get('cnHunt') ? 1 : 0; // 동방 맹호은림 사냥 겹 (11/14 — `?cnHunt=0` = 겹 없음 · 격살 판당 수는 공용 표 secretUses — 전 판 `?secretUses=1,chinese:3`)
+if (params.has('cnHuntLife')) CONFIG.UNIQUE_ASSIST.cnHunt.life = CONFIG.realS(+params.get('cnHuntLife') || 0); // 겹 사라짐 (11/16 사장님 '8초로 하자' — 8.0 s · `?cnHuntLife=0` = 안 빠짐 전 판)
 if (params.has('cnHuntAi')) CONFIG.UNIQUE_ASSIST.cnHunt.ai = +params.get('cnHuntAi') ? 1 : 0; // AI 동방도 사냥 겹 (견줌 — 기본 0)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6 · 11/14 사장님 0.9)
 for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld', 'inqTap', 'inqAi']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js) · inqAi(11/15 — AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 · 0 = 옛 판)

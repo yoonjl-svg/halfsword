@@ -12,6 +12,7 @@ import { playerSecretDef, TRADITIONS } from '../../src/schools.js';
 import { risoHitMul, gyeoksalHitMul } from '../../src/skill.js';
 import { mordHitMul } from '../../src/mordschlag.js';
 import { lungeAt } from './riso_reach.mjs';
+import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 
 const { SECRET } = CONFIG;
 const rs = CONFIG.realS;
@@ -62,7 +63,8 @@ test("A [사장님 11/11 결정] '리솔루토를 70%로 상향하고 파괴력�
   assert.deepEqual(t13.tapHits, [1.3]);
 });
 
-test("A [사장님 11/11 결정] '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경': 빠르기 몫 0.7 · 격살 판정 배율 1 · 격살 한 칼 요청에 실림 · ?gyeoksalHitMul=1.3 · 다른 비기 1.3 그대로", () => {
+test("A [사장님 11/11 결정] '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경': 빠르기 몫 0.7 · 격살 판정 배율 1 · 격살 한 칼 요청에 실림 · ?gyeoksalHitMul=1.3 · 다른 비기 1.3 그대로", (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   assert.equal(SECRET.gyeoksal.share, 0.7);
   assert.equal(SECRET.gyeoksalHitMul, 1);
   assert.equal(SECRET.gyeoksal.power, 'hit');

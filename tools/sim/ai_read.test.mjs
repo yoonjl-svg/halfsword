@@ -13,6 +13,7 @@ import { readInit, readNote, readLineN, readAtkN, readRepeatLine, readRaiseD, re
 import { jpInit, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep, JP_PLAN } from '../../src/ai_plan_jp.js';
 import { aiBeatTick } from '../../src/italian_outbox.js';
 import { gnsEnterLine, useSecret } from '../../src/secret.js';
+import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 
 const { AI_PLAN, AI_PLAN_JP, SECRET, STAMINA, JP_TANK, TIME } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -66,7 +67,8 @@ function fake(prof, tr = 'german', o = {}) {
 const still = { hvx: 0, hvy: 0, hx: 0, hy: 0, state: 'stand' };
 const raise = { hvx: 0, hvy: 2.5, hx: 0, hy: 0.3, state: 'stand' };
 
-test('읽기 그릇 — 띠마다 칸 (무 · 낮음은 안 읽음 · 가운데 상대 유파 · 버릇 · 높음 되풀이 · 대가 창 · 기력) · 값', () => {
+test('읽기 그릇 — 띠마다 칸 (무 · 낮음은 안 읽음 · 가운데 상대 유파 · 버릇 · 높음 되풀이 · 대가 창 · 기력) · 값', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   const R = AI_PLAN.read;
   assert.equal(R.on, 1);
   assert.equal(R.fair, 1);

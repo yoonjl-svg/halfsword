@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI, seedRandom } from './harness_m.mjs';
 import { planFor, distErrWidth, PHASES, SCHOOL_PLAN } from '../../src/ai_plan.js';
 import { cnTechW, cnNeed, cnHoldM, cnCircle, cnMeet, cnTick, cnFeint, cnNext, cnWill, cnWant } from '../../src/ai_plan_cn.js';
+import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 // 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
 //  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
@@ -59,7 +60,8 @@ function trace({ weapon2, prof = 2, secs = 4, seed = 2 } = {}) {
   return r;
 }
 
-test('동방 플랜 열림 — 숙련도(무 = 없음) · 스위치 · 거리 오차 · 칸 = 고를 몫 0 ~ 1', () => {
+test('동방 플랜 열림 — 숙련도(무 = 없음) · 스위치 · 거리 오차 · 칸 = 고를 몫 0 ~ 1', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   assert.ok(AI_PLAN.schools.includes('chinese'), '2 단계 기본 켬');
   assert.equal(planFor('chinese', 0), null, '무 = 플랜 없음');
   for (const p of [1, 2, 3, 4, 5, 6]) assert.equal(planFor('chinese', p), SCHOOL_PLAN.chinese, `숙련도 ${p}`);
@@ -277,7 +279,8 @@ test('유도 (가운데 끝 4 부터): 겹이 있으면 간 보기 한 번에 �
   }
 });
 
-test('나서며 받기 — 격살이 남았고 이 위협에 노릴 마음이 났으면(cnWant) 물러나 피하기를 칼로 받기로 → respond 가 나서며 받음', () => {
+test('나서며 받기 — 격살이 남았고 이 위협에 노릴 마음이 났으면(cnWant) 물러나 피하기를 칼로 받기로 → respond 가 나서며 받음', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   const hi = cnAi(5);
   const lo = cnAi(4);
   try {
@@ -342,7 +345,8 @@ test('나서며 받기 — 격살이 남았고 이 위협에 노릴 마음이 �
   }
 });
 
-test('격살을 노릴 마음 (사장님 11/14 \'절대적 규칙은 지우자 마음의 기울기로\') — 겹 0 · 초반에도 가끔 · 겹이 많을수록 · 판이 길수록 · 지칠수록 더 · 높음도 반드시 없음 · 옛 판은 문 그대로', () => {
+test('격살을 노릴 마음 (사장님 11/14 \'절대적 규칙은 지우자 마음의 기울기로\') — 겹 0 · 초반에도 가끔 · 겹이 많을수록 · 판이 길수록 · 지칠수록 더 · 높음도 반드시 없음 · 옛 판은 문 그대로', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   const hi = cnAi(5);
   const mid = cnAi(3);
   const lo = cnAi(2);
@@ -490,7 +494,7 @@ test('다른 유파 판은 동방 몫과 상관없이 바이트 같음 · 동방
   assert.notEqual(cn1.text, cn0.text, '동방 켬은 판이 달라짐');
 });
 
-test('판 하나 — AI 동방(환도 숙련 5 · P 자리) 대 롱소드 AI(숙련 2) 씨앗 11: 허리 베기 → 사냥 겹 → 지치게 · 유도 · 노릴 마음 · 나서며 받기 · 격살 시도 · 국면이 실제로 남', (t) => pinLodge0(t) || pinArc0(t) || withPlan({ read: { ...AI_PLAN.read, on: 0, fair: 0 } }, () => { // 3 단계(11/14) 그때 판으로 묶음 (기준은 안 고침): 수 읽기 · 공정함으로 씨앗 11 판이 갈라짐 (사냥 겹 0)
+test('판 하나 — AI 동방(환도 숙련 5 · P 자리) 대 롱소드 AI(숙련 2) 씨앗 11: 허리 베기 → 사냥 겹 → 지치게 · 유도 · 노릴 마음 · 나서며 받기 · 격살 시도 · 국면이 실제로 남', (t) => pin1116(t) || pinLodge0(t) || pinArc0(t) || withPlan({ read: { ...AI_PLAN.read, on: 0, fair: 0 } }, () => { // 3 단계(11/14) 그때 판으로 묶음 (기준은 안 고침): 수 읽기 · 공정함으로 씨앗 11 판이 갈라짐 (사냥 겹 0)
   const G = newRound({ walls: true, seed: 11, weapon: 'hwando', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 2, planOff: true }, persona2: { proficiency: 5 } }); // 3 단계(11/14): 상대 롱소드 AI 는 옛 판(planOff)
   const ai = G.ai2;
   let waist = 0;

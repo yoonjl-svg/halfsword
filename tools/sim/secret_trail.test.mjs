@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG } from './harness_m.mjs';
 import { probe } from './secret_trail_probe.mjs';
+import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 
 const { SECRET } = CONFIG;
 const { ART_MIN } = await import('../../src/secret_instant.js');
@@ -39,7 +40,8 @@ test('안다레 리솔루토 10/23 탭 찌르기 판(?risoLunge=0): 찌르는 �
   }
 });
 
-test('모르트슐라크 · 격살: 잔상은 베는 토막만(준비 · 다시 세우기 · 이음 없음) · 세기는 빠르기 몫 그대로', () => {
+test('모르트슐라크 · 격살: 잔상은 베는 토막만(준비 · 다시 세우기 · 이음 없음) · 세기는 빠르기 몫 그대로', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   const m = probe('mord'); // 10/31 14:xx 사장님 '폼멜 찍기로 바꿔서 본판에 올려.' — 기본 폼멜 찍기는 내려찍는 토막이 짧아(손 길 기준 ~0.2 s) 점이 적음(18)
   assert.equal(m.kind, 'combo');
   assert.equal(m.share, SECRET.mord.kin);
