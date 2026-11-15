@@ -141,7 +141,7 @@ export function airOne({ ws = 'zweihander', next = ['zornhauL', 'zornhau'], v = 
       }
       if (cur && !cur.tech && uq.cur?.tech) cur.tech = uq.cur.tech;
       wasSw = sw;
-      if (P.ibLink && !link) link = { t0: t, tech: P.ibLink.tech, dpsi: r3((P.ibLink.plan.dpsi * 180) / Math.PI), T: r3(P.ibLink.T / K), v0: r3(P.ibLink.speed.v0), v1: r3(P.ibLink.speed.v1), still: 0, n: 0, vmax: 0 };
+      if (P.ibLink && !link) link = { t0: t, tech: P.ibLink.tech, dpsi: P.ibLink.plan ? r3((P.ibLink.plan.dpsi * 180) / Math.PI) : null, T: r3(P.ibLink.T / K), v0: r3(P.ibLink.speed?.v0 ?? P.ibLink.bridge?.v0), v1: r3(P.ibLink.speed?.v1 ?? P.ibLink.bridge?.v3), still: 0, n: 0, vmax: 0 }; // 11/15 넘기기 판은 원 길(plan) 없음
       P.bladePoint(1, tip);
       const vt = havePrev ? tip.distanceTo(tipPrev) / DT : 0; // 칼끝 실제 옮김 빠르기 (놓인 칼도)
       tipPrev.copy(tip);

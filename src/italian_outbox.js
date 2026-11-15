@@ -4,7 +4,7 @@
 //   설계안 docs/design/italian_point_control_2026-11-14.md · 기록 docs/strike/it_outbox_2026-11-14.md).
 //  이탈리아 몸(무기 유파 italian) — 사람 · AI 같게 (사장님 11/14 'ai에도 적용' — IT_OUTBOX.ai 1 · 0 이면 사람만 = 11/14 첫 판).
 //   AI 몫: 1 · 2 = AI 찌르기 기술(빼서 찌르기 패시브 = 칼끝 돌려 빼기 · 비껴서며 찌르기 = 특수) · 3 = AI 빼서 찌르기 · 비껴서며 찌르기가 상처를 내면 · 헛누름이 들면 칼 우위(AI 는 리솔루토가 없어 —
-//   SECRET.aiOpenSchools — 칼 우위는 빛 · 재기만) · 4 = AI 맞받아 베기(respond — 굴림 그대로)가 상대가 치기 시작한 beat 초 안이면 그 칼이 비껴서며 찌르기(aiBeatTick · aiBeatTech)
+//   SECRET.aiOpenSchools — 칼 우위는 빛 · 재기만) · 4 = AI 맞받아 베기(respond — 굴림 그대로)가 상대가 치기 시작한 beat 초 안이면 그 칼이 비껴서며 찌르기(aiBeatTick · aiBeatTech — 11/15 부터 beatAi 1 일 때만)
 //   1 찌르기 약하게 — itThrust: 보통 찌르기(탭 찌르기 · 내려 찌르기 · 칼끝 돌려 빼기 · 그어 찌르기 · 막아찌르기)의 판정 에너지 × thrustMul.
 //      자리 = combat.js analyze 의 hk(비기 배율 secretHit — SECRET.risolutoHitMul 과 같은 자리 · 칼날 상처 · 둔타 모두 그 에너지에서 · 물리 빠르기 · 질량은 그대로).
 //      비기(리솔루토)는 빼고 · 특수 공격(비껴서며 찌르기)도 빼고(제 칼끝 빠르기 몫 specialShare 가 따로).
@@ -13,6 +13,7 @@
 //      원전: 카포 페로 『Gran Simulacro』(1610) 쓰임 10 「Del ferire di contratempo」(원판 30쪽) — 상대가 칼을 얻으러 오른발을 옮기는 바로 그 박자에 찌른다.
 //   3 칼 우위 (설계안 A) — itOnStrike · itEdgeGrant: I2 · I6 · I9 가 상처를 내면 · I8 헛누름이 들면 edge 초. 리솔루토 창은 칼 우위 동안만(itEdgeOk — secret.js risoTick).
 //   4 박자 찌르기 (설계안 B) — beatTick · beatOk · beatSide: 상대가 치기 시작한 beat 초 안의 탭 = 비껴서며 찌르기(I9 — unique_assist.js TAP_TRIG.inq).
+//      11/15 사장님 'l9는 이전처럼 되돌려' · 'ai도 되돌려' — 사람 몫 beatHuman 0 · AI 몫 beatAi 0 (둘 다 기본 끔 · 1 = 11/14 판). AI 가 비껴서며 찌르기를 더 고르는 것은 유파 플랜 기울기(ai_plan.js itInqP)
 //  재기(판정엔 안 씀): 몸의 itOut { edge 켜진 수 · by 갈래 · stopHits 맞박자 맞음 · thrustHits 약해진 찌르기 맞음 · beatFired · risoWait 칼 우위 없어 리솔루토 셈이 기다린 시간 }
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -42,8 +43,10 @@ export function itThrustKind(f) {
   if (f.aiControlled) {
     const c = f.aiCtl;
     if (!c || c.secretRun || f.stamina?.inSecret) return c?.secretRun ? 'secret' : null;
-    if (sk?.tap) return 'ai';
+    // 11/15 고침: 공격 · 찌르기 기술 줄을 탭 줄보다 먼저 — AI 레이피어 찌르기는 탭 길(ai.js startStrike → skill.thrust)이라 전엔 비껴서며 찌르기 · 빼서 찌르기도 'ai' 로 읽힘
+    //  (상처를 내도 칼 우위가 안 켜지고 비껴서며 찌르기에 × thrustMul — 11/14 결정 '사람 · AI 같게'와 어긋남 · 기록 docs/strike/it_ai_i9_2026-11-15.md §4)
     if (c.mode === 'attack' && (c.phase === 'strike' || c.phase === 'follow') && c.tech?.kind === 'thrust') return c.tech.name === 'inquartata' ? 'special' : c.passiveAtk === 'cavazione' ? 'cav' : 'ai'; // 빼서 찌르기 패시브(AI 칼끝 돌려 빼기 — 칼이 맞물린 뒤)
+    if (sk?.tap) return 'ai'; // 기술 밖 탭 (쓰러진 상대 찍기 등)
     return null;
   }
   if (f.stamina?.inSecret || sk?.sec || f.iai?.secret || (f.secretHit ?? 1) !== 1) return 'secret';
@@ -156,11 +159,11 @@ export function aiBeatTick(B, dt, sw) {
 }
 
 /**
- * AI 맞받아 베기 칼 (ai.js respond — 맞받아 베기 굴림이 나온 뒤 · 굴림 그대로): 스위치 · AI 몫 켬 · 상대가 치기 시작한 beat 초 안 · 이 공격에 아직 안 씀 · 비껴서며 찌르기가 식지 않았으면
+ * AI 맞받아 베기 칼 (ai.js respond — 맞받아 베기 굴림이 나온 뒤 · 굴림 그대로): 스위치 · AI 몫 켬 · AI 박자 몫 켬(beatAi — 11/15 기본 끔) · 상대가 치기 시작한 beat 초 안 · 이 공격에 아직 안 씀 · 비껴서며 찌르기가 식지 않았으면
  *  그 기술(techNow 가 식힘을 거른 것) · 아니면 null(전 판 — 유파 맞받아 베기 목록 counterTech)
  */
 export function aiBeatTech(B, tech) {
-  if (!B || !tech || !IO.ai || !beatOk(B)) return null;
+  if (!B || !tech || !IO.ai || !IO.beatAi || !beatOk(B)) return null; // beatAi 0 (11/15 사장님 'ai도 되돌려') = 전 판 목록
   return tech;
 }
 

@@ -2325,10 +2325,12 @@ export class Fighter {
     const sk = this.skill, raw = !!sk.swinging, v = sk.vel, sp = Math.hypot(v.x, v.y);
     if (raw) this.ibFlowLow = 0;
     else if (this.ibFlowSw && (this.ibFlowLow = (this.ibFlowLow ?? 0) + 1) === 1) this.ibFlowLowT = t; // 문턱 밑으로 처음 내려간 때 = 끝난 때(굳으면)
-    const sw = raw || (!!this.ibFlowSw && this.ibFlowLow <= IB_FLOW.endSteps);
+    const sw = (raw || (!!this.ibFlowSw && this.ibFlowLow <= IB_FLOW.endSteps)) && !(this.ibLinkWait && !this.ibFlowSw); // 11/15 넘기기 기다림(앞 칼이 끝 자리로 가는 동안 — unique_assist.js linkTick 'wait'): 앞 칼은 그대로 끝나고 다음 칼 손가락 첫머리는 새 긋기가 아님
     // 이어 돌리기 (11/14 B7 — iberian_link.js · IB_LINK): 도는 동안은 긋기가 아님 — 원을 부른 손가락 첫머리(휘두르기로 읽혔어도)는 셈에서 빼고(ibCutN 은 앞 칼 그대로) ·
     //  사슬을 쥔 채 이어짐 창 시계를 원 끝까지 미룸(마지막 진짜 긋기 끝 = 지금) — 원이 끝나고 그은 칼이 사슬의 다음 칼(n + 1)
     if (this.ibLink) {
+      // 11/15 다음 칼 입력이 앞 진짜 긋기가 아직 휘두르는 동안 들어와 넘기기가 시작됨(unique_assist.js linkTry) — 그 긋기를 여기서 끝난 칼로 셈 (사슬 길이 · 끝난 때)
+      if (this.ibFlowSw && (this.ibFlowPk ?? 0) >= IB_FLOW.cutSpeed) this.ibLastN = this.ibFlowChain ? this.ibCutN ?? 0 : 0;
       this.ibFlowSw = false;
       this.ibFlowLow = 0;
       this.ibCutN = this.ibLastN ?? 0;
@@ -2396,13 +2398,17 @@ export class Fighter {
    *  같은 칼(그 공격 번호)이 같은 길에 다른 부위를 잇달아 치는 것(넘긴 때부터 원 한 번 시간 IB_LINK.time 안)은 한 맞음으로 함께 넘김(기력은 한 번).
    *  combat.js strike 가 상처를 놓기 전에 부름: 넘기면 true (상처 · 의식 · 아픔 · 그 맞음에 딸린 무릎 꺾기 · 칼 떨구기 굴림 없음 · 물리 충돌은 그대로).
    */
+  /** 맞바꿈 창 (11/15 사장님 '맞바꿈이 너무 짧아지면 안돼. 차라리 공격 사이의 n초, 이런 식으로 고정해.'): 넘기기(이어 돌리기)를 시작한 때부터 IB_LINK.tradeT 동안 — 넘김이 짧게 끝나 다음 칼이 나가도 창은 끝까지 */
+  ibTradeWin() {
+    return !!this.ibLink || (!!this.ibTradeOpen && (this.ibFlowT ?? 0) - this.ibTradeOpen.t0 <= IB_LINK.tradeT + 1e-9);
+  }
   ibTradeTry(att, r) {
     const k = this.ibTradeHit;
-    if (k && k.from === att && k.attackId && k.attackId === att?.stamina?.attackId && (this.ibFlowT ?? 0) - k.t <= IB_LINK.time) { // 넘긴 그 칼이 같은 길에 다른 부위를 마저 침 (넘긴 때부터 원 한 번 시간 안)
+    if (k && k.from === att && k.attackId && k.attackId === att?.stamina?.attackId && (this.ibFlowT ?? 0) - k.t <= IB_LINK.tradeT) { // 넘긴 그 칼이 같은 길에 다른 부위를 마저 침 (넘긴 때부터 맞바꿈 창 시간 안)
       k.sev += r.type === 'blunt' ? 0 : r.severity ?? 0;
       return true;
     }
-    if (!IB_LINK.trade || !this.ibLink || this.ibTradeUsed || this.swordArt?.tradition !== 'iberian' || kitOff(this, 'ibTrade')) return false; // AI 도 같은 규칙 (11/14 사장님 'ai에게도 똑같이' — AI 는 칸 없이 늘 가짐: kitOff 는 skillKit 이 없으면 false)
+    if (!IB_LINK.trade || !this.ibTradeWin() || this.ibTradeUsed || this.swordArt?.tradition !== 'iberian' || kitOff(this, 'ibTrade')) return false; // AI 도 같은 규칙 (11/14 사장님 'ai에게도 똑같이' — AI 는 칸 없이 늘 가짐: kitOff 는 skillKit 이 없으면 false)
     const S = this.stamina, cost = STAMINA.cutCost * (S.weight ?? 1);
     if (STAMINA.on && !S.infinite && S.value < cost) return false;
     S.spend('attack', cost);
@@ -4328,7 +4334,7 @@ export class Fighter {
    *  켠 동안: 두 팔 관절 목표 빠르기 0 · 손목 겨눔 · 감쇠 · 날 비틀기 힘 없음(칼 무게 버팀만) · 빈팔 목표 = 놓인 칼자루 끝 (자리 · 빈손 쥠 · 몸 · 다리 그대로)
    */
   armsPlaced() {
-    return (!!this.rdWind || !!this.ibLink) && UNIQUE_ASSIST.rdSteady > 0; // 11/14 이어 돌리기 (iberian_link.js — 감기와 같은 놓기)
+    return (!!this.rdWind || (!!this.ibLink && !this.ibLink.bridge)) && UNIQUE_ASSIST.rdSteady > 0; // 11/14 이어 돌리기 원 판 (iberian_link.js — 감기와 같은 놓기) · 11/15 넘기기 판은 서보가 몲(놓지 않음)
   }
 
   secretReaching() {
