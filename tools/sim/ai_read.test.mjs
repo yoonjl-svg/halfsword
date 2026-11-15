@@ -13,6 +13,7 @@ import { readInit, readNote, readLineN, readAtkN, readRepeatLine, readRaiseD, re
 import { jpInit, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep, JP_PLAN } from '../../src/ai_plan_jp.js';
 import { aiBeatTick } from '../../src/italian_outbox.js';
 import { gnsEnterLine, useSecret } from '../../src/secret.js';
+import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 
 const { AI_PLAN, AI_PLAN_JP, SECRET, STAMINA, JP_TANK, TIME } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -256,7 +257,7 @@ test('스위치 — read.on 0 이면 읽기 몫 0 · 곱 1 (그릇은 유파 버
   assert.equal(off.lag, 0, '`?aiPlan=0` — 옛 판 눈');
 });
 
-test('공정함 — 비기 조건을 알아채는 눈에 반응 시간(몸 자리는 앞질러) · 박자 찌르기는 늦게 본 휘두름 · 고노센 경계는 늦게 본 준비 자세 (스틱 · 속 셈 아님) · 끄면 옛 판', () => {
+test('공정함 — 비기 조건을 알아채는 눈에 반응 시간(몸 자리는 앞질러) · 박자 찌르기는 늦게 본 휘두름 · 고노센 경계는 늦게 본 준비 자세 (스틱 · 속 셈 아님) · 끄면 옛 판', () => withSecretFreeOff(() => { // 11/16 그때 판(판당 1 — 끝없는 비기 끔)으로 묶음 · 기준 그대로
   // ① 비기 조건 눈 (secretScan · spinTick — 실행은 그대로)
   const G = newRound({ weapon: 'uchigatana', weapon2: 'longsword', seed: 1 });
   try {
@@ -313,7 +314,7 @@ test('공정함 — 비기 조건을 알아채는 눈에 반응 시간(몸 자�
   } finally {
     G.world.free();
   }
-});
+}));
 
 /** 가짜 일본 AI (고노센 준비 셈만) */
 function fakeJp(prof, o = {}) {

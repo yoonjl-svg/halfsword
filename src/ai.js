@@ -33,7 +33,7 @@ import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — �
 import { schoolPassiveOn } from './school_passive.js'; // 유파 패시브 스위치 (10/21 — 이베리아 손목 힘 · 나머지 넷은 fighter.schoolPassive)
 import { closeStartD, bargeHeld, nearHilt } from './close_hold.js'; // 밀치기 시작 거리 (11/14 — AI 는 CLOSE.startAI 견줌 · 기본 null = 무기 reach 그대로)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 AI 몫 — 상대 두 팔 늦춤 (10/31)
-import { aiUniqueStages, PLAYER_UNIQUE, specialShare, rdReleaseOpt, altibHitMul, altibPower } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
+import { aiUniqueStages, PLAYER_UNIQUE, specialShare, rdReleaseOpt, altibShot, altibAfter } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
 import { MEASURED } from './weapon_measured.js';
 import { routeAroundStageObstacle, obstacleSegmentBlocked, OBSTACLE_ROUTE } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 막힌 길이면 스틱 방향만 둘레로 (석상 없는 무대는 아무 일 없음)
@@ -46,7 +46,7 @@ import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } fro
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, requestArtRedondo, requestArtThrust, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy, snapAim } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
 import { windStart, windEnd, windRopesBack, windLoopOf, windSpec, windWoundT } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 08:xx — UNIQUE_ASSIST.rdAiWind · 사람과 같은 감기 · 내려침)
-import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret, gnsHumanMoving, foeRecentTipSp } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
+import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret, gnsHumanMoving, foeRecentTipSp, secretCostOf } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 import { PICKUP } from './config.js'; // 떨어진 칼 줍기 (11/05)
 import { aiPickup } from './pickup.js'; // 떨어진 칼 줍기 — AI 몫 (11/05 · PICKUP.ai)
@@ -57,7 +57,8 @@ import { gyeoksalComboOpt } from './skill.js'; // 동방 격살 AI 몫 (11/14 �
 import { huntN } from './cn_hunt.js'; // 동방 격살 AI 쓸 때 — 상대에 쌓인 사냥 겹 (11/14)
 import { AI_PLAN } from './config.js'; // 유파 AI 기본 전투 흐름 (11/14 — 설계안 docs/design/ai_school_baseline_2026-11-14.md §9)
 import { planFor, tiltOf, luckOf, bandOf, distErrWidth, judgePhase, seenStep, planStats, digStats, itInqP } from './ai_plan.js'; // 국면 판정 · 유파 플랜 · 숙련도 띠 (플랜 없는 유파는 안 부름)
-import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, jpBeat, jpRead, jpTsubame, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep } from './ai_plan_jp.js'; // 2 단계 일본 플랜 몫 (11/14 — ai.planJp 일 때만)
+import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, jpBeat, jpRead, jpTsubame, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep, jpArmRead } from './ai_plan_jp.js'; // 2 단계 일본 플랜 몫 (11/14 — ai.planJp 일 때만)
+import { iaiSeated, drawStart, drawLog } from './iai_obi.js'; // 11/16 뽑기 — 칼집에 든 채 공격 · 막기는 SECRET.gnsDraw 초 뽑은 뒤 (사람과 같은 셈)
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
 import { DIG_PROTO, CN_STEP, AI_ARC, PHYSICS } from './config.js'; // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
@@ -129,6 +130,19 @@ export { MEASURED };
 const COVER_LINES = ['highL', 'highR', 'highC', 'lowL', 'lowR']; // coverFor 가 돌려주는 막기 줄 (withdraw — coverLine)
 // 2:2 (10/29 — setFoe): 상대마다 따로 두고 바꿀 때 맞바꾸는 칸 — 눈 · 상대 간격 어림 · 지난 아픔 · 위협 걸쇠(번호 · 읽기 굴림 · 낌새) · 다가옴 · 몰아침 · 고노센 경계 · 늦게 본 모습
 const PER_FOE = ['sense', 'foeM', 'foeReach', 'foeBrokeM', 'prevFoePain', 'threatId', 'threatSeen', 'readRollId', 'readRollOk', 'preArmed', 'preOff', 'noThreat', 'foeClosing', 'foeAggro', 'gnsW', 'lastSeen'];
+
+/**
+ * 뽑기 걸쇠 (11/16 사장님 '고노센을 쓰지 않고 칼을 뺄 때도 시간이 강제로 들게 하자. 그 시간엔 당연히 공격이나 막기 불가.' — SECRET.gnsDraw · iai_obi.js · AI startAttack · respond):
+ *  뽑는 중이면 true(공격 · 막기를 열지 않음 — 거절 셈) · 칼이 칼집에 든 채(iaiSeated)면 뽑기를 걸고 true · 아니면 false. 끝나면 보통 길로 다시 고름(낡은 판단은 버림 — 사람 탭은 하나 쥐어 냄)
+ */
+function drawGate(me, why) {
+  if (me.iaiDraw) {
+    if (!me.iaiDraw.lockSeen) (me.iaiDraw.lockSeen = true), drawLog(me).refused++; // 뽑기 하나에 한 번 셈
+    return true;
+  }
+  if (!iaiSeated(me)) return false;
+  return drawStart(me, why);
+}
 
 export class AI {
   /**
@@ -977,7 +991,8 @@ export class AI {
     if (this.iaiArm && SECRET.iai) {
       const busy = this.mode === 'attack' || this.mode === 'defend' || (!!this.secretRun && this.secretRun.stage !== 'instant') || this.drillOut; // 헛스윙 연습 동안은 대기하지 않는다
       const outside = SECRET.gnsEnterAI ? gnsOutside(d, { foeReach: this.foeReach, reach: this.M.reach, contact: this.M.contact }, this.iaiArm.armed, SECRET.gnsLong) : d > this.foeReach; // 고노센 들어옴 AI 판(10/25 — 기본 끔)의 긴 칼 상대 규칙 · 끄면 옛 셈
-      gnsArmTick(this.iaiArm, dt, busy || kneeling || hurt, gnsMoving(me), { outside: outside && !kneeling, busy }, armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x — 서 있는 모습 인물은 그동안 여기 안 옴 · 기본 AI 몫)
+      gnsArmTick(this.iaiArm, dt, busy || kneeling || hurt || !!me.iaiDraw, gnsMoving(me), { outside: outside && !kneeling, busy: busy || !!me.iaiDraw }, armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x — 서 있는 모습 인물은 그동안 여기 안 옴 · 기본 AI 몫) · 11/16 뽑는 중(iaiDraw)도 행동
+      if (this.planJp && !kneeling) jpArmRead(this, dt); // 11/16 뽑기 읽기 (AI_PLAN_JP.drawRead): 칼집이 위험하면 납도를 미루고 · 칼집에 든 채 위험하면 먼저 뽑음
       iaiReadyPose(me, this.iaiArm.armed && this.mode !== 'attack', dt, this.mode !== 'attack' ? this.iaiArm.sheathe : 0); // 11/14 납도 (SECRET.iaiSheathe): 준비 전 iaiSheathe 초 동안 칼을 칼집에 (사람과 같은 셈)
     }
     // 이베리아 길목 지키기 준비 (10/11 v6): 상대가 내 칼끝 거리(reach) 밖에 gilmokArmTime 초 머물면 칼을 몸 옆으로 감아 뒤로 둔 옆 자세(가로 탈류·가로 레베스)로 길목을 지킨다.
@@ -1671,6 +1686,7 @@ export class AI {
   /** 공격 시작. why: 어떤 기회였나 (recover/stepin/finish/patience/counter/...) */
   startAttack(tech, why, opt = {}) {
     if (!tech || !this.me.armed || this.me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false; // 칼이 없으면 칠 수 없다
+    if (drawGate(this.me, 'attack')) return false; // 11/16 뽑기 (SECRET.gnsDraw): 칼집에 든 채면 먼저 뽑음 · 뽑는 동안 공격 없음 — 끝나면 다시 고름
     if (AI_ARC.on && !opt.chain && !opt.secret && !opt.passive && !opt.drill && !GAP_OPEN.has(why) && arcGapHold(this)) return void (this.stats.arcGap = (this.stats.arcGap ?? 0) + 1), false; // ① 칼끝 틈 건너기 (11/15): 긴 칼 앞 내 칼끝 밖 보통 공격은 띠 기울기만큼 참음
     if (this.planDe && this.deDig.t > 0 && !opt.secret) return false; // 독일 파고들기 (3 단계 11/14): 건 동안(digT)은 새 공격을 미룸 — 박찬 두 걸음이 공격 걸음에 덮여 버려지지 않게 · 끝나면 그 자리에서 밀치기 · 공격 고르기 그대로
     // 붙은 거리 규칙 AI 견줌 (11/14 — CLOSE.startAI · 기본 null 이면 안 탐 · close_hold.js): 묶인 동안(내 밀치기든 상대가 나를 민 밀치기든 — 맞밀기로 둘 다 묶임) 공격 안 함 ·
@@ -2170,24 +2186,25 @@ export class AI {
   }
 
   /**
-   * 비기 알티바슈 포르트 내려침 (11/11 — 사람 unique_assist.js altibFire 와 같은 칼): 칼끝 고노센 × SECRET.altib.share · 판정 배율 altibHitMul × 남은 기력 몫(altibPower) ·
+   * 비기 알티바슈 포르트 내려침 (11/11 — 사람 unique_assist.js altibFire 와 같은 칼): 칼끝 · 판정 배율 = altibShot(11/16 빠르기 판 SECRET.altib.speed · 옛 판 share × 기력 몫 위력) ·
    *  끝 자세 붙듦 altib.hold · 판당 쓸 수 · 비기 셈 · 터뜨림 수 · 비기 알림 · 칼 하나 기력 뒤 기력 0 · 특수 공격 식힘 없음. 못 내면 그만둠(쓸 수 안 씀)
    */
   altibFire(why) {
     const me = this.me;
     const W = me.rdWind;
-    const k = altibPower(me, this.rd);
+    const shot = altibShot(me, this.rd); // 11/16 빠르기 판(SECRET.altib.speed — 사람 altibFire 와 같은 셈) · 옛 판은 기력 몫 위력
+    const k = shot.k;
     const R = windEnd(me, true);
     this.rd = { ...(this.rd ?? {}), ropes: R ?? this.rd?.ropes ?? null, fade: 0.12, secret: false };
     const A = SECRET.altib;
-    const ok = UA.enhance > 0 && requestArtRedondo(me, rdReleaseOpt(me, W, { share: A.share, maxT: UA.rdSnapTime, tech: 'redondo', hitMul: altibHitMul() * k, hold: A.hold ?? SECRET.stiff.iberian ?? 0, secret: 'altib' }));
+    const ok = UA.enhance > 0 && requestArtRedondo(me, rdReleaseOpt(me, W, { share: shot.share, maxT: UA.rdSnapTime, tech: 'redondo', hitMul: shot.hitMul, hold: A.hold ?? SECRET.stiff.iberian ?? 0, secret: 'altib' }));
     if (!ok) {
       const C = (this.stats.rdWind ??= { begin: 0, fire: 0, cancel: {} }).cancel;
       C.noStrike = (C.noStrike ?? 0) + 1;
       return this.abortAttack();
     }
     me.stamina.attack('cut');
-    if (A.zero) me.stamina.zero('secret');
+    altibAfter(me); // 11/16 기력 −35 까지 (SECRET.altib.drop · 사람과 같음)
     this.phase = 'rdStrike';
     this.path.length = 0;
     const S = this.secret;
@@ -2198,6 +2215,8 @@ export class AI {
     const st = (this.stats.altib ??= { begin: 0, fired: 0, k: [] });
     st.fired++;
     st.k.push(+k.toFixed(3));
+    (st.s ??= []).push(+(shot.s ?? 0).toFixed(1)); // 11/16 뗀 순간 기력 · 칼끝 몫 (재기)
+    (st.share ??= []).push(+shot.share.toFixed(3));
     (st.why ??= {})[why] = (st.why[why] ?? 0) + 1;
   }
 
@@ -2801,10 +2820,12 @@ export class AI {
     const L = this.level;
     if (this.me.parryLockUntil != null && this.me.fightT < this.me.parryLockUntil) return false; // 칼끝 돌려 빼기 C (10/31 시제품 — UNIQUE_ASSIST.cavParryLock · 기본 끔): 누르던 칼이 빠진 동안 반응을 새로 시작하지 못함 (이 위협은 묶음이 풀린 뒤 다시 봄)
     if (th.id === this.threatSeen) return false;
+    if (this.me.iaiDraw) return drawGate(this.me, 'guard') && false; // 11/16 뽑는 중: 이 위협은 뽑은 뒤 다시 봄 (굴림 없음)
     this.threatSeen = th.id;
     const gc = this.planJp ? jpGuardChance(this, th, L.guardChance) : L.guardChance; // 일본 (11/14): 가운데부터 버릇 — 같은 줄이 다시 오면 막을 눈이 조금 큼 (굴림 수 그대로)
     if (this.planJp) jpSeeThreat(this, th); // 상대 공격 줄 기억 (본 것만)
     if (Math.random() > gc) return false; // 못 봤거나 늦었다
+    if (drawGate(this.me, 'guard')) return void (this.threatSeen = null), false; // 11/16 뽑기 (SECRET.gnsDraw): 칼집에 든 채면 먼저 뽑음 · 뽑는 동안 막기 · 맞받기 없음 — 같은 위협은 뽑은 뒤 다시 봄
     this.defLine = th.line;
     // 패시브 threat (이 위협에 한 번 — threatSeen 과 같은 번호): 맞받아치기 목록 바꿈·막기·피하기 강제. 없으면 난수 없이 아래 그대로
     //  맞받아치기 꼴(counter)은 간격(맞받아 벨 거리) 안에서만 굴린다 — 굴려 나오면 확정이라 굴림이 곧 낸 수가 되게 (10/9 13:xx)
@@ -3664,7 +3685,7 @@ export class AI {
       this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
       return false;
     }
-    this.me.stamina.secret();
+    this.me.stamina.secret(secretCostOf(S)); // 11/16 고노센 SECRET.gnsCost 50 (사람 skill.secret 과 같은 셈 — secret.js secretCostOf)
     this.secretStat(S).fired++;
     useSecret(this.me); // 판당 쓸 수 셈 (10/29 19:5x — 사람 창과 같은 칸 fighter.secretUsed)
     this.binds?.reset(); // 이베리아: 비기를 내면 맺힘 셈 0

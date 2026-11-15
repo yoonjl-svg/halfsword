@@ -65,6 +65,7 @@ import { updateCapeSway } from './cape_sway.js'; // 긴 망토 흔들림 (10/24 
 import { tickDebris, clearDebris, debrisCount, DEBRIS } from './debris.js';
 import { ReviveFx } from './revive_fx.js';
 import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비기 창 (10/9 23:5x — AI 와 같은 조건 함수)
+import { drawInput, drawTapTake } from './iai_obi.js'; // 11/16 뽑기 — 사람 입력 잠금 (SECRET.gnsDraw)
 import { IAI_READY_STANCE, iaiReadyShown } from './secret_instant.js'; // 고노센 발도 대기 자세 이름 (① 자세 칸 — 10/31 13:xx)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
 import { pickupReady } from './pickup.js'; // 떨어진 칼 줍기 (11/05 — 막기 단추 글 '줍기')
@@ -271,6 +272,19 @@ if (params.has('ibFoot') && +params.get('ibFoot') >= 0) CONFIG.SECRET.ibSpin.spl
 if (params.has('ibUnder')) CONFIG.SECRET.ibSpin.split.under = +params.get('ibUnder') ? 1 : 0; // 틀어 딛는 앞발을 엉덩이 밑에 (1 판 값 · 0 = 제자리 견줌)
 if (params.has('mordHitMul') && +params.get('mordHitMul') > 0) CONFIG.SECRET.mordHitMul = +params.get('mordHitMul'); // 죽음의 일격 판정 배율 (11/11 사장님 1.0 · `?mordHitMul=1.3` = 전 판)
 if (params.has('altibHitMul') && +params.get('altibHitMul') > 0) CONFIG.SECRET.altibHitMul = +params.get('altibHitMul'); // 알티바슈 포르트 판정 배율 (11/11 사장님 1.0)
+// 11/16 끝없는 비기 (사장님 11/16 — docs/strike/secret_free_2026-11-16.md): 고노센 · 알티바슈 포르트 판당 쓸 수 끝없음 · 고노센 기력 · 뽑기 · 알티바슈 뒤 기력 · 빠르기 판
+if (params.has('gnsFree')) CONFIG.SECRET.gnsFree = +params.get('gnsFree') ? 1 : 0; // `?gnsFree=0` = 판당 secretUses 그대로
+if (params.has('gnsCost') && Number.isFinite(+params.get('gnsCost'))) CONFIG.SECRET.gnsCost = +params.get('gnsCost') > 0 ? +params.get('gnsCost') : null; // `?gnsCost=0` = 비기 공통 35
+if (params.has('gnsDraw') && Number.isFinite(+params.get('gnsDraw'))) CONFIG.SECRET.gnsDraw = +params.get('gnsDraw') > 0 ? CONFIG.realS(+params.get('gnsDraw')) : 0; // 뽑기 (실제 초 · 기본 0.6 · `?gnsDraw=0` = 곧장 사람 손)
+if (params.has('altibFree')) CONFIG.SECRET.altib.free = +params.get('altibFree') ? 1 : 0; // `?altibFree=0` = 판당 secretUses 그대로
+if (params.has('altibDrop')) CONFIG.SECRET.altib.drop = params.get('altibDrop') === 'zero' ? null : Number.isFinite(+params.get('altibDrop')) ? +params.get('altibDrop') : CONFIG.SECRET.altib.drop; // `?altibDrop=zero` = 11/11 판(기력 0)
+if (['f1', 'f2', '0'].includes(params.get('altibSpeed'))) CONFIG.SECRET.altib.speed = params.get('altibSpeed') === '0' ? 0 : params.get('altibSpeed'); // 'f2' 기본 · 'f1' 견줌 · 0 = 11/11 판(기력 몫 위력)
+if (params.has('mordFree')) CONFIG.SECRET.mord.free = +params.get('mordFree') ? 1 : 0; // 죽음의 일격 판당 쓸 수 (`?mordFree=0` = 판당 1)
+if (params.has('mordCost') && Number.isFinite(+params.get('mordCost'))) CONFIG.SECRET.mord.cost = +params.get('mordCost') > 0 ? +params.get('mordCost') : null; // 죽음의 일격 기력 (`?mordCost=0` = 비기 공통)
+if (params.has('mordGuard') && Number.isFinite(+params.get('mordGuard'))) CONFIG.SECRET.mord.guard = +params.get('mordGuard') > 0 ? CONFIG.realS(+params.get('mordGuard')) : 0; // 다시 세우기 (실제 초 · `?mordGuard=0` = 11/15 판 굳음)
+if (params.has('risoFree')) CONFIG.SECRET.risolutoFree = +params.get('risoFree') ? 1 : 0; // 리솔루토 판당 쓸 수 (`?risoFree=0` = 판당 1)
+if (params.has('risoCost') && Number.isFinite(+params.get('risoCost'))) CONFIG.SECRET.risolutoCost = +params.get('risoCost') > 0 ? +params.get('risoCost') : null; // 리솔루토 기력 (`?risoCost=0` = 비기 공통)
+if (params.has('risoBack') && Number.isFinite(+params.get('risoBack'))) CONFIG.SECRET.risolutoBack = +params.get('risoBack') > 0 ? CONFIG.realS(+params.get('risoBack')) : 0; // 런지 되돌림 (실제 초 · `?risoBack=0` = 11/15 판 굳음)
 if (params.get('ibFeet') === '0') CONFIG.SECRET.ibSpin.feet = 0; // 싱지르 발디딤 고침 끔 (10/24 02:5x 판 — 도는 발이 축발 옆에 딛고 축발은 제자리 · 판 값 1 · 사장님 10/24 12:5x '두 다리가 딱 붙어서 곧게 편 채')
 if ([90, 180, 270, 360].includes(+params.get('ibTurn'))) CONFIG.SECRET.ibSpin.stickTurn = +params.get('ibTurn'); // 스틱 돌림 각 ° (판 값 180 — 사장님 10/23 '반 바퀴 이상') · 시험 `?ibTurn=360`
 if ([0.4, 0.6].includes(+params.get('ibTurnTime'))) CONFIG.SECRET.ibSpin.stickTime = +params.get('ibTurnTime'); // 그 각을 이 초 안에 (판 값 0.6 — 사다리 칸만) · 시험 `?ibTurnTime=0.4`
@@ -3594,6 +3608,16 @@ function playerInputFrame(dt, now) {
       showPlayerCue(o.S, 'secret');
     }
   }
+  // 11/16 뽑기 (사장님 11/16 '고노센을 쓰지 않고 칼을 뺄 때도 시간이 강제로 들게 하자. 그 시간엔 당연히 공격이나 막기 불가.' — SECRET.gnsDraw · iai_obi.js drawInput):
+  //  칼이 칼집에 든 채(고노센 준비) 고노센 아닌 탭 · 칼을 쥠(손가락이 길게 누름 한도를 넘게 끎 · 마우스는 움직임) · 막기 단추면 뽑기 — 뽑는 동안 손가락 움직임 · 탭 · 막기를 버림(비기 실행 중과 같은 secBusy) ·
+  //  뽑는 동안 든 탭 하나는 끝난 뒤 이 차례에서 냄 (몸이 칼을 낼 수 없으면 아래 길이 버림)
+  const prD = input.press;
+  const parryDown = (parryHold.btn != null || parryHold.key) && !roundOver;
+  if (player.alive && drawInput(player, { taps, grip: prD && !prD.mouse ? prD.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx) : Math.abs(d.x) + Math.abs(d.y) > 1e-5, guard: parryDown }, secBusy)) {
+    secBusy = true;
+    d.x = 0;
+    d.y = 0;
+  } else if (drawTapTake(player) && !secBusy) taps++; // 쥔 탭은 한 번만 — 몸이 못 내는 프레임이면 버림
   // 붙은 거리 규칙 (11/14 사장님 '묶인 1.2초 동안은 아무 공격도 못하고' · '1m 이내에서는 손잡이 찍기만' — config CLOSE.holdLock · nearHilt · close_hold.js — 모든 유파 사람):
   //  묶임 = 위에서 비기 실행 중처럼(secBusy — 손 · 공격 · 비기 모두 안 남) · 칼자루만 거리 = 공격 입력(탭 · 빠른 끌기)은 손잡이 찍기(모르트슐라크 창은 위 비기 차례가 먼저 — closeGate.secretOk)
   if (player.alive && (closeGate.lock || !secBusy) && closeInputApply(player, closeGate, d, taps, swipe, dt)) taps = 0;
@@ -3608,7 +3632,7 @@ function playerInputFrame(dt, now) {
   player.pickupPress = (parryHold.btn != null || parryHold.key) && !roundOver; // 떨어진 칼 줍기 'block' (11/05 — src/pickup.js): 칼을 놓친 동안 막기 단추 · F 가 줍기 (막기는 칼이 없으면 아무 일도 안 함)
   if (playerGuard) {
     const G = playerGuard;
-    G.held = (parryHold.btn != null || parryHold.key) && !roundOver;
+    G.held = (parryHold.btn != null || parryHold.key) && !roundOver && !player.iaiDraw; // 11/16 뽑는 동안 막기 없음 (SECRET.gnsDraw)
     if (G.broken && (!G.held || (!player.skill.swinging && !player.skill.tap && !swipe && taps === 0))) G.broken = false;
     if (G.held && !bufHold && (swipe || taps > 0)) G.broken = true;
     guardHold = G.held && !G.broken && !secBusy;

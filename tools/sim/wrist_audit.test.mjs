@@ -18,6 +18,7 @@ import { standTrial } from './tap_thrust.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { withArmOld } from './arm_real_pin.mjs';
 import { ITALIAN_NOW } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 'full' 이면 옛 판 재현을 그때 간격 줄로
+import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { SECRET, JOINTS } = CONFIG;
@@ -58,7 +59,7 @@ test('값: 운동학 겨눈 찌름 팔 뻗음 SECRET.thrustArm 1 · 팔꿈치 �
 //  11/11 사장님 "런지 거리는 0.45로 해, 다른 거리 잴 필요 없어."(risolutoSlide 0.45) 뒤에도 10/24 런지 값 몸 미끄러짐 0.6(그때 고노센 iaiStep 과 같은 수) 으로 본다 — 옛 장면 재현 (0.45 면 달타냥 2.2 m 런지가 닿는 끝 밖)
 const LUNGE1024 = [[SECRET, 'risolutoStiff', 0.6], [SECRET, 'risolutoArmSlow', 0.6], [SECRET, 'risolutoShare', 1], [SECRET, 'risolutoHitMul', 1.3], [SECRET, 'risolutoSlide', 0.6]];
 const withLunge1024 = (fn) => withSets(LUNGE1024, fn);
-test('10/24 런지 손목: 맞힌 자세 아래팔-칼 ≤ 135° · 손이 어깨 앞 팔 길이 0.8 이상 · 새끼 쪽 아님 · 굳음 동안 뻗은 채 (레이피어 · 달타냥 · 2.2 m)', () => {
+test('10/24 런지 손목: 맞힌 자세 아래팔-칼 ≤ 135° · 손이 어깨 앞 팔 길이 0.8 이상 · 새끼 쪽 아님 · 굳음 동안 뻗은 채 (레이피어 · 달타냥 · 2.2 m)', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   for (const w of ['rapier', 'dartagnan']) {
     const r = withLunge1024(() => lungeRun(w, { gap: 2.2 }));
     assert.ok(r.fired && r.res?.ok, `${w} 런지`);
@@ -75,9 +76,9 @@ test('10/24 런지 손목: 맞힌 자세 아래팔-칼 ≤ 135° · 손이 어�
     // 칼끝 빠르기 = 고노센 × risolutoShare 그대로 (italian_risoluto.test.mjs 와 같은 기준)
     assert.ok(r.res.tipVmax >= 0.9 * r.res.v && r.res.tipV >= 0.8 * r.res.v, `${w} 칼끝 ${r.res.tipV.toFixed(1)} · 최고 ${r.res.tipVmax.toFixed(1)} / 길 ${r.res.v.toFixed(1)}`);
   }
-});
+}));
 
-test('10/24 런지 `?thrustArm=0&elbowSwivel=0&wristGuard=0` = 옛 꼴 그대로: 굳음 동안 손이 어깨 앞 팔 길이 0.5 아래 · 칼이 새끼 쪽으로 75° 안팎 (거꾸로 쥔 꼴) — 손목 교정만 켜면 같은 굽은 팔에서 범위 안', () => {
+test('10/24 런지 `?thrustArm=0&elbowSwivel=0&wristGuard=0` = 옛 꼴 그대로: 굳음 동안 손이 어깨 앞 팔 길이 0.5 아래 · 칼이 새끼 쪽으로 75° 안팎 (거꾸로 쥔 꼴) — 손목 교정만 켜면 같은 굽은 팔에서 범위 안', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   // 옛 판 재현 = 그때 간격 줄로 (THRUST.itMeasure 'full' — 런지 몸 미끄러짐은 맞닿기에서 멈춰 새 줄에선 끝 자리가 0.18 ~ 0.25 m 멀어 옛 꼴이 안 남 · 'old' · 'contact' 는 지금 맞닿음 그대로라 덮지 않음)
   const old = (w) => (CONFIG.THRUST.itMeasure === 'full' ? { contact: ITALIAN_NOW.MEASURED[w][0], reach: ITALIAN_NOW.MEASURED[w][1], clinch: ITALIAN_NOW.MEASURED[w][2], cutTime: ITALIAN_NOW.CUT_TIME_30[w] } : null);
   withSets([[SECRET, 'thrustArm', 0], ...OLD, ...LUNGE1024.slice(1)], () => {
@@ -98,7 +99,7 @@ test('10/24 런지 `?thrustArm=0&elbowSwivel=0&wristGuard=0` = 옛 꼴 그대로
     assert.ok(S.aSum / S.n < 0.5, `팔은 그대로 굽음 (팔을 펴게 하지 않음) ${(S.aSum / S.n).toFixed(2)}`);
     assert.ok(S.devSum / S.n >= ULNAR - 5 && S.rev / S.n < 0.1, `손목은 범위 안 dev ${(S.devSum / S.n).toFixed(0)}° · 거꾸로 ${S.rev} / ${S.n}`); // 옛 꼴 거꾸로 > 50 %
   }), ['armClear2']);
-});
+}));
 
 test('격살 허파 찌르기(봉두세)도 같은 길: 굳음 동안 뻗은 채 · 새끼 쪽 아님 — `?thrustArm=0` 은 옛 꼴(새끼 쪽)', () => {
   const now = gyeoksalRun('qinggang', 'bongdu');

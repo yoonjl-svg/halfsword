@@ -5,13 +5,14 @@
 //          멜 때 기력 = st × 최대 기력. 판마다: 뗀 때 기력 · 위력 몫(k) · 첫 상처(자리 · 심각도 · J) · 상처 합 · 내려친 뒤 기력.
 //          --k1=1 = 기력 몫을 끈 판(SECRET.altib.staminaK 0 — '기력 100 % 위력' 견줌)
 //  spin  : 싱지르 — 과녁 가슴 거리 gap 에서 낸다(특수 공격 판 = skill.secret special · 비기 판 = --mode=spin). 판마다: 맞힘 · 첫 상처 J · 골반 옮김 · 몸 기울기 최대 · 넘어짐 · 끝 두 발 앞뒤
-//  node tools/sim/ib_swap.mjs altib [--ws=zweihander,flamberge,tizona,durandal] [--st=1] [--hold=1.6] [--k1=0] [--seeds=1] [--set=…]
+//  node tools/sim/ib_swap.mjs altib [--ws=zweihander,flamberge,tizona,durandal] [--st=1] [--hold=1.6] [--k1=0] [--seeds=1] [--set=…] [--rel=100,60,30,0 (11/16 뗀 순간 기력 · vMax 칼끝 가장 빠름 실제 m/s)]
 //  node tools/sim/ib_swap.mjs spin  [--ws=…] [--gaps=1.6,1.9,2.2] [--seeds=1] [--set=SECRET.ibSpin.stride=0.45] [--old=1]
 // ─────────────────────────────────────────────────────────────
 import { newRound, CONFIG, THREE } from './harness_m.mjs';
 import { PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { IBERIAN_SPIN_DEF } from '../../src/schools.js';
 import { MEASURED } from '../../src/weapon_measured.js';
+import { iaiTipSpeed } from '../../src/secret_instant.js'; // 11/16 칼끝 몫 → 실제 m/s (목표 빠르기 vT)
 import { isMain } from './is_main.mjs';
 
 const r3 = (x) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(3));
@@ -32,7 +33,7 @@ export function applySets(s) {
 }
 
 /** 비기 알티바슈 포르트 한 번 (서 있는 과녁) */
-export function altibRun({ w = 'zweihander', seed = 1, st = 1, hold = 1.6, gap = null } = {}) {
+export function altibRun({ w = 'zweihander', seed = 1, st = 1, hold = 1.6, gap = null, rel = null } = {}) { // rel (11/16): 뗀 순간 기력을 이 값으로 (빠르기 판 견줌 — 칼끝 가장 빠름 vMax 실제 m/s)
   const [C, R] = MEASURED[w] ?? MEASURED.longsword;
   const G = newRound({ walls: true, seed, weapon: w, weapon2: 'longsword', gap: gap ?? (C + R) / 2 });
   const P = G.player;
@@ -62,18 +63,31 @@ export function altibRun({ w = 'zweihander', seed = 1, st = 1, hold = 1.6, gap =
     if (tWind != null && tRel == null && t - tWind >= CONFIG.realS(hold)) {
       tRel = t;
       down = false;
+      if (rel != null) P.stamina.value = rel; // 11/16 뗀 순간 기력 (빠르기 판 견줌)
       stRel = P.stamina.value;
     }
     uq.holdInput(down, true, true, true);
     P.handHeld = down;
   };
   try {
+    let vMax = 0;
+    const tip = new THREE.Vector3(), prevTip = new THREE.Vector3();
+    const tips = [];
+    let have = false;
     while (G.t < pressAt + CONFIG.realS(hold) + 3) {
       G.step();
       if (k == null && uq.stats.altib?.k?.length) k = uq.stats.altib.k[0];
+      P.bladePoint(1, tip);
+      if (tRel != null && G.t - tRel <= CONFIG.realS(0.6)) {
+        tips.push(tip.clone());
+        if (tips.length > 4) vMax = Math.max(vMax, tip.distanceTo(tips[tips.length - 5]) / ((4 * CONFIG.PHYSICS.timestep) / K)); // 뗀 뒤 0.6 실제 s 안 칼끝 가장 빠름 — 4 스텝 창 평균 (실제 m/s · 운동학 칼 놓임 튐을 거름)
+      }
+      prevTip.copy(tip);
+      have = true;
     }
     const first = wounds[0] ?? null;
-    return { w, seed, st, hold, k, stRel: r1(stRel), stEnd: r1(P.stamina.value), weight: r3(P.stamina.weight), first, sev: r3(wounds.reduce((a, x) => a + x.sev, 0)), Emax: r1(Math.max(0, ...wounds.map((x) => x.E))), n: wounds.length, fired: uq.stats.altib?.fired ?? 0 };
+    const sh = uq.stats.altib?.share?.[0] ?? null;
+    return { w, seed, st, hold, k, share: sh, vT: sh != null ? r1(sh * iaiTipSpeed(P) * K) : null, vMax: r1(vMax), stRel: r1(stRel), stEnd: r1(P.stamina.value), weight: r3(P.stamina.weight), first, sev: r3(wounds.reduce((a, x) => a + x.sev, 0)), Emax: r1(Math.max(0, ...wounds.map((x) => x.E))), n: wounds.length, fired: uq.stats.altib?.fired ?? 0 };
   } finally {
     G.world.free();
   }
@@ -139,7 +153,8 @@ if (isMain(import.meta.url)) {
   const seeds = arg('seeds', '1').split(',').map(Number);
   if (mode === 'altib') {
     if (arg('k1', '0') === '1') CONFIG.SECRET.altib.staminaK = 0;
-    for (const w of ws) for (const st of arg('st', '1').split(',').map(Number)) for (const hold of arg('hold', '1.6').split(',').map(Number)) for (const seed of seeds) console.log(JSON.stringify(altibRun({ w, seed, st, hold })));
+    const rels = arg('rel', null)?.split(',').map(Number) ?? [null]; // 11/16 뗀 순간 기력 (빠르기 판 견줌)
+    for (const w of ws) for (const st of arg('st', '1').split(',').map(Number)) for (const hold of arg('hold', '1.6').split(',').map(Number)) for (const rel of rels) for (const seed of seeds) console.log(JSON.stringify(altibRun({ w, seed, st, hold, rel })));
   } else if (mode === 'spin') {
     for (const w of ws) for (const gap of arg('gaps', '1.6,1.9,2.2').split(',').map(Number)) for (const seed of seeds) console.log(JSON.stringify(spinRun({ w, seed, gap, old: arg('old', '0') === '1' })));
   } else throw new Error('첫 인자: altib | spin');

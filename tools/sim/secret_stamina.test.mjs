@@ -9,6 +9,7 @@ import { CONFIG, newRound, DT } from './harness_m.mjs';
 import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
+import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 
 const { SECRET, STAMINA } = CONFIG;
 
@@ -135,7 +136,7 @@ test('AI: 기력 −5 이면 secretGo · mordGo · spinGo 모두 거절 (거절 
   }
 });
 
-test('기력 0.5 에서 낸 비기 다섯 모두 끝까지 (사장님 10/30 18:3x — 0 보다 크면 냄): 비기 값 35 를 내 −34.5 · 탈진 없음 · holdExhausted 끊김 0 · 굳음까지', () => {
+test('기력 0.5 에서 낸 비기 다섯 모두 끝까지 (사장님 10/30 18:3x — 0 보다 크면 냄): 비기 값 35 를 내 −34.5 · 탈진 없음 · holdExhausted 끊김 0 · 굳음까지', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   const cases = [
     ['longsword', { ev: 'press' }],
     ['rapier', { ev: 'risoluto' }],
@@ -179,4 +180,4 @@ test('기력 0.5 에서 낸 비기 다섯 모두 끝까지 (사장님 10/30 18:3
       CONFIG.SECRET.iberianSecret = keepIb;
     }
   }
-});
+}));

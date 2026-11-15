@@ -11,6 +11,7 @@ import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { planFor, tiltOf, luckOf, distErrWidth, PHASES, SCHOOL_PLAN } from '../../src/ai_plan.js';
 import { readNote } from '../../src/ai_read.js';
 import { ibStats, chainWant, spinK, armK, habitN, ibTick, ibCircle, ibFeetV, schoolRead, swapReady, nextFree, ibSidePost, ibFwdPost, ibAfter, foeAtkN } from '../../src/ai_plan_ib.js';
+import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { AI_PLAN, IB_LINK, STAMINA } = CONFIG;
@@ -237,7 +238,7 @@ test('원으로 이을 몫 — 맞바꿈이 남으면 더 · 상대 유파 거�
   }
 });
 
-test('알티바슈 무장 쪽 몫 — 높음 · 비기가 남았을 때 · 기력이 많을수록 (비기 몫 35 위)', () => {
+test('알티바슈 무장 쪽 몫 — 높음 · 비기가 남았을 때 · 기력이 많을수록 (비기 몫 35 위)', () => withSecretFreeOff(() => { // 11/16 그때 판(판당 1 — 끝없는 비기 끔)으로 묶음 · 기준 그대로
   const { ai, free } = ibAi(5);
   ai.planC = SCHOOL_PLAN.iberian.commit;
   const S = ai.me.stamina;
@@ -258,7 +259,7 @@ test('알티바슈 무장 쪽 몫 — 높음 · 비기가 남았을 때 · 기�
   g.ai.planC = SCHOOL_PLAN.iberian.commit;
   assert.equal(armK(g.ai), 0, '숙련 4 — 비기 없음');
   g.free();
-});
+}));
 
 test('버릇 고리 버퍼 — 원 한 번에 한 번 · 굴림 없음 · 새 배열 없음 · 옆 박차기 진행', () => {
   const { ai, free } = ibAi(5);

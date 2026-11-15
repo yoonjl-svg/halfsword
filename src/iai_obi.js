@@ -300,6 +300,74 @@ function notoTime(N, p, W) {
   const d = T[i + 1] - T[i];
   return (i + (d > 1e-9 ? Math.max(0, Math.min(1, (c - T[i]) / d)) : 0)) / NOTO_TAB;
 }
+// ── 뽑기 (抜き — 11/16) ─────────────────────────────────────────
+//  사장님 11/16 '고노센을 쓰지 않고 칼을 뺄 때도 시간이 강제로 들게 하자. 그 시간엔 당연히 공격이나 막기 불가. 자연스럽고 사실적으로 칼을 빼는 동작으로. 0.4나 0.6 어때? 대신 무한으로 풀어주고.' →
+//   '0.6으로 하고 기력 소모 50으로.' (SECRET.gnsDraw · gnsFree · gnsCost — 기록 docs/strike/secret_free_2026-11-16.md):
+//   칼이 칼집에 든 채(납도가 끝난 고노센 준비 — iaiSeated) 고노센 아닌 공격 · 막기 · 칼을 쥠 · 준비가 풀림(맞음 등)이면 SECRET.gnsDraw 초 동안 납도를 거꾸로 —
+//   왼손이 칼집 입(鯉口)을 쥔 채 칼날이 칼집 축을 따라 나오고(③ 거꾸로) · 칼끝이 칼집 입을 떠나(②) · 납도 전 겨눔(납도 첫 스텝에 잡은 칼 자리 N.O0 · D0)으로 (① 거꾸로) — 끝나면 보통 겨눔.
+//   그동안 공격 · 막기 안 남(사람 drawInput · AI ai.js drawGate) · 고노센 준비 셈 0 · 사람 · AI 같은 셈. 몸이 넘어짐 · 칼 없음 · 고노센이면 그만둠 (secret_instant.js drawTick)
+/** 이 몸이 뽑기를 쓰나 (스위치 SECRET.gnsDraw · 납도 iaiSheathe · 帯刀 일본 칼 넷) */
+export function drawOn(f) {
+  return SECRET.gnsDraw > 0 && SECRET.iaiSheathe > 0 && obiOn(f);
+}
+/** 칼이 칼집에 든 채인가 (납도가 끝나 준비 — notoSeat · 덧씌우기 몫 1 · 납도 길 표가 있음) — 뽑는 중 · 발도 중 · 넘어짐 · 칼 없음은 아님 */
+export function iaiSeated(f) {
+  return !f.iaiDraw && drawOn(f) && f.notoSeat >= 1 && !!f.noto?.tab && (f.skill?.thrustPose?.w ?? 0) > 0.99 && !f.iai && !f.iaiReq && !!f.armed && !!f.sword && f.alive !== false && f.state === 'stand';
+}
+/** 뽑기 셈 (재기 — 몸마다: 수 · 까닭 · 거절한 입력 · 뽑는 동안 받은 상처) */
+export function drawLog(f) {
+  return (f.drawLog ??= { n: 0, why: {}, refused: 0, hitN: 0, wounds: 0, sev: 0, done: 0, cut: 0, tapOut: 0 });
+}
+/** 뽑기 시작 (why — 'tap' · 'grip' · 'guard' · 'attack' · 'off' · 'read' …) */
+export function drawStart(f, why = 'act') {
+  f.iaiDraw = { t: 0, T: SECRET.gnsDraw, why, tap: false, w0: f.wounds?.length ?? 0, hit: false };
+  const L = drawLog(f);
+  L.n++;
+  L.why[why] = (L.why[why] ?? 0) + 1;
+  return true;
+}
+/**
+ * 사람 입력 (main.js playerInputFrame · 재는 도구 손가락 봇 — 비기 차례 뒤 · 같은 차례): 뽑는 중이면 잠금(돌려줌 true — 부른 쪽이 손가락 움직임 · 탭 · 막기를 버림 · 탭은 하나 쥐어 끝에 냄) ·
+ *  칼집에 든 채 공격 입력(탭) · 칼을 쥠(grip — 손가락이 길게 누름 한도를 넘게 끎 · 마우스는 움직임) · 막기 단추면 뽑기 시작(잠금) · busy(비기가 나감 · 탈진 · 묶임)면 안 엶
+ */
+export function drawInput(f, I, busy) {
+  const atk = I.taps > 0 || !!I.grip || !!I.guard;
+  if (f.iaiDraw) {
+    if (I.taps > 0) f.iaiDraw.tap = true;
+    if (atk && !f.iaiDraw.lockSeen) (f.iaiDraw.lockSeen = true), drawLog(f).refused++;
+    return true;
+  }
+  if (busy || !atk || !iaiSeated(f)) return false;
+  drawStart(f, I.taps > 0 ? 'tap' : I.guard ? 'guard' : 'grip');
+  if (I.taps > 0) f.iaiDraw.tap = true;
+  return true;
+}
+/** 뽑기가 끝난 뒤 쥐었던 탭 (사람 — 한 번만 · drawTick 이 끝에 둠): 1 이면 그 프레임 탭으로 */
+export function drawTapTake(f) {
+  if (!f.iaiDrawTap) return 0;
+  f.iaiDrawTap = false;
+  return 1;
+}
+/**
+ * 뽑기 길 한 스텝 (secret_instant.js drawTick): q = 뽑기 시간 몫 0 → 1 · 납도 길(notoPlan)을 거꾸로 — 시간 → 길은 그 납도 표(notoTable)를 거꾸로(처음 = 납도 끝 빠르기 ease[1] 로 느리게 —
+ *  칼집 입을 끊음 · 끝 = 납도 처음 빠르기) · 칼 손 목표는 lead 초 앞 길(납도와 같은 셈). hand · dir = 덧씌우기 칸. 돌려줌: 덧씌우기 몫(납도 표 · 칼이 없으면 0)
+ */
+export function nukiStep(f, q, hand, dir) {
+  const N = f.noto;
+  if (!N?.tab || !f.sword || !f.armed) return 0;
+  N.w = 1;
+  const W = SECRET.iaiSheatheWay ?? {};
+  const p = Math.max(0, Math.min(1, q));
+  const x = Math.max(1e-3, SECRET.gnsDraw || 0.66);
+  notoPlan(f, notoTime(N, Math.max(0, 1 - p - ((W.lead ?? 0.06) / x) * smooth01(p / 0.15)), W), N);
+  _nO.copy(N.O);
+  _nD.copy(N.D);
+  notoPlan(f, notoTime(N, 1 - p, W), N);
+  N.p = 1 - p;
+  N.k = smooth01(1 - p);
+  pelvisSwordInto(f, _nO, _nD, hand, dir);
+  return 1;
+}
 /** 납도 그만 (준비가 켜짐 · 셈이 풀림 · 발도): 덧씌우기 몫 0 — 돌려줌: 그만둔 스텝에 납도 중이었나 */
 export function notoStop(f) {
   const N = f.noto;

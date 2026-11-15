@@ -38,8 +38,8 @@ import { beginFlowRecovery } from './nagashi_recovery.js'; // 이탈리아 거�
 import { requestSpin, spinAbort, spinCutPose, spinCap, spinHandRest, spinLid } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 (10/22 — 한 바퀴 도는 대본)
 import { windStep } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 — ai.js rdWindTick)
 import { linkStep } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — IB_LINK.ai)
-import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain, gnsBlockOf } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
-import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf, mordBurstTick } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
+import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain, gnsBlockOf, secretCostOf } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
+import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf, mordBurstTick, mordMode } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
 import { huntShareK } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 상대를 겨눈 격살 칼끝 빠르기 몫 × (1 + share × 겹)
 
@@ -90,13 +90,16 @@ const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? real
  */
 /** 안다레 리솔루토 판정 배율 (11/11 사장님 '리솔루토를 70%로 상향하고 파괴력을 0.5로 해.' — SECRET.risolutoHitMul 0.5 · null 이면 다른 비기와 같은 SECRET.hitMul · `?risoHitMul=1.3` = 전 판) — 런지 · 탭 찌르기(`?risoLunge=0`) 둘 다 */
 export const risoHitMul = () => SECRET.risolutoHitMul ?? SECRET.hitMul;
-const risolutoLungeReq = () => {
+const risolutoLungeReq = (f = null) => {
   const st = SECRET.risolutoStep ?? {};
   const fixed = !!SECRET.risolutoReach && !!(SECRET.risolutoReachFixed ?? 1); // 11/11 거리 판단 ②: 미끄러짐 늘 같은 길이
   const step = { kind: 'lunge', fwd: secVal(st.slide ?? 'risolutoSlide'), foot: secVal(st.foot ?? 'italianStep'), ...(st.draw ? { draw: true } : {}), ...(st.room ? { room: true } : {}), ...(st.push ? { push: secVal(st.push) } : {}), ...(st.accel ? { accel: true } : {}), ...(fixed ? { close: true } : {}) };
   const moves = [{ name: 'risolutoLunge', nameKo: '런지', kind: 'thrust', lunge: true, glide: !!SECRET.risolutoGlide, step, dyn: { kind: 'aim', target: 'lung', thrust: true, back: true } }];
-  return { moves, share: SECRET.risolutoShare ?? 1, hitMul: risoHitMul(), hold: risolutoStiff(), arcCut: true, face: SECRET.secretStreak ? 'line' : null, min: SECRET.secretArcMin ?? 0 };
+  const gd = f && SECRET.risolutoBack > 0 ? { hold: 0, guardT: SECRET.risolutoBack, guardPad: [f.handOffset.x, f.handOffset.y] } : null; // 11/16 런지 되돌림 (SECRET.risolutoBack — 굳음 붙잡기 대신)
+  return { moves, share: SECRET.risolutoShare ?? 1, hitMul: risoHitMul(), hold: risolutoStiff(), arcCut: true, face: SECRET.secretStreak ? 'line' : null, min: SECRET.secretArcMin ?? 0, ...gd };
 };
+/** 죽음의 일격 다시 세우기 초 (11/16 SECRET.mord.guard — 폼멜 찍기 판만 · 0 = 11/15 판) */
+const mordGuardT = (f) => (SECRET.mord.guard > 0 && SECRET.mord.pommel && mordMode(f) === 'hilt' ? SECRET.mord.guard : 0);
 const _ps = new THREE.Vector3();
 const _pd = new THREE.Vector3();
 const _pt = new THREE.Vector3();
@@ -708,7 +711,9 @@ export class Skill {
         run.instant = true;
         run.queue.length = 0;
         //  잔상(10/23 점검): 베는 토막만(arcCut) · 정수리로 곧게 내리치는 길은 뒤 카메라에서 옆으로 보여 → 마주 보는 띠(face 'path' 칼자루 끝 길 — SECRET.secretStreak, sword_trail.js) · 밝기 바닥 SECRET.secretArcMin
-        requestCombo(f, { moves: [{ name: t.name, kind: t.kind, from: t.from, path: t.path }], share: SECRET.mord.kin, hitMul: mordHitMul(), mord: mordKinOf(f, run), arcCut: true, face: SECRET.secretStreak ? 'path' : null, min: SECRET.secretArcMin ?? 0 });
+        const gd = mordGuardT(f); // 11/16 다시 세우기 0.6 s (SECRET.mord.guard — 폼멜 찍기 판 · 굳음 대신)
+        if (gd > 0) run.guardT = gd;
+        requestCombo(f, { moves: [{ name: t.name, kind: t.kind, from: t.from, path: t.path }], share: SECRET.mord.kin, hitMul: mordHitMul(), mord: mordKinOf(f, run), arcCut: true, face: SECRET.secretStreak ? 'path' : null, min: SECRET.secretArcMin ?? 0, ...(gd > 0 ? { hold: 0, guardT: gd, guardPad: [f.handOffset.x, f.handOffset.y] } : {}) });
         this.secretBursts++;
       }
     } else if (D.risoluto) {
@@ -796,10 +801,11 @@ export class Skill {
       run.queue.push(D.step ? { ...base, step: { ...D.step, fwd: secVal(D.step.fwd), push: secVal(D.step.push) } } : base);
     } else return false;
     this.sec = run;
-    if (!run.special) f.stamina.secret(); // 특수 공격 싱지르(11/11)는 비기 기력 없음 — 아래 베기 한 번 값
+    if (!run.special) f.stamina.secret(secretCostOf(S)); // 특수 공격 싱지르(11/11)는 비기 기력 없음 — 아래 베기 한 번 값 · 11/16 고노센 SECRET.gnsCost 50 (secret.js secretCostOf)
     if (run.risoluto) {
       if (run.lunge) {
-        requestCombo(f, risolutoLungeReq());
+        requestCombo(f, risolutoLungeReq(f));
+        if (SECRET.risolutoBack > 0) run.guardT = SECRET.risolutoBack; // 11/16 런지 되돌림 0.6 s (굳음 대신)
         startLunge(f); // 런지 자세 (SECRET.stance.lunge — 엇박 찌르기 런지와 같은 골반 낮춤 · 몸 숙임 · 빈팔 뒤로 · 넓은 발)
       } else if (!this.thrust()) {
         this.sec = null; // 찌르기를 못 냄 (기력 탈진 · 칼 없음 …) — 비기도 없음
@@ -948,6 +954,8 @@ export class Skill {
       return;
     }
     if (run.stage === 'instant') {
+      // 11/16 런지 되돌림 (SECRET.risolutoBack): 되돌림 토막이 시작되면 앞발을 거둠 — 굳음 끝을 기다리지 않음 (lungeRecoverTick)
+      if (run.lunge && run.guardT > 0 && f.iai?.guarding && !run.recAsk && SECRET.risolutoStep?.recover && f.lungeReq) (run.recAsk = true), (f.lungeRecover = { foot: 0, t: 0 });
       const R = f.instantResult;
       if (!R) return;
       if (!R.ok) return this.secretEnd();
@@ -955,12 +963,12 @@ export class Skill {
       if (run.landed) this.secretStats[run.S.name].landed++;
       if (run.lunge) {
         run.lungeRes = R; // 재기 (안다레 리솔루토 런지 — 막힘 · 미끄러짐 · 몸 미끄러짐)
-        if (SECRET.risolutoStep?.recover && f.lungeReq) f.lungeRecover = { foot: R.foot ?? 0, t: 0 }; // 되돌아오기: 앞발이 디디면 뒤로 거둠 (lungeRecoverTick)
+        if (SECRET.risolutoStep?.recover && f.lungeReq && !run.recAsk) f.lungeRecover = { foot: R.foot ?? 0, t: 0 }; // 되돌아오기: 앞발이 디디면 뒤로 거둠 (lungeRecoverTick)
       }
       f.secretHit = 1;
       run.stage = 'stiff';
       run.t = 0;
-      run.stiffT = run.lunge ? risolutoStiff() : SECRET.stiff[run.tr] ?? realS(0.3); // 런지 뒤 굳음 0.6 s (사장님 10/24)
+      run.stiffT = run.guardT > 0 ? 0 : run.lunge ? risolutoStiff() : SECRET.stiff[run.tr] ?? realS(0.3); // 런지 뒤 굳음 0.6 s (사장님 10/24) · 11/16 겨눔 되돌림(guardT — 죽음의 일격 · 리솔루토)이면 굳음 없음(되돌림이 0.6 s 무방비)
       return;
     }
     if (run.stage === 'spin') {
@@ -1131,7 +1139,7 @@ export class Skill {
       f.lungeRecover = null;
       return;
     }
-    if (f.gait.req === f.lungeReq || this.sec) return; // 앞발이 아직 떠 있음 · 굳음 중
+    if (f.gait.req === f.lungeReq || (this.sec && !(this.sec.guardT > 0 && f.iai?.guarding))) return; // 앞발이 아직 떠 있음 · 굳음 중 · 11/16 겨눔 되돌림 동안은 거둠
     f.lungeRecover = null;
     f.lungeReq = null;
     const s1 = stanceSpread(f);

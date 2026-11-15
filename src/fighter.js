@@ -27,6 +27,7 @@ import { newFinish, updateFinish, FINISH, plungeBoost } from './finish.js';
 import { vitalHand, vitalAim, playerVitalUpdate } from './vital_target.js'; // 약한 자세 겨눔 덧씌우기 (FINISH.vital, 10/12)
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
 import { breakWeaponLook } from './weapon_looks.js';
+import { drawTick, guardWinTick } from './secret_instant.js'; // 11/16 뽑기 — 칼집에 든 채 다른 칼은 SECRET.gnsDraw 초 동안 뽑음 (사람 · AI 같은 스텝)
 import { obiOn, obiGrip, pelvisToWorld, attachObiSaya, syncObiSaya, syncObiEdge, notoKoiW } from './iai_obi.js'; // 帯刀 — 鞘戻し 점 · 빈 칼집 그림 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi · iaiObiSaya)
 import { attachDruidWhip } from './druid_whip.js'; // 휘는 마디 무기(드루이드의 채찍 — spec.flexible, 샛별 저장소 69ef7dac8)
 import { BLOOD_RED } from './blood_palette.js'; // 피 색 (10/27 — 칼에 묻는 피: 맞은 몸의 피 색, 광기의 병마용은 흰 피)
@@ -1791,6 +1792,8 @@ export class Fighter {
       if (this.gait) this.gait.req = null;
     }
     updateFinish(this, dt); // 상대가 쓰러져 있으면 아래쪽 자세를 내려찍기로 (finish.js)
+    if (this.secretGuard) guardWinTick(this, dt); // 11/16 비기 뒤 무방비 창 셈 (죽음의 일격 · 리솔루토 겨눔 되돌림 — 재기만)
+    if (this.iaiDraw) drawTick(this, dt); // 11/16 뽑기 (SECRET.gnsDraw — 덧씌우기 칸을 검술 층 앞에 둠 · 없으면 안 부름)
     this.skill.update(dt);
     this.stamina.step(dt);
     this.schoolPassive?.update(dt); // 유파 패시브: 켄타이 쌓임 · 인데스 창 시계 · 휘두르는 중 (기력 장부의 공격 중을 읽는다)

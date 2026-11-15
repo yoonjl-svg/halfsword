@@ -15,6 +15,7 @@ import { mordHitMul } from '../../src/mordschlag.js';
 import { nodeTitle } from '../../src/skill_tree.js';
 import * as D from '../../src/skill_tree_data.js';
 import { altibRun, spinRun } from './ib_swap.mjs';
+import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 
 const setup = (P) => {
   P.skill.corr = CONFIG.SKILL.corr;
@@ -65,7 +66,7 @@ test('스킬트리 — B4 알티바슈 포르트가 비기 자리(전 B7 값) ·
   assert.equal(b7.cmd, '원을 그리며 긋기(↻/↺)');
 });
 
-test('사람 비기 알티바슈 포르트 — 무장 없이 길게 누르면 아무 일 없음 · 칼끝 거리 밖 2 s 무장 창(금빛 !)에서 길게 누르면 메기(무장을 씀) · 떼면 비기 내려침 · 판당 한 번 · 기력 0 · 판정 = 1 × 기력 몫', () => {
+test('사람 비기 알티바슈 포르트 — 무장 없이 길게 누르면 아무 일 없음 · 칼끝 거리 밖 2 s 무장 창(금빛 !)에서 길게 누르면 메기(무장을 씀) · 떼면 비기 내려침 · 판당 한 번 · 기력 0 · 판정 = 1 × 기력 몫', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   const G = newRound({ seed: 2, weapon: 'zweihander', weapon2: 'longsword', gap: 3.4 });
   const P = G.player, E = G.enemy;
   setup(P);
@@ -119,9 +120,9 @@ test('사람 비기 알티바슈 포르트 — 무장 없이 길게 누르면 �
   } finally {
     G.world.free();
   }
-});
+}));
 
-test('기력 몫 — 서 있는 과녁 · 츠바이핸더 · 같은 메기: 멜 때 기력 50 % 면 위력 몫 · 판정 J 가 100 % 의 절반 안팎 · 내려친 뒤 기력 0', () => {
+test('기력 몫 — 서 있는 과녁 · 츠바이핸더 · 같은 메기: 멜 때 기력 50 % 면 위력 몫 · 판정 J 가 100 % 의 절반 안팎 · 내려친 뒤 기력 0', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   const a = altibRun({ w: 'zweihander', st: 1, hold: 0.8 });
   const b = altibRun({ w: 'zweihander', st: 0.5, hold: 0.8 });
   assert.equal(a.fired, 1);
@@ -132,7 +133,7 @@ test('기력 몫 — 서 있는 과녁 · 츠바이핸더 · 같은 메기: 멜 
   const er = b.first.E / a.first.E;
   assert.ok(er > 0.35 && er < 0.7, `J 비 ${er} (${b.first.E} / ${a.first.E})`);
   assert.ok(a.k < 1 && a.k > 0.8, `메는 동안 기력이 빠져 몫 < 1 (${a.k})`);
-});
+}));
 
 test('무게 보정 견줌(weightFix — 기본 끔): 켜면 위력 몫 = (멜 때 기력 − 무게 1 값으로 멘 만큼) ÷ 최대 · 끄면 뗀 순간 기력 ÷ 최대', () => {
   const f = { stamina: { value: 60, max: 100, infinite: false } };
@@ -238,7 +239,7 @@ test('AI — 숙련도 5 이베리아: 비기 알티바슈 포르트(싱지르 �
   }
 });
 
-test('AI 비기 알티바슈 포르트 — 무장된 채 상대가 칼끝 거리 + altib.aiFire 안이면 메고 다가가 내려침 · 비기 셈 · 기력 0 · 특수 공격 식힘 없음', () => {
+test('AI 비기 알티바슈 포르트 — 무장된 채 상대가 칼끝 거리 + altib.aiFire 안이면 메고 다가가 내려침 · 비기 셈 · 기력 0 · 특수 공격 식힘 없음', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   const G = newRound({ seed: 4, weapon: 'longsword', weapon2: 'zweihander', persona: { proficiency: 5 }, gap: 3.6 });
   const P = G.player, A = G.ai, E = G.enemy;
   try {
@@ -260,4 +261,4 @@ test('AI 비기 알티바슈 포르트 — 무장된 채 상대가 칼끝 거리
   } finally {
     G.world.free();
   }
-});
+}));

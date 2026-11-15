@@ -13,6 +13,7 @@ import { playerSecretDef, TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { iaiTipSpeed, stanceSpread } from '../../src/secret_instant.js';
+import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 
 const { SECRET } = CONFIG;
 const rs = CONFIG.realS; // 표준 시간 (10/25 22:3x): 적힌 0.6 · 0.2 · 0.4 s 는 실제 초 — 게임 초 = × 1.1
@@ -269,7 +270,7 @@ test('10/24 런지 값 (사장님 \'런지로 진행해. 단 런지 동작이 �
   assert.equal(CONFIG.FLOW_RECOVERY.seconds, rs(0.4)); assert.equal(SECRET.stiff.italian, rs(0.6)); /* 11/14 통일 (전 0.4) */
 });
 
-test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝 빠르기) · 몸 미끄러짐 + 앞발 런지 0.9 m · 상대 팔 늦춤 0.6 s · 굳음 0.6 s(끝 자세 붙잡음) · 굳음 뒤 앞발을 뒤로 거둠(14:0x) · 넘어지지 않음', () => {
+test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝 빠르기) · 몸 미끄러짐 + 앞발 런지 0.9 m · 상대 팔 늦춤 0.6 s · 굳음 0.6 s(끝 자세 붙잡음) · 굳음 뒤 앞발을 뒤로 거둠(14:0x) · 넘어지지 않음', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   for (const w of ['rapier', 'dartagnan']) {
     const o = lungeRun(w);
     assert.equal(o.name, 'andareRisoluto');
@@ -312,7 +313,7 @@ test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝
     assert.ok(o.res?.ok && o.res.lunge, '런지 결과');
     assert.equal(o.end, null, '굳음 뒤 끝');
   }
-});
+}));
 
 test('10/24 런지는 멈춘 상대를 칼 축으로 찌른다 (찌르기 상처) · 런지를 끄면(?risoLunge=0) 10/23 탭 찌르기 그대로', () => {
   const o = lungeRun('rapier');
@@ -602,14 +603,14 @@ function lungePose(cfg) {
   });
 }
 
-test('10/24 14:0x 런지 자세: 앞무릎이 굽고 뒷다리가 펴짐 (전: 앞다리가 곧고 뒷무릎이 굽어 뒤로 주저앉음) · 골반 낮춤', () => {
+test('10/24 14:0x 런지 자세: 앞무릎이 굽고 뒷다리가 펴짐 (전: 앞다리가 곧고 뒷무릎이 굽어 뒤로 주저앉음) · 골반 낮춤', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   const now = lungePose({});
   assert.ok(now.front >= 30 && now.back <= 40 && now.front - now.back >= 15, `지금 앞무릎 ${now.front.toFixed(0)}° · 뒷무릎 ${now.back.toFixed(0)}°`);
   assert.ok(now.drop >= 0.08, `골반 낮춤 ${now.drop.toFixed(3)} m`);
   // 14:0x 전 걸음 (?risoRecover=0 — 뒷발 끌어붙임 · 몸 따라감 배율 · 몸 가속 없음)
   const old = lungePose({ risolutoStep: { ...SECRET.risolutoStep, draw: 1, recover: 0, push: 0, accel: 0 } });
   assert.ok(old.front - old.back < 0, `전 앞무릎 ${old.front.toFixed(0)}° · 뒷무릎 ${old.back.toFixed(0)}°`);
-});
+}));
 
 test("10/25 21:0x 사장님 조건 (스틱 '앞이나 뒤' · 덮음 '15cm 이내'): 뒤 90° 부채꼴도 덮인 채 나아가기 · 옆 · 놓음은 아님 · 0.12 m 떨어진 칼도 덮음 · ?risoStick=fwd · ?risoCover=0.07 = 전", () => {
   assert.equal(SECRET.risolutoStick, 'both');

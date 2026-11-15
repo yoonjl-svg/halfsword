@@ -14,6 +14,7 @@
 //    칼끝 거리 + 0.6 m 안이면 가만히 섬(고노센 준비도 참) · 기세가 가득(지금 판의 가득 — 스택 max · 전 판 full 초)하거나 3 ~ 9 s 참았으면 칼끝 거리로 들어가 내려베기 한 칼 ·
 //    그 칼이 몫을 못 썼으면 곧장 제비 베기 · 칼끝 거리 안 견제(손목 치기 · 비껴 베기) 결정마다 0.025 · 비기가 남았으면 결정마다 0.1 몫 고노센을 노리는 기다림(전 봇과 같은 손 — 2.4 s 가만히 · 그동안 안 막음) ·
 //    비기 창이면 탭(그대로). 기본 ''(전 봇 — 다른 유파 · 일본 모두 바이트 같음)
+//   --jpwait=3 (11/16 — 기록 docs/strike/secret_free_2026-11-16.md): 일본 봇이 고노센을 노리며 기다리는 실제 초(기본 2.4 — 납도 뒤 준비 2.6 s 에 못 미쳐 칼집에 안 듦) · 뽑기 재기용
 //  node tools/sim/school_balance.mjs agg <json ...>   (칸마다 판 표 + 기술 표 — Markdown)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync } from 'node:fs';
@@ -29,6 +30,7 @@ import { TRADITIONS } from '../../src/schools.js';
 import { LOOKS } from '../../src/looks.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js'; // 11/14 판금 상대 재기 (SB_FOE_LOOK=plate — 하인리히 차림)
 import { isMain } from './is_main.mjs';
+import { drawInput, drawTapTake } from '../../src/iai_obi.js'; // 11/16 뽑기 (main.js 와 같은 입력 잠금)
 import { closeInputGate, closeInputApply } from '../../src/close_hold.js'; // 붙은 거리 규칙 (11/14 — main.js playerInputFrame 과 같은 차례)
 
 const K = CONFIG.TIME.k; // 실제 초 → 게임 초
@@ -84,7 +86,7 @@ const TSU = (() => {
 const KOTE = { from: PAD.langort, path: [[0.02, -0.22]] };
 
 /** 한 판 */
-export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], probe = null, onRound = null, botHook = null, attrib = 'new', hunt = 0, jpBot = '', ibBot = 'chain' }) { // ibBot (11/14 이베리아 B7 이어 돌리기 재기): 'chain' = 이베리아 봇이 큰 칼을 이어 그어 사슬을 만듦(아래 chainAct) · 'old' = 11/12 판 봇 (다른 유파는 늘 그대로) // probe = 재기 꽂개 (rapier_defence.mjs) · onRound · botHook = 코테 · 줍기 재기 (kote_pickup.mjs) · attrib 'old' = 11/04 기술 기록 셈 (step_input — 늦게 읽힌 긋기 이름 바꿈)
+export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sjit = 0.06, jit = 0.04, spd = [3, 5.5], focus = null, secret = true, drop = [], probe = null, onRound = null, botHook = null, attrib = 'new', hunt = 0, jpBot = '', ibBot = 'chain', jpWait = 2.4 }) { // jpWait (11/16): 고노센을 노리는 기다림 실제 초 — 기본 2.4(전 봇 그대로) · 납도(11/14) 뒤 준비는 2.0 + 0.6 s 라 2.4 로는 칼집에 들지 않음 → 뽑기 재기는 `--jpwait=3` // ibBot (11/14 이베리아 B7 이어 돌리기 재기): 'chain' = 이베리아 봇이 큰 칼을 이어 그어 사슬을 만듦(아래 chainAct) · 'old' = 11/12 판 봇 (다른 유파는 늘 그대로) // probe = 재기 꽂개 (rapier_defence.mjs) · onRound · botHook = 코테 · 줍기 재기 (kote_pickup.mjs) · attrib 'old' = 11/04 기술 기록 셈 (step_input — 늦게 읽힌 긋기 이름 바꿈)
   const rnd = rng(seed * 7919 + 101);
   const kit = kitFromNodes(school, allNodeIds(school)); // 무유파는 null (나무 없음 — 고유 · 비기 없음)
   const G = newRound({ seed, weapon, weapon2: opp, walls: true, ...(kit ? { kit } : {}), look: LOOKS.player, look2: process.env.SB_FOE_LOOK === 'plate' ? CHARACTERS_BY_ID.heinrich.look : LOOKS.enemy, persona: { proficiency: +(process.env.SB_FOE_PROF || 3) }, onFighter(f) { if (f.index === 0) f.humanInput = true; } }); // SB_FOE_PROF = 상대 AI 숙련도 (11/14 AI 리솔루토 재기 — 기본 3 그대로)
@@ -245,7 +247,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     }
     if (school === 'japanese') {
       if (focus === 'kote') return stroke('kote', { S: KOTE, want: 'kote' }); // focus 'kote' (11/05 손목 치기 떨굼 재기 — kote_pickup.mjs): 유파 기술 몫은 모두 손목 치기
-      if (L && rnd() < 0.3) return { kind: 'wait', seconds: S.iai ? 0.8 : 2.4, fwd: 0, want: secretName }; // 아무것도 안 함 2 s → 고노센 준비
+      if (L && rnd() < 0.3) return { kind: 'wait', seconds: S.iai ? 0.8 : jpWait, fwd: 0, want: secretName }; // 아무것도 안 함 2 s → 고노센 준비
       const n = Math.floor(rnd() * 3);
       return n === 0 ? stroke('kote', { S: KOTE, want: 'kote' }) : n === 1 ? stroke('zornhauL', { side: side(), want: 'hirakiGiri' }) : stroke('tsubame', { S: TSU, want: 'tsubameGaeshi' });
     }
@@ -275,7 +277,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     tk.tsu = null;
     if (S.attack && S.dist < M.reach + 0.8 && rnd() < 0.85) return { kind: 'guard', seconds: 0.6, fwd: S.dist < M.contact ? -0.5 : 0 };
     if (S.dist > M.reach + 1.0) return { kind: 'move', seconds: 0.35, fwd: 0.9 };
-    if (S.left > 0 && secretName && rnd() < 0.1) return { kind: 'wait', seconds: S.iai ? 0.8 : 2.4, fwd: 0, want: secretName }; // 고노센을 노리는 기다림 (전 봇과 같은 손 — 그동안 막지 않음)
+    if (S.left > 0 && secretName && rnd() < 0.1) return { kind: 'wait', seconds: S.iai ? 0.8 : jpWait, fwd: 0, want: secretName }; // 고노센을 노리는 기다림 (전 봇과 같은 손 — 그동안 막지 않음)
     const sp = P.schoolPassive;
     const ready = sp.charge >= fullCharge() - 1e-9 || S.t - tk.last >= tk.W; // 기세가 가득 · 참은 시간이 참
     if (ready && S.dist > M.reach + 0.25) return { kind: 'move', seconds: 0.35, fwd: 0.8 }; // 칠 때가 됨 — 칼끝 거리로 들어감
@@ -481,11 +483,18 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       if (o) o.dir = [d.x, d.y];
       if (P.skill.secret(o)) secBusy = true;
     }
+    // 11/16 뽑기 (main.js playerInputFrame 과 같은 차례 — iai_obi.js drawInput · SECRET.gnsDraw)
+    const prD = input.press;
+    if (P.alive && drawInput(P, { taps, grip: prD ? prD.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx) : Math.abs(d.x) + Math.abs(d.y) > 1e-5, guard: guardPress }, secBusy)) {
+      secBusy = true;
+      d.x = 0;
+      d.y = 0;
+    } else if (drawTapTake(P) && !secBusy) taps++; // 쥔 탭은 한 번만 — 몸이 못 내는 프레임이면 버림
     if (P.alive && (closeGate.lock || !secBusy) && closeInputApply(P, closeGate, d, taps, swipe, FR)) taps = 0; // 붙은 거리 규칙 (11/14 — 묶임 · 칼자루만)
     if (!secBusy && P.alive && (taps > 0 || swipe) && W.canBuffer()) W.buffer([d.x, d.y]);
     const bufHold = !secBusy && !!W.bufferHold;
     if (secBusy || bufHold) taps = 0;
-    guard.held = guardPress;
+    guard.held = guardPress && !P.iaiDraw; // 11/16 뽑는 동안 막기 없음 (main.js 와 같음)
     P.pickupPress = guardPress; // 떨어진 칼 줍기 'block' (main.js playerInputFrame 과 같은 차례 — 막기 단추 = 줍기 누름)
     if (guard.broken && (!guard.held || (!P.skill.swinging && !P.skill.tap && !swipe && taps === 0))) guard.broken = false;
     if (guard.held && !bufHold && (swipe || taps > 0)) guard.broken = true;
@@ -640,6 +649,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       dealt: r3(wounds.dealt), recv: r3(wounds.recv), dealtN: wounds.dealtN, recvN: wounds.recvN, consD: r3(wounds.consD), consR: r3(wounds.consR), falls, exh: r3(exhT / K / Math.max(1e-6, T)),
       secretFired: fires.filter((f) => f.cls === 'secret').length, brk, disarms,
       secretLeft: secretLeft(P), wants, acts, reads, altib: uq.stats.altib ?? null, // 11/11 알티바슈 포르트: 낸 수 · 남은 기력 몫(k) · 뗀 까닭
+      ...(P.drawLog ? { draw: P.drawLog } : {}), ...(P.secretGuardLog ? { guardWin: P.secretGuardLog } : {}), // 11/16 뽑기(수 · 까닭 · 뽑는 동안 맞은 수 · 상처) · 비기 뒤 무방비 창 — 있을 때만 칸을 둠(없으면 판 바이트 그대로 · 기록 docs/strike/secret_free_2026-11-16.md)
       aiStats: { altib: G.ai.stats.altib ?? null, cingir: G.ai.stats.cingir ?? null, specials: G.ai.stats.specials ?? null },
       ...(IBM ? { ib: ibResult(IBM, uq, W, T) } : {}),
       ...(school === 'chinese' ? { hunt: { n: A.cnHunt?.n ?? 0, hits: A.cnHunt?.hits ?? 0, t5: huntT5, onMe: P.cnHunt?.n ?? 0, bot: hunt ? 1 : 0 } } : {}), // 11/14 사냥 겹 (cn_hunt.js — 상대 몸 겹 · 겹 붙은 맞음 · 상한 닿은 때 · AI 가 내게 쌓은 겹 · 사냥 봇)
@@ -751,7 +761,7 @@ if (isMain(import.meta.url)) {
     for (const c of cells) {
       const [school, weapon, opp] = c.split(':');
       for (const seed of seeds) {
-        const r = fightOne({ school, weapon, opp, seed, dur: +arg('dur', 30), tech: +arg('tech', 0.35), focus: arg('focus', null), secret: arg('secret', '1') !== '0', drop: arg('drop', '').split(',').filter(Boolean), attrib: arg('attrib', 'new'), hunt: +arg('hunt', 0), jpBot: arg('jpbot', '') });
+        const r = fightOne({ school, weapon, opp, seed, dur: +arg('dur', 30), tech: +arg('tech', 0.35), focus: arg('focus', null), secret: arg('secret', '1') !== '0', drop: arg('drop', '').split(',').filter(Boolean), attrib: arg('attrib', 'new'), hunt: +arg('hunt', 0), jpBot: arg('jpbot', ''), jpWait: +arg('jpwait', 2.4) });
         runs.push(r);
         console.error(JSON.stringify({ c, seed, win: r.win, lose: r.lose, T: r.T, dealt: r.dealt, recv: r.recv, fires: r.fires.length, ms: Date.now() - t0 }));
       }

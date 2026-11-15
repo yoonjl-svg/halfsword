@@ -27,7 +27,7 @@ import { classifyStroke } from './attack_stroke.js';
 //  수는 config.js UNIQUE_ASSIST (확인표 1040~1047 · 10/14 강화 수는 owner_defaults_table.md 끝, 사장님 확인 전). 끄기 `?uniqueAssist=0`.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { UNIQUE_ASSIST as UA, SKILL, SECRET, STAMINA, IB_FLOW, IB_LINK, THRUST, IT_OUTBOX, realRate, realS, PHYSICS, CLOSE } from './config.js';
+import { UNIQUE_ASSIST as UA, SKILL, SECRET, STAMINA, IB_FLOW, IB_LINK, THRUST, IT_OUTBOX, realRate, realS, realV, PHYSICS, CLOSE } from './config.js';
 const SKILL_DT = PHYSICS.timestep; // 물리 한 스텝 (게임 초 — 이어 돌리기 손가락 첫머리 나눔)
 import { G, TECH, TECH_BY_NAME } from './ai_techniques.js';
 import { TRADITIONS, IBERIAN_SPIN_DEF } from './schools.js';
@@ -225,6 +225,36 @@ export function altibPower(f, H = null) {
   if (!A?.staminaK || !STAMINA.on || S.infinite || !(S.max > 0)) return 1;
   const v = A.weightFix && H?.s0 != null ? H.s0 - (H.base ?? 0) : S.value;
   return THREE.MathUtils.clamp(v / S.max, 0, 1);
+}
+/**
+ * 알티바슈 포르트 한 칼 (사람 altibFire · AI ai.js altibFire 같은 셈 — 11/16 사장님 '기력 비례 빠르기로' → '둘째로 해' · SECRET.altib.speed):
+ *  빠르기 판('f2' · 'f1'): 칼끝 몫 x = 뗀 순간 기력 ÷ 최대('f2' — 100 소모에 고노센 100 %) 또는 (기력 − drop) ÷ (최대 − drop)('f1' — 135 소모에 100 %) · 0 ~ 1 로 자름 ·
+ *   칼끝 = 같은 칼 고노센 칼끝(iaiTipSpeed) × x · 바닥 = 같은 칼 보통 큰 베기 칼끝(SECRET.altib.floorTip — 실제 m/s · 표에 없으면 share 몫) · 판정 배율 = altibHitMul (기력 몫 없음 — 에너지는 물리)
+ *  옛 판(speed 0): 몫 share(0.35) · 판정 배율 = altibHitMul × 기력 몫(altibPower). 기력 끔 · 무한이면 x = 1. 돌려줌 { share, hitMul, k(옛 위력 몫), x(빠르기 몫 · 바닥 전), floor(바닥이 걸렸나), s(뗀 순간 기력) }
+ */
+export function altibShot(f, H = null) {
+  const A = SECRET.altib;
+  const S = f.stamina;
+  const s = S?.value ?? null;
+  if (!A.speed) {
+    const k = altibPower(f, H);
+    return { share: A.share, hitMul: altibHitMul() * k, k, x: null, floor: false, s };
+  }
+  let x = 1;
+  if (STAMINA.on && S && !S.infinite && S.max > 0) {
+    const fee = A.speed === 'f1' && A.drop != null ? A.drop : 0;
+    x = THREE.MathUtils.clamp((S.value - fee) / (S.max - fee), 0, 1);
+  }
+  const vg = Math.max(1e-6, iaiTipSpeed(f));
+  const ft = A.floorTip?.[f.weapon?.id];
+  const fs = ft > 0 ? realV(ft) / vg : A.share; // 바닥 몫 (실제 m/s → 게임 m/s ÷ 고노센 칼끝)
+  return { share: Math.max(x, fs), hitMul: altibHitMul(), k: 1, x, floor: fs > x, s };
+}
+/** 알티바슈 포르트 뒤 기력 (사람 · AI 같음): SECRET.altib.drop(11/16 −35 까지 강제로) · 없으면 zero 판(기력 0) */
+export function altibAfter(f) {
+  const A = SECRET.altib;
+  if (A.drop != null) f.stamina.drainTo(A.drop, 'secret');
+  else if (A.zero) f.stamina.zero('secret');
 }
 /**
  * B4 내려침 길 고르기 (사람 windFire · AI rdFire 같은 셈 — requestArtRedondo 의 칸): UNIQUE_ASSIST.rdRelease 'tajo'(10/31 19:xx 기본 — 멘 어깨에서 반대쪽 아래로 · rdTajo ·
@@ -914,14 +944,15 @@ export class PlayerUniqueAssist {
     const e = this.holdE;
     const W = f.rdWind;
     const H = this.hold;
-    const k = altibPower(f, H);
+    const shot = altibShot(f, H); // 11/16 빠르기 판(SECRET.altib.speed) · 옛 판은 기력 몫 위력
+    const k = shot.k;
     H.ropes = windEnd(f, true) ?? H.ropes;
     H.st = this.press.down ? 'spent' : 'idle';
     H.fade = 0.12;
     H.secret = false;
     f.ibStrike = null;
     const A = SECRET.altib;
-    const ok = UA.enhance > 0 && requestArtRedondo(f, rdReleaseOpt(f, W, { share: A.share, maxT: UA.rdSnapTime, tech: e.U.name, hitMul: altibHitMul() * k, hold: A.hold ?? SECRET.stiff.iberian ?? 0, secret: 'altib' }));
+    const ok = UA.enhance > 0 && requestArtRedondo(f, rdReleaseOpt(f, W, { share: shot.share, maxT: UA.rdSnapTime, tech: e.U.name, hitMul: shot.hitMul, hold: A.hold ?? SECRET.stiff.iberian ?? 0, secret: 'altib' }));
     if (!ok) {
       this.stats.windCancel ??= {};
       this.stats.windCancel.noStrike = (this.stats.windCancel.noStrike ?? 0) + 1;
@@ -935,13 +966,15 @@ export class PlayerUniqueAssist {
     st.fired++;
     st.why[why] = (st.why[why] ?? 0) + 1;
     st.k.push(+k.toFixed(3));
+    (st.s ??= []).push(+(shot.s ?? 0).toFixed(1)); // 11/16 뗀 순간 기력 · 칼끝 몫 (재기)
+    (st.share ??= []).push(+shot.share.toFixed(3));
     st.turns.push(+(W?.turns ?? 0).toFixed(2));
     this.stats.windFire ??= {};
     this.stats.windFire[why] = (this.stats.windFire[why] ?? 0) + 1;
     const S = TRADITIONS.iberian?.secret;
     f.uniqueCue = { text: S?.nameKo ?? e.U.nameKo, kind: 'secret', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: 'altib', t: this.t };
     f.stamina.attack('cut');
-    if (A.zero) f.stamina.zero('secret');
+    altibAfter(f); // 11/16 기력 −35 까지 (SECRET.altib.drop · 없으면 zero 판)
     return true;
   }
 

@@ -349,7 +349,7 @@ export function gnsHumanMoving(f) {
  */
 export function gnsHumanUnsettled(f, hurt) {
   const sk = f.skill;
-  return !!(sk?.swinging || sk?.tap || sk?.pom || sk?.sec) || !!f.parryGuard?.held || (!!hurt && !SECRET.gnsHurtKeep); // gnsHurtKeep (11/05 일본 강화 길 · 기본 0): 1 = 맞음으로는 안 풀림 (사람 창 · AI 가 읽는 사람 준비 같은 셈)
+  return !!(sk?.swinging || sk?.tap || sk?.pom || sk?.sec) || !!f.parryGuard?.held || !!f.iaiDraw || (!!hurt && !SECRET.gnsHurtKeep); // 11/16 뽑는 중(iaiDraw — SECRET.gnsDraw)도 행동 // gnsHurtKeep (11/05 일본 강화 길 · 기본 0): 1 = 맞음으로는 안 풀림 (사람 창 · AI 가 읽는 사람 준비 같은 셈)
 }
 
 /** 비기 조건 (cond) — 굴림 없음. view = { reach, foeReach, clinch } */
@@ -744,9 +744,32 @@ export function chainRange(d, view) {
  *  그 몸 손에 든 무기 유파(swordArt.tradition)의 수 · 없으면 default · 표가 없으면 끝없음. 셈은 몸(fighter.secretUsed — 판마다 새 Fighter)에 — 사람 창(PlayerSecretWatch) · AI(ai.js) · AI 가 읽는 사람 고노센 준비(gnsWatch) 같은 칸
  */
 export function secretUsesOf(f) {
+  const tr = f?.swordArt?.tradition;
+  if (secretFree(tr)) return Infinity; // 11/16 끝없는 고노센 · 알티바슈 포르트 (SECRET.gnsFree · altib.free — 아래)
   const U = UNIQUE_ASSIST.secretUses;
   if (!U) return Infinity;
-  return U[f?.swordArt?.tradition] ?? U.default ?? Infinity;
+  return U[tr] ?? U.default ?? Infinity;
+}
+/**
+ * 판당 쓸 수가 끝없는 유파 비기인가 (사장님 11/16 '고노센을 … 무한으로 풀어주고' · '알티바슈는 -35까지 기력 강제 소진으로 해.' — 대신 유파마다 대가):
+ *  일본 고노센(SECRET.gnsFree — 대가: 기력 gnsCost 50 · 칼집에 든 채 다른 칼은 뽑기 gnsDraw 0.6 s) · 이베리아 알티바슈 포르트(SECRET.altib.free — 'altib' 판만 · 대가: 내려친 뒤 기력 drop −35)
+ */
+export function secretFree(tr) {
+  if (tr === 'japanese') return !!SECRET.gnsFree;
+  if (tr === 'iberian') return !!SECRET.altib?.free && SECRET.iberianSecret === 'altib';
+  if (tr === 'german') return !!SECRET.mord?.free; // 11/16 죽음의 일격 (대가: 맞든 빗나가든 다시 세우기 0.6 s 무방비 · 기력 35)
+  if (tr === 'italian') return !!SECRET.risolutoFree && SECRET.itSecret === 'risoluto'; // 11/16 리솔루토 (대가: 런지 뒤 되돌림 0.6 s 무방비 · 기력 50)
+  return false;
+}
+/**
+ * 비기 한 번 기력 (stamina.secret 에 넘김 — 사람 skill.secret · AI secretGo 같은 셈 · 없으면 공통 STAMINA.secretCost 35):
+ *  일본 고노센 = SECRET.gnsCost(11/16 사장님 '기력 소모 50으로.') · 독일 죽음의 일격 = SECRET.mord.cost(35) · 이탈리아 리솔루토 = SECRET.risolutoCost(50 — 11/16 '리솔루토는 기력 50 죽음의 일격은 기력 35 소모.')
+ */
+export function secretCostOf(S) {
+  if (S?.do?.instant && SECRET.gnsCost > 0) return SECRET.gnsCost;
+  if (S?.name === 'mordschlag' && SECRET.mord?.cost > 0) return SECRET.mord.cost;
+  if (S?.when === 'risoluto' && SECRET.risolutoCost > 0) return SECRET.risolutoCost;
+  return undefined;
 }
 /** 이 판에 남은 비기 수 */
 export const secretLeft = (f) => Math.max(0, secretUsesOf(f) - (f?.secretUsed ?? 0));

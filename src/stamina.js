@@ -248,13 +248,14 @@ export class Stamina {
     this.spend('attack', Math.max(0, (kind === 'thrust' ? STAMINA.thrustCost : STAMINA.cutCost) * this.weight * chainK - credit));
   }
 
-  secret() {
+  /** 비기 한 번 (cost — 11/16 일본 고노센 SECRET.gnsCost 50 · 없으면 공통 STAMINA.secretCost 35 — secret.js secretCostOf) */
+  secret(cost = STAMINA.secretCost) {
     if (this.fighter.alive && !this.exhausted) this.fighter.schoolPassive?.strokeStart(true); // 비기 칼 — 유파 패시브 몫 없음 (school_passive.js)
     if (!STAMINA.on || this.exhausted) return;
     this.attackId++;
     this.flowAttackKind = 'secret'; this.flowAttackStart = this.time;
     this.attackUntil = this.time + ATTACK_LIFE;
-    if (this.spend('secret', STAMINA.secretCost)) this.counts.secret++;
+    if (this.spend('secret', cost)) this.counts.secret++;
   }
 
   /**
@@ -265,6 +266,22 @@ export class Stamina {
     if (!STAMINA.on || this.infinite || this.exhausted || !this.fighter.alive) return false;
     if (this.value > 0) this.spent[kind] = (this.spent[kind] ?? 0) + this.value;
     this.value = 0;
+    this.rest = 0;
+    this.action = kind;
+    this.stages();
+    return true;
+  }
+
+  /**
+   * 기력을 to 까지 강제로 뺌 (11/16 사장님 '알티바슈는 -35까지 기력 강제 소진으로 해.' — 이베리아 비기 알티바슈 포르트 · config SECRET.altib.drop):
+   *  to 보다 많으면 그 몫을 kind 로 쓴 것으로 적고(spent · 회복 쉼 다시 셈 — zero 와 같음) · 이미 to 이하면 값은 그대로(올리지 않음 — 쉼만 다시 셈). 기력 끔 · 무한 · 탈진 · 죽음이면 아무 일 없음
+   */
+  drainTo(to, kind = 'secret') {
+    if (!STAMINA.on || this.infinite || this.exhausted || !this.fighter.alive) return false;
+    if (this.value > to) {
+      this.spent[kind] = (this.spent[kind] ?? 0) + this.value - to;
+      this.value = to;
+    }
     this.rest = 0;
     this.action = kind;
     this.stages();

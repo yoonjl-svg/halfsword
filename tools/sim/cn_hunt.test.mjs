@@ -12,6 +12,7 @@ import { Combat } from '../../src/combat.js';
 import { secretUsesOf, secretLeft, useSecret } from '../../src/secret.js';
 import { kitFromNodes, allNodeIds, nodeOf, KIT_KEYS } from '../../src/skill_tree_data.js';
 import { TRADITIONS } from '../../src/schools.js';
+import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { SECRET, STAMINA } = CONFIG;
@@ -152,7 +153,7 @@ test('격살 판당 1 번 (공용 표 — 사람 · AI 같음 · C12 · 사냥 �
     UA.cnHunt.on = 0;
     assert.equal(secretUsesOf(body()), 1, '사냥 끔이어도');
     reset();
-    for (const tr of ['german', 'italian', 'iberian', 'japanese']) assert.equal(secretUsesOf(body({ tr })), 1, tr);
+    withSecretFreeOff(() => { for (const tr of ['german', 'italian', 'iberian', 'japanese']) assert.equal(secretUsesOf(body({ tr })), 1, tr); }); // 11/16 그때 판(끝없는 비기 끔 — 다른 유파 판당 1)으로 묶음 · 기준 그대로
     const P = body();
     useSecret(P);
     assert.equal(secretLeft(P), 0, '한 번 쓰면 끝');

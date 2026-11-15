@@ -11,10 +11,13 @@
 //   stack  스택이 적을수록 참고 쌓일수록 먼저 칠 마음 · 쌓일수록 크고 단순한 한 칼(내려베기)
 //   link   빗나가거나 막힌 내려벤 칼 → 제비 베기 (스택을 들고 감) · 칼이 맞닿으면 되받아 치기(공통 planBind — 일본 bindDef 패시브)
 //   lure   유도(가운데 끝 4 부터) — 준비 자세로 서서 상대를 칼끝 밖에 묶음 (2.6 s 서 있으면 고노센 준비 — 2.0 + 납도 0.6)
+//  11/16 끝없는 고노센 · 뽑기 (사장님 11/16 '0.6으로 하고 기력 소모 50으로.' — AI_PLAN_JP.drawRead · 아래 jpArmRead · jpLureOk):
+//   칼집에 든 채 다른 칼은 뽑기 SECRET.gnsDraw(0.6 s)가 듦을 알고, 본 것(상대 칼끝 어림 · 거리 · 다가오는 빠르기 · 내 기력)으로 납도를 시작할지 · 칼집에서 먼저 뽑을지 · 유도할지 고름
 // ─────────────────────────────────────────────────────────────
-import { AI_PLAN, AI_PLAN_JP as J, JP_TANK, SECRET } from './config.js';
+import { AI_PLAN, AI_PLAN_JP as J, JP_TANK, SECRET, STAMINA } from './config.js';
 import { readNote, readLineN, readRepeatLine, readRaiseD } from './ai_read.js'; // 3 단계 (11/14): 버릇 · 되풀이 기억은 공통 읽기 그릇 하나로 · 상대가 칼을 드는 거리
 import { gnsEnterLine } from './secret.js';
+import { iaiSeated, drawStart } from './iai_obi.js'; // 11/16 뽑기 (SECRET.gnsDraw)
 
 const P = (o) => Object.freeze(o);
 /** 일본 플랜 칸 (국면마다 — 값은 고를 몫 0 ~ 1) */
@@ -104,7 +107,7 @@ export function jpRead(ai) {
 export function jpBeat(ai) {
   const C = ai.planC;
   const R = ai.planR;
-  if (ai.planLure && C?.lure && !R.mode && Math.random() < ai.planK * C.lure) {
+  if (ai.planLure && C?.lure && !R.mode && jpLureOk(ai) && Math.random() < ai.planK * C.lure) {
     R.mode = 'stop';
     R.t = AI_PLAN.beat - J.lureT; // 공통 'stop' 은 R.t 가 AI_PLAN.beat 에 닿으면 끝 — 거기서 lureT 만큼 앞에서 시작
     ai.stats.plan.jp.lure++;
@@ -224,4 +227,56 @@ export function jpGnsIgnore(ai, th, d) {
     ai.stats.plan.jp.ignore++;
   }
   return true;
+}
+
+// ── 11/16 뽑기 읽기 (AI_PLAN_JP.drawRead — 사장님 11/16 '고노센을 쓰지 않고 칼을 뺄 때도 시간이 강제로 들게 하자 …' · 사람 · AI 같은 규칙) ──
+/**
+ * 칼집 위험 (본 것만 — 늦게 본 거리 ai.d · 상대 칼끝 어림 foeReach · 다가오는 빠르기 foeClosing · 내 기력 · 내 발도 선 gnsEnterLine):
+ *  near = 뽑는 동안(SECRET.gnsDraw) 상대 칼이 닿을 수 있음(거리 < 상대 칼끝 어림 + 다가오는 빠르기 × 뽑기 초) · out = 상대가 내 발도 선 밖에서 칠 수 있음(칼끝 어림 > 선) ·
+ *  can = 고노센을 낼 기력(> 0 — 비기 문턱). ok = 칼집에 넣어도 됨(고노센을 낼 수 있고 · 선 밖에서 치는 상대가 닿지 않음) · now = 칼집에서 먼저 뽑을 때(닿는데 고노센을 못 내거나 선 밖에서 맞음)
+ */
+function drawRisk(ai) {
+  const line = gnsEnterLine(ai.M);
+  const can = !!ai.me.stamina?.secretReady;
+  const near = ai.d < ai.foeReach + Math.max(0, ai.foeClosing) * SECRET.gnsDraw;
+  const out = ai.foeReach > line;
+  return { ok: can && (!out || !near), now: near && (!can || (out && ai.d > line)) };
+}
+/** 이번 준비 셈에 뽑기 읽기를 하나 (띠 기울기 — 높음은 늘 · 낮을수록 굴림 몫으로 · 셈이 풀리면 다시 굴림) */
+function jpWary(ai) {
+  const G = ai.jpGns;
+  if (G.wary == null) G.wary = ai.planK >= 1 || (ai.planK > 0 && Math.random() < ai.planK);
+  return G.wary;
+}
+/**
+ * 고노센 준비 셈 뒤 (ai.js — gnsArmTick 다음 스텝마다 · 플랜이 일본인 몸만): 납도를 시작하기 전(셈이 iaiArmTime 에 닿음) 칼집이 위험하면 셈을 그 문턱에 쥠(납도를 미룸 — 안전해지면 곧장) ·
+ *  칼이 칼집에 든 채 위험하면 먼저 뽑음(drawStart 'read' — 상대 칼이 닿기 전에 0.6 s 를 씀) · 맞으러 나가는 중(meet)은 그대로. drawRead 0 · 뽑기 없음이면 아무것도 안 함
+ */
+export function jpArmRead(ai, dt) {
+  const A = ai.iaiArm;
+  if (!J.drawRead || !(SECRET.gnsDraw > 0) || !A || !ai.jpGns) return;
+  const T = SECRET.iaiArmTime;
+  const G = ai.jpGns;
+  if (!A.armed && A.t < T) {
+    G.wary = null;
+    return;
+  }
+  if (!jpWary(ai)) return;
+  const R = drawRisk(ai);
+  if (!A.armed && A.t - dt <= T + 1e-9 && !R.ok) {
+    if (A.t > T) ai.stats.plan.jp.sheatheWait = (ai.stats.plan.jp.sheatheWait ?? 0) + 1;
+    A.t = T; // 납도 몫 0 — 셈은 문턱에 쥠
+    return;
+  }
+  if (R.now && !(G.meet > 0) && iaiSeated(ai.me)) {
+    drawStart(ai.me, 'read');
+    ai.stats.plan.jp.drawRead = (ai.stats.plan.jp.drawRead ?? 0) + 1;
+  }
+}
+/** 유도해도 되나 (jpBeat — 서서 준비를 쌓는 3 s): 고노센이 이 몸에 있고 · 기력이 고노센 값(SECRET.gnsCost) 넘게 있고 · 지금 칼집이 위험하지 않음. drawRead 0 이면 늘 (11/15 판) */
+export function jpLureOk(ai) {
+  if (!J.drawRead || !(SECRET.gnsDraw > 0)) return true;
+  if (!ai.iaiArm || !SECRET.iai) return false;
+  if (ai.me.stamina && !ai.me.stamina.infinite && STAMINA.on && !(ai.me.stamina.value > (SECRET.gnsCost ?? STAMINA.secretCost))) return false;
+  return drawRisk(ai).ok;
 }

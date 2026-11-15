@@ -8,6 +8,7 @@ import { TRADITIONS } from '../../src/schools.js';
 import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
 import { mordMode, mordGripOf, mordHitMul, mordKinOf, mordHeadReach } from '../../src/mordschlag.js';
 import { FINISH } from '../../src/finish.js';
+import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 const { SECRET } = CONFIG;
 
 class Still {
@@ -444,7 +445,7 @@ test('자연스러운 쥠 바꿈 · 강제 뒤 박차기 · 폼멜 찍기 시제
   assert.ok(pom.hits.some((h) => h.zone === 'head' && h.part === 'hilt'), JSON.stringify(pom.hits));
 });
 
-test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누르기 mordPress(2 s) → 창 → 머리가 닿으면 곧장 냄(사람과 같은 실행부) → 굳음 → 끝 · 끊기면 셈 0 · 머리가 멀면 안 냄 (10/31 14:xx 뒤 기본 폼멜 찍기 — 닿는 거리 = 팔 + 폼멜 + 앞 반걸음)', () => {
+test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누르기 mordPress(2 s) → 창 → 머리가 닿으면 곧장 냄(사람과 같은 실행부) → 굳음 → 끝 · 끊기면 셈 0 · 머리가 멀면 안 냄 (10/31 14:xx 뒤 기본 폼멜 찍기 — 닿는 거리 = 팔 + 폼멜 + 앞 반걸음)', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 }, planOff: true } }); // 3 단계(11/14): 비기 셈을 보는 장면 — 독일 플랜 전 판(planOff · 인물 칸 없는 밀치기 몸 아님)
   const P = g.player, E = g.enemy, ai = g.ai;
   try {
@@ -487,7 +488,7 @@ test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누�
     for (const k of Object.keys(pp)) { const t = pp[k].translation(); pp[k].setTranslation({ x: t.x - 2.5, y: t.y, z: t.z }, true); } // 상대를 멀리
     assert.equal(mordHeadReach(E), false, '가슴 3 m — 머리가 멂');
   } finally { g.world.free(); }
-});
+}));
 
 test('AI 걸어가며 치기 (10/24 13:3x 사장님 \'걸어가며 치기도 같이 넣어\' — SECRET.mordWalkStrike 1): 붙으러 걸어 들어가는 동안은 간 보기가 칠 때를 본다 · 밀치는 동안은 걸쇠 · 0 = 12:0x 판(걸어가는 동안도 걸쇠)', () => {
   assert.equal(SECRET.mordWalkStrike, 1);
