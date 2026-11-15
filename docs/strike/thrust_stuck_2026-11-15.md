@@ -167,6 +167,7 @@ node tools/sim/thrust_motion.mjs --kinds=tap,stich,cut --gap=air,contact [--set=
 | 합친 머리 · **lodgeHold 1** (새 기본) | **`b9ff63bd`** | **`cd211727`** | **`9a8d9641`** | 12/12 | 34/34 | 0 · 0 |
 
 ### 7-6 시험 — 옛 장면 묶음 (기준은 안 고침 · 그때 판 `lodgeHold` 0 으로)
+`node --test tools/sim/*.test.mjs` — **1011 / 1011 · 실패 0** (합친 머리 · lodgeHold 1 · 새 `thrust_stuck.test` 7 — 겹침 막기 한 판 더함).
 박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 그 판의 흐름이 갈라진 장면 여섯 — 각 파일 `pinLodge0(t)`:
 1. `ai_plan.test` '파고들기 판: 모르겐슈테른 AI 대 롱소드 AI' — 씨앗 1 판에 파고들기 재기 칸이 안 생김(판이 갈라짐).
 2. `ai_plan_cn.test` '판 하나 — AI 동방(환도 숙련 5) 대 롱소드 AI 씨앗 11' — 사냥 겹 · 국면 흐름이 그 씨앗에서 갈라짐.
