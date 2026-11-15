@@ -6,7 +6,7 @@
 //  1 단계: 이탈리아만 플랜이 있다(config AI_PLAN.schools). 2 단계(11/14): 일본(src/ai_plan_jp.js — 유파 몫은 유파 파일에). 플랜이 없는 유파는 ai.js 가 이 파일의 어떤 셈도 부르지 않는다(바이트 같음).
 //  연산(사장님 11/14 '랙이 생기진 않을까'): 국면 판정은 AI_PLAN.tick 마다 한 번 · 스텝마다 새 객체 · 배열을 만들지 않음 · 탐색 · 미리 돌려 보기 같은 무거운 셈 없음.
 // ─────────────────────────────────────────────────────────────
-import { AI_PLAN, STAMINA, GAIT, AI_PLAN_FREE } from './config.js';
+import { AI_PLAN, STAMINA, GAIT, AI_PLAN_FREE, realS } from './config.js';
 import { FREE_PLAN } from './ai_plan_free.js'; // 3 단계 무유파 플랜 칸 (11/14 — 유파 몫은 유파 파일에 묶음)
 import { itEdgeOn } from './italian_outbox.js';
 import { JP_PLAN } from './ai_plan_jp.js'; // 2 단계 일본 플랜 칸 (11/14 — 유파 몫은 유파 파일에 묶음)
@@ -42,7 +42,7 @@ export function distErrWidth(p, tradition) {
 
 /**
  * 숙련도 세 축의 그릇 (설계 §2-4) — 1 단계가 읽는 칸: band · tilt · weapon.err · link · lure. read 칸(상대 유파 · 버릇 · 되풀이)은 자리만(3 단계).
- *  link = 첫 고리(낮음부터) · lure = 유도(가운데 끝 4 부터) · read.mem = 버릇 기억 창 s (가운데 6.0 · 높음 10.0 — 시간 사다리 · 아직 안 읽음)
+ *  link = 첫 고리(낮음부터) · lure = 유도(가운데 끝 4 부터) · read.mem = 버릇 기억 창 s (가운데 6.0 · 높음 8.0(11/16 — 전 10.0) — 시간 사다리 · 아직 안 읽음)
  */
 export function axesOf(p, tradition) {
   const band = bandOf(p);
@@ -53,7 +53,7 @@ export function axesOf(p, tradition) {
     weapon: { err: distErrWidth(p, tradition) },
     link: band >= 1,
     lure: (p ?? 0) >= 4,
-    read: { school: band >= 2, habit: band >= 2, repeat: band >= 3, mem: band >= 3 ? 10.0 : band >= 2 ? 6.0 : 0 },
+    read: { school: band >= 2, habit: band >= 2, repeat: band >= 3, mem: band >= 3 ? AI_PLAN.read.repeatT / realS(1) : band >= 2 ? 6.0 : 0 }, // 높음 = 되풀이 기억 AI_PLAN.read.repeatT 를 실제 초로 — 8.0 [사장님 11/16 결정 — 10초 사다리 없앰 · 8초 신설 · 전 10.0 박은 수]
   };
 }
 

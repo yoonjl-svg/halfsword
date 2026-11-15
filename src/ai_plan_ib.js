@@ -34,7 +34,7 @@ export function ibInit(ai) {
   ai.ibPlan = {
     read: A.read.school, // 상대 유파 — 원을 시작하는 거리 (가운데부터)
     habit: A.read.habit, // 버릇 — 원 사이를 치는 상대 (가운데 6.0 s)
-    repeat: A.read.repeat, // 되풀이 — 10.0 s 안에 두 번 (높음)
+    repeat: A.read.repeat, // 되풀이 — 8.0 s 안에 두 번 (높음 · 11/16 — 전 10.0)
     mem: A.read.mem,
     hitT: new Float64Array(MEM).fill(-Infinity),
     hitI: 0,
@@ -74,7 +74,7 @@ export function nextFree(me) {
   return n > 0 && (n - (me.ibChainN0 ?? 0) + 1) % every === 0;
 }
 
-/** 버릇 · 되풀이 — 기억 창(가운데 6.0 · 높음 10.0 s) 안에 상대가 내 원 사이를 친 수 */
+/** 버릇 · 되풀이 — 기억 창(가운데 6.0 · 높음 8.0 s — 11/16 전 10.0) 안에 상대가 내 원 사이를 친 수 */
 export function habitN(ai) {
   const I = ai.ibPlan;
   if (!I.habit) return 0;

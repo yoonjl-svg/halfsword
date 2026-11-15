@@ -46,7 +46,7 @@ import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } fro
 import { aiVitalCandidate, aiVitalPrepare, aiVitalAdvance, neckCrossingTechnique } from './vital_target.js'; // 약한 자세 겨눔 (FINISH.vital, 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, requestArtRedondo, requestArtThrust, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy, snapAim } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
 import { windStart, windEnd, windRopesBack, windLoopOf, windSpec, windWoundT } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 08:xx — UNIQUE_ASSIST.rdAiWind · 사람과 같은 감기 · 내려침)
-import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret, gnsHumanMoving, foeRecentTipSp } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
+import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret, gnsHumanMoving, foeRecentTipSp, gkFreeOn, gkCooling, gkCoolFrom } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 import { PICKUP } from './config.js'; // 떨어진 칼 줍기 (11/05)
 import { aiPickup } from './pickup.js'; // 떨어진 칼 줍기 — AI 몫 (11/05 · PICKUP.ai)
@@ -748,6 +748,7 @@ export class AI {
     if (IT_OUTBOX.ai && IT_OUTBOX.beatAi && IT_OUTBOX.beat > 0 && this.school?.techByName?.inquartata) aiBeatTick((this.itBeat ??= { f: this.me, t: 0, foeAtk: null, foeSw: false, inqBeatSeen: -1 }), dt, AI_PLAN.on && AI_PLAN.read.fair ? this.seenSwing() : undefined); // 공정함 (3 단계 — 설계 §4-3 셋째 곳): 상대 휘두름을 기력 장부 대신 늦게 본 손 빠르기로
     if (this.rd || this.me.rdWind) this.rdKeep(dt); // 풍차 베기 AI 몫 (10/31): 감기 지킴 · 덧씌우기 칸 내려놓기 · 뗀 밧줄 다시
     if (this.secret && !this.secretRun && secretSpent(this.me)) this.dropSecret(); // 이 판 비기를 다 씀 (10/29 19:5x 판당 쓸 수 — 비기 없는 AI 와 같은 길)
+    if (this.gkRun && !this.secretRun && !this.me.iai && !this.me.iaiReq) (this.gkRun = false), gkCoolFrom(this.me); // 격살 풀기 (11/16 — SECRET.gkFree): 격살 칼이 끝나 몸이 자유로운 때부터 식힘 (사람과 같은 셈)
     // 동방 AI 걸음 박자 (10/15 — GAIT.cnLightAi · docs/strike/cn_light_feet_2026-10-15.md §7): 가벼운 발 몸(유파 걸음 칸 light)의 AI 는 공격 꼴(준비·다가가기·벰·뒤따름)일 때만 가벼운 발 —
     //  간 보기·막기·물러남(비기 꼴 포함)의 발놀림 박자(간격 비례 제어·잔걸음·'관성으로 너무 멀리 가지 않게' 늦추는 물러남)는 옛 가속(3.2 m/s²) 몸에 맞춘 값이라 그 꼴에서는 옛 가속으로 민다
     //  (fighter.js driveBalance 가 읽음 — 지난 스텝의 꼴 · 칸 없는 몸은 어차피 × 1). 끄면(0) 늘 false(사람·AI 같이 — 지금 판, 바이트 같음). 사람은 AI 가 없어 그대로
@@ -2868,7 +2869,7 @@ export class AI {
     if (this.defVoid) this.stats.voids++;
     else this.stats.parries++;
     // 동방 격살 (11/14 사장님 '동방도 격살 쓰게 해'): 칼로 받기로 정했고 이 판 격살이 남았으면, 쓸 때(gkWant)엔 나서며 받는다 — 굴림 없음 (gyeoksalAi · moveFeet)
-    if (!this.defVoid && this.secret?.when === 'gyeoksal' && !secretSpent(this.me) && this.gkWant(th)) {
+    if (!this.defVoid && this.secret?.when === 'gyeoksal' && !secretSpent(this.me) && !gkCooling(this.me) && this.gkWant(th)) { // 격살 풀기(11/16): 식히는 동안은 나서며 받지 않음
       this.gk = { t: 0, seen: false, pend: null };
       this.stats.gkTry = (this.stats.gkTry ?? 0) + 1;
     }
@@ -2885,6 +2886,7 @@ export class AI {
   gkWant(th) {
     if (this.planCn) return cnWant(this, th); // 동방 플랜 (사장님 11/14 '… 절대적 규칙은 지우자 마음의 기울기로 남겨둬'): 위협 하나에 한 번 굴린 마음 (ai_plan_cn.js cnWill) · 옛 판은 아래 문 그대로
     const C = SECRET.gyeoksalAi ?? { stacks: 0, late: 0 };
+    if (gkFreeOn()) return Math.random() < 0.2 + 0.6 * (1 - Math.pow(2, -huntN(this.foe) / Math.max(1, C.stacks))); // 격살 풀기 (11/16): 아껴 두기(판 시간) 없이 겹이 많을수록 — 플랜 몸 cnWill 과 같은 바닥 0.2 · 꼭대기 0.8 (플랜 없는 옛 판 몸만)
     return huntN(this.foe) >= C.stacks || this.me.fightT >= C.late;
   }
 
@@ -2914,7 +2916,9 @@ export class AI {
       const st = G.pend;
       this.gk = null;
       K.open++;
-      return this.secretGo(this.secret, { slot: st.stance, stance: st.stance, line: st.line, gk: true });
+      const ok = this.secretGo(this.secret, { slot: st.stance, stance: st.stance, line: st.line, gk: true });
+      if (ok && gkFreeOn()) this.gkRun = true; // 격살 풀기 (11/16): 이 칼이 끝나면 식힘
+      return ok;
     }
     if (G.seen || !touch) return false;
     G.seen = true;

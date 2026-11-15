@@ -18,6 +18,7 @@ import { standTrial } from './tap_thrust.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { withArmOld } from './arm_real_pin.mjs';
 import { ITALIAN_NOW } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 'full' 이면 옛 판 재현을 그때 간격 줄로
+import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { SECRET, JOINTS } = CONFIG;
@@ -146,7 +147,8 @@ test('10/24 17:2x 뒤 탭 찌르기 (롱소드 황소 → 칼 내린 상대 · 1
   assert.equal(v17.stab, 0, `17:2x 판 찌름 ${v17.stab}`);
 });
 
-test('격살 허파 찌르기 맞닿기 언저리 (맞닿기 −0.1 ~ +0.1 m · 상대 롱소드 · 우치가타나 · 청강검 · 사브르): 첫 맞음이 베기 아님 — SECRET.thrustSweep 0 이면 겨눔 토막 옆 움직임이 섞여 베기', () => {
+test('격살 허파 찌르기 맞닿기 언저리 (맞닿기 −0.1 ~ +0.1 m · 상대 롱소드 · 우치가타나 · 청강검 · 사브르): 첫 맞음이 베기 아님 — SECRET.thrustSweep 0 이면 겨눔 토막 옆 움직임이 섞여 베기', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   const run = () => {
     const T = { stab: 0, cut: 0, n: 0 };
     const g0 = newRound({ weapon: 'qinggang', weapon2: 'longsword', seed: 1 });

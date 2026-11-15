@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG } from './harness_m.mjs';
+import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 
 const { SECRET } = CONFIG;
 const { TRADITIONS } = await import('../../src/schools.js');
@@ -160,7 +161,8 @@ test('한 칼 세기: 판정 에너지 × FINISH.power (결정타 hitMul 대신)
   }
 });
 
-test('스위치: 칼끝 빠르기 몫 SECRET.gyeoksal.share(11/11 0.7 · 10/22 확정 0.6) · 어거 길 armPath down · 잔상 굵기 trailWidth', () => {
+test('스위치: 칼끝 빠르기 몫 SECRET.gyeoksal.share(11/11 0.7 · 10/22 확정 0.6) · 어거 길 armPath down · 잔상 굵기 trailWidth', (t) => {
+  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   assert.equal(SECRET.gyeoksal.share, 0.7); // 11/11 사장님 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' (전 0.6 — 10/22 23:0x 사장님 확정 · 그 전 null = 연환 0.3)
   assert.equal(SECRET.gyeoksalHitMul, 1); // 같은 말씀 — 격살만 판정 배율 1 (다른 비기 SECRET.hitMul 1.3 그대로)
   assert.equal(SECRET.hitMul, 1.3);

@@ -52,13 +52,13 @@ function run(f, secs, mv) {
 }
 const ladder = (v, rungs) => rungs.map(CONFIG.realS).some((r) => Math.abs(r - v) < 1e-9);
 
-test('기본 끔(11/15 감독 — 1.2 s · 45° 사장님 판정 전 · ① 판에서 다시 잼) · 사장님 값 0.4 s · 50 % · 끄면(0) 동방 판은 값을 안 읽음 · 켜도 동방이 아닌 판(롱소드끼리)은 그대로', () => {
-  assert.equal(C.mode, 0, '11/15 감독: ① 둥근 칼 읽기 판에서 다시 재기 전 끔 (전 기본 turn)');
-  assert.equal(CONFIG.AI_PLAN.cn.dive, 0, '偏閃奏進도 끔');
+test('기본 켬(11/16 사장님 결정 \'동방 보법 개편도 켜. 45도 기준.\' · \'그럼 1.2초로 해\') · 사장님 값 0.4 s · 50 % · 끄면(0) 동방 판은 값을 안 읽음 · 켜도 동방이 아닌 판(롱소드끼리)은 그대로', () => {
+  assert.equal(C.mode, 'turn', '[사장님 11/16 결정] 켬 (전 11/15 감독 끔)');
+  assert.equal(CONFIG.AI_PLAN.cn.dive, 1, '[사장님 11/16 결정] 偏閃奏進도 켬 (전 끔)');
   near(C.keepT, CONFIG.realS(0.4));
   near(C.cut, 0.5);
   near(C.turn, Math.PI / 4);
-  assert.ok(ladder(C.turnT, [0.2]) && ladder(C.rearm, [1.2]) && C.straight === 0, '시간 사다리 (사장님 확인 전)');
+  assert.ok(ladder(C.turnT, [0.2]) && ladder(C.rearm, [1.2]) && C.straight === 0, '꺾음 시간 0.2 s 시간 사다리 · 다시 걸기 1.2 s [사장님 11/16 결정]');
   const a = withMode(0, () => trace());
   const b = withMode(0, () => trace(), { cut: 0.9, keepT: CONFIG.realS(2), rearm: 0, dive: 0 });
   assert.equal(a.text, b.text);
@@ -124,7 +124,7 @@ test('꺾음: 걷는 중 45° 넘게 꺾은 때부터 0.4 s 칼날 상처 × 0.5
   assert.equal(held.cnStep.n.turn, 0, '발이 묶임');
 }));
 
-test("'항상 켜지면 안돼': 다시 걸기 1.2 s — 지그재그로 꺾어도 켜진 몫 ≤ 0.4 ÷ 1.2 · 한도 없음이면 거의 늘 · 곧게 걸음 한도(견줌)", () => {
+test("'항상 켜지면 안돼': 다시 걸기 1.2 s(사장님 11/16 결정) — 지그재그로 꺾어도 켜진 몫 ≤ 0.4 ÷ 1.2 · 한도 없음이면 거의 늘 · 곧게 걸음 한도(견줌)", () => {
   const zig = (o) => withMode('turn', () => {
     const f = body();
     run(f, 0.5, { x: 0, y: 1 });
@@ -135,7 +135,7 @@ test("'항상 켜지면 안돼': 다시 걸기 1.2 s — 지그재그로 꺾어�
   const lim = zig({});
   const st = zig({ rearm: 0, straight: CONFIG.realS(0.4) });
   assert.ok(free.onT / free.T > 0.9, `한도 없음 ${free.onT / free.T}`);
-  assert.ok(lim.onT / lim.T <= 0.4 / 1.2 + 0.01 && lim.onT / lim.T > 0.25, `다시 걸기 1.2 s ${lim.onT / lim.T}`);
+  assert.ok(lim.onT / lim.T <= C.keepT / C.rearm + 0.01 && lim.onT / lim.T > 0.25, `다시 걸기 ${lim.onT / lim.T}`); // 상한 = 줄임 시간 ÷ 다시 걸기 (0.4 ÷ 1.2 — 같은 기준을 값에서 셈)
   assert.ok(lim.block > 0 && lim.trig < free.trig);
   assert.equal(st.trig, 1, '곧게 걸음 0.4 s — 처음 0.5 s 곧게 걸은 뒤 첫 꺾음 하나만 · 0.2 s 지그재그는 안 걸림');
   // 다시 걸기: 1.2 s 지나면 다시 걸림
@@ -146,10 +146,10 @@ test("'항상 켜지면 안돼': 다시 걸기 1.2 s — 지그재그로 꺾어�
     run(f, 0.5);
     run(f, DT, { x: 0, y: 1 });
     assert.equal(f.cnStep.n.trig, 1);
-    assert.equal(f.cnStep.n.block, 1, '1.2 s 안');
+    assert.equal(f.cnStep.n.block, 1, '다시 걸기 안');
     run(f, C.rearm);
     run(f, DT, { x: -1, y: 0 });
-    assert.equal(f.cnStep.n.trig, 2, '1.2 s 뒤');
+    assert.equal(f.cnStep.n.trig, 2, '다시 걸기 뒤');
   });
 });
 
