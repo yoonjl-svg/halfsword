@@ -46,6 +46,12 @@ export function huntRegenK(f) {
   return C?.on && C.regen > 0 ? Math.max(0, 1 - C.regen * n) : 1;
 }
 
+/** 쌓는 몸이 겨눈 상대의 겹 수 (격살 풀기 더함 몫 — skill.js gyeoksalReq · 쌓는 몸이 아니면 0) */
+export function huntStacksFor(f) {
+  const n = f?.foe?.cnHunt?.n;
+  return n && huntOn(f) ? n : 0;
+}
+
 /** 격살 칼끝 빠르기 몫 배율 (skill.js gyeoksalReq): 쌓는 몸이 겨눈 상대(f.foe)의 겹 × share 를 더함 · 겹 없음 = 1 */
 export function huntShareK(f) {
   const n = f?.foe?.cnHunt?.n;

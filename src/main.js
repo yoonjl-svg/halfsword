@@ -449,6 +449,7 @@ if (params.has('dupBurstMatch')) CONFIG.UNIQUE_ASSIST.dupBurstMatch = [0, 1, 2].
   }
 }
 if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
+if (['A', 'B'].includes(params.get('gkFree'))) Object.assign(CONFIG.SECRET.gkFree, { on: 1, ...CONFIG.SECRET.gkFreeSets[params.get('gkFree')] }); // 격살 풀기 (11/16 — 안 A 0.35 + 0.08 × 겹 · 식힘 3 s / 안 B 0.50 + 0.05 × 겹 · 식힘 6 s · 기본 끔)
 if (params.has('cnHunt')) CONFIG.UNIQUE_ASSIST.cnHunt.on = +params.get('cnHunt') ? 1 : 0; // 동방 맹호은림 사냥 겹 (11/14 — `?cnHunt=0` = 겹 없음 · 격살 판당 수는 공용 표 secretUses — 전 판 `?secretUses=1,chinese:3`)
 if (params.has('cnHuntAi')) CONFIG.UNIQUE_ASSIST.cnHunt.ai = +params.get('cnHuntAi') ? 1 : 0; // AI 동방도 사냥 겹 (견줌 — 기본 0)
 if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6 · 11/14 사장님 0.9)
