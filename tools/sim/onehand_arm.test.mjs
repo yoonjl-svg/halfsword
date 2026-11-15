@@ -11,7 +11,6 @@ import assert from 'node:assert/strict';
 import { CONFIG } from './harness_m.mjs';
 import { guardsRun, tapRun, aiRun, guardAimRun, WristTally, ELBOW_UP_X, ROLL_AT, OOR_EPS } from './wrist_audit.mjs';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
-import { pinPOff } from './p_pin.mjs'; // 11/16 묶음 P — 옛 장면은 잰 때 판으로 (docs/strike/it_tone_2026-11-15.md §9)
 
 const { JOINTS } = CONFIG;
 const withSets = (L, fn) => {
@@ -64,10 +63,8 @@ test('한손 자세표 (레이피어 · 세이버 · 월왕구천검 — 자리�
   assert.ok(old.up0 > 0.03 && old.up0 > now.up0 + 0.03, `10/24 판: ${fmt(old)}`);
 });
 
-test('한손 탭 찌르기 (레이피어 · 세이버 — 쟁기 · 황소 · 긴 자세): 기본 위팔 돌림 밖 ≤ 1 % · 팔꿈치 30° 넘게 위 ≤ 1 % — 10/24 판은 찌르는 맞춤 돌림이 팔꿈치를 들고 위팔을 한도 밖으로', (t) => {
-  // 11/16 묶음 P(사람 탭 찌르기 몸 싣기 THRUST.drive 3 — 당김 0.3)를 켜면 위팔 돌림 밖이 2.5 % 로 기준(1 %)을 넘음 — 이 장면은 그때 판(묶음 P 끔)으로 묶음 · 기준은 그대로 ·
-  //  당김 팔 꼴은 따로 볼 일 (기록 docs/strike/it_tone_2026-11-15.md §9-4)
-  pinPOff(t);
+test('한손 탭 찌르기 (레이피어 · 세이버 — 쟁기 · 황소 · 긴 자세): 기본 위팔 돌림 밖 ≤ 1 % · 팔꿈치 30° 넘게 위 ≤ 1 % — 10/24 판은 찌르는 맞춤 돌림이 팔꿈치를 들고 위팔을 한도 밖으로', () => {
+  // 11/16 묶음 P(사람 탭 찌르기 몸 싣기 THRUST.drive 3) 그대로 — 높은 자세(황소)에선 몸 싣기 당김을 안 해(skill.js thrust · 기록 docs/strike/thrust_stuck_2026-11-15.md §8) 기준 안 (전 묶음 풀음)
   const run = () => {
     const T = new WristTally();
     for (const w of ['rapier', 'sabre']) for (const gd of ['pflug', 'ochs', 'langort']) T.merge(tapRun(w, gd).T, `${w}:${gd}:`);

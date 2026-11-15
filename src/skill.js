@@ -294,6 +294,9 @@ export class Skill {
     const it = !!THRUST.itLunge && f.swordArt?.tradition === 'italian' && !down && !V;
     this.tap = { t: 0, h0, down, head: !down && !V && this.aimRaw.y > THRUST.headPad && !(it && itPartOn('aim')), K };
     const dv = !down && !V && !rangeCommit ? thrustDrive(f) : null; // 사람 탭 찌르기 몸 싣기 (11/15 — THRUST.drive · 끄면 null)
+    // 높은 자세(황소 · 지붕 — 손 패드가 headPad 위)에서는 몸 싣기 당김을 안 함 — 유파 제 당김 그대로 (11/16 — 손이 이미 어깨 위라 칼 선 뒤로 0.3 을 더 당기면 손이 어깨 위 뒤로 가 위팔 돌림이 사람 범위 밖:
+    //  한손 탭 찌르기 레이피어 황소 뻗기 8 / 17 스텝 · 롱소드 황소 탭 1.5 ~ 2.3 m 찌름 2 → 0 · 머묾 손목 dev −22 → −45° — 기록 docs/strike/thrust_stuck_2026-11-15.md §8). 런지 · 머묾은 그대로
+    if (dv && this.aimRaw.y > THRUST.headPad) dv.chamber = null;
     if (dv) this.tap.drive = dv;
     if (it) this.tap.it = { hold: 0, fwd: this.itMeasure(f, h0) }; // fwd = 이 찌르기의 런지 걸음 (재기 — 0 이면 팔만) · hold = 런지 몸이 실리는 동안 뻗은 채 머문 시간 (재기만)
     if (rangeCommit) this.tap.w0 = this.thrustPose.w; // 간격 맞추기 자세에서 곧장 이어 간다 (덧씌우기를 0 으로 떨어뜨리지 않는다)
