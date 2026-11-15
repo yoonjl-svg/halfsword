@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { planFor, distErrWidth } from '../../src/ai_plan.js';
 import { FREE_PLAN, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freePress, freeBackK } from '../../src/ai_plan_free.js';
+const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { AI_PLAN_FREE: F, AI_PLAN } = CONFIG;
 function withFree(over, fn) {
@@ -181,7 +182,8 @@ test('쳐낸 뒤 건너 들어감(몫 = planK × go + 굴림 몫 × coin) · 그
   assert.equal(freeBackK(b), 1);
 });
 
-test('판에서 쓰임 — 모르겐슈테른 AI 숙련 5 는 쳐내기(계획) · 건너 들어감 · 숙련 0 은 막 휘두름만 (대 롱소드 AI · 씨앗 1 ~ 2 · 30 s)', () => {
+test('판에서 쓰임 — 모르겐슈테른 AI 숙련 5 는 쳐내기(계획) · 건너 들어감 · 숙련 0 은 막 휘두름만 (대 롱소드 AI · 씨앗 1 ~ 2 · 30 s)', (t) => {
+  pinArc0(t); // 11/15 그때 판(① 끔 — 둥근 칼 읽기 · 칼끝 틈이 판을 바꿈)으로 묶음 · 기준 그대로
   const sum = (prof) => {
     const T = { beat: 0, wild: 0, go: 0, goStrike: 0 };
     for (const seed of [1, 2]) {

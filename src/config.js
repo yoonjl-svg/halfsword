@@ -2402,7 +2402,7 @@ export const AI_PLAN = {
   zeroPlain: 1,
   // 3 단계: 붙은 거리 손잡이 찍기를 모든 AI 에 (인물 칸 · 독일 밀치기가 없는 몸도) — 닿는 거리 안 사건(들어섬 · 칼 맞물림)마다 이 몫으로 찍기 (CLOSE.pommelDist 0.9 m 안) [사장님 확인 전]
   pommel: 0.5,
-  cn: { close: 0.5, circle: 0.5, waist: 0.5, wear: 0.08, wearNext: 0.5, lureHold: realS(2.0), lureNeed: 0.5, meetFresh: 0.5, will0: 0.2, dive: 1 },
+  cn: { close: 0.5, circle: 0.5, waist: 0.5, wear: 0.08, wearNext: 0.5, lureHold: realS(2.0), lureNeed: 0.5, meetFresh: 0.5, will0: 0.2, dive: 0 }, // dive 偏閃奏進 — 11/15 감독: ① 판에서 다시 재기 전 끔 (`?cnDive=1` · 꺾음 'turn' 일 때만 탐)
 };
 
 // 유파 AI 2 단계 — 일본 '기다리는 중전차' 플랜 값 (11/14 — 설계안 §3-2 · §12 · src/ai_plan_jp.js · 사장님 11/14 확인 '일본 스택과 바위 몸 AI 켜는 것도 이번 개편에 함께'):
@@ -2536,7 +2536,7 @@ export const AI_PLAN_FREE = {
 //  win   (a · b · c) 공격 창 길이 0.4 s · slideT (a) 박찬 걸음 줄임 시간 0.4 s · ai · aiT (a · b) AI 가 창에서 꺾을 몫 · 꺾는 스틱 시간 0.2 s [첫 시제품 — 견줌용]
 //  AI 동방 偏閃奏進(칼을 보면 aiT 꺾고 곧장 뛰어들어 벰)은 ai_plan_cn.js cnDive · 값 AI_PLAN.cn.dive ('turn' 일 때만 · 꺾는 시간은 aiT)
 export const CN_STEP = {
-  mode: 'turn',
+  mode: 0, // 11/15 감독 — 사장님이 1.2 s · 45° 를 정하기 전 · ① 둥근 칼 읽기(AI_ARC) 판에서 다시 재기로: 끔 (`?cnStep=turn` = 꺾음)
   turn: Math.PI / 4,
   turnT: realS(0.2),
   keepT: realS(0.4),
@@ -2547,6 +2547,23 @@ export const CN_STEP = {
   slideT: realS(0.4),
   ai: 1,
   aiT: realS(0.2),
+};
+
+// ① 둥근 칼 읽기 + 칼끝 틈 건너기 — 모든 AI (11/15 [사장님 11/15 결정] "둥근 칼 읽기 모든 유파에 넣어." · 앞서 "상대 무기가 나보다 길 때의 대처 전략으로 모든 ai에게 기본으로" ·
+//  진단 docs/strike/cn_root_2026-11-15.md — 긴 칼 상처의 63 % 가 '못 본 칼'(곧은 줄 0.45 s 눈이 둥근 베기를 마지막 순간에야 봄) · 75 % 가 칼끝 틈(내 칼끝 밖 · 상대 칼끝 안) ·
+//  둘 중 하나만 넣으면 나빠짐 → 함께. 기록 docs/strike/ai_arc_2026-11-15.md · 확인표 4470 ~):
+//  on      1 = 켬 · 0 = 전 판(굴림 · 셈 없음 — 바이트 같음) `?aiArc=0`
+//  눈 (ai.js threat — 위협 읽기 자리 그대로 · 곧은 줄이 못 잡을 때만): 늦게 본(반응 시간 — 공정) 칼끝 · 타격점 빠르기로 칼의 순간 회전(축 ω = (칼끝 − 타격점) × 빠르기 차 ÷ 길이² ·
+//   중심 = 타격점 + ω × 타격점 빠르기 ÷ |ω|² · 축 방향 흐름)을 셈해 물리 한 스텝(PHYSICS.timestep 1/120 s — 새 수 없음)마다 horizon 까지 칼끝 · 타격점을 돌려 보고
+//   몸통 원통에 처음 들면 '오는 칼'. 문턱은 모두 곧은 줄 눈 것 그대로: 칼끝 3.5 m/s · 거리(상대 칼끝 어림 + 0.9) · 원통 0.55 m · 높이 −1.3 ~ 0.75 · 찌르기(along > 0.75)는 곧은 줄 눈 몫
+//  horizon 내다보는 시간 (시간 사다리 0.6 s) [사장님 확인 전]
+//  gap     칼끝 틈 건너기 (ai.js startAttack): 상대 칼끝 어림이 내 칼끝보다 이만큼(걸음 사다리 첫 칸 0.3 m) 넘게 길고 내 칼끝 밖이면, 보통 공격(간 보다 · 밀어붙임 · 비스듬히 · 꾐 …)을
+//          띠 기울기 몫(무 0 · 낮음 ⅓ · 가운데 ⅔ · 높음 1 — AI_PLAN.beat 0.6 s 마다 한 번 굴림)으로 참음 · 상대가 헛친 틈 · 무너짐 · 들어옴 · 받아 친 틈(GAP_OPEN — recover · finish · offbalance ·
+//          stepin · counter · riposte · follow · stop · dig · dive)과 이어 치기 · 비기 · 패시브는 그대로 · 0 = 안 씀
+export const AI_ARC = {
+  on: 1,
+  horizon: realS(0.6),
+  gap: 0.3,
 };
 
 // 마른 길을 아는 AI (사장님 10/14 18:3x '라트나 마른길 AI 넣어' — 감독 추천안 승인 항목. docs/import/ratna_drypath_2026-10-14.md · 확인표 1340~, 값은 모두 사장님 확인 전)

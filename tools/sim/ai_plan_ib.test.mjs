@@ -11,6 +11,7 @@ import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { planFor, tiltOf, luckOf, distErrWidth, PHASES, SCHOOL_PLAN } from '../../src/ai_plan.js';
 import { readNote } from '../../src/ai_read.js';
 import { ibStats, chainWant, spinK, armK, habitN, ibTick, ibCircle, ibFeetV, schoolRead, swapReady, nextFree, ibSidePost, ibFwdPost, ibAfter, foeAtkN } from '../../src/ai_plan_ib.js';
+const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { AI_PLAN, IB_LINK, STAMINA } = CONFIG;
 /** AI_PLAN 칸을 잠깐 바꿔 fn 을 돌리고 되돌림 ('ib.x' = 이베리아 칸) */
@@ -463,6 +464,7 @@ test('판: AI 이베리아 숙련 2 대 롱소드 AI — 국면 · 이베리아 
 });
 
 test('판: AI 이베리아 숙련 2 대 롱소드 AI (씨앗 4) — 옆 박차기 → 나선 걸음 베기 · 비스듬히 들어감이 남 (11/14 둘째 — 종종)', (t) => {
+  pinArc0(t); // 11/15 그때 판(① 끔 — 둥근 칼 읽기 · 칼끝 틈이 판을 바꿈)으로 묶음 · 기준 그대로
   // 11/15 그때 판으로 묶음 (이어 돌리기 = 넘기기 판 기본 — 사장님 11/15 '브릿지로서의 메타포' · AI 이어 돌리기 길이 바뀌어 이 씨앗 판이 갈라짐: 비스듬히 들어감 0 · 기준은 안 고침 — docs/strike/ib_link_2026-11-14.md §12)
   const mk = IB_LINK.mode;
   IB_LINK.mode = 'circle';

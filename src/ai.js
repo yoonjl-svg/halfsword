@@ -60,7 +60,7 @@ import { planFor, tiltOf, luckOf, bandOf, distErrWidth, judgePhase, seenStep, pl
 import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, jpBeat, jpRead, jpTsubame, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep } from './ai_plan_jp.js'; // 2 단계 일본 플랜 몫 (11/14 — ai.planJp 일 때만)
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
-import { DIG_PROTO, CN_STEP } from './config.js'; // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
+import { DIG_PROTO, CN_STEP, AI_ARC, PHYSICS } from './config.js'; // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
 import { cnSee, cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 — CN_STEP.mode · 기본 끔)
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
@@ -105,6 +105,21 @@ const STEP_T = 0.3; // 기술 걸음 'strike'(유파 고유 동작 step 칸): �
 // 느긋한 틈 (startAttack why): 빈틈을 보고 골라 든 공격 — 준비 자세를 보통 빠르기로 잡는다. 나머지 why(recover · press · stepin · counter · riposte · shove · stop · windup · follow · finish · 패시브 까닭 …)는
 //  빠른 틈(this.quick — 그 순간을 놓치지 않게 빠르게 친다). 풍차 베기 AI 몫(10/31 13:4x — rdSkipWhy)도 같은 셈으로 빠른 틈을 가른다
 const SLOW_WHY = new Set(['patience', 'open', 'weak', 'offbalance', 'drill']);
+/** ① 칼끝 틈 건너기 (11/15 — AI_ARC.gap): 긴 칼 앞 내 칼끝 밖에서도 여는 공격 까닭 — 상대가 헛친 틈 · 무너짐 · 들어옴 · 받아 친 틈 · 이어 치기 · 파고들기(헛친 뒤) · 偏閃奏進 */
+const GAP_OPEN = new Set(['recover', 'finish', 'offbalance', 'stepin', 'counter', 'riposte', 'follow', 'stop', 'dig', 'dive']);
+/**
+ * ① 칼끝 틈 건너기 (11/15 — AI_ARC.gap · 앞서 사장님 '상대 무기가 나보다 길 때의 대처 전략으로 모든 ai에게 기본으로'): 상대 칼끝 어림이 내 칼끝보다 gap 넘게 길고 내 칼끝 밖이면
+ *  보통 공격을 띠 기울기 몫으로 참음 — AI_PLAN.beat 마다 한 번 굴림(같은 박자 안 거듭 부름은 같은 답). 참으면 true · 칼끝 · 거리를 모르는 몸(시험 몸)은 false
+ */
+function arcGapHold(ai) {
+  if (!(AI_ARC.gap > 0) || !(ai.foeReach - ai.M?.reach > AI_ARC.gap) || !(ai.d > ai.M.reach)) return false;
+  const t = ai.sense?.t ?? 0;
+  if (!(t - (ai.gapT ?? -Infinity) < AI_PLAN.beat)) {
+    ai.gapT = t;
+    ai.gapOk = Math.random() < tiltOf(ai.proficiency ?? 2);
+  }
+  return ai.gapOk;
+}
 // 무기별 간격 실측표(MEASURED)는 weapon_measured.js 한 곳에 있다 (10/8 ① 구조 — 전엔 이 파일과 schools.js MEASURES 두 벌).
 //  간격을 무기에 맞춰 늘이고 줄이는 일은 sword_art.js 가 한다. 옛 이름 MEASURED 는 여기서도 그대로 내보낸다 —
 //  도구(proto_weapons·r2p_ai_*·shove_check)가 이 이름으로 읽고 고쳐 쓴다(같은 객체)
@@ -1656,6 +1671,7 @@ export class AI {
   /** 공격 시작. why: 어떤 기회였나 (recover/stepin/finish/patience/counter/...) */
   startAttack(tech, why, opt = {}) {
     if (!tech || !this.me.armed || this.me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false; // 칼이 없으면 칠 수 없다
+    if (AI_ARC.on && !opt.chain && !opt.secret && !opt.passive && !opt.drill && !GAP_OPEN.has(why) && arcGapHold(this)) return void (this.stats.arcGap = (this.stats.arcGap ?? 0) + 1), false; // ① 칼끝 틈 건너기 (11/15): 긴 칼 앞 내 칼끝 밖 보통 공격은 띠 기울기만큼 참음
     if (this.planDe && this.deDig.t > 0 && !opt.secret) return false; // 독일 파고들기 (3 단계 11/14): 건 동안(digT)은 새 공격을 미룸 — 박찬 두 걸음이 공격 걸음에 덮여 버려지지 않게 · 끝나면 그 자리에서 밀치기 · 공격 고르기 그대로
     // 붙은 거리 규칙 AI 견줌 (11/14 — CLOSE.startAI · 기본 null 이면 안 탐 · close_hold.js): 묶인 동안(내 밀치기든 상대가 나를 민 밀치기든 — 맞밀기로 둘 다 묶임) 공격 안 함 ·
     //  칼자루만 거리(가슴 사이 ≤ startAI)에선 공격 대신 손잡이 찍기
@@ -3027,6 +3043,64 @@ export class AI {
     return bestD < 0.3 ? best : null;
   }
 
+  /**
+   * ① 둥근 칼 읽기 (11/15 사장님 '둥근 칼 읽기 모든 유파에 넣어' — config AI_ARC · 기록 docs/strike/ai_arc_2026-11-15.md): 곧은 줄 눈이 못 잡은 칼만 —
+   *  늦게 본 칼끝 · 타격점 빠르기로 칼의 순간 회전(축 ω = (칼끝 − 타격점) × 빠르기 차 ÷ 길이² · 중심 = 타격점 + ω × 타격점 빠르기 ÷ |ω|² · 축 방향 흐름)을 셈해
+   *  물리 한 스텝(PHYSICS.timestep 1/120 s)마다 horizon 까지 칼끝 · 타격점을 돌려 보고 몸통 원통(곧은 줄 눈과 같은 0.55 m · 높이 −1.3 ~ 0.75)에 처음 든 자리 · 아니면 null.
+   *  문턱은 모두 곧은 줄 눈 것 그대로: 칼끝 3.5 m/s · 찌르기(칼날 쪽으로 곧게 — along > 0.75)는 곧은 줄 눈 몫. 새 객체는 처음 한 번(this.arcH) · 삼각함수는 두 번(각 칸은 덧셈 정리)
+   */
+  arcHit(s, c) {
+    const sp = Math.hypot(s.tvx, s.tvy, s.tvz);
+    if (sp < 3.5) return null;
+    const ex = s.tx - s.mx, ey = s.ty - s.my, ez = s.tz - s.mz;
+    const e2 = ex * ex + ey * ey + ez * ez;
+    if (e2 < 1e-6 || (ex * s.tvx + ey * s.tvy + ez * s.tvz) / (Math.sqrt(e2) * sp) > 0.75) return null; // 찌르기 — 곧은 줄 눈 몫 (threat 의 찌르기 가름 0.75 그대로)
+    const dvx = s.tvx - s.mvx, dvy = s.tvy - s.mvy, dvz = s.tvz - s.mvz;
+    const wx = (ey * dvz - ez * dvy) / e2, wy = (ez * dvx - ex * dvz) / e2, wz = (ex * dvy - ey * dvx) / e2; // ω = e × Δv / |e|²
+    const w2 = wx * wx + wy * wy + wz * wz;
+    if (w2 < 1e-9) return null; // 돌지 않는 칼 (셈 지킴 — 값 아님)
+    const wn = Math.sqrt(w2);
+    const ax = wx / wn, ay = wy / wn, az = wz / wn;
+    const ox = s.mx + (wy * s.mvz - wz * s.mvy) / w2, oy = s.my + (wz * s.mvx - wx * s.mvz) / w2, oz = s.mz + (wx * s.mvy - wy * s.mvx) / w2; // 순간 중심
+    const drift = s.mvx * ax + s.mvy * ay + s.mvz * az; // 축 방향 흐름
+    const dt = PHYSICS.timestep;
+    const n = Math.max(1, Math.round(AI_ARC.horizon / dt));
+    const c1 = Math.cos(wn * dt), s1 = Math.sin(wn * dt);
+    let cs = 1, sn = 0;
+    for (let k = 1; k <= n; k++) {
+      const cn = cs * c1 - sn * s1;
+      sn = sn * c1 + cs * s1;
+      cs = cn;
+      const t = k * dt;
+      for (let p = 0; p < 2; p++) {
+        const qx = (p ? s.mx : s.tx) - ox, qy = (p ? s.my : s.ty) - oy, qz = (p ? s.mz : s.tz) - oz;
+        const qa = (qx * ax + qy * ay + qz * az) * (1 - cs) + drift * t;
+        const hx = ox + qx * cs + (ay * qz - az * qy) * sn + ax * qa - c.x;
+        const hz = oz + qz * cs + (ax * qy - ay * qx) * sn + az * qa - c.z;
+        if (hx * hx + hz * hz > 0.3025) continue; // 0.55² — 곧은 줄 눈과 같은 원통
+        const hy = oy + qy * cs + (az * qx - ax * qz) * sn + ay * qa - c.y;
+        if (hy < -1.3 || hy > 0.75) continue;
+        const H = (this.arcH ??= { tc: 0, hx: 0, hy: 0, hz: 0, vx: 0, vy: 0, vz: 0, sp: 0 });
+        H.tc = t;
+        H.hx = hx;
+        H.hy = hy;
+        H.hz = hz;
+        H.vx = s.tvx;
+        H.vy = s.tvy;
+        H.vz = s.tvz;
+        H.sp = sp;
+        this.stats.arcSeen = (this.stats.arcSeen ?? 0) + 1;
+        return H;
+      }
+    }
+    return null;
+  }
+
+  /** ① 칼끝 틈 건너기 — 참으면 true (셈은 아래 arcGapHold · 시험이 부름) */
+  gapHold() {
+    return arcGapHold(this);
+  }
+
   // ───────────────────────── 위험 읽기 ─────────────────────────
   /**
    * 상대 칼끝·타격점이 지금 속도 그대로 0.45초 안에 내 몸(가슴 축 주위 0.55m 원통)에 닿는가.
@@ -3055,6 +3129,7 @@ export class AI {
       if (Math.hypot(hx, hz) > 0.55 || hy < -1.3 || hy > 0.75) continue;
       if (!hit || tc < hit.tc) hit = { tc, hx, hy, hz, vx, vy, vz, sp };
     }
+    if (!hit && AI_ARC.on) hit = this.arcHit(s, c); // ① 둥근 칼 읽기 (11/15 — 곧은 줄이 못 잡을 때만 · 같은 늦게 본 모습)
     if (!hit) return null;
     if (this.noThreat > NEW_THREAT_T) this.threatId++; // 잠깐 조용했다가 다시 오면 새 공격
     const lat = hit.hx * r.x + hit.hz * r.z; // + = 내 오른쪽

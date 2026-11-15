@@ -52,8 +52,9 @@ function run(f, secs, mv) {
 }
 const ladder = (v, rungs) => rungs.map(CONFIG.realS).some((r) => Math.abs(r - v) < 1e-9);
 
-test('기본 꺾음(turn) · 사장님 값 0.4 s · 50 % · 끄면(0) 동방 판은 값을 안 읽음 · 켜도 동방이 아닌 판(롱소드끼리)은 그대로', () => {
-  assert.equal(C.mode, 'turn', '사장님 11/15 결정');
+test('기본 끔(11/15 감독 — 1.2 s · 45° 사장님 판정 전 · ① 판에서 다시 잼) · 사장님 값 0.4 s · 50 % · 끄면(0) 동방 판은 값을 안 읽음 · 켜도 동방이 아닌 판(롱소드끼리)은 그대로', () => {
+  assert.equal(C.mode, 0, '11/15 감독: ① 둥근 칼 읽기 판에서 다시 재기 전 끔 (전 기본 turn)');
+  assert.equal(CONFIG.AI_PLAN.cn.dive, 0, '偏閃奏進도 끔');
   near(C.keepT, CONFIG.realS(0.4));
   near(C.cut, 0.5);
   near(C.turn, Math.PI / 4);
@@ -152,7 +153,7 @@ test("'항상 켜지면 안돼': 다시 걸기 1.2 s — 지그재그로 꺾어�
   });
 });
 
-test('AI 偏閃奏進: 높음(띠 기울기 1)은 늘 · 칼이 오는 반대쪽 옆 — 그 쪽으로 걷던 중이면 반대로 · 꺾는 시간 뒤 앞 박찬 걸음 + 허리 베기 · 0 이면 안 함', () => withMode('turn', () => {
+test('AI 偏閃奏進(켠 판 `?cnStep=turn&cnDive=1`): 높음(띠 기울기 1)은 늘 · 칼이 오는 반대쪽 옆 — 그 쪽으로 걷던 중이면 반대로 · 꺾는 시간 뒤 앞 박찬 걸음 + 허리 베기 · 0 이면 안 함', () => withMode('turn', () => {
   const mk = (o = {}) => {
     const me = body(o.me);
     const started = [];
@@ -195,7 +196,7 @@ test('AI 偏閃奏進: 높음(띠 기울기 1)은 늘 · 칼이 오는 반대쪽
   let yes = 0;
   for (let i = 0; i < 400; i++) if (cnDive(mk({ ai: { planK: 0, planLuck: 1 } }), TH, 1.5)) yes++;
   assert.ok(yes > 140 && yes < 260, `운 ${yes} / 400`);
-}));
+}, { dive: 1 }));
 
 test('견줌 ⓐ 꺾어 딛기 · ⓑ 줄임만 · ⓒ 저절로 비킴 (공격 창 — 첫 시제품 그대로)', () => {
   withMode('a', () => {
@@ -237,9 +238,9 @@ test('견줌 ⓐ 꺾어 딛기 · ⓑ 줄임만 · ⓒ 저절로 비킴 (공격 
   });
 });
 
-test('판에서 쓰임 — 환도 AI 숙련 5 대 롱소드 AI (씨앗 2 · 30 s): 꺾음 · 줄임이 걸림 · 한도에 막힘 · 偏閃奏進 굴림 · 뛰어듦 / 뛰어들기 0 이면 굴림 없음', () => {
+test('판에서 쓰임 (켠 판) — 환도 AI 숙련 5 대 롱소드 AI (씨앗 2 · 30 s): 꺾음 · 줄임이 걸림 · 한도에 막힘 · 偏閃奏進 굴림 · 뛰어듦 / 뛰어들기 0 이면 굴림 없음', () => {
   const run2 = (o) => withMode('turn', () => trace({ weapon: 'hwando', weapon2: 'longsword', seed: 2, secs: 30 }), o);
-  const a = run2({});
+  const a = run2({ dive: 1 });
   const n = a.n[0];
   assert.ok(n.turn > 0 && n.trig > 0 && n.block > 0 && n.onT > 0, JSON.stringify(n));
   assert.ok(n.onT / n.T < 0.4, '늘 켜지지 않음');
