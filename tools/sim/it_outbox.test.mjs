@@ -446,6 +446,56 @@ test('11/15 AI 비껴서며 찌르기 기울기 — 실제 AI respond: 굴림이
   });
 });
 
+test('11/15 둘째 AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 (UNIQUE_ASSIST.inqAi 1): 칼이 나가는 순간 requestArtThrust 몸 빼기 · 같은 이름 · 식힘 · 갈래 special(칼 우위) · 빼는 쪽 = 본 상대 칼 반대 · 끔(0) = 옛 탭 찌르기', () => {
+  const UA = CONFIG.UNIQUE_ASSIST;
+  assert.equal(UA.inqAi, 1);
+  const go = (ai, G) => {
+    for (let k = 0; k < 20; k++) G.step();
+    assert.ok(ai.startAttack(ai.school.techByName.inquartata, 'counter', { noFeint: true, skipChamber: true }));
+    ai.startStrike();
+  };
+  itAi(5, (ai, G) => {
+    const me = ai.me;
+    const st0 = me.stamina.value;
+    go(ai, G);
+    assert.ok(me.iaiReq || me.iai, '운동학 칼 부탁');
+    assert.equal((me.iaiReq ?? me.iai).tech, 'inquartata', '같은 이름');
+    assert.equal(ai.phase, 'strike');
+    assert.equal(ai.inqRun, true);
+    assert.equal(ai.stats.inqArt.fired, 1);
+    assert.equal(ai.stats.specials.inquartata, 1, '특수 공격 셈 (식힘 시작)');
+    assert.ok(me.stamina.value < st0 || me.stamina.infinite, '찌르기 기력');
+    let k = 0;
+    while ((me.iai || me.iaiReq) && k++ < 240) {
+      G.step();
+      if (me.iai) assert.equal(itThrustKind(me), 'special', '끄는 동안 갈래 = 비껴서며 찌르기');
+    }
+    assert.ok(k < 240, '칼이 끝남');
+    G.step();
+    assert.ok(ai.inqRun === false && ai.phase !== 'strike', '끝나면 다음 스텝에 뒤따름으로');
+    assert.ok(ai.specCooling('inquartata'), '끝난 뒤 식힘 (사람과 같은 수)');
+  });
+  itAi(5, (ai, G) => {
+    const UA0 = UA.inqAi;
+    UA.inqAi = 0;
+    try {
+      go(ai, G);
+      assert.ok(!ai.me.iaiReq && !ai.me.iai, '옛 판 — 운동학 칼 없음');
+      assert.ok(ai.me.skill.tap, '옛 판 — 탭 찌르기 길');
+      assert.equal(ai.stats.inqArt, undefined);
+    } finally { UA.inqAi = UA0; }
+  });
+  itAi(5, (ai) => {
+    const c = ai.me.bodies.chest.translation();
+    const fc = ai.foe.bodies.chest.translation();
+    const ux = fc.x - c.x, uz = fc.z - c.z, d = Math.hypot(ux, uz);
+    const at = (lat) => ({ armed: true, cx: fc.x, cz: fc.z, mx: c.x + ux * 0.5 + (-uz / d) * lat, mz: c.z + uz * 0.5 + (ux / d) * lat });
+    assert.equal(ai.inqSide(at(0.3)), -1, '본 칼이 내 오른쪽 — 왼쪽으로 뺌');
+    assert.equal(ai.inqSide(at(-0.3)), 1, '왼쪽 — 오른쪽으로');
+    assert.equal(ai.inqSide({ ...at(0.3), armed: false }), 1, '칼을 못 봄 — 기술 표 쪽(오른쪽)');
+  });
+});
+
 const hash = (r) => createHash('sha256').update(JSON.stringify(r)).digest('hex').slice(0, 12);
 test('스위치 끔이면 전 판 (본판 c1cad826 과 판 바이트 같음 — 사람 이탈리아 손가락 봇 판 둘 · 거울은 AI 이탈리아도) · 다른 유파 판은 켬 그대로 같음', (t) => { pinLodge0(t);
   // 11/14 틈 파고들기(사장님 '기본찌르기는 0.6 위에서 내려찌르기는 0.9' — 무기 값 · IT_OUTBOX 밖)는 그때 값으로 묶어 본판과 견줌 (레이피어 0.3 · 에스톡 0.5 · 내려 찌르기 0.6)

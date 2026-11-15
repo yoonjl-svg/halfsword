@@ -1986,6 +1986,10 @@ export const UNIQUE_ASSIST = {
   //    시간 상한 inqSnapTime(찌르는 토막부터) · 몸 꼴 = 표 body(디딘 쪽 — bodyMirror). 0 = 끔 `?inqTap=0`
   inqTap: 1,
   inqThreat: realS(0.25), // 위협이 그친 뒤 이 초까지는 '공격해 오는 중' = 같은 공격 (ai.js · parry_button.js NEW_THREAT_T — '잠깐 조용했다가 다시 오면 새 공격'과 같은 틈 · 새 수 없음) · 0.12(QUIET_T)면 사람 같은 봇 탭 16 번에 3 번만(위협 읽힘이 0 ~ 0.07 s · 탭은 그 뒤 0.13 ~ 0.28 s)
+  // AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 (11/15 감독 — 사장님 '1. 모두 해' 뒤 · 기록 docs/strike/it_ai_i9_2026-11-15.md §7 · 확인표 4433 ~): 1 = AI 도 몸 빼기 · 넷째 자세 찌름을 한 칼로
+  //  (ai.js inqGo → secret_instant.js requestArtThrust void — 사람 tapVoid 와 같은 부름 · 이름 · 식힘 · 칼끝 몫 specialShare.inquartata · 칼 우위 그대로) · 빼는 쪽 = 늦게 본 상대 칼 반대쪽 ·
+  //  내는 거리 = 옛 판이 비껴 딛기 시작하던 거리. 0 = 옛 판(옆걸음을 딛고 나서 보통 탭 찌르기) `?inqAi=0` [사장님 확인 전]
+  inqAi: 1,
   inqSnapTime: 0, // 11/01 00:xx 사장님 '공격이 몇 초 안에 끝나야한다 이런 기준 없애라고 햇지 내가 그딴건 필요없어' → 0 = 상한 없음(길 끝까지 · 확인표 3276) · 전: 끌고 가는 시간 상한 (실제 초 — cavSnapTime · lianSnapTime 과 같은 0.2)
   // 사람 날개 접기 (C6 염시 斂翅 — 동방 특수 공격 · 사장님 10/28 00:2x ~ 00:3x · 01:0x — 기록 docs/strike/lianchi_2026-10-28.md · 확인표 2694 ~ 2699). 사람 강화(unique_assist.js)만 · AI 염시(속임 길)는 그대로.
   //  ① lianTap: 물러나는 동안(스틱 뒤 — 뒤 몫 ≥ 0.5 · 옆 몫보다 큼, 걸음 명령 '앞'의 거울) · 스틱 뒤를 놓고 lianWindow 안의 탭 = 보통 탭 찌르기 대신 날개 접기 (상대 칼 닿음 없이 내 명령만 —

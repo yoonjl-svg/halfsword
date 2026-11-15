@@ -42,6 +42,8 @@ export const PRESETS = {
   i9b1: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 2.0, beat: 0.4, ai: 1, beatAi: 1 }, prof: 5, inq: 0 },
   i9b0: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 2.0, beat: 0.4, ai: 1, beatAi: 0 }, prof: 5, inq: 0 },
   i9inq: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 2.0, beat: 0.4, ai: 1, beatAi: 0 }, prof: 5 },
+  // 11/15 둘째 (감독 — AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 · UNIQUE_ASSIST.inqAi): i9old = 옛 칼(옆걸음 뒤 탭 찌르기 — 개발 가지 머리 판) · i9inq 는 본판 값(운동학 칼)
+  i9old: { bot: 'outbox', io: { on: 1, thrustMul: 0.8, stop: 0.3, edge: 2.0, beat: 0.4, ai: 1, beatAi: 0 }, prof: 5, inqAi: 0 },
 };
 const range = (s) => String(s).split(',').flatMap((p) => { const m = p.match(/^(\d+)-(\d+)$/); if (!m) return [+p]; const o = []; for (let i = +m[1]; i <= +m[2]; i++) o.push(i); return o; });
 const r3 = (x) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(3));
@@ -147,6 +149,9 @@ export async function aiFight(preset, weapon, opp, seed) {
   const open0 = CONFIG.SECRET.aiOpenSchools;
   if (P0.open === 0) CONFIG.SECRET.aiOpenSchools = open0.filter((x) => x !== 'italian');
   const it0 = CONFIG.AI_PLAN.it;
+  const inqAi0 = CONFIG.UNIQUE_ASSIST.inqAi;
+  if (P0.inqAi != null) CONFIG.UNIQUE_ASSIST.inqAi = P0.inqAi; // 11/15 둘째: AI 비껴서며 찌르기 칼 (없으면 본판 값)
+  const { itThrustKind } = await import('../../src/italian_outbox.js');
   if (P0.inq != null) CONFIG.AI_PLAN.it = { ...it0, inq: P0.inq }; // 11/15 비껴서며 찌르기 기울기 (없으면 본판 값)
   try {
     const G = newRound({ walls: true, seed, weapon, weapon2: opp, AI2Class: AI, persona: { proficiency: 3 }, persona2: { proficiency: P0.prof ?? 3 } }); // 11/14 AI 리솔루토 재기: AI 이탈리아 숙련 P0.prof (상대 AI 는 3 그대로)
@@ -158,8 +163,7 @@ export async function aiFight(preset, weapon, opp, seed) {
       pw?.(att, vic, r, ...rest);
       const sv = r.type === 'blunt' ? 0 : r.severity ?? 0;
       if (att === P) w.dealt += sv;
-      const A2 = G.ai2;
-      if (att === P && vic === E && A2.mode === 'attack' && A2.tech?.name === 'inquartata' && (A2.phase === 'strike' || A2.phase === 'follow')) { // 11/15: 비껴서며 찌르기가 닿음 (AI 칼이 그 기술의 벰 · 뒤따름 단계 — 레이피어 AI 찌르기는 탭 길이라 itThrustKind 는 'ai' 로 읽음) — 닿은 수 · 가장 센 에너지 · 상처를 낸 수
+      if (att === P && vic === E && itThrustKind(P) === 'special') { // 비껴서며 찌르기가 닿음 (11/15 둘째: 갈래 읽기 — 옛 칼은 그 기술의 벰 · 뒤따름 단계 · 운동학 칼은 끄는 동안) — 닿은 수 · 가장 센 에너지 · 상처를 낸 수
         w.inqTouch++;
         w.inqE = Math.max(w.inqE, r.energy ?? 0);
         if (sv > 0) (w.inqHit++, (w.inqSev += sv));
@@ -174,13 +178,14 @@ export async function aiFight(preset, weapon, opp, seed) {
     }
     const o = P.itOut ?? {};
     const st = G.ai2.stats;
-    const r = { preset, c: `ai:${weapon}:${opp}`, seed, T: r3(T), win: !E.alive && P.alive, lose: !P.alive && E.alive, dealt: r3(w.dealt), recv: r3(w.recv), edge: o.edge ?? 0, by: o.by ?? {}, beatFired: o.beatFired ?? 0, stopHits: o.stopHits ?? 0, thrustHits: o.thrustHits ?? 0, inq: st.specials?.inquartata ?? 0, inqHit: w.inqHit, inqSev: r3(w.inqSev), inqTouch: w.inqTouch, inqE: r3(w.inqE), inqStep: st.techStep?.inquartata ?? null, inqTilt: st.plan?.inq ?? 0, counters: st.counters ?? 0, specials: st.specials ?? null, riso: st.secrets?.andareRisoluto?.fired ?? 0, risoLanded: st.secrets?.andareRisoluto?.landed ?? 0, risoWins: st.riso?.wins ?? 0, risoGap: st.riso?.gapBlocked ?? 0, risoArmT: r3((st.riso?.armT ?? 0) / CONFIG.TIME.k), risoSev: r3(w.risoSev), risoHits: w.risoHits, hasRiso };
+    const r = { preset, c: `ai:${weapon}:${opp}`, seed, T: r3(T), win: !E.alive && P.alive, lose: !P.alive && E.alive, dealt: r3(w.dealt), recv: r3(w.recv), edge: o.edge ?? 0, by: o.by ?? {}, beatFired: o.beatFired ?? 0, stopHits: o.stopHits ?? 0, thrustHits: o.thrustHits ?? 0, inq: st.specials?.inquartata ?? 0, inqHit: w.inqHit, inqSev: r3(w.inqSev), inqTouch: w.inqTouch, inqE: r3(w.inqE), inqStep: st.techStep?.inquartata ?? null, inqArt: st.inqArt ?? null, inqTilt: st.plan?.inq ?? 0, counters: st.counters ?? 0, specials: st.specials ?? null, riso: st.secrets?.andareRisoluto?.fired ?? 0, risoLanded: st.secrets?.andareRisoluto?.landed ?? 0, risoWins: st.riso?.wins ?? 0, risoGap: st.riso?.gapBlocked ?? 0, risoArmT: r3((st.riso?.armT ?? 0) / CONFIG.TIME.k), risoSev: r3(w.risoSev), risoHits: w.risoHits, hasRiso };
     G.world.free();
     return r;
   } finally {
     Object.assign(IO, keep);
     CONFIG.SECRET.aiOpenSchools = open0;
     CONFIG.AI_PLAN.it = it0;
+    CONFIG.UNIQUE_ASSIST.inqAi = inqAi0;
   }
 }
 let SB = null;
