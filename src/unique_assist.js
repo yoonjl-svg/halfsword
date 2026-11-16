@@ -245,10 +245,19 @@ export function altibShot(f, H = null) {
     const fee = A.speed === 'f1' && A.drop != null ? A.drop : 0;
     x = THREE.MathUtils.clamp((S.value - fee) / (S.max - fee), 0, 1);
   }
-  x *= A.full ?? 1; // 기력 가득 = 고노센의 이 몫 (11/16 사장님 '알티바슈를 가득=50%로 하자')
   const vg = Math.max(1e-6, iaiTipSpeed(f));
   const ft = A.floorTip?.[f.weapon?.id];
   const fs = ft > 0 ? realV(ft) / vg : A.share; // 바닥 몫 (실제 m/s → 게임 m/s ÷ 고노센 칼끝)
+  // 꺾임 판 (11/16 사장님 '풀 기력에서 고노센 40%로' · '50에서 바닥에 도달하게 해'): 기력 knee 이하 = 바닥(같은 칼 보통 큰 베기) ·
+  //  knee ~ 최대 = 바닥에서 고노센 × full 까지 고르게 (칼끝 몫 = 바닥 + (full − 바닥) × (기력 − knee) ÷ (최대 − knee)) · full 이 바닥 아래인 칼은 늘 바닥
+  if (A.knee != null) {
+    let t = 1;
+    if (STAMINA.on && S && !S.infinite && S.max > A.knee) t = THREE.MathUtils.clamp((S.value - A.knee) / (S.max - A.knee), 0, 1);
+    const top = A.full ?? 1;
+    const share = top > fs ? fs + (top - fs) * t : fs;
+    return { share, hitMul: altibHitMul(), k: 1, x: share, floor: !(top > fs) || t <= 0, s };
+  }
+  x *= A.full ?? 1; // 기력 가득 = 고노센의 이 몫 (11/16 사장님 '알티바슈를 가득=50%로 하자' — 꺾임 판 전)
   return { share: Math.max(x, fs), hitMul: altibHitMul(), k: 1, x, floor: fs > x, s };
 }
 /** 알티바슈 포르트 뒤 기력 (사람 · AI 같음): SECRET.altib.drop(11/16 −35 까지 강제로) · 없으면 zero 판(기력 0) */

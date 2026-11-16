@@ -50,15 +50,23 @@ test('알티바슈 빠르기 — 둘째 셈(기력 ÷ 100) · 첫째 셈((기력
     const vg = iaiTipSpeed(P);
     const floor = CONFIG.realV(SECRET.altib.floorTip.zweihander) / vg;
     const at = (v) => ((P.stamina.value = v), altibShot(P));
-    // 11/16 사장님 '알티바슈를 가득=50%로 하자' — full 0.5: 칼끝 몫 = 0.5 × 기력 ÷ 100 (바닥 = 보통 큰 베기)
-    assert.equal(SECRET.altib.full, 0.5);
+    // 11/16 사장님 '풀 기력에서 고노센 40%로' · '50에서 바닥에 도달하게 해' — 칼끝 몫 = 바닥 + (0.4 − 바닥) × (기력 − 50) ÷ 50 · 50 이하 바닥
+    assert.equal(SECRET.altib.full, 0.4);
+    assert.equal(SECRET.altib.knee, 50);
+    assert.ok(floor < 0.4, '츠바이핸더 바닥(보통 큰 베기)은 고노센 40 % 아래');
     let s = at(100);
-    assert.ok(Math.abs(s.share - Math.max(0.5, floor)) < 1e-9, '가득 100 → 0.5');
+    assert.ok(Math.abs(s.share - 0.4) < 1e-9, '가득 100 → 0.4');
     assert.equal(s.hitMul, 1);
-    s = at(90);
-    assert.ok(Math.abs(s.share - Math.max(0.45, floor)) < 1e-9, '90 → 0.45 (바닥 위면)');
+    s = at(75);
+    assert.ok(Math.abs(s.share - (floor + (0.4 - floor) * 0.5)) < 1e-9, '75 → 바닥과 0.4 의 가운데');
+    s = at(50);
+    assert.ok(Math.abs(s.share - floor) < 1e-9 && s.floor, '50 → 바닥');
+    s = at(20);
+    assert.ok(Math.abs(s.share - floor) < 1e-9 && s.floor, '20 → 바닥');
     const full0 = SECRET.altib.full;
-    SECRET.altib.full = 1; // 아래는 셈 꼴 시험 (full 1 = 11/16 둘째 셈 첫 판)
+    const knee0 = SECRET.altib.knee;
+    SECRET.altib.full = 1; // 아래는 셈 꼴 시험 (full 1 · 꺾임 없음 = 11/16 둘째 셈 첫 판)
+    SECRET.altib.knee = null;
     try {
     s = at(100);
     assert.equal(s.share, 1);
@@ -75,6 +83,7 @@ test('알티바슈 빠르기 — 둘째 셈(기력 ÷ 100) · 첫째 셈((기력
     }
     } finally {
       SECRET.altib.full = full0;
+      SECRET.altib.knee = knee0;
     }
     withSecretFreeOff(() => {
       s = at(60);
