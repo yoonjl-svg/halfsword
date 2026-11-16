@@ -63,7 +63,7 @@ export function measureFight(f, dur) {
   const loF = swap ? G.player : G.enemy;
   const aiHi = swap ? G.ai : G.ai2;
   const aiLo = swap ? G.ai2 : G.ai;
-  if (hi === 6) hiF.vitality = PROF6_VITALITY;
+  if (hi === 6 && !process.env.NO_VITAL) hiF.vitality = PROF6_VITALITY;
   if (lo === 6) loF.vitality = PROF6_VITALITY;
 
   const dealt = new Map([[hiF, 0], [loF, 0]]);
