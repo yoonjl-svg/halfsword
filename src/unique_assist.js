@@ -252,7 +252,8 @@ export function altibShot(f, H = null) {
   //  knee ~ 최대 = 바닥에서 고노센 × full 까지 고르게 (칼끝 몫 = 바닥 + (full − 바닥) × (기력 − knee) ÷ (최대 − knee)) · full 이 바닥 아래인 칼은 늘 바닥
   if (A.knee != null) {
     let t = 1;
-    if (STAMINA.on && S && !S.infinite && S.max > A.knee) t = THREE.MathUtils.clamp((S.value - A.knee) / (S.max - A.knee), 0, 1);
+    const hi = Math.min(A.kneeTop ?? S?.max ?? 100, S?.max ?? 100); // 이 기력 이상이면 꼭대기 (11/16 사장님 '40~90 사이에서 재는 걸로 하자. 즉 90과 100은 동일함.')
+    if (STAMINA.on && S && !S.infinite && hi > A.knee) t = THREE.MathUtils.clamp((S.value - A.knee) / (hi - A.knee), 0, 1);
     const top = A.full ?? 1;
     const share = top > fs ? fs + (top - fs) * t : fs;
     return { share, hitMul: altibHitMul(), k: 1, x: share, floor: !(top > fs) || t <= 0, s };
