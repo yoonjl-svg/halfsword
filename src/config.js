@@ -2389,7 +2389,7 @@ export const AI_LEVELS = {
 //     levels 'hard'(더 센 이름이 없다 · 3 ~ 5 와 같음) · schoolK 1.6(한 단계 +0.15 그대로) · reaction 0.05 s(한 단계 −0.05 그대로) · 고유 동작 · 비기 · 패시브 · 흘림 문턱은 '이상'이라 5 와 같음.
 //     max(5)는 얼터 숙련도 +1 의 상한 그대로(미나미 얼터 5 그대로) — 표 끝(6)은 levels.length − 1. 6 칸 수는 사장님 확인 전
 export const AI_PROFICIENCY = {
-  levels: ['easy', 'easy', 'normal', 'hard', 'hard', 'expert', 'expert'], // [5] · [6] 'expert' 최고 [사장님 11/16 결정 — 높음 다음 등급 신설] · 전 'hard' (AI 플랜 끈 판에서만 — 켠 판은 AI_PLAN.levels)
+  levels: ['easy', 'easy', 'normal', 'hard', 'hard', 'hard', 'expert'], // [5] · [6] 'expert' 최고 [사장님 11/16 결정 — 높음 다음 등급 신설] · 전 'hard' (AI 플랜 끈 판에서만 — 켠 판은 AI_PLAN.levels)
   max: 6, // 얼터(광기) 숙련도 +1 의 상한 (characters.js VARIANT_PLUS) · 사장님 10/29 22:4x '상한 6으로 올려' — 전 5(시트 값만 6 까지: 10/24 롤랑 · 베르나르도). 아래 표들의 [6] 칸은 10/24 부터 있음
   secretAt: UNIQUE_ASSIST.secretStage,
   ofLevel: { easy: 1, normal: 2, hard: 3 },
@@ -2398,7 +2398,7 @@ export const AI_PROFICIENCY = {
   // AI 반응 시간 (s · 숙련도 0~5 — 10/21 14:3x 사장님 'ai 막기 반응은 … 난이도가 없어졌으니 숙련도에 따라 달라지게 개편해' · 확인표 2114):
   //  AI 의 눈(sense.seen — 막기 · 틈 읽기 · 미리 보기가 모두 읽는 한 값)이 이만큼 늦게 본다. 숙련도 한 단계마다 0.05 s 빨라짐 · 2 = 0.25(전 normal 0.26) · 3 = 0.2.
   //  인물 시트의 reaction 덮어쓰기와 이름(easy · normal · hard) 값보다 이것이 이긴다(ai.js). 광기 인물은 숙련도 + 1 이라 한 단계 빠름. 수는 감독 — 사장님 확인 전
-  reaction: [0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05].map(realS), // 표준 시간: 실제 초 (10/25) · [6] 0.05 s (10/24 — 한 단계 −0.05 그대로 · 사장님 확인 전)
+  reaction: [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2].map(realS), // 표준 시간: 실제 초 (10/25) · [6] 0.05 s (10/24 — 한 단계 −0.05 그대로 · 사장님 확인 전)
 };
 // 숙련도 6 버티는 힘 (사장님 10/29 22:4x '지금 숙련도 6인 캐릭터는 (롤랑과 베르나르도의 경우를 보면) 체력 10% 보너스가 있었어. 그와 동일한 방식으로 숙련도 6캐릭터는 모두같은 보너스를 주도록 해'):
 //  인물 시트의 실효 숙련도(ai.proficiency — 얼터는 원본 +1 · 상한 맞춤 뒤)가 6 이면 시트 vitality = 이 값(characters.js 한 곳 — 시트마다 손으로 적지 않음).
@@ -2523,7 +2523,7 @@ export const AI_PLAN = {
   digCross: 0.6,
   digKeep: 0.6,
   // 3 단계 (11/14 — 설계 §2-4 어긋남 표 '권고대로'): 숙련도 → 실력 이름 (3 = normal · 4 = hard — 가운데 · 높음의 차는 축 ③) · 전 AI_PROFICIENCY.levels(3 = hard) — 인물 시트가 숙련도 표에서 고른 이름일 때만 바꿈 (ai.js)
-  levels: ['easy', 'easy', 'normal', 'normal', 'hard', 'expert', 'expert'], // [5] · [6] 'expert' 최고 [사장님 11/16 결정 — 높음 다음 등급 신설 · 감독 '숙련도 5 · 6'] · 전 'hard'
+  levels: ['easy', 'easy', 'normal', 'normal', 'hard', 'hard', 'expert'], // [5] · [6] 'expert' 최고 [사장님 11/16 결정 — 높음 다음 등급 신설 · 감독 '숙련도 5 · 6'] · 전 'hard'
   // 3 단계: 숙련도 0(무) = 유파 패시브 · schoolK 0 · 기질은 무유파 범위 (고유 동작은 이미 0 에서 없음) [권고대로 · 사장님 확인 전]
   zeroPlain: 1,
   // 3 단계: 붙은 거리 손잡이 찍기를 모든 AI 에 (인물 칸 · 독일 밀치기가 없는 몸도) — 닿는 거리 안 사건(들어섬 · 칼 맞물림)마다 이 몫으로 찍기 (CLOSE.pommelDist 0.9 m 안) [사장님 확인 전]
