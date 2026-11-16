@@ -27,13 +27,13 @@ import { ibInit, ibAfter, ibTick, ibCircle, ibSide, ibFeetV, ibWatch, ibSidePost
 import { readInit, readTick, readNeed, readFeetV, readTechK, readChainK } from './ai_read.js'; // 3 단계 수 읽기 그릇 (11/14 — 플랜이 있는 몸만 this.read · 셈은 그 파일)
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
-import { TRADITIONS, IBERIAN_SPIN_DEF } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
+import { TRADITIONS, IBERIAN_SPIN_DEF, traditionOf } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
 import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — 내 공격이 상대 칼에 막히면 막은 쪽 기력 −, afterStrike)
 import { schoolPassiveOn } from './school_passive.js'; // 유파 패시브 스위치 (10/21 — 이베리아 손목 힘 · 나머지 넷은 fighter.schoolPassive)
 import { closeStartD, bargeHeld, nearHilt } from './close_hold.js'; // 밀치기 시작 거리 (11/14 — AI 는 CLOSE.startAI 견줌 · 기본 null = 무기 reach 그대로)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 AI 몫 — 상대 두 팔 늦춤 (10/31)
-import { aiUniqueStages, PLAYER_UNIQUE, specialShare, rdReleaseOpt, altibShot, altibAfter } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
+import { aiUniqueStages, aiStageOpen, PLAYER_UNIQUE, specialShare, rdReleaseOpt, altibShot, altibAfter } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
 import { MEASURED } from './weapon_measured.js';
 import { routeAroundStageObstacle, obstacleSegmentBlocked, OBSTACLE_ROUTE } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 막힌 길이면 스틱 방향만 둘레로 (석상 없는 무대는 아무 일 없음)
@@ -61,7 +61,8 @@ import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, j
 import { iaiSeated, drawStart, drawLog } from './iai_obi.js'; // 11/16 뽑기 — 칼집에 든 채 공격 · 막기는 SECRET.gnsDraw 초 뽑은 뒤 (사람과 같은 셈)
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
-import { DIG_PROTO, CN_STEP, AI_ARC, PHYSICS, AI_TELL } from './config.js';
+import { DIG_PROTO, CN_STEP, AI_ARC, PHYSICS, AI_TELL, AI_KIT } from './config.js';
+import { aiKitOf } from './skill_tree_data.js'; // AI 숙련도 = 칸 (11/16 — config AI_KIT · 무기가 바뀌면 kitRefresh)
 import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 눈 (11/15 시제품 — AI_TELL.ai · 기본 끔) // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
 import { cnSee, cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 — CN_STEP.mode · 기본 끔)
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
@@ -183,18 +184,26 @@ export class AI {
     //  실측 비율만큼 줄이거나 늘린다 — 안 그러면 짧은 칼을 쥔 쪽이 롱소드 간격에서 공격을 걸었다가 정작 닿지도 못하고 상대 롱소드에만 맞는다
     //  (무기 밸런스 시뮬로 확인한 근본 원인). 인물 꾸러미(청강검·나뭇가지·복제품)는 measure 가 이미 그 무기 실측이라 같은 무기면 1배 그대로
     //  숙련도 (10/13): 손에 든 유파의 고유 동작은 단계 ≤ 숙련도인 것만 꾸러미에 (sword_art.js applySchoolArt) · 비기는 숙련도 5 에서만 (아래 this.secret)
-    const art = resolveSwordArt(me.weapon, this.persona, { proficiency: this.persona.proficiency ?? AI_PROFICIENCY.ofLevel[levelName] ?? AI_PROFICIENCY.ofLevel.normal });
+    this.profSrc = this.persona.proficiency ?? AI_PROFICIENCY.ofLevel[levelName] ?? AI_PROFICIENCY.ofLevel.normal; // 숙련도 원본 (숫자 또는 { 유파: 숙련도 } — 무기가 바뀌면 칸 몫을 다시 셈 · kitRefresh)
+    //  AI 숙련도 = 칸 (11/16 사장님 결정 — config AI_KIT · aiKit 를 넘기면 art.kit = 이 유파 숙련도의 사다리 칸 몫 · 유파 칸이 없는 무기는 null)
+    const art = resolveSwordArt(me.weapon, this.persona, { proficiency: this.profSrc, ...(AI_KIT.on ? { aiKit: true } : {}) });
     this.art = art;
     this.proficiency = art.proficiency; // 유파 몫: 손에 든 무기 유파의 숙련도 (고유 동작 · 비기 · schoolK · 패시브 · 흘림 문턱 · 마른 길 세기)
     // 사람 몫 (사장님 10/29 15:5x '반응은 본 유파 숙련도를 따르도록 해'): 인물의 본 유파 숙련도(characters.js aiAtProficiency → persona.mainProficiency) — 반응 시간(setLevel).
     //  인물이 아닌 AI(숫자 숙련도 · 난이도 이름만)는 지금처럼 위 값 — 그때는 둘이 같다
     this.mainProficiency = this.persona.mainProficiency ?? this.proficiency;
-    me.wristK = schoolPassiveOn('iberian') && art.tradition === 'iberian' && this.proficiency >= SCHOOL_PASSIVE.at ? SCHOOL_PASSIVE.iberian.wrist : 1; // 유파 패시브 손목 힘 (10/21 — 4급 책 = 숙련도 at 이상)
-    me.schoolPassive?.set(this.proficiency >= SCHOOL_PASSIVE.at ? art.tradition : null, { ai: true }); // 나머지 넷 (10/21 — 이탈리아 · 일본 · 독일 · 동방, school_passive.js · AI 몫 aiK)
-    this.school = art.school;
+    // AI 칸 몫 (11/16 — config AI_KIT): 몸에 skillKit · 보법 I · 막기 I 을 사람과 같은 꼴로 (applyKit) · 칸 몫이 없으면(옛 판 · 유파 칸 없는 무기) kit null — 아래 모든 자리가 옛 숙련도 규칙
+    this.kitOn = !!AI_KIT.on;
+    this.applyKit(art.kit ?? null, art.tradition);
+    //  유파 패시브 (손목 힘 · 나머지 넷): 칸 몫이 있으면 패시브 칸(독일 G9 · 이탈리아 I10 · 이베리아 B10 · 일본 J10 · 동방 C10) · 없으면 옛 숙련도 SCHOOL_PASSIVE.at 이상
+    this.kitPassive(art.tradition);
+    // 유파 막기 자리 (11/16 칸 몫): 막기 I 칸이 없는 칸 몫이면 무유파 막기 자리(사람 parry_button.js padOf — schoolParry false 와 같음) · 그 밖은 꾸러미 그대로
+    this.school = this.kit && !this.kit.parry ? { ...art.school, parry: TRADITIONS.none.parry } : art.school;
     // 유파 막기 자리 몸꼴 (10/11 — schools.js TRADITIONS[유파].parryCover, 중국 · 독일 왕관 10/12): 막는 동안(mode 'defend', 피하기 아님)만 그 줄의 막기 자세로 손·칼끝·몸을 덮는다.
     //  14 자리 섞기에 넣으면 그 자리를 지나는 베기 길이 휘고 원전 꼴(가로 든 칼)이 섞여 사라져서 덧씌우기로 둔다(frames.js COVERS 와 같은 까닭). 칸 없는 유파는 아무것도 안 붙인다(바이트 그대로)
-    const pc = TRADITIONS[art.tradition]?.parryCover;
+    //  11/16 칸 몫: 막기 자리 몸꼴은 막기 칸(parryCover — 독일 G4 왕관 · 이탈리아 I5 · 이베리아 B8 · 일본 J2 · 동방 C7)이 있을 때만(사람 parry_button.js 와 같음) · 쓰러져 머리 가리기(down — AI 몫 · 칸 밖)는 그대로
+    const pc0 = TRADITIONS[art.tradition]?.parryCover;
+    const pc = !pc0 || !this.kit || (this.kit.parry && this.kit.parryCover) ? pc0 : pc0.down ? { down: pc0.down } : null;
     if (pc) installCover(me, this, pc);
     const baseM = this.school.measure;
     this.M = art.measure;
@@ -327,7 +336,7 @@ export class AI {
     //  독일 셋은 ai:false → 롱소드 AI 는 빈 목록 → 아래 모든 자리에서 난수도 코드 길도 전과 같다. 도구(motion_lab)는 이 목록을 갈아 끼워 잰다
     //  숙련도 (10/13): 단계 표에 이름이 있는 패시브(동방 자→격 ciji — yaoji 이음, 4 단계)는 단계 ≤ 숙련도일 때만. 그 밖의 패시브는 그대로
     const ST = aiUniqueStages(art.tradition);
-    const open = (map, name) => !map.has(name) || map.get(name) <= this.proficiency;
+    const open = aiStageOpen(ST, this.kit, this.proficiency); // 11/16 칸 몫이 있으면 그 칸(kit.unique) · 없으면 옛 단계 ≤ 숙련도
     this.passives = SKILL.schoolArt && !(this.planOn && AI_PLAN.zeroPlain && this.proficiency === 0) ? (TRADITIONS[art.tradition]?.passives ?? []).filter((x) => x.ai !== false && open(ST.passive, x.name)) : []; // 3 단계: 숙련도 0(무) = 유파 패시브 없음
     this.passiveAtk = null; // 지금 공격을 시작한 패시브 이름 (startAttack 이 지운다)
     this.pendingPassive = null; // 물러남 끝에 낼 패시브 (斂翅 꼴 at:'end')
@@ -337,14 +346,14 @@ export class AI {
     const SBo = me.weapon?.secretBlade?.open ? me.weapon.secretBlade.tech : null; // 무기 비검이 여는 기술 (10/21 — 숙련도와 상관없이)
     const UQ = SKILL.schoolArt ? (TRADITIONS[art.tradition]?.unique ?? []).filter((u) => u.ai !== false && !u.counter && !ST.retired.has(u.name) && (open(ST.unique, u.name) || u.name === SBo)) : []; // 숙련도로 뺀 것 · 통폐합으로 뺀 것(10/21)은 꾸러미에 없다
     this.uniqueByName = new Map(UQ.map((u) => [u.feint ? u.feint.name : u.name, u]));
-    this.cavDeep = UQ.some((u) => u.name === 'cavazione'); // 칼끝 돌려 빼기가 꾸러미에 듦 (숙련도 ≥ 단계) — 심화 · 헛누름 AI 몫 (10/31)
+    this.cavDeep = UQ.some((u) => u.name === 'cavazione') && (!this.kit || this.kit.perk.has('cavazione')); // 칼끝 돌려 빼기가 꾸러미에 듦 (숙련도 ≥ 단계) — 심화 · 헛누름 AI 몫 (10/31) · 11/16 칸 몫이면 헛누름 칸(I8)도 익혀야 (사람과 같음)
     this.standoffArmed = true; // standoff: 대치 한 번에 한 번만 굴린다
     // 유파 비기 (10/9 유파 설계 v3 — schools.js *_SECRET, docs/strike/school_secret_2026-10-09.md): 이 유파의 비기 하나 (SKILL.schoolArt·schoolSecret 일 때).
     //  굴림이 없다 — 조건이 차면 확정. 무유파는 null → 아래 비기 자리들은 난수도 코드 길도 전과 같다
     //  숙련도 (사장님 결정 10/13 23:1x 'AI는 숙련도 5만 비기 씀'): 손에 든 유파의 숙련도가 AI_PROFICIENCY.secretAt(5) 아래면 null — 무유파처럼 비기 자리들이 전 코드 그대로 지나간다
     //  10/24 사장님 12:0x 'ai도 비기 쓰게 해': 유파에 AI 몫(aiSecret — 독일 모르트슐라크, schools.js)이 있으면 그것 · 없으면 secret 그대로
     const TR = TRADITIONS[art.tradition];
-    this.secret = SKILL.schoolArt && SKILL.schoolSecret && this.proficiency >= AI_PROFICIENCY.secretAt && SECRET.aiOpenSchools.includes(art.tradition) ? (TR?.aiSecret ?? TR?.secret) ?? null : null; // 10/21 닫힌 유파 비기 없음 · 10/22 AI 는 따로 (config SECRET.aiOpenSchools — 사람 먼저)
+    this.secret = SKILL.schoolArt && SKILL.schoolSecret && (this.kit ? !!this.kit.secret : this.proficiency >= AI_PROFICIENCY.secretAt) && SECRET.aiOpenSchools.includes(art.tradition) ? (TR?.aiSecret ?? TR?.secret) ?? null : null; // 10/21 닫힌 유파 비기 없음 · 10/22 AI 는 따로 (config SECRET.aiOpenSchools — 사람 먼저) · 11/16 칸 몫이면 비기 칸(숙련도 5)
     this.secretRun = null; // 지금 내는 비기 { S, stage, t, landed, … } (null = 없음)
     this.specCool = {}; // 특수 공격 AI 몫마다 식힘을 세기 시작한 때 (sense.t · 도는 동안 Infinity — 10/29 19:4x 사람과 같게)
     this.specRun = null; // 나갔는데 아직 안 끝난 특수 공격 { name, seq, t0, motion } (specTick)
@@ -756,7 +765,52 @@ export class AI {
   /** 매 스텝: 싸움 판단(updateCombat) 뒤에 무대 장애물 돌아가기 · 화산섬 용암 피하기 — 스틱 입력의 방향만 바꾼다 (샛별 저장소 325a5c38 · 0116047c 의 줄을 옮김).
    *  마른 길(drySense > 0 — 라트나 · 잠든 습지만)이면 돌아갈 쪽을 덜 젖은 쪽으로 미리 고르고(dryRouteSide), 돌아가기까지 끝난 스틱을 덜 젖은 쪽으로 튼다(dryFeet).
    *  둘 다 자기 무대에서만 일한다(습지 · 화산섬은 함께 나오지 않음) — 용암 피하기를 마지막에 둬 안전 쪽이 이긴다 */
+  /**
+   * AI 칸 몫을 몸에 둔다 (11/16 사장님 결정 'AI 숙련도 = 이 칸들을 익혔다' — config AI_KIT · skill_tree_data.js aiKitOf): 사람 main.js newRound 와 같은 몫 —
+   *  skillKit(skill_kit.js kitOff · perkOff 를 묻는 자리 모두) · 보법 I 없음 = schoolFootwork false · 막기 I 없음 = schoolParry false. kit null(옛 판 · 유파 칸 없는 무기) = 몸을 그대로(옛 판은 손대지 않음).
+   *  kitLink = 이어 돌리기 AI 몫(IB_LINK.ai)을 낼 칸(사람 linkTry 와 같음 — B7 이어 돌리기 · B5 흐르는 긋기)
+   */
+  applyKit(kit, tradition) {
+    const me = this.me;
+    this.kit = kit;
+    this.kitSchool = tradition;
+    this.kitWeapon = me.weapon;
+    this.kitLink = !kit || (kit.unique.has('cingir') && !!kit.ibFlow);
+    if (!this.kitOn) return;
+    if (!kit) {
+      if (me.skillKit?.ai) delete me.skillKit, delete me.schoolFootwork, delete me.schoolParry; // 앞 칸 몫(다른 무기)을 걷음 — 사람 몸 칸 몫은 건드리지 않음
+      return;
+    }
+    me.skillKit = kit;
+    if (kit.footwork) delete me.schoolFootwork;
+    else me.schoolFootwork = false;
+    if (kit.parry) delete me.schoolParry;
+    else me.schoolParry = false;
+  }
+
+  /** 유파 패시브 (손목 힘 wristK · 나머지 넷 school_passive.js): 칸 몫이 있으면 패시브 칸 · 없으면 옛 숙련도 SCHOOL_PASSIVE.at 이상 (10/21) */
+  kitPassive(tradition) {
+    const me = this.me;
+    const on = this.kit ? !!this.kit.passive : this.proficiency >= SCHOOL_PASSIVE.at;
+    me.wristK = schoolPassiveOn('iberian') && tradition === 'iberian' && on ? SCHOOL_PASSIVE.iberian.wrist : 1; // 유파 패시브 손목 힘 (10/21 — 4급 책 = 숙련도 at 이상 · 11/16 칸 몫 B10)
+    me.schoolPassive?.set(on ? tradition : null, { ai: true }); // 나머지 넷 (10/21 — 이탈리아 · 일본 · 독일 · 동방, school_passive.js · AI 몫 aiK)
+  }
+
+  /**
+   * 손에 든 무기가 바뀌었으면 칸 몫을 다시 (11/16 — 칸 몫 판만 · 그 무기 유파의 숙련도 · 몸 몫(skillKit · 보법 · 막기 · 패시브)만):
+   *  지금 판에는 싸움 가운데 무기를 바꾸는 길이 없다(줍기는 제 칼을 다시 쥠 — pickup.js) — 꾸러미 · 고유 동작 · 비기는 AI 를 새로 만들 때 정해진다
+   */
+  kitRefresh() {
+    const me = this.me;
+    const tr = traditionOf(me.weapon);
+    const P = this.profSrc;
+    const prof = typeof P === 'number' ? P : P?.[tr] ?? 0;
+    this.applyKit(aiKitOf(tr, prof), tr);
+    this.kitPassive(tr);
+  }
+
   update(dt) {
+    if (this.kitOn && this.me.weapon !== this.kitWeapon) this.kitRefresh(); // 11/16 칸 몫 — 손에 든 무기가 바뀌면 그 유파 칸으로 (지금은 바뀌는 길 없음)
     this.specTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:4x · 19:5x 사람과 같게)
     // 이탈리아 박자 찌르기 셈 (11/14 사장님 'ai에도 적용' — italian_outbox.js aiBeatTick · IT_OUTBOX.ai · beat): 비껴서며 찌르기를 꾸러미에 가진 AI 만 · 상대 휘두름이 선 때를 셈(굴림 없음)
     //  11/15 사장님 'ai도 되돌려' — IT_OUTBOX.beatAi 1 일 때만 (기본 0 = 셈도 안 돎 — 11/14 전 판)
@@ -1779,7 +1833,7 @@ export class AI {
     if (UA.rdAiWind && this.tech?.name === 'redondo' && !this.feint && !this.secretRun && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin(); // 부러진 칼은 옛 길 (사람도 부러지면 감기를 그만둠 — windStop 'armed')
     // 이어 돌리기 (11/14 IB_LINK.ai — 기본 켬 · 사장님 11/14 확인 'ai에게도 똑같이' · 사람 unique_assist.js linkTry 와 같은 뜻 · 원 동안 맞바꿈도 사람과 같음 — fighter.js ibTradeTry): 이베리아 AI 가 앞 공격이 끝나고 이어짐 창(afterWindow) 안에 큰 칼(시작 자리가 가슴 높이 이상인 베기)을
     //  새로 시작하는데 손이 그 시작 자리에서 떨어져 있으면 — 준비 자세로 손을 옮기는 대신 칼을 머리 위로 돌려 시작 자리로(iberian_link.js) · 다 돌면 곧장 친다(linkTick)
-    else if (IB_LINK.ai && this.art.tradition === 'iberian' && this.phase === 'windup' && !opt.secret && !opt.passive && !this.feint && !this.secretRun && this.tech?.kind === 'cut' && this.tech.from[1] > 0 && cd > UA.padRadius && this.sense.t - this.lastAtkT <= UA.afterWindow && this.me.state === 'stand' && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.ibLink && !iaiBusy(this.me) && linkStart(this.me, this.tech.from, { tech: this.tech.name, bridge: this.linkBridge(L) })) {
+    else if (IB_LINK.ai && this.kitLink && this.art.tradition === 'iberian' && this.phase === 'windup' && !opt.secret && !opt.passive && !this.feint && !this.secretRun && this.tech?.kind === 'cut' && this.tech.from[1] > 0 && cd > UA.padRadius && this.sense.t - this.lastAtkT <= UA.afterWindow && this.me.state === 'stand' && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.ibLink && !iaiBusy(this.me) && linkStart(this.me, this.tech.from, { tech: this.tech.name, bridge: this.linkBridge(L) })) {
       this.phase = 'ibLink';
       (this.stats.ibLink ??= { fired: 0, done: 0, cancel: {} }).fired++;
     }

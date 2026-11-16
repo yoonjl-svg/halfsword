@@ -714,7 +714,7 @@ export class Gait {
    */
   deDigAi() {
     const f = this.f;
-    if (!GAIT.deDig || !GAIT.stepBurst || footworkTradition(f) !== 'german' || f.feetHeld || f.finish?.amt > 0.5 || this.burstBrake || this.burst || this.fastK > 1) return false;
+    if (!GAIT.deDig || !GAIT.stepBurst || footworkTradition(f) !== 'german' || kitOff(f, 'chase') || f.feetHeld || f.finish?.amt > 0.5 || this.burstBrake || this.burst || this.fastK > 1) return false; // 11/16 칸 몫: 파고들기 칸 G2(열쇠 chase — 사람과 같음)
     this.burst = { fore: 1, side: 0, lat: 0, foreOnly: false, dig: GAIT.digSteps, ai: 2 };
     return true;
   }

@@ -17,6 +17,7 @@ import { iaiTipSpeed } from '../../src/secret_instant.js'; // 11/11 칼끝 돌�
 import { withArmOld } from './arm_real_pin.mjs';
 import { THRUST_STYLE } from '../../src/weapons.js'; // 11/14 틈 파고들기 그때 값으로 묶음 (아래 ② 넘어짐 전 판)
 import { withPOff } from './p_pin.mjs'; // 11/16 묶음 P · 3안 전 판으로 묶음 (아래 ② 판 · ② 넘어짐 전 판)
+import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, THRUST } = CONFIG;
@@ -303,7 +304,8 @@ test('② 판 (씨앗 901 · 롱소드 AI · 12 s · 칼끼리 닿음을 느끼�
   assert.ok(r.it.fires.every((x) => !x || x.E >= 0), '낸 칼 결과');
 });
 
-test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼기 수 동안 칼 어깨 면 밧줄을 떼고 끝나면 다시 검 · 0 = 전 판(씨앗 902 츠바이핸더 7.05 s 수 뒤 발 밖 넘어짐)', () => {
+test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼기 수 동안 칼 어깨 면 밧줄을 떼고 끝나면 다시 검 · 0 = 전 판(씨앗 902 츠바이핸더 7.05 s 수 뒤 발 밖 넘어짐)', (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 씨앗 902 AI 판이 칸 몫으로 갈림 · 기준 그대로
   const watch = () => {
     const seen = { during: 0, ropesDuring: 0, after: 0, ropesAfter: 0, was: false };
     const probe = (G, P) => {

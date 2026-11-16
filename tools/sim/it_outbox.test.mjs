@@ -17,6 +17,7 @@ import { THRUST_STYLE } from '../../src/weapons.js';
 import { pinPOff } from './p_pin.mjs'; // 11/16 묶음 P · 3안(사장님 결정)이 바꾼 옛 장면은 그때 판(끔)으로 묶음 · 기준 그대로
 import { SCHOOL_PLAN, tiltOf, luckOf, itInqP } from '../../src/ai_plan.js';
 import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
+import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 // 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
 //  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
@@ -500,7 +501,8 @@ test('11/15 둘째 AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 (U
 });
 
 const hash = (r) => createHash('sha256').update(JSON.stringify(r)).digest('hex').slice(0, 12);
-test('스위치 끔이면 전 판 (본판 c1cad826 과 판 바이트 같음 — 사람 이탈리아 손가락 봇 판 둘 · 거울은 AI 이탈리아도) · 다른 유파 판은 켬 그대로 같음', (t) => withSecretFreeOff(() => { pinLodge0(t); pinArc0(t); pinPOff(t); // 11/16 묶음 P · 3안도 그때 판(끔)으로 · 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
+// 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 본판 해시 판(거울 AI 이탈리아 · 롱소드 AI)이 칸 몫으로 갈림 · 기준 그대로
+test('스위치 끔이면 전 판 (본판 c1cad826 과 판 바이트 같음 — 사람 이탈리아 손가락 봇 판 둘 · 거울은 AI 이탈리아도) · 다른 유파 판은 켬 그대로 같음', (t) => withSecretFreeOff(() => { pinLodge0(t); pinArc0(t); pinPOff(t); pinAiKitOff(t); // 11/16 묶음 P · 3안도 그때 판(끔)으로 · 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
   // 11/14 틈 파고들기(사장님 '기본찌르기는 0.6 위에서 내려찌르기는 0.9' — 무기 값 · IT_OUTBOX 밖)는 그때 값으로 묶어 본판과 견줌 (레이피어 0.3 · 에스톡 0.5 · 내려 찌르기 0.6)
   const UA = CONFIG.UNIQUE_ASSIST, keep = [THRUST_STYLE.rapier.gap, THRUST_STYLE.estoc.gap, UA.imbroccataGap];
   THRUST_STYLE.rapier.gap = 0.3; THRUST_STYLE.estoc.gap = 0.5; UA.imbroccataGap = 0.6;

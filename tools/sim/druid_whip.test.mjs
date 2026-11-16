@@ -9,6 +9,7 @@ import { traditionOf } from '../../src/schools.js';
 import { CHARACTERS } from '../../src/characters.js';
 import { WHIP, WHIP_SRC, WHIP_NOW, setWhipPreset, DRUID } from '../../src/druid_whip.js';
 import { newRound, DT, AI, CONFIG } from './harness_m.mjs';
+import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 
 class Quiet { update() {} }
 const W = () => getWeapon('druid_whip');
@@ -106,7 +107,8 @@ test('덩굴 길이 · 무게 · 테이퍼 (10/23 넷째 · 다섯째 일 · WHI
   assert.equal(weaponSpecText(W()), '한손 채찍, 173 cm, 0.77 kg');
 });
 
-test('마디 물리: 8 마디 · AI 끼리 6 s 벌어짐 3 cm 안 · 유한 · 끝 점 = 덩굴 마디 · 세게 쳐도 · 직접 불러도 안 부러짐', () => {
+test('마디 물리: 8 마디 · AI 끼리 6 s 벌어짐 3 cm 안 · 유한 · 끝 점 = 덩굴 마디 · 세게 쳐도 · 직접 불러도 안 부러짐', (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 상대 롱소드 AI(숙련 2) 칸 몫으로 씨앗 2 판이 갈림(6 s 벌어짐 5.8 cm — 전 씨앗 1 ~ 18 가장 큼 6.48 cm 안) · 기준 그대로
   CONFIG.ARENA.startHold = 0;
   // 시드 11 → 13 (10/23 채찍 간격표 고침 1.25/1.69 → 1.15/1.32 — AI 가 든 채찍의 간격이 바뀌어 같은 시드도 다른 판이 된다. 덩굴 값은 그대로):
   //  시드 1 ~ 18 의 6 s 벌어짐은 전 가운데 1.98 · 가장 큼 6.48 · 3 cm 넘음 4 판 → 후 1.20 · 5.93 · 4 판으로 같거나 작다.

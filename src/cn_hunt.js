@@ -6,13 +6,15 @@
 //  격살 판당 1 번은 공용 표 UNIQUE_ASSIST.secretUses.chinese (11/14 — 사람 · AI 같음 · secret.js secretUsesOf).
 //  아무것도 쌓이지 않은 몸은 늘 1 · 겹 칸 자체가 없다(난수 · 몸 · 장부 그대로 — 다른 유파 판은 바이트 같음).
 import { UNIQUE_ASSIST as UA } from './config.js';
+import { kitOff } from './skill_kit.js';
 
 const H = () => UA.cnHunt;
 
-/** 이 몸이 사냥 겹을 쌓는가 (동방 무기 · 사람 = 스킬트리 C12 몫 · 스킬트리가 없는 몸(AI · 시뮬) = ai 스위치) */
+/** 이 몸이 사냥 겹을 쌓는가 (동방 무기 · 사람 = 스킬트리 C12 몫 · 스킬트리가 없는 몸(시뮬) = ai 스위치 · AI = ai 스위치 그리고 칸 몫 C12 — 11/16 AI 숙련도 = 칸 config AI_KIT · 칸 몫이 없으면 스위치만) */
 export function huntOn(f) {
   const C = H();
   if (!C?.on || f?.swordArt?.tradition !== 'chinese') return false;
+  if (f.aiControlled) return !!C.ai && !kitOff(f, 'cnHunt');
   return f.skillKit ? !!f.skillKit.cnHunt : !!C.ai;
 }
 

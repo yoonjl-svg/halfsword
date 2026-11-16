@@ -104,7 +104,7 @@ export function schoolRead(ai, d) {
  */
 export function spinK(ai, d) {
   const me = ai.me;
-  if (!IB_LINK.ai || !me.sword || !me.armed || me.weaponBroken || me.state !== 'stand') return 0;
+  if (!IB_LINK.ai || ai.kitLink === false || !me.sword || !me.armed || me.weaponBroken || me.state !== 'stand') return 0; // 11/16 칸 몫: 이어 돌리기 칸(B7 · B5)이 없으면 원 후보 없음 (ai.js applyKit kitLink)
   const C = ai.planC;
   const k = ai.planK;
   const Lk = ai.planLuck;

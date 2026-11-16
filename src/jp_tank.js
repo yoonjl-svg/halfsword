@@ -12,6 +12,6 @@ import { kitOff } from './skill_kit.js';
  *  AI (11/14 2 단계 일본 — 사장님 '바위 몸 AI 켜는 것도'): JP_TANK.ai 이고 스택 판(school_passive stackOn — 숙련도 4 부터)인 AI 일본 몸도 참
  */
 export function lowShoveFree(f) {
-  if (f?.aiControlled) return !!JP_TANK.lowShove && !!JP_TANK.ai && f.swordArt?.tradition === 'japanese' && !!f.schoolPassive?.stackOn; // 11/14 2 단계 일본 — AI 바위 몸 (스택 판인 AI 일본 몸 — 숙련도 4 부터 · JP_TANK.ai)
+  if (f?.aiControlled) return !!JP_TANK.lowShove && !!JP_TANK.ai && f.swordArt?.tradition === 'japanese' && !!f.schoolPassive?.stackOn && !kitOff(f, 'jpRock'); // 11/16 칸 몫이면 바위 몸 칸 J12 도 (사람과 같음 — config AI_KIT · 옛 판은 칸 몫 없음 = 켜짐) // 11/14 2 단계 일본 — AI 바위 몸 (스택 판인 AI 일본 몸 — 숙련도 4 부터 · JP_TANK.ai)
   return !!JP_TANK.lowShove && !!f?.humanInput && f.swordArt?.tradition === 'japanese' && !kitOff(f, 'jpRock');
 }

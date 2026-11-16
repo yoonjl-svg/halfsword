@@ -13,6 +13,7 @@ import * as D from '../../src/skill_tree_data.js';
 import { windRun } from './windmill.mjs';
 import { runOne } from './singir_fall.mjs';
 import { IB_LINK } from '../../src/config.js';
+import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 /** 11/14 이어 돌리기(B7 — IB_LINK.on) 전 판으로 잠깐 (풍차 베기 원 긋기 장면 시험 — docs/strike/ib_link_2026-11-14.md §7) */
 const withLinkOff = (fn) => { const k = IB_LINK.on; IB_LINK.on = 0; try { return fn(); } finally { IB_LINK.on = k; } };
 
@@ -108,7 +109,8 @@ test('넘어짐 되살아나지 않음 (11/05 고친 것 — 손가락 봇 대 �
   assert.ok(n > 0, '봇이 풍차 베기를 냄');
 });
 
-test('AI 도 같은 대본 — 숙련 3 이베리아 AI(왼 가로베기 자리 특수 공격)가 낸 풍차 베기는 두 마디 (발 틀기 · 돌기 · 내딛기)', () => {
+test('AI 도 같은 대본 — 숙련 3 이베리아 AI(왼 가로베기 자리 특수 공격)가 낸 풍차 베기는 두 마디 (발 틀기 · 돌기 · 내딛기)', (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 숙련 3 이베리아 싱지르 → 칸 판은 이어 돌리기 B7(4 단계) · 기준 그대로
   const G = newRound({ seed: 2, weapon: 'longsword', weapon2: 'zweihander', persona: { proficiency: 3 }, gap: 2.4 });
   const E = G.enemy;
   try {

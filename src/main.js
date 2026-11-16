@@ -360,6 +360,8 @@ if (IB_TABLE === 'v2') useIberianTableV2();
   if (params.has('itBeatAi')) CONFIG.IT_OUTBOX.beatAi = +params.get('itBeatAi') ? 1 : 0; // 11/15 사장님 'ai도 되돌려' — 1 = AI 박자 찌르기(11/14 판)
   if (params.has('itAi')) CONFIG.IT_OUTBOX.ai = +params.get('itAi') ? 1 : 0; // 11/14 사장님 'ai에도 적용' — 0 = 사람만
 }
+if (params.has('aiKit')) CONFIG.AI_KIT.on = +params.get('aiKit') ? 1 : 0; // AI 숙련도 = 스킬트리 칸 (11/16 사장님 결정 — config AI_KIT) · `?aiKit=0` = 옛 판(AI 는 칸 몫 없이 모두 켬 · 옛 단계표 · 패시브 4 · 비기 5)
+if (params.get('playerProf') === 'old') CONFIG.SAENGSA.playerProf.mode = 'old'; // 내 숙련도 옛 규칙 (10/29 — 2 · 5 칸 · 비기 + 특수공격 · 모두) · 기본 = 11/16 문턱 5 · 7 · 9 · 11 칸 [사장님 11/16 결정 '사람 셈도 문턱 기준으로 바꿔']
 { // 유파 AI 기본 전투 흐름 (11/14 — config AI_PLAN · src/ai_plan.js · 설계안 docs/design/ai_school_baseline_2026-11-14.md §9): `?aiPlan=0` = 옛 판 (플랜 · 국면 · 이탈리아 거리 오차 모두 끔) ·
   //  `?aiPlanTick=0` = 국면 판정을 매 스텝 (실제 초 — 기본 0.2)
   if (params.has('aiPlan')) CONFIG.AI_PLAN.on = +params.get('aiPlan') ? 1 : 0;

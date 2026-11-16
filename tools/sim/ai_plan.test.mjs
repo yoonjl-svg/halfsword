@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { bandOf, tiltOf, luckOf, distErrWidth, planFor, judgePhase, seenStep, axesOf, PHASES } from '../../src/ai_plan.js';
 import { foeStep, mirrorOk, mirrorStep } from '../../src/italian_risoluto.js';
+import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 // 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
 //  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
 const pinLodge0 = (t) => { const lh = CONFIG.STRIKE.lodgeHold; CONFIG.STRIKE.lodgeHold = 0; t.after(() => { CONFIG.STRIKE.lodgeHold = lh; }); };
@@ -347,7 +348,8 @@ function jpAi(prof, weapon = 'uchigatana') {
   return { G, ai, free: () => G.world.free() };
 }
 
-test('2 단계 일본 — 플랜 · 스택 · 바위 몸 AI (사장님 11/14 확인) · 숙련도 4 부터 스택 · 옛 판 스위치', async () => {
+test('2 단계 일본 — 플랜 · 스택 · 바위 몸 AI (사장님 11/14 확인) · 숙련도 4 부터 스택 · 옛 판 스위치', async (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 일본 바위 몸 AI 몫이 4 → 5 단계(J12) · 기준 그대로
   const { lowShoveFree } = await import('../../src/jp_tank.js');
   assert.equal(JP_TANK.ai, 1);
   const got = [0, 2, 3, 4, 5].map((p) => {
@@ -495,7 +497,8 @@ function deAi(prof, foeWeapon = 'longsword', persona = {}) {
   return { G, ai, free: () => G.world.free() };
 }
 
-test('3 단계 독일 — 플랜 · 인물 칸 없는 밀치기 · 칼 씨름 · 파고들기 · 뒤 박차기 장치 · 옛 판 스위치', async () => {
+test('3 단계 독일 — 플랜 · 인물 칸 없는 밀치기 · 칼 씨름 · 파고들기 · 뒤 박차기 장치 · 옛 판 스위치', async (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 칼 씨름 AI 몫이 독일 플랜 몸 → 5 단계(G12) · 기준 그대로
   const { deDirtyBody } = await import('../../src/de_dirty.js');
   const got = [0, 2, 4, 5].map((p) => {
     const { ai, free } = deAi(p);
