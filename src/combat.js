@@ -25,6 +25,7 @@ import { TRADITIONS } from './schools.js';
 import * as THREE from 'three';
 import { beginFlowRecovery } from './nagashi_recovery.js';
 import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty, flowShieldKeep } from './nagashi_redesign.js';
+import { BLOCK2 } from './config.js';
 import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL , IB_PARRY_ARM, IB_PARRY_BEAT, WHIP_KNEEL, CN_STEP } from './config.js';
 import { cnStepKeep } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
 import { WEAPON_ABILITY } from './config.js'; // 달타냥 '총사의 결투' 배율 (10/25 — duelOneHandMult)
@@ -69,6 +70,7 @@ const _q = new THREE.Quaternion();
 const _n1 = new THREE.Vector3(); // 흘려 받기 (Combat.nagashi)
 const _n2 = new THREE.Vector3();
 const _n3 = new THREE.Vector3();
+const _n4 = new THREE.Vector3();
 const _k1 = new THREE.Vector3(); // 손목 치기 칼 떨구기 (Combat.koteSword)
 const _k2 = new THREE.Vector3();
 
@@ -710,6 +712,7 @@ export class Combat {
     const flowD = (fresh || FLOW_REDESIGN.on) && NAGASHI.on && SA && SB && J > 0 ? this.nagashi(A, B, SA, SB, point, nrm, vn) : null;
     if (!flowD && IB_PARRY_ARM.on && fresh && SA && SB && J > 0) this.ibParryArm(A, B, SA, SB, point, nrm); // 이베리아 쳐내기 팔 늦춤 (시험 · 기본 끔)
     if (!flowD && IB_PARRY_BEAT.on && fresh && SA && SB && J > 0) this.ibParryBeat(A, B, SA, SB, point, nrm, vn); // 이베리아 쳐내기 튕김 (시험 · 기본 끔)
+    if ((BLOCK2.on || BLOCK2.reward > 0 || BLOCK2.watch) && fresh && !flowD && SA && SB && J > 0) this.block2(A, B, SA, SB, point, nrm, J); // 막기 2.0 (config BLOCK2 — 기본 끔)
     // 새로 부딪혀 튕긴 순간: 칼이 손 안에서 길이 축으로 팽이처럼 도는 몫은 손아귀가 잡는다 (gripTwist)
     if (fresh) for (const f of [A.fighter, B.fighter]) gripTwist(f);
     const va = A.body.velocityAtPoint(point);
@@ -751,6 +754,78 @@ export class Combat {
     B.fighter.parryGuard?.opposition?.onClash(A.fighter, { vn });
     if (fresh && SA && SB && J > 0) this.koteSword(A, B, SA, SB, point, nrm, vn); // 손목 치기가 상대 칼 손 쪽 절반을 세게 침 (J8 판정 완화 — 사람만)
     this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm, nagashi: !!flowD, a: A.fighter, b: B.fighter }); // a · b = 앞 · 뒤 싸움꾼 (2:2 — main.js 가 보는 몸이 낀 부딪힘인지 본다)
+  }
+
+  /**
+   * 막기 2.0 (config BLOCK2 · 사장님 11/17): 새로 칼끼리 닿은 순간 한 번. 사람 · AI 같은 길 (공격 중인가 = stamina.attacking, 막는 중인가 = stamina.guarding).
+   *  ① 둘 다 공격 중 (BLOCK2.on): 점수 = strength × 칼 유효 질량 × 닿는 쪽 빠르기 × 각(내 칼 속도가 닿는 면 법선에 곧은 정도) ÷ 손에서 닿은 자리까지 거리(손잡이 쪽이 세다).
+   *   점수가 큰 쪽이 줄을 지킨다(이어 감). 진 쪽: 칼이 이긴 쪽 가는 방향으로 밀리고 · 그 공격 상처 무효(voidT) · 팔 늦춤(voidT).
+   *  ② 한쪽만 공격 중 · 다른 쪽이 막는 중이고 손이 막는 자리 0.15 m 안 (BLOCK2.reward 초): 공격 쪽 팔 늦춤.
+   */
+  block2(A, B, SA, SB, point, nrm, J) {
+    const fa = A.fighter;
+    const fb = B.fighter;
+    // 공격 = 막는 중이 아니고, 공격 상태(stamina.attacking — 사람 · AI 같은 칸)이거나 칼이 닿는 자리로 0.5 m/s 넘게 들어가는 중 (contactAttack 과 같은 문)
+    const swing = (f, S, sgn) => !f.stamina?.guarding && (!!f.stamina?.attacking || velAt(S, point, _n1).dot(nrm) * sgn > 0.5);
+    const atkA = swing(fa, SA, 1);
+    const atkB = swing(fb, SB, -1);
+    const st = (this.block2Stats ??= { clash: 0, reward: 0, aWin: 0, bWin: 0, both: 0, one: 0, none: 0, state2: 0 });
+    if (atkA && atkB) st.both++; else if (atkA || atkB) st.one++; else st.none++;
+    if (fa.stamina?.attacking && fb.stamina?.attacking) st.state2++;
+    if (!BLOCK2.on && !(BLOCK2.reward > 0)) return;
+    if (atkA && atkB) {
+      if (!BLOCK2.on) return;
+      const side = (f, S, sgn) => {
+        const v = velAt(S, point, new THREE.Vector3());
+        const vin = Math.max(0, v.dot(nrm) * sgn); // 상대 쪽으로 다가오는 빠르기
+        const sp = v.length();
+        const m = freeMass(f.swordProps, S, point, nrm.clone().multiplyScalar(sgn));
+        const hand = f.sword ? tv(f.sword.translation()).addScaledVector(_n3.set(0, 1, 0).applyQuaternion(rotQ(f.sword)), f.weaponCfg.hiltLength * 0.5) : point;
+        const r = Math.max(0.05, point.distanceTo(hand));
+        const ang = sp > 1e-6 ? vin / sp : 0;
+        return { v, vin, m, r, ang, score: f.strength * m * vin * ang / r };
+      };
+      const a = side(fa, SA, 1);
+      const b = side(fb, SB, -1);
+      if (a.score === b.score) return;
+      const aWins = a.score > b.score;
+      const [W, L, w, l, SL, sgnW] = aWins ? [A, B, a, b, SB, 1] : [B, A, b, a, SA, -1];
+      const lf = L.fighter;
+      lf.block2Until = this.stepNo + Math.ceil(BLOCK2.voidT / this.dt);
+      const dir = w.v.clone();
+      const ax = _n3.set(0, 1, 0).applyQuaternion(rotQ(L.fighter.sword));
+      dir.addScaledVector(ax, -dir.dot(ax));
+      if (dir.lengthSq() > 1e-8) {
+        dir.normalize();
+        const o = tv(lf.sword.translation());
+        const pL = o.addScaledVector(ax, _n2.copy(point).sub(o).dot(ax));
+        const Jt = gripMass(lf.swordProps, liveState(lf.sword), pL, dir, STEEL.handMass) * BLOCK2.push * w.vin;
+        lf.sword.applyImpulseAtPoint({ x: dir.x * Jt, y: dir.y * Jt, z: dir.z * Jt }, vp(pL), true);
+      }
+      // 이긴 쪽은 부딪힘에서 잃은 충격을 돌려받는다 (칼이 지나감)
+      const wf = W.fighter;
+      const wax = _n4.set(0, 1, 0).applyQuaternion(rotQ(wf.sword));
+      const wo = tv(wf.sword.translation());
+      const pW = wo.addScaledVector(wax, _n2.copy(point).sub(wo).dot(wax));
+      wf.sword.applyImpulseAtPoint({ x: nrm.x * sgnW * J, y: nrm.y * sgnW * J, z: nrm.z * sgnW * J }, vp(pW), true);
+      beginFlowRecovery(lf, wf, BLOCK2.voidT);
+      st.clash++;
+      st[aWins ? 'aWin' : 'bWin']++;
+      return;
+    }
+    if (!(BLOCK2.reward > 0) || atkA === atkB) return;
+    const [O, D] = atkA ? [fa, fb] : [fb, fa];
+    if (!this.cleanBlock(D)) return;
+    if (beginFlowRecovery(O, D, BLOCK2.reward)) st.reward++;
+  }
+
+  /** 깨끗한 막기 (막기 조사와 같은 뜻): 막는 중이고 손이 그 줄 막기 자리 패드 0.15 m 안. 사람 (parryGuard) · AI (aiCtl) 같은 칸 */
+  cleanBlock(D) {
+    const c = D.parryGuard ?? D.aiCtl;
+    if (!c?.school || !D.stamina?.guarding) return false;
+    const p = c.school.parry?.[c.defLine] || c.school.pose?.point;
+    if (!p) return false;
+    return Math.hypot(D.handOffset.x - p[0], D.handOffset.y - p[1]) <= 0.15;
   }
 
   /**
@@ -992,6 +1067,7 @@ export class Combat {
   strike(pr, point, passing) {
     const att = pr.w.fighter;
     const vic = pr.v.fighter;
+    if (BLOCK2.on && att.block2Until > this.stepNo) return null; // 막기 2.0: 칼 겨룸에서 진 공격은 상처 없음 (BLOCK2.voidT)
     const key = `${att.index}:${pr.v.part}`;
     // 속도는 스텝 "직전" 값을 쓴다. 튕긴 충돌은 스텝 뒤엔 이미 속도가 꺾여 있어서 에너지가 작게 나온다.
     const S = pr.w.state || att.cache?.sword || liveState(pr.w.body); // 휘는 마디 무기: 그 마디의 스텝 전 상태
