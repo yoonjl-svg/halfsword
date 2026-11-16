@@ -15,7 +15,7 @@ import { newRound, AI } from './harness_m.mjs';
 import { wilson } from './ref_duel.mjs';
 import { isMain } from './is_main.mjs';
 import { WEAPONS } from './ai_ring_measure.mjs';
-import { PROF6_VITALITY } from '../../src/config.js';
+import { PROF6_VITALITY, AI_PROFICIENCY } from '../../src/config.js';
 
 const args = process.argv.slice(2);
 const mode = args[0] && !args[0].startsWith('--') ? args[0] : 'run';
@@ -57,13 +57,15 @@ export function measureFight(f, dur) {
   // persona = 상대(E) 자리 AI · persona2 = 플레이어 자리 AI (ai2)
   const G = newRound({
     seed: rngSeed, walls: true, weapon, weapon2: weapon, AI2Class: AI,
+    // 실력 등급: 게임과 같게 숙련도 표의 이름을 넘김(main.js · characters.js aiAtProficiency — AI 가 AI_PLAN.levels 로 바꿈) · 11/17 고침: 전엔 harness 기본 'normal' 이라 모든 숙련도가 보통 숫자
+    difficulty: AI_PROFICIENCY.levels[swap ? hi : lo], difficulty2: AI_PROFICIENCY.levels[swap ? lo : hi],
     persona: { proficiency: swap ? hi : lo }, persona2: { proficiency: swap ? lo : hi },
   });
   const hiF = swap ? G.enemy : G.player;
   const loF = swap ? G.player : G.enemy;
   const aiHi = swap ? G.ai : G.ai2;
   const aiLo = swap ? G.ai2 : G.ai;
-  if (hi === 6) hiF.vitality = PROF6_VITALITY;
+  if (hi === 6 && !process.env.NO_VITAL) hiF.vitality = PROF6_VITALITY;
   if (lo === 6) loF.vitality = PROF6_VITALITY;
 
   const dealt = new Map([[hiF, 0], [loF, 0]]);
