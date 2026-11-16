@@ -53,6 +53,7 @@ test('알티바슈 빠르기 — 둘째 셈(기력 ÷ 100) · 첫째 셈((기력
     // 11/16 사장님 '풀 기력에서 고노센 40%로' · '50에서 바닥에 도달하게 해' → '아니다 40에서.' — 칼끝 몫 = 바닥 + (0.4 − 바닥) × (기력 − 40) ÷ 60 · 40 이하 바닥
     assert.equal(SECRET.altib.full, 0.4);
     assert.equal(SECRET.altib.knee, 40);
+    assert.equal(SECRET.altib.fullBy.durandal, 0.45); // '뒤랑달은 5% 보너스 줘 상한에. 45%'
     assert.equal(SECRET.altib.kneeTop, 90); // '40~90 사이에서 재는 걸로 하자. 즉 90과 100은 동일함.'
     assert.ok(floor < 0.4, '츠바이핸더 바닥(보통 큰 베기)은 고노센 40 % 아래');
     let s = at(100);

@@ -254,7 +254,7 @@ export function altibShot(f, H = null) {
     let t = 1;
     const hi = Math.min(A.kneeTop ?? S?.max ?? 100, S?.max ?? 100); // 이 기력 이상이면 꼭대기 (11/16 사장님 '40~90 사이에서 재는 걸로 하자. 즉 90과 100은 동일함.')
     if (STAMINA.on && S && !S.infinite && hi > A.knee) t = THREE.MathUtils.clamp((S.value - A.knee) / (hi - A.knee), 0, 1);
-    const top = A.full ?? 1;
+    const top = A.fullBy?.[f.weapon?.id] ?? A.full ?? 1; // 무기별 꼭대기 (11/16 사장님 '뒤랑달은 5% 보너스 줘 상한에. 45%')
     const share = top > fs ? fs + (top - fs) * t : fs;
     return { share, hitMul: altibHitMul(), k: 1, x: share, floor: !(top > fs) || t <= 0, s };
   }
