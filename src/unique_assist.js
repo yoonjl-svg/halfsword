@@ -169,13 +169,20 @@ export const PLAYER_UNIQUE = {
 export function aiUniqueStages(tradition) {
   const unique = new Map();
   const passive = new Map();
+  const slot = new Map(); // 표 이름 → 사람 칸 이름(skillKit.unique — 스킬트리 u 칸 · 11/16 AI 칸 몫 config AI_KIT 이 읽음)
   for (const e of PLAYER_UNIQUE[tradition] ?? []) {
     unique.set(e.path ?? e.name, e.stage);
-    if (e.path) passive.set(e.name, e.stage);
-    if (e.aiPassive) passive.set(e.aiPassive, e.stage); // 동방 자→격 패시브(yaoji 이음)는 요격 강화동작과 같은 단계
+    slot.set(e.path ?? e.name, e.name);
+    if (e.path) passive.set(e.name, e.stage), slot.set(e.name, e.name);
+    if (e.aiPassive) passive.set(e.aiPassive, e.stage), slot.set(e.aiPassive, e.name); // 동방 자→격 패시브(yaoji 이음)는 요격 강화동작과 같은 단계 · 같은 칸(C3)
   }
-  return { unique, passive, retired: ibRetired() };
+  return { unique, passive, slot, retired: ibRetired() };
 }
+/**
+ * AI 고유 동작 · 패시브가 열렸나 (11/16 AI 숙련도 = 칸 — config AI_KIT): 표(map — aiUniqueStages unique · passive)에 없는 이름은 늘 열림.
+ *  kit(AI 칸 몫 — skill_tree_data.js aiKitOf)이 있으면 그 이름의 칸이 kit.unique 에 있을 때만(사람 PlayerUniqueAssist names 와 같음) · 없으면 옛 단계 ≤ 숙련도
+ */
+export const aiStageOpen = (ST, kit, prof) => (map, name) => !map.has(name) || (kit ? kit.unique.has(ST.slot.get(name)) : map.get(name) <= prof);
 
 /** 강화동작 (10/21): 유파 → [{ base 기본 동작, name 강화동작, stage }] — 기본 동작이 TECH 이름인 것만(일본 코테의 '가운데서 짧게 내려베기'는 AI 기술이 아님). sword_art.js 가 AI 꾸러미를 바꿀 때 읽는다 */
 /**

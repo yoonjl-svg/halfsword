@@ -333,12 +333,31 @@ test('무명 검객 숙련도 · 이름: 대회마다 새로 — 메인 0 ~ 2 ·
   assert.deepEqual(make(9), make(9)); // 씨앗이 같으면 같은 무명 검객
 });
 
-test('내 숙련도: 0 칸 · 1 칸 = 1 · 2 칸 = 2 · 5 칸 = 3 · 비기 + 특수공격 = 4 · 전부 = 5 · 편지 칸은 셈 밖 (사장님 10/29 17:5x · 18:1x)', async () => {
+test('내 숙련도 (11/16 사장님 \'사람 셈도 문턱 기준으로 바꿔\'): 4 칸까지 1 · 5 칸 = 2 · 7 = 3 · 9 = 4 · 11(전부) = 5 · 편지 칸은 셈 밖 · 가장 낮게 1', async () => {
   const roster = await import('../../src/saengsa_roster.js');
   const { nodesOf, isClosed } = await import('../../src/skill_tree_data.js');
-  const L = (ids) => ({ german: new Set(ids) });
-  const g = (ids) => roster.playerProficiency(L(ids)).german;
+  assert.deepEqual({ ...SAENGSA.playerProf, old: undefined }, { mode: 'step', at2: 5, at3: 7, at4: 9, at5: 11, old: undefined });
   assert.deepEqual(roster.playerProficiency({}), { german: 1, italian: 1, iberian: 1, japanese: 1, chinese: 1 });
+  for (const s of R.SCHOOLS5) {
+    const skills = nodesOf(s).filter((n) => n.cat !== 'letter' && !isClosed(s, n)).map((n) => n.id);
+    const letter = nodesOf(s).find((n) => n.cat === 'letter').id;
+    assert.equal(skills.length, 11, s);
+    const p = (n, extra = []) => roster.playerProficiency({ [s]: new Set([...skills.slice(0, n), ...extra]) })[s];
+    assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((n) => p(n)), [1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5], s);
+    assert.equal(p(4, [letter]), 1, `${s} 편지는 칸으로 세지 않음`);
+    // 비기 + 특수공격만 (옛 규칙 4) = 2 칸 → 1
+    const special = SAENGSA.playerProf.old.special[s], secret = nodesOf(s).find((n) => n.cat === 'secret').id;
+    assert.equal(roster.playerProficiency({ [s]: new Set([special, secret]) })[s], 1, s);
+  }
+});
+
+test('내 숙련도 옛 규칙 (`?playerProf=old` — mode \'old\'): 0 칸 · 1 칸 = 1 · 2 칸 = 2 · 5 칸 = 3 · 비기 + 특수공격 = 4 · 전부 = 5 · 편지 칸은 셈 밖 (사장님 10/29 17:5x · 18:1x)', async () => {
+  const roster = await import('../../src/saengsa_roster.js');
+  const { nodesOf, isClosed } = await import('../../src/skill_tree_data.js');
+  const OLD = { ...SAENGSA.playerProf, mode: 'old' };
+  const L = (ids) => ({ german: new Set(ids) });
+  const g = (ids) => roster.playerProficiency(L(ids), OLD).german;
+  assert.deepEqual(roster.playerProficiency({}, OLD), { german: 1, italian: 1, iberian: 1, japanese: 1, chinese: 1 });
   assert.equal(g(['G1']), 1);
   assert.equal(g(['G1', 'G11']), 1); // 편지는 칸으로 세지 않음
   assert.equal(g(['G1', 'G2']), 2);
@@ -348,12 +367,12 @@ test('내 숙련도: 0 칸 · 1 칸 = 1 · 2 칸 = 2 · 5 칸 = 3 · 비기 + �
   assert.equal(g(['G1', 'G2', 'G5', 'G8', 'G3', 'G10']), 3); // 비기만
   for (const s of R.SCHOOLS5) {
     const skills = nodesOf(s).filter((n) => n.cat !== 'letter' && !isClosed(s, n)).map((n) => n.id);
-    const all = roster.playerProficiency({ [s]: new Set(skills) })[s];
+    const all = roster.playerProficiency({ [s]: new Set(skills) }, OLD)[s];
     assert.equal(all, 5, s);
-    assert.equal(roster.playerProficiency({ [s]: new Set(skills.slice(1)) })[s] < 5, true, s);
-    const special = SAENGSA.playerProf.special[s], secret = nodesOf(s).find((n) => n.cat === 'secret').id;
+    assert.equal(roster.playerProficiency({ [s]: new Set(skills.slice(1)) }, OLD)[s] < 5, true, s);
+    const special = SAENGSA.playerProf.old.special[s], secret = nodesOf(s).find((n) => n.cat === 'secret').id;
     assert.ok(nodesOf(s).find((n) => n.id === special)?.u, `${s} 특수공격 칸 ${special}`);
-    assert.equal(roster.playerProficiency({ [s]: new Set([special, secret]) })[s], 4, s);
+    assert.equal(roster.playerProficiency({ [s]: new Set([special, secret]) }, OLD)[s], 4, s);
   }
 });
 

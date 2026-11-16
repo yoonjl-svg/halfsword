@@ -16,6 +16,7 @@ import { nodeTitle } from '../../src/skill_tree.js';
 import * as D from '../../src/skill_tree_data.js';
 import { altibRun, spinRun } from './ib_swap.mjs';
 import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
+import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 
 const setup = (P) => {
   P.skill.corr = CONFIG.SKILL.corr;
@@ -218,7 +219,8 @@ test('한 걸음 나가며 — 서 있는 과녁 · 네 칼: 골반이 stride �
   }
 });
 
-test('AI — 숙련도 5 이베리아: 비기 알티바슈 포르트(싱지르 무장 셈) · 숙련도 3 이상: 왼 가로베기 자리 특수 공격 싱지르(바탕 왼 가로베기) · 정수리 가르기는 고르는 목록에 없음', () => {
+test('AI — 숙련도 5 이베리아: 비기 알티바슈 포르트(싱지르 무장 셈) · 숙련도 3 이상: 왼 가로베기 자리 특수 공격 싱지르(바탕 왼 가로베기) · 정수리 가르기는 고르는 목록에 없음', (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 숙련 3 이베리아 싱지르 → 칸 판은 이어 돌리기 B7(4 단계) · 기준 그대로
   const G = newRound({ seed: 1, weapon: 'zweihander', weapon2: 'zweihander', persona: { proficiency: 5 } });
   try {
     assert.equal(G.ai.secret?.name, 'altib');

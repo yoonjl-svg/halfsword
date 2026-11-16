@@ -13,6 +13,7 @@ import { readNote } from '../../src/ai_read.js';
 import { ibStats, chainWant, spinK, armK, habitN, ibTick, ibCircle, ibFeetV, schoolRead, swapReady, nextFree, ibSidePost, ibFwdPost, ibAfter, foeAtkN } from '../../src/ai_plan_ib.js';
 import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
+import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { AI_PLAN, IB_LINK, STAMINA } = CONFIG;
@@ -123,6 +124,7 @@ test('이베리아 플랜 열림 · 표 · 거리 오차 — 띠 무는 플랜 �
 });
 
 test('AI 이베리아 차림 — 띠마다 (플랜 · 유도 4 부터 · 알티바슈 무장 5 부터 · B6 몸 · 거리 오차)', (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — B6 이어지는 흐름 AI 몫이 플랜 몸 → 4 단계 · 기준 그대로
   pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
   const got = [0, 1, 2, 3, 4, 5, 6].map((p) => {
     const { ai, free } = ibAi(p);
@@ -445,7 +447,8 @@ test('칼끝 밖 무장 기다림 (고노센 선 무모는 11/14 합치며 공�
   assert.equal(ibFeetV(o, 0.18, o.M.reach + 0.5), 0.18);
 });
 
-test('판: AI 이베리아 숙련 2 대 롱소드 AI — 국면 · 이베리아 행동(사슬 · 이어 돌리기 · 원으로 이음 · 옆 박차기)이 남', () => {
+test('판: AI 이베리아 숙련 2 대 롱소드 AI — 국면 · 이베리아 행동(사슬 · 이어 돌리기 · 원으로 이음 · 옆 박차기)이 남', (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 숙련 2 이베리아는 이어 돌리기(B7 · 4 단계)가 없음 · 기준 그대로
   const tot = { judges: 0, cont: 0, end: 0, link: 0, spin: 0, dash: 0, phT: 0 };
   for (const seed of [1, 3, 6]) {
     const G = newRound({ walls: true, seed, weapon: 'longsword', weapon2: 'zweihander', AI2Class: AI, persona: { proficiency: 2 }, persona2: { proficiency: 2 } });
@@ -481,7 +484,8 @@ test('판: AI 이베리아 숙련 2 대 롱소드 AI (씨앗 4) — 옆 박차�
   assert.ok(st.odd >= 1, '비스듬히 들어감');
 });
 
-test('스위치 끔 = 옛 판 (이베리아 — `?aiPlan=0` · 이베리아만 뺌이 같고 켬은 다름) · 다른 유파는 이베리아 칸을 안 읽음', () => {
+test('스위치 끔 = 옛 판 (이베리아 — `?aiPlan=0` · 이베리아만 뺌이 같고 켬은 다름) · 다른 유파는 이베리아 칸을 안 읽음', (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 숙련 2 이베리아는 B6(4 단계)이 없어 켬 판 몸 표식이 다름 · 기준 그대로
   const off = withPlan({ on: 0 }, () => trace({ prof: 2 }));
   const noIb = (k) => AI_PLAN[k].filter((t) => t !== 'iberian');
   const none = withPlan({ schools: noIb('schools'), errSchools: noIb('errSchools'), pommel: 0 }, () => trace({ prof: 2 })); // 3 단계(11/14): 모든 AI 손잡이 찍기도 뺌

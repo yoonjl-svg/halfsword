@@ -2,10 +2,10 @@
 //  유파마다 11 칸 · 뿌리 = 보법 I · pre = 먼저 익힐 칸 '모두'(독일 2단계 관문 · 이탈리아 보법 II 줄기 · 이베리아 패시브 → 비기 · 독일 보법 II → 패시브 → 비기가 이미 여기 들어 있다).
 //  값(사장님 10/21 19:0x): 편지 금화 100 · 패시브 머리 5(금화 없음 · 10/25 01:5x 사장님 10 → 5) · 보법 II 금화 100 · 비기 금화 400 + 머리 10(10/25 01:5x 사장님 20 → 10) · 나머지는 깊이마다 금화 — data.mjs 그대로.
 //  닫힌 칸: 비기는 SECRET.openSchools(config — 10/22 사람 쪽 다섯 유파 모두: 일본 · 독일 · 이탈리아 · 이베리아 · 동방)에 없으면 '준비 중'(사람 · 살 수 없음 — 10/21 20:xx) · closed 칸(지금 없음 — 일본 J8 손목 치기 심화는 10/24 칼 떨구기로 열림).
-//  칸 → 판 몫(아래 f · u · perk): 칸 하나가 제 몫 하나만 켠다 — 몫 열쇠는 skill_kit.js kitOff 가 싸움 코드에서 읽는다(사람만 · AI 는 숙련도 그대로).
+//  칸 → 판 몫(아래 f · u · perk): 칸 하나가 제 몫 하나만 켠다 — 몫 열쇠는 skill_kit.js kitOff 가 싸움 코드에서 읽는다(사람 · 11/16 부터 AI 도 — 숙련도 사다리 칸 config AI_KIT · 아래 aiKitOf).
 //   표 · 근거: IMPLEMENTATION.md §2 · docs/strike/school_kit_map.md §2 '스킬트리'. 글(l1 · l2 · eff)은 화면 글 지침(docs/text/editing_guide.md) — data.mjs eff 는 설계 메모라 고쳐 씀.
 //  이 파일은 저장 · 화면을 모른다(시험이 바로 읽음) — 저장은 skill_tree_store.js · 화면은 skill_tree.js.
-import { SECRET, LETTER, UNIQUE_ASSIST, IB_LINK } from './config.js';
+import { SECRET, LETTER, UNIQUE_ASSIST, IB_LINK, AI_KIT } from './config.js';
 
 /** 탭 차례 (감독 10/16: 독일 · 이탈리아 · 이베리아 · 일본 · 동방) */
 export const TREE_SCHOOLS = Object.freeze(['german', 'italian', 'iberian', 'japanese', 'chinese']);
@@ -290,7 +290,7 @@ export function canLearn(school, node, learned, { coins = 0, heads = 0 } = {}) {
 }
 
 /**
- * 익힌 칸 → 판 몫 (사람만 — main.js newRound 가 몸에 skillKit 으로 넣는다 · skill_kit.js kitOff 가 읽는다).
+ * 익힌 칸 → 판 몫 (사람 — main.js newRound 가 몸에 skillKit 으로 넣는다 · AI 는 aiKitOf 가 같은 꼴로 · skill_kit.js kitOff 가 읽는다).
  *  school = 손에 든 무기 유파 · ids = 이 유파의 켤 칸 id 모음(닫힌 칸은 늘 뺀다). 유파 칸이 없는 무기(무유파)는 null — 유파 몫이 원래 없다(지금 그대로).
  *  돌려줌 { school, footwork … secret: bool, unique: Set<고유 공격 이름>, perk: Set<강화동작 이름> } — 칸 하나가 제 몫만 켠다(IMPLEMENTATION.md §2 표)
  */
@@ -304,6 +304,27 @@ export function kitFromNodes(school, ids) {
     if (n.u) kit.unique.add(n.u);
     if (n.perk) kit.perk.add(n.perk);
   }
+  return kit;
+}
+// ── AI 숙련도 = 칸 (11/16 사장님 결정 — config AI_KIT · 기록 docs/strike/prof_kit_2026-11-16.md) ──
+/** 숙련도 → 그 유파 사다리 1 ~ L 단계 칸 (L = 숙련도 · 6 이상 = 5 · 0 · 모르는 값 = 없음) */
+export function aiLadderIds(school, level) {
+  const L = AI_KIT.ladder?.[school] ?? [];
+  const n = Number.isFinite(level) ? Math.max(0, Math.min(L.length, Math.floor(level))) : 0;
+  return new Set(L.slice(0, n).flat());
+}
+/**
+ * 칸 없는 강화동작 이점 — perkOff 가 묻지만 어느 칸도 켜지 않는 이름: 내려 찌르기 틈 파고들기(combat.js imbroccataGap — 10/31 I8 이 헛누름으로 바뀐 뒤 칸 없음) ·
+ *  머리 위 돌려 베기 쌓기(redondo stack — 'altib' 판에선 AI 가 안 씀). 사람 칸 몫엔 없어 사람은 못 받는다(지금 그대로). AI 칸 몫은 그 이점을 지금처럼 둔다
+ *  (사다리는 익히지 않은 칸만 끈다 — 칸 없는 이점은 사장님께 여쭐 것 · 기록 §질문)
+ */
+export const AI_SLOTLESS_PERKS = Object.freeze(['imbroccata', 'redondo']);
+/** AI 몸의 칸 몫 (ai.js applyKit — 사람 kitFromNodes 와 같은 꼴 · 유파 칸이 없는 무기는 null): school = 손에 든 무기 유파 · level = 그 유파 숙련도 */
+export function aiKitOf(school, level) {
+  const kit = kitFromNodes(school, aiLadderIds(school, level));
+  if (!kit) return null;
+  for (const p of AI_SLOTLESS_PERKS) kit.perk.add(p);
+  kit.ai = true;
   return kit;
 }
 /** 이 유파의 칸 id 모두 (테스트 경로 = 모두 익힘) */

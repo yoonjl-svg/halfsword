@@ -42,7 +42,8 @@ import { MOTION, buildFrameTable, styleTech, styleFeints, frameWatchGuards, weig
 import { TRADITIONS, SCHOOL_ART, traditionOf, schoolOf } from './schools.js';
 import { getWeapon } from './weapons.js';
 import { MEASURED, WEAPON_BASELINE } from './weapon_measured.js';
-import { aiUniqueStages, enhancedMoves } from './unique_assist.js'; // AI 숙련도 거르기 (10/13): 고유 동작 단계 표는 그 파일 한 곳
+import { aiUniqueStages, aiStageOpen, enhancedMoves } from './unique_assist.js'; // AI 숙련도 거르기 (10/13): 고유 동작 단계 표는 그 파일 한 곳
+import { aiKitOf } from './skill_tree_data.js'; // AI 숙련도 = 칸 (11/16 — config AI_KIT)
 
 const LS_MEASURED = MEASURED.longsword;
 
@@ -104,7 +105,7 @@ function restGuardOf(names, tradition) {
  *  숙련도(prof — 10/13 사장님 '숙련도 수치에 따라 쓸지 말지'): null 이면 거르지 않는다(플레이어·도구). 숫자면 고유 동작 단계 표(unique_assist.js aiUniqueStages)에서
  *   단계 > prof 인 것을 뺀다(표에 없는 것 — 이베리아 rodaCounter — 은 그대로). 비기는 숙련도 5 에서만이라(ai.js) 그때는 고유 동작이 다 열려 비기가 찾는 이름이 모두 있다
  */
-function applySchoolArt(school, tradition, frame, style, prof = null, openTech = null) {
+function applySchoolArt(school, tradition, frame, style, prof = null, openTech = null, kit = null) {
   const T = TRADITIONS[tradition];
   if (!school || !T) return school;
   let out = school;
@@ -121,7 +122,8 @@ function applySchoolArt(school, tradition, frame, style, prof = null, openTech =
   const uqAll = SCHOOL_ART.unique && T.unique ? T.unique.filter((u) => u.ai !== false && !ST.retired.has(u.name)) : [];
   const retiredPaths = SCHOOL_ART.unique && T.unique ? T.unique.filter((u) => u.ai !== false && ST.retired.has(u.name) && u.path && !u.feint && !u.counter) : [];
   const stage = prof == null ? null : ST.unique;
-  const uqOpen = stage ? uqAll.filter((u) => !stage.has(u.name) || stage.get(u.name) <= prof || u.name === openTech) : uqAll; // 숙련도 거르기 (10/13) · 무기 비검이 여는 기술은 늘(10/21 — weapons.js secretBlade.open)
+  const open = aiStageOpen(ST, kit, prof); // 11/16 AI 칸 몫(kit — config AI_KIT)이 있으면 단계 대신 칸 · 없으면 옛 단계 ≤ 숙련도
+  const uqOpen = stage ? uqAll.filter((u) => open(stage, u.name) || u.name === openTech) : uqAll; // 숙련도 거르기 (10/13) · 무기 비검이 여는 기술은 늘(10/21 — weapons.js secretBlade.open)
   // 숙련도가 높을수록 고유 동작(길)을 더 자주 고른다 (사장님 10/18 23:4x — config AI_PROFICIENCY.schoolK: 가중치 base × k · 숙련도 2 · 플레이어 · 도구(prof null) = 그대로)
   const kq = prof == null ? 1 : AI_PROFICIENCY.schoolK?.[prof] ?? 1;
   // 길 다시 그림 (사장님 10/25 08:0x '셸하우 3번' — config UNIQUE_ASSIST.schielPath · 곁눈 베기): redraw 칸이 있는 고유 동작은 AI 꾸러미에서 그 길 점 · 길 덧칸(plan — ai.js techPlanStep)으로.
@@ -285,11 +287,13 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
     offArm: TRADITIONS[tradition]?.offArm ?? null, // 유파 빈팔 자세 (10/10 고증 — schools.js offArm, fighter.js applyPose 가 읽는다). 칸 없는 유파 = null(오늘 그대로)
     lib,
   };
+  // AI 칸 몫 (11/16 — config AI_KIT · opts.aiKit 를 넘긴 AI 만): 이 유파 숙련도의 사다리 칸 (skill_tree_data.js aiKitOf — 유파 칸이 없으면 null). 안 넘기면 칸이 없다(전 판 그대로)
+  if (opts.aiKit && art.proficiency != null) art.kit = aiKitOf(tradition, art.proficiency);
   // AI 꾸러미: 인물이 고른 꾸러미(없으면 롱소드) → lib 이면 몸 틀·방식 몫을 더한다 (전 ai.js schoolOf + libSchool) → 스위치를 켜면 유파 자료(art.tradition 의 것)
   lazy(art, 'school', () => {
     const pkg = 'school' in opts ? opts.school : schoolOf(persona?.school ?? w.id); // 인물이 없으면 무기 유파 꾸러미(weaponSchool) — 사장님 10/9 01:2x '바꿔'(전엔 롱소드 꾸러미 + 무기 간격 비율)
     const s = lib ? mergeLibSchool(pkg, spec) : pkg;
-    return SKILL.schoolArt ? applySchoolArt(s, tradition, frame, style, art.proficiency, w.secretBlade?.open ? w.secretBlade.tech : null) : s;
+    return SKILL.schoolArt ? applySchoolArt(s, tradition, frame, style, art.proficiency, w.secretBlade?.open ? w.secretBlade.tech : null, art.kit ?? null) : s;
   });
   lazy(art, 'tech', () => art.school.tech);
   lazy(art, 'feints', () => art.school.feints);

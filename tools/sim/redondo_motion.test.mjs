@@ -9,6 +9,7 @@ import { CONFIG, newRound, DT, THREE } from './harness_m.mjs';
 import { PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { windSpec, windRate } from '../../src/iberian_redondo.js';
 import { applyB4Old } from '../../src/config.js';
+import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 풍차 베기 · 정수리 가르기 특수 공격 장면(무장 없이 길게 눌러 냄 · 10/29 ~ 10/31)이라
 //  그 판('spin')으로 묶는다(이 파일 안에서만). 비기가 된 판은 tools/sim/ib_swap.test.mjs
 (await import('../../src/config.js')).SECRET.iberianSecret = 'spin';
@@ -319,7 +320,8 @@ test('AI 풍차 베기 (사장님 10/31 08:xx \'플레이어만 그런 건가? �
   assert.equal(off.rdMove, false);
 });
 
-test('AI 풍차 베기 빠른 틈 · 성향 기력 아낌 (사장님 10/31 13:4x \'a는 기본 적용하고 c는 성향마다 달랐음 좋겠어. 싸움을 풀어가는 방식에 따라 자율적으로.\' — rdAiQuick · rdAiThrift): 빠른 틈 · 기력 모자람은 바탕 동작 · 공격적 기질 · 분노는 감음 · 감는 중 기력이 아낌 줄 아래면 그만둠', () => {
+test('AI 풍차 베기 빠른 틈 · 성향 기력 아낌 (사장님 10/31 13:4x \'a는 기본 적용하고 c는 성향마다 달랐음 좋겠어. 싸움을 풀어가는 방식에 따라 자율적으로.\' — rdAiQuick · rdAiThrift): 빠른 틈 · 기력 모자람은 바탕 동작 · 공격적 기질 · 분노는 감음 · 감는 중 기력이 아낌 줄 아래면 그만둠', (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — AI 머리 위 돌려 베기 강화동작이 옛 단계(3)에서 열리던 판 · 칸 판은 비기 칸(B4 · 5 단계) · 기준 그대로
   const mk = () => {
     const G = newRound({ walls: true, seed: 1, weapon: 'longsword', weapon2: 'zweihander', gap: 2.3, persona: { proficiency: 4 } });
     for (let i = 0; i < Math.round(2.0 / DT); i++) G.step();

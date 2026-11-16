@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { newRound, CONFIG, AI } from './harness_m.mjs';
 import { runDir, armReachSample } from './arm_reach_audit.mjs';
 import { withArmOld, ARM_CLEAR1 } from './arm_real_pin.mjs';
+import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 
 const { SKILL } = CONFIG;
 const old1 = (fn) => withArmOld(fn, ['armClear2']); // 11/12 첫 판 두 팔 엇갈림 막기 (main 30929293)
@@ -87,7 +88,8 @@ function aiArms(seed, secs = 14) {
   return { n, arms: x / n, grip: grip / n, up: up / n };
 }
 
-test('AI 몸에도 (armClear.ai — 사장님 11/12 결정): AI 끼리 롱소드 두 팔 뚫음 몫이 끈 판보다 줄어듦 · 뒤집힘 · 쥠 놓침 안 늘어남', () => {
+test('AI 몸에도 (armClear.ai — 사장님 11/12 결정): AI 끼리 롱소드 두 팔 뚫음 몫이 끈 판보다 줄어듦 · 뒤집힘 · 쥠 놓침 안 늘어남', (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 롱소드 AI 끼리(숙련 2) 칸 몫으로 판이 갈림 · 기준 그대로
   let on = { n: 0, a: 0, g: 0, u: 0 }, off = { n: 0, a: 0, g: 0, u: 0 };
   // 독일 붙은 거리 연계 (나) · (다) (사장님 11/15 결정 — config AI_PLAN_DE.digLuck · pushNear)는 잰 때의 AI(11/14 판)로 묶음 · 기준 그대로:
   //  (다) 맞닿기 안 헛침 굴림이 롱소드 AI 끼리 판의 난수 차례를 바꿔, 씨앗 7 켠 판에 밀치기 누르기(팔꿈치 듦) 스텝이 늘어 뒤집힘이 끈 판 + 0.02 를 넘음(armClear 끈 판 0.017 · 켠 판 0.041 — 늘어난 몫의 대부분이 밀치기 중)

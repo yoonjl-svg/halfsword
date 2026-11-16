@@ -6,7 +6,7 @@
 //   전용무기 = 표 SAENGSA.signature (사장님 10/29 22:3x — 인물 하나에 하나 · 기본 인물과 얼터를 가름 · 생사전에서만) — 무명 검객은 없음.
 //  입장 조건(18:2x): 호칭 SAENGSA.entry.title(정복자) + 가진 무기 SAENGSA.entry.weapons 개 — entryState
 //  숙련도: 인물 = saengsa_proficiency.js proficiencyOf(character_temperament.js 표) · 무명 검객 = 대회마다 새로(saengsa_rules.js makeNameless — 사장님 10/29 18:2x) ·
-//   나 = 스킬트리 — 그 유파에서 익힌 칸 수로(사장님 10/29 17:5x · 18:1x — config SAENGSA.playerProf · 확인표 2792) · 무유파 무기는 빠른 셈 규칙(saengsa_rules.js profFor)
+//   나 = 스킬트리 — 그 유파에서 익힌 칸 수로(11/16 사장님 '사람 셈도 문턱 기준으로 바꿔' — 5 · 7 · 9 · 11 칸 · 전 10/29 17:5x · 18:1x — config SAENGSA.playerProf · 확인표 2792 · 4599 ~) · 무유파 무기는 빠른 셈 규칙(saengsa_rules.js profFor)
 //  고용 금화 (사장님 10/29 14:5x '동료를 고용할 때 금화를 내는 걸로' · 15:5x '고용비는 그대로 둬'): SAENGSA.hire.base + step × 가장 높은 숙련도 ·
 //   무명 검객 = SAENGSA.nameless.hire (15:5x '무명 검객은 고용비 20') — 특별 동료(특별한 증표로 고용 — 나중)는 { token } 자리만
 import { SAENGSA } from './config.js';
@@ -56,22 +56,31 @@ export function entryState() {
 }
 
 /**
- * 내 숙련도 (사장님 10/29 17:5x '2칸 이상 배우면 2가 됨, 5칸 이상 배우면 3이 됨, 비기와 특수공격을 모두 배우면 4가 됨, 전부 다 배우면 5가 됨.' ·
- *  18:1x '플레이어 숙련도는 0이 없고 1부터 시작'): 유파마다 그 유파 스킬 칸(편지 · 닫힌 칸 뺌)에서 익힌 수로 맞는 가장 높은 단계 — 1(늘) · 2(at2 칸 이상) · 3(at3 칸 이상) ·
- *  4(비기 칸 + 특수공격 칸 special) · 5(스킬 칸 전부). learned = { 유파: Set(칸 id) } (skill_tree_store.js readLearned)
+ * 내 숙련도 — 유파마다 그 유파 스킬 칸(편지 · 닫힌 칸 뺌)에서 익힌 칸 수로 (18:1x '플레이어 숙련도는 0이 없고 1부터 시작' — 가장 낮게 1). learned = { 유파: Set(칸 id) } (skill_tree_store.js readLearned)
+ *  11/16 [사장님 11/16 결정 '사람 셈도 문턱 기준으로 바꿔'] (기본 mode 'step'): at2(5) 칸 이상 2 · at3(7) 3 · at4(9) 4 · at5(11 — 모두) 5 — AI 사다리(config AI_KIT.ladder) 쌓임 칸 수와 같은 문턱
+ *  mode 'old' (`?playerProf=old` — cfg.old): 10/29 17:5x 옛 규칙 '2칸 이상 배우면 2가 됨, 5칸 이상 배우면 3이 됨, 비기와 특수공격을 모두 배우면 4가 됨, 전부 다 배우면 5가 됨.' —
+ *   2(at2 칸 이상) · 3(at3 칸 이상) · 4(비기 칸 + 특수공격 칸 special) · 5(스킬 칸 전부)
  */
 export function playerProficiency(learned = readLearned(), cfg = SAENGSA.playerProf) {
   const out = Object.fromEntries(PROF_SCHOOLS.map((s) => [s, 1]));
+  const old = cfg.mode === 'old' ? cfg.old ?? cfg : null;
   for (const s of TREE_SCHOOLS) {
     const has = new Set(learned[s] ?? []);
     const skills = nodesOf(s).filter((n) => n.cat !== 'letter' && !isClosed(s, n));
     const got = skills.filter((n) => has.has(n.id));
-    const secret = skills.find((n) => n.cat === 'secret');
     let v = 1;
-    if (got.length >= cfg.at2) v = 2;
-    if (got.length >= cfg.at3) v = 3;
-    if (secret && has.has(secret.id) && has.has(cfg.special[s])) v = 4;
-    if (skills.length && got.length === skills.length) v = 5;
+    if (old) {
+      const secret = skills.find((n) => n.cat === 'secret');
+      if (got.length >= old.at2) v = 2;
+      if (got.length >= old.at3) v = 3;
+      if (secret && has.has(secret.id) && has.has(old.special[s])) v = 4;
+      if (skills.length && got.length === skills.length) v = 5;
+    } else {
+      if (got.length >= cfg.at2) v = 2;
+      if (got.length >= cfg.at3) v = 3;
+      if (got.length >= cfg.at4) v = 4;
+      if (got.length >= cfg.at5) v = 5;
+    }
     out[s] = v;
   }
   return out;

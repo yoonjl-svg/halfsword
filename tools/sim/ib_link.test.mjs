@@ -19,6 +19,7 @@ import { inputOne } from './ib_link_input.mjs';
 import { bridgeOne } from './ib_link_bridge.mjs';
 import { fightOne } from './school_balance.mjs';
 import { AI } from '../../src/ai.js';
+import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 
 const LADDER = [0.2, 0.4, 0.6, 1.2, 1.5, 2.0, 3.0, 6.0, 10.0].map((s) => realS(s));
 const keep = () => ({ ...IB_LINK });
@@ -304,7 +305,8 @@ test('맞바꿈 B12 — 칼끼리 맞아 돌던 칼이 서는 것(jolt)은 넘�
   }
 });
 
-test('AI 에도 똑같이 (11/14 사장님 \'모두 본판에 넣어 ai에게도 똑같이 적용해\') — AI 이베리아가 이어 돌리기를 쓰고 풍차 베기는 안 냄 · 맞바꿈도 같은 규칙(칸 없이 늘)', () => {
+test('AI 에도 똑같이 (11/14 사장님 \'모두 본판에 넣어 ai에게도 똑같이 적용해\') — AI 이베리아가 이어 돌리기를 쓰고 풍차 베기는 안 냄 · 맞바꿈도 같은 규칙(칸 없이 늘)', (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — AI 몸에 칸 몫이 없다는 옛 전제(맞바꿈 늘) · 판도 갈림 · 기준 그대로
   const o = keep();
   // 11/14 둘째 그때 판으로 묶음 (기준은 안 고침): 이베리아 플랜 변칙(옆 박차기 · 비스듬히 들어감 — src/ai_plan_ib.js)으로 씨앗 2 판이 갈라져 20 s 안에 이어 돌리기가 안 남 → 이베리아 플랜 전 판(`?aiPlanIb=0` 꼴)으로
   const AP = CONFIG.AI_PLAN;
