@@ -211,7 +211,7 @@ test('일본 기다림과 침 스택 = 빠르기 [사장님 11/16 결정] — �
   const { allNodeIds, kitFromNodes } = await import('../../src/skill_tree_data.js');
   assert.equal(JP_TANK.speed, 1);
   assert.equal(JP_TANK.speedHuman, 0.05);
-  assert.equal(JP_TANK.speedAi, 0.025);
+  assert.equal(JP_TANK.speedAi, 0.05); // 11/16 사장님 '사람과 ai 둘다 +5%로 하자' (전 0.025)
   const kit = kitFromNodes('japanese', allNodeIds('japanese'));
   const G = newRound({ weapon: 'uchigatana', weapon2: 'longsword', seed: 1, gap: 3, kit, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
   try {
@@ -223,7 +223,7 @@ test('일본 기다림과 침 스택 = 빠르기 [사장님 11/16 결정] — �
     assert.equal(SP.lock.stk, 10);
     assert.ok(Math.abs(SP.speedOf() - 1.5) < 1e-12, '사람 1 + 0.05 × 10');
     SP.ai = true;
-    assert.ok(Math.abs(SP.speedOf() - 1.25) < 1e-12, 'AI 1 + 0.025 × 10');
+    assert.ok(Math.abs(SP.speedOf() - 1.5) < 1e-12, 'AI 1 + 0.05 × 10 (11/16 사장님 \'둘다 +5%\' — 전 0.025 × 10 = 1.25)');
     SP.ai = false;
     SP.lock.stk = 0;
     SP.lock.carryStk = 6;
