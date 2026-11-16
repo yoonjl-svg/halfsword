@@ -350,6 +350,23 @@
       #btnParry.on { background: rgba(243, 230, 200, 0.32); border-color: var(--c-text); }
       #btnParry.pick { border-color: var(--c-text); box-shadow: 0 0 0 2px rgba(243, 230, 200, 0.35); } /* 떨어진 칼 곁 — 단추가 '줍기' (11/05 src/pickup.js) */
       #moveKnob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); pointer-events: none; }
+      /* 공격 조이스틱 (11/17 — INPUT.atkStick 'stick' · 'both' 판만 · src/atk_stick.js): 오른쪽 아래, 이동 스틱과 거울 자리 · 같은 꼴 · 크기 · 손잡이.
+         이 판에서는 막기 단추가 조이스틱 왼쪽 위 대각선(원 사이 12px)으로 비키고(오른 엄지가 조이스틱에서 미끄러져 닿음), 아래 가운데 안내 줄은 두 조이스틱 사이 폭 안 ·
+         세로 화면 안내는 막기 단추 위로 (body.atkstick — main.js 가 붙임) */
+      #atkStick { position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); width: 110px; height: 110px; border-radius: 50%; border: 1px solid var(--line); background: rgba(24, 18, 14, 0.45); display: none; touch-action: none; }
+      #atkStick.show { display: block; }
+      #atkKnob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); pointer-events: none; }
+      body.atkstick #btnParry { right: calc(max(20px, env(safe-area-inset-right)) + 90px); bottom: calc(max(20px, env(safe-area-inset-bottom)) + 90px); }
+      body.atkstick { --atk-side: calc(100vw - 2 * (max(20px, env(safe-area-inset-left), env(safe-area-inset-right)) + 118px)); } /* 두 조이스틱(110px) 사이 폭 — 원에서 8px 비움 */
+      body.atkstick { --notice-up: 54px; } /* 안내가 좁은 폰에서 두 줄이 되어도 알림 줄과 안 겹치게 (세로와 같은 값) */
+      body.atkstick #hint { max-width: min(64vw, 520px, var(--atk-side)); white-space: normal; text-align: center; width: max-content; word-break: keep-all; border-radius: 14px; } /* 두 조이스틱 사이 폭이 좁으면 두 줄 (자르지 않음) */
+      body.atkstick #emoMsg { max-width: min(64vw, 480px, var(--atk-side)); }
+      @media (orientation: portrait) {
+        /* 세로: 안내 · 알림 줄을 막기 단추(아래 + 90 + 84px) 위로 올리고 폭은 세로 그대로 */
+        body.atkstick { --hint-b: calc(var(--safe-b) + 206px); }
+        body.atkstick #hint { max-width: calc(100vw - 2 * var(--safe-l)); }
+        body.atkstick #emoMsg { max-width: min(64vw, 480px); }
+      }
 
       /* 메뉴 */
       .overlay { position: fixed; inset: 0; z-index: 3; display: none; align-items: center; justify-content: center; padding: 16px; background: radial-gradient(ellipse at center, rgba(27,20,16,.55), rgba(27,20,16,.92)); }
@@ -489,6 +506,7 @@
     <div id="techCue"><div id="techSlot" class="stack" aria-live="polite"><div class="slot"></div></div></div>
     <div id="moveStick" aria-label="이동 조이스틱"><div id="moveKnob"></div></div>
     <button id="btnParry" aria-label="막기 (누르고 있기)">막기</button>
+    <div id="atkStick" aria-label="공격 조이스틱"><div id="atkKnob"></div></div>
 
     <div class="overlay show" id="menu">
       <div class="card">

@@ -35,7 +35,8 @@ import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks,
 import { letterMul } from './skill_tree_data.js'; // 편지 — 카드 뽑기 유파 무게 (10/21)
 import { convertSeals } from './seal_coins.js'; // 이미 받은 인장 → 금화 한 번 — 판을 처음 연 때 어느 길이든 (아래 testRoute 다음 · 10/16 08:1x 인장 없앰)
 import { InputTrail } from './trail.js';
-import { Input, attachStick } from './input.js';
+import { Input, attachStick, attachAtkStick } from './input.js';
+import { atkStickMode, atkStickStep } from './atk_stick.js'; // 공격 조이스틱 (11/17 — INPUT.atkStick)
 import { LOOKS, getLook } from './looks.js';
 import { AI } from './ai.js';
 import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, savedFoeWeapon, randomLine, lineSourceOf, aiAtProficiency } from './characters.js';
@@ -541,6 +542,7 @@ if (params.has('dupBandMin')) CONFIG.UNIQUE_ASSIST.dupBandMin = +params.get('dup
 for (const k of ['dupAutoParry', 'dupAutoHint']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0;
 if (params.has('stickGuard')) CONFIG.INPUT.stickGuardPx = Math.max(0, +params.get('stickGuard') || 0); // 이동 스틱 둘레 (px — 10/31 08:xx 사장님 '+10~20px 정도' · 기본 15 · 0 = 전 판) [확인표 3096]
 if (params.has('stickGuardGrab')) CONFIG.INPUT.stickGuardGrab = +params.get('stickGuardGrab') ? 1 : 0; // 둘레에 닿은 손가락이 스틱을 쥠 (기본 1 · 0 = 버리기만) [사장님 확인 전 — 확인표 3097]
+if (params.has('atkStick')) CONFIG.INPUT.atkStick = atkStickMode(params.get('atkStick')); // 공격 조이스틱 (11/17 — 'stick' 조이스틱만 · 'both' 조이스틱과 화면 끌기 · 0 지금) [감독 안 · 사장님 확인 전 — 확인표 4656]
 if (params.has('holdPx') && +params.get('holdPx') > 0) CONFIG.INPUT.holdPx = +params.get('holdPx'); // 길게 누름 떠돎 한도 (손가락 px — 10/31 · 기본 24 · 12 = 전 판 탭 문턱) [사장님 확인 전 — 확인표 3090]
 if (params.has('strokeMin')) CONFIG.STAMINA.humanStrokeMin = Math.max(0, +params.get('strokeMin') || 0); // 사람 긋기 청구 바닥 (패드 m — 10/31 · 기본 0.15 · 0 = 전 판 strokeTravel 0.06) [사장님 확인 전 — 확인표 3092]
 if (params.has('rdEdge')) CONFIG.UNIQUE_ASSIST.rdEdge = +params.get('rdEdge') < 0 ? -1 : 1; // 감는 칼 날 쪽 (기본 −1 — 사장님 확인 전)
@@ -1960,12 +1962,23 @@ const topButtons = $('topButtons');
 const toast = $('toast');
 const hint = $('hint');
 attachStick(input, $('moveStick'), $('moveKnob'));
+// 공격 조이스틱 (11/17 — INPUT.atkStick · src/atk_stick.js): 터치 기기 · 'stick' | 'both' 판만 붙임 (0 = 붙이지 않음 — input.atk 없음, 판 그대로 · PC 마우스는 늘 그대로)
+const atkStickOn = !!(input.isTouchDevice && attachAtkStick(input, $('atkStick'), $('atkKnob'), CONFIG.INPUT.atkStick));
+if (atkStickOn) document.body.classList.add('atkstick'); // 막기 단추 · 안내 자리 (index.html body.atkstick)
 let state = 'menu'; // menu | fight | paused | draw(무기 카드) | encounter(방랑 전용 상대 알림 창 — 10/24 wanderEncounter)
 let roundOver = false;
 let roundOverTime = 0;
 let resultShown = false; // 판 끝 결과 글자("승리"/"패배")를 띄웠나 — 결정타 슬로모션(slowMo)이 끝난 뒤에 띄운다
 
-$('howto').innerHTML = input.isTouchDevice
+// 공격 조이스틱 판 조작 안내 (11/17 — INPUT.atkStick 'stick' · 'both' 판에서만. 0 이면 아래 손가락 안내 그대로 · 싸움 시작 한 줄 안내 showFightCues 도 같은 판만)
+const ATK_STICK_HOWTO = {
+  stick: '<li>오른쪽 아래 공격 조이스틱을 민 자리로 칼이 갑니다. 손잡이를 그 자리에 두면 칼도 머물러 들어오는 칼의 길을 막습니다.</li><li>공격 조이스틱을 빠르게 밀면 휘두릅니다. 가운데를 톡 치면 찌릅니다. 원 긋기와 길게 누르기도 이 조이스틱으로 합니다.</li><li>왼쪽 아래 조이스틱으로 걷습니다.</li><li>막기를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다. 누른 채 휘두르면 바로 공격합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>',
+  both: '<li>오른쪽 아래 공격 조이스틱을 민 자리로 칼이 갑니다. 손잡이를 그 자리에 두면 칼도 머물러 들어오는 칼의 길을 막습니다.</li><li>공격 조이스틱을 빠르게 밀면 휘두릅니다. 가운데를 톡 치면 찌릅니다. 화면을 손가락으로 끌거나 톡 쳐도 됩니다.</li><li>왼쪽 아래 조이스틱으로 걷습니다.</li><li>막기를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다. 누른 채 휘두르면 바로 공격합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>',
+};
+const ATK_STICK_HINT = { stick: '왼쪽 스틱으로 걷기 · 오른쪽 스틱으로 휘두르기 · 톡 쳐서 찌르기', both: '왼쪽 스틱으로 걷기 · 오른쪽 스틱이나 끌어서 휘두르기 · 톡 쳐서 찌르기' };
+$('howto').innerHTML = atkStickOn
+  ? ATK_STICK_HOWTO[input.atk.mode]
+  : input.isTouchDevice
   ? '<li>화면을 손가락으로 끌면 칼이 따라 움직입니다. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기입니다.</li><li>왼쪽 아래 조이스틱으로 걷습니다. 화면을 톡 치면 찌릅니다.</li><li>오른쪽 아래 막기를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다. 누른 채 휘두르면 바로 공격합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>'
   : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘두릅니다.</li><li>WASD 또는 방향키로 걷습니다. F를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다.</li><li>Esc로 마우스 잠금을 풀고, P로 일시정지합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>';
 
@@ -2404,6 +2417,7 @@ function showToast(text, ms = 1200) {
 function applyMoveMode() {
   $('moveStick').classList.toggle('show', input.isTouchDevice && state !== 'menu' && state !== 'draw' && state !== 'encounter');
   $('btnParry').classList.toggle('show', input.isTouchDevice && state !== 'menu' && state !== 'draw' && state !== 'encounter'); // 막기 단추: 조이스틱과 같은 때 (오른쪽 아래)
+  if (atkStickOn) $('atkStick').classList.toggle('show', state !== 'menu' && state !== 'draw' && state !== 'encounter'); // 공격 조이스틱 (11/17): 이동 스틱과 같은 때
 }
 
 function showHint(text, ms = 3500) {
@@ -2689,7 +2703,7 @@ function showFightCues() {
   introShownFor = introKey;
   showToast(FIGHT_START_TEXT, 900);
   if (teamRun && !teamRun.human) showHint('지켜보기 — 동료들이 싸웁니다'); // 동시 대전 지켜보기: 조작 안내 대신 (내 몸 없음)
-  else showHint(input.isTouchDevice ? '조이스틱으로 걷기 · 끌어서 휘두르기 · 톡 쳐서 찌르기' : '클릭해서 마우스 잠그기 · WASD로 걷기 · 클릭으로 찌르기');
+  else showHint(atkStickOn ? ATK_STICK_HINT[input.atk.mode] : input.isTouchDevice ? '조이스틱으로 걷기 · 끌어서 휘두르기 · 톡 쳐서 찌르기' : '클릭해서 마우스 잠그기 · WASD로 걷기 · 클릭으로 찌르기');
 }
 
 let pausedFrom = 'fight'; // 싸움 중에 멈췄나, 무기 뽑기 중에 멈췄나 (계속하기가 돌아갈 곳)
@@ -3593,6 +3607,8 @@ const renderCap = createRenderCap();
 function playerInputFrame(dt, now) {
   // 손 목표 갱신 (입력 → 플레이어)
   const d = input.consumeHandDelta();
+  // 공격 조이스틱 (11/17 — src/atk_stick.js): 손잡이 자리가 정한 손 목표 몫을 손가락 끌기 몫에 더함 — 아래 긋기 · 비기 · 원 · 고유 동작 · 막기 · 기력 판정이 손가락과 같은 길로 읽는다
+  if (input.atk) { const s = atkStickStep(input.atk, player.handOffset, dt); d.x += s.x; d.y += s.y; }
   const exhausted = player.stamina.exhausted;
   if (exhausted) { d.x = 0; d.y = 0; }
   // 멈칫하는 동안엔 손가락 움직임도 느리게 반영한다 (멈칫이 끝나는 순간 손이 휙 튀지 않게)
@@ -3635,7 +3651,7 @@ function playerInputFrame(dt, now) {
   //  뽑는 동안 든 탭 하나는 끝난 뒤 이 차례에서 냄 (몸이 칼을 낼 수 없으면 아래 길이 버림)
   const prD = input.press;
   const parryDown = (parryHold.btn != null || parryHold.key) && !roundOver;
-  if (player.alive && drawInput(player, { taps, grip: prD && !prD.mouse ? prD.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx) : Math.abs(d.x) + Math.abs(d.y) > 1e-5, guard: parryDown }, secBusy)) {
+  if (player.alive && drawInput(player, { taps, grip: prD && !prD.mouse ? (prD.atk ? input.atk.grip : prD.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx)) : Math.abs(d.x) + Math.abs(d.y) > 1e-5, guard: parryDown }, secBusy)) {
     secBusy = true;
     d.x = 0;
     d.y = 0;
@@ -3681,7 +3697,7 @@ function playerInputFrame(dt, now) {
   player.inputActive = !secBusy && !bufHold && !winding && Math.abs(d.x) + Math.abs(d.y) > 1e-5;
   // 칼을 쥐었나 (고노센 허리 대기 — SECRET.gnsReadyHip · secret.js): 손가락은 닿은 자리에서 길게 누름 한도(INPUT.holdPx — 엄지 떠돎)를 넘게 끌었을 때부터 뗄 때까지 · 마우스는 움직임 그대로(inputActive)
   const pr = input.press;
-  player.handGrip = pr && !pr.mouse ? pr.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx) : player.inputActive;
+  player.handGrip = pr && !pr.mouse ? (pr.atk ? input.atk.grip : pr.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx)) : player.inputActive; // 공격 조이스틱 엄지(11/17): 칼을 쥠 = 데드존 밖에 닿음 · holdPx 넘게 끎 (atk_stick.js)
   if (taps > 0 && player.alive && !(pommelTap && player.foeDistance() <= CONFIG.CLOSE.pommelDist && player.skill.pommel())) player.skill.thrust();
   updatePlayerEmotion(dt);
   watchEmotions();
