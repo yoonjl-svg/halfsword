@@ -823,7 +823,7 @@ export class Combat {
   cleanBlock(D) {
     const c = D.parryGuard ?? D.aiCtl;
     if (!c?.school || !D.stamina?.guarding) return false;
-    const p = c.school.parry?.[c.defLine] || c.school.pose?.point;
+    const p = (c.icp && !c.defVoid && c.icpPad) || c.school.parry?.[c.defLine] || c.school.pose?.point; // 막기 2.0 STEP B (11/17): 가로막기 중인 AI 는 그 겨눈 자리 (ai_intercept.js icpPad — 끄면 없음)
     if (!p) return false;
     return Math.hypot(D.handOffset.x - p[0], D.handOffset.y - p[1]) <= 0.15;
   }

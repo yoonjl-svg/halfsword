@@ -61,7 +61,8 @@ import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, j
 import { iaiSeated, drawStart, drawLog } from './iai_obi.js'; // 11/16 뽑기 — 칼집에 든 채 공격 · 막기는 SECRET.gnsDraw 초 뽑은 뒤 (사람과 같은 셈)
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
-import { DIG_PROTO, CN_STEP, AI_ARC, PHYSICS, AI_TELL, AI_KIT } from './config.js';
+import { DIG_PROTO, CN_STEP, AI_ARC, PHYSICS, AI_TELL, AI_KIT, AI_INTERCEPT } from './config.js';
+import { icpArm, icpAim, coverTech, strikeCoverPrep, strikeCoverQ, icpStats } from './ai_intercept.js'; // 막기 2.0 STEP B (11/17 — config AI_INTERCEPT · 기본 끔): 가로막기 · 덮는 맞받기
 import { aiKitOf } from './skill_tree_data.js'; // AI 숙련도 = 칸 (11/16 — config AI_KIT · 무기가 바뀌면 kitRefresh)
 import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 눈 (11/15 시제품 — AI_TELL.ai · 기본 끔) // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
 import { cnSee, cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 — CN_STEP.mode · 기본 끔)
@@ -205,6 +206,7 @@ export class AI {
     const pc0 = TRADITIONS[art.tradition]?.parryCover;
     const pc = !pc0 || !this.kit || (this.kit.parry && this.kit.parryCover) ? pc0 : pc0.down ? { down: pc0.down } : null;
     if (pc) installCover(me, this, pc);
+    this.icpCovers = pc; // 막기 가로막기 (11/17 — ai_intercept.js 후보: 그 줄 막기 자리 몸꼴) · 읽기만
     const baseM = this.school.measure;
     this.M = art.measure;
     // 10/8 17:00 (c): 이 몸이 R2′ 묶음(몸의 호)을 쓰면 칼이 더 멀리·일찍 지나가 간격을 BODY.r2pAiContact 만큼 당긴다(72 판 'all': contact 1.57 → 1.52 가 E 승 14 → 27, P 28 → 33). 묶음 없는 AI(기본 'player' 범위의 상대)엔 0 — 바이트 동일
@@ -1693,8 +1695,10 @@ export class AI {
     const vKind = vt && this.school.tech.some((t) => t.kind === vt.kind) ? vt.kind : null;
     const neckCut = vKind === 'cut' && this.school.tech.some(neckCrossingTechnique);
     const Lk = this.plan ? this.planLuck : 0; // 무 · 낮음 띠 굴림 몫 (11/14 — 플랜 없는 몸은 0 · 셈 그대로)
+    const cov = AI_INTERCEPT.on ? strikeCoverPrep(this, s) : null; // 막기 2.0 STEP B 덮는 베기 (11/17 — ai_intercept.js): 내 칼 길이 상대 칼 자리를 가로지르는 기술의 무게를 띠 기울기만큼 (끄면 null)
     let best = null;
     let bestW = -1;
+    let bestQ = 0;
     for (const t0 of this.school.tech) {
       const t = this.techNow(t0); // 식는 특수 공격은 바탕 동작 또는 건너뜀 (10/29 19:4x — 사람과 같게)
       if (!t) continue;
@@ -1729,12 +1733,20 @@ export class AI {
       const cd = padDist(hand, t.from);
       const quick = why === 'recover' || why === 'stepin' || why === 'windup' || why === 'riposte' || why === 'stop';
       w *= Math.exp(-cd / ((quick ? 0.3 : 0.55) + 0.4 * (1 - L.read)));
+      const cq = cov ? strikeCoverQ(this, cov, t) : 0;
+      if (cq > 0) w *= 1 + cov.k * cq;
       const noise = 0.2 + 0.5 * (1 - L.read) + (Lk > 0 ? 0.3 * Lk : 0); // 무계획: 흩어지게 고름 (굴림 수는 그대로 — 폭만)
       w *= rand(1 - noise, 1 + noise);
       if (w > bestW) {
         bestW = w;
         best = t;
+        bestQ = cq;
       }
+    }
+    if (cov) {
+      const S = (this.stats.icp ??= icpStats());
+      S.stPick++;
+      if (bestQ > 0) S.stCover++;
     }
     return best;
   }
@@ -2950,8 +2962,15 @@ export class AI {
       this.gk = { t: 0, seen: false, pend: null };
       this.stats.gkTry = (this.stats.gkTry ?? 0) + 1;
     }
+    if (AI_INTERCEPT.on) this.icpPick(); // 막기 2.0 STEP B (11/17): 칼로 막기면 가로막기로 할지 띠 기울기만큼 한 번 굴림 (끄면 이 줄을 안 탐)
     this.timer = DEF_T;
     return true;
+  }
+
+  /** 막기 2.0 STEP B (11/17 — ai_intercept.js icpArm): 칼로 막는 막기면 가로막기 굴림 · 물러나 피하기면 끔 */
+  icpPick() {
+    if (this.defVoid) this.icp = this.icpFree = false;
+    else icpArm(this);
   }
 
   /** 격살 막기의 칼끼리 닿음 (사람 gyeoksalTick 과 같은 기하 — secret.js bladesTouch · 시험이 갈아 끼울 수 있게 메서드) */
@@ -3011,12 +3030,14 @@ export class AI {
     return false;
   }
 
-  defend(dt, s, d) {
+  defend(dt, s, d, th) {
     const L = this.level;
     this.timer -= dt;
     if (this.cnDive && cnDiveTick(this, dt)) return; // 偏閃奏進 (11/15 — ai_plan_cn.js): 꺾는 시간이 지나면 곧장 뛰어들어 벰
     if (!this.drillOut && this.timer < DEF_SEIZE && this.seize(s, d, dt)) return;
-    const p = this.school.parry[this.defLine] || this.school.pose.point;
+    // 막기 2.0 STEP B 가로막기 (11/17 — ai_intercept.js icpAim · 굴려 나온 막기만): 위협이 보이는 스텝마다 늦게 본 상대 칼 길을 내 칼이 몸 앞에서 가로지르는 손 자리로 다시 겨눔 (막기 줄 defLine 도 그 자리 줄로)
+    if (this.icp && !this.defVoid && th && this.me.armed) icpAim(this, s, th);
+    const p = (this.icp && !this.defVoid && this.icpPad) || this.school.parry[this.defLine] || this.school.pose.point;
     this.hand.set(p[0], p[1]);
     this.handSpeed = this.defVoid ? L.parrySpeed * 0.6 : L.parrySpeed;
     this.checkBind();
@@ -3119,6 +3140,14 @@ export class AI {
       if (cd < bestD) {
         bestD = cd;
         best = t;
+      }
+    }
+    // 막기 2.0 STEP B 덮는 맞받기 (11/17 — ai_intercept.js coverTech · Versetzen): 띠 기울기만큼 굴려 나오면 그 칼 길이 상대 칼 길을 내 몸 앞에서 가로지르는 칼을 먼저 (없으면 아래 그대로)
+    if (AI_INTERCEPT.on && !list) {
+      const cv = coverTech(this, th, hand);
+      if (cv) {
+        if (cv === (bestD < 0.3 ? best : null)) this.stats.icp.cvSame++;
+        return cv;
       }
     }
     // 준비 자세가 너무 멀면 제때 못 친다 → 그냥 막는다
@@ -3282,6 +3311,7 @@ export class AI {
     this.startWithdraw(0.5);
     return true;
   }
+
 
   // ───────────────────────── 유파 비기 (10/9 유파 설계 v3 — schools.js *_SECRET, config.js SECRET, docs/strike/school_secret_2026-10-09.md) ─────────────────────────
   //  유파 = 기질(temper + 버릇 passives) + 비기(secret) + 동작(공용 + 고유). 비기는 조건이 차면 그 유파의 대표 동작을 '완벽 실행'한다 — **굴림이 없다**.
@@ -4214,6 +4244,7 @@ export class AI {
       this.defVoid = !!D.void || !this.me.armed;
       if (this.defVoid) this.stats.voids++;
       else this.stats.parries++;
+      if (AI_INTERCEPT.on) this.icpPick(); // 막기 2.0 STEP B (11/17): 패시브 막기도 같은 굴림
       this.timer = DEF_T;
       this.passiveFired(P);
       return true;

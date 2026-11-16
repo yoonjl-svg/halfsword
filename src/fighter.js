@@ -1437,6 +1437,28 @@ export class Fighter {
     return outD.normalize();
   }
 
+  /** 막기 가로막기 (11/17 — config AI_INTERCEPT · ai_intercept.js): 패드 (x, y) 가 지금 명령할 손 목표 · 칼끝 방향 (몸 틀 · 가슴 원점). 보정 v2 면 driveSword 의 쉼 무게(bodyPose.idle) 섞기까지 —
+   *  padPose 를 옛 보정의 명령(날것.lerp(자세 지도, gw))쪽으로 wi 만큼 (driveSword 와 같은 식). 덧씌우기 · 마무리 · 칼 기울기 덧칸은 넣지 않는다. 읽기만 */
+  padCommand(x, y, outH, outD) {
+    const sv = this.skill.level;
+    if (!(this.skill.corr === 'v2' && sv > 0)) return this.strokeCommand(x, y, outH, outD);
+    this.padPose(x, y, outH, outD);
+    const wi = THREE.MathUtils.clamp(this.bodyPose.idle, 0, 1);
+    if (wi > 0) {
+      const S = (this._strokeG ||= {});
+      S.table = this.guardPose.table;
+      S.oneHand = this.guardPose.oneHand;
+      const G = guardAt(x, y, S, null);
+      const gw = this.guardWeight();
+      const oh = rawHand(x, y, _pcH).lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
+      const od = _pcD.set(...guardDir(x, y, !!this.guardPose?.oneHand)).lerp(_v6.set(G.dir[0], G.dir[1], G.dir[2]), gw);
+      if (od.lengthSq() < 0.04) od.set(G.dir[0], G.dir[1], G.dir[2]);
+      outH.lerp(oh, wi);
+      outD.lerp(od.normalize(), wi);
+    }
+    return outD.normalize();
+  }
+
   /**
    * 몸의 자세 목표 (골반·가슴 틀기, 숙이기, 낮추기). 손가락 입력을 "거르기 전" 값으로 곧바로 따라가서
    * 손(걸러진 값)보다 먼저 움직인다 → 골반 → 가슴 → 팔 → 칼 순서로 힘이 이어진다 (실제 베기의 순서).
@@ -4909,6 +4931,8 @@ const _gh = new THREE.Vector3();
 const _gf = new THREE.Vector3();
 const _v7 = new THREE.Vector3();
 const _v6 = new THREE.Vector3();
+const _pcH = new THREE.Vector3(); // 막기 가로막기 padCommand (11/17)
+const _pcD = new THREE.Vector3();
 const _qt4 = new THREE.Quaternion();
 const _qg = new THREE.Quaternion();
 const _gA = new THREE.Vector3();
