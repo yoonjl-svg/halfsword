@@ -5,5 +5,8 @@
 /** 이 몸에 스킬트리 몫 key 가 꺼졌나 — skillKit 이 없으면(시뮬 · 옛 판 AI) false */
 export const kitOff = (f, key) => !!f?.skillKit && !f.skillKit[key];
 
-/** 이 몸에 강화동작 이점(심화 칸 — 곁눈 베기 무릎 꺾기 · 내려 찌르기 틈 · 돌려 베기 쌓기 · 허리 베기 출혈)이 꺼졌나 — skillKit 이 없으면 false */
+/** 이 몸에 강화동작 이점(심화 칸 — 곁눈 베기 무릎 꺾기 · 돌려 베기 쌓기 · 허리 베기 출혈)이 꺼졌나 — skillKit 이 없으면 false */
 export const perkOff = (f, name) => !!f?.skillKit && !f.skillKit.perk?.has(name);
+
+/** 이 몸에 고유 공격 칸(skillKit.unique — 스킬트리 u 칸)이 꺼졌나 — skillKit 이 없으면 false (11/16 내려 찌르기 틈 파고들기 = 내려 찌르기 칸 I7 · combat.js) */
+export const uniqueOff = (f, name) => !!f?.skillKit && !f.skillKit.unique?.has(name);

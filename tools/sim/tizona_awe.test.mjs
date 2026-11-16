@@ -11,6 +11,7 @@ import { getWeapon, WEAPONS, WEAPON_ALIASES } from '../../src/weapons.js';
 import { Skill } from '../../src/skill.js';
 import { newRound, DT, AI } from './harness_m.mjs';
 import { withArmOld } from './arm_real_pin.mjs';
+import { pinReactOld } from './react_old.mjs'; // 11/16 AI 반응 시간 0.2 s 하나 전 판으로 묶을 옛 장면
 
 const near = (a, b, e = 1e-7) => assert.ok(Math.abs(a - b) < e, `${a} != ${b}`);
 function actor(extra = {}) {
@@ -138,7 +139,8 @@ test('AI 가 든 티소나 (상대 자리 · 플레이어 자리 모두): 막힘
   }
 }));
 
-test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · 플레이어 자리 11 s): 기력 깎음은 티소나의 막힌 공격 끝에서만 · 공격 하나에 한 번 · 8 씩 · 1.5 s 안의 둘째 막힘은 없음', oldDrain(() => {
+// 11/16 AI 반응 시간 숙련도 사다리(전 판 [0.35 … 0.05])로 묶음 (tools/sim/react_old.mjs) — 반응이 바뀌어 씨앗 27 판이 갈림 · 기준 그대로
+test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · 플레이어 자리 11 s): 기력 깎음은 티소나의 막힌 공격 끝에서만 · 공격 하나에 한 번 · 8 씩 · 1.5 s 안의 둘째 막힘은 없음', (t) => { pinReactOld(t); return oldDrain(() => {
   const orig = AI.prototype.afterStrike;
   const log = [];
   // 11/14 그때 판으로 묶음 (AI 이베리아 이어 돌리기 · 맞바꿈 켬 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해' · IB_LINK.ai 1 로 티소나 AI 판이 갈라짐: 씨앗 27 막힘 건너뜀 0 · 기준은 안 고침 — docs/strike/ib_link_2026-11-14.md §11)
@@ -187,7 +189,7 @@ test('AI 대 AI 실제 판 (티소나 대 롱소드 — 상대 자리 11 s · �
     [AP.schools, AP.errSchools, AP.pommel] = ap;
     DIG_PROTO.reach = reachOn;
   }
-}));
+})(); });
 
 test('북부 대공의 검 지움: 무기 목록에 없음 · 옛 id ice = 츠바이핸더 · 라트나는 츠바이핸더 · 플랑베르주 레어', async () => {
   assert.equal(WEAPONS.ice, undefined);

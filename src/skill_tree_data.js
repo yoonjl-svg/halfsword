@@ -314,11 +314,11 @@ export function aiLadderIds(school, level) {
   return new Set(L.slice(0, n).flat());
 }
 /**
- * 칸 없는 강화동작 이점 — perkOff 가 묻지만 어느 칸도 켜지 않는 이름: 내려 찌르기 틈 파고들기(combat.js imbroccataGap — 10/31 I8 이 헛누름으로 바뀐 뒤 칸 없음) ·
- *  머리 위 돌려 베기 쌓기(redondo stack — 'altib' 판에선 AI 가 안 씀). 사람 칸 몫엔 없어 사람은 못 받는다(지금 그대로). AI 칸 몫은 그 이점을 지금처럼 둔다
- *  (사다리는 익히지 않은 칸만 끈다 — 칸 없는 이점은 사장님께 여쭐 것 · 기록 §질문)
+ * 칸 없는 강화동작 이점 — perkOff 가 묻지만 어느 칸도 켜지 않는 이름: 머리 위 돌려 베기 쌓기(redondo stack — 'altib' 판에선 AI 가 안 씀).
+ *  사람 칸 몫엔 없어 사람은 못 받는다(지금 그대로). AI 칸 몫은 그 이점을 지금처럼 둔다(사다리는 익히지 않은 칸만 끈다).
+ *  11/16 내려 찌르기 틈 파고들기(imbroccataGap)는 내려 찌르기 칸 I7 에 붙음 — 이 목록에서 뺌(combat.js uniqueOff · [사장님 11/16 결정 '다 너의 권고대로 하마'])
  */
-export const AI_SLOTLESS_PERKS = Object.freeze(['imbroccata', 'redondo']);
+export const AI_SLOTLESS_PERKS = Object.freeze(['redondo']);
 /** AI 몸의 칸 몫 (ai.js applyKit — 사람 kitFromNodes 와 같은 꼴 · 유파 칸이 없는 무기는 null): school = 손에 든 무기 유파 · level = 그 유파 숙련도 */
 export function aiKitOf(school, level) {
   const kit = kitFromNodes(school, aiLadderIds(school, level));

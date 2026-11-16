@@ -640,7 +640,8 @@ test('독일 붙은 거리 연계 (사장님 11/15 결정 (나) · (다)): 낮�
   }
 });
 
-test('3 단계 — 숙련도 실력 숫자 새 띠 (3 = normal · 4 = hard) · 숙련도 0 = 유파 패시브 · schoolK 0 (권고대로 · 옛 판은 그대로)', () => {
+test('3 단계 — 숙련도 실력 숫자 새 띠 (3 = normal · 4 = hard) · 숙련도 0 = 유파 패시브 · schoolK 0 (권고대로 · 옛 판은 그대로)', (t) => {
+  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 옛 판(플랜 끔) 숙련 0 레이피어 AI 의 유파 패시브 = 반응 버릇 빼서 찌르기 하나뿐 — 칸 판은 칼끝 돌려 빼기 칸(I2)이 있어야 · 기준 그대로
   const lv = (p, on = 1) => withPlan({ on }, () => {
     const G = newRound({ weapon: 'longsword', weapon2: 'rapier', seed: 1 });
     const ai = new AI(G.enemy, G.player, CONFIG.AI_PROFICIENCY.levels[p], { proficiency: p });

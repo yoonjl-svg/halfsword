@@ -337,7 +337,8 @@ export class AI {
     //  숙련도 (10/13): 단계 표에 이름이 있는 패시브(동방 자→격 ciji — yaoji 이음, 4 단계)는 단계 ≤ 숙련도일 때만. 그 밖의 패시브는 그대로
     const ST = aiUniqueStages(art.tradition);
     const open = aiStageOpen(ST, this.kit, this.proficiency); // 11/16 칸 몫이 있으면 그 칸(kit.unique) · 없으면 옛 단계 ≤ 숙련도
-    this.passives = SKILL.schoolArt && !(this.planOn && AI_PLAN.zeroPlain && this.proficiency === 0) ? (TRADITIONS[art.tradition]?.passives ?? []).filter((x) => x.ai !== false && open(ST.passive, x.name)) : []; // 3 단계: 숙련도 0(무) = 유파 패시브 없음
+    const habitOk = (name) => !this.kit || !ST.habit.has(name) || this.kit.unique.has(ST.habit.get(name)); // 11/16 반응 버릇 '겹치기 (두플리렌)' · '빼서 찌르기 (카바치오네)' = 같은 이름 칸(G7 · I2)이 칸 몫에 있을 때만 [사장님 11/16 결정 '다 너의 권고대로 하마'] · 옛 판 늘
+    this.passives = SKILL.schoolArt && !(this.planOn && AI_PLAN.zeroPlain && this.proficiency === 0) ? (TRADITIONS[art.tradition]?.passives ?? []).filter((x) => x.ai !== false && open(ST.passive, x.name) && habitOk(x.name)) : []; // 3 단계: 숙련도 0(무) = 유파 패시브 없음
     this.passiveAtk = null; // 지금 공격을 시작한 패시브 이름 (startAttack 이 지운다)
     this.pendingPassive = null; // 물러남 끝에 낼 패시브 (斂翅 꼴 at:'end')
     this.stepinArmed = true; // foeStepIn: 상대가 걸어 드는 한 번에 한 번만 굴린다

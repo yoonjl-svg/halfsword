@@ -14,6 +14,7 @@ import { ibStats, chainWant, spinK, armK, habitN, ibTick, ibCircle, ibFeetV, sch
 import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
+import { pinReactOld } from './react_old.mjs'; // 11/16 AI 반응 시간 0.2 s 하나 전 판으로 묶을 옛 장면
 const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { AI_PLAN, IB_LINK, STAMINA } = CONFIG;
@@ -470,6 +471,7 @@ test('판: AI 이베리아 숙련 2 대 롱소드 AI — 국면 · 이베리아 
 });
 
 test('판: AI 이베리아 숙련 2 대 롱소드 AI (씨앗 4) — 옆 박차기 → 나선 걸음 베기 · 비스듬히 들어감이 남 (11/14 둘째 — 종종)', (t) => {
+  pinReactOld(t); // 11/16 AI 반응 시간 숙련도 사다리(전 판 [0.35 … 0.05])로 묶음 (tools/sim/react_old.mjs) — 반응 0.25 → 0.2 s(숙련 2 두 몸)로 씨앗 4 판이 갈림 · 기준 그대로
   pinArc0(t); // 11/15 그때 판(① 끔 — 둥근 칼 읽기 · 칼끝 틈이 판을 바꿈)으로 묶음 · 기준 그대로
   // 11/15 그때 판으로 묶음 (이어 돌리기 = 넘기기 판 기본 — 사장님 11/15 '브릿지로서의 메타포' · AI 이어 돌리기 길이 바뀌어 이 씨앗 판이 갈라짐: 비스듬히 들어감 0 · 기준은 안 고침 — docs/strike/ib_link_2026-11-14.md §12)
   const mk = IB_LINK.mode;

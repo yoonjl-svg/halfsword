@@ -36,7 +36,7 @@ import { lowFinishOn, lowFinishPosture, downLowTarget } from './finish_entry.js'
 import { UNIQUE_ASSIST as UA, IB_FLOW } from './config.js'; // IB_FLOW.power: 이베리아 흐르는 긋기 위력 (10/28 — analyze)
 import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 판정 배율 (11/06 — SKILL.fingerCut.hit · 기본 1 = 끔)
 import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
-import { kitOff, perkOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4)
+import { kitOff, perkOff, uniqueOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4 · 11/16 내려 찌르기 틈 파고들기 = 내려 찌르기 칸 I7 [사장님 11/16 결정 '다 너의 권고대로 하마'])
 import { itThrust, itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14 — 사람 이탈리아 찌르기 판정 배율 · 맞박자 찌르기 · 칼 우위 — config IT_OUTBOX)
 import { aiWoundKeep } from './ai_block_cut.js';
 import { ibBlockHit } from './ib_block_regen.js'; // 이베리아 막아 내면 기력 되찾음 (11/15 — 기다리는 공격의 칼날 상처면 못 막아 냄) // AI 막는 동안 피해 감소 시제품 (11/15 — SKILL.aiParryCut · 기본 끔)
@@ -359,7 +359,7 @@ export class Combat {
     if (att.weaponCfg.ignoreArmor) (guard = 1), (plateGuard = 0); // 라이트세이버 등: 갑옷·투구가 막아주지 않는다
     else if (att.weaponCfg.ignoreArmorDamage) plateGuard = 0; // 모르겐슈테른: 판금은 막아주지 않되 누비옷(guard)은 그대로
     // 찌르기 무기의 찌르기는 옷·투구의 틈을 파고든다: 옷이 막아주는 몫(0.55 위)의 gap 비율, 투구·판금은 gap 의 절반을 무시한다
-    else if (type === 'stab' && (gapV = strokeTechOf(att) === 'imbroccata' && !perkOff(att, 'imbroccata') ? Math.max(ts?.gap ?? 0, UA.imbroccataGap ?? 0) : UA.cavGap > 0 && strokeTechOf(att) === 'cavazione' ? Math.max(ts?.gap ?? 0, UA.cavGap) : ts?.gap)) {
+    else if (type === 'stab' && (gapV = strokeTechOf(att) === 'imbroccata' && !uniqueOff(att, 'imbroccata') ? Math.max(ts?.gap ?? 0, UA.imbroccataGap ?? 0) : UA.cavGap > 0 && strokeTechOf(att) === 'cavazione' ? Math.max(ts?.gap ?? 0, UA.cavGap) : ts?.gap)) {
       // 칼끝 돌려 빼기 틈 파고들기 (10/31 시제품 B — UNIQUE_ASSIST.cavGap · 기본 0 = 끔): 이 찌르기만 gap 을 cavGap 으로
       // 위에서 내려 찌르기(이탈리아 강화동작 — 10/21 사장님 '파고드는 값 0.6'): 이 찌르기만 gap 을 UA.imbroccataGap 으로 (다른 찌르기 · 다른 무기는 그대로)
       if (helmOn) guard *= 1 - 0.5 * gapV;
@@ -1027,7 +1027,7 @@ export class Combat {
       if (r.type === 'cut' && r.severity > 0) this.buckleCheck(att, vic, pr.v.part);
       itOnStrike(att, vic, r); // 이탈리아 아웃복싱 (11/14): 칼끝 돌려 빼기 · 막아찌르기 · 비껴서며 찌르기가 상처를 내면 칼 우위 · 재기 (사람 이탈리아만 — 그 밖은 곧장 돌아감)
       // 이점이 터진 순간 잔상 (10/21): 위에서 내려 찌르기가 틈을 파고들어 상처 · 요격이 몸통을 베어 깊은 출혈
-      if (r.severity > 0) { const tn = strokeTechOf(att); const yb = this.yaojiDeep(att, r, tn); if ((tn === 'imbroccata' && r.type === 'stab' && !perkOff(att, tn)) || yb) artFlash(att, this.dt); this.huntWound(att, vic, r, tn, yb); } // 11/14 동방 맹호은림: 허리를 베는 세 칼의 칼날 상처(몸 어디든)에 사냥 한 겹 (cn_hunt.js — 쌓는 몸만 · 공격 하나에 한 겹)
+      if (r.severity > 0) { const tn = strokeTechOf(att); const yb = this.yaojiDeep(att, r, tn); if ((tn === 'imbroccata' && r.type === 'stab' && !uniqueOff(att, tn)) || yb) artFlash(att, this.dt); this.huntWound(att, vic, r, tn, yb); } // 11/14 동방 맹호은림: 허리를 베는 세 칼의 칼날 상처(몸 어디든)에 사냥 한 겹 (cn_hunt.js — 쌓는 몸만 · 공격 하나에 한 겹)
     }
     if (att.weapon?.kneelHit) this.whipKneelCheck(att, vic, pr.v.part); // 채찍 무릎 꿇리기 (10/23 — 한 획에 한 번 · 아래)
     this.koteCheck(att, vic, pr.v.part, r); // 손목 치기 칼 떨구기 (J8 — 아래팔에 판정이 난 맞음: 10/24 12:3x 판정 완화 · 'cut' 판은 칼날 베기 · 심각도 > 0 만)
