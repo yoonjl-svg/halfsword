@@ -573,6 +573,8 @@ if (params.has('koteDrop')) CONFIG.UNIQUE_ASSIST.koteDrop.p = +params.get('koteD
 if (params.has('koteEase')) CONFIG.UNIQUE_ASSIST.koteDrop.ease = +params.get('koteEase') ? 1 : 0; // 손목 치기 떨굼 완화(11/05 — 판 값 1 · `?koteEase=0` = 10/24 판 · 기록 docs/strike/kote_pickup_2026-11-05.md)
 if (['block', 'auto', '0'].includes(params.get('pickup'))) CONFIG.PICKUP.mode = params.get('pickup') === '0' ? 0 : params.get('pickup'); // 떨어진 칼 줍기(11/05 — 판 값 끔 · `?pickup=block` 칼 곁에서 막기 단추 · `?pickup=auto` 곁에 가면 저절로 · src/pickup.js)
 if (params.has('pickupAi')) CONFIG.PICKUP.ai = +params.get('pickupAi') ? 1 : 0; // 칼을 놓친 AI 도 걸어가 주움(11/05 — 판 값 끔 · `?pickupAi=1`)
+if ([0.6, 0.9].includes(+params.get('pickupReach'))) CONFIG.PICKUP.reach = +params.get('pickupReach'); // 줍기 거리(11/16 [사장님 11/16 결정] '활성화되는 거리를 늘려.' — 판 값 0.9 · `?pickupReach=0.6` = 11/05 판 · 기록 docs/strike/pickup_reach_2026-11-16.md)
+if (params.has('pickupStep')) CONFIG.PICKUP.step = +params.get('pickupStep') ? 0.3 : 0; // 먼 칼 줍기 반걸음 내디딤(11/16 — 판 값 0.3 · `?pickupStep=0` = 내딛지 않음)
 if (['cut', 'arm', 'all'].includes(params.get('koteJudge'))) CONFIG.UNIQUE_ASSIST.koteDrop.judge = params.get('koteJudge'); // 칼 떨구기 닿음 판정(10/24 12:3x — 판 값 'all' · 'cut' = 11:5x 판 · 'arm' = 아래팔 닿음만)
 if (params.has('uniqueAssist')) CONFIG.UNIQUE_ASSIST.on = +params.get('uniqueAssist') ? 1 : 0; // 플레이어 고유 동작 강화(10/14 — 10/13 이어 주기): 기본 1, `?uniqueAssist=0` = 끔 (기술 이름 알림도 없음)
 // 테스트 경로도 기본 켬 (사장님 10/14 03:1x '테스트에서 켜' — 10/14 02:0x 부터 '궤적은 내 것' 강화 판으로 다시 만드는 동안 꺼 두었던 것). 끄려면 `?uniqueAssist=0`

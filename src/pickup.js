@@ -8,14 +8,15 @@
 //  흐름 (실제 초 — 시간 사다리):
 //   bend (PICKUP.bend 0.4 s): 칼 쪽으로 몸을 돌리며(f.pickup.face — fighter.updateHeading · 쥘 때까지) 웅크리고(f.pickW → secret_instant.js stanceTick 'pickup' — 골반 낮춤 · 몸통 숙임)
 //        칼 손 목표를 칼자루로(pickupHand — fighter.driveSword). 손이 칼자루 grab 안에 오거나 bend 가 차면 쥔다
+//        11/16 칼자루가 PICKUP.stepFrom(0.6 m) 넘게 멀면 웅크리며 칼 쪽으로 반걸음 PICKUP.step(0.3 m) 내디딤(앞쪽 칼 = 앞발 · 뒤쪽 칼 = 뒷발) — 손이 닿을 때까지 bend + stepWait 까지 (아래 pickupStep)
 //   lift (PICKUP.lift 0.2 s): 일어서며 칼이 손으로 올라온다 — 부활 때 칼이 돌아오는 길 그대로(revive.js startSwordReturn · flySword: 충돌 끔 · 중력 끔 · 스텝마다 빠르기로
 //        손목 자리 · 쥐는 자세까지) → attachSword(생성자와 같은 손목 관절 · 손목 원뿔 · armed · 칼끝 추정 리셋) → 칼 충돌 그룹을 되돌림
 //   settle: 쥔 칼이 상대 몸 · 칼 · 제 몸통과 겹치지 않을 때 칼 충돌을 켠다(늦어도 PICKUP.settleMax) — 켜는 순간 겹친 칼이 튀지 않게
 //  그동안 칼은 상처를 내지도 막지도 못한다(armed 거짓 · 날아오는 칼 · 쥔 직후 칼은 충돌 없음). 넘어지면(state ≠ stand) 그만두고 칼은 땅에 남는다(lift 중이면 마저 쥔다 — 이미 손 앞).
-//  f.pickupLog = [{ t0 시작 · t1 다시 쥠 · t2 칼 충돌 켬 (게임 초 fightT), ok, why, reach 시작 때 칼자루 거리, hand 쥘 때 손 ↔ 칼자루 }] — 재는 도구가 읽는다
+//  f.pickupLog = [{ t0 시작 · t1 다시 쥠 · t2 칼 충돌 켬 (게임 초 fightT), ok, why, reach 시작 때 칼자루 거리, hand 쥘 때 손 ↔ 칼자루, step 내디딘 걸음 m (11/16) }] — 재는 도구가 읽는다
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { PICKUP, VITALS, realS } from './config.js';
+import { PICKUP, VITALS, SECRET, realS } from './config.js';
 import { startSwordReturn, flySword, attachSword, holdRot } from './revive.js';
 
 const _g = new THREE.Vector3();
@@ -23,6 +24,7 @@ const _h = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _f = new THREE.Vector3();
 const _r = new THREE.Vector3();
+const LOSE = 0.3; // 굽히는 동안 칼자루가 reach + 이만큼 넘게 멀어지면 그만둠 (m — 걸음 사다리 한 칸 · 11/16 전 reach × 1.5)
 const smooth = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
 
 /** 이 몸이 줍기를 쓰나: AI 가 모는 몸 = PICKUP.ai · 사람 = PICKUP.mode */
@@ -86,14 +88,16 @@ export function pickupTick(f, dt) {
   }
   if (f.revival) return revivalHandoff(f); // 줍다가 쓰러져 부활이 시작됨: 칼은 부활 길(revive.js — 일어설 때 손으로 날아옴)에 맡긴다
   if (P.phase === 'bend') {
-    if (!canPickup(f) || swordReachDist(f) > PICKUP.reach * 1.5) return pickupEnd(f, false, !f.alive ? 'dead' : f.state !== 'stand' ? 'down' : 'lost');
+    if (!canPickup(f) || swordReachDist(f) > PICKUP.reach + LOSE) return pickupEnd(f, false, !f.alive ? 'dead' : f.state !== 'stand' ? 'down' : 'lost'); // 칼이 시작 문 밖 걸음 사다리 한 칸(0.3) 넘게 멀어짐(밀림 · 칼을 참) — 0.6 판의 × 1.5 = 0.9 와 같은 수 · 0.9 판 1.2 (× 1.5 = 1.35 면 내디딘 손도 0.5 m 넘게 못 미침)
     P.t += dt;
     f.pickW = 1;
     P.wHand = smooth(P.t / P.T);
     gripPoint(f, P.g);
     P.face = P.g;
+    if (P.step == null) pickupStep(f, P);
     const hd = wristOf(f, _h).distanceTo(P.g);
-    if (hd > PICKUP.grab && P.t < P.T) return;
+    if (hd > PICKUP.grab && P.t < P.T + (P.step > 0 ? realS(PICKUP.stepWait) : 0)) return; // 내디딘 줍기는 손이 닿을 때까지 stepWait 실제 초 더 (시간 사다리 0.4 + 0.2 = 0.6)
+    P.step ??= 0;
     // 쥔다: 칼 충돌 그룹을 적어 두고(날아오는 동안 0 — 부활과 같은 길) 손목으로 올린다
     P.hand = +hd.toFixed(3);
     P.saved = f.swordColliders.map((c) => [c, c.collisionGroups()]); // (attachSword 의 V.groups 는 부활 유령 칸 — 줍기는 쓰지 않음)
@@ -128,6 +132,24 @@ export function pickupTick(f, dt) {
 }
 
 /**
+ * 11/16 내디딤 ([사장님 11/16 결정] '지금 칼 줍는 기능이 잘 안쓰게 돼. 활성화되는 거리를 늘려.' — reach 0.6 → 0.9 · 기록 docs/strike/pickup_reach_2026-11-16.md):
+ *  칼자루가 PICKUP.stepFrom(0.6 m — 11/05 웅크린 손이 칼자루 바로 위까지 닿던 거리) 넘게 멀면 웅크리며 칼 쪽으로 반걸음 PICKUP.step(0.3 m — 걸음 사다리) 내디딘다 —
+ *  손이 칼자루까지 늘어나거나 칼이 멀리서 손으로 날아오지 않게. gait 기술 걸음(몸이 따라 실림): 칼이 앞쪽 반이면 'lunge'(앞발) · 뒤쪽 반이면 'retreat'(뒷발 — 돌아서기 전에 몸을 칼 쪽으로)
+ *  · 몸 기준 앞 · 옆 몫으로 칼자루 쪽 · 몸 따라감 SECRET.stepPush(2.0 — 비기 걸음과 같은 수 · 없으면 골반이 0.15 m 남짓만 옮아 뒤쪽 칼은 손이 못 미침). 걸음을 못 받으면(앞으로 내딛는데 스틱이 물러남 · 발이 묶임) 다음 스텝에 다시 — 굽힘이 다 차면 그만(P.step 0)
+ *  P.step: null = 아직 정하지 않음(기다림) · 0 = 안 내디딤 · > 0 = 내디딘 걸음 m
+ */
+function pickupStep(f, P) {
+  if (!(PICKUP.step > 0) || !f.gait?.active) return (P.step = 0);
+  const p = f.bodies.pelvis.translation();
+  const dx = P.g.x - p.x, dz = P.g.z - p.z, d = Math.hypot(dx, dz);
+  if (!(d > PICKUP.stepFrom)) return (P.step = 0);
+  if (P.t >= P.T) return (P.step = 0);
+  const F = f.forward(_f), R = f.right(_r);
+  const fx = (dx * F.x + dz * F.z) / d, sx = (dx * R.x + dz * R.z) / d;
+  if (f.gait.requestStep({ kind: fx >= 0 ? 'lunge' : 'retreat', fwd: PICKUP.step * fx, side: PICKUP.step * sx, duration: 0.3, push: SECRET.stepPush })) P.step = PICKUP.step;
+}
+
+/**
  * 줍는 중 부활이 시작됨 (revive.js tryRevive — 유령이 지금 칼 충돌 그룹을 적어 둠): 올리던 · 막 쥔 칼은 충돌이 0 이었으므로 부활 기록의 칼 그룹을 원래 값으로 고치고
  *  지금은 부활 유령 칼(땅하고만)로 둔다 — 부활이 끝나면 원래대로. 올리던 칼은 중력을 되돌려 떨어뜨림(부활이 일어설 때 다시 손으로 부른다)
  */
@@ -138,7 +160,7 @@ function revivalHandoff(f) {
     for (const [col, g] of P.saved) if (col.isEnabled() && !f.colliderInfo?.get(col.handle)?.detached) col.setCollisionGroups((g & 0xffff0000) | 1); // revive.js ghostSword 와 같은 꼴 (땅 비트 1)
   }
   if (P.sword) f.sword.setGravityScale(1, true);
-  (f.pickupLog ??= []).push({ t0: +P.t0.toFixed(3), t1: +f.fightT.toFixed(3), t2: +f.fightT.toFixed(3), ok: false, why: 'revive', reach: +P.reach.toFixed(3), hand: P.hand });
+  (f.pickupLog ??= []).push({ t0: +P.t0.toFixed(3), t1: +f.fightT.toFixed(3), t2: +f.fightT.toFixed(3), ok: false, why: 'revive', reach: +P.reach.toFixed(3), hand: P.hand, step: P.step ?? 0 });
   f.pickup = null;
   f.pickW = 0;
 }
@@ -167,7 +189,7 @@ function pickupEnd(f, ok, why) {
   const P = f.pickup;
   if (P.saved) for (const [col, g] of P.saved) if (col.isEnabled() && !f.colliderInfo?.get(col.handle)?.detached) col.setCollisionGroups(g); // 파손으로 떼어 낸 부품은 그대로 (revive.js ghost 와 같은 거름)
   if (!ok && P.sword) f.sword.setGravityScale(1, true);
-  (f.pickupLog ??= []).push({ t0: +P.t0.toFixed(3), t1: +(P.t1 ?? f.fightT).toFixed(3), t2: +f.fightT.toFixed(3), ok, why, reach: +P.reach.toFixed(3), hand: P.hand }); // t1 = 다시 쥔 때 · t2 = 칼 충돌을 켠 때
+  (f.pickupLog ??= []).push({ t0: +P.t0.toFixed(3), t1: +(P.t1 ?? f.fightT).toFixed(3), t2: +f.fightT.toFixed(3), ok, why, reach: +P.reach.toFixed(3), hand: P.hand, step: P.step ?? 0 }); // t1 = 다시 쥔 때 · t2 = 칼 충돌을 켠 때
   f.pickup = null;
   f.pickW = 0;
 }

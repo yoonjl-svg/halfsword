@@ -37,8 +37,10 @@ const run = (g, s) => { for (let i = 0; i < s / DT; i++) g.step(); };
 
 test('기본값: 손목 치기 떨굼 완화 켬(ease 1 · 2 J · 0.4 s · 1.5 m/s) · AI 손목 치기도 떨굼(ai 1) · 줍기 막기 단추(mode block · ai 1) — 사장님 11/05', () => {
   assert.deepEqual([K.ease, K.easeE, K.easeAfter, K.easeVn, K.p, K.ai, K.once, K.judge, K.swordVn, K.swordHalf], [1, 2, 0.4, 1.5, 0.5, 1, 1, 'all', 3, 0.5]);
-  assert.deepEqual([PU.mode, PU.ai, PU.reach, PU.bend, PU.lift], ['block', 1, 0.6, 0.4, 0.2]);
-  assert.ok([0.3, 0.45, 0.6, 0.9].includes(PU.reach), '걸음 사다리');
+  assert.deepEqual([PU.mode, PU.ai, PU.reach, PU.bend, PU.lift], ['block', 1, 0.9, 0.4, 0.2]); // reach 0.6 → 0.9 [사장님 11/16 결정] '활성화되는 거리를 늘려.'
+  assert.deepEqual([PU.step, PU.stepFrom, PU.stepWait], [0.3, 0.6, 0.2], '11/16 내디딤');
+  assert.ok([0.3, 0.45, 0.6, 0.9].includes(PU.reach) && [0.3, 0.45, 0.6, 0.9].includes(PU.step) && [0.3, 0.45, 0.6, 0.9].includes(PU.stepFrom), '걸음 사다리');
+  assert.ok([0.2, 0.4, 0.6].includes(+(PU.bend + PU.stepWait).toFixed(2)), '시간 사다리 (내디딘 굽힘)');
   assert.ok([0.2, 0.4, 0.6].includes(PU.bend) && [0.2, 0.4, 0.6].includes(PU.lift), '시간 사다리');
   assert.ok(CONFIG.SECRET.stance.pickup.drop > 0);
 });
@@ -200,6 +202,49 @@ test('AI 줍기: ai 1 이면 칼을 놓친 AI 가 걸어가 주움 · ai 0 이�
       run(g, 3); g.enemy.dropSword(); run(g, 6);
       assert.equal(g.enemy.armed, !!ai, `ai ${ai}`);
       if (ai) assert.equal(g.enemy.pickupLog?.at(-1)?.ok, true);
+    } finally { restore(); g.world.free(); }
+  }
+});
+
+/** 멈춘 칼을 몸 기준 (d m · 방향 a° — 0 = 앞 · + = 오른쪽) 자리로 옮겨 둠 (칼 자세 · 높이 그대로) */
+function placeSword(g, d, a) {
+  const P = g.player, p = P.bodies.pelvis.translation(), s = P.sword.translation(), F = P.forward(), R = P.right(), th = (a * Math.PI) / 180;
+  P.sword.setTranslation({ x: p.x + (F.x * Math.cos(th) + R.x * Math.sin(th)) * d, y: s.y, z: p.z + (F.z * Math.cos(th) + R.z * Math.sin(th)) * d }, true);
+  P.sword.setLinvel({ x: 0, y: 0, z: 0 }, true); P.sword.setAngvel({ x: 0, y: 0, z: 0 }, true);
+}
+
+test('줍기 거리 0.9 · 내디딤 (사장님 11/16 \'활성화되는 거리를 늘려\'): 칼자루 0.85 m 에서 누르면 시작 · 칼 쪽으로 반걸음 0.3 · 손이 칼자루 위로 · 칼 순간이동 없음 · 0.6 판이면 시작 안 함', () => {
+  for (const [reach, step] of [[0.6, 0], [PU.reach, PU.step]]) {
+    const g = round();
+    try {
+      const P = g.player;
+      Object.assign(PU, { mode: 'block', reach, step });
+      let press = false;
+      g.before = () => { P.move.set(0, 0); P.stickX = P.stickY = 0; P.pickupPress = press; };
+      run(g, 1); P.dropSword(); run(g, 2.5);
+      placeSword(g, 0.85, 20); run(g, 0.3);
+      assert.ok(Math.abs(swordReachDist(P) - 0.85) < 0.05, `칼자루 거리 ${swordReachDist(P).toFixed(2)}`);
+      const p0 = { ...P.bodies.pelvis.translation() }, s0 = { ...P.sword.translation() };
+      press = true;
+      let maxStep = 0, prev = null, fell = false;
+      for (let i = 0; i < 2 / DT && !(P.armed && !P.pickup); i++) {
+        g.step();
+        fell ||= P.state !== 'stand';
+        const s = P.sword.translation();
+        if (prev && P.pickup) maxStep = Math.max(maxStep, Math.hypot(s.x - prev.x, s.y - prev.y, s.z - prev.z));
+        prev = { ...s };
+      }
+      if (reach === 0.6) { assert.equal(P.armed, false, '0.6 판: 0.85 m 칼은 못 주움 (걸어가야)'); assert.equal(P.pickupLog, undefined); continue; }
+      assert.equal(P.armed, true, '0.9 판: 주움');
+      assert.equal(fell, false, '넘어지지 않음');
+      const L = P.pickupLog[0];
+      assert.equal(L.ok, true); assert.equal(L.step, PU.step, '반걸음 내디딤');
+      assert.ok(L.hand <= PU.grab + 0.1, `쥘 때 손 ↔ 칼자루 ${L.hand} (웅크린 손은 땅 위 0.3 m 안팎 — 칼자루 바로 위)`);
+      const motion = (L.t1 - L.t0) / CONFIG.TIME.k;
+      assert.ok(motion < PU.bend + PU.stepWait + PU.lift + 0.05, `동작 ${motion.toFixed(2)} 실제 s`);
+      const p1 = P.bodies.pelvis.translation(), toward = ((p1.x - p0.x) * (s0.x - p0.x) + (p1.z - p0.z) * (s0.z - p0.z)) / Math.hypot(s0.x - p0.x, s0.z - p0.z);
+      assert.ok(toward > 0.15, `골반이 칼 쪽으로 ${toward.toFixed(2)} m`);
+      assert.ok(maxStep < 0.12, `한 스텝 칼 옮김 ${maxStep.toFixed(3)} m`);
     } finally { restore(); g.world.free(); }
   }
 });

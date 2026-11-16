@@ -4,12 +4,16 @@
 //   ① 칼 곁 — 단추 '줍기' (게임 카메라) · ② 웅크려 손을 뻗음 (옆 눈) · ③ 쥐고 일어섬 (옆 눈) · ④ 다시 쥔 뒤 (게임 카메라)
 //  실행 (저장소 뿌리): npx vite build && python3 -m http.server 5493 -d dist &  ·  node tools/browser/kote_pickup_shots.mjs http://127.0.0.1:5493 [그림 폴더 (기본 docs/strike/kote_pickup_2026-11-05)]
 //  끝 코드 0 = 콘솔 오류 0 · 단추 글 · 주움 맞음. 크롬 PW_CHROMIUM (기본 /opt/pw-browsers/chromium) · 그림은 WebP(브라우저 canvas)
+//  11/16 (줍기 거리 0.9 · 내디딤 — docs/strike/pickup_reach_2026-11-16.md): 넷째 인자 = 이 판에서만 바꿀 PICKUP 값(예 `reach=0.6,step=0` = 11/05 판) · 다섯째 = 그림 이름 앞(기본 pickup) ·
+//   쥐는 순간(굽힘 → 올림) 옆 눈 그림 '_grab' 을 더 찍음
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 const { chromium } = createRequire(import.meta.url)('playwright'); // 미리 깔린 playwright (전역 — NODE_PATH)
 
 const base = (process.argv[2] || 'http://127.0.0.1:5493').replace(/\/$/, '');
 const out = process.argv[3] || 'docs/strike/kote_pickup_2026-11-05';
+const puSet = (process.argv[4] || '').split(',').filter(Boolean).map((kv) => kv.split('=')).map(([k, v]) => [k, Number.isNaN(+v) ? v : +v]); // 11/16 이 판에서만 바꿀 PICKUP 값
+const pre = process.argv[5] || 'pickup';
 fs.mkdirSync(out, { recursive: true });
 const W = 844, H = 390;
 const errors = [], report = {};
@@ -47,7 +51,7 @@ page.on('pageerror', (e) => errors.push('pageerror ' + e));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 await page.goto(`${base}/?weapon=longsword&foeWeapon=longsword&pickup=block&slowMo=0&camOpen=old&emo=0`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 180000 });
-await page.evaluate(() => { game.config.ARENA.startGap = 2.6; game.config.ARENA.startHold = 0; });
+await page.evaluate((puSet) => { game.config.ARENA.startGap = 2.6; game.config.ARENA.startHold = 0; for (const [k, v] of puSet) game.config.PICKUP[k] = v; }, puSet);
 await page.getByText('여정 시작', { exact: true }).click();
 await page.waitForFunction(() => window.game?.state === 'fight', null, { timeout: 180000 });
 await page.waitForFunction(() => window.game?.stats?.simTime > 3.0, null, { timeout: 300000 });
@@ -96,7 +100,7 @@ async function shoot(name, side) {
   report[name] = st;
   console.log('SHOT', name, JSON.stringify(st));
 }
-await shoot('pickup_1_near', false);
+await shoot(`${pre}_1_near`, false);
 // 줍기: F 를 누른 채 (단추와 같은 parryHold)
 await page.evaluate(() => (window.__timeK = 0.25)); // 천천히 (찍을 때를 놓치지 않게)
 await page.keyboard.down('KeyF');
@@ -104,16 +108,18 @@ await page.waitForFunction(() => window.game.player.pickup?.phase === 'bend', nu
 const K = await page.evaluate(() => game.config.TIME.k);
 const b0 = await simT();
 await page.waitForFunction((t) => game.stats.simTime >= t || game.player.pickup?.phase !== 'bend', b0 + 0.24 * K, { timeout: 60000, polling: 'raf' });
-await shoot('pickup_2_reach', true);
+await shoot(`${pre}_2_reach`, true);
+await page.waitForFunction(() => game.player.pickup?.phase === 'lift' || game.player.armed, null, { timeout: 60000, polling: 'raf' });
+await shoot(`${pre}_grab`, true); // 11/16 쥐는 순간 (손 ↔ 칼자루 틈)
 await page.waitForFunction(() => game.player.pickup?.phase === 'lift' || game.player.armed, null, { timeout: 60000, polling: 'raf' });
 await page.waitForFunction(() => game.player.armed || (game.player.pickup?.sword?.t ?? 0) > 0.6 * game.player.pickup?.sword?.fly, null, { timeout: 60000, polling: 'raf' });
-await shoot('pickup_3_lift', true);
+await shoot(`${pre}_3_lift`, true);
 await page.keyboard.up('KeyF');
 await page.evaluate(() => (window.__timeK = 1));
 await page.waitForFunction(() => game.player.armed && !game.player.pickup, null, { timeout: 60000 });
 const a0 = await simT();
 await page.waitForFunction((t) => game.stats.simTime > t + 0.8, a0, { timeout: 60000 });
-await shoot('pickup_4_armed', false);
+await shoot(`${pre}_4_armed`, false);
 report.log = await page.evaluate(() => window.game.player.pickupLog);
 report.labelAfter = await label();
 if (!report.before.show) errors.push('막기 단추가 안 보임 (터치 문맥)');
