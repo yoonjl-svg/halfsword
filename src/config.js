@@ -2366,9 +2366,12 @@ export const SKILL_BODY = {
 //  discipline: 간격을 지키는 정도 (0~1)
 //  aggression: 인내심이 줄어드는 빠르기·공격 성향, skill: 검술 보정(자세 지도를 따르는 정도)
 export const AI_LEVELS = {
-  easy: { reaction: realS(0.38), windup: 1.2, chamberSpeed: 2.2, strikeSpeed: 7.5, parrySpeed: 3.5, guardChance: 0.35, predict: 0.4, counter: 0, feint: 0, followUp: 0.25, read: 0.35, discipline: 0.6, strength: 0.8, aggression: 0.6, skill: 0.4 },
+  easy: { reaction: realS(0.38), windup: 1.2, chamberSpeed: 2.2, strikeSpeed: 8, parrySpeed: 3.5, guardChance: 0.4, predict: 0.4, counter: 0, feint: 0, followUp: 0.25, read: 0.35, discipline: 0.6, strength: 0.9, aggression: 0.6, skill: 0.4 }, // [사장님 11/16 결정 '쉬움 칼 빠르기 8로. 힘은 0.9로. 막을 확률 0.4.' — 전 7.5 · 0.8 · 0.35 · strikeSpeed 는 보통 베기(운동학 칼)에 안 쓰임 — 이어 돌리기 넘기기 · 비기 고리 손만]
   normal: { reaction: realS(0.26), windup: 0.6, chamberSpeed: 3, strikeSpeed: 11, parrySpeed: 4.5, guardChance: 0.6, predict: 0.75, counter: 0.2, feint: 0.15, followUp: 0.5, read: 0.65, discipline: 0.85, strength: 1.0, aggression: 0.9, skill: 0.7 },
-  hard: { reaction: realS(0.17), windup: 0.4, chamberSpeed: 3.8, strikeSpeed: 13, parrySpeed: 5.5, guardChance: 0.85, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.15, aggression: 1.0, skill: 0.85 },
+  hard: { reaction: realS(0.17), windup: 0.4, chamberSpeed: 3.8, strikeSpeed: 13, parrySpeed: 5.5, guardChance: 0.8, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.1, aggression: 1.0, skill: 0.85 }, // [사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]
+  // 최고 (11/16 신설 — 사장님 '높음 다음의 등급을 신설해. 칼 빠르기 15 힘 1.1 휘두르기 전 준비 0.3 막을 확률 0.9 - 아니 칼 빠르기 어차피 한계에 가까우면 14?' → 감독 '칼 빠르기는 보통 베기에 안 쓰여 효과 없음 — 14' ·
+  //  숙련도 5 · 6 (AI_PLAN.levels · AI_PROFICIENCY.levels) · 나머지 숫자는 높음 그대로 [감독 안 — 사장님 '다 끝나고 적용해도 됨'])
+  expert: { reaction: realS(0.17), windup: 0.3, chamberSpeed: 3.8, strikeSpeed: 14, parrySpeed: 5.5, guardChance: 0.9, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.1, aggression: 1.0, skill: 0.85 }, // [사장님 11/16 결정]
 };
 
 // AI 숙련도 (사장님 결정 10/13 22:4x~23:0x — '난이도'를 숙련도로 개편: "각 검술의 숙련도가 있고 캐릭터마다 숙련도가 달라", 메뉴의 상대 난이도는 뺌.
@@ -2386,7 +2389,7 @@ export const AI_LEVELS = {
 //     levels 'hard'(더 센 이름이 없다 · 3 ~ 5 와 같음) · schoolK 1.6(한 단계 +0.15 그대로) · reaction 0.05 s(한 단계 −0.05 그대로) · 고유 동작 · 비기 · 패시브 · 흘림 문턱은 '이상'이라 5 와 같음.
 //     max(5)는 얼터 숙련도 +1 의 상한 그대로(미나미 얼터 5 그대로) — 표 끝(6)은 levels.length − 1. 6 칸 수는 사장님 확인 전
 export const AI_PROFICIENCY = {
-  levels: ['easy', 'easy', 'normal', 'hard', 'hard', 'hard', 'hard'], // [6] 'hard' (10/24 — 사장님 확인 전)
+  levels: ['easy', 'easy', 'normal', 'hard', 'hard', 'expert', 'expert'], // [5] · [6] 'expert' 최고 [사장님 11/16 결정 — 높음 다음 등급 신설] · 전 'hard' (AI 플랜 끈 판에서만 — 켠 판은 AI_PLAN.levels)
   max: 6, // 얼터(광기) 숙련도 +1 의 상한 (characters.js VARIANT_PLUS) · 사장님 10/29 22:4x '상한 6으로 올려' — 전 5(시트 값만 6 까지: 10/24 롤랑 · 베르나르도). 아래 표들의 [6] 칸은 10/24 부터 있음
   secretAt: UNIQUE_ASSIST.secretStage,
   ofLevel: { easy: 1, normal: 2, hard: 3 },
@@ -2520,7 +2523,7 @@ export const AI_PLAN = {
   digCross: 0.6,
   digKeep: 0.6,
   // 3 단계 (11/14 — 설계 §2-4 어긋남 표 '권고대로'): 숙련도 → 실력 이름 (3 = normal · 4 = hard — 가운데 · 높음의 차는 축 ③) · 전 AI_PROFICIENCY.levels(3 = hard) — 인물 시트가 숙련도 표에서 고른 이름일 때만 바꿈 (ai.js)
-  levels: ['easy', 'easy', 'normal', 'normal', 'hard', 'hard', 'hard'],
+  levels: ['easy', 'easy', 'normal', 'normal', 'hard', 'expert', 'expert'], // [5] · [6] 'expert' 최고 [사장님 11/16 결정 — 높음 다음 등급 신설 · 감독 '숙련도 5 · 6'] · 전 'hard'
   // 3 단계: 숙련도 0(무) = 유파 패시브 · schoolK 0 · 기질은 무유파 범위 (고유 동작은 이미 0 에서 없음) [권고대로 · 사장님 확인 전]
   zeroPlain: 1,
   // 3 단계: 붙은 거리 손잡이 찍기를 모든 AI 에 (인물 칸 · 독일 밀치기가 없는 몸도) — 닿는 거리 안 사건(들어섬 · 칼 맞물림)마다 이 몫으로 찍기 (CLOSE.pommelDist 0.9 m 안) [사장님 확인 전]
