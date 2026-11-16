@@ -1,0 +1,368 @@
+{
+ "mode": "stick",
+ "views": {
+  "landscape": {
+   "errors": [],
+   "start": {
+    "vw": 750,
+    "vh": 342,
+    "out": {
+     "moveStick": {
+      "shown": true,
+      "opacity": 1,
+      "x": 20,
+      "y": 212,
+      "w": 110,
+      "h": 110
+     },
+     "atkStick": {
+      "shown": true,
+      "opacity": 1,
+      "x": 620,
+      "y": 212,
+      "w": 110,
+      "h": 110
+     },
+     "btnParry": {
+      "shown": true,
+      "opacity": 1,
+      "x": 556,
+      "y": 148,
+      "w": 84,
+      "h": 84
+     },
+     "hint": {
+      "shown": true,
+      "opacity": 1,
+      "x": 215,
+      "y": 301,
+      "w": 320,
+      "h": 29
+     },
+     "emoMsg": {
+      "shown": false,
+      "opacity": 0,
+      "x": 375,
+      "y": 276,
+      "w": 0,
+      "h": 0
+     },
+     "guardName": {
+      "shown": true,
+      "opacity": 1,
+      "x": 481,
+      "y": 12,
+      "w": 255,
+      "h": 52
+     },
+     "techSlot": {
+      "shown": true,
+      "opacity": 1,
+      "x": 481,
+      "y": 70,
+      "w": 255,
+      "h": 40
+     },
+     "topButtons": {
+      "shown": true,
+      "opacity": 1,
+      "x": 356,
+      "y": 8,
+      "w": 38,
+      "h": 38
+     },
+     "stageInfo": {
+      "shown": true,
+      "opacity": 1,
+      "x": 14,
+      "y": 12,
+      "w": 255,
+      "h": 15
+     }
+    },
+    "overlap": [],
+    "offscreen": [],
+    "hintText": "왼쪽 스틱으로 걷기 · 오른쪽 스틱으로 휘두르기 · 톡 쳐서 찌르기"
+   },
+   "hud": {
+    "vw": 750,
+    "vh": 342,
+    "out": {
+     "moveStick": {
+      "shown": true,
+      "opacity": 1,
+      "x": 20,
+      "y": 212,
+      "w": 110,
+      "h": 110
+     },
+     "atkStick": {
+      "shown": true,
+      "opacity": 1,
+      "x": 620,
+      "y": 212,
+      "w": 110,
+      "h": 110
+     },
+     "btnParry": {
+      "shown": true,
+      "opacity": 1,
+      "x": 556,
+      "y": 148,
+      "w": 84,
+      "h": 84
+     },
+     "hint": {
+      "shown": true,
+      "opacity": 1,
+      "x": 215,
+      "y": 301,
+      "w": 320,
+      "h": 29
+     },
+     "emoMsg": {
+      "shown": false,
+      "opacity": 0,
+      "x": 375,
+      "y": 276,
+      "w": 0,
+      "h": 0
+     },
+     "guardName": {
+      "shown": true,
+      "opacity": 1,
+      "x": 481,
+      "y": 12,
+      "w": 255,
+      "h": 52
+     },
+     "techSlot": {
+      "shown": true,
+      "opacity": 1,
+      "x": 481,
+      "y": 70,
+      "w": 255,
+      "h": 40
+     },
+     "topButtons": {
+      "shown": true,
+      "opacity": 1,
+      "x": 356,
+      "y": 8,
+      "w": 38,
+      "h": 38
+     },
+     "stageInfo": {
+      "shown": true,
+      "opacity": 1,
+      "x": 14,
+      "y": 12,
+      "w": 255,
+      "h": 15
+     }
+    },
+    "overlap": [],
+    "offscreen": []
+   },
+   "hold": {
+    "up": {
+     "hand": [
+      0,
+      0.547
+     ],
+     "swordUp": 0.897,
+     "swordSide": 0.126,
+     "swinging": false,
+     "tip": 0.41,
+     "tap": false,
+     "held": true,
+     "grip": true,
+     "knob": "translate(0px, -36px)"
+    },
+    "right": {
+     "hand": [
+      0.547,
+      0
+     ],
+     "swordUp": 0.432,
+     "swordSide": 0.451,
+     "swinging": false,
+     "tip": 0.14,
+     "tap": false,
+     "held": true,
+     "grip": true,
+     "knob": "translate(36px, 0px)"
+    },
+    "down": {
+     "hand": [
+      0,
+      -0.547
+     ],
+     "swordUp": 0.014,
+     "swordSide": 0.122,
+     "swinging": false,
+     "tip": 0,
+     "tap": false,
+     "held": true,
+     "grip": true,
+     "knob": "translate(0px, 36px)"
+    },
+    "left": {
+     "hand": [
+      -0.547,
+      0
+     ],
+     "swordUp": 0.466,
+     "swordSide": -0.357,
+     "swinging": false,
+     "tip": 0.23,
+     "tap": false,
+     "held": true,
+     "grip": true,
+     "knob": "translate(-36px, 0px)"
+    }
+   },
+   "flick": {
+    "before": {
+     "hand": [
+      0,
+      0.62
+     ],
+     "swordUp": 0.946,
+     "swordSide": 0.129,
+     "swinging": false,
+     "tip": 0.19,
+     "tap": false,
+     "held": true,
+     "grip": true,
+     "knob": "translate(0px, -40px)"
+    },
+    "after": {
+     "hand": [
+      0,
+      -0.62
+     ],
+     "swordUp": 0,
+     "swordSide": 0.113,
+     "swinging": false,
+     "tip": 0.01,
+     "tap": false,
+     "held": true,
+     "grip": true,
+     "knob": "translate(0px, 40px)"
+    },
+    "swing": true,
+    "tipMax": 16.1
+   },
+   "tap": {
+    "thrusts": 1,
+    "hand": [
+     0.078,
+     -0.039
+    ],
+    "swordUp": 0.457,
+    "swordSide": -0.031,
+    "swinging": false,
+    "tip": 2.33,
+    "tap": true,
+    "held": false,
+    "grip": false,
+    "knob": ""
+   },
+   "canvasSwipe": {
+    "before": [
+     0.078,
+     -0.039
+    ],
+    "after": [
+     0.078,
+     -0.039
+    ]
+   }
+  },
+  "portrait": {
+   "errors": [],
+   "rotateCover": "flex",
+   "hud": {
+    "vw": 390,
+    "vh": 664,
+    "out": {
+     "moveStick": {
+      "shown": true,
+      "opacity": 1,
+      "x": 20,
+      "y": 534,
+      "w": 110,
+      "h": 110
+     },
+     "atkStick": {
+      "shown": true,
+      "opacity": 1,
+      "x": 260,
+      "y": 534,
+      "w": 110,
+      "h": 110
+     },
+     "btnParry": {
+      "shown": true,
+      "opacity": 1,
+      "x": 196,
+      "y": 470,
+      "w": 84,
+      "h": 84
+     },
+     "hint": {
+      "shown": true,
+      "opacity": 1,
+      "x": 35,
+      "y": 417,
+      "w": 320,
+      "h": 29
+     },
+     "emoMsg": {
+      "shown": false,
+      "opacity": 0,
+      "x": 195,
+      "y": 392,
+      "w": 0,
+      "h": 0
+     },
+     "guardName": {
+      "shown": true,
+      "opacity": 1,
+      "x": 224,
+      "y": 12,
+      "w": 152,
+      "h": 52
+     },
+     "techSlot": {
+      "shown": true,
+      "opacity": 1,
+      "x": 224,
+      "y": 70,
+      "w": 152,
+      "h": 40
+     },
+     "topButtons": {
+      "shown": true,
+      "opacity": 1,
+      "x": 176,
+      "y": 8,
+      "w": 38,
+      "h": 38
+     },
+     "stageInfo": {
+      "shown": true,
+      "opacity": 1,
+      "x": 14,
+      "y": 12,
+      "w": 152,
+      "h": 15
+     }
+    },
+    "overlap": [],
+    "offscreen": []
+   }
+  }
+ }
+}

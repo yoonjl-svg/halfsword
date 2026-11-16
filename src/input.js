@@ -8,6 +8,9 @@ import { INPUT } from './config.js';
 import { flushHaptic } from './effects.js';
 import { configureMobileIntent, mapMobileHandDelta } from './mobile_intent.js'; // 10/7 폰 세로 1.35 배 (사장님 선택, 샛별 일반판 그대로)
 import { STICK_DEAD } from './stick_turn.js'; // 조이스틱 데드존 0.15 — 스틱 돌리기 몸짓 읽기(10/23 이베리아 휘감아 돌기)와 같은 수 한 곳
+import { atkStickState, atkStickGrab, atkStickKnob, atkStickRelease } from './atk_stick.js'; // 공격 조이스틱 (11/17 — INPUT.atkStick · 아래 attachAtkStick)
+
+const STICK_R = 40; // 화면 조이스틱 손잡이가 움직이는 반지름 (px — 이동 · 공격 조이스틱 같은 수)
 
 export class Input {
   constructor(canvas, params = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : new URLSearchParams()) {
@@ -74,6 +77,7 @@ export class Input {
     if (!this.enabled) return;
     // 이동 스틱 둘레(10/31 — INPUT.stickGuardPx · attachStick 이 stickGuard 를 건다): 스틱 원 + 둘레 안에 닿은 손가락은 칼 손가락이 아님 (권총 탭도 아님)
     if (e.pointerType !== 'mouse' && this.stickGuard?.(e)) return;
+    if (this.atk?.mode === 'stick' && e.pointerType !== 'mouse') return; // 공격 조이스틱 'stick' 판 (11/17 — INPUT.atkStick): 칼은 조이스틱만 — 화면 끌기 · 톡은 칼 입력이 아님
     // 마우스 잠금을 거는 첫 클릭은 찌르기로 치지 않는다 (잠금을 못 거는 브라우저는 클릭 그대로)
     const lockedBefore = document.pointerLockElement === this.canvas || !this.canvas.requestPointerLock;
     if (e.pointerType === 'mouse') {
@@ -111,6 +115,7 @@ export class Input {
     }
     if (e.pointerId !== this.activeTouch) return;
     if (this.press?.id === e.pointerId) this.press.moved = Math.max(this.press.moved, Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y));
+    if (this.atk?.id === e.pointerId) return; // 공격 조이스틱 엄지: 손 목표는 손잡이 자리가 정한다 (atk_stick.js — main.js 가 프레임마다)
     const delta = mapMobileHandDelta({ dx: e.clientX - this.lastX, dy: e.clientY - this.lastY, height: window.innerHeight, sensitivity: INPUT.touchSensitivity, pointerType: e.pointerType, verticalGain: this.mobileIntent.verticalGain });
     this.handDX += delta.x;
     this.handDY += delta.y;
@@ -143,6 +148,7 @@ export class Input {
   holdState() {
     const p = this.press;
     if (!this.enabled || !p || !p.ok) return { down: false, still: false };
+    if (p.atk) return { down: true, still: !this.atk.grip }; // 공격 조이스틱 엄지 (11/17): 얹은 엄지(데드존 안 · holdPx 안)만 길게 누름 — 칼을 쥔 엄지(막는 선을 쥐고 기다림)는 아님
     return { down: true, still: p.moved < (p.mouse ? INPUT.clickPx : INPUT.holdPx ?? INPUT.tapPx) };
   }
 
@@ -188,7 +194,7 @@ export class Input {
 export function attachStick(input, pad, knob) {
   let id = null;
   let ring = false; // 스틱 둘레에서 쥔 손가락 (10/31 — 아래 input.stickGuard · 캡처가 안 걸린 환경에서도 창 사건으로 따라감)
-  const R = 40;
+  const R = STICK_R;
   const DEAD = STICK_DEAD; // 가운데 근처 살짝 건드린 건 무시 (0.15)
   const reset = () => {
     const captured = id;
@@ -255,4 +261,108 @@ export function attachStick(input, pad, knob) {
   };
   window.addEventListener('pointermove', (e) => ring && e.pointerId === id && e.target !== pad && update(e));
   for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, (e) => ring && e.pointerId === id && e.target !== pad && reset());
+}
+
+/**
+ * 공격 조이스틱 (11/17 — 사장님 '이동스위치처럼 공격 스위치를 만들어' · INPUT.atkStick · src/atk_stick.js): 화면 오른쪽 아래. 이동 스틱과 같은 꼴 · 크기 · 손잡이 반지름 ·
+ *  둘레(INPUT.stickGuardPx · stickGuardGrab — 둘레에 닿은 손가락은 화면 칼 손가락이 아니고, 비어 있으면 이 조이스틱을 쥠).
+ *  손잡이를 쥔 엄지는 칼 손가락이다(input.activeTouch · press — 탭 찌르기 · 길게 누름 · 손가락 닿음 · 권총 닿는 순간 쏨이 손가락과 같은 길 · press.atk 표시).
+ *  다만 엄지 움직임은 손 목표에 더하지 않고(Input.onMove) 손잡이 자리(input.atk)로만 — main.js 가 프레임마다 atkStickStep 으로 손 목표 몫을 낸다.
+ *  'both' 판: 화면 손가락이 칼을 쥐고 있으면 조이스틱이 넘겨받는다(그 손가락은 버림 — 칼은 손가락 하나로만). 판이 0 이면 아무것도 붙이지 않음(input.atk 없음 — 판 그대로)
+ * @param {HTMLElement} pad  바깥 원
+ * @param {HTMLElement} knob 안쪽 손잡이
+ */
+export function attachAtkStick(input, pad, knob, mode) {
+  const st = atkStickState(mode);
+  if (!st.mode) return null;
+  input.atk = st;
+  const R = STICK_R;
+  let cx0 = 0;
+  let cy0 = 0;
+  const at = (e) => {
+    const r = pad.getBoundingClientRect();
+    let dx = e.clientX - (r.left + r.width / 2);
+    let dy = e.clientY - (r.top + r.height / 2);
+    const len = Math.hypot(dx, dy);
+    if (len > R) {
+      dx = (dx / len) * R;
+      dy = (dy / len) * R;
+    }
+    return { dx, dy };
+  };
+  const show = (dx, dy) => { knob.style.transform = dx || dy ? `translate(${dx}px, ${dy}px)` : ''; };
+  const release = () => {
+    const captured = st.id;
+    atkStickRelease(st);
+    show(0, 0);
+    if (captured !== null && pad.releasePointerCapture) {
+      try {
+        if (!pad.hasPointerCapture || pad.hasPointerCapture(captured)) pad.releasePointerCapture(captured);
+      } catch { /* 이미 취소·해제된 포인터 */ }
+    }
+  };
+  input._resetHooks.add(release);
+  const grab = (e) => {
+    if (input.activeTouch !== null) {
+      // 화면 손가락이 칼을 쥐고 있었다('both' 판) — 넘겨받음 (그 손가락의 누름 · 흔적은 버림)
+      input.activeTouch = null;
+      input.press = null;
+      input.trail?.lift?.();
+    }
+    const { dx, dy } = at(e);
+    cx0 = e.clientX;
+    cy0 = e.clientY;
+    atkStickGrab(st, e.pointerId, dx / R, -dy / R);
+    show(dx, dy);
+    if (input.tapOnDown) input.taps++; // 권총: 손가락처럼 닿는 순간 쏨
+    input.activeTouch = e.pointerId;
+    input.lastX = e.clientX;
+    input.lastY = e.clientY;
+    input.press = { id: e.pointerId, t: e.timeStamp || performance.now(), x: e.clientX, y: e.clientY, moved: 0, mouse: false, ok: !input.tapOnDown, atk: true };
+    try { pad.setPointerCapture(e.pointerId); } catch { /* 캡처가 안 되면 아래 창 사건이 따라감 */ }
+  };
+  const update = (e) => {
+    if (!input.enabled) { release(); return; }
+    const { dx, dy } = at(e);
+    atkStickKnob(st, dx / R, -dy / R, Math.hypot(e.clientX - cx0, e.clientY - cy0));
+    show(dx, dy);
+  };
+  pad.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    if (!input.enabled || st.id !== null || e.pointerType === 'mouse') return;
+    grab(e);
+  });
+  pad.addEventListener('pointermove', (e) => e.pointerId === st.id && update(e));
+  const end = (e) => {
+    if (e.pointerId !== st.id) return;
+    release();
+  };
+  pad.addEventListener('pointerup', end);
+  pad.addEventListener('pointercancel', end);
+  // 뗌 없이 캡처를 잃음: 칼 손가락 상태도 버림 (캔버스 손가락의 lostpointercapture 와 같은 길 — Input.onCancel)
+  pad.addEventListener('lostpointercapture', (e) => {
+    if (e.pointerId !== st.id) return;
+    input.onCancel(e);
+    release();
+  });
+  // 캡처가 안 걸린 환경 · 둘레에서 쥔 손가락: 창 사건으로 따라감 (이동 스틱 둘레와 같은 꼴)
+  window.addEventListener('pointermove', (e) => e.pointerId === st.id && e.target !== pad && update(e));
+  for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, (e) => e.pointerId === st.id && e.target !== pad && release());
+  // 둘레 (이동 스틱 둘레와 같은 수 — INPUT.stickGuardPx · stickGuardGrab): 앞선 둘레(이동 스틱)를 먼저 보고, 이 원 + 둘레 안 캔버스 손가락은 칼 손가락이 아님 · 비어 있으면 쥠
+  const prevGuard = input.stickGuard;
+  input.stickGuard = (e) => {
+    if (prevGuard?.(e)) return true;
+    const g = +(INPUT.stickGuardPx ?? 0);
+    if (!(g > 0)) return false;
+    const r = pad.getBoundingClientRect();
+    if (!(r.width > 0 && r.height > 0)) return false; // 숨은 조이스틱
+    const R0 = Math.min(r.width, r.height) / 2;
+    if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) > R0 + g) return false;
+    if (INPUT.stickGuardGrab && st.id === null) {
+      grab(e);
+      st.ring = true;
+    }
+    return true;
+  };
+  return st;
 }
