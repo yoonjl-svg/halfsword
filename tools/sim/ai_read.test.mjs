@@ -15,6 +15,7 @@ import { aiBeatTick } from '../../src/italian_outbox.js';
 import { gnsEnterLine, useSecret } from '../../src/secret.js';
 import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
+import { pinReactOld } from './react_old.mjs'; // 11/16 AI 반응 시간 0.2 s 하나 전 판으로 묶을 옛 장면
 
 const { AI_PLAN, AI_PLAN_JP, SECRET, STAMINA, JP_TANK, TIME } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -425,7 +426,8 @@ test('AI 고노센 꾐 — 상대가 칼을 드는 거리(버릇)가 선 밖이�
   assert.equal(e.jpGns.invite, true, '모름 — 어림 거리(상대 칼끝 + 0.4)가 선 밖 · 굴림 몫 아래');
 });
 
-test('판: 일본 숙련 5 대 롱소드 AI (씨앗 1 · 2) — AI 고노센이 남 · 지킴 · 읽기 판단이 남', () => {
+test('판: 일본 숙련 5 대 롱소드 AI (씨앗 1 · 2) — AI 고노센이 남 · 지킴 · 읽기 판단이 남', (t) => {
+  pinReactOld(t); // 11/16 AI 반응 시간 숙련도 사다리(전 판 [0.35 … 0.05])로 묶음 (tools/sim/react_old.mjs) — 반응 0.1 · 0.25 → 0.2 s 로 씨앗 1 · 2 판이 갈림 · 기준 그대로
   let fired = 0;
   let keep = 0;
   let risk = 0;

@@ -1992,7 +1992,7 @@ export const UNIQUE_ASSIST = {
   tsuTip: 1,
   // 위에서 내려 찌르기(이탈리아) — 옷 · 갑옷 틈을 파고드는 값(combat.js THRUST_STYLE gap 자리)을 이 찌르기만 이 값으로 (레이피어 기본 0.6 — 11/14 · 사장님 10/21 '파고드는 값 0.6으로 해' · 확인표 2107)
   //  11/14 사장님 '기본찌르기는 0.6 위에서 내려찌르기는 0.9' (확인표 3821 — 걸음 테이블에서 고름 · 판금 찌르기 문턱 47 × (1 − 0.5 × 0.9) ≈ 26 J) — 전 0.6 `?imbroccataGap=0.6`
-  imbroccataGap: 0.9,
+  imbroccataGap: 0.9, // 11/16 내려 찌르기 칸 I7 을 익힌 몸이 받음(사람 · AI 같음 — AI 는 숙련도 2 부터 · combat.js uniqueOff) [사장님 11/16 결정 '다 너의 권고대로 하마'] · 전 칸 없음(10/31 I8 헛누름 뒤 — 사람은 못 받고 AI 만)
   // 사람 위에서 내려 찌르기 닿게 (사장님 10/27 23:5x '임브로카타 찌르기 뻗게 고치고' — 기록 docs/strike/imbroccata_2026-10-27.md · 확인표 2660): 1 = 긋기가 내려 찌르기로 읽힌 순간
   //  탭 찌르기 덧씌우기로 찌른다(AI 임브로카타 ai.js startStrike → skill.thrust 와 같은 길 — 이탈리아 찌르기 THRUST.itLunge: 몸통 겨눔 · 팔만으로 안 닿으면 거리만큼 런지) · 그 탭의 찌른 상처에 I8 틈 파고들기 그대로.
   //  0 = 전 판(손가락 길만 — 칼끝이 머리 곁 18 cm · 가슴 곁 26 cm 를 옆으로 쓸고 지나감) `?imbroReach=0`. 같은 날 의논한 이어 찌르기 조건 · 빠르기 보정 · 잔상 · 길은 사장님 10/28 00:5x 결정으로 칼끝 돌려 빼기(I9 — 아래 cav*)로 옮김
@@ -2370,14 +2370,14 @@ export const AI_LEVELS = {
   normal: { reaction: realS(0.26), windup: 0.6, chamberSpeed: 3, strikeSpeed: 11, parrySpeed: 4.5, guardChance: 0.6, predict: 0.75, counter: 0.2, feint: 0.15, followUp: 0.5, read: 0.65, discipline: 0.85, strength: 1.0, aggression: 0.9, skill: 0.7 },
   hard: { reaction: realS(0.17), windup: 0.4, chamberSpeed: 3.8, strikeSpeed: 13, parrySpeed: 5.5, guardChance: 0.8, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.1, aggression: 1.0, skill: 0.85 }, // [사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]
   // 최고 (11/16 신설 — 사장님 '높음 다음의 등급을 신설해. 칼 빠르기 15 힘 1.1 휘두르기 전 준비 0.3 막을 확률 0.9 - 아니 칼 빠르기 어차피 한계에 가까우면 14?' → 감독 '칼 빠르기는 보통 베기에 안 쓰여 효과 없음 — 14' ·
-  //  숙련도 5 · 6 (AI_PLAN.levels · AI_PROFICIENCY.levels) · 나머지 숫자는 높음 그대로 [감독 안 — 사장님 '다 끝나고 적용해도 됨'])
+  //  숙련도 6 만 (AI_PLAN.levels · AI_PROFICIENCY.levels — [사장님 11/16 결정 '단 실력 등급은 높음을 4~5, 최고를 6으로'] · 전 감독 안 5 · 6) · 나머지 숫자는 높음 그대로 [감독 안 — 사장님 '다 끝나고 적용해도 됨'])
   expert: { reaction: realS(0.17), windup: 0.3, chamberSpeed: 3.8, strikeSpeed: 14, parrySpeed: 5.5, guardChance: 0.9, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.1, aggression: 1.0, skill: 0.85 }, // [사장님 11/16 결정]
 };
 
 // AI 숙련도 (사장님 결정 10/13 22:4x~23:0x — '난이도'를 숙련도로 개편: "각 검술의 숙련도가 있고 캐릭터마다 숙련도가 달라", 메뉴의 상대 난이도는 뺌.
 //  docs/strike/ai_proficiency_2026-10-13.md). 숙련도(0~4)는 두 곳에 쓴다:
 //   ① 실력 숫자: 아래 levels[숙련도] = AI_LEVELS 이름 (인물별 persona.level 덮어쓰기는 그 위에 그대로) — 이 매핑은 사장님 확인 전 (확인표 끝).
-//      4·5 = hard: 지금 hard 보다 센 수가 없다 — 3 과의 차이는 네 번째 고유 동작(4)·비기(5)뿐. 0 = easy (시험 주소 ?foeProficiency=0 으로만 나온다)
+//      4·5 = hard: 3 과의 차이는 네 번째 고유 동작(4)·비기(5)뿐 · 6 = expert(최고 — 11/16 신설 · [사장님 11/16 결정 '높음을 4~5, 최고를 6으로']). 0 = easy (시험 주소 ?foeProficiency=0 으로만 나온다)
 //   ② 고유 동작: 손에 든 무기 유파의 고유 동작 가운데 단계 ≤ 숙련도인 것만 (unique_assist.js PLAYER_UNIQUE 단계 — sword_art.js·ai.js)
 //   ③ 비기: 손에 든 무기 유파의 숙련도가 secretAt(5) 일 때만 그 유파 비기 (사장님 결정 10/13 23:1x 'AI는 숙련도 5만 비기 씀' — ai.js). 5 이상인 인물: 미나미 · 얼터 일부 · 10/24 아르토리아 · 백린의 전사(5) · 롤랑 · 베르나르도(6) — 그 가운데 AI 가 비기를 쓰는 것은 SECRET.aiOpenSchools(일본 · 10/24 이베리아 · 독일) 유파 인물뿐
 //  ofLevel: 숙련도를 주지 않은 AI(인물 시트 없이 난이도 이름만 받는 도구·기본 상대)의 숙련도 = 난이도 이름에서. 기본 상대(?foe=default) = normal = 2
@@ -2386,19 +2386,21 @@ export const AI_LEVELS = {
 //     flowReady = 일본 AI 가 흘려 받기를 노리는 자세: 'defend'(막는 중)는 늘 · 'watch'(간 보기 — 겨눈 칼)는 이 숙련도부터 · 'withdraw'(물러남)는 이 숙련도부터 (nagashi_redesign.js aiFlowReady).
 //     값은 감독 안 — 사장님 확인 전 (확인표 2092 · 2093)
 //  ⑤ 숙련도 6 (사장님 10/24 01:1x '백린 전사는 5 롤랑과 베르나르도는 6' — 방랑 손님 롤랑 · 베르나르도만, 확인표 2334 · 2335): 표마다 0~5 값은 그대로 두고 6 칸만 더함 —
-//     levels 'hard'(더 센 이름이 없다 · 3 ~ 5 와 같음) · schoolK 1.6(한 단계 +0.15 그대로) · reaction 0.05 s(한 단계 −0.05 그대로) · 고유 동작 · 비기 · 패시브 · 흘림 문턱은 '이상'이라 5 와 같음.
+//     levels 'expert'(최고 — 11/16 신설 · 숙련도 6 만 [사장님 11/16 결정 '최고를 6으로'] · 전 'hard') · schoolK 1.6(한 단계 +0.15 그대로) · reaction(11/16 부터 모든 숙련도 같은 값 — 아래) · 고유 동작 · 비기 · 패시브 · 흘림 문턱은 '이상'이라 5 와 같음.
 //     max(5)는 얼터 숙련도 +1 의 상한 그대로(미나미 얼터 5 그대로) — 표 끝(6)은 levels.length − 1. 6 칸 수는 사장님 확인 전
 export const AI_PROFICIENCY = {
-  levels: ['easy', 'easy', 'normal', 'hard', 'hard', 'expert', 'expert'], // [5] · [6] 'expert' 최고 [사장님 11/16 결정 — 높음 다음 등급 신설] · 전 'hard' (AI 플랜 끈 판에서만 — 켠 판은 AI_PLAN.levels)
+  levels: ['easy', 'easy', 'normal', 'hard', 'hard', 'hard', 'expert'], // [6] 'expert' 최고 · [5] 'hard' [사장님 11/16 결정 '단 실력 등급은 높음을 4~5, 최고를 6으로'] · 전 [5] · [6] 'hard' (AI 플랜 끈 판에서만 — 켠 판은 AI_PLAN.levels)
   max: 6, // 얼터(광기) 숙련도 +1 의 상한 (characters.js VARIANT_PLUS) · 사장님 10/29 22:4x '상한 6으로 올려' — 전 5(시트 값만 6 까지: 10/24 롤랑 · 베르나르도). 아래 표들의 [6] 칸은 10/24 부터 있음
   secretAt: UNIQUE_ASSIST.secretStage,
   ofLevel: { easy: 1, normal: 2, hard: 3 },
   schoolK: [0.7, 0.85, 1, 1.15, 1.3, 1.45, 1.6], // [6] 1.6 (10/24 — 한 단계 +0.15 그대로 · 사장님 확인 전)
   flowReady: { watch: 2, withdraw: 4 },
-  // AI 반응 시간 (s · 숙련도 0~5 — 10/21 14:3x 사장님 'ai 막기 반응은 … 난이도가 없어졌으니 숙련도에 따라 달라지게 개편해' · 확인표 2114):
-  //  AI 의 눈(sense.seen — 막기 · 틈 읽기 · 미리 보기가 모두 읽는 한 값)이 이만큼 늦게 본다. 숙련도 한 단계마다 0.05 s 빨라짐 · 2 = 0.25(전 normal 0.26) · 3 = 0.2.
-  //  인물 시트의 reaction 덮어쓰기와 이름(easy · normal · hard) 값보다 이것이 이긴다(ai.js). 광기 인물은 숙련도 + 1 이라 한 단계 빠름. 수는 감독 — 사장님 확인 전
-  reaction: [0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05].map(realS), // 표준 시간: 실제 초 (10/25) · [6] 0.05 s (10/24 — 한 단계 −0.05 그대로 · 사장님 확인 전)
+  // AI 반응 시간 (s · 숙련도 0~6 — 10/21 14:3x 사장님 'ai 막기 반응은 … 난이도가 없어졌으니 숙련도에 따라 달라지게 개편해' · 확인표 2114):
+  //  AI 의 눈(sense.seen — 막기 · 틈 읽기 · 미리 보기가 모두 읽는 한 값)이 이만큼 늦게 본다. 인물 시트의 reaction 덮어쓰기와 이름(easy · normal · hard · expert) 값보다 이것이 이긴다(ai.js).
+  //  11/16 [사장님 11/16 결정 '다 너의 권고대로 하마'] 모든 숙련도 사람 반응 0.2 s 하나 — 감독 재기: 숙련 4 롱소드 거울(짝마다 24 판 · 재는 쪽 반응 0.30 / 0.15 / 0.05 s 대 0.15 s)에서
+  //   이김 몫 42 / 50 / 38 % · 받은 상처 판당 2.63 / 2.83 / 2.88 — 차이 없음. 칸(숙련도마다)은 남겨 나중에 다시 맞출 수 있게.
+  //  전 [0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05] (한 단계마다 0.05 s 빨라짐 · 감독 안)
+  reaction: [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2].map(realS), // 표준 시간: 실제 초 (10/25) [사장님 11/16 결정 '다 너의 권고대로 하마']
 };
 // 숙련도 6 버티는 힘 (사장님 10/29 22:4x '지금 숙련도 6인 캐릭터는 (롤랑과 베르나르도의 경우를 보면) 체력 10% 보너스가 있었어. 그와 동일한 방식으로 숙련도 6캐릭터는 모두같은 보너스를 주도록 해'):
 //  인물 시트의 실효 숙련도(ai.proficiency — 얼터는 원본 +1 · 상한 맞춤 뒤)가 6 이면 시트 vitality = 이 값(characters.js 한 곳 — 시트마다 손으로 적지 않음).
@@ -2523,7 +2525,7 @@ export const AI_PLAN = {
   digCross: 0.6,
   digKeep: 0.6,
   // 3 단계 (11/14 — 설계 §2-4 어긋남 표 '권고대로'): 숙련도 → 실력 이름 (3 = normal · 4 = hard — 가운데 · 높음의 차는 축 ③) · 전 AI_PROFICIENCY.levels(3 = hard) — 인물 시트가 숙련도 표에서 고른 이름일 때만 바꿈 (ai.js)
-  levels: ['easy', 'easy', 'normal', 'normal', 'hard', 'expert', 'expert'], // [5] · [6] 'expert' 최고 [사장님 11/16 결정 — 높음 다음 등급 신설 · 감독 '숙련도 5 · 6'] · 전 'hard'
+  levels: ['easy', 'easy', 'normal', 'normal', 'hard', 'hard', 'expert'], // 높음 = 4 · 5 · 최고 = 6 [사장님 11/16 결정 '단 실력 등급은 높음을 4~5, 최고를 6으로'] · 전 [5] · [6] 'hard'
   // 3 단계: 숙련도 0(무) = 유파 패시브 · schoolK 0 · 기질은 무유파 범위 (고유 동작은 이미 0 에서 없음) [권고대로 · 사장님 확인 전]
   zeroPlain: 1,
   // 3 단계: 붙은 거리 손잡이 찍기를 모든 AI 에 (인물 칸 · 독일 밀치기가 없는 몸도) — 닿는 거리 안 사건(들어섬 · 칼 맞물림)마다 이 몫으로 찍기 (CLOSE.pommelDist 0.9 m 안) [사장님 확인 전]

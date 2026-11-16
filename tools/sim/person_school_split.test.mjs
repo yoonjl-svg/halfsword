@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { AI_PROFICIENCY } from '../../src/config.js';
 import { newRound, AI } from './harness_m.mjs';
+import { pinReactOld } from './react_old.mjs'; // 11/16 AI 반응 시간 0.2 s 하나 전 판으로 묶을 옛 장면
 
 const C = CHARACTERS_BY_ID;
 /** 인물을 상대 자리에 세운 AI — weapon 을 주면 main.js 처럼 꾸러미도 그 무기 것(검술을 배우지 못한 인물은 그대로) */
@@ -26,7 +27,8 @@ test('다른 유파 무기: 유파 몫은 그 유파 숙련도(0) · 반응은 �
   }
 });
 
-test('광기의 브론: 숙련도 표 = 실제로 싸우는 유파(무유파) · 원본 + 1 로 싸움 · 낮의 브론보다 느리지 않음 (사장님 10/29 15:5x)', () => {
+test('광기의 브론: 숙련도 표 = 실제로 싸우는 유파(무유파) · 원본 + 1 로 싸움 · 낮의 브론보다 느리지 않음 (사장님 10/29 15:5x)', (t) => {
+  pinReactOld(t); // 11/16 AI 반응 시간 숙련도 사다리(전 판 [0.35 … 0.05])로 묶음 (tools/sim/react_old.mjs) — 광기 인물 숙련도 + 1 = 한 단계 빠른 반응(옛 사다리)을 보는 시험 · 기준 그대로
   assert.deepEqual(C.bran_mad.ai.persona.proficiency, { none: 1 }); // 11/14 사장님 결정: 브론 1 → 0(무) 이라 얼터 0 + 1 = 1 (전 2 — docs/design/ai_school_baseline_2026-11-14.md §10)
   const mad = aiOf('bran_mad'), day = aiOf('bran');
   assert.equal(mad.proficiency, C.bran.ai.proficiency + 1);

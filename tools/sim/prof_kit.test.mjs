@@ -13,11 +13,11 @@ import { huntOn } from '../../src/cn_hunt.js';
 import { deDirtyBody } from '../../src/de_dirty.js';
 import { lowShoveFree } from '../../src/jp_tank.js';
 import { aiWoundKeep } from '../../src/ai_block_cut.js';
-import { kitOff } from '../../src/skill_kit.js';
+import { kitOff, uniqueOff, perkOff } from '../../src/skill_kit.js';
 import { playerProficiency } from '../../src/saengsa_roster.js';
 import { withAiKitOff } from './ai_kit_off.mjs';
 
-const { AI_KIT, SAENGSA, SCHOOL_PASSIVE, AI_PROFICIENCY } = CONFIG;
+const { AI_KIT, SAENGSA, SCHOOL_PASSIVE, AI_PROFICIENCY, AI_PLAN } = CONFIG;
 const WEAPON = { german: 'longsword', italian: 'rapier', iberian: 'zweihander', japanese: 'uchigatana', chinese: 'qinggang' };
 const skillIds = (s) => nodesOf(s).filter((n) => !n.letter).map((n) => n.id);
 /** 칸 → 처음 들어오는 단계 (1 ~ 5) */
@@ -104,8 +104,40 @@ test('aiKitOf = 사람 kitFromNodes(사다리 칸) + 칸 없는 이점 · 유파
   }
   assert.equal(aiKitOf('none', 5), null);
   assert.equal(aiKitOf(undefined, 5), null);
-  // 칸 없는 이점은 어느 칸도 켜지 않는다 (사람은 못 받음 — 기록 §질문)
+  // 칸 없는 이점은 어느 칸도 켜지 않는다 (사람은 못 받음 — 기록 §3-4) · 11/16 내려 찌르기 틈 파고들기는 칸 I7 로 옮겨 이 목록에서 빠짐
   for (const s of TREE_SCHOOLS) for (const n of nodesOf(s)) assert.ok(!AI_SLOTLESS_PERKS.includes(n.perk), `${s} ${n.id}`);
+  assert.deepEqual([...AI_SLOTLESS_PERKS], ['redondo']);
+});
+
+test('11/16 사장님 \'다 너의 권고대로 하마\' ① 내려 찌르기 틈 파고들기 = 내려 찌르기 칸 I7 (사람 · AI 같음 — AI 는 숙련도 2 부터)', () => {
+  const ids = (xs) => new Set(xs);
+  const withI7 = kitFromNodes('italian', ids(['I1', 'I3', 'I7'])), noI7 = kitFromNodes('italian', ids(['I1', 'I3']));
+  assert.equal(uniqueOff({ skillKit: withI7 }, 'imbroccata'), false, '사람 I7 = 받음');
+  assert.equal(uniqueOff({ skillKit: noI7 }, 'imbroccata'), true);
+  assert.equal(uniqueOff({}, 'imbroccata'), false, '칸 몫 없는 몸(시뮬 · 옛 판 AI) = 받음');
+  assert.deepEqual([1, 2].map((l) => uniqueOff({ skillKit: aiKitOf('italian', l) }, 'imbroccata')), [true, false]);
+  assert.equal(perkOff({ skillKit: aiKitOf('italian', 6) }, 'imbroccata'), true, '이점 이름(perk)으로는 더 묻지 않음');
+  assert.equal(CONFIG.UNIQUE_ASSIST.imbroccataGap, 0.9);
+});
+
+test('11/16 사장님 \'다 너의 권고대로 하마\' ③ AI 반응 버릇 \'겹치기 (두플리렌)\' = 겹치기 칸 G7 · \'빼서 찌르기 (카바치오네)\' = 칼끝 돌려 빼기 칸 I2 · 옛 판은 늘', () => {
+  const has = (s, p, name) => match(s, p).ai.passives.some((x) => x.name === name);
+  assert.deepEqual([3, 4].map((p) => has('german', p, 'duplieren')), [false, true]);
+  assert.deepEqual([2, 3].map((p) => has('italian', p, 'cavazione')), [false, true]);
+  assert.equal(has('german', 4, 'indes'), true, '다른 버릇은 그대로');
+  assert.equal(has('german', 1, 'nachreisen'), true);
+  withAiKitOff(() => {
+    assert.equal(has('german', 1, 'duplieren'), true);
+    assert.equal(has('italian', 1, 'cavazione'), true);
+  });
+});
+
+test('11/16 사장님 \'단 실력 등급은 높음을 4~5, 최고를 6으로\' · \'다 너의 권고대로 하마\' ⑥ 반응 시간 모든 숙련도 0.2 s', () => {
+  assert.deepEqual(AI_PLAN.levels, ['easy', 'easy', 'normal', 'normal', 'hard', 'hard', 'expert']);
+  assert.deepEqual(AI_PROFICIENCY.levels, ['easy', 'easy', 'normal', 'hard', 'hard', 'hard', 'expert']);
+  assert.equal(AI_PROFICIENCY.reaction.length, 7);
+  assert.ok(AI_PROFICIENCY.reaction.every((r) => r === CONFIG.realS(0.2)));
+  for (const p of [0, 2, 6]) assert.equal(match('german', p).ai.level.reaction, CONFIG.realS(0.2), `숙련 ${p}`);
 });
 
 test('AI 몸 칸 몫 (숙련도 0 ~ 6 · 다섯 유파): skillKit · 보법 I · 막기 I · 막기 자리 몸꼴 · 무유파 막기 자리', () => {

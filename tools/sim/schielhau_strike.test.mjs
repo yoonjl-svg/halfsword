@@ -12,6 +12,7 @@ import { duelRun, duelSummary, playerRun, tsubameRun, tsubameSummary } from './s
 import { TRADITIONS } from '../../src/schools.js';
 import { PLAYER_UNIQUE, uniqueDef, PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
+import { pinReactOld } from './react_old.mjs'; // 11/16 AI 반응 시간 0.2 s 하나 전 판으로 묶을 옛 장면
 
 const UA = CONFIG.UNIQUE_ASSIST;
 // 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
@@ -180,7 +181,8 @@ test('덧칸 셈: 토막에서 손이 간 몫만큼 섞음 · 따라 베기는 �
   }
 });
 
-test('맞는 순간 손목 · 세기 (서 있는 상대 · 셸하우만 · 씨앗 넷): 새 길 = 손목 범위 밖 ≤ 10 % · 거꾸로 ≤ 5 % · 교정 안 걸림 · 공격당 심각도가 옛 길의 3 배 넘게', () => {
+test('맞는 순간 손목 · 세기 (서 있는 상대 · 셸하우만 · 씨앗 넷): 새 길 = 손목 범위 밖 ≤ 10 % · 거꾸로 ≤ 5 % · 교정 안 걸림 · 공격당 심각도가 옛 길의 3 배 넘게', (t) => {
+  pinReactOld(t); // 11/16 AI 반응 시간 숙련도 사다리(전 판 [0.35 … 0.05])로 묶음 (tools/sim/react_old.mjs) — 반응이 바뀌어 씨앗 넷 판이 갈림 · 기준 그대로
   // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 — 셸하우를 내는 AI 몸의 겨눔 · 다가감 팔이 바뀜)로 씨앗 넷 판이 갈라져 견줌 잣대가 옮겨감 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
   const run = (v) => withArmOld(() => withPath(v, () => duelSummary([1, 2, 3, 4].map((s) => duelRun(s, { foe: 'still', dur: 40 })))), ['armClear2']);
   const neu = run(1);

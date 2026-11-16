@@ -101,7 +101,7 @@ export const TSU_AIM = {
 export const PLAYER_UNIQUE = {
   german: [
     { stage: 1, name: 'zwerchAbtritt', role: 'step', stick: 'side', hint: '옆으로 걸으며 가로 긋기', body: [-15, -20, 1.5, 0.025], on: [{ tech: 'zwerch' }] }, // 비껴 딛는 가로베기 ← 옆 + 가로베기
-    { stage: 3, name: 'duplieren', role: 'chain', hint: '칼이 맞물린 뒤 다시 긋기', far: true, body: [5, -3, 3, 0], on: [], // 겹치기 — 사람은 탭으로만 (10/28 01:2x 사장님 '지금대로' — 맞물린 뒤 다음 긋기 입력은 뺌 · AI 는 schools.js 그대로 — 이 칸을 안 읽음)
+    { stage: 3, name: 'duplieren', aiHabit: 1, role: 'chain', hint: '칼이 맞물린 뒤 다시 긋기', far: true, body: [5, -3, 3, 0], on: [], // 겹치기 — 사람은 탭으로만 (10/28 01:2x 사장님 '지금대로' — 맞물린 뒤 다음 긋기 입력은 뺌 · AI 는 schools.js 그대로 — 이 칸을 안 읽음)
       // tapKey = 탭으로 내는 조건 (TAP_TRIG 'dup' — config UNIQUE_ASSIST.dupTap): 내 긋기가 상대 칼에 맞물려 지금도 닿아 있는 동안의 탭 · tapDup = 맞물린 자리에서 칼을 떼지 않고
       //  상대 칼 뒤로 밀어 넣어 엇갈린 손으로 얼굴을 사선으로 베는 운동학 칼(secret_instant.js requestArtDup)
       //  10/31 18:xx 사장님 결정부터 기본은 탭 없이 저절로 (UNIQUE_ASSIST.dupAuto 'bind' — dupAutoTick: 가슴 사이 0.8 ~ 1.6 m 에서 칼끼리 맞댄 채 0.6 s) · 탭 조건은 dupAuto 0 일 때만
@@ -112,7 +112,7 @@ export const PLAYER_UNIQUE = {
     // 10/31 이탈리아 자리 바꿈 (사장님 10/31 12:xx — 칼끝 돌려 빼기 = 기본 고유 공격 I2 · 비껴서며 찌르기 = 특수 공격 I9 · config UNIQUE_ASSIST cav* · inq* · docs/strike/italian_swap_2026-10-31.md):
     //  단계(AI 숙련도 거르기)도 칸 깊이를 따름(전 판도 단계 = 칸 깊이 − 1 이었음 — 비껴서며 찌르기 d 2 = 1 · 내려 찌르기 d 3 = 2 · 돌려 빼기 d 4 = 3) — 10/31 12:xx 사장님 '임브로카타를 먼저 배우고 카바치오네를 배우고':
     //  위에서 내려 찌르기 I2 d 2 = 1 · 칼끝 돌려 빼기 I7 d 3 = 2 · 비껴서며 찌르기 I9 d 4 = 3 (다른 유파 특수 공격과 같은 3)
-    { stage: 2, name: 'cavazione', role: 'chain', hint: '칼이 상대 칼에 닿은 채 박자를 맞추어 탭', nameKo: '칼끝 돌려 빼기 (카바치오네)', orig: 'cavazione', body: [5, 8, 4, 0.02], on: [], // 칼끝 돌려 빼기 — 사람은 탭으로만 (AI 는 schools.js 속임 · 빼서 찌르기 패시브 그대로 — 이 칸을 안 읽음)
+    { stage: 2, name: 'cavazione', aiHabit: 1, role: 'chain', hint: '칼이 상대 칼에 닿은 채 박자를 맞추어 탭', nameKo: '칼끝 돌려 빼기 (카바치오네)', orig: 'cavazione', body: [5, 8, 4, 0.02], on: [], // 칼끝 돌려 빼기 — 사람은 탭으로만 (AI 는 schools.js 속임 · 빼서 찌르기 패시브 그대로 — 이 칸을 안 읽음)
       // tapKey = 탭으로 내는 조건 (TAP_TRIG 'cav' — 10/31 칼끼리 닿음 뒤 cavFrom ~ cavTo 의 탭 · 내 긋기 동안의 닿음은 셈 밖) · tapSnap = 상대 칼 밑으로 돌려 빼 반대쪽을 찌르는 운동학 칼(requestArtThrust — 보통 찌르기 빠르기 · 잔상 없음)
       //  special 없음 = 특수 공격 식힘 · 잔상 · 고노센 몫 없음 (10/31 사장님 '카바치오네는 이제 특수공격이 아니고')
       tapKey: 'cav', tapSnap: 1 },
@@ -170,13 +170,15 @@ export function aiUniqueStages(tradition) {
   const unique = new Map();
   const passive = new Map();
   const slot = new Map(); // 표 이름 → 사람 칸 이름(skillKit.unique — 스킬트리 u 칸 · 11/16 AI 칸 몫 config AI_KIT 이 읽음)
+  const habit = new Map(); // AI 반응 버릇(schools.js passives) 이름 → 칸 이름 — aiHabit 칸(독일 겹치기 G7 · 이탈리아 칼끝 돌려 빼기 I2): 칸 몫이 있는 AI 는 그 칸이 있어야 버릇도 (11/16 [사장님 11/16 결정 '다 너의 권고대로 하마'] · 옛 판은 늘)
   for (const e of PLAYER_UNIQUE[tradition] ?? []) {
+    if (e.aiHabit) habit.set(e.name, e.name);
     unique.set(e.path ?? e.name, e.stage);
     slot.set(e.path ?? e.name, e.name);
     if (e.path) passive.set(e.name, e.stage), slot.set(e.name, e.name);
     if (e.aiPassive) passive.set(e.aiPassive, e.stage), slot.set(e.aiPassive, e.name); // 동방 자→격 패시브(yaoji 이음)는 요격 강화동작과 같은 단계 · 같은 칸(C3)
   }
-  return { unique, passive, slot, retired: ibRetired() };
+  return { unique, passive, slot, habit, retired: ibRetired() };
 }
 /**
  * AI 고유 동작 · 패시브가 열렸나 (11/16 AI 숙련도 = 칸 — config AI_KIT): 표(map — aiUniqueStages unique · passive)에 없는 이름은 늘 열림.
