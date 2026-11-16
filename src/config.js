@@ -1355,7 +1355,7 @@ export const SECRET = {
     //   0 = 11/11 판(빠르기 share 0.35 그대로 · 판정 × 기력 몫 staminaK) `?altibSpeed=0` · `?altibSpeed=f1`
     speed: 'f2', // [사장님 11/16 결정 '둘째로 해']
     full: 0.4, // [사장님 11/16 결정 '풀 기력에서 고노센 40%로' — 전 0.5 '가득=50%'] 기력 가득일 때 칼끝 몫 = 고노센 × 이 값
-    knee: 50, // [사장님 11/16 결정 '50에서 바닥에 도달하게 해'] 꺾임: 기력 이 값 이하 = 바닥(보통 큰 베기) · 위로 full 까지 고르게 · null = 꺾임 없음(full × 기력 ÷ 100 · 바닥에서 멈춤) `?altibKnee=` · full 은 `?altibFull=` (꺾임 전 11/16 판: 칼끝 몫 = full 0.5 × 뗀 순간 기력 ÷ 최대 — '알티바슈를 가득=50%로 하자')
+    knee: 40, // [사장님 11/16 결정 '50에서 바닥에 도달하게 해' → '아니다 40에서.'] 꺾임: 기력 이 값 이하 = 바닥(보통 큰 베기) · 위로 full 까지 고르게 · null = 꺾임 없음(full × 기력 ÷ 100 · 바닥에서 멈춤) `?altibKnee=` · full 은 `?altibFull=` (꺾임 전 11/16 판: 칼끝 몫 = full 0.5 × 뗀 순간 기력 ÷ 최대 — '알티바슈를 가득=50%로 하자')
     //  바닥 칼끝 = 같은 칼 보통 큰 베기(손가락 내려베기 zornhau 획 · 허공 · 실제 m/s — `node tools/sim/thrust_motion.mjs --kinds=cut --gap=air` 잰 값) · 표에 없는 칼은 위 share(0.35) 몫이 바닥 [잰 값 · 사장님 확인 전]
     floorTip: { zweihander: 15.4, flamberge: 13.1, tizona: 14.9, durandal: 18.2 },
   },
