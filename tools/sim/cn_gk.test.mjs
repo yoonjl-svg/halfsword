@@ -35,11 +35,11 @@ function trace(seed = 2, secs = 12) {
 
 test('기본 안 A 켬 [사장님 11/16 결정 \'A안으로 해\'] · 안 A · B 값 · 끄면 값을 바꿔도 판이 바이트 같음', () => {
   assert.equal(S.gkFree.on, 1, '[사장님 11/16 결정] A 켬 (전 기본 끔)');
-  near(S.gkFree.share, 0.35); near(S.gkFree.add, 0.1); near(S.gkFree.cool, CONFIG.realS(3.0)); // 11/16 add 0.10
+  near(S.gkFree.share, 0.4); near(S.gkFree.add, 0.1); // share 0.40 [사장님 11/16 '격살과 모르트슐라크도 40%로' — 전 0.35] near(S.gkFree.cool, CONFIG.realS(3.0)); // 11/16 add 0.10
   const A = S.gkFreeSets.A, B = S.gkFreeSets.B;
-  near(A.share, 0.35); near(A.add, 0.1); near(A.cool, CONFIG.realS(3.0)); // add 0.10 [사장님 11/16 결정 '스탯 하나당 추가 합산은 +10%로' — 전 0.08]
+  near(A.share, 0.4); near(A.add, 0.1); near(A.cool, CONFIG.realS(3.0)); // add 0.10 [사장님 11/16 결정 '스탯 하나당 추가 합산은 +10%로' — 전 0.08]
   near(B.share, 0.5); near(B.add, 0.05); near(B.cool, CONFIG.realS(6.0));
-  near(A.share + 5 * A.add, 0.85); near(B.share + 5 * B.add, 0.75); // A 겹 5 = 0.85 (11/16 — 전 0.75)
+  near(A.share + 5 * A.add, 0.9); near(B.share + 5 * B.add, 0.75); // A 겹 5 = 0.85 (11/16 — 전 0.75)
   withGk(0, () => {
     const a = trace();
     Object.assign(S.gkFree, { share: 0.9, add: 0.3, cool: 0 });
@@ -66,9 +66,9 @@ test('칼끝 빠르기 몫: 풀면 기본 + 겹 × 더함 (A 0.35 + 0.10 [사장
   const f = (n) => ({ swordArt: { tradition: 'chinese' }, aiControlled: true, foe: { cnHunt: { n } } });
   withGk(0, () => near(gyeoksalComboOpt(D, f(3), []).share, 0.7 * (1 + 0.08 * 3), 1e-9));
   withGk('A', () => {
-    near(gyeoksalComboOpt(D, f(0), []).share, 0.35);
-    near(gyeoksalComboOpt(D, f(3), []).share, 0.65); // 0.35 + 0.10 × 3 (11/16 — 전 0.59)
-    near(gyeoksalComboOpt(D, f(5), []).share, 0.85); // 겹 5 (11/16 — 전 0.75)
+    near(gyeoksalComboOpt(D, f(0), []).share, 0.4); // 11/16 '격살과 모르트슐라크도 40%로' (전 0.35)
+    near(gyeoksalComboOpt(D, f(3), []).share, 0.7); // 0.40 + 0.10 × 3
+    near(gyeoksalComboOpt(D, f(5), []).share, 0.9); // 겹 5
   });
   withGk('B', () => {
     near(gyeoksalComboOpt(D, f(0), []).share, 0.5);

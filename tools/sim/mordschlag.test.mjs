@@ -277,7 +277,7 @@ test('넘어 들어감 규칙 (mordOver — 기본 끔): 켜면 내리치는 동
 });
 
 test('가볍고 느림을 고칠 안 (10/23 확정 — kin · aim pull · 11/11 kin 0.35 · 판정 1): kin · aim · power hit = 죽음의 일격 판정 배율 mordHitMul(1 — 고노센만 1.3) · finish = FINISH.power · 수 = 그 수', () => {
-  assert.equal(SECRET.mord.kin, 0.3); // 11/16 사장님 '모르트슐라크 30%' (전 11/11 0.35 · 그 전 10/23 0.3)
+  assert.equal(SECRET.mord.kin, 0.4); // 11/16 '격살과 모르트슐라크도 40%로' (전 '30%') // 11/16 사장님 '모르트슐라크 30%' (전 11/11 0.35 · 그 전 10/23 0.3)
   assert.equal(SECRET.mord.aim, 'pull');
   assert.equal(SECRET.mord.power, 'hit');
   assert.equal(mordHitMul(), 1); // 11/11 사장님 '죽음의 일격도 1.0으로 해.' (전 SECRET.hitMul 1.3)
