@@ -12,9 +12,11 @@ export function secretFreeOff() {
   const keep = { gnsFree: SECRET.gnsFree, gnsCost: SECRET.gnsCost, gnsDraw: SECRET.gnsDraw, read: AI_PLAN_JP.drawRead, free: A.free, drop: A.drop, speed: A.speed, mFree: M.free, mCost: M.cost, mGuard: M.guard, rFree: SECRET.risolutoFree, rCost: SECRET.risolutoCost, rGuard: SECRET.risolutoBack };
   Object.assign(SECRET, { gnsFree: 0, gnsCost: null, gnsDraw: 0, risolutoFree: 0, risolutoCost: null, risolutoBack: 0 });
   Object.assign(A, { free: 0, drop: null, speed: 0 });
-  Object.assign(M, { free: 0, cost: null, guard: 0 });
+  const kin0 = M.kin;
+  Object.assign(M, { free: 0, cost: null, guard: 0, kin: 0.35 }); // kin 0.35 = 11/15 판 빠르기 (11/16 사장님 '모르트슐라크 30%' 전)
   AI_PLAN_JP.drawRead = 0;
   return () => {
+    M.kin = kin0;
     Object.assign(SECRET, { gnsFree: keep.gnsFree, gnsCost: keep.gnsCost, gnsDraw: keep.gnsDraw, risolutoFree: keep.rFree, risolutoCost: keep.rCost, risolutoBack: keep.rGuard });
     Object.assign(A, { free: keep.free, drop: keep.drop, speed: keep.speed });
     Object.assign(M, { free: keep.mFree, cost: keep.mCost, guard: keep.mGuard });
