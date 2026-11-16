@@ -763,12 +763,14 @@ export function secretFree(tr) {
 }
 /**
  * 비기 한 번 기력 (stamina.secret 에 넘김 — 사람 skill.secret · AI secretGo 같은 셈 · 없으면 공통 STAMINA.secretCost 35):
- *  일본 고노센 = SECRET.gnsCost(11/16 사장님 '기력 소모 50으로.') · 독일 죽음의 일격 = SECRET.mord.cost(35) · 이탈리아 리솔루토 = SECRET.risolutoCost(50 — 11/16 '리솔루토는 기력 50 죽음의 일격은 기력 35 소모.')
+ *  일본 고노센 = SECRET.gnsCost 40 · 이탈리아 리솔루토 = SECRET.risolutoCost 40 · 독일 죽음의 일격 = SECRET.mord.cost 20 · 동방 격살 = SECRET.gkFree.cost 20(풀기 판만)
+ *  (11/16 사장님 '고노센과 리솔루토 40, 죽음의 일격과 격살은 20' — 전 50 · 50 · 35 · 공통 35)
  */
 export function secretCostOf(S) {
   if (S?.do?.instant && SECRET.gnsCost > 0) return SECRET.gnsCost;
   if (S?.name === 'mordschlag' && SECRET.mord?.cost > 0) return SECRET.mord.cost;
   if (S?.when === 'risoluto' && SECRET.risolutoCost > 0) return SECRET.risolutoCost;
+  if (S?.name === 'gyeoksal' && gkFreeOn() && SECRET.gkFree?.cost > 0) return SECRET.gkFree.cost; // 11/16 격살 20 (풀기 판만)
   return undefined;
 }
 /** 격살 풀기 (11/15–16 사장님 '격살은 … 무한으로 쓸 수 있게 풀어 … 대신 쿨타임' — SECRET.gkFree · 기본 끔) 켬인가 */

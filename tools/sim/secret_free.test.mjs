@@ -17,25 +17,27 @@ const body = (tr) => ({ swordArt: { tradition: tr } });
 
 test('기본값 — [사장님 11/16 결정] 고노센 · 알티바슈 · 죽음의 일격 · 리솔루토 판당 끝없음 · 기력 50 · 35 · 50 · 뽑기 0.6 s · −35 · 빠르기 둘째 셈 · 되돌림 0.6 s', () => {
   assert.equal(SECRET.gnsFree, 1);
-  assert.equal(SECRET.gnsCost, 50);
+  assert.equal(SECRET.gnsCost, 40); // 11/16 '고노센과 리솔루토 40, 죽음의 일격과 격살은 20'
   assert.equal(SECRET.gnsDraw, realS(0.6));
   assert.equal(SECRET.altib.free, 1);
   assert.equal(SECRET.altib.drop, -35);
   assert.equal(SECRET.altib.drop, STAMINA.severeAt); // 심한 지침 문턱과 같은 수
   assert.equal(SECRET.altib.speed, 'f2');
   assert.equal(SECRET.mord.free, 1);
-  assert.equal(SECRET.mord.cost, 35);
+  assert.equal(SECRET.mord.cost, 20);
   assert.equal(SECRET.mord.guard, realS(0.6));
   assert.equal(SECRET.risolutoFree, 1);
-  assert.equal(SECRET.risolutoCost, 50);
+  assert.equal(SECRET.risolutoCost, 40);
+  assert.equal(SECRET.gkFree.cost, 20);
   assert.equal(SECRET.risolutoBack, realS(0.6));
   assert.equal(AI_PLAN_JP.drawRead, 1);
   for (const tr of ['japanese', 'iberian', 'german', 'italian']) assert.equal(secretUsesOf(body(tr)), Infinity, tr);
   assert.equal(secretFree('chinese'), false); // 동방 격살은 다른 일 — 공용 표 그대로
   assert.equal(secretUsesOf(body('chinese')), gkFreeOn() ? Infinity : UA.secretUses?.chinese ?? Infinity); // 격살 끝없음은 격살 풀기(SECRET.gkFree — 개발 가지 머리 11/16 동방 묶음)가 맡음
-  assert.equal(secretCostOf(TRADITIONS.japanese.secret), 50);
-  assert.equal(secretCostOf(TRADITIONS.german.playerSecret), 35);
-  assert.equal(secretCostOf(playerSecretDef('italian')), 50);
+  assert.equal(secretCostOf(TRADITIONS.japanese.secret), 40);
+  assert.equal(secretCostOf(TRADITIONS.german.playerSecret), 20);
+  assert.equal(secretCostOf(playerSecretDef('italian')), 40);
+  assert.equal(secretCostOf(TRADITIONS.chinese.playerSecret), gkFreeOn() ? 20 : undefined); // 격살 — 풀기 판만 20
   assert.equal(secretCostOf(TRADITIONS.iberian.secret), undefined); // 알티바슈는 비기 값 없음(메는 기력 · 뒤 −35)
   withSecretFreeOff(() => {
     for (const tr of ['japanese', 'iberian', 'german', 'italian']) assert.equal(secretUsesOf(body(tr)), 1, tr); // 끄면 11/15 판 (판당 1)
@@ -101,7 +103,7 @@ test('알티바슈 빠르기 — 둘째 셈(기력 ÷ 100) · 첫째 셈((기력
   }
 });
 
-test('기력 — 알티바슈 뒤 −35 까지(더 낮으면 그대로) · 고노센 50', () => {
+test('기력 — 알티바슈 뒤 −35 까지(더 낮으면 그대로) · 고노센 40', () => {
   const G = newRound({ seed: 1, walls: true, weapon: 'uchigatana', weapon2: 'longsword' });
   try {
     const S = G.player.stamina;
@@ -113,7 +115,7 @@ test('기력 — 알티바슈 뒤 −35 까지(더 낮으면 그대로) · 고�
     assert.equal(S.value, -50);
     S.value = 100;
     S.secret(secretCostOf(TRADITIONS.japanese.secret));
-    assert.equal(S.value, 50);
+    assert.equal(S.value, 60);
   } finally {
     G.world.free();
   }
@@ -174,8 +176,8 @@ test('뽑기 — 끄면(gnsDraw 0) 곧장 사람 손 (11/15 판)', () => {
   }
 });
 
-test('죽음의 일격 · 리솔루토 — 맞든 빗나가든 0.6 s 겨눔 되돌림(굳음 대신) · 기력 35 · 50 · 끄면 굳음 판', () => {
-  for (const [w, S, ctx, cost, gap] of [['longsword', TRADITIONS.german.playerSecret, { ev: 'press', held: 2 }, 35, 1.0], ['rapier', playerSecretDef('italian'), { ev: 'risoluto' }, 50, 1.7]]) {
+test('죽음의 일격 · 리솔루토 — 맞든 빗나가든 0.6 s 겨눔 되돌림(굳음 대신) · 기력 20 · 40 · 끄면 굳음 판', () => {
+  for (const [w, S, ctx, cost, gap] of [['longsword', TRADITIONS.german.playerSecret, { ev: 'press', held: 2 }, 20, 1.0], ['rapier', playerSecretDef('italian'), { ev: 'risoluto' }, 40, 1.7]]) {
     const run = (off) => {
       const G = newRound({ seed: 1, walls: true, weapon: w, weapon2: 'longsword', gap });
       const P = G.player;
