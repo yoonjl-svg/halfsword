@@ -35,10 +35,12 @@ const tAlong = (f, pt) => { // 칼 위 접점의 자리 (0 = 손잡이 끝 · 1 
   return Math.min(1.2, Math.max(-0.2, pt.clone().sub(a).dot(ab) / ab.lengthSq()));
 };
 
-export function studyFight({ school, weapon, wi, seed, swap, dur = 60, block2 = 0, reward = 0, str, prof, look = 'enemy' }) {
+export function studyFight({ school, weapon, wi, seed, swap, dur = 60, block2 = 0, reward = 0, ccd = null, str, prof, look = 'enemy' }) {
   CONFIG.BLOCK2.on = block2 ? 1 : 0;
   CONFIG.BLOCK2.reward = reward;
   CONFIG.BLOCK2.watch = 1;
+  if (ccd != null) CONFIG.BLOCK2.ccd = ccd;
+  if (process.env.CCD_M) CONFIG.BLOCK2.ccdMargin = +process.env.CCD_M;
   const lk = look === 'enemy' ? LOOKS.enemy : LOOKS.player;
   // 주인공(= 높은 쪽) 자리: swap=false → 플레이어(P) 자리, true → 상대(E) 자리
   const [pLo, pHi] = prof ? prof : [4, 4];
@@ -116,6 +118,7 @@ export function studyFight({ school, weapon, wi, seed, swap, dur = 60, block2 = 
       }
       if (!ep) ep = { t0: G.t, minD: 1e9, nClash: 0, nFresh: 0, first: null, steps: 0, ph0: { P: aiOf.get(P).phase, E: aiOf.get(E).phase } };
       ep.minD = Math.min(ep.minD, d); ep.steps++;
+      if (P.instantGhost > 0 || E.instantGhost > 0 || P.holdGhost > 0 || E.holdGhost > 0 || P.iai || E.iai || aiOf.get(P).secretRun || aiOf.get(E).secretRun) ep.ghost = 1;
       ep.tEnd = G.t;
     } else if (ep) {
       // 한 쪽이 strike 를 떠난 뒤 0.1 s 까지 닿음도 이 구간 몫 (칼은 마지막 스텝에 닿을 수 있다)
@@ -133,7 +136,7 @@ export function studyFight({ school, weapon, wi, seed, swap, dur = 60, block2 = 
   const res = out(hero) && !out(other) ? 'lo' : out(other) && !out(hero) ? 'hi' : 'd';
   const rec = {
     school, weapon, seed, swap, res, endT: +G.t.toFixed(2), clashes, freshClashes, wounds,
-    eps: eps.map((e) => ({ t0: +e.t0.toFixed(3), dur: +(e.tEnd - e.t0 + DT).toFixed(3), minD: +e.minD.toFixed(3), minSweep: +(e.minSweep ?? 9).toFixed(3), tipV: +(e.tipV ?? 0).toFixed(1), nClash: e.nClash, nFresh: e.nFresh, first: e.first, wP: e.wP, wE: e.wE })),
+    eps: eps.map((e) => ({ t0: +e.t0.toFixed(3), dur: +(e.tEnd - e.t0 + DT).toFixed(3), minD: +e.minD.toFixed(3), minSweep: +(e.minSweep ?? 9).toFixed(3), ghost: e.ghost ?? 0, tipV: +(e.tipV ?? 0).toFixed(1), nClash: e.nClash, nFresh: e.nFresh, first: e.first, wP: e.wP, wE: e.wE })),
     hero: swap ? 'E' : 'P', resp, b2: G.combat.block2Stats ?? null,
     eps2: eps2.map((e) => ({ dur: +(e.tEnd - e.t0).toFixed(2), minD: +e.minD.toFixed(3), nClash: e.cl1 - e.cl0, nFresh: e.fr1 - e.fr0 })),
   };
@@ -179,7 +182,7 @@ export function aggregate(recs) {
   const rt = Object.values(rs).reduce((a, b) => a + b, 0);
   O.push(`· 반응 굴림 ${rt}: 칼로 막기 ${pc(rs.parry, rt)} · 물러나 피하기 ${pc(rs.void, rt)} · 맞받기 ${pc(rs.counter, rt)} · 굴림 탈락 ${pc(rs.rollfail, rt)}`);
   const sw = eps.filter((e) => e.minSweep < 0.03);
-  O.push(`· 훑기(스텝 사이 6 칸) 최소 거리 < 0.03 m: ${sw.length} (${pc(sw.length, eps.length)}) — 그 중 칼 닿음(어떤 스텝이든) ${pc(sw.filter((e) => e.nClash > 0).length, sw.length)} · 닿음 없음 ${sw.filter((e) => !e.nClash).length} (중앙 칼끝 빠르기 ${med(sw.filter((e) => !e.nClash).map((e) => e.tipV)).toFixed(1)} m/s, 닿은 것 ${med(sw.filter((e) => e.nClash).map((e) => e.tipV)).toFixed(1)} m/s)`);
+  O.push(`· 훑기(스텝 사이 6 칸) 최소 거리 < 0.03 m: ${sw.length} (${pc(sw.length, eps.length)}) — 그 중 칼 닿음(어떤 스텝이든) ${pc(sw.filter((e) => e.nClash > 0).length, sw.length)} · 닿음 없음 ${sw.filter((e) => !e.nClash).length} (그 중 비기·발도·무충돌 구간 ${sw.filter((e) => !e.nClash && e.ghost).length} · 중앙 칼끝 빠르기 ${med(sw.filter((e) => !e.nClash).map((e) => e.tipV)).toFixed(1)} m/s, 닿은 것 ${med(sw.filter((e) => e.nClash).map((e) => e.tipV)).toFixed(1)} m/s)`);
   const e2 = recs.flatMap((r) => r.eps2);
   const e2n = e2.filter((e) => e.minD < 0.05);
   O.push(`· 넓은 겹침(둘 다 attack 모드 · 준비 · 마무리 포함) ${e2.length} (판당 ${(e2.length / n).toFixed(2)}) · 중앙 ${med(e2.map((e) => e.dur)).toFixed(2)} s · 칼 < 0.05 m ${pc(e2n.length, e2.length)} · 새 닿음 있음 ${pc(e2.filter((e) => e.nFresh > 0).length, e2.length)}`);
@@ -227,7 +230,7 @@ if (isMain(import.meta.url)) {
     const mine = list.filter((_, i) => i % sn === si - 1);
     const recs = [];
     for (const f of mine) {
-      const r = studyFight({ ...f, dur, block2: +arg('block2', '0'), reward: +arg('reward', '0'), str, prof, look: arg('look', 'enemy') });
+      const r = studyFight({ ...f, dur, block2: +arg('block2', '0'), reward: +arg('reward', '0'), ccd: arg('ccd', null) == null ? null : +arg('ccd'), str, prof, look: arg('look', 'enemy') });
       recs.push(r);
       console.error(f.school, f.weapon, f.seed, f.swap ? 'S' : '-', r.res, r.endT, 'eps', r.eps.length);
     }

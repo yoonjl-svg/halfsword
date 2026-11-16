@@ -18,6 +18,7 @@ import { withJpOld } from './jp_tank_pin.mjs'; // 11/14 일본 스택 · 바위 
 import { withReadOld } from './ai_read_pin.mjs'; // 11/14 유파 AI 3 단계 수 읽기 · 공정함 · AI 고노센 지키기 — 옛 장면은 잰 때 판으로 (docs/strike/ai_read_2026-11-14.md §6)
 import { pinPOff } from './p_pin.mjs'; // 11/16 묶음 P · 3안 — 옛 장면은 잰 때 판으로 (docs/strike/it_tone_2026-11-15.md §9)
 import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
+CONFIG.BLOCK2.ccd = 0; // 막기 2.0 칼 연속 충돌(11/17): 옛 장면 묶음 — 이 시험의 기대값은 끈 판 기준 (켠 판은 값이 다름)
 /** 11/14 칼집 각도 · 납도 전 판 (docs/strike/iai_obi_2026-11-14.md §13 — 납도 없음 · 쉬는 칼집 입 배꼽 앞 · 축 −121 / −15 — 鞘戻し 점(쉬는 칼집 입 쥠)이 빈손 다시 쥐는 길에 들어감) — 옛 장면만 */
 const OBI2_OLD = { iaiSheathe: 0, iaiObiSayaMouth: [0.21, 0.085, 0.02], iaiObiSayaAxis: { yaw: -121, el: -15 }, iaiObiPull: { yaw: -160, el: -25 }, iaiObiFollow: { m: 0.06, deg: 20 } };
 // 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):

@@ -18,6 +18,7 @@ import { withArmOld } from './arm_real_pin.mjs';
 import { THRUST_STYLE } from '../../src/weapons.js'; // 11/14 틈 파고들기 그때 값으로 묶음 (아래 ② 넘어짐 전 판)
 import { withPOff } from './p_pin.mjs'; // 11/16 묶음 P · 3안 전 판으로 묶음 (아래 ② 판 · ② 넘어짐 전 판)
 import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
+CONFIG.BLOCK2.ccd = 0; // 막기 2.0 칼 연속 충돌(11/17): 옛 장면 묶음 — 이 시험의 기대값은 끈 판 기준 (켠 판은 값이 다름)
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, THRUST } = CONFIG;

@@ -13,6 +13,8 @@ import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
 import { runTick } from './dig_proto.js'; // 시제품 C 달림 (11/14 — config DIG_PROTO.run · 기본 끔)
 import { cnStepTick, cnStepMove } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
+import { BLOCK2, PHYSICS } from './config.js';
+import { bladeSweepCcd } from './block2_ccd.js';
 import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, CN_STEP, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_LINK, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { MAX_FIGHTERS, teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
@@ -4665,6 +4667,7 @@ export class Fighter {
     c.sword = put(this.sword, c.sword);
     this.flexWeapon?.cache(put); // 휘는 마디 무기: 마디마다 스텝 전 상태 (combat.js 가 그 마디 접촉에 쓴다)
     for (const name in this.bodies) c.parts[name] = put(this.bodies[name], c.parts[name]);
+    if (BLOCK2.ccd) bladeSweepCcd(this, PHYSICS.timestep); // 막기 2.0 (config BLOCK2.ccd): 칼끼리 스텝 사이로 통과하지 않게
   }
 
   syncMeshes() {

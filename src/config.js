@@ -2709,6 +2709,10 @@ export const BLOCK2 = {
   reward: +(urlParam('block2reward') ?? envParam('BLOCK2_REWARD') ?? 0) || 0,
   voidT: 0.4,
   push: 1,
+  //  ccd: 칼끼리 연속 충돌 (칼끝 15 m/s × 1/120 s = 0.12 m — 칼날 두께보다 커서 스텝 사이로 통과함 · src/block2_ccd.js) · 0 = 옛 판 ·
+  //   1 = 두 칼이 이번 스텝 안에 가로지를 때만 그 스텝 둘의 CCD 를 켬 · 2 = 칼 몸에 늘 켬(베기가 죽음 — 비교용). `?block2ccd=0` [사장님 11/17 결정 '네가 원하는대로 모두 빠짐없이 하고']
+  ccd: (urlParam('block2ccd') ?? envParam('BLOCK2_CCD')) == null ? 1 : +(urlParam('block2ccd') ?? envParam('BLOCK2_CCD')) || 0,
+  ccdMargin: 0.08, // [감독 안 · 사장님 확인 전] m · 이 거리 안으로 가로지를 칼이면 CCD (0.04 는 놓침 남음 · 0.08 은 놓침 0 — 30 판 재어 봄)
   watch: 0, // 1 = 재기만 (사건 수를 세고 아무것도 바꾸지 않음 — 측정 도구 전용)
 };
 
