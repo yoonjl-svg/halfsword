@@ -6,7 +6,7 @@
 //  누름: HOLD(기본) = 처음부터 누르고 버팀 · REACT=<초> = 긋기 시작 + 초에 누름(보고 누르기 — 0 이면 긋기와 같이).
 //  막음 = 칼날 상처(벰·찌름) 없음 + 칼끼리 닿음 (parry_assist_probe 와 같은 뜻) · 베임 = 칼날 상처. 둘 다 아님(간격 밖·스침)은 뺀다.
 //  실패 까닭: 못읽음(줄을 못 정함) · 늦음(손 목표가 자리에서 0.06 넘게 또는 칼이 서보 목표에서 20° 넘게) · 밀림(칼끼리 닿은 뒤 베임) · 꼴(자리에 가 있는데 칼이 안 닿고 베임)
-//  PAV='{"powK":1.5,…}' = 거듦 값 덮어쓰기 · DEBUG=1 = 베인 판마다 한 줄
+//  PAV='{"powK":1.5,…}' = 거듦 값 덮어쓰기 · DEBUG=1 = 베인 판마다 한 줄 · AI_INTERCEPT_HUMAN=1 = 사람 가로막기 (STEP C 11/17 — 늦음 잣대는 그 겨눈 자리)
 //  node tools/sim/parry_assist_bench.mjs <무기,…> [유파 덮어쓰기|-] [PA 단계들 0,1,2,3]
 import { newRound, DT } from './harness_m.mjs';
 import * as THREE from '../../node_modules/three/build/three.module.js';
@@ -62,7 +62,7 @@ function trial(id, tech, gap, level) {
     if (!r.cut) {
       const w = Gm.wounds.find((x) => x.vic === D && x.type !== 'blunt');
       if (w) {
-        const pad = guard.padOf(guard.line ?? 'point');
+        const pad = (guard.icp && guard.icpPad) || guard.padOf(guard.line ?? 'point'); // 사람 가로막기(AI_INTERCEPT.human — STEP C 11/17)면 그 겨눈 자리
         const rr = D.sword.rotation();
         _q.set(rr.x, rr.y, rr.z, rr.w);
         _b.set(0, 1, 0).applyQuaternion(_q);

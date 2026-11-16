@@ -8,9 +8,11 @@
 //     그리고 창 + 0.3 s 안에 그 공격 쪽이 막는 쪽에 상처를 내지 않음
 //   · 상처 · 맞교환(0.5 s 안 서로) · 이김(주인공 = 높은 쪽 / 첫 수)
 //   · 반응 굴림 몫(막기 · 피하기 · 맞받기 · 탈락) · 가로막기 셈(ai.stats.icp)
+//   · (STEP C 11/17) 상처 때 맞은 쪽이 공격 꼴이었나(준비 · 다가감 / 휘두름 · 마무리) · 휘두름마다 막는 쪽 반응 굴림이 있었나(휘두름 시작 ~ 1 s) · 공격 연 까닭(why)
 //  node tools/sim/intercept_study.mjs run --seeds=1-6 [--shard=i/n] [--out=p.json] [--icp=1] [--aim=0|1] [--counter=0|1] [--strike=1] [--block2=1] [--reward=0.4] [--str=1.6:1.1] [--prof=2:6]
+//     STEP C: [--disc=1] [--antic=1] [--anticwd=1] [--swing=1] [--rule=base|str2|lever|both] [--vit=1.3:1]
 //  node tools/sim/intercept_study.mjs agg a.json b.json …
-//  node tools/sim/intercept_study.mjs table --dir=D v1 v2 …   (파일 D/{변형}_{mirror|str|prof|p24|p46}_{1..4}.json — 없는 묶음은 건너뜀)
+//  node tools/sim/intercept_study.mjs table --dir=D v1 v2 …   (파일 D/{변형}_{mirror|str|prof|p24|p46|vit}_{1..4}.json — 없는 묶음은 건너뜀) · --c = STEP C 표
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { newRound, AI, CONFIG } from './harness_m.mjs';
@@ -23,8 +25,14 @@ const { AI_PROFICIENCY, PROF6_VITALITY } = CONFIG;
 const SCHOOLS = ['german', 'italian', 'iberian', 'japanese', 'chinese'];
 const out = (f) => !f.alive || f.state === 'dead';
 
-export function studyFight({ school, weapon, wi, seed, swap, dur = 60, icp = 0, aim = 1, counter = 1, strike = 0, block2 = 0, reward = 0, str, prof }) {
+const RULES = { base: [1, 1, 1], str2: [2, 1, 1], lever: [1, 0.5, 2], both: [2, 0.5, 2] };
+export function studyFight({ school, weapon, wi, seed, swap, dur = 60, icp = 0, aim = 1, counter = 1, strike = 0, block2 = 0, reward = 0, str, prof, disc = 0, antic = 0, anticWd = 0, swing = 0, rule = 'base', vit }) {
   CONFIG.AI_INTERCEPT.on = icp ? 1 : 0;
+  CONFIG.AI_INTERCEPT.discipline = disc; // STEP C (11/17): 공격 절제 · 미리 줄 닫기 · 새 휘두름
+  CONFIG.AI_INTERCEPT.antic = antic;
+  CONFIG.AI_INTERCEPT.anticWd = anticWd;
+  CONFIG.AI_INTERCEPT.swing = swing;
+  [CONFIG.BLOCK2.strExp, CONFIG.BLOCK2.speedExp, CONFIG.BLOCK2.leverExp] = RULES[rule]; // 겨룸 점수 지수
   CONFIG.AI_INTERCEPT.aim = aim; // 가름 재기: --aim=0 = 덮는 맞받기만 · --counter=0 = 가로막기만
   CONFIG.AI_INTERCEPT.counter = counter;
   CONFIG.AI_INTERCEPT.strike = strike; // --strike=1 = 덮는 베기 켬 (기본 0)
@@ -42,6 +50,7 @@ export function studyFight({ school, weapon, wi, seed, swap, dur = 60, icp = 0, 
   const hero = swap ? E : P, other = swap ? P : E;
   if (str) { hero.strength = str[0]; other.strength = str[1]; }
   if (prof) { if (pHi === 6 && !process.env.NO_VITAL) hero.vitality = PROF6_VITALITY; if (pLo === 6) other.vitality = PROF6_VITALITY; }
+  if (vit) { hero.vitality = vit[0]; other.vitality = vit[1]; }
   const aiOf = new Map([[E, G.ai], [P, G.ai2]]);
   const foeOf = new Map([[E, P], [P, E]]);
   const nm = (f) => (f === P ? 'P' : 'E');
@@ -67,9 +76,12 @@ export function studyFight({ school, weapon, wi, seed, swap, dur = 60, icp = 0, 
   };
   G.onWound = (att, vic, r) => {
     if (!(r.severity > 0)) return;
-    wounds.push({ t: +G.t.toFixed(3), att: nm(att), vic: nm(vic), sev: +r.severity.toFixed(2) });
+    const va = aiOf.get(vic);
+    const vm = va.mode === 'attack' ? (va.phase === 'strike' || va.phase === 'follow' ? 'S' : 'W') : va.mode === 'defend' ? (va.defVoid ? 'V' : va.icpPre ? 'P' : 'D') : va.mode === 'withdraw' ? 'R' : 'O'; // 맞은 쪽 꼴: 휘두름 · 준비 / 막기 · 피하기 · 미리 닫음 / 물러남 / 그 밖
+    wounds.push({ t: +G.t.toFixed(3), att: nm(att), vic: nm(vic), sev: +r.severity.toFixed(2), vm, why: va.mode === 'attack' ? va.why : null });
   };
   const resp = { parry: 0, void: 0, counter: 0, rollfail: 0, other: 0 };
+  const lastStrike = new Map(); // 싸움꾼 → 마지막 휘두름 (반응 굴림을 붙일 곳)
   for (const f of [P, E]) {
     const ai = aiOf.get(f);
     const oRe = ai.respond.bind(ai);
@@ -77,6 +89,8 @@ export function studyFight({ school, weapon, wi, seed, swap, dur = 60, icp = 0, 
       const before = ai.threatSeen, c0 = ai.stats.counters;
       const r = oRe(th, d);
       if (before !== th.id && ai.threatSeen === th.id) {
+        const L = lastStrike.get(foeOf.get(f));
+        if (L && G.t - L.t0 <= 1.0) L.rolled = true;
         const b = !r ? 'rollfail' : ai.mode === 'attack' || ai.stats.counters > c0 ? 'counter' : ai.defVoid ? 'void' : ai.mode === 'defend' ? 'parry' : 'other';
         resp[b]++;
       }
@@ -92,9 +106,10 @@ export function studyFight({ school, weapon, wi, seed, swap, dur = 60, icp = 0, 
       const A = open.get(f);
       if (ph === 'strike' && prevPh.get(f) !== 'strike') {
         if (A) A.t1 = G.t;
-        const n = { att: nm(f), t0: G.t, t1: null, met: null, why: a.why };
+        const n = { att: nm(f), t0: G.t, t1: null, met: null, why: a.why, rolled: false };
         atks.push(n);
         open.set(f, n);
+        lastStrike.set(f, n);
       } else if (A && ph !== 'strike' && ph !== 'follow') {
         if (A.t1 == null) A.t1 = G.t;
         if (G.t > A.t1 + 0.1) open.delete(f);
@@ -114,7 +129,8 @@ export function studyFight({ school, weapon, wi, seed, swap, dur = 60, icp = 0, 
   const pc = [P, E].reduce((s, f) => s + (aiOf.get(f).stats.parryWin ?? 0), 0);
   const rec = {
     school, weapon, seed, swap, res, endT: +G.t.toFixed(2), clashes: G.clashes, fresh, wounds, hero: swap ? 'E' : 'P', resp, icp: icpS, pcWin: pc,
-    atks: atks.map((a) => [a.att === 'P' ? 0 : 1, +a.t0.toFixed(3), a.met ? 1 : 0, a.met?.def ? 1 : 0, a.met?.hand ? 1 : 0, a.clean ? 1 : 0, a.wound ? 1 : 0, a.met?.icp ? 1 : 0]),
+    atks: atks.map((a) => [a.att === 'P' ? 0 : 1, +a.t0.toFixed(3), a.met ? 1 : 0, a.met?.def ? 1 : 0, a.met?.hand ? 1 : 0, a.clean ? 1 : 0, a.wound ? 1 : 0, a.met?.icp ? 1 : 0, a.rolled ? 1 : 0, a.why]),
+    whys: [P, E].map((f) => aiOf.get(f).stats.attacks ?? 0),
     b2: G.combat.block2Stats ?? null,
   };
   G.world.free();
@@ -136,7 +152,12 @@ export function summary(recs) {
   const rt = Object.values(rs).reduce((a, b) => a + b, 0);
   const ic = recs.flatMap((r) => r.icp.filter(Boolean)).reduce((a, x) => { for (const q in x) a[q] = (a[q] ?? 0) + x[q]; return a; }, {});
   const b2 = (q) => recs.reduce((a, r) => a + (r.b2?.[q] ?? 0), 0) / n;
+  const allW = recs.flatMap((r) => r.wounds);
+  const vm = allW.reduce((a, w) => ((a[w.vm ?? '?'] = (a[w.vm ?? '?'] ?? 0) + 1), a), {});
+  const rolled = A.filter((a) => a[8]).length;
+  const draws = recs.filter((r) => r.res === 'd').length;
   return {
+    wAtk: W ? ((vm.S ?? 0) + (vm.W ?? 0)) / W : 0, wStrike: W ? (vm.S ?? 0) / W : 0, vm, rolled: A.length ? rolled / A.length : 0, draws: draws / n,
     n, W, wpf: W / n, trade: W ? trade / W : 0, share: k / n, ci: wilson(k, n), hi, dr, lo,
     fresh: recs.reduce((s, r) => s + r.fresh, 0) / n, atk: A.length / n, met: A.length ? met / A.length : 0, metDef: A.length ? metDef / A.length : 0,
     clean: A.length ? clean / A.length : 0, cleanPf: clean / n, atkWound: A.length ? wnd / A.length : 0,
@@ -152,6 +173,7 @@ export function aggregate(recs) {
   O.push(`공격 판당 ${S.atk.toFixed(1)} · 칼로 맞음 ${(100 * S.met).toFixed(1)} % (막는 중 ${(100 * S.metDef).toFixed(1)} %) · 깨끗한 막기 ${(100 * S.clean).toFixed(1)} % (판당 ${S.cleanPf.toFixed(2)}) · 상처 낸 공격 ${(100 * S.atkWound).toFixed(1)} %`);
   O.push(`반응: 막기 ${(100 * S.parry).toFixed(1)} % · 피하기 ${(100 * S.void).toFixed(1)} % · 맞받기 ${(100 * S.counter).toFixed(1)} % · 막기 연환 창 판당 ${S.pcWin.toFixed(2)}`);
   O.push(`가로막기 셈: ${JSON.stringify(S.icp)} · 겨룸 판당 ${S.clash2.toFixed(2)} · 막기 보상 판당 ${S.reward2.toFixed(2)}`);
+  O.push(`STEP C: 공격 중 맞은 상처 ${(100 * S.wAtk).toFixed(1)} % (휘두름 · 마무리 ${(100 * S.wStrike).toFixed(1)} %) · 맞은 꼴 ${JSON.stringify(S.vm)} · 반응 굴림 받은 휘두름 ${(100 * S.rolled).toFixed(1)} % · 비김 ${(100 * S.draws).toFixed(1)} %`);
   return O.join('\n');
 }
 
@@ -164,6 +186,21 @@ if (isMain(import.meta.url)) {
     const names = args.slice(1).filter((a) => !a.startsWith('--'));
     const load = (n, set) => { const fs = [1, 2, 3, 4].map((i) => `${dir}/${n}_${set}_${i}.json`).filter(existsSync); return fs.length ? fs.flatMap((p) => JSON.parse(readFileSync(p, 'utf8'))) : null; };
     const sh = (rs) => { if (!rs) return '-'; const S = summary(rs); return `${(100 * S.share).toFixed(1)} % [${(100 * S.ci[0]).toFixed(0)}~${(100 * S.ci[1]).toFixed(0)}] (${rs.length})`; };
+    if (args.includes('--c')) {
+      // STEP C 표 (11/17): 거울(숙련 4) 짓 + 숙련 2 : 6 · 힘 · 버팀 몫
+      console.log('| 변형 | 판당 상처 | 공격 중 맞은 상처 (휘두름 · 마무리) | 물러나다 맞은 상처 | 맞교환 상처 | 반응 굴림 받은 휘두름 | 판당 칼 새로 닿음 | 칼로 맞은 공격 (막는 중) | 판당 공격 | 비김 | 숙련 2 : 6 의 6 쪽 | 2 : 6 판당 상처 | 힘 1.6 : 1.1 | 버팀 1.3 : 1 |');
+      console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+      for (const n of names) {
+        const m = load(n, 'mirror');
+        const pr = load(n, 'prof');
+        if (!m && !pr) continue;
+        const S = m ? summary(m) : null;
+        const Sp = pr ? summary(pr) : null;
+        const f = (v) => (S ? v(S) : '-');
+        console.log(`| ${n} | ${f((x) => x.wpf.toFixed(2))} | ${f((x) => `${(100 * x.wAtk).toFixed(1)} % (${(100 * x.wStrike).toFixed(1)} %)`)} | ${f((x) => `${((100 * (x.vm.R ?? 0)) / x.W).toFixed(1)} %`)} | ${f((x) => `${(100 * x.trade).toFixed(1)} %`)} | ${f((x) => `${(100 * x.rolled).toFixed(1)} %`)} | ${f((x) => x.fresh.toFixed(1))} | ${f((x) => `${(100 * x.met).toFixed(1)} % (${(100 * x.metDef).toFixed(1)} %)`)} | ${f((x) => x.atk.toFixed(1))} | ${f((x) => `${(100 * x.draws).toFixed(1)} %`)} | ${sh(pr)} | ${Sp ? Sp.wpf.toFixed(2) : '-'} | ${sh(load(n, 'str'))} | ${sh(load(n, 'vit'))} |`);
+      }
+      process.exit(0);
+    }
     console.log('| 변형 | 판당 칼 새로 닿음 | 칼로 맞은 공격 (막는 중) | 깨끗한 막기 (판당) | 맞교환 상처 | 판당 상처 | 칼로 막기 고른 몫 | 힘 1.6 : 1.1 센 쪽 | 숙련 2 : 6 의 6 쪽 | 2 : 4 의 4 쪽 | 4 : 6 의 6 쪽 |');
     console.log('|---|---|---|---|---|---|---|---|---|---|---|');
     for (const n of names) {
@@ -187,7 +224,7 @@ if (isMain(import.meta.url)) {
     const mine = list.filter((_, i) => i % sn === si - 1);
     const recs = [];
     for (const f of mine) {
-      const r = studyFight({ ...f, dur, icp: +arg('icp', '0'), aim: +arg('aim', '1'), counter: +arg('counter', '1'), strike: +arg('strike', '0'), block2: +arg('block2', '0'), reward: +arg('reward', '0'), str, prof });
+      const r = studyFight({ ...f, dur, icp: +arg('icp', '0'), aim: +arg('aim', '1'), counter: +arg('counter', '1'), strike: +arg('strike', '0'), block2: +arg('block2', '0'), reward: +arg('reward', '0'), str, prof, disc: +arg('disc', '0'), antic: +arg('antic', '0'), anticWd: +arg('anticwd', '0'), swing: +arg('swing', '0'), rule: arg('rule', 'base'), vit: arg('vit', null)?.split(':').map(Number) });
       recs.push(r);
       console.error(f.school, f.weapon, f.seed, f.swap ? 'S' : '-', r.res, r.endT, 'fresh', r.fresh);
     }

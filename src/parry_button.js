@@ -28,7 +28,8 @@
 //   새 상한·쿨타임 없음. 놓으면 powerMul 1 (비기 중엔 버튼이 손을 안 쥐니 skill.js 의 비기 힘 창과 겹치지 않는다)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, SKILL, ARENA, realS, CN_STEP, AI_TELL } from './config.js';
+import { AI_LEVELS, SKILL, ARENA, realS, CN_STEP, AI_TELL, AI_INTERCEPT } from './config.js';
+import { icpAim } from './ai_intercept.js'; // 막기 2.0 STEP C 사람 가로막기 (11/17 — AI_INTERCEPT.human · 기본 0)
 import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 (11/15 시제품 — AI_TELL.guard · 기본 끔)
 import { cnSee } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
@@ -92,6 +93,13 @@ export class PlayerParryGuard {
     if (pc) {
       const { down, ...covers } = pc; // 쓰러져 머리 가리기(down)는 AI 몫 — 플레이어 몸엔 막기 줄만
       if (Object.keys(covers).length) installCover(me, this, covers);
+    }
+    if (AI_INTERCEPT.human > 0) {
+      // 막기 2.0 STEP C 사람 가로막기 (11/17 — AI 와 같은 ai_intercept.js icpAim): 그 함수가 읽는 칸 — 손 빠르기 바탕 L · 화 0 · 막기 자리표(책 없음이면 무유파) · 몸꼴 덮개
+      this.level = this.L;
+      this.anger = 0;
+      this.icpCovers = pc ?? null;
+      this.icpParry = me.schoolParry === false ? TRADITIONS.none.parry : null;
     }
   }
 
@@ -187,6 +195,7 @@ export class PlayerParryGuard {
       this.defLine = null;
       this.coverLine = null;
       this.line = null;
+      if (this.icp) this.icp = this.icpFree = false; // 막기 2.0 STEP C 사람 가로막기 (끄면 없음)
       if (this.boost) (me.powerMul = 1), (this.boost = false);
       return false;
     }
@@ -200,6 +209,12 @@ export class PlayerParryGuard {
       this.stats.threats++;
       this.stats.lines[th.line] = (this.stats.lines[th.line] ?? 0) + 1;
       if (SKILL.itRetreat || SKILL.itParryBeat) this.beatOnThreat(th, d);
+      if (AI_INTERCEPT.human > 0) {
+        // 막기 2.0 STEP C 사람 가로막기 (11/17): 위협 하나에 한 번 이 몫으로 (1 = 늘 · 굴림 없음)
+        this.icp = AI_INTERCEPT.human >= 1 || Math.random() < AI_INTERCEPT.human;
+        this.icpPad = null;
+        this.icpFree = false;
+      }
     } else if (A >= 2 && AV.reread && th && this.defLine && th.line !== this.defLine) {
       // ② 다시 읽기: 한 공격 안에서도 지금 읽은 줄이 바뀌면 따라간다 (AI 는 한 번 정하면 그대로 — 준비 동작을 공격으로 읽고 줄을 잘못 굳히는 일, 기록 §3)
       this.defLine = th.line;
@@ -219,7 +234,10 @@ export class PlayerParryGuard {
       // ai.js defend 의 끝: 공격이 지나갔다 (칼끝이 더는 오지 않고 손이 멈췄다) · 막기 시간이 다 됐다
       this.timer -= dt;
       const swingOver = this.noThreat > QUIET_T && Math.hypot(s.hvx, s.hvy) < 2.5;
-      if ((swingOver && this.timer < DEF_MIN) || this.timer <= 0) this.defLine = null;
+      if ((swingOver && this.timer < DEF_MIN) || this.timer <= 0) {
+        this.defLine = null;
+        if (this.icp) (this.icpPad = null), (this.icpFree = false); // 막기 2.0 STEP C 사람 가로막기: 막기가 끝나면 겨눈 자리도 (끄면 없음)
+      }
     }
     // 물러서는 한 짝 (10/17 연구 — SKILL.itRetreat): 박자 걸음이 짧은 디딤으로 센 두 디딤(뒷발 → 앞발 — gait.js shortPair)을 다 디딜 때까지 스틱을 뒤로 쥔다 · maxT 안에 못 하면 놓음.
     //  둘째 짧은 디딤을 뗀 때(shortPair 0)의 디딤 수 z 를 적고, 그 뒤 처음 디딘 때 끝. 걸 때 자세 고치던 발이 떠 있으면 그 발은 걷는 걸음으로 바뀌어(셈 밖) 한 디딤 더 물러선다
@@ -237,10 +255,11 @@ export class PlayerParryGuard {
       else if (!R.own) me.move.set(0, -SKILL.itRetreatVals.stick);
     }
     let p;
+    if (this.defLine && this.icp && AI_INTERCEPT.human > 0 && th) icpAim(this, s, th, this.lag); // 막기 2.0 STEP C 사람 가로막기 (11/17): 보이는 상대 칼 길(지금 모습 — 사람 눈)을 내 칼이 몸 앞에서 가로지르는 손 자리로 · 막기 줄도 따라감
     if (this.defLine) {
       this.mode = 'defend';
       this.line = this.defLine;
-      p = this.padOf(this.defLine);
+      p = (this.icp && this.icpPad) || this.padOf(this.defLine);
     } else {
       this.mode = 'idle';
       this.stats.waitT += dt;

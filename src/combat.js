@@ -783,7 +783,8 @@ export class Combat {
         const hand = f.sword ? tv(f.sword.translation()).addScaledVector(_n3.set(0, 1, 0).applyQuaternion(rotQ(f.sword)), f.weaponCfg.hiltLength * 0.5) : point;
         const r = Math.max(0.05, point.distanceTo(hand));
         const ang = sp > 1e-6 ? vin / sp : 0;
-        return { v, vin, m, r, ang, score: f.strength * m * vin * ang / r };
+        const pw = (x, k) => (k === 1 ? x : x ** k); // 겨룸 점수 지수 (STEP C 11/17 — BLOCK2.strExp · speedExp · leverExp · 1 이면 옛 셈 그대로)
+        return { v, vin, m, r, ang, score: (pw(f.strength, BLOCK2.strExp) * m * pw(vin, BLOCK2.speedExp) * ang) / pw(r, BLOCK2.leverExp) };
       };
       const a = side(fa, SA, 1);
       const b = side(fb, SB, -1);

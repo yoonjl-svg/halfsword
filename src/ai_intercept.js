@@ -16,7 +16,7 @@
 //  ① ② 는 띠 기울기만큼 굴림(위협 하나 · 맞받기 하나에 한 번) — 안 나오면 옛 길. 손 · 서보 · 거르기 · 빠르기 · 힘은 그대로.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_INTERCEPT, AI_ARC, PHYSICS, ARM, realS } from './config.js';
+import { AI_INTERCEPT, AI_ARC, AI_PLAN, PHYSICS, ARM, realS } from './config.js';
 import { tiltOf } from './ai_plan.js';
 import { padDist } from './ai_techniques.js';
 
@@ -93,20 +93,23 @@ export function foePath(s, c) {
       P.t[i + 1] = s.ty + s.tvy * t;
       P.t[i + 2] = s.tz + s.tvz * t;
     }
-    if (P.kHit === K && k > 0) {
-      for (let p = 0; p < 2; p++) {
-        const w = p ? 1 : U_MID; // 칼끝 · 타격점 (곧은 줄 눈과 같은 두 점)
-        const x = P.b[i] + (P.t[i] - P.b[i]) * w - c.x;
-        const z = P.b[i + 2] + (P.t[i + 2] - P.b[i + 2]) * w - c.z;
-        if (x * x + z * z > R2) continue;
-        const y = P.b[i + 1] + (P.t[i + 1] - P.b[i + 1]) * w - c.y;
-        if (y < -1.3 || y > 0.75) continue;
-        P.kHit = k;
-        break;
-      }
-    }
+    if (P.kHit === K && k > 0 && inBody(i, c, R2)) P.kHit = k;
   }
   return P;
+}
+
+/** 칸 i 의 칼끝 · 타격점(곧은 줄 눈과 같은 두 점) 가운데 하나가 내 몸통에 드는가 */
+function inBody(i, c, R2) {
+  for (let p = 0; p < 2; p++) {
+    const w = p ? 1 : U_MID;
+    const x = P.b[i] + (P.t[i] - P.b[i]) * w - c.x;
+    const z = P.b[i + 2] + (P.t[i + 2] - P.b[i + 2]) * w - c.z;
+    if (x * x + z * z > R2) continue;
+    const y = P.b[i + 1] + (P.t[i + 1] - P.b[i + 1]) * w - c.y;
+    if (y < -1.3 || y > 0.75) continue;
+    return true;
+  }
+  return false;
 }
 
 // ── 내 칼 선분 ↔ 상대 칼 면 ──
@@ -244,7 +247,8 @@ function candidates(ai) {
     const el = (o.blade[0] * Math.PI) / 180, az = (o.blade[1] * Math.PI) / 180;
     return [k, { hand: o.hand, dir: [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)] }];
   })) : {};
-  const slots = LINES.map((line) => ({ line, pad: (ai.school.parry[line] || ai.school.pose.point).slice(), cover: covers[line] ?? null, free: false }));
+  const parry = ai.icpParry ?? ai.school.parry; // 사람 막기 단추(STEP C — parry_button.js)는 제 막기 자리표(책 없음이면 무유파 자리)
+  const slots = LINES.map((line) => ({ line, pad: (parry[line] || ai.school.pose.point).slice(), cover: covers[line] ?? null, free: false }));
   const g = AI_INTERCEPT.grid;
   const grid = [];
   const n = Math.floor(0.6 / g + 1e-9);
@@ -274,20 +278,20 @@ export function icpArm(ai) {
 }
 
 export function icpStats() {
-  return { arm: 0, on: 0, aim: 0, none: 0, free: 0, slot: 0, lineChange: 0, late: 0, cvTry: 0, cvPick: 0, cvSame: 0, stPick: 0, stCover: 0 };
+  return { arm: 0, on: 0, aim: 0, none: 0, free: 0, slot: 0, lineChange: 0, late: 0, cvTry: 0, cvPick: 0, cvSame: 0, stPick: 0, stCover: 0, disc: 0, discRoll: 0, ant: 0, antAim: 0, antTh: 0, antEnd: 0, antWd: 0, swTurn: 0, swNew: 0, swRe: 0 };
 }
 
 /**
  * ① 막는 동안 매 스텝 (위협이 보일 때): 늦게 본 모습 s 로 상대 칼 길을 내다보고 가장 좋은 손 자리 → ai.icpPad · ai.icpFree · (막기 자리면) ai.defLine.
  *  가로지르는 후보가 없으면 손대지 않는다(앞 겨눔 · 없으면 옛 정한 자리). 돌려줌: 겨눴으면 true
  */
-export function icpAim(ai, s, th) {
+export function icpAim(ai, s, th, lag0) {
   const me = ai.me;
   const c = me.bodies.chest.translation();
   foePath(s, c);
   const kEnd = P.kHit;
   const L = ai.level;
-  const lag = L.reaction + realS(0.04) * ai.anger; // ai.js update 의 sense.seen 지연과 같은 셈
+  const lag = lag0 ?? L.reaction + realS(0.04) * ai.anger; // ai.js update 의 sense.seen 지연과 같은 셈 (사람 막기 단추는 제 눈 지연 — 지금 모습 0)
   const spd = Math.max(1e-3, L.parrySpeed);
   const hx = me.handOffset.x, hy = me.handOffset.y;
   const { slots, grid } = candidates(ai);
@@ -459,4 +463,199 @@ export function strikeCoverQ(ai, prep, t) {
     return Math.max(0, 1 - Math.abs(uMe - FORTE) - Math.abs(uFoe - FOIBLE)) * sin;
   }
   return 0;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  막기 2.0 STEP C — 휘두름 전의 판단 (11/17 · config AI_INTERCEPT.discipline · antic · swing — 모두 기본 0 · 기록 docs/strike/ai_intercept_2026-11-17.md §§ 9 ~)
+//   단계 B 재기: 휘두름 0.1 s · 반응 0.2 s — 보고 막기로는 실력이 판에 안 든다 → 실력은 휘두름 전에 (공격을 여는 때 · 줄을 미리 닫음 · 새 휘두름을 새로 읽음).
+//   모두 띠 기울기(무 0 · 낮음 ⅓ · 가운데 ⅔ · 높음 1) × 값 으로 굴림 — 절대 규칙 없음 · 늦게 본 모습(sense.seen — 반응 지연)만 읽음 · 같은 손 · 같은 물리.
+// ─────────────────────────────────────────────────────────────
+const tilt = (ai, k) => k * tiltOf(ai.proficiency ?? 2);
+
+/**
+ * ① 공격 절제 (AI_INTERCEPT.discipline — ai.js startAttack 의 새 공격 문): 상대가 준비된 채 칼끝 · 칼을 내 줄에 두었으면 새 공격을 열지 않음 → true.
+ *  준비됨 = 서 있고 칼을 쥠 · 헛친 뒤 아님(opportunity 'recover' 와 같은 셈 — 0.7 s 안 손 3.5 m/s 넘게 휘두르고 지금 손 1.8 m/s 밑) · 제 휘두름 중 아님(칼끝 3.5 m/s 밑 — 위협 문턱) ·
+ *   상대 칼끝 어림 + 0.6 안(몰아침 셈 aggrNow 와 같은 거리 — 내가 들어가면 그 칼끝에 걸리는 곳). 내 줄 = 칼끝이 나를 겨눔(foeClass online — 곧장 들어가면 찔림).
+ *  AI_PLAN.beat(0.6 s)마다 한 번 몫(discipline × 띠 기울기)으로 굴려 같은 박자 안 거듭 부름은 같은 답 (칼끝 틈 건너기 arcGapHold 와 같은 꼴)
+ */
+export function discHold(ai) {
+  const s = ai.lastSeen;
+  if (!s || s.state !== 'stand' || !s.armed || !(ai.d < ai.foeReach + 0.6)) return false;
+  if (Math.hypot(s.tvx, s.tvy, s.tvz) >= 3.5) return false; // 상대가 휘두르는 중 — 맞받기(Indes) 몫
+  if (ai.sense.recentHandSpeed(ai.level.reaction, realS(0.7)) > 3.5 && Math.hypot(s.hvx, s.hvy) < 1.8) return false; // 헛친 뒤(Nach)
+  if (!ai.foeClass(s).online) return false; // 칼이 줄 밖 — 들어가도 찔리지 않음
+  const t = ai.sense.t;
+  const S = (ai.stats.icp ??= icpStats());
+  if (!(t - (ai.discT ?? -Infinity) < AI_PLAN.beat)) {
+    ai.discT = t;
+    ai.discOk = Math.random() < tilt(ai, AI_INTERCEPT.discipline);
+    S.discRoll++;
+  }
+  if (ai.discOk) S.disc++;
+  return ai.discOk;
+}
+
+// ── ② 미리 줄 닫기 (AI_INTERCEPT.antic): 휘두름 전 — 늦게 본 상대 칼 자리에서 올 칼 길을 내다봄 ──
+//  베기: 칼(칼날 0 ~ 1)이 상대 가슴을 축으로 돌아 칼끝이 내 가슴 쪽으로 감 (축 = (칼끝 − 상대 가슴) × (내 가슴 − 상대 가슴)) — 반 바퀴를 내다보는 칸 수(AI_ARC.horizon ÷ 물리 세 스텝)에 고르게.
+//   칼은 팔째 어깨 · 가슴에서 돌아 나온다 — 손잡이를 축으로 돌리면 칼끝이 상대 머리 둘레만 돌아 내 몸에 닿지 않음.
+//  찌르기: 칼끝이 나를 겨누면(online) 칼이 제 줄을 따라 내 가슴 너머까지 (두 배 거리) 곧게 옴.
+//  때는 모름(아직 안 휘두름) — 점수는 질(① 과 같은 셈) − 손 옮김 때만 (늦음 셈 없음).
+function predPath(s, c, thrust) {
+  const h = PHYSICS.timestep * H_STEPS;
+  const K = Math.max(1, Math.round(AI_ARC.horizon / h));
+  if (P.b.length < 3 * (K + 1)) {
+    P.b = new Float64Array(3 * (K + 1));
+    P.t = new Float64Array(3 * (K + 1));
+  }
+  P.K = K;
+  P.h = h;
+  P.kHit = K;
+  const kb = 1 / (1 - U_MID);
+  const ex = s.tx - s.mx, ey = s.ty - s.my, ez = s.tz - s.mz;
+  const bx = s.tx - ex * kb, by = s.ty - ey * kb, bz = s.tz - ez * kb;
+  const R2 = bodyR2();
+  if (thrust) {
+    const el = Math.hypot(ex, ey, ez) || 1;
+    const D = (2 * Math.hypot(c.x - s.tx, c.y - s.ty, c.z - s.tz)) / K;
+    const ux = (ex / el) * D, uy = (ey / el) * D, uz = (ez / el) * D;
+    for (let k = 0; k <= K; k++) {
+      const i = 3 * k;
+      P.b[i] = bx + ux * k;
+      P.b[i + 1] = by + uy * k;
+      P.b[i + 2] = bz + uz * k;
+      P.t[i] = s.tx + ux * k;
+      P.t[i + 1] = s.ty + uy * k;
+      P.t[i + 2] = s.tz + uz * k;
+      if (P.kHit === K && k > 0 && inBody(i, c, R2)) P.kHit = k;
+    }
+    return true;
+  }
+  const px = s.cx, py = s.cy, pz = s.cz; // 축이 지나는 점 = 상대 가슴
+  const rx = s.tx - px, ry = s.ty - py, rz = s.tz - pz;
+  const qx = c.x - px, qy = c.y - py, qz = c.z - pz;
+  let nx = ry * qz - rz * qy, ny = rz * qx - rx * qz, nz = rx * qy - ry * qx;
+  const nn = Math.hypot(nx, ny, nz);
+  if (nn < 1e-6) return false; // 칼끝이 곧장 나를 향함 — 찌르기 몫
+  nx /= nn;
+  ny /= nn;
+  nz /= nn;
+  const dA = Math.PI / K;
+  for (let k = 0; k <= K; k++) {
+    const i = 3 * k;
+    const co = Math.cos(dA * k), si = Math.sin(dA * k);
+    for (let p = 0; p < 2; p++) {
+      const vx = (p ? s.tx : bx) - px, vy = (p ? s.ty : by) - py, vz = (p ? s.tz : bz) - pz;
+      const nd = (nx * vx + ny * vy + nz * vz) * (1 - co);
+      const A = p ? P.t : P.b;
+      A[i] = px + vx * co + (ny * vz - nz * vy) * si + nx * nd;
+      A[i + 1] = py + vy * co + (nz * vx - nx * vz) * si + ny * nd;
+      A[i + 2] = pz + vz * co + (nx * vy - ny * vx) * si + nz * nd;
+    }
+    if (P.kHit === K && k > 0 && inBody(i, c, R2)) P.kHit = k;
+  }
+  return true;
+}
+
+/** 내다본 줄 이름 (위협 읽기 threat 의 준비 자세 규칙과 같음 — 상대가 칼을 든 쪽) */
+function predLine(s, thrust) {
+  if (thrust) return 'thrust';
+  if (s.hy > 0.15) return s.hx > 0.15 ? 'highL' : s.hx < -0.15 ? 'highR' : 'highC';
+  if (s.hy < -0.2) return s.hx >= 0 ? 'lowL' : 'lowR';
+  return 'highC';
+}
+
+/**
+ * ② 미리 줄 닫기 — 막는 꼴(ai.icpPre)의 매 스텝 (위협이 아직 안 보일 때): 늦게 본 상대 칼에서 내다본 칼 길을 가로지르는 손 자리 → ai.icpPad · icpFree · defLine.
+ *  가로지르는 후보가 없으면 그 줄 막기 자리(icpPad null). 돌려줌: 가로지르는 자리를 찾았으면 true
+ */
+export function anticAim(ai, s) {
+  const r = anticPick(ai, s);
+  ai.icpPad = r.pad;
+  ai.icpFree = r.free;
+  ai.defLine = r.line;
+  if (r.pad) (ai.stats.icp ??= icpStats()).antAim++;
+  return !!r.pad;
+}
+
+const _ap = { pad: null, free: false, line: null };
+/** 내다본 길을 가로지르는 손 자리 { pad (없으면 null) · free (패드 칸) · line } — 칸을 바꾸지 않음 (물러나며 가리기도 씀) */
+export function anticPick(ai, s) {
+  const me = ai.me;
+  const c = me.bodies.chest.translation();
+  const thrust = !!ai.foeClass(s).online;
+  const line = predLine(s, thrust);
+  _ap.pad = null;
+  _ap.free = false;
+  _ap.line = line;
+  if (!predPath(s, c, thrust)) return _ap;
+  const kEnd = P.kHit;
+  const spd = Math.max(1e-3, ai.level.parrySpeed);
+  const hx = me.handOffset.x, hy = me.handOffset.y;
+  const { slots, grid } = candidates(ai);
+  let best = null, bestS = -Infinity, bestLine = null;
+  const judge = (q, ln) => {
+    myBlade(me, q.pad, q.cover, c);
+    if (!crossFirst(_a, _e, kEnd, thrust)) return;
+    let Q = Math.max(0, 1 - Math.abs(X.uMe - FORTE) - Math.abs(X.uFoe - FOIBLE)) * X.sin;
+    if (thrust) Q *= 1 - X.d / AI_INTERCEPT.thrustR;
+    const sc = AI_INTERCEPT.qual * Q - Math.hypot(q.pad[0] - hx, q.pad[1] - hy) / spd;
+    if (sc > bestS) {
+      bestS = sc;
+      best = q;
+      bestLine = ln;
+    }
+  };
+  for (const q of slots) if (q.line === line) judge(q, q.line);
+  for (const q of slots) if (q.line !== line) judge(q, q.line);
+  for (const q of grid) judge(q, line);
+  if (best) {
+    _ap.pad = best.pad;
+    _ap.free = best.free;
+    _ap.line = bestLine;
+  }
+  return _ap;
+}
+
+/** ② 낌새 하나에 한 번: 미리 줄 닫기로 할지 (antic × 띠 기울기) */
+export function anticRoll(ai) {
+  const p = tilt(ai, AI_INTERCEPT.antic);
+  return p >= 1 || (p > 0 && Math.random() < p);
+}
+
+// ── ③ 새 휘두름 = 새 위협 번호 (AI_INTERCEPT.swing — ai.js threat): 위협이 이어지는 동안 늦게 본 칼끝(느리면 타격점) 가는 방향이 90° 넘게 꺾이면 새 휘두름 ──
+const _sw = [0, 0, 0];
+function swingDir(s) {
+  let x = s.tvx, y = s.tvy, z = s.tvz;
+  let n = Math.hypot(x, y, z);
+  if (n < 3.5) (x = s.mvx), (y = s.mvy), (z = s.mvz), (n = Math.hypot(x, y, z));
+  if (n < 1e-6) return null;
+  _sw[0] = x / n;
+  _sw[1] = y / n;
+  _sw[2] = z / n;
+  return _sw;
+}
+/** 새 위협 번호를 줄 때(조용했다가 다시 옴) — 그 휘두름의 방향을 적음 */
+export function swingMark(ai, s) {
+  const d = swingDir(s);
+  ai.swDir = d ? d.slice() : null;
+}
+/** 위협이 이어지는 스텝: 방향이 90° 넘게 꺾였으면 한 번 굴려(swing × 띠 기울기) 새 번호면 true. 꺾인 방향을 새 바탕으로 */
+export function swingTurn(ai, s) {
+  const d = swingDir(s);
+  if (!d) return false;
+  const o = ai.swDir;
+  if (!o) {
+    ai.swDir = d.slice();
+    return false;
+  }
+  if (o[0] * d[0] + o[1] * d[1] + o[2] * d[2] >= 0) return false;
+  o[0] = d[0];
+  o[1] = d[1];
+  o[2] = d[2];
+  const S = (ai.stats.icp ??= icpStats());
+  S.swTurn++;
+  const p = tilt(ai, AI_INTERCEPT.swing);
+  const ok = p >= 1 || (p > 0 && Math.random() < p);
+  if (ok) S.swNew++;
+  return ok;
 }

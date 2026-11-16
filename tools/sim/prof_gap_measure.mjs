@@ -8,6 +8,8 @@
 //  판마다: 칸 · 짝 · 무기 · 씨앗 · 자리 · 결과 · 끝 시각 · 서로 준 상처 수 · 끝 피 · 비밀 기술 낸 수.
 //  node tools/sim/prof_gap_measure.mjs [--schools=german,italian,…] [--pairs=1:2,2:4,…] [--seeds=1-3] [--dur=60] [--shard=i/n] [--json=path]
 //  node tools/sim/prof_gap_measure.mjs agg a.json b.json …   ·  4 갈래 동시 실행: --shard=1/4 … --shard=4/4 (네 개 모두 옵션을 같게 — 옵션으로 만든 전체 목록 번호를 n 으로 나눔)
+//   --look=enemy : 두 자리 모두 같은 겉모습 LOOKS.enemy (막기 2.0 STEP C 11/17 — 감독 '겉모습 같게'. 안 주면 옛 판 그대로 — 자리마다 기본 겉모습)
+//   --cfg=AI_INTERCEPT.on:1,AI_INTERCEPT.discipline:1,BLOCK2.on:1 … : config 값 덮어쓰기 (재기 전용 · 게임 값은 그대로) · --rule=base|str2|lever|both = BLOCK2 겨룸 점수 지수
 //  출력 — 합산 hi 몫 = (승 + 무 ½) / 판 수 · 95 % 윌슨 구간 · 승 / 무 / 패 · 평균 끝 시각 · 유파별 hi 몫 (무 수)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync } from 'node:fs';
@@ -15,7 +17,9 @@ import { newRound, AI } from './harness_m.mjs';
 import { wilson } from './ref_duel.mjs';
 import { isMain } from './is_main.mjs';
 import { WEAPONS } from './ai_ring_measure.mjs';
-import { PROF6_VITALITY, AI_PROFICIENCY } from '../../src/config.js';
+import * as CFG from '../../src/config.js';
+import { LOOKS } from '../../src/looks.js';
+const { PROF6_VITALITY, AI_PROFICIENCY } = CFG;
 
 const args = process.argv.slice(2);
 const mode = args[0] && !args[0].startsWith('--') ? args[0] : 'run';
@@ -51,12 +55,13 @@ export function planFights({ schools, pairs, seeds }) {
 }
 
 /** 한 판: swap=false 면 높은 쪽이 플레이어 자리, true 면 상대 자리. 같은 무기 · 씨앗은 무기 · 씨앗 · 자리마다 다른 값 */
-export function measureFight(f, dur) {
+export function measureFight(f, dur, opt = {}) {
   const { school, lo, hi, weapon, wi, seed, swap } = f;
   const rngSeed = seed * 100 + wi * 10 + (swap ? 1 : 0);
+  const lk = opt.look ? LOOKS[opt.look] : null; // --look=enemy: 두 자리 같은 겉모습 (STEP C 11/17)
   // persona = 상대(E) 자리 AI · persona2 = 플레이어 자리 AI (ai2)
   const G = newRound({
-    seed: rngSeed, walls: true, weapon, weapon2: weapon, AI2Class: AI,
+    seed: rngSeed, walls: true, weapon, weapon2: weapon, AI2Class: AI, ...(lk ? { look: lk, look2: lk } : {}),
     // 실력 등급: 게임과 같게 숙련도 표의 이름을 넘김(main.js · characters.js aiAtProficiency — AI 가 AI_PLAN.levels 로 바꿈) · 11/17 고침: 전엔 harness 기본 'normal' 이라 모든 숙련도가 보통 숫자
     difficulty: AI_PROFICIENCY.levels[swap ? hi : lo], difficulty2: AI_PROFICIENCY.levels[swap ? lo : hi],
     persona: { proficiency: swap ? hi : lo }, persona2: { proficiency: swap ? lo : hi },
@@ -129,6 +134,21 @@ if (isMain(import.meta.url)) {
     }
     const seeds = range(arg('seeds', '1-3'));
     const dur = +arg('dur', '60');
+    const look = arg('look', null);
+    if (look && !LOOKS[look]) throw new Error(`unknown look: ${look}`);
+    // config 덮어쓰기 (재기 전용): --cfg=OBJ.key:val,… · --rule=base|str2|lever|both (BLOCK2 겨룸 점수 지수)
+    for (const kv of (arg('cfg', '') || '').split(',').filter(Boolean)) {
+      const [path, v] = kv.split(':');
+      const [obj, key] = path.split('.');
+      if (!CFG[obj] || !(key in CFG[obj])) throw new Error(`unknown cfg: ${path}`);
+      CFG[obj][key] = Number.isNaN(+v) ? v : +v;
+    }
+    const RULES = { base: [1, 1, 1], str2: [2, 1, 1], lever: [1, 0.5, 2], both: [2, 0.5, 2] };
+    const rule = arg('rule', null);
+    if (rule) {
+      if (!RULES[rule]) throw new Error(`unknown rule: ${rule}`);
+      [CFG.BLOCK2.strExp, CFG.BLOCK2.speedExp, CFG.BLOCK2.leverExp] = RULES[rule];
+    }
     const shard = arg('shard', '1/1').split('/').map(Number);
     const [si, sn] = shard;
     if (!(sn >= 1 && si >= 1 && si <= sn)) throw new Error('--shard=i/n 은 1 ≤ i ≤ n');
@@ -137,7 +157,7 @@ if (isMain(import.meta.url)) {
     console.error(`전체 ${all.length} 판 · 이 샤드 ${mine.length} 판 (${si}/${sn})`);
     const runs = [];
     for (const { f, k } of mine) {
-      const r = measureFight(f, dur);
+      const r = measureFight(f, dur, { look });
       runs.push(r);
       console.error(`[${k + 1}/${all.length}] ${f.school} ${f.lo}:${f.hi} w${f.wi} s${f.seed} ${f.swap ? 'swap' : 'std'} → ${r.result} @${r.endT}s`);
     }

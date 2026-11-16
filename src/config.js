@@ -2715,6 +2715,9 @@ export const BLOCK2 = {
   ccd: +(urlParam('block2ccd') ?? envParam('BLOCK2_CCD') ?? 0) || 0,
   ccdMargin: 0.08, // [감독 안 · 사장님 확인 전] m · 이 거리 안으로 가로지를 칼이면 CCD (0.04 는 놓침 남음 · 0.08 은 놓침 0 — 30 판 재어 봄)
   watch: 0, // 1 = 재기만 (사건 수를 세고 아무것도 바꾸지 않음 — 측정 도구 전용)
+  //  겨룸 점수 지수 (STEP C 11/17 — 감독 지시 '힘²' · '지렛대를 더 · 빠르기를 덜'): 점수 = strength^strExp × 칼 유효 질량 × 닿는 빠르기^speedExp × 각 ÷ 손~닿은 자리^leverExp.
+  //   1 · 1 · 1 = 옛 셈. `?block2rule=str2`(힘²) · `lever`(지렛대² · 빠르기^½) · `both` — 시뮬 BLOCK2_RULE [감독 안 · 사장님 확인 전]
+  ...{ base: { strExp: 1, speedExp: 1, leverExp: 1 }, str2: { strExp: 2, speedExp: 1, leverExp: 1 }, lever: { strExp: 1, speedExp: 0.5, leverExp: 2 }, both: { strExp: 2, speedExp: 0.5, leverExp: 2 } }[urlParam('block2rule') ?? envParam('BLOCK2_RULE') ?? 'base'] ?? { strExp: 1, speedExp: 1, leverExp: 1 },
 };
 
 // 막기 2.0 STEP B — 가로막기 · 덮는 맞받기 (11/17 · src/ai_intercept.js · 기록 docs/strike/ai_intercept_2026-11-17.md · 기본 끔 `?aiIntercept=1` — 끄면 판이 바이트까지 같다).
@@ -2732,6 +2735,17 @@ export const BLOCK2 = {
 //  grid    : 패드 칸 간격 m (걸음 사다리 0.3 의 반 — 막기 자리 패드 0.15 m 와 같은 잣대)
 //  qual    : 강약 · 직각 질 1 이 몇 초 늦음과 맞먹나 (시간 사다리 0.2 s)
 //  thrustR : 찌르기 — 칼끝이 지나는 줄에서 내 칼이 이 거리 안이면 가로지름으로 봄 (걸음 사다리 0.3 m)
+// 막기 2.0 STEP C — 휘두름 전의 판단 (11/17 · 기록 같은 문서 §§ 9 ~ · 감독 지시 '실력은 휘두름 전에') — 모두 기본 0 = 끔 (끄면 판이 바이트까지 같다) · 몫 = 값 × 띠 기울기(무 0 · 낮음 ⅓ · 가운데 ⅔ · 높음 1)
+//  discipline : 공격 절제 — 상대 칼끝 · 칼이 내 줄에 있고(칼끝이 나를 겨눔 — foeClass online) 상대가 준비됨(헛친 뒤 아님 · 제 휘두름 중 아님 · 상대 칼끝 어림 + 0.6 안)이면
+//               새 공격(참다 · 빈틈 · 다침 · 꾐 …)을 열지 않음 — AI_PLAN.beat 마다 한 번 굴림 (칼끝 틈 건너기와 같은 꼴). 헛친 뒤(Nach) · 들어옴 · 드는 순간(Vor) · 맞받기(Indes) · 무너짐 · 이어 치기 · 비기 · 패시브는 그대로
+//               `?aiDisc=1` · 시뮬 AI_DISC=1
+//  antic      : 미리 줄 닫기 — 보이는 낌새(칼을 듦 · 달려듦 — preThreat 걸쇠 그대로 · 상대 칼끝 어림 안으로 걸어 들어옴)에 늦게 본 상대 칼 자리에서 올 칼 길을 내다봐(칼이 내 가슴 쪽으로
+//               상대 가슴을 축으로 돎 · 칼끝이 나를 겨누면 찌르기) 가로막기 손 자리로 미리 감 — 휘두름이 보이면 보통 가로막기로 이어짐. 낌새 하나에 한 번 굴림 · `?aiAntic=1` · 시뮬 AI_ANTIC=1
+//  anticWd    : 1 = 미리 줄 닫기(antic)를 물러남에도 — 상대 칼이 닿는 거리에서 물러나며 가리는 손(옛 coverFor — 상대가 칼을 든 쪽 막기 자리)을 같은 내다본 칼 길의 가로막기 자리로.
+//               물러남 하나에 한 번 굴림(antic × 띠 기울기). 0 = 물러남은 옛 가리기 그대로 (antic 이 0 이면 아무 일 없음) `?aiAnticWd=1`
+//  swing      : 새 휘두름 = 새 위협 번호 — 위협이 이어지는 동안 늦게 본 칼끝 가는 방향이 90° 넘게 꺾이면(되돌아 베기 · 들었다 내려침) 띠 기울기만큼 새 번호(반응 굴림 한 번 더) ·
+//               막는 중에도 새 번호면 다시 정함. `?aiSwing=1` · 시뮬 AI_SWING=1
+//  human      : 사람 막기 단추 가로막기 (parry_button.js) — 누른 동안 위협 하나에 이 몫으로 AI 와 같은 가로막기 (사람 눈 = 지금 모습 · 단추 손 빠르기). `?humanIcp=1` · 시뮬 AI_INTERCEPT_HUMAN=1
 export const AI_INTERCEPT = {
   on: (urlParam('aiIntercept') ?? envParam('AI_INTERCEPT')) === '1' ? 1 : 0,
   aim: 1,
@@ -2740,6 +2754,11 @@ export const AI_INTERCEPT = {
   grid: 0.15,
   qual: realS(0.2),
   thrustR: 0.3,
+  discipline: +(urlParam('aiDisc') ?? envParam('AI_DISC') ?? 0) || 0,
+  antic: +(urlParam('aiAntic') ?? envParam('AI_ANTIC') ?? 0) || 0,
+  anticWd: +(urlParam('aiAnticWd') ?? envParam('AI_ANTIC_WD') ?? 0) || 0,
+  swing: +(urlParam('aiSwing') ?? envParam('AI_SWING') ?? 0) || 0,
+  human: +(urlParam('humanIcp') ?? envParam('AI_INTERCEPT_HUMAN') ?? 0) || 0,
 };
 
 // 찌르기 낌새 눈 (11/15 시제품 — 사장님 '찌르기의 맛은 살려야 해. 혹은 찌르기를 더 잘 방어할 방법? 지금 찌르기 막기 거의 불가능하지 않아?' · src/thrust_tell.js ·

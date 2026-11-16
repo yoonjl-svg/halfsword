@@ -181,3 +181,217 @@ test('켜면 판에서 쓰임: 막기 굴림 · 겨눔 · 덮는 맞받기 셈',
     assert.ok(arm > 0 && aim > 0 && cv > 0, JSON.stringify({ arm, aim, cv }));
   });
 });
+
+// ───────── 막기 2.0 STEP C (11/17 — 공격 절제 · 미리 줄 닫기 · 새 휘두름 · 겨룸 지수 · 사람 가로막기 — 모두 기본 0) ─────────
+import { discHold, anticAim, swingMark, swingTurn } from '../../src/ai_intercept.js';
+import { PlayerParryGuard } from '../../src/parry_button.js';
+
+test('STEP C 기본 끔 · 겨룸 지수 1 · 1 · 1 (옛 셈)', () => {
+  assert.ok(I.discipline === 0 && I.antic === 0 && I.anticWd === 0 && I.swing === 0 && I.human === 0, JSON.stringify(I));
+  const B = CONFIG.BLOCK2;
+  assert.ok(B.strExp === 1 && B.speedExp === 1 && B.leverExp === 1, JSON.stringify(B));
+});
+
+test('STEP C 끄면 셈 · 굴림 · 칸이 없다 (판에서 discT · icpPre · swDir · anArmed 없음)', () => {
+  const { G, ai, free } = round();
+  try {
+    while (G.t < 12) G.step();
+    for (const a of [ai, G.ai2]) {
+      assert.equal(a.stats.icp, undefined);
+      for (const k of ['discT', 'icpPre', 'swDir', 'anArmed', 'anOff', 'anWd']) assert.equal(a[k], undefined, k);
+    }
+  } finally {
+    free();
+  }
+});
+
+/** 판을 1 s 돌린 뒤 늦게 본 모습을 갈아 끼움: 상대가 서서 칼끝을 내 가슴으로 겨눔 (칼 멈춤) */
+function aimedAt(ai, extra = {}) {
+  const c = ai.me.bodies.chest.translation();
+  const f = ai.me.forward();
+  const tip = { x: c.x + f.x * 0.6, y: c.y, z: c.z + f.z * 0.6 };
+  const mid = { x: c.x + f.x * 0.9, y: c.y, z: c.z + f.z * 0.9 };
+  const s = { ...ai.lastSeen, tx: tip.x, ty: tip.y, tz: tip.z, mx: mid.x, my: mid.y, mz: mid.z, tvx: 0, tvy: 0, tvz: 0, mvx: 0, mvy: 0, mvz: 0, hvx: 0, hvy: 0, state: 'stand', armed: true, ...extra };
+  ai.lastSeen = s;
+  ai.d = ai.foeReach;
+  ai.sense.recentHandSpeed = () => 0;
+  return s;
+}
+
+test('공격 절제: 준비된 상대 칼끝이 내 줄이면 높음 띠는 참음 · 휘두르는 중 · 줄 밖 · 무 띠는 안 참음 · 박자마다 한 번 굴림', () => {
+  withIcp({ discipline: 1 }, () => {
+    const { G, ai, free } = round(6);
+    try {
+      while (G.t < 1) G.step();
+      aimedAt(ai);
+      assert.ok(ai.foeClass(ai.lastSeen).online, '칼끝 겨눔');
+      assert.equal(discHold(ai), true, '높음 = 참음');
+      assert.equal(ai.stats.icp.discRoll, 1);
+      assert.equal(discHold(ai), true);
+      assert.equal(ai.stats.icp.discRoll, 1, '같은 박자 = 같은 답');
+      ai.discT = -Infinity;
+      aimedAt(ai, { tvx: 6 });
+      assert.equal(discHold(ai), false, '휘두르는 중 (Indes 몫)');
+      const s = aimedAt(ai);
+      const rr = ai.me.right();
+      ai.lastSeen = { ...s, tx: s.tx + rr.x * 1.5, tz: s.tz + rr.z * 1.5 }; // 칼끝을 옆으로 — 줄 밖
+      assert.equal(discHold(ai), false, '칼이 줄 밖');
+      aimedAt(ai);
+      ai.d = ai.foeReach + 1;
+      assert.equal(discHold(ai), false, '멀다');
+      assert.equal(ai.startAttack(ai.school.tech[0], 'recover'), true, '헛친 뒤(Nach)는 그대로 엶');
+    } finally {
+      free();
+    }
+    const P0 = round(0);
+    try {
+      while (P0.G.t < 1) P0.G.step();
+      aimedAt(P0.ai);
+      for (let i = 0; i < 10; i++) {
+        P0.ai.discT = -Infinity;
+        assert.equal(discHold(P0.ai), false, '무 띠');
+      }
+    } finally {
+      P0.free();
+    }
+  });
+});
+
+test('미리 줄 닫기: 든 칼에서 내다본 길(상대 가슴 축 회전)을 몸 앞에서 가로지르는 손 자리 · 겨누면 찌르기 줄', () => {
+  withIcp({ antic: 1 }, () => {
+    const { G, ai, free } = round(6);
+    try {
+      while (G.t < 1) G.step();
+      const me = ai.me;
+      const c = me.bodies.chest.translation();
+      const f = me.forward(), r = me.right();
+      // 상대 가슴 = 내 앞 1.6 m · 칼을 상대 오른쪽(내 왼쪽) 위로 듦: 손잡이 끝 상대 머리 옆 · 칼끝 위 뒤
+      const fc = { x: c.x + f.x * 1.6, y: c.y, z: c.z + f.z * 1.6 };
+      const base = { x: fc.x - r.x * 0.25, y: fc.y + 0.45, z: fc.z - r.z * 0.25 };
+      const dir = { x: f.x * 0.3 - r.x * 0.3, y: 0.9, z: f.z * 0.3 - r.z * 0.3 };
+      const dl = Math.hypot(dir.x, dir.y, dir.z);
+      const L = 0.9;
+      const tip = { x: base.x + (dir.x / dl) * L, y: base.y + (dir.y / dl) * L, z: base.z + (dir.z / dl) * L };
+      const mid = { x: base.x + (dir.x / dl) * L * 0.7, y: base.y + (dir.y / dl) * L * 0.7, z: base.z + (dir.z / dl) * L * 0.7 };
+      const s = { ...ai.lastSeen, cx: fc.x, cy: fc.y, cz: fc.z, tx: tip.x, ty: tip.y, tz: tip.z, mx: mid.x, my: mid.y, mz: mid.z, hx: -0.3, hy: 0.4 };
+      ai.mode = 'defend';
+      ai.defVoid = false;
+      assert.equal(ai.foeClass(s).online, false);
+      assert.equal(anticAim(ai, s), true, JSON.stringify(ai.stats.icp));
+      assert.ok(Array.isArray(ai.icpPad) && Math.hypot(ai.icpPad[0], ai.icpPad[1]) <= 0.62, `패드 ${ai.icpPad}`);
+      assert.equal(ai.stats.icp.antAim, 1);
+      const S2 = aimedAt(ai);
+      anticAim(ai, S2);
+      assert.equal(ai.defLine, ai.icpPad && !ai.icpFree ? ai.defLine : 'thrust', '겨눈 칼 = 찌르기 줄 (막기 자리를 고르면 그 줄)');
+    } finally {
+      free();
+    }
+  });
+});
+
+test('미리 줄 닫기 꼴: 휘두름이 보이면 보통 가로막기로 · 안 오면 막기 시간 뒤 간 보기로', () => {
+  withIcp({ antic: 1 }, () => {
+    const { G, ai, free } = round(6);
+    try {
+      while (G.t < 1) G.step();
+      const s = aimedAt(ai);
+      ai.anticGo(s);
+      assert.ok(ai.mode === 'defend' && ai.icpPre === true && ai.icp === true && ai.defVoid === false);
+      assert.equal(ai.stats.icp.ant, 1);
+      ai.timer = 0.001;
+      ai.defend(0.01, s, ai.foeReach, null);
+      assert.equal(ai.mode, 'watch', '안 옴 → 간 보기');
+      assert.equal(ai.icpPre, false);
+      assert.equal(ai.stats.icp.antEnd, 1);
+      ai.anticGo(s);
+      ai.timer = 0.1;
+      ai.defend(1 / 120, s, ai.foeReach, { id: 77, line: 'highR', thrust: false });
+      assert.equal(ai.icpPre, false, '휘두름이 보임');
+      assert.equal(ai.threatSeen, 77, '이 위협은 받음');
+      assert.equal(ai.mode, 'defend');
+      assert.equal(ai.stats.icp.antTh, 1);
+    } finally {
+      free();
+    }
+  });
+});
+
+test('미리 줄 닫기 — 물러남 (anticWd): 굴려 나온 물러남은 내다본 칼 길의 가로막기 자리로 가림 · 끄면 옛 가리기', () => {
+  for (const wd of [0, 1]) {
+    withIcp({ antic: 1, anticWd: wd }, () => {
+      const { G, ai, free } = round(6);
+      try {
+        while (G.t < 1) G.step();
+        const s = aimedAt(ai);
+        ai.startWithdraw(0.6);
+        assert.equal(ai.anWd, wd ? true : undefined, '높음 띠 = 늘');
+        ai.withdraw(1 / 120, s, ai.M.reach, null);
+        const old = ai.coverFor(s);
+        if (wd) assert.equal(ai.stats.icp?.antWd, 1, '내다본 자리로 가림');
+        else assert.ok(ai.hand.x === old[0] && ai.hand.y === old[1] && ai.stats.icp === undefined, '옛 가리기');
+      } finally {
+        free();
+      }
+    });
+  }
+});
+
+test('새 휘두름: 칼 가는 방향이 90° 넘게 꺾이면 높음 띠는 새 번호 · 안 꺾이면 그대로 · 무 띠는 안 줌', () => {
+  withIcp({ swing: 1 }, () => {
+    for (const [p, want] of [[6, true], [0, false]]) {
+      const { ai, free } = round(p);
+      try {
+        const s = { tvx: 8, tvy: 0, tvz: 0, mvx: 5, mvy: 0, mvz: 0 };
+        swingMark(ai, s);
+        assert.equal(swingTurn(ai, { ...s, tvx: 7, tvy: 2 }), false, '같은 쪽');
+        assert.equal(swingTurn(ai, { ...s, tvx: -8 }), want, `되돌아 옴 · 숙련 ${p}`);
+        assert.equal(ai.stats.icp.swTurn, 1);
+        assert.equal(swingTurn(ai, { ...s, tvx: -8 }), false, '한 번 꺾임에 한 번');
+      } finally {
+        free();
+      }
+    }
+  });
+});
+
+test('사람 가로막기 (AI_INTERCEPT.human): 누른 채 위협이 오면 AI 와 같은 가로막기 손 자리 · 끄면 칸 없음', () => {
+  const run = (human) => withIcp({ human }, () => {
+    const G = newRound({ seed: 1, weapon: 'longsword', weapon2: 'longsword', gap: 1.5 });
+    try {
+      const g = new PlayerParryGuard(G.player, G.enemy);
+      g.held = true;
+      let aimed = 0, steps = 0;
+      G.before = () => {
+        g.step(1 / 120);
+        G.player.inputActive = g.active;
+        if (g.mode === 'defend') steps++;
+        if (g.icp && g.icpPad) aimed++;
+      };
+      while (G.t < 8 && G.player.alive) G.step();
+      return { aimed, steps, icp: g.stats.icp, has: 'icp' in g };
+    } finally {
+      G.world.free();
+    }
+  });
+  const off = run(0);
+  assert.equal(off.has, false, '끄면 칸 없음');
+  assert.equal(off.icp, undefined);
+  const on = run(1);
+  assert.ok(on.steps > 0 && on.aimed > 0 && on.icp?.aim > 0, JSON.stringify(on));
+});
+
+test('STEP C 켜면 판에서 쓰임: 절제 굴림 · 미리 닫음 · 꺾임 셈', () => {
+  withIcp({ on: 1, discipline: 1, antic: 1, swing: 1 }, () => {
+    const t = { discRoll: 0, ant: 0, swTurn: 0 };
+    for (const seed of [1, 2, 3]) {
+      const { G, free } = round(4, seed);
+      try {
+        while (G.t < 40 && G.player.alive && G.enemy.alive) G.step();
+        for (const a of [G.ai, G.ai2]) for (const k in t) t[k] += a.stats.icp?.[k] ?? 0;
+      } finally {
+        free();
+      }
+    }
+    assert.ok(t.discRoll > 0 && t.ant > 0 && t.swTurn > 0, JSON.stringify(t));
+  });
+});
