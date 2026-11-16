@@ -50,9 +50,18 @@ test('알티바슈 빠르기 — 둘째 셈(기력 ÷ 100) · 첫째 셈((기력
     const vg = iaiTipSpeed(P);
     const floor = CONFIG.realV(SECRET.altib.floorTip.zweihander) / vg;
     const at = (v) => ((P.stamina.value = v), altibShot(P));
+    // 11/16 사장님 '알티바슈를 가득=50%로 하자' — full 0.5: 칼끝 몫 = 0.5 × 기력 ÷ 100 (바닥 = 보통 큰 베기)
+    assert.equal(SECRET.altib.full, 0.5);
     let s = at(100);
-    assert.equal(s.share, 1);
+    assert.ok(Math.abs(s.share - Math.max(0.5, floor)) < 1e-9, '가득 100 → 0.5');
     assert.equal(s.hitMul, 1);
+    s = at(90);
+    assert.ok(Math.abs(s.share - Math.max(0.45, floor)) < 1e-9, '90 → 0.45 (바닥 위면)');
+    const full0 = SECRET.altib.full;
+    SECRET.altib.full = 1; // 아래는 셈 꼴 시험 (full 1 = 11/16 둘째 셈 첫 판)
+    try {
+    s = at(100);
+    assert.equal(s.share, 1);
     s = at(60);
     assert.ok(Math.abs(s.share - 0.6) < 1e-9, '둘째 셈 60 → 0.6');
     s = at(10);
@@ -63,6 +72,9 @@ test('알티바슈 빠르기 — 둘째 셈(기력 ÷ 100) · 첫째 셈((기력
       assert.ok(Math.abs(s.share - 95 / 135) < 1e-9, '첫째 셈 (60 + 35) ÷ 135');
     } finally {
       SECRET.altib.speed = 'f2';
+    }
+    } finally {
+      SECRET.altib.full = full0;
     }
     withSecretFreeOff(() => {
       s = at(60);

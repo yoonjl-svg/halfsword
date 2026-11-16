@@ -245,6 +245,7 @@ export function altibShot(f, H = null) {
     const fee = A.speed === 'f1' && A.drop != null ? A.drop : 0;
     x = THREE.MathUtils.clamp((S.value - fee) / (S.max - fee), 0, 1);
   }
+  x *= A.full ?? 1; // 기력 가득 = 고노센의 이 몫 (11/16 사장님 '알티바슈를 가득=50%로 하자')
   const vg = Math.max(1e-6, iaiTipSpeed(f));
   const ft = A.floorTip?.[f.weapon?.id];
   const fs = ft > 0 ? realV(ft) / vg : A.share; // 바닥 몫 (실제 m/s → 게임 m/s ÷ 고노센 칼끝)

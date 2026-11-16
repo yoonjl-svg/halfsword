@@ -34,7 +34,7 @@ test('기본값 — 사장님 11/11: 이베리아 비기 = 알티바슈 포르�
   assert.equal(altibHitMul(), 1); // '비기 파괴력 배율 1.3배는 고노센에만 남긴다'
   assert.equal(SECRET.hitMul, 1.3); // 고노센 (비기 공통 열쇠 그대로)
   assert.equal(mordHitMul(), 1); // '죽음의 일격도 1.0으로 해.'
-  assert.equal(SECRET.mord.kin, 0.35); // '빠르기 35%로 하자.'
+  assert.equal(SECRET.mord.kin, 0.3); // 11/16 사장님 '모르트슐라크 30%' (전 11/11 '빠르기 35%로 하자.')
   assert.equal(SECRET.mordPress, realS(1.5)); // '1.5초로 해.'
   assert.equal(UA.specialShare.cingir, 0.3); // '빠르기를 고노센의 30%로'
   assert.equal(UA.specialShare.duplieren, 0.3); // '겹치기 30으로.'
