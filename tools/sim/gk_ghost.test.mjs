@@ -84,13 +84,8 @@ test('리솔루토 미끄러짐 0.45 (기본): 몸 미끄러짐 한도 0.45 m ·
   const edge = lungeAt({ gap: 2.25 });
   assert.ok(edge.hit && edge.sev > 0, `2.25 m 맞음 ${JSON.stringify(edge)}`);
   assert.ok(Math.abs(edge.slide - 0.45) < 1e-3, `미끄러짐 한도 ${edge.slide}`);
-  // 11/17 C 걸음 운동량 (config STRIKE.stepMass — docs/strike/ae_port_2026-11-17.md §5): 2.3 m 는 칼끝이 여전히 모자라 찌르기는 빗나가나(over < 0) 런지로 들어가는 몸이 실린 칼날 스침이
-  //  가벼운 베기(심각도 0.05 밑)가 됨 → 전 '2.3 m 빗나감(hit false)' 을 '찌르기 모자람 + 스침만' 으로 · 깨끗한 빗나감은 이름의 2.35 m 에서 봄
-  const graze = lungeAt({ gap: 2.3 });
-  assert.ok(graze.over < 0, `2.3 m 칼끝 모자람 ${graze.over}`);
-  assert.ok(graze.sev < 0.1, `2.3 m 는 스침뿐 ${JSON.stringify(graze)}`);
-  const out = lungeAt({ gap: 2.35 });
-  assert.equal(out.hit, false, `2.35 m 빗나감 ${JSON.stringify(out)}`);
+  const out = lungeAt({ gap: 2.3 });
+  assert.equal(out.hit, false, `2.3 m 빗나감 ${JSON.stringify(out)}`);
   assert.ok(out.over < 0, `칼끝 모자람 ${out.over}`);
   const old = withSets([[SECRET, 'risolutoSlide', 0.6]], () => lungeAt({ gap: 2.3 }));
   assert.ok(old.hit, `0.6 판 같은 자리 맞음 ${JSON.stringify(old)}`);
