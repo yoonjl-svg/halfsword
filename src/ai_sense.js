@@ -31,6 +31,7 @@ function snap() {
     armed: true,
     vigor: 1,
     crouch: 0, // 고노센 웅크림 무게 (f.iaiReadyW — 10/27 21:4x 웅크린 사람에게 낮게 치기 · ai.js crouchLow)
+    okori: 0, // 오코리 보이는 크기 (11/17 — f.okoriVis · 몸이 칼보다 먼저 감기는 꼴 · 눈으로 보이는 것 · 끔이면 0)
     ready: 0, // 고노센 준비 자세 무게 (웅크림 iaiReadyW · 선 채 허리 대기 iaiReadyR — 칼을 허리에 둔 몸 · 눈으로 보이는 것 — 11/14 3 단계 공정함: ai.js gnsWatch)
   };
 }
@@ -87,6 +88,7 @@ export class Senses {
     s.armed = f.armed;
     s.vigor = f.vigor;
     s.crouch = f.iaiReadyW ?? 0; // 웅크림 (몸이 낮아진 것 — 눈으로 보이는 것)
+    s.okori = f.okoriVis ?? 0; // 오코리 보이는 크기 (11/17 — 보이는 꼴)
     s.ready = Math.max(f.iaiReadyW ?? 0, f.iaiReadyR ?? 0); // 고노센 준비 자세 (웅크림 · 허리 대기 — 보이는 꼴)
     // 약한 자세 겨눔 (FINISH.vital, 10/12): 머리·목·가슴·칼 자리 사본 — AI 는 이것도 반응 시간만큼 늦게 본다 (끄면 기록하지 않는다)
     s.vital = FINISH.vital ? captureVitalPose(f) : null;

@@ -3,7 +3,7 @@
 //  판: 숙련 4 거울(기본) 유파 다섯 × 무기 둘 × 씨앗 × 자리 둘 · 두 자리 모두 LOOKS.enemy · 60 s. --prof=2:6 이면 낮은:높은 숙련 짝 (자리 번갈음).
 //  공격(startStrike 까지 간 것)마다 — 결정(startAttack) · 휘두름 시작(startStrike) · 닿음(첫 상처, 없으면 칼끝이 상대 가슴에 가장 가까운 때)의 시각 · 거리 ·
 //  결정 때 자세(guard.name) · 기술 · 줄(tech.open) · 낌새 여덟(문턱 넘음 시작) · 막는 쪽 꼴을 적는다.
-//  node tools/sim/tell_study.mjs run [--seeds=1-6] [--prof=4|2:6] [--shard=i/n] [--json=out.json] [--dur=60]
+//  node tools/sim/tell_study.mjs run [--seeds=1-6] [--prof=4|2:6] [--shard=i/n] [--json=out.json] [--dur=60] [--cfg=MEASURE.on:1,OKORI.on:1]
 //  node tools/sim/tell_study.mjs agg a.json b.json …           (표)
 //  node tools/sim/tell_study.mjs frames <school> <wi> <seed> <swap 0|1> [n=0] [wound=1]   (사람 눈 타임라인 — 공격 n 번째)
 // ─────────────────────────────────────────────────────────────
@@ -13,6 +13,14 @@ import { WEAPONS } from './ai_ring_measure.mjs';
 import { LOOKS } from '../../src/looks.js';
 import { AI_PROFICIENCY, PROF6_VITALITY } from '../../src/config.js';
 import { isMain } from './is_main.mjs';
+import * as CFG from '../../src/config.js';
+// config 덮어쓰기 (재기 전용 · 게임 값 그대로 — prof_gap_measure 와 같은 꼴): --cfg=MEASURE.on:1,OKORI.on:1 … (간격과 박자 · 오코리 켜고 끄기는 이 칸으로만 — 11/17 스위치 없음)
+for (const kv of ((process.argv.find((x) => x.startsWith('--cfg=')) ?? '').slice(6)).split(',').filter(Boolean)) {
+  const [path, v] = kv.split(':');
+  const [obj, key] = path.split('.');
+  if (!CFG[obj] || !(key in CFG[obj])) throw new Error(`unknown cfg: ${path}`);
+  CFG[obj][key] = Number.isNaN(+v) ? v : +v;
+}
 
 const args = process.argv.slice(2);
 const mode = args[0] && !args[0].startsWith('--') ? args[0] : 'run';
@@ -22,10 +30,12 @@ export const SCHOOLS = ['german', 'italian', 'iberian', 'japanese', 'chinese'];
 const KO = { german: '독일', italian: '이탈리아', iberian: '이베리아', japanese: '일본', chinese: '동방' };
 
 // 낌새 문턱 (게임 값 아님 · 재기 전용)
-export const CUES = ['step', 'foot', 'pelYaw', 'chYaw', 'com', 'hand', 'raise', 'tip'];
+export const CUES = ['step', 'foot', 'pelYaw', 'chYaw', 'com', 'hand', 'raise', 'tip', 'okori', 'wind'];
+export const USABLE = ['step', 'raise', 'okori', 'wind']; // 쓸 만한 낌새 묶음 (간격과 박자 · 오코리 11/17 — 걸어 들어옴 · 칼 듦 · 보이는 오코리 · 느린 감기)
 export const CUE_KO = {
   step: '걸어 들어옴 (골반이 상대 쪽 ≥ 0.3 m/s)', foot: '발 뗌 (두 발 중 하나가 딛지 않음)', pelYaw: '골반 돌림 (≥ 60 °/s)', chYaw: '가슴 돌림 (≥ 60 °/s)',
   com: '무게 옮김 (무게중심이 두 발 가운데보다 상대 쪽으로 ≥ 0.25 m/s)', hand: '손이 자세 자리를 떠남 (> 0.05)', raise: '칼 듦 (AI 눈 문턱 — 손 위 속도 > 1.6 · 높이 > 0.05)', tip: '칼끝 움직임 (> 2 m/s)',
+  okori: '보이는 오코리 (f.okoriVis ≥ 0.2 — 높은 띠 읽는 문턱 · OKORI 켬일 때만)', wind: '느린 감기 (손이 자세 바깥쪽으로 > 1.3 m/s · 칼끝 < 3.5 m/s — OKORI.windV)',
 };
 
 const WIN = 6; // 0.05 s
@@ -63,7 +73,7 @@ export function runFight({ school, wi, seed, swap, prof = [4, 4], dur = 60 }) {
   const mk = () => ({
     t: fa(), px: fa(), pz: fa(), cx: fa(), cz: fa(), py: fa(), cy: fa(), comx: fa(), comz: fa(), fmx: fa(), fmz: fa(), ax: fa(), ay: fa(),
     hvx: fa(), hvy: fa(), tip: fa(), gx: fa(), gy: fa(), clos: fa(), away: fa(), stF: fa(Uint8Array), stB: fa(Uint8Array), mode: new Array(N), phase: new Array(N),
-    down: fa(Uint8Array), dcc: fa(), dpp: fa(), reach: fa(), hx: fa(), hy: fa(), hz: fa(), sa: fa(),
+    down: fa(Uint8Array), dcc: fa(), dpp: fa(), reach: fa(), hx: fa(), hy: fa(), hz: fa(), sa: fa(), okv: fa(),
   });
   const S = [mk(), mk()];
   const attacks = [[], []];
@@ -110,6 +120,7 @@ export function runFight({ school, wi, seed, swap, prof = [4, 4], dur = 60 }) {
       s.fmx[n] = (ft1.x + ft2.x) / 2; s.fmz[n] = (ft1.z + ft2.z) / 2;
       s.ax[n] = f.skill.aim.x; s.ay[n] = f.skill.aim.y; s.hvx[n] = f.skill.aimVel.x; s.hvy[n] = f.skill.aimVel.y;
       s.tip[n] = f.tipVel.length();
+      s.okv[n] = f.okoriVis ?? 0;
       const bp = f.bladePoint(1); s.hx[n] = bp.x; s.hy[n] = bp.y; s.hz[n] = bp.z;
       const g = ai.guard; s.gx[n] = g ? g.pad[0] : 0; s.gy[n] = g ? g.pad[1] : 0;
       const dx = po.x - pe.x, dz = po.z - pe.z, dd = Math.hypot(dx, dz) || 1e-3;
@@ -147,6 +158,9 @@ export function runFight({ school, wi, seed, swap, prof = [4, 4], dur = 60 }) {
       c.hand[j] = Math.hypot(s.ax[j] - s.gx[j], s.ay[j] - s.gy[j]) > 0.05 ? 1 : 0;
       c.raise[j] = s.hvy[j] > 1.6 && s.ay[j] > 0.05 ? 1 : 0;
       c.tip[j] = s.tip[j] > 2 ? 1 : 0;
+      c.okori[j] = s.okv[j] >= 0.2 ? 1 : 0;
+      const ar = Math.hypot(s.ax[j], s.ay[j]);
+      c.wind[j] = ar > 1e-3 && (s.ax[j] * s.hvx[j] + s.ay[j] * s.hvy[j]) / ar > 1.3 && s.tip[j] < 3.5 ? 1 : 0;
     }
     return c;
   });
@@ -200,17 +214,20 @@ export function runFight({ school, wi, seed, swap, prof = [4, 4], dur = 60 }) {
       const c = sig[i][k], s = S[i];
       const starts = attacks[i].filter((a) => a.iS != null).map((a) => a.iS);
       let last = -999;
+      // 오코리는 공격을 고른 뒤에만 켜지는 몸짓이라 공격 꼴 안의 켜짐도 셈 · 몸 시작 + 준비 + 박자 걸음이 0.6 s 를 넘을 수 있어 1.2 s 안 휘두름을 봄 (바탕도 같은 창)
+      const okc = k === 'okori';
+      const win = okc ? 144 : 72;
       for (let j = 1; j < n; j++) {
         if (c[j] && !c[j - 1] && j - last > 36) {
           last = j;
-          if (s.mode[j - 1] === 'attack' || s.down[j] || s.dcc[j] > s.reach[j] + 0.6) continue;
+          if ((!okc && s.mode[j - 1] === 'attack') || s.down[j] || s.dcc[j] > s.reach[j] + 0.6) continue;
           ev++;
-          if (starts.some((x) => x > j && x <= j + 72)) fol++;
+          if (starts.some((x) => x > j && x <= j + win)) fol++;
         }
       }
       for (let j = 0; j < n; j += 12) {
         if (s.mode[j] === 'attack' || s.down[j] || s.dcc[j] > s.reach[j] + 0.6) continue;
-        ev0++; if (starts.some((x) => x > j && x <= j + 72)) fol0++;
+        ev0++; if (starts.some((x) => x > j && x <= j + win)) fol0++;
       }
     }
     rec.cueEv[k] = { ev, fol, ev0, fol0 };
@@ -256,6 +273,15 @@ export function report(runs) {
     const o = set.filter((a) => a.outside);
     out.push(`  ${nm}: 결정 때 간격 밖(가슴 거리 > M.reach) ${pc(o.length / set.length)} · 밖에서 결정 → 닿음 ${qs(o.map((a) => a.tC - a.tD))} · 안에서 결정 → 닿음 ${qs(set.filter((a) => !a.outside).map((a) => a.tC - a.tD))} · 상대 칼끝거리 안(가슴거리 < 상대 reach) 결정 ${pc(set.filter((a) => a.dccD < a.foeReachTrue).length / set.length)}`);
   }
+  out.push('\n## 요약 (간격과 박자 · 오코리 11/17)');
+  const earliest = (a) => Math.max(-9, ...USABLE.map((k) => (a.cues[k] && !a.cues[k].long ? a.cues[k].lead : -9)));
+  for (const [nm, set] of [['상처', W], ['모든', A]]) {
+    const L = set.map(earliest);
+    out.push(`${nm} ${set.length}: 쓸 만한 낌새(걸음 · 칼 듦 · 오코리 · 감기) 가장 이른 것 ≥ 0.3 s ${pc(L.filter((x) => x >= 0.3).length / set.length)} · ≥ 0.5 s ${pc(L.filter((x) => x >= 0.5).length / set.length)} · 앞섬 ${qs(L.filter((x) => x > -9))} · 결정 때 간격 안(가슴 거리 ≤ M.reach) ${pc(set.filter((a) => !a.outside).length / set.length)} · 결정 때 막는 쪽 간 보기 ${pc(set.filter((a) => a.defD === 'watch').length / set.length)} · 휘두름 시작 때 간 보기 ${pc(set.filter((a) => a.defS === 'watch').length / set.length)}`);
+  }
+  const inf = USABLE.map((k) => { const ev = runs.reduce((x, r) => x + r.cueEv[k].ev, 0), fol = runs.reduce((x, r) => x + r.cueEv[k].fol, 0), ev0 = runs.reduce((x, r) => x + r.cueEv[k].ev0, 0), fol0 = runs.reduce((x, r) => x + r.cueEv[k].fol0, 0); return `${k} ${ev ? pc(fol / ev) : '-'} (낌새 ${ev} · 바탕 ${ev0 ? pc(fol0 / ev0) : '-'})`; });
+  out.push(`읽는 값 (낌새 뒤 0.6 s 안 휘두름 · 오코리는 1.2 s 안): ${inf.join(' · ')}`);
+  out.push(`판 길이 ${qs(runs.map((r) => r.endT))} s · 판당 휘두름 ${(A.length / runs.length).toFixed(1)} · 판당 상처 공격 ${(W.length / runs.length).toFixed(2)}`);
   out.push('\n## 낌새 표 — 상처로 닿은 공격');
   out.push(cueTable(W, runs));
   out.push('\n## 낌새 표 — 휘두름까지 간 모든 공격');

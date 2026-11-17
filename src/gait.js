@@ -1304,7 +1304,8 @@ export class Gait {
     if ((!walkNow && !swing) || bowHold) {
       const c = f.com;
       if (c) {
-        const w = bowHold ? this.P.weightFront + (this.P.bow.front - this.P.weightFront) * this.bowW : this.P.weightFront;
+        let w = bowHold ? this.P.weightFront + (this.P.bow.front - this.P.weightFront) * this.bowW : this.P.weightFront;
+        if (f.okoriFront) w += f.okoriFront; // 오코리 (11/17 — AI 몸 · 끄면 0): 무게를 앞발 쪽으로
         const front = this.frontLeg(fwd);
         const a = L[front].plant;
         const b = L[front === 'F' ? 'B' : 'F'].plant;
