@@ -15,14 +15,14 @@ import { createStrikeCue } from './strike_cue.js'; // 칠 때 알림 — 이어 
 import { readJourney, writeJourney, addJourneyClear, journeyClears } from './journey_save.js'; // 여정 이어하기 지점 · 깬 무대 수(통계) (첫 화면 '이어하기' — 샛별 저장소 215d7b7e 를 우리 여정에 맞춤, docs/import/lobby_port_2026-10-16.md §5)
 import { readProfile, recordDuel } from './player_profile.js'; // 대기실 이름 · 대면 결과 (샛별 저장소 817db21c)
 import { readLobbyEquipment, readLobbyArmor, readLobbyNeck, LOBBY_ARMOR, HERO_TEAR } from './lobby_equipment.js'; // 대기실 장착을 싸움에 (사장님 10/16 03:5x '장착하면 실제 전투에 가져나가게 해' — docs/import/lobby_fix_2026-10-16.md §3 · 용사의 눈물 hero_tear_2026-10-17.md)
-import { journeyCoins, awardHead, readProgress, rand01, recordCampaignStage, migrateCampaignStages, ensureWanderRun, saveWanderLoadout, resetWanderLoadout, markWanderFighting, settleAbandonedWander, awardWanderHead, settleWander, wanderNoticeDue, markWanderNotice, markWanderEncounter } from './lobby_progress.js'; // 여정 판 끝 금화 · 상대의 목을 베면 머리 1 (사장님 10/16 04:3x) · 방랑 저장 (10/23) · 방랑 전용 상대 알림 창 본 기록 (10/24)
+import { journeyCoins, awardHead, readProgress, rand01, recordCampaignStage, migrateCampaignStages, ensureWanderRun, saveWanderLoadout, resetWanderLoadout, awardWanderHead, settleWander, wanderNoticeDue, markWanderNotice, markWanderEncounter } from './lobby_progress.js'; // 여정 판 끝 금화 · 상대의 목을 베면 머리 1 (사장님 10/16 04:3x) · 방랑 저장 (10/23) · 방랑 전용 상대 알림 창 본 기록 (10/24)
 import { showTitleNotice } from './title_notice.js'; // 결과 창 위 호칭 알림 창 (10/24)
-import { titleTierDraw, saveWanderResume } from './lobby_progress.js'; // saveWanderResume = 방랑 몸 상태 이어받기 (10/30 — WANDER.resumeState)
+import { titleTierDraw, saveWanderResume } from './lobby_progress.js'; // saveWanderResume = 방랑 몸 상태 이어받기 (10/30)
 import { snapshotFighter, applyFighterSnapshot } from './fight_snapshot.js'; // 방랑 몸 상태 사본 (10/30 01:1x — 감독 안 (b)) // 호칭 하나마다 레전드 확률 (10/24 — drawCardIds)
 import { TIER_DRAW } from './weapons.js';
 import { COIN_ICON, POUCH_ICON } from './wallet_icons.js'; // 결과 창 금화 줄 = 대기실 금화 · 천 주머니 그림 (사장님 10/16 14:0x)
 import { HORN_ICON } from './wallet_icons.js'; // 결과 창 뿔피리 (10/30 상점 · 10/31 금화 · 머리와 같은 줄)
-import { SHOP } from './config.js'; // 상점 — 왕을 이긴 판의 뿔피리 (10/30 · SHOP.enabled 일 때만 — 본판은 끔)
+import { SHOP } from './config.js'; // 상점 — 왕을 이긴 판의 뿔피리 (10/30 · 10/31 본판 켬)
 import { awardKingHorn } from './lobby_progress.js';
 import { HORN_REWARD_LABEL } from './shop_text.js';
 import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, migrateItalianSlots, playerLetters } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
@@ -45,7 +45,7 @@ import { whipTipStep } from './whip_sound.js'; // 드루이드의 채찍 휙 · 
 import { SecretSfxWatch } from './secret_sfx.js'; // 비기 소리 (10/25 — 샛별 저장소 2fa0b2ae): 낸 전투자 · 유파 소리 한 번
 import { Combat, woundDegree, woundRageMult, COMBAT_HOOKS } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_ORDER, STAGE_FOE, STAGE_FOE_EXTRA, stageFoeId, stageLabel, STAGE_NAME_KO } from './stages.js';
-import { WANDER, WANDER_NAME, WANDER_EXCLUSIVE, WANDER_HEAD, WANDER_BONUS_LABEL, WANDER_NOTICE_TEXT, chooseWanderEncounter } from './wander_rules.js'; // 방랑 (10/23 — 대기실 '방랑' 단추, docs/import/wander_heroes_import_2026-10-23.md)
+import { WANDER_NAME, WANDER_EXCLUSIVE, WANDER_HEAD, WANDER_BONUS_LABEL, WANDER_NOTICE_TEXT, chooseWanderEncounter } from './wander_rules.js'; // 방랑 (10/23 — 대기실 '방랑' 단추, docs/import/wander_heroes_import_2026-10-23.md)
 import { installGunFx, clearGunFx, warmGunFx } from './gun_fx.js';
 import { GUN_STANCE } from './gun.js';
 import { attachMadEyes } from './mad_eyes.js';
@@ -254,12 +254,12 @@ const LOOK_BAREHEAD = { ...LOOKS.player, helmet: null }; // 케틀 햇을 벗은
 // 이번 판 금화 · 머리 (결과 창 한 줄 — showRewardLine). 첫 화면·대기실 여정만 바뀐다 (주소 고정 판 · 테스트 경로 · 옛 메뉴 판은 그대로)
 let roundReward = null;
 // 뿔피리 (사장님 10/30 19:0x "뿔피리는 '왕'을 잡으면 50% 확률로 얻어. 얻으면 전투 후 팝업에 획득 메시지가 뜸." — config.js SHOP · lobby_progress.js awardKingHorn):
-//  여정 · 방랑(내 저장 판 — careerSaves)에서 왕(SHOP.hornKings)을 이긴 판 끝에 한 번 · 상점이 켜졌을 때만(SHOP.enabled — 본판은 끔) · 난수 = rand01(crypto — 게임 난수 그대로).
+//  여정 · 방랑(내 저장 판 — careerSaves)에서 왕(SHOP.hornKings)을 이긴 판 끝에 한 번 · 난수 = rand01(crypto — 게임 난수 그대로).
 //  결과 창 = 금화 · 머리와 같은 줄에 '[뿔피리] 뿔피리 +1'(showRewardLine — 사장님 10/31 00:2x '금화나 목 획득처럼 아이콘만 넣고 따로 메시지 출력 안 함' · 전 10/30 은 금화 줄 아래 따로 한 줄 글).
 //  상점 시험판 `?horn=1` = 모든 상대 · 늘(사장님이 왕까지 가지 않고 창을 보게 — 본판에는 없음)
 let roundHorns = 0;
 const HORN_FORCE = SHOP.testMode && params.get('horn') === '1';
-const kingHorn = () => (SHOP.enabled ? awardKingHorn(currentFoe?.id, { kings: SHOP.hornKings, chance: SHOP.hornChance, amount: SHOP.hornAmount, force: HORN_FORCE }) : 0);
+const kingHorn = () => awardKingHorn(currentFoe?.id, { kings: SHOP.hornKings, chance: SHOP.hornChance, amount: SHOP.hornAmount, force: HORN_FORCE });
 // 머리 (사장님 결정 10/16 04:3x '적의 머리를 베면 1개씩 주는 재화'): 참수가 일어난 순간 한 번 부르는 자리(combat.js COMBAT_HOOKS.onDecapitate — fighter.js applyWound ·
 //  흙 몸의 머리 떨어짐 detachHeadFromWound)에 건다. 이 판 상대만 · 한 상대에 한 번(lobby_progress.js awardHead). 시뮬은 이 훅을 걸지 않는다(null)
 //  방랑도 머리 1(WANDER_HEAD — 10/24 02:4x, 전 2) · 판마다 한 번 — 판 결과와 같은 저장에 적어 다시 열어도 두 번 받지 않는다(awardWanderHead). 쓰러뜨린 뒤 벤 목도 센다(여정과 같게)
@@ -1059,8 +1059,7 @@ export async function launchSaengsa(setup) {
 //  spent · quiet = 멈칫 묶음(타격감 10/25 — src/impact_fx.js stopGrant · stopTick: 잇달아 오는 멈칫 합 IMPACT_FX.chainCap 까지). 넣는 곳은 addHitStop 하나
 const hitStop = { left: 0, spent: 0, quiet: 0 };
 function addHitStop(t) {
-  if (CONFIG.IMPACT_FX.on) stopGrant(hitStop, t, CONFIG.IMPACT_FX);
-  else hitStop.left = Math.max(hitStop.left, t); // : 옛 식 그대로 (더 긴 쪽만 · 묶음 상한 없음)
+  stopGrant(hitStop, t, CONFIG.IMPACT_FX);
 }
 let playerEmo = null; // 플레이어 감정 판정 (emotions.js)
 let playerEv = { hurt: false, parried: false, landed: false }; // 이번 프레임에 플레이어에게 일어난 사건
@@ -1210,21 +1209,15 @@ function onWound(att, vic, r, point, pr) {
   // 타격감 (10/25 — config IMPACT_FX · src/impact_fx.js): 맞는 순간의 무게(판정 에너지 × 때린 무기 무게 배율) 하나로 멈칫 · 카메라 밀림 · 무게 소리 — 모든 무기 같은 식 · 무거운 칼일수록 크게.
   //  내가 맞음 · 내가 침 둘 다 (카메라는 내가 맞을 때 더 크게).
   //  총알(r.gun)은 무게 배율 없이 판정 에너지만 (총 무게는 맞은 몸에 실리지 않는다)
-  const fx = CONFIG.IMPACT_FX.on ? woundImpact({ energy: e, mass: r.gun ? 0 : att.swordProps?.m, pass: !!r.pass, hard: !!(r.stuck || bone || r.helmet || r.plate), taken: vic === me }, CONFIG.IMPACT_FX) : null;
-  if (fx) {
-    // 무게 소리 한 겹 (기존 타격음 위에 — 빛의 칼 · 고무 닭은 몸통 '쿵'이 어울리지 않아 뺌 · 드루이드의 채찍은 녹음 맞음 소리 그대로)
-    if (mat !== 'plasma' && mat !== 'rubber' && !whipHit) sound.heft(fx.sound, fx.x, { metal: !!(r.helmet || r.plate) && !opened });
-  }
-  const stopT = fx ? fx.stop : r.pass ? Math.min(0.06, e / 2000) : r.stuck || bone || r.helmet || r.plate ? Math.min(0.1, e / 900) : Math.min(0.08, e / 1200);
-  if (fxOn) addHitStop(stopT);
+  const fx = woundImpact({ energy: e, mass: r.gun ? 0 : att.swordProps?.m, pass: !!r.pass, hard: !!(r.stuck || bone || r.helmet || r.plate), taken: vic === me }, CONFIG.IMPACT_FX);
+  // 무게 소리 한 겹 (기존 타격음 위에 — 빛의 칼 · 고무 닭은 몸통 '쿵'이 어울리지 않아 뺌 · 드루이드의 채찍은 녹음 맞음 소리 그대로)
+  if (mat !== 'plasma' && mat !== 'rubber' && !whipHit) sound.heft(fx.sound, fx.x, { metal: !!(r.helmet || r.plate) && !opened });
+  if (fxOn) addHitStop(fx.stop);
   // 손맛: 칼의 타격 중심(스위트 스팟, 코등이에서 약 58cm)에 맞으면 손이 울리지 않고, 칼끝·칼 밑동에 맞으면 손이 찌릿하다
   //  (손을 축으로 도는 강체에서 한 점을 치면 축(손)이 받는 충격 = 1 − a·b/k²)
   const sting = att.swordSting(r.t);
-  // 카메라가 칼이 지나간 방향으로 밀린다 (내가 맞으면 더 크게, 내가 칠 땐 손이 받은 충격만큼 — 옛 식. 타격감 켬이면 무게대로 + 무거울수록 아래로)
-  if (fxOn) {
-    if (fx) impactKick(r.dir, fx.cam, fx.down);
-    else kickCamera(r.dir, Math.min(1.6, e / 120) * (vic === me ? 1.4 : 0.4 + 0.4 * sting));
-  }
+  // 카메라가 칼이 지나간 방향으로 밀린다 (타격감 — 무게대로 + 무거울수록 아래로)
+  if (fxOn) impactKick(r.dir, fx.cam, fx.down);
   if (vic === me) haptic(e / 120);
   else if (att === me) haptic((e / 120) * (0.4 + 0.6 * sting));
   if (!vic.alive && fxOn) slowMo = 1.6;
@@ -1258,10 +1251,8 @@ function onClash(point, speed, touch) {
     else if (ma === 'steel' && mb === 'steel') {
       sound.clash(touch.vn, touch.vt);
       // 타격감 (10/25): 쇠 칼끼리면 부딪힌 무게만큼 낮은 '쿵' 한 겹 (맞음보다 순하게 — IMPACT_FX.sound.clash)
-      if (CONFIG.IMPACT_FX.on) {
-        const cs = clashImpact({ vn: touch.vn, m1: A?.swordProps?.m, m2: B?.swordProps?.m, energyScale: CONFIG.STRIKE.energyScale }, CONFIG.IMPACT_FX);
-        sound.heft(cs.sound, cs.x, { metal: true });
-      }
+      const cs = clashImpact({ vn: touch.vn, m1: A?.swordProps?.m, m2: B?.swordProps?.m, energyScale: CONFIG.STRIKE.energyScale }, CONFIG.IMPACT_FX);
+      sound.heft(cs.sound, cs.x, { metal: true });
     } else sound.impact({ a: ma, b: mb, energy: 12 * touch.vn });
   }
   // 연출의 세기는 "부딪히기 직전" 속도로 정한다 (부딪힌 뒤 속도엔 튕겨 나온 몫이 섞여 있다)
@@ -1278,17 +1269,16 @@ function onClash(point, speed, touch) {
   clashCooldown = CONFIG.realS(0.09);
   stats.clashes++;
   particles.sparks(point, impact);
-  // 타격감 (10/25 — IMPACT_FX): 부딪힌 무게(두 칼 무게 · 맞닿는 빠르기)로 멈칫 · 카메라 — 맞음과 같은 곡선을 순하게. 문턱(6 m/s) · 간격(0.5 s)은 그대로. 끔이면 옛 식
-  const cfx = CONFIG.IMPACT_FX.on ? clashImpact({ vn: impact, m1: A?.swordProps?.m, m2: B?.swordProps?.m, energyScale: CONFIG.STRIKE.energyScale }, CONFIG.IMPACT_FX) : null;
+  // 타격감 (10/25 — IMPACT_FX): 부딪힌 무게(두 칼 무게 · 맞닿는 빠르기)로 멈칫 · 카메라 — 맞음과 같은 곡선을 순하게. 문턱(6 m/s) · 간격(0.5 s)은 그대로
+  const cfx = clashImpact({ vn: impact, m1: A?.swordProps?.m, m2: B?.swordProps?.m, energyScale: CONFIG.STRIKE.energyScale }, CONFIG.IMPACT_FX);
   // 세게 부딪힐 때만 잠깐 멈칫 (칼끼리 맞대고 밀 때마다 멈추면 끊겨 보인다)
   if (!fxOn) return; // 동시 대전: 보는 몸이 안 낀 부딪힘은 불꽃 · 소리만
   if (impact > 6 && clashStopCooldown <= 0) {
-    addHitStop(cfx ? cfx.stop : Math.min(0.08, impact / 200));
+    addHitStop(cfx.stop);
     clashStopCooldown = CONFIG.realS(0.5);
   }
   const clashDir = new THREE.Vector3((Math.random() - 0.5), 0.3, (Math.random() - 0.5)).normalize();
-  if (cfx) impactKick(clashDir, cfx.cam);
-  else kickCamera(clashDir, Math.min(0.6, impact / 25));
+  impactKick(clashDir, cfx.cam);
   haptic(Math.min(1, impact / 15));
 }
 
@@ -1818,10 +1808,10 @@ function showHint(text, ms = 3500) {
   hudLater('hint', ms / 1000, () => hint.classList.remove('show'));
 }
 
-// 방랑 몸 상태 이어받기 (WANDER.resumeState — 사장님 10/30 01:1x '이어하면 그 상황 그대로' · 감독 안 (b) · src/fight_snapshot.js):
+// 방랑 몸 상태 이어받기 (늘 — 사장님 10/30 01:1x '이어하면 그 상황 그대로' · 감독 안 (b) · src/fight_snapshot.js):
 //  싸우는 동안 2 초마다 · 대기실로 나갈 때 · 화면을 떠날 때 두 몸의 사본을 진행 중 판(run.resume)에 적고, 같은 대면을 다시 열면 판을 세운 뒤 첫 스텝 전에 입힌다
 let resumeSaveT = 0;
-const wanderResumeOn = () => wanderSaves() && WANDER.resumeState && !WANDER.quitAsLoss;
+const wanderResumeOn = () => wanderSaves();
 function saveWanderBody() {
   if (!wanderResumeOn() || roundOver || !player || !enemy || !currentFoe) return false;
   return saveWanderResume({ v: 1, foe: currentFoe.id, foeWeapon: enemy.weapon?.id ?? null, player: snapshotFighter(player), enemy: snapshotFighter(enemy) });
@@ -1837,7 +1827,7 @@ async function startFight() {
   if (teamRun?.opts?.saengsa) return; // 생사전 판은 다시 굴리지 않는다 (결과 · 그만두기만 — launchSaengsa)
   if (TEAM_TEST) return startTeamTest(); // ?team= 시험 판 (동시 대전 — test.html '동시 대전')
   if (wanderMode && !openWanderRound()) return; // 방랑: 지금 판의 무대를 짓고 pendingJourney 에 넣는다 (버린 판을 패배로 셈했으면 결과 창 — 판을 열지 않음)
-  $('btnStart').hidden = false; // 방랑 진 판 결과 창이 숨긴 단추
+  $('btnStart').hidden = false;
   const savedRound = pendingJourney; // 이어하기로 연 판이면 저장된 무대 시작 지점 (launchJourney 가 넣는다 — 한 번만 쓴다)
   pendingJourney = null;
   roundReward = wanderMode && savedRound?.headTaken ? { coins: 0, heads: WANDER_HEAD } : null; // 방랑: 이 판에서 이미 벤 목(다시 연 판)
@@ -1879,7 +1869,7 @@ async function startFight() {
     lastPlayerWeapon = lobbyWeapon;
     newRound(lobbyWeapon);
     saveJourneyRound(null);
-    applyWanderBody(savedRound); // 방랑 몸 상태 이어받기 (WANDER.resumeState — 끄면 아무 일 없음)
+    applyWanderBody(savedRound); // 방랑 몸 상태 이어받기
     if (wanderEncounter(beginFight)) return; // 방랑 전용 상대면 싸움 전에 알림 창 (10/24 — 확인을 누르면 싸움)
     beginFight();
     return;
@@ -1888,7 +1878,7 @@ async function startFight() {
     // 이어하기: 무기를 이미 골라 둔 판 — 그 무기로 무대 시작부터 (카드 없이)
     lastPlayerWeapon = savedRound.weapon;
     newRound(savedRound.weapon);
-    applyWanderBody(savedRound); // 방랑 몸 상태 이어받기 (WANDER.resumeState — 끄면 아무 일 없음)
+    applyWanderBody(savedRound); // 방랑 몸 상태 이어받기
     if (wanderEncounter(beginFight)) return; // 방랑 전용 상대 알림 창 (10/24 — 같은 대면에서 이미 봤으면 없음)
     beginFight();
     return;
@@ -1956,20 +1946,13 @@ function migrateLegacyWander() {
 }
 /**
  * 방랑 판을 연다 (startFight 앞): 지금 판(ensureWanderRun — 없거나 끝났으면 새로 뽑음)의 무대를 짓고 pendingJourney 에 넣는다. 돌려줌: 판을 여나
- *  도중에 그만두기 (WANDER.quitAsLoss — 기본 끔, 일반 여정과 같게): 대기실에서 들어오면 저장된 판 그대로(카드 · 고른 무기까지 — 여정 '이어하기'처럼) ·
+ *  도중에 그만두기 (일반 여정과 같게): 대기실에서 들어오면 저장된 판 그대로(카드 · 고른 무기까지 — 여정 '이어하기'처럼) ·
  *   정지 창 '재대결'이면 같은 대면을 카드부터 다시(여정 '재대결'처럼) · 금화는 판이 끝날 때만 바뀐다.
- *   켬: 싸우던 중 버린 판(새로고침 · 대기실 · 재대결)은 패배로 셈하고 진 판 결과 창을 띄운다(판을 열지 않음)
  */
 function openWanderRound() {
   const resume = wanderResume;
   wanderResume = false;
-  if (WANDER.quitAsLoss) {
-    const lost = settleAbandonedWander();
-    if (lost) {
-      showWanderForfeit(lost);
-      return false;
-    }
-  } else if (!resume) resetWanderLoadout(); // 재대결 — 진행 중 판이면 카드부터 (끝난 판이면 아무 일 없음 — '다음 방랑'은 새 판)
+  if (!resume) resetWanderLoadout(); // 재대결 — 진행 중 판이면 카드부터 (끝난 판이면 아무 일 없음 — '다음 방랑'은 새 판)
   const run = ensureWanderRun(drawWanderEncounter, validWanderRun);
   if (!run) throw new Error('방랑이 잠겨 있음');
   run.foeWeapon = savedFoeWeapon(CHARACTERS_BY_ID[run.foe], run.foeWeapon); // 진행 판도 여정과 같게 (10/25)
@@ -1985,39 +1968,12 @@ function openWanderRound() {
   sound.setStage(stages.id);
   return true;
 }
-/** 싸우던 중 버린 방랑 판을 패배로 셈한 결과 창 (WANDER.quitAsLoss 켬 — 정지 창 '재대결'): 진 판 결과 창과 같은 꼴 · '대기실'만 */
-function showWanderForfeit(lost) {
-  recordDuel(false);
-  roundReward = lost;
-  roundHorns = 0; // 진 판 — 지난 판 뿔피리가 남지 않게 (10/30)
-  pauseOpen = false;
-  state = 'paused';
-  roundOver = true;
-  input.enabled = false;
-  input.resetTransient();
-  closeDraw();
-  toast.classList.remove('show');
-  hideFoeIntro();
-  clearEmoMsg();
-  $('menuTitle').textContent = '패배';
-  $('menuSub').textContent = `${WANDER_NAME} ${lost.round} · 싸움을 그만두었다 · ${WANDER_NAME} 종료`;
-  showDefeatFoe(null);
-  $('btnStart').hidden = true;
-  $('btnResume').style.display = 'none';
-  const lobbyOk = lobbyMenu();
-  $('fpsRow').hidden = lobbyOk;
-  $('btnLobby').hidden = !lobbyOk;
-  showRewardLine();
-  showMenu();
-}
 /**
- * 대기실 방랑 단추 (lobby.js): 옛 저장 인정(한 번) · 버린 판 셈(WANDER.quitAsLoss 켬) 뒤 지금 상태.
- *  돌려줌 { unlocked, cleared: 깬 무대 수, total: 무대 수, ongoing: 이어 갈 판이 있나('방랑 이어가기'), name, notice: 알림 창을 띄울 때인가, forfeit: 방금 패배로 셈한 판(없으면 null) }
+ * 대기실 방랑 단추 (lobby.js): 옛 저장 인정(한 번) 뒤 지금 상태.
+ *  돌려줌 { unlocked, cleared: 깬 무대 수, total: 무대 수, ongoing: 이어 갈 판이 있나('방랑 이어가기'), name, notice: 알림 창을 띄울 때인가 }
  */
 export function getWanderStatus() {
   migrateLegacyWander();
-  const forfeit = JOURNEY_PURE && WANDER.quitAsLoss ? settleAbandonedWander() : null;
-  if (forfeit) recordDuel(false);
   const w = readProgress().wander;
   return {
     unlocked: JOURNEY_PURE && w.unlocked,
@@ -2026,7 +1982,6 @@ export function getWanderStatus() {
     ongoing: !!w.run && w.run.status !== 'lost',
     name: WANDER_NAME,
     notice: JOURNEY_PURE && wanderNoticeDue(),
-    forfeit,
   };
 }
 /** 대기실의 '방랑' 단추: 지금 판(없으면 새로 뽑음)부터. 잠겨 있으면 false */
@@ -2073,7 +2028,6 @@ function beginFight() {
   input.resetTransient();
   state = 'fight';
   input.enabled = true;
-  if (wanderSaves() && WANDER.quitAsLoss) markWanderFighting(true); // 도중에 그만두기 켬: 지금부터 판을 버리면 다음에 패배로 셈한다
   emoSeen.player = emoSeen.enemy = null; // 감정 알림은 판마다 새로 (시작 감정도 알린다 — 브론은 분노로 시작한다)
   mudNoticeShown = false; // 진흙 알림도 판마다 한 번
   clearEmoMsg();
@@ -2111,8 +2065,7 @@ function pause() {
   $('menuTitle').textContent = '일시정지';
   // 방랑 정지 창은 '재개' · '대기실'만 (사장님 10/30 01:1x '방랑과 생사전은 일시정지 후엔 재개랑 대기실로 가기만 할 수 있고 재시작은 못하게 해') — 아래 btnStart('재대결')를 감춘다
   const noRestart = wanderMode;
-  // 방랑 · 도중에 그만두기 켬(WANDER.quitAsLoss)이면 싸우는 동안 그만두면 패배라고 알린다
-  $('menuSub').textContent = wanderSaves() && WANDER.quitAsLoss && pausedFrom === 'fight' ? '지금 그만두면 이 방랑은 패배로 끝납니다.' : '설정을 바꾸거나 계속할 수 있습니다.';
+  $('menuSub').textContent = '설정을 바꾸거나 계속할 수 있습니다.';
   $('btnStart').hidden = false; // 방랑 진 판 결과 창이 숨긴 단추
   $('menuReward').hidden = true;
   showDefeatFoe(null); // 패배 창의 상대 프로필 · 대사는 정지 창에 남기지 않는다
@@ -2155,7 +2108,7 @@ const lobbyMenu = () => careerSaves() && !!lobbyReturn; // 방랑도 같다
 function toLobby() {
   if (teamRun?.opts?.saengsa) return teamQuit(); // 생사전 판을 그만두고 생사전 화면으로 (결과 null — 적지 않음)
   if (!lobbyMenu()) return;
-  if (pausedFrom === 'fight' && !roundOver) saveWanderBody(); // 방랑 몸 상태 이어받기 (WANDER.resumeState) — 싸우던 몸을 적고 떠난다
+  if (pausedFrom === 'fight' && !roundOver) saveWanderBody(); // 방랑 몸 상태 이어받기 — 싸우던 몸을 적고 떠난다
   const back = lobbyReturn;
   pauseOpen = false;
   state = 'menu';
@@ -2727,7 +2680,7 @@ function updateCamera(dt) {
   const h = Math.min(dt, 1 / 30);
   camShake.v.addScaledVector(camShake.o, -170 * h).multiplyScalar(Math.max(0, 1 - 13 * h));
   camShake.o.addScaledVector(camShake.v, h);
-  if (CONFIG.IMPACT_FX.on) shakeWall(camShake.o, camShake.v, CONFIG.IMPACT_FX.camMaxOff); // 타격감 (10/25): 맞음이 잇달아 와도 밀린 거리는 벽 안 (폰 멀미)
+  shakeWall(camShake.o, camShake.v, CONFIG.IMPACT_FX.camMaxOff); // 타격감 (10/25): 맞음이 잇달아 와도 밀린 거리는 벽 안 (폰 멀미)
   camera.position.add(camShake.o);
   camera.lookAt(camLook);
   camera.position.sub(camShake.o); // 다음 프레임 따라가기는 흔들림 없는 위치 기준
@@ -3122,13 +3075,7 @@ function frame(now) {
     else input.consumeHandDelta(), input.consumeTaps();
 
     // 타격 순간 살짝 멈칫 + 판이 끝나면 슬로모션
-    let scale = 1;
-    if (CONFIG.IMPACT_FX.on) {
-      scale = 1 - stopTick(hitStop, dt, CONFIG.IMPACT_FX) * (1 - 0.12); // 멈칫 묶음 시계 (실제 시간 · 화면 안 멈칫 몫만 0.12 배 — 느린 폰에서도 짧게)
-    } else if (hitStop.left > 0) {
-      hitStop.left -= dt;
-      scale = 0.12;
-    }
+    let scale = 1 - stopTick(hitStop, dt, CONFIG.IMPACT_FX) * (1 - 0.12); // 멈칫 묶음 시계 (실제 시간 · 화면 안 멈칫 몫만 0.12 배 — 느린 폰에서도 짧게)
     // 결정타 연출 (10/9 23:5x — CONFIG.SECRET.slowMo): AI·플레이어 비기가 터뜨려진 순간(터뜨림 수가 바뀜) 화면 시간을 잠깐 늦춘다 — 물리 스텝 dt 는 그대로, 스텝 수만 준다
     const bursts = teamRun ? teamBursts() : (ai?.secretBursts ?? 0) + player.skill.secretBursts; // 동시 대전: 보는 몸이 낸 · 받은 비기만 (teamBursts)
     if (bursts !== secretBurstsSeen) {

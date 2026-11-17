@@ -472,7 +472,7 @@ export function bladesTouch(me, foe) {
 }
 
 /**
- * 넓은 뜻의 맞부딪힘 (자연 바인드 실험 2안 — BIND.natural, 사장님 10/11 20:3x '꼭 검을 맞댄 게 아니어도 밀착해서 힘을 경합하는 경우를 넓은 의미의 맞부딪힘으로 해석'):
+ * 넓은 뜻의 맞부딪힘 (자연 바인드 2안 — 본판 10/31, 사장님 10/11 20:3x '꼭 검을 맞댄 게 아니어도 밀착해서 힘을 경합하는 경우를 넓은 의미의 맞부딪힘으로 해석'):
  *  칼날이 아닌 곳끼리 붙어 미는 접촉 — ① 내 팔·코등이·자루 ↔ 상대 팔·코등이·자루·몸통 (칼자루끼리 · 손과 칼자루 · 칼자루로 몸을 누름) ② 몸통끼리(가슴·배·골반).
  *  칼날이 몸에 닿은 것(베기)·칼날끼리(bladesTouch 가 맡음)는 넣지 않는다. 근접 밀치기 누르기(fighter.closeStep)에서 칼이 엇걸린 채 누르는 것은 칼날끼리라 bladesTouch 로 이미 든다.
  *  근거: Ringeck·Lew 「Ringen am Schwert」(칼을 쥔 씨름)·「Einlaufen」(뛰어들기 — 왕관에서 'rush in') [원전 2차]. Rapier 접촉을 읽기만 한다(물리 무관). 가슴 거리 1.5 m 밖은 묻지 않는다(팔이 닿을 수 없는 거리 — 셈 줄이기)
@@ -500,10 +500,10 @@ export function wideTouch(me, foe) {
   return touch(mine, [...theirs, ...cols(foe, WIDE_TORSO)]) || touch(theirs, cols(me, WIDE_TORSO)) || touch(cols(me, WIDE_TORSO), cols(foe, WIDE_TORSO));
 }
 
-/** 바인드(맞부딪힘)인가: 칼끼리 닿음(bladesTouch) — 자연 바인드 실험(BIND.natural)이면 넓은 뜻의 맞부딪힘(wideTouch)도. 끄면 bladesTouch 그대로 */
+/** 바인드(맞부딪힘)인가: 칼끼리 닿음(bladesTouch) · 넓은 뜻의 맞부딪힘(wideTouch — 자연 바인드 2안, 늘) */
 export function bindTouch(me, foe) {
   if (bladesTouch(me, foe)) return true;
-  return !!BIND.natural && me.armed && foe.armed && wideTouch(me, foe);
+  return me.armed && foe.armed && wideTouch(me, foe);
 }
 
 /**
@@ -907,7 +907,7 @@ export class PlayerSecretWatch {
     const touch = bladesTouch(me, foe);
     if (this.swing && touch) this.swing.bound = true; // 칼 맞물림 (ai.js checkBind 와 같은 기하)
     if (S.when === 'gyeoksal') this.gyeoksalTick(dt, touch, sw || !!me.skill.tap, busy); // 동방 막아 죽이기 (10/22 — 막기 단추 · 때맞춤 · 스틱 앞)
-    if (S.when === 'parry') this.parryTick(dt, BIND.natural ? bindTouch(me, foe) : touch, sw || !!me.skill.tap, s0, c, d0, V, busy); // 막기 연환 (10/11) · 자연 바인드 실험이면 넓은 맞부딪힘도 (bindTouch)
+    if (S.when === 'parry') this.parryTick(dt, bindTouch(me, foe), sw || !!me.skill.tap, s0, c, d0, V, busy); // 막기 연환 (10/11) · 자연 바인드 실험이면 넓은 맞부딪힘도 (bindTouch)
     if (S.when === 'bindCount') this.binds.tick(dt, touch);
     if (S.when === 'press') this.pressTick(dt, busy);
     // 고노센 준비 (10/25 22:3x · 22:5x 사장님 '거리와 상관없이 … 아무 행동 없이 2초' · '준비가 활성화되면 걸어도 유지' — gnsArmTick 'idle'): 휘두름 · 탭 · 손잡이 찍기 · 비기 · 막기 단추 · 맞음이면 풀림 ·

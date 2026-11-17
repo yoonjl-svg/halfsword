@@ -41,7 +41,7 @@ test('AI_KIT 기본값 — 켬 [사장님 11/16 결정] · 사다리 표(11/16 �
     japanese: [['J1', 'J6'], ['J2', 'J3', 'J4'], ['J7', 'J8'], ['J9', 'J10'], ['J5', 'J12']],
     chinese: [['C1', 'C2'], ['C7', 'C3', 'C5'], ['C8', 'C4'], ['C6', 'C10'], ['C9', 'C12']],
   });
-  assert.equal(SAENGSA.playerProf.mode, 'step'); // 사람 숙련도 = 칸 수 문턱 5 · 7 · 9 · 11 [사장님 11/16 결정 '사람 셈도 문턱 기준으로 바꿔']
+  assert.deepEqual(SAENGSA.playerProf, { at2: 5, at3: 7, at4: 9, at5: 11 }); // 사람 숙련도 = 칸 수 문턱 5 · 7 · 9 · 11 [사장님 11/16 결정 '사람 셈도 문턱 기준으로 바꿔']
 });
 
 test('사다리가 바르다: 단계마다 칸의 먼저 익힐 칸(pre)은 그 단계나 앞 · 1 ~ 5 가 편지 아닌 11 칸을 꼭 한 번씩 · 편지 없음 · 6 = 5 · 0 = 없음', () => {
@@ -230,7 +230,7 @@ test('손에 든 무기가 바뀌면 칸 몫을 그 유파 숙련도로 다시 (
 
 
 
-test('사람 숙련도 (11/16 사장님 \'사람 셈도 문턱 기준으로 바꿔\'): 익힌 칸 수 문턱 = AI 사다리 쌓임 칸 수 — 사다리 1 ~ L 단계를 다 익힌 사람 = 숙련도 L 인 AI 와 같은 숫자 · 옛 규칙 mode \'old\'', () => {
+test('사람 숙련도 (11/16 사장님 \'사람 셈도 문턱 기준으로 바꿔\'): 익힌 칸 수 문턱 = AI 사다리 쌓임 칸 수 — 사다리 1 ~ L 단계를 다 익힌 사람 = 숙련도 L 인 AI 와 같은 숫자', () => {
   const P = SAENGSA.playerProf;
   assert.deepEqual([P.at2, P.at3, P.at4, P.at5], [2, 3, 4, 5].map((l) => aiLadderIds('german', l).size));
   for (const s of TREE_SCHOOLS) {
@@ -239,13 +239,8 @@ test('사람 숙련도 (11/16 사장님 \'사람 셈도 문턱 기준으로 바�
     assert.equal(playerProficiency({ [s]: new Set([...aiLadderIds(s, 2)].slice(1)) })[s], 1, `${s} 4 칸 = 1`);
   }
   // 칸 수만 셈 — 어느 칸이든 (사다리 차례와 상관없이)
-  const g = (ids, cfg) => playerProficiency({ german: new Set(ids) }, cfg).german;
+  const g = (ids) => playerProficiency({ german: new Set(ids) }).german;
   assert.equal(g(['G10', 'G7', 'G12', 'G9', 'G4']), 2);
-  // 옛 규칙 (`?playerProf=old`)
-  const OLD = { ...P, mode: 'old' };
-  assert.equal(g(['G1', 'G2'], OLD), 2);
-  assert.equal(g(['G1', 'G2', 'G5', 'G8', 'G3'], OLD), 3);
-  assert.equal(g(['G10', 'G7'], OLD), 4);
   assert.equal(g(['G10', 'G7']), 1);
 });
 

@@ -162,14 +162,14 @@ test('화면 · 소리만: 판정 · 물리 · AI · 시뮬 바탕은 impact_fx 
   assert.ok(!/^\s*import\s/m.test(src('src/impact_fx.js')), 'impact_fx.js 는 순수 셈');
 });
 
-test('main.js: 멈칫은 addHitStop 한 곳으로만 들어가고 · 끄면 옛 식 · 멈칫은 화면 시간 배율만 바꾼다 (물리 스텝 길이 그대로)', () => {
+test('main.js: 멈칫은 addHitStop 한 곳으로만 들어가고(늘 묶음 — 11/17 옛 식 지움) · 멈칫은 화면 시간 배율만 바꾼다 (물리 스텝 길이 그대로)', () => {
   const m = src('src/main.js');
   const writes = m.match(/hitStop(\.left)?\s*=\s*Math\.max/g) || [];
-  assert.equal(writes.length, 1, '옛 식(끔) 한 줄만 Math.max');
-  assert.ok(/function addHitStop\(t\)\s*\{\s*if \(CONFIG\.IMPACT_FX\.on\) stopGrant\(hitStop, t, CONFIG\.IMPACT_FX\);/.test(m));
+  assert.equal(writes.length, 0, '멈칫은 stopGrant 묶음으로만');
+  assert.ok(/function addHitStop\(t\)\s*\{\s*stopGrant\(hitStop, t, CONFIG\.IMPACT_FX\);/.test(m));
   assert.equal((m.match(/addHitStop\(/g) || []).length, 4, '정의 1 + 맞음 · 흘림 · 부딪힘');
   assert.ok(/scale = 1 - stopTick\(hitStop, dt, CONFIG\.IMPACT_FX\) \* \(1 - 0\.12\);/.test(m));
-  assert.ok(/if \(CONFIG\.IMPACT_FX\.on\) shakeWall\(camShake\.o, camShake\.v, CONFIG\.IMPACT_FX\.camMaxOff\);/.test(m), '카메라 벽은 켬일 때만');
+  assert.ok(/shakeWall\(camShake\.o, camShake\.v, CONFIG\.IMPACT_FX\.camMaxOff\);/.test(m), '카메라 벽');
   // 물리 스텝은 늘 PHYSICS.timestep — 멈칫이 스텝 길이를 바꾸지 않는다
   assert.ok(/world\.step\(eventQueue, combat\.physicsHooks\)/.test(m));
   assert.ok(/acc \+= dt \* scale \* TEMPO;/.test(m));

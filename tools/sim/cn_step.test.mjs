@@ -1,19 +1,18 @@
 // 동방 보법 회피 '편섬(偏閃)' 시험 (11/15 사장님 '방향을 꺾은 순간으로 하자. 그렇다고 항상 켜지면 안돼. 0.4초 50% 감소.' · '동방 유파 설계에 이것도 감안한 전투 스타일과
 //  뛰어들기가 나오도록 해' · 첫 안 '동방은 비켜 들기를 응용하되 보법으로 풀어보자 …' · src/cn_step.js · ai_plan_cn.js cnDive · config CN_STEP · 기록 docs/strike/cn_step_2026-11-15.md):
-//  기본 꺾음('turn') · 끄면(0) 판이 바이트 같음 · 동방 몸만(사람은 C1) · 걷는 중 45° 꺾음 → 0.4 s 칼날 상처 × 0.5 · 서 있다 걷기 · 작은 꺾음 · 천천히 돎은 아님 ·
-//  다시 걸기 한도 1.2 s · 곧게 걸음 한도(견줌) · AI 偏閃奏進(굴림 · 꺾을 쪽 · 뛰어듦) · 견줌 ⓐ ⓑ ⓒ · 판에서 쓰임. 시간 상한 기준은 없다.  node --test tools/sim/cn_step.test.mjs
+//  꺾음('turn' — 늘 · 11/17 견줌 판 ⓐ ⓑ ⓒ · 끔 판 지움) · 동방 몸만(사람은 C1) · 걷는 중 45° 꺾음 → 0.4 s 칼날 상처 × 0.5 · 서 있다 걷기 · 작은 꺾음 · 천천히 돎은 아님 ·
+//  다시 걸기 한도 1.2 s · 곧게 걸음 한도(견줌) · AI 偏閃奏進(굴림 · 꺾을 쪽 · 뛰어듦) · 판에서 쓰임. 시간 상한 기준은 없다.  node --test tools/sim/cn_step.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
-import { cnStepOn, cnSee, cnStepTick, cnStepMove, cnStepKeep, cnAiTurn } from '../../src/cn_step.js';
+import { cnStepOn, cnStepTick, cnStepKeep, cnAiTurn } from '../../src/cn_step.js';
 import { cnDive, cnDiveTick } from '../../src/ai_plan_cn.js';
 import { kitFromNodes } from '../../src/skill_tree_data.js';
 
 const C = CONFIG.CN_STEP;
 const near = (a, b, e = 1e-9) => assert.ok(Math.abs(a - b) < e, `${a} vs ${b}`);
-function withMode(m, fn, o = {}) {
+function withC(fn, o = {}) {
   const keep = { ...C };
-  C.mode = m;
   Object.assign(C, o);
   try {
     return fn();
@@ -49,30 +48,26 @@ function run(f, secs, mv) {
 }
 const ladder = (v, rungs) => rungs.map(CONFIG.realS).some((r) => Math.abs(r - v) < 1e-9);
 
-test('기본 켬(11/16 사장님 결정 \'동방 보법 개편도 켜. 45도 기준.\' · \'그럼 1.2초로 해\') · 사장님 값 0.4 s · 50 % · 끄면(0) 동방 판은 값을 안 읽음 · 켜도 동방이 아닌 판(롱소드끼리)은 그대로', () => {
-  assert.equal(C.mode, 'turn', '[사장님 11/16 결정] 켬 (전 11/15 감독 끔)');
+test('사장님 값(11/16 \'동방 보법 개편도 켜. 45도 기준.\' · \'그럼 1.2초로 해\') 0.6 s · 50 % · 동방이 아닌 판(롱소드끼리)은 값을 안 읽음', () => {
   near(C.keepT, CONFIG.realS(0.6)); // 11/16 사장님 '보법을 0.4초 말고 0.6초' (전 0.4)
   near(C.cut, 0.5);
   near(C.turn, Math.PI / 4);
   assert.ok(ladder(C.turnT, [0.2]) && ladder(C.rearm, [1.2]) && C.straight === 0, '꺾음 시간 0.2 s 시간 사다리 · 다시 걸기 1.2 s [사장님 11/16 결정]');
-  const a = withMode(0, () => trace());
-  const b = withMode(0, () => trace(), { cut: 0.9, keepT: CONFIG.realS(2), rearm: 0, dive: 0 });
+  const a = trace({ weapon2: 'longsword' });
+  const b = withC(() => trace({ weapon2: 'longsword' }), { cut: 0.9, keepT: CONFIG.realS(2), rearm: 0 });
   assert.equal(a.text, b.text);
   assert.deepEqual(a.n, [null, null]);
-  const m0 = withMode(0, () => trace({ weapon2: 'longsword' }));
-  for (const m of ['turn', 'a', 'b', 'c']) assert.equal(withMode(m, () => trace({ weapon2: 'longsword' })).text, m0.text, `롱소드끼리 ${m}`);
 });
 
-test('동방 몸만 · 사람은 보법 I(C1 — footwork) 을 익힌 몸만', () => withMode('turn', () => {
+test('동방 몸만 · 사람은 보법 I(C1 — footwork) 을 익힌 몸만', () => withC(() => {
   assert.equal(cnStepOn(body()), true);
   assert.equal(cnStepOn(body({ swordArt: { tradition: 'german' } })), false);
   assert.equal(cnStepOn(body({ skillKit: kitFromNodes('chinese', new Set(['C3'])) })), false, 'C1 없음');
   assert.equal(cnStepOn(body({ skillKit: kitFromNodes('chinese', new Set(['C1'])) })), true);
   assert.equal(cnStepOn(body({ schoolFootwork: false })), false);
-  assert.equal(withMode(0, () => cnStepOn(body())), false, '끔');
 }));
 
-test('꺾음: 걷는 중 45° 넘게 꺾은 때부터 0.4 s 칼날 상처 × 0.5 · 키보드 대각 한 칸(45°)도 · 작은 꺾음 · 서 있다 걷기 · 천천히 돎 · 멈춤은 아님', () => withMode('turn', () => {
+test('꺾음: 걷는 중 45° 넘게 꺾은 때부터 0.4 s 칼날 상처 × 0.5 · 키보드 대각 한 칸(45°)도 · 작은 꺾음 · 서 있다 걷기 · 천천히 돎 · 멈춤은 아님', () => withC(() => {
   const f = body();
   run(f, 0.5, { x: 0, y: 1 });
   assert.equal(cnStepKeep(f), 1, '곧게 걷기');
@@ -121,7 +116,7 @@ test('꺾음: 걷는 중 45° 넘게 꺾은 때부터 0.4 s 칼날 상처 × 0.5
 }));
 
 test("'항상 켜지면 안돼': 다시 걸기 1.2 s(사장님 11/16 결정) — 지그재그로 꺾어도 켜진 몫 ≤ 0.4 ÷ 1.2 · 한도 없음이면 거의 늘 · 곧게 걸음 한도(견줌)", () => {
-  const zig = (o) => withMode('turn', () => {
+  const zig = (o) => withC(() => {
     const f = body();
     run(f, 0.5, { x: 0, y: 1 });
     run(f, 12, (t) => ({ x: Math.floor(t / CONFIG.realS(0.2)) % 2 ? 0.7 : -0.7, y: 0.7 }));
@@ -135,7 +130,7 @@ test("'항상 켜지면 안돼': 다시 걸기 1.2 s(사장님 11/16 결정) —
   assert.ok(lim.block > 0 && lim.trig < free.trig);
   assert.equal(st.trig, 1, '곧게 걸음 0.4 s — 처음 0.5 s 곧게 걸은 뒤 첫 꺾음 하나만 · 0.2 s 지그재그는 안 걸림');
   // 다시 걸기: 1.2 s 지나면 다시 걸림
-  withMode('turn', () => {
+  withC(() => {
     const f = body();
     run(f, 0.5, { x: 0, y: 1 });
     run(f, DT, { x: 1, y: 0 });
@@ -149,7 +144,7 @@ test("'항상 켜지면 안돼': 다시 걸기 1.2 s(사장님 11/16 결정) —
   });
 });
 
-test('AI 偏閃奏進(켠 판 `?cnStep=turn&cnDive=1`): 높음(띠 기울기 1)은 늘 · 칼이 오는 반대쪽 옆 — 그 쪽으로 걷던 중이면 반대로 · 꺾는 시간 뒤 앞 박찬 걸음 + 허리 베기 · 0 이면 안 함', () => withMode('turn', () => {
+test('AI 偏閃奏進: 높음(띠 기울기 1)은 늘 · 칼이 오는 반대쪽 옆 — 그 쪽으로 걷던 중이면 반대로 · 꺾는 시간 뒤 앞 박찬 걸음 + 허리 베기 · 0 이면 안 함', () => withC(() => {
   const mk = (o = {}) => {
     const me = body(o.me);
     const started = [];
@@ -186,55 +181,14 @@ test('AI 偏閃奏進(켠 판 `?cnStep=turn&cnDive=1`): 높음(띠 기울기 1)�
   assert.equal(leave.cnDive, null);
   assert.equal(cnDive(mk({ ai: { planC: { dive: 0 } } }), TH, 1.5), null, '칸 0');
   assert.equal(cnDive(mk({ me: { stamina: { time: 10, value: 5, exhausted: false } } }), TH, 1.5), null, '기력 < 12');
-  assert.equal(withMode('a', () => cnDive(mk(), TH, 1.5)), null, "꺾음('turn')일 때만");
   // 무 · 낮음은 운 (기울기 0 · 굴림 몫 1 → 동전 0.5)
   let yes = 0;
   for (let i = 0; i < 400; i++) if (cnDive(mk({ ai: { planK: 0, planLuck: 1 } }), TH, 1.5)) yes++;
   assert.ok(yes > 140 && yes < 260, `운 ${yes} / 400`);
 }, { dive: 1 }));
 
-test('견줌 ⓐ 꺾어 딛기 · ⓑ 줄임만 · ⓒ 저절로 비킴 (공격 창 — 첫 시제품 그대로)', () => {
-  withMode('a', () => {
-    const f = body();
-    cnSee(f, TH);
-    cnStepTick(f, DT);
-    assert.ok(f.cnStep.open, '창');
-    f.move = { x: 1, y: 0 };
-    cnStepTick(f, DT);
-    assert.deepEqual(f.gait.burst, { fore: 0, side: 1, lat: 1 });
-    near(cnStepKeep(f), 1 - C.cut);
-  });
-  withMode('b', () => {
-    const f = body();
-    cnSee(f, TH);
-    cnStepTick(f, DT);
-    f.move = { x: -1, y: 0 };
-    cnStepTick(f, DT);
-    assert.equal(f.gait.burst, null, '몸 움직임 없음');
-    near(cnStepKeep(f), 1 - C.cut);
-  });
-  withMode('c', () => {
-    const f = body();
-    cnSee(f, TH);
-    cnStepTick(f, DT);
-    assert.equal(f.gait.burst?.side, -1);
-    assert.deepEqual(cnStepMove(f), { x: -1, y: 0 });
-    const busy = body({ aiCtl: { mode: 'attack' } });
-    cnSee(busy, TH);
-    cnStepTick(busy, DT);
-    assert.equal(busy.gait.burst, null, '치는 중');
-  });
-  withMode('a', () => {
-    const f = body();
-    const ai = { me: f, proficiency: 5, mode: 'watch', pers: { circleDir: 1 } };
-    cnSee(f, TH);
-    cnStepTick(f, DT);
-    assert.deepEqual(cnAiTurn(ai, 1, 0), [0, -1], 'ⓐ AI 꺾음');
-  });
-});
-
 test('판에서 쓰임 (켠 판) — 환도 AI 숙련 5 대 롱소드 AI (씨앗 2 · 30 s): 꺾음 · 줄임이 걸림 · 한도에 막힘 · 偏閃奏進 굴림 · 뛰어듦 / 뛰어들기 0 이면 굴림 없음', () => {
-  const run2 = (o) => withMode('turn', () => trace({ weapon: 'hwando', weapon2: 'longsword', seed: 2, secs: 30 }), o);
+  const run2 = (o) => withC(() => trace({ weapon: 'hwando', weapon2: 'longsword', seed: 2, secs: 30 }), o);
   const a = run2({ dive: 1 });
   const n = a.n[0];
   assert.ok(n.turn > 0 && n.trig > 0 && n.block > 0 && n.onT > 0, JSON.stringify(n));

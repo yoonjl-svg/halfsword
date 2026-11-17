@@ -1651,9 +1651,6 @@ const SAMPLES = {
   crack: ['crack1'], // 나무 쪼개지는 "딱" → 뼈 부러지는 소리로 쓴다 (효과음에서 흔히 쓰는 방법)
   slide: ['slide1', 'slide2'], // 칼날이 미끄러지는 "스르릉"
   breath: ['breath/breath1'], // 피를 흘리는 내 숨 한 번: 들이쉬고 "후우" (Sadiquecat, CC0)
-  // 칼이 몸을 칠 때 "녹음" 안 (33차 후보, Freesound CC0 — 출처 public/sfx/LICENSE.txt). SOUND.fleshHit 이 'rec' 일 때만 쓴다
-  fleshEdge: nums('flesh/edge', 5), // 날 선 칼이 살에 들어가는 매끈한 "슉" (칼·검 찌르기 녹음, 멜론 찌르기)
-  fleshWet: nums('flesh/wet', 2), // 깊이 베였을 때 젖은 꼬리 (피 튀는 소리, 위를 3.5kHz 에서 닫음)
   // 드루이드의 채찍 (10/23 사장님 '휘두르고 때릴 때 실제 채찍 소리 넣어줘' — 녹음만 · 출처 public/sfx/LICENSE.txt whip/): 없으면 그 소리는 나지 않는다(합성으로 대신하지 않음)
   whipSwish: nums('whip/swish', 4), // 휘두르는 바람 "휙" (qubodup 대나무 막대 휘두르기 녹음 · CC0)
   whipCrack: nums('whip/crack', 3), // 끝이 터지는 "딱" (스위스 퀴스나흐트 클라우스야겐 채찍 치기 녹음 · 퍼블릭 도메인)
@@ -2174,78 +2171,30 @@ export class Sound {
     this._hitScale = v;
   }
   /**
-   * 칼이 몸을 칠 때의 소리 (31·33차 후보, 사장님 "전자 파리채로 모기 잡는 소리 같아" → 31차 안은 "둔기·죽도 같다"): 'legacy' = 지금(5차 hitSlash),
-   * 'synth' = 날 선 칼 합성(bladeCut), 'rec' = 날 선 칼 녹음(flesh/edge*.mp3 + 젖은 꼬리, 없으면 합성),
-   * 'drawn' = 사용자 선택 A2/B2 단축 베기(약 .26초/강 .35초), 찌르기는 기존 samsho 유지.
-   * 'samsho' = 대전 게임식 2(34·35차 slashHit: "자-쩌억 + 쿵 + 촤아악", 강베기는 두껍고 길게). 기본은 SOUND.fleshHit.
-   * 베기·찌르기만 바뀐다. 칼 면(blunt)·투구·판금 소리는 그대로
+   * 베기 (칼이 몸을 칠 때의 소리 — 10/7 사장님 지시로 샛별 일반판의 사용자 선택 그대로: A2/B2 단축 베기(약 .26초/강 .35초 — 112 J 경계) · 11/17 다른 안(35차 · 녹음 · 합성 · 이전 기본) 지움).
+   *  through = 베고 지나감. 칼 면(blunt)·투구·판금 소리는 따로
    */
-  get fleshHit() {
-    return this._fleshHit ?? SOUND.fleshHit ?? 'legacy';
-  }
-  set fleshHit(v) {
-    this._fleshHit = v;
-  }
-
-  /**
-   * 녹음 안(33차): 날 선 칼이 살에 들어가는 "슉" 녹음(fleshEdge) + 합성 bladeCut 의 갈라지는 "쯔억"·작은 "툭"을 조금 + 깊으면 젖은 꼬리.
-   * 녹음이 아직 안 읽혔으면 false → 합성으로 낸다
-   */
-  _fleshRec(ev, kind, e, low) {
-    const edge = this.pickSample('fleshEdge');
-    if (!edge) return false;
-    this.layer(ev, edge, { gain: 1.2, rate: low * (kind === 'stab' ? between(Math.random, 0.85, 0.95) : between(Math.random, 0.95, 1.08)) });
-    const syn = kind === 'stab' ? 'bladeStab' : kind === 'through' ? 'bladeThrough' : 'bladeCut';
-    this.layer(ev, this.pick(syn), { gain: 0.35, rate: low * between(Math.random, 0.95, 1.05), delay: 0.004 });
-    const wet = e > 0.3 ? this.pickSample('fleshWet') : null;
-    if (wet) this.layer(ev, wet, { gain: 0.15 + 0.3 * e, rate: between(Math.random, 0.95, 1.1), delay: 0.012 });
-    return true;
-  }
-
-  /** 베기: 천이 찢기고 살을 가르는 "쉭-지직" + 젖은 소리 + 몸통 "퍽". through = 베고 지나감 */
   cut(energy, through) {
     if (!this._on || !this.ctx) return;
     const { e, w, low } = this.hitWeight(energy, 140);
-    const mode = this.fleshHit;
-    const drawn = mode === 'drawn';
     const strong = energy >= DRAWN_SLASH.strongEnergy;
-    const ev = this.event({ bus: this.fleshBus, gain: (0.45 + 0.6 * e ** 0.8) * (1 + 0.7 * w) * (drawn ? DRAWN_SLASH.gain : 1), prio: 2 });
-    if (drawn) {
-      // Both are shortened heavy-source A2/B2 timbres. Penetration alone is not strength.
-      this.layer(ev, this.pick(strong ? 'drawnHeavy' : 'drawnCut'), { gain: 1, rate: low * between(Math.random, 0.96, 1.05) });
-    } else if (mode === 'samsho') {
-      // 대전 게임식 2 (34·35차): "자-쩌억 + 쿵 + 촤아악" — 금속 울림·클릭 없이
-      // 강베기(에너지 112 J 위, e ≥ 0.8)와 베고 지나감은 두껍고 긴 판, 보통 베기는 짧은 판
-      this.layer(ev, this.pick(through ? 'slashThrough' : e >= 0.8 ? 'slashHeavy' : 'slashCut'), { gain: 1, rate: low * between(Math.random, 0.96, 1.05) });
-    } else if (mode === 'legacy') {
-      // 대전 게임식 "챡-촤악-징 퍽": 맞은 순간이 또렷하게 튀어나와야 한다 (예전엔 누비옷 너머 둔한 "쿵" 위주라 흐릿했다)
-      // 베고 지나가면 칼바람 꼬리를 길게(느리게 틀기)
-      this.layer(ev, this.pick('hitCut'), { gain: 1, rate: low * (through ? between(Math.random, 0.85, 0.92) : between(Math.random, 0.96, 1.06)) });
-      // 천이 찢기며 살을 가르는 "지직"은 뒤에 작게
-      this.layer(ev, this.pick('slice'), { gain: 0.3 + 0.2 * e, rate: low * (through ? between(Math.random, 0.72, 0.82) : between(Math.random, 0.9, 1.1)), delay: 0.01 });
-    } else if (!(mode === 'rec' && this._fleshRec(ev, through ? 'through' : 'cut', e, low))) {
-      // 날 선 칼 합성: 매끈한 "슉" + 갈라지는 "쯔억" + 작은 "툭" (베고 지나가면 갈라지는 소리를 길게)
-      this.layer(ev, this.pick(through ? 'bladeThrough' : 'bladeCut'), { gain: 1, rate: low * between(Math.random, 0.95, 1.06) });
-    }
+    const ev = this.event({ bus: this.fleshBus, gain: (0.45 + 0.6 * e ** 0.8) * (1 + 0.7 * w) * DRAWN_SLASH.gain, prio: 2 });
+    // Both are shortened heavy-source A2/B2 timbres. Penetration alone is not strength.
+    this.layer(ev, this.pick(strong ? 'drawnHeavy' : 'drawnCut'), { gain: 1, rate: low * between(Math.random, 0.96, 1.05) });
     // 깊이 베인 큰 상처(e 높음)는 물컹한 크런치가 섞인 "젖은" 소리로
-    this.layer(ev, this.pick(e > 0.55 ? 'wetHeavy' : 'wet'), { gain: (mode === 'legacy' ? 1 : 0.65) * (0.3 + 0.4 * e) * (1 + 0.3 * w) * (drawn ? (strong ? 0.06 : 0.025) : 1), rate: between(Math.random, 0.85, 1.15), delay: 0.015 });
-    // 몸통 "퍽"(주먹 녹음 + 누비옷 쿵): 날 선 칼은 몽둥이처럼 몸을 밀지 않는다 → 새 안에서는 작게(0.25배). 이 층이 31차 안을 "둔기"로 들리게 했다
-    this.body(ev, (mode === 'legacy' ? 1 : 0.25) * (through ? 0.45 + 0.3 * e : 0.6 + 0.4 * e) * (1 + 0.5 * w) * (drawn ? (strong ? 0.035 : 0) : 1), low);
-    if (w > 0 && !drawn) this.layer(ev, this.pick('thump'), { gain: 0.8 * w, rate: 0.7 * low, delay: 0.004 }); // drawn은 승인된 저음 비율 유지
+    this.layer(ev, this.pick(e > 0.55 ? 'wetHeavy' : 'wet'), { gain: 0.65 * (0.3 + 0.4 * e) * (1 + 0.3 * w) * (strong ? 0.06 : 0.025), rate: between(Math.random, 0.85, 1.15), delay: 0.015 });
+    // 몸통 "퍽"(주먹 녹음 + 누비옷 쿵): 날 선 칼은 몽둥이처럼 몸을 밀지 않는다 → 작게(0.25배 · 강베기만)
+    this.body(ev, 0.25 * (through ? 0.45 + 0.3 * e : 0.6 + 0.4 * e) * (1 + 0.5 * w) * (strong ? 0.035 : 0), low);
   }
 
-  /** 찌르기: 무겁고 짧은 "퍽" + 푹 들어가는 젖은 소리 */
+  /** 찌르기: 대전 게임식 2 "자-푹 + 쿵 + 촤악" + 푹 들어가는 젖은 소리 */
   stab(energy) {
     if (!this._on || !this.ctx) return;
     const { e, w, low } = this.hitWeight(energy, 100);
     const ev = this.event({ bus: this.fleshBus, gain: (0.45 + 0.6 * e ** 0.8) * (1 + 0.7 * w), prio: 2 });
-    const mode = this.fleshHit;
-    if (mode === 'samsho' || mode === 'drawn') this.layer(ev, this.pick('slashStab'), { gain: 1, rate: low * between(Math.random, 0.95, 1.05) }); // 대전 게임식 2 "자-푹 + 쿵 + 촤악"
-    else if (mode === 'legacy') this.layer(ev, this.pick('hitStab'), { gain: 1, rate: low * between(Math.random, 0.95, 1.05) }); // 대전 게임식 "챡-푹"
-    else if (!(mode === 'rec' && this._fleshRec(ev, 'stab', e, low))) this.layer(ev, this.pick('bladeStab'), { gain: 1, rate: low * between(Math.random, 0.95, 1.05) }); // 날 선 칼 "슉-푹"
-    this.body(ev, (mode === 'legacy' ? 0.85 : 0.3) * (1 + 0.5 * w), 0.85 * low); // 찌르기는 칼끝이 몸을 조금 민다 — 베기보다는 크게
-    this.layer(ev, this.pick('wet'), { gain: (mode === 'legacy' ? 1 : 0.65) * (0.5 + 0.4 * e) * (1 + 0.3 * w), rate: low * between(Math.random, 0.7, 0.85), delay: 0.008 });
-    if (mode === 'legacy') this.layer(ev, this.pick('slice'), { gain: 0.3, rate: 1.3, delay: 0.004 }); // 천을 뚫는 짧은 "틱" (새 안에서는 뺀다 — "지직"의 한 원인)
+    this.layer(ev, this.pick('slashStab'), { gain: 1, rate: low * between(Math.random, 0.95, 1.05) });
+    this.body(ev, 0.3 * (1 + 0.5 * w), 0.85 * low); // 찌르기는 칼끝이 몸을 조금 민다 — 베기보다는 크게
+    this.layer(ev, this.pick('wet'), { gain: 0.65 * (0.5 + 0.4 * e) * (1 + 0.3 * w), rate: low * between(Math.random, 0.7, 0.85), delay: 0.008 });
     if (w > 0) this.layer(ev, this.pick('thump'), { gain: 0.8 * w, rate: 0.7 * low, delay: 0.004 }); // 무게(200 J 위): 묵직한 저음 한 겹
   }
 

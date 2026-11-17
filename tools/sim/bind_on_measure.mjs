@@ -9,7 +9,7 @@
 //   (맞닿은 자리 미끄럼 bladeContact.slide < 0.25 m/s 인데 두 칼끝 평균 빠르기 > 1.5 m/s) · 아무도 안 미는 채 0.3 s · 1 s 넘게 이어진 덩이(Stand = 둘 다 서 있는 동안만 — 넘어진 몸 밑에 칼이 낀 것 뺌) ·
 //   판 길이(먼저 죽은 때 — 없으면 끝까지) · 이긴 쪽 · 칼날 상처 심각도 합(양쪽) · 넘어짐(서 있다 down · getup) · 휘청(발 디딤 잃음 offBalanceTime 0 → 양수) · AI natBind 끝난 방식 · 미는 뜻 w
 //  시간은 게임 초(1/120 스텝 — 10/11 기록과 같은 잣대 · 실제 초 = ÷ TIME.k 1.1)
-//  node tools/sim/bind_on_measure.mjs ai  [--pairs=longsword:longsword,rapier:rapier,…] [--seeds=1-12] [--dur=40] [--set=BIND.natural=0,BIND.restitution=0.1,BIND.will.on=0] [--tag=이름] [--json=파일]
+//  node tools/sim/bind_on_measure.mjs ai  [--pairs=longsword:longsword,rapier:rapier,…] [--seeds=1-12] [--dur=40] [--set=BIND.restitution=0.1] [--tag=이름] [--json=파일]
 //  node tools/sim/bind_on_measure.mjs bot [--rows=german,cavTouch,iberian,japanese] [--opps=same,longsword] [--seeds=901-904] [--dur=30] [--delay=0.22] [--set=…] [--tag=…] [--json=파일]
 //  node tools/sim/bind_on_measure.mjs agg <json…>   (판 묶음마다 표 한 줄 — tag · 모드 · 짝)
 // ─────────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith(`--${k}=
 const range = (s) => s.split(',').flatMap((p) => { const m = p.match(/^(\d+)-(\d+)$/); if (!m) return [+p]; const out = []; for (let i = +m[1]; i <= +m[2]; i++) out.push(i); return out; });
 const r3 = (x) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(3));
 
-/** --set=BIND.natural=0,BIND.will.on=0 — 이 프로세스 안에서만 */
+/** --set=BIND.restitution=0.3,BIND.will.hi=2 — 이 프로세스 안에서만 */
 export function applySets(s) {
   for (const kv of (s ?? '').split(',').filter(Boolean)) {
     const [path, v] = kv.split('=');
@@ -58,7 +58,7 @@ function meter(G, X, Y, XA, YA) {
   const S = { run: -1, gap: 0, w: 0, free: 0, freeMax: 0, freeS: 0, freeMaxS: 0, down: false };
   const prev = [X.state, Y.state];
   const offPrev = [0, 0];
-  const absMax = BIND.holdMax * (BIND.will?.on ? BIND.will.hi : 1);
+  const absMax = BIND.holdMax * BIND.will.hi;
   const close = () => {
     const len = S.run;
     M.lens.push(len);

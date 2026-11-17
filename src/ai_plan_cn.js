@@ -13,7 +13,7 @@
 //  무 · 낮음 '행운에 기대는 전투'(무모 · 무계획) · 띠별 기력(planRestAt) · 거리 오차는 공통 틀(ai.js · ai_plan.js)이 그대로 맡는다 — 여기는 그 위 동방 몫:
 //   무계획 = 겹 · 유도 · 격살 때를 셈하지 않음(기울기가 작음) · 무모 = 고노센 경계 선을 넘는 쪽(11/14 합치며 공통 틀 하나로 — ai.js gnsWatch W.reck · 이 파일엔 없음).
 //  수 읽기의 동방 몫(본 것만 — 늦게 본 위협 줄): 가운데부터 버릇(최근 6.0 s 상대 공격 — 안 치는 상대면 기다리지 않고 허리 견제) · 높음 되풀이(같은 줄 두 번 8.0 s 안 — 그 줄을 나서며 받을 준비).
-//  偏閃奏進 (11/15 사장님 '동방 유파 설계에 이것도 감안한 전투 스타일과 뛰어들기가 나오도록 해' — 편섬 꺾음 CN_STEP.mode 'turn' 일 때만 · cnDive · cnDiveTick):
+//  偏閃奏進 (11/15 사장님 '동방 유파 설계에 이것도 감안한 전투 스타일과 뛰어들기가 나오도록 해' — 편섬 꺾음 · cnDive · cnDiveTick):
 //   상대 칼을 보면(respond — 늦게 본 위협 하나에 한 번) 굴려 → 칼이 오는 반대쪽 옆으로 걸음을 꺾음(aiT — 걷던 중이면 꺾음 줄임이 걸림 · 손은 막는 자리) →
 //   곧장 앞 박찬 걸음(걸음 장치 파고들기 한 걸음 · 기력 12)으로 뛰어들어 허리 베기(체보요격 — 끌어 딛는 걸음 0.3 · 식는 중이면 요격). 격살 마음이 난 위협은 옛 길(나서며 받기).
 //   몫 = 띠 기울기 × 칸 dive × AI_PLAN.cn.dive + 굴림 몫 × 동전 — 무 · 낮음은 운에 기대 아무 때나 · 숙련 5 는 늘(칸 1 이면).
@@ -226,7 +226,7 @@ function diveTech(ai) {
  */
 export function cnDive(ai, th, d) {
   const C = ai.planC;
-  if (CN_STEP.mode !== 'turn' || !C?.dive) return null;
+  if (!C?.dive) return null;
   const me = ai.me;
   if (!cnStepOn(me) || !me.armed || me.state !== 'stand' || me.stamina?.exhausted || ai.staminaRest || (me.stamina?.value ?? 0) < STAMINA.pushCost || !diveTech(ai)) return null;
   if (gkLeft(ai) && cnWant(ai, th)) return null;

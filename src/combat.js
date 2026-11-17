@@ -25,8 +25,8 @@ import { TRADITIONS } from './schools.js';
 import * as THREE from 'three';
 import { beginFlowRecovery } from './nagashi_recovery.js';
 import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty, flowShieldKeep } from './nagashi_redesign.js';
-import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL, IB_PARRY_BEAT, WHIP_KNEEL, CN_STEP } from './config.js';
-import { cnStepKeep } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
+import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL, IB_PARRY_BEAT, WHIP_KNEEL } from './config.js';
+import { cnStepKeep } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 · 11/16 사장님 결정 켬)
 import { WEAPON_ABILITY } from './config.js'; // 달타냥 '총사의 결투' 배율 (10/25 — duelOneHandMult)
 import { BREAK, isOneHandSword } from './weapons.js';
 import { updateGun } from './gun.js';
@@ -405,7 +405,7 @@ export class Combat {
         //  일본 · 이베리아도 같은 칸으로 × (1 − 0.2) (사장님 10/18 22:1x — SKILL.jpParryDmgCut · ibParryDmgCut)
         if (vic.parryGuard?.woundKeep) severity *= vic.parryGuard.woundKeep();
         else if (vic.aiCtl) severity *= aiWoundKeep(vic); // AI 몸도 사람과 같게 (11/15 사장님 '동방 ai 막기 감소 켜' · src/ai_block_cut.js)
-        if (CN_STEP.mode) severity *= cnStepKeep(vic); // 동방 편섬 (11/15 사장님 '0.4초 50% 감소 (칼날 피해에 찌르기도 포함 맞지?)' — 베기 · 찌르기 둘 다 · 둔기 빼고): 꺾은 때부터 줄임 시간 안이면 × (1 − cut)
+        severity *= cnStepKeep(vic); // 동방 편섬 (11/15 사장님 '0.4초 50% 감소 (칼날 피해에 찌르기도 포함 맞지?)' — 베기 · 찌르기 둘 다 · 둔기 빼고): 꺾은 때부터 줄임 시간 안이면 × (1 − cut)
       } else {
         const armorBlocks = finish && (plate || helmet) && !att.weaponCfg.ignoreArmor && !att.weaponCfg.ignoreArmorDamage;
         if (armorBlocks) finish = false; // 판금·투구가 내려찍기를 막았다 (사장님 10/1 C): 즉사 없음, 칼은 물리로 튕긴다.
@@ -738,7 +738,7 @@ export class Combat {
     }
     for (const f of [A.fighter, B.fighter]) if (f.skill?.corr === 'v2') (f.bladeTouch = true), (f.touchStep = this.stepNo); // 보정 v2: 칼끼리 닿음
     for (const f of [A.fighter, B.fighter]) f.schoolPassive?.bladeContact(); // 독일 인데스 (10/28 01:4x 사장님 '무기가 맞부딪혔을 때' — school_passive.js): 닿아 있는 스텝마다 창을 열고 시계를 0 으로 · 두 몸 모두
-    if (BIND.natural) this.bindFeel(pairs, point, A.fighter, B.fighter, fresh, own);
+    this.bindFeel(pairs, point, A.fighter, B.fighter, fresh, own);
     A.fighter.parryGuard?.opposition?.onClash(B.fighter, { vn });
     B.fighter.parryGuard?.opposition?.onClash(A.fighter, { vn });
     if (fresh && SA && SB && J > 0) this.koteSword(A, B, SA, SB, point, nrm, vn); // 손목 치기가 상대 칼 손 쪽 절반을 세게 침 (J8 판정 완화 — 사람만)
@@ -814,7 +814,7 @@ export class Combat {
   }
 
   /**
-   * 자연 바인드 실험의 '느낌' (BIND.natural — docs/strike/natural_bind_2026-10-11.md ③④, 읽기만 · 물리 무관): 맞닿은 자리가 내 칼날 어디인가
+   * 자연 바인드의 '느낌' (본판 10/31 — docs/strike/natural_bind_2026-10-11.md ③④, 읽기만 · 물리 무관): 맞닿은 자리가 내 칼날 어디인가
    *  feel.at = 코등이 0 → 칼끝 1 (음수 = 코등이·자루 위 — 강함 Stärke 쪽일수록 작다) · feel.hilt = 이번 스텝 내 코등이·자루 콜라이더가 상대 칼에 닿음(코등이 걸림) ·
    *  feel.bindT = 이어 붙은 시간(s, fe.time 과 같으나 실험 쪽 셈). AI(독일 느낌 결정)와 측정 도구가 읽는다
    */
@@ -835,8 +835,8 @@ export class Combat {
 
   /** 칼끼리 맞댄 채(바인드)엔 반발을 끈다: 누를 때마다 접촉점이 새로 생기며 튕겨 떨리지 않게 */
   armSteel() {
-    // 자연 바인드 (BIND.natural ①): 처음 한 번 칼 반발을 BIND.restitution 으로 다시 건다 (끄면 이 줄을 지나치기만 한다)
-    if (BIND.natural && !this.natSurface) (this.natSurface = true), (this.steelArmed = null), (this.natBase = new Map()), this.steelArmedOf.clear();
+    // 자연 바인드 (①): 처음 한 번 칼 반발을 BIND.restitution 으로 다시 건다
+    if (!this.natSurface) (this.natSurface = true), (this.steelArmed = null), (this.natBase = new Map()), this.steelArmedOf.clear();
     // 싸움꾼마다 (2:2 — 한 짝이 맞대고 있어도 다른 싸움꾼의 칼은 그대로 튕긴다). 1:1 은 두 칼이 늘 함께 닿아 예전 판(한꺼번에 끄고 켬)과 같은 차례다
     // 무기마다 재질이 다를 수 있어(강철/나무/고무…) 되돌릴 때도 각자 자기 재질 반발값을 쓴다
     for (const f of this.fighters) {
@@ -845,10 +845,6 @@ export class Combat {
       this.steelArmedOf.set(f, armed);
       const mat = f.restitution ?? STEEL.restitution;
       for (const c of f.swordColliders || []) {
-        if (!BIND.natural) {
-          c.setRestitution(armed ? mat : 0);
-          continue;
-        }
         // 콜라이더마다 처음 본 제 반발 · 마찰이 바탕 (10/31 고침: 10/11 판은 되돌릴 때 마찰을 0.4 로 박아 두어 덩굴 채찍 마디(druid_whip.js WHIP 반발 0.08 · 마찰 0.65)가
         //  칼끼리 한 번 닿은 뒤로 칼 값으로 바뀌었다. 보통 칼 부품은 반발 = 무기 재질 값 · 마찰 0.4(fighter.js) 그대로라 10/11 판과 같음)
         let B = this.natBase.get(c.handle);

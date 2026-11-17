@@ -22,9 +22,8 @@
 //  새 수 없음 — 모두 AI·검술 층에 있던 값.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, SKILL, realS, CN_STEP } from './config.js';
+import { AI_LEVELS, SKILL, realS } from './config.js';
 import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 (11/15 — 사장님 11/16 묶음 P)
-import { cnSee } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
 import { threatNow } from './secret.js';
 import { TRADITIONS } from './schools.js';
@@ -144,7 +143,6 @@ export class PlayerParryGuard {
       const h = thrustTell(s, c);
       if (h) (th = { line: 'thrust', thrust: true, sp: h.sp, E: 0.5 * (this.foe.swordProps?.m ?? 1.5) * h.sp * h.sp, high: s.hy > 0.15, tell: true }), (this.stats.tell = (this.stats.tell ?? 0) + 1);
     }
-    if (CN_STEP.mode) cnSee(me, th); // 동방 보법 회피 (11/15 시제품): 공격 창 — 사람도 보이는 칼 움직임으로 (AI 와 같은 눈)
     if (th) {
       if (this.noThreat > NEW_THREAT_T) this.threatId++;
       this.noThreat = 0;

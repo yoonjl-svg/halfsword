@@ -58,10 +58,10 @@ import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, j
 import { iaiSeated, drawStart, drawLog } from './iai_obi.js'; // 11/16 뽑기 — 칼집에 든 채 공격 · 막기는 SECRET.gnsDraw 초 뽑은 뒤 (사람과 같은 셈)
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
-import { DIG_PROTO, CN_STEP, AI_ARC, PHYSICS } from './config.js';
+import { DIG_PROTO, AI_ARC, PHYSICS } from './config.js';
 import { aiKitOf } from './skill_tree_data.js'; // AI 숙련도 = 칸 (11/16 — config AI_KIT · 무기가 바뀌면 kitRefresh)
 import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 눈 (11/15 — 사장님 11/16 묶음 P) // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
-import { cnSee, cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 — CN_STEP.mode · 기본 끔)
+import { cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 — 偏閃奏進 꺾는 스틱)
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
 
@@ -973,7 +973,6 @@ export class AI {
     // 상대 칼이 내 몸 쪽으로 오나
     const th = this.threat(s, c, r, d);
     this.noThreat = th ? 0 : this.noThreat + dt;
-    if (CN_STEP.mode) cnSee(me, th); // 동방 편섬 견줌 ⓐ ⓑ ⓒ (11/15 시제품): 공격 창 — AI 가 본 위협 ('turn' 은 안 읽음)
     this.emote(dt, hurt, !!th && d < this.M.clinch + 0.4);
     // 밀치는 중(me.barge)에도 모드 분기는 그대로 돈다: 베기·찌르기를 시작하면 'swing'·'thrust', 막으며 물러서면(defVoid)
     //  closeWant 가 풀려 스틱 0 → 'release' 로 끝난다 (버틴 상대에게 누르기가 끝없이 남지 않게. 새 숫자 없음)
@@ -1943,7 +1942,7 @@ export class AI {
         this.sbFired = true;
         if (requestArtReturn(me, [me.handOffset.x, me.handOffset.y], this.path.map((p) => p.slice()), SBk)) this.path.length = 0;
       }
-      if (BIND.natural && this.natPress(dt)) return; // 자연 바인드 실험 ②③: 막힌 칼을 노리던 자리로 밀고 · 독일은 느낌으로 감거나 밀고 들어감
+      if (this.natPress(dt)) return; // 자연 바인드 실험 ②③: 막힌 칼을 노리던 자리로 밀고 · 독일은 느낌으로 감거나 밀고 들어감
       if (!this.path.length) {
         // 유파 비기 (10/9): 베기 길이 끝난 순간 — 비기가 이어 칠 수(連環·Duplieren)가 있으면 곧장, 첫 칼이 닿았으면 連環三擊 을 낸다
         if (this.secret && this.secretStrikeEnd(d)) return;
@@ -1959,14 +1958,14 @@ export class AI {
         this.secretTrack();
       }
       this.checkBind();
-      if (BIND.natural && this.natPress(dt)) return; // 자연 바인드 실험 ②③: 손이 길 끝에 먼저 닿고 무거운 칼이 아직 날아가다 막힌 때 (맞닿음 대부분이 이 단계)
+      if (this.natPress(dt)) return; // 자연 바인드 실험 ②③: 손이 길 끝에 먼저 닿고 무거운 칼이 아직 날아가다 막힌 때 (맞닿음 대부분이 이 단계)
       // 칼이 다 지나가고(칼끝이 느려지고) 나서 다음을 정한다
       if ((this.timer <= 0 && me.tipVel.length() < 6) || this.timer < -0.2) this.afterStrike(d);
     }
   }
 
   /**
-   * 자연 바인드 실험 ②③ (BIND.natural — docs/strike/natural_bind_2026-10-11.md). 베는 중(phase strike) 칼끼리 맞닿으면:
+   * 자연 바인드 ②③ (본판 10/31 — docs/strike/natural_bind_2026-10-11.md). 베는 중(phase strike) 칼끼리 맞닿으면:
    *  ② 미는 뜻 — 베기 길을 끝까지 따라가 칼을 지나쳐 버리지 않고, 손 빠르기를 BIND.pressSpeed 로 줄여 노리던 자리(길의 가운데 점 = 상대 빈틈)까지 밀고 거기서 멈춰 민다(pressAim — 손이 길 끝에 먼저 닿은 뒤 무거운 칼이 막힌 follow 단계도).
    *   막는 쪽 칼이 버티면 두 서보가 맞서 칼이 붙어 있고, 힘·각이 한쪽으로 기울면 칼이 미끄러져 떨어진다(물리의 결과) → 떨어지면 원래 손 빠르기로 길을 마저 간다.
    *  ③ 느낌 (독일만 — Lichtenauer 「Fühlen」·「Indes」·「Vor/Nach, Schwach/Stark」): 맞닿고 BIND.feelT 뒤 한 번 —
@@ -2048,11 +2047,10 @@ export class AI {
   /**
    * 자연 바인드 ②′ 미는 뜻 w (사장님 10/31 19:xx 'ai가 밀지의 여부는 기본적으로 키되 성향에 따라 그 정도가 조절되면 좋겠네' — config BIND.will · 셈 · 수는 사장님 확인 전 · 확인표 3313 ~ 3315):
    *  공격 성향(pers.aggr × level.aggression — aggressiveTemper 와 같은 곱) × 맞받기 성향(pers.vor) × 지금 감정(분노 · 집념은 더 밀고 · 공포는 덜)을 [lo, hi] 로 자름.
-   *  치는 쪽 natPress: 밀기 손 빠르기 · 밀기 상한 × w / 막는 쪽 natHoldDef: 붙어 버팀 상한 × w. 성격 칸 · 감정 세기를 읽기만(난수 없음) · will.on 0 이면 1(10/11 실험 그대로)
+   *  치는 쪽 natPress: 밀기 손 빠르기 · 밀기 상한 × w / 막는 쪽 natHoldDef: 붙어 버팀 상한 × w. 성격 칸 · 감정 세기를 읽기만(난수 없음)
    */
   pressWill() {
     const W = BIND.will;
-    if (!W?.on) return 1;
     const a = 1 + W.aggrK * (this.pers.aggr * this.level.aggression - W.aggr0);
     const v = 1 + W.vorK * ((this.pers.vor ?? W.vor0) - W.vor0);
     const e = (1 + W.emoK * (this.anger ?? 0)) * (1 + W.emoK * (this.obsession ?? 0)) * (1 - W.emoK * (this.fear ?? 0));
@@ -2739,7 +2737,7 @@ export class AI {
         return true;
       }
     }
-    // 偏閃奏進 (11/15 사장님 '동방 유파 설계에 이것도 감안한 전투 스타일과 뛰어들기가 나오도록 해' — ai_plan_cn.js cnDive · 편섬 꺾음 CN_STEP.mode 'turn' 일 때만):
+    // 偏閃奏進 (11/15 사장님 '동방 유파 설계에 이것도 감안한 전투 스타일과 뛰어들기가 나오도록 해' — ai_plan_cn.js cnDive · 편섬 꺾음):
     //  굴려 나오면 막기 꼴(손은 막는 자리)로 aiT 동안 칼이 오는 반대쪽 옆으로 걸음을 꺾고(moveFeet cnAiTurn) → defend 맨 앞 cnDiveTick 이 곧장 앞 박찬 걸음 + 허리 베기
     const dive = this.planCn && !this.drillOut ? cnDive(this, th, d) : null;
     // 파고들기 (11/14 — this.dig): 다가가다(공격 준비 · 다가감) 받은 위협이면 접지 않고 칼로 받으며 계속 들어감 — 몫 digKeep × 띠 기울기 (파고들기 판에서만 굴림)
@@ -2853,7 +2851,7 @@ export class AI {
     const pcWait = !!this.pcPend || !!this.gk?.pend; // 격살 기다림도 막기 연환처럼 버릇 · 흐름 되받기를 걸지 않음 // 기다리는 동안(중국 갈라짐 · 독일 붙음 이어짐)은 맞닿음에 거는 버릇·흐름 되받기를 걸지 않는다 (막기 연환이 그 자리를 맡음)
     // 패시브 bindDef (이번 막기의 처음 맞닿음에 한 번): 받은 칼로 곧장 (返し·cavazione)
     if (!pcWait && this.passives.length && !this.defBindSeen && this.passiveBindDef(s, d)) return;
-    if (BIND.natural && this.natHoldDef(dt)) return; // 자연 바인드 실험 ②: 칼이 맞붙어 있는 동안은 막는 자리를 지키며 민다 (BIND.holdMax 까지)
+    if (this.natHoldDef(dt)) return; // 자연 바인드 실험 ②: 칼이 맞붙어 있는 동안은 막는 자리를 지키며 민다 (BIND.holdMax 까지)
     // 공격이 지나갔다(칼끝이 더는 오지 않고 손이 멈췄다) → 상대가 다시 자세를 잡기 전에 되받아 친다 (Nach)
     const swingOver = this.noThreat > QUIET_T && Math.hypot(s.hvx, s.hvy) < 2.5;
     if ((swingOver && this.timer < DEF_MIN) || this.timer <= 0) {
@@ -2881,7 +2879,7 @@ export class AI {
   parryCombo(d, dt) {
     const S = this.secret;
     const me = this.me;
-    const touch = BIND.natural ? bindTouch(me, this.foe) : bladesTouch(me, this.foe); // 자연 바인드 실험이면 넓은 맞부딪힘(2안)도 붙음으로 센다
+    const touch = bindTouch(me, this.foe); // 자연 바인드 실험이면 넓은 맞부딪힘(2안)도 붙음으로 센다
     const hurt = (me.wounds?.length ?? 0) > this.pcW0;
     const P = this.pcPend;
     if (P) {
@@ -4329,7 +4327,7 @@ export class AI {
     if (me.foes && !me.barge) [fwd, side] = this.teamFeet(fwd, side); // 2:2 (10/29): 둘러싸임 · 다른 상대 몸 막힘 · 같은 편 비킴 — 1:1 은 me.foes 가 없어 안 탐
     if (!this.foe.alive) fwd = side = 0;
     if (this.secretRun?.stage === 'stiff' || ((this.secretRun?.stage === 'mord' || this.secretRun?.stage === 'riso') && me.skill.sec?.stage === 'stiff')) fwd = side = 0; // 비기 경직: 걸음 없음 — 울타리 빠짐·근접 밀치기 스틱도 (10/10 20:5x) · 싱지르(10/24 — 검술 층 skill.sec 이 대본 · 굳음까지 몸을 쥔다) · 모르트슐라크(10/24 — 사람과 같게 굳음 동안만)
-    if (CN_STEP.mode && !armsBusy) [fwd, side] = cnAiTurn(this, fwd, side); // 동방 편섬 (11/15): 'turn' — 偏閃奏進이 꺾는 동안 옆 스틱 · 견줌 ⓐ ⓑ — 창에서 꺾음(띠 기울기 + 굴림)
+    if (!armsBusy) [fwd, side] = cnAiTurn(this, fwd, side); // 동방 편섬 (11/15): 'turn' — 偏閃奏進이 꺾는 동안 옆 스틱 · 견줌 ⓐ ⓑ — 창에서 꺾음(띠 기울기 + 굴림)
     me.stickX = side; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
     me.stickY = fwd;
     const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)

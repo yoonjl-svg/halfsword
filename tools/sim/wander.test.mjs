@@ -8,7 +8,7 @@ const memory = new Map();
 globalThis.localStorage = { getItem: (k) => memory.get(k) ?? null, setItem: (k, v) => memory.set(k, String(v)), removeItem: (k) => memory.delete(k) };
 let freshId = 0;
 const fresh = () => import(`../../src/lobby_progress.js?wander=${freshId++}`); // 새로고침 흉내 (모듈 메모리 비움)
-const { WANDER, WANDER_EXCLUSIVE, WANDER_BONUS, WANDER_BONUS_LABEL, WANDER_COINS, WANDER_STREAK, WANDER_HEAD, WANDER_NOTICE_TEXT, wanderReward, wanderStreakPct, wanderStreakBonus, normalizeWander, chooseWanderEncounter, legacyWanderStages } = await import('../../src/wander_rules.js');
+const { WANDER_EXCLUSIVE, WANDER_BONUS, WANDER_BONUS_LABEL, WANDER_COINS, WANDER_STREAK, WANDER_HEAD, WANDER_NOTICE_TEXT, wanderReward, wanderStreakPct, wanderStreakBonus, normalizeWander, chooseWanderEncounter, legacyWanderStages } = await import('../../src/wander_rules.js');
 const { STAGE_ORDER } = await import('../../src/stages.js');
 const { CHARACTERS_BY_ID } = await import('../../src/characters.js');
 const encounter = (foe = 'roland', stage = 'poseidon') => () => ({ stage, foe, foeWeapon: 'tizona' });
@@ -41,8 +41,6 @@ test('옛 저장 인정: 지점 앞 무대 · 한 바퀴(깬 수 ≥ 무대 수 
   assert.deepEqual(legacyWanderStages(R[5], 3, R), [], '깬 수가 지점보다 적으면(옛 판 · 시험 경로) 인정 안 함');
   assert.deepEqual(legacyWanderStages(null, 500, R), [], '지점이 없으면 증거가 없다');
   assert.deepEqual(legacyWanderStages('darkhall', 500, R), []);
-  assert.deepEqual(legacyWanderStages('poseidon', 120, R, { loop: false }), [], '스위치 끔 = 전달본 그대로');
-  assert.equal(WANDER.legacyLoop, true, '기본 켬 (사장님 18:3x 이미 다 깬 여정도 인정)');
 });
 
 test('옛 저장 옮기기: 한 번만 · 한 바퀴 돈 저장은 바로 열림 · 반쯤 온 저장은 남은 무대를 깨면 열림', async () => {
@@ -226,8 +224,7 @@ test('무효 판 (리뷰 2-3): 진행 중 판의 상대 · 무대가 지금 목�
   assert.equal(p.ensureWanderRun(() => { throw new Error('고친 판은 그대로'); }, valid).foe, 'roland');
 });
 
-test('도중에 그만두기: 기본 끔(일반 여정과 같게 — 정지 창 재대결 = 같은 대면 카드부터 · 나가기 = 같은 대면) · 켬이면 싸우던 판을 버리면 패배', async () => {
-  assert.equal(WANDER.quitAsLoss, false, '기본 끔 (사장님 18:5x 언제든 들어가는 자유 무대 — 감독 판단)');
+test('도중에 그만두기 (일반 여정과 같게 — 정지 창 재대결 = 같은 대면 카드부터 · 나가기 = 같은 대면)', async () => {
   const p = await reset();
   unlock(p);
   p.ensureWanderRun(encounter('heinrich'));
@@ -239,20 +236,6 @@ test('도중에 그만두기: 기본 끔(일반 여정과 같게 — 정지 창 
   assert.equal(run.cards, null);
   assert.equal(run.foe, 'heinrich', '같은 상대');
   assert.equal(p.readProgress().coins, coins, '금화 그대로');
-  assert.equal(p.settleAbandonedWander(() => 3), null, '싸움 표시가 없으면 버린 판이 아니다');
-  // 켬: 싸움을 시작한 표시 → 새로고침(모듈 새로) → 패배로 셈
-  assert.ok(p.markWanderFighting(true));
-  const q = await fresh();
-  const lost = q.settleAbandonedWander(() => 3);
-  assert.deepEqual(lost, { coins: -3, heads: 0, bonus: { coins: 0, heads: 0 }, streak: 0, round: 1 });
-  assert.equal(q.readProgress().wander.run.status, 'lost');
-  assert.equal(q.readProgress().coins, coins - 3);
-  assert.equal(q.settleAbandonedWander(() => 3), null, '한 번만');
-  // 정산이 끝나면 싸움 표시는 지워진다
-  q.ensureWanderRun(encounter('heinrich'));
-  q.markWanderFighting(true);
-  q.settleWander(true, () => 10);
-  assert.equal(q.readProgress().wander.run.fighting, false);
 });
 
 test('저장 실패: 방랑 거래는 이번 실행 동안 지킨다(보상 두 번 없음) · 다른 거래는 전처럼 옛 값으로 (리뷰 2-8) · 바깥에서 바꾸면 버린다', async () => {
@@ -354,8 +337,7 @@ test('저장 칸 거르기: 모양이 틀린 판은 버리고 나머지는 지�
   assert.equal(ok.run.fighting, false);
 });
 
-test('몸 상태 이어받기 (사장님 10/30 01:1x · 08:2x \'둘 다 켜\' — WANDER.resumeState 기본 켬): 진행 중 판에 사본 · 새로고침에도 남음 · 정산 · 재대결에 지움 · 끝난 판엔 안 적음', async () => {
-  assert.equal(WANDER.resumeState, true, '기본 켬 (주소 ?wanderResume=0 = 전 판)');
+test('몸 상태 이어받기 (사장님 10/30 01:1x · 08:2x \'둘 다 켜\'): 진행 중 판에 사본 · 새로고침에도 남음 · 정산 · 재대결에 지움 · 끝난 판엔 안 적음', async () => {
   let p = await reset();
   unlock(p);
   assert.equal(p.saveWanderResume({ v: 1 }), false, '판이 없으면 안 적음');

@@ -8,16 +8,15 @@ import { CHARACTERS_BY_ID } from '../../src/characters.js';
 const { BIND, realS } = CONFIG;
 const near = (a, b, e = 1e-9) => assert.ok(Math.abs(a - b) < e, `${a} != ${b}`);
 
-test('기본값: natural 1 · 반발 0.2(사장님) · 마찰 1.2 · 밀기 0.2 m/s · 상한 실제 1.5 s · 성향 셈 켬 [0.5, 1.5]', () => {
-  assert.equal(BIND.natural, 1);
+test('기본값: 반발 0.2(사장님) · 마찰 1.2 · 밀기 0.2 m/s · 상한 실제 1.5 s · 성향 셈 켬 [0.5, 1.5]', () => {
   assert.equal(BIND.restitution, 0.2);
   assert.equal(BIND.friction, 1.2);
   assert.equal(BIND.pressSpeed, 0.2);
   near(BIND.holdMax, realS(1.5));
-  assert.deepEqual(BIND.will, { on: 1, aggr0: 0.9, aggrK: 1.5, vor0: 0.4, vorK: 0.5, emoK: 0.5, lo: 0.5, hi: 1.5 });
+  assert.deepEqual(BIND.will, { aggr0: 0.9, aggrK: 1.5, vor0: 0.4, vorK: 0.5, emoK: 0.5, lo: 0.5, hi: 1.5 });
 });
 
-test('미는 뜻 w (pressWill): 가운데 1 · 공격 성향 · 맞받기 성향 · 분노 · 집념은 올리고 공포는 내림 · [lo, hi] 로 자름 · will.on 0 = 늘 1', () => {
+test('미는 뜻 w (pressWill): 가운데 1 · 공격 성향 · 맞받기 성향 · 분노 · 집념은 올리고 공포는 내림 · [lo, hi] 로 자름', () => {
   const G = newRound({ walls: true, seed: 1 });
   const A = G.ai;
   const set = (aggr, lv, vor, anger = 0, obs = 0, fear = 0) => {
@@ -37,42 +36,26 @@ test('미는 뜻 w (pressWill): 가운데 1 · 공격 성향 · 맞받기 성향
   near(set(1, 0.9, 0.4, 0, 0, 0.5), 0.75);
   assert.equal(set(1.3, 1.0, 0.8, 1, 1), BIND.will.hi); // 위 끝
   assert.equal(set(0.85, 0.6, 0.15, 0, 0, 1), BIND.will.lo); // 아래 끝
-  const on = BIND.will.on;
-  BIND.will.on = 0;
-  try {
-    assert.equal(set(1.3, 1.0, 0.8, 1, 1), 1);
-  } finally {
-    BIND.will.on = on;
-  }
   G.world.free();
 });
 
-test('칼 면 (combat.js armSteel): 떨어져 있으면 반발 min(제 값, 0.2) · 제 마찰 / 맞닿은 동안 반발 0 · 마찰 1.2 — 덩굴 채찍 마디는 제 값(0.08 · 0.65) 그대로 · 끄면 전 판(재질 값 · 마찰 그대로)', () => {
+test('칼 면 (combat.js armSteel): 떨어져 있으면 반발 min(제 값, 0.2) · 제 마찰 / 맞닿은 동안 반발 0 · 마찰 1.2 — 덩굴 채찍 마디는 제 값(0.08 · 0.65) 그대로', () => {
   const look = (G, f) => f.swordColliders.map((c) => [+c.restitution().toFixed(3), +c.friction().toFixed(3)]);
-  for (const nat of [1, 0]) {
-    const keep = BIND.natural;
-    BIND.natural = nat;
-    try {
-      for (const weapon of ['longsword', 'druid_whip']) {
-        const G = newRound({ walls: true, seed: 3, weapon, weapon2: 'longsword' });
-        G.step();
-        const C = G.combat;
-        const base = weapon === 'druid_whip' ? (i) => (i >= 2 ? [0.08, 0.65] : [0.35, 0.4]) : () => [0.7, 0.4];
-        // 끔(전 판 — 바이트 같음)은 한 번 맞닿은 뒤 모든 칼 부품 반발을 무기 재질 값(G.player.restitution)으로 되돌림 — 채찍 마디도 (10/31 전부터의 꼴 그대로 둠)
-        const apart = (after) => look(G, G.player).forEach(([e, mu], i) => { const [e0, mu0] = base(i); near(e, nat ? Math.min(e0, BIND.restitution) : after ? G.player.restitution : e0, 1e-6); near(mu, mu0, 1e-6); });
-        apart(false);
-        C.bladeLast = C.stepNo; // 칼끼리 맞닿음 (이번 스텝)
-        for (const f of C.fighters) C.bladeLastOf.set(f, C.stepNo); // 동시 대전 병합: 실제 칼 접촉은 싸움꾼마다 시각을 적는다(combat.js clashGroup)
-        C.armSteel();
-        look(G, G.player).forEach(([e, mu], i) => { near(e, 0); near(mu, nat ? BIND.friction : base(i)[1], 1e-6); });
-        C.stepNo += CONFIG.STEEL.rearmSteps + 1; // 떨어진 지 rearmSteps 넘음
-        C.armSteel();
-        apart(true);
-        G.world.free();
-      }
-    } finally {
-      BIND.natural = keep;
-    }
+  for (const weapon of ['longsword', 'druid_whip']) {
+    const G = newRound({ walls: true, seed: 3, weapon, weapon2: 'longsword' });
+    G.step();
+    const C = G.combat;
+    const base = weapon === 'druid_whip' ? (i) => (i >= 2 ? [0.08, 0.65] : [0.35, 0.4]) : () => [0.7, 0.4];
+    const apart = () => look(G, G.player).forEach(([e, mu], i) => { const [e0, mu0] = base(i); near(e, Math.min(e0, BIND.restitution), 1e-6); near(mu, mu0, 1e-6); });
+    apart();
+    C.bladeLast = C.stepNo; // 칼끼리 맞닿음 (이번 스텝)
+    for (const f of C.fighters) C.bladeLastOf.set(f, C.stepNo); // 동시 대전 병합: 실제 칼 접촉은 싸움꾼마다 시각을 적는다(combat.js clashGroup)
+    C.armSteel();
+    look(G, G.player).forEach(([e, mu], i) => { near(e, 0); near(mu, BIND.friction, 1e-6); });
+    C.stepNo += CONFIG.STEEL.rearmSteps + 1; // 떨어진 지 rearmSteps 넘음
+    C.armSteel();
+    apart();
+    G.world.free();
   }
 });
 

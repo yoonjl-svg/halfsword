@@ -2,7 +2,7 @@
 //  npx vite build --config tools/shop_page/vite.config.mjs --outDir <폴더> --emptyOutDir
 //   → <폴더> 를 개발 가지 위 따로 가지(wk/shop-page)의 public/shop/ 에 그대로 넣는다 (/saengsa/ · /wb/ 시험판과 같은 꼴 — 본 게임 오프라인 저장에선 뺌: tools/pwa/build.mjs EXCLUDED_DIRS).
 //  본판 vite.config.js 와 다른 점:
-//   - VITE_SHOP_TEST=1 → config SHOP.testMode · SHOP.enabled 참(상점 켬 · 주소 스위치 · '다음 갱신') · src/shop_test.js 가 저장 열쇠를 가름('stillness.test.shop.') · pwa.js 등록 안 함 ·
+//   - VITE_SHOP_TEST=1 → config SHOP.testMode 참(주소 스위치 · '다음 갱신') · src/shop_test.js 가 저장 열쇠를 가름('stillness.test.shop.') · pwa.js 등록 안 함 ·
 //     게임이 뜨면 곧바로 대기실 상점 칸(game_entry.js)
 //   - 게임 페이지(index.html) 하나만 · 소스맵 없음 · base './'(하위 경로에서 그대로 열림)
 //   - public 은 게임이 쓰는 것만: fonts · sfx · ui · 탭 아이콘 셋을 .tmp/shop_public 에 모아 그 폴더를 public 으로 (옛 실험판 · 검토용 · 다른 시험판 · 매니페스트는 뺌)

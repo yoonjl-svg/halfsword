@@ -21,7 +21,6 @@ const tierCount = (items) => items.reduce((m, it) => ((m[it.tier] = (m[it.tier] 
 const H = 3600e3;
 
 test('사장님 값이 config SHOP 에 그대로 (10/30 19:0x · 10/31 00:2x) · 본판 켬 · 다음 갱신 머리 1', () => {
-  assert.equal(SHOP.enabled, true); // 사장님 10/31 00:2x '게임 본판에 상점 열어.' (전: 시험판만)
   assert.equal(SHOP.testMode, false); // 시험판 스위치(?shopAlter · ?shopSlot · ?horns · ?horn)는 시험판 빌드만
   assert.equal(SHOP.rerollHeads, 1); // 사장님 10/31 00:2x "'다음 갱신'도 재화가 필요해. 머리 1개로 하자." 
   assert.ok([2, 3].includes(SHOP.items)); // 파는 수 2 또는 3 (10/31 02:xx 견주기 — 사장님 확인 전)
@@ -35,7 +34,6 @@ test('사장님 값이 config SHOP 에 그대로 (10/30 19:0x · 10/31 00:2x) ·
   // 감독 기본 (사장님 확인 전)
   assert.equal(SHOP.coinStep, 10);
   assert.equal(SHOP.slotTzHours, 9); assert.equal(SHOP.slotStartHour, 0);
-  assert.equal(SHOP.redrawEmptyTier, true);
   assert.deepEqual(SHOP.hornKings, ['roland', 'bernardo', 'artoria', 'artoria_mad']);
   for (const id of SHOP.hornKings) assert.ok(CHARACTERS_BY_ID[id], `왕 id ${id} 가 인물 표에 있다`);
   for (const id of ['roland_mad', 'bernardo_mad']) assert.equal(CHARACTERS_BY_ID[id], undefined, `${id} 는 없다 — 그래서 왕 목록에 없음`);

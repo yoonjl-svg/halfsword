@@ -17,7 +17,7 @@
 //  10/23 방랑 (main.js getWanderStatus · launchWander — docs/import/wander_heroes_import_2026-10-23.md): 'Stage 입장' 아래 '방랑' 단추(같은 폭 · 다른 색 — lobby.css .wander) ·
 //   사장님 18:3x '버튼 밑에 설명 쓰는 거 싫음' — 단추 밑 글 없음. 잠겼을 때 누르면 위 알림 줄에 열리는 조건 · 깬 무대 수 · 판이 남아 있으면 '방랑 이어가기'
 //   이미 다 깬 사람(옛 저장 인정 — 저장 wander.noticeSeen 없음)은 대기실에 처음 들어올 때 알림 창 한 번(스킬트리 알림 창과 같은 꼴 · '확인'은 방랑 단추 색 — 사장님 10/24 00:3x)
-//  10/30 상점 (사장님 19:0x — config.js SHOP · shop_panel.js): '상점' 칸 = 상인 프로필 · 대사 · 파는 무기 둘 · '⏳ 1:29:59' · '다음 갱신'(머리 1) (SHOP.enabled — 10/31 00:2x 본판 켬 · 끄면 전 빈 안내 한 줄) ·
+//  10/30 상점 (사장님 19:0x — config.js SHOP · shop_panel.js): '상점' 칸 = 상인 프로필 · 대사 · 파는 무기 둘 · '⏳ 1:29:59' · '다음 갱신'(머리 1) (10/31 00:2x 본판 켬) ·
 //   뿔피리는 상점 칸 제목 줄 지갑에(내 정보 칸은 좁아 금화 · 머리만 그대로) · 아이템 칸 무기 = 가진 무기 모두(시작 무기 + 산 무기 — owned_weapons.js · 산 무기도 장착) · 시험판은 상점 칸으로 바로 열림(tab)
 //  10/29 생사전 (사장님 14:1x 요지 — 탭 '이벤트'를 '생사전'으로 · docs/design/saengsa_2026-10-29.md): 넷째 탭 '이벤트' → '생사전'(열쇠 tabEvent · panelEvent · 차례 그대로) ·
 //   ③ 칸 = 부제 '3인의 맹약' · 일정 알약 · saengsa_panel.js 판(설명 · 내 팀 · 안내 · '생사전 입장') · 입장 → onSaengsa(game_entry.js showSaengsa)
@@ -36,7 +36,6 @@ import { convertSeals, takeSealNotice } from './seal_coins.js';
 import { migrateSkillBooks, migrateItalianSlots, takeTreeNotice, treeNoticeText } from './skill_tree_store.js'; // 옛 스킬북 → 스킬트리 (10/21 — 한 번)
 import { getWeapon, TIER_LABEL, weaponSpecText } from './weapons.js';
 import { COIN_ICON, POUCH_ICON, HORN_ICON } from './wallet_icons.js'; // 금화 · 머리 그림 — 결과 창 금화 줄과 같은 그림 · 뿔피리(10/30 상점)
-import { SHOP } from './config.js';
 import shopStyle from './shop.css?inline'; // 상점 칸 (10/30)
 import { mountShopPanel } from './shop_panel.js';
 import { SHOP_TEXT } from './shop_text.js';
@@ -73,8 +72,7 @@ const CHECK = '<svg class="check" viewBox="0 0 12 12" aria-hidden="true" fill="n
 
 export function mountLobby({ root, game, choice, onDepart, onWander, onBack, onSaengsa, tab: firstTab = null }) {
   const ctx = game.getSkillBookContext?.() ?? { test: false };
-  const shopOn = SHOP.enabled; // 상점 (10/30 — 본판은 끔 · 시험판 켬)
-  root.innerHTML = `<style>${uiStyle}\n${style}\n${saengsaStyle}\n${shopOn ? shopStyle : ''}\n${typeStyle}</style><main class="lobby" aria-labelledby="lobbyHeading">
+  root.innerHTML = `<style>${uiStyle}\n${style}\n${saengsaStyle}\n${shopStyle}\n${typeStyle}</style><main class="lobby" aria-labelledby="lobbyHeading">
     <canvas class="lobby-backdrop" id="lobbyGrove" aria-hidden="true"></canvas><div class="lobby-shade" aria-hidden="true"></div>
     <header class="lobby-header"><h1 id="lobbyHeading" tabindex="-1"><span>대기실</span></h1><p id="lobbyStatus" class="lobby-status" role="status"></p><button id="lobbyBack" class="secondary small on-art utility">첫 화면</button></header>
     <div class="lobby-columns">
@@ -97,9 +95,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, onS
           <div class="item-detail" id="itemDetail" hidden><p class="item-head"><b id="itemName"></b><span id="itemRarity"></span></p><p id="itemDescription"></p><div class="equipment-actions"><button type="button" id="equipItem" disabled>장착</button><button type="button" id="unequipItem" disabled>해제</button></div></div></div>
           <p id="equipmentStatus" class="sr-only" role="status"></p>
         </div>
-        <div role="tabpanel" id="panelShop" aria-labelledby="tabShop" hidden>${shopOn
-          ? `<div class="panel-heading"><h2>${SHOP_TEXT.title}</h2><span class="wallet panel-wallet">${COIN_ICON}<b id="shopCoins"></b>${POUCH_ICON}<b id="shopHeads"></b>${HORN_ICON}<b id="shopHorns"></b></span></div><div id="shopHost" class="shop-host"></div>`
-          : `<div class="panel-heading"><h2>상점</h2></div><p class="empty-panel">${SHOP_TEXT.closed}</p>`}</div>
+        <div role="tabpanel" id="panelShop" aria-labelledby="tabShop" hidden><div class="panel-heading"><h2>${SHOP_TEXT.title}</h2><span class="wallet panel-wallet">${COIN_ICON}<b id="shopCoins"></b>${POUCH_ICON}<b id="shopHeads"></b>${HORN_ICON}<b id="shopHorns"></b></span></div><div id="shopHost" class="shop-host"></div></div>
         <div role="tabpanel" id="panelSkills" aria-labelledby="tabSkills" hidden><div class="panel-heading"><h2>스킬</h2><span class="wallet panel-wallet">${COIN_ICON}<b id="skillCoins"></b>${POUCH_ICON}<b id="skillHeads"></b></span></div><div id="skillTreeHost" class="skill-tree-host"></div><p id="skillStatus" class="sr-only" role="status"></p></div>
         <div role="tabpanel" id="panelEvent" aria-labelledby="tabEvent" hidden><div class="panel-heading"><h2>${SAENGSA_TEXT.title}<span class="sg-sub">${SAENGSA_TEXT.subtitle}</span></h2><span class="sg-state" id="saengsaState"></span></div><div id="saengsaHost" class="saengsa-host"></div></div>
       </section>
@@ -126,10 +122,9 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, onS
     $('lobbyLevel').textContent = `Lv.${progress.level}`; // 레벨은 글 그대로 (금색 아님 — 강조 색은 누를 것 · 꼭 볼 것만)
     $('lobbyCoins').textContent = $('skillCoins').textContent = progress.coins.toLocaleString('ko-KR');
     $('lobbyHeads').textContent = $('skillHeads').textContent = progress.heads.toLocaleString('ko-KR');
-    if (shopOn) { // 상점 칸 지갑 — 금화 · 머리 · 뿔피리 (10/30 · 내 정보 지갑에는 뿔피리를 넣지 않음: 844 × 390 내 정보 칸 안 폭 약 130 px 에 세 재화가 들지 않는다)
-      $('shopCoins').textContent = progress.coins.toLocaleString('ko-KR'); $('shopHeads').textContent = progress.heads.toLocaleString('ko-KR');
-      $('shopHorns').textContent = progress.horns.toLocaleString('ko-KR');
-    }
+    // 상점 칸 지갑 — 금화 · 머리 · 뿔피리 (10/30 · 내 정보 지갑에는 뿔피리를 넣지 않음: 844 × 390 내 정보 칸 안 폭 약 130 px 에 세 재화가 들지 않는다)
+    $('shopCoins').textContent = progress.coins.toLocaleString('ko-KR'); $('shopHeads').textContent = progress.heads.toLocaleString('ko-KR');
+    $('shopHorns').textContent = progress.horns.toLocaleString('ko-KR');
   }
   // ── 호칭 내림 상자 (사장님 10/16 15:3x ⑥ "'여행자'는 내림박스 같은 기능을 만들어서 호칭 선택할 수 있게 해" ·
   //    16:0x "호칭 내림 상자를 누르면 아래로 열리는 투명도를 가진 박스에 이미 가진 호칭인 여행자가 보이고, '호칭 없음' 같은 시스템 알림은 거기서 빼자"):
@@ -219,7 +214,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, onS
   const equipped = { weapon: readLobbyEquipment(), head: readLobbyArmor(), neck: readLobbyNeck() };
   const tree = mountSkillTree($('skillTreeHost'), { test: ctx.test, onWallet: () => { renderWallet(); showTitleNotice(); }, announce: text => { $('skillStatus').textContent = text; } }); // 칸을 사서 호칭을 얻으면 스킬 화면 위에 알림 창
   // 상점 칸 (10/30): 무기를 사면 지갑 · 레벨(얻은 것 하나 = Lv +1)을 다시 그림 · 알림 줄에 '구입했습니다.'
-  const shop = shopOn ? mountShopPanel($('shopHost'), { status: (text, tone) => status(text, tone), onWallet: () => { renderWallet(); showTitleNotice(); } }) : null;
+  const shop = mountShopPanel($('shopHost'), { status: (text, tone) => status(text, tone), onWallet: () => { renderWallet(); showTitleNotice(); } });
   // 생사전 칸 (10/29): 입장 → 생사전 화면(onSaengsa) · 신청하면 금화가 줄어 내 정보 칸을 다시 그림
   const saengsa = mountSaengsaPanel($('saengsaHost'), { chip: $('saengsaState'), status: (text, tone) => status(text, tone), onWallet: () => renderWallet(), onEnter: (opts) => { if (onSaengsa && !departing) onSaengsa(opts); } }); // opts.fresh = 막 신청함 → 내 첫 경기 화면 (사장님 11/12 바로 시작)
   const tabs = [...root.querySelectorAll('.lobby-tabs [role=tab]')]; // 차례 = 2 × 2 칸 차례(윗줄 아이템 · 상점 · 아랫줄 스킬북 · 이벤트) — ↑ ↓ 는 같은 칸 줄, ← → 는 다음 · 앞
@@ -329,12 +324,11 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, onS
   });
   listen($('lobbyBack'), 'click', onBack);
   // ── 방랑 단추 (10/23): 잠겼으면 흐리게(aria-disabled — 눌러서 열리는 조건을 위 알림 줄에) · 판이 남아 있으면 '방랑 이어가기' ──
-  const wander = game.getWanderStatus?.() ?? { unlocked: false, cleared: 0, total: 30, ongoing: false, name: '방랑', notice: false, forfeit: null };
+  const wander = game.getWanderStatus?.() ?? { unlocked: false, cleared: 0, total: 30, ongoing: false, name: '방랑', notice: false };
   const wanderBtn = $('lobbyWander');
   wanderBtn.textContent = wander.unlocked && wander.ongoing ? `${wander.name} 이어가기` : wander.name;
   wanderBtn.setAttribute('aria-disabled', String(!wander.unlocked));
   if (!wander.unlocked) wanderBtn.setAttribute('aria-label', `${wander.name} (잠김 · 깬 무대 ${wander.cleared}/${wander.total})`);
-  if (wander.forfeit) status(`싸움 도중에 나간 방랑을 패배로 셈했습니다. (금화 ${wander.forfeit.coins < 0 ? `−${-wander.forfeit.coins}` : '±0'})`); // 도중에 그만두기 켬(WANDER.quitAsLoss)일 때만
   // 알림 창 (이미 다 깬 사람 — 한 번): 스킬트리 알림 창이 떠 있으면 그 창을 닫은 뒤
   const showWanderNotice = () => {
     $('wanderText').textContent = WANDER_NOTICE_TEXT;
@@ -378,7 +372,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, onS
   $('lobbyHeading').focus();
   return {
     tree, // 시험·사진 도구: lobby.tree.show('german', 2)
-    shop, // 시험·사진 도구: lobby.shop.stock (상점 켬일 때만)
+    shop, // 시험·사진 도구: lobby.shop.stock
     destroy() { events.abort(); tree.destroy(); shop?.destroy(); saengsa.destroy(); $('nameDialog').close(); $('treeDialog').close(); $('wanderDialog').close(); $('titleDialog').close(); grove.dispose(); },
   };
 }

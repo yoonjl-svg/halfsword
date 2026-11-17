@@ -361,7 +361,7 @@ export function saveWanderLoadout({ weapon, cards, lastWeapon }) {
   return save(true);
 }
 /**
- * 몸 상태 이어받기 (WANDER.resumeState — 사장님 10/30 01:1x '이어하면 그 상황 그대로' · 감독 안 (b)): 진행 중 판에 두 몸의 사본을 적는다 · null 이면 지움.
+ * 몸 상태 이어받기 (사장님 10/30 01:1x '이어하면 그 상황 그대로' · 감독 안 (b)): 진행 중 판에 두 몸의 사본을 적는다 · null 이면 지움.
  *  resume = { v 1, foe, foeWeapon, player: 사본, enemy: 사본 } (src/fight_snapshot.js) · 돌려줌: 저장했나
  */
 export function saveWanderResume(resume) {
@@ -371,7 +371,7 @@ export function saveWanderResume(resume) {
   if (resume) run.resume = resume; else delete run.resume;
   return save(true);
 }
-/** 정지 창 '재대결'(10/24 02:4x — 전 '처음부터 다시') (WANDER.quitAsLoss 끔 — 일반 여정과 같게): 같은 대면을 카드부터 다시 — 고른 무기 · 카드만 지운다 */
+/** 정지 창 '재대결'(10/24 02:4x — 전 '처음부터 다시') (일반 여정과 같게): 같은 대면을 카드부터 다시 — 고른 무기 · 카드만 지운다 */
 export function resetWanderLoadout() {
   readProgress();
   const run = session.wander.run;
@@ -379,23 +379,6 @@ export function resetWanderLoadout() {
   Object.assign(run, { weapon: null, cards: null, fighting: false });
   delete run.resume; // 재대결 = 처음 몸 (몸 상태 이어받기 사본도 지움 — 방랑 정지 창엔 재대결이 없지만 이 길로 오면)
   return save(true);
-}
-/** 싸움이 시작됨 / 끝남 (WANDER.quitAsLoss 켬 — main.js beginFight): 싸우는 동안 판을 버리면(새로고침 · 대기실 · 재대결) 다음에 패배로 셈한다 */
-export function markWanderFighting(on = true) {
-  readProgress();
-  const run = session.wander.run;
-  if (!run || run.status !== 'active' || run.fighting === on) return false;
-  run.fighting = on;
-  return save(true);
-}
-/** 싸우던 중 버린 판이 있으면(WANDER.quitAsLoss 켬) 패배로 셈한다 — 돌려줌: 그 판 보상(settleWander 와 같은 꼴 + round) · 없으면 null */
-export function settleAbandonedWander(roll = rollInt) {
-  readProgress();
-  const run = session.wander.run;
-  if (!run || run.status !== 'active' || !run.fighting) return null;
-  const round = run.round;
-  const reward = settleWander(false, roll);
-  return reward && { ...reward, round };
 }
 /** 방랑 판에서 상대의 목을 벰 (main.js COMBAT_HOOKS.onDecapitate): 판마다 한 번 머리 WANDER_HEAD(1 — 여정과 같음 · 10/24 02:4x, 전 2). 판이 끝난 뒤(쓰러뜨린 뒤) 벤 목도 센다 — 여정과 같게(리뷰 2-9). 돌려줌: 이번에 더했나 */
 export function awardWanderHead() {
@@ -425,7 +408,7 @@ export function settleWander(win, roll = rollInt) {
   noteEarned(session.coins - before, reward.heads); // 대부호 · 도살자 — 특별 몫 포함 · 진 판 차감은 빼지 않음
   run.status = win ? 'won' : 'lost';
   run.fighting = false;
-  delete run.resume; // 끝난 판은 이어받을 몸이 없다 (WANDER.resumeState)
+  delete run.resume; // 끝난 판은 이어받을 몸이 없다 (몸 상태 이어받기)
   if (win) run.wins++;
   run.reward = { coins: session.coins - before, heads: reward.heads + (run.headTaken ? WANDER_HEAD : 0), bonus: reward.bonus, streak: reward.streak };
   save(true);

@@ -40,17 +40,8 @@ export const WANDER_NOTICE_TEXT = '모든 무대를 깨서 방랑이 열렸습�
 /** 방랑 판에서 상대의 목을 베면 머리 — 일반 여정과 같은 1 (사장님 10/24 02:4x '목도 백린 전사 빼고는 1개씩만 줘' — 전 2) */
 export const WANDER_HEAD = 1;
 
-/**
- * 스위치 (새 값은 사장님 확인 전 — docs/strike/owner_defaults_table.md 2291 ~ 2300). 주소로도 바꾼다(main.js — ?title=1 과 함께 · 예 ?title=1&wanderQuit=1)
- *  quitAsLoss: 싸움 도중 '재대결'(정지 창 — 10/24 02:4x 전 '처음부터 다시') · 대기실로 나가기 · 새로고침을 패배로 친다(감독 첫 권고). 기본 끔 — 일반 여정과 같게
- *   (재대결 = 같은 대면을 카드부터 다시 · 나가기 · 새로고침 = 금화 그대로 · 같은 대면을 이어 감). 켜면 판과 판 사이 · 카드 고르는 동안만 이어 간다
- *  legacyLoop: 옛 저장 인정 — 누적 깬 수가 '한 바퀴(무대 수) + 이어하기 지점 자리' 이상이면 30 무대를 모두 깬 것으로 친다 (사장님 10/23 18:3x '이미 다 깬 여정도 인정')
- *  resumeState: 몸 상태 이어받기 (사장님 10/30 01:1x '방랑과 생사전은 일시정지 후엔 재개랑 대기실로 가기만 할 수 있고 재시작은 못하게 해. 이어하면 그상황 그대로.(이 기능 가능해? 불가하면 재개만 되도록.)' — 감독 안 (b) · 확인표 3001) — 사장님 10/30 08:2x "몸 상태 이어받기 방랑 · 생사전 둘 다 켜." → 기본 켬
- *   켜면 싸우는 동안 몸 상태(피 · 출혈 · 상처 · 팔다리 · 기력 · 무기 부러짐 · 쓴 비기 · 남은 부활 — src/fight_snapshot.js)를 진행 중 판 run.resume 에 적어 두고(2 초마다 · 대기실로 나갈 때 · 화면을 떠날 때)
- *   '방랑 이어가기'(대기실 · 새로고침 · 앱을 다시 켬)로 같은 대면을 열면 두 몸에 입힌다 — 자리 · 속도 · 휘두르던 칼 · AI 기억은 새 판 시작 그대로. 판이 끝나면(settleWander) 지움.
- *   끄면 지금처럼 같은 대면을 처음 몸으로 다시 연다. quitAsLoss 를 켜면 그쪽이 먼저(나가면 패배)
- */
-export const WANDER = { quitAsLoss: false, legacyLoop: true, resumeState: true };
+// 늘 (11/17 스위치 걷음 — docs/strike/owner_defaults_table.md 2291 ~ 2300): 도중에 그만두기는 패배로 치지 않음(일반 여정과 같게 — 재대결 = 같은 대면을 카드부터 다시 · 나가기 · 새로고침 = 같은 대면을 이어 감) ·
+//  옛 저장 인정에 한 바퀴 셈 (사장님 10/23 18:3x '이미 다 깬 여정도 인정') · 몸 상태 이어받기 (사장님 10/30 01:1x '이어하면 그 상황 그대로' — src/fight_snapshot.js · main.js)
 
 /** 이 방랑에서 win 번째 승리의 연승 보너스 % (정수 — 3승째 15 · 4승째 20 …) · from 번째 전이면 0 */
 export function wanderStreakPct(win) {
@@ -113,14 +104,14 @@ export function chooseWanderEncounter(stages, foes, random = Math.random) {
  * 옛 저장에서 깬 무대를 찾는다 (방랑이 들어오기 전 저장 — 무대별 기록이 없다). 증거는 두 가지뿐이다:
  *  이어하기 지점 checkpointStage(stillness.journey.checkpoint.v1 — 순서대로 깨야 넘어가는 자리)와 누적 깬 수 clears(stillness.journeyClears.v1 — 이긴 판마다 +1).
  *  ① 지점 앞의 무대: 지점이 i 번째(0 부터)이고 깬 수가 i 이상이면 0 ~ i−1 번째를 깬 것으로 친다 (전달본 그대로)
- *  ② 한 바퀴(legacyLoop): 깬 수가 무대 수 + i 이상이면 모두 깬 것으로 친다 — 마지막 무대를 깨면 지점이 다시 1 번으로 돌아가므로,
+ *  ② 한 바퀴: 깬 수가 무대 수 + i 이상이면 모두 깬 것으로 친다 — 마지막 무대를 깨면 지점이 다시 1 번으로 돌아가므로,
  *     한 바퀴 돈 저장은 지점이 앞쪽이어도 깬 수가 그만큼 쌓여 있다
  *  지점이 없으면(첫 화면 · 대기실을 거치지 않은 옛 판만 한 저장) 증거가 없어 아무것도 치지 않는다
  */
-export function legacyWanderStages(checkpointStage, clears, required, { loop = WANDER.legacyLoop } = {}) {
+export function legacyWanderStages(checkpointStage, clears, required) {
   const index = required.indexOf(checkpointStage);
   if (index < 0 || !Number.isSafeInteger(clears) || clears <= 0) return [];
-  if (loop && clears >= required.length + index) return [...required];
+  if (clears >= required.length + index) return [...required];
   if (index > 0 && clears >= index) return required.slice(0, index);
   return [];
 }
