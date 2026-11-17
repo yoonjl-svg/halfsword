@@ -174,5 +174,5 @@ export function readGuard(foe, s) {
 
 /** 재기 칸 (판정에 안 씀) */
 export function glStats() {
-  return { beat: 0, beatSkip: 0, beatFire: 0, enter: 0, read: 0, go: 0, th: 0, hit: 0, end: 0 };
+  return { beat: 0, beatSkip: 0, beatFire: 0, enter: 0, go: 0, debana: 0, th: 0, hit: 0, end: 0 };
 }

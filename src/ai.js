@@ -59,7 +59,7 @@ import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cn
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
 import { DIG_PROTO, AI_ARC, PHYSICS, GUARD_LINE } from './config.js';
 import { icpArm, icpAim, coverTech, icpStats, discHold, anticAim, anticRoll, swingMark, swingTurn } from './ai_intercept.js'; // 막기 2.0 읽기 묶음 (11/17 — config AI_INTERCEPT · [사장님 11/17 결정] 기본 판): 가로막기 · 덮는 맞받기 · 공격 절제 · 미리 줄 닫기 · 새 휘두름
-import { msTick, msLine, msChainWant, msHold, msFeetV, msWdEnd, msInsideHold, msAttackStart, msTempoFeet, msWindupFeet, msRead, okoriStart, okoriFrom, okoriTick, okoriEnd, okoriBody, okoriHold, okoriCue } from './ai_measure.js'; // 간격과 박자 · 오코리 (11/17 — config MEASURE · OKORI · [사장님 11/17 결정] 기본 판)
+import { msTick, msLine, msDebana, msChainWant, msHold, msFeetV, msWdEnd, msInsideHold, msAttackStart, msTempoFeet, msWindupFeet, msRead, okoriStart, okoriFrom, okoriTick, okoriEnd, okoriBody, okoriHold, okoriCue } from './ai_measure.js'; // 간격과 박자 · 오코리 (11/17 — config MEASURE · OKORI · [사장님 11/17 결정] 기본 판)
 import { nearGuard, guardsOf, lineW, readGuard, glStats } from './guard_line.js'; // ③ 자세 → 칼길 (11/17 — config GUARD_LINE · [사장님 11/17 결정] 기본 판): 보이는 손 자세 → 기술 무게 · 상대 자세 → 미리 덮을 줄
 import { aiKitOf } from './skill_tree_data.js'; // AI 숙련도 = 칸 (11/16 — config AI_KIT · 무기가 바뀌면 kitRefresh)
 import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 눈 (11/15 — 사장님 11/16 묶음 P) // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
@@ -1304,6 +1304,7 @@ export class AI {
   /**
    * ③ 자세 → 칼길 — 읽기 (11/17 · [사장님 11/17 결정 3 · 4]): 간 보는 중 상대가 걸어 들어오면(빈틈 읽기 '들어옴'과 같은 0.45 m/s · 내 선 + 0.3 안 — 간격과 박자 msRead 와 같은 자리)
    *  늦게 본 상대 손 자리의 자세(nearGuard — 공격하는 쪽과 같은 함수 · 사람 상대도)가 줄을 약속하면 들어옴 하나에 한 번 read 몫으로 굴려 그 기본 줄을 미리 덮는다(미리 줄 닫기 꼴 anticGo).
+   *  덮기 전에 간격과 박자 걸음에 치기(msDebana — 상대가 내 칼끝 + 0.3 안이면 debana × 띠 기울기)를 msRead 와 같은 차례로 굴림 — 나오면 그 걸음에 침.
    *  휘두름이 보이면 보통 가로막기(defend 의 icpAim)가 실제 칼 길로 고쳐 겨눔 — 틀린 읽기는 손을 옮기는 시간을 그대로 냄. 걸쇠 = preThreat · anticStep 과 같은 EV_REARM
    */
   guardRead(s, d, dt) {
@@ -1323,6 +1324,7 @@ export class AI {
     S.enter++;
     if (!(Math.random() < this.level.read)) return false;
     S.go++;
+    if (msDebana(this, s, d)) return void S.debana++, true; // 간격과 박자 걸음에 치기 (11/17 — msRead 와 같은 차례: 반응 굴림 → 걸음에 치기 → 줄 닫기)
     this.anticGo(s, G.line);
     return true;
   }

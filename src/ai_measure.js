@@ -144,16 +144,7 @@ export function msRead(ai, s, d, dt, rearm) {
   if (!roll(tilt(ai, MEASURE.read))) return false;
   S.read++;
   if (ai.me.armed) {
-    if (d < ai.M.reach + 0.3) {
-      S.debanaRoll++;
-      if (roll(tilt(ai, MEASURE.debana))) {
-        const t = ai.pickTech(s, 'stepin');
-        if (t && ai.startAttack(t, 'stepin', { noFeint: true, fastChamber: true })) {
-          S.debana++;
-          return true;
-        }
-      }
-    }
+    if (msDebana(ai, s, d)) return true;
     ai.anticGo(s);
     S.close++;
     return true;
@@ -161,6 +152,24 @@ export function msRead(ai, s, d, dt, rearm) {
   S.back++;
   ai.startWithdraw(0.4);
   return true;
+}
+
+/**
+ * 걸음에 치기 (데바나 — MEASURE.debana · msRead 에서 따로 뺌 11/17 · 셈 · 차례 그대로): 들어옴에 반응하기로 한 뒤 상대가 내 칼끝 거리 + 0.3 안이면
+ *  debana × 띠 기울기로 굴려 그 걸음에 침 → 쳤으면 true (안 나오거나 공격 문이 거절하면 false — 부른 쪽이 줄을 닫음).
+ *  ③ 자세 → 칼길 읽기(ai.js guardRead — 같은 들어옴을 먼저 받음)도 같은 차례로 부름: 읽기 굴림 → 걸음에 치기 → 읽은 자세의 줄 닫기
+ */
+export function msDebana(ai, s, d) {
+  if (!(d < ai.M.reach + 0.3)) return false;
+  const S = ST(ai);
+  S.debanaRoll++;
+  if (!roll(tilt(ai, MEASURE.debana))) return false;
+  const t = ai.pickTech(s, 'stepin');
+  if (t && ai.startAttack(t, 'stepin', { noFeint: true, fastChamber: true })) {
+    S.debana++;
+    return true;
+  }
+  return false;
 }
 
 // ───────────────────────── ② 오코리 ─────────────────────────
