@@ -10,13 +10,11 @@
 //    판 'hilt'(가장 가까운 판 · 칼날을 잡을 수 없는 칼은 늘): 쥠 그대로 겨눔만 뒤집어 폼멜(칼자루 끝)이 같은 길로 — 지레가 손에서 폼멜까지(롱소드 0.12 m)뿐.
 //   결과: 판정은 지금 규칙 그대로 — 코등이 · 폼멜은 칼자루 부품이라 둔타(combat.js analyze), 머리 둔타는 의식 · 멍함 · 주저앉음 · 쓰러짐(fighter.applyWound) ·
 //    비기 배율(손 빠르기 SECRET.handSpeed · 서보 힘 창 SECRET.power · 판정 배율 SECRET.hitMul — 다른 비기의 베기 길과 같은 자리)만 곱한다. 새 힘 · 새 넘어뜨리기 · 새 문턱 없음.
-//    넘어 들어감 규칙(SECRET.mordOver — 내리치는 동안 내 칼 ↔ 상대 칼 충돌 끔)은 스위치 · 기본 끔(사장님 확인 전).
 //   10/24 사장님 12:0x 'ai도 비기 쓰게 해' — AI 도 같은 조건 · 같은 실행부(ai.js mordTick → skill.secret · SECRET.aiOpenSchools 'german' · 숙련도 5 이상).
 //    AI 는 창 안에서 상대 머리가 칼자루 길에 닿을 때(mordHeadReach — 아래) 곧장 낸다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, ARM, realS } from './config.js';
-import { FINISH } from './finish.js';
+import { SECRET, ARM } from './config.js';
 import { comboArmLen } from './secret_instant.js';
 
 /** 이 몸의 판: 'reverse'(칼날을 거꾸로 쥠) | 'hilt'(쥠 그대로 폼멜) — 칼날을 잡을 수 없는 칼(날 없는 무기 · 라이트세이버 · 부러진 칼)은 늘 'hilt' */
@@ -24,7 +22,7 @@ export function mordMode(f) {
   return 'hilt'; // 폼멜 찍기 (10/31 사장님 결정 — 쥠 그대로)
 }
 
-/** 이 비기가 휘두르는 기술 (꾸러미의 기본 동작 — SECRET.mord.tech, 없으면 정수리 베기) */
+/** 이 비기가 휘두르는 기술 (꾸러미의 정수리 베기 — 그 시작 자세(지붕)로 준비) */
 export function mordTech(byName) {
   const t = byName?.oberhau;
   return t ? { ...t, mord: true } : null;
@@ -37,7 +35,7 @@ export function mordTech(byName) {
  */
 export function mordStart(f, run, tech) {
   const mode = mordMode(f);
-  const m = (run.mord = { mode, G: null, flipped: false, overOn: false });
+  run.mord = { mode, G: null };
   f.mordAim = true;
   const d = f.strokeCommand(tech.from[0], tech.from[1], _h, _d); // 시작 자세 패드의 칼끝 겨눔 (몸 틀) — 준비 동안 칼자루가 이쪽으로 선다
   f.mordHold = [d.x, d.y, d.z];
@@ -75,43 +73,19 @@ export function mordSwinging(f) {
   return Math.hypot(v.x, v.y, v.z) >= (6 * lever) / (W.hiltLength + W.bladeLength);
 }
 
-/** 매 스텝 (skill.js updateSecret 머리): 넘어 들어감 규칙 창 — 베기 길 · 따라 지나감 동안만 */
+/** 매 스텝 (skill.js updateSecret 머리) */
 export function mordStep(f, run) {
   if (run.stage !== 'chamber') f.mordHold = null; // 베기 길부터는 패드(길)의 겨눔을 뒤집어 따른다
-  const on = false;
-  if (on !== run.mord.overOn) {
-    over(f, on);
-    run.mord.overOn = on;
-  }
 }
 
-/**
- * 넘어 들어감 규칙 (SECRET.mordOver — 사장님 확인 전 · 기본 끔): on 이면 내 칼 부품(칼날 · 칼자루) 충돌 짝에서 상대 칼을 뺀다(충돌 그룹 거름의 '상대 칼' 비트만) —
- *  상대가 칼을 들어 막아도 내 칼자루가 그 칼 위로 지나 머리에 떨어진다. 몸 · 팔 · 땅 · 제 몸통은 그대로. off 면 원래 그룹으로
- */
-function over(f, on) {
-  const cols = f.swordColliders ?? [];
-  if (on && !f._mordGroups) {
-    f._mordGroups = cols.map((c) => c.collisionGroups());
-    const wBit = f.bits?.foeWeapon ?? 0; // 상대 편 칼 비트 (fighter.js this.bits — 1:1 은 예전 그대로 0 번 몸 16 · 1 번 몸 4 · 2:2 는 상대 편 둘의 칼)
-    for (const c of cols) c.setCollisionGroups(c.collisionGroups() & ~wBit);
-  } else if (!on && f._mordGroups) {
-    cols.forEach((c, i) => c.setCollisionGroups(f._mordGroups[i]));
-    f._mordGroups = null;
-  }
-}
-
-/** 끝 · 끊김: 원래 쥠 · 겨눔 · 충돌 그룹으로 (skill.js — 굳음에 들어갈 때 · secretEnd). 이미 원래면 아무것도 안 함 */
+/** 끝 · 끊김: 원래 겨눔으로 (skill.js — 굳음에 들어갈 때 · secretEnd). 이미 원래면 아무것도 안 함 */
 export function mordEnd(f) {
-  over(f, false);
   // 칼끝을 곧게 위로 (다시 세우기 끝은 칼자루가 대개 위라 거의 같은 줄 · 손이 늦거나 끊겼을 때도 칼날이 상대 몸 · 땅 속으로 옮겨 가지 않게)
   f.mordAim = false;
   f.mordHold = null;
 }
 
-// ── 가볍고 느림을 고칠 안 (10/22 밤 감독 — 스위치 · 기본 끔 · 문서 §11) ──
-
-/** 판정 배율 (SECRET.mord.power): 'hit' = 결정타 SECRET.hitMul · 'finish' = 마무리 찍기 FINISH.power (겹치지 않고 그 자리에) · 수 = 그 수. 둔타도 듣는 자리(f.secretHit — combat.js hk) */
+/** 판정 배율: 결정타 SECRET.mordHitMul (null 이면 비기 공통 SECRET.hitMul). 둔타도 듣는 자리(f.secretHit — combat.js hk) */
 export function mordHitMul() {
   const hit = SECRET.mordHitMul ?? SECRET.hitMul; // 11/11 사장님 '죽음의 일격도 1.0으로 해.' — 죽음의 일격만의 결정타 배율 SECRET.mordHitMul 1 (null 이면 비기 공통 hitMul 1.3 — 전 판)
   return hit;
@@ -133,49 +107,8 @@ export function mordKinOf(f, run) {
     const h = t === 0 ? c.radius() : t === 1 ? c.halfExtents().y : 0; // 공(ball) · 상자(cuboid)
     yp = Math.min(yp, y - h);
   }
-  const K = { g: G.g, gOff: G.gOff, Lc: G.g - W.hiltLength, Lp: G.g - yp, pull: true, over: false, end: mordEnd };
-  K.pommel = true; // 폼멜 찍기 길 (10/31)
-  return K;
+  return { g: G.g, gOff: G.gOff, Lc: G.g - W.hiltLength, Lp: G.g - yp, end: mordEnd }; // 폼멜 찍기 길 (10/31 — secret_instant.js comboPlanMord)
 }
-
-/**
- * 강제 뒤 박차기 (10/31 시제품 — SECRET.mord.burstBack · 기본 끔 · 사장님 '박차기 강제 발동과 함께 한걸음 물러나며 일격'): skill.js updateSecret 이 비기 스텝마다 부름.
- *  'go' = 스틱을 곧장 뒤로(f.move — 이 스텝의 걸음 · 균형이 읽기 전) · 박차기(gait.burst — 독일 뒤 박차기와 같은 칸 { fore −1 })를 박찬 걸음이 시작될 때까지 다시 걺 →
- *   gait.js fastBegin 이 다음에 떼는 걸음을 박찬 걸음으로(몸 목표 빠르기 burstBackV · 가속 한도 × burstAccel · 발 뜬 시간 burstT · 기력 pushCost — burstFree 면 안 냄) ·
- *   박찬 발이 디디면(burstLeg 가 풀림) 'hold' = 일격이 끝날 때까지 발을 멈춤(스틱 0 — 박찬 뒤 세게 멈춤은 걸음 그대로). 0.6 s(시간 사다리) 안에 못 디디면 그때 'hold'
- */
-export function mordBurstTick(f, run, dt) {
-  const B = run.mord?.burst;
-  if (!B || B.phase === 'off') return;
-  const g = f.gait;
-  B.t += dt;
-  if (!g?.active || f.state !== 'stand' || run.stage !== 'instant') {
-    if (B.phase !== 'go' || run.stage !== 'instant') B.phase = 'off';
-    return;
-  }
-  if (B.phase === 'go') {
-    // 한 걸음만: 박찬 발이 디디면 놓음 · 머리 뚫음 막기(noSelfClip)가 켜져 있으면 그 셈의 '못 옮긴 몫'(I.mord.clip.short — 머리 따라 겨눔이 스텝마다 그때 머리로 셈)이
-    //  먼저 0 이 되면(상대도 물러나 일찍 넉넉해짐) 박찬 걸음 도중이라도 놓음(세게 멈춤). 디딘 뒤 더 물러나지는 않음(뒷걸음을 이어 가면 판 싸움에서 넘어짐 2 ~ 4 / 30 — 확인표 3143)
-    const C = f.iai?.mord?.clip;
-    const room = C && C.short != null && C.short <= ROOM_TOL;
-    if (g.burstLeg) B.used = true;
-    else if (!B.used && !g.burst && !g.burstStep) g.burst = { fore: -1, side: 0, lat: 0,  };
-    if (B.used && (room || !g.burstLeg)) {
-      B.phase = 'hold';
-      B.landT = B.t;
-    }
-    if (B.phase === 'go' && B.t > BURST_MAX) {
-      B.phase = 'hold';
-      B.timeout = true;
-    }
-  }
-  const back = B.phase === 'go';
-  f.move.set(0, back ? -1 : 0);
-  f.stickX = 0;
-  f.stickY = back ? -1 : 0;
-}
-const BURST_MAX = realS(0.6); // 실제 초 — 시간 사다리 0.6 칸 (이 안에 못 디디거나 거리가 안 나면 놓음)
-const ROOM_TOL = 0.02; // m — '넉넉함' 판정 여유 (칼자루 가운데 ↔ 머리 가운데 못 옮긴 몫 · 머리 공 반지름 0.1 의 몫)
 
 /**
  * 상대 머리가 칼자루 길에 닿나 (10/24 — AI 가 창 안에서 낼 때 · ai.js mordTick): 운동학 길의 머리 겨눔('pull' — secret_instant.js comboPlanMord)은 칼자루 가운데
@@ -191,7 +124,7 @@ export function mordHeadReach(f) {
   const S = _s.set(ARM.shoulder[0], ARM.shoulder[1], f.side * ARM.shoulder[2]).applyQuaternion(_q.set(q.x, q.y, q.z, q.w)).add(f.bodies.chest.translation());
   const h = head.translation();
   // 폼멜 찍기 (10/31 14:xx 사장님 결정 — 기본): 겨누는 점 = 폼멜 공 가운데 쯤(손에서 Lp × 0.8 — secret_instant.js comboPlanMord 와 같은 수) + 팔이 안 닿으면 내딛는 앞 반걸음(머리 뚫음 막기 셈 · clipStep)
-  const reach = K.pommel ? K.Lp * 0.8 + (SECRET.mord.clipStep ?? 0) : (K.Lc + K.Lp) / 2;
+  const reach = K.Lp * 0.8 + (SECRET.mord.clipStep ?? 0);
   return Math.hypot(h.x - S.x, h.y - S.y, h.z - S.z) <= comboArmLen() + reach;
 }
 const _s = new THREE.Vector3();

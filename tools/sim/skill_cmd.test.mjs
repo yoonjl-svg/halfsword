@@ -162,7 +162,7 @@ test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · confi
   // 비기 창: 탭(taps) 또는 긋기(secSwipe — tapOnly 면 긋기는 보통 공격) (main.js)
   const main = src('main.js');
   assert.ok(main.includes('const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly;'), 'main.js — 긋기는 tapOnly 가 아닐 때만 비기');
-  assert.ok(main.includes('((atkWin || gilReady) && (taps > 0 || secSwipe))'), 'main.js — 비기 창 = 탭 · 긋기');
+  assert.ok(main.includes('(atkWin && (taps > 0 || secSwipe))'), 'main.js — 비기 창 = 탭 · 긋기');
   const sec = (school) => D.nodesOf(school).find((n) => n.cat === 'secret');
   /** 글 속 'n초' = 그 기다림 값 (s) */
   const secs = (c) => +/(\d+(?:\.\d+)?)초/.exec(c)?.[1];

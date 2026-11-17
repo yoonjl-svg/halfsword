@@ -264,11 +264,6 @@ function techList() {
     }
     list.push({ name: `속임수 ${fk.name}`, id: `feint:${fk.name}`, from: fake.from, path: [...cut, ...fk.then.map((p) => p.slice())], open: 0, kind: '속임수' });
   }
-  const mid = [0, -0.1]; // schools.js IBERIAN_SECRET_GILMOK.do.cutMid
-  if (art.tradition === 'iberian') {
-    list.push({ name: '비기 길목 지키기 (오른 옆 → 왼 옆)', id: 'gilmok:R', from: PADS.sideR, path: [mid, PADS.sideL], open: 5, kind: '비기' });
-    list.push({ name: '비기 길목 지키기 (왼 옆 → 오른 옆)', id: 'gilmok:L', from: PADS.sideL, path: [mid, PADS.sideR], open: 5, kind: '비기' });
-  }
   return list;
 }
 
@@ -295,7 +290,7 @@ function runGuards(seat) {
 function runTechs(seat) {
   const rows = [];
   const SPS = String(args.speeds ?? '9,11,13').split(',').map(Number);
-  const only = args.only ? new Set(String(args.only).split(',')) : null; // --only=zornhauL,gilmok:L 기술 id 만 (후보 고르기)
+  const only = args.only ? new Set(String(args.only).split(',')) : null; // --only=zornhauL,feint:… 기술 id 만 (후보 고르기)
   for (const tech of techList()) {
     if (only && !only.has(tech.id)) continue;
     const acc = blank();

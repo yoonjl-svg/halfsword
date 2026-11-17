@@ -21,7 +21,7 @@ import { STAMINA } from './config.js';
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF, AI_MAAI, IB_LINK } from './config.js';
+import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF, IB_LINK } from './config.js';
 import { linkStart, linkEnd, bridgePlan, bridgeStep, techDir, linkBoost } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해')
 import { ibInit, ibAfter, ibTick, ibCircle, ibSide, ibFeetV, ibWatch, ibSidePost, ibFwdPost } from './ai_plan_ib.js'; // 유파 플랜 2 단계 이베리아 (11/14 — 플랜 표 ib 표식일 때만 this.ibPlan · 셈은 그 파일)
 import { readInit, readTick, readNeed, readFeetV, readTechK, readChainK } from './ai_read.js'; // 3 단계 수 읽기 그릇 (11/14 — 플랜이 있는 몸만 this.read · 셈은 그 파일)
@@ -42,9 +42,9 @@ import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 import { lowFinishPosture, lowFinishContinuing } from './finish_entry.js'; // 낮은 상대 진입 (10/12)
 import { aiVitalCandidate, aiVitalPrepare } from './vital_target.js'; // 약한 자세 겨눔 (10/12)
-import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, requestArtRedondo, requestArtThrust, iaiReadyPose, startLunge, gilmokCutPose, gilmokSeg, iaiBusy, snapAim } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
+import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, requestArtRedondo, requestArtThrust, iaiReadyPose, startLunge, iaiBusy, snapAim } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
 import { windStart, windEnd, windRopesBack, windLoopOf } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 08:xx — UNIQUE_ASSIST.rdAiWind · 사람과 같은 감기 · 내려침)
-import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret, gnsHumanMoving, foeRecentTipSp, gkCooling, gkCoolFrom, secretCostOf } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
+import { parrySlotOf, bindGain, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret, gnsHumanMoving, foeRecentTipSp, gkCooling, gkCoolFrom, secretCostOf } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
 import { aiPickup } from './pickup.js'; // 떨어진 칼 줍기 — AI 몫 (11/05)
 import { itEdgeGrant, itEdgeOk, itEdgeOn } from './italian_outbox.js'; // 칼 우위 (헛누름) · 리솔루토 창 문 (11/14)
@@ -80,7 +80,6 @@ const lungeFoe = (f) => f?.swordArt?.tradition === 'italian';
 /** AI 가 어림하는 상대 칼 닿는 거리의 바탕 = 무기 간격 + 0.05 · 런지 찌르는 상대면 + AI_THRUST_DEF.lungeReach (기본 0 = 지금 그대로) */
 export const foeReachBase = (foeM, f) => { // 시험이 읽음 (tools/sim/jp_strength.test.mjs)
   let b = foeM.reach + 0.05;
-  if (AI_MAAI.hide > 0 && f?.swordArt?.tradition === 'japanese') b -= AI_MAAI.hide; // 일본 칼끝 거리 숨김 (11/05 일본 강화 길 · 기본 0): 일본 칼을 hide m 짧게 봄 — 멀리서 맞으면 늘리는 셈은 그대로
   return AI_THRUST_DEF.lungeReach > 0 && lungeFoe(f) ? b + AI_THRUST_DEF.lungeReach : b;
 };
 // 표준 시간 (10/25 22:3x — config.js TIME): AI 판단 박자 · 막기 · 물러남 · 걸쇠 · 눈의 기억은 실제 초로 적고 한 번 게임 초로 바꾼다 (realS).
@@ -357,7 +356,6 @@ export class AI {
     this.secretEv = { armed: true, off: 0 }; // 상대 사건(threat·foeRaise·foeCharge·foeRecover) 한 번에 한 번 — 사건이 0.3 s 그치면 다시 건다
     this.combo = 0; // 끊기지 않은 내 베기 수 (이베리아 옛 비기 조건 — 공격 꼴을 벗어나면 0)
     this.iaiArm = this.secret?.do?.instant ? new IaiArm() : null; // 일본 발도 대기 (10/10 02:4x — 상대 간격 밖 iaiArmTime 초 · 10/25 22:3x 부터 거리와 상관없이 침착하게 iaiArmTime 초 — secret.js gnsArmTick)
-    this.gilArm = this.secret?.do?.gilmok ? new IaiArm('gilmokArmTime', 'gilmokArmGrace') : null; // 이베리아 길목 지키기 준비 (10/11 v6 — 내 칼끝 거리 밖 gilmokArmTime 초, 같은 셈)
     this.spinArm = this.secret?.do?.altib ? new IaiArm('armTime', 'armGrace', 'altib') : null; // 싱지르 무장 (10/24 사장님 '싱지르 ai에게도 열어' — 사람 PlayerSecretWatch.spinArm 과 같은 셈 · 내 칼끝 거리 밖 SECRET.ibSpin.armTime 초)
     this.spinW = 0; // 무장 동안 상처 셈 (상처가 나면 무장이 풀림 — 사람과 같은 규칙)
     this.press = this.secret?.when === 'press' ? { win: 0, wins: 0, go: false, goBarge: false, goes: 0, inClinch: false } : null; // 모르트슐라크 누르기 셈 · 창 (10/24 'ai도 비기 쓰게 해' — 사람 PlayerSecretWatch.pressTick 과 같은 셈 secret.js pressStep · win = 창 남은 초 · wins = 연 창 수)
@@ -1036,30 +1034,6 @@ export class AI {
       if (this.planJp && !kneeling) jpArmRead(this, dt); // 11/16 뽑기 읽기 (AI_PLAN_JP.drawRead): 칼집이 위험하면 납도를 미루고 · 칼집에 든 채 위험하면 먼저 뽑음
       iaiReadyPose(me, this.iaiArm.armed && this.mode !== 'attack', dt, this.mode !== 'attack' ? this.iaiArm.sheathe : 0); // 11/14 납도 (SECRET.iaiSheathe): 준비 전 iaiSheathe 초 동안 칼을 칼집에 (사람과 같은 셈)
     }
-    // 이베리아 길목 지키기 준비 (10/11 v6): 상대가 내 칼끝 거리(reach) 밖에 gilmokArmTime 초 머물면 칼을 몸 옆으로 감아 뒤로 둔 옆 자세(가로 탈류·가로 레베스)로 길목을 지킨다.
-    //  쪽 = 준비가 켜질 때 지금 간 보는 자세의 쪽(가운데면 오른쪽 — 피 단Ⅰ 탈류부터). 간 보기·물러남 동안만 손 목표를 덮는다(자세 고르기는 그대로 — 풀리면 그 자세로 돌아감)
-    //  10/11 v6 2차 (디렉터 — 사장님이 낮은 자세를 '큰 차별성'으로 보심): 준비 동안 기본은 **낮은 자세**(아래 탈류·아래 레베스·칼끝 땅에 — 지금 자세가 낮지 않으면 손에서 가장
-    //   가까운 낮은 자세)로 기다리고, **상대가 다가오는 중일 때만**(foeClosing > SECRET.iberianInsideClosing 0.3 — 재사용) 그 쪽 옆 자세로 감는다. 감은 뒤 최소 gilmokArmGrace 0.5 s
-    //   유지(깜빡이지 않게 — 재사용). 감는 모습이 곧 길목의 예고다. 쪽 = 낮은 자세의 쪽(아래 레베스면 왼쪽, 아니면 오른쪽 — 피 단Ⅰ 탈류부터)
-    if (this.gilArm) {
-      const was = this.gilArm.armed;
-      this.gilArm.tick(dt, d > gilmokLine(me, this.M.reach, this.secret.do) && !kneeling, this.mode === 'attack' || this.mode === 'defend' || !!this.secretRun || this.drillOut || armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x) // 헛스윙 연습 동안은 준비하지 않는다
-      const A = this.gilArm.armed && (this.mode === 'watch' || this.mode === 'withdraw');
-      if (this.gilArm.armed && !was) {
-        this.guard = gilmokLowGuard(this.school.guards, this.guard, [this.me.handOffset.x, this.me.handOffset.y]); // secret.js — 플레이어와 같은 규칙
-        this.gilSide = this.guard?.name === 'wechselL' ? -1 : 1;
-        this.gilWindT = 0;
-      }
-      if (A) {
-        // 감는 거리: preThreat '가까움'과 같은 꼴(간격 + 다가옴 × 0.4 + 0.3)을 내 칼끝 거리로 — 먼 데서 걸어오는 동안은 낮게 기다린다 (secret.js gilmokWindT)
-        this.gilWindT = gilmokWindT(this.gilWindT, this.foeClosing, d, this.M.reach, dt);
-        const p = this.gilWindT > 0 ? this.secret.do.side[this.gilSide] : this.guard.pad;
-        this.hand.set(p[0], p[1]);
-        this.handSpeed = this.gilWindT > 0 ? L.parrySpeed : this.pers.guardSpeed; // 감기는 받아 막기 빠르기, 낮게 기다리기는 간 보기 빠르기
-      } else this.gilWindT = 0;
-      const g = this.secretRun ? gilmokSeg(this.tech?.name, this.secretRun.stage === 'stiff') : { seg: null, s: 1 };
-      gilmokCutPose(me, g.seg, g.s, dt); // 한 칼의 덧씌우기 자세 (secret_instant.js — 팔을 앞으로 뻗어 몸통 높이)
-    }
     this.moveHand(dt);
     this.moveFeet(dt, d);
     if (kneeling) me.move.set(0, 0); // 무릎 꿇거나 일어나는 중엔 발을 옮길 수 없다 (칼만 움직인다)
@@ -1188,9 +1162,6 @@ export class AI {
     if (th && this.respond(th, d)) return;
     if (this.drillOut) return this.drillWatch(dt, s, d); // 시험: 헛스윙 연습 (whiff_drill.js) — 들어오는 칼 받기만 위에서 평소대로
     if (this.pendingPassive?.left != null && this.passivePending(s, d)) return; // 미룬 패시브 (물러남 끝 斂翅 · 간격 밖에서 굴려 나온 돌려 물러남)
-    // 이베리아 길목 지키기 준비 (10/11 v6): 준비된 동안은 먼저 치지도(기회·패시브) 낌새에 앞질러 치거나 물러나지도(preThreat·seize) 않고 칼끝 거리 선을 지킨다 —
-    //  48 판 첫 측정: 이 걸쇠 없이는 상대가 칼끝 거리에 들자마자 내가 먼저 공격을 열어 준비가 풀려 창 0 번. 들어오는 칼(위 respond)은 그대로 받는다. 자세 손은 update 끝에서 옆 자세로 덮는다
-    if (this.gilArm?.armed) return;
     // 싱지르 무장 (10/24): 같은 걸쇠 — 무장된 동안은 먼저 치지 않고 간을 보며(발은 holdDist 그대로 다가섬) 상대가 칼끝 거리 + aiFire 안에 들면 spinTick 이 한 바퀴.
     //  걸쇠가 없으면 롤랑이 무장한 뒤 상대가 칼끝 거리 + 0.6 m 에 오자마자 보통 공격을 열어 무장이 풀렸다(첫 시험 — 낸 수 0). 들어오는 칼(위 respond)은 그대로 받는다
     //  인물 손잡이 pers.spinHold (10/29 15:5x — 사장님 '롤랑과 베르나르도의 … 싸움 스타일도 바꾸도록 해'): 걸쇠는 둘 다 같고, 발만 다르다 —
@@ -1292,10 +1263,6 @@ export class AI {
     // 빈손 상대는 칼이 닿지 않는다: 내 칼이 닿는 거리까지 다가선다
     const W = this.gnsW;
     const wary = !!W && ((W.ready && !W.reck) || W.cut) && !this.chasing; // 무모(W.reck — 11/14 플랜 유파 무 · 낮음)는 준비된 선을 안 셈 (그 발도에 막 베인 뒤 W.cut 은 그대로 물러섬) · 고노센 경계 (10/25): 준비된 고노센 상대(또는 그 발도에 막 베임)면 상대 발도 선 밖에 선다 — 여유는 위와 같은 m (최소 0.08)
-    if (this.gilArm?.armed && !this.chasing) {
-      const g = Math.max(this.foeReach + Math.max(0.08, m), gilmokLine(this.me, this.M.reach, this.secret.do) + 0.08); // 이베리아 길목 준비 (10/11): 내 칼끝 거리 선 밖에 선다 (여유 0.08 = 위 최소 여유 그대로)
-      return wary ? Math.max(g, W.line + Math.max(0.08, mW)) : g;
-    }
     const h = (this.chasing ? this.M.contact : this.foeReach) + Math.max(0.08, m);
     return wary ? Math.max(h, W.line + Math.max(0.08, mW)) : h;
   }
@@ -1636,7 +1603,7 @@ export class AI {
   dropSecret() {
     if (this.iaiArm) iaiReadyPose(this.me, false, 1); // 발도 대기 웅크림이 남아 있으면 풀기 (덧씌우기 칸을 가졌을 때만 — iaiReadyW > 0)
     this.secret = null;
-    this.iaiArm = this.gilArm = this.spinArm = this.binds = null;
+    this.iaiArm = this.spinArm = this.binds = null;
     this.riso = null; // 안다레 리솔루토 (11/14)
     if (this.press && !('tech' in this.press)) this.press = null; // 모르트슐라크 누르기 셈 (자연 바인드 밀기 칸은 10/31 부터 따로 this.natP — 이 칸에 tech 가 있는 꼴은 이제 없음)
     this.stats.secretDropped = (this.stats.secretDropped ?? 0) + 1;
@@ -3116,7 +3083,7 @@ export class AI {
   secretScan(dt, c, r) {
     const S = this.secret;
     const W = [].concat(S.when);
-    const foeEv = W.includes('threat') || W.includes('foeRecover') || W.includes('foeRaise') || W.includes('foeCharge') || W.includes('inside') || W.includes('gilmok'); // inside: 이베리아 호 안쪽 (10/10 04:4x) · gilmok: 길목 경계 넘음 (10/11 v6)
+    const foeEv = W.includes('threat') || W.includes('foeRecover') || W.includes('foeRaise') || W.includes('foeCharge') || W.includes('inside'); // inside: 이베리아 호 안쪽 (10/10 04:4x)
     if (!foeEv) return false;
     const E = this.secretEv;
     const lag = this.secretLag(); // 공정함 (3 단계 11/14): 비기 조건을 알아채는 눈에 반응 시간 — 실행은 그대로 완벽 (옛 판 0)
@@ -3124,19 +3091,17 @@ export class AI {
     const dx = s0.cx - c.x;
     const dz = s0.cz - c.z;
     const d0 = Math.max(0.01, Math.hypot(dx, dz));
-    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach, this.me, { lag, reach: this.gilArm ? gilmokLine(this.me, this.M.reach, S.do) : this.M.reach, dt, st: E, armed: !!this.gilArm?.armed }); // 사건 판정은 플레이어 창과 같은 함수 (secret.js) · ex: 이베리아 호 안쪽 · 길목 (준비) · 일본 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만 · 10/25 22:3x 들어옴 창 gnsWalkIn 0 기본이면 안 봄)
+    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach, this.me, { lag, reach: this.M.reach, dt, st: E }); // 사건 판정은 플레이어 창과 같은 함수 (secret.js) · ex: 이베리아 호 안쪽 · 길목 (준비) · 일본 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만 · 10/25 22:3x 들어옴 창 gnsWalkIn 0 기본이면 안 봄)
     if (!on) {
       E.off += dt;
       if (E.off > EV_REARM) E.armed = true;
       return false;
     }
     E.off = 0;
-    if (ctx?.ev === 'gilmok') this.stats.gilWins = (this.stats.gilWins ?? 0) + 1; // 길목 창 (경계 넘음 사건 — 준비된 채) 수 (재기)
     if (!E.armed || !this.secretFree() || !this.foe.alive || s0.state !== 'stand' || !this.me.armed) return false;
     if (!this.secretCond(S, ctx, d0)) return false;
     if (!this.secretGo(S, { th: ctx, s: s0, d: d0 })) return false;
     E.armed = false;
-    this.gilArm?.consume(); // 길목: 한 번 준비에 한 번
     return true;
   }
 
@@ -3181,7 +3146,7 @@ export class AI {
   secretFree() {
     const m = this.mode;
     if (m === 'watch' || m === 'withdraw' || m === 'defend') return true;
-    if (m === 'attack' && this.phase === 'follow' && this.secret?.do?.flow && !this.secret.do.gilmok && !this.passiveLocked) return true; // 이베리아 흐름 (10/11): 손은 끝 자세에 닿고 칼이 아직 지나가는 중 — 그 칼을 이어받는다
+    if (m === 'attack' && this.phase === 'follow' && this.secret?.do?.flow && !this.passiveLocked) return true; // 이베리아 흐름 (10/11): 손은 끝 자세에 닿고 칼이 아직 지나가는 중 — 그 칼을 이어받는다
     return m === 'attack' && (this.phase === 'windup' || this.phase === 'approach') && !this.passiveLocked;
   }
 
@@ -3475,7 +3440,7 @@ export class AI {
       //  수마다 flowInto(이음새 없이 — 앞 수 끝에서 곧장). 칼이 지나가던 공격(follow)을 이어받으면 그 칼의 맞힘·막힘을 여기서 센다(afterStrike 를 건너뜀)
       if (this.mode === 'attack' && this.phase === 'follow') this.secretTally();
       const v = this.me.skill.aimVel;
-      run.queue = montanteFlowSeq([this.me.handOffset.x, this.me.handOffset.y], [v.x, v.y], D, this.me); // f: 길목 디딤을 그 순간 간격으로 (secret.js gilmokSeq)
+      run.queue = montanteFlowSeq([this.me.handOffset.x, this.me.handOffset.y], [v.x, v.y], D, this.me);
       ok = this.secretNext();
     } else if (D.path) {
       // 이베리아 휩쓸기 (10/10 02:5x): 사이드스텝 + 머리 위 큰 고리 + 사선 — 이번 스텝 끝부터 SECRET.iberianSweepTime 동안 (secret_instant.js, 발도와 같은 틀)

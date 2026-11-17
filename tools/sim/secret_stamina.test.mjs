@@ -1,5 +1,5 @@
 // 기력이 모자라면 비기 못 씀 시험 (사장님 10/30 08:2x '기력이 모자라면 못써(다른 비기도 그렇게 해)' · 18:3x '비기를 못 쓰는 기력 기준은 0 이하일 때야.' — config SECRET.secretStamina · secretStaminaMin 0 · stamina.js secretReady ·
-//   secret.js PlayerSecretWatch(openWindow · fire · fireArmed 거절 · poor 셈) · skill.js secret · ai.js secretGo · mordGo · secretPoor):
+//   secret.js PlayerSecretWatch(openWindow · fire · poor 셈) · skill.js secret · ai.js secretGo · mordGo · secretPoor):
 //   지금 기력 ≤ 0 이면 사람 창이 안 열림(열린 창도 닫힘) · AI 가 안 냄 · skill.secret 도 받지 않음 — 아무것도 안 나가고 판당 쓸 수 안 씀 · 기력 무한 · 스위치 끔이면 늘 됨 ·
 //   0 보다 크면(0.5 여도) 냄 — 비기 값 35 를 내 −34.5 가 돼도 탈진(바닥 −70) 없이 다섯 비기 모두 끝까지
 //  작게 · 빠르게: 사람 창은 물리 스텝 없이 창만 돌린다.  node --test tools/sim/secret_stamina.test.mjs

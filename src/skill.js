@@ -32,12 +32,12 @@ import { startFlick, flickDrive } from './druid_whip.js'; // 휘는 무기(드�
 import { FINISH, armRay, updateFinish, cleaveFinish, cleaveRaise, cleaveReach } from './finish.js';
 import { VITAL, playerVitalThrust, measureThrustRange } from './vital_target.js'; // 약한 자세 겨눔 탭 찌르기 (10/12)
 import { LOW_FINISH } from './finish_entry.js'; // 낮은 상대 진입 (10/12)
-import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg, stanceSpread } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
+import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, stanceSpread } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 이탈리아 거침없이 나아가 찌르기 — 상대 팔 늦춤 (흘림과 같은 장치, 10/22)
 import { windStep } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 — ai.js rdWindTick)
 import { linkStep } from './iberian_link.js'; // AI 이어 돌리기 (11/14)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain, gnsBlockOf, secretCostOf } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
-import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf, mordBurstTick, mordMode } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
+import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf, mordMode } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
 import { huntStacksFor } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 상대를 겨눈 격살 칼끝 빠르기 몫 × (1 + share × 겹)
 
@@ -648,7 +648,7 @@ export class Skill {
     };
     const run = { S, ctx: o.ctx ?? null, tr: f.swordArt.tradition, stage: null, t: 0, queue: [], cur: null, path: [], landed: false, bound: false, str0: f.strength, painFoe: f.foe.pain, painMe: f.pain, special: o.special ?? null }; // special = 특수 공격이 이 실행부를 빌려 씀 (11/11 싱지르 'cingir' — 비기 셈 · 판정 배율 · 터뜨림 · 비기 기력 없음 · 굳음 SECRET.ibSpin.specialStiff)
     if (D.mord) {
-      // 독일 죽음의 일격 (10/22 — mordschlag.js): 꾸러미의 기본 동작 하나(SECRET.mord.tech) 길을 — 베기 길을 열 때 칼날을 거꾸로 쥐고 겨눔을 뒤집어 칼자루로 휘두른다
+      // 독일 죽음의 일격 (10/22 — mordschlag.js): 정수리 베기(시작 자세 지붕)에서 — 쥠 그대로 겨눔을 뒤집어 폼멜로 내려찍는다 (10/31 폼멜 찍기)
       const t = mordTech(byName);
       if (!t) return false;
       run.queue.push(t);
@@ -874,8 +874,7 @@ export class Skill {
     const handMul = secVal(D.hand ?? 'handSpeed');
     const g = f.gait;
     const ask = (o) => !!(g?.requestStep && g.active && g.requestStep(o));
-    if (run.mord) mordStep(f, run); // 죽음의 일격: 넘어 들어감 규칙 창 (스위치 SECRET.mordOver — 기본 끔)
-    if (run.mord?.burst) mordBurstTick(f, run, dt); // 죽음의 일격 강제 뒤 박차기 (10/31 시제품 — SECRET.mord.burstBack · 기본 끔)
+    if (run.mord) mordStep(f, run); // 죽음의 일격: 베기 길부터 겨눔 붙잡기를 놓음
     if (run.stage === 'riso') {
       // 이탈리아 거침없이 나아가 찌르기: 탭 찌르기(updateThrust)가 도는 동안 비기 배율 — 끝나면 굳음 (SECRET.stiff.italian)
       if (this.tap || this.vitalRange) {
@@ -962,13 +961,10 @@ export class Skill {
       const inLoop = !!run.cur?.pre?.length && run.path.length > run.cur.path.length; // 연환삼격 이음새 고리 동안 (10/10 04:4x): 검무 빠르기(loopHand), 힘 창·판정 배율 없음 — ai.js 와 같음
       f.powerMul = inLoop ? 1 : secVal(D.power ?? 'power') * (run.gain ?? 1); // run.gain: 독일 막기 연환 붙은 시간 어드밴티지 (없으면 1 — 다른 비기는 전과 같음)
       const gkHit = D.power === 'gyeoksal' || D.power === 'hit'; // 격살 = 결정타 (gyeoksalHitMul)
-      f.secretHit = inLoop ? 1 : D.power && !gkHit ? 1 : run.mord ? mordHitMul() : (D.power === 'gyeoksal' ? gyeoksalHitMul() : SECRET.hitMul) * (run.gain ?? 1); // 죽음의 일격: SECRET.mord.power (기본 'hit' = hitMul 그대로) · 격살 'hit' = gyeoksalHitMul (11/11 1 — 서보 길 cnFast 0)
+      f.secretHit = inLoop ? 1 : D.power && !gkHit ? 1 : run.mord ? mordHitMul() : (D.power === 'gyeoksal' ? gyeoksalHitMul() : SECRET.hitMul) * (run.gain ?? 1); // 죽음의 일격: mordHitMul (SECRET.mordHitMul) · 격살 'hit' = gyeoksalHitMul (11/11 1 — 서보 길 cnFast 0)
       if (D.power && !gkHit) f.effMul = secretEffMul(D); // 격살 서보 길(cnFast 0): 판정 에너지 × FINISH.power — 따라 지나감까지 (secretEnd 에서 지움)
       if (D.strength) f.strength = run.str0 * (inLoop ? 1 : secVal(D.strength));
       if (run.wantStep && !run.stepAsked && run.t >= 0.04 && run.t < 0.4) run.stepAsked = ask(run.wantStep);
-      // 길목 디딤 (10/11 v6 6차): 걸음은 받아 줘도(다리) 플레이어 스틱이 0 이면 몸이 거의 안 따라갔다(브라우저: 가운데 선까지 몸 옮김 0.01~0.02 m). AI 는 내딛는 동안 스틱을
-      //  앞으로 민다(ai.js moveFeet — stepT 동안 fwd 1, 맞닿기 − 0.1 보다 멀 때) → 같게: 걸음을 받은 뒤 0.3 s(ai.js STEP_T) 동안 스틱 앞 1. 길목만 (다른 유파 플레이어 비기는 전과 같다)
-      if (D.gilmok && run.stepAsked && run.t < 0.04 + 0.3 && f.foeDistance() > f.swordArt.measure.contact - 0.1) f.move.y = Math.max(f.move.y, 1);
       // 칼끼리 맞물림 (ai.js checkBind 와 같은 기하)
       if (!run.bound && f.tipPrev && foe.tipPrev && segDist(f.bladePoint(0.1, _sf), f.tipPrev, foe.bladePoint(0.1, _sr), foe.tipPrev) < 0.07) run.bound = true;
       if (run.path.length) {
@@ -1632,11 +1628,6 @@ export class Skill {
     if (f.rdWind && f.aiControlled && !this.uniq) windStep(f, dt); // AI 풍차 베기 감기 (10/31 08:xx — ai.js rdWindTick · UNIQUE_ASSIST.rdAiWind): 사람 holdTick 과 같은 자리에서 스텝마다 두 팔 · 칼을 놓음
     if (f.ibLink && !this.uniq) linkStep(f, dt); // AI 이어 돌리기 (11/14 — ai.js linkTick 이 끝을 봄): 사람 linkTick 과 같은 자리에서 스텝마다 두 팔 · 칼을 놓음
     if (this.uniq) this.uniq.drive(dt); // 플레이어 고유 동작 강화 (unique_assist.js — main.js 가 플레이어에게만 붙인다, AI 는 없음): 몸 덧씌우기·끝 힘·걸음 (손 목표는 건드리지 않는다)
-    if (this.sec?.S?.do?.gilmok || f.gilCutW > 0) {
-      // 이베리아 길목 한 칼의 덧씌우기 자세 (10/11 v6 2차 — AI 와 같은 함수 secret_instant.js gilmokCutPose): 팔을 앞으로 뻗어 몸통 높이로 둘러 벰
-      const g = this.sec ? gilmokSeg(this.sec.cur?.name, this.sec.stage === 'stiff') : { seg: null, s: 1 };
-      gilmokCutPose(f, g.seg, g.s, dt);
-    }
     if (this.flick) flickDrive(this, dt); // 채찍 톡 = 손목 튕기기 (손 목표를 손가락 긋기처럼 옮긴다 — druid_whip.js)
     // 손가락 긋기 감도 (11/06 — finger_cut.js · SKILL.fingerCut.gain · 기본 1 = 끔): 사람 손가락으로 긋는 동안(지난 스텝 휘두르기) 지난 스텝 뒤 손가락이 옮긴 손 목표 몫을 × gain.
     //  손 목표 반지름(WEAPON.reach — 아래 자름)은 그대로. 끄면 이 몫은 아무것도 하지 않는다 (fcOff 도 만들지 않음)

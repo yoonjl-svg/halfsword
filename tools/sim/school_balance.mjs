@@ -472,10 +472,9 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     const swipe = Math.hypot(d.x, d.y) / FR >= CONFIG.SKILL.swingSpeed;
     input.stickMove = { x: sx, y: sy };
     const atkWin = !!W.open && !W.holdOwns();
-    const gilReady = !!W.S?.do?.gilmok && !!W.gilArm?.armed;
     const secArm = !((P.skill.tap || P.skill.pom));
-    if ((((atkWin || gilReady) && (taps > 0 || (swipe && !W.S?.do?.tapOnly)))) && !secBusy && P.alive && secArm && closeGate.secretOk) {
-      const o = W.open ? W.fire() : W.fireArmed();
+    if (((atkWin && (taps > 0 || (swipe && !W.S?.do?.tapOnly)))) && !secBusy && P.alive && secArm && closeGate.secretOk) {
+      const o = W.fire();
       if (o) o.dir = [d.x, d.y];
       if (P.skill.secret(o)) secBusy = true;
     }

@@ -902,25 +902,6 @@ function stepIai(f, combat) {
           const P0 = { B: I.prev.B.clone().lerp(cur.B, prevW), D: I.prev.D.clone().lerp(cur.D, prevW).normalize() };
           I.hit = best;
           I.res = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, I.J);
-          // 베고 지나감 (11/05 일본 강화 길 — SECRET.gnsThrough · 사람 발도만 · 기본 0): 팔을 가르고 지나간 칼(베기 · 남은 에너지 > 그 부위가 받는 몫 absorb — 보통 칼이 박히지 않는 셈 combat.js strike 와 같음)은
-          //  남은 에너지(판정 에너지 − absorb)로 길 위의 몸(팔이 아닌 부위)에 한 번 더 닿을 수 있다 — 새 수 없음
-          if (I.through && I.res?.type === 'cut' && best.info.kind === 'arm' && I.res.energy > I.res.absorb) I.left = I.res.energy - I.res.absorb;
-        }
-      } else if (I.left > 0 && !I.hit2 && !I.blocked && foe.alive && foe.state !== 'dead') {
-        let best = null;
-        for (const [h, info] of f.colliderInfo) {
-          if (info.fighter !== foe || info.kind === 'weapon' || info.kind === 'arm' || info.detached || h === I.hit.h) continue;
-          const col = f.world.getCollider(h);
-          if (!col) continue;
-          const r = segToCollider(B, tip, col);
-          if (r <= SECRET.instantTouch && (!best || r < best.r)) best = { h, info, col, r };
-        }
-        if (best) {
-          const prevW = Math.max(0, w - 1 / subs);
-          const P0 = { B: I.prev.B.clone().lerp(cur.B, prevW), D: I.prev.D.clone().lerp(cur.D, prevW).normalize() };
-          I.hit2 = best;
-          I.res2 = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, I.left / SECRET.hitMul); // 남은 에너지 그대로 (instantWound 가 hitMul 을 곱함)
-          f.gnsThroughN = (f.gnsThroughN ?? 0) + 1; // 재기 (판정에는 안 씀)
         }
       }
     }
@@ -1445,68 +1426,6 @@ export function startLunge(f) {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  이베리아 길목 지키기 한 칼의 덧씌우기 자세 (10/11 v6 2차 — 디렉터 '칼끝 선에서 실제로 닿게'): 둘러 베는 두 토막 동안 덧씌우기 칸(skill.thrustPose)에
-//   손·칼날 방향·몸 돌림 목표를 준다 — 물리 서보 목표(스텝마다 자리 지정 아님). 수는 일본 발도 길 SECRET.iaiPath 의 가운데(M)·끝(E) 자리를 거울로 다시 씀(새 값 아님):
-//   가운데 = 손 앞 0.5 · 위 0.1 · 칼날 수평(앞 0°, 높이 −3°) — 팔을 앞으로 뻗어 칼끝이 상대 몸통 높이로 지난다 ·
-//   끝 = 손을 반대쪽 앞으로 다 뻗고 칼날 반대쪽 75° · 몸 돌림(칼 든 어깨가 앞).
-//   1차(덧씌우기 없음 — 자세 지도의 패드 길만): 옆 자세에서 칼이 몸 뒤로 감겨 칼끝이 앞 1.3 m · 가슴 +0.8~1.5 m(상대 머리 위)에서 그쳐 48 판 맞힘 0.
-//  감는 토막(gilmokWind — 플레이어가 옆 자세 밖에서 창을 받은 때)에는 덧씌우지 않는다 (10/11 v6 4차): 3차에 자세표 옆 자세를 덧씌웠더니 플레이어 칼이 2/2 헛쳤다 —
-//   덧씌우기를 빼면 2/2 넓적다리에 닿는다(2차와 같음). 남은 낮음의 원인은 감음 토막의 떨어지는 힘(손을 미리 옆 자세에 두면 칼끝이 가슴 +0.1~0.3 m — 탐침)
-//  seg: 'mid'(가운데 토막) | 'end'(끝 토막·따라 지나감·경직) | null(끔 — 0.12 s 에 걷음, iaiReadyPose 끄는 빠르기와 같음) · s: +1 오른쪽에서 탈류 · −1 왼쪽에서 레베스
-// ─────────────────────────────────────────────────────────────
-const _gh = new THREE.Vector3();
-const _gt = new THREE.Vector3();
-export function gilmokCutPose(f, seg, s, dt) {
-  const th = f.skill.thrustPose;
-  if (iaiBusy(f) || f.skill.tap || f.skill.pom) {
-    f.gilCutW = 0;
-    return;
-  }
-  const w0 = f.gilCutW ?? 0;
-  if (!seg && w0 <= 0) return;
-  const w = seg ? 1 : Math.max(0, w0 - dt / 0.12);
-  f.gilCutW = w;
-  th.w = w;
-  if (!seg) return; // 걷는 동안은 마지막 목표 그대로
-  const K = SECRET.iaiPath;
-  const P = seg === 'mid' ? K.M : K.E;
-  // 발도는 왼 허리 → 칼 든 쪽(+)으로 벤다. 길목 탈류(s +1)는 칼 든 쪽 → 반대쪽(−)이라 옆 자리·옆 각을 −s 로 뒤집는다
-  th.hand[0] = P.hand[0];
-  th.hand[1] = P.hand[1];
-  th.hand[2] = -s * P.hand[2];
-  // 높이 각 (10/11 v6 3차 — 디렉터 '칼끝이 가운데 선에서 상대 몸통 높이를 지나게'): 발도 길의 고정 각(el) 대신 그 순간의 칼자루 높이·칼 길이로 계산 —
-  //  sin(el) = (상대 가슴 몸체 높이 − 내 칼자루 높이) / (칼자루 → 칼끝 길이). 기하에서 나오는 값(고르는 수 없음). 2차(고정 −3°): 칼끝이 츠바이핸더 가슴 −0.13~+0.35 ·
-  //  북부 대공의 검 +0.53~0.65 m 로 뜨고, 플레이어는 넓적다리·정강이로 지났다. 상대가 없으면 발도 길 각 그대로
-  let el = P.el;
-  const foe = f.foe;
-  if (foe?.bodies?.chest) {
-    const hp = f.bladePoint(0, _gh);
-    const tp = f.bladePoint(1, _gt);
-    const L = hp.distanceTo(tp);
-    // 겨누는 몸 자리 (사장님 결정 10/11 13:5x — SECRET.gilmokAim): 가슴 · 머리 가운데 · 머리 꼭대기(+ 머리 반지름). 처지는 만큼 위를 겨눔 (AI·플레이어 같은 함수)
-    const A = SECRET.gilmokAim;
-    const ty = A === 'chest' || !foe.bodies.head ? foe.bodies.chest.translation().y : foe.bodies.head.translation().y + (A === 'headTop' ? foe.headR ?? 0 : 0);
-    if (L > 0) el = Math.asin(THREE.MathUtils.clamp((ty - hp.y) / L, -1, 1)) / D2R;
-  }
-  const D = dirOf(-s * P.yaw, el);
-  th.dir[0] = D.x;
-  th.dir[1] = D.y;
-  th.dir[2] = D.z;
-  const B = P.body ?? { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 };
-  th.pelvisYaw = s * B.pelvisYaw * D2R; // 끝: 탈류는 칼 든 어깨가 앞(−) — 발도 E 와 같은 부호, 레베스는 거울
-  th.chestYaw = s * B.chestYaw * D2R;
-  th.pitch = B.pitch * D2R;
-  th.drop = B.drop;
-}
-
-/** 길목 한 칼의 토막 이름 → gilmokCutPose 의 seg · s (그 밖이면 seg null) */
-export function gilmokSeg(name, stiff) {
-  const m = /^gilmok(Talho|Revez)(End)?$/.exec(name ?? '');
-  if (!m) return { seg: null, s: 1 };
-  return { seg: m[2] || stiff ? 'end' : 'mid', s: m[1] === 'Talho' ? 1 : -1 };
-}
-
-// ─────────────────────────────────────────────────────────────
 //  중국 빠른 연환 (10/12 사장님 01:1x '연격은 기술 자체의 시각적 효과도 잘 안 보여서 … 고노센 50% 정도의 빠르기와 잔상' · 01:2x '잔상도 고노센의 50%나 65%로' —
 //   docs/strike/cn_combo_play_2026-10-12.md §5). 서보는 손 빠르기 handSpeed 1.5 에서 포화돼 더 빨라지지 않는다 → 발도와 같은 틀(**물리 원칙의 예외** — 사장님 10/9 23:5x
 //   '모든 비기 모션·판정 어드밴티지'): 팔 사슬·칼을 스텝마다 길 위 자리에 놓는다(placeIai — 관절 기준점이 맞음, 칼 쪽 팔·칼 ↔ 상대 몸·칼 충돌 끔 instantGhost).
@@ -1942,36 +1861,26 @@ function bandPick(I, { dy, P, part }) {
 }
 
 /**
- * 죽음의 일격 운동학 길 (10/22 밤 감독 — SECRET.mord.kin · 기본 끔): 지금 자리 → 시작 자세(준비 — 맞힘 없음) → 기술 길 점(맞힘) → 시작 자세(다시 세우기 — 맞힘 없음).
+ * 죽음의 일격 운동학 길 (10/22 밤 감독 — SECRET.mord.kin): 지금 자리 → 시작 자세(준비 — 맞힘 없음) → 기술 길 점(맞힘) → 시작 자세(다시 세우기 — 맞힘 없음).
  *  패드 → 손 자리 · 방향은 서보 길과 같은 padPose — 방향은 칼자루 쪽(겨눔 뒤집기와 같음). 시간 = 칼자루 끝(I.mord.Lp) 길이 / I.v.
- *  I.mord.pull (SECRET.mord.aim 'pull'): 베는 길 위 칼자루 가운데 점(손에서 (Lc + Lp)/2)이 상대 머리 가운데에 가장 가까운 자리를 찾아, 시작 자세 · 길 점의 손 자리를
+ *  머리 겨눔 'pull' (늘 — 전 SECRET.mord.aim): 베는 길 위 폼멜 공 가운데 쯤(손에서 Lp × 0.8)이 상대 머리 가운데에 가장 가까운 자리를 찾아, 시작 자세 · 길 점의 손 자리를
  *   그 차이만큼 옮긴다 — 칼자루 가운데가 머리 가운데를 지난다 (격살 겨눔 comboPlanAim 과 같은 꼴 · 새 수 없음 · 길을 짜는 그때의 머리 자리). 다시 세우기는 옮기기 전 시작 자세로
  */
 function comboPlanMord(f, I, m, A) {
   const M = I.mord;
-  const pose = (p) => {
-    const B = { H: new THREE.Vector3(), D: new THREE.Vector3(), px: p[0], pad: p };
-    f.padPose(p[0], p[1], B.H, B.D);
-    return B;
-  };
-  let pts = [m.from, ...m.path].map(pose);
-  let home = pose(m.from); // 다시 세우기 끝 = 옮기기 전 시작 자세 (굳음 붙잡기 · 원래 쥠으로 돌아가는 자리)
-  const Lc = M.Lc;
   const Lp = M.Lp;
-  if (M.pommel) {
-    // 폼멜 찍기 (10/31 시제품 — SECRET.mord.pommel · 기본 끔 · 사장님 '칼은 그대로 쥐고 폼멜이나 손잡이 하단부로 찍기'): 쥠 그대로 · D = 폼멜 쪽(칼날은 위 뒤로 섬) —
-    //  머리 위에서(손 이마 앞 위) 폼멜 끝을 앞 아래로 내려찍는 길 (몸 틀 · 칼 든 쪽 z = side). 'pull' 겨눔 · 머리 따라 겨눔 · 머리 뚫음 막기는 같은 셈
-    const z = f.side ?? 1;
-    const mk = (h, d) => ({ H: new THREE.Vector3(h[0], h[1], h[2] * z), D: new THREE.Vector3(d[0], d[1], d[2] * z).normalize(), px: m.from[0], pad: m.from });
-    pts = [mk([0.26, 0.6, 0.1], [0.15, -1, 0]), mk([0.4, 0.42, 0.06], [0.45, -0.9, 0]), mk([0.42, 0.1, 0.04], [0.75, -0.65, 0])];
-    home = mk([0.26, 0.6, 0.1], [0.15, -1, 0]);
-  }
+  // 폼멜 찍기 (늘 — 10/31 14:xx 사장님 '폼멜 찍기로 바꿔서 본판에 올려.' · '칼은 그대로 쥐고 폼멜이나 손잡이 하단부로 찍기' — 기술 길(m.path)의 패드 길 판은 11/17 걷음): 쥠 그대로 · D = 폼멜 쪽(칼날은 위 뒤로 섬) —
+  //  머리 위에서(손 이마 앞 위) 폼멜 끝을 앞 아래로 내려찍는 길 (몸 틀 · 칼 든 쪽 z = side). 'pull' 겨눔 · 머리 따라 겨눔 · 머리 뚫음 막기는 같은 셈
+  const z = f.side ?? 1;
+  const mk = (h, d) => ({ H: new THREE.Vector3(h[0], h[1], h[2] * z), D: new THREE.Vector3(d[0], d[1], d[2] * z).normalize(), px: m.from[0], pad: m.from });
+  const pts = [mk([0.26, 0.6, 0.1], [0.15, -1, 0]), mk([0.4, 0.42, 0.06], [0.45, -0.9, 0]), mk([0.42, 0.1, 0.04], [0.75, -0.65, 0])];
+  const home = mk([0.26, 0.6, 0.1], [0.15, -1, 0]); // 다시 세우기 끝 = 옮기기 전 시작 자세 (굳음 붙잡기 · 원래 쥠으로 돌아가는 자리)
   M.start = pts[0]; // 재기 (시작 자세 · 다시 세우기 끝 — 옮김 delta = start.H − home.H)
   M.home = home;
-  if (M.pull && f.foe?.bodies.head) {
+  if (f.foe?.bodies.head) {
     const c = tv(f.bodies.chest.translation(), new THREE.Vector3());
     const P = tv(f.foe.bodies.head.translation(), new THREE.Vector3()).sub(c).applyQuaternion(I.yaw.clone().invert());
-    const r = M.pommel ? Lp * 0.8 : (Lc + Lp) / 2; // 폼멜 찍기: 폼멜 공 가운데 쯤
+    const r = Lp * 0.8; // 폼멜 찍기: 폼멜 공 가운데 쯤
     let best = null;
     for (let k = 0; k + 1 < pts.length; k++) {
       for (let i = 0; i <= 8; i++) {
@@ -1983,9 +1892,9 @@ function comboPlanMord(f, I, m, A) {
     }
     if (best) {
       const delta = P.clone().sub(best.C);
-      // 머리 따라 겨눔 (10/30 시제품 — SECRET.mord.track · 기본 끔): 옮기기 전 길 · 겨눈 길 자리(토막 k 의 i/8)를 두었다가 stepCombo 가 스텝마다 그때 머리로 다시 옮김 (mordTrack)
+      // 머리 따라 겨눔 (늘 — 10/30 · 전 SECRET.mord.track): 옮기기 전 길 · 겨눈 길 자리(토막 k 의 i/8)를 두었다가 stepCombo 가 스텝마다 그때 머리로 다시 옮김 (mordTrack)
       M.trk = { pts, base: pts.map((B) => ({ H: B.H.clone(), D: B.D.clone() })), k: best.k, w: best.i / 8, r, seg: null, tAim: null, done: false, n: 0, moved: 0 };
-      M.clip = mordClipPlan(f, I, pts, M.trk?.base ?? pts.map((B) => ({ H: B.H.clone(), D: B.D.clone() })), best.k, best.i / 8, P, r); // 내 머리 뚫음 막기 (10/31 시제품 · 기본 끔 — 아래)
+      M.clip = mordClipPlan(f, I, pts, M.trk.base, best.k, best.i / 8, P, r); // 내 머리 뚫음 막기 (늘 — 아래)
       M.pullD = delta.length(); // 재기 (옮긴 거리 m)
     }
   }
@@ -1993,14 +1902,14 @@ function comboPlanMord(f, I, m, A) {
   let cur = A;
   const push = (B, cut) => {
     const sg = { cut, A: cur, B };
-    sg.T = (M.pommel ? Math.max(comboSegLen(f, sg, Lp), comboSegLen(f, sg, 0)) : comboSegLen(f, sg, Lp)) / I.v; // 폼멜 찍기: 폼멜 끝 길이 짧아(손이 0.4 m 드는데 0.02 s) 손 길이 쪽으로
+    sg.T = Math.max(comboSegLen(f, sg, Lp), comboSegLen(f, sg, 0)) / I.v; // 폼멜 찍기: 폼멜 끝 길이 짧아(손이 0.4 m 드는데 0.02 s) 손 길이 쪽으로
     segs.push(sg);
     cur = B;
   };
   const pre = segs.length; // 쥠 바꿈 토막 수 (없으면 0 — 아래 토막 번호는 지금 판 그대로)
   push(pts[0], false);
   for (let k = 1; k < pts.length; k++) push(pts[k], true);
-  if (!(M.pommel && I.guardT > 0)) push({ ...home, back: true }, false); // 11/16 폼멜 찍기 겨눔 되돌림(SECRET.mord.guard)이면 다시 세우기는 찍은 자리에서 곧장 겨눔으로 (comboGuardBegin)
+  if (!(I.guardT > 0)) push({ ...home, back: true }, false); // 11/16 폼멜 찍기 겨눔 되돌림(SECRET.mord.guard)이면 다시 세우기는 찍은 자리에서 곧장 겨눔으로 (comboGuardBegin)
   M.pre = pre;
   if (M.trk) M.trk.seg = segs[pre + M.trk.k + 1]; // 겨눈 자리가 든 토막 (pts[k] → pts[k + 1])
   if (M.clip && I.slide?.keep) {
@@ -2013,7 +1922,7 @@ function comboPlanMord(f, I, m, A) {
 }
 
 /**
- * 내 머리 뚫음 막기 (10/31 시제품 — 사장님 확인 전 · 기본 끔 SECRET.mord.noSelfClip · 확인표 3110 ~ 3116): 사장님 10/31 02:xx '가까이서 보면 팔이 나의 머리를 뚫고 뒤로 갔다가 다시 적을 강타하는 것처럼 보여'.
+ * 내 머리 뚫음 막기 (10/31 — 늘 · 전 SECRET.mord.noSelfClip · 확인표 3110 ~ 3116): 사장님 10/31 02:xx '가까이서 보면 팔이 나의 머리를 뚫고 뒤로 갔다가 다시 적을 강타하는 것처럼 보여'.
  *  까닭: 거꾸로 쥔 칼(at 0.6)의 칼자루 가운데가 손에서 (Lc + Lp)/2 ≈ 0.76 m(롱소드) — 지붕 자세 손(내 이마 앞 위)에서 휘두르면 그 점이 가슴 사이 약 1.05 m 의 머리를 지나는데,
  *   창은 가슴 사이 0.8 m 안이라 'pull' 이 길 전체를 0.3 ~ 0.8 m 뒤로 옮긴다 → 두 손이 내 머리 위 · 속(0.75 ~ 0.8 m) · 머리 뒤 목덜미(0.45 ~ 0.65 m)를 지나 내리친다.
  *  B = 옮기기 전 길(손 H · 칼자루 쪽 D — 몸 틀), (k, w) = 겨눈 자리(토막 k 의 w 몫), P = 상대 머리 가운데(몸 틀), r = 손 → 칼자루 가운데. 셋:
@@ -2057,8 +1966,8 @@ function mordClipPlan(f, I, pts, base, k, w, P, r) {
   let s = Math.min(SECRET.mord.clipStep ?? 0, Math.max(0, sol.short));
   let e = null;
   let dir = -1; // −1 = 뒤로(못 옮긴 몫) · +1 = 앞으로(폼멜 찍기 — 팔이 안 닿는 몫)
-  if (I.mord.pommel && s <= 1e-3) {
-    // 폼멜 찍기 (10/31 시제품): 옮긴 길의 겨눈 자리 손이 칼 어깨에서 팔 길이(comboArmLen) 밖이면 그만큼 앞으로 반걸음(clipStep 까지 · 같은 미끄러짐 틀)
+  if (s <= 1e-3) {
+    // 폼멜 찍기 (10/31): 옮긴 길의 겨눈 자리 손이 칼 어깨에서 팔 길이(comboArmLen) 밖이면 그만큼 앞으로 반걸음(clipStep 까지 · 같은 미끄러짐 틀)
     const Q = comboLerp({ A: base[k], B: base[k + 1] }, w);
     const H = Q.H.clone().add(sol.d);
     const S = comboShoulder(f, I.yaw);
@@ -2089,7 +1998,7 @@ function mordClipPlan(f, I, pts, base, k, w, P, r) {
 }
 
 /**
- * 머리 따라 겨눔 (10/30 시제품 — 사장님 '모르트가 빗나가는 경우는 어떤거지? … 모르트의 적중은 실력이 아니라 그저 행운인가?' · SECRET.mord.track · 기본 끔):
+ * 머리 따라 겨눔 (10/30 — 사장님 '모르트가 빗나가는 경우는 어떤거지? … 모르트의 적중은 실력이 아니라 그저 행운인가?' · 늘 — 전 SECRET.mord.track):
  *  길을 짠 때 한 번만 머리에 맞추던('pull') 칼자루 길을, 칼자루 가운데가 겨눈 자리에 닿기 SECRET.mord.trackCommit 초 전까지 스텝마다 그때 머리(내 가슴 틀 — 내 몸이 밀려도)로 다시 옮긴다
  *  (trackUntil 'cut' 이면 베는 토막이 시작될 때까지만). 그 뒤는 고정 — 마지막 몫에 머리를 빼면 빗나감. 막힘 · 맞힘 · 다시 세우기면 멈춤. 옮김은 길 전체를 그대로 평행 이동(pull 과 같은 꼴)
  */
@@ -2111,7 +2020,7 @@ function mordTrack(f, I) {
   const P = tv(f.foe.bodies.head.translation(), new THREE.Vector3()).sub(c).applyQuaternion(I.yaw.clone().invert());
   const C = I.mord.clip;
   if (C) {
-    // 내 머리 뚫음 막기 (10/31 시제품 · 기본 끔): 같은 셈(묶음 · 기울임)을 그때 머리로 — 남은 반걸음만큼 상대 머리를 멀리 둔 자리(물러난 뒤의 자리)로 겨눔
+    // 내 머리 뚫음 막기 (10/31 · 늘): 같은 셈(묶음 · 기울임)을 그때 머리로 — 남은 반걸음만큼 상대 머리를 멀리 둔 자리(물러난 뒤의 자리)로 겨눔
     const rem = C.e && I.slide?.keep ? C.s - Math.abs(I.slide.done) : 0; // 남은 걸음 (뒤로면 상대 머리가 그만큼 멀어질 것 · 앞으로면 가까워질 것)
     const sol = mordClipSolve(f, I, T.base, T.k, T.w, rem > 0 ? P.clone().addScaledVector(C.e, -(C.dir ?? -1) * rem) : P, T.r);
     T.moved += T.pts[0].H.distanceTo(T.base[0].H.clone().add(sol.d));
@@ -3203,7 +3112,7 @@ function stepCombo(f, combat) {
     S.done = want;
     I.slideDs = (I.slideDs ?? new THREE.Vector3()).set(S.dx * ds, 0, S.dz * ds); // 이 스텝 몸 옮김 (겹치기 날 쪽 — hintBody)
   }
-  if (I.mord?.trk && !I.guarding) mordTrack(f, I); // 죽음의 일격 머리 따라 겨눔 (10/30 시제품 — SECRET.mord.track · 기본 끔)
+  if (I.mord?.trk && !I.guarding) mordTrack(f, I); // 죽음의 일격 머리 따라 겨눔 (10/30 · 늘)
   const u0 = sg.T > 0 ? clamp((I.t - I.ts) / sg.T, 0, 1) : 1;
   const u = sg.guard ? u0 * u0 * (3 - 2 * u0) : u0; // 11/16 겨눔 되돌림 토막은 처음 · 끝 느리게 (멈춤에서 나와 겨눔에 가라앉음)
   const P = comboLerp(sg, u);
@@ -3263,7 +3172,7 @@ function stepCombo(f, combat) {
     if (I.dupGlide && I.moves[I.mi]?.dup) {
       if (bd >= SECRET.iberianBlockDist) I.dupGlide = false;
       else I.glided = (I.glided ?? 0) + 1;
-    } else if (!I.mord?.over && bd < SECRET.iberianBlockDist) {
+    } else if (bd < SECRET.iberianBlockDist) {
       I.blockM = true;
       I.blocked++;
       continue;
@@ -3452,7 +3361,7 @@ function endCombo(f, combat) {
   th.hand[0] = E.H.x;
   th.hand[1] = E.H.y;
   th.hand[2] = E.H.z;
-  const flipDir = I.mord && I.mord.pommel ? -1 : 1; // 쥠 바꿈 · 폼멜 찍기 (10/31 시제품): 끝 자세가 원래 쥠이라 D(칼자루 쪽)의 반대가 칼끝 쪽
+  const flipDir = I.mord ? -1 : 1; // 폼멜 찍기 (10/31): 끝 자세가 원래 쥠이라 D(칼자루 쪽)의 반대가 칼끝 쪽
   th.dir[0] = E.D.x * flipDir;
   th.dir[1] = E.D.y * flipDir;
   th.dir[2] = E.D.z * flipDir;

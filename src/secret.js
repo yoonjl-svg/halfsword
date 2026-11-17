@@ -9,8 +9,8 @@
 //   플레이어는 검술 풀이의 measure(같은 꾸러미 값)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, SKILL, BIND, CLOSE, UNIQUE_ASSIST, GAIT, realS } from './config.js';
-import { TRADITIONS, playerSecretDef } from './schools.js';
+import { SECRET, BIND, CLOSE, UNIQUE_ASSIST, GAIT, realS } from './config.js';
+import { playerSecretDef } from './schools.js';
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
 import { segDist } from './skill.js';
 import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동방 막기 I(C7 — 몸꼴 parryCover)일 때만
@@ -132,7 +132,6 @@ function segPoint(ax, ay, az, bx, by, bz, px, py, pz) {
 export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null, ex = null) {
   const W = [].concat(S.when);
   if (W.includes('inside')) return insideEvent(s0, c, d0, ex);
-  if (W.includes('gilmok')) return gilmokEvent(s0, c, d0, ex);
   if (W.includes('threat')) {
     const ctx = threatNow(sense, foe, s0, c, r, d0, foeReach, ex?.lag ?? 0); // ex.lag — AI 가 늦게 본 모습을 넘겼으면 (3 단계 11/14 공정함) · 사람 · 옛 판 0
     if (ctx && S.cond?.lethal && me) lethalPath(ctx, s0, me);
@@ -181,29 +180,10 @@ function insideEvent(s0, c, d0, ex) {
 }
 
 /**
- * 이베리아 길목 지키기 사건 (10/11 03:3x 사장님 '길목 지키기 비기로 해보자' — v6): 준비(ex.armed — IaiArm 'gilmok' 셈, 칼끝 거리 reach 밖에서 쌓임)된 채, 상대 가슴이 내 칼끝 거리
- *  (ex.reach)를 **다가오며 넘어 들어오는 그 순간** — 지난 스텝 거리 ≥ reach 이고 이번 스텝 거리 < reach, 그리고 상대 가슴이 나 쪽으로 SECRET.iberianInsideClosing m/s 넘게 다가옴.
- *  (경계를 맞닿기 contact 로 옮겨 봤다: 48 판에서 상대 롱소드 AI 가 reach 와 contact 사이(1.85~1.96 m)에 서서 유예 0.5 s 안에 contact 를 넘지 않아 창 0 — 되돌림)
- *  (v4·v5 '호 안쪽'의 다가옴 문턱 0.3 을 그대로 다시 씀 — 새 값 아님. 내가 걸어 들어가 경계를 넘은 것은 상대가 '길목에 들어온' 것이 아니다).
- *  안에 머무는 것은 세지 않는다(v5 '호 안쪽'은 상태라 맞붙은 거리 내내 창이 열렸다). ex = { reach, dt, st, armed } — st.gilPrevD 에 지난 거리를 적는다. 굴림 없음
- *  근거: 피 단Ⅶ 「This rule serves to deter people in a street and impede them moving from one end to another」 [원문 영역] — 몬탄테는 자리(길목)를 지키는 칼 [해석]
- */
-function gilmokEvent(s0, c, d0, ex) {
-  if (!ex || !(ex.reach > 0)) return { on: false, ctx: null };
-  const st = ex.st;
-  const prev = st.gilPrevD;
-  st.gilPrevD = d0;
-  const B = ex.reach;
-  if (!ex.armed || prev == null || !(prev >= B && d0 < B)) return { on: false, ctx: null };
-  const closing = Math.max(0, -(s0.vx * (s0.cx - c.x) + s0.vz * (s0.cz - c.z)) / d0);
-  return closing > SECRET.iberianInsideClosing ? { on: true, ctx: { ev: 'gilmok', closing } } : { on: false, ctx: null };
-}
-
-/**
  * 일본 고노센 '들어옴' 사건 (10/25 01:3x 사장님 '이 경우에 창이 안 열리고 천천히 다가와서 가까이 붙어 버리던데?' — docs/strike/school_secret_2026-10-09.md §16):
  *  발도 대기(ex.iaiArmed)인 채, 상대 가슴이 내 발도가 닿는 거리(ex.enterLine — gnsEnterLine)를 **안으로 넘는 그 스텝**(지난 스텝 거리 > 선 ≥ 이번 스텝 거리)에 한 번 —
  *  그 넘음이 상대가 들어와서인가: 최근(GNS_RECENT 0.6 s — 아래 foeRecover 의 '방금' 과 같은 시간) 상대 가슴의 나 쪽 빠르기 > 0 이고 > 내 가슴의 상대 쪽 빠르기.
- *  내가 걸어 들어가 선을 넘은 것은 상대가 '들어온' 것이 아니다. 문턱 수가 없다(길목 지키기 gilmokEvent 는 0.3 m/s 문턱).
+ *  내가 걸어 들어가 선을 넘은 것은 상대가 '들어온' 것이 아니다. 문턱 수가 없다(전 길목 지키기 사건은 0.3 m/s 문턱).
  *  첫 꼴은 길목과 같은 0.3 m/s 문턱이었으나 AI 는 0.1 ~ 0.25 m/s 로 기어 들어와(넘는 스텝 p50 0.18 ~ 0.26 m/s) 선 안에서 멈추고 유예 0.5 s 가 먼저 지나 창을 놓쳤다(§16-4).
  *  최근 빠르기(0.6 s 지수 평균)로 보는 까닭: 천천히 걷는 상대의 가슴 빠르기는 걸음마다 0 근처로 출렁인다(시험 걸음 0.47 m/s 에서 −0.01 ~ 0.69).
  *  창을 연 넘음 뒤로는(st.gnsEnter 'done') 준비가 풀리거나 상대가 선 밖에 iaiArmTime 머물 때까지 다시 걸지 않는다 — 선 언저리에 선 상대가 흔들려 선을 오가도 창이 거듭 뜨지 않게
@@ -410,7 +390,7 @@ export class BindCount {
  *  간격 안으로 들어가거나 공격·막기(busy)면 풀린다. AI 는 이때 웅크린 발도 대기 자세(secret_instant.js iaiReadyPose), 플레이어는 '고노센 준비' 표시만.
  *  고노센(cond.armed)은 armed 일 때만 — SECRET.iai 일 때. AI·플레이어 같은 셈
  */
-//  10/11 이베리아 길목 지키기(v6)도 같은 셈을 쓴다 — 열쇠만 다르다(new IaiArm('gilmokArmTime', 'gilmokArmGrace'), outside = 내 칼끝 거리 reach 밖). 일본은 열쇠 없이 부르니 전과 같다.
+//  (10/11 이베리아 길목 지키기(v6)도 같은 셈을 썼다 — 비기 정의는 4차 · 읽는 코드는 11/17 걷음). 일본은 열쇠 없이 부르니 전과 같다.
 //  ons = 준비가 켜진 수 (재기 — 판정에는 안 씀) · consume() = 창을 열었거나 비기를 냄 → 준비가 풀림 (길목: 한 번 준비에 한 번 기회)
 //  10/22 이베리아 휘감아 돌기도 같은 셈 — 값 칸이 SECRET.ibSpin 안이라 group 'ibSpin' 으로 연다(new IaiArm('armTime', 'armGrace', 'ibSpin')). 열쇠 없이 부르면 전과 같다.
 //  10/25 22:3x 일본 고노센 준비는 거리를 안 본다(SECRET.gnsReady 'idle' — gnsArmTick 이 outside 를 늘 참으로 · 풀림만 봄). 'dist' 판 · 길목 · 싱지르는 위 그대로.
@@ -517,7 +497,6 @@ export function bindTouch(me, foe) {
  *  토막 = { name, nameKo, from, pre: [](이음새 물레 점 없음 — 앞 토막 끝에서 곧장), path, gate?, open, kind, reach, base }
  */
 export function montanteFlowSeq(hand, dir, D, f = null) {
-  if (D.gilmok) return gilmokSeq(hand, D, f); // v6 길목 지키기: 한 칼 (아래)
   const hx = hand[0];
   const hy = hand[1];
   const len = Math.hypot(dir?.[0] ?? 0, dir?.[1] ?? 0);
@@ -562,72 +541,6 @@ export function montanteFlowSeq(hand, dir, D, f = null) {
   return seq;
 }
 
-/**
- * 이베리아 길목 지키기의 한 칼 (10/11 v6 — schools.js IBERIAN_SECRET_GILMOK do.gilmok, AI·플레이어 같은 함수). 난수 없음.
- *  감아 둔 쪽 s(손이 있는 쪽 — 가운데면 오른쪽 = 탈류, 피 단Ⅰ)에서 몸 전체를 돌려 몸 가운데 높이(고 규칙 9 「in mittlerer Höhe」)로 반대쪽 끝까지 둘러 벤다.
- *  길 = v5 마지막 칼(flowTalhoCingido/flowRevezCingido: cutMid [0, 0.1] → 반대쪽 옆 자세) = 꾸러미 zwerch·zwerchL 줄. 물리 서보 길(순간이동·스텝마다 자리 지정 없음).
- *  손이 그 쪽 옆 자세(D.side[s])에서 패드 거리 0.15 밖이면(v5 montanteFlowSeq 의 '이미 아래' 판정 0.15 그대로 — 새 값 아님)(플레이어 — 준비 자세를 잡지 않고 창을 받은 때) 먼저 그 쪽으로 감는 토막(문 = 칼끝이 그 쪽 · 가슴보다 뒤 —
- *  v5 '머리 위로 넘김'과 같은 문)을 둔다. AI 는 준비 동안 옆 자세를 잡고 있으니 곧장 벤다
- */
-/**
- * 길목 준비 자세 규칙 (10/11 v6 2차 AI · 5차 플레이어도 같은 함수): 준비가 켜질 때 기다릴 낮은 자세 — 지금 자세가 낮은 셋(아래 탈류·아래 레베스·칼끝 땅에)이면 그대로,
- *  아니면 손에서 가장 가까운 낮은 자세. guards = 이 유파 간 보는 자세 목록 · cur = 지금 자세 · hand = 손 패드 [x, y]
- */
-export const GILMOK_LOW = ['wechselR', 'wechselL', 'alber'];
-export function gilmokLowGuard(guards, cur, hand) {
-  if (GILMOK_LOW.includes(cur?.name)) return cur;
-  let best = null;
-  const dd = (g) => Math.hypot(hand[0] - g.pad[0], hand[1] - g.pad[1]); // ai_techniques.js padDist 와 같은 셈
-  for (const g of guards) if (GILMOK_LOW.includes(g.name) && (!best || dd(g) < dd(best))) best = g;
-  return best ?? cur;
-}
-/** 감는 시간 남음 (같은 규칙): 상대가 다가오는 중(> iberianInsideClosing)이고 가까우면(< reach + 다가옴 × 0.4 + 0.3 — preThreat '가까움' 꼴) gilmokArmGrace 로 다시 채우고, 아니면 줄인다. > 0 이면 옆 자세로 감음 */
-export function gilmokWindT(windT, closing, d, reach, dt) {
-  return closing > SECRET.iberianInsideClosing && d < reach + closing * 0.4 + 0.3 ? SECRET.gilmokArmGrace : Math.max(0, (windT ?? 0) - dt);
-}
-
-/**
- * 길목 경계 선 (10/11 v6 4차 — 디렉터 '북부 대공의 검 경계는 스위치로'): 준비(밖)·순간(넘음)을 재는 가슴 거리.
- *  SECRET.gilmokEdge 'reach'(기본) = 무기 간격 끝(검술 풀이 measure.reach) · 'cut' = 이 한 칼의 칼끝이 실제로 닿는 앞 거리 + 디딤 —
- *  덧씌우기 가운데 손 앞(SECRET.iaiPath.M.hand[0] 0.5) + 날 길이(weaponCfg.bladeLength) + 디딤(do.step.fwd 0.3). 칼 길이·손 자리에서 계산(탐침 값 아님)
- */
-export function gilmokLine(f, reach, D) {
-  return reach;
-}
-
-/**
- * 길목 한 칼의 디딤 (10/11 v6 3차 — 디렉터 '디딤을 그 순간 상대와의 간격에 맞추세요'): 디딤 = (그 순간 상대 가슴 거리 − 이 한 칼의 칼끝 앞 거리)를
- *  [st.fwd 0.3 (talhoRodeado 와 같던 수 — 10/29 뒤 talhoRodeado 0.45 · 이 값은 0.3 칸 그대로), st.max 0.6 (japaneseStep)] 로 자름 — 기하로 정하는 값. 칼끝 앞 거리 = 덧씌우기 가운데 손 앞(SECRET.iaiPath.M.hand[0] 0.5) + 날 길이(weaponCfg.bladeLength).
- *  f 가 없으면(도구) st.fwd 그대로
- */
-function gilmokStep(st, f) {
-  if (!f?.foe || st.max == null) return { lat: st.lat, fwd: st.fwd, when: st.when };
-  const tip = SECRET.iaiPath.M.hand[0] + (f.weaponCfg?.bladeLength ?? 0);
-  return { lat: st.lat, fwd: clamp(f.foeDistance() - tip, st.fwd, st.max), when: st.when };
-}
-
-export function gilmokSeq(hand, D, f = null) {
-  const hx = hand[0];
-  const s = Math.abs(hx) > 0.05 ? (hx < 0 ? -1 : 1) : 1;
-  const P = (o, k) => o[k].slice();
-  const seq = [];
-  let at = hand.slice();
-  const push = (t) => {
-    seq.push({ kind: 'cut', reach: 0, base: 1, ...t, from: at.slice(), pre: [] });
-    at = t.path[t.path.length - 1].slice();
-  };
-  const side = P(D.side, s);
-  if (Math.hypot(hand[0] - side[0], hand[1] - side[1]) > 0.15) push({ name: s > 0 ? 'gilmokWindR' : 'gilmokWindL', nameKo: s > 0 ? '가로 탈류로 감음' : '가로 레베스로 감음', path: [side], gate: { side: s, behind: true }, open: 'H' });
-  // 한 칼을 두 토막으로 (길은 그대로 — cutMid → 반대쪽 옆 자세): 옆 자세에서 칼이 몸 뒤로 감겨 있어 칼끝이 손보다 늦게 온다. 탐침(tools/sim/iberian_flow_probe.mjs):
-  //   ① 문이 없으면 손 목표가 먼저 끝나 칼이 경직 동안에야 건너갔다 ② 끝에만 문(반대쪽)을 두면 손이 가운데를 0.03 s 에 지나 칼끝이 앞으로 오지 않고 머리 위 뒤로 돌아 건너갔다(칼끝 앞 ≤ 0.06 m · 상처 0).
-  //   → 가운데 점에 문 front(칼끝이 가슴보다 앞) — 칼끝이 앞으로 돌아 나온 뒤 반대쪽으로 둘러 벤다(문 past: 칼끝이 반대쪽). 문마다 최대 FLOW_GATE_MAX, 맞히면 곧장 (v5 문과 같음)
-  const nm = s > 0 ? 'gilmokTalho' : 'gilmokRevez';
-  const ko = s > 0 ? '길목 둘러 베기 (talho orizontal cingido)' : '길목 둘러 베기 (revez orizontal cingido)';
-  push({ name: nm, nameKo: ko, path: [D.cutMid.slice()], gate: { front: true }, open: s > 0 ? 'UL' : 'UR', ...(D.step ? { step: gilmokStep(D.step, f) } : {}) }); // 빈틈 = zwerch · zwerchL · 걸음(D.step)은 첫 토막에
-  push({ name: nm + 'End', nameKo: ko, path: [P(D.side, -s)], gate: { past: -s }, open: s > 0 ? 'UL' : 'UR' });
-  return seq;
-}
-
 /** 흐름 토막 문을 기다리는 최대 (s) — 따라 지나감(손이 끝 자세에 닿은 뒤 칼이 지나가길 기다림)의 바탕 시간과 같은 값 (ai.js follow timer 0.3 · skill.js follow run.t ≥ 0.3).
  *  탐침(tools/sim/iberian_flow_probe.mjs): 0.5 면 막힌 토막에서 칼끝이 0 가까이 멎은 채 0.5 s 씩 서 흐름이 끊겨 보였다(플레이어 2.4~2.7 s) — 0.3 (1.6~1.9 s) */
 export const FLOW_GATE_MAX = 0.3;
@@ -661,7 +574,7 @@ export function flowGate(f, g) {
 
 /**
  * 막기 연환의 자리 (10/11 — schools.js *_SECRET_PARRY cond.slots): 이 막기가 유파가 정한 자세로 한 막기인가 → 자리 열쇠 또는 null. 굴림 없음.
- *  손(패드 [x, y])이 그 줄의 막기 자리 패드(꾸러미 parry[줄]) 0.15 안 — 0.15 는 v5·v6 '이미 그 자세' 판정(montanteFlowSeq·gilmokSeq)의 패드 폭 그대로(새 값 아님).
+ *  손(패드 [x, y])이 그 줄의 막기 자리 패드(꾸러미 parry[줄]) 0.15 안 — 0.15 는 v5·v6 '이미 그 자세' 판정(montanteFlowSeq · 길목 한 칼 — 11/17 걷음)의 패드 폭 그대로(새 값 아님).
  *  AI: line = 막은 줄(defLine) — 그 줄이 정한 줄이고 손이 그 자리에 있어야. 플레이어: line = null — 막기 자리가 없으니 손이 정한 자리 패드 가운데 가장 가까운 것(0.15 안).
  *   두 자리가 같은 패드면(중국 거정세·표두세 = G.tag) hint(그때 들어오던 상대 칼의 줄 — threatNow)로 고르고, 없으면 cond.slots 의 뒤 것(중국: 표두세 — 플레이어 자세표에서 그 패드의 꼴)
  */
@@ -803,8 +716,6 @@ export class PlayerSecretWatch {
     this.combo = 0;
     this.binds = new BindCount(); // 이베리아 맺힘 셈 (10/10)
     this.iaiArm = new IaiArm(); // 일본 발도 대기 (10/10 02:4x — 플레이어는 표시만)
-    this.gilArm = new IaiArm('gilmokArmTime', 'gilmokArmGrace'); // 이베리아 길목 지키기 준비 (10/11 v6 — 플레이어는 표시만, AI 와 같은 셈)
-    this.gilWins = 0; // 길목 창 수 (재기)
     this.spinArm = new IaiArm('armTime', 'armGrace', 'altib'); // 이베리아 휘감아 돌기 무장 (10/22 — 내 칼끝 거리 밖 SECRET.ibSpin.armTime 초, 발도 대기와 같은 셈) · 무장 동안 창이 열려 있다
     this.spinW = me.wounds?.length ?? 0; // 무장 동안 상처 셈 (상처가 나면 무장이 풀림)
     this.gap = Infinity; // 마지막 베기 끝에서 지난 시간
@@ -887,7 +798,6 @@ export class PlayerSecretWatch {
       this.combo = 0;
       this.iaiArm.tick(0, false, true);
       if (S?.do?.instant) iaiReadyPosePlayer(me, false, true, dt, true); // 웅크림 · 허리 대기도 풀림 (손 · 칼은 곧장 · 몸은 gnsCrouchOut)
-      this.gilArm.tick(0, false, true);
       this.spinArm.tick(0, false, true);
       if (this.pc) this.pc.pend = this.pc.buf = null;
       this.riso?.reset();
@@ -919,11 +829,6 @@ export class PlayerSecretWatch {
     //   칼을 쥠 = 손가락이 닿은 자리에서 길게 누름 한도(INPUT.holdPx)를 넘게 끌었음(main.js handGrip — 얹은 손가락의 떨림 · 떠돎은 쥠이 아님) · 막기 단추 · 휘두름. 손가락 몸이 없으면(시뮬 · 마우스) 손가락 움직임 그대로
     //  11/14 납도 (SECRET.iaiSheathe — IaiArm.sheathe): 준비 셈이 iaiArmTime 을 넘은 뒤 준비 전 iaiSheathe 초 동안 칼을 칼집에 넣음 (손이 쉴 때만 — 쥐면 곧장 사람 손 · 셈은 그대로)
     if (S.do?.instant) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!(me.handGrip ?? me.inputActive) || !!me.parryGuard?.held || sw, dt, true, busy ? 0 : this.iaiArm.sheathe);
-    if (S.do?.gilmok) {
-      const was = this.gilArm.armed;
-      this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy || armHold(me)); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖) · 판 시작 정지 동안 셈 0 (10/27 23:0x — 싱지르와 같은 무장 시계)
-      this.gilmokRest(dt, was, s0, c, d0, V, sw || busy);
-    }
     if (S.do?.altib) this.spinTick(dt, d0, V, busy, sw); // 11/11 알티바슈 포르트도 싱지르 무장 그대로
     if (!sw && this.swing) {
       // 베기 하나가 끝났다
@@ -946,7 +851,7 @@ export class PlayerSecretWatch {
     const r = me.right(_r);
     const E = this.ev;
     const enter = null; // 일본 들어옴 (10/25 — 발도 대기인 채 상대가 내 발도가 닿는 거리를 넘어 듦) · 10/25 22:3x 들어옴 창 gnsWalkIn 0(기본 — 사장님 입력 글에 없음)이면 안 봄
-    const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: S.do?.gilmok ? gilmokLine(me, V.reach, S.do) : V.reach, dt, st: E, armed: this.gilArm.armed, ...enter }); // ex: 이베리아 호 안쪽 (reach · 머문 시간) · 길목 (준비) · 일본 들어옴
+    const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: V.reach, dt, st: E, ...enter }); // ex: 이베리아 호 안쪽 (reach · 머문 시간) · 길목 (준비) · 일본 들어옴
     // 고노센 든 칼 이어 봄 (10/31 — SECRET.gnsRaiseLatch · 사장님 확인 전): 준비된 채 상대가 발도가 닿는 거리 밖에서 칼을 들었으면(창 없음) 그 들기를 playerWindow 초 붙잡아,
     //  그 사이 상대가 그 칼로 내 발도 선 안에 들면 그때 창(같은 '듦' 창) — 선 밖에서 시작해 들어오며 치는 칼도 '내 간격에서 공격을 시도'로 셈. 새 수 없음(창 길이 그대로) · 끄면 이 몫 없음
     if (E.latch) {
@@ -971,10 +876,6 @@ export class PlayerSecretWatch {
       return;
     }
     E.armed = false;
-    if (ctx?.ev === 'gilmok') {
-      this.gilArm.consume(); // 한 번 준비에 한 번 기회 — 창을 놓치면 다시 간격 밖에서 준비해야 한다
-      this.gilWins++;
-    }
     this.openWindow(ctx, SECRET.playerWindow); // 여쭘 A (10/25 08:0x · 기본 0 = 다른 창과 같은 playerWindow): 들어옴 창만 짧게
   }
 
@@ -1023,43 +924,6 @@ export class PlayerSecretWatch {
   /** 알티바슈 포르트 무장 창인가 (11/11 — 비기 'altib'): 참이면 그 창은 톡 · 끌기로 나가지 않는다(보통 공격) — 길게 눌러 메기(unique_assist.js holdInput armed)로만 */
   holdOwns() {
     return this.open?.ctx?.ev === 'altib';
-  }
-
-  /**
-   * 플레이어 길목 준비 자세 (10/11 v6 5차 — 디렉터): 준비(armed)이고 손가락을 떼고 있으면(handHeld 거짓 — 쉴 자세로 돌아가는 그 자리) 쉴 목표를 AI 준비 자세와 같은 규칙으로 —
-   *  기본은 낮은 자세(gilmokLowGuard — 손에서 가까운 아래 탈류·아래 레베스·칼끝 땅에), 상대가 다가오고 가까우면(gilmokWindT) 그 쪽 옆 자세로 감고 0.5 s 유지. 손 빠르기 =
-   *  쉴 자세로 돌아가는 빠르기 SKILL.recoverSpeed(휘두르기로 오인되지 않게 — 그대로). 손가락을 대고 있으면 플레이어 손 그대로(창에서는 감는 토막이 붙는 꼴).
-   *  까닭: 4차 원인 — 손이 옆 자세 밖에서 창을 받으면 감는 토막의 떨어지는 힘으로 칼끝이 처져 넓적다리를 벤다. 미리 옆 자세면 가슴 높이(탐침)
-   */
-  gilmokRest(dt, was, s0, c, d0, V, busy) {
-    const me = this.me;
-    const P = (this.gilPose ??= { guard: null, side: 1, windT: 0 });
-    if (!this.gilArm.armed) {
-      P.windT = 0;
-      return;
-    }
-    if (!was) {
-      const guards = TRADITIONS[me.swordArt?.tradition]?.guards ?? [];
-      P.guard = gilmokLowGuard(guards, null, [me.handOffset.x, me.handOffset.y]);
-      P.side = P.guard?.name === 'wechselL' ? -1 : 1;
-      P.windT = 0;
-    }
-    const closing = Math.max(0, -(s0.vx * (s0.cx - c.x) + s0.vz * (s0.cz - c.z)) / d0); // 상대 가슴이 나 쪽으로 (지금 모습 — insideEvent·gilmokEvent 와 같은 셈)
-    P.windT = gilmokWindT(P.windT, closing, d0, V.reach, dt);
-    if (me.handHeld || busy || !P.guard) return;
-    const side = this.S.do.side[P.side];
-    const tgt = P.windT > 0 ? side : P.guard.pad;
-    const off = me.handOffset;
-    const hx = tgt[0] - off.x;
-    const hy = tgt[1] - off.y;
-    const d = Math.hypot(hx, hy);
-    const step = SKILL.recoverSpeed * dt;
-    if (d <= step) off.set(tgt[0], tgt[1]);
-    else {
-      off.x += (hx / d) * step;
-      off.y += (hy / d) * step;
-    }
-    me.skill.recovering = false; // 검술 층의 쉴 자세 걷기와 다투지 않게 (이 동안은 길목 준비 자세가 쉴 자리)
   }
 
   /**
@@ -1325,22 +1189,6 @@ export class PlayerSecretWatch {
       if (o.ctx?.ev === 'altib') this.spinArm.consume(); // 휘감아 돌기 · 알티바슈 포르트(11/11): 한 번 무장에 한 번 (10/22)
     }
     return o;
-  }
-
-  /**
-   * 길목 준비에서 곧장 내기 (사장님 결정 10/11 13:2x — '발동 시점이 좀 늦어. 미리 쓸 수 있게 해야해. 너무 미리 써서 미스가 나는 게 그 반대보다 말이 돼'):
-   *  플레이어만, 길목 준비(gilArm.armed — 경계 안으로 들어온 뒤 유예 gilmokArmGrace 동안도 포함)가 켜져 있으면 창(경계 넘음 사건)을 기다리지 않고 공격 입력 하나가 곧 길목 한 칼.
-   *  준비는 쓰면 풀린다(한 번 준비에 한 번). 너무 이르면 칼끝이 못 미쳐 헛치고, 늦으면 상대가 안쪽이라 걸린다 — 보정 없음(물리 그대로). 새 값 없음. AI 는 그대로 경계 넘음 순간에 낸다
-   *  돌려줌: { S, ctx } (fire() 와 같은 꼴) 또는 null
-   */
-  fireArmed() {
-    if (!this.S?.do?.gilmok || !this.gilArm.armed) return null;
-    if (!this.me.stamina?.secretReady) return this.refusePoor({ ev: 'gilmokArmed' }) || null; // 기력이 모자람 (10/30 08:2x) — 준비는 그대로 · 이 입력은 보통 공격
-    this.gilArm.consume();
-    this.open = null;
-    this.combo = 0;
-    this.binds.reset();
-    return { S: this.S, ctx: { ev: 'gilmokArmed' } };
   }
 }
 
