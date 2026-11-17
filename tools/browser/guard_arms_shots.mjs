@@ -4,7 +4,7 @@
 //  장면: idle(손 뗌) · rest(엄지를 얹고 2 s — 안 끔: 사장님 화면) · drag(40 px 천천히 끈 뒤 댄 채 1.5 s) · swipeRest(가로 긋고 곧 다시 얹어 2.5 s) ·
 //   jitter(얹은 엄지가 ±1 px 떨고 4 px 까지 떠돎 2 s) · wind(얹고 1.6 s — 풍차 베기 감기 · 떼고 1.5 s 뒤 서 있나, 그림 없음) · pad:x:y(패드를 그 자리에 놓고 손 뗌)
 //  실행 (자기 포트): npx vite build && npx http-server dist -p 4472 -s &
-//        node tools/browser/guard_arms_shots.mjs http://127.0.0.1:4472 zweihander after idle,rest,drag,swipeRest [주소 덧붙임 예 restTouch=0] [그림 폴더 (기본 .tmp/shots)]
+//        node tools/browser/guard_arms_shots.mjs http://127.0.0.1:4472 zweihander after idle,rest,drag,swipeRest [주소 덧붙임] [그림 폴더 (기본 .tmp/shots)]
 //  끝 줄 = JSON { tag, weapon, extra, out: [장면마다 수], errors(콘솔 · 페이지 오류 — 404 빼고) }
 import fs from 'node:fs';
 import { createRequire } from 'node:module';

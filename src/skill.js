@@ -1758,12 +1758,12 @@ export class Skill {
       this.cutPending = true;
       this.recovering = false;
     }
-    // 얹은 손가락 (10/31 SKILL.restTouch — 사장님 11/01 결정): 닿은 자리에서 길게 누름 한도(INPUT.holdPx)를 넘게 끌지 않은 손가락(main.js handGrip 거짓)은
+    // 얹은 손가락 (10/31 — 사장님 11/01 결정): 닿은 자리에서 길게 누름 한도(INPUT.holdPx)를 넘게 끌지 않은 손가락(main.js handGrip 거짓)은
     //  손을 뗀 것과 같다 — 닿음(touched) · 움직임(moved) 둘 다 아님(엄지 떨림 · 떠돎이 쉼 자세를 날것으로 끌어내리지 않게). 풍차 베기 감는 동안은 전과 같이 쥠.
     //  handGrip 이 없는 몸(AI · 시뮬 대본)은 handHeld · inputActive 그대로.
     //  손을 쥐는 다른 길은 그대로 쥠(11/01): 막기 단추가 이 스텝 손을 쥠(parryGuard.active — 단추가 inputActive 를 켜 쉼 무게를 비킴) · 채찍 톡(flick — 손가락이 움직이는 것처럼 알림) ·
     //  손가락이 닿지 않은 때(handHeld 거짓 — main.js handGrip 이 inputActive 를 그대로 받음)
-    const restFinger = !!SKILL.restTouch && !!f.handHeld && f.handGrip === false && !this.uniq?.winding && !this.flick && !f.parryGuard?.active;
+    const restFinger = !!f.handHeld && f.handGrip === false && !this.uniq?.winding && !this.flick && !f.parryGuard?.active;
     // 11/15 (2) 이베리아 이어 돌리기 지연 줄(unique_assist.js linkTickBridge — 넘기기 판: link.pos)이 손 목표를 쥔 동안 = 손가락이 닿아 긋는 것과 같음 —
     //  손을 뗐어도 받아 둔 긋기가 다 나갈 때까지 자세로 돌아가기가 끼어들지 않음(끼어들면 그 몫이 손가락 몫으로 줄에 들어 다시 그어짐) · 줄이 끝난 뒤부터 recoverDelay
     const linkHeld = !!this.uniq?.link?.pos;

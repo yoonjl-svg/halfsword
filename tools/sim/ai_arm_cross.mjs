@@ -9,7 +9,7 @@
 //   fights12            관문 fights12.mjs 와 같은 판 (jelly_harness · 씨앗 1 ~ 12 · 30 s · 두 자리 모두 AI 'normal' · 롱소드 끼리) — 두 AI 모두 잼
 //   pair:<무기>:<상대>   harness_m · 두 자리 모두 AI(숙련 3 — school_balance 상대 AI 와 같은 몸) · 무기 실측 간격 — 두 AI 모두 잼 (무기별로 묶음)
 //   school:<유파>:<무기>:<상대>  school_balance.mjs fightOne 판 그대로(사람 손가락 봇 대 AI) — AI 쪽만 잼 (--scenes=sb = 표준 열세 칸)
-//  node tools/sim/ai_arm_cross.mjs [--scenes=fights12,pair:zweihander:longsword,…|aiw|sb] [--seeds=1-8] [--seeds12=1-12] [--dur=30] [--set=SKILL.armClear.ai=0] [--shard=i/n] [--json=파일] [--trace=장면:씨앗]
+//  node tools/sim/ai_arm_cross.mjs [--scenes=fights12,pair:zweihander:longsword,…|aiw|sb] [--seeds=1-8] [--seeds12=1-12] [--dur=30] [--set=칸=값] [--shard=i/n] [--json=파일] [--trace=장면:씨앗]
 //   --scenes=aiw = AI 가 드는 무기 모두(캐릭터 시트 무기) × 롱소드 · 거울 · sb = school_balance 표준 열세 칸
 //  node tools/sim/ai_arm_cross.mjs --merge=a.json,b.json [--only=fights12|pair|school]   (묶음 표)
 // ─────────────────────────────────────────────────────────────

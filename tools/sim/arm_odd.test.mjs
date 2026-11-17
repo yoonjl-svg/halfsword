@@ -13,7 +13,7 @@ const { SKILL } = CONFIG;
 test('기본값 — armClear.frontIn 0.1 s (다른 칸 그대로)', () => {
   const C = SKILL.armClear;
   assert.equal(C.frontIn, 0.1);
-  assert.deepEqual({ on: C.on, gap: C.gap, near: C.near, yield: C.yield, ai: C.ai, body: C.body, front: C.front, grip: C.grip, miss: C.miss }, { on: 1, gap: 0.01, near: 0.03, yield: 0.3, ai: 1, body: 1, front: 0.24, grip: 0.13, miss: 'base' });
+  assert.deepEqual({ gap: C.gap, near: C.near, yield: C.yield, front: C.front, grip: C.grip }, { gap: 0.01, near: 0.03, yield: 0.3, front: 0.24, grip: 0.13 });
 });
 
 /** 손가락을 쥔 첫 스텝부터 0.15 s 안 스텝 사이 손 목표(몸 틀) 옮김 가장 큰 것 (m) */

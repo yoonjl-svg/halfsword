@@ -327,16 +327,15 @@ function guardDir(x, y, oneHand = false) {
 
 /**
  * 보정 v2 날것 매핑 배수 (corrScale c — padHand · driveSword 의 한 식): 손 = S + k · (날것 − S).
- *  패드 끝 뻗음 (11/12 SKILL.edgeReach — 기본 0 = 끔 · docs/strike/arm_reach_audit_2026-11-12.md · [시험 스위치 · 사장님 확인 전]): 한손 칼(guardPose.oneHand)만,
- *  쉼 자리 반지름(|SKILL.homeGuard|) → 패드 반지름(WEAPON.reach) 사이에서 배수를 '그 방향 날것 손이 팔 길이에 닿는 배수' 쪽으로 smoothstep 만큼 × edgeReach 섞는다 —
+ *  패드 끝 뻗음 (11/12 사장님 '셋 다 진행해.' · docs/strike/arm_reach_audit_2026-11-12.md): 한손 칼(guardPose.oneHand)만,
+ *  쉼 자리 반지름(|SKILL.homeGuard|) → 패드 반지름(WEAPON.reach) 사이에서 배수를 '그 방향 날것 손이 팔 길이에 닿는 배수' 쪽으로 smoothstep 만큼 섞는다 —
  *  쉼 자리 안쪽(쉼 · 찌르기 가운데)은 그대로, 패드 끝은 팔이 다 펴짐(팔 IK 가 사람 칼 몫 0.975 로 자름). 배수가 이미 더 크면 그대로 (줄이지 않음)
  */
 function corrMap(f, out, c, x, y) {
   let k = c.k;
-  const er = SKILL.edgeReach;
-  if (er > 0 && f.guardPose?.oneHand) {
+  if (f.guardPose?.oneHand) {
     const R = WEAPON.reach;
-    const w = THREE.MathUtils.smoothstep(Math.hypot(x, y), Math.hypot(SKILL.homeGuard[0], SKILL.homeGuard[1]), R) * er;
+    const w = THREE.MathUtils.smoothstep(Math.hypot(x, y), Math.hypot(SKILL.homeGuard[0], SKILL.homeGuard[1]), R);
     if (w > 0) {
       const kFull = (ARM.upper + ARM.fore) / Math.max(1e-6, out.distanceTo(c.S));
       if (kFull > k) k += (kFull - k) * w;
@@ -346,7 +345,7 @@ function corrMap(f, out, c, x, y) {
 }
 const _thq = new THREE.Quaternion(), _thy = new THREE.Quaternion(), _thS = new THREE.Vector3(), _thD = new THREE.Vector3(), _thP = new THREE.Vector3();
 /**
- * 두손 칼 손 목표를 빈팔이 칼자루 끝을 쥘 수 있는 곳으로 (SKILL.twoHandReach — driveSword 머리말). hand = 몸 틀(헤딩 yaw · 가슴 원점) 손 목표 · off = 패드.
+ * 두손 칼 손 목표를 빈팔이 칼자루 끝을 쥘 수 있는 곳으로 (11/12 두손 칼 빈팔 닿는 곳 — driveSword 머리말). hand = 몸 틀(헤딩 yaw · 가슴 원점) 손 목표 · off = 패드.
  *  칼자루 끝 앞 바닥 (11/12 둘째 SKILL.armClear.front — 사장님 11/12 '남은 팔 엇갈림 고치고 ai에도 넣어' · docs/strike/arm_clear2_2026-11-12.md §2): 두 팔 엇갈림 막기를 켠 몸은
  *   칼자루 끝(빈손 쥠 자리)을 가슴 틀 앞 front m 밖으로도 — 빈팔 길이 공과 그 앞 반공간이 겹친 곳의 가장 가까운 점으로(빈손 아래팔이 가슴 · 칼 어깨 앞을 지나게).
  *   대검 오른쪽(칼자루 끝이 칼 어깨 바로 앞 — 빈 아래팔이 칼 위팔 뿌리를 뚫음) · 일본 두손 왼쪽(손 목표가 몸 쪽이라 칼자루 끝이 가슴 안 — 몸이 목표를 못 따라감)이 이 몫.
@@ -416,12 +415,12 @@ function projBallFront(p, c, R, x0, out) {
 /**
  * 두 팔 엇갈림 막기 (11/12 SKILL.armClear — 사장님 11/12 '덤도 고쳐.' · docs/strike/arm_real_2026-11-12.md §4 · 확인표 3603 ~): 사람 손가락 칼(playerArm)의 두 팔이 서로를 뚫지 않게.
  *  몸에서 두 팔은 서로 부딪히지 않는 몸이라(빈팔 ↔ 칼 팔) IK 가 고른 자세가 겹치면 그대로 뚫고 지나간다 — 두손 칼 위 · 왼위 · 왼쪽 · 오른쪽에서 칼 팔꿈치 돌림(elbowSwivel)이
- *  사람 팔 범위 밖으로 돌아 칼 팔꿈치를 가슴 앞 가운데로 보내 빈 아래팔과 엇갈림 · 이탈리아 한손 칼은 패드 끝 뻗음(edgeReach)으로 왼쪽 끝 칼 손이 앞에 든 빈손 자리로 감.
+ *  사람 팔 범위 밖으로 돌아 칼 팔꿈치를 가슴 앞 가운데로 보내 빈 아래팔과 엇갈림 · 이탈리아 한손 칼은 패드 끝 뻗음(corrMap)으로 왼쪽 끝 칼 손이 앞에 든 빈손 자리로 감.
  *  재는 꼴은 팔 뻗음 점검(arm_reach_audit.mjs)과 같음: 칼 팔 = 위팔 바깥 2/3 · 아래팔(손목 6 cm 앞까지) / 빈팔 = 위팔 · 아래팔(손목 6 cm 앞까지) · 겉끼리(팔 캡슐 반지름 위팔 0.045 · 아래팔 0.04 — partDefs).
  *  ① 두손 칼: 칼 팔꿈치 돌림을 사람 팔 범위 안(한손 칼 · 빈팔 닿는 곳 스텝과 같은 swivelHuman 규칙)에서, 빈팔(지금 몸)과 겉 틈 gap 밖인 돌림만 고른다(elbowSwivel cx) — 손 자리 · 두 손 쥠 그대로 · 안 되면 덜 겹치는 쪽
  *  ② 한손 칼(유파 빈팔 자리 — 쥔 칼 없음): 칼 팔(지난 스텝 IK 자세)이 빈팔 자리를 지나면 빈손을 비킨다(가장 짧게 — 아래 · 아래 뒤 · 뒤 · 위 · 바깥 차례로 찾음, yield m 까지) · 칼 팔은 그대로
  *  대본 · 덧씌우기가 손 · 칼을 쥔 동안(handScripted — 비기 · 고유 공격 · 운동학 칼 길 · 칼날 쥠 · 대본이 놓은 팔 · 탭 찌르기 · 발도 대기 손)은 안 함 —
- *  그 길은 전 판 팔 위에서 맞춘 값 (날것 매핑 잣대 frameScale · thrustScale · eastScale 과 같은 규칙 · 두손 탭 찌르기 사람 팔 범위는 황소 찌름을 무너뜨림 — wrist_audit §10)
+ *  그 길은 전 판 팔 위에서 맞춘 값 (날것 매핑 잣대 corrScale 과 같은 규칙 · 두손 탭 찌르기 사람 팔 범위는 황소 찌름을 무너뜨림 — wrist_audit §10)
  */
 const S2_F = Math.SQRT1_2;
 const ARM_R = { u: 0.045, f: 0.04 }; // 팔 캡슐 반지름 (partDefs uarmS · farmS · uarmO · farmO — 그대로)
@@ -435,8 +434,8 @@ const scriptedMove = (f) => {
 const handScripted = (f) => scriptedMove(f) || !!f.iai || !!f.iaiOneHold || !!f.armsPlaced?.() || f.skill?.thrustPose?.w > 0;
 /** AI 의 비기 · 특수(고유) 공격이 도는 중인가 (사람 scriptedMove 와 같은 규칙 — AI 비기 secretRun 모든 단계 · 특수 공격 specRun 동작 동안) */
 const aiScripted = (f) => !!f.aiCtl?.secretRun || (!!f.aiCtl?.specRun && f.aiCtl.specRun.motion == null);
-/** 두 팔 엇갈림 막기를 받는 몸: 사람 손가락 칼 · AI 몸(armClear.ai — 사장님 11/12 '남은 팔 엇갈림 고치고 ai에도 넣어') — 대본 · 덧씌우기가 손을 쥔 동안은 빼고 */
-const armClearOn = (f) => !!SKILL.armClear?.on && (playerArm(f) || (!!SKILL.armClear.ai && !!f.aiControlled && !aiScripted(f))) && f.armed && f.limbs.armO > 0.3 && !f.severedLimbs?.has?.('armO') && !handScripted(f);
+/** 두 팔 엇갈림 막기를 받는 몸: 사람 손가락 칼 · AI 몸(사장님 11/12 '남은 팔 엇갈림 고치고 ai에도 넣어') — 대본 · 덧씌우기가 손을 쥔 동안은 빼고 */
+const armClearOn = (f) => (playerArm(f) || (!!f.aiControlled && !aiScripted(f))) && f.armed && f.limbs.armO > 0.3 && !f.severedLimbs?.has?.('armO') && !handScripted(f);
 /** 선분 ↔ 선분 가장 가까운 거리 (Ericson 5.1.9 — 스칼라만) */
 function segSegDist(p1, q1, p2, q2) {
   const d1x = q1.x - p1.x, d1y = q1.y - p1.y, d1z = q1.z - p1.z;
@@ -513,7 +512,7 @@ function armClearNear(f, qInv, c) {
   put(B.uarmS, 0.15, 1, _anE);
   _anE.lerp(put(B.farmS, 0.135, -1, _anF), 0.5);
   put(B.farmS, 0.135, 1, _anW);
-  _acX.wb = C.body ? _acX.wbV.copy(_anW) : null; // 칼 손목 지금 몸 (가슴 틀) — 돌림 고를 때 지금 몸에서도 틈 (armClear.body)
+  _acX.wb = _acX.wbV.copy(_anW); // 칼 손목 지금 몸 (가슴 틀) — 돌림 고를 때 지금 몸에서도 틈 (11/12 둘째)
   const g = armGap(_anS, _anE, _anW, o);
   f.armClrGap = g; // 두 팔 겉 틈 지금 몸 (빈손 비킴 — offHand gripClear 가 읽음)
   const dt = f.lastDt || 1 / 120;
@@ -1225,21 +1224,19 @@ export class Fighter {
   corrScale(s) {
     const gp = this.guardPose;
     const c = (this._corrK ||= { s: NaN, S: new THREE.Vector3() });
-    // 배수의 잣대 표 (10/31 SKILL.frameScale — 사장님 11/01 결정): 유파 자세표가 쉼 자리 칸을 덮기 전 무기 틀 표(guards.js applySchoolGuardTable frameTable).
-    //  'heavy' = 앞무게 틀(대검)만 · 'all' = 유파 자세표가 있는 모든 무기 · 'off' = 10/10 ~ 10/31 판(덮은 표로 잼).
+    // 배수의 잣대 표 (10/31 — 사장님 11/01 결정): 앞무게 틀(대검)은 유파 자세표가 쉼 자리 칸을 덮기 전 무기 틀 표(guards.js applySchoolGuardTable frameTable)로 잰다.
     //  비기가 도는 동안(skill.sec — 싱지르 등 대본이 손 길을 쥠)은 덮은 표 그대로 (11/01 — 비기 길은 10/10 ~ 10/31 배수 위에서 맞춘 값: 대검 배수로 재면 싱지르 손목 교정 · 어깨 범위 밖이 늘었음)
     //  고유 공격 길게 누름 · 감기 · 강화 동작이 도는 동안(skill.uniq — 정수리 가르기 B4 누름 'press' · 메기 'wind' · running)도 그대로 (11/01 — 같은 까닭: B4 내려침 첫 상처 자리가 바뀜)
-    const fs = SKILL.frameScale;
     const scripted = scriptedMove(this);
-    const useFrame = (fs === 'all' || (fs === 'heavy' && this.swordArt?.frame === 'heavy')) && !scripted;
-    // 한손 찌르기 칼(이탈리아 무기 — 레이피어 · 달타냥 · 발리사르다 · 파펜하이머)의 잣대 (11/12 SKILL.thrustScale — 사장님 11/12 '이탈리아 무기들 여전히 팔이 잘 안펴져 … 오른쪽으로 안 펴지는'
-    //  · docs/strike/arm_reach_audit_2026-11-12.md): 'base' = 무기별 바탕 표(한손 찌르기 표 — 싸움 방식 one:thrust 표 · 이탈리아 자세표가 쉼 자리 칸을 옆으로 60° 선 3번 자세로 덮기 전)로 잰다.
+    const useFrame = this.swordArt?.frame === 'heavy' && !scripted;
+    // 한손 찌르기 칼(이탈리아 무기 — 레이피어 · 달타냥 · 발리사르다 · 파펜하이머)의 잣대 (11/12 — 사장님 11/12 '이탈리아 무기들 여전히 팔이 잘 안펴져 … 오른쪽으로 안 펴지는'
+    //  · docs/strike/arm_reach_audit_2026-11-12.md): 무기별 바탕 표(한손 찌르기 표 — 싸움 방식 one:thrust 표 · 이탈리아 자세표가 쉼 자리 칸을 옆으로 60° 선 3번 자세로 덮기 전)로 잰다.
     //  덮은 표로 재면 날것 매핑이 가슴 돌림 57.5° 로 돌고(다른 한손 칼 24.5°) 배수가 0.60(0.71) — 패드 오른쪽 끝이 앞 가운데(손이 칼 어깨보다 안쪽)로 · 가운데가 가슴 왼쪽으로 · 왼쪽 끝이 가슴 뒤로 가고 ·
-    //  어느 쪽으로 끌어도 팔꿈치가 89 ~ 103° 굽은 채(뻗음 0.62 ~ 0.71). 비기 · 고유 공격이 도는 동안은 덮은 표 그대로(위 frameScale 과 같은 규칙). 'off' = 전 판
-    const useBase = SKILL.thrustScale === 'base' && this.swordArt?.frame === 'one' && this.swordArt?.style === 'thrust' && !!this.swordArt?.baseTable && !scripted;
-    // 동방 한손 칼(중국 무기 일곱)의 잣대 (11/12 SKILL.eastScale — 사장님 11/12 '셋 다 진행해.' · docs/strike/arm_real_2026-11-12.md): 'frame' = 10/10 동방 자세표가 쉼 자리 칸을 덮기 전 무기 틀 표(한손 틀)로 잰다 —
+    //  어느 쪽으로 끌어도 팔꿈치가 89 ~ 103° 굽은 채(뻗음 0.62 ~ 0.71). 비기 · 고유 공격이 도는 동안은 덮은 표 그대로(위 대검과 같은 규칙)
+    const useBase = this.swordArt?.frame === 'one' && this.swordArt?.style === 'thrust' && !!this.swordArt?.baseTable && !scripted;
+    // 동방 한손 칼(중국 무기 일곱)의 잣대 (11/12 — 사장님 11/12 '셋 다 진행해.' · docs/strike/arm_real_2026-11-12.md): 10/10 동방 자세표가 쉼 자리 칸을 덮기 전 무기 틀 표(한손 틀)로 잰다 —
     //  덮은 표로 재면 배수 0.666(다른 한손 칼 0.712)이라 어느 쪽으로 끌어도 한손 칼 가운데 가장 덜 뻗음(0.69 ~ 0.82). 일본 두손은 그대로 · 비기 · 고유 공격 동안은 덮은 표 그대로 (위 규칙)
-    const useEast = SKILL.eastScale === 'frame' && this.swordArt?.frame === 'one' && this.swordArt?.tradition === 'chinese' && !scripted;
+    const useEast = this.swordArt?.frame === 'one' && this.swordArt?.tradition === 'chinese' && !scripted;
     if (c.s === s && c.table === gp.table && c.oneHand === gp.oneHand && c.useFrame === useFrame && c.useBase === useBase && c.useEast === useEast) return c;
     const [hx, hy] = SKILL.homeGuard;
     const raw = rawHand(hx, hy, _cs1);
@@ -3518,13 +3515,13 @@ export class Fighter {
       const breath = Math.sin(this.stamina.time * Math.PI * 2 / 0.85) * 0.025;
       handLocal.lerp(_v6.set(0.23, -0.26 + breath, this.side * 0.17), this.stamina.pose);
     }
-    // 두손 칼 빈팔 닿는 곳 (11/12 SKILL.twoHandReach — 기본 끔 · docs/strike/arm_reach_audit_2026-11-12.md): 패드 오른쪽 끝의 손 목표는 빈손이 쥘 칼자루 끝(손 + 칼 겨눔 × gripAlong)을
+    // 두손 칼 빈팔 닿는 곳 (11/12 사장님 '셋 다 진행해.' · docs/strike/arm_reach_audit_2026-11-12.md): 패드 오른쪽 끝의 손 목표는 빈손이 쥘 칼자루 끝(손 + 칼 겨눔 × gripAlong)을
     //  빈팔 길이 밖(빈 어깨에서 0.7 m 남짓)에 둬서, 빈팔 · 쥠 용수철이 칼 손을 몸 뒤로 끌어당기고 칼 팔꿈치가 앞으로 꺾임(뻗음 0.57 · 위팔 돌림 115°).
-    //  켜면 칼자루 끝이 빈팔 길이(offArmIK 와 같은 0.3 + 0.275 − 0.005) 안에 오도록 손 목표를 빈 어깨 쪽으로 그 넘친 만큼 옮긴다 — 사람 손가락 칼 · 빈손이 쥘 때만 (AI · 한손 칼 그대로)
+    //  칼자루 끝이 빈팔 길이(offArmIK 와 같은 0.3 + 0.275 − 0.005) 안에 오도록 손 목표를 빈 어깨 쪽으로 그 넘친 만큼 옮긴다 — 사람 손가락 칼 · 빈손이 쥘 때만 (AI · 한손 칼 그대로)
     //  사람 발도 원전 꼴(11/13 SECRET.iaiReal — secret_instant.js f.iaiReal: 뽑기 · 굳음 · 풀기 동안) 동안은 빠짐 — 두 손 발도(모노호시자오 · 틀 'heavy')의 굳음 손 목표를 칼자루 끝이 빈팔 길이 안에 오게 끌어
     //   굳음 팔꿈치가 71 → 87° 로 더 굽었다(11/12 A 뒤 — docs/strike/iai_real_2026-11-13.md §1)
-    if (SKILL.twoHandReach && playerArm(this) && this.weaponCfg.twoHand && GRIP.on && this.limbs.armO > 0.3 && !(this.iai?.oneHand || this.iaiOneHold) && !this.iaiReal) twoHandReach(this, handLocal, off);
-    // AI 두손 칼 (11/12 둘째 — 두 팔 엇갈림 막기 AI 몫 armClear.ai): 빈팔 닿는 곳(A)은 안 타고 칼자루 끝 앞 바닥만 (twoHandReach 머리말 aiOnly). 비기 · 특수 공격 · 대본 손 동안은 전 판
+    if (playerArm(this) && this.weaponCfg.twoHand && GRIP.on && this.limbs.armO > 0.3 && !(this.iai?.oneHand || this.iaiOneHold) && !this.iaiReal) twoHandReach(this, handLocal, off);
+    // AI 두손 칼 (11/12 둘째 — 두 팔 엇갈림 막기 AI 몫): 빈팔 닿는 곳(A)은 안 타고 칼자루 끝 앞 바닥만 (twoHandReach 머리말 aiOnly). 비기 · 특수 공격 · 대본 손 동안은 전 판
     else if (this.weaponCfg.twoHand && GRIP.on && armClearOn(this) && !playerArm(this) && !(this.iai?.oneHand || this.iaiOneHold)) twoHandReach(this, handLocal, off, true);
     else this.thReach = false;
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
@@ -4059,7 +4056,7 @@ export class Fighter {
       //  두손 칼 팔꿈치 돌림이 사람 범위 밖으로(팔꿈치를 가슴 앞 가운데 · 어깨 위로) 돌아 빈 아래팔과 엇갈린 것이 두 팔 엇갈림의 큰 몫 (docs/strike/arm_real_2026-11-12.md §4).
       //  두 팔이 떨어져 있으면 전 판 그대로(팔꿈치 돌림 · 탭 찌르기 · 고유 공격 길이 안 바뀜)
       const clrOn = !!this._clrOn && !!this._ikMain; // driveSword 가 이 스텝 armIK 앞에서 정하고 그 부름에만 (armClearNear) — 다른 곳의 armIK(길을 짤 때 시험 셈 secret_instant armTurnAt · 발도 iaiSolve · 싱지르)는 전 판 그대로
-      // 두손 칼은 빈팔 닿는 곳으로 옮긴 스텝(SKILL.twoHandReach) · 두 팔이 붙은 동안(clrOn)만 사람 팔 범위
+      // 두손 칼은 빈팔 닿는 곳으로 옮긴 스텝(twoHandReach) · 두 팔이 붙은 동안(clrOn)만 사람 팔 범위
       const human = !!JOINTS.swivelHuman && (!this.weaponCfg.twoHand || !!this.thReach || clrOn);
       const nF = human && this.rollTgtOk ? _ik9.copy(this.rollTgtW).applyQuaternion(_q2) : null;
       // 두 팔 엇갈림 막기 ① (SKILL.armClear — 위 armGap 머리말): 두손 칼 — 빈팔(지금 몸)을 뚫는 돌림은 고르지 않음. 한손 칼은 빈손이 비킴(② — 칼 팔은 그대로). 끄면 null (전 판 그대로)
@@ -4079,8 +4076,8 @@ export class Fighter {
     _ikM.makeBasis(xA, yA, zA);
     J.uarmS.target.setFromRotationMatrix(_ikM);
     J.farmS.target.setFromAxisAngle(Z_AXIS, flex);
-    // 두 팔 엇갈림 막기 ② 가 읽는 칼 팔 IK 자세 (가슴 틀 — 어깨 · 팔꿈치 · 손목). 켰을 때만 · driveSword 가 이 스텝 것으로 옮김(_swGeo) — 다른 곳에서 부른 armIK 는 안 옮김
-    if (SKILL.armClear?.on && this._ikMain) {
+    // 두 팔 엇갈림 막기 ② 가 읽는 칼 팔 IK 자세 (가슴 틀 — 어깨 · 팔꿈치 · 손목). driveSword 가 이 스텝 것으로 옮김(_swGeo) — 다른 곳에서 부른 armIK 는 안 옮김
+    if (this._ikMain) {
       const g = (this._ikGeo ||= { S: new THREE.Vector3(), E: new THREE.Vector3(), W: new THREE.Vector3() });
       g.S.copy(S);
       g.E.copy(S).addScaledVector(u, a);
@@ -4604,7 +4601,7 @@ function elbowSwivel(pDir, Dn, S, d, alpha, D, a, th0 = 0, k = 1, align = 0, sid
   const ca = Math.cos(alpha);
   const sa = Math.sin(alpha);
   // 그 돌림의 칼 팔과 빈팔 겉 틈 (m — 손 자리 · 팔 길이 그대로, 팔꿈치만) · 틈이 cx.gap 이상인가
-  // 지금 몸 손목에서도 (armClear.body — 11/12 둘째): 같은 돌림 각의 팔을 칼 손목 지금 몸(cx.wb — 가슴 틀)에 둔 꼴 (어깨 → 그 손목 축 둘레 · 팔꿈치 겨냥 같은 식)과도 틈을 본다.
+  // 지금 몸 손목에서도 (11/12 둘째): 같은 돌림 각의 팔을 칼 손목 지금 몸(cx.wb — 가슴 틀)에 둔 꼴 (어깨 → 그 손목 축 둘레 · 팔꿈치 겨냥 같은 식)과도 틈을 본다.
   //  손 목표와 몸이 15 ~ 20 cm 떨어진 동안(빈손에 끌린 칼 손 · 빠르게 긋는 동안 늦은 팔)은 목표 자세만 보면 틈 있는 돌림이 몸에서는 뚫음 (기록 §2)
   let bD = null, bq = null, bp = null, bca = 0, bsa = 0;
   if (cx?.wb) {
@@ -4706,7 +4703,7 @@ function elbowSwivel(pDir, Dn, S, d, alpha, D, a, th0 = 0, k = 1, align = 0, sid
   if (clrGap) {
     // 두 팔 엇갈림 막기 ① (cx 있을 때만 — 없으면 아래 전 판 그대로): 빈팔과 틈 있는 돌림만 고른다 (사람 팔 범위 armOk 그대로).
     //  기본 팔꿈치(0)가 손목 한도 안이고 틈 있으면 0 · 아니면 지금 돌림에서 가장 가까운, 틈 있고 손목 한도 안인 돌림 ·
-    //  없으면 0 에서 가장 가까운 틈 있는 돌림(0 먼저 — 손목은 교정 wristGuard 가 범위 끝까지) · 그것도 없으면 틈이 가장 큰(덜 겹치는) 돌림
+    //  없으면 0 에서 가장 가까운 틈 있는 돌림(0 먼저 — 손목은 교정 wristGuard 가 범위 끝까지)
     const wristOk = (th) => dev(th) >= lim || (pron && reach(th));
     if (!(clrGap(0) && wristOk(0))) {
       want = null;
@@ -4720,24 +4717,19 @@ function elbowSwivel(pDir, Dn, S, d, alpha, D, a, th0 = 0, k = 1, align = 0, sid
           }
         }
       }
-      let bestG = -Infinity;
-      let bestTh = 0;
       for (let n = 0; n * STEP <= Math.PI && want === null; n++) {
         for (const s of n ? [1, -1] : [1]) {
           const th = s * n * STEP;
           if (!armOk(th)) continue;
-          const g = gapAt(th);
-          if (g >= cx.gap) {
+          if (gapAt(th) >= cx.gap) {
             want = th;
             break;
           }
-          if (g > bestG) (bestG = g), (bestTh = th);
         }
       }
-      if (want === null && SKILL.armClear.miss !== 'base') want = bestTh; // 11/12 첫 판 'gap': 틈이 가장 큰(덜 겹치는) 돌림
     }
   }
-  // 틈 있는 돌림이 하나도 없으면 (armClear.miss 'base' — 11/12 둘째): 사람 범위 기본 돌림(아래 전 판 길 그대로). 덜 겹치는 돌림은 지금 몸 빈팔에 따라 스텝마다 크게 튀어(0 ↔ 110°)
+  // 틈 있는 돌림이 하나도 없으면 (11/12 둘째): 사람 범위 기본 돌림(아래 전 판 길 그대로). 덜 겹치는 돌림은 지금 몸 빈팔에 따라 스텝마다 크게 튀어(0 ↔ 110°)
   //  칼 팔꿈치를 빈 아래팔 밑으로 끌어들였다 — 대검 왼쪽 엇갈림 12 → 26 % 의 까닭 (기록 §2)
   if (want === null && !(dev(0) < lim && !(pron && reach(0)))) want = 0;
   if (want === null || (!clrGap && dev(0) < lim && !(pron && reach(0)))) {

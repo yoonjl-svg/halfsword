@@ -5,17 +5,16 @@
 //           (칼 팔 관절 근육 · 손목 힘 · 손목 빠르기 한계 √) — 비기 do.strength(ai.js secretStrength · skill.js run.str0)가 그 베기 구간만 몸의 힘을 올리는 것과 같은 꼴. 칼이 실제로 빨라진다
 //    gain — 긋는 동안 손가락이 옮긴 손 목표 몫을 × gain (skill.js update 처음 — 빠른 끌기만 감도를 올림 · 손 목표 반지름 WEAPON.reach 그대로)
 //    hit  — 긋는 동안과 그 끝 recoverDelay 안의 닿음(combat.js analyze)의 판정 에너지를 × hit — 물리(빠르기 · 질량 · 가르나 튕기나 판단 앞 에너지)는 그대로, 판정만 (마지막 수단 — 보이는 움직임은 그대로)
-//    ai   — 1 이면 AI 몸의 보통 긋기(AI 가 손 목표를 옮기는 휘두름 — 비기 · 끌고 가는 칼 아님)에도 arm · hit 를 건다 (gain 은 손가락이 없어 사람만). 기본 0 = 사람만
+//    사람만 (AI 몸은 받지 않음)
 //   주소 손잡이 (main.js):
 //   새 문턱 · 상한 · 시간 없음 — '긋는 동안'은 skill.swinging(SKILL.swingSpeed), 끝 몫은 SKILL.recoverDelay(손가락을 떼고 자세로 돌아가기까지) 를 그대로 읽는다
 // ─────────────────────────────────────────────────────────────
 import { SKILL } from './config.js';
 
-/** 이 몸이 지금 손가락 긋기 길을 받을 몸인가 (사람 손가락 팔 — skill.autoGuard · ai 켬이면 AI 몸도) — 칼 · 살아 있음 · 비기 · 끌고 가는 칼 · 찌르기 · 찍기 · 채찍 톡 · 감기 · 칼자루 치기 아님 */
-function strokeBody(f, F, human) {
+/** 이 몸이 지금 손가락 긋기 길을 받을 몸인가 (사람 손가락 팔 — skill.autoGuard) — 칼 · 살아 있음 · 비기 · 끌고 가는 칼 · 찌르기 · 찍기 · 채찍 톡 · 감기 · 칼자루 치기 아님 */
+function strokeBody(f) {
   const sk = f.skill;
   if (!sk || !f.alive || !f.armed || f.weapon?.gun) return false;
-  if (human ? sk.autoGuard !== true : !(F.ai && f.aiControlled && sk.autoGuard !== true)) return false;
   if (sk.sec || sk.tap || sk.pom || sk.flick || sk.uniq?.winding || f.iai || f.iaiReq || f.secretStiff || f.mordAim || f.rdWind || f.parryGuard?.active) return false;
   if ((f.secretHit ?? 1) !== 1 || (f.powerMul ?? 1) !== 1) return false; // AI 비기 베기 (판정 · 서보 힘 창)
   return true;
@@ -28,13 +27,11 @@ export function fingerCutK(f, key) {
   return fingerCutRaw(f, key);
 }
 function fingerCutRaw(f, key) {
-  const F = SKILL.fingerCut;
-  const k = F?.[key] ?? 1;
+  const k = SKILL.fingerCut?.[key] ?? 1;
   if (k === 1 || !f) return 1;
   const sk = f.skill;
-  const human = sk?.autoGuard === true;
-  if (key === 'gain' && !human) return 1;
-  if (!strokeBody(f, F, human)) return 1;
+  if (sk?.autoGuard !== true) return 1;
+  if (!strokeBody(f)) return 1;
   if (key === 'hit') return sk.swinging || sk.quiet <= SKILL.recoverDelay ? k : 1;
   return sk.swinging ? k : 1;
 }

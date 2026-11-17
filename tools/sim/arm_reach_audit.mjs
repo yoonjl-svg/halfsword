@@ -15,7 +15,7 @@
 //    shPlane 어깨 수평 벌림 · 모음 밖(−45 / 130 · 들림 60 ~ 160) · shBack 어깨 폄 > 60 · shRot 위팔 돌림 밖(안 70 · 바깥 90) · wristFE 손목 굽힘 · 폄 ±70 밖 · wrist163 아래팔-칼 > 163 ·
 //    roll 아래팔 굴림 ≥ 78 (손목 밧줄 80 끝) · oor 손 면 안 각이 사람 범위 밖 10° 넘게 · rev 거꾸로 쥠(dev < −45) · body 칼 팔(팔꿈치 ~ 손목 · 위팔 바깥 2/3)이 제 몸통 · 머리를 2 cm 넘게 뚫음 ·
 //    arms 두 팔이 서로 2 cm 넘게 뚫음 · sword 칼날이 제 몸통 · 머리 · 다리에 닿음 · grip 두손 무기 빈손이 칼자루를 놓침
-//  node tools/sim/arm_reach_audit.mjs [--weapons=all|rapier,balisarda] [--dirs=all|right,left] [--modes=slow,fast] [--set=SKILL.frameScale=all] [--json=파일] [--md]
+//  node tools/sim/arm_reach_audit.mjs [--weapons=all|rapier,balisarda] [--dirs=all|right,left] [--modes=slow,fast] [--set=칸=값] [--json=파일] [--md]
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync } from 'node:fs';
 import { newRound, CONFIG, DT, THREE } from './harness_m.mjs';

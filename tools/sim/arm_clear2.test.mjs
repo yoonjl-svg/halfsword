@@ -1,6 +1,6 @@
 // 두 팔 엇갈림 막기 둘째 (사장님 11/12 22:1x '남은 팔 엇갈림 고치고 ai에도 넣어' — docs/strike/arm_clear2_2026-11-12.md · 확인표 3620 ~ 3629):
 //   사람: 대검 오른쪽 · 일본 두손 왼쪽 · 왼위에서 두 팔이 2 cm 넘게 안 뚫음 (11/12 첫 판은 뚫음) · 새 팔꿈치 뒤집힘 · 위팔 돌림 · 쥠 놓침 없음 · 두 손 쥔 채
-//   한손 칼은 새 칸(body · front · grip · miss)에 안 걸림 · AI 몸에도 켬(armClear.ai) — AI 끼리 싸움에서 두 팔 뚫음이 줄고 · AI 비기 · 특수 공격 동안은 안 탐
+//   한손 칼은 새 칸(손목 지금 몸 틈 · front · grip · 틈 없으면 기본 돌림)에 안 걸림 · AI 몸에도 켬 — AI 끼리 싸움에서 두 팔 뚫음이 줄고 · AI 비기 · 특수 공격 동안은 안 탐
 //   (시간 기준 없음 — 사장님 11/01 '공격이 몇 초 안에 끝나야한다 이런 기준 없애')
 //   node --test tools/sim/arm_clear2.test.mjs
 import test from 'node:test';
@@ -10,14 +10,10 @@ import { runDir, armReachSample } from './arm_reach_audit.mjs';
 
 const { SKILL } = CONFIG;
 
-test('기본값 — armClear ai 1 · body 1 · front 0.24 · grip 0.13 · miss base (on · gap · near · hold · yield 그대로)', () => {
+test('기본값 — armClear front 0.24 · grip 0.13 (gap · near · yield 그대로)', () => {
   const C = SKILL.armClear;
-  assert.equal(C.on, 1);
-  assert.equal(C.ai, 1);
-  assert.equal(C.body, 1);
   assert.equal(C.front, 0.24);
   assert.equal(C.grip, 0.13);
-  assert.equal(C.miss, 'base');
   assert.equal(C.gap, 0.01);
   assert.equal(C.near, 0.03);
   assert.equal(C.yield, 0.3);
