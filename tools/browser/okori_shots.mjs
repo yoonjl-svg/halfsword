@@ -17,7 +17,17 @@ async function open(q, on) {
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(`${base}/${q}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 120000 });
-  if (on) await page.evaluate(async () => { const C = await import('/src/config.js'); C.MEASURE.on = 1; C.OKORI.on = 1; });
+  if (on) {
+    // 앱이 실제로 불러온 config 모듈 주소 그대로 (개발 서버가 고친 뒤 ?t= 를 붙이면 다른 인스턴스가 됨)
+    const ok = await page.evaluate(async () => {
+      const url = performance.getEntriesByType('resource').map((e) => e.name).filter((n) => /\/src\/config\.js(\?|$)/.test(n)).pop() ?? '/src/config.js';
+      const C = await import(url);
+      C.MEASURE.on = 1;
+      C.OKORI.on = 1;
+      return url;
+    });
+    log.push({ tag: 'config', url: ok });
+  }
   await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 120000 });
   await page.evaluate(() => { const c = document.getElementById('techCue'); if (c) c.style.visibility = 'hidden'; });
@@ -45,7 +55,7 @@ const shot = async (page, path) => {
   await page.evaluate(() => (window.game.freeCam = false));
 };
 // 기다렸다 찍기: cond(p) 가 참인 순간 멈추고 찍음
-async function catchShot(page, cond, path, tag, timeout = 90000) {
+async function catchShot(page, cond, path, tag, timeout = 180000) {
   const t0 = Date.now();
   while (Date.now() - t0 < timeout) {
     const p = await probe(page);
