@@ -918,7 +918,7 @@ export const CHARACTER_LOOK_VERSION = {
   bernardo: 'v2', // 10/23 손님 인물 베르나르도 (방랑 전용) — 우리 v2(흰 겉옷 · 금관 쓴 레온 사자 · 금빛 긴 망토 · 사슬 치마 — 사장님 10/23). 옛 판 ?look=bernardo:v1 = 그쪽 black_king v4(올리비에)
 };
 
-/** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look=, ?lookv= 미리보기용) */
+/** id의 특정 버전을 꺼낸다. 버전이 없으면 현재 버전 → v0 순으로 물러난다. (main.js의 ?look= 미리보기용) */
 export function getLook(id, version) {
   const archive = LOOK_ARCHIVE[id];
   if (!archive) return null;

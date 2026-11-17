@@ -117,7 +117,7 @@ const ONE_HAND_SABRE = {
 //  어깨에 메는 자세·옆 자세는 칼끝을 분명히 위로 세우고(올림 → 55~60°, 두삭 Wacht·Entrüst — 칼을 세워 어깨 옆에 든다. 옆 자세 방위는 뒤 150 → 120°로 덜 눕혀 가로 베기 호는 지킴),
 //  낮은 옆 지킴은 칼끝을 분명히 아래·앞 바깥으로 둔다(올림 −45°, 방위 60° — 두삭 Eber·Nebenhut). 손 자리·몸 돌림은 그대로.
 //  (10/9 첫 안의 옆 자세 [30, ±110] 은 칼끝을 옆으로 누인 채라 사장님 10/10 화면의 꼴 그대로여서 버림.)
-//  JOINTS.oneTip 'off' (`?onetip=off`·ONETIP=off) = 전 값. 청강검 두루 표(감는 8 곳 = 세이버 값)도 함께 따른다
+//  JOINTS.oneTip 'off' (ONETIP=off) = 전 값. 청강검 두루 표(감는 8 곳 = 세이버 값)도 함께 따른다
 const ONE_HAND_SABRE_TIP = {
   '어깨 지붕 (폼 타크)': [60, 165], // 전 [40, 170]
   '옆 자세': [60, 120], // 전 [30, 150]
@@ -279,7 +279,7 @@ export function setIberianTable(key, o) {
 }
 
 // 이베리아 자세표 v2 (10/22 — 칸별 시험으로 고름 · **사장님 확인 전** · docs/strike/iberian_flat_hits_2026-10-22.md §9 · 확인표 2174~): set = 고친 칸(짧은 이름 → 바꾼 값) · skip = 걷은 칸.
-//  판 기본은 부르지 않는다 — `?ibTable=v2`(사람 · AI 모두 — useIberianTableV2) · `?ibTable=v2p`(사람만 — main.js 가 플레이어 몸에 iberianTableV2() 를 넘김)
+//  판 기본은 부르지 않는다(사람 · AI 모두 — useIberianTableV2)(사람만 — main.js 가 플레이어 몸에 iberianTableV2 를 넘김)
 //  고른 값 (§9 칸별 시험 — 사람식 긋기 서 있는 과녁 · 막는 상대, 츠바이핸더 · 플랑베르주 · 티소나): 어느 칸도 하나만 걷거나 각을 바꿔 칼 면이 뚜렷이 줄지 않았다 —
 //   점 추정이 가장 좋은 쪽만 묶음: 옆 자세 둘 옆 각 130 → 100°('몸 가운데 높이에 눕혀 뒤로 감아 둔다' 안 — 옆보다 조금 뒤) · 어깨 지붕(오른) · 왼 바꿈 걷음. 옆 자세 오른 · 옆 지킴은 걷으면 나빠져 그대로
 export const IBERIAN_TABLE_V2 = { set: { sideR: { blade: [10, 100] }, sideL: { blade: [10, -100] } }, skip: ['tagR', 'wechselL'] };

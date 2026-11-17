@@ -26,18 +26,18 @@ import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } fro
 
 export const FINISH = {
   // ── 10/12 샛별 가져오기 2차 스위치 (사장님 10/12 지시로 재 봄 — 기본은 둘 다 예전 그대로. 기본값은 디렉터가 병합 때 정한다)
-  //  docs/import/saetbyeol_round2_2026-10-12.md · 주소 ?finishEntry=low · ?finishMode=power25 (main.js)
-  entry: 'auto', // 'auto' (10/12 약한 자세 겨눔 묶음) = vital 이 켜져 있으면 'low', 꺼져 있으면 'down'(기본 — 전과 같음) · 주소 ?finishEntry=down|low|downlow 로 하나를 고른다
+  //  docs/import/saetbyeol_round2_2026-10-12.md
+  entry: 'auto', // 'auto' (10/12 약한 자세 겨눔 묶음) = vital 이 켜져 있으면 'low', 꺼져 있으면 'down'(기본 — 전과 같음)
   //  · 'down' = 상대가 쓰러짐(state down)이면 연다(전 기본) · 'low' = 실제 몸 높이로 연다 (finish_entry.js LOW_FINISH, 샛별 저장소 b9d28ca6·080ea451 의 뜻)
   //  · 'downlow' = 고친 판: 'down' 그대로 + 일어나는 중(getup)이라도 몸이 낮으면 연다 (finish_entry.js downLowTarget) — 확인표 954~956
   // ── 10/12 약한 자세 겨눔 묶음 (사장님 10/12 02:3x 지시로 샛별 저장소 ccea5855 등의 뜻 — src/vital_target.js · docs/import/saetbyeol_vital_2026-10-12.md · 확인표 1001~1008, 사장님 확인 전)
   //  추천 기본 켬 (디렉터가 병합 때 정함): 크게 넘어뜨림 24 판 판금 상대 탭 찍기로 끝난 판 0 → 8 · 무 12 → 5 (몸통 겨눔 뒤) — 문서 §4.
-  //  갈래(vital_target.js VITAL): 찌르기 겨눔 켬 · AI 목 가로 베기 끔(자연 결투 참수 26 → 21~22, 무 3 → 5~8) · 플레이어 베기 보정 끔(장면 9 판 목·머리 2 → 2). ?vital=0 = 모두 끔(진입도 'down')
+  //  갈래(vital_target.js VITAL): 찌르기 겨눔 켬 · AI 목 가로 베기 끔(자연 결투 참수 26 → 21~22, 무 3 → 5~8) · 플레이어 베기 보정 끔(장면 9 판 목·머리 2 → 2).
   vital: true, // 무릎 꿇음·일어나는 중·넘어지는 중인 상대에게 찌르기는 목·얼굴·머리 (갈래를 켜면 베기는 목 가로). 누운 몸은 내려찍기(entry 'auto' → 'low')
   // 판금 상대 목 겨눔 (사장님 10/1 21:45 'C 를 확률 아닌 물리로'): 10/12 02:4x 사장님 '판금도 몸을 겨누게 하자. 목 말고 … 몸을 아무데나 찌르되 힘이 2.5배면
-  //  판금의 의미도 살고 내려찍기의 의미도 살겠지' → 기본 끔 (판금·맨몸 모두 몸통 선). ?plateNeck=1 = 전 목 겨눔 — 확인표 1000 (사장님 지시 10/12)
+  //  판금의 의미도 살고 내려찍기의 의미도 살겠지' → 기본 끔 (판금·맨몸 모두 몸통 선).
   plateNeck: false,
-  mode: 'power25', // 기본 'power25' — 사장님 10/12 00:5x '즉사 대신 2.5배가 갑옷 판정 등 사실적 기준에서 더 뛰어나 고친 거야' + 가져오기 2차 측정 추천 → 디렉터가 병합 때 켬(`?finishMode=kill` = 전 즉사). 'kill' = 찍기가 몸통·머리에 찌르기로 닿으면 즉사(지금, 사장님 9/30) · 'power25' = 즉사 대신 판정 에너지 × power 로 갑옷·상처 문턱을 그대로 거친다
+  mode: 'power25', // 기본 'power25' — 사장님 10/12 00:5x '즉사 대신 2.5배가 갑옷 판정 등 사실적 기준에서 더 뛰어나 고친 거야' + 가져오기 2차 측정 추천 → 디렉터가 병합 때 켬(머리에 찌르기로 닿으면 즉사(지금, 사장님 9/30) · 'power25' = 즉사 대신 판정 에너지 × power 로 갑옷·상처 문턱을 그대로 거친다
   //  (샛별 저장소 7fd7f592. 맞아 죽은 상처는 부활 없음 — 살아남으면 보통 상처·출혈. 상한 없음) — 확인표 957~958
   power: 2.5, // 'power25' 때 찍기 찌르기의 판정 에너지 배율 (상한 없음 — 사장님 확인 전)
   range: 1.7, // 누운 몸통이 내 가슴에서 이 수평 거리(m) 안이면 마무리 자세
@@ -82,13 +82,13 @@ export const FINISH = {
   // ── 10/13 내려찍기 동작 (사장님 10/13 20:1x '더 높이 들었다가 더 빠르게(힘있게) 콱 찍으면 좋겠어 — 다른 유저들의 공통된 피드백'
   //  · docs/strike/finish_plunge_2026-10-13.md · 확인표 1030~1035, 사장님 확인 전). 탭 마무리 찍기(skill.plungePose)만 읽는다 — 자세 지도 겨눔 자리(fin.hover)·서 있는 상대는 그대로.
   //  물리는 그대로 거친다: 손 목표를 더 높이 두고, 찍는 동안(tap.go ~ 끝)만 팔 근육·손목 서보 힘에 배율을 곱한다. 칼이 실제로 빨리 내려와 판정 에너지가 커진다.
-  //  새 상한·쿨타임 없음 (어깨·팔꿈치 힘-속도 한계 shoulderVmax·elbowVmax·사람 관절 한도는 그대로). 주소 `?finishLift=0` = 전 동작 (finish_thrust 1 --stand 와 관문이 전과 같다)
+  //  새 상한·쿨타임 없음 (어깨·팔꿈치 힘-속도 한계 shoulderVmax·elbowVmax·사람 관절 한도는 그대로).
   lift: true,
   liftHands: [0.35, 0.45, 0.1], // 찍기 겨눔 손 (가슴 기준 [앞, 위, 옆], m) — 전 hands [0.35, 0.35, 0.10] 보다 0.10 높게(머리 꼭대기 +0.38 위)
   strikeArm: 2.0, // 사장님 10/13 21:0x '팔 힘 배율은 2.0배로' (전 1.6 — 실제로는 몸무게를 실어 찍는 몫을 팔 힘으로 대신) · 찍는 동안 두 팔 근육(어깨·팔꿈치 서보 강도·힘 상한) 배율 — 비기 서보 힘 창(SECRET.power)과 같은 꼴, 찍기 전용
   strikeWrist: 1.3, // 찍는 동안 손목 서보 힘 배율 (fighter.driveSword 의 str — 빨리 내려오는 칼을 몸 점 선에 붙잡는다)
   // 찍을 몸 점 (10/13 사장님 물음 '골반에서 가슴 쪽으로 올려 찍으면 빗맞을 확률이 늘지 않나'): 'torso' = 몸통 선에서 내 앞 plungeAt 에 가장 가까운 점(지금 기본) ·
-  //  'chest' = 몸통 선의 가슴 쪽 chestS 지점(골반 0 → 가슴 몸체 중심 1). 주소 `?finishAim=chest` — 기본 전환은 디렉터·사장님 몫
+  //  'chest' = 몸통 선의 가슴 쪽 chestS 지점(골반 0 → 가슴 몸체 중심 1). 주소 — 기본 전환은 디렉터·사장님 몫
   //  측정(새 동작 위 160 판, 문서 §5): 헛찍음 맨몸 2 → 5 · 판금 2 → 2, 10 초 안 죽음 66 → 70 · 57 → 50 (3 초 몫은 목으로 미끄러진 찍기) → 지금은 torso 추천
   aim: 'torso',
   chestS: 1,
@@ -118,17 +118,17 @@ export const FINISH = {
   //  칼날을 곧게 내려친다 (skill.cleavePose). 세기는 찍기와 같은 판정 에너지 × power (combat.js — 베기에도), 투구 · 갑옷 · 옷 · 살 문턱은 그대로.
   //  찍는 동안 팔 · 손목 힘 배율(strikeArm · strikeWrist) · 손목 제동 늦춤(brakeRelief)도 찍기와 같이 걸린다. 새 상한 · 문턱 없음
   cleave: {
-    player: true, // 사람(플레이어) 칼 — 주소 ?finishCleave=0 = 전 찍기 (시뮬 FINISH_CLEAVE=0)
-    ai: false, // AI 칼 — 기본 끔(AI 마무리 그대로 — 자세 지도 내려베기). 주소 ?finishCleaveAi=1 (시뮬 FINISH_CLEAVE_AI=1)
+    player: true, // 사람(플레이어) 칼
+    ai: false, // AI 칼 — 기본 끔(AI 마무리 그대로 — 자세 지도 내려베기). 주소 (시뮬 FINISH_CLEAVE_AI=1)
     // 쓰는 칼: 몸 틀(weapons.js frame = weapon_class.js 'B 양손 앞무게' — 두 손 · 무겁거나 칼끝 쪽 무게)이 이 값이고 날 있는 칼(부러지지 않은).
     //  지금 로스터: 츠바이핸더 · 플랑베르주 · 티소나 · 모노호시자오 (냉동 참치는 날이 없어 찍기 그대로 — 머리를 내려찍는다). 무기 칸 finishCleave(true | false)가 있으면 그 값
     frame: 'heavy',
     power: 2, // 쪼개 내려치기의 판정 에너지 배율 (사장님 10/22 23:0x '대검은 마무리를 2.5 말고 2로 해' — 찍기는 FINISH.power 2.5 그대로)
-    charge: realS(0.2), // 머리 위에 든 뒤 힘을 모으는 시간 (실제 s — 표준 시간 10/25, 시간 사다리 0.2 반응 — 사장님 확인 전). 주소 ?finishCleaveCharge=초
+    charge: realS(0.2), // 머리 위에 든 뒤 힘을 모으는 시간 (실제 s — 표준 시간 10/25, 시간 사다리 0.2 반응 — 사장님 확인 전).
     // 사장님 10/22 23:0x '내 최초 의도는 … 어떤 높이이든 꿇기 이하로 낮아지면 내려치라는 거였어. 강렬한 수직베기를 지면까지 그대로 내리꽂는 것' →
     //  true: 몸 높이(낮은 상대 진입 LOW_FINISH) 대신 상대 상태로 연다 — 무릎 꿇음(kneel) · 일어나는 중(getup) · 쓰러짐(down)이면 높이와 상관없이 (cleaveFoe).
     //   내려치는 칼끝 목표도 몸 점이 아니라 그 밑 땅까지(칼끝이 땅에 닿는 각 — skill.cleavePose). 새 문턱 없음(상태 가름만).
-    //  false: 10/22 첫 판(찍기와 같은 문 · 몸 점까지). 주소 ?finishCleaveLow=0 (시뮬 FINISH_CLEAVE_LOW=0) — 확인표 2218
+    //  false: 10/22 첫 판(찍기와 같은 문 · 몸 점까지). 주소 (시뮬 FINISH_CLEAVE_LOW=0) — 확인표 2218
     anyHeight: true,
   },
 };

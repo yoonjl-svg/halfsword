@@ -24,7 +24,7 @@ import { classifyStroke } from './attack_stroke.js';
 //  비기·막기 버튼·탭 찌르기·손잡이 찍기·마무리 찍기·약한 자세 간격 맞추기가 돌고 있으면 발동하지 않고, 강화 중에 그것들이 시작되면 곧장 물러난다.
 //  발동하면 기술 이름 알림(main.js showTechCue 'unique' — AI 고유 동작 알림과 같은 칸, '내 · 굽은 베기' 꼴).
 //  AI 쪽은 아래 표의 단계만 읽는다(aiUniqueStages — 숙련도 거르기 10/13, sword_art.js applySchoolArt · ai.js). body·body2 칸은 플레이어만.
-//  수는 config.js UNIQUE_ASSIST (확인표 1040~1047 · 10/14 강화 수는 owner_defaults_table.md 끝, 사장님 확인 전). 끄기 `?uniqueAssist=0`.
+//  수는 config.js UNIQUE_ASSIST (확인표 1040~1047 · 10/14 강화 수는 owner_defaults_table.md 끝, 사장님 확인 전).
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { UNIQUE_ASSIST as UA, SKILL, SECRET, STAMINA, IB_FLOW, IB_LINK, THRUST, IT_OUTBOX, realRate, realS, realV, PHYSICS, CLOSE, WEAPON } from './config.js';
@@ -118,7 +118,7 @@ export const PLAYER_UNIQUE = {
       tapKey: 'cav', tapSnap: 1 },
     // 10/31 12:xx 사장님 'I7은 어떤 방향이나 높이에서든 다른 유파의 내려 긋는 베기에 해당하는 커맨드를 내려찌르기로 전환해 주도록 하자. 어차피 지금 이탈리아 수직 베기는 거의 공격으로서 의미가 없잖아':
     //  사람 = 황소 찌르기 긋기(stichOchs) · 그 거울(stichOchsL — 왼 황소에서 내려 찌르는 긋기) · 아래로 가는 베기(down — 곧장 아래 ↓ · 사선 아래 ↙/↘ · 어느 자세 · 높이에서든: UNIQUE_ASSIST.imbroDown) 모두 →
-    //  위에서 내려 찌르기 탭 찌르기(아래 tap). 수평 · 올려 긋기 · 다른 찌르는 긋기 · 탭은 그대로. AI 는 replaces 그대로(황소 찌르기 자리만 — sword_art.js) · 전 on [{ tech: 'stichOchs' }] · `?imbroDown=0`
+    //  위에서 내려 찌르기 탭 찌르기(아래 tap). 수평 · 올려 긋기 · 다른 찌르는 긋기 · 탭은 그대로. AI 는 replaces 그대로(황소 찌르기 자리만 — sword_art.js) · 전 on [{ tech: 'stichOchs' }]
     { stage: 1, name: 'imbroccata', role: 'enh', replaces: 'stichOchs', hint: '강화동작 · 내려 긋는 칼 대신', body: [10, 12, 8, 0.04], on: [{ tech: 'stichOchs' }, { tech: 'stichOchsL', down: true }, { down: true }], // 위에서 내려 찌르기 ← 황소 찌르기 (늘) · 10/31 내려 긋는 칼 모두 (down 칸 — condOk)
       // tap = 읽힌 순간 탭 찌르기 덧씌우기로 찌름 (사장님 10/27 23:5x '찌르기 뻗게 고치고' — config UNIQUE_ASSIST.imbroReach · AI 임브로카타와 같은 길 · 기록 docs/strike/imbroccata_2026-10-27.md)
       tap: 1 },
@@ -400,7 +400,7 @@ const TAP_TRIG = {
   },
   // 겹치기 (10/28 01:2x 사장님 '지금대로'): 내 긋기(탭 · 찌르기 · 강화 탭 칼 빼고)가 상대 칼에 맞물렸고(track — 칼끼리 0.07 m 안) 지금도 닿아 있는(같은 거리 안) 동안의 탭 · 한 맞물림에 한 번
   dup(uq) {
-    if (UA.dupAuto) return null; // 겹치기 자동 (사장님 10/31 18:xx 결정 — 기본 'bind' · dupAutoTick): 탭으로는 안 냄 (탭 = 보통 탭 찌르기) · `?dupAuto=0` 이면 아래 전 판 탭 조건
+    if (UA.dupAuto) return null; // 겹치기 자동 (사장님 10/31 18:xx 결정 — 기본 'bind' · dupAutoTick): 탭으로는 안 냄 (탭 = 보통 탭 찌르기)
     const rec = uq.cur && !uq.repos(uq.cur) ? uq.cur : uq.prevAtk();
     if (UA.dupAny || UA.dupGrace > 0) {
       // 시제품 (10/31 — 기본 끔): 닿음 덩이(drive 의 dupC — 칼끼리 닿음이 시작된 때 · 끝난 때)로 · 끝난 뒤 dupGrace 초까지 · dupAny 면 내 베기 맞물림이 아니어도 · 한 닿음에 한 번

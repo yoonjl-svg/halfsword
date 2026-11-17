@@ -23,7 +23,7 @@
 //    'shoulder' 안 B(rdShoulder — 오른 어깨에 얹어 멈춤 · 날 위 · 감은 셈은 그 자세로 woundT 넘게 쥐었나)
 //  10/30 00:1x 사장님 '레돈두는 A로 하고 흐름 보너스 시간은 한바퀴로 둬' — 기본 'slowSpin' · 흐름 셈 '한 바퀴' 그대로 (내려침 길은 secret_instant.js comboPlanRdDiag — 기록 §8-9)
 //  10/31 19:xx 사장님 '칼을 더 들어올리거나 아예 어깨에 얹거나. 그리고 칼 끝이 머리 뒤로 넘어와서 땅쪽으로 기울어 있어야 해' — 기본 'load'(UNIQUE_ASSIST.rdLoad — 칼 든 어깨에 메어 칼끝이 머리 뒤 · 땅 쪽 ·
-//   놓기는 'shoulder' 와 같은 틀) · 내려침은 멘 어깨에서 반대쪽 아래로 사선(secret_instant.js comboPlanRdTajo) · 흐름과 무관(config IB_FLOW.windmillApart) — 기록 docs/strike/b4_rework_2026-10-31.md · `?b4Old=1` = 10/31 14:xx 판
+//   놓기는 'shoulder' 와 같은 틀) · 내려침은 멘 어깨에서 반대쪽 아래로 사선(secret_instant.js comboPlanRdTajo) · 흐름과 무관(config IB_FLOW.windmillApart) — 기록 docs/strike/b4_rework_2026-10-31.md
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { UNIQUE_ASSIST as UA } from './config.js';

@@ -3766,7 +3766,7 @@ export class BodySounds {
     if (f.state === 'stand' || f.state === 'getup') {
       // 이탈리아 고른 짝걸음(10/15 …/it-even — gait P.pair.even, docs/strike/italian_rhythm_2026-10-15.md §10): 발을 낮게(0.045 m) 짧게 들어 아래 높이 판정(발 몸체 0.09 m 위로)에
       //  거의 걸리지 않는다(가까이 반 스틱 디딤 12~15 번에 발소리 0~1) — 박자 걸음 디딤 간격이 들리게 걷는 디딤(walk·catch)마다 gait.touchdown 셈(leg.tdN)으로 낸다.
-      //  세기 = 그 발이 내려오던 가장 빠른 속도(높이 판정과 같은 잣대) · 강조 = leg.fastStep 그대로. 다른 걸음(`?itGait=old` 포함)은 아래 높이 판정 그대로
+      //  세기 = 그 발이 내려오던 가장 빠른 속도(높이 판정과 같은 잣대) · 강조 = leg.fastStep 그대로. 다른 걸음은 아래 높이 판정 그대로
       const G = f.state === 'stand' && f.gait?.active && f.gait.P?.pair?.even ? f.gait : null;
       for (const k of ['footF', 'footB']) {
         const b = f.bodies[k];

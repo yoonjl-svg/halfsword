@@ -62,7 +62,7 @@ const secretEffMul = (D) => {
   const v = D.power === 'gyeoksal' ? SECRET.gyeoksal?.power : D.power;
   return v === 'finish' ? FINISH.power : v === 'hit' ? 1 : +v || 1;
 };
-/** 격살 판정 배율 (11/11 사장님 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' — SECRET.gyeoksalHitMul 1 · null 이면 다른 비기와 같은 SECRET.hitMul · `?gyeoksalHitMul=1.3` = 전 판) — 운동학 길 · 서보 길 둘 다 */
+/** 격살 판정 배율 (11/11 사장님 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' — SECRET.gyeoksalHitMul 1 · null 이면 다른 비기와 같은 SECRET.hitMul · 서보 길 둘 다 */
 export const gyeoksalHitMul = () => SECRET.gyeoksalHitMul ?? SECRET.hitMul;
 /** 격살 판정 묶음 (requestCombo 칸): 'hit' = 결정타 격살 배율 gyeoksalHitMul(판정 에너지 · secretHit — 11/11 1 · 전 다른 비기와 같은 SECRET.hitMul 1.3) · 그 밖 = 결정타 없이 eff × secretEffMul · 시험 빠르기 몫 share · 잔상 굵기 width(trailWidth 켬일 때 = 빠르기 몫) */
 //  11/14 동방 맹호은림 (cn_hunt.js huntShareK — 사장님 '스택당 … 격살 빠르기 +8%'): 겨눈 상대에 쌓인 사냥 겹마다 몫 × (1 + share × 겹) · 겹 없으면 그대로(× 1)
@@ -93,7 +93,7 @@ const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? real
  *  11/11 거리 판단 (스위치 SECRET.risolutoReach · 기본 끔 — 켜고 risolutoReachFixed 1 이면): 몸 미끄러짐을 늘 같은 길이(slide 한도 그대로 — 맞닿기에서 멈추지 않음 · clinch 안 금지는 그대로) —
  *   comboMoveStart 의 걸음 칸 close(날개 접기 10/28 과 같은 칸 · 새 수 없음). 끄면 전과 바이트 같음
  */
-/** 안다레 리솔루토 판정 배율 (11/11 사장님 '리솔루토를 70%로 상향하고 파괴력을 0.5로 해.' — SECRET.risolutoHitMul 0.5 · null 이면 다른 비기와 같은 SECRET.hitMul · `?risoHitMul=1.3` = 전 판) — 런지 · 탭 찌르기(`?risoLunge=0`) 둘 다 */
+/** 안다레 리솔루토 판정 배율 (11/11 사장님 '리솔루토를 70%로 상향하고 파괴력을 0.5로 해.' — SECRET.risolutoHitMul 0.5 · null 이면 다른 비기와 같은 SECRET.hitMul · 탭 찌르기 둘 다 */
 export const risoHitMul = () => SECRET.risolutoHitMul ?? SECRET.hitMul;
 const risolutoLungeReq = (f = null) => {
   const st = SECRET.risolutoStep ?? {};
@@ -958,7 +958,7 @@ export class Skill {
       if (run.landed) this.secretStats[run.S.name].landed++;
       run.stage = 'stiff';
       run.t = 0;
-      run.stiffT = risolutoStiff(); // 10/23 탭 찌르기 판(`?risoLunge=0` — stiff.italian 0.4) · risolutoStiff 가 있으면 그 값
+      run.stiffT = risolutoStiff(); // 10/23 탭 찌르기 판(stiff.italian 0.4) · risolutoStiff 가 있으면 그 값
       return;
     }
     if (run.stage === 'instant') {

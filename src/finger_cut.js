@@ -6,7 +6,7 @@
 //    gain — 긋는 동안 손가락이 옮긴 손 목표 몫을 × gain (skill.js update 처음 — 빠른 끌기만 감도를 올림 · 손 목표 반지름 WEAPON.reach 그대로)
 //    hit  — 긋는 동안과 그 끝 recoverDelay 안의 닿음(combat.js analyze)의 판정 에너지를 × hit — 물리(빠르기 · 질량 · 가르나 튕기나 판단 앞 에너지)는 그대로, 판정만 (마지막 수단 — 보이는 움직임은 그대로)
 //    ai   — 1 이면 AI 몸의 보통 긋기(AI 가 손 목표를 옮기는 휘두름 — 비기 · 끌고 가는 칼 아님)에도 arm · hit 를 건다 (gain 은 손가락이 없어 사람만). 기본 0 = 사람만
-//   주소 손잡이 (main.js): ?fcArm= · ?fcGain= · ?fcHit= · ?fcAi=1
+//   주소 손잡이 (main.js):
 //   새 문턱 · 상한 · 시간 없음 — '긋는 동안'은 skill.swinging(SKILL.swingSpeed), 끝 몫은 SKILL.recoverDelay(손가락을 떼고 자세로 돌아가기까지) 를 그대로 읽는다
 // ─────────────────────────────────────────────────────────────
 import { SKILL } from './config.js';

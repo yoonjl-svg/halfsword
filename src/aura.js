@@ -79,8 +79,8 @@ const AURA_DEFAULTS = { gain: 1, fall: 0.022, halfW: 0.11, rim: null, rimA: 0, r
 //   glow = 칼날 발광 배율(기본 1 — 엑스칼리버) · lightGain = 점 조명 배율(기본 1)
 
 // 보기 손잡이 (재기 · 견줌 사진용 — 게임 값이 아님 · 물리 · 판정과 상관없음. docs/strike/legend_glow_2026-10-24.md)
-//  on = false 면 기운을 그리지 않는다(아지랑이 · 티끌 숨김 · 점 조명 0 · 칼날 발광은 원래 값) — 주소 `?aura=0`.
-//  t = 숫자면 기운 시계를 그 시각에 멈춘다(같은 장면의 켬 · 끔을 견줄 때) · tune = { 무기 id: 프로필 일부 } 판을 세울 때 덮어쓴다(값을 맞추는 동안만 — `?auraTune=`)
+//  on = false 면 기운을 그리지 않는다(아지랑이 · 티끌 숨김 · 점 조명 0 · 칼날 발광은 원래 값) — 주소.
+//  t = 숫자면 기운 시계를 그 시각에 멈춘다(같은 장면의 켬 · 끔을 견줄 때) · tune = { 무기 id: 프로필 일부 } 판을 세울 때 덮어쓴다(값을 맞추는 동안만)
 export const AURA_VIEW = { on: true, t: null, tune: null };
 
 const MOTE_VERT = /* glsl */ `

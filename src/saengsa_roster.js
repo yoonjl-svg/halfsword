@@ -58,7 +58,7 @@ export function entryState() {
 /**
  * 내 숙련도 — 유파마다 그 유파 스킬 칸(편지 · 닫힌 칸 뺌)에서 익힌 칸 수로 (18:1x '플레이어 숙련도는 0이 없고 1부터 시작' — 가장 낮게 1). learned = { 유파: Set(칸 id) } (skill_tree_store.js readLearned)
  *  11/16 [사장님 11/16 결정 '사람 셈도 문턱 기준으로 바꿔'] (기본 mode 'step'): at2(5) 칸 이상 2 · at3(7) 3 · at4(9) 4 · at5(11 — 모두) 5 — AI 사다리(config AI_KIT.ladder) 쌓임 칸 수와 같은 문턱
- *  mode 'old' (`?playerProf=old` — cfg.old): 10/29 17:5x 옛 규칙 '2칸 이상 배우면 2가 됨, 5칸 이상 배우면 3이 됨, 비기와 특수공격을 모두 배우면 4가 됨, 전부 다 배우면 5가 됨.' —
+ *  mode 'old' (cfg.old): 10/29 17:5x 옛 규칙 '2칸 이상 배우면 2가 됨, 5칸 이상 배우면 3이 됨, 비기와 특수공격을 모두 배우면 4가 됨, 전부 다 배우면 5가 됨.' —
  *   2(at2 칸 이상) · 3(at3 칸 이상) · 4(비기 칸 + 특수공격 칸 special) · 5(스킬 칸 전부)
  */
 export function playerProficiency(learned = readLearned(), cfg = SAENGSA.playerProf) {

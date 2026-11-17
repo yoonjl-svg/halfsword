@@ -22,7 +22,7 @@
 //   tech·feints·parry·watch  그 꾸러미의 기술·속임수·막기 자리·간 보는 자세
 //   measure      그 꾸러미로 이 무기를 쥘 때의 간격 (꾸러미 간격을 무기 실측 비율로 늘이고 줄임) · measureFor(다른 무기) = 상대 칼 어림용
 //   restGuard    쉴 자세 (보정 v2 ③ 되돌아옴 겨눔의 목표 — skill.js 가 pad 를 읽는다, 플레이어만) — 유파 rest 가 있으면 그 패드(일본·중국 'langort' = 中段·中平, 사장님 10/9 01:2x 안 A),
-//                아니면 SKILL.homeGuard(쟁기 자리). 스위치와 상관없이 늘. 비교 손잡이 SKILL.schoolRest(`?schoolRest=pflugR` = 안 B)
+//                아니면 SKILL.homeGuard(쟁기 자리). 스위치와 상관없이 늘. 비교 손잡이 SKILL.schoolRest
 //   tradition    유파 전통 열쇠 (인물이 꾸러미를 고르면 그 꾸러미의 것, 아니면 무기의 것 — schools.js traditionOf)
 //   lib          동작 라이브러리를 입히나 (본판 스위치 MOTION.lib — 도구는 opts.lib 로 직접)
 //   motion       옛 motionFor 모양 (도구·fighter.motion 호환)
@@ -81,7 +81,7 @@ function gripOf(spec) {
 /** 쉴 자세 (사장님 10/8 21:5x '유파가 정한다'): SKILL.schoolArt 1 이고 SCHOOL_ART.rest 이고 유파 rest(G 패드 열쇠)가 있으면 그 패드, 아니면 SKILL.homeGuard(쟁기 자리) */
 function restGuardOf(names, tradition) {
   const own = TRADITIONS[tradition]?.rest; // 유파 쉴 자세 (일본·중국 'langort' — 사장님 10/9 01:2x 안 A). 없는 유파(독일 등)는 homeGuard
-  const key = SCHOOL_ART.rest && own ? SKILL.schoolRest || own : null; // `?schoolRest=pflugR` = 안 B 비교(유파 rest 가 있는 무기만 바뀐다)
+  const key = SCHOOL_ART.rest && own ? SKILL.schoolRest || own : null; //
   const pad = key && G[key] ? G[key] : SKILL.homeGuard;
   let index = -1;
   let best = Infinity;

@@ -7,10 +7,10 @@
 //   · 일본 기다림과 침 (켄타이) — 휘두르지 않는 동안 full 초에 걸쳐 0 → gain 쌓임(곧은 오름) · 칼을 낸 순간(strokeStart — 기력 장부의 공격 청구) 그 칼에 묶이고 0 부터 다시.
 //     묶인 칼이 상처를 내면(combat.js strike → onHit) 그 맞음에 × (1 + 몫) 뒤 씀 · 못 맞히고(빗나감 · 막힘) 끝난 뒤 이어짐 창(UNIQUE_ASSIST.afterWindow) 안에 시작한 칼이
 //     츠바메가에시면 그 몫이 넘어감(unique_assist.js strokeTechOf — 맞는 순간 읽음) · 비기 칼엔 안 묶임 — 10/28 01:5x 사장님 '일본 기다림과 침도 고노센도 적용받게 해':
-//     일본 비기 고노센(goNoSen — 사람 skill.sec · AI secretRun)은 보통 칼처럼 묶고 첫 상처에 씀(SCHOOL_PASSIVE.japanese.secret 1 · `?kenSecret=0` = 전 · 다른 비기는 그대로 없음)
+//     일본 비기 고노센(goNoSen — 사람 skill.sec · AI secretRun)은 보통 칼처럼 묶고 첫 상처에 씀(SCHOOL_PASSIVE.japanese.secret 1 · 다른 비기는 그대로 없음)
 //   · 독일 인데스 — 상대 공격이 내게 실패(foeFailed: 헛침 = 칼에도 몸에도 안 닿음 · 막힘 = 내 칼에 닿고 나를 못 벰 — ai.js afterStrike · 사람 공격은 skill.js whiffTrack)하면
 //     이어짐 창(afterWindow)이 열리고, 그 안에 시작한 내 칼(비기 아님)은 주는 피해 × (1 + gain × aiK). 칼을 내면 창은 닫힘(그 칼이 되받아 친 칼).
-//     10/28 01:4x 사장님 '무기가 맞부딪혔을 때로 하면?' · '겹치기는 맞물리면 인데스 늘 붙게 해' (SCHOOL_PASSIVE.german.touch 1 · `?indesTouch=0` = 전):
+//     10/28 01:4x 사장님 '무기가 맞부딪혔을 때로 하면?' · '겹치기는 맞물리면 인데스 늘 붙게 해' (SCHOOL_PASSIVE.german.touch 1
 //     내 칼이 상대 칼에 닿아 있는 동안(combat.js bladeClash — feel.touching 과 같은 때 · 까닭은 묻지 않음: 내 칼이 막힘 · 상대 칼을 받음 · 맞물림) 창이 열리고
 //     스텝마다 창 시계를 0 으로(bladeContact) — 닿음이 끝나고 afterWindow 뒤에 닫힘 · 칼을 내면 닫힘(그대로) · 겹치기(duplieren)는 창이 닫혀 있어도 실림(dealtK).
 //     원전: 링에크 — 맞물린 그 순간 부드러움 · 단단함을 느끼고 인데스로 [원전 · 해석]
@@ -236,7 +236,7 @@ export class SchoolPassive {
   }
 
   /**
-   * 이 비기 칼에 켄타이를 묶나 (10/28 01:5x 사장님 '일본 기다림과 침도 고노센도 적용받게 해' — SCHOOL_PASSIVE.japanese.secret · `?kenSecret=0` = 전):
+   * 이 비기 칼에 켄타이를 묶나 (10/28 01:5x 사장님 '일본 기다림과 침도 고노센도 적용받게 해' — SCHOOL_PASSIVE.japanese.secret
    *  일본 패시브가 켜져 있고 지금 내는 비기가 고노센(schools.js JAPANESE_SECRET name 'goNoSen' — 사람 skill.sec.S · AI secretRun.S)일 때만. 그 밖 비기는 그대로 없음
    */
   kenSecret() {

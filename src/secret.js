@@ -154,7 +154,7 @@ export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null, ex
   // preThreat 의 raising·charging 과 같은 꼴 — 지금 모습으로. 거리 창(cond.window)이 있는 비기(일본)는 preThreat 의 '가까움' 문턱 대신 그 창이 거리를 맡는다
   const closing = Math.max(0, -(s0.vx * dx + s0.vz * dz) / d0);
   const raising = W.includes('foeRaise') && s0.hvy > 1.6 && s0.hy > 0.05;
-  const charging = W.includes('foeCharge') && (SECRET.foeChargeAvg && ex?.st ? ex.st.foeInAvg : closing) > SECRET.foeChargeSpeed; // 달려듦 (10/25 16:0x 사장님 '최고 속도 기준으로 상위 30% 정도를 빠르게 걸어들어오는 것으로' — 0.9 → 1.2 (16:1x '1.2m를 기준으로') · `?foeChargeSpeed=0.9` 옛 판)
+  const charging = W.includes('foeCharge') && (SECRET.foeChargeAvg && ex?.st ? ex.st.foeInAvg : closing) > SECRET.foeChargeSpeed; // 달려듦 (10/25 16:0x 사장님 '최고 속도 기준으로 상위 30% 정도를 빠르게 걸어들어오는 것으로' — 0.9 → 1.2 (16:1x '1.2m를 기준으로') 옛 판)
   let on = (raising || charging) && (!!S.cond?.window || d0 < foeReach + closing * 0.4 + 0.3);
   // 결심한 공격만 (cond.commit — 10/9 사장님 '발동은 좀 줄되'): 들어 올림이면 손이 commit 패드 m/s 이상으로 움직일 때만(달려듦은 그대로)
   if (on && S.cond?.commit && !charging && Math.hypot(s0.hvx, s0.hvy) < secretVal(S.cond.commit)) on = false;
@@ -314,7 +314,7 @@ export const armHold = (f) => !!SECRET.armAtFight && !!f?.openHold;
  *  SECRET.gnsReady · docs/strike/school_secret_2026-10-09.md §19). 사람 창(PlayerSecretWatch) · AI(ai.js) · AI 가 읽는 사람 준비(gnsWatch)가 같이 부른다.
  *  'idle'(기본): 거리와 상관없이 — unsettled(공격 · 막기 · 맞음 · 비기 — 부르는 쪽이 그 몸에 맞게 셈)면 곧장 풀림(유예 없음) · 준비가 아직이면 moving(이동 입력 — gnsMoving)도 셈을 0 으로 ·
  *   그 밖엔 iaiArmTime 초 쌓여 준비 · 준비된 뒤엔 걸어도(moving) 유지.
- *  'dist'(10/25 전 판 `?gnsReady=dist`): old = { outside, busy } 그대로 — 상대 칼 거리 밖(gnsOutside)에서 쌓이고 간격 안이면 iaiArmGrace 뒤 풀림 · 풀림은 그 판 몫(휘두름 · 비기 / AI 공격 · 막기 꼴)만.
+ *  'dist'(10/25 전 판): old = { outside, busy } 그대로 — 상대 칼 거리 밖(gnsOutside)에서 쌓이고 간격 안이면 iaiArmGrace 뒤 풀림 · 풀림은 그 판 몫(휘두름 · 비기 / AI 공격 · 막기 꼴)만.
  *  A = IaiArm (열쇠 iaiArmTime · iaiArmGrace). hold = 그 몸의 판 시작 정지(fighter.openHold — 10/27 23:0x) 동안이면 셈 0. 굴림 없음
  */
 export function gnsArmTick(A, dt, unsettled, moving, old, hold = false) {
@@ -1381,7 +1381,7 @@ export class PlayerSecretWatch {
   /**
    * 창 지킴 (사장님 10/25 21:0x '비기 발동창이 열리면 어떻게 상황이 변하더라도 최소 0.6초는 열린 상태를 유지해서 비기가 나갈 수 있도록 해' — SECRET.secretHold):
    *  열린 창이 열린 뒤 SECRET.playerWindow 초가 안 됐으면 참 — 그동안은 창을 연 조건이 바뀌어도(간격 · 내 휘두름 · 무장 풀림 · 칼 떨어짐 · 베임) 닫지 않는다.
-   *  몸이 비기를 낼 수 없는 때(update 첫머리 — 내가 넘어짐 · 죽음 · 칼 없음 · 상대 죽음)는 이것과 상관없이 닫는다. `?secretHold=0` = 전
+   *  몸이 비기를 낼 수 없는 때(update 첫머리 — 내가 넘어짐 · 죽음 · 칼 없음 · 상대 죽음)는 이것과 상관없이 닫는다.
    */
   holding() {
     return !!SECRET.secretHold && !!this.open && (this.open.age ?? 0) < SECRET.playerWindow - 1e-6; // 1e-6: 스텝 시간 더하기의 떠다니는 소수 (창 끝과 같은 스텝에 닫히게)

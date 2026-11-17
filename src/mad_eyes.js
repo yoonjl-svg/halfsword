@@ -10,7 +10,7 @@
 //   · 얼굴 둘레의 옅은 붉은 빛 한 장(선택 사항, 몸 전체 오라는 없음 — "적막하고 고독한 대결").
 //   · 쓰러져 죽으면(state 'dead') 2.5초에 걸쳐 서서히 꺼진다. 판이 바뀌면 main.js 가 dispose() 로 치운다(auras 목록과 같이).
 //   · 판정·물리·시뮬 무관(보여 주기만). 폰에서 가볍게: 스프라이트 2×(2+6)+1 = 17장, 조명 없음.
-//  main.js: attachMadEyes(enemy, currentFoe?.eyes === 'madGlow' || params.has('madEyes')) → auras 에 넣어 update(t)/dispose() 를 같이 부른다.
+//  main.js: attachMadEyes(enemy, currentFoe?.eyes === 'madGlow') → auras 에 넣어 update(t)/dispose() 를 같이 부른다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { canvasTex } from './stage_kit.js';

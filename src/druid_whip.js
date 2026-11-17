@@ -9,7 +9,7 @@ import * as THREE from 'three';
 
 // grip 손잡이(덩굴 시작까지) · lash 덩굴 길이 · count 마디 수 · mass 전체 질량 · handleMass 손잡이 + 끝 공 · tipWeight 끝 두 마디에 더한 무게(kg)
 export const DRUID = Object.freeze({ grip: .26, lash: 1.44, count: 8, mass: .77, handleMass: .21, tipWeight: .12 });
-// 덩굴 물리 값. SRC = 샛별 값 그대로(`?whip=src` 로 견줌) · NOW = 10/23 검수 뒤 지금 값(확인표 2224 ~ 2229 · 2273 '사장님 확인 전' — 잰 값은 docs/import/druid_whip_2026-10-23.md §5)
+// 덩굴 물리 값. SRC = 샛별 값 그대로 · NOW = 10/23 검수 뒤 지금 값(확인표 2224 ~ 2229 · 2273 '사장님 확인 전' — 잰 값은 docs/import/druid_whip_2026-10-23.md §5)
 //  tip: 끝 두 마디에 더한 무게(kg — 합 질량 DRUID.mass 는 그대로, 나머지 줄 몫에서 뺀다) · tipSplit: 그 무게를 [끝에서 둘째, 끝] 마디에 나누는 몫 · taper: 마디 1 ~ 8 의 줄 질량 비
 //  bend: 굽힘 용수철 N·m/rad — 관절 i(0 = 손잡이 ~ 마디 1) 의 굳기 = k[i] + fold × max(0, .5 − cos 꺾인 각) (샛별 값 k[i] = .035 × (1 − i/10) + (i < 2 ? .08 : .025))
 //  bendDamp: 굽힘 감쇠 1/s — 관절 양쪽 몸의 상대 굽힘 빠르기를 줄이는 몫(엮은 줄기의 속 마찰 · 0 = 없음)
@@ -52,7 +52,7 @@ export const WHIP_NOW = Object.freeze({
 });
 const copyWhip = (P) => ({ ...P, bend: { ...P.bend, k: [...P.bend.k] }, bendDamp: [...P.bendDamp], tipSplit: [...P.tipSplit], taper: [...P.taper], servo: { ...P.servo }, armAssist: Array.isArray(P.armAssist) ? [...P.armAssist] : P.armAssist });
 export const WHIP = copyWhip(WHIP_NOW);
-/** 덩굴 값 판 고르기 ('src' = 샛별 값 · 그 밖 = 지금 기본) — fighter 를 만들기 전에 부른다 (main.js `?whip=src`) */
+/** 덩굴 값 판 고르기 ('src' = 샛별 값 · 그 밖 = 지금 기본) — fighter 를 만들기 전에 부른다 (main.js) */
 export function setWhipPreset(name) {
   Object.assign(WHIP, copyWhip(name === 'src' ? WHIP_SRC : WHIP_NOW));
 }

@@ -1062,7 +1062,7 @@ export async function launchSaengsa(setup) {
 const hitStop = { left: 0, spent: 0, quiet: 0 };
 function addHitStop(t) {
   if (CONFIG.IMPACT_FX.on) stopGrant(hitStop, t, CONFIG.IMPACT_FX);
-  else hitStop.left = Math.max(hitStop.left, t); // `?impactFx=0`: 옛 식 그대로 (더 긴 쪽만 · 묶음 상한 없음)
+  else hitStop.left = Math.max(hitStop.left, t); // : 옛 식 그대로 (더 긴 쪽만 · 묶음 상한 없음)
 }
 let playerEmo = null; // 플레이어 감정 판정 (emotions.js)
 let playerEv = { hurt: false, parried: false, landed: false }; // 이번 프레임에 플레이어에게 일어난 사건
@@ -1210,7 +1210,7 @@ function onWound(att, vic, r, point, pr) {
   // 멈칫: 재질에 따라. 살을 깨끗이 가르면 짧게, 박히거나 뼈·투구에 걸리면 길게 (최대 0.1초 — 조작이 늦게 느껴지지 않게)
   const bone = e > 70 && (r.zone === 'head' || r.zone === 'arm' || r.zone === 'leg');
   // 타격감 (10/25 — config IMPACT_FX · src/impact_fx.js): 맞는 순간의 무게(판정 에너지 × 때린 무기 무게 배율) 하나로 멈칫 · 카메라 밀림 · 무게 소리 — 모든 무기 같은 식 · 무거운 칼일수록 크게.
-  //  내가 맞음 · 내가 침 둘 다 (카메라는 내가 맞을 때 더 크게). `?impactFx=0` 이면 아래 옛 식 그대로
+  //  내가 맞음 · 내가 침 둘 다 (카메라는 내가 맞을 때 더 크게).
   //  총알(r.gun)은 무게 배율 없이 판정 에너지만 (총 무게는 맞은 몸에 실리지 않는다)
   const fx = CONFIG.IMPACT_FX.on ? woundImpact({ energy: e, mass: r.gun ? 0 : att.swordProps?.m, pass: !!r.pass, hard: !!(r.stuck || bone || r.helmet || r.plate), taken: vic === me }, CONFIG.IMPACT_FX) : null;
   if (fx) {
@@ -3013,7 +3013,7 @@ function playerInputFrame(dt, now) {
   let secBusy = exhausted || !!player.skill.secretPhase || closeGate.lock;
   // 이베리아 길목 (사장님 결정 10/11 13:2x): 준비(armed)가 켜져 있으면 창을 기다리지 않고 공격 입력 하나가 곧 길목 한 칼 (secret.js fireArmed — 플레이어만)
   const gilReady = !!playerSecret?.S?.do?.gilmok && !!playerSecret.gilArm?.armed;
-  const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly; // tapOnly(이탈리아 안다레 리솔루토 전 판 — `?risoTap=1`)면 찌르기 입력(톡)만 · 10/25 21:0x 사장님 '공격하면 발동' 뒤 기본은 끌기도 비기 (schools.js tapOnly = SECRET.risolutoTap)
+  const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly; // tapOnly(이탈리아 안다레 리솔루토 전 판)면 찌르기 입력(톡)만 · 10/25 21:0x 사장님 '공격하면 발동' 뒤 기본은 끌기도 비기 (schools.js tapOnly = SECRET.risolutoTap)
   // 이베리아 휘감아 돌기 스틱 판 (10/23 사장님 '공격 버튼 대신 이동 버튼을 360도 돌린다거나' · '반 바퀴 이상으로' — SECRET.ibSpin.input 'stick'): 무장 창은 공격 입력으로 나가지 않고
   //  (무장 동안의 톡 · 끌기는 보통 공격) 이동 스틱을 stickTime 초 안에 stickTurn° 돌리면 같은 길(fire → skill.secret → showPlayerCue)로 낸다. 몸짓 셈 = 실제 프레임 시간 (secret.js spinStick)
   //  10/24 공격 원 판 (사장님 02:5x '공격 동작 360도 원형 입력으로 변경' — 기본 'attackCircle'): 무장 창은 톡 · 끌기 하나로 나가지 않고(원이 아닌 공격은 보통 공격) 공격 손 움직임 d 로
@@ -3025,7 +3025,7 @@ function playerInputFrame(dt, now) {
   const handDown = input.activeTouch !== null || document.pointerLockElement === canvas;
   const circleGo = !!playerSecret?.spinCircle(dt, d, handDown, !secBusy && player.alive && closeGate.secretOk);
   if (player.skill.uniq?.cingirE && !closeGate.near && player.skill.uniq.circleTick(dt, d, handDown, !secBusy && player.alive)) secBusy = true; // 칼자루만 거리(11/14 — close_hold.js)에선 원 긋기를 안 봄
-  // 창 지킴 (10/25 21:0x — SECRET.secretHold): 보통 탭 찌르기 · 손잡이 찍기가 아직 도는 동안은 비기를 못 낸다(skill.secret 이 받지 않음) — 그 입력으로 창을 써 버리지 않고 남겨 둠 (`?secretHold=0` = 전: 창을 쓰고 비기 없음)
+  // 창 지킴 (10/25 21:0x — SECRET.secretHold): 보통 탭 찌르기 · 손잡이 찍기가 아직 도는 동안은 비기를 못 낸다(skill.secret 이 받지 않음) — 그 입력으로 창을 써 버리지 않고 남겨 둠
   const secArm = !(CONFIG.SECRET.secretHold && (player.skill.tap || player.skill.pom));
   if (((atkWin || gilReady) && (taps > 0 || secSwipe) || stickGo || circleGo) && !secBusy && player.alive && secArm && closeGate.secretOk) {
     const o = playerSecret.open ? playerSecret.fire() : playerSecret.fireArmed();

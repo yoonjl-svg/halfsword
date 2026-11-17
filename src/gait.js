@@ -69,7 +69,7 @@ const legLen = (phi) => Math.sqrt(A_LEN * A_LEN + B_LEN * B_LEN + 2 * A_LEN * B_
 const clamp = THREE.MathUtils.clamp;
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 /**
- * 박자 걸음 칸(P.rhythm)이 켜졌나 — 디딤 셈 'foot'(기본, normal·fast 둘 다 1 이상) · 옛 짝 셈 'pair'(every 1 이상) · 'off'(`?itRhythm=0`).
+ * 박자 걸음 칸(P.rhythm)이 켜졌나 — 디딤 셈 'foot'(기본, normal·fast 둘 다 1 이상) · 옛 짝 셈 'pair'(every 1 이상) · 'off'.
  *  꺼졌으면 칸 없는 것과 같은 길(셈하지 않음)
  */
 const rhythmOn = (R) => !!R && (R.count === 'foot' ? R.normal > 0 && R.fast > 0 : R.count !== 'off' && R.every > 0);
@@ -456,7 +456,7 @@ export class Gait {
    *  방향을 막 바꿔 몸이 아직 반대쪽으로 RH.brake m/s 넘게 가는 동안 뗀 걸음은 빠른 걸음을 미룬다(셈은 하고 다음 앞뒤 걸음이 빠른 걸음) — 멈춰 서는 디딤을
    *   서두르면 붙잡기 반사가 는다(스틱 끝 앞 ↔ 뒤 번갈아 — rhythm_step_feel C). 빠른 걸음 중 스틱 앞뒤가 뒤집혀도 거기서 끝(update)
    *  간격 잡기 빠른 디딤은 같은 '한 걸음' 가운데 앞 걸음(wf > 0)만 받고 쓴다 — 받을 창 안 첫 앞 걸음부터 steps 걸음(몸이 아직 뒤로 brake 넘게 가는 앞 걸음은 받기만)
-   *  ※ 위 '한 걸음'(짝걸음 = 한 짝)은 옛 셈 RH.count 'pair'(`?itRhythm=N` 비교용)이다. 기본 RH.count 'foot'(10/15 13:2x 사장님 '디딤 기준으로 통일'):
+   *  ※ 위 '한 걸음'(짝걸음 = 한 짝)은 옛 셈 RH.count 'pair'(비교용)이다. 기본 RH.count 'foot'(10/15 13:2x 사장님 '디딤 기준으로 통일'):
    *   짝걸음 안에서도 **디딤 하나 = 한 걸음**(이끄는 발·따라붙는 발·걷는 중 catch 모두) — 앞뒤 디딤 normal 번 보통 → 다음 fast 디딤이 빠름(기본 2 + 2 — 10/15 15:1x, 전 4 + 2 · 셈 rhyN, 남은 빠른 디딤 rhyF).
    *   짝걸음이면 빠른 몫은 **이끄는 발 디딤에서만 시작** — 셈이 따라붙는 발에서 차면 그 발은 보통으로 두고(셈은 normal 에 머묾) 다음 이끄는 발에서 시작 → 빠른 몫이 펜싱 한 걸음 통째.
    *   빠른 디딤마다 fastK = mul(박자 · 몸 빠르기 — 짝걸음은 발 뜬 시간 그대로, 짝 사이 쉼에서 줄임) · 가속 한도 규칙도 그대로(RH.accel 없음 = × 1).
@@ -783,7 +783,7 @@ export class Gait {
       const wl = want.x * rgt.x + want.z * rgt.z;
       want.addScaledVector(rgt, wl * (this.P.sideMul - 1));
     }
-    // 이탈리아 보법 빠르기 시험 (10/21 — 판 값: 이탈리아 backMul 'flat' = 뒤 느려짐 없앰 · 시험 schools.js setItalianWalk · `?itWalk=`): 걸음 칸 foreMul · backMul 이 있으면 가려는 속도의 앞 · 뒤 몫을 그 배율로(옆 몫 그대로).
+    // 이탈리아 보법 빠르기 시험 (10/21 — 판 값: 이탈리아 backMul 'flat' = 뒤 느려짐 없앰 · 시험 schools.js setItalianWalk): 걸음 칸 foreMul · backMul 이 있으면 가려는 속도의 앞 · 뒤 몫을 그 배율로(옆 몫 그대로).
     //  박자는 아래 cad(빠르기 ÷ 보폭)가 따라 올린다. 칸 없으면 셈하지 않는다(바이트 같음)
     //  'flat' 의 걸음 수 한도(P.backCap — 10/31 08:xx 사장님 '네걸음 이후에는 (다섯 걸음째부터) 70% 적용'): 이어 물러선 뒤 디딤이 backCap.steps 를 넘으면(다섯째 뒤 디딤을 뗀 때부터)
     //  없애지 않는다 — 모든 유파와 같은 뒷걸음 × GAIT.backFactor. 셈은 아래 ③ backStep · 끊기는 backTick (셈이 읽는 앞뒤 · 옆 몫은 배율 전 값 — 한도가 셈을 흔들지 않게)
@@ -948,7 +948,7 @@ export class Gait {
     if (PR?.stride) cad = Math.max(cad, (2 * speed) / PR.stride);
     const T = walkNow ? 1 / cad : GAIT.settleT / (1 - this.P.dsFrac);
     this.stepT += (T - this.stepT) * Math.min(1, dt * 6);
-    // 빠른 걸음 (10/15): 박자 걸음(P.rhythm — 이탈리아, docs/strike/italian_rhythm_2026-10-15.md)은 켜졌을 때만 센다(rhythmOn — 디딤 셈 N + M 또는 옛 짝 셈 · `?itRhythm=0` = 칸 없는 것과 같은 길) ·
+    // 빠른 걸음 (10/15): 박자 걸음(P.rhythm — 이탈리아, docs/strike/italian_rhythm_2026-10-15.md)은 켜졌을 때만 센다(rhythmOn — 디딤 셈 N + M 또는 옛 짝 셈 ·
     //  간격 잡기 빠른 디딤(this.chase — 독일, 상대 헛침 뒤 받을 창 · docs/strike/german_chase_2026-10-15.md)(잡기는 holdTick — driveBalance 가 먼저 부름).
     //  판 시작 정지·마무리 중엔 세지 않고 처음부터(받을 창도 버림) · 걷지 않으면 빠른 걸음 끝. 둘 다 없고 빠른 걸음도 아니면 셈하지 않는다
     //  빠른 걸음 중 스틱 앞뒤가 뒤집히면(가려는 속도 앞 몫의 부호가 그 걸음과 반대) 거기서 끝 — 멈춰 서는 동안 서두르지 않게

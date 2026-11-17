@@ -117,7 +117,7 @@ export function woundRageMult(f) {
 // ── 총사의 결투 (달타냥 에픽 특수 능력 — 사장님 10/25 01:4x '달타냥은 B로 하고 배율 1.15로 해' · B = 한손검 상대) ──
 //  칼(spec.duelOneHand)의 주인이 지금 한손검(weapons.js isOneHandSword — 한손 쥠 · 날 있음)을 쥔 상대(armed — 놓쳤거나 팔이 잘려 칼이 떨어졌으면 아님 ·
 //  부러진 칼은 그대로 한손검)를 치면 그 칼의 공격력(등급 power — 판정 에너지 배율)이 × WEAPON_ABILITY.duelOneHand(1.15 — config). 와신상담과 같은 자리.
-//  능력 없는 칼 · 한손검이 아닌 상대 · 값 1(`?dartagnanAbility=0`)은 1 — power × 1 은 power 그대로라 다른 판은 바이트까지 같다
+//  능력 없는 칼 · 한손검이 아닌 상대 · 값 1은 1 — power × 1 은 power 그대로라 다른 판은 바이트까지 같다
 /** 총사의 결투 배율: att 칼에 duelOneHand 가 있고 vic 가 한손검을 쥐고 있으면 WEAPON_ABILITY.duelOneHand, 아니면 1 (시험이 읽는다) */
 export function duelOneHandMult(att, vic) {
   const k = +WEAPON_ABILITY.duelOneHand;

@@ -1101,7 +1101,7 @@ export class Fighter {
    *  발 디딤 잃음(offBalanceTime)·기준 막대 풀림이 모두 이 값을 읽는다 ② 맞아서 깎이는 휘청임 게이지(applyWound — balance ≤ 0 넘어짐).
    *  머리 맞아 주저앉음(타격 에너지 문턱)·다리가 못 버팀(legsCannotSupport)은 부상이라 곱하지 않는다.
    *  곁눈 베기 무릎 꺾기(combat.js buckleCheck — 부상이 아니라 균형의 일)는 그 확률에 곱한다 (10/21).
-   *  steady 칸이 없는 유파(독일·무유파 …)·`?jpSteady=0`·`?schoolGait=0`(걸음 값이 GAIT 그 자체)은 1 → 두 곳 모두 곱하는 줄을 건너뛴다(지금 길 그대로).
+   *  steady 칸이 없는 유파(독일·무유파 …)(걸음 값이 GAIT 그 자체)은 1 → 두 곳 모두 곱하는 줄을 건너뛴다(지금 길 그대로).
    *  나중에 스태미너가 들어오면 여기에 곱한다 — 두 곳에 한꺼번에 걸린다.
    */
   get swayScale() {
@@ -1237,10 +1237,10 @@ export class Fighter {
     // 한손 찌르기 칼(이탈리아 무기 — 레이피어 · 달타냥 · 발리사르다 · 파펜하이머)의 잣대 (11/12 SKILL.thrustScale — 사장님 11/12 '이탈리아 무기들 여전히 팔이 잘 안펴져 … 오른쪽으로 안 펴지는'
     //  · docs/strike/arm_reach_audit_2026-11-12.md): 'base' = 무기별 바탕 표(한손 찌르기 표 — 싸움 방식 one:thrust 표 · 이탈리아 자세표가 쉼 자리 칸을 옆으로 60° 선 3번 자세로 덮기 전)로 잰다.
     //  덮은 표로 재면 날것 매핑이 가슴 돌림 57.5° 로 돌고(다른 한손 칼 24.5°) 배수가 0.60(0.71) — 패드 오른쪽 끝이 앞 가운데(손이 칼 어깨보다 안쪽)로 · 가운데가 가슴 왼쪽으로 · 왼쪽 끝이 가슴 뒤로 가고 ·
-    //  어느 쪽으로 끌어도 팔꿈치가 89 ~ 103° 굽은 채(뻗음 0.62 ~ 0.71). 비기 · 고유 공격이 도는 동안은 덮은 표 그대로(위 frameScale 과 같은 규칙). 'off' = 전 판 · `?thrustScale=off`
+    //  어느 쪽으로 끌어도 팔꿈치가 89 ~ 103° 굽은 채(뻗음 0.62 ~ 0.71). 비기 · 고유 공격이 도는 동안은 덮은 표 그대로(위 frameScale 과 같은 규칙). 'off' = 전 판
     const useBase = SKILL.thrustScale === 'base' && this.swordArt?.frame === 'one' && this.swordArt?.style === 'thrust' && !!this.swordArt?.baseTable && !scripted;
     // 동방 한손 칼(중국 무기 일곱)의 잣대 (11/12 SKILL.eastScale — 사장님 11/12 '셋 다 진행해.' · docs/strike/arm_real_2026-11-12.md): 'frame' = 10/10 동방 자세표가 쉼 자리 칸을 덮기 전 무기 틀 표(한손 틀)로 잰다 —
-    //  덮은 표로 재면 배수 0.666(다른 한손 칼 0.712)이라 어느 쪽으로 끌어도 한손 칼 가운데 가장 덜 뻗음(0.69 ~ 0.82). 일본 두손은 그대로(`?frameScale=all` 과 다른 점) · 비기 · 고유 공격 동안은 덮은 표 그대로 (위 규칙)
+    //  덮은 표로 재면 배수 0.666(다른 한손 칼 0.712)이라 어느 쪽으로 끌어도 한손 칼 가운데 가장 덜 뻗음(0.69 ~ 0.82). 일본 두손은 그대로 · 비기 · 고유 공격 동안은 덮은 표 그대로 (위 규칙)
     const useEast = SKILL.eastScale === 'frame' && this.swordArt?.frame === 'one' && this.swordArt?.tradition === 'chinese' && !scripted;
     if (c.s === s && c.table === gp.table && c.oneHand === gp.oneHand && c.useFrame === useFrame && c.useBase === useBase && c.useEast === useEast) return c;
     const [hx, hy] = SKILL.homeGuard;
@@ -3577,7 +3577,7 @@ export class Fighter {
     // 누르기: 손 목표 앞뒤를 상대 가슴 앞면(d − 0.11, 가슴 반두께 partDefs chest)으로 closeW 만큼. 높이·옆은 손가락이 둔 그대로
     //  (손잡이 찍기 동안은 덧씌운 정도만큼 덜 — 밀치기 끝에 곧장 찍으면 남은 누르기가 손을 상대 가슴 앞면에 붙잡지 않게)
     if (this.closeW > 0 && this.foe) handLocal.x += (this.foeDistance() - 0.11 - handLocal.x) * (this.skill.pom ? this.closeW * (1 - th.w) : this.closeW);
-    // 시험 (SECRET.holdDepth — 기본 끔 · `?holdDepth=1`): 맞힌 겨눈 찌름의 굳음 동안(holdGhost — 내 칼 ↔ 상대 몸 안 부딪힘) 몸이 런지 앞발을 따라 더 나가도
+    // 시험 (SECRET.holdDepth — 기본 끔): 맞힌 겨눈 찌름의 굳음 동안(holdGhost — 내 칼 ↔ 상대 몸 안 부딪힘) 몸이 런지 앞발을 따라 더 나가도
     //  칼끝이 겨눈 곳(상대 몸통 가운데 — 옛 길 thrustArm 0 의 칼끝 자리)을 넘지 않게 손을 칼 줄을 따라 거둔다 — 칼이 상대 몸을 뚫고 등 뒤로 나가 보이는 몫을 줄임 (기록 §9-9)
     if (SECRET.holdDepth && this.holdGhost > 0 && th.w > 0 && this.foe?.bodies?.chest) holdDepthHand(this, handLocal, th);
     else this.holdDepth = null;

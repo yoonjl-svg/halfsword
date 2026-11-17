@@ -13,16 +13,16 @@
 //  창: 덮인 채 나아가기가 SECRET.risolutoHold 초 이어지면 비기 창(SECRET.playerWindow — 금색 '!') · 그 안의 탭 하나가 리솔루토 찌르기(skill.js secret · main.js).
 //   두 번째 길(SECRET.risolutoBeat): 덮인 채 나아가기가 risolutoBeatMin 초 넘게 이어지던 중 상대가 칼을 내거나(휘두름 시작) 덮음이 풀리면
 //   (내가 휘두르거나 스틱을 놓은 게 아닐 때) 곧장 창 — 원전 [156] 「상대가 박자를 내면 그것을 잡아, 멈추지 않고 몸까지」.
-//  10/23 넓은 판정 (사장님 10/23 00:1x '리솔루토 발동 거의 안 되더라 칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게' — 기본 · 10/22 판은 `?risoWide=0`):
+//  10/23 넓은 판정 (사장님 10/23 00:1x '리솔루토 발동 거의 안 되더라 칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게' — 기본):
 //   덮음에 칼 어느 부위든 맞닿음 · 0.07 m(risolutoAnyPart — bladesNear) · 덮음 끊김 0.2 s(risolutoGrace) 너그러움으로 모아서 셈 · 가슴 사이 줄어듦 뺌(risolutoClosing 0) ·
 //   다 붙음 창(risolutoClose — 맞닿기 거리 밖에서 안으로 든 순간) · 상대 박자 창(risolutoBeat) 기본 켬. 노리는 운전 30 판 창 판당 0.07 → 2.27 (문서 §9)
-//  10/25 칼끝 얽힘 창 (사장님 10/25 01:0x '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — 기본 · 10/24 판은 `?risoTouch=0` · 문서 §14):
+//  10/25 칼끝 얽힘 창 (사장님 10/25 01:0x '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — 기본 · 10/24 판은 · 문서 §14):
 //   덮인 채 나아가기가 새로 선 그 스텝(칼끼리 어느 부위든 실제 맞닿음 · 0.07 m — 칼끝끼리 · 칼끝이 상대 칼 몸에 엇걸림도)에 곧장 창 · 셈 시간 없음 · 덮인 채 나아가기 한 번에 한 번.
 //   10/24 판에서 첫 닿음을 늦춘 것 = 이어짐 0.6 s(risolutoHold) 하나 — 부위 · 가슴 사이 조건은 10/23 에 이미 풂 · 다 붙음 창은 13:4x 간격 조건(맞닿기 거리)과 같은 자리라 늘 막힘.
-//  10/25 21:0x 사장님 조건 셋 (기본 — 문서 §16 · 확인표 2563 ~ 2569): ① 스틱 앞이나 뒤(SECRET.risolutoStick 'both' · `?risoStick=fwd` = 앞만) ·
-//   ② 창 안의 공격 입력이면 탭 · 끌기 모두(SECRET.risolutoTap 0 · `?risoTap=1` = 탭만 — schools.js tapOnly) · ③ 덮음 거리 0.07 → 0.15 m(SECRET.risolutoCover — 칼 어느 부위든 · 손 쪽 ↔ 칼끝 쪽 둘 다) ·
+//  10/25 21:0x 사장님 조건 셋 (기본 — 문서 §16 · 확인표 2563 ~ 2569): ① 스틱 앞이나 뒤(SECRET.risolutoStick 'both' ·
+//   ② 창 안의 공격 입력이면 탭 · 끌기 모두(SECRET.risolutoTap 0 · ③ 덮음 거리 0.07 → 0.15 m(SECRET.risolutoCover — 칼 어느 부위든 · 손 쪽 ↔ 칼끝 쪽 둘 다) ·
 //   그리고 사람 비기 창은 열리면 0.6 s 지킴(SECRET.secretHold — secret.js PlayerSecretWatch.holding · 간격 조건이 열린 창을 닫지 않음).
-//  10/28 01:4x 사장님 '기존 조건과 같아. 단 상대도 들어오거나 나가야 한다' → '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로' (기본 — SECRET.risolutoMirror · `?risoMirror=0` = 10/25 판):
+//  10/28 01:4x 사장님 '기존 조건과 같아. 단 상대도 들어오거나 나가야 한다' → '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로' (기본 — SECRET.risolutoMirror
 //   사장님 원칙(10/28) '비기 = 상대 반응(상대가 막을 수 있음) · 특수공격 = 내 커맨드' — 덮인 채 나아가기는 스틱만이 아니라 상대 걸음에 맞춰야 셈(mirrorOk): 상대가 물러서는 동안 스틱 앞 ·
 //   상대가 들어오는 동안 스틱 뒤. 상대 걸음 = 걸음 의도 move.y(몸 틀 앞 = 나 쪽 — AI 는 상대 쪽 기준 스틱 · 실제 골반 빠르기와 칼이 가까운 동안 93 % 같음 · 문서 §17) ∓ 0.1(gait.js requestStep 과 같은 문턱).
 //   어긋남(상대가 섬 · 방향이 바뀜)은 덮음 풀림처럼 너그러움 risolutoGrace 동안 셈을 쥠 · 칼끝 얽힘 · 이어짐 · 상대 박자 창 모두 같은 조건 · 다 붙음 창(내 커맨드)은 기본 끔(risolutoClose 0)
@@ -122,7 +122,7 @@ export function stickBack(me) {
 
 /**
  * 덮인 채 나아가기의 스틱 (사장님 10/25 21:0x '앞을 향하고 있을 때 -> 앞이나 뒤를 향하고 있을 때' — SECRET.risolutoStick):
- *  'both'(기본) = 앞 또는 뒤 90° 부채꼴 · 옆 · 놓음은 아님 · 'fwd' = 전(앞만 — `?risoStick=fwd`)
+ *  'both'(기본) = 앞 또는 뒤 90° 부채꼴 · 옆 · 놓음은 아님 · 'fwd' = 전(앞만)
  */
 export function stickOk(me) {
   return stickForward(me) || (SECRET.risolutoStick !== 'fwd' && stickBack(me));
@@ -191,7 +191,7 @@ export class RisolutoWatch {
   }
 
   /**
-   * 10/23 넓은 판정 (사장님 '리솔루토 발동 거의 안 되더라 칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게' — 옛 10/22 판 = `?risoWide=0`):
+   * 10/23 넓은 판정 (사장님 '리솔루토 발동 거의 안 되더라 칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게' — 옛 10/22 판):
    *  덮음 = 손 쪽 ↔ 칼끝 쪽 0.07 m 또는 칼끼리 어느 부위든 맞닿음 · 0.07 m(risolutoAnyPart) · 덮음이나 가슴 사이가 risolutoGrace(0.2 s 반응) 안에 다시 이어지면 같은 덮인 채 나아가기로
    *  (그동안은 안 셈 — 붙은 시간을 모아서 셈) · 가슴 사이 줄어듦은 risolutoClosing 1 일 때만(기본 0 — 스틱 앞이면 됨) · 다 붙음 창 · 상대 박자 창 기본 켬.
    *  옛 판과 같은 길: risolutoAnyPart 0 · risolutoGrace 0 · risolutoClosing 1 · risolutoClose 0 · risolutoBeat 0 이면 10/22 판과 스텝마다 같다
@@ -226,7 +226,7 @@ export class RisolutoWatch {
       this.on = true;
       if (SECRET.risolutoMirror) this.step = fstep;
       if (canOpen) this.touchT += dt;
-      // 칼끝 얽힘 창 (10/25 사장님 '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — SECRET.risolutoTouch · `?risoTouch=0` = 10/24 판): 덮인 채 나아가기가 선 첫 스텝에 곧장 · 셈 시간 없음 ·
+      // 칼끝 얽힘 창 (10/25 사장님 '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — SECRET.risolutoTouch · 셈 시간 없음 ·
       //  덮인 채 나아가기 한 번에 한 번(같은 묶임에서 다시는 이어짐 · 상대 박자 창으로). 창이 이미 열려 있으면 그 창이 끝난 스텝에
       //  11/16 2안 (SECRET.risolutoTouchMin — 기본 0 끔): 창을 열 수 있는 동안(칼 우위 · 창 없음) 덮인 채 나아가기가 이 초 이어진 뒤에
       if (SECRET.risolutoTouch && canOpen && !this.touchDone && this.touchT >= (SECRET.risolutoTouchMin ?? 0) - 1e-9) {

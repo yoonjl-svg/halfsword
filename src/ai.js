@@ -402,7 +402,7 @@ export class AI {
       this.planReckOk = false;
       this.stats.plan = planStats();
     }
-    // 리솔루토 맞춤 걸음: 사람 스틱 대신 본 걸음 (설계 §4-3) — 플랜 몸(1 단계)과 함께 플랜 없는 몸(무 띠 · planOff)도 공정함 스위치(AI_PLAN.read.fair)가 켜졌으면 본 걸음 (감독 11/14 3 단계 셋 합침 결정 · 새 값 없음 · `?aiFair=0` · `?aiPlan=0` 이면 플랜 없는 몸은 옛 줄)
+    // 리솔루토 맞춤 걸음: 사람 스틱 대신 본 걸음 (설계 §4-3) — 플랜 몸(1 단계)과 함께 플랜 없는 몸(무 띠 · planOff)도 공정함 스위치(AI_PLAN.read.fair)가 켜졌으면 본 걸음 (감독 11/14 3 단계 셋 합침 결정 · 새 값 없음 · `?aiFair=0`
     if (this.riso) this.riso.W.stepOf = () => (this.risoSeen() ? seenStep(this.foeClosing) : foeStep(this.foe));
     this.planJp = !!this.plan && art.tradition === 'japanese'; // 2 단계 일본 '기다리는 중전차' (11/14 — src/ai_plan_jp.js · 아래 planJp 자리만)
     if (this.planJp) jpInit(this);

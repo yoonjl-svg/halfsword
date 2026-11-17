@@ -1,6 +1,6 @@
 // 플레이어 스킬트리 몫 읽기 (10/21 — docs/design/skill_tree_2026-10-21/IMPLEMENTATION.md) — 싸움 코드가 '이 몸에 그 몫이 꺼졌나'를 묻는 오직 한 자리.
 //  몸의 skillKit = 사람(플레이어)은 main.js newRound 가 넣는다(skill_tree_data.js kitFromNodes) · AI 는 11/16 부터 ai.js applyKit 이 숙련도 사다리 칸으로 넣는다(config AI_KIT — aiKitOf).
-//  시뮬 대본 몸 · 옛 판(`?aiKit=0`) AI 에는 없다 → 늘 '켜짐'. 아무것도 들여오지 않는다(걸음 · 막기 · 상처 코드 어디서나 불러도 고리가 생기지 않게).
+//  시뮬 대본 몸 · 옛 판 AI 에는 없다 → 늘 '켜짐'. 아무것도 들여오지 않는다(걸음 · 막기 · 상처 코드 어디서나 불러도 고리가 생기지 않게).
 
 /** 이 몸에 스킬트리 몫 key 가 꺼졌나 — skillKit 이 없으면(시뮬 · 옛 판 AI) false */
 export const kitOff = (f, key) => !!f?.skillKit && !f.skillKit[key];

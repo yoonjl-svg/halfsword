@@ -68,7 +68,7 @@ const GERMAN = {
     highR: G.ochsR, // 내 오른쪽 위: 오른쪽 황소
     // 머리 위에서 곧게: 왕관(Kron — 칼자루를 머리 위로 높이 들어 코등이·칼자루로 받는다, 사장님 10/11 22:2x '독일 막기 자세에 왕관 넣어' 기본).
     //  Ringeck 주해 「… catch his strike on your hilt … this displacement is called "the crown". From there you can rush in」 [원전 2차 영역] · 자리 = G.kron [0.02, 0.4](덮는 자세로 쓰던 패드 — 지붕과 긴 자세 사이, 자세표 섞기로 칼이 서고 손이 머리 위) [해석]
-    //  SKILL.deKron 0 = 전 자리(긴 자세 — 뻗은 칼 위로 떨어지게, 물리 탐색으로 고른 값). 읽을 때마다 스위치를 본다(게터 — 시뮬 with_config·주소 ?kron=0)
+    //  SKILL.deKron 0 = 전 자리(긴 자세 — 뻗은 칼 위로 떨어지게, 물리 탐색으로 고른 값). 읽을 때마다 스위치를 본다(게터 — 시뮬 with_config)
     //  10/12 왕관 꼴: 이 패드는 손이 가는 길만 정하고, 손·칼끝·칼 면은 막기 자리 몸꼴 덧씌우기(아래 GERMAN_KRON — TRADITIONS.german.parryCover)가 준다 (SKILL.deKronShape 'pad' = 패드만)
     get highC() {
       return SKILL.deKron ? G.kron : G.langort;
@@ -335,33 +335,33 @@ const ITALIAN_PAIR = { lead: 0.45, trail: 0.4, inner: 0.3, stride: 0.36, len: 0.
 //   even = 디딤 간격이 늘 한 걸음 시간(이끄는 발 → 따라붙는 발 → 이끄는 발 … 같은 간격 — gait.js update ③ gate · 박자 걸음 빠른 디딤은 그 간격 ÷ mul — fastPeek) · 몸 박자 없음(leadV·trailV·restV 칸 없음 — 몸 빠르기 고르게) ·
 //   두 발 다 Tsw × lead · trail(0.7 — 옛 0.45 · 0.4 의 짧게 채는 발은 고른 간격에서도 골반을 멈칫하게 함)로 들고 나머지는 두 발 — 한 발로 오래 버티지 않게(10/10 '저는 느낌' — 골반이 짝마다 8 cm 주저앉던 고른 셔플과 다름).
 //   stride = 한 짝에 한 발이 옮기는 거리 상한(작게 빨리 0.36 → 0.28 — 넘으면 박자를 올림) · len · stop 은 옛 짝과 같음. 값은 사장님 확인 전 (확인표 1711~1713)
-const ITALIAN_PAIR_EVEN = { even: true, lead: 0.7, trail: 0.7, inner: 0.3, stride: 0.44, len: 0.7, stop: true }; // stride 0.44 는 10/21 R0(긴 계수 0.85)에도 그대로 — 줄이면 AI 가 크게 손해(docs/strike/italian_gait_speed_2026-10-21.md) · 처음 값은 0.28 → 0.44(10/15 22:1x 보폭 박자 시험 — 0.28 × 1.1 ÷ 0.7 · `?itStride=0` 이면 0.28)
+const ITALIAN_PAIR_EVEN = { even: true, lead: 0.7, trail: 0.7, inner: 0.3, stride: 0.44, len: 0.7, stop: true }; // stride 0.44 는 10/21 R0(긴 계수 0.85)에도 그대로 — 줄이면 AI 가 크게 손해(docs/strike/italian_gait_speed_2026-10-21.md) · 처음 값은 0.28 → 0.44(10/15 22:1x 보폭 박자 시험 — 0.28 × 1.1 ÷ 0.7
 //  박자 걸음 rhythm (10/15 사장님 '앞이든 뒤든 4걸음마다 다음 1걸음이 50% 빨라질 수 있어? … 3걸음마다 1걸음이 더 박자 감각이 생길까?' → 감독 권고 3 + 1 —
 //   docs/strike/italian_rhythm_2026-10-15.md): 빠른 걸음은 몸 빠르기 ×mul · 발 박자 ×mul(한 걸음 길이는 그대로, 시간만 ÷mul) — gait.js fastBegin.
 //   count 'foot' (기본 — 10/15 13:2x 사장님 '디딤 기준으로 통일하자 … 3+2? 4+2?' → 감독 권고 4 + 2, 확인표 1604~): 앞뒤 **디딤** normal 번 보통 → 다음 fast 디딤이 빠름.
 //    짝걸음(가까이 '따·닥')도 디딤 하나씩 센다 — 빠른 몫은 이끄는 발 디딤에서만 시작(셈이 따라붙는 발에서 차면 다음 이끄는 발까지 보통으로 미룸 → '따·닥, 따·닥, 따닥!').
-//   count 'pair' (옛 셈 — 비교용, `?itRhythm=N`): 한 걸음 = follow 짝걸음 안에서는 이끄는 발 + 따라붙는 발 한 짝(짝 사이 쉼까지), 밖(지나 딛기)에서는 한 디딤 · every 번 센 다음 한 걸음이 빠름.
+//   count 'pair' (옛 셈 — 비교용): 한 걸음 = follow 짝걸음 안에서는 이끄는 발 + 따라붙는 발 한 짝(짝 사이 쉼까지), 밖(지나 딛기)에서는 한 디딤 · every 번 센 다음 한 걸음이 빠름.
 //   두 셈 다: 옆 몫이 앞뒤 몫보다 큰 걸음·기술 걸음은 세지도 끊지도 않음.
 //   idle = 걸음이 끝난 뒤 이만큼(s) 새 걸음이 없으면 처음부터 · brake = 몸이 아직 반대쪽으로 이만큼(m/s — GAIT.walkMin 과 같은 크기) 넘게 가는 동안 뗀 걸음(방향을 막 바꾼
 //   멈춰 서는 디딤)은 빠른 걸음을 다음 앞뒤 걸음으로 미룸 · accent = 빠른 걸음 발소리 세기·높이 배율(sound.js footstep — 같은 표본).
 //   **10/15 15:1x 사장님 결정** '이탈리아는 2+2로 하자. 대신 가속을 50%에서 30%로 조정. 몸이 빨라지는 게 궁극적 이점이라기보다는 리듬감을 살려서 플레이하게 만드는 게 목적'
 //    → 기본 디딤 셈 **2 + 2**(보통 디딤 둘 → 빠른 디딤 둘 — 짝걸음이면 보통 한 짝 → 빠른 한 짝 '따·닥, 따닥!') · **mul 1.3**(전 1.5 — 몸 빠르기·발 박자 둘 다. 가속 한도 규칙은 그대로 × 1) (확인표 1626~)
-//   주소 `?itRhythm=2+2`(기본) · `?itRhythm=4+2`(13:2x 판) · `?itRhythm=3+2` · `?itRhythm=0` = 끔(칸 없는 것과 같은 길) · `?itRhythm=3` = 옛 짝 셈 3 + 1(10/15 오전 판) — main.js · setItalianRhythm.
+//   주소 (기본)(13:2x 판) · setItalianRhythm.
 //    지난 판 비교 갈래(4+2 · 3+2 · 옛 짝 셈 N)는 그때 배율 ×1.5 그대로 — 그 판을 그대로 다시 본다(ITALIAN_OLD_MUL)
 //   2 + 2 · ×1.3 은 사장님 결정 10/15 15:1x · 나머지(idle · brake · accent)는 사장님 확인 전 (확인표 1500~ · 1604~ · 1626~)
 //   **10/15 19:3x 사장님 결정** '이탈리아 유파 30%로는 리듬감이 안 살아. 50%로 해' → mul **1.5**(디딤 셈 2 + 2 그대로 · 몸 빠르기·발 박자 둘 다) — 바탕 걸음을 고르게(고른 짝걸음 ITALIAN_PAIR_EVEN)
-//    하는 작업과 같이(docs/strike/italian_rhythm_2026-10-15.md §10 · 확인표 1710~). 15:1x 판 비교 `?itRhythm=2+2x1.3`('N+MxK' = 배율 K 를 손으로 — setItalianRhythm)
+//    하는 작업과 같이(docs/strike/italian_rhythm_2026-10-15.md §10 · 확인표 1710~). 15:1x 판 비교 ('N+MxK' = 배율 K 를 손으로 — setItalianRhythm)
 export const FAST_ACCENT = { gain: 1.3, rate: 1.06 }; // 빠른 걸음 발소리 강조 — 박자 걸음·간격 잡기 빠른 디딤·첫 걸음 박차기(10/15 15:2x 사장님 '박차기에 발소리 강조 붙여' — gait.js fastBegin)가 같이 씀 (사장님 확인 전 · 확인표 1508 · 1621)
-const ITALIAN_MUL = 1.5; // 박자 걸음 빠른 디딤 배율 (사장님 결정 10/15 19:3x '30%로는 리듬감이 안 살아. 50%로 해' — 15:1x 의 1.3 에서. 지난 판 비교 `?itRhythm=2+2x1.3`)
-const ITALIAN_OLD_MUL = 1.5; // 지난 판 비교 갈래(`?itRhythm=4+2` · `3+2` · 옛 짝 셈 N)의 배율 — 그때 값 그대로
+const ITALIAN_MUL = 1.5; // 박자 걸음 빠른 디딤 배율 (사장님 결정 10/15 19:3x '30%로는 리듬감이 안 살아. 50%로 해' — 15:1x 의 1.3 에서. 지난 판 비교)
+const ITALIAN_OLD_MUL = 1.5; // 지난 판 비교 갈래(`3+2` · 옛 짝 셈 N)의 배율 — 그때 값 그대로
 //   **10/15 22:1x 사장님 시험** '속도 가중치를 주는 게 아니라 보폭 차이를 두면 어떨까. 1-2 디딤 짧게 3-4 디딤 넓게. 1-2는 0.8로 3-4는 1.1로'("이탈리아 보폭이 지금 너무 짧아졌어") →
 //    보폭 박자 ITALIAN_STRIDE: 디딤 셈 2 + 2 의 빠른 몫(짧은 디딤)이 먼저(shortFirst — 쉬었다 걸으면 짧게 둘 → 길게 둘 …), 몸 빠르기는 그대로(timeOnly — 발 박자만 ×mul).
 //    보폭 규칙 계수로 짧은 디딤 0.8(0.50 m) · 긴 디딤 1.1(0.68 m): 이탈리아 바탕 보폭을 긴 디딤(strideK 1.1)으로 두고 짧은 디딤은 발 박자 × (1.1 ÷ 0.8 = 1.375) — 같은 몸 빠르기에서 간격이 짧으면
 //    보폭이 짧다. 고른 짝걸음 보폭 상한(ITALIAN_PAIR_EVEN.stride)도 같은 비로(0.28 × 1.1 ÷ 0.7). 발소리 강조는 짧은 디딤(빠른 몫) 그대로. 시험값 — 사장님 확인 전.
-//    `?itStride=0` = 22:0x 판(속도 ×1.5 · 바탕 0.7) · `?itStride=0.75,1.1` 처럼 짧은·긴 계수를 손으로 — setItalianStride
+//    짧은·긴 계수를 손으로 — setItalianStride
 //   **10/15 22:5x 사장님** '별로 박자 감각이 안 느껴져 … 뭐가 제일 리듬감 있는가?' → 감독 권고 '보폭 차이 + 빠르기 결합': 짧은 디딤은 몸 빠르기도 × speed(1.3) —
 //    짧은 디딤 간격 = (short ÷ speed) ÷ long = 긴 디딤 간격의 0.56 배(보폭만일 때 0.73) · 짧은 짝에서 몸이 치고 나감 · 평균 빠르기 +11 %(옛 × 1.5 는 +20 %).
-//    발 박자 배율 mul = long × speed ÷ short · 몸 빠르기 배율 speedMul = speed(gait.js fastBegin · update — timeOnly 일 때 몸은 speedMul, 박자는 mul). `?itStride=a,b,c` = 짧은·긴 계수·짧은 디딤 빠르기
+//    발 박자 배율 mul = long × speed ÷ short · 몸 빠르기 배율 speedMul = speed(gait.js fastBegin · update — timeOnly 일 때 몸은 speedMul, 박자는 mul). ·긴 계수·짧은 디딤 빠르기
 //   **10/21 사장님** '뒤로 물러설 때 느려짐 보정을 없애서 앞과 뒤 속도가 같아지게 … 롱소드보다 빠르다면 R0' → 보폭 계수 0.8 · 1.1 → **0.62 · 0.85**(둘 다 −23 % · 짧은/긴 비 0.73 그대로)
 //    + 짧은 디딤 가속 한도 × 1.5(ITALIAN_RHYTHM.accel) + 뒤 느려짐 없앰(ITALIAN_GAIT.backMul 'flat'). docs/strike/italian_gait_speed_2026-10-21.md · 확인표 2127~2128
 const ITALIAN_STRIDE = { short: 0.62, long: 0.85, speed: 1.3 };
@@ -392,9 +392,8 @@ const ITALIAN_EVEN = { pair: ITALIAN_PAIR_EVEN, dsFrac: 0.21, player: { dsFrac: 
 //   앞뒤 몫이 옆 몫보다 크고 뒤쪽이면 +1 · 앞 걸음 · 옆 몫이 큰 걸음 · 빈 스틱 걸음은 몸이 더는 물러나지 않을 때(골반 뒤 빠르기 < GAIT.walkMin 걷기 문턱)만 0 으로
 //   (아직 뒤로 미끄러지면 그대로 — 잠깐 놓기 · 옆 한 디딤으로 셈만 지우는 꼴 막음) · 걸음이 끝난 뒤 idle s 안에 새 걸음이 없으면(멈춤) 0 으로 —
 //   idle = 박자 걸음 멈춤 기준 0.6 s(사장님 결정 10/17 14:5x) 그대로 · 기술 걸음 · 자세 고치기는 세지도 끊지도 않음(새 문턱 없음 — 셈 규칙은 사장님 확인 전).
-//   `?itBackCap=0` = 10/21 판(늘 뒤 느려짐 없음) · `?itBackCap=N` = N 걸음까지 (setItalianBackCap)
 const ITALIAN_BACK_CAP = { steps: 4, idle: ITALIAN_RHYTHM.idle };
-const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 }, strideK: 0.85, backMul: 'flat', backCap: ITALIAN_BACK_CAP, even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375 · `?itStride=0` 이면 0.7)
+const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, bobAdd: 0.01, dsLow: 1.0, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, player: { maxStride: 0.55, cadence0: 2.4, trailReach: 0.36, dsFrac: 0.15 }, strideK: 0.85, backMul: 'flat', backCap: ITALIAN_BACK_CAP, even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375
 //  ⓐ′ 중국 (조선세법): 체보 (掣步) — 앞발 내딛고 뒷발 끌어붙임 [원문 무비지 쪽155·156] · 진보 (進步) 로 들어가며 침 [원문 쪽158] — 수는 [추정]
 //   10/10 사장님 12:5x~13:0x (docs/strike/school_gait_iberian_chinese_2026-10-10.md):
 //   간수세 낮춤 guardLow — 바탕 자세표 '옆 지킴'(중국 이름 看守勢 · 자세 虎蹲 '웅크린 범', 무비지 쪽163 · 무도 권2 p039 「左脚右手虎蹲勢」 [원문 이름])에 있을 때 골반 +0.04 m (확인표 628)
@@ -413,9 +412,9 @@ const CHINESE_BOW = { drop: 0.22, lowMax: 0.24, rate: 1.2, inTime: 0.12, outTime
 //    ('빠르진 않지만 신속하다'). 빠른 걸음·첫 걸음 박차기·세게 멈춤(fastAcc · burstAccel)엔 곱하지 않는다(그 값 그대로). 몸의 일이라 사람·AI 같이 · 칼 입력은 읽지 않는다(보법 = 다리만).
 export const CHINESE_GAIT = { guardHeight: 0.88, walkHeight: 0.95, guardLength: 0.55, guardWidth: 0.16, weightFront: 0.55, maxStride: 0.5, cadence0: 2.5, dsFrac: 0.18, width: 0.07, minWidth: 0.11, lift: 0.05, liftSettle: 0.03, toeUp: 0.15, sway: 0.018, bobAdd: 0.015, dsLow: 1.2, footwork: 'follow', followIn: 3.3, followVmax: 0.8, trailReach: 0.42, dragLift: 0.03, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, guardLow: CHINESE_GUARD_LOW, bow: CHINESE_BOW, light: 1.5, strideK: 0.75 };
 //  ↑ 동방 박자 (10/29 21:0x 사장님 '동방 박자도 바꾸고' — docs/strike/cn_cadence_2026-10-29.md): 보폭 규칙 k 0.9 → 0.75 — 같은 꼭대기(2.0 m/s)를 더 잦고 짧은 걸음으로
-//   (보폭 상한 0.558 → 0.465 · 1 m/s 박자 2.28 → 2.73 · 초당 3.26 → 3.83 걸음 × 0.63 → 0.55 m · 90 % 까지 0.55 → 0.54 s — 가벼운 발 그대로). 독일(k 1.0)은 그대로. 전 판 = `?cnGait=old`
+//   (보폭 상한 0.558 → 0.465 · 1 m/s 박자 2.28 → 2.73 · 초당 3.26 → 3.83 걸음 × 0.63 → 0.55 m · 90 % 까지 0.55 → 0.54 s — 가벼운 발 그대로). 독일(k 1.0)은 그대로. 전 판
 export const CHINESE_GAIT_OLD = { strideK: 0.9 };
-/** 동방 박자 비교 (주소 `?cnGait=old` = 10/29 전 판 strideK 0.9 — 판을 세우기 전에 한 번) */
+/** 동방 박자 비교 (주소 */
 export function setChineseGait(o) {
   if (o === 'old') Object.assign(CHINESE_GAIT, CHINESE_GAIT_OLD);
 }
@@ -427,7 +426,7 @@ export function setChineseGait(o) {
 //   · 두 발 너비 0.34 그대로(사장님 '다양성을 고려해 지금 유지' · 625). 발끝 틀기 arcYaw·옆 몫 문턱 crossFrom 은 그대로
 //  burstSide: true — 첫 걸음 박차기의 옆 박차기(옆·비스듬히 옆)는 이 유파만(10/15 15:1x 사장님 '옆으로 박차기는 이베리아 유파만 사용하게 바꿔' — 둥근 걸음·옆 빠르기의 유파).
 //   (10/15 20:4x 사장님 '박차기는 독일 보법으로 넣어' — 뒤 박차기는 독일 유파만 · gait.js update 걷기 시작 자리: 이베리아는 옆만 · 그 밖 유파는 박차기 없음.
-//    아래 옛 설명 '다른 유파는 뒤 박차기만'은 `?burstDe=0` 판) 다른 유파는 뒤 박차기만(뒤 몫이 옆 몫 이상 — 비스듬히 뒤면 앞뒤 몫만 빠르게) · 이탈리아는 박차기 없음(burst: false) — gait.js 가 gaitParams 로 읽음 (확인표 1631~ · docs/strike/step_burst_2026-10-15.md §8)
+//    아래 옛 설명 '다른 유파는 뒤 박차기만'은 판) 다른 유파는 뒤 박차기만(뒤 몫이 옆 몫 이상 — 비스듬히 뒤면 앞뒤 몫만 빠르게) · 이탈리아는 박차기 없음(burst: false) — gait.js 가 gaitParams 로 읽음 (확인표 1631~ · docs/strike/step_burst_2026-10-15.md §8)
 const IBERIAN_GAIT = { guardLength: 0.62, guardWidth: 0.34, weightFront: 0.5, maxStride: 0.68, cadence0: 1.85, cadenceK: 0.45, width: 0.13, minWidth: 0.16, lift: 0.08, sway: 0.025, arcYaw: 0.35, crossFrom: 0.5, sideStride: 0.7, sideLead: true, sideMul: 1.3, burstSide: true, strideK: 1.2 };
 //  ⓒ 일본: 스리아시·오쿠리아시 [원문 검도형 p24·p06] · 늘 걷듯이·뜬발을 꺼림 [원문 고린노쇼 p20] — 낮고 안정, 짧은 앞뒤 간격. 앞무게 틀(모노호시자오 — 큰 칼)은 byFrame.heavy: 앞뒤 조금 길게, 발 놀림은 번갈아 걷기(고린노쇼 음양의 발 [원문] — follow 는 48×2 판 옮겨 딛기 1.73 → 3.2~4.2/판, 잣대 ×1.5 밖)
 //  follow 는 상대 가슴 followIn 안 + 걸러진 빠르기 followVmax 아래에서만(빨리 좁힐 땐 지나 딛기), 뒤에 남은 발이 엉덩이에서 trailReach 넘으면 그 발부터 따라붙임.
@@ -437,17 +436,17 @@ const IBERIAN_GAIT = { guardLength: 0.62, guardWidth: 0.34, weightFront: 0.5, ma
 //   발이 땅에 일찍 걸리지 않게 발 들기 AI 0.025 → 0.035 · 플레이어 0.035 → 0.05 — gait_rhythm.mjs·player_gait_feel.mjs·gait_metrics.mjs 로 고름 (확인표 590~)
 //  버티기 steady (10/15 사장님 '휘청·넘어짐 저항으로 가자' — 25 % 는 감독 권고 수치, 미세 조정은 나중 · docs/strike/japanese_steady_2026-10-15.md · 확인표 1520~): · 10/30 00:1x 사장님 '흔들림 저항도 30%로 늘려' → steady 0.25 → 0.3
 //   균형이 흔들리는 양을 이 몫만큼 덜 받는다(× 0.75 — fighter.js swayScale 이 '발 밖으로 벗어난 몫 offBalance'와 '맞아 깎이는 휘청임 게이지'에 곱함).
-//   몸의 일이라 사람·AI 같이, 두 일본 무기(byFrame·player 덮개가 안 건드림) 모두. `?jpSteady=0` = 끔
+//   몸의 일이라 사람·AI 같이, 두 일본 무기(byFrame·player 덮개가 안 건드림) 모두.
 export const JAPANESE_GAIT = { guardHeight: 0.75, walkHeight: 0.818, reachMax: 0.7, guardLength: 0.45, guardWidth: 0.18, weightFront: 0.5, maxStride: 0.5, cadence0: 2.2, dsFrac: 0.25, width: 0.08, minWidth: 0.12, lift: 0.035, liftSettle: 0.015, toeUp: 0.06, sway: 0.01, bobAdd: 0.005, dsLow: 0.5, footwork: 'follow', followIn: 3.5, followVmax: 0.8, trailReach: 0.42, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, steady: 0.3, byFrame: { heavy: { guardLength: 0.5, footwork: 'pass' } }, player: { trailReach: 0.36 }, speedMul: 0.7, settleStance: true };
 //  ↑ 10/29 21:0x 사장님 '일본 걸음 설계대로 고쳐' · '다른 유파보다 확연히 느려도 돼. 10%~50% 사이로 일본 걸음의 맛을 살렸을 때 가장 자연스러운 쪽으로' (docs/strike/jp_gait_2026-10-29.md):
 //   보폭 규칙 strideK 0.8 뺌(보폭 상한 0.496 · 1 m/s 박자 2.56 으로 설계 박자 2.2 · 보폭 0.5 를 덮어 — 같은 꼭대기를 짧은 보폭으로 내느라 사람은 독일보다 잦은 박자, AI 는 두 발 디딤 0.25 · 들기 0.035 로
 //   초당 5.2 잔걸음이 되어 꼭대기 −33 %) · 설계 박자 2.2 · 보폭 상한 0.5 그대로 · speedMul = 가려는 빠르기 × (꼭대기 약 −30 % — 확연히 느리고 잰 걸음) ·
-//   사람 칸의 두 발 디딤 0.18 · 들기 0.05 뺌(사람도 설계 0.25 · 0.035 — 스리아시) · settleStance = 서 있는 자세를 자세 길이 0.45 로(판 시작 0.31 에서 안 고쳐지던 것). 전 판 = `?jpGait=old`
+//   사람 칸의 두 발 디딤 0.18 · 들기 0.05 뺌(사람도 설계 0.25 · 0.035 — 스리아시) · settleStance = 서 있는 자세를 자세 길이 0.45 로(판 시작 0.31 에서 안 고쳐지던 것). 전 판
 //   speedMul **0.67 → 0.70** (10/31 08:xx 사장님 결정 '일본은 70%가 아니라 67%네? … ' · '일본 바로잡아' — 10/30 00:1x '일본 -30% 적용해' 의 −30 % 를 배율 그대로 0.70 으로).
-//    0.67 은 10/29 표에서 앞 꼭대기가 독일의 −30 %(1.41 · 2.00 m/s)로 잰 자리였다 — 0.70 은 배율이 앞걸음 × 0.7(뒷걸음 GAIT.backFactor 와 같은 몫). `?jpWalk=0.67` = 10/30 판
+//    0.67 은 10/29 표에서 앞 꼭대기가 독일의 −30 %(1.41 · 2.00 m/s)로 잰 자리였다 — 0.70 은 배율이 앞걸음 × 0.7(뒷걸음 GAIT.backFactor 와 같은 몫).
 export const JAPANESE_GAIT_OLD = { strideK: 0.8, player: { trailReach: 0.36, dsFrac: 0.18, lift: 0.05 }, speedMul: undefined, settleStance: undefined };
-/** 일본 걸음 비교 (주소 `?jpGait=old` = 10/29 전 판 · `?jpWalk=0.67` = speedMul 시험(0.67 = 10/30 판 · 판 값 0.70) — 판을 세우기 전에 한 번) */
-/** 사람 몸만 일본 걸음 빠르기 (11/05 시험 — docs/strike/jp_de_basics_2026-11-05.md · 주소 `?jpPlayerWalk=0.85` · 기본 없음 = 사람도 칸 값 0.70): gait.js gaitParams 의 player 덮어쓰기 칸 — AI 일본 몸은 그대로 */
+/** 일본 걸음 비교 (판 값 0.70) — 판을 세우기 전에 한 번) */
+/** 사람 몸만 일본 걸음 빠르기 (11/05 시험 — docs/strike/jp_de_basics_2026-11-05.md · 기본 없음 = 사람도 칸 값 0.70): gait.js gaitParams 의 player 덮어쓰기 칸 — AI 일본 몸은 그대로 */
 export function setJapanesePlayerWalk(x) {
   if (+x > 0) JAPANESE_GAIT.player = { ...(JAPANESE_GAIT.player ?? {}), speedMul: +x };
 }
@@ -680,7 +679,7 @@ const ITALIAN_RISOLUTO = {
   do: {
     risoluto: true,
     // tapOnly: 창 안의 탭(찌르기 입력)만 비기 — 끌기(베기)는 보통 베기로 (main.js secSwipe). 10/25 21:0x 사장님 '찌르기(탭)로 발동 -> 공격하면 발동' 뒤 기본 거짓(탭 · 끌기 모두 같은 런지) —
-    //  SECRET.risolutoTap 1(`?risoTap=1`)이면 전처럼 탭만. 읽을 때 정함(주소 스위치가 모듈을 읽은 뒤 바뀌므로)
+    //  SECRET.risolutoTap 1이면 전처럼 탭만. 읽을 때 정함(주소 스위치가 모듈을 읽은 뒤 바뀌므로)
     get tapOnly() {
       return !!SECRET.risolutoTap;
     },
@@ -688,7 +687,7 @@ const ITALIAN_RISOLUTO = {
   },
   src: 'Fabris 1606 둘째 책 [153] 「andare di risolutione」 · [155] 「che quando la nimica si moue para essere legata dalla propria … che siano sempre unite」 · [156] 「tenendo fermo il braccio andare scorrendo il filo di detta nimica sino al corpo auerso senza mai abbandonarla」 [원문 — Wiktenauer 전사 · A. F. Johnson 영역] · 덮음을 칼 모양으로 재기 · 상대 팔 늦춤 [해석] · 수 [추정]',
 };
-// 이베리아 v4 (10/10 04:4x — 10/11 부터 옛 판, SECRET.iberianSecret 'v4' · 주소 `?ibSecret=v4`): 호 안쪽에서 비켜 서며 크게 가로베기 (휩쓸기 secret_instant.js sweepPose)
+// 이베리아 v4 (10/10 04:4x — 10/11 부터 옛 판, SECRET.iberianSecret 'v4'): 호 안쪽에서 비켜 서며 크게 가로베기 (휩쓸기 secret_instant.js sweepPose)
 //  (그 전: Molinete altibaixo 휘돌려 내려치기 — 끊기지 않은 베기 셋 뒤, 옆으로 비껴 딛으며 칼을 한 바퀴 휘돌려(몰리넬로 고리) 지붕에서 곧게 내려친다)
 export const IBERIAN_SECRET_V4 = {
   name: 'molineteTalho',
@@ -707,7 +706,7 @@ export const IBERIAN_SECRET_V4 = {
   do: { loop: [G.nebenR, G.tagR], path: [[0.12, 0.14], G.wechselL], powerFrom: 0, side: 'iberianLat', open: 'H', reach: 0, power: 'iberianPower', loopHand: 'iberianLoopHand', strength: 'iberianStrength', sideBack: 'iberianBack', release: { dist: 'iberianRelease', maxHold: 'releaseMaxHold' } },
   src: '몬탄테 molinete·altabaixo — Godinho 1599 · Figueiredo 1651 요약 [원전 2차] · 둥근 걸음(옆으로 비껴 딛음) [원전 2차] · 고리 → 내려치기로 잇기 [해석]',
 };
-// 이베리아 멈추지 않는 흐름 (10/11 01:5x 사장님 '이베리아 비기를 몬탄테 흐름으로 다시 설계' — docs/strike/iberian_secret_v5_2026-10-11.md, SECRET.iberianSecret 'flow' — 10/11 03:3x 부터 v6 길목 지키기가 기본, 이것은 `?ibSecret=flow`):
+// 이베리아 멈추지 않는 흐름 (10/11 01:5x 사장님 '이베리아 비기를 몬탄테 흐름으로 다시 설계' — docs/strike/iberian_secret_v5_2026-10-11.md, SECRET.iberianSecret 'flow' — 10/11 03:3x 부터 v6 길목 지키기가 기본, 이것은 옛 판):
 //  사장님 10/11 00:2x '인간 플레이어로서 흐름이 너무 끊기고 컨셉과 동작이 어색해. 유파 꾸러미에서 따로 노는 느낌' → v4 휩쓸기(정해진 자세로 감고 크게 한 번 — 스텝마다 자리 지정)를 걷어 내고
 //  지금 휘두르던 칼의 방향을 이어받아(그쪽으로 떨어뜨려 감고) 좌우 번갈아 아래에서 위로 올려베기 둘 → 머리 위로 넘겨 어깨 뒤로 돌린 칼로 몸 가운데 높이를 둘러 베는 큰 한 칼. 셋을 이음새 없이(물리 서보 길, 순간이동 없음)
 //  잇고, 경직은 흐름이 끝난 뒤에만. 길은 이베리아 꾸러미의 것 그대로 — 올려베기 = 고유 동작 talhoRevezBaixo 의 두 반(unterhau·unterhauL 줄), 떨어뜨려 감기 = 그 길의 [∓0.5, 0] 점,
@@ -831,7 +830,7 @@ const JAPANESE_SECRET = {
 // 중국 連環三擊 (가칭): 들어가며 친 첫 칼이 닿으면 멈추지 않고 두 수를 물 흐르듯 더 잇는다 — 조선세법의 세 끝 이음(腰擊 → 逆鱗刺 → 左翼擊 → 逆鱗刺)
 const CHINESE_SECRET = {
   name: 'lianhuanSanji',
-  nameKo: '연환삼격', orig: '連環三擊', // 10/23 동방은 한자를 한국식으로 독음 // 옛 판 (`?cnSecret=v1`) — 전 '옛 연환삼격 (첫 칼이 맞으면 잇는 판) · 가칭'
+  nameKo: '연환삼격', orig: '連環三擊', // 10/23 동방은 한자를 한국식으로 독음 // 옛 판 — 전 '옛 연환삼격 (첫 칼이 맞으면 잇는 판) · 가칭'
   when: 'firstHit',
   cond: { landed: true, rest: 'chineseRest' }, // 첫 칼이 맞았을 때만 (막힘 제외 — 10/9 23:5x) · 그 앞에 내 공격 없이 SECRET.chineseRest 초 이상 (10/10 01:2x 사장님 '쉬었다가'의 값)
   // 10/9 23:5x 사장님 '중국 비기는 꽤 자주 나오는데 어떤 상황이 벌어지는지 전혀 모르겠더라. 타격도 크지 않고 동작이 화려한 것도 아니어서' → 보이는 삼연격:
@@ -869,14 +868,14 @@ const stepBack25 = { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'retreat'
 const CHINESE_SECRET_PARRY = {
   name: 'lianhuanParry',
   get nameKo() { return SECRET.cnCombo === 2 ? '연환' : '연환삼격'; }, // 10/23 한국식 독음만 (전 '이어 치기 (연환)' · '세 번 이어 치기 (연환삼격)')
-  get orig() { return SECRET.cnCombo === 2 ? '連環' : '連環三擊'; }, // 스킬북 원어 (10/19 3차) // 10/12 사장님 '3연격(이름 뭘로 하지?)' → 디렉터 제안 연환삼격(초기 계획 이름 · 검결가 「滾手連環」) · `?cnCombo=2` 전 두 수 판은 '연환'
+  get orig() { return SECRET.cnCombo === 2 ? '連環' : '連環三擊'; }, // 스킬북 원어 (10/19 3차) // 10/12 사장님 '3연격(이름 뭘로 하지?)' → 디렉터 제안 연환삼격(초기 계획 이름 · 검결가 「滾手連環」) 전 두 수 판은 '연환'
   when: 'parry',
   // 거정세(highC — 擧鼎格 「鼎格上殺」, 몸꼴 덧씌우기)·표두세(highR — 칼을 세운 표두세 자리)·봉두세(highL — 10/12 더함, SECRET.cnBongdu). 어거세(thrust)·요략세(lowL·lowR)는 아님
   //  봉두세 (10/12 사장님 01:1x '타격 대부분이 가로로 들어오더라' — docs/strike/cn_combo_play_2026-10-12.md §2): 막기 버튼이 고른 줄을 재니 highL 25 % · highC 29 % · highR 10 % (네 상대 410 수) —
   //   거정세·표두세 둘로는 높은 줄의 60 % 만 받았다. 봉두세 鳳頭勢 「法能洗刺剪殺」 = 씻어 쳐내고(洗) 찌르고(刺) 끊어 벤다(剪) — 막기 1 수 + 2 연격이 원문 그대로 [원문]
   cond: {
     get slots() {
-      return SECRET.cnBongdu ? { highC: 'geojeong', highR: 'pyodu', highL: 'bongdu' } : { highC: 'geojeong', highR: 'pyodu' }; // `?cnBongdu=0` = 전 두 자리
+      return SECRET.cnBongdu ? { highC: 'geojeong', highR: 'pyodu', highL: 'bongdu' } : { highC: 'geojeong', highR: 'pyodu' }; //
     },
     window: 'apart',
     time: 'cnParryWindow', // 창 길이 = SECRET.cnParryWindow (사장님 10/12 시험 1 s)
@@ -893,7 +892,7 @@ const CHINESE_SECRET_PARRY = {
           return SECRET.cnCombo !== 2 ? CN3.names.geojeong : '솥 들기 → 허리 베기 → 목 찌르기';
         },
         get seq() {
-          if (SECRET.cnCombo !== 2) return CN3.geojeong; // 10/12 08:2x 3 연격 (아래 CN3) — `?cnCombo=2` 면 아래 두 수 그대로
+          if (SECRET.cnCombo !== 2) return CN3.geojeong; // 10/12 08:2x 3 연격 (아래 CN3)
           const cut = { name: 'pcYao', nameKo: '당겨 허리 베기 (요격)', orig: '腰擊', pre: [], from: G.sideR, path: [[0.32, 0.14], [0.0, 0.14], [-0.32, 0.1], [-0.56, 0.02]], open: 'UL', kind: 'cut', reach: 0, base: 1, step: step25, dyn: { kind: 'draw', side: -1, yaw: [-15, 30], el: [45, -40], from: 'prep' } }; // 패드 길 = 연환삼격 腰擊 길 그대로
           const thrust = { name: 'pcNiLinL', nameKo: '목 찌르기 (역린자)', orig: '逆鱗刺', pre: [], from: [-0.34, 0.02], path: [[-0.12, 0.06], [0.0, 0.12]], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust', back: true } }; // 패드 길: 腰擊 끝(왼쪽)에서 목을 올려 찌름 — 逆鱗 = 턱 밑 비늘 [해석] · 길 [추정]
           return SECRET.cnGeojeongOrder === 'thrustFirst' ? [{ ...thrust, dyn: { kind: 'thrust' } }, { ...cut, dyn: { kind: 'draw', side: -1, yaw: [0, 70], el: [10, -25], from: 'stab' } }] : [cut, thrust];
@@ -923,7 +922,7 @@ const CHINESE_SECRET_PARRY = {
   },
   src: '擧鼎勢 「擧鼎格 … 向前掣擊中殺」 무비지 쪽154/0568 · 豹頭勢 「寃步挑刺」 쪽157/0571 · 鳳頭勢 「法能洗刺剪殺」 쪽176/0590 · 右翼勢 「剪殺兩翼」 쪽168/0582 · 腰擊勢 「進步逆鱗」 쪽166/0580 · 逆鱗勢 「掣步左翼擊」 쪽173/0587 · 검결가 「滾手連環」 쪽151 [원문] · 挑刺 = 역린자 · 쳐 낸 뒤 갈라져 잇기 [해석] · 길 [추정]',
 };
-// 10/12 01:1x~03:0x 두 수 (`?cnCombo=2` — 표두세·봉두세. 거정세는 위 seq 게터 안)
+// 10/12 01:1x~03:0x 두 수 (표두세·봉두세. 거정세는 위 seq 게터 안)
 const CN2 = {
   pyodu: [
           { name: 'pcNiLin', nameKo: '목 찌르기 (역린자)', orig: '逆鱗刺', pre: [], from: G.ochsR, path: [[0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'thrust' } }, // 패드 길 = 꾸러미 stichOchs(역린자) 그대로 · dyn = 칼이 떨어진 자리에서 몸통 가장 가까운 점으로 곧게 (挑刺 — 높이 든 칼이라 대개 내려 찌름이 된다 [해석])
@@ -935,7 +934,7 @@ const CN2 = {
   ],
 };
 // ── 10/12 08:2x 3 연격 (사장님 '초기 계획대로 3연격 … 방어 자세 후 가장 자연스러운 최단거리 공격, 그다음 2연격이 어떻게 이어지는 게 물 흐르듯 … 반걸음 물러나도록' —
-//   docs/strike/cn_combo_play_2026-10-12.md §12). 기본(SECRET.cnCombo 3) · `?cnCombo=2` = 위 두 수.
+//   docs/strike/cn_combo_play_2026-10-12.md §12). 기본(SECRET.cnCombo 3)
 //  원리: ① 첫 수 = 막은 칼이 떨어진 자리에서 가장 짧은 공격(높이 막은 칼 → 곧게 찌름, 머리 위 칼 → 그대로 가운데로 내려 침) ·
 //   ② 둘째·셋째 = 다시 들지 않고 앞 수의 끝이 다음 수의 시작 — 손목을 굴려(滾手連環, 검결가 쪽151 [원문]) 좌우 '날개'(右翼勢 「剪殺兩翼」 쪽168 [원문])로 몸을 가로질러 벰 ·
 //   ③ 마지막 수는 반걸음 물러나며(退步 · 逆鱗勢 「掣步左翼擊」 쪽173 의 掣步 [원문 낱말 — '당기며 물러남' 으로 읽음 해석]) 당겨 벰(掣).
@@ -1040,7 +1039,7 @@ const GERMAN_SECRET_PARRY = {
 };
 // 독일 죽음의 일격 (모르트슐라크 · Mordschlag — 10/22 저녁 사장님 '독일은 죽음의 일격으로 하자. 막기로 버틸 때나 서로 몸이 맞붙어 클린치 상태일 때 밀기가 n초 이상 작동하면 발동' ·
 //  '1.5로 해' · 사람 먼저 — docs/strike/german_mordschlag_2026-10-22.md): 사람(플레이어) 비기 — TRADITIONS.german.playerSecret (SECRET.deMord).
-//  10/24 사장님 12:0x 'ai도 비기 쓰게 해' — AI 도 같은 비기(TRADITIONS.german.aiSecret · SECRET.aiOpenSchools 'german' · 숙련도 5 이상 — ai.js mordTick). 옛 받아 베기 · 감아 들기(TRADITIONS.german.secret)는 `?deMord=0` 판에만.
+//  10/24 사장님 12:0x 'ai도 비기 쓰게 해' — AI 도 같은 비기(TRADITIONS.german.aiSecret · SECRET.aiOpenSchools 'german' · 숙련도 5 이상 — ai.js mordTick). 옛 받아 베기 · 감아 들기(TRADITIONS.german.secret)는 판에만.
 //  when 'press' = 밀치기 누르기(fighter.barge 'press')가 cond.press 초(SECRET.mordPress) 끊기지 않고 이어짐 (secret.js pressStep — PlayerSecretWatch · ai.js 같은 셈) · do.mord = mordschlag.js 동작
 const GERMAN_MORDSCHLAG = {
   name: 'mordschlag',
@@ -1092,7 +1091,7 @@ export const TECH_NAMES = {
 // 유파 전통 여섯 (사장님 10/8 20:xx: 유파 5 + 무유파). rest = 쉴 자세(보정 v2 ③ 되돌아옴 겨눔의 목표) — 사장님 10/8 21:5x '유파가 정한다'
 //  (독일 쟁기/긴 자세 · 이탈리아 테르차 · 이베리아 중단형 · 일본 中段 · 중국 中平 · 무유파 앞으로 겨눔). null = SKILL.homeGuard(쟁기 자리) 그대로.
 //  일본·중국 rest = 'langort'(긴 자세 자리 [0.0, 0.03] = 中段·中平) — **사장님 10/9 01:2x 답: 안 A**(확인표 198). 쉴 자세는 스위치(SKILL.schoolArt)와 상관없이 늘 쓴다(플레이어 ③ 되돌아옴만).
-//  비교용 `?schoolRest=pflugR`(= 안 B, 쟁기 자리 = SKILL.homeGuard — 10/9 00:49 까지의 판)
+//  비교용 (= 안 B, 쟁기 자리 = SKILL.homeGuard — 10/9 00:49 까지의 판)
 /**
  * 걸음(보법)을 읽는 유파 — 플레이어가 대기실 스킬북 '보법'을 안 가졌거나 해제했으면(fighter.schoolFootwork === false — main.js newRound, 첫 화면·대기실 여정만)
  *  유파 없이 기본 걸음(GAIT 그대로 · 박차기·간격 잡기·박자 걸음·버티기·가벼운 발·유파 걷기 기력 없음). 그 밖(AI·시뮬·옛 메뉴 판)은 늘 무기 유파 — 지금 그대로
@@ -1102,7 +1101,7 @@ export const footworkTradition = (f) => (f?.schoolFootwork === false ? null : f?
 export const TRADITIONS = {
   // 독일: 두손 두루(롱소드·엑스칼리버·라이트세이버·에스톡)와 한손 베기(세이버·팔쉬온 — 두삭 가지).
   //  가지(branches, 열쇠 = 몸 틀:싸움 방식): 두삭(한손 베기)은 찌르기를 덜 믿는다 — 찌르기 기술 가중치 × thrustK (전 schools.js 세이버·팔쉬온 weakThrust 0.5 그대로) · 이름은 DUSSACK_NAMES (sword_art.js schoolNames 가 가지 이름을 먼저 읽는다)
-  german: { id: 'german', nameKo: '독일', ...GERMAN, chase: GERMAN_CHASE, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5, names: DUSSACK_NAMES } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES, temper: GERMAN_TEMPER, get secret() { return this.secretSet ?? (SECRET.deSecret === 'v1' ? GERMAN_SECRET : GERMAN_SECRET_PARRY); }, set secret(v) { this.secretSet = v; }, get playerSecret() { return SECRET.deMord ? GERMAN_MORDSCHLAG : this.secret; }, get aiSecret() { return SECRET.deMord ? GERMAN_MORDSCHLAG : this.secret; } }, // 비기 판 (10/11): SECRET.deSecret 'parry' 기본(막기 연환 — 감아 들기) · 'v1' 옛 Versetzen (`?deSecret=v1`) — 옛 AI 몫. 사람 몫 playerSecret = 죽음의 일격 (10/22 SECRET.deMord · `?deMord=0` = 옛 판) · AI 몫 aiSecret = 같은 비기 (10/24 사장님 'ai도 비기 쓰게 해' — ai.js 는 aiSecret 이 있으면 그것)
+  german: { id: 'german', nameKo: '독일', ...GERMAN, chase: GERMAN_CHASE, branches: { 'one:cut': { nameKo: '두삭 (한손 베기)', thrustK: 0.5, names: DUSSACK_NAMES } }, rest: null, techNames: TECH_NAMES.german, unique: GERMAN_UNIQUE, passives: GERMAN_PASSIVES, temper: GERMAN_TEMPER, get secret() { return this.secretSet ?? (SECRET.deSecret === 'v1' ? GERMAN_SECRET : GERMAN_SECRET_PARRY); }, set secret(v) { this.secretSet = v; }, get playerSecret() { return SECRET.deMord ? GERMAN_MORDSCHLAG : this.secret; }, get aiSecret() { return SECRET.deMord ? GERMAN_MORDSCHLAG : this.secret; } }, // 비기 판 (10/11): SECRET.deSecret 'parry' 기본(막기 연환 — 감아 들기) · 'v1' 옛 Versetzen — 옛 AI 몫. 사람 몫 playerSecret = 죽음의 일격 (10/22 SECRET.deMord · AI 몫 aiSecret = 같은 비기 (10/24 사장님 'ai도 비기 쓰게 해' — ai.js 는 aiSecret 이 있으면 그것)
   // 이탈리아 물러남(10/9 패시브 단계 — Ritirata): 몰리면 테르차(긴 자세)로 칼끝을 겨눈 채 물러난다, 그 밖엔 긴 자세·쟁기 (전 독일 값 황소 · 쟁기·긴 자세).
   //  레이피어 간 보는 자세(WATCH_GUARDS)에 긴 자세가 있다 — 재기 손잡이 motion_lab SCHOOL_RITIRATA=0 (전 값)
   // 이탈리아: 한손 찌르기(레이피어). 지금은 독일 내용 그대로(전 레이피어 꾸러미 = 롱소드 꾸러미 + 간격) — 카포 페로 자료는 다음 단계 — 10/9 고유 동작 셋(unique)과 공용 동작 이름(techNames)은 따로 가진다
@@ -1119,7 +1118,7 @@ export const TRADITIONS = {
   //  맞받아치기(초안 §8): 막은 뒤 곧장 찌른다 — 찌르기 먼저 [추정]
   //  물러남(10/9 腰擊 쓰임): 몰려 물러날 때 腰擊勢(옆 자세)로 거둔다 — 斂翅 「佯北誘賺… 倒退進步腰擊」(무비지 쪽174/0588 [원문]): 물러나며 腰擊을 들고 있다가 들어가 벤다.
   //   그 밖(calm)은 독일 그대로(쟁기·긴 자세 — 坦腹·中平, 찌르기 쪽). 전엔 독일 값(pressed 황소)이라 기술을 고를 때 손이 옆 자세 0.2 m 안에 있던 적이 48 판 pickTech 502 번 가운데 0 번
-  chinese: { id: 'chinese', nameKo: '동방', ...GERMAN, guards: CHINESE_GUARDS, withdraw: { ...GERMAN.withdraw, pressed: 'sideR' }, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES, temper: CHINESE_TEMPER, gait: CHINESE_GAIT, get secret() { return this.secretSet ?? (SECRET.cnSecret === 'v1' ? CHINESE_SECRET : CHINESE_SECRET_PARRY); }, set secret(v) { this.secretSet = v; }, get playerSecret() { return SECRET.gyeoksal?.on && !this.secretSet ? CHINESE_SECRET_GYEOKSAL : this.secret; }, get aiSecret() { return SECRET.gyeoksal?.on && !this.secretSet ? CHINESE_SECRET_GYEOKSAL : undefined; } }, // 11/14 사장님 '동방도 격살 쓰게 해' — AI 도 사람과 같은 격살 (ai.js gyeoksalAi · SECRET.aiOpenSchools 'chinese') · 격살 끔 · 시험 secretSet 이면 전 판 secret(막기 연환) // 화면 이름 '동방' (사장님 10/13 22:5x '중국 대신 동방' — 원전이 중국·조선 함께라서 · 코드 열쇠 chinese 그대로) · 비기 판 (10/11): SECRET.cnSecret 'parry' 기본(막기 연환 — 연환) · 'v1' 옛 連環三擊 (`?cnSecret=v1`)
+  chinese: { id: 'chinese', nameKo: '동방', ...GERMAN, guards: CHINESE_GUARDS, withdraw: { ...GERMAN.withdraw, pressed: 'sideR' }, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES, temper: CHINESE_TEMPER, gait: CHINESE_GAIT, get secret() { return this.secretSet ?? (SECRET.cnSecret === 'v1' ? CHINESE_SECRET : CHINESE_SECRET_PARRY); }, set secret(v) { this.secretSet = v; }, get playerSecret() { return SECRET.gyeoksal?.on && !this.secretSet ? CHINESE_SECRET_GYEOKSAL : this.secret; }, get aiSecret() { return SECRET.gyeoksal?.on && !this.secretSet ? CHINESE_SECRET_GYEOKSAL : undefined; } }, // 11/14 사장님 '동방도 격살 쓰게 해' — AI 도 사람과 같은 격살 (ai.js gyeoksalAi · SECRET.aiOpenSchools 'chinese') · 격살 끔 · 시험 secretSet 이면 전 판 secret(막기 연환) // 화면 이름 '동방' (사장님 10/13 22:5x '중국 대신 동방' — 원전이 중국·조선 함께라서 · 코드 열쇠 chinese 그대로) · 비기 판 (10/11): SECRET.cnSecret 'parry' 기본(막기 연환 — 연환) · 'v1' 옛 連環三擊
   // 무유파: 둔기(나뭇가지·고무 닭·모르겐슈테른)·총. 지금은 독일 내용 그대로 — 날 없는 무기의 찌르기 빼기는 싸움 방식 규칙(weaponSchool)
   none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, names: NONE_NAMES, techNames: TECH_NAMES.none, unique: [], passives: [], temper: NONE_TEMPER, secret: null }, // 무유파 (비기 없음): 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
 };
@@ -1143,7 +1142,7 @@ export function playerSecretDef(tradition) {
 //  watch: 물러나며 가리기(ai.js withdraw coverFor — 상대가 머리 위로 들면 이 줄)·플레이어 막기 버튼 기다림에도 같은 꼴 (10/11 G.kron 이 쓰이던 곳 그대로). 중국 칸은 watch 가 없어 그대로.
 //  숫자는 모두 사장님 확인 전 (확인표 917). 덧씌우기 빠르기는 중국과 같은 MOTION.coverIn·coverOut, 손 목표 빠르기는 parrySpeed 그대로(새 값 없음)
 // 왕관 손·칼끝 (10/12 08:2x 사장님 '막기의 효용이 가장 큰 자세이되, 원전의 설명을 해치지 않는 자세로' — docs/strike/kron_shape_2026-10-12.md §9):
-//  1 = 정적 막기 쓸기(손 높이 0.45~0.64 · 앞 0.08~0.24 · 칼 70~90° — 45 자리 × 간격 12, 다시 12)에서 '칼날 상처 없이 받음'이 가장 많은 자리 · 0 = 10/12 00:1x 값. SKILL.deKronH, `?kronH=0`
+//  1 = 정적 막기 쓸기(손 높이 0.45~0.64 · 앞 0.08~0.24 · 칼 70~90° — 45 자리 × 간격 12, 다시 12)에서 '칼날 상처 없이 받음'이 가장 많은 자리 · 0 = 10/12 00:1x 값. SKILL.deKronH
 const KRON_AT = { 1: { hand: [0.16, 0.5, 0.04], blade: [70, 0] }, 0: { hand: [0.16, 0.6, 0.04], blade: [80, 0] } };
 export const GERMAN_KRON = { name: '왕관 (크론)', desc: '칼자루로 받고 그대로 뛰어든다', pad: G.kron, get hand() { return this.handSet ?? KRON_AT[SKILL.deKronH ? 1 : 0].hand; }, set hand(v) { this.handSet = v; }, get blade() { return this.bladeSet ?? KRON_AT[SKILL.deKronH ? 1 : 0].blade; }, set blade(v) { this.bladeSet = v; }, face: [1, 0, 0], pelvisYaw: 10, chestYaw: 0, pitch: 0, drop: 0.05, watch: true, src: 'Ringeck 주해 Scheitelhau 「versetzt er mit dem gehiltz hoch ob seinem haupt, die versatzung heist die kran」 [원전 2차] · 코등이 가로·칼 면 상대 쪽 [해석] · 수 [추정]' };
 // 독일만(롱소드·엑스칼리버·라이트세이버·에스톡·세이버·팔쉬온 — 독일 전통 무기 모두). 무유파(none)는 GERMAN 막기 패드를 같이 쓰지만 이 덧씌우기는 받지 않는다(유파 칸이 따로 — 바이트 그대로).
@@ -1167,7 +1166,7 @@ Object.defineProperty(TRADITIONS.german, 'parryCover', {
 //   [모두 사장님 확인 전 — owner_defaults_table 600~]
 const ITALIAN_OFFARM = { guard: [0.35, 0.18, 0.12], lunge: [0.3, 0.36, 0.04] };
 // 11/14 사장님 '리솔루토도 쓰게해' — AI 이탈리아(숙련도 AI_PROFICIENCY.secretAt 이상 · SECRET.aiOpenSchools 'italian')도 사람과 같은 비기 안다레 리솔루토(ai.js risoTick — 같은 셈 italian_risoluto.js RisolutoWatch ·
-//  칼 우위 동안만 · 같은 실행부 skill.secret 런지). 읽을 때 정함(주소 스위치 `?itSecret=` 가 모듈을 읽은 뒤 바뀜) — 'risoluto' 가 아니면 없음 = 옛 비기 secret(파사타 인 콘트라템포) 그대로
+//  칼 우위 동안만 · 같은 실행부 skill.secret 런지). 읽을 때 정함 — 'risoluto' 가 아니면 없음 = 옛 비기 secret(파사타 인 콘트라템포) 그대로
 Object.defineProperty(TRADITIONS.italian, 'aiSecret', { get: () => (SECRET.itSecret === 'risoluto' ? ITALIAN_RISOLUTO : undefined), enumerable: false, configurable: true });
 TRADITIONS.italian.offArm = ITALIAN_OFFARM; // 이탈리아 줄(위)은 걸음 작업과 겹치지 않게 그대로 두고 여기서 더한다
 
@@ -1336,7 +1335,7 @@ TRADITIONS.italian.pose = { ...GERMAN.pose, cover: G.tag };
 //   오른쪽 위 forte 57 → 72 % · 머리 위 45 → 70 %. 왼쪽 위는 이미 forte 로 받고(80 %) 원전대로 뻗은 4번 자세를 세우면 맞은 판이 늘어(30 → 38, 부호 검정 p 0.02) 그대로 둔다.
 //  값 = 자세표 값 그대로(새 수 없음): 오른쪽 위 = '황소 (옥스)' 칸 2번 자세 · 머리 위 = 한손 찌르기 틀 '긴 자세' 손 · 칼끝(이탈리아 자세표 뻗은 3번 자세 — 값 없는 칸) + 몸은 자세표의 낮춤 0.12.
 //  hand [앞, 위, 칼 든 쪽] m 진행 방향 틀 · 가슴 가운데 원점 · blade [올려본 각, 옆 각] ° (frames.js installCover — 막는 줄에서 손 · 칼끝 · 몸을 덮음, 패드는 그대로)
-//  SKILL.itForte (config — 판 값 0 = 끔, 지금 판 바이트 그대로): 1 = 오른쪽 위만 · 2 = 오른쪽 위 + 머리 위. `?itForte=1|2` · 시뮬 with_config.mjs SKILL.itForte=1 · parry_gap_map.mjs '무기:forte|forte2'
+//  SKILL.itForte (config — 판 값 0 = 끔, 지금 판 바이트 그대로): 1 = 오른쪽 위만 · 2 = 오른쪽 위 + 머리 위. · 시뮬 with_config.mjs SKILL.itForte=1 · parry_gap_map.mjs '무기:forte|forte2'
 const IT_FORTE_SECONDA = { name: '뻗은 2번 자세 (세콘다)', desc: '뻗은 칼 밑동으로 받는다', pad: G.ochsR, hand: [0.55, 0.16, 0.2], blade: [-4, -4], pelvisYaw: -45, chestYaw: -55, pitch: 10, drop: 0.12, src: 'Capo Ferro 1610 [16](용어 2) · [21](용어 7) · [29](용어 15) [원문 영역] · 손 · 칼끝 · 몸 = 이탈리아 자세표 2번 자세 값(Fabris 1606 [21]·[22] 판 3·4) [해석]' };
 const IT_FORTE_TERZA = { name: '뻗은 3번 자세 (테르차)', desc: '곧은 줄로 치며 막는다', pad: G.langort, hand: [0.68, 0.08, 0.1], blade: [-3, 0], pelvisYaw: -35, chestYaw: -45, pitch: 10, drop: 0.12, src: 'Capo Ferro 1610 [115] · [21](용어 7) · [29](용어 15) [원문 영역] · 손 · 칼끝 · 몸 = 한손 찌르기 틀 긴 자세 값(이탈리아 자세표 뻗은 3번 자세 — Fabris 1606 [28] 판 10) · 낮춤 0.12 [해석]' };
 export const ITALIAN_FORTE = { 1: { highR: IT_FORTE_SECONDA }, 2: { highR: IT_FORTE_SECONDA, highC: IT_FORTE_TERZA } };
@@ -1471,14 +1470,14 @@ TRADITIONS.chinese.parryCover = { ...TRADITIONS.chinese.parryCover, down: CHINES
 export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true, table: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬 · table: 유파 자세표(10/10 이베리아 몬탄테 — TRADITIONS[유파].guardTable, guards.js applySchoolGuardTable) — false = 무기 틀 표 그대로
 
 /**
- * 이탈리아 박자 걸음 셈 고르기 (10/15 — 주소 `?itRhythm=` · 시뮬 환경 변수 IT_RHYTHM): 'N+M' = 디딤 셈 N + M(기본 2+2 · 4+2 · 3+2 — 주소에선 + 가 빈칸으로 읽혀 'N M' 도 받음) ·
- *  '0' = 끔(칸 없는 것과 같은 길) · 'N'(1 이상 정수) = 옛 짝 셈 N + 1(10/15 오전 판 — `?itRhythm=3` 이 그 기본). 못 읽으면 그대로 두고 false
+ * 이탈리아 박자 걸음 셈 고르기 (10/15 — 시뮬 환경 변수 IT_RHYTHM): 'N+M' = 디딤 셈 N + M(기본 2+2 · 4+2 · 3+2 — 주소에선 + 가 빈칸으로 읽혀 'N M' 도 받음) ·
+ *  '0' = 끔(칸 없는 것과 같은 길) · 'N'(1 이상 정수) = 옛 짝 셈 N + 1(10/15 오전 판 기본은 3). 못 읽으면 그대로 두고 false
  *  배율 mul 도 같이 정한다: 지난 판 비교 갈래 '4+2'(13:2x 판) · '3+2' · 옛 짝 셈 N 은 그때 ×1.5(ITALIAN_OLD_MUL), 그 밖의 N + M(기본 2+2 포함)은 지금 ×1.5(ITALIAN_MUL — 10/15 19:3x, 전 ×1.3)
- *  'N+MxK'(주소 'N MxK' — 예 `?itRhythm=2+2x1.3` = 15:1x 판)는 배율 K 를 손으로 (10/15 …/it-even)
+ *  'N+MxK'(주소 'N MxK' — 예
  */
 /**
  * 이탈리아 보폭 박자 (10/15 22:1x 사장님 시험 — ITALIAN_STRIDE): '0' = 22:0x 판(박자 걸음 몸 빠르기·발 박자 ×1.5 · 바탕 보폭 계수 0.7 · 짝 보폭 0.28) ·
- *  'a,b[,c[,p]]' = 짧은 디딤 계수 a · 긴 디딤 계수 b(보폭 규칙 계수) · 짧은 디딤 몸 빠르기 c(기본 0.8,1.1,1.3 — c 없으면 1 = 보폭만) · p = 가까이 짝걸음 보폭 상한(없으면 0.28 × b ÷ 0.7). main.js `?itStride=` · `?itRhythm=` 보다 먼저 부른다
+ *  'a,b[,c[,p]]' = 짧은 디딤 계수 a · 긴 디딤 계수 b(보폭 규칙 계수) · 짧은 디딤 몸 빠르기 c(기본 0.8,1.1,1.3 — c 없으면 1 = 보폭만) · p = 가까이 짝걸음 보폭 상한(없으면 0.28 × b ÷ 0.7). main.js 보다 먼저 부른다
  */
 export function setItalianStride(v) {
   const g = TRADITIONS.italian.gait;
@@ -1503,7 +1502,7 @@ export function setItalianStride(v) {
  * 이탈리아 보법 빠르기 시험 (10/21 사장님 '레이피어는 거리를 벌리며 싸우는 게 중요 … 보폭을 약간 줄이는 대신 속도를 빠르게 해' — 제안 재기용, 판 값 없음):
  *  'f,b[,a]' = 걷는 빠르기의 앞 몫 × f · 뒤 몫 × b(사람 · AI 같이 — 걸음 칸 foreMul · backMul) · a = 짧은 디딤(박자 걸음 빠른 몫) 몸 가속 한도 × a(rhythm.accel —
  *   fighter.js driveBalance fastAcc · 독일 간격 잡기 chase.accel 1.5 와 같은 칸, 사람 · AI 같이) · 'p:f,b' = 앞 · 뒤 배율만 플레이어만(player 칸) · '1' · '0' = 없앰.
- *  옆 몫 · 박자 걸음 셈 · 짧은 디딤 몸 빠르기(speedMul)는 그대로 — 박자는 gait.js 가 빠르기 ÷ 보폭으로 따라 올린다. 주소 `?itWalk=` (main.js)
+ *  옆 몫 · 박자 걸음 셈 · 짧은 디딤 몸 빠르기(speedMul)는 그대로 — 박자는 gait.js 가 빠르기 ÷ 보폭으로 따라 올린다. 주소 (main.js)
  */
 export function setItalianWalk(v) {
   const g = TRADITIONS.italian.gait;
@@ -1519,7 +1518,7 @@ export function setItalianWalk(v) {
 }
 
 /**
- * 이탈리아 물러서기 걸음 수 한도 비교 (10/31 — ITALIAN_GAIT.backCap · 주소 `?itBackCap=` · 판을 세우기 전에 한 번): '0' = 10/21 판(한도 없음 — 늘 뒤 느려짐 없음) ·
+ * 이탈리아 물러서기 걸음 수 한도 비교 (10/31 — ITALIAN_GAIT.backCap · 판을 세우기 전에 한 번): '0' = 10/21 판(한도 없음 — 늘 뒤 느려짐 없음) ·
  *  'N'(1 이상 정수) = 이어 물러서는 뒤 디딤 N 번까지 뒤 느려짐 없음(판 값 4). 못 읽으면 그대로 두고 false
  */
 export function setItalianBackCap(v) {
@@ -1542,7 +1541,7 @@ export function setItalianRhythm(v) {
     R.count = 'foot';
     R.normal = +m[1];
     R.fast = +m[2];
-    R.mul = m[3] ? +m[3] : R.fast === 2 && (R.normal === 4 || R.normal === 3) ? ITALIAN_OLD_MUL : ITALIAN_MUL; // 'N+MxK' = 배율 K 를 손으로(10/15 …/it-even — 지난 판 × 1.3 비교 `?itRhythm=2+2x1.3`)
+    R.mul = m[3] ? +m[3] : R.fast === 2 && (R.normal === 4 || R.normal === 3) ? ITALIAN_OLD_MUL : ITALIAN_MUL; // 'N+MxK' = 배율 K 를 손으로(10/15 …/it-even — 지난 판 × 1.3 비교)
     return true;
   }
   if (!/^\d+$/.test(s)) return false;
