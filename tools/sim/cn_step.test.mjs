@@ -13,16 +13,13 @@ const C = CONFIG.CN_STEP;
 const near = (a, b, e = 1e-9) => assert.ok(Math.abs(a - b) < e, `${a} vs ${b}`);
 function withMode(m, fn, o = {}) {
   const keep = { ...C };
-  const keepD = CONFIG.AI_PLAN.cn.dive;
   C.mode = m;
   Object.assign(C, o);
-  if ('dive' in o) CONFIG.AI_PLAN.cn.dive = o.dive;
   try {
     return fn();
   } finally {
     Object.assign(C, keep);
     for (const k of Object.keys(C)) if (!(k in keep)) delete C[k];
-    CONFIG.AI_PLAN.cn.dive = keepD;
   }
 }
 function trace({ weapon = 'longsword', weapon2 = 'hwando', secs = 8, seed = 1 } = {}) {
@@ -54,7 +51,6 @@ const ladder = (v, rungs) => rungs.map(CONFIG.realS).some((r) => Math.abs(r - v)
 
 test('기본 켬(11/16 사장님 결정 \'동방 보법 개편도 켜. 45도 기준.\' · \'그럼 1.2초로 해\') · 사장님 값 0.4 s · 50 % · 끄면(0) 동방 판은 값을 안 읽음 · 켜도 동방이 아닌 판(롱소드끼리)은 그대로', () => {
   assert.equal(C.mode, 'turn', '[사장님 11/16 결정] 켬 (전 11/15 감독 끔)');
-  assert.equal(CONFIG.AI_PLAN.cn.dive, 1, '[사장님 11/16 결정] 偏閃奏進도 켬 (전 끔)');
   near(C.keepT, CONFIG.realS(0.6)); // 11/16 사장님 '보법을 0.4초 말고 0.6초' (전 0.4)
   near(C.cut, 0.5);
   near(C.turn, Math.PI / 4);
@@ -190,7 +186,6 @@ test('AI 偏閃奏進(켠 판 `?cnStep=turn&cnDive=1`): 높음(띠 기울기 1)�
   assert.equal(leave.cnDive, null);
   assert.equal(cnDive(mk({ ai: { planC: { dive: 0 } } }), TH, 1.5), null, '칸 0');
   assert.equal(cnDive(mk({ me: { stamina: { time: 10, value: 5, exhausted: false } } }), TH, 1.5), null, '기력 < 12');
-  assert.equal(withMode('turn', () => cnDive(mk(), TH, 1.5), { dive: 0 }), null, '`?cnDive=0`');
   assert.equal(withMode('a', () => cnDive(mk(), TH, 1.5)), null, "꺾음('turn')일 때만");
   // 무 · 낮음은 운 (기울기 0 · 굴림 몫 1 → 동전 0.5)
   let yes = 0;
@@ -246,7 +241,5 @@ test('판에서 쓰임 (켠 판) — 환도 AI 숙련 5 대 롱소드 AI (씨앗
   assert.ok(n.onT / n.T < 0.4, '늘 켜지지 않음');
   const cn = a.cn[1];
   assert.ok(cn.dive > 0 && cn.diveGo > 0, JSON.stringify(cn));
-  const b = run2({ dive: 0 });
-  assert.equal(b.cn[1].diveRoll, 0);
   assert.equal(a.n[1], null, '롱소드 몸은 셈 없음');
 });

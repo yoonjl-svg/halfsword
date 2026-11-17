@@ -12,7 +12,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT } from './harness_m.mjs';
 import { tsubameRun, tsubameSummary } from './schielhau_strike.mjs';
-import { TRADITIONS, JAPANESE_GAIT, setJapaneseGait } from '../../src/schools.js';
+import { TRADITIONS, JAPANESE_GAIT } from '../../src/schools.js';
 import { G } from '../../src/ai_techniques.js';
 import { PLAYER_UNIQUE, uniqueDef, PlayerUniqueAssist, TSU_AIM } from '../../src/unique_assist.js';
 import { HUMAN } from '../../src/fighter.js';

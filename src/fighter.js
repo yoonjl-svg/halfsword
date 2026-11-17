@@ -321,7 +321,7 @@ function guardDir(x, y, oneHand = false) {
   let el = y <= 0.1 ? Math.max(-0.6, (y - 0.1) * 1.1) : Math.min(1.75, ((y - 0.1) / 0.5) * 1.65);
   // 옆으로 뺄수록 칼이 그쪽으로 눕는다 (칼 든 쪽은 더 크게 뺄 수 있다)
   const az = THREE.MathUtils.clamp((x - 0.05) * 1.7, -1.1, 1.3);
-  if (oneHand && JOINTS.oneTip !== 'off') el = oneTipLift(el, az);
+  if (oneHand) el = oneTipLift(el, az);
   const c = Math.cos(el);
   return [c * Math.cos(az), Math.sin(el), c * Math.sin(az)];
 }

@@ -16,7 +16,6 @@ import { classifyWeapon } from './weapon_class.js';
 import { CHIXIAO_COLORS, chixiaoPartMesh } from './chixiao_details.js';
 import { chixiaoCollider, chixiaoBladeMass } from './chixiao_profile.js';
 import { drawBrothersSword } from './renji_sword_wrap.js'; // 황약사의 검(형의 칼)의 흰 천 감싼 겉모습 (샛별 저장소에서 가져옴 10/17)
-import { MONTANTE } from './config.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { swordKit, metalMat, weaponEnv, hiddenParts, drawTreeBranch, drawRubberChicken, drawFrozenTuna, drawPistol, drawMorgenstern, PISTOL_GRIP, PISTOL_BORE_X } from './weapon_looks.js';
@@ -507,7 +506,7 @@ const longsword = finalizeSpec('longsword', {
 //     2.892kg·칼날 117cm [M]. 균형점 실측 자료를 못 찾아(연구 노트 §14) 롱소드 가문의
 //     비율로 크기만 올려서 추정 [I]
 // ═════════════════════════════════════════════════════════════
-// 쥠 세 꼴 (MONTANTE.hand, config.js — docs/motion/iberian_montante_2026-10-10.md §10·§12·§15). 칼 원점 = 오른손 주먹 가운데, 손~칼끝 1.335 m 는 모두 같다.
+// 쥠 꼴 'mid' (docs/motion/iberian_montante_2026-10-10.md §10·§12·§15 — 사장님 10/10 20:4x '초기 그립과 지금의 중간'). 칼 원점 = 오른손 주먹 가운데, 손~칼끝 1.335 m 는 모두 같다.
 //  칼날 길이 (사장님 10/21 23:5x '츠바이핸더는 손~칼끝 2.5 cm 줄여'): 네 꼴 모두 칼끝 쪽에서 0.025 m 씩 — 손~칼끝 1.36 → 1.335 m · 기본 꼴 전체 165 → 162 cm.
 //   칼날 질량은 길이 비(1.7 × 1.19/1.215 → 1.665 kg — 합 2.865 kg) · 칼날 질량 분포는 아침 꼴 칼날(1.17 → 1.145)에 대한 같은 비(무게중심 0.34 · 회전 반경 0.253)로
 //   함께 줄임(ZW_OLD_BLADE · ZW_REACH) → 손 기준 관성 0.787 → 0.748 (롱소드 0.272 의 2.75 배). 바탕 알비온 'The Wallace' 날 117 cm 보다는 아직 길다.
@@ -515,9 +514,6 @@ const longsword = finalizeSpec('longsword', {
 //  'mid'(기본 — 사장님 10/10 20:4x '초기 그립과 지금의 중간', 확인표 760~): 손 사이 0.24 m(gripAlong −0.24) · 오른손 주먹 가운데 ~ 날밑 아랫면 0.11 m ·
 //    hiltLength(손 → 칼날 밑동) 0.145 · 칼날 1.215 · 날밑 가운데 0.13 · 폼멜 가운데 −0.25(왼손 폼멜 목, 폼멜 끝 −0.288) · 자루 상자 날밑 밑 0.115 ~ −0.25.
 //    날밑 아랫면 ~ 폼멜 끝 0.398 m (톨레도 몬탄테 Cleveland 1916.1509 · 1916.1507 자루 41.3 · 40.0 cm 안).
-//  'guard'(10/10 14:5x '넣어' — 고디뉴 1599 규칙 3 '오른손 날밑 가까이', §12): 손 사이 0.30 · 날밑 0.065 m · hiltLength 0.10 · 칼날 1.26 · 폼멜 −0.31
-//  'old'(10/10 아침 꼴 — §10 넓힘 전): 손 사이 0.18 · 날밑 0.155 m · hiltLength 0.19 · 칼날 1.17 · 자루 ±0.16(0.32 m) · 폼멜 −0.16 · 서보 덮개 28
-//  'wide'(§10~§11 꼴 — 자루만 넓힘, 오른손은 아직 날밑에서 0.155 m): 손 사이 0.30 · hiltLength 0.19 · 칼날 1.17 · 폼멜 −0.31 (§12 의 옛 꼴 'old')
 //  칼날의 질량 분포는 네 꼴이 같다(손에서 칼날 무게중심 0.588 → 10/21 0.579 m · 그 둘레 관성 같음 — 칼날이 길어진 몫은 전에도 쇠(슴베)였던 자리, 실측 없이 무게를 옮기지 않는다).
 //  자루 상자는 날밑 아랫면 0.005 위 ~ 폼멜 가운데, 부품 질량 그대로(자루 0.26 · 폼멜 0.62 · 날밑 0.32 · 칼날 1.7 → 10/21 1.665 = 2.865 kg)
 const ZW_OLD_BLADE = 1.145; // 아침 꼴 칼날 (10/21 23:5x 1.17 → 1.145) — 칼날 질량 분포의 잣대
@@ -526,12 +522,9 @@ const ZW_BLADE_MASS = 1.665; // 칼날 질량 (10/21 23:5x 1.7 → 1.7 × 1.19/1
 const ZW_BLADE_COM = 0.19 + 0.34 * ZW_OLD_BLADE; // 손에서 칼날 무게중심 (아침 꼴 값 — 모든 꼴이 지킨다)
 const zwShift = (hilt) => ({ com: (ZW_BLADE_COM - hilt) / (ZW_REACH - hilt), gyr: (0.253 * ZW_OLD_BLADE) / (ZW_REACH - hilt) });
 const ZW_FORMS = {
-  old: { hilt: 0.19, blade: 1.145, crossY: 0.175, gripY: 0, gripH: 0.16, pommelY: -0.16, gripAlong: -0.18, com: 0.34, gyr: 0.253, cap: 28 },
-  wide: { hilt: 0.19, blade: 1.145, crossY: 0.175, gripY: -0.075, gripH: 0.235, pommelY: -0.31, gripAlong: -0.3, com: 0.34, gyr: 0.253 },
-  guard: { hilt: 0.1, blade: 1.235, crossY: 0.085, gripY: -0.12, gripH: 0.19, pommelY: -0.31, gripAlong: -0.3, ...zwShift(0.1) },
   mid: { hilt: 0.145, blade: 1.19, crossY: 0.13, gripY: -0.0675, gripH: 0.1825, pommelY: -0.25, gripAlong: -0.24, ...zwShift(0.145) },
 };
-const ZW = ZW_FORMS[MONTANTE.hand] ?? ZW_FORMS.mid; // 모르는 이름은 기본(중간)
+const ZW = ZW_FORMS.mid;
 const zweihander = finalizeSpec('zweihander', {
   nameKo: '츠바이핸더', nameEn: 'Zweihänder',
   desc: '두 배 급료를 받고 창 숲 맨 앞을 깨던 용병의 칼.\n느리지만 맞으면 묵직하게 부순다.',

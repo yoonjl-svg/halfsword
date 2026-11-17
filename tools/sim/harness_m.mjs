@@ -12,41 +12,6 @@ import { Combat } from '../../src/combat.js';
 
 await RAPIER.init();
 export { RAPIER, THREE, CONFIG, AI };
-// 마무리 스위치 (10/12, src 기본은 둘 다 끔 — docs/import/saetbyeol_round2_2026-10-12.md): 어느 시뮬 도구든 환경 변수로 켠다
-//  FINISH_ENTRY=low = 낮은 상대 진입 (downlow = 고친 판) ·FINISH_MODE=power25 = 즉사 대신 판정 에너지 × FINISH.power (FINISH_POWER=수 로 배율 바꿈)
-{
-  const { FINISH } = await import('../../src/finish.js');
-  if (['down', 'low', 'downlow', 'auto'].includes(process.env.FINISH_ENTRY)) FINISH.entry = process.env.FINISH_ENTRY;
-  // 10/12 약한 자세 겨눔 묶음: VITAL=0 = 끔 (진입 auto → down) · PLATE_NECK=1 = 판금 상대 찍기 목 겨눔 (10/1 C)
-  if (['0', '1'].includes(process.env.VITAL)) FINISH.vital = process.env.VITAL === '1';
-  if (['0', '1'].includes(process.env.PLATE_NECK)) FINISH.plateNeck = process.env.PLATE_NECK === '1';
-  {
-    const { VITAL } = await import('../../src/vital_target.js'); // 묶음 갈래: VITAL_AI=0|1 · VITAL_THRUST=0|1 · VITAL_PCUT=0|1
-    for (const [e, k] of [['VITAL_AI', 'aiCut'], ['VITAL_THRUST', 'thrust'], ['VITAL_PCUT', 'playerCut']]) if (['0', '1'].includes(process.env[e])) VITAL[k] = process.env[e] === '1';
-  }
-  if (['power25', 'kill'].includes(process.env.FINISH_MODE)) FINISH.mode = process.env.FINISH_MODE; // 10/12 기본 power25 · kill = 전 즉사
-  if (process.env.FINISH_POWER) FINISH.power = +process.env.FINISH_POWER;
-  // 10/13 내려찍기 동작 (docs/strike/finish_plunge_2026-10-13.md): FINISH_LIFT=0 = 전 동작 · FINISH_AIM=chest|torso · 쓸기용 FINISH_LIFT_HANDS=x,y,z · FINISH_ARM=수 · FINISH_WRIST=수 · FINISH_CHEST_S=수
-  if (['0', '1'].includes(process.env.FINISH_LIFT)) FINISH.lift = process.env.FINISH_LIFT === '1';
-  if (['chest', 'torso'].includes(process.env.FINISH_AIM)) FINISH.aim = process.env.FINISH_AIM;
-  if (process.env.FINISH_LIFT_HANDS) FINISH.liftHands = process.env.FINISH_LIFT_HANDS.split(',').map(Number);
-  if (process.env.FINISH_ARM) FINISH.strikeArm = +process.env.FINISH_ARM;
-  if (process.env.FINISH_WRIST) FINISH.strikeWrist = +process.env.FINISH_WRIST;
-  if (process.env.FINISH_CHEST_S) FINISH.chestS = +process.env.FINISH_CHEST_S;
-  // 10/22 대검 마무리 (docs/strike/greatsword_finish_2026-10-22.md): FINISH_CLEAVE=0 = 사람 칼도 전 찍기 · FINISH_CLEAVE_AI=1 = AI 칼도 쪼개 내려치기 · FINISH_CLEAVE_CHARGE=초
-  if (FINISH.cleave) {
-    if (['0', '1'].includes(process.env.FINISH_CLEAVE)) FINISH.cleave.player = process.env.FINISH_CLEAVE === '1';
-    if (['0', '1'].includes(process.env.FINISH_CLEAVE_AI)) FINISH.cleave.ai = process.env.FINISH_CLEAVE_AI === '1';
-    if (process.env.FINISH_CLEAVE_CHARGE) FINISH.cleave.charge = +process.env.FINISH_CLEAVE_CHARGE;
-    if (['0', '1'].includes(process.env.FINISH_CLEAVE_LOW)) FINISH.cleave.anyHeight = process.env.FINISH_CLEAVE_LOW === '1'; // 10/22 23:0x 상태로 열기 · 땅까지 (0 = 첫 판)
-    if (process.env.FINISH_CLEAVE_POWER) FINISH.cleave.power = +process.env.FINISH_CLEAVE_POWER;
-  }
-}
-// 이탈리아 박자 걸음 셈 (10/15 — src/schools.js setItalianRhythm, docs/strike/italian_rhythm_2026-10-15.md §8 · §9): IT_RHYTHM=2+2(기본 · ×1.3) · 4+2 · 3+2 · 3(옛 짝 셈 3 + 1 — 지난 판 비교, 그때 ×1.5) · 0(끔). 안 주면 src 기본 그대로
-if (process.env.IT_RHYTHM != null) {
-  const { setItalianRhythm } = await import('../../src/schools.js');
-  if (!setItalianRhythm(process.env.IT_RHYTHM)) throw new Error(`IT_RHYTHM=${process.env.IT_RHYTHM} 을 읽지 못함`);
-}
 const { PHYSICS, ARENA } = CONFIG;
 export const DT = PHYSICS.timestep;
 

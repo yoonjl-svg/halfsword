@@ -331,7 +331,6 @@ export function runDir({ weapon, school = traditionOf(WEAPONS[weapon]), dir, mod
     const atkWin = !!W.open && !W.stickOwns() && !W.circleOwns() && !W.holdOwns();
     const stickGo = !!W.spinStick(FR, input.move, !secBusy && P.alive);
     const circleGo = !!W.spinCircle(FR, d, hand, !secBusy && P.alive);
-    if (uq.cingirE && uq.circleTick(FR, d, hand, !secBusy && P.alive)) secBusy = true;
     const gilReady = !!W.S?.do?.gilmok && !!W.gilArm?.armed;
     const secArm = !(CONFIG.SECRET.secretHold && (P.skill.tap || P.skill.pom));
     if ((((atkWin || gilReady) && (taps > 0 || (swipe && !W.S?.do?.tapOnly))) || stickGo || circleGo) && !secBusy && P.alive && secArm) {

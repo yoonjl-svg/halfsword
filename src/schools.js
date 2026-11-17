@@ -413,11 +413,6 @@ const CHINESE_BOW = { drop: 0.22, lowMax: 0.24, rate: 1.2, inTime: 0.12, outTime
 export const CHINESE_GAIT = { guardHeight: 0.88, walkHeight: 0.95, guardLength: 0.55, guardWidth: 0.16, weightFront: 0.55, maxStride: 0.5, cadence0: 2.5, dsFrac: 0.18, width: 0.07, minWidth: 0.11, lift: 0.05, liftSettle: 0.03, toeUp: 0.15, sway: 0.018, bobAdd: 0.015, dsLow: 1.2, footwork: 'follow', followIn: 3.3, followVmax: 0.8, trailReach: 0.42, dragLift: 0.03, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, guardLow: CHINESE_GUARD_LOW, bow: CHINESE_BOW, light: 1.5, strideK: 0.75 };
 //  ↑ 동방 박자 (10/29 21:0x 사장님 '동방 박자도 바꾸고' — docs/strike/cn_cadence_2026-10-29.md): 보폭 규칙 k 0.9 → 0.75 — 같은 꼭대기(2.0 m/s)를 더 잦고 짧은 걸음으로
 //   (보폭 상한 0.558 → 0.465 · 1 m/s 박자 2.28 → 2.73 · 초당 3.26 → 3.83 걸음 × 0.63 → 0.55 m · 90 % 까지 0.55 → 0.54 s — 가벼운 발 그대로). 독일(k 1.0)은 그대로. 전 판
-export const CHINESE_GAIT_OLD = { strideK: 0.9 };
-/** 동방 박자 비교 (주소 */
-export function setChineseGait(o) {
-  if (o === 'old') Object.assign(CHINESE_GAIT, CHINESE_GAIT_OLD);
-}
 //  ⓑ 이베리아 (몬탄테): 좌우로 번갈아 베며 앞뒤로 걷기·둥근 걸음 [원전 2차] · 넓게 서서 큰 칼의 원심력을 받는다 [해석] — 수는 [추정]
 //  10/10 데스트레사 고증 (docs/strike/school_gait_iberian_chinese_2026-10-10.md, 사장님 12:5x~13:0x '고증대로 · 사이드스텝이 더 원활하고 이동량 증가'):
 //   보통 옆걸음에서 발을 엇갈리지 않는다(crossSide 뺌 — 에텐하르트 1675 원서 55~56 쪽 둥근·옆걸음 '그 발이 제 쪽으로', 피게이레두 1651 복합 XII '왼발이 따라붙는다' · 확인표 620)
@@ -444,16 +439,6 @@ export const JAPANESE_GAIT = { guardHeight: 0.75, walkHeight: 0.818, reachMax: 0
 //   사람 칸의 두 발 디딤 0.18 · 들기 0.05 뺌(사람도 설계 0.25 · 0.035 — 스리아시) · settleStance = 서 있는 자세를 자세 길이 0.45 로(판 시작 0.31 에서 안 고쳐지던 것). 전 판
 //   speedMul **0.67 → 0.70** (10/31 08:xx 사장님 결정 '일본은 70%가 아니라 67%네? … ' · '일본 바로잡아' — 10/30 00:1x '일본 -30% 적용해' 의 −30 % 를 배율 그대로 0.70 으로).
 //    0.67 은 10/29 표에서 앞 꼭대기가 독일의 −30 %(1.41 · 2.00 m/s)로 잰 자리였다 — 0.70 은 배율이 앞걸음 × 0.7(뒷걸음 GAIT.backFactor 와 같은 몫).
-export const JAPANESE_GAIT_OLD = { strideK: 0.8, player: { trailReach: 0.36, dsFrac: 0.18, lift: 0.05 }, speedMul: undefined, settleStance: undefined };
-/** 일본 걸음 비교 (판 값 0.70) — 판을 세우기 전에 한 번) */
-/** 사람 몸만 일본 걸음 빠르기 (11/05 시험 — docs/strike/jp_de_basics_2026-11-05.md · 기본 없음 = 사람도 칸 값 0.70): gait.js gaitParams 의 player 덮어쓰기 칸 — AI 일본 몸은 그대로 */
-export function setJapanesePlayerWalk(x) {
-  if (+x > 0) JAPANESE_GAIT.player = { ...(JAPANESE_GAIT.player ?? {}), speedMul: +x };
-}
-export function setJapaneseGait(o) {
-  if (o === 'old') for (const [k, v] of Object.entries(JAPANESE_GAIT_OLD)) { if (v === undefined) delete JAPANESE_GAIT[k]; else JAPANESE_GAIT[k] = v; }
-  else if (+o > 0) JAPANESE_GAIT.speedMul = +o;
-}
 // 중국 기술 가중치 (초안 §3-2, 지금 jianTech 의 찌르기 ×1.5 위에 곱한다). 안 A (24 세 쪽, 베기 : 찌르기 ≈ 3 : 1) — 腰擊 ×2.0(10/9 腰擊 쓰임에서 ×3.0) · 걷어 올리기 ×1.2 · 손 노리기 ×1.2
 //  腰擊 ×2.0 → ×3.0 (10/9 腰擊 쓰임 — docs/strike/chinese_yaoji_2026-10-09.md): ×2 로는 공용 腰擊(zwerch·zwerchL)이 휘두름의 6 % — 옆 자세에 손이 있어도 base 0.5 가 분노의 베기(1.4)에 졌다
 const CHINESE_TECHK = { '*': { zwerch: 3.0, zwerchL: 3.0, unterhau: 1.2, unterhauL: 1.2, wristCut: 1.2 } };

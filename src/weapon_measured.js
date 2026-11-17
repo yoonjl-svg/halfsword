@@ -192,24 +192,11 @@ for (const id of IT_IDS) {
   MEASURED[id] = [...ITALIAN_THRUST.MEASURED[id]];
   CUT_TIME_30[id] = ITALIAN_THRUST.CUT_TIME_30[id];
 }
-// ── 플랑베르주 간격 줄 판 (10/29 15:xx 사장님 '봐' — WEAPON_MEASURE.flambergeFix · docs/strike/flamberge_measure_2026-10-29.md · 확인표 2900 ~ 2903 · 사장님 확인 전) ──
-//  위 손 표 플랑베르주 줄은 맞닿기 1.91 · 칼끝 거리 2.57 — 츠바이핸더(1.68 · 2.01)보다 23 · 56 cm 큰데 손 ~ 칼끝은 5 cm 차(1.385 · 1.335 m).
-//  까닭(기록 §2): ① 10/14 처음 붙일 때 롱소드 비율로 붙였고(그 바탕에선 생성기가 무거운 칼을 길게 잰다 — 같은 실행 츠바이핸더 생성 값은 플랑베르주보다 컸다) 뒤로는 전 → 후 비만 곱해 그 바탕이 남음 ·
-//   ② reach: 생성기가 스틱을 3 s 내내 앞으로 두어 늦은 베기(0.52 s)가 머리 높이를 지나기 전까지 몸이 계속 걸어 나감(가슴 이동 0.43 · 츠바이핸더 0.21 — 생성기 단위) ·
-//   ③ contact: 몸 이동은 없음(가슴이 오히려 뒤로) — 늦게 지나는 칼이 팔을 더 뻗은 채 머리 높이를 지남(칼 몫 +0.09 · 칼 길이 몫 +0.02)
-//  'off'(기본) = 위 줄 그대로(판 바이트 같음). 그 밖은 config.js WEAPON_MEASURE.flambergeRows 의 같은 이름 줄로 바꾼다 (다른 무기 줄은 그대로)
-export const FLAMBERGE_NOW = { row: [...MEASURED.flamberge], cut: CUT_TIME_30.flamberge };
-/** 판(mode)마다 플랑베르주 손 표 줄 { row, cut } — 'off' = 지금 */
-export function flambergeMeasureRow(mode) {
-  const R = mode !== 'off' ? WEAPON_MEASURE.flambergeRows?.[mode] : null;
-  return R ? { row: [...R.row], cut: R.cut } : { row: [...FLAMBERGE_NOW.row], cut: FLAMBERGE_NOW.cut };
-}
-// 판을 만들기 전, 이 모듈을 읽을 때 한 번 (이탈리아 줄과 같은 자리 — 꾸러미 간격 · 상대 칼 어림 measureFor 가 이 표를 읽는다)
-if (WEAPON_MEASURE.flambergeFix !== 'off') {
-  const v = flambergeMeasureRow(WEAPON_MEASURE.flambergeFix);
-  MEASURED.flamberge = v.row;
-  CUT_TIME_30.flamberge = v.cut;
-}
+// ── 플랑베르주 간격 줄 (10/29 15:xx 사장님 '봐' — config.js WEAPON_MEASURE.flamberge · docs/strike/flamberge_measure_2026-10-29.md · 확인표 2900 ~ 2903) ──
+//  위 손 표 플랑베르주 줄(맞닿기 1.91 · 칼끝 거리 2.57)은 10/14 처음 붙일 때 롱소드 비율로 붙인 값 — 판에는 츠바이핸더 기하 줄을 쓴다 (기록 §2)
+MEASURED.flamberge = [...WEAPON_MEASURE.flamberge.row];
+CUT_TIME_30.flamberge = WEAPON_MEASURE.flamberge.cut;
+
 /** 유파 꾸러미에 넣는 간격 한 벌 (새 객체): 거리 셋은 MEASURED, 베는 시간은 CUT_TIME_30. 표에 없는 무기는 null */
 export function schoolMeasure(id) {
   const m = MEASURED[id];

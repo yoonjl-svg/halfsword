@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, AI } from './harness_m.mjs';
 import { PlayerSecretWatch, secretEvent, gnsEnterLine, foeOnline, gnsUser, gnsBlockOf } from '../../src/secret.js';
-import { playerSecretDef, JAPANESE_GAIT, setJapaneseGait } from '../../src/schools.js';
+import { playerSecretDef, JAPANESE_GAIT } from '../../src/schools.js';
 import { requestIai } from '../../src/secret_instant.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 // 준비까지 (11/14 사장님 '2초 후에 납도 시작' — 일본 준비는 iaiArmTime 뒤 납도 SECRET.iaiSheathe 가 끝나야 · 帯刀 끄면 납도 없음 · secret.js IaiArm.extra)

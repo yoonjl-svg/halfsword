@@ -839,14 +839,6 @@ export const BALANCE = {
   schoolSteady: 1,
 };
 
-// 몬탄테(츠바이핸더) 쥠 꼴 (docs/motion/iberian_montante_2026-10-10.md §10·§12·§15 — 값은 weapons.js ZW_FORMS). 손~칼끝 1.36 m 는 모두 같다.
-//  'mid'(기본 — 사장님 10/10 20:4x '너무 고증을 쫓다 보니 대검의 맛이 사라졌어, 초기 그립과 지금의 중간', 확인표 760~): 손 사이 0.24 · 오른손 ~ 날밑 0.11 m · 칼날 1.215
-//  'guard'(10/10 14:5x 고디뉴 규칙 3 '오른손 날밑 가까이', 확인표 689~692): 손 사이 0.30 · 날밑 0.065 m · 칼날 1.26 · MONTANTE_HAND=guard
-//  'old'(10/10 아침 꼴): 손 사이 0.18 · 날밑 0.155 m · 칼날 1.17 · 자루 0.32 · 서보 덮개 28 · MONTANTE_HAND=old
-//  'wide'(§10~§11 꼴, §12 의 옛 꼴): 손 사이 0.30 · 날밑 0.155 m · 칼날 1.17 · MONTANTE_HAND=wide
-export const MONTANTE = {
-  hand: (typeof process !== 'undefined' && process.env?.MONTANTE_HAND) || 'mid',
-};
 
 // 두 손 잡기: 빈손이 칼자루 끝을 쥐는 부드러운 스프링
 export const GRIP = {
@@ -2637,17 +2629,9 @@ export const THRUST = {
 //  'off' = 지금 줄(판 바이트 같음) · 그 밖은 weapon_measured.js FLAMBERGE_ROWS 의 같은 이름 줄 — 판을 만들기 전에 읽는다(꾸러미 간격이 weapon_measured.js 를 읽을 때 정해짐)
 //  시뮬 `FL_MEASURE=…` 또는 with_config.mjs WEAPON_MEASURE.flambergeFix=…
 export const WEAPON_MEASURE = {
-  // 판마다 플랑베르주 줄 [contact, reach, clinch, 베는 시간 날것] · cut = 유파 꾸러미 베는 시간(CUT_TIME_30 — 롱소드 0.30 기준) — 'off' 는 손 표 그대로라 여기 없음
-  //  geo     (가) 기하: 츠바이핸더 손 표 [1.68, 2.01, 1.30] × 손 ~ 칼끝 비 1.385 / 1.335 (= 1.0375) · 베는 시간 그대로(사장님 10/25 손맛 — 늦은 베기)
-  //  step    (나) 다시 잼 — 걸음을 AI 한 걸음(스틱 앞 0.3 s · ai.js STEP_T)으로 묶은 같은 실행 생성기 값의 츠바이핸더 비 × 츠바이핸더 손 표:
-  //          contact 1.9783 / 1.8850 · reach 2.2119 / 2.0666 · 베는 시간 0.5167 / 0.4083 (clinch 는 contact 와 같은 비 · 꾸러미 베는 시간 0.34 × 같은 비)
-  //  contact (다) 맞닿기 · 붙음만 (가) 값 · 칼끝 거리 2.57 · 베는 시간 그대로
-  flambergeRows: {
-    geo: { row: [1.74, 2.09, 1.35, 0.77], cut: 0.57 },
-    step: { row: [1.76, 2.15, 1.36, 0.59], cut: 0.43 },
-    contact: { row: [1.74, 2.57, 1.35, 0.77], cut: 0.57 },
-  },
-  flambergeFix: ((v) => (['off', 'geo', 'step', 'contact'].includes(v) ? v : 'geo'))((typeof process !== 'undefined' && process.env?.FL_MEASURE) || 'geo'), // 사장님 10/29 17:5x '플랑베르주 거리 값을 칼 길이대로 다시 매겨' → 기본 'geo'
+  // 플랑베르주 줄 [contact, reach, clinch, 베는 시간 날것] · cut = 유파 꾸러미 베는 시간(CUT_TIME_30 — 롱소드 0.30 기준)
+  //  (가) 기하: 츠바이핸더 손 표 [1.68, 2.01, 1.30] × 손 ~ 칼끝 비 1.385 / 1.335 (= 1.0375) · 베는 시간 그대로 (docs/strike/flamberge_measure_2026-10-29.md)
+  flamberge: { row: [1.74, 2.09, 1.35, 0.77], cut: 0.57 },
 };
 
 // 손잡이 찍기(Knaufschlag, 시제품 — 사장님 아이디어 3] 10/9 "근접 상황에서 칼 손잡이로 찍기", docs/strike/pommel_strike_2026-10-09.md).
@@ -2787,7 +2771,7 @@ export const CAPE = {
  *  각은 도. 해부학 출처: AAOS "Joint Motion: Method of Measuring and Recording"(1965) · Norkin & White "Measurement of Joint Motion" · Soucie 외 2011 (Haemophilia 17:500)
  */
 export const JOINTS = {
-  mode: (typeof process !== 'undefined' && process.env?.JOINTS) || 'anat', // 기본 켬 'anat' (10/9 17:5x 디렉터 — 사장님 '두 가지 모두 수행'·'겪어 봐야 판단'. 전 판 = / JOINTS=off). 값은 확인표 290~298 사장님 확인 전
+  mode: 'anat', // 기본 켬 'anat' (10/9 17:5x 디렉터 — 사장님 '두 가지 모두 수행'·'겪어 봐야 판단'. 전 판 = / JOINTS=off). 값은 확인표 290~298 사장님 확인 전
   // 묶음마다 켜는 몫 (hard = 엔진 한도, soft = 끝 스프링, reach = 손 목표 자르기)
   presets: {
     off: {},
@@ -2844,7 +2828,7 @@ export const JOINTS = {
   // 날 세우기 방식 (10/10 날 세우기 — docs/motion/edge_alignment_2026-10-10.md, 확인표 520~522). 'torque' = 명시 돌림힘(10/9 까지 그대로, 끔·EDGE=off 도 이것)
   //  · 'motor' = 모터 ⓐ (칼날 축 둘레 1 자유도를 엔진 관절 모터와 같은 암시적(뒤 오일러) PD 로 풀어 돌림힘으로 — Rapier 공 관절 모터는 칼날 축 하나만 못 잡아 직접 품) · 'ff' = 각속도 앞먹임 ⓑ (명시 돌림힘 + 목표 각속도 항) · 'pre' = ⓐ + 미리 돌리기 ⓒ (명령 겨눔 각속도로 앞으로 칠 방향을 읽어 날을 먼저 돌림)
   edge: (() => {
-    const v = (typeof process !== 'undefined' && process.env?.EDGE) || 'torque'; // 기본 = 오늘(명시 돌림힘). 10/10 후보 ⓐ~ⓓ 어느 것도 칼 면 비율을 줄이지 못해 켜지 않음 (문서 §4)
+    const v = 'torque'; // 기본 = 오늘(명시 돌림힘). 10/10 후보 ⓐ~ⓓ 어느 것도 칼 면 비율을 줄이지 못해 켜지 않음 (문서 §4)
     return v === 'off' ? 'torque' : v;
   })(),
   edgeMotorK: 3, // 모터 강성 = 오늘 날 세우기 강성(4·twistScale N·m/rad) × 이 값 (암시적이라 안정 한계가 없다)
@@ -2860,16 +2844,14 @@ export const JOINTS = {
   edgeArm: 0, // ⓓ 팔 나눔: 날 세우기 어긋남의 위팔 축 몫 × 이 값을 위팔 비틀기 서보 목표에 더한다 (0 = 끔. 'torque' 에선 쓰지 않음)
   edgeLead: 1, // ⓒ 미리 돌리기: 명령 겨눔 각속도(서보 목표가 도는 빠르기) × 칼날 70 % 반지름 = 곧 낼 칼날 속도를 이 무게로 지금 속도에 더해 날 방향을 읽는다
   // 한손 칼끝 고침 (10/10 — docs/motion/onehand_tip_2026-10-10.md, 확인표 523~525): 'fix' = guards.js 세이버 표 감는 자리 다섯의 칼끝을 분명히 위·아래로 + 한손 칼 손 매핑(fighter guardDir)의 옆 패드 칼끝 접기
-  //  · 'off' = 전 값 (ONETIP=off)
-  oneTip: (typeof process !== 'undefined' && process.env?.ONETIP) || 'fix',
   oneTipAz: [26, 46], // 접기를 섞기 시작 → 다 거는 방위 |az| (°, 손 매핑 guardDir: 패드 x 0.32 → 0.52) — 그 안쪽은 상대를 겨누는 자리라 그대로
   oneTipFold: -14, // 가르는 올림각 (°): 이 위면 위로, 아래면 아래로 접는다 (±5° 는 섞음 — 패드 y −0.12 쯤)
   oneTipUp: 55, // 위로 접을 때 올림각 하한 (°) — 마이어 1570 두삭 Wacht·Entrüst 처럼 칼끝이 분명히 위
   oneTipDown: -45, // 아래로 접을 때 올림각 상한 (°) — 두삭 Eber·Nebenhut 처럼 칼끝이 분명히 아래
   // 플레이어 칼 날 세우기 (10/10 사장님 '인간 플레이어 쪽' — docs/motion/player_edge_2026-10-10.md, 확인표 560~): 사람 손가락이 모는 칼(skill.autoGuard)에만 걸린다. AI 칼은 그대로
-  //  'off' = 10/10 오전까지(제 칼 70 % 지점 속도만·PLAYER_EDGE=off) · 'input' = 손가락 속도로 겨눔이 곧 돌 쪽을 날 방향에 더함 · 'goal' = 거른 손 목표가 아직 따라갈 몫(손가락이 끌어 둔 자리까지 겨눔이 돌 쪽) · 'both' = 둘 다
+  //  'off' = 10/10 오전까지(제 칼 70 % 지점 속도만) · 'input' = 손가락 속도로 겨눔이 곧 돌 쪽을 날 방향에 더함 · 'goal' = 거른 손 목표가 아직 따라갈 몫(손가락이 끌어 둔 자리까지 겨눔이 돌 쪽) · 'both' = 둘 다
   //  기본 'goal' (확인표 561, 사장님 폰 확인 전): player_edge 계기 9 무기 씨앗 셋 칼 면 23.4 → 20.1 % · × 날 세움 J 12.8 → 13.9 · 팽이 773 → 661 스텝 (문서 §4)
-  playerEdge: (typeof process !== 'undefined' && process.env?.PLAYER_EDGE) || 'goal',
+  playerEdge: 'goal',
   playerEdgeLead: 1, // 입력 미리 돌리기 무게: 예측한 칼날 70 % 지점 속도 × 이 값을 지금 속도에 더한다
   playerEdgeMode: null, // 플레이어 칼만 다른 날 세우기 방식 ('motor'·'ff'·'pre', null = edge 와 같음) — 실험 스위치
 };

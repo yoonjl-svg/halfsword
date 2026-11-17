@@ -233,7 +233,7 @@ function runDuel(pair, args) {
     }
     G.world.free();
   }
-  const res = { pair, A: { ...a, ...SA }, B: { ...b, ...SB }, seeds, secs, fix: WEAPON_MEASURE.flambergeFix, row: [...MEASURED.flamberge], cut: CUT_TIME_30.flamberge };
+  const res = { pair, A: { ...a, ...SA }, B: { ...b, ...SB }, seeds, secs, fix: 'geo', row: [...MEASURED.flamberge], cut: CUT_TIME_30.flamberge };
   printDuel(res);
   const json = argOf(args, 'json', null);
   if (json) fs.writeFileSync(json, JSON.stringify(res));
