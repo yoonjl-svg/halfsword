@@ -77,6 +77,8 @@ function makeRig({ school, weapon, gap = 3.2, seed = 3, foeWeapon = 'longsword' 
   G.ai.update = () => {};
   const P = G.player;
   const E = G.enemy;
+  E.strength = 1; // 멈춘 상대 몸은 11/16 판 그대로(숙련 3 = 보통 힘 1 · 버티는 힘 1) — 숙련도별 몸 값(E · config PROF_BODY 3 칸 0.8)이면 상대 칼 · 몸이 처져 사람 수 길이 바뀜. 이 도구는 사람 수만 견줌
+  E.vitality = 1;
   P.skill.corr = CONFIG.SKILL.corr;
   P.skill.autoGuard = true;
   P.canShove = true;
