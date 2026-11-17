@@ -22,7 +22,7 @@
 import { AI_PLAN, UNIQUE_ASSIST as UA, SECRET, CN_STEP, STAMINA, realS } from './config.js';
 import { cnStepOn, awaySide } from './cn_step.js'; // 편섬 꺾음 (11/15 — 偏閃奏進 뛰어들기)
 import { huntN } from './cn_hunt.js';
-import { secretSpent, gkFreeOn, gkCooling } from './secret.js';
+import { secretSpent, gkCooling } from './secret.js';
 import { bandOf, axesOf } from './ai_plan.js';
 import { readNote, readLineN } from './ai_read.js'; // 3 단계 (11/14): 버릇 · 되풀이 기억은 공통 읽기 그릇 하나로
 
@@ -186,10 +186,9 @@ export function cnNext(ai, want) {
  *  무계획(굴림 몫 Lk — 무 · 낮음이 큼): Lk 만큼은 동전(AI_PLAN.coin)으로 — 아무 때나 노리기도 함. 가운데는 겹 · 시간 · 기력만 · 높음은 낌새까지
  */
 export function cnWill(ai, th) {
-  const G = SECRET.gyeoksalAi ?? { stacks: 1, late: realS(8.0) }; // 11/16 사장님 — 10초 사다리 없앰 · 8초
   const S = ai.planCn;
   // 격살 풀기 (11/16 — SECRET.gkFree · 감독 '아껴 두기 대신 기울기'): 판 시간 몫(late — 판당 1 번이라 아껴 둠)을 빼고 겹 · 지침 · 낌새만 — 겹이 많을수록 나서며 받음 (띠 기울기 · 굴림 몫은 아래 그대로)
-  let L = huntN(ai.foe) / Math.max(1, G.stacks) + (gkFreeOn() ? 0 : Math.max(0, ai.me.fightT ?? 0) / Math.max(1e-6, G.late)) + (foeTired(ai) ? 1 : 0);
+  let L = huntN(ai.foe) + (foeTired(ai) ? 1 : 0);
   if (bandOf(ai.proficiency) >= 3 && th && (th.id === S.drawnId || (S.rep && th.line === S.rep))) L += 1;
   const w0 = CN().will0;
   const plan = w0 + (1 - 2 * w0) * (1 - Math.pow(2, -L));

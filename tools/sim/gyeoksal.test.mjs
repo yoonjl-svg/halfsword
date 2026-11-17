@@ -27,13 +27,6 @@ test('사람 길만 격살 — AI 는 옛 막기 연환 그대로 · 비기 닫�
   assert.equal(ai.secret, null); // AI 동방은 숙련도 5 라도 비기 없음 (옛 판)
   assert.equal(new PlayerSecretWatch(G.player, G.enemy).S.name, 'gyeoksal');
   assert.equal(new PlayerSecretWatch(G.player, G.enemy, { locked: true }).S, null); // 비기 칸이 없으면 창 없음
-  const keep = SECRET.gyeoksal.on;
-  SECRET.gyeoksal.on = 0;
-  try {
-    assert.equal(T.playerSecret.name, 'lianhuanParry'); // `?gyeoksal=0` = 옛 판
-  } finally {
-    SECRET.gyeoksal.on = keep;
-  }
   } finally { SECRET.aiOpenSchools = open0; }
 });
 
@@ -44,7 +37,6 @@ test('자세 → 겨눌 곳: 거정(위 가운데 · 위 오른) 머리 · 어�
   assert.deepEqual(aim, { geojeong: ['head'], eogeo: ['arm'], yoryak: ['leg'], bongdu: ['lung'] });
   assert.equal(S.do.combo.bongdu.seq[0].kind, 'thrust');
   assert.equal(S.do.power, 'gyeoksal');
-  assert.equal(SECRET.gyeoksal.power, 'hit'); // 10/22 23:0x 사장님 확정 (전 'finish')
 });
 
 /** 칼이 들어오는 중인 상대 (지난 0.6 s 칼끝 ≥ 3.5 m/s — foeRecentTipSp 가 읽는 눈)를 흉내 */
@@ -136,31 +128,6 @@ test('미리 받기: 칼이 붙은 동안 넣은 공격 입력은 떨어지는 �
   assert.equal(o.ctx.stance, 'geojeong');
 });
 
-test('한 칼 세기: 판정 에너지 × FINISH.power (결정타 hitMul 대신) — 같은 칼 배율 1 보다 심각도가 크다', () => {
-  const sev = (pw) => {
-    SECRET.gyeoksal.power = pw;
-    const G = newRound({ weapon: 'qinggang', weapon2: 'longsword', seed: 1, gap: 1.35 });
-    G.ai.update = () => {};
-    G.player.skill.autoGuard = true;
-    while (G.t < 1.0) G.step();
-    assert.ok(G.player.skill.secret({ S: TRADITIONS.chinese.playerSecret, ctx: { slot: 'yoryak', stance: 'yoryak' } }));
-    const t0 = G.t;
-    while (G.t < t0 + 1.2 && G.player.skill.sec) G.step();
-    return G.player.instantResult;
-  };
-  try {
-    const one = sev(1);
-    const fin = sev('finish');
-    assert.equal(one.aim, 'leg');
-    assert.ok(fin.hit && one.hit, '다리를 맞힘');
-    assert.ok(fin.sev > one.sev, `${fin.sev} > ${one.sev}`);
-    assert.equal(FINISH.power, 2.5);
-  } finally {
-    SECRET.gyeoksal.power = 'hit';
-  }
-});
-
-
 test('스킬트리 C9 막아 죽이기: 열림 · 익히면 비기 몫 · 글은 숫자 없는 온전한 한 문장', () => {
   const n = D.nodeOf('chinese', 'C9');
   assert.equal(D.isClosed('chinese', n), false);
@@ -169,13 +136,10 @@ test('스킬트리 C9 막아 죽이기: 열림 · 익히면 비기 몫 · 글은
   assert.equal(D.kitFromNodes('chinese', D.allNodeIds('chinese')).secret, true);
 });
 
-test('저절로 (사장님 10/24 12:2x): 누른 뒤 0.6 s 안 · 받아 내면 창과 함께 곧장 낼 입력(queued auto) — 공격 입력 없음 · auto 0 이면 옛 판(입력 기다림) · 때 늦으면 없음', () => {
+test('저절로 (사장님 10/24 12:2x): 누른 뒤 0.6 s 안 · 받아 내면 창과 함께 곧장 낼 입력(queued auto) — 공격 입력 없음 · 때 늦으면 없음', () => {
   assert.equal(SECRET.gyeoksal.press, CONFIG.realS(0.6)); // 실제 0.6 s (표준 시간 10/25)
-  assert.equal(SECRET.gyeoksal.auto, 1);
   const { w } = script({ wait: CONFIG.realS(0.5), line: 'highC' }); // 0.4 s 넘고 0.6 s 안 — 옛 판이면 늦음
   assert.ok(w.open, '창'); assert.ok(w.queued?.auto, '저절로 낼 입력');
   const o = w.fire(); assert.equal(o.ctx.stance, 'geojeong'); assert.equal(w.queued, null); // 받은 자세가 겨눌 곳을 정함
-  const was = SECRET.gyeoksal.auto;
-  try { SECRET.gyeoksal.auto = 0; const { w: w0 } = script({ wait: 0.2, line: 'highC' }); assert.ok(w0.open); assert.equal(w0.queued ?? null, null); } finally { SECRET.gyeoksal.auto = was; }
   assert.equal(script({ wait: CONFIG.realS(0.65), line: 'highC' }).w.queued ?? null, null);
 });

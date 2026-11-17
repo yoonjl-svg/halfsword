@@ -8,13 +8,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { SECRET, ARENA, UNIQUE_ASSIST as UA, STAMINA, realS } from '../../src/config.js';
-import { TRADITIONS, IBERIAN_SPIN_DEF } from '../../src/schools.js';
+import { TRADITIONS } from '../../src/schools.js';
 import { PlayerSecretWatch, secretLeft } from '../../src/secret.js';
 import { PlayerUniqueAssist, altibHitMul } from '../../src/unique_assist.js';
 import { mordHitMul } from '../../src/mordschlag.js';
 import { nodeTitle } from '../../src/skill_tree.js';
 import * as D from '../../src/skill_tree_data.js';
-import { altibRun, spinRun } from './ib_swap.mjs';
+import { altibRun } from './ib_swap.mjs';
 
 const setup = (P) => {
   P.skill.corr = CONFIG.SKILL.corr;
@@ -26,7 +26,6 @@ test('기본값 — 사장님 11/11: 이베리아 비기 = 알티바슈 포르�
   assert.equal(TRADITIONS.iberian.secret.name, 'altib');
   assert.equal(TRADITIONS.iberian.secret.nameKo, '알티바슈 포르트');
   assert.equal(SECRET.altib.share, 0.35); // '알티바슈 포르테로 35%로 해. 비기 숫자테이블이 일정해지게.'
-  assert.equal(SECRET.altib.staminaK, 1); // '남은 기력 만큼의 % 공격력'
   assert.equal(altibHitMul(), 1); // '비기 파괴력 배율 1.3배는 고노센에만 남긴다'
   assert.equal(SECRET.hitMul, 1.3); // 고노센 (비기 공통 열쇠 그대로)
   assert.equal(mordHitMul(), 1); // '죽음의 일격도 1.0으로 해.'
@@ -35,19 +34,5 @@ test('기본값 — 사장님 11/11: 이베리아 비기 = 알티바슈 포르�
   assert.equal(UA.specialShare.cingir, 0.3); // '빠르기를 고노센의 30%로'
   assert.equal(UA.specialShare.duplieren, 0.3); // '겹치기 30으로.'
   assert.equal(UA.rdDrainCut, 1); // 메는 동안 초당 베기 한 번 값 그대로 (사장님 11/01 — 오래 멜수록 약해짐)
-  assert.ok(SECRET.ibSpin.stride > 0, '싱지르 한 걸음 (새 값 · 사장님 확인 전)');
-  assert.ok([0.3, 0.45, 0.6].includes(SECRET.ibSpin.stride), '걸음 사다리 가운데');
 });
-
-test('한 걸음 나가며 — 서 있는 과녁 · 네 칼: 골반이 stride 만큼 나아감(전 비기 판 0.42 ~ 0.53 m) · 안 넘어짐 · 몸 기울기 20° 아래 · 끝 두 발 앞뒤 펜싱 너비 · 칼끝 거리 밖 과녁도 벰', () => {
-  for (const w of ['zweihander', 'flamberge', 'tizona', 'durandal']) {
-    const r = spinRun({ w, gap: 2.1 });
-    assert.equal(r.fell, false, w);
-    assert.ok(r.tiltMax < 20, `${w} 기울기 ${r.tiltMax}`);
-    assert.ok(r.travel > SECRET.ibSpin.stride - 0.06 && r.travel < SECRET.ibSpin.stride + 0.15, `${w} 나아감 ${r.travel}`);
-    assert.ok(r.feetLon > 0.45 && r.feetLon < 0.85, `${w} 두 발 앞뒤 ${r.feetLon}`);
-    assert.ok(r.hit, `${w} 벰`);
-  }
-});
-
 

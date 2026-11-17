@@ -16,7 +16,7 @@ function strokeBody(f, F, human) {
   const sk = f.skill;
   if (!sk || !f.alive || !f.armed || f.weapon?.gun) return false;
   if (human ? sk.autoGuard !== true : !(F.ai && f.aiControlled && sk.autoGuard !== true)) return false;
-  if (sk.sec || sk.tap || sk.pom || sk.flick || sk.uniq?.winding || f.iai || f.iaiReq || f.ibSpin || f.secretStiff || f.mordAim || f.rdWind || f.parryGuard?.active) return false;
+  if (sk.sec || sk.tap || sk.pom || sk.flick || sk.uniq?.winding || f.iai || f.iaiReq || f.secretStiff || f.mordAim || f.rdWind || f.parryGuard?.active) return false;
   if ((f.secretHit ?? 1) !== 1 || (f.powerMul ?? 1) !== 1) return false; // AI 비기 베기 (판정 · 서보 힘 창)
   return true;
 }

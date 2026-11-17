@@ -159,7 +159,7 @@ export function readTick(ai, dt, d, s, th) {
 }
 
 /** 무장처럼 보이는 이베리아 상대 (제 칼끝 밖에서 휘두르지 않고 무장 시간만큼 — 보이는 꼴로만 어림) */
-const ibArmed = (ai) => ai.read.idleT >= SECRET.ibSpin.armTime;
+const ibArmed = (ai) => ai.read.idleT >= SECRET.altib.armTime;
 
 /**
  * 공격 문턱에 얹을 몫 (watch — 다른 유파 몫 뒤): ② 상대 유파 대표 위험(가운데부터) · ③ 대가 창 · ④ 상대 기력(높음). + 는 참음 · − 는 칠 마음
@@ -229,7 +229,7 @@ export function readFeetV(ai, v, d) {
     if (itEdgeOn(ai.foe)) return Math.min(v, -r); // 칼 우위 빛 — 거리를 벌림
     if (v > 0 && d < ai.foeReach + 0.3) return v * (1 - r); // 맞박자 — 곧게 걸어 들지 않음
   } else if (t === 'iberian' && ibArmed(ai)) {
-    const want = ai.foeReach + (SECRET.altib?.aiFire ?? SECRET.ibSpin.aiFire) + 0.1;
+    const want = ai.foeReach + SECRET.altib.aiFire + 0.1;
     if (d < want) return Math.min(v, clamp((d - want) * 1.6, -1.9, 0));
   }
   return v;

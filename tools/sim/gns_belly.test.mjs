@@ -15,21 +15,6 @@ const { SECRET } = CONFIG;
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
 const strip = (r) => JSON.stringify({ ...r, frames: undefined });
 
-test('기본값: iaiBelly 켬 (11/08 사장님) · 전 올려베기 길 값 그대로 · 배 길 B = 전 B', () => {
-  const R = SECRET.iaiPathRise;
-  assert.deepEqual([R.M.hand, R.M.yaw, R.M.el], [[0.5, 0.02, 0.04], 0, 12]);
-  assert.deepEqual([R.E.hand, R.E.yaw, R.E.el], [[0.4, 0.34, 0.4], 70, 38]);
-  assert.deepEqual(SECRET.iaiPathBelly.B, R.B, '뽑는 자리 그대로');
-  assert.deepEqual(SECRET.iaiPathBelly.E.body, R.E.body, '끝 몸 그대로');
-  const B = SECRET.iaiPathBelly;
-  assert.ok(B.M.hand[1] < R.M.hand[1] && B.M.el < R.M.el, '가운데가 낮고 칼날 오름이 작음');
-  assert.ok(B.E.hand[1] < R.E.hand[1] && B.E.el < R.E.el, '끝이 낮고 칼날 오름이 작음 (완만)');
-  assert.ok(B.E.el > B.M.el && B.E.hand[1] > B.B.hand[1], '그래도 올려 벰 (왼 아래 → 오른 위)');
-});
-
-// 11/13 사람 발도 원전 꼴(SECRET.iaiReal — docs/strike/iai_real_2026-11-13.md)은 선 사람 발도 길을 iaiPathReal 로 바꿈 — 배 길을 잰 이 장면들은 그때 판(iaiReal 0)으로 묶음 (§7)
-
-
 test('켬: 롱소드 AI 간 보는 자세 아홉 모두 — 칼이 땅 · 제 다리에 안 닿음 · 서 있음 · 가슴에 먼저 닿지 않음', () => {
   withCfg({ iaiBelly: 1 }, () => {
     for (const g of guardsOf('longsword')) {

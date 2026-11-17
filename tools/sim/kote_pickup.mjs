@@ -170,7 +170,7 @@ export function pickupWhyNot(f) {
   if (f.revival) return 'revive';
   if (f.severedLimbs?.has('armS') || !(f.limbs.armS >= CONFIG.VITALS.dropSwordArm)) return 'arm';
   if (f.stamina?.exhausted) return 'tired';
-  if (f.iai || f.rdWind || f.ibSpin) return 'busy';
+  if (f.iai || f.rdWind) return 'busy';
   if (!swordSettled(f)) return 'settle';
   const d = swordReachDist(f);
   if (!Number.isFinite(d)) return 'high';

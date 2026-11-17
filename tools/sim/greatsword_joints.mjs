@@ -7,7 +7,7 @@
 //    칼 팔꿈치 굽힘(0 = 곧음 · − = 뒤로 꺾임) · 빈팔 팔꿈치 · 어깨 범위 밖(joint_range LIMITS) · 손목 범위 밖 > 10° · 아래팔-칼 > 135 · 굴림 ≥ 78(손목 밧줄 80 끝) · 교정 각 ·
 //    팔꿈치 들림 > 30°(머리 곁으로 꺾여 듦) · 칼 팔 곧게 펴짐 < 10° · 두 팔꿈치 엇갈림(칼 팔꿈치가 빈 팔꿈치보다 빈손 쪽 — 가슴 틀)
 //   묶음: 장면마다 스텝 · 각 몫(%) · 최솟값 · 최댓값 · 가장 나쁜 스텝(점수 = 넘친 각의 합) 몇 개
-//  node tools/sim/greatsword_joints.mjs [--weapons=zweihander,flamberge,tizona,durandal,monohoshizao] [--scenes=idle,rest,cuts,tap,parry,walk,spin,b4] [--set=SKILL.frameScale=off;SKILL.restTouch=0] [--json=파일] [--worst=3]
+//  node tools/sim/greatsword_joints.mjs [--weapons=zweihander,flamberge,tizona,durandal,monohoshizao] [--scenes=idle,rest,cuts,tap,parry,walk,b4] [--set=SKILL.frameScale=off;SKILL.restTouch=0] [--json=파일] [--worst=3]
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
 import { newRound, DT, THREE, CONFIG } from './harness_m.mjs';
@@ -183,12 +183,6 @@ export function runWeapon(w, scenes) {
   return trad;
 }
 async function runIberianExtras(w, scenes) {
-  if (scenes.has('spin')) {
-    const { runCircle } = await import('./iberian_spin_circle.mjs');
-    for (const [st, input, c] of [['langort', 'circle', { r: 50, T: 0.8, a0: 0, dir: 'ccw', close: 380 }], ['langort', 'circle', { r: 50, T: 0.8, a0: 180, dir: 'cw', close: 380 }], ['ochsR', 'direct', { dir: 'ccw' }]]) {
-      scene(`${w} spin:${st}:${c.dir}${input === 'direct' ? ':direct' : ''}`, () => { LABEL = (f) => (f.ibSpin ? 'spin' : f.skill?.secretPhase ? `sec:${f.skill.secretPhase}` : 'other'); runCircle(w, st, input, c, 'stand'); });
-    }
-  }
   if (scenes.has('b4')) {
     const { b4Run } = await import('./b4_probe.mjs');
     scene(`${w} b4`, () => { LABEL = (f) => (f.rdWind ? 'load' : f.armsPlaced?.() ? 'strike' : f.skill?.swinging ? 'swing' : 'rest'); b4Run({ w, hold: 1.6, after: 0.8 }); });
@@ -220,7 +214,7 @@ if (isMain(import.meta.url)) {
     o[ks.at(-1)] = isNaN(+val) ? val : +val;
   }
   const weapons = String(args.weapons ?? 'zweihander,flamberge,tizona,durandal,monohoshizao').split(',');
-  const scenes = new Set(String(args.scenes ?? 'idle,rest,cuts,tap,parry,walk,spin,b4').split(','));
+  const scenes = new Set(String(args.scenes ?? 'idle,rest,cuts,tap,parry,walk,b4').split(','));
   for (const w of weapons) {
     const trad = runWeapon(w, scenes);
     if (trad === 'iberian') await runIberianExtras(w, scenes);

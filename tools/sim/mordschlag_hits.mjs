@@ -2,7 +2,7 @@
 //  node tools/sim/mordschlag_hits.mjs [foes isolde,…,roland] [seeds 6] [dur 40]
 //  BOT=player(걸어 붙어 스틱 앞 ±25° 흔들림 · 붙은 동안 0.8 ~ 1.6 s 마다 긋기) | hold(스틱 앞 쥠만) · STICK=keep(일격 동안 스틱 앞 그대로 — 기본) | release(놓음) · 판당 쓸 수 끔 · 창이 열리면 0.12 ~ 0.30 s 뒤 냄
 //  TRACK=0 옛 겨눔(SECRET.mord.track — 10/30 08:2x 부터 기본 1) · COMMIT=실제 초(trackCommit) · UNTIL=cut · JSON=1 일격마다 한 줄
-//  NOCLIP=1 내 머리 뚫음 막기(SECRET.mord.noSelfClip — 10/31 시제품 · 기본 끔) · CLIPX= · CLIPSTEP= · AT=(SECRET.mord.at) · 일격마다 내 머리 ↔ 두 손 · 팔 · 칼자루 쪽 틈도 잰다(10/31)
+//  NOCLIP=1 내 머리 뚫음 막기(SECRET.mord.noSelfClip — 10/31 시제품 · 기본 끔) · CLIPX= · CLIPSTEP= · 일격마다 내 머리 ↔ 두 손 · 팔 · 칼자루 쪽 틈도 잰다(10/31)
 //  까닭: head 머리 · otherPart 칼자루가 머리 대신 가슴 · 팔 등에 · blocked 상대 칼(막힘 거리) · headMoved 머리가 길에서 빠져 헛침 · pathOff 길이 겨눈 자리를 안 지남 · outOfReach 안 닿음 ·
 //   foeDown 상대가 넘어짐 · notStarted 시작 못 함(기력이 비기 값보다 적어 낸 스텝에 탈진 — lost) · 겨눈 자리 = 길을 짠 때 머리(내 가슴 틀) · 가장 가까운 때 머리 옮김(rel) · 상대 머리 · 내 가슴(땅) 옮김
 import { newRound, DT, CONFIG, THREE } from './harness_m.mjs';
@@ -20,9 +20,7 @@ if (process.env.MORD_JSON) Object.assign(SECRET.mord, JSON.parse(process.env.MOR
 if (process.env.NOCLIP) SECRET.mord.noSelfClip = +process.env.NOCLIP;
 if (process.env.CLIPX) SECRET.mord.clipX = +process.env.CLIPX;
 if (process.env.CLIPSTEP) SECRET.mord.clipStep = +process.env.CLIPSTEP;
-if (process.env.AT) SECRET.mord.at = +process.env.AT;
 // 10/31 08:xx 시제품: REGRIP=0.4(실제 초 — 자연스러운 쥠 바꿈) · BURST=1(강제 뒤 박차기) · BURSTFREE=1(그 걸음 기력 안 냄) · POMMEL=1(쥠 그대로 폼멜 찍기)
-if (process.env.REGRIP) SECRET.mord.regrip = TIME.k * +process.env.REGRIP;
 if (process.env.BURST) SECRET.mord.burstBack = +process.env.BURST;
 if (process.env.BURSTFREE) SECRET.mord.burstFree = +process.env.BURSTFREE;
 if (process.env.POMMEL) SECRET.mord.pommel = +process.env.POMMEL;
@@ -39,7 +37,7 @@ function selfClip(P, I, rec) {
     arm = Math.min(arm, segToPoint(c.clone().sub(a), c.clone().add(a), hd) - hr - rad);
   }
   const sq = qOf(P.sword.rotation()), sp = new THREE.Vector3().copy(P.sword.translation());
-  const gp = new THREE.Vector3(0, P.mordGrip ? P.mordGrip.g : 0, 0).applyQuaternion(sq).add(sp), pom = new THREE.Vector3(0, -0.15, 0).applyQuaternion(sq).add(sp);
+  const gp = new THREE.Vector3(0, 0, 0).applyQuaternion(sq).add(sp), pom = new THREE.Vector3(0, -0.15, 0).applyQuaternion(sq).add(sp);
   const hilt = segToPoint(gp, pom, hd) - hr - 0.02;
   if (Math.max(wS.distanceTo(hd), wO.distanceTo(hd)) > 1.0) { rec.scCut = (rec.scCut ?? 0) + 1; return; } // 팔이 잘려 날아감 (붙은 팔은 머리에서 0.85 m 밖으로 못 감) — 재지 않음
   const hand = Math.min(wS.distanceTo(hd), wO.distanceTo(hd));

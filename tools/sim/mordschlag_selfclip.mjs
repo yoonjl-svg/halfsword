@@ -14,7 +14,6 @@ const GUARDS = (process.env.GUARDS || 'home,high,low').split(',');
 if (process.env.MORD_JSON) Object.assign(SECRET.mord, JSON.parse(process.env.MORD_JSON));
 // 10/31 08:xx 시제품: REGRIP=0.4(실제 초 — 쥠 바꿈) · BURST=1(강제 뒤 박차기) · BURSTFREE=1 · POMMEL=1(폼멜 찍기) · NOCLIP=1 · CLIPSTEP=
 { const { realS } = await import('../../src/config.js');
-  if (process.env.REGRIP) SECRET.mord.regrip = realS(+process.env.REGRIP);
   if (process.env.BURST) SECRET.mord.burstBack = +process.env.BURST;
   if (process.env.BURSTFREE) SECRET.mord.burstFree = +process.env.BURSTFREE;
   if (process.env.POMMEL) SECRET.mord.pommel = +process.env.POMMEL;
@@ -76,7 +75,7 @@ for (const gap of GAPS) for (const gd of GUARDS) {
     const W = P.weaponCfg;
     const pom = new THREE.Vector3(0, -0.15, 0).applyQuaternion(sq).add(sp), tip = new THREE.Vector3(0, W.hiltLength + W.bladeLength, 0).applyQuaternion(sq).add(sp);
     const sw = segDist(pom, tip, hd) - headR - 0.02;
-    const gp = new THREE.Vector3(0, P.mordGrip ? P.mordGrip.g : 0, 0).applyQuaternion(sq).add(sp); // 칼 든 손이 쥔 자리
+    const gp = new THREE.Vector3(0, 0, 0).applyQuaternion(sq).add(sp); // 칼 든 손이 쥔 자리
     const swH = segDist(pom, gp, hd) - headR - 0.02, swT = segDist(gp, tip, hd) - headR - 0.02; // 칼자루 쪽(손 → 폼멜 끝 — 치는 막대) · 칼끝 쪽(손 → 칼끝 — 내 쪽으로 남는 꼬리)
     // 옮김 delta (몸 틀): 시작 자세(옮긴 뒤 — segs[0].B) − home(다시 세우기 끝 — 옮기기 전 시작 자세)
     const s0 = I.mord.start ?? I.segs[0]?.B, sh = I.mord.home ?? I.segs.find((sg) => sg.B.back)?.B;

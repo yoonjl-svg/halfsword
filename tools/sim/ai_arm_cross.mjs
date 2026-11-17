@@ -43,7 +43,7 @@ function applySets(CONFIG, s) {
 export function scriptedNow(f) {
   const uq = f.skill?.uniq;
   const aiSc = !!f.aiCtl?.secretRun || (!!f.aiCtl?.specRun && f.aiCtl.specRun.motion == null); // AI 비기 · 특수 공격 동작 (fighter.js aiScripted)
-  return aiSc || !!f.skill?.sec || (!!uq && (uq.hold?.st === 'press' || uq.hold?.st === 'wind' || !!uq.running)) || !!f.iai || !!f.iaiOneHold || !!f.mordGrip || !!f.armsPlaced?.() || f.skill?.thrustPose?.w > 0;
+  return aiSc || !!f.skill?.sec || (!!uq && (uq.hold?.st === 'press' || uq.hold?.st === 'wind' || !!uq.running)) || !!f.iai || !!f.iaiOneHold || !!f.armsPlaced?.() || f.skill?.thrustPose?.w > 0;
 }
 /** 몸 하나 칸 */
 const newTally = () => ({ n: 0, ns: 0, f: Object.fromEntries(FLAGS.map((k) => [k, 0])), fs: Object.fromEntries(FLAGS.map((k) => [k, 0])), deep: 0, minArms: Infinity });

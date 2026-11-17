@@ -46,15 +46,14 @@ test('탈진 중 이동·찌르기·막기·비기 예약 차단, 자연 회복 
 }));
 test('AI 탈진은 지형 우회보다 우선하여 자발적 이동을 막음',()=>game(g=>{g.enemy.stamina.spend('attack',STAMINA.max-STAMINA.floor);g.ai.update(DT);near(g.enemy.move.length(),0);assert.equal(g.ai.mode,'watch');}));
 test('진행 중 발도는 탈진 때 끝나고 팔·칼의 동적 물리와 양손 잡기를 복구',()=>{
- const previous=SECRET.iaiKinematic;
- try{for(const kinematic of [0,1]){SECRET.iaiKinematic=kinematic;game(g=>{
+ game(g=>{
   g.ai.update=()=>{};const p=g.player;for(let i=0;i<240;i++)g.step();
-  requestIai(p,{player:true});g.step();assert.ok(p.iai);assert.equal(p.sword.isKinematic(),!!kinematic);
+  requestIai(p,{player:true});g.step();assert.ok(p.iai);assert.equal(p.sword.isKinematic(),false);
   p.iaiOneHold=true;p.stamina.spend('attack',STAMINA.max-STAMINA.floor);g.step();
   assert.equal(p.iai,null);assert.equal(p.iaiOneHold,false);assert.equal(p.sword.isDynamic(),true);
   for(const part of ['uarmS','farmS'])assert.equal(p.bodies[part].isDynamic(),true);
   for(let i=0;i<60;i++)g.step();assert.ok(Number.isFinite(p.bodies.pelvis.translation().y));
- },'uchigatana');}}finally{SECRET.iaiKinematic=previous;}
+ },'uchigatana');
 });
 test('실제 칼 충돌을 상대 공격당 한 번의 막기 비용으로 셈',()=>game(g=>{
  const guard=new PlayerParryGuard(g.player,g.enemy);g.player.stamina.controller=guard;guard.held=true;g.before=()=>guard.step(DT);

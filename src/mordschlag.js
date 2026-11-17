@@ -24,13 +24,6 @@ export function mordMode(f) {
   return 'hilt'; // 폼멜 찍기 (10/31 사장님 결정 — 쥠 그대로)
 }
 
-/** 거꾸로 쥔 자리 (칼 축 y, m): 칼 든 손 g(칼날 위 SECRET.mord.at 몫) · 빈손 gOff(칼 든 손보다 칼끝 쪽 |gripAlong| — 한손 칼은 같은 자리) */
-export function mordGripOf(f) {
-  const W = f.weaponCfg;
-  const g = W.hiltLength + W.bladeLength * SECRET.mord.at;
-  return { g, gOff: g - (W.twoHand ? W.gripAlong ?? -0.14 : 0) };
-}
-
 /** 이 비기가 휘두르는 기술 (꾸러미의 기본 동작 — SECRET.mord.tech, 없으면 정수리 베기) */
 export function mordTech(byName) {
   const t = byName?.oberhau;
@@ -72,12 +65,11 @@ export function mordReady(f) {
  */
 export function mordSwinging(f) {
   const W = f.weaponCfg;
-  const m = f.mordGrip;
-  const lever = m ? m.g - W.hiltLength : 0.12;
+  const lever = 0.12;
   const sw = f.sword;
   const r = sw.rotation();
   const t = sw.translation();
-  const y = m ? W.hiltLength : -0.12; // 코등이 (거꾸로) · 폼멜 (쥠 그대로) — 칼 원점 기준 칼 축
+  const y = -0.12; // 폼멜 — 칼 원점 기준 칼 축
   const p = { x: t.x + y * 2 * (r.x * r.y - r.w * r.z), y: t.y + y * (1 - 2 * (r.x * r.x + r.z * r.z)), z: t.z + y * 2 * (r.y * r.z + r.w * r.x) };
   const v = sw.velocityAtPoint(p);
   return Math.hypot(v.x, v.y, v.z) >= (6 * lever) / (W.hiltLength + W.bladeLength);
@@ -113,11 +105,9 @@ function over(f, on) {
 export function mordEnd(f) {
   over(f, false);
   // 칼끝을 곧게 위로 (다시 세우기 끝은 칼자루가 대개 위라 거의 같은 줄 · 손이 늦거나 끊겼을 때도 칼날이 상대 몸 · 땅 속으로 옮겨 가지 않게)
-  if (f.mordGrip) f.reverseGrip(null, UP);
   f.mordAim = false;
   f.mordHold = null;
 }
-const UP = { x: 0, y: 1, z: 0 };
 
 // ── 가볍고 느림을 고칠 안 (10/22 밤 감독 — 스위치 · 기본 끔 · 문서 §11) ──
 
@@ -196,7 +186,7 @@ export function mordHeadReach(f) {
   const head = f.foe?.bodies?.head;
   if (!head || !f.weaponCfg) return false;
   const mode = mordMode(f);
-  const K = mordKinOf(f, { mord: { mode, G: mode === 'reverse' ? mordGripOf(f) : null } });
+  const K = mordKinOf(f, { mord: { mode, G: null } });
   const q = f.bodies.chest.rotation();
   const S = _s.set(ARM.shoulder[0], ARM.shoulder[1], f.side * ARM.shoulder[2]).applyQuaternion(_q.set(q.x, q.y, q.z, q.w)).add(f.bodies.chest.translation());
   const h = head.translation();

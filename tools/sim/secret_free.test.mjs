@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { newRound, CONFIG, THREE } from './harness_m.mjs';
 import { SECRET, STAMINA, UNIQUE_ASSIST as UA, AI_PLAN_JP, realS } from '../../src/config.js';
 import { TRADITIONS, playerSecretDef } from '../../src/schools.js';
-import { PlayerSecretWatch, secretUsesOf, secretCostOf, secretFree, gkFreeOn } from '../../src/secret.js';
+import { PlayerSecretWatch, secretUsesOf, secretCostOf, secretFree } from '../../src/secret.js';
 import { drawInput, drawTapTake, iaiSeated } from '../../src/iai_obi.js';
 import { altibShot } from '../../src/unique_assist.js';
 import { iaiTipSpeed } from '../../src/secret_instant.js';

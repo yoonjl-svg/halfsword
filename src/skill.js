@@ -34,13 +34,12 @@ import { VITAL, playerVitalThrust, measureThrustRange } from './vital_target.js'
 import { LOW_FINISH, lowFinishOn } from './finish_entry.js'; // 낮은 상대 진입 (FINISH.entry 'low', 기본 끔 — 10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, startLunge, gilmokCutPose, gilmokSeg, stanceSpread } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 이탈리아 거침없이 나아가 찌르기 — 상대 팔 늦춤 (흘림과 같은 장치, 10/22)
-import { requestSpin, spinAbort, spinCutPose, spinCap, spinHandRest, spinLid } from './iberian_spin.js'; // 이베리아 비기 휘감아 돌기 (10/22 — 한 바퀴 도는 대본)
 import { windStep } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 — ai.js rdWindTick)
 import { linkStep } from './iberian_link.js'; // AI 이어 돌리기 (11/14)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain, gnsBlockOf, secretCostOf } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf, mordBurstTick, mordMode } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
-import { huntShareK, huntStacksFor } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 상대를 겨눈 격살 칼끝 빠르기 몫 × (1 + share × 겹)
+import { huntStacksFor } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 상대를 겨눈 격살 칼끝 빠르기 몫 × (1 + share × 겹)
 
 const D2R = Math.PI / 180;
 const _yawInv = new THREE.Quaternion();
@@ -57,27 +56,19 @@ const _d2 = new THREE.Vector3();
 const _r = new THREE.Vector3();
 const _u0 = [0, 0, 0];
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
-/** 격살(10/22 — schools.js CHINESE_SECRET_GYEOKSAL do.power 'gyeoksal'): 판정 에너지 배율 = SECRET.gyeoksal.power ('finish' = 마무리 찍기와 같은 FINISH.power · 수면 그 수) */
+/** 비기 판정 에너지 배율 (do.power 칸 — 격살 'gyeoksal' 은 결정타라 여기 오지 않음): 'finish' = 마무리 찍기와 같은 FINISH.power · 'hit' = 1 · 수면 그 수 */
 const secretEffMul = (D) => {
-  const v = D.power === 'gyeoksal' ? SECRET.gyeoksal?.power : D.power;
+  const v = D.power;
   return v === 'finish' ? FINISH.power : v === 'hit' ? 1 : +v || 1;
 };
 /** 격살 판정 배율 (11/11 사장님 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' — SECRET.gyeoksalHitMul 1 · null 이면 다른 비기와 같은 SECRET.hitMul · 서보 길 둘 다 */
 export const gyeoksalHitMul = () => SECRET.gyeoksalHitMul ?? SECRET.hitMul;
-/** 격살 판정 묶음 (requestCombo 칸): 'hit' = 결정타 격살 배율 gyeoksalHitMul(판정 에너지 · secretHit — 11/11 1 · 전 다른 비기와 같은 SECRET.hitMul 1.3) · 그 밖 = 결정타 없이 eff × secretEffMul · 시험 빠르기 몫 share · 잔상 굵기 width(trailWidth 켬일 때 = 빠르기 몫) */
-//  11/14 동방 맹호은림 (cn_hunt.js huntShareK — 사장님 '스택당 … 격살 빠르기 +8%'): 겨눈 상대에 쌓인 사냥 겹마다 몫 × (1 + share × 겹) · 겹 없으면 그대로(× 1)
+/** 격살 판정 묶음 (requestCombo 칸): 결정타 격살 배율 gyeoksalHitMul(판정 에너지 · secretHit) · 칼끝 빠르기 몫 = SECRET.gkFree.share + add × 겹(11/16 격살 풀기 — 사냥 겹 cn_hunt.js) */
 const gyeoksalReq = (D, f) => {
-  const G = SECRET.gyeoksal ?? {};
-  const pw = D.power === 'gyeoksal' ? G.power : D.power;
+  const pw = D.power === 'gyeoksal' ? 'hit' : D.power;
   const F = SECRET.gkFree;
-  if (F?.on) {
-    // 격살 풀기 (11/16 — SECRET.gkFree · 사장님 '고노센의 35%면 … 스택 하나당 +5~8%'): 몫 = share + add × 겹 (더함 — 지금 판은 0.7 × (1 + 0.08 × 겹) 곱)
-    const sh = F.share + F.add * huntStacksFor(f);
-    return { ...(pw === 'hit' ? { hitMul: gyeoksalHitMul() } : { hitMul: 1, effMul: secretEffMul(D) }), share: sh, ...(G.trailWidth ? { width: Math.min(1, sh) } : {}) };
-  }
-  const hk = huntShareK(f);
-  const share = (G.share > 0 ? G.share : SECRET.cnFastShare) * hk;
-  return { ...(pw === 'hit' ? { hitMul: gyeoksalHitMul() } : { hitMul: 1, effMul: secretEffMul(D) }), ...(G.share > 0 ? { share: G.share * hk } : {}), ...(G.trailWidth ? { width: Math.min(1, share) } : {}) };
+  const sh = F.share + F.add * huntStacksFor(f);
+  return { ...(pw === 'hit' ? { hitMul: gyeoksalHitMul() } : { hitMul: 1, effMul: secretEffMul(D) }), share: sh };
 };
 /** 격살 한 칼 requestCombo 덧칸 (사람 skill.js · 11/14 AI ai.js secretGo 같이 — 사람과 같은 값): 판정 묶음(gyeoksalReq — 사냥 겹 빠르기 포함) · 잔상은 베는 토막만 · 찌르기면 마주 보는 띠 · 밝기 바닥 */
 export const gyeoksalComboOpt = (D, f, moves) => ({ ...gyeoksalReq(D, f), arcCut: true, face: moves.some((m) => m.kind === 'thrust') ? 'line' : null, min: SECRET.secretArcMin ?? 0 });
@@ -642,7 +633,7 @@ export class Skill {
   secret(o) {
     const f = this.f;
     if (f.stamina.exhausted || this.sec || this.tap || this.pom || !o?.S || !f.alive || !f.armed || f.state !== 'stand' || !f.foe) return false;
-    if (!o.special && !f.stamina.secretReady) return false; // 특수 공격(11/11 싱지르 — o.special)은 이 문턱 없음 · 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써' · 18:3x '0 이하' — SECRET.secretStamina · 사람 창 · AI 는 그 앞에서 거름) — 아무것도 안 나감 · 판당 쓸 수 안 씀
+    if (!f.stamina.secretReady) return false; // 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써' · 18:3x '0 이하' — SECRET.secretStamina · 사람 창 · AI 는 그 앞에서 거름) — 아무것도 안 나감 · 판당 쓸 수 안 씀
     const S = o.S;
     const D = S.do;
     const school = f.swordArt?.school;
@@ -690,12 +681,6 @@ export class Skill {
       run.stage = 'instant';
       run.instant = true;
       run.lunge = true;
-    } else if (D.spin) {
-      // 이베리아 휘감아 돌기 (10/22): 앞발을 축으로 몸을 한 바퀴 돌리는 대본 (iberian_spin.js) — 두 발로 딛고 있어야 건다(못 걸면 비기 아님 · 창은 이미 썼다)
-      if (!requestSpin(f, run.ctx?.turnDir ?? 0, run.special ? { share: UNIQUE_ASSIST.specialShare?.[run.special] ?? 0, special: true } : undefined)) return false; // 10/23 스틱 판: 스틱을 돌린 쪽 (ctx.turnDir — secret.js spinStick) · 공격 입력 판은 0 = 칼 든 쪽 · 11/11 특수 공격 싱지르 = 칼끝 고노센 × specialShare.cingir · 한 걸음 나가며(stride)
-      if (SECRET.ibSpin.handRest && !f.aiControlled) spinHandRest(f); // 10/24 10:4x: 사람 손 목표를 쉼 자세로 (원을 그린 손 목표가 몸통을 원 끝 쪽으로 틀어 두어 놓은 칼이 머리 위로 솟았다 — iberian_spin.js)
-      run.stage = 'spin';
-      if (!run.special) this.secretBursts++; // 특수 공격 싱지르(11/11)는 비기 연출 · 소리 없음
     } else if (D.break) {
       // 독일 Versetzen: 들어오는 줄을 깨는 비밀 베기 (창을 연 위협의 줄)
       const th = run.ctx ?? {};
@@ -761,7 +746,7 @@ export class Skill {
       run.queue.push(D.step ? { ...base, step: { ...D.step, fwd: secVal(D.step.fwd), push: secVal(D.step.push) } } : base);
     } else return false;
     this.sec = run;
-    if (!run.special) f.stamina.secret(secretCostOf(S)); // 특수 공격 싱지르(11/11)는 비기 기력 없음 — 아래 베기 한 번 값 · 11/16 고노센 SECRET.gnsCost 50 (secret.js secretCostOf)
+    f.stamina.secret(secretCostOf(S)); // 11/16 고노센 SECRET.gnsCost 50 (secret.js secretCostOf)
     if (run.risoluto) {
       if (run.lunge) {
         requestCombo(f, risolutoLungeReq(f));
@@ -776,10 +761,9 @@ export class Skill {
     }
     this.recovering = false;
     this.cutPending = true;
-    const st = (this.secretStats[run.special ?? S.name] ??= { fired: 0, landed: 0 }); // 특수 공격(11/11 싱지르)은 그 이름 칸
+    const st = (this.secretStats[S.name] ??= { fired: 0, landed: 0 });
     st.fired++;
     if (run.risoluto) st.armSlow = (st.armSlow ?? 0) + (run.armSlow ? 1 : 0);
-    if (run.stage === 'spin') f.stamina.attack('cut', !run.special); // 휘감아 돌기: 기력은 큰 동작 · 비기 그대로 (위 secret() + 베기 한 번 — 흐름 토막과 같은 셈) · 11/11 특수 공격 싱지르 = 다른 특수 공격처럼 베기 한 번 값
     if (!run.stage) this.secretNextMove();
     return true;
   }
@@ -931,21 +915,6 @@ export class Skill {
       run.stiffT = run.guardT > 0 ? 0 : run.lunge ? risolutoStiff() : SECRET.stiff[run.tr] ?? realS(0.3); // 런지 뒤 굳음 0.6 s (사장님 10/24) · 11/16 겨눔 되돌림(guardT — 죽음의 일격 · 리솔루토)이면 굳음 없음(되돌림이 0.6 s 무방비)
       return;
     }
-    if (run.stage === 'spin') {
-      // 이베리아 휘감아 돌기 (10/22 — iberian_spin.js): 도는 동안 서보 힘 창 · 보조 힘 · 판정 배율. 대본이 끝나면(막힘 포함) 칼이 지나갈 때까지 따라 지나감 → 경직
-      const H = SECRET.ibSpin.hit;
-      f.powerMul = SECRET.ibSpin.power;
-      f.secretHit = H === 'finish' ? FINISH.power : H === 'one' ? 1 : SECRET.hitMul; // 판정 에너지 배율 (마무리 찍기 FINISH.power 와 같은 칸 — 갑옷 · 투구 판정은 그대로 거친다)
-      if (D.strength) f.strength = run.str0 * secVal(D.strength);
-      if (f.ibSpin) return;
-      run.spin = f.ibSpinDone ?? null;
-      f.ibSpinDone = null;
-      run.stage = 'follow';
-      run.t = 0;
-      f.powerMul = 1;
-      if (D.strength) f.strength = run.str0;
-      return;
-    }
     if (run.stage === 'back') {
       const B = D.back;
       this.secretMove(B.guard[0], B.guard[1], L.parrySpeed * handMul, dt);
@@ -997,7 +966,7 @@ export class Skill {
     if (run.stage === 'strike') {
       const inLoop = !!run.cur?.pre?.length && run.path.length > run.cur.path.length; // 연환삼격 이음새 고리 동안 (10/10 04:4x): 검무 빠르기(loopHand), 힘 창·판정 배율 없음 — ai.js 와 같음
       f.powerMul = inLoop ? 1 : secVal(D.power ?? 'power') * (run.gain ?? 1); // run.gain: 독일 막기 연환 붙은 시간 어드밴티지 (없으면 1 — 다른 비기는 전과 같음)
-      const gkHit = D.power && (D.power === 'gyeoksal' ? SECRET.gyeoksal?.power : D.power) === 'hit'; // 격살 시험 'hit' = 다른 비기와 같은 결정타
+      const gkHit = D.power === 'gyeoksal' || D.power === 'hit'; // 격살 = 결정타 (gyeoksalHitMul)
       f.secretHit = inLoop ? 1 : D.power && !gkHit ? 1 : run.mord ? mordHitMul() : (D.power === 'gyeoksal' ? gyeoksalHitMul() : SECRET.hitMul) * (run.gain ?? 1); // 죽음의 일격: SECRET.mord.power (기본 'hit' = hitMul 그대로) · 격살 'hit' = gyeoksalHitMul (11/11 1 — 서보 길 cnFast 0)
       if (D.power && !gkHit) f.effMul = secretEffMul(D); // 격살 서보 길(cnFast 0): 판정 에너지 × FINISH.power — 따라 지나감까지 (secretEnd 에서 지움)
       if (D.strength) f.strength = run.str0 * (inLoop ? 1 : secVal(D.strength));
@@ -1043,15 +1012,13 @@ export class Skill {
       if (D.strength) f.strength = run.str0;
       return;
     }
-    if (run.stage === 'follow' && run.spin?.vmax < Infinity) spinCap(f, run.spin.vmax); // 휘감아 돌기 share 판 (10/24): 따라 지나가는 칼도 칼끝 상한 (iberian_spin.js)
-    if (run.stage === 'follow' && run.S?.do?.spin) spinLid(f); // 싱지르 몸통 뚜껑 (10/24 10:4x): 따라 지나가는 칼끝도 몸통 위 끝을 넘어 오르지 않게 (iberian_spin.js)
     if (run.stage === 'follow') {
       // 손은 끝 자세에 닿았지만 칼은 아직 지나가는 중 — 판정 배율은 칼이 지나갈 때까지
       // 죽음의 일격은 치는 끝이 칼자루라 칼끝(손 뒤 꼬리) 대신 코등이 빠르기를 칼끝 거리 비로 줄인 문턱에 견준다 (mordSwinging — 같은 6 m/s · 같은 0.3 · 0.5 s)
       if ((run.t >= 0.3 && (run.mord ? !mordSwinging(f) : f.tipVel.length() < 6)) || run.t > 0.5) {
         f.secretHit = 1;
         if (f.effMul != null) f.effMul = null;
-        if (run.landed) this.secretStats[run.special ?? run.S.name].landed++;
+        if (run.landed) this.secretStats[run.S.name].landed++;
         if (run.mord) {
           run.stage = 'mordBack'; // 죽음의 일격: 칼자루를 다시 세운 뒤 원래 쥠으로 (아래)
           run.t = 0;
@@ -1059,7 +1026,7 @@ export class Skill {
         }
         run.stage = 'stiff';
         run.t = 0;
-        run.stiffT = run.special ? SECRET.ibSpin.specialStiff ?? SECRET.stiff[run.tr] ?? realS(0.3) : SECRET.stiff[run.tr] ?? realS(0.3); // 11/11 특수 공격 싱지르 = specialStiff (0 — 굳음 없음 · 비기 굳음은 알티바슈 포르트로)
+        run.stiffT = SECRET.stiff[run.tr] ?? realS(0.3);
         if (!(run.stiffT > 0)) return this.secretEnd();
       }
       return;
@@ -1113,8 +1080,7 @@ export class Skill {
     const f = this.f;
     const run = this.sec;
     this.sec = null;
-    if (f.mordGrip || f.mordAim) mordEnd(f); // 죽음의 일격이 끊겼으면 원래 쥠 · 겨눔으로 (mordschlag.js)
-    if (f.ibSpin) spinAbort(f, 'end'); // 휘감아 돌기 대본이 아직 돌면 끊는다 (넘어짐 · 칼 놓침 — 10/22)
+    if (f.mordAim) mordEnd(f); // 죽음의 일격이 끊겼으면 원래 쥠 · 겨눔으로 (mordschlag.js)
     f.powerMul = 1;
     f.secretHit = 1;
     if (f.effMul != null) f.effMul = null;
@@ -1679,11 +1645,6 @@ export class Skill {
       // 이베리아 길목 한 칼의 덧씌우기 자세 (10/11 v6 2차 — AI 와 같은 함수 secret_instant.js gilmokCutPose): 팔을 앞으로 뻗어 몸통 높이로 둘러 벰
       const g = this.sec ? gilmokSeg(this.sec.cur?.name, this.sec.stage === 'stiff') : { seg: null, s: 1 };
       gilmokCutPose(f, g.seg, g.s, dt);
-    }
-    if (this.sec?.S?.do?.spin || f.spinPoseW > 0) {
-      // 이베리아 휘감아 돌기의 팔 · 칼 덧씌우기 (10/22 — iberian_spin.js): 도는 동안 칼을 칼 든 쪽 뒤로 수평으로 감고, 칼을 놓은 뒤 · 따라 지나감 · 경직 동안 가로 베기 끝 자세
-      const st = this.sec?.S?.do?.spin ? this.sec.stage : null;
-      spinCutPose(f, st === 'spin' ? (f.ibSpin && !f.ibSpin.free ? 'wind' : 'cut') : st === 'follow' || st === 'stiff' ? 'cut' : null, dt);
     }
     if (this.flick) flickDrive(this, dt); // 채찍 톡 = 손목 튕기기 (손 목표를 손가락 긋기처럼 옮긴다 — druid_whip.js)
     // 손가락 긋기 감도 (11/06 — finger_cut.js · SKILL.fingerCut.gain · 기본 1 = 끔): 사람 손가락으로 긋는 동안(지난 스텝 휘두르기) 지난 스텝 뒤 손가락이 옮긴 손 목표 몫을 × gain.

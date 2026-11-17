@@ -30,7 +30,7 @@ import * as THREE from 'three';
 import { UNIQUE_ASSIST as UA, SKILL, SECRET, STAMINA, IB_FLOW, IB_LINK, THRUST, realRate, realS, realV, PHYSICS, CLOSE, WEAPON } from './config.js';
 const SKILL_DT = PHYSICS.timestep; // 물리 한 스텝 (게임 초 — 이어 돌리기 손가락 첫머리 나눔)
 import { G, TECH, TECH_BY_NAME } from './ai_techniques.js';
-import { TRADITIONS, IBERIAN_SPIN_DEF } from './schools.js';
+import { TRADITIONS } from './schools.js';
 import { useSecret } from './secret.js'; // 이베리아 비기 알티바슈 포르트 판당 쓸 수 (11/11 — windFire 비기 칼)
 import { segDist } from './skill.js';
 import { requestArtReturn, requestArtSnap, requestArtThrust, requestArtFold, requestArtDup, requestArtRedondo, setArtTechOf, iaiBusy, iaiTipSpeed, snapAim } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21) · 제비 베기 되돌림 칼 (10/25 해법 ②) · 칼끝 돌려 빼기 운동학 찌름 (10/28)
@@ -789,12 +789,12 @@ export class PlayerUniqueAssist {
     if (H.st === 'wind') {
       const why = this.windStop();
       if (why) return this.windCancel(why);
-      if (!P.down) return this.windFire('release');
+      if (!P.down) return this.altibFire('release');
       const S = f.stamina;
       S.spent.wind ??= 0;
       S.spend('wind', (UA.rdDrainCut ? realRate(STAMINA.cutCost) * S.weight : UA.rdDrain) * dt); // 회복 멈춤
-      if (H.secret) H.base += (UA.rdDrainCut ? realRate(STAMINA.cutCost) : UA.rdDrain) * dt; // 11/11 알티바슈 포르트 무게 보정 셈(SECRET.altib.weightFix — 무게 1 값으로 뺀 기력)
-      if (!S.infinite && S.value <= 0) return this.windFire('empty');
+      H.base += (UA.rdDrainCut ? realRate(STAMINA.cutCost) : UA.rdDrain) * dt; // 11/11 알티바슈 포르트 무게 보정 셈(SECRET.altib.weightFix — 무게 1 값으로 뺀 기력)
+      if (!S.infinite && S.value <= 0) return this.altibFire('empty');
       const hit = windStep(f, dt);
       if (hit) this.stats.windTouch = (this.stats.windTouch ?? 0) + 1; // 감는 칼이 무엇에 닿은 스텝 (재기만 — 닿아도 그대로 감음 · 세게 맞으면 windStop 의 jolt · 상처면 hit)
       return;
@@ -817,15 +817,13 @@ export class PlayerUniqueAssist {
     }
     H.t += dt;
     if (H.t < UA.rdHoldTime) return;
-    const e = this.holdE;
-    // 11/11 'altib' 판 (SECRET.iberianSecret — 사장님 '알티바슈 포르트를 고노센 급의 비기로'): 알티바슈 포르트 무장 창(press.armed)이 열린 동안만 메기 = 비기 · 무장 없으면 이 누름은 아무 일도 안 함(특수 공격 아님 · 식힘 없음)
-    const sec = true;
-    if (!UA.rdHold || (sec ? !P.armed : this.cooling(e) || P.secretOpen) || this.busy() || iaiBusy(f) || f.stamina.exhausted || !f.sword) {
+    // 11/11 알티바슈 포르트 (사장님 '알티바슈 포르트를 고노센 급의 비기로'): 알티바슈 포르트 무장 창(press.armed)이 열린 동안만 메기 = 비기 · 무장 없으면 이 누름은 아무 일도 안 함(특수 공격 아님 · 식힘 없음)
+    if (!UA.rdHold || !P.armed || this.busy() || iaiBusy(f) || f.stamina.exhausted || !f.sword) {
       H.st = 'spent';
       this.stats.holdRefused = (this.stats.holdRefused ?? 0) + 1;
       return;
     }
-    this.windBegin(sec);
+    this.windBegin();
   }
 
   /** 감기에 뗀 손목 원뿔 · 칼 어깨 면 밧줄 (10/29 20:0x 휘청 고침 — iberian_redondo.js windStart): 내려침 운동학 칼이 끝나고 · 그만둔 팔의 덧씌우기 칸을 다 내려놓은 뒤 다시 건다 */
@@ -837,11 +835,11 @@ export class PlayerUniqueAssist {
     H.ropes = null;
   }
 
-  windBegin(secret = false) {
+  windBegin() {
     const f = this.f;
     const H = this.hold;
     H.st = 'wind';
-    H.secret = !!secret; // 11/11 알티바슈 포르트 비기 메기 (secret.js PlayerSecretWatch.spinTick 이 보고 무장을 씀 — 한 번 무장에 한 번)
+    H.secret = true; // 11/11 알티바슈 포르트 비기 메기 (secret.js PlayerSecretWatch.spinTick 이 보고 무장을 씀 — 한 번 무장에 한 번)
     H.s0 = f.stamina.value; // 멜 때 기력 (무게 보정 셈 — SECRET.altib.weightFix)
     H.base = 0;
     H.wounds0 = f.wounds?.length ?? 0;
@@ -864,7 +862,7 @@ export class PlayerUniqueAssist {
     if (f.state !== 'stand') return 'down';
     if ((f.wounds?.length ?? 0) > (this.hold.wounds0 ?? 0)) return 'hit';
     if (this.blocked || f.parryGuard?.held) return 'parry';
-    if (sk.sec || f.ibSpin) return 'secret';
+    if (sk.sec) return 'secret';
     if (f.stamina.exhausted) return 'exhausted';
     if (f.jolt > 0.5) return 'jolt'; // 칼을 세게 맞음 (맞아 흔들림 = 끊김 — 막기 연환 secret.js 와 같은 문턱)
     if (sk.tap || sk.pom || f.iai || f.iaiReq || !f.foe) return 'busy';
@@ -883,35 +881,6 @@ export class PlayerUniqueAssist {
     this.hold.fade = 0.12;
     this.stats.windCancel ??= {};
     this.stats.windCancel[why] = (this.stats.windCancel[why] ?? 0) + 1;
-  }
-
-  /** 내려침 (떼었거나 기력이 바닥) — 운동학 칼 · 기술 알림 · 칼 하나 기력 · 식힘 시작 · 흐르는 긋기 셈 */
-  windFire(why) {
-    if (this.hold.secret) return this.altibFire(why); // 11/11 비기 알티바슈 포르트
-    const f = this.f;
-    const e = this.holdE;
-    const W = f.rdWind;
-    const turns = W?.turns ?? 0;
-    this.hold.ropes = windEnd(f, true) ?? this.hold.ropes; // 뗀 밧줄은 내려침 운동학 칼이 끝난 뒤 (holdTick — 머리 위 → 왼 어깨 길도 어깨 면 한도 밖을 지남)
-    this.hold.st = this.press.down ? 'spent' : 'idle'; // 기력이 바닥나 낸 칼: 손가락을 뗄 때까지 다시 감지 않음
-    this.hold.fade = 0.12;
-    const U = e.U;
-    const ok = UA.enhance > 0 && requestArtRedondo(f, rdReleaseOpt(f, W, { share: specialShare(e.name), maxT: UA.rdSnapTime, tech: U.name })); // 길 = rdReleaseOpt (10/31 19:xx 기본 'tajo' 멘 어깨에서 내려침 · 'direct' 10/30 곧장 사선 · 'chamber' 10/29 판)
-    if (!ok) {
-      this.stats.windCancel ??= {};
-      this.stats.windCancel.noStrike = (this.stats.windCancel.noStrike ?? 0) + 1;
-      return false;
-    }
-    this.coolStart(e); // 식힘은 내려침이 나간 순간부터 (사장님 10/28 02:0x '스킬이 발동한 순간부터 재')
-    if (this.cur) this.closeStroke(this.t);
-    this.tapRec = { tech: 'tap', kind: 'cut', tap: true, t0: this.t, dir: [0, 0], start: null, landed: false, bound: false, tEnd: null, unique: U.name }; // 앞 칼 기록 (다음 기회를 열지 않음 — tapChain 과 같음)
-    this.stats.fired[U.name] = (this.stats.fired[U.name] ?? 0) + 1;
-    this.stats.windFire ??= {};
-    this.stats.windFire[why] = (this.stats.windFire[why] ?? 0) + 1;
-    this.stats.windTurns = [...(this.stats.windTurns ?? []), +turns.toFixed(2)];
-    f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
-    f.stamina.attack('cut'); // 칼 하나 (끌고 가는 칼은 같은 공격 — same) · 풍차 베기 칼은 세 칼마다 기력 0 자리가 아님 (fighter.js ibChainCostK — 이어지는 흐름 B6)
-    return true;
   }
 
   /**
@@ -1008,7 +977,7 @@ export class PlayerUniqueAssist {
   /** 이어 돌리기를 낼 수 있나 (linkTry · 지연 줄 안 다음 넘기기 linkPlay 같은 조건): 다른 동작이 손을 쥐지 않음 · 서 있음 · 칼 · 앞 진짜 긋기가 끝나고 이어짐 창 안이거나 아직 휘두르는 중 */
   linkOk() {
     const f = this.f;
-    if (this.busy() || iaiBusy(f) || f.ibSpin || f.ibLink || this.winding || f.skill.sec || f.skill.tap || f.skill.pom || f.stamina.exhausted || f.state !== 'stand' || !f.sword || !f.armed) return false;
+    if (this.busy() || iaiBusy(f) || f.ibLink || this.winding || f.skill.sec || f.skill.tap || f.skill.pom || f.stamina.exhausted || f.state !== 'stand' || !f.sword || !f.armed) return false;
     // 앞 진짜 긋기가 끝나고 이어짐 창 안 · 11/15 또는 앞 진짜 긋기가 아직 휘두르는 중(손가락을 쉬지 않고 다음 칼을 그음 — 전엔 앞 칼이 끝나기 전에 그은 다음 칼은 원도 없고 손 반지름 끝에 막혀 안 나감)
     return (f.ibFlowChainNow?.() ?? -1) >= 0 || !!(f.ibFlowSw && (f.ibFlowPk ?? 0) >= IB_FLOW.cutSpeed);
   }
@@ -1122,7 +1091,7 @@ export class PlayerUniqueAssist {
     if (!f.alive || !f.armed || f.weaponBroken || !f.sword) return 'armed';
     if (f.state !== 'stand') return 'down';
     if ((f.wounds?.length ?? 0) > (f.ibLink?.wounds0 ?? this.link?.wounds0 ?? 0)) return 'hit';
-    if (sk.sec || f.ibSpin) return 'secret';
+    if (sk.sec) return 'secret';
     if (f.stamina.exhausted) return 'exhausted';
     if (sk.tap || sk.pom || f.iai || f.iaiReq || !f.foe) return 'busy';
     if (this.blocked) return 'busy'; // 11/15 (2) 막기 단추가 손을 쥠 — 받아 둔 손가락 몫을 버리고 막기에 손을 줌

@@ -34,7 +34,7 @@ export function canPickup(f) {
   if (f.flexWeapon) return false; // 휘는 마디 무기(채찍): 마디 강체가 따로 놀아 손잡이만 손으로 옮기면 마디 관절이 늘어난다
   if (f.severedLimbs?.has('armS') || !(f.limbs.armS >= VITALS.dropSwordArm)) return false; // 칼 팔을 잃었거나 칼을 쥘 힘이 없다(주워도 곧 놓침)
   if (f.stamina?.exhausted) return false;
-  if (f.iai || f.rdWind || f.ibSpin) return false; // 비기 · 특수 공격 대본이 몸 · 칼을 쥔 동안(놓친 채 남은 대본)은 기다림
+  if (f.iai || f.rdWind) return false; // 비기 · 특수 공격 대본이 몸 · 칼을 쥔 동안(놓친 채 남은 대본)은 기다림
   const col = f.swordColliders?.[0];
   return !!col && !f.colliderInfo?.get(col.handle)?.detached; // 잘린 팔과 함께 간 칼(잔해)
 }
@@ -78,7 +78,6 @@ export function pickupTick(f, dt) {
     f.pickW = 0;
     if (!pickupReady(f)) return;
     if (!f.pickupPress) return;
-    if (f.mordGrip) resetReverseGrip(f); // 거꾸로 쥔 채(죽음의 일격) 놓친 칼: 다시 쥘 땐 보통 쥠 — 아래
     P = f.pickup = { phase: 'bend', t: 0, T: realS(PICKUP.bend), wHand: 0, g: gripPoint(f, new THREE.Vector3()), face: null, sword: null, saved: null, t0: f.fightT, reach: swordReachDist(f), hand: null };
   }
   if (f.revival) return revivalHandoff(f); // 줍다가 쓰러져 부활이 시작됨: 칼은 부활 길(revive.js — 일어설 때 손으로 날아옴)에 맡긴다
@@ -158,14 +157,6 @@ function revivalHandoff(f) {
   (f.pickupLog ??= []).push({ t0: +P.t0.toFixed(3), t1: +f.fightT.toFixed(3), t2: +f.fightT.toFixed(3), ok: false, why: 'revive', reach: +P.reach.toFixed(3), hand: P.hand, step: P.step ?? 0 });
   f.pickup = null;
   f.pickW = 0;
-}
-
-/** 거꾸로 쥔 표시(fighter.reverseGrip — 죽음의 일격)를 지운다: 다시 쥐는 손목 관절은 보통 쥠(revive.js attachSword) · 손 기준 칼 관성도 보통 쥠으로 (fighter 생성자와 같은 셈) */
-function resetReverseGrip(f) {
-  f.mordGrip = null;
-  const lc = f.sword.localCom();
-  const pI = f.sword.principalInertia();
-  f.swordIhand = Math.max(pI.x, pI.z) + f.sword.mass() * lc.y * lc.y;
 }
 
 /** 쥔 칼(충돌 꺼짐)이 원래 그룹이면 부딪힐 것과 겹쳐 있나 (칼 몸체는 뺌) */

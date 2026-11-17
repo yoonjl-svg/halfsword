@@ -49,7 +49,7 @@ test('fingerCutK: 사람 손가락 팔이 긋는 동안만 · AI 는 ai 켬일 �
     });
     const off = [
       ['비기', { skill: { sec: {} } }], ['탭 찌르기', { skill: { tap: {} } }], ['손잡이 찍기', { skill: { pom: {} } }], ['채찍 톡', { skill: { flick: {} } }],
-      ['감기', { skill: { uniq: { winding: true } } }], ['끌고 가는 칼', { iai: {} }], ['끌고 갈 칼 부탁', { iaiReq: {} }], ['휘감아 돌기', { ibSpin: {} }], ['경직', { secretStiff: true }],
+      ['감기', { skill: { uniq: { winding: true } } }], ['끌고 가는 칼', { iai: {} }], ['끌고 갈 칼 부탁', { iaiReq: {} }], ['경직', { secretStiff: true }],
       ['칼자루 치기', { mordAim: true }], ['AI 풍차 감기', { rdWind: {} }], ['막기 단추', { parryGuard: { active: true } }], ['죽음', { alive: false }], ['칼 없음', { armed: false }], ['권총', { weapon: { gun: true } }],
     ];
     for (const [why, o] of off) {

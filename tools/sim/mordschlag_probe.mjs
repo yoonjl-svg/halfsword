@@ -48,7 +48,7 @@ for (const gap of GAPS) for (const gd of GUARDS) {
       stages[st] = (stages[st] ?? 0) + DT;
       const fa = P.bodies.farmS, sw = P.sword, sq = q(sw.rotation());
       const wr = new THREE.Vector3(0.13, 0, 0).applyQuaternion(q(fa.rotation())).add(fa.translation());
-      const gp = new THREE.Vector3(0, P.mordGrip ? P.mordGrip.g : 0, 0).applyQuaternion(sq).add(sw.translation());
+      const gp = new THREE.Vector3(0, 0, 0).applyQuaternion(sq).add(sw.translation());
       maxErr = Math.max(maxErr, wr.distanceTo(gp));
       const w = sw.angvel(); maxW = Math.max(maxW, Math.hypot(w.x, w.y, w.z));
       const cross = new THREE.Vector3(0, P.weaponCfg.hiltLength - 0.015, 0).applyQuaternion(sq).add(sw.translation());

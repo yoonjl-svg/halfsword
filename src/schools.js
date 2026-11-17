@@ -672,25 +672,8 @@ const ITALIAN_RISOLUTO = {
   },
   src: 'Fabris 1606 둘째 책 [153] 「andare di risolutione」 · [155] 「che quando la nimica si moue para essere legata dalla propria … che siano sempre unite」 · [156] 「tenendo fermo il braccio andare scorrendo il filo di detta nimica sino al corpo auerso senza mai abbandonarla」 [원문 — Wiktenauer 전사 · A. F. Johnson 영역] · 덮음을 칼 모양으로 재기 · 상대 팔 늦춤 [해석] · 수 [추정]',
 };
-// 이베리아 휘감아 돌기 (10/22 사장님 '이베리아는 새로 지은 기술을 만들면 어떨까 … 충분한 거리가 확보되어 있을 때 빙글 한바퀴 돌면서 엄청 강렬한 회전력을 발생시켜 일격' ·
-//  '애니메이션으로 한 발을 축으로 해서 빠르게 빙글 도는 모션' — docs/strike/iberian_spin_2026-10-22.md · SECRET.iberianSecret 'spin' 기본 · 값 SECRET.ibSpin):
-//   ① 무장: 상대 가슴이 내 칼끝 거리(reach) 밖에 SECRET.ibSpin.armTime 초 (일본 발도 대기와 같은 틀 — secret.js PlayerSecretWatch spinArm) → 무장이 이어지는 동안 창(금색 '!')
-//   ② 내는 조작(10/24 — 무장 동안 공격으로 원 한 바퀴 · 10/23 스틱 반 바퀴 · 10/22 공격 입력 하나는 스위치 SECRET.ibSpin.input · AI 는 상대가 들어오면 — ai.js spinTick) → 앞발을 축으로 몸을 한 바퀴 돌리는 대본(src/iberian_spin.js) — 칼은 칼 든 쪽 뒤로 수평으로 감겨 따라오다, 돌기 끝에 몸이 서는 동안 앞을 가로로 친다(탈류)
-//   ③ 경직 SECRET.stiff.iberian. 맞음 · 막힘 · 상처는 물리 판정 그대로 (판정 에너지 배율 SECRET.ibSpin.hit)
-//  근거: 고디뉴 1599 규칙 8 「umgürtet das Montante die gesamten Rippen, auch den gesamten Körper herumdrehend」 [원문 독일어 역] ·
-//   피게이레두 1651 단Ⅰ 「the body must always turn toward where the montante cuts」 [원문 영역] · 단Ⅺ 「talho orizontal」 · 복ⅩⅥ 「para vir a cingir pello lado dereyto」 [원문] ·
-//   한 바퀴를 도는 대본 · 무장 틀 · 수 [해석 · 추정]. 이름 = 원전 낱말 cingir(띠를 두르다 — 칼이 몸을 휘감음)
-const IBERIAN_SECRET_SPIN = {
-  name: 'ibSpin',
-  nameKo: '싱지르', orig: 'cingir', // 10/23 원어 독음 (전 '휘감아 돌기 (싱지르)')
-  when: 'spinArm', // 상대 사건 없음 — 무장 셈만 (secret.js PlayerSecretWatch)
-  do: {
-    spin: true, // 실행 = skill.js secret → iberian_spin.js requestSpin · 서보 힘 창 · 판정 배율은 SECRET.ibSpin.power · hit
-  },
-  src: '고디뉴 1599 규칙 8(갈비를 휘감고 온몸을 돌림) [원문 독일어 역] · 피게이레두 1651 단Ⅰ(몸은 베는 쪽으로 돈다)·단Ⅺ(가로 탈류)·복ⅩⅥ(감아 돎) [원문·원문 영역] · 무장 틀 · 한 바퀴 대본 [해석] · 수 [추정]',
-};
 // 이베리아 비기 '알티바슈 포르트' (11/11 사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자 … 알티바슈 포르트를 고노센 급의 비기로' — SECRET.iberianSecret 'altib' · 기록 docs/strike/ib_swap_2026-11-11.md):
-//  무장 = 싱지르 무장 그대로(내 칼끝 거리 밖 SECRET.ibSpin.armTime — secret.js spinTick · 창 ev 'altib') · 실행 = 전 B4 정수리 가르기 길(unique_assist.js holdTick — 무장된 채 길게 눌러 메고 떼면 내려침 ·
+//  무장 = 싱지르 무장 그대로(내 칼끝 거리 밖 SECRET.altib.armTime — secret.js spinTick · 창 ev 'altib') · 실행 = 전 B4 정수리 가르기 길(unique_assist.js holdTick — 무장된 채 길게 눌러 메고 떼면 내려침 ·
 //  AI ai.js altibGo) · 빠르기 SECRET.altib.share · 판정 = SECRET.hitMul × 남은 기력 몫 · 내려친 뒤 기력 0. 이름 = 원어 독음(화면 글 지침 §1 비기 · 사장님 11/11 말씀의 이름) [화면 이름 사장님 확인 전]
 const IBERIAN_SECRET_ALTIB = {
   name: 'altib',
@@ -701,8 +684,6 @@ const IBERIAN_SECRET_ALTIB = {
   },
   src: '피게이레두 1651 단Ⅸ · 복ⅩⅤ(altibaxo — 어깨에 감아 두었다 위에서 아래로) [원문 영역] · forte 를 붙인 이름 · 무장 틀(싱지르 그대로) [해석] · 수 [사장님 11/11]',
 };
-/** 싱지르 실행 판 (11/11 — 특수 공격이 된 뒤에도 skill.secret 실행부 · 대본은 같은 것을 쓴다: unique_assist.js · ai.js cingirGo) */
-export const IBERIAN_SPIN_DEF = IBERIAN_SECRET_SPIN;
 // 일본 後の先 (가칭): 상대가 헛친 순간 ① 빠르게 물러서며 칼을 오른 허리 뒤(脇構え 꼴)로 끌어 담고 ② 앞발을 강하게 내딛으며 팔을 다 뻗어 真向 ③ 경직 ④ 맞았으면 残心
 const JAPANESE_SECRET = {
   name: 'goNoSen',
@@ -860,7 +841,6 @@ const CN3 = {
 const GYEOKSAL_STANCE = { highC: 'geojeong', highR: 'geojeong', thrust: 'eogeo', lowL: 'yoryak', lowR: 'yoryak', highL: 'bongdu' };
 const GK_CUT = (name, nameKo, orig, target, from, path, dyn, open) => ({ name, nameKo, orig, pre: [], from, path, open, kind: 'cut', reach: 0.2, base: 1, step: step25, dyn: { kind: 'aim', target, from: 'prep', ...dyn } });
 const GK_ARM = [GK_CUT('gkArm', '팔 깎기 (삭살)', '削殺', 'arm', [0.3, 0.1], [[0.05, 0.0], [-0.3, -0.05]], { side: -1, yaw: [-40, 40], el: [10, -10], at: 0.8 }, 'UL')];
-const GK_ARM_DOWN = [GK_CUT('gkArmDown', '팔 내려 깎기 (삭살)', '削殺', 'arm', [0.1, 0.4], [[0.05, 0.1], [-0.05, -0.3]], { side: -1, yaw: [-10, 10], el: [40, -40], at: 0.8 }, 'UL')];
 const CHINESE_SECRET_GYEOKSAL = {
   name: 'gyeoksal',
   nameKo: '격살', orig: '格殺', // 10/23 동방은 한자를 한국식으로 독음 (전 '막아 죽이기 (격살)')
@@ -868,15 +848,12 @@ const CHINESE_SECRET_GYEOKSAL = {
   cond: { stances: GYEOKSAL_STANCE, time: 'playerWindow' }, // time: 미리 받은 입력을 칼이 붙은 채 이 초까지 기다림 (막기 연환 cnParryWindow 와 같은 0.6)
   do: {
     fast: 1,
-    power: 'gyeoksal', // 판정 = SECRET.gyeoksal.power (skill.js — 'finish' 면 FINISH.power)
+    power: 'gyeoksal', // 판정 = 결정타 격살 배율 SECRET.gyeoksalHitMul (skill.js gyeoksalReq)
     combo: {
       geojeong: { nameKo: '솥 들기 → 머리 베기', seq: [GK_CUT('gkHead', '머리 베기 (상살)', '上殺', 'head', G.tag, [[0.12, 0.2], [-0.2, -0.15]], { side: -1, yaw: [-35, 35], el: [25, -25], at: 0.75 }, 'H')] },
       eogeo: {
         nameKo: '수레 몰기 → 팔 깎기',
-        // 기본 = 가로 호(오른 → 왼) · 시험 SECRET.gyeoksal.armPath 'down' = 위에서 아래로 팔꿈치를 내려 깎음(削 — 거의 곧게 내림, 가로 ±10°) [추정]
-        get seq() {
-          return SECRET.gyeoksal?.armPath === 'down' ? GK_ARM_DOWN : GK_ARM;
-        },
+        seq: GK_ARM, // 가로 호(오른 → 왼)
       },
       yoryak: { nameKo: '걷어 올리기 → 다리 베기', seq: [GK_CUT('gkLeg', '다리 베기 (하살)', '下殺', 'leg', [0.4, -0.2], [[0.0, -0.42], [-0.4, -0.46]], { side: -1, yaw: [-40, 40], el: [10, -10], at: 0.8 }, 'LL')] },
       bongdu: { nameKo: '봉황 머리 → 허파 찌르기', seq: [{ name: 'gkLung', nameKo: '허파 찌르기 (자)', orig: '刺', pre: [], from: G.ochsL, path: [[-0.08, 0.12], G.langort], open: 'C', kind: 'thrust', reach: 0.1, base: 1, step: step25, dyn: { kind: 'aim', target: 'lung', thrust: true, back: true } }] },
@@ -974,7 +951,7 @@ export const TRADITIONS = {
   //  맞받아치기(초안 §8): 막은 뒤 곧장 찌른다 — 찌르기 먼저 [추정]
   //  물러남(10/9 腰擊 쓰임): 몰려 물러날 때 腰擊勢(옆 자세)로 거둔다 — 斂翅 「佯北誘賺… 倒退進步腰擊」(무비지 쪽174/0588 [원문]): 물러나며 腰擊을 들고 있다가 들어가 벤다.
   //   그 밖(calm)은 독일 그대로(쟁기·긴 자세 — 坦腹·中平, 찌르기 쪽). 전엔 독일 값(pressed 황소)이라 기술을 고를 때 손이 옆 자세 0.2 m 안에 있던 적이 48 판 pickTech 502 번 가운데 0 번
-  chinese: { id: 'chinese', nameKo: '동방', ...GERMAN, guards: CHINESE_GUARDS, withdraw: { ...GERMAN.withdraw, pressed: 'sideR' }, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES, temper: CHINESE_TEMPER, gait: CHINESE_GAIT, get secret() { return this.secretSet ?? CHINESE_SECRET_PARRY; }, set secret(v) { this.secretSet = v; }, get playerSecret() { return SECRET.gyeoksal?.on && !this.secretSet ? CHINESE_SECRET_GYEOKSAL : this.secret; }, get aiSecret() { return SECRET.gyeoksal?.on && !this.secretSet ? CHINESE_SECRET_GYEOKSAL : undefined; } }, // 11/14 사장님 '동방도 격살 쓰게 해' — AI 도 사람과 같은 격살 (ai.js gyeoksalAi · SECRET.aiOpenSchools 'chinese') · 격살 끔 · 시험 secretSet 이면 전 판 secret(막기 연환) // 화면 이름 '동방' (사장님 10/13 22:5x '중국 대신 동방' — 원전이 중국·조선 함께라서 · 코드 열쇠 chinese 그대로) · 비기 판 (10/11): SECRET.cnSecret 'parry' 기본(막기 연환 — 연환) · 'v1' 옛 連環三擊
+  chinese: { id: 'chinese', nameKo: '동방', ...GERMAN, guards: CHINESE_GUARDS, withdraw: { ...GERMAN.withdraw, pressed: 'sideR' }, tech: jianTech, techByName: byName(jianTech), rest: 'langort', names: CHINESE_NAMES, techK: CHINESE_TECHK, counterArt: { default: ['stichPflug', 'zwerch', 'zornhau'] }, techNames: TECH_NAMES.chinese, unique: CHINESE_UNIQUE, passives: CHINESE_PASSIVES, temper: CHINESE_TEMPER, gait: CHINESE_GAIT, get secret() { return this.secretSet ?? CHINESE_SECRET_PARRY; }, set secret(v) { this.secretSet = v; }, get playerSecret() { return !this.secretSet ? CHINESE_SECRET_GYEOKSAL : this.secret; }, get aiSecret() { return !this.secretSet ? CHINESE_SECRET_GYEOKSAL : undefined; } }, // 11/14 사장님 '동방도 격살 쓰게 해' — AI 도 사람과 같은 격살 (ai.js gyeoksalAi · SECRET.aiOpenSchools 'chinese') · 격살 끔 · 시험 secretSet 이면 전 판 secret(막기 연환) // 화면 이름 '동방' (사장님 10/13 22:5x '중국 대신 동방' — 원전이 중국·조선 함께라서 · 코드 열쇠 chinese 그대로) · 비기 판 (10/11): SECRET.cnSecret 'parry' 기본(막기 연환 — 연환) · 'v1' 옛 連環三擊
   // 무유파: 둔기(나뭇가지·고무 닭·모르겐슈테른)·총. 지금은 독일 내용 그대로 — 날 없는 무기의 찌르기 빼기는 싸움 방식 규칙(weaponSchool)
   none: { id: 'none', nameKo: '무유파', ...GERMAN, rest: null, names: NONE_NAMES, techNames: TECH_NAMES.none, unique: [], passives: [], temper: NONE_TEMPER, secret: null }, // 무유파 (비기 없음): 고유 동작 없음 — 공용 동작만(사장님 10/9 01:5x)
 };

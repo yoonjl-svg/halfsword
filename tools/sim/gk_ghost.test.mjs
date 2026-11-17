@@ -64,7 +64,6 @@ test('값: 헛맞음 고침 SECRET.spendOnWound 1 · 리솔루토 미끄러짐 S
   assert.equal(SECRET.risolutoSlide, 0.45);
   assert.equal(SECRET.risolutoStep.slide, 'risolutoSlide');
   assert.equal(SECRET.iaiStep, 0.6);
-  assert.equal(SECRET.gyeoksal.share, 0.7);
   assert.equal(SECRET.gyeoksalHitMul, 1);
 });
 

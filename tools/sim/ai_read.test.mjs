@@ -131,7 +131,7 @@ test('상대 유파 대표 위험 (가운데부터 · 기울기) — 이탈리�
     ib.sense.t += 0.3;
     assert.ok(near(readNeed(ib, opp), p === 5 ? -tiltOf(p) * AI_PLAN.read.cost : -r), '원 사이 — 칠 마음 (높음은 대가 창으로 한 번)');
     ib.foe.ibLink = null;
-    for (let i = 0; i < Math.ceil(SECRET.ibSpin.armTime * 120) + 2; i++) readTick(ib, 1 / 120, 2.5, still, null);
+    for (let i = 0; i < Math.ceil(SECRET.altib.armTime * 120) + 2; i++) readTick(ib, 1 / 120, 2.5, still, null);
     assert.ok(near(readNeed(ib, opp), r), '무장처럼 보임 — 참음');
   }
   for (const p of [1, 2]) for (const tr of ['german', 'italian', 'japanese', 'chinese', 'iberian']) assert.equal(readNeed(fake(p, tr, { d: 2.5 }), opp), 0, `낮음 ${p} ${tr}`);
@@ -188,8 +188,8 @@ test('걸음 · 기술 · 이어 치기 곱 — 이탈리아 곧게 안 듦 · �
   it.chasing = true;
   assert.equal(readFeetV(it, 1, 2.5), 1, '쫓는 중엔 안 봄');
   const ib = fake(3, 'iberian');
-  for (let i = 0; i < Math.ceil(SECRET.ibSpin.armTime * 120) + 2; i++) readTick(ib, 1 / 120, 2.5, still, null);
-  const want = ib.foeReach + (SECRET.altib?.aiFire ?? SECRET.ibSpin.aiFire) + 0.1;
+  for (let i = 0; i < Math.ceil(SECRET.altib.armTime * 120) + 2; i++) readTick(ib, 1 / 120, 2.5, still, null);
+  const want = ib.foeReach + (SECRET.altib?.aiFire ?? SECRET.altib.aiFire) + 0.1;
   assert.ok(readFeetV(ib, 1, want - 0.2) < 0, '무장 꼴 — 그 칼끝 + aiFire 밖으로');
   assert.equal(readFeetV(ib, 1, want + 0.2), 1);
   const de = fake(3, 'german', { d: 2.3 });

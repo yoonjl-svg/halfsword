@@ -3,7 +3,7 @@
 //  node --test tools/sim/iberian_finish_arms.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spinRun, armSample, RANGE } from './iberian_finish_arms.mjs';
+import { armSample, RANGE } from './iberian_finish_arms.mjs';
 import { newRound } from './harness_m.mjs';
 import { SECRET, JOINTS } from '../../src/config.js';
 // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본 · 싱지르 = 특수 공격): 이 파일은 싱지르 비기 판 장면(무장 창 · 비기 몫 0.5 · 11/05 대본)이라

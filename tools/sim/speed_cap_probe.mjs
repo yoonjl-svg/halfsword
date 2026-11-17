@@ -70,8 +70,6 @@ const MODES = ['base', 'noise', 'noise2', 'none', 'nonenoise', '45', '60', 'filt
 // all 이 돌리는 묶음: run 묶음 + 사람 쪽 도구를 wrap 으로. modes 를 줄인 묶음은 base 에 30 넘는 분석이 없어 상한 방식이 판을 못 바꾼다(none 하나로 확인 · noise 는 소음 폭)
 const FEW = ['base', 'none', 'noise'];
 const JOBS = {
-  spin: { wrap: ['iberian_spin.mjs', 'duel', '--weapons=zweihander,flamberge', '--opps=longsword,isolde,heinrich,tome,omari,minami', '--seeds=1-3'] },
-  spinprobe: { wrap: ['iberian_spin.mjs', 'probe', '--gaps=2.0,2.3,2.6'], modes: ['base', 'noise', 'none', '45', '60', 'filter'] },
   f12: { run: ['--set=f12', '--seeds=1-36'], modes: FEW },
   mix: { run: ['--set=mix', '--seeds=1'], modes: FEW },
   pbot: { run: ['--set=pbot', '--seeds=1-2'], modes: FEW },
@@ -390,7 +388,7 @@ async function runSet(set, mode, seeds, dur) {
       G.world.free?.();
     }
   } else if (set === 'iai') {
-    // 일본 비기 고노센(발도 — secret_instant.js) 판정 길 확인: 플레이어가 서 있는 롱소드 과녁(AI 멈춤 · 칼 충돌 끔 · 죽지 않음 — iberian_spin.mjs probe 와 같은 과녁)에
+    // 일본 비기 고노센(발도 — secret_instant.js) 판정 길 확인: 플레이어가 서 있는 롱소드 과녁(AI 멈춤 · 칼 충돌 끔 · 죽지 않음 — 지운 iberian_spin.mjs probe 와 같은 과녁)에
     //  2.6 s 에 비기를 곧장 낸다. instantWound 가 부른 분석의 빠르기는 L.instant 에 다 적힌다
     const { newRound, DT } = await import('./harness_m.mjs');
     const { PlayerSecretWatch } = await import('../../src/secret.js');

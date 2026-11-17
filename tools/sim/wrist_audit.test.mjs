@@ -13,7 +13,6 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, THREE } from './harness_m.mjs';
 import { lungeRun, gyeoksalRun, guardsRun, aiRun, tapRun, wristSample, outOfRange, WristTally, ARM_LEN, REV, ULNAR, OOR_X } from './wrist_audit.mjs';
 import { HUMAN, wristClamp } from '../../src/fighter.js';
-import { mordGripOf } from '../../src/mordschlag.js';
 import { standTrial } from './tap_thrust.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { ITALIAN_NOW } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 'full' 이면 옛 판 재현을 그때 간격 줄로
@@ -167,12 +166,6 @@ test('시험 손목 치우침 밧줄: 켜면(`?wristRope=1`) 손목 원뿔에 �
     const P = g.player;
     for (let i = 0; i < 30; i++) g.step();
     assert.ok(P.gripDev?.length === 2 && P.gripDev.every((j) => P.gripCone.includes(j)), '켬: 밧줄 둘 (척측 · 엄지 쪽)');
-    const G = mordGripOf(P);
-    assert.equal(P.reverseGrip(G, { x: 0, y: -1, z: 0 }), true);
-    assert.equal(P.gripDev, null, '거꾸로 쥔 동안 뗌');
-    for (let i = 0; i < 30; i++) g.step();
-    assert.equal(P.reverseGrip(null), true);
-    assert.ok(P.gripDev?.length === 2 && P.gripDev.every((j) => P.gripCone.includes(j)), '돌아오면 다시');
     for (let i = 0; i < 30; i++) g.step();
     const t = P.sword.translation();
     assert.ok(Number.isFinite(t.x + t.y + t.z), 'NaN 없음');

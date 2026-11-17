@@ -1,7 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  iberian_finish_arms.mjs — 이베리아 마무리 공격의 팔 관절 재기 (10/24 13:2x 사장님 '이베리아 마무리 공격도 팔 관절이 이상하게 꺾이지 않는지 확인해봐')
 //   두 읽기를 같은 잣대로 잰다 — docs/strike/iberian_finish_arms_2026-10-24.md:
-//    spin   = 싱지르(휘감아 돌기) 한 바퀴 ~ 받아 멈춤 ~ 따라 지나감 ~ 굳음 (iberian_spin_form.mjs 와 같은 자리 · 곧장 냄)
 //    cleave = 대검 마무리 쪼개 내려치기 (greatsword_finish.mjs gsTrial 과 같은 자리 — 누운 상대 · 무릎 꿇은 상대)
 //    plunge = 같은 칼로 전 찍기 (FINISH.cleave.player 끔 — 견줌)
 //    cuts   = 같은 칼 보통 베기 (손가락 획 — 가로 · 세로 · 사선, 바탕)
@@ -15,9 +14,9 @@
 //   범위 (넘으면 '밖' 스텝으로 셈 — 참고 수): 팔꿈치 과신전 < −5 · 굽힘 > 145 · 경첩 밖 > 5 · 손목 굽힘 · 폄 ±70 (JOINTS.wristFE — 끝 스프링) ·
 //    아래팔-칼 > 163 · 굴림 > 80 · 들림 면 > 130 (밧줄 한도 — 밧줄은 한도에 딱 붙어 있어 +2 ~ 3° 여유를 둠: 165 · 82 · 132) · 어깨 폄 > 60 · 들림 면 < −45 (들림 60 ~ 160) ·
 //    위팔 돌림 −70 ~ 90 (들림 120 아래) · 척추 ±45 · 두 손 > 0.10 m (쥔 동안) · 파고듦 > 0.03 m (빈팔 위팔은 쉼 자세에서도 가슴 상자와 1 ~ 2 cm 겹침)
-//  사용법: node tools/sim/iberian_finish_arms.mjs [--modes=spin,cleave,plunge,cuts,ai] [--weapons=zweihander,flamberge,tizona,durandal]
+//  사용법: node tools/sim/iberian_finish_arms.mjs [--modes=cleave,plunge,cuts,ai] [--weapons=zweihander,flamberge,tizona,durandal]
 //          [--starts=tag,ochsR,langort,wechselR,ochsL] [--dirs=0,-1] [--targets=none,stand] [--n=1] [--trace=무기:모드:판번호] [--json=파일]
-//   스위치(이 도구 안에서만): --set=SECRET.ibSpin.armRoll=0 처럼 config 값을 바꿔 견준다 (쉼표로 여럿)
+//   스위치(이 도구 안에서만): --set=SECRET.altib.share=0.4 처럼 config 값을 바꿔 견준다 (쉼표로 여럿)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
 import { newRound, DT, THREE, CONFIG, AI } from './harness_m.mjs';
@@ -176,68 +175,6 @@ export class Tally {
       }
     }
   }
-}
-
-// ── 판 하나: 싱지르 (iberian_spin_form.mjs 와 같은 자리) ──
-function spinPhase(P) {
-  const S = P.ibSpin;
-  const sec = P.skill.sec;
-  if (S) return S.settle ? 'settle' : S.tp < S.pre ? 'pre' : S.free ? 'free' : S.t < S.r ? 'ramp' : 'wind';
-  if (sec) return sec.stage === 'stiff' ? 'stiff' : 'follow';
-  return 'after';
-}
-export function spinRun({ weapon, start = 'langort', dir = 0, target = 'stand', gap = 2.3, seed = 7, trace = null }) {
-  const { SKILL } = CONFIG;
-  const G = newRound({ seed, weapon, weapon2: 'longsword', gap: target === 'none' ? 8 : gap, walls: false });
-  const P = G.player;
-  const E = G.enemy;
-  P.skill.corr = SKILL.corr;
-  P.skill.corrTip = SKILL.corrTip;
-  P.skill.autoGuard = true;
-  G.ai.update = () => E.move.set(0, 0);
-  E.die = () => {};
-  if (target === 'stand') for (let i = 0; i < E.sword.numColliders(); i++) E.sword.collider(i).setCollisionGroups(0);
-  const W = new PlayerSecretWatch(P, E, { locked: false });
-  const pad = PADS[start];
-  const T = new Tally();
-  const base = new Tally();
-  let t0 = null;
-  let fired = false;
-  let tEnd = null;
-  G.before = () => {
-    W.update(DT, !!P.skill.sec);
-    P.move.set(0, 0);
-    if (t0 == null) {
-      if (G.t > 1.2) P.handOffset.set(pad[0], pad[1]);
-      if (G.t > 2.6) {
-        const ctx = { ev: 'spin' };
-        if (dir) ctx.turnDir = dir;
-        fired = P.skill.secret({ S: W.S, ctx });
-        t0 = G.t;
-      }
-    }
-  };
-  while (G.t < 9) {
-    G.step();
-    if (t0 == null) {
-      if (G.t > 2.0) base.add('stand', armSample(P), G.t);
-      continue;
-    }
-    if (!fired) break;
-    const ph = spinPhase(P);
-    if (ph === 'after') tEnd ??= G.t;
-    if (tEnd != null && G.t - tEnd > 0.6) break;
-    if (P.state !== 'stand') {
-      T.add('fell', armSample(P), G.t - t0);
-      continue;
-    }
-    const s = armSample(P);
-    T.add(ph, s, G.t - t0);
-    T.add('all', s, G.t - t0);
-    if (trace) trace.push({ t: +(G.t - t0).toFixed(4), ph, ...pick(s) });
-  }
-  G.world.free();
-  return { T, base, fired };
 }
 
 // ── 판 하나: 보통 베기 (손가락 획 — 자세 → 반대쪽 자세를 0.2 s 에, 0.8 s 쉼) ──
@@ -401,7 +338,7 @@ if (isMain(import.meta.url)) {
       o[ks.at(-1)] = isNaN(+val) ? val : +val;
     }
   }
-  const modes = list('modes', 'spin,cleave,cuts');
+  const modes = list('modes', 'cleave,cuts');
   const weapons = list('weapons', 'zweihander,flamberge,tizona,durandal');
   const starts = list('starts', 'tag,ochsR,langort,wechselR,ochsL');
   const dirs = list('dirs', '0,-1').map(Number);
@@ -417,16 +354,7 @@ if (isMain(import.meta.url)) {
       let idx = 0;
       const traceOf = () => (tw === weapon && tm === mode && +ti === idx ? [] : null);
       const runs = [];
-      if (mode === 'spin') {
-        for (const target of targets) for (const dir of dirs) for (const start of starts) for (let s = 0; s < N; s++) {
-          const tr = traceOf();
-          const r = spinRun({ weapon, start, dir, target, seed: 7 + s, trace: tr });
-          tot.merge(r.T);
-          runs.push({ start, dir, target, seed: 7 + s, T: r.T });
-          if (tr) out.trace = { weapon, mode, idx, start, dir, target, rows: tr };
-          idx++;
-        }
-      } else if (mode === 'cuts') {
+      if (mode === 'cuts') {
         for (let s = 0; s < N; s++) {
           const tr = traceOf();
           const r = cutsRun({ weapon, seed: 7 + s, trace: tr });

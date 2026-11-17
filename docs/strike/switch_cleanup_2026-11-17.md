@@ -17,7 +17,7 @@
 | tools/sim 파일 | 462 | 449 (13 지움) |
 | 시험 (`node --test tools/sim/*.test.mjs`) | 1 091 / 1 091 | 955 / 955 (실패 0) |
 
-관문은 바이트 같다 (§6). 같은 날 3차로 더 걷었다(§7). **스위치 걷어내기는 다 끝나지 않았다** — 지금 남은 것은 §7-6.
+관문은 바이트 같다 (§6). 같은 날 3차로 더 걷었다(§7). **스위치 걷어내기는 다 끝나지 않았다** — 지금 남은 것은 §9 끝.
 
 ## 2. 남긴 주소 인자
 
@@ -213,3 +213,21 @@ corr_s0 의 `--limits=off,on` 은 사람 관절 한도 스위치를 지운 뒤�
 - 남김(다음 일): SECRET 의 싱지르 ibSpin 묶음 · 격살 꼴(armPath · power · auto) · gkFree · iaiKinematic · 발도 길 각도 칸. 그리고 'spin' 판에서만 쓰던 정수리 가르기 특수 공격 · 거꾸로 쥠 코드가 아직 src 에 남음(읽는 길이 없어짐 — 지울 일)
 - 시험: 'spin' 판 · 옛 비기 판 · 끈 판으로 묶어 보던 시험 블록을 지움(파일 하나 b4_rework.test.mjs 통째). 기본 판 기대값은 그대로. 비기 정의의 글자 열쇠(fast 'cnFast' · lead 'japaneseLead')가 지운 칸을 가리켜 동방 빠른 연환이 꺼지던 것을 잡아 값으로 바꿈
 - 관문 바이트 같음(커밋마다)
+
+## 9. 5차 (272e5a12 부터 — 작업자 교대)
+
+규칙은 같다(기본 판 그대로 · 다른 갈래 지움 · 안 들인 시제품 코드째 · 관문 바이트 같음 · 블록마다 커밋 · 시험 묶음은 `--test-concurrency=3`).
+
+### 9-1. SECRET 남은 것 (블록 1)
+
+- 수: SECRET 스위치 꼴 칸(켬 · 끔 · 꼴 · 0/1 어림) 54 → 22 (남은 22 는 각도 0 · 배율 1 · 걸음 칸의 글자 열쇠 'risolutoSlide' 같은 조율 수 · 길목 겨눔 'headTop'). src 99 841 → 97 770 줄(파일 251 → 249) · config 2 776 → 2 652 줄 · tools/sim 448 → 433 파일
+- 지움 — 칸: `ibSpin` 묶음 통째(40 칸 — 입력 꼴 · 원 · 스틱 · 발디딤 · 받아 멈춤 · 몸통 · 뚜껑 · 땅 · 두 마디 · 특수 공격 굳음 등). 무장 셈 둘(`armTime` · `armGrace`)만 `SECRET.altib` 으로 옮김(알티바슈 포르트 무장이 싱지르 무장 그대로라 — 같은 값) · AI 내기 거리 `aiFire` 는 이미 `altib.aiFire` 에 같은 값 · 무장 동안 상처면 풀림(`hurtDisarm` 1)은 그 자리에 · 격살 꼴(`gyeoksal.on` · `auto` · `armPath` · `power` · `share` · `trailWidth`) · `gyeoksalAi` 통째(겹 문턱 1 은 나눗셈 1 이라 그대로 · `late` 는 풀기 판에서 안 읽음) · `gkFree.on` · `gkFreeSets`(A · B 견줌 값) · `iaiKinematic` · `mord.at` · `altib.staminaK` · `iaiPathBelly`(사람 발도는 원전 길 · AI 는 올려베기 길 — 배 길은 고를 길이 없었음)
+- 지움 — 아무도 부르지 않던 코드: 싱지르 대본 통째(`src/iberian_spin.js` 1 230 줄 — 'spin' 비기 판과 특수 공격 싱지르가 다 없어져 부르는 곳이 없었음 · fighter · gait · skill · secret · ai · pickup · finger_cut · unique_assist 의 `f.ibSpin` 갈래) · 원 긋기 몸짓(`src/attack_circle.js`) · 스틱 돌리기 몸짓(`stick_turn.js` 는 데드존 수 `STICK_DEAD` 하나만 남김) · 비기 정의 `IBERIAN_SECRET_SPIN` · 사람 창 `spinCircle` · `spinStick` · `stickOwns` · `circleOwns`(main.js 원 · 스틱 입력 길) · AI `spinGo` · 'spin' 비기 단계 셈 · 특수 공격 싱지르 몫(`o.special` · `run.special`)
+- 지움 — 'spin' 판에서만 쓰던 정수리 가르기 특수 공격: 사람 `windFire` 의 특수 공격 길(식힘 · 흐름 셈) · 무장 없이 메기(`sec` 거짓 갈래) · AI `rdFire` 의 특수 공격 길 · 기력 아낌(`rdThrift` · `rdWindCost` · `rdSkipWhy` · 공격 시작의 'redondo' 바꿈) · `windWoundT`. 메기 · 내려침은 알티바슈 포르트 비기 길(`altibFire`)로만
+- 지움 — 죽음의 일격 거꾸로 쥠: `mordGripOf` · fighter `reverseGrip` · pickup `resetReverseGrip` · hands.js 거꾸로 쥔 주먹 · secret_instant `mordRegripStep` · 쥠 바꿈 토막(`regripAt` · `M.regrip` 갈래 셋) · fighter 손잡이 겨눔 · 빈손 자리의 `mordGrip` 갈래
+- 남김: 알티바슈 포르트 무장 · 메기 · 내려침(`iberian_redondo.js` — 감기 꼴 `rdWindMode` 는 UNIQUE_ASSIST 블록) · `gkFree` 의 share · add · cool · cost · `gyeoksal.press` · 길목(`gilmokAim` 과 `do.gilmok` 길 — 길목 비기 정의는 4차에서 지웠으나 읽는 코드가 남음, 다음 일)
+- 시험: 지운 파일 — `iberian_spin.test` · `singir_fall.test` · `windmill.test` · `attack_circle.test` · `stick_turn.test`(모두 지운 대본 · 몸짓만 봄). 지운 블록 — 원 긋기(atk_stick) · 싱지르 한 걸음(ib_swap) · 격살 한 칼 세기(power 1 · 'finish' 판) · 끈 판 · B 안 · 옛 판 견줌(cn_gk) · 배 길 값(gns_belly). 단언만 뺌 — `ibSpin.stride` · `gyeoksal.on` · `auto` · `power` · `share` · `staminaK` · 배 길 견줌 둘 · `spinGo` · 'spin' 단계 · 거꾸로 쥠(mordschlag · wrist_audit) · `iaiKinematic` 1 판(stamina_integration — 기본 0 판은 그대로 봄)
+- 지운 시뮬 도구: `iberian_spin` · `iberian_spin_ai` · `iberian_spin_circle` · `iberian_spin_feet` · `iberian_spin_form` · `iberian_spin_share` · `iberian_stick` · `singir_fall` · `windmill` · `attack_circle_drives`. 고친 도구: ib_swap(spin 판) · iberian_finish_arms(spin 판) · greatsword_joints(spin 장면) · speed_cap_probe(spin 묶음) · school_balance · arm_reach_audit · gonosen_touch(원 · 스틱 입력) · kote_pickup · ai_arm_cross · mordschlag_hits · selfclip · probe(지운 칸 넣기 · 거꾸로 쥠 읽기)
+- 지운 브라우저 도구: `iberian_spin_shots` · `iberian_stick_shots` · `singir_circle_shots` (지운 대본 · 입력만 찍음)
+- 시험 수: `test(` 798 → 766 · 전체 788 돌림 중 실패 6 → 고침(남은 `R` 하나 · 지운 AI 정수리 가르기 특수 공격 시험 하나 지움 · main.js 줄 단언) → 실패 0
+- 교훈(새로): 지운 칸만 지우고 그 칸을 읽던 변수 이름(`R` · `rg`)이 함수 아래쪽에 남으면 관문은 지나도(죽음의 일격 · 비기 소리는 관문 판에 없음) 시험이 `R is not defined` 로 잡는다 — 지운 지역 변수는 함수 전체에서 이름을 찾아 볼 것. 'spin' 판처럼 비기 판을 지운 뒤에는 그 판만 부르던 모듈(대본 · 몸짓 읽기)이 통째로 남아 있지 않은지 부르는 곳부터 거꾸로 찾을 것

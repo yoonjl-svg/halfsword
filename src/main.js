@@ -3014,18 +3014,11 @@ function playerInputFrame(dt, now) {
   // 이베리아 길목 (사장님 결정 10/11 13:2x): 준비(armed)가 켜져 있으면 창을 기다리지 않고 공격 입력 하나가 곧 길목 한 칼 (secret.js fireArmed — 플레이어만)
   const gilReady = !!playerSecret?.S?.do?.gilmok && !!playerSecret.gilArm?.armed;
   const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly; // tapOnly(이탈리아 안다레 리솔루토 전 판)면 찌르기 입력(톡)만 · 10/25 21:0x 사장님 '공격하면 발동' 뒤 기본은 끌기도 비기 (schools.js tapOnly = SECRET.risolutoTap)
-  // 이베리아 휘감아 돌기 스틱 판 (10/23 사장님 '공격 버튼 대신 이동 버튼을 360도 돌린다거나' · '반 바퀴 이상으로' — SECRET.ibSpin.input 'stick'): 무장 창은 공격 입력으로 나가지 않고
-  //  (무장 동안의 톡 · 끌기는 보통 공격) 이동 스틱을 stickTime 초 안에 stickTurn° 돌리면 같은 길(fire → skill.secret → showPlayerCue)로 낸다. 몸짓 셈 = 실제 프레임 시간 (secret.js spinStick)
-  //  10/24 공격 원 판 (사장님 02:5x '공격 동작 360도 원형 입력으로 변경' — 기본 'attackCircle'): 무장 창은 톡 · 끌기 하나로 나가지 않고(원이 아닌 공격은 보통 공격) 공격 손 움직임 d 로
-  //  circleTime 초 안에 원 한 바퀴를 그리면 같은 길로 낸다 (secret.js spinCircle · src/attack_circle.js). 손가락이 닿아 있나 = 터치 손가락 · 잠긴 마우스(늘 — 멈춤으로 획을 가름)
-  //  11/11 알티바슈 포르트 비기 (SECRET.iberianSecret 'altib'): 무장 창은 톡 · 끌기로 나가지 않고(holdOwns — 보통 공격) 길게 눌러 메기로만(아래 holdInput armed) ·
-  const atkWin = !!playerSecret?.open && !playerSecret.stickOwns() && !playerSecret.circleOwns() && !playerSecret.holdOwns();
-  const stickGo = !!playerSecret?.spinStick(dt, input.move, !secBusy && player.alive && closeGate.secretOk);
-  const handDown = input.activeTouch !== null || document.pointerLockElement === canvas;
-  const circleGo = !!playerSecret?.spinCircle(dt, d, handDown, !secBusy && player.alive && closeGate.secretOk);
+  // 11/11 알티바슈 포르트 비기: 무장 창은 톡 · 끌기로 나가지 않고(holdOwns — 보통 공격) 길게 눌러 메기로만(아래 holdInput armed) ·
+  const atkWin = !!playerSecret?.open && !playerSecret.holdOwns();
   // 창 지킴 (10/25 21:0x — SECRET.secretHold): 보통 탭 찌르기 · 손잡이 찍기가 아직 도는 동안은 비기를 못 낸다(skill.secret 이 받지 않음) — 그 입력으로 창을 써 버리지 않고 남겨 둠
   const secArm = !((player.skill.tap || player.skill.pom));
-  if (((atkWin || gilReady) && (taps > 0 || secSwipe) || stickGo || circleGo) && !secBusy && player.alive && secArm && closeGate.secretOk) {
+  if (((atkWin || gilReady) && (taps > 0 || secSwipe)) && !secBusy && player.alive && secArm && closeGate.secretOk) {
     const o = playerSecret.open ? playerSecret.fire() : playerSecret.fireArmed();
     if (o) o.dir = [d.x, d.y]; // 비기를 낸 끌기의 방향 — 이베리아 흐름(10/11)이 이 칼의 흐름을 이어받는다 (톡이면 0 → 걸러진 손 목표 속도)
     if (player.skill.secret(o)) {

@@ -16,8 +16,6 @@ import { segDist } from './skill.js';
 import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동방 막기 I(C7 — 몸꼴 parryCover)일 때만
 import { RisolutoWatch, lungeGapOk, bladesNear } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
 import { itEdgeOk, itStats } from './italian_outbox.js'; // 이탈리아 칼 우위 (11/14 설계안 A — 리솔루토 창은 칼 우위 동안만 · config IT_OUTBOX.edgeRiso)
-import { stickTurnState, stickTurnStep, stickTurnClear } from './stick_turn.js'; // 이베리아 휘감아 돌기 스틱 판 — 이동 스틱 돌리기 몸짓 (10/23)
-import { circleState, circleStep, circleClear, circleLive } from './attack_circle.js'; // 이베리아 싱지르 공격 원 판 — 공격 입력으로 원 그리기 몸짓 (10/24)
 import { iaiReadyPosePlayer } from './secret_instant.js'; // 사람 고노센 준비 웅크림 (10/25 23:0x — SECRET.gnsCrouch)
 
 const clamp = THREE.MathUtils.clamp;
@@ -743,7 +741,7 @@ export function secretUsesOf(f) {
   const tr = f?.swordArt?.tradition;
   if (secretFree(tr)) return Infinity; // 11/16 끝없는 고노센 · 알티바슈 포르트 (SECRET.gnsFree · altib.free — 아래)
   const U = UNIQUE_ASSIST.secretUses;
-  if (!U || (gkFreeOn() && f?.swordArt?.tradition === 'chinese')) return Infinity; // 격살 풀기 (11/16 — SECRET.gkFree): 동방 격살 끝없음 · 대신 식힘(gkCooling)
+  if (!U || f?.swordArt?.tradition === 'chinese') return Infinity; // 격살 풀기 (11/16 — SECRET.gkFree): 동방 격살 끝없음 · 대신 식힘(gkCooling)
   return U[f?.swordArt?.tradition] ?? U.default ?? Infinity;
 }
 /**
@@ -766,16 +764,14 @@ export function secretCostOf(S) {
   if (S?.do?.instant && SECRET.gnsCost > 0) return SECRET.gnsCost;
   if (S?.name === 'mordschlag' && SECRET.mord?.cost > 0) return SECRET.mord.cost;
   if (S?.when === 'risoluto' && SECRET.risolutoCost > 0) return SECRET.risolutoCost;
-  if (S?.name === 'gyeoksal' && gkFreeOn() && SECRET.gkFree?.cost > 0) return SECRET.gkFree.cost; // 11/16 격살 20 (풀기 판만)
+  if (S?.name === 'gyeoksal' && SECRET.gkFree.cost > 0) return SECRET.gkFree.cost; // 11/16 격살 20
   return undefined;
 }
-/** 격살 풀기 (11/15–16 사장님 '격살은 … 무한으로 쓸 수 있게 풀어 … 대신 쿨타임' — SECRET.gkFree · 기본 끔) 켬인가 */
-export const gkFreeOn = () => !!SECRET.gkFree?.on;
 /** 격살 식히는 중인가 (풀기 판만 · 몸 시계 fightT — 판마다 새 몸) */
-export const gkCooling = (f) => gkFreeOn() && (f?.fightT ?? 0) < (f?.gkCoolUntil ?? -Infinity);
+export const gkCooling = (f) => (f?.fightT ?? 0) < (f?.gkCoolUntil ?? -Infinity);
 /** 격살 칼이 끝나 몸이 다시 자유로운 때 — 그때부터 SECRET.gkFree.cool 동안 식힘 (특수 공격 식힘 'free' 와 같은 셈) */
 export function gkCoolFrom(f) {
-  if (gkFreeOn() && f) f.gkCoolUntil = (f.fightT ?? 0) + SECRET.gkFree.cool;
+  if (f) f.gkCoolUntil = (f.fightT ?? 0) + SECRET.gkFree.cool;
 }
 /** 이 판에 남은 비기 수 */
 export const secretLeft = (f) => Math.max(0, secretUsesOf(f) - (f?.secretUsed ?? 0));
@@ -809,8 +805,8 @@ export class PlayerSecretWatch {
     this.iaiArm = new IaiArm(); // 일본 발도 대기 (10/10 02:4x — 플레이어는 표시만)
     this.gilArm = new IaiArm('gilmokArmTime', 'gilmokArmGrace'); // 이베리아 길목 지키기 준비 (10/11 v6 — 플레이어는 표시만, AI 와 같은 셈)
     this.gilWins = 0; // 길목 창 수 (재기)
-    this.spinArm = new IaiArm('armTime', 'armGrace', 'ibSpin'); // 이베리아 휘감아 돌기 무장 (10/22 — 내 칼끝 거리 밖 SECRET.ibSpin.armTime 초, 발도 대기와 같은 셈) · 무장 동안 창이 열려 있다
-    this.spinW = me.wounds?.length ?? 0; // 무장 동안 상처 셈 (SECRET.ibSpin.hurtDisarm)
+    this.spinArm = new IaiArm('armTime', 'armGrace', 'altib'); // 이베리아 휘감아 돌기 무장 (10/22 — 내 칼끝 거리 밖 SECRET.ibSpin.armTime 초, 발도 대기와 같은 셈) · 무장 동안 창이 열려 있다
+    this.spinW = me.wounds?.length ?? 0; // 무장 동안 상처 셈 (상처가 나면 무장이 풀림)
     this.gap = Infinity; // 마지막 베기 끝에서 지난 시간
     this.swing = null; // 지금 베기 { first, landed }
     this.prevFoePain = foe.pain;
@@ -849,10 +845,10 @@ export class PlayerSecretWatch {
     //  비기가 나간 때(skill.secret 이 받아 me.skill.sec 에 새 실행이 걸린 때 — 창을 썼어도 skill.secret 이 받지 않았으면 아님) 한 번 셈(몸 fighter.secretUsed — 판마다 새 몸).
     //  다 쓰면 그 판엔 그 비기의 창 · 조건은 없는 것 = 비기가 도는 동안과 같은 '바쁨'(창을 새로 열지 않음 · 무장 · 누르기 셈 · 덮음 셈 · 격살 기다림이 안 걸림 · 고노센 웅크림도 풀림) — 공격 입력은 보통 공격
     const run = me.skill?.sec ?? null;
-    if (run && run !== this.secRun && !run.special) useSecret(me); // 싱지르 특수 공격(11/11 — run.special)은 비기가 아님 · 알티바슈 포르트는 unique_assist.js altibFire 가 셈
-    if (gkFreeOn() && this.S?.when === 'gyeoksal') {
+    if (run && run !== this.secRun) useSecret(me); // 알티바슈 포르트는 unique_assist.js altibFire 가 셈
+    if (this.S?.when === 'gyeoksal') {
       // 격살 풀기 (11/16 — SECRET.gkFree): 격살 칼이 나갔다가 몸이 다시 자유로운 때(비기 실행 · 운동학 칼 끝)부터 식힘 · 식히는 동안은 다 쓴 판과 같은 '바쁨'
-      if (run && run !== this.secRun && !run.special) this.gkRun = true;
+      if (run && run !== this.secRun) this.gkRun = true;
       if (this.gkRun && !run && !me.iai && !me.iaiReq) {
         this.gkRun = false;
         gkCoolFrom(me);
@@ -928,7 +924,7 @@ export class PlayerSecretWatch {
       this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy || armHold(me)); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖) · 판 시작 정지 동안 셈 0 (10/27 23:0x — 싱지르와 같은 무장 시계)
       this.gilmokRest(dt, was, s0, c, d0, V, sw || busy);
     }
-    if (S.do?.spin || S.do?.altib) this.spinTick(dt, d0, V, busy, sw); // 11/11 알티바슈 포르트도 싱지르 무장 그대로
+    if (S.do?.altib) this.spinTick(dt, d0, V, busy, sw); // 11/11 알티바슈 포르트도 싱지르 무장 그대로
     if (!sw && this.swing) {
       // 베기 하나가 끝났다
       const w = this.swing;
@@ -1001,96 +997,32 @@ export class PlayerSecretWatch {
   }
 
   /**
-   * 이베리아 휘감아 돌기 무장 (10/22 — schools.js IBERIAN_SECRET_SPIN): 상대 가슴이 내 칼끝 거리(reach) 밖에 SECRET.ibSpin.armTime 초 머물면 무장(발도 대기 IaiArm 과 같은 셈 —
-   *  휘두르거나 비기 중이면 풀림 · 간격 안으로 들어와도 armGrace 초 남음). 무장이 이어지는 동안 창이 열려 있다(끝 없음 — 금색 '!' · 비기 이름 알림) → 공격 입력으로 원 한 바퀴
-   *  (10/24 공격 원 판 기본 — 아래 spinCircle) · 이동 스틱 반 바퀴(10/23 스틱 판 'stick' — 아래 spinStick) · 옛 판(SECRET.ibSpin.input 'attack')은 공격 입력 하나가 휘감아 돌기.
-   *  hurtDisarm: 무장 동안 내 몸에 상처가 나면 곧장 풀림(발도 대기에 없는 규칙 — 스위치). 창을 쓰면(fire) 무장도 풀린다 — 한 번 무장에 한 번
+   * 알티바슈 포르트 무장 (11/11 — schools.js IBERIAN_SECRET_ALTIB · 무장 셈은 10/22 싱지르 그대로): 상대 가슴이 내 칼끝 거리(reach) 밖에 SECRET.altib.armTime 초 머물면 무장
+   *  (발도 대기 IaiArm 과 같은 셈 — 휘두르거나 비기 중이면 풀림 · 간격 안으로 들어와도 armGrace 초 남음). 무장이 이어지는 동안 창이 열려 있다(끝 없음 — 금색 '!' · 비기 이름 알림) →
+   *  무장된 채 길게 눌러 메기 시작하면(unique_assist.js holdTick — hold.secret) 그 무장을 씀. 무장 동안 내 몸에 상처가 나면 곧장 풀림. 창을 쓰면(fire) 무장도 풀린다 — 한 번 무장에 한 번
    */
   spinTick(dt, d0, V, busy, sw = false) {
     const me = this.me;
     const nw = me.wounds?.length ?? 0;
-    const hurt = !!SECRET.ibSpin.hurtDisarm && nw > this.spinW;
+    const hurt = nw > this.spinW;
     this.spinW = nw;
-    // 공격 원 판 (10/24 — SECRET.ibSpin.input 'attackCircle'): 원을 그리는 손은 칼을 휘두른다 — 무장된 동안은 휘두름을 그 획이 끝날 때(손가락을 떼거나 멈춤 ·
-    //  circleTime 초가 지남) 센다: 그 획이 원이 되면(spinCircle → fire) 무장은 비기로 쓰이고, 안 되면 그때 풀린다(보통 공격 — 스틱 판과 같은 규칙). 무장 전에는 전처럼 곧장 셈을 비운다
     let swing = sw;
-    const altib = !!this.S?.do?.altib; // 11/11 비기 알티바슈 포르트: 무장 셈은 같고 창 ev 'altib' · 무장된 채 길게 눌러 메기 시작하면(unique_assist.js holdTick — hold.secret) 그 무장을 씀
-    if (altib) {
-      const H = me.skill?.uniq?.hold;
-      if (H?.st === 'wind' && H.secret && this.open?.ctx?.ev === 'altib') {
-        this.fire(); // 한 번 무장에 한 번 (창을 닫고 무장을 씀 — 기력이 모자라 거절해도 이미 메는 칼은 그대로)
-        return;
-      }
-      if (me.skill?.uniq?.winding) swing = true; // 메는 동안은 무장 셈 0 (다음 무장은 그 칼이 끝난 뒤부터)
+    const H = me.skill?.uniq?.hold;
+    if (H?.st === 'wind' && H.secret && this.open?.ctx?.ev === 'altib') {
+      this.fire(); // 한 번 무장에 한 번 (창을 닫고 무장을 씀 — 기력이 모자라 거절해도 이미 메는 칼은 그대로)
+      return;
     }
-    if (!altib && SECRET.ibSpin.input === 'attackCircle' && this.spinArm.armed) {
-      if (sw) this.circSwung = true;
-      const live = !!this.circ && circleLive(this.circ, SECRET.ibSpin.circleTime);
-      swing = !!this.circSwung && !live;
-      if (!live) this.circSwung = false;
-    } else this.circSwung = false;
+    if (me.skill?.uniq?.winding) swing = true; // 메는 동안은 무장 셈 0 (다음 무장은 그 칼이 끝난 뒤부터)
     this.spinArm.tick(dt, d0 > V.reach, busy || swing || hurt || armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x 사장님 '전투 시작 후, 실제 공격이 가능해진 때부터')
     const o = this.open;
-    const ev = altib ? 'altib' : 'spin';
     if (this.spinArm.armed) {
-      if (!o && !busy) this.openWindow({ ev }, Infinity);
-    } else if (o?.ctx?.ev === ev && !this.holding()) this.open = null; // 무장이 풀림 (secretHold: 열린 뒤 playerWindow 초는 지킴)
-  }
-
-  /** 이베리아 휘감아 돌기 창이 스틱 판인가 (SECRET.ibSpin.input 'stick') — 참이면 그 창은 공격 입력으로 나가지 않는다(공격은 보통 공격 · main.js) */
-  stickOwns() {
-    return SECRET.ibSpin.input === 'stick' && this.open?.ctx?.ev === 'spin';
+      if (!o && !busy) this.openWindow({ ev: 'altib' }, Infinity);
+    } else if (o?.ctx?.ev === 'altib' && !this.holding()) this.open = null; // 무장이 풀림 (secretHold: 열린 뒤 playerWindow 초는 지킴)
   }
 
   /** 알티바슈 포르트 무장 창인가 (11/11 — 비기 'altib'): 참이면 그 창은 톡 · 끌기로 나가지 않는다(보통 공격) — 길게 눌러 메기(unique_assist.js holdInput armed)로만 */
   holdOwns() {
     return this.open?.ctx?.ev === 'altib';
-  }
-
-  /** 싱지르 창이 공격 원 판인가 (10/24 — SECRET.ibSpin.input 'attackCircle') — 참이면 그 창은 톡 · 끌기 하나로 나가지 않는다(원이 아닌 공격은 보통 공격 · main.js) */
-  circleOwns() {
-    return SECRET.ibSpin.input === 'attackCircle' && this.open?.ctx?.ev === 'spin';
-  }
-
-  /**
-   * 싱지르 공격 원 판 (10/24 사장님 02:5x '커맨드를 방향키 말고 공격 동작 360도 원형 입력으로 변경' — main.js 가 프레임마다 부른다):
-   *  무장 창이 열려 있고 낼 수 있는 동안(can — 스틱 판과 같은 조건) 이 프레임의 공격 손 움직임 d(input.consumeHandDelta — 손 m) · 손가락이 닿아 있나(down — 마우스는 늘)를 읽어
-   *  최근 SECRET.ibSpin.circleTime 초 안에 원을 한 바퀴(그 길의 가운데 둘레로 360° · 반지름 circleR 이상) 그렸으면 참(그 스텝에 fire() → skill.secret).
-   *  창이 없거나 · 낼 수 없거나 · 다른 판이면 셈을 비우고 거짓. 몸짓 셈 = src/attack_circle.js (순수 함수). 참이면 창 ctx 에 그린 쪽 turnDir(+1 반시계 · −1 시계 — 몸이 그쪽으로 돈다)
-   */
-  spinCircle(dt, d, down, can) {
-    const st = (this.circ ??= circleState());
-    if (!can || !this.circleOwns()) {
-      circleClear(st);
-      st.t += dt;
-      return false;
-    }
-    const V = SECRET.ibSpin;
-    const go = circleStep(st, dt, d.x, d.y, down, { time: V.circleTime, need: 2 * Math.PI, rMin: V.circleR, gap: V.circleGap, inner: V.circleInner });
-    if (go) {
-      this.open.ctx = { ...this.open.ctx, turnDir: st.sgn };
-      this.circleFires = (this.circleFires ?? 0) + 1;
-    }
-    return go;
-  }
-
-  /**
-   * 이베리아 휘감아 돌기 스틱 판 (10/23 사장님 '공격 버튼 대신 이동 버튼을 360도 돌린다거나' · '한 바퀴로 하지 말고 반 바퀴 이상으로' — main.js 가 프레임마다 부른다):
-   *  무장 창이 열려 있고 낼 수 있는 동안(can — 공격 입력 길과 같은 조건: 기력 · 굳음 · 비기 중 아님 · 살아 있음) 이동 스틱 m(input.move)을 읽어
-   *  최근 SECRET.ibSpin.stickTime 초 안에 어느 쪽으로든 stickTurn° 돌았으면 참(그 스텝에 fire() → skill.secret — 공격 입력 길과 같은 함수).
-   *  창이 없거나 · 낼 수 없거나 · 'attack' 판이면 셈을 비우고 거짓. 몸짓 셈 = src/stick_turn.js (순수 함수).
-   *  참이면 창 ctx 에 돌린 쪽 turnDir(+1 반시계 · −1 시계)을 적는다 — 몸이 그쪽으로 돈다(10/23 사장님 '조이스틱 회전에 따라 반대로도' · SECRET.ibSpin.reverse)
-   */
-  spinStick(dt, m, can) {
-    const st = (this.turn ??= stickTurnState());
-    if (!can || !this.stickOwns()) {
-      stickTurnClear(st);
-      return false;
-    }
-    const V = SECRET.ibSpin;
-    const go = stickTurnStep(st, dt, m.x, m.y, { time: V.stickTime, need: (V.stickTurn * Math.PI) / 180, path: !!V.stickPath, rate: !!V.stickRate, from: !!V.stickFrom });
-    if (go) this.open.ctx = { ...this.open.ctx, turnDir: st.sgn }; // 돌린 쪽 (+1 = 반시계 = 몸이 왼쪽으로 · −1 = 시계 = 오른쪽으로 — iberian_spin.js requestSpin want)
-    return go;
   }
 
   /**
@@ -1237,7 +1169,7 @@ export class PlayerSecretWatch {
           K.open++;
           K.stance[P.pend.stance] = (K.stance[P.pend.stance] ?? 0) + 1;
           if (P.buf) (this.queued = P.buf), (P.bufFired = (P.bufFired ?? 0) + 1); // 미리 받은 입력 → 이 스텝 곧장 (main.js 가 update 뒤에 fire)
-          else if (SECRET.gyeoksal.auto) (this.queued = { dir: null, auto: true }), (K.auto = (K.auto ?? 0) + 1); // 10/24 사장님: 받아 내면 저절로 — 스틱 앞(조건 ②)이 곧 입력 · 겨눌 곳은 받은 자세가 정함
+          else (this.queued = { dir: null, auto: true }), (K.auto = (K.auto ?? 0) + 1); // 10/24 사장님: 받아 내면 저절로 — 스틱 앞(조건 ②)이 곧 입력 · 겨눌 곳은 받은 자세가 정함
         }
         P.pend = P.buf = null;
       }
@@ -1390,7 +1322,7 @@ export class PlayerSecretWatch {
     if (o) {
       this.combo = 0;
       this.binds.reset(); // 비기를 내면 0
-      if (o.ctx?.ev === 'spin' || o.ctx?.ev === 'altib') this.spinArm.consume(); // 휘감아 돌기 · 알티바슈 포르트(11/11): 한 번 무장에 한 번 (10/22)
+      if (o.ctx?.ev === 'altib') this.spinArm.consume(); // 휘감아 돌기 · 알티바슈 포르트(11/11): 한 번 무장에 한 번 (10/22)
     }
     return o;
   }

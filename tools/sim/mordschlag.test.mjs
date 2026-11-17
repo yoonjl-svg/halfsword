@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, AI, THREE } from './harness_m.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
-import { mordMode, mordGripOf, mordHitMul, mordKinOf, mordHeadReach } from '../../src/mordschlag.js';
+import { mordMode, mordHitMul, mordKinOf, mordHeadReach } from '../../src/mordschlag.js';
 import { FINISH } from '../../src/finish.js';
 const { SECRET } = CONFIG;
 
@@ -28,7 +28,7 @@ const anc = (P) => { const a = P.gripJoint.anchor2(); return [+a.x.toFixed(6), +
 const wristGap = (P) => {
   const fa = P.bodies.farmS, sw = P.sword;
   const w = new THREE.Vector3(0.13, 0, 0).applyQuaternion(q(fa.rotation())).add(fa.translation());
-  const gp = new THREE.Vector3(0, P.mordGrip ? P.mordGrip.g : 0, 0).applyQuaternion(q(sw.rotation())).add(sw.translation());
+  const gp = new THREE.Vector3(0, 0, 0).applyQuaternion(q(sw.rotation())).add(sw.translation());
   return w.distanceTo(gp);
 };
 
@@ -110,10 +110,9 @@ test('폼멜 찍기 기본 (10/31 14:xx 사장님 \'폼멜 찍기로 바꿔서 �
       g.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === P) hits.push({ zone: r.zone, part: pr.w.part, E: r.energy }); };
       assert.equal(P.skill.secret({ S: TRADITIONS.german.playerSecret, ctx: { ev: 'press' } }), true);
       assert.equal(mordMode(P), 'hilt');
-      let front = Infinity, rev = false, fell = false, stiff = false;
+      let front = Infinity, fell = false, stiff = false;
       for (let i = 0; i < Math.round(3 / DT) && P.skill.sec; i++) {
         g.step();
-        if (P.mordGrip) rev = true;
         if (P.state !== 'stand') fell = true;
         if (P.skill.sec?.stage === 'stiff') stiff = true;
         const I = P.iai;
@@ -123,7 +122,6 @@ test('폼멜 찍기 기본 (10/31 14:xx 사장님 \'폼멜 찍기로 바꿔서 �
         const wO = new THREE.Vector3(0, -0.13, 0).applyQuaternion(q(P.bodies.farmO.rotation())).add(P.bodies.farmO.translation());
         front = Math.min(front, wS.sub(hd).applyQuaternion(yi).x, wO.sub(hd).applyQuaternion(yi).x);
       }
-      assert.ok(!rev, `${gap}: 쥠 그대로 (칼날을 거꾸로 쥐지 않음)`);
       assert.ok(hits.some((h) => h.zone === 'head' && h.part === 'hilt'), `${gap}: 폼멜로 머리 ${JSON.stringify(hits)}`);
       assert.ok(front > 0.05, `${gap}: 두 손이 내 머리 앞 ${front.toFixed(2)} m`);
       assert.ok(!fell, `${gap}: 서 있음`);
@@ -142,15 +140,13 @@ test('폼멜 찍기 기본 (10/31 14:xx 사장님 \'폼멜 찍기로 바꿔서 �
     const hits = [];
     g.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === E && E.skill.sec) hits.push({ zone: r.zone, part: pr.w.part }); };
     E.barge = { phase: 'press' };
-    let fired = false, rev = false, fell = false;
+    let fired = false, fell = false;
     for (let i = 0; i < Math.round((SECRET.mordPress + 1.5) / DT); i++) {
       g.step();
       if (ai.secretRun?.stage === 'mord') fired = true;
-      if (E.mordGrip) rev = true;
       if (fired && E.state !== 'stand') fell = true;
     }
     assert.ok(fired, 'AI 가 창 안에서 냄');
-    assert.ok(!rev, 'AI 도 쥠 그대로');
     assert.ok(!fell, 'AI 서 있음');
     assert.ok(hits.some((h) => h.zone === 'head' && h.part === 'hilt'), `AI 폼멜로 머리 ${JSON.stringify(hits)}`);
   } finally { g.world.free(); }

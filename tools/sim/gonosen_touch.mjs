@@ -68,7 +68,7 @@ for (const w of weapons) for (const id of foes) {
         const fdt = 2 * DT / tk; // 이 프레임의 실제 초 (main.js dt — 화면 시계)
         const swipe = Math.hypot(d.x, d.y) / Math.max(fdt, 1e-3) >= CONFIG.SKILL.swingSpeed;
         const secBusy = !!p.skill.secretPhase;
-        const atkWin = !!ps.open && !ps.stickOwns() && !ps.circleOwns();
+        const atkWin = !!ps.open;
         const secArm = !(S0.secretHold && (p.skill.tap || p.skill.pom));
         if (atkWin && (taps > 0 || swipe) && !secBusy && p.alive && secArm) {
           const o = ps.fire();

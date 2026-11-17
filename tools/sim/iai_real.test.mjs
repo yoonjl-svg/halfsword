@@ -30,10 +30,8 @@ test('① 기본값 — 원전 꼴 켬 · 뽑는 자리 · 배를 지나는 자�
   assert.equal(UA.tsuTip, 1);
   const R = SECRET.iaiPathReal;
   assert.deepEqual(R.B, SECRET.iaiPathRise.B, '뽑는 자리 (왼 허리) 그대로');
-  assert.deepEqual([R.M.hand, R.M.yaw, R.M.el], [SECRET.iaiPathBelly.M.hand, SECRET.iaiPathBelly.M.yaw, SECRET.iaiPathBelly.M.el], '배를 지나는 자리 = 배 길 M (사장님 11/06)');
   assert.ok(R.N.at > 0 && R.N.at < R.M.at && R.M.at < 1, '뽑아 냄 → 배 → 끝 차례');
   assert.equal(R.N.yaw, R.B.yaw, '뽑아 내는 동안 칼날은 칼집 줄 (옆 각 그대로)');
-  assert.ok(R.E.hand[1] > SECRET.iaiPathBelly.E.hand[1] && R.E.el > SECRET.iaiPathBelly.E.el, '끝이 어깨 위로 (7 시 → 1 시)');
   assert.ok(R.E.body.pitch + R.draw.pitch < SECRET.iaiPath.E.body.pitch + SECRET.stance.iai.draw.pitch, '숙임 합이 줄어듦');
   assert.deepEqual(R.ready, { pelvisYaw: 0, chestYaw: 0 }, '허리 대기 몸 비틂 없음 (正対)');
   // 11/13 사장님 결정 '욍손자리 원전대로'로 빈손 기본 자리가 왼 허리(SECRET.iaiSaya 1 · iaiSayaHip)로 바뀜 (iai_saya_2026-11-13 — 이 줄만 고침 · 전: 10/14 배 앞이 기본)

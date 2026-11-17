@@ -215,7 +215,7 @@ export function ibAfter(ai, d) {
   if (aK > 0 && Math.random() < aK) {
     const I = ai.ibPlan;
     I.out = true;
-    I.outUntil = ai.sense.t + SECRET.ibSpin.armTime + SECRET.ibSpin.armGrace;
+    I.outUntil = ai.sense.t + SECRET.altib.armTime + SECRET.altib.armGrace;
     st.out++;
   }
   return true;
@@ -392,7 +392,7 @@ export function ibWatch(ai, s, d, CALM) {
       I.out = false;
       st.outArmed++;
     }
-    if (beat && ai.planLure && A.t - SECRET.ibSpin.armTime >= AI_PLAN.ib.armWait && ai.foeClosing < GAIT.walkMin && s.state === 'stand' && Math.random() < ai.planK * (C.lure ?? 0) * AI_PLAN.coin) {
+    if (beat && ai.planLure && A.t - SECRET.altib.armTime >= AI_PLAN.ib.armWait && ai.foeClosing < GAIT.walkMin && s.state === 'stand' && Math.random() < ai.planK * (C.lure ?? 0) * AI_PLAN.coin) {
       const t = bigCut(ai, s, 'lure');
       if (t && ai.startAttack(t, 'lure', { noFeint: true })) {
         st.goIn++;
