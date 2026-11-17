@@ -57,7 +57,7 @@ for (const w of WEAPONS) for (const fam of FAMS) for (const v of VS) for (const 
   for (let i = 0; i < E.sword.numColliders(); i++) E.sword.collider(i).setCollisionGroups(0);
   for (let i = 0; i < P.sword.numColliders(); i++) P.sword.collider(i).setCollisionGroups(0);
   P.skill.level = 0.7;
-  setCorr(CONFIG, P, CONFIG.SKILL.corr, CONFIG.SKILL.corrTip);
+  setCorr(CONFIG, P, CONFIG.SKILL.corr);
   setPad(P, PAD.Pflug);
   inputPump(G, deps, { pace: pacer('60', 100) });
   const S = [];

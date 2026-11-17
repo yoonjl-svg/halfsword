@@ -38,7 +38,7 @@ export function strokeReach(wid, seed, cutIdx, { lunge = false, pre = 2, band = 
   const G = newRound({ weapon: wid, weapon2: wid, seed });
   G.park();
   const P = G.player;
-  P.skill.corr = CONFIG.SKILL.corr; P.skill.corrTip = CONFIG.SKILL.corrTip; P.skill.autoGuard = true;
+  P.skill.corr = CONFIG.SKILL.corr; P.skill.autoGuard = true;
   let rs = (seed * 7919 + cutIdx * 104729) >>> 0; // 선 채 · 한 걸음 판이 같은 앞 획을 쓴다
   const rnd = () => ((rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296);
   let fx = 0, fy = 0;

@@ -21,7 +21,7 @@ function fight(id, seed, v) {
   const F = CHARACTERS_BY_ID[id];
   const G = newRound({ seed, difficulty: F.ai.level, persona: F.ai.persona, weapon2: F.weapon, weapon: 'rapier', revive: F.revive });
   const D = G.player, A = G.enemy;
-  D.skill.corr = SKILL.corr; D.skill.corrTip = SKILL.corrTip; D.skill.autoGuard = true;
+  D.skill.corr = SKILL.corr; D.skill.autoGuard = true;
   const guard = new PlayerParryGuard(D, A); D.stamina.controller = guard;
   guard.held = true; guard.opposition.lastHeld = true; // 판 시작에 누른 것으로 치지 않음
   let got = 0, gave = 0; const presses = []; const clashes = []; const oppHits = [];

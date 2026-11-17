@@ -32,7 +32,6 @@ function trial(id, tech, gap, level) {
   const D = Gm.player, A = Gm.enemy;
   if (trad) D.swordArt = resolveSwordArt({ ...WEAPONS[id], school: trad });
   D.skill.corr = SKILL.corr;
-  D.skill.corrTip = SKILL.corrTip;
   D.skill.autoGuard = true;
   Gm.ai.update = () => {};
   A.move.set(0, 0);

@@ -38,7 +38,6 @@ for (const pw of pows) {
           const E = G.enemy;
           G.ai.update = () => {}; // 상대는 기본 자세로 가만히 (칼을 든 채)
           P.skill.corr = CONFIG.SKILL.corr;
-          P.skill.corrTip = CONFIG.SKILL.corrTip;
           P.skill.autoGuard = true;
           while (G.t < 1.0) G.step();
           const w0 = E.wounds.length;

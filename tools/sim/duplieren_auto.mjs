@@ -47,7 +47,6 @@ export function fight({ bot: botKind = 'normal', weapon = 'longsword', opp = 'lo
   const P = G.player;
   const A = G.enemy;
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   const guard = new PlayerParryGuard(P, A);
   P.stamina.controller = guard;

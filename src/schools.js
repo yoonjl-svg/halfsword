@@ -13,7 +13,7 @@
 //      고유 동작 단계(10/9, docs/strike/school_unique_2026-10-09.md — 사장님 10/9 01:5x '새 베기 길을 열어야 유파의 의미가 있지'):
 //       공용 동작(TECH 12 + 라이브러리 talhoReves·wristCut·molinello)은 모든 유파가 같이 쓰고 이름만 유파 말로(techNames),
 //       유파마다 고유 동작 셋(unique — 독일·이탈리아·이베리아·일본·중국, 무유파는 없음)을 더한다. 아래 '공용 동작 이름'·'고유 동작' 머리말.
-//      자세 이름·쉴 자세는 늘, 가중치·맞받아치기·새 기술(燕返し)은 SKILL.schoolArt(기본 1, 사장님 10/9 01:5x) 일 때. 값(가중치 수)은 사장님 확인 전 — 켜는 것만 결정됨
+//      자세 이름·쉴 자세는 늘, 가중치·맞받아치기·새 기술(燕返し)도 늘 (사장님 10/9 01:5x '스위치 켜'). 값(가중치 수)은 사장님 확인 전 — 켜는 것만 결정됨
 //      유파 설계 v3 (10/9 사장님 승인 — docs/strike/school_secret_2026-10-09.md): 유파 하나 = 세 층
 //       ㉠ 기질 — 평소 몸가짐(temper: 간격·돌기·자세 박자·맞받기 성향, AI 성격 범위) + 반응 버릇(passives: 사건이 오면 p 로 굴려 나오는 작은 반응)
 //       ㉡ 비기 — secret 하나: 조건이 차면 그 유파의 대표 동작을 '완벽 실행'(굴림 없음, 결과는 물리). 독일 Versetzen · 이탈리아 Passata in contratempo ·
@@ -45,7 +45,7 @@
 import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS } from './ai_techniques.js';
 import { WEAPONS } from './weapons.js';
 import { schoolMeasure } from './weapon_measured.js';
-import { SECRET, SKILL, realS } from './config.js'; // 이베리아 비기 판 스위치 (10/11 — SECRET.iberianSecret) · 독일 왕관 막기 자리 스위치 (SKILL.deKron)
+import { SECRET, SKILL, realS } from './config.js';
 import { IBERIAN_TABLE } from './guards.js'; // 이베리아 몬탄테 자세표 (10/10 고증 — TRADITIONS.iberian.guardTable) // 무기별 간격은 한 곳(weapon_measured.js)에서 읽는다
 
 /** 기술 목록을 복사하면서 기술별 reach(닿는 거리 보정, m)를 무기에 맞게 바꾼다 (표에 없는 기술은 롱소드 값 그대로) */
@@ -68,11 +68,8 @@ const GERMAN = {
     highR: G.ochsR, // 내 오른쪽 위: 오른쪽 황소
     // 머리 위에서 곧게: 왕관(Kron — 칼자루를 머리 위로 높이 들어 코등이·칼자루로 받는다, 사장님 10/11 22:2x '독일 막기 자세에 왕관 넣어' 기본).
     //  Ringeck 주해 「… catch his strike on your hilt … this displacement is called "the crown". From there you can rush in」 [원전 2차 영역] · 자리 = G.kron [0.02, 0.4](덮는 자세로 쓰던 패드 — 지붕과 긴 자세 사이, 자세표 섞기로 칼이 서고 손이 머리 위) [해석]
-    //  SKILL.deKron 0 = 전 자리(긴 자세 — 뻗은 칼 위로 떨어지게, 물리 탐색으로 고른 값). 읽을 때마다 스위치를 본다(게터 — 시뮬 with_config)
-    //  10/12 왕관 꼴: 이 패드는 손이 가는 길만 정하고, 손·칼끝·칼 면은 막기 자리 몸꼴 덧씌우기(아래 GERMAN_KRON — TRADITIONS.german.parryCover)가 준다 (SKILL.deKronShape 'pad' = 패드만)
-    get highC() {
-      return SKILL.deKron ? G.kron : G.langort;
-    },
+    //  10/12 왕관 꼴: 이 패드는 손이 가는 길만 정하고, 손·칼끝·칼 면은 막기 자리 몸꼴 덧씌우기(아래 GERMAN_KRON — TRADITIONS.german.parryCover)가 준다
+    highC: G.kron,
     lowL: G.pflugL,
     lowR: G.pflugR,
     thrust: G.pflugL, // 찌르기: 왼쪽으로 비껴 누른다 (Absetzen)
@@ -104,7 +101,7 @@ const jianTech = withReach(TECH, { zornhau: 0, unterhau: 0.01, zornhauL: -0.04, 
 //   techNames  공용 동작 이름 (기술 이름 → { name, src }) — 자료만(HUD 는 기술 이름을 보이지 않는다)
 //   guardTable 유파 자세표 (10/10 풀림): 바탕 자리 이름 → { hand, blade, pelvisYaw, chestYaw, pitch, drop, name?, desc?, src? } — 무기 틀 표를 고른 뒤 적힌 자리만 덮는다
 //              (guards.js applySchoolGuardTable — sword_art.js resolveSwordArt 가 부름: 플레이어·AI 같은 표). 간 보는 자세 목록은 guards(칸 w = 빈도 곱), HUD 이름은 names
-//  techK·counterArt·unique 는 SKILL.schoolArt(기본 1 — 사장님 10/9 01:5x '스위치 켜') 일 때 sword_art.js 가 입힌다 (0 = 10/9 01:49 까지의 판). names·rest 는 늘 (사장님 10/9 01:2x 안 A)
+//  techK·counterArt·unique 는 sword_art.js 가 입힌다 (사장님 10/9 01:5x '스위치 켜' — 늘). names·rest 는 늘 (사장님 10/9 01:2x 안 A)
 
 // 일본 자세표 (10/10 사장님 '유파마다 자기 자세·동작을 원전대로' · 13:4x '규칙을 풀어' · 14:0x 세 갈래 — docs/motion/japanese_guards_2026-10-10.md).
 //  guardTable 꼴 (guards.js applySchoolGuardTable — sword_art.js 가 무기 틀 표를 고른 뒤 적힌 자리만 덮는다: 플레이어·AI 같은 표, 모노호시자오(앞무게)·우치가타나(두손 보통) 둘 다).
@@ -866,7 +863,7 @@ const CHINESE_SECRET_GYEOKSAL = {
 //  막은 자리에 따라 한 수를 고르는 표: 오른 황소(높이, 칼 든 쪽)에서 맞붙음 → Duplieren(칼을 떼지 않고 상대 칼 뒤로 머리 — 위 빈틈) ·
 //   왼 걸이(칼을 왼쪽에 세워 받음)에서 맞붙음 → Mutieren(짧은 날로 감아 팔을 들고 바깥에서 상대 칼을 따라 아래 빈틈을 찌름).
 //  어드밴티지: 창이 열린 뒤 붙어 있던 시간만큼 판정 배율·서보 힘 창 × secret.js bindGain (SECRET.deBindFull 에 deBindGain 최대). 오래 버티는 위험(상대가 감거나 떼어 냄)은 물리 그대로.
-//  자리: highR 오른 황소(G.ochsR) · highL 왼 걸이(독일 막기 자리 [−0.3, 0.1] — '칼을 왼쪽에 세워 받는다', 왼쪽 황소 꼴) · highC 왕관(Kron, SKILL.deKron 켬일 때 — 사장님 10/11 22:2x). 쟁기(lowL·lowR·thrust)는 아님
+//  자리: highR 오른 황소(G.ochsR) · highL 왼 걸이(독일 막기 자리 [−0.3, 0.1] — '칼을 왼쪽에 세워 받는다', 왼쪽 황소 꼴) · highC 왕관(Kron — 사장님 10/11 22:2x). 쟁기(lowL·lowR·thrust)는 아님
 //   왕관 → 뛰어들기 (Einlaufen): Ringeck 「this displacement is called "the crown". From there you can rush in」 [원전 2차 영역] — 칼자루로 받은 칼을 머리 위에 걸친 채 반걸음 들어가며 짧게 머리로 내려 벰.
 //   씨름(Ringen am Schwert)은 우리 몸에 없어(잡기·던지기 없음) 들어가며 짧게 치는 한 칼로 [해석] · 반걸음 = 중국 연환 반걸음과 같은 값(SECRET.chineseStep 0.3 — 새 값 아님 · 걸음 사다리 0.3 칸 · 사장님 10/29 14:5x '0.25는 0.3으로 합치자', 전 0.25) · 길 [추정]
 const deStep = { lat: 0, fwd: 'chineseStep', when: 'strike', kind: 'lunge' };
@@ -923,7 +920,7 @@ export const TECH_NAMES = {
 
 // 유파 전통 여섯 (사장님 10/8 20:xx: 유파 5 + 무유파). rest = 쉴 자세(보정 v2 ③ 되돌아옴 겨눔의 목표) — 사장님 10/8 21:5x '유파가 정한다'
 //  (독일 쟁기/긴 자세 · 이탈리아 테르차 · 이베리아 중단형 · 일본 中段 · 중국 中平 · 무유파 앞으로 겨눔). null = SKILL.homeGuard(쟁기 자리) 그대로.
-//  일본·중국 rest = 'langort'(긴 자세 자리 [0.0, 0.03] = 中段·中平) — **사장님 10/9 01:2x 답: 안 A**(확인표 198). 쉴 자세는 스위치(SKILL.schoolArt)와 상관없이 늘 쓴다(플레이어 ③ 되돌아옴만).
+//  일본·중국 rest = 'langort'(긴 자세 자리 [0.0, 0.03] = 中段·中平) — **사장님 10/9 01:2x 답: 안 A**(확인표 198). 쉴 자세는 늘 쓴다(플레이어 ③ 되돌아옴만).
 //  비교용 (= 안 B, 쟁기 자리 = SKILL.homeGuard — 10/9 00:49 까지의 판)
 /**
  * 걸음(보법)을 읽는 유파 — 플레이어가 대기실 스킬북 '보법'을 안 가졌거나 해제했으면(fighter.schoolFootwork === false — main.js newRound, 첫 화면·대기실 여정만)
@@ -975,14 +972,14 @@ export function playerSecretDef(tradition) {
 //  watch: 물러나며 가리기(ai.js withdraw coverFor — 상대가 머리 위로 들면 이 줄)·플레이어 막기 버튼 기다림에도 같은 꼴 (10/11 G.kron 이 쓰이던 곳 그대로). 중국 칸은 watch 가 없어 그대로.
 //  숫자는 모두 사장님 확인 전 (확인표 917). 덧씌우기 빠르기는 중국과 같은 MOTION.coverIn·coverOut, 손 목표 빠르기는 parrySpeed 그대로(새 값 없음)
 // 왕관 손·칼끝 (10/12 08:2x 사장님 '막기의 효용이 가장 큰 자세이되, 원전의 설명을 해치지 않는 자세로' — docs/strike/kron_shape_2026-10-12.md §9):
-//  1 = 정적 막기 쓸기(손 높이 0.45~0.64 · 앞 0.08~0.24 · 칼 70~90° — 45 자리 × 간격 12, 다시 12)에서 '칼날 상처 없이 받음'이 가장 많은 자리 · 0 = 10/12 00:1x 값. SKILL.deKronH
-const KRON_AT = { 1: { hand: [0.16, 0.5, 0.04], blade: [70, 0] }, 0: { hand: [0.16, 0.6, 0.04], blade: [80, 0] } };
-export const GERMAN_KRON = { name: '왕관 (크론)', desc: '칼자루로 받고 그대로 뛰어든다', pad: G.kron, get hand() { return this.handSet ?? KRON_AT[SKILL.deKronH ? 1 : 0].hand; }, set hand(v) { this.handSet = v; }, get blade() { return this.bladeSet ?? KRON_AT[SKILL.deKronH ? 1 : 0].blade; }, set blade(v) { this.bladeSet = v; }, face: [1, 0, 0], pelvisYaw: 10, chestYaw: 0, pitch: 0, drop: 0.05, watch: true, src: 'Ringeck 주해 Scheitelhau 「versetzt er mit dem gehiltz hoch ob seinem haupt, die versatzung heist die kran」 [원전 2차] · 코등이 가로·칼 면 상대 쪽 [해석] · 수 [추정]' };
+//  정적 막기 쓸기(손 높이 0.45~0.64 · 앞 0.08~0.24 · 칼 70~90° — 45 자리 × 간격 12, 다시 12)에서 '칼날 상처 없이 받음'이 가장 많은 자리 (전 10/12 00:1x 손 [0.16, 0.6, 0.04] · 80°)
+const KRON_AT = { hand: [0.16, 0.5, 0.04], blade: [70, 0] };
+export const GERMAN_KRON = { name: '왕관 (크론)', desc: '칼자루로 받고 그대로 뛰어든다', pad: G.kron, get hand() { return this.handSet ?? KRON_AT.hand; }, set hand(v) { this.handSet = v; }, get blade() { return this.bladeSet ?? KRON_AT.blade; }, set blade(v) { this.bladeSet = v; }, face: [1, 0, 0], pelvisYaw: 10, chestYaw: 0, pitch: 0, drop: 0.05, watch: true, src: 'Ringeck 주해 Scheitelhau 「versetzt er mit dem gehiltz hoch ob seinem haupt, die versatzung heist die kran」 [원전 2차] · 코등이 가로·칼 면 상대 쪽 [해석] · 수 [추정]' };
 // 독일만(롱소드·엑스칼리버·라이트세이버·에스톡·세이버·팔쉬온 — 독일 전통 무기 모두). 무유파(none)는 GERMAN 막기 패드를 같이 쓰지만 이 덧씌우기는 받지 않는다(유파 칸이 따로 — 바이트 그대로).
-//  읽을 때마다 스위치를 본다(게터): SKILL.deKron 0 → 없음(긴 자세 자리) · SKILL.deKronShape 'pad' → 없음(10/11 패드 꼴)
+//  읽을 때마다 새 칸 (게터 — 늘 왕관)
 Object.defineProperty(TRADITIONS.german, 'parryCover', {
   get() {
-    return SKILL.deKron && SKILL.deKronShape !== 'pad' ? { highC: GERMAN_KRON } : undefined;
+    return { highC: GERMAN_KRON };
   },
   enumerable: true,
 });
@@ -1299,7 +1296,7 @@ TRADITIONS.chinese.parryCover = { ...TRADITIONS.chinese.parryCover, down: CHINES
   TRADITIONS.chinese.parryCover = rest;
 }
 
-// 유파 자료 켬 묶음 (재기 전용): SKILL.schoolArt 1 일 때 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
+// 유파 자료 켬 묶음 (재기 전용): 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
 export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true, table: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬 · table: 유파 자세표(10/10 이베리아 몬탄테 — TRADITIONS[유파].guardTable, guards.js applySchoolGuardTable) — false = 무기 틀 표 그대로
 
 /**

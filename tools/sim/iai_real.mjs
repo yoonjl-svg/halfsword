@@ -111,7 +111,6 @@ export function gnsShot({ foeW = 'longsword', guard = 'langort', start = 'hip', 
   const P = G.player;
   const A = G.enemy;
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   P.canShove = true;
   const W = new PlayerSecretWatch(P, A);

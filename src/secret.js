@@ -1344,8 +1344,8 @@ export class PlayerSecretWatch {
   }
 }
 
-/** 플레이어 무기의 유파 비기 (내 무기 전통 = 검술 풀이 tradition — schoolOf(w.id)). 스위치(SKILL.schoolArt·schoolSecret·playerSecret)가 꺼졌거나 무유파면 null */
+/** 플레이어 무기의 유파 비기 (내 무기 전통 = 검술 풀이 tradition — schoolOf(w.id)). 총이거나 무유파면 null */
 export function playerSecretOf(f) {
-  if (!(SKILL.schoolArt && SKILL.schoolSecret && SKILL.playerSecret) || f.weapon?.gun) return null;
+  if (f.weapon?.gun) return null;
   return playerSecretDef(f.swordArt?.tradition); // 사람 비기 판 (10/22 — 이탈리아는 거침없이 나아가 찌르기 · schools.js playerSecretDef)
 }

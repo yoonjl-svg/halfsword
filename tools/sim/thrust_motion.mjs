@@ -34,7 +34,6 @@ export function strokeRun({ school, weapon, kind, seed = 1, gap = 'contact', v =
   const P = G.player, E = G.enemy;
   G.ai.update = () => E.move.set(0, 0);
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   for (let t = 0; t < 1.2 * K; t += DT) { P.move.set(0, 0); E.handOffset.set(...foeHand); G.step(); }
   const d0 = air ? null : P.foeDistance();

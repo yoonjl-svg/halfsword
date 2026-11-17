@@ -71,7 +71,7 @@ const jobs = {
   smoke: () => run('weapon_smoke.mjs', []),
 };
 if (!quick) {
-  jobs.duel = () => run('motion_lab.mjs', ['duel', id, String(N), 'main']);
+  jobs.duel = () => run('motion_lab.mjs', ['duel', id, String(N)]);
   jobs.fights12 = () => run('fights12.mjs', []);
   jobs.live_battery = () => run('live_battery.mjs', []);
   jobs.finish_thrust = () => run('finish_thrust.mjs', ['1', '--stand']);

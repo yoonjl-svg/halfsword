@@ -19,7 +19,7 @@ const withMord = (set, fn) => { const keep = { ...SECRET.mord }; Object.assign(S
 function fixture(weapon = 'longsword', gap = 0.75) {
   const g = newRound({ weapon, weapon2: 'longsword', gap, seed: 7, walls: false, AIClass: Still });
   const P = g.player, E = g.enemy;
-  P.skill.corr = CONFIG.SKILL.corr; P.skill.corrTip = CONFIG.SKILL.corrTip; P.skill.autoGuard = true; P.canShove = true;
+  P.skill.corr = CONFIG.SKILL.corr; P.skill.autoGuard = true; P.canShove = true;
   P.foe = E; E.foe = P;
   return { g, P, E };
 }

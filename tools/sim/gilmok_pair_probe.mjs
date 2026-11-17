@@ -37,7 +37,6 @@ function run(who) {
   if (PL) {
     G.ai.update = () => {}; // 상대 멈춤
     me.skill.corr = SKILL.corr;
-    me.skill.corrTip = process.env.NOTIP ? false : SKILL.corrTip;
     me.skill.autoGuard = !process.env.NOAG; // NOAG=1: 플레이어 칼 표시(playerArm = autoGuard) 끔 — 진단용
   } else {
     const ai = G.ai;

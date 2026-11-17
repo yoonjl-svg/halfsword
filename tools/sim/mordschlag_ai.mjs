@@ -105,7 +105,6 @@ function fight(heroId, oppId, seed) {
     P.stamina.setInfinite(true); // 용사의 눈물 (대기실 기본 장착 — 기력 무한)
     if (oppId !== 'human') {
       P.skill.corr = SKILL.corr;
-      P.skill.corrTip = SKILL.corrTip;
       P.skill.autoGuard = true;
       P.canShove = true;
       if (oppId === 'block' || oppId === 'backblock' || oppId === 'hug') {

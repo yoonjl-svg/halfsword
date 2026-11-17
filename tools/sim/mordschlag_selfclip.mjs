@@ -38,7 +38,7 @@ const rows = [];
 for (const gap of GAPS) for (const gd of GUARDS) {
   const G = newRound({ weapon: 'longsword', weapon2: process.env.FOE || 'longsword', seed: 7, gap, walls: false, AIClass: Still });
   const P = G.player, E = G.enemy;
-  P.skill.corr = SKILL.corr; P.skill.corrTip = SKILL.corrTip; P.skill.autoGuard = true; P.canShove = true;
+  P.skill.corr = SKILL.corr; P.skill.autoGuard = true; P.canShove = true;
   const S = TRADITIONS.german.playerSecret;
   const hits = [];
   G.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === P && P.skill.sec) hits.push(`${pr?.w?.part}>${r.zone}:${r.energy.toFixed(0)}J`); };

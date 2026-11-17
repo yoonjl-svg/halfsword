@@ -83,7 +83,6 @@ function setup(wid, seed) {
   const P = G.player, E = G.enemy;
   P.skill.level = 0.7;
   P.skill.corr = SKILL.corr;
-  P.skill.corrTip = SKILL.corrTip;
   P.skill.autoGuard = true;
   for (const f of [P, E]) f.die = () => {};
   G.ai.update = () => E.move.set(0, 0);

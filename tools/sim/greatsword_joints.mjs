@@ -106,7 +106,6 @@ function round(w, { seed = 7, gap = null, ai = false } = {}) {
   const G = newRound({ seed, weapon: w, weapon2: 'longsword', gap: gap ?? ARENA.startGap });
   const P = G.player, E = G.enemy;
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   if (!ai) G.ai.update = () => E.move.set(0, 0);
   E.die = () => {};

@@ -14,19 +14,16 @@
 //
 //  누가 고르나: sword_art.js resolveSwordArt(spec, persona) 한 곳 — 무기 스펙의 frame·style 로 이 파일의 표·기술·덧씌우기를 골라
 //   검객(Fighter 생성자)·AI(생성자)·손 모양(hands.js)·HUD(main.js)가 같은 결과를 읽는다.
-//  본판(10/8 18:50 사장님 '적용', 확인표 34): MOTION.lib(= config SKILL.motionLib, 기본 1)이 켜져 있으면 Fighter 생성자가 자세표·런지·흐름을 입히고,
+//  본판(10/8 18:50 사장님 '적용', 확인표 34 — 늘 켬): Fighter 생성자가 자세표·런지·흐름을 입히고,
 //  AI 생성자가 유파 꾸러미에 기술·속임수·간 보는 자세를 더한다(막기 덧씌우기 COVERS·막기 자리 LIB_PARRY 는 기본 끔 그대로).
 //  숫자 근거: [원전]·[해석]·[추정] 표시는 docs/weapon_motions.md 에 있다. 여기 적은 값은 모두 몸 크기(키 1.75 m)에 맞춘 추정이다.
 // ─────────────────────────────────────────────────────────────
 import { GUARD_BASE, GUARD_BASE_ONE } from './guards.js';
 import { TECH, FEINTS, G, WATCH_GUARDS, TECH_BY_NAME } from './ai_techniques.js';
-import { THRUST, SKILL } from './config.js';
+import { THRUST } from './config.js';
 
 export const MOTION = {
-  // 본판 스위치 = config SKILL.motionLib (사장님 10/8 18:50 '적용', 확인표 34 — 기본 켬). 켜져 있으면 Fighter·AI 생성자가 sword_art.js resolveSwordArt 로 라이브러리 몫을 입힌다(옛 이름 applyMotionLibrary·libSchool 은 motion_library.js 호환 겉면).
-  //  점검 도구(motion_lab·motion_league)는 MOTION.lib = false 로 끄고 직접 입혀 끔/켬을 나란히 잰다.
-  get lib() { return !!SKILL.motionLib; },
-  set lib(v) { SKILL.motionLib = v ? 1 : 0; },
+  // 본판 (사장님 10/8 18:50 '적용', 확인표 34 — 늘 켬): Fighter·AI 생성자가 sword_art.js resolveSwordArt 로 라이브러리 몫을 입힌다(옛 이름 applyMotionLibrary·libSchool 은 motion_library.js 호환 겉면).
   coverIn: 0.08, // 막기 덧씌우기: 덮는 시간(초)
   coverOut: 0.15, // 걷는 시간(초)
   useParry: false, // 무기별 막기 자리(LIB_PARRY)를 AI 에 끼울까 — 기본 끔: 바뀐 자세표(막기 자세 포함)로 잰 값이라 지금 표와 맞지 않는다
@@ -333,17 +330,7 @@ export function installCover(fighter, ai, covers) {
 export function installFlow(fighter) {
   const sk = fighter.skill;
   if (!sk || sk._flow) return;
-  sk._flow = true;
-  const upd = sk.update.bind(sk);
-  sk.update = (dt) => {
-    const keep = SKILL.flow;
-    SKILL.flow = true;
-    try {
-      return upd(dt);
-    } finally {
-      SKILL.flow = keep;
-    }
-  };
+  sk._flow = true; // skill.js update 가 읽음 (흐름 판단 updateFlow)
 }
 
 /**

@@ -9,7 +9,7 @@ import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 감도 (11/06 
 //  훈련된 사람이 저절로 하는 몸놀림을 덧붙인다. 단, 여기서 바꾸는 것은 "목표"뿐이다.
 //  실제 움직임은 언제나 근육(힘의 한계)과 물리가 만든다 → 맞으면 흐트러지고, 칼은 여전히 무겁다.
 //
-//   0) 입력 쪽 관성("가죽끈", SKILL.handDynamicsOn): 손가락 목표 앞에 반지름 작은 원(anchor)을 둔다.
+//   0) 입력 쪽 관성("가죽끈", SKILL.inputDeadRadius): 손가락 목표 앞에 반지름 작은 원(anchor)을 둔다.
 //      손가락이 그 안에서 떨리는 동안은 anchor가 안 움직이고, 반경을 넘어야 그만큼만 끌려간다.
 //      → 잘게 떠는 손가락이 자세 경계(guards.js RBF 블렌드)를 스치며 칼끝·몸통을 흔드는 것을 원천에서 막는다.
 //      진짜 베기·자세 이동처럼 큰 움직임은 anchor가 거의 즉시 팽팽해져 그대로 전해진다 → 반응은 그대로.
@@ -182,8 +182,7 @@ export class Skill {
   constructor(fighter, level = SKILL.level) {
     this.f = fighter;
     this.level = level;
-    this.corr = SKILL.corr; // 보정 방식 'v2' | 'old' (플레이어 = config 그대로, 새 보정 하나 — 사장님 10/1 22:05 위임 → 디렉터 결정; AI 는 ai.js setLevel 이 SKILL.corrAI 'old' 로 덮어쓴다)
-    this.corrTip = SKILL.corrTip; // v2 끝점 겨눔 ② (config 기본 끔, 같은 결정. AI 는 늘 끔)
+    this.corr = SKILL.corr; // 보정 방식 'v2' | 'old' (플레이어 = config 그대로, 새 보정 하나 — 사장님 10/1 22:05 위임 → 디렉터 결정; AI 는 ai.js setLevel 이 옛 보정 'old' 로 덮어쓴다)
     this.prev = fighter.handOffset.clone();
     this.vel = new THREE.Vector2(); // 손 목표가 움직이는 속도 (m/s, 몸 앞 평면)
     this.follow = new THREE.Vector2(); // 이어 베기로 더해지는 손 목표
@@ -204,7 +203,7 @@ export class Skill {
     this.tap = null;
     this.thrusts = 0;
     this.thrustPush = false; // 지금 칼끝을 뻗는 구간인가 (겨눈 뒤 ~ 뻗고 버티기 끝). combat.js 가 팔 유효 질량을 이때만 싣는다
-    this.flowing = false; // 흐름(SKILL.flow) 중인가 — 끄면 늘 false
+    this.flowing = false; // 흐름 중인가 — 흐름을 받는 몸(_flow — frames.js installFlow · 앞무게 틀)이 아니면 늘 false
     // 손잡이 찍기(시제품, pommel()): 진행 중인 찍기와 센 수. 찌르기와 같은 덧씌우기 칸(thrustPose)을 쓴다 — 둘은 함께 돌지 않는다
     this.pom = null;
     this.pommels = 0;
@@ -1459,7 +1458,7 @@ export class Skill {
   }
 
   /**
-   * 흐름 판단(SKILL.flow): 휘두르기가 멈추지 않은 채 끌기 방향이 flowTurn(rad) 넘게 휘어 돌면 흐름(this.flowing)이다.
+   * 흐름 판단(_flow — frames.js installFlow): 휘두르기가 멈추지 않은 채 끌기 방향이 flowTurn(rad) 넘게 휘어 돌면 흐름(this.flowing)이다.
    *  - 흐르는 동안 반 바퀴(새 베기)마다 한 걸음 내딛는다 (상대가 한 걸음 거리일 때)
    *  - 안전장치: 칼이 세게 막히면(fighter.jolt) 흐름이 끊기고 flowBreak 초 동안 다시 흐르지 못한다
    *  - 손을 멈추면(0.08초) 흐름이 끝나 예전처럼 자세에서 선다
@@ -1692,7 +1691,7 @@ export class Skill {
     // 0) 가죽끈: anchor는 손가락(off)이 반경(inputDeadRadius)을 넘어야 그만큼만 끌려간다.
     //  반경 안의 떨림은 anchor를 전혀 움직이지 못한다 — 어디서 떨든(자세 경계라도) 걸러진다.
     //  큰 움직임(진짜 베기)은 반경이 순식간에 다 채워져 손가락과 거의 같이 움직인다(지연 ≈ 반경/속도).
-    if (SKILL.handDynamicsOn) {
+    {
       const adx = off.x - this.anchor.x;
       const ady = off.y - this.anchor.y;
       const ad = Math.hypot(adx, ady);
@@ -1702,12 +1701,10 @@ export class Skill {
         this.anchor.x += adx * k;
         this.anchor.y += ady * k;
       }
-    } else {
-      this.anchor.copy(off);
     }
 
-    // 흐름(SKILL.flow, 시제품): 멈추지 않고 휘어 이어지는 끌기를 흐름으로 본다 (끄면 아무 일도 없다 — flowing 은 늘 false)
-    if (SKILL.flow) this.updateFlow(dt, swinging);
+    // 흐름: 멈추지 않고 휘어 이어지는 끌기를 흐름으로 본다 (앞무게 틀 검객만 — frames.js installFlow 가 _flow 를 켬. 아니면 flowing 은 늘 false)
+    if (this._flow) this.updateFlow(dt, swinging);
     // 들어가며 막기 (짧은 한손 칼만 — 다른 무기는 아무 일도 없다)
     if (f.weapon?.enterParry) this.enterParry(dt);
     const fk = this.flowing ? SKILL.flowFollow : 1; // 흐르는 동안은 이어 베기를 더 밀어 칼이 멈추지 않고 돌아 나가게
@@ -1783,7 +1780,7 @@ export class Skill {
         // 한손 무기(guardPose.oneHand)는 옛 보정처럼 homeGuard 로 (사장님 탐색판 3·4차 '나뭇가지 기본 자세가 몸통 오른쪽으로 쭉 편 것처럼 고정'):
         //  pad*(가슴 앞 가운데)의 한손 자세표는 팔을 끝까지 뻗고 45° 옆으로 선 3번 자세(찌르기 자세)라, 쉼 무게(bodyPose.idle)가 그리로 끌면
         //  벤 뒤마다 팔이 곧게 뻗은 채 굳는다. homeGuard 의 한손 쟁기는 칼끝이 상대 얼굴을 겨누니(guards.js) ③ 의 겨눔은 그대로다. 걷기·진행 p 는 같다
-        //  쉴 자리(home) = 유파 쉴 자세(sword_art.js restGuard.pad — 10/9 ②③, 스위치 SKILL.schoolArt 0 이면 SKILL.homeGuard 그대로)
+        //  쉴 자리(home) = 유파 쉴 자세(sword_art.js restGuard.pad — 10/9 ②③, 유파 rest 가 없으면 SKILL.homeGuard 그대로)
         const ps = (this.recoverDest ||= [0, 0]);
         const home = f.swordArt?.restGuard?.pad ?? SKILL.homeGuard;
         if (f.guardPose?.oneHand) {

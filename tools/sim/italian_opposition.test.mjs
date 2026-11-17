@@ -107,7 +107,7 @@ test('real physics round: one press, one paid thrust, completes', () => {
   const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: 1.65, seed: 1 });
   try {
     const p = g.player, a = g.enemy; p.fightT = a.fightT = CONFIG.ARENA.startHold;
-    p.skill.corr = CONFIG.SKILL.corr; p.skill.corrTip = CONFIG.SKILL.corrTip; p.skill.autoGuard = true;
+    p.skill.corr = CONFIG.SKILL.corr; p.skill.autoGuard = true;
     const guard = new PlayerParryGuard(p, a); p.stamina.controller = guard; g.ai.update = () => {};
     g.before = () => { if (g.t > .6) guard.held = true; guard.step(DT); p.inputActive = guard.active; a.move.set(0, 0); };
     for (let i = 0; i < 180; i++) g.step();

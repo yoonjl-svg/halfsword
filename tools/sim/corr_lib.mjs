@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
-//  corr_lib.mjs — 검술 보정 v2 측정 도구 공통 (chain_corr·corr_s0·corr_ai_battery 가 쓴다)
+//  corr_lib.mjs — 검술 보정 v2 측정 도구 공통 (chain_corr·corr_s0 가 쓴다)
 //   src 를 스스로 불러오지 않는다: 부르는 쪽이 제 트리(--root)의 모듈을 넘긴다 (다른 체크아웃·시험 트리에서도 같은 도구)
-//   - 스위치 알아보기: SKILL.corr / corrAI / corrTip, BODY.humanLimits 가 없는 트리면 'feature absent' (옛 길만 돈다)
+//   - 스위치 알아보기: SKILL.corr, BODY.humanLimits 가 없는 트리면 'feature absent' (옛 길만 돈다)
 //   - 입력 펌프: wbs-impl(895973d) tools/sim/harness_m.mjs inputPump·feedTrace(:152-300) 를 옮김. 이 트리 input.js 에 없는
 //     fingerTrace·handDeltaAt(INPUT.coalesce)·손짓 층(ges)은 있으면 쓰고 없으면 건너뛴다 (?.). main.js frame() 의 입력 줄과 같은 차례
 //   - 화면 빠르기: 60·120 Hz, 30J (30 fps ± 25 % 씨앗 흔들림 = 24~40 fps), J (24~45 fps 씨앗 수열, wbs chain.mjs jitterPump 와 같은 식)
@@ -14,10 +14,9 @@
 export const hasCorr = (CONFIG) => !!CONFIG?.SKILL && 'corr' in CONFIG.SKILL;
 export const hasLimits = (CONFIG) => !!CONFIG?.BODY && 'humanLimits' in CONFIG.BODY;
 /** 파이터 한 명의 보정 방식 (newRound 뒤). 기능이 없는 트리에선 아무것도 안 한다 */
-export function setCorr(CONFIG, f, mode, tip) {
+export function setCorr(CONFIG, f, mode) {
   if (!hasCorr(CONFIG) || !f?.skill) return false;
   f.skill.corr = mode;
-  if (tip != null) f.skill.corrTip = tip;
   return true;
 }
 

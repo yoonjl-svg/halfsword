@@ -97,7 +97,7 @@ test('④ 칼집 입 ↔ 왼손 쥠 자리 — 대기 동안 같은 점 · 鞘�
     const G = newRound({ walls: false, weapon, weapon2: 'longsword', seed: 1, gap: 4, onFighter(f) { if (f.index === 0 && hip) f.humanInput = true; } });
     const P = G.player;
     try {
-      if (hip) { P.skill.corr = CONFIG.SKILL.corr; P.skill.corrTip = CONFIG.SKILL.corrTip; P.skill.autoGuard = true; } else P.aiControlled = true;
+      if (hip) { P.skill.corr = CONFIG.SKILL.corr; P.skill.autoGuard = true; } else P.aiControlled = true;
       G.ai.update = () => {};
       let fire = false;
       G.before = () => (fire ? null : hip ? iaiReadyPosePlayer(P, true, false, DT, true) : iaiReadyPose(P, true, DT));

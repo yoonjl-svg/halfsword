@@ -386,7 +386,7 @@ export function readyShot({ weapon = 'uchigatana', mode = 'hip', seed = 1, look 
   const A = G.enemy;
   G.ai.update = () => { A.move.set(0, 0); A.handOffset.set(0, 0); };
   if (ai) { P.aiControlled = true; G.before = () => iaiReadyPose(P, true, DT); }
-  else { P.skill.corr = CONFIG.SKILL.corr; P.skill.corrTip = CONFIG.SKILL.corrTip; P.skill.autoGuard = true; G.before = () => iaiReadyPosePlayer(P, true, false, DT, true); }
+  else { P.skill.corr = CONFIG.SKILL.corr; P.skill.autoGuard = true; G.before = () => iaiReadyPosePlayer(P, true, false, DT, true); }
   const tEnd = CONFIG.ARENA.startHold + 1.5;
   const e = [];
   while (G.t < tEnd) {
@@ -521,7 +521,7 @@ export function notoRun({ weapon = 'uchigatana', mode = 'hip', seed = 1, look = 
     arm = new IaiArm();
     G.before = () => { arm.tick(DT, true, P.openHold); iaiReadyPose(P, arm.armed, DT, arm.sheathe); };
   } else {
-    P.skill.corr = CONFIG.SKILL.corr; P.skill.corrTip = CONFIG.SKILL.corrTip; P.skill.autoGuard = true;
+    P.skill.corr = CONFIG.SKILL.corr; P.skill.autoGuard = true;
     const pg = new PlayerParryGuard(P, A);
     P.stamina.controller = pg;
     ps = new PlayerSecretWatch(P, A);

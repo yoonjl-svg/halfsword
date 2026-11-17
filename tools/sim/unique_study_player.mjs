@@ -32,7 +32,7 @@ for (const seed of seeds) for (const opp of opps) for (const delay of delays) {
   SKILL.parryAssist = 0;
   const Gm = newRound({ weapon: W, weapon2: opp, seed });
   const D = Gm.player, A = Gm.enemy;
-  D.skill.corr = SKILL.corr; D.skill.corrTip = SKILL.corrTip; D.skill.autoGuard = true; D.schoolFootwork = true; D.schoolParry = true;
+  D.skill.corr = SKILL.corr; D.skill.autoGuard = true; D.schoolFootwork = true; D.schoolParry = true;
   const Guard = flowGuard('base'), guard = new Guard(D, A); D.stamina.controller = guard;
   const ua0 = UA.on, en0 = UA.enhance; UA.on = 1; UA.enhance = enh;
   const uq = new PlayerUniqueAssist(D, { stage: 4 });

@@ -64,7 +64,6 @@ for (const id of ids) {
     massInfo ||= { m: P.swordProps?.m, I: P.swordIhand, tr: P.swordArt.tradition };
     // main.js newRound 의 플레이어 몫 (harness 는 넣지 않는다): 보정 v2 · 끝점 겨눔 끔 · 사람 손가락 칼(autoGuard — 날 세우기 앞당김·팔 뻗음·자세로 돌아가기가 플레이어 길) · 근접 밀치기
     P.skill.corr = SKILL.corr;
-    P.skill.corrTip = SKILL.corrTip;
     P.skill.autoGuard = true;
     P.canShove = true;
     const guard = new PlayerParryGuard(P, Gm.enemy);

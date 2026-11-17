@@ -79,7 +79,6 @@ function trial(cover, atk, gap, speed, attack) {
   const Gm = newRound({ weapon: WEAPON, weapon2: atk, seed: 1, gap });
   const D = Gm.player, A = Gm.enemy;
   D.skill.corr = SKILL.corr;
-  D.skill.corrTip = SKILL.corrTip;
   D.skill.autoGuard = true;
   const T = TRADITIONS[TR];
   const keep = Object.getOwnPropertyDescriptor(T, 'parryCover');

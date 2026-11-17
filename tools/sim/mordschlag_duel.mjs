@@ -49,7 +49,7 @@ for (const school of FOES) {
     const G = newRound({ seed, weapon: W, weapon2: ch.weapon, difficulty: ch.ai.level, persona: ch.ai.persona, look2: ch.look, revive: ch.revive, walls: true });
     const P = G.player, E = G.enemy;
     if (HELM) { E.hasHelmet = true; E.helmetType = HELM; E.helmetSpec = ARMOR.helmets[HELM]; E.helmetIntegrity = 1; } // 투구 상대 (판정만 — 겉모습은 그대로)
-    P.skill.corr = SKILL.corr; P.skill.corrTip = SKILL.corrTip; P.skill.autoGuard = true; P.canShove = true;
+    P.skill.corr = SKILL.corr; P.skill.autoGuard = true; P.canShove = true;
     const watch = new PlayerSecretWatch(P, E);
     let rs = (seed * 2654435761) >>> 0;
     const rnd = () => ((rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296);

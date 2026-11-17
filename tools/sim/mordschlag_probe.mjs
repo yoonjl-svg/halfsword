@@ -24,7 +24,7 @@ const q = (r) => new THREE.Quaternion(r.x, r.y, r.z, r.w);
 for (const gap of GAPS) for (const gd of GUARDS) {
   const G = newRound({ weapon: W, weapon2: process.env.FOE || 'longsword', seed: 7, gap, walls: false, AIClass: Still });
   const P = G.player, E = G.enemy;
-  P.skill.corr = SKILL.corr; P.skill.corrTip = SKILL.corrTip; P.skill.autoGuard = true; P.canShove = true;
+  P.skill.corr = SKILL.corr; P.skill.autoGuard = true; P.canShove = true;
   const hits = [];
   G.combat.hooks.onWound = (att, vic, r, pt, pr) => { if (att === P && P.skill.sec) hits.push({ part: pr?.w?.part, zone: r.zone, type: r.type, E: +r.energy.toFixed(1), st: P.skill.sec.stage }); };
   const S = TRADITIONS.german.playerSecret;

@@ -44,7 +44,6 @@ export function drillOne({ school, weapon, seed, dur = 14, spd = [3, 5.5], onRou
   D.knockDown = () => {};
   D.dropSword = () => {};
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   onRound?.({ G, P, D });
   const rnd = rng(seed * 7919 + 17);
@@ -104,7 +103,6 @@ export function airSwing({ weapon = 'longsword', school = 'german', A = [0.42, 0
   const P = G.player;
   G.ai.update = () => G.enemy.move.set(0, 0);
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   const FRAME = 2 * DT;
   const legs = [[null, 2.6], [A, 2], [null, 0.6], [B, v, 'cut'], [null, 0.6, 'cut']];

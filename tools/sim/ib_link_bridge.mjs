@@ -59,7 +59,6 @@ export function bridgeOne({ ws = 'zweihander', a = 'zornhau', b = 'zwerch', on =
   const E = G.enemy;
   P.skill.level = 0.7;
   P.skill.corr = SKILL.corr;
-  P.skill.corrTip = SKILL.corrTip;
   P.skill.autoGuard = true;
   P.humanInput = true;
   for (const x of [P, E]) x.die = () => {};

@@ -515,7 +515,7 @@ async function child() {
     guardWeight: player.guardWeight ? player.guardWeight() : null,
     hasTrace,
     foe: foe ? foe.id : 'default',
-    corr: player.skill.corr ?? null, corrTip: player.skill.corrTip ?? null, corrAI: enemy.skill.corr ?? null, humanLimits: CONFIG.BODY.humanLimits ?? null, // (corr 측정)
+    corr: player.skill.corr ?? null, corrAI: enemy.skill.corr ?? null, humanLimits: CONFIG.BODY.humanLimits ?? null, // (corr 측정)
   };
   // 요청과 살아 있는 값이 다르면 오류 (잘못된 칸을 조용히 재지 않는다)
   const bad = [];

@@ -620,7 +620,6 @@ function newRound(weaponId) {
   player.emoMods = playerEmo.mods;
   player.skill.level = +settings.skill;
   player.skill.corr = CONFIG.SKILL.corr; // 플레이어 보정 = 새 보정 하나 (Skill 생성자도 같은 값을 읽는다. 설정·주소 스위치 없음, 디렉터 결정 10/1 22:05)
-  player.skill.corrTip = CONFIG.SKILL.corrTip; // 끝점 겨눔 ② 끔 (같은 결정)
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
   player.canShove = true; // 근접 밀치기: 플레이어는 스틱으로
   combat = new Combat(colliderInfo, { onWound, onClash });
@@ -788,7 +787,6 @@ function newTeamRound(spec, mods = {}) {
     H.emoMods = playerEmo.mods;
     H.skill.level = +settings.skill;
     H.skill.corr = CONFIG.SKILL.corr;
-    H.skill.corrTip = CONFIG.SKILL.corrTip;
     H.skill.autoGuard = true;
     H.canShove = true;
   } else {

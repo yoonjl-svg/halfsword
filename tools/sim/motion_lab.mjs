@@ -1,21 +1,19 @@
 // 동작 라이브러리 점검 (src/motion_library.js, docs/weapon_motions.md)
-//   node tools/sim/hybrid.mjs motion_lab.mjs poses <무기id>          자세표: 자세마다 손·칼끝이 목표에 얼마나 붙나 (지금 표 vs 라이브러리 표)
+//   node tools/sim/hybrid.mjs motion_lab.mjs poses <무기id>          자세표: 자세마다 손·칼끝이 목표에 얼마나 붙나
 //   node tools/sim/hybrid.mjs motion_lab.mjs swings <무기id> [기술…]   기술마다 혼자 휘둘러: 걸린 시간, 칼날 70% 최고 속도, 베기 지표(J), 날 세움
-//   node tools/sim/hybrid.mjs motion_lab.mjs duel <무기id> <자리마다 판 수> [off|on]   롱소드 상대 실제 승패 (ability_test 와 같은 판)
-//  라이브러리를 켜는 곳은 이 도구뿐이다(게임 기본은 꺼짐).
+//   node tools/sim/hybrid.mjs motion_lab.mjs duel <무기id> <자리마다 판 수>   롱소드 상대 실제 승패 (ability_test 와 같은 판 · 본판 길)
+//  동작 라이브러리는 본판에 늘 켬 (Fighter · AI 생성자가 입힌다 — 11/17 스위치 걷음으로 끔 판 · 끔/켬 견줌은 없앰).
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
 import { WEAPONS } from '../../src/weapons.js';
 import { SCHOOLS, SCHOOL_ART, TRADITIONS, CHINESE_TECHK_B, traditionOf } from '../../src/schools.js';
 import { mergeUnique } from '../../src/sword_art.js';
-import { STRIKE, GAIT, SKILL, SECRET, BIND } from '../../src/config.js';
+import { STRIKE, GAIT, SECRET, BIND } from '../../src/config.js';
 import { wideTouch as bindTouchW } from '../../src/secret.js'; // 자연 바인드 계기 (BIND_STATS=1 — 넓은 맞부딪힘 덩이, 읽기만)
-// 유파 자료 (10/9 ②③ — 켜는 곳은 이 도구뿐, src 기본은 끔): SCHOOL_ART=1 → SKILL.schoolArt 1.
-//  SCHOOL_ART_PARTS=weights,rest,counter (켤 몫만, 없으면 셋 다) · SCHOOL_REST=langort (일본·중국 쉴 자세 안 A) · SCHOOL_TECHK=B (중국 가중치 안 B)
-if (process.env.SCHOOL_ART === '1') {
-  SKILL.schoolArt = 1;
-  const parts = process.env.SCHOOL_ART_PARTS ? process.env.SCHOOL_ART_PARTS.split(/[,|]/) : null;
-  if (parts) for (const k of Object.keys(SCHOOL_ART)) SCHOOL_ART[k] = parts.includes(k);
+// 유파 자료 (10/9 ②③ — 본판 늘 켬): SCHOOL_ART_PARTS=weights,rest,counter (켤 몫만, 없으면 셋 다) · SCHOOL_REST=langort (일본·중국 쉴 자세 안 A) · SCHOOL_TECHK=B (중국 가중치 안 B)
+if (process.env.SCHOOL_ART_PARTS) {
+  const parts = process.env.SCHOOL_ART_PARTS.split(/[,|]/);
+  for (const k of Object.keys(SCHOOL_ART)) SCHOOL_ART[k] = parts.includes(k);
 }
 if (process.env.SCHOOL_REST) for (const t of ['japanese', 'chinese']) TRADITIONS[t].rest = process.env.SCHOOL_REST;
 if (process.env.SCHOOL_TECHK === 'B') TRADITIONS.chinese.techK = CHINESE_TECHK_B;
@@ -61,9 +59,8 @@ function passiveList(ai) {
   return list;
 }
 // 유파 비기 (10/9 유파 설계 v3 — docs/strike/school_secret_2026-10-09.md): SCHOOL_SECRET=off = 시험 쪽(X) AI 만 비기 없음(상대 롱소드 AI 는 그대로) ·
-//  alloff = 양쪽 모두 끔(SKILL.schoolSecret 0) · SECRET_LETHAL=수 = 독일 문턱 lethalJ 를 이 값으로 · SECRET_JSON = SECRET 칸 덮기 (재기용, 양쪽)
+//  SECRET_LETHAL=수 = 독일 문턱 lethalJ 를 이 값으로 · SECRET_JSON = SECRET 칸 덮기 (재기용, 양쪽)
 const SECRET_X_OFF = process.env.SCHOOL_SECRET === 'off';
-if (process.env.SCHOOL_SECRET === 'alloff') SKILL.schoolSecret = 0;
 if (process.env.SECRET_LETHAL) SECRET.lethalJ = +process.env.SECRET_LETHAL;
 if (process.env.SECRET_JSON) Object.assign(SECRET, JSON.parse(process.env.SECRET_JSON));
 // SECRET_DO_JSON = '{"iberian":{"powerFrom":3,"path":[…]}}' — 유파 비기 do 칸 덮기 (재기용, 양쪽)
@@ -107,8 +104,7 @@ function swFlush(ai) {
 } // 비기 수 갈아 끼우기 (재기용, 예: '{"italianDist":[0,0.2]}')
 if (process.env.HEIGHT_RATE) GAIT.heightRate = +process.env.HEIGHT_RATE; // 점검: 골반 높이를 바꾸는 최고 빠르기 (런지 몸 낮춤)
 import { GUARD_BASE } from '../../src/guards.js';
-import { applyMotionLibrary, motionFor, MOTION, installFlow } from '../../src/motion_library.js';
-MOTION.lib = false; // 점검 도구: 본판 스위치(10/8 기본 켬)를 끄고 아래에서 직접 입힌다 → 끔/켬 A/B 그대로. duel 의 'main' 은 본판 길(스위치 켬, 생성자가 입힘)을 그대로 잰다
+import { motionFor, MOTION, installFlow } from '../../src/motion_library.js';
 for (const k of (process.env.MOTION_SKIP ?? '').split(',').filter(Boolean)) MOTION.skip.add(k);
 if (process.env.USE_PARRY === '1') MOTION.useParry = true;
 if (process.env.COVER_IN) MOTION.coverIn = +process.env.COVER_IN;
@@ -149,11 +145,10 @@ function mFreeAt(f, t) {
   const rn = new THREE.Vector3(0, d, 0).cross(new THREE.Vector3(1, 0, 0)).applyQuaternion(frame.clone().invert());
   return 1 / (1 / m + (rn.x * rn.x) / I.x + (rn.y * rn.y) / Math.max(I.y, 1e-6) + (rn.z * rn.z) / I.z);
 }
-function soloRound(lib) {
+function soloRound() {
   const G = newRound({ walls: false, weapon: id, weapon2: 'longsword', seed: 7 });
   G.park();
   const P = G.player;
-  if (lib && process.env.LIB !== '0') applyMotionLibrary(P, { overlay: process.env.NO_OVERLAY !== '1' });
   if (process.env.TWIST_MUL) P.twistScale *= +process.env.TWIST_MUL; // 점검: 날 세우기 힘 배율
   return { G, P };
 }
@@ -165,8 +160,8 @@ function setPad(P, x, y) {
 if (mode === 'poses') {
   // 자세마다 1.2초 들고 있게 한 뒤: 손(칼 원점)이 손 목표에서 몇 cm, 칼 축이 칼끝 목표 방향에서 몇 도 벗어났나
   const rows = [];
-  for (const lib of [false, true]) {
-    const { G, P } = soloRound(lib);
+  {
+    const { G, P } = soloRound();
     const n = GUARD_BASE.length;
     for (let i = 0; i < n; i++) {
       const pd = GUARD_BASE[i].pad;
@@ -186,19 +181,13 @@ if (mode === 'poses') {
           k++;
         }
       }
-      rows.push({ lib, i, name: P.guardPose.table?.[i]?.name ?? '(바탕 표)', near: P.guardPose.nearest, hand: ((100 * hErr) / k).toFixed(1), ang: (aErr / k).toFixed(1) });
+      rows.push({ i, name: P.guardPose.table?.[i]?.name ?? '(바탕 표)', near: P.guardPose.nearest, hand: ((100 * hErr) / k).toFixed(1), ang: (aErr / k).toFixed(1) });
     }
   }
-  const byI = {};
-  for (const r of rows) (byI[r.i] ||= {})[r.lib ? 'on' : 'off'] = r;
   console.log(`${id} (${motionFor(W).frame}·${motionFor(W).style}) — 자세마다 손 오차 cm / 칼끝 방향 오차 ° (1.0~1.4초 평균)`);
-  console.log('| 패드 | 지금 표 | 손 | 칼끝 | 라이브러리 표 | 손 | 칼끝 |');
-  console.log('|---|---|---|---|---|---|---|');
-  for (const i of Object.keys(byI)) {
-    const a = byI[i].off;
-    const b = byI[i].on;
-    console.log(`| ${i} | ${a.name} | ${a.hand} | ${a.ang} | ${b.name} | ${b.hand} | ${b.ang} |`);
-  }
+  console.log('| 패드 | 자세표 | 손 | 칼끝 |');
+  console.log('|---|---|---|---|');
+  for (const a of rows) console.log(`| ${a.i} | ${a.name} | ${a.hand} | ${a.ang} |`);
 } else if (mode === 'swings') {
   // 기술 길을 AI 손 빠르기(패드 m/s)로 따라간다: 시작 자세에서 0.8초 기다린 뒤 길을 따라가고 0.6초 더 본다
   const SP = +(process.env.PAD_SPEED ?? 11); // 패드 m/s — AI 보통 난이도 strikeSpeed (config.js AI_LEVELS.normal)
@@ -209,8 +198,8 @@ if (mode === 'poses') {
   console.log('| 기술 | 종류 | 길이(패드 m) | 시간 s | 최고 속도 m/s | 지표 J | ×날 세움 J | 봉우리 (속도×날 세움) |');
   console.log('|---|---|---|---|---|---|---|---|');
   for (const tech of list) {
-    for (const lib of [true]) {
-      const { G, P } = soloRound(lib);
+    {
+      const { G, P } = soloRound();
       setPad(P, tech.from[0], tech.from[1]);
       for (let t = 0; t < 0.8; t += DT) G.step();
       const pts = tech.path.map((p) => p.slice());
@@ -254,22 +243,8 @@ if (mode === 'poses') {
   }
 } else if (mode === 'duel') {
   const N = +rest[0] || 6;
-  const mainPath = rest[1] === 'main'; // 본판 길: MOTION.lib 켬 → Fighter·AI 생성자가 입힌다(자세표 바탕 = 무기별 표, 유파 = libSchool 병합). 끔(off)과 나란히 재는 데 쓴다
-  if (mainPath) MOTION.lib = true;
-  const on = rest[1] === 'on' || rest[1] === 'tech' || rest[1] === 'table' || mainPath; // on = 둘 다, tech = 기술 목록만, table = 자세표만
-  const useTech = rest[1] === 'on' || rest[1] === 'tech';
-  const useTable = rest[1] === 'on' || rest[1] === 'table';
   const m = motionFor(W);
-  const skipTech = (process.env.SKIP_TECH ?? '').split(',').filter(Boolean);
-  if (skipTech.length) m.tech = m.tech.filter((t) => !skipTech.includes(t.name));
-  // AI 유파: 무기 꾸러미(없으면 롱소드)에 라이브러리 기술·속임수를 끼운다 — schools.js 는 건드리지 않는다
-  const key = `${id}__lib`;
-  const base = SCHOOLS[id] ?? SCHOOLS.longsword;
-  SCHOOLS[key] = { ...base, id: key, tech: m.tech, techByName: Object.fromEntries(m.tech.map((t) => [t.name, t])), feints: m.feints, ...(m.counter ? { counter: m.counter } : {}), ...(useTable && m.parry && process.env.NO_PARRY !== '1' ? { parry: { ...base.parry, ...m.parry } } : {}) };
-  const school0 = useTech || !useTable ? null : key; void school0;
-  // 기술만: 라이브러리 기술 목록 · 자세표만: 자세표 + 그 표의 막기 자리 · 켬: 둘 다
-  if (!useTech && useTable) SCHOOLS[key] = { ...base, id: key, ...(m.parry && process.env.NO_PARRY !== '1' ? { parry: { ...base.parry, ...m.parry } } : {}) };
-  let school = useTech || useTable ? key : SCHOOLS[id] ? id : 'longsword'; // main: 유파 그대로(생성자 libSchool 이 더한다)
+  let school = SCHOOLS[id] ? id : 'longsword'; // 본판 길: 유파 그대로(생성자 libSchool 이 더한다)
   if ((uqX.length || process.env.UQ_XPACK === '1') && traditionOf(W) === 'german') { // UQ_XPACK=1: 더할 것 없이 시험 쪽 꾸러미만 따로 만든다(대조군) // 독일 고유 동작: 시험 쪽 꾸러미에만 (상대 롱소드 꾸러미는 그대로)
     const k2 = `${school}__uq`;
     SCHOOLS[k2] = { ...mergeUnique(SCHOOLS[school], uqX), id: k2 };
@@ -407,7 +382,6 @@ if (mode === 'poses') {
       };
       if (process.env.TWIST_MUL) X.twistScale *= +process.env.TWIST_MUL; // 점검: 날 세우기 힘 배율 (라이브러리와 별개)
       if (process.env.FORCE_FLOW === '1') installFlow(X); // 점검: 무기 쪽에만 흐름(이어 베기) — 두손 보통 틀(카타나 대리 = 롱소드)에 켜면 어떻게 되나
-      if (useTable) applyMotionLibrary(X, { overlay: process.env.NO_OVERLAY !== '1', flow: process.env.NO_FLOW !== '1', noTwist: process.env.NOTWIST === '1', ai: XA, cover: process.env.COVER === '1' });
       let res = 'D';
       let lastTech = null;
       if (XA && !stepNames) {
@@ -587,7 +561,7 @@ if (mode === 'poses') {
   const [lo, hi] = wilson(Wn, n);
   const pc = (v) => `${Math.round(100 * v)}%`;
   const top = Object.entries(used).sort((a, b) => b[1] - a[1]).slice(0, process.env.USED_ALL === '1' ? 99 : 14).map(([k, v]) => `${k} ${v}`).join(', ');
-  console.log(`${id} 라이브러리 ${mainPath ? '본판(켬)' : on ? (useTech && useTable ? '켬' : useTech ? '기술만' : '자세표만') : '끔'} (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
+  console.log(`${id} 본판 (${m.frame}·${m.style}) 승 ${Wn} 패 ${L} 무 ${D} / ${n} · 승률 ${pc(Wn / n)} (95% ${pc(lo)}~${pc(hi)}) · 평균 종료 ${tN ? (tSum / tN).toFixed(1) : '-'}s · NaN ${nan} · 쓴 기술: ${top}`);
   console.log(`  끝난 모습 (두 쪽): 죽은 까닭 ${JSON.stringify(endAgg.causes)} · 참수 ${endAgg.decap} · 약한 자세(쓰러짐·일어남·무릎)에서 죽음 ${endAgg.low} · AI 급소 공격(약한 자세 겨눔) ${endAgg.vitalAI}`);
   console.log(`  넘어짐 (시험 쪽 서 있다 쓰러짐·무릎): 모두 ${falls.all} · 비기 동안·뒤 1 s ${falls.secret} · 비기 자세 동안·뒤 1 s ${falls.stance}`);
   console.log(`  경직 (시험 쪽): 든 수 ${stiffHit.n} · 경직 동안 맞은 상처 ${stiffHit.stiff} · 비기 끝난 뒤 1 s 안 맞은 상처 ${stiffHit.after}`);
@@ -647,23 +621,22 @@ if (mode === 'poses') {
   }
 } else if (mode === 'tap') {
   // 탭 찌르기 한 번 (상대는 치움): 칼끝이 내 가슴에서 앞으로 가장 멀리 간 거리, 그때까지 걸린 시간, 칼끝 최고 속도, 몸 낮춤.
-  //  자세(패드)마다 한 번씩: 쟁기·긴 자세·황소. 라이브러리 끔/켬(켬이면 무기 방식의 덧씌우기 — 찌르기 방식은 런지)
+  //  자세(패드)마다 한 번씩: 쟁기·긴 자세·황소 (본판 — 무기 방식의 덧씌우기: 찌르기 방식은 런지)
   console.log(`${id} (${motionFor(W).frame}·${motionFor(W).style}) — 탭 찌르기: 칼끝 최대 앞 거리 m · 걸린 초 · 칼끝 최고 속도 m/s · 가슴 최대 낮춤 cm · 왕복 초(뻗은 거리의 80%를 되돌아오기까지)`);
-  console.log('| 자세 | 끔: 거리 | 초 | 속도 | 낮춤 | 왕복 | 켬: 거리 | 초 | 속도 | 낮춤 | 왕복 |');
-  console.log('|---|---|---|---|---|---|---|---|---|---|---|');
+  console.log('| 자세 | 거리 | 초 | 속도 | 낮춤 | 왕복 |');
+  console.log('|---|---|---|---|---|---|');
   for (const [nm, pad] of [['쟁기', [0.18, -0.28]], ['긴 자세', [0.0, 0.03]], ['황소', [0.22, 0.26]]]) {
     const cells = [];
-    for (const lib of [false, true]) {
+    {
       // 상대를 치우면 찌를 대상(foe)이 없어 탭이 안 나간다 → 가만히 세워 둔다(AI 끔). 시작 간격이 칼끝 거리보다 멀다
       const G = newRound({ walls: false, weapon: id, weapon2: 'longsword', seed: 7 });
       G.ai.update = () => {};
       const P = G.player;
-      if (lib) applyMotionLibrary(P);
       setPad(P, pad[0], pad[1]);
       for (let t = 0; t < 1.0; t += DT) G.step();
       const gap = P.bodies.chest.translation();
       const fc = P.foe.bodies.chest.translation();
-      if (nm === '쟁기' && !lib) console.log(`(가슴 사이 거리 ${Math.hypot(gap.x - fc.x, gap.z - fc.z).toFixed(2)} m)`);
+      if (nm === '쟁기') console.log(`(가슴 사이 거리 ${Math.hypot(gap.x - fc.x, gap.z - fc.z).toFixed(2)} m)`);
       const c0 = P.bodies.chest.translation();
       const fwd = P.forward(new THREE.Vector3());
       const y0 = c0.y;
@@ -684,13 +657,12 @@ if (mode === 'poses') {
       }
       cells.push(`${best.toFixed(2)} | ${tBest.toFixed(2)} | ${vmax.toFixed(1)} | ${(low * 100).toFixed(0)} | ${tBack === null ? '-' : tBack.toFixed(2)}`);
     }
-    console.log(`| ${nm} | ${cells[0]} | ${cells[1]} |`);
+    console.log(`| ${nm} | ${cells[0]} |`);
   }
 } else if (mode === 'parry') {
   // 막기 자리 찾기 (롱소드 유파 parry 표를 고른 방법과 같다: 공격 줄 × 자세를 물리로 부딪쳐 본다).
   //  자세표가 바뀌면 "어느 패드가 어느 줄을 막나"도 바뀐다 → 몸 틀 표마다 다시 찾아야 한다(10라운드 규칙 발견, docs/weapon_motions.md).
-  //  막는 쪽 = 이 무기(라이브러리 켬/끔), 치는 쪽 = 롱소드(스크립트로 기술 길을 11 m/s 로). 간격 1.45·1.6 m, 패드 14 곳
-  const lib = rest[0] !== 'off';
+  //  막는 쪽 = 이 무기(본판), 치는 쪽 = 롱소드(스크립트로 기술 길을 11 m/s 로). 간격 1.45·1.6 m, 패드 14 곳
   const LINES = [['highL', 'zornhau'], ['highR', 'zornhauL'], ['highC', 'oberhau'], ['lowL', 'unterhau'], ['lowR', 'unterhauL'], ['thrust', 'stichPflug']];
   const SPD = 11;
   const res = {};
@@ -706,7 +678,6 @@ if (mode === 'poses') {
         G.ai.update = () => {};
         const A = G.player;
         const D = G.enemy;
-        if (lib) applyMotionLibrary(D);
         const pd = GUARD_BASE[i].pad;
         setPad(D, pd[0], pd[1]);
         setPad(A, tech.from[0], tech.from[1]);
@@ -736,14 +707,14 @@ if (mode === 'poses') {
     rows.sort((a, b) => a.hit - b.hit || b.clash - a.clash || a.eSum - b.eSum);
     res[line] = rows;
     const nm = (i) => {
-      const { G: g2, P } = soloRound(lib);
+      const { G: g2, P } = soloRound();
       void g2;
       return P.guardPose.table?.[i]?.name ?? GUARD_BASE[i].name;
     };
     console.log(`${line} (${tn}): 가장 잘 막은 자세 ${rows.slice(0, 3).map((r) => `${nm(r.i)}[패드 ${GUARD_BASE[r.i].pad}] 맞음 ${r.hit} 칼부딪침 ${r.clash}`).join(' · ')}`);
   }
   const pick = Object.fromEntries(Object.entries(res).map(([k, rows]) => [k, GUARD_BASE[rows[0].i].pad]));
-  console.log(`parry 표 제안 (${id}, 라이브러리 ${lib ? '켬' : '끔'}): ${JSON.stringify(pick)}`);
+  console.log(`parry 표 제안 (${id}): ${JSON.stringify(pick)}`);
 } else {
   console.log('모드: poses | swings | duel | tap | parry');
 }

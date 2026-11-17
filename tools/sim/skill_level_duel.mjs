@@ -1,5 +1,5 @@
 // 검술 보정(skill.level)만 다른 AI(X) 대 보통 AI (롱소드끼리, hybrid): 승패, 손 앞뻗음, 낸 상처의 칼 속도·에너지, 받은 상처. 사용법: node tools/sim/skill_level_duel.mjs <보정 0~1> [판수(자리마다)=24]
-//  --both: 같은 시드를 두 번 — X 의 skill.corr 'old' 다음 'v2' (newRound 뒤 X 에만 넣는다. Y 는 설정 그대로 = SKILL.corrAI). 결과 두 줄 + 차이 한 줄 + 뜻 바뀜 한 줄
+//  --both: 같은 시드를 두 번 — X 의 skill.corr 'old' 다음 'v2' (newRound 뒤 X 에만 넣는다. Y 는 AI 그대로 = 옛 보정). 결과 두 줄 + 차이 한 줄 + 뜻 바뀜 한 줄
 //   (--both 가 없으면 출력은 예전과 글자까지 같다)
 import * as CONFIG from '../../src/config.js';
 import { newRound, DT } from './harness_m.mjs';

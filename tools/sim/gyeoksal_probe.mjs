@@ -34,7 +34,6 @@ for (const wid of weapons) {
       const P = G.player;
       const E = G.enemy;
       P.skill.corr = CONFIG.SKILL.corr;
-      P.skill.corrTip = CONFIG.SKILL.corrTip;
       P.skill.autoGuard = true;
       P.canShove = true;
       const guard = new PlayerParryGuard(P, E);

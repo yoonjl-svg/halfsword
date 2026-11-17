@@ -77,7 +77,6 @@ export function traceRun(variant, seed, GAP, opt = {}) {
   G.ai.update = () => {};
   D.applyWound = () => {};
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   const uq = new PlayerUniqueAssist(P, { names: new Set(['tsubameGaeshi']) });
   const FRAME = 2 * DT;

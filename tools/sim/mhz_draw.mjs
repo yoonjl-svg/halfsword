@@ -91,7 +91,6 @@ export function mhzShot({ weapon = 'monohoshizao', foeW = 'longsword', guard = '
     G.before = () => iaiReadyPose(P, !fired, DT); // AI 고노센(숙련 5 일본)의 웅크린 발도 대기 (gns_belly.mjs standShot crouch 와 같음)
   } else {
     P.skill.corr = CONFIG.SKILL.corr;
-    P.skill.corrTip = CONFIG.SKILL.corrTip;
     P.skill.autoGuard = true;
     P.canShove = true;
     W = new PlayerSecretWatch(P, A);
@@ -239,7 +238,6 @@ export function readyShot({ weapon = 'uchigatana', foeW = 'longsword', guard = '
     G.before = () => iaiReadyPose(P, on, DT);
   } else {
     P.skill.corr = CONFIG.SKILL.corr;
-    P.skill.corrTip = CONFIG.SKILL.corrTip;
     P.skill.autoGuard = true;
     P.canShove = true;
     W = new PlayerSecretWatch(P, A);

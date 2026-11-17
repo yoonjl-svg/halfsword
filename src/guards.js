@@ -18,7 +18,7 @@
 //  yaw = + 이면 칼 든 쪽 어깨·골반이 뒤로 빠진다(몸을 칼 든 쪽으로 튼다). pitch = + 이면 앞으로 숙인다.
 // ─────────────────────────────────────────────────────────────
 
-import { SKILL, JOINTS } from './config.js';
+import { JOINTS } from './config.js';
 
 const RAW = [
   // 이름, 패드 [x, y], 손 [앞, 위, 옆], 칼끝 [올려본 각, 옆 각], 골반 yaw, 가슴 yaw, 숙이기, 낮추기(m)
@@ -76,7 +76,7 @@ export const GUARDS = [...BASE, ...FINISH_GUARDS.map((g) => ({ ...g, pad: g.pads
 //    칼을 어깨·머리 옆에 둔다(어깨 걸침·걸친 막기 류). 팔을 수평으로 펴지 않는다. 겨누는 자세는 지금(10라운드 B)과 같다.
 //  · ONE_HAND_VERSATILE (두루 한손 칼: 청강검 — 10/9 고침, docs/strike/qinggang_floor_2026-10-09.md 안 A): 겨누는 6 곳은 THRUST,
 //    베기를 감는 8 곳은 SABRE (아래 VERSATILE_CHAMBER). 劍의 "겨눠 찌르고, 감아 벤다".
-//  고르는 규칙: weapon_class.js classifyStyle 이 'thrust' → THRUST, 'versatile'(청강검) → SKILL.oneVersatileTable 손잡이
+//  고르는 규칙: weapon_class.js classifyStyle 이 'thrust' → THRUST, 'versatile'(청강검) → 섞은 표(VERSATILE)
 //   ('mixed' 기본 = VERSATILE · 'thrust' = 10/9 고침 전 THRUST · 'cut' = SABRE 통째, 안 B), 그 밖('cut'·'blunt') → SABRE.
 //   guardBaseOne(style) 이 표를 돌려준다. GUARD_BASE_ONE 은 예전 이름 그대로 SABRE 표(뜻이 같은 기본값).
 const ONE_HAND_THRUST = {
@@ -177,13 +177,10 @@ export const GUARD_BASE_ONE = BASE_ONE_SABRE;
 export const GUARD_BASE_ONE_THRUST = BASE_ONE_THRUST;
 export const GUARD_BASE_ONE_SABRE = BASE_ONE_SABRE;
 export const GUARD_BASE_ONE_VERSATILE = BASE_ONE_VERSATILE;
-/** 한손 무기 자세표 고르기 — style = weapon_class.js classifyStyle 값. 'versatile'(청강검)만 SKILL.oneVersatileTable 을 읽는다 */
+/** 한손 무기 자세표 고르기 — style = weapon_class.js classifyStyle 값. 'versatile'(청강검)은 섞은 표 (10/9 안 A — 찌르기 표의 겨눔 6 곳 + 세이버 표의 감는 8 곳) */
 export function guardBaseOne(style) {
   if (style === 'thrust') return BASE_ONE_THRUST;
-  if (style === 'versatile') {
-    const t = SKILL.oneVersatileTable;
-    return t === 'thrust' ? BASE_ONE_THRUST : t === 'cut' ? BASE_ONE_SABRE : BASE_ONE_VERSATILE;
-  }
+  if (style === 'versatile') return BASE_ONE_VERSATILE;
   return BASE_ONE_SABRE;
 }
 export const GUARD_BASE_TWO_THRUST = BASE_TWO_THRUST;

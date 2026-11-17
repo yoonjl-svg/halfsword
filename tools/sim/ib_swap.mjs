@@ -37,7 +37,6 @@ export function altibRun({ w = 'zweihander', seed = 1, st = 1, hold = 1.6, gap =
   G.ai.update = () => {};
   D.applyWound = () => {};
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   const uq = new PlayerUniqueAssist(P, { names: new Set(['redondo']) });
   const K = CONFIG.TIME.k;

@@ -29,7 +29,6 @@ function trial(cfg, attack, atk, gap) {
   const Gm = newRound({ weapon: cfg.weapon, weapon2: atk, seed: 1, gap });
   const D = Gm.player, A = Gm.enemy;
   D.skill.corr = SKILL.corr;
-  D.skill.corrTip = SKILL.corrTip;
   D.skill.autoGuard = true;
   const tr = D.swordArt?.tradition;
   const saved = cfg.mode === 'nocover' ? Object.getOwnPropertyDescriptor(TRADITIONS[tr], 'parryCover') : null;

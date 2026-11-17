@@ -44,7 +44,6 @@ function fightRun(id, seed, tok) {
   const Gm = newRound({ seed, difficulty: F.ai.level, persona: F.ai.persona, weapon2: F.weapon, weapon: 'rapier', revive: F.revive });
   const D = Gm.player, A = Gm.enemy, ai = Gm.ai;
   D.skill.corr = SKILL.corr;
-  D.skill.corrTip = SKILL.corrTip;
   D.skill.autoGuard = true;
   const guard = new PlayerParryGuard(D, A);
   D.stamina.controller = guard; // main.js 와 같게 (막는 동안 기력 · 근육 빠르기)

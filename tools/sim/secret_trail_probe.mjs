@@ -29,7 +29,6 @@ export function probe(key) {
   const P = g.player, E = g.enemy;
   g.ai.update = () => {};
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   P.canShove = true;
   P.foe = E;

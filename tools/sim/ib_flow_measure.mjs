@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  ib_flow_measure.mjs — 이베리아 B5 '흐르는 긋기'(config IB_FLOW · fighter.js updateIbFlow) 가 사람 손에 쓸모 있나 (사장님 10/27 '흐르는 긋기는 플레이어에게 유용한가?')
 //   재기만 한다 — 게임 값은 건드리지 않는다. 0 번 자리 사람 몸(츠바이핸더 · 플람베르주)을 손가락 봇이 긋는다(ib_feel · schielhau_strike playerFight 와 같은 입력 길:
-//   60 Hz 프레임마다 handOffset 이동 · handHeld · inputActive · 숙련 0.7 · corr · corrTip · autoGuard). 스킬트리 = 이베리아 칸 모두 익힘(kitFromNodes) —
+//   60 Hz 프레임마다 handOffset 이동 · handHeld · inputActive · 숙련 0.7 · corr · autoGuard). 스킬트리 = 이베리아 칸 모두 익힘(kitFromNodes) —
 //   on = 그대로 · off = 같은 몫에서 ibFlow 만 끔(kitOff 가 B5 를 꺼진 칸으로 읽음). 같은 씨앗 · 같은 손가락 대본.
 //   pair  = 허공 두 칼 (상대는 6 m 밖에 선 몸): 감기(1.2 패드 m/s — 휘두르기 문턱 1.5 아래) → 1 s 쉼 → 칼 1 A→B → 쉼 PAUSE → 칼 2 B→C → 손가락을 C 에 댄 채 1.5 s.
 //           칼 2 를 잰다: 흐름 켜짐 · 칼끝 최고(m/s — 칼날 끝 점 velocityAtPoint) · 칼 1 손가락 멈춤 → 칼 2 칼끝 최고까지(이어 오기 s) ·
@@ -71,7 +71,6 @@ const VARIANTS = String(args.variants ?? 'off,on').split(',').map((x) => x === '
 function setupPlayer(P) {
   P.skill.level = 0.7;
   P.skill.corr = SKILL.corr;
-  P.skill.corrTip = SKILL.corrTip;
   P.skill.autoGuard = true;
   if (FLOW_WRIST !== 1) {
     const base = P.wristK ?? 1, step0 = P.step.bind(P);

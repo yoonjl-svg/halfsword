@@ -2,7 +2,7 @@
 // Use after implementing the heavy-sword plan:   node live_battery.mjs cuts,steps,kata,walk,jitter,hits,fights,jam
 // Optional instrumentation read if the implementation exposes it: fighter.debug = { aim: Vector3 (world commanded blade dir), wristTorque: Vector3, wristCap: number }
 // 검술 보정 v2 (skill.corr 'v2'): aimOf·cut().fa 의 기준 칼 방향은 f.debug.aim 먼저, 없으면 날것 guardDir 매핑 (자세 지도 당김 없음). 'old' 는 예전 식 그대로
-//   node tools/sim/with_config.mjs SKILL.corr=v2 live_battery.mjs   (플레이어만 v2. AI 싸움(fights)은 SKILL.corrAI 를 따른다)
+//   node tools/sim/with_config.mjs SKILL.corr=v2 live_battery.mjs   (플레이어만 v2. AI 싸움(fights)은 늘 옛 보정)
 import { newRound, THREE, DT, AI, CONFIG } from './jelly_harness.mjs';
 import { guardAt } from '../../src/guards.js';
 

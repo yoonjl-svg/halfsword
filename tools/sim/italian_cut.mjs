@@ -75,7 +75,6 @@ function stroke(tech, gap) {
   P.foe = E;
   E.foe = P;
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   if (WALK) for (let t = 0; t < 8 && P.foeDistance() > gap; t += DT) { P.move.set(0, 1); E.handOffset.set(...FOEH); G.step(); } // 걸어 들어감 (브라우저 그림과 같은 꼴)
   P.move.set(0, 0);

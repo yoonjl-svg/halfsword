@@ -51,7 +51,6 @@ function trial(cover, atk, gap, speed) {
   const Gm = newRound({ weapon: WEAPON, weapon2: atk, seed: 1, gap });
   const D = Gm.player, A = Gm.enemy;
   D.skill.corr = SKILL.corr;
-  D.skill.corrTip = SKILL.corrTip;
   D.skill.autoGuard = true;
   const keepC = TRADITIONS.chinese.parryCover, keepP = TRADITIONS.chinese.parry;
   if (cover) {

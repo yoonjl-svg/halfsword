@@ -126,7 +126,6 @@ function trialRun(cfg, atk, gap) {
   if (NOHOLD) D.fightT = ARENA.startHold; // 발 묶임 풀고 시작 (위 NOHOLD)
   if (NOHOLD && NOHOLD !== 'D') A.fightT = ARENA.startHold;
   D.skill.corr = SKILL.corr;
-  D.skill.corrTip = SKILL.corrTip;
   D.skill.autoGuard = true;
   if (cfg.mode === 'basic') D.schoolParry = false;
   // nocover: 이 판의 유파 덧씌우기만 잠깐 뺀다 (지킴이를 만들 때 installCover 가 읽는다)

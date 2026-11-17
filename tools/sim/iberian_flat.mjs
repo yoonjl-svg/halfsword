@@ -20,7 +20,7 @@
 //    tableSkip=a+b  그 칸만 걷음 (tag · tagR · tagL · langort · ochsR · ochsL · pflugR · pflugL · alber · sideR · sideL · wechselR · wechselL · neben · 묶음 wait · pass)
 //    edgeRest=pre+kick+fast+latch+tsw  쉬는 날 방향 시험 (config EDGE_REST — 사람 칼만) · preV=수 · kickK=수 · kickT=수
 //    tableSet=k:el/az[:x/y/z]+…  그 칸의 칼끝 각(올려본 · 옆 °) · 손 자리(m)를 바꿈 (guards.js setIberianTable · 빈 칸은 그대로) · ibTable=v2  자세표 v2 묶음 (IBERIAN_TABLE_V2)
-//    heavy   앞무게 틀 흐름 덧씌우기(SKILL.flow) 끔 — skill._flow 감싸기를 판 뒤 걷어 낸다
+//    heavy   앞무게 틀 흐름 덧씌우기 끔 — 판 뒤 skill._flow 를 끈다
 //    limits  사람 관절 범위 끔 (BODY.humanLimits = false — 손목 밧줄 · 아래팔 돌림 범위 · 양날 고르기)
 //    joints  관절 교정 묶음 끔 (JOINTS.mode = 'off')
 //    roll    잰 쪽 아래팔 돌림 밧줄만 걷음 (손목 밧줄 둘 가운데 HUMAN.forearmRoll 80° 줄)
@@ -183,10 +183,7 @@ function postBuild(f) {
     f.world.removeImpulseJoint(f.gripCone[1], true); // 아래팔 돌림 밧줄(HUMAN.forearmRoll 80°)만 걷음 — 양날 고르기(rollSide)는 그대로
     f.gripCone.splice(1, 1);
   }
-  if (ablVal('heavy') && f.skill?._flow) {
-    delete f.skill.update; // installFlow 가 인스턴스에 얹은 감싸기 → 프로토타입 update 로 돌아간다
-    f.skill._flow = false;
-  }
+  if (ablVal('heavy') && f.skill?._flow) f.skill._flow = false; // installFlow 가 켠 흐름 판단(skill.js updateFlow)을 끈다
 }
 
 // ── 날 각 탭 + 맞는 순간 기하 ──
@@ -480,7 +477,7 @@ function runPad() {
           f.applyWound = (h) => { if (!(f.decapitated && h.zone === 'neck')) aw(h); };
         }
         P.skill.level = 0.7;
-        setCorr(CONFIG, P, CONFIG.SKILL.corr, CONFIG.SKILL.corrTip);
+        setCorr(CONFIG, P, CONFIG.SKILL.corr);
         setPad(P, PAD.Pflug);
         aiOf = new Map();
         lastClash = -1e9;

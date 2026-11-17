@@ -82,7 +82,7 @@ if (mode === 'probe') {
       for (let s = 0; s < SEEDS; s++) {
         const G = newRound({ walls: false, seed: 700 + s + Math.round(gap * 100) * 10, weapon: 'longsword', gap, AIClass: Still });
         const P = G.player, E = G.enemy;
-        P.skill.corr = CONFIG.SKILL.corrAI;
+        P.skill.corr = 'old'; // AI 보정 (ai.js setLevel 과 같음)
         P.skill.level = CONFIG.AI_LEVELS.normal.skill;
         const log = [];
         const C = G.combat;

@@ -43,7 +43,7 @@ function fight(opp, seed, v) {
   applyWeaponMeasure(G.ai, opp);
   const D = G.player, A = G.enemy;
   G.combat.koteProbe = []; // 굴림 판정과 상관없이 손목 치기 닿음을 모두 적음 (combat.js koteCheck · koteSword) — 떨굼 없는 판(off)에서 판정 셋을 한꺼번에 견줌
-  D.skill.corr = SKILL.corr; D.skill.corrTip = SKILL.corrTip; D.skill.autoGuard = true;
+  D.skill.corr = SKILL.corr; D.skill.autoGuard = true;
   const guard = new PlayerParryGuard(D, A); D.stamina.controller = guard;
   const uq = new PlayerUniqueAssist(D, { stage: 4 });
   const r = { opp, seed, v, koteStrokes: 0, koteHits: {}, rolls: 0, drops: 0, dropT: null, end: null, win: false, lose: false, after: null, aiAttackAfter: 0, foeCutAfter: 0, swordMinY: null, nan: false, strokes: 0, counters: 0 };

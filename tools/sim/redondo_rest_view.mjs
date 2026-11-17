@@ -107,7 +107,6 @@ export function restRun({ w = 'zweihander', cand = {}, rest = 0.8, seed = 3 } = 
   const D = G.enemy;
   G.ai.update = () => {};
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   const uq = new PlayerUniqueAssist(P, { names: new Set(['redondo']) });
   let down = false;

@@ -4,11 +4,11 @@
 //   플레이어는 게임과 같은 입력 길로만 움직인다 (corr_lib inputPump: 손가락 이벤트 → input.js → main.js frame() 차례, 누르는 동안 handHeld).
 //   상대는 가만히 (칼 충돌 끔, 죽지 않음, 참수 뒤 목 상처 건너뜀 = chain.mjs 와 같음). hitMove 만 상대가 제 move 입력으로 걷는다 (몸을 옮기지 않는다)
 //
-//   node tools/sim/chain_corr.mjs [--root=<트리>] [--modes=old0,old07,v204,v207,v21,v207tip0] [--scenes=air,stop,hit,hitMove]
+//   node tools/sim/chain_corr.mjs [--root=<트리>] [--modes=old0,old07,v204,v207,v21] [--scenes=air,stop,hit,hitMove]
 //        [--fams=diagR,vert,horizR,riseR,novA,novB,novC,liftShort,holdShort] [--input=60,120,30J,J] [--limits=on,off]
 //        [--seed=7] [--reps=1] [--weapon=longsword] [--quick] [--json=<파일>] [--rows=0] [--shortDeg=25]
 //   --root: 그 트리의 src/ 와 tools/sim/harness_m.mjs 를 읽기만 한다 (base_src·시험 트리). 측정 도우미(corr_lib·envelope_check)는 이 트리 것
-//   방식: oldS = skill.corr 'old' 설정 S, v2S = 'v2' 설정 S 끝점 겨눔 켬, v207tip0 = v2 0.7 끝점 겨눔 끔(② 대조군). old0 = v2 0 = 맨 팔.
+//   방식: oldS = skill.corr 'old' 설정 S, v2S = 'v2' 설정 S (끝점 겨눔 ② 는 11/17 코드째 지움 — 아래 ② 칸은 있는 트리(--root)에서만 찬다). old0 = v2 0 = 맨 팔.
 //         S 는 숫자: 0 · 04 → 0.4 · 07 → 0.7 · 1 · 085 → 0.85. SKILL.corr 가 없는 트리의 v2 방식은 'feature absent' 로 건너뛴다
 //   장면: air = 2.0 m 헛치기 (내 칼 충돌 끔) · stop = 획 절반에서 손가락 멈춤, 1 s 누른 채, 그 뒤 끝까지 이어 긋고 뗌 (2.0 m, 내 칼 충돌 끔)
 //         hit = 1.55 m 서 있는 과녁 (내 칼 충돌 켬) · hitMove = hit 에 상대가 감기 시작부터 획 끝 + 0.3 s 까지 옆(across)·앞(toward)으로 걷는다 (둘 다 돈다)
@@ -57,7 +57,7 @@ const list = (k, d) => String(arg(k, d)).split(',').filter(Boolean);
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = realpathSync(resolve(arg('root', resolve(HERE, '..', '..'))));
 const QUICK = !!arg('quick', false);
-const MODES = list('modes', 'old0,old07,v204,v207,v21,v207tip0');
+const MODES = list('modes', 'old0,old07,v204,v207,v21');
 const SCENES = list('scenes', QUICK ? 'air,hit' : 'air,stop,hit,hitMove');
 const FAMS = list('fams', QUICK ? 'diagR,novA,liftShort,holdShort' : 'diagR,vert,horizR,riseR,novA,novB,novC,liftShort,holdShort');
 const INPUTS = list('input', QUICK ? '60' : '60,120,30J,J');
@@ -70,11 +70,11 @@ const ROWS = arg('rows', '1') !== '0';
 for (const f of FAMS) if (!FAM[f]) throw new Error(`모르는 무리 ${f}`);
 for (const s of SCENES) if (!['air', 'stop', 'hit', 'hitMove'].includes(s)) throw new Error(`모르는 장면 ${s}`);
 function parseMode(m) {
-  const x = m.match(/^(old|v2)(\d+)(tip0)?$/);
+  const x = m.match(/^(old|v2)(\d+)$/);
   if (!x) throw new Error(`모르는 방식 ${m}`);
   const d = x[2];
   const level = d.length > 1 && d[0] === '0' ? +`0.${d.slice(1)}` : +d;
-  return { name: m, corr: x[1], level, tip: !x[3] };
+  return { name: m, corr: x[1], level };
 }
 const MODE_DEFS = MODES.map(parseMode);
 
@@ -121,7 +121,7 @@ function trial(o) {
   const aw = E.applyWound.bind(E);
   E.applyWound = (h) => { if (!(E.decapitated && h.zone === 'neck')) aw(h); };
   P.skill.level = M.level;
-  setCorr(cfg, P, M.corr, M.tip);
+  setCorr(cfg, P, M.corr);
   setPad(P, PAD.Pflug);
   const pump = inputPump(G, deps, { pace: pacer(o.input, SEED + o.rep) });
   const wounds = [];
@@ -240,7 +240,7 @@ function trial(o) {
   const iRe = kOf(rt.t0);
   const iWinEnd = Math.min(n - 1, iL + Math.round(0.5 / DT));
   const iTipEnd = Math.min(n - 1, iL + Math.round(0.3 / DT));
-  const row = { mode: M.name, corr: M.corr, level: M.level, tip: M.tip, scene: o.scene, foeMove: o.scene === 'hitMove' ? o.foeMove : null, fam: o.fam, input: String(o.input), limits: o.limits, rep: o.rep, feature: { corr: HAS, limits: HASL } };
+  const row = { mode: M.name, corr: M.corr, level: M.level, scene: o.scene, foeMove: o.scene === 'hitMove' ? o.foeMove : null, fam: o.fam, input: String(o.input), limits: o.limits, rep: o.rep, feature: { corr: HAS, limits: HASL } };
   if (shortInfo) row.short = shortInfo;
   let tipPk = 0;
   for (let i = i0; i <= iTipEnd; i++) tipPk = Math.max(tipPk, S[i].tipV);

@@ -18,7 +18,6 @@ import { altibRun } from './ib_swap.mjs';
 
 const setup = (P) => {
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
 };
 

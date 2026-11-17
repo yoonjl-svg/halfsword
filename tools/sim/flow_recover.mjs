@@ -28,7 +28,6 @@ function run(seed, on, stopAt) {
   const Gm = newRound({ weapon: 'uchigatana', weapon2: ATK, seed, gap: GAP });
   const D = Gm.player, A = Gm.enemy, ai = Gm.ai;
   D.skill.corr = SKILL.corr;
-  D.skill.corrTip = SKILL.corrTip;
   D.skill.autoGuard = true;
   D.applyWound = () => {};
   const guard = new PlayerParryGuard(D, A);

@@ -190,7 +190,6 @@ export function cutsRun({ weapon, seed = 7, gap = 2.3, trace = null }) {
   const P = G.player;
   const E = G.enemy;
   P.skill.corr = SKILL.corr;
-  P.skill.corrTip = SKILL.corrTip;
   P.skill.autoGuard = true;
   G.ai.update = () => E.move.set(0, 0);
   E.die = () => {};

@@ -25,7 +25,6 @@ function body({ weapon = 'zweihander', set = {}, kit = null, seed = 3 } = {}) {
   const P = G.player;
   G.ai.update = () => {};
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   const uq = new PlayerUniqueAssist(P, { names: new Set(['redondo']) });
   const press = { down: false };

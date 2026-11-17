@@ -1,5 +1,5 @@
 // 유파 막기 자리 물리 점검 (10/10 빌린 칸 걷어내기 — docs/strike/school_borrow_clear_2026-10-10.md §1)
-//  motion_lab parry 와 같은 방법: 치는 쪽 = 롱소드(스크립트로 기술 길을 11 m/s 로), 막는 쪽 = 이 무기(본판 길 — MOTION.lib 켬, 유파 자세표 그대로)가
+//  motion_lab parry 와 같은 방법: 치는 쪽 = 롱소드(스크립트로 기술 길을 11 m/s 로), 막는 쪽 = 이 무기(본판 길 — 유파 자세표 그대로)가
 //  한 자리를 들고 버틴다. 다른 점: 본판 길로 잰다(생성자가 유파 자세표를 입힘) · 14 패드에 독일 표의 highL 자리 [−0.3, 0.1] 를 더한다 ·
 //  줄마다 그 유파 꾸러미의 막기 자리(art.school.parry)와 독일 막기 자리(GERMAN = longsword 꾸러미)를 표시한다.
 //  막음 = 그 판에 치는 쪽 상처가 0. 고르는 기준은 원전이고 이 수는 보고용이다.
@@ -7,7 +7,6 @@
 //   본판과 같은 덧씌우기(frames.js installCover — 덮는 시간 0.08 s)로 몸꼴을 입힌다. 표에 ◀유파 = 본판이 쓰는 자리(덧씌움 있으면 덧씌운 쪽).
 //   node tools/sim/school_parry.mjs <무기id>      (PARRY_GAPS=1.3,1.45,1.6,1.75 · PARRY_SEEDS=7 — 판 수 = 간격 × 씨앗 · PARRY_ONLY=1 = 유파·독일 자리만 · PARRY_LINES=lowL,thrust = 그 줄만)
 import { newRound, DT } from './harness_m.mjs';
-import { MOTION } from '../../src/motion_library.js';
 import { TECH, G as PAD } from '../../src/ai_techniques.js';
 import { GUARD_BASE } from '../../src/guards.js';
 import { SCHOOLS } from '../../src/schools.js';
@@ -18,7 +17,6 @@ import { TRADITIONS } from '../../src/schools.js';
 const id = process.argv[2] ?? 'rapier';
 const W = WEAPONS[id];
 if (!W) throw new Error(`무기 없음: ${id}`);
-MOTION.lib = true; // 본판 길
 const GAPS = (process.env.PARRY_GAPS ?? '1.3,1.45,1.6,1.75').split(',').map(Number);
 const SEEDS = (process.env.PARRY_SEEDS ?? '7').split(',').map(Number);
 const LINES = [['highL', 'zornhau'], ['highR', 'zornhauL'], ['highC', 'oberhau'], ['lowL', 'unterhau'], ['lowR', 'unterhauL'], ['thrust', 'stichPflug']];

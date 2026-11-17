@@ -2,7 +2,7 @@
 //  player_edge.mjs — 플레이어(사람 손가락) 칼의 칼 면 맞음 계기 (10/10 사장님 '인간 플레이어 쪽' — docs/motion/player_edge_2026-10-10.md)
 //   main.js frame() 의 플레이어 입력 길을 그대로 흉내 낸다: 60 Hz 프레임마다 손가락 패드 이동을 handOffset 에 더하고 (input.js 는 px → 패드 선형 배율뿐),
 //   handHeld(손가락 닿음)·inputActive(이번 프레임 움직임)를 두고, 톡이면 skill.thrust(). 멈칫(hitStop)은 main.js 처럼 물리 스텝을 0.12 배·손가락 0.25 배.
-//   플레이어 = main.js 와 같게 skill.corr = SKILL.corr · corrTip · autoGuard 켬 · 숙련 0.7. 상대 = 롱소드.
+//   플레이어 = main.js 와 같게 skill.corr = SKILL.corr · autoGuard 켬 · 숙련 0.7. 상대 = 롱소드.
 //   상대 셋: stand (AI 멈춤, 가만히 선 과녁) · block (AI 가 공격을 시작하지 않음 — 간 보기·막기·물러남만) · ai (보통 AI, 맞받아 침)
 //   둘 다 죽지 않는다 (상처·넘어짐은 그대로). 한쪽이 1.5 s 넘게 서 있지 않으면 그 판을 끝낸다.
 //   대본 (씨앗 고정, 결정적): 감기(느리게 감는 자리로 → 빠르게 긋기) · 바로 긋기(쉰 자리에서 그 길 방향으로) · 되긋기(긋고 곧장 반대로) · 톡(찌르기),
@@ -80,7 +80,6 @@ function runRound(weapon, foeMode, seed, acc, sw) {
   const P = G.player, E = G.enemy;
   P.skill.level = 0.7;
   P.skill.corr = SKILL.corr;
-  P.skill.corrTip = SKILL.corrTip;
   P.skill.autoGuard = true;
   // 죽지 않음 (상처·넘어짐 그대로)
   for (const f of [P, E]) {

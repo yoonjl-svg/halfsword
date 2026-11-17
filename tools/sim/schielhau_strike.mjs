@@ -202,7 +202,6 @@ export function playerRun(seed, { dur = 40, foe = 'still', finger = 'zornhau', s
   if (foe !== 'ai') G.ai.update = () => {};
   if (immortal) D.applyWound = () => {}; // 상처 끔 (duelRun 과 같음)
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   const uq = new PlayerUniqueAssist(P, { names: new Set(['schielhau']), ...(trad ? { tradition: trad } : {}) }); // trad: 다른 무기로 곁눈 베기(견줌 — 기술과 무기 가르기)
   const FR = FINGER[finger];
@@ -324,7 +323,6 @@ export function tsubameRun(seed, { dur = 40, foe = 'still', spd = [3, 5.5], jit 
   if (foe !== 'ai') G.ai.update = () => {};
   if (immortal) D.applyWound = () => {};
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   const uq = new PlayerUniqueAssist(P, { names: new Set(['tsubameGaeshi']), ...(trad ? { tradition: trad } : {}) });
   if (!uq.list.length) throw new Error('제비 베기가 열리지 않음 (유파?)');
@@ -497,7 +495,6 @@ export function playerFight(seed, opp, { dur = 30, prof = 3, delay = 0.15, share
   const P = G.player;
   const A = G.enemy;
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   const guard = new PlayerParryGuard(P, A);
   P.stamina.controller = guard;

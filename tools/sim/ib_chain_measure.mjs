@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  ib_chain_measure.mjs — 이베리아 B6 '이어지는 흐름' · B4 풍차 베기와 사슬 재기 (사장님 10/29 01:4x · 01:5x · 08:3x — docs/strike/redondo_hold_2026-10-29.md §3 · §4)
 //   재기만 한다 — 게임 값은 건드리지 않는다. 0 번 자리 사람 몸을 손가락 봇이 긋는다(ib_flow_measure.mjs 와 같은 입력 길 — 60 Hz 프레임마다 handOffset 이동 ·
-//   최소 저크 손가락(천천히 떠서 가운데서 평균의 1.875 배 · 천천히 멈춤 — 사람 손) · 숙련 0.7 · corr · corrTip · autoGuard). 스킬트리 b5 = 이베리아 칸 모두 − B6 · b6 = 모두.
+//   최소 저크 손가락(천천히 떠서 가운데서 평균의 1.875 배 · 천천히 멈춤 — 사람 손) · 숙련 0.7 · corr · autoGuard). 스킬트리 b5 = 이베리아 칸 모두 − B6 · b6 = 모두.
 //   진짜 긋기 · 사슬 · n 은 게임 읽기 그대로(fighter.js updateIbFlow — 휘두르기 끝마다 ibFlowWasCut · ibFlowChain · ibCutN) · 기력은 chargeAttack 청구 그대로.
 //   chain   = 허공 이어 긋기(상대 6 m 밖 · 서 있음): 한 벌 = K 칼(set 'practice' 3 ~ 5 · 'fight' 1 ~ 3 · 'endless' 끝없이) · 칼 사이 쉼 0 ~ pmax s(손가락 댄 채) · 벌 사이 1.0 ~ 1.6 s 손 뗌 ·
 //             빠르기 3.5 ~ 6 패드 m/s(평균) → n 분포 · 사슬 길이 · 최대 n · 칼마다 위력(b5 · b6) · 기력 배율
@@ -34,7 +34,6 @@ const r3 = (x) => (Number.isFinite(x) ? +x.toFixed(3) : null);
 function setupPlayer(P) {
   P.skill.level = 0.7;
   P.skill.corr = SKILL.corr;
-  P.skill.corrTip = SKILL.corrTip;
   P.skill.autoGuard = true;
 }
 /** 손가락 프레임 줄 (최소 저크 · 느린 감기 < 1.5 는 고른 빠르기) — ib_flow_measure.mjs fingerTo 와 같음 */

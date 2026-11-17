@@ -6,8 +6,6 @@
 //
 //  node tools/sim/qinggang_diag.mjs [무기=qinggang] [자리마다 판 수=24]
 //  조건(환경 변수, 하나씩 켜서 같은 시드로 비교 — src 는 바꾸지 않고 이 프로세스 안에서만 덮는다):
-//   QG_LIB=off              동작 라이브러리 끔 (motion_lab duel … off 와 같은 길이 아님: 무기 꾸러미는 그대로, MOTION.lib 만 끔)
-//   QG_SCHOOLART=0          유파 자료 끔 (SKILL.schoolArt 0 — 중국 가중치·맞받아치기 빼기)
 //   QG_CONTACT=±m QG_REACH=±m QG_CLINCH=±m   X AI 간격에 더하기 (생성 뒤 a.M 덮어쓰기)
 //   QG_CUTTIME=s            X AI 베는 시간 바꾸기
 //   QG_TABLE=sabre|hybrid|thrust   X 자세표 바탕을 바꿔 다시 짓는다 (hybrid = 찌르기 표 + 베기 감는 자세 8 곳만 세이버 표) (라이브러리 켬이면 몸 틀 표를 그 바탕 위에)
@@ -26,8 +24,7 @@ import { newRound, DT } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
 import { WEAPONS, THRUST_STYLE } from '../../src/weapons.js';
 import { SCHOOLS } from '../../src/schools.js';
-import { SKILL } from '../../src/config.js';
-import { MOTION, NEW_TECH, buildFrameTable } from '../../src/frames.js';
+import { NEW_TECH, buildFrameTable } from '../../src/frames.js';
 import { GUARD_BASE_ONE_SABRE, GUARD_BASE_ONE_THRUST } from '../../src/guards.js';
 import { TECH } from '../../src/ai_techniques.js';
 import { wilson } from './ref_duel.mjs';
@@ -36,8 +33,6 @@ import { writeFileSync } from 'node:fs';
 const [id = 'qinggang', nArg = '24'] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const N = +nArg;
 const env = process.env;
-MOTION.lib = env.QG_LIB !== 'off'; // motion_lab duel 'main' = 본판 길(스위치 켬)
-if (env.QG_SCHOOLART != null) SKILL.schoolArt = +env.QG_SCHOOLART;
 if (env.QG_NOWRIST === '1') for (const k of Object.keys(NEW_TECH)) for (const t of NEW_TECH[k]) if (t.name === 'wristCut') t.ai = false;
 const bodyId = env.QG_BODY || id;
 const schoolId = env.QG_SCHOOL || (SCHOOLS[id] ? id : 'longsword');
@@ -117,7 +112,7 @@ for (let s = s0; s <= s1; s++) {
     if (env.QG_TABLE) {
       const base = env.QG_TABLE === 'sabre' ? GUARD_BASE_ONE_SABRE : env.QG_TABLE === 'hybrid' ? HYBRID : GUARD_BASE_ONE_THRUST;
       const fx = F.X;
-      const tbl = MOTION.lib ? buildFrameTable(fx.swordArt?.frame ?? spec.frame, fx.swordArt?.style ?? spec.style, spec.motionSkip ?? [], base) : base;
+      const tbl = buildFrameTable(fx.swordArt?.frame ?? spec.frame, fx.swordArt?.style ?? spec.style, spec.motionSkip ?? [], base);
       fx.guardPose.table = fx.bodyGuard.table = tbl;
     }
     const prev = { X: 'stand', Y: 'stand' };

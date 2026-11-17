@@ -2,25 +2,23 @@
 //  사장님 아이디어 3] '손잡이 찍기' 설계 메모(docs/strike/owner_ideas_design_2026-10-09.md §3-6)의 '오늘 값부터' 측정. 측정만 — src 는 건드리지 않는다.
 //  판 차림은 motion_lab.mjs duel 과 같다: 시험 무기 X(유파 = 그 무기 유파, 없으면 롱소드) vs 롱소드 AI Y, 둘 다 AI normal,
 //   씨앗 1000+s(X 가 P 자리)·2000+s(X 가 E 자리), 40 s, 한쪽이 죽으면 끝.
-//  동작 라이브러리는 기본 = 본판(src 기본 MOTION.lib 그대로). --lib=off 면 motion_lab duel 기본(끔)과 같다.
+//  동작 라이브러리는 본판 그대로(늘 켬).
 //  맞은 점이 칼의 어디인가: combat.js strike() 는 hooks.onWound(att, vic, r, point, pr) 로 무기 콜라이더 부품
 //   (pr.w.part = 'blade' | 'hilt', fighter.js:597)과 맞은 점을 넘긴다. 칼날 위 비율(t)은 결과에 없다.
 //   자루(part 'hilt')는 칼 원점(손잡이 가운데) 기준 칼 축 좌표 y 로 다시 나눈다:
 //   y < −0.07 m = 폼멜, y > hiltLength − 0.05 = 코등이, 그 사이 = 손잡이(쥔 자리).
 //   칼날 부품: cut = 날, stab = 칼끝, blunt = 칼 면(납작)·날 뿌리.
-//  실행: node tools/sim/pommel_count.mjs <무기id> [--N=24] [--lib=off]
+//  실행: node tools/sim/pommel_count.mjs <무기id> [--N=24]
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
 import { WEAPONS } from '../../src/weapons.js';
 import { SCHOOLS } from '../../src/schools.js';
-import { MOTION } from '../../src/motion_library.js';
 
 const pos = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => { const [k, v] = a.slice(2).split('='); return [k, v ?? '1']; }));
 const id = pos[0] ?? 'longsword';
 if (!WEAPONS[id]) throw new Error(`무기 없음: ${id}`);
 const N = +(args.N ?? 24);
-if (args.lib === 'off') MOTION.lib = false;
 const school = SCHOOLS[id] ? id : 'longsword';
 
 const med = (a) => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); return +b[Math.floor(b.length / 2)].toFixed(1); };
@@ -85,4 +83,4 @@ const row = (k) => {
   const S = side[k];
   return { side: k === 'X' ? id : 'longsword(상대)', hits: S.hits, cut: S.cut, stab: S.stab, flat: S.flat, hilt: S.hilt, hiltPct: +(100 * S.hilt / Math.max(1, S.hits)).toFixed(1), hiltPart: S.hiltPart, hiltZone: S.hiltZone, hiltE_med: med(S.hiltE), hiltE_max: max(S.hiltE), pommelE_med: med(S.pommelE), hiltClinch: S.hiltClinch, hiltDist_med: med(S.hiltDist), hiltSev: S.hiltSev, hiltHeadOver45: S.hiltHeadBig, hiltState: S.hiltState, hiltMode: S.hiltMode, hiltY_cm_med: med(S.hiltY.map((v) => v * 100)) };
 };
-console.log(JSON.stringify({ weapon: id, school, lib: MOTION.lib, fights: 2 * N, X_W: W, X_L: L, D, X: row('X'), Y: row('Y') }));
+console.log(JSON.stringify({ weapon: id, school, fights: 2 * N, X_W: W, X_L: L, D, X: row('X'), Y: row('Y') }));

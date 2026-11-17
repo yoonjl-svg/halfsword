@@ -16,7 +16,7 @@ await page.evaluate(()=>{game.config.ARENA.startGap=1.4;});
 await page.getByText('여정 시작',{exact:true}).click();await page.waitForFunction(()=>window.game.state==='fight');
 await page.evaluate(async()=>{
  const {TECH}=await import('/src/ai_techniques.js');const g=game,a=g.enemy,p=g.player,tech=TECH.find(t=>t.name==='zwerchL');
- g.config.ARENA.startHold=0;p.fightT=a.fightT=4;p.skill.corr=g.config.SKILL.corr;p.skill.corrTip=g.config.SKILL.corrTip;
+ g.config.ARENA.startHold=0;p.fightT=a.fightT=4;p.skill.corr=g.config.SKILL.corr;
  const r=window.probe={t:0,ph:0,at:0,ready:false,go:false,captured:false,contacts:0,events:[]};
  const old=g.combat.hooks.onClash;g.combat.hooks.onClash=(...args)=>{old?.(...args);r.contacts++;r.events.push({t:r.t,age:g.playerGuard.clock-g.playerGuard.opposition.pressed,vn:args[2]?.vn,attack:a.stamina.attackId,injury:g.playerGuard.clock-g.playerGuard.opposition.lastInjury,approach:new g.THREE.Vector3().copy(p.bodies.chest.translation()).sub(a.bladePoint(1,new g.THREE.Vector3())).dot(a.tipVel)});};
  const pad=(x,y)=>{a.handOffset.set(x,y);a.skill.aimRaw.set(x,y);};

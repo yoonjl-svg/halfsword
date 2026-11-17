@@ -927,7 +927,7 @@ export class Fighter {
     // 검술 풀이 (sword_art.js resolveSwordArt — 10/8 ① 구조: 전엔 이 자리에서 표를 고르고 applyMotionLibrary 를 불렀다. 값은 그대로):
     //  자세표 = 무기 종류별 표(동작 PM 10/1, 사장님 10/1 21:45 승인 — 한손 → 찌르기/세이버 표, 두손 찌르기 칼 → 두손 찌르기 표, 그 밖 → 교본 표)
     //  위에 동작 라이브러리 몸 틀 표(무기 PM, 사장님 10/8 18:50 본판 기본 — 확인표 34: 앞무게 상단·팔상·중단·협, 한손 3번·2번 자세)를 덮은 것.
-    //  라이브러리가 켜져 있으면 찌르기 무기 런지·앞무게 흐름도 덧씌운다. 롱소드류(두손 두루)·총은 바뀌는 것 없음. 끄면(SKILL.motionLib 0) 바이트 동일.
+    //  찌르기 무기 런지·앞무게 흐름도 덧씌운다. 롱소드류(두손 두루)·총은 바뀌는 것 없음.
     //  AI 기술 목록·간격은 ai.js 생성자가 같은 함수(인물을 넘겨)로 읽는다. 손 모양(hands.js)·HUD 이름(main.js)은 this.swordArt 를 읽는다
     const art = resolveSwordArt(spec, null, o.guardTables ? { guardTables: o.guardTables } : undefined); // guardTables: 이 몸만 다른 유파 자세표 (10/22 이베리아 자세표 v2 '사람만' 시험 — main.js · 기본 없음)
     this.swordArt = art;
@@ -935,7 +935,7 @@ export class Fighter {
     this.schoolPassive = new SchoolPassive(this); // 나머지 넷 (school_passive.js — 받은 유파가 없으면 아무 일 없음 · AI 는 ai.js 가 숙련도로 다시 둔다)
     this.schoolPassive.set(this.passiveBook ? art.tradition : null);
     this.guardPose.table = this.bodyGuard.table = art.table;
-    if (art.lib) applySwordArt(this, art, { cover: false });
+    applySwordArt(this, art, { cover: false });
     // 파손 굴림용 전용 난수 (Math.random 과 분리: 부러지지 않는 한 기존 시뮬의 난수 순서가 바뀌지 않는다).
     //  씨앗은 판 시드(o.breakSeed, 시뮬 하니스가 넘긴다) — 몇 번째로 돌리든 같은 시드면 같은 굴림이 나온다.
     //  시드가 없으면(실제 게임) "이 프로세스에서 몇 번째로 만들어진 파이터인가"로 — 판마다 다른 굴림.

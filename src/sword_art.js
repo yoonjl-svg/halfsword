@@ -12,24 +12,23 @@
 //   frame·style  몸 틀·싸움 방식 (weapon_class.js 분류 — 스펙에 적으면 그 값)
 //   grip         쥠: kind(쥠 종류 one-hand·hand-and-half·two-hand) + 벙어리장갑 손 모양 a·b·t·off(+ 자세별 돌림 turn) — hands.js
 //   baseTable    무기 종류별 자세표 (동작 PM 10/1: 한손 → 찌르기/세이버 표, 두손 찌르기 → 두손 찌르기 표, 그 밖 → 없음 = 교본 표)
-//   libTable     동작 라이브러리 몸 틀 표 (바탕 표 위에 덮음, 고칠 것이 없으면 null) — lib 일 때만
+//   libTable     동작 라이브러리 몸 틀 표 (바탕 표 위에 덮음, 고칠 것이 없으면 null)
 //   table        실제로 쓰는 표 = libTable ?? 바탕 표 (fighter.guardPose.table·bodyGuard.table)
 //   names        자세 번호(0~15, 마무리 자세 둘 포함) → 자세 칸(name·desc) — main.js HUD. 유파 이름(TRADITIONS[tradition].names)이 있으면
 //                바탕 자리 이름(GUARDS[i].name)으로 맞춰 이름·설명만 덮는다(10/9 ②③ — 늘 켬, 표는 건드리지 않는다: 판에 닿지 않음)
 //   overlays     덧씌우기: lunge(찌르기 방식 런지) · flow(앞무게 이어 베기) · noTwist(날 없는 무기 — 기본 안 씀) · cover(막기 덧씌우기 — 기본 안 씀)
 //   caps         손목 서보 상한 (쥠 종류 기본값 또는 무기 명시값 — weapons.js 가 정한 그대로, 읽기만)
-//   school       AI 가 쥐는 꾸러미: 인물이 고른 것(persona.school, 없으면 롱소드 = 독일) + lib 이면 몸 틀·방식 가중치·새 기술·속임수·간 보는 자세
+//   school       AI 가 쥐는 꾸러미: 인물이 고른 것(persona.school, 없으면 롱소드 = 독일) + 몸 틀·방식 가중치·새 기술·속임수·간 보는 자세
 //   tech·feints·parry·watch  그 꾸러미의 기술·속임수·막기 자리·간 보는 자세
 //   measure      그 꾸러미로 이 무기를 쥘 때의 간격 (꾸러미 간격을 무기 실측 비율로 늘이고 줄임) · measureFor(다른 무기) = 상대 칼 어림용
 //   restGuard    쉴 자세 (보정 v2 ③ 되돌아옴 겨눔의 목표 — skill.js 가 pad 를 읽는다, 플레이어만) — 유파 rest 가 있으면 그 패드(일본·중국 'langort' = 中段·中平, 사장님 10/9 01:2x 안 A),
-//                아니면 SKILL.homeGuard(쟁기 자리). 스위치와 상관없이 늘. 비교 손잡이 SKILL.schoolRest
+//                아니면 SKILL.homeGuard(쟁기 자리)
 //   tradition    유파 전통 열쇠 (인물이 꾸러미를 고르면 그 꾸러미의 것, 아니면 무기의 것 — schools.js traditionOf)
-//   lib          동작 라이브러리를 입히나 (본판 스위치 MOTION.lib — 도구는 opts.lib 로 직접)
 //   motion       옛 motionFor 모양 (도구·fighter.motion 호환)
 //  school·measure·motion 은 처음 읽을 때 만든다: 검객 생성자는 몸 쪽만 읽어 유파 병합(기억해 두는 꾸러미)을 건드리지 않는다 — 전과 같은 차례.
 //  기본 AI(인물 없음)는 그 무기의 유파 꾸러미(schools.js weaponSchool: 무기 유파 내용 + 그 무기 간격)를 쥔다 — 사장님 10/9 01:2x '바꿔'(전엔 롱소드 꾸러미 + 무기 간격 비율; 롱소드는 같은 꾸러미라 관문 동일,
 //   다른 무기는 docs/strike/motion_lib_main_2026-10-08.md §3 '본판(켬)' 열(motion_lab duel main = 무기 꾸러미)이 곧 기본 AI 의 수치). 꾸러미가 없는 무기(총)는 롱소드 꾸러미
-//  유파 자료 (10/9 ②③, SKILL.schoolArt 1 일 때만 — schools.js '유파 자료' 머리말): 꾸러미에 유파 기술 가중치(techK)·고유 동작(unique)·맞받아치기(counterArt)를 덮는다 (쉴 자세·이름은 늘).
+//  유파 자료 (10/9 ②③ — schools.js '유파 자료' 머리말): 꾸러미에 유파 기술 가중치(techK)·고유 동작(unique)·맞받아치기(counterArt)를 덮는다 (쉴 자세·이름은 늘).
 //   어느 유파의 것을 덮나 = art.tradition — 인물이 꾸러미를 골랐으면 그 꾸러미의 유파, 아니면 무기의 유파(traditionOf).
 //   그래서 인물 없는 기본 AI 가 모노호시자오를 쥐면 독일 꾸러미 위에 일본 가중치가 얹힌다(꾸러미는 오늘 그대로 독일 — 그것은 바꾸지 않았다, 사장님 확인 전).
 //   이름 덮기는 스위치와 상관없이 늘 한다(HUD 만)
@@ -78,10 +77,10 @@ function gripOf(spec) {
   return { kind: spec.grip ?? null, ...shape };
 }
 
-/** 쉴 자세 (사장님 10/8 21:5x '유파가 정한다'): SKILL.schoolArt 1 이고 SCHOOL_ART.rest 이고 유파 rest(G 패드 열쇠)가 있으면 그 패드, 아니면 SKILL.homeGuard(쟁기 자리) */
+/** 쉴 자세 (사장님 10/8 21:5x '유파가 정한다'): SCHOOL_ART.rest 이고 유파 rest(G 패드 열쇠)가 있으면 그 패드, 아니면 SKILL.homeGuard(쟁기 자리) */
 function restGuardOf(names, tradition) {
   const own = TRADITIONS[tradition]?.rest; // 유파 쉴 자세 (일본·중국 'langort' — 사장님 10/9 01:2x 안 A). 없는 유파(독일 등)는 homeGuard
-  const key = SCHOOL_ART.rest && own ? SKILL.schoolRest || own : null; //
+  const key = SCHOOL_ART.rest && own ? own : null;
   const pad = key && G[key] ? G[key] : SKILL.homeGuard;
   let index = -1;
   let best = Infinity;
@@ -97,7 +96,7 @@ function restGuardOf(names, tradition) {
 }
 
 /**
- * 유파 자료를 꾸러미에 덮는다 (10/9 ②③ — SKILL.schoolArt 1 일 때만 부른다). 받은 꾸러미는 고치지 않고 새 꾸러미를 돌려준다(라이브러리 병합 기억을 지킨다).
+ * 유파 자료를 꾸러미에 덮는다 (10/9 ②③). 받은 꾸러미는 고치지 않고 새 꾸러미를 돌려준다(라이브러리 병합 기억을 지킨다).
  *  가중치(SCHOOL_ART.weights): 유파 techK 에서 '몸 틀:싸움 방식' → '몸 틀:*' → '*' 차례로 처음 맞는 칸 하나 — 기술 이름 곱 × (찌르기면 thrust 곱), base 에 곱한다.
  *  고유 동작(SCHOOL_ART.unique — 옛 이름 newTech): 유파 unique 가운데 ai:false 아닌 것을 mergeUnique 로 — 길·속임수는 가중치 뒤(유파 가중치를 받지 않는다),
  *   맞받아치기 꼴은 counterArt 뒤(같은 줄이면 고유 동작이 이긴다).
@@ -247,7 +246,6 @@ function lazy(obj, key, make) {
  * 검술 풀이 한 번.
  *  spec    무기 스펙 (getWeapon 결과 — finalizeSpec 이 frame·style 을 붙여 둔다). 없으면 롱소드류 기본으로 읽는다
  *  persona AI 인물 (persona.school = 꾸러미 id: 인물 꾸러미 또는 무기 id). 없거나 school 이 없으면 롱소드(독일) 꾸러미
- *  opts.lib    동작 라이브러리를 입히나 (기본 = 본판 스위치 MOTION.lib). 옛 이름 applyMotionLibrary·motionFor 는 true 로 부른다
  *  opts.base   라이브러리 표의 바탕 표 (기본 = 이 무기의 무기별 표). applyMotionLibrary 는 검객이 지금 쥔 표를 넘긴다 (null = 옛 바탕)
  *  opts.school 꾸러미 객체를 직접 (옛 이름 libSchool 호환 — 인물 대신)
  *  opts.proficiency AI 숙련도 (10/13): 숫자(이 무기 유파의 숙련도) 또는 { 유파: 숙련도 } 표(없는 유파 = 0). 없으면 고유 동작을 거르지 않는다(플레이어·도구) —
@@ -257,7 +255,6 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   const w = spec ?? {};
   const frame = w.frame ?? 'two';
   const style = w.style ?? 'versatile';
-  const lib = opts.lib ?? MOTION.lib;
   const baseTable = baseTableOf(w);
   const hasBase = 'base' in opts;
   const libBase = hasBase ? opts.base : baseTable ?? null;
@@ -267,7 +264,7 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   // opts.guardTables (10/22 이베리아 자세표 v2 '사람만' 시험 — 기본 없음): { 유파: 자세표 칸 } 이 있으면 그 유파는 TRADITIONS 의 guardTable 대신 그 칸으로 덮는다 (main.js 가 플레이어 몸에만 넘김)
   const ownTable = opts.guardTables?.[tradition];
   const schoolTable = (t) => (SCHOOL_ART.table ? applySchoolGuardTable(t, ownTable ? { guardTable: ownTable } : TRADITIONS[tradition]) : t); // 유파 자세표 (10/10 이베리아 몬탄테 고증 — guardTable 없는 유파는 그대로 = 전과 같음)
-  const libTable = lib ? schoolTable(buildFrameTable(frame, style, skip, libBase)) : null;
+  const libTable = schoolTable(buildFrameTable(frame, style, skip, libBase));
   const table = libTable ?? (hasBase ? opts.base ?? undefined : baseTable);
   const names = schoolNames(guardNames(table), tradition, frame, style);
   const art = {
@@ -285,15 +282,13 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
     tradition,
     proficiency: proficiencyIn(opts.proficiency, tradition),
     offArm: TRADITIONS[tradition]?.offArm ?? null, // 유파 빈팔 자세 (10/10 고증 — schools.js offArm, fighter.js applyPose 가 읽는다). 칸 없는 유파 = null(오늘 그대로)
-    lib,
   };
   // AI 칸 몫 (11/16 — config AI_KIT · opts.aiKit 를 넘긴 AI 만): 이 유파 숙련도의 사다리 칸 (skill_tree_data.js aiKitOf — 유파 칸이 없으면 null). 안 넘기면 칸이 없다(전 판 그대로)
   if (opts.aiKit && art.proficiency != null) art.kit = aiKitOf(tradition, art.proficiency);
-  // AI 꾸러미: 인물이 고른 꾸러미(없으면 롱소드) → lib 이면 몸 틀·방식 몫을 더한다 (전 ai.js schoolOf + libSchool) → 스위치를 켜면 유파 자료(art.tradition 의 것)
+  // AI 꾸러미: 인물이 고른 꾸러미(없으면 롱소드) → 몸 틀·방식 몫을 더한다 (전 ai.js schoolOf + libSchool) → 유파 자료(art.tradition 의 것)
   lazy(art, 'school', () => {
     const pkg = 'school' in opts ? opts.school : schoolOf(persona?.school ?? w.id); // 인물이 없으면 무기 유파 꾸러미(weaponSchool) — 사장님 10/9 01:2x '바꿔'(전엔 롱소드 꾸러미 + 무기 간격 비율)
-    const s = lib ? mergeLibSchool(pkg, spec) : pkg;
-    return SKILL.schoolArt ? applySchoolArt(s, tradition, frame, style, art.proficiency, w.secretBlade?.open ? w.secretBlade.tech : null, art.kit ?? null) : s;
+    return applySchoolArt(mergeLibSchool(pkg, spec), tradition, frame, style, art.proficiency, w.secretBlade?.open ? w.secretBlade.tech : null, art.kit ?? null);
   });
   lazy(art, 'tech', () => art.school.tech);
   lazy(art, 'feints', () => art.school.feints);
@@ -305,7 +300,7 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
   lazy(art, 'motion', () => ({
     frame,
     style,
-    table: lib ? libTable : schoolTable(buildFrameTable(frame, style, skip, libBase)),
+    table: libTable,
     tech: styleTech(style, frame),
     feints: styleFeints(style, frame),
     watch: frameWatchGuards(frame),
@@ -320,7 +315,7 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
 
 /**
  * 검객 하나에 풀이의 라이브러리 몫을 입힌다 (전 applyMotionLibrary 의 몸 그대로): 몸 틀 표, 덧씌우기(런지·흐름·막기), fighter.motion.
- *  Fighter 생성자가 lib 일 때 부르고(cover 끔), 옛 이름 applyMotionLibrary(도구)가 부른다.
+ *  Fighter 생성자가 부르고(cover 끔), 옛 이름 applyMotionLibrary(도구)가 부른다.
  */
 export function applySwordArt(fighter, art, { overlay = true, flow = true, noTwist = false, ai = null, cover = true } = {}) {
   const m = art.motion;
@@ -335,7 +330,7 @@ export function applySwordArt(fighter, art, { overlay = true, flow = true, noTwi
   //  끄면 날이 안 서 베기 지표가 0 이 된다 — 넣지 않는다.
   //  기본은 끔(noTwist=false): 실제 싸움에서 참치 23% → 8%, 나뭇가지도 떨어졌다 (비트는 힘이 칼을 붙잡아 주는 몫이 컸다). 기록용으로만 남긴다
   if (overlay && noTwist && o.noTwist) fighter.twistScale = 0;
-  // 흐름(SKILL.flow — 멈추지 않고 이어 베기)을 이 검객에게만 켠다: 앞무게(B)는 되돌리지 않고 이어 도는 것이 빠른 길 (몬탄테)
+  // 흐름(멈추지 않고 이어 베기 — skill.js updateFlow)을 이 검객에게만 켠다: 앞무게(B)는 되돌리지 않고 이어 도는 것이 빠른 길 (몬탄테)
   if (overlay && flow && o.flow) installFlow(fighter);
   // 막기 덧씌우기(COVERS): AI 가 그 줄을 칼로 막는 동안만 손·칼끝을 막기 자세로 덮는다 (자세표에 넣으면 베기 길이 휜다 — COVERS 주석)
   if (overlay && cover && ai && o.cover) installCover(fighter, ai, o.cover);

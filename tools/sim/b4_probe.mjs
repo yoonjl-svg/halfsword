@@ -110,7 +110,6 @@ export function b4Run({ w = 'zweihander', seed = 1, hold = 1.6, after = 0.8, gap
   const pa = D.applyWound.bind(D);
   D.applyWound = (h) => { if (!ai) return; pa(h); }; // AI 판은 상처를 몸에 검 (막고 치는 상대 — 맞음이 판을 바꿈) · 아니면 기록만
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   const uq = new PlayerUniqueAssist(P, { names: new Set(['redondo']) });
   if (!uq.holdE) throw new Error('B4 가 열리지 않음');

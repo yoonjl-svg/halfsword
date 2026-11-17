@@ -274,7 +274,6 @@ export function runDir({ weapon, school = traditionOf(WEAPONS[weapon]), dir, mod
   const A = G.enemy;
   G.ai.update = () => A.move.set(0, 0); // 상대는 서 있기만 (칼 · 걸음 없음)
   P.skill.corr = SKILL.corr;
-  P.skill.corrTip = SKILL.corrTip;
   P.skill.autoGuard = true;
   P.canShove = true;
   const uq = new PlayerUniqueAssist(P, { names: new Set(kit?.unique ?? []) });

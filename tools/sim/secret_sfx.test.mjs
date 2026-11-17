@@ -69,7 +69,7 @@ const CASES = {
 function playerRound(C) {
   const g = newRound({ weapon: C.weapon, weapon2: 'longsword', gap: C.gap, seed: 3, walls: false });
   g.ai.update = () => {}; // 상대는 멈춤 (사람 비기만 본다)
-  Object.assign(g.player.skill, { corr: SKILL.corr, corrTip: SKILL.corrTip, autoGuard: true });
+  Object.assign(g.player.skill, { corr: SKILL.corr, autoGuard: true });
   g.player.canShove = true;
   return g;
 }

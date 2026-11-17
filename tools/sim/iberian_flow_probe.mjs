@@ -23,7 +23,7 @@ for (let seed = 1; seed <= N; seed++) {
   const PL = WHO === 'player';
   const G = PL ? newRound({ walls: false, weapon: id, weapon2: 'longsword', seed, gap: +(process.env.GAP || 1.9) }) : newRound({ walls: false, weapon: 'longsword', weapon2: id, seed });
   const me = PL ? G.player : G.enemy;
-  if (PL) { G.ai.update = () => {}; me.skill.corr = SKILL.corr; me.skill.corrTip = SKILL.corrTip; me.skill.autoGuard = true; }
+  if (PL) { G.ai.update = () => {}; me.skill.corr = SKILL.corr; me.skill.autoGuard = true; }
   const ai = PL ? { M: me.swordArt.measure, secretFree: () => !me.skill.sec, get secretRun() { const s = me.skill.sec; return s ? { stage: s.stage } : null; }, get tech() { return me.skill.sec?.cur ?? null; }, phase: '-', path: { get length() { return me.skill.sec?.path?.length ?? 0; } }, stats: { secrets: {} }, secret: playerSecretOf(me) } : G.ai;
   let run = null;
   const rec = [];

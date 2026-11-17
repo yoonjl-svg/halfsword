@@ -49,7 +49,6 @@ export function humanRun(kind, n, seed = 1) {
   const P = G.player;
   G.ai.update = () => G.enemy.move.set(0, 0);
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   for (let t = 0; t < 1.2 * K; t += DT) (P.move.set(0, 0)), G.step();
   const SP = P.schoolPassive;

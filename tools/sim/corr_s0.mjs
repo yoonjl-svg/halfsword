@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  corr_s0.mjs — 검술 보정 새 방식(v2)을 설정 0 에 두면 옛 방식 설정 0 과 스텝마다 비트까지 같은가 (설계 '스위치·바이트 동일' ③)
-//   같은 프로세스·같은 시드에서 두 번 돈다: 모든 파이터 skill.corr = 'old' / 'v2' (끝점 겨눔 켬, skill.corrTip = true), newRound 뒤에 넣는다
+//   같은 프로세스·같은 시드에서 두 번 돈다: 모든 파이터 skill.corr = 'old' / 'v2', newRound 뒤에 넣는다
 //   장면 a: 플레이어 skill.level 0 을 고정 패드 순서(chain_corr 무리 9개, 게임과 같은 입력 길 corr_lib inputPump)로 몰고, 상대는 가만히 (칼 충돌 끔, 죽지 않음, skill.level 도 0), 1.55 m
 //   장면 b: AI 대 AI (harness_m AI2Class), 두 쪽 persona level.skill = 0 (with_config 로는 AI 레벨 안쪽을 못 바꾼다)
 //   시드 1·2·3, 20 s. 스텝마다 전정밀(float 비트 해시): 손 목표 · 칼 쿼터니언 · tipVel · 골반·가슴 자리 · 상처(부위·에너지) · Math.random 부른 수
@@ -95,7 +95,7 @@ function run(scene, seed, arm, limits) {
     G = newRound({ walls: true, seed, weapon: 'longsword', weapon2: 'longsword', difficulty: 'normal', persona: per(), AI2Class: AI, difficulty2: 'normal', persona2: per() });
   }
   const P = G.player, E = G.enemy;
-  for (const f of [P, E]) setCorr(CONFIG, f, arm, true);
+  for (const f of [P, E]) setCorr(CONFIG, f, arm);
   // Math.random 세기 (newRound 가 시드 난수로 바꾼 뒤)
   let nRand = 0;
   const rnd = Math.random;

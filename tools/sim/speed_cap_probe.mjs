@@ -363,7 +363,7 @@ async function runSet(set, mode, seeds, dur) {
       const rnd = () => ((rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296);
       const G = newRound({ walls: true, seed: 700 + seed * 50 + k, weapon: w, weapon2: opp });
       const D = G.player;
-      D.skill.corr = SKILL.corr; D.skill.corrTip = SKILL.corrTip; D.skill.autoGuard = true; D.schoolFootwork = true; D.schoolParry = true;
+      D.skill.corr = SKILL.corr; D.skill.autoGuard = true; D.schoolFootwork = true; D.schoolParry = true;
       let queue = [], fx = D.handOffset.x, fy = D.handOffset.y, nextAtk = 2.6, step = 0;
       const to = (p, v, held) => { const fr = []; let x = fx, y = fy; for (let i = 0; i < 400; i++) { const dx = p[0] - x, dy = p[1] - y, d = Math.hypot(dx, dy); if (d < 1e-6) break; const st = Math.min(d, v * FRAME); x += (dx / d) * st; y += (dy / d) * st; fr.push([(dx / d) * st, (dy / d) * st, held]); } fx = x; fy = y; return fr; };
       const stroke = (b, v, back) => { const fr = to(b.from, 1.6, false); fr.push(...Array(4).fill([0, 0, false])); for (const p of b.path) fr.push(...to(p, v, true)); if (back) { fr.push(...Array(3).fill([0, 0, true])); fr.push(...to(b.from, v, true)); } fr.push(...Array(6).fill([0, 0, false])); return fr; };
@@ -397,7 +397,7 @@ async function runSet(set, mode, seeds, dur) {
       L.label = `iai:${seed}:${w}:${gap}`;
       const G = newRound({ seed: 7 + seed, weapon: w, weapon2: 'longsword', gap, walls: false });
       const P = G.player, E = G.enemy;
-      P.skill.corr = SKILL.corr; P.skill.corrTip = SKILL.corrTip; P.skill.autoGuard = true;
+      P.skill.corr = SKILL.corr; P.skill.autoGuard = true;
       G.ai.update = () => E.move.set(0, 0);
       for (let i = 0; i < E.sword.numColliders(); i++) E.sword.collider(i).setCollisionGroups(0);
       E.die = () => {};

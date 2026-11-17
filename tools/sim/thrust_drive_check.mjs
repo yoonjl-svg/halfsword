@@ -144,7 +144,7 @@ export async function sceneRun({ school, weapon, scene, drive }) {
     const G = newRound({ weapon, weapon2: 'longsword', seed: 1, gap, walls: false, kit, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
     const P = G.player, E = G.enemy;
     G.ai.update = () => E.move.set(0, 0);
-    P.skill.corr = CONFIG.SKILL.corr; P.skill.corrTip = CONFIG.SKILL.corrTip; P.skill.autoGuard = true;
+    P.skill.corr = CONFIG.SKILL.corr; P.skill.autoGuard = true;
     const Wt = makeWatch(P, G, THREE, K, DT);
     for (let t = 0; t < 1.0 * K; t += DT) { P.move.set(0, 0); E.handOffset.set(0, -0.5); G.step(); }
     if (scene === 'walk') for (let t = 0; t < 6 * K && P.foeDistance() > M.reach + 0.6; t += DT) { P.move.set(...mv); E.handOffset.set(0, -0.5); G.step(); }

@@ -88,7 +88,6 @@ export function runTrials(school, trials, { seed = 1, gap = 3.2, rest = 0.7 } = 
   G.ai.update = () => {}; // 상대는 서 있기만
   const P = G.player;
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   P.canShove = true;
   const uq = new PlayerUniqueAssist(P, { names: new Set(kit?.unique ?? []) });

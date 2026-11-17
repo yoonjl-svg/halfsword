@@ -149,7 +149,6 @@ function botStroke(G, tech, v, { foeLow = false, onStart = null } = {}) {
 
 const playerHand = (P) => {
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
 };
 

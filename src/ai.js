@@ -328,29 +328,29 @@ export class AI {
     this.cautious = false;
     this.desperate = false;
     this.stats = { attacks: 0, feints: 0, parries: 0, voids: 0, counters: 0, preempts: 0, followUps: 0, landed: 0, aborted: 0 };
-    // 패시브 고유 동작 (10/9, docs/strike/school_passive_2026-10-09.md): 이 유파의 passives 가운데 ai:false 아닌 것 (SKILL.schoolArt 1 일 때 — 유파 자료).
+    // 패시브 고유 동작 (10/9, docs/strike/school_passive_2026-10-09.md): 이 유파의 passives 가운데 ai:false 아닌 것 (유파 자료).
     //  독일 셋은 ai:false → 롱소드 AI 는 빈 목록 → 아래 모든 자리에서 난수도 코드 길도 전과 같다. 도구(motion_lab)는 이 목록을 갈아 끼워 잰다
     //  숙련도 (10/13): 단계 표에 이름이 있는 패시브(동방 자→격 ciji — yaoji 이음, 4 단계)는 단계 ≤ 숙련도일 때만. 그 밖의 패시브는 그대로
     const ST = aiUniqueStages(art.tradition);
     const open = aiStageOpen(ST, this.kit, this.proficiency); // 11/16 칸 몫이 있으면 그 칸(kit.unique) · 없으면 옛 단계 ≤ 숙련도
     const habitOk = (name) => !this.kit || !ST.habit.has(name) || this.kit.unique.has(ST.habit.get(name)); // 11/16 반응 버릇 '겹치기 (두플리렌)' · '빼서 찌르기 (카바치오네)' = 같은 이름 칸(G7 · I2)이 칸 몫에 있을 때만 [사장님 11/16 결정 '다 너의 권고대로 하마'] · 옛 판 늘
-    this.passives = SKILL.schoolArt && !(this.planOn && this.proficiency === 0) ? (TRADITIONS[art.tradition]?.passives ?? []).filter((x) => x.ai !== false && open(ST.passive, x.name) && habitOk(x.name)) : []; // 3 단계: 숙련도 0(무) = 유파 패시브 없음
+    this.passives = !(this.planOn && this.proficiency === 0) ? (TRADITIONS[art.tradition]?.passives ?? []).filter((x) => x.ai !== false && open(ST.passive, x.name) && habitOk(x.name)) : []; // 3 단계: 숙련도 0(무) = 유파 패시브 없음
     this.passiveAtk = null; // 지금 공격을 시작한 패시브 이름 (startAttack 이 지운다)
     this.pendingPassive = null; // 물러남 끝에 낼 패시브 (斂翅 꼴 at:'end')
     this.stepinArmed = true; // foeStepIn: 상대가 걸어 드는 한 번에 한 번만 굴린다
     // 기술 알림 (10/9 — 사장님 '패시브가 발동될 때 알아차릴 수 있게 … 화면 중앙에 기술명', docs/strike/tech_cue_2026-10-09.md):
-    //  이 유파 고유 동작(길·속임수) 이름 표 — 꾸러미에 실제로 들어간 것(SKILL.schoolArt 켬 · ai:false 아님)만. 읽기만 하고 결정에는 안 쓴다(난수 없음)
+    //  이 유파 고유 동작(길·속임수) 이름 표 — 꾸러미에 실제로 들어간 것(ai:false 아님)만. 읽기만 하고 결정에는 안 쓴다(난수 없음)
     const SBo = me.weapon?.secretBlade?.open ? me.weapon.secretBlade.tech : null; // 무기 비검이 여는 기술 (10/21 — 숙련도와 상관없이)
-    const UQ = SKILL.schoolArt ? (TRADITIONS[art.tradition]?.unique ?? []).filter((u) => u.ai !== false && !u.counter && !ST.retired.has(u.name) && (open(ST.unique, u.name) || u.name === SBo)) : []; // 숙련도로 뺀 것 · 통폐합으로 뺀 것(10/21)은 꾸러미에 없다
+    const UQ = (TRADITIONS[art.tradition]?.unique ?? []).filter((u) => u.ai !== false && !u.counter && !ST.retired.has(u.name) && (open(ST.unique, u.name) || u.name === SBo)); // 숙련도로 뺀 것 · 통폐합으로 뺀 것(10/21)은 꾸러미에 없다
     this.uniqueByName = new Map(UQ.map((u) => [u.feint ? u.feint.name : u.name, u]));
     this.cavDeep = UQ.some((u) => u.name === 'cavazione') && (!this.kit || this.kit.perk.has('cavazione')); // 칼끝 돌려 빼기가 꾸러미에 듦 (숙련도 ≥ 단계) — 심화 · 헛누름 AI 몫 (10/31) · 11/16 칸 몫이면 헛누름 칸(I8)도 익혀야 (사람과 같음)
     this.standoffArmed = true; // standoff: 대치 한 번에 한 번만 굴린다
-    // 유파 비기 (10/9 유파 설계 v3 — schools.js *_SECRET, docs/strike/school_secret_2026-10-09.md): 이 유파의 비기 하나 (SKILL.schoolArt·schoolSecret 일 때).
+    // 유파 비기 (10/9 유파 설계 v3 — schools.js *_SECRET, docs/strike/school_secret_2026-10-09.md): 이 유파의 비기 하나.
     //  굴림이 없다 — 조건이 차면 확정. 무유파는 null → 아래 비기 자리들은 난수도 코드 길도 전과 같다
     //  숙련도 (사장님 결정 10/13 23:1x 'AI는 숙련도 5만 비기 씀'): 손에 든 유파의 숙련도가 AI_PROFICIENCY.secretAt(5) 아래면 null — 무유파처럼 비기 자리들이 전 코드 그대로 지나간다
     //  10/24 사장님 12:0x 'ai도 비기 쓰게 해': 유파에 AI 몫(aiSecret — 독일 모르트슐라크, schools.js)이 있으면 그것 · 없으면 secret 그대로
     const TR = TRADITIONS[art.tradition];
-    this.secret = SKILL.schoolArt && SKILL.schoolSecret && (this.kit ? !!this.kit.secret : this.proficiency >= AI_PROFICIENCY.secretAt) && SECRET.aiOpenSchools.includes(art.tradition) ? (TR?.aiSecret ?? TR?.secret) ?? null : null; // 10/21 닫힌 유파 비기 없음 · 10/22 AI 는 따로 (config SECRET.aiOpenSchools — 사람 먼저) · 11/16 칸 몫이면 비기 칸(숙련도 5)
+    this.secret = (this.kit ? !!this.kit.secret : this.proficiency >= AI_PROFICIENCY.secretAt) && SECRET.aiOpenSchools.includes(art.tradition) ? (TR?.aiSecret ?? TR?.secret) ?? null : null; // 10/21 닫힌 유파 비기 없음 · 10/22 AI 는 따로 (config SECRET.aiOpenSchools — 사람 먼저) · 11/16 칸 몫이면 비기 칸(숙련도 5)
     this.secretRun = null; // 지금 내는 비기 { S, stage, t, landed, … } (null = 없음)
     this.specCool = {}; // 특수 공격 AI 몫마다 식힘을 세기 시작한 때 (sense.t · 도는 동안 Infinity — 10/29 19:4x 사람과 같게)
     this.specRun = null; // 나갔는데 아직 안 끝난 특수 공격 { name, seq, t0, motion } (specTick)
@@ -602,8 +602,7 @@ export class AI {
     if (RX) this.level = { ...this.level, reaction: RX[Math.max(0, Math.min(RX.length - 1, Math.round(this.mainProficiency ?? this.proficiency ?? 2)))] };
     this.me.strength = this.level.strength;
     this.me.skill.level = this.level.skill;
-    this.me.skill.corr = SKILL.corrAI; // AI 보정 방식 (사장님 9/30 23:40: 사람이 먼저, AI 는 옛 보정)
-    this.me.skill.corrTip = false; // AI 는 끝점 겨눔 ② 없음 (손 뗌 사건이 없고 속임을 망친다, 설계 AI 절)
+    this.me.skill.corr = 'old'; // AI 보정 방식 (사장님 9/30 23:40: 사람이 먼저, AI 는 옛 보정)
   }
 
   // ── 겨눌 상대 바꾸기 (2:2 동시 대전 10/29 — docs/strike/team_fight_2026-10-29.md · src/match.js · src/targeting.js) ──
@@ -1948,8 +1947,6 @@ export class AI {
       if (!this.path.length) {
         // 유파 비기 (10/9): 베기 길이 끝난 순간 — 비기가 이어 칠 수(連環·Duplieren)가 있으면 곧장, 첫 칼이 닿았으면 連環三擊 을 낸다
         if (this.secret && this.secretStrikeEnd(d)) return;
-        // 흐름(SKILL.flow, 시제품): 칼이 막히지 않았으면 멈춰 서지 않고 지금 손에서 이어지는 베기로 곧장 흐른다
-        if (SKILL.flow && this.flowOn(d)) return;
         // 손은 끝 자세에 닿았지만 무거운 칼은 아직 날아가는 중이다 → 칼이 지나갈 때까지 버틴다
         this.phase = 'follow';
         this.timer = 0.3;
@@ -2593,28 +2590,7 @@ export class AI {
     this.startWithdraw((0.9 - 0.4 * this.obsession) * (this.planFree ? freeBackK(this) : 1)); // 물고 늘어질 땐 짧게만 물러난다 (막기는 그대로) · 무유파 플랜(3 단계): 붙어 두들김 — 짧게
   }
 
-  // ───────────────────────── 흐름 (SKILL.flow 시제품, 디렉터 10라운드 D) ─────────────────────────
-  /**
-   * 흐름으로 이을 베기 하나: 내려베기(presses: 분노의 베기·정수리 베기)를 먼저 찾는다 — 끝 자세(아래)에서 곧장 올려베면 약하다.
-   *  준비 자세가 지금 손에서 멀수록 덜 고른다(flowReach m 을 한 바퀴 돌아가는 거리의 기준으로). 찌르기·방금 친 기술은 빼고
-   */
-  flowTech() {
-    const hand = [this.me.handOffset.x, this.me.handOffset.y];
-    let best = null;
-    let bestW = 0;
-    for (const t0 of this.school.tech) {
-      const t = this.techNow(t0); // 식는 특수 공격 (10/29 19:4x)
-      if (!t || t0 === this.tech || t === this.tech || t.kind === 'thrust') continue;
-      const cd = padDist(hand, t.from);
-      const w = this.pers.techPref[t0.name] * t.base * (t.presses ? 3 : 1) * Math.exp(-cd / (2 * SKILL.flowReach));
-      if (w > bestW) {
-        bestW = w;
-        best = t;
-      }
-    }
-    return best;
-  }
-
+  // ───────────────────────── 흐름 (이음새 없이 다음 수 — 비기 연환이 쓴다) ─────────────────────────
   /**
    * 기술 t 로 흐른다: 멈춰 서서 자세를 잡지 않고, 손이 옆으로 한 바퀴 돌아(물레) 준비 자세를 지나 그대로 벤다.
    *  칼이 쉬지 않고 돌아 나가니 다음 베기도 제 무게를 싣는다 (8자: 분노의 베기 → 왼쪽 분노의 베기 → …)
@@ -2630,30 +2606,6 @@ export class AI {
       if (this.secretRun) this.secretRun.powerFrom = 0; // 고리 동안은 힘 창 밖 — secretStrike 가 do.loopHand 빠르기로 (베기 길 점부터 힘·판정 배율)
     } else this.path.unshift([clamp(mx + Math.sign(mx || hand[0] || 1) * 0.12, -0.6, 0.6), (hand[1] + t.from[1]) / 2], t.from.slice());
     return true;
-  }
-
-  /** 베기가 끝났다: 칼이 막히지 않았고(안전장치) 상대가 간격 안이면 멈추지 않고 다음 베기로 흐른다 */
-  flowOn(d) {
-    if (this.bound || this.chain >= SKILL.flowChain || !this.foe.alive || d > this.M.reach + 0.1 || d < this.M.clinch - 0.5) return false;
-    const t = this.flowTech();
-    if (!t) return false;
-    if (this.hitLanded) {
-      this.stats.landed++; // afterStrike 를 건너뛰니 맞힌 것을 여기서 센다
-      this.evLanded = true;
-    }
-    return this.flowInto(t, 'flow', this.chain + 1);
-  }
-
-  /** 막는 중: 칼끼리 지금 맞닿았으면(받아 냄) 받은 칼이 멈추지 않고 곧장 되받아 벤다 (예전엔 공격이 지나가길 기다렸다가 자세에서 다시 쳤다) */
-  flowRiposte(d) {
-    const me = this.me;
-    const foe = this.foe;
-    if (!me.tipPrev || !foe.tipPrev || !foe.alive || d > this.M.reach + 0.25 || d < this.M.clinch + 0.1) return false;
-    me.bladePoint(0.1, _a0);
-    foe.bladePoint(0.1, _b0);
-    if (segDist(_a0, me.tipPrev, _b0, foe.tipPrev) > 0.07) return false;
-    const t = this.flowTech();
-    return !!t && this.flowInto(t, 'riposte', 0);
   }
 
   // ───────────────────────── 물러나기 ─────────────────────────
@@ -2901,8 +2853,6 @@ export class AI {
     const pcWait = !!this.pcPend || !!this.gk?.pend; // 격살 기다림도 막기 연환처럼 버릇 · 흐름 되받기를 걸지 않음 // 기다리는 동안(중국 갈라짐 · 독일 붙음 이어짐)은 맞닿음에 거는 버릇·흐름 되받기를 걸지 않는다 (막기 연환이 그 자리를 맡음)
     // 패시브 bindDef (이번 막기의 처음 맞닿음에 한 번): 받은 칼로 곧장 (返し·cavazione)
     if (!pcWait && this.passives.length && !this.defBindSeen && this.passiveBindDef(s, d)) return;
-    // 흐름(SKILL.flow): 칼로 받아 낸 순간(칼끼리 맞닿음) 받은 칼이 멈추지 않고 그대로 되받아 벤다
-    if (!pcWait && SKILL.flow && SKILL.flowParry && !this.defVoid && this.flowRiposte(d)) return;
     if (BIND.natural && this.natHoldDef(dt)) return; // 자연 바인드 실험 ②: 칼이 맞붙어 있는 동안은 막는 자리를 지키며 민다 (BIND.holdMax 까지)
     // 공격이 지나갔다(칼끝이 더는 오지 않고 손이 멈췄다) → 상대가 다시 자세를 잡기 전에 되받아 친다 (Nach)
     const swingOver = this.noThreat > QUIET_T && Math.hypot(s.hvx, s.hvy) < 2.5;

@@ -498,7 +498,6 @@ export function drillRun(rowKey, seed, { foe = 'still', variant = 'on', dur = 14
     D.helmetIntegrity = 1;
   }
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   // 칼끝 돌려 빼기 줄 끔 판: 맞물림을 적는 몸이 있어야 손이 뒤 칼을 낸다 — 옆 스틱이 없으면 안 나는 비껴서며 찌르기만 연 몸(그대로 보통 탭)
   const uq = new PlayerUniqueAssist(P, { names: new Set(variant === 'on' && !R.tap ? [R.name] : R.cav ? ['inquartata'] : R.lian ? ['chebuYaoji'] : R.dup ? ['zwerchAbtritt'] : R.rd ? ['talhoRodeado'] : []) });
@@ -607,7 +606,6 @@ export function fightRun(rowKey, seed, opp, { variant = 'on', dur = 30, prof = 3
   const P = G.player;
   const A = G.enemy;
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   const guard = new PlayerParryGuard(P, A);
   P.stamina.controller = guard;

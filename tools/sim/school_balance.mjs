@@ -94,7 +94,6 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   const P = G.player;
   const A = G.enemy;
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   P.canShove = true;
   const uq = new PlayerUniqueAssist(P, { names: new Set([...(kit?.unique ?? [])].filter((n) => !drop.includes(n))) }); // drop = 안 익힌 고유 공격 (견줌 — --drop=imbroccata)

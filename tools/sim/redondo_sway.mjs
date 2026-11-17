@@ -45,7 +45,6 @@ export function swayRun({ w = 'zweihander', seed = 1, move = 'stand', press = 4.
   G.ai.update = () => {};
   D.applyWound = () => {};
   P.skill.corr = CONFIG.SKILL.corr;
-  P.skill.corrTip = CONFIG.SKILL.corrTip;
   P.skill.autoGuard = true;
   const uq = new PlayerUniqueAssist(P, { names: new Set(['redondo']) });
   if (!uq.holdE) throw new Error('풍차 베기가 열리지 않음');

@@ -76,7 +76,7 @@ function duel(wSpec, oppId, seed, dur) {
   const G = newRound(ch ? { ...base, weapon2: ch.weapon, difficulty: ch.ai.level, persona: ch.ai.persona, look2: ch.look, revive: ch.revive } : { ...base, weapon2: 'longsword' });
   const P = G.player, E = G.enemy;
   if (ch?.vitality > 0) E.vitality = ch.vitality; // 버티는 힘 (롤랑 · 베르나르도 1.1 — 게임 main.js 와 같게 · 다른 인물은 시트에 없어 1)
-  P.skill.corr = SKILL.corr; P.skill.corrTip = SKILL.corrTip; P.skill.autoGuard = true;
+  P.skill.corr = SKILL.corr; P.skill.autoGuard = true;
   const guard = aiDrive ? null : new PlayerParryGuard(P, E);
   let rs = (seed * 7919 + oppId.length * 104729) >>> 0;
   const rnd = () => ((rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296);
