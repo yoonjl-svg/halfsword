@@ -10,7 +10,7 @@ import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { SECRET, ARENA, UNIQUE_ASSIST as UA, STAMINA, realS } from '../../src/config.js';
 import { TRADITIONS, IBERIAN_SPIN_DEF } from '../../src/schools.js';
 import { PlayerSecretWatch, secretLeft } from '../../src/secret.js';
-import { PlayerUniqueAssist, altibPower, altibHitMul } from '../../src/unique_assist.js';
+import { PlayerUniqueAssist, altibHitMul } from '../../src/unique_assist.js';
 import { mordHitMul } from '../../src/mordschlag.js';
 import { nodeTitle } from '../../src/skill_tree.js';
 import * as D from '../../src/skill_tree_data.js';
@@ -23,13 +23,10 @@ const setup = (P) => {
 };
 
 test('기본값 — 사장님 11/11: 이베리아 비기 = 알티바슈 포르트 · 빠르기 0.35 · 기력 몫 · 기력 0 · 판정 1 · 싱지르 특수 0.3 · 고노센만 1.3 · 죽음의 일격 0.35 · 1.0 · 누르기 1.5 s · 겹치기 0.3', () => {
-  assert.equal(SECRET.iberianSecret, 'altib');
   assert.equal(TRADITIONS.iberian.secret.name, 'altib');
   assert.equal(TRADITIONS.iberian.secret.nameKo, '알티바슈 포르트');
   assert.equal(SECRET.altib.share, 0.35); // '알티바슈 포르테로 35%로 해. 비기 숫자테이블이 일정해지게.'
   assert.equal(SECRET.altib.staminaK, 1); // '남은 기력 만큼의 % 공격력'
-  assert.equal(SECRET.altib.zero, 1); // '발동 후에는 무조건 기력이 0이 됨'
-  assert.equal(SECRET.altib.weightFix, 0); // '무게 가중치는 재 보고 정해' — 잰 뒤 보정 없음
   assert.equal(altibHitMul(), 1); // '비기 파괴력 배율 1.3배는 고노센에만 남긴다'
   assert.equal(SECRET.hitMul, 1.3); // 고노센 (비기 공통 열쇠 그대로)
   assert.equal(mordHitMul(), 1); // '죽음의 일격도 1.0으로 해.'
@@ -40,18 +37,6 @@ test('기본값 — 사장님 11/11: 이베리아 비기 = 알티바슈 포르�
   assert.equal(UA.rdDrainCut, 1); // 메는 동안 초당 베기 한 번 값 그대로 (사장님 11/01 — 오래 멜수록 약해짐)
   assert.ok(SECRET.ibSpin.stride > 0, '싱지르 한 걸음 (새 값 · 사장님 확인 전)');
   assert.ok([0.3, 0.45, 0.6].includes(SECRET.ibSpin.stride), '걸음 사다리 가운데');
-});
-
-test('무게 보정 견줌(weightFix — 기본 끔): 켜면 위력 몫 = (멜 때 기력 − 무게 1 값으로 멘 만큼) ÷ 최대 · 끄면 뗀 순간 기력 ÷ 최대', () => {
-  const f = { stamina: { value: 60, max: 100, infinite: false } };
-  assert.equal(altibPower(f, { s0: 100, base: 30 }), 0.6);
-  SECRET.altib.weightFix = 1;
-  try {
-    assert.equal(altibPower(f, { s0: 100, base: 30 }), 0.7);
-  } finally {
-    SECRET.altib.weightFix = 0;
-  }
-  assert.equal(altibPower({ stamina: { value: -5, max: 100 } }, null), 0);
 });
 
 test('한 걸음 나가며 — 서 있는 과녁 · 네 칼: 골반이 stride 만큼 나아감(전 비기 판 0.42 ~ 0.53 m) · 안 넘어짐 · 몸 기울기 20° 아래 · 끝 두 발 앞뒤 펜싱 너비 · 칼끝 거리 밖 과녁도 벰', () => {

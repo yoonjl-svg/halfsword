@@ -21,9 +21,7 @@ import { comboArmLen } from './secret_instant.js';
 
 /** 이 몸의 판: 'reverse'(칼날을 거꾸로 쥠) | 'hilt'(쥠 그대로 폼멜) — 칼날을 잡을 수 없는 칼(날 없는 무기 · 라이트세이버 · 부러진 칼)은 늘 'hilt' */
 export function mordMode(f) {
-  const W = f.weaponCfg;
-  if (SECRET.mord.grip === 'hilt' || SECRET.mord.pommel || !W?.edged || W.ignoreArmor || f.weaponBroken) return 'hilt'; // pommel: 폼멜 찍기 시제품(10/31 — 쥠 그대로)
-  return 'reverse';
+  return 'hilt'; // 폼멜 찍기 (10/31 사장님 결정 — 쥠 그대로)
 }
 
 /** 거꾸로 쥔 자리 (칼 축 y, m): 칼 든 손 g(칼날 위 SECRET.mord.at 몫) · 빈손 gOff(칼 든 손보다 칼끝 쪽 |gripAlong| — 한손 칼은 같은 자리) */
@@ -35,7 +33,7 @@ export function mordGripOf(f) {
 
 /** 이 비기가 휘두르는 기술 (꾸러미의 기본 동작 — SECRET.mord.tech, 없으면 정수리 베기) */
 export function mordTech(byName) {
-  const t = byName?.[SECRET.mord.tech] ?? byName?.oberhau;
+  const t = byName?.oberhau;
   return t ? { ...t, mord: true } : null;
 }
 
@@ -46,16 +44,7 @@ export function mordTech(byName) {
  */
 export function mordStart(f, run, tech) {
   const mode = mordMode(f);
-  const m = (run.mord = { mode, G: mode === 'reverse' ? mordGripOf(f) : null, flipped: false, overOn: false });
-  if (mode === 'reverse' && SECRET.mord.regrip > 0 && SECRET.mord.kin > 0) {
-    // 자연스러운 쥠 바꿈 (10/31 시제품 — SECRET.mord.regrip · 기본 끔): 여기서 칼을 옮기지 않는다 — 운동학 길의 쥠 바꿈 토막이 손을 칼날로 옮긴 뒤 그 자세 그대로 쥠을 바꿈(secret_instant.js mordRegripDone)
-    if (!f.armed || !f.sword || !f.gripJoint || f.mordGrip) return false;
-    m.regrip = true;
-  } else if (mode === 'reverse') {
-    m.flipped = f.reverseGrip(m.G, DOWN);
-    if (!m.flipped) return false;
-  }
-  if (SECRET.mord.burstBack && f.gait) m.burst = { t: 0, phase: 'go', used: false, timeout: false, landT: null }; // 강제 뒤 박차기 (10/31 시제품 — 아래 mordBurstTick)
+  const m = (run.mord = { mode, G: null, flipped: false, overOn: false });
   f.mordAim = true;
   const d = f.strokeCommand(tech.from[0], tech.from[1], _h, _d); // 시작 자세 패드의 칼끝 겨눔 (몸 틀) — 준비 동안 칼자루가 이쪽으로 선다
   f.mordHold = [d.x, d.y, d.z];
@@ -97,7 +86,7 @@ export function mordSwinging(f) {
 /** 매 스텝 (skill.js updateSecret 머리): 넘어 들어감 규칙 창 — 베기 길 · 따라 지나감 동안만 */
 export function mordStep(f, run) {
   if (run.stage !== 'chamber') f.mordHold = null; // 베기 길부터는 패드(길)의 겨눔을 뒤집어 따른다
-  const on = !!SECRET.mordOver && (run.stage === 'strike' || run.stage === 'follow');
+  const on = false;
   if (on !== run.mord.overOn) {
     over(f, on);
     run.mord.overOn = on;
@@ -134,9 +123,8 @@ const UP = { x: 0, y: 1, z: 0 };
 
 /** 판정 배율 (SECRET.mord.power): 'hit' = 결정타 SECRET.hitMul · 'finish' = 마무리 찍기 FINISH.power (겹치지 않고 그 자리에) · 수 = 그 수. 둔타도 듣는 자리(f.secretHit — combat.js hk) */
 export function mordHitMul() {
-  const v = SECRET.mord.power;
   const hit = SECRET.mordHitMul ?? SECRET.hitMul; // 11/11 사장님 '죽음의 일격도 1.0으로 해.' — 죽음의 일격만의 결정타 배율 SECRET.mordHitMul 1 (null 이면 비기 공통 hitMul 1.3 — 전 판)
-  return v === 'finish' ? FINISH.power : v === 'hit' || v == null ? hit : +v || hit;
+  return hit;
 }
 
 /**
@@ -155,16 +143,8 @@ export function mordKinOf(f, run) {
     const h = t === 0 ? c.radius() : t === 1 ? c.halfExtents().y : 0; // 공(ball) · 상자(cuboid)
     yp = Math.min(yp, y - h);
   }
-  const K = { g: G.g, gOff: G.gOff, Lc: G.g - W.hiltLength, Lp: G.g - yp, pull: SECRET.mord.aim === 'pull', over: !!SECRET.mordOver, end: mordEnd };
-  if (run.mord.regrip) {
-    // 쥠 바꿈 토막 (10/31 시제품): 원래 쥠(칼 든 손 칼 축 0 · 빈손 gripAlong)에서 시작 — 토막마다 g · gOff · Lc · Lp 를 옮김(secret_instant.js stepCombo). G = 끝 쥠 · yp = 칼자루 끝 · HL = 코등이
-    K.regrip = { T: SECRET.mord.regrip, G: run.mord.G, g0: 0, o0: W.twoHand ? W.gripAlong ?? -0.14 : 0, yp, HL: W.hiltLength, done: false };
-    K.g = 0;
-    K.gOff = K.regrip.o0;
-    K.Lc = -W.hiltLength;
-    K.Lp = -yp;
-  }
-  if (SECRET.mord.pommel && run.mord.mode === 'hilt') K.pommel = true; // 폼멜 찍기 길 (10/31 시제품)
+  const K = { g: G.g, gOff: G.gOff, Lc: G.g - W.hiltLength, Lp: G.g - yp, pull: true, over: false, end: mordEnd };
+  K.pommel = true; // 폼멜 찍기 길 (10/31)
   return K;
 }
 
@@ -189,7 +169,7 @@ export function mordBurstTick(f, run, dt) {
     const C = f.iai?.mord?.clip;
     const room = C && C.short != null && C.short <= ROOM_TOL;
     if (g.burstLeg) B.used = true;
-    else if (!B.used && !g.burst && !g.burstStep) g.burst = { fore: -1, side: 0, lat: 0, ...(SECRET.mord.burstFree ? { free: true } : {}) };
+    else if (!B.used && !g.burst && !g.burstStep) g.burst = { fore: -1, side: 0, lat: 0,  };
     if (B.used && (room || !g.burstLeg)) {
       B.phase = 'hold';
       B.landT = B.t;
@@ -221,7 +201,7 @@ export function mordHeadReach(f) {
   const S = _s.set(ARM.shoulder[0], ARM.shoulder[1], f.side * ARM.shoulder[2]).applyQuaternion(_q.set(q.x, q.y, q.z, q.w)).add(f.bodies.chest.translation());
   const h = head.translation();
   // 폼멜 찍기 (10/31 14:xx 사장님 결정 — 기본): 겨누는 점 = 폼멜 공 가운데 쯤(손에서 Lp × 0.8 — secret_instant.js comboPlanMord 와 같은 수) + 팔이 안 닿으면 내딛는 앞 반걸음(머리 뚫음 막기 셈 · clipStep)
-  const reach = K.pommel ? K.Lp * 0.8 + (SECRET.mord.noSelfClip ? SECRET.mord.clipStep ?? 0 : 0) : (K.Lc + K.Lp) / 2;
+  const reach = K.pommel ? K.Lp * 0.8 + (SECRET.mord.clipStep ?? 0) : (K.Lc + K.Lp) / 2;
   return Math.hypot(h.x - S.x, h.y - S.y, h.z - S.z) <= comboArmLen() + reach;
 }
 const _s = new THREE.Vector3();

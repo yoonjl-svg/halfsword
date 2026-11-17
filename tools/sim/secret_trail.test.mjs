@@ -24,34 +24,5 @@ test('안다레 리솔루토 런지 (10/24): 찌르는 토막에 비기 잔상(c
   assert.equal(o.min, SECRET.secretArcMin); // 그리는 밝기는 결정타 잔상 바닥까지
 });
 
-test('안다레 리솔루토 10/23 탭 찌르기 판(?risoLunge=0): 찌르는 몫에 비기 잔상(combo) · 칼끝이 느려 바닥 ART_MIN · 마주 보는 띠', () => {
-  const keep = [SECRET.risolutoLunge, SECRET.risolutoArmSlow, SECRET.risolutoStiff];
-  Object.assign(SECRET, { risolutoLunge: 0, risolutoArmSlow: null, risolutoStiff: null });
-  try {
-    const o = probe('riso');
-    assert.equal(o.kind, 'combo');
-    assert.equal(o.share, ART_MIN);
-    assert.ok(o.pts >= 8, `점 ${o.pts}`);
-    assert.equal(o.face, 'line');
-    assert.equal(o.min, SECRET.secretArcMin);
-  } finally {
-    [SECRET.risolutoLunge, SECRET.risolutoArmSlow, SECRET.risolutoStiff] = keep;
-  }
-});
 
 
-test('스위치 SECRET.secretStreak 0 = 호만 (마주 보는 띠 없음) · SECRET.secretArcMin 0 = 빠르기 몫 그대로', () => {
-  const keep = [SECRET.secretStreak, SECRET.secretArcMin];
-  SECRET.secretStreak = 0;
-  SECRET.secretArcMin = 0;
-  try {
-    for (const k of ['riso', 'mord']) {
-      const o = probe(k);
-      assert.equal(o.face, false);
-      assert.equal(o.min, 0);
-      assert.equal(o.arcAlpha, +(0.95 * o.share).toFixed(2));
-    }
-  } finally {
-    [SECRET.secretStreak, SECRET.secretArcMin] = keep;
-  }
-});

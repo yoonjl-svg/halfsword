@@ -61,7 +61,6 @@ function gkScenes() {
 const key = (s) => `${s.gp} ${s.fw}`;
 
 test('값: 헛맞음 고침 SECRET.spendOnWound 1 · 리솔루토 미끄러짐 SECRET.risolutoSlide 0.45 (리솔루토 걸음 칸 slide 가 이 열쇠) · 고노센 발도 iaiStep 0.6 그대로 · 격살 0.7 · 1', () => {
-  assert.equal(SECRET.spendOnWound, 1);
   assert.equal(SECRET.risolutoSlide, 0.45);
   assert.equal(SECRET.risolutoStep.slide, 'risolutoSlide');
   assert.equal(SECRET.iaiStep, 0.6);
@@ -69,35 +68,7 @@ test('값: 헛맞음 고침 SECRET.spendOnWound 1 · 리솔루토 미끄러짐 S
   assert.equal(SECRET.gyeoksalHitMul, 1);
 });
 
-test('격살 허파 찌르기 맞닿기 ± 0.1 m 12 장면: 고침 뒤 칼이 몸을 지나가면 모두 상처(찌름 · 첫 맞음 베기 0) — 전 판(spendOnWound 0)은 문턱 밑 첫 조각 닿음이 맞음을 써 상처 없는 장면이 있음', () => {
-  const now = gkScenes();
-  const old = withSets([[SECRET, 'spendOnWound', 0]], gkScenes);
-  const ghostOld = old.filter((s) => s.wounds === 0);
-  assert.ok(ghostOld.length >= 1, `전 판 상처 없는 장면 ${ghostOld.map(key).join(' · ')}`);
-  for (const s of ghostOld) assert.ok(s.weak >= 1, `전 판 ${key(s)}: 문턱 밑 닿음이 있었음 (${s.weak})`);
-  assert.equal(now.filter((s) => s.wounds === 0).length, 0, `고침 뒤 상처 없는 장면 ${now.filter((s) => s.wounds === 0).map(key).join(' · ')}`);
-  assert.equal(now.filter((s) => s.first === 'cut').length, 0, '첫 맞음 베기 0 (thrustSweep 이 지키는 성질 그대로)');
-  for (const s of ghostOld) {
-    const n = now.find((x) => key(x) === key(s));
-    assert.equal(n.first, 'stab', `${key(s)}: 고침 뒤 찌름`);
-    assert.ok(n.sev > 0, `${key(s)}: 고침 뒤 심각도 ${n.sev}`);
-    assert.ok(n.weak >= 1, `${key(s)}: 문턱 밑 닿음은 셈만 (${n.weak})`);
-  }
-  // 헛맞음이 없던 장면은 그대로 (문턱 밑 닿음이 없으면 고침이 아무것도 바꾸지 않음)
-  for (const s of now.filter((x) => x.weak === 0)) {
-    const o = old.find((x) => key(x) === key(s));
-    assert.deepEqual([s.first, s.wounds, s.sev], [o.first, o.wounds, o.sev], `${key(s)} 그대로`);
-  }
-});
 
-test('격살 10/24 장면 (빠르기 0.6 · 판정 1.3 — 전 기본): 전 판 헛맞음 1 장면도 고침 뒤 찌름 상처', () => {
-  const GK = [[SECRET.gyeoksal, 'share', 0.6], [SECRET, 'gyeoksalHitMul', 1.3]];
-  const now = withSets(GK, gkScenes);
-  const old = withSets([...GK, [SECRET, 'spendOnWound', 0]], gkScenes);
-  assert.ok(old.some((s) => s.wounds === 0), '전 판 상처 없는 장면 있음');
-  assert.equal(now.filter((s) => s.wounds === 0).length, 0, '고침 뒤 모두 상처');
-  assert.equal(now.filter((s) => s.first === 'cut').length, 0, '첫 맞음 베기 0');
-});
 
 test('리솔루토 미끄러짐 `?risoSlide=0.6` = 전 판(걸음 칸 slide 가 고노센 iaiStep) 바이트 같음 — 가까운 · 닿는 끝 · 먼 데', () => {
   for (const gap of [2.0, 2.4, 2.6]) {

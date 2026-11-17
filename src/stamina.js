@@ -111,7 +111,7 @@ export class Stamina {
   }
   /** 비기를 낼 기력이 있나 (사장님 10/30 08:2x '기력이 모자라면 못써(다른 비기도 그렇게 해)' · 18:3x '0 이하일 때야' — SECRET.secretStamina · secretStaminaMin): 지금 기력 > secretStaminaMin(0) ·
    *  기력 끔 · 기력 무한 · 스위치 끔이면 늘 참. 사람 창(secret.js) · AI(ai.js secretGo · spinGo · mordGo) · skill.secret 이 본다 */
-  get secretReady() { return !SECRET.secretStamina || this.infinite || this.value > (SECRET.secretStaminaMin ?? 0); }
+  get secretReady() { return this.infinite || this.value > 0; }
   get inSecret() { return !!(this.fighter.skill?.sec || this.controller?.secretRun); }
   get attacking() {
     const f = this.fighter;

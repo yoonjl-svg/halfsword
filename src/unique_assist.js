@@ -60,9 +60,7 @@ export const RETIRED_UNIQUE = new Set(['krumphau', 'passataSotto', 'altibaixo', 
 // 이베리아 자리 바꿈 (11/11 — SECRET.iberianSecret): 'altib' 판 = 정수리 가르기(redondo)는 비기라 AI 가 고르는 목록에서 뺌(비기 altibGo 가 이름 표에서 빌려 씀) · 'spin' 판 = 싱지르 AI 몫(cingir)을 뺌
 const RETIRED_ALTIB = new Set([...RETIRED_UNIQUE, 'redondo']);
 const RETIRED_SPIN = new Set([...RETIRED_UNIQUE, 'cingir']);
-/** 이 판의 이베리아 자리 바꿈인가 (11/11 — SECRET.iberianSecret 'altib': 비기 알티바슈 포르트 · 특수 공격 싱지르) */
-export const ibSwap = () => SECRET.iberianSecret === 'altib';
-const ibRetired = () => (ibSwap() ? RETIRED_ALTIB : RETIRED_SPIN);
+const ibRetired = () => (RETIRED_ALTIB);
 // 통폐합 (10/21 사장님 '판정표대로 통폐합 해' — 판정은 docs/strike/unique_attack_study_result_2026-10-20.md 뒤 의견 · 사람 기술 기준): 유파마다 넷 → 둘~셋.
 //  뺀 것: 독일 굽은 베기(분노의 베기와 구별 안 됨 · 쓰임 최저) · 이탈리아 밑으로 들어가 찌르기(드묾 · 비기 런지와 겹침) · 이베리아 위아래 사슬 · 번갈아 올려베기(이어 긋기 셋이
 //  비슷 — 머리 위 돌려 베기로 모음, 이어 그을수록 힘이 쌓이는 강화는 다음 단계) · 일본 코코 연타(이베리아 돌려 베기와 같은 몸 뒤집는 이어 긋기) · 동방 좌익격(일본 코테와 같은 동작).
@@ -224,33 +222,18 @@ export const specialShare = (name) => UA.specialShare?.[name] ?? 0;
 /** 알티바슈 포르트 판정 배율 (11/11 사장님 '비기 파괴력 배율 1.3배는 고노센에만 남긴다' — SECRET.altibHitMul 1 · null 이면 비기 공통 SECRET.hitMul) */
 export const altibHitMul = () => SECRET.altibHitMul ?? SECRET.hitMul;
 /**
- * 알티바슈 포르트 위력 몫 (11/11 사장님 '남은 기력 만큼의 % 공격력' — SECRET.altib.staminaK): 뗀 순간 기력 ÷ 최대 기력(0 ~ 1 · 기력 끔 · 무한이면 1).
- *  weightFix 1 (사장님 11/11 '무게 가중치는 재 보고 정해' — 견줌 스위치): (멜 때 기력 − 무게 1 값으로 메는 동안 뺀 기력 H.base) ÷ 최대 기력 — 무거운 칼이 메는 동안 더 잃은 몫을 위력에서는 빼지 않음(실제 기력은 무게대로 빠짐)
- */
-export function altibPower(f, H = null) {
-  const A = SECRET.altib;
-  const S = f.stamina;
-  if (!A?.staminaK || S.infinite || !(S.max > 0)) return 1;
-  const v = A.weightFix && H?.s0 != null ? H.s0 - (H.base ?? 0) : S.value;
-  return THREE.MathUtils.clamp(v / S.max, 0, 1);
-}
-/**
  * 알티바슈 포르트 한 칼 (사람 altibFire · AI ai.js altibFire 같은 셈 — 11/16 사장님 '기력 비례 빠르기로' → '둘째로 해' · SECRET.altib.speed):
  *  빠르기 판('f2' · 'f1'): 칼끝 몫 x = 뗀 순간 기력 ÷ 최대('f2' — 100 소모에 고노센 100 %) 또는 (기력 − drop) ÷ (최대 − drop)('f1' — 135 소모에 100 %) · 0 ~ 1 로 자름 ·
  *   칼끝 = 같은 칼 고노센 칼끝(iaiTipSpeed) × x · 바닥 = 같은 칼 보통 큰 베기 칼끝(SECRET.altib.floorTip — 실제 m/s · 표에 없으면 share 몫) · 판정 배율 = altibHitMul (기력 몫 없음 — 에너지는 물리)
- *  옛 판(speed 0): 몫 share(0.35) · 판정 배율 = altibHitMul × 기력 몫(altibPower). 기력 끔 · 무한이면 x = 1. 돌려줌 { share, hitMul, k(옛 위력 몫), x(빠르기 몫 · 바닥 전), floor(바닥이 걸렸나), s(뗀 순간 기력) }
+ *  기력 끔 · 무한이면 x = 1.
  */
 export function altibShot(f, H = null) {
   const A = SECRET.altib;
   const S = f.stamina;
   const s = S?.value ?? null;
-  if (!A.speed) {
-    const k = altibPower(f, H);
-    return { share: A.share, hitMul: altibHitMul() * k, k, x: null, floor: false, s };
-  }
   let x = 1;
   if (S && !S.infinite && S.max > 0) {
-    const fee = A.speed === 'f1' && A.drop != null ? A.drop : 0;
+    const fee = 0;
     x = THREE.MathUtils.clamp((S.value - fee) / (S.max - fee), 0, 1);
   }
   const vg = Math.max(1e-6, iaiTipSpeed(f));
@@ -273,7 +256,7 @@ export function altibShot(f, H = null) {
 export function altibAfter(f) {
   const A = SECRET.altib;
   if (A.drop != null) f.stamina.drainTo(A.drop, 'secret');
-  else if (A.zero) f.stamina.zero('secret');
+  else f.stamina.zero('secret');
 }
 /**
  * B4 내려침 길 고르기 (사람 windFire · AI rdFire 같은 셈 — requestArtRedondo 의 칸): UNIQUE_ASSIST.rdRelease 'tajo'(10/31 19:xx 기본 — 멘 어깨에서 반대쪽 아래로 · rdTajo ·
@@ -836,7 +819,7 @@ export class PlayerUniqueAssist {
     if (H.t < UA.rdHoldTime) return;
     const e = this.holdE;
     // 11/11 'altib' 판 (SECRET.iberianSecret — 사장님 '알티바슈 포르트를 고노센 급의 비기로'): 알티바슈 포르트 무장 창(press.armed)이 열린 동안만 메기 = 비기 · 무장 없으면 이 누름은 아무 일도 안 함(특수 공격 아님 · 식힘 없음)
-    const sec = ibSwap();
+    const sec = true;
     if (!UA.rdHold || (sec ? !P.armed : this.cooling(e) || P.secretOpen) || this.busy() || iaiBusy(f) || f.stamina.exhausted || !f.sword) {
       H.st = 'spent';
       this.stats.holdRefused = (this.stats.holdRefused ?? 0) + 1;
@@ -949,7 +932,7 @@ export class PlayerUniqueAssist {
     H.fade = 0.12;
     H.secret = false;
     const A = SECRET.altib;
-    const ok = UA.enhance > 0 && requestArtRedondo(f, rdReleaseOpt(f, W, { share: shot.share, maxT: UA.rdSnapTime, tech: e.U.name, hitMul: shot.hitMul, hold: A.hold ?? SECRET.stiff.iberian ?? 0, secret: 'altib' }));
+    const ok = UA.enhance > 0 && requestArtRedondo(f, rdReleaseOpt(f, W, { share: shot.share, maxT: UA.rdSnapTime, tech: e.U.name, hitMul: shot.hitMul, hold: SECRET.stiff.iberian ?? 0, secret: 'altib' }));
     if (!ok) {
       this.stats.windCancel ??= {};
       this.stats.windCancel.noStrike = (this.stats.windCancel.noStrike ?? 0) + 1;
@@ -988,7 +971,7 @@ export class PlayerUniqueAssist {
    */
   linkTry(cur, start, dir, now) {
     const f = this.f;
-    if (!ibSwap() || this.link || !this.linkOk()) return false;
+    if (this.link || !this.linkOk()) return false;
     const rn = this.fRaw ? Math.hypot(this.fRaw[0], this.fRaw[1]) : 0;
     const fd = this.fSpeed > SKILL.swingSpeed ? (rn > 1e-9 ? [this.fRaw[0] / rn, this.fRaw[1] / rn] : [this.fv.x / this.fSpeed, this.fv.y / this.fSpeed]) : dir; // 손가락 그대로의 방향 (손 목표는 손 반지름에서 잘려 휠 수 있음 — 끝 자리에서 그은 칼) · 11/15 거르지 않은 이번 프레임 방향
     // 11/15 (2) 넘기기 판: 이 긋기 첫머리 = 손가락이 쉬다 움직이기 시작한 스텝(또는 꺾인 스텝)부터 지금까지 손가락이 더한 몫 그대로 — 시작 자리 = 지금 손 − 그 몫

@@ -80,7 +80,7 @@ const gyeoksalReq = (D, f) => {
   return { ...(pw === 'hit' ? { hitMul: gyeoksalHitMul() } : { hitMul: 1, effMul: secretEffMul(D) }), ...(G.share > 0 ? { share: G.share * hk } : {}), ...(G.trailWidth ? { width: Math.min(1, share) } : {}) };
 };
 /** 격살 한 칼 requestCombo 덧칸 (사람 skill.js · 11/14 AI ai.js secretGo 같이 — 사람과 같은 값): 판정 묶음(gyeoksalReq — 사냥 겹 빠르기 포함) · 잔상은 베는 토막만 · 찌르기면 마주 보는 띠 · 밝기 바닥 */
-export const gyeoksalComboOpt = (D, f, moves) => ({ ...gyeoksalReq(D, f), arcCut: true, face: SECRET.secretStreak && moves.some((m) => m.kind === 'thrust') ? 'line' : null, min: SECRET.secretArcMin ?? 0 });
+export const gyeoksalComboOpt = (D, f, moves) => ({ ...gyeoksalReq(D, f), arcCut: true, face: moves.some((m) => m.kind === 'thrust') ? 'line' : null, min: SECRET.secretArcMin ?? 0 });
 /** 안다레 리솔루토 굳음 (s): 10/24 런지 risolutoStiff 0.6 (사장님) · null 이면 이탈리아 비기 굳음 stiff.italian (10/23 판) */
 const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? realS(0.3); // 굳음은 실제 초 (표준 시간 10/25 — config 값도 realS)
 /**
@@ -97,14 +97,14 @@ const risolutoStiff = () => SECRET.risolutoStiff ?? SECRET.stiff.italian ?? real
 export const risoHitMul = () => SECRET.risolutoHitMul ?? SECRET.hitMul;
 const risolutoLungeReq = (f = null) => {
   const st = SECRET.risolutoStep ?? {};
-  const fixed = !!SECRET.risolutoReach && !!(SECRET.risolutoReachFixed ?? 1); // 11/11 거리 판단 ②: 미끄러짐 늘 같은 길이
+  const fixed = false;
   const step = { kind: 'lunge', fwd: secVal(st.slide ?? 'risolutoSlide'), foot: secVal(st.foot ?? 'italianStep'), ...(st.draw ? { draw: true } : {}), ...(st.room ? { room: true } : {}), ...(st.push ? { push: secVal(st.push) } : {}), ...(st.accel ? { accel: true } : {}), ...(fixed ? { close: true } : {}) };
-  const moves = [{ name: 'risolutoLunge', nameKo: '런지', kind: 'thrust', lunge: true, glide: !!SECRET.risolutoGlide, step, dyn: { kind: 'aim', target: 'lung', thrust: true, back: true } }];
+  const moves = [{ name: 'risolutoLunge', nameKo: '런지', kind: 'thrust', lunge: true, glide: true, step, dyn: { kind: 'aim', target: 'lung', thrust: true, back: true } }];
   const gd = f && SECRET.risolutoBack > 0 ? { hold: 0, guardT: SECRET.risolutoBack, guardPad: [f.handOffset.x, f.handOffset.y] } : null; // 11/16 런지 되돌림 (SECRET.risolutoBack — 굳음 붙잡기 대신)
-  return { moves, share: SECRET.risolutoShare ?? 1, hitMul: risoHitMul(), hold: risolutoStiff(), arcCut: true, face: SECRET.secretStreak ? 'line' : null, min: SECRET.secretArcMin ?? 0, ...gd };
+  return { moves, share: SECRET.risolutoShare ?? 1, hitMul: risoHitMul(), hold: risolutoStiff(), arcCut: true, face: 'line', min: SECRET.secretArcMin ?? 0, ...gd };
 };
 /** 죽음의 일격 다시 세우기 초 (11/16 SECRET.mord.guard — 폼멜 찍기 판만 · 0 = 11/15 판) */
-const mordGuardT = (f) => (SECRET.mord.guard > 0 && SECRET.mord.pommel && mordMode(f) === 'hilt' ? SECRET.mord.guard : 0);
+const mordGuardT = (f) => (SECRET.mord.guard > 0 ? SECRET.mord.guard : 0);
 const _ps = new THREE.Vector3();
 const _pd = new THREE.Vector3();
 const _pt = new THREE.Vector3();
@@ -676,7 +676,7 @@ export class Skill {
         //  잔상(10/23 점검): 베는 토막만(arcCut) · 정수리로 곧게 내리치는 길은 뒤 카메라에서 옆으로 보여 → 마주 보는 띠(face 'path' 칼자루 끝 길 — SECRET.secretStreak, sword_trail.js) · 밝기 바닥 SECRET.secretArcMin
         const gd = mordGuardT(f); // 11/16 다시 세우기 0.6 s (SECRET.mord.guard — 폼멜 찍기 판 · 굳음 대신)
         if (gd > 0) run.guardT = gd;
-        requestCombo(f, { moves: [{ name: t.name, kind: t.kind, from: t.from, path: t.path }], share: SECRET.mord.kin, hitMul: mordHitMul(), mord: mordKinOf(f, run), arcCut: true, face: SECRET.secretStreak ? 'path' : null, min: SECRET.secretArcMin ?? 0, ...(gd > 0 ? { hold: 0, guardT: gd, guardPad: [f.handOffset.x, f.handOffset.y] } : {}) });
+        requestCombo(f, { moves: [{ name: t.name, kind: t.kind, from: t.from, path: t.path }], share: SECRET.mord.kin, hitMul: mordHitMul(), mord: mordKinOf(f, run), arcCut: true, face: 'path', min: SECRET.secretArcMin ?? 0, ...(gd > 0 ? { hold: 0, guardT: gd, guardPad: [f.handOffset.x, f.handOffset.y] } : {}) });
         this.secretBursts++;
       }
     } else if (D.risoluto) {
@@ -684,14 +684,12 @@ export class Skill {
       //  (흘림과 같은 장치 — nagashi_recovery.js beginFlowRecovery · FLOW_RECOVERY) + 비기 배율(power · hitMul — updateSecret 'riso'). 찌르기는 아래 this.sec 를 건 뒤(기력은 비기 값 하나)
       run.stage = 'riso';
       run.risoluto = true;
-      if (SECRET.risolutoLunge) {
-        // 10/24 런지 (사장님 '런지로 진행해. 단 런지 동작이 고노센처럼 빠르게 나가야 의미가 있어'): 탭 찌르기 대신 고노센 · 격살과 같은 운동학 틀(requestCombo)로 —
-        //  칼끝을 지금 자리(붙은 칼)에서 상대 몸통 가장 가까운 점으로 곧게(연환 그때 계산 찌름 comboPlanDyn 'thrust') · 빠르기 = 고노센 칼끝 × risolutoShare ·
-        //  몸 미끄러짐(고노센 발도와 같은 한도) + 앞발 런지 걸음 + 디딘 뒤 뒷발 끌어붙임 · 붙은 칼을 따라 미끄러지는 동안은 막힘 아님(glide) · 찌른 뒤 온 길로 뽑아 굳음 동안 붙잡음
-        run.stage = 'instant';
-        run.instant = true;
-        run.lunge = true;
-      }
+      // 10/24 런지 (사장님 '런지로 진행해. 단 런지 동작이 고노센처럼 빠르게 나가야 의미가 있어'): 탭 찌르기 대신 고노센 · 격살과 같은 운동학 틀(requestCombo)로 —
+      //  칼끝을 지금 자리(붙은 칼)에서 상대 몸통 가장 가까운 점으로 곧게(연환 그때 계산 찌름 comboPlanDyn 'thrust') · 빠르기 = 고노센 칼끝 × risolutoShare ·
+      //  몸 미끄러짐(고노센 발도와 같은 한도) + 앞발 런지 걸음 + 디딘 뒤 뒷발 끌어붙임 · 붙은 칼을 따라 미끄러지는 동안은 막힘 아님(glide) · 찌른 뒤 온 길로 뽑아 굳음 동안 붙잡음
+      run.stage = 'instant';
+      run.instant = true;
+      run.lunge = true;
     } else if (D.spin) {
       // 이베리아 휘감아 돌기 (10/22): 앞발을 축으로 몸을 한 바퀴 돌리는 대본 (iberian_spin.js) — 두 발로 딛고 있어야 건다(못 걸면 비기 아님 · 창은 이미 썼다)
       if (!requestSpin(f, run.ctx?.turnDir ?? 0, run.special ? { share: UNIQUE_ASSIST.specialShare?.[run.special] ?? 0, special: true } : undefined)) return false; // 10/23 스틱 판: 스틱을 돌린 쪽 (ctx.turnDir — secret.js spinStick) · 공격 입력 판은 0 = 칼 든 쪽 · 11/11 특수 공격 싱지르 = 칼끝 고노센 × specialShare.cingir · 한 걸음 나가며(stride)
@@ -706,13 +704,12 @@ export class Skill {
       if (!t) return false;
       run.queue.push(t);
       run.bind = D.bind ? byName[D.bind] ?? null : null;
-    } else if (D.back && SECRET.instant && D.instant) {
+    } else if (D.back && D.instant) {
       // 일본 순간 베기 (10/10): 물러남·담기 없이 곧장 — 이번 스텝 끝(combat.afterStep)에 내딛음·끝 자세·쓸린 자리 상처 (secret_instant.js, AI 와 같은 실행부)
       run.stage = 'instant';
       run.instant = true;
       run.end = D.tech.path[D.tech.path.length - 1];
-      if (SECRET.iai) requestIai(f, { player: true, block: gnsBlockOf(run.ctx, f) }); // 10/10 발도: 지금 손 → 왼 허리 → 가로 (전체 iaiPlayerTime) · B(10/25 16:0x 사장님 켬): 천천히 걸어 든 들어옴 창 발도는 상대 칼에 막힐 수 있음 (달려듦 빠르기로 넘은 것 · 칼을 듦 · 달려듦 · 헛침 창은 그대로)
-      else requestInstant(f, { endPad: run.end });
+      requestIai(f, { player: true, block: gnsBlockOf(run.ctx, f) }); // 10/10 발도: 지금 손 → 왼 허리 → 가로 (전체 iaiPlayerTime) · B(10/25 16:0x 사장님 켬): 천천히 걸어 든 들어옴 창 발도는 상대 칼에 막힐 수 있음 (달려듦 빠르기로 넘은 것 · 칼을 듦 · 달려듦 · 헛침 창은 그대로)
       this.secretBursts++;
     } else if (D.back) {
       run.stage = 'back'; // 일본 後の先 ①: 물러서며 脇構え 로 끌어 담기
@@ -722,7 +719,7 @@ export class Skill {
       const dir = o.dir && Math.hypot(o.dir[0], o.dir[1]) > 1e-6 ? o.dir : [this.aimVel.x, this.aimVel.y];
       for (const t of montanteFlowSeq(hand, dir, D, f)) run.queue.push(t);
       run.flow = true;
-    } else if (D.path && SECRET.iberianSweep) {
+    } else if (D.path) {
       // 이베리아 휩쓸기 (10/10 02:5x): 사이드스텝(스틱이 옆을 누르면 그쪽, 아니면 오른쪽) + 머리 위 큰 고리 + 사선 — AI 와 같은 실행부
       run.stage = 'instant';
       run.instant = true;
@@ -774,7 +771,7 @@ export class Skill {
         this.sec = null; // 찌르기를 못 냄 (기력 탈진 · 칼 없음 …) — 비기도 없음
         return false;
       }
-      run.armSlow = beginFlowRecovery(f.foe, f, SECRET.risolutoArmSlow); // 상대 칼이 묶여 막을 수 없다 — 찌르기가 시작될 때 상대 두 팔 늦춤 (흘림과 같은 장치 · 10/24 0.6 s — null 이면 흘림 FLOW_RECOVERY 0.4)
+      run.armSlow = beginFlowRecovery(f.foe, f, 0); // 상대 칼이 묶여 막을 수 없다 — 찌르기가 시작될 때 상대 두 팔 늦춤 (흘림과 같은 장치 · 10/24 0.6 s — null 이면 흘림 FLOW_RECOVERY 0.4)
       this.secretBursts++; // 결정타 연출
     }
     this.recovering = false;

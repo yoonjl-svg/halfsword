@@ -10,7 +10,6 @@ import { runOne } from './singir_fall.mjs';
 import { footSnap } from './iberian_spin_feet.mjs';
 // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 싱지르 비기 넘어짐 장면(11/05 — 가까우면 뒷발 축 near · 무장 창 원 · 비기 몫)이라
 //  그 판('spin')으로 묶는다(이 파일 안에서만). 새 판(비기 알티바슈 포르트 · 특수 공격 싱지르 한 걸음)은 tools/sim/ib_swap.test.mjs
-(await import('../../src/config.js')).SECRET.iberianSecret = 'spin';
 
 const withNear = async (v, fn) => {
   const old = SECRET.ibSpin.near;
@@ -77,47 +76,6 @@ test('기본값: 가까운 상대 뒷발 축 near 1 (11/05 · 사장님 확인 �
   assert.equal(SECRET.ibSpin.near, 1);
   assert.equal(SECRET.ibSpin.share, 0.5); // 빠르기 몫 (사장님 11/05 '싱지르 0.5로 넣고')
 });
-
-test('가까우면(맞닿기 + 나아감 안) 뒷발 축: 처음엔 상대에게서 물러나고 끝에 칼과 함께 나아감 · 한 바퀴 · 서 있음 · 벰 · 발 자리 — 끄면 앞발 축(처음에 다가감)', async () => {
-  const on = standSpin('zweihander', 1.75);
-  assert.ok(on.d0 < on.contact + SECRET.ibSpin.advance, `가슴 거리 ${on.d0}`);
-  assert.equal(on.near, true);
-  assert.ok(Math.abs(on.turned - 2 * Math.PI) < 0.05, `돈 각 ${on.turned}`);
-  assert.ok(on.dq > on.d0, `무게 옮긴 때 거리 ${on.dq.toFixed(2)} (낼 때 ${on.d0.toFixed(2)} — 물러남)`);
-  assert.ok(on.end.travel > 0.3 && on.end.travel < 0.55, `골반 옮김 ${on.end.travel.toFixed(2)} (나아감 그대로)`);
-  assert.equal(on.state, 'stand');
-  assert.ok(on.tilt < 25, `기울기 ${on.tilt.toFixed(0)}`);
-  assert.ok(on.cuts > 0, '벰');
-  // 발: 끝(받아 멈춤 끝)에 펜싱 자세 너비 · 골반은 두 발 사이 · 무게 가운데 발바닥 안 · 도는 동안 안 엇갈림 (iberian_spin.test.mjs 발디딤과 같은 눈금)
-  const F = on.end.feet;
-  assert.ok(F.lon >= 0.45 && F.lat >= 0.2, `끝 두 발 앞뒤 ${F.lon.toFixed(2)} · 옆 ${F.lat.toFixed(2)}`);
-  assert.ok(Math.abs(F.pelFwd) <= 0.1, `골반 − 두 발 가운데 ${F.pelFwd.toFixed(2)}`);
-  assert.ok(F.margin > -0.02, `무게 가운데 여유 ${F.margin.toFixed(3)}`);
-  assert.equal(on.cross ?? 0, 0, '도는 동안 엇갈림');
-  assert.ok(on.after.lon > 0.2, `끝난 뒤 0.6 s 앞발이 앞 ${on.after.lon.toFixed(2)}`);
-  const off = await withNear(0, () => standSpin('zweihander', 1.75));
-  assert.equal(off.near, false);
-  assert.notEqual(off.pk, on.pk, '축발이 다름 (끄면 앞발)');
-  assert.ok(off.dq < off.d0 - 0.1, `끔 무게 옮긴 때 거리 ${off.dq.toFixed(2)} (낼 때 ${off.d0.toFixed(2)} — 다가감)`);
-  assert.ok(on.dq - off.dq > 0.3, `무게 옮긴 때 거리 켬 ${on.dq.toFixed(2)} · 끔 ${off.dq.toFixed(2)}`);
-  assert.ok(Math.abs(off.end.travel - on.end.travel) < 0.1, `끝 골반 옮김 켬 ${on.end.travel.toFixed(2)} · 끔 ${off.end.travel.toFixed(2)}`);
-  // 견줌 'place' (뒷발 축 · 제자리): 나아감 0
-  const pl = await withNear('place', () => standSpin('zweihander', 1.75));
-  assert.equal(pl.near, true);
-  assert.ok(pl.end.travel < 0.2 && pl.state === 'stand', `제자리 골반 옮김 ${pl.end.travel.toFixed(2)}`);
-});
-
-test('멀면(맞닿기 + 나아감 밖) 전 판 그대로 — 앞발 축 · 나아감 (켬 · 끔 같은 몸)', async () => {
-  const on = standSpin('zweihander', 2.2); // 11/05 몫 0.5 뒤 2.4 m(가슴 2.53)면 칼이 닿지 않음 → 2.2 m(가슴 2.33 — 여전히 맞닿기 + 나아감 밖)
-  assert.ok(on.d0 >= on.contact + SECRET.ibSpin.advance, `가슴 거리 ${on.d0}`);
-  assert.equal(on.near, false);
-  const off = await withNear(0, () => standSpin('zweihander', 2.2));
-  assert.equal(off.pk, on.pk);
-  assert.equal(off.end.travel.toFixed(6), on.end.travel.toFixed(6), '골반 옮김 바이트 같음');
-  assert.equal(off.cuts, on.cuts);
-  assert.ok(on.cuts > 0, '벰');
-});
-
 
 test('재기 꽂개는 읽기만: singir_fall runOne 판 = school_balance fightOne 판 (이베리아 · 롱소드 AI 씨앗 3 · 5 s)', () => {
   const a = runOne({ weapon: 'zweihander', opp: 'longsword', seed: 3, dur: 5 });

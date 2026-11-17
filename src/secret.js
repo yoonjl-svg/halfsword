@@ -154,7 +154,7 @@ export function secretEvent(S, sense, foe, s0, c, r, d0, foeReach, me = null, ex
   // preThreat 의 raising·charging 과 같은 꼴 — 지금 모습으로. 거리 창(cond.window)이 있는 비기(일본)는 preThreat 의 '가까움' 문턱 대신 그 창이 거리를 맡는다
   const closing = Math.max(0, -(s0.vx * dx + s0.vz * dz) / d0);
   const raising = W.includes('foeRaise') && s0.hvy > 1.6 && s0.hy > 0.05;
-  const charging = W.includes('foeCharge') && (SECRET.foeChargeAvg && ex?.st ? ex.st.foeInAvg : closing) > SECRET.foeChargeSpeed; // 달려듦 (10/25 16:0x 사장님 '최고 속도 기준으로 상위 30% 정도를 빠르게 걸어들어오는 것으로' — 0.9 → 1.2 (16:1x '1.2m를 기준으로') 옛 판)
+  const charging = W.includes('foeCharge') && (ex?.st ? ex.st.foeInAvg : closing) > SECRET.foeChargeSpeed; // 달려듦 (10/25 16:0x 사장님 '최고 속도 기준으로 상위 30% 정도를 빠르게 걸어들어오는 것으로' — 0.9 → 1.2 (16:1x '1.2m를 기준으로') 옛 판)
   let on = (raising || charging) && (!!S.cond?.window || d0 < foeReach + closing * 0.4 + 0.3);
   // 결심한 공격만 (cond.commit — 10/9 사장님 '발동은 좀 줄되'): 들어 올림이면 손이 commit 패드 m/s 이상으로 움직일 때만(달려듦은 그대로)
   if (on && S.cond?.commit && !charging && Math.hypot(s0.hvx, s0.hvy) < secretVal(S.cond.commit)) on = false;
@@ -237,10 +237,9 @@ function enterEvent(s0, c, d0, ex, me) {
   st.gnsOutT = 0;
   if (prev == null || !(prev > B) || st.gnsEnter === 'done') return { on: false, ctx: null };
   if (!(st.gnsFoeIn > 0 && st.gnsFoeIn > st.gnsMeIn)) return { on: false, ctx: null }; // 내가 들어가 넘음 (또는 둘 다 서 있음)
-  if (SECRET.gnsEnterOpen && foeOnline(s0, c)) return { on: false, ctx: null }; // 여쭘 C (10/25 08:0x · 기본 끔): 칼끝을 내 몸에 겨눈 채 들어옴은 빈틈이 아님 — 이 넘음은 창 없음
   st.gnsEnter = 'done';
   // fast: 상대가 달려듦 빠르기(foeChargeSpeed — secretEvent 의 달려듦과 같은 셈)로 들어와 넘음 — 이 창은 달려듦과 같은 몫이라 B 의 막힘이 안 걸림 (10/25 16:0x)
-  const fast = (SECRET.foeChargeAvg ? st.gnsFoeIn : -(s0.vx * ux + s0.vz * uz)) > SECRET.foeChargeSpeed; // foeChargeAvg: 넘음 판정의 최근 0.6 s 평균 그대로
+  const fast = (st.gnsFoeIn) > SECRET.foeChargeSpeed; // foeChargeAvg: 넘음 판정의 최근 0.6 s 평균 그대로
   return { on: true, ctx: { ev: 'enter', closing: st.gnsFoeIn, meIn: st.gnsMeIn, fast } };
 }
 
@@ -289,7 +288,7 @@ export function gnsBlockOf(ctx, me) {
 
 /** 고노센 들어옴 선 = 내 발도가 닿는 거리 — secretCond 의 발도 창 위 끝 그대로(맞닿기 + iaiStep + iaiMargin) · iai 0 이면 옛 창 위 끝(reach + japaneseReach + japaneseFar). view = { reach, contact } */
 export function gnsEnterLine(view) {
-  return SECRET.iai ? view.contact + SECRET.iaiStep + SECRET.iaiMargin : view.reach + SECRET.japaneseReach + SECRET.japaneseFar;
+  return view.contact + SECRET.iaiStep + SECRET.iaiMargin;
 }
 
 /**
@@ -306,7 +305,7 @@ export function gnsOutside(d0, view, armed, long) {
 }
 
 /** 비기 무장 시계를 아직 세지 않나 (10/27 23:0x 사장님 '고노센과 싱지르는 전투 시작 후, 실제 공격이 가능해진 때부터 시간을 카운트 해' — SECRET.armAtFight): 그 몸의 판 시작 정지(fighter.openHold) 동안. 끄면 늘 거짓(옛 판) */
-export const armHold = (f) => !!SECRET.armAtFight && !!f?.openHold;
+export const armHold = (f) => !!f?.openHold;
 
 /**
  * 고노센 준비 한 스텝 (10/25 22:3x 사장님 '2] … 거리와 상관없이 '1.5초 동안 치지도 막지도 않고 침착하게 있으면 준비'로 바꾸는 것 이것도 좋다. 그렇게 바꿔.' ·
@@ -319,7 +318,6 @@ export const armHold = (f) => !!SECRET.armAtFight && !!f?.openHold;
  */
 export function gnsArmTick(A, dt, unsettled, moving, old, hold = false) {
   if (hold) return A.tick(0, false, true); // 판 시작 정지 동안(fighter.openHold — 10/27 23:0x 사장님 '실제 공격이 가능해진 때부터 시간을 카운트') 셈 0 · 준비 아님 — 두 판 모두
-  if (SECRET.gnsReady === 'dist') return A.tick(dt, old.outside, old.busy);
   A.tick(dt, true, !!unsettled || (!A.armed && !!moving));
 }
 
@@ -335,7 +333,6 @@ export function gnsMoving(f) {
  *  걸음 문턱 GAIT.walkMin(gait.js — 이보다 빨리 가려 해야 발을 떼어 걷는다)을 넘나. 새 수 없음. 끄면(0) gnsMoving 그대로(0 이 아니면 걸음). AI 자기 준비는 gnsMoving 그대로
  */
 export function gnsHumanMoving(f) {
-  if (!SECRET.gnsStickWalk) return gnsMoving(f);
   const x = f?.stickX || 0;
   const y = f?.stickY || 0;
   if (!x && !y) return false;
@@ -349,7 +346,7 @@ export function gnsHumanMoving(f) {
  */
 export function gnsHumanUnsettled(f, hurt) {
   const sk = f.skill;
-  return !!(sk?.swinging || sk?.tap || sk?.pom || sk?.sec) || !!f.parryGuard?.held || !!f.iaiDraw || (!!hurt && !SECRET.gnsHurtKeep); // 11/16 뽑는 중(iaiDraw — SECRET.gnsDraw)도 행동 // gnsHurtKeep (11/05 일본 강화 길 · 기본 0): 1 = 맞음으로는 안 풀림 (사람 창 · AI 가 읽는 사람 준비 같은 셈)
+  return !!(sk?.swinging || sk?.tap || sk?.pom || sk?.sec) || !!f.parryGuard?.held || !!f.iaiDraw || (!!hurt); // 11/16 뽑는 중(iaiDraw — SECRET.gnsDraw)도 행동 // gnsHurtKeep (11/05 일본 강화 길 · 기본 0): 1 = 맞음으로는 안 풀림 (사람 창 · AI 가 읽는 사람 준비 같은 셈)
 }
 
 /** 비기 조건 (cond) — 굴림 없음. view = { reach, foeReach, clinch } */
@@ -357,12 +354,12 @@ export function secretCond(S, ctx, d, view) {
   const C = S.cond;
   if (!C) return true;
   if (C.lethal && !(ctx && ctx.tipSp >= SECRET.lethalSpeed && ctx.lethalD <= SECRET.lethalDist)) return false; // 10/10: J 문턱(옛 lethalJ 247) 대신 궤적 — 칼끝 길이 내 머리·목 곁을 지남 (lethalPath)
-  if (C.armed && SECRET.iai && !view.armed) return false; // 일본 발도: 발도 대기에서만 (IaiArm)
-  if (C.armed && SECRET.iai && view.contact != null && d > view.contact + SECRET.iaiStep + SECRET.iaiMargin) return false; // 발도가 닿는 거리: 내디딤(iaiStep) 뒤 맞닿기 + 여유 안
+  if (C.armed && !view.armed) return false; // 일본 발도: 발도 대기에서만 (IaiArm)
+  if (C.armed && view.contact != null && d > view.contact + SECRET.iaiStep + SECRET.iaiMargin) return false; // 발도가 닿는 거리: 내디딤(iaiStep) 뒤 맞닿기 + 여유 안
   if (C.whiff && ctx?.ev === 'recover' && !(ctx.tipE >= secretVal(C.whiff))) return false; // 일본 보조 사건(헛침): 상대가 헛친 칼이 제대로 휘두른 칼이었나
   if (C.window) {
     // 일본 後の先 창: 상대 공격은 명백히 안 닿고(상대 칼 닿는 거리 foeReach + 여유 밖) 내 後の先 은 닿는다(내 간격 끝 + 기술 reach + 강한 내딛음 몫 안)
-    if (!(C.armed && SECRET.iai) && (d <= view.foeReach + SECRET.japaneseFoeMargin || d > view.reach + SECRET.japaneseReach + SECRET.japaneseFar)) return false; // (발도는 아래 대기·닿는 거리가 창을 맡는다)
+    if (!(C.armed) && (d <= view.foeReach + SECRET.japaneseFoeMargin || d > view.reach + SECRET.japaneseReach + SECRET.japaneseFar)) return false; // (발도는 아래 대기·닿는 거리가 창을 맡는다)
   }
   if (C.line && !C.line.includes(ctx?.line)) return false;
   if (C.range === 'counter' && !(d < view.reach + 0.3 && d > view.clinch + 0.1)) return false; // ai.js counterRange 와 같은 식
@@ -433,7 +430,7 @@ export class IaiArm {
    *  帯刀(SECRET.iaiObi) 이 꺼졌으면 0 (칼집이 없는 11/14 판). 길목 · 싱지르(다른 열쇠 · 묶음)는 0
    */
   get extra() {
-    return !this.group && this.timeKey === 'iaiArmTime' && SECRET.iaiObi && SECRET.iaiSheathe > 0 ? SECRET.iaiSheathe : 0;
+    return !this.group && this.timeKey === 'iaiArmTime' && SECRET.iaiSheathe > 0 ? SECRET.iaiSheathe : 0;
   }
   /** 납도 몫 (0 ~ 1): 셈이 iaiArmTime 을 넘고 아직 준비 전인 동안 · 그 밖(셈 전 · 준비됨 · 납도 없음)은 0 */
   get sheathe() {
@@ -597,8 +594,7 @@ export function gilmokWindT(windT, closing, d, reach, dt) {
  *  덧씌우기 가운데 손 앞(SECRET.iaiPath.M.hand[0] 0.5) + 날 길이(weaponCfg.bladeLength) + 디딤(do.step.fwd 0.3). 칼 길이·손 자리에서 계산(탐침 값 아님)
  */
 export function gilmokLine(f, reach, D) {
-  if (SECRET.gilmokEdge !== 'cut') return reach;
-  return SECRET.iaiPath.M.hand[0] + (f.weaponCfg?.bladeLength ?? 0) + (D?.step?.fwd ?? 0);
+  return reach;
 }
 
 /**
@@ -720,7 +716,7 @@ export function pressStep(st, dt, pressing, busy, open, need, step = null) {
     st.pressT = (st.pressT ?? 0) + dt;
     st.pressHeld = (st.pressHeld ?? 0) + dt;
     if (st.pressHeld > (st.pressMax ?? 0)) st.pressMax = st.pressHeld;
-  } else if ((st.pressHeld ?? 0) > 0 && SECRET.mordStepPause && step && !st.pauseDone && (!st.pauseStep || st.pauseStep === step)) {
+  } else if ((st.pressHeld ?? 0) > 0 && step && !st.pauseDone && (!st.pauseStep || st.pauseStep === step)) {
     st.pauseStep = step; // 다시 시작한 밀치기의 첫 걸음 — 너그러움 시계 멈춤(셈도 쥔 채 · 안 셈)
     st.pausedT = (st.pausedT ?? 0) + dt; // 재기: 멈춘 시간 합 (판정에는 안 씀)
   } else if ((st.pressHeld ?? 0) > 0 && (st.pressOff = (st.pressOff ?? 0) + dt) <= (SECRET.mordGrace ?? 0)) {
@@ -755,10 +751,10 @@ export function secretUsesOf(f) {
  *  일본 고노센(SECRET.gnsFree — 대가: 기력 gnsCost 50 · 칼집에 든 채 다른 칼은 뽑기 gnsDraw 0.6 s) · 이베리아 알티바슈 포르트(SECRET.altib.free — 'altib' 판만 · 대가: 내려친 뒤 기력 drop −35)
  */
 export function secretFree(tr) {
-  if (tr === 'japanese') return !!SECRET.gnsFree;
-  if (tr === 'iberian') return !!SECRET.altib?.free && SECRET.iberianSecret === 'altib';
-  if (tr === 'german') return !!SECRET.mord?.free; // 11/16 죽음의 일격 (대가: 맞든 빗나가든 다시 세우기 0.6 s 무방비 · 기력 35)
-  if (tr === 'italian') return !!SECRET.risolutoFree && SECRET.itSecret === 'risoluto'; // 11/16 리솔루토 (대가: 런지 뒤 되돌림 0.6 s 무방비 · 기력 50)
+  if (tr === 'japanese') return true;
+  if (tr === 'iberian') return true;
+  if (tr === 'german') return true; // 11/16 죽음의 일격 (대가: 맞든 빗나가든 다시 세우기 0.6 s 무방비 · 기력 35)
+  if (tr === 'italian') return true; // 11/16 리솔루토 (대가: 런지 뒤 되돌림 0.6 s 무방비 · 기력 50)
   return false;
 }
 /**
@@ -881,7 +877,6 @@ export class PlayerSecretWatch {
     recordFoeSenses(this, dt); // 1:1 = this.sense.record(dt) 그대로 (2:2 는 상대마다 — setFoe)
     if (this.open) {
       this.open.age = (this.open.age ?? 0) + dt;
-      if (this.riso && SECRET.risolutoReach) this.reachTick(dt); // 11/11 거리 판단 리솔루토 ① (스위치 · 기본 끔): 두 칼이 떨어진 뒤 지난 시간
       if ((this.open.t -= dt) <= 0 && !this.holding() && !this.reachHolding()) this.open = null; // 창 끝 (secretHold: 열린 뒤 playerWindow 초까지는 짧은 창도 지킴 · 거리 판단 리솔루토: 칼이 떨어진 뒤 risolutoReachKeep 초까지)
     }
     const S = this.S;
@@ -895,7 +890,7 @@ export class PlayerSecretWatch {
       this.swing = null;
       this.combo = 0;
       this.iaiArm.tick(0, false, true);
-      if (S?.do?.instant && (SECRET.gnsCrouch || SECRET.gnsReadyHip)) iaiReadyPosePlayer(me, false, true, dt, !SECRET.gnsCrouch); // 웅크림 · 허리 대기도 풀림 (손 · 칼은 곧장 · 몸은 gnsCrouchOut)
+      if (S?.do?.instant) iaiReadyPosePlayer(me, false, true, dt, true); // 웅크림 · 허리 대기도 풀림 (손 · 칼은 곧장 · 몸은 gnsCrouchOut)
       this.gilArm.tick(0, false, true);
       this.spinArm.tick(0, false, true);
       if (this.pc) this.pc.pend = this.pc.buf = null;
@@ -921,14 +916,13 @@ export class PlayerSecretWatch {
     if (S.when === 'press') this.pressTick(dt, busy);
     // 고노센 준비 (10/25 22:3x · 22:5x 사장님 '거리와 상관없이 … 아무 행동 없이 2초' · '준비가 활성화되면 걸어도 유지' — gnsArmTick 'idle'): 휘두름 · 탭 · 손잡이 찍기 · 비기 · 막기 단추 · 맞음이면 풀림 ·
     //  준비 전엔 이동 입력도 셈을 0 으로 · 'dist'(10/25 전 판) = 상대 칼 거리 밖(긴 칼 상대 규칙 gnsLong 이 아니면 d0 > foeReach 그대로) · 휘두름 · 비기만 풀림
-    if (S.do?.instant) gnsArmTick(this.iaiArm, dt, gnsHumanUnsettled(me, hurt) || busy, gnsHumanMoving(me), { outside: gnsOutside(d0, V, this.iaiArm.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: sw || busy }, armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x)
+    if (S.do?.instant) gnsArmTick(this.iaiArm, dt, gnsHumanUnsettled(me, hurt) || busy, gnsHumanMoving(me), { outside: gnsOutside(d0, V, this.iaiArm.armed, 1), busy: sw || busy }, armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x)
     // 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준비가 되면 웅크리게 해.' — SECRET.gnsCrouch · secret_instant.js iaiReadyPosePlayer): 준비된 동안 AI 와 같은 발도 대기 자세 ·
     //  칼을 쥐면(손가락 움직임 · 막기 단추 · 휘두름) 손 · 칼은 곧장 사람 것 — 몸 웅크림은 그대로 · 0 이면 '고노센 준비' 표시만(전 판)
     //  10/31 허리 대기 (사장님 08:xx '웅크리기를 없앴더니 고노센 발동창이 안열려.' — SECRET.gnsReadyHip · 웅크림 0 일 때): 몸은 선 채 손 · 칼만 왼 허리 발도 대기 —
     //   칼을 쥠 = 손가락이 닿은 자리에서 길게 누름 한도(INPUT.holdPx)를 넘게 끌었음(main.js handGrip — 얹은 손가락의 떨림 · 떠돎은 쥠이 아님) · 막기 단추 · 휘두름. 손가락 몸이 없으면(시뮬 · 마우스) 손가락 움직임 그대로
     //  11/14 납도 (SECRET.iaiSheathe — IaiArm.sheathe): 준비 셈이 iaiArmTime 을 넘은 뒤 준비 전 iaiSheathe 초 동안 칼을 칼집에 넣음 (손이 쉴 때만 — 쥐면 곧장 사람 손 · 셈은 그대로)
-    if (S.do?.instant && SECRET.iai && SECRET.gnsCrouch) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!me.inputActive || !!me.parryGuard?.held || sw, dt, false, busy ? 0 : this.iaiArm.sheathe);
-    else if (S.do?.instant && SECRET.iai && SECRET.gnsReadyHip) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!(me.handGrip ?? me.inputActive) || !!me.parryGuard?.held || sw, dt, true, busy ? 0 : this.iaiArm.sheathe);
+    if (S.do?.instant) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!(me.handGrip ?? me.inputActive) || !!me.parryGuard?.held || sw, dt, true, busy ? 0 : this.iaiArm.sheathe);
     if (S.do?.gilmok) {
       const was = this.gilArm.armed;
       this.gilArm.tick(dt, d0 > gilmokLine(me, V.reach, S.do), sw || busy || armHold(me)); // 길목: 내 칼끝 거리 밖 (일본은 상대 칼 닿는 거리 밖) · 판 시작 정지 동안 셈 0 (10/27 23:0x — 싱지르와 같은 무장 시계)
@@ -942,7 +936,7 @@ export class PlayerSecretWatch {
       this.combo = this.gap > SECRET.playerChainGap ? 1 : this.combo + 1;
       this.gap = 0;
       if (S.when === 'bindCount') {
-        this.binds.strike(SECRET.iberianHurt === 'wound' ? (foe.wounds?.length ?? 0) > w.w0 : w.landed, w.bound); // '피해' = 벤 상처(iberianHurt 'wound') 또는 아픔 +0.05
+        this.binds.strike((foe.wounds?.length ?? 0) > w.w0, w.bound); // '피해' = 벤 상처(iberianHurt 'wound') 또는 아픔 +0.05
         if (!busy && !this.open && this.binds.ready) this.openWindow(null, SECRET.iberianWindow); // 셋째 맺힘 → 다음 공격 입력이 비기 (창 iberianWindow)
       }
       if (!busy && !this.open && chainRange(d0, V)) {
@@ -955,7 +949,7 @@ export class PlayerSecretWatch {
     // 상대 사건 (AI secretScan 과 같은 꼴: 사건 한 번에 한 번, 0.3 s 그치면 다시 건다)
     const r = me.right(_r);
     const E = this.ev;
-    const enter = SECRET.gnsWalkIn && SECRET.gnsEnter && S.do?.instant ? { enterLine: gnsEnterLine(V), iaiArmed: V.armed } : null; // 일본 들어옴 (10/25 — 발도 대기인 채 상대가 내 발도가 닿는 거리를 넘어 듦) · 10/25 22:3x 들어옴 창 gnsWalkIn 0(기본 — 사장님 입력 글에 없음)이면 안 봄
+    const enter = null; // 일본 들어옴 (10/25 — 발도 대기인 채 상대가 내 발도가 닿는 거리를 넘어 듦) · 10/25 22:3x 들어옴 창 gnsWalkIn 0(기본 — 사장님 입력 글에 없음)이면 안 봄
     const { on, ctx } = secretEvent(S, this.sense, foe, s0, c, r, d0, V.foeReach, me, { reach: S.do?.gilmok ? gilmokLine(me, V.reach, S.do) : V.reach, dt, st: E, armed: this.gilArm.armed, ...enter }); // ex: 이베리아 호 안쪽 (reach · 머문 시간) · 길목 (준비) · 일본 들어옴
     // 고노센 든 칼 이어 봄 (10/31 — SECRET.gnsRaiseLatch · 사장님 확인 전): 준비된 채 상대가 발도가 닿는 거리 밖에서 칼을 들었으면(창 없음) 그 들기를 playerWindow 초 붙잡아,
     //  그 사이 상대가 그 칼로 내 발도 선 안에 들면 그때 창(같은 '듦' 창) — 선 밖에서 시작해 들어오며 치는 칼도 '내 간격에서 공격을 시도'로 셈. 새 수 없음(창 길이 그대로) · 끄면 이 몫 없음
@@ -977,7 +971,7 @@ export class PlayerSecretWatch {
     E.off = 0;
     if (!E.armed || s0.state !== 'stand' || this.open) return;
     if (!secretCond(S, ctx, d0, V)) {
-      if (SECRET.gnsRaiseLatch && S.do?.instant && ctx?.ev === 'raise' && V.armed && !E.latch) E.latch = { ctx, t: 0 }; // 위 — 든 칼 이어 봄
+      if (S.do?.instant && ctx?.ev === 'raise' && V.armed && !E.latch) E.latch = { ctx, t: 0 }; // 위 — 든 칼 이어 봄
       return;
     }
     E.armed = false;
@@ -985,7 +979,7 @@ export class PlayerSecretWatch {
       this.gilArm.consume(); // 한 번 준비에 한 번 기회 — 창을 놓치면 다시 간격 밖에서 준비해야 한다
       this.gilWins++;
     }
-    this.openWindow(ctx, ctx?.ev === 'enter' && SECRET.gnsEnterWindow > 0 ? SECRET.gnsEnterWindow : SECRET.playerWindow); // 여쭘 A (10/25 08:0x · 기본 0 = 다른 창과 같은 playerWindow): 들어옴 창만 짧게
+    this.openWindow(ctx, SECRET.playerWindow); // 여쭘 A (10/25 08:0x · 기본 0 = 다른 창과 같은 playerWindow): 들어옴 창만 짧게
   }
 
   /**
@@ -998,11 +992,6 @@ export class PlayerSecretWatch {
    */
   pressTick(dt, busy) {
     const me = this.me;
-    if (SECRET.mordRule === 'press') {
-      const b = me.barge;
-      if (pressStep(this, dt, b?.phase === 'press', busy, !!this.open, secretVal(this.S.cond.press), b?.phase === 'step' ? b : null)) this.openWindow({ ev: 'press', held: this.pressHeld });
-      return;
-    }
     // 'close' (10/29 20:0x 사장님 — SECRET.mordRule): 몸이 붙어 있음 = 가슴 사이 ≤ mordCloseN(0.8 m 모든 무기 — 10/30 00:4x 사장님 · null 이면 밀치기가 닿는 거리 CLOSE.reach) · 나 · 상대 서 있음 — 밀치기 꼴 · 스틱 · 긋기와 상관없이.
     //  셈 · 너그러움(mordGrace) · 창은 같은 pressStep(첫 걸음 멈춤 mordStepPause 는 밀치기 걸음 몫이라 안 씀)
     const n = SECRET.mordCloseN ?? CLOSE.reach(me.armed ? me.weapon : null);
@@ -1296,7 +1285,7 @@ export class PlayerSecretWatch {
    */
   canBuffer() {
     const P = this.pc;
-    return !!(SECRET.cnBuffer && ((this.S?.when === 'parry' && this.S.cond?.window === 'apart') || this.S?.when === 'gyeoksal') && P?.pend && !P.buf && !this.open && !this.queued); // 격살(10/22)도 같은 미리 받기
+    return !!(((this.S?.when === 'parry' && this.S.cond?.window === 'apart') || this.S?.when === 'gyeoksal') && P?.pend && !P.buf && !this.open && !this.queued); // 격살(10/22)도 같은 미리 받기
   }
 
   /** 입력을 받아 둔다 (dir = 그 끌기의 방향 — fire 의 o.dir 와 같은 꼴) */
@@ -1370,24 +1359,13 @@ export class PlayerSecretWatch {
    *  몸이 비기를 낼 수 없는 때(update 첫머리 — 내가 넘어짐 · 죽음 · 칼 없음 · 상대 죽음)는 이것과 상관없이 닫는다.
    */
   holding() {
-    return !!SECRET.secretHold && !!this.open && (this.open.age ?? 0) < SECRET.playerWindow - 1e-6; // 1e-6: 스텝 시간 더하기의 떠다니는 소수 (창 끝과 같은 스텝에 닫히게)
+    return !!this.open && (this.open.age ?? 0) < SECRET.playerWindow - 1e-6; // 1e-6: 스텝 시간 더하기의 떠다니는 소수 (창 끝과 같은 스텝에 닫히게)
   }
 
-  /**
-   * 거리 판단 리솔루토 ① (11/11 — 사장님 '거리 제한을 풀어서 잘못 판단하면 빗나가게' → '거리 판단에 맡기기 -> 진행하고' · SECRET.risolutoReach 스위치 · 기본 끔):
-   *  열린 리솔루토 창의 '두 칼이 떨어진 뒤 지난 시간'(open.apart — 칼끼리 어느 부위든 가까움 bladesNear · 덮음 거리 risolutoCover 0.15 m · 실제 맞닿음이면 0 으로).
-   *  창은 연 뒤 playerWindow(0.6 s — secretHold)를 지키고, 그 뒤에는 두 칼이 가까운 동안 + 떨어진 뒤 risolutoReachKeep 초까지 이어진다(reachHolding).
-   *  지킴(holding) 밖이라 그동안 간격이 모자라거나(risolutoGap) 내가 베면 닫힌다(risoTick · fire 그대로). 재기: riso.reachExt = 0.6 s 를 넘어 이어진 창 수 · 끄면 이 함수를 안 부름
-   */
-  reachTick(dt) {
-    const O = this.open;
-    O.apart = bladesNear(this.me, this.foe) ? 0 : (O.apart ?? 0) + dt;
-    if (!O.ext && !this.holding() && this.reachHolding()) (O.ext = true), (this.riso.reachExt = (this.riso.reachExt ?? 0) + 1);
-  }
 
   /** 거리 판단 리솔루토 ①: 칼이 떨어진 뒤 risolutoReachKeep 초가 안 됐으면 참 (스위치 끔 · 리솔루토 아님 · 창 없음이면 늘 거짓 — 전 판과 같음) */
   reachHolding() {
-    return !!this.riso && !!SECRET.risolutoReach && !!this.open && (this.open.apart ?? 0) < (SECRET.risolutoReachKeep ?? 0) - 1e-6;
+    return false;
   }
 
   /** 창 안의 공격 입력: 열린 창을 닫고 그 비기 { S, ctx } 를 돌려준다 (없으면 null) */

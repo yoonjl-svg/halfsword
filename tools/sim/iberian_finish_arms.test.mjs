@@ -8,7 +8,6 @@ import { newRound } from './harness_m.mjs';
 import { SECRET, JOINTS } from '../../src/config.js';
 // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본 · 싱지르 = 특수 공격): 이 파일은 싱지르 비기 판 장면(무장 창 · 비기 몫 0.5 · 11/05 대본)이라
 //  그 판('spin')으로 묶는다. 특수 공격 판(무장 없음 · 0.3 · 한 걸음 나가며)의 같은 성질은 tools/sim/ib_swap.test.mjs
-SECRET.iberianSecret = 'spin';
 
 test('잣대: 선 자세 팔 — 과신전 · 경첩 밖 · 손목 범위 안 (재는 식이 맞나)', () => {
   const G = newRound({ seed: 7, weapon: 'zweihander', weapon2: 'longsword', gap: 6, walls: false });
@@ -23,52 +22,3 @@ test('잣대: 선 자세 팔 — 과신전 · 경첩 밖 · 손목 범위 안 (�
   G.world.free();
 });
 
-test('싱지르 감기 손 자리 (10/24 14:0x 사장님 결정 — SECRET.ibSpin.windSide): 칼 든 쪽 감기 아래팔-칼 ≤ 135° · 반대 쪽 그대로 ≤ 80° · windSide 0 이면 옛 꼴(≥ 140°)', () => {
-  const windMax = (dir) => {
-    const trace = [];
-    const { fired } = spinRun({ weapon: 'zweihander', start: 'langort', dir, target: 'stand', trace });
-    assert.ok(fired, '싱지르가 나감');
-    const w = trace.filter((x) => x.ph === 'ramp' || x.ph === 'wind').map((x) => x.wrist).filter(Number.isFinite);
-    assert.ok(w.length > 40, `감기 스텝 ${w.length}`);
-    return Math.max(...w);
-  };
-  assert.equal(SECRET.ibSpin.windSide, 1);
-  const nat = windMax(0);
-  const rev = windMax(-1);
-  assert.ok(nat <= 135, `칼 든 쪽 감기 아래팔-칼 ${nat}`);
-  assert.ok(rev <= 80, `반대 쪽 감기 아래팔-칼 ${rev}`);
-  const keep = SECRET.ibSpin.windSide;
-  const keepJ = [JOINTS.elbowSwivel, JOINTS.wristGuard];
-  SECRET.ibSpin.windSide = 0;
-  try {
-    // 옛 꼴은 옛 손목 판에서 (10/24 17:2x 팔꿈치 돌림 · 손목 교정을 켜면 windSide 0 이어도 손목 교정이 엄지 쪽 135 에서 멈춤)
-    [JOINTS.elbowSwivel, JOINTS.wristGuard] = [0, 0];
-    const old = windMax(0);
-    assert.ok(old >= 140, `옛 꼴 칼 든 쪽 감기 아래팔-칼 ${old}`);
-    [JOINTS.elbowSwivel, JOINTS.wristGuard] = keepJ;
-    assert.equal(windMax(-1), rev, '반대 쪽은 스위치와 상관없음');
-  } finally {
-    SECRET.ibSpin.windSide = keep;
-    [JOINTS.elbowSwivel, JOINTS.wristGuard] = keepJ;
-  }
-});
-
-for (const dir of [0, -1]) {
-  test(`싱지르 마무리 팔 (${dir ? '반대 쪽' : '칼 든 쪽'}): 과신전 · 경첩 옆 꺾임 · 손 엇갈림 없음 · 손목 100° 아래 · 두 손 0.2 m 안`, () => {
-    const trace = [];
-    const { fired } = spinRun({ weapon: 'zweihander', start: 'langort', dir, target: 'stand', trace });
-    assert.ok(fired, '싱지르가 나감');
-    const end = trace.filter((x) => x.ph === 'settle' || x.ph === 'follow' || x.ph === 'stiff');
-    assert.ok(end.length > 100, `마무리 스텝 ${end.length}`);
-    const mn = (k) => Math.min(...end.map((x) => x[k]).filter(Number.isFinite));
-    const mx = (k) => Math.max(...end.map((x) => x[k]).filter(Number.isFinite));
-    assert.ok(mn('elbow') > -5, `칼 팔꿈치 과신전 ${mn('elbow')}`);
-    assert.ok(mn('elbowO') > -5, `빈팔 팔꿈치 과신전 ${mn('elbowO')}`);
-    assert.ok(Math.max(mx('elbowOff'), -mn('elbowOff'), mx('elbowOffO'), -mn('elbowOffO')) < 5, '팔꿈치 경첩 옆 꺾임');
-    assert.ok(mx('wrist') < 100, `아래팔-칼 ${mx('wrist')}`);
-    assert.ok(mx('roll') <= RANGE.roll[1], `굴림 ${mx('roll')}`);
-    assert.ok(mx('shPlane') <= RANGE.shPlane[1], `어깨 수평 모음 ${mx('shPlane')}`);
-    assert.ok(Math.max(...end.filter((x) => x.gripping).map((x) => x.gripGap)) < 0.2, '두 손 떨어짐');
-    assert.equal(end.filter((x) => x.cross).length, 0, '두 손 엇갈림');
-  });
-}

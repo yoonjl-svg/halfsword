@@ -3267,7 +3267,7 @@ export class Fighter {
     // 빈 손은 앞으로 들어 균형을 잡는다 (다친 팔은 힘없이 늘어진다)
     const armO = this.limbs.armO;
     const OA = this.swordArt?.offArm; // 유파 빈팔 (10/10 고증 — schools.js offArm: 이탈리아만). 없으면 아래 두 줄 그대로
-    if ((this.iai?.oneHand || this.iaiOneHold) && this.state === 'stand') this.offArmSchool({ guard: SECRET.iaiSaya && SECRET.iaiSayaHip ? sayaGuard(this) : SECRET.iaiSayaHand }, armO); // 고노센 한 손 발도 (10/12 03:2x — secret_instant.js startIai): 빈손은 배 앞 (10/14 — 전 칼집을 뒤로 당기는 꼴 鞘引き, 뒷짐처럼 보여 몸통 앞으로)
+    if ((this.iai?.oneHand || this.iaiOneHold) && this.state === 'stand') this.offArmSchool({ guard: SECRET.iaiSayaHip ? sayaGuard(this) : SECRET.iaiSayaHand }, armO); // 고노센 한 손 발도 (10/12 03:2x — secret_instant.js startIai): 빈손은 배 앞 (10/14 — 전 칼집을 뒤로 당기는 꼴 鞘引き, 뒷짐처럼 보여 몸통 앞으로)
     //  → 11/13 사장님 '욍손자리 원전대로' (SECRET.iaiSaya 1): 칼집 입을 쥐고 왼 허리(左帯)로 당긴 자리 iaiSayaHip — 골반 틀(칼집은 허리띠에 참)을 가슴 틀로 옮겨 넘김 (sayaGuard · 다시 쥐기 시작 점 regripFrom 과 같은 점)
     else if (OA && this.armed && this.state === 'stand') this.offArmSchool(OA, armO);
     else {
@@ -3579,8 +3579,7 @@ export class Fighter {
     if (this.closeW > 0 && this.foe) handLocal.x += (this.foeDistance() - 0.11 - handLocal.x) * (this.skill.pom ? this.closeW * (1 - th.w) : this.closeW);
     // 시험 (SECRET.holdDepth — 기본 끔): 맞힌 겨눈 찌름의 굳음 동안(holdGhost — 내 칼 ↔ 상대 몸 안 부딪힘) 몸이 런지 앞발을 따라 더 나가도
     //  칼끝이 겨눈 곳(상대 몸통 가운데 — 옛 길 thrustArm 0 의 칼끝 자리)을 넘지 않게 손을 칼 줄을 따라 거둔다 — 칼이 상대 몸을 뚫고 등 뒤로 나가 보이는 몫을 줄임 (기록 §9-9)
-    if (SECRET.holdDepth && this.holdGhost > 0 && th.w > 0 && this.foe?.bodies?.chest) holdDepthHand(this, handLocal, th);
-    else this.holdDepth = null;
+    this.holdDepth = null;
     const c = chest.translation();
     // 공통 탈진 덧씌움: 유파 자세표를 바꾸지 않고 손을 내리며 어깨/팔이 호흡을 따라간다.
     if (this.stamina.pose > 0) {
@@ -4066,7 +4065,6 @@ export class Fighter {
   }
 
   secretReaching() {
-    if (!SECRET.secretReach) return false;
     const sec = this.skill?.sec;
     return !!this.iai || !!(sec && sec.stage !== 'stiff') || !!this.secretActing;
   }
@@ -4841,40 +4839,8 @@ function elbowSwivel(pDir, Dn, S, d, alpha, D, a, th0 = 0, k = 1, align = 0, sid
   if (th !== 0) pDir.multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th)).normalize();
   return th;
 }
-const _hdH = new THREE.Vector3(); // holdDepthHand
 const _hdD = new THREE.Vector3();
 const _hdL = new THREE.Vector3();
-/**
- * 맞힌 겨눈 찌름의 굳음 동안 손 거두기 (시험 SECRET.holdDepth — driveSword): 칼끝 깊이 = (가슴 + 손 목표 + 칼 방향 × 손 → 칼끝 길이 − 상대 가슴)·(내 가슴 → 상대 가슴 가로 방향).
- *  굳음 첫 스텝(칼이 운동학으로 놓인 끝 자리)의 손 → 칼끝 길이와 그때 깊이를 기억하고, 바닥 = 그 깊이와 0(상대 가슴 가운데 — 겨눈 곳) 가운데 얕은 쪽.
- *  스텝마다 넘친 만큼 손을 칼 줄(th.dir)을 따라 뒤로 (손 목표만 — 칼 방향 그대로) · 손은 가슴 앞 0.12 m(closeReach 바닥) 안으로는 안 거둠
- */
-function holdDepthHand(f, hl, th) {
-  const c = f.bodies.chest.translation();
-  const fc = f.foe.bodies.chest.translation();
-  const ux = fc.x - c.x;
-  const uz = fc.z - c.z;
-  const L = Math.hypot(ux, uz) || 1;
-  const Dw = _hdD.set(th.dir[0], th.dir[1], th.dir[2]).applyQuaternion(f.yaw).normalize();
-  const du = (Dw.x * ux + Dw.z * uz) / L;
-  const at = (h) => {
-    const H = _hdH.copy(h).applyQuaternion(f.yaw);
-    return ((c.x + H.x - fc.x) * ux + (c.z + H.z - fc.z) * uz) / L;
-  };
-  if (!f.holdDepth) {
-    const tip = f.bladePoint(1, _hdL);
-    const H = _hdH.set(th.hand[0], th.hand[1], th.hand[2]).applyQuaternion(f.yaw);
-    const len = (tip.x - c.x - H.x) * Dw.x + (tip.y - c.y - H.y) * Dw.y + (tip.z - c.z - H.z) * Dw.z; // 손 목표 → 칼끝 (칼 줄 위)
-    f.holdDepth = { len, ref: Math.min(0, at(_hdL.set(th.hand[0], th.hand[1], th.hand[2])) + du * len) };
-  }
-  const ex = at(hl) + du * f.holdDepth.len - f.holdDepth.ref;
-  if (!(ex > 0) || du < 0.2) return;
-  let s = ex / du;
-  if (th.dir[0] > 1e-3) s = Math.min(s, Math.max(0, (hl.x - 0.12) / th.dir[0]));
-  hl.x -= th.dir[0] * s;
-  hl.y -= th.dir[1] * s;
-  hl.z -= th.dir[2] * s;
-}
 const _wgQ = new THREE.Quaternion(); // 비정상 손목 교정 (wristGuardAim · wristClamp)
 const _wgF = new THREE.Vector3();
 const _wgZ = new THREE.Vector3();
@@ -5056,7 +5022,7 @@ const _grQ = new THREE.Quaternion();
 /** 다시 쥐기 시작 점 (11/13 — offHand rgK): 칼집 손 자리 (한 손 발도 동안 applyPose 의 offArmSchool 이 빈손 목표로 둔 점과 같은 셈) → 월드 —
  *  SECRET.iaiSaya 1 = 원전 왼 허리 iaiSayaHip (골반 몸체 기준 [앞, 위, 바깥] · sayaHandW) · 0 = 10/14 배 앞 iaiSayaHand (가슴 몸체 기준 — 전 판 셈 그대로) */
 function regripFrom(f, out) {
-  if (SECRET.iaiSaya && SECRET.iaiSayaHip) return sayaHandW(f, out);
+  if (SECRET.iaiSayaHip) return sayaHandW(f, out);
   const g = SECRET.iaiSayaHand;
   const c = f.bodies.chest.translation();
   return out.set(g[0], g[1], -f.side * g[2]).applyQuaternion(rot(f.bodies.chest, _grQ)).add(_oaC.set(c.x, c.y, c.z));

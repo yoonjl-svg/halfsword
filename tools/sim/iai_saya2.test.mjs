@@ -34,9 +34,6 @@ const maxJump = (F) => {
 };
 
 test('① 기본값 — 세 맞춤 켬 · 鞘戻し 점은 배꼽 앞 · 칼집 입 자리 · 다시 쥐는 시간 사다리 값', () => {
-  assert.equal(SECRET.iaiSayaReady, 1);
-  assert.equal(SECRET.iaiRegripFade, 1);
-  assert.equal(SECRET.iaiSayaModoshi, 1);
   const [x, y, z] = SECRET.iaiSayaMouth;
   assert.ok(x > 0.1 && x < 0.2, `배 앞면(골반 상자 앞 0.1) 밖 (${x})`);
   assert.equal(y, SECRET.iaiSayaHip[1], '허리띠 높이 = 칼집 손 자리 높이');
@@ -70,35 +67,4 @@ test('③ 鞘引き — 칼이 칼집을 떠나는 몫에서 왼손이 이미 �
   assert.ok(held.sum.preOff.sayaW === 0 && held.sum.sayaUB == null, '칼자루를 쥔 채 낸 발도는 鞘引き 놓기 없음 (11/13 그대로)');
 });
 
-test('④ 두 손으로 돌아오는 때 — 풀기(振りかぶり) 동안 시작 · 鞘戻し 점을 풀기 끝에 지남 · 굳음 · 풀기 길이 그대로 · 튐 없음', () => withS({ iaiObi: 0 }, () => {
-  // 11/14 帯刀(SECRET.iaiObi) 뒤 鞘戻し 점은 대기 칼집 입 쥠(iai_obi.js obiGrip — iai_obi.test ④)으로 옮겨 이 장면(iaiSayaMouth 를 잼)은 그때 판으로 묶음 (기록 docs/strike/iai_obi_2026-11-14.md §7)
-  for (const [weapon, start] of [['uchigatana', 'hip'], ['uchigatana', 'held'], ['uchigatana', 'crouch'], ['monohoshizao', 'hip'], ['kusanagi', 'held']]) {
-    const r = shot({ weapon, start });
-    const s = r.sum;
-    const off = withS(OFF, () => shot({ weapon, start }));
-    assert.equal(s.grip.nHold, off.sum.grip.nHold, `${weapon} ${start} 굳음 스텝 수 그대로`);
-    assert.equal(s.grip.nFade, off.sum.grip.nFade, `${weapon} ${start} 풀기 스텝 수 그대로`);
-    assert.equal(s.rgStart?.ph, 'fade', `${weapon} ${start} 다시 쥐기가 풀기 동안 시작`);
-    assert.equal(off.sum.rgStart?.ph, 'free', '끄면 풀기가 끝난 뒤');
-    const lastFade = r.frames.filter((f) => f.ph === 'fade').at(-1);
-    assert.ok(lastFade.rgK != null && Math.abs(lastFade.rgK - 0.5) < 0.1, `${weapon} ${start} 풀기 끝 = 다시 쥐기 가운데(鞘戻し 점) ${lastFade.rgK}`);
-    assert.ok(s.via && s.via.tgt < 0.002, `${weapon} ${start} 빈손 목표가 鞘戻し 점을 지남 ${JSON.stringify(s.via)}`);
-    assert.ok(s.via.hand < 0.15, `${weapon} ${start} 빈손이 鞘戻し 점 곁을 지남 ${s.via.hand}`);
-    assert.ok(s.offJump.d < 0.08, `${weapon} ${start} 빈손 목표 이웃 스텝 옮김 ${JSON.stringify(s.offJump)} (보통 두 손 싸움 몫 안)`);
-    const last = r.frames.filter((f) => f.ph === 'free').at(-1);
-    assert.ok(last.grip && last.gap <= s.seatRef + 0.03 && last.rgK == null, `${weapon} ${start} 다시 쥐고 자리 잡음 (틈 ${last.gap})`);
-  }
-}));
 
-test('⑤ 끄면 11/13 판 — 대기 동안 두 손 · 鞘引き 놓기 없음 · 풀기 끝 뒤 곧은 다시 쥐기', () => {
-  const r = withS(OFF, () => shot({ start: 'hip' }));
-  const s = r.sum;
-  assert.ok(s.preGrip && s.preOff.sayaW === 0, '대기 동안 칼자루 끝을 쥠');
-  assert.equal(s.sayaUB, null, '鞘引き 놓기 없음');
-  assert.equal(s.rgStart?.ph, 'free', '풀기가 끝난 뒤 다시 쥐기');
-  const g = SECRET.iaiSayaHip;
-  const R = r.frames.filter((f) => f.rgK != null && f.offP);
-  // 곧은 섞기: 다시 쥐는 동안 빈손 목표가 왼 허리 → 칼자루 끝 곧은 줄 위 (鞘戻し 점을 지나지 않음)
-  assert.ok(Math.min(...R.map((f) => dist3(f.offP, mouthP()))) > 0.02, '鞘戻し 점을 지나지 않음');
-  assert.ok(dist3(R[0].offP, [g[0], g[1], -g[2]]) < 0.03, '왼 허리에서 시작');
-});

@@ -264,57 +264,6 @@ test('④ 길게 누름: 가운데 얹은 엄지는 길게 누름(엄지 떠돎 
   assert.deepEqual(R.input.holdState(), { down: true, still: false }, '끎');
 });
 
-test('④ 길게 누름이 풍차 베기를 감음 · 막는 선을 1.5 s 쥐어도 감지 않음 · 탭은 탭 (실제 몸 — redondo_hold 입력 층 시험과 같은 꼴)', async () => {
-  const { newRound, DT } = await import('./harness_m.mjs');
-  const { PlayerUniqueAssist } = await import('../../src/unique_assist.js');
-  const keep = SECRET.iberianSecret;
-  SECRET.iberianSecret = 'spin'; // 정수리 가르기 특수 공격 판 (redondo_hold.test.mjs 와 같게 — 무장 없이 길게 눌러 냄)
-  const G = newRound({ walls: true, seed: 11, weapon: 'zweihander', weapon2: 'longsword', gap: 3.4 });
-  try {
-    const Pl = G.player;
-    G.ai.update = () => {};
-    const uq = new PlayerUniqueAssist(Pl, { names: new Set(['redondo']) });
-    for (let i = 0; i < 3; i++) G.step();
-    const R = rig('stick');
-    const hand = Pl.handOffset;
-    const fr = () => {
-      const hs = R.input.holdState();
-      uq.holdInput(hs.down, hs.still, false);
-      const { d } = frame(R, { x: hand.x, y: hand.y });
-      if (!uq.winding) { hand.x += d.x; hand.y += d.y; }
-      Pl.handHeld = R.input.activeTouch !== null;
-      Pl.inputActive = Math.abs(d.x) + Math.abs(d.y) > 1e-5;
-      Pl.handGrip = R.input.press?.atk ? R.input.atk.grip : false;
-      G.step(); G.step();
-      R.wait(1000 / 60);
-    };
-    const rest = () => { for (let k = 0; k < 90; k++) fr(); uq.coolT = {}; Pl.stamina.value = STAMINA.max; };
-    // 막는 선 쥐기 1.5 s
-    R.sDown(1, P(0.6, 0.5).x, P(0.6, 0.5).y);
-    for (let i = 0; i < 90; i++) fr();
-    assert.equal(uq.stats.winds ?? 0, 0, '쥔 엄지는 감지 않음');
-    R.sUp(1, P(0.6, 0.5).x, P(0.6, 0.5).y);
-    rest();
-    // 탭
-    R.sDown(2, C.x, C.y); fr(); fr(); fr();
-    R.sUp(2, C.x, C.y);
-    assert.equal(R.input.consumeTaps(), 1, '탭');
-    rest();
-    assert.equal(uq.stats.winds ?? 0, 0);
-    // 가운데 길게 누름 (떠돎 4 px)
-    R.sDown(3, C.x, C.y);
-    for (let i = 0; i < Math.ceil((realS(0.6) + 0.15) / F); i++) { R.sMove(3, C.x + (i % 5) - 2, C.y + (i % 3) - 1); fr(); }
-    assert.equal(uq.winding, true, '가운데 길게 누름 = 감기');
-    R.sUp(3, C.x, C.y);
-    fr(); fr();
-    assert.equal(uq.stats.fired?.redondo, 1, '떼면 내려침');
-    void DT;
-  } finally {
-    SECRET.iberianSecret = keep;
-    G.world.free();
-  }
-});
-
 test('④ 원 긋기: 손잡이로 테를 한 바퀴 넘게(0.8 s) 그리면 공격 원(싱지르 — 손가락과 같은 셈 attack_circle.js)이 참 · 반 바퀴는 거짓', () => {
   const V = SECRET.ibSpin;
   const o = { time: V.circleTime, need: 2 * Math.PI, rMin: V.circleR, gap: V.circleGap, inner: V.circleInner };

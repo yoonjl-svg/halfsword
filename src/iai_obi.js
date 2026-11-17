@@ -23,7 +23,7 @@ const D2R = Math.PI / 180;
 export const OBI_IDS = Object.freeze(['uchigatana', 'muramasa', 'kusanagi', 'monohoshizao']);
 /** 이 몸이 帯刀 대기 칼 자리 · 칼집을 쓰나 (스위치 SECRET.iaiObi · 일본 칼 넷) */
 export function obiOn(f) {
-  return !!SECRET.iaiObi && !!SECRET.iaiObiMouth && OBI_IDS.includes(f.weapon?.id);
+  return !!SECRET.iaiObiMouth && OBI_IDS.includes(f.weapon?.id);
 }
 
 const _q = new THREE.Quaternion();
@@ -569,7 +569,7 @@ function sayaGroup(prof, look) {
  */
 export function attachObiSaya(f, look) {
   f.obiSaya = null;
-  if (!SECRET.iaiObiSaya || !obiOn(f) || !f.groups?.pelvis || !f.swordGroup) return null;
+  if (!obiOn(f) || !f.groups?.pelvis || !f.swordGroup) return null;
   // 옷 두께 (누운 몸 밀어냄 — obiPush): 칼집을 달기 전 그림으로 잼
   const garm = {
     pelvis: partHalf(f.groups.pelvis, PELVIS_BOX),
@@ -585,7 +585,7 @@ export function attachObiSaya(f, look) {
   const lk = SAYA_LOOK[f.weapon.id] ?? SAYA_LOOK.uchigatana;
   if (ownScabbard(f, look)) {
     // 다라이시 (11/14 사장님 '다라이시 검집 모양은 그대로 두고 자리만 다른 인물처럼 허리띠로'): 자기 빈 검집 그림을 칼집 틀로 옮겨 같은 몰기 · 밀어냄 · 땅 셈 (daraishiSaya)
-    const own = SECRET.iaiObiOwn ? daraishiSaya(f, look) : null;
+    const own = daraishiSaya(f, look);
     if (!own) return null;
     ({ g, prof } = own);
   } else {
@@ -594,9 +594,9 @@ export function attachObiSaya(f, look) {
     g = sayaGroup(prof, lk);
   }
   f.groups.pelvis.add(g);
-  const edge = SECRET.iaiObiEdge ? 1 : f.weapon.id === 'monohoshizao' ? 1 : -1; // 날 쪽 — 날 위(iaiObiEdge — 원전 「刃を上に」)면 처음부터 위
+  const edge = 1; // 날 쪽 — 날 위(iaiObiEdge — 원전 「刃を上に」)면 처음부터 위
   f.obiSaya = { g, prof, k: 0, t: null, pulled: false, fw: 0, fPos: new THREE.Vector3(), fQuat: new THREE.Quaternion(), edge, legR, legRF, shinR, garm, skirt, knob: g.userData.knob ?? null, cord: null, own: !!g.userData.own }; // edge: 날 쪽 (obiSayaPose) · legR: 허벅지 그림 반지름 (obiPush) · garm: 누운 몸 옷 두께 상자
-  if (SECRET.iaiObiSageo && f.obiSaya.knob) f.obiSaya.cord = sageoCord(f, g.userData.cordColor ?? lk.cord ?? lk.body);
+  if (f.obiSaya.knob) f.obiSaya.cord = sageoCord(f, g.userData.cordColor ?? lk.cord ?? lk.body);
   syncObiSaya(f);
   return g;
 }
@@ -1072,7 +1072,7 @@ export function obiPush(f, pos, quat, quat0 = null) {
   const pt = f.bodies.pelvis.translation();
   const qpi = _qs.set(pr.x, pr.y, pr.z, pr.w).invert();
   // 누운 몸(골반 위 축이 누움 — 넘어짐 · 죽음): 옷 두께 상자 · 허벅지 온 길이 굵기 · 정강이까지 (서 있을 땐 그림 상자 · 허벅지 윗반 그대로 — 쉬는 칼집 자리 그대로)
-  const lie = !!SECRET.iaiObiDroop && lieOf(f) > 0.5 && !!S.garm;
+  const lie = lieOf(f) > 0.5 && !!S.garm;
   const boxes = [[_zero, _ident, lie ? S.garm.pelvis : PELVIS_BOX]];
   for (const [name, H0, C, Q] of [['abdomen', ABDOMEN_BOX, _ac, _aq], ['chest', CHEST_BOX, _cc, _cq]]) {
     const H = lie ? S.garm[name] ?? H0 : H0;
@@ -1259,7 +1259,7 @@ function obiGround(f, pos, quat, turn = 0, force = false) {
   const need = (S.gR + (SECRET.iaiObiSkin ?? 0.006) + gy - M.y) / L; // 칼집 끝이 땅 위에 남는 가장 작은 위 성분
   // 처짐 (11/14 — SECRET.iaiObiDroop): 누운 몸(골반 위 축 y 0.5 → 0.2)에서 칼집이 위로 서면(칼 끝 쪽이 하늘로 — 칼집 쪽이 위인 옆으로 누운 몸) 띠에 낀 칼집이 제 무게로 처져
   //  누운 몫만큼 수평까지 내림 — 몸 위(엉덩이 · 허벅지 겉)에 얹힘. 이미 수평 아래면 그대로(땅 셈이 맡음)
-  const lie = SECRET.iaiObiDroop ? lieOf(f) : 0;
+  const lie = lieOf(f);
   const yD = D.y > 0 ? D.y * (1 - lie) : D.y;
   if (D.y >= need && !force && lie <= 0) return 0;
   const yN = Math.min(0.9, Math.max(need, force ? Math.min(yD, 0.9) : yD));
@@ -1327,7 +1327,7 @@ export function obiEdgeRoll(f) {
   const now = f.stamina?.time ?? 0;
   const dt = E.t != null ? Math.max(0, now - E.t) : 0;
   E.t = now;
-  if (!SECRET.iaiObiEdge || !obiOn(f) || !f.sword || !f.armed) return (E.roll = 0);
+  if (!obiOn(f) || !f.sword || !f.armed) return (E.roll = 0);
   const I = f.iai;
   if (I && I.kind === 'iai') {
     if (E.iai !== I) { E.iai = I; E.roll0 = E.roll; }

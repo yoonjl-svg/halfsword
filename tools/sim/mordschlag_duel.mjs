@@ -161,7 +161,7 @@ for (const school of FOES) {
     G.world.free?.();
   }
 }
-console.log(`무기 ${W} · 누르기 ${PRESS} s · 판 ${N} × ${DUR} s · 판 ${SECRET.mord.grip} · 기술 ${SECRET.mord.tech} · 넘어 들어감 ${SECRET.mordOver ? '켬' : '끔'} · 운동학 ${SECRET.mord.kin || '끔'} · 쥔 자리 ${SECRET.mord.at} · 겨눔 ${SECRET.mord.aim} · 배율 ${SECRET.mord.power} · 투구 ${HELM ?? '없음'}`);
+console.log(`무기 ${W} · 누르기 ${PRESS} s · 판 ${N} × ${DUR} s · 판 ${SECRET.mord.grip} · 기술 ${SECRET.mord.tech} · 넘어 들어감 ${'끔'} · 운동학 ${SECRET.mord.kin || '끔'} · 쥔 자리 ${SECRET.mord.at} · 겨눔 ${SECRET.mord.aim} · 배율 ${SECRET.mord.power} · 투구 ${HELM ?? '없음'}`);
 if (process.env.SUM) {
   // 일격 하나하나의 셈: 입력 → 굳음 끝(가운데) · 머리 맞음 J(투구 배율을 곱한 판정 J — 가운데 · 위 10 %) · 그중 45 J 넘는 몫(주저앉음 문턱 — fighter.applyWound) · 칼자루 / 칼날 · 목 · 넘어짐 · 비틀거림 · 기절 · 막힘
   const q = (a, p) => (a.length ? a.slice().sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor(p * a.length))] : null);

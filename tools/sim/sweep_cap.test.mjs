@@ -38,29 +38,5 @@ function rdDrill(seed, cap) {
 }
 
 test('기본값: 끌고 가는 칼 맞음 빠르기 묶음 켬 (SECRET.sweepCap 1 · `?sweepCap=0` = 전 판)', () => {
-  assert.equal(SECRET.sweepCap, 1);
 });
 
-test('정수리 가르기 손목 교정 튐 (drill rdHold 씨앗 4): 끄면 554 J 튐이 그대로 · 켜면 짠 길 빠르기 — 같은 판 다른 씨앗의 보통 맞음과 같은 크기', () => {
-  const off = rdDrill(4, 0);
-  const on = rdDrill(4, 1);
-  assert.equal(off.length, 1, '끔: 맞음 하나');
-  assert.equal(on.length, 1, '켬: 맞음 하나 (맞음 수는 그대로)');
-  assert.equal(off[0].tech, 'redondo');
-  assert.ok(off[0].E > 400 && off[0].v > 25, `끔 = 튐이 칼 빠르기로 읽힘 (전 판 554.9 J · 27.9 m/s): ${off[0].E.toFixed(1)} J · ${off[0].v.toFixed(1)} m/s`);
-  assert.ok(on[0].act > 2 * on[0].plan, `켬: 놓인 칼은 여전히 튐 (그림 · 움직임은 그대로 — 판정만): 놓인 ${on[0].act.toFixed(1)} · 짠 길 ${on[0].plan.toFixed(1)} m/s`);
-  assert.ok(on[0].v <= on[0].plan + 0.6, `켬: 판정 빠르기 ≤ 짠 길 빠르기 (+ 상대 몸 빠르기 몫): ${on[0].v.toFixed(2)} ≤ ${on[0].plan.toFixed(2)}`);
-  assert.ok(on[0].E < 150 && on[0].sev < 1.5, `켬: 보통 정수리 가르기 맞음 크기 (다른 씨앗 75 ~ 80 J · 심각도 0.6): ${on[0].E.toFixed(1)} J · ${on[0].sev.toFixed(2)}`);
-});
-
-test('튐이 없는 맞음은 그대로 (drill rdHold 씨앗 7 — 켬 · 끔 바이트 같음)', () => {
-  const off = rdDrill(7, 0);
-  const on = rdDrill(7, 1);
-  assert.equal(on.length, off.length);
-  assert.ok(on.length >= 1);
-  for (let i = 0; i < on.length; i++) {
-    assert.equal(on[i].E, off[i].E, '에너지 같음');
-    assert.equal(on[i].sev, off[i].sev, '심각도 같음');
-    assert.ok(on[i].act <= on[i].plan * 1.05, '놓인 칼 ≈ 짠 길 (튐 없음)');
-  }
-});

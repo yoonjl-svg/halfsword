@@ -8,7 +8,7 @@ import { CONFIG, newRound, DT, AI } from './harness_m.mjs';
 import { PlayerSecretWatch, secretLeft, secretUsesOf, useSecret, secretSpent } from '../../src/secret.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 // 준비까지 (11/14 사장님 '2초 후에 납도 시작' — 일본 준비는 iaiArmTime 뒤 납도 SECRET.iaiSheathe 가 끝나야 · 帯刀 끄면 납도 없음 · secret.js IaiArm.extra)
-const ARM = () => CONFIG.SECRET.iaiArmTime + (CONFIG.SECRET.iaiObi && CONFIG.SECRET.iaiSheathe > 0 ? CONFIG.SECRET.iaiSheathe : 0);
+const ARM = () => CONFIG.SECRET.iaiArmTime + (CONFIG.SECRET.iaiSheathe > 0 ? CONFIG.SECRET.iaiSheathe : 0);
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { SECRET } = CONFIG;

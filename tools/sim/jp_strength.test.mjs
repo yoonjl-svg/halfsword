@@ -26,8 +26,6 @@ const deOn = (k) => { const P = CONFIG.AI_PLAN; [P.schools, P.errSchools, P.pomm
 const withDeOff = (fn) => { const k = deOff(); try { return fn(); } finally { deOn(k); } };
 
 test('기본값: 새 스위치 모두 끔 · 일본 걷기 빠르기 그대로', () => {
-  assert.equal(SECRET.gnsHurtKeep, 0);
-  assert.equal(SECRET.gnsThrough, 0);
   assert.equal(UA.tsuStep, 0);
   assert.equal(AI_MAAI.hide, 0);
   assert.equal(JAPANESE_GAIT.speedMul, 0.7);
@@ -50,20 +48,6 @@ function humanRound(school, weapon, opp = 'longsword') {
   return { G, P, A: G.enemy };
 }
 
-test('gnsHurtKeep: 끔이면 맞음이 준비를 풂 · 켜면 맞음으로는 안 풀림 (치기 · 막기는 그대로 풂)', () => {
-  const f = { skill: {}, parryGuard: { held: false } };
-  try {
-    assert.equal(gnsHumanUnsettled(f, true), true, '끔 — 맞으면 풀림');
-    assert.equal(gnsHumanUnsettled(f, false), false);
-    SECRET.gnsHurtKeep = 1;
-    assert.equal(gnsHumanUnsettled(f, true), false, '켬 — 맞음만으로는 안 풀림');
-    assert.equal(gnsHumanUnsettled({ ...f, skill: { swinging: true } }, true), true, '휘두름은 풂');
-    assert.equal(gnsHumanUnsettled({ ...f, skill: { tap: {} } }, false), true, '탭은 풂');
-    assert.equal(gnsHumanUnsettled({ ...f, parryGuard: { held: true } }, false), true, '막기 단추는 풂');
-  } finally {
-    allOff();
-  }
-});
 
 test('jpMaaiHide: AI 가 일본 칼끝 거리를 hide m 짧게 봄 · 다른 유파 · 끔은 그대로', () => {
   const { G, P, A } = humanRound('japanese', 'uchigatana');

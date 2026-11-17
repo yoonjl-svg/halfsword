@@ -144,7 +144,7 @@ export function jpTsubame(ai, canChain) {
  */
 function jpGnsArm(ai) {
   const G = ai.jpGns;
-  const armed = !!SECRET.iai && !!ai.iaiArm?.armed;
+  const armed = !!ai.iaiArm?.armed;
   if (armed && !G.was) {
     const line = gnsEnterLine(ai.M);
     const rd = readRaiseD(ai);
@@ -276,7 +276,7 @@ export function jpArmRead(ai, dt) {
 /** 유도해도 되나 (jpBeat — 서서 준비를 쌓는 3 s): 고노센이 이 몸에 있고 · 기력이 고노센 값(SECRET.gnsCost) 넘게 있고 · 지금 칼집이 위험하지 않음. drawRead 0 이면 늘 (11/15 판) */
 export function jpLureOk(ai) {
   if (!J.drawRead || !(SECRET.gnsDraw > 0)) return true;
-  if (!ai.iaiArm || !SECRET.iai) return false;
+  if (!ai.iaiArm) return false;
   if (ai.me.stamina && !ai.me.stamina.infinite && !(ai.me.stamina.value > (SECRET.gnsCost ?? STAMINA.secretCost))) return false;
   return drawRisk(ai).ok;
 }

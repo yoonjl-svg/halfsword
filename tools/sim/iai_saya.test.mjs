@@ -36,8 +36,6 @@ const PELVIS_HALF_W = 0.16; // fighter.js partDefs pelvis 상자 반 너비
 const then1113 = (fn) => withS({ iaiSayaReady: 0, iaiRegripFade: 0, iaiSayaModoshi: 0, stiff: { ...SECRET.stiff, japanese: CONFIG.realS(1.2) } }, fn); // 11/14 비기 경직 0.6 통일 전 판(고노센 굳음 1.2 s — 그 장면을 잰 때)
 
 test('① 기본값 — 칼집 손 자리 원전(왼 허리) 켬 · 우치가타나 등 다시 쥐기 부드럽게 켬 · 10/14 배 앞은 전 판 값', () => {
-  assert.equal(SECRET.iaiSaya, 1);
-  assert.equal(SECRET.iaiRegripAll, 1);
   const [x, y, z] = SECRET.iaiSayaHip;
   assert.ok(Math.abs(x) <= 0.05, `몸 옆 줄 (앞뒤 ${x})`);
   assert.ok(y >= 0.03 && y <= 0.12, `허리띠 높이 (골반 가운데 위 ${y})`);
@@ -45,61 +43,6 @@ test('① 기본값 — 칼집 손 자리 원전(왼 허리) 켬 · 우치가타
   assert.equal(SECRET.iaiSayaHand.join(','), '0.24,-0.28,0', '`?iaiSaya=0` 판 = 10/14 배 앞 그대로');
 });
 
-test('② 사람 발도 — 뽑아 냄 · 벰 · 굳음 · 풀기 동안 빈손 목표 = 왼 허리 · 굳음 동안 빈손이 왼 허리 옆 / 끄면 10/14 배 앞', () => {
-  for (const weapon of ['uchigatana', 'monohoshizao']) {
-    for (const start of ['hip', 'held']) {
-      const r = then1113(() => shot({ weapon, start })); // 11/13 판으로 묶음 (위 then1113)
-      assert.ok(r.sum.ok && r.sum.oneHand, `${weapon} ${start} 한 손 발도`);
-      for (const ph of ['draw', 'hold', 'fade']) {
-        const F = phase(r.frames, ph);
-        assert.ok(F.length > 0, ph);
-        assert.equal(F.filter((f) => f.grip).length, 0, `${weapon} ${start} ${ph} 동안 빈손이 칼자루를 놓음`);
-        assert.ok(F.every((f) => f.offP && dist3(f.offP, hipP()) < 1e-3), `${weapon} ${start} ${ph} 빈손 목표 = 왼 허리 (골반 틀)`);
-      }
-      // 굳음 뒤 반(잔심 — 머무는 자리) 빈손 (아래팔 끝) — 왼 허리 옆: 목표 4 cm 안 · 몸 옆 줄 앞뒤 6 cm 안(뒷짐 아님) · 골반 너비 밖
-      const H = phase(r.frames, 'hold');
-      const late = H.slice(Math.floor(H.length / 2));
-      assert.ok(late.length > 20, '굳음 길이');
-      for (const f of late) {
-        assert.ok(dist3(f.ohP, hipP()) < 0.04, `${weapon} ${start} 굳음 빈손 ${JSON.stringify(f.ohP)} ↔ 왼 허리 ${JSON.stringify(hipP())}`);
-        assert.ok(Math.abs(f.ohP[0]) < 0.06 && -f.ohP[2] > PELVIS_HALF_W, `${weapon} ${start} 굳음 빈손 몸 옆 ${JSON.stringify(f.ohP)}`);
-      }
-    }
-  }
-  const off = withS({ iaiSaya: 0 }, () => shot());
-  const sh = SECRET.iaiSayaHand;
-  assert.ok(phase(off.frames, 'hold').every((f) => f.offT && dist3(f.offT, [sh[0], sh[1], -sh[2]]) < 1e-3), '끈 판 = 10/14 배 앞 (가슴 틀)');
-});
-
-test('③ AI 발도 · 다른 일본 칼도 같은 칼집 손 자리', () => {
-  for (const [weapon, start] of [['uchigatana', 'crouch'], ['monohoshizao', 'crouch'], ['muramasa', 'hip'], ['kusanagi', 'held']]) {
-    const r = then1113(() => shot({ weapon, start })); // 11/13 판으로 묶음 (위 then1113)
-    assert.ok(r.sum.ok && r.sum.oneHand, `${weapon} ${start} 한 손 발도`);
-    const F = [...phase(r.frames, 'draw'), ...phase(r.frames, 'hold'), ...phase(r.frames, 'fade')];
-    assert.ok(F.every((f) => f.offP && dist3(f.offP, hipP()) < 1e-3), `${weapon} ${start} 빈손 목표 = 왼 허리`);
-    assert.equal(F.filter((f) => f.grip).length, 0, `${weapon} ${start} 빈손 놓음`);
-    const H = phase(r.frames, 'hold');
-    const late = H.slice(Math.floor(H.length / 2)); // 굳음 뒤 반 (머무는 자리)
-    assert.ok(late.length > 20 && late.every((f) => dist3(f.ohP, hipP()) < 0.06), `${weapon} ${start} 굳음 빈손 왼 허리 곁 ${JSON.stringify(late.at(-1)?.ohP)}`);
-  }
-});
-
-test('④ 우치가타나 등 다시 쥐기 부드럽게 — 튐 없음 · 몫 고르게 · 다시 쥐고 자리 잡음 / 끄면 우치가타나 곧장', () => {
-  for (const [weapon, start] of [['uchigatana', 'hip'], ['uchigatana', 'held'], ['uchigatana', 'crouch'], ['muramasa', 'held'], ['kusanagi', 'hip']]) {
-    const r = shot({ weapon, start });
-    assert.ok(r.sum.regrip, `${weapon} ${start} 다시 쥐기 켬`);
-    assert.ok(r.sum.offJump.d < 0.08, `${weapon} ${start} 빈손 목표 이웃 스텝 옮김 ${JSON.stringify(r.sum.offJump)} (보통 두 손 싸움 몫 안)`);
-    const K = r.frames.map((f) => f.rgK).filter((k) => k != null);
-    assert.ok(K.length > 2 && K[0] < 0.05 && K.every((k, i) => i === 0 || k >= K[i - 1]), `${weapon} ${start} 몫 ${JSON.stringify(K.slice(0, 4))}`);
-    const free = r.frames.filter((f) => f.ph === 'free');
-    const last = free.at(-1);
-    assert.ok(last.grip && last.gap <= r.sum.pre0 + 0.03 && last.rgK == null, `${weapon} ${start} 다시 쥐고 자리 잡음 (틈 ${last.gap} · 뽑기 전 ${r.sum.pre0})`);
-  }
-  const snap = withS({ iaiRegripAll: 0 }, () => shot({ start: 'hip' }));
-  assert.ok(!snap.sum.regrip && snap.sum.offJump.d > 0.3, `끈 판 우치가타나 곧장 ${JSON.stringify(snap.sum.offJump)}`);
-  const mhz = withS({ iaiRegripAll: 0 }, () => shot({ weapon: 'monohoshizao' }));
-  assert.ok(mhz.sum.regrip && mhz.sum.offJump.d < 0.08, '모노호시자오는 끄든 말든 부드럽게 (11/13 iaiOneHeavy 판)');
-});
 
 test('⑤ 칼 길 그대로 — 맞는 곳 · 베는 몫 칼끝 길 · 빠르기 · 굳음 칼 각이 왼손 자리와 상관없음', () => {
   for (const weapon of ['uchigatana', 'monohoshizao']) {

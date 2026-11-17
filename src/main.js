@@ -2958,7 +2958,7 @@ function updateTechCue(dt) {
   const pPhase = player?.skill?.secretPhase ?? null;
   // 고노센 준비 (10/10 02:4x · 10/25 22:3x 부터 거리와 상관없이 이동 입력 · 공격 · 막기 · 맞음 · 비기 없이 iaiArmTime 초 · 준비된 뒤엔 걸어도 유지 — secret.js gnsArmTick): 차면 ② 에 흐린 '고노센 준비' — 준비된 동안 마지막 기술을 덮는다 (다른 상태 알림이 없을 때만)
   //  10/11 이베리아 길목 지키기(v6): 내 칼끝 거리 밖 gilmokArmTime 초가 차면 같은 자리·꼴로 '길목 지키기 준비' (secret.js PlayerSecretWatch.gilArm)
-  const arm = CONFIG.SECRET.iai && playerSecret?.S?.do?.instant ? playerSecret.iaiArm : playerSecret?.S?.do?.gilmok ? playerSecret.gilArm : null;
+  const arm = playerSecret?.S?.do?.instant ? playerSecret.iaiArm : playerSecret?.S?.do?.gilmok ? playerSecret.gilArm : null;
   const pArmed = !!arm?.armed;
   if (liveMine && pArmed && !pPhase && !playerSecret.open && !techLine.over) {
     const armHold = () => (arm.armed && !player?.skill?.secretPhase && !playerSecret.open ? true : 'end');
@@ -3024,7 +3024,7 @@ function playerInputFrame(dt, now) {
   const handDown = input.activeTouch !== null || document.pointerLockElement === canvas;
   const circleGo = !!playerSecret?.spinCircle(dt, d, handDown, !secBusy && player.alive && closeGate.secretOk);
   // 창 지킴 (10/25 21:0x — SECRET.secretHold): 보통 탭 찌르기 · 손잡이 찍기가 아직 도는 동안은 비기를 못 낸다(skill.secret 이 받지 않음) — 그 입력으로 창을 써 버리지 않고 남겨 둠
-  const secArm = !(CONFIG.SECRET.secretHold && (player.skill.tap || player.skill.pom));
+  const secArm = !((player.skill.tap || player.skill.pom));
   if (((atkWin || gilReady) && (taps > 0 || secSwipe) || stickGo || circleGo) && !secBusy && player.alive && secArm && closeGate.secretOk) {
     const o = playerSecret.open ? playerSecret.fire() : playerSecret.fireArmed();
     if (o) o.dir = [d.x, d.y]; // 비기를 낸 끌기의 방향 — 이베리아 흐름(10/11)이 이 칼의 흐름을 이어받는다 (톡이면 0 → 걸러진 손 목표 속도)

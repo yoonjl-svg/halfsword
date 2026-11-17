@@ -86,81 +86,11 @@ const bound = () => {
 };
 
 test('세 안 기본값 — 1안 · 2안 끔 · 3안 켬 (사장님 11/16 "3안도 넣어." — AI 0.2 s 뒤 박자 싸움 · 리솔루토 위험 읽기) · 손잡이 둘은 지금 그대로', () => {
-  assert.equal(CONFIG.SECRET.risolutoTouchMin, 0);
   assert.equal(CONFIG.SECRET.risoAiWait, CONFIG.realS(0.2));
-  assert.equal(CONFIG.SECRET.risoAiMax, 0);
-  assert.equal(CONFIG.SECRET.risoAiGame, 1);
 });
 
-test('2안 SECRET.risolutoTouchMin: 0 = 덮인 채 나아가기 첫 스텝에 칼끝 얽힘 창 · 0.2 s = 창을 열 수 있는 동안(칼 우위) 0.2 s 이어진 뒤', async () => {
-  const { RisolutoWatch } = await import('../../src/italian_risoluto.js');
-  const S = CONFIG.SECRET;
-  const dt = CONFIG.realS(0.05);
-  const { me, foe } = bound();
-  const W0 = new RisolutoWatch(me, foe);
-  assert.equal(W0.tick(dt, true)?.path, 'touch', '지금 — 곧장');
-  with_(S, 'risolutoTouchMin', CONFIG.realS(0.2), () => {
-    const W = new RisolutoWatch(me, foe);
-    for (let k = 0; k < 4; k++) assert.equal(W.tick(dt, false), null, '칼 우위 없음 — 셈만');
-    for (let k = 0; k < 3; k++) assert.equal(W.tick(dt, true), null, `칼 우위 ${k + 1} 스텝 — 0.2 s 전`);
-    assert.equal(W.tick(dt, true)?.path, 'touch', '0.2 s');
-    assert.equal(W.opens.touch, 1);
-  });
-});
 
-test('3안 AI 박자 싸움 SECRET.risoAiWait (기본 0.2 s): 창이 열리고 0.2 s 전엔 안 냄 · 박자 싸움 몫이면 본 휘두름 · 칼 듦 · 걸어 들어옴에만 · 아니면 0.2 s 에 곧장', () => {
-  const S = CONFIG.SECRET;
-  const fake = (o = {}) => ({ sense: { seen: () => ({ hvx: 0, hvy: o.hvy ?? 0, hy: o.hy ?? 0 }) }, level: { reaction: 0.1 }, seenSwing: () => !!o.swing, foeClosing: o.closing ?? 0 });
-  const R = (age, tgame) => ({ win: S.playerWindow - CONFIG.realS(age), tgame });
-  with_(S, 'risoAiWait', CONFIG.realS(0.2), () => {
-    const go = (f, r) => AI.prototype.risoTiming.call(f, r);
-    assert.equal(go(fake({ swing: true }), R(0.1, true)), null, '0.2 s 전');
-    assert.equal(go(fake(), R(0.1, false)), null, '0.2 s 전 (곧장 몫도)');
-    assert.equal(go(fake(), R(0.3, false)), 'plain', '박자 싸움 밖 몫 — 0.2 s 뒤 곧장');
-    assert.equal(go(fake(), R(0.3, true)), null, '상대가 박자를 안 냄 — 기다림');
-    assert.equal(go(fake({ swing: true }), R(0.3, true)), 'swing');
-    assert.equal(go(fake({ hvy: 2, hy: 0.1 }), R(0.3, true)), 'raise');
-    assert.equal(go(fake({ closing: 1 }), R(0.3, true)), 'step');
-    assert.equal(go(fake({ closing: -1 }), R(0.3, true)), null, '물러섬은 박자 아님');
-    // 손잡이 risoAiMax (기본 0 = 창 끝까지 기다림): 0.4 s 면 그때 창이 열려 있으면 그대로 냄
-    assert.equal(go(fake(), R(0.5, true)), null, '기본 — 0.5 s 에도 기다림');
-    with_(S, 'risoAiMax', CONFIG.realS(0.4), () => {
-      assert.equal(go(fake(), R(0.3, true)), null, '0.4 s 전 — 기다림');
-      assert.equal(go(fake(), R(0.45, true)), 'late', '0.4 s 뒤 — 그대로 냄');
-      assert.equal(go(fake({ closing: 1 }), R(0.45, true)), 'step', '박자가 있으면 그 까닭');
-    });
-  });
-});
 
-test('3안 손잡이 risoAiGame (기본 1): 창이 열릴 때 박자 싸움 몫 = 띠 기울기 × 이 값 — 숙련 5 · 6 은 1 이면 늘 기다림 · 0.5 면 창 둘에 하나', () => {
-  const G = newRound({ seed: 2, weapon: 'longsword', weapon2: 'rapier', AI2Class: AI, persona: { proficiency: 5 }, persona2: { proficiency: 5 } });
-  try {
-    const ai = G.ai2.riso ? G.ai2 : G.ai;
-    assert.ok(ai.riso, '레이피어 숙련 5 AI 는 리솔루토 셈이 있음');
-    assert.equal(ai.planK, 1);
-    const S = CONFIG.SECRET;
-    const roll = (game, n = 400) => {
-      let k = 0;
-      with_(S, 'risoAiGame', game, () => {
-        for (let i = 0; i < n; i++) {
-          const R = ai.riso;
-          R.win = 0;
-          R.W.tick = () => ({ ev: 'risoluto', path: 'touch' }); // 창이 열린다고 침 (셈은 위 시험)
-          ai.risoTick(1 / 120, false);
-          k += R.tgame ? 1 : 0;
-        }
-      });
-      return k / n;
-    };
-    const keep = { w: ai.riso.W.tick, go: ai.risoGo, free: ai.secretFree };
-    ai.risoGo = () => false;
-    try {
-      assert.equal(roll(1), 1, '기본 — 늘 기다림');
-      const h = roll(0.5);
-      assert.ok(h > 0.4 && h < 0.6, `0.5 — 반쯤 (${h})`);
-    } finally { ai.riso.W.tick = keep.w; ai.risoGo = keep.go; }
-  } finally { G.world.free(); }
-});
 
 test('3안 리솔루토 위험 읽기 (사장님 11/16 결정): 칼 우위 빛 + 칼 붙음이면 발을 묶음(띠 세기만큼) · 칼이 떨어져 있으면 거리를 벌림 · 0 = 전 판', async () => {
   const { readFeetV } = await import('../../src/ai_read.js');

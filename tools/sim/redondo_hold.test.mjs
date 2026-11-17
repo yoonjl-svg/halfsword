@@ -12,7 +12,6 @@ import { classifyStroke } from '../../src/attack_stroke.js';
 import { G as PAD } from '../../src/ai_techniques.js';
 // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 정수리 가르기 특수 공격 장면(무장 없이 길게 눌러 냄 · specialShare.redondo · AI 왼 가로베기 강화동작 — 10/29 ~ 11/01)이라
 //  그 판('spin')으로 묶는다(이 파일 안에서만). 새 판(비기 알티바슈 포르트 · 특수 공격 싱지르 한 걸음)은 tools/sim/ib_swap.test.mjs
-(await import('../../src/config.js')).SECRET.iberianSecret = 'spin';
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, STAMINA, IB_FLOW, INPUT } = CONFIG;
@@ -56,99 +55,6 @@ function body({ seed = 3, gap = 2.4, names = ['redondo'], kit = null, weapon = '
   return { G, P, uq, press, steps, free: () => G.world.free() };
 }
 
-test('짧은 누름 · 끈 누름은 감지 않음 / 0.6 s 넘게 누르면 감고 · 떼면 내려침 · 식힘은 내려침이 나간 순간부터', () => {
-  const B = body();
-  try {
-    const { P, uq, press, steps } = B;
-    press.down = true; steps(realS(0.4)); press.down = false; steps(0.1); // 0.4 s 누름 → 아무것도 아님
-    assert.equal(uq.stats.winds ?? 0, 0);
-    press.down = true; press.still = false; steps(realS(0.9)); press.down = false; press.still = true; steps(0.1); // 끈 누름(긋기) → 감지 않음
-    assert.equal(uq.stats.winds ?? 0, 0);
-    press.down = true; steps(realS(0.55));
-    assert.equal(uq.winding, false, '0.55 s 는 아직');
-    steps(realS(0.1));
-    assert.equal(uq.winding, true, '0.65 s 감기');
-    assert.ok(P.rdWind);
-    const v0 = P.stamina.value;
-    steps(realS(1.0));
-    assert.ok(v0 - P.stamina.value > 0.9 * STAMINA.clinchPerSecond * realS(1.0) * 0.99, '감는 동안 기력이 듦');
-    assert.equal(uq.coolLeft('redondo'), 0, '감는 동안은 식힘 아님');
-    press.down = false; steps(DT * 2);
-    assert.equal(uq.stats.fired.redondo, 1, '떼면 내려침');
-    assert.equal(uq.coolT.redondo, Infinity, '내려침이 도는 동안 식힘 중 (끝난 때부터 셈 — 10/29 19:5x)');
-    assert.ok(P.iai || P.instantResult?.combo, '운동학 칼');
-    steps(1.1); // 내려침(10/31 19:xx 멘 어깨에서 — 11/01 빠르기 0.2 에서 실제 약 0.67 s) + 끝 자세 풀기 0.2 s 뒤
-    assert.equal(P.instantResult?.tech, 'redondo');
-    const run = uq.stats.coolRuns?.at(-1);
-    assert.ok(run?.name === 'redondo' && Number.isFinite(uq.coolT.redondo), '내려침 · 풀기가 끝나면 식힘을 셈');
-    assert.ok(uq.coolLeft('redondo') > realS(2.0) && uq.coolLeft('redondo') <= realS(3.0), `남은 식힘 ${uq.coolLeft('redondo')}`);
-    // 식힘 중: 길게 눌러도 감지 않음 · 떼도 아무것도 아님(탭 찌르기 없음 — 누른 시간이 탭 문턱 밖)
-    press.down = true; steps(realS(1.0)); press.down = false; steps(0.1);
-    assert.equal(uq.stats.winds, 1);
-    assert.equal(uq.stats.fired.redondo, 1);
-    assert.equal(P.skill.tap, null);
-  } finally { B.free(); }
-});
-
-test('그만둠 (식힘 없음): 막기 단추 · 맞음(칼날 상처) · 비기 · 넘어짐 / 기력이 바닥이면 저절로 내려침', () => {
-  for (const why of ['parry', 'hit', 'down']) {
-    const B = body({ seed: 5 });
-    try {
-      const { P, uq, press, steps } = B;
-      press.down = true; steps(realS(0.8));
-      assert.equal(uq.winding, true, why);
-      if (why === 'parry') uq.blocked = true;
-      if (why === 'hit') P.wounds.push({ part: 'chest', type: 'cut', severity: 0.2, bleed: 0, local: null });
-      if (why === 'down') P.state = 'down';
-      uq.holdTick(DT);
-      assert.equal(uq.winding, false, why);
-      assert.equal(uq.stats.windCancel?.[why], 1, why);
-      assert.equal(uq.coolLeft('redondo'), 0, `${why} — 식힘 없음`);
-      assert.equal(uq.stats.fired.redondo ?? 0, 0, why);
-      if (why === 'down') P.state = 'stand';
-    } finally { B.free(); }
-  }
-  const B = body({ seed: 6 });
-  try {
-    const { P, uq, press, steps } = B;
-    P.stamina.value = 3; // 거의 바닥
-    press.down = true; steps(realS(1.2));
-    assert.equal(uq.stats.windFire?.empty, 1, '기력 바닥 → 저절로 내려침');
-    assert.equal(uq.stats.fired.redondo, 1);
-    assert.equal(uq.winding, false);
-    steps(realS(1.0));
-    assert.equal(uq.stats.winds, 1, '누른 채면 다시 감지 않음');
-  } finally { B.free(); }
-});
-
-test('B4 는 이어지는 흐름과 무관 (사장님 10/31 19:xx \'풍차베기는 이어지는 흐름과 무관한 게 낫겠어\' — windmillChain 0 · windmillApart 1): 흐름의 첫 칼이 아님 · 사슬이 켜져 있어도 B4 칼은 흐름 위력 × 1 · 세 칼 기력 0 자리가 아님 · 사슬을 늘이거나 끊지 않음 (옛 판은 B4_OLD)', () => {
-  const kitAll = kitFromNodes('iberian', new Set(['B1', 'B5', 'B4', 'B6']));
-  const B = body({ seed: 7, kit: kitAll });
-  try {
-    const { P, press, steps } = B;
-    // 바로 앞에 사슬 둘 (마지막 진짜 긋기가 막 끝남 — 이어짐 창 안에서 누르기 시작)
-    P.ibFlowT = 10; P.ibFlowCutEnd = 10; P.ibLastN = 2;
-    const cutEnd0 = P.ibFlowCutEnd;
-    press.down = true; steps(realS(0.6) + realS(1.4)); press.down = false;
-    let k = 0;
-    while (!(P.iai || P.iaiReq) && k++ < 40) steps(DT);
-    assert.ok(P.iai || P.iaiReq, '내려침');
-    steps(DT);
-    assert.equal(P.rdStrikeNow(), true);
-    // 사슬이 켜진 채로 B4 칼이 맞는다고 해도 (흐름 켬 · 이어 그은 수 2 — 사슬 3 번째 자리) 위력 · 기력은 보통
-    P.ibFlowOn = true; P.ibFlowSw = true; P.ibFlowChain = true; P.ibCutN = 2; P.ibChainN0 = 0;
-    assert.equal(P.ibFlowK(), 1, 'B4 칼 흐름 위력 × 1');
-    assert.equal(P.ibChainCostK(), 1, 'B4 칼은 세 칼 기력 0 자리가 아님');
-    P.ibFlowSw = false;
-    while ((P.iai || P.iaiReq) && k++ < 400) steps(DT);
-    steps(0.05);
-    assert.equal(P.ibFlowCutEnd, cutEnd0, 'B4 는 마지막 진짜 긋기 끝을 옮기지 않음 (사슬을 늘이지 않음)');
-    // B4 뒤 첫 긋기 = 새 사슬 (앞 사슬의 창은 감는 동안 이미 지남 — 길게 누름 0.6 s = 이어짐 창 0.6 s)
-    P.skill.swinging = true; P.skill.vel.set(-8, 0); P.updateIbFlow(1 / 120);
-    assert.equal(P.ibChainN(), 0, 'B4 뒤 첫 긋기 = 새 사슬의 첫 칼');
-  } finally { B.free(); }
-});
-
 test('사람 왼 가로베기는 보통 긋기 (풍차 베기를 열어도 강화동작으로 안 읽힘)', () => {
   const B = body();
   try {
@@ -169,56 +75,3 @@ const withBrowser = (fn) => {
 };
 const { Input } = await import('../../src/input.js');
 
-test('입력 층 — 사람 손 흉내 500 번: 짧은 탭(40 ~ 150 ms · 12 px 안 — 탭 문턱 180 ms)은 늘 탭 · 감지 않음 / 끌기(0.6 s 전에 12 px 넘게)는 늘 긋기 · 감지 않음 / 끌지 않은 0.6 s 넘는 누름만 감음', () => {
-  const B = body({ seed: 11, gap: 3.4 });
-  try {
-    const { P, uq, G } = B;
-    const input = withBrowser(() => new Input({ addEventListener() {} }, { verticalGain: 1 }));
-    input.enabled = true;
-    let ms = 1000;
-    let lcg = 12345;
-    const rnd = () => (lcg = (Math.imul(lcg, 1664525) + 1013904223) >>> 0) / 4294967296;
-    const send = (type, x, y) => withBrowser(() => { const e = { type, pointerId: 1, pointerType: 'touch', button: 0, clientX: x, clientY: y, timeStamp: ms }; type === 'pointerdown' ? input.onDown(e) : type === 'pointermove' ? input.onMove(e) : input.onUp(e); });
-    const frame = () => { // 60 Hz 화면 한 장 = 물리 두 스텝 (main.js 차례: 누름 상태 → 스텝)
-      const hs = input.holdState();
-      uq.holdInput(hs.down, hs.still, false);
-      G.before = () => {};
-      G.step(); G.step();
-      ms += 1000 / 60;
-    };
-    const tally = { tap: 0, tapWind: 0, drag: 0, dragWind: 0, long: 0, longWind: 0 };
-    const cool = () => { uq.coolT = {}; }; // 감은 뒤 식힘은 이 시험 밖
-    for (let i = 0; i < 500; i++) {
-      const kind = i % 3 === 0 ? 'tap' : i % 3 === 1 ? 'drag' : 'long';
-      const w0 = uq.stats.winds ?? 0;
-      const x = 600 + rnd() * 100, y = 200 + rnd() * 60;
-      send('pointerdown', x, y);
-      let dur = kind === 'tap' ? 40 + rnd() * 110 : kind === 'drag' ? 650 + rnd() * 500 : 700 + rnd() * 600;
-      const t0 = ms;
-      let mx = x, my = y;
-      while (ms - t0 < dur) {
-        if (kind === 'tap' || kind === 'long') { mx = x + (rnd() - 0.5) * 8; my = y + (rnd() - 0.5) * 8; } // 손가락 떨림 (12 px 안)
-        else if (ms - t0 > 80 && ms - t0 < 80 + 400) { mx += 3 + rnd() * 4; my += rnd() * 2; } // 0.08 s 뒤 끌기 시작 (0.6 s 전에 12 px 넘음)
-        send('pointermove', mx, my);
-        frame();
-      }
-      const taps0 = input.taps;
-      send('pointerup', mx, my);
-      const tapped = input.consumeTaps() > 0;
-      frame(); frame();
-      const wound = (uq.stats.winds ?? 0) > w0;
-      if (kind === 'tap') { tally.tap += tapped ? 1 : 0; tally.tapWind += wound ? 1 : 0; }
-      if (kind === 'drag') { tally.drag += !tapped ? 1 : 0; tally.dragWind += wound ? 1 : 0; }
-      if (kind === 'long') { tally.long += 1; tally.longWind += wound ? 1 : 0; }
-      void taps0;
-      for (let k = 0; k < 40; k++) frame(); // 칼이 끝나고 쉼
-      cool();
-      P.stamina.value = STAMINA.max;
-    }
-    assert.equal(tally.tapWind, 0, '탭이 감김');
-    assert.equal(tally.dragWind, 0, '끌기가 감김');
-    assert.equal(tally.tap, 167, '짧은 탭은 모두 탭');
-    assert.equal(tally.drag, 167, '끌기는 탭이 아님');
-    assert.equal(tally.longWind, tally.long, '끌지 않은 긴 누름은 모두 감김');
-  } finally { B.free(); }
-});

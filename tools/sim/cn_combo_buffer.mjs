@@ -72,6 +72,6 @@ const q = (f) => {
   const a = [...C.pendT].sort((x, y) => x - y);
   return a.length ? a[Math.min(a.length - 1, Math.floor(f * a.length))].toFixed(2) : '-';
 };
-console.log(`미리 받기 ${CONFIG.SECRET.cnBuffer ? '켬' : '끔'} · REACT ${REACT} s · 상대 ${foes.join(',')} × 씨앗 ${N} × ${SIM} s`);
+console.log(`미리 받기 ${'켬'} · REACT ${REACT} s · 상대 ${foes.join(',')} × 씨앗 ${N} × ${SIM} s`);
 console.log(`  정한 자세 기다림 ${C.pend} (맞닿음 길이 p50 ${q(0.5)} · p75 ${q(0.75)} · p90 ${q(0.9)} s) · 창 ${C.windows} · 입력 ${C.input}`);
 console.log(`  → 창에서 냄 ${C.fireOpen} · 미리 받음 ${C.buffered} (떨어질 때 냄 ${C.fireBuf} · 버림 ${C.drop}) · 맞닿은 채 그어 취소 ${C.cancel} · 놓침 ${C.miss} · 낸 합 ${C.fireOpen + C.fireBuf} · 연환 맞힌 수 ${C.hits}`);

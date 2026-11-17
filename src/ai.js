@@ -965,7 +965,7 @@ export class AI {
       if ((this.mode !== 'attack' || this.phase !== 'strike') && this.secretRun?.stage !== 'stiff' && this.secretRun?.stage !== 'instant' && this.secretRun?.stage !== 'spin' && this.secretRun?.stage !== 'mord' && this.secretRun?.stage !== 'riso') this.startWithdraw(this.planJp ? 0.8 * (1 - 0.5 * jpStill(this)) : 0.8); // 일본 (11/14): 바위 몸으로 버팀 — 물러남이 짧음 // 순간 베기·발도 도중(instant)도 끊지 않는다 — 그 몇 스텝은 대본 // 비기 경직 동안은 물러나지도 못한다 (핸디캡)
     }
     this.foeReach += (this.foeBase(this.foeM, foe) - this.foeReach) * dt * realRate(0.03); // 천천히 원래 생각으로
-    if (SECRET.gnsWary) this.gnsWatch(dt, d, hurt); // 고노센 경계 (10/25 08:0x 사장님 '⑤'): 상대가 고노센 쓰는 몸이 아니면 아무 일 없음 · 끄면 이 줄을 안 타 옛 판 그대로
+    this.gnsWatch(dt, d, hurt); // 고노센 경계 (10/25 08:0x 사장님 '⑤'): 상대가 고노센 쓰는 몸이 아니면 아무 일 없음 · 끄면 이 줄을 안 타 옛 판 그대로
 
     // 인내심: 시간이 지나면 줄어든다 → 판이 늘어지지 않는다
     const hurry = this.hurry();
@@ -1035,9 +1035,9 @@ export class AI {
     // 일본 발도 대기 (10/10 02:4x): 상대 간격 밖에 iaiArmTime 초 머물면 웅크린 발도 대기 자세 (간격 안·공격·막기면 풀림). 고노센은 이 자세에서만 (cond.armed)
     //  10/25 22:3x · 22:5x 사장님 '거리와 상관없이 … 아무 행동 없이 2초' · '준비가 활성화되면 걸어도 유지' (SECRET.gnsReady 'idle' — 사람과 같은 셈 secret.js gnsArmTick): 공격 꼴 · 막기 꼴 · 비기 · 맞음 ·
     //   무릎 꿇음 · 헛스윙 연습이면 풀림 · 준비 전엔 걸음 뜻(moveFeet 의 스틱 원값 — 사람 스틱과 같은 칸)도 셈을 0 으로 · 거리는 안 봄. 'dist' 판 = 아래 옛 셈 그대로
-    if (this.iaiArm && SECRET.iai) {
+    if (this.iaiArm) {
       const busy = this.mode === 'attack' || this.mode === 'defend' || (!!this.secretRun && this.secretRun.stage !== 'instant') || this.drillOut; // 헛스윙 연습 동안은 대기하지 않는다
-      const outside = SECRET.gnsEnterAI ? gnsOutside(d, { foeReach: this.foeReach, reach: this.M.reach, contact: this.M.contact }, this.iaiArm.armed, SECRET.gnsLong) : d > this.foeReach; // 고노센 들어옴 AI 판(10/25 — 기본 끔)의 긴 칼 상대 규칙 · 끄면 옛 셈
+      const outside = gnsOutside(d, { foeReach: this.foeReach, reach: this.M.reach, contact: this.M.contact }, this.iaiArm.armed, 1); // 고노센 들어옴 AI 판(10/25 — 기본 끔)의 긴 칼 상대 규칙 · 끄면 옛 셈
       gnsArmTick(this.iaiArm, dt, busy || kneeling || hurt || !!me.iaiDraw, gnsMoving(me), { outside: outside && !kneeling, busy: busy || !!me.iaiDraw }, armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x — 서 있는 모습 인물은 그동안 여기 안 옴 · 기본 AI 몫) · 11/16 뽑는 중(iaiDraw)도 행동
       if (this.planJp && !kneeling) jpArmRead(this, dt); // 11/16 뽑기 읽기 (AI_PLAN_JP.drawRead): 칼집이 위험하면 납도를 미루고 · 칼집에 든 채 위험하면 먼저 뽑음
       iaiReadyPose(me, this.iaiArm.armed && this.mode !== 'attack', dt, this.mode !== 'attack' ? this.iaiArm.sheathe : 0); // 11/14 납도 (SECRET.iaiSheathe): 준비 전 iaiSheathe 초 동안 칼을 칼집에 (사람과 같은 셈)
@@ -1209,7 +1209,7 @@ export class AI {
     if (this.plan && this.planBind(s, d)) return; // 유파 플랜 첫 고리 (11/14 이탈리아): 칼이 맞닿은 순간 빼서 찌르기 쪽으로 기울임
     // 모르트슐라크 몸 붙이기 (10/24): 같은 걸쇠 — 미는 동안은 먼저 치지 않는다(누르기가 베기로 끊기지 않게 — fighter.closeStep 'swing'). 들어오는 칼(위 respond)은 그대로 받는다.
     //  붙으러 걸어 들어가는 동안은 칠 때가 오면 친다(10/24 13:3x 사장님 '걸어가며 치기도 같이 넣어' — SECRET.mordWalkStrike · 0 이면 걸어가는 동안도 걸쇠 — 12:0x 판). 치면 붙이기는 끝(mordTick — 간 보기를 벗어남)
-    if (this.press?.go && !(SECRET.mordWalkStrike && this.mordWalking())) return;
+    if (this.press?.go && !(this.mordWalking())) return;
     // 치려는 낌새(간격 가까이서 칼을 들며 다가온다) → 들어오는 순간을 먼저 치거나(Vor), 물러난다
     if (this.planJp && jpGnsHold(this, s, d)) return; // 일본 고노센 (3 단계): 준비가 켜졌으면 낌새에 먼저 치거나 물러나지 않고 기다림 · 선 밖이면 맞으러 나감 (굴림 — 낌새 하나에 한 번)
     if (this.preThreat(s, d, dt)) return;
@@ -1248,7 +1248,7 @@ export class AI {
     const score = this.plan ? this.planGamble(opp.score) : opp.score; // 무계획(11/14 — 굴림 몫): 빈틈 판단이 흐림 · 플랜 없는 몸은 그대로
     if (this.plan && this.planLuck > 0 && d < this.holdDist() + reachOut && (score >= need) !== (opp.score >= need)) this.stats.plan[score >= need ? 'blurFire' : 'blurMiss']++; // 재기: 흐림 탓에 나쁜 때 냄 · 좋은 때 놓침
     if (score >= need && d < this.holdDist() + reachOut) {
-      if (this.press && !SECRET.mordNear && this.mordPressGo('watch')) return; // 모르트슐라크 (10/24 12:0x 판 — SECRET.mordNear 0 일 때만): 칠 때를 본 순간 인물 밀치기 확률로 베는 대신 몸을 붙여 민다 · 14:2x 부터는 보통 AI 대로 친다
+      if (this.press && !this.mordPressGo('watch')) return; // 모르트슐라크 (10/24 12:0x 판 — SECRET.mordNear 0 일 때만): 칠 때를 본 순간 인물 밀치기 확률로 베는 대신 몸을 붙여 민다 · 14:2x 부터는 보통 AI 대로 친다
       if (this.gnsW?.ready && !this.gnsW.reck && this.gnsAct(s, opp)) return; // 고노센 경계 (10/25): 준비된 고노센 상대 — 결행 또는 속임 (무모로 경계를 접은 준비 동안은 보통 공격)
       if (this.startAttack(this.pickTech(s, opp.kind), opp.kind)) {
         if (this.plan && opp.kind === 'stepin') this.stats.plan.stepin++; // 재기: 플랜이 받은 '들어옴' 공격
@@ -1323,7 +1323,7 @@ export class AI {
     const sv = this.sense.seen(this.level.reaction);
     const M = foe.swordArt?.measure;
     W.line = M ? gnsEnterLine({ reach: M.reach, contact: M.contact }) : W.line;
-    W.ready = !!SECRET.iai && sv.ready >= 0.5 && sv.state === 'stand' && sv.armed && foe.alive && !secretSpent(foe);
+    W.ready = sv.ready >= 0.5 && sv.state === 'stand' && sv.armed && foe.alive && !secretSpent(foe);
     if (hurt && iaiBusy(foe)) {
       W.cut = true;
       W.n.cut++;
@@ -2228,7 +2228,7 @@ export class AI {
     const R = windEnd(me, true);
     this.rd = { ...(this.rd ?? {}), ropes: R ?? this.rd?.ropes ?? null, fade: 0.12, secret: false };
     const A = SECRET.altib;
-    const ok = UA.enhance > 0 && requestArtRedondo(me, rdReleaseOpt(me, W, { share: shot.share, maxT: UA.rdSnapTime, tech: 'redondo', hitMul: shot.hitMul, hold: A.hold ?? SECRET.stiff.iberian ?? 0, secret: 'altib' }));
+    const ok = UA.enhance > 0 && requestArtRedondo(me, rdReleaseOpt(me, W, { share: shot.share, maxT: UA.rdSnapTime, tech: 'redondo', hitMul: shot.hitMul, hold: SECRET.stiff.iberian ?? 0, secret: 'altib' }));
     if (!ok) {
       const C = (this.stats.rdWind ??= { begin: 0, fire: 0, cancel: {} }).cancel;
       C.noStrike = (C.noStrike ?? 0) + 1;
@@ -2452,7 +2452,7 @@ export class AI {
    */
   crouchLow() {
     const s = this.lastSeen;
-    if (!SECRET.gnsCrouchAim || !s || !(s.crouch > 0) || this.foe.aiControlled) return 0;
+    if (!s || !(s.crouch > 0) || this.foe.aiControlled) return 0;
     return Math.max(0, this.me.bodies.chest.translation().y - s.cy);
   }
 
@@ -2605,11 +2605,11 @@ export class AI {
     }
     if (this.secret) {
       this.combo++;
-      if (this.binds) this.binds.strike(SECRET.iberianHurt === 'wound' ? (this.foe.wounds?.length ?? 0) > (this.atkWounds0 ?? 0) : this.hitLanded, this.bound || this.atkClash); // 이베리아 맺힘 셈: 칼끼리 닿고 피해 없음 +1 · 피해 0 · 헛침 그대로
+      if (this.binds) this.binds.strike((this.foe.wounds?.length ?? 0) > (this.atkWounds0 ?? 0), this.bound || this.atkClash); // 이베리아 맺힘 셈: 칼끼리 닿고 피해 없음 +1 · 피해 0 · 헛침 그대로
       if (this.secretCombo(d) || this.secretFirstHit(d)) return;
     }
     // 모르트슐라크 몸 붙이기 'after' (10/24 14:2x — SECRET.mordNear): 내 칼이 막혀 맞물린 채(칼끼리 닿음 · 못 벰) 붙은 거리(M.clinch) 안에서 끝났으면 — 둘이 엉킨 채 가까움 — 인물 밀치기 확률로 이어 치기 · 물러남 대신 붙어 민다
-    if (this.press && SECRET.mordNear && this.bound && !this.hitLanded && this.foe.alive && d < this.M.clinch && this.mordPressGo('after')) return;
+    if (this.press && this.bound && !this.hitLanded && this.foe.alive && d < this.M.clinch && this.mordPressGo('after')) return;
     // 이어 치기(Nachschlag): 막히거나 헛쳤어도 이어 친다. 완전히 붙어 씨름하는 거리(0.75m 아래)만 거른다 —
     //  간격 끝(clinch 근처)에서도 짧게 이어 칠 수 있어야 몰아치는 상대에게 계속 밀리지 않는다
     const maxChain = this.obsession > 0.5 ? 3 : 2; // 물고 늘어질 땐 한 번 더 이어 친다
@@ -3260,7 +3260,7 @@ export class AI {
     const dx = s0.cx - c.x;
     const dz = s0.cz - c.z;
     const d0 = Math.max(0.01, Math.hypot(dx, dz));
-    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach, this.me, { lag, reach: this.gilArm ? gilmokLine(this.me, this.M.reach, S.do) : this.M.reach, dt, st: E, armed: !!this.gilArm?.armed, ...(SECRET.gnsWalkIn && SECRET.gnsEnterAI && SECRET.iai && this.iaiArm ? { enterLine: gnsEnterLine(this.M), iaiArmed: this.iaiArm.armed } : null) }); // 사건 판정은 플레이어 창과 같은 함수 (secret.js) · ex: 이베리아 호 안쪽 · 길목 (준비) · 일본 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만 · 10/25 22:3x 들어옴 창 gnsWalkIn 0 기본이면 안 봄)
+    const { on, ctx } = secretEvent(S, this.sense, this.foe, s0, c, r, d0, this.foeReach, this.me, { lag, reach: this.gilArm ? gilmokLine(this.me, this.M.reach, S.do) : this.M.reach, dt, st: E, armed: !!this.gilArm?.armed }); // 사건 판정은 플레이어 창과 같은 함수 (secret.js) · ex: 이베리아 호 안쪽 · 길목 (준비) · 일본 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만 · 10/25 22:3x 들어옴 창 gnsWalkIn 0 기본이면 안 봄)
     if (!on) {
       E.off += dt;
       if (E.off > EV_REARM) E.armed = true;
@@ -3446,7 +3446,7 @@ export class AI {
       R.win = SECRET.playerWindow;
       R.st.wins++;
       R.ctx = ctx;
-      if (SECRET.risoAiWait > 0) R.tgame = Math.random() < (this.planK ?? 1) * (SECRET.risoAiGame ?? 1); // 11/16 3안: 이 창에서 박자 싸움을 할지 (띠 기울기 × risoAiGame — 창 하나에 한 번 굴림 · 끄면 굴림 없음)
+      if (SECRET.risoAiWait > 0) R.tgame = Math.random() < (this.planK ?? 1) * 1; // 11/16 3안: 이 창에서 박자 싸움을 할지 (띠 기울기 × risoAiGame — 창 하나에 한 번 굴림 · 끄면 굴림 없음)
     }
     if (!(R.win > 0) || !this.secretFree() || this.foe.state !== 'stand') return false;
     if (!(SECRET.risoAiWait > 0)) return this.risoGo(R.ctx);
@@ -3470,7 +3470,7 @@ export class AI {
     if (!R.tgame) return 'plain';
     const s = this.sense.seen(this.level.reaction);
     const cue = this.seenSwing() ? 'swing' : s.hvy > 1.6 && s.hy > 0.05 ? 'raise' : seenStep(this.foeClosing) === 'advance' ? 'step' : null;
-    return cue ?? (SECRET.risoAiMax > 0 && age >= SECRET.risoAiMax - 1e-9 ? 'late' : null);
+    return cue ?? null;
   }
 
   /** 안다레 리솔루토를 낸다 — 검술 층 skill.secret (사람과 같은 실행부: 런지 · 상대 팔 늦춤 · 기력 · 굳음). 냈으면 true */
@@ -3516,11 +3516,9 @@ export class AI {
     if (inC && !P.inClinch && !busy && (this.mode === 'watch' || this.mode === 'withdraw')) this.mordPressGo('clinch');
     P.inClinch = inC;
     // 'bind' (10/24 14:2x — SECRET.mordNear): 붙은 거리 안에서 칼끼리 맞닿은 순간(바인드 — 막고 버팀 · 칼 맞대고 버팀) 간 보기 · 물러남 · 막기 중이면 인물 밀치기 확률로 붙어 민다
-    if (SECRET.mordNear) {
-      const touch = inC && !busy && bladesTouch(me, this.foe);
-      if (touch && !P.touch && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend')) this.mordPressGo('bind');
-      P.touch = touch;
-    }
+    const touch = inC && !busy && bladesTouch(me, this.foe);
+    if (touch && !P.touch && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend')) this.mordPressGo('bind');
+    P.touch = touch;
     // 밀치기(닿는 거리 사건 굴림 — closeQuarters)로 민 때도 누르기가 이어지는 동안 먼저 치지 않는다 (몸이 붙으면 계속 민다 — watch 걸쇠)
     if (me.barge && !P.go && !busy) {
       P.go = true;
@@ -3529,7 +3527,7 @@ export class AI {
     // 몸 붙이기 끝: 밀치기가 끝났거나(어떤 까닭이든 — 그 뒤는 인물 then 그대로) · 밀기 전에 간 보기를 벗어났거나(막기 · 물러남 · 공격) · 상대가 칠 거리 밖으로 갔으면
     if (P.go) {
       if (me.barge) P.goBarge = true;
-      else if (P.goBarge || busy || this.mode !== 'watch' || !this.foe.alive || this.foe.state !== 'stand' || this.d >= (SECRET.mordNear ? this.M.clinch : this.holdDist() + this.watchReachOut())) P.go = P.goBarge = false; // 14:2x: 상대가 붙은 거리 밖으로 떨어지면 끝(쫓지 않음) · 12:0x 판은 칠 거리 밖까지
+      else if (P.goBarge || busy || this.mode !== 'watch' || !this.foe.alive || this.foe.state !== 'stand' || this.d >= (this.M.clinch)) P.go = P.goBarge = false; // 14:2x: 상대가 붙은 거리 밖으로 떨어지면 끝(쫓지 않음) · 12:0x 판은 칠 거리 밖까지
     }
     if (P.win > 0) P.win -= dt; // 사람 창(PlayerSecretWatch.update)과 같은 차례: 창 시간을 먼저 줄이고 셈
     if (pressStep(P, dt, me.barge?.phase === 'press', busy, P.win > 0, secretVal(this.secret.cond.press), me.barge?.phase === 'step' ? me.barge : null)) { // step: 다시 시작한 밀치기 첫 걸음 동안 너그러움 시계 멈춤 (사람과 같은 셈 · 10/27 23:0x)
@@ -3572,7 +3570,7 @@ export class AI {
    *  붙은 거리에서 붙는 반 걸음('clinch' · 'bind' · 'after')은 밀기의 일부(걸쇠). 12:0x 판은 밀치기 걸쇠 'barge' 밖 모두 */
   mordWalking() {
     const P = this.press;
-    return !!P?.go && !P.goBarge && !this.me.barge && (P.goWhy === 'watch' || (!SECRET.mordNear && P.goWhy !== 'barge'));
+    return !!P?.go && !P.goBarge && !this.me.barge && (P.goWhy === 'watch' || (!P.goWhy !== 'barge'));
   }
 
   /** 모르트슐라크를 낸다 — 검술 층 skill.secret (사람과 같은 실행부: 칼날 거꾸로 쥐기 · 운동학 길 · 기력 · 굳음). 냈으면 true */
@@ -3625,13 +3623,12 @@ export class AI {
       this.stepT = 0;
       run.stage = 'back';
       // 10/10 순간 베기 (SECRET.instant): 물러남·담기·붙잡기 없이 곧장 — 이번 스텝 끝(combat.afterStep)에 내딛음·끝 자세·쓸린 자리 상처 (secret_instant.js)
-      if (SECRET.instant && D.instant) {
+      if (D.instant) {
         run.stage = 'instant';
         run.instant = true;
         run.t = 0;
         const end = D.tech.path[D.tech.path.length - 1];
-        if (SECRET.iai) requestIai(this.me, SECRET.gnsEnterBlock ? { block: gnsBlockOf(ctx.th, this.me) } : undefined); // 10/10 발도: 대기 자세(왼 허리)에서 곧장 가로로 (secret_instant.js) · B(10/25 16:0x 켬): 천천히 걸어 든 들어옴 창 발도는 상대 칼에 막힐 수 있음 (사람과 같은 규칙)
-        else requestInstant(this.me, { endPad: end });
+        requestIai(this.me, SECRET.gnsEnterBlock ? { block: gnsBlockOf(ctx.th, this.me) } : undefined); // 10/10 발도: 대기 자세(왼 허리)에서 곧장 가로로 (secret_instant.js) · B(10/25 16:0x 켬): 천천히 걸어 든 들어옴 창 발도는 상대 칼에 막힐 수 있음 (사람과 같은 규칙)
         this.hand.set(end[0], end[1]);
         this.secretBursts = (this.secretBursts ?? 0) + 1; // 결정타 연출 (터뜨림 = 낸 순간)
       }
@@ -3643,7 +3640,7 @@ export class AI {
       const v = this.me.skill.aimVel;
       run.queue = montanteFlowSeq([this.me.handOffset.x, this.me.handOffset.y], [v.x, v.y], D, this.me); // f: 길목 디딤을 그 순간 간격으로 (secret.js gilmokSeq)
       ok = this.secretNext();
-    } else if (D.path && SECRET.iberianSweep) {
+    } else if (D.path) {
       // 이베리아 휩쓸기 (10/10 02:5x): 사이드스텝 + 머리 위 큰 고리 + 사선 — 이번 스텝 끝부터 SECRET.iberianSweepTime 동안 (secret_instant.js, 발도와 같은 틀)
       this.mode = 'secret';
       this.phase = 'ready';
@@ -4435,7 +4432,7 @@ export class AI {
       // 고노센 준비 쌓기 (10/25 22:5x 사장님 '아무 행동 없이 2초' — SECRET.gnsReady 'idle' · 감독 'AI 도 같은 생각 — AI 의 걸음 뜻으로' · SECRET.gnsAiSettle):
       //  고노센 AI 가 준비 전이면 간 보기 동안 다가가기 · 잔걸음 · 옆 돌기 없이 제자리에 선다(스틱 0 — 사람이 스틱을 놓고 기다리는 것과 같은 셈 · 새 수 없음) ·
       //  준비가 켜지면 다시 간 보기 걸음(걸어도 유지). 너무 붙음 · 울타리 · 밀치기 걸음(아래)은 그대로. 빈손 상대를 쫓을 때 · 'dist' 판 · 끄면 이 줄을 안 탐
-      if (SECRET.gnsAiSettle && this.iaiArm && SECRET.iai && SECRET.gnsReady === 'idle' && !this.iaiArm.armed && !this.chasing) fwd = side = 0;
+      if (this.iaiArm && !this.iaiArm.armed && !this.chasing) fwd = side = 0;
     }
     if (this.ibPlan) (side = ibSidePost(this, side)), (fwd = ibFwdPost(this, fwd)); // 이베리아 플랜 (11/14 둘째 — 변칙): 옆 박차기 동안 옆 끝(간 보기 · 물러남 · 막기) · 비스듬히 들어감
     // 안다레 리솔루토 무장 (11/14 사장님 '리솔루토도 쓰게해' — risoTick · 사람 조건 10/28 '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로'): 간 보기 · 물러남 동안

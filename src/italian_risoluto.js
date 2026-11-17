@@ -53,7 +53,6 @@ export function lungeGap(me) {
 
 /** 런지를 쓸 수 있는 간격인가 (간격 조건 SECRET.risolutoGap · 런지 판 SECRET.risolutoLunge 일 때만 — 아니면 늘 true) */
 export function lungeGapOk(me) {
-  if (!SECRET.risolutoLunge || !SECRET.risolutoGap) return true;
   return me.foeDistance() >= lungeGap(me);
 }
 
@@ -104,7 +103,7 @@ export function bladesNear(me, foe) {
 
 /** 나는 휘두르는 중이 아님 (긋기 · 탭 · 손잡이 찍기 · 비기 · 막아찌르기 · 손 휘두르기 · 막기 단추 — 막기 단추는 시험 SECRET.risolutoGuard 1 이면 셈에 넣음) */
 export function meFree(me) {
-  return !swingingNow(me) && !me.skill?.swinging && (!me.parryGuard?.held || !!SECRET.risolutoGuard);
+  return !swingingNow(me) && !me.skill?.swinging && (!me.parryGuard?.held || false);
 }
 
 /** 스틱이 앞 (상대 쪽 90° 부채꼴 — fighter.js closeStep 밂 걸쇠와 같은 기하) */
@@ -122,7 +121,7 @@ export function stickBack(me) {
  *  'both'(기본) = 앞 또는 뒤 90° 부채꼴 · 옆 · 놓음은 아님 · 'fwd' = 전(앞만)
  */
 export function stickOk(me) {
-  return stickForward(me) || (SECRET.risolutoStick !== 'fwd' && stickBack(me));
+  return stickForward(me) || stickBack(me);
 }
 
 /** 상대 걸음 의도의 문턱 (스틱 몫 — gait.js requestStep '물러나는 중' move.y < −0.1 과 같은 수 · 새 수 아님) */
@@ -202,31 +201,27 @@ export class RisolutoWatch {
     this.gap = gap;
     const d = (this.d = coverDist(me, foe));
     let cover = d <= SECRET.risolutoCover;
-    if (!cover && SECRET.risolutoAnyPart && bladesNear(me, foe)) {
+    if (!cover && bladesNear(me, foe)) {
       cover = true; // 칼 어느 부위든 맞닿음 · 가까움 (10/23 넓은 판정)
       this.anySteps++;
-    }
-    if (!cover && SECRET.risolutoLine && lineCover(me, foe)) {
-      cover = true; // 칼을 대지 않는 덮음 (줄 막기 — 시험 스위치)
-      this.lineSteps++;
     }
     const mine = meFree(me);
     const fwd = stickOk(me); // 10/25 21:0x 앞이나 뒤 (SECRET.risolutoStick — 'fwd' = 전 앞만)
     const foeFree = !swingingNow(foe);
-    const fstep = SECRET.risolutoMirror ? (this.stepOf ? this.stepOf() : foeStep(foe)) : null; // 상대 걸음 (11/14 — AI 유파 플랜은 본 걸음)
-    const mir = !SECRET.risolutoMirror || mirrorStep(me, fstep); // 10/28 상대 걸음에 맞춰 (끄면 늘 참 — 10/25 판)
-    const on = cover && mine && foeFree && fwd && mir && (closing || !SECRET.risolutoClosing);
+    const fstep = (this.stepOf ? this.stepOf() : foeStep(foe)); // 상대 걸음 (11/14 — AI 유파 플랜은 본 걸음)
+    const mir = mirrorStep(me, fstep); // 10/28 상대 걸음에 맞춰 (끄면 늘 참 — 10/25 판)
+    const on = cover && mine && foeFree && fwd && mir;
     if (on) {
       if (this.on && this.off > 0) this.bridged++;
       this.off = 0;
       this.held += dt;
       this.on = true;
-      if (SECRET.risolutoMirror) this.step = fstep;
+      this.step = fstep;
       if (canOpen) this.touchT += dt;
       // 칼끝 얽힘 창 (10/25 사장님 '칼끝이 얽히자마자 그 순간부터 쓸 수 있게' — SECRET.risolutoTouch · 셈 시간 없음 ·
       //  덮인 채 나아가기 한 번에 한 번(같은 묶임에서 다시는 이어짐 · 상대 박자 창으로). 창이 이미 열려 있으면 그 창이 끝난 스텝에
       //  11/16 2안 (SECRET.risolutoTouchMin — 기본 0 끔): 창을 열 수 있는 동안(칼 우위 · 창 없음) 덮인 채 나아가기가 이 초 이어진 뒤에
-      if (SECRET.risolutoTouch && canOpen && !this.touchDone && this.touchT >= (SECRET.risolutoTouchMin ?? 0) - 1e-9) {
+      if (canOpen && !this.touchDone && this.touchT >= 0 - 1e-9) {
         this.touchDone = true;
         this.opens.touch++;
         return { ev: 'risoluto', path: 'touch', held: this.held, ...this.foeCtx() };
@@ -240,13 +235,6 @@ export class RisolutoWatch {
       }
       // 다 붙음 창 (시험 SECRET.risolutoClose — 기본 끔 · 감독 10/22): 덮인 채 나아가다 맞닿기 거리(무기 실측 measure.contact — 칼이 제대로 들어가는 거리)에 든 순간 · 시간 조건 없음 · 덮인 채 나아가기 한 번에 한 번
       const contact = lungeGap(me); // 몸 간격 measure.contact
-      if (SECRET.risolutoClose && canOpen && !this.closeDone && this.closeArmed && contact > 0 && gap <= contact) {
-        this.closeArmed = false; // 다시 열려면 맞닿기 거리 밖으로 나갔다 들어와야 (닿은 '순간' — 10/23: 맞닿기 언저리에서 셈이 끊겼다 이어질 때마다 다시 열리지 않게)
-        this.closeDone = true;
-        const held = this.held;
-        this.opens.close++;
-        return { ev: 'risoluto', path: 'close', held, ...this.foeCtx() };
-      }
       return null;
     }
     if (!this.on) return null;
@@ -265,7 +253,7 @@ export class RisolutoWatch {
     this.touchDone = false;
     this.touchT = 0;
     // 두 번째 길: 상대 박자(칼을 냄 · 칼을 빼 덮음이 풀림) — 내가 휘두르거나 스틱을 놓아 끝난 것은 아님
-    if (SECRET.risolutoBeat && canOpen && held >= SECRET.risolutoBeatMin && (why === 'foeSwing' || why === 'uncover')) {
+    if (canOpen && held >= SECRET.risolutoBeatMin && (why === 'foeSwing' || why === 'uncover')) {
       this.opens.beat++;
       return { ev: 'risoluto', path: 'beat', held, why, ...this.foeCtx() };
     }
@@ -274,7 +262,7 @@ export class RisolutoWatch {
 
   /** 창 사건에 붙이는 상대 걸음 (재기 · 10/28 맞춤 판만 — 덮인 채 나아가기가 마지막으로 선 스텝의 것) */
   foeCtx() {
-    return SECRET.risolutoMirror && this.step ? { foe: this.step } : {};
+    return this.step ? { foe: this.step } : {};
   }
 }
 
@@ -294,7 +282,7 @@ export function risolutoTrail(f, run) {
   const b = f.bladePoint(1, _a1);
   let A = run.arc;
   if (!A) {
-    A = run.arc = { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share: ART_MIN, pts: [], ...(SECRET.secretStreak ? { face: 'line' } : {}), ...(SECRET.secretArcMin > 0 ? { min: SECRET.secretArcMin } : {}) };
+    A = run.arc = { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share: ART_MIN, pts: [], ...({ face: 'line' }), ...(SECRET.secretArcMin > 0 ? { min: SECRET.secretArcMin } : {}) };
     run.arcSum = 0;
     f.instantArc = A;
   }

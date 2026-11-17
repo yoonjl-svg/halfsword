@@ -16,8 +16,6 @@ const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals
 const strip = (r) => JSON.stringify({ ...r, frames: undefined });
 
 test('기본값: iaiBelly 켬 (11/08 사장님) · 전 올려베기 길 값 그대로 · 배 길 B = 전 B', () => {
-  assert.equal(SECRET.iaiBelly, 1);
-  assert.equal(SECRET.iaiRise, 1);
   const R = SECRET.iaiPathRise;
   assert.deepEqual([R.M.hand, R.M.yaw, R.M.el], [[0.5, 0.02, 0.04], 0, 12]);
   assert.deepEqual([R.E.hand, R.E.yaw, R.E.el], [[0.4, 0.34, 0.4], 70, 38]);
@@ -30,31 +28,7 @@ test('기본값: iaiBelly 켬 (11/08 사장님) · 전 올려베기 길 값 그�
 });
 
 // 11/13 사람 발도 원전 꼴(SECRET.iaiReal — docs/strike/iai_real_2026-11-13.md)은 선 사람 발도 길을 iaiPathReal 로 바꿈 — 배 길을 잰 이 장면들은 그때 판(iaiReal 0)으로 묶음 (§7)
-test('끔 = 전 판: 배 길 값을 바꿔도 끈 판 발도는 바이트 같음', () => withCfg({ iaiBelly: 0, iaiReal: 0 }, () => {
-  const a = standShot({ foeW: 'longsword', guard: 'langort', start: 'hip', gapAdd: 0.3 });
-  const keep = SECRET.iaiPathBelly;
-  try {
-    SECRET.iaiPathBelly = { B: keep.B, M: { hand: [0.3, -0.5, 0.3], yaw: 10, el: -30 }, E: { hand: [0.1, -0.5, 0.1], yaw: 0, el: -40, body: keep.E.body } };
-    const b = standShot({ foeW: 'longsword', guard: 'langort', start: 'hip', gapAdd: 0.3 });
-    assert.equal(strip(b), strip(a));
-  } finally {
-    SECRET.iaiPathBelly = keep;
-  }
-  assert.equal(a.first?.zone, 'chest', `끈 판 첫 닿음 ${a.first?.zone}`);
-}));
 
-test('켬: 선 사람 발도 — 첫 닿음 배 · 가운데 줄이 배 높이 · 팔 다 펴짐 · 칼이 땅 · 제 다리에 안 닿음 · 서 있음', () => {
-  const off = withCfg({ iaiBelly: 0, iaiReal: 0 }, () => standShot({ foeW: 'longsword', guard: 'langort', start: 'hip', gapAdd: 0.3 }));
-  const on = withCfg({ iaiBelly: 1, iaiReal: 0 }, () => standShot({ foeW: 'longsword', guard: 'langort', start: 'hip', gapAdd: 0.3 }));
-  assert.equal(on.first?.zone, 'abdomen', `첫 닿음 ${on.first?.zone}`);
-  const ab = on.foeY.abdomen;
-  assert.ok(on.crossY > ab - 0.07 && on.crossY < ab + 0.07, `가운데 줄 ${on.crossY} · 배 ${ab} ± 0.07`);
-  assert.ok(on.crossY < off.crossY - 0.1, `끈 판보다 낮게 ${off.crossY} → ${on.crossY}`);
-  assert.ok(on.ext.M >= 0.95 && on.ext.E >= 0.95, `팔 펴짐 ${on.ext.M} · ${on.ext.E}`);
-  assert.ok(on.minY > 0.3, `칼 가장 낮은 점 ${on.minY} m`);
-  assert.ok(on.legGap > 0.03, `제 다리 · 골반 틈 ${on.legGap} m`);
-  assert.equal(on.stand, true);
-});
 
 test('켬: 롱소드 AI 간 보는 자세 아홉 모두 — 칼이 땅 · 제 다리에 안 닿음 · 서 있음 · 가슴에 먼저 닿지 않음', () => {
   withCfg({ iaiBelly: 1 }, () => {

@@ -65,7 +65,7 @@ if (E.RISO_MIRROR === '1') CONFIG.SECRET.risolutoMirror = 1;
 const MIRROR_DRIVE = E.RISO_DRIVE === 'mirror' || E.RISO_DRIVE === 'wait', MREACT = E.RISO_MREACT != null ? +E.RISO_MREACT : 0.2; // 운전: 상대 걸음 따라 (반응 늦음 s — 게임 초)
 const WAIT_DRIVE = E.RISO_DRIVE === 'wait'; // 운전 갈래: 상대 걸음 따라 + 칼이 가깝고 상대가 서 있으면 스틱을 놓고 기다림 (상대가 들어오기를 — 들어옴 길 재기)
 if (E.RISO_ROOM) CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, room: +E.RISO_ROOM }; // 0 = 앞발 런지 걸음을 가슴 사이로 줄이지 않음 (늘 italianStep)
-const LUNGE = !!CONFIG.SECRET.risolutoLunge;
+const LUNGE = true;
 const SEEDS = +seedsArg, SIM = +simArg, V = +vArg, REACT = +rArg;
 const weapons = wArg.split(','), foes = fArg.split(',');
 const v3 = () => new THREE.Vector3();

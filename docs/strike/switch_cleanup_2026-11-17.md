@@ -205,3 +205,11 @@ corr_s0 의 `--limits=off,on` 은 사람 관절 한도 스위치를 지운 뒤�
 - `wander_resume_check.mjs` — `wanderResume`
 - `weapon_thumbs.mjs` — `ids`
 - `wrist_audit_shots.mjs` — `elbowSwivel` · `holdDepth` · `schielPath` · `swivelHuman` · `swivelThrust` · `thrustArm` · `wristGuard`
+
+## 8. 4차 (a937427e 부터 — SECRET 묶음, 일부)
+
+- SECRET 스위치 꼴 칸 159 → 54 (켬 · 끔 · 꼴 · 0/1 어림 — 남은 것엔 각도 · 배율 같은 조율 수가 섞임). src 100 337 → 99 841 줄 · config 3 030 → 2 776 줄.
+- 지움: 켬 판 칸 59 (고노센 · 발도 · 칼집 · 리솔루토 · 연환 · 죽음의 일격 · 비기 기력 · 창 지킴 등 — 기본값을 그 자리에) · 끔 판 칸 19 코드째 (넘어 들어감 · 들어옴 창 · 들어옴 문 · 다 붙음 창 · 줄 덮음 · 거리 판단 리솔루토 · 칼 깊이 지킴 · 웅크림 등) · 꼴 칸 10 (이베리아 · 동방 · 독일 비기 판 · 이탈리아 비기 · 고노센 준비 'dist' · 길목 끝 · 피해 셈 · 스틱 · 거정세 순서 · 밀치기 누르기 옛 조건) · 옛 비기 정의 다섯 (이베리아 v4 · 흐름 · 길목 · 동방 v1 · 독일 막기 연환) · 죽음의 일격 칸 12 (거꾸로 쥠 판 · 쥠 바꿈 · 뒤 박차기 · 겨눔 · 세기 꼴 등 — 폼멜 찍기 하나로) · 알티바슈 칸 5 (옛 빠르기 판 · 무게 보정)
+- 남김(다음 일): SECRET 의 싱지르 ibSpin 묶음 · 격살 꼴(armPath · power · auto) · gkFree · iaiKinematic · 발도 길 각도 칸. 그리고 'spin' 판에서만 쓰던 정수리 가르기 특수 공격 · 거꾸로 쥠 코드가 아직 src 에 남음(읽는 길이 없어짐 — 지울 일)
+- 시험: 'spin' 판 · 옛 비기 판 · 끈 판으로 묶어 보던 시험 블록을 지움(파일 하나 b4_rework.test.mjs 통째). 기본 판 기대값은 그대로. 비기 정의의 글자 열쇠(fast 'cnFast' · lead 'japaneseLead')가 지운 칸을 가리켜 동방 빠른 연환이 꺼지던 것을 잡아 값으로 바꿈
+- 관문 바이트 같음(커밋마다)

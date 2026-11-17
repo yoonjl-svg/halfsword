@@ -168,7 +168,7 @@ test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · confi
   /** 글 속 'n초' = 그 기다림 값 (s) */
   const secs = (c) => +/(\d+(?:\.\d+)?)초/.exec(c)?.[1];
   const de = playerSecretDef('german');
-  assert.ok(SECRET.deMord && de.when === 'press' && SECRET.mordPress > 0, '독일 = 밀치기 누르기 (모르트슐라크)');
+  assert.ok(de.when === 'press' && SECRET.mordPress > 0, '독일 = 밀치기 누르기 (모르트슐라크)');
   // 10/25 23:3x 밀치기 걸쇠 없앰(닿는 거리 안에서 밀면 곧장 · fighter.js closeStep) → '붙은 채 … 밀치면(↑)' · 글 속 시간 = mordPress
   const { CLOSE } = await import('../../src/config.js');
   assert.ok(src('fighter.js').includes('push && (this.closeArmed || (!latch && !g?.req))'), 'fighter.js closeStep — 걸쇠 없는 판은 밂이 곧 발사');
@@ -176,14 +176,9 @@ test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · confi
   assert.equal(sec('german').cmd, OWNER.G10);
   // 이탈리아 (10/25 21:0x 조건 · 22:3x 글): 칼끼리 risolutoCover 안에 댄 채(맞대고) 스틱 앞이나 뒤(움직이면(↑/↓)) · 가슴 사이 ≥ 맞닿기 거리(칼 길이 바깥 — lungeGapOk) → 창(비기 활성화) → 공격(탭 · 긋기)
   const it = playerSecretDef('italian');
-  assert.ok(SECRET.itSecret === 'risoluto' && it.when === 'risoluto' && !it.do.tapOnly && !SECRET.risolutoTap, '이탈리아 = 덮인 채 나아가기 → 공격(탭 · 끌기)');
-  assert.equal(SECRET.risolutoStick, 'both', "I4 '움직이면(↑/↓)' = 스틱 앞이나 뒤");
-  assert.ok(SECRET.risolutoLunge && SECRET.risolutoGap, '런지 간격 조건(가슴 사이 ≥ 맞닿기 거리 — italian_risoluto.js lungeGapOk) — 10/28 글에서는 뺐지만 조건은 그대로');
-  assert.equal(SECRET.risolutoMirror, 1, "I4 '상대 걸음 따라' = 상대가 물러서면 앞 · 들어오면 뒤 (italian_risoluto.js risolutoMirror — 10/28 01:4x)");
   assert.equal(sec('italian').cmd, OWNER.I4);
   // 이베리아 (11/11 자리 바꿈 — 비기 = 알티바슈 포르트 B4): 칼끝 거리 밖 ibSpin.armTime 초 무장(비기 활성화) → 그 창에서 탭을 길게 누르다 떼기(메고 내려침) · 톡 · 끌기 · 원으로는 안 남
   const ib = playerSecretDef('iberian');
-  assert.ok(SECRET.iberianSecret === 'altib' && ib.do.altib && ib.when === 'spinArm', '이베리아 = 무장 → 길게 눌러 메고 떼기');
   assert.ok(src('secret.js').includes('this.spinArm.tick(dt, d0 > V.reach,'), "B4 '칼 길이 바깥' = 내 칼끝 거리(reach) 밖에서 무장");
   assert.ok(main.includes('!playerSecret.holdOwns()'), 'main.js — 알티바슈 포르트 창은 탭 · 긋기 하나로 안 남');
   assert.equal(realS(secs(OWNER.B4)), SECRET.ibSpin.armTime, 'B4 글 속 시간(실제 초) = SECRET.ibSpin.armTime');
@@ -191,11 +186,8 @@ test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · confi
   assert.equal(sec('iberian').cmd, OWNER.B4);
   // 일본 (10/25 22:3x · 22:5x): 거리와 상관없이 iaiArmTime 초 이동 입력 · 공격 · 막기 · 맞음 · 비기 없음(아무 행동 없이 — gnsReady 'idle' · 준비된 뒤엔 걸어도 유지) → 준비 → 상대가 칼을 듦 · 헛침(공격을 시도) · 빠르게 움직임(foeCharge) + 내 발도가 닿는 거리(내 간격) → 창(비기 활성화)
   const jp = playerSecretDef('japanese');
-  assert.ok(jp.cond.armed && jp.do.instant && SECRET.iai && !jp.do.tapOnly, '일본 = 발도 대기 → 상대가 칠 때 창 · 탭도 긋기도');
-  assert.equal(SECRET.gnsReady, 'idle', "J5 '아무 행동 없이' = 거리와 상관없이 이동 입력도 없이 (gnsReady 'idle')");
   assert.equal(realS(secs(OWNER.J5)), SECRET.iaiArmTime, 'J5 글 속 시간(실제 초) = SECRET.iaiArmTime');
   assert.ok(['foeRaise', 'foeRecover', 'foeCharge'].every((w) => jp.when.includes(w)), "J5 '공격을 시도하거나 빠르게 움직이면' = 칼을 듦 · 헛침 · 달려듦");
-  assert.ok(!SECRET.gnsWalkIn, "J5 글에 '천천히 걸어 들어옴' 없음 = 들어옴 창 끔 (gnsWalkIn 0)");
   assert.equal(sec('japanese').cmd, OWNER.J5);
   // 동방: 막기 새 누름 뒤 gyeoksal.press 초 안에 칼이 닿음(정확한 타이밍) · 그때 스틱 앞(앞으로 움직이며(↑)) · 받아 내면 저절로(자동 발동)
   const cn = playerSecretDef('chinese');

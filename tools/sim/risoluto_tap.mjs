@@ -112,7 +112,7 @@ function round(w, id, seed, RT) {
     let secBusy = exhausted || !!p.skill.secretPhase;
     const swipe = Math.hypot(d.x, d.y) / FR >= CONFIG.SKILL.swingSpeed; // main.js: 프레임 손 움직임 ÷ 프레임 시간(실시간)
     const secSwipe = swipe && !ps.S?.do?.tapOnly;
-    const secArm = !(CONFIG.SECRET.secretHold && (p.skill.tap || p.skill.pom)); // main.js 창 지킴: 보통 찌르기가 도는 동안은 창을 쓰지 않음
+    const secArm = !((p.skill.tap || p.skill.pom)); // main.js 창 지킴: 보통 찌르기가 도는 동안은 창을 쓰지 않음
     const attack = DRAG ? !!plan?.swipeNow && swipe : taps > 0;
     if (plan) plan.swipeNow = false;
     if (attack && plan && !plan.done) {
@@ -184,7 +184,7 @@ function round(w, id, seed, RT) {
 }
 
 const WHY = ['fired', 'gap', 'gapFire', 'swing', 'expire', 'state', 'busy', 'skillBusy', 'tapOnly', 'refuse:tap', 'refuse:pom', 'refuse:sec', 'refuse:exhausted', 'refuse:state', 'refuse:other', 'noWin'];
-console.log(`사람 ${DRAG ? '끌기' : '탭'} 흉내 · ${E.RISO_OLD === '1' ? '전 판(10/25 21:0x 전)' : '새 판'} · 덮음 ${CONFIG.SECRET.risolutoCover} · 스틱 ${CONFIG.SECRET.risolutoStick} · ${CONFIG.SECRET.risolutoTap ? '탭만' : '공격'} · 창 지킴 ${CONFIG.SECRET.secretHold ? '켬' : '끔'} · 스틱 늘 앞${STOP ? '(맞붙는 거리에서 멈춤)' : ''} · 누름 ${PRESS} s · 끌던 손가락 뗌 ${LIFT} s 앞 · 미끄러짐 ${SLIP} px · 손 ${V} · TEMPO ${TEMPO} · 씨앗 ${SEEDS} × ${SIM} s · 간격 조건 ${CONFIG.SECRET.risolutoGap ? '켬' : '끔'}`);
+console.log(`사람 ${DRAG ? '끌기' : '탭'} 흉내 · ${E.RISO_OLD === '1' ? '전 판(10/25 21:0x 전)' : '새 판'} · 덮음 ${CONFIG.SECRET.risolutoCover} · 스틱 ${CONFIG.SECRET.risolutoStick} · ${'공격'} · 창 지킴 ${'켬'} · 스틱 늘 앞${STOP ? '(맞붙는 거리에서 멈춤)' : ''} · 누름 ${PRESS} s · 끌던 손가락 뗌 ${LIFT} s 앞 · 미끄러짐 ${SLIP} px · 손 ${V} · TEMPO ${TEMPO} · 씨앗 ${SEEDS} × ${SIM} s · 간격 조건 ${'켬'}`);
 const all = {};
 for (const RT of RTS) {
   const A = { taps: [], wins: [], lunges: 0, hits: 0, pDead: 0, fDead: 0, blocked: 0, invisible: 0, rounds: 0, byW: {} };

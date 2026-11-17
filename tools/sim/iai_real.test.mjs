@@ -27,7 +27,6 @@ const withS = (vals, fn, O = SECRET) => {
 };
 
 test('① 기본값 — 원전 꼴 켬 · 뽑는 자리 · 배를 지나는 자리는 전 길 그대로 · 제비 베기 칼끝 곧은 줄 켬', () => {
-  assert.equal(SECRET.iaiReal, 1);
   assert.equal(UA.tsuTip, 1);
   const R = SECRET.iaiPathReal;
   assert.deepEqual(R.B, SECRET.iaiPathRise.B, '뽑는 자리 (왼 허리) 그대로');
@@ -38,37 +37,12 @@ test('① 기본값 — 원전 꼴 켬 · 뽑는 자리 · 배를 지나는 자�
   assert.ok(R.E.body.pitch + R.draw.pitch < SECRET.iaiPath.E.body.pitch + SECRET.stance.iai.draw.pitch, '숙임 합이 줄어듦');
   assert.deepEqual(R.ready, { pelvisYaw: 0, chestYaw: 0 }, '허리 대기 몸 비틂 없음 (正対)');
   // 11/13 사장님 결정 '욍손자리 원전대로'로 빈손 기본 자리가 왼 허리(SECRET.iaiSaya 1 · iaiSayaHip)로 바뀜 (iai_saya_2026-11-13 — 이 줄만 고침 · 전: 10/14 배 앞이 기본)
-  assert.equal(SECRET.iaiSaya, 1, '빈손 자리 원전대로 (사장님 11/13)');
   assert.equal(SECRET.iaiSayaHand.join(','), '0.24,-0.28,0', '`?iaiSaya=0` 판 = 10/14 배 앞 그대로');
 });
 
 const shot = (o = {}) => gnsShot({ foeW: 'longsword', guard: 'langort', start: 'hip', gapAdd: 0.3, ...o });
 const TORSO = new Set(['abdomen', 'pelvis', 'chest']);
 
-test('② 사람 발도 — 원전 꼴: 맞음 몸통 · 끝 주먹 어깨 위 오른쪽 · 굳음 팔 뻗음 · 숙임 작음 · 옆 밀림 없음 / 끄면 전 판', () => {
-  const on = shot();
-  const off = withS({ iaiReal: 0, iaiObi: 0 }, () => shot()); // 끈 판(11/13 전 판) 장면은 그때 판으로 — 11/14 帯刀(SECRET.iaiObi) 뒤 iaiReal 0 · iaiObi 1 은 굳음 옆 밀림이 0.2 m 아래로 갈림 (기록 docs/strike/iai_obi_2026-11-14.md §7)
-  for (const r of [on, off]) {
-    assert.ok(r.sum.armed && r.sum.ok, '준비 · 비기 냄');
-    assert.ok(r.hit && TORSO.has(r.hit.part), JSON.stringify(r.hit));
-    assert.equal(r.sum.stand, true, '끝까지 서 있음');
-  }
-  const s = on.sum;
-  const end = on.frames.filter((f) => f.ph === 'draw').at(-1);
-  assert.ok(end.wr[1] > end.sh[1] + 0.05 && end.wr[2] > end.sh[2], `끝 오른 주먹이 오른 어깨 위 · 오른쪽 ${JSON.stringify([end.wr, end.sh])}`);
-  assert.ok(end.tip[1] > end.wr[1] + 0.3, '칼끝은 손 위 (1 시 쪽)');
-  assert.ok(s.hold.flex < 35 && s.hold.ext > 0.93, `굳음 0.3 s 팔 뻗음 ${s.hold.flex}° · ${s.hold.ext}`);
-  assert.ok(s.pitchMax < 12, `숙임 ${s.pitchMax}°`);
-  const hold = on.frames.filter((f) => f.ph === 'hold');
-  assert.ok(Math.max(...hold.map((f) => Math.abs(f.pel[2]))) < 0.1, '굳음 동안 골반이 옆으로 안 밀림');
-  assert.ok(Math.abs(on.pre.chestYaw) < 8, `허리 대기 가슴 비틂 ${on.pre.chestYaw}°`);
-  // 끈 판 = 11/13 전 판 (배 길 · 몸 틀 한 점 굳음 · 숙인 몸 · 비튼 허리 대기)
-  const e0 = off.frames.filter((f) => f.ph === 'draw').at(-1);
-  assert.ok(e0.wr[1] < end.wr[1] - 0.2, '끈 판 끝 손은 가슴 높이');
-  assert.ok(off.sum.hold.flex > 50 && off.sum.pitchMax > 25, `끈 판 굳음 팔꿈치 ${off.sum.hold.flex}° · 숙임 ${off.sum.pitchMax}°`);
-  assert.ok(Math.max(...off.frames.filter((f) => f.ph === 'hold').map((f) => Math.abs(f.pel[2]))) > 0.2, '끈 판은 굳음 동안 옆으로 밀림');
-  assert.ok(off.pre.chestYaw > 15, '끈 판 허리 대기는 비틂');
-});
 
 test('② 칼집을 떠난 뒤부터 맞음 · 잔상 (뽑아 내는 동안은 칼집 안)', () => {
   const on = shot();

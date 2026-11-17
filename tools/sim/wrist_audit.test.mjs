@@ -33,10 +33,8 @@ const OLD = [[JOINTS, 'elbowSwivel', 0], [JOINTS, 'wristGuard', 0]]; // 10/24 17
 const ph = (T, k) => T.k.get(k);
 
 test('값: 운동학 겨눈 찌름 팔 뻗음 SECRET.thrustArm 1 · 팔꿈치 돌림 JOINTS.elbowSwivel 1 (사장님 10/24 17:2x) · 따라감 0.2 s · 손목 교정 wristGuard 1 · 손 면 범위 [−30, 135] · 팔 길이 0.57 m · 찌르는 돌림 swivelThrust 1 · 찌름 쓸린 자리 thrustSweep 1', () => {
-  assert.equal(SECRET.thrustArm, 1);
   assert.equal(JOINTS.elbowSwivel, 1);
   assert.equal(JOINTS.swivelThrust, 1);
-  assert.equal(SECRET.thrustSweep, 1);
   assert.equal(JOINTS.swivelTau, 0.2);
   assert.equal(JOINTS.wristGuard, 1);
   assert.equal(JOINTS.wristRope, 0); // 시험 밧줄 기본 끔 (켜면 AI 베기가 크게 약해짐 — 기록 §9)
@@ -58,17 +56,6 @@ const LUNGE1024 = [[SECRET, 'risolutoStiff', 0.6], [SECRET, 'risolutoArmSlow', 0
 const withLunge1024 = (fn) => withSets(LUNGE1024, fn);
 
 
-test('격살 허파 찌르기(봉두세)도 같은 길: 굳음 동안 뻗은 채 · 새끼 쪽 아님 — `?thrustArm=0` 은 옛 꼴(새끼 쪽)', () => {
-  const now = gyeoksalRun('qinggang', 'bongdu');
-  assert.ok(now.fired && now.res?.ok, '격살 허파 찌르기');
-  const S = ph(now.T, 'stiff');
-  assert.ok(S.aSum / S.n >= 0.85 && S.devSum / S.n >= ULNAR, `굳음 손 앞 ${(S.aSum / S.n).toFixed(2)} · dev ${(S.devSum / S.n).toFixed(0)}`);
-  withSets([[SECRET, 'thrustArm', 0], ...OLD, ...LUNGE1024.slice(1)], () => {
-    const old = gyeoksalRun('qinggang', 'bongdu');
-    const O = ph(old.T, 'stiff');
-    assert.ok(O.aSum / O.n < 0.5 && O.devSum / O.n < -60, `옛 굳음 손 앞 ${(O.aSum / O.n).toFixed(2)} · dev ${(O.devSum / O.n).toFixed(0)}`);
-  });
-});
 
 test('10/24 17:2x 뒤 탭 찌르기 (롱소드 황소 → 칼 내린 상대 · 1.5 ~ 2.3 m): 기본 찌름 판정 수 ≥ 전 판(돌림 · 교정 끔) · 머묾 손목 범위 안 — JOINTS.swivelThrust 0(17:2x 판)은 찌름 0', () => {
   // 11/16 묶음 P(사람 탭 찌르기 몸 싣기 THRUST.drive 3) 그대로 — 높은 자세(황소)에선 몸 싣기 당김을 안 해(skill.js thrust · 기록 docs/strike/thrust_stuck_2026-11-15.md §8) 기준 안 (전 묶음 풀음)

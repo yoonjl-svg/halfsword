@@ -133,7 +133,7 @@ export function createSwordTrails(scene) {
         arcs[k].share = Math.max(A.share ?? 1, A.min ?? 0); // 잔상 세기 몫 (중국 빠른 연환 — SECRET.cnFastShare: 빠르기와 같은 비율, 사장님 10/12 01:2x). 그 밖 비기는 1 · min = 결정타 잔상 바닥 (10/23 SECRET.secretArcMin — 사람 비기)
         arcs[k].width = A.width ?? 1; // 잔상 굵기 몫 (격살 시험 스위치 SECRET.gyeoksal.trailWidth — 칼끝에서 칼날 쪽으로 덮는 몫 · 기본 1 = 칼날 전부, 그대로)
         const L = lunges[k];
-        L.A = A.lunge && SECRET.risoStreak ? A : null; // 런지 빛줄기 (10/25 — 위)
+        L.A = A.lunge ? A : null; // 런지 빛줄기 (10/25 — 위)
         if (L.A) Object.assign(L, { S: A.lunge, E: null, d: -1, n: 0, t0: performance.now(), tf: performance.now(), share: arcs[k].share });
         arcs[k].face = (!L.A && A.face) || null; // 마주 보는 띠 'path' | 'line' (10/23 — 위 머리말) · 빛줄기를 그리는 런지는 빼고
         arcs[k].t0 = arcs[k].tf = performance.now();

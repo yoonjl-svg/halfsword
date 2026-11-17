@@ -455,7 +455,7 @@ function iaiPose(I, u) {
  *  왼 허리에서 뽑는 자리(B)는 그대로(0) → 가운데(M)에서 다 뻗음(1) → 끝(E)까지 다 뻗음. 어깨 = 지금 가슴의 칼 어깨 자리(발도 몸 틀). 방향·칼날·시간은 그대로 (새 값 없음)
  */
 function iaiReach(f, I, P, u) {
-  if (!SECRET.secretReach || u < I.ab) return P;
+  if (u < I.ab) return P;
   const v = I.ab < 1 ? (u - I.ab) / (1 - I.ab) : 1;
   const x = Math.min(1, v / (I.K?.M?.at ?? 0.5)); // B → M 사이 몫 (iaiPose 의 가운데 이음새 v 0.5 · 원전 꼴 iaiPathReal 은 M.at)
   const w = x * x * (3 - 2 * x);
@@ -708,7 +708,7 @@ function iaiSolve(f, H, D, turn = 0, edgeHint = null, rollCap = false, I = f.iai
   }
   // 비정상 손목 교정 (JOINTS.wristGuard — driveSword 와 같은 wristClamp): 놓을 아래팔(qf)과 칼날이 사람 손목 범위 밖이면 칼날을 칼 면 안에서 범위 끝으로. 손 자리 · 팔 · 칼 면 그대로
   //  겨눈 찌름(comboPlanAim thrust · SECRET.thrustArm — 런지 · 격살 허파 찌르기)은 칼이 어깨 → 겨눈 곳 줄 위라 건드리지 않는다: 칼끝을 줄에서 비키면 찌름이 베기가 된다(탭 찌르기와 같은 원칙 — 손목은 팔이 맡음)
-  const thrustSeg = SECRET.thrustArm && I.kind === 'combo' && I.moves?.[I.mi]?.dyn?.thrust;
+  const thrustSeg = I.kind === 'combo' && I.moves?.[I.mi]?.dyn?.thrust;
   const fix = JOINTS.wristGuard && !M && !thrustSeg ? f.wristClamp(new THREE.Vector3(1, 0, 0).applyQuaternion(qf), Dw, _wz.set(0, 0, 1).applyQuaternion(qs), I.wristMargin ?? 0) : 0; // fighter.js wristClamp (몸의 메서드로 — 이 모듈이 fighter.js 를 부르면 모듈 차례가 꼬인다)
   if (fix) swordQuat(Dw, qs, _wx.crossVectors(Dw, _wz));
   return { M, Dw, up, fp, wrist, qu, qf, qs, fix };
@@ -831,28 +831,27 @@ function startIai(f, combat) {
   //  틀이 무거운 칼(frame 'heavy' — 모노호시자오)은 한 손이 무리라 두 손 그대로였음 (10/12 — 무기 표에 이미 있는 틀 값을 읽음 · 11/13 아래 iaiOneHeavy 로 사람은 한 손). 다시 쥐기는 발도 뒤(경직 붙잡기) — iai 가 끝나면 offHand 가 다시 쥔다
   //  11/13 사장님 결정 "… 한손으로." (SECRET.iaiOneHeavy · 사람 기본 1 / iaiOneHeavyAi · AI 기본 0 — 여쭐 것): 틀이 무거운 칼도 원전대로 한 손으로 뽑아 벰
   //   (전일본검도연맹 거합 1 · 5본 — 뽑아 벨 때 오른손 한 손 · 왼손 칼집 · 두 손은 내려 벨 때부터). 길 · 빠르기 · 판정 · 굳음은 한 손 발도 그대로 — 다시 쥐기만 부드럽게(regrip — SECRET.iaiRegrip · fighter.js offHand)
-  const rise = !!SECRET.iaiRise;
+  const rise = true;
   const heavy = f.weapon?.frame === 'heavy';
-  const oneHeavy = heavy && !!(req.player ? SECRET.iaiOneHeavy : SECRET.iaiOneHeavyAi);
+  const oneHeavy = heavy;
   const oneHand = rise && !!f.weaponCfg.twoHand && (!heavy || oneHeavy);
   // 11/06 사장님 '그래 배 쪽으로 재봐. 사선 베기의 모양도 지금보다는 완만해져도 돼' (SECRET.iaiBelly · 기본 0): 올려베기 길을 배 높이 길 iaiPathBelly 로 — 선 몸에서 뽑는 사람 발도만.
   //  AI 고노센(숙련 5 일본)과 웅크림 판 사람(SECRET.gnsCrouch 1)은 웅크린 발도 대기(iaiReady — 낮춤 0.16 · 숙임 14°)에서 뽑아 지금 길이 이미 상대 골반 높이(롱소드 과녁 가운데 줄 0.91 m)를 지남 — 배 길이면 허벅지(0.80)로 내려감 (gns_belly.mjs stand crouch)
   //  11/13 사장님 '실제 발도슬이나 원전이 재현되도록' (SECRET.iaiReal · 기본 1): 같은 사람 발도를 원전 꼴 길 iaiPathReal 로 (뽑아 냄 → 칼집을 떠남 → 배를 지나 오른 어깨 위로 · 몸 숙임 줄임 · 허리 대기 正対 · 굳음 동안 팔 뻗음)
-  const real = rise && !!SECRET.iaiReal && !!SECRET.iaiPathReal && req.player && !SECRET.gnsCrouch;
-  const riseK0 = real ? SECRET.iaiPathReal : SECRET.iaiBelly && req.player && !SECRET.gnsCrouch ? SECRET.iaiPathBelly : SECRET.iaiPathRise;
+  const real = rise && !!SECRET.iaiPathReal && req.player;
+  const riseK0 = real ? SECRET.iaiPathReal : req.player ? SECRET.iaiPathBelly : SECRET.iaiPathRise;
   const riseK = obiB ? { ...riseK0, B: obiB } : riseK0; // 帯刀 뽑는 자리 (위 obiB — N · M · E 그대로)
   f.iai = { kind: 'iai', K: rise ? riseK : K, oneHand, J: SECRET.instantJ, body: real ? riseK.E.body : SECRET.iaiPath.E.body, real, hold: SECRET.stiff.japanese, pose: (I, u) => iaiReach(f, I, iaiPose(I, u), u), t: 0, T, ab: far ? SECRET.iaiDrawShare : 0, A: { H: AH, D: AD }, DB, yaw, slide, dx, dz, off: !oneHand && !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hit: null, res: null, arc: null };
-  if (SECRET.gnsThrough && req.player) f.iai.through = true; // 베고 지나감 (11/05 일본 강화 길 — 사람 발도만 · 기본 0 · stepIai)
   if (req.block) f.iai.block = true; // 고노센 B (SECRET.gnsEnterBlock — 천천히 걸어 든 들어옴 창에서 낸 발도): 몸보다 먼저 상대 칼에 닿으면 막힘 (아래 stepIai — 밀어냄은 휩쓸기만)
   if (req.block === 'cover') f.iai.cover = true; // gnsEnterBlock 2: 칼끝이 내 몸을 겨눈 채 천천히 든 상대 — 몸에 닿는 자리에서 막힘
-  if (oneHand && (oneHeavy || SECRET.iaiRegripAll)) f.iai.regrip = true; // 한 손 발도 (11/13): 굳음 · 풀기 뒤 빈손이 칼자루로 부드럽게 돌아옴 (holdIai → fighter.js offHand) — 앞무게 두손 칼(iaiOneHeavy) · 우치가타나 등 모든 일본 칼(SECRET.iaiRegripAll — 사장님 11/13 '우치가타나 부드럽게' · 사람 · AI)
+  if (oneHand) f.iai.regrip = true; // 한 손 발도 (11/13): 굳음 · 풀기 뒤 빈손이 칼자루로 부드럽게 돌아옴 (holdIai → fighter.js offHand) — 앞무게 두손 칼(iaiOneHeavy) · 우치가타나 등 모든 일본 칼(SECRET.iaiRegripAll — 사장님 11/13 '우치가타나 부드럽게' · 사람 · AI)
   setKinematic(f, true);
   // 칼집을 떠나는 자리부터 맞음 · 잔상 (원전 꼴 — 뽑아 내는 동안은 칼이 칼집 안)
   if (real && riseK.N) f.iai.hitFrom = f.iai.ab + (1 - f.iai.ab) * riseK.N.at;
   // 11/14 사장님 '원전과 다른 셋 이어서 맞춰' ① (SECRET.iaiSayaReady — 鞘引き): 발도 대기에서(왼손이 칼집 입 鯉口 — fighter.js offHand iaiSayaW) 낸 한 손 발도면 뽑아 내는 동안
   //  왼손(빈팔)을 칼집 입에서 왼 허리 칼집 손 자리로 — 칼이 칼집을 떠나는 몫(원전 꼴 hitFrom 과 같은 셈 ab + (1 − ab) × iaiPathReal.N.at · 새 수 없음)에서 다 닿게
   //  스텝마다 놓음(placeIai — 두 손 발도 빈팔 I.off 와 같은 놓기) · 그 뒤 · 굳음은 그 자리. 칼자루를 쥔 채(대기 아님) 낸 발도는 11/13 그대로(빈팔 근육으로 감)
-  if (oneHand && SECRET.iaiSayaReady && SECRET.iaiSaya && SECRET.iaiSayaHip && (f.iaiSayaW ?? 0) > 0 && f.bodies.farmO && f.limbs?.armO > 0.3) {
+  if (oneHand && SECRET.iaiSayaHip && (f.iaiSayaW ?? 0) > 0 && f.bodies.farmO && f.limbs?.armO > 0.3) {
     const pc = tv(f.bodies.pelvis.translation(), new THREE.Vector3());
     const qpi = tq(f.bodies.pelvis.rotation(), new THREE.Quaternion()).invert();
     const fo = f.bodies.farmO;
@@ -1026,7 +1025,7 @@ function holdIai(f, dt) {
       // 11/14 사장님 '원전과 다른 셋 이어서 맞춰' ② (SECRET.iaiRegripFade): 두 손으로 가는 때를 원전처럼 振りかぶり(이 게임 = 풀기 0.2 s — 칼이 끝 자세에서 가운데로)와 겹침 —
       //  다시 쥐기(iaiRegrip)를 풀기 동안 시작해 鞘戻し 점(③ — 다시 쥐기 몫 0.5)을 풀기가 끝나는 때(振りかぶり 끝) 지나게: 기다림 = 풀기 − 다시 쥐기 ÷ 2 (0.2 − 0.1 = 0.1 s · 새 수 없음).
       //  풀기 끝에 칼 겨눔이 한 스텝에 바뀌는 몸(AI 가 손을 되찾는 때)도 그 순간 칼자루 끝 몫이 0 이라 빈손 목표가 튀지 않음 · 굳음 길이 · 풀기 길이 그대로 (전: 풀기가 끝난 뒤 시작)
-      if (SECRET.iaiRegripFade && f.iaiOneHold && f.iaiOneRegrip) f.iaiRegripWait = Math.max(0, 0.2 - (SECRET.iaiRegrip ?? 0) / 2);
+      if (f.iaiOneHold && f.iaiOneRegrip) f.iaiRegripWait = Math.max(0, 0.2 - (SECRET.iaiRegrip ?? 0) / 2);
     }
     if (!f.alive || f.state !== 'stand') {
       f.iaiHoldT = 0;
@@ -1065,13 +1064,13 @@ function startRegrip(f) {
   const T = SECRET.iaiRegrip ?? 0;
   f.iaiRegripT = T > 0 ? T : 0;
   f.iaiRegripDur = T > 0 ? T : 0;
-  f.iaiRegripVia = !!SECRET.iaiSayaModoshi; // 11/14 ③: 왼 허리 → 鞘戻し 점(칼집 입을 배꼽 앞으로 — SECRET.iaiSayaMouth) → 칼자루 끝 (fighter.js offHand)
+  f.iaiRegripVia = true; // 11/14 ③: 왼 허리 → 鞘戻し 점(칼집 입을 배꼽 앞으로 — SECRET.iaiSayaMouth) → 칼자루 끝 (fighter.js offHand)
 }
 
 /** 이 몸의 발도가 한 손인가 (startIai oneHand 와 같은 셈 — 11/14 발도 대기 왼손 칼집 입 SECRET.iaiSayaReady 가 읽음). player = 사람 발도(req.player) */
 export function iaiOneHandOf(f, player) {
   const heavy = f.weapon?.frame === 'heavy';
-  return !!SECRET.iaiRise && !!f.weaponCfg?.twoHand && (!heavy || !!(player ? SECRET.iaiOneHeavy : SECRET.iaiOneHeavyAi));
+  return !!f.weaponCfg?.twoHand && true;
 }
 
 /** 발도 중이거나 끝 자세를 붙잡는 중인가 (대기 자세·다른 덧씌우기가 칸을 건드리지 않게) */
@@ -1095,7 +1094,7 @@ function notosPose(f, w, body, standing, oneHand) {
   th.chestYaw = body.chestYaw * D2R * k + (TW?.chest ?? 0) * D2R * tw;
   th.pitch = standing ? (TW?.pitch ?? 0) * D2R * tw : body.pitch * D2R * k; // 숙임 덧은 선 채 대기만 (웅크린 대기는 이미 숙임 — 더 숙이면 배가 칼날에 닿음 · 재기)
   th.drop = standing ? 0.06 : 0.06 + (body.drop - 0.06) * k;
-  f.iaiSayaReadyW = SECRET.iaiSayaReady && oneHand && w > 0 ? N?.left ?? 0 : 0;
+  f.iaiSayaReadyW = oneHand && w > 0 ? N?.left ?? 0 : 0;
 }
 
 /** 발도 대기 자세 (AI 일본, 대기 IaiArm 이 찼을 때): 덧씌우기 칸에 웅크린 왼 허리 자세를 on 이면 0.35 s 에 켜고, 아니면 0.12 s 에 끈다 */
@@ -1149,7 +1148,7 @@ export function iaiReadyPose(f, on, dt, sheathe = 0) {
   f.iaiReadyW = w;
   const hw = Math.max(w, f.notoSeat ?? 0); // 손 · 칼 덧씌우기 몫 (납도로 칼집에 든 채 켜졌으면 1 — 웅크림 몫 w 는 그대로 0.35 s)
   // 11/14 ① (SECRET.iaiSayaReady): 발도 대기 동안 왼손은 칼자루를 놓고 칼집 입(鯉口)을 쥠 — 몫 = 대기 무게 (fighter.js offHand) · 한 손 발도일 때만
-  f.iaiSayaReadyW = SECRET.iaiSayaReady && iaiOneHandOf(f, false) ? hw : 0;
+  f.iaiSayaReadyW = iaiOneHandOf(f, false) ? hw : 0;
   const R = SECRET.iaiReady;
   const th = f.skill.thrustPose;
   th.w = hw;
@@ -1211,7 +1210,7 @@ export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false, sheath
   if ((!on || handFree) && own && iaiSeated(f)) return void drawStart(f, !on ? 'off' : 'grip');
   // 11/14 납도 (SECRET.iaiSheathe — sheathe = IaiArm.sheathe 몫): 준비 전 iaiSheathe 초 동안 손이 쉬면 칼을 칼집에 (iai_obi.js notoStep) · 칼을 쥐면 곧장 사람 손(덧씌우기 0) — 셈은 그대로 흐름
   if (!on && sheathe > 0 && own && obiOn(f)) {
-    const RB = standing && SECRET.iaiReal && SECRET.iaiPathReal?.ready ? SECRET.iaiPathReal.ready : SECRET.iaiReady.body;
+    const RB = standing && SECRET.iaiPathReal?.ready ? SECRET.iaiPathReal.ready : SECRET.iaiReady.body;
     notosPose(f, notoStep(f, sheathe, !handFree, sk.thrustPose.hand, sk.thrustPose.dir), RB, standing, iaiOneHandOf(f, true));
     f.iaiReadyW = f.iaiReadyR = f.iaiHandW = 0;
     f.iaiObiW = 0;
@@ -1233,7 +1232,7 @@ export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false, sheath
   f.iaiReadyW = standing ? 0 : w;
   f.iaiHandW = h;
   // 11/14 ① (SECRET.iaiSayaReady): 손을 쉬고 기다리는 발도 대기(손 몫 h) 동안 왼손은 칼집 입(鯉口) — 칼을 쥐면 h 0 → offHand 가 칼자루로 다시 쥠(iaiRegrip 초)
-  f.iaiSayaReadyW = own && SECRET.iaiSayaReady && iaiOneHandOf(f, true) ? h : 0;
+  f.iaiSayaReadyW = own && iaiOneHandOf(f, true) ? h : 0;
   f.iaiObiW = own && obiOn(f) ? h : 0; // 11/14 帯刀 (SECRET.iaiObi — 아래 · iai_obi.js): 칼집 그림이 대기 칼을 감싸는 몫
   if (!own) return;
   const R = SECRET.iaiReady;
@@ -1250,7 +1249,7 @@ export function iaiReadyPosePlayer(f, on, handFree, dt, standing = false, sheath
     th.dir[2] = D.z;
   }
   // 선 채 허리 대기를 원전 꼴로 (11/13 SECRET.iaiReal — iaiPathReal.ready): 몸 비틂 없이 상대를 바로 봄 (웅크림 판 · AI 는 그대로)
-  const RB = standing && SECRET.iaiReal && SECRET.iaiPathReal?.ready ? SECRET.iaiPathReal.ready : R.body;
+  const RB = standing && SECRET.iaiPathReal?.ready ? SECRET.iaiPathReal.ready : R.body;
   th.pelvisYaw = RB.pelvisYaw * D2R;
   th.chestYaw = RB.chestYaw * D2R;
   // 선 채 허리 대기 (10/31 — SECRET.gnsReadyHip): 몸 숙임 · 낮춤 없이(골반 높이 그대로 — 덧씌우기 몸 낮춤의 바탕 0.06 · fighter.js) 몸 비틂만 — 발도 길은 가슴 기준이라 서 있는 높이에서 나간다
@@ -1285,8 +1284,8 @@ export function drawTick(f, dt) {
   const th = f.skill.thrustPose;
   if (!nukiStep(f, p, th.hand, th.dir)) return drawEnd(f, false);
   const player = !f.aiControlled;
-  const standing = player && !SECRET.gnsCrouch;
-  const body = standing && SECRET.iaiReal && SECRET.iaiPathReal?.ready ? SECRET.iaiPathReal.ready : SECRET.iaiReady.body;
+  const standing = player;
+  const body = standing && SECRET.iaiPathReal?.ready ? SECRET.iaiPathReal.ready : SECRET.iaiReady.body;
   notosPose(f, 1, body, standing, iaiOneHandOf(f, player));
   f.iaiReadyW = standing ? 0 : Math.min(f.iaiReadyW ?? 0, 1 - p); // 웅크림은 뽑는 동안 풀림 (AI · 사람 웅크림 판)
   f.iaiReadyR = 0;
@@ -1679,7 +1678,7 @@ function startCombo(f, combat, req) {
   setKinematic(f, true);
   f.instantGhost = Math.ceil(SECRET.instantNoCollide / (combat.dt || 1 / 120)) + 1; // 수를 짤 때마다·스텝마다 다시 채운다 (stepCombo)
   f.iai.prev = placeIai(f, AH, AD, true);
-  if (SECRET.sweepCap) f.iai.planPrev = comboPlanW(f, f.iai, f.iai.cur); // 짠 길 지난 자세 (11/04 — 맞음 빠르기 묶음 · stepCombo)
+  f.iai.planPrev = comboPlanW(f, f.iai, f.iai.cur); // 짠 길 지난 자세 (11/04 — 맞음 빠르기 묶음 · stepCombo)
   comboNext(f, f.iai);
 }
 
@@ -1688,7 +1687,7 @@ function comboNext(f, I) {
   if (I.mi + 1 >= I.moves.length) return false;
   comboMoveStart(f, I, I.mi + 1);
   const m = I.moves[I.mi];
-  const dyn = !!m.dyn && (!!SECRET.cnPath || !!m.lunge); // 안다레 리솔루토 런지(10/24 — m.lunge)는 연환 길 스위치(cnPath)와 따로 늘 그때 계산 찌름
+  const dyn = !!m.dyn; // 안다레 리솔루토 런지(10/24 — m.lunge)는 연환 길 스위치(cnPath)와 따로 늘 그때 계산 찌름
   I.segs = (I.mord ? comboPlanMord(f, I, m, I.cur) : m.artThrust ? comboPlanArtThrust(f, I, m, I.cur) : m.dup ? (m.dyn?.old ? comboPlanDup(f, I, m, I.cur) : comboPlanDupLine(f, I, m, I.cur)) : m.rd ? comboPlanRd(f, I, m, I.cur) : dyn ? comboPlanDyn(f, I, m, I.cur) : comboPlanPad(f, I, m, I.cur)).filter((sg) => sg.T > 0); // rd: 사람 풍차 베기 (10/29 — 아래) // artThrust: 사람 칼끝 돌려 빼기 (10/28 — 아래)
   I.si = 0;
   I.ts = I.t;
@@ -2007,9 +2006,8 @@ function comboPlanMord(f, I, m, A) {
     if (best) {
       const delta = P.clone().sub(best.C);
       // 머리 따라 겨눔 (10/30 시제품 — SECRET.mord.track · 기본 끔): 옮기기 전 길 · 겨눈 길 자리(토막 k 의 i/8)를 두었다가 stepCombo 가 스텝마다 그때 머리로 다시 옮김 (mordTrack)
-      if (SECRET.mord.track) M.trk = { pts, base: pts.map((B) => ({ H: B.H.clone(), D: B.D.clone() })), k: best.k, w: best.i / 8, r, seg: null, tAim: null, done: false, n: 0, moved: 0 };
-      if (SECRET.mord.noSelfClip) M.clip = mordClipPlan(f, I, pts, M.trk?.base ?? pts.map((B) => ({ H: B.H.clone(), D: B.D.clone() })), best.k, best.i / 8, P, r); // 내 머리 뚫음 막기 (10/31 시제품 · 기본 끔 — 아래)
-      else for (const B of pts) B.H.add(delta);
+      M.trk = { pts, base: pts.map((B) => ({ H: B.H.clone(), D: B.D.clone() })), k: best.k, w: best.i / 8, r, seg: null, tAim: null, done: false, n: 0, moved: 0 };
+      M.clip = mordClipPlan(f, I, pts, M.trk?.base ?? pts.map((B) => ({ H: B.H.clone(), D: B.D.clone() })), best.k, best.i / 8, P, r); // 내 머리 뚫음 막기 (10/31 시제품 · 기본 끔 — 아래)
       M.pullD = delta.length(); // 재기 (옮긴 거리 m)
     }
   }
@@ -2193,7 +2191,7 @@ function mordTrack(f, I) {
     if (I.mord.pre > 0) for (let s = 1; s < I.segs.length && !I.segs[s].cut; s++) T.tCut += I.segs[s].T; // 쥠 바꿈 토막 (10/31 시제품) 뒤 첫 베는 토막까지
     T.tAim = t + T.w * T.seg.T;
   }
-  const until = SECRET.mord.trackUntil === 'cut' ? T.tCut : T.tAim - (SECRET.mord.trackCommit ?? 0);
+  const until = T.tAim;
   if (I.mordBacked || I.hitM || I.blockM || I.t >= until || !f.foe?.bodies.head) return void (T.done = true);
   const c = tv(f.bodies.chest.translation(), new THREE.Vector3());
   const P = tv(f.foe.bodies.head.translation(), new THREE.Vector3()).sub(c).applyQuaternion(I.yaw.clone().invert());
@@ -2284,7 +2282,7 @@ function comboShoulder(f, yaw) {
 
 /** 칼 팔이 닿는 거리 — fighter.armIK 와 같은 끝 (비기 동안 SECRET.secretReach 면 위팔 + 아래팔, 아니면 평소 여유) · 10/24 모르트슐라크 AI 머리 닿음(mordschlag.js mordHeadReach)도 */
 export function comboArmLen() {
-  return ARM.upper + ARM.fore - (SECRET.secretReach ? 0 : ARM.slack);
+  return ARM.upper + ARM.fore - (0);
 }
 
 /** 상대 몸통 선(가슴 → 골반 몸체 가운데) 두 끝을 몸 틀로 — 이 수의 반걸음 미끄러짐만큼 당겨 둔다(미끄러진 뒤의 자리) */
@@ -2490,7 +2488,7 @@ function comboPlanAim(f, I, m, A, D, at0 = null) {
   const dc = P.clone().sub(S);
   const dist = dc.length();
   dc.normalize();
-  if (D.thrust && SECRET.thrustArm) {
+  if (D.thrust) {
     // 10/24 15:5x 팔을 뻗은 찌름 (SECRET.thrustArm 1 — 사장님 '주먹 아래쪽으로 칼날이 향하도록 거꾸로 쥐고 있는 거 같은데?' · docs/strike/wrist_audit_2026-10-24.md):
     //  손을 어깨 → P 줄 위 팔 길이(Lf — 팔꿈치 곧게)에 두고 칼을 그 줄 = 곧게 편 아래팔의 연장으로 (카포 페로 · 파브리스 런지 도판: 맞히는 순간 칼 팔이 어깨 높이로 다 펴지고 팔과 칼이 한 줄).
     //  옛 길(아래)은 칼끝이 꼭 P 에 닿게 손을 어깨에서 dist − 칼 길이(맞닿기 거리에서 0.1 ~ 0.5 m) · 뽑아 붙잡는 자리는 다시 D.draw 만큼 어깨 쪽(0.1 ~ 0.2 m)에
@@ -3528,14 +3526,14 @@ function stepCombo(f, combat) {
   // 겨눈 찌름(comboPlanAim thrust — 격살 허파 찌르기): 이 스텝에 맞힘 없는 겨눔 토막에서 찌르는 토막으로 넘어왔으면 쓸린 자리를 찌르는 토막 첫 자리부터 본다.
   //  지난 스텝 자리(겨눔 토막 가운데)부터 보면 겨눔의 옆 움직임이 찌름 방향에 섞여, 칼끝이 이미 몸 깊이에 든 맞닿기 언저리에서 찌름이 베기로 셈됐다
   //  (10/24 17:2x 뒤 — 시작 자세가 바뀌면 겨눔이 끝나는 스텝이 달라져 맞닿기 −0.1 ~ +0.1 m 의 찌름 17 → 8 / 20 · 런지 lungeSweep 과 같은 까닭 · SECRET.thrustSweep)
-  if (SECRET.thrustSweep && I.mi === mi0 && I.si > si0 && sg?.cut && !I.mord && I.moves[I.mi]?.dyn?.thrust) {
+  if (I.mi === mi0 && I.si > si0 && sg?.cut && !I.mord && I.moves[I.mi]?.dyn?.thrust) {
     let k = I.si;
     while (k > si0 && I.segs[k - 1].cut) k--;
     if (k > si0) {
       const A = I.segs[k].A;
       const D = A.D.clone().applyQuaternion(I.yaw).normalize();
       I.prev = { B: A.H.clone().applyQuaternion(I.yaw).add(tv(f.bodies.chest.translation(), new THREE.Vector3())).addScaledVector(D, f.weaponCfg.hiltLength), D };
-      if (SECRET.sweepCap) I.planPrev = { B: I.prev.B.clone(), D: D.clone() }; // 짠 길도 같은 자리부터 (11/04 — 이 자리는 팔이 못 닿는 길 자리일 수 있어 놓인 칼과 0.3 m 어긋남: 그 어긋남은 빠르기로 안 셈)
+      I.planPrev = { B: I.prev.B.clone(), D: D.clone() }; // 짠 길도 같은 자리부터 (11/04 — 이 자리는 팔이 못 닿는 길 자리일 수 있어 놓인 칼과 0.3 m 어긋남: 그 어긋남은 빠르기로 안 셈)
     }
   }
   // 반걸음 몸 미끄러짐 (발도와 같은 꼴 — 부드럽게 줄며)
@@ -3592,7 +3590,7 @@ function stepCombo(f, combat) {
     if (hint && hint.lengthSq() > 1e-8) I.edgeHint = hint;
   }
   const cur = placeIai(f, P.H, P.D, false, P.turn, I.moves[I.mi]?.cutSweep ? I.edgeHint ?? null : null, !!(I.moves[I.mi]?.band || I.moves[I.mi]?.roll)); // roll: 굴림 묶음만 (칼끝 돌려 빼기 — 10/28)
-  const planCur = SECRET.sweepCap && I.planPrev ? comboPlanW(f, I, P) : null; // 짠 길 이 스텝 자세 (11/04 — 맞음 빠르기 묶음 · instantWound plan)
+  const planCur = I.planPrev ? comboPlanW(f, I, P) : null; // 짠 길 이 스텝 자세 (11/04 — 맞음 빠르기 묶음 · instantWound plan)
   const subs = I.guarding ? 0 : I.moves[I.mi]?.lunge ? 0 : 3; // 런지는 아래 lungeSweep (지나온 토막 길을 따라) · 11/16 겨눔 되돌림은 맞힘 없음
   // 제비 베기 되돌림 칼(10/25 — requestArtSnap 의 cutSweep): 꺾은 자리로 거두는 준비 토막(맞힘 없음)에서 베는 토막으로 넘어온 스텝은 맞힘을 보지 않는다 —
   //  그 스텝 쓸린 자리가 준비 토막(내려간 칼 자리 — 상대 다리 곁)부터 베기로 셈됐다 (겨눈 찌름 thrustSweep 과 같은 까닭 · 길 점 자리는 팔이 다 닿지 않아 실제 놓인 칼과 달라 그 자리부터 재지 않음)
@@ -3770,7 +3768,7 @@ function lungeSweep(f, I, combat, t0, t1) {
  */
 function weakTouch(I) {
   I.weakN = (I.weakN ?? 0) + 1;
-  if (SECRET.spendOnWound) I.hitM = false;
+  I.hitM = false;
 }
 
 function endCombo(f, combat) {
@@ -3829,7 +3827,7 @@ function endCombo(f, combat) {
   f.iaiFade = I.hold > 0 ? 0 : 0.2; // 붙잡기 0 (제비 베기 되돌림 칼 — 비기 굳음이 아님)이면 곧장 손가락에 돌려준다 (holdIai 의 0.2 s 풀기 그대로)
   f.instantGhost = Math.max(f.instantGhost ?? 0, Math.ceil(SECRET.instantNoCollide / (combat.dt || 1 / 120)));
   // 10/24 15:5x 팔을 뻗은 겨눈 찌름(SECRET.thrustArm)이 맞혔으면: 뻗은 채 굳는 동안 칼은 이미 상처 속 — 내 칼 ↔ 상대 몸만 그 굳음 동안 부딪히지 않음(combat.js filterContactPair · 칼끼리 · 팔은 그대로)
-  if (SECRET.thrustArm && I.hits > 0 && I.moves.some((m) => m.dyn?.thrust)) f.holdGhost = Math.ceil(I.hold / (combat.dt || 1 / 120));
+  if (I.hits > 0 && I.moves.some((m) => m.dyn?.thrust)) f.holdGhost = Math.ceil(I.hold / (combat.dt || 1 / 120));
   f.tipPrev = f.bladePoint(1, new THREE.Vector3());
   f.hitPointPrev = f.bladePoint(0.7, new THREE.Vector3());
   f.tipVel.set(0, 0, 0);

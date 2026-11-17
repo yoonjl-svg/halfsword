@@ -18,7 +18,6 @@ test('기본값: 새 스위치 끔 · 죽음의 일격 조건 그대로', () => 
   assert.equal(SKILL.cutStepIn.fwd, 0.3); // 11/05 사장님 '독일 반걸음 넣고'
   assert.deepEqual(SKILL.cutStepIn.schools, ['german']);
   assert.deepEqual(SKILL.cutStepIn.frames, ['two']);
-  assert.equal(SECRET.mordRule, 'close');
   assert.equal(SECRET.mordCloseN, 0.8);
 });
 

@@ -12,34 +12,6 @@ import { CHARACTERS_BY_ID } from '../../src/characters.js';
 
 const { SECRET, STAMINA } = CONFIG;
 
-test('기본값 — 켬 · 기준 0 (사장님 10/30 18:3x) · 기력 > 0 이면 됨 · 0 이하면 안 됨 · 무한 · 끔이면 늘 됨', () => {
-  assert.equal(SECRET.secretStamina, 1);
-  assert.equal(SECRET.secretStaminaMin, 0);
-  assert.equal(STAMINA.secretCost, 35);
-  const G = newRound({ walls: true, seed: 3, weapon: 'longsword', weapon2: 'longsword' });
-  try {
-    const s = G.player.stamina;
-    s.value = 0.01;
-    assert.equal(s.secretReady, true, '0 보다 크면 됨');
-    s.value = 1;
-    assert.equal(s.secretReady, true);
-    s.value = 0;
-    assert.equal(s.secretReady, false, '0 이하 안 됨');
-    s.value = -20;
-    assert.equal(s.secretReady, false);
-    s.infinite = true;
-    assert.equal(s.secretReady, true, '기력 무한');
-    s.infinite = false;
-    SECRET.secretStamina = 0;
-    try {
-      assert.equal(s.secretReady, true, '끔 = 전 판');
-    } finally {
-      SECRET.secretStamina = 1;
-    }
-  } finally {
-    G.world.free();
-  }
-});
 
 /** 독일 몸 + 비기 창 (몸이 붙은 채 — 모르트슐라크 조건) */
 function body() {
@@ -81,36 +53,6 @@ test('사람: 기력 0 이면 붙은 채 2 s 가 차도 창 없음 · 거절 셈
   }
 });
 
-test('사람: 열린 창도 기력이 0 이하가 되면 닫힘 · fire 는 null (거절 셈) · 끄면(secretStamina 0) 기력 −20 에서도 창 · 나감', () => {
-  const B = body();
-  const { P, W, upd, until } = B;
-  try {
-    P.stamina.value = 60;
-    assert.ok(until(() => W.open, SECRET.mordPress + 0.2) != null);
-    P.stamina.value = -20;
-    assert.equal(W.fire(), null, '창이 열린 뒤 모자라짐 — 비기 아님');
-    assert.equal(W.open, null);
-    assert.equal(W.poor.refused, 1);
-    P.stamina.value = 60;
-    assert.ok(until(() => W.open, SECRET.mordPress + 0.2) != null);
-    P.stamina.value = -20;
-    upd();
-    assert.equal(W.open, null, '다음 스텝에 닫힘');
-    assert.equal(W.poor.refused, 2);
-  } finally {
-    B.free();
-  }
-  SECRET.secretStamina = 0;
-  const C = body();
-  try {
-    C.P.stamina.value = -20;
-    assert.ok(C.until(() => C.W.open, SECRET.mordPress + 0.2) != null, '끔: 창');
-    assert.equal(C.P.skill.secret(C.W.fire()), true, '끔: 나감');
-  } finally {
-    SECRET.secretStamina = 1;
-    C.free();
-  }
-});
 
 test('AI: 기력 −5 이면 secretGo · mordGo · spinGo 모두 거절 (거절 셈 · 0.3 s 안 다시 거절은 한 번) · 판당 쓸 수 그대로 · 비기 실행 없음', () => {
   for (const id of ['roland', 'artoria', 'minami']) {

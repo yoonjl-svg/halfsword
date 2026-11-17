@@ -476,7 +476,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     const stickGo = !!W.spinStick(FR, input.move, !secBusy && P.alive && closeGate.secretOk);
     const circleGo = !!W.spinCircle(FR, d, hand, !secBusy && P.alive && closeGate.secretOk);
     const gilReady = !!W.S?.do?.gilmok && !!W.gilArm?.armed;
-    const secArm = !(CONFIG.SECRET.secretHold && (P.skill.tap || P.skill.pom));
+    const secArm = !((P.skill.tap || P.skill.pom));
     if ((((atkWin || gilReady) && (taps > 0 || (swipe && !W.S?.do?.tapOnly))) || stickGo || circleGo) && !secBusy && P.alive && secArm && closeGate.secretOk) {
       const o = W.open ? W.fire() : W.fireArmed();
       if (o) o.dir = [d.x, d.y];

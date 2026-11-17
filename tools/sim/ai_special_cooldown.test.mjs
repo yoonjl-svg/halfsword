@@ -18,7 +18,6 @@ function aiOf(id, seed = 1, gap = undefined) {
 // 11/11 이베리아 자리 바꿈 (SECRET.iberianSecret 'altib' — 사장님 '싱지르를 제비베기와 같은 위계의 특수공격으로'): 왼 가로베기 자리 특수 공격이 싱지르(cingir)로 — 같은 성질을 새 칸으로 본다 ·
 //  옛 장면(머리 위 돌려 베기 = 특수 공격 — 'spin' 판)은 아래 시험 안에서만 옛 판으로 묶는다
 test('강화동작(싱지르 — 11/11 특수 공격): 식는 동안 그 자리는 바탕 왼 가로베기 · 다 식으면 다시 싱지르 · 정수리 가르기(비기)는 고르는 목록에 없음', () => {
-  assert.equal(CONFIG.SECRET.iberianSecret, 'altib');
   const { G, ai } = aiOf('roland');
   try {
     const cg = ai.school.techByName.cingir;
@@ -37,25 +36,6 @@ test('강화동작(싱지르 — 11/11 특수 공격): 식는 동안 그 자리�
   }
 });
 
-test('옛 판 (11/11 전 — SECRET.iberianSecret \'spin\') 강화동작(머리 위 돌려 베기): 식는 동안 그 자리는 바탕 왼 가로베기 · 다 식으면 다시 돌려 베기', () => {
-  const keep = CONFIG.SECRET.iberianSecret;
-  CONFIG.SECRET.iberianSecret = 'spin';
-  const { G, ai } = aiOf('roland');
-  try {
-    const rd = ai.school.techByName.redondo;
-    assert.ok(rd && rd.plain?.name === 'zwerchL', '강화동작에 바탕 동작');
-    assert.equal(ai.techNow(rd), rd);
-    ai.specCool.redondo = ai.sense.t;
-    assert.equal(ai.techNow(rd).name, 'zwerchL');
-    const s = ai.sense.seen(0);
-    for (let k = 0; k < 200; k++) assert.notEqual(ai.pickTech(s, 'patience')?.name, 'redondo');
-    ai.specCool.redondo = ai.sense.t - UA.specialCooldown - 1e-6;
-    assert.equal(ai.techNow(rd), rd, '다 식음');
-  } finally {
-    G.world.free();
-    CONFIG.SECRET.iberianSecret = keep;
-  }
-});
 
 test('패시브(겹치기 · 되받아 치기)는 식는 동안 없음 — 다른 패시브는 그대로', () => {
   for (const [id, key, name] of [['margarethe', 'parried', 'duplieren'], ['minami', 'bindDef', 'kaeshi']]) {
