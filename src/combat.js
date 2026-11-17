@@ -23,6 +23,7 @@
 // ─────────────────────────────────────────────────────────────
 import { TRADITIONS } from './schools.js';
 import * as THREE from 'three';
+import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import { beginFlowRecovery } from './nagashi_recovery.js';
 import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty, flowShieldKeep } from './nagashi_redesign.js';
 import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL, IB_PARRY_BEAT, WHIP_KNEEL } from './config.js';
@@ -197,7 +198,7 @@ export class Combat {
     // Rapier 물리 훅: 칼과 상대 몸이 부딪히려 할 때마다(매 스텝) 불린다.
     // 여기서는 엔진 함수를 부르면 안 되므로, 스텝 직전에 저장해 둔 값(cacheState)만 쓴다.
     this.physicsHooks = {
-      filterContactPair: (c1, c2) => this.filterContactPair(c1, c2),
+      filterContactPair: guarded(this, (c1, c2) => this.filterContactPair(c1, c2), 1), // 11/17 콜백 예외 드러내기 (rapier_guard.js — 예외면 1 = 평소처럼 부딪힘 · 적고 afterStep 첫머리에서 다시 던짐)
       filterIntersectionPair: () => true,
     };
   }
@@ -513,6 +514,7 @@ export class Combat {
 
   /** 매 물리 스텝 직후: 가르고 있는 칼 처리 + 일반 충돌(튕김) 처리 */
   afterStep(world, eventQueue) {
+    rethrowRapier(this); // 11/17: 방금 world.step 안의 물리 걸이(filterContactPair)에서 잡힌 예외 — node(시뮬 · 시험)에서는 여기서 크게 실패 · 브라우저는 한 번 적고 이어감 (rapier_guard.js)
     this.stepNo++;
     // 1) 가르고 지나가는 칼: 몸 속을 지나는 동안 매 순간 저항을 받는다
     const dt = world.timestep;
@@ -526,7 +528,7 @@ export class Combat {
       const col1 = world.getCollider(c.wc);
       const col2 = world.getCollider(c.vc);
       let point = null;
-      world.contactPair(col1, col2, (m, flipped) => {
+      world.contactPair(col1, col2, guarded(this, (m, flipped) => {
         for (let i = 0; i < m.numContacts() && !point; i++) {
           if (m.contactDist(i) < 0.004) {
             // flipped면 엔진 쪽 순서가 뒤집혀 있어서, col1 기준 점은 두 번째 점이다
@@ -534,7 +536,8 @@ export class Combat {
             if (lp) point = new THREE.Vector3(lp.x, lp.y, lp.z).applyQuaternion(rotQ(col1)).add(tv(col1.translation()));
           }
         }
-      });
+      }));
+      rethrowRapier(this); // 11/17 콜백 예외 드러내기 (rapier_guard.js — node 에서 다시 던짐)
       const sw = c.pr.w.body;
       const vb = c.pr.v.body;
       if (!c.applied) {
@@ -607,7 +610,7 @@ export class Combat {
 
     // 2) 튕긴 충돌 (칼끼리, 칼 면/손잡이, 문턱 못 넘은 베기)
     const bladePairs = [];
-    eventQueue.drainContactForceEvents((e) => {
+    eventQueue.drainContactForceEvents(guarded(this, (e) => {
       const h1 = e.collider1();
       const h2 = e.collider2();
       const a = this.info.get(h1);
@@ -623,12 +626,13 @@ export class Combat {
       const pr = this.pairOf(h1, h2);
       if (!pr) return;
       if (this.cutting.has(`${pr.wc}:${pr.vc}`)) return;
-      const c = contactOf(world, pr.wc, pr.vc);
+      const c = contactOf(world, pr.wc, pr.vc, this);
       if (!c) return;
       this.strike(pr, c.p, false);
       this.rebound(pr, c.p, c.n);
       if (pr.w.fighter.skill?.corr === 'v2') (pr.w.fighter.bladeTouch = true), (pr.w.fighter.touchStep = this.stepNo); // 보정 v2: 접촉힘 타격 = 닿음
-    });
+    }));
+    rethrowRapier(this); // 11/17 콜백 예외 드러내기 (rapier_guard.js)
     this.bladeClash(world, bladePairs);
     this.armSteel();
     // 보정 v2 사건: 떨어짐 = 이번 스텝에 가르는 쌍·접촉힘 타격·칼끼리 닿음이 하나도 없음 (v2 공격자만 적는다)
@@ -688,7 +692,7 @@ export class Combat {
     let point = null;
     const n = _c.set(0, 0, 0);
     for (const [h1, h2] of pairs) {
-      world.contactPair(world.getCollider(h1), world.getCollider(h2), (m, flipped) => {
+      world.contactPair(world.getCollider(h1), world.getCollider(h2), guarded(this, (m, flipped) => {
         let s = 0;
         for (let i = 0; i < m.numContacts(); i++) s += m.contactImpulse(i);
         if (s <= 0) return;
@@ -700,7 +704,8 @@ export class Combat {
         n.z += nn.z * sg;
         J += s;
         if (!point && m.numSolverContacts() > 0) point = tv(m.solverContactPoint(0));
-      });
+      }));
+      rethrowRapier(this); // 11/17 콜백 예외 드러내기 (rapier_guard.js)
     }
     if (!point) point = g.A.fighter.bladePoint(0.6);
     if (J > 0) n.normalize();
@@ -1248,15 +1253,16 @@ function bodyMass(b, point, n) {
 }
 const _fq2 = new THREE.Quaternion();
 /** 칼(h1)과 몸(h2)의 접촉점과 법선(h1 → h2 방향) */
-function contactOf(world, h1, h2) {
+function contactOf(world, h1, h2, box) {
   let found = null;
-  world.contactPair(world.getCollider(h1), world.getCollider(h2), (m, flipped) => {
+  world.contactPair(world.getCollider(h1), world.getCollider(h2), guarded(box, (m, flipped) => {
     if (!found && m.numSolverContacts() > 0) {
       const p = m.solverContactPoint(0);
       const nn = m.normal();
       const s = flipped ? -1 : 1;
       if (p) found = { p: new THREE.Vector3(p.x, p.y, p.z), n: new THREE.Vector3(nn.x * s, nn.y * s, nn.z * s) };
     }
-  });
+  }));
+  rethrowRapier(box); // 11/17 (rapier_guard.js)
   return found;
 }

@@ -19,6 +19,7 @@
 //   5) 세게 맞아 발이 끌리거나, 넘어지거나, 쓰러진 뒤에는 예전 방식(보조 힘 100%)으로 돌아갔다가,
 //      일어서면 보조 힘을 부드럽게 줄이며 다리로 넘겨준다 (다리가 이미 받치는 만큼은 보조를 덜 쓴다).
 // ─────────────────────────────────────────────────────────────
+import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import * as THREE from 'three';
 import { BODY, GAIT, DIG_PROTO } from './config.js';
 import { TRADITIONS, FAST_ACCENT, footworkTradition } from './schools.js';
@@ -1874,7 +1875,8 @@ export class Gait {
     _gf.w = w;
     _gf.floor = SUPPORT_FLOOR.get(w) ?? -1;
     _gf.sum = f.terrain ? _gfSumUp : _gfSum; // 지형 무대: 접촉 충격의 위 방향 성분만 받침으로 (비탈 면을 미는 몫·미끄럼을 막는 몫은 받침이 아님)
-    w.contactPairsWith(col, _gfPair);
+    w.contactPairsWith(col, _gfPairG);
+    rethrowRapier(_rg); // 11/17 콜백 예외 드러내기 (rapier_guard.js)
     return f.lastDt > 0 ? _gf.imp / f.lastDt : 0;
   }
 
@@ -2081,12 +2083,19 @@ const _gfSumUp = (m, flipped) => {
 };
 const _gfPair = (other) => {
   if (_gf.floor >= 0) {
-    if (other.handle === _gf.floor) _gf.w.contactPair(_gf.col, other, _gf.sum);
+    if (other.handle === _gf.floor) _gf.w.contactPair(_gf.col, other, _gf.sum === _gfSumUp ? _gfSumUpG : _gfSumG);
+    rethrowRapier(_rg);
     return;
   }
   const b = other.parent();
-  if (b && b.isFixed()) _gf.w.contactPair(_gf.col, other, _gf.sum);
+  if (b && b.isFixed()) _gf.w.contactPair(_gf.col, other, _gf.sum === _gfSumUp ? _gfSumUpG : _gfSumG);
+  rethrowRapier(_rg);
 };
+// 11/17 Rapier 콜백 예외 드러내기 (rapier_guard.js): 감싼 콜백은 모듈에서 한 번만 만듦 (발 받침은 스텝마다 불림)
+const _rg = {};
+const _gfSumG = guarded(_rg, _gfSum);
+const _gfSumUpG = guarded(_rg, _gfSumUp);
+const _gfPairG = guarded(_rg, _gfPair);
 /** 물리 세계 → 체중을 받치는 바닥 콜라이더 핸들 (main.js newRound · 시뮬 jelly_harness 가 바닥을 만들 때 알린다) */
 const SUPPORT_FLOOR = new WeakMap();
 export function setSupportFloor(world, collider) {
