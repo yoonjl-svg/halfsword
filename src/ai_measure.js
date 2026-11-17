@@ -11,6 +11,8 @@
 //   · 박자 걸음: 다가감에서 남은 거리(contactDist − 칠 거리)가 0.3 ~ step m 이면 미끄러져 걷는 대신 기술 걸음 하나로 들어감 → 그 걸음 중에 칼이 나감(옛 '닿을 거리' 셈 그대로)
 //   · 막는 쪽 읽기: 상대가 내 선 + 0.3 안으로 0.45 m/s 넘게 들어오면(늦게 본 모습) 들어옴 하나에 한 번 read × 띠 기울기 →
 //     칼이 있으면: 내 칼끝 거리 + 0.3 안이면 걸음에 치기(debana × 띠 기울기 — 줄 닫기 앞에 굴림) · 안 나오거나 아직 멀면 줄 닫기(막기 2.0 미리 줄 닫기 — anticGo) · 빈손이면 물러남
+//     걸음에 치기는 들어옴 하나에 굴림 하나 — 처음 볼 때 아직 멀었으면 상대가 내 칼끝 거리 + 0.3 안에 들 때 굴림(줄을 이미 닫았어도) · 덮은 채 걸어 듦(anticStep)도 같음 ·
+//     치는 칼은 맞받아 베기와 같은 준비 없는 칼(skipChamber — 오코리 없음 · 곧장 다가감 → 칼이 나감) [감독 11/17 — 사장님 '데바나 살려' 안에서]
 //  ② 오코리 (OKORI) — 칼보다 먼저 움직이는 몸 · 반대로 감았다 푸는 준비
 //   · 공격을 고르면(비기 · 이어 치기 · 흐름 · 맞받아 베기처럼 칼이 이미 움직이는 것 · 헛스윙 연습 빼고) 띠의 T 동안 칼이 나가지 않고 몸이 먼저 감긴다:
 //     손 = 준비 자리(기술 from) 너머 베기 방향의 반대로 lift × 크기 (손이 이미 준비 자리면 그 너머 몫 × 굴림 몫 luckOf — 높은 띠는 이미 실린 자세에서 곧장: 숨김) ·
@@ -35,7 +37,7 @@ const inPad = (x, y) => {
 
 /** 재기 칸 (AI 하나에 한 번) */
 export function msStats() {
-  return { inRoll: 0, inHold: 0, tempo: 0, enter: 0, read: 0, close: 0, debana: 0, debanaRoll: 0, back: 0, okori: 0, okoriT: 0, okSeen: 0, okRead: 0, chamberSeen: 0 };
+  return { inRoll: 0, inHold: 0, tempo: 0, enter: 0, read: 0, close: 0, debana: 0, debanaRoll: 0, debanaLate: 0, back: 0, okori: 0, okoriT: 0, okSeen: 0, okRead: 0, chamberSeen: 0 };
 }
 const ST = (ai) => (ai.stats.ms ??= msStats());
 
@@ -144,22 +146,53 @@ export function msRead(ai, s, d, dt, rearm) {
   if (!roll(tilt(ai, MEASURE.read))) return false;
   S.read++;
   if (ai.me.armed) {
-    if (d < ai.M.reach + 0.3) {
-      S.debanaRoll++;
-      if (roll(tilt(ai, MEASURE.debana))) {
-        const t = ai.pickTech(s, 'stepin');
-        if (t && ai.startAttack(t, 'stepin', { noFeint: true, fastChamber: true })) {
-          S.debana++;
-          return true;
-        }
-      }
-    }
+    msDebanaOpen(ai);
+    if (d < ai.M.reach + 0.3 && msDebanaTry(ai, s)) return true;
     ai.anticGo(s);
     S.close++;
     return true;
   }
   S.back++;
   ai.startWithdraw(0.4);
+  return true;
+}
+
+/** 걸음에 치기 — 들어옴 하나 열기 (msRead 반응 · anticStep 줄 닫기 굴림이 나왔을 때): 이미 열려 있으면 그대로 (들어옴 하나에 굴림 하나) */
+export function msDebanaOpen(ai) {
+  if (ai.dbn) ai.dbn.off = 0;
+  else ai.dbn = { rolled: false, off: 0 };
+}
+
+/** 걸음에 치기 굴림 (열린 들어옴 하나에 한 번 — debana × 띠 기울기): 나오면 그 걸음에 침 — 맞받아 베기와 같은 준비 없는 칼(skipChamber · 오코리 없음) → 쳤으면 true */
+export function msDebanaTry(ai, s) {
+  const D = ai.dbn;
+  if (!D || D.rolled) return false;
+  D.rolled = true;
+  const S = ST(ai);
+  S.debanaRoll++;
+  if (!roll(tilt(ai, MEASURE.debana))) return false;
+  const t = ai.pickTech(s, 'stepin');
+  if (!(t && ai.startAttack(t, 'stepin', { noFeint: true, fastChamber: true, skipChamber: true }))) return false;
+  S.debana++;
+  return true;
+}
+
+/**
+ * 걸음에 치기 — 매 스텝 (updateCombat · 꼴 나누기 앞 · 열린 들어옴이 있을 때만): 상대가 0.45 m/s 넘게 내 선 · 상대 칼끝 어림 + 0.3 안으로 다가오는 일이 rearm 동안 그치면 닫음 ·
+ *  아직 안 굴렸고 상대가 내 칼끝 거리 + 0.3 안에 들면 굴림 — 간 보기 · 미리 닫은 줄(icpPre)에서 휘두름이 아직 안 보일 때만 (줄을 이미 닫았어도). 쳤으면 true
+ */
+export function msDebanaTick(ai, s, d, dt, th, rearm) {
+  const D = ai.dbn;
+  if (!D) return false;
+  if (ai.foeClosing > 0.45 && d < Math.max(msLine(ai), ai.foeReach) + 0.3) D.off = 0;
+  else if ((D.off += dt) > rearm) {
+    ai.dbn = null;
+    return false;
+  }
+  if (D.rolled || th || !(d < ai.M.reach + 0.3) || !ai.me.armed || s.state !== 'stand' || !s.armed) return false;
+  if (!(ai.mode === 'watch' || (ai.mode === 'defend' && ai.icpPre))) return false;
+  if (!msDebanaTry(ai, s)) return false;
+  ST(ai).debanaLate++;
   return true;
 }
 

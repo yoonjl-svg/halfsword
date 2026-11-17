@@ -59,7 +59,7 @@ import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cn
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
 import { DIG_PROTO, AI_ARC, PHYSICS } from './config.js';
 import { icpArm, icpAim, coverTech, icpStats, discHold, anticAim, anticRoll, swingMark, swingTurn } from './ai_intercept.js'; // 막기 2.0 읽기 묶음 (11/17 — config AI_INTERCEPT · [사장님 11/17 결정] 기본 판): 가로막기 · 덮는 맞받기 · 공격 절제 · 미리 줄 닫기 · 새 휘두름
-import { msTick, msChainWant, msHold, msFeetV, msWdEnd, msInsideHold, msAttackStart, msTempoFeet, msWindupFeet, msRead, okoriStart, okoriFrom, okoriTick, okoriEnd, okoriBody, okoriHold, okoriCue } from './ai_measure.js'; // 간격과 박자 · 오코리 (11/17 — config MEASURE · OKORI · [사장님 11/17 결정] 기본 판)
+import { msTick, msChainWant, msHold, msFeetV, msWdEnd, msInsideHold, msAttackStart, msTempoFeet, msWindupFeet, msRead, msDebanaOpen, msDebanaTry, msDebanaTick, okoriStart, okoriFrom, okoriTick, okoriEnd, okoriBody, okoriHold, okoriCue } from './ai_measure.js'; // 간격과 박자 · 오코리 (11/17 — config MEASURE · OKORI · [사장님 11/17 결정] 기본 판)
 import { aiKitOf } from './skill_tree_data.js'; // AI 숙련도 = 칸 (11/16 — config AI_KIT · 무기가 바뀌면 kitRefresh)
 import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 눈 (11/15 — 사장님 11/16 묶음 P) // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
 import { cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 — 偏閃奏進 꺾는 스틱)
@@ -1006,6 +1006,7 @@ export class AI {
     // 독일 파고들기 (3 단계 11/14): 간 보기 · 물러남 · 막기에서 상대 헛침(seize 의 recovering 과 같은 셈 — 늦게 본 모습)을 본 한 번에 굴림
     if (this.planDe && !kneeling && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend')) deDigTry(this, s, d, this.sense.recentHandSpeed(L.reaction, realS(0.6)) > 3.5 && Math.hypot(s.hvx, s.hvy) < 1.8);
     if (this.planCn) cnTick(this, dt, d, s, th); // 동방 플랜 전략 층 덧칸 (11/14): 수 읽기 기억 · 유도 박자 (고노센 경계 무모는 공통 W.reck)
+    if (this.dbn && !kneeling) msDebanaTick(this, s, d, dt, th, EV_REARM); // 걸음에 치기 (11/17 — ai_measure.js): 열린 들어옴 — 상대가 내 칼끝 + 0.3 안에 들면 한 번 굴려 그 걸음에 침 (줄을 이미 닫았어도)
 
     if (kneeling) {
       // 다리를 못 쓰니 물러나거나 파고들 수 없다: 위험이 오면 그래도 막고, 아니면 사정거리 안에 있을 때만
@@ -3136,6 +3137,8 @@ export class AI {
     if (this.anArmed === false) return false;
     this.anArmed = false;
     if (!anticRoll(this)) return false;
+    msDebanaOpen(this); // 걸음에 치기 (11/17): 덮은 채 걸어 듦도 들어옴 하나 — 칼끝 + 0.3 안이면 줄 닫기 앞에 · 아직 멀면 들 때 굴림 (msDebanaTick)
+    if (d < this.M.reach + 0.3 && msDebanaTry(this, s)) return true;
     this.anticGo(s);
     return true;
   }
