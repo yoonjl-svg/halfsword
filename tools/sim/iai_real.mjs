@@ -267,17 +267,13 @@ if (isMain(import.meta.url)) {
     const json = arg('json', null);
     if (json) writeFileSync(json, JSON.stringify({ set: arg('set', ''), rows }));
   } else if (mode === 'tsu') {
-    const UA = CONFIG.UNIQUE_ASSIST;
-    const keep = UA.tsuTip;
     const low = arg('low', null) != null ? +arg('low', null) : undefined;
     const rows = [];
-    for (const gap of arg('gaps', '1.15,1.3').split(',').map(Number)) for (const seed of arg('seeds', '701,702').split(',').map(Number)) for (const tip of [0, keep]) {
-      UA.tsuTip = tip;
+    for (const gap of arg('gaps', '1.15,1.3').split(',').map(Number)) for (const seed of arg('seeds', '701,702').split(',').map(Number)) {
       const tr = traceRun('line', seed, gap, { low });
-      UA.tsuTip = keep;
-      const row = { gap, seed, tsuTip: tip, low: low ?? null, fired: tr.fired, cut: bendCut(tr), trail: bendTrail(tr), hits: tr.hits, tip: tr.tip, hand: tr.hand, arc: (tr.arc ?? []).map((a) => a.map(r3)) };
+      const row = { gap, seed, low: low ?? null, fired: tr.fired, cut: bendCut(tr), trail: bendTrail(tr), hits: tr.hits, tip: tr.tip, hand: tr.hand, arc: (tr.arc ?? []).map((a) => a.map(r3)) };
       rows.push(row);
-      console.log(`${gap} m 씨앗 ${seed} 곧은 줄 ${tip} | 베는 토막 ${JSON.stringify(row.cut)} | 잔상 ${JSON.stringify(row.trail)} | 첫 맞음 ${tr.hits[0]?.part ?? '-'} 날 ${tr.hits[0]?.edge}`);
+      console.log(`${gap} m 씨앗 ${seed} | 베는 토막 ${JSON.stringify(row.cut)} | 잔상 ${JSON.stringify(row.trail)} | 첫 맞음 ${tr.hits[0]?.part ?? '-'} 날 ${tr.hits[0]?.edge}`);
     }
     const json = arg('json', null);
     if (json) writeFileSync(json, JSON.stringify({ rows }));

@@ -44,9 +44,7 @@ function mk(weapon, { stage = 4, on = 1, attach = true, gap = 2.6, foeGuard = [0
   const hits = [];
   const combat = new Combat(colliderInfo, { onWound: (a, v, r) => hits.push(`${a.name}->${r.zone}`), onClash: () => {} });
   const on0 = UA.on;
-  UA.on = on;
   const uq = attach ? new PlayerUniqueAssist(player, { stage }) : null;
-  UA.on = on0;
   const R = { world, player, enemy, uq, hits, t: 0, trace: crypto.createHash('sha256'), fired: [], ends: [] };
   R.step = () => {
     player.foe = enemy;

@@ -18,9 +18,6 @@ const SEEDS = (process.argv[4] || '1,2,3').split(',').map(Number);
 const SIM = +(process.argv[5] || 45);
 const REACT = +(process.env.REACT ?? 0.25);
 const HIT = +(process.env.HIT ?? 0.25);
-if (process.env.POW === 'hit' || +process.env.POW > 0) CONFIG.SECRET.gyeoksal.power = process.env.POW === 'hit' ? 'hit' : +process.env.POW; // 판정 배율 시험 (기본 'finish' = FINISH.power · 'hit' = 다른 비기와 같은 hitMul 1.3)
-if (+process.env.SHARE > 0) CONFIG.SECRET.gyeoksal.share = +process.env.SHARE; // 시험: 격살 칼끝 빠르기 몫 (기본 cnFastShare)
-if (process.env.ARM) CONFIG.SECRET.gyeoksal.armPath = process.env.ARM; // 시험: 어거 길 'down'
 const WANT = { geojeong: ['head'], eogeo: ['uarmS', 'farmS', 'uarmO', 'farmO'], yoryak: ['thighF', 'shinF', 'thighB', 'shinB', 'footF', 'footB'], bongdu: ['chest'] };
 const SKO = { geojeong: '거정', eogeo: '어거', yoryak: '요략', bongdu: '봉두' };
 

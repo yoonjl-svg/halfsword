@@ -36,7 +36,6 @@ const [CONTACT, REACH] = MEASURED[W] ?? MEASURED.longsword; // 내 무기 간격
 
 function fight(opp, seed, v) {
   UA.koteDrop.p = v === 'on' ? P_ON : 0;
-  UA.koteDrop.judge = JUDGE;
   let rs = (seed * 7919) >>> 0; const rnd = () => ((rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296);
   const G = newRound({ walls: true, weapon: W, weapon2: opp, seed, persona: { proficiency: PROF } });
   applyWeaponMeasure(G.ai, opp);

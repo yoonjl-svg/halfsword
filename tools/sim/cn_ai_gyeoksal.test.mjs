@@ -7,14 +7,7 @@ import { CONFIG, newRound, DT, AI } from './harness_m.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { useSecret } from '../../src/secret.js';
 
-const { SECRET, UNIQUE_ASSIST: UA, AI_PLAN } = CONFIG;
-/** 옛 판(`?aiPlan=0` — 유파 플랜 끔)으로 fn: 11/14 사장님 '동방도 반드시 스택이 쌓여야 격살을 쓴다는 절대적 규칙은 지우자 마음의 기울기로 남겨둬' 뒤
- *  플랜 몸(동방 숙련 1 ~ 6 · 기본 켬)의 격살 쓸 때는 마음의 기울기(ai_plan_cn.js cnWill · 시험 ai_plan_cn.test) — 옛 문(겹 1 · 10 s) 장면은 옛 판에서 그대로 봄 (기준 안 고침) */
-function oldPlan(fn) {
-  const keep = AI_PLAN.on;
-  AI_PLAN.on = 0;
-  try { return fn(); } finally { AI_PLAN.on = keep; }
-}
+const { SECRET, UNIQUE_ASSIST: UA } = CONFIG;
 
 /** AI 동방(숙련 5) 하나 — 칼 든 상대 앞 · 판 시작 정지는 지난 것으로 */
 function cnAi(prof = 5, weapon = 'qinggang') {

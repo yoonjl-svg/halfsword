@@ -8,13 +8,8 @@ import { CHARACTERS_BY_ID } from '../../src/characters.js';
 
 const [seedsArg = '4', simArg = '30', jArg = 'minami,white_scale', fArg = 'isolde,artoria,ratna,tome,roland,chanda,walker:longsword,walker:rapier', goArg = '0.5'] = process.argv.slice(2);
 const E = process.env;
-if (E.GNS_AI != null) CONFIG.SECRET.gnsEnterAI = +E.GNS_AI ? 1 : 0;
-if (E.GNS_LONG != null) CONFIG.SECRET.gnsLong = +E.GNS_LONG ? 1 : 0;
-if (E.GNS_WARY != null) CONFIG.SECRET.gnsWary = +E.GNS_WARY ? 1 : 0;
 if (E.GNS_BLOCK != null) CONFIG.SECRET.gnsEnterBlock = [0, 1, 2].includes(+E.GNS_BLOCK) ? +E.GNS_BLOCK : 1;
 if (E.CHARGE != null && +E.CHARGE > 0) CONFIG.SECRET.foeChargeSpeed = +E.CHARGE; // 달려듦 빠르기 (10/25 16:0x — 기본 1.2 · 옛 0.9)
-if (E.CHARGE_AVG != null) CONFIG.SECRET.foeChargeAvg = +E.CHARGE_AVG ? 1 : 0; // 달려듦 빠르기 최근 0.6 s 평균
-if (E.GNS_OPEN != null) CONFIG.SECRET.gnsEnterOpen = +E.GNS_OPEN ? 1 : 0;
 const SEEDS = +seedsArg, SIM = +simArg, GO = +goArg;
 const f1 = (x) => (Number.isFinite(x) ? x.toFixed(1) : '-'), f2 = (x) => (Number.isFinite(x) ? x.toFixed(2) : '-');
 const rows = [];

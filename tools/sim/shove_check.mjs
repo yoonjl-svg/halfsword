@@ -423,7 +423,6 @@ const bargeSnap = (b) => (b ? { phase: b.phase, L: b.L != null ? +(+b.L).toFixed
 
 // ═════ 한 판: 붙거나 걸어 들어와서 → 스틱을 놓았다(REL_S) → 민다. cell.neg 가 있으면 음성 대본 ═════
 function runRound(cell, seed, { on, ctrl }) {
-  if (HAS) CLOSE.on = on;
   const bare = !!cell.disarm;
   const reachP = reachW(cell.weapon, bare);
   const M = measureOf(cell.weapon);
@@ -888,7 +887,6 @@ function modeNeg() {
     let tIn = 0;
     const per = [];
     for (const [i, s] of SEEDS.entries()) {
-      if (HAS) CLOSE.on = true;
       const gap = gaps[i % 3];
       const dur = durs[Math.floor(i / 3) % 3];
       const G = mkRound({ seed: s, gap, walls: true });
@@ -930,7 +928,6 @@ function modeNeg() {
     let ef = 0;
     let want = 0;
     for (const s of SEEDS) {
-      if (HAS) CLOSE.on = true;
       const G = mkRound({ seed: s, rng: 'lcg', walls: true });
       G.player.skill.level = 0.7;
       G.ai2 = new AI(G.player, G.enemy, 'normal');
@@ -955,7 +952,6 @@ function modeNeg() {
 
 // ═════ 우회 관문: 한 프로세스, 스텝마다 흔적 ═════
 function traceRun(kind, on, seed) {
-  if (HAS) CLOSE.on = on;
   trReset();
   let G;
   const recs = [];
@@ -1062,7 +1058,6 @@ function modeControl() {
 
 // ═════ 0절 기준표: persona.close 캐릭터 대 기본 AI ═════
 function personaRound(ch, seed, on, opp) {
-  if (HAS) CLOSE.on = on;
   const walker = opp === 'walker';
   // default: 기본 AI(보통, 인물 없음, 롱소드) 와 30 s. walker: 스틱을 앞으로 민 채 걸어 들어오는 꼭두각시(밀치지 않음, probe ai_window 차림) 와 15 s
   const G = mkRound(walker ? { seed, gap: 3.0, walls: true, difficulty: ch.ai.level, persona: ch.ai.persona, weapon2: ch.weapon, revive: ch.revive } : { seed, walls: true, difficulty: ch.ai.level, persona: ch.ai.persona, weapon2: ch.weapon, revive: ch.revive, AI2Class: AI, difficulty2: 'normal' });
@@ -1180,5 +1175,4 @@ for (const m of modes) {
   else if (m === 'persona') modePersona();
   say(`[${m}] 걸린 시간 ${((Date.now() - t) / 1000).toFixed(0)} s`);
 }
-if (HAS) CLOSE.on = ON0;
 say(`[전체] ${((Date.now() - T0) / 1000).toFixed(0)} s`);

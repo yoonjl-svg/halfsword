@@ -15,7 +15,6 @@
 //   GNS_OPEN=1 들어옴은 상대 칼끝이 비켰을 때만 C(?gnsEnterOpen=1) — 놓침을 헛침 · 막힘으로 나눔 · AI 경계 셈(결행 · 속임 · 발도에 베여 물러남)
 //  10/25 16:0x (§18): CHARGE=0.9 달려듦 빠르기 옛 판(?foeChargeSpeed=0.9 — 기본 1.2) · B 기본 켬(GNS_BLOCK=0 = 끔) — 들어옴 창 가운데 빠르게(달려듦 빠르기로 넘음 — 막힘 없음) · 듦 창 가운데 달려듦만으로 열린 것
 import { newRound, DT, CONFIG } from './harness_m.mjs';
-if (process.env.KEN_SECRET != null) CONFIG.SCHOOL_PASSIVE.japanese.secret = +process.env.KEN_SECRET ? 1 : 0;
 if (process.env.KEN_FULL != null) CONFIG.SCHOOL_PASSIVE.japanese.full = CONFIG.realS(+process.env.KEN_FULL);
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';

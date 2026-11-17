@@ -29,8 +29,6 @@ const FOES = (process.env.FOES || 'german,italian,iberian,japanese,chinese').spl
 SECRET.mordPress = PRESS;
 if (!SECRET.openSchools.includes('german')) SECRET.openSchools = [...SECRET.openSchools, 'german'];
 if (process.env.MORD_JSON) Object.assign(SECRET.mord, JSON.parse(process.env.MORD_JSON));
-if (process.env.OVER) SECRET.mordOver = 1;
-if (process.env.GRIP) SECRET.mord.grip = process.env.GRIP;
 const HELM = process.env.HELM || null;
 const REL = 0.1; // 스틱을 놓는 시간 (엄지 한 번 — shove_check 와 같은 시험 값)
 const foeOf = (school) => CHARACTERS.find((c) => traditionOf(WEAPONS[c.weapon] ?? {}) === school);

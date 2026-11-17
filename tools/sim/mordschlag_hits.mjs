@@ -11,19 +11,12 @@ import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { mordHeadReach } from '../../src/mordschlag.js';
 const { SECRET, CLOSE, SKILL, UNIQUE_ASSIST: UA, TIME } = CONFIG;
 UA.secretUses = null;
-if (process.env.TRACK) SECRET.mord.track = +process.env.TRACK;
-if (process.env.COMMIT) SECRET.mord.trackCommit = +process.env.COMMIT * TIME.k;
-if (process.env.UNTIL) SECRET.mord.trackUntil = process.env.UNTIL;
 const STICK = process.env.STICK || 'keep'; // 일격 동안 스틱: keep = 앞으로 쥔 채(붙어 밀던 그대로) · release = 놓음
 if (process.env.MORD_N) SECRET.mordCloseN = +process.env.MORD_N;
 if (process.env.MORD_JSON) Object.assign(SECRET.mord, JSON.parse(process.env.MORD_JSON));
-if (process.env.NOCLIP) SECRET.mord.noSelfClip = +process.env.NOCLIP;
 if (process.env.CLIPX) SECRET.mord.clipX = +process.env.CLIPX;
 if (process.env.CLIPSTEP) SECRET.mord.clipStep = +process.env.CLIPSTEP;
 // 10/31 08:xx 시제품: REGRIP=0.4(실제 초 — 자연스러운 쥠 바꿈) · BURST=1(강제 뒤 박차기) · BURSTFREE=1(그 걸음 기력 안 냄) · POMMEL=1(쥠 그대로 폼멜 찍기)
-if (process.env.BURST) SECRET.mord.burstBack = +process.env.BURST;
-if (process.env.BURSTFREE) SECRET.mord.burstFree = +process.env.BURSTFREE;
-if (process.env.POMMEL) SECRET.mord.pommel = +process.env.POMMEL;
 // 내 머리 ↔ 팔 캡슐 (10/31 — tools/sim/mordschlag_selfclip.mjs 와 같은 셈): 칼 팔 x 축 · 빈팔 y 축 [반 길이, 반지름]
 const CAPS = { uarmS: [0.105, 0.045, 'x'], farmS: [0.095, 0.04, 'x'], uarmO: [0.105, 0.045, 'y'], farmO: [0.095, 0.04, 'y'] };
 const qOf = (r) => new THREE.Quaternion(r.x, r.y, r.z, r.w);

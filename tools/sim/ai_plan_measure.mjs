@@ -34,10 +34,8 @@ const PH_KO = { probe: '간 보기', contest: '거리 다툼', commit: '들어�
 
 function withPlan(over, fn) {
   const keep = { ...AI_PLAN };
-  const jk = CONFIG.JP_TANK.ai;
   Object.assign(AI_PLAN, over);
-  if (!AI_PLAN.on) CONFIG.JP_TANK.ai = 0; // 옛 판 = AI 일본 스택 · 바위 몸도 끔 (main.js `?aiPlan=0` 과 같게 — 2 단계 일본)
-  try { return fn(); } finally { Object.assign(AI_PLAN, keep); CONFIG.JP_TANK.ai = jk; }
+  try { return fn(); } finally { Object.assign(AI_PLAN, keep); }
 }
 
 /** 한 판: 자리 0 롱소드 AI · 자리 1 이탈리아(레이피어) AI */

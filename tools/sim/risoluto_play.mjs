@@ -33,34 +33,22 @@ import * as THREE from 'three';
 const [Targ = '0.6', beatArg = '0', seedsArg = '3', simArg = '30', wArg = 'rapier,dartagnan', fArg = 'isolde,tome,omari,minami,liao', vArg = '0.6', rArg = '0.25'] = process.argv.slice(2);
 const E = process.env;
 if (Targ !== '-') CONFIG.SECRET.risolutoHold = +Targ; // '-' = 판 값 그대로 (10/28 — 표준 시간 realS(0.6) = 게임 0.66)
-if (beatArg !== '-') CONFIG.SECRET.risolutoBeat = +beatArg ? 1 : 0; // '-' = 판 값 그대로
 if (E.RISO_COVER) CONFIG.SECRET.risolutoCover = +E.RISO_COVER;
-if (E.RISO_CLOSE === '1') CONFIG.SECRET.risolutoClose = 1;
-if (E.RISO_LINE === '1') CONFIG.SECRET.risolutoLine = 1;
 // 10/23 넓은 판정 묶음 RISO_WIDE=1 (칼 어느 부위든 · 너그러움 0.2 · 가슴 사이 조건 뺌 · 다 붙음 · 상대 박자) · RISO_WIDE=0 (10/22 판) — 낱낱이: RISO_ANY · RISO_GRACE · RISO_CLOSING · RISO_CLOSE · 두 번째 길 인자
 if (E.RISO_WIDE === '1') Object.assign(CONFIG.SECRET, { risolutoAnyPart: 1, risolutoGrace: 0.2, risolutoClosing: 0, risolutoClose: 1, risolutoBeat: 1 });
 if (E.RISO_WIDE === '0') Object.assign(CONFIG.SECRET, { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0, risolutoTouch: 0 });
-if (E.RISO_ANY) CONFIG.SECRET.risolutoAnyPart = +E.RISO_ANY;
 if (E.RISO_GRACE) CONFIG.SECRET.risolutoGrace = +E.RISO_GRACE;
-if (E.RISO_CLOSING) CONFIG.SECRET.risolutoClosing = +E.RISO_CLOSING;
-if (E.RISO_CLOSE === '0') CONFIG.SECRET.risolutoClose = 0;
-if (E.RISO_BEAT) CONFIG.SECRET.risolutoBeat = +E.RISO_BEAT;
 const GUARD = E.RISO_GUARD === '1';
-if (GUARD) CONFIG.SECRET.risolutoGuard = 1;
 // 대조 RISO_PLAIN=1: 같은 때의 보통 탭 찌르기 — 상대 팔 늦춤 끔(FLOW_RECOVERY.seconds 0) · 비기 배율 1 (AI 비기는 닫혀 있어 사람 쪽만 바뀜)
 const PLAIN = E.RISO_PLAIN === '1';
-if (PLAIN) { CONFIG.FLOW_RECOVERY.seconds = 0; CONFIG.SECRET.risolutoArmSlow = 0; CONFIG.SECRET.power = 1; CONFIG.SECRET.hitMul = 1; }
+if (PLAIN) { CONFIG.FLOW_RECOVERY.seconds = 0; CONFIG.SECRET.power = 1; CONFIG.SECRET.hitMul = 1; }
 if (E.RISO_LUNGE === '0') Object.assign(CONFIG.SECRET, { risolutoLunge: 0, risolutoArmSlow: PLAIN ? 0 : null, risolutoStiff: null }); // 10/23 판
 if (E.RISO_SHARE) CONFIG.SECRET.risolutoShare = +E.RISO_SHARE;
-if (E.RISO_GLIDE) CONFIG.SECRET.risolutoGlide = +E.RISO_GLIDE; // 0 = 붙은 칼 따라 미끄러짐 끔 (연환과 같은 막힘)
-if (E.RISO_GAP) CONFIG.SECRET.risolutoGap = +E.RISO_GAP; // 10/24 13:2x 런지 간격 조건 — 0 = 간격 조건 없음 (12:1x 판)
-if (E.RISO_TOUCH) CONFIG.SECRET.risolutoTouch = +E.RISO_TOUCH; // 10/25 01:0x 칼끝 얽힘 창 — 0 = 10/24 판 (이어짐 0.6 s 를 기다림)
 if (E.RISO_OLD === '1') Object.assign(CONFIG.SECRET, { risolutoStick: 'fwd', risolutoTap: 1, risolutoCover: 0.07, secretHold: 0 }); // 10/25 21:0x 전 판 (스틱 앞만 · 탭만 · 덮음 0.07 · 창 지킴 끔 — main.js ?risoStick=fwd&risoTap=1&risoCover=0.07&secretHold=0)
 const STOP = E.RISO_STOP === '1';
 const CREEP = +E.RISO_CREEP || 0; // 운전: 칼끼리 가까운 동안 스틱을 이 몫만 (천천히 밀고 들어감 — 간격 조건 판을 아는 사람 흉내 · 0 = 늘 1) // 운전: 창(금색 '!')이 보이면 스틱을 놓고 선다 (간격 조건 판을 아는 사람 흉내 — 기본은 늘 같은 운전)
 if (E.RISO_OLDSTEP === '1') CONFIG.SECRET.risolutoStep = { slide: 'iaiStep', foot: 'italianStep', draw: 1, room: 0 }; // 10/24 14:0x 전 걸음 (뒷발 끌어붙임 · 몸 가속 · 따라감 배율 · 앞발 거둠 없음)
 if (E.RISO_MIRROR === '0') Object.assign(CONFIG.SECRET, { risolutoMirror: 0, risolutoClose: 1 }); // 10/28 전 판 (스틱만 · 다 붙음 창 켬)
-if (E.RISO_MIRROR === '1') CONFIG.SECRET.risolutoMirror = 1;
 const MIRROR_DRIVE = E.RISO_DRIVE === 'mirror' || E.RISO_DRIVE === 'wait', MREACT = E.RISO_MREACT != null ? +E.RISO_MREACT : 0.2; // 운전: 상대 걸음 따라 (반응 늦음 s — 게임 초)
 const WAIT_DRIVE = E.RISO_DRIVE === 'wait'; // 운전 갈래: 상대 걸음 따라 + 칼이 가깝고 상대가 서 있으면 스틱을 놓고 기다림 (상대가 들어오기를 — 들어옴 길 재기)
 if (E.RISO_ROOM) CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, room: +E.RISO_ROOM }; // 0 = 앞발 런지 걸음을 가슴 사이로 줄이지 않음 (늘 italianStep)

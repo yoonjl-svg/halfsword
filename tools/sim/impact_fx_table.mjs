@@ -49,7 +49,6 @@ function exampleTable(C) {
 async function measureAI(ids, N) {
   const { newRound, DT } = await import('./harness_m.mjs');
   const { AI } = await import('../../src/ai.js');
-  BODY.weightMode = 'hybrid';
   const res = {};
   for (const id of ids) {
     const E = { cut: [], stab: [], blunt: [] };

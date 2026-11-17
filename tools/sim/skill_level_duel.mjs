@@ -5,7 +5,6 @@ import * as CONFIG from '../../src/config.js';
 import { newRound, DT } from './harness_m.mjs';
 import { AI } from '../../src/ai.js';
 import { wilson } from './ref_duel.mjs';
-CONFIG.BODY.weightMode = 'hybrid';
 const argv = process.argv.slice(2);
 const BOTH = argv.includes('--both');
 const pos = argv.filter((a) => a !== '--both');

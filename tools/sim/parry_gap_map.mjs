@@ -34,7 +34,6 @@ const CONFIGS = (process.argv[2] ?? 'longsword').split(',').map((s) => {
   const [weapon, mode = 'school'] = s.split(':');
   return { weapon, mode, key: s };
 });
-if (process.env.NAGASHI != null) NAGASHI.on = +process.env.NAGASHI; // NAGASHI=0: 흘려 받기 규칙 끔 (config NAGASHI)
 const ATK = process.env.ATK ?? 'longsword';
 const GAPS = (process.env.GAPS ?? '1.35,1.5,1.65,1.8').split(',').map(Number);
 const COVERS = process.env.COVERS ? JSON.parse(readFileSync(process.env.COVERS, 'utf8')) : {};

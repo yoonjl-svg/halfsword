@@ -17,7 +17,6 @@ const r3 = (x) => +(+x).toFixed(3);
 export function applyCfg(cfg) {
   if (cfg === 'closed') {
     SECRET.aiOpenSchools = SECRET.aiOpenSchools.filter((x) => x !== 'chinese');
-    UA.cnHunt.ai = 0;
   } else if (cfg !== 'open') throw new Error(`cfg ${cfg}`);
 }
 

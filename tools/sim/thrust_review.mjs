@@ -271,7 +271,6 @@ export function snapReview() {
 
 if (isMain(import.meta.url)) {
   const args = process.argv.slice(2);
-  if (args.includes('--hybrid')) CONFIG.BODY.weightMode = 'hybrid';
   const mode = args.find((a) => !a.startsWith('--')) || 'all';
   const f2 = (x) => (Number.isFinite(x) ? x.toFixed(2) : '-');
   console.log(`몸무게: ${CONFIG.BODY.weightMode}`);

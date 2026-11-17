@@ -31,7 +31,7 @@ test('빠른 준비→내려베기는 사람/AI 모두12; 느린 준비와 해�
  }
 });
 test('지친 물리 명령과 원래 손길 판정: 준비 비용0·12종 한 번 청구·유파 인식 동일',()=>{
- const saved={...STAMINA};Object.assign(STAMINA,{attackTempo:true,tempoInput:true,tempoGravity:true,tempoWristDamping:true});
+ const saved={...STAMINA};
  try{
   for(const fatigue of [1,2]){
    const g=setup([.15,0],5,fatigue);try{

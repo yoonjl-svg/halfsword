@@ -15,8 +15,6 @@ const SECS = +(process.env.SECS ?? 20), circle = dodgeEnv === 'circle', dodge = 
 Object.assign(SWING_TURN, turn === 'off' ? { on: false } : { on: true, rate: +turn, from });
 if (process.env.BURST) GAIT.burstSideV = +process.env.BURST; // 옆 박차기 첫 걸음 목표 빠르기(m/s, 판 값 1.5 — 이베리아만)
 if (process.env.TWIST) GAIT.maxTwist = +process.env.TWIST; // 발 안 옮기고 허리로 도는 한도(rad, 판 값 0.9)
-if (process.env.WALKSIDE) GAIT.burstWalkSide = +process.env.WALKSIDE; // 옆 누르면 첫 걸음 박차기(판 값 1)
-if (process.env.FWDDEG) GAIT.burstFwdDeg = +process.env.FWDDEG; // 비스듬히 앞으로 박차기 각(°, 판 값 30)
 if (process.env.REACT) Object.assign(AI_REACT, { on: +process.env.REACT > 0, face: +process.env.REACT || AI_REACT.face }); // AI 반응 시간 s(판 값 0.2 · 0 = 끔)
 const angTo = (E, P) => {
   const pe = E.bodies.pelvis.translation(), pp = P.bodies.pelvis.translation(), f = E.forward();

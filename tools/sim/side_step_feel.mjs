@@ -34,8 +34,6 @@ Gait.prototype.target = function (l, want, fwd, rgt, remain) {
 };
 
 function run(id, school, near, mx) {
-  const keep = GAIT.school;
-  GAIT.school = school;
   const G = newRound({ walls: true, seed: 7, weapon: id, weapon2: 'longsword' });
   G.ai.update = () => G.enemy.move.set(0, 0);
   const P = G.player;
@@ -111,7 +109,6 @@ function run(id, school, near, mx) {
   const rise = (vs.findIndex((v) => v >= 0.5 * peak) + 1) * DT;
   const r = rec;
   rec = null;
-  GAIT.school = keep;
   const wk = steps.filter((x) => x.kind === 'walk');
   return {
     rs: rsT / HOLD, first: r.trail[0] ?? NaN, arc, angDeg: Math.abs(dAng) * 57.3, dd, m, cv: sd / m, rise, walkShare: walkT / HOLD,

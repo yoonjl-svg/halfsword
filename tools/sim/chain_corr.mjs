@@ -80,7 +80,6 @@ const MODE_DEFS = MODES.map(parseMode);
 
 // ── 부팅 ──
 const cfg = await import(pathToFileURL(join(ROOT, 'src/config.js')).href);
-cfg.BODY.weightMode = 'hybrid'; // chain.mjs 와 같게 (tools/sim/hybrid.mjs)
 const H = await import(pathToFileURL(join(ROOT, 'tools/sim/harness_m.mjs')).href);
 const { newRound, DT, THREE } = H;
 const { Input } = await import(pathToFileURL(join(ROOT, 'src/input.js')).href);
@@ -109,7 +108,6 @@ function snapCorr(c) {
 
 function trial(o) {
   const M = o.mode;
-  if (HASL && o.limits !== 'n/a') cfg.BODY.humanLimits = o.limits === 'on';
   const dist = o.scene.startsWith('hit') ? HIT_DIST : GAP;
   const G = newRound({ walls: false, gap: dist + 0.17, seed: SEED + o.rep, weapon: WEAPON });
   const P = G.player, E = G.enemy;

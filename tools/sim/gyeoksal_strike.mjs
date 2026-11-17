@@ -11,20 +11,17 @@ import { TRADITIONS } from '../../src/schools.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 
 const weapon = process.argv[2] || 'qinggang';
-const pows = (process.argv[3] || '1,2.5').split(',').map((x) => (x === 'hit' || x === 'finish' ? x : Number(x))); // 'hit' = 다른 비기와 같은 결정타 hitMul 1.3 (판정 에너지) · 'finish' = FINISH.power
+const pows = ['판']; // 격살 판정 배율 갈래(전 argv[3] — SECRET.gyeoksal.power)는 11/17 걷음 — 판 값 하나
 const foes = (process.argv[4] || 'longsword,uchigatana,qinggang,sabre').split(',');
 const gaps = (process.argv[5] || '-0.1,0,0.2').split(',').map(Number);
 const looks = { 맨몸: LOOKS.enemy, 판금: CHARACTERS_BY_ID.heinrich.look, 투구: LOOKS.player }; // 판금 = 하인리히 인물 겉모습(판 13 부위 · 투구 없음) · 투구 = 케틀햇
 const stances = (process.env.STANCE || 'geojeong,eogeo,yoryak,bongdu').split(','); // STANCE= 로 고름 · LOOK=맨몸,판금 처럼 겉모습도
 const KO = { geojeong: '거정 → 머리', eogeo: '어거 → 팔', yoryak: '요략 → 다리', bongdu: '봉두 → 허파' };
-if (+process.env.SHARE > 0) CONFIG.SECRET.gyeoksal.share = +process.env.SHARE; // 시험: 격살 칼끝 빠르기 몫 (기본 cnFastShare)
-if (process.env.ARM) CONFIG.SECRET.gyeoksal.armPath = process.env.ARM; // 시험: 어거 길 'down'
 const GK = TRADITIONS.chinese.playerSecret;
 if (GK?.name !== 'gyeoksal') throw new Error('격살이 꺼져 있음 (SECRET.gyeoksal.on)');
 
 const out = [];
 for (const pw of pows) {
-  CONFIG.SECRET.gyeoksal.power = pw;
   for (const [lk, look] of Object.entries(looks).filter(([k]) => !process.env.LOOK || process.env.LOOK.split(',').includes(k))) {
     for (const st of stances) {
       const R = { n: 0, fired: 0, hit: 0, blocked: 0, aimHit: 0, sever: 0, deep: 0, decap: 0, dead: 0, armor: 0, parts: {}, sev: [], bleed: [] };

@@ -32,14 +32,8 @@ export function parseVariant(v) {
 function apply(v) {
   const save = { ...Object.fromEntries(KEYS.map((k) => [k, UA[k]])), share: UA.specialShare.duplieren };
   const p = parseVariant(v);
-  UA.dupOld = p.dupOld;
   UA.dupBurst = p.dupBurst;
-  if (p.dupBurstFree != null) UA.dupBurstFree = p.dupBurstFree;
-  if (p.dupBurstT != null) UA.dupBurstT = p.dupBurstT;
-  if (p.dupBurstMatch != null) UA.dupBurstMatch = p.dupBurstMatch;
-  if (p.dupBurstFit != null) UA.dupBurstFit = p.dupBurstFit;
   if (p.dupFitPoint != null) UA.dupFitPoint = p.dupFitPoint;
-  if (p.dupBurstSync != null) UA.dupBurstSync = p.dupBurstSync;
   UA.specialShare.duplieren = p.share;
   return () => {
     for (const k of KEYS) UA[k] = save[k];

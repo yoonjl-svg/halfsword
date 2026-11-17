@@ -11,7 +11,6 @@ import { TECH, FEINTS } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 
-if (process.env.NAGASHI != null) NAGASHI.on = +process.env.NAGASHI; // NAGASHI=0: 흘려 받기 규칙 끔 (config NAGASHI)
 const TR = process.env.TR ?? 'japanese';
 const WEAPON = process.env.WEAPON ?? 'uchigatana';
 const LINE = process.env.LINE ?? 'highL';

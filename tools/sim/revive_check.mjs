@@ -14,7 +14,6 @@ import { newRound, DT, AI, CONFIG } from './harness_m.mjs';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { VITALS } from '../../src/config.js';
 
-CONFIG.BODY.weightMode = 'hybrid'; // 게임은 늘 hybrid (main.js newRound)
 const N = +(process.argv[2] || 16);
 const ISO = CHARACTERS_BY_ID.isolde;
 const LIMIT_STAND = 4.0;

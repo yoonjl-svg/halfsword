@@ -38,8 +38,6 @@ const range = (s) => {
 };
 const { SECRET, CLOSE, SKILL } = CONFIG;
 if (arg('mord', '1') === '0') SECRET.aiOpenSchools = SECRET.aiOpenSchools.filter((s) => s !== 'german');
-if (args.walkStrike != null) SECRET.mordWalkStrike = +args.walkStrike ? 1 : 0; // 걸어가며 치기 (10/24 13:3x — 0 = 12:0x 판)
-if (args.near != null) SECRET.mordNear = +args.near ? 1 : 0; // 자연스럽게 가까울 때만 밀기 (10/24 14:2x — 0 = 12:0x · 13:3x 판)
 // --nearStrike: 견줌만(판에 없음) — 붙은 거리에서 붙는 반 걸음('clinch' · 'bind' · 'after')에도 걸어가며 치기를 건다
 if (args.nearStrike) {
   AI.prototype.mordWalking = function () {

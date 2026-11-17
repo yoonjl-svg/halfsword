@@ -109,15 +109,9 @@ for (const [key, C] of Object.entries(CASES)) {
 }
 
 test('여러 수 비기(서보 연환 — 수마다 칼 길을 다시 엶 · run.burst 걸쇠): 두 수에 한 번', () => {
-  const keep = SECRET.cnFast;
-  SECRET.cnFast = 0;
-  try {
-    const { reqs } = firePlayer('gyeoksal');
-    assert.equal(reqs.length, 1, JSON.stringify(reqs));
-    assert.equal(reqs[0].file, G1);
-  } finally {
-    SECRET.cnFast = keep;
-  }
+  const { reqs } = firePlayer('gyeoksal');
+  assert.equal(reqs.length, 1, JSON.stringify(reqs));
+  assert.equal(reqs[0].file, G1);
 });
 
 test('못 냄 · 실행 실패는 0: 탈진 · 서 있지 않음(secret() false) · 낸 스텝에 칼을 놓친 발도(instantResult.ok false)', () => {

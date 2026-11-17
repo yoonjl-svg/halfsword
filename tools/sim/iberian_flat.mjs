@@ -68,8 +68,6 @@ const QUIET = !!arg('quiet', false);
 
 // ── 시험 끄기 (판 값은 이 프로세스 안에서만 바뀐다) ──
 const { SCHOOL_PASSIVE, IB_FLOW, BODY, JOINTS, STRIKE } = CONFIG;
-if (ablVal('wrist')) SCHOOL_PASSIVE.iberian.on = false;
-if (ablVal('flow')) IB_FLOW.a = false;
 if (ablVal('table')) SCHOOL_ART.table = false;
 if (ablVal('edgeRest')) {
   // 쉬는 날 방향 시험 (config EDGE_REST — main.js ?edgeRest= 와 같은 뜻, 사람 칼만): pre · kick · fast (+ 로 여럿) · preV=수 · kickK=수 는 따로 칸으로
@@ -78,7 +76,6 @@ if (ablVal('edgeRest')) {
   for (const x of String(ablVal('edgeRest')).split('+')) { if (!['pre', 'kick', 'fast', 'latch', 'tsw'].includes(x)) throw new Error(`edgeRest ${x}?`); CONFIG.EDGE_REST[x] = true; }
 }
 for (const k of ['preV', 'kickK', 'kickT']) if (ablVal(k) != null) CONFIG.EDGE_REST[k] = +ablVal(k);
-if (ablVal('limits')) BODY.humanLimits = false;
 if (ablVal('ibEdge') != null) {
   // 이베리아 날 세우기 시험 (config IB_EDGE — main.js ?ibEdge= 와 같은 뜻): motor · ff · pre
   if (!CONFIG.IB_EDGE) throw new Error('이 트리에 IB_EDGE 가 없다');

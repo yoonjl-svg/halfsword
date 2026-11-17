@@ -14,8 +14,6 @@ const _f = new THREE.Vector3();
 const _r = new THREE.Vector3();
 
 function run(id, school, near = 2.4) {
-  const keep = GAIT.school;
-  GAIT.school = school;
   const G = newRound({ walls: true, seed: 7, weapon: id, weapon2: 'longsword' });
   G.ai.update = () => G.enemy.move.set(0, 0); // 상대는 제자리
   const P = G.player;
@@ -78,7 +76,6 @@ function run(id, school, near = 2.4) {
     step(0, 0);
     if (vel().h < 0.1) { stop = (i + 1) * DT; break; }
   }
-  GAIT.school = keep;
   return { approach, res, stop, catches, falls, followShare: followT / (t - t0) };
 }
 

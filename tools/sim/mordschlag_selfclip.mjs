@@ -14,10 +14,6 @@ const GUARDS = (process.env.GUARDS || 'home,high,low').split(',');
 if (process.env.MORD_JSON) Object.assign(SECRET.mord, JSON.parse(process.env.MORD_JSON));
 // 10/31 08:xx 시제품: REGRIP=0.4(실제 초 — 쥠 바꿈) · BURST=1(강제 뒤 박차기) · BURSTFREE=1 · POMMEL=1(폼멜 찍기) · NOCLIP=1 · CLIPSTEP=
 { const { realS } = await import('../../src/config.js');
-  if (process.env.BURST) SECRET.mord.burstBack = +process.env.BURST;
-  if (process.env.BURSTFREE) SECRET.mord.burstFree = +process.env.BURSTFREE;
-  if (process.env.POMMEL) SECRET.mord.pommel = +process.env.POMMEL;
-  if (process.env.NOCLIP) SECRET.mord.noSelfClip = +process.env.NOCLIP;
   if (process.env.CLIPSTEP) SECRET.mord.clipStep = +process.env.CLIPSTEP; }
 const TRACE = !!process.env.TRACE;
 class Still {

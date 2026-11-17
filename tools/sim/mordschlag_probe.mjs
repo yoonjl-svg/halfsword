@@ -8,12 +8,10 @@ import { SECRET, SKILL } from '../../src/config.js';
 import { TRADITIONS } from '../../src/schools.js';
 
 const W = process.argv[2] || 'longsword';
-const MODE = process.argv[3] || 'reverse';
+const MODE = 'hilt'; // 폼멜 찍기 (쥠 그대로 — 전 argv[3] 판 'reverse' 는 걷음)
 const GAPS = (process.argv[4] || '0.6,0.7,0.8').split(',').map(Number);
 const GUARDS = (process.env.GUARDS || 'home,high,low').split(',');
-SECRET.mord.grip = MODE;
 if (process.env.MORD_JSON) Object.assign(SECRET.mord, JSON.parse(process.env.MORD_JSON));
-if (process.env.OVER) SECRET.mordOver = 1;
 class Still {
   constructor(me) { this.me = me; }
   update() { this.me.move.set(0, 0); }

@@ -5,8 +5,7 @@ import { MEASURED } from '../../src/ai.js';
 const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => { const [k, v] = a.slice(2).split('='); return [k, v ?? '1']; }));
 const N = +(args.N ?? 36), who = args.who ?? 'P';
 for (const [k, i] of [['contact', 0], ['reach', 1], ['clinch', 2], ['cutTime', 3]]) if (args[k] != null) MEASURED.longsword[i] = +args[k]; // AI 롱소드 간격 실측값 [contact, reach, clinch, cutTime] 덮어쓰기(두 손 상한 26 뒤 박자 맞추기 실험, 10/8)
-if (args.bundle) { CONFIG.BODY.trunkArc = +(args.trunkArc ?? 2); CONFIG.BODY.trunkFollow = +(args.trunkFollow ?? 0.5); CONFIG.ARM.servoLead = 0.5; if (args.bundle === 'all') CONFIG.BODY.r2pScope = 'all'; }
-if (args.chain) CONFIG.BODY.chain = args.chain;
+if (args.bundle) { CONFIG.BODY.trunkArc = +(args.trunkArc ?? 2); CONFIG.BODY.trunkFollow = +(args.trunkFollow ?? 0.5); CONFIG.ARM.servoLead = 0.5; }
 const seedRand = (seed) => { let s = seed * 9301 + 49297; Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280); };
 const med = (a) => { if (!a.length) return NaN; const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
 const f1 = (x) => +x.toFixed(1), f2 = (x) => +x.toFixed(2);

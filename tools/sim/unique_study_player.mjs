@@ -33,7 +33,7 @@ for (const seed of seeds) for (const opp of opps) for (const delay of delays) {
   const D = Gm.player, A = Gm.enemy;
   D.skill.corr = SKILL.corr; D.skill.autoGuard = true; D.schoolFootwork = true; D.schoolParry = true;
   const Guard = flowGuard('base'), guard = new Guard(D, A); D.stamina.controller = guard;
-  const ua0 = UA.on, en0 = UA.enhance; UA.on = 1; UA.enhance = enh;
+  const en0 = UA.enhance; UA.enhance = enh;
   const uq = new PlayerUniqueAssist(D, { stage: 4 });
   const hD = observeHealth(D, () => Gm.t), hA = observeHealth(A, () => Gm.t);
   // 손가락 행동 줄: 프레임마다 {dx, dy, held}
@@ -66,7 +66,7 @@ for (const seed of seeds) for (const opp of opps) for (const delay of delays) {
   let end = 30;
   for (let i = 0; i < 30 / DT; i++) { Gm.step(); hD.step?.(DT, guard); hA.step?.(DT); if ((!D.alive || !A.alive) && end === 30) end = Gm.t + 0.5; if (Gm.t >= end) break; }
   const fD = hD.finish ? hD.finish() : hD, fA = hA.finish ? hA.finish() : hA;
-  UA.on = ua0; UA.enhance = en0;
+  UA.enhance = en0;
   const sev = (l) => +l.reduce((s, h) => s + (h.severity ?? 0), 0).toFixed(3);
   rows.push({ school, enh, seed, opp, delay, dur: +Gm.t.toFixed(2), pAlive: D.alive, eAlive: A.alive,
     recvSev: sev(fD.applied), recvLimb: +(fD.limbLost ?? 0).toFixed(3), recvConc: +(fD.concussion ?? 0).toFixed(3), recvBleed: +(fD.bleedAdded ?? 0).toFixed(4),

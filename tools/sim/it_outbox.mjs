@@ -150,7 +150,6 @@ export async function aiFight(preset, weapon, opp, seed) {
   if (P0.open === 0) CONFIG.SECRET.aiOpenSchools = open0.filter((x) => x !== 'italian');
   const it0 = CONFIG.AI_PLAN.it;
   const inqAi0 = CONFIG.UNIQUE_ASSIST.inqAi;
-  if (P0.inqAi != null) CONFIG.UNIQUE_ASSIST.inqAi = P0.inqAi; // 11/15 둘째: AI 비껴서며 찌르기 칼 (없으면 본판 값)
   const { itThrustKind } = await import('../../src/italian_outbox.js');
   if (P0.inq != null) CONFIG.AI_PLAN.it = { ...it0, inq: P0.inq }; // 11/15 비껴서며 찌르기 기울기 (없으면 본판 값)
   try {
@@ -185,7 +184,6 @@ export async function aiFight(preset, weapon, opp, seed) {
     Object.assign(IO, keep);
     CONFIG.SECRET.aiOpenSchools = open0;
     CONFIG.AI_PLAN.it = it0;
-    CONFIG.UNIQUE_ASSIST.inqAi = inqAi0;
   }
 }
 let SB = null;

@@ -63,7 +63,6 @@ const lcg = (seed) => { let s = (seed * 7919 + 17) >>> 0; return () => (s = (Mat
 // 견줌 시험 (이 실행 안에서만 — src 값은 그대로): --brake=0.8 = IB_FLOW.brake 를 이 실행에서만 바꿈 · --flowWrist=1.15 = 흐름 켜진 동안 손목 힘(wristK) × 수 (지금 판엔 없는 몫)
 if (args.brake != null) CONFIG.IB_FLOW.brake = +args.brake;
 if (args.power != null) CONFIG.IB_FLOW.power = +args.power; // 10/28 흐름 위력 (기본 1.2 · 1 = 없음)
-if (args.detect != null) CONFIG.IB_FLOW.detect = args.detect; // 10/28 흐름 읽기 'a' (기본) | 'old' (10/21 판)
 // 10/28 전 본판과 견줌: --detect=old --brake=0.5 --power=1
 const FLOW_WRIST = +(args.flowWrist ?? 1);
 const SPF = Math.max(1, Math.round(FRAME / DT)); // 손가락 한 프레임 = 물리 몇 스텝 (chain · fight)

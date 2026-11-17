@@ -111,7 +111,6 @@ if (isMain(import.meta.url)) {
     const k = +(pos[2] || 0);
     const K = +(pos[3] || 1);
     const S0 = +(args.find((a) => a.startsWith('--seed='))?.split('=')[1] ?? 1);
-    CONFIG.BODY.weightMode = args.includes('--levitate') ? 'levitate' : 'hybrid';
     for (const [a, b] of pairs(k, K)) console.log(JSON.stringify(playPair(a, b, N, S0)));
   }
 }

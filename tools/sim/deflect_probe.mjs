@@ -14,7 +14,6 @@ import { TECH } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 
-if (process.env.NAGASHI != null) NAGASHI.on = +process.env.NAGASHI; // NAGASHI=0: 흘려 받기 규칙 끔 (config NAGASHI)
 const CONFIGS = (process.argv[2] ?? 'uchigatana,uchigatana:nocover,longsword').split(',').map((s) => {
   const [weapon, mode = 'school'] = s.split(':');
   return { weapon, mode, key: s };

@@ -179,7 +179,6 @@ async function child() {
   const ev = (e) => { if (rec) events.push(e); };
 
   function newRound(k) {
-    CONFIG.BODY.weightMode = 'hybrid';
     if (world) world.free();
     if (eventQueue) eventQueue.free();
     world = new RAPIER.World({ x: 0, y: PHYSICS.gravity, z: 0 });

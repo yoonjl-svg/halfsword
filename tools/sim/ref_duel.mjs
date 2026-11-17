@@ -120,7 +120,6 @@ if (isMain(import.meta.url)) {
   const N = +(pos[1] || 48);
   const ids = pos.slice(2).length ? pos.slice(2) : Object.keys(WEAPONS).filter((id) => mode === 'field' || id !== 'longsword');
   const S0 = +(args.find((a) => a.startsWith('--seed='))?.split('=')[1] ?? 1);
-  CONFIG.BODY.weightMode = args.includes('--levitate') ? 'levitate' : 'hybrid';
   PROXY_LS = args.includes('--proxy=ls');
   HERO_ALL = args.includes('--hero');
   console.log(`기준 하니스 · ${mode === 'field' ? '주인공이 쥔 경우(캐릭터 다섯 상대)' : '롱소드 상대'} · ${CONFIG.BODY.weightMode} · 자리마다 ${N}판(시드 ${S0}부터) × 2`);

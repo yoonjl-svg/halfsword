@@ -18,7 +18,7 @@ test('공격은 한 번에 베기12/찌르기10, 막기3; 무게는 원래 질�
 });
 test('무게 배율은 0.75~1.5',()=>{near(actor({swordMass:.1}).stamina.weight,.75);near(actor({swordMass:20}).stamina.weight,1.5);});
 test('찌르기 시간 분류는 원래 질량과 찌르기 특성 사용, 방어 근육은 기존 한도',()=>{
- const saved={...STAMINA};Object.assign(STAMINA,{attackTempo:true,tempoProfiles:true});
+ const saved={...STAMINA};
  try{for(const [mass,style,rate] of [[1.6,null,.55],[2.9,null,.6],[1.1,{},.6]]){
   const f=actor({swordMass:mass,weaponCfg:{thrustStyle:style}});f.skill.tap={};f.stamina.value=-60;f.stamina.stages();
   near(f.stamina.attackSpeed,rate);f.swordMass=.2;near(f.stamina.attackSpeed,rate);

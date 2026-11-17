@@ -21,7 +21,6 @@ import * as THREE from 'three';
 
 const [wArg = 'rapier,dartagnan,pappenheimer', fArg = 'isolde,tome', seedsArg = '1', simArg = '30', rtArg = '0.15,0.25,0.35,0.5'] = process.argv.slice(2);
 const E = process.env;
-if (E.RISO_GAP) CONFIG.SECRET.risolutoGap = +E.RISO_GAP;
 if (E.RISO_OLD === '1') Object.assign(CONFIG.SECRET, { risolutoStick: 'fwd', risolutoTap: 1, risolutoCover: 0.07, secretHold: 0 }); // 10/25 21:0x 전 판
 const DRAG = E.RISO_TAP_ATTACK === 'drag';
 const DRAG_PX = 16, DRAG_N = 6; // 끌기: 프레임마다 16 px(약 0.11 m — 실시간 6.4 m/s · 문턱 1.5) · 6 프레임
