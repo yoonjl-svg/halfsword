@@ -22,11 +22,8 @@
 //    tableSet=k:el/az[:x/y/z]+…  그 칸의 칼끝 각(올려본 · 옆 °) · 손 자리(m)를 바꿈 (guards.js setIberianTable · 빈 칸은 그대로) · ibTable=v2  자세표 v2 묶음 (IBERIAN_TABLE_V2)
 //    heavy   앞무게 틀 흐름 덧씌우기 끔 — 판 뒤 skill._flow 를 끈다
 //    limits  사람 관절 범위 끔 (BODY.humanLimits = false — 손목 밧줄 · 아래팔 돌림 범위 · 양날 고르기)
-//    joints  관절 교정 묶음 끔 (JOINTS.mode = 'off')
 //    roll    잰 쪽 아래팔 돌림 밧줄만 걷음 (손목 밧줄 둘 가운데 HUMAN.forearmRoll 80° 줄)
 //    ts=K    잰 무기 쪽 날 세우기 힘(twistScale) × K · ts=L = 롱소드 값 1 그대로(관성 비례 끔)
-//    edge=M  날 세우기 방식 (JOINTS.edge = motor | ff | pre — 있는 시험 스위치)
-//    edgeAt  JOINTS.edgeAt = 'near' (있는 시험 스위치) · edgeRel  JOINTS.edgeRel = true · edgeArm=K  JOINTS.edgeArm = K (팔 나눔 ⓓ — edge=motor 와 함께)
 //    ibEdge=motor|ff|pre  이베리아 유파만 그 날 세우기 방식 (config IB_EDGE — 이 조사의 시제품, 판 끔 · main.js ?ibEdge= 와 같은 뜻)
 //   10/22 플랑베르주 절 (문서 '플랑베르주 (10/22 사장님 답 뒤)'):
 //    flGuardIt=K|ZW  플랑베르주 코등이 칼날 축 관성 × K (ZW = 칼 전체가 츠바이핸더 값) · flGuardW=X  코등이 충돌체 반폭 X m · flGuardOff  코등이 충돌체 끔
@@ -105,11 +102,6 @@ if (ablVal('tableSet')) {
   }
 }
 if (ablVal('limits')) BODY.humanLimits = false;
-if (ablVal('joints')) JOINTS.mode = 'off';
-if (ablVal('edge')) JOINTS.edge = ablVal('edge');
-if (ablVal('edgeAt')) JOINTS.edgeAt = 'near';
-if (ablVal('edgeRel')) JOINTS.edgeRel = true;
-if (ablVal('edgeArm')) JOINTS.edgeArm = +ablVal('edgeArm'); // 팔 나눔 ⓓ (새 방식 motor · ff · pre 에서만 읽힘)
 if (ablVal('ibEdge') != null) {
   // 이베리아 날 세우기 시험 (config IB_EDGE — main.js ?ibEdge= 와 같은 뜻): motor · ff · pre
   if (!CONFIG.IB_EDGE) throw new Error('이 트리에 IB_EDGE 가 없다');

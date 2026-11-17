@@ -18,7 +18,7 @@
 //   입력 예측 날 각: 손가락 속도(skill.vel)로 겨눔(guardDir)이 도는 쪽 = 칼이 곧 갈 쪽 ↔ 칼날 방향 각 (입력이 미리 알려 주는 날 방향)
 //
 //   node tools/sim/player_edge.mjs [무기,…|all] [--foes=stand,block,ai] [--rounds=6] [--secs=24] [--seed0=0] [--json=<파일>] [--quiet]
-//   설정 바꿈은 with_config.mjs 로 감싼다 (예: node tools/sim/with_config.mjs JOINTS.playerEdge=off player_edge.mjs longsword)
+//   설정 바꿈은 with_config.mjs 로 감싼다 (예: node tools/sim/with_config.mjs JOINTS.playerEdgeLead=0.5 player_edge.mjs longsword)
 //  src 는 읽기만 (하니스 몫: AI 멈춤·공격 막음·죽지 않음 — live_twin passive 와 같은 종류)
 // ─────────────────────────────────────────────────────────────
 import { newRound, THREE, CONFIG, DT, seedRandom } from './harness_m.mjs';
@@ -364,6 +364,6 @@ for (const w of WEAPONS) {
     for (const f of FOES) { const b = out[w][f]; process.stderr.write(`   ${f}: ${b.hits} 맞음 · 칼 면 ${b.flatPct}% · J ${b.eMean} · 맞힘률 ${b.hitRate}%\n`); }
   }
 }
-const edgeCfg = { edge: CONFIG.JOINTS.edge, playerEdge: CONFIG.JOINTS.playerEdge ?? null };
+const edgeCfg = { playerEdgeLead: CONFIG.JOINTS.playerEdgeLead };
 if (args.json) writeFileSync(args.json, JSON.stringify({ cfg: edgeCfg, foes: FOES, rounds: ROUNDS, secs: SECS, out }, null, 1));
 console.log(JSON.stringify({ cfg: edgeCfg, out: Object.fromEntries(Object.entries(out).map(([k, v]) => [k, { hits: v.all.hits, flatPct: v.all.flatPct, eMean: v.all.eMean, hitRate: v.all.hitRate, stab: v.all.stab.n }])) }));

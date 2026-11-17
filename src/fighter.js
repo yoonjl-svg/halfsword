@@ -199,32 +199,18 @@ export function humanJointDefs(defs, s) {
   return defs;
 }
 // ─────────────────────────────────────────────────────────────
-//  칼 팔 관절 가동 범위 교정 (config JOINTS, 시제품 기본 끔 — docs/motion/joint_range_2026-10-09.md). jm() = 켠 묶음의 몫 ({} = 끔 → 오늘 그대로)
+//  칼 팔 관절 가동 범위 교정 (config JOINTS — 10/9 'anat' 묶음 늘 켬 · docs/motion/joint_range_2026-10-09.md): ⓑ 범위 끝 되돌림(anatSoft) · 플레이어 칼만 ⓒ 손 목표 자르기 · 위팔 비틀기 서보 JOINTS.twistK
 // ─────────────────────────────────────────────────────────────
-const jm = () => JOINTS.presets[JOINTS.mode] ?? {};
-/** ⓐ 엔진 한도: 칼 팔꿈치 경첩 한도를 [elbowMin, elbowMax] 로 (몸이 만들어질 때·절단 뒤 수동 관절이 같은 표를 읽는다) */
-function anatJointDefs(defs) {
-  if (!jm().hard) return defs;
-  for (const jd of defs) if (jd.c === 'farmS') jd.lim = [JOINTS.elbowMin * HD, JOINTS.elbowMax * HD];
-  return defs;
-}
-/** ⓒ 손 목표 자르기: armIK·armU 가 손 목표 거리를 자르는 위 끝 (m). 끔이면 오늘 그대로 위팔 + 아래팔 − 여유 */
-//  player: 사람 손가락이 모는 칼인가 (playerArm). 'anat' 의 playerReach 는 플레이어 칼에만 playerReachFrac 로 자른다 (AI 는 원래 거의 안 뻗고, 걸면 레이피어 승률 −14 — 기록 §7·§8)
+/** ⓒ 손 목표 자르기: armIK·armU 가 손 목표 거리를 자르는 위 끝 (m). 플레이어 칼만 playerReachFrac 로 (AI 는 원래 거의 안 뻗고, 걸면 레이피어 승률 −14 — 기록 §7·§8) · 아니면 위팔 + 아래팔 − 여유
+ *  player: 사람 손가락이 모는 칼인가 (playerArm) */
 function ikReach(a, b, player = false) {
-  if (jm().reach) return Math.min(a + b - IK_MARGIN, (a + b) * JOINTS.reachFrac);
-  if (player && jm().playerReach) return Math.min(a + b - IK_MARGIN, (a + b) * JOINTS.playerReachFrac);
+  if (player) return Math.min(a + b - IK_MARGIN, (a + b) * JOINTS.playerReachFrac);
   return a + b - IK_MARGIN;
 }
 /** 사람 손가락이 모는 칼인가: skill.autoGuard 는 플레이어만 true (main.js newRound · 시뮬 입력 길 corr_lib inputPump). skill.corr 로 가르면
  *  corr_s0 (모든 파이터 corr old/v2 바꿔 끼움)의 '설정 0 동일'이 깨져서 쓰지 않는다 */
 const playerArm = (f) => f.skill?.autoGuard === true;
 const _pe0 = new THREE.Vector3(), _pe1 = new THREE.Vector3(); // inputEdgeLead scratch
-/** 위팔 비틀기 서보 강성 (N·m/rad): JOINTS.twistK 가 있으면 그것, 없으면 켠 묶음의 twistK, 둘 다 없으면 25 (오늘 값). 감쇠·상한은 같은 배율 (manualMuscle) */
-const twistK = () => JOINTS.twistK ?? jm().twistK ?? 25;
-/** 날 세우기 힘(twistScale) 배율: JOINTS.edgeK 가 있으면 그것, 없으면 켠 묶음의 edgeK, 둘 다 없으면 1 */
-const edgeK = () => JOINTS.edgeK ?? jm().edgeK ?? 1;
-/** 날 세우기 방식 (JOINTS.edge, 10/9 날 세우기): 'torque' = 명시 돌림힘(오늘, 끔) · 'motor' = 암시적 모터 ⓐ · 'ff' = 각속도 앞먹임 ⓑ · 'pre' = ⓐ + 미리 돌리기 ⓒ */
-const edgeMode = () => JOINTS.edge ?? 'torque';
 /**
  * armIK 의 위팔 방향 u (가슴 틀): 손 목표 T(가슴 틀)·어깨 S 에서 armIK 와 같은 식 (같은 IK_POLE·IK_DMIN·IK_MARGIN·ARM 길이). out 에 쓴다.
  *  보정 v2 순서 결합(Fighter.corrTrunkTurn)이 '이 가슴 yaw 면 칼 어깨가 어디를 향하나'를 몸을 움직이지 않고 묻는 데 쓴다
@@ -846,7 +832,6 @@ export class Fighter {
     const jdefs = jointDefs(this.side);
     hybridJointDefs(jdefs);
     humanJointDefs(jdefs, this.side);
-    anatJointDefs(jdefs); // 관절 가동 범위 교정 ⓐ (JOINTS, 끔이면 그대로)
     for (const jd of jdefs) {
       const P = new THREE.Vector3(...jd.at);
       const rp = this.localRot[jd.p];
@@ -863,9 +848,6 @@ export class Fighter {
       const raw = joint.rawSet;
       if (jd.manual) {
         // 엔진 모터·각도 제한 없음 (driveJoints에서 직접 회전력을 건다)
-        // 관절 가동 범위 교정 ⓐ (JOINTS hard): 칼 어깨 x 축(= 위팔 비틀기, 기준 = 팔 앞으로 뻗고 경첩 축 옆) 한도만 엔진에 건다. 축 한도는 쿼터니언 x 성분이라
-        //  위팔을 많이 들수록(흔듦 θ) 실제 허용 돌림이 넓어지는 근사다 (흔듦 90° 에서 70° → 약 108°) — 기록 docs/motion/joint_range_2026-10-09.md
-        if (jm().hard && jd.c === 'uarmS') raw.jointSetLimits(joint.handle, MOTOR_AXES[0], JOINTS.twist[0] * HD, JOINTS.twist[1] * HD);
       } else if (jd.type === 'hinge') {
         joint.setLimits(jd.lim[0], jd.lim[1]);
         raw.jointConfigureMotorModel(joint.handle, HINGE_AXIS, 1); // 1 = 힘(N·m) 기준
@@ -1058,8 +1040,6 @@ export class Fighter {
     // 미처 정렬되지 못하는 경우가 있어, 그런 무기는 weapons.js의 controlOverrides.twistScale로
     // 개별 조정할 수 있게 한다 (없으면 실제 관성 비율 그대로).
     this.twistScale = spec.id === 'longsword' ? 1 : (this.weaponCfg.twistScale ?? pI.y / TWIST_I_BASE);
-    // 관절 가동 범위 교정 (JOINTS edgeK, 10/9 3차): 위팔 비틀기 서보를 세게(twistK) 하면 날 세우기 힘이 상대적으로 밀려 칼 면으로 맞았다 → 같은 묶음에서 날 세우기 힘도 배율 (1 = 오늘 그대로)
-    if (edgeK() !== 1) this.twistScale *= edgeK();
     // 무기별 날 세우기 힘 배율 (weapons.js twistK — 10/22 청강검 1.25, 사람 · AI 같음). 없으면 1 (지금 그대로)
     if (spec.twistK) this.twistScale *= spec.twistK;
     this.handTarget = new THREE.Vector3();
@@ -1771,7 +1751,7 @@ export class Fighter {
     this.offHand(); // 빈손으로 칼자루 끝을 잡는다
     this.driveJoints(); // 모든 관절 근육을 움직인다
     this.elbowGravity();
-    if (jm().soft) this.anatSoft(); // 관절 가동 범위 교정 ⓑ 범위 끝 되돌림 (JOINTS, 끔이면 부르지 않는다)
+    this.anatSoft(); // 관절 가동 범위 교정 ⓑ 범위 끝 되돌림 (JOINTS)
     this.flexWeapon?.step(dt); // 휘는 마디 무기의 굽힘 복원 (druid_whip.js — 없으면 아무 일 없음)
     this.trackBlade(dt);
 
@@ -2101,7 +2081,6 @@ export class Fighter {
     const jdefs = jointDefs(this.side);
     hybridJointDefs(jdefs);
     humanJointDefs(jdefs, this.side);
-    anatJointDefs(jdefs);
     return jdefs.find((jd) => jd.c === childName) || null;
   }
 
@@ -2577,8 +2556,6 @@ export class Fighter {
     const rope = (deg, a1, a2) => this.world.createImpulseJoint(R.JointData.rope(len(deg), a1, a2), this.bodies.farmS, this.sword, true);
     // 손목 W = 아래팔 몸체 (0.13, 0, 0) = 칼 몸체 원점 (위 gripJoint)
     this.gripCone = [rope(HUMAN.gripFlex, { x: 0.13 + K, y: 0, z: 0 }, { x: 0, y: L, z: 0 }), rope(HUMAN.forearmRoll, { x: 0.13, y: 0, z: K }, { x: 0, y: 0, z: L })];
-    // 관절 가동 범위 교정 ⓐ (JOINTS hard): 손목 굽힘·폄 ±wristFE — 칼날 축이 아래팔 경첩 축 ±z 와 이루는 각 ≤ 90 + wristFE (밧줄 둘, 같은 기하)
-    if (jm().hard) for (const sz of [1, -1]) this.gripCone.push(rope(90 + JOINTS.wristFE, { x: 0.13, y: 0, z: sz * K }, { x: 0, y: L, z: 0 }));
     this.gripDev = null;
     if (JOINTS.wristGuard && JOINTS.wristRope) this.gripDevOn();
   }
@@ -3369,13 +3346,9 @@ export class Fighter {
     }
     // 비틀기: 위팔 자체의 비틀림 관성은 ≈0.003kg·m²로 아주 작다 → 안정 한계(강도 ≤10, 감쇠 ≤0.2) 안에서만
     //  (엔진 쪽 회전 감쇠(팔 몸체 1.5)가 함께 잡아줘서 조금 더 세게 걸 수 있다)
-    //  관절 가동 범위 교정 (JOINTS twistK, 10/9 2차): 강성 25 → twistK 로 올리면 감쇠 0.8·상한 20 도 같은 배율 (25 = 오늘 그대로, 같은 float)
-    const twR = twistK() / 25;
-    // 날 세우기 팔 나눔 ⓓ (JOINTS.edgeArm, 10/10 — docs/motion/edge_alignment_2026-10-10.md): 칼 든 위팔은 날 세우기가 남긴 굴림 어긋남(칼날 축 둘레, 지난 스텝)의
-    //  위팔 축 몫 × edgeArm 만큼 비틀기 목표를 옮긴다 — 아래팔 엎침·뒤침(손목 밧줄 ±80°)이 끝에 닿으면 어깨 돌림이 나머지를 낸다(사람 날 세우기 = 엎침 + 어깨 돌림).
-    //  edgeArm 0 이면 이 줄은 eTw 그대로 (같은 float). 비틀기 서보 강성·감쇠·상한은 그대로
-    const eTwE = this.edgeArmErr && j.child === this.bodies.uarmS ? eTw + JOINTS.edgeArm * this.edgeArmErr.dot(boneAxis) : eTw;
-    _mT.addScaledVector(boneAxis, THREE.MathUtils.clamp(eTwE * 25 * twR - wTw * 0.8 * twR, -20 * twR, 20 * twR) + twistFF);
+    //  관절 가동 범위 교정 (JOINTS twistK, 10/9 2차): 강성 25 → twistK 로 올리면 감쇠 0.8·상한 20 도 같은 배율
+    const twR = JOINTS.twistK / 25;
+    _mT.addScaledVector(boneAxis, THREE.MathUtils.clamp(eTw * 25 * twR - wTw * 0.8 * twR, -20 * twR, 20 * twR) + twistFF);
     j.child.addTorque(vecArg(_mT), true);
     j.parent.addTorque({ x: -_mT.x, y: -_mT.y, z: -_mT.z }, true);
   }
@@ -3548,8 +3521,6 @@ export class Fighter {
       this.aimLagMap = 0; // follow-through 의 뒤처짐도 0 (쓰러짐·무장 해제 동안 낡은 값으로 몸을 더 틀지 않게 — 검토 2-5)
       // (손목 hold 상태 리셋은 10/8 17:20 hold 삭제와 함께 지움)
       this.aimOff = true; // 측정용: 다음 재개 스텝을 표시
-      this.edgePrevT = null; // 날 세우기 목표 굴림 빠르기(JOINTS.edge)도 재개 때 0 부터
-      this.edgeArmErr = null; // 팔 나눔 ⓓ 어긋남도 버린다 (쓰러짐·칼 놓침 동안 위팔 비틀기 목표를 옮기지 않게)
       this.prevAim = null; // 손목 제어가 멈춘 동안의 묵은 목표를 버린다 — 안 버리면 재개 첫 스텝에 지난 목표와의 차를 한 스텝 각속도(최대 120 rad/s)로 읽는다 (10/7; 샛별 A-021 뒤 injury_followup 과 같은 결함)
       return; // 쓰러지거나 칼을 놓치면 손목에 힘을 쓰지 않는다
     }
@@ -3675,21 +3646,11 @@ export class Fighter {
     // 칼날 가운데쯤이 실제로 움직이는 방향 (손잡이 속도와 다르다: 칼은 손을 축으로 돈다)
     const bv = this.hitPointVel;
     const edgeDir = new THREE.Vector3(bv.x, bv.y, bv.z);
-    const em = JOINTS.playerEdgeMode && playerArm(this) ? JOINTS.playerEdgeMode : edgeMode(); // 플레이어 칼만 다른 날 세우기 방식 (JOINTS.playerEdgeMode, 기본 null = 같음)
-    // 날 세우기 ⓒ 미리 돌리기 (JOINTS.edge 'pre'): 명령 겨눔이 도는 빠르기(wAim, 서보 목표)로 칼날 70 % 지점이 곧 갈 속도를 읽어 더한다 —
-    //  칼이 실제로 빨라지기 전(준비 자세에서 길의 첫 방향으로 손이 움직이기 시작할 때)에 날이 그쪽을 먼저 본다. 'pre' 가 아니면 오늘 줄 그대로
-    if (em === 'pre') edgeDir.addScaledVector(_edL.crossVectors(wAim, blade), (this.weaponCfg.hiltLength + 0.7 * this.weaponCfg.bladeLength) * JOINTS.edgeLead);
-    // 날 세우기 상대 속도 (JOINTS.edgeRel, 'torque' 가 아닐 때만): 베는 것은 상대 몸에 대한 칼 움직임이라 상대 가슴 속도를 뺀다 (판정 combat.js 의 rel 과 같은 뜻)
-    if (em !== 'torque' && JOINTS.edgeRel && this.foe?.bodies?.chest) { const fv = this.foe.bodies.chest.linvel(); edgeDir.x -= fv.x; edgeDir.y -= fv.y; edgeDir.z -= fv.z; }
-    // 날 세우기 닿을 자리 (JOINTS.edgeAt 'near', 'torque' 가 아닐 때만): 상대 몸 부위가 칼날 가까이(edgeNear m 안) 오면, 날 방향을 칼날 70 % 지점 제 속도 대신
-    //  '그 부위에 가장 가까운 칼날 점의 속도 − 그 부위 속도'(판정 combat.js 의 rel 과 같은 뜻, 닿기 전에 미리)로 읽는다 — 상대 팔·몸이 움직여 칼 면으로 닿는 몫(칼 면 맞음의 약 ⅓)을 겨눈다
-    if (em !== 'torque' && JOINTS.edgeAt === 'near' && this.foe?.bodies) this.edgeNearDir(edgeDir);
-    // 플레이어 입력 미리 돌리기 (JOINTS.playerEdge, 10/10 플레이어 칼 면 — docs/motion/player_edge_2026-10-10.md): 사람 손가락 칼(playerArm)만.
-    //  손가락이 가는 쪽으로 겨눔이 곧 돌 빠르기를 칼날 70 % 지점 속도로 바꿔 날 방향에 더한다 — 칼이 실제로 빨라지기 전에 날이 먼저 그쪽을 본다. 'off' 면 오늘 줄 그대로
-    const pem = JOINTS.playerEdge ?? 'off';
-    if (pem !== 'off' && playerArm(this)) this.inputEdgeLead(edgeDir, blade, pem);
+    // 플레이어 입력 미리 돌리기 (10/10 플레이어 칼 면 — docs/motion/player_edge_2026-10-10.md · 'goal' 늘 켬): 사람 손가락 칼(playerArm)만.
+    //  거른 손 목표가 아직 따라갈 몫으로 겨눔이 곧 돌 빠르기를 칼날 70 % 지점 속도로 바꿔 날 방향에 더한다 — 칼이 실제로 빨라지기 전에 날이 먼저 그쪽을 본다
+    if (playerArm(this)) this.inputEdgeLead(edgeDir, blade);
     edgeDir.addScaledVector(blade, -edgeDir.dot(blade));
-    const mv0 = em === 'torque' ? 0.5 : JOINTS.edgeMove0, mv1 = em === 'torque' ? 2.5 : JOINTS.edgeMove1; // 날을 세우기 시작하는 칼날 빠르기 (m/s, 오늘 0.5~2.5)
+    const mv0 = 0.5, mv1 = 2.5; // 날을 세우기 시작하는 칼날 빠르기 (m/s)
     // 가만히 있을 때: 칼 면이 몸 오른쪽을 본다 / 움직일 때: 날이 움직이는 쪽을 향한다.
     // 속도에 따라 둘을 부드럽게 섞는다 (딱 잘라 바꾸면 경계 속도에서 칼이 매 순간 90°씩 비틀리며 떤다)
     const flatTarget = RIGHT_LOCAL.clone().applyQuaternion(this.yaw);
@@ -3851,12 +3812,9 @@ export class Fighter {
     // 날 세우기(손목 비틀기). 칼날 축 관성이 매우 작아 안정 한계(≈5) 안에서 최대한 세게.
     // 이 축 관성이 롱소드보다 작은/큰 무기는 twistScale만큼 힘도 같이 줄이거나 늘려서
     // (관성이 작을수록 같은 힘에도 더 빨리 도니까) 안정성을 맞춘다.
-    let twist;
     const tsE = this.twistScale;
-    if (em === 'torque') {
-      twist = new THREE.Vector3().crossVectors(flat, flatTarget).projectOnVector(blade).multiplyScalar(4 * tsE);
-      twist.addScaledVector(wTwist, -0.12 * tsE);
-    } else twist = this.edgeTwist(em, blade, flat, flatTarget, w.dot(blade));
+    const twist = new THREE.Vector3().crossVectors(flat, flatTarget).projectOnVector(blade).multiplyScalar(4 * tsE);
+    twist.addScaledVector(wTwist, -0.12 * tsE);
     if (!placed) torque.add(twist);
     sword.addTorque(vecArg(torque), true);
     // 손목 근육의 반작용은 아래팔로 간다. 단, 아래팔 길이 방향으로 비트는 몫은
@@ -3870,15 +3828,15 @@ export class Fighter {
   }
 
   /**
-   * 플레이어 입력 미리 돌리기 (JOINTS.playerEdge — docs/motion/player_edge_2026-10-10.md). 칼은 읽기만, out(날 방향 속도)에 더한다.
-   *  'input' = 손가락 속도(skill.vel, 패드 m/s) · 'goal' = 거른 손 목표가 아직 따라갈 몫((aimRaw − aim) × 거르기 빠르기) · 'both' = 둘의 합.
-   *  그 패드 빠르기로 겨눔(guardDir)이 도는 각속도 × 칼날 70 % 반지름 = 곧 낼 칼날 속도, 무게 JOINTS.playerEdgeLead
+   * 플레이어 입력 미리 돌리기 (10/10 — docs/motion/player_edge_2026-10-10.md · 'goal' 판 늘 켬). 칼은 읽기만, out(날 방향 속도)에 더한다.
+   *  거른 손 목표가 아직 따라갈 몫((aimRaw − aim) × 거르기 빠르기)의 패드 빠르기로 겨눔(guardDir)이 도는 각속도 × 칼날 70 % 반지름 = 곧 낼 칼날 속도, 무게 JOINTS.playerEdgeLead
    */
-  inputEdgeLead(out, blade, mode) {
+  inputEdgeLead(out, blade) {
     const sk = this.skill;
     let vx = 0, vy = 0;
-    if (mode === 'input' || mode === 'both') { vx += sk.vel.x; vy += sk.vel.y; }
-    if (mode === 'goal' || mode === 'both') { const w = sk.filterW ?? 0; vx += (sk.aimRaw.x - sk.aim.x) * w; vy += (sk.aimRaw.y - sk.aim.y) * w; }
+    const fw = sk.filterW ?? 0;
+    vx += (sk.aimRaw.x - sk.aim.x) * fw;
+    vy += (sk.aimRaw.y - sk.aim.y) * fw;
     // 덧씌우기 자세(skill.thrustPose — 찌르기·손잡이 찍기·비기 길목 한 칼 등)가 칼끝 방향을 명령하는 동안은 패드 → guardDir 이 겨눔이 아니라 그 몫(1 − th.w)만 (10/11 v6 §19):
     //  길목 한 칼은 패드 손 목표가 빠르게 옮겨 가는데 칼끝 방향은 덧씌우기(th.dir)가 쥔다 — 패드 길로 읽은 '곧 돌 쪽'이 날 방향에 더해져 높이 겨눔(머리)에서 칼이 위로 솟았다
     //  (탐침 tools/sim/gilmok_pair_probe.mjs: 플레이어 +1.06 m 헛침 → 이 몫을 빼면 AI 와 같은 +0.2~0.3 m). AI 는 이 앞당김이 없다(playerArm 만). 지움 몫 = 지도 몸 돌림 호(arcO)와 같은 (1 − th.w)
@@ -3902,76 +3860,6 @@ export class Fighter {
     const a1 = _pe1.set(...guardDir(sk.aim.x + vx * h, sk.aim.y + vy * h, oneHand));
     const wIn = _pe1.crossVectors(a0, a1).multiplyScalar(1 / h).applyQuaternion(this.yaw);
     out.addScaledVector(_pe0.crossVectors(wIn, blade), (this.weaponCfg.hiltLength + 0.7 * this.weaponCfg.bladeLength) * JOINTS.playerEdgeLead);
-  }
-
-  /** 날 세우기 닿을 자리 (JOINTS.edgeAt 'near'): edgeDir(지금 = 칼날 70 % 지점 속도)를 가장 가까운 상대 부위 쪽 상대 속도로 섞는다. 칼은 읽기만 한다 */
-  edgeNearDir(edgeDir) {
-    const a = this.bladePoint(0, _enA), b = this.bladePoint(1, _enB);
-    const ab = _enC.subVectors(b, a);
-    const L2 = ab.lengthSq() || 1e-9;
-    let best = Infinity, bp = null, bt = 0;
-    for (const n of EDGE_NEAR_PARTS) {
-      const pb = this.foe.bodies[n];
-      if (!pb || this.foe.detachedParts?.has?.(n)) continue;
-      const c = pb.translation();
-      const t = THREE.MathUtils.clamp(((c.x - a.x) * ab.x + (c.y - a.y) * ab.y + (c.z - a.z) * ab.z) / L2, 0, 1);
-      const d = Math.hypot(a.x + ab.x * t - c.x, a.y + ab.y * t - c.y, a.z + ab.z * t - c.z);
-      if (d < best) { best = d; bp = pb; bt = t; }
-    }
-    const near = JOINTS.edgeNear;
-    if (!bp || best > near) return;
-    const wN = 1 - THREE.MathUtils.smoothstep(best, near * 0.5, near);
-    const p = _enD.copy(a).addScaledVector(ab, bt);
-    const sv = this.sword.linvel(), sw = this.sword.angvel(), com = this.sword.worldCom();
-    const r = _enA.set(p.x - com.x, p.y - com.y, p.z - com.z);
-    const vp = _enB.set(sw.y * r.z - sw.z * r.y + sv.x, sw.z * r.x - sw.x * r.z + sv.y, sw.x * r.y - sw.y * r.x + sv.z);
-    const fv = bp.linvel();
-    vp.x -= fv.x; vp.y -= fv.y; vp.z -= fv.z;
-    edgeDir.lerp(vp, wN);
-  }
-
-  /**
-   * 날 세우기 새 방식 (JOINTS.edge 'motor'·'ff'·'pre', 10/9~10/10 — docs/motion/edge_alignment_2026-10-10.md, 기본 끔). 칼날 축 둘레 1 자유도:
-   *  e = flat → flatTarget 의 칼날 축 둘레 부호 있는 각, ω = 칼 각속도의 칼날 축 몫, ω* = 목표(flatTarget)가 칼날 축 둘레로 도는 빠르기(지난 스텝과 차).
-   *  'ff' ⓑ: 오늘 명시 돌림힘에 목표 각속도 항 — 4·ts·sin e + 0.12·ts·(ω* − ω). 감쇠 계수는 오늘 그대로라 안정 한계도 그대로다(세기는 못 올림).
-   *  'motor' ⓐ·'pre' ⓒ: 암시적(뒤 오일러) PD — 한 스텝 뒤 각·각속도로 힘을 정한다: τ = (k·e − (k·dt + d)·ω) / (1 + (k·dt² + d·dt)/I),
-   *   I = 칼날 축 관성(swordProps.I.y). 엔진 관절 모터와 같은 적분이라 강성을 올려도 떨지 않는다. k = 4·ts·edgeMotorK, d = 0.12·ts·edgeMotorD, e 는 ±edgeClamp 로 포화.
-   *   (Rapier 공 관절 모터를 칼 ↔ 아래팔에 걸어 보니 축 셋이 쿼터니언 성분으로 엮여, 칼날 축 목표 0.8 rad 이 0.53 rad 에 머물고 손목 굽힘 축으로 1.9 rad 돌았다 —
-   *    칼날 축 하나만 잡을 수 없어 같은 적분을 이 축에 직접 푼다 — 10/9 앞 작업자 시험, 기록은 이 주석뿐)
-   *  반작용은 오늘처럼 driveSword 끝에서 아래팔·가슴으로 나뉜다.
-   */
-  edgeTwist(em, blade, flat, flatTarget, wB) {
-    const ts = this.twistScale;
-    const e = Math.atan2(_edC.crossVectors(flat, flatTarget).dot(blade), flat.dot(flatTarget));
-    const dt = this.lastDt || 1 / 120;
-    // 목표 굴림 빠르기 ω*: 지난 목표 → 이번 목표의 칼날 축 둘레 각 / dt (처음·멈춤 뒤는 0)
-    const prev = this.edgePrevT;
-    let wT = 0;
-    if (prev) wT = THREE.MathUtils.clamp(Math.atan2(_edC.crossVectors(prev, flatTarget).dot(blade), prev.dot(flatTarget)) / dt, -40, 40);
-    (this.edgePrevT ||= new THREE.Vector3()).copy(flatTarget);
-    let tau;
-    if (em === 'ff') tau = 4 * ts * Math.sin(e) + 0.12 * ts * (wT - wB);
-    else {
-      const k = 4 * ts * JOINTS.edgeMotorK;
-      const d = 0.12 * ts * JOINTS.edgeMotorD;
-      const I = Math.max(1e-6, this.swordProps.I.y);
-      const ec = THREE.MathUtils.clamp(e, -JOINTS.edgeClamp, JOINTS.edgeClamp);
-      // 앞먹임 (JOINTS.edgeFF): 감쇠가 0 이 아니라 목표 굴림 빠르기 ω* 를 향한다 — 감쇠를 '멈춤'으로 두면 길이 휘며 목표가 도는 동안 (d/k)·ω* 만큼 늘 뒤처진다
-      //  (오늘 명시 돌림힘: 0.12/4 × 20 rad/s ≈ 0.6 rad = 34°, 칼 면 맞음의 '못 따라감' 몫). edgeFF 0 = 10/9 첫 꼴(멈춤 감쇠)
-      const wRel = wB - JOINTS.edgeFF * wT;
-      tau = (k * ec - (k * dt + d) * wRel) / (1 + (k * dt * dt + d * dt) / I);
-      // 손목 굴림 빠르기 한계: 이 힘이 한 스텝 뒤 칼날 축 각속도를 ±edgeWMax 밖으로 밀면 그 끝까지만 민다 (제동은 그대로) —
-      //  큰 어긋남(양날 쪽 바꿈 등)에서 한 스텝에 1 rad 를 돌리는 '팽이'를 막는다. 사람 손목 엎침·뒤침 최고 빠르기 몫 (확인표 522)
-      const wN = wB + (dt * tau) / I;
-      const wM = JOINTS.edgeWMax;
-      if (Math.abs(wN) > wM && Math.abs(wN) > Math.abs(wB)) tau = (I * (Math.sign(wN) * wM - wB)) / dt;
-      const tM = 4 * ts * JOINTS.edgeTauK; // 돌림힘 상한 = 오늘 최대(4·ts·1) × edgeTauK
-      if (Math.abs(tau) > tM) tau = Math.sign(tau) * tM;
-    }
-    this.edgeErr = e; // 측정용 (계기가 읽는다)
-    // 팔 나눔 ⓓ: 다음 스텝 위팔 비틀기 목표가 읽는 어긋남 (칼날 축 × 부호 있는 각, ±edgeClamp). edgeArm 0 이면 두지 않는다
-    if (JOINTS.edgeArm > 0) (this.edgeArmErr ||= new THREE.Vector3()).copy(blade).multiplyScalar(THREE.MathUtils.clamp(e, -JOINTS.edgeClamp, JOINTS.edgeClamp));
-    return _edT.copy(blade).multiplyScalar(tau);
   }
 
   /**
@@ -5061,11 +4949,6 @@ const _v5 = new THREE.Vector3();
 const _mapAim = new THREE.Vector3(); // driveSword: 자세 지도 방향 사본(follow-through 뒤처짐 계산)
 const _lagB = new THREE.Vector3(); // WA2-2 follow-through 뒤처짐 각
 const _lagC = new THREE.Vector3();
-const _edL = new THREE.Vector3(); // 날 세우기 ⓒ 미리 돌리기 scratch
-const _edC = new THREE.Vector3(); // 날 세우기 edgeTwist scratch
-const _enA = new THREE.Vector3(), _enB = new THREE.Vector3(), _enC = new THREE.Vector3(), _enD = new THREE.Vector3(); // 날 세우기 닿을 자리 scratch
-const EDGE_NEAR_PARTS = ['head', 'chest', 'abdomen', 'pelvis', 'uarmS', 'farmS', 'uarmO', 'farmO', 'thighF', 'thighB'];
-const _edT = new THREE.Vector3(); // 날 세우기 edgeTwist 돌림힘
 const _cr1 = new THREE.Vector3(); // 보정 v2 ① 날 맞춤 scratch
 const _cr2 = new THREE.Vector3(); // 사람 관절 범위: 아래팔 경첩 축(세계)
 const _cq = new THREE.Quaternion();

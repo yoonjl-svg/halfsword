@@ -1,8 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  joint_range.mjs — 칼 든 팔의 관절 각을 스텝마다 재어, 해부학 범위 밖 비율을 공격 중 / 간 보기 중 / 넘어짐 중으로 나눈다 (10/9 관절 가동 범위)
 //   다른 시뮬을 감싼다 (envelope_check.mjs 와 같은 방식: Fighter.prototype.cacheState 를 감싸 읽기만 — 감싼 stdout 은 한 글자도 안 바뀐다).
-//     node tools/sim/joint_range.mjs motion_lab.mjs duel longsword 24 main      (48 판 결투)
-//     JOINTS=anat node tools/sim/joint_range.mjs motion_lab.mjs duel rapier 24 main   (교정안 켬, config JOINTS)
+//     node tools/sim/joint_range.mjs motion_lab.mjs duel longsword 24      (48 판 결투 · 관절 교정은 본판 늘 켬 — config JOINTS)
 //     JR_JSON=<파일> 이면 표를 json 으로도 쓴다. 표는 stderr.
 //   각 (몸체 좌표에서 곧장, 가슴 몸 틀: x 앞, y 위, z 칼 든 쪽):
 //     elbow   = 칼 팔꿈치 굽힘 (°, 위팔 x → 아래팔 x 를 경첩 축 z(위팔 몸) 둘레로 잰 부호 있는 각). + 굽힘, − 과신전. 명령값(armIK 목표)도 함께
@@ -442,7 +441,7 @@ if (isMain(import.meta.url)) {
       }
       if (!gd) info.push(`${w}: 가까운 자세 ${GUARDS[P.guardPose.nearest]?.name} · 쉼 무게 ${P.bodyPose.idle.toFixed(2)} · 보정 무게 gw ${P.guardWeight().toFixed(2)} · 명령 칼끝 올림각 ${(cmdEl / n).toFixed(1)}° · 한손 ${!!P.guardPose.oneHand}`);
     }
-    console.log(`플레이어 쉴 자세 칼끝 (JOINTS.mode ${cfg.JOINTS.mode}, edge ${cfg.JOINTS.edge ?? '-'})`);
+    console.log('플레이어 쉴 자세 칼끝');
     console.log(T.table());
     for (const l of info) console.log('  ' + l);
     process.exit(0);
@@ -455,13 +454,12 @@ if (isMain(import.meta.url)) {
   const report = () => {
     if (done) return;
     done = true;
-    const mode = cfg.JOINTS?.mode ?? 'off';
-    process.stderr.write(`\n──── joint_range (${script}${rest.length ? ' ' + rest.join(' ') : ''}) · JOINTS.mode ${mode} ────\n`);
+    process.stderr.write(`\n──── joint_range (${script}${rest.length ? ' ' + rest.join(' ') : ''}) ────\n`);
     for (const [id, C] of byW) process.stderr.write(C.table(`무기 ${id} (양쪽 싸움꾼 합)`) + '\n');
-    process.stderr.write(`칼 면 맞음 (날 각 > ${EDGE_FLAT}°, JOINTS.edge ${cfg.JOINTS?.edge ?? '-'})\n` + edges.table() + '\n');
+    process.stderr.write(`칼 면 맞음 (날 각 > ${EDGE_FLAT}°)\n` + edges.table() + '\n');
     for (const [id, L] of Object.entries(lagSt)) process.stderr.write(`날 세우기 따라감 ${id}: 움직이는 스텝 ${L[0]} · 어긋남 > 45° ${((100 * L[1]) / L[0]).toFixed(1)}% · 평균 ${((L[2] / L[0]) * R2D).toFixed(1)}°\n`);
     if (tips.by.size) process.stderr.write('한손 무기 간 보기 칼끝 (가까운 자세별 평균)\n' + tips.table() + '\n');
-    if (process.env.JR_JSON) fs.writeFileSync(process.env.JR_JSON, JSON.stringify({ script, args: rest, mode, edge: cfg.JOINTS?.edge ?? null, weapons: Object.fromEntries([...byW].map(([id, C]) => [id, C.json()])), edges: edges.json(), tips: tips.json(), lag: lagSt, where: hitWhere }, null, 1));
+    if (process.env.JR_JSON) fs.writeFileSync(process.env.JR_JSON, JSON.stringify({ script, args: rest, weapons: Object.fromEntries([...byW].map(([id, C]) => [id, C.json()])), edges: edges.json(), tips: tips.json(), lag: lagSt, where: hitWhere }, null, 1));
   };
   process.on('exit', report);
   process.argv = [process.argv[0], simPath(script), ...rest];
