@@ -11,9 +11,10 @@
 //   --look=enemy : 두 자리 모두 같은 겉모습 LOOKS.enemy (11/17 — 감독 '겉모습 같게'. 안 주면 옛 판 그대로 — 자리마다 기본 겉모습)
 //   --cfg=PATH:수,… : config 수 덮어쓰기 (재기 전용 · 게임 값은 그대로 — cfg_override.mjs · 예: --cfg=AI_LEVELS.normal.strikeSpeed:12)
 //   --vit=v0,v1,…,v6 · --str=s0,…,s6 : 몸 값 표 PROF_BODY.vitality · strength 를 통째로 (재기 전용 · 숙련도 0 ~ 6 일곱 수 — 11/17 E 찾기)
+//   --resume : --json 파일이 있으면 그 판들(판 번호 k)은 건너뛰고 이어 잼 (판 10 개마다 파일을 씀 — 11/18)
 //  출력 — 합산 hi 몫 = (승 + 무 ½) / 판 수 · 95 % 윌슨 구간 · 승 / 무 / 패 · 평균 끝 시각 · 유파별 hi 몫 (무 수)
 // ─────────────────────────────────────────────────────────────
-import { writeFileSync, readFileSync } from 'node:fs';
+import { writeFileSync, readFileSync, existsSync, renameSync } from 'node:fs';
 import { newRound, AI } from './harness_m.mjs';
 import { wilson } from './ref_duel.mjs';
 import { isMain } from './is_main.mjs';
@@ -91,6 +92,9 @@ export function measureFight(f, dur, opt = {}) {
   return rec;
 }
 
+/** 판 기록을 한 번에 갈아 씀 (임시 파일 → 이름 바꿈 — 쓰는 중에 멈춰도 옛 파일이 남게) */
+const saveRuns = (out, runs) => { writeFileSync(`${out}.tmp`, JSON.stringify(runs)); renameSync(`${out}.tmp`, out); };
+
 const pct = (x) => `${x.toFixed(1)} %`;
 /** 기록 배열 → Markdown 표 (짝마다 한 줄 · 합산 · 유파별) */
 export function aggTable(rows) {
@@ -152,14 +156,19 @@ if (isMain(import.meta.url)) {
     const all = planFights({ schools, pairs, seeds });
     const mine = all.map((f, k) => ({ f, k })).filter(({ k }) => k % sn === si - 1);
     console.error(`전체 ${all.length} 판 · 이 샤드 ${mine.length} 판 (${si}/${sn})`);
-    const runs = [];
+    // --json 은 판 10 개마다 그때까지를 씀(11/18 — 컨테이너가 다시 서도 남게) · --resume 이면 그 파일에 이미 있는 판(번호 k)은 건너뜀 (옵션은 같게)
+    const out = arg('json', null);
+    const runs = out && args.includes('--resume') && existsSync(out) ? JSON.parse(readFileSync(out, 'utf8')) : [];
+    const done = new Set(runs.map((r) => r.k));
+    if (done.size) console.error(`이어 재기: ${done.size} 판 있음`);
     for (const { f, k } of mine) {
-      const r = measureFight(f, dur, { look });
+      if (done.has(k)) continue;
+      const r = { k, ...measureFight(f, dur, { look }) };
       runs.push(r);
       console.error(`[${k + 1}/${all.length}] ${f.school} ${f.lo}:${f.hi} w${f.wi} s${f.seed} ${f.swap ? 'swap' : 'std'} → ${r.result} @${r.endT}s`);
+      if (out && runs.length % 10 === 0) saveRuns(out, runs);
     }
-    const out = arg('json', null);
-    if (out) writeFileSync(out, JSON.stringify(runs));
+    if (out) saveRuns(out, runs);
     console.log(aggTable(runs));
   }
 }
