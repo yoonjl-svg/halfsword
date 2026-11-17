@@ -12,9 +12,11 @@
 //   · 소리: 총소리·장전 소리만 (불꽃·연기 없음). GUN_HOOKS 로 main.js 가 이어 줄 수 있고, 없으면 window.game.sound 로 낸다.
 //  매 물리 스텝 combat.js afterStep 이 updateGun 을, skill.js thrust 가 gunCanFire 를, ai.js 가 gunAI 를 부른다.
 // ─────────────────────────────────────────────────────────────
+import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import * as THREE from 'three';
 import { ANATOMY, ARENA, COMBAT, realS } from './config.js';
 import { prepareRevolverReload, playRevolverReload } from './revolver_reload_audio.js';
+const _rg = {}; // Rapier 콜백 예외 통 (11/17 — rapier_guard.js: 콜백 안 예외를 적고 엔진 부름 뒤 node 에서 다시 던짐)
 
 /** 권총을 든 동안 화면에 띄우는 자세 이름 (사장님: "사격 자세 라고 써") — main.js 자세 이름 표시가 GUARDS 대신 쓴다 */
 export const GUN_STANCE = { name: '사격 자세', desc: '레이저가 몸에 걸리면 탭으로 쏜다' };
@@ -587,7 +589,8 @@ function sightOnTorso(f, world, combat) {
 function castRay(world, o, d, pred) {
   // RAPIER.Ray 는 origin·dir 만 담는 순수 객체라, 같은 모양의 객체를 넘기면 된다 (RAPIER 모듈을 따로 불러오지 않는다)
   const ray = { origin: { x: o.x, y: o.y, z: o.z }, dir: { x: d.x, y: d.y, z: d.z } };
-  const hit = world.castRay(ray, GUN.range, true, undefined, undefined, undefined, undefined, (c) => pred(c.handle));
+  const hit = world.castRay(ray, GUN.range, true, undefined, undefined, undefined, undefined, guarded(_rg, (c) => pred(c.handle), false));
+  rethrowRapier(_rg);
   if (!hit) return null;
   return { collider: hit.collider, toi: hit.timeOfImpact ?? hit.toi };
 }

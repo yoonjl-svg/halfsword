@@ -9,8 +9,10 @@
 //     용암 사망·새 사망 원인·부활 예외·결과 화면 글은 없다
 //   지형이 없는 무대(지금의 모든 평지 무대)는 이 파일의 바닥을 쓰지 않는다 — main.js·시뮬 도구의 평평한 상자 바닥 그대로(바이트 같은 길)
 // ─────────────────────────────────────────────────────────────
+import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import * as THREE from 'three';
 import { ARENA, ARENA_SCALE, VITALS } from './config.js';
+const _rg = {}; // Rapier 콜백 예외 통 (11/17 — rapier_guard.js: 콜백 안 예외를 적고 엔진 부름 뒤 node 에서 다시 던짐)
 
 const degrees = 10;
 const slope = Math.tan((degrees * Math.PI) / 180);
@@ -154,13 +156,14 @@ const LIMB_OF = { footF: 'legF', shinF: 'legF', thighF: 'legF', footB: 'legB', s
 export function applyTerrainHazards(environment, colliderInfo, dt) {
   if (!environment?.lava || !(dt > 0)) return [];
   const victims = new Map();
-  environment.world.intersectionPairsWith(environment.lava, (collider) => {
+  environment.world.intersectionPairsWith(environment.lava, guarded(_rg, (collider) => {
     const info = colliderInfo.get(collider.handle);
     const f = info?.fighter;
     if (!f?.alive || info.kind === 'weapon' || f.detachedParts?.has(info.part) || f.bodies[info.part]?.handle !== collider.parent()?.handle) return;
     if (!victims.has(f)) victims.set(f, new Set());
     victims.get(f).add(info.part);
-  });
+  }));
+  rethrowRapier(_rg);
   const previous = environment.burning ?? new Set();
   for (const f of previous) {
     if (victims.has(f) || !f.lavaBurn) continue;

@@ -15,9 +15,11 @@
 //  그동안 칼은 상처를 내지도 막지도 못한다(armed 거짓 · 날아오는 칼 · 쥔 직후 칼은 충돌 없음). 넘어지면(state ≠ stand) 그만두고 칼은 땅에 남는다(lift 중이면 마저 쥔다 — 이미 손 앞).
 //  f.pickupLog = [{ t0 시작 · t1 다시 쥠 · t2 칼 충돌 켬 (게임 초 fightT), ok, why, reach 시작 때 칼자루 거리, hand 쥘 때 손 ↔ 칼자루, step 내디딘 걸음 m (11/16) }] — 재는 도구가 읽는다
 // ─────────────────────────────────────────────────────────────
+import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import * as THREE from 'three';
 import { PICKUP, VITALS, SECRET, realS } from './config.js';
 import { startSwordReturn, flySword, attachSword, holdRot } from './revive.js';
+const _rg = {}; // Rapier 콜백 예외 통 (11/17 — rapier_guard.js: 콜백 안 예외를 적고 엔진 부름 뒤 node 에서 다시 던짐)
 
 const _g = new THREE.Vector3();
 const _h = new THREE.Vector3();
@@ -164,7 +166,8 @@ function swordOverlaps(f, saved) {
   let hit = false;
   for (const [col, g] of saved) {
     if (!col.isEnabled() || f.colliderInfo?.get(col.handle)?.detached) continue;
-    f.world.intersectionsWithShape(col.translation(), col.rotation(), col.shape, () => ((hit = true), false), undefined, g, undefined, f.sword);
+    f.world.intersectionsWithShape(col.translation(), col.rotation(), col.shape, guarded(_rg, () => ((hit = true), false), false), undefined, g, undefined, f.sword);
+    rethrowRapier(_rg);
     if (hit) return true;
   }
   return false;
