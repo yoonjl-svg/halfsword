@@ -8,6 +8,7 @@
 //   ④ 단추 = 싸움 화면 단추: Stage / 이어가기 · 공지 확인 · 설정 확인 · 인증번호 받기 · 연결하기 = 주 단추(.primary),
 //      대기실 · 아래 줄 세 칸 · 계정 닫기 = 부 단추(.secondary — 그림 위면 .on-art · 작으면 .small) · 꼴은 entrance_ui.css
 //   ⑤ '화면 60 fps 제한' · '지난 업데이트 숨김' = 싸움 화면 미닫이 (사장님 ③ "설정은 미닫이가 맞아") — role=switch · aria-checked, 하는 일 · 저장은 전과 같다
+//   ⑥ 설정 '공격 조이스틱' 미닫이 (사장님 11/17 '공격 스위치는 설정에서 정하게 할 수 있어? 기본은 지금처럼 설정을 바꾸면 스틱으로') — 터치 기기만 보임 · 메뉴 줄과 같은 값 · 같은 저장
 //  game_entry.js 가 Shadow DOM 안에 붙인다 — 게임 HUD 글자 규칙(index.html)과 섞이지 않는다.
 import { UPDATE_NOTES } from './update_notes.js';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
@@ -43,7 +44,7 @@ export const ENTRANCE_HTML = `<main id="entrance" data-phase="notice">
   </dialog>
   <dialog id="settingsDialog" aria-labelledby="settingsHeading">
     <header class="notice-header"><h2 id="settingsHeading" tabindex="-1">설정</h2></header>
-    <div class="settings-content"><label class="setting-row" for="titleFps"><span id="titleFpsLabel">화면 60 fps 제한</span><button id="titleFps" type="button" class="toggle" role="switch" aria-checked="true" aria-labelledby="titleFpsLabel"></button></label><p>화면 갱신을 제한해 배터리 소모를 줄입니다.</p><p id="settingsStatus" role="status"></p></div>
+    <div class="settings-content"><label class="setting-row" for="titleFps"><span id="titleFpsLabel">화면 60 fps 제한</span><button id="titleFps" type="button" class="toggle" role="switch" aria-checked="true" aria-labelledby="titleFpsLabel"></button></label><p>화면 갱신을 제한해 배터리 소모를 줄입니다.</p><div id="titleAtkStickSet" hidden><label class="setting-row" for="titleAtkStick"><span id="titleAtkStickLabel">공격 조이스틱</span><button id="titleAtkStick" type="button" class="toggle" role="switch" aria-checked="false" aria-labelledby="titleAtkStickLabel"></button></label><p>오른쪽 아래 조이스틱으로 칼을 움직입니다.</p></div><p id="settingsStatus" role="status"></p></div>
     <footer class="notice-footer"><button id="closeSettings" class="confirm-button primary" type="button">확인</button></footer>
   </dialog>
   <dialog id="accountDialog" aria-labelledby="accountHeading">
@@ -61,7 +62,7 @@ export const ENTRANCE_HTML = `<main id="entrance" data-phase="notice">
 </main>`;
 
 /**
- * root: ENTRANCE_HTML 이 붙은 곳(Shadow root) · onChoice('new' | 'continue' | 'lobby') · settings: () => Promise<{ get(): { fpsCap }, set(bool) }> (게임 설정 — main.js)
+ * root: ENTRANCE_HTML 이 붙은 곳(Shadow root) · onChoice('new' | 'continue' | 'lobby') · settings: () => Promise<{ get(): { fpsCap, atkStick, touch }, set(key, bool) }> (게임 설정 — main.js)
  * accountLoader: () => import('./account/title_account.js') (없으면 계정 단추를 숨긴다) · accountOptions: 시험에서 인증 객체를 바꿔 끼울 때 ({ auth })
  */
 export function mountStartScreen({ root = document, storageKey = NOTICE_KEY, onChoice, settings, accountLoader, accountOptions } = {}) {
@@ -144,23 +145,27 @@ listen(hideRead, 'click', () => setOn(hideRead, !isOn(hideRead))); // 저장은 
 listen(dialog, 'cancel', event => { event.preventDefault(); $('confirmNotices').click(); });
 listen(list, 'scroll', recordVisible, { passive: true });
 listen($('openNotices'), 'click', () => showNotices(true));
-// 설정 (샛별 3b280a1b — 대기실에 있던 설정을 첫 화면 공지사항 옆으로): 게임 설정 '화면 60 fps 제한' 하나 (우리 메뉴의 설정 줄과 같은 값 · 같은 저장 gladiator-settings)
+// 설정 (샛별 3b280a1b — 대기실에 있던 설정을 첫 화면 공지사항 옆으로): 게임 설정 '화면 60 fps 제한' · '공격 조이스틱'(터치 기기만 — 11/17) (우리 메뉴의 설정 줄과 같은 값 · 같은 저장 gladiator-settings)
 if (settings) {
+  const SWITCHES = [['titleFps', 'fpsCap'], ['titleAtkStick', 'atkStick']];
   listen($('openSettings'), 'click', async () => {
     $('settingsDialog').showModal(); $('settingsHeading').focus();
-    $('titleFps').disabled = true; $('settingsStatus').textContent = '';
+    for (const [id] of SWITCHES) $(id).disabled = true;
+    $('settingsStatus').textContent = '';
     try {
       const api = await settings();
       if (events.signal.aborted) return;
-      setOn($('titleFps'), api.get().fpsCap); $('titleFps').disabled = false;
+      const now = api.get();
+      $('titleAtkStickSet').hidden = !now.touch;
+      for (const [id, key] of SWITCHES) { setOn($(id), now[key]); $(id).disabled = false; }
     } catch { if (!events.signal.aborted) $('settingsStatus').textContent = '설정을 불러오지 못했습니다. 다시 시도해 주십시오.'; }
   });
   // 미닫이를 누르면 바로 바꾸고 바로 저장 (전 체크 상자의 change 와 같은 때) — 저장을 못 하면 되돌린다
-  listen($('titleFps'), 'click', async () => {
-    const value = !isOn($('titleFps'));
-    setOn($('titleFps'), value);
-    try { const api = await settings(); if (!events.signal.aborted) api.set(value); }
-    catch { if (!events.signal.aborted) { setOn($('titleFps'), !value); $('settingsStatus').textContent = '설정을 저장하지 못했습니다.'; } }
+  for (const [id, key] of SWITCHES) listen($(id), 'click', async () => {
+    const value = !isOn($(id));
+    setOn($(id), value);
+    try { const api = await settings(); if (!events.signal.aborted) api.set(key, value); }
+    catch { if (!events.signal.aborted) { setOn($(id), !value); $('settingsStatus').textContent = '설정을 저장하지 못했습니다.'; } }
   });
   listen($('closeSettings'), 'click', () => $('settingsDialog').close());
 } else $('openSettings').hidden = true;

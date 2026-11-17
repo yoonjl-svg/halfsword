@@ -1,17 +1,18 @@
 // 공격 조이스틱 시험 (11/17 — 사장님 '이동스위치처럼 공격 스위치를 만들어. 그걸로 공격해야 정교한 컨트롤이 되고 상대 공격을 막는 컨트롤 가능해져' ·
 //  src/atk_stick.js · input.js attachAtkStick · main.js playerInputFrame · 기록 docs/strike/atk_stick_2026-11-17.md · 확인표 4656 ~)
-//   ① 판: INPUT.atkStick 기본 0 (감독 안 · 사장님 확인 전) · 0 이면 아무것도 붙지 않고 손가락 입력이 그대로
+//   ① 켬 · 끔: 설정 '공격 조이스틱' (사장님 11/17 — 기본 끔 · 켬 = 조이스틱만 칼 · main.js settings.atkStick) · 끈 동안은 붙여 둔 조이스틱이 아무것도 받지 않고 손가락 입력이 그대로 ·
+//      켬 · 끔은 바로(useAtkStick — 쥔 엄지를 놓고 화면 끌기 ↔ 조이스틱)
 //   ② 자리 조종: 손잡이 자리 → 손 목표(패드 m) · 끝까지 = 손 닿는 끝 WEAPON.reach · 데드존 = 이동 스틱 STICK_DEAD · 가만히 = 그 자리에 머묾 · 닿는 순간 뜀은 자세 복귀 빠르기
 //   ③ 같은 길: 빠른 튕김 = 휘두르기 문턱(SKILL.swingSpeed)을 넘는 손 목표 · 느린 밂은 아님 · 엄지 움직임은 손가락 끌기 몫(handDX)에 안 들어감
 //   ④ 명령: 탭 = 찌르기 · 길게 누름(가운데 얹은 엄지) = 풍차 베기 감기 · 쥔 엄지(막는 선)는 길게 누름 아님 · 원 긋기 = 싱지르 · 권총 닿는 순간 · 고노센 뽑기(쥠)
-//   ⑤ 'stick' 판: 화면 손가락은 칼 아님 · 'both' 판: 둘 다 · 둘레(stickGuardPx)는 이동 스틱과 같음
+//   ⑤ 켬: 화면 손가락은 칼 아님 · 둘레(stickGuardPx)는 이동 스틱과 같음
 //   ⑥ 물리: 네 자리를 쥐고 있으면 칼 손이 그쪽에 머묾 · 튕김은 손가락 긋기와 같은 칼끝 빠르기 (같은 손 목표 길이면 판이 바이트 같음)
 //  node --test tools/sim/atk_stick.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { INPUT, SKILL, WEAPON, SECRET, STAMINA, UNIQUE_ASSIST as UA, IB_LINK, ARENA, realS } from '../../src/config.js';
 import { STICK_DEAD } from '../../src/stick_turn.js';
-import { atkStickMode, atkStickState, atkStickTarget, atkStickStep, atkStickGrab, atkStickKnob, atkStickRelease } from '../../src/atk_stick.js';
+import { atkStickState, atkStickTarget, atkStickStep, atkStickGrab, atkStickKnob, atkStickRelease } from '../../src/atk_stick.js';
 import fs from 'node:fs';
 
 const SHIM = { window: { addEventListener() {}, innerHeight: 390, innerWidth: 844 }, document: { pointerLockElement: null }, matchMedia: () => ({ matches: true }) };
@@ -20,7 +21,7 @@ const withBrowser = (fn) => {
   for (const k in SHIM) if (typeof globalThis[k] === 'undefined') (globalThis[k] = SHIM[k]), added.push(k);
   try { return fn(); } finally { for (const k of added) delete globalThis[k]; }
 };
-const { Input, attachStick, attachAtkStick } = await import('../../src/input.js');
+const { Input, attachStick, attachAtkStick, useAtkStick } = await import('../../src/input.js');
 
 // 844 × 390 가로 화면 · 이동 스틱 left 20 · bottom 20 · 110 px → 가운데 (75, 315) · 공격 조이스틱 right 20 · bottom 20 → 가운데 (769, 315) · 반지름 55 · 손잡이 40 px
 const MOVE = { left: 20, top: 260, width: 110, height: 110 };
@@ -36,15 +37,16 @@ function padRig(box) {
   const pad = { addEventListener(t, f) { (L[t] ??= []).push(f); }, getBoundingClientRect: () => box, setPointerCapture: (id) => cap.add(id), releasePointerCapture: (id) => cap.delete(id), hasPointerCapture: (id) => cap.has(id) };
   return { pad, L, cap, knob: { style: { transform: '' } } };
 }
-/** 입력 하나 + 이동 스틱 + (판이 있으면) 공격 조이스틱. 사건은 main.js 차례 그대로: 패드 사건(대상) → 창 사건(Input — 거품) */
-function rig(mode = 'stick') {
+/** 입력 하나 + 이동 스틱 + 공격 조이스틱(on = 설정 켬 — 끄면 붙여만 둠). 사건은 main.js 차례 그대로: 패드 사건(대상) → 창 사건(Input — 거품) */
+function rig(on = true) {
   const CL = {};
   const canvas = { addEventListener(t, f) { (CL[t] ??= []).push(f); } };
   const input = withBrowser(() => new Input(canvas, { verticalGain: 1 }));
   const mv = padRig(MOVE);
   const at = padRig(ATK);
   withBrowser(() => attachStick(input, mv.pad, mv.knob));
-  const st = withBrowser(() => attachAtkStick(input, at.pad, at.knob, mode));
+  const st = withBrowser(() => attachAtkStick(input, at.pad, at.knob));
+  withBrowser(() => useAtkStick(input, st, on));
   input.enabled = true;
   let ms = 1000;
   const ev = (type, id, x, y, target) => ({ type, pointerId: id, pointerType: 'touch', button: 0, clientX: x, clientY: y, timeStamp: ms, stopPropagation() {}, target });
@@ -73,28 +75,38 @@ function frame(R, hand, dt = F) {
   return { d, v: Math.hypot(d.x, d.y) / dt };
 }
 
-test('① 판 값 — 기본 0 [감독 안 · 사장님 확인 전] · 판 읽기 · 0 이면 붙지 않음 · 새 수 없음(손 닿는 끝 · 데드존 · 자세 복귀 빠르기는 있던 수)', () => {
-  assert.equal(INPUT.atkStick, 0);
-  assert.equal(atkStickMode('stick'), 'stick');
-  assert.equal(atkStickMode('both'), 'both');
-  for (const v of ['0', 0, null, undefined, '', 'yes', 'STICK', 1]) assert.equal(atkStickMode(v), 0, String(v));
-  const R = rig(0);
-  assert.equal(R.st, null);
-  assert.equal(R.input.atk, undefined, '0 판: 입력에 공격 조이스틱 없음');
-  assert.equal(R.at.L.pointerdown, undefined, '0 판: 패드에 사건 없음');
+test('① 켬 · 끔 — 설정 기본 끔 [사장님 11/17 결정] · 끈 동안 입력에 공격 조이스틱 없음 · 패드 · 둘레가 받지 않음 · 새 수 없음(손 닿는 끝 · 데드존 · 자세 복귀 빠르기는 있던 수)', () => {
+  assert.equal('atkStick' in INPUT, false, '설정 말고 다른 스위치 없음');
+  const R = rig(false);
+  assert.ok(R.st, '터치 기기엔 붙여 둠');
+  assert.equal(R.input.atk, null, '끔: 입력에 공격 조이스틱 없음');
+  R.sDown(1, C.x, C.y);
+  assert.equal(R.st.held, false, '끔: 패드 누름을 받지 않음');
+  assert.equal(R.input.activeTouch, null);
+  R.cDown(2, C.x - 62, C.y); // 둘레 (원 밖 7 px)
+  assert.equal(R.st.held, false, '끔: 둘레가 쥐지 않음');
+  assert.equal(R.input.activeTouch, 2, '끔: 둘레 자리도 화면 손가락 그대로');
+  R.cUp(2, C.x - 62, C.y);
+  assert.equal(withBrowser(() => useAtkStick(R.input, R.st, true)), true);
+  assert.equal(R.input.atk, R.st, '켬: 입력에 공격 조이스틱');
+  assert.equal(withBrowser(() => useAtkStick(R.input, null, true)), false, '터치 기기가 아님(붙이지 않음) = 늘 끔');
+  assert.equal(R.input.atk, null);
   assert.equal(WEAPON.reach, 0.62);
   assert.equal(STICK_DEAD, 0.15);
   assert.equal(SKILL.recoverSpeed, 1.2);
   assert.ok(SKILL.recoverSpeed < SKILL.swingSpeed, '틈 메우기는 휘두르기 문턱보다 느림');
 });
 
-test('① 0 판 = 손가락 입력 그대로 (공격 조이스틱을 붙이지 않은 입력과 사건마다 같음)', () => {
-  const run = (attach) => {
+test('① 끔 = 손가락 입력 그대로 (공격 조이스틱을 붙이지 않은 입력 · 켰다 끈 입력과 사건마다 같음)', () => {
+  const run = (attach, toggled = false) => {
     const CL = {};
     const input = withBrowser(() => new Input({ addEventListener(t, f) { (CL[t] ??= []).push(f); } }, { verticalGain: 1 }));
     const mv = padRig(MOVE);
     withBrowser(() => attachStick(input, mv.pad, mv.knob));
-    if (attach) withBrowser(() => attachAtkStick(input, padRig(ATK).pad, { style: {} }, 0));
+    if (attach) {
+      const st = withBrowser(() => attachAtkStick(input, padRig(ATK).pad, { style: {} }));
+      if (toggled) withBrowser(() => { useAtkStick(input, st, true); useAtkStick(input, st, false); });
+    }
     input.enabled = true;
     const out = [];
     let ms = 1000;
@@ -108,6 +120,36 @@ test('① 0 판 = 손가락 입력 그대로 (공격 조이스틱을 붙이지 �
     return out;
   };
   assert.deepEqual(run(true), run(false));
+  assert.deepEqual(run(true, true), run(false));
+});
+
+test('① 켬 · 끔은 바로 (설정 미닫이 — 싸움 사이 정지 창에서도): 켜면 화면 끌기 · 톡이 칼 아님 · 끄면 쥔 엄지를 놓고(손잡이 가운데) 화면 끌기 · 톡이 칼 · 같은 값이면 손가락 상태를 버리지 않음', () => {
+  const R = rig(false);
+  R.cDown(1, 500, 200);
+  R.cMove(1, 560, 150);
+  assert.ok(R.input.handDX > 0.3, '끔: 화면 끌기 = 칼');
+  R.cUp(1, 560, 150);
+  R.input.consumeHandDelta();
+  withBrowser(() => useAtkStick(R.input, R.st, true));
+  R.cDown(2, 500, 200);
+  R.cMove(2, 560, 150);
+  R.wait(60);
+  R.cUp(2, 560, 150);
+  assert.equal(R.input.handDX, 0, '켬: 화면 끌기 아님');
+  assert.equal(R.input.consumeTaps(), 0);
+  R.sDown(3, P(0.6, 0.4).x, P(0.6, 0.4).y);
+  assert.equal(R.input.activeTouch, 3, '켬: 조이스틱이 칼 손가락');
+  withBrowser(() => useAtkStick(R.input, R.st, true));
+  assert.equal(R.st.held, true, '같은 값: 그대로');
+  withBrowser(() => useAtkStick(R.input, R.st, false));
+  assert.equal(R.input.atk, null);
+  assert.equal(R.st.held, false, '끄면 쥔 엄지를 놓음');
+  assert.equal(R.input.activeTouch, null);
+  assert.equal(R.at.knob.style.transform, '', '손잡이 가운데');
+  R.cDown(4, 500, 200);
+  R.wait(60);
+  R.cUp(4, 500, 200);
+  assert.equal(R.input.consumeTaps(), 1, '끔: 화면 톡 = 찌르기');
 });
 
 test('② 자리 조종: 손잡이 → 손 목표 — 가운데 · 데드존 = 긴 자세 자리(0,0) · 끝까지 = 손 닿는 끝 · 위 = +y · 오른쪽 = +x · 1 넘음은 1', () => {
@@ -285,8 +327,8 @@ test('④ 권총: 조이스틱에 닿는 순간 쏨 (손가락과 같은 tapOnDo
   R.sUp(3, P(0.4, -0.3).x, P(0.4, -0.3).y);
 });
 
-test("⑤ 'stick' 판: 화면 손가락은 칼 아님(긋기 · 탭 · 누름 없음) · 'both' 판: 화면 손가락 그대로 + 조이스틱이 쥐고 있던 손가락을 넘겨받음", () => {
-  let R = rig('stick');
+test('⑤ 켬: 화면 손가락은 칼 아님(긋기 · 탭 · 누름 없음) · 조이스틱을 쥔 동안에도 화면 손가락은 칼 아님', () => {
+  const R = rig(true);
   R.cDown(5, 500, 200);
   R.cMove(5, 560, 150);
   R.wait(60);
@@ -299,34 +341,23 @@ test("⑤ 'stick' 판: 화면 손가락은 칼 아님(긋기 · 탭 · 누름 �
   R.wait(60);
   R.cUp(6, 500, 200);
   assert.equal(R.input.consumeTaps(), 0, '화면 탭 아님');
-  R = rig('both');
-  R.cDown(5, 500, 200);
-  R.cMove(5, 560, 150);
-  assert.ok(R.input.handDX > 0.3, '화면 끌기 그대로');
-  R.input.consumeHandDelta();
-  // 조이스틱이 넘겨받음
-  R.sDown(7, C.x, C.y);
-  assert.equal(R.input.activeTouch, 7);
-  assert.equal(R.input.press.atk, true);
-  R.cMove(5, 600, 120);
-  assert.equal(R.input.handDX, 0, '버린 손가락은 손을 못 움직임');
-  R.cUp(5, 600, 120);
-  assert.equal(R.input.activeTouch, 7, '버린 손가락을 떼도 조이스틱 그대로');
-  R.wait(60);
-  R.sUp(7, C.x, C.y);
-  assert.equal(R.input.consumeTaps(), 1, '조이스틱 탭');
-  // 조이스틱을 쥔 동안 화면 손가락은 칼 아님 (칼은 손가락 하나로만 — 전과 같음)
   R.sDown(8, C.x, C.y);
   R.cDown(9, 500, 200);
+  R.cMove(9, 560, 150);
   assert.equal(R.input.activeTouch, 8);
+  assert.equal(R.input.press.atk, true);
+  assert.equal(R.input.handDX, 0);
+  R.wait(60);
+  R.cUp(9, 560, 150);
   R.sUp(8, C.x, C.y);
+  assert.equal(R.input.consumeTaps(), 1, '조이스틱 탭만');
 });
 
 test('⑤ 둘레: 공격 조이스틱 원 밖 15 px 안 화면 손가락은 조이스틱을 쥠 (이동 스틱 둘레와 같은 수) · 둘레 밖은 판대로 · 이동 스틱 둘레는 그대로', () => {
-  for (const mode of ['stick', 'both']) {
-    const R = rig(mode);
+  {
+    const R = rig(true);
     R.cDown(1, C.x - 62, C.y); // 원 왼쪽 7 px 밖
-    assert.equal(R.input.activeTouch, 1, `${mode}: 조이스틱을 쥠`);
+    assert.equal(R.input.activeTouch, 1, '조이스틱을 쥠');
     assert.equal(R.input.press?.atk, true);
     assert.equal(R.input.atk.id, 1);
     assert.ok(R.input.atk.x < -0.99, '그쪽으로 끝까지');
@@ -336,7 +367,7 @@ test('⑤ 둘레: 공격 조이스틱 원 밖 15 px 안 화면 손가락은 조�
     assert.equal(R.input.atk.held, false);
     const out = { x: C.x - 75, y: C.y }; // 20 px 밖
     R.cDown(2, out.x, out.y);
-    assert.equal(R.input.activeTouch, mode === 'both' ? 2 : null, `${mode}: 둘레 밖`);
+    assert.equal(R.input.activeTouch, null, '둘레 밖도 칼 아님(켬)');
     R.cUp(2, out.x, out.y);
     R.cDown(3, 75 + 62, 315); // 이동 스틱 둘레
     assert.equal(R.input.activeTouch, null, '이동 스틱 둘레는 칼 아님');
@@ -362,8 +393,7 @@ test('⑤ 취소 · 판 경계: 포인터 취소 · resetTransient · 입력 꺼
 });
 
 test('상태 함수: 쥠 · 놓음 · 쥐기 전 손잡이 자리 · 쥔 몸은 닿은 첫 프레임에 뜀 없음', () => {
-  const s = atkStickState('both');
-  assert.equal(s.mode, 'both');
+  const s = atkStickState();
   atkStickGrab(s, 4, 0.05, 0);
   assert.equal(s.grip, false);
   atkStickKnob(s, 0.05, 0, INPUT.holdPx);
@@ -431,7 +461,7 @@ test('⑥ 물리: 손잡이 튕김(위 끝 → 아래 끝 4 프레임)은 휘두
     const B = await body(4);
     try {
       const { G, Pl } = B;
-      const R = rig(src === 'stick' ? 'stick' : 'both');
+      const R = rig(src === 'stick');
       const hand = Pl.handOffset;
       // 위 끝 쥐기 (닿기까지 1 s)
       const up = P(0, 1);
@@ -475,7 +505,7 @@ test('⑥ 물리: 손잡이 튕김(위 끝 → 아래 끝 4 프레임)은 휘두
   assert.equal(f.key, s.key, '같은 손 목표 길 = 같은 판 (손가락 끌기 몫과 같은 자리)');
 });
 
-test('main.js 길 (브라우저 모듈이라 줄로 봄): 조이스틱 몫을 손가락 끌기 몫 d 에 더한 뒤에 긋기 · 비기 · 원 · 고유 동작 · 손 목표가 읽음 · 쥠 = 조이스틱 엄지 쥠 · 0 판은 붙이지 않음', () => {
+test('main.js 길 (브라우저 모듈이라 줄로 봄): 조이스틱 몫을 손가락 끌기 몫 d 에 더한 뒤에 긋기 · 비기 · 원 · 고유 동작 · 손 목표가 읽음 · 쥠 = 조이스틱 엄지 쥠 · 설정 기본 끔 · 메뉴 · 첫 화면 줄', () => {
   const src = fs.readFileSync(new URL('../../src/main.js', import.meta.url), 'utf8');
   const i = (s) => {
     const k = src.indexOf(s);
@@ -487,8 +517,21 @@ test('main.js 길 (브라우저 모듈이라 줄로 봄): 조이스틱 몫을 �
   for (const s of ['const swipe = Math.hypot(d.x, d.y)', 'player.skill.uniq?.feed(d.x, d.y', 'player.handOffset.x += d.x * inScale', 'player.inputActive = !secBusy']) assert.ok(i(s) > add, `조이스틱 몫 뒤에 읽음: ${s}`);
   i('grip: prD && !prD.mouse ? (prD.atk ? input.atk.grip : prD.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx))');
   i('player.handGrip = pr && !pr.mouse ? (pr.atk ? input.atk.grip : pr.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx)) : player.inputActive;');
-  i("const atkStickOn = !!(input.isTouchDevice && attachAtkStick(input, $('atkStick'), $('atkKnob'), CONFIG.INPUT.atkStick));");
-  i("if (params.has('atkStick')) CONFIG.INPUT.atkStick = atkStickMode(params.get('atkStick'));");
+  // 설정: 기본 끔 · 같은 저장(gladiator-settings) · 메뉴 줄 · 첫 화면 줄 · 미닫이를 바꾸면 바로(refreshSettingsUI → applyAtkStick)
+  i("const DEFAULTS = { skill: '0.7', fpsCap: true, atkStick: false };");
+  i("for (const k of ['fpsCap', 'atkStick']) if (k in saved) settings[k] = saved[k];");
+  const load = i("const saved = JSON.parse(localStorage.getItem('gladiator-settings') || '{}');");
+  const url = i("if (params.has('atkStick')) settings.atkStick = params.get('atkStick') === 'stick';");
+  assert.ok(url > load && url < i('const saveSettings = () => {'), '주소 인자는 불러온 값 위에 · 저장하지 않음');
+  i("const atkStickPad = input.isTouchDevice ? attachAtkStick(input, $('atkStick'), $('atkKnob')) : null;");
+  i('const on = useAtkStick(input, atkStickPad, settings.atkStick);');
+  const refresh = src.slice(i('function refreshSettingsUI() {'), i('function refreshSettingsUI() {') + 600);
+  assert.ok(refresh.includes('applyAtkStick();'), '미닫이를 바꾸면 바로');
+  i("export const getLobbySettings = () => ({ fpsCap: settings.fpsCap, atkStick: !!settings.atkStick, touch: !!atkStickPad });");
   const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
   assert.ok(html.includes('<div id="atkStick" aria-label="공격 조이스틱"><div id="atkKnob"></div></div>'));
+  assert.ok(html.includes('<div class="row" id="atkStickRow"><span>공격 조이스틱</span><button class="toggle" data-setting="atkStick" aria-label="공격 조이스틱"></button></div>'));
+  const title = fs.readFileSync(new URL('../../src/start_screen.js', import.meta.url), 'utf8');
+  assert.ok(title.includes('<span id="titleAtkStickLabel">공격 조이스틱</span>'));
+  assert.ok(title.includes("['titleAtkStick', 'atkStick']"));
 });

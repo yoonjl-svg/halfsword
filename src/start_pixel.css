@@ -97,6 +97,7 @@ html[data-start-theme="pixel"] {
 [data-start-theme="pixel"] .settings-content p { font-size: 12px; color: var(--c-sub); margin: 12px 0 0; }
 [data-start-theme="pixel"] .settings-content p:empty { display: none; }
 [data-start-theme="pixel"] .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; cursor: pointer; }
+[data-start-theme="pixel"] #titleAtkStickSet { margin-top: 18px; } /* 둘째 설정 줄 '공격 조이스틱' (11/17 — 터치 기기만): 위 줄 설명과 띄움 */
 [data-start-theme="pixel"] #settingsDialog .notice-footer { justify-content: flex-end; }
 /* 계정 창: '인증번호 받기' · '연결하기' = 주 단추 · '닫기' = 부 단추 (entrance_ui.css) — 창 · 입력 칸 꼴은 그대로 */
 [data-start-theme="pixel"] #accountDialog { width: min(380px, calc(100vw - 40px)); }

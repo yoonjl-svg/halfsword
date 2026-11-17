@@ -29,8 +29,8 @@ import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks,
 import { letterMul } from './skill_tree_data.js'; // 편지 — 카드 뽑기 유파 무게 (10/21)
 import { convertSeals } from './seal_coins.js'; // 이미 받은 인장 → 금화 한 번 — 판을 처음 연 때 어느 길이든 (아래 testRoute 다음 · 10/16 08:1x 인장 없앰)
 import { InputTrail } from './trail.js';
-import { Input, attachStick, attachAtkStick } from './input.js';
-import { atkStickMode, atkStickStep } from './atk_stick.js'; // 공격 조이스틱 (11/17 — INPUT.atkStick)
+import { Input, attachStick, attachAtkStick, useAtkStick } from './input.js';
+import { atkStickStep } from './atk_stick.js'; // 공격 조이스틱 (11/17 — 설정 '공격 조이스틱')
 import { LOOKS, getLook } from './looks.js';
 import { AI } from './ai.js';
 import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, savedFoeWeapon, randomLine, lineSourceOf, aiAtProficiency } from './characters.js';
@@ -102,7 +102,6 @@ if (!testRoute.active) convertSeals();
 if (!testRoute.active) migrateSkillBooks();
 if (!testRoute.active) migrateItalianSlots(); // 10/31 이탈리아 왼 줄 자리 옮기기 (옛 d 2 자리 I2 만 익힌 저장 → I7 — skill_tree_store.js)
 const SECRET_SLOWMO = params.get('slowMo') !== '0'; // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo) — `?slowMo=0` = 끔 (브라우저 도구 장면)
-if (params.has('atkStick')) CONFIG.INPUT.atkStick = atkStickMode(params.get('atkStick')); // 공격 조이스틱 (11/17 — 'stick' 조이스틱만 · 'both' 조이스틱과 화면 끌기 · 0 지금) [감독 안 · 사장님 확인 전 — 확인표 4656]
 const UNIQUE_STAGE = stageParam(params.get('uniqueStage')); // 개발 인자 `?uniqueStage=0..5`: 손에 든 무기 유파의 옛 급 N 까지의 스킬트리 칸을 켬 (브라우저 도구 장면)
 const SKILL_NODES = params.get('skillNodes'); // 개발 인자 `?skillNodes=G1,G5`: 그 칸만 켬 · `all` = 모두 · 빈 값 = 없음 — ?uniqueStage 보다 먼저
 const FOE_PROF_PARAM = params.get('foeProficiency'); // 시험: 그 판 상대의 숙련도 `?foeProficiency=0..6` (characters.js aiAtProficiency). 없거나 범위 밖이면 인물 시트 값
@@ -126,21 +125,25 @@ function drawCardIds() {
 }
 
 // ── 설정 (브라우저에 저장) ──
-//  메뉴에 남은 설정은 하나 — 화면 60 fps 제한 (10/10 19:2x 사장님 '시작 전 설정에서도 뺄 기능이 많아' — docs/ui/hud_type_system_2026-10-10.md §13).
+//  메뉴에 남은 설정은 둘 — 화면 60 fps 제한 (10/10 19:2x 사장님 '시작 전 설정에서도 뺄 기능이 많아' — docs/ui/hud_type_system_2026-10-10.md §13) ·
+//  공격 조이스틱 (사장님 11/17 '공격 스위치는 설정에서 정하게 할 수 있어? 기본은 지금처럼 설정을 바꾸면 스틱으로' — 기본 끔 = 화면 끌기 · 켬 = 오른쪽 아래 조이스틱만 칼 ·
+//   터치 기기만 줄이 보임 · 아래 applyAtkStick · 기록 docs/strike/atk_stick_2026-11-17.md §9).
 //  상대 난이도 줄은 뺐다 (사장님 결정 10/13 '상대 난이도는 메뉴에서 빼자' — 상대의 실력은 인물 숙련도가 정한다, characters.js). 저장된 옛 difficulty 값은 읽지 않는다.
 //  늘 켬으로 고정해 줄을 지운 것: 자세 이름 · 피 · 조작 흔적 · 유파 기술 알림 · 소리 · 비기 화면 번쩍임 · 비기 카메라 연출.
 //  기울기 이동은 기능째 지웠다 (터치는 조이스틱만).
 //   모든 기술 이름 보기(디버그 ?techCueAll=1)는 상대 기술을 보이던 것이라 10/14 03:3x 상대 기술 표기를 없앨 때 같이 걷어냈다 (docs/ui/hud_type_system_2026-10-10.md §15).
-const DEFAULTS = { skill: '0.7', fpsCap: true };
+const DEFAULTS = { skill: '0.7', fpsCap: true, atkStick: false };
 const settings = { ...DEFAULTS };
 try {
   const saved = JSON.parse(localStorage.getItem('gladiator-settings') || '{}');
   // 남은 설정만 읽는다: 지운 설정(옛 legWeight · corr · corrTip · 위의 늘 켬 7 개 · 픽셀 · 기울기 moveMode·invertTilt)의 저장 값은 무시 — 끈 채 저장돼 있어도 켜진다
-  for (const k of ['fpsCap']) if (k in saved) settings[k] = saved[k];
+  for (const k of ['fpsCap', 'atkStick']) if (k in saved) settings[k] = saved[k];
   // 검술 보정은 한 단계(0.7)만 — 사장님 10/8 21:5x "플레이어에겐 끔 약 보통 강 같은 구분이 필요 없어. 한 단계로 기본 적용": 메뉴를 뺐고 저장된 옛 값(0·0.4·1)도 무시한다. AI 는 인물 숫자(persona.level.skill)
 } catch {
   /* 저장소를 못 쓰면 기본값으로 */
 }
+// 브라우저 도구 장면 (tools/browser/atk_stick_shots.mjs): `?atkStick=stick` = 이 열기만 공격 조이스틱 켬 · 다른 값 = 끔 — 불러올 때 저장하지 않음
+if (params.has('atkStick')) settings.atkStick = params.get('atkStick') === 'stick';
 const saveSettings = () => {
   try {
     localStorage.setItem('gladiator-settings', JSON.stringify(settings));
@@ -906,7 +909,7 @@ function teamFinish() {
   $('btnStart').classList.remove('wander');
   $('btnResume').style.display = 'none';
   $('btnLobby').hidden = true;
-  $('fpsRow').hidden = false;
+  showSettingRows(true);
   $('menuReward').hidden = true;
   showDefeatFoe(null);
   reviveFx.reset();
@@ -1346,27 +1349,34 @@ const topButtons = $('topButtons');
 const toast = $('toast');
 const hint = $('hint');
 attachStick(input, $('moveStick'), $('moveKnob'));
-// 공격 조이스틱 (11/17 — INPUT.atkStick · src/atk_stick.js): 터치 기기 · 'stick' | 'both' 판만 붙임 (0 = 붙이지 않음 — input.atk 없음, 판 그대로 · PC 마우스는 늘 그대로)
-const atkStickOn = !!(input.isTouchDevice && attachAtkStick(input, $('atkStick'), $('atkKnob'), CONFIG.INPUT.atkStick));
-if (atkStickOn) document.body.classList.add('atkstick'); // 막기 단추 · 안내 자리 (index.html body.atkstick)
+// 공격 조이스틱 (11/17 — src/atk_stick.js): 터치 기기에만 붙여 두고 켬 · 끔은 설정 '공격 조이스틱'(아래 applyAtkStick — 기본 끔 = input.atk 없음, 판 그대로 · PC 마우스는 늘 그대로)
+const atkStickPad = input.isTouchDevice ? attachAtkStick(input, $('atkStick'), $('atkKnob')) : null;
+$('atkStickRow').hidden = !atkStickPad; // 설정 줄은 터치 기기만
 let state = 'menu'; // menu | fight | paused | draw(무기 카드) | encounter(방랑 전용 상대 알림 창 — 10/24 wanderEncounter)
 let roundOver = false;
 let roundOverTime = 0;
 let resultShown = false; // 판 끝 결과 글자("승리"/"패배")를 띄웠나 — 결정타 슬로모션(slowMo)이 끝난 뒤에 띄운다
 
-// 공격 조이스틱 판 조작 안내 (11/17 — INPUT.atkStick 'stick' · 'both' 판에서만. 0 이면 아래 손가락 안내 그대로 · 싸움 시작 한 줄 안내 showFightCues 도 같은 판만)
-const ATK_STICK_HOWTO = {
-  stick: '<li>오른쪽 아래 공격 조이스틱을 민 자리로 칼이 갑니다. 손잡이를 그 자리에 두면 칼도 머물러 들어오는 칼의 길을 막습니다.</li><li>공격 조이스틱을 빠르게 밀면 휘두릅니다. 가운데를 톡 치면 찌릅니다. 원 긋기와 길게 누르기도 이 조이스틱으로 합니다.</li><li>왼쪽 아래 조이스틱으로 걷습니다.</li><li>막기를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다. 누른 채 휘두르면 바로 공격합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>',
-  both: '<li>오른쪽 아래 공격 조이스틱을 민 자리로 칼이 갑니다. 손잡이를 그 자리에 두면 칼도 머물러 들어오는 칼의 길을 막습니다.</li><li>공격 조이스틱을 빠르게 밀면 휘두릅니다. 가운데를 톡 치면 찌릅니다. 화면을 손가락으로 끌거나 톡 쳐도 됩니다.</li><li>왼쪽 아래 조이스틱으로 걷습니다.</li><li>막기를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다. 누른 채 휘두르면 바로 공격합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>',
-};
-const ATK_STICK_HINT = { stick: '왼쪽 스틱으로 걷기 · 오른쪽 스틱으로 휘두르기 · 톡 쳐서 찌르기', both: '왼쪽 스틱으로 걷기 · 오른쪽 스틱이나 끌어서 휘두르기 · 톡 쳐서 찌르기' };
-$('howto').innerHTML = atkStickOn
-  ? ATK_STICK_HOWTO[input.atk.mode]
-  : input.isTouchDevice
-  ? '<li>화면을 손가락으로 끌면 칼이 따라 움직입니다. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기입니다.</li><li>왼쪽 아래 조이스틱으로 걷습니다. 화면을 톡 치면 찌릅니다.</li><li>오른쪽 아래 막기를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다. 누른 채 휘두르면 바로 공격합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>'
-  : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘두릅니다.</li><li>WASD 또는 방향키로 걷습니다. F를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다.</li><li>Esc로 마우스 잠금을 풀고, P로 일시정지합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>';
+// 공격 조이스틱을 켠 조작 안내 (11/17 — 설정 '공격 조이스틱' 켬일 때만. 끔이면 아래 손가락 안내 그대로 · 싸움 시작 한 줄 안내 showFightCues 도 같음)
+const ATK_STICK_HOWTO = '<li>오른쪽 아래 공격 조이스틱을 민 자리로 칼이 갑니다. 손잡이를 그 자리에 두면 칼도 머물러 들어오는 칼의 길을 막습니다.</li><li>공격 조이스틱을 빠르게 밀면 휘두릅니다. 가운데를 톡 치면 찌릅니다. 원 긋기와 길게 누르기도 이 조이스틱으로 합니다.</li><li>왼쪽 아래 조이스틱으로 걷습니다.</li><li>막기를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다. 누른 채 휘두르면 바로 공격합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>';
+const ATK_STICK_HINT = '왼쪽 스틱으로 걷기 · 오른쪽 스틱으로 휘두르기 · 톡 쳐서 찌르기';
+/** 설정 '공격 조이스틱'을 지금 바로 (11/17): 입력(useAtkStick — 바뀔 때만 손가락 상태를 버림) · 막기 단추 · 안내 자리(index.html body.atkstick) · 조작 안내 · 조이스틱 보임(applyMoveMode) */
+function applyAtkStick() {
+  const on = useAtkStick(input, atkStickPad, settings.atkStick);
+  document.body.classList.toggle('atkstick', on);
+  $('howto').innerHTML = on
+    ? ATK_STICK_HOWTO
+    : input.isTouchDevice
+    ? '<li>화면을 손가락으로 끌면 칼이 따라 움직입니다. 좌우로 끌면 가로베기, 위아래로 끌면 내려치기입니다.</li><li>왼쪽 아래 조이스틱으로 걷습니다. 화면을 톡 치면 찌릅니다.</li><li>오른쪽 아래 막기를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다. 누른 채 휘두르면 바로 공격합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>'
+    : '<li>화면을 클릭하면 마우스가 잠기고, 마우스로 칼을 휘두릅니다.</li><li>WASD 또는 방향키로 걷습니다. F를 누르고 있으면 들어오는 칼을 유파 막기 자세로 받습니다.</li><li>Esc로 마우스 잠금을 풀고, P로 일시정지합니다.</li><li>칼을 빠르게 휘둘러야 세게 들어갑니다. 머리가 약점입니다.</li>';
+}
+/** 정지 · 시작 창의 설정 줄 (결과 창(첫 화면 · 대기실 여정)엔 뺌 — 10/16 08:3x): 공격 조이스틱 줄은 터치 기기만 */
+function showSettingRows(show) {
+  $('fpsRow').hidden = !show;
+  $('atkStickRow').hidden = !show || !atkStickPad;
+}
 
-// 설정 창: 남은 설정(화면 60 fps 제한)만 [data-setting] 줄이 있다 (상대 난이도 줄은 10/13 에 뺐다)
+// 설정 창: 남은 설정(화면 60 fps 제한 · 공격 조이스틱)만 [data-setting] 줄이 있다 (상대 난이도 줄은 10/13 에 뺐다)
 function refreshSettingsUI() {
   document.querySelectorAll('[data-setting]').forEach((el) => {
     const key = el.dataset.setting;
@@ -1374,6 +1384,7 @@ function refreshSettingsUI() {
     else el.classList.toggle('on', !!settings[key]);
   });
   document.body.classList.toggle('touch', input.isTouchDevice);
+  applyAtkStick();
   applyMoveMode();
 }
 document.querySelectorAll('[data-setting]').forEach((el) => {
@@ -1799,7 +1810,7 @@ function showToast(text, ms = 1200) {
 function applyMoveMode() {
   $('moveStick').classList.toggle('show', input.isTouchDevice && state !== 'menu' && state !== 'draw' && state !== 'encounter');
   $('btnParry').classList.toggle('show', input.isTouchDevice && state !== 'menu' && state !== 'draw' && state !== 'encounter'); // 막기 단추: 조이스틱과 같은 때 (오른쪽 아래)
-  if (atkStickOn) $('atkStick').classList.toggle('show', state !== 'menu' && state !== 'draw' && state !== 'encounter'); // 공격 조이스틱 (11/17): 이동 스틱과 같은 때
+  $('atkStick').classList.toggle('show', !!input.atk && state !== 'menu' && state !== 'draw' && state !== 'encounter'); // 공격 조이스틱 (11/17 — 설정 켬): 이동 스틱과 같은 때
 }
 
 function showHint(text, ms = 3500) {
@@ -2000,9 +2011,11 @@ export async function launchWander() {
 export const getSkillBookContext = () => ({ test: testRoute.active });
 /** 대기실 프로필 칸의 인물 (사장님 10/17 22:1x — docs/design/portrait_ui_2026-10-17.md): ?hero=<인물 id> 로 다른 영웅이면 그 인물(그림이 없으면 플레이어) · 아니면 플레이어 */
 export const lobbyPortraitId = () => (testRoute.hero && portraitIdOf(testRoute.hero.id)) || 'player';
-export const getLobbySettings = () => ({ fpsCap: settings.fpsCap });
-export function setLobbyFps(enabled) {
-  settings.fpsCap = !!enabled; // 첫 화면 설정 창 — 메뉴의 '화면 60 fps 제한' 줄과 같은 값 · 같은 저장
+/** 첫 화면 설정 창 (start_screen.js): 메뉴의 설정 줄과 같은 값 · 같은 저장 — touch = 공격 조이스틱 줄을 보이나(터치 기기만) */
+export const getLobbySettings = () => ({ fpsCap: settings.fpsCap, atkStick: !!settings.atkStick, touch: !!atkStickPad });
+export function setLobbySetting(key, enabled) {
+  if (key !== 'fpsCap' && key !== 'atkStick') return; // '화면 60 fps 제한' · '공격 조이스틱'
+  settings[key] = !!enabled;
   saveSettings();
   refreshSettingsUI();
 }
@@ -2049,7 +2062,7 @@ function showFightCues() {
   introShownFor = introKey;
   showToast(FIGHT_START_TEXT, 900);
   if (teamRun && !teamRun.human) showHint('지켜보기 — 동료들이 싸웁니다'); // 동시 대전 지켜보기: 조작 안내 대신 (내 몸 없음)
-  else showHint(atkStickOn ? ATK_STICK_HINT[input.atk.mode] : input.isTouchDevice ? '조이스틱으로 걷기 · 끌어서 휘두르기 · 톡 쳐서 찌르기' : '클릭해서 마우스 잠그기 · WASD로 걷기 · 클릭으로 찌르기');
+  else showHint(input.atk ? ATK_STICK_HINT : input.isTouchDevice ? '조이스틱으로 걷기 · 끌어서 휘두르기 · 톡 쳐서 찌르기' : '클릭해서 마우스 잠그기 · WASD로 걷기 · 클릭으로 찌르기');
 }
 
 let pausedFrom = 'fight'; // 싸움 중에 멈췄나, 무기 뽑기 중에 멈췄나 (계속하기가 돌아갈 곳)
@@ -2075,7 +2088,7 @@ function pause() {
   $('btnResume').style.display = '';
   $('btnLobby').hidden = !lobbyMenu() && !teamRun?.opts?.saengsa; // 첫 화면·대기실 여정만 — 판을 떠나 대기실로 (아래 toLobby) · 생사전 판은 그만두고 생사전으로
   if (teamRun?.opts?.saengsa) $('btnStart').hidden = true; // 생사전: 재대결 없음 (결과를 다시 굴리지 않게)
-  $('fpsRow').hidden = false;
+  showSettingRows(true);
   showMenu();
 }
 
@@ -2436,7 +2449,7 @@ function checkRoundEnd(dt) {
     // 첫 화면·대기실 여정 (사장님 10/16 08:3x '팝업에선 얻은 금화나 잃은 금화 표시하고, 그 화면에서 설정은 빼고, 다음 여정과 대기실 선택지로'): 금화 줄(showRewardLine) ·
     //  '다음 여정'(진 판은 '재대결' — 같은 무대 · 10/24 전 '다시 겨루기') · '대기실'. 설정 줄은 정지 창 · 첫 화면 설정에만. 그 밖 판은 지금 그대로
     const lobbyOk = lobbyMenu();
-    $('fpsRow').hidden = lobbyOk;
+    showSettingRows(!lobbyOk);
     $('btnLobby').hidden = !lobbyOk;
     showRewardLine();
     testRoute.resultLabel($('btnStart'));

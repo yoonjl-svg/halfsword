@@ -7,7 +7,7 @@
 //  agg   : 표 (파일 여럿)
 //  bench : 같은 칼을 같은 자리에서 — AI 손 대본(parry_assist_bench 와 같은 꼴): 쉼 0.6 s → 준비 자리(없음 · 실린 자리 · 너머 0.15)로 3 m/s → 0.15 s → 길을 11 m/s 로 긋기.
 //          몸통 감기(오코리 몸 덧씌우기 크기 1) · 들어가는 걸음(pass 0.6) 있음 / 없음 · 거리 훑기. 맞는 쪽은 서 있는 몸(손을 아래 옆에 — 몸이 열림).
-//  node tools/sim/strike_physics.mjs run [--seeds=1-6] [--shard=i/n] [--json=out.json] [--cfg=PATH:수,…]
+//  node tools/sim/strike_physics.mjs run [--seeds=1-6] [--prof=4:4] [--shard=i/n] [--json=out.json] [--cfg=PATH:수,…]
 //  node tools/sim/strike_physics.mjs agg a.json …
 //  node tools/sim/strike_physics.mjs bench [--weapons=longsword,hwando,zweihander] [--json=out.json] [--cfg=PATH:수,…]
 // ─────────────────────────────────────────────────────────────
@@ -132,7 +132,8 @@ export function runFight({ school, wi, seed, swap, prof = [4, 4], dur = 60 }) {
         wE: w ? w.E : null, wSev: w ? w.sev : null, wU: w ? w.u : null });
     }
   }
-  const rec = { school, weapon, seed, swap, endT: +G.t.toFixed(2), loser, attacks, wounds: wounds.map(({ n: _n, ...w }) => w) };
+  const ms = A.map((ai) => ({ prof: ai.proficiency, ...(ai.stats.ms ?? {}) })); // 간격과 박자 재기 칸 (들어옴 읽기 · 걸음에 치기 · 줄 닫기 …)
+  const rec = { school, weapon, seed, swap, endT: +G.t.toFixed(2), loser, attacks, wounds: wounds.map(({ n: _n, ...w }) => w), ms };
   G.world.free();
   return rec;
 }
@@ -166,6 +167,12 @@ export function report(runs) {
     out.push(`\n### 한눈에`);
     out.push(`| 판 길이 평균 · 중앙 | 비김 (60 s 넘김 · 둘 다 섬) | 판당 상처 (심각도 > 0) | 판당 상처 (모두) |\n|---|---|---|---|`);
     out.push(`| ${f1(runs.reduce((a, r) => a + r.endT, 0) / fights)} · ${f1(med(runs.map((r) => r.endT)))} s | ${pc((fights - dec) / fights)} (${fights - dec}) | ${f2(W.filter((w) => w.sev > 0).length / fights)} | ${f2(W.length / fights)} |`);
+    const M = runs.flatMap((r) => r.ms ?? []);
+    if (M.length) {
+      const sum = (k) => M.reduce((a, m) => a + (m[k] ?? 0), 0);
+      out.push(`\n| 간격과 박자 읽기 (판당 · 두 쪽 합) | 들어옴 봄 | 반응(read) | 걸음에 치기 굴림 · 침 | 줄 닫기 | 물러남 |\n|---|---|---|---|---|---|`);
+      out.push(`| ${fights} 판 | ${f2(sum('enter') / fights)} | ${f2(sum('read') / fights)} | ${f2(sum('debanaRoll') / fights)} · ${f2(sum('debana') / fights)} | ${f2(sum('close') / fights)} | ${f2(sum('back') / fights)} |`);
+    }
     out.push(`\n| 베기 판정 에너지 J 중앙 (수) | 값 |\n|---|---|`);
     out.push(`| 칼날 끝 ⅓ (t ≥ ⅔) | ${eMed(cut.filter((w) => w.u >= 2 / 3))} |`);
     out.push(`| 칼날 가운데 ⅓ | ${eMed(cut.filter((w) => w.u >= 1 / 3 && w.u < 2 / 3))} |`);
@@ -342,7 +349,7 @@ if (isMain(import.meta.url)) {
     console.error(`전체 ${list.length} 판 · 이 샤드 ${mine.length}`);
     const runs = [];
     for (const f of mine) {
-      const r = runFight({ ...f, dur: +arg('dur', '60') });
+      const r = runFight({ ...f, dur: +arg('dur', '60'), prof: arg('prof', '4:4').split(':').map(Number) });
       runs.push(r);
       console.error(`${f.school} w${f.wi} s${f.seed} ${f.swap ? 'swap' : 'std'} → 상처 ${r.wounds.length} @${r.endT}s`);
     }

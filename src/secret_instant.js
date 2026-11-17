@@ -3373,6 +3373,7 @@ function endCombo(f, combat) {
   if (last?.pad && !I.keepAim) snapAim(f, last.pad);
   f.iaiHoldT = I.hold;
   f.iaiHoldKind = 'combo';
+  f.iaiHoldThrust = I.moves.some((m) => m.kind === 'thrust' || m.lunge || m.dyn?.thrust); // 11/17 붙잡기 · 풀기 동안도 찌르기 공격 (combat.js thrustingNow — 걸음 운동량 안 실음) · 읽기만
   f.iaiFade = I.hold > 0 ? 0 : 0.2; // 붙잡기 0 (제비 베기 되돌림 칼 — 비기 굳음이 아님)이면 곧장 손가락에 돌려준다 (holdIai 의 0.2 s 풀기 그대로)
   f.instantGhost = Math.max(f.instantGhost ?? 0, Math.ceil(SECRET.instantNoCollide / (combat.dt || 1 / 120)));
   // 10/24 15:5x 팔을 뻗은 겨눈 찌름(SECRET.thrustArm)이 맞혔으면: 뻗은 채 굳는 동안 칼은 이미 상처 속 — 내 칼 ↔ 상대 몸만 그 굳음 동안 부딪히지 않음(combat.js filterContactPair · 칼끼리 · 팔은 그대로)

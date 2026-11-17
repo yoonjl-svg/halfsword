@@ -89,13 +89,31 @@ export function bladeWeight(t) {
 }
 
 /**
+ * 친 쪽이 지금 찌르기 공격 중인가 (11/17 — 걸음 운동량은 찌르기에 안 실음: 찌르기는 팔 몫 thrustAssist 가 따로 있음 · 감독 11/17 '찌르기는 걸음 몫 없음 — 닿음 꼴이 아니라 공격으로'):
+ *  탭 찌르기(사람 · AI 찌르기 기술 · 고유 공격이 낸 탭 · 쓰러진 상대 찍기 — 겨눔 ~ 돌아옴 · 대검 쪼개 내려치기 tap.cleave 는 베기라 뺌) · 칼끝을 뻗는 구간 thrustPush ·
+ *  운동학 칼(requestCombo — 리솔루토 런지 · 격살 찌름 · 비껴서며 찌르기 …)의 지금 수가 찌르기 · 찌르는 운동학 칼이 끝난 뒤 붙잡기 · 풀기(secret_instant.js iaiHoldThrust) ·
+ *  AI 가 찌르기 기술로 공격 중(준비 ~ 마무리). 읽기만
+ */
+export function thrustingNow(f) {
+  const sk = f?.skill;
+  if (sk?.thrustPush || (sk?.tap && !sk.tap.cleave)) return true;
+  const I = f?.iai;
+  if (I?.kind === 'combo') {
+    const m = I.moves?.[Math.max(0, I.mi ?? 0)];
+    if (m && (m.kind === 'thrust' || m.lunge || m.dyn?.thrust)) return true;
+  } else if (!I && f.iaiHoldKind === 'combo' && (f.iaiHoldT > 0 || f.iaiFade > 0) && f.iaiHoldThrust) return true; // 찌르는 운동학 칼이 끝난 뒤 붙잡기 · 풀기 동안 (리솔루토 런지 끝 — 칼이 아직 손에 안 돌아옴)
+  const ai = f?.aiCtl;
+  return !!ai && ai.mode === 'attack' && ai.tech?.kind === 'thrust';
+}
+
+/**
  * 걸음 운동량 kg (11/17 — config STRIKE.stepMass · stepVRef): 친 쪽 골반이 상대 골반 쪽(바닥 위 방향)으로 들어가는 빠르기 v_body > 0 이면 stepMass × min(1, v_body ÷ stepVRef) · 아니면 0.
- *  스텝 전 저장값(cacheState)만 읽음 — 예측(predicting)도 엔진을 부르지 않음 · 저장값이 없으면 0
+ *  찌르기 공격 중(thrustingNow — 칼날 스침 · 베기 꼴 닿음이어도)이면 0 · 스텝 전 저장값(cacheState)만 읽음 — 예측(predicting)도 엔진을 부르지 않음 · 저장값이 없으면 0
  */
 export function stepMassOf(att, vic) {
   const a = att?.cache?.parts?.pelvis;
   const b = vic?.cache?.parts?.pelvis;
-  if (!a || !b || !(STRIKE.stepMass > 0)) return 0;
+  if (!a || !b || !(STRIKE.stepMass > 0) || thrustingNow(att)) return 0;
   const dx = b.p.x - a.p.x, dz = b.p.z - a.p.z;
   const dd = Math.hypot(dx, dz);
   if (!(dd > 1e-6)) return 0;

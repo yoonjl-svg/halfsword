@@ -350,7 +350,7 @@
       #btnParry.on { background: rgba(243, 230, 200, 0.32); border-color: var(--c-text); }
       #btnParry.pick { border-color: var(--c-text); box-shadow: 0 0 0 2px rgba(243, 230, 200, 0.35); } /* 떨어진 칼 곁 — 단추가 '줍기' (11/05 src/pickup.js) */
       #moveKnob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); pointer-events: none; }
-      /* 공격 조이스틱 (11/17 — INPUT.atkStick 'stick' · 'both' 판만 · src/atk_stick.js): 오른쪽 아래, 이동 스틱과 거울 자리 · 같은 꼴 · 크기 · 손잡이.
+      /* 공격 조이스틱 (11/17 — 설정 '공격 조이스틱'을 켰을 때만 · src/atk_stick.js): 오른쪽 아래, 이동 스틱과 거울 자리 · 같은 꼴 · 크기 · 손잡이.
          이 판에서는 막기 단추가 조이스틱 왼쪽 위 대각선(원 사이 12px)으로 비키고(오른 엄지가 조이스틱에서 미끄러져 닿음), 아래 가운데 안내 줄은 두 조이스틱 사이 폭 안 ·
          세로 화면 안내는 막기 단추 위로 (body.atkstick — main.js 가 붙임) */
       #atkStick { position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); width: 110px; height: 110px; border-radius: 50%; border: 1px solid var(--line); background: rgba(24, 18, 14, 0.45); display: none; touch-action: none; }
@@ -458,7 +458,7 @@
       .minor { color: var(--c-accent); font-size: var(--fs-s); margin-left: 6px; }
       .actions + .howto { margin-top: 28px; } /* 단추 줄(.actions)의 아래 여백 -20px 만큼 끌려 올라가 첫 줄이 단추 줄 바탕 밑에 가리던 것 (10/10 20:3x 창 정리 때 고침) */
 
-      /* 설정 창 (시작·일시정지·결과가 함께 쓰는 #menu): 남은 설정이 하나(60 fps 제한 — 상대 난이도는 10/13 에 뺐다)라 한 열 · 좁은 폭 (10/10 20:3x 사장님 '2열로 넓을 필요가 없어졌어' — §14).
+      /* 설정 창 (시작·일시정지·결과가 함께 쓰는 #menu): 남은 설정이 둘(60 fps 제한 · 공격 조이스틱(터치 기기만 — 11/17) — 상대 난이도는 10/13 에 뺐다)이라 한 열 · 좁은 폭 (10/10 20:3x 사장님 '2열로 넓을 필요가 없어졌어' — §14).
          폭은 위 .card (460 → 340px). 테스트 경로(test=1)가 붙이는 '테스트 고르기로' 단추(.secondary 100%)·안내 한 줄도 이 폭을 따른다 */
       /* 가로로 든 폰처럼 낮은 화면: 글자는 줄이지 않고 여백만 촘촘하게 (한 열 그대로) */
       @media (max-height: 500px) {
@@ -522,6 +522,8 @@
         <!-- 10/10 19:2x 사장님 '시작 전 설정에서도 뺄 기능이 많아': 자세 이름 · 피 · 조작 흔적 · 유파 기술 알림 · 소리 · 비기 화면 번쩍임 · 비기 카메라 연출은 늘 켬,
              픽셀 모드(실험 ?pixel=1)는 주소 인자로만, 기울기 이동은 기능째 지웠다 (main.js DEFAULTS). 모든 기술 이름(디버그 ?techCueAll=1)은 10/14 03:3x 상대 기술 표기와 함께 걷어냈다 -->
         <div class="row" id="fpsRow"><span>화면 60 fps 제한</span><button class="toggle" data-setting="fpsCap" aria-label="화면 60 fps 제한"></button></div>
+        <!-- 공격 조이스틱 (사장님 11/17 '공격 스위치는 설정에서 정하게 할 수 있어? 기본은 지금처럼 설정을 바꾸면 스틱으로'): 기본 끔 = 화면 끌기 · 켬 = 오른쪽 아래 조이스틱 · 터치 기기만 (main.js applyAtkStick) -->
+        <div class="row" id="atkStickRow"><span>공격 조이스틱</span><button class="toggle" data-setting="atkStick" aria-label="공격 조이스틱"></button></div>
         <!-- 시작 단추는 카드 아래에 붙여 둔다: 가로로 든 폰에서 설정 목록이 길어도 스크롤 없이 보인다 -->
         <div class="actions">
           <button class="primary" id="btnStart">여정 시작</button> <!-- 사장님 10/14 11:0x "싸움 시작 문구는 유치해. 여정 시작" -->

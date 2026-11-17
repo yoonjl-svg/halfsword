@@ -68,7 +68,7 @@ if (skipsTitle(params)) {
     let choosing = false;
     const mounted = screen = mountStartScreen({
       root,
-      settings: async () => { const game = await loaded; return { get: game.getLobbySettings, set: game.setLobbyFps }; },
+      settings: async () => { const game = await loaded; return { get: game.getLobbySettings, set: game.setLobbySetting }; },
       accountLoader: () => import('./account/title_account.js'),
       async onChoice(choice) {
         if (choosing) return;

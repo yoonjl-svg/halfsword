@@ -1,11 +1,11 @@
 // 칼날 자리 무게 · 걸음 운동량 시험 (11/17 — [사장님 11/17 결정] 감독 권고 따름 · config STRIKE.bladeW0 · bladeWFull · stepMass · stepVRef · combat.js analyze ·
 //  옮긴 기록 docs/strike/ae_port_2026-11-17.md §4): 베기 판정 에너지 × w(t) (끝 ⅓ = 1 · 손잡이 끝 0.5) · 들어가며 친 베기 판정 유효 질량 + 1.0 kg × min(1, v ÷ 1.0) ·
-//  찌르기 · 둔타는 그대로 · 사람 · AI 같은 판정.
+//  찌르기 · 둔타는 그대로 · 찌르기 공격 중(탭 · 운동학 찌름 · 리솔루토 런지 끝 붙잡기 · AI 찌르기 기술)의 베기 꼴 닿음도 걸음 몫 없음 · 사람 · AI 같은 판정.
 //  node --test tools/sim/blade_step.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
-import { bladeWeight, stepMassOf } from '../../src/combat.js';
+import { bladeWeight, stepMassOf, thrustingNow } from '../../src/combat.js';
 
 const S = CONFIG.STRIKE;
 
@@ -32,6 +32,33 @@ test('걸음 운동량: 상대 쪽으로 들어갈 때만 · v_ref 에서 다 �
   assert.equal(stepMassOf({}, foe), 0, '저장값 없음');
   // 상대가 왼쪽에 있으면 왼쪽으로 가는 것이 들어감
   assert.equal(stepMassOf(f(0, -1.2), f(-2, 0)), 1);
+});
+
+test('찌르기 공격 중이면 걸음 몫 없음 (닿음 꼴이 아니라 공격으로 — 칼날 스침도) · 칼날 자리 무게는 그대로', () => {
+  const V = (x, y, z) => ({ x, y, z });
+  const foe = { cache: { parts: { pelvis: { p: V(2, 1, 0), v: V(0, 0, 0) } } } };
+  const f = (o = {}) => ({ cache: { parts: { pelvis: { p: V(0, 1, 0), v: V(1.2, 0, 0) } } }, skill: {}, ...o });
+  assert.equal(stepMassOf(f(), foe), 1, '베기 · 서기 꼴 아님 — 걸음 몫');
+  for (const [k, o] of [
+    ['탭 찌르기', { skill: { tap: { t: 0.1 } } }],
+    ['뻗는 구간', { skill: { thrustPush: true } }],
+    ['운동학 찌름 (리솔루토 런지)', { iai: { kind: 'combo', mi: 0, moves: [{ kind: 'thrust', lunge: true }] } }],
+    ['찌르는 운동학 칼 끝 풀기', { iaiHoldKind: 'combo', iaiHoldT: 0, iaiFade: 0.1, iaiHoldThrust: true }],
+    ['AI 찌르기 기술', { aiCtl: { mode: 'attack', tech: { kind: 'thrust' } } }],
+  ]) {
+    assert.equal(thrustingNow(f(o)), true, k);
+    assert.equal(stepMassOf(f(o), foe), 0, k);
+  }
+  for (const [k, o] of [
+    ['대검 쪼개 내려치기 (탭 틀이지만 베기)', { skill: { tap: { cleave: true } } }],
+    ['운동학 칼 베기 수', { iai: { kind: 'combo', mi: 1, moves: [{ kind: 'thrust' }, { kind: 'cut' }] } }],
+    ['베는 운동학 칼 끝 풀기', { iaiHoldKind: 'combo', iaiFade: 0.1, iaiHoldThrust: false }],
+    ['AI 베기 기술', { aiCtl: { mode: 'attack', tech: { kind: 'cut' } } }],
+    ['AI 찌르기 기술이지만 공격 꼴 아님', { aiCtl: { mode: 'watch', tech: { kind: 'thrust' } } }],
+  ]) {
+    assert.equal(thrustingNow(f(o)), false, k);
+    assert.equal(stepMassOf(f(o), foe), 1, k);
+  }
 });
 
 test('판에서: 베기 판정 = ½ × (자유 칼 + 팔 + 걸음 몫) × 빠르기² × 눈금 × w(t) · 찌르기 · 둔타엔 걸음 몫 없음', () => {

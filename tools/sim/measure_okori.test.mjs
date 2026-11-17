@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
-import { msLine, msHold, msFeetV, okoriStart, okoriFrom, okoriCue } from '../../src/ai_measure.js';
+import { msLine, msHold, msFeetV, msRead, okoriStart, okoriFrom, okoriCue } from '../../src/ai_measure.js';
 
 const M = CONFIG.MEASURE;
 const O = CONFIG.OKORI;
@@ -25,7 +25,7 @@ test('기본 판 · 켜고 끄는 칸 없음 · 값 (시간 사다리 0.2 · 0.4
   assert.deepEqual(O.amp.map((x) => +x.toFixed(4)), [1, 1, 0.6667, 0.3333], '크기 — 낮음이 크고 높음이 작음');
   assert.deepEqual(O.see, [0.6, 0.6, 0.4, 0.2]);
   assert.ok(O.turn === 0.35 && O.lean === 0.05 && O.drop === 0.03 && O.front === 0.15 && O.lift === 0.15 && O.hand === 1.4 && O.read === 1 && O.windV === 1.3, JSON.stringify(O));
-  assert.ok(M.gap.italian === 0 && M.gap.chinese === 0 && M.gap.other === 0.15 && M.deep === 0.15 && M.step === 0.6 && M.inside === 1 && M.read === 1 && M.out === 1, JSON.stringify(M));
+  assert.ok(M.gap.italian === 0 && M.gap.chinese === 0 && M.gap.other === 0.15 && M.deep === 0.15 && M.step === 0.6 && M.inside === 1 && M.read === 1 && M.debana === 1 && M.out === 1, JSON.stringify(M));
   assert.ok(Math.abs(M.bindT / L - 0.2) < 1e-9);
 });
 
@@ -132,4 +132,40 @@ test('사람 손의 느린 바깥 감기를 AI 가 늦게 본 눈으로 읽음 (
   assert.ok(on.n > 0 && on.live != null, `AI 판단 길에서 사람의 느린 감기를 봄 ${JSON.stringify(on)}`);
   assert.ok(on.eye0 != null && on.live >= on.eye0 + on.lag - 0.02, `늦게 본 눈 — 지연 ${on.lag} s 뒤에 봄 (${on.eye0} → ${on.live})`);
   assert.ok(on.maxVis === 0 && on.maxSeenOk === 0 && on.body === 0, '사람 몸엔 오코리 덧씌우기 · 무게 옮김 · 보이는 크기 없음');
+});
+
+// 사장님 11/17 '데바나 살려' — 걸음에 치기: 들어옴 읽기(read × 띠 기울기)가 나오고 상대가 내 칼끝 + 0.3 안이면 줄 닫기 앞에 debana × 띠 기울기로 그 걸음에 침 ·
+//  안 나오면 줄 닫기 · 아직 멀면 줄 닫기 (가지 코드에선 줄 닫기가 늘 먼저라 닿지 않던 갈래)
+test('걸음에 치기: 칼 든 AI 는 칼끝 + 0.3 안으로 걸어 드는 상대를 띠 기울기만큼 그 걸음에 침 · 아니면 줄 닫기 · 멀면 줄 닫기', () => {
+  const G = newRound({ seed: 3, walls: true, weapon: 'longsword', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 4 }, persona2: { proficiency: 4 } });
+  try {
+    while (G.t < 1) G.step();
+    const ai = G.ai;
+    const L = msLine(ai);
+    const dIn = Math.min(ai.M.reach + 0.2, L + 0.25);
+    const dFar = ai.M.reach + 0.35;
+    assert.ok(L > 0 && dIn < ai.M.reach + 0.3 && dIn < L + 0.3 && dFar < L + 0.3, `선 ${L} · 칼끝 ${ai.M.reach}`);
+    const s0 = { ...ai.lastSeen, state: 'stand', armed: true };
+    const trial = (d) => {
+      ai.mode = 'watch';
+      ai.phase = 'ready';
+      ai.icpPre = ai.icp = false;
+      ai.okori = null;
+      ai.msArmed = true; // 들어옴 하나 (걸쇠 새로)
+      ai.foeClosing = 1.0; // 늦게 본 상대 골반이 1 m/s 로 다가옴
+      const took = msRead(ai, s0, d, 1 / 120, 1);
+      return !took ? 'none' : ai.mode === 'attack' ? 'strike' : ai.mode === 'defend' && ai.icpPre ? 'close' : 'other';
+    };
+    const near = { none: 0, strike: 0, close: 0, other: 0 };
+    const far = { none: 0, strike: 0, close: 0, other: 0 };
+    for (let i = 0; i < 40; i++) near[trial(dIn)]++;
+    for (let i = 0; i < 20; i++) far[trial(dFar)]++;
+    assert.ok(near.strike > 0 && near.close > 0 && near.other === 0, `칼끝 안 — 칠 때도 줄 닫을 때도 (가운데 띠 ⅔ · ⅔) ${JSON.stringify(near)}`);
+    assert.ok(far.strike === 0 && far.close > 0 && far.other === 0, `칼끝 + 0.3 밖 — 줄 닫기만 ${JSON.stringify(far)}`);
+    assert.equal(ai.why, 'stepin');
+    const S = ai.stats.ms;
+    assert.ok(S.debana === near.strike && S.debanaRoll === near.strike + near.close, JSON.stringify(S));
+  } finally {
+    G.world.free();
+  }
 });
