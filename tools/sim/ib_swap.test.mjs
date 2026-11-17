@@ -145,7 +145,7 @@ test('무게 보정 견줌(weightFix — 기본 끔): 켜면 위력 몫 = (멜 �
   } finally {
     SECRET.altib.weightFix = 0;
   }
-  if (STAMINA.on) assert.equal(altibPower({ stamina: { value: -5, max: 100 } }, null), 0);
+  assert.equal(altibPower({ stamina: { value: -5, max: 100 } }, null), 0);
 });
 
 test('사람 특수 공격 싱지르 — 무장 없이 원 한 바퀴로 냄 · 비기 셈 · 판정 배율 · 굳음 없음 · 칼끝 고노센 × 0.3 · 식힘 동안 다시 안 남 · 한 걸음 나가며(앞발 축)', (t) => {

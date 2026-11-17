@@ -5,7 +5,6 @@ import {tempoHand} from '../../src/attack_tempo.js';
 import {STAMINA} from '../../src/config.js';
 const before={...STAMINA};
 function setup(speed=.6){
-  STAMINA.attackTempo=true;STAMINA.tempoInput=true;
   const f={handOffset:new Vector2(),stamina:{attackSpeed:speed,guarding:false},state:'stand'};
   return {f,prev:new Vector2()};
 }
@@ -30,9 +29,9 @@ test('guard interrupts queued attacks immediately and recovery starts from the r
   s.recovering=true;s.f.inputActive=true;s.f.handOffset.set(-.4,.2);
   assert.deepEqual(tempoHand(s,1/120).toArray(),[-.4,.2]);
 });
-test('fresh, tempo disabled, and AI input bypass the queue without changing the input object',()=>{
-  for(const kind of ['fresh','off','ai']){
-    const s=setup(kind==='fresh'?1:.6);if(kind==='off'){STAMINA.attackTempo=false;}if(kind==='ai')s.f.aiControlled=true;
+test('fresh and AI input bypass the queue without changing the input object',()=>{
+  for(const kind of ['fresh','ai']){
+    const s=setup(kind==='fresh'?1:.6);if(kind==='ai')s.f.aiControlled=true;
     s.f.handOffset.set(.3,.4);assert.equal(tempoHand(s,1/120),s.f.handOffset);assert.deepEqual(s.f.handOffset.toArray(),[.3,.4]);assert.equal(s.tempoInput,null);
   }
 });

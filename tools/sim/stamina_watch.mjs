@@ -2,7 +2,6 @@
 //  읽기만 한다(난수·물리·장부 값에 손대지 않음) — 감싼 도구의 출력은 감싸지 않은 것과 바이트 같고, 요약은 그 뒤에 '기력 지켜보기' 줄로 붙는다.
 //  쓰기: node tools/sim/stamina_watch.mjs fights12.mjs
 //        node tools/sim/stamina_watch.mjs motion_lab.mjs duel rapier 24 main      (48 판 대결은 늘 main 인자)
-//        node tools/sim/with_config.mjs STAMINA.on=false stamina_watch.mjs fights12.mjs   (끔 — 장부가 늘 100 이라 요약은 0)
 //  몸 하나 = 판 하나의 검객 하나(Fighter 가 만들어지는 차례 — 판마다 둘). 요약: 0 아래로 내려간 몸 · −30 아래 · 탈진한 몸과 횟수 · 가장 낮은 값 ·
 //   0 아래·−30 아래·탈진으로 보낸 시간 몫 · AI 숨 고르기(staminaRest) 시간 몫 · 비용 갈래별 합 · 낸 공격·막아 받기·비기·박차기 수.
 //  STAMINA_WATCH_ROWS=1 이면 몸마다 한 줄(JSON)도 찍는다

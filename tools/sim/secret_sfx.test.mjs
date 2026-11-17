@@ -211,7 +211,7 @@ test('AI 고노센 (일본 숙련도 5 · AI 실행부 secretGo): 한 번 · g1 
         failTried = true;
         const keep = A.staminaRest;
         A.staminaRest = true; // 쉬는 중(기력) → secretGo false
-        if (CONFIG.STAMINA.on) assert.equal(A.secretGo(A.secret, {}), false);
+        assert.equal(A.secretGo(A.secret, {}), false);
         A.staminaRest = keep;
       }
       if (A.secretGo(A.secret, {})) fired++;

@@ -29,7 +29,6 @@ import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS, IBERIAN_SPIN_DEF, traditionOf } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
-import { spendAweDrain } from './stamina.js'; // 티소나 '위세' (10/21 — 내 공격이 상대 칼에 막히면 막은 쪽 기력 −, afterStrike)
 import { schoolPassiveOn } from './school_passive.js'; // 유파 패시브 스위치 (10/21 — 이베리아 손목 힘 · 나머지 넷은 fighter.schoolPassive)
 import { closeStartD, bargeHeld, nearHilt } from './close_hold.js'; // 밀치기 시작 거리 (11/14 — AI 는 CLOSE.startAI 견줌 · 기본 null = 무기 reach 그대로)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 AI 몫 — 상대 두 팔 늦춤 (10/31)
@@ -208,7 +207,7 @@ export class AI {
     const baseM = this.school.measure;
     this.M = art.measure;
     // 10/8 17:00 (c): 이 몸이 R2′ 묶음(몸의 호)을 쓰면 칼이 더 멀리·일찍 지나가 간격을 BODY.r2pAiContact 만큼 당긴다(72 판 'all': contact 1.57 → 1.52 가 E 승 14 → 27, P 28 → 33). 묶음 없는 AI(기본 'player' 범위의 상대)엔 0 — 바이트 동일
-    if (BODY.r2pScope === 'all' && BODY.trunkArc > 0 && BODY.r2pAiContact) this.M = { ...this.M, contact: this.M.contact + BODY.r2pAiContact }; // 'player' 범위에선 시뮬의 AI 조종 P 에도 안 걸어 기준 sha 를 지킨다
+    if (BODY.trunkArc > 0 && BODY.r2pAiContact) this.M = { ...this.M, contact: this.M.contact + BODY.r2pAiContact }; // 'player' 범위에선 시뮬의 AI 조종 P 에도 안 걸어 기준 sha 를 지킨다
     // 상대 칼 길이로도 따로 잰다: foeReach(아래)는 "내가 아니라 상대가" 닿는 거리를 어림하는 값이라, 내
     // 무기가 아니라 상대 무기 기준으로 스케일해야 한다 (짧은 칼을 든 쪽이 상대의 롱소드 간격을 실제보다
     // 가깝게 어림해 그대로 걸어 들어가는 일을 막는다)
@@ -890,15 +889,13 @@ export class AI {
     // 무릎 꿇었거나 일어나는 중: 다리는 못 놀리지만 칼은 쥘 수 있다 → 가만히 가리고만 있지 않고,
     //  사정거리 안까지 다가온 적은 아래에서도 위협하거나 짧게 친다 (발놀림은 아래에서 0으로 막는다)
     const kneeling = me.state !== 'stand';
-    if (STAMINA.on) {
-      const limit = this.plan ? this.planRestAt() : this.restAt; // 공격적 기질 −10 · 아니면 20 (아래 aggressiveTemper) · 유파 플랜(11/14 — 이탈리아)은 띠마다 기력 셈(planRestAt)
-      const resume = this.plan ? Math.max(STAMINA.aiResumeAt, limit + STAMINA.stageBack) : STAMINA.aiResumeAt; // 플랜: 쉼 문턱을 올렸으면(비기 몫) 다시 나가는 기력도 그만큼 위 (지침 한 칸 되돌림 stageBack 15 — 새 수 없음)
-      if (me.stamina.value < limit) {
-        if (this.plan && !this.staminaRest && limit < this.restAt) this.stats.plan.restLow++; // 재기: 무계획으로 낮춘 문턱 아래까지 쓴 뒤 쉼
-        this.staminaRest = true;
-      } else if (me.stamina.value >= resume) this.staminaRest = false;
-      if (this.staminaRest && this.mode === 'watch') this.startWithdraw(0.8, this.school.withdraw.calm[0]);
-    } else this.staminaRest = false;
+    const limit = this.plan ? this.planRestAt() : this.restAt; // 공격적 기질 −10 · 아니면 20 (아래 aggressiveTemper) · 유파 플랜(11/14 — 이탈리아)은 띠마다 기력 셈(planRestAt)
+    const resume = this.plan ? Math.max(STAMINA.aiResumeAt, limit + STAMINA.stageBack) : STAMINA.aiResumeAt; // 플랜: 쉼 문턱을 올렸으면(비기 몫) 다시 나가는 기력도 그만큼 위 (지침 한 칸 되돌림 stageBack 15 — 새 수 없음)
+    if (me.stamina.value < limit) {
+      if (this.plan && !this.staminaRest && limit < this.restAt) this.stats.plan.restLow++; // 재기: 무계획으로 낮춘 문턱 아래까지 쓴 뒤 쉼
+      this.staminaRest = true;
+    } else if (me.stamina.value >= resume) this.staminaRest = false;
+    if (this.staminaRest && this.mode === 'watch') this.startWithdraw(0.8, this.school.withdraw.calm[0]);
 
     // 칼을 놓쳤다: 빈손으로는 칠 수 없다 → 하던 공격을 거두고 간격 밖으로 물러난다 (좀비처럼 맨손으로 달려들지 않는다)
     if (!me.armed && this.mode === 'attack') this.startWithdraw(0.8);
@@ -1246,7 +1243,7 @@ export class AI {
     this.decideTimer = realS(rand(0.06, 0.14));
     const opp = this.opportunity(s, d);
     let need = 1 - 0.3 * (this.pers.aggr * L.aggression - 0.8);
-    if (STAMINA.on && this.foe.stamina.level > 0) need -= (this.foe.stamina.exhausted ? 0.45 : 0.2) * (this.plan ? 1 + 0.5 * this.planK : 1); // 유파 플랜 띠 기울기(11/14 기력 계획): 지친 상대를 더 몰아침 — 상대 기력은 머리 위 막대로 보임 (stamina_hud.js)
+    if (this.foe.stamina.level > 0) need -= (this.foe.stamina.exhausted ? 0.45 : 0.2) * (this.plan ? 1 + 0.5 * this.planK : 1); // 유파 플랜 띠 기울기(11/14 기력 계획): 지친 상대를 더 몰아침 — 상대 기력은 머리 위 막대로 보임 (stamina_hud.js)
     // 겁먹으면 확실한 순간(헛친 뒤·쓰러진 상대)에만 들어간다
     if (opp.kind !== 'recover' && opp.kind !== 'finish') need += this.fear * 0.7;
     if (this.planJp) need += jpNeed(this, opp); // 일본 (11/14): 스택이 적을수록 참고 쌓일수록 먼저 · 고노센 준비 동안 기다림
@@ -1742,7 +1739,7 @@ export class AI {
   // ───────────────────────── 공격 ─────────────────────────
   /** 공격 시작. why: 어떤 기회였나 (recover/stepin/finish/patience/counter/...) */
   startAttack(tech, why, opt = {}) {
-    if (!tech || !this.me.armed || this.me.stamina.exhausted || (STAMINA.on && this.staminaRest)) return false; // 칼이 없으면 칠 수 없다
+    if (!tech || !this.me.armed || this.me.stamina.exhausted || (this.staminaRest)) return false; // 칼이 없으면 칠 수 없다
     if (drawGate(this.me, 'attack')) return false; // 11/16 뽑기 (SECRET.gnsDraw): 칼집에 든 채면 먼저 뽑음 · 뽑는 동안 공격 없음 — 끝나면 다시 고름
     if (AI_ARC.on && !opt.chain && !opt.secret && !opt.passive && !opt.drill && !GAP_OPEN.has(why) && arcGapHold(this)) return void (this.stats.arcGap = (this.stats.arcGap ?? 0) + 1), false; // ① 칼끝 틈 건너기 (11/15): 긴 칼 앞 내 칼끝 밖 보통 공격은 띠 기울기만큼 참음
     if (this.planDe && this.deDig.t > 0 && !opt.secret) return false; // 독일 파고들기 (3 단계 11/14): 건 동안(digT)은 새 공격을 미룸 — 박찬 두 걸음이 공격 걸음에 덮여 버려지지 않게 · 끝나면 그 자리에서 밀치기 · 공격 고르기 그대로
@@ -1870,7 +1867,7 @@ export class AI {
     if (!UA.rdAiWind || opt.secret) return null;
     if (UA.rdAiQuick && (!SLOW_WHY.has(why) || opt.chain > 0)) return 'quick';
     const S = this.me.stamina;
-    if (STAMINA.on && !S.infinite && S.value < this.rdThrift() * (this.restAt + this.rdWindCost())) return 'low';
+    if (!S.infinite && S.value < this.rdThrift() * (this.restAt + this.rdWindCost())) return 'low';
     return null;
   }
 
@@ -2192,12 +2189,12 @@ export class AI {
     S.spent.wind ??= 0;
     S.spend('wind', (UA.rdDrainCut ? realRate(STAMINA.cutCost) * S.weight : UA.rdDrain) * dt); // 11/01 rdDrainCut — 사람과 같게
     if (this.rd.secret) this.rd.base += (UA.rdDrainCut ? realRate(STAMINA.cutCost) : UA.rdDrain) * dt; // 11/11 알티바슈 포르트 무게 보정 셈 (사람 holdTick 과 같음)
-    if (STAMINA.on && !S.infinite && S.value <= 0) return this.rdFire('empty');
+    if (!S.infinite && S.value <= 0) return this.rdFire('empty');
     const t = this.tech;
     this.need = this.M.contact + (t?.reach ?? 0) * this.reachScale + 0.05;
     // (c) 아끼는 성향 (10/31 13:4x — 확인표 3134): 기력이 아낌 × 쉼 기력(restAt) 아래로 내려가면 더 감지 않음 — 감았고 닿으면 지금 벰 · 아니면 그만둠 (아낌 0 = 사람처럼 0 까지)
     const keep = this.rd.secret ? 0 : this.rdThrift() * this.restAt; // 비기 알티바슈 포르트(11/11)는 아끼지 않음 — 사람처럼 0 까지 메고 저절로 내려침
-    if (STAMINA.on && !S.infinite && keep > 0 && S.value < keep) {
+    if (!S.infinite && keep > 0 && S.value < keep) {
       if (W.turns >= 1 && this.contactDist() <= this.need) return this.rdFire('low');
       this.rdCancel('low');
       return this.abortAttack();
@@ -2637,8 +2634,6 @@ export class AI {
     if (!this.hitLanded && !this.bound) this.foe.gait?.foeWhiff();
     // 독일 인데스 (10/21 — school_passive.js foeFailed): 내 공격이 상대를 못 벰 — 헛침(위와 같은 가름) · 막힘(칼끼리 닿음) → 상대 몸에 되받아 칠 창. 읽기 · 알림만
     if (!this.hitLanded) this.foe.schoolPassive?.foeFailed(this.bound ? 'blocked' : 'whiff');
-    // 티소나 '위세' (10/21 — stamina.js spendAweDrain): 위와 같은 '막힘'(못 벰 · 칼끼리 닿음)이면 막은 쪽 기력 − · 능력 없는 칼은 아무 일 없음
-    if (!this.hitLanded && this.bound) spendAweDrain(this.me, this.foe);
     if (this.hitLanded && !this.strikeTallied) {
       this.stats.landed++;
       this.evLanded = true; // 감정층 사건: 맞혔다
@@ -3418,7 +3413,7 @@ export class AI {
    */
   altibGo() {
     const me = this.me;
-    if (me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(me)) return false;
+    if (me.stamina.exhausted || (this.staminaRest) || secretSpent(me)) return false;
     if (!me.stamina.secretReady) return this.secretPoor();
     const t = this.school.techByName.redondo;
     if (!t || !UA.rdAiWind || !this.startAttack(t, 'secret', { secret: true })) {
@@ -3450,7 +3445,7 @@ export class AI {
   spinGo() {
     const me = this.me;
     const S = this.secret;
-    if (me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(me)) return false; // 판당 쓸 수 (10/29 19:5x)
+    if (me.stamina.exhausted || (this.staminaRest) || secretSpent(me)) return false; // 판당 쓸 수 (10/29 19:5x)
     if (!me.stamina.secretReady) return this.secretPoor(); // 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써' · 18:3x '0 이하' — 사람과 같은 규칙 · 판당 쓸 수 안 씀)
     if (!me.skill.secret({ S, ctx: { ev: 'spin', turnDir: me.side >= 0 ? 1 : -1 } })) {
       this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
@@ -3531,7 +3526,7 @@ export class AI {
   risoGo(ctx) {
     const me = this.me;
     const S = this.secret;
-    if (me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(me)) return false; // 판당 쓸 수 (10/29 19:5x)
+    if (me.stamina.exhausted || (this.staminaRest) || secretSpent(me)) return false; // 판당 쓸 수 (10/29 19:5x)
     if (!me.stamina.secretReady) return this.secretPoor();
     if (!me.skill.secret({ S, ctx })) {
       this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
@@ -3633,7 +3628,7 @@ export class AI {
   mordGo() {
     const me = this.me;
     const S = this.secret;
-    if (me.stamina.exhausted || (STAMINA.on && this.staminaRest) || secretSpent(me)) return false; // 판당 쓸 수 (10/29 19:5x)
+    if (me.stamina.exhausted || (this.staminaRest) || secretSpent(me)) return false; // 판당 쓸 수 (10/29 19:5x)
     if (!me.stamina.secretReady) return this.secretPoor(); // 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써' · 18:3x '0 이하' — 사람과 같은 규칙 · 판당 쓸 수 안 씀)
     if (!me.skill.secret({ S, ctx: { ev: 'press', held: this.press.pressHeld } })) {
       this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
@@ -3656,7 +3651,7 @@ export class AI {
 
   /** 비기를 낸다 (조건은 이미 찼다). 냈으면 true — 기술이 꾸러미에 없거나 공격을 못 열면 false (아무것도 바꾸지 않는다) */
   secretGo(S, ctx = {}) {
-    if (this.me.stamina.exhausted || (STAMINA.on && this.staminaRest && !ctx.gk) || secretSpent(this.me)) return false; // 판당 쓸 수 (10/29 19:5x) · 격살(ctx.gk — 11/14)은 사람과 같게 기력 0 이하만 막음(아래 secretReady) — AI 쉼 걸쇠(staminaRest)는 새 공격을 여는 몫이라 받아 낸 뒤 저절로 나가는 격살엔 안 걸림
+    if (this.me.stamina.exhausted || (this.staminaRest && !ctx.gk) || secretSpent(this.me)) return false; // 판당 쓸 수 (10/29 19:5x) · 격살(ctx.gk — 11/14)은 사람과 같게 기력 0 이하만 막음(아래 secretReady) — AI 쉼 걸쇠(staminaRest)는 새 공격을 여는 몫이라 받아 낸 뒤 저절로 나가는 격살엔 안 걸림
     if (!this.me.stamina.secretReady) return this.secretPoor(); // 기력이 0 이하 (사장님 10/30 08:2x '기력이 모자라면 못써' · 18:3x '0 이하' — 사람과 같은 규칙 · 판당 쓸 수 안 씀)
     const D = S.do;
     const run = { S, stage: 'strike', t: 0, landed: false, peakE: 0, tr: this.art.tradition };
@@ -4553,12 +4548,7 @@ export class AI {
     if (this.requestedStep || !g?.requestStep || !g.active || this.me.state !== 'stand') return;
     // 이번 프레임의 조이스틱(me.move)은 아직 지난 프레임 값(발을 멈추려고 뒤로 살짝 당긴 값)일 수 있어서 거절될 수 있다
     //  → 받아 줄 때까지 다음 프레임에 다시 부탁한다
-    let leg = null;
-    if (GAIT.cutStep > 0 && BODY.chain === 'legs' && this.tech?.kind !== 'thrust' && this.tech?.path?.length) {
-      // R2′ 채널 B(확인표 182): 기술 길의 가로 변위 부호로 획 반대쪽 발을 고른다 (플레이어의 skill.js 와 같은 규칙; |변위| ≤ 0.2 패드면 안 고름)
-      const dx = this.tech.path[this.tech.path.length - 1][0] - this.tech.from[0];
-      leg = dx < -0.2 ? 'left' : dx > 0.2 ? 'right' : null;
-    }
+    const leg = null; // 발 고르기는 걸음 쪽에 맡김
     const st = this.tech?.step;
     if (st?.when === 'strike') {
       if (this.techStepRequest(st)) this.requestedStep = true;

@@ -57,12 +57,12 @@ test('사슬 칼 빠르기 — 목표 s = min(1 + p × k, 1.3) · 힘 배율 = �
   const f = mk(2, 100);
   const b = linkBoost(f);
   assert.ok(Math.abs(b.s - 1.2) < 1e-12 && f.ibBoostK === 1.7);
-  if (STAMINA.on) assert.ok(Math.abs(100 - f.stamina.value - STAMINA.cutCost * 1.5 * 0.44) < 1e-9);
+  assert.ok(Math.abs(100 - f.stamina.value - STAMINA.cutCost * 1.5 * 0.44) < 1e-9);
   const f5 = mk(5, 100);
   assert.ok(Math.abs(linkBoost(f5).s - 1.3) < 1e-12 && f5.ibBoostK === 7, '상한 1.3 · 칸 끝 값');
   assert.equal(linkBoost(mk(1, 100, 'tizona')).m, 1.1, '표에 없는 무기는 def');
   assert.equal(linkBoost(mk(3, 100, 'flamberge', true)).m, 4, 'AI 표');
-  if (STAMINA.on) assert.equal(linkBoost(mk(3, 1)), null, '기력이 모자라면 안 더함');
+  assert.equal(linkBoost(mk(3, 1)), null, '기력이 모자라면 안 더함');
 });
 
 test('사슬 칼 빠르기 (기본 켬) — 넘김마다 k 1 · 2 · 3 · 손 목표는 그대로(그은 길 · 박자) · 이은 칼이 끔보다 빠름 · 끄면 더함 없음', (t) => {

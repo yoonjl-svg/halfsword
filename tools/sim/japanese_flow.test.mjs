@@ -18,7 +18,7 @@ function actor(extra = {}) {
 
 test('판 값: 판정 개편 켬 · 공격 끝 = 실제 칼 기하 · 기력 60 · 창 0.2 s · 팔 늦춤 0.4 s(바닥 0.25 — 10/21 시간 통일) · 자연 회복 탈진 · 일본 · 이베리아 0(11/15 사장님 결정 — 전 0.2) · 동방 0.5', () => {
   assert.equal(FLOW_REDESIGN.on, true); assert.equal(FLOW_REDESIGN.penalty, 60); assert.equal(FLOW_REDESIGN.window, realS(0.2)); assert.equal(FLOW_REDESIGN.threatEnd, true);
-  assert.equal(FLOW_RECOVERY.seconds, realS(0.4)); assert.equal(FLOW_RECOVERY.floor, 0.25); assert.equal(STAMINA.exhaustNatural, true);
+  assert.equal(FLOW_RECOVERY.seconds, realS(0.4)); assert.equal(FLOW_RECOVERY.floor, 0.25);
   assert.equal(SKILL.jpParryDmgCut, 0); assert.equal(SKILL.ibParryDmgCut, 0); assert.equal(SKILL.cnParryDmgCut, 0.5);
 });
 

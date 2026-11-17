@@ -85,11 +85,6 @@ test('기력 무한 + 케틀 햇: 최대 130 · 늘 130 / 바깥에서 값을 �
   near(f.stamina.max, 130); near(f.stamina.value, 130); hammer(f, actor({ aiControlled: true }), 12); near(f.stamina.value, 130);
   f.stamina.value = -79; f.stamina.exhaustLeft = 1; f.stamina.level = 3; // 시험 도구가 바꿔 놓은 값
   tick(f, 1 / 120); near(f.stamina.value, 130); assert.equal(f.stamina.exhausted, false); assert.equal(f.stamina.level, 0);
-  try {
-    STAMINA.on = false;
-    const g = actor(); g.stamina.setInfinite(true); near(g.stamina.max, 100); near(g.stamina.value, 100);
-    hammer(g, actor({ aiControlled: true }), 5); near(g.stamina.value, 100); near(sum(g.stamina.spent), 0);
-  } finally { STAMINA.on = true; }
   const off = actor(); off.stamina.setInfinite(true); off.stamina.setInfinite(false); hammer(off, actor({ aiControlled: true }), 3); assert.ok(off.stamina.value < 100); // 끄면 보통 장부
 });
 test('클린치: 기력 무한 쪽은 0 · 상대는 전처럼 초당 10 (스텝 차례 무관) — 상대가 탈진하면 밀기 끝', () => {

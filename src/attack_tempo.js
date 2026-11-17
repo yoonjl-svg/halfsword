@@ -1,10 +1,8 @@
-import { STAMINA } from './config.js';
-
 // Gesture recognition keeps the original, real-time input clock. The delayed
 // physical command must not split one stroke or change a school's input rule.
 export function observeTempoInput(skill, dt) {
   const f = skill.f;
-  if (!STAMINA.attackTempo || !STAMINA.tempoInput || f.aiControlled || f.stamina.guarding) {
+  if (f.aiControlled || f.stamina.guarding) {
     skill.inputMotion = null;
     return;
   }
@@ -19,7 +17,7 @@ export function observeTempoInput(skill, dt) {
 // It affects human attack targets only; defence and scripted moves own their clocks.
 export function tempoHand(skill, dt) {
   const f=skill.f, raw=f.handOffset, speed=f.stamina.attackSpeed;
-  const enabled=STAMINA.attackTempo&&STAMINA.tempoInput&&!f.aiControlled&&speed>0&&speed<1&&!f.stamina.guarding&&!skill.tap&&!skill.pom&&!skill.sec&&!f.iai&&!skill.recovering&&f.state==='stand';
+  const enabled=!f.aiControlled&&speed>0&&speed<1&&!f.stamina.guarding&&!skill.tap&&!skill.pom&&!skill.sec&&!f.iai&&!skill.recovering&&f.state==='stand';
   if(!enabled){
     if(skill.recovering&&!f.inputActive&&skill.tempoInput)raw.copy(skill.tempoInput.out);
     skill.tempoInput=null;return raw;

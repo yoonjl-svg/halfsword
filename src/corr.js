@@ -9,7 +9,7 @@
 //   ① 날 맞춤 창: 겨눈 부위 = d/v_close 최소, 창이 열릴 때 고정. τ = d/v_close < T_roll 이면 열린다.
 //    T_roll = 8·I/kd: 기존 굴림 서보(kd = 0.12·twistScale, I = 칼날 축 관성)의 2 % 안착 시간 4/(ζωn) = 8·I/kd (유도, 숫자 아님)
 //    닫힘: v_close ≤ 0, 띠·거리 밖, 떨어짐(bladeTouch 참 → 거짓), 칼끼리 새로 부딪힘(그 뒤는 combat.js gripTwist)
-//  ② 끝점 겨눔 (플레이어만: skill.corrTip·손목 원뿔 fighter.gripCone(BODY.humanLimits)·선 자세·총 아님·찌르기 아님 th.w = 0):
+//  ② 끝점 겨눔 (플레이어만: skill.corrTip·손목 원뿔 fighter.gripCone(사람 관절 한도)·선 자세·총 아님·찌르기 아님 th.w = 0):
 //   켜짐 = 손 뗌 사건(skill.lift, handHeld 참 → 거짓)인 스텝에만, 그 손가락이 긋는 중에 뗐을 때(skill.quiet = 0: 기존 휘두르기 깃발,
 //   패드 빠르기 > SKILL.swingSpeed — 누른 채 멈췄다 뗀 것은 켜지 않는다, 비판 H1), ㉠ 칼이 아직 손가락 목표 쪽으로 돈다(toward > 0, fighter.js:1756 식을
 //   여기서 직접 계산 — 손목 걸쇠는 쓰지 않음) ㉡ 겨눈 부위가 Π 안 앞쪽 ㉢ 면 안 각 φ손가락 < φ* ㉣ th.w = 0.

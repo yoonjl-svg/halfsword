@@ -231,7 +231,7 @@ export const altibHitMul = () => SECRET.altibHitMul ?? SECRET.hitMul;
 export function altibPower(f, H = null) {
   const A = SECRET.altib;
   const S = f.stamina;
-  if (!A?.staminaK || !STAMINA.on || S.infinite || !(S.max > 0)) return 1;
+  if (!A?.staminaK || S.infinite || !(S.max > 0)) return 1;
   const v = A.weightFix && H?.s0 != null ? H.s0 - (H.base ?? 0) : S.value;
   return THREE.MathUtils.clamp(v / S.max, 0, 1);
 }
@@ -250,7 +250,7 @@ export function altibShot(f, H = null) {
     return { share: A.share, hitMul: altibHitMul() * k, k, x: null, floor: false, s };
   }
   let x = 1;
-  if (STAMINA.on && S && !S.infinite && S.max > 0) {
+  if (S && !S.infinite && S.max > 0) {
     const fee = A.speed === 'f1' && A.drop != null ? A.drop : 0;
     x = THREE.MathUtils.clamp((S.value - fee) / (S.max - fee), 0, 1);
   }
@@ -262,7 +262,7 @@ export function altibShot(f, H = null) {
   if (A.knee != null) {
     let t = 1;
     const hi = Math.min(A.kneeTop ?? S?.max ?? 100, S?.max ?? 100); // 이 기력 이상이면 꼭대기 (11/16 사장님 '40~90 사이에서 재는 걸로 하자. 즉 90과 100은 동일함.')
-    if (STAMINA.on && S && !S.infinite && hi > A.knee) t = THREE.MathUtils.clamp((S.value - A.knee) / (hi - A.knee), 0, 1);
+    if (S && !S.infinite && hi > A.knee) t = THREE.MathUtils.clamp((S.value - A.knee) / (hi - A.knee), 0, 1);
     const top = A.fullBy?.[f.weapon?.id] ?? A.full ?? 1; // 무기별 꼭대기 (11/16 사장님 '뒤랑달은 5% 보너스 줘 상한에. 45%')
     const share = top > fs ? fs + (top - fs) * t : fs;
     return { share, hitMul: altibHitMul(), k: 1, x: share, floor: !(top > fs) || t <= 0, s };
@@ -824,7 +824,7 @@ export class PlayerUniqueAssist {
       S.spent.wind ??= 0;
       S.spend('wind', (UA.rdDrainCut ? realRate(STAMINA.cutCost) * S.weight : UA.rdDrain) * dt); // 회복 멈춤
       if (H.secret) H.base += (UA.rdDrainCut ? realRate(STAMINA.cutCost) : UA.rdDrain) * dt; // 11/11 알티바슈 포르트 무게 보정 셈(SECRET.altib.weightFix — 무게 1 값으로 뺀 기력)
-      if (STAMINA.on && !S.infinite && S.value <= 0) return this.windFire('empty');
+      if (!S.infinite && S.value <= 0) return this.windFire('empty');
       const hit = windStep(f, dt);
       if (hit) this.stats.windTouch = (this.stats.windTouch ?? 0) + 1; // 감는 칼이 무엇에 닿은 스텝 (재기만 — 닿아도 그대로 감음 · 세게 맞으면 windStop 의 jolt · 상처면 hit)
       return;

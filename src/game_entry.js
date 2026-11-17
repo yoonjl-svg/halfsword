@@ -4,7 +4,7 @@
 //  게임(main.js)은 첫 화면 뒤에서 받아 두고, 첫 화면·대기실이 앞에 있는 동안(html[data-start-open]) 게임의 3D 그리기·물리는 멈춘다 (main.js frame).
 //  첫 화면의 둘째 단추 외에, 여정의 정지 · 결과 창에서도 대기실로 돌아온다(main.js setLobbyReturn → toLobby).
 //  장비 · 이름 · 스킬은 저장된 그대로 싸움에 쓰인다. 주소로 연 판 · 테스트 경로는 이 길이 없다.
-//  게임 인자가 하나라도 있는 주소(?stage= ?weapon= ?foe= ?test=1 ?stamina=0 ?foeWhiff=1 …): 지금처럼 바로 게임 메뉴 (journey_save.js skipsTitle)
+//  게임 인자가 하나라도 있는 주소(?stage= ?weapon= ?foe= ?test=1 ?foeWhiff=1 …): 지금처럼 바로 게임 메뉴 (journey_save.js skipsTitle)
 //  첫 화면·대기실은 Shadow DOM 안 — 꾸밈은 그 안에서만, 글자는 게임 HUD 규칙의 토큰(index.html :root)을 물려받아 entrance_type.css 한 곳에서 (lobby_fix §1).
 //   단추 · 미닫이 · 탭은 싸움 화면 꼴을 같은 토큰 · 같은 값으로 옮긴 entrance_ui.css 하나 (사장님 10/16 15:3x ② ③ — docs/import/ui_unify_2026-10-16.md)
 //  디자인 보기용 주소 `?coins=N` = 대기실 금화를 N 으로 (lobby_progress.js setCoins — 게임 인자로 세지 않아 첫 화면이 뜬다 · lobby_fix §6) · `?heads=N` = 머리를 N 으로 (10/25 · setHeads — 같은 꼴)

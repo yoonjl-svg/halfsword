@@ -277,6 +277,6 @@ export function jpArmRead(ai, dt) {
 export function jpLureOk(ai) {
   if (!J.drawRead || !(SECRET.gnsDraw > 0)) return true;
   if (!ai.iaiArm || !SECRET.iai) return false;
-  if (ai.me.stamina && !ai.me.stamina.infinite && STAMINA.on && !(ai.me.stamina.value > (SECRET.gnsCost ?? STAMINA.secretCost))) return false;
+  if (ai.me.stamina && !ai.me.stamina.infinite && !(ai.me.stamina.value > (SECRET.gnsCost ?? STAMINA.secretCost))) return false;
   return drawRisk(ai).ok;
 }

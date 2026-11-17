@@ -1669,7 +1669,7 @@ function startCombo(f, combat, req) {
     guardPad: req.guardPad ?? null, // 되돌아갈 겨눔 (낸 때의 손 패드)
   };
   if (req.selfFree >= 1 && f.shoulderRopes && !f.iaiRopes) {
-    // 칼 어깨 면 밧줄(가슴 ↔ 위팔 — BODY.humanLimits)을 이 수 동안 뗌 (휩쓸기 · 풍차 감기 · 죽음의 일격과 같은 까닭): 돌려 빼는 위팔이 면 한도 밖을 지나면 밧줄이 스텝마다 가슴을 잡아채고
+    // 칼 어깨 면 밧줄(가슴 ↔ 위팔 — 사람 관절 한도)을 이 수 동안 뗌 (휩쓸기 · 풍차 감기 · 죽음의 일격과 같은 까닭): 돌려 빼는 위팔이 면 한도 밖을 지나면 밧줄이 스텝마다 가슴을 잡아채고
     //  놓인 팔 빠르기는 가슴 빠르기로 되돌려져(placeIai) 반작용만 몸에 남음 — 골반이 0.09 s 에 초속 5 m 로 뒤로 밀려 넘어졌다 · 끝나면 다시 건다(endCombo — iaiRopes) · 손목 원뿔은 그대로
     f.iaiRopes = { grip: false, shoulder: true };
     for (const j of f.shoulderRopes) f.world.removeImpulseJoint(j, true);

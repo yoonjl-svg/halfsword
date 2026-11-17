@@ -56,7 +56,7 @@ const weaponBit = (t) => (t === 0 ? 4 : 16);
 // 발은 따로: 상대 발·다리와는 부딪히지 않는다 (서로 발을 밟고 마찰로 엉겨 붙는 것을 막는다)
 const footBit = (t) => (t === 0 ? 64 : 128);
 const groups = (member, filter) => (member << 16) | filter;
-// 자기 몸 충돌 (BODY.humanLimits 일 때만): 제 몸통·허벅지, 제 칼팔 — 자리(index)마다 따로 (제 칼이 같은 편 몸통에 걸리지 않게).
+// 자기 몸 충돌: 제 몸통·허벅지, 제 칼팔 — 자리(index)마다 따로 (제 칼이 같은 편 몸통에 걸리지 않게).
 //  자리 0 · 1 은 예전 비트 그대로, 2 · 3 은 남은 네 비트. 그 밖: 땅 1 · 날아간 투구 32(땅하고만) — 16 비트를 다 쓴다
 const TORSO_BITS = [256, 512, 4096, 8192];
 const ARMS_BITS = [1024, 2048, 16384, 32768];
@@ -159,16 +159,8 @@ function jointDefs(s) {
   ];
 }
 
-// BODY.legTorque 'human': 엉덩이·무릎 근육 상한(j.max)만 사람 최대 힘으로 (k·d·각도 제한·발목은 그대로, 새 한도 없음)
-function humanLegTorque(jdefs) {
-  for (const jd of jdefs) {
-    if (jd.c === 'thighF' || jd.c === 'thighB') jd.max = BODY.legHipHuman;
-    else if (jd.c === 'shinF' || jd.c === 'shinB') jd.max = BODY.legKneeHuman;
-  }
-}
-
 // ─────────────────────────────────────────────────────────────
-//  사람 관절 범위 (BODY.humanLimits, 사장님 9/30 23:40 "관절 한도·자기 몸 충돌 켬"). 튜닝 값이 아니라 물리 범위다
+//  사람 관절 범위 (사장님 9/30 23:40 "관절 한도·자기 몸 충돌 켬"). 튜닝 값이 아니라 물리 범위다
 //  — 확인표 '사장님 확인 전 (해부학 범위)'. 출처: docs/motion/human_envelope_2026-09-30.md 표 1 (tools/motion/human_envelope.json
 //  literature·bySize.large), 아래팔 돌림만 봉투에 칸이 없어 문헌: AAOS, "Joint Motion: Method of Measuring and Recording" (1965) —
 //  엎침 80°·뒤침 80° (Norkin & White, "Measurement of Joint Motion" 도 같은 값).
@@ -192,7 +184,7 @@ export const HUMAN = {
   wristThumb: 135, // 손 면 안 엄지 쪽 끝 ° (칼이 아래팔 줄에서 엄지 쪽으로 — 봉투 손목 칸 '135 ~ 160 부터 무리'의 아래 끝 · 어깨 메기). JOINTS.wristGuard 만 읽는다 [사장님 확인 전]
 };
 /**
- * BODY.humanLimits 일 때 관절 표를 사람 범위로 (몸이 만들어질 때 한 번). false 면 부르지 않는다 → 오늘 그대로
+ * 관절 표를 사람 범위로 (몸이 만들어질 때 한 번)
  *  - 척추 비틀림(축 한도 y): HUMAN.spineTwist ±45° 를 오늘 복부 0.5 : 가슴 0.6 비율로 나눈다. 엔진 y 가 + 면 칼 든 어깨가 앞으로 → 봉투 + (뒤로) 는 엔진 −
  *  - 칼 팔꿈치(경첩): 0~150°
  *  - 칼 어깨 면은 밧줄 (Fighter.shoulderOn), 손목 원뿔은 밧줄 (Fighter.gripConeOn)
@@ -775,15 +767,13 @@ export class Fighter {
     const otherFoot = FFA ? FFA_FOOT : footBit(1 - T); // ffa: 발은 한 비트 — 제 발은 제 칼 거름(발 쪽 거름에 제 칼이 없음)으로 걸러진다
     const bodyGroups = groups(myBody, BIT.ground | otherBody | otherWeapon);
     const footGroups = groups(myFoot, BIT.ground | otherWeapon);
-    let weaponGroups = groups(myWeapon, BIT.ground | otherBody | otherWeapon | otherFoot);
-    // 자기 몸 충돌 (BODY.humanLimits): 제 칼·칼팔(위팔·아래팔) ↔ 제 몸통(골반·배·가슴)·허벅지. 그 밖의 제 몸끼리는 그대로 지나간다.
+    // 자기 몸 충돌: 제 칼·칼팔(위팔·아래팔) ↔ 제 몸통(골반·배·가슴)·허벅지. 그 밖의 제 몸끼리는 그대로 지나간다.
     //  제 몸 닿음은 combat.js 가 같은 싸움꾼 쌍을 버려 상처·부딪힘·불꽃·소리·멈칫이 되지 않는다(pairOf·접촉힘 사건)
-    const HL = BODY.humanLimits;
     const myTorso = FFA ? FFA_TORSO : torsoBit(this.index); // ffa: 몸통 · 칼팔은 한 비트 — 남의 몸통 · 칼팔은 몸 비트로 어차피 부딪히고, 제 것끼리만 아래 규칙
     const myArmS = FFA ? FFA_ARMS : armSBit(this.index);
     const torsoGroups = groups(myBody | myTorso, BIT.ground | otherBody | otherWeapon | myWeapon | myArmS);
     const armSGroups = groups(myBody | myArmS, BIT.ground | otherBody | otherWeapon | myTorso);
-    if (HL) weaponGroups = groups(myWeapon, BIT.ground | otherBody | otherWeapon | otherFoot | myTorso);
+    const weaponGroups = groups(myWeapon, BIT.ground | otherBody | otherWeapon | otherFoot | myTorso);
     // 이 몸의 비트 (읽기만 — mordschlag.js 넘어 들어감 · revive.js 유령이 '남의 칼' 비트를 여기서 읽는다 · ffa 는 나 빼고 모두)
     this.bits = Object.freeze({ body: myBody, weapon: myWeapon, foot: myFoot, torso: myTorso, armS: myArmS, foeBody: otherBody, foeWeapon: otherWeapon, foeFoot: otherFoot });
 
@@ -808,7 +798,7 @@ export class Fighter {
         .setMass(d.mass)
         // 옷·살끼리는 잘 미끄러진다 (마찰이 크면 팔이 상대 몸에 걸려 같이 끌려간다)
         .setFriction(d.foot ? 0.9 : 0.25)
-        .setCollisionGroups(d.foot ? footGroups : HL && TORSO_PARTS.has(d.name) ? torsoGroups : HL && (d.name === 'uarmS' || d.name === 'farmS') ? armSGroups : bodyGroups);
+        .setCollisionGroups(d.foot ? footGroups : TORSO_PARTS.has(d.name) ? torsoGroups : (d.name === 'uarmS' || d.name === 'farmS') ? armSGroups : bodyGroups);
       const col = world.createCollider(cd, rb);
       if (d.name === 'abdomen') {
         // 배는 가볍고(10kg) 무거운 골반과 상체(30kg) 사이에 끼어 있어서, 엔진의 반복 계산(6회)으로는
@@ -858,9 +848,8 @@ export class Fighter {
 
     // 관절 생성 + 근육(관절 모터) + 각도 제한
     const jdefs = jointDefs(this.side);
-    if (BODY.weightMode === 'hybrid') hybridJointDefs(jdefs);
-    if (BODY.legTorque === 'human') humanLegTorque(jdefs);
-    if (HL) humanJointDefs(jdefs, this.side);
+    hybridJointDefs(jdefs);
+    humanJointDefs(jdefs, this.side);
     anatJointDefs(jdefs); // 관절 가동 범위 교정 ⓐ (JOINTS, 끔이면 그대로)
     for (const jd of jdefs) {
       const P = new THREE.Vector3(...jd.at);
@@ -894,10 +883,8 @@ export class Fighter {
     }
     this.jointByName = Object.fromEntries(this.joints.map((j) => [j.name, j]));
     // 자기 몸 충돌: 어깨에서 이어진 가슴 ↔ 위팔은 원래 겹쳐 있어 닿음을 끈다 (관절로 이어진 쌍)
-    if (HL) {
-      this.jointByName.uarmS.joint.setContactsEnabled(false);
-      this.shoulderOn();
-    }
+    this.jointByName.uarmS.joint.setContactsEnabled(false);
+    this.shoulderOn();
 
     // ── 똑바로 서기: 보이지 않는 "기준 막대"(운동학 물체)에 골반을 회전 모터로 묶는다 ──
     //  위치는 자유(골반을 끌고 다니지 않음), 회전만 모터로 맞춘다. 엔진이 한꺼번에 풀어서 떨리지 않는다.
@@ -912,11 +899,7 @@ export class Fighter {
       true,
     );
     // 축 번호(측정 10/7, 디렉터 작업 공간 a021/axis_map_test): generic(축 (1,0,0)) 관절은 raw 3 = 닻 x, raw 4 = 닻 z(앞뒤 숙임), raw 5 = 닻 y(연직 = yaw). spherical(3·4·5 = x·y·z)과 다르다.
-    //  R2′ K1 (확인표 123, legs): yaw 축(raw 5 = MOTOR_AXES[2]) 모터는 **설정하지 않는다** — 0·0 설정은 자유가 아니라 경성 속도 잠금(한 관절 시험 10/7). 모터 bit 가 안 켜진 축만 자유다.
-    for (const ax of MOTOR_AXES) {
-      if (BODY.chain === 'legs' && ax === MOTOR_AXES[2]) continue;
-      this.uprightJoint.rawSet.jointConfigureMotorModel(this.uprightJoint.handle, ax, 1); // 1 = 힘(N·m) 기준
-    }
+    for (const ax of MOTOR_AXES) this.uprightJoint.rawSet.jointConfigureMotorModel(this.uprightJoint.handle, ax, 1); // 1 = 힘(N·m) 기준
 
 
     // ── 무기: 데이터 중심 무기고(weapons.js)에서 무기 하나를 골라 만든다 ──
@@ -1054,7 +1037,7 @@ export class Fighter {
       sword,
       true,
     );
-    if (HL) this.gripConeOn();
+    this.gripConeOn();
     this.swordGroup = group;
     // 휘는 마디 무기(spec.flexible — 드루이드의 채찍): 덩굴 콜라이더를 마디 강체 8 개로 옮겨 단다(druid_whip.js). 칼 몸체에는 손잡이만 남는다 —
     //  기력 셈의 무기 질량은 옮기기 전 전체(0.77 kg), 아래 타격용 swordProps · 관성은 남은 손잡이 몸체 그대로(마디를 친 몫은 마디 자기 질량 — combat.js)
@@ -1089,8 +1072,8 @@ export class Fighter {
     this.hitPointPrev = null;
     this.hitPointVel = new THREE.Vector3();
 
-    // 다리가 체중을 싣는 걸음 (BODY.weightMode 'hybrid'). 'levitate'면 없음 → 예전 방식 그대로
-    this.gait = BODY.weightMode === 'hybrid' ? new Gait(this) : null;
+    // 다리가 체중을 싣는 걸음 (gait.js)
+    this.gait = new Gait(this);
 
     this.applyPose(0);
   }
@@ -1304,7 +1287,7 @@ export class Fighter {
    * 보정 v2 순서 결합 (fix2 A): 패드 (x, y) 가 명령하는 손 목표 T (padHand, x 는 closeReach 로 자름 — driveSword 와 같음) 에 대해, 가슴 yaw 가
    *  psi0 (v2 가지의 총 가슴 명령 = 몸 돌림 −x·BODY_TURN) 일 때 칼 어깨가 T 에 닿지 못하면 그 넘침 각 δ (rad, 몸 틀 yaw 와 같은 부호)를 돌려준다. 0 = 닿음.
    *  가슴 yaw ψ 에서 armIK 는 T 를 가슴 틀 Ry(−ψ)·T 로 보고 어깨 S(ARM.shoulder) 에서 푼다 → 위팔 u 는 armIK 식 그대로 (armU, 같은 IK_POLE·IK_DMIN·IK_MARGIN).
-   *   (1) 들림 면 (밧줄이 있을 때 = BODY.humanLimits): 밧줄 두 개가 거는 반공간 u·n ≥ 0 (n = 면 끝 − 90 · 시작 + 90 쪽 수평, shoulderOn 과 같은 식).
+   *   (1) 들림 면 (밧줄): 밧줄 두 개가 거는 반공간 u·n ≥ 0 (n = 면 끝 − 90 · 시작 + 90 쪽 수평, shoulderOn 과 같은 식).
    *       끝(몸 앞 가로지름) 쪽을 넘으면 칼 든 어깨를 앞으로(+side), 시작 쪽을 넘으면 뒤로(−side) 튼다
    *   (2) 팔 길이 (옆으로만): 어깨–T 수평 거리가 그 높이의 수평 팔 길이 √(L² − Dy²) (L = ARM.upper + ARM.fore, |Dy| ≥ L 이면 0) 를 넘으면 T 쪽으로
    *  δ = 조건이 막 풀리는 가장 작은 각: 괄호 [0, δₑ] 를 TURN_BISECT 번 이분. δₑ = 그 방향으로 돌 때 조건이 가장 덜 걸리는 각 (기하 괄호, 자르기 아님):
@@ -1315,10 +1298,6 @@ export class Fighter {
    *  δₑ 에서도 안 풀리면(트는 것으로 다 닿지 못함) δₑ 를 돌려준다: 가장 덜 넘치는 데까지 튼다 (0 으로 끄면 풀리는 이웃 패드와 수십 도 뜀).
    *  두 조건이 다 걸리면 큰 쪽. 크기·빠르기는 부르는 쪽 follow(SKILL_BODY 빠르기·holdSpeed 몫)·관절·근육이 정한다
    */
-  /** R2′ 팔 단계 묶음이 이 검객에게 걸리나 (BODY.r2pScope: 'player' = 사람 몸(human — 안 주면 자리 0)만, 'all' = 모두) */
-  r2pOn() {
-    return BODY.r2pScope === 'all' || this.human;
-  }
 
   corrTrunkTurn(x, y, s, psi0) {
     const T = this.padHand(x, y, s, _ct1);
@@ -1458,7 +1437,7 @@ export class Fighter {
     const spd = SKILL_BODY.holdSpeed + (1 - SKILL_BODY.holdSpeed) * act;
     const s = sk.level;
     let arc = 0; // 몸의 호 몫(rad): 순서 결합 ex 가 보는 turn 에는 넣지 않는다 — ex 는 '손이 닿는 데 필요한 만큼' 으로 되돌리는 보정이라 호를 상쇄한다(10/8 03:55 dbg)
-    if ((BODY.trunkArc > 0 || BODY.trunkFollow > 0) && this.r2pOn()) {
+    if (BODY.trunkArc > 0 || BODY.trunkFollow > 0) {
       // 획 방향 = 손 목표 속도의 가로 성분(부드러운 부호: |vx| 0.5 m/s 에서 ±1, 세로 획은 0 근처). 가로로 움직이는 동안만 갱신 — 손가락이 끝 자리에 서면(follow-through 가 필요한 바로 그때) 마지막 방향을 지킨다
       const vx = sk.vel.x;
       if (sk.swinging && Math.abs(vx) > 0.3) this.swingDir = THREE.MathUtils.clamp(vx / 0.5, -1, 1);
@@ -1537,7 +1516,7 @@ export class Fighter {
         piT += (G.pitch * gw - piT) * wi;
         dT += ((G.drop - 0.06) * gw - dT) * wi;
       }
-      const arcSpd = BODY.trunkArc > 0 && this.r2pOn() ? 1 + (BODY.trunkArcSpeed - 1) * act : 1; // WA2 보조(trunkArcSpeed): 휘두르는 동안만 몸이 더 빨리 따라간다 (기본 1 = 오늘)
+      const arcSpd = BODY.trunkArc > 0 ? 1 + (BODY.trunkArcSpeed - 1) * act : 1; // WA2 보조(trunkArcSpeed): 휘두르는 동안만 몸이 더 빨리 따라간다 (기본 1 = 오늘)
       follow('pelvisYaw', pT, SKILL_BODY.pelvis * spd * arcSpd);
       follow('chestYaw', cT, SKILL_BODY.chest * spd * arcSpd);
       follow('pitch', piT, SKILL_BODY.chest * spd);
@@ -1547,7 +1526,7 @@ export class Fighter {
       //  WA4(10/8): 옛 보정 가지(AI)에도 몸의 호·follow-through(arc)를 더한다 — arc 가 0 이면 식 그대로(바이트 동일)
       const pT0 = -G.pelvisYaw * 0.5 * gw * amp;
       const cT0 = -G.chestYaw * gw * amp;
-      const arcSpd0 = BODY.trunkArc > 0 && this.r2pOn() ? 1 + (BODY.trunkArcSpeed - 1) * act : 1;
+      const arcSpd0 = BODY.trunkArc > 0 ? 1 + (BODY.trunkArcSpeed - 1) * act : 1;
       const arcO = arc !== 0 ? arc * (1 - sk.thrustPose.w) : 0; // 찌르기 자세 동안은 v2 가지처럼 호를 줄인다 (검토 2-7)
       follow('pelvisYaw', arcO !== 0 ? pT0 + PELVIS_SHARE * arcO : pT0, SKILL_BODY.pelvis * spd * arcSpd0);
       follow('chestYaw', arcO !== 0 ? cT0 + arcO : cT0, SKILL_BODY.chest * spd * arcSpd0);
@@ -1813,7 +1792,6 @@ export class Fighter {
     if (jm().soft) this.anatSoft(); // 관절 가동 범위 교정 ⓑ 범위 끝 되돌림 (JOINTS, 끔이면 부르지 않는다)
     this.flexWeapon?.step(dt); // 휘는 마디 무기의 굽힘 복원 (druid_whip.js — 없으면 아무 일 없음)
     this.trackBlade(dt);
-    if (this.chainDbg) this.chainProbe(dt); // 탐색판 HUD 측정만 (public/r2p/?chain=…)
 
     for (const [k, t] of this.hitCooldowns) {
       if (t - dt <= 0) this.hitCooldowns.delete(k);
@@ -1885,11 +1863,11 @@ export class Fighter {
   }
 
   /**
-   * 뒷다리(무릎 꿇은 다리 B)의 무릎 꿇은 정도. BODY.getupLead(10/8, 확인표 194) 면 앞다리(딛은 다리 F)가 먼저 펴고, 뒷다리는 riseTime 의 getupLag 몫만큼 접힌 채
-   * 기다렸다가 남은 시간에 편다 — 사람이 한쪽 무릎에서 일어설 때 앞발로 밀어 서고 뒷발은 뒤따라 딛는 차례. 0(오늘)이면 kneelAmount 와 같은 값(두 다리가 한 비율로 함께 펴짐).
+   * 뒷다리(무릎 꿇은 다리 B)의 무릎 꿇은 정도 (10/8, 확인표 194): 앞다리(딛은 다리 F)가 먼저 펴고, 뒷다리는 riseTime 의 getupLag 몫만큼 접힌 채
+   * 기다렸다가 남은 시간에 편다 — 사람이 한쪽 무릎에서 일어설 때 앞발로 밀어 서고 뒷발은 뒤따라 딛는 차례.
    */
   get kneelAmountB() {
-    if (!(BODY.getupLead > 0) || this.state !== 'getup' || this.stateTime < this.kneelTime) return this.kneelAmount;
+    if (this.state !== 'getup' || this.stateTime < this.kneelTime) return this.kneelAmount;
     const lag = THREE.MathUtils.clamp(BODY.getupLag, 0, 0.95);
     const u = (this.stateTime - this.kneelTime) / this.riseTime;
     return THREE.MathUtils.clamp(1 - (u - lag) / (1 - lag), 0, 1);
@@ -2139,9 +2117,8 @@ export class Fighter {
   /** 관절 정의 다시 셈(생성자와 같은 변형 순서) — 수동 관절 재생성에 쓴다 */
   jointDefFor(childName) {
     const jdefs = jointDefs(this.side);
-    if (BODY.weightMode === 'hybrid') hybridJointDefs(jdefs);
-    if (BODY.legTorque === 'human') humanLegTorque(jdefs);
-    if (BODY.humanLimits) humanJointDefs(jdefs, this.side);
+    hybridJointDefs(jdefs);
+    humanJointDefs(jdefs, this.side);
     anatJointDefs(jdefs);
     return jdefs.find((jd) => jd.c === childName) || null;
   }
@@ -2420,7 +2397,7 @@ export class Fighter {
     }
     if (!IB_LINK.trade || !this.ibTradeWin() || this.ibTradeUsed || this.swordArt?.tradition !== 'iberian' || kitOff(this, 'ibTrade')) return false; // AI 도 같은 규칙 (11/14 사장님 'ai에게도 똑같이' — AI 는 칸 없이 늘 가짐: kitOff 는 skillKit 이 없으면 false)
     const S = this.stamina, cost = STAMINA.cutCost * (S.weight ?? 1);
-    if (STAMINA.on && !S.infinite && S.value < cost) return false;
+    if (!S.infinite && S.value < cost) return false;
     S.spend('attack', cost);
     this.ibTradeUsed = true;
     this.ibTradeHit = { from: att, attackId: att?.stamina?.attackId ?? 0, sev: r.type === 'blunt' ? 0 : r.severity ?? 0, t: this.ibFlowT ?? 0 };
@@ -2637,7 +2614,7 @@ export class Fighter {
   }
 
   /**
-   * 손목 원뿔 (BODY.humanLimits, 설계 P1 = ② 의 전제). 엔진 공 관절 축 한도는 기준(0)이 '칼이 아래팔에 수직'이라 원뿔을 못 그린다
+   * 손목 원뿔 (사람 관절 범위, 설계 P1 = ② 의 전제). 엔진 공 관절 축 한도는 기준(0)이 '칼이 아래팔에 수직'이라 원뿔을 못 그린다
    *  → 밧줄(rope, 두 점 사이 최대 거리)로 각을 정확히 막는다 (위 머리말: W 에서 u 로 L 인 점 ↔ n 으로 K 인 점, 거리 ≤ √(L²+K²−2LK·cosα) ⟺ 각 ≤ α):
    *   (1) 아래팔-칼 각 ≤ HUMAN.gripFlex: 아래팔 축 W + K·x(아래팔) ↔ 칼 축 W + L·y(칼)
    *   (2) 아래팔 돌림 ≤ HUMAN.forearmRoll: 경첩 축 W + K·z(아래팔) ↔ 칼 면 W + L·z(칼). 쥔 자세에서 칼 면 = 팔꿈치 경첩 축이라
@@ -3123,16 +3100,7 @@ export class Fighter {
     const al = this.accelLean.length();
     // 자세에 따라 골반을 튼다 (서 있을 때만)
     let anchorQ = this.yaw;
-    if (BODY.chain === 'legs') {
-      // R2′ K1 (확인표 123): 닻은 **실제** 골반 yaw(측정값)를 따라 pitch·roll 기준 틀 노릇만 한다 — yaw 토크 0 (yaw 축 raw 5 모터 미설정).
-      //  의도 ψ* = heading + pelvisYawOffset(오늘 닻 목표식 그대로, 새 식 없음)와의 차 Δψ 는 딛은 다리의 엉덩이 근육 몫 (gait.poseLegs, 124)
-      const fp = _cv1.set(1, 0, 0).applyQuaternion(rot(pelvis, _cq1));
-      if (Math.hypot(fp.x, fp.z) > 0.3) this.chainPsi = Math.atan2(-fp.z, fp.x);
-      else if (this.chainPsi == null) this.chainPsi = this.heading;
-      const psiStar = this.state === 'stand' && this.pelvisYawOffset ? this.heading + this.pelvisYawOffset : this.heading;
-      this.chainDpsi = Math.atan2(Math.sin(psiStar - this.chainPsi), Math.cos(psiStar - this.chainPsi));
-      anchorQ = _qt.setFromAxisAngle(UP, this.chainPsi);
-    } else if (this.state === 'stand' && this.pelvisYawOffset) anchorQ = _qt.setFromAxisAngle(UP, this.heading + this.pelvisYawOffset);
+    if (this.state === 'stand' && this.pelvisYawOffset) anchorQ = _qt.setFromAxisAngle(UP, this.heading + this.pelvisYawOffset);
     if (al > 1) {
       const ang = Math.atan(al / (M * g)) * BODY.accelLean;
       _axis2.set(this.accelLean.z / al, 0, -this.accelLean.x / al);
@@ -3144,10 +3112,6 @@ export class Fighter {
     const assist = BODY.uprightAssist * mus * hold * (0.3 + 0.7 * Math.min(1, loadSum));
     const raw = this.uprightJoint.rawSet;
     for (const ax of MOTOR_AXES) {
-      // R2′ K1 (123, legs): yaw 축 raw 5(MOTOR_AXES[2]) 는 생성 때부터 모터 미설정 → 여기서도 부르지 않는다(0·0 을 넣으면 그 축이 잠긴다 — 10/7 한 관절 시험).
-      //  약한 닻·상한 둔 닻 없음(질량 무한 몸체의 토크는 반작용이 땅으로 안 간다). 감쇠 330 도 함께 사라진다. 옆·앞뒤 기울기(raw 3·4)는 오늘 그대로.
-      //  10/2~10/6 의 W1b 는 raw 4(= 닻 z, 앞뒤 숙임)를 0·0 으로 잠그고 yaw 는 2500·330 그대로 둔 잘못된 구현이었다 — 그때의 W2 수치는 K1 측정이 아니다.
-      if (BODY.chain === 'legs' && ax === MOTOR_AXES[2]) continue;
       const r = this.uprightRelax(ax); // 휘두르거나 부딪히는 동안 덜 붙잡기 (실험, 기본 1)
       let kk = BODY.uprightStiffness * assist * r, dd = BODY.uprightDamping * assist * r;
       if (ax === MOTOR_AXES[2] && BODY.anchorYawMax > 0 && this.state === 'stand') {
@@ -3170,21 +3134,6 @@ export class Fighter {
         if (sc < 1) this.anchorYawSat = (this.anchorYawSat || 0) + 1;
       }
       raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, kk, dd);
-    }
-    if (this.chainDbg) {
-      // 탐색판 HUD(측정만): 선언한 걷기 밀기 힘(골반 (1−up)·가슴 up)과 닻 yaw 토크 재계산(k·e + d·ω; legs 는 yaw 모터 미설정이라 0)
-      const D = this.chainDbg;
-      D.pushX = fx;
-      D.pushZ = fz;
-      if (BODY.chain === 'legs') D.anchorTau = 0;
-      else {
-        const ap = _cv1.set(1, 0, 0).applyQuaternion(rot(pelvis, _cq1));
-        const psi = Math.hypot(ap.x, ap.z) > 0.3 ? Math.atan2(-ap.z, ap.x) : this.heading;
-        const psiStar = this.state === 'stand' && this.pelvisYawOffset ? this.heading + this.pelvisYawOffset : this.heading;
-        const e = Math.atan2(Math.sin(psiStar - psi), Math.cos(psiStar - psi));
-        const r = this.uprightRelax(MOTOR_AXES[2]); // yaw 축 = raw 5 (uprightRelax 의 정의와 같음)
-        D.anchorTau = BODY.uprightStiffness * assist * r * e - BODY.uprightDamping * assist * r * pelvis.angvel().y;
-      }
     }
     // 걷는 방향으로 상체를 살짝 숙인다 (골반-가슴 관절 목표)
     this.lean = this.state === 'stand' ? THREE.MathUtils.clamp(-vFwd * 0.05, -0.12, 0.12) : 0;
@@ -3352,7 +3301,7 @@ export class Fighter {
     this.stanceDrop += (drop - this.stanceDrop) * Math.min(1, dt * 20);
     // 무릎 꿇기 자세 (앞다리는 세워 발을 딛고, 뒷다리는 무릎을 땅에)
     const kn = this.kneelAmount;
-    const knB = this.kneelAmountB; // 뒷다리 차례(BODY.getupLead): 0 이면 kn 과 같은 값이라 오늘과 같은 섞기
+    const knB = this.kneelAmountB; // 뒷다리 차례
     if (kn > 0 || knB > 0) {
       const K = (name, a, w) => J[name].target.slerp(_qk.setFromAxisAngle(Z_AXIS, a), w);
       K('thighF', 1.25, kn);
@@ -3452,156 +3401,20 @@ export class Fighter {
           const wc = j.child.angvel();
           const wp = j.parent.angvel();
           const wRel = (wc.x - wp.x) * ax.x + (wc.y - wp.y) * ax.y + (wc.z - wp.z) * ax.z;
-          mErr *= hill(Math.sign(_rv.z - _cur.z || 1) * wRel, this.weaponCfg.elbowVmax * (this.stamina.exhausted || (STAMINA.attackTempo && !this.stamina.guarding && !STAMINA.tempoCaps) ? 1 : this.stamina.motorSpeed));
+          mErr *= hill(Math.sign(_rv.z - _cur.z || 1) * wRel, this.weaponCfg.elbowVmax * (this.stamina.exhausted ? 1 : this.stamina.motorSpeed));
         }
         const tz = _cur.z + THREE.MathUtils.clamp(_rv.z - _cur.z, -mErr, mErr);
         const vz = placed && ARM_JOINT.has(n) ? 0 : THREE.MathUtils.clamp((_rv.z - prev.z) * inv, -15, 15);
         raw.jointConfigureMotor(j.joint.handle, HINGE_AXIS, tz, vz, k, d);
       } else {
-        const chainY = BODY.chain === 'legs' && (n === 'thighF' || n === 'thighB' || n === 'abdomen' || n === 'chest'); // R2′ 비틀기 y 축 (124·125)
         for (const [i, ax] of [[0, 'x'], [1, 'y'], [2, 'z']]) {
           const t = _cur[ax] + THREE.MathUtils.clamp(_rv[ax] - _cur[ax], -maxErr, maxErr);
-          if (chainY && i === 1) {
-            this.chainAxisY(j, raw, t - _cur.y, t, k, d, mus);
-            continue;
-          }
           const v = placed && ARM_JOINT.has(n) ? 0 : THREE.MathUtils.clamp((_rv[ax] - prev[ax]) * inv, -15, 15);
           raw.jointConfigureMotor(j.joint.handle, MOTOR_AXES[i], t, v, k, d);
         }
       }
       prev.copy(_rv);
     }
-  }
-
-  /**
-   * R2′ 'legs' 비틀기 y 축 구동 (명세 §2.2·§2.3, 심사 조건: 명시 토크 쌍 금지 → 엔진 암시 모터 + 포화 축소 σ).
-   *  엉덩이(thigh, 124): 속도 목표 0, τ_pd = k·e − d·ω_rel,y, τ_cap = 기존 j.max × mus(새 수 없음), σ = min(1, τ_cap/|τ_pd|) → k·d 를 함께 σ 배.
-   *  척추(abdomen·chest, 125): 같은 σ 길, 속도 목표 0(수동 감쇠), d_y = ζ·2·√(k_관절·I_윗몸) (ζ = BODY.chainSpineZeta, I 는 명세 부록 A 어림).
-   *  e = 끌어 붙인 목표 − 현재(maxErr 자르기 뒤, 스프링 몫은 오늘처럼 j.max 안), ω_rel = (자식 − 부모) 각속도를 관절 기준 틀로.
-   *  감쇠항까지 상한 안에 들어오고, 암시 해라 허벅지 비틀기 관성 0.02 kg·m² 에서도 안정하다. x·z 축은 오늘 그대로.
-   */
-  chainAxisY(j, raw, e, t, k, d, mus) {
-    const n = j.name;
-    let dy = d;
-    if (n === 'abdomen' || n === 'chest') dy = BODY.chainSpineZeta * 2 * Math.sqrt(j.k * CHAIN_SPINE_I[n]) * Math.sqrt(Math.max(0.05, mus)) * (j.gain || 1);
-    const wc = j.child.angvel();
-    const wp = j.parent.angvel();
-    // 상대 각속도를 부모 틀(부모⁻¹) → 관절 기준 틀(restInv)로
-    const w = _cw.set(wc.x - wp.x, wc.y - wp.y, wc.z - wp.z).applyQuaternion(rot(j.parent, _cq1).invert()).applyQuaternion(j.restInv);
-    const tau = k * e - dy * w.y;
-    const cap = j.max * mus;
-    const sigma = Math.min(1, cap / Math.max(1e-9, Math.abs(tau)));
-    j.chainSigma = sigma;
-    j.chainTau = tau * sigma; // 낼 토크 추정(스텝 전 값, 장부의 τ̂ 는 W1a 가 교차 검산)
-    raw.jointConfigureMotor(j.joint.handle, MOTOR_AXES[1], t, 0, k * sigma, dy * sigma);
-  }
-
-  /**
-   * 탐색판 HUD 전용 측정(시뮬·본판에서는 chainDbg 가 없어 돌지 않는다). 물리를 바꾸지 않는다.
-   *  수직축 각운동량 L_y(모든 강체 + 칼, 무게중심 기준)·dL/dt, 선언한 힘의 yaw 토크(발 핀 힘·핀 yaw 토크·걷기 밀기)와의 차 r_y(잔차, 엔진 접촉 마찰과 닻 yaw 토크가 남는다 —
-   *  W1a 장부 chain_ledger 의 식을 줄인 것: 접촉 임펄스 ×6/7×r 은 여기서 안 센다), 골반·가슴 yaw 각속도, 엉덩이 σ 포화율, 발 핀 미끄러짐 수.
-   */
-  chainProbe(dt) {
-    const D = this.chainDbg;
-    const list = this.meshes;
-    let M = 0;
-    let cx = 0;
-    let cz = 0;
-    let vx = 0;
-    let vz = 0;
-    const acc = (rb) => {
-      const m = rb.mass();
-      const c = rb.worldCom();
-      const v = rb.linvel();
-      M += m;
-      cx += m * c.x;
-      cz += m * c.z;
-      vx += m * v.x;
-      vz += m * v.z;
-    };
-    for (const { rb } of list) acc(rb);
-    if (this.armed) acc(this.sword);
-    if (M <= 0) return;
-    cx /= M;
-    cz /= M;
-    vx /= M;
-    vz /= M;
-    let L = 0;
-    const addL = (rb) => {
-      const m = rb.mass();
-      const c = rb.worldCom();
-      const v = rb.linvel();
-      L += m * ((c.z - cz) * (v.x - vx) - (c.x - cx) * (v.z - vz));
-      const I = rb.principalInertia();
-      const fr = rb.principalInertiaLocalFrame();
-      rot(rb, _cq1).multiply(_cq2.set(fr.x, fr.y, fr.z, fr.w)); // 월드 ← 주축 틀
-      const wv = rb.angvel();
-      _cv1.set(wv.x, wv.y, wv.z).applyQuaternion(_cq3.copy(_cq1).invert());
-      _cv1.set(_cv1.x * I.x, _cv1.y * I.y, _cv1.z * I.z).applyQuaternion(_cq1);
-      L += _cv1.y;
-    };
-    for (const { rb } of list) addL(rb);
-    if (this.armed) addL(this.sword);
-    const dLdt = D.L == null || !(dt > 0) ? 0 : (L - D.L) / dt;
-    D.L = L;
-    // 선언한 외부 힘의 yaw 토크 (무게중심 기준): 발 핀 힘 + 핀 yaw 토크 + 걷기 밀기(골반 (1−up)·가슴 up)
-    let tau = 0;
-    const g = this.gait;
-    if (g?.active) {
-      for (const k of ['F', 'B']) {
-        const l = g.legs[k];
-        if (!l.chainPinOn) continue;
-        tau += (l.chainPinZ - cz) * l.chainPinFx - (l.chainPinX - cx) * l.chainPinFz + l.chainPinTy;
-      }
-    }
-    const pushX = D.pushX || 0;
-    const pushZ = D.pushZ || 0;
-    if (pushX || pushZ) {
-      const up = BODY.upperShare;
-      const pc = this.bodies.pelvis.translation();
-      const cc = this.bodies.chest.translation();
-      tau += (pc.z - cz) * pushX * (1 - up) - (pc.x - cx) * pushZ * (1 - up) + (cc.z - cz) * pushX * up - (cc.x - cx) * pushZ * up;
-    }
-    const r = dLdt - tau;
-    // 창(약 0.5 s) 통계: 잔차 rms, σ<1 스텝 몫, 골반·가슴 yaw 각속도 최고(1 s 감쇠 유지)
-    const N = 60;
-    D.rr = D.rr || new Float64Array(N);
-    D.sat = D.sat || new Uint8Array(N);
-    D.i = ((D.i || 0) + 1) % N;
-    D.rr[D.i] = r * r;
-    const JF = this.jointByName.thighF;
-    const JB = this.jointByName.thighB;
-    const sF = JF.chainSigma ?? 1;
-    const sB = JB.chainSigma ?? 1;
-    D.sat[D.i] = sF < 1 || sB < 1 ? 1 : 0;
-    let rs = 0;
-    let sc = 0;
-    for (let i = 0; i < N; i++) {
-      rs += D.rr[i];
-      sc += D.sat[i];
-    }
-    D.rRms = Math.sqrt(rs / N);
-    D.satRate = sc / N;
-    D.sigma = Math.min(sF, sB);
-    D.hipTau = Math.max(Math.abs(JF.chainTau || 0), Math.abs(JB.chainTau || 0));
-    const wp = Math.abs(this.bodies.pelvis.angvel().y) * 57.2958;
-    const wc = Math.abs(this.bodies.chest.angvel().y) * 57.2958;
-    D.pelvisW = wp;
-    D.chestW = wc;
-    const decay = Math.exp(-dt / 1.0);
-    D.pelvisWmax = Math.max(wp, (D.pelvisWmax || 0) * decay);
-    D.chestWmax = Math.max(wc, (D.chestWmax || 0) * decay);
-    D.dpsi = this.chainDpsi || 0;
-    D.spineTwist = 0;
-    for (const nm of ['abdomen', 'chest']) {
-      const j = this.jointByName[nm];
-      rot(j.parent, _cq1).invert();
-      rot(j.child, _cq2);
-      toRotVec(_cq3.copy(j.restInv).multiply(_cq1.multiply(_cq2)), _cv1);
-      D.spineTwist += _cv1.y;
-    }
-    D.slips = g?.active ? (g.legs.F.chainSlips || 0) + (g.legs.B.chainSlips || 0) : 0;
-    D.steps = (D.steps || 0) + 1;
   }
 
   /**
@@ -3668,17 +3481,17 @@ export class Fighter {
     const wErr = _mW.sub(wT);
     _mT.addScaledVector(wErr.addScaledVector(boneAxis, -wErr.dot(boneAxis)), -d);
     // 중력 보상: 팔과 칼의 무게를 미리 알고 버틴다 (사람도 무게를 예상하고 힘을 준다 → 처지지 않는다)
-    const mus = k / j.k / (this.armBoost ?? 1) / (STAMINA.attackTempo && !this.stamina.guarding && STAMINA.tempoGravity ? this.stamina.power : 1); // 10/13: 찍기 근육 배율(armBoost)은 무게를 더 버티는 데 쓰지 않는다 (1 이면 같은 float)
+    const mus = k / j.k / (this.armBoost ?? 1) / (!this.stamina.guarding ? this.stamina.power : 1); // 10/13: 찍기 근육 배율(armBoost)은 무게를 더 버티는 데 쓰지 않는다 (1 이면 같은 float)
     this.gravityTorque([this.bodies.uarmS, this.bodies.farmS, this.armed ? this.sword : null], j.child, -0.15, _mG).multiplyScalar(-mus);
     // 팔꿈치를 굽히면 아래팔과 칼의 무게가 위팔을 길이 방향으로 비튼다 → 그 몫도 미리 버틴다
     //  (되먹임이 아닌 고정 보정이라 비틀기 축이 가벼워도 불안정해지지 않는다)
     const twistFF = THREE.MathUtils.clamp(_mG.dot(boneAxis), -10, 10);
-    const tempoGravity = STAMINA.attackTempo && !this.stamina.guarding && STAMINA.tempoGravity && this.stamina.power < 1;
+    const tempoGravity = !this.stamina.guarding && this.stamina.power < 1;
     _mG.addScaledVector(boneAxis, -_mG.dot(boneAxis));
     if (!tempoGravity) _mT.add(_mG);
     // 힘-속도 관계: 팔을 빨리 휘두를수록 어깨 힘이 빠진다
     const tlen = _mT.length();
-    const cap = maxT * hill(tlen > 1e-6 ? wSw.dot(_mT) / tlen : 0, this.weaponCfg.shoulderVmax * (this.stamina.exhausted || (STAMINA.attackTempo && !this.stamina.guarding && !STAMINA.tempoCaps) ? 1 : this.stamina.motorSpeed));
+    const cap = maxT * hill(tlen > 1e-6 ? wSw.dot(_mT) / tlen : 0, this.weaponCfg.shoulderVmax * (this.stamina.exhausted ? 1 : this.stamina.motorSpeed));
     if (tlen > cap) _mT.setLength(cap);
     if (tempoGravity) {
       _mT.add(_mG);
@@ -3934,7 +3747,7 @@ export class Fighter {
     aim.applyQuaternion(this.yaw);
     // 보정 v2 (s > 0): 마지막 궤적 탐지기 (corr.js, 제 scratch 로 살아 있는 몸을 읽는다). 이 뒤 wAim·prevAim·aimDirW 가 같은 aim 을 본다
     if (v2) corrStep(this, aim, sv);
-    if (ARM.vertLead > 0 && this.r2pOn()) {
+    if (ARM.vertLead > 0) {
       // 세로 follow-through(10/8 16:10, ARM.vertLead): 빠른 내려긋기 동안 서보 목표를 더 아래로 — 짧은 손가락 획도 칼끝은 몸통까지 내려가게. 손가락이 멈추면 τ 0.15 s 로 풀린다
       // 2 판(16:12): 긋는 내내가 아니라 **빠른 내려긋기가 가운데 위에서 짧게 멈췄을 때만** — 긋는 중엔 최고 하강 속도를 기억하고, 손가락이 그 30 % 아래로 느려졌는데 아직 패드 가운데 위(y > −0.15)면
       //  칼끝을 기억한 속도 × 값 만큼 더 내려 보낸다(관성 이월). 끝까지 그은 획(y < −0.15)엔 걸지 않는다 — 1 판은 전 구간에 걸어 끝까지 그은 세로가 몸 아래로 지나갔다
@@ -3951,7 +3764,7 @@ export class Fighter {
       }
     } else this.vertLeadAmt = 0;
     if (this.stamina.pose > 0) aim.lerp(_v6.set(0.28, -0.93, this.side * 0.08).applyQuaternion(this.yaw).normalize(), this.stamina.pose).normalize();
-    else if (this.stamina.level === 2 && this.stamina.speed < 1 && !this.skill.swinging && !this.skill.tap && !(STAMINA.attackTempo && (this.handHeld || this.skill.pom || this.skill.sec || this.iai || this.stamina.attacking))) { aim.y -= 0.12; aim.normalize(); }
+    else if (this.stamina.level === 2 && this.stamina.speed < 1 && !this.skill.swinging && !this.skill.tap && !((this.handHeld || this.skill.pom || this.skill.sec || this.iai || this.stamina.attacking))) { aim.y -= 0.12; aim.normalize(); }
     // 비정상 손목 교정 (JOINTS.wristGuard — 사장님 10/24 17:2x '비정상적인 손목이나 팔 움직임을 교정'): 이 스텝 팔 명령(armIK)의 아래팔과 칼 겨눔이 이루는
     //  손 면(굴림 0) 안 각이 사람 범위 [−HUMAN.ulnarDev, HUMAN.wristThumb] 밖이면 손 면 축 둘레로 가까운 범위 끝까지만 당긴다 — 손 자리 · 팔 그대로, 칼끝만 (아래 wristGuardAim · wristClamp).
     //  aimRawW = 교정 전 겨눔 (팔꿈치 돌림이 다음 스텝 읽는다 — 교정된 겨눔을 읽으면 돌림과 교정이 서로를 따라 돈다). 칼날 거꾸로 쥠(죽음의 일격) 동안은 걸지 않는다
@@ -3985,7 +3798,7 @@ export class Fighter {
     const sinA = axis.length();
     const angle = Math.atan2(sinA, blade.dot(aim));
     const torque = new THREE.Vector3();
-    const oneHandR2p = !this.weaponCfg.twoHand && this.r2pOn(); // 실험 길(서보 풀어주기·겨눔 앞세움)은 한손 무기·R2′ 범위 안에서만
+    const oneHandR2p = !this.weaponCfg.twoHand; // 실험 길(서보 풀어주기·겨눔 앞세움)은 한손 무기·R2′ 범위 안에서만
     const leadK = ARM.servoLead > 0 && oneHandR2p ? 1 + ARM.servoLead : 1; // 실험(T2 길 (c)): 서보 목표 각을 (1 + servoLead) 배로 앞세움(스프링·제동 판단 모두). 1 = 오늘
     if (sinA > 1e-5) torque.copy(axis).multiplyScalar((this.weaponCfg.aimStiffness * angle) / sinA);
     if (leadK !== 1) torque.multiplyScalar(leadK);
@@ -4039,9 +3852,9 @@ export class Fighter {
       lf.addScaledVector(blade, -lf.dot(blade));
       if (lf.lengthSq() > 1e-2) { lf.normalize(); if (lf.dot(flat) < 0) lf.negate(); flatTarget.copy(lf); }
     }
-    // 사람 관절 범위(BODY.humanLimits): 가까운 쪽 칼 면이 아래팔 돌림 범위(HUMAN.forearmRoll, 손목 밧줄) 밖이고 반대쪽은 안이면 반대쪽 날을 쓴다 (양날)
-    const zf = BODY.humanLimits ? _cr2.set(0, 0, 1).applyQuaternion(rot(forearm, _cq)) : null;
-    if (zf) rollSide(flatTarget, zf);
+    // 사람 관절 범위: 가까운 쪽 칼 면이 아래팔 돌림 범위(HUMAN.forearmRoll, 손목 밧줄) 밖이고 반대쪽은 안이면 반대쪽 날을 쓴다 (양날)
+    const zf = _cr2.set(0, 0, 1).applyQuaternion(rot(forearm, _cq));
+    rollSide(flatTarget, zf);
     const ev = edgeDir.length();
     if (v2 && this.corr?.win) {
       // 보정 v2 ① 날 맞춤 (창 안에서만, corr.js): 굴림 목표만 바꾼다. 판정(combat.js:179-181)이 쓸 상대 기준 속도 rel⊥ 로
@@ -4058,7 +3871,7 @@ export class Fighter {
         mf.normalize();
         mfRel.normalize();
         if (mf.dot(flat) < 0) mf.negate();
-        if (zf) rollSide(mf, zf);
+        rollSide(mf, zf);
         if (mfRel.dot(mf) < 0) mfRel.negate();
         mf.lerp(mfRel, sv).normalize();
         flatTarget.lerp(mf, moving);
@@ -4072,7 +3885,7 @@ export class Fighter {
       if (moving > 0) {
         const mf = edgeDir.crossVectors(blade, edgeDir).normalize();
         if (mf.dot(flat) < 0) mf.negate();
-        if (zf) rollSide(mf, zf);
+        rollSide(mf, zf);
         flatTarget.lerp(mf, moving);
         if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(mf);
         flatTarget.normalize();
@@ -4098,7 +3911,7 @@ export class Fighter {
       if (fw.lengthSq() > 1e-4) {
         fw.normalize();
         if (fw.dot(flat) < 0) fw.negate();
-        if (zf) rollSide(fw, zf);
+        rollSide(fw, zf);
         if (flatTarget.dot(fw) < 0) flatTarget.negate();
         flatTarget.lerp(fw, this.skill.thrustPose.w);
         if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(fw);
@@ -4116,7 +3929,7 @@ export class Fighter {
       if (fw.lengthSq() > 1e-4) {
         fw.normalize();
         if (fw.dot(flat) < 0) fw.negate();
-        if (zf) rollSide(fw, zf);
+        rollSide(fw, zf);
         if (flatTarget.dot(fw) < 0) flatTarget.negate();
         flatTarget.lerp(fw, this.skill.thrustPose.w);
         if (flatTarget.lengthSq() < 1e-4) flatTarget.copy(fw);
@@ -4156,13 +3969,13 @@ export class Fighter {
         }
       }
     }
-    if (STAMINA.attackTempo && !this.stamina.guarding && STAMINA.tempoWristDamping && this.stamina.speed > 0) damp *= this.stamina.motorSpeed;
+    if (!this.stamina.guarding && this.stamina.speed > 0) damp *= this.stamina.motorSpeed;
     torque.addScaledVector(wSwing.sub(wAim), -damp);
     const placed = this.armsPlaced(); // 풍차 베기 감기 (10/29 20:0x 휘청 고침): 대본이 놓은 칼 — 겨눔 · 감쇠 · 날 비틀기 힘 없음 (칼 무게 버팀만 — 아래 _mG) · armsPlaced
     if (placed) torque.set(0, 0, 0);
     // 칼 무게도 같은 힘 안에서 버틴다 (칼끝이 처지지 않게)
-    this.gravityTorque([sword], forearm, 0.13, _mG).multiplyScalar(-Math.min(1, STAMINA.attackTempo && !this.stamina.guarding && STAMINA.tempoGravity ? str / this.stamina.power : str));
-    const tempoGravity = STAMINA.attackTempo && !this.stamina.guarding && STAMINA.tempoGravity && this.stamina.power < 1;
+    this.gravityTorque([sword], forearm, 0.13, _mG).multiplyScalar(-Math.min(1, !this.stamina.guarding ? str / this.stamina.power : str));
+    const tempoGravity = !this.stamina.guarding && this.stamina.power < 1;
     if (!tempoGravity) torque.add(_mG);
     // 힘-속도 관계: 손목이 빨리 돌수록 힘이 빠진다 (근육 활성화 지연 30ms로 부드럽게)
     const fw = forearm.angvel();
@@ -4170,7 +3983,7 @@ export class Fighter {
     const vAlong = tl > 1e-6 ? ((w.x - fw.x) * torque.x + (w.y - fw.y) * torque.y + (w.z - fw.z) * torque.z) / tl : 0;
     // 손목 각속도 한계는 힘(strength)의 제곱근에 비례한다 (감독 확정 V1, docs/characters.md "관절 각속도 한계를 힘에 묶는 실험"):
     //  힘이 세면 더 빠른 칼끝까지 힘이 실려 한 방이 실제로 세진다. 힘 1.0이면 예전과 같다 (기본 AI 회귀 동일)
-    const h = hill(vAlong, this.weaponCfg.wristVmax * Math.sqrt(this.strength * fcArm) * (this.stamina.exhausted || (STAMINA.attackTempo && !this.stamina.guarding && !STAMINA.tempoCaps) ? 1 : this.stamina.motorSpeed), 0.25, this.weaponCfg.brakeEcc);
+    const h = hill(vAlong, this.weaponCfg.wristVmax * Math.sqrt(this.strength * fcArm) * (this.stamina.exhausted ? 1 : this.stamina.motorSpeed), 0.25, this.weaponCfg.brakeEcc);
     this.wristHill = (this.wristHill ?? h) + (h - (this.wristHill ?? h)) * Math.min(1, (this.lastDt || 1 / 120) / 0.03);
     cap *= this.wristHill;
     if (tl > cap) torque.setLength(cap);
@@ -5461,8 +5274,6 @@ const _cw = new THREE.Vector3();
 const _cq1 = new THREE.Quaternion();
 const _cq2 = new THREE.Quaternion();
 const _cq3 = new THREE.Quaternion();
-// 척추 비틀기 축의 윗몸 yaw 관성 어림 (kg·m², 명세 부록 A: 가슴+머리+두 팔+칼 ≈ 2.0, 복부는 그 위 전부 ≈ 2.45) — 확인표 125 의 d 를 ζ 에서 셈하는 데만 쓴다
-const CHAIN_SPINE_I = { abdomen: 2.45, chest: 2.0 };
 const _v5 = new THREE.Vector3();
 const _mapAim = new THREE.Vector3(); // driveSword: 자세 지도 방향 사본(follow-through 뒤처짐 계산)
 const _lagB = new THREE.Vector3(); // WA2-2 follow-through 뒤처짐 각
@@ -5492,7 +5303,7 @@ const _finH = {}; // 보정 v2 마무리 명령 (finishAt): 손·칼끝 (driveSw
 const _wi1 = new THREE.Vector3(); // 보정 v2 쉼 무게: 옛 보정 손 목표 (driveSword)
 const _wi2 = new THREE.Vector3(); // 보정 v2 쉼 무게: 옛 보정 칼끝 방향 (driveSword)
 const COS_ROLL = Math.cos(HUMAN.forearmRoll * HD);
-/** 칼 면 목표 t(단위, 칼에 수직)가 아래팔 돌림 범위 밖이고 −t 는 안이면 뒤집는다 (BODY.humanLimits 일 때만 부른다) */
+/** 칼 면 목표 t(단위, 칼에 수직)가 아래팔 돌림 범위 밖이고 −t 는 안이면 뒤집는다  */
 function rollSide(t, zf) {
   if (t.dot(zf) < COS_ROLL && -t.dot(zf) >= COS_ROLL) t.negate();
 }

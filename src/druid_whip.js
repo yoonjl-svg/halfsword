@@ -176,7 +176,7 @@ export function drawDruidWhip(group) {
 
 /**
  * 칼 몸체(손잡이)에 붙어 만들어진 마디 콜라이더 8 개를 떼어 마디 강체 8 개로 옮기고 구면 관절로 잇는다 (fighter.js 생성자 — spec.flexible).
- *  ownTorsoBit: 제 몸통 · 허벅지 충돌 비트(BODY.humanLimits). 단단한 손잡이는 사람 관절 · 몸 한계를 그대로 지키고,
+ *  ownTorsoBit: 제 몸통 · 허벅지 충돌 비트(사람 관절 한도). 단단한 손잡이는 사람 관절 · 몸 한계를 그대로 지키고,
  *  휘는 덩굴만 제 몸에서 빼 준다 — 마찰 있는 마디가 제 몸에 감겨 다시 휘두르지 못하던 것(샛별 749a7b367). 상대 몸 · 땅 · 장애물 비트는 그대로 · 상대 무기 비트(foeWeaponBit)는 WHIP.bladeFrom 번 마디부터만.
  *  돌려줌 flex: step(dt) 굽힘 복원 · cache(put) 스텝 전 상태 · point(t, out) 덩굴 위 한 점 · sync() 메쉬 휨
  */

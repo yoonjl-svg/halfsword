@@ -304,7 +304,7 @@ export function linkBoost(f) {
   const S = f.stamina;
   const cost = STAMINA.cutCost * (S?.weight ?? 1) * (s * s - 1);
   const log = (f.ibBoostLog ??= { n: 0, cost: 0, skip: 0, k: {} }); // 재기 (ib_link_speed.mjs)
-  if (STAMINA.on && S && !S.infinite && S.value < cost) {
+  if (S && !S.infinite && S.value < cost) {
     log.skip++;
     return null;
   }

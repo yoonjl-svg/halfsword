@@ -202,7 +202,7 @@ export function readNeed(ai, opp) {
     }
     const S = ai.me.stamina;
     const F = foe.stamina;
-    if (STAMINA.on && S && F && !S.infinite && !F.infinite) {
+    if (S && F && !S.infinite && !F.infinite) {
       const diff = clamp((S.value - F.value) / STAMINA.max, -1, 1); // 머리 위 막대 — 내가 더 남았으면 몰아침 · 모자라면 기다림
       if (Math.abs(diff) > 0.05) {
         n -= k * P().stamina * diff;

@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { UNIQUE_ASSIST as UA, STAMINA } from './config.js';
+import { UNIQUE_ASSIST as UA } from './config.js';
 import { huntN } from './cn_hunt.js'; // 겹 수 (11/16 — 사라진 겹을 뺀 수)
 
 /** 동방 맹호은림 사냥 겹 표시 (11/14 — cn_hunt.js · config UNIQUE_ASSIST.cnHunt): 겹이 쌓인 몸의 기력 막대(stamina_hud.js — 머리 위 0.28 m) 바로 위에 작은 발톱 자국 max 개.
@@ -29,7 +29,7 @@ export function createHuntHud(root) {
         const f = fighters[i];
         const n = huntN(f); // 11/16 — 8.0 s 지난 겹은 사라짐 (표시도 같이 줄어듦)
         m.el.hidden = true;
-        if (!visible || !n || !STAMINA.on || !f?.alive || f.revival || f.decapitated) return;
+        if (!visible || !n || !f?.alive || f.revival || f.decapitated) return;
         const head = f.bodies.head.translation();
         point.set(head.x, head.y + 0.28, head.z);
         if (viewPoint.copy(point).applyMatrix4(camera.matrixWorldInverse).z >= 0) return;

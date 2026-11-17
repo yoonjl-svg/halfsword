@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { STAMINA, JP_TANK } from './config.js';
+import { JP_TANK } from './config.js';
 
 /** 두 검객의 머리 위에 붙이는 화면 크기 고정 기력 바. 판마다 DOM을 만들지 않는다.
  *  동시 대전(10/29 — 넷까지): 셋째 · 넷째 바는 셋 이상 판이 처음 올 때만 만든다 (1:1 DOM 은 예전 그대로 둘).
@@ -47,7 +47,7 @@ export function createStaminaHud(root) {
         const f = fighters[i];
         bar.hidden = true;
         ken.hidden = true;
-        if (!visible || !STAMINA.on || !f?.alive || f.revival || f.decapitated) return;
+        if (!visible || !f?.alive || f.revival || f.decapitated) return;
         if (f.stamina.infinite) return; // 기력 무한(용사의 눈물 — 플레이어만): 그 사람 막대는 아예 없다 (사장님 10/17 '어차피 기력 무한이기 때문에 기력바 표시하지 않음' · 상대 막대는 그대로)
         const head = f.bodies.head.translation();
         point.set(head.x, head.y + 0.28, head.z);

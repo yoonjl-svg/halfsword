@@ -29,13 +29,12 @@ export const PHYSICS = {
 
 // 기력(스태미너) — 설계 docs/design/stamina_2026-10-15.md (사장님 결정 §0) · 구현 샛별 저장소(c8e2bdaf … 577f4d53) · 들여온 기록 docs/strike/stamina_import_2026-10-15.md.
 //  계산은 src/stamina.js(사람·AI 같은 장부 — 회복만 사람 21 · AI 15), 머리 위 막대 src/stamina_hud.js. 모든 시간은 물리(게임) 시간.
-//  on: true = 켬(기본) · false = 기력 없음(지금 본판 그대로 — 관문 바이트 같음). 주소 `?stamina=0` = 끔(main.js). 시뮬은 with_config STAMINA.on=false
 //  범위 100 … 0 … −70(탈진) · 0 아래 지침 · −35 아래 심한 지침 — 배율은 아래 moveTired … attackSevere · 되돌림 +15
 //  지친 배율 · 실제 접촉 시간 보정: 샛별 저장소 47b2e16e (사장님 10/17 '샛별의 기력접촉 보정 적용해' — 들여온 기록 docs/import/stamina_contact_2026-10-17.md)
 export const STAMINA = {
   // 단계 문턱(사장님 10/17 12:0x '-40 -80 기준으로 잡은 거 -35 -70으로 변경' — 그 전 10/16 00:5x −40 · −80, 처음 −30 · −50): 0 아래 지침 · severeAt 아래 심한 지침 · floor 에서 탈진.
   //  stageBack: 한 단계 위로 돌아오려면 문턱보다 15 더 회복해야(지침 → 생생 +15 · 심한 지침 → 지침 severeAt + 15 = −20 — 설계안 §0 11 '단계 되돌림', 값 그대로)
-  on: true, max: 100, floor: -70, severeAt: -35, stageBack: 15,
+  max: 100, floor: -70, severeAt: -35, stageBack: 15,
   // 지친 배율(사장님 10/16 샛별 쪽 지시 '이동 −30 % · −60 %, 공격 −20 % · −40 %' → 10/17 본판 적용): 이동 × 0.7 · × 0.4 (전 0.7 · 0.5) · 공격 × 0.8 · × 0.6 (전 0.7 · 0.5)
   //  공격 배율의 뜻 = 공격 시작부터 첫 실제 접촉까지 시간이 1 ÷ 0.8 = 1.25 배 · 1 ÷ 0.6 = 1.667 배 (칼끝 최고 빠르기 시각이 아님) — 그 시간비를 맞추는 안쪽 계수가 아래 tempo* (재는 도구 tools/sim/stamina_contact_probe.mjs)
   moveTired: 0.7, moveSevere: 0.4, attackTired: 0.8, attackSevere: 0.6,
@@ -64,33 +63,25 @@ export const STAMINA = {
   humanRecoverPerSecond: realRate(25), // [사장님 10/29 17:5x 결정]
   // 탈진 규칙 (사장님 10/18 22:1x '탈진 규칙은 샛별 것이 맞음' — 원문 '새벽'은 오타, 23:3x 정정 · 샛별 연구 규칙 · docs/strike/japanese_flow_adopt_2026-10-18.md): 바닥(floor −70)에서 이동 · 공격 불가 ·
   //  막기를 누르고 있어도 자연 회복 빠르기(사람 humanRecoverPerSecond 25(10/29 17:5x — 전 21) · AI recoverPerSecond 15 /s)로 강제로 차서 severeAt(−35)에서 풀림(심한 지침 단계) —
-  //  사람 1.4 s(전 1.667) · 시뮬 대본 몸 1.667 s · AI 2.333 s. 풀린 뒤는 보통 규칙(되돌림 +15 · 막기 쥐면 회복 멈춤). `?exhaust=fixed` = 옛 규칙(아래 exhaustSeconds · exhaustRecover)
-  exhaustNatural: true,
-  exhaustSeconds: realS(2.5), exhaustRecover: realRate(28), // (옛 규칙 · `?exhaust=fixed`) 탈진: 2.5 s 제자리 숨 고르기(사장님 결정) · 끝에서 0(지침 단계)으로. 초당 28 = −floor ÷ 2.5 — 2.5 s 끝에 0 에 닿게(같은 규칙 — 10/16 −80 ÷ 2.5 = 32 · 10/17 탈진 −70 에 맞춤 · 탈진 중 값은 막대에 안 보이고(진행은 시간) 끝에서 0 으로 맞추므로 게임 차이 없음)
-  // 실제 접촉 시간 보정 (attackTempo false = 공격 시계에 attackTired · attackSevere 를 그대로 곱함 · 안쪽 계수 없음). 아래 값은 샛별 저장소 19 무기 266 조건 고정 표적 측정에서 정한 것 — 사장님 확인 전
+  //  사람 1.4 s(전 1.667) · 시뮬 대본 몸 1.667 s · AI 2.333 s. 풀린 뒤는 보통 규칙(되돌림 +15 · 막기 쥐면 회복 멈춤)
+  // 실제 접촉 시간 보정 (지친 공격 시계의 안쪽 계수 — 겉 목표는 위 attackTired · attackSevere). 아래 값은 샛별 저장소 19 무기 266 조건 고정 표적 측정에서 정한 것 — 사장님 확인 전
   //  tempoPower*: 공격 중 지친 팔·손목 힘(막는 동안은 아래 tiredPower · severePower 그대로) · tempoRate*: 베기 · 비기 명령 시계 · tempoThrust*: 찌르기(원래 질량 tempoHeavyMass 2.5 kg 넘거나 찌르기 특성 무기는 tempoRate*) · tempoPommel*: 손잡이 찍기
-  //  tempoBody: 몸 돌림도 같은 시계 · tempoCaps: 관절 빠르기 한계도 같은 배율(motorSpeed) · tempoInput: 사람 손길을 순서 그대로 늦게 보냄(고유 동작 · 긋기 청구는 원래 손길로 읽음 — src/attack_tempo.js)
-  //  tempoGravity: 지쳐도 팔·칼 무게는 다 버팀(처지지 않게) · tempoWristDamping: 손목 감쇠도 같은 배율
-  attackTempo: true,
+  //  몸 돌림도 같은 시계 · 관절 빠르기 한계도 같은 배율(motorSpeed) · 사람 손길을 순서 그대로 늦게 보냄(고유 동작 · 긋기 청구는 원래 손길로 읽음 — src/attack_tempo.js)
+  //  지쳐도 팔·칼 무게는 다 버팀(처지지 않게) · 손목 감쇠도 같은 배율
   tempoPowerTired: 0.64, tempoPowerSevere: 0.36,
   tempoRateTired: 0.8, tempoRateSevere: 0.6,
-  tempoProfiles: true,
   tempoThrustTired: 0.75, tempoThrustSevere: 0.55, tempoHeavyMass: 2.5,
   tempoPommelTired: 0.72, tempoPommelSevere: 0.50,
-  tempoBody: true, tempoCaps: true, tempoInput: true, tempoGravity: true, tempoWristDamping: true,
-  tiredPower: 0.49, severePower: 0.25, // 지침·심한 지침의 팔·손목 힘 배율 — attackTempo 켜면 막는 동안만(공격 중엔 tempoPower*) · 처음 들인 시작값 그대로 (사장님 확인 전)
+  tiredPower: 0.49, severePower: 0.25, // 지침·심한 지침의 팔·손목 힘 배율 — 막는 동안만(공격 중엔 tempoPower*) · 처음 들인 시작값 그대로 (사장님 확인 전)
   aiRestAt: 20, aiAggressiveRestAt: -10, aiResumeAt: 35, // AI: 20 아래(공격적 기질 −10 아래) 새 공격 멈추고 물러남 · 35 에서 다시(되돌림 35 는 샛별 저장소 값 — 사장님 확인 전)
 };
 // 무기 특수 능력 값 (능력은 무기 스펙에 적고 — weapons.js — 값만 여기. 와신상담 woundRage · 창천 breakMult 처럼 늘 켜져 있다)
-//  티소나 '위세' (사장님 10/21 23:xx — 능력은 사장님 결정 · 값은 샛별 저장소 제안 그대로 · 확인표 2160): 칼 주인의 공격이 상대 칼에 막혀 끝나면(못 벰 · 칼끼리 닿음 —
-//   독일 인데스 '막힘'과 같은 가름: AI ai.js afterStrike · 사람 skill.js whiffEnd) 막은 쪽 기력 − aweDrain(8) · 한 공격에 한 번 · 칼 주인 시계로 aweGap(1.5 s) 안에는 다시 안 깎음.
-//   계산은 stamina.js spendAweDrain. aweDrain 0 = 끔
-//  10/24 11:3x 사장님 '막은 상대의 기력 줄이는 거 말고 … 시작할 때 감소된 기력으로 시작하는 걸 생각했었어' + 앞서 '10~20 정도':
+//  티소나 '위세' — 10/24 11:3x 사장님 '막은 상대의 기력 줄이는 거 말고 … 시작할 때 감소된 기력으로 시작하는 걸 생각했었어' + 앞서 '10~20 정도':
 //   위세 = 티소나를 든 쪽과 싸우는 상대가 그 판을 최대 기력 − aweStart 로 시작 · 그 판 내내 그 최대(회복도 거기까지) ·
-//   막힘마다 깎던 몫은 끔(aweDrain 0 — 옛 판 스위치로 남김). 계산 stamina.js applyAweStart · 판을 세울 때 main.js newRound(사람 · AI 두 쪽 모두)
+//   (10/21 판의 막힘마다 깎던 몫은 지움). 계산 stamina.js applyAweStart · 판을 세울 때 main.js newRound(사람 · AI 두 쪽 모두)
 //   aweStart 15 (사장님 11:4x '10-20 사이로 추천해달라고 한거야 랜덤적용 x' → 감독 추천 고정 15: 베기 한 번 12(× 무게 0.75 ~ 1.5)라
 //    생생한 채 지치기(0 아래) 전까지 베기를 한 번쯤 덜 하게 됨 · 10 은 베기 한 번도 안 됨 · 20 은 두 번 가까이)
-export const WEAPON_ABILITY = { aweDrain: 0, aweGap: realS(1.5), aweStart: 15 };
+export const WEAPON_ABILITY = { aweStart: 15 };
 // 달타냥 '총사의 결투' — 사장님 10/25 결정 (01:4x '달타냥은 B로 하고 배율 1.15로 해' · B = 한손검 상대): 칼 주인이 한손검(weapons.js isOneHandSword —
 //  한손 쥠 · 날 있음)을 쥔 상대를 치면 그 칼의 공격력(등급 power — 판정 에너지 배율, 와신상담과 같은 자리 · combat.js duelOneHandMult)이 × duelOneHand.
 //  사람 · AI 같이 · 물리(속도 · 질량)는 그대로. 1 = 끔(`?dartagnanAbility=0`) · 한손검 목록은 사장님 10/25 결정 — 가름 규칙 그대로 (확인표 2491 · 2492 · 10/25 파펜하이머가 들며 11 → 12 개)
@@ -98,8 +89,8 @@ WEAPON_ABILITY.duelOneHand = 1.15; // 사장님 10/25 결정
 // 드루이드의 채찍 무릎 꿇리기 (사장님 10/23 01:5x '특수효과 넣어서 채찍으로 맞을 때마다 일정 확률로 무릎 꿇게 해줘.(모든 종류의 타격 대상) 곁눈베기 맞았을 때처럼' — 확인표 2255 ~ 2257 사장님 확인 전)
 //  곁눈 베기 무릎 꺾기(UNIQUE_ASSIST.buckle · combat.js buckleCheck)와 같은 틀: 맞은 쪽 knockDown(false) · 꿇는 시간 kneel 초 · 맞는 쪽 버티기(fighter.swayScale)를 확률에 곱함 · 친 쪽 전용 난수 · 잔상(artFlash).
 //  다른 점: 부위 · 판정 종류(둔타 · 멍 · 상처)를 가리지 않는다 · 굴림은 한 획(휘두름 · 톡)에 한 번 — 그 획의 첫 맞음에서만(마디가 여러 번 닿아도) · 무기 칸 kneelHit 이 있는 무기만(채찍).
-//  p · kneel 은 곁눈 베기 값 그대로(0.5 · 0.4 s) · ai 기본 끔(사람 먼저 — `?whipKneelAi=1`) · `?whipKneel=0` 끔
-export const WHIP_KNEEL = { p: 0.5, kneel: realS(0.6), ai: false }; // kneel 0.4 → 0.6 [사장님 11/14 결정 '채찍도 같이 0.6초로 해' — 확인표 3861]
+//  p · kneel 은 곁눈 베기 값 그대로(0.5 · 0.4 s) · 사람 채찍만 (AI 채찍은 굴리지 않음)
+export const WHIP_KNEEL = { p: 0.5, kneel: realS(0.6) }; // kneel 0.4 → 0.6 [사장님 11/14 결정 '채찍도 같이 0.6초로 해' — 확인표 3861]
 
 // 바닥 면적 2배: 길이는 √2배. 인물·무기·시작 간격은 확대하지 않는다.
 export const ARENA_SCALE = Math.SQRT2;
@@ -147,14 +138,13 @@ export const CAMERA = {
   height: 2.3, // 카메라 높이
   shoulder: 0.9, // 오른쪽 어깨 너머로 비켜선 정도 → 내 캐릭터는 화면 왼쪽, 상대는 가운데
   fov: 55,
-  follow: 5, // 따라가는 빠르기. 작을수록 부드럽게(흔들리는 골반을 그대로 따라가지 않는다). 10/15 부터 `?camFollow=old`(예전 따라가기)에만 — 평소는 아래 followTau
   stepBob: 0.012, // 발을 디딜 때 카메라가 살짝 내려앉는 정도(m)
   lookAhead: 2.2, // 내 앞쪽 얼마나 먼 곳을 화면 가운데로 볼지
   openUp: 0.6, // 판 시작: 이만큼 높은 자리에서 시작해 ARENA.startHold 동안 평소 높이로 내려온다(m). 무대를 보여 준다 (사장님 9/30). 10/15 부터 다시 겨루기 내려앉기·`?openSweep=0` 에만
   openBack: 1.0, // 판 시작: 이만큼 더 뒤에서 시작해 같은 시간 동안 평소 거리로 (m)
   // ── 10/15 사장님 '백스텝을 밟으려 하면 카메라에 막히고, 카메라가 캐릭터 걸음보다 느리다' (docs/strike/camera_open_2026-10-15.md, 확인표 1560~1579) ──
   //  예전 follow 5 → 자리 6 두 번 거름(≈ 0.3~0.45 s 늦음)을 한 번으로: 따라가는 점 = 내 무게중심을 물리 스텝 사이 남은 시간만큼 앞으로 민 자리(화면마다 스텝이 2·3 개로
-  //  갈려 생기는 계단 떨림을 지움)를 followTau 로 한 번만 거른다. 바라보는 점도 같이 (따로 늦게 따라가지 않는다). `?camFollow=old` = 예전 따라가기
+  //  갈려 생기는 계단 떨림을 지움)를 followTau 로 한 번만 거른다. 바라보는 점도 같이 (따로 늦게 따라가지 않는다).
   followTau: 0.05, // 따라가기 시간 상수(실제 초) — 걷는 동안 지연 ≈ 0.04 s [사장님 확인 전]
   followTauDown: 0.25, // 서 있지 않을 때(무릎·쓰러짐·일어서기·죽음) — 발로 걷지 않는 동안 몸이 굴러도 화면이 덜 흔들리게 [사장님 확인 전]
   minDist: 2.8, // 카메라 ↔ 내 무게중심 수평 최소 거리(m) — 서 있을 때 3.04. 몸이 카메라 쪽으로 밀려 와도 그 자리에서 바로 물러난다 [사장님 확인 전]
@@ -198,40 +188,14 @@ export const BODY = {
   maxAccel: 4.5, // 발로 땅을 밀어 낼 수 있는 최대 가속(m/s²). 사람은 대략 중력의 0.4~0.5배
   fallTiltDeg: 55, // 몸이 이 각도 이상 기울면 넘어진다
   fallDuration: realS(2.2), // 넘어진 뒤 일어나기 시작할 때까지 (초)
-  getupLead: 1, // **기본 1 — 사장님 10/8 18:26 '0.5로 켜'**(확인표 194): 일어서기 다리 차례. 1 = 앞다리(딛은 다리 F)가 먼저 펴고 뒷다리 B 는 riseTime 의 getupLag 몫만큼 접힌 채 기다렸다가 남은 시간에 편다(뒷발을 떼어 뒤따라 딛는 차례 — 사람이 한쪽 무릎에서 일어서는 모습). 0 = 전 물리(두 다리 관절 목표가 한 비율 kneelAmount 로 함께 펴져 두 다리로 동시에 일어남, `?getupLead=0`). 받침·시간표·넘어짐 판정은 그대로. 기록 docs/strike/getup_lead_2026-10-08.md
-  getupLag: 0.5, // 뒷다리가 기다리는 몫(riseTime 0.9 s 의 비율 → 0.45 s). 12 씨앗: 0.4 는 뒷발이 3 cm 도 안 뜨는 판 4/12, 0.6 은 39 cm 까지 듦 → 0.5(7~32 cm, 뒷무릎 지연 0.20~0.27 s). `?getupLag=`
+  // 일어서기 다리 차례 (사장님 10/8 18:26 '0.5로 켜' — 확인표 194): 앞다리(딛은 다리 F)가 먼저 펴고 뒷다리 B 는 riseTime 의 getupLag 몫만큼 접힌 채 기다렸다가 남은 시간에 편다(사람이 한쪽 무릎에서 일어서는 모습)
+  getupLag: 0.5, // 뒷다리가 기다리는 몫(riseTime 0.9 s 의 비율 → 0.45 s). 12 씨앗: 0.4 는 뒷발이 3 cm 도 안 뜨는 판 4/12, 0.6 은 39 cm 까지 듦 → 0.5(7~32 cm, 뒷무릎 지연 0.20~0.27 s)
   shoveForce: 320, // 바짝 붙었을 때 빈손으로 상대를 밀쳐내는 힘(N). 같은 힘이 나에게도 반대로 걸린다
-  // 몸무게를 누가 받치나 (gait.js 머리말 참고)
-  //  'hybrid'  : 다리 관절이 몸무게의 대부분을 땅까지 전한다. 딛은 발은 제자리에 붙어 있다 (보조 힘은 GAIT.assist만큼)
-  //  'levitate': 예전 방식. 보이지 않는 힘이 골반을 거의 전부 떠받치고 다리는 걷는 흉내만 낸다
-  //  기본은 'hybrid': 게임과 같다(main.js newRound 도 판마다 'hybrid'로 둔다, 9/28 사장님 "늘 켬"). 시뮬 도구도 기본으로
-  //  게임 걸음을 잰다(9/29 감사 R-003). 옛 levitate 숫자는 tools/sim/with_config.mjs BODY.weightMode=levitate 로만.
-  //  'hybrid'에 남은 것: 드물게(수백 번 걸음에 한 번꼴) 빨리 나가기 시작하거나 돌아선 뒤 걷기 시작할 때
-  //  뒤에 남은 발이 발끝으로 4cm 남짓 끌린다, 성능
-  weightMode: 'hybrid',
-  // 다리 근육 상한 (받침 sweep 손잡이, 사장님 확인 전, docs/strike/owner_defaults_table.md)
-  //  'asis' : 관절 표 그대로 (엉덩이 560 · 무릎 500 N·m, 사람 최대의 2.7 · 2.4 배)
-  //  'human': 엉덩이·무릎 관절 근육 상한(j.max)만 아래 사람 값으로. k·d·딛은 다리 배율·mus·발목은 그대로
-  legTorque: 'asis', // 10/1 18:40 사장님 결론 1·2 (반사 on·fall, 받침 0.1~0.3) 안 20 칸: 'human' 10 칸은 손맛 바닥 ✗ (걷기 무릎 한도 닿음 0.42–0.62 · 밀치기 미발사 13/40) → 'asis'. 유사도로는 human 이 상위에 많음 (docs/strike/support_optimum_2026-10-01.md)
-  legHipHuman: 208, // 사람 엉덩이 폄 최대 등척 힘 208±63 N·m (젊은 남자, 75 kg·1.75 m 환산: Anderson·Madigan·Nussbaum 2007 J Biomech 40:3105 표 3)
-  legKneeHuman: 210, // 사람 무릎 폄 최대 등척 힘 210±52 N·m (같은 문헌. 동심 60°/s 는 2.21 N·m/kg ≈ 166 N·m: Baumgart 외 2021 Sports Med Open)
-  // 관절 한도·자기 몸 충돌 (검술 보정 v2 설계 '뒤틀림은 물리가 막는다', 사장님 9/30 23:40 켬). 값은 사람 움직임 봉투
-  //  (docs/motion/human_envelope_2026-09-30.md) 의 물리 범위이지 튜닝 값이 아니다(fighter.js HUMAN). false = 오늘 그대로(바이트까지, 옛 기준 sha)
-  humanLimits: true,
-  // ── R2′ 운동 사슬 (docs/strike/r2p_spec_2026-10-02.md §2·§3·§2.5, 값은 모두 사장님 확인 전, 확인표 122~129) ──
-  //  'anchor': 오늘 그대로(바이트 동일). 골반 yaw 는 기준 막대(닻, 질량 무한 운동학 물체)가 돌린다.
-  //  'legs'  : 닻 yaw 축 모터 강성·감쇠 0·0 (123, 닻은 실제 골반 yaw 를 따라 pitch·roll 기준 틀 노릇만) → 골반 yaw 목표(heading + pelvisYawOffset)는
-  //            딛은 다리의 엉덩이 비틀기(y 축) 근육이 발 마찰로 돌린다 (124: 엔진 암시 모터 + 포화 축소 σ = min(1, j.max·mus/|τ_pd|), 속도 목표 0,
-  //            목표는 하중 몫 w_l = Nf_l/ΣNf 로 나눔 — gait.poseLegs·fighter.driveJoints). 척추 비틀기 축은 수동 감쇠·ζ 아래 (125),
-  //            skill.lunge(매 베기 앞걸음) 끔 (126), 발 핀 마찰 한계의 접촉 N ×6/7 (127, Rapier 과대 보고 교정). 128·129 는 그대로.
-  //  탐색판: public/r2p/?chain=legs|anchor (주소 인자는 탐색판 빌드 R2P_PROBE 에서만 읽힌다, src/r2p_probe.js). 본판 기본값 변경 0.
-  chain: 'anchor', // 확인표 122
   trunkArcSpeed: 1, // WA2 보조: 호가 켜진 동안(trunkArc > 0, activity) 몸 자세 따라가기 빠르기(SKILL_BODY.pelvis·chest) 배수 — 1 = 오늘. 몸이 느려 손 속도에 안 실리는지 가르는 계측용
   r2pAiContact: -0.05, // (c) 10/8 17:00: 묶음을 쓰는 AI 의 유파 간격 contact 보정(m). 'all' 범위에서만 걸림(player 범위의 상대 AI 는 묶음이 없어 0) — 확인표 193, 사장님 확인 전
-  r2pScope: 'all', // **기본 'all' — 사장님 10/8 17:15 '권고대로'**: R2′ 묶음(몸의 호 trunkArc·몸 follow trunkFollow·한손 앞세움 servoLead·세로 follow vertLead)을 플레이어와 AI 모두에게. AI 는 r2pAiContact 로 간격을 당긴다. 'player' = index 0 만(14:40~17:15 의 본판; `?r2pScope=player`, fights12 `415c3c7e`). 기각된 손목 hold(ARM.swing arc)·손 follow(handFollow)·서보 풀기(servoLagRelease)·내려앉기(dropArc·pitchArc)는 10/8 17:20 코드에서 지움(기록: docs/decisions.md)
+  // R2′ 묶음(몸의 호 trunkArc·몸 follow trunkFollow·한손 앞세움 servoLead·세로 follow vertLead)은 플레이어와 AI 모두에게 (사장님 10/8 17:15 '권고대로'). AI 는 r2pAiContact 로 간격을 당긴다
   trunkFollow: 0.5, // WA2-2 follow-through(docs/strike/r2p_arm_arc_2026-10-08.md §2c, 10/8 WA5 §2j 로 고침): 휘두르는 동안 칼(머리)이 겨눔보다 획 방향으로 **뒤처진** 각(fighter.aimLagBehind, 부호 있음 — 앞서 넘어간 칼엔 0)만큼 몸 돌림을 더 유지한다(× activity × 0.35 rad) — 무거운 머리가 따라올 때까지 몸이 멈추지 않는다. **기본 0.5 — 사장님 10/8 14:40**(0 = 전 물리 = `?r2p=off`; 1 이면 두 손 무기 AI 첫 베기 25 → 17/30; 확인표 176). 한손 손 follow 는 handFollow
   trunkArc: 2, // R2′ 팔 단계 WA2 '몸의 호'(docs/strike/r2p_arm_arc_2026-10-08.md §4, 10/8 WA5 §2j 로 고침): 휘두르는 동안 자세 지도의 몸 돌림(보정 v2 updateBodyPose 의 −x·0.35) 기울기를 (1 + 값·activity) 배로 — 호는 손가락 자리 x 그 자체에 비례(획 시작점과 무관, x = 0 에서 0: 오른쪽에서 감으면 코일됐다가 베며 풀린다)해 베는 자리가 그대로다. 골반은 PELVIS_SHARE 몫, 순서 결합 ex 밖. **기본 2 — 사장님 10/8 14:40 "플레이어에게만 적용해"**(r2pScope player; 0 = 10/8 14:40 전 물리 = `?r2p=off`, fights12 `8d574a8c`; 확인표 174). R2′ 범위(r2pScope) 안에서만
-  chainSpineZeta: 0.5, // 확인표 125 ('legs' 만, 첫 탐색판의 유일한 새 수): 척추 비틀기(y) 축 감쇠비. d_y = ζ·2·√(k·I_up) → 복부 ≈66·가슴 ≈57 N·m·s/rad (오늘 180·160 = ζ ≈1.4). x·z 축·강성(129)은 그대로
 };
 
 // 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, 사장님 확인 전). 몸이 닿을 만큼 붙어서 스틱을 놓았다가 상대 쪽으로 밀면
@@ -281,7 +245,7 @@ export const CLOSE = {
   nearHilt: 1,
 };
 
-// 다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid', gait.js)
+// 다리가 체중을 싣는 걸음 (gait.js)
 export const GAIT = {
   lowMax: 0.16, // 유파 걸음이 있는 몸만: 유파 바탕 낮춤 + 자세표·덧씌우기 낮춤의 합계 상한(m, 전역 기본 높이 기준). 비기 자세(secretStance) 동안은 상한 밖 (확인표 507)
   school: 1, // 유파 걸음 (10/10 비싼 층, docs/strike/school_gait_design_2026-10-10.md): 1 = 무기 유파의 TRADITIONS[t].gait 를 덮음(독일·무유파는 칸 없음 = 그대로), 0 = 모든 유파 같은 걸음(전 판). `?schoolGait=0`
@@ -2036,7 +2000,7 @@ export const UNIQUE_ASSIST = {
   cavSpeed: 'tap', // [감독 해석 — '보통 찌르기 빠르기' 사장님 10/31 · 수 확인 전] · 숫자(m/s)를 주면 그 빠르기 · `?cavSpeed=`
   cavSide: 'contact', // [감독 안 — 확인 전] `?cavSide=free`
   //  칼끝 돌려 빼기 넘어짐 고침 (10/31): 끌고 가는 칼의 팔은 스텝마다 길이 자리를 놓고 빠르기를 가슴 빠르기로 되돌린다(secret_instant.js placeIai · SECRET.iaiKinematic 0).
-  //   돌려 빼는 위팔이 칼 어깨 면 한도(BODY.humanLimits 밧줄 — 가슴 ↔ 위팔) 밖을 지나면 밧줄이 스텝마다 팔과 가슴을 서로 잡아채고, 팔이 얻은 빠르기는 되돌림에 지워져
+  //   돌려 빼는 위팔이 칼 어깨 면 한도(사람 관절 한도 밧줄 — 가슴 ↔ 위팔) 밖을 지나면 밧줄이 스텝마다 팔과 가슴을 서로 잡아채고, 팔이 얻은 빠르기는 되돌림에 지워져
   //   반작용만 몸에 남음 — 골반이 0.09 s 에 초속 0.2 → 5 m 로 뒤로 밀려 발 밖으로 0.25 s 넘게 나가 넘어짐(knockDown(false) — lostFooting · 츠바이핸더 판 9 판에 넘어짐 6).
   //   1 = 이 수 동안 칼 어깨 면 밧줄을 뗌(휩쓸기 · 풍차 감기 · 죽음의 일격과 같은 손 — 끝나면 다시 검 · 손목 원뿔 · 칼팔 ↔ 몸통 충돌은 그대로) · 0 = 전 판 `?cavSelfFree=0`
   cavSelfFree: 1, // [감독 고침 — 사장님 확인 전]
@@ -2996,7 +2960,7 @@ export const JOINTS = {
   //  [−HUMAN.ulnarDev 30, HUMAN.wristThumb 135] 밖이면 칼끝을 칼 면 안에서 가까운 범위 끝까지만 들거나 내린다 — 손 자리(치는 자리 · 지금 자리) · 팔은 그대로, 팔을 펴게 하지 않는다
   //  (fighter.js wristClamp — driveSword 가 팔 명령 직후(명령 아래팔 · 굴림 0 손 면) · 운동학 비기 placeIai 도). 사람 · AI 모든 칼 팔 · 탭 찌르기 · 기술 길 · 자세 · 바짝 붙음 · 격살 · 런지 거둠.
   wristGuard: 1,
-  // 시험 손목 치우침 밧줄 둘 (wristGuard 가 켜졌을 때만 · 기본 끔 0 · 켜면 `?wristRope=1` · 기록 §9): fighter.js gripDevOn — BODY.humanLimits 손목 원뿔에 더: 손 면 안 각 ≥ −30 · ≤ 135.
+  // 시험 손목 치우침 밧줄 둘 (wristGuard 가 켜졌을 때만 · 기본 끔 0 · 켜면 `?wristRope=1` · 기록 §9): fighter.js gripDevOn — 사람 관절 한도 손목 원뿔에 더: 손 면 안 각 ≥ −30 · ≤ 135.
   //  겨눔 교정은 명령만 범위 안에 두고, 빠른 베기 관성 · 날 세우기 굴림이 칼을 범위 밖으로 넘겨 돌리는 것은 이 밧줄만 막는다(범위 밖 스텝 0 %).
   //  켜면 AI 끼리 베기가 크게 약해지고(24 판 심각도 합 −47 % · 츠바이핸더 −86 %) 어깨 메기 · 허리 뒤 숨김 자세가 무너져 기본 끔 [사장님 결정 전]
   // 시험 베는 동안 손목 교정 (10/25 01:0x 사장님 '셸하우 약해진 까닭 살펴봐' — 기본 0 · `?wristSwing=1|2` · 기록 wrist_audit §11): 베는 토막(AI 베기 기술의 긋기 · 따라 베기 · 사람 손 휘두르기)에서

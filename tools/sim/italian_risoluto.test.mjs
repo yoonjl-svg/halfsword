@@ -169,7 +169,7 @@ test('10/23 판(?risoLunge=0) 실제 몸 실행: 탭 찌르기 하나 · 기력�
     assert.ok(p.skill.tap, '탭 찌르기');
     assert.equal(p.skill.sec.stage, 'riso');
     assert.equal(p.stamina.spent.attack, spent0, '찌르기 값은 따로 안 냄');
-    assert.ok(p.stamina.spent.secret > secret0 || !CONFIG.STAMINA.on, '비기 값 하나');
+    assert.ok(p.stamina.spent.secret > secret0, '비기 값 하나');
     assert.ok(e.flowRecovery && e.flowRecovery.duration === CONFIG.FLOW_RECOVERY.seconds, '상대 팔 늦춤 0.4 s');
     assert.equal(p.skill.secretStats.andareRisoluto.armSlow, 1);
     let sawPower = false, sawTip = false;
@@ -288,7 +288,7 @@ test('10/24 런지 실제 몸: 탭 하나 = 운동학 찌르기(고노센 칼끝
     assert.equal(o.armSlow, null, '상대 두 팔 늦춤 없음 (10/30 20:0x — 전 0.6 s)');
     assert.ok(o.lungeT > 0, '런지 자세 (SECRET.stance.lunge)');
     assert.equal(o.spentAttack, 0, '찌르기 값은 따로 안 냄');
-    assert.ok(o.spentSecret > 0 || !CONFIG.STAMINA.on, '비기 값 하나');
+    assert.ok(o.spentSecret > 0, '비기 값 하나');
     // 고노센처럼 빠르게: 길 빠르기 = 같은 칼 고노센 칼끝 빠르기 × 1 · 찌르는 토막 칼끝(월드 — 쓸린 자리 조각) 가장 빠름 ≥ 고노센의 0.9 · 평균 ≥ 0.8 (몸 미끄러짐 몫을 길 시간에 넣어 늘임 — 연환 그때 계산 길과 같음)
     assert.ok(Math.abs(o.res.v - SECRET.risolutoShare * o.gon) < 1e-6, `${w} 길 빠르기 ${o.res.v}`);
     const sh = SECRET.risolutoShare; // 10/30 20:0x 0.9 — 칼끝 문턱도 그 몫만큼

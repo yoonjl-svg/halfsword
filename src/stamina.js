@@ -51,18 +51,18 @@ export class Stamina {
     this.clinchStep = null;
   }
 
-  /** 최대 기력: 100(STAMINA.max) + 장비 덧. 기력을 끄면(STAMINA.on false) 덧 없이 100 — 지금 판 그대로 */
-  get max() { return STAMINA.on ? STAMINA.max + this.maxBonus - this.aweLoss : STAMINA.max; } // − 위세 깎임(10/24)
+  /** 최대 기력: 100(STAMINA.max) + 장비 덧 */
+  get max() { return STAMINA.max + this.maxBonus - this.aweLoss; } // − 위세 깎임(10/24)
   /** 판을 세울 때(main.js newRound — 첫 스텝 전) 장비 덧을 정하고 그 최대에서 시작한다 */
   setMaxBonus(bonus) {
     this.maxBonus = Math.max(0, +bonus || 0);
-    if (STAMINA.on) this.value = this.max;
+    this.value = this.max;
   }
   /**
    * 기력 무한 (용사의 눈물 — main.js newRound 가 판을 세울 때 · 첫 스텝 전 · 플레이어만, docs/import/hero_tear_2026-10-17.md):
    *  늘 가득(최대 — 케틀 햇 덧까지) · 청구(spend — 걷기 · 공격 · 막아 받기 · 박차기 · 비기 · 권총 · 클린치)가 깎지 않는다 →
    *  지침(× 0.7 · × 0.5 · 힘 배율) · 탈진 · 숨 고르기 자세 · 숨소리 · 회복 쉼이 생기지 않는다. 상대가 읽는 내 기력(ai.js 지친 상대 노림)도 늘 생생.
-   *  공격 번호(attackId — 상대의 막아 받기 청구)와 횟수 셈(counts)은 전처럼 남는다 — 상대 장부는 그대로. 기력 끔(STAMINA.on 거짓)이면 원래 100 그대로
+   *  공격 번호(attackId — 상대의 막아 받기 청구)와 횟수 셈(counts)은 전처럼 남는다 — 상대 장부는 그대로
    */
   setInfinite(on = true) {
     this.infinite = !!on;
@@ -77,37 +77,31 @@ export class Stamina {
     this.captureMass(this.fighter.swordMass);
     return clamp(Math.sqrt((this.originalMass ?? STAMINA.weaponReferenceMass) / STAMINA.weaponReferenceMass), 0.75, 1.5);
   }
-  get ratio() { return clamp(this.value / (this.max + (STAMINA.on ? this.aweLoss : 0)), 0, 1); } // 머리 위 막대 = 최대(덧 포함)의 몫 — 위세로 깎인 몫은 빈 칸으로 보인다(10/24 — 가득 차도 85 % 쯤)
-  get exhausted() { return STAMINA.on && this.exhaustLeft > 0; }
-  get speed() { return !STAMINA.on ? 1 : this.exhausted ? 0 : this.level === 2 ? STAMINA.moveSevere : this.level === 1 ? STAMINA.moveTired : 1; }
+  get ratio() { return clamp(this.value / (this.max + this.aweLoss), 0, 1); } // 머리 위 막대 = 최대(덧 포함)의 몫 — 위세로 깎인 몫은 빈 칸으로 보인다(10/24 — 가득 차도 85 % 쯤)
+  get exhausted() { return this.exhaustLeft > 0; }
+  get speed() { return this.exhausted ? 0 : this.level === 2 ? STAMINA.moveSevere : this.level === 1 ? STAMINA.moveTired : 1; }
   get attackSpeed() {
-    if (!STAMINA.on) return 1;
     if (this.exhausted) return 0;
     if (!this.level) return 1;
     const severe = this.level === 2;
-    if (!STAMINA.attackTempo) return severe ? STAMINA.attackSevere : STAMINA.attackTired;
     const f = this.fighter;
-    if (STAMINA.tempoProfiles) {
-      if (f.skill?.pom) return severe ? STAMINA.tempoPommelSevere : STAMINA.tempoPommelTired;
-      this.captureMass(f.swordMass);
-      if (f.skill?.tap && !f.weaponCfg?.thrustStyle && this.originalMass < STAMINA.tempoHeavyMass)
-        return severe ? STAMINA.tempoThrustSevere : STAMINA.tempoThrustTired;
-    }
+    if (f.skill?.pom) return severe ? STAMINA.tempoPommelSevere : STAMINA.tempoPommelTired;
+    this.captureMass(f.swordMass);
+    if (f.skill?.tap && !f.weaponCfg?.thrustStyle && this.originalMass < STAMINA.tempoHeavyMass)
+      return severe ? STAMINA.tempoThrustSevere : STAMINA.tempoThrustTired;
     return severe ? STAMINA.tempoRateSevere : STAMINA.tempoRateTired;
   }
   get retimeBody() {
-    return STAMINA.on && STAMINA.attackTempo && STAMINA.tempoBody && this.level > 0 && !this.exhausted && !this.guarding
-      && !(STAMINA.tempoProfiles && this.fighter.skill?.tap);
+    return this.level > 0 && !this.exhausted && !this.guarding
+      && !this.fighter.skill?.tap;
   }
   // 막기 자세/신뢰도 보정은 보류한 범위다. 기존 방어 근육의 한도는 유지한다.
-  get motorSpeed() { return this.guarding && STAMINA.on && !this.exhausted ? this.level === 2 ? .5 : this.level === 1 ? .7 : 1 : this.attackSpeed; }
-  get power() { const tune=STAMINA.attackTempo&&!this.guarding;return !STAMINA.on || this.exhausted ? 1 : this.level === 2 ? (tune ? STAMINA.tempoPowerSevere : STAMINA.severePower) : this.level === 1 ? (tune ? STAMINA.tempoPowerTired : STAMINA.tiredPower) : 1; }
-  /** 탈진 회복 진행 0 → 1 (기력 막대 · stamina_hud.js): 자연 회복 탈진은 값이 바닥 → 풀리는 자리(severeAt)로 차는 몫 · 옛 고정 탈진(`?exhaust=fixed`)은 지난 시간 몫 */
+  get motorSpeed() { return this.guarding && !this.exhausted ? this.level === 2 ? .5 : this.level === 1 ? .7 : 1 : this.attackSpeed; }
+  get power() { const tune = !this.guarding; return this.exhausted ? 1 : this.level === 2 ? (tune ? STAMINA.tempoPowerSevere : STAMINA.severePower) : this.level === 1 ? (tune ? STAMINA.tempoPowerTired : STAMINA.tiredPower) : 1; }
+  /** 탈진 회복 진행 0 → 1 (기력 막대 · stamina_hud.js): 값이 바닥 → 풀리는 자리(severeAt)로 차는 몫 */
   get progress() {
     if (!this.exhausted) return 0;
-    return this.exhaustNaturalTarget != null
-      ? clamp((this.value - STAMINA.floor) / (this.exhaustNaturalTarget - STAMINA.floor), 0, 1)
-      : 1 - this.exhaustLeft / STAMINA.exhaustSeconds;
+    return clamp((this.value - STAMINA.floor) / (STAMINA.severeAt - STAMINA.floor), 0, 1);
   }
   get guarding() {
     const c = this.controller;
@@ -117,7 +111,7 @@ export class Stamina {
   }
   /** 비기를 낼 기력이 있나 (사장님 10/30 08:2x '기력이 모자라면 못써(다른 비기도 그렇게 해)' · 18:3x '0 이하일 때야' — SECRET.secretStamina · secretStaminaMin): 지금 기력 > secretStaminaMin(0) ·
    *  기력 끔 · 기력 무한 · 스위치 끔이면 늘 참. 사람 창(secret.js) · AI(ai.js secretGo · spinGo · mordGo) · skill.secret 이 본다 */
-  get secretReady() { return !SECRET.secretStamina || !STAMINA.on || this.infinite || this.value > (SECRET.secretStaminaMin ?? 0); }
+  get secretReady() { return !SECRET.secretStamina || this.infinite || this.value > (SECRET.secretStaminaMin ?? 0); }
   get inSecret() { return !!(this.fighter.skill?.sec || this.controller?.secretRun); }
   get attacking() {
     const f = this.fighter;
@@ -127,7 +121,7 @@ export class Stamina {
 
   /** 기존 누르기 단계 + 실제 팔/칼 접촉. 거리만 가깝거나 공격 중인 것은 클린치가 아니다. */
   canClinch(other) {
-    if (!STAMINA.on || !CLOSE.on || !(STAMINA.clinchPerSecond > 0) || !other || other === this) return false;
+    if (!CLOSE.on || !(STAMINA.clinchPerSecond > 0) || !other || other === this) return false;
     const a = this.fighter, b = other.fighter;
     if (a.foe !== b || b.foe !== a) return false;
     for (const s of [this, other]) {
@@ -197,11 +191,8 @@ export class Stamina {
     if (this.value <= STAMINA.floor) {
       this.value = STAMINA.floor;
       // 탈진 (사장님 10/18 22:1x '탈진 규칙은 샛별 것이 맞음' — 원문 '새벽'은 오타, 23:3x 정정 · 샛별 연구 규칙): 이동 · 공격 불가 · 막기를 누르고 있어도 자연 회복 빠르기(recoverRate — 사람 25(10/29 17:5x) · 시뮬 대본 몸 21 · AI 15 /s)로 차서
-      //  severeAt(−35)에서 풀린다(심한 지침 단계로) — 바닥 −70 에서 사람 1.4 s(전 1.667) · AI 2.333 s. 옛 규칙(`?exhaust=fixed`): exhaustSeconds 2.5 s 숨 고르기 뒤 0(지침)
-      this.exhaustNaturalTarget = STAMINA.exhaustNatural ? STAMINA.severeAt : null;
-      this.exhaustLeft = this.exhaustNaturalTarget != null
-        ? (this.exhaustNaturalTarget - this.value) / recoverRate(this.fighter)
-        : STAMINA.exhaustSeconds;
+      //  severeAt(−35)에서 풀린다(심한 지침 단계로) — 바닥 −70 에서 사람 1.4 s(전 1.667) · AI 2.333 s
+      this.exhaustLeft = (STAMINA.severeAt - this.value) / recoverRate(this.fighter);
       this.level = 3;
       this.counts.exhaustion++;
       this.stroke = null;
@@ -213,7 +204,7 @@ export class Stamina {
   }
 
   spend(kind, amount) {
-    if (!STAMINA.on || this.infinite || this.exhausted || !this.fighter.alive || this.fighter.revival || !(amount > 0)) return false; // 기력 무한: 모든 청구가 여기서 멈춘다 (값 · 쉼 시계 · 단계 그대로)
+    if (this.infinite || this.exhausted || !this.fighter.alive || this.fighter.revival || !(amount > 0)) return false; // 기력 무한: 모든 청구가 여기서 멈춘다 (값 · 쉼 시계 · 단계 그대로)
     this.value = Math.max(STAMINA.floor, this.value - amount);
     this.spent[kind] += amount;
     if (kind !== 'move') this.rest = 0;
@@ -230,7 +221,7 @@ export class Stamina {
 
   chargeAttack(kind = 'cut', bundled = this.inSecret, credit = 0) {
     if (this.fighter.alive && !this.exhausted) this.fighter.schoolPassive?.strokeStart(bundled || this.inSecret); // 유파 패시브: 칼을 낸 순간 (10/21 켄타이 · 인데스 — school_passive.js, 기력을 꺼도 같은 때)
-    if (!STAMINA.on || this.exhausted || !this.fighter.alive) return;
+    if (this.exhausted || !this.fighter.alive) return;
     this.attackId++;
     this.flowAttackKind = kind; this.flowAttackStart = this.time; // 흘림 판정이 읽는 공격 종류(찌르기는 흘리지 않음 — nagashi_redesign.js) · 사람 · AI 같게
     this.attackUntil = this.time + ATTACK_LIFE;
@@ -251,7 +242,7 @@ export class Stamina {
   /** 비기 한 번 (cost — 11/16 일본 고노센 SECRET.gnsCost 50 · 없으면 공통 STAMINA.secretCost 35 — secret.js secretCostOf) */
   secret(cost = STAMINA.secretCost) {
     if (this.fighter.alive && !this.exhausted) this.fighter.schoolPassive?.strokeStart(true); // 비기 칼 — 유파 패시브 몫 없음 (school_passive.js)
-    if (!STAMINA.on || this.exhausted) return;
+    if (this.exhausted) return;
     this.attackId++;
     this.flowAttackKind = 'secret'; this.flowAttackStart = this.time;
     this.attackUntil = this.time + ATTACK_LIFE;
@@ -263,7 +254,7 @@ export class Stamina {
    *  0 보다 많으면 그 몫을 kind 로 쓴 것으로 적고(spent · 회복 쉼 다시 셈 — spend 와 같음) · 0 보다 적으면(지침) 0 으로 올림('무조건 0'). 기력 끔 · 무한 · 탈진 · 죽음이면 아무 일 없음
    */
   zero(kind = 'secret') {
-    if (!STAMINA.on || this.infinite || this.exhausted || !this.fighter.alive) return false;
+    if (this.infinite || this.exhausted || !this.fighter.alive) return false;
     if (this.value > 0) this.spent[kind] = (this.spent[kind] ?? 0) + this.value;
     this.value = 0;
     this.rest = 0;
@@ -277,7 +268,7 @@ export class Stamina {
    *  to 보다 많으면 그 몫을 kind 로 쓴 것으로 적고(spent · 회복 쉼 다시 셈 — zero 와 같음) · 이미 to 이하면 값은 그대로(올리지 않음 — 쉼만 다시 셈). 기력 끔 · 무한 · 탈진 · 죽음이면 아무 일 없음
    */
   drainTo(to, kind = 'secret') {
-    if (!STAMINA.on || this.infinite || this.exhausted || !this.fighter.alive) return false;
+    if (this.infinite || this.exhausted || !this.fighter.alive) return false;
     if (this.value > to) {
       this.spent[kind] = (this.spent[kind] ?? 0) + this.value - to;
       this.value = to;
@@ -291,13 +282,13 @@ export class Stamina {
   /** 첫 걸음 박차기 (우리 본판 gait.js fastBegin — 박찬 걸음을 뗄 때 한 번): pushCost 12, 무게 배율 없음 · 회복 0.6 s 시계를 다시 센다(공격·막아 받기·비기와 같이).
    *  박차기가 걸리는 몸만 부른다 — 독일 뒤(비스듬히 뒤) · 이베리아 옆(비스듬히 옆) · 지금은 플레이어만(GAIT.stepBurst · burstDe). 박찬 걸음의 걸은 거리는 걷기 비용으로 따로 센다 */
   burst() {
-    if (!STAMINA.on || this.exhausted) return;
+    if (this.exhausted) return;
     if (this.spend('push', STAMINA.pushCost)) this.counts.push++;
   }
 
   /** 접촉 fresh와 별개로 상대 공격 번호당 한 번만 청구한다. 공격 중 칼 충돌은 공격 비용에 포함. */
   block(attacker) {
-    if (!STAMINA.on || this.exhausted || this.inSecret || this.clinchStep?.active || !this.fighter.armed) return;
+    if (this.exhausted || this.inSecret || this.clinchStep?.active || !this.fighter.armed) return;
     const other = attacker?.stamina;
     if (!other || !other.attackId || other.time > other.attackUntil) return;
     if (this.attacking && !this.guarding) return;
@@ -411,11 +402,6 @@ export class Stamina {
     const p = f.bodies?.pelvis?.translation();
     const old = this.position;
     this.position = p ? { x: p.x, z: p.z } : null;
-    if (!STAMINA.on) {
-      this.value = STAMINA.max; this.level = 0; this.exhaustLeft = 0; this.pose = 0; this.rest = 0;
-      this.clinching = false; this.clinchStep = null;
-      return;
-    }
     if (this.infinite) this.refill(); // 기력 무한: 늘 가득 — 아래 길(클린치 짝 셈 · 긋기 확정 · 걸음 셈)은 그대로 돌고 청구만 spend 가 받지 않는다
     // 회복·걷기보다 우선. 이번 스텝 비용으로 탈진했으면 강제 회복은 다음 스텝부터.
     if (this.stepClinch(dt)) {
@@ -429,19 +415,16 @@ export class Stamina {
       const slice = Math.min(dt, this.exhaustLeft);
       const before = this.value;
       this.exhaustLeft = Math.max(0, this.exhaustLeft - slice);
-      const target = this.exhaustNaturalTarget ?? 0;
-      const rate = this.exhaustNaturalTarget != null
-        ? recoverRate(f) : STAMINA.exhaustRecover;
-      this.value = Math.min(target, this.value + rate * slice);
+      const target = STAMINA.severeAt;
+      this.value = Math.min(target, this.value + recoverRate(f) * slice);
       this.recovered += this.value - before;
       this.pose = Math.min(1, this.pose + dt * 6);
       this.action = 'exhausted';
       this.rest = 0;
       if (this.exhaustLeft < 1e-9) {
-        // 자연 회복 탈진: −35 · 심한 지침(2)에서 풀림(되돌림 +15 그대로 — 지침으로는 −20 에서) · 옛 고정: 0 · 지침(1)
+        // −35 · 심한 지침(2)에서 풀림(되돌림 +15 그대로 — 지침으로는 −20 에서)
         this.exhaustLeft = 0; this.value = target;
-        this.level = this.exhaustNaturalTarget != null ? 2 : 1;
-        this.exhaustNaturalTarget = null;
+        this.level = 2;
         this.rest = STAMINA.recoverDelay; // 강제 회복을 마쳤으므로 새 대기 없이 다음 스텝부터 정상 회복 (막기를 쥐고 있으면 다시 멈춤)
       }
       return;
@@ -486,28 +469,6 @@ export class Stamina {
 }
 
 /**
- * 티소나 '위세' (사장님 10/21 23:xx — 값 config.js WEAPON_ABILITY · 무기 스펙 awe): 칼 주인(att)의 공격이 상대(vic) 칼에 막혀 끝났다(못 벰 · 칼끼리 닿음).
- *  부르는 곳 = 독일 인데스 '막힘'과 같은 가름 — AI 는 ai.js afterStrike(!hitLanded · bound) · 사람은 skill.js whiffEnd(공격으로 셈 · !landed · bound). 둘 다 공격 하나 끝에 한 번 부른다.
- *  막은 쪽 기력 − aweDrain · 칼 주인 시계(stamina.time)로 aweGap 초 안에는 다시 깎지 않는다(깎았을 때만 시계를 다시 셈).
- *  능력 없는 칼 · 부러진 칼 · 빈손이면 아무 일도 없다(난수 · 몸 · 장부 그대로 — 다른 무기 판은 바이트 같음). 청구는 spend('awe'):
- *  기력 끔 · 기력 무한(용사의 눈물) · 탈진 · 죽음이면 깎이지 않는다. 깎인 값은 머리 위 기력 막대(stamina_hud.js)에 다른 청구처럼 보인다
- */
-export function spendAweDrain(att, vic) {
-  const W = WEAPON_ABILITY;
-  const A = att?.stamina, s = vic?.stamina;
-  if (!att?.weapon?.awe || !att.armed || att.weaponBroken || !A || !s || !(W.aweDrain > 0)) return null;
-  if (att.aweLast != null && A.time - att.aweLast < W.aweGap - 1e-9) return null;
-  s.spent.awe ??= 0;
-  s.counts.awe ??= 0;
-  const before = s.value;
-  if (!s.spend('awe', W.aweDrain)) return null;
-  s.counts.awe++;
-  att.aweLast = A.time;
-  const event = { time: A.time, attacker: att.index, requested: W.aweDrain, before, after: s.value, actual: before - s.value };
-  vic.lastAwe = event;
-  return event;
-}
-/**
  * 티소나 '위세' 판 시작 (사장님 10/24 11:3x — config.js WEAPON_ABILITY.aweStart): att 가 위세 칼(weapon.awe)을 들고 판을 시작하면 vic 의 최대 기력을
  *  aweStart(15 — 고정 · 무작위 아님, 사장님 11:4x)만큼 그 판 내내 깎고, 깎인 최대에서 시작한다(기력 무한이면 깎인 최대로 늘 가득 — 청구가 없어 느낄 일 없음).
  *  판을 세울 때 한 번(main.js newRound — 사람 · AI 두 쪽 모두). 돌려줌 { loss } 또는 null(위세 칼 아님 · 끔)
@@ -516,7 +477,7 @@ export function applyAweStart(att, vic) {
   const s = vic?.stamina, loss = Math.max(0, Math.round(+WEAPON_ABILITY.aweStart || 0));
   if (!att?.weapon?.awe || !s || !(loss > 0)) return null;
   s.aweLoss = loss;
-  if (STAMINA.on) s.value = s.max;
+  s.value = s.max;
   if (s.infinite) s.refill();
   vic.aweStart = { attacker: att.index, loss };
   return { loss };

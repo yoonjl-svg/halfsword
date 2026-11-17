@@ -16,7 +16,7 @@
 //
 //  들어보기: 메뉴의 "소리 들어보기" (sounds.html)
 // ─────────────────────────────────────────────────────────────
-import { SOUND, VITALS, STAMINA, IMPACT_FX } from './config.js';
+import { SOUND, VITALS, IMPACT_FX } from './config.js';
 import { whipCrackGate } from './whip_sound.js'; // 드루이드의 채찍 C2 맞음 · 끝 딱 겹침 막기 (10/24)
 import { drawnSlash, DRAWN_SLASH } from './slash_draw.js';
 import { StageDetailSound, hasStageDetails } from './stage_detail_sound.js';
@@ -3838,7 +3838,7 @@ export class BodySounds {
     }
 
     // 기력 숨은 출혈/상처 회복 계산과 독립. 기존 숨 녹음을 재사용한다.
-    const staminaBreath = STAMINA.on && f.alive && !f.revival && !VOICES[this.voice]?.mute && f.stamina.level > 0;
+    const staminaBreath = f.alive && !f.revival && !VOICES[this.voice]?.mute && f.stamina.level > 0;
     if (staminaBreath) {
       const exhausted = f.stamina.exhausted;
       if (this.t >= this.staminaBreathT || (exhausted && !this.staminaWasExhausted)) {

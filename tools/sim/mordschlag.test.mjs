@@ -482,7 +482,7 @@ test('AI 모르트슐라크 (10/24 사장님 \'ai도 비기 쓰게 해\'): 누�
     assert.equal(E.secretUsed, 1);
     assert.equal(E.mordGrip, null); // 원래 쥠으로
     assert.equal(E.skill.sec, null);
-    if (CONFIG.STAMINA.on) assert.equal((E.stamina.counts.secret ?? 0) - c0, 1); // 비기 기력 (사람과 같은 장부)
+    assert.equal((E.stamina.counts.secret ?? 0) - c0, 1); // 비기 기력 (사람과 같은 장부)
     E.barge = null;
     const pp = P.bodies;
     for (const k of Object.keys(pp)) { const t = pp[k].translation(); pp[k].setTranslation({ x: t.x - 2.5, y: t.y, z: t.z }, true); } // 상대를 멀리

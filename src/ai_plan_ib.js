@@ -63,7 +63,7 @@ export function ibInit(ai) {
 export function swapReady(me) {
   if (!IB_LINK.trade || me.ibTradeUsed) return false;
   const S = me.stamina;
-  return !STAMINA.on || !S || S.infinite || S.value >= STAMINA.cutCost * (S.weight ?? 1);
+  return !S || S.infinite || S.value >= STAMINA.cutCost * (S.weight ?? 1);
 }
 
 /** 다음 칼이 세 칼마다 기력 0 칼인가 (B6 — 몸이 그 셈을 받을 때만 · fighter.js ibChainCostK 와 같은 셈 · 읽기만) */
@@ -125,7 +125,7 @@ export function armK(ai) {
   const me = ai.me;
   if (!ai.spinArm || !ai.secret?.do?.altib || secretSpent(me) || !me.stamina?.secretReady) return 0;
   const S = me.stamina;
-  const share = STAMINA.on && !S.infinite ? clamp((S.value - STAMINA.secretCost) / Math.max(1, S.max - STAMINA.secretCost), 0, 1) : 1;
+  const share = !S.infinite ? clamp((S.value - STAMINA.secretCost) / Math.max(1, S.max - STAMINA.secretCost), 0, 1) : 1;
   return ai.planK * (ai.planC?.arm ?? 0) * share;
 }
 
@@ -226,7 +226,7 @@ function dashStart(ai, side) {
   const D = ai.ibPlan.dash;
   if (D.on || !side || ai.chasing || ai.me.state !== 'stand' || !ai.me.gait || !(ai.mode === 'watch' || ai.mode === 'withdraw' || ai.mode === 'defend')) return false;
   const S = ai.me.stamina;
-  if (bandOf(ai.proficiency) >= 2 && STAMINA.on && S && !S.infinite && S.value < ai.planRestAt() + STAMINA.pushCost) return false;
+  if (bandOf(ai.proficiency) >= 2 && S && !S.infinite && S.value < ai.planRestAt() + STAMINA.pushCost) return false;
   D.on = true;
   D.side = Math.sign(side);
   D.t = 0;

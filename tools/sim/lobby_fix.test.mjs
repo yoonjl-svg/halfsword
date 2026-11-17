@@ -39,13 +39,6 @@ test('케틀 햇: 최대 130에서 시작 · 130까지만 회복 · 문턱 0 / S
   f.stamina.spend('attack', 40); assert.equal(f.stamina.exhausted, true); near(f.stamina.value, STAMINA.floor); // −80.5 → floor(−70)에서 멈춤 · 탈진
   const plain = actor(); near(plain.stamina.max, 100); near(plain.stamina.value, 100); // 덧 없는 몸(AI · 그 밖)은 100 그대로
 });
-test('기력 끔(?stamina=0)이면 덧 없이 100 — 지금 판 그대로', () => {
-  try {
-    STAMINA.on = false;
-    const f = actor(); f.stamina.setMaxBonus(30); near(f.stamina.max, 100); near(f.stamina.value, 100);
-    tick(f, 0.5); near(f.stamina.value, 100); near(f.stamina.ratio, 1);
-  } finally { STAMINA.on = true; }
-});
 test('실제 판: 케틀 햇 플레이어는 130까지 회복, 상대는 100', () => {
   const g = newRound({ weapon: 'longsword', seed: 7 });
   try {

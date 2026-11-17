@@ -15,7 +15,7 @@
 //   (10/24) 획마다 손맛도 셈: 긋기 시작(감기 · 멈춤 뒤) → 칼끝(몸통 기준) 가장 빠른 때 swingT · 그 빠르기 tipV · 손가락을 뗀 뒤 칼끝이 몸통 기준 3 m/s 아래로 0.1 s 머물기까지 recT(회수) · 판정 하나의 J 평균
 //                                [--sound]  (10/24) 채찍 소리 때: 게임과 같은 휙 · 딱 걸쇠(src/whip_sound.js whipTipStep)를 화면마다(물리 2 스텝 = 60 fps) 돌려 딱이 난 때와 채찍 맞음(판정 5 J 넘음 · 살 · 옷 / 투구 · 판금) 때를 적고 맞음마다 가장 가까운 딱까지 시간을 셈 — 맞음 소리와 딱이 겹치나 (docs/import/bernardo_whip_import_2026-10-24.md)
 //                                [--diag]  획 진단: 몸 닿음 · 칼만 · 둘 다 아님 갈래마다 시작 거리 · 덩굴 끝이 상대 쪽으로 간 거리 · 상대 몸통 · 머리와 가장 가까움 · 상대가 서 있던 획 몫
-//   무기 뒤 ':k' = 채찍 무릎 꿇리기 켬(WHIP_KNEEL.p 판 값) · 없으면 끔(p 0 — 꿇리기 전) · ':ai' = 플레이어 자리도 AI 가 채찍(AI 스위치 WHIP_KNEEL.ai 켬) · ':ai0' = 같은 AI 채찍 · 스위치 끔(견줌)
+//   무기 뒤 ':k' = 채찍 무릎 꿇리기 켬(WHIP_KNEEL.p 판 값) · 없으면 끔(p 0 — 꿇리기 전) · ':ai' = 플레이어 자리도 AI 가 채찍(AI 채찍은 꿇리기를 굴리지 않음)
 //  판마다: 판정 수(strike 가 낸 맞음) · 가장 큰 한 맞음 J(maxJ · 머리 · 목 maxHeadJ) · 판정 J 합(머리 · 목 따로 — 둔기는 심각도 대신 J · 넘어짐 · 의식으로 친다) · 상대 넘어짐(down) · 의식 잃은 몫 · 상처 맞힘(심각도 > 0) · 준 심각도 · 받은 심각도 · 이김(상대 죽음 — 부활 뒤 마지막) / 짐 / 시간 끝 · 이긴 때 · 휘두른 획 · 막힌 획(칼끼리 닿고 못 맞힘) ·
 //   꿇린 수 · 연달아 꿇림(일어선 뒤 1 s 안에 다시 꿇음 · 가장 긴 줄) · 상대가 꿇은 채 보낸 시간 · 머리 · 목 판정 수 · 주저앉음(서 있다 무릎 — 채찍 꿇림 빼고) ·
 //   (채찍) 덩굴이 상대 칼에 붙어 있던 시간 · 붙음 횟수 · 가운데 길이 · 0.3 s 넘게 붙은 횟수 · 마디별 칼 닿음 몫 · 몸에 닿을 기회가 있던 획(그 획 1.2 s 안에 덩굴이 상대 몸에 닿음) 몫
@@ -64,9 +64,8 @@ function gateCount(SD) {
 }
 function duel(wSpec, oppId, seed, dur) {
   const [w, mode] = wSpec.split(':');
-  WHIP_KNEEL.p = mode === 'k' || mode === 'ai' || mode === 'ai0' ? PK : 0;
-  WHIP_KNEEL.ai = mode === 'ai';
-  const aiDrive = mode === 'ai' || mode === 'ai0';
+  WHIP_KNEEL.p = mode === 'k' || mode === 'ai' ? PK : 0;
+  const aiDrive = mode === 'ai';
   setWhipPreset('now');
   if (WHIP_OVR) Object.assign(WHIP, WHIP_OVR);
   const mb0 = WEAPONS.druid_whip.mBlunt;
@@ -221,7 +220,7 @@ for (const w of W) for (const o of OPPS) for (const s of SEEDS) {
   rows.push(r);
   console.log(JSON.stringify(r));
 }
-WHIP_KNEEL.p = P0; WHIP_KNEEL.ai = false;
+WHIP_KNEEL.p = P0;
 // 무기마다 묶음
 const f1 = (v) => (Number.isFinite(v) ? v.toFixed(v >= 10 ? 0 : 1) : '-');
 console.log('\n| 무기 | 판 | 이김 · 짐 · 시간 끝 | 이긴 때 평균 s | 판정 / 판 | 판정 J 합 / 판 (머리 · 목) | 머리 · 목 판정 / 판 | 주저앉음 · 넘어짐 / 판 · 의식 잃은 몫 | 상처 맞힘 / 판 | 준 심각도 / 판 | 받은 심각도 / 판 | 획 / 판 | 막힌 획 몫 | 몸에 닿을 기회 획 · 칼 닿은 획 | 칼에 붙은 시간 / 판 s (횟수 · 가운데 s · 0.3 s 넘음) | 마디별 칼 닿음 몫 (1 → 8) | 꿇린 수 / 판 (굴림) | 연달아 꿇림 / 판 · 가장 긴 줄 | 상대 꿇은 시간 / 판 s |');

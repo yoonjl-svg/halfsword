@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-//  다리가 체중을 싣는 걸음 (BODY.weightMode = 'hybrid')
+//  다리가 체중을 싣는 걸음
 //
 //  예전 방식('levitate'): 보이지 않는 힘이 골반을 거의 전부(몸무게의 94%) 떠받치고, 다리는 흉내만 냈다.
 //  → 걸을 때 발이 땅을 미끄러지고 몸이 제 무게를 느끼지 않는 것처럼 보였다.
@@ -1783,9 +1783,7 @@ export class Gait {
         //  (걷는 중 디딘 직후(무게를 받는 동안)만: 서 있을 땐 자세대로 무릎을 굽힌다)
         const capK = GAIT.stanceKneeMax > 0 && this.walking && l.kind !== 'settle' && l.tLand < GAIT.loadTime * 1.5;
         //  (뛰듯 빨리 갈 땐 발을 디딜 때 부딪는 힘이 커서 무릎이 목표보다 더 꺾이므로 덜 굽히게 한다)
-        // R2′ 'legs' (124): 골반 yaw 목표(Δψ, fighter.driveBalance)의 하중 몫 w_l = Nf_l/ΣNf (걸러진 발 하중, 128 의 나눔) 을 이 다리 엉덩이에
-        const dpsi = BODY.chain === 'legs' ? this.chainShare(l) * (f.chainDpsi || 0) : 0;
-        this.legIK(l, _h, _a, l.yaw, -l.heel, capK ? legLen(Math.max(l.phi, l.phiTD) + GAIT.stanceKneeMax * (1 - GAIT.runKneeCut * this.runW)) : 0, dpsi);
+        this.legIK(l, _h, _a, l.yaw, -l.heel, capK ? legLen(Math.max(l.phi, l.phiTD) + GAIT.stanceKneeMax * (1 - GAIT.runKneeCut * this.runW)) : 0);
       } else if (f.ibSpin && f.ibSpin.sk === k) {
         // 휘감아 돌기 (10/22 — iberian_spin.js): 도는 발은 축발 둘레 반 바퀴 넘는 원을 따라 앞에 딛는다 (몸이 돈 몫만큼 · 발 드는 높이 P.lift)
         const yaw = spinFootTarget(f, l, _a, ANKLE_H, this.P.lift);
@@ -1831,14 +1829,6 @@ export class Gait {
         this.legIK(l, l.hip, _a, yaw, this.P.toeUp * Math.sin(Math.PI * u));
       }
     }
-  }
-
-  /** R2′ 'legs': 이 딛은 다리의 하중 몫 w_l = Nf_l / ΣNf (걸러진 발 하중, pinFeet). 두 발이면 N 비례로 나뉘고 한 발이면 1, 하중이 없으면 0 */
-  chainShare(l) {
-    const sum = (this.legs.F.stance ? this.legs.F.Nf || 0 : 0) + (this.legs.B.stance ? this.legs.B.Nf || 0 : 0);
-    const w = sum > 1e-6 ? (l.Nf || 0) / sum : 0;
-    l.chainW = w;
-    return w;
   }
 
   /** 내딛는 발목을 목표(a)로 당기는 힘 (발 ↔ 골반, 서로 반대) */
@@ -1914,7 +1904,7 @@ export class Gait {
    * 다리 역운동학: 엉덩이(hip) → 발목(ankle)까지 다리를 뻗고, 발은 yaw 방향을 보며 땅과 나란하게.
    * 무릎은 경첩, 발목은 공 관절이라 다리가 옆으로 기울어도 발바닥은 평평하다.
    */
-  legIK(l, hip, ankle, yaw, pitch, minLen = 0, dpsi = 0) {
+  legIK(l, hip, ankle, yaw, pitch, minLen = 0) {
     const f = this.f;
     const J = f.jointByName;
     const d = _d.subVectors(ankle, hip);
@@ -1942,9 +1932,6 @@ export class Gait {
     _qT.setFromRotationMatrix(_M);
     const pr = f.bodies.pelvis.rotation();
     _qP.set(pr.x, pr.y, pr.z, pr.w);
-    // R2′ 'legs' (확인표 124): 딛은 다리의 허벅지 목표를 "골반이 의도 쪽으로 dpsi(= w_l·Δψ)만큼 더 돈 틀"에서 푼다
-    //  = q_hip* = R_y(−dpsi)·q_hip (골반 틀의 연직축 기준). 발·정강이 목표는 그대로 → 엉덩이 y 축 근육이 골반을 돌리고 반작용은 발 마찰로 땅에 간다
-    if (dpsi) _qP.premultiply(_qY.setFromAxisAngle(UP, dpsi));
     _qP.invert();
     J[l.thigh].target.copy(_qP).multiply(_qT);
     J[l.shin].target.setFromAxisAngle(Z_AXIS, -phi);
@@ -1986,7 +1973,6 @@ export class Gait {
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
       l.N = 0;
-      if (f.chainDbg) l.chainPinOn = false;
       if (!l.stance) {
         l.Nf = 0;
         continue;
@@ -2005,18 +1991,16 @@ export class Gait {
       const rx = pt.x - c.x;
       const ry = pt.y - c.y;
       const rz = pt.z - c.z;
-      // R2′ 'legs' (확인표 127): 마찰 한계가 보는 접촉 N 은 ×6/7 (Rapier 0.19 (n+1)/n 과대 보고 교정, support_optimum §2 와 같은 식 — 상한 아님). l.N 은 그대로
-      const Nc = BODY.chain === 'legs' ? N * (6 / 7) : N;
       if (f.terrain) {
         // 지형 무대: 같은 하중 한계의 정지 마찰을 비탈 면 안에서 (아래 평지 식은 수평면 안)
-        this.pinTerrainFoot(l, pin, pt, Nc, fb, v, w, rx, ry, rz);
+        this.pinTerrainFoot(l, pin, pt, N, fb, v, w, rx, ry, rz);
         continue;
       }
       // 그 점의 속도 = v + ω × r
       const vx = v.x + w.y * rz - w.z * ry;
       const vz = v.z + w.x * ry - w.y * rx;
       // 한계는 걸러진 무게로 (접촉 힘은 스텝마다 들쭉날쭉해서, 순간적으로 작게 잡히면 붙잡는 자리가 조금씩 끌려간다)
-      l.Nf = Math.max(Nc, (l.Nf || 0) * (1 - GAIT.pinHold * (f.lastDt || 1 / 120)));
+      l.Nf = Math.max(N, (l.Nf || 0) * (1 - GAIT.pinHold * (f.lastDt || 1 / 120)));
       const lim = GAIT.pinMu * l.Nf;
       // 붙잡는 자리가 한계보다 멀면 (미끄러짐) 자리를 발 쪽으로 옮긴다. 딛은 자리(다리 IK 목표)도 같이
       const ex = pin.x - pt.x;
@@ -2024,7 +2008,6 @@ export class Gait {
       const e = Math.hypot(ex, ez);
       const eMax = lim / GAIT.pinK;
       if (e > eMax) {
-        if (f.chainDbg) l.chainSlips = (l.chainSlips || 0) + 1; // 탐색판 HUD: 핀 자리 옮김(미끄러짐) 횟수
         const s = 1 - eMax / e;
         const mx = ex * s;
         const mz = ez * s;
@@ -2065,15 +2048,6 @@ export class Gait {
       _f.y = clamp(GAIT.pinYawK * ye - GAIT.pinYawD * w.y, -lt, lt);
       _f.z = 0;
       fb.addTorque(_f, true);
-      if (f.chainDbg) {
-        // 탐색판 HUD 측정만 (fighter.chainProbe): 이 스텝 발 핀이 건 수평 힘·자리·yaw 토크
-        l.chainPinOn = true;
-        l.chainPinFx = fx;
-        l.chainPinFz = fz;
-        l.chainPinX = pt.x;
-        l.chainPinZ = pt.z;
-        l.chainPinTy = _f.y;
-      }
     }
   }
 
@@ -2099,13 +2073,13 @@ export class Gait {
    * 지형 무대의 발바닥 정지 마찰 (pinFeet 평지 식과 같은 하중 한계 · 같은 스프링 — 비탈 면 안에서, 샛별 0116047c 그대로):
    *  groundForce 는 위 방향(수직) 받침을 재므로 쿨롱 한계는 법선 하중 = N / 법선 y. l.N·l.Nf 는 넘겨받기 셈을 위해 수직 받침 그대로 둔다
    */
-  pinTerrainFoot(l, pin, pt, Nc, fb, v, w, rx, ry, rz) {
+  pinTerrainFoot(l, pin, pt, N, fb, v, w, rx, ry, rz) {
     const f = this.f;
     const n = f.terrain.normalAt(pt.x, pt.z);
     _floorNormal.set(n.x, n.y, n.z);
     _pinVelocity.set(v.x + w.y * rz - w.z * ry, v.y + w.z * rx - w.x * rz, v.z + w.x * ry - w.y * rx);
     _pinVelocity.addScaledVector(_floorNormal, -_pinVelocity.dot(_floorNormal));
-    l.Nf = Math.max(Nc, (l.Nf || 0) * (1 - GAIT.pinHold * (f.lastDt || 1 / 120)));
+    l.Nf = Math.max(N, (l.Nf || 0) * (1 - GAIT.pinHold * (f.lastDt || 1 / 120)));
     const lim = (GAIT.pinMu * l.Nf) / n.y;
     _pinError.subVectors(pin, pt);
     _pinError.addScaledVector(_floorNormal, -_pinError.dot(_floorNormal));
@@ -2160,7 +2134,6 @@ export class Gait {
 }
 
 const _qP = new THREE.Quaternion();
-const _qY = new THREE.Quaternion(); // R2′ legIK dpsi 전용
 const _qF = new THREE.Quaternion();
 const _qT = new THREE.Quaternion();
 const _M = new THREE.Matrix4();

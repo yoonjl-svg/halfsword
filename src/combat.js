@@ -1043,7 +1043,7 @@ export class Combat {
    */
   whipKneelCheck(att, vic, part) {
     const K = WHIP_KNEEL, X = att.flexWeapon;
-    if (!(K.p > 0) || !X || (att.aiControlled && !K.ai)) return;
+    if (!(K.p > 0) || !X || att.aiControlled) return; // 사람 채찍만 (AI 채찍은 굴리지 않는다)
     const n = X.strokes ?? 0;
     if (n <= (X.rolled ?? 0)) return; // 이 획은 이미 굴렸다 (마디가 여러 번 닿아도 한 번)
     X.rolled = n;

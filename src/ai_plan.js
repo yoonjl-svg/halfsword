@@ -6,7 +6,7 @@
 //  1 단계: 이탈리아만 플랜이 있다(config AI_PLAN.schools). 2 단계(11/14): 일본(src/ai_plan_jp.js — 유파 몫은 유파 파일에). 플랜이 없는 유파는 ai.js 가 이 파일의 어떤 셈도 부르지 않는다(바이트 같음).
 //  연산(사장님 11/14 '랙이 생기진 않을까'): 국면 판정은 AI_PLAN.tick 마다 한 번 · 스텝마다 새 객체 · 배열을 만들지 않음 · 탐색 · 미리 돌려 보기 같은 무거운 셈 없음.
 // ─────────────────────────────────────────────────────────────
-import { AI_PLAN, STAMINA, GAIT, AI_PLAN_FREE, realS } from './config.js';
+import { AI_PLAN, GAIT, AI_PLAN_FREE, realS } from './config.js';
 import { FREE_PLAN } from './ai_plan_free.js'; // 3 단계 무유파 플랜 칸 (11/14 — 유파 몫은 유파 파일에 묶음)
 import { itEdgeOn } from './italian_outbox.js';
 import { JP_PLAN } from './ai_plan_jp.js'; // 2 단계 일본 플랜 칸 (11/14 — 유파 몫은 유파 파일에 묶음)
@@ -128,7 +128,7 @@ export function planFor(tradition, p) {
 export function judgePhase(ai, d, s = null) {
   const me = ai.me;
   const foe = ai.foe;
-  if (STAMINA.on && (ai.staminaRest || me.stamina?.exhausted)) return 'tired';
+  if ((ai.staminaRest || me.stamina?.exhausted)) return 'tired';
   if (ai.desperate || (ai.lastHurtT != null && ai.sense.t - ai.lastHurtT < AI_PLAN.hurtT) || itEdgeOn(foe)) return 'behind';
   if ((s?.state ?? foe.state) !== 'stand' || foe.ringHit || foe.stamina?.exhausted || ai.riso?.win > 0 || ai.press?.win > 0) return 'finish';
   if (itEdgeOn(me) || ai.cautious) return 'ahead';
