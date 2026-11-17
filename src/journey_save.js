@@ -10,7 +10,7 @@ export const JOURNEY_SAVE_KEY = 'stillness.journey.checkpoint.v1';
 //  ?title=0 = 늘 건너뜀 · ?title=1 = 다른 인자가 있어도 첫 화면 (대기실 화면 점검용 — 주소로 무대·상대·무기를 고정한 판은 여정을 저장하지 않는다, main.js journeySaves)
 //  셈에서 빼는 인자: title 자신 · nosw(서비스 워커 비상 스위치 — pwa.js) · 바깥 링크가 붙이는 utm_* · fbclid · gclid · coins(디자인 보기용 금화 — game_entry.js, 대기실을 봐야 뜻이 있다)
 const NOT_GAME_ARGS = new Set(['title', 'nosw', 'fbclid', 'gclid', 'coins', 'heads', 'horns', 'horn', 'shopAlter', 'shopSlot', 'saengsaNow', 'atkStick']); // heads (10/25) = 시험용 머리 채우기 — coins 와 같이 첫 화면을 그대로 띄운다
-//  atkStick (11/17 — 공격 조이스틱 INPUT.atkStick) = 조작 판 스위치 — 판을 고정하지 않으니 첫 화면 · 대기실 · 여정 그대로 (사장님이 늘 하던 여정에서 해 보시게)
+//  atkStick (11/17 — 공격 조이스틱 · 브라우저 도구 장면의 `?atkStick=stick` = 설정 '공격 조이스틱' 켬) = 조작만 바꿈 — 판을 고정하지 않으니 첫 화면 · 대기실 · 여정 그대로
 //  horns · horn · shopAlter · shopSlot (10/30 · 10/31) = 상점 시험판 스위치(shop_test.js · main.js · shop_panel.js — 시험판에서만 뜻이 있음) — 대기실을 봐야 하니 첫 화면 그대로
 export function skipsTitle(params) {
   const forced = params.get('title');

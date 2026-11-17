@@ -8,7 +8,7 @@ import { INPUT } from './config.js';
 import { flushHaptic } from './effects.js';
 import { MOBILE_VERTICAL_GAIN, mapMobileHandDelta } from './mobile_intent.js'; // 10/7 폰 세로 1.35 배 (사장님 선택, 샛별 일반판 그대로)
 import { STICK_DEAD } from './stick_turn.js'; // 조이스틱 데드존 0.15 — 스틱 돌리기 몸짓 읽기(10/23 이베리아 휘감아 돌기)와 같은 수 한 곳
-import { atkStickState, atkStickGrab, atkStickKnob, atkStickRelease } from './atk_stick.js'; // 공격 조이스틱 (11/17 — INPUT.atkStick · 아래 attachAtkStick)
+import { atkStickState, atkStickGrab, atkStickKnob, atkStickRelease } from './atk_stick.js'; // 공격 조이스틱 (11/17 — 설정 '공격 조이스틱' · 아래 attachAtkStick · useAtkStick)
 
 const STICK_R = 40; // 화면 조이스틱 손잡이가 움직이는 반지름 (px — 이동 · 공격 조이스틱 같은 수)
 
@@ -31,6 +31,7 @@ export class Input {
     this.taps = 0;
     this.press = null;
     this.tapOnDown = false; // 권총(main.js 가 켠다): 손가락이 닿는(클릭하는) 순간 한 번 친 것으로 센다 — 떼는 때·누른 시간과 상관없이
+    this.atk = null; // 공격 조이스틱 손잡이 상태 — 설정 '공격 조이스틱'을 켠 터치 기기만 (아래 attachAtkStick · useAtkStick). 비었으면 화면 끌기 · 톡이 칼 입력
 
     this._resetHooks = new Set(); // 조이스틱처럼 자체 포인터 상태를 가진 입력 장치가 등록한다 (resetTransient 때 함께 초기화)
 
@@ -77,7 +78,7 @@ export class Input {
     if (!this.enabled) return;
     // 이동 스틱 둘레(10/31 — INPUT.stickGuardPx · attachStick 이 stickGuard 를 건다): 스틱 원 + 둘레 안에 닿은 손가락은 칼 손가락이 아님 (권총 탭도 아님)
     if (e.pointerType !== 'mouse' && this.stickGuard?.(e)) return;
-    if (this.atk?.mode === 'stick' && e.pointerType !== 'mouse') return; // 공격 조이스틱 'stick' 판 (11/17 — INPUT.atkStick): 칼은 조이스틱만 — 화면 끌기 · 톡은 칼 입력이 아님
+    if (this.atk && e.pointerType !== 'mouse') return; // 공격 조이스틱을 켬 (11/17 설정 '공격 조이스틱'): 칼은 조이스틱만 — 화면 끌기 · 톡은 칼 입력이 아님
     // 마우스 잠금을 거는 첫 클릭은 찌르기로 치지 않는다 (잠금을 못 거는 브라우저는 클릭 그대로)
     const lockedBefore = document.pointerLockElement === this.canvas || !this.canvas.requestPointerLock;
     if (e.pointerType === 'mouse') {
@@ -264,18 +265,16 @@ export function attachStick(input, pad, knob) {
 }
 
 /**
- * 공격 조이스틱 (11/17 — 사장님 '이동스위치처럼 공격 스위치를 만들어' · INPUT.atkStick · src/atk_stick.js): 화면 오른쪽 아래. 이동 스틱과 같은 꼴 · 크기 · 손잡이 반지름 ·
+ * 공격 조이스틱 (11/17 — 사장님 '이동스위치처럼 공격 스위치를 만들어' · src/atk_stick.js): 화면 오른쪽 아래. 이동 스틱과 같은 꼴 · 크기 · 손잡이 반지름 ·
  *  둘레(INPUT.stickGuardPx · stickGuardGrab — 둘레에 닿은 손가락은 화면 칼 손가락이 아니고, 비어 있으면 이 조이스틱을 쥠).
  *  손잡이를 쥔 엄지는 칼 손가락이다(input.activeTouch · press — 탭 찌르기 · 길게 누름 · 손가락 닿음 · 권총 닿는 순간 쏨이 손가락과 같은 길 · press.atk 표시).
  *  다만 엄지 움직임은 손 목표에 더하지 않고(Input.onMove) 손잡이 자리(input.atk)로만 — main.js 가 프레임마다 atkStickStep 으로 손 목표 몫을 낸다.
- *  'both' 판: 화면 손가락이 칼을 쥐고 있으면 조이스틱이 넘겨받는다(그 손가락은 버림 — 칼은 손가락 하나로만). 판이 0 이면 아무것도 붙이지 않음(input.atk 없음 — 판 그대로)
+ *  붙이기만 하고 켜지 않는다: 켬 · 끔은 useAtkStick (설정 '공격 조이스틱' — 사장님 11/17 기본 끔). 끈 동안(input.atk 가 이 손잡이가 아님)은 패드 · 둘레가 아무것도 받지 않음 — 화면 끌기 그대로
  * @param {HTMLElement} pad  바깥 원
  * @param {HTMLElement} knob 안쪽 손잡이
  */
-export function attachAtkStick(input, pad, knob, mode) {
-  const st = atkStickState(mode);
-  if (!st.mode) return null;
-  input.atk = st;
+export function attachAtkStick(input, pad, knob) {
+  const st = atkStickState();
   const R = STICK_R;
   let cx0 = 0;
   let cy0 = 0;
@@ -303,12 +302,6 @@ export function attachAtkStick(input, pad, knob, mode) {
   };
   input._resetHooks.add(release);
   const grab = (e) => {
-    if (input.activeTouch !== null) {
-      // 화면 손가락이 칼을 쥐고 있었다('both' 판) — 넘겨받음 (그 손가락의 누름 · 흔적은 버림)
-      input.activeTouch = null;
-      input.press = null;
-      input.trail?.lift?.();
-    }
     const { dx, dy } = at(e);
     cx0 = e.clientX;
     cy0 = e.clientY;
@@ -329,7 +322,7 @@ export function attachAtkStick(input, pad, knob, mode) {
   };
   pad.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
-    if (!input.enabled || st.id !== null || e.pointerType === 'mouse') return;
+    if (!input.enabled || input.atk !== st || st.id !== null || e.pointerType === 'mouse') return;
     grab(e);
   });
   pad.addEventListener('pointermove', (e) => e.pointerId === st.id && update(e));
@@ -352,6 +345,7 @@ export function attachAtkStick(input, pad, knob, mode) {
   const prevGuard = input.stickGuard;
   input.stickGuard = (e) => {
     if (prevGuard?.(e)) return true;
+    if (input.atk !== st) return false; // 끈 조이스틱 (설정 '공격 조이스틱' 끔)
     const g = +(INPUT.stickGuardPx ?? 0);
     if (!(g > 0)) return false;
     const r = pad.getBoundingClientRect();
@@ -365,4 +359,18 @@ export function attachAtkStick(input, pad, knob, mode) {
     return true;
   };
   return st;
+}
+
+/**
+ * 공격 조이스틱 켬 · 끔 (설정 '공격 조이스틱' — main.js applyAtkStick · 사장님 11/17 '기본은 지금처럼 설정을 바꾸면 스틱으로'): 바뀔 때만
+ *  칼 손가락 · 조이스틱 엄지 상태를 버리고(resetTransient — 판 경계와 같은 길) input.atk 를 바꾼다. 끄면 화면 끌기 · 톡이 칼 입력(전 판 그대로)
+ * @returns {boolean} 켜졌나 (st 가 없으면 — 터치 기기가 아니면 — 늘 끔)
+ */
+export function useAtkStick(input, st, on) {
+  const want = on && st ? st : null;
+  if (input.atk !== want) {
+    input.resetTransient();
+    input.atk = want;
+  }
+  return !!want;
 }

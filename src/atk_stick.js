@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  공격 조이스틱 (11/17 — 사장님 '이동스위치처럼 공격 스위치를 만들어. 그걸로 공격해야 정교한 컨트롤이 되고 상대 공격을 막는 컨트롤 가능해져'
-//   · 기록 docs/strike/atk_stick_2026-11-17.md · 확인표 4656 ~ · 스위치 INPUT.atkStick · 붙이기 input.js attachAtkStick · 프레임 main.js playerInputFrame)
+//   · 기록 docs/strike/atk_stick_2026-11-17.md · 확인표 4656 ~ · 켬 · 끔 = 설정 '공격 조이스틱'(사장님 11/17 — 기본 끔 · main.js settings.atkStick) ·
+//   붙이기 input.js attachAtkStick · useAtkStick · 프레임 main.js playerInputFrame)
 //
 //  자리 조종: 손잡이 자리(오른쪽 +x · 위 +y · 길이 ≤ 1)가 손 목표(handOffset — 손가락 끌기와 같은 패드 m 공간)를 정한다.
 //   가운데 = 긴 자세 자리(0, 0 — 칼끝이 상대를 겨눔) · 위 = 지붕 · 오른쪽 = 옆 자세 · 아래 = 바보 자세 쪽. 끝까지 민 손잡이 = 손 닿는 끝 WEAPON.reach
@@ -18,14 +19,9 @@
 import { INPUT, SKILL, WEAPON } from './config.js';
 import { STICK_DEAD } from './stick_turn.js';
 
-/** 공격 조이스틱 판: 'stick' = 조이스틱만 칼 · 'both' = 조이스틱과 화면 끌기 · 0 = 없음(지금) */
-export function atkStickMode(v) {
-  return v === 'stick' || v === 'both' ? v : 0;
-}
-
 /** 손잡이 상태 (input.js attachAtkStick 이 채운다): id = 쥔 포인터 · x y = 손잡이 자리 원값 · grip = 칼을 쥠 · prev = 지난 프레임 손 목표 자리 */
-export function atkStickState(mode) {
-  return { mode: atkStickMode(mode), id: null, held: false, x: 0, y: 0, x0: 0, y0: 0, travel: 0, grip: false, ring: false, prev: null };
+export function atkStickState() {
+  return { id: null, held: false, x: 0, y: 0, x0: 0, y0: 0, travel: 0, grip: false, ring: false, prev: null };
 }
 
 /** 손잡이 자리 → 손 목표 (패드 m). 데드존 안 = 가운데(긴 자세 자리) · 끝 = 손 닿는 끝 */
