@@ -1,6 +1,6 @@
 // AI 숙련도 = 스킬트리 칸 시험 (11/16 사장님 결정 — config AI_KIT · src/skill_tree_data.js aiKitOf · src/ai.js applyKit · 기록 docs/strike/prof_kit_2026-11-16.md):
 //  사다리가 바른가(먼저 익힐 칸 · 11 칸을 꼭 한 번씩 · 6 = 5) · 숙련도마다 AI 몸 칸 몫 · 고유 공격 · 유파 패시브 · 비기가 칸을 따르나 ·
-//  AI 만의 스위치(사냥 겹 · 칼 씨름 · 바위 몸 · 이어 돌리기 · 파고들기 · 막는 동안 피해 감소)도 칸을 묻나 · `?aiKit=0`(AI_KIT.on 0) = 옛 판 · 사람 숙련도 mode 'count' · 'ladder'.
+//  AI 만의 스위치(사냥 겹 · 칼 씨름 · 바위 몸 · 이어 돌리기 · 파고들기 · 막는 동안 피해 감소)도 칸을 묻나 · 사람 숙련도 mode 'count' · 'ladder'.
 //  node --test tools/sim/prof_kit.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -34,7 +34,6 @@ const aiNamesOf = (s) => {
 const pkgNames = (A) => new Set([...A.uniqueByName.values()].map((u) => u.name));
 
 test('AI_KIT 기본값 — 켬 [사장님 11/16 결정] · 사다리 표(11/16 사장님 손목 힘 3단계 · 맞박자 찌르기 3단계 · 헛누름 4단계 · 막아찌르기 2단계 · 굳은 받기 2단계 반영)', () => {
-  assert.equal(AI_KIT.on, 1);
   assert.deepEqual(AI_KIT.ladder, {
     german: [['G1', 'G2'], ['G3', 'G5', 'G8'], ['G4', 'G6'], ['G7', 'G9'], ['G10', 'G12']],
     italian: [['I1', 'I3'], ['I5', 'I7', 'I6'], ['I2', 'I12'], ['I9', 'I8'], ['I4', 'I10']],

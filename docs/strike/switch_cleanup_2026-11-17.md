@@ -17,7 +17,7 @@
 | tools/sim 파일 | 462 | 449 (13 지움) |
 | 시험 (`node --test tools/sim/*.test.mjs`) | 1 091 / 1 091 | 955 / 955 (실패 0) |
 
-관문은 바이트 같다 (§6). **스위치 걷어내기는 다 끝나지 않았다** — 남은 것은 §5.
+관문은 바이트 같다 (§6). 같은 날 3차로 더 걷었다(§7). **스위치 걷어내기는 다 끝나지 않았다** — 지금 남은 것은 §7-6.
 
 ## 2. 남긴 주소 인자
 
@@ -83,7 +83,7 @@
 - 지운 시뮬 도구(꺼 둔 판만 보던 것): `stamina_gates` · `stamina_contact_fixtures` · `cam_follow_probe` · `arm_clear2_pic` · `arm_odd_pic`
 - 도중에 잡은 실수 하나: 2a 커밋에서 이베리아 막아 되찾기 조건이 `!!f?.swordArt?.tradition === 'iberian'` 로 바뀌어 늘 거짓이었음 — 2b 에서 고침(ib_block_regen 시험이 잡음 · 관문 다섯 판엔 닿지 않음)
 
-## 5. 남은 것 (다음 일)
+## 5. 2차 끝에 남았던 것 (3차에서 일부 걷음 — 지금 남은 것은 §7-6)
 
 - config 스위치 칸 약 260 이 아직 있다. 크게: SECRET(비기 — 고노센 · 발도 · 싱지르 · 모르트슐라크 · 리솔루토 · 격살 칸 100 남짓) · UNIQUE_ASSIST(겹치기 · 카바치오네 · 풍차 베기 · 셸하우 60 남짓 · `applyB4Old`) · SKILL(팔 사람 꼴 · 손가락 긋기 · 이탈리아 · 자세표) · JOINTS(날 세우기 꼴 · 손목 · 팔꿈치) · AI_PLAN · AI_KIT · AI_ARC · AI_TELL · IT_OUTBOX · PICKUP · THRUST · SCHOOL_PASSIVE · JP_TANK · IMPACT_FX · IB_LINK 켬 · 꼴(circle) · SKILL.corr(옛 보정 — corr_s0 관문이 이 둘을 견줌)
 - schools.js · finish.js · vital_target.js · druid_whip.js · nagashi_redesign 바깥의 모듈 스위치(`setItalianStride` · `setJapaneseGait('old')` · `FINISH` · `VITAL` · `setWhipPreset`)와 시뮬 환경 변수(harness_m 의 FINISH_* · VITAL_* · config 의 MONTANTE_HAND · IT_MEASURE · FL_MEASURE · EDGE · ONETIP · PLAYER_EDGE · JOINTS)
@@ -94,3 +94,114 @@
 
 `node tools/sim/fights12.mjs | sha256sum` `b7ba0017` · live_battery `cd211727` · `finish_thrust 1 --stand` `ba9c958b` · `corr_s0 --limits=off,on` IDENTICAL 12 · weapon_smoke OK 34 / 34 · `npm run -s build` 됨 · `name_policy` 0 — 바탕 `1cc27e8e` 와 같다. 커밋마다 같은 관문을 돌림.
 corr_s0 의 `--limits=off,on` 은 사람 관절 한도 스위치를 지운 뒤로 같은 판을 두 번 돈다(관문 명령 · 수는 그대로).
+
+## 7. 3차 (같은 날 이어서 — `801e1a75` 부터)
+
+감독 지시로 2단계를 이어 했다. 규칙은 같다(기본 판 그대로 · 다른 갈래 지움 · 안 들인 시제품 코드째 · 관문 바이트 같음).
+
+### 7-1. 수 (630e57fb → 지금)
+
+| | 전 | 후 |
+|---|---|---|
+| 주소 인자가 덮던 config 칸 406 가운데 스위치 꼴 | 302 중 259 남음 | 233 남음 (이번에 26 · 모두 69 지움) |
+| config 참거짓 · 꼴 글 · null 칸 | 116 | 102 |
+| config 참거짓 · 꼴 · null · 0/1 칸 (0/1 조율 수 섞임 — 어림) | 481 (바탕 559) | 427 |
+| src 줄 수 · config.js 줄 수 | 100 756 · 3 121 | 100 337 · 3 030 |
+| 시뮬 환경 변수 스위치 (src · harness) | MONTANTE_HAND · IT_MEASURE · FL_MEASURE · JOINTS · EDGE · ONETIP · PLAYER_EDGE · FINISH_* · VITAL* · PLATE_NECK · IT_RHYTHM | 0 |
+
+### 7-2. 지운 것
+
+- 기본값을 그 자리에 적음: IT_OUTBOX(켬 · AI 몫 · 걸어 들어옴 문턱 · 특수 공격 맞박자 · 리솔루토 칼 우위 · 칼 우위 빛) · THRUST(이탈리아 찌르기 · 런지 걸음 상한 · 몸 싣기 당김 · 몸 싣기 둘 다 · AI 몫 · 간격 줄 'full') · JP_TANK(스택 · AI · 빠르기 · 바위 몸 둘) · PICKUP(막기 단추 · AI) · AI_TELL(AI · 막기 단추) · SCHOOL_PASSIVE(모두 · 유파마다 켬 · 고노센 켄타이 · 인데스 칼 닿음) · AI_PLAN(켬 · 무 띠 · 읽기 넷 · 이베리아 흐름 몸 · 편섬 뛰어들기) · AI_PLAN_FREE · AI_PLAN_DE(굴림 몫 · 밀 마음) · AI_KIT · AI_ARC · IB_LINK(켬 · 넘기기 · 사슬 빠르기) · 몬탄테 쥠 'mid' · 플랑베르주 간격 'geo' · 한손 칼끝 'fix'
+- 시제품 · 옛 판 코드째: 박자 찌르기(사람 · AI — 사장님 11/15 '되돌려') · 칼 우위 켜는 길 고르기(11/16 1안) · 칼 길 잡고 찌르기(bind) · 찌르기 재기 스위치(itDrop · itStep · itClashEnd · itAccel) · 이탈리아 간격 옛 줄 · 리솔루토 'contact' 판 · 받아 치기 고노센 C · 손목 치기 스택 예외 E · 막기 단추 낌새 붙잡기 · 줍기 저절로(auto) · 이어 돌리기 원 판 · 싱지르 원 긋기(꺼진 판) · B7 풍차 베기 글 판 · 몬탄테 쥠 옛 꼴 셋 · 플랑베르주 간격 다른 줄 둘 · 동방 · 일본 걸음 옛 판 손잡이(setChineseGait · setJapaneseGait · setJapanesePlayerWalk) · 시뮬 하네스 둘의 마무리 · 약한 자세 겨눔 환경 변수
+
+### 7-3. 남긴 것과 까닭
+
+- `SKILL.corr` — corr_s0 관문이 옛 보정과 v2 를 견준다
+- `INPUT.atkStick` · 주소 인자 27 (§2 그대로)
+- JOINTS `mode`(+ presets) · `edge` · `playerEdge` — 환경 변수 읽기만 걷고 값은 글자로 둠. 갈래를 지우려면 fighter.js 관절 · 날 세우기 길을 하나씩 걷어야 해 다음 일로
+- 조율 수(0/1 이어도 배율인 칸 — 예 `SCHOOL_PASSIVE.german.aiK` · `JP_TANK.hit` · `AI_PLAN.read` 의 몫 수)
+
+### 7-4. 시험
+
+- 지운 시험 블록 31 (`test(` 52 지우고 21 은 제목 · 몸만 고쳐 다시 씀): 꺼 둔 판 · 옛 판으로 묶어 보던 것 — 박자 찌르기 · 칼 우위 길 · 리솔루토 칼 우위 끈 판 · 찌르기 재기 · 몸 싣기 끔 견줌 · 받아 치기 C · 막기 낌새 붙잡기 · 줍기 끔 · auto · 줍기 없는 판 · 유파 패시브 끔 · AI 플랜 · 읽기 끔 견줌 · 둥근 눈 끈 판 · 이어 돌리기 원 판 · 끈 판 · 그때 판 글(B7) 묶음 · 원 긋기 · 플랑베르주 다른 줄
+- 고친 시험(기대값 그대로): 지운 칸 단언만 뺌 · 끈 판 견줌 줄만 뺌 · 견줌 바탕을 스위치 대신 배율 1 로(it_outbox 찌르기 0.8) · 줍기 시험은 단추 누름으로 · 간격 줄 시험은 찌르기 잣대 줄로
+- 전체: 955 / 955 → 924 / 924 (실패 0)
+
+### 7-5. 관문
+
+커밋마다 같은 관문: fights12 `b7ba0017` · live `cd211727` · ft `ba9c958b` · corr 12 · smoke 34 / 34 · build 됨 · name_policy 0.
+
+### 7-6. 남은 것
+
+- config: SECRET(비기 — 100 칸 남짓) · UNIQUE_ASSIST(60 남짓 · `applyB4Old`) · SKILL(팔 사람 꼴 · 손가락 긋기 · 이탈리아 · 자세표 · 왕관 등 40 남짓 — corr 빼고) · JOINTS(관절 · 날 세우기 꼴) · CN_STEP · BIND · IMPACT_FX · SHOP · SAENGSA.playerProf.mode · SOUND.fleshHit · WANDER
+- 모듈 스위치: finish.js `FINISH`(entry · mode · vital · plateNeck · lift · aim · track · cleave) · vital_target.js `VITAL`(aiCut · thrust · playerCut) · 이탈리아 걸음 손잡이 넷(setItalianStride · setItalianWalk · setItalianBackCap · setItalianRhythm) · druid_whip.js `setWhipPreset`(샛별 값 판) · guards.js `setIberianTable` · weapons.js `setGripTorque`
+- 브라우저 도구: 182 개 가운데 65 개가 지운 주소 인자 99 가지를 아직 주소에 적는다(많은 것: camOpen 13 · pixel 4 · itRhythm 3 · tempo 3 · playerSecret 3). 게임은 읽지 않아 기본 판으로 돈다. 도구마다 견줌 짜임이 달라 손으로 고쳐야 해서 이번엔 목록만 — 아래 부록
+- 시뮬 도구 가운데 지운 칸에 값을 넣는 것(ib_link · it_tone_measure · thrust_stuck · school_passive_duel · gonosen_play · jp_tank · ai_plan_measure 등) — 넣어도 읽는 데가 없어 기본 판으로 돈다
+
+### 부록 — 지운 주소 인자를 아직 적는 브라우저 도구
+
+- `atk_stick_shots.mjs` — `camOpen`
+- `b4_shots.mjs` — `b4Old` · `camOpen` · `rdTajoAngle`
+- `bernardo_whip_shots.mjs` — `whipHit`
+- `build_smoke.mjs` — `motionLib` · `oneVersatile` · `pommel` · `schoolArt` · `schoolRest`
+- `cavazione_probe.mjs` — `camOpen` · `cavHeld`
+- `cn_combo_probe.mjs` — `cnBongdu` · `cnBuffer` · `cnFast`
+- `cn_light_probe.mjs` — `cnLight`
+- `corr_shots.mjs` — `corr` · `tip`
+- `defeat_portrait_smoke.mjs` — `portrait` · `portraitGrid`
+- `druid_whip_shots.mjs` — `whip`
+- `duplieren_auto_probe.mjs` — `camOpen` · `dupAuto` · `dupBandMax` · `dupClashT` · `dupStackS`
+- `duplieren_simple_shots.mjs` — `camOpen` · `dupOld` · `specialShare`
+- `game_entry_smoke.mjs` — `stamina`
+- `gonosen_crouch_shots.mjs` — `gnsCrouch`
+- `gonosen_window_probe.mjs` — `camOpen` · `gnsCrouch`
+- `hold_gap_probe.mjs` — `deHold`
+- `iberian_flow_probe.mjs` — `ibSecret`
+- `iberian_gilmok_probe.mjs` — `gilAim` · `ibSecret`
+- `iberian_stick_shots.mjs` — `ibSettle`
+- `it_downcut_shots.mjs` — `cutPronate`
+- `it_even_probe.mjs` — `itGait` · `itRhythm` · `strideRule`
+- `it_foot_probe.mjs` — `itRhythm`
+- `it_rhythm_shots.mjs` — `itRhythm`
+- `italian_opposition_probe.mjs` — `camOpen`
+- `italian_thrust_shots.mjs` — `itThrust`
+- `joint_shots.mjs` — `joints`
+- `kote_pickup_shots.mjs` — `camOpen` · `pickup`
+- `kron_shape_shots.mjs` — `kronShape`
+- `legend_glow_measure.mjs` — `auraTune`
+- `live_diag.mjs` — `chain` · `pixel`
+- `longpress_probe.mjs` — `camOpen` · `holdPx` · `stickGuard`
+- `mordschlag_selfclip_shots.mjs` — `mordAt` · `mordNoClip`
+- `nagashi_live_shots.mjs` — `tempo`
+- `pappenheimer_shots.mjs` — `alt` · `cy` · `dist` · `ids` · `mode` · `ppm`
+- `parry_button_probe.mjs` — `parryAssist`
+- `parry_combo_probe.mjs` — `bind` · `deSecret`
+- `pistol_look.mjs` — `ids`
+- `player_edge_shots.mjs` — `playerEdge`
+- `redondo_gamecam_shots.mjs` — `camOpen` · `rdWind`
+- `redondo_motion_shots.mjs` — `rdRelease` · `rdSteady` · `rdWind`
+- `revive_shots.mjs` — `pixel`
+- `risoluto_fx_shots.mjs` — `risoCam` · `risoStreak`
+- `risoluto_lunge_shots.mjs` — `risoRecover`
+- `risoluto_shots.mjs` — `risoBeat`
+- `sb_import2_shots.mjs` — `finishMode`
+- `school_parry_shots.mjs` — `kronShape`
+- `shop_layout_shots.mjs` — `shopItems`
+- `singir_circle_shots.mjs` — `ibUpright`
+- `sluice_bear_shots.mjs` — `bearH` · `eye` · `ground` · `h` · `pixel` · `plinth` · `span` · `w` · `yaw`
+- `stamina_recovery_smoke.mjs` — `tempo`
+- `stamina_route_probe.mjs` — `stamina`
+- `stamina_walking_smoke.mjs` — `tempo`
+- `step_burst_probe.mjs` — `burstDe` · `stepBurst`
+- `step_input_probe.mjs` — `camOpen` · `stepIn`
+- `strike_cue_shots.mjs` — `playerSecret` · `strikeCue` · `uniqueAssist`
+- `text_policy_shot.mjs` — `iai` · `playerSecret` · `secret`
+- `title_account_smoke.mjs` — `type`
+- `touch_stamina_probe.mjs` — `camOpen` · `strokeMin`
+- `tsubame_path_probe.mjs` — `camOpen` · `tsuAim`
+- `tsubame_shots.mjs` — `tsuAim` · `tsuRuler` · `tsuSnap`
+- `unique_assist_shots.mjs` — `clears` · `pixel` · `playerSecret` · `uniqueAssist`
+- `vital_shots.mjs` — `vital` · `vitalAi`
+- `wander_resume_check.mjs` — `wanderResume`
+- `weapon_thumbs.mjs` — `ids`
+- `wrist_audit_shots.mjs` — `elbowSwivel` · `holdDepth` · `schielPath` · `swivelHuman` · `swivelThrust` · `thrustArm` · `wristGuard`

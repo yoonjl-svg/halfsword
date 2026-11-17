@@ -17,7 +17,6 @@ import { mordGripOf } from '../../src/mordschlag.js';
 import { standTrial } from './tap_thrust.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { ITALIAN_NOW } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 'full' 이면 옛 판 재현을 그때 간격 줄로
-const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { SECRET, JOINTS } = CONFIG;
 /** 여러 값을 잠깐 바꿔 fn — [[객체, 열쇠, 값], …] */

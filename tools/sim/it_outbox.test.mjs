@@ -15,7 +15,6 @@ import { kitFromNodes, allNodeIds, KIT_KEYS } from '../../src/skill_tree_data.js
 import { fightOne } from './school_balance.mjs';
 import { THRUST_STYLE } from '../../src/weapons.js';
 import { SCHOOL_PLAN, tiltOf, luckOf, itInqP } from '../../src/ai_plan.js';
-const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const IO = CONFIG.IT_OUTBOX;
 const { realS, GAIT } = CONFIG;

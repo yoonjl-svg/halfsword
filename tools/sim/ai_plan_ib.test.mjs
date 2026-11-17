@@ -11,7 +11,6 @@ import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { planFor, tiltOf, luckOf, distErrWidth, PHASES, SCHOOL_PLAN } from '../../src/ai_plan.js';
 import { readNote } from '../../src/ai_read.js';
 import { ibStats, chainWant, spinK, armK, habitN, ibTick, ibCircle, ibFeetV, schoolRead, swapReady, nextFree, ibSidePost, ibFwdPost, ibAfter, foeAtkN } from '../../src/ai_plan_ib.js';
-const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { AI_PLAN, IB_LINK, STAMINA } = CONFIG;
 /** AI_PLAN 칸을 잠깐 바꿔 fn 을 돌리고 되돌림 ('ib.x' = 이베리아 칸) */
