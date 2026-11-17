@@ -1,6 +1,6 @@
 // ③ 자세 → 칼길 (11/17 — [사장님 11/17 결정] 기본 판 · 설계 docs/design/guard_line_2026-11-17.md · src/guard_line.js · config GUARD_LINE · schools.js lineMap)
 //  ① 표의 기술 이름이 모두 그 유파 꾸러미(techByName)에 있음 · 묶인 고유 기술은 넷뿐 · 간 보는 자세마다 칸 · 이베리아 목록 셋 더함 · 간수세 줄 없음
-//  ② 공격하는 쪽: τ(read)가 클수록 약속(기본 줄)을 더 지킴 — 무게 셈 · 실제 AI 고르기 · 버릇 고정 몫(간 보는 목록 평균 = 1)
+//  ② 공격하는 쪽: τ(read)가 클수록 약속(기본 줄)을 더 지킴 — 무게 셈 · 실제 AI 고르기 · 기본 기술 = W^τ × 자세마다 한 곱(자세 안 비 그대로) · 묶인 고유 기술 = 버릇 고정 몫(간 보는 목록 평균 = 1)
 //  ③ 읽는 쪽: 걸어 들어오는 상대의 보이는 자세(늦게 본 손)가 약속한 기본 줄을 미리 덮음 — 사람 상대 · AI 상대
 //  ④ 사람 조작은 묶지 않음: 사람 입력 길(main · skill · 조이스틱 · 긋기 읽기 …)은 이 규칙을 읽지 않고 · 사람 손은 자세 패드로 끌려가지 않음
 import test from 'node:test';
@@ -78,7 +78,7 @@ function pShare(ai, sc, tau, guards) {
   return p / all;
 }
 
-test('공격하는 쪽: τ(read)가 클수록 기본 줄 약속을 더 지킴 · 버릇 고정 몫 — 간 보는 목록 평균 무게 1 (유파 기술 몫 그대로)', () => {
+test('공격하는 쪽: τ(read)가 클수록 기본 줄 약속을 더 지킴 · 기본 기술 = P 1 · S 0.35 · U 0.08 의 τ 제곱 × 자세마다 한 곱 · 묶인 고유 기술 = 버릇 고정 몫 (간 보는 목록 평균 무게 1 — 유파 맛 그대로)', () => {
   for (const sc of SCHOOLS) {
     const G0 = newRound({ seed: 3, walls: true, weapon: WEAPONS[sc][0], weapon2: WEAPONS[sc][0], persona: { proficiency: 6 } });
     try {
@@ -86,16 +86,32 @@ test('공격하는 쪽: τ(read)가 클수록 기본 줄 약속을 더 지킴 ·
       const gs = Object.entries(TRADITIONS[sc].lineMap).filter(([g, r]) => !r.free && ai.school.tech.some((t) => r.P.includes(t.name))).map(([g]) => g);
       const lo = pShare(ai, sc, 0.35, gs), mid = pShare(ai, sc, 0.65, gs), hi = pShare(ai, sc, 0.9, gs);
       assert.ok(lo < mid && mid < hi, `${sc} 기본 몫 τ 0.35 / 0.65 / 0.9 = ${lo.toFixed(3)} / ${mid.toFixed(3)} / ${hi.toFixed(3)}`);
-      // 버릇 고정: 간 보는 목록 ŵ 로 평균 낸 무게 곱 = 1 (기술마다)
+      // 기본 기술: 무게 곱 = W^τ × c(자세) · 묶인 고유 기술: 간 보는 목록 ŵ 로 평균 낸 무게 곱 = 1 (버릇 고정)
       ai.level = { ...ai.level, read: 0.9 };
       ai.glBook = null;
       const gl = ai.school.guards;
       const raw = gl.map((g) => (g.w ?? 1) * ai.pers.guardPref[g.name]);
       const tot = raw.reduce((a, b) => a + b, 0);
+      const uniq = new Set(TRADITIONS[sc].unique.map((u) => u.name));
+      const cOf = {};
+      let nU = 0;
       for (const t of ai.school.tech) {
-        const avg = gl.reduce((s, g, i) => s + (raw[i] / tot) * lineW(ai, { name: g.name, pad: g.pad }, t), 0);
-        assert.ok(Math.abs(avg - 1) < 1e-9, `${sc} ${t.name} 평균 무게 ${avg}`);
+        const bound = Object.values(TRADITIONS[sc].lineMap).some((r) => r.P.includes(t.name) || r.S.includes(t.name));
+        if (!bound) continue;
+        if (uniq.has(t.name)) {
+          nU++;
+          const avg = gl.reduce((s, g, i) => s + (raw[i] / tot) * lineW(ai, { name: g.name, pad: g.pad }, t), 0);
+          assert.ok(Math.abs(avg - 1) < 1e-9, `${sc} ${t.name} 평균 무게 ${avg}`);
+        } else for (const g of gl) {
+          const k = lineClass(sc, g.name, t.name);
+          if (!k) continue;
+          const c = lineW(ai, { name: g.name, pad: g.pad }, t) / Math.pow(CONFIG.GUARD_LINE.w[k], 0.9);
+          (cOf[g.name] ??= []).push(c);
+        }
       }
+      // 기본 기술: 한 자세 안에서는 모두 같은 곱 c(자세) ≥ 1 — 자세 안 P : S : U 비 그대로 (가장 센 기본 기술 무게가 전과 같게)
+      for (const [g, cs] of Object.entries(cOf)) assert.ok(cs.every((c) => Math.abs(c - cs[0]) < 1e-9 && c >= 1 - 1e-9), `${sc} ${g} 기본 기술 곱 ${cs.map((c) => c.toFixed(3))}`);
+      if (sc !== 'iberian' && sc !== 'chinese') assert.ok(nU >= 1, `${sc} 묶인 고유 기술이 꾸러미에 있음`);
       // 묶지 않은 고유 기술 = 어느 자세에서나 1
       for (const t of ai.school.tech) if (!lineClass(sc, gl[0].name, t.name) && !Object.values(TRADITIONS[sc].lineMap).some((r) => r.P.includes(t.name) || r.S.includes(t.name))) assert.equal(lineW(ai, { name: gl[0].name }, t), 1, `${sc} ${t.name} 묶지 않음`);
     } finally {
