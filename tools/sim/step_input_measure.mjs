@@ -95,7 +95,7 @@ export function runTrials(school, trials, { seed = 1, gap = 3.2, rest = 0.7 } = 
   const guard = new PlayerParryGuard(P, G.enemy);
   P.stamina.controller = guard;
   const canvas = evTarget();
-  const input = inputEnv(() => new Input(canvas, new URLSearchParams('')));
+  const input = inputEnv(() => new Input(canvas));
   input.enabled = true;
   const pad = evTarget(STICK_RECT);
   const knob = { style: {} };

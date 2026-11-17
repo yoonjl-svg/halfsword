@@ -1657,13 +1657,12 @@ const SAMPLES = {
   // 드루이드의 채찍 (10/23 사장님 '휘두르고 때릴 때 실제 채찍 소리 넣어줘' — 녹음만 · 출처 public/sfx/LICENSE.txt whip/): 없으면 그 소리는 나지 않는다(합성으로 대신하지 않음)
   whipSwish: nums('whip/swish', 4), // 휘두르는 바람 "휙" (qubodup 대나무 막대 휘두르기 녹음 · CC0)
   whipCrack: nums('whip/crack', 3), // 끝이 터지는 "딱" (스위스 퀴스나흐트 클라우스야겐 채찍 치기 녹음 · 퍼블릭 도메인)
-  whipHit: nums('whip/hit', 3), // (10/23 판 — 주소 ?whipHit=old) 살 · 옷을 치는 "찰싹" (AntumDeluge Thwack — 물건을 때린 녹음 · CC0)
-  whipLash: nums('whip/lash', 1), // (10/24 기본) 살 · 옷을 치는 채찍 "짝" — SciFiSounds 'Whip Crack'(freesound 529925 · CC0) 의 딱 부분 (사장님 10/24 'c2로 할게' · 샛별 저장소 3912e1ec)
+  whipLash: nums('whip/lash', 1), // 살 · 옷을 치는 채찍 "짝" — SciFiSounds 'Whip Crack'(freesound 529925 · CC0) 의 딱 부분 (사장님 10/24 'c2로 할게' · 샛별 저장소 3912e1ec)
   whipArmor: nums('whip/armor', 3), // 투구 · 판금을 치는 "탱" (Kenney impactPlate_light · CC0)
   whipClash: nums('whip/clash', 3), // 칼에 감기며 부딪는 "칭" (Kenney impactMetal_light · CC0)
 };
 // 비기 소리 (10/25 — 샛별 저장소 2fa0b2ae · 출처 public/sfx/secret/LICENSE.txt): 이름 'secret:<파일>' 하나에 녹음 하나 (SOUND.secretSfxFiles — 연결표 사장님 10/25 결정).
-//  끈 판(SOUND.secretSfx 0 — 주소 ?secretSfx=0)은 loadSamples 가 받지 않는다. 내는 곳 secretSfx · 언제는 src/secret_sfx.js
+//  내는 곳 secretSfx · 언제는 src/secret_sfx.js
 for (const f of new Set(Object.values(SOUND.secretSfxFiles ?? {}))) SAMPLES[`secret:${f}`] = [f];
 
 // 배경(스테이지)마다 다른 것: 발소리 녹음(step), 쓰러질 때 바닥 알갱이(grit), 전투 소리가 벽에 되울리는 방(room).
@@ -1940,7 +1939,7 @@ export class Sound {
   async loadSamples() {
     // 한꺼번에 받는다 (하나씩 받으면 발소리처럼 판 시작부터 필요한 소리가 몇 초 늦는다). 순서는 목록 순서로 맞춘다
     const jobs = [];
-    for (const [name, files] of Object.entries(SAMPLES)) if (SOUND.secretSfx || !name.startsWith('secret:')) files.forEach((f, i) => jobs.push(this.decodeSample(f).then((buf) => buf && (((this.samples[name] = this.samples[name] || [])[i] = buf)))));
+    for (const [name, files] of Object.entries(SAMPLES)) files.forEach((f, i) => jobs.push(this.decodeSample(f).then((buf) => buf && (((this.samples[name] = this.samples[name] || [])[i] = buf)))));
     await Promise.all(jobs);
     for (const name of Object.keys(SAMPLES)) if (this.samples[name]) this.samples[name] = this.samples[name].filter(Boolean);
   }
@@ -2296,20 +2295,18 @@ export class Sound {
   /**
    * 드루이드의 채찍 소리 (10/23 — 녹음만: 위 SAMPLES whip*. 아직 안 읽혔으면 아무 소리도 내지 않는다 — 합성으로 대신하지 않는다).
    *  swish(speed): 끝 빠르기(m/s)가 오를 때 한 번 "휙" — 빠를수록 크고 조금 높게 · crack(speed): 끝 빠르기 최고점에서 "딱"
-   *  hit(energy, armor): 채찍이 몸을 친 판정 — 살 · 옷 = C2 채찍 "짝"(10/24 · 'old' 판 = Thwack "찰싹") 또는 투구 · 판금 "탱" · clash(vn): 칼에 부딪힘(맞닿는 빠르기 m/s)
+   *  hit(energy, armor): 채찍이 몸을 친 판정 — 살 · 옷 = C2 채찍 "짝"(10/24) 또는 투구 · 판금 "탱" · clash(vn): 칼에 부딪힘(맞닿는 빠르기 m/s)
    *  음량은 같은 세기의 칼 소리(blunt · clash)와 같은 눈금으로 (event 음량 0.12 + 0.95 e^0.8 꼴)
    *  (10/24) C2 는 그 자체가 채찍 '딱' 이라 끝 '딱'과 한 맞음에서 두 번 터지지 않게 막는다 — whip_sound.js whipCrackGate (SOUND.whipLashGap · whipFlam).
-   *   'old' 판(?whipHit=old)은 10/23 그대로 막지 않는다
    */
   whip(kind, x = 0, armor = false) {
     if (!this._on || !this.ctx) return;
-    const c2 = SOUND.whipHit !== 'old';
-    const lash = c2 && kind === 'hit' && !armor;
-    const pick = { swish: 'whipSwish', crack: 'whipCrack', hit: armor ? 'whipArmor' : c2 ? 'whipLash' : 'whipHit', clash: 'whipClash' }[kind];
+    const lash = kind === 'hit' && !armor;
+    const pick = { swish: 'whipSwish', crack: 'whipCrack', hit: armor ? 'whipArmor' : 'whipLash', clash: 'whipClash' }[kind];
     const buf = this.pickSample(pick);
     if (!buf) return;
     if (kind === 'hit' && x < 5) return; // 스치는 닿음은 blunt 와 같이 소리 없음
-    if (c2 && (kind === 'crack' || lash) && !whipCrackGate((this._whipGate ??= {}), lash ? 'lash' : 'crack', this.ctx.currentTime, SOUND)) return;
+    if ((kind === 'crack' || lash) && !whipCrackGate((this._whipGate ??= {}), lash ? 'lash' : 'crack', this.ctx.currentTime, SOUND)) return;
     const R = Math.random;
     if (kind === 'swish') {
       const e = clamp01((x - 6) / 16); // 끝 6 → 22 m/s
@@ -2335,10 +2332,10 @@ export class Sound {
    *  언제 · 누구 · 어느 파일은 src/secret_sfx.js (main.js — 비기가 실제로 터진 순간 한 번, 낸 사람의 유파 파일). 여기서는 내기만:
    *  녹음 한 겹(파일마다 크기 맞춤 SOUND.secretSfxTrimDb — 10/25 18:4x g1 · g2 같은 크기) · 쇳소리 묶음(칼 부딪힘 · 채찍 딱과 같은 묶음 — 무대 울림도 같게) · 이벤트 음량 SOUND.secretSfxGain ·
    *  재생 빠르기 1 (비기 화면 늦춤 0.4 배와 상관없음 — 소리 시계는 실제 시간) · 음소거(on) · 전체 음량은 다른 소리와 같은 master 를 거친다.
-   *  녹음이 아직 안 읽혔거나 끈 판(SOUND.secretSfx 0)이면 소리 없음(합성으로 대신하지 않음). 냈으면 그 이벤트
+   *  녹음이 아직 안 읽혔으면 소리 없음(합성으로 대신하지 않음). 냈으면 그 이벤트
    */
   secretSfx(file) {
-    if (!this._on || !this.ctx || !SOUND.secretSfx) return null;
+    if (!this._on || !this.ctx) return null;
     const buf = this.pickSample(`secret:${file}`);
     if (!buf) return null;
     const ev = this.event({ bus: this.metalBus, gain: SOUND.secretSfxGain, prio: 2.5 }); // 우선 2.5: 칼 부딪힘(1 ~ 2) · 베기(2)가 몰려도 먼저 끊기지 않게 (흘림 3 보다는 낮게)

@@ -16,9 +16,6 @@ import { SOUND } from './config.js';
 /** 유파 → 소리 파일(public/sfx 기준 · 확장자 없음). 없으면 null */
 export const secretSfxFile = (school, files = SOUND.secretSfxFiles) => (school && files?.[school]) || null;
 
-/** 주소 `?secretSfx=0` → 끔(0) · 그 밖 = base (기본 SOUND.secretSfx 1). main.js 가 SOUND.secretSfx 에 넣는다 */
-export const secretSfxMode = (params, base = 1) => (params.get('secretSfx') === '0' ? 0 : base);
-
 /** 곧장 터지는 비기가 그 스텝 끝 실행에서 못 걸렸나: 실행 결과가 실패이고 비기가 이미 끝났거나 아직 그 결과를 기다리는 칸이면 (다른 칸이면 지난 동작의 묵은 결과) */
 export const secretFizzled = (f, run) => f?.instantResult?.ok === false && (!run || run.stage === 'instant');
 

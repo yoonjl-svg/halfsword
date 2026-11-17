@@ -6,16 +6,16 @@
 // ─────────────────────────────────────────────────────────────
 import { INPUT } from './config.js';
 import { flushHaptic } from './effects.js';
-import { configureMobileIntent, mapMobileHandDelta } from './mobile_intent.js'; // 10/7 폰 세로 1.35 배 (사장님 선택, 샛별 일반판 그대로)
+import { MOBILE_VERTICAL_GAIN, mapMobileHandDelta } from './mobile_intent.js'; // 10/7 폰 세로 1.35 배 (사장님 선택, 샛별 일반판 그대로)
 import { STICK_DEAD } from './stick_turn.js'; // 조이스틱 데드존 0.15 — 스틱 돌리기 몸짓 읽기(10/23 이베리아 휘감아 돌기)와 같은 수 한 곳
 import { atkStickState, atkStickGrab, atkStickKnob, atkStickRelease } from './atk_stick.js'; // 공격 조이스틱 (11/17 — INPUT.atkStick · 아래 attachAtkStick)
 
 const STICK_R = 40; // 화면 조이스틱 손잡이가 움직이는 반지름 (px — 이동 · 공격 조이스틱 같은 수)
 
 export class Input {
-  constructor(canvas, params = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : new URLSearchParams()) {
+  constructor(canvas, { verticalGain = MOBILE_VERTICAL_GAIN.default } = {}) {
     this.canvas = canvas;
-    this.mobileIntent = configureMobileIntent(params); // 폰 touch 세로 배율 (기본 1.35, ?mobileVerticalGain=1 이 옛 매핑; 시뮬 도구는 1 을 넘겨 기준선을 지킨다)
+    this.mobileIntent = { verticalGain }; // 폰 touch 세로 배율 1.35 (시뮬 도구는 1 을 넘겨 10/7 전 기준선을 지킨다)
     this.handDX = 0; // 누적된 손 이동량(m). +x = 화면 오른쪽
     this.handDY = 0; // +y = 위
     this.keys = new Set();

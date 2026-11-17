@@ -1,12 +1,12 @@
 // 드루이드의 채찍 소리 시험 (10/24 — docs/import/bernardo_whip_import_2026-10-24.md §3):
-//  살 · 옷 맞음 = C2 채찍 녹음(SciFiSounds 'Whip Crack' · CC0 — public/sfx/whip/lash1.mp3) · 주소 ?whipHit=old = 10/23 Thwack ·
+//  살 · 옷 맞음 = C2 채찍 녹음(SciFiSounds 'Whip Crack' · CC0 — public/sfx/whip/lash1.mp3) ·
 //  C2 와 끝 '딱'이 한 맞음에서 두 번 터지지 않게 막음 (src/whip_sound.js whipCrackGate) · 휙 · 딱 걸쇠는 main.js 에서 옮겨 값 그대로
 //  node --test tools/sim/whip_sound.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import { WHIP_SOUND, whipTipStep, whipHitMode, whipCrackGate } from '../../src/whip_sound.js';
+import { WHIP_SOUND, whipTipStep, whipCrackGate } from '../../src/whip_sound.js';
 import { SOUND } from '../../src/config.js';
 const { Sound } = await import('../../src/sound.js');
 const root = (p) => new URL(`../../${p}`, import.meta.url);
@@ -15,7 +15,7 @@ const root = (p) => new URL(`../../${p}`, import.meta.url);
 function fakeSound() {
   const s = Object.create(Sound.prototype), played = [];
   Object.assign(s, { _on: true, ctx: { currentTime: 0 }, useSamples: true, master: 'master', fleshBus: 'flesh', metalBus: 'metal' });
-  s.samples = Object.fromEntries(['whipSwish', 'whipCrack', 'whipHit', 'whipLash', 'whipArmor', 'whipClash'].map((k) => [k, [{ name: k }]]));
+  s.samples = Object.fromEntries(['whipSwish', 'whipCrack', 'whipLash', 'whipArmor', 'whipClash'].map((k) => [k, [{ name: k }]]));
   s.event = (o) => ({ ...o });
   s.layer = (ev, buf, o) => played.push({ t: s.ctx.currentTime, name: buf.name, bus: ev.bus, layer: o.gain });
   const at = (t, ...a) => { s.ctx.currentTime = t; const n = played.length; s.whip(...a); return played.length > n ? played.at(-1) : null; };
@@ -30,27 +30,13 @@ test('휙 · 딱 걸쇠 (main.js whipWhoosh 에서 옮김 — 값 · 셈 그대�
   assert.deepEqual(run([4, 8, 10, 16, 13]), [['swish', 10], ['crack', 16]]);
 });
 
-test('주소 스위치: 기본 = C2 · ?whipHit=old = 10/23 Thwack (그 밖의 값은 기본)', () => {
-  assert.equal(SOUND.whipHit, 'c2');
-  const q = (s) => whipHitMode(new URLSearchParams(s));
-  assert.deepEqual(['', 'whipHit=old', 'whipHit=c2', 'whipHit=1', 'weapon=druid_whip&whipHit=old'].map(q), ['c2', 'old', 'c2', 'c2', 'old']);
-});
-
-test('맞음 소리 고르기: 살 · 옷 = C2(whipLash · 몸 묶음 · 음량 SOUND.whipLashGain) · 투구 · 판금 = 그대로 · 5 J 아래 소리 없음 · old 판 = Thwack', () => {
+test('맞음 소리 고르기: 살 · 옷 = C2(whipLash · 몸 묶음 · 음량 SOUND.whipLashGain) · 투구 · 판금 = 그대로 · 5 J 아래 소리 없음', () => {
   const { at } = fakeSound();
   assert.deepEqual(at(0, 'hit', 40, false), { t: 0, name: 'whipLash', bus: 'flesh', layer: SOUND.whipLashGain });
   assert.deepEqual(at(1, 'hit', 40, true), { t: 1, name: 'whipArmor', bus: 'metal', layer: 0.8 });
   assert.equal(at(2, 'hit', 4, false), null);
   assert.equal(at(3, 'swish', 15)?.name, 'whipSwish');
   assert.equal(at(4, 'clash', 3)?.name, 'whipClash');
-  const keep = SOUND.whipHit;
-  try {
-    SOUND.whipHit = 'old';
-    const o = fakeSound();
-    assert.deepEqual(o.at(0, 'hit', 40, false), { t: 0, name: 'whipHit', bus: 'flesh', layer: 1 });
-    assert.equal(o.at(0.01, 'crack', 20)?.name, 'whipCrack'); // old 판은 10/23 그대로 — 겹침 막기 없음
-    assert.equal(o.at(0.02, 'hit', 40, false)?.name, 'whipHit');
-  } finally { SOUND.whipHit = keep; }
 });
 
 test('겹침 막기: C2 뒤 whipLashGap 안의 끝 딱 · C2 는 안 냄 · 끝 딱 뒤 whipFlam 안의 C2 는 안 냄 · 그보다 늦으면 둘 다 · 투구 · 휙 · 칼은 막지 않음', () => {
@@ -79,6 +65,6 @@ test('녹음 파일: lash1.mp3 = provenance 해시 · 모노 44.1 kHz MP3 · 옛
   assert.deepEqual([(b[i + 1] >> 3) & 3, (b[i + 2] >> 2) & 3, (b[i + 3] >> 6) & 3], [3, 0, 3]); // MPEG-1 · 44.1 kHz · 모노
   for (const k of [1, 2, 3]) assert.ok(fs.existsSync(root(`public/sfx/whip/hit${k}.mp3`)) && prov[`hit${k}`], `hit${k}`);
   const lic = fs.readFileSync(root('public/sfx/LICENSE.txt'), 'utf8');
-  for (const s of ['SciFiSounds', 'sounds/529925', 'publicdomain/zero/1.0', 'whip/lash1.mp3', '?whipHit=old']) assert.ok(lic.includes(s), s);
+  for (const s of ['SciFiSounds', 'sounds/529925', 'publicdomain/zero/1.0', 'whip/lash1.mp3']) assert.ok(lic.includes(s), s);
   assert.match(fs.readFileSync(root('src/sound.js'), 'utf8'), /whipLash: nums\('whip\/lash', 1\)/);
 });

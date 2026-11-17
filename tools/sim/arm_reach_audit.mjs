@@ -267,7 +267,7 @@ function inputEnv(fn) {
  * 무기 하나 · 방향 하나 · 손 하나 (slow | fast). 돌려줌: { samples(끈 뒤 스텝마다 — keep 일 때만), end, peak, flags, frac, poseEnd, posePeak }
  *  onRound({ G, P }) 꽂개 (재기 · 시험 — 몸 그대로)
  */
-export function runDir({ weapon, school = traditionOf(WEAPONS[weapon]), dir, mode = 'slow', seed = 1, keep = false, onRound = null, params = '' }) {
+export function runDir({ weapon, school = traditionOf(WEAPONS[weapon]), dir, mode = 'slow', seed = 1, keep = false, onRound = null }) {
   const kit = school && school !== 'none' ? kitFromNodes(school, allNodeIds(school)) : null;
   const G = newRound({ seed, weapon, weapon2: 'longsword', walls: true, ...(kit ? { kit } : {}), onFighter(f) { if (f.index === 0) f.humanInput = true; } });
   const P = G.player;
@@ -281,7 +281,7 @@ export function runDir({ weapon, school = traditionOf(WEAPONS[weapon]), dir, mod
   const W = new PlayerSecretWatch(P, A, { locked: !kit?.secret });
   const guard = new PlayerParryGuard(P, A);
   P.stamina.controller = guard;
-  const input = inputEnv(() => new Input(canvas, new URLSearchParams(params)));
+  const input = inputEnv(() => new Input(canvas));
   input.enabled = true;
   setPad(P, [0, 0]);
   onRound?.({ G, P, A });
@@ -419,9 +419,9 @@ export function runDir({ weapon, school = traditionOf(WEAPONS[weapon]), dir, mod
 }
 
 /** 무기 하나 모든 방향 · 손 */
-export function runWeapon(cell, { dirs = Object.keys(DIRS), modes = Object.keys(MODES), seed = 1, params = '' } = {}) {
+export function runWeapon(cell, { dirs = Object.keys(DIRS), modes = Object.keys(MODES), seed = 1 } = {}) {
   const rows = [];
-  for (const mode of modes) for (const dir of dirs) rows.push(runDir({ weapon: cell.weapon, school: cell.school, dir, mode, seed, params }));
+  for (const mode of modes) for (const dir of dirs) rows.push(runDir({ weapon: cell.weapon, school: cell.school, dir, mode, seed }));
   return rows;
 }
 
@@ -529,7 +529,7 @@ if (isMain(import.meta.url)) {
       res.push({ cell, rows: [] });
       continue;
     }
-    const rows = runWeapon(cell, { dirs, modes, params: arg('params', '') });
+    const rows = runWeapon(cell, { dirs, modes });
     res.push({ cell, rows });
     if (!argv.includes('--md')) {
       for (const r of rows) console.log(`${cell.weapon.padEnd(17)} ${cell.school.padEnd(8)} ${r.mode.padEnd(4)} ${r.dir.padEnd(9)} 뻗음 ${f2(r.end?.reach)} (가장 ${f2(r.peak?.reach)}) · 목표 ${f2(r.end?.cmd)} · 오차 ${f2(r.end?.err, 3)} · 팔꿈치 ${f2(r.end?.elbow, 0)} · 패드 ${r.end?.pad.map((v) => f2(v)).join(',')} · 손 ${r.end?.hand.map((v) => f2(v)).join(',')} · ${r.flags.map((k) => `${FLAG_KO[k]} ${Math.round(r.frac[k] * 100)}%`).join(' · ')}`);

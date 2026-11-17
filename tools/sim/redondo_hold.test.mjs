@@ -276,7 +276,7 @@ test('입력 층 — 사람 손 흉내 500 번: 짧은 탭(40 ~ 150 ms · 12 px 
   const B = body({ seed: 11, gap: 3.4 });
   try {
     const { P, uq, G } = B;
-    const input = withBrowser(() => new Input({ addEventListener() {} }, new URLSearchParams('mobileVerticalGain=1')));
+    const input = withBrowser(() => new Input({ addEventListener() {} }, { verticalGain: 1 }));
     input.enabled = true;
     let ms = 1000;
     let lcg = 12345;

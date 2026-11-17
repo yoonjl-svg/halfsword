@@ -26,7 +26,7 @@ import uiStyle from './entrance_ui.css?inline';
 import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { LOBBY_ARMORS, armorSlot, readLobbyEquipment, saveLobbyEquipment, readLobbyArmor, saveLobbyArmor, readLobbyNeck, saveLobbyNeck } from './lobby_equipment.js';
-import { portraitSrc, portraitMode, portraitGrid } from './portraits.js'; // ① 프로필 칸 (10/17 — 전: 3D 미리보기 · 10/18 그 코드 지움)
+import { portraitSrc } from './portraits.js'; // ① 프로필 칸 (10/17 — 전: 3D 미리보기 · 10/18 그 코드 지움)
 import { readProfile, renamePlayer } from './player_profile.js';
 import { readProgress, titleOptions, selectTitle, markWanderNotice, checkTitles, titleNotices, markTitleSeen } from './lobby_progress.js';
 import { TITLE_NOTICE_HEAD, NO_TITLE_TEXT } from './title_rules.js'; // 호칭 알림 창 (10/24 — 싸움 결과 창 위 title_notice.js 와 같은 글) · 호칭이 없을 때 글
@@ -207,11 +207,10 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, onS
   if (treeNotice) { $('treeText').textContent = treeNoticeText(treeNotice); try { $('treeDialog').showModal(); } catch { $('treeDialog').setAttribute('open', ''); } }
   listen($('closeTree'), 'click', () => $('treeDialog').close());
   // ① 프로필 칸 (사장님 10/17 22:1x — 3D 미리보기를 없애고 정사각 프로필 사진 자리 · docs/design/portrait_ui_2026-10-17.md): 지금 플레이어의 프로필
-  //  (10/18 16:3x 기본 = 샛별 새 투명 배경 도트판 · 플레이어 = player2 그림 · ?portrait=hd / low 예비 · ?portraitGrid=1 칸 줄 — portraits.js).
+  //  (10/18 16:3x 샛별 새 투명 배경 도트판 · 플레이어 = player2 그림 — portraits.js).
   //  ?hero=<인물 id> 로 다른 영웅이면 그 그림(main.js lobbyPortraitId). 그림 안에 액자 1 이 있어 CSS 틀은 없다 · 못 불러오면 빈 액자 1(data-empty — lobby.css)
   const portraitId = game.lobbyPortraitId?.() ?? 'player', portraitImg = $('lobbyPortraitImg');
-  $('lobbyPortrait').dataset.portrait = portraitId; $('lobbyPortrait').dataset.mode = portraitMode();
-  if (portraitGrid()) $('lobbyPortrait').dataset.grid = '';
+  $('lobbyPortrait').dataset.portrait = portraitId;
   portraitImg.alt = `${profile.name} 프로필`;
   listen(portraitImg, 'error', () => { $('lobbyPortrait').dataset.empty = ''; portraitImg.alt = ''; });
   portraitImg.src = portraitSrc(portraitId) ?? portraitSrc('player');

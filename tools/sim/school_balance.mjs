@@ -101,7 +101,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
   const W = new PlayerSecretWatch(P, A, { locked: !kit?.secret || !secret }); // secret false = 비기 안 익힘 (견줌 — --secret=0)
   const guard = new PlayerParryGuard(P, A);
   P.stamina.controller = guard;
-  const input = inputEnv(() => new Input(canvas, new URLSearchParams('')));
+  const input = inputEnv(() => new Input(canvas));
   input.enabled = true;
   onRound?.({ G, P, A, uq, guard, W });
   const M = P.swordArt.measure;

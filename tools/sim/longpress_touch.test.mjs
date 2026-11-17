@@ -20,7 +20,7 @@ const { Input } = await import('../../src/input.js');
 function newInput() {
   const L = {};
   const canvas = { addEventListener(t, f) { (L[t] ??= []).push(f); } };
-  const input = withBrowser(() => new Input(canvas, new URLSearchParams('mobileVerticalGain=1')));
+  const input = withBrowser(() => new Input(canvas, { verticalGain: 1 }));
   input.enabled = true;
   let ms = 1000;
   const send = (type, x, y, o = {}) => withBrowser(() => { const e = { type, pointerId: 1, pointerType: o.mouse ? 'mouse' : 'touch', button: 0, clientX: x, clientY: y, movementX: o.mx ?? 0, movementY: o.my ?? 0, timeStamp: ms }; type === 'pointerdown' ? input.onDown(e) : type === 'pointermove' ? input.onMove(e) : input.onUp(e); });

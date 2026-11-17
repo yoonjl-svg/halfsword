@@ -6,16 +6,6 @@ function validGain(value) {
   return Number.isFinite(value) && value >= MOBILE_VERTICAL_GAIN.min && value <= MOBILE_VERTICAL_GAIN.max;
 }
 
-/** URL override is session-local; 1 restores the original touch mapping. */
-export function configureMobileIntent(params, fallback = MOBILE_VERTICAL_GAIN.default) {
-  const defaultGain = validGain(fallback) ? fallback : MOBILE_VERTICAL_GAIN.default;
-  const raw = params.get('mobileVerticalGain');
-  const text = typeof raw === 'string' ? raw.trim() : '';
-  const number = /^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(text) ? Number(text) : NaN;
-  const override = validGain(number);
-  return { verticalGain: override ? number : defaultGain, source: override ? 'url' : 'default' };
-}
-
 /**
  * Convert the unlocked pointer path from screen pixels to relative hand intent (m).
  * Touch alone gets the bounded Y gain; mouse fallback and pen retain legacy scaling.

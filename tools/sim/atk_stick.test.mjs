@@ -38,10 +38,10 @@ function padRig(box) {
   return { pad, L, cap, knob: { style: { transform: '' } } };
 }
 /** 입력 하나 + 이동 스틱 + (판이 있으면) 공격 조이스틱. 사건은 main.js 차례 그대로: 패드 사건(대상) → 창 사건(Input — 거품) */
-function rig(mode = 'stick', { params = 'mobileVerticalGain=1' } = {}) {
+function rig(mode = 'stick') {
   const CL = {};
   const canvas = { addEventListener(t, f) { (CL[t] ??= []).push(f); } };
-  const input = withBrowser(() => new Input(canvas, new URLSearchParams(params)));
+  const input = withBrowser(() => new Input(canvas, { verticalGain: 1 }));
   const mv = padRig(MOVE);
   const at = padRig(ATK);
   withBrowser(() => attachStick(input, mv.pad, mv.knob));
@@ -92,7 +92,7 @@ test('① 판 값 — 기본 0 [감독 안 · 사장님 확인 전] · 판 읽�
 test('① 0 판 = 손가락 입력 그대로 (공격 조이스틱을 붙이지 않은 입력과 사건마다 같음)', () => {
   const run = (attach) => {
     const CL = {};
-    const input = withBrowser(() => new Input({ addEventListener(t, f) { (CL[t] ??= []).push(f); } }, new URLSearchParams('mobileVerticalGain=1')));
+    const input = withBrowser(() => new Input({ addEventListener(t, f) { (CL[t] ??= []).push(f); } }, { verticalGain: 1 }));
     const mv = padRig(MOVE);
     withBrowser(() => attachStick(input, mv.pad, mv.knob));
     if (attach) withBrowser(() => attachAtkStick(input, padRig(ATK).pad, { style: {} }, 0));

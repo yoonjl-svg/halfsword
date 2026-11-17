@@ -6,18 +6,12 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import * as CONFIG from './config.js';
 import { closeInputGate, closeInputApply } from './close_hold.js'; // 붙은 거리 규칙 — 묶인 동안 공격 막음 · 1 m 안 손잡이 찍기만 (11/14 사장님)
 import { PHYSICS, ARENA, CAMERA, AI_PROFICIENCY } from './config.js';
-import { setWhipPreset } from './druid_whip.js'; // 드루이드의 채찍 덩굴 값 판 (`?whip=src` = 샛별 값 — 10/23)
-import { FINISH as FINISH_SWITCH } from './finish.js'; // 마무리 스위치 entry·mode·vital·plateNeck (주소 ?finishEntry · ?finishMode · ?vital · ?plateNeck)
-import { VITAL as VITAL_SWITCH } from './vital_target.js'; // 약한 자세 겨눔 갈래 스위치 (10/12)
-import { FLOW_REDESIGN } from './nagashi_redesign.js'; // 일본 흘림 판정 개편 · 기력 청구 스위치 (10/18 — ?flowJudge · ?flowCost)
-import { FLOW_RECOVERY } from './nagashi_recovery.js'; // 흘림당한 뒤 팔 늦춤 스위치 (10/18 — ?flowArm)
-import { skipIberianTable, useIberianTableV2, iberianTableV2 } from './guards.js'; // 이베리아 자세표 칸 걷기 시험 (10/22 — ?ibTableSkip) · 자세표 v2 (?ibTable=v2 | v2p) — 기본 끔
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { createStaminaHud } from './stamina_hud.js';
 import { createHuntHud } from './cn_hunt_hud.js'; // 동방 맹호은림 사냥 겹 표시 (11/14)
 import { applyAweStart } from './stamina.js'; // 티소나 '위세' 판 시작 깎임 (10/24)
 import { createScreenTint } from './screen_tint.js';
-import { createStrikeCue } from './strike_cue.js'; // 칠 때 알림 — 이어 긋기 · 비기 · 인데스 창 동안 상대 머리 위 '!' (10/21 · ?strikeCue=mark|edge|both|0)
+import { createStrikeCue } from './strike_cue.js'; // 칠 때 알림 — 이어 긋기 · 비기 · 인데스 창 동안 내 머리 위 '!' (10/21)
 import { readJourney, writeJourney, addJourneyClear, journeyClears } from './journey_save.js'; // 여정 이어하기 지점 · 깬 무대 수(통계) (첫 화면 '이어하기' — 샛별 저장소 215d7b7e 를 우리 여정에 맞춤, docs/import/lobby_port_2026-10-16.md §5)
 import { readProfile, recordDuel } from './player_profile.js'; // 대기실 이름 · 대면 결과 (샛별 저장소 817db21c)
 import { readLobbyEquipment, readLobbyArmor, readLobbyNeck, LOBBY_ARMOR, HERO_TEAR } from './lobby_equipment.js'; // 대기실 장착을 싸움에 (사장님 10/16 03:5x '장착하면 실제 전투에 가져나가게 해' — docs/import/lobby_fix_2026-10-16.md §3 · 용사의 눈물 hero_tear_2026-10-17.md)
@@ -41,14 +35,14 @@ import { LOOKS, getLook } from './looks.js';
 import { AI } from './ai.js';
 import { CHARACTERS_BY_ID, randomCharacter, pickCharacterWeapon, savedFoeWeapon, randomLine, lineSourceOf, aiAtProficiency } from './characters.js';
 import { Emotions, EMO_ABILITY } from './emotions.js';
-import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, setGripTorque, RETIRED_WEAPONS, THRUST_STYLE } from './weapons.js';
+import { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_LABEL, RETIRED_WEAPONS } from './weapons.js';
 import { attachAura, AURA_VIEW } from './aura.js';
 import { Particles, haptic, stickDecal, rebuildDecal, disposeDecals, decalWarmMesh } from './effects.js';
 import { bloodPalette } from './blood_palette.js'; // 피 색 (10/27 — 광기의 병마용은 흰 피 · 그 밖은 붉은 피 그대로)
 import { Sound, BodySounds } from './sound.js';
 import { woundImpact, clashImpact, stopGrant, stopTick, shakeWall } from './impact_fx.js'; // 타격감 셈 (10/25 — config IMPACT_FX: 맞는 순간의 무게로 멈칫 · 카메라 밀림 · 무게 소리 — 아래 onWound · onClash · 멈칫 묶음 addHitStop)
-import { whipTipStep, whipHitMode } from './whip_sound.js'; // 드루이드의 채찍 휙 · 딱 걸쇠 (10/24 — 아래 whipWhoosh 에서 옮김) · 맞음 소리 주소 스위치
-import { SecretSfxWatch, secretSfxMode } from './secret_sfx.js'; // 비기 소리 (10/25 — 샛별 저장소 2fa0b2ae): 낸 전투자 · 유파 소리 한 번 · 주소 스위치
+import { whipTipStep } from './whip_sound.js'; // 드루이드의 채찍 휙 · 딱 걸쇠 (10/24 — 아래 whipWhoosh 에서 옮김)
+import { SecretSfxWatch } from './secret_sfx.js'; // 비기 소리 (10/25 — 샛별 저장소 2fa0b2ae): 낸 전투자 · 유파 소리 한 번
 import { Combat, woundDegree, woundRageMult, COMBAT_HOOKS } from './combat.js';
 import { Stages, nextStage, STAGE_IDS, STAGE_ORDER, STAGE_FOE, STAGE_FOE_EXTRA, stageFoeId, stageLabel, STAGE_NAME_KO } from './stages.js';
 import { WANDER, WANDER_NAME, WANDER_EXCLUSIVE, WANDER_HEAD, WANDER_BONUS_LABEL, WANDER_NOTICE_TEXT, chooseWanderEncounter } from './wander_rules.js'; // 방랑 (10/23 — 대기실 '방랑' 단추, docs/import/wander_heroes_import_2026-10-23.md)
@@ -72,13 +66,13 @@ import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버
 import { pickupReady } from './pickup.js'; // 떨어진 칼 줍기 (11/05 — 막기 단추 글 '줍기')
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { itEdgeLook } from './italian_outbox.js'; // 이탈리아 칼 우위 빛 (11/14 설계안 A — 그림만 · config IT_OUTBOX.edgeLook)
-import { TRADITIONS, setChineseGait, setItalianBackCap, setItalianRhythm, setItalianStride, setItalianWalk, setJapaneseGait, setJapanesePlayerWalk, traditionOf } from './schools.js';
+import { TRADITIONS, traditionOf } from './schools.js';
 import { createMatch, stepMatch, spawnSpots, orderControllers, pairFoe, matchResult } from './match.js'; // 동시 대전 판 (10/29 3단계 — 2:2 · 2:1 · 1:2 · 지켜보기)
 import { createTeamHud, teamFramePull } from './team_hud.js';
 import { shortNameOf } from './short_names.js'; // 체력 목록 짧은 이름 (사장님 10/30 01:0x) // 동시 대전 화면 (위 막대 넷 · 화면 밖 화살표 · 카메라 물러남)
 import { specFromSetup, resultFromMatch, profOfEntry, fallbackInjuries } from './saengsa_match.js'; // 생사전 ↔ 엔진 (game.launchSaengsa)
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
-import { portraitIdOf, portraitSrc, portraitMode, portraitGrid } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
+import { portraitIdOf, portraitSrc } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
 import { WhiffDrill } from './whiff_drill.js'; // 시험: 헛스윙 연습 상대 (?foeWhiff=1 — test.html '상대 헛스윙', docs/strike/german_hold_2026-10-15.md §7)
 import { configureStageObstacle, clampStageCamera, stageStartZ } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 충돌체 · 시작 비킴 · 카메라 보호 (docs/import/sluice_port_2026-10-14.md)
 import { configureWetlandMovement } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이 감속 (다른 무대는 배율 1)
@@ -88,15 +82,9 @@ import { followState, followReset, followStep, retreatStep, basePose, keepDistan
 
 await RAPIER.init();
 
-// 테스트용 URL 파라미터: ?weapon=monohoshizao&foeWeapon=chicken (무기 id는 weapons.js의 WEAPONS 키,
-//  Fighter 생성자가 알아서 getWeapon()으로 찾는다. 없으면 기본 롱소드)
-const params = new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')); // 주소에 ? 를 두 번 써도(…?r2p=1?weapon=…) 뒤쪽 인자까지 읽는다 (사장님 10/8 08:30 링크 입력 실수 대비)
-if (params.has('stamina')) CONFIG.STAMINA.on = params.get('stamina') !== '0'; // 기력(10/15 — 샛별 저장소 구현, docs/strike/stamina_import_2026-10-15.md): 기본 켬, `?stamina=0` = 기력 없음(막대·비용·지침·탈진 모두 없음 — 지금 본판 그대로)
-CONFIG.SOUND.secretSfx = secretSfxMode(params, CONFIG.SOUND.secretSfx); // 비기 소리 (10/25 사장님 '샛별이 비기 소리 보낸 거 입혀'): 기본 켬 · `?secretSfx=0` = 끔 (녹음도 안 받음)
-CONFIG.SOUND.whipHit = whipHitMode(params, CONFIG.SOUND.whipHit); // 드루이드의 채찍 살 · 옷 맞음 소리(10/24): 기본 C2 채찍 녹음 · `?whipHit=old` = 10/23 판(Thwack — 겹침 막기도 없음)
-// 레전드 기운 보기 손잡이 (재기 · 견줌 사진용 — 그림만, aura.js AURA_VIEW): `?aura=0` = 기운 끔 · `?auraTune={"durandal":{"gain":1}}` = 판을 세울 때 프로필 일부를 덮어씀 (docs/strike/legend_glow_2026-10-24.md)
-if (params.get('aura') === '0') AURA_VIEW.on = false;
-if (params.has('auraTune')) { try { AURA_VIEW.tune = JSON.parse(params.get('auraTune')); } catch { AURA_VIEW.tune = null; } }
+// 주소 인자는 길 찾기 · 시험 경로 · 브라우저 도구 장면만 읽는다 (11/17 스위치 정리 — 남긴 목록 docs/strike/switch_cleanup_2026-11-17.md):
+//  weapon · foeWeapon · foe · stage · hero · test · team · foeWhiff · look · cards · emo · slowMo · openSweep · skillNodes · uniqueStage · foeProficiency · fps · horn · atkStick
+const params = new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')); // 주소에 ? 를 두 번 써도 뒤쪽 인자까지 읽는다 (사장님 10/8 08:30 링크 입력 실수 대비)
 const teamHud = createTeamHud(); // 동시 대전 위 막대 · 화면 밖 화살표 (1:1 은 숨긴 채 — team_hud.js)
 const staminaHud = createStaminaHud(document.getElementById('staminaHud')); // 두 검객 머리 위 기력 막대 (src/stamina_hud.js)
 const huntHud = createHuntHud(document.getElementById('staminaHud')); // 동방 맹호은림 사냥 겹 — 기력 막대 위 발톱 자국 (11/14 — src/cn_hunt_hud.js)
@@ -113,584 +101,14 @@ if (!testRoute.active) convertSeals();
 //  두 번 일하지 않는다(진행 저장 안의 기록 · 짝 열쇠). 알림은 다음 대기실이 한 번 (lobby.js takeTreeNotice)
 if (!testRoute.active) migrateSkillBooks();
 if (!testRoute.active) migrateItalianSlots(); // 10/31 이탈리아 왼 줄 자리 옮기기 (옛 d 2 자리 I2 만 익힌 저장 → I7 — skill_tree_store.js)
-// 테스트용 ?morgTorque=33 : 모르겐슈테른 손목 겨눔 토크 상한(기본 22 = 한손 무기 공통, 확인표 169)을 이번 실행에만 바꾼다 — 사장님 비교용, 저장하지 않는다
-const morgTorque = +params.get('morgTorque');
-if (morgTorque > 0) getWeapon('morgenstern').controlOverrides.maxAimTorque = morgTorque;
-// 테스트용 ?cutReact=same|full|legacy : 절삭 끌림 반작용 방식(config STRIKE.cutReact, 기본 legacy)을 이번 실행에만 바꾼다 — 사장님 비교용(10/8 타격 B 질문)
-const cutReact = params.get('cutReact');
-if (cutReact === 'same' || cutReact === 'full' || cutReact === 'legacy') CONFIG.STRIKE.cutReact = cutReact;
-// R2′ 팔 단계 인자(10/8): ?trunkArc= ?trunkArcSpeed= ?trunkFollow= ?servoLead= ?vertLead= ?r2pScope=player|all ?anchorYawMax= ?twoHandCap= ?chain=legs ?pushAtFoot= ?cutStep= — 기각된 ?swing=arc ?handFollow= ?servoLagRelease= ?dropArc= ?pitchArc= 는 17:20 코드에서 지움
-// ?r2p=1 : R2′ 팔 단계 묶음(trunkArc 2 · trunkFollow 0.5 · 한손 servoLead 0.5) — 10/8 17:15 부터 플레이어·AI 모두 본판 기본이라 1 은 확인용. `?r2p=off` 가 묶음 전 물리(세로 follow 는 `?vertLead=0`, 닻 상한은 `?anchorYawMax=0`, 두 손 상한은 `?twoHandCap=22` 로 따로)
-//  ?r2p=legs 는 chain legs(발 힘쌍 A)+걸음 채널까지, ?r2p=all 은 범위 all(이제 기본과 같음; 옛 범위는 ?r2pScope=player). 개별 인자가 뒤에 오면 그것이 덮는다
-const r2pAll = params.getAll('r2p'); // ?r2p=1&r2p=legs 처럼 여러 번 와도 전부 적용 (legs·all 은 1 을 포함한다)
-if (r2pAll.includes('off') || r2pAll.includes('0')) { CONFIG.BODY.trunkArc = 0; CONFIG.BODY.trunkFollow = 0; CONFIG.ARM.servoLead = 0; } // 10/8 14:40 본판 기본이 묶음(플레이어만)이 된 뒤 비교용: 전 물리
-if (r2pAll.some((v) => v === '1' || v === 'legs' || v === 'all')) { CONFIG.BODY.trunkArc = 2; CONFIG.BODY.trunkFollow = 0.5; /* 10/8 WA5: 1 이면 두 손 무기 AI 첫 베기 25 → 17/30 (몸이 더 돌아 칼이 짧아짐), 0.5 면 24/30 */ CONFIG.ARM.servoLead = 0.5; /* 10/8 T2 (c): 한손 서보 겨눔 앞세움 — 모르겐슈테른 8.8 → 9.7 m/s, 두 손 무기엔 안 걸림 */ if (r2pAll.includes('legs')) { CONFIG.BODY.chain = 'legs'; CONFIG.GAIT.pushAtFoot = 1; CONFIG.GAIT.cutStep = 1; } /* 10/8 T3: legs 는 걸음 조율 채널 A·B 와 함께 */ if (r2pAll.includes('all')) CONFIG.BODY.r2pScope = 'all'; }
-const r2pScope = params.get('r2pScope');
-if (r2pScope === 'player' || r2pScope === 'all') CONFIG.BODY.r2pScope = r2pScope;
-const twoHandCap = +params.get('twoHandCap');
-if (twoHandCap > 0 && params.has('twoHandCap')) setGripTorque('two-hand', twoHandCap); // 10/8 16:20 두 손 서보 상한 26 본판 뒤 비교용(22 = 전 값)
-const vertLead = +params.get('vertLead');
-if (vertLead >= 0 && params.has('vertLead')) CONFIG.ARM.vertLead = vertLead;
-const anchorYawMax = +params.get('anchorYawMax');
-if (anchorYawMax >= 0 && params.has('anchorYawMax')) CONFIG.BODY.anchorYawMax = anchorYawMax; // 실험(10/8 15:10): 닻 yaw 모터 토크 상한 N·m, 0 = 오늘
-const getupLead = +params.get('getupLead');
-if (getupLead >= 0 && params.has('getupLead')) CONFIG.BODY.getupLead = getupLead; // 일어서기 다리 차례(10/8 18:26 본판 기본 1·lag 0.5, 확인표 194): `?getupLead=0` = 전 물리(두 다리 함께)
-const motionLib = +params.get('motionLib');
-if (motionLib >= 0 && params.has('motionLib')) CONFIG.SKILL.motionLib = motionLib; // 동작 라이브러리(무기 PM) 본판 스위치 — 10/8 18:50 기본 1(사장님 '적용', 확인표 34). `?motionLib=0` = 전 물리
-const schoolArt = +params.get('schoolArt');
-if (schoolArt >= 0 && params.has('schoolArt')) CONFIG.SKILL.schoolArt = schoolArt; // 유파 자료(10/9 ②③): 기본 1(사장님 10/9 01:5x '스위치 켜') = 유파 가중치·맞받아치기·새 기술(燕返し) 켬. `?schoolArt=0` = 그 전 판(이름·쉴 자세는 늘)
-if (params.has('secret')) CONFIG.SKILL.schoolSecret = +params.get('secret') ? 1 : 0; // 유파 비기(10/9 유파 설계 v3): 기본 1, `?secret=0` = 비기 없는 판 (docs/strike/school_secret_2026-10-09.md)
-if (params.has('playerSecret')) CONFIG.SKILL.playerSecret = +params.get('playerSecret') ? 1 : 0; // 플레이어 비기(10/9 23:5x): 기본 1, `?playerSecret=0` = 끔 (docs/strike/player_secret_2026-10-09.md)
-if (params.has('instant')) CONFIG.SECRET.instant = +params.get('instant') ? 1 : 0; // 일본 비기 순간 베기(10/10, secret_instant.js): 기본 1, `?instant=0` = 10/9 길(담았다 터뜨림) 대조
-const SECRET_SLOWMO = params.get('slowMo') !== '0';
-if (['v1', 'parry'].includes(params.get('cnSecret'))) CONFIG.SECRET.cnSecret = params.get('cnSecret'); // 중국 비기 판(10/11): 기본 'parry'(막기 연환 — docs/strike/parry_combo_secret_2026-10-11.md), `?cnSecret=v1` = 連環三擊
-if (['v1', 'parry'].includes(params.get('deSecret'))) CONFIG.SECRET.deSecret = params.get('deSecret'); // 독일 비기 판(10/11): 기본 'parry'(막기 연환 — 감아 들기), `?deSecret=v1` = Versetzen
-// 독일 죽음의 일격 (10/22 — 사람 독일 비기, src/mordschlag.js · docs/strike/german_mordschlag_2026-10-22.md): `?deMord=0` = 옛 판(deSecret) · `?mordPress=0.6` 누르기 시간 비교 ·
-//  `?mordGrip=hilt` 쥠 그대로 폼멜 판 · `?mordOver=1` 넘어 들어감 규칙 (사장님 확인 전)
-if (params.has('deMord')) CONFIG.SECRET.deMord = +params.get('deMord') ? 1 : 0;
-if (['close', 'press'].includes(params.get('mordRule'))) CONFIG.SECRET.mordRule = params.get('mordRule'); // 사람 모르트슐라크 조건 (10/29 20:0x — close 붙은 거리 2 s · press 밀치기 누르기 옛 판)
-if (params.get('mordClose') === 'reach') CONFIG.SECRET.mordCloseN = null; else if (+params.get('mordClose') > 0) CONFIG.SECRET.mordCloseN = +params.get('mordClose'); // 붙은 거리 n (m — 기본 0.8 사장님 10/30 00:4x · 'reach' = 옛 판 CLOSE.reach(내 무기))
-if (+params.get('mordPress') > 0) CONFIG.SECRET.mordPress = CONFIG.realS(+params.get('mordPress')); // 주소 값 = 실제 초 (표준 시간 10/25 — 아래 시간 · 빠르기 주소 인자도 같음)
-if (params.has('mordGrace') && +params.get('mordGrace') >= 0) CONFIG.SECRET.mordGrace = CONFIG.realS(+params.get('mordGrace')); // 모르트슐라크 누르기 끊김 너그러움 (10/25 23:1x 사장님 · 10/27 21:4x 0.4 s — 기본 0.4 s · 주소 값 = 실제 초 · `?mordGrace=0` = 끊기면 셈 0)
-if (params.has('armAtFight')) CONFIG.SECRET.armAtFight = +params.get('armAtFight') ? 1 : 0; // 비기 무장 시계를 공격이 풀린 때부터 (10/27 23:0x 사장님 결정 — 기본 1 · `?armAtFight=0` = 판 시작부터)
-if (params.has('mordStepPause')) CONFIG.SECRET.mordStepPause = +params.get('mordStepPause') ? 1 : 0; // 다시 붙는 밀치기 첫 걸음 동안 너그러움 시계 멈춤 (10/27 23:0x 사장님 결정 — 기본 1 · `?mordStepPause=0`)
-if (params.has('closeLatch')) CONFIG.CLOSE.latch = +params.get('closeLatch') ? 1 : 0; // 밀치기 걸쇠 (10/25 23:3x 사장님 '이 걸쇠 없애' — 기본 0 · `?closeLatch=1` = 놓았다 다시 밀어야)
-if (params.has('closeLatchAI')) CONFIG.CLOSE.latchAI = +params.get('closeLatchAI') ? 1 : 0; // AI 밀치기 걸쇠 (기본 = config CLOSE.latchAI)
-// 붙은 거리 규칙 (11/14 사장님 '밀치기 기준 1m' · '묶인 1.2초 동안은 아무 공격도 못하고 기력이 2배' · '1m 이내에서는 손잡이 찍기만' · '2초간 다시 강제로 묶이지 않아' — config CLOSE · src/close_hold.js):
-//  `?closeStart=0` = 옛 시작 거리(무기 reach) · `?closeStart=0.9` = 그 거리 · `?closeStartAI=0` = AI 규칙 끔(전 판 — 11/14 사장님 결정으로 AI 도 기본 켬) · `?closeHold=0` = 묶임 없음 · `?closeHold=1.5` = 그 실제 초 ·
-//  `?closeLock=0` = 묶인 동안 공격 막음 없음 · `?closeDrain=1` = 기력 그대로 · `?closeCool=0` = 쿨타임 없음 · `?closeHilt=0` = 칼자루만 거리 없음
-if (params.has('closeStart')) CONFIG.CLOSE.startD = +params.get('closeStart') > 0 ? +params.get('closeStart') : null;
-if (params.has('closeStartAI')) CONFIG.CLOSE.startAI = +params.get('closeStartAI') > 0 ? +params.get('closeStartAI') : null;
-if (params.has('closeHold')) CONFIG.CLOSE.holdMin = +params.get('closeHold') > 0 ? CONFIG.realS(+params.get('closeHold')) : 0;
-if (params.has('closeLock')) CONFIG.CLOSE.holdLock = +params.get('closeLock') ? 1 : 0;
-if (params.has('closeDrain')) CONFIG.CLOSE.holdDrain = +params.get('closeDrain') > 0 ? +params.get('closeDrain') : 1;
-if (params.has('closeCool')) CONFIG.CLOSE.holdCool = +params.get('closeCool') > 0 ? CONFIG.realS(+params.get('closeCool')) : 0;
-if (params.has('closeHilt')) CONFIG.CLOSE.nearHilt = +params.get('closeHilt') ? 1 : 0;
-if (params.has('deRing')) CONFIG.DE_DIRTY.ring = +params.get('deRing') ? 1 : 0; // 칼 씨름 1] (11/14 사장님 '1번으로 해' — 기본 켬 · 상대 지침이면 세게 밀쳐 0.6 m · 팔 벌어짐 0.6 s · 그 순간 창) · `?deRing=0` = 끔
-if (params.has('mordNear')) CONFIG.SECRET.mordNear = +params.get('mordNear') ? 1 : 0; // AI 몸 붙이기 자연스럽게 가까울 때만 (10/24 14:2x 사장님 · 0 = 멀리서 붙이러 걸어가는 옛 판)
-if (params.has('mordWalkStrike')) CONFIG.SECRET.mordWalkStrike = +params.get('mordWalkStrike') ? 1 : 0; // AI 몸 붙이기 걸어가며 치기 (10/24 13:3x 사장님 · 0 = 걸어가는 동안 안 침 옛 판)
-if (['reverse', 'hilt'].includes(params.get('mordGrip'))) CONFIG.SECRET.mord.grip = params.get('mordGrip');
-if (params.has('mordOver')) CONFIG.SECRET.mordOver = +params.get('mordOver') ? 1 : 0;
-if (params.has('mordTrack')) CONFIG.SECRET.mord.track = +params.get('mordTrack') ? 1 : 0; // 죽음의 일격 머리 따라 겨눔 (10/30 08:2x 사장님 기본 켬 — secret_instant.js mordTrack · `?mordTrack=0` = 옛 겨눔)
-if (params.has('secretStaminaMin') && Number.isFinite(+params.get('secretStaminaMin'))) CONFIG.SECRET.secretStaminaMin = +params.get('secretStaminaMin'); // 이 기력 이하면 비기 못 씀 (10/30 18:3x 사장님 0)
-if (params.has('secretStamina')) CONFIG.SECRET.secretStamina = +params.get('secretStamina') ? 1 : 0; // 기력이 비기 값보다 적으면 비기 못 씀 (10/30 08:2x 사장님 — 사람 · AI · 기본 1 · `?secretStamina=0` = 전 판)
-if (params.has('mordCommit') && +params.get('mordCommit') >= 0) CONFIG.SECRET.mord.trackCommit = CONFIG.realS(+params.get('mordCommit')); // 따라 겨눔을 멈추는 때 = 겨눈 자리에 닿기 이 실제 초 전
-if (['aim', 'cut'].includes(params.get('mordTrackUntil'))) CONFIG.SECRET.mord.trackUntil = params.get('mordTrackUntil');
-// 죽음의 일격 내 머리 뚫음 막기 (10/31 시제품 — 사장님 확인 전 · 기본 끔 · secret_instant.js mordClipSolve): `?mordNoClip=1` · 손이 머리 앞으로 둘 거리 `?mordClipX=0.16` (m) · 뒤로 반걸음 끝 `?mordClipStep=0.3` (m · 0 = 걸음 없음)
-if (params.has('mordNoClip')) CONFIG.SECRET.mord.noSelfClip = +params.get('mordNoClip') ? 1 : 0;
-if (params.has('mordClipX') && Number.isFinite(+params.get('mordClipX'))) CONFIG.SECRET.mord.clipX = +params.get('mordClipX');
-if (params.has('mordClipStep') && +params.get('mordClipStep') >= 0) CONFIG.SECRET.mord.clipStep = +params.get('mordClipStep');
-// 죽음의 일격 자연스러운 쥠 바꿈 · 강제 뒤 박차기 · 폼멜 찍기 (10/31 08:xx 시제품 — 사장님 확인 전 · 기본 끔): `?mordRegrip=0.4` (실제 초) · `?mordBurst=1` · `?mordBurstFree=1` · `?mordPommel=1`
-if (params.has('mordRegrip') && +params.get('mordRegrip') >= 0) CONFIG.SECRET.mord.regrip = CONFIG.realS(+params.get('mordRegrip'));
-if (params.has('mordBurst')) CONFIG.SECRET.mord.burstBack = +params.get('mordBurst') ? 1 : 0;
-if (params.has('mordBurstFree')) CONFIG.SECRET.mord.burstFree = +params.get('mordBurstFree') ? 1 : 0;
-if (params.has('mordPommel')) CONFIG.SECRET.mord.pommel = +params.get('mordPommel') ? 1 : 0;
-//  가볍고 느림을 고칠 안 (10/22 밤 — 스위치 · 기본 끔 · 사장님 확인 전): `?mordKin=0.6` 운동학 길(칼자루 끝 = 고노센 칼끝 빠르기 몫) · `?mordAt=0.5` 쥔 자리 · `?mordAim=pull` 머리 겨눔 · `?mordPow=finish` 판정 × FINISH.power
-if (params.has('mordKin')) CONFIG.SECRET.mord.kin = Math.max(0, +params.get('mordKin') || 0);
-if (+params.get('mordAt') > 0) CONFIG.SECRET.mord.at = +params.get('mordAt');
-if (['pad', 'pull'].includes(params.get('mordAim'))) CONFIG.SECRET.mord.aim = params.get('mordAim');
-if (params.has('mordPow')) CONFIG.SECRET.mord.power = params.get('mordPow') === 'finish' || params.get('mordPow') === 'hit' ? params.get('mordPow') : +params.get('mordPow') || 'hit';
-if (params.has('parryAssist')) CONFIG.SKILL.parryAssist = Math.max(0, Math.min(3, +params.get('parryAssist') || 0)); // 플레이어 막기 버튼 거듦 단계(10/12 — parry_button.js, 확인표 990): `?parryAssist=0` = 끔(10/11 판) · 1 무게 보정 · 2 + 일찍 읽기 · 3 + 자리 덧힘
-if (params.has('kron')) CONFIG.SKILL.deKron = +params.get('kron') ? 1 : 0; // 독일 왕관 막기 자리(10/11 22:2x 사장님 기본): `?kron=0` = 전 자리(머리 위 = 긴 자세)
-if (params.has('gyeoksal')) CONFIG.SECRET.gyeoksal.on = +params.get('gyeoksal') ? 1 : 0; // 동방 막아 죽이기 (10/22 — 사람 동방 비기): `?gyeoksal=0` = 옛 판(막기 연환)
-if (params.has('talhoApproach')) CONFIG.SKILL.talhoApproach = +params.get('talhoApproach') ? 1 : 0; // 나선 걸음 베기 '먼저 비껴 딛고 벤다'(AI — 10/29 18:4x 사장님): `?talhoApproach=0` = 전처럼 베며 딛음 (비교용)
-if (params.get('jpGait') === 'old') setJapaneseGait('old'); // 일본 걸음 (10/29 21:0x 사장님 '설계대로'): `?jpGait=old` = 전 판 (비교용)
-if (params.has('jpWalk')) setJapaneseGait(+params.get('jpWalk')); // 일본 걸음 빠르기 시험: `?jpWalk=0.81` 처럼 speedMul (가려는 빠르기 ×) · 판 값 0.70(10/31 사장님 '일본 바로잡아') · `?jpWalk=0.67` = 10/30 판
-if (params.has('jpPlayerWalk')) setJapanesePlayerWalk(+params.get('jpPlayerWalk')); // 사람 몸만 일본 걸음 빠르기 (11/05 시험 — AI 일본은 0.70 그대로 · docs/strike/jp_de_basics_2026-11-05.md)
-if (params.get('cnGait') === 'old') setChineseGait('old'); // 동방 박자 (10/29 21:0x 사장님 '동방 박자도 바꾸고'): `?cnGait=old` = 전 판 strideK 0.9 (비교용)
-if (params.has('passAsRung')) CONFIG.GAIT.passAsRung = +params.get('passAsRung') ? 1 : 0; // follow 안 pass → lunge + 끌어붙임 걸음 길이: 1 = 사다리 한 칸 아래(10/29 18:5x 사장님) · `?passAsRung=0` = 옛 × 0.85 (비교용)
-if (params.get('gyeoksalPow') === 'hit' || +params.get('gyeoksalPow') > 0) CONFIG.SECRET.gyeoksal.power = params.get('gyeoksalPow') === 'hit' ? 'hit' : +params.get('gyeoksalPow'); // 격살 판정 시험 (기본 'finish' = FINISH.power 2.5 · 'hit' = 다른 비기와 같은 hitMul 1.3)
-if (params.get('gyeoksalTrail') === '1') CONFIG.SECRET.gyeoksal.trailWidth = 1; // 격살 잔상 굵기도 빠르기 몫으로 (시험)
-if (+params.get('gyeoksalShare') > 0) CONFIG.SECRET.gyeoksal.share = +params.get('gyeoksalShare'); // 격살 칼끝 빠르기 몫 (기본 0.7 — 11/11 사장님 '격살도 빠르기 70%로' · 전 0.6 · 0.5 진 · 1 고노센 발도)
-if (params.has('gyeoksalHitMul') && +params.get('gyeoksalHitMul') > 0) CONFIG.SECRET.gyeoksalHitMul = +params.get('gyeoksalHitMul'); // 격살 판정 배율 (기본 1 — 11/11 사장님 '파괴력 배율은 1.3에서 1로 변경') · `?gyeoksalHitMul=1.3` = 전 판
-if (params.get('gyeoksalArm') === 'down') CONFIG.SECRET.gyeoksal.armPath = 'down'; // 격살 어거(팔) 길 시험: 위에서 내려 깎음
-if (params.has('secretStreak')) CONFIG.SECRET.secretStreak = +params.get('secretStreak') ? 1 : 0; // 비기 잔상 마주 보는 띠 (10/23 — 사장님 확인 전): 기본 1, `?secretStreak=0` = 호만
-if (params.has('secretArcMin')) CONFIG.SECRET.secretArcMin = Math.max(0, Math.min(1, +params.get('secretArcMin') || 0)); // 결정타 잔상 바닥 (10/23 — 사장님 확인 전): 기본 0.6, `?secretArcMin=0` = 빠르기 몫 그대로
-for (const k of ['cnBongdu', 'cnBuffer', 'cnFast']) if (params.has(k)) CONFIG.SECRET[k] = +params.get(k) ? 1 : 0; // 중국 막기 연환 사람이 쓰게 (10/12 — docs/strike/cn_combo_play_2026-10-12.md): 봉두세 자리 · 미리 받기 · 빠른 연환. 기본 1, `?cnBongdu=0` · `?cnBuffer=0` · `?cnFast=0` = 전
-if (+params.get('cnFastShare') > 0) CONFIG.SECRET.cnFastShare = +params.get('cnFastShare'); // 빠른 연환 비율(빠르기·잔상 같이 — 기본 0.5): 사장님이 한 값만 바꿔 보시게 `?cnFastShare=0.65`
-if (params.get('cnCombo') === '2') CONFIG.SECRET.cnCombo = 2; // 연환 3 연격(10/12 08:2x): 기본 3, `?cnCombo=2` = 전 두 수
-if (params.has('cnPath')) CONFIG.SECRET.cnPath = +params.get('cnPath') ? 1 : 0; // 연환 길 그때 계산(10/12 03:0x): 기본 1, `?cnPath=0` = 패드 길
-if (['cutFirst', 'thrustFirst'].includes(params.get('cnGeojeongOrder'))) CONFIG.SECRET.cnGeojeongOrder = params.get('cnGeojeongOrder'); // 거정세 연환 순서: 기본 원문대로 벰 → 찌름
-if (params.has('secretReach')) CONFIG.SECRET.secretReach = +params.get('secretReach') ? 1 : 0; // 비기 동안 팔 끝까지 펴짐(10/12 03:0x·03:1x): 기본 1, `?secretReach=0` = 평소 제한
-if (params.has('iaiRise')) CONFIG.SECRET.iaiRise = +params.get('iaiRise') ? 1 : 0; // 고노센 올려베기·한 손(10/12 03:2x): 기본 1, `?iaiRise=0` = 가로 휩쓸기·두 손
-if (params.has('iaiBelly')) CONFIG.SECRET.iaiBelly = +params.get('iaiBelly') ? 1 : 0; // 고노센 배 높이 길 (11/06 사장님 '그래 배 쪽으로 재봐' — 기본 0 · 사장님 확인 전 · 확인표 3450 · docs/strike/gns_belly_2026-11-06.md)
-if (params.has('iaiReal')) CONFIG.SECRET.iaiReal = +params.get('iaiReal') ? 1 : 0; // 사람 발도 원전 꼴 (11/13 사장님 '실제 발도슬이나 원전이 재현되도록' — 기본 1 · `?iaiReal=0` = 11/13 전 판 배 길 · 사장님 확인 전 · 확인표 3660 · docs/strike/iai_real_2026-11-13.md)
-if (params.has('iaiOneHeavy')) CONFIG.SECRET.iaiOneHeavy = +params.get('iaiOneHeavy') ? 1 : 0; // 모노호시자오(앞무게 두손 칼) 사람 발도 한 손 (사장님 11/13 '한손으로' — 기본 1 · `?iaiOneHeavy=0` = 전 판 두 손 발도 · 확인표 3680 · docs/strike/monohoshizao_draw_2026-11-13.md)
-if (params.has('iaiOneHeavyAi')) CONFIG.SECRET.iaiOneHeavyAi = +params.get('iaiOneHeavyAi') ? 1 : 0; // 같은 규칙을 AI 발도에도 (기본 0 — 여쭐 것 · 확인표 3682)
-if (params.has('iaiRegrip') && Number.isFinite(+params.get('iaiRegrip'))) CONFIG.SECRET.iaiRegrip = Math.max(0, +params.get('iaiRegrip')); // 한 손 발도 뒤 다시 쥐는 시간 (게임 s — 기본 0.2 · 0 = 곧장 · 확인표 3681)
-if (params.has('iaiRegripAll')) CONFIG.SECRET.iaiRegripAll = +params.get('iaiRegripAll') ? 1 : 0; // 우치가타나 등 모든 일본 한 손 발도도 다시 쥐기 부드럽게 (사장님 11/13 '우치가타나 부드럽게' — 기본 1 · `?iaiRegripAll=0` = 전 판 곧장 · 확인표 3701 · docs/strike/iai_saya_2026-11-13.md)
-if (params.has('iaiSaya')) CONFIG.SECRET.iaiSaya = +params.get('iaiSaya') ? 1 : 0; // 한 손 발도 칼집 손(왼손) 자리 원전대로 왼 허리 (사장님 11/13 '욍손자리 원전대로' — 기본 1 · `?iaiSaya=0` = 10/14 배 앞 · 확인표 3700)
-if (params.has('iaiSayaReady')) CONFIG.SECRET.iaiSayaReady = +params.get('iaiSayaReady') ? 1 : 0; // 발도 대기 왼손 칼집 입 · 뽑을 때 鞘引き (사장님 11/13 '원전과 다른 셋 이어서 맞춰' ① — 기본 1 · `?iaiSayaReady=0` = 11/13 판 · 확인표 3720 · docs/strike/iai_saya2_2026-11-14.md)
-if (params.has('iaiRegripFade')) CONFIG.SECRET.iaiRegripFade = +params.get('iaiRegripFade') ? 1 : 0; // 두 손으로 가는 때를 풀기(振りかぶり)와 겹침 (② — 기본 1 · `?iaiRegripFade=0` = 풀기 끝난 뒤 · 확인표 3721)
-if (params.has('iaiSayaModoshi')) CONFIG.SECRET.iaiSayaModoshi = +params.get('iaiSayaModoshi') ? 1 : 0; // 다시 쥐는 길이 鞘戻し 점(배꼽 앞)을 지남 (③ — 기본 1 · `?iaiSayaModoshi=0` = 곧은 섞기 · 확인표 3722)
-if (params.has('iaiObi')) CONFIG.SECRET.iaiObi = +params.get('iaiObi') ? 1 : 0; // 帯刀 — 대기 칼 자리(칼집 입이 배꼽 앞 · 골반 틀) · 뽑는 자리 · 鞘戻し 점 (사장님 11/14 '권고대로 둘 다 진행해' ① — 기본 1 · `?iaiObi=0` = 11/14 판 · 확인표 3871 · docs/strike/iai_obi_2026-11-14.md)
-if (params.has('iaiObiSaya')) CONFIG.SECRET.iaiObiSaya = +params.get('iaiObiSaya') ? 1 : 0; // 일본 칼 넷의 빈 칼집 그림 (② — 기본 1 · `?iaiObiSaya=0` = 없음 · 확인표 3874)
-for (const k of ['iaiObiSageo', 'iaiObiOwn', 'iaiObiEdge', 'iaiObiDroop']) if (params.has(k)) CONFIG.SECRET[k] = +params.get(k) ? 1 : 0; // 11/14 사장님 '동방과 일본은 전부 권고대로' — 사게오 · 다라이시 검집 자리 · 날 위 · 누운 몸 처짐 (모두 기본 1 · 그림만 · 확인표 3886 ~ 3890)
-if (params.has('iaiSheathe') && Number.isFinite(+params.get('iaiSheathe'))) CONFIG.SECRET.iaiSheathe = +params.get('iaiSheathe') > 0 ? CONFIG.realS(+params.get('iaiSheathe')) : 0; // 납도 (11/14 사장님 '2초 후에 납도 시작' — 실제 초 · 기본 0.6 · `?iaiSheathe=0` = 납도 없음 · 확인표 3966)
-if (params.has('kronH')) CONFIG.SKILL.deKronH = +params.get('kronH') ? 1 : 0; // 왕관 손·칼끝 자리(10/12 08:2x): 기본 1 = 쓸어 고른 자리, `?kronH=0` = 00:1x 값
-if (['true', 'pad'].includes(params.get('kronShape'))) CONFIG.SKILL.deKronShape = params.get('kronShape'); // 왕관 꼴(10/12 00:1x 사장님): 기본 'true'(진짜 왕관 꼴 — 코등이 가로), `?kronShape=pad` = 10/11 패드 꼴 (docs/strike/kron_shape_2026-10-12.md)
-if (params.get('itRetreat') === '1' || params.get('itRetreat') === '2') CONFIG.SKILL.itRetreat = +params.get('itRetreat'); // 이탈리아 물러서기 연구(10/17 — 판 값 끔, 사장님 확인 전): `?itRetreat=1` = 막기 단추가 약한 길에서 실제 디딤 두 번 물러섬 · `?itRetreat=2` = 막는 동안 스틱을 뒤로 당긴 두 디딤을 물러서는 한 짝으로 셈(스틱은 플레이어 것) (docs/strike/italian_retreat_2026-10-17.md)
-if (params.get('itOpposition') === '0') CONFIG.SKILL.itOpposition = 0;
-if (params.get('itParryBeat') === '1') CONFIG.SKILL.itParryBeat = 1; // 막기를 짧은 박자로 셈(10/17 연구 — 사장님 승인 전 제안, 판 값 끔): `?itParryBeat=1`
-if (+params.get('cnParrySpeed') > 0) CONFIG.SKILL.cnParrySpeedK = +params.get('cnParrySpeed'); // 동방 막기 단추 손 빠르기 배율(10/17 — 판 값 1 = 끔, 사장님 확인 전): `?cnParrySpeed=1.3` = 동방 막기 책 플레이어의 막기 단추 손 옮김 4.5 → 5.85 m/s (docs/strike/chinese_parry_speed_2026-10-17.md)
-if (+params.get('cnBrace') > 0) CONFIG.SKILL.cnBraceK = +params.get('cnBrace'); // 동방 버티는 힘(10/17 연구 — 판 값 0 = 끔, 사장님 확인 전): `?cnBrace=0.5` = 동방 막기 책 플레이어가 막기 단추로 막는 중 서보 힘 × 1.5 (docs/strike/chinese_parry_brace_2026-10-17.md)
-if (params.has('cnParryCut') && +params.get('cnParryCut') >= 0 && +params.get('cnParryCut') <= 1) CONFIG.SKILL.cnParryDmgCut = +params.get('cnParryCut'); // 동방 막는 동안 피해 감소(10/17 — 판 값 0.5, 사장님 22:1x 결정): `?cnParryCut=0` = 끔 · `?cnParryCut=0.25` = 막는 중 입는 칼날 상처 심각도 × 0.75 (몫이라 0~1 만 읽음)
-// 일본 흘림 묶음 (사장님 10/18 22:1x — docs/strike/japanese_flow_adopt_2026-10-18.md): 판정 개편 · 팔 늦춤 0.4 s(10/21 시간 통일 — 전 0.36) · 흘림당한 쪽 기력 40(10/31 09:xx 사장님 결정 60 — config FLOW_REDESIGN.penalty) · 자연 회복 탈진 · 일본/이베리아 막는 동안 피해 20 % 감소 — 모두 기본 켬
-if (params.has('flowJudge')) FLOW_REDESIGN.on = params.get('flowJudge') !== '0'; // `?flowJudge=0` = 옛 흘림 판정(내려 베기 · 칼 지붕 · 새로 부딪힌 순간만)
-if (params.has('flowDmgCut') && +params.get('flowDmgCut') >= 0 && +params.get('flowDmgCut') <= 1) FLOW_REDESIGN.flowDmgCut = +params.get('flowDmgCut'); // 흘린 공격의 피해 감소(판 값 0.7 — 11/15 사장님 결정 · 전 0.8) — `?flowDmgCut=0` = 끔
-if (params.get('flowEnd') === 'timer') FLOW_REDESIGN.threatEnd = false; // `?flowEnd=timer` = 공격 끝을 공격 번호 시간으로(샛별 연구 그대로 — 판 값은 실제 칼 기하)
-if (params.has('flowArm') && +params.get('flowArm') >= 0 && +params.get('flowArm') <= 2) FLOW_RECOVERY.seconds = CONFIG.realS(+params.get('flowArm')); // `?flowArm=0` = 팔 늦춤 끔 · `?flowArm=0.18` = 0.18 s
-if (params.has('ibBeat') && +params.get('ibBeat') >= 0 && +params.get('ibBeat') <= 3) Object.assign(CONFIG.IB_PARRY_BEAT, { on: +params.get('ibBeat') > 0, k: +params.get('ibBeat') || CONFIG.IB_PARRY_BEAT.k }); // 이베리아 탈류 · 레베스 쳐내기 튕김 세기 k (판 값 1.6 — 사장님 10/20) · `?ibBeat=0` = 끔
-if (params.has('swingTurn') && +params.get('swingTurn') >= 0 && +params.get('swingTurn') <= 180) Object.assign(CONFIG.SWING_TURN, { on: +params.get('swingTurn') > 0, rate: +params.get('swingTurn') || CONFIG.SWING_TURN.rate }); // 휘두르는 동안 몸 돌림 묶기 °/s (시험 — 기본 끔 · 10/21) · `?swingTurn=30`
-if (params.has('burstWalkSide')) CONFIG.GAIT.burstWalkSide = params.get('burstWalkSide') === '0' ? 0 : 1; // 옆 누르면 첫 걸음에 늘 옆 박차기 (10/21 — 기본 켬) · `?burstWalkSide=0` = 전 판(서 있다 걷기 시작 때만)
-if (params.has('burstFwdDeg') && +params.get('burstFwdDeg') >= 0 && +params.get('burstFwdDeg') <= 60) CONFIG.GAIT.burstFwdDeg = +params.get('burstFwdDeg'); // 비스듬히 앞으로 박차기 각(°, 판 값 30 · 0 = 곧장 옆)
-if (params.has('aiReact') && +params.get('aiReact') >= 0 && +params.get('aiReact') <= 0.6) Object.assign(CONFIG.AI_REACT, { on: +params.get('aiReact') > 0, face: CONFIG.realS(+params.get('aiReact')) || CONFIG.AI_REACT.face }); // AI 반응 시간 s (판 값 0.2 · 0 = 끔)
-if (['strike', 'approach', 'windup'].includes(params.get('swingTurnFrom'))) CONFIG.SWING_TURN.from = params.get('swingTurnFrom'); // 묶기 시작: windup(기본 — 칼 드는 때부터) · approach(들어오는 단계부터) · strike(긋기부터)
-if (params.has('flowCost') && +params.get('flowCost') >= 0 && +params.get('flowCost') <= 100) FLOW_REDESIGN.penalty = +params.get('flowCost'); // `?flowCost=0` = 흘림당한 쪽 기력 청구 끔 · `?flowCost=20` = 20 · `?flowCost=40` = 10/31 전 판(판 값 60)
-if (params.get('exhaust') === 'fixed') CONFIG.STAMINA.exhaustNatural = false; // `?exhaust=fixed` = 옛 탈진(2.5 s 숨 고르기 뒤 0)
-if (params.get('thrustCost') === '7') CONFIG.STAMINA.thrustCost = 7; // `?thrustCost=7` = 옛 찌르기 기력 7 (10/24 사장님 결정 전)
-if (params.has('jpParryCut') && +params.get('jpParryCut') >= 0 && +params.get('jpParryCut') <= 1) CONFIG.SKILL.jpParryDmgCut = +params.get('jpParryCut'); // 일본 막는 동안 피해 감소(판 값 0.2) — `?jpParryCut=0` = 끔
-if (params.has('ibParryCut') && +params.get('ibParryCut') >= 0 && +params.get('ibParryCut') <= 1) CONFIG.SKILL.ibParryDmgCut = +params.get('ibParryCut'); // 이베리아 막는 동안 피해 감소(판 값 0.2) — `?ibParryCut=0` = 끔
-if (['1', '2'].includes(params.get('itForte'))) CONFIG.SKILL.itForte = +params.get('itForte'); // 이탈리아 forte 막기 연구 후보 (가)(10/17 — 사장님 확인 전): 기본 0 = 끔, `?itForte=1`·`?itForte=2` = 후보 몸꼴 (docs/strike/italian_forte_parry_2026-10-17.md)
-if (params.has('bind')) CONFIG.BIND.natural = +params.get('bind') ? 1 : 0; // 자연 바인드 (10/11 실험 — docs/strike/natural_bind_2026-10-11.md · 10/31 본판 — natural_bind_on_2026-10-31.md): 기본 1(사장님 10/31 19:xx), `?bind=0` = 전 물리(칼끼리 더 튕김 · AI 밀기 없음)
-if (params.has('bindRest')) CONFIG.BIND.restitution = +params.get('bindRest'); // 칼끼리 닿는 면 반발 (기본 0.2 — 사장님 10/31 19:xx · 10/11 실험 0.1)
-if (params.has('bindWill')) CONFIG.BIND.will.on = +params.get('bindWill') ? 1 : 0; // AI 미는 정도를 성향에 따라 (기본 1 · 0 = 모든 AI 10/11 실험 값 그대로 — 셈은 사장님 확인 전)
-if (['v4', 'flow', 'gilmok', 'spin', 'altib'].includes(params.get('ibSecret'))) CONFIG.SECRET.iberianSecret = params.get('ibSecret'); // 11/11 기본 'altib'(알티바슈 포르트 비기 · 싱지르 특수 공격 — 사장님 자리 바꿈) · 'spin' = 전 판 // 이베리아 비기 판(10/11 · 10/22): 기본 'spin'(휘감아 돌기 — docs/strike/iberian_spin_2026-10-22.md), `?ibSecret=gilmok` = v6 길목 지키기, `?ibSecret=flow` = v5 멈추지 않는 흐름, `?ibSecret=v4` = 10/10 비켜 서며 크게 가로베기
-if (['stick', 'attack', 'attackCircle'].includes(params.get('ibInput'))) CONFIG.SECRET.ibSpin.input = params.get('ibInput'); // 싱지르 내는 조작: 기본 'attackCircle'(10/24 — 무장 동안 공격으로 원 한 바퀴) · `?ibInput=stick` = 10/23 판(이동 스틱 반 바퀴) · `?ibInput=attack` = 10/22 판(무장 동안 공격 입력 하나)
-if ([0.6, 1.5].includes(+params.get('ibCircleTime'))) CONFIG.SECRET.ibSpin.circleTime = +params.get('ibCircleTime'); // 원 한 바퀴를 이 초 안에 (판 값 1.5 — 사다리 칸만) · 시험 `?ibCircleTime=0.6`
-if (params.get('gyeoksalAuto') === '0') CONFIG.SECRET.gyeoksal.auto = 0; // 격살 저절로 끔 = 옛 판(창 안 공격 입력 — 10/24 사장님 결정 전)
-if (params.get('ibShare') === '0') CONFIG.SECRET.ibSpin.share = 0; // 싱지르 빠르기를 고노센 몫으로 정하지 않음 (10/23 판 — 한 바퀴 time 0.6 s · 칼끝 자름 없음 · 판 값 0.7 — 사장님 10/24 10:5x)
-if (params.get('ibUpright') === '0') CONFIG.SECRET.ibSpin.upright = 0; // 싱지르 몸 곧게 끔 (10/23 판 — 판 값 1)
-if (params.get('ibHandRest') === '0') CONFIG.SECRET.ibSpin.handRest = 0; // 싱지르 낼 때 사람 손 목표를 쉼 자세로 옮기지 않음 (10/24 02:5x 판 — 판 값 1 · 사장님 10/24 10:4x '또 허공 위로 날아가는 싱지르')
-if (params.get('ibLid') === '0') CONFIG.SECRET.ibSpin.lid = 0; // 싱지르 몸통 뚜껑 끔 (놓은 칼끝이 몸통 위 끝을 넘어 오를 수 있음 — 판 값 1 · 10/24 10:4x)
-if (params.get('ibWindSide') === '0') CONFIG.SECRET.ibSpin.windSide = 0; // 싱지르 칼 든 쪽으로 감을 때 손을 배 앞 가운데(10/22 판 wind.hand 0.06)에 — 판 값 1 = 칼 든 어깨 앞 (사장님 10/24 14:0x 결정)
-if (params.get('ibFloor') === '0') CONFIG.SECRET.ibSpin.floor = 0; // 싱지르 감는 동안 땅에 닿아도 막힘 (10/22 판 — 판 값 1 · 10/24 10:4x '작게 그으면 … 실패')
-if (params.has('ibNear')) CONFIG.SECRET.ibSpin.near = ['place', 'contact'].includes(params.get('ibNear')) ? params.get('ibNear') : +params.get('ibNear') || 0; // 싱지르 가까운 상대 뒷발 축 (11/05 — 1 판 값 · 0 = 늘 앞발 축 전 판 · place · contact = 제자리 견줌)
-if (params.has('ibStride') && +params.get('ibStride') >= 0) CONFIG.SECRET.ibSpin.stride = +params.get('ibStride'); // 싱지르 특수 공격 한 걸음 나가며 (11/11 — m · 0 = 11/05 판 near · advance)
-if (params.has('ibStrideAt') && +params.get('ibStrideAt') > 0) CONFIG.SECRET.ibSpin.strideAt = +params.get('ibStrideAt'); // 그 나아감을 마치는 돌기 진행 (11/11 · 1 = 돌기 끝)
-if (params.has('ibSplit')) CONFIG.SECRET.ibSpin.split.on = +params.get('ibSplit') ? 1 : 0; // 풍차 베기 두 마디 (11/12 — 1 판 값 · 0 = 11/11 판 돌며 나아감)
-if (params.has('ibFoot') && +params.get('ibFoot') >= 0) CONFIG.SECRET.ibSpin.split.foot = +params.get('ibFoot'); // 그 앞발 틀기 각 (° — 90 판 값 · 0 = 안 틂 견줌)
-if (params.has('ibUnder')) CONFIG.SECRET.ibSpin.split.under = +params.get('ibUnder') ? 1 : 0; // 틀어 딛는 앞발을 엉덩이 밑에 (1 판 값 · 0 = 제자리 견줌)
-if (params.has('mordHitMul') && +params.get('mordHitMul') > 0) CONFIG.SECRET.mordHitMul = +params.get('mordHitMul'); // 죽음의 일격 판정 배율 (11/11 사장님 1.0 · `?mordHitMul=1.3` = 전 판)
-if (params.has('altibHitMul') && +params.get('altibHitMul') > 0) CONFIG.SECRET.altibHitMul = +params.get('altibHitMul'); // 알티바슈 포르트 판정 배율 (11/11 사장님 1.0)
-// 11/16 끝없는 비기 (사장님 11/16 — docs/strike/secret_free_2026-11-16.md): 고노센 · 알티바슈 포르트 판당 쓸 수 끝없음 · 고노센 기력 · 뽑기 · 알티바슈 뒤 기력 · 빠르기 판
-if (params.has('gnsFree')) CONFIG.SECRET.gnsFree = +params.get('gnsFree') ? 1 : 0; // `?gnsFree=0` = 판당 secretUses 그대로
-if (params.has('gnsCost') && Number.isFinite(+params.get('gnsCost'))) CONFIG.SECRET.gnsCost = +params.get('gnsCost') > 0 ? +params.get('gnsCost') : null; // `?gnsCost=0` = 비기 공통 35
-if (params.has('gnsDraw') && Number.isFinite(+params.get('gnsDraw'))) CONFIG.SECRET.gnsDraw = +params.get('gnsDraw') > 0 ? CONFIG.realS(+params.get('gnsDraw')) : 0; // 뽑기 (실제 초 · 기본 0.6 · `?gnsDraw=0` = 곧장 사람 손)
-if (params.has('altibFree')) CONFIG.SECRET.altib.free = +params.get('altibFree') ? 1 : 0; // `?altibFree=0` = 판당 secretUses 그대로
-if (params.has('altibDrop')) CONFIG.SECRET.altib.drop = params.get('altibDrop') === 'zero' ? null : Number.isFinite(+params.get('altibDrop')) ? +params.get('altibDrop') : CONFIG.SECRET.altib.drop; // `?altibDrop=zero` = 11/11 판(기력 0)
-if (params.has('altibKnee')) CONFIG.SECRET.altib.knee = params.get('altibKnee') === 'null' ? null : +params.get('altibKnee'); // 11/16 꺾임 기력
-if (params.has('altibFull') && +params.get('altibFull') > 0) CONFIG.SECRET.altib.full = +params.get('altibFull'); // 11/16 기력 가득 = 고노센 × full
-if (['f1', 'f2', '0'].includes(params.get('altibSpeed'))) CONFIG.SECRET.altib.speed = params.get('altibSpeed') === '0' ? 0 : params.get('altibSpeed'); // 'f2' 기본 · 'f1' 견줌 · 0 = 11/11 판(기력 몫 위력)
-if (params.has('jpSpeed')) CONFIG.JP_TANK.speed = +params.get('jpSpeed') ? 1 : 0; // 11/16 일본 스택 = 빠르기 (`?jpSpeed=0` = 11/14 판 공격력 +8 % / 스택)
-if (params.has('mordFree')) CONFIG.SECRET.mord.free = +params.get('mordFree') ? 1 : 0; // 죽음의 일격 판당 쓸 수 (`?mordFree=0` = 판당 1)
-if (params.has('mordCost') && Number.isFinite(+params.get('mordCost'))) CONFIG.SECRET.mord.cost = +params.get('mordCost') > 0 ? +params.get('mordCost') : null; // 죽음의 일격 기력 (`?mordCost=0` = 비기 공통)
-if (params.has('mordGuard') && Number.isFinite(+params.get('mordGuard'))) CONFIG.SECRET.mord.guard = +params.get('mordGuard') > 0 ? CONFIG.realS(+params.get('mordGuard')) : 0; // 다시 세우기 (실제 초 · `?mordGuard=0` = 11/15 판 굳음)
-if (params.has('risoFree')) CONFIG.SECRET.risolutoFree = +params.get('risoFree') ? 1 : 0; // 리솔루토 판당 쓸 수 (`?risoFree=0` = 판당 1)
-if (params.has('risoCost') && Number.isFinite(+params.get('risoCost'))) CONFIG.SECRET.risolutoCost = +params.get('risoCost') > 0 ? +params.get('risoCost') : null; // 리솔루토 기력 (`?risoCost=0` = 비기 공통)
-if (params.has('risoBack') && Number.isFinite(+params.get('risoBack'))) CONFIG.SECRET.risolutoBack = +params.get('risoBack') > 0 ? CONFIG.realS(+params.get('risoBack')) : 0; // 런지 되돌림 (실제 초 · `?risoBack=0` = 11/15 판 굳음)
-if (params.get('ibFeet') === '0') CONFIG.SECRET.ibSpin.feet = 0; // 싱지르 발디딤 고침 끔 (10/24 02:5x 판 — 도는 발이 축발 옆에 딛고 축발은 제자리 · 판 값 1 · 사장님 10/24 12:5x '두 다리가 딱 붙어서 곧게 편 채')
-if ([90, 180, 270, 360].includes(+params.get('ibTurn'))) CONFIG.SECRET.ibSpin.stickTurn = +params.get('ibTurn'); // 스틱 돌림 각 ° (판 값 180 — 사장님 10/23 '반 바퀴 이상') · 시험 `?ibTurn=360`
-if ([0.4, 0.6].includes(+params.get('ibTurnTime'))) CONFIG.SECRET.ibSpin.stickTime = +params.get('ibTurnTime'); // 그 각을 이 초 안에 (판 값 0.6 — 사다리 칸만) · 시험 `?ibTurnTime=0.4`
-if (params.get('ibTurnPath') === '0') CONFIG.SECRET.ibSpin.stickPath = 0; // 표본 사이 데드존 건너뜀을 놓음으로 보지 않음 (판 값 1)
-if (params.get('ibTurnRate') === '1') CONFIG.SECRET.ibSpin.stickRate = 1; // 시험: 느린 각 흐름은 안 셈 (판 값 0)
-if (params.get('ibTurnFrom') === '1') CONFIG.SECRET.ibSpin.stickFrom = 1; // 시험: 스틱을 가운데에서 밀어 낸 때부터 0.6 s 안 (판 값 0)
-if (params.get('ibTorso') === '0') CONFIG.SECRET.ibSpin.torso = 0; // 휘감아 돌기 칼 높이 몸통 안 끔 (10/22 판 — 판 값 1 · 사장님 10/23 01:0x)
-if (params.get('ibReverse') === '0') CONFIG.SECRET.ibSpin.reverse = 0; // 스틱을 돌린 쪽으로 돌기 끔 (늘 칼 든 쪽 — 판 값 1)
-if (params.get('ibSettle') === '0') CONFIG.SECRET.ibSpin.settle = 0; // 마무리 받기 끔 (곧장 놓음 — 판 값 1)
-if (['all', 'cut', '0'].includes(params.get('ibTrail'))) CONFIG.SECRET.ibSpin.trail = params.get('ibTrail') === '0' ? 0 : params.get('ibTrail'); // 휘감아 돌기 비기 잔상: 판 값 'cut'(놓은 뒤 가로지르는 몫) · `?ibTrail=all` 내내 · `?ibTrail=0` 끔
-if (['chest', 'head', 'headTop'].includes(params.get('gilAim'))) CONFIG.SECRET.gilmokAim = params.get('gilAim'); // 길목 한 칼 겨누는 자리 (사장님 결정 10/11 13:5x — 기본 config.js SECRET.gilmokAim) · 확인용 `?gilAim=head`
-if (params.has('iai')) CONFIG.SECRET.iai = +params.get('iai') ? 1 : 0; // 고노센 = 발도(10/10 02:3x): 기본 1, `?iai=0` = 순간이동 고노센
-if (params.has('gnsEnter')) CONFIG.SECRET.gnsEnter = +params.get('gnsEnter') ? 1 : 0; // 고노센 들어옴 사건(10/25 01:3x — 발도 대기인 채 상대가 내 발도가 닿는 거리를 넘어 들면 창): 기본 1, `?gnsEnter=0` = 옛 판
-if (params.has('gnsEnterAI')) CONFIG.SECRET.gnsEnterAI = +params.get('gnsEnterAI') ? 1 : 0; // AI 고노센도 들어옴 사건 (10/25 08:0x 사장님 결정 — 기본 1, `?gnsEnterAI=0` = 01:3x 판)
-if (params.has('gnsLong')) CONFIG.SECRET.gnsLong = +params.get('gnsLong') ? 1 : 0; // 고노센 긴 칼 상대 규칙 (10/25 08:0x 사장님 결정 — 기본 1, `?gnsLong=0` = 끔: 상대 칼 거리 ≥ 내 발도가 닿는 거리면 준비가 그 사이에서 안 풀림)
-if (params.has('gnsWary')) CONFIG.SECRET.gnsWary = +params.get('gnsWary') ? 1 : 0; // AI 고노센 경계 (10/25 08:0x 사장님 '⑤' — 기본 1, `?gnsWary=0` = 01:3x 판 AI 걸음)
-if (params.has('gnsEnterWindow')) CONFIG.SECRET.gnsEnterWindow = CONFIG.realS(Math.max(0, +params.get('gnsEnterWindow') || 0)); // 여쭘 A: 들어옴 창 길이 (기본 0 = playerWindow 그대로 · `?gnsEnterWindow=0.4`)
-if (params.has('gnsEnterBlock')) CONFIG.SECRET.gnsEnterBlock = [0, 1, 2].includes(+params.get('gnsEnterBlock')) ? +params.get('gnsEnterBlock') : 2; // B: 천천히 걸어 든 들어옴 창 발도는 상대 칼에 막힐 수 있음 (10/25 16:0x 사장님 결정 — 기본 1 · `?gnsEnterBlock=0` 끔 · `=2` 칼끝 겨눔도 막음 — 시험)
-if (params.has('foeChargeAvg')) CONFIG.SECRET.foeChargeAvg = +params.get('foeChargeAvg') ? 1 : 0; // 달려듦 빠르기를 최근 0.6 s 평균으로 (10/25 16:0x — 기본 1 · `?foeChargeAvg=0` = 한 스텝)
-if (params.has('foeChargeSpeed') && +params.get('foeChargeSpeed') > 0) CONFIG.SECRET.foeChargeSpeed = CONFIG.realV(+params.get('foeChargeSpeed')); // 실제 m/s // 비기 '달려듦' 빠르기 (10/25 16:1x 사장님 결정 — 기본 1.2 · `?foeChargeSpeed=0.9` 옛 판)
-if (params.has('gnsEnterOpen')) CONFIG.SECRET.gnsEnterOpen = +params.get('gnsEnterOpen') ? 1 : 0; // 여쭘 C: 들어옴 창은 상대 칼끝이 나를 겨누지 않을 때만 (기본 0 · `?gnsEnterOpen=1`)
-if (['idle', 'dist'].includes(params.get('gnsReady'))) CONFIG.SECRET.gnsReady = params.get('gnsReady'); // 고노센 준비 (10/25 22:3x · 22:5x 사장님 — 기본 'idle' = 거리와 상관없이 아무 행동 없이 2 s · 준비된 뒤엔 걸어도 유지 · `?gnsReady=dist` = 상대 칼 거리 밖 옛 판)
-if (params.has('gnsCrouch')) CONFIG.SECRET.gnsCrouch = +params.get('gnsCrouch') ? 1 : 0; // 사람 고노센 준비 웅크림 (10/25 23:0x 사장님 결정 1 → 10/31 01:0x '플레이어만 웅크리기 꺼' — 기본 0 · `?gnsCrouch=1` = 웅크림)
-if (params.has('gnsStickWalk')) CONFIG.SECRET.gnsStickWalk = +params.get('gnsStickWalk') ? 1 : 0; // 고노센 준비의 걸음 뜻 = 스틱이 몸을 걷게 할 때만 (10/31 13:xx — 기본 1 · `?gnsStickWalk=0` = 0 이 아니면 걸음 · 사장님 확인 전)
-if (params.has('gnsRaiseLatch')) CONFIG.SECRET.gnsRaiseLatch = +params.get('gnsRaiseLatch') ? 1 : 0; // 고노센 든 칼 이어 봄 — 선 밖에서 든 칼이 선 안에 들면 창 (10/31 — 기본 1 · `?gnsRaiseLatch=0` = 10/31 01:0x 판 · 사장님 확인 전)
-if (params.has('gnsReadyHip')) CONFIG.SECRET.gnsReadyHip = +params.get('gnsReadyHip') ? 1 : 0; // 사람 허리 대기 — 웅크림 없이 칼만 왼 허리 (10/31 08:xx — 기본 1 · `?gnsReadyHip=0` = 10/31 01:0x 판 '고노센 준비' 글만 · 사장님 확인 전)
-if (params.has('gnsCrouchOut') && +params.get('gnsCrouchOut') > 0) CONFIG.SECRET.gnsCrouchOut = +params.get('gnsCrouchOut'); // 웅크림 풀림 시간 (s — 기본 0.2 · 사장님 확인 전)
-if (params.has('gnsCrouchAim')) CONFIG.SECRET.gnsCrouchAim = +params.get('gnsCrouchAim') ? 1 : 0; // AI 가 웅크린 사람을 칠 때 길을 낮춤 (10/27 21:4x 사장님 결정 — 기본 1 · `?gnsCrouchAim=0` = 7b02877 판)
-if (params.has('gnsAiSettle')) CONFIG.SECRET.gnsAiSettle = +params.get('gnsAiSettle') ? 1 : 0; // 고노센 AI 가 준비 전이면 간 보기 동안 제자리에 섬 (10/25 22:5x 규칙의 AI 쪽 — 기본 1 · `?gnsAiSettle=0` · 사장님 확인 전)
-if (params.has('gnsWalkIn')) CONFIG.SECRET.gnsWalkIn = +params.get('gnsWalkIn') ? 1 : 0; // 고노센 들어옴 창 (기본 0 = 천천히 걸어 듦은 창 없음 — 사장님 10/25 22:3x 입력 글 · 22:5x 끈 채로 · `?gnsWalkIn=1` = 01:3x 판)
-if (params.get('ibFlow') === '0') CONFIG.IB_FLOW.a = false; // 이베리아 이어 긋기 흐름 A 끔 (10/21 — 기본 켬 · test.html '이베리아 시험')
-if (params.get('ibFlowDetect') === 'old') CONFIG.IB_FLOW.detect = 'old'; // 흐르는 긋기 10/21 판 읽기 (10/28 — 기본 'a' 진짜 이어 그을 때만 · 확인표 2722)
-if (params.has('ibFlowBrake')) CONFIG.IB_FLOW.brake = +params.get('ibFlowBrake'); // 흐르는 긋기 제동 늦춤 몫 (10/28 기본 0.8 · 전 0.5 · 확인표 2723)
-if (params.has('ibFlowPow')) CONFIG.IB_FLOW.power = +params.get('ibFlowPow'); // 흐르는 긋기 위력 (10/28 기본 1.2 · 1 = 없음 · 확인표 2724)
-if (params.get('ibWrist') === '0') CONFIG.SCHOOL_PASSIVE.iberian.on = false; // 이베리아 손목 힘 패시브만 끔 (10/21 — test.html '이베리아 시험')
-// 이베리아 날 세우기 시험 (10/22 — 기본 끔 · 사장님 확인 전, config IB_EDGE · docs/strike/iberian_flat_hits_2026-10-22.md): `?ibEdge=motor` · `?ibEdge=ff` · `?ibEdge=pre` = 이베리아 유파만 그 날 세우기 방식
-if (['motor', 'ff', 'pre'].includes(params.get('ibEdge'))) Object.assign(CONFIG.IB_EDGE, { on: true, edge: params.get('ibEdge') });
-// 쉬는 날 방향 시험 (10/22 — 기본 끔 · 사장님 확인 전, config EDGE_REST · docs/strike/edge_rest_hold_2026-10-22.md): `?edgeRest=pre` · `kick` · `fast` · `latch` · `tsw` · 쉼표로 여럿 — 사람 칼만
-if (params.get('edgeRest')) {
-  const m = params.get('edgeRest').split(',').filter((x) => ['pre', 'kick', 'fast', 'latch', 'tsw'].includes(x));
-  if (m.length) { CONFIG.EDGE_REST.on = true; for (const x of m) CONFIG.EDGE_REST[x] = true; }
-}
-// 이베리아 자세표 칸 걷기 시험 (10/22 — 기본 끔 · 사장님 확인 전, docs/strike/iberian_flat_hits_2026-10-22.md): `?ibTableSkip=sideR,sideL` 처럼 칸 짧은 이름(guards.js IBERIAN_TABLE_KEYS) · 묶음 wait · pass — 걷은 칸은 앞무게 틀 표 값
-if (params.get('ibTableSkip')) skipIberianTable(params.get('ibTableSkip').split(',').map((x) => x.trim()).filter(Boolean));
-// 이베리아 자세표 v2 (10/22 — 기본 끔 · 사장님 확인 전, guards.js IBERIAN_TABLE_V2): `?ibTable=v2` = 사람 · AI 모두 · `?ibTable=v2p` = 사람만(플레이어 몸에만 덮음 — 아래 newRound)
-const IB_TABLE = params.get('ibTable');
-if (IB_TABLE === 'v2') useIberianTableV2();
-{ // 열린 비기 유파 (10/21 — config SECRET.openSchools): `?secretOpen=all` 옛 판 · `?secretOpen=japanese,german` 고르기
-  const so = params.get('secretOpen');
-  if (so) CONFIG.SECRET.openSchools = CONFIG.SECRET.aiOpenSchools = so === 'all' ? ['german', 'italian', 'iberian', 'japanese', 'chinese'] : so.split(',').map((x) => x.trim()).filter(Boolean); // 사람 · AI 둘 다 (10/22 aiOpenSchools)
-}
-{ // 이탈리아 아웃복싱 (11/14 사장님 '이탈리아는 아웃복싱 스타일이야 … 찌르기 자체를 너프 … 걸어들어오는 상대를 카운터하면 +30%. 제안 A와 B 좋아.' — config IT_OUTBOX · src/italian_outbox.js):
-  //  `?itOutbox=0` 넷 모두 끔(전 판) · `?itThrustMul=0.7` 보통 찌르기 배율(1 = 끔) · `?itStop=0` 맞박자 찌르기 끔 · `?itEdge=3` 칼 우위 초(0 = 끔 — 리솔루토 전 조건) · `?itBeat=0` 박자 찌르기 끔 (실제 초) · `?itAi=0` 사람만
-  if (params.has('itOutbox')) CONFIG.IT_OUTBOX.on = +params.get('itOutbox') ? 1 : 0;
-  if (params.has('itThrustMul') && +params.get('itThrustMul') > 0) CONFIG.IT_OUTBOX.thrustMul = +params.get('itThrustMul');
-  if (params.has('hitKPhys')) CONFIG.STRIKE.hitKPhys = +params.get('hitKPhys') ? 1 : 0; // 11/15 약화 배율은 상처에만 (STRIKE.hitKPhys — 찌르기 박힘 · 무시됨 고침 · 사장님 11/16 결정 기본 1 · 0 = 전 판)
-  if (params.has('lodgeHold')) CONFIG.STRIKE.lodgeHold = +params.get('lodgeHold') ? 1 : 0; // 11/15 다 쓴 박힘 풀기 (STRIKE.lodgeHold — 기본 1 · 사장님 11/15 결정 · `?lodgeHold=0` = 전 판)
-  if (params.has('thrustDrive')) CONFIG.THRUST.drive = Math.max(0, Math.min(3, Math.round(+params.get('thrustDrive') || 0))); // 11/15 사람 탭 찌르기 몸 싣기 (THRUST.drive — 1 당김 · 2 몸 싣기 · 3 둘 다 · 사장님 11/16 결정 기본 3 · 0 = 전 판)
-  if (params.has('thrustDriveChamber') && +params.get('thrustDriveChamber') >= 0) CONFIG.THRUST.driveChamber = +params.get('thrustDriveChamber');
-  if (params.has('thrustDriveStep') && +params.get('thrustDriveStep') >= 0) CONFIG.THRUST.driveStep = +params.get('thrustDriveStep');
-  if (params.has('thrustDriveAi')) CONFIG.THRUST.driveAi = Math.max(0, Math.min(3, Math.round(+params.get('thrustDriveAi') || 0))); // 11/15 시제품 AI 찌르기 몸 싣기 (THRUST.driveAi — 사장님 11/16 결정 기본 3 · 0 = 전 판)
-  for (const [q, k] of [['tellAi', 'ai'], ['tellGuard', 'guard']]) if (params.has(q)) CONFIG.AI_TELL[k] = +params.get(q) ? 1 : 0; // 11/15 시제품 찌르기 낌새 눈 (src/thrust_tell.js — 사장님 11/16 결정 기본 켬 · 0 = 전 판)
-  if (params.has('tellLatch') && +params.get('tellLatch') >= 0) CONFIG.AI_TELL.latch = CONFIG.realS(+params.get('tellLatch')); // 11/15 시제품 막기 단추 낌새 붙잡기 (실제 초 — 기본 0)
-  if (params.has('inqMul') && +params.get('inqMul') > 0) CONFIG.IT_OUTBOX.inqMul = +params.get('inqMul'); // 11/15 시제품 비껴서며 찌르기 판정 배율 (사람 · AI — 사장님 11/16 결정 기본 0.5 · 1 = 전 판)
-  if (params.has('itEdgeFrom') && ['', 'stop', 'counter'].includes(params.get('itEdgeFrom'))) CONFIG.IT_OUTBOX.edgeFrom = params.get('itEdgeFrom'); // 11/16 시제품 1안 칼 우위가 켜지는 길 (사람 · AI — 기본 '' 지금)
-  if (params.has('itStop') && +params.get('itStop') >= 0) CONFIG.IT_OUTBOX.stop = +params.get('itStop');
-  if (params.has('itEdge') && +params.get('itEdge') >= 0) CONFIG.IT_OUTBOX.edge = CONFIG.realS(+params.get('itEdge'));
-  if (params.has('itBeat') && +params.get('itBeat') >= 0) CONFIG.IT_OUTBOX.beat = CONFIG.realS(+params.get('itBeat'));
-  if (params.has('itBeatHuman')) CONFIG.IT_OUTBOX.beatHuman = +params.get('itBeatHuman') ? 1 : 0; // 11/15 사장님 '사람 l9 이전처럼' — 1 = 사람 박자 찌르기(11/14 판)
-  if (params.has('itBeatAi')) CONFIG.IT_OUTBOX.beatAi = +params.get('itBeatAi') ? 1 : 0; // 11/15 사장님 'ai도 되돌려' — 1 = AI 박자 찌르기(11/14 판)
-  if (params.has('itAi')) CONFIG.IT_OUTBOX.ai = +params.get('itAi') ? 1 : 0; // 11/14 사장님 'ai에도 적용' — 0 = 사람만
-}
-if (params.has('aiKit')) CONFIG.AI_KIT.on = +params.get('aiKit') ? 1 : 0; // AI 숙련도 = 스킬트리 칸 (11/16 사장님 결정 — config AI_KIT) · `?aiKit=0` = 옛 판(AI 는 칸 몫 없이 모두 켬 · 옛 단계표 · 패시브 4 · 비기 5)
-if (params.get('playerProf') === 'old') CONFIG.SAENGSA.playerProf.mode = 'old'; // 내 숙련도 옛 규칙 (10/29 — 2 · 5 칸 · 비기 + 특수공격 · 모두) · 기본 = 11/16 문턱 5 · 7 · 9 · 11 칸 [사장님 11/16 결정 '사람 셈도 문턱 기준으로 바꿔']
-{ // 유파 AI 기본 전투 흐름 (11/14 — config AI_PLAN · src/ai_plan.js · 설계안 docs/design/ai_school_baseline_2026-11-14.md §9): `?aiPlan=0` = 옛 판 (플랜 · 국면 · 이탈리아 거리 오차 모두 끔) ·
-  //  `?aiPlanTick=0` = 국면 판정을 매 스텝 (실제 초 — 기본 0.2)
-  if (params.has('aiPlan')) CONFIG.AI_PLAN.on = +params.get('aiPlan') ? 1 : 0;
-  if (!CONFIG.AI_PLAN.on) CONFIG.JP_TANK.ai = 0; // 2 단계 일본 (11/14): 옛 판이면 AI 일본 스택 · 바위 몸도 끔 (아래 `?jpStackAi=` 가 있으면 그 값)
-  if (params.has('aiPlanTick') && +params.get('aiPlanTick') >= 0) CONFIG.AI_PLAN.tick = CONFIG.realS(+params.get('aiPlanTick'));
-  if (params.has('aiPlanIb') && !+params.get('aiPlanIb')) for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'iberian'); // `?aiPlanIb=0` = 이베리아만 옛 판 (2 단계 11/14)
-  if (params.get('aiPlanCn') === '0') for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((t) => t !== 'chinese'); // `?aiPlanCn=0` = 동방 플랜만 옛 판 (2 단계 · 11/14 — 플랜 · 거리 오차 · 동방 몫 모두 끔 · 공통 파고들기는 그대로)
-  if (params.get('aiPlanDe') === '0') for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((t) => t !== 'german'); // `?aiPlanDe=0` = 독일 플랜만 옛 판 (3 단계 · 11/14 — 독일 플랜 · 거리 오차 · 독일 몫 모두 · 손잡이 찍기 · 실력 이름 · 숙련도 0 은 `?aiPlan=0` 이 끔)
-  if (params.get('aiPlanFree') === '0') CONFIG.AI_PLAN_FREE.on = 0; // `?aiPlanFree=0` = 무유파 플랜만 옛 판 (3 단계 · 11/14 — 플랜 · 굴림 · 거리 오차 · src/ai_plan_free.js)
-  if (params.has('ibBlockRegen')) CONFIG.SKILL.ibBlockRegen = +params.get('ibBlockRegen') ? 1 : 0; // 이베리아 막아 내면 기력 되찾음 (11/15 — src/ib_block_regen.js · B9)
-  if (['cut', 'fixed', 'foe2'].includes(params.get('ibBlockRegenN'))) CONFIG.SKILL.ibBlockRegenN = params.get('ibBlockRegenN'); // 되찾는 몫: 고정 30 · 상대 베기 × 2 (11/15 — 사장님 확인 전)
-  if (['turn', 'a', 'b', 'c', '0'].includes(params.get('cnStep'))) CONFIG.CN_STEP.mode = params.get('cnStep') === '0' ? 0 : params.get('cnStep'); // 동방 편섬 (11/15 사장님 '방향을 꺾은 순간으로 하자 … 0.4초 50% 감소' — src/cn_step.js · 기본 'turn' · 0 = 끔 · a b c = 첫 시제품 견줌)
-  if (params.has('aiArc')) CONFIG.AI_ARC.on = +params.get('aiArc') ? 1 : 0; // ① 둥근 칼 읽기 + 칼끝 틈 건너기 — 모든 AI (11/15 사장님 결정) `?aiArc=0` = 전 판
-  if (params.has('cnDive')) CONFIG.AI_PLAN.cn = { ...CONFIG.AI_PLAN.cn, dive: +params.get('cnDive') || 0 }; // 동방 AI 偏閃奏進 (11/15 — ai_plan_cn.js cnDive) `?cnDive=0` = 꺾음만
-  if (params.has('aiParryCut')) CONFIG.SKILL.aiParryCut = +params.get('aiParryCut') ? 1 : 0; // AI 막는 동안 피해 감소 시제품 (11/15 — src/ai_block_cut.js · 기본 끔)
-  for (const [q, k] of [['digAi', 'ai'], ['digStep', 'step'], ['digRun', 'run'], ['digReach', 'reach']]) if (params.has(q)) CONFIG.DIG_PROTO[k] = +params.get(q) ? 1 : 0; // 짧은 칼 파고들기 (11/14 — src/dig_proto.js): A 기본 켬 `?digAi=0` = 옛 판 · 시제품 B `?digStep=1` · C `?digRun=1` · 상대가 길 때의 대처 기울기(11/14 — 모든 AI) `?digReach=0` = 옛 문
-  if (params.has('aiItInq') && +params.get('aiItInq') >= 0) CONFIG.AI_PLAN.it = { ...CONFIG.AI_PLAN.it, inq: +params.get('aiItInq') }; // 이탈리아 AI 비껴서며 찌르기 기울기 (11/15 — ai_plan.js itInqP · 기본 0.6) `?aiItInq=0` = 끔
-  for (const [q, k] of [['aiRead', 'on'], ['aiFair', 'fair'], ['aiGns', 'gns']]) if (params.has(q)) CONFIG.AI_PLAN.read = { ...CONFIG.AI_PLAN.read, [k]: +params.get(q) ? 1 : 0 }; // 3 단계 (11/14): `?aiRead=0` = 읽기 몫(상대 유파 위험 · 대가 창 · 상대 기력) 끔 · `?aiFair=0` = 공정함 끔 (그 전 판 눈) · `?aiGns=0` = 일본 AI 고노센 준비 지키기 끔
-}
-{ // 이탈리아 사람 비기 (10/22 — config SECRET.itSecret · risoluto* · src/italian_risoluto.js): `?itSecret=contratempo` 옛 엇박 찌르기 · `?risoHold=1.5` 창까지 이어질 시간 · `?risoBeat=1` 두 번째 길(상대 박자) · `?risoCover=0.1` 덮음 거리
-  const its = params.get('itSecret');
-  // 10/28 01:4x 사장님 '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로' (기본 — italian_risoluto.js mirrorOk): `?risoMirror=0` = 10/25 21:0x 판(스틱 앞이나 뒤만 · 다 붙음 창 켬 — 아래 ?risoClose 가 덮을 수 있게 먼저)
-  if (params.get('risoMirror') === '0') Object.assign(CONFIG.SECRET, { risolutoMirror: 0, risolutoClose: 1 });
-  if (params.get('risoWide') === '0') Object.assign(CONFIG.SECRET, { risolutoAnyPart: 0, risolutoGrace: 0, risolutoClosing: 1, risolutoClose: 0, risolutoBeat: 0, risolutoHold: CONFIG.realS(0.6), risolutoTouch: 0, risolutoMirror: 0 }); // 10/23 넓은 판정 전 10/22 판 (10/28 상대 걸음 맞춤도 끔) (아래 낱낱 스위치가 덮을 수 있게 먼저)
-  if (['risoluto', 'contratempo'].includes(its)) CONFIG.SECRET.itSecret = its;
-  if (params.has('risoHold') && +params.get('risoHold') > 0) CONFIG.SECRET.risolutoHold = CONFIG.realS(+params.get('risoHold'));
-  if (params.has('risoBeat')) CONFIG.SECRET.risolutoBeat = +params.get('risoBeat') ? 1 : 0;
-  if (params.has('risoCover') && +params.get('risoCover') > 0) CONFIG.SECRET.risolutoCover = +params.get('risoCover');
-  if (params.has('risoClose')) CONFIG.SECRET.risolutoClose = +params.get('risoClose') ? 1 : 0; // '다 붙었을 때' 창 — 10/28 기본 끔(내 커맨드라 비기 원칙 밖) · 1 = 켬
-  if (params.has('risoLine')) CONFIG.SECRET.risolutoLine = +params.get('risoLine') ? 1 : 0; // 시험: 칼을 대지 않는 덮음 (줄 막기)
-  if (params.has('risoGuard')) CONFIG.SECRET.risolutoGuard = +params.get('risoGuard') ? 1 : 0; // 시험: 막기 단추를 누른 채 나아가기도 셈
-  // 10/23 넓은 판정 (사장님 '칼이 붙어 있는 상황에 대한 판정을 더 광범위하고 유연하게'): `?risoWide=0` = 10/22 판(손 쪽 ↔ 칼끝 쪽만 · 끊김 너그러움 없음 · 가슴 사이 줄어듦 · 다 붙음 · 상대 박자 끔) · 낱낱이 `?risoAny=0|1` · `?risoGrace=0.2` · `?risoClosing=0|1`
-  if (params.has('risoAny')) CONFIG.SECRET.risolutoAnyPart = +params.get('risoAny') ? 1 : 0;
-  if (params.has('risoGrace') && +params.get('risoGrace') >= 0) CONFIG.SECRET.risolutoGrace = CONFIG.realS(+params.get('risoGrace'));
-  if (params.has('risoClosing')) CONFIG.SECRET.risolutoClosing = +params.get('risoClosing') ? 1 : 0;
-  // 10/24 런지 (사장님 '런지로 진행해 … 고노센처럼 빠르게 … 0.6초 내 경직도 0.6초'): `?risoLunge=0` = 10/23 판(탭 찌르기 · 팔 늦춤 FLOW_RECOVERY 0.4 · 굳음 stiff.italian 0.4) · `?risoShare=0.6` 칼끝 빠르기 몫 비교 · `?risoRoom=1` · `?risoGlide=0`
-  if (params.get('risoLunge') === '0') Object.assign(CONFIG.SECRET, { risolutoLunge: 0, risolutoArmSlow: null, risolutoStiff: null });
-  if (params.has('risoHitMul') && +params.get('risoHitMul') > 0) CONFIG.SECRET.risolutoHitMul = +params.get('risoHitMul'); // 11/11 사장님 '리솔루토를 70%로 상향하고 파괴력을 0.5로 해.' (기본 0.5) · `?risoHitMul=1.3` = 전 판
-  // 11/11 거리 판단 리솔루토 (스위치 · 기본 끔 — 사장님 '거리 판단에 맡기기 -> 진행하고'): `?risoReach=1` 켬 (칼이 떨어진 뒤에도 창 · 미끄러짐 늘 같은 길이) · `?risoReachKeep=0.6` 이어지는 시간(실제 초) · `?risoReachFixed=0` 창만
-  if (params.has('risoReach')) CONFIG.SECRET.risolutoReach = +params.get('risoReach') ? 1 : 0;
-  if (params.has('risoReachKeep') && +params.get('risoReachKeep') >= 0) CONFIG.SECRET.risolutoReachKeep = CONFIG.realS(+params.get('risoReachKeep'));
-  if (params.has('risoSlide') && +params.get('risoSlide') >= 0) CONFIG.SECRET.risolutoSlide = +params.get('risoSlide'); // 11/11 사장님 "런지 거리는 0.45로 해" — 리솔루토 런지 몸 미끄러짐 한도 (m · 기본 0.45 · `?risoSlide=0.6` = 전 판 — 고노센 발도 iaiStep 과 같던 수)
-  if (params.has('risoReachFixed')) CONFIG.SECRET.risolutoReachFixed = +params.get('risoReachFixed') ? 1 : 0;
-  if (params.has('risoShare') && +params.get('risoShare') > 0) CONFIG.SECRET.risolutoShare = +params.get('risoShare'); // 11/11 사장님 '리솔루토를 70%로 상향' 0.7 (전 0.5 — 11/04 · 그 전 0.7 · 0.8 · 0.9 · 1)
-  if (params.has('risoArmSlow') && +params.get('risoArmSlow') >= 0) CONFIG.SECRET.risolutoArmSlow = CONFIG.realS(+params.get('risoArmSlow')); // 런지 상대 팔 늦춤 (실제 초 — 10/30 20:0x 사장님 0 · 전 0.6)
-  if (params.has('risoRoom')) CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, room: +params.get('risoRoom') ? 1 : 0 }; // 1 = 앞발 런지 걸음을 가슴 사이(clinch 밖까지)로 줄임
-  if (params.has('risoGlide')) CONFIG.SECRET.risolutoGlide = +params.get('risoGlide') ? 1 : 0; // 0 = 붙은 칼 따라 미끄러짐 끔 (연환과 같은 막힘)
-  if (params.get('risoRecover') === '0') CONFIG.SECRET.risolutoStep = { ...CONFIG.SECRET.risolutoStep, draw: 1, recover: 0, push: 0, accel: 0 }; // 10/24 14:0x 전 걸음 = 디딘 뒤 뒷발 끌어붙임 (몸 따라감 배율 · 몸 가속 · 앞발 거둠은 없음)
-  if (params.has('risoGap')) CONFIG.SECRET.risolutoGap = +params.get('risoGap') ? 1 : 0; // 10/24 13:2x 런지 간격 조건 — 0 = 간격 조건 없음 (12:1x 판 — 가까워도 창)
-  if (params.has('risoTouch')) CONFIG.SECRET.risolutoTouch = +params.get('risoTouch') ? 1 : 0; // 10/25 01:0x 칼끝 얽힘 창 — 0 = 10/24 판 (이어짐 0.6 s 를 기다림)
-  if (params.has('risoTouchMin') && +params.get('risoTouchMin') >= 0) CONFIG.SECRET.risolutoTouchMin = CONFIG.realS(+params.get('risoTouchMin')); // 11/16 시제품 2안 칼끝 얽힘 창까지 덮인 채 나아가기 (실제 초 — 사람 · AI · 기본 0)
-  if (params.has('risoAiWait') && +params.get('risoAiWait') >= 0) CONFIG.SECRET.risoAiWait = CONFIG.realS(+params.get('risoAiWait')); // 11/16 3안 AI 리솔루토 박자 싸움 (실제 초 — AI 만 · 사장님 11/16 결정 기본 0.2 · 0 = 전 판)
-  if (params.has('risoAiMax') && +params.get('risoAiMax') >= 0) CONFIG.SECRET.risoAiMax = CONFIG.realS(+params.get('risoAiMax')); // 11/16 3안 손잡이: 박자를 기다리다 그대로 낼 때 (실제 초 · 기본 0 = 흘려보냄)
-  if (params.has('risoAiGame') && +params.get('risoAiGame') >= 0) CONFIG.SECRET.risoAiGame = +params.get('risoAiGame'); // 11/16 3안 손잡이: 박자 싸움 몫 곱 (기본 1)
-  if (params.has('aiReadRiso') && +params.get('aiReadRiso') >= 0) CONFIG.AI_PLAN.read.riso = +params.get('aiReadRiso'); // 11/16 3안 다른 유파 AI 리솔루토 위험 읽기 (사장님 11/16 결정 기본 1 · 0 = 전 판)
-  // 10/25 21:0x 사장님 조건 셋 · 창 지킴 (기본 — 확인표 2563 ~ 2569): `?risoStick=fwd` 스틱 앞만(전) · `?risoTap=1` 탭만(전) · `?risoCover=0.07` 덮음 거리(전 — 위 줄) · `?secretHold=0` 열린 창을 조건이 바뀌면 바로 닫음(전 — 모든 사람 비기 창)
-  if (params.get('risoStick') === 'fwd' || params.get('risoStick') === 'both') CONFIG.SECRET.risolutoStick = params.get('risoStick');
-  if (params.has('risoTap')) CONFIG.SECRET.risolutoTap = +params.get('risoTap') ? 1 : 0;
-  if (params.has('secretHold')) CONFIG.SECRET.secretHold = +params.get('secretHold') ? 1 : 0;
-  // 10/25 14:0x 런지 연출 (사장님 '리솔루토 쓰는 순간 비기인 줄 모르겠더라' → 안 1 — 화면만): `?risoCam=0` 카메라 밀어 넣기 끔(`?risoCam=0.9` 처럼 m 로 견주기) · `?risoStreak=0` 빛줄기 · 끝 반짝임 끔(10/23 마주 보는 띠 'line' 그대로) · `?risoGlint=0` 끝 반짝임만 끔
-  if (params.has('risoCam')) CONFIG.SECRET.risoCam = Math.max(0, +params.get('risoCam') || 0);
-  if (params.has('risoStreak')) CONFIG.SECRET.risoStreak = +params.get('risoStreak') ? 1 : 0;
-  if (params.has('risoGlint')) CONFIG.SECRET.risoGlintLife = Math.max(0, +params.get('risoGlint') || 0); // 빛줄기 끝 반짝임만: 0 = 끔 · `?risoGlint=0.2` 처럼 s 로 견주기
-  if (params.has('thrustArm')) CONFIG.SECRET.thrustArm = +params.get('thrustArm') ? 1 : 0; // 10/24 15:5x 운동학 겨눈 찌름(런지 · 격살 허파 찌르기) — 0 = 전 손 자리(어깨 가까이 · 칼이 새끼 쪽으로 꺾여 거꾸로 쥔 꼴)
-  if (params.has('sweepCap')) CONFIG.SECRET.sweepCap = +params.get('sweepCap') ? 1 : 0; // 11/04 끌고 가는 칼 맞음 빠르기 묶음 (기본 1 — 손목 교정 튐이 1470 ~ 4965 J 로 읽히던 결함 고침) · `?sweepCap=0` = 전 판
-  if (params.has('spendOnWound')) CONFIG.SECRET.spendOnWound = +params.get('spendOnWound') ? 1 : 0; // 11/11 끌고 가는 칼 헛맞음 고침 (기본 1 — 판정 문턱 밑 닿음은 '수마다 한 번'을 쓰지 않음) · `?spendOnWound=0` = 전 판
-  if (params.has('holdDepth')) CONFIG.SECRET.holdDepth = +params.get('holdDepth') ? 1 : 0; // 시험 (10/24 17:2x 뒤 · 기본 끔): 1 = 맞힌 겨눈 찌름(런지 · 격살 허파 찌르기)의 굳음 동안 칼끝이 겨눈 곳(상대 몸통 가운데)을 넘지 않게 손을 칼 줄을 따라 거둠 (fighter.js holdDepthHand — 끄면 런지 앞발을 따라 칼이 상대 등 뒤로 나옴)
-}
-{
-  // 유파 패시브 (10/21 — config SCHOOL_PASSIVE · school_passive.js · test.html '유파 패시브'): `?schoolPassive=0` = 모두 끔 · `?schoolPassive=italian,german` = 고른 유파만 (나와 상대 모두)
-  const sp = params.get('schoolPassive');
-  if (sp === '0') CONFIG.SCHOOL_PASSIVE.on = false;
-  else if (sp && sp !== '1') {
-    const keep = new Set(sp.split(','));
-    for (const k of ['iberian', 'italian', 'japanese', 'german', 'chinese']) CONFIG.SCHOOL_PASSIVE[k].on = keep.has(k);
-  }
-  // 10/28 01:4x 사장님 '무기가 맞부딪혔을 때로 하면?' — 독일 인데스 창이 칼끼리 닿음에도 열림 (기본): `?indesTouch=0` = 전(상대 공격이 실패할 때만)
-  if (params.has('indesTouch')) CONFIG.SCHOOL_PASSIVE.german.touch = +params.get('indesTouch') ? 1 : 0;
-  // 10/28 01:5x 사장님 '일본 기다림과 침도 고노센도 적용받게 해' — 고노센에도 켄타이 (기본): `?kenSecret=0` = 전(비기엔 안 실림)
-  if (params.has('kenSecret')) CONFIG.SCHOOL_PASSIVE.japanese.secret = +params.get('kenSecret') ? 1 : 0;
-  // 11/14 일본 기다리는 중전차 (config JP_TANK · 사장님 11/14 '스택 시스템' · '낮은 걸음 … 밀치기에 기력이 소모되는 않는'): `?jpStack=0` = 전(시간 곧은 오름) · `?jpFlow=2` 흘려 받기 스택 ·
-  //  바위 몸 `?jpLowShove=0` = 전(밀치기 기력 그대로) · `?jpRock=0` = 스택당 받는 피해 줄임 끔 · 견줌(기본 끔) `?jpStackAi=1` AI 도 스택 · `?jpCounter=1` C 받아 치기 고노센 · `?jpKeep=1` E
-  for (const [q, k] of [['jpStack', 'stack'], ['jpStackAi', 'ai'], ['jpFlow', 'flow'], ['jpLowShove', 'lowShove'], ['jpRock', 'rock'], ['jpCounter', 'counter'], ['jpKeep', 'keep']]) if (params.has(q) && Number.isFinite(+params.get(q))) CONFIG.JP_TANK[k] = Math.max(0, +params.get(q));
-}
-if (params.has('whipKneel')) CONFIG.WHIP_KNEEL.p = +params.get('whipKneel') || 0; // 채찍 무릎 꿇리기 확률 (10/23 — 판 값 0.5 · `?whipKneel=0` 끔)
-if (params.get('whipKneelAi') === '1') CONFIG.WHIP_KNEEL.ai = true; // AI 가 든 채찍도 꿇리기 (기본 끔 — 사람 먼저)
-if (params.get('dartagnanAbility') === '0') CONFIG.WEAPON_ABILITY.duelOneHand = 1; // 달타냥 '총사의 결투' 끔 (10/25 — 판 값 1.15 · 시험용 · combat.js duelOneHandMult)
-if (params.has('buckle')) CONFIG.UNIQUE_ASSIST.buckle.p = +params.get('buckle') || 0; // 곁눈 베기 무릎 꺾기 확률(10/21 — 판 값 0.15 · `?buckle=0` 끔)
-if (params.has('schielPath')) CONFIG.UNIQUE_ASSIST.schielPath = +params.get('schielPath') ? 1 : 0; // 곁눈 베기 AI 길 (사장님 10/25 08:0x '셸하우 3번' — 기본 1 = 다시 그린 길 · `?schielPath=0` = 10/25 전 길 · sword_art.js applySchoolArt · ai.js techPlanStep)
-if (params.has('schielPlayer')) CONFIG.UNIQUE_ASSIST.schielPlayer = +params.get('schielPlayer') ? 1 : 0; // 사람 곁눈 베기 같은 길 (사장님 10/25 18:0x '같은 길 입혀' — 기본 1 · `?schielPlayer=0` = 사람은 옛 길 잣대 · 덧칸 없음 · unique_assist.js uniqueDef · planStep)
-if (params.has('schielPlayerK') && Number.isFinite(+params.get('schielPlayerK'))) CONFIG.UNIQUE_ASSIST.schielPlayerK = +params.get('schielPlayerK'); // 사람 곁눈 베기 세기 손잡이 (사장님 10/25 20:2x 결정 — 기본 1 = 세기 100 % · `?schielPlayerK=0.5` = 시험용 50 % · combat.js analyze)
-if (params.has('schielPlayerTip')) CONFIG.UNIQUE_ASSIST.schielPlayerTip = +params.get('schielPlayerTip') ? 1 : 0; // 사람 곁눈 베기 칼끝 들기 (사장님 10/25 20:2x 결정 '칼끝 들기 빼지 마' — 기본 1 = AI 와 같은 덧칸 셋 · `?schielPlayerTip=0` = 시험용 칼끝 들기 없음 · unique_assist.js planStep)
-for (const k of ['tsuRuler', 'tsuSnap', 'tsuAim', 'tsuBand', 'tsuHook', 'tsuArm', 'tsuTip']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 제비 베기 세 해법 (사장님 10/25 21:1x '해법 1~3 좋아' — 기본 1 · 0 = 그 해법만 끔 · unique_assist.js) · tsuHook (사장님 10/31 16:xx '곧은 길로' — 기본 0 = 곧은 길 · `?tsuHook=1` = 10/25 갈고리 길) · tsuArm (사장님 11/08 낮은 시작 날 앞장 — 기본 1 · `?tsuArm=0` = 11/08 전 판) · tsuTip (11/13 칼끝 곧은 줄 — 기본 1 · `?tsuTip=0` = 11/13 전 판)
-// 겹치기 단순 길 · 앞 박차기 (사장님 10/31 19:xx — 확인표 3301 ~ 3309): `?dupOld=1` = 10/28 길 그대로 견줌(감기 · 밀어 넣기 · 박차기 없음 · 몫 전 0.5 — 아래 specialShare 를 함께 주면 그 몫) · `?dupBurst=` m · `?dupBurstFree=1` · `?dupBurstSync=0|1|2` · `?dupBurstT=` (실제 초) · `?dupBurstMatch=0|1|2`
-if (params.has('dupOld') && +params.get('dupOld')) {
-  CONFIG.UNIQUE_ASSIST.dupOld = 1;
-  CONFIG.UNIQUE_ASSIST.specialShare.duplieren = CONFIG.UNIQUE_ASSIST.dupOldShare;
-}
-if (params.has('dupBurst')) CONFIG.UNIQUE_ASSIST.dupBurst = Math.max(0, +params.get('dupBurst') || 0);
-if (params.has('dupBurstFree')) CONFIG.UNIQUE_ASSIST.dupBurstFree = +params.get('dupBurstFree') ? 1 : 0;
-if (params.has('dupBurstSync')) CONFIG.UNIQUE_ASSIST.dupBurstSync = [0, 1, 2].includes(+params.get('dupBurstSync')) ? +params.get('dupBurstSync') : 1; // 0 끔 · 1 몸 · 발 먼저 · 칼은 디딤에 출발 · 2 고르게 늦춤
-if (params.has('dupBurstT') && +params.get('dupBurstT') >= 0) CONFIG.UNIQUE_ASSIST.dupBurstT = CONFIG.realS(+params.get('dupBurstT')); // 겹치기 박차기 시간 (실제 초)
-if (params.has('dupBurstFit')) CONFIG.UNIQUE_ASSIST.dupBurstFit = +params.get('dupBurstFit') ? 1 : 0; // 박차기 길이 맞춤 (겹치기가 가장 잘 드는 거리까지 — 사장님 11/01 00:xx)
-if (params.has('dupFitPoint') && +params.get('dupFitPoint') > 0) CONFIG.UNIQUE_ASSIST.dupFitPoint = Math.min(1, +params.get('dupFitPoint'));
-if (params.has('dupFitFloor') && +params.get('dupFitFloor') > 0) CONFIG.UNIQUE_ASSIST.dupFitFloor = +params.get('dupFitFloor');
-if (params.has('dupBurstMatch')) CONFIG.UNIQUE_ASSIST.dupBurstMatch = [0, 1, 2].includes(+params.get('dupBurstMatch')) ? +params.get('dupBurstMatch') : 0; // 박차기 몸 꼴: 0 고르게 · 1 첫 걸음 박차기 물리(빨라짐 · 세게 멈춤) · 2 빨라짐만
-// 특수 공격 칼끝 빠르기 몫 (사장님 10/29 02:0x — 같은 칼 고노센 칼끝 × 몫 · config UNIQUE_ASSIST.specialShare 한 곳): `?specialShare=redondo:0.5,lianchi:0.5` · 옛 이름 `?tsuSnapShare=` · `?cavSnapShare=` · `?lianSnapShare=` · `?dupSnapShare=` · `?rdSnapShare=` 도 그 칸(값 = 고노센 몫)
-{
-  const SPK = { tsuSnapShare: 'tsubameGaeshi', cavSnapShare: 'cavazione', lianSnapShare: 'lianchi', dupSnapShare: 'duplieren', rdSnapShare: 'redondo', inqSnapShare: 'inquartata' }; // inqSnapShare: 비껴서며 찌르기 (10/31 — 이탈리아 특수 공격) · cavSnapShare 는 칸만 남음(칼끝 돌려 빼기는 10/31 부터 특수 공격 아님 — cavSpeed)
-  for (const [k, name] of Object.entries(SPK)) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST.specialShare[name] = +params.get(k);
-  for (const kv of String(params.get('specialShare') ?? '').split(',').filter(Boolean)) {
-    const [name, v] = kv.split(':');
-    if (name in CONFIG.UNIQUE_ASSIST.specialShare && +v >= 0) CONFIG.UNIQUE_ASSIST.specialShare[name] = +v;
-  }
-}
-if (params.has('yaojiBleed')) CONFIG.UNIQUE_ASSIST.yaojiBleed.k = +params.get('yaojiBleed') || 1; // 요격 몸통 출혈 배율(10/21 — 판 값 1.5 · 1 = 끔)
-if (['A', 'B'].includes(params.get('gkFree'))) Object.assign(CONFIG.SECRET.gkFree, { on: 1, ...CONFIG.SECRET.gkFreeSets[params.get('gkFree')] }); // 격살 풀기 (11/16 — 안 A 0.35 + 0.08 × 겹 · 식힘 3 s [사장님 11/16 결정 — 기본] / 안 B 0.50 + 0.05 × 겹 · 식힘 6 s)
-if (params.get('gkFree') === '0') CONFIG.SECRET.gkFree.on = 0; // `?gkFree=0` = 전 판 (판당 1 번)
-if (params.has('cnHunt')) CONFIG.UNIQUE_ASSIST.cnHunt.on = +params.get('cnHunt') ? 1 : 0; // 동방 맹호은림 사냥 겹 (11/14 — `?cnHunt=0` = 겹 없음 · 격살 판당 수는 공용 표 secretUses — 전 판 `?secretUses=1,chinese:3`)
-if (params.has('cnHuntLife')) CONFIG.UNIQUE_ASSIST.cnHunt.life = CONFIG.realS(+params.get('cnHuntLife') || 0); // 겹 사라짐 (11/16 사장님 '8초로 하자' — 8.0 s · `?cnHuntLife=0` = 안 빠짐 전 판)
-if (params.has('cnHuntAi')) CONFIG.UNIQUE_ASSIST.cnHunt.ai = +params.get('cnHuntAi') ? 1 : 0; // AI 동방도 사냥 겹 (견줌 — 기본 0)
-if (params.has('imbroccataGap')) CONFIG.UNIQUE_ASSIST.imbroccataGap = +params.get('imbroccataGap'); // 위에서 내려 찌르기 파고드는 값(10/21 — 판 값 0.6 · 11/14 사장님 0.9)
-for (const k of ['imbroReach', 'cavTap', 'cavSnap', 'cavHeld', 'cavCapCut', 'tapHeld', 'inqTap', 'inqAi']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0; // 사람 위에서 내려 찌르기 닿게(10/27 23:5x) · 칼끝 돌려 빼기 탭 · 운동학 찌름(10/28 00:5x) — 기본 1 · 0 = 그것만 끔 (unique_assist.js) · inqAi(11/15 — AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 · 0 = 옛 판)
-if (params.has('cavFrom') && +params.get('cavFrom') >= 0) CONFIG.UNIQUE_ASSIST.cavFrom = CONFIG.realS(+params.get('cavFrom')); // 칼끝 돌려 빼기 탭 창 처음 (실제 초 — 기본 0.2 · 10/29 20:0x · 옛 판 0.6)
-if (params.has('cavMerge') && +params.get('cavMerge') >= 0) CONFIG.UNIQUE_ASSIST.cavMerge = CONFIG.realS(+params.get('cavMerge')); // 칼끝 돌려 빼기 닿음 이어 붙임 (11/04 제안 · 실제 초 — 기본 0 끔 · 0.2 = 시간 사다리)
-if (params.has('stepIn')) CONFIG.UNIQUE_ASSIST.stepIn = +params.get('stepIn') ? 1 : 0; // 걸음 공격 입력 읽기 (11/05 — 기본 1 · 0 = 전 판: 긋기 시작 순간의 스틱만 · 문턱 0.5)
-if (params.has('stepStick') && +params.get('stepStick') > 0) CONFIG.UNIQUE_ASSIST.stepStick = +params.get('stepStick'); // 그 스틱 문턱 (기본 0.3 — 걸음 사다리)
-for (const k of ['stepPre', 'stepPost']) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST[k] = CONFIG.realS(+params.get(k)); // 그 앞 · 뒤 창 (실제 초 — 기본 0.2 · 시간 사다리)
-if (params.has('cavTo') && +params.get('cavTo') > 0) CONFIG.UNIQUE_ASSIST.cavTo = CONFIG.realS(+params.get('cavTo')); // 칼끝 돌려 빼기 탭 창 끝 (실제 초 — 기본 1.2 · 사장님 10/28 01:1x)
-if (params.has('cavArmSlow') && +params.get('cavArmSlow') >= 0) CONFIG.UNIQUE_ASSIST.cavArmSlow = CONFIG.realS(+params.get('cavArmSlow')); // 칼끝 돌려 빼기 심화 · 헛누름 상대 팔 늦춤 (실제 초 — 기본 1.2 · 사장님 10/31 '1.2초로 할게' · 0 = 끔)
-if (params.has('cavArmSlowAi')) CONFIG.UNIQUE_ASSIST.cavArmSlowAi = +params.get('cavArmSlowAi') ? 1 : 0; // 그 AI 몫 (10/31 — 기본 1)
-if (params.has('imbroDown') && +params.get('imbroDown') >= 0) CONFIG.UNIQUE_ASSIST.imbroDown = +params.get('imbroDown'); // 이탈리아 위에서 내려 찌르기 — 아래로 가는 긋기 각 (10/31 사장님 · 기본 67.5 · 0 = 황소 찌르기 긋기만)
-if (params.has('cavSide')) CONFIG.UNIQUE_ASSIST.cavSide = params.get('cavSide') === 'free' ? 'free' : 'contact'; // 칼끝 돌려 빼기 비킨 쪽 (10/31 — 'contact' 닿았을 때 상대 칼 쪽 · 'free' 10/28 판)
-if (params.has('cavSelfFree')) CONFIG.UNIQUE_ASSIST.cavSelfFree = +params.get('cavSelfFree') || 0; // 칼끝 돌려 빼기 넘어짐 고침 (10/31 — 1 칼 어깨 면 밧줄 뗌 · 0 전 판)
-if (params.has('rdDrainCut')) CONFIG.UNIQUE_ASSIST.rdDrainCut = +params.get('rdDrainCut') ? 1 : 0; // 정수리 가르기 메는 동안 기력 = 초당 베기 한 번 값 (11/01 사장님 · 0 = 초당 10)
-if (params.has('cavSpeedMul')) CONFIG.UNIQUE_ASSIST.cavSpeedMul = +params.get('cavSpeedMul') || 1; // 칼끝 돌려 빼기 시제품 A (10/31 — 칼끝 빠르기 배 · 1 = 끔)
-if (params.has('cavShare')) CONFIG.UNIQUE_ASSIST.cavShare = +params.get('cavShare') ? 1 : 0; // 칼끝 돌려 빼기 칼끝 = 고노센 × specialShare.cavazione (11/11 사장님 '1.2배 없애고 35%로 해' · 0 = 보통 찌르기 빠르기 × cavSpeedMul)
-if (params.has('cavGap')) CONFIG.UNIQUE_ASSIST.cavGap = +params.get('cavGap') || 0; // 시제품 B (틈 파고들기 · 0 = 끔)
-if (params.has('cavParryLock')) CONFIG.UNIQUE_ASSIST.cavParryLock = CONFIG.realS(+params.get('cavParryLock') || 0); // 시제품 C (상대 반응 묶음 실제 초 · 0 = 끔)
-if (params.has('cavHitMul')) CONFIG.UNIQUE_ASSIST.cavHitMul = +params.get('cavHitMul') || 1; // 시제품 D (판정 배율 · 1 = 끔)
-if (params.has('cavCancel')) CONFIG.UNIQUE_ASSIST.cavCancel = +params.get('cavCancel') || 0; // 시제품 E (끄는 동안 막기로 거둠 · 0 = 끔)
-if (params.has('cavSpeed')) CONFIG.UNIQUE_ASSIST.cavSpeed = +params.get('cavSpeed') > 0 ? +params.get('cavSpeed') : 'tap'; // 칼끝 돌려 빼기 칼끝 빠르기 m/s (10/31 — 기본 'tap' = 보통 탭 찌르기 빠르기)
-if (params.has('lianTap')) CONFIG.UNIQUE_ASSIST.lianTap = +params.get('lianTap') ? 1 : 0; // 사람 날개 접기 탭 (사장님 10/28 01:2x — 물러나며 탭 · 기본 1)
-if (params.has('lianStep') && +params.get('lianStep') >= 0) CONFIG.UNIQUE_ASSIST.lianStep = +params.get('lianStep'); // 사람 날개 접기 앞 걸음 (m — 기본 0.45 · 사장님 10/29 14:3x)
-if (params.has('specialCooldown')) CONFIG.UNIQUE_ASSIST.specialCooldown = CONFIG.realS(Math.max(0, +params.get('specialCooldown') || 0)); // 특수 공격 공통 식힘 (실제 초 — 기본 6 · 0 = 끔 · 사장님 10/28 02:0x)
-/** `?secretUses=1,chinese:3` → { default: 1, chinese: 3 } (숫자 하나 = default · 'inf' · 'off' = 끝없음 — 10/29 19:5x) */
-function parseSecretUses(v) {
-  const out = { default: 1 };
-  for (const p of String(v ?? '').split(',')) {
-    const [k, n] = p.includes(':') ? p.split(':') : ['default', p];
-    const x = n === 'inf' || n === 'off' ? Infinity : +n;
-    if (k.trim() && (x === Infinity || x >= 0)) out[k.trim()] = x;
-  }
-  return out;
-}
-if (params.has('specialCoolFrom') && ['free', 'motion', 'fire'].includes(params.get('specialCoolFrom'))) CONFIG.UNIQUE_ASSIST.specialCoolFrom = params.get('specialCoolFrom'); // 특수 공격 식힘을 세기 시작하는 때 (기본 free — 몸이 다시 자유로울 때 · motion 동작 끝 · fire 나간 순간 · 10/29 19:5x)
-if (params.has('secretUses')) CONFIG.UNIQUE_ASSIST.secretUses = parseSecretUses(params.get('secretUses')); // 유파 비기 판당 쓸 수 (기본 1 · 동방 3 · 'inf' = 끝없음 · 사장님 10/29 19:5x)
-if (params.has('dupTap')) CONFIG.UNIQUE_ASSIST.dupTap = +params.get('dupTap') ? 1 : 0; // 사람 겹치기 탭 (사장님 10/28 01:2x — 맞물린 채 탭 · 기본 1)
-if (params.has('rdHold')) CONFIG.UNIQUE_ASSIST.rdHold = +params.get('rdHold') ? 1 : 0; // 사람 풍차 베기 길게 누름 (이베리아 B4 — 사장님 10/29 · 기본 1)
-if (['heavy', 'all', 'off'].includes(params.get('frameScale'))) CONFIG.SKILL.frameScale = params.get('frameScale'); // 날것 매핑 반지름 잣대 — 대검은 덮기 전 무기 틀 표로 (10/31 · 기본 'heavy' · 사장님 확인 전) · `?frameScale=off` = 전 판
-if (['base', 'off'].includes(params.get('thrustScale'))) CONFIG.SKILL.thrustScale = params.get('thrustScale'); // 한손 찌르기 칼(이탈리아 무기) 날것 매핑 잣대 — 무기별 바탕 표로 (11/12 · 기본 'base' · 사장님 확인 전) · `?thrustScale=off` = 전 판
-if (params.has('twoHandReach')) CONFIG.SKILL.twoHandReach = +params.get('twoHandReach') ? 1 : 0; // 두손 칼 손 목표를 빈팔이 칼자루 끝을 쥘 수 있는 곳으로 (11/12 · 기본 1 — 사장님 11/12 결정) · `?twoHandReach=0` = 전 판
-if (params.has('edgeReach')) CONFIG.SKILL.edgeReach = Math.min(1, Math.max(0, +params.get('edgeReach') || 0)); // 한손 칼 패드 끝에서 팔이 다 펴지게 (11/12 · 기본 1 — 사장님 11/12 결정) · `?edgeReach=0` = 전 판
-if (['frame', 'off'].includes(params.get('eastScale'))) CONFIG.SKILL.eastScale = params.get('eastScale'); // 동방 한손 칼 날것 매핑 잣대 — 덮기 전 무기 틀 표로 (11/12 · 기본 'frame' — 사장님 11/12 결정) · `?eastScale=off` = 전 판
-if (params.has('armClear')) CONFIG.SKILL.armClear.on = +params.get('armClear') ? 1 : 0; // 두 팔 엇갈림 막기 (11/12 · 기본 1 · 사장님 확인 전) · `?armClear=0` = 전 판
-if (params.has('armClearAI')) CONFIG.SKILL.armClear.ai = +params.get('armClearAI') ? 1 : 0; // 두 팔 엇갈림 막기 AI 몫 (11/12 둘째 · 기본 1 · [사장님 11/12 결정]) · `?armClearAI=0` = 사람만
-if (params.has('armFrontIn')) CONFIG.SKILL.armClear.frontIn = Math.max(0, +params.get('armFrontIn') || 0); // 두손 칼 칼자루 끝 앞 바닥을 쥘 때 들이는 시간 (11/13 · 기본 0.1 s · 사장님 확인 전) · `?armFrontIn=0` = 11/12 둘째 판(쥐면 곧장)
-if (params.has('restTouch')) CONFIG.SKILL.restTouch = +params.get('restTouch') ? 1 : 0; // 얹은 손가락은 뗀 것과 같게 — 쉼 자세 그대로 (10/31 · 기본 1 · 사장님 확인 전) · `?restTouch=0` = 전 판
-if (params.has('dupGrace')) CONFIG.UNIQUE_ASSIST.dupGrace = Math.max(0, +params.get('dupGrace') || 0); // 겹치기 시제품: 닿음이 끝난 뒤 받는 초 (10/31 · 기본 0 · 사장님 확인 전 — 확인표 3100)
-if (params.has('dupAny')) CONFIG.UNIQUE_ASSIST.dupAny = +params.get('dupAny') ? 1 : 0; // 겹치기 시제품: 칼끼리 닿음이면 모두 (기본 0 · 확인표 3101)
-if (params.has('dupStep')) CONFIG.UNIQUE_ASSIST.dupStep = Math.max(0, +params.get('dupStep') || 0); // 겹치기 시제품: 앞 걸음 m (기본 0 · 확인표 3102)
-// 겹치기 자동 (사장님 10/31 16:xx — 시제품 · 기본 0 = 지금 탭 · 확인표 3220 ~ 3229): `?dupAuto=bind` · `?dupAuto=clash2` · 수는 실제 초 · m
-if (params.has('dupAuto')) CONFIG.UNIQUE_ASSIST.dupAuto = ['bind', 'clash2', 'both'].includes(params.get('dupAuto')) ? params.get('dupAuto') : 0; // both = 둘 가운데 먼저 찬 쪽 (11/14 견줌)
-for (const k of ['dupStackS', 'dupStackGap', 'dupClashT', 'dupClashGap']) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST[k] = CONFIG.realS(+params.get(k)); // 실제 초
-for (const k of ['dupBandMax', 'dupClashMax', 'dupStackDrain']) if (params.has(k) && +params.get(k) >= 0) CONFIG.UNIQUE_ASSIST[k] = +params.get(k); // 가슴 사이 m (dupClashMax 0 = 위 끝 없음) · 빠짐 초당 몫 (0 = 곧장 0)
-if (params.has('dupBandMin')) CONFIG.UNIQUE_ASSIST.dupBandMin = +params.get('dupBandMin') > 0 ? +params.get('dupBandMin') : null; // null = 죽음의 일격 거리(SECRET.mordCloseN)
-for (const k of ['dupAutoParry', 'dupAutoHint']) if (params.has(k)) CONFIG.UNIQUE_ASSIST[k] = +params.get(k) ? 1 : 0;
-if (params.has('stickGuard')) CONFIG.INPUT.stickGuardPx = Math.max(0, +params.get('stickGuard') || 0); // 이동 스틱 둘레 (px — 10/31 08:xx 사장님 '+10~20px 정도' · 기본 15 · 0 = 전 판) [확인표 3096]
-if (params.has('stickGuardGrab')) CONFIG.INPUT.stickGuardGrab = +params.get('stickGuardGrab') ? 1 : 0; // 둘레에 닿은 손가락이 스틱을 쥠 (기본 1 · 0 = 버리기만) [사장님 확인 전 — 확인표 3097]
+const SECRET_SLOWMO = params.get('slowMo') !== '0'; // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo) — `?slowMo=0` = 끔 (브라우저 도구 장면)
 if (params.has('atkStick')) CONFIG.INPUT.atkStick = atkStickMode(params.get('atkStick')); // 공격 조이스틱 (11/17 — 'stick' 조이스틱만 · 'both' 조이스틱과 화면 끌기 · 0 지금) [감독 안 · 사장님 확인 전 — 확인표 4656]
-if (params.has('holdPx') && +params.get('holdPx') > 0) CONFIG.INPUT.holdPx = +params.get('holdPx'); // 길게 누름 떠돎 한도 (손가락 px — 10/31 · 기본 24 · 12 = 전 판 탭 문턱) [사장님 확인 전 — 확인표 3090]
-if (params.has('strokeMin')) CONFIG.STAMINA.humanStrokeMin = Math.max(0, +params.get('strokeMin') || 0); // 사람 긋기 청구 바닥 (패드 m — 10/31 · 기본 0.15 · 0 = 전 판 strokeTravel 0.06) [사장님 확인 전 — 확인표 3092]
-if (params.has('rdEdge')) CONFIG.UNIQUE_ASSIST.rdEdge = +params.get('rdEdge') < 0 ? -1 : 1; // 감는 칼 날 쪽 (기본 −1 — 사장님 확인 전)
-if (params.get('b4Old') === '1') CONFIG.applyB4Old(true); // B4 옛 판 견줌 (사장님 10/31 19:xx 다시 짬 — 기본 새 판 · 1 = 10/31 14:xx 판: 어깨에 얹음 · 곧장 사선 60° · 흐름의 첫 칼 · 아래 칸 하나하나는 그 위에 덮음)
-if (params.has('rdWind')) CONFIG.UNIQUE_ASSIST.rdWindMode = ['spin', 'slowSpin', 'shoulder', 'load'].includes(params.get('rdWind')) ? params.get('rdWind') : 'load'; // 풍차 베기 감기 꼴 (사장님 10/29 20:0x 두 안 · 10/30 00:1x 'A로' · 10/31 02:xx 'b안으로 본판 적용해' · 10/31 19:xx 어깨에 메기 — 기본 'load' · 10/31 08:xx 판 'shoulder' · 안 A 'slowSpin' · 10/29 판 'spin')
-if (params.has('rdRelease')) CONFIG.UNIQUE_ASSIST.rdRelease = ['chamber', 'direct', 'tajo'].includes(params.get('rdRelease')) ? params.get('rdRelease') : 'tajo'; // 풍차 베기 내려침 길 (사장님 10/30 00:1x '바로 내려치는 게 아닌가?' · 10/31 19:xx '45도~90도 사이로' — 기본 'tajo' 멘 어깨에서 내려침 · 'direct' 10/30 곧장 사선 · 'chamber' 10/29 판 왼 어깨 뒤 길)
-if (params.has('rdTajoAngle')) CONFIG.UNIQUE_ASSIST.rdTajo = { ...CONFIG.UNIQUE_ASSIST.rdTajo, angle: Math.min(90, Math.max(45, +params.get('rdTajoAngle') || CONFIG.UNIQUE_ASSIST.rdTajo.angle)) }; // B4 내려침 벰 면 각 (10/31 19:xx 사장님 '45도~90도 사이로' — 견줌용)
-if (params.has('rdAiOld')) CONFIG.UNIQUE_ASSIST.rdAiOld = +params.get('rdAiOld') ? 1 : 0; // AI B4 옛 판 (10/31 19:xx — 기본 0 = AI 도 새 꼴)
-if (params.has('ibWindApart')) CONFIG.IB_FLOW.windmillApart = +params.get('ibWindApart') ? 1 : 0; // B4 와 흐름 서로 닿지 않음 (10/31 19:xx 사장님 '이어지는 흐름과 무관' — 기본 1)
-if (params.has('rdAiWind')) CONFIG.UNIQUE_ASSIST.rdAiWind = +params.get('rdAiWind') ? 1 : 0; // AI 풍차 베기 = 사람과 같은 감기 · 내려침 (사장님 10/31 08:xx — 기본 1 · 0 = 옛 판 패드 길)
-if (params.has('rdAiQuick')) CONFIG.UNIQUE_ASSIST.rdAiQuick = +params.get('rdAiQuick') ? 1 : 0; // (a) 빠른 틈엔 감지 않고 바탕 동작 (사장님 10/31 13:4x — 기본 1 · 0 = 08:xx 판)
-if (params.has('rdAiThrift')) CONFIG.UNIQUE_ASSIST.rdAiThrift = +params.get('rdAiThrift') ? 1 : 0; // (c) 성향마다 기력 아낌 (사장님 10/31 13:4x — 기본 1 · 0 = 늘 감음)
-if (params.has('rdSteady')) CONFIG.UNIQUE_ASSIST.rdSteady = +params.get('rdSteady') ? 1 : 0; // 풍차 베기 감기 휘청 고침 (10/29 20:0x — 기본 1 · 0 = 10/29 판)
-if (params.has('rdRamp')) CONFIG.UNIQUE_ASSIST.rdRamp = +params.get('rdRamp') ? 1 : 0; // 감기 첫머리 도는 빠르기 부드럽게 (10/29 20:0x — 기본 1)
-if (params.has('ibChain')) CONFIG.IB_FLOW.chainStack = +params.get('ibChain') ? 1 : 0; // 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:4x · 01:5x · 기본 1)
-if (params.has('ibFreeEvery')) CONFIG.IB_FLOW.freeEvery = Math.max(0, Math.round(+params.get('ibFreeEvery') || 0)); // 이어지는 흐름 — 사슬 세 칼마다 기력 0 (사장님 10/29 14:2x · 기본 3 · 0 = 끔)
-// B7 이어 돌리기 (11/14 사장님 '이베리아 이어 돌리기로 진행해.' — config IB_LINK · src/iberian_link.js): `?ibLink=0` = 11/12 판 풍차 베기(원 긋기) · `?ibLinkT=` 원 시간(실제 초) · `?ibLinkCool=1` 특수 공격 식힘 걸기 ·
-//  `?ibTrade=0` B12 맞바꿈 '멈추지 않는 칼' 효과 끔(기본 켬 — 칸을 익힌 사람 · AI 이베리아 · 견줌) · `?ibLinkAi=0` AI 이어 돌리기 끔(기본 켬 — 11/14 사장님 'ai에게도 똑같이' · 0 = AI 풍차 베기 판) · 스위치(견줌 · 기본 끔): `?ibChainArm=1` B 사슬 세 칼 넘으면 알티바슈 포르트 곧장 무장
-if (params.has('ibLink')) CONFIG.IB_LINK.on = +params.get('ibLink') ? 1 : 0;
-if (params.has('ibLinkT')) CONFIG.IB_LINK.time = CONFIG.realS(Math.max(0.05, +params.get('ibLinkT') || 0.4));
-if (params.has('ibLinkMode')) CONFIG.IB_LINK.mode = params.get('ibLinkMode') === 'circle' ? 'circle' : 'bridge'; // 11/15 넘기기 판(기본) · 'circle' = 11/14 머리 위 원 판 (견줌)
-if (params.has('ibArrive') && +params.get('ibArrive') === 40) Object.assign(CONFIG.IB_LINK, { arriveDeg: CONFIG.UNIQUE_ASSIST.angle, arriveT: CONFIG.IB_LINK.bridgeMin }); // 11/15 (2) 넘기기 닿기 문 견줌 — 전 판 40° · 0.2 s
-if (params.has('ibChainSpeed')) CONFIG.IB_LINK.chainSpeed.on = +params.get('ibChainSpeed') ? 1 : 0; // 11/16 사슬 칼 빠르기 (기본 켬 — 사장님 11/16 결정) · 0 = 끔 (견줌)
-if (params.has('ibTradeT')) CONFIG.IB_LINK.tradeT = CONFIG.realS(Math.max(0.05, +params.get('ibTradeT') || 0.4)); // 11/15 맞바꿈 창 n 초 (넘기기 시작부터 · 기본 0.4 · 견줌 0.6)
-if (params.has('ibLinkCool')) CONFIG.IB_LINK.cool = +params.get('ibLinkCool') ? 1 : 0;
-if (params.has('ibChainArm')) CONFIG.IB_LINK.chainArm = +params.get('ibChainArm') ? 1 : 0;
-if (params.has('ibTrade')) CONFIG.IB_LINK.trade = +params.get('ibTrade') ? 1 : 0;
-if (params.has('ibLinkAi')) CONFIG.IB_LINK.ai = +params.get('ibLinkAi') ? 1 : 0;
-if (params.has('ibWindChain')) CONFIG.IB_FLOW.windmillChain = ['simple', 'inside'].includes(params.get('ibWindChain')) ? params.get('ibWindChain') : 0; // 풍차 베기를 이어 그은 칼 하나로 셈 (사장님 10/29 01:5x · 08:3x 'simple' — 기본 'simple' · 'inside' 견줌 · 0 끔)
-if (params.has('ibWindPower')) CONFIG.IB_FLOW.windmillPower = +params.get('ibWindPower') ? 1 : 0; // 풍차 베기 내려침 자체 흐름 위력 (사장님 10/31 14:xx — 기본 0 = 없음 · 사슬 첫 칼 자리는 그대로 · 1 = 10/29 판 × 1.2)
-if (params.has('dupEdge')) CONFIG.UNIQUE_ASSIST.dupEdge = +params.get('dupEdge') < 0 ? -1 : 1; // 겹치기 날 (1 긴 날 · −1 짧은 날)
-if (params.has('koteDrop')) CONFIG.UNIQUE_ASSIST.koteDrop.p = +params.get('koteDrop') || 0; // 손목 치기 칼 떨구기 확률(10/24 J8 — 판 값 0.5 · `?koteDrop=0` 끔)
-if (params.has('koteEase')) CONFIG.UNIQUE_ASSIST.koteDrop.ease = +params.get('koteEase') ? 1 : 0; // 손목 치기 떨굼 완화(11/05 — 판 값 1 · `?koteEase=0` = 10/24 판 · 기록 docs/strike/kote_pickup_2026-11-05.md)
-if (['block', 'auto', '0'].includes(params.get('pickup'))) CONFIG.PICKUP.mode = params.get('pickup') === '0' ? 0 : params.get('pickup'); // 떨어진 칼 줍기(11/05 — 판 값 끔 · `?pickup=block` 칼 곁에서 막기 단추 · `?pickup=auto` 곁에 가면 저절로 · src/pickup.js)
-if (params.has('pickupAi')) CONFIG.PICKUP.ai = +params.get('pickupAi') ? 1 : 0; // 칼을 놓친 AI 도 걸어가 주움(11/05 — 판 값 끔 · `?pickupAi=1`)
-if ([0.6, 0.9].includes(+params.get('pickupReach'))) CONFIG.PICKUP.reach = +params.get('pickupReach'); // 줍기 거리(11/16 [사장님 11/16 결정] '활성화되는 거리를 늘려.' — 판 값 0.9 · `?pickupReach=0.6` = 11/05 판 · 기록 docs/strike/pickup_reach_2026-11-16.md)
-if (params.has('pickupStep')) CONFIG.PICKUP.step = +params.get('pickupStep') ? 0.3 : 0; // 먼 칼 줍기 반걸음 내디딤(11/16 — 판 값 0.3 · `?pickupStep=0` = 내딛지 않음)
-if (['cut', 'arm', 'all'].includes(params.get('koteJudge'))) CONFIG.UNIQUE_ASSIST.koteDrop.judge = params.get('koteJudge'); // 칼 떨구기 닿음 판정(10/24 12:3x — 판 값 'all' · 'cut' = 11:5x 판 · 'arm' = 아래팔 닿음만)
-if (params.has('uniqueAssist')) CONFIG.UNIQUE_ASSIST.on = +params.get('uniqueAssist') ? 1 : 0; // 플레이어 고유 동작 강화(10/14 — 10/13 이어 주기): 기본 1, `?uniqueAssist=0` = 끔 (기술 이름 알림도 없음)
-// 테스트 경로도 기본 켬 (사장님 10/14 03:1x '테스트에서 켜' — 10/14 02:0x 부터 '궤적은 내 것' 강화 판으로 다시 만드는 동안 꺼 두었던 것). 끄려면 `?uniqueAssist=0`
-if (params.has('uniqueEnhance')) CONFIG.UNIQUE_ASSIST.enhance = Math.max(0, +params.get('uniqueEnhance') || 0); // 고유 동작 강화 세기(10/14): 기본 1 · 0 = 기술 이름 알림만 · 0.5 = 절반 (걸음·몸·끝 힘 한꺼번에)
-const UNIQUE_STAGE = stageParam(params.get('uniqueStage')); // 개발 인자 `?uniqueStage=0..5`: 손에 든 무기 유파의 옛 급 N 까지의 스킬트리 칸을 켬 (0 = 칸 없음 · 1 = 보법 · 2 = + 막기 · 3 = + 고유 공격 · 심화 · 4 = + 패시브 · 5 = 모두 — 익힌 칸 · 테스트 경로보다 먼저, skill_tree_store.js playerKit). 없으면 익힌 칸 · 테스트 경로는 모두
-const SKILL_NODES = params.get('skillNodes'); // 개발 인자 `?skillNodes=G1,G5`(10/21): 그 칸만 켬 · `all` = 모두 · 빈 값 = 없음 — ?uniqueStage 보다도 먼저 (칸 하나씩 시험)
-const FOE_PROF_PARAM = params.get('foeProficiency'); // 시험: 그 판 상대의 숙련도 덮어쓰기 `?foeProficiency=0..6` (실력 숫자 이름·고유 동작 거르기·5 이상 비기 모두 — characters.js aiAtProficiency). 없거나 범위 밖이면 인물 시트 값
+const UNIQUE_STAGE = stageParam(params.get('uniqueStage')); // 개발 인자 `?uniqueStage=0..5`: 손에 든 무기 유파의 옛 급 N 까지의 스킬트리 칸을 켬 (브라우저 도구 장면)
+const SKILL_NODES = params.get('skillNodes'); // 개발 인자 `?skillNodes=G1,G5`: 그 칸만 켬 · `all` = 모두 · 빈 값 = 없음 — ?uniqueStage 보다 먼저
+const FOE_PROF_PARAM = params.get('foeProficiency'); // 시험: 그 판 상대의 숙련도 `?foeProficiency=0..6` (characters.js aiAtProficiency). 없거나 범위 밖이면 인물 시트 값
 const FOE_PROF = /^[0-9]$/.test(FOE_PROF_PARAM ?? '') && +FOE_PROF_PARAM < AI_PROFICIENCY.levels.length ? +FOE_PROF_PARAM : null; // 0 ~ 6 (10/24 — 6 칸 · 전 0 ~ max 5)
-// 마무리 스위치 (10/12 샛별 가져오기 2차 — docs/import/saetbyeol_round2_2026-10-12.md, 기본은 둘 다 끔):
-//  `?finishEntry=low` = 낮은 상대 진입(몸 높이로 내려찍기를 연다, finish_entry.js) · `?finishMode=power25` = 즉사 대신 판정 에너지 2.5 배 + 갑옷 판정
-if (['down', 'low', 'downlow', 'auto'].includes(params.get('finishEntry'))) FINISH_SWITCH.entry = params.get('finishEntry'); // downlow = 고친 판 (큰 쓰러짐은 지금처럼 + 일어나는 중 낮은 몸) · 기본 auto (10/12)
-//  10/12 약한 자세 겨눔 묶음 (docs/import/saetbyeol_vital_2026-10-12.md): `?vital=0` = 끔 (진입도 'down' 으로 — 추천 기본 켬) · `?plateNeck=1` = 판금 상대 찍기를 목 한 점으로 (10/1 C, 10/12 기본 끔)
-if (params.get('vital') === '0') FINISH_SWITCH.vital = false;
-if (params.get('vital') === '1') FINISH_SWITCH.vital = true;
-if (params.get('plateNeck') === '1') FINISH_SWITCH.plateNeck = true;
-if (params.get('plateNeck') === '0') FINISH_SWITCH.plateNeck = false;
-for (const [q, k] of [['vitalAi', 'aiCut'], ['vitalThrust', 'thrust'], ['vitalCut', 'playerCut']]) if (['0', '1'].includes(params.get(q))) VITAL_SWITCH[k] = params.get(q) === '1'; // 묶음 갈래: AI 목 가로 베기 · 찌르기 목·얼굴·머리 + 간격 맞추기 · 플레이어 베기 겨눔 보정
-if (['power25', 'kill'].includes(params.get('finishMode'))) FINISH_SWITCH.mode = params.get('finishMode'); // 10/12 기본 power25 · kill = 9/30 즉사
-// 10/13 내려찍기 동작 (docs/strike/finish_plunge_2026-10-13.md): `?finishLift=0` = 전 동작(더 높이 들기·찍는 동안 힘 배율 끔) · `?finishAim=chest` = 가슴 쪽 몸 점 (기본 torso = 몸통 선)
-if (params.get('finishLift') === '0') FINISH_SWITCH.lift = false;
-if (params.get('finishLift') === '1') FINISH_SWITCH.lift = true;
-if (['chest', 'torso'].includes(params.get('finishAim'))) FINISH_SWITCH.aim = params.get('finishAim');
-// 10/22 대검 마무리 (docs/strike/greatsword_finish_2026-10-22.md · 확인표 2211~2217): `?finishCleave=0` = 사람 칼도 전 찍기 · `?finishCleaveAi=1` = AI 칼도 쪼개 내려치기 (기본 끔) · `?finishCleaveCharge=초` = 힘 모으기 시간
-if (['0', '1'].includes(params.get('finishCleave'))) FINISH_SWITCH.cleave.player = params.get('finishCleave') === '1';
-if (params.get('whip') === 'src') setWhipPreset('src'); // 10/23 드루이드의 채찍: 샛별 저장소 덩굴 값 그대로(손맛 고치기 전 — 견줌용 · docs/import/druid_whip_2026-10-23.md)
-if (['0', '1'].includes(params.get('finishCleaveAi'))) FINISH_SWITCH.cleave.ai = params.get('finishCleaveAi') === '1';
-if (params.has('finishCleaveCharge') && Number.isFinite(+params.get('finishCleaveCharge'))) FINISH_SWITCH.cleave.charge = CONFIG.realS(Math.max(0, +params.get('finishCleaveCharge')));
-if (['0', '1'].includes(params.get('finishCleaveLow'))) FINISH_SWITCH.cleave.anyHeight = params.get('finishCleaveLow') === '1'; // 10/22 23:0x 꿇기 이하 어떤 높이든(상태로 열기) · 땅까지 — 0 = 첫 판(찍기와 같은 문 · 몸 점까지)
-if (params.has('schoolGait')) CONFIG.GAIT.school = +params.get('schoolGait') ? 1 : 0; // 유파 걸음(10/10 비싼 층, gait.js gaitParams): 기본 1, `?schoolGait=0` = 모든 유파 같은 걸음(전 판)
-if (params.has('strideRule')) CONFIG.GAIT.strideRule = +params.get('strideRule') ? 1 : 0; // 보폭 규칙(10/15 20:3x 사장님 — 유파 보폭 상한 0.62 × k · 박자 2.05 ÷ k, 최고 빠르기 같음 · docs/strike/stride_rule_2026-10-15.md): 기본 1, `?strideRule=0` = 옛 유파 값
-if (params.has('jpSteady')) CONFIG.BALANCE.schoolSteady = +params.get('jpSteady') ? 1 : 0; // 일본 보법 버티기(10/15 — 흔들림 × 0.75, fighter.js swayScale): 기본 1, `?jpSteady=0` = 끔
-// 이탈리아 박자 걸음 셈(10/15 — schools.js ITALIAN_GAIT.rhythm · setItalianRhythm, docs/strike/italian_rhythm_2026-10-15.md §8 · §9 · §10): 기본 디딤 셈 2 + 2 · ×1.5(보통 디딤 둘 → 빠른 디딤 둘 — 사장님 10/15 15:1x 2 + 2 · 19:3x '50%로 해'),
-//  15:1x 판(×1.3) 비교 `?itRhythm=2+2x1.3`('N+MxK' = 배율 손으로) ·
-//  지난 판 비교(그때 ×1.5): `?itRhythm=4+2`(13:2x 판) · `?itRhythm=3+2` · `?itRhythm=3` = 옛 짝 셈 3 + 1(10/15 오전 판 — 짝걸음 한 짝 = 한 걸음) · `?itRhythm=4` = 옛 짝 셈 4 + 1 · `?itRhythm=0` = 끔
-if (params.has('itStride')) setItalianStride(params.get('itStride')); // 이탈리아 보폭 박자(10/15 22:1x · 22:5x — 짧은 디딤 둘 0.8 + 몸 ×1.3 → 긴 디딤 둘 1.1): `?itStride=0` = 22:0x 판(속도 ×1.5 · 계수 0.7) · `?itStride=a,b[,c[,p]]` = 짧은·긴 계수·짧은 디딤 빠르기 · 가까이 짝걸음 보폭 상한(예 0.8,1.1 = 보폭만 · 0.7,1.2 · 0.8,0.8,1.5 · 0.62,0.85,1.3,0.44)
-if (params.has('itRhythm')) setItalianRhythm(params.get('itRhythm'));
-if (params.has('itWalk')) setItalianWalk(params.get('itWalk')); // 이탈리아 보법 빠르기 시험(10/21 — 판 값 없음): `?itWalk=1,1.15,1.5` = 앞 · 뒤 걷는 빠르기 배율 · 짧은 디딤 가속 한도 배율(사람 · AI) · `?itWalk=p:1,1.15` = 앞뒤 배율만 플레이어만 — 제안 갈래(10/21 재기): R0 `?itStride=0.62,0.85,1.3,0.44&itWalk=1,1,1.5` · R `?itStride=0.62,0.85,1.3,0.44&itWalk=1,1.1,1.5`
-if (params.has('itBackCap')) setItalianBackCap(params.get('itBackCap')); // 이탈리아 물러서기 걸음 수 한도(10/31 08:xx 사장님 '네걸음 이후에는 (다섯 걸음째부터) 70% 적용' — schools.js ITALIAN_GAIT.backCap): `?itBackCap=0` = 10/21 판(늘 뒤 느려짐 없음) · `?itBackCap=N` = N 걸음까지
-if (params.has('itGait')) CONFIG.GAIT.itEven = params.get('itGait') === 'old' ? 0 : 1; // 이탈리아 고른 바탕 걸음(10/15 19:3x 사장님 '이탈리아 보법 자체가 이미 불균질' — 고른 짝걸음, docs/strike/italian_rhythm_2026-10-15.md §10): 기본 켬, `?itGait=old` = 옛 짝걸음('따·닥 + 쉼')
-if (params.has('deChase')) CONFIG.GAIT.deChase = +params.get('deChase') ? 1 : 0; // 독일 간격 잡기의 빠른 디딤(10/15 — 상대 헛침 뒤 앞 두 걸음 빠른 걸음, docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기'): 기본 1, `?deChase=0` = 끔(잡기도 없음)
-if (params.has('deDig')) CONFIG.GAIT.deDig = +params.get('deDig') ? 1 : 0; // 독일 보법 II 파고들기 (11/14 사장님 '간격 잡기를 파고들기로 바꿔' — 서서 앞으로 세게 밀면 두 걸음 박차고 들어감 · 거리 제한 없음, gait.js): 기본 1, `?deDig=0` = 옛 간격 잡기(헛침 뒤 0.6 s · 두 걸음 50 % · 칼 거리에서 섬)
-if (params.has('deHold')) CONFIG.GAIT.deHold = +params.get('deHold') ? 1 : 0; // 독일 간격 잡기의 잡기(10/15 18:0x — 칼이 제대로 들어가는 거리 contact 에서 서고 0.6 s 앞 몫 0 · 스틱 놓았다 밀면 풀림 · 플레이어만, docs/strike/german_hold_2026-10-15.md): 기본 1, `?deHold=0` = 끔(빠른 디딤만 — 지금 판)
-if (params.has('cnLight')) CONFIG.GAIT.cnLight = +params.get('cnLight') ? 1 : 0; // 동방 보법 가벼운 발(10/15 18:3x — 발로 내는 가속 한도의 보통 걸음 몫 × 1.5, 최고 빠르기 그대로 · 사람·AI 같이, docs/strike/cn_light_feet_2026-10-15.md): 기본 1, `?cnLight=0` = 끔(지금 판)
-if (params.has('cnLightAi')) CONFIG.GAIT.cnLightAi = +params.get('cnLightAi') ? 1 : 0; // 동방 AI 걸음 박자(10/15 — 가벼운 발 몸의 AI 는 공격 꼴에서만 가벼운 발 · 간 보기·막기·물러남은 옛 가속, docs/strike/cn_light_feet_2026-10-15.md §7): 기본 1, `?cnLightAi=0` = 끔(사람·AI 같이 — 지금 판)
-if (params.get('walk') === 'old') Object.assign(CONFIG.GAIT, { moveSpeed: 2.3, backFactor: 0.45, sideFactor: 0.31 }); // 걷기 빠르기 전 값(10/15 사장님 결정 전 — 앞 2.3 · 뒤 × 0.45 · 옆 × 0.31) 비교용: `?walk=old`
-if (params.has('burstDe')) CONFIG.GAIT.burstDe = +params.get('burstDe') ? 1 : 0; // 박차기는 독일 보법(10/15 20:4x 사장님 '박차기는 독일 보법으로 넣어' — 뒤 박차기는 독일 유파만 · 옆은 이베리아만 그대로 · 그 밖 유파 없음, docs/strike/step_burst_2026-10-15.md §10): 기본 1, `?burstDe=0` = 지금 판(이탈리아 빼고 모든 유파)
-if (params.has('stepBurst')) CONFIG.GAIT.stepBurst = +params.get('stepBurst') ? 1 : 0; // 첫 걸음 박차기(10/15 — 서 있다가 뒤·옆으로 떼는 첫 걸음만 빠름, 플레이어만 · 이탈리아 빼고 · 옆은 이베리아만(10/15 15:1x), docs/strike/step_burst_2026-10-15.md): 기본 1, `?stepBurst=0` = 끔
-// 전체 빠르기 손잡이 (10/10 사장님 '모티브 게임은 모든 움직임이 다 빠르다'): `?tempo=1.35|1.5|1.7` — 게임 시간 배율(실제 1 초에 물리 스텝을 더 돌림, 비기 느린 화면의 반대 꼴).
-//  기본 1 = 오늘 그대로. 시뮬 도구에는 닿지 않는다(이 파일만). 프레임마다 스텝 상한(PHYSICS.maxStepsPerFrame)은 그대로 — 느린 폰에선 상한에 걸리면 그만큼 덜 빨라진다
-const TEMPO = CONFIG.TIME.tempo; // = Math.min(2, Math.max(0.5, +(params.get('tempo') ?? 1.1) || 1.1)) — config.js TIME 한 곳(표준 시간 std 가 이 템포를 따라감 · 10/25 22:3x) · 기본 1.1 (사장님 10/10 05:1x '기본 템포 1.1로'), 전 값 `?tempo=1` // 결정타 연출(비기 터뜨림 순간 화면 시간 늦춤, CONFIG.SECRET.slowMo): `?slowMo=0` = 끔
-// 판 시작 카메라 · 따라가기 (10/15 사장님 — docs/strike/camera_open_2026-10-15.md, 확인표 1560~1579): `?openSweep=0` = 9/30 판 시작(정지 2 s · 조금 높고 먼 자리에서 내려오기 — 다시 겨루기도 같음)
-//  `?camFollow=old` = 예전 따라가기(무게중심 follow 5 → 카메라 자리 6 두 번 거름 · 최소 거리·물러날 때 올리기 없음). 둘 다 쓰면 10/15 오전 판과 거의 같다
-const OPEN_SWEEP = params.get('openSweep') !== '0';
-const CAM_OLD = params.get('camFollow') === 'old';
-const schoolRest = params.get('schoolRest');
-if (schoolRest != null) CONFIG.SKILL.schoolRest = schoolRest; // 유파 쉴 자세 비교(10/9 안 A 결정 뒤): `?schoolRest=pflugR` = 안 B(쟁기 자리), 빈 값 = 유파 값(中段·中平)
-const oneVersatile = params.get('oneVersatile');
-if (oneVersatile === 'mixed' || oneVersatile === 'thrust' || oneVersatile === 'cut') CONFIG.SKILL.oneVersatileTable = oneVersatile; // 한손 두루(청강검) 자세표(10/9 바닥 고침): 기본 'mixed'(섞은 표, 사장님 확인 전). `?oneVersatile=thrust` = 그 전 판(찌르기 표) · `cut` = 세이버 표(안 B)
-const getupLag = +params.get('getupLag');
-if (getupLag >= 0 && params.has('getupLag')) CONFIG.BODY.getupLag = getupLag; // 뒷다리가 기다리는 몫(riseTime 비율, 기본 0.5)
-const pushAtFoot = +params.get('pushAtFoot');
-if (pushAtFoot >= 0 && params.has('pushAtFoot')) CONFIG.GAIT.pushAtFoot = pushAtFoot;
-const cutStep = +params.get('cutStep');
-if (cutStep >= 0 && params.has('cutStep')) CONFIG.GAIT.cutStep = cutStep;
-const servoLead = +params.get('servoLead');
-if (servoLead >= 0 && params.has('servoLead')) CONFIG.ARM.servoLead = servoLead;
-// 손잡이 찍기 시제품(10/9, docs/strike/pommel_strike_2026-10-09.md): `?pommel=1` = persona.close 가 있는 AI 는 밀치기 뒤 베기 대신 폼멜로 찍는다(CLOSE.pommelAll).
-//  `?pommel=tap` = 그에 더해 플레이어가 붙은 거리(CLOSE.pommelDist)에서 탭하면 찌르기 대신 찍는다. 없으면 오늘 그대로
-const pommelKnob = params.get('pommel');
-if (pommelKnob === '1' || pommelKnob === 'tap') CONFIG.CLOSE.pommelAll = true;
-const pommelTap = pommelKnob === 'tap';
-const trunkArc = +params.get('trunkArc');
-if (trunkArc >= 0 && params.has('trunkArc')) CONFIG.BODY.trunkArc = trunkArc;
-const trunkFollow = +params.get('trunkFollow');
-if (trunkFollow >= 0 && params.has('trunkFollow')) CONFIG.BODY.trunkFollow = trunkFollow;
-const trunkArcSpeed = +params.get('trunkArcSpeed');
-if (trunkArcSpeed > 0) CONFIG.BODY.trunkArcSpeed = trunkArcSpeed;
-if (params.has('elbowSwivel')) CONFIG.JOINTS.elbowSwivel = +params.get('elbowSwivel') ? 1 : 0; // 기본 켬 (사장님 10/24 17:2x · `?elbowSwivel=0` 전 판): 칼이 새끼 쪽으로 꺾이면 팔꿈치를 돌려 세움 (fighter.js elbowSwivel — 사람 · AI 모두)
-if (params.has('wristGuard')) CONFIG.JOINTS.wristGuard = +params.get('wristGuard') ? 1 : 0; // 기본 켬 (사장님 10/24 17:2x · `?wristGuard=0` 전 판): 사람 손목 범위 밖 칼 겨눔을 범위 끝으로 (fighter.js wristClamp — 사람 · AI 모두 · 밧줄은 아래 wristRope)
-if (params.has('swivelThrust')) CONFIG.JOINTS.swivelThrust = +params.get('swivelThrust') ? 1 : 0; // 10/24 17:2x 뒤 고침 (기본 켬 · `?swivelThrust=0` = 17:2x 판): 탭 찌르기 동안 팔꿈치 돌림이 칼을 아래팔의 연장 쪽으로 (fighter.js elbowSwivel align)
-if (params.has('wristPronate')) CONFIG.JOINTS.wristPronate = +params.get('wristPronate') ? 1 : 0; // 10/25 (기본 켬 · `?wristPronate=0` = dbf2120 판): 한손 무기 엎친 손 길 — 높은 자세에서 손을 엎쳐 손목을 굽혀 칼끝을 상대 쪽으로 (fighter.js wristPlane)
-if (params.has('swivelHuman')) CONFIG.JOINTS.swivelHuman = +params.get('swivelHuman') ? 1 : 0; // 10/25 01:2x (기본 켬 · `?swivelHuman=0` = 10/24 17:2x 뒤 판): 한손 무기 팔꿈치 돌림이 팔꿈치를 줄 위로 · 아래팔 굴림 · 위팔 돌림을 한도 밖으로 밀지 않게 (fighter.js elbowSwivel armOk)
-if (params.has('cutPronate')) CONFIG.JOINTS.cutPronate = +params.get('cutPronate') ? 1 : 0; // 10/25 19:0x (기본 켬 · `?cutPronate=0` = 10/25 전 판): 엎친 손 길은 손이 자세에 쉬는 동안만 — 칼을 끄는 동안(감기 · 긋기 · 자세 사이 옮김)은 팔꿈치 돌림 + 굴림 0 손 면 교정 (fighter.js pronateRest · 사람 · AI 한손 무기)
-if (params.has('itThrust')) CONFIG.THRUST.itLunge = +params.get('itThrust') ? 1 : 0; // 10/25 08:0x 사장님 '이탈리아 찌르기 손봐' (기본 켬 · `?itThrust=0` = 10/25 아침 판): 이탈리아 유파 탭 찌르기 · AI 찌르기 기술 = 몸통 겨눔 · 당기지 않음 · 몸이 실린 런지 · 몸이 다 실릴 때까지 뻗은 채 (skill.js thrust · updateThrust · ai.js startStrike · gaitStep)
-// 11/05 찌르기 막기 재기 스위치 (모두 기본 끔 · docs/strike/rapier_defence_2026-11-05.md · 확인표 3370 ~ 3379): 런지 걸음 상한 · 막힌 런지 거둠 · AI 런지 간격 어림 · AI 런지 막기
-if (params.has('itStep')) CONFIG.THRUST.itStep = +params.get('itStep') || null;
-if (params.has('itClashEnd')) CONFIG.THRUST.itClashEnd = +params.get('itClashEnd') ? 1 : 0;
-if (params.has('itAccel')) CONFIG.THRUST.itAccel = +params.get('itAccel') ? 1 : 0;
-if (params.has('rapierWindow')) THRUST_STYLE.rapier.window = Math.max(0, +params.get('rapierWindow') || 0); // 레이피어 찌르기 판정 폭 (weapons.js THRUST_STYLE.rapier.window 0.12 — 달타냥 · 발리사르다 등 같은 객체를 쥔 칼 모두 · 재기 `?rapierWindow=0.06`)
-if (params.has('lungeReach')) CONFIG.AI_THRUST_DEF.lungeReach = +params.get('lungeReach') || 0;
-if (params.has('lungeParry')) CONFIG.AI_THRUST_DEF.lungeParry = +params.get('lungeParry') ? 1 : 0;
-// 11/05 일본 · 독일 롱소드 기본 공격 재기 스위치 (모두 기본 끔 · docs/strike/jp_de_basics_2026-11-05.md · 확인표 3400 ~ 3409)
-if (params.has('cutStepIn')) CONFIG.SKILL.cutStepIn.fwd = Math.max(0, +params.get('cutStepIn') || 0); // 베며 내딛기 걸음 (m — 걸음 사다리 0.3 · 0.45 · 0 = 끔)
-if (params.has('cutStepSchools')) CONFIG.SKILL.cutStepIn.schools = params.get('cutStepSchools').split(',').filter(Boolean);
-if (params.has('cutStepFrames')) CONFIG.SKILL.cutStepIn.frames = params.get('cutStepFrames') === 'all' ? null : params.get('cutStepFrames').split(',').filter(Boolean);
-// 손가락 긋기 세기 (11/06 — src/finger_cut.js · 기본 모두 1 = 끔 · 사장님 확인 전): 긋는 동안 칼 팔 · 손목 힘 · 손가락 감도 · 판정 에너지 배율 · AI 보통 긋기도(fcAi=1)
-for (const [q, k] of [['fcArm', 'arm'], ['fcGain', 'gain'], ['fcHit', 'hit']]) if (params.has(q) && +params.get(q) > 0) CONFIG.SKILL.fingerCut[k] = +params.get(q);
-if (params.has('fcAi')) CONFIG.SKILL.fingerCut.ai = +params.get('fcAi') ? 1 : 0;
-// 일본 강화 길 (11/05 사장님 '걸음 속도가 특색이니 유지하면서 다른 방법으로' — docs/strike/jp_strength_2026-11-05.md · 모두 기본 끔 · 사장님 확인 전)
-if (params.has('gnsHurtKeep')) CONFIG.SECRET.gnsHurtKeep = +params.get('gnsHurtKeep') ? 1 : 0; // 맞아도 고노센 준비 이어 셈 (확인표 3420)
-if (params.has('gnsThrough')) CONFIG.SECRET.gnsThrough = +params.get('gnsThrough') ? 1 : 0; // 고노센 베고 지나감 — 팔을 가르고 몸까지 (확인표 3423)
-if (params.has('tsuStep')) CONFIG.UNIQUE_ASSIST.tsuStep = Math.max(0, +params.get('tsuStep') || 0); // 제비 베기 미끄러져 들어감 (m — 걸음 사다리 0.3 · 0.45 · 확인표 3421)
-if (params.has('jpMaaiHide')) CONFIG.AI_MAAI.hide = Math.max(0, +params.get('jpMaaiHide') || 0); // AI 가 일본 칼끝 거리를 짧게 봄 (m — 걸음 사다리 0.3 · 확인표 3422)
-if (params.has('wristSwing')) CONFIG.JOINTS.wristSwing = Math.max(0, Math.min(2, Math.round(+params.get('wristSwing') || 0))); // 시험 (10/25 · 기본 0): 베는 동안 손목 교정 — 1 = 칼 면 안에서만 · 2 = 안 함 (fighter.js wristGuardAim · cutSwing · 기록 wrist_audit §11)
-if (params.has('wristRope')) CONFIG.JOINTS.wristRope = +params.get('wristRope') ? 1 : 0; // 시험 (10/24 17:2x · 기본 끔 · `?wristRope=1` = 손목 치우침 밧줄 둘 — fighter.js gripDevOn · 기록 §9)
-if (CONFIG.JOINTS.presets[params.get('joints')]) CONFIG.JOINTS.mode = params.get('joints'); // 칼 팔 관절 가동 범위 교정 시제품(10/9, docs/motion/joint_range_2026-10-09.md): `?joints=off|anat|hard|soft|reach`, 없으면 기본 anat(켬)
-// 타격감 (10/25 사장님 '타격감 보강도 진행해' — config IMPACT_FX · src/impact_fx.js · 화면 · 소리만): `?impactFx=0` = 10/25 전 게임 그대로(옛 멈칫 · 흔들림 식 · 무게 소리 없음) · `?impactMass=0` = 무게 배율 없이 판정 에너지만(견주기)
-if (params.has('impactFx')) CONFIG.IMPACT_FX.on = +params.get('impactFx') ? 1 : 0;
-if (params.has('impactMass') && +params.get('impactMass') >= 0) CONFIG.IMPACT_FX.massExp = +params.get('impactMass');
-const chainParam = params.get('chain');
-if (chainParam === 'legs' || chainParam === 'anchor') CONFIG.BODY.chain = chainParam;
+const TEMPO = CONFIG.TIME.tempo; // 전체 빠르기 1.1 (사장님 10/10 05:1x '기본 템포 1.1로') — config.js TIME 한 곳
+const OPEN_SWEEP = params.get('openSweep') !== '0'; // 판 시작 카메라 훑기 (10/15 — docs/strike/camera_open_2026-10-15.md) · `?openSweep=0` = 정지 2 s 판 시작 (브라우저 도구 장면)
 let lastPlayerWeapon = null; // 지난 판에 고른 무기 (여정 이어하기 저장용 — 10/21 16:3x 사장님 '이전 판 무기 다시 안 나오게 하는 제한 없애' 로 카드에서 빼지 않는다)
 /** 이번 판 내 카드 두 장 (맨 오른쪽 세 번째 칸은 상대 무기라 여기서 뽑지 않는다): 뽑기 목록에서 겹치지 않게 고르게 뽑는다
  *  (지난 판 무기를 빼던 규칙은 10/21 사장님 지시로 없앰 — 9/27 첫 카드 뽑기 때 감독이 넣은 것, 사장님 지시 기록 없음).
@@ -711,10 +129,9 @@ function drawCardIds() {
 //  메뉴에 남은 설정은 하나 — 화면 60 fps 제한 (10/10 19:2x 사장님 '시작 전 설정에서도 뺄 기능이 많아' — docs/ui/hud_type_system_2026-10-10.md §13).
 //  상대 난이도 줄은 뺐다 (사장님 결정 10/13 '상대 난이도는 메뉴에서 빼자' — 상대의 실력은 인물 숙련도가 정한다, characters.js). 저장된 옛 difficulty 값은 읽지 않는다.
 //  늘 켬으로 고정해 줄을 지운 것: 자세 이름 · 피 · 조작 흔적 · 유파 기술 알림 · 소리 · 비기 화면 번쩍임 · 비기 카메라 연출.
-//  주소 인자로만 켜는 것: 픽셀 모드(실험, ?pixel=1). 기울기 이동은 기능째 지웠다 (터치는 조이스틱만).
+//  기울기 이동은 기능째 지웠다 (터치는 조이스틱만).
 //   모든 기술 이름 보기(디버그 ?techCueAll=1)는 상대 기술을 보이던 것이라 10/14 03:3x 상대 기술 표기를 없앨 때 같이 걷어냈다 (docs/ui/hud_type_system_2026-10-10.md §15).
 const DEFAULTS = { skill: '0.7', fpsCap: true };
-const PIXEL_MODE = params.get('pixel') === '1'; // 실험: 작은 해상도로 그려 크게 늘린다 (도트 그래픽처럼)
 const settings = { ...DEFAULTS };
 try {
   const saved = JSON.parse(localStorage.getItem('gladiator-settings') || '{}');
@@ -738,7 +155,6 @@ const saveSettings = () => {
 // ── 겉모습 미리보기 (모델링 PM 라운드): 마음에 안 들어도 지우지 않고 archive에 쌓아 둔 옛 버전들을
 //  주소창에서 바로 볼 수 있게 한다. 플레이어 외형에는 적용하지 않는다(감독 지시: 주인공은 그대로).
 //  ?look=margarethe:v0  : 그 캐릭터를 상대로 고정하고 그 버전을 입힌다 (버전 생략 시 지금 버전)
-//  ?lookv=0              : 이번에 고른 상대가 누구든 그 버전을 입힌다 (?foe=와 함께 써도 됨)
 let lookPreviewId = null;
 let lookPreviewVersion = null;
 const lookParam = params.get('look');
@@ -747,8 +163,6 @@ if (lookParam) {
   lookPreviewId = id;
   lookPreviewVersion = ver ? (ver.startsWith('v') ? ver : `v${ver}`) : null;
 }
-const lookvParam = params.get('lookv');
-const lookvVersion = lookvParam != null ? (lookvParam.startsWith('v') ? lookvParam : `v${lookvParam}`) : null;
 
 // ── 상대 캐릭터 고르기 (테스트/데모용 최소 기능. 정식 선택 UI는 나중에) ──
 //  (없음)        : 무대마다 그곳이 고향인 검객 (stages.js STAGE_FOE, 오너 결정). 짝이 없는 무대는 무작위
@@ -802,7 +216,7 @@ scene.add(sun, sun.target);
 const fighterLight = createFighterLight({ hemi, sun });
 // 부활 연출 (이졸데, src/revive_fx.js): 하늘에서 내린 빛기둥·빛 알갱이·땅의 빛·진짜 빛 하나·몸의 빛. 부활하는 동안만 장면에 붙는다
 const reviveFx = new ReviveFx(scene, { renderer, camera, fighterLight });
-const strikeCue = createStrikeCue(scene, screenTint, params.get('strikeCue'), { anchor: params.get('cueAnchor'), secretEdge: params.get('secretEdge'), secretEdgeW: params.get('secretEdgeW'), secretEdgeA: params.get('secretEdgeA'), secretEdgeStyle: params.get('secretEdgeStyle'), secretEdgeLevel: params.get('secretEdgeLevel') }); // 칠 때 알림 (strike_cue.js): 느낌표 하나를 장면에 먼저 붙여 둔다
+const strikeCue = createStrikeCue(scene, screenTint); // 칠 때 알림 — 내 머리 위 느낌표 · 비기 창 금색 테두리 (strike_cue.js)
 
 // ── 배경(스테이지): 판마다 정해진 순서 ─────────────────────────────────────
 //  오너 결정: 고르는 화면 없이 늘 포세이돈 신전 → 성 안뜰 → 산사 → 대성당 순서. 대성당 다음 판은 다시 포세이돈 (stages.js STAGE_ORDER)
@@ -832,10 +246,6 @@ const careerSaves = () => journeySaves() || wanderSaves();
 // 방랑 풀: 무대 = 여정 30곳(보관용 화전 터 · 어두운 홀 빼고) · 상대 = 그 무대 상대 + 방랑 전용 일곱(아르토리아 두 모습 · 롤랑 · 백린의 전사 · 베르나르도 · 쥘리아 두 모습 — 10/30 22:1x)
 const WANDER_STAGES = [...STAGE_ORDER];
 const WANDER_FOES = [...new Set([...WANDER_STAGES.map((id) => STAGE_FOE[id]), ...WANDER_EXCLUSIVE])].filter((id) => CHARACTERS_BY_ID[id]);
-// 주소 스위치 (?title=1 과 함께 — 대기실을 거쳐야 방랑이 열린다): ?wanderQuit=1 = 싸움 도중 그만두면 패배 · ?wanderLegacy=0 = 옛 저장 한 바퀴 인정 끔 (wander_rules.js WANDER — 사장님 확인 전)
-if (['0', '1'].includes(params.get('wanderQuit'))) WANDER.quitAsLoss = params.get('wanderQuit') === '1';
-if (['0', '1'].includes(params.get('wanderLegacy'))) WANDER.legacyLoop = params.get('wanderLegacy') === '1';
-if (['0', '1'].includes(params.get('wanderResume'))) WANDER.resumeState = params.get('wanderResume') === '1'; // 몸 상태 이어받기 (사장님 10/30 01:1x · 08:2x '둘 다 켜' — 기본 켬 · 0 = 전 판: 같은 대면을 처음 몸으로)
 // 대기실 장착을 싸움에 (docs/import/lobby_fix_2026-10-16.md §3): 첫 화면·대기실에서 연 여정만(journeySaves — 주소 고정 판·테스트 경로·옛 메뉴 판은 지금 그대로).
 //  weapon = 대기실 무기(있으면 무대마다 카드 없이 그 무기 · 없으면 카드) · armor = 케틀 햇(있으면 투구 + 최대 기력 130 · 없으면 맨머리) ·
 //  neck = 용사의 눈물(있으면 플레이어 기력 무한 + 내 기력 막대 없음 · 겉모습 그대로 — 10/17, docs/import/hero_tear_2026-10-17.md).
@@ -902,17 +312,8 @@ function resize() {
   const w = canvas.clientWidth || window.innerWidth;
   const h = canvas.clientHeight || window.innerHeight;
   if (!w || !h) return;
-  if (PIXEL_MODE) {
-    // 작은 해상도로 그린 뒤 크게 늘리면 도트 그래픽처럼 보인다
-    const px = Math.max(3, Math.round(h / 180));
-    renderer.setPixelRatio(1);
-    renderer.setSize(Math.ceil(w / px), Math.ceil(h / px), false);
-    canvas.classList.add('pixel');
-  } else {
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(w, h, false);
-    canvas.classList.remove('pixel');
-  }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.fov = w / h < 1.2 ? CAMERA.fov + 15 : CAMERA.fov;
   camera.updateProjectionMatrix();
@@ -1133,12 +534,11 @@ function newRound(weaponId) {
     schoolParry: kit ? kit.parry : undefined,
     schoolPassive: kit ? kit.passive : undefined, // 패시브 칸 (이베리아 손목 힘 · 이탈리아 · 일본 · 독일 · 동방 — school_passive.js)
     skillKit: kit ?? undefined,
-    ...(IB_TABLE === 'v2p' ? { guardTables: { iberian: iberianTableV2() } } : {}), // 이베리아 자세표 v2 사람만 (10/22 시험 — 기본 끔)
     ...testRoute.player, // ?hero=<인물 id>: 겉모습·이름만 그 인물 (유파·비기는 무기를 따른다)
   });
   let enemyLook = currentFoe ? currentFoe.look : LOOKS.enemy;
   if (currentFoe) {
-    const overrideVersion = (lookPreviewId === currentFoe.id && lookPreviewVersion) || lookvVersion;
+    const overrideVersion = lookPreviewId === currentFoe.id && lookPreviewVersion;
     if (overrideVersion) enemyLook = getLook(currentFoe.id, overrideVersion) || enemyLook;
   }
   enemy = new Fighter(RAPIER, world, scene, colliderInfo, {
@@ -1180,7 +580,7 @@ function newRound(weaponId) {
       reviveFx.warm();
     });
   }
-  const madEyes = attachMadEyes(enemy, ['madGlow','clothGlow'].includes(currentFoe?.eyes) || params.has('madEyes'), { veiled: currentFoe?.eyes === 'clothGlow', sheltered: currentFoe?.look?.alter === 'bran' }); // Veil transmits light; Bran's low brim hides pupils and leaves a dim spill.
+  const madEyes = attachMadEyes(enemy, ['madGlow','clothGlow'].includes(currentFoe?.eyes), { veiled: currentFoe?.eyes === 'clothGlow', sheltered: currentFoe?.look?.alter === 'bran' }); // Veil transmits light; Bran's low brim hides pupils and leaves a dim spill.
   if (madEyes) auras.push(madEyes);
   for (const f of [player, enemy]) { const h = attachHands(f); if (h) auras.push(h); } // 벙어리장갑 손 (외형 PM, hands.js — 겉모습만)
   swordTrails.attach([player, enemy]); // 칼 잔상 띠: 이번 판 두 검객 (지난 띠는 지운다)
@@ -1319,7 +719,7 @@ function newTeamRound(spec, mods = {}) {
       weapon: e.weapon,
       ffa: E.length > 2, // 셋 이상 판: 같은 편도 적과 똑같이 부딪히고 벤다 (사장님 10/29 22:3x · fighter.js FFA_*)
       ...(e.human
-        ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined, ...(IB_TABLE === 'v2p' ? { guardTables: { iberian: iberianTableV2() } } : {}) }
+        ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined }
         : { revive: ch?.revive, physiology: ch?.physiology, vitality: ch?.vitality }),
     });
   });
@@ -2060,7 +1460,7 @@ function setFoePortrait(fig, img, ch) {
   const broken = !!src && img.getAttribute('src') === src && img.complete && img.naturalWidth === 0; // 같은 그림을 전에 못 불러왔으면(예: 오프라인에서 예비 low) 칸을 숨긴 채로
   fig.hidden = !src || broken;
   if (src && !broken) {
-    fig.dataset.portrait = portraitIdOf(ch.id); fig.dataset.mode = portraitMode(); fig.toggleAttribute('data-grid', portraitGrid()); // ?portraitGrid=1 칸 줄 (10/18 16:3x 확인용)
+    fig.dataset.portrait = portraitIdOf(ch.id);
     img.alt = `${ch.name} 프로필`;
     if (img.getAttribute('src') !== src) img.src = src;
   }
@@ -2141,10 +1541,8 @@ const cardEls = [...drawEl.querySelectorAll('.wcard')];
 //  오너 결정: 픽셀 아트 뒷면(외형 PM v3, docs/design_language.md). 판마다 그 판 배경의 문양이다 — 포세이돈 신전·성 안뜰·산사·대성당.
 //  조각(tile·frame·center·plaque, public/ui/cardbacks/px_<테마>_*.png)을 한 칸 = --px(게임 픽셀)로 정수 배 확대해 붙인다(index.html).
 //  상대 칸은 회색 조각(_foe, tools/cardbacks/grey_foe.py)이다. 테마가 없는 배경(어두운 홀)은 classic(가죽 빛 바탕 + 마름모 칼 문장).
-//  주소 ?back=<테마|classic> 으로 고정해 볼 수 있다
 const PX_BACKS = { poseidon: '#1d3037', clearing: '#1a1816', castle: '#1e2433', temple: '#1a352b', poseidon_night: '#0c1220', cathedral: '#2b171a', loggia: '#302326', corsair: '#19383e', sacred_grove: '#1c3025', frozen_bay: '#18293a', qinglan: '#16332f', sluice: '#182a22', dayr: '#2a1d1b', dunhuang: '#2d2418', etna: '#1d1b21', courtyard: '#3a1f24' }; // 테마 → 바탕색 (뒤 열은 샛별 저장소의 무대 — 얼어붙은 만·청람잔도는 10/11, 잠든 습지·소금 사막·철불 절벽·화산섬은 10/14, 봉인의 중정은 10/17 우리가 그림, tools/cardbacks/gen_pixel_cardbacks.py)
 const BACK_PARTS = ['tile', 'frame', 'center', 'plaque'];
-const BACK_PIN = params.get('back') in PX_BACKS || params.get('back') === 'classic' ? params.get('back') : null;
 let cardBack = 'classic';
 // 조각을 미리 받아 둔다(모두 합쳐 몇 KB): 카드가 뜰 때 뒷면이 비었다가 그려지지 않게
 for (const t in PX_BACKS) for (const p of BACK_PARTS) for (const f of ['', '_foe']) new Image().src = `ui/cardbacks/px_${t}_${p}${f}.png`;
@@ -2165,7 +1563,7 @@ const CARD_BACK_SVG_FOE = CARD_BACK_SVG.replaceAll('#d9a441', '#86817a').replace
 function setCardBack(stageId) {
   // 밤 무대(10/16 샛별)는 뒷면 그림이 아직 없어 같은 곳 낮 무대의 뒷면을 빌린다 (밤의 포세이돈은 제 뒷면)
   const dayOf = typeof stageId === 'string' ? stageId.replace(/_night$/, '') : stageId;
-  cardBack = BACK_PIN || (stageId in PX_BACKS ? stageId : dayOf in PX_BACKS ? dayOf : 'classic');
+  cardBack = stageId in PX_BACKS ? stageId : dayOf in PX_BACKS ? dayOf : 'classic';
   drawEl.dataset.back = cardBack === 'classic' ? 'classic' : 'px';
   cardEls.forEach((el, i) => {
     const foe = i === FOE_CARD;
@@ -3261,14 +2659,14 @@ function updateCamera(dt) {
   const src = (!P.decapitated && P.com) || P.pelvisPos;
   const standing = P.state === 'stand';
   // 따라가는 점: 지금 몸 자리를 물리 스텝 사이 남은 시간(acc)만큼 지난 빠르기로 앞으로 민 자리를 CAMERA.followTau 로 한 번만 거른다 (서 있지 않으면 followTauDown) — camera_rig.followStep
-  const a = CAM_OLD ? camFollow.lerp(src, 1 - Math.exp(-dt * CAMERA.follow)) : followStep(camRig, src, camSteps, acc, dt, standing, CAMERA, PHYSICS.timestep);
+  const a = followStep(camRig, src, camSteps, acc, dt, standing, CAMERA, PHYSICS.timestep);
   const b = (!E.decapitated && E.com) || E.pelvisPos;
   // 나 → 상대 방향 (너무 붙어 있으면 이전 방향 유지) — 도는 것은 지금처럼 부드럽게(3/s)
   _cd.set(b.x - a.x, 0, b.z - a.z);
   if (_cd.length() > 0.3) camDir.lerp(_cd.normalize(), 1 - Math.exp(-dt * 3)).normalize();
   const right = _cd.set(-camDir.z, 0, camDir.x);
   // 물러나는 동안 카메라를 조금 올린다 (CAMERA.retreatLift — 가까이 따라붙은 상대를 내 몸이 덜 가리게): 지난 화면 몸 빠르기의 카메라 방향 반대 몫으로 — camera_rig.retreatStep
-  const lift = CAM_OLD ? 0 : retreatStep(camRig, camDir.x, camDir.z, dt, standing, CAMERA);
+  const lift = retreatStep(camRig, camDir.x, camDir.z, dt, standing, CAMERA);
   // 지형 무대(화산섬): 카메라 높이·바라보는 높이·해와 그림자 과녁을 내 무게중심 밑 땅 높이만큼 올린다 (평지 무대는 0 — 그대로)
   const terrainY = P.terrain ? P.terrain.heightAt(a.x, a.z) : 0;
   const camH = (teamRun ? CAMERA.height + teamRun.pull.up : CAMERA.height) + CAMERA.retreatLift * lift + terrainY; // 동시 대전: 물러남 몫만큼 위로 (1:1 은 예전 식)
@@ -3290,7 +2688,7 @@ function updateCamera(dt) {
     }
   }
   // 최소 거리 (CAMERA.minDist): 몸이 카메라 쪽으로 밀려 와도 카메라가 그 자리에서 바로 물러난다 — 지금 몸 자리(거르기 전) 기준, 수평 (camera_rig.keepDistance)
-  if (!CAM_OLD) keepDistance(camTarget, src, CAMERA.minDist);
+  keepDistance(camTarget, src, CAMERA.minDist);
   // 런지 카메라 (10/25 14:0x — SECRET.risoCam · watchSecretFx): 카메라와 바라보는 점을 런지 방향으로 함께 risoCam m — risoCamIn 초에 밀고 risoCamOut 초에 되돌림 (camSwing 과 같은 smoothstep).
   //  최소 거리 뒤에 더한다 (앞에 더하면 minDist 가 밀어 넣은 몫을 거의 다 되돌린다 — 서 있을 때 3.04 → 2.8 m 까지만)
   let push = 0;
@@ -3321,11 +2719,6 @@ function updateCamera(dt) {
     else settlePose(u, camTarget, look, camDir.x, camDir.z, CAMERA.openBack, CAMERA.openUp, _co, look);
     camera.position.copy(_co);
     camLook.copy(look);
-  } else if (CAM_OLD) {
-    const k = 1 - Math.exp(-dt * 6); // 예전: 자리·바라보는 점을 한 번 더 거른다 (자리 6)
-    camera.position.lerp(camTarget, k);
-    clampStageCamera(a, camera.position, arenaStone?.navigation);
-    camLook.lerp(look, k);
   } else {
     camera.position.copy(camTarget);
     camLook.copy(look);
@@ -3698,7 +3091,7 @@ function playerInputFrame(dt, now) {
   // 칼을 쥐었나 (고노센 허리 대기 — SECRET.gnsReadyHip · secret.js): 손가락은 닿은 자리에서 길게 누름 한도(INPUT.holdPx — 엄지 떠돎)를 넘게 끌었을 때부터 뗄 때까지 · 마우스는 움직임 그대로(inputActive)
   const pr = input.press;
   player.handGrip = pr && !pr.mouse ? (pr.atk ? input.atk.grip : pr.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx)) : player.inputActive; // 공격 조이스틱 엄지(11/17): 칼을 쥠 = 데드존 밖에 닿음 · holdPx 넘게 끎 (atk_stick.js)
-  if (taps > 0 && player.alive && !(pommelTap && player.foeDistance() <= CONFIG.CLOSE.pommelDist && player.skill.pommel())) player.skill.thrust();
+  if (taps > 0 && player.alive) player.skill.thrust();
   updatePlayerEmotion(dt);
   watchEmotions();
   watchMudNotice(); // 잠든 습지: 진흙을 처음 밟으면 알림 줄 한 번 (다른 무대는 배율 1 이라 안 뜬다)

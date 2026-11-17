@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { newRound, DT, CONFIG, AI } from './harness_m.mjs';
-import { SecretSfxWatch, secretSfxFile, secretSfxMode, secretFizzled } from '../../src/secret_sfx.js';
+import { SecretSfxWatch, secretSfxFile, secretFizzled } from '../../src/secret_sfx.js';
 // 준비까지 (11/14 사장님 '2초 후에 납도 시작' — 일본 준비는 iaiArmTime 뒤 납도 SECRET.iaiSheathe 가 끝나야 · 帯刀 끄면 납도 없음 · secret.js IaiArm.extra)
 const ARM = () => CONFIG.SECRET.iaiArmTime + (CONFIG.SECRET.iaiObi && CONFIG.SECRET.iaiSheathe > 0 ? CONFIG.SECRET.iaiSheathe : 0);
 // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 싱지르 비기 소리 장면(무장 창 · 비기 터뜨림 — 사람 · AI)이라
@@ -331,37 +331,23 @@ test('걸쇠 셈: 새 판 바탕(묵은 수는 안 터짐) · 같은 화면 둘�
   assert.deepEqual(W.tick(), []);
 });
 
-test('연결표 = 사장님 10/25 결정 · 주소 스위치 ?secretSfx=0 · 소리 끔 · 녹음 없음 · 꺼 둔 판은 녹음도 안 받음', async () => {
+test('연결표 = 사장님 10/25 결정 · 소리 끔 · 녹음 없음 · 녹음 받기', async () => {
   assert.deepEqual(SOUND.secretSfxFiles, { japanese: G1, italian: G1, chinese: G1, iberian: G2, german: G2 });
   assert.deepEqual(['japanese', 'italian', 'chinese', 'iberian', 'german', 'none', null].map((k) => secretSfxFile(k)), [G1, G1, G1, G2, G2, null, null]);
-  assert.equal(SOUND.secretSfx, 1);
   assert.equal(SOUND.secretSfxGain, 1); // 사장님 10/25 18:4x '음량 1.0으로'
-  const q = (x) => secretSfxMode(new URLSearchParams(x), 1);
-  assert.deepEqual(['', 'secretSfx=0', 'secretSfx=1', 'weapon=rapier&secretSfx=0'].map(q), [1, 0, 1, 0]);
   const a = fakeSound();
   a.s._on = false; // 음소거
   assert.equal(a.s.secretSfx(G1), null);
   a.s._on = true;
   delete a.s.samples[`secret:${G2}`]; // 아직 안 읽힘 → 합성으로 대신하지 않음
   assert.equal(a.s.secretSfx(G2), null);
-  const keep = SOUND.secretSfx;
-  try {
-    SOUND.secretSfx = 0;
-    assert.equal(a.s.secretSfx(G1), null);
-    assert.equal(a.played.length, 0);
-    // 녹음 받기: 켬이면 두 파일 · 끔이면 안 받음 (fetch 대신 decodeSample 을 바꿔 낌)
-    for (const on of [1, 0]) {
-      SOUND.secretSfx = on;
-      const b = Object.create(Sound.prototype);
-      const asked = [];
-      Object.assign(b, { samples: {}, decodeSample: async (f) => (asked.push(f), { name: f }) });
-      await b.loadSamples();
-      assert.equal(asked.includes(`${G1}`) && asked.includes(`${G2}`), !!on);
-      assert.equal(!!b.samples[`secret:${G1}`], !!on);
-    }
-  } finally {
-    SOUND.secretSfx = keep;
-  }
+  // 녹음 받기: 두 파일 (fetch 대신 decodeSample 을 바꿔 낌)
+  const b = Object.create(Sound.prototype);
+  const asked = [];
+  Object.assign(b, { samples: {}, decodeSample: async (f) => (asked.push(f), { name: f }) });
+  await b.loadSamples();
+  assert.ok(asked.includes(`${G1}`) && asked.includes(`${G2}`));
+  assert.ok(b.samples[`secret:${G1}`]);
 });
 
 test('g1 · g2 크기 맞춤 (사장님 10/25 18:4x \'g1과 g2 소리 크기 맞춰\'): 받은 MP3 바이트 그대로 · 녹음 한 겹 음량만 · 맞춘 뒤 순간 크기 차 0.1 dB 안 · 키운 최고도 리미터(−6 dB) 아래', () => {

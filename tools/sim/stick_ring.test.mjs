@@ -22,7 +22,7 @@ function rig({ hidden = false } = {}) {
   const cap = new Set();
   const pad = { addEventListener(t, f) { (PL[t] ??= []).push(f); }, getBoundingClientRect: () => (hidden ? { left: 0, top: 0, width: 0, height: 0 } : PAD), setPointerCapture: (id) => cap.add(id), releasePointerCapture: (id) => cap.delete(id), hasPointerCapture: (id) => cap.has(id) };
   const knob = { style: { transform: '' } };
-  const input = withBrowser(() => new Input(canvas, new URLSearchParams('mobileVerticalGain=1')));
+  const input = withBrowser(() => new Input(canvas, { verticalGain: 1 }));
   withBrowser(() => attachStick(input, pad, knob));
   input.enabled = true;
   let ms = 1000;

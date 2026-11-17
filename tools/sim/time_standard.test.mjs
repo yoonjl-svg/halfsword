@@ -4,28 +4,22 @@
 //  ② 걷기 실제 2.0 m/s · 고노센 달려듦 실제 1.2 m/s · 비기 창 실제 0.6 s
 //  ③ 비기 규칙 시간 열쇠(SECRET 안 이름 끝이 Time · Window · Hold · Grace · Stiff · Rest · Press · Dwell · Full · Reset · Gap · Cool · Delay · ArmSlow · BeatMin)는
 //     config.js 에 realS( … ) 로 적혀 있어야 한다 — 다른 가지를 합칠 때 맨 수(게임 초)로 들어오면 여기서 걸린다. 몸 · 칼 동작 시간 · 이미 실제 시간인 열쇠는 KEEP 에 까닭과 함께
-//  ④ 옛 판 TIME_STD=0 = 적힌 수가 그대로 게임 값
 //  node --test tools/sim/time_standard.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import * as CONFIG from '../../src/config.js';
 
 const { TIME, realS, realV, realRate, GAIT, SECRET } = CONFIG;
 const near = (a, b, e = 1e-9) => assert.ok(Math.abs(a - b) <= e, `${a} ≈ ${b}`);
-const OLD = TIME.on === 0; // 시험 묶음을 TIME_STD=0 으로 돌린 때
 
-test('장치: 켬 · 템포 1.1 · realS × 1.1 · realV ÷ 1.1 · realRate ÷ 1.1', () => {
-  if (OLD) return;
-  assert.equal(TIME.on, 1);
+test('장치: 템포 1.1 · realS × 1.1 · realV ÷ 1.1 · realRate ÷ 1.1', () => {
   near(TIME.tempo, 1.1); near(TIME.std, TIME.tempo); near(TIME.k, 1.1);
   near(realS(0.6), 0.66); near(realV(1.1), 1); near(realRate(11), 10);
 });
 
 test('사장님 10/25 22:3x: 걷기 실제 2.0 m/s · 고노센 달려듦 실제 1.2 m/s · 비기 창 실제 0.6 s', () => {
-  if (OLD) return;
   near(GAIT.moveSpeed * TIME.k, 2.0);
   near(SECRET.foeChargeSpeed * TIME.k, 1.2);
   near(SECRET.playerWindow / TIME.k, 0.6);
@@ -63,11 +57,4 @@ test('비기 규칙 시간 열쇠는 config.js 에 realS( … ) 로 (맨 수 = �
     }
   }
   assert.deepEqual(bad, [], `실제 초로 적을 열쇠가 맨 수: ${bad.join(' · ')} — realS(초)로 감싸거나 KEEP 에 까닭과 함께`);
-});
-
-test('옛 판 TIME_STD=0: 적힌 수가 그대로 게임 값 (걷기 1.8 · 달려듦 1.2 · 창 0.6 · 일본 굳음 0.6 — 11/14 비기 경직 0.6 통일 · 전 1.2)', () => {
-  const code = "import('./src/config.js').then((c) => console.log(JSON.stringify([c.TIME.k, c.GAIT.moveSpeed, c.SECRET.foeChargeSpeed, c.SECRET.playerWindow, c.SECRET.stiff.japanese, c.STAMINA.recoverPerSecond])))";
-  const cwd = fileURLToPath(new URL('../../', import.meta.url));
-  const out = JSON.parse(execFileSync(process.execPath, ['-e', code], { cwd, env: { ...process.env, TIME_STD: '0' } }).toString());
-  assert.deepEqual(out, [1, 1.8, 1.2, 0.6, 0.6, 15]);
 });
