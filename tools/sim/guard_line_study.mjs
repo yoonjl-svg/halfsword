@@ -154,12 +154,24 @@ export function measured(runs) {
     // H(줄 | 손 자세) · 맞히기 (같은 표 — 설계 §6-3 '자세 앎 q = 1' 과 같은 셈)
     const lineAll = cnt(rec, (a) => a.ro), techAll = cnt(rec, (a) => a.tech);
     const byG = {}; for (const a of rec) (byG[a.gn] ??= []).push(a);
-    let Hc = 0, accL = 0, accT = 0;
+    let Hc = 0, HcMM = 0, accL = 0, accT = 0;
+    const mm = (c) => { const v = Object.values(c), N = v.reduce((x, y) => x + y, 0); return N ? entropy(v) + (v.filter((x) => x > 0).length - 1) / (2 * N * Math.LN2) : 0; }; // Miller–Madow (적은 표본 치우침 고침)
     for (const xs of Object.values(byG)) {
       const cl = cnt(xs, (a) => a.ro), ct = cnt(xs, (a) => a.tech);
       Hc += (xs.length / rec.length) * entropy(Object.values(cl));
+      HcMM += (xs.length / rec.length) * mm(cl);
       accL += top(cl); accT += top(ct);
     }
+    // 반 나눠 시험 (홀수 씨앗으로 표 → 짝수 씨앗을 맞힘 — 같은 표 맞히기의 치우침 없이)
+    const half = (key) => {
+      const tr = rec.filter((a) => a.seed % 2), te = rec.filter((a) => a.seed % 2 === 0);
+      const tg = {}; for (const a of tr) { const c = (tg[a.gn] ??= {}); c[key(a)] = (c[key(a)] ?? 0) + 1; }
+      const all = cnt(tr, key); const m0 = Object.entries(all).sort((x, y) => y[1] - x[1])[0]?.[0];
+      let ok = 0, ok0 = 0;
+      for (const a of te) { const c = tg[a.gn]; const g = c ? Object.entries(c).sort((x, y) => y[1] - x[1])[0][0] : m0; if (g === key(a)) ok++; if (m0 === key(a)) ok0++; }
+      return te.length ? [ok0 / te.length, ok / te.length] : [NaN, NaN];
+    };
+    const [hl0, hl] = half((a) => a.ro), [ht0, ht] = half((a) => a.tech);
     // 약속 지킨 몫: 손 자세에서 그 기술이 기본 · 보조 · 드묾 · 묶지 않음
     const adh = { P: 0, S: 0, U: 0, free: 0 };
     for (const a of rec) adh[lineClass(sc, a.gn, a.tech) ?? 'free']++;
@@ -175,7 +187,7 @@ export function measured(runs) {
     const gs = runs.filter((r) => r.school === sc).flatMap((r) => r.gl ?? []).filter(Boolean);
     const gl = gs.reduce((o, g) => { for (const k in g) o[k] = (o[k] ?? 0) + g[k]; return o; }, {});
     out.push({ school: sc, n, rec: rec.length / (n || 1), beat: set.filter((a) => a.beat).length / (n || 1), feint: set.filter((a) => a.feint).length / (n || 1),
-      H0: entropy(Object.values(lineAll)), Hc, accL0: top(lineAll) / (rec.length || 1), accL: accL / (rec.length || 1), accT0: top(techAll) / (rec.length || 1), accT: accT / (rec.length || 1),
+      H0: entropy(Object.values(lineAll)), Hc, H0MM: mm(lineAll), HcMM, hl0, hl, ht0, ht, accL0: top(lineAll) / (rec.length || 1), accL: accL / (rec.length || 1), accT0: top(techAll) / (rec.length || 1), accT: accT / (rec.length || 1),
       adhP: adh.P / (bound || 1), adhS: adh.S / (bound || 1), adhU: adh.U / (bound || 1), free: adh.free / (rec.length || 1),
       cov: cov.length / (n || 1), covHit: cov.length ? covHit / cov.length : NaN, covAny: covAny.length / (n || 1), covAnyHit: covAny.length ? covAnyHit / covAny.length : NaN, flav, top4, gl });
   }
@@ -186,9 +198,9 @@ export function measuredTable(runs) {
   const R = measured(runs);
   const L = [];
   L.push(`판 ${runs.length} · 새 공격 ${R.reduce((s, r) => s + r.n, 0)}`);
-  L.push('\n| 유파 | 새 공격 | 손 자세 인정 | 박자 뒤 | H(줄) → H(줄\\|손 자세) bit | 줄 맞히기 자세 모름 → 앎 | 기술 맞히기 모름 → 앎 | 약속 P · S · U (묶인 기술) · 묶지 않음 | 속임 |');
+  L.push('\n| 유파 | 새 공격 | 손 자세 인정 | 박자 뒤 | H(줄) → H(줄\\|손 자세) bit (같은 표 · 치우침 고침) | 줄 맞히기 모름 → 앎 (같은 표 · 반 나눠) | 기술 맞히기 모름 → 앎 (같은 표 · 반 나눠) | 약속 P · S · U (묶인 기술) · 묶지 않음 | 속임 |');
   L.push('|---|---|---|---|---|---|---|---|---|');
-  for (const r of R) L.push(`| ${KO[r.school]} | ${r.n} | ${pc(r.rec)} | ${pc(r.beat)} | ${r.H0.toFixed(2)} → ${r.Hc.toFixed(2)} | ${pc(r.accL0)} → ${pc(r.accL)} | ${pc(r.accT0)} → ${pc(r.accT)} | ${pc(r.adhP)} · ${pc(r.adhS)} · ${pc(r.adhU)} · ${pc(r.free)} | ${pc(r.feint)} |`);
+  for (const r of R) L.push(`| ${KO[r.school]} | ${r.n} | ${pc(r.rec)} | ${pc(r.beat)} | ${r.H0.toFixed(2)} → ${r.Hc.toFixed(2)} · ${r.H0MM.toFixed(2)} → ${r.HcMM.toFixed(2)} | ${pc(r.accL0)} → ${pc(r.accL)} · ${pc(r.hl0)} → ${pc(r.hl)} | ${pc(r.accT0)} → ${pc(r.accT)} · ${pc(r.ht0)} → ${pc(r.ht)} | ${pc(r.adhP)} · ${pc(r.adhS)} · ${pc(r.adhU)} · ${pc(r.free)} | ${pc(r.feint)} |`);
   L.push('\n| 유파 | 읽은 줄 덮은 채 휘두름 시작 (몫 · 적중) | 결정 ~ 휘두름 사이 덮음 (몫 · 적중) | 읽기 굴림 · 나옴 · 위협 봄 · 위협 줄 = 덮은 줄 · 안 옴 | 박자 · 건너뜀 · 낸 공격 | 유파 맛 기술 몫 | 많이 쓴 기술 |');
   L.push('|---|---|---|---|---|---|---|');
   for (const r of R) {
