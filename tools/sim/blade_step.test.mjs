@@ -63,7 +63,8 @@ test('찌르기 공격 중이면 걸음 몫 없음 (닿음 꼴이 아니라 공�
 
 test('판에서: 베기 판정 = ½ × (자유 칼 + 팔 + 걸음 몫) × 빠르기² × 눈금 × w(t) · 찌르기 · 둔타엔 걸음 몫 없음', () => {
   const cut = [], other = [];
-  for (const seed of [1, 2]) {
+  // 씨앗 1 · 2 → 1 ~ 3 (11/17 ③ 자세 → 칼길 — 판 흐름이 갈라져 씨앗 1 · 2 판이 20.2 · 13.5 s 에 끝나고 베기 상처 여섯이 모두 칼날 끝 ⅓ 에 닿음 · 씨앗 3 을 더하면 베기 13 · 무게 < 1 하나 — 뜻 그대로)
+  for (const seed of [1, 2, 3]) {
     const G = newRound({ seed, walls: true, weapon: 'longsword', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 4 }, persona2: { proficiency: 4 } });
     G.onWound = (att, vic, r) => (r.type === 'cut' ? cut : other).push({ ...r, sh: att.secretHit ?? 1 });
     try {
