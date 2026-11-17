@@ -230,10 +230,8 @@ export function linkStart(f, to, { T = IB_LINK.time, tech = null, sigma = 0, bri
   const I = { yaw: f.yaw.clone(), mord: null, kind: 'wind', moves: null, mi: 0, off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), body: BODY0, wristMargin: UA.rdWristMargin ?? 0 };
   f.ibLink = { t: 0, T: speed.T, speed, to: [to[0], to[1]], tech, plan, sigma: sg, I, H: A.H.clone(), D: A.D.clone(), wounds0: f.wounds?.length ?? 0, touch: 0, ropes: null, x: 0 };
   f.ibTradeOpen = { t0: f.ibFlowT ?? 0 };
-  if (UA.rdSteady > 0) {
-    f.ibLink.ropes = { grip: !!f.gripCone, shoulder: !!f.shoulderRopes };
-    armRopes(f, false);
-  }
+  f.ibLink.ropes = { grip: !!f.gripCone, shoulder: !!f.shoulderRopes };
+  armRopes(f, false);
   return f.ibLink;
 }
 
@@ -260,7 +258,7 @@ export function linkStep(f, dt) {
   const { H, D } = lerpPose(P.pts[i], P.pts[i + 1], u, _H, _D);
   // 날: 풍차 감기 windEdge 와 같은 꼴(가로 각이 느는 쪽 · rdEdge −1 이면 반대 날) — 도는 쪽과 상관없이 같은 면 (몬탄테는 양날 · 반대 면은 오른쪽 앞에서 손목이 사람 범위를 20° 넘음 — 기록 §2)
   const psi = psiOf(f, D, H);
-  _e.set(-Math.sin(psi), 0, sideOf(f) * Math.cos(psi)).multiplyScalar(UA.rdEdge < 0 ? -1 : 1);
+  _e.set(-Math.sin(psi), 0, sideOf(f) * Math.cos(psi)).multiplyScalar(-1); // 반대 날이 앞장 (전 rdEdge −1)
   K.H.copy(H);
   K.D.copy(D);
   K.I.yaw.copy(f.yaw); // 몸 틀 = 지금 몸 방향 (걷고 돌아도 머리 위 그대로)

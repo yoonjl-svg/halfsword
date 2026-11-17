@@ -264,10 +264,7 @@ export function altibAfter(f) {
  *  AI 옛 판(rdAiOld 1)이면 AI 는 'direct'
  */
 export function rdReleaseOpt(f, W, base) {
-  const rel = f?.aiControlled && UA.rdAiOld > 0 ? 'direct' : UA.rdRelease;
-  const o = { ...base, arc: UA.rdArc, loop: windLoopOf(W?.M) };
-  if (rel === 'tajo' && UA.rdTajo) return { ...o, tajo: UA.rdTajo, bodyFrom: W?.M?.body ?? null };
-  return { ...o, diag: rel === 'chamber' ? null : UA.rdDiag };
+  return { ...base, loop: windLoopOf(), tajo: UA.rdTajo, bodyFrom: W?.M?.body ?? null };
 }
 const _v = new THREE.Vector3();
 const _a = new THREE.Vector3();
@@ -792,8 +789,8 @@ export class PlayerUniqueAssist {
       if (!P.down) return this.altibFire('release');
       const S = f.stamina;
       S.spent.wind ??= 0;
-      S.spend('wind', (UA.rdDrainCut ? realRate(STAMINA.cutCost) * S.weight : UA.rdDrain) * dt); // 회복 멈춤
-      H.base += (UA.rdDrainCut ? realRate(STAMINA.cutCost) : UA.rdDrain) * dt; // 11/11 알티바슈 포르트 무게 보정 셈(SECRET.altib.weightFix — 무게 1 값으로 뺀 기력)
+      S.spend('wind', realRate(STAMINA.cutCost) * S.weight * dt); // 회복 멈춤 (11/01 메는 동안 초당 베기 한 번 값)
+      H.base += realRate(STAMINA.cutCost) * dt; // 11/11 알티바슈 포르트 무게 보정 셈(SECRET.altib.weightFix — 무게 1 값으로 뺀 기력)
       if (!S.infinite && S.value <= 0) return this.altibFire('empty');
       const hit = windStep(f, dt);
       if (hit) this.stats.windTouch = (this.stats.windTouch ?? 0) + 1; // 감는 칼이 무엇에 닿은 스텝 (재기만 — 닿아도 그대로 감음 · 세게 맞으면 windStop 의 jolt · 상처면 hit)
@@ -818,7 +815,7 @@ export class PlayerUniqueAssist {
     H.t += dt;
     if (H.t < UA.rdHoldTime) return;
     // 11/11 알티바슈 포르트 (사장님 '알티바슈 포르트를 고노센 급의 비기로'): 알티바슈 포르트 무장 창(press.armed)이 열린 동안만 메기 = 비기 · 무장 없으면 이 누름은 아무 일도 안 함(특수 공격 아님 · 식힘 없음)
-    if (!UA.rdHold || !P.armed || this.busy() || iaiBusy(f) || f.stamina.exhausted || !f.sword) {
+    if (!P.armed || this.busy() || iaiBusy(f) || f.stamina.exhausted || !f.sword) {
       H.st = 'spent';
       this.stats.holdRefused = (this.stats.holdRefused ?? 0) + 1;
       return;
@@ -866,7 +863,7 @@ export class PlayerUniqueAssist {
     if (f.stamina.exhausted) return 'exhausted';
     if (f.jolt > 0.5) return 'jolt'; // 칼을 세게 맞음 (맞아 흔들림 = 끊김 — 막기 연환 secret.js 와 같은 문턱)
     if (sk.tap || sk.pom || f.iai || f.iaiReq || !f.foe) return 'busy';
-    if (!UA.rdHold || !UA.on) return 'off';
+    if (!UA.on) return 'off';
     return null;
   }
 
@@ -901,7 +898,7 @@ export class PlayerUniqueAssist {
     H.fade = 0.12;
     H.secret = false;
     const A = SECRET.altib;
-    const ok = UA.enhance > 0 && requestArtRedondo(f, rdReleaseOpt(f, W, { share: shot.share, maxT: UA.rdSnapTime, tech: e.U.name, hitMul: shot.hitMul, hold: SECRET.stiff.iberian ?? 0, secret: 'altib' }));
+    const ok = UA.enhance > 0 && requestArtRedondo(f, rdReleaseOpt(f, W, { share: shot.share, tech: e.U.name, hitMul: shot.hitMul, hold: SECRET.stiff.iberian ?? 0, secret: 'altib' }));
     if (!ok) {
       this.stats.windCancel ??= {};
       this.stats.windCancel.noStrike = (this.stats.windCancel.noStrike ?? 0) + 1;

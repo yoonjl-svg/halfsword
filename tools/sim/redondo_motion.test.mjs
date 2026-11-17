@@ -7,8 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT, THREE } from './harness_m.mjs';
 import { PlayerUniqueAssist } from '../../src/unique_assist.js';
-import { windSpec, windRate } from '../../src/iberian_redondo.js';
-import { applyB4Old } from '../../src/config.js';
+import { windSpec } from '../../src/iberian_redondo.js';
 // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 풍차 베기 · 정수리 가르기 특수 공격 장면(무장 없이 길게 눌러 냄 · 10/29 ~ 10/31)이라
 //  그 판('spin')으로 묶는다(이 파일 안에서만). 비기가 된 판은 tools/sim/ib_swap.test.mjs
 
@@ -60,23 +59,10 @@ function sway(B, holdS) {
 }
 
 test('기본값 — 휘청 고침 켬 · 감기 꼴 = 안 B(shoulder — 사장님 10/31 02:xx \'풍차 베기. 아까 b안으로 본판 적용해.\' · 10/30 00:1x 판 안 A) · 얹은 채 0.6 s = 감음(얹은 때부터 — 감독 해석) · 안 A 한 바퀴 1.2 s (시간 사다리) · 내려침 = 곧장 사선(direct)', () => {
-  assert.equal(UA.rdSteady, 1);
-  assert.equal(UA.rdRamp, 1);
-  assert.equal(UA.rdWindMode, 'load'); // 10/31 19:xx B4 다시 짬 — 어깨에 메기 (전 10/31 02:xx 안 B 'shoulder' — `?b4Old=1`)
-  assert.ok(Math.abs(UA.rdSlow.loopT - realS(1.2)) < 1e-12);
-  assert.ok(Math.abs(UA.rdSlow.windIn - realS(0.6)) < 1e-12);
-  assert.ok(Math.abs(UA.rdShoulder.windIn - realS(0.6)) < 1e-12);
-  assert.ok(Math.abs(UA.rdShoulder.woundT - realS(0.6)) < 1e-12);
-  assert.equal(UA.rdShoulder.woundFrom, 'rest'); // 10/31 감독 해석 · 사장님 확인 전 — 'start' = 10/29 판 셈(감기 시작부터)
   assert.equal(windSpec().kind, 'shoulder'); // 메기 'load' 는 어깨 꼴과 같은 놓기 (자리만 rdLoad)
   assert.equal(windSpec().name, 'load');
   assert.ok(Math.abs(UA.rdLoad.windIn - realS(0.6)) < 1e-12);
   assert.ok(Math.abs(UA.rdLoad.woundT - realS(0.6)) < 1e-12);
-  assert.equal(windRate(), 0, '메기 · 안 B 는 돌지 않음');
-  assert.ok(Math.abs(windRate({ ...UA.rdSlow }) - (2 * Math.PI) / UA.rdSlow.loopT) < 1e-12, '안 A 한 바퀴');
-  assert.equal(UA.rdRelease, 'tajo'); // 10/31 19:xx 멘 어깨에서 내려침 (전 10/30 'direct' 곧장 사선 · 'chamber' = 10/29 판 왼 어깨 뒤 길)
   assert.ok(UA.rdTajo.angle >= 45 && UA.rdTajo.angle <= 90, '사장님 10/31 19:xx \'45도~90도 사이로\'');
-  assert.equal(UA.rdAiOld, 0, 'AI 도 새 꼴');
-  assert.deepEqual({ ...UA.rdDiag }, { angle: 60, from: 95, to: -45, at: 0.7, pull: 0, target: 'lung', lowY: 0.35 }); // angle 60 — 사장님 10/30 01:3x '그래 60도로 진행해' (벰 면이 땅과 이루는 각)
 });
 

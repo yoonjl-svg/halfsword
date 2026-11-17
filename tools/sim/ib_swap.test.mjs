@@ -33,6 +33,5 @@ test('기본값 — 사장님 11/11: 이베리아 비기 = 알티바슈 포르�
   assert.equal(SECRET.mordPress, realS(1.5)); // '1.5초로 해.'
   assert.equal(UA.specialShare.cingir, 0.3); // '빠르기를 고노센의 30%로'
   assert.equal(UA.specialShare.duplieren, 0.3); // '겹치기 30으로.'
-  assert.equal(UA.rdDrainCut, 1); // 메는 동안 초당 베기 한 번 값 그대로 (사장님 11/01 — 오래 멜수록 약해짐)
 });
 

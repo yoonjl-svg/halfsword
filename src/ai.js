@@ -1795,7 +1795,7 @@ export class AI {
     this.fastChamber = !!opt.fastChamber || this.quick;
     this.timer = this.phase === 'approach' && !this.quick ? realS(L.windup * 0.15) : 0; // 준비 자세 멈칫 = 실제 초
     // 풍차 베기 AI 몫 (사장님 10/31 08:xx '누가봐도 레돈두 준비처럼' — UNIQUE_ASSIST.rdAiWind): 머리 위 돌려 베기는 패드 길 대신 사람과 같은 감기로 (아래 rdWindTick)
-    if (UA.rdAiWind && this.tech?.name === 'redondo' && !this.feint && !this.secretRun && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin(); // 부러진 칼은 옛 길 (사람도 부러지면 감기를 그만둠 — windStop 'armed')
+    if (this.tech?.name === 'redondo' && !this.feint && !this.secretRun && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin(); // 부러진 칼은 옛 길 (사람도 부러지면 감기를 그만둠 — windStop 'armed')
     // 이어 돌리기 (11/14 IB_LINK.ai — 기본 켬 · 사장님 11/14 확인 'ai에게도 똑같이' · 사람 unique_assist.js linkTry 와 같은 뜻 · 원 동안 맞바꿈도 사람과 같음 — fighter.js ibTradeTry): 이베리아 AI 가 앞 공격이 끝나고 이어짐 창(afterWindow) 안에 큰 칼(시작 자리가 가슴 높이 이상인 베기)을
     //  새로 시작하는데 손이 그 시작 자리에서 떨어져 있으면 — 준비 자세로 손을 옮기는 대신 칼을 머리 위로 돌려 시작 자리로(iberian_link.js) · 다 돌면 곧장 친다(linkTick)
     else if (this.kitLink && this.art.tradition === 'iberian' && this.phase === 'windup' && !opt.secret && !opt.passive && !this.feint && !this.secretRun && this.tech?.kind === 'cut' && this.tech.from[1] > 0 && cd > UA.padRadius && this.sense.t - this.lastAtkT <= UA.afterWindow && this.me.state === 'stand' && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.ibLink && !iaiBusy(this.me) && linkStart(this.me, this.tech.from, { tech: this.tech.name, bridge: this.linkBridge(L) })) {
@@ -2131,8 +2131,8 @@ export class AI {
     }
     const S = me.stamina;
     S.spent.wind ??= 0;
-    S.spend('wind', (UA.rdDrainCut ? realRate(STAMINA.cutCost) * S.weight : UA.rdDrain) * dt); // 11/01 rdDrainCut — 사람과 같게
-    this.rd.base += (UA.rdDrainCut ? realRate(STAMINA.cutCost) : UA.rdDrain) * dt; // 11/11 알티바슈 포르트 무게 보정 셈 (사람 holdTick 과 같음)
+    S.spend('wind', realRate(STAMINA.cutCost) * S.weight * dt); // 11/01 메는 동안 초당 베기 한 번 값 — 사람과 같게
+    this.rd.base += realRate(STAMINA.cutCost) * dt; // 11/11 알티바슈 포르트 무게 보정 셈 (사람 holdTick 과 같음)
     if (!S.infinite && S.value <= 0) return this.altibFire('empty');
     const t = this.tech;
     this.need = this.M.contact + (t?.reach ?? 0) * this.reachScale + 0.05;
@@ -2161,7 +2161,7 @@ export class AI {
     const R = windEnd(me, true);
     this.rd = { ...(this.rd ?? {}), ropes: R ?? this.rd?.ropes ?? null, fade: 0.12, secret: false };
     const A = SECRET.altib;
-    const ok = UA.enhance > 0 && requestArtRedondo(me, rdReleaseOpt(me, W, { share: shot.share, maxT: UA.rdSnapTime, tech: 'redondo', hitMul: shot.hitMul, hold: SECRET.stiff.iberian ?? 0, secret: 'altib' }));
+    const ok = UA.enhance > 0 && requestArtRedondo(me, rdReleaseOpt(me, W, { share: shot.share, tech: 'redondo', hitMul: shot.hitMul, hold: SECRET.stiff.iberian ?? 0, secret: 'altib' }));
     if (!ok) {
       const C = (this.stats.rdWind ??= { begin: 0, fire: 0, cancel: {} }).cancel;
       C.noStrike = (C.noStrike ?? 0) + 1;
@@ -3294,7 +3294,7 @@ export class AI {
     if (me.stamina.exhausted || (this.staminaRest) || secretSpent(me)) return false;
     if (!me.stamina.secretReady) return this.secretPoor();
     const t = this.school.techByName.redondo;
-    if (!t || !UA.rdAiWind || !this.startAttack(t, 'secret', { secret: true })) {
+    if (!t || !this.startAttack(t, 'secret', { secret: true })) {
       this.stats.secretSkipped = (this.stats.secretSkipped ?? 0) + 1;
       return false;
     }

@@ -3992,7 +3992,7 @@ export class Fighter {
    *  켠 동안: 두 팔 관절 목표 빠르기 0 · 손목 겨눔 · 감쇠 · 날 비틀기 힘 없음(칼 무게 버팀만) · 빈팔 목표 = 놓인 칼자루 끝 (자리 · 빈손 쥠 · 몸 · 다리 그대로)
    */
   armsPlaced() {
-    return (!!this.rdWind || (!!this.ibLink && !this.ibLink.bridge)) && UNIQUE_ASSIST.rdSteady > 0; // 11/14 이어 돌리기 원 판 (iberian_link.js — 감기와 같은 놓기) · 11/15 넘기기 판은 서보가 몲(놓지 않음)
+    return !!this.rdWind || (!!this.ibLink && !this.ibLink.bridge); // 11/14 이어 돌리기 원 판 (iberian_link.js — 감기와 같은 놓기) · 11/15 넘기기 판은 서보가 몲(놓지 않음)
   }
 
   secretReaching() {

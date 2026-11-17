@@ -1,14 +1,14 @@
 // ─────────────────────────────────────────────────────────────
 //  redondo_rest_view.mjs — 풍차 베기 안 B 어깨에 얹은 자세가 게임 카메라에서 보이나 (사장님 10/31 08:xx '풍차 b는 칼을 어깨 위로 올리거나 들지 않던데? … 누가봐도 레돈두 준비처럼 보여야해.' ·
 //   docs/strike/redondo_hold_2026-10-29.md §8-12). 재기만 — 게임 값은 --set · --cand 로 바꿔 견줌.
-//  사람 몸(0 번 · 츠바이핸더 등)이 서서 손가락을 댄 채 길게 누름 → 감기(rdWindMode 'shoulder') → 얹은 채 rest 초 동안 스텝마다:
+//  사람 몸(0 번 · 츠바이핸더 등)이 서서 손가락을 댄 채 길게 누름 → 감기(어깨에 메기 rdLoad) → 얹은 채 rest 초 동안 스텝마다:
 //   보임 — 게임 카메라(main.js updateCamera 와 같은 자리: 무게중심에서 상대 쪽 뒤로 CAMERA.back · 오른쪽 CAMERA.shoulder · 높이 CAMERA.height · 앞 lookAhead 를 1.1 m 높이로 봄 ·
 //    fov 55 · 844×390)로 칼(밑동 → 칼끝)을 비춘 화면 길이(px)와 그중 내 머리(공 0.12 m) · 몸통(가슴 ~ 골반 줄 0.17 m) 뒤로 가려지지 않은 길이(px) · 칼끝이 머리 위로 솟은 px ·
 //    상대 쪽(앞)에서 본 같은 셈(상대 눈 — 상대 가슴 높이에서 나를 봄)
 //   자세 — 손목 교정 각(f.wristFixDeg — 최대 · 스텝 사이 뜀) · 놓인 칼 방향 ↔ 목표 방향 어긋남 ° · 칼날 ↔ 내 몸통 · 머리 가장 가까이(m) · 손 높이(가슴 기준) · 팔꿈치 높이(어깨 기준)
 //   흔들림 — 가슴 기울기 바뀜 ° · 무게중심 발 둘레 밖(cm) · 넘어짐
 //  사용법: node tools/sim/redondo_rest_view.mjs [--ws=zweihander] [--cand='[{"hand":[0.15,0.16,0.12],"blade":[12,155]}, …]'] [--rest=0.8] [--json=.tmp/파일]
-//   cand 칸: hand · blade · via({hand, blade}) · body({chestYaw, pelvisYaw, pitch, drop} — 덧씌우기 몸 °·m) — 빠진 칸은 지금 rdShoulder
+//   cand 칸: hand · blade · via({hand, blade}) · body({chestYaw, pelvisYaw, pitch, drop} — 덧씌우기 몸 °·m) — 빠진 칸은 지금 rdLoad
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
 import { newRound, DT, CONFIG, THREE } from './harness_m.mjs';
@@ -100,10 +100,8 @@ export function bladeView(P, eye, look, fov) {
 
 /** 한 판: 손가락을 댄 채 길게 누름 → 얹음 → rest 초 재기 */
 export function restRun({ w = 'zweihander', cand = {}, rest = 0.8, seed = 3 } = {}) {
-  const keep = UA.rdShoulder;
-  const keepMode = UA.rdWindMode;
-  UA.rdShoulder = { ...keep, ...cand, via: cand.via ?? keep.via };
-  UA.rdWindMode = 'shoulder';
+  const keep = UA.rdLoad;
+  UA.rdLoad = { ...keep, ...cand, via: cand.via ?? keep.via };
   const G = newRound({ walls: true, seed, weapon: w, weapon2: 'longsword', gap: 3.0 });
   const P = G.player;
   const D = G.enemy;
@@ -120,7 +118,7 @@ export function restRun({ w = 'zweihander', cand = {}, rest = 0.8, seed = 3 } = 
     for (let i = 0; i < Math.round(3.0 / DT); i++) G.step();
     out.tilt0 = Math.acos(Math.min(1, up(P.bodies.chest.rotation()).y)) * R2D;
     down = true;
-    const M = UA.rdShoulder;
+    const M = UA.rdLoad;
     const tEnd = CONFIG.realS(0.6) + M.windIn + CONFIG.realS(rest) + 0.05;
     let prevFix = null;
     for (let i = 0; i < Math.round(tEnd / DT); i++) {
@@ -170,8 +168,7 @@ export function restRun({ w = 'zweihander', cand = {}, rest = 0.8, seed = 3 } = 
     }
   } finally {
     G.world.free();
-    UA.rdShoulder = keep;
-    UA.rdWindMode = keepMode;
+    UA.rdLoad = keep;
   }
   const avg = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
   return { w, cand, n: out.n, len: r2(avg(out.len)), vis: r2(avg(out.vis)), above: r2(avg(out.above)), foeVis: r2(avg(out.foeVis)), fixMax: r2(Math.max(0, ...out.fix)), fixJump: r2(out.fixJump), devMax: r2(Math.max(0, ...out.dev)), selfBlade: r2(out.selfBlade), selfBladeWind: r2(out.selfBladeWind), chestYaw: r2(avg(out.cy ?? [])), hand: r2(avg(out.hand)), elbow: r2(avg(out.elbow)), dTilt: r2(out.dTilt), off: r2(out.off * 100), fell: out.fell };

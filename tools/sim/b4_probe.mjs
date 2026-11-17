@@ -10,13 +10,12 @@
 //   벰 면이 땅과 이루는 각(°) = 칼끝 점들의 가장 맞는 면(주성분) · 면에서 벗어난 거리 RMS · 최대(m — 곧은가) · 처음 → 끝 칼끝(높이 · 칼 든 쪽 + — 오른 위 → 왼 아래면 y 줄고 z 줄음) ·
 //   칼날 ↔ 내 몸통 · 팔 ↔ 머리 틈 · 뗀 뒤 흔들림 · 넘어짐 · 기력(감기 + 칼 하나).
 //  옆걸음 판(--side=1 · -1): 메는 동안 다가가다 뗌 sideLead 실제 초 전부터 스틱을 옆으로(이베리아 옆 박차기 B2 — 첫 걸음 박참) · 상대는 AI(막고 치는 — --ai=1)면 맞음 · 막힘을 셈.
-//  사용법: node tools/sim/b4_probe.mjs [--ws=zweihander] [--hold=1.6] [--after=0.8] [--old=1] [--set=UNIQUE_ASSIST.rdTajo={"angle":60,…};…] [--seeds=1] [--gap=] [--side=0] [--ai=0] [--json=.tmp/파일] [--trace=1]
+//  사용법: node tools/sim/b4_probe.mjs [--ws=zweihander] [--hold=1.6] [--after=0.8] [--set=UNIQUE_ASSIST.rdTajo={"angle":60,…};…] [--seeds=1] [--gap=] [--side=0] [--ai=0] [--json=.tmp/파일] [--trace=1]
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
 import { newRound, DT, CONFIG, THREE } from './harness_m.mjs';
 import { PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { MEASURED } from '../../src/weapon_measured.js';
-import { applyB4Old } from '../../src/config.js';
 import { sample } from './duplieren_check.mjs';
 import { gameCamera, bladeView } from './redondo_rest_view.mjs';
 import { isMain } from './is_main.mjs';
@@ -274,7 +273,6 @@ export function b4Sum(o) {
 
 if (isMain(import.meta.url)) {
   const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, ...v] = a.replace(/^--/, '').split('='); return [k, v.join('=')]; }));
-  if (+args.old) applyB4Old(true);
   for (const kv of String(args.set ?? '').split(';').filter(Boolean)) {
     const i = kv.indexOf('=');
     const ks = kv.slice(0, i).split('.');

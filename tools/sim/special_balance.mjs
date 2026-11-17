@@ -30,8 +30,6 @@ import { MEASURED } from '../../src/weapon_measured.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { classifyStroke } from '../../src/attack_stroke.js';
 import { isMain } from './is_main.mjs';
-import { applyB4Old } from '../../src/config.js';
-if (+(process.env.B4_OLD ?? 0)) applyB4Old(true); // B4 옛 판 견줌 (10/31 19:xx — `?b4Old=1` 과 같음)
 if (process.env.B4_ANGLE) CONFIG.UNIQUE_ASSIST.rdTajo = { ...CONFIG.UNIQUE_ASSIST.rdTajo, angle: +process.env.B4_ANGLE }; // B4 벰 면 각 견줌 (45 ~ 90)
 import { wristSample, outOfRange, OOR_EPS, ROLL_AT } from './wrist_audit.mjs';
 

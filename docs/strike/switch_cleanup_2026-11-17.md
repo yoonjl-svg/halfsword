@@ -231,3 +231,10 @@ corr_s0 의 `--limits=off,on` 은 사람 관절 한도 스위치를 지운 뒤�
 - 지운 브라우저 도구: `iberian_spin_shots` · `iberian_stick_shots` · `singir_circle_shots` (지운 대본 · 입력만 찍음)
 - 시험 수: `test(` 798 → 766 · 전체 788 돌림 중 실패 6 → 고침(남은 `R` 하나 · 지운 AI 정수리 가르기 특수 공격 시험 하나 지움 · main.js 줄 단언) → 실패 0
 - 교훈(새로): 지운 칸만 지우고 그 칸을 읽던 변수 이름(`R` · `rg`)이 함수 아래쪽에 남으면 관문은 지나도(죽음의 일격 · 비기 소리는 관문 판에 없음) 시험이 `R is not defined` 로 잡는다 — 지운 지역 변수는 함수 전체에서 이름을 찾아 볼 것. 'spin' 판처럼 비기 판을 지운 뒤에는 그 판만 부르던 모듈(대본 · 몸짓 읽기)이 통째로 남아 있지 않은지 부르는 곳부터 거꾸로 찾을 것
+
+### 9-2. UNIQUE_ASSIST — 풍차 베기 · B4 (블록 2 첫 몫 · 5b)
+
+- 지움(기본값을 그 자리에): `rdHold` · `rdDrainCut`(메는 동안 초당 베기 한 번 값 — 옛 `rdDrain` 길 지움) · `rdRamp` · `rdSteady`(휘청 고침 늘 켬 — 감기 · 이어 돌리기 밧줄 뗌 · 놓인 팔 헛힘 끔) · `rdEdge`(이어 돌리기 날 −1 을 그 자리에) · `rdAiWind` · `rdSnapTime`(0 = 상한 없음 — 넘기지 않으면 0 과 같음)
+- 지움(안 고른 꼴 코드째): 감기 꼴 `rdWindMode` 와 그 꼴 셋(10/29 원뿔 고리 'spin' · 안 A `rdSlow` · 안 B `rdShoulder` — 'load' 메기 하나만 · `windRate` · 도는 날 `windEdge` · 고리 셈) · 내려침 꼴 `rdRelease` 와 곧장 사선 `rdDiag`(secret_instant `comboPlanRdDiag`) · 10/29 왼 어깨 뒤 길 `rdArc`(`comboPlanRd` 의 그 길) · AI 옛 판 `rdAiOld` · AI 기력 아낌 `rdAiQuick` · `rdAiThrift`(읽는 곳이 블록 1 에서 없어짐) · 견줌 손잡이 `applyB4Old` · `rdLoad.woundFrom`('start' 판)
+- 남김: `rdHoldTime` · `rdLoop`(내려침 앞 고리 자리 — tajo 길이 읽음) · `rdWristMargin` · `rdLoad` · `rdTajo` · `rdAiMaxT`
+- 시험: 지운 칸 단언만 뺌(redondo_motion · redondo_hold · ib_swap 기본값). 도구: 지움 — `redondo_trace`(8 자 재기 — 옛 길 견줌) · `redondo_trace_plot.py` · `redondo_ai_duel`(AI 특수 공격 판). 고침 — `redondo_rest_view`(후보 자세를 어깨 꼴 대신 메기 `rdLoad` 에) · `b4_probe` · `special_balance`(옛 판 손잡이)
