@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-//  낮은 상대 마무리 진입 (높이 제한) — 스위치 FINISH.entry = 'low' 일 때만 (기본 'down' = 끔, 예전 그대로)
+//  낮은 상대 마무리 진입 (높이 제한) — 늘 (11/17 스위치 걷음 — 전 FINISH.entry 'auto' · 약한 자세 겨눔과 한 묶음)
 //   사장님 10/12 지시로 샛별 저장소 b9d28ca6·080ea451(진입 결함 기록 4b010726) 의 뜻을 우리 finish.js·skill.js·combat.js·ai.js 에 옮겼다.
 //   기록: docs/import/saetbyeol_round2_2026-10-12.md §3 · 확인표 954~956 (사장님 확인 전)
 //
@@ -20,20 +20,6 @@ export const LOW_FINISH = {
   minimumDrop: 0.2, // m: 내 가슴보다 이만큼은 낮아야 한다 (무릎 꿇고 버티는 상대는 아니다)
   approach: SKILL.lungeMove * SKILL.level, // 걸어 들어가는 앞 밀기 (예전 찍기와 같은 값)
 };
-
-/** 스위치 (FINISH.entry) — finish.js 가 이 파일을 부르기 전에 읽어 넘긴다 */
-//  'auto' (10/12 약한 자세 겨눔 묶음): 약한 자세 겨눔(FINISH.vital)이 켜져 있으면 'low' — 무릎 꿇은·높은 몸은 겨눔이, 낮은 몸은 내려찍기가 맡는다
-export const lowFinishOn = (FINISH) => FINISH?.entry === 'low' || (FINISH?.entry === 'auto' && !!FINISH.vital);
-
-/**
- * 고친 판 (FINISH.entry 'downlow', 기본 끔): 큰 쓰러짐(down)은 지금처럼 이름으로 열고(넘어지는 중 탭도 그대로),
- *  가벼운 넘어짐에서 일어나는 중(getup)인 상대는 몸이 낮을 때만(lowFinishPosture) 더 연다. 겉면 닿음·허공 거둠 같은 'low' 의 나머지 규칙은 쓰지 않는다.
- *  (우리 판 측정: 자연 결투에선 큰 쓰러짐이 거의 없고 가벼운 넘어짐(무릎부터 일어남)이 판마다 몇 번 — 그때 탭은 늘 보통 찌르기였다)
- */
-export function downLowTarget(FINISH, att, vic, continuing = false, cached = false) {
-  if (vic?.state === 'down') return true;
-  return FINISH?.entry === 'downlow' && vic?.state === 'getup' && lowFinishPosture(att, vic, continuing, cached);
-}
 
 /**
  * 지금 몸만 보는 판정 (부작용 없음 — 접촉 예측에서 여러 번 불러도 된다).
@@ -58,5 +44,5 @@ export function lowFinishPosture(att, vic = att?.foe, continuing = false, cached
 /** 이 파이터가 같은 상대에게 시작한 찍기를 이어 가는 중인가 */
 export function lowFinishContinuing(f, foe = f.foe) {
   const tp = f.skill?.tap;
-  return !!(tp?.down && !tp.abort && !tp.ended && (tp.foe ?? f.foe) === foe); // tp.foe 는 'low' 때만 적는다
+  return !!(tp?.down && !tp.abort && !tp.ended && (tp.foe ?? f.foe) === foe); // tp.foe = 시작한 상대 (skill.js thrust)
 }

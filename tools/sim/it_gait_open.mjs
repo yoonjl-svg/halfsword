@@ -5,12 +5,12 @@
 //   걷기 기력(spent.move — 0.62 m 마다 1.4) · 같은 동안 회복 · 1 m 당 기력(막기 안 쥠 = 걷기 − 회복 · 막기 쥠 = 걷기만 — 막는 동안 회복이 멈춤).
 //  대본: CB 가까이 뒤 끝 3 s(상대 가슴 2.3 m 에 서 있음 — 몸이 벌어지며 follow 문턱 밖으로) · CP 가까이 뒤 끝 3 s(상대가 2.3 m 를 지키며 따라옴) ·
 //   CH 가까이 뒤 반(0.5) 3 s(따라옴 — 짝걸음) · FB 혼자 뒤 끝 3 s · FF 혼자 앞 끝 3 s · CS 가까이 옆 끝 3 s(서 있는 상대) · CT 가까이 뒤 톡 0.3 s 뒤 놓음 1.2 s
-//  갈래: cur = 지금 판 · nobook = 보법 책 없음(기본 걸음 — 박자 걸음 없음) · 's=a,b,c' = setItalianStride(짧은 · 긴 계수 · 짧은 디딤 몸 빠르기) · 'w=f,b' = setItalianWalk(앞 · 뒤 빠르기 배율) ·
-//   'a=k' = 짧은 디딤 몸 가속 한도 × k(rhythm.accel) · ';' 로 잇기 (예 's=0.72,0.99,1.3;w=1.15,1.15') · 갈래끼리는 '|'
+//  갈래: cur = 지금 판 · nobook = 보법 책 없음(기본 걸음 — 박자 걸음 없음) · 'p=m' = 가까이 짝걸음 보폭 상한(m) (보폭 · 앞뒤 배율 시험 s= · w= 는 11/17 걷음 — setItalianStride · setItalianWalk)
+//   'a=k' = 짧은 디딤 몸 가속 한도 × k(rhythm.accel) · ';' 로 잇기 (예 'p=0.4;a=1.2') · 갈래끼리는 '|'
 //  실행: node tools/sim/it_gait_open.mjs [무기들 rapier,longsword] [갈래들 cur] [대본들 CB,CP,CH,FB,FF,CS,CT]   ·   IGO_ROWS=1 → 디딤 줄
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { Gait } from '../../src/gait.js';
-import { TRADITIONS, traditionOf, setItalianStride, setItalianWalk } from '../../src/schools.js';
+import { TRADITIONS, traditionOf } from '../../src/schools.js';
 import { STAMINA } from '../../src/config.js';
 import { getWeapon } from '../../src/weapons.js';
 
@@ -40,15 +40,12 @@ const SCRIPTS = {
 
 // 갈래 칸 되돌리기 — 지금 판 값을 그대로 적어 두었다가 판마다 되돌린다
 const g = TRADITIONS.italian.gait;
-const SNAP = { rhythm: { ...g.rhythm }, strideK: g.strideK, pairStride: g.even.pair.stride, foreMul: g.foreMul, backMul: g.backMul }; // 앞 · 뒤 배율도 판 값(10/21 이탈리아 backMul 'flat')
+const SNAP = { rhythm: { ...g.rhythm }, strideK: g.strideK, pairStride: g.even.pair.stride };
 function reset() {
   for (const k of Object.keys(g.rhythm)) if (!(k in SNAP.rhythm)) delete g.rhythm[k];
   Object.assign(g.rhythm, SNAP.rhythm);
   g.strideK = SNAP.strideK;
   g.even.pair.stride = SNAP.pairStride;
-  setItalianWalk('1');
-  if (SNAP.foreMul != null) g.foreMul = SNAP.foreMul;
-  if (SNAP.backMul != null) g.backMul = SNAP.backMul;
 }
 function apply(v) {
   reset();
@@ -56,11 +53,7 @@ function apply(v) {
   for (const part of v.split(';').filter(Boolean)) {
     if (part === 'cur') continue;
     if (part === 'nobook') o.nobook = true;
-    else if (part.startsWith('s=')) {
-      if (!setItalianStride(part.slice(2))) throw new Error(`못 읽음 ${part}`);
-    } else if (part.startsWith('w=')) {
-      if (!setItalianWalk(part.slice(2))) throw new Error(`못 읽음 ${part}`);
-    } else if (part.startsWith('p=')) g.even.pair.stride = +part.slice(2); // 가까이 짝걸음 보폭 상한(m) — setItalianStride 가 0.28 × 긴 계수 ÷ 0.7 로 정한 값을 덮음(s= 뒤에 둠)
+    else if (part.startsWith('p=')) g.even.pair.stride = +part.slice(2); // 가까이 짝걸음 보폭 상한(m)
     else if (part.startsWith('a=')) g.rhythm.accel = +part.slice(2); // 짧은 디딤(박자 걸음 빠른 몫) 몸 가속 한도 배율 — fighter.js driveBalance fastAcc (독일 간격 잡기 chase.accel 1.5 와 같은 칸)
     else throw new Error(`모르는 갈래 ${part}`);
   }

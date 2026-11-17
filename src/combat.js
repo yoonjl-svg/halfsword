@@ -31,8 +31,8 @@ import { WEAPON_ABILITY } from './config.js'; // 달타냥 '총사의 결투' �
 import { BREAK, isOneHandSword } from './weapons.js';
 import { updateGun } from './gun.js';
 import { runInstants, artFlash } from './secret_instant.js'; // artFlash: 이점이 터진 순간 잔상 (10/21)
-import { FINISH, cleaveFoe } from './finish.js'; // 마무리 스위치 entry·mode·power (10/12, 기본 끔)
-import { lowFinishOn, lowFinishPosture, downLowTarget } from './finish_entry.js';
+import { FINISH, cleaveFoe } from './finish.js'; // 마무리 찍기 힘 배율 power (10/12)
+import { lowFinishPosture } from './finish_entry.js';
 import { UNIQUE_ASSIST as UA, IB_FLOW } from './config.js'; // IB_FLOW.power: 이베리아 흐르는 긋기 위력 (10/28 — analyze)
 import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 판정 배율 (11/06 — SKILL.fingerCut.hit · 기본 1 = 끔)
 import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
@@ -57,7 +57,7 @@ export const COMBAT_HOOKS = { onDecapitate: null, onSever: null }; // onSever(f,
 
 /** 요격 깊은 출혈이 붙는 칼 (10/28 — UA.yaojiBleed.techs · 없으면 요격만) */
 export const yaojiBleedTech = (tn) => !!tn && (UA.yaojiBleed?.techs ?? ['yaoji']).includes(tn);
-const FINISH_PARTS = new Set(['chest', 'abdomen', 'pelvis', 'head']); // 내려찍기 즉사 부위 (몸통·머리). 부위 이름으로 — 가슴·머리 몸체의 목 쪽도 들어간다
+const FINISH_PARTS = new Set(['chest', 'abdomen', 'pelvis', 'head']); // 내려찍기 힘 배율 부위 (몸통·머리 — 전 즉사 부위). 부위 이름으로 — 가슴·머리 몸체의 목 쪽도 들어간다
 const Y = new THREE.Vector3(0, 1, 0);
 const X = new THREE.Vector3(1, 0, 0);
 const _a = new THREE.Vector3();
@@ -310,24 +310,19 @@ export class Combat {
     const vicLocal = point.clone().sub(P.p).applyQuaternion(_q.copy(P.q).invert());
     const zone = zoneOf(pr.v, vicLocal);
     const vic = pr.v.fighter;
-    // 사장님 결정 (9/30 "맞으면 즉사로"): 탭 마무리 찌르기가 내리찍는 동안(skill.tap.down·go, thrustPush = 끝나기 전)
-    //  칼끝이 칼 축으로(찌르기) 쓰러진 상대의 몸통(가슴·배·골반)·머리에 닿으면 즉사 (fighter.applyWound).
-    //  옷·살 문턱은 이것을 막지 못한다 — 아래 문턱은 상처 깊이와 관통(pass: 물리로 튕기나 가르나)만 정한다.
-    //  판금·투구는 막는다 (사장님 10/1 21:45, C 를 확률 아닌 물리로): 판·투구 위에 닿아 문턱을 못 넘으면 finish 를 끄고 멍으로 보낸다 — 판금 상대는
-    //  finish.js 가 겨눔 점을 목(갑옷 없는 틈)으로 옮기고(10/12 부터 FINISH.plateNeck 일 때만 — 기본은 판금도 몸통 선), 들어가느냐는 물리가 정한다. 갑옷 무시 무기(ignoreArmor)는 예전처럼 막히지 않는다.
+    // 탭 마무리 찌르기가 내리찍는 동안(skill.tap.down·go, thrustPush = 끝나기 전) 칼끝이 칼 축으로(찌르기) 쓰러진 · 낮은 상대의 몸통(가슴·배·골반)·머리에 닿으면
+    //  즉사 대신 힘 (늘 — 사장님 10/12 00:5x · 샛별 저장소 7fd7f592 · 전 9/30 즉사 판은 스위치째 걷음 11/17): 판정 에너지에 FINISH.power 를 곱해
+    //  갑옷·옷·살 문턱을 그대로 거친다. 문턱을 못 넘으면 보통처럼 멍(판금·투구가 막음). 치명상(목·머리)으로 죽으면 부활 없음(fighter.applyWound).
+    //  판금 상대도 몸통 선을 겨눈다 (finish.js) — 들어가느냐는 물리가 정한다.
     //  걸리지 않는 것: 서 있는·무릎 꿇은·일어나는 상대 (vic.state) · 보통 탭 찌르기 (tap.down) · 겨누는 중·걷는 중 (go) ·
     //  찍기가 끝난 뒤·돌아오는 중 (thrustPush) · 자세 지도로 친 내려찍기·AI 내려베기 (tap 없음) · 베기·둔기·날 없는 무기 (stab) ·
     //  팔다리 (부위) · 내가 넘어졌을 때 (att.state) · 다른 상대 (att.foe). 판단만 한다 — 예측(predicting)·측정 도구가 불러도 부작용 없음
     const tp = att.skill?.tap;
-    // 낮은 상대 진입(FINISH.entry 'low', 기본 끔): 'down' 이름 대신 시작한 그 상대의 실제 몸 높이 (예측 중엔 스텝 전 저장값만 — 엔진을 부르지 않는다)
-    //  10/22 23:0x 상태로 연 쪼개 내려치기(tp.cleave · FINISH.cleave.anyHeight): 시작한 그 상대가 아직 무릎 꿇음 · 일어나는 중 · 쓰러짐이면 (높이는 보지 않는다)
-    const finishTarget = tp?.cleave && FINISH.cleave.anyHeight ? tp.foe === vic && !tp.abort && !tp.ended && cleaveFoe(vic) : lowFinishOn(FINISH) ? tp?.foe === vic && !tp.abort && !tp.ended && lowFinishPosture(att, vic, true, predicting) : downLowTarget(FINISH, att, vic, true, predicting);
+    // 낮은 상대 진입: 'down' 이름 대신 시작한 그 상대의 실제 몸 높이 (예측 중엔 스텝 전 저장값만 — 엔진을 부르지 않는다)
+    //  10/22 23:0x 상태로 연 쪼개 내려치기(tp.cleave): 시작한 그 상대가 아직 무릎 꿇음 · 일어나는 중 · 쓰러짐이면 (높이는 보지 않는다)
+    const finishTarget = tp?.cleave ? tp.foe === vic && !tp.abort && !tp.ended && cleaveFoe(vic) : tp?.foe === vic && !tp.abort && !tp.ended && lowFinishPosture(att, vic, true, predicting);
     // 10/22 대검 마무리 (finish.js FINISH.cleave): 쪼개 내려치기(tp.cleave)는 칼날로 맞는다 — 베기도 같은 마무리 (그 밖은 그대로 찌르기만)
-    let finish = (type === 'stab' || (type === 'cut' && !!tp?.cleave)) && !!tp?.down && !!tp.go && !!att.skill.thrustPush && (att.state === 'stand' || att.state === 'kneel') && vic === att.foe && finishTarget && FINISH_PARTS.has(pr.v.part);
-    // 즉사 대신 힘 (FINISH.mode 'power25', 기본 끔 — 샛별 저장소 7fd7f592): 찍기 찌르기는 즉사 표시(finish)를 끄고, 판정 에너지에 FINISH.power 를 곱해
-    //  갑옷·옷·살 문턱을 그대로 거친다. 문턱을 못 넘으면 보통처럼 멍(판금·투구가 막음). 치명상(목·머리)으로 죽으면 부활 없음(fighter.applyWound)
-    const finishPower = finish && FINISH.mode === 'power25';
-    if (finishPower) finish = false;
+    const finishPower = (type === 'stab' || (type === 'cut' && !!tp?.cleave)) && !!tp?.down && !!tp.go && !!att.skill.thrustPush && (att.state === 'stand' || att.state === 'kneel') && vic === att.foe && finishTarget && FINISH_PARTS.has(pr.v.part);
     // 투구: 머리 윗부분(눈썹 위)만 덮는다. 종류별 값은 ARMOR.helmets (케틀햇 = 예전 ANATOMY.helmet 그대로)
     const helmet = zone === 'head' && vic.hasHelmet && vicLocal.y > -0.01;
     const hs = helmet ? vic.helmetSpec || ARMOR.helmets.kettle : null;
@@ -406,16 +401,10 @@ export class Combat {
         if (vic.parryGuard?.woundKeep) severity *= vic.parryGuard.woundKeep();
         else if (vic.aiCtl) severity *= aiWoundKeep(vic); // AI 몸도 사람과 같게 (11/15 사장님 '동방 ai 막기 감소 켜' · src/ai_block_cut.js)
         severity *= cnStepKeep(vic); // 동방 편섬 (11/15 사장님 '0.4초 50% 감소 (칼날 피해에 찌르기도 포함 맞지?)' — 베기 · 찌르기 둘 다 · 둔기 빼고): 꺾은 때부터 줄임 시간 안이면 × (1 − cut)
-      } else {
-        const armorBlocks = finish && (plate || helmet) && !att.weaponCfg.ignoreArmor && !att.weaponCfg.ignoreArmorDamage;
-        if (armorBlocks) finish = false; // 판금·투구가 내려찍기를 막았다 (사장님 10/1 C): 즉사 없음, 칼은 물리로 튕긴다.
-        //  예측 경로(predicting)도 같게 — 10/7 S-016: 예측만 이 분기를 건너뛰어 판금에 막힐 찍기를 즉사로 읽던 결함(마무리 도구 판금 칸 45/45 불일치)
-        if (!predicting && (!finish || armorBlocks)) {
-          type = 'blunt'; // 날이 들지 못했으면 멍만 든다 (맨몸 내려찍기 즉사 찌르기는 찌르기 그대로 — 옷·살 문턱에 막혀도.
-          //  판·옷·소리는 심각도 0 이라 막힌 타격으로 적힌다: fighter.applyWound·main.js onWound)
-          // 칼끝이 들어가지 못한 찌르기에는 팔 유효 질량을 싣지 않는다 (아픔·비틀거림·옷·투구·기절이 부풀지 않게)
-          if (assisted) ({ mEff, ephys, energy } = assisted);
-        }
+      } else if (!predicting) {
+        type = 'blunt'; // 날이 들지 못했으면 멍만 든다
+        // 칼끝이 들어가지 못한 찌르기에는 팔 유효 질량을 싣지 않는다 (아픔·비틀거림·옷·투구·기절이 부풀지 않게)
+        if (assisted) ({ mEff, ephys, energy } = assisted);
       }
     }
     if (type === 'blunt') energy *= power * att.weaponCfg.mBlunt * emoDealt * emoTaken;
@@ -465,8 +454,7 @@ export class Combat {
       thr,
       eff,
       bladeAxis: axis.clone(),
-      finish, // 내려찍기 즉사 (사장님 결정 9/30, fighter.applyWound)
-      ...(finishPower ? { finishPower: tp?.cleave ? (FINISH.cleave?.power ?? FINISH.power) : FINISH.power } : {}), // 즉사 대신 힘으로 들어간 찍기 (FINISH.mode 'power25' 때만 붙는다)
+      ...(finishPower ? { finishPower: tp?.cleave ? (FINISH.cleave?.power ?? FINISH.power) : FINISH.power } : {}), // 즉사 대신 힘으로 들어간 찍기
       ...(att.weapon?.woundRage ? { woundRage: rage } : {}), // 와신상담 배율 (그 능력이 있는 칼만 붙는다 — 시험·디버그가 읽는다)
       ...(duel !== 1 ? { duelOneHand: duel } : {}), // 총사의 결투 배율이 실렸을 때만 (달타냥이 한손검 상대를 쳤을 때 — 시험 · 잼이 읽는다)
       ...(spK !== 1 ? { schoolK: spK, schoolLock: att.schoolPassive.lastLock } : {}), // 유파 패시브 배율이 실렸을 때만 (strike → onHit 이 켄타이를 씀)

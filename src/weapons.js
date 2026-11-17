@@ -453,7 +453,6 @@ function finalizeSpec(id, s) {
     oneHandStance: s.oneHandStance ?? s.grip === 'one-hand',
     soundMaterial: s.soundMaterial ?? SOUND_MATERIAL[s.material] ?? 'steel', // 소리 담당 API에 넘길 재질 이름
     controlOverrides: { maxAimTorque: GRIP_TORQUE[s.grip] ?? 22, ...s.controlOverrides },
-    capFromGrip: !(s.controlOverrides && 'maxAimTorque' in s.controlOverrides), // 서보 상한이 쥠 기본값에서 왔나(setGripTorque 가 바꿀 대상)
   };
   // 무기 유형 (weapon_class.js, docs/weapon_types.md): 몸 틀 × 싸움 방식. 스펙에 적으면 그 값, 아니면 질량 분포·배율로 자동.
   //  지금은 이름표일 뿐 게임 동작은 읽지 않는다 (다음 버전 동작 라이브러리가 읽는다)
@@ -2110,10 +2109,4 @@ export function getWeapon(id) {
     console.warn(`[weapons] 모르는 무기 id '${id}' → ${DEFAULT_WEAPON} 로 대신합니다`);
   }
   return WEAPONS[DEFAULT_WEAPON];
-}
-
-/** 쥠 종류 기본 서보 상한을 바꾼다(명시 상한이 없는 무기만) — 10/8 */
-export function setGripTorque(grip, value) {
-  GRIP_TORQUE[grip] = value;
-  for (const spec of Object.values(WEAPONS)) if (spec.grip === grip && spec.capFromGrip) spec.controlOverrides.maxAimTorque = value;
 }

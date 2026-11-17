@@ -38,7 +38,7 @@ for(const impactStress of [false,true]){
   const point=new T.Vector3(0,a.weaponCfg.hiltLength+.96*a.weaponCfg.bladeLength,0).applyQuaternion(S.q).add(S.p);
   const P={...v.cache.parts.chest,p:point.clone(),com:point.clone(),v:new T.Vector3(),w:new T.Vector3()};
   const r=G.combat.analyze(pr,point,S,P);
-  assert.equal(r.type,'blunt');assert.equal(r.pass,false);assert.equal(r.finish,false);
+  assert.equal(r.type,'blunt');assert.equal(r.pass,false);
   const blood=v.blood,bleed=v.bleed,wounds=v.wounds.length;
   v.applyWound({...r,part:'chest'});
   assert.equal(v.blood,blood);assert.equal(v.bleed,bleed);assert.equal(v.wounds.length,wounds);

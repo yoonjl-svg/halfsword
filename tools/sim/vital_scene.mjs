@@ -3,10 +3,9 @@
 //  ② tap : 플레이어가 화면을 톡 친다 (급소 찌르기 — 간격 맞추기 포함)
 //  ③ ai  : 플레이어 자리 롱소드 AI 가 8 s 동안 친다
 //  센다: 첫 몸 접촉 부위(목·머리 / 팔 / 다른 몸 / 헛침) · 목·머리 상처 · 참수 · 3 s · 10 s 안 죽음(장면 시작부터, 출혈 포함).
-//  재현용 부상·입력 조건이다 (자연 결투의 빈도·승률이 아니다). 결정적 (같은 입력 → 같은 출력). 스위치는 환경 변수 VITAL=0|1 (harness_m.mjs)
+//  재현용 부상·입력 조건이다 (자연 결투의 빈도·승률이 아니다). 결정적 (같은 입력 → 같은 출력). ① 은 11/17 부터 겨눔 보정 없는 보통 베기 (플레이어 베기 보정 갈래 걷음)
 //  사용법: node tools/sim/vital_scene.mjs [cut|tap|ai] [판 수=2]
 import { newRound, DT, AI } from './harness_m.mjs';
-import { FINISH } from '../../src/finish.js';
 import { isMain } from './is_main.mjs';
 
 class Dummy {
@@ -67,7 +66,7 @@ export function scene({ kind, seed, gap, padY = 0.15 }) {
         G.step();
         continue;
       }
-      if (stage === 0 && (goTo(0.35, padY, 0.5) || stageT > 1.2) && stageT > 0.6) { (stage = 1), (stageT = 0), (watch = 1); if (process.env.VDBG) { const st = P.vitalPlayer; const n = E.bodies.head.translation(); console.log('dbg', padY, st?.phase, JSON.stringify(P.vitalCmd), 'cross', st?.cross?.height?.toFixed(2), 'neckY', n.y.toFixed(2), 'chestY', P.bodies.chest.translation().y.toFixed(2), 'local', st?.local?.toArray().map(v=>v.toFixed(2))); } }
+      if (stage === 0 && (goTo(0.35, padY, 0.5) || stageT > 1.2) && stageT > 0.6) { (stage = 1), (stageT = 0), (watch = 1); }
       else if (stage === 1 && goTo(-0.45, padY, 4)) (stage = 2), (stageT = 0);
       else if (stage === 2) P.inputActive = false;
     }
@@ -79,7 +78,7 @@ export function scene({ kind, seed, gap, padY = 0.15 }) {
   const body = contacts.find((c) => c.zone);
   const first = !body ? '헛침' : body.zone === 'neck' || body.zone === 'head' ? '목머리' : body.zone === 'arm' ? '팔' : '딴몸';
   if (process.env.VDBG) console.log('dbg', gap, P.skill.lastVitalRange, JSON.stringify(P.skill.vitalRangeEnds ?? {}), P.skill.vitalThrusts ?? 0);
-  return { kind, seed, gap, padY, kneel: t0 != null, first, firstZone: body ? `${body.zone}/${body.type}` : '-', vitalWound: contacts.some((c) => (c.zone === 'neck' || c.zone === 'head') && c.sev > 0), decap, tDead, cap: P.vitalPlayer?.captures ?? 0, taps: P.skill.vitalThrusts ?? 0, vs: ai2?.stats?.vital ?? 0 };
+  return { kind, seed, gap, padY, kneel: t0 != null, first, firstZone: body ? `${body.zone}/${body.type}` : '-', vitalWound: contacts.some((c) => (c.zone === 'neck' || c.zone === 'head') && c.sev > 0), decap, tDead, taps: P.skill.vitalThrusts ?? 0, vs: ai2?.stats?.vital ?? 0 };
 }
 
 if (isMain(import.meta.url)) {
@@ -90,8 +89,8 @@ if (isMain(import.meta.url)) {
     for (const padY of kind === 'cut' ? [-0.05, 0.15, 0.35] : [0.15])
       for (let s = 0; s < N; s++) rows.push(scene({ kind, seed: 900 + 31 * s + Math.round(gap * 10), gap, padY }));
   const cnt = (k) => rows.reduce((m, r) => ((m[r[k]] = (m[r[k]] || 0) + 1), m), {});
-  console.log(`vital_scene ${kind} · vital=${FINISH.vital ? 1 : 0} · ${rows.length}판 (무릎 ${rows.filter((r) => r.kneel).length})`);
+  console.log(`vital_scene ${kind} · ${rows.length}판 (무릎 ${rows.filter((r) => r.kneel).length})`);
   console.log(`  첫 몸 접촉 ${JSON.stringify(cnt('first'))} · 목·머리 상처 ${rows.filter((r) => r.vitalWound).length} · 참수 ${rows.filter((r) => r.decap).length} · 3 s 안 죽음 ${rows.filter((r) => r.tDead != null && r.tDead <= 3).length} · 10 s 안 ${rows.filter((r) => r.tDead != null && r.tDead <= 10).length}`);
-  console.log(`  플레이어 준비 보정 잡음 ${rows.filter((r) => r.cap).length} · 급소 찌르기 ${rows.reduce((m, r) => m + r.taps, 0)} · AI 급소 공격 ${rows.reduce((m, r) => m + r.vs, 0)}`);
+  console.log(`  급소 찌르기 ${rows.reduce((m, r) => m + r.taps, 0)} · AI 급소 공격 ${rows.reduce((m, r) => m + r.vs, 0)}`);
   for (const r of rows) console.log(`   ${r.gap} y${r.padY} s${r.seed}: ${r.firstZone} ${r.decap ? '참수 ' : ''}${r.tDead != null ? `죽음 ${r.tDead.toFixed(1)}s` : ''}`);
 }

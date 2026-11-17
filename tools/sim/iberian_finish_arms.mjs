@@ -2,7 +2,6 @@
 //  iberian_finish_arms.mjs — 이베리아 마무리 공격의 팔 관절 재기 (10/24 13:2x 사장님 '이베리아 마무리 공격도 팔 관절이 이상하게 꺾이지 않는지 확인해봐')
 //   두 읽기를 같은 잣대로 잰다 — docs/strike/iberian_finish_arms_2026-10-24.md:
 //    cleave = 대검 마무리 쪼개 내려치기 (greatsword_finish.mjs gsTrial 과 같은 자리 — 누운 상대 · 무릎 꿇은 상대)
-//    plunge = 같은 칼로 전 찍기 (FINISH.cleave.player 끔 — 견줌)
 //    cuts   = 같은 칼 보통 베기 (손가락 획 — 가로 · 세로 · 사선, 바탕)
 //    ai     = 같은 칼 AI 끼리 15 s (보통 싸움 바탕 — 0 번 자리만 잼)
 //   잼: 물리 스텝이 끝난 자세(그려지는 자세)마다 — joint_range.mjs armAngles(팔꿈치 부호 있는 굽힘 · 어깨 · 손목) + 아래 덧칸
@@ -14,7 +13,7 @@
 //   범위 (넘으면 '밖' 스텝으로 셈 — 참고 수): 팔꿈치 과신전 < −5 · 굽힘 > 145 · 경첩 밖 > 5 · 손목 굽힘 · 폄 ±70 (JOINTS.wristFE — 끝 스프링) ·
 //    아래팔-칼 > 163 · 굴림 > 80 · 들림 면 > 130 (밧줄 한도 — 밧줄은 한도에 딱 붙어 있어 +2 ~ 3° 여유를 둠: 165 · 82 · 132) · 어깨 폄 > 60 · 들림 면 < −45 (들림 60 ~ 160) ·
 //    위팔 돌림 −70 ~ 90 (들림 120 아래) · 척추 ±45 · 두 손 > 0.10 m (쥔 동안) · 파고듦 > 0.03 m (빈팔 위팔은 쉼 자세에서도 가슴 상자와 1 ~ 2 cm 겹침)
-//  사용법: node tools/sim/iberian_finish_arms.mjs [--modes=cleave,plunge,cuts,ai] [--weapons=zweihander,flamberge,tizona,durandal]
+//  사용법: node tools/sim/iberian_finish_arms.mjs [--modes=cleave,cuts,ai] [--weapons=zweihander,flamberge,tizona,durandal]
 //          [--starts=tag,ochsR,langort,wechselR,ochsL] [--dirs=0,-1] [--targets=none,stand] [--n=1] [--trace=무기:모드:판번호] [--json=파일]
 //   스위치(이 도구 안에서만): --set=SECRET.altib.share=0.4 처럼 config 값을 바꿔 견준다 (쉼표로 여럿)
 // ─────────────────────────────────────────────────────────────
@@ -275,17 +274,10 @@ const live = [];
     return r;
   };
 }
-export async function finishRun({ weapon, scen = 'down', guard = '쟁기', dist = 1.1, fall = 'toward', seed = 517, cleave = true, trace = null }) {
+export async function finishRun({ weapon, scen = 'down', guard = '쟁기', dist = 1.1, fall = 'toward', seed = 517, trace = null }) {
   const { gsTrial } = await import('./greatsword_finish.mjs');
-  const keep = FINISH.cleave.player;
-  FINISH.cleave.player = cleave;
   FIN = { T: new Tally(), trace, P: null };
-  let r;
-  try {
-    r = gsTrial({ weapon, scen, guard, dist, fall, seed, win: 4 });
-  } finally {
-    FINISH.cleave.player = keep;
-  }
+  const r = gsTrial({ weapon, scen, guard, dist, fall, seed, win: 4 });
   const T = FIN.T;
   FIN = null;
   return { T, r };
@@ -363,13 +355,13 @@ if (isMain(import.meta.url)) {
         }
       } else if (mode === 'ai') {
         for (let s = 0; s < N * 2; s++) tot.merge(aiRun({ weapon, seed: 11 + s }).T);
-      } else if (mode === 'cleave' || mode === 'plunge') {
+      } else if (mode === 'cleave') {
         const sc = [];
         for (const guard of ['쟁기', '지붕']) for (const dist of [0.8, 1.1, 1.4]) for (const fall of ['toward', 'away', 'left', 'right']) sc.push({ scen: 'down', guard, dist, fall });
         for (const dist of [1.4, 1.6]) for (const guard of ['쟁기', '지붕']) sc.push({ scen: 'kneel', guard, dist });
         for (const o of sc) for (let s = 0; s < N; s++) {
           const tr = traceOf();
-          const r = await finishRun({ weapon, ...o, seed: 517 + 17 * s + Math.round(o.dist * 100), cleave: mode === 'cleave', trace: tr });
+          const r = await finishRun({ weapon, ...o, seed: 517 + 17 * s + Math.round(o.dist * 100), trace: tr });
           tot.merge(r.T);
           runs.push({ ...o, T: r.T, hit: r.r.hit, go: r.r.go });
           if (tr) out.trace = { weapon, mode, idx, ...o, rows: tr };

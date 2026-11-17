@@ -68,10 +68,10 @@ const legLen = (phi) => Math.sqrt(A_LEN * A_LEN + B_LEN * B_LEN + 2 * A_LEN * B_
 const clamp = THREE.MathUtils.clamp;
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 /**
- * 박자 걸음 칸(P.rhythm)이 켜졌나 — 디딤 셈 'foot'(기본, normal·fast 둘 다 1 이상) · 옛 짝 셈 'pair'(every 1 이상) · 'off'.
+ * 박자 걸음 칸(P.rhythm)이 켜졌나 — 디딤 셈 normal·fast 둘 다 1 이상 (옛 짝 셈 'pair' · 'off' 는 11/17 걷음).
  *  꺼졌으면 칸 없는 것과 같은 길(셈하지 않음)
  */
-const rhythmOn = (R) => !!R && (R.count === 'foot' ? R.normal > 0 && R.fast > 0 : R.count !== 'off' && R.every > 0);
+const rhythmOn = (R) => !!R && R.normal > 0 && R.fast > 0;
 /** 부드러운 출발·도착 (속도·가속도 0) */
 const minJerk = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * u * (10 - 15 * u + 6 * u * u));
 
@@ -207,7 +207,7 @@ export class Gait {
     //  fastAcc = 지금 빠른 걸음의 몸 가속 한도 배율(fighter.js driveBalance — 간격 잡기 빠른 디딤만 둠) · chaseStep = 지금 빠른 걸음이 간격 잡기 빠른 디딤인가(fastBegin)
     this.fastK = 1;
     this.rhyN = 0;
-    this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
+    this.rhyGo = false; // 보폭 박자 — 처음부터 다시 세면 짧은 디딤부터
     this.rhyF = 0;
     this.rhyIdle = 0;
     this.rhyTrail = false;
@@ -278,7 +278,7 @@ export class Gait {
     // 빠른 걸음: 새로 서면(판 시작·일어선 뒤) 처음부터 센다 — 넘어진 동안은 걸음 셈이 없다(간격 잡기 받을 창·잡기·박차기도 버림)
     this.fastK = 1;
     this.rhyN = 0;
-    this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
+    this.rhyGo = false; // 보폭 박자 — 처음부터 다시 세면 짧은 디딤부터
     this.rhyF = 0;
     this.rhyIdle = 0;
     this.rhyTrail = false;
@@ -294,7 +294,7 @@ export class Gait {
     this.active = false;
     this.fastK = 1;
     this.rhyN = 0;
-    this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
+    this.rhyGo = false; // 보폭 박자 — 처음부터 다시 세면 짧은 디딤부터
     this.rhyF = 0;
     this.chase = null;
     if (this.hold) this.holdEnd = 'state';
@@ -452,7 +452,7 @@ export class Gait {
    *  방향을 막 바꿔 몸이 아직 반대쪽으로 RH.brake m/s 넘게 가는 동안 뗀 걸음은 빠른 걸음을 미룬다(셈은 하고 다음 앞뒤 걸음이 빠른 걸음) — 멈춰 서는 디딤을
    *   서두르면 붙잡기 반사가 는다(스틱 끝 앞 ↔ 뒤 번갈아 — rhythm_step_feel C). 빠른 걸음 중 스틱 앞뒤가 뒤집혀도 거기서 끝(update)
    *  간격 잡기 빠른 디딤은 같은 '한 걸음' 가운데 앞 걸음(wf > 0)만 받고 쓴다 — 받을 창 안 첫 앞 걸음부터 steps 걸음(몸이 아직 뒤로 brake 넘게 가는 앞 걸음은 받기만)
-   *  ※ 위 '한 걸음'(짝걸음 = 한 짝)은 옛 셈 RH.count 'pair'(비교용)이다. 기본 RH.count 'foot'(10/15 13:2x 사장님 '디딤 기준으로 통일'):
+   *  ※ 위 '한 걸음'(짝걸음 = 한 짝)은 옛 짝 셈(11/17 걷음)이고, 박자 걸음은 디딤 셈(10/15 13:2x 사장님 '디딤 기준으로 통일'):
    *   짝걸음 안에서도 **디딤 하나 = 한 걸음**(이끄는 발·따라붙는 발·걷는 중 catch 모두) — 앞뒤 디딤 normal 번 보통 → 다음 fast 디딤이 빠름(기본 2 + 2 — 10/15 15:1x, 전 4 + 2 · 셈 rhyN, 남은 빠른 디딤 rhyF).
    *   짝걸음이면 빠른 몫은 **이끄는 발 디딤에서만 시작** — 셈이 따라붙는 발에서 차면 그 발은 보통으로 두고(셈은 normal 에 머묾) 다음 이끄는 발에서 시작 → 빠른 몫이 펜싱 한 걸음 통째.
    *   빠른 디딤마다 fastK = mul(박자 · 몸 빠르기 — 짝걸음은 발 뜬 시간 그대로, 짝 사이 쉼에서 줄임) · 가속 한도 규칙도 그대로(RH.accel 없음 = × 1).
@@ -465,13 +465,13 @@ export class Gait {
     this.fastFore = false; // 첫 걸음 박차기의 '앞뒤 몫만 빠르게'(이베리아 아닌 유파 비스듬히 뒤) — 아래 박차기 가지만 켬
     this.chaseStep = false; // 이 걸음이 간격 잡기 빠른 디딤인가 — 아래 C 가지만 켬 (잡기 걸기 holdTick 이 읽음)
     this.digStep = false; // 이 걸음이 파고들기 박찬 앞 걸음인가 — 아래 박차기 가지의 dig 만 켬 (11/14)
-    const foot = RH?.count === 'foot'; // 디딤 셈(기본) — 짝걸음 따라붙는 발·catch 도 센다
-    this.fastTimeOnly = false; // 박자 걸음 보폭 박자(RH.timeOnly — 10/15 22:1x 이탈리아 시험): 빠른 몫이 발 박자만 ×mul(몸 빠르기 그대로 → 보폭이 짧아짐)
+    const foot = !!RH; // 박자 걸음 디딤 셈 — 짝걸음 따라붙는 발·catch 도 센다
+    this.fastTimeOnly = false; // 박자 걸음 보폭 박자(10/15 22:1x · 22:5x 이탈리아): 빠른 몫은 발 박자 ×mul · 몸 빠르기 ×speedMul
     if (Math.abs(wf) > vLat && (PR && !foot ? kind === 'walk' && this.pairStep === 'lead' : kind === 'walk' || (kind === 'catch' && this.walking))) {
       let k = 1;
       if (foot) {
         // 디딤 셈 N + M: 빠른 몫 안이면 이 디딤도 빠름 · 아니면 normal 번 센 뒤(짝걸음은 이끄는 발 디딤에서만 · 멈춰 서는 디딤은 brake 로 미룸) 빠른 몫 시작
-        const fresh = RH.shortFirst && !this.rhyGo; // 보폭 박자: 쉬었다 걸으면 짧은 디딤(빠른 몫)부터 — '1-2 디딤 짧게 3-4 디딤 넓게' (쉬었다 떼는 첫 디딤은 짝 자리가 아직 없어도 이끄는 발로 봄)
+        const fresh = !this.rhyGo; // 보폭 박자: 쉬었다 걸으면 짧은 디딤(빠른 몫)부터 — '1-2 디딤 짧게 3-4 디딤 넓게' (쉬었다 떼는 첫 디딤은 짝 자리가 아직 없어도 이끄는 발로 봄)
         if (fresh) this.rhyN = RH.normal;
         this.rhyGo = true;
         let fast = this.rhyF > 0;
@@ -485,16 +485,8 @@ export class Gait {
           k = RH.mul;
           this.fastAccent = RH.accent ?? true;
           this.fastAcc = RH.accel ?? 1;
-          this.fastTimeOnly = !!RH.timeOnly;
-          this.fastSpeedMul = RH.speedMul ?? 1; // timeOnly 일 때 몸 빠르기 배율(보폭 + 빠르기 결합 — 10/15 22:5x)
-        }
-      } else if (RH) {
-        const fast = this.rhyN >= RH.every && vb * Math.sign(wf) > -(RH.brake ?? Infinity);
-        this.rhyN = fast ? 0 : Math.min(RH.every, this.rhyN + 1);
-        if (fast) {
-          k = RH.mul;
-          this.fastAccent = RH.accent ?? true;
-          this.fastAcc = RH.accel ?? 1;
+          this.fastTimeOnly = true;
+          this.fastSpeedMul = RH.speedMul ?? 1; // 몸 빠르기 배율(보폭 + 빠르기 결합 — 10/15 22:5x)
         }
       }
       if (C && wf > 0) {
@@ -512,7 +504,7 @@ export class Gait {
       this.fastK = k;
       this.fastDir = Math.sign(wf);
       this.fastSide = 0;
-      this.rhyTrail = !!PR && !foot; // 옛 짝 셈: 이 짝의 따라붙는 발 하나는 같은 걸음 (디딤 셈은 따라붙는 발도 제 디딤으로 센다)
+      this.rhyTrail = !!PR && !foot; // 짝 셈(박자 걸음 없는 간격 잡기 · 박차기): 이 짝의 따라붙는 발 하나는 같은 걸음 (박자 걸음 디딤 셈은 따라붙는 발도 제 디딤으로 센다)
     } else if (PR && !foot && kind === 'walk' && this.pairStep === 'trail' && this.rhyTrail) this.rhyTrail = false;
     else {
       this.fastK = 1;
@@ -609,16 +601,14 @@ export class Gait {
   /**
    * 고른 짝걸음(P.pair.even — 10/15 이탈리아 '고른 바탕 걸음')의 다음 디딤 배율 미리 보기: 짝걸음 안 다음 걷는 걸음(trail = 따라붙는 발이면 true)이
    *  박자 걸음 빠른 디딤일지 — fastBegin 의 박자 걸음 셈과 같은 가름이되 상태(rhyN·rhyF·fastK)는 바꾸지 않는다. 디딤 셈(기본)은 빠른 몫 안이면 빠름 ·
-   *  아니면 보통 디딤을 다 셌고 이끄는 발이고 몸이 반대쪽으로 brake 넘게 가지 않을 때 빠름. 옛 짝 셈은 이끄는 발이 every 번 뒤 · 따라붙는 발은 그 짝이 빠를 때.
+   *  아니면 보통 디딤을 다 셌고 이끄는 발이고 몸이 반대쪽으로 brake 넘게 가지 않을 때 빠름.
    *  update ③ 이 다음 발을 뗄 때(gate)를 정할 때만 부른다 — 빠른 디딤으로 끝나는 간격을 짧게(박자 걸음의 셈·빠르기 자체는 fastBegin 그대로)
    */
   fastPeek(RH, trail, wf, vLat, vb) {
     if (!(Math.abs(wf) > vLat)) return 1;
     const go = vb * Math.sign(wf) > -(RH.brake ?? Infinity);
-    const fresh = RH.shortFirst && !this.rhyGo; // 보폭 박자 — fastBegin 과 같은 가름(쉬었다 떼는 첫 이끄는 디딤부터 짧은 디딤)
-    if (RH.count === 'foot') return this.rhyF > 0 || (!trail && (fresh ? RH.normal : this.rhyN) >= RH.normal && go) ? RH.mul : 1;
-    if (trail) return this.fastK > 1 && this.rhyTrail ? this.fastK : 1;
-    return this.rhyN >= RH.every && go ? RH.mul : 1;
+    const fresh = !this.rhyGo; // 보폭 박자 — fastBegin 과 같은 가름(쉬었다 떼는 첫 이끄는 디딤부터 짧은 디딤)
+    return this.rhyF > 0 || (!trail && (fresh ? RH.normal : this.rhyN) >= RH.normal && go) ? RH.mul : 1;
   }
 
   /**
@@ -751,18 +741,17 @@ export class Gait {
       const wl = want.x * rgt.x + want.z * rgt.z;
       want.addScaledVector(rgt, wl * (this.P.sideMul - 1));
     }
-    // 이탈리아 보법 빠르기 시험 (10/21 — 판 값: 이탈리아 backMul 'flat' = 뒤 느려짐 없앰 · 시험 schools.js setItalianWalk): 걸음 칸 foreMul · backMul 이 있으면 가려는 속도의 앞 · 뒤 몫을 그 배율로(옆 몫 그대로).
+    // 이탈리아 뒤 느려짐 없앰 (10/21 — 걸음 칸 backMul 'flat'): 가려는 속도의 뒤 몫에서 GAIT.backFactor 를 되곱한다(앞 · 옆 몫 그대로 — 앞 · 뒤 배율 시험 foreMul · setItalianWalk 는 11/17 걷음).
     //  박자는 아래 cad(빠르기 ÷ 보폭)가 따라 올린다. 칸 없으면 셈하지 않는다(바이트 같음)
     //  'flat' 의 걸음 수 한도(P.backCap — 10/31 08:xx 사장님 '네걸음 이후에는 (다섯 걸음째부터) 70% 적용'): 이어 물러선 뒤 디딤이 backCap.steps 를 넘으면(다섯째 뒤 디딤을 뗀 때부터)
     //  없애지 않는다 — 모든 유파와 같은 뒷걸음 × GAIT.backFactor. 셈은 아래 ③ backStep · 끊기는 backTick (셈이 읽는 앞뒤 · 옆 몫은 배율 전 값 — 한도가 셈을 흔들지 않게)
-    if ((this.P.foreMul || this.P.backMul) && !f.feetHeld) {
+    if (this.P.backMul === 'flat' && !f.feetHeld) {
       const wf = want.x * fwd.x + want.z * fwd.z;
-      const flat = this.P.backMul === 'flat';
-      if (flat && this.P.backCap) {
+      if (this.P.backCap) {
         this.backWf = wf;
         this.backWl = Math.abs(want.x * rgt.x + want.z * rgt.z);
       }
-      const k = wf > 0 ? this.P.foreMul ?? 1 : flat ? (this.backN > (this.P.backCap?.steps ?? Infinity) ? 1 : 1 / GAIT.backFactor) : this.P.backMul ?? 1; // 'flat' = 뒤 느려짐(GAIT.backFactor) 없앰 — 이탈리아 10/21 · 10/31 부터 네 디딤까지
+      const k = wf > 0 ? 1 : this.backN > (this.P.backCap?.steps ?? Infinity) ? 1 : 1 / GAIT.backFactor; // 'flat' = 뒤 느려짐(GAIT.backFactor) 없앰 — 이탈리아 10/21 · 10/31 부터 네 디딤까지
       if (k !== 1) want.addScaledVector(fwd, wf * (k - 1));
     }
     // 유파 걸음 빠르기 (10/29 21:0x 사장님 '일본 걸음 … 다른 유파보다 확연히 느려도 돼' — P.speedMul · docs/strike/jp_gait_2026-10-29.md): 가려는 빠르기 전부(앞 · 뒤 · 옆)에 곱한다.
@@ -916,7 +905,7 @@ export class Gait {
     if (RH || CH || this.burst || this.fastK > 1) {
       if (f.feetHeld || f.finish?.amt > 0.5) {
         this.rhyN = 0;
-        this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
+        this.rhyGo = false; // 보폭 박자 — 처음부터 다시 세면 짧은 디딤부터
         this.rhyF = 0;
         this.rhyIdle = 0;
         this.fastK = 1;
@@ -1153,7 +1142,7 @@ export class Gait {
       if ((swing && swing.kind !== 'settle') || this.parrying()) this.rhyIdle = 0;
       else if ((this.rhyIdle += dt) > RH.idle) {
         this.rhyN = 0;
-        this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
+        this.rhyGo = false; // 보폭 박자 — 처음부터 다시 세면 짧은 디딤부터
         this.rhyF = 0;
         this.fastK = 1;
       }

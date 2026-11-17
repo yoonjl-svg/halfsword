@@ -7,7 +7,6 @@
 //  칼끝 위치와 속도, 자세, 비틀거림. (상대 조종 입력을 몰래 읽지 않는다)
 // ─────────────────────────────────────────────────────────────
 
-import { FINISH } from './finish.js';
 import { TIME } from './config.js';
 import { captureVitalPose } from './vital_target.js';
 
@@ -88,8 +87,8 @@ export class Senses {
     s.vigor = f.vigor;
     s.crouch = f.iaiReadyW ?? 0; // 웅크림 (몸이 낮아진 것 — 눈으로 보이는 것)
     s.ready = Math.max(f.iaiReadyW ?? 0, f.iaiReadyR ?? 0); // 고노센 준비 자세 (웅크림 · 허리 대기 — 보이는 꼴)
-    // 약한 자세 겨눔 (FINISH.vital, 10/12): 머리·목·가슴·칼 자리 사본 — AI 는 이것도 반응 시간만큼 늦게 본다 (끄면 기록하지 않는다)
-    s.vital = FINISH.vital ? captureVitalPose(f) : null;
+    // 약한 자세 겨눔 (10/12): 머리·목·가슴·칼 자리 사본 — AI 는 이것도 반응 시간만큼 늦게 본다
+    s.vital = captureVitalPose(f);
   }
 
   /** delay초 전의 모습 (기록이 모자라면 가장 오래된 것) */

@@ -59,7 +59,7 @@ export function reviveOf(spec) {
 export function tryRevive(f, cause) {
   if (f.revival) return true;
   if (f.decapitated) return false; // 참수된 몸은 일어서지 않는다 (현실감 귀결, COMBAT.decapitate — 남은 횟수는 그대로)
-  if (cause === '내려찍기') return false; // 찍기 즉사는 참수처럼 되살아나지 않는다 (디렉터 10/1). 남은 횟수는 그대로 (fighter.applyWound h.finish)
+  if (cause === '내려찍기') return false; // 찍기 즉사 원인은 참수처럼 되살아나지 않는다 (디렉터 10/1). 남은 횟수는 그대로 — 게임 안 찍기 즉사는 11/17 걷음(즉사 대신 힘 늘), 판을 끝내는 도구가 부른다
   const R = f.revive;
   if (!R || R.left <= 0) return false;
   R.left--;

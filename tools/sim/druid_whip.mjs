@@ -1,25 +1,25 @@
 // 드루이드의 채찍 측정 (10/23 — docs/import/druid_whip_2026-10-23.md). 물리를 바꾸지 않는다(측정만).
 //  샛별 저장소 69ef7dac8 의 docs/design/druid_whip_release_20261022 repeat.mjs · verify.mjs 와 같은 측정에, 10/23 검수 잣대(쉬는 자세 · 끝에서 터짐)를 더해
-//  샛별 값(`src` — druid_whip.js WHIP_SRC)과 지금 값(`now` — WHIP_NOW)을 나란히 잰다.
+//  지금 값(`now` — druid_whip.js WHIP_NOW)을 잰다 (샛별 값 `src` · 그 전 `before` 판 견줌은 11/17 걷음 — 판 고르기 setWhipPreset 이 없어짐).
 //   node tools/sim/druid_whip.mjs [repeat] [swing] [tap] [rest] [verify] [draw] [perf]   (안 적으면 다)
 //   [--var=이름:{덩굴 값 JSON} …] [--only=now,이름]  지금 값 위에 덮은 판을 더해 잼(10/23 넷째 일 — 길이 lash · 무게 mass · 끝 매듭 tip · taper · bend) · 긋기 표에 다루기 넷(손 최대 빠르기 · 손목 서보 상한 몫 · 겨눔 어긋남 · 기력 / 획)
 //  repeat: 샛별 표 그대로 — 손 목표를 1.6 s 마다 같은 길로 여덟 번, 2 ~ 8 번째 평균(앞 도달 · 몸통 높이 도달 · 접힘 · 제 몸 실제 접촉 · 끝 최대 빠르기).
-//   before = 샛별 749a7b367 전(제 몸통 비트 되돌림 + 굽힘 .035 만 — 샛별 표의 '기존') · src · now. 판마다 시작을 0 · 0.1 · 0.2 s 늦춰 셋 평균(되풀이 휘두름은 시작 상태에 민감하다)
+//   판마다 시작을 0 · 0.1 · 0.2 s 늦춰 셋 평균(되풀이 휘두름은 시작 상태에 민감하다)
 //  swing: 손가락 긋기 셋(가로 · 내려 · 사선) × 빠르기 둘(0.12 · 0.25 s) × 시작 셋 — 끝 최대 빠르기 · 손잡이 끝(덩굴 시작) 최대 빠르기와 그 비(채찍 꼴 '끝에서 터짐') ·
 //   끝이 가장 빠른 때 덩굴이 펴진 몫(곧은 줄 = 1) · 그때 끝의 앞 거리 · 높이 · 접힘 시간 · 긋기 뒤 덩굴이 몸 뒤로 넘어간 시간 · 30 m/s 넘는 획(판정 버림 — combat.analyze) 몫 ·
 //   선 상대(AI 멈춤 · 가슴 1.55 m)를 친 판정 수 · 가장 센 판정 J
-//  tap: 톡 네 번(1.2 s 쉬고 톡 · 0.8 s 봄) — 끝 최대 빠르기 · 끝 앞 도달 최대, 선 상대(가슴 1.55 m)에 판정 수 · 가장 센 J (롱소드 · src · now)
+//  tap: 톡 네 번(1.2 s 쉬고 톡 · 0.8 s 봄) — 끝 최대 빠르기 · 끝 앞 도달 최대, 선 상대(가슴 1.55 m)에 판정 수 · 가장 센 J (롱소드 · now)
 //  rest: 쉬는 자세 6 s(처음 1 s 뺌) — 손잡이 흔들림(손잡이 축에 수직인 각속도 평균) · 끝 빠르기 평균 · 끝이 땅에 닿은 몫 · 끝 높이
 //  verify: 정지 · 손 휘두르기 · AI · 양쪽 채찍 각 12 s — 마디 벌어짐 · 마디 빠르기 · 휨 · 유한 · 맞힘 수, 강한 충격 1000 번 + 직접 부러뜨리기 뒤 길이 · 질량
 //  draw: 카드 첫 장에 채찍이 나올 확률(셈) · 편지 없음 / 편지 하나에서 drawWeaponCards 20 만 번
-//  perf: AI 대 AI 6 s 의 스텝당 시간 — 롱소드 대 롱소드 · 채찍 대 롱소드(src · now)
+//  perf: AI 대 AI 6 s 의 스텝당 시간 — 롱소드 대 롱소드 · 채찍 대 롱소드
 import * as THREE from 'three';
 import { newRound, DT, AI, CONFIG } from './harness_m.mjs';
 import { WEAPONS, WEAPON_LIST, RETIRED_WEAPONS, TIER_DRAW, drawWeaponCards, weaponSpecText, getWeapon } from '../../src/weapons.js';
 import { TECH_BY_NAME } from '../../src/ai_techniques.js';
 import { traditionOf } from '../../src/schools.js';
 import { letterMul } from '../../src/skill_tree_data.js';
-import { setWhipPreset, WHIP } from '../../src/druid_whip.js';
+import { WHIP, WHIP_NOW } from '../../src/druid_whip.js';
 
 const argv = process.argv.slice(2);
 const want = argv.filter((x) => !x.startsWith('--'));
@@ -27,8 +27,9 @@ const on = (k) => !want.length || want.includes(k);
 // --var=이름:{덩굴 값 JSON} (여럿) : 지금 값(now) 위에 덮은 판을 더해 잰다 (10/23 넷째 일 — 길이 · 무게 · 테이퍼) · --only=now,이름 : 잴 판만
 const VARS = Object.fromEntries(argv.filter((x) => x.startsWith('--var=')).map((x) => { const v = x.slice(6), k = v.indexOf(':'); return [v.slice(0, k), JSON.parse(v.slice(k + 1))]; }));
 const ONLY = argv.find((x) => x.startsWith('--only='))?.slice(7).split(',');
-const PRESETS = ONLY ?? ['src', 'now', ...Object.keys(VARS)];
-const use = (p) => { setWhipPreset(p === 'src' ? 'src' : 'now'); if (VARS[p]) Object.assign(WHIP, VARS[p]); };
+const PRESETS = ONLY ?? ['now', ...Object.keys(VARS)];
+const reset = () => Object.assign(WHIP, structuredClone(WHIP_NOW)); // 지금 값으로
+const use = (p) => { reset(); if (VARS[p]) Object.assign(WHIP, VARS[p]); };
 CONFIG.ARENA.startHold = 0;
 class Quiet { update() {} }
 const Yv = new THREE.Vector3(0, 1, 0);
@@ -43,17 +44,6 @@ const selfTouch = (g, f) => {
   });
   return touch;
 };
-function oldBend(f) {
-  // 749a7b367 전 굽힘: 관절마다 .035 × (1 − i/10) 만 (샛별 repeat.mjs 'before')
-  const flex = f.flexWeapon;
-  return () => {
-    for (let i = 0; i < flex.segments.length; i++) {
-      const child = flex.segments[i].body, parent = i ? flex.segments[i - 1].body : f.sword;
-      const t = axisOf(child).cross(axisOf(parent)).multiplyScalar(0.035 * (1 - i / 10));
-      child.addTorque(t, true); parent.addTorque({ x: -t.x, y: -t.y, z: -t.z }, true);
-    }
-  };
-}
 /** 손 목표 길 한 바퀴(C s): 0 ~ 0.3 감기(to → from) · 0.55 까지 쥠 · dur 동안 긋기(from → to) · 그 뒤 손가락 뗌 */
 function drive(f, from, to, dur, C, lead) {
   return (t0) => {
@@ -76,14 +66,13 @@ if (on('repeat')) {
   console.log('| 판 | 길 | 앞 도달 m | 몸통 높이 도달 m | 접힘 s | 제 몸 접촉 s | 끝 최대 m/s |');
   console.log('|---|---|---|---|---|---|---|');
   const G = { cross: [[-0.6, 0.25], [0.6, 0.25]], down: [[0.1, 0.65], [0.1, -0.55]], diagonal: [[-0.5, 0.65], [0.5, -0.5]] };
-  for (const mode of ONLY ?? ['before', 'src', 'now', ...Object.keys(VARS)]) for (const [gesture, [from, to]] of Object.entries(G)) {
+  for (const mode of PRESETS) for (const [gesture, [from, to]] of Object.entries(G)) {
     const acc = { reach: [], torso: [], fold: [], touch: [], speed: [] };
     for (const lead of LEADS) {
-      use(mode === 'before' ? 'src' : mode);
+      use(mode);
       const g = newRound({ weapon: 'druid_whip', weapon2: 'tree_branch', seed: 13, gap: 1.3, AIClass: Quiet });
       g.park();
-      const f = g.player, flex = f.flexWeapon;
-      if (mode === 'before') { for (const s of flex.segments) s.col.setCollisionGroups(s.col.collisionGroups() | 256); flex.step = oldBend(f); } // 256 = fighter.js torsoBit(0)
+      const f = g.player;
       // 샛별 repeat.mjs 와 같은 손 길 (감기 0.3 s · 쥠 · 0.32 s 긋기 — 손가락 떼기 없음: inputActive 만)
       g.before = (t0) => {
         const t = t0 - lead;
@@ -115,7 +104,7 @@ if (on('repeat')) {
     }
     console.log(`| ${mode} | ${gesture} | ${mean(acc.reach).toFixed(3)} | ${mean(acc.torso).toFixed(3)} | ${mean(acc.fold).toFixed(3)} | ${mean(acc.touch).toFixed(3)} | ${mean(acc.speed).toFixed(1)} |`);
   }
-  setWhipPreset('now');
+  reset();
 }
 
 /** 손가락 긋기 한 판(6 획): 획마다 잰 값의 2 ~ 6 번째 평균 */
@@ -168,7 +157,7 @@ if (on('swing')) {
     const m = (k, L = A) => mean(L.map((x) => x[k]));
     console.log(`| ${preset} | ${m('tip').toFixed(1)} | ${m('root').toFixed(1)} | ${(m('tip') / m('root')).toFixed(2)} | ${m('extPk').toFixed(2)} | ${m('pkFwd').toFixed(2)} | ${m('pkY').toFixed(2)} | ${m('fold').toFixed(3)} | ${m('behind').toFixed(3)} | ${(100 * m('over30')).toFixed(0)} % | ${m('hits', T).toFixed(1)} | ${m('J', T).toFixed(0)} | ${m('hand').toFixed(1)} | ${(100 * m('sat')).toFixed(0)} % | ${m('aimErr').toFixed(0)} | ${m('stamPer').toFixed(1)} |`);
   }
-  setWhipPreset('now');
+  reset();
 }
 
 if (on('tap')) {
@@ -199,7 +188,7 @@ if (on('tap')) {
     }
     console.log(`| ${w}${w === 'druid_whip' ? ` (${preset})` : ''} | ${row.tip.toFixed(1)} | ${row.fwd.toFixed(2)} | ${row.n} | ${row.J.toFixed(0)} | ${row.zones || '-'} |`);
   }
-  setWhipPreset('now');
+  reset();
 }
 
 if (on('rest')) {
@@ -226,7 +215,7 @@ if (on('rest')) {
     console.log(`| ${preset} | ${(wp / n).toFixed(1)} | ${(tv / n).toFixed(2)} | ${(gnd / n).toFixed(2)} | ${low.toFixed(2)} |`);
     g.world.free();
   }
-  setWhipPreset('now');
+  reset();
 }
 
 if (on('verify')) {
@@ -267,7 +256,7 @@ if (on('verify')) {
     console.log(`| ${preset} | ${mode} | ${gap.toFixed(4)} | ${speed.toFixed(1)} | ${bend.toFixed(2)} | ${pHits} · ${eHits} | ${g.clashes} | ${finite} |`);
     g.world.free();
   }
-  setWhipPreset('now');
+  reset();
   const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', seed: 5, AIClass: Quiet });
   const f = g.player, m0 = f.stamina.originalMass;
   for (let i = 0; i < 1000; i++) f.absorbWeaponImpact(1000, { armed: true, weapon: { breakMult: 100 } });
@@ -302,8 +291,8 @@ if (on('draw')) {
 
 if (on('perf')) {
   console.log('\n## 스텝당 시간 (AI 대 AI 6 s · 세 번 중 가장 빠른 값)');
-  for (const [a, b, preset] of [['longsword', 'longsword', 'now'], ['druid_whip', 'longsword', 'src'], ['druid_whip', 'longsword', 'now']]) {
-    setWhipPreset(preset);
+  for (const [a, b, preset] of [['longsword', 'longsword', 'now'], ['druid_whip', 'longsword', 'now']]) {
+    reset();
     let best = Infinity;
     for (let k = 0; k < 3; k++) {
       const g = newRound({ weapon: a, weapon2: b, seed: 3, AI2Class: AI });
@@ -314,5 +303,5 @@ if (on('perf')) {
     }
     console.log(`${a} 대 ${b}${a === 'druid_whip' ? ` (${preset})` : ''}: ${best.toFixed(3)} ms / 스텝`);
   }
-  setWhipPreset('now');
+  reset();
 }

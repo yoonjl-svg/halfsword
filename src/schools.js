@@ -335,30 +335,24 @@ const ITALIAN_PAIR = { lead: 0.45, trail: 0.4, inner: 0.3, stride: 0.36, len: 0.
 const ITALIAN_PAIR_EVEN = { even: true, lead: 0.7, trail: 0.7, inner: 0.3, stride: 0.44, len: 0.7, stop: true }; // stride 0.44 는 10/21 R0(긴 계수 0.85)에도 그대로 — 줄이면 AI 가 크게 손해(docs/strike/italian_gait_speed_2026-10-21.md) · 처음 값은 0.28 → 0.44(10/15 22:1x 보폭 박자 시험 — 0.28 × 1.1 ÷ 0.7
 //  박자 걸음 rhythm (10/15 사장님 '앞이든 뒤든 4걸음마다 다음 1걸음이 50% 빨라질 수 있어? … 3걸음마다 1걸음이 더 박자 감각이 생길까?' → 감독 권고 3 + 1 —
 //   docs/strike/italian_rhythm_2026-10-15.md): 빠른 걸음은 몸 빠르기 ×mul · 발 박자 ×mul(한 걸음 길이는 그대로, 시간만 ÷mul) — gait.js fastBegin.
-//   count 'foot' (기본 — 10/15 13:2x 사장님 '디딤 기준으로 통일하자 … 3+2? 4+2?' → 감독 권고 4 + 2, 확인표 1604~): 앞뒤 **디딤** normal 번 보통 → 다음 fast 디딤이 빠름.
+//   디딤 셈 (10/15 13:2x 사장님 '디딤 기준으로 통일하자 … 3+2? 4+2?' → 감독 권고 4 + 2, 확인표 1604~ — 옛 짝 셈 'pair' · 끔 'off' · 셈 고르기 setItalianRhythm 은 11/17 걷음): 앞뒤 **디딤** normal 번 보통 → 다음 fast 디딤이 빠름.
 //    짝걸음(가까이 '따·닥')도 디딤 하나씩 센다 — 빠른 몫은 이끄는 발 디딤에서만 시작(셈이 따라붙는 발에서 차면 다음 이끄는 발까지 보통으로 미룸 → '따·닥, 따·닥, 따닥!').
-//   count 'pair' (옛 셈 — 비교용): 한 걸음 = follow 짝걸음 안에서는 이끄는 발 + 따라붙는 발 한 짝(짝 사이 쉼까지), 밖(지나 딛기)에서는 한 디딤 · every 번 센 다음 한 걸음이 빠름.
 //   두 셈 다: 옆 몫이 앞뒤 몫보다 큰 걸음·기술 걸음은 세지도 끊지도 않음.
 //   idle = 걸음이 끝난 뒤 이만큼(s) 새 걸음이 없으면 처음부터 · brake = 몸이 아직 반대쪽으로 이만큼(m/s — GAIT.walkMin 과 같은 크기) 넘게 가는 동안 뗀 걸음(방향을 막 바꾼
 //   멈춰 서는 디딤)은 빠른 걸음을 다음 앞뒤 걸음으로 미룸 · accent = 빠른 걸음 발소리 세기·높이 배율(sound.js footstep — 같은 표본).
 //   **10/15 15:1x 사장님 결정** '이탈리아는 2+2로 하자. 대신 가속을 50%에서 30%로 조정. 몸이 빨라지는 게 궁극적 이점이라기보다는 리듬감을 살려서 플레이하게 만드는 게 목적'
 //    → 기본 디딤 셈 **2 + 2**(보통 디딤 둘 → 빠른 디딤 둘 — 짝걸음이면 보통 한 짝 → 빠른 한 짝 '따·닥, 따닥!') · **mul 1.3**(전 1.5 — 몸 빠르기·발 박자 둘 다. 가속 한도 규칙은 그대로 × 1) (확인표 1626~)
-//   주소 (기본)(13:2x 판) · setItalianRhythm.
-//    지난 판 비교 갈래(4+2 · 3+2 · 옛 짝 셈 N)는 그때 배율 ×1.5 그대로 — 그 판을 그대로 다시 본다(ITALIAN_OLD_MUL)
 //   2 + 2 · ×1.3 은 사장님 결정 10/15 15:1x · 나머지(idle · brake · accent)는 사장님 확인 전 (확인표 1500~ · 1604~ · 1626~)
 //   **10/15 19:3x 사장님 결정** '이탈리아 유파 30%로는 리듬감이 안 살아. 50%로 해' → mul **1.5**(디딤 셈 2 + 2 그대로 · 몸 빠르기·발 박자 둘 다) — 바탕 걸음을 고르게(고른 짝걸음 ITALIAN_PAIR_EVEN)
-//    하는 작업과 같이(docs/strike/italian_rhythm_2026-10-15.md §10 · 확인표 1710~). 15:1x 판 비교 ('N+MxK' = 배율 K 를 손으로 — setItalianRhythm)
+//    하는 작업과 같이(docs/strike/italian_rhythm_2026-10-15.md §10 · 확인표 1710~). 그 뒤 22:5x 보폭 박자(아래 ITALIAN_STRIDE)가 mul 을 정한다
 export const FAST_ACCENT = { gain: 1.3, rate: 1.06 }; // 빠른 걸음 발소리 강조 — 박자 걸음·간격 잡기 빠른 디딤·첫 걸음 박차기(10/15 15:2x 사장님 '박차기에 발소리 강조 붙여' — gait.js fastBegin)가 같이 씀 (사장님 확인 전 · 확인표 1508 · 1621)
-const ITALIAN_MUL = 1.5; // 박자 걸음 빠른 디딤 배율 (사장님 결정 10/15 19:3x '30%로는 리듬감이 안 살아. 50%로 해' — 15:1x 의 1.3 에서. 지난 판 비교)
-const ITALIAN_OLD_MUL = 1.5; // 지난 판 비교 갈래(`3+2` · 옛 짝 셈 N)의 배율 — 그때 값 그대로
 //   **10/15 22:1x 사장님 시험** '속도 가중치를 주는 게 아니라 보폭 차이를 두면 어떨까. 1-2 디딤 짧게 3-4 디딤 넓게. 1-2는 0.8로 3-4는 1.1로'("이탈리아 보폭이 지금 너무 짧아졌어") →
-//    보폭 박자 ITALIAN_STRIDE: 디딤 셈 2 + 2 의 빠른 몫(짧은 디딤)이 먼저(shortFirst — 쉬었다 걸으면 짧게 둘 → 길게 둘 …), 몸 빠르기는 그대로(timeOnly — 발 박자만 ×mul).
+//    보폭 박자 ITALIAN_STRIDE: 디딤 셈 2 + 2 의 빠른 몫(짧은 디딤)이 먼저(쉬었다 걸으면 짧게 둘 → 길게 둘 … — 늘), 빠른 몫은 발 박자 ×mul · 몸 빠르기 ×speedMul(아래 22:5x — 늘).
 //    보폭 규칙 계수로 짧은 디딤 0.8(0.50 m) · 긴 디딤 1.1(0.68 m): 이탈리아 바탕 보폭을 긴 디딤(strideK 1.1)으로 두고 짧은 디딤은 발 박자 × (1.1 ÷ 0.8 = 1.375) — 같은 몸 빠르기에서 간격이 짧으면
 //    보폭이 짧다. 고른 짝걸음 보폭 상한(ITALIAN_PAIR_EVEN.stride)도 같은 비로(0.28 × 1.1 ÷ 0.7). 발소리 강조는 짧은 디딤(빠른 몫) 그대로. 시험값 — 사장님 확인 전.
-//    짧은·긴 계수를 손으로 — setItalianStride
 //   **10/15 22:5x 사장님** '별로 박자 감각이 안 느껴져 … 뭐가 제일 리듬감 있는가?' → 감독 권고 '보폭 차이 + 빠르기 결합': 짧은 디딤은 몸 빠르기도 × speed(1.3) —
 //    짧은 디딤 간격 = (short ÷ speed) ÷ long = 긴 디딤 간격의 0.56 배(보폭만일 때 0.73) · 짧은 짝에서 몸이 치고 나감 · 평균 빠르기 +11 %(옛 × 1.5 는 +20 %).
-//    발 박자 배율 mul = long × speed ÷ short · 몸 빠르기 배율 speedMul = speed(gait.js fastBegin · update — timeOnly 일 때 몸은 speedMul, 박자는 mul). ·긴 계수·짧은 디딤 빠르기
+//    발 박자 배율 mul = long × speed ÷ short · 몸 빠르기 배율 speedMul = speed(gait.js fastBegin · update — 몸은 speedMul, 박자는 mul)
 //   **10/21 사장님** '뒤로 물러설 때 느려짐 보정을 없애서 앞과 뒤 속도가 같아지게 … 롱소드보다 빠르다면 R0' → 보폭 계수 0.8 · 1.1 → **0.62 · 0.85**(둘 다 −23 % · 짧은/긴 비 0.73 그대로)
 //    + 짧은 디딤 가속 한도 × 1.5(ITALIAN_RHYTHM.accel) + 뒤 느려짐 없앰(ITALIAN_GAIT.backMul 'flat'). docs/strike/italian_gait_speed_2026-10-21.md · 확인표 2127~2128
 const ITALIAN_STRIDE = { short: 0.62, long: 0.85, speed: 1.3 };
@@ -366,7 +360,7 @@ const ITALIAN_STRIDE = { short: 0.62, long: 0.85, speed: 1.3 };
 //    독일 쪽 0.6 s 는 독일 보법 '간격 잡기'(아래 GERMAN_CHASE.window)의 값이다: 받은 빠른 디딤 사이 걸음이 끝나고 0.6 s 안에 새 걸음이 없으면 남은 빠른 디딤이 사라지는 멈춤 기준
 //    (헛침 뒤 받을 창 · 잡기 시간도 같은 0.6 s). 첫 걸음 박차기에는 시간 문턱이 없다 — 골반 수평 빠르기 0.3 m/s(burstStandV) 밑이면 '서 있음'.
 //    막는 동안은 셈 시계가 0 에 머문다(gait.js parrying — 같은 결정 · 확인표 2038 · 2039)
-const ITALIAN_RHYTHM = { count: 'foot', normal: 2, fast: 2, every: 3, mul: (ITALIAN_STRIDE.long * ITALIAN_STRIDE.speed) / ITALIAN_STRIDE.short, speedMul: ITALIAN_STRIDE.speed, timeOnly: true, shortFirst: true, idle: 0.6, brake: 0.2, accel: 1.5, accent: FAST_ACCENT }; // accel: 짧은 디딤 몸 가속 한도 × 1.5 (10/21 R0 — 독일 간격 잡기 chase.accel 과 같은 값 · 없으면 몸 가속 한도에 막혀 짧은 디딤이 빨라지지 않았다)
+const ITALIAN_RHYTHM = { normal: 2, fast: 2, mul: (ITALIAN_STRIDE.long * ITALIAN_STRIDE.speed) / ITALIAN_STRIDE.short, speedMul: ITALIAN_STRIDE.speed, idle: 0.6, brake: 0.2, accel: 1.5, accent: FAST_ACCENT }; // accel: 짧은 디딤 몸 가속 한도 × 1.5 (10/21 R0 — 독일 간격 잡기 chase.accel 과 같은 값 · 없으면 몸 가속 한도에 막혀 짧은 디딤이 빨라지지 않았다)
 //  ⓐ″ 독일 보법 '간격 잡기'의 빠른 디딤 chase (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기' — 10/15 18:0x 부터 '간격 잡기',
 //   AI 패시브 '따라 들어가기 (Nachreisen)'(GERMAN_PASSIVES)와 다른 것. 잡기 = gait.js holdTick — docs/strike/german_hold_2026-10-15.md): 상대 공격이 칼에도 몸에도 닿지 않고 끝나면(헛침 —
 //   ai.js afterStrike 의 missed · 사람 휘두르기는 skill.js whiffTrack) 그 뒤 window s 안에 앞으로 걷기 시작해야 받고, 받으면 앞으로 steps 걸음이 각각 ×mul —
@@ -1279,91 +1273,6 @@ TRADITIONS.chinese.parryCover = { ...TRADITIONS.chinese.parryCover, down: CHINES
 
 // 유파 자료 켬 묶음 (재기 전용): 무엇을 입히나. 기본 모두 true — 도구(motion_lab)만 하나씩 끄고 켜 본다. 다른 곳은 읽지 않는다
 export const SCHOOL_ART = { weights: true, rest: true, counter: true, unique: true, table: true }; // unique: 유파 고유 동작 가운데 ai:false 가 아닌 것을 꾸러미에 더함(옛 이름 newTech — 10/9 고유 동작 단계에서 이름 바꿈). 독일 셋은 ai:false(사장님 확인 전), 재면 motion_lab SCHOOL_UNIQUE= 로 켬 · table: 유파 자세표(10/10 이베리아 몬탄테 — TRADITIONS[유파].guardTable, guards.js applySchoolGuardTable) — false = 무기 틀 표 그대로
-
-/**
- * 이탈리아 박자 걸음 셈 고르기 (10/15 — 시뮬 환경 변수 IT_RHYTHM): 'N+M' = 디딤 셈 N + M(기본 2+2 · 4+2 · 3+2 — 주소에선 + 가 빈칸으로 읽혀 'N M' 도 받음) ·
- *  '0' = 끔(칸 없는 것과 같은 길) · 'N'(1 이상 정수) = 옛 짝 셈 N + 1(10/15 오전 판 기본은 3). 못 읽으면 그대로 두고 false
- *  배율 mul 도 같이 정한다: 지난 판 비교 갈래 '4+2'(13:2x 판) · '3+2' · 옛 짝 셈 N 은 그때 ×1.5(ITALIAN_OLD_MUL), 그 밖의 N + M(기본 2+2 포함)은 지금 ×1.5(ITALIAN_MUL — 10/15 19:3x, 전 ×1.3)
- *  'N+MxK'(주소 'N MxK' — 예
- */
-/**
- * 이탈리아 보폭 박자 (10/15 22:1x 사장님 시험 — ITALIAN_STRIDE): '0' = 22:0x 판(박자 걸음 몸 빠르기·발 박자 ×1.5 · 바탕 보폭 계수 0.7 · 짝 보폭 0.28) ·
- *  'a,b[,c[,p]]' = 짧은 디딤 계수 a · 긴 디딤 계수 b(보폭 규칙 계수) · 짧은 디딤 몸 빠르기 c(기본 0.8,1.1,1.3 — c 없으면 1 = 보폭만) · p = 가까이 짝걸음 보폭 상한(없으면 0.28 × b ÷ 0.7). main.js 보다 먼저 부른다
- */
-export function setItalianStride(v) {
-  const g = TRADITIONS.italian.gait;
-  const R = g.rhythm;
-  const s = String(v ?? '').trim();
-  if (s === '0') {
-    Object.assign(R, { mul: ITALIAN_MUL, speedMul: undefined, timeOnly: false, shortFirst: false });
-    g.strideK = 0.7;
-    g.even.pair.stride = 0.28;
-    return true;
-  }
-  const m = s.match(/^(\d*\.?\d+)\s*,\s*(\d*\.?\d+)(?:\s*,\s*(\d*\.?\d+))?(?:\s*,\s*(\d*\.?\d+))?$/);
-  const c = m?.[3] ? +m[3] : 1; // 짧은 디딤 몸 빠르기 배율(없으면 1 = 보폭만)
-  if (!m || !(+m[1] > 0) || !(+m[2] >= +m[1]) || !(c >= 1) || !((+m[2] * c) / +m[1] > 1) || (m[4] != null && !(+m[4] > 0))) return false;
-  Object.assign(R, { mul: (+m[2] * c) / +m[1], speedMul: c, timeOnly: true, shortFirst: true });
-  g.strideK = +m[2];
-  g.even.pair.stride = m[4] != null ? +m[4] : (0.28 * +m[2]) / 0.7; // 넷째 값 = 가까이 짝걸음 보폭 상한(m)을 손으로 (10/21 보법 빠르기 제안 — 없으면 0.28 × 긴 계수 ÷ 0.7)
-  return true;
-}
-
-/**
- * 이탈리아 보법 빠르기 시험 (10/21 사장님 '레이피어는 거리를 벌리며 싸우는 게 중요 … 보폭을 약간 줄이는 대신 속도를 빠르게 해' — 제안 재기용, 판 값 없음):
- *  'f,b[,a]' = 걷는 빠르기의 앞 몫 × f · 뒤 몫 × b(사람 · AI 같이 — 걸음 칸 foreMul · backMul) · a = 짧은 디딤(박자 걸음 빠른 몫) 몸 가속 한도 × a(rhythm.accel —
- *   fighter.js driveBalance fastAcc · 독일 간격 잡기 chase.accel 1.5 와 같은 칸, 사람 · AI 같이) · 'p:f,b' = 앞 · 뒤 배율만 플레이어만(player 칸) · '1' · '0' = 없앰.
- *  옆 몫 · 박자 걸음 셈 · 짧은 디딤 몸 빠르기(speedMul)는 그대로 — 박자는 gait.js 가 빠르기 ÷ 보폭으로 따라 올린다. 주소 (main.js)
- */
-export function setItalianWalk(v) {
-  const g = TRADITIONS.italian.gait;
-  const s = String(v ?? '').trim();
-  for (const o of [g, g.player]) delete o.foreMul, delete o.backMul;
-  delete g.rhythm.accel;
-  if (s === '0' || s === '1') return true;
-  const m = s.match(/^(p:)?(\d*\.?\d+)\s*,\s*(\d*\.?\d+)(?:\s*,\s*(\d*\.?\d+))?$/);
-  if (!m || !(+m[2] > 0) || !(+m[3] > 0) || (m[4] != null && !(+m[4] > 0))) return false;
-  Object.assign(m[1] ? g.player : g, { foreMul: +m[2], backMul: +m[3] });
-  if (m[4] != null) g.rhythm.accel = +m[4];
-  return true;
-}
-
-/**
- * 이탈리아 물러서기 걸음 수 한도 비교 (10/31 — ITALIAN_GAIT.backCap · 판을 세우기 전에 한 번): '0' = 10/21 판(한도 없음 — 늘 뒤 느려짐 없음) ·
- *  'N'(1 이상 정수) = 이어 물러서는 뒤 디딤 N 번까지 뒤 느려짐 없음(판 값 4). 못 읽으면 그대로 두고 false
- */
-export function setItalianBackCap(v) {
-  const g = TRADITIONS.italian.gait;
-  const s = String(v ?? '').trim();
-  if (s === '0') {
-    delete g.backCap;
-    return true;
-  }
-  if (!/^\d+$/.test(s) || !(+s >= 1)) return false;
-  g.backCap = { ...ITALIAN_BACK_CAP, steps: +s };
-  return true;
-}
-
-export function setItalianRhythm(v) {
-  const R = TRADITIONS.italian.gait.rhythm;
-  const s = String(v ?? '').trim();
-  const m = s.match(/^(\d+)\s*[+ ]\s*(\d+)(?:\s*[x*]\s*(\d+(?:\.\d+)?))?$/);
-  if (m) {
-    R.count = 'foot';
-    R.normal = +m[1];
-    R.fast = +m[2];
-    R.mul = m[3] ? +m[3] : R.fast === 2 && (R.normal === 4 || R.normal === 3) ? ITALIAN_OLD_MUL : ITALIAN_MUL; // 'N+MxK' = 배율 K 를 손으로(10/15 …/it-even — 지난 판 × 1.3 비교)
-    return true;
-  }
-  if (!/^\d+$/.test(s)) return false;
-  if (+s === 0) R.count = 'off';
-  else {
-    R.count = 'pair';
-    R.every = +s;
-    R.mul = ITALIAN_OLD_MUL;
-  }
-  return true;
-}
 
 /**
  * 무기 → 유파 기본값 (틀·방식에서 자동). 스펙에 school 이 있으면 그것 (모노호시자오 japanese · 청강검 chinese).

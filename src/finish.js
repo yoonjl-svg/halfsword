@@ -22,24 +22,14 @@ import * as THREE from 'three';
 import { MEASURED } from './weapon_measured.js'; // 무기별 간격 실측 한 곳 (10/8 ① 구조 — 전엔 ai.js 에서 읽었다, 같은 객체)
 import { ARM, realS } from './config.js';
 import { GUARDS } from './guards.js'; // 쪼개 내려치기(FINISH.cleave)의 들기 자세 = 교본 지붕 자세 (guards.js 는 이 파일을 읽지 않는다 — 고리 없음)
-import { lowFinishOn, lowFinishPosture, lowFinishContinuing, downLowTarget } from './finish_entry.js';
+import { lowFinishPosture, lowFinishContinuing } from './finish_entry.js';
 
 export const FINISH = {
-  // ── 10/12 샛별 가져오기 2차 스위치 (사장님 10/12 지시로 재 봄 — 기본은 둘 다 예전 그대로. 기본값은 디렉터가 병합 때 정한다)
-  //  docs/import/saetbyeol_round2_2026-10-12.md
-  entry: 'auto', // 'auto' (10/12 약한 자세 겨눔 묶음) = vital 이 켜져 있으면 'low', 꺼져 있으면 'down'(기본 — 전과 같음)
-  //  · 'down' = 상대가 쓰러짐(state down)이면 연다(전 기본) · 'low' = 실제 몸 높이로 연다 (finish_entry.js LOW_FINISH, 샛별 저장소 b9d28ca6·080ea451 의 뜻)
-  //  · 'downlow' = 고친 판: 'down' 그대로 + 일어나는 중(getup)이라도 몸이 낮으면 연다 (finish_entry.js downLowTarget) — 확인표 954~956
-  // ── 10/12 약한 자세 겨눔 묶음 (사장님 10/12 02:3x 지시로 샛별 저장소 ccea5855 등의 뜻 — src/vital_target.js · docs/import/saetbyeol_vital_2026-10-12.md · 확인표 1001~1008, 사장님 확인 전)
-  //  추천 기본 켬 (디렉터가 병합 때 정함): 크게 넘어뜨림 24 판 판금 상대 탭 찍기로 끝난 판 0 → 8 · 무 12 → 5 (몸통 겨눔 뒤) — 문서 §4.
-  //  갈래(vital_target.js VITAL): 찌르기 겨눔 켬 · AI 목 가로 베기 끔(자연 결투 참수 26 → 21~22, 무 3 → 5~8) · 플레이어 베기 보정 끔(장면 9 판 목·머리 2 → 2).
-  vital: true, // 무릎 꿇음·일어나는 중·넘어지는 중인 상대에게 찌르기는 목·얼굴·머리 (갈래를 켜면 베기는 목 가로). 누운 몸은 내려찍기(entry 'auto' → 'low')
-  // 판금 상대 목 겨눔 (사장님 10/1 21:45 'C 를 확률 아닌 물리로'): 10/12 02:4x 사장님 '판금도 몸을 겨누게 하자. 목 말고 … 몸을 아무데나 찌르되 힘이 2.5배면
-  //  판금의 의미도 살고 내려찍기의 의미도 살겠지' → 기본 끔 (판금·맨몸 모두 몸통 선).
-  plateNeck: false,
-  mode: 'power25', // 기본 'power25' — 사장님 10/12 00:5x '즉사 대신 2.5배가 갑옷 판정 등 사실적 기준에서 더 뛰어나 고친 거야' + 가져오기 2차 측정 추천 → 디렉터가 병합 때 켬(머리에 찌르기로 닿으면 즉사(지금, 사장님 9/30) · 'power25' = 즉사 대신 판정 에너지 × power 로 갑옷·상처 문턱을 그대로 거친다
-  //  (샛별 저장소 7fd7f592. 맞아 죽은 상처는 부활 없음 — 살아남으면 보통 상처·출혈. 상한 없음) — 확인표 957~958
-  power: 2.5, // 'power25' 때 찍기 찌르기의 판정 에너지 배율 (상한 없음 — 사장님 확인 전)
+  // 늘 (스위치 걷음 11/17 — 전 entry · vital · plateNeck · mode): 낮은 상대 진입은 몸 높이로 연다(finish_entry.js LOW_FINISH — 10/12 샛별 가져오기 2차 · docs/import/saetbyeol_round2_2026-10-12.md) ·
+  //  약한 자세 겨눔(무릎 꿇음 · 일어나는 중 · 넘어지는 중 상대의 찌르기는 목 · 얼굴 · 머리 — src/vital_target.js · docs/import/saetbyeol_vital_2026-10-12.md) ·
+  //  판금 상대도 몸통 선을 겨눈다(사장님 10/12 02:4x '판금도 몸을 겨누게 하자 … 힘이 2.5배면 판금의 의미도 살고') ·
+  //  머리에 찌르기로 닿아도 즉사 대신 판정 에너지 × power 로 갑옷 · 상처 문턱을 그대로 거친다 (사장님 10/12 00:5x '즉사 대신 2.5배가 … 더 뛰어나' — 맞아 죽은 상처는 부활 없음)
+  power: 2.5, // 찍기 찌르기의 판정 에너지 배율 (상한 없음 — 사장님 확인 전)
   range: 1.7, // 누운 몸통이 내 가슴에서 이 수평 거리(m) 안이면 마무리 자세
   minFwd: 0.2, // 내 앞쪽으로 이만큼(m)은 있어야 한다 (발밑·등 뒤는 찍지 못한다)
   ideal: 0.85, // 몸통(골반~가슴 선)에서 겨눌 점: 내 앞 이 거리(m)에 가장 가까운 점
@@ -81,23 +71,17 @@ export const FINISH = {
   hands: [0.35, 0.35, 0.1],
   // ── 10/13 내려찍기 동작 (사장님 10/13 20:1x '더 높이 들었다가 더 빠르게(힘있게) 콱 찍으면 좋겠어 — 다른 유저들의 공통된 피드백'
   //  · docs/strike/finish_plunge_2026-10-13.md · 확인표 1030~1035, 사장님 확인 전). 탭 마무리 찍기(skill.plungePose)만 읽는다 — 자세 지도 겨눔 자리(fin.hover)·서 있는 상대는 그대로.
-  //  물리는 그대로 거친다: 손 목표를 더 높이 두고, 찍는 동안(tap.go ~ 끝)만 팔 근육·손목 서보 힘에 배율을 곱한다. 칼이 실제로 빨리 내려와 판정 에너지가 커진다.
+  //  늘 켬 (스위치 걷음 11/17). 물리는 그대로 거친다: 손 목표를 더 높이 두고, 찍는 동안(tap.go ~ 끝)만 팔 근육·손목 서보 힘에 배율을 곱한다. 칼이 실제로 빨리 내려와 판정 에너지가 커진다.
   //  새 상한·쿨타임 없음 (어깨·팔꿈치 힘-속도 한계 shoulderVmax·elbowVmax·사람 관절 한도는 그대로).
-  lift: true,
   liftHands: [0.35, 0.45, 0.1], // 찍기 겨눔 손 (가슴 기준 [앞, 위, 옆], m) — 전 hands [0.35, 0.35, 0.10] 보다 0.10 높게(머리 꼭대기 +0.38 위)
   strikeArm: 2.0, // 사장님 10/13 21:0x '팔 힘 배율은 2.0배로' (전 1.6 — 실제로는 몸무게를 실어 찍는 몫을 팔 힘으로 대신) · 찍는 동안 두 팔 근육(어깨·팔꿈치 서보 강도·힘 상한) 배율 — 비기 서보 힘 창(SECRET.power)과 같은 꼴, 찍기 전용
   strikeWrist: 1.3, // 찍는 동안 손목 서보 힘 배율 (fighter.driveSword 의 str — 빨리 내려오는 칼을 몸 점 선에 붙잡는다)
-  // 찍을 몸 점 (10/13 사장님 물음 '골반에서 가슴 쪽으로 올려 찍으면 빗맞을 확률이 늘지 않나'): 'torso' = 몸통 선에서 내 앞 plungeAt 에 가장 가까운 점(지금 기본) ·
-  //  'chest' = 몸통 선의 가슴 쪽 chestS 지점(골반 0 → 가슴 몸체 중심 1). 주소 — 기본 전환은 디렉터·사장님 몫
-  //  측정(새 동작 위 160 판, 문서 §5): 헛찍음 맨몸 2 → 5 · 판금 2 → 2, 10 초 안 죽음 66 → 70 · 57 → 50 (3 초 몫은 목으로 미끄러진 찍기) → 지금은 torso 추천
-  aim: 'torso',
-  chestS: 1,
+  // 찍을 몸 점 (10/13 사장님 물음 '골반에서 가슴 쪽으로 올려 찍으면 빗맞을 확률이 늘지 않나'): 몸통 선에서 내 앞 plungeAt 에 가장 가까운 점 (늘 — 전 aim 'chest' 견줌 걷음 11/17)
   // 내려찍을 몸 점: 몸통 선(골반 → 가슴)에서 내 앞 이 거리(m, × 무기 배율 k)에 가장 가까운 점. 칼 선이 가파르고(약 76°)
   //  팔이 선을 따라 뻗을 여유가 남는 곳. ideal(0.85, 겨눔 켜기·AI 간격)은 닿는 곳 끝자락이라 느린 끝 베기가 됐다.
   //  측정 (시제품, 몸 점 앞 거리별 찌르기): 0.5m 9/9 · 0.6 17/23 · 0.7 15/17 · 0.8 13/17 · 0.9 4/8
   plungeAt: 0.55,
-  // 판금 상대(몸통 판이 남아 있는 쓰러진 상대, 사장님 10/1 21:45 "C 를 확률 아닌 물리로"): 날 있는 무기의 겨눔 점·찍을 점을 몸통 선 대신
-  //  목 한 점으로 — 머리 몸체 기준 아래로 이 거리(m). 목 구역(combat.js zoneOf: 머리 몸체 −0.05 아래, 가슴 몸체 0.11 위)은 투구(−0.01 위)도
+  // 목 점 (약한 자세 겨눔의 찌르기 점 — vital_target.js · 전엔 판금 상대 내려찍기 목 겨눔에도 썼다, 걷음 11/17): 머리 몸체 기준 아래로 이 거리(m). 목 구역(combat.js zoneOf: 머리 몸체 −0.05 아래, 가슴 몸체 0.11 위)은 투구(−0.01 위)도
   //  판금도 덮지 않는다. 몸 축을 따라 즉사 창은 머리 밑(−0.10)에서 투구 끝(−0.01)까지 9cm (맨머리 찌르기도 즉사), 그 아래 가슴 윗면까지 6cm 는
   //  몸체가 없는 틈(빗나감) → 창의 가운데 −0.06 에 둔다 (양쪽 4cm 여유). 나머지는 물리: 목·맨머리면 즉사, 판·투구에 닿으면 멍만 들고 튕긴다
   neckAt: -0.06,
@@ -113,41 +97,32 @@ export const FINISH = {
   ai: { contact: 1.1, reach: 1.4, clinch: 0.6 },
   // ── 10/22 대검 마무리: 쪼개듯 내려치기 (사장님 10/22 밤 '상대가 넘어졌거나 무릎을 꿇거나 하여튼 중심을 잃고 자세가 낮아졌을 때 쪼갤 듯이 강렬하게
   //  힘을 모아 내려치는 거야. 대검이 길다보니 내려찍기가 무용지물이거든. 그걸 보완하는거지' → '2번도 따로 고쳐' · docs/strike/greatsword_finish_2026-10-22.md ·
-  //  확인표 2211~2217, 사장님 확인 전). 탭 마무리가 열리는 문은 10/22 23:0x 부터 상대 상태(무릎 꿇음 · 일어나는 중 · 쓰러짐 — anyHeight · cleaveFoe, 거리 range 는 같다). 이 길을 쓰는 칼은 칼끝으로 찍는 대신
+  //  확인표 2211~2217, 사장님 확인 전). 탭 마무리가 열리는 문은 10/22 23:0x 부터 상대 상태(무릎 꿇음 · 일어나는 중 · 쓰러짐 — cleaveFoe, 거리 range 는 같다). 이 길을 쓰는 칼은 칼끝으로 찍는 대신
   //  머리 위(교본 지붕 자세)로 들어 힘을 모았다가, 자세 지도 내려찍기 자리(fin.strike — 칼날 hitAt 지점이 몸 겉면에 닿는 손 · 몸 너머 땅속을 겨눈 칼끝)로
   //  칼날을 곧게 내려친다 (skill.cleavePose). 세기는 찍기와 같은 판정 에너지 × power (combat.js — 베기에도), 투구 · 갑옷 · 옷 · 살 문턱은 그대로.
   //  찍는 동안 팔 · 손목 힘 배율(strikeArm · strikeWrist) · 손목 제동 늦춤(brakeRelief)도 찍기와 같이 걸린다. 새 상한 · 문턱 없음
   cleave: {
-    player: true, // 사람(플레이어) 칼
-    ai: false, // AI 칼 — 기본 끔(AI 마무리 그대로 — 자세 지도 내려베기). 주소 (시뮬 FINISH_CLEAVE_AI=1)
+    // 사람(플레이어) 칼만 — AI 마무리는 그대로(자세 지도 내려베기 · 스위치 걷음 11/17).
     // 쓰는 칼: 몸 틀(weapons.js frame = weapon_class.js 'B 양손 앞무게' — 두 손 · 무겁거나 칼끝 쪽 무게)이 이 값이고 날 있는 칼(부러지지 않은).
     //  지금 로스터: 츠바이핸더 · 플랑베르주 · 티소나 · 모노호시자오 (냉동 참치는 날이 없어 찍기 그대로 — 머리를 내려찍는다). 무기 칸 finishCleave(true | false)가 있으면 그 값
     frame: 'heavy',
     power: 2, // 쪼개 내려치기의 판정 에너지 배율 (사장님 10/22 23:0x '대검은 마무리를 2.5 말고 2로 해' — 찍기는 FINISH.power 2.5 그대로)
     charge: realS(0.2), // 머리 위에 든 뒤 힘을 모으는 시간 (실제 s — 표준 시간 10/25, 시간 사다리 0.2 반응 — 사장님 확인 전).
-    // 사장님 10/22 23:0x '내 최초 의도는 … 어떤 높이이든 꿇기 이하로 낮아지면 내려치라는 거였어. 강렬한 수직베기를 지면까지 그대로 내리꽂는 것' →
-    //  true: 몸 높이(낮은 상대 진입 LOW_FINISH) 대신 상대 상태로 연다 — 무릎 꿇음(kneel) · 일어나는 중(getup) · 쓰러짐(down)이면 높이와 상관없이 (cleaveFoe).
-    //   내려치는 칼끝 목표도 몸 점이 아니라 그 밑 땅까지(칼끝이 땅에 닿는 각 — skill.cleavePose). 새 문턱 없음(상태 가름만).
-    //  false: 10/22 첫 판(찍기와 같은 문 · 몸 점까지). 주소 (시뮬 FINISH_CLEAVE_LOW=0) — 확인표 2218
-    anyHeight: true,
+    // 여는 문 (늘 — 스위치 걷음 11/17): 사장님 10/22 23:0x '내 최초 의도는 … 어떤 높이이든 꿇기 이하로 낮아지면 내려치라는 거였어. 강렬한 수직베기를 지면까지 그대로 내리꽂는 것' →
+    //  몸 높이(낮은 상대 진입 LOW_FINISH) 대신 상대 상태로 연다 — 무릎 꿇음(kneel) · 일어나는 중(getup) · 쓰러짐(down)이면 높이와 상관없이 (cleaveFoe).
+    //  내려치는 칼끝 목표도 몸 점이 아니라 그 밑 땅까지(칼끝이 땅에 닿는 각 — skill.cleavePose). 새 문턱 없음(상태 가름만).
   },
 };
 
-/** 쪼개 내려치기를 여는 상대 상태 (FINISH.cleave.anyHeight): 살아 있고 무릎 꿇음 · 일어나는 중 · 쓰러짐 — 몸 높이는 보지 않는다 (엔진을 부르지 않는다) */
+/** 쪼개 내려치기를 여는 상대 상태: 살아 있고 무릎 꿇음 · 일어나는 중 · 쓰러짐 — 몸 높이는 보지 않는다 (엔진을 부르지 않는다) */
 export function cleaveFoe(vic) {
   return !!vic?.alive && (vic.state === 'kneel' || vic.state === 'getup' || vic.state === 'down');
 }
 
-/** 이 파이터의 탭 마무리가 쪼개 내려치기인가 (FINISH.cleave — 사람 · AI 스위치, 몸 틀, 무기 칸 finishCleave) */
+/** 이 파이터의 탭 마무리가 쪼개 내려치기인가 (FINISH.cleave — 사람 칼만, 몸 틀, 무기 칸 finishCleave) · 그렇다면 상대 상태로 연다 (cleaveFoe) */
 export function cleaveFinish(f) {
-  const C = FINISH.cleave;
-  if (!(f.aiControlled ? C.ai : C.player) || !f.weaponCfg?.edged || f.weaponBroken) return false;
-  return f.weapon?.finishCleave ?? f.weapon?.frame === C.frame;
-}
-
-/** 쪼개 내려치기를 상대 상태로 여는가 (사람 대검 · FINISH.cleave.anyHeight) */
-export function cleaveAnyHeight(f) {
-  return FINISH.cleave.anyHeight && cleaveFinish(f);
+  if (f.aiControlled || !f.weaponCfg?.edged || f.weaponBroken) return false;
+  return f.weapon?.finishCleave ?? f.weapon?.frame === FINISH.cleave.frame;
 }
 
 let _raise = null;
@@ -174,15 +149,10 @@ export function downReachK(id) {
   return Math.min(1, r(m[0]) / r(MEASURED.longsword[0]));
 }
 
-/** 탭 마무리 찍기의 겨눔 손 (10/13 FINISH.lift — 끄면 전 FINISH.hands) */
-export function finishHands() {
-  return FINISH.lift ? FINISH.liftHands : FINISH.hands;
-}
-
-/** 찍는 동안(tap.go ~ 끝)만 곱하는 힘 배율 (10/13 FINISH.lift): key = 'strikeArm' | 'strikeWrist'. 그 밖엔 1 (곱해도 같은 float) */
+/** 찍는 동안(tap.go ~ 끝)만 곱하는 힘 배율 (10/13 내려찍기 동작): key = 'strikeArm' | 'strikeWrist'. 그 밖엔 1 (곱해도 같은 float) */
 export function plungeBoost(f, key) {
   const tp = f.skill?.tap;
-  return FINISH.lift && tp?.down && tp.go && !tp.ended && !tp.abort ? FINISH[key] : 1;
+  return tp?.down && tp.go && !tp.ended && !tp.abort ? FINISH[key] : 1;
 }
 
 const D2R = Math.PI / 180;
@@ -217,57 +187,40 @@ export function updateFinish(f, dt) {
   fin.k ??= downReachK(f.weapon?.id); // 무기 배율 (한 판 동안 같다)
   fin.gap ??= { contact: FINISH.ai.contact * fin.k, reach: FINISH.ai.reach * fin.k, clinch: FINISH.ai.clinch * fin.k }; // AI 가 읽는 간격
   let on = false;
-  // 낮은 상대 진입 (FINISH.entry 'low'): state 이름 대신 몸 높이로 연다. 새로 시작해도 되나(canStart)는 이어 가기 여유 없이 따로 본다
-  const low = lowFinishOn(FINISH);
-  // 10/22 23:0x 쪼개 내려치기 칼(사람 대검 · FINISH.cleave.anyHeight): 몸 높이 대신 상대 상태(무릎 꿇음 · 일어나는 중 · 쓰러짐)로 연다. 그 밖은 예전 그대로
-  const anyH = cleaveAnyHeight(f);
-  if (low || anyH) fin.canStart = false;
-  if (foe && (anyH ? cleaveFoe(foe) : low ? lowFinishPosture(f, foe, lowFinishContinuing(f, foe)) : downLowTarget(FINISH, f, foe, lowFinishContinuing(f, foe))) && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel')) {
+  // 낮은 상대 진입: state 이름 대신 몸 높이로 연다. 새로 시작해도 되나(canStart)는 이어 가기 여유 없이 따로 본다
+  // 10/22 23:0x 쪼개 내려치기 칼(사람 대검): 몸 높이 대신 상대 상태(무릎 꿇음 · 일어나는 중 · 쓰러짐)로 연다
+  const anyH = cleaveFinish(f);
+  fin.canStart = false;
+  if (foe && (anyH ? cleaveFoe(foe) : lowFinishPosture(f, foe, lowFinishContinuing(f, foe))) && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel')) {
     const c = f.bodies.chest.translation();
     _c.set(c.x, c.y, c.z);
     _yawInv.copy(f.yaw).invert();
     // 날 없는 무기(나뭇가지·고무 닭·참치)나 부러진 칼은 머리를 내려찍는다: 둔기로 몸통을 치면 멍만 들고, 머리 충격만 기절시킨다
+    //  판금 상대도 몸통 선 (사장님 10/12 02:4x — 전 목 한 점 겨눔 걷음 11/17)
     const blunt = !f.weaponCfg.edged || f.weaponBroken;
-    // 판금 상대 (사장님 10/1 21:45, C 를 확률 아닌 물리로 — 10/12 02:4x 부터 스위치 FINISH.plateNeck, 기본 끔): 날 있는 무기는 몸통 가운데 대신 목 — 투구 밑·가슴판 위, 갑옷이 없는 틈 — 한 점을
-    //  겨누고 찍는다 (FINISH.neckAt). 나머지는 물리가 정한다 (combat.js finish: 목·맨머리면 즉사, 판·투구에 닿으면 멍만 들고 튕긴다).
-    //  한 점이라 몸통 선 위의 점 고르기는 건너뛴다. 맨몸 상대·둔기는 예전 계산 그대로 (한 비트도 다르지 않다)
-    const neck = !blunt && FINISH.plateNeck && !!foe.torsoPlated?.(); // 10/12 사장님: 기본 끔 — 판금도 몸통 선 (FINISH.plateNeck)
-    let ex = 0;
-    let ez = 0;
-    let el2 = 0;
-    if (neck) {
-      const hp = foe.bodies.head.translation();
-      const hq = foe.bodies.head.rotation();
-      _t.set(0, FINISH.neckAt, 0).applyQuaternion(_sq.set(hq.x, hq.y, hq.z, hq.w)).add(_a.set(hp.x, hp.y, hp.z)).sub(_c).applyQuaternion(_yawInv);
-    } else {
-      const p0 = foe.bodies[blunt ? 'head' : 'pelvis'].translation();
-      const p1 = foe.bodies[blunt ? 'head' : 'chest'].translation();
-      _a.set(p0.x, p0.y, p0.z).sub(_c).applyQuaternion(_yawInv);
-      _b.set(p1.x, p1.y, p1.z).sub(_c).applyQuaternion(_yawInv);
-      // 몸통 선(골반 → 가슴) 위에서 내 앞 ideal 거리의 점에 가장 가까운 곳 (수평면에서)
-      ex = _b.x - _a.x;
-      ez = _b.z - _a.z;
-      el2 = ex * ex + ez * ez;
-      const ideal = FINISH.ideal * fin.k;
-      const s = el2 > 1e-6 ? THREE.MathUtils.clamp(((ideal - _a.x) * ex + (0 - _a.z) * ez) / el2, 0, 1) : 0;
-      _t.copy(_a).lerp(_b, s);
-    }
+    const p0 = foe.bodies[blunt ? 'head' : 'pelvis'].translation();
+    const p1 = foe.bodies[blunt ? 'head' : 'chest'].translation();
+    _a.set(p0.x, p0.y, p0.z).sub(_c).applyQuaternion(_yawInv);
+    _b.set(p1.x, p1.y, p1.z).sub(_c).applyQuaternion(_yawInv);
+    // 몸통 선(골반 → 가슴) 위에서 내 앞 ideal 거리의 점에 가장 가까운 곳 (수평면에서)
+    const ex = _b.x - _a.x;
+    const ez = _b.z - _a.z;
+    const el2 = ex * ex + ez * ez;
+    const ideal = FINISH.ideal * fin.k;
+    const s = el2 > 1e-6 ? THREE.MathUtils.clamp(((ideal - _a.x) * ex + (0 - _a.z) * ez) / el2, 0, 1) : 0;
+    _t.copy(_a).lerp(_b, s);
     const hd = Math.hypot(_t.x, _t.z);
     if (_t.x > FINISH.minFwd && hd < FINISH.range * fin.k) {
       on = true;
       fin.target[0] = _t.x;
       fin.target[1] = _t.y;
       fin.target[2] = _t.z;
-      if (neck) _tp.copy(_t);
-      else {
-        // 내려찍을 몸 점: 같은 몸통 선에서 내 앞 plungeAt 거리의 점에 가장 가까운 곳
-        //  (10/13 FINISH.aim 'chest': 몸통 선의 가슴 쪽 chestS 지점 — 둔기는 머리 한 점이라 같다)
-        const sp = FINISH.aim === 'chest' && !blunt ? FINISH.chestS : el2 > 1e-6 ? THREE.MathUtils.clamp(((FINISH.plungeAt * fin.k - _a.x) * ex + (0 - _a.z) * ez) / el2, 0, 1) : 0;
-        _tp.copy(_a).lerp(_b, sp);
-      }
+      // 내려찍을 몸 점: 같은 몸통 선에서 내 앞 plungeAt 거리의 점에 가장 가까운 곳
+      const sp = el2 > 1e-6 ? THREE.MathUtils.clamp(((FINISH.plungeAt * fin.k - _a.x) * ex + (0 - _a.z) * ez) / el2, 0, 1) : 0;
+      _tp.copy(_a).lerp(_b, sp);
       aimPoses(f, fin, _t, _tp);
       if (anyH) fin.canStart = on; // 상태로 연다: 닿는 곳은 skill.cleavePose 가 본다 (걸어 들어가기 · 칼끝도 못 닿으면 거둠)
-      else if (low) {
+      else {
         // 몸 겉면에 닿기만 하면 된다 — 몸 너머(sink) 끝은 짧은·부러진 칼에 멀 수 있다
         const pl = fin.plunge;
         on = pl.surfaceInside || pl.surfaceWalk;
@@ -345,7 +298,7 @@ function aimPoses(f, fin, T, Tp) {
   //  닿는 곳: 머리 위 손에서 칼 선을 따라 팔이 뻗을 수 있는 거리(Dmax) 안에서 칼끝이 몸 점 너머(sink)까지 들어가면 안.
   //  손이 몸 점보다 1.5m 위라 칼끝은 늘 몸 위에서 시작한다 — 손이 높으니 거리와 관계없이 같은 찍기
   const side = f.side ?? 1;
-  const hs = finishHands(); // 10/13 FINISH.lift: 더 높이 든 손 (끄면 FINISH.hands)
+  const hs = FINISH.liftHands; // 10/13 내려찍기 동작: 더 높이 든 손
   _Hs[0] = hs[0];
   _Hs[1] = hs[1];
   _Hs[2] = hs[2] * side;
@@ -373,12 +326,10 @@ function aimPoses(f, fin, T, Tp) {
   //   그때 걸으면 몸 점이 발밑 뒤로 지나가 마무리가 꺼질 뿐이었다 (측정: 부러진 롱소드 0.66m 가 누운 몸을 넘어 걸어가 찍지 못함,
   //   팔쉬온 18판 중 4판) → 걷지 않고 선 자리에서 찍는다
   pl.walk = !pl.inside && Tp.x > _Hs[0] && _Hs[1] - Tp.y + FINISH.sink - L <= armRay(_Hs, DOWN, side);
-  if (lowFinishOn(FINISH)) {
-    // 낮은 상대 진입: 칼끝이 몸 겉면(몸 점 위 top)까지만 닿으면 되는 '겉면' 판 (안 · 걸어서 닿음 · 모자란 수평 거리)
-    pl.surfaceInside = pn - FINISH.top - L <= pl.Dmax;
-    pl.surfaceWalk = !pl.surfaceInside && Tp.x > _Hs[0] && _Hs[1] - Tp.y - FINISH.top - L <= armRay(_Hs, DOWN, side);
-    pl.surfaceShort = pl.surfaceInside ? 0 : Math.max(0, (pn - FINISH.top - L - pl.Dmax) / Math.max(1e-6, Math.hypot(u[0], u[2])));
-  }
+  // 낮은 상대 진입: 칼끝이 몸 겉면(몸 점 위 top)까지만 닿으면 되는 '겉면' 판 (안 · 걸어서 닿음 · 모자란 수평 거리)
+  pl.surfaceInside = pn - FINISH.top - L <= pl.Dmax;
+  pl.surfaceWalk = !pl.surfaceInside && Tp.x > _Hs[0] && _Hs[1] - Tp.y - FINISH.top - L <= armRay(_Hs, DOWN, side);
+  pl.surfaceShort = pl.surfaceInside ? 0 : Math.max(0, (pn - FINISH.top - L - pl.Dmax) / Math.max(1e-6, Math.hypot(u[0], u[2])));
   const tip = pl.tip;
   tip[0] = Tp.x + u[0] * FINISH.sink;
   tip[1] = Tp.y + u[1] * FINISH.sink;
@@ -409,7 +360,7 @@ function aimPoses(f, fin, T, Tp) {
   const hd = H.dir;
   if (cleaveFinish(f)) {
     // 10/22 쪼개 내려치기 칼 (FINISH.cleave): 겨눔 자리 = 들기 자세(지붕 — 머리 위로 들어 힘을 모은 채). 탭하면 곧 힘 모으기 → 내려치기 (skill.cleavePose).
-    //  사람 칼만 (AI 는 스위치 FINISH.cleave.ai 를 켰을 때만 — 기본은 이 줄을 타지 않아 자세 지도가 예전 그대로)
+    //  사람 칼만 (AI 는 이 줄을 타지 않아 자세 지도가 예전 그대로)
     const R = cleaveRaise();
     for (let k = 0; k < 3; k++) (hh[k] = k === 2 ? R.hand[2] * side : R.hand[k]), (hd[k] = k === 2 ? R.dir[2] * side : R.dir[k]);
     return;

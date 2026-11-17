@@ -14,11 +14,11 @@
 //  안정: 넘어짐 · 붙잡기 반사 s(levC > 0.3) · catch · 일찍 디딤(walk 걸음이 정한 발 뜬 시간 85 % 전) · 걷는 중 기술 걸음(req·draw) 수(런지 꼴이 걸음에 섞이나)
 //  재기만 — 물리·난수는 게임 그대로(begin·touchdown 을 감싸 읽기만), 판 하나는 결정적. 다가가기·쉼은 박자 걸음 끔으로(갈래끼리 출발 자리가 같게)
 //  실행: node tools/sim/gait_even_feel.mjs [무기들 rapier,longsword,uchigatana] [박자 걸음 갈래들 0,2+2] [대본들 A,B,T,U,NA,NB,NH,NI,NT,NU — AH·BH 도 있음]
-//   박자 걸음 갈래는 setItalianRhythm 글(이탈리아 무기만 — 다른 무기는 한 번) · '-' = 손대지 않음(src 기본)
+//   박자 걸음 갈래(이탈리아 무기만 — 다른 무기는 한 번): '-' = 손대지 않음(src 기본) · '0' = 박자 끔(normal 0 — 이 프로세스 안에서만. 셈 고르기 setItalianRhythm 은 11/17 걷음)
 //   GEF_ROWS=1 → 디딤마다 줄(갈래마다) · GEF_CURVE=1 → 골반 빠르기 0.02 s 마다(첫 무기·갈래) · GEF_SUM=1 → 요약 줄만(H 표 — 대본마다 무기 한 줄)
 import { newRound, DT, THREE } from './harness_m.mjs';
 import { Gait } from '../../src/gait.js';
-import { TRADITIONS, traditionOf, setItalianRhythm } from '../../src/schools.js';
+import { TRADITIONS, traditionOf } from '../../src/schools.js';
 import { getWeapon } from '../../src/weapons.js';
 
 // GAIT_JSON='{"italian":{"even":{"pair":{"lead":0.8}}}}' → 그 유파 걸음 칸에 덮어 잰다(값 고르기용 — 객체 칸은 안쪽까지 덮음)
@@ -29,7 +29,7 @@ const deep = (a, b) => {
 };
 if (process.env.GAIT_JSON) for (const [t, o] of Object.entries(JSON.parse(process.env.GAIT_JSON))) TRADITIONS[t].gait = deep(TRADITIONS[t].gait, o);
 const IDS = (process.argv[2] || 'rapier,longsword,uchigatana').split(',');
-const RHY = (process.argv[3] || '0,2+2').split(',');
+const RHY = (process.argv[3] || '0,-').split(',');
 const SCN = (process.argv[4] || 'A,B,T,U,NA,NB,NH,NI,NT,NU').split(',');
 const ROWS = process.env.GEF_ROWS === '1';
 const CURVE = process.env.GEF_CURVE === '1';
@@ -84,8 +84,9 @@ Gait.prototype.touchdown = function (l, speed) {
   }
 };
 
+const setRhy = (rhy) => Object.assign(RH, RH0, rhy === '0' ? { normal: 0 } : {}); // '0' = 박자 끔 (gait.js rhythmOn — normal 0)
 function run(id, rhy, scn) {
-  setItalianRhythm('0');
+  setRhy('0');
   const S = SCRIPTS[scn];
   const G = newRound({ walls: !S.far, seed: 7, weapon: id, weapon2: 'longsword' });
   const P = G.player;
@@ -135,8 +136,7 @@ function run(id, rhy, scn) {
     while (P.foeDistance() > KEEP + 0.3 && t - t1 < 10) step(APPROACH);
   }
   for (let i = 0; i < 1.2 / DT; i++) step(0); // 쉼 — 셈이 처음부터 (idle 넘게) · 자세 고치기 끝
-  if (rhy !== '-') setItalianRhythm(rhy);
-  else Object.assign(RH, RH0);
+  setRhy(rhy);
   const dir = Math.sign(S.seq[0][0]);
   P.forward(_f);
   rec = { who: P, t, begins: [], tds: [], samples: [], sounds: [], sndT: {}, open: { F: null, B: null }, d: { x: _f.x * dir, z: _f.z * dir } };
@@ -284,11 +284,7 @@ const pct = (v) => (Number.isFinite(v) ? `${Math.round(100 * v)}%` : '-');
 const schoolOf = (id) => TRADITIONS[traditionOf(getWeapon(id))]?.nameKo ?? '?';
 const label = (id, rhy) => {
   if (traditionOf(getWeapon(id)) !== 'italian') return '';
-  if (rhy === '-') return '기본';
-  setItalianRhythm(rhy);
-  const { mul, count, normal, fast, every } = RH;
-  Object.assign(RH, RH0);
-  return count === 'off' ? '박자 끔' : count === 'foot' ? `${normal} + ${fast} ×${mul}` : `옛 짝 ${every} + 1 ×${mul}`;
+  return rhy === '0' ? '박자 끔' : '기본';
 };
 
 const out = [];

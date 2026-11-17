@@ -1,5 +1,5 @@
 // 드루이드의 채찍 시험 (10/23 — 샛별 저장소 69ef7dac8 에서 들여옴 · docs/import/druid_whip_2026-10-23.md)
-//  스펙 · 글 · 뽑기 칸 · 인물 무기 아님 · 마디 물리(8 마디 · 벌어짐 · 유한 · 부서지지 않음) · 판 고르기(`?whip=src`) · 톡 = 손목 튕기기
+//  스펙 · 글 · 뽑기 칸 · 인물 무기 아님 · 마디 물리(8 마디 · 벌어짐 · 유한 · 부서지지 않음) · 덩굴 값(지금 값 — 판 고르기 걷음 11/17) · 톡 = 손목 튕기기
 //  node --test tools/sim/druid_whip.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { WEAPONS, WEAPON_LIST, RETIRED_WEAPONS, TIER_DRAW, getWeapon, weaponSpecText } from '../../src/weapons.js';
 import { traditionOf } from '../../src/schools.js';
 import { CHARACTERS } from '../../src/characters.js';
-import { WHIP, WHIP_SRC, WHIP_NOW, setWhipPreset, DRUID } from '../../src/druid_whip.js';
+import { WHIP, WHIP_NOW, DRUID } from '../../src/druid_whip.js';
 import { newRound, DT, AI, CONFIG } from './harness_m.mjs';
 
 class Quiet { update() {} }
@@ -30,14 +30,10 @@ test('스펙 · 글: ??? · 한손 · 무유파 · 나무 · 날 없음 · 둔�
   const lines = w.desc.split('\n');
   assert.equal(lines.length, 2);
   assert.ok(!/[0-9]/.test(w.desc));
-  // 끝 무게를 바꿔도 합 질량 · 길이는 그대로 (판 고르기 둘 다)
-  for (const p of ['src', 'now']) {
-    setWhipPreset(p);
-    const parts = w.buildParts({});
-    assert.ok(Math.abs(parts.reduce((a, q) => a + q[2][0], 0) - DRUID.mass) < 1e-9, p);
-    assert.equal(parts.length, 2 + DRUID.count);
-  }
-  setWhipPreset('now');
+  // 끝 무게를 바꿔도 합 질량 · 길이는 그대로
+  const parts = w.buildParts({});
+  assert.ok(Math.abs(parts.reduce((a, q) => a + q[2][0], 0) - DRUID.mass) < 1e-9);
+  assert.equal(parts.length, 2 + DRUID.count);
 });
 
 test('뽑기 · 인물: 사람 카드 ??? 칸 넷째 · 첫 장 확률 1.5 % · 인물 무기 목록에는 없음', () => {
@@ -51,22 +47,15 @@ test('뽑기 · 인물: 사람 카드 ??? 칸 넷째 · 첫 장 확률 1.5 % · 
   assert.ok(!getWeapon('druid_whip').characterOnly);
 });
 
-test('판 고르기: 기본 = 지금 값 · src = 샛별 값 (덧 풀이 8 · 서보 24 · 굽힘 감쇠 없음 · 끝 무게 0.12 · 톡 찌르기)', () => {
-  setWhipPreset('src');
-  assert.equal(WHIP.iters, 8); assert.equal(WHIP.tip, 0.12); assert.equal(WHIP.servo.aimStiffness, 24); assert.equal(WHIP.flick, false);
-  assert.ok(WHIP.bendDamp.every((x) => x === 0));
-  assert.deepEqual(WHIP.bend.k, WHIP_SRC.bend.k);
-  setWhipPreset('now');
-  assert.equal(WHIP.iters, WHIP_NOW.iters); assert.equal(WHIP.tip, WHIP_NOW.tip); assert.equal(WHIP.flick, true);
+test('덩굴 값 = 지금 값 (10/23 검수 — 덧 풀이 1 · 서보 10 · 굽힘 감쇠 8 · 끝 매듭 없음) · 무기 칸 서보도 같다', () => {
+  assert.equal(WHIP.iters, WHIP_NOW.iters); assert.equal(WHIP.tip, WHIP_NOW.tip);
   assert.deepEqual(W().controlOverrides, { ...W().controlOverrides, ...WHIP_NOW.servo });
 });
 
-test('칼 닿는 마디 (10/23 셋째 일 · WHIP.bladeFrom): 지금 = 마디 4 ~ 8 만 상대 칼과 부딪힘 · 상대 몸은 모든 마디 · 제 몸통은 빠짐 · 샛별 값 = 모든 마디', () => {
+test('칼 닿는 마디 (10/23 셋째 일 · WHIP.bladeFrom): 지금 = 마디 4 ~ 8 만 상대 칼과 부딪힘 · 상대 몸은 모든 마디 · 제 몸통은 빠짐', () => {
   CONFIG.ARENA.startHold = 0;
-  assert.equal(WHIP_SRC.bladeFrom, 0);
   assert.equal(WHIP_NOW.bladeFrom, 3);
-  for (const [p, from] of [['now', 3], ['src', 0]]) {
-    setWhipPreset(p);
+  for (const [p, from] of [['now', 3]]) {
     const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', gap: 1.35, seed: 3, AIClass: Quiet, AI2Class: Quiet });
     const P = g.player, E = g.enemy;
     const foeBlade = E.swordColliders[0].collisionGroups() >>> 16, foeBody = E.bodies.chest.collider(0).collisionGroups() >>> 16;
@@ -79,20 +68,17 @@ test('칼 닿는 마디 (10/23 셋째 일 · WHIP.bladeFrom): 지금 = 마디 4 
     });
     g.world.free();
   }
-  setWhipPreset('now');
 });
 
 test('덩굴 길이 · 무게 · 테이퍼 (10/23 넷째 · 다섯째 일 · WHIP.lash · mass · tip · taper): 지금 = 끝 매듭 없음 · 테이퍼 6 : 1 · 길이 1.44 m · 0.77 kg 그대로 · 길이 · 무게는 판을 따라 무기 칸 · 카드 스펙 · 마디가 바뀜', () => {
   CONFIG.ARENA.startHold = 0;
-  assert.equal(WHIP_SRC.lash, 1.44); assert.equal(WHIP_SRC.mass, 0.77);
   assert.equal(WHIP_NOW.lash, 1.44); assert.equal(WHIP_NOW.mass, 0.77);
   assert.equal(WHIP_NOW.tip, 0);
   assert.equal(WHIP_NOW.taper[0] / WHIP_NOW.taper[7], 6);
-  setWhipPreset('now');
   const parts = W().buildParts({}).slice(2).map((q) => q[2][0]);
   for (let i = 1; i < 8; i++) assert.ok(parts[i] < parts[i - 1], `마디 ${i + 1} 이 손 쪽보다 가볍다`);
   assert.ok(parts[0] > 5 * parts[7], '손 쪽 마디가 끝 마디의 5 배 넘게 무겁다');
-  // 판 고르기로 길이 · 무게를 바꾸면 무기 칸 · 카드 스펙 · 마디 길이가 따른다 (시험 도구 --whip · with_whip.mjs 와 같은 길)
+  // 덩굴 칸 길이 · 무게를 바꾸면 무기 칸 · 카드 스펙 · 마디 길이가 따른다 (시험 도구 whip_duel.mjs --whip 과 같은 길)
   Object.assign(WHIP, { lash: 1.8, mass: 0.9 });
   assert.equal(W().bladeLength, 1.8);
   assert.equal(weaponSpecText(W()), '한손 채찍, 209 cm, 0.9 kg');
@@ -101,7 +87,7 @@ test('덩굴 길이 · 무게 · 테이퍼 (10/23 넷째 · 다섯째 일 · WHI
   assert.equal(g.player.weaponCfg.bladeLength, 1.8);
   assert.ok(Math.abs(g.player.stamina.originalMass - 0.9) < 1e-6);
   g.world.free();
-  setWhipPreset('now');
+  Object.assign(WHIP, { lash: WHIP_NOW.lash, mass: WHIP_NOW.mass });
   assert.equal(W().bladeLength, 1.44);
   assert.equal(weaponSpecText(W()), '한손 채찍, 173 cm, 0.77 kg');
 });
@@ -127,15 +113,6 @@ test('톡 = 손목 튕기기 (사람 · 마무리 아님): 손 목표가 올라�
   assert.equal(f.handHeld, false);
   assert.ok(fwd > 0.9, `끝 앞 ${fwd}`);
   g.world.free();
-  // 샛별 판: 톡은 보통 탭 찌르기
-  setWhipPreset('src');
-  const g2 = newRound({ weapon: 'druid_whip', weapon2: 'longsword', seed: 13, gap: 3.0, AIClass: Quiet });
-  for (let i = 0; i < 1 / DT; i++) g2.step();
-  assert.equal(g2.player.skill.thrust(), true);
-  assert.ok(!g2.player.skill.flick);
-  assert.ok(g2.player.skill.tap);
-  g2.world.free();
-  setWhipPreset('now');
 });
 
 test('무릎 꿇리기 (사장님 10/23 · config WHIP_KNEEL): 채찍만 · 한 획에 한 번(첫 맞음) · p 1 이면 맞은 쪽이 꿇음 · p 0 이면 없음 · AI 채찍은 굴리지 않음', async () => {

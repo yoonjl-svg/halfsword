@@ -27,7 +27,7 @@ import { CHARACTERS_BY_ID } from '../../src/characters.js';
 import { TECH } from '../../src/ai_techniques.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { WEAPONS } from '../../src/weapons.js';
-import { WHIP, setWhipPreset } from '../../src/druid_whip.js';
+import { WHIP, WHIP_NOW } from '../../src/druid_whip.js';
 import { MEASURED } from '../../src/weapon_measured.js';
 import { whipTipStep, whipCrackGate } from '../../src/whip_sound.js';
 
@@ -66,7 +66,7 @@ function duel(wSpec, oppId, seed, dur) {
   const [w, mode] = wSpec.split(':');
   WHIP_KNEEL.p = mode === 'k' || mode === 'ai' ? PK : 0;
   const aiDrive = mode === 'ai';
-  setWhipPreset('now');
+  Object.assign(WHIP, structuredClone(WHIP_NOW)); // 판마다 지금 값에서
   if (WHIP_OVR) Object.assign(WHIP, WHIP_OVR);
   const mb0 = WEAPONS.druid_whip.mBlunt;
   if (MB != null) WEAPONS.druid_whip.mBlunt = MB;

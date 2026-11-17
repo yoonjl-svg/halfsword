@@ -1,6 +1,6 @@
 // 병마용 몸 규칙 검사 (docs/import/chanda_terra_port_2026-10-14.md §3-3 — 사장님 결정 10/14 '샛별 그대로' · '머리나 팔 잘릴 때 부서지는 소리만'). 결정적. 실패하면 exit 1.
 //  ① 출혈 0 · 혈액 1: 합성 상처(몸통·팔다리 베기·찌르기)와 실전(병마용 AI 대 기본 AI — 30 s × 3 판) 내내 출혈 0 · 혈액 1 · 상처마다 bleed 0
-//  ② 머리가 떨어져야만 죽음: die('출혈'·'기절'·'내려찍기'·'목') 거부 · 의식 0 거부 · 내려찍기 즉사 찌르기·몸통 깊은 찌르기 거부 ·
+//  ② 머리가 떨어져야만 죽음: die('출혈'·'기절'·'내려찍기'·'목') 거부 · 의식 0 거부 · 몸통 깊은 찌르기 거부 ·
 //     머리 베기 0.9 · 머리 찌르기 0.6 · 지나가지 못한 목 찌르기 0.6 · 머리 둔타(사람 기절 문턱) → 목 관절이 떨어지고 그래서 죽음 (같은 상처의 사람과 견줌)
 //     부활 시트를 줘도: 머리 없는 죽음 요청은 남은 횟수를 쓰지 않음 · 머리가 떨어지면 부활 없이 끝 · 실전에서 병마용이 죽은 판은 모두 목 관절 없음
 //  ③ 부서지는 소리 · ④ 목소리 0: BodySounds(소리 대역 — 부른 함수만 센다)로 팔·다리 절단과 참수 → 흙 부서지는 소리(clayBreak 팔다리·머리)만,
@@ -64,8 +64,6 @@ const headless = (f) => f.decapitated && !f.jointByName.head?.joint;
   for (let i = 0; i < 60; i++) G.step();
   say(E.state !== 'dead', '② 의식 0 이어도 기절로 죽지 않음 (updateVitals)', `상태 ${E.state}`);
   E.consciousness = 1;
-  E.applyWound(wound('chest', 'chest', 'stab', 0, new THREE.Vector3(0.12, 0, 0), { finish: true, pass: false, passing: false }));
-  say(E.state !== 'dead', '② 내려찍기 즉사 찌르기(몸통) 거부', `상태 ${E.state}`);
   E.applyWound(wound('chest', 'chest', 'stab', 3, new THREE.Vector3(0.12, 0, 0), { pass: true, passing: false }));
   say(E.state !== 'dead' && E.setState('dead') === undefined && E.state !== 'dead', '② 몸통 깊은 찌르기(심각도 3) · setState(dead) 거부', `상태 ${E.state}`);
 }

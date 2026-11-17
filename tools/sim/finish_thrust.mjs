@@ -242,7 +242,7 @@ function armAtGo(P, tp, tGo) {
   const miss = d.clone().addScaledVector(ax, -along).length();
   const headTop = V(P.bodies.head.translation()).y + (P.headR ?? HEAD_R) - c.y;
   return {
-    cmdY: (FINISH.lift ? FINISH.liftHands : FINISH.hands)?.[1] ?? null, // 10/13 FINISH.lift: 더 높이 든 손 (없는 소스는 hands)
+    cmdY: FINISH.liftHands[1], // 10/13 내려찍기 동작: 더 높이 든 손
     x: G.x, y: G.y, z: G.z, headTop,
     bladeEl: Math.asin(THREE.MathUtils.clamp(-ax.y, -1, 1)) * R2D,
     lineAng: Math.acos(THREE.MathUtils.clamp(along / dn, -1, 1)) * R2D,

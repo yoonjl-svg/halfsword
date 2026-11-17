@@ -277,7 +277,7 @@ export function resolveSwordArt(spec, persona = null, opts = {}) {
     table,
     names,
     overlays: { lunge: OVERLAY[style]?.lunge ?? null, flow: frame === 'heavy', noTwist: style === 'blunt', cover: COVERS[frame] ?? null },
-    caps: { grip: w.grip ?? null, maxAimTorque: w.controlOverrides?.maxAimTorque ?? null, fromGrip: !!w.capFromGrip },
+    caps: { grip: w.grip ?? null, maxAimTorque: w.controlOverrides?.maxAimTorque ?? null },
     restGuard: restGuardOf(names, tradition),
     tradition,
     proficiency: proficiencyIn(opts.proficiency, tradition),

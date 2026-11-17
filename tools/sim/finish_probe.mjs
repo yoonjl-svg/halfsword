@@ -5,8 +5,7 @@
 //   결과: 보통찌르기(찍기가 안 열림 = '안 나감') · 거둠(찍기 시작 뒤 내려찍기 전에 거둠) · 헛찍음(내려찍었는데 몸통·머리에 찌르기로 안 닿음 = '안 박힘')
 //         · 막힘(판·투구에 막혀 멍) · 상처(들어갔는데 안 죽음) · 끝(이 탭의 찍기 뒤 상대가 죽음)
 //  AI 쪽(상대 자리 AI 가 쓰러진 플레이어를 마무리하나): 플레이어가 down 인 구간마다 상처를 냈나 · 그 구간에 죽였나.
-//  판 끝: 승패 · 판 길이 · 죽은 까닭 (내려찍기 = 즉사, 목·머리 = 치명상, 기절·출혈) · 참수.
-//  스위치는 환경 변수 (harness_m.mjs): FINISH_ENTRY=low · FINISH_MODE=power25
+//  판 끝: 승패 · 판 길이 · 죽은 까닭 (목·머리 = 치명상, 기절·출혈 — 찍기는 즉사 대신 힘 FINISH.power) · 참수.
 //  사용법: node tools/sim/finish_probe.mjs [판 수=12] [플레이어 무기=longsword] [초=40] [--armour=none|plate] [--seed=첫 번호] [--react=0.3] [--knock=초] [--rows]
 //   --knock=S : 상대가 서 있으면 S 초마다 크게 넘어뜨린다 (자연 판에선 큰 쓰러짐(down)이 드물다 — 가벼운 넘어짐은 바로 무릎(getup)부터)
 //   --armour=plate : 상대(롱소드 AI)에게 판금·투구(하인리히 겉모습)를 입힌다. 결정적(같은 입력 → 같은 출력)
@@ -101,7 +100,7 @@ export function probeRound({ seed, weapon = 'longsword', secs = 40, plate = fals
       const top = topY(E);
       return { pose: es === 'getup' ? '일어나는중' : es === 'kneel' ? '무릎' : top > LOW_FINISH.enterHeight ? '넘어지는중' : '누움', top };
     };
-    // 약한 자세 간격 맞추기(FINISH.vital) 뒤에 나간 찌르기도 탭으로 센다
+    // 약한 자세 간격 맞추기 뒤에 나간 찌르기도 탭으로 센다
     if (!cur && P.skill.tap && P.skill.tap !== lastTap) cur = { tap: P.skill.tap, ...tapPose(), finOn: !!P.finish.on, contacts: [], killed: false };
     if (!notap && !cur && E.alive && (es === 'down' || es === 'getup' || es === 'kneel') && since >= react && P.alive && P.armed && !P.skill.tap && !P.skill.vitalRange) {
       const tp0 = tapPose();
@@ -167,9 +166,9 @@ if (isMain(import.meta.url)) {
   for (let s = 0; s < n; s++) R.push(probeRound({ seed: seed0 + 37 * s, weapon, secs, plate, react, knock, notap }));
   const all = R.flatMap((r) => r.taps);
   const pc = (a, b) => (b ? `${((100 * a) / b).toFixed(0)}%` : '-');
-  console.log(`finish_probe ${weapon} 대 롱소드 AI · 상대 ${plate ? '판금' : '맨몸'} · ${n}판 × ${secs}s · entry=${FINISH.entry} mode=${FINISH.mode}${FINISH.mode === 'power25' ? ` ×${FINISH.power}` : ''} vital=${FINISH.vital ? 1 : 0} plateNeck=${FINISH.plateNeck ? 1 : 0} · react ${react}s${knock ? ` · ${knock}s 마다 크게 넘어뜨림` : ''}${notap ? ' · 탭 봇 없음' : ''}`);
+  console.log(`finish_probe ${weapon} 대 롱소드 AI · 상대 ${plate ? '판금' : '맨몸'} · ${n}판 × ${secs}s · 찍기 ×${FINISH.power} · react ${react}s${knock ? ` · ${knock}s 마다 크게 넘어뜨림` : ''}${notap ? ' · 탭 봇 없음' : ''}`);
   const RES = ['보통찌르기', '거둠', '헛찍음', '막힘', '상처', '끝'];
-  // 약한 자세 급소 찌르기 탭 (FINISH.vital)
+  // 약한 자세 급소 찌르기 탭
   const VT = all.filter((x) => x.vital);
   if (VT.length || R.some((r) => r.rangeN)) {
     const VR = ['급소맞음', '딴곳', '헛침', '끝'];

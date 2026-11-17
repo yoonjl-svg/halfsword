@@ -24,7 +24,6 @@ import { guardAt, finishAt } from './guards.js';
 import { resolveSwordArt, applySwordArt } from './sword_art.js'; // 검술 풀이: 자세표·동작 라이브러리·덧씌우기·쥠·HUD 이름을 한 곳에서 (10/8 ① 구조)
 import { corrStep } from './corr.js';
 import { newFinish, updateFinish, FINISH, plungeBoost } from './finish.js';
-import { vitalHand, vitalAim, playerVitalUpdate } from './vital_target.js'; // 약한 자세 겨눔 덧씌우기 (FINISH.vital, 10/12)
 import { getWeapon, MATERIALS, weaponMatOpts, DEFAULT_WEAPON, BREAK } from './weapons.js';
 import { breakWeaponLook } from './weapon_looks.js';
 import { drawTick, guardWinTick } from './secret_instant.js'; // 11/16 뽑기 — 칼집에 든 채 다른 칼은 SECRET.gnsDraw 초 동안 뽑음 (사람 · AI 같은 스텝)
@@ -1359,7 +1358,7 @@ export class Fighter {
   }
 
   /** 패드 (x, y) 가 명령하는 손 목표·칼끝 방향 — driveSword 의 쉼 무게·덧씌우기 앞 줄과 같은 식 (보정 v2 = padPose, 옛 보정 = 날것.lerp(자세 지도, gw)).
-   *  약한 자세 겨눔(vital_target.js strokeCrossing)이 베기 길이 목 앞을 지나는 높이를 잴 때 읽는다. 자세 지도는 제 scratch 로 부른다 (guardPose 를 건드리지 않는다) */
+   *  죽음의 일격(mordschlag.js)이 시작 자세 패드의 칼끝 겨눔을 잴 때 읽는다. 자세 지도는 제 scratch 로 부른다 (guardPose 를 건드리지 않는다) */
   strokeCommand(x, y, outH, outD) {
     if (this.skill.corr === 'v2' && this.skill.level > 0) return this.padPose(x, y, outH, outD);
     rawHand(x, y, outH);
@@ -1858,7 +1857,7 @@ export class Fighter {
     }
   }
 
-  die(cause, noRevive = false) { // noRevive: 즉사 대신 힘으로 들어간 찍기(FINISH.mode 'power25')가 낸 치명상 — 찍기 즉사처럼 되살아나지 않는다
+  die(cause, noRevive = false) { // noRevive: 즉사 대신 힘으로 들어간 찍기(finishPower)가 낸 치명상 — 되살아나지 않는다
     if (this.state === 'dead') return;
     if (!this.canDie) return; // 흙 몸(병마용): 몸통 찌르기·내려찍기·기절로는 죽지 않는다 — 부활(tryRevive)보다 먼저 보므로 남은 부활 횟수도 쓰지 않는다 (샛별 901b1f39 순서)
     if (!noRevive && tryRevive(this, cause)) return; // 처음 죽음이면 투지로 다시 일어선다 (revive.js) — 참수된 몸은 tryRevive 가 거절하니 흙 몸의 '머리 잘림 = 끝'도 여기서 그대로
@@ -1939,8 +1938,7 @@ export class Fighter {
     this.parryGuard?.opposition?.onWound(h);
     const sev = h.severity;
     const Z = h.zone;
-    // 날이 살을 갈랐나. 보통은 찌르기·베기 = 문턱을 넘음 (못 넘으면 combat.js 가 멍으로 바꿔 보낸다). 내려찍기 즉사 찌르기(h.finish)만
-    //  문턱을 못 넘어도 찌르기로 온다 — 그땐 판·옷·상처를 막힌 타격(멍)처럼 적는다 (판을 뚫었다·옷이 찢겼다·빈 상처로 적지 않는다)
+    // 날이 살을 갈랐나. 찌르기·베기 = 문턱을 넘음 (못 넘으면 combat.js 가 멍으로 바꿔 보낸다 — 심각도 0 은 막힌 타격(멍)처럼 적는다)
     const bit = h.type !== 'blunt' && sev > 0;
     // 통증과 휘청임 (에너지가 클수록)
     this.pain = Math.min(2, this.pain + sev * 0.8 + h.energy / 150);
@@ -1966,12 +1964,6 @@ export class Fighter {
       const tear = !bit ? h.energy / 800 : 0.25 + sev * 0.5;
       this.cloth[h.part] = Math.max(0, c - tear);
     }
-
-    // 사장님 결정 (9/30 "맞으면 즉사로"): 쓰러진 상대를 탭 마무리로 내리찍는 칼끝이 몸통(가슴·배·골반)이나 머리에
-    //  찌르기로 닿았다 (combat.js analyze 의 finish) → 즉사. 옷·살 문턱은 따지지 않는다.
-    //  판금·투구가 칼을 막았으면(문턱 아래) analyze 가 finish 를 끄고 멍으로 보낸다 (사장님 10/1 C: 판금 상대는 목을 겨누고, 결과는 물리가 정한다).
-    //  찍기 즉사는 참수처럼 되살아나지 않는다 (디렉터 10/1): die → tryRevive 가 원인 '내려찍기'를 부활로 바꾸지 않는다 (revive.js)
-    if (h.finish) this.die('내려찍기');
 
     if (!bit) {
       // 판금 위 둔타: h.plateBlunt(판을 통해 몸에 전해지는 비율, config.js ARMOR.plate.blunt, 확인표 줄 140)는 몸통·팔다리 둔타 효과표(줄 141, R3 — 아직 없음)에만
@@ -3209,7 +3201,7 @@ export class Fighter {
     const legsMus = Math.max(0.15, this.muscle);
     const inv = this.lastDt > 0 ? 1 / this.lastDt : 0;
     const placed = this.armsPlaced(); // 풍차 베기 감기 (10/29 20:0x 휘청 고침): 대본이 놓은 두 팔은 목표 빠르기 0 — 아래 armsPlaced
-    const armBoost = (this.armBoost = plungeBoost(this, 'strikeArm')); // 10/13 FINISH.lift (finish.js) — 중력 보상(manualMuscle)은 이 배율을 빼고 그대로
+    const armBoost = (this.armBoost = plungeBoost(this, 'strikeArm')); // 10/13 내려찍기 동작 (finish.js) — 중력 보상(manualMuscle)은 이 배율을 빼고 그대로
     const fcArm = fingerCutK(this, 'arm') * (this.ibBoostK ?? 1); // 손가락 긋기 팔 힘 (11/06 — 긋는 동안만 칼 팔 근육 × arm · 끔 = 1) · 11/15 사슬 칼 빠르기 시제품 (iberian_link.js linkBoost — 끔이면 1)
     for (const j of this.joints) {
       const n = j.name;
@@ -3456,11 +3448,6 @@ export class Fighter {
     } else if (gw > 0) handLocal.lerp(_v6.set(G.hand[0], G.hand[1], G.hand[2]), gw);
     // 탭 찌르기(skill.thrustPose)는 보정이 아니라 명령이라 검술 보정 세기(gw)와 무관하게 덧씌운다 — 보정 0 에서도 찌른다.
     //  찌르기는 지금 손 목표(handBase, 덧씌우기 전)에서 뻗어 나간다 (skill.thrust)
-    // 약한 자세 겨눔 (FINISH.vital, 10/12 — vital_target.js): 상대가 무릎 꿇음·일어나는 중이면 베기 길이 목 앞을 지나게 손 높이를 준비 (보정 0 이면 손대지 않는다)
-    if (FINISH.vital) {
-      if (this.human) playerVitalUpdate(this, this.lastDt || 0);
-      vitalHand(this, handLocal);
-    }
     const hb = (this.handBase ||= [0, 0, 0]);
     hb[0] = handLocal.x;
     hb[1] = handLocal.y;
@@ -3569,7 +3556,6 @@ export class Fighter {
         aim.set((aim.x / h) * c, Math.sin(el), (aim.z / h) * c);
       }
     }
-    if (FINISH.vital) vitalAim(this, aim); // 약한 자세 겨눔: 칼 기울기 (높이만, 수평 방향 그대로)
     if (th.w > 0) {
       aim.lerp(_v6.set(th.dir[0], th.dir[1], th.dir[2]), th.w);
       if (aim.lengthSq() < 1e-6) aim.set(th.dir[0], th.dir[1], th.dir[2]);

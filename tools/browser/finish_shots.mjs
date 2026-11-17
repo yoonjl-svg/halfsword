@@ -172,7 +172,7 @@ for (let t = 0; t < 4000; t += 17) {
   if (rec.tap && !hover && s.go) {
     hover = true;
     // 찍기 시작 = 겨눔이 선 프레임: 칼자루 높이(가슴 기준) 대 명령
-    rec.go = { t, ...s, cmdY: await page.evaluate(async () => ((m) => (m.finishHands ? m.finishHands() : m.FINISH.hands)?.[1] ?? null)(await import('/src/finish.js'))) };
+    rec.go = { t, ...s, cmdY: await page.evaluate(async () => (await import('/src/finish.js')).FINISH.liftHands[1]) };
     files.push(await shot(name('1_hover')));
   }
   if (s.push) pushed = true;

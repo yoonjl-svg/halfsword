@@ -11,7 +11,6 @@
 //         1.4 m 안으로 걸어 들어가지 않는다. 그 상대는 시드로 달라지는 것이 없어 자리를 바꿔 잰다 — 10/22 둘째 판)
 //   거리 = 내 가슴 ↔ 상대 몸통(가슴 · 배 · 골반) 가장 가까운 곳 수평 거리 (down_hits.mjs torsoDist). 상대는 가만히(AI 끔). 결정적
 //  사용법: node tools/sim/greatsword_finish.mjs [무기,무기,…] [--scen=down,getup,kneel] [--n=1] [--win=10] [--armour=none|plate] [--rows]
-//   스위치(harness_m.mjs 환경 변수): FINISH_CLEAVE=0 = 사람 칼도 전 찍기 · FINISH_CLEAVE_AI=1 · FINISH_CLEAVE_CHARGE=초
 import { newRound, DT, THREE, V, Q } from './harness_m.mjs';
 import { torsoDist, FALLS } from './down_hits.mjs';
 import { PADS } from './finish_thrust.mjs';

@@ -2,26 +2,16 @@
 //  ITALIAN_GAIT.backCap(steps 4 · idle 0.6 s) — gait.js backStep · backTick · update 의 'flat' 배율
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TRADITIONS, setItalianBackCap } from '../../src/schools.js';
+import { TRADITIONS } from '../../src/schools.js';
 import { Gait } from '../../src/gait.js';
 import { newRound, DT } from './harness_m.mjs';
 
-test('걸음 칸: 이탈리아만 backCap 4 · idle 0.6 s(박자 걸음 멈춤 기준) · `?itBackCap=` 스위치', () => {
+test('걸음 칸: 이탈리아만 backCap 4 · idle 0.6 s(박자 걸음 멈춤 기준)', () => {
   const g = TRADITIONS.italian.gait;
   assert.equal(g.backMul, 'flat');
   assert.deepEqual(g.backCap, { steps: 4, idle: 0.6 });
   assert.equal(g.backCap.idle, g.rhythm.idle);
   for (const t of Object.keys(TRADITIONS)) if (t !== 'italian') assert.equal(TRADITIONS[t].gait?.backCap, undefined, t);
-  const keep = g.backCap;
-  try {
-    assert.equal(setItalianBackCap('0'), true);
-    assert.equal(g.backCap, undefined);
-    assert.equal(setItalianBackCap('6'), true);
-    assert.equal(g.backCap.steps, 6);
-    assert.equal(setItalianBackCap('x'), false);
-  } finally {
-    g.backCap = keep;
-  }
 });
 
 test('셈 규칙 (backStep): 뒤 디딤 +1 · 앞 · 옆 · 빈 스틱 디딤은 몸이 더는 물러나지 않을 때만 0(아직 뒤로 가면 그대로) · 기술 걸음 · 자세 고치기 · 서 있을 때 catch 는 그대로', () => {
