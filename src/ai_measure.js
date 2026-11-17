@@ -10,7 +10,7 @@
 //   · 새 공격: 선 − deep 보다 깊은 안에서 칼이 자유로운 채 여는 공격은 띠 기울기만큼 참음 (참 빈틈 DISC_OPEN 은 그대로 — ai.js startAttack)
 //   · 박자 걸음: 다가감에서 남은 거리(contactDist − 칠 거리)가 0.3 ~ step m 이면 미끄러져 걷는 대신 기술 걸음 하나로 들어감 → 그 걸음 중에 칼이 나감(옛 '닿을 거리' 셈 그대로)
 //   · 막는 쪽 읽기: 상대가 내 선 + 0.3 안으로 0.45 m/s 넘게 들어오면(늦게 본 모습) 들어옴 하나에 한 번 read × 띠 기울기 →
-//     칼이 있으면 줄 닫기(막기 2.0 미리 줄 닫기 — anticGo) · 빈손이면 물러남
+//     칼이 있으면: 내 칼끝 거리 + 0.3 안이면 걸음에 치기(debana × 띠 기울기 — 줄 닫기 앞에 굴림) · 안 나오거나 아직 멀면 줄 닫기(막기 2.0 미리 줄 닫기 — anticGo) · 빈손이면 물러남
 //  ② 오코리 (OKORI) — 칼보다 먼저 움직이는 몸 · 반대로 감았다 푸는 준비
 //   · 공격을 고르면(비기 · 이어 치기 · 흐름 · 맞받아 베기처럼 칼이 이미 움직이는 것 · 헛스윙 연습 빼고) 띠의 T 동안 칼이 나가지 않고 몸이 먼저 감긴다:
 //     손 = 준비 자리(기술 from) 너머 베기 방향의 반대로 lift × 크기 (손이 이미 준비 자리면 그 너머 몫 × 굴림 몫 luckOf — 높은 띠는 이미 실린 자세에서 곧장: 숨김) ·
@@ -35,7 +35,7 @@ const inPad = (x, y) => {
 
 /** 재기 칸 (AI 하나에 한 번) */
 export function msStats() {
-  return { inRoll: 0, inHold: 0, tempo: 0, enter: 0, read: 0, close: 0, back: 0, okori: 0, okoriT: 0, okSeen: 0, okRead: 0, chamberSeen: 0 };
+  return { inRoll: 0, inHold: 0, tempo: 0, enter: 0, read: 0, close: 0, debana: 0, debanaRoll: 0, back: 0, okori: 0, okoriT: 0, okSeen: 0, okRead: 0, chamberSeen: 0 };
 }
 const ST = (ai) => (ai.stats.ms ??= msStats());
 
@@ -124,8 +124,9 @@ export function msWindupFeet(ai, fwd, d, want) {
 }
 
 /**
- * 막는 쪽 — 상대가 내 선 안으로 걸어 듦 (watch 의 preThreat 앞): 들어옴 하나에 한 번 read × 띠 기울기 →
- *  칼이 있으면 줄 닫기(막기 2.0 미리 줄 닫기 — anticGo) · 빈손이면 물러남(0.4 s). 이 스텝을 맡았으면 true
+ * 막는 쪽 — 상대가 내 선 안으로 걸어 듦 (watch 의 preThreat 앞): 들어옴 하나에 한 번 read × 띠 기울기 → 칼이 있으면
+ *  ① 상대가 내 칼끝 거리 + 0.3 안이면 debana × 띠 기울기로 굴려 그 걸음에 침(걸음에 치기 — 옛 '들어옴' 공격 · 사장님 11/17 '데바나 살려')
+ *  ② 안 나오거나 아직 멀면(또는 칠 수 없으면) 줄 닫기(막기 2.0 미리 줄 닫기 — anticGo) · 빈손이면 물러남(0.4 s). 이 스텝을 맡았으면 true
  */
 export function msRead(ai, s, d, dt, rearm) {
   const L = msLine(ai);
@@ -143,6 +144,16 @@ export function msRead(ai, s, d, dt, rearm) {
   if (!roll(tilt(ai, MEASURE.read))) return false;
   S.read++;
   if (ai.me.armed) {
+    if (d < ai.M.reach + 0.3) {
+      S.debanaRoll++;
+      if (roll(tilt(ai, MEASURE.debana))) {
+        const t = ai.pickTech(s, 'stepin');
+        if (t && ai.startAttack(t, 'stepin', { noFeint: true, fastChamber: true })) {
+          S.debana++;
+          return true;
+        }
+      }
+    }
     ai.anticGo(s);
     S.close++;
     return true;
