@@ -1,8 +1,8 @@
-// 공격 조이스틱 화면 점검 (11/17 — INPUT.atkStick · src/atk_stick.js · 기록 docs/strike/atk_stick_2026-11-17.md)
-//  폰 흉내(playwright devices — 'iPhone 13 landscape' 가로 · 'iPhone 13' 세로) · `?atkStick=stick` 판 · CDP 터치로 손잡이를 네 자리에 쥐고 · 튕기고 · 톡 침 →
+// 공격 조이스틱 화면 점검 (11/17 — 설정 '공격 조이스틱' · src/atk_stick.js · 기록 docs/strike/atk_stick_2026-11-17.md)
+//  폰 흉내(playwright devices — 'iPhone 13 landscape' 가로 · 'iPhone 13' 세로) · `?atkStick=stick`(설정을 이 열기만 켬) · CDP 터치로 손잡이를 네 자리에 쥐고 · 튕기고 · 톡 침 →
 //   손 목표(handOffset) · 칼 손 높이 · 휘두르기 · 칼끝 빠르기 · 탭 찌르기 · 화면 칸 겹침(조이스틱 둘 · 막기 단추 · 안내 · 알림 · 오른쪽 위 칸)을 재고 그림을 남김
 //  실행 (저장소 뿌리): npx vite --port 5176 --strictPort --host 127.0.0.1 & → node tools/browser/atk_stick_shots.mjs [주소 http://127.0.0.1:5176] [그림 폴더 docs/strike/atk_stick_2026-11-17]
-//   환경: PW_CHROMIUM(크로미움 실행 파일 — 없으면 playwright 기본) · MODE(stick · both) · K(화면 시계 배 — 소프트웨어 GL 의 긴 프레임이 게임 시간을 깎지 않게, 기본 0.25)
+//   환경: PW_CHROMIUM(크로미움 실행 파일 — 없으면 playwright 기본) · K(화면 시계 배 — 소프트웨어 GL 의 긴 프레임이 게임 시간을 깎지 않게, 기본 0.25)
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 // playwright 는 저장소 의존성에 없음 — 깔린 자리(NODE_PATH · 전역)에서 require 로 (ESM import 는 NODE_PATH 를 안 봄)
@@ -10,7 +10,6 @@ const { chromium, devices } = createRequire(import.meta.url)('playwright');
 
 const base = process.argv[2] || 'http://127.0.0.1:5176';
 const outDir = process.argv[3] || 'docs/strike/atk_stick_2026-11-17';
-const MODE = process.env.MODE || 'stick';
 const K = +(process.env.K || 0.25);
 fs.mkdirSync(outDir, { recursive: true });
 const launch = { args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] };
@@ -19,7 +18,7 @@ const browser = await chromium.launch(launch);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // 그림: CSS 픽셀 크기(폰 화면 그대로) · jpeg 80 (저장소에 두는 그림이라 작게)
 const shot = (page, path) => page.screenshot({ path, scale: 'css', type: 'jpeg', quality: 80 });
-const report = { mode: MODE, views: {} };
+const report = { views: {} };
 
 async function open(devName) {
   const { defaultBrowserType, ...dev } = devices[devName];
@@ -39,7 +38,7 @@ async function open(devName) {
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror ' + e));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`${base}/?atkStick=${MODE}&weapon=longsword&foeWeapon=longsword&slowMo=0`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/?atkStick=stick&weapon=longsword&foeWeapon=longsword&slowMo=0`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 240000 });
   return { ctx, page, errors };
 }
@@ -151,7 +150,7 @@ async function boxes(page) {
   await waitSim(0.2);
   V.tap = { thrusts: await page.evaluate(() => window.__tap), ...(await read()) };
   await shot(page, `${outDir}/land_tap.jpg`);
-  // ④ 'stick' 판: 화면 끌기는 칼이 아님
+  // ④ 조이스틱을 켜면 화면 끌기는 칼이 아님
   const h0 = await read();
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 400, y: 150, id: 9 }] });
   for (let i = 1; i <= 6; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 400 + i * 30, y: 150 - i * 10, id: 9 }] }); await sleep(40); }
