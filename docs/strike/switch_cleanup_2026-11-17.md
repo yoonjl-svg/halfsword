@@ -270,3 +270,61 @@ corr_s0 의 `--limits=off,on` 은 사람 관절 한도 스위치를 지운 뒤�
   - 머리 묶음 줄은 UNIQUE_ASSIST 에도 있다: `duplieren_tap.test` 머리 `UA.dupAuto = 0`(파일 통째 탭 판) · `skill_tree.test` 머리 `koteDrop.ai = 0`(손목 치기 10/24 판 시험 둘) · 시험 안 `body({ dupBurstFit: 0 … })` 처럼 도움 함수가 칸을 옛 값으로 넣는 것도 같은 묶음이다
   - 바꿔 넣던 칸이 없어지면 그 칸을 넣는 시험 조각은 아무 일도 안 하고 지나가거나(같은 판) 엉뚱하게 실패한다 — 실패 줄만 보지 말고 칸을 넣는 줄을 찾아 그 조각을 지울 것
   - 시간 상한 0 칸(`*SnapTime`)은 부르는 쪽에서 넘기지 않으면 requestCombo 가 `req.maxT ?? 0` 으로 같은 0 — 시험의 `R.maxT === 0` 은 그대로 맞음
+
+## 10. 6차 (786a1be4 부터 — 블록 3 ~ 8 · 남은 읽기)
+
+사장님 지시 그대로("재지 말고 그냥 지워.") — 기본 판을 그 자리에 적고 다른 갈래는 코드째 지움. 커밋마다 관문 바이트 같음.
+
+### 10-1. 커밋
+
+| 커밋 | 블록 | 시험 수 (돌림 · 실패 0) |
+|---|---|---|
+| 6a `7c820abb` | 3 SKILL 팔 | 765 → 760 |
+| 6b `3a4aba89` | 3 SKILL 보정 · 입력 · 흐름 · 동작 라이브러리 · 유파 · 왕관 | 760 → 760 |
+| 6c `6307c9f5` | 3 SKILL 막기 · 이탈리아 | 760 → 758 |
+| 6d `15ba90f2` | 4 JOINTS 꼴 | 758 → 758 |
+| 6e `b546df99` | 5 CN_STEP · BIND · IMPACT_FX · SHOP · playerProf · fleshHit · WANDER | 758 → 756 |
+| 6f `cbb1c368` | 6 모듈 스위치 (FINISH · VITAL · 이탈리아 걸음 손잡이 넷 · setWhipPreset · setIberianTable · setGripTorque) | 756 → 756 |
+| 6g `84c6a85d` | 남은 읽기 (길목 · 죽음의 일격 지운 칸 · 베고 지나감 · AI_MAAI.hide · jp_strength 머리 묶음) | 756 → 755 |
+| 6h `8e038f99` | 7 시뮬 도구 | 755 → 754 |
+| 6i `ec1508e7` | 8 브라우저 도구 | (시험 없음 — node --check 만) |
+
+### 10-2. 지운 것
+
+- 블록 3 SKILL (corr 빼고): 손가락 긋기 AI 몫 · 얹은 손가락 · 날것 매핑 잣대 셋(frameScale · thrustScale · eastScale) · 두손 칼 빈팔 닿는 곳 · 패드 끝 뻗음(edgeReach) · 두 팔 엇갈림 막기 on · ai · body · miss · corrAI · 끝점 겨눔 corrTip 코드째 · handDynamicsOn · flow(앞무게 틀 흐름은 `skill._flow`) · AI 흐름 시제품 flowOn · flowRiposte · motionLib · MOTION.lib · oneVersatileTable · schoolRest · schoolArt · schoolSecret · playerSecret · deKron · deKronShape · deKronH · 물러서기 연구 itRetreat · itParryBeat · 박자 걸음 셈 rhythmBeat · shortPair · 막기 거듦 parryAssist · forte 막기 itForte · itOpposition · parryFollow · ibBlockRegen · ibBlockRegenN · aiParryCut · talhoApproach
+- 블록 4 JOINTS: mode · presets('anat' 묶음을 그 자리에) · elbowMin · elbowMax · reachFrac · edgeK · edge(명시 돌림힘 하나만) · 모터 · 앞먹임 · 미리 돌리기 · playerEdge('goal' 하나만) · playerEdgeMode
+- 블록 5: CN_STEP mode(꺾음 'turn' 하나만 — 견줌 판 ⓐ ⓑ ⓒ 코드째) · win · slideT · ai · BIND natural · will.on · IMPACT_FX.on(옛 멈칫 · 흔들림 식) · SHOP.enabled · redrawEmptyTier · SAENGSA.playerProf.mode(문턱 셈 'step' 만) · SOUND.fleshHit(그린 살 소리만) · WANDER(quitAsLoss 끔 판 · legacyLoop · resumeState 늘 — 버린 판 패배 셈 markWanderFighting · settleAbandonedWander · showWanderForfeit 코드째)
+- 블록 6: FINISH entry · vital · plateNeck · mode(즉사 판 코드째 — combat `finish` · fighter '내려찍기' 즉사) · lift · aim · chestS · cleave player · ai · anyHeight · AI 쪼개 내려치기 finishOnly · finish_entry lowFinishOn · downLowTarget · VITAL aiCut · thrust · playerCut · track(AI 목 가로 베기 준비 · 플레이어 느린 준비 베기 보정 코드째 — strokeCrossing · pathGoal · vitalHand · vitalAim · aiVitalAdvance · playerVitalUpdate) · setItalianStride · setItalianWalk · setItalianBackCap · setItalianRhythm과 gait.js 옛 짝 셈 'pair' · 'off' · shortFirst · timeOnly · foreMul 갈래(rhythm 칸 count · every · timeOnly · shortFirst) · setWhipPreset · WHIP_SRC · flick 칸 · setIberianTable · skipIberianTable · 자세표 v2(IBERIAN_TABLE_V2 · useIberianTableV2) · setGripTorque · capFromGrip
+- 남은 읽기(5차 §9-5 '블록 밖'): 길목 지키기 — do.gilmok · gilArm · gilmokRest · gilmokSeq · gilmokCutPose · gilmokLine · fireArmed · AI 길목 몸 · config gilmokArmTime · gilmokAim · gilmokArmGrace · 죽음의 일격 — 폼멜 찍기 · 머리 겨눔 'pull' 늘(옛 기술 길 판 지움) · 넘어 들어감 over · 강제 뒤 박차기 mordBurstTick 코드째 · 베고 지나감(gnsThrough) 둘째 맞음 갈래 · AI_MAAI.hide · jp_strength.test 머리의 withNoto0 · deOff
+- 블록 7 시뮬 도구: 지운 칸에 값을 넣던 줄 90 남짓을 지움(NAGASHI.on · BODY.weightMode · humanLimits · chain · r2pScope · SECRET 리솔루토 · 고노센 · 격살 · 모르트 칸 · UA.on · koteDrop.judge · cnHunt.ai · inqAi · dupOld · dupBurst* · tsuTip · JP_TANK.ai · GAIT.school · CLOSE.on · IB_FLOW.detect · 시험 머리 묶음 AI_PLAN.on · SECRET.cnFast · STAMINA.attackTempo 등) · 견줌만 하던 도구 지움(cn_light_duel · cn_light_feel · cn_light_push · chase_step_feel · step_burst_feel · step_burst_void · cut_react_battery · flow_recover) · 아무것도 단언하지 않던 sweep_cap.test(빈 시험 하나) 지움
+- 블록 8 브라우저 도구: 지운 판만 찍던 도구 지움(corr_shots · iberian_gilmok_probe · iberian_gilmok_chart · player_edge_shots · joint_shots · step_burst_probe · mordschlag_selfclip_shots) · 지운 주소 인자 걷음(build_smoke 의 schoolArt · schoolRest · oneVersatile · pommel · motionLib 주소 · camOpen=old 14 곳 · vital_shots 의 vitalAi · vital=0 판 · sb_import2_shots 의 finishMode(즉사 판) · text_policy_shot · strike_cue_shots · unique_assist_shots 의 playerSecret · uniqueAssist · strikeCue · iai · secret · wander_resume_check 의 wanderResume · parry_button_probe 의 parryAssist 글)
+
+### 10-3. 남긴 것과 까닭
+
+- 값이라 남김(스위치처럼 보여도 지금 판이 읽는 수): JOINTS twistK 60 · CN_STEP.straight · 이베리아 IBERIAN_TABLE(v2 묶음은 지움) · WHIP_NOW 값 · FINISH neckAt(약한 자세 겨눔 목 점) · hands(자세 지도 겨눔 자리) · SECRET.mord.guard · AI_THRUST_DEF lungeReach · lungeParry(0 = 지금 — 값 칸)
+- 지시대로 남김: SKILL.corr · INPUT.atkStick · 주소 인자 27 · UNIQUE_ASSIST.enhance · 튜닝 수 모두
+- 다음 일로 남김(이번 범위 밖 스위치): MOTION.useParry · SCHOOL_ART · STEEL.gripTwistMaxPlayer · RECOIL.anchorRelax · JOINTS elbowSwivel · swivelThrust · wristPronate · cutPronate · swivelHuman · wristGuard · wristSwing · wristRope · GRIP.on · SOUND.hitScale · SAENGSA.resumeState · SHOP_TEXT.closed · chain_corr tip2 읽기
+- 관문 도구라 손대지 않음: corr_s0.mjs(--limits 갈래가 지운 BODY.humanLimits 를 넣음 — 관문 줄 `--limits=off,on` 이 그대로 12 IDENTICAL)
+- 견줌 틀이 도구 깊이 엮여 손으로 다시 짜야 하는 것(넣어도 읽는 데가 없어 기본 판으로 돈다): ib_link · ib_link_bridge · ib_chain_measure · thrust_drive_check · it_tone_measure · jp_tank · de_dirty_measure · hold_gap_feel · risoluto_play · risoluto_tap(Object.assign 칸) · 브라우저 b4_shots · redondo_gamecam_shots · redondo_motion_shots(rdWind · rdSteady · b4Old 갈래) · iberian_finish_arms_shots(MOVE=spin) · 그 밖 §7 부록 도구의 tempo · pixel · itRhythm 같은 인자
+- revive.js 의 원인 '내려찍기' 부활 없음 줄 — 게임 안 찍기 즉사는 지웠으나 판을 끝내는 브라우저 도구(stages_sb_shots · courtyard_night_review)가 그 원인을 부름
+
+### 10-4. 시험
+
+- 6a ~ 6g 는 커밋마다 전체 돌림(실패 0). 지운 시험: 끈 판 견줌(손가락 긋기 AI · 두 팔 엇갈림 · 물러서기 · 막기 거듦 · 이베리아 막기 재생 'cut' · CN_STEP 견줌 ⓐ ⓑ ⓒ · 옛 숙련도 'old' · 길목 켬 판 · 칼끝 거리 숨김 켬 판) · 고친 시험: 기본 판 단언은 그대로 두고 지운 칸 단언 · 머리 묶음 · 켬 판 조각만 뺌(druid_whip 판 고르기 → 지금 값 · it_back_cap setter · skill_cmd 의 main.js 줄 · gonosen_ready gilmokArmTime · jp_strength 셋)
+- 6h · 6i 는 도구만 — 6h 전체 돌림 754 (실패 0)
+
+### 10-5. 관문
+
+- 커밋마다 fights12 `b7ba0017` · live `cd211727` · ft `ba9c958b` · corr 12 · smoke 34 / 34 · build 됨 · name_policy 0 · 금지 낱말 0 (바탕과 같음)
+- 덧 대조(관문 밖 — 지운 갈래를 거치는 장면): finish_thrust 1 --armour=both · greatsword_finish · vital_scene tap · ai · cut · finish_probe · gait_even_feel · fast_step_duel · druid_whip tap rest · mordschlag_duel · mordschlag_hits · mordschlag_ai · school_balance — 바꾸기 전과 출력 같음(찍는 머리 줄 · 칸 이름 · 시간만 다름)
+
+### 10-6. 교훈 (새로)
+
+- 문서 덩이 사이를 이름표로 잘라 지울 때(앞 주석 → 다음 주석) 다음 이름표가 멀리 있으면 사이의 함수가 통째로 날아간다 — 6g 에서 `gilmokEvent` 를 그렇게 지우다 고노센 함수 열둘(gnsBlockOf · BindCount …)을 함께 지웠고, 시험 줄의 import 오류로 잡았다. 함수 끝(`}`)까지만 자르고, 지운 뒤 export 목록을 바탕과 견줄 것
+- 지운 스위치가 '켬'일 때만 값을 넣던 칸은 기본 판에서 늘 비어 있다(죽음의 일격 run.mord.burst · I.through · AI gilArm) — 칸을 넣는 곳이 없어진 읽기를 찾아 갈래째 지울 것
+- 시험이 main.js 줄을 글자로 단언하는 곳(skill_cmd)은 갈래를 지우면 실패한다 — 뜻(비기 창 = 탭 · 긋기)은 그대로라 단언 글만 고침
+- 비교 도구는 손잡이(setter)를 지우면 그대로 깨진다 — 같은 블록에서 도구도 고칠 것(with_italian · rhythm_step_feel 지움 · gait_even_feel 은 '0' 판을 normal 0 으로)
+
+### 10-7. 남은 것
+
+- §10-3 의 '다음 일로 남김' · '견줌 틀' 목록
