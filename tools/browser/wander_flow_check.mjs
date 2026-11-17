@@ -23,6 +23,7 @@ import { UPDATE_NOTES } from '../../src/update_notes.js';
 import { STAGE_ORDER } from '../../src/stages.js';
 import { WANDER_EXCLUSIVE, WANDER_BONUS } from '../../src/wander_rules.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
+import { PROF_BODY } from '../../src/config.js'; // 숙련도별 몸 값 (11/17 E — 상대 = 본 유파 숙련도 칸 · 나 = 익힌 칸 숙련도 칸)
 
 const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
 const out = process.argv[3] || 'docs/handoff/wander_import';
@@ -314,7 +315,7 @@ async function lobbyGo(page, id) {
   check(!(await toFight(page)), '⑤ 대기실 → 방랑 이어가기: 같은 대면 — 알림 창 다시 없음');
   const foe = await page.evaluate(() => window.game.enemy.name);
   const vit = await page.evaluate(() => ({ v: window.game.enemy.vitality, blood: window.game.enemy.blood, me: window.game.player.vitality }));
-  check(vit.v === 1.1 && vit.blood === 1 && vit.me === 1, `⑤ 롤랑 버티는 힘 ${vit.v} (사장님 10/24 '체력 +10%') · 피 ${vit.blood * 100} % 에서 시작 · 나 ${vit.me}`);
+  check(vit.v === PROF_BODY.vitality[6] && vit.blood === 1 && PROF_BODY.vitality.slice(1, 6).includes(vit.me), `⑤ 롤랑 버티는 힘 ${vit.v} (숙련도 6 칸 — 11/17 E · 전 사장님 10/24 '체력 +10%') · 피 ${vit.blood * 100} % 에서 시작 · 나 ${vit.me} (익힌 칸 숙련도 칸)`);
   await page.waitForTimeout(3000);
   await page.screenshot({ path: `${out}/wander_fight_roland.png` });
   await finish(page, true);
@@ -344,7 +345,7 @@ async function lobbyGo(page, id) {
   await page.screenshot({ path: `${out}/encounter_white_scale.png` });
   await page.locator('#btnEncounter').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 30000 }).catch(() => {});
-  check(await page.evaluate(() => window.game.state === 'fight' && window.game.enemy.name === '백린의 전사' && window.game.enemy.vitality === 1), '⑦ 확인 → 카드 없이 싸움 (백린의 전사 · 버티는 힘 1 그대로)');
+  check(await page.evaluate((v5) => window.game.state === 'fight' && window.game.enemy.name === '백린의 전사' && window.game.enemy.vitality === v5, PROF_BODY.vitality[5]), '⑦ 확인 → 카드 없이 싸움 (백린의 전사 · 버티는 힘 = 숙련도 5 칸 — 11/17 E)');
   // 백린의 전사 이김 (이 방랑 3승째 · 목은 안 벰): '금화 +N (연승 보너스 +M 포함) · 머리 +10 (빼앗은 수급 +10 포함)' (사장님 10/24 02:4x · 03:0x)
   const heads0 = (await progress(page)).heads, coins7 = (await progress(page)).coins;
   await page.waitForTimeout(1500);

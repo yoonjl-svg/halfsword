@@ -14,12 +14,11 @@ import { CHARACTERS_BY_ID } from './characters.js';
 import { WEAPON_LIST, RETIRED_WEAPONS, getWeapon, drawWeaponCards, TIER_DRAW, BREAK } from './weapons.js';
 import { traditionOf } from './schools.js';
 import { portraitSrc, PORTRAIT_IDS } from './portraits.js';
-import { readLearned } from './skill_tree_store.js';
-import { TREE_SCHOOLS, nodesOf, isClosed } from './skill_tree_data.js';
+import { playerProficiency } from './skill_tree_store.js';
 import { ownedWeapons } from './owned_weapons.js';
 import { readProgress } from './lobby_progress.js';
 import { readProfile } from './player_profile.js';
-import { proficiencyOf, PROF_SCHOOLS } from './saengsa_proficiency.js';
+import { proficiencyOf } from './saengsa_proficiency.js';
 import { NAMELESS, entryMissing } from './saengsa_rules.js';
 import { namelessFace } from './saengsa_nameless.js';
 import { SAENGSA_TEXT, CLOTH_KO } from './saengsa_text.js';
@@ -55,26 +54,8 @@ export function entryState() {
   return { missing: entryMissing({ hasTitle, owned: owned.length }), owned, hasTitle };
 }
 
-/**
- * 내 숙련도 — 유파마다 그 유파 스킬 칸(편지 · 닫힌 칸 뺌)에서 익힌 칸 수로 (18:1x '플레이어 숙련도는 0이 없고 1부터 시작' — 가장 낮게 1). learned = { 유파: Set(칸 id) } (skill_tree_store.js readLearned)
- *  11/16 [사장님 11/16 결정 '사람 셈도 문턱 기준으로 바꿔']: at2(5) 칸 이상 2 · at3(7) 3 · at4(9) 4 · at5(11 — 모두) 5 — AI 사다리(config AI_KIT.ladder) 쌓임 칸 수와 같은 문턱
- *  (10/29 17:5x 옛 규칙 — 비기 · 특수공격 칸 — 은 11/17 지움)
- */
-export function playerProficiency(learned = readLearned(), cfg = SAENGSA.playerProf) {
-  const out = Object.fromEntries(PROF_SCHOOLS.map((s) => [s, 1]));
-  for (const s of TREE_SCHOOLS) {
-    const has = new Set(learned[s] ?? []);
-    const skills = nodesOf(s).filter((n) => n.cat !== 'letter' && !isClosed(s, n));
-    const got = skills.filter((n) => has.has(n.id));
-    let v = 1;
-    if (got.length >= cfg.at2) v = 2;
-    if (got.length >= cfg.at3) v = 3;
-    if (got.length >= cfg.at4) v = 4;
-    if (got.length >= cfg.at5) v = 5;
-    out[s] = v;
-  }
-  return out;
-}
+/** 내 숙련도 (유파마다 익힌 칸 수 문턱 — 11/17 skill_tree_store.js 로 옮김 · 판의 몸 값과 함께 씀) */
+export { playerProficiency };
 /** 인물(또는 'player') → 숙련도 */
 export const profOf = (id) => (id === 'player' ? playerProficiency() : proficiencyOf(id));
 /** 고용 값: { coins } (특별 동료면 { token }) */

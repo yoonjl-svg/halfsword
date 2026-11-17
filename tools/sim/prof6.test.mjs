@@ -1,8 +1,8 @@
-// 숙련도 상한 6 · 숙련도 6 버티는 힘 · 시트 무기 (사장님 10/29 22:4x · 22:5x — docs/decisions.md 같은 때)
+// 숙련도 상한 6 · 숙련도 6 버티는 힘(11/17 부터 PROF_BODY) · 시트 무기 (사장님 10/29 22:4x · 22:5x — docs/decisions.md 같은 때)
 //  node --test tools/sim/prof6.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AI_PROFICIENCY, PROF6_VITALITY } from '../../src/config.js';
+import { AI_PROFICIENCY, PROF_BODY } from '../../src/config.js';
 import { CHARACTERS_BY_ID as C } from '../../src/characters.js';
 import { WEAPONS } from '../../src/weapons.js';
 import { traditionOf } from '../../src/schools.js';
@@ -31,11 +31,11 @@ test('숙련도 표의 열쇠 = 실제로 싸우는 유파 (광기의 마야 = �
   assert.deepEqual(C.artoria.ai.persona.proficiency, { german: 6 });
 });
 
-test('숙련도 6 이면 버티는 힘 1.1 — 규칙 한 곳 (롤랑 · 베르나르도 · 아르토리아 · 광기의 아르토리아 · 광기의 미나미 · 광기의 다라이시)', () => {
-  assert.equal(PROF6_VITALITY, 1.1);
+test('숙련도 6 버티는 힘 — 11/17 E 부터 숙련도별 몸 값 PROF_BODY 6 칸이 줌 (시트에 vitality 없음 · 전 PROF6_VITALITY 1.1 · 롤랑 · 베르나르도 · 아르토리아 · 광기의 아르토리아 · 광기의 미나미 · 광기의 다라이시)', () => {
+  assert.ok(PROF_BODY.vitality[6] >= 1.1, '6 칸 ≥ 옛 1.1 (사장님 10/24 롤랑 · 베르나르도 +10 %)');
   const six = all.filter((c) => c.ai?.proficiency === 6).map((c) => c.id).sort();
   assert.deepEqual(six, ['artoria', 'artoria_mad', 'bernardo', 'minami_mad', 'roland', 'silver_wanderer_mad']); // 11/14 광기의 다라이시 6 더함 (§10)
-  for (const c of all) assert.equal(c.vitality ?? 1, c.ai?.proficiency === 6 ? PROF6_VITALITY : 1, c.id);
+  for (const c of all) assert.equal(c.vitality, undefined, c.id); // 몸에 넣는 곳은 ai.js setLevel 한 곳 (prof_body.test.mjs)
 });
 
 test('시트 무기: 미나미 쿠사나기 · 광기의 미나미 무라마사 · 다라이시 우치가타나 · 광기의 다라이시 모노호시자오 — 모두 일본 · 꾸러미 = 무기', () => {
