@@ -48,7 +48,10 @@ for (const sh of SHOTS) {
         ai.sense.record(dt);
         ai.me.move.set(0, 0);
       };
-      g.config.SKILL.parryFollow = 0;
+      // 따라가기 막음 (막기 단추 따라가기는 늘 켬 — 11/17): 기다림 규칙 coverFor 가 줄을 주지 않게 (AI 는 위에서 멈춤 · 이 사진 판만)
+      let pr = Object.getPrototypeOf(ai);
+      while (pr && !Object.prototype.hasOwnProperty.call(pr, 'coverFor')) pr = Object.getPrototypeOf(pr);
+      if (pr) pr.coverFor = () => null;
       const G = g.playerGuard;
       const st = G.step.bind(G);
       G.step = (dt) => {

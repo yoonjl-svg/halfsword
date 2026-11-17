@@ -79,17 +79,16 @@ for (const mode of ['exhaustion', 'manual', 'down', 'lost', 'enemyDead', 'broken
   });
 }
 
-for (const mode of ['bookOff', 'otherWeapon', 'disabled', 'broken']) {
+for (const mode of ['bookOff', 'otherWeapon', 'broken']) {
   test(`no start: ${mode}`, () => {
     const fx = fixture(mode === 'otherWeapon' ? 'longsword' : 'rapier');
     try {
       const { f, guard, mod, press } = fx;
       if (mode === 'bookOff') f.schoolParry = false;
-      if (mode === 'disabled') CONFIG.SKILL.itOpposition = 0;
       if (mode === 'broken') guard.broken = true;
       press();
       assert.equal(mod.run, null); assert.equal(mod.starts, 0); assert.equal(guard.woundKeep(), 1);
-    } finally { CONFIG.SKILL.itOpposition = 1; fx.g.world.free(); }
+    } finally { fx.g.world.free(); }
   });
 }
 

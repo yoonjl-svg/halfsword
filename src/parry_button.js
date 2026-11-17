@@ -20,15 +20,9 @@
 //  손가락 빠르기와 섞이지 않게: 이 파일이 옮긴 손 목표만큼 검술 층의 지난 목표(skill.prev)도 옮겨, 휘두르기 판정(skill.swinging — 내딛기·베기 덩이·막기 연환의 '공격 중')은
 //   손가락 끌기만 본다. 대신 손이 휘두르기 문턱보다 빠르게 옮겨지는 동안은 AI 막기처럼 휘두르기 꼴의 거르기·몸 따라가기를 쓴다(skill.guardDrive).
 //  새 수 없음 — 모두 AI·검술 층에 있던 값.
-//  막기 거듦 (10/12 — SKILL.parryAssist, docs/strike/parry_assist_2026-10-12.md, 확인표 990~993 사장님 확인 전): 무거운 칼의 막기 바닥을 올린다. 누르는 동안만.
-//   ① 무게 보정: 롱소드(손 기준 휘두름 관성 iRef)보다 무거운 몫 w 만큼 손 빠르기·서보 힘(fighter.powerMul)을 보탠다 — 가벼운 칼은 그대로라 '가벼운 칼이 더 잘 막는다'는 남는다
-//   ② 일찍·다시 읽기: 들어오는 칼끝·타격점을 lead 초 앞으로 내다본 모습으로 threatNow 를 부른다(같은 함수 — 원통을 그만큼 앞으로 넓힘).
-//      한 공격 안에서 읽은 줄이 바뀌면 따라간다(reread — AI 는 한 번 정한 줄을 굳힌다)
-//   ③ 자리 덧힘: 막는 줄의 자리에 손이 닿아 있는 동안 서보 힘을 더 — 칼을 단단히 세워 맞고 밀리지 않게
-//   새 상한·쿨타임 없음. 놓으면 powerMul 1 (비기 중엔 버튼이 손을 안 쥐니 skill.js 의 비기 힘 창과 겹치지 않는다)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, SKILL, ARENA, realS, CN_STEP } from './config.js';
+import { AI_LEVELS, SKILL, realS, CN_STEP } from './config.js';
 import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 (11/15 — 사장님 11/16 묶음 P)
 import { cnSee } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
@@ -46,7 +40,6 @@ const NEW_THREAT_T = realS(0.25); // 잠깐 조용했다가 다시 오면 새 �
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 몸꼴 덧씌우기 parryCover · 막는 동안 피해 감소 parryCut)
 
 const _r = new THREE.Vector3();
-const _b = new THREE.Vector3();
 const LINES = ['highL', 'highR', 'highC', 'lowL', 'lowR', 'thrust'];
 // coverFor 가 고른 자리 → 줄 이름 (10/16 23:5x): 두 줄이 같은 자리를 쓰면(이베리아 lowL·lowR = 왼 비낀 자세 · 동방 highR·highC = 거정세 자리 · 이탈리아 highL·lowL)
 //  LINES 차례의 앞 줄만 잡혀 그 줄의 몸꼴 덧씌우기가 엇갈렸다(동방 정수리 준비에 거정세 대신 맨 자리) — coverFor 와 같은 규칙으로 상대 칼이 있는 쪽 줄을 먼저 본다.
@@ -79,11 +72,7 @@ export class PlayerParryGuard {
     this.threatSeen = -1;
     this.line = null; // 지금 손이 가는 자리의 줄 (defLine 또는 기다림의 coverFor 줄 · 'point')
     this.stats = { heldT: 0, threats: 0, lines: {}, waitT: 0 };
-    this.boost = false; // 막기 거듦이 me.powerMul 을 쥐고 있나
-    this._s2 = {}; // 일찍 읽기용 내다본 모습 (seen 사본)
-    // 이탈리아 물러서기 (10/17 연구 — SKILL.itRetreat · itParryBeat, 판 값 끔): retreat = 물러서는 한 짝 { t 지난 시간 · n0 걸 때 디딤 수 } · retreatEnd = 마지막으로 끝난 때(clock — 식힘 cool)
-    this.retreat = null;
-    this.retreatEnd = -Infinity;
+    this.boost = false; // 동방 버티는 힘이 me.powerMul 을 쥐고 있나
     this.clock = 0;
     this.opposition = new ItalianOpposition(me, foe, this);
     // 대기실 스킬트리 막기 I 을 안 익힌 플레이어(me.schoolParry === false — main.js newRound, 모든 판): 무유파 막기 자리(TRADITIONS.none.parry)·덧씌우기 없음
@@ -149,15 +138,11 @@ export class PlayerParryGuard {
     const c = me.bodies.chest.translation();
     const d = Math.max(0.01, Math.hypot(s.cx - c.x, s.cz - c.z));
     const foeReach = (me.swordArt?.measureFor?.(this.foe.weapon)?.reach ?? 1) + 0.05; // ai.js 생성자 foeReach 와 같은 셈 (PlayerSecretWatch.view 와 같음)
-    const A = SKILL.parryAssist ?? 0;
-    const AV = SKILL.parryAssistVals;
-    const w = A > 0 ? Math.min(AV.wMax, Math.max(0, (me.swordIhand ?? AV.iRef) / AV.iRef - 1)) : 0; // 롱소드보다 무거운 몫
-    const sr = A >= 2 && AV.lead > 0 ? this.ahead(s, AV.lead) : s; // ② 일찍 읽기
-    let th = this.foe.alive ? threatNow(this.sense, this.foe, sr, c, me.right(_r), d, foeReach, this.lag) : null;
+    let th = this.foe.alive ? threatNow(this.sense, this.foe, s, c, me.right(_r), d, foeReach, this.lag) : null;
     // 찌르기 낌새 (11/15 — 사장님 11/16 묶음 P): 곧은 줄 눈이 못 잡은 칼이 칼날 줄로 나오기 시작하면 찌르기 줄로 (AI 눈과 같은 셈 · 같은 모습)
     if (!th && this.foe.alive && d < foeReach + 0.3) {
-      const h = thrustTell(sr, c);
-      if (h) (th = { line: 'thrust', thrust: true, sp: h.sp, E: 0.5 * (this.foe.swordProps?.m ?? 1.5) * h.sp * h.sp, high: sr.hy > 0.15, tell: true }), (this.stats.tell = (this.stats.tell ?? 0) + 1);
+      const h = thrustTell(s, c);
+      if (h) (th = { line: 'thrust', thrust: true, sp: h.sp, E: 0.5 * (this.foe.swordProps?.m ?? 1.5) * h.sp * h.sp, high: s.hy > 0.15, tell: true }), (this.stats.tell = (this.stats.tell ?? 0) + 1);
     }
     if (CN_STEP.mode) cnSee(me, th); // 동방 보법 회피 (11/15 시제품): 공격 창 — 사람도 보이는 칼 움직임으로 (AI 와 같은 눈)
     if (th) {
@@ -165,7 +150,6 @@ export class PlayerParryGuard {
       this.noThreat = 0;
     } else this.noThreat += dt;
     if (!can) {
-      if (this.retreat) this.endRetreat(); // 물러서는 한 짝도 놓는다 (스틱으로 돌려줌)
       if (this.active && !this.broken) sk.cutPending = true; // 놓으면 검술 층의 '자세로 돌아가기'(쉴 자세)로 — 휘두르고 난 뒤와 같은 길
       this.active = false;
       this.mode = 'idle';
@@ -184,12 +168,7 @@ export class PlayerParryGuard {
       this.timer = DEF_T;
       this.stats.threats++;
       this.stats.lines[th.line] = (this.stats.lines[th.line] ?? 0) + 1;
-      if (SKILL.itRetreat || SKILL.itParryBeat) this.beatOnThreat(th, d);
-    } else if (A >= 2 && AV.reread && th && this.defLine && th.line !== this.defLine) {
-      // ② 다시 읽기: 한 공격 안에서도 지금 읽은 줄이 바뀌면 따라간다 (AI 는 한 번 정하면 그대로 — 준비 동작을 공격으로 읽고 줄을 잘못 굳히는 일, 기록 §3)
-      this.defLine = th.line;
-      this.stats.reread = (this.stats.reread ?? 0) + 1;
-    } else if (SKILL.parryFollow && !th && this.defLine) {
+    } else if (!th && this.defLine) {
       // 따라가기 (10/16 — docs/strike/yoryak_shape_2026-10-16.md): 막는 중 위협이 잠깐 끊기면(상대가 준비 자세에서 멈춤) 기다릴 때와 같은 규칙(coverFor)으로
       //  상대 칼이 있는 쪽 줄로 옮긴다 — 준비 동작을 공격으로 읽어 굳힌 줄(위)을 칼을 내린 준비 자세(아래)로 바로잡는다.
       //  가까운 올려 베기는 다리를 먼저 베어, 긋기 전에 아래 자리(동방 요략세)에 가 있어야 막는다
@@ -205,21 +184,6 @@ export class PlayerParryGuard {
       this.timer -= dt;
       const swingOver = this.noThreat > QUIET_T && Math.hypot(s.hvx, s.hvy) < 2.5;
       if ((swingOver && this.timer < DEF_MIN) || this.timer <= 0) this.defLine = null;
-    }
-    // 물러서는 한 짝 (10/17 연구 — SKILL.itRetreat): 박자 걸음이 짧은 디딤으로 센 두 디딤(뒷발 → 앞발 — gait.js shortPair)을 다 디딜 때까지 스틱을 뒤로 쥔다 · maxT 안에 못 하면 놓음.
-    //  둘째 짧은 디딤을 뗀 때(shortPair 0)의 디딤 수 z 를 적고, 그 뒤 처음 디딘 때 끝. 걸 때 자세 고치던 발이 떠 있으면 그 발은 걷는 걸음으로 바뀌어(셈 밖) 한 디딤 더 물러선다
-    //  스스로 물러서기(itRetreat 1 · 2 둘 다): 막는 동안 스틱을 뒤로(뒤 90° 부채꼴 — fighter.closeStep 의 밂과 같은 기하, 새 수 없음) 당기면 그 두 디딤을 짧은 디딤으로 센다 — 스틱은 플레이어 것 그대로 · 뒤에서 떼면 끝
-    //  스틱이 이긴다(itRetreat 1): 막기 단추가 물러서는 중 플레이어가 스틱을 대면 — 뒤로면 스스로 물러서기로 이어 세고, 다른 쪽이면 그 자리에서 끝(스틱을 돌려줌)
-    const back = -me.stickY > Math.abs(me.stickX);
-    if (SKILL.itRetreat && !this.retreat && back) this.ownRetreat();
-    if (this.retreat) {
-      const R = this.retreat;
-      R.t += dt;
-      const touched = !R.own && (me.stickX !== 0 || me.stickY !== 0);
-      if (touched && back) R.own = true;
-      if (R.z == null && !(me.gait?.shortPair > 0)) R.z = this.footfalls();
-      if ((R.z != null && this.footfalls() > R.z) || R.t > SKILL.itRetreatVals.maxT || (R.own && !back) || (touched && !back)) this.endRetreat();
-      else if (!R.own) me.move.set(0, -SKILL.itRetreatVals.stick);
     }
     let p;
     if (this.defLine) {
@@ -239,7 +203,7 @@ export class PlayerParryGuard {
     const dy = p[1] - off.y;
     const dd = Math.hypot(dx, dy);
     const cnK = this.chineseBook() ? SKILL.cnParrySpeedK : 1; // 동방 막기 책 손 빠르기 배율 (10/17 — SKILL.cnParrySpeedK, 판 값 1 = 그대로)
-    const step = L.parrySpeed * (1 + (A >= 1 ? AV.speedK * w : 0)) * cnK * dt; // ① 무게 보정 (단계 0 이면 그대로)
+    const step = L.parrySpeed * cnK * dt;
     const k = dd > step ? step / dd : 1;
     const mx = dx * k;
     const my = dy * k;
@@ -250,48 +214,16 @@ export class PlayerParryGuard {
     sk.guardDrive = Math.hypot(mx, my) / dt; // 검술 층: 휘두르기 문턱보다 빠르면 AI 막기처럼 휘두르기 꼴의 거르기·몸 따라가기 (skill.js)
     sk.recovering = false;
     sk.cutPending = false;
-    // 동방 버티는 힘 (10/17 연구 — SKILL.cnBraceK, 판 값 0 = 끔): 동방 막기 책을 쥔 몸이 막는 중(mode 'defend')이면 서보 힘 × (1 + cnBraceK).
-    //  기다림(idle)엔 안 줌 · 막기가 끝나거나 단추를 놓으면 아래 boost 되돌림 길로 1 · 막기 거듦(①③)과는 곱
+    // 동방 버티는 힘 (10/17 연구 — SKILL.cnBraceK, 판 값 0): 동방 막기 책을 쥔 몸이 막는 중(mode 'defend')이면 서보 힘 × (1 + cnBraceK).
+    //  기다림(idle)엔 안 줌 · 막기가 끝나거나 단추를 놓으면 아래 boost 되돌림 길로 1
     const brace = this.mode === 'defend' && SKILL.cnBraceK > 0 && this.chineseBook() ? SKILL.cnBraceK : 0;
-    if (A >= 1 || brace > 0) {
-      // ① 서보 힘 · ③ 막는 줄의 자리에 닿아 있으면 더 (칼을 단단히 세움) — 거듦 단계 0 이면 w = 0 이라 1
-      let pm = 1 + AV.powK * w;
-      if (A >= 3 && this.mode === 'defend' && Math.hypot(p[0] - off.x, p[1] - off.y) < AV.holdR) pm *= 1 + AV.holdK * (1 + w);
-      if (brace > 0) pm *= 1 + brace;
-      me.powerMul = pm;
+    if (brace > 0) {
+      me.powerMul = 1 + brace;
       this.boost = true;
     } else if (this.boost) (me.powerMul = 1), (this.boost = false);
     me.inputActive = true; // 손을 쥐고 있다 — 쉼 무게·되돌아옴·끝점 붙잡음은 손가락이 움직일 때처럼 비킨다 (main.js 가 프레임마다 다시 정함)
     this.opposition.endGuardStep();
     return true;
-  }
-
-  /**
-   * 이탈리아 물러서기 · 막기 박자 (10/17 연구 — SKILL.itRetreat · itParryBeat, 판 값 끔 · docs/strike/italian_retreat_2026-10-17.md): 새 공격을 읽은 순간(한 공격에 한 번).
-   *  이탈리아 막기 책을 쥔 플레이어만. itRetreat 1(막기 단추가 물러섬)이고 스틱을 대지 않았고(스틱이 이긴다) 약한 길(가슴 사이 거리 ≥ gap, 또는 low 일 때 읽은 줄이 아래 — 올려 베기)이고 뒤에 자리가 있고 식힘이 지났으면 물러서는 한 짝을 건다:
-   *   박자 걸음은 그 두 디딤을 짧은 디딤으로 센다(gait.js rhythmBeat 'retreat') → 다음 나아가는 한 짝이 긴 디딤. 카포 페로 권고 4 · 13 · 12 — 몸을 조금 뒤로 빼 비키고 곧장 찌름 · 뒷발부터 [해석]
-   *  아니면 itParryBeat 일 때 막기를 짧은 박자로 센다(rhythmBeat 'parry' — 막은 뒤 첫 나아가는 한 짝이 긴 디딤 · 물러서는 중이면 그 셈 그대로). 새 상한 · 쿨타임 값은 itRetreatVals(사장님 확인 전)
-   */
-  beatOnThreat(th, d) {
-    const me = this.me;
-    if (!this.italianFeet()) return;
-    const V = SKILL.itRetreatVals;
-    const weak = d >= V.gap || (V.low && (th.line === 'lowL' || th.line === 'lowR'));
-    if (SKILL.itRetreat === 1 && !this.retreat && me.stickX === 0 && me.stickY === 0 && weak && this.clock - this.retreatEnd >= V.cool && this.roomBehind(V.room)) {
-      this.retreat = { t: 0, n0: this.footfalls() };
-      me.gait.rhythmBeat('retreat');
-      this.stats.retreats = (this.stats.retreats ?? 0) + 1;
-      return;
-    }
-    if (SKILL.itParryBeat && !this.retreat) me.gait.rhythmBeat('parry');
-  }
-
-  /** 스스로 물러서기 (itRetreat 1 · 2) — 플레이어가 막는 동안 스틱을 뒤로 당긴 순간: 그 걸음을 물러서는 한 짝으로 센다(스틱은 쥐지 않음 · 식힘 cool 같음 · 거리 · 뒤 자리는 플레이어가 본다) */
-  ownRetreat() {
-    if (!this.italianFeet() || this.clock - this.retreatEnd < SKILL.itRetreatVals.cool) return;
-    this.retreat = { t: 0, n0: this.footfalls(), own: true };
-    this.me.gait.rhythmBeat('retreat');
-    this.stats.retreats = (this.stats.retreats ?? 0) + 1;
   }
 
   /** 동방 막기 책을 쥔 몸인가 (무기 유파 chinese · 책 해제면 아님) — 막기 단추 손 빠르기 배율 SKILL.cnParrySpeedK · 버티는 힘 cnBraceK · 피해 감소 cnParryDmgCut 를 받는다 */
@@ -314,48 +246,5 @@ export class PlayerParryGuard {
     // 유파별 몫: 동방 cnParryDmgCut 0.5(10/17) · 일본 jpParryDmgCut · 이베리아 ibParryDmgCut 0.2(사장님 10/18 22:1x) — 다른 유파 · 책 해제 = 1
     const cut = { chinese: SKILL.cnParryDmgCut, japanese: SKILL.jpParryDmgCut, iberian: SKILL.ibParryDmgCut }[me.swordArt?.tradition] ?? 0;
     return (cut > 0 ? 1 - cut : 1) * press;
-  }
-
-  /** 이탈리아 막기 책을 쥐고(책 해제면 아님) 박자 걸음이 도는 몸인가 */
-  italianFeet() {
-    const me = this.me;
-    return me.swordArt?.tradition === 'italian' && me.schoolParry !== false && !!me.gait?.active;
-  }
-
-  /** 지금까지 디딘 발 수 (gait.js touchdown 의 tdN — 두 발 합) */
-  footfalls() {
-    const L = this.me.gait?.legs;
-    return L ? (L.F.tdN ?? 0) + (L.B.tdN ?? 0) : 0;
-  }
-
-  /** 뒤로 room m 물러선 골반 자리가 결투장 안(ARENA.radius − 0.3 m — 보이지 않는 벽 앞)인가. 석상 같은 무대 장애물은 보지 않는다 */
-  roomBehind(room) {
-    const p = this.me.bodies.pelvis.translation();
-    const f = this.me.forward(_b);
-    return Math.hypot(p.x - f.x * room, p.z - f.z * room) < ARENA.radius - 0.3;
-  }
-
-  /** 물러서는 한 짝 끝 — 못 다 딛은 짧은 디딤 몫은 버리고(셈은 짧은 박자를 마친 자리 — 다음 둘이 긴 디딤), 막기 단추가 쥐었던 스틱을 돌려줌(main.js 가 프레임마다 스틱 값으로 다시 정한다 · 시뮬은 0) */
-  endRetreat() {
-    const me = this.me;
-    const own = this.retreat?.own;
-    this.retreat = null;
-    this.retreatEnd = this.clock;
-    if (me.gait?.shortPair > 0) me.gait.shortPair = 0;
-    if (own) return;
-    const k = me.emoMods?.move ?? 1;
-    me.move.set(me.stickX * k, me.stickY * k);
-  }
-
-  /** 일찍 읽기 (막기 거듦 ②): 칼끝·타격점을 지금 속도로 lead 초 앞에 둔 모습 (나머지 칸은 그대로) */
-  ahead(s, lead) {
-    const o = Object.assign(this._s2, s);
-    o.tx = s.tx + s.tvx * lead;
-    o.ty = s.ty + s.tvy * lead;
-    o.tz = s.tz + s.tvz * lead;
-    o.mx = s.mx + s.mvx * lead;
-    o.my = s.my + s.mvy * lead;
-    o.mz = s.mz + s.mvz * lead;
-    return o;
   }
 }

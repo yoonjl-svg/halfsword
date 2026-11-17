@@ -1,6 +1,6 @@
 // 유파 막기 몸꼴 찾기 — 아무 유파 · 아무 줄 (10/16 23:3x 사장님 '우케나가시 탈류 쳐내기 개발해'). 읽기만 — 판 값은 바꾸지 않는다.
 //  yoryak_search.mjs(요략세)를 넓힌 것: 플레이어(그 유파 무기 · 유파 막기 책)가 막기 단추를 버티고, AI normal 몸이 대본으로 공격들을 긋는다.
-//  후보 몸꼴을 TRADITIONS[TR].parryCover[LINE] 에 잠깐 얹어 막음을 센다(판 값 SKILL.parryFollow 그대로 — 막기 따라가기 켬).
+//  후보 몸꼴을 TRADITIONS[TR].parryCover[LINE] 에 잠깐 얹어 막음을 센다(막기 따라가기 켬 — 본판).
 //  TR=<유파> WEAPON=<무기> LINE=<줄> ATTACKS=<기술·속임수 이름,…> RANGE=ukenagashi|talho|sage|diag|talhoTh (찾는 범위 — 아래)
 //  ATKS=<치는 칼,…> GAPS=… SPEEDS=… N=<후보 수> SEED=<씨앗> TOP=<보일 수> OUT=<json> CANDS=<json — 이 후보만>
 //  node tools/sim/cover_search.mjs
@@ -11,7 +11,6 @@ import { TECH, FEINTS } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 
-if (process.env.FOLLOW != null) SKILL.parryFollow = +process.env.FOLLOW;
 if (process.env.NAGASHI != null) NAGASHI.on = +process.env.NAGASHI; // NAGASHI=0: 흘려 받기 규칙 끔 (config NAGASHI)
 const TR = process.env.TR ?? 'japanese';
 const WEAPON = process.env.WEAPON ?? 'uchigatana';
@@ -75,7 +74,6 @@ function candidate() {
 let nag = false;
 function trial(cover, atk, gap, speed, attack) {
   nag = false;
-  SKILL.parryAssist = 0;
   const Gm = newRound({ weapon: WEAPON, weapon2: atk, seed: 1, gap });
   const D = Gm.player, A = Gm.enemy;
   D.skill.corr = SKILL.corr;

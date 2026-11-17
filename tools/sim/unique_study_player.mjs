@@ -29,7 +29,6 @@ const rows = [];
 for (const seed of seeds) for (const opp of opps) for (const delay of delays) {
   const t0 = Date.now();
   let rs = (seed * 7919 + Math.round(delay * 1000)) >>> 0; const rnd = () => ((rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296);
-  SKILL.parryAssist = 0;
   const Gm = newRound({ weapon: W, weapon2: opp, seed });
   const D = Gm.player, A = Gm.enemy;
   D.skill.corr = SKILL.corr; D.skill.autoGuard = true; D.schoolFootwork = true; D.schoolParry = true;

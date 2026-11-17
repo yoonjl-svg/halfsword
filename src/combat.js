@@ -39,7 +39,7 @@ import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 �
 import { perkOff, uniqueOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4 · 11/16 내려 찌르기 틈 파고들기 = 내려 찌르기 칸 I7 [사장님 11/16 결정 '다 너의 권고대로 하마'])
 import { itThrust, itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14 — 사람 이탈리아 찌르기 판정 배율 · 맞박자 찌르기 · 칼 우위 — config IT_OUTBOX)
 import { aiWoundKeep } from './ai_block_cut.js';
-import { ibBlockHit } from './ib_block_regen.js'; // 이베리아 막아 내면 기력 되찾음 (11/15 — 기다리는 공격의 칼날 상처면 못 막아 냄) // AI 막는 동안 피해 감소 시제품 (11/15 — SKILL.aiParryCut · 기본 끔)
+import { ibBlockHit } from './ib_block_regen.js'; // 이베리아 막아 내면 기력 되찾음 (11/15 — 기다리는 공격의 칼날 상처면 못 막아 냄) // AI 막는 동안 피해 감소 (11/15 — 늘 켬)
 import { huntHit } from './cn_hunt.js'; // 동방 맹호은림 사냥 겹 (11/14 — 출혈 이점이 붙는 맞음에서 · 쌓는 몸만)
 import { MAX_FIGHTERS } from './team.js'; // 셋 이상 판: 같은 편도 적과 똑같이 상처 · 칼 겨루기 (사장님 10/29 22:3x — 제 몸끼리만 버린다)
 
@@ -404,7 +404,7 @@ export class Combat {
         //  심각도에서 나와(fighter.applyWound) 같이 준다. 에너지 · 가르나 튕기나(pass) · 박힘은 그대로 — 칼과 몸의 물리(충격 · 휘청임 · 투구/판 닳음)는 바뀌지 않는다
         //  일본 · 이베리아도 같은 칸으로 × (1 − 0.2) (사장님 10/18 22:1x — SKILL.jpParryDmgCut · ibParryDmgCut)
         if (vic.parryGuard?.woundKeep) severity *= vic.parryGuard.woundKeep();
-        else if (SKILL.aiParryCut && vic.aiCtl) severity *= aiWoundKeep(vic); // AI 몸도 사람과 같게 (11/15 시제품 — 기본 끔 · src/ai_block_cut.js)
+        else if (vic.aiCtl) severity *= aiWoundKeep(vic); // AI 몸도 사람과 같게 (11/15 사장님 '동방 ai 막기 감소 켜' · src/ai_block_cut.js)
         if (CN_STEP.mode) severity *= cnStepKeep(vic); // 동방 편섬 (11/15 사장님 '0.4초 50% 감소 (칼날 피해에 찌르기도 포함 맞지?)' — 베기 · 찌르기 둘 다 · 둔기 빼고): 꺾은 때부터 줄임 시간 안이면 × (1 − cut)
       } else {
         const armorBlocks = finish && (plate || helmet) && !att.weaponCfg.ignoreArmor && !att.weaponCfg.ignoreArmorDamage;

@@ -554,7 +554,7 @@ const IBERIAN_UNIQUE = [
   //  the montante to give a revez cutting from behind with the other edge … also from low to high」(피 단Ⅰ — 「whoever performs it well will be able to perform them all」).
   //  오른 아래 → 올려 탈류 → 왼 높이 비낌(피 복ⅩⅤ 멈춤 자리) → 왼쪽으로 떨궈(「let fall the montante to the left」 피 복Ⅰ) → 왼 아래 → 올려 레베스 → 오른 높이 비낌. chain 2 = 흐름이 이어 돈다
   { name: 'talhoRevezBaixo', nameKo: '번갈아 올려베기 (탈류 이 레베스 드 바슈)', orig: 'talho e revez de baxo', from: G.wechselR, path: [[0.04, -0.08], G.ochsL, [-0.5, 0.0], G.wechselL, [-0.04, -0.08], G.ochsR], open: 'LL', kind: 'cut', reach: 0, base: 0.9, chain: 2, src: '피게이레두 1651 단순 규칙 Ⅰ·복합 규칙 Ⅰ·Ⅶ(「always from low to high, alternating talho and revez」) [원문 영역] · 길의 수 [추정]' },
-  { name: 'talhoRodeado', nameKo: '나선 걸음 베기 (탈류 로데아두)', orig: 'talho rodeado', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.45, fwd: 0.45, get when() { return SKILL.talhoApproach ? 'approach' : 'strike'; } } /* 10/29 옆 0.35 → 0.45 · 앞 0.3 → 0.45 = 걸음 사다리 0.45 칸(몬탄테의 더 큰 둥근 걸음) · when = AI 가 먼저 비껴 딛고 발이 닿으면 벤다(SKILL.talhoApproach — 사람 B3 은 when 을 읽지 않아 긋는 순간 딛음 그대로): 사장님 10/29 18:4x 결정 '나선 걸음 베기 조정해' — docs/strike/step_ladder_2026-10-29.md §8-4 · §9 · §10 */, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
+  { name: 'talhoRodeado', nameKo: '나선 걸음 베기 (탈류 로데아두)', orig: 'talho rodeado', from: G.tagR, path: [[0.12, 0.14], G.wechselL], open: 'UL', kind: 'cut', reach: 0, base: 1.96, presses: true, step: { lat: 0.45, fwd: 0.45, when: 'approach' } /* 10/29 옆 0.35 → 0.45 · 앞 0.3 → 0.45 = 걸음 사다리 0.45 칸(몬탄테의 더 큰 둥근 걸음) · when = AI 가 먼저 비껴 딛고 발이 닿으면 벤다('approach' — 사람 B3 은 when 을 읽지 않아 긋는 순간 딛음 그대로): 사장님 10/29 18:4x 결정 '나선 걸음 베기 조정해' — docs/strike/step_ladder_2026-10-29.md §8-4 · §9 · §10 */, src: '피 단ⅩⅢ 「walking like a screw over the left」 · 고디뉴 규칙 10 「sich selbst im Rad herumdrehend」 [원문 영역] · 이름 붙임 [해석] · 수 [추정]' },
 ];
 
 // ── 패시브 고유 동작 (10/9 — 사장님 02:1x '어떤 고유 동작은 패시브여도 좋을 거 같아', docs/strike/school_passive_design_2026-10-09.md) ──
@@ -1155,28 +1155,9 @@ TRADITIONS.japanese.parryCover = { highC: JAPANESE_UKENAGASHI };
 TRADITIONS.italian.parry = { highL: G.pflugL, highR: G.ochsR, highC: G.langort, lowL: G.pflugL, lowR: G.pflugR, thrust: G.pflugL };
 // 덮는 자세: 1번 자세(지붕 자리) — 판 64 「parry the said blow in prima with the sword in guardia di testa」(망토와 함께, 칼만 판엔 머리 막기 없음) [원문] · 자리 [해석]
 TRADITIONS.italian.pose = { ...GERMAN.pose, cover: G.tag };
-// ── 이탈리아 forte 막기 (가) — 연구 후보, 판에는 꺼 둠 (10/17 감독 아침 검토 · 사장님 확인 전 — 확인표 2037 · docs/strike/italian_forte_parry_2026-10-17.md) ──
-//  원전 (카포 페로 1610 — Wiktenauer 'Ridolfo Capoferro' 영역 Swanger·Wilson 단락 [n], 괄호 = 원문 번호): [29](용어 15) 「when you parry with the true edge, you must parry with the forte,
-//   from the middle of your sword down to the hilt」 · [37] forte = 코등이 ~ 칼 가운데 · [21](용어 7) 「all the parries require an extended arm」 ·
-//   [115] 「the forte of my sword goes in a straight line, and comes to cover all of my body」 · [16](용어 2) 2번 자세 = 칼자루가 어깨 높이 [원문 영역]
-//  잰 것(456 판 — parry_gap_map.mjs): 위 막기 자리는 패드만 다르고 몸꼴 덧씌우기가 없어 자세표의 원전 꼴(위 ITALIAN_GUARD_TABLE 뻗은 2번 · 3번)이 막을 때 실제로 서지 않는다
-//   (보정 v2 가 칼끝 방향을 패드에서 읽음 — 플레이어 오른쪽 위 칼끝 26° 위로 듦 · 머리 위 손이 왼쪽 0.24 · 앞 0.32 m 에 머묾). 긋기 첫 닿음이 forte(0.5 이하)인 몫:
-//   왼쪽 위 80 % · 오른쪽 위 57 % · 머리 위 45 %. 그래서 오른쪽 위 · 머리 위만 막기 몸꼴 덧씌우기(installCover — 왕관 · 우케나가시와 같은 장치)로 자세표의 원전 꼴을 세운다:
-//   오른쪽 위 forte 57 → 72 % · 머리 위 45 → 70 %. 왼쪽 위는 이미 forte 로 받고(80 %) 원전대로 뻗은 4번 자세를 세우면 맞은 판이 늘어(30 → 38, 부호 검정 p 0.02) 그대로 둔다.
-//  값 = 자세표 값 그대로(새 수 없음): 오른쪽 위 = '황소 (옥스)' 칸 2번 자세 · 머리 위 = 한손 찌르기 틀 '긴 자세' 손 · 칼끝(이탈리아 자세표 뻗은 3번 자세 — 값 없는 칸) + 몸은 자세표의 낮춤 0.12.
-//  hand [앞, 위, 칼 든 쪽] m 진행 방향 틀 · 가슴 가운데 원점 · blade [올려본 각, 옆 각] ° (frames.js installCover — 막는 줄에서 손 · 칼끝 · 몸을 덮음, 패드는 그대로)
-//  SKILL.itForte (config — 판 값 0 = 끔, 지금 판 바이트 그대로): 1 = 오른쪽 위만 · 2 = 오른쪽 위 + 머리 위. · 시뮬 with_config.mjs SKILL.itForte=1 · parry_gap_map.mjs '무기:forte|forte2'
-const IT_FORTE_SECONDA = { name: '뻗은 2번 자세 (세콘다)', desc: '뻗은 칼 밑동으로 받는다', pad: G.ochsR, hand: [0.55, 0.16, 0.2], blade: [-4, -4], pelvisYaw: -45, chestYaw: -55, pitch: 10, drop: 0.12, src: 'Capo Ferro 1610 [16](용어 2) · [21](용어 7) · [29](용어 15) [원문 영역] · 손 · 칼끝 · 몸 = 이탈리아 자세표 2번 자세 값(Fabris 1606 [21]·[22] 판 3·4) [해석]' };
-const IT_FORTE_TERZA = { name: '뻗은 3번 자세 (테르차)', desc: '곧은 줄로 치며 막는다', pad: G.langort, hand: [0.68, 0.08, 0.1], blade: [-3, 0], pelvisYaw: -35, chestYaw: -45, pitch: 10, drop: 0.12, src: 'Capo Ferro 1610 [115] · [21](용어 7) · [29](용어 15) [원문 영역] · 손 · 칼끝 · 몸 = 한손 찌르기 틀 긴 자세 값(이탈리아 자세표 뻗은 3번 자세 — Fabris 1606 [28] 판 10) · 낮춤 0.12 [해석]' };
-export const ITALIAN_FORTE = { 1: { highR: IT_FORTE_SECONDA }, 2: { highR: IT_FORTE_SECONDA, highC: IT_FORTE_TERZA } };
-// 읽을 때마다 스위치를 본다(게터 — 독일 왕관과 같은 꼴). configurable: 도구(parry_gap_map · cover_search · cover_pose_check)가 잠깐 바꿔 끼우고 되돌린다
-Object.defineProperty(TRADITIONS.italian, 'parryCover', {
-  get() {
-    return ITALIAN_FORTE[SKILL.itForte];
-  },
-  enumerable: true,
-  configurable: true,
-});
+// 이탈리아 막기 자리 몸꼴 덧씌우기 없음 (10/17 forte 막기 후보 (가) — 판에 들이지 않음 · 11/17 스위치 걷음 때 코드째 지움 · docs/strike/italian_forte_parry_2026-10-17.md).
+//  칸은 둔다 — 도구(parry_gap_map · cover_search · cover_pose_check)가 잠깐 바꿔 끼우고 되돌린다
+Object.defineProperty(TRADITIONS.italian, 'parryCover', { value: undefined, writable: true, enumerable: true, configurable: true });
 // 속임수: Umschlagen 둘(롱소드 고유)을 뺀다 — 남김 위→다리 · 찌르기→베기(권고 22 「these feints strike directly at the opposite of that at which they gesture」 [원문] = 기본 속임).
 //  카포 페로의 칼만 속임(판 45·46 「disengaged the sword by way of a feint」)은 이미 고유 동작 cavazione 다 — 새로 지어 넣지 않는다
 TRADITIONS.italian.feints = FEINTS.filter((f) => !/^(오른쪽→왼쪽|왼쪽→오른쪽)$/.test(f.name));
@@ -1274,7 +1255,7 @@ const CHINESE_PARRY_SLOTS = {
   //   가까운 간격(1.2~1.6 m)의 올려 베기는 칼보다 왼 다리를 먼저 벤다 → 허리에 눕힌 칼(전 몸꼴 — 왼 요격세)로는 0/15. 칼끝을 왼 앞 아래로 드리워 다리까지 가린다.
   //   원전 짝: 撩(아래에서 걷어 올림)은 낮게 드리운 데서 시작한다 · 跨左勢 「提水」(칼끝을 왼 아래로 늘어뜨림, 무비지 쪽171/0585) [해석].
   //   수 = 물리 찾기(tools/sim/yoryak_search.mjs RANGE=hang FOLLOW=1 — 후보 246 → 상위 7, 롱소드·츠바이핸더·레이피어 × 간격 8 × 빠르기 3 = 72 판 72 막음) [측정] · 사장님 확인 전 숫자
-  //   막기 단추 따라가기(SKILL.parryFollow — parry_button.js)와 짝: 상대가 칼을 낮게 준비하면 긋기 전에 이 자리로 가 있는다
+  //   막기 단추 따라가기(parry_button.js)와 짝: 상대가 칼을 낮게 준비하면 긋기 전에 이 자리로 가 있는다
   yoryak: { name: '걷어 올리기 (요략세)', desc: '아래로 오는 칼을 걷어 올린다', pad: G.sideL,
     hand: [0.2, -0.48, -0.08], blade: [-63, -54], pelvisYaw: 2, chestYaw: -30, pitch: 8, drop: 0.11,
     src: '무도 권2 p038/30 「撩掠格 … 遮駕下殺 蔽左護右」 [원문 이름] · 드리운 꼴 = 跨左勢 「提水」 짝 [해석] · 수 = 물리 찾기 [측정 — 72/72] (10/16 전: 왼 요격세 꼴 — 가까운 간격 0/15)' },

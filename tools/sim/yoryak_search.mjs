@@ -3,7 +3,7 @@
 //  → 찾는 범위 = 손 낮게(가슴 중심 아래) · 앞으로 · 칼은 수평 가까이(위아래 ±35°) · 칼끝은 가리는 쪽으로. 몸 돌림도 함께.
 //  판: parry_gap_map 과 같음 — 플레이어(청강검 · 동방 막기 책)가 막기 단추를 버티고, AI normal 몸이 대본으로 올려 베기.
 //  줄: SIDE=L → lowL 몸꼴(내 왼쪽 아래로 오는 올려 베기 unterhau) · SIDE=R → lowR 몸꼴(내 오른쪽 아래로 오는 unterhauL)
-//  SPLIT=<초 — 새 공격으로 읽는 멈춤 길이 시험> PA=<막기 거듦 단계 0~3> N=<후보 수> SEED=<씨앗> ATKS=longsword,zweihander GAPS=… SPEEDS=11 TOP=<보일 수> OUT=<json> CANDS=<json — 이 후보만 잼>
+//  SPLIT=<초 — 새 공격으로 읽는 멈춤 길이 시험> N=<후보 수> SEED=<씨앗> ATKS=longsword,zweihander GAPS=… SPEEDS=11 TOP=<보일 수> OUT=<json> CANDS=<json — 이 후보만 잼>
 //  node tools/sim/yoryak_search.mjs
 import { newRound, DT } from './harness_m.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -12,7 +12,6 @@ import { TECH } from '../../src/ai_techniques.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 
-if (process.env.FOLLOW != null) SKILL.parryFollow = +process.env.FOLLOW; // 막기 따라가기 (판 값 SKILL.parryFollow — 10/16 22:5x 부터 1)
 const SIDE = process.env.SIDE ?? 'L';
 const LINE = SIDE === 'L' ? 'lowL' : 'lowR';
 const ATTACK = TECH.find((t) => t.name === (process.env.ATTACK ?? (SIDE === 'L' ? 'unterhau' : 'unterhauL')));
@@ -47,7 +46,6 @@ function candidate() {
 }
 
 function trial(cover, atk, gap, speed) {
-  SKILL.parryAssist = +(process.env.PA ?? 0); // 막기 거듦 단계 (지금 판 0 — 2 = 일찍·다시 읽기)
   const Gm = newRound({ weapon: WEAPON, weapon2: atk, seed: 1, gap });
   const D = Gm.player, A = Gm.enemy;
   D.skill.corr = SKILL.corr;

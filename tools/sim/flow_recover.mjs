@@ -24,7 +24,6 @@ const MARKS = [0.1, 0.2, 0.3, 0.5, 0.8];
 
 function run(seed, on, stopAt) {
   NAGASHI.on = on ? 1 : 0;
-  SKILL.parryAssist = 0;
   const Gm = newRound({ weapon: 'uchigatana', weapon2: ATK, seed, gap: GAP });
   const D = Gm.player, A = Gm.enemy, ai = Gm.ai;
   D.skill.corr = SKILL.corr;

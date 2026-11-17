@@ -1,5 +1,5 @@
 // 동방 막아 죽이기 (격살 · 10/22) 사람 손맛 — 보고 막고, 창이 열리면 친다 (docs/strike/chinese_gyeoksal_2026-10-22.md §5). 읽기만 (판정 · 실행은 게임 함수 그대로).
-//  parry_assist_probe.mjs 꼴: 플레이어 = 동방 칼 · 막기 단추(PlayerParryGuard) · 비기 창(PlayerSecretWatch — 격살) · 상대 = 인물 AI(FOE) 또는 롱소드 AI 보통.
+//  10/12 막기 거듦 재기 꼴: 플레이어 = 동방 칼 · 막기 단추(PlayerParryGuard) · 비기 창(PlayerSecretWatch — 격살) · 상대 = 인물 AI(FOE) 또는 롱소드 AI 보통.
 //  사람 대본 (main.js 와 같은 차례 — 입력 → playerSecret.update → 미리 받은 입력 → playerGuard.step):
 //   ① 보고 누르기: AI 공격 시작(준비 포함) + REACT(0.25) s 에 막기 단추를 누르고, 그 공격이 끝나고 0.3 s 뒤 뗀다 (parry_assist_probe REACT 와 같음)
 //   ② 앞으로: 단추를 누르는 동안 스틱 앞(stickY 1 — 걸어 든다) · 떼면 APPROACH(맞닿기 + 0.2 m 밖이면 앞)

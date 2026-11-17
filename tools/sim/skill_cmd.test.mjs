@@ -154,7 +154,7 @@ test('걸음 · 막기 칸 글 = 코드 스위치: 뒤 박차기(독일 보법) 
   // 11/14 사장님 '간격 잡기를 파고들기로 바꿔' (서서 앞으로 세게 밀면 두 걸음 · 헛침 조건 없음): G1 글의 거울 · 몫 열쇠 'chase' 그대로 · 전 글 '상대가 헛치면 앞으로 이동(↑)'(`?deDig=0` 판)
   assert.ok(GAIT.digSteps === 2 && D.nodeOf('german', 'G2').f.includes('chase'));
   assert.equal(cmdOf('german', 'G2'), '멈춘 상태에서 앞으로 이동(↑)');
-  assert.ok(SKILL.itOpposition && D.nodeOf('italian', 'I6').f.includes('opposition'));
+  assert.ok(D.nodeOf('italian', 'I6').f.includes('opposition'));
   assert.equal(cmdOf('italian', 'I6'), '막기');
 });
 

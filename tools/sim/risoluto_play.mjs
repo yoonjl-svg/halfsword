@@ -6,7 +6,7 @@
 //  시험 스위치 (환경 변수 — 판 기본은 그대로, 감독 10/22 비교):
 //   RISO_CLOSE=1 '다 붙었을 때' 창(SECRET.risolutoClose) · RISO_LINE=1 칼을 대지 않는 덮음(줄 막기 — SECRET.risolutoLine) · RISO_COVER=수 덮음 거리
 //   RISO_GUARD=1 막기 단추를 누른 채 걸어 들어감(SECRET.risolutoGuard — 운전: 가슴 사이 3 m 안에서 누르고 쥠 · 손은 막기 단추가 쥠 · 탭은 같은 엄지라 단추를 놓고 · 비기가 끝나면 다시 누름) ·
-//   RISO_OPP=0 막아찌르기 끔(SKILL.itOpposition) · RISO_PLAIN=1 대조(같은 때의 보통 탭 — 팔 늦춤 · 비기 배율 끔)
+//   RISO_PLAIN=1 대조(같은 때의 보통 탭 — 팔 늦춤 · 비기 배율 끔)
 //   10/24 런지(기본 — SECRET.risolutoLunge): RISO_LUNGE=0 = 10/23 판(탭 찌르기 · 팔 늦춤 0.4 · 굳음 0.4 — main.js ?risoLunge=0 과 같은 값) · RISO_SHARE=수 칼끝 빠르기 몫 · RISO_GLIDE=0 붙은 칼 미끄러짐 끔
 //   10/24 13:2x 런지 간격 조건(기본 — SECRET.risolutoGap): RISO_GAP=0 = 조건 없음 · 운전 갈래 RISO_STOP=1(창이 보이면 섬) · RISO_CREEP=수(칼이 붙으면 스틱을 그 몫만 — 천천히 밀고 들어감) ·
 //    RISO_DUMP=1(열린 창 한 줄씩 'WIN 무기 인물 길 가슴사이 맞닿기 맞붙기' — 대안 셈용) · 실제로 열린 창 · 가까워 안 뜸(gapBlocked) · 뜬 뒤 닫힘(gapClosed) · 열린 때 가슴 사이 · 맞붙는 거리 밖 여유
@@ -47,7 +47,6 @@ if (E.RISO_CLOSE === '0') CONFIG.SECRET.risolutoClose = 0;
 if (E.RISO_BEAT) CONFIG.SECRET.risolutoBeat = +E.RISO_BEAT;
 const GUARD = E.RISO_GUARD === '1';
 if (GUARD) CONFIG.SECRET.risolutoGuard = 1;
-if (E.RISO_OPP === '0') CONFIG.SKILL.itOpposition = 0;
 // 대조 RISO_PLAIN=1: 같은 때의 보통 탭 찌르기 — 상대 팔 늦춤 끔(FLOW_RECOVERY.seconds 0) · 비기 배율 1 (AI 비기는 닫혀 있어 사람 쪽만 바뀜)
 const PLAIN = E.RISO_PLAIN === '1';
 if (PLAIN) { CONFIG.FLOW_RECOVERY.seconds = 0; CONFIG.SECRET.risolutoArmSlow = 0; CONFIG.SECRET.power = 1; CONFIG.SECRET.hitMul = 1; }

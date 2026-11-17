@@ -210,7 +210,6 @@ export class Gait {
     this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
     this.rhyF = 0;
     this.rhyIdle = 0;
-    this.shortPair = 0; // 짧은 디딤으로 셀 앞뒤 디딤 수 (10/17 이탈리아 물러서기 연구 — rhythmBeat 'retreat', 판 값 끔이면 늘 0)
     this.rhyTrail = false;
     this.chase = null;
     this.chaseStep = false;
@@ -282,7 +281,6 @@ export class Gait {
     this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
     this.rhyF = 0;
     this.rhyIdle = 0;
-    this.shortPair = 0;
     this.rhyTrail = false;
     this.chase = null;
     this.hold = this.holdBrake = null;
@@ -298,7 +296,6 @@ export class Gait {
     this.rhyN = 0;
     this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
     this.rhyF = 0;
-    this.shortPair = 0;
     this.chase = null;
     if (this.hold) this.holdEnd = 'state';
     this.hold = this.holdBrake = null;
@@ -474,26 +471,16 @@ export class Gait {
       let k = 1;
       if (foot) {
         // 디딤 셈 N + M: 빠른 몫 안이면 이 디딤도 빠름 · 아니면 normal 번 센 뒤(짝걸음은 이끄는 발 디딤에서만 · 멈춰 서는 디딤은 brake 로 미룸) 빠른 몫 시작
-        let fast;
-        if (this.shortPair > 0) {
-          // 물러서는 한 짝 (10/17 연구 — rhythmBeat 'retreat', 판 값 끔): 이 디딤은 짧은 디딤(빠른 몫) — 멈춤 셈 · brake 미룸과 상관없이. 셈은 짧은 박자를 마친 자리에서 이어감(다음 둘 = 긴 디딤)
-          this.shortPair--;
-          this.rhyGo = true;
-          this.rhyN = 0;
-          this.rhyF = 0;
+        const fresh = RH.shortFirst && !this.rhyGo; // 보폭 박자: 쉬었다 걸으면 짧은 디딤(빠른 몫)부터 — '1-2 디딤 짧게 3-4 디딤 넓게' (쉬었다 떼는 첫 디딤은 짝 자리가 아직 없어도 이끄는 발로 봄)
+        if (fresh) this.rhyN = RH.normal;
+        this.rhyGo = true;
+        let fast = this.rhyF > 0;
+        if (fast) this.rhyF--;
+        else if (this.rhyN >= RH.normal && ((fresh && this.pairStep !== 'trail') || !PR || (kind === 'walk' && this.pairStep === 'lead')) && vb * Math.sign(wf) > -(RH.brake ?? Infinity)) {
           fast = true;
-        } else {
-          const fresh = RH.shortFirst && !this.rhyGo; // 보폭 박자: 쉬었다 걸으면 짧은 디딤(빠른 몫)부터 — '1-2 디딤 짧게 3-4 디딤 넓게' (쉬었다 떼는 첫 디딤은 짝 자리가 아직 없어도 이끄는 발로 봄)
-          if (fresh) this.rhyN = RH.normal;
-          this.rhyGo = true;
-          fast = this.rhyF > 0;
-          if (fast) this.rhyF--;
-          else if (this.rhyN >= RH.normal && ((fresh && this.pairStep !== 'trail') || !PR || (kind === 'walk' && this.pairStep === 'lead')) && vb * Math.sign(wf) > -(RH.brake ?? Infinity)) {
-            fast = true;
-            this.rhyN = 0;
-            this.rhyF = RH.fast - 1;
-          } else this.rhyN = Math.min(RH.normal, this.rhyN + 1);
-        }
+          this.rhyN = 0;
+          this.rhyF = RH.fast - 1;
+        } else this.rhyN = Math.min(RH.normal, this.rhyN + 1);
         if (fast) {
           k = RH.mul;
           this.fastAccent = RH.accent ?? true;
@@ -620,23 +607,6 @@ export class Gait {
   }
 
   /**
-   * 박자 걸음 셈 맞추기 (10/17 이탈리아 물러서기 연구 — parry_button.js 가 부름, 스위치 SKILL.itRetreat · itParryBeat 판 값 끔 · docs/strike/italian_retreat_2026-10-17.md):
-   *  'retreat' = 다음 앞뒤 디딤 둘(물러서는 한 짝 — 뒷발 · 앞발)을 짧은 디딤으로 센다 → 그 다음 디딤 둘이 긴 디딤(나아가는 한 짝)
-   *  'parry' = 막기를 짧은 박자로 본다 — 짧은 디딤 둘을 막 마친 셈(보통 디딤 0 · 남은 빠른 디딤 0) → 다음 앞뒤 디딤 둘이 긴 디딤
-   *  디딤 셈(count 'foot') 박자 걸음이 없는 걸음(이탈리아 보법 책 없음 · 다른 유파)이면 아무것도 안 하고 false
-   */
-  rhythmBeat(kind) {
-    const RH = rhythmOn(this.P.rhythm) ? this.P.rhythm : null;
-    if (!RH || RH.count !== 'foot') return false;
-    this.rhyGo = true;
-    this.rhyIdle = 0;
-    this.rhyN = 0;
-    this.rhyF = 0;
-    this.shortPair = kind === 'retreat' ? RH.fast : 0;
-    return true;
-  }
-
-  /**
    * 고른 짝걸음(P.pair.even — 10/15 이탈리아 '고른 바탕 걸음')의 다음 디딤 배율 미리 보기: 짝걸음 안 다음 걷는 걸음(trail = 따라붙는 발이면 true)이
    *  박자 걸음 빠른 디딤일지 — fastBegin 의 박자 걸음 셈과 같은 가름이되 상태(rhyN·rhyF·fastK)는 바꾸지 않는다. 디딤 셈(기본)은 빠른 몫 안이면 빠름 ·
    *  아니면 보통 디딤을 다 셌고 이끄는 발이고 몸이 반대쪽으로 brake 넘게 가지 않을 때 빠름. 옛 짝 셈은 이끄는 발이 every 번 뒤 · 따라붙는 발은 그 짝이 빠를 때.
@@ -644,7 +614,6 @@ export class Gait {
    */
   fastPeek(RH, trail, wf, vLat, vb) {
     if (!(Math.abs(wf) > vLat)) return 1;
-    if (RH.count === 'foot' && this.shortPair > 0) return RH.mul; // 물러서는 한 짝(10/17 연구 — rhythmBeat 'retreat')은 짧은 디딤
     const go = vb * Math.sign(wf) > -(RH.brake ?? Infinity);
     const fresh = RH.shortFirst && !this.rhyGo; // 보폭 박자 — fastBegin 과 같은 가름(쉬었다 떼는 첫 이끄는 디딤부터 짧은 디딤)
     if (RH.count === 'foot') return this.rhyF > 0 || (!trail && (fresh ? RH.normal : this.rhyN) >= RH.normal && go) ? RH.mul : 1;
@@ -949,7 +918,6 @@ export class Gait {
         this.rhyN = 0;
         this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
         this.rhyF = 0;
-        this.shortPair = 0;
         this.rhyIdle = 0;
         this.fastK = 1;
         this.chase = null;
@@ -1187,7 +1155,6 @@ export class Gait {
         this.rhyN = 0;
         this.rhyGo = false; // 보폭 박자 shortFirst — 처음부터 다시 세면 짧은 디딤부터
         this.rhyF = 0;
-        this.shortPair = 0;
         this.fastK = 1;
       }
     }

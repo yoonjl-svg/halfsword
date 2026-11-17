@@ -1,6 +1,6 @@
-// AI 막는 동안 피해 감소 시제품 시험 (11/15 사장님 '동방의 장점은 막을 때 피해 50% 감소인데 막기를 잘 활용 못하는 거 아닐까? …' · src/ai_block_cut.js ·
-//  config SKILL.aiParryCut · 기록 docs/strike/cn_block_2026-11-15.md): 기본 끔 · 끄면 AI 판이 바이트 같음 · 사람 막기 단추와 같은 유파 몫 · 막는 중(칼로 받기)만 ·
-//  켜도 독일끼리(롱소드) 판은 그대로. 시간 상한 기준은 없다.  node --test tools/sim/ai_block_cut.test.mjs
+// AI 막는 동안 피해 감소 시험 (11/15 사장님 '동방의 장점은 막을 때 피해 50% 감소인데 막기를 잘 활용 못하는 거 아닐까? …' → '동방 ai 막기 감소 켜' · src/ai_block_cut.js ·
+//  기록 docs/strike/cn_block_2026-11-15.md): 늘 켬 · 사람 막기 단추와 같은 유파 몫 · 막는 중(칼로 받기)만 ·
+//  독일끼리(롱소드) 판은 유파 몫 값을 안 읽음. 시간 상한 기준은 없다.  node --test tools/sim/ai_block_cut.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
@@ -30,13 +30,6 @@ function trace({ weapon = 'longsword', weapon2 = 'qinggang', secs = 8, seed = 1 
 }
 const body = (tradition, mode = 'defend', defVoid = false) => ({ aiCtl: { mode, defVoid }, swordArt: { tradition } });
 
-test('기본 켬(사장님 11/15) · 끄면 AI 판은 유파 몫 값을 안 읽음 (바이트 같음)', () => {
-  assert.equal(S.aiParryCut, 1, '사장님 11/15 결정 — 동방 ai 막기 감소 켜');
-  const a = withSkill({ aiParryCut: 0 }, () => trace());
-  const b = withSkill({ aiParryCut: 0, cnParryDmgCut: 0.9, jpParryDmgCut: 0.9, ibParryDmgCut: 0.9 }, () => trace());
-  assert.equal(a, b);
-});
-
 test('사람 막기 단추와 같은 유파 몫 · 막는 중(칼로 받기)만 · 피하기 · 공격 · 다른 유파는 1', () => {
   assert.equal(schoolParryCut('chinese'), S.cnParryDmgCut);
   assert.equal(schoolParryCut('japanese'), S.jpParryDmgCut);
@@ -52,8 +45,8 @@ test('사람 막기 단추와 같은 유파 몫 · 막는 중(칼로 받기)만 
   assert.equal(aiWoundKeep({ swordArt: { tradition: 'chinese' } }), 1, 'AI 몸이 아님');
 });
 
-test('켜도 롱소드끼리 판은 그대로 (독일 — 감소 없음) · 켜면 동방 AI 판은 달라질 수 있음', () => {
+test('롱소드끼리 판은 유파 몫 값을 안 읽음 (독일 — 감소 없음 · 바이트 같음)', () => {
   const a = trace({ weapon: 'longsword', weapon2: 'longsword', secs: 10 });
-  const b = withSkill({ aiParryCut: 1 }, () => trace({ weapon: 'longsword', weapon2: 'longsword', secs: 10 }));
+  const b = withSkill({ cnParryDmgCut: 0.9, jpParryDmgCut: 0.9, ibParryDmgCut: 0.9 }, () => trace({ weapon: 'longsword', weapon2: 'longsword', secs: 10 }));
   assert.equal(a, b);
 });

@@ -25,7 +25,6 @@ const GAPS = (process.env.GAPS ?? '1.3,1.4,1.5,1.6,1.7').split(',').map(Number);
 const _r = new THREE.Vector3(), _t = new THREE.Vector3();
 
 function trial(cfg, attack, atk, gap) {
-  SKILL.parryAssist = 0;
   const Gm = newRound({ weapon: cfg.weapon, weapon2: atk, seed: 1, gap });
   const D = Gm.player, A = Gm.enemy;
   D.skill.corr = SKILL.corr;
@@ -35,17 +34,6 @@ function trial(cfg, attack, atk, gap) {
   if (saved) Object.defineProperty(TRADITIONS[tr], 'parryCover', { value: null, configurable: true, writable: true });
   const guard = new PlayerParryGuard(D, A);
   if (saved) Object.defineProperty(TRADITIONS[tr], 'parryCover', saved);
-  // CALM=<m/s> 시험: 따라가기를 상대 칼끝이 이 빠르기 밑일 때만 (parry_gap_map.mjs CALM 과 같음)
-  if (process.env.CALM) {
-    const CALM = +process.env.CALM, st = guard.step.bind(guard);
-    guard.step = (dt) => {
-      const s = guard.sense.seen(0), keep = SKILL.parryFollow;
-      if (Math.hypot(s.tvx, s.tvy, s.tvz) >= CALM) SKILL.parryFollow = 0;
-      const out = st(dt);
-      SKILL.parryFollow = keep;
-      return out;
-    };
-  }
   Gm.ai.update = () => {};
   A.move.set(0, 0);
   guard.held = !process.env.NOPARRY; // NOPARRY=1: 막기 단추를 안 누른 판 — 그 간격에서 막지 않으면 실제로 맞는지 보기

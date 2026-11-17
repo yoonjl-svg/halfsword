@@ -1,5 +1,5 @@
 // 막아찌르기 입력형 측정 (10/21 — docs/strike/italian_opposition_2026-10-20.md 10/21 절): 플레이어 레이피어(막기 책) · 막기 단추를 쥔 채 · 상대 새 공격을 읽고 GAP m 안이면 HUM_RT s 뒤 한 번 눌렀다 다시 누름
-//  꼴: off(막아찌르기 끔 = 그냥 막기) · p50(판 값) · p65(샛별안) · p0(감소 없음). VARIANTS=off,p50 SEEDS=1-2 DUR=20 FOES=id,… OUT=<json> node tools/sim/italian_press_fight.mjs
+//  꼴: off(막기 단추 새 누름 없음 = 그냥 막기) · p50(판 값) · p65(샛별안) · p0(감소 없음). VARIANTS=off,p50 SEEDS=1-2 DUR=20 FOES=id,… OUT=<json> node tools/sim/italian_press_fight.mjs
 import { newRound, DT } from './harness_m.mjs';
 import { writeFileSync } from 'node:fs';
 import { SKILL } from '../../src/config.js';
@@ -12,12 +12,10 @@ const [s0, s1] = (process.env.SEEDS ?? '1-3').split('-').map(Number);
 const DUR = +(process.env.DUR ?? 20), HUM_RT = +(process.env.HUM_RT ?? 0.2), GAP = +(process.env.GAP ?? 2.0);
 const journey = [...new Set(STAGE_ORDER.flatMap((st) => [STAGE_FOE[st], ...(STAGE_FOE_EXTRA[st] ?? [])]))].filter((id) => id && (!id.endsWith('_mad') || id === 'heinrich_mad'));
 const FOES = (process.env.FOES ? process.env.FOES.split(',') : journey).filter((id) => CHARACTERS_BY_ID[id] && !getWeapon(CHARACTERS_BY_ID[id].weapon)?.gun);
-const keep0 = { on: SKILL.itOpposition, cut: SKILL.itOppositionVals.shieldCut, dealt: SKILL.itOppositionVals.dealt };
+const keep0 = { cut: SKILL.itOppositionVals.shieldCut, dealt: SKILL.itOppositionVals.dealt };
 function fight(id, seed, v) {
-  SKILL.itOpposition = v === 'off' ? 0 : 1;
   SKILL.itOppositionVals.shieldCut = v.startsWith('p65') ? 0.65 : v.startsWith('p0') ? 0 : 0.5;
   const dm = v.match(/d(\d+)$/); SKILL.itOppositionVals.dealt = dm ? +dm[1] / 100 : keep0.dealt; // 'p50d100' = 주는 피해 100 %
-  SKILL.parryAssist = 0;
   const F = CHARACTERS_BY_ID[id];
   const G = newRound({ seed, difficulty: F.ai.level, persona: F.ai.persona, weapon2: F.weapon, weapon: 'rapier', revive: F.revive });
   const D = G.player, A = G.enemy;
@@ -56,7 +54,7 @@ function fight(id, seed, v) {
 }
 const out = [];
 for (const id of FOES) for (let s = s0; s <= s1; s++) for (const v of VARIANTS) { out.push(fight(id, s, v)); }
-SKILL.itOpposition = keep0.on; SKILL.itOppositionVals.shieldCut = keep0.cut; SKILL.itOppositionVals.dealt = keep0.dealt;
+SKILL.itOppositionVals.shieldCut = keep0.cut; SKILL.itOppositionVals.dealt = keep0.dealt;
 if (process.env.OUT) writeFileSync(process.env.OUT, JSON.stringify(out));
 for (const v of VARIANTS) {
   const R = out.filter((r) => r.v === v), n = R.length, sum = (k) => R.reduce((s, r) => s + r[k], 0);
