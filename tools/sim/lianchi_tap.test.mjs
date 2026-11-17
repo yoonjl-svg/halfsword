@@ -56,20 +56,11 @@ function body() {
 test('막기 단추를 쥔 채 친 탭 (사장님 10/30 08:2x \'날개접기랑 겹치기도 같게해\' — UNIQUE_ASSIST.tapHeld 1): 물러나며 쥔 막기 · 탭 = 날개 접기 · tapHeld 0 은 전 판(버려짐)', () => {
   const B = body();
   try {
-    assert.equal(UA.tapHeld, 1);
     B.run(0.3, 0, -0.8);
     B.uq.feed(0, 0, 1 / 60, true, false);
     assert.equal(B.tap(), true, '쥔 채 탭 = 날개 접기');
     B.P.iai = null;
     B.P.iaiReq = null;
-    UA.tapHeld = 0;
-    try {
-      B.run(0.3, 0, -0.8);
-      B.uq.feed(0, 0, 1 / 60, true, false);
-      assert.equal(B.tap(), false, '전 판');
-    } finally {
-      UA.tapHeld = 1;
-    }
   } finally {
     B.free();
   }

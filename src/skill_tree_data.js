@@ -230,11 +230,8 @@ const NODE_CMD = {
   C6: '뒤로 움직이며(↓) 탭', // 탭으로 내는 특수 공격 — unique_assist.js TAP_TRIG.lian: 물러나는 동안(스틱 뒤) · 놓고 실제 0.6 s 안의 탭 (10/28 01:2x) · 10/29 14:1x · 14:2x 사장님 글 (전 '사선 긋기(↖) 도중 바로 방향 꺾기')
   C9: '앞으로 움직이며(↑) 상대 공격을 정확한 타이밍에 막으면 자동 발동', // 10/25 22:3x 사장님 확정 글(감독 전달) · 전 '앞으로 이동(↑)과 동시에, 칼이 닿기 직전 막기' — secret.js gyeoksalTick — 막기 새 누름 뒤 gyeoksal.press 초 안에 칼이 닿음 · 그때 스틱 앞 · 받아 내면 저절로(gyeoksal.auto — 공격 입력 없음)
 };
-// G7 다른 판 입력 줄 (UNIQUE_ASSIST.dupAuto 를 기본 'both'(11/14 — 전 'bind')에서 바꿨을 때만 카드에 나옴 — nodeCmd): 0 = 전 판 맞물린 채 탭(10/29 14:1x · 14:2x 사장님 글) · 'clash2' = 두 번 맞부딪힘 시제품 초안(검수 전) · 효과 글(eff — 사장님 글)은 그대로
-export const G7_CMD_TAP = '긋기가 상대 칼에 닿은 채 탭';
-export const G7_CMD_AUTO = { both: NODE_CMD.G7, bind: '가까이서 칼을 맞댄 채 버티면 자동 발동' /* 10/31 사장님 '초안 ok.' */, clash2: '칼끼리 연달아 부딪히면 자동 발동' /* [검수 전] */ };
 /** 상세 카드 입력 줄 (skill_tree.js — 얼린 칸의 cmd · 겹치기 자동 판을 바꿨으면 G7 은 그 판 글) */
-export const nodeCmd = (n) => (n?.id !== 'G7' ? n?.cmd : !UNIQUE_ASSIST.dupAuto ? G7_CMD_TAP : G7_CMD_AUTO[UNIQUE_ASSIST.dupAuto] ?? n.cmd);
+export const nodeCmd = (n) => n?.cmd;
 /** 칸 + 오의 (lore · src — 편지는 lore 만) + 입력 줄 (cmd — 정해진 입력으로 내는 칸만) */
 const withLore = (n) => {
   const x = { ...n, ...NODE_LORE[n.id], ...(NODE_CMD[n.id] ? { cmd: NODE_CMD[n.id] } : {}) };

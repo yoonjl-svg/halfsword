@@ -245,3 +245,28 @@ corr_s0 의 `--limits=off,on` 은 사람 관절 한도 스위치를 지운 뒤�
 - 시간 상한 `tsuSnapTime` · `inqSnapTime` · `lianSnapTime`(모두 0 = 상한 없음): 부르는 쪽에서 `maxT` 를 넘기지 않음 — requestCombo 가 `req.maxT ?? 0` 이라 같은 0
 - 남김: `enhance`(세기 곱 1 — 몸 덧씌우기 · 끝 힘 셈에 곱으로 들어가 1 을 지우면 뜬수 셈이 바뀔 수 있음 · 조율 수) · `stepStick` · `stepPost` · `planRelease` · `lianWindow` · `lianStep` · `specialCooldown` · `secretUses` · `koteDrop` 의 p · parts · swordHalf · easeE · easeAfter · easeVn · `cnHunt` 의 max · regen · life
 - 시험: 지운 블록 — 사냥 겹 끔 판 · 켬 끔 바이트 견줌(cn_hunt 둘) · 손목 치기 10/24 판 둘(skill_tree — 파일 머리에서 `koteDrop.ai = 0` 으로 묶어 보던 것 · 묶음 줄도 지움) · 곁눈 베기 세기 손잡이(schielhau_strike) · 식힘 세 셈 견줌(special_cooldown). 단언 · 판 조각만 뺌 — 끈 판 · 옛 길(tsubame_snap 넷 · schielhau_strike 셋 · cavazione_tap · lianchi_tap · it_outbox · kote_pickup) · 지운 칸 기본값(cn_hunt · prof_kit · iai_real · redondo_hold · step_input · jp_strength). 시간 상한 단언은 `R.maxT === 0` 그대로 봄
+
+### 9-4. UNIQUE_ASSIST — 칼끝 돌려 빼기 · 겹치기 (블록 2 끝 몫 · 5d)
+
+- 지움(기본값을 그 자리에): 칼끝 돌려 빼기 `cavHeld` · `tapHeld` · `cavSnap` · `cavSide`('contact') · `cavSpeed`('tap' — 탭 찌르기 박자 · 상한 없음 · `capFromCut` 거짓) · `cavShare`(0 — 보통 찌르기 빠르기 × `cavSpeedMul`) · `cavSelfFree` · `cavHitMul` · `cavArmSlowAi` · `cavCapCut` · `cavSnapTime` · `cavTap`. 겹치기 `dupAuto`('both' — 'bind' · 'clash2' 홀로 판 · 탭 판 길 코드째: `TAP_TRIG.dup` 은 늘 없음 · 닿음 덩이 `dupC` · 카드 글 `G7_CMD_TAP` · `G7_CMD_AUTO`) · `dupAutoParry` · `dupAutoHint`(0) · `dupStackDrain`(0) · `dupBandMin`(null) · `dupClashMax`(0) · `dupTap` · `dupGrace` · `dupAny` · `dupStep` · `dupOld`(0 — 10/28 길 `comboPlanDup` 코드째 · `dupOldShare`) · `dupBurstFree` · `dupBurstSync` · `dupBurstT` · `dupBurstMatch` · `dupBurstFit` · `dupSnapTime` · `dupEdge` · `dupPlan`
+- 지움(시제품 코드째 — 10/31 '세게 하는 시제품' 기본 끔): B `cavGap`(combat.js 틈 파고들기) · C `cavParryLock`(ai.js 반응 묶음 · `parryLockUntil`) · E `cavCancel`(`cavCancelTick` · `cavFire`) · 닿음 이어 붙임 `cavMerge`
+- 남김: `cavFrom` · `cavTo` · `cavSpeedMul`(1.2 — 조율 수) · `cavArmSlow` · `dupBurst` · `dupFitPoint` · `dupFitMin` · `dupFitFloor` · `dupStackS` · `dupStackGap` · `dupBandMax` · `dupClashT` · `dupClashGap` · `dupFace` · `dupFollow` · `dupBody`
+- 수(블록 2 전체): UNIQUE_ASSIST 스위치 꼴 칸 93 → 8 (남은 8 은 `enhance` 1 · `buckle.cool` 0 · 비기 쓸 수 1 · 몸 숙임 0 · tajo 의 pull 0 · liftK 1 · target 같은 조율 수 · 자료). config 2 652 → 2 475 줄 · src 97 770 → 97 174 줄
+- 시험: 지운 파일 — `duplieren_tap.test`(머리에서 `UA.dupAuto = 0` 으로 파일 통째를 탭 판에 묶어 보던 것 — 교훈대로 모두 옛 판 시험). 지운 블록 — 시제품 A ~ E(cavazione_tap) · 겹치기 기본 아닌 꼴 일곱(duplieren_simple — `dupBurstFit 0` · `dupBurstMatch 0 · 2` · `dupBurstSync 0 · 2` · `dupBurstFree 0` · `dupOld 1` 로 묶어 보던 것) · 막기 단추 안 셈 · 알림 · 빠짐 판(duplieren_auto) · 탭 판 겹치기 식힘(special_cooldown 의 duplieren 칸). 단언만 뺌 — 지운 칸 기본값(cavazione_tap · duplieren_auto · duplieren_simple · de_dirty) · 끔 판 조각(cavSnap 0 · tapHeld 0 · dupAuto 0 · G7 다른 판 글)
+
+### 9-5. 남은 것 (5차 끝)
+
+- 블록 3 SKILL(`corr` 빼고) · 블록 4 JOINTS 꼴(`mode` · `presets` · `edge` · `playerEdge` · `playerEdgeMode`)과 fighter.js 관절 · 날 세우기 다른 길 · 블록 5 작은 묶음(CN_STEP · BIND · IMPACT_FX · SHOP · `SAENGSA.playerProf.mode` · `SOUND.fleshHit` · WANDER) · 블록 6 모듈 스위치(`FINISH` · `VITAL` · 이탈리아 걸음 손잡이 넷 · `setWhipPreset` · `setIberianTable` · `setGripTorque`)
+- 블록 7 시뮬 도구: §7-6 목록에 더해 이번에 지운 칸을 아직 넣는 것 — kote_drop_duel(`koteDrop.judge`) · cn_ai_gyeoksal(`cnHunt.ai`) · duplieren_simple(`dupOld` · `dupOldShare`) · unique_study_player · tsubame_trace · school_balance · iai_real · kote_pickup · step_input_measure · unique_assist_probe · special_balance · it_tone_measure · it_outbox · schielhau_strike(제비 · 곁눈 · 식힘 칸) · mordschlag_duel(`mord.grip`). 넣어도 읽는 데가 없어 기본 판으로 돈다
+- 블록 8 브라우저 도구: §7 부록 65 개에 더해 `iberian_finish_arms_shots`(MOVE=spin — 지운 대본) · `b4_shots` · `redondo_gamecam_shots` · `redondo_motion_shots`(지운 B4 · 감기 꼴 인자)
+- 블록 밖에서 본 것(다음 일): 4차에서 정의를 지운 길목(`do.gilmok` · `gilmokAim` · secret.js `gilmokRest` · AI 길목 몸) 코드가 남음 · 4차에서 지운 죽음의 일격 칸(`mord.burstBack` · `burstFree` · `power` · `aim` · `pommel` · `track` · `trackCommit` · `noSelfClip` · `tech`)을 읽는 코드가 아직 undefined 로 읽음 — 기본 판 값으로 적고 갈래를 지울 것 · `AI_MAAI.hide`(0 — 스위치) · jp_strength.test 머리의 `withNoto0` · `deOff`(그때 판 묶음)
+
+### 9-6. 시험 · 관문 · 교훈 (5차)
+
+- 관문: 커밋마다 fights12 `b7ba0017` · live `cd211727` · ft `ba9c958b` · corr 12 · smoke 34 / 34 · build 됨 · name_policy 0 (바탕과 같음)
+- 전체 시험: 블록 1 뒤 788 중 실패 6 → 고침 · 블록 2 뒤 765 중 실패 1 → 고침(아래) → 0. `test(` 798 → 739
+- 교훈(새로):
+  - 지운 칸을 별칭 + 선택 사슬로 읽는 곳(`const C = H(); … C?.on`)은 `C\.on` 같은 찾기에 안 걸린다 — 5c 에서 `cnHunt.on` 을 지우고 `huntRegenK` 의 `C?.on` 을 놓쳐 사냥 겹 기력 회복 감소가 꺼졌고, 관문은 지나고 cn_gk 시험이 잡았다(5d 에서 고침). 칸을 지울 때 `\??\.이름\b` 로 찾을 것
+  - 머리 묶음 줄은 UNIQUE_ASSIST 에도 있다: `duplieren_tap.test` 머리 `UA.dupAuto = 0`(파일 통째 탭 판) · `skill_tree.test` 머리 `koteDrop.ai = 0`(손목 치기 10/24 판 시험 둘) · 시험 안 `body({ dupBurstFit: 0 … })` 처럼 도움 함수가 칸을 옛 값으로 넣는 것도 같은 묶음이다
+  - 바꿔 넣던 칸이 없어지면 그 칸을 넣는 시험 조각은 아무 일도 안 하고 지나가거나(같은 판) 엉뚱하게 실패한다 — 실패 줄만 보지 말고 칸을 넣는 줄을 찾아 그 조각을 지울 것
+  - 시간 상한 0 칸(`*SnapTime`)은 부르는 쪽에서 넘기지 않으면 requestCombo 가 `req.maxT ?? 0` 으로 같은 0 — 시험의 `R.maxT === 0` 은 그대로 맞음

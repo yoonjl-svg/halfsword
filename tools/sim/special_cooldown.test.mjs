@@ -46,10 +46,6 @@ const TAPS = {
     B.P.stickY = 0;
   }],
   lianchi: ['hwando', (B) => (B.uq.backOff = B.uq.t - realS(0.2))],
-  duplieren: ['longsword', (B) => {
-    B.uq.bladeTouch = () => true;
-    B.uq.cur = { tech: 'zornhau', kind: 'cut', tap: false, t0: B.uq.t - 0.2, dir: [-0.7, -0.7], landed: false, bound: true, tEnd: null, unique: null };
-  }],
 };
 const tapper = (B, name, arm) => () => {
   const n0 = B.uq.stats.fired[name] ?? 0;
@@ -60,12 +56,6 @@ const tapper = (B, name, arm) => () => {
 
 for (const [name, [weapon, arm]] of Object.entries(TAPS))
   test(`${name}: 나감 → 끝날 때까지 식힘 중 · 끝난 때부터 실제 2.9 s 뒤 조건이 다시 차도 보통 탭 찌르기 → 3.1 s 뒤 다시 나감`, (t) => {
-    // 겹치기는 탭 판(`?dupAuto=0`)으로 봄 — 10/31 18:xx 사장님 결정으로 기본은 자동('bind' — 자동 판 식힘은 duplieren_auto.test.mjs)
-    if (name === 'duplieren') {
-      const a0 = UA.dupAuto;
-      UA.dupAuto = 0;
-      t.after(() => (UA.dupAuto = a0));
-    }
     for (const at of [2.9, 3.1]) {
       const B = body(weapon, name);
       try {

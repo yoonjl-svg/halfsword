@@ -31,7 +31,7 @@ test('기본값: 파고들기 켬 · 두 걸음 · 목표 2.5 m/s (사장님 11/
   assert.equal(CLOSE.startAI, 1.0, 'AI 도 같은 규칙 (사장님 11/14 \'2는 ai도 동일하게\')');
   assert.deepEqual({ ...DE_DIRTY, ringT: 0, ringNoRecover: 0 }, { ring: 1, ringDist: 0.6, ringT: 0, ringNoRecover: 0 }, '칼 씨름 기본 켬 (사장님 11/14 \'1번으로 해\') · B · C 폐기 (11/14)');
   assert.equal(CONFIG.DE_DIRTY_ON, undefined, 'B · C 켤 때 값도 걷어냄');
-  near(DE_DIRTY.ringT, realS(1.2)); near(DE_DIRTY.ringNoRecover, realS(2.0)); assert.equal(CONFIG.UNIQUE_ASSIST.dupAuto, 'both', '겹치기 자동 ⓒ (사장님 11/14 \'c로 해\')'); near(CONFIG.UNIQUE_ASSIST.dupStackS, realS(0.4), 1e-9);
+  near(DE_DIRTY.ringT, realS(1.2)); near(DE_DIRTY.ringNoRecover, realS(2.0)); near(CONFIG.UNIQUE_ASSIST.dupStackS, realS(0.4), 1e-9);
 });
 
 test('파고들기 몸: 서서 앞으로 세게 밀면 박찬 앞 걸음 둘(× digV ÷ 앞 걷는 빠르기 · 파고들기 걸음 표시) · 기력 pushCost 한 번 · 셋째 걸음은 보통 · 넘어지지 않음 · 보통 걸음보다 1 m 에 빨리 닿음', () => {

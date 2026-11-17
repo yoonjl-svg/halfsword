@@ -21,13 +21,9 @@ const { realS, THRUST } = CONFIG;
 const it = Object.fromEntries(PLAYER_UNIQUE.italian.map((e) => [e.name, e]));
 
 test('기본값 (10/31): 칼끝 돌려 빼기 = 기본 기술(특수 공격 아님 · 보통 찌르기 빠르기 · 잔상 없음) · 비껴서며 찌르기 = 특수 공격(고노센 × 0.3) · 헛누름 1.2 s · 내려 긋기 67.5°', () => {
-  assert.equal(UA.cavSnap, 1);
   assert.ok(Math.abs(UA.cavFrom - realS(0.2)) < 1e-12 && Math.abs(UA.cavTo - realS(1.2)) < 1e-12, '창 그대로 (사장님 값)');
-  assert.equal(UA.cavSpeed, 'tap');
   assert.ok(Math.abs(cavTipSpeed() - (THRUST.reach + THRUST.chamber) / THRUST.extend) < 1e-12, '탭 찌르기가 칼 선을 따라 뻗는 빠르기');
-  assert.equal(UA.cavSide, 'contact');
   assert.ok(Math.abs(UA.cavArmSlow - realS(1.2)) < 1e-12, "헛누름 — 사장님 '1.2초로 할게'");
-  assert.equal(UA.cavArmSlowAi, 1);
   assert.ok(Math.abs(UA.inqThreat - realS(0.25)) < 1e-12);
   assert.equal(UA.specialShare.inquartata, 0.3); // 10/31 16:xx 감독 판단(사장님 위임 — 확인표 3217)
   assert.equal(UA.imbroDown, 67.5);
@@ -72,10 +68,10 @@ test('② 칼끼리 닿음 처음부터 실제 0.5 s 의 탭 = 칼끝 돌려 빼
     assert.ok(R?.combo, '운동학 찌름 요청');
     assert.equal(R.tech, 'cavazione');
     assert.ok(Math.abs(R.speed - 1.2 * cavTipSpeed()) < 1e-9 && R.noArc, '보통 찌르기 빠르기 × 1.2(사장님 10/31 18:xx · 11/12 감독 보류로 그대로) · 잔상 없음');
-    assert.deepEqual([UA.cavShare, UA.cavSpeedMul], [0, 1.2]); // 11/12 감독 보류 — 10/31 판
+    assert.equal(UA.cavSpeedMul, 1.2); // 11/12 감독 보류 — 10/31 판
     assert.equal(R.maxT, 0, '길 끝(거둠)까지');
     assert.ok(R.moves[0].same && R.moves[0].artThrust && R.moves[0].dyn.under && R.moves[0].dyn.tapTiming && R.moves[0].plane);
-    assert.equal(R.selfFree, UA.cavSelfFree, '넘어짐 고침 (cavSelfFree — 그 수 동안 칼 어깨 면 밧줄 뗌)');
+    assert.equal(R.selfFree, 1, '넘어짐 고침 (cavSelfFree — 그 수 동안 칼 어깨 면 밧줄 뗌)');
     assert.ok(B.P.skill.tap == null, '보통 탭 찌르기는 없음');
     const costCav = st0 - B.P.stamina.value;
     assert.equal(B.uq.coolT.cavazione, undefined, '식힘 없음');
@@ -265,42 +261,6 @@ test('① 내려 찌르기 닿게 (씨앗 1 · 서 있는 상대): 찌른 상처
 
 
 
-test('② 세게 하는 시제품 A ~ E (10/31 16:xx 사장님 물음 · 확인표 3263 ~ · 기본 모두 끔): A 빠르기 배 · D 판정 배율 → 요청 · C 상대 반응 묶음(ai.js respond) · E 막기 단추로 거둠 · B 는 combat.js(재기로 봄)', () => {
-  assert.deepEqual([UA.cavSpeedMul, UA.cavGap, UA.cavParryLock, UA.cavHitMul, UA.cavCancel], [1.2, 0, 0, 1, 0], '기본: A × 1.2(사장님 10/31 18:xx \'1.2배로 해\' · 11/12 감독 보류로 그대로) · 나머지 끔');
-  assert.equal(UA.cavShare, 0, '칼끝 = 보통 찌르기 빠르기 × cavSpeedMul (11/12 감독 보류 — 10/31 판)');
-  const keep = { cavSpeedMul: UA.cavSpeedMul, cavHitMul: UA.cavHitMul, cavParryLock: UA.cavParryLock, cavCancel: UA.cavCancel, cavShare: UA.cavShare };
-  const B = body();
-  try {
-    B.touch(realS(0.5));
-    assert.equal(B.tap(), true);
-    assert.ok(Math.abs(B.P.iaiReq.speed - 1.2 * cavTipSpeed()) < 1e-9 && B.P.iaiReq.hitMul === 1 && B.G.enemy.parryLockUntil == null, '기본 = × 1.2 · 나머지 끔 (11/12 감독 보류 — 10/31 판)');
-    Object.assign(UA, { cavSpeedMul: 1.5, cavHitMul: 1.3, cavParryLock: realS(0.2), cavCancel: 1, cavShare: 0 }); // A 는 10/31 바탕(보통 찌르기 빠르기)에서 봄
-    B.touch(realS(0.5));
-    assert.equal(B.tap(), true);
-    const R = B.P.iaiReq;
-    assert.ok(Math.abs(R.speed - 1.5 * cavTipSpeed()) < 1e-9, `A 빠르기 × 1.5 (${R.speed})`);
-    assert.equal(R.hitMul, 1.3, 'D 판정 배율');
-    const E = B.G.enemy;
-    assert.ok(Math.abs(E.parryLockUntil - (E.fightT + realS(0.2))) < 1e-9, 'C 묶음 끝 = 낸 때 + 실제 0.2 s');
-    const ai = B.G.ai;
-    const seen = ai.threatSeen;
-    assert.equal(ai.respond({ id: 9999, line: 'high', thrust: true }, 1.2), false, 'C 묶인 동안 반응 못 함');
-    assert.equal(ai.threatSeen, seen, 'C 이 위협은 묶음이 풀린 뒤 다시 봄');
-    // E: 끄는 동안 막기 단추를 새로 누르면 그 스텝에 거둠
-    B.guard.held = false;
-    B.G.step();
-    assert.equal(B.P.iai?.tech, 'cavazione', '끄는 칼 시작');
-    B.guard.held = true;
-    B.uq.drive(DT);
-    assert.equal(B.uq.stats.cavCancel, 1, 'E 거둠');
-    B.G.step();
-    assert.equal(B.P.iai, null, 'E 그 스텝 자리에서 끝');
-  } finally {
-    Object.assign(UA, keep);
-    B.free();
-  }
-});
-
 test('①② 탭이 걸어 맞추기 판(무릎 꿇은 상대 약한 자리 — skill.thrust 가 참이어도 탭이 아직 없음)이면 이름을 달지 않고 넘어감 (10/28 싸움 재기에서 떨어진 오류)', () => {
   const B = body(['imbroccata', 'cavazione']);
   try {
@@ -308,14 +268,6 @@ test('①② 탭이 걸어 맞추기 판(무릎 꿇은 상대 약한 자리 — 
     B.P.skill.thrust = (o = {}) => (o.uniq === false ? true : real(o)); // 걸어 맞추기 판: 참 · 탭 없음
     const e = B.uq.list.find((x) => x.name === 'imbroccata');
     assert.doesNotThrow(() => B.uq.start(e, { tech: 'stichOchs', kind: 'thrust', t0: B.uq.t, dir: [0, -1], start: [0.2, 0.3], landed: false, bound: false, tEnd: null, unique: null }, 1));
-    const snap = UA.cavSnap;
-    UA.cavSnap = 0; // 운동학 칼 없이 — 탭 찌르기 덧씌우기 갈래
-    try {
-      B.touch(realS(0.5));
-      assert.doesNotThrow(() => B.uq.tapChain());
-    } finally {
-      UA.cavSnap = snap;
-    }
   } finally {
     B.free();
   }

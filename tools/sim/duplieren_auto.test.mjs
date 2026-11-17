@@ -7,26 +7,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT } from './harness_m.mjs';
 import { PlayerUniqueAssist } from '../../src/unique_assist.js';
-import { G7_CMD_AUTO, nodeCmd, nodeOf } from '../../src/skill_tree_data.js';
+import { nodeCmd, nodeOf } from '../../src/skill_tree_data.js';
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, SECRET } = CONFIG;
 const KEYS = ['dupAuto', 'dupStackS', 'dupStackGap', 'dupStackDrain', 'dupBandMin', 'dupBandMax', 'dupClashT', 'dupClashGap', 'dupClashMax', 'dupAutoParry', 'dupAutoHint', 'specialCooldown', 'dupTap'];
 
 test("기본값 — 사장님 10/31 18:xx 결정: 'bind' · 띠 0.8 m 초과(죽음의 일격 거리 밖) ~ 1.6 m · 쌓임 0.6 s · 끊김 0.2 s 넘으면 처음부터 · 막기 단추 맞댐도 셈 · 자세 칸 알림 없음 · clash2 값은 사다리 칸", () => {
-  assert.equal(UA.dupAuto, 'both'); // 11/14 사장님 'c로 해' — 'bind' 또는 'clash2' 먼저 찬 쪽 (전 'bind')
-  assert.equal(UA.dupTap, 1); // 탭 조건 스위치는 그대로 (자동 판이면 TAP_TRIG.dup 이 안 봄 — dupAuto 0 이면 전 판 탭)
   assert.ok(Math.abs(UA.dupStackS - realS(0.4)) < 1e-9, `dupStackS ${UA.dupStackS}`); // 11/14 사장님 '겹치기 0.6초 제한은 좀 더 낮은 숫자 테이블로' — 0.4 (전 0.6)
   assert.ok(Math.abs(UA.dupStackGap - realS(0.2)) < 1e-9, `dupStackGap ${UA.dupStackGap}`);
-  assert.equal(UA.dupStackDrain, 0, '0.2 s 넘게 떨어지면 처음부터');
-  assert.equal(UA.dupBandMin, null);
   assert.equal(SECRET.mordCloseN, 0.8);
   assert.equal(UA.dupBandMax, 1.6);
-  assert.equal(UA.dupAutoParry, 1, '막기 단추로 맞댄 것도 쌓음');
-  assert.equal(UA.dupAutoHint, 0, '자세에 안 띄움');
   const LAD = [0.2, 0.4, 0.6, 1.2, 1.5, 2.0, 3.0, 6.0, 10.0];
   for (const k of ['dupClashT', 'dupClashGap']) assert.ok(LAD.some((s) => Math.abs(UA[k] - realS(s)) < 1e-9), `${k} ${UA[k]}`);
-  assert.equal(UA.dupClashMax, 0);
 });
 
 /** 사람 롱소드 몸 + 독일 고유 공격 셋 (판을 돌리지 않음 — 닿음 · 가슴 사이를 손으로 놓고 drive 를 부름) */
@@ -129,51 +122,6 @@ test("'bind' — 죽음의 일격 거리(가슴 사이 ≤ 0.8 m) · 띠 위(> d
   }
 });
 
-test("'bind' — 막기 단추를 누른 동안은 안 쌓임(dupAutoParry 0) · 1 이면 쌓고 냄 · 손가락이 긋는 중이면 냄만 미룸(쌓임 쥠) · 자세 칸 알림은 절반부터 · 빠짐 판", () => {
-  const B = body({ dupAuto: 'bind', specialCooldown: 0, dupAutoParry: 0, dupAutoHint: 1 }); // 16:xx 시제품 판(막기 단추 안 셈 · 알림 켬)부터 보고 아래에서 사장님 판(1)으로
-  try {
-    const need = Math.ceil(UA.dupStackS / DT);
-    B.uq.feed(0, 0, 1 / 60, true, true); // 막기 단추 누름 (main.js feed — blocked · handHeld)
-    assert.equal(B.run(need * 3), -1, '막기 단추');
-    UA.dupAutoParry = 1;
-    const i = B.run(need + 3);
-    assert.ok(i >= 0, '막기 단추와 상관없이 (dupAutoParry 1)');
-    UA.dupAutoParry = 0;
-    B.clear();
-    B.uq.feed(0, 0, 1 / 60, false, false);
-    // 자세 칸 알림 · 긋는 중엔 미룸
-    const half = Math.ceil(need / 2); // 올림 — dupStackS 0.4 s(11/14 사장님 결정)면 need 53(홀수) · 내림 26 스텝은 절반(0.22 s) 아래라 알림 전
-    assert.equal(B.run(half), -1);
-    assert.equal(B.uq.dupCue?.name, 'duplieren', '절반 — 자세 칸 알림');
-    assert.equal(B.uq.dupCue?.sub, '맞물림');
-    B.P.skill.inputSwinging = true;
-    assert.equal(B.run(need * 2), -1, '긋는 중 — 미룸');
-    assert.ok(B.uq.dupA.st >= UA.dupStackS, '쌓임은 쥠');
-    B.P.skill.inputSwinging = false;
-    assert.equal(B.run(2), 0, '손가락이 멈춘 스텝에 냄');
-    UA.dupAutoHint = 0;
-    B.clear();
-    B.run(Math.floor(need * 0.8));
-    assert.equal(B.uq.dupCue, null, '알림 끔');
-    // 빠짐 판 (dupStackDrain 0.5): 긴 끊김 뒤에도 쌓임이 남아 이어 셈
-    UA.dupAutoHint = 1;
-    UA.dupStackDrain = 0.5;
-    B.clear();
-    B.uq.dupA = null;
-    assert.equal(B.run(half), -1);
-    B.st.touch = false;
-    const offN = Math.ceil(UA.dupStackGap / DT) + Math.ceil(realS(0.2) / DT);
-    assert.equal(B.run(offN), -1);
-    const left = B.uq.dupA.st;
-    assert.ok(left > 0 && left < half * DT, `빠진 뒤 남음 ${left}`);
-    B.st.touch = true;
-    const k = B.run(need);
-    assert.ok(k >= 0 && k < need - 2, `빠짐 판 이어 셈 — ${k}`);
-  } finally {
-    B.free();
-  }
-});
-
 test("'clash2' — 두 닿음(떨어진 틈 ≥ dupClashGap)이 dupClashT 안이면 둘째 닿음에 냄 · 짧은 떨어짐은 같은 닿음 · dupClashT 넘으면 안 냄 · 죽음의 일격 거리면 안 냄", () => {
   const B = body({ dupAuto: 'clash2', specialCooldown: 0 });
   try {
@@ -212,7 +160,7 @@ test("'clash2' — 두 닿음(떨어진 틈 ≥ dupClashGap)이 dupClashT 안이
   }
 });
 
-test('켜면 탭은 보통 탭 찌르기 (맞물린 채 탭이어도 겹치기 아님) · 끄면(0) 탭 판 그대로', () => {
+test('탭은 보통 탭 찌르기 (맞물린 채 탭이어도 겹치기 아님)', () => {
   const B = body({ dupAuto: 'bind', specialCooldown: 0 });
   try {
     B.uq.cur = { tech: 'zornhau', kind: 'cut', tap: false, t0: B.uq.t - 0.2, dir: [-0.7, -0.7], landed: false, bound: true, tEnd: null, unique: null };
@@ -220,17 +168,6 @@ test('켜면 탭은 보통 탭 찌르기 (맞물린 채 탭이어도 겹치기 �
     B.P.skill.thrust();
     assert.equal(B.fired(), 0, '자동 판 — 탭은 겹치기 아님');
     assert.ok(B.P.skill.tap, '보통 탭 찌르기');
-    UA.dupAuto = 0;
-    B.P.skill.tap = null;
-    B.uq.tapRec = null;
-    B.uq.cur = { tech: 'zornhau', kind: 'cut', tap: false, t0: B.uq.t - 0.2, dir: [-0.7, -0.7], landed: false, bound: true, tEnd: null, unique: null };
-    B.P.skill.thrust();
-    assert.equal(B.fired(), 1, '끔 — 탭 판');
-    // 끔이면 drive 가 자동 셈을 안 함
-    B.clear();
-    B.uq.dupA = null;
-    B.run(Math.ceil(realS(3) / DT));
-    assert.equal(B.uq.dupA, null);
   } finally {
     B.free();
   }
@@ -241,23 +178,6 @@ test('G7 카드 입력 줄 — 기본(자동 both — 11/14 사장님 글) · bi
   assert.equal(n.eff, '칼이 맞물리면 상대 칼 뒤로 들어가 얼굴을 벤다');
   assert.equal(n.cmd, '가까이서 칼을 맞대거나 연달아 부딪히면 자동 발동', '사장님 11/14 결정 (겹치기 자동 ⓒ)');
   assert.equal(nodeCmd(n), n.cmd, '기본(자동 both) — 카드에 이 글');
-  assert.equal(G7_CMD_AUTO.bind, '가까이서 칼을 맞댄 채 버티면 자동 발동', '사장님 10/31 18:xx 초안 ok (bind 판)');
-  const save = UA.dupAuto;
-  try {
-    UA.dupAuto = 0;
-    assert.equal(nodeCmd(n), '긋기가 상대 칼에 닿은 채 탭', '0 = 전 판 탭 글');
-    for (const m of ['both', 'bind', 'clash2']) {
-      UA.dupAuto = m;
-      const c = nodeCmd(n);
-      assert.equal(c, G7_CMD_AUTO[m]);
-      assert.ok(c.length <= 33, `${c} ${c.length}`);
-      assert.ok(!/[0-9A-Za-z一-鿿぀-ヿ]/.test(c), c);
-      assert.ok(!/베기|찌르기/.test(c), c);
-      assert.ok(/자동 발동$/.test(c), c);
-    }
-  } finally {
-    UA.dupAuto = save;
-  }
   // 다른 칸은 그대로
   assert.equal(nodeCmd(nodeOf('german', 'G5')), nodeOf('german', 'G5').cmd);
 });

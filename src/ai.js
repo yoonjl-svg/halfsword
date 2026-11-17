@@ -2309,7 +2309,7 @@ export class AI {
     if (sp) this.specStart(sp);
     // 칼끝 돌려 빼기 심화 · 헛누름 (10/31 사장님 '1.2초로 할게' — config UNIQUE_ASSIST.cavArmSlow): 빼서 찌르기 패시브(칼이 맞물린 뒤 — parried · bindDef)가 나가는 순간 상대 두 팔 늦춤 ·
     //  칼끝 돌려 빼기가 숙련도 꾸러미에 든 AI 만(cavDeep — 곁눈 베기 무릎 꺾기 · 허리 베기 출혈처럼 AI 는 그 기술이 있으면 심화 이점도)
-    if (this.passiveAtk === 'cavazione' && this.cavDeep && UA.cavArmSlowAi && UA.cavArmSlow > 0 && beginFlowRecovery(this.foe, this.me, UA.cavArmSlow)) {
+    if (this.passiveAtk === 'cavazione' && this.cavDeep && UA.cavArmSlow > 0 && beginFlowRecovery(this.foe, this.me, UA.cavArmSlow)) {
       this.stats.cavArmSlow = (this.stats.cavArmSlow ?? 0) + 1;
       itEdgeGrant(this.me, 'feint'); // 칼 우위 (11/14 'ai에도 적용' — 헛누름이 들면 · 11/14 '리솔루토도 쓰게해' — 숙련도 5 AI 는 그동안 리솔루토 창이 열릴 수 있음 · risoTick)
     }
@@ -2755,7 +2755,6 @@ export class AI {
    */
   respond(th, d) {
     const L = this.level;
-    if (this.me.parryLockUntil != null && this.me.fightT < this.me.parryLockUntil) return false; // 칼끝 돌려 빼기 C (10/31 시제품 — UNIQUE_ASSIST.cavParryLock · 기본 끔): 누르던 칼이 빠진 동안 반응을 새로 시작하지 못함 (이 위협은 묶음이 풀린 뒤 다시 봄)
     if (th.id === this.threatSeen) return false;
     if (this.me.iaiDraw) return drawGate(this.me, 'guard') && false; // 11/16 뽑는 중: 이 위협은 뽑은 뒤 다시 봄 (굴림 없음)
     this.threatSeen = th.id;

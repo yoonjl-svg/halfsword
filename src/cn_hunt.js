@@ -63,7 +63,7 @@ export function huntRegenK(f) {
   const n = huntN(f);
   if (!n) return 1;
   const C = H();
-  return C?.on && C.regen > 0 ? Math.max(0, 1 - C.regen * n) : 1;
+  return C?.regen > 0 ? Math.max(0, 1 - C.regen * n) : 1;
 }
 
 /** 쌓는 몸이 겨눈 상대의 겹 수 (격살 풀기 더함 몫 — skill.js gyeoksalReq · 쌓는 몸이 아니면 0) */
