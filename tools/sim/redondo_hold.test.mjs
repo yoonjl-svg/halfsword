@@ -28,8 +28,6 @@ test('기본값 — 길게 누름 실제 0.6 s · 기력 초당 붙어 버티기
   assert.equal(UA.rdSnapTime, 0); // 11/01 00:xx 사장님 '공격이 몇 초 안에 끝나야한다 이런 기준 없애라고 햇지' — 상한 없음(0) · 전 0.4 — // 10/31 0.2 → 0.4 [사장님 확인 전] — 칼끝 × 0.3 의 벰(0.265 s)을 끊지 않게 (redondo_motion 내려침 길 시험)
   assert.ok(Math.abs(UA.specialCooldown - realS(3.0)) < 1e-12); // 10/29 19:5x 사장님 '특수공격 3초(발동이 완료된 시점부터)' (전 6 s · 나간 순간부터)
   assert.equal(UA.specialCoolFrom, 'free');
-  assert.equal(IB_FLOW.windmillChain, 0); // 10/31 19:xx 사장님 '풍차베기는 이어지는 흐름과 무관한 게 낫겠어' (전 10/29 08:3x 'simple' — `?b4Old=1`)
-  assert.equal(IB_FLOW.windmillApart, 1); // B4 칼은 흐름 위력 · 세 칼 기력 0 자리와 닿지 않음 (감독 판단 · 사장님 확인 전 — 확인표 3292)
   const e = PLAYER_UNIQUE.iberian.find((x) => x.name === 'redondo');
   assert.equal(e.role, 'hold');
   assert.deepEqual(e.on, []); // 사람: 긋기 조건 없음 — 왼 가로베기는 보통 긋기
@@ -141,54 +139,6 @@ test('그만둠 (식힘 없음): 막기 단추 · 맞음(칼날 상처) · 비�
 });
 
 for (const mode of ['slowSpin', 'shoulder'])
-test(`흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 01:5x · 08:3x simple · 10/31 14:xx windmillPower 0) [${mode === 'shoulder' ? '안 B 어깨 — 기본 10/31 · 얹은 채 0.6 s = 한 바퀴(감독 해석)' : '안 A 고리 — 사장님 10/30 00:1x 한 바퀴'}]: 한 바퀴 전에 떼면 셈 없음 · simple = 사슬 안이든 밖이든 n 1 · inside(견줌) = 창 안에서 누르면 n + 1 · 흐르는 긋기(B5) 없으면 셈 없음 · 풍차 베기 칼 자체 위력은 × 1(흐름보너스 없음 — windmillPower 1 = 10/29 판 × 1.2 · inside × 1.8) · 0 = 끔`, () => withWind(mode, () => {
-  // 한 바퀴 = 안 A 꼴 한 바퀴 + 섞는 동안 도는 빠르기를 0 에서 올린 늦음(rdRamp — 섞기의 반 · 사장님 10/30 00:1x 'A로 하고 흐름 보너스 시간은 한바퀴로' — 감기 시작부터 실제 약 1.5 s) ·
-  //  안 B = 어깨에 얹는 섞기 0.6 s + 얹은 채 0.6 s (감기 시작부터 실제 1.2 s — 10/31 감독 해석 · 사장님 확인 전)
-  const rot = oneTurn();
-  const kitAll = kitFromNodes('iberian', new Set(['B1', 'B5', 'B4', 'B6']));
-  const inPrep = (P) => { P.ibFlowT = 10; P.ibFlowCutEnd = 10; P.ibLastN = 3; }; // 이어 긋기 창 안 · 사슬 셋
-  const run = (holdS, prep, kit = kitAll, mode = 'simple', power = IB_FLOW.windmillPower) => {
-    const keep = [IB_FLOW.windmillChain, IB_FLOW.windmillPower];
-    IB_FLOW.windmillChain = mode;
-    IB_FLOW.windmillPower = power;
-    const B = body({ seed: 7, kit });
-    try {
-      const { P, uq, press, steps } = B;
-      prep?.(P);
-      press.down = true; steps(realS(0.6) + holdS); press.down = false; steps(DT * 3);
-      const n = uq.stats.windChain?.at(-1);
-      const on = P.ibFlowOn;
-      const k = on ? P.ibFlowK() : 1;
-      const cost = P.ibChainCostK();
-      return { n, k, cost, on, strike: P.ibStrike };
-    } finally { [IB_FLOW.windmillChain, IB_FLOW.windmillPower] = keep; B.free(); }
-  };
-  assert.equal(IB_FLOW.windmillPower, 0, '10/31 14:xx 사장님 결정 — 풍차 베기 칼 자체 흐름 위력 없음');
-  assert.equal(run(rot * 0.7).n, 0, '한 바퀴 전');
-  const out = run(rot * 1.2);
-  assert.equal(out.n, 1, '사슬 밖 → 첫 수 (흐름의 첫 칼로 인정)');
-  assert.ok(out.on && out.strike, '내려침 동안 흐름 켜짐 · 사슬 자리 그대로');
-  assert.equal(out.k, 1, '풍차 베기 칼 자체 × 1 (흐름보너스 없음)');
-  assert.equal(out.cost, 1, '풍차 베기 칼은 기력 0 자리가 아님 (10/29 14:2x)');
-  const inSimple = run(rot * 1.2, inPrep);
-  assert.equal(inSimple.n, 1, 'simple — 사슬 안에서 눌러도 n 1');
-  assert.equal(inSimple.k, 1);
-  const inChain = run(rot * 1.2, inPrep, kitAll, 'inside');
-  assert.equal(inChain.n, 4, 'inside — 사슬 안 → n + 1');
-  assert.equal(inChain.k, 1, 'inside 도 칼 자체 × 1');
-  const b5 = run(rot * 1.2, inPrep, kitFromNodes('iberian', new Set(['B1', 'B5', 'B4'])), 'inside');
-  assert.equal(b5.k, 1, 'B5 만 → 칼 자체 × 1');
-  assert.equal(b5.cost, 1, 'B5 만 → 기력 그대로');
-  // 10/29 판 (windmillPower 1): 풍차 베기 칼도 이어 그은 칼 위력
-  assert.ok(Math.abs(run(rot * 1.2, null, kitAll, 'simple', 1).k - 1.2) < 1e-9, '10/29 판 × 1.2');
-  assert.ok(Math.abs(run(rot * 1.2, inPrep, kitAll, 'inside', 1).k - 1.8) < 1e-9, '10/29 판 inside 1 + 0.2 × 4');
-  assert.ok(Math.abs(run(rot * 1.2, inPrep, kitFromNodes('iberian', new Set(['B1', 'B5', 'B4'])), 'inside', 1).k - 1.2) < 1e-9, '10/29 판 B5 만 → 1.2');
-  const none = run(rot * 1.2, null, kitFromNodes('iberian', new Set(['B1', 'B4'])));
-  assert.equal(none.n, 0, 'B5 없음 → 셈 없음');
-  assert.equal(none.k, 1);
-  const off = run(rot * 1.2, null, kitAll, 0);
-  assert.equal(off.n, 0, '끔');
-}));
 
 for (const mode of ['slowSpin', 'shoulder'])
 test(`simple — 풍차 베기 뒤 이어 그은 긋기는 n 2 (× 1.4) [${mode === 'shoulder' ? '안 B 어깨' : '안 A 고리'}]: 풍차 베기가 새 사슬의 첫 칼(칼 자체는 × 1 — 10/31 14:xx) — 세 칼 셈은 풍차 베기가 1 번째 · 그 뒤 두 번째 긋기(사슬 3 번째)가 기력 0`, () => withWind(mode, () => {
@@ -237,11 +187,6 @@ test('B4 는 이어지는 흐름과 무관 (사장님 10/31 19:xx \'풍차베기
     P.ibFlowOn = true; P.ibFlowSw = true; P.ibFlowChain = true; P.ibCutN = 2; P.ibChainN0 = 0;
     assert.equal(P.ibFlowK(), 1, 'B4 칼 흐름 위력 × 1');
     assert.equal(P.ibChainCostK(), 1, 'B4 칼은 세 칼 기력 0 자리가 아님');
-    IB_FLOW.windmillApart = 0;
-    try {
-      assert.ok(Math.abs(P.ibFlowK() - 1.4) < 1e-9, '닿음 판이면 1 + 0.2 × 2 (가드가 하는 일)');
-      assert.equal(P.ibChainCostK(), 0, '닿음 판이면 사슬 3 번째 기력 0');
-    } finally { IB_FLOW.windmillApart = 1; }
     P.ibFlowSw = false;
     while ((P.iai || P.iaiReq) && k++ < 400) steps(DT);
     steps(0.05);

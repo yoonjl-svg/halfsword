@@ -558,7 +558,6 @@ test('실제 몸 — 강화동작 이점은 심화 칸: 곁눈 베기 무릎 꺾
   }
 });
 test('흐르는 긋기 A (10/28 22:0x 사장님 \'A로 해\'): 한 스텝 깜빡임 · 느린 감기 뒤 긋기는 이어 감이 아님 · 진짜 긋기 뒤 창 안 · 둥글게 꺾임은 이어 감 · old = 10/21 판', () => {
-  assert.equal(IB_FLOW.detect, 'a');
   assert.equal(IB_FLOW.brake, 0.8); // 사장님 '제동을 좀더 늦추고' (0.5 → 0.8 — 사장님 확인 전)
   assert.equal(IB_FLOW.power, 1.2); // '위력도 그만큼 올려' (사장님 확인 전)
   const r = round('zweihander', kitOf('iberian', 'B1', 'B4', 'B5'), 9);
@@ -586,11 +585,7 @@ test('흐르는 긋기 A (10/28 22:0x 사장님 \'A로 해\'): 한 스텝 깜빡
     st(false, 0, 0, 120);
     st(true, 3, 0, 10); st(true, -8, 0, 2); // 느린 감기에서 곧장 꺾어 긋기 — 이어 감 아님
     assert.equal(P.ibFlowOn, false);
-    IB_FLOW.detect = 'old';
-    st(false, 0, 0, 120);
-    st(true, 8); st(false, 1.2); st(true, 8, 0, 2); // 10/21 판: 한 스텝 깜빡임도 '끝나고 곧 다시' = 이어 감
-    assert.equal(P.ibFlowOn, true);
-  } finally { IB_FLOW.detect = 'a'; r.world.free(); }
+  } finally { r.world.free(); }
 });
 test('칸 효과 글 — 사장님 글 그대로 (10/29 14:1x · 14:2x — 특수 공격 넷 · 이어지는 흐름)', () => {
   const OWNER_EFF = {
@@ -614,7 +609,6 @@ test('B4 이름 · 효과 글 (10/31 19:xx 사장님 이름 \'정수리 가르�
 });
 test('이어지는 흐름 (B6 — 사장님 10/29 01:4x · 01:5x · 14:1x · 14:2x): 이어 그은 수 n — 위력 1 + 0.2n 더하기 · 상한 없음 · 사슬 세 칼마다 베기 기력 0 · 끊기면 처음부터 · B5 만이면 1.2 · AI 는 그대로', () => {
   assert.equal(IB_FLOW.power, 1.2); // 사장님 10/29 01:5x 결정
-  assert.equal(IB_FLOW.chainStack, 1);
   assert.equal(IB_FLOW.freeEvery, 3); // 14:2x '세 칼마다' (전 01:5x 0.9ⁿ — 없앰)
   assert.equal(IB_FLOW.chainCost, undefined);
   const run = (kit) => {
@@ -670,7 +664,6 @@ test('이어지는 흐름 (B6 — 사장님 10/29 01:4x · 01:5x · 14:1x · 14:
       assert.equal(P.ibChainCostK(), 1, why);
     } finally { r.world.free(); }
   }
-  { const keep = IB_FLOW.chainStack; IB_FLOW.chainStack = 0; const { r, P, st } = run(kitOf('iberian', 'B1', 'B5', 'B4', 'B6')); try { st(false, 0, 0, 120); st(true, 8, 0, 20); st(false, 0, 0, 30); st(true, -8, 0, 20); st(false, 0, 0, 30); st(true, 8, 0, 20); assert.equal(P.ibFlowK(), 1.2, '끔'); } finally { IB_FLOW.chainStack = keep; r.world.free(); } }
 });
 test('실제 몸 — 손목 치기 칼 떨구기(J8 · 10/24): J8 을 익혀야 · 손목 치기만 · 칼 쥔 아래팔(손 · 손목)만 · 50 % 는 친 쪽 전용 난수 · 떨구면 칼을 놓침 · 못 떨구면 보통 맞음 그대로 · AI 가 모는 몸은 굴리지 않음', () => {
   const K = UNIQUE_ASSIST.koteDrop;

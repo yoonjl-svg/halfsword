@@ -233,7 +233,7 @@ export class Stamina {
     if (chainK === 0) {
       this.rest = 0;
       this.action = 'attack';
-      this.fighter.ibFreeCut?.(); // 11/14 스위치 B (IB_LINK.chainArm — 기본 끔): 세 번째 기력 0 칼이 듦 → 알티바슈 포르트 곧장 무장 부탁 (fighter.js)
+      this.fighter.ibFreeCut?.(); // 세 번째 기력 0 칼 (재기)
       return;
     }
     this.spend('attack', Math.max(0, (kind === 'thrust' ? STAMINA.thrustCost : STAMINA.cutCost) * this.weight * chainK - credit));

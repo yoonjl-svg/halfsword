@@ -35,7 +35,7 @@ import { useSecret } from './secret.js'; // 이베리아 비기 알티바슈 포
 import { circleState, circleStep, circleClear } from './attack_circle.js'; // 싱지르 특수 공격 원 긋기 몸짓 (11/11 — circleTick · 비기 판과 같은 셈)
 import { segDist } from './skill.js';
 import { requestArtReturn, requestArtSnap, requestArtThrust, requestArtFold, requestArtDup, requestArtRedondo, setArtTechOf, iaiBusy, iaiTipSpeed, snapAim } from './secret_instant.js'; // 진 · 츠바메가에시 되돌림 칼 · 고유 동작 잔상 (10/21) · 제비 베기 되돌림 칼 (10/25 해법 ②) · 칼끝 돌려 빼기 운동학 찌름 (10/28)
-import { perkOff, kitOff } from './skill_kit.js';
+import { perkOff } from './skill_kit.js';
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 — 상대 두 팔 늦춤 (흘림과 같은 장치 · 10/31)
 import { beatTick, beatOk, beatSide, itEdgeGrant, itStats } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14 — 박자 찌르기 B · 칼 우위 A: 헛누름이 들면 · config IT_OUTBOX)
 import { windStart, windStep, windEnd, windLoopOf, windRopesBack } from './iberian_redondo.js';
@@ -926,16 +926,8 @@ export class PlayerUniqueAssist {
     this.hold.st = this.press.down ? 'spent' : 'idle'; // 기력이 바닥나 낸 칼: 손가락을 뗄 때까지 다시 감지 않음
     this.hold.fade = 0.12;
     const U = e.U;
-    // 흐르는 긋기 (IB_FLOW.windmillChain — 사장님 10/29 01:5x '한 바퀴 이상 돌렸을 때 한 번만' · 08:3x 'simple' 결정 · 확인표 2737): 한 바퀴 넘게 돌린 뒤 낸 칼 = 이어 그은 칼 하나 (더 돌려도 하나) ·
-    //  'simple' = 늘 첫 수(n 1 — × 1.2 · 앞 사슬과 상관없이 · 새 사슬의 1 번째 칼 — 세 칼 셈) · 'inside'(견줌) = 이어 긋기 창 안에서 누르기 시작했으면 그 사슬의 다음 수(n + 1) · 아니면 n 1 ·
-    //  사슬은 이 칼 뒤로 이어짐(다음 긋기 n + 1). 흐르는 긋기(B5)가 없으면 없음 · 한 바퀴 못 돌았으면 없음(앞 사슬도 이 칼로 잇지 않음)
-    const mode = IB_FLOW.windmillChain;
-    const chain = !!mode && IB_FLOW.a && turns >= 1 && f.swordArt?.tradition === 'iberian' && !kitOff(f, 'ibFlow');
-    const n = !chain ? 0 : mode === 'inside' && this.hold.chainN >= 0 ? this.hold.chainN + 1 : 1;
-    f.ibStrike = chain ? { n, t0: this.t, newChain: !(mode === 'inside' && this.hold.chainN >= 0) } : null; // fighter.js updateIbFlow 가 칼이 끄는 동안 흐름을 켬 · newChain = 이 칼이 새 사슬의 첫 칼(세 칼 셈 — 10/29 14:2x)
     const ok = UA.enhance > 0 && requestArtRedondo(f, rdReleaseOpt(f, W, { share: specialShare(e.name), maxT: UA.rdSnapTime, tech: U.name })); // 길 = rdReleaseOpt (10/31 19:xx 기본 'tajo' 멘 어깨에서 내려침 · 'direct' 10/30 곧장 사선 · 'chamber' 10/29 판)
     if (!ok) {
-      f.ibStrike = null;
       this.stats.windCancel ??= {};
       this.stats.windCancel.noStrike = (this.stats.windCancel.noStrike ?? 0) + 1;
       return false;
@@ -947,7 +939,6 @@ export class PlayerUniqueAssist {
     this.stats.windFire ??= {};
     this.stats.windFire[why] = (this.stats.windFire[why] ?? 0) + 1;
     this.stats.windTurns = [...(this.stats.windTurns ?? []), +turns.toFixed(2)];
-    this.stats.windChain = [...(this.stats.windChain ?? []), n];
     f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
     f.stamina.attack('cut'); // 칼 하나 (끌고 가는 칼은 같은 공격 — same) · 풍차 베기 칼은 세 칼마다 기력 0 자리가 아님 (fighter.js ibChainCostK — 이어지는 흐름 B6)
     return true;
@@ -970,7 +961,6 @@ export class PlayerUniqueAssist {
     H.st = this.press.down ? 'spent' : 'idle';
     H.fade = 0.12;
     H.secret = false;
-    f.ibStrike = null;
     const A = SECRET.altib;
     const ok = UA.enhance > 0 && requestArtRedondo(f, rdReleaseOpt(f, W, { share: shot.share, maxT: UA.rdSnapTime, tech: e.U.name, hitMul: shot.hitMul, hold: A.hold ?? SECRET.stiff.iberian ?? 0, secret: 'altib' }));
     if (!ok) {
@@ -1032,7 +1022,7 @@ export class PlayerUniqueAssist {
    * B7 이어 돌리기 (11/14 사장님 '이베리아 이어 돌리기로 진행해.' — IB_LINK · iberian_link.js · 열쇠는 B7 칸 cingir 그대로): 긋기가 시작되는 순간(detect · linkWatch) —
    *  앞 진짜 긋기(fighter.js updateIbFlow — 맞음 · 빗나감 · 막힘 · 쳐내짐 모두)가 끝나고 이어짐 창(afterWindow) 안이고(f.ibFlowChainNow) · 이 긋기가 지금 자리에서 그대로 그어지는
    *  기본 동작이 아니고 · 그 첫 방향의 큰 칼(내려 · 가로 베기) 시작 자리가 떨어져 있으면(linkNeed) — 칼을 그 시작 자리로 넘기고(linkStart) · 이 긋기는 거기서 다시 그음(linkTick).
-   *  막는 조건: 다른 동작이 손을 쥠(busy · 끌고 가는 칼 · 비기 · 탭 · 감기) · 서 있지 않음 · 탈진 · 칼 없음 · 식힘(IB_LINK.cool 일 때만). 냈으면 true
+   *  막는 조건: 다른 동작이 손을 쥠(busy · 끌고 가는 칼 · 비기 · 탭 · 감기) · 서 있지 않음 · 탈진 · 칼 없음. 냈으면 true
    *  11/15 (2) 넘기기 판 (사장님 "몇번째 칼이든 그은 그대로 칼이 나가야 하고 이어돌리기는 그 사이의 힌지일 뿐이야." — 기록 docs/strike/ib_link_2026-11-15.md):
    *   손가락 몫은 이 긋기가 시작된 스텝부터(fingerStep 기록 — 전엔 걸러진 손가락 빠르기가 문턱을 넘은 뒤 자리라 첫 두 프레임 몫이 빠짐) 지연 줄(L.q)에 그대로 받아 둠.
    *   넘기기가 끝나면 그 줄을 스텝마다 하나씩 그은 박자 그대로 내고 · 그동안 든 손가락 몫도 손 목표에 곧장 더하지 않고 줄 뒤에 이음(전엔 받아 둔 몫과 지금 몫이 겹쳐 더해져
@@ -1080,7 +1070,6 @@ export class PlayerUniqueAssist {
   linkOk() {
     const f = this.f;
     if (this.busy() || iaiBusy(f) || f.ibSpin || f.ibLink || this.winding || f.skill.sec || f.skill.tap || f.skill.pom || f.stamina.exhausted || f.state !== 'stand' || !f.sword || !f.armed) return false;
-    if (IB_LINK.cool && this.cooling(this.cingirE)) return false;
     // 앞 진짜 긋기가 끝나고 이어짐 창 안 · 11/15 또는 앞 진짜 긋기가 아직 휘두르는 중(손가락을 쉬지 않고 다음 칼을 그음 — 전엔 앞 칼이 끝나기 전에 그은 다음 칼은 원도 없고 손 반지름 끝에 막혀 안 나감)
     return (f.ibFlowChainNow?.() ?? -1) >= 0 || !!(f.ibFlowSw && (f.ibFlowPk ?? 0) >= IB_FLOW.cutSpeed);
   }
@@ -1229,7 +1218,6 @@ export class PlayerUniqueAssist {
       L.T = K.t;
       while (L.q.length && !L.q.at(-1)[0] && !L.q.at(-1)[1]) L.q.pop(); // 손가락이 멈춘 뒤 몫은 버림 (그 뒤는 손가락 그대로)
       this.stats.link.done++;
-      if (IB_LINK.cool) this.coolT[this.cingirE.name] = this.t;
       // 첫 몫은 이 스텝에 (아래로)
     }
     if (L.phase === 'replay') {
@@ -1267,10 +1255,8 @@ export class PlayerUniqueAssist {
     }
     if (L.phase === 'replay') return this.linkPlay();
     if (L.phase === 'wait') {
-      // 11/15 앞 칼이 끝 자리로 가는 동안 (무거운 칼은 손가락보다 늦음): 손 목표를 앞 칼 끝에 둔 채 · 칼이 그 자리 자세 허용 각(UNIQUE_ASSIST.angle) 안에
-      //  오거나 IB_LINK.bridgeMin 지나면 넘기기 시작 (IB_LINK.waitA 0 = 곧장 — 앞 칼이 잘리지 않아 그 칼의 맞음 · 흐름 위력 그대로)
+      // 11/15 앞 칼이 끝 자리로 가는 중이어도 곧장 넘김 (앞 칼이 잘리지 않아 그 칼의 맞음 · 흐름 위력 그대로)
       this.linkHand(L.pos);
-      if (IB_LINK.waitA && bladeOff(f, L.pos) > UA.angle && this.t - L.tw < IB_LINK.bridgeMin) return;
       return this.linkBridgeGo(L);
     }
     if (L.phase === 'arrive') {
@@ -1286,7 +1272,7 @@ export class PlayerUniqueAssist {
       this.linkHand(p);
       if (!f.ibLink.done) return;
       L.tw = this.t;
-      if (IB_LINK.arrive && !this.linkArrived(L)) return void (L.phase = 'arrive'); // 칼이 아직 오는 중 — 시작 자리에서 잠깐 (위 arrive)
+      if (!this.linkArrived(L)) return void (L.phase = 'arrive'); // 칼이 아직 오는 중 — 시작 자리에서 잠깐 (위 arrive)
       return this.linkRelease(L, true);
     }
   }
@@ -1395,7 +1381,6 @@ export class PlayerUniqueAssist {
     if (L.pos) L.pos = L.to.slice();
     else while (L.q.length && !L.q.at(-1)[0] && !L.q.at(-1)[1]) L.q.pop();
     this.stats.link.done++;
-    if (IB_LINK.cool) this.coolT[this.cingirE.name] = this.t;
     if (L.pos && K?.bridge) linkBoost(f); // 사슬 칼 빠르기 시제품 (IB_LINK.chainSpeed — 기본 끔): 이 이은 칼에 서보 힘 더함 · 기력 더 씀
   }
 

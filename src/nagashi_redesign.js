@@ -46,8 +46,7 @@ export function flowCandidate(D, O, SO, point, normal, impact, now) {
   entry.last = now;
   if (!s.attackId || s.flowAttackKind === 'thrust') return no('attack-kind');
   // 공격 유효 구간(stamina.attackUntil)을 그대로 쓴다 — 실제 긋기 · 내리치기 동안(느려진 긋기 포함) 계속 늘어난다. 이미 낸 번호로 나중 회수 동작을 베기로 읽지 않는다.
-  // threatEnd(판 값 — config.js): 공격 번호 시간이 지났어도 들어오는 칼 기하(entry.eligible — 아래)로 위협이면 본다 · 끄면 공격 번호 시간으로(`?flowEnd=timer`)
-  if (s.time > s.attackUntil && !FLOW_REDESIGN.threatEnd) return no('attack-ended', { time: s.time, until: s.attackUntil });
+  // 공격 번호 시간이 지났어도 들어오는 칼 기하(entry.eligible — 아래)로 위협이면 본다 (10/18 감독 측정 — config FLOW_REDESIGN 머리말)
   if (O.flowSpentAttack === s.attackId) return no('already-paid');
   if (entry.attackId !== s.attackId) return no('new-command-in-bind');
   const age = now - entry.start;

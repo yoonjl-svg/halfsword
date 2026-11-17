@@ -25,7 +25,7 @@ import { TRADITIONS } from './schools.js';
 import * as THREE from 'three';
 import { beginFlowRecovery } from './nagashi_recovery.js';
 import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty, flowShieldKeep } from './nagashi_redesign.js';
-import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL , IB_PARRY_ARM, IB_PARRY_BEAT, WHIP_KNEEL, CN_STEP } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL, IB_PARRY_BEAT, WHIP_KNEEL, CN_STEP } from './config.js';
 import { cnStepKeep } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
 import { WEAPON_ABILITY } from './config.js'; // 달타냥 '총사의 결투' 배율 (10/25 — duelOneHandMult)
 import { BREAK, isOneHandSword } from './weapons.js';
@@ -36,7 +36,7 @@ import { lowFinishOn, lowFinishPosture, downLowTarget } from './finish_entry.js'
 import { UNIQUE_ASSIST as UA, IB_FLOW } from './config.js'; // IB_FLOW.power: 이베리아 흐르는 긋기 위력 (10/28 — analyze)
 import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 판정 배율 (11/06 — SKILL.fingerCut.hit · 기본 1 = 끔)
 import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
-import { kitOff, perkOff, uniqueOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4 · 11/16 내려 찌르기 틈 파고들기 = 내려 찌르기 칸 I7 [사장님 11/16 결정 '다 너의 권고대로 하마'])
+import { perkOff, uniqueOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4 · 11/16 내려 찌르기 틈 파고들기 = 내려 찌르기 칸 I7 [사장님 11/16 결정 '다 너의 권고대로 하마'])
 import { itThrust, itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14 — 사람 이탈리아 찌르기 판정 배율 · 맞박자 찌르기 · 칼 우위 — config IT_OUTBOX)
 import { aiWoundKeep } from './ai_block_cut.js';
 import { ibBlockHit } from './ib_block_regen.js'; // 이베리아 막아 내면 기력 되찾음 (11/15 — 기다리는 공격의 칼날 상처면 못 막아 냄) // AI 막는 동안 피해 감소 시제품 (11/15 — SKILL.aiParryCut · 기본 끔)
@@ -442,7 +442,7 @@ export class Combat {
     // 이베리아 흐르는 긋기 위력 (10/28 22:0x 사장님 '위력도 그만큼 올려' — config IB_FLOW.power · 확인표 2724): 흐름이 켜진 채(fighter.js updateIbFlow — 사람은 B5 · AI 이베리아는 늘)
     //  맞힌 긋기의 칼날 상처 심각도 · 둔타 에너지 × power. 찌르기 · 비기 칼(secretHit ≠ 1)은 그대로 · 물리(빠르기 · 가르나 튕기나)는 그대로
     //  10/29 01:5x 이어지는 흐름(B6 — 사람만 · fighter.js ibFlowK): 이어 그은 수 n 만큼 더하기 1 + (power − 1) × n · AI 는 그대로 power
-    const ibK = att.ibFlowOn && IB_FLOW.a && type !== 'stab' && (att.secretHit ?? 1) === 1 ? (att.ibFlowK ? att.ibFlowK() : IB_FLOW.power) : 1;
+    const ibK = att.ibFlowOn && type !== 'stab' && (att.secretHit ?? 1) === 1 ? (att.ibFlowK ? att.ibFlowK() : IB_FLOW.power) : 1;
     if (ibK !== 1) { if (type === 'blunt') energy *= ibK; else severity *= ibK; }
     return {
       type,
@@ -701,10 +701,9 @@ export class Combat {
     this.bladeLastOf.set(A.fighter, this.stepNo);
     this.bladeLastOf.set(B.fighter, this.stepNo);
     // 우케나가시 흘려 받기 (config NAGASHI): 받은 칼을 칼 지붕을 따라 미끄러뜨리고, 받는 쪽 손 흔들림·무기 닳음을 던다 (아래 feel)
-    //  판정 개편(FLOW_REDESIGN.on — 사장님 10/18 22:1x)이면 새로 부딪힌 순간이 아니어도 접촉 창(0.12 s) 안에서 다시 본다 (nagashi_redesign.js)
-    const flowD = (fresh || FLOW_REDESIGN.on) && NAGASHI.on && SA && SB && J > 0 ? this.nagashi(A, B, SA, SB, point, nrm, vn) : null;
-    if (!flowD && IB_PARRY_ARM.on && fresh && SA && SB && J > 0) this.ibParryArm(A, B, SA, SB, point, nrm); // 이베리아 쳐내기 팔 늦춤 (시험 · 기본 끔)
-    if (!flowD && IB_PARRY_BEAT.on && fresh && SA && SB && J > 0) this.ibParryBeat(A, B, SA, SB, point, nrm, vn); // 이베리아 쳐내기 튕김 (시험 · 기본 끔)
+    //  판정 개편(사장님 10/18 22:1x): 새로 부딪힌 순간이 아니어도 접촉 창 안에서 다시 본다 (nagashi_redesign.js)
+    const flowD = SA && SB && J > 0 ? this.nagashiExpanded(A, B, SA, SB, point, nrm, vn) : null;
+    if (!flowD && fresh && SA && SB && J > 0) this.ibParryBeat(A, B, SA, SB, point, nrm, vn); // 이베리아 쳐내기 튕김 (10/20 사장님 '쳐내기튕김 1.6 적용해')
     // 새로 부딪혀 튕긴 순간: 칼이 손 안에서 길이 축으로 팽이처럼 도는 몫은 손아귀가 잡는다 (gripTwist)
     if (fresh) for (const f of [A.fighter, B.fighter]) gripTwist(f);
     const va = A.body.velocityAtPoint(point);
@@ -748,34 +747,8 @@ export class Combat {
     this.hooks.onClash?.(point, sp, { fresh, vn, vt, force, impulse: J, normal: nrm, nagashi: !!flowD, a: A.fighter, b: B.fighter }); // a · b = 앞 · 뒤 싸움꾼 (2:2 — main.js 가 보는 몸이 낀 부딪힘인지 본다)
   }
 
-  /**
-   * 우케나가시 흘려 받기 (config NAGASHI — docs/strike/ukenagashi_talho_2026-10-17.md §12). 칼끼리 새로 부딪힌 스텝(물리 뒤)에 한 번:
-   *  받는 쪽 D = 일본 막기의 흘려 받기 칸(schools.js parryCover 의 nagashi — 우케나가시)을 가지고 막는 중인 싸움꾼
-   *   (플레이어 = 막기 단추를 쥐고 손이 막기 자리로 감 — parry_button.js active · AI = 막기 꼴 mode 'defend', 피하기 아님).
-   *  상대 칼이 맞닿은 자리에서 아래로 moveDown 넘게 움직이고(내려 베기), 그 자리가 D 가슴 + zoneHy 보다 높고, D 칼끝이 코등이보다 낮으면(칼 지붕.
-   *   칼끝이 위인 칼은 받은 칼이 코등이 쪽으로 흘러내려 걸릴 뿐이라 흘리지 못한다) 상대 칼에 D 칼 축의 칼끝 쪽(지붕의 내리막)을 맞닿는 면에 눕힌 방향으로
-   *   slideK × vn(맞부딪는 빠르기)의 빠르기를 더한다 — 그 방향으로 민 유효 질량(손 포함 gripMass) × 빠르기. 같은 크기 반대 충격은 D 칼이 받는다(거의 칼 길이 방향 — 손이 축으로 받음).
-   *   두 칼 모두 칼날 중심선 위에 건다(rebound 와 같은 까닭 — 날 끝에 걸면 칼이 길이 축으로 팽이처럼 돈다). 그리고 D 의 몸꼴을 poseT 동안 우케나가시로.
-   *  돌려줌: 흘려 받은 싸움꾼(D) · 없으면 null
-   */
-  /** 이베리아 탈류 · 레베스 쳐내기에 흘림과 같은 팔 늦춤 (사장님 10/19 03:5x 시험 — config IB_PARRY_ARM, 기본 끔).
-   *  받는 쪽 D = 이베리아 막기 칸(탈류 highL · 레베스 highR 쳐내기 몸꼴)을 잡고 막는 중 · 상대 칼이 들어오던 새 맞닿음 → 공격자 O 에 beginFlowRecovery. 돌려줌: D 또는 null */
-  ibParryArm(A, B, SA, SB, point, nrm) {
-    const pc = TRADITIONS.iberian?.parryCover;
-    if (!pc) return null;
-    for (const [D, O, SO, sgn] of [[A.fighter, B.fighter, SB, -1], [B.fighter, A.fighter, SA, 1]]) {
-      if (!ibParrying(D, pc)) continue;
-      if (sgn * velAt(SO, point, _n1).dot(nrm) < 0.5) continue; // 상대 칼이 들어오던 중일 때만
-      if (beginFlowRecovery(O, D)) {
-        this.lastIbArm = { step: this.stepNo, d: D.index };
-        return D;
-      }
-    }
-    return null;
-  }
-
-  /** 이베리아 탈류 · 레베스 쳐내기 튕김 (사장님 10/19 08:4x '튕겨나가는 힘을 인위적으로 추가' 시험 — config IB_PARRY_BEAT, 기본 끔).
-   *  ibParryArm 과 같은 때(이베리아 막기 칸 · 막는 중 · 상대 칼이 들어오던 새 맞닿음): 상대 칼을 받는 사람 몸 가운데선에서 바깥쪽으로 민다.
+  /** 이베리아 탈류 · 레베스 쳐내기 튕김 (사장님 10/19 08:4x '튕겨나가는 힘을 인위적으로 추가' — config IB_PARRY_BEAT · 10/20 사장님 '쳐내기튕김 1.6 적용해').
+   *  이베리아 쳐내기 칸 막는 때(이베리아 막기 칸 · 막는 중 · 상대 칼이 들어오던 새 맞닿음): 상대 칼을 받는 사람 몸 가운데선에서 바깥쪽으로 민다.
    *   방향 = 받는 사람 가슴 → 상대 가슴(수평)에 직각인 옆 방향 중 맞닿은 자리 쪽(가운데선 가까우면 탈류 = 왼 · 레베스 = 오른) · 상대 칼 축 성분은 뺀다(칼이 길이 축으로 밀리지 않게)
    *   충격량 = 그 방향 유효 질량(손 포함 gripMass) × k × vn(맞부딪는 빠르기) — 흘림(NAGASHI.slideK)과 같은 꼴. 반대 충격은 받는 사람 가슴 0.6 · 골반 0.4(팔을 거쳐 몸이 버팀 — 받는 칼은 흔들지 않음)
    *   k = 0 이면 밀지 않고 알아보기만(측정용). 돌려줌: D 또는 null */
@@ -810,41 +783,6 @@ export class Combat {
     }
     return null;
   }
-
-  nagashi(A, B, SA, SB, point, nrm, vn) {
-    if (FLOW_REDESIGN.on) return this.nagashiExpanded(A, B, SA, SB, point, nrm, vn); // 판정 개편 (사장님 10/18 22:1x · 기본) — 아래는 옛 판정(`?flowJudge=0`)
-    for (const [D, O, SO] of [[A.fighter, B.fighter, SB], [B.fighter, A.fighter, SA]]) {
-      const st = D.skill?._cover;
-      if (!st?.nagashi || D.schoolParry === false || kitOff(D, 'flow') || !O.swordProps) continue;
-      if (!(D.parryGuard ? D.parryGuard.active : st.ai?.mode === 'defend' && !st.ai.defVoid)) continue;
-      if (velAt(SO, point, _n1).y > -NAGASHI.moveDown) continue; // 상대 칼이 내려오지 않음
-      if (point.y < D.bodies.chest.translation().y + NAGASHI.zoneHy) continue; // 받는 자리가 낮음
-      const dir = D.bladePoint(1, _n1).sub(D.bladePoint(0, _n2)); // 코등이 → 칼끝
-      if (dir.y >= 0) continue; // 칼끝이 위 — 지붕이 아니다
-      dir.addScaledVector(nrm, -dir.dot(nrm)); // 맞닿는 면에 눕힘
-      if (dir.lengthSq() < 1e-8) continue;
-      dir.normalize();
-      const onAxis = (sw) => {
-        const ax = _n3.set(0, 1, 0).applyQuaternion(rotQ(sw));
-        const o = tv(sw.translation());
-        return o.addScaledVector(ax, _n2.copy(point).sub(o).dot(ax));
-      };
-      const pO = onAxis(O.sword);
-      const Jt = gripMass(O.swordProps, liveState(O.sword), pO, dir, STEEL.handMass) * NAGASHI.slideK * vn;
-      O.sword.applyImpulseAtPoint({ x: dir.x * Jt, y: dir.y * Jt, z: dir.z * Jt }, vp(pO), true);
-      D.sword.applyImpulseAtPoint({ x: -dir.x * Jt, y: -dir.y * Jt, z: -dir.z * Jt }, vp(onAxis(D.sword)), true);
-      st.forceT = NAGASHI.poseT;
-      // 흘림당한 쪽(O) 팔 늦춤 · 기력 청구 — 판정과 따로 켜고 끈다 (nagashi_recovery.js · nagashi_redesign.js — 끄면 옛 판과 같음)
-      const recovery = Jt > 0 && beginFlowRecovery(O, D);
-      const penalty = spendFlowPenalty(O, D);
-      D.flowShield = { from: O, attackId: O.stamina?.attackId ?? 0 }; // 흘린 공격의 피해 감소 표시 (analyze — FLOW_REDESIGN.flowDmgCut)
-      D.schoolPassive?.guardEvent?.('flow', O, O.stamina?.attackId ?? 0); // 일본 스택 흘려 받기 (11/14 사장님 — JP_TANK.flow · 막기와 함께 들면 큰 쪽 하나 · school_passive.js)
-      this.lastNagashi = { step: this.stepNo, d: D.index, Jt, vn, dir: dir.clone(), recovery, penalty };
-      return D;
-    }
-    return null;
-  }
-
   /**
    * 우케나가시 판정 개편 (샛별 연구 들여옴 — nagashi_redesign.js · docs/strike/japanese_flow_adopt_2026-10-18.md · 사장님 10/18 22:1x 기본):
    *  흘리는 미끄럼 충격 계수(NAGASHI.slideK)는 같고 · 칼끼리 실제 접촉만 · 받는 몸꼴로 강제로 옮기지 않는다(옛 판정의 poseT 없음 — 공격 입력과 부딪치지 않게).
@@ -1239,7 +1177,7 @@ function onBone(info, point) {
   return axis.multiplyScalar(r.dot(axis)).add(new THREE.Vector3(c.x, c.y, c.z));
 }
 
-/** 이베리아 쳐내기 칸을 잡고 막는 중인가 (ibParryArm · ibParryBeat): 이베리아 · 막기 켬 · 막는 중 · 막기 칸 무게 > 0.3 · 탈류(highL) 또는 레베스(highR) 쳐내기 칸.
+/** 이베리아 쳐내기 칸을 잡고 막는 중인가 (ibParryBeat): 이베리아 · 막기 켬 · 막는 중 · 막기 칸 무게 > 0.3 · 탈류(highL) 또는 레베스(highR) 쳐내기 칸.
  *  깔린 막기 칸은 사본이라 이름으로 맞춘다 */
 function ibParrying(D, pc) {
   const st = D.skill?._cover;

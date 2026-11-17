@@ -484,65 +484,40 @@ export const STRIKE = {
 //   ② 받는 쪽이 받는 충격(손 흔들림 · 무기 닳음)을 joltCut 만큼 덜 · ③ 받는 쪽 몸꼴을 poseT 동안 우케나가시로 (막기 줄 읽기와 상관없이 — 읽기는 손 목표를 봐 정수리를 놓친다 §9)
 //  moveDown = 상대 칼이 '내려온다'로 보는 아래 빠르기 (secret.js threatNow 의 '움직이는 칼' 3.5 m/s 와 같은 값) · zoneHy = 받는 자리 높이 문턱(threatNow 위·아래 가름 가슴 −0.1 m 와 같은 값).
 //  on 0 = 없음. slideK · joltCut · poseT 는 새 값 — 사장님 확인 전(확인표 2014)
-export const NAGASHI = { on: 1, slideK: 0.8, joltCut: 0.5, poseT: realS(0.35), moveDown: 3.5, zoneHy: -0.1 };
+export const NAGASHI = { slideK: 0.8, joltCut: 0.5 };
 // 우케나가시 판정 개편 (샛별 저장소 연구 들여옴 — src/nagashi_redesign.js · docs/strike/japanese_flow_adopt_2026-10-18.md):
 //  사장님 10/18 22:1x "흘림으로 나에게 손해가 발생하지 않으면서 상대의 기력을 뺏을 수 있기 때문 … 판정 개편이든 뭐든 흘림 빈도를 높일 수 있는 방안이 있다면 그렇게 개편 ·
 //   팔을 0.36초 늦추는 효과와 흘림당한 상대 기력을 40 빼앗는 효과 모두 적용"
-//  on = 새 판정(칼끼리 실제 접촉 · 들어오는 칼 기하 · 접촉 창 window s 안에 몸 바깥으로 빠지나) — `?flowJudge=0` = 옛 판정(NAGASHI — 내려 베기 · 칼 지붕 · 새로 부딪힌 순간만)
-//  penalty = 흘림당한 쪽(공격한 쪽) 기력 청구 — 공격 하나에 한 번(옛 · 새 판정 같음) · `?flowCost=0` = 끔 · 10/31 09:xx 40 → 60(사장님 결정 — `?flowCost=40` = 전 판)
+//  판정 = 칼끼리 실제 접촉 · 들어오는 칼 기하 · 접촉 창 window s 안에 몸 바깥으로 빠지나 (옛 판정 — 내려 베기 · 칼 지붕 · 새로 부딪힌 순간만 — 은 지움)
+//  penalty = 흘림당한 쪽(공격한 쪽) 기력 청구 — 공격 하나에 한 번 · 10/31 09:xx 40 → 60(사장님 결정)
 //  min… / maxHeight / exit… / sideGain / frontClearance = 판정 기하 허용치 — 샛별 연구의 첫 설계 값 그대로(사장님 '판정 개편' 채택 · docs/strike/owner_defaults_table.md)
-//  threatEnd = 공격이 끝났는지를 공격 번호 시간(stamina.attackUntil) 대신 실제 칼 기하(들어오는 칼 — 위 min… 조건)로 본다 — 감독 측정 10/18 23:1x(닿은 공격 중 흘림이 안 된 까닭 1 위 39 % = 공격 번호 시간이 끝남)
-//   → 사장님 3 '흘림 빈도를 높일 수 있는 방안이 있다면 그렇게 개편'. 기력은 그대로 공격 번호 하나에 한 번. `?flowEnd=timer` = 공격 번호 시간으로(샛별 연구 그대로)
+//  공격이 끝났는지를 공격 번호 시간(stamina.attackUntil) 대신 실제 칼 기하(들어오는 칼 — 위 min… 조건)로 본다 — 감독 측정 10/18 23:1x(닿은 공격 중 흘림이 안 된 까닭 1 위 39 % = 공격 번호 시간이 끝남)
+//   → 사장님 3 '흘림 빈도를 높일 수 있는 방안이 있다면 그렇게 개편'. 기력은 그대로 공격 번호 하나에 한 번
 //  flowDmgCut = 흘린 공격의 피해 감소 (사장님 10/18 23:4x '흘린 공격의 피해 80% 줄여' → 11/15 '흘린 칼 감소는 70%로 해' 0.7): 받는 쪽이 흘린 그 공격(공격 번호)이 몸에 닿으면 칼날 상처 심각도 · 둔타 에너지 × (1 − 0.8) —
-//   사람 · AI 같게(흘린 쪽 누구나) · 다음 공격(새 번호)부터는 그대로 · `?flowDmgCut=0` = 끔 (combat.js analyze · 흘림 표시 flowShield)
+//   사람 · AI 같게(흘린 쪽 누구나) · 다음 공격(새 번호)부터는 그대로 (combat.js analyze · 흘림 표시 flowShield)
 export const FLOW_REDESIGN = {
-  on: true, window: realS(0.2), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' · '흘림 접촉도 그냥 0.2로 통일' — 0.12 → 0.2 (반응 칸) */ penalty: 60, /* 10/31 09:xx 사장님 결정 '일본 흘림의 상대 기력 소모는 60으로 증가' — 40 → 60 (흘림 = 일본 막기 칸 우케나가시만 · TRADITIONS.japanese.parryCover.highC nagashi) */ threatEnd: true, flowDmgCut: 0.7, /* [사장님 11/15 결정 '흘린 칼 감소는 70%로 해. 들어오는 피해가 0.3이 되는 셈.' — 전 0.8] */
+  window: realS(0.2), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' · '흘림 접촉도 그냥 0.2로 통일' — 0.12 → 0.2 (반응 칸) */ penalty: 60, /* 10/31 09:xx 사장님 결정 '일본 흘림의 상대 기력 소모는 60으로 증가' — 40 → 60 (흘림 = 일본 막기 칸 우케나가시만 · TRADITIONS.japanese.parryCover.highC nagashi) */  flowDmgCut: 0.7, /* [사장님 11/15 결정 '흘린 칼 감소는 70%로 해. 들어오는 피해가 0.3이 되는 셈.' — 전 0.8] */
   minSpeed: 2.5, minApproach: 0.5, minSweep: 1.5, minSweepRatio: 0.4,
   minImpact: 0.5, upperHeight: -0.15, maxHeight: 0.85,
   minTangent: 0.25, exitDistance: 0.30, exitGain: 0.015, sideGain: 0.06, frontClearance: 0.10,
 };
 // 흘림당한 쪽 팔 늦춤 (샛별 저장소 연구 들여옴 — src/nagashi_recovery.js): seconds 동안 두 팔 근육 · 손목 힘 × (floor → 1) — 사장님 10/18 22:1x 0.36 s → 10/21 시간 통일 0.4 s ·
-//  사장님 11/15 '흘림을 당한 상대 팔은 0.4초 늦어지게 해. 우리 시간테이블에 있는 숫자로' — 이미 realS(0.4) (시간 사다리 · 바꿀 값 없음) · `?flowArm=0` = 끔
-//  release = 옛 판정(`?flowJudge=0`)에서 받는 몸꼴(NAGASHI.poseT)을 쥔 동안 막기를 풀고 치면 그 몸꼴을 놓는다 (frames.js — 샛별 연구 그대로)
-export const FLOW_RECOVERY = { seconds: realS(0.4), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.36 → 0.4 (짧은 효과 칸) */ floor: 0.25, release: true, hold: null, recover: null };
-// 시험 (사장님 10/19 03:5x): hold · recover 를 주면 '처음 hold 초는 floor 로 유지 → recover 초 동안 부드럽게 회복'(합 hold + recover) — null 이면 위 seconds · floor 옛 꼴 (줄 때는 realS(초)로 — 표준 시간)
-// 이베리아 탈류 · 레베스 쳐내기에 흘림과 같은 팔 늦춤 (사장님 10/19 03:5x 시험 — 기본 끔): 쳐내기 자세로 들어오는 칼을 받으면 공격자 팔에 FLOW_RECOVERY 를 건다
-export const IB_PARRY_ARM = { on: false };
-// 이베리아 탈류 · 레베스 쳐내기 튕김 (사장님 10/19 08:4x '튕겨나가는 힘을 인위적으로 추가' → 10/20 00:4x '탈류레베스에 쳐내기튕김 1.6 적용해' — 판 값 · `?ibBeat=0` 끔):
+//  사장님 11/15 '흘림을 당한 상대 팔은 0.4초 늦어지게 해. 우리 시간테이블에 있는 숫자로' — 이미 realS(0.4) (시간 사다리 · 바꿀 값 없음)
+export const FLOW_RECOVERY = { seconds: realS(0.4), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.36 → 0.4 (짧은 효과 칸) */ floor: 0.25 };
+// 이베리아 탈류 · 레베스 쳐내기 튕김 (사장님 10/19 08:4x '튕겨나가는 힘을 인위적으로 추가' → 10/20 00:4x '탈류레베스에 쳐내기튕김 1.6 적용해'):
 //  쳐내기 자세로 들어오는 칼을 받으면 상대 칼을 받는 사람 몸 가운데선에서 바깥쪽(맞닿은 쪽)으로 민다 — 빠르기 k × 맞부딪는 빠르기 (흘림 NAGASHI.slideK 와 같은 꼴), 반대 충격은 받는 사람 몸통이 받는다
-export const IB_PARRY_BEAT = { on: true, k: 1.6 };
-// 휘두르는 동안 몸 돌림 묶기 (10/21 00:5x 사장님 '1번 해' — 옆걸음이 무용지물: 상대가 초당 137°로 돌아 1.6 m 에서 옆걸음 26 · 이베리아 34 · 옆 박차기 54°/s 로는 각을 못 만듦).
-//  시험 스위치(기본 끔 · 사장님 확인 전): 공격 중(stamina.attacking — AI 는 긋기 단계 strike, 사람은 청구된 긋기 · 탭 · 폼멜)에는 상대 쪽으로 몸을 돌리는 최고 속도를
-//  BODY.turnSpeed(2.4 rad/s ≈ 137°/s) 대신 rate(°/s)로 — 칼이 출발한 줄로 나가 그 순간 옆으로 비키면 빗나가고 옆이 열린다. 사람 · AI 같이. `?swingTurn=30|60` (0 = 끔)
-//  from(AI 쪽 묶기 시작): 'strike' = 긋기(0.1 s 남짓) · 따라 긋기만 · 'approach' = 칼을 내밀며 들어오는 단계부터 · 'windup' = 준비 자세로 칼을 드는 때부터(공격 전체 —
-//   사람이 칼 드는 것을 보고 비킬 틈). 사람 쪽은 셋 다 청구된 긋기 · 탭 · 폼멜
-export const SWING_TURN = { on: false, rate: 30, from: 'windup' };
-// 이베리아 이어 긋기 흐름 A (10/21 — 시험 스위치에서 사장님 'A를 기본 적용해' · 확인표 2109): 이베리아 유파 몸(사람 · AI)이 휘두르기를 이어 갈 때 —
-//  앞 휘두르기가 끝난 뒤 '이어짐 창'(UNIQUE_ASSIST.afterWindow 0.6 s — 게임의 이어짐 기준 하나) 안에 다시 휘두르거나, 휘두르는 채로 손 방향이 90° 넘게 꺾일 때(둥글게 돌리기) —
+export const IB_PARRY_BEAT = { k: 1.6 };
+// 이베리아 이어 긋기 흐름 (10/21 사장님 'A를 기본 적용해' · 확인표 2109): 이베리아 유파 몸(사람 · AI)이 휘두르기를 이어 갈 때 —
+//  앞 휘두르기가 끝난 뒤 '이어짐 창'(UNIQUE_ASSIST.afterWindow 0.6 s) 안에 다시 휘두르거나, 휘두르는 채로 손 방향이 90° 넘게 꺾일 때(둥글게 돌리기) —
 //  그 휘두르기 동안과 끝난 뒤 창까지 손목 제동을 '멈출 거리 × releaseMargin' 의 (1 − brake) 몫에서 늦게 시작 → 칼이 서지 않고 다음 긋기로 흐른다 (fighter.js updateIbFlow).
-//  test.html '이베리아 시험' · `?ibFlow=0` = 끔.
 //  10/28 22:0x 사장님 'A로 해. 대신 확실히 다른 손맛을 위해 흐르는 긋기의 제동을 좀더 늦추고 위력도 그만큼 올려' (docs/decisions.md · 확인표 2722 ~ 2725):
-//   detect 'a' = 진짜 이어 그을 때만 — 휘두르기 끝은 손 목표가 문턱(SKILL.swingSpeed) 밑에 물리 endSteps 스텝 넘게 머물 때(60 Hz 화면 깜빡임 거름) ·
-//    앞 휘두르기의 손 목표 빠르기 최고가 cutSpeed(패드 m/s) 이상일 때만 이어 감(빠른 감기 · AI 준비 손은 안 셈) · 'old' = 10/21 판(`?ibFlowDetect=old`)
-//   brake 0.5 → 0.8(제동을 멈출 거리의 20 % 에서 — 사장님 '좀더 늦추고' · 값은 감독) · power = 흐름이 켜진 채 맞힌 긋기의 칼날 상처 심각도 · 둔타 에너지 ×(combat.js analyze — 찌르기 · 비기 칼은 그대로)
-//   brake 0.8 · endSteps 2 · cutSpeed 5 — 사장님 확인 전 (power 1.2 는 10/29 01:4x 사장님 결정 — 아래)
-// 10/29 01:4x · 01:5x 사장님 결정 — 이어지는 흐름 (이베리아 B6 · '상한 없음' · 기록 docs/strike/redondo_hold_2026-10-29.md §3 · 확인표 2735 ~ 2737): 흐르는 긋기 위력 power 1.2 = 사장님 결정(B5 만이면 이어 그은 수와 상관없이 × 1.2) ·
-//  chainStack 1 = B6 칸을 익힌 사람은 이어 그은 진짜 긋기의 n(사슬 첫 이은 칼 1 · 다음 2 …)만큼 위력을 더하기 1 + (power − 1) × n(1.2 · 1.4 · 1.6 …) — 상한 없음 ·
-//  freeEvery 3 = 사슬의 세 칼마다(사슬 첫 칼을 1 번째로 셈 — 3 · 6 · 9 번째) 그 베기는 기력 0(공격이라 회복은 0.6 s 쉼 그대로 · 위력 쌓기는 그대로 · 0 = 끔 `?ibFreeEvery=`) —
-//   10/29 14:1x 사장님 '기력 감소 효과는 아예 뺄게. 대신 세 번째 긋기는 기력을 소모하지 않는 걸로' · 14:2x '세 칼마다' (전 01:5x 그 긋기 기력 × 0.9ⁿ — 없앰 · 확인표 2741) ·
-//  사슬이 끊기면 n 은 처음부터 · AI 는 그대로(power 만) · 0 = 끔 `?ibChain=0`.
-//  windmillChain = 풍차 베기(B4)와 사슬 (01:5x '한 바퀴 이상 돌렸을 때 한 번만' · 08:3x 사장님 'simple' 결정): 머리 위로 한 바퀴 넘게 돌린 뒤 낸 칼만 이어 그은 칼 하나로 셈 —
-//   'simple' = 늘 n 1(× 1.2) · 그 칼부터 새 사슬(앞 사슬과 상관없이 — 세 칼 셈도 풍차 베기를 1 번째로 다시 · 풍차 베기 칼은 기력 0 자리가 아님) · 'inside' = 이어 긋기 창 안에서 누르기 시작했으면(누르고 도는 동안 사슬이 안 끊김) 그 사슬의 다음 수 n + 1 · 밖이면 n 1 (사장님 확인 전 견줌 판) ·
-//   0 = 셈 없음 · `?ibWindChain=simple|inside|0`. 감는 동안 기력(rdDrain)은 그대로. 흐름이 끊긴 뒤 1.2 s 이어받기는 넣지 않음(여쭘 남음)
-//  windmillPower (10/31 14:xx 사장님 결정 '그럼 흐름보너스 주지 않는 대신 흐름의 첫 칼로는 인정하도록 해' — 확인표 3138): 0 = 풍차 베기 내려침 자체는 흐름 위력 없음(× 1.0 — 싱지르 같은 비기 칼이
-//   combat.js analyze 에서 빠지는 것과 같은 뜻) · 사슬 자리는 그대로(windmillChain 'simple' — 새 사슬의 첫 칼 · 다음 이은 긋기 n 2 × 1.4(B6) · 세 칼 셈도 풍차 베기가 1 번째) ·
-//   1 = 10/29 판(풍차 베기 칼도 이어 그은 칼 n 1 위력 × 1.2 · inside 판 n + 1) `?ibWindPower=1` (fighter.js ibFlowK)
-// 10/31 19:xx 사장님 '풍차베기가 이어지는 흐름의 첫 공격이 되기엔 그 이후의 공격에서 연계성이 보이지 않더라. 풍차베기는 이어지는 흐름과 무관한 게 낫겠어.' (B4 다시 짬 — 기록 docs/strike/b4_rework_2026-10-31.md §4 · 확인표 3292):
-//  windmillChain 'simple' → **0** = B4 내려침은 흐름의 첫 칼이 아님(새 사슬을 열지 않음 · 사슬 셈 n 없음 — 다음 긋기는 B4 와 상관없이 셈) ·
-//  windmillApart **1** = B4 와 흐름은 서로 닿지 않음: 감는 동안 · 내려침 동안 흐름이 켜져 있어도 B4 칼은 흐름 위력 × 1(fighter.js ibFlowK) · 세 칼마다 기력 0 자리가 아님(ibChainCostK — 늘 보통 기력) ·
-//   흐름 시계(이어짐 창)는 B4 를 모르는 채 그대로 흐름 — B4 가 사슬을 늘이지도 · 멈추지도 · 끊지도 않음. 길게 누름(실제 0.6 s)이 이어짐 창(실제 0.6 s)과 같아 감기가 시작될 때 앞 사슬은 이미 닫혀 있음 →
-//   B4 뒤 첫 긋기는 새 사슬의 첫 칼 [감독 판단 · 사장님 확인 전]. 0 = 10/31 14:xx 판(windmillChain 'simple' 과 함께 — `?b4Old=1`) · `?ibWindApart=0`
-export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps: 2, cutSpeed: 5, chainStack: 1, freeEvery: 3, windmillChain: 0, windmillPower: 0, windmillApart: 1 };
+//   진짜 이어 그을 때만 — 휘두르기 끝은 손 목표가 문턱(SKILL.swingSpeed) 밑에 물리 endSteps 스텝 넘게 머물 때 · 앞 휘두르기의 손 목표 빠르기 최고가 cutSpeed(패드 m/s) 이상일 때만 이어 감 ·
+//   brake 0.8 · power = 흐름이 켜진 채 맞힌 긋기의 칼날 상처 심각도 · 둔타 에너지 ×(combat.js analyze — 찌르기 · 비기 칼은 빼고)
+// 10/29 01:4x · 01:5x 사장님 결정 — 이어지는 흐름 (이베리아 B6 · '상한 없음' · docs/strike/redondo_hold_2026-10-29.md §3 · 확인표 2735 ~ 2737): power 1.2 ·
+//  B6 칸을 익힌 사람은 이어 그은 진짜 긋기의 n(사슬 첫 이은 칼 1 · 다음 2 …)만큼 위력 1 + (power − 1) × n — 상한 없음 ·
+//  freeEvery 3 = 사슬의 세 칼마다 그 베기는 기력 0 (10/29 14:1x · 14:2x 사장님) · 사슬이 끊기면 n 은 처음부터 · AI 는 power 만.
+// 10/31 19:xx 사장님 '풍차베기는 이어지는 흐름과 무관한 게 낫겠어': B4 내려침은 흐름의 첫 칼이 아니고 · 흐름 위력 × 1 · 세 칼마다 기력 0 자리가 아님 (fighter.js ibFlowK · ibChainCostK)
+export const IB_FLOW = { brake: 0.8, power: 1.2, endSteps: 2, cutSpeed: 5, freeEvery: 3 };
 // 이베리아 B7 '이어 돌리기' (11/14 사장님 '이베리아 이어 돌리기로 진행해.' — src/iberian_link.js · 기록 docs/strike/ib_link_2026-11-14.md · 확인표 3900 ~ 3929):
 //  새 공격이 아니라 사이동작 — 앞 진짜 긋기(맞음 · 빗나감 · 막힘 · 쳐내짐 모두)가 끝나고 이어짐 창(UNIQUE_ASSIST.afterWindow 0.6 s) 안에 다음 큰 칼(내려 · 가로 베기)을 그었는데
 //  손이 그 칼의 시작 자리에 없으면, 칼이 지금 자리에서 머리 위로 원을 그리며 그 칼의 시작 자리로 저절로 넘어가고 그은 긋기가 거기서 그대로 나간다(손가락 몫은 받아 두었다가 다시 그음).
@@ -551,18 +526,16 @@ export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps:
 //  time = 원 한 번의 시간 (실제 초 — 시간 사다리 0.4): 칼끝은 원을 부른 때의 빠르기에서 서지 않고 곧게 올라 이 시간에 다 돎(그 빠르기가 이미 평균보다 빠르면 그대로 — 더 짧게) ·
 //   도는 쪽 = 앞 칼이 가던 쪽 그대로 (iberian_link.js linkPlan — 새 수 없음) [사장님 확인 전 — 3901 · 3902]
 //  handR = 머리 위 원에서 두 손이 칼이 기운 옆쪽으로 따라가는 몫 (m · 풍차 감기 고리 손 rdLoop.hand 에 더함 — 손목 사람 범위) [사장님 확인 전 — 3903]
-//  cool = 1 이면 특수 공격 식힘(UNIQUE_ASSIST.specialCooldown 3 s)을 건다 (기본 0 — 공격이 아니므로 · 감독 안) [사장님 확인 전 — 3904]
-//  chainArm 1 = 스위치 B '흐름 사슬이 세 칼을 넘으면(세 번째 기력 0 칼이 든 때) 알티바슈 포르트 곧장 무장' (기본 끔 · 지금 길 — 칼끝 거리 밖 2 s 는 그대로) [사장님 확인 전 — 3905]
-//  trade 1 = 스킬트리 B12 맞바꿈 '멈추지 않는 칼' 칸의 효과 (11/14 사장님 '맞바꿈 새 칸으로' · 새 안 '이어돌리기 중에 피격돼도 1회 무시하는 대신 기력 소모' — fighter.js ibTradeTry):
+//  맞바꿈 = 스킬트리 B12 '멈추지 않는 칼' 칸의 효과 (11/14 사장님 '맞바꿈 새 칸으로' · 새 안 '이어돌리기 중에 피격돼도 1회 무시하는 대신 기력 소모' — fighter.js ibTradeTry):
 //   이어 돌리기(머리 위 원) 동안 몸에 든 칼날 맞음 하나를 상처 · 의식 · 아픔 없이 넘기고, 대신 그 무기로 베기 한 번 값의 기력(STAMINA.cutCost × 무기 무게 배율 — 새 수 없음)을 씀 ·
 //   흐름 사슬 하나에 한 번(끊기면 다시) · 기력이 그 값보다 적으면 못 넘김 · 칼끼리 맞아 원이 멈춤은 안 넘김 · 원 동안 막기 안 됨은 B7 그대로. 칸을 익힌 사람만 · 0 = 칸이 있어도 효과 없음(`?ibTrade=0` — 견줌)
 //   [사장님 11/14 확인 '권고대로 해' — 3914] (전 11/14 C' 스위치 '사슬 중 맞아도 안 끊김 · 막기 불가 · 받는 피해 × 1.2' 는 걷어냄 — 3906 · 3907)
-//  ai 1 = AI 이베리아도 특수 공격 풍차 베기 대신 이어 돌리기 · 맞바꿈도 사람과 같은 규칙(AI 는 칸 없이 늘 가짐 — 다른 유파 AI 패시브와 같은 꼴) [사장님 11/14 확인 '모두 본판에 넣어 ai에게도 똑같이 적용해' — 3922] (0 = 11/14 전 판 — AI 풍차 베기 · 견줌)
+//  AI 이베리아도 특수 공격 풍차 베기 대신 이어 돌리기 · 맞바꿈도 사람과 같은 규칙(AI 는 칸 없이 늘 가짐 — 다른 유파 AI 패시브와 같은 꼴) [사장님 11/14 확인 '모두 본판에 넣어 ai에게도 똑같이 적용해' — 3922] (0 = 11/14 전 판 — AI 풍차 베기 · 견줌)
 //  11/15 넘기기 판 (사장님 11/15 "'원'을 공격과 다음 공격을 잇기 위한 브릿지로서의 메타포로 이해해 … 최소의 동작" — iberian_link.js bridgePlan · 기록 §12):
 //   mode 'bridge' = 손 목표를 앞 칼 관성 → 다음 칼 첫 빠르기로 잇는 가장 짧은 길(서보가 칼을 몲 — 놓기 없음) · 'circle' = 11/14 머리 위 원 판(견줌 — `?ibLinkMode=circle`)
 //   [사장님 11/15 결정 — 권고대로 — 4351] · time = 넘기기 위 한도(실제 0.4 s — 전 원 시간) · bridgeMin = 아래 한도 · 칼을 기다리는 한도(실제 0.2 s — 시간 사다리) [사장님 11/15 결정 — 권고대로 — 4352]
-//   arrive 1 = 손 목표가 다음 칼 시작 자리에 와도 칼(무거운 칼은 손 목표보다 늦음)이 그 자세 허용 각(UNIQUE_ASSIST.angle) 안에 오기까지(bridgeMin 한도) 기다렸다 그음 — 0 이면 곧장(칼이 덜 들려 다음 칼이 약함) [사장님 11/15 결정 — 권고대로 — 4354]
-//   waitA 0 = 앞 칼이 끝 자리로 가는 중이어도 곧장 넘김(그 기세를 꺾어 실음) · 1 = 앞 칼 칼날이 끝 자세 허용 각 안에 오기까지 기다렸다 넘김(견줌 — 다음 칼이 0.07 s 늦음) [사장님 11/15 결정 — 권고대로 — 4355]
+//   손 목표가 다음 칼 시작 자리에 와도 칼(무거운 칼은 손 목표보다 늦음)이 그 자세 허용 각(UNIQUE_ASSIST.angle) 안에 오기까지(bridgeMin 한도) 기다렸다 그음 — 0 이면 곧장(칼이 덜 들려 다음 칼이 약함) [사장님 11/15 결정 — 권고대로 — 4354]
+//   앞 칼이 끝 자리로 가는 중이어도 곧장 넘김(그 기세를 꺾어 실음) · 1 = 앞 칼 칼날이 끝 자세 허용 각 안에 오기까지 기다렸다 넘김(견줌 — 다음 칼이 0.07 s 늦음) [사장님 11/15 결정 — 권고대로 — 4355]
 //   tradeT = 맞바꿈 창(사장님 11/15 '공격 사이의 n초, 이런 식으로 고정해' — 넘기기를 시작한 때부터 n 초 · 넘김이 짧아져도 줄지 않음 · 실제 0.4 s 기본 · 견줌 0.6 `?ibTradeT=0.6`) [사장님 11/15 결정 — 권고대로 — 4353]
 //  11/15 (2) 사슬 칼 (사장님 11/15 "몇번째 칼이든 그은 그대로 칼이 나가야 하고 이어돌리기는 그 사이의 힌지일 뿐이야." — 기록 docs/strike/ib_link_2026-11-15.md): 사람 넘기기 판은 손가락 몫을
 //   지연 줄로 받아 그은 박자 그대로 냄(unique_assist.js linkTickBridge — 새 수 없음) · arriveDeg · arriveT = 넘기기 닿기 문: 칼날이 다음 칼 시작 자세에서 arriveDeg(20°) 안에 오기까지
@@ -573,25 +546,11 @@ export const IB_FLOW = { a: true, brake: 0.8, power: 1.2, detect: 'a', endSteps:
 //   배 (p 0.1 · cap 1.3 — 1 · 2 · 3 째 넘김 ×1.1 · 1.2 · 1.3 · 그 뒤 1.3) — 칼 팔 · 손목 서보 힘 배율을 무기마다 · 넘김마다 재어 맞춤(drive — 사람 손가락 봇 · driveAi — AI ·
 //   tools/sim/ib_link_speed.mjs real · aireal · 칸 끝 값이 그 뒤 넘김 · 표에 없는 무기는 def) — 그은 길 · 박자는 그대로(힘만 더함). 기력: 그 칼 + 베기 한 번 값 × (s² − 1)
 //   (더한 운동 에너지 — 사장님 11/15 "숫자로 견주지 않아도 됨. 네 의견은 알겠다."). `?ibChainSpeed=0` = 끔 (견줌 — 11/16 앞 판)
-export const IB_LINK = { on: 1, mode: 'bridge', time: realS(0.4), bridgeMin: realS(0.2), waitA: 0, arrive: 1, tradeT: realS(0.4), handR: 0.25, cool: 0, chainArm: 0, trade: 1, ai: 1, arriveDeg: 20, arriveT: realS(0.4), chainSpeed: {
+export const IB_LINK = { on: 1, mode: 'bridge', time: realS(0.4), bridgeMin: realS(0.2), tradeT: realS(0.4), handR: 0.25, arriveDeg: 20, arriveT: realS(0.4), chainSpeed: {
   on: 1, p: 0.1, cap: 1.3,
   drive: { zweihander: [1.37, 1.69, 3.8, 9.5], flamberge: [1.54, 1.62, 4.3, 7.2], tizona: [1.4, 1.69, 3.1, 8.3], durandal: [1.37, 1.69, 3.8, 6.5], def: [1.37, 1.69, 3.8, 9.5] },
   driveAi: { zweihander: [4.2, 3.3, 5.6], flamberge: [2.4, 1.9, 3.2], tizona: [3.9, 3.05, 5.2], durandal: [2.65, 2.1, 3.5], def: [4.2, 3.3, 5.6] },
 } };
-// 이베리아 날 세우기 시험 (10/22 — 사장님 10/21 23:5x '이베리아 유파가 유독 칼면이 맞는 경우가 많았어 특히 수직베기에서', docs/strike/iberian_flat_hits_2026-10-22.md · 확인표 2167~ · **기본 끔 · 사장님 확인 전**).
-//  on = 이베리아 유파 몸(사람 · AI)만 날 세우기 방식을 edge 로 (JOINTS.edge 와 같은 이름 — 'motor' 모터 ⓐ · 'ff' 앞먹임 ⓑ · 'pre' 모터 + 미리 돌리기 ⓒ, 값은 JOINTS.edgeMotorK … 그대로).
-//   다른 유파 · 무기는 그대로. 끄면(on false) 판 그대로(같은 float). `?ibEdge=motor` · `?ibEdge=pre` (main.js) · 시뮬 tools/sim/iberian_flat.mjs --abl=ibEdge=motor
-export const IB_EDGE = { on: false, edge: 'motor' };
-// 쉬는 날 방향 시험 (10/22 — 사장님 09:5x '유파 공통 과제로 이어가', docs/strike/edge_rest_hold_2026-10-22.md · 확인표 2177~ · **기본 끔 · 사장님 확인 전**):
-//  감는 자리에서 오래 쥐면 칼이 서고, 칼이 서면 날 세우기 목표가 쉼 쪽(칼 면이 몸 오른쪽)으로 돌아와 다음 긋기의 날이 누운 채 출발한다(1000 ms 쥔 가로 칼 면 24 % · 300 ms 6 %).
-//  사람 손가락 칼(fighter.js playerArm)만 — 모든 유파 · 무기. AI 는 그대로. 끄면(on false) 판 그대로(같은 float). 칸은 하나씩 켠다(`?edgeRest=pre` · `kick` · `fast` · `pre,kick`):
-//   pre  = 손가락을 대고 쥐고 있는 동안 '다음에 그을 쪽'(패드 가운데 — 지금 손 자리의 반대쪽)으로 손가락이 preV 패드 m/s 로 움직인다고 보고 날 세우기 목표를 미리 돌림
-//          (손가락이 실제로 움직이면 그 몫이 preV 까지 줄며 넘겨받는다 — fighter.js inputEdgeLead)
-//   kick = 휘두르기를 시작한 첫 kickT 초 동안 날 세우기 힘(강성 · 감쇠) × kickK
-//   fast = 날 세우기 목표가 쉼 → 날 방향으로 넘어가는 칼날 빠르기 0.5~2.5 m/s 를 mv 로 (빨리 넘어감)
-//   latch = 손가락을 대고 멈춰 있는 동안 쉼 목표(칼 면 오른쪽) 대신 마지막으로 움직이던 때의 칼 면을 쥔다 (손을 떼면 오늘 줄)
-//   tsw  = tsW 에 적힌 무기만 날 세우기 힘(강성 · 감쇠 함께) × 그 수 — 청강검 날 세우기 힘이 롱소드의 0.072 배로 다섯 무기 가운데 가장 약하다 (× 3 은 칼이 팽이처럼 돎)
-export const EDGE_REST = { on: false, pre: false, preV: 2, kick: false, kickK: 1.5, kickT: 0.12, fast: false, mv: [0.2, 1.0], latch: false, tsw: false, tsW: { qinggang: 1.2 } }; // tsW 청강검 1.2 = 판 기본 twistK 1.25 위에 곱해 시험 때 모두 1.5 (10/22 판 1.25 확정 뒤)
 // 유파 패시브 (스킬북 4급 — 10/21 사장님 '유파마다 캐릭터의 기본기나 스탯을 강화할 수 있는 패시브 스킬 … 이베리아 유파의 경우에는 손목 힘을 증가하는 걸 넣자' · 확인표 2110):
 //  이베리아 = 칼을 돌리는 손목 힘 한도(maxAimTorque) × wrist — 늘(이어 긋기 시험 B 를 패시브로 옮김). 사람 = 4급 책 '사용'(테스트 경로는 모두 켬) · AI = 숙련도 at 이상.
 //  1.3 은 감독 값(시험 B 22 → 28 N·m 를 30 % 로 고름) — 사장님 확인 전. `?ibWrist=0` = 이베리아만 끔
@@ -2269,8 +2228,6 @@ export const PICKUP = { mode: 'block', ai: 1, reach: 0.9, bend: 0.4, lift: 0.2, 
 export function applyB4Old(on = true) {
   UNIQUE_ASSIST.rdWindMode = on ? 'shoulder' : 'load';
   UNIQUE_ASSIST.rdRelease = on ? 'direct' : 'tajo';
-  IB_FLOW.windmillChain = on ? 'simple' : 0;
-  IB_FLOW.windmillApart = on ? 0 : 1;
 }
 
 // 몸이 자세를 따라가는 빠르기(rad/s). 골반이 가장 빠르고 → 가슴 → 손(SKILL.aimFilter) 순서라

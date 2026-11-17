@@ -193,26 +193,6 @@ test('안 B shoulder — 오른 어깨에 얹어 멈춤(칼끝이 거의 안 움
   assert.equal(short.fired, 1, '떼면 내려침 (셈 없이)');
 });
 
-test('흐르는 긋기 셈 (IB_FLOW.windmillChain simple) — 안 B 는 어깨에 얹은 채 0.6 s 를 한 바퀴 자리로 (10/31 감독 해석 · 사장님 확인 전 — 얹은 때부터 · woundFrom \'start\' = 10/29 판 감기 시작부터)', async () => {
-  const { kitFromNodes } = await import('../../src/skill_tree_data.js');
-  const kitAll = kitFromNodes('iberian', new Set(['B1', 'B5', 'B4', 'B6']));
-  const run = (holdS, from = 'rest') => {
-    const B = body({ set: { rdWindMode: 'shoulder', rdShoulder: { ...UA.rdShoulder, woundFrom: from } }, kit: kitAll, seed: 7 });
-    try {
-      const { uq, press, steps } = B;
-      press.down = true; steps(realS(0.6) + realS(holdS)); press.down = false; steps(DT * 3);
-      return uq.stats.windChain?.at(-1);
-    } finally { B.free(); }
-  };
-  applyB4Old(true); // 흐름 셈은 10/31 14:xx 판 몫 (10/31 19:xx 부터 B4 는 흐름과 무관 — redondo_hold.test.mjs)
-  try {
-  assert.equal(IB_FLOW.windmillChain, 'simple');
-  assert.equal(run(0.8), 0, '감기 0.8 s = 얹은 지 0.2 s → 셈 없음');
-  assert.equal(run(1.0), 0, '얹은 지 0.4 s → 셈 없음');
-  assert.equal(run(1.4), 1, '얹은 채 0.8 s → n 1');
-  assert.equal(run(0.8, 'start'), 1, "10/29 판 셈(woundFrom 'start') — 감기 0.6 s 넘으면 n 1");
-  } finally { applyB4Old(false); }
-});
 
 test('내려침 길 [안 A 고리] (사장님 10/30 00:1x \'궤적이 8자 모양으로 현란해 보이는데. 바로 내려치는 게 아닌가?\') — 곧장 사선(direct): 원 어디서 떼도 칼끝이 머리 위에 머문 채 왼 위로 들려 왼 위 → 오른 아래로 벰 · 10/29 판(chamber)은 칼끝이 어깨 뒤로 떨어지는 고리', async () => {
   const { traceRun, figure8 } = await import('./redondo_trace.mjs');

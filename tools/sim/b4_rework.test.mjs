@@ -1,6 +1,6 @@
 // B4 다시 짬 시험 (사장님 10/31 19:xx '칼을 더 들어올리거나 아예 어깨에 얹거나. 그리고 칼 끝이 머리 뒤로 넘어와서 땅쪽으로 기울어 있어야 해. 그래야 '그냥 칼을 높이 든 자세'와 구분됨.' ·
 //  '수직 말고 45도~90도 사이로 적정 길을 유지해. 살짝 사선이어야 어깨에 얹고 있다가 치는 게 자연스럽고' · 오른 어깨 · 오른 위 → 왼 아래 — 기록 docs/strike/b4_rework_2026-10-31.md ·
-//  config UNIQUE_ASSIST.rdWindMode 'load' · rdLoad · rdRelease 'tajo' · rdTajo · IB_FLOW.windmillApart · applyB4Old · 재는 판 tools/sim/b4_probe.mjs)
+//  config UNIQUE_ASSIST.rdWindMode 'load' · rdLoad · rdRelease 'tajo' · rdTajo · applyB4Old · 재는 판 tools/sim/b4_probe.mjs)
 //  node --test tools/sim/b4_rework.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -45,11 +45,11 @@ test('섞는 첫머리(감기 0.3 s)에 떼도 같은 내려침 — 칼이 아�
 test('옛 판 스위치 (`?b4Old=1` — applyB4Old): 안 B 어깨(칼끝 위) · 곧장 사선 60° 왼 위 → 오른 아래 · 흐름의 첫 칼 · 다시 끄면 새 판', () => {
   applyB4Old(true);
   try {
-    assert.deepEqual([UA.rdWindMode, UA.rdRelease, CONFIG.IB_FLOW.windmillChain, CONFIG.IB_FLOW.windmillApart], ['shoulder', 'direct', 'simple', 0]);
+    assert.deepEqual([UA.rdWindMode, UA.rdRelease], ['shoulder', 'direct']);
     const o = b4Sum(b4Run({ w: 'zweihander' }));
     assert.ok(o.load.el > 30, `옛 얹은 칼 높이각 ${o.load.el}° (위)`);
     assert.ok(Math.abs(o.strike.plane.angle - 60) < 2.5, `옛 벰 면 ${o.strike.plane.angle}°`);
     assert.ok(o.strike.tip1[2] - o.strike.tip0[2] > 0.3, `왼 → 오른 ${o.strike.tip0[2]} → ${o.strike.tip1[2]}`);
   } finally { applyB4Old(false); }
-  assert.deepEqual([UA.rdWindMode, UA.rdRelease, CONFIG.IB_FLOW.windmillChain, CONFIG.IB_FLOW.windmillApart], ['load', 'tajo', 0, 1]);
+  assert.deepEqual([UA.rdWindMode, UA.rdRelease], ['load', 'tajo']);
 });

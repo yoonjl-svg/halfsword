@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
 import { runTick } from './dig_proto.js'; // 시제품 C 달림 (11/14 — config DIG_PROTO.run · 기본 끔)
 import { cnStepTick, cnStepMove } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 · 기본 끔)
-import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, CN_STEP, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, SWING_TURN, AI_REACT, IB_FLOW, IB_LINK, IB_EDGE, EDGE_REST, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
+import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, CN_STEP, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, realS } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { MAX_FIGHTERS, teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
 import { Skill } from './skill.js';
@@ -220,7 +220,6 @@ function ikReach(a, b, player = false) {
  *  corr_s0 (모든 파이터 corr old/v2 바꿔 끼움)의 '설정 0 동일'이 깨져서 쓰지 않는다 */
 const playerArm = (f) => f.skill?.autoGuard === true;
 const _pe0 = new THREE.Vector3(), _pe1 = new THREE.Vector3(); // inputEdgeLead scratch
-const _erF = new THREE.Vector3(), _erQ = new THREE.Quaternion(); // 쉬는 날 방향 시험 latch scratch (config EDGE_REST)
 /** 위팔 비틀기 서보 강성 (N·m/rad): JOINTS.twistK 가 있으면 그것, 없으면 켠 묶음의 twistK, 둘 다 없으면 25 (오늘 값). 감쇠·상한은 같은 배율 (manualMuscle) */
 const twistK = () => JOINTS.twistK ?? jm().twistK ?? 25;
 /** 날 세우기 힘(twistScale) 배율: JOINTS.edgeK 가 있으면 그것, 없으면 켠 묶음의 edgeK, 둘 다 없으면 1 */
@@ -1170,15 +1169,6 @@ export class Fighter {
     return h.bufs.get(this.foe)[0];
   }
 
-  /** 휘두르는 동안 몸 돌림 묶기(SWING_TURN)가 걸리는 때: AI 는 공격의 긋기 · 따라 긋기(from 'approach' 는 들어오는 단계부터 · 'windup' 은 칼 드는 때부터), 사람은 청구된 긋기 · 탭 · 폼멜 */
-  swingTurnLocked() {
-    const c = this.aiControlled ? this.stamina?.controller : null;
-    if (!c) return !!this.stamina?.attacking;
-    if (c.mode !== 'attack') return false;
-    const from = SWING_TURN.from;
-    return c.phase === 'strike' || c.phase === 'follow' || (c.phase === 'approach' && from !== 'strike') || (c.phase === 'windup' && from === 'windup');
-  }
-
   // 상대 쪽으로 몸을 천천히 돌린다 (한 번에 휙 돌지 못하게 회전 속도 제한)
   updateHeading(dt) {
     if (this.state === 'stand' || this.state === 'getup' || this.state === 'kneel') {
@@ -1189,9 +1179,7 @@ export class Fighter {
         const want = Math.atan2(-(tg.z - p.z), tg.x - p.x);
         let diff = want - this.heading;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-        // 휘두르는 동안 몸 돌림 묶기 (SWING_TURN — 시험 스위치, 기본 끔): 공격 중엔 돌림 최고 속도를 rate(°/s)까지만 — 칼이 출발한 줄로 나간다
-        const turnRate = SWING_TURN.on && this.swingTurnLocked() ? Math.min(BODY.turnSpeed, (SWING_TURN.rate * Math.PI) / 180) : BODY.turnSpeed;
-        const maxTurn = turnRate * this.muscle * dt;
+        const maxTurn = BODY.turnSpeed * this.muscle * dt;
         let turn = THREE.MathUtils.clamp(diff, -maxTurn, maxTurn);
         // 다리가 체중을 싣는 걸음: 딛은 발은 땅에 붙어 있어서, 엉덩이가 비틀 수 있는 만큼만 몸을 돌린다 (그 다음은 발을 돌려 딛는다)
         if (this.gait?.active && this.state === 'stand') turn = this.gait.limitTurn(turn);
@@ -2291,16 +2279,14 @@ export class Fighter {
   /**
    * 이베리아 이어 긋기 흐름 A (10/21 — config IB_FLOW, 기본 켬): 휘두르기(skill.swinging — 사람 · AI 같은 문턱)를 이어 가는지 읽어 ibFlowOn 을 둔다.
    *  이어 감 = 앞 휘두르기가 끝난 뒤 이어짐 창(0.6 s) 안에 다시 휘두름 · 휘두르는 채로 손 방향이 90° 넘게 꺾임(둥글게 돌리기). 켜진 채로 그 휘두르기 동안 + 끝난 뒤 창까지.
-   *  IB_FLOW.a 를 끄면 읽지도 않는다. (B 손목 힘 한도는 10/21 유파 패시브 wristK 로 옮김 — 이어 긋기와 상관없이 늘)
+   *  (B 손목 힘 한도는 10/21 유파 패시브 wristK 로 옮김 — 이어 긋기와 상관없이 늘)
    *  10/28 22:0x 사장님 'A로 해'(진짜 이어 그을 때만 — IB_FLOW.detect 'a' · 확인표 2722): 휘두르기 끝 = 손 목표가 문턱 밑에 물리 endSteps(2) 스텝 넘게 머묾
    *   (60 Hz 화면은 물리 두세 스텝에 한 번 손가락이 움직여 문턱 근처에서 휘두르기 표시가 한 스텝씩 꺼졌다 켜짐 → 혼자 벤 칼도 '끝나고 곧 다시'로 읽혔음) ·
    *   진짜 긋기 = 손 목표 빠르기 최고가 cutSpeed(5 패드 m/s) 이상인 휘두르기(감기 · AI 준비 손 2.2 ~ 3.8 은 아님) — 이어 감 = 마지막 진짜 긋기가 끝나고 창 안에 시작한 휘두르기
    *   (사이에 낀 감기는 창을 끊지도 잇지도 않음) · 90° 꺾임은 꺾이기 전 몫이 진짜 긋기일 때만 · 흐름은 그 휘두르기도 진짜 긋기일 때만(최고가 cutSpeed 를 넘은 뒤 + 끝난 뒤 창까지).
-   *   'old' = 10/21 판 (updateIbFlowOld — `?ibFlowDetect=old`)
    */
   updateIbFlow(dt) {
-    if (!IB_FLOW.a || this.swordArt?.tradition !== 'iberian' || kitOff(this, 'ibFlow')) { this.ibFlowOn = false; return; } // 사람은 스킬트리 B5 '이어 긋기 · 흐름' (10/21)
-    if (IB_FLOW.detect === 'old') return this.updateIbFlowOld(dt);
+    if (this.swordArt?.tradition !== 'iberian' || kitOff(this, 'ibFlow')) { this.ibFlowOn = false; return; } // 사람은 스킬트리 B5 '이어 긋기 · 흐름' (10/21)
     const win = UNIQUE_ASSIST.afterWindow; // 이어짐 창 0.6 s (게임 하나 — 10/21)
     const t = (this.ibFlowT = (this.ibFlowT ?? 0) + dt);
     const sk = this.skill, raw = !!sk.swinging, v = sk.vel, sp = Math.hypot(v.x, v.y);
@@ -2320,21 +2306,6 @@ export class Fighter {
       this.ibFlowEnd = this.ibFlowCutEnd = t;
       this.ibFlowOn = false;
       return;
-    }
-    // 풍차 베기 내려침 (10/29 IB_FLOW.windmillChain — unique_assist.js windFire 가 ibStrike 를 둠): 한 바퀴 넘게 돌린 뒤 낸 운동학 칼 = 이어 그은 진짜 긋기 하나 —
-    //  끄는 동안 흐름 켬 · 그 칼의 이어 그은 수 n · 끝난 때가 마지막 진짜 긋기 끝(사슬이 그 뒤로 이어짐). 손 목표는 안 움직여 아래 휘두르기 읽기는 그동안 쉼
-    if (this.ibStrike) {
-      if (this.iai || this.iaiReq) {
-        this.ibCutN = this.ibLastN = this.ibStrike.n;
-        if (this.ibStrike.newChain) this.ibChainN0 = this.ibStrike.n; // 풍차 베기가 새 사슬의 첫 칼 (세 칼 셈 — 10/29 14:2x · 'simple')
-        this.ibFlowChain = true;
-        this.ibFlowWasCut = true;
-        this.ibFlowEnd = this.ibFlowCutEnd = t;
-        this.ibFlowSw = false;
-        this.ibFlowOn = true;
-        return;
-      }
-      this.ibStrike = null;
     }
     if (sw) {
       const u = sp || 1;
@@ -2395,7 +2366,7 @@ export class Fighter {
       k.sev += r.type === 'blunt' ? 0 : r.severity ?? 0;
       return true;
     }
-    if (!IB_LINK.trade || !this.ibTradeWin() || this.ibTradeUsed || this.swordArt?.tradition !== 'iberian' || kitOff(this, 'ibTrade')) return false; // AI 도 같은 규칙 (11/14 사장님 'ai에게도 똑같이' — AI 는 칸 없이 늘 가짐: kitOff 는 skillKit 이 없으면 false)
+    if (!this.ibTradeWin() || this.ibTradeUsed || this.swordArt?.tradition !== 'iberian' || kitOff(this, 'ibTrade')) return false; // AI 도 같은 규칙 (11/14 사장님 'ai에게도 똑같이' — AI 는 칸 없이 늘 가짐: kitOff 는 skillKit 이 없으면 false)
     const S = this.stamina, cost = STAMINA.cutCost * (S.weight ?? 1);
     if (!S.infinite && S.value < cost) return false;
     S.spend('attack', cost);
@@ -2406,41 +2377,38 @@ export class Fighter {
     this.ibTradeCost = (this.ibTradeCost ?? 0) + cost;
     return true;
   }
-  /** 세 번째 기력 0 칼이 듦 (stamina.js chargeAttack — 이어지는 흐름 B6): 스위치 B(IB_LINK.chainArm)면 알티바슈 포르트 곧장 무장을 부탁 (secret.js spinTick 이 읽음) */
+  /** 세 번째 기력 0 칼이 듦 (stamina.js chargeAttack — 이어지는 흐름 B6): 재기만 */
   ibFreeCut() {
     this.ibFreeCuts = (this.ibFreeCuts ?? 0) + 1; // 재기
-    if (IB_LINK.chainArm) this.ibChainArmReq = true;
   }
 
   /**
-   * 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:5x '상한 없음' · config IB_FLOW.chainStack): 이 몸이 받나 — 사람만(AI 몸 그대로 · 관문 판 그대로) · 스킬트리 B6 칸 · 흐름 읽기 'a'(진짜 이어 긋기)
+   * 이어지는 흐름 (이베리아 B6 — 사장님 10/29 01:5x '상한 없음' · config IB_FLOW): 이 몸이 받나 — 사람만(AI 몸 그대로 · 관문 판 그대로) · 스킬트리 B6 칸 · 흐름 읽기 'a'(진짜 이어 긋기)
    *  11/14 유파 플랜 2 단계: 플랜이 있는 이베리아 AI 몸(ibChainAi — ai_plan_ib.js ibInit · config AI_PLAN.ib.chainBody)도 사람과 같은 규칙 (셋째 칼 기력 0 — 띠별 기력의 '유파 기력 장치')
    */
   ibChainOn() {
-    return !!IB_FLOW.chainStack && IB_FLOW.a && IB_FLOW.detect !== 'old' && (!this.aiControlled || !!this.ibChainAi) && this.swordArt?.tradition === 'iberian' && !kitOff(this, 'ibFlow') && !kitOff(this, 'ibChain');
+    return (!this.aiControlled || !!this.ibChainAi) && this.swordArt?.tradition === 'iberian' && !kitOff(this, 'ibFlow') && !kitOff(this, 'ibChain');
   }
   /** 지금 칼의 이어 그은 수 n (이어 그은 진짜 긋기가 아니면 0) — 흐름이 켜진 동안 · 휘두르기가 막 시작돼 읽기가 아직 못 본 스텝은 미리 셈 (stamina.js 가 같은 스텝에 긋기를 청구할 때) */
   ibChainN() {
-    if (this.ibStrike) return this.ibStrike.n;
     if (this.ibFlowSw) return this.ibFlowChain ? this.ibCutN ?? 0 : 0;
     if (this.skill?.swinging) return (this.ibFlowT ?? 0) - (this.ibFlowCutEnd ?? -9) <= UNIQUE_ASSIST.afterWindow ? (this.ibLastN ?? 0) + 1 : 0;
     return this.ibFlowOn ? this.ibCutN ?? 0 : 0;
   }
   /** 지금 이어 긋기 창 안인가 (풍차 베기 누름 시작 — unique_assist.js holdTick): 창 안이면 그 사슬 길이(이어 그은 수 · 0 이상), 아니면 −1 */
   ibFlowChainNow() {
-    if (!IB_FLOW.a || kitOff(this, 'ibFlow') || this.swordArt?.tradition !== 'iberian') return -1;
+    if (kitOff(this, 'ibFlow') || this.swordArt?.tradition !== 'iberian') return -1;
     return (this.ibFlowT ?? 0) - (this.ibFlowCutEnd ?? -9) <= UNIQUE_ASSIST.afterWindow ? this.ibLastN ?? 0 : -1;
   }
   /** 흐르는 긋기 위력 (combat.js analyze): 흐름이 켜진 채 맞힌 긋기 × IB_FLOW.power · 이어지는 흐름(B6)이면 더하기 1 + (power − 1) × n (상한 없음 — 사장님 10/29 01:5x) */
-  /** B4 내려침이 나가는 중인가 (끌고 가는 칼 또는 그 요청의 수가 풍차 베기 길 rd — 사람 windFire · AI rdFire): 흐름과 무관 (10/31 19:xx IB_FLOW.windmillApart) */
+  /** B4 내려침이 나가는 중인가 (끌고 가는 칼 또는 그 요청의 수가 풍차 베기 길 rd — 사람 windFire · AI rdFire): 흐름과 무관 (10/31 19:xx) */
   rdStrikeNow() {
     const I = this.iai ?? this.iaiReq;
     return !!I?.moves?.[Math.max(0, I.mi ?? 0)]?.rd;
   }
   ibFlowK() {
-    if (!this.ibFlowOn || !IB_FLOW.a) return 1;
-    if (IB_FLOW.windmillApart && this.rdStrikeNow()) return 1; // B4 칼은 흐름이 켜져 있어도 흐름 위력 없음 (10/31 19:xx 사장님 '풍차베기는 이어지는 흐름과 무관한 게 낫겠어' — 확인표 3292)
-    if (this.ibStrike && !IB_FLOW.windmillPower) return 1; // 풍차 베기 내려침 자체는 흐름 위력 없음 — 사슬 자리(n · 세 칼 셈)는 그대로 (10/31 14:xx 사장님 '흐름보너스 주지 않는 대신 흐름의 첫 칼로는 인정' · IB_FLOW.windmillPower 0)
+    if (!this.ibFlowOn) return 1;
+    if (this.rdStrikeNow()) return 1; // B4 칼은 흐름이 켜져 있어도 흐름 위력 없음 (10/31 19:xx 사장님 '풍차베기는 이어지는 흐름과 무관한 게 낫겠어' — 확인표 3292)
     if (!this.ibChainOn()) return IB_FLOW.power;
     return 1 + (IB_FLOW.power - 1) * Math.max(1, this.ibCutN ?? 1);
   }
@@ -2450,26 +2418,11 @@ export class Fighter {
    */
   ibChainCostK() {
     const every = IB_FLOW.freeEvery | 0;
-    if (!(every > 0) || this.ibStrike || !this.ibChainOn()) return 1;
-    if (IB_FLOW.windmillApart && this.rdStrikeNow()) return 1; // B4 칼은 세 칼마다 기력 0 자리가 아님 — 늘 보통 기력 (10/31 19:xx · 확인표 3292)
+    if (!(every > 0) || !this.ibChainOn()) return 1;
+    if (this.rdStrikeNow()) return 1; // B4 칼은 세 칼마다 기력 0 자리가 아님 — 늘 보통 기력 (10/31 19:xx · 확인표 3292)
     const n = this.ibChainN();
     if (!(n > 0)) return 1;
     return (n - (this.ibChainN0 ?? 0) + 1) % every === 0 ? 0 : 1;
-  }
-
-  /** 이베리아 이어 긋기 흐름 10/21 판 읽기 (IB_FLOW.detect 'old' — 휘두르기 표시를 스텝마다 그대로 · 앞 휘두르기 빠르기를 안 봄) */
-  updateIbFlowOld(dt) {
-    const win = UNIQUE_ASSIST.afterWindow;
-    const t = (this.ibFlowT = (this.ibFlowT ?? 0) + dt);
-    const sk = this.skill, sw = !!sk.swinging, v = sk.vel;
-    if (sw) {
-      const sp = Math.hypot(v.x, v.y) || 1;
-      if (!this.ibFlowSw) { this.ibFlowChain = t - (this.ibFlowEnd ?? -9) <= win; this.ibFlowDir = [v.x / sp, v.y / sp]; }
-      else if (this.ibFlowDir && (v.x * this.ibFlowDir[0] + v.y * this.ibFlowDir[1]) / sp < 0) { this.ibFlowChain = true; this.ibFlowDir = [v.x / sp, v.y / sp]; } // 90° 넘게 꺾임 = 둥글게 이어 감
-    } else if (this.ibFlowSw) this.ibFlowEnd = t;
-    this.ibFlowSw = sw;
-    this.ibFlowOn = !!this.ibFlowChain && (sw || t - (this.ibFlowEnd ?? -9) <= win);
-    if (!this.ibFlowOn && !sw) this.ibFlowChain = false;
   }
 
   /** 곁눈 베기 무릎 꺾기 굴림 전용 난수 (파이터별 LCG, 결정적, Math.random 과 무관 — 10/21) */
@@ -3795,9 +3748,7 @@ export class Fighter {
     // 칼날 가운데쯤이 실제로 움직이는 방향 (손잡이 속도와 다르다: 칼은 손을 축으로 돈다)
     const bv = this.hitPointVel;
     const edgeDir = new THREE.Vector3(bv.x, bv.y, bv.z);
-    // 이베리아 날 세우기 시험 (config IB_EDGE — 10/22, 기본 끔 · 사장님 확인 전): 이베리아 유파 몸(사람 · AI)만 다른 날 세우기 방식(IB_EDGE.edge — JOINTS.edge 와 같은 이름). 끄면 오늘 줄 그대로
-    const ibEdge = IB_EDGE.on && this.swordArt?.tradition === 'iberian' ? IB_EDGE.edge : null;
-    const em = JOINTS.playerEdgeMode && playerArm(this) ? JOINTS.playerEdgeMode : ibEdge ?? edgeMode(); // 플레이어 칼만 다른 날 세우기 방식 (JOINTS.playerEdgeMode, 기본 null = 같음)
+    const em = JOINTS.playerEdgeMode && playerArm(this) ? JOINTS.playerEdgeMode : edgeMode(); // 플레이어 칼만 다른 날 세우기 방식 (JOINTS.playerEdgeMode, 기본 null = 같음)
     // 날 세우기 ⓒ 미리 돌리기 (JOINTS.edge 'pre'): 명령 겨눔이 도는 빠르기(wAim, 서보 목표)로 칼날 70 % 지점이 곧 갈 속도를 읽어 더한다 —
     //  칼이 실제로 빨라지기 전(준비 자세에서 길의 첫 방향으로 손이 움직이기 시작할 때)에 날이 그쪽을 먼저 본다. 'pre' 가 아니면 오늘 줄 그대로
     if (em === 'pre') edgeDir.addScaledVector(_edL.crossVectors(wAim, blade), (this.weaponCfg.hiltLength + 0.7 * this.weaponCfg.bladeLength) * JOINTS.edgeLead);
@@ -3811,8 +3762,7 @@ export class Fighter {
     const pem = JOINTS.playerEdge ?? 'off';
     if (pem !== 'off' && playerArm(this)) this.inputEdgeLead(edgeDir, blade, pem);
     edgeDir.addScaledVector(blade, -edgeDir.dot(blade));
-    const erFast = EDGE_REST.on && EDGE_REST.fast && playerArm(this); // 쉬는 날 방향 시험 fast (10/22 — config EDGE_REST, 기본 끔): 사람 칼만 빨리 날 방향으로 넘어감
-    const mv0 = erFast ? EDGE_REST.mv[0] : em === 'torque' ? 0.5 : JOINTS.edgeMove0, mv1 = erFast ? EDGE_REST.mv[1] : em === 'torque' ? 2.5 : JOINTS.edgeMove1; // 날을 세우기 시작하는 칼날 빠르기 (m/s, 오늘 0.5~2.5)
+    const mv0 = em === 'torque' ? 0.5 : JOINTS.edgeMove0, mv1 = em === 'torque' ? 2.5 : JOINTS.edgeMove1; // 날을 세우기 시작하는 칼날 빠르기 (m/s, 오늘 0.5~2.5)
     // 가만히 있을 때: 칼 면이 몸 오른쪽을 본다 / 움직일 때: 날이 움직이는 쪽을 향한다.
     // 속도에 따라 둘을 부드럽게 섞는다 (딱 잘라 바꾸면 경계 속도에서 칼이 매 순간 90°씩 비틀리며 떤다)
     const flatTarget = RIGHT_LOCAL.clone().applyQuaternion(this.yaw);
@@ -3830,14 +3780,6 @@ export class Fighter {
         flatTarget.copy(wp.normalize());
         planeHold = true;
       }
-    }
-    // 쉬는 날 방향 시험 latch (10/22 — config EDGE_REST, 기본 끔): 사람 칼이 손가락을 대고 멈춰 있는 동안 쉼 목표(칼 면 오른쪽) 대신
-    //  마지막으로 움직이던 때의 칼 면(몸 돌림 기준으로 기억)을 쥔다 — 감는 자리로 옮긴 길과 다음 긋기는 대개 같은 줄이라 양날 칼 면이 그대로 맞는다. 손을 떼면 오늘 줄 그대로
-    const erLatch = EDGE_REST.on && EDGE_REST.latch && playerArm(this);
-    if (erLatch && this.handHeld && this.erFace) {
-      const lf = _erF.copy(this.erFace).applyQuaternion(this.yaw);
-      lf.addScaledVector(blade, -lf.dot(blade));
-      if (lf.lengthSq() > 1e-2) { lf.normalize(); if (lf.dot(flat) < 0) lf.negate(); flatTarget.copy(lf); }
     }
     // 사람 관절 범위: 가까운 쪽 칼 면이 아래팔 돌림 범위(HUMAN.forearmRoll, 손목 밧줄) 밖이고 반대쪽은 안이면 반대쪽 날을 쓴다 (양날)
     const zf = _cr2.set(0, 0, 1).applyQuaternion(rot(forearm, _cq));
@@ -3884,10 +3826,6 @@ export class Fighter {
       //  칼 면을 아래팔 굴림 쪽으로 미리 돌려, 아래팔이 선 채 맞는 때 손목 치우침이 굽힘 몫으로 간다 (아래팔 굴림 한도는 손목 밧줄 HUMAN.forearmRoll 그대로)
       flatTarget.applyAxisAngle(blade, this.side * tplan.turn).normalize();
       if (v2 && this.corr) this.corr.rollTarget.copy(flatTarget);
-    }
-    if (erLatch) {
-      if (!this.handHeld) this.erFace = null;
-      else if (this.edgeMoving > 0.9) (this.erFace ??= new THREE.Vector3()).copy(flatTarget).applyQuaternion(_erQ.copy(this.yaw).invert());
     }
     // 막기 자리 몸꼴의 칼 면 (10/12 독일 왕관 — frames.js installCover 의 face, schools.js GERMAN_KRON): 덮개가 덧씌우기 칸을 쥔 동안 날 세우기 목표를 덮는 무게만큼
     //  그 쪽(왕관 = 칼 면이 상대 쪽, 날·코등이가 좌우)으로. 고르는 법은 위와 같다(가까운 칼 면 → 아래팔 돌림 범위). face 없는 덮개(중국 셋)·덮지 않는 때는 지나치기만 한다
@@ -3948,7 +3886,7 @@ export class Fighter {
         const stopAngle = (toward * toward) / (2 * brakeAcc);
         // 쓰러진 상대를 내려찍을 때는 늦게 세운다 (finish.js). 마무리 찌르기가 겨눔으로 칼을 옮기는 동안(skill.plungePose)은 치는 게 아니라 예전대로 세운다
         const tap = this.skill.tap;
-        const fr = (this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1) * (this.ibFlowOn && IB_FLOW.a ? 1 - IB_FLOW.brake : 1); // 이베리아 흐르는 긋기: 제동을 늦게 (IB_FLOW.brake — 10/28 0.8 · 확인표 2723)
+        const fr = (this.finish.amt > 0 && aim.y < blade.y && !(tap?.down && !tap.go) ? 1 - FINISH.brakeRelief * this.finish.amt : 1) * (this.ibFlowOn ? 1 - IB_FLOW.brake : 1); // 이베리아 흐르는 긋기: 제동을 늦게 (IB_FLOW.brake — 10/28 0.8 · 확인표 2723)
         if (angle * leadK > stopAngle * this.weaponCfg.releaseMargin * fr) damp = this.weaponCfg.releaseDamping;
         else {
           this.wristBrake = true;
@@ -3987,18 +3925,7 @@ export class Fighter {
     // 이 축 관성이 롱소드보다 작은/큰 무기는 twistScale만큼 힘도 같이 줄이거나 늘려서
     // (관성이 작을수록 같은 힘에도 더 빨리 도니까) 안정성을 맞춘다.
     let twist;
-    // 쉬는 날 방향 시험 kick (10/22 — config EDGE_REST, 기본 끔): 사람 칼이 휘두르기를 시작한 첫 kickT 초 동안 날 세우기 힘 × kickK
-    let tsE = this.twistScale;
-    if (EDGE_REST.on && EDGE_REST.tsw && playerArm(this)) tsE *= EDGE_REST.tsW?.[this.weaponSpecId] ?? 1; // 쉬는 날 방향 시험 tsw (10/22 — 기본 끔): 적힌 무기만 날 세우기 힘 배율 (사람 칼만)
-    if (EDGE_REST.on && EDGE_REST.kick && playerArm(this)) {
-      const swN = !!this.skill.swinging;
-      if (swN && !this.erSw) this.erKickT = EDGE_REST.kickT;
-      this.erSw = swN;
-      if (this.erKickT > 0) {
-        tsE *= EDGE_REST.kickK;
-        this.erKickT -= this.lastDt || 1 / 120;
-      }
-    }
+    const tsE = this.twistScale;
     if (em === 'torque') {
       twist = new THREE.Vector3().crossVectors(flat, flatTarget).projectOnVector(blade).multiplyScalar(4 * tsE);
       twist.addScaledVector(wTwist, -0.12 * tsE);
@@ -4031,16 +3958,6 @@ export class Fighter {
     const kw = 1 - (sk.thrustPose?.w ?? 0);
     vx *= kw;
     vy *= kw;
-    // 쉬는 날 방향 시험 pre (10/22 — config EDGE_REST, 기본 끔): 손가락을 대고 쥐고 있는 동안 '다음에 그을 쪽'(패드 가운데 — 지금 손 자리의 반대쪽)으로
-    //  손가락이 preV 로 움직인다고 본다. 손가락이 실제로 움직이면 그 빠르기만큼 줄여 넘겨준다 (가운데 0.15 m 안에서는 걸지 않음)
-    if (EDGE_REST.on && EDGE_REST.pre && this.handHeld) {
-      const rr = Math.hypot(sk.aim.x, sk.aim.y);
-      const kPre = rr > 0.15 ? Math.max(0, 1 - Math.hypot(sk.vel.x, sk.vel.y) / EDGE_REST.preV) : 0;
-      if (kPre > 0) {
-        vx -= (sk.aim.x / rr) * EDGE_REST.preV * kPre;
-        vy -= (sk.aim.y / rr) * EDGE_REST.preV * kPre;
-      }
-    }
     // 플레이어 고유 동작 강화의 몸 돌림 (10/14 — skill.uniqBody.yawRate, 플레이어만 · 없으면 그대로): 덧씌운 가슴 돌림이 바뀌는 빠르기(가슴 명령 cT 에 − 로 더함 → 위축 둘레 −yawRate)로
     //  칼날 70 % 지점이 곧 낼 속도를 날 방향에 더한다 — 손가락 몫(위)만 읽으면 몸이 더 도는 몫을 날이 늦게 따라간다 (탐침 unique_enhance_measure feel: 날 각 23.4 → 22.2°, 부호를 뒤집으면 더 나빠짐 — 문서 §7)
     const ub = sk.uniqBody;

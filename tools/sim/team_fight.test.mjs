@@ -29,11 +29,10 @@ function legacyGroups(i, part) {
   const bodyBit = (k) => (k === 0 ? 2 : 8), weaponBit = (k) => (k === 0 ? 4 : 16), footBit = (k) => (k === 0 ? 64 : 128);
   const torsoBit = (k) => (k === 0 ? 256 : 512), armSBit = (k) => (k === 0 ? 1024 : 2048);
   const myBody = bodyBit(i), otherBody = bodyBit(1 - i), otherWeapon = weaponBit(1 - i);
-  const HL = CONFIG.BODY.humanLimits;
-  if (part === 'weapon') return HL ? groups(weaponBit(i), 1 | otherBody | otherWeapon | footBit(1 - i) | torsoBit(i)) : groups(weaponBit(i), 1 | otherBody | otherWeapon | footBit(1 - i));
+  if (part === 'weapon') return groups(weaponBit(i), 1 | otherBody | otherWeapon | footBit(1 - i) | torsoBit(i));
   if (part.startsWith('foot')) return groups(footBit(i), 1 | otherWeapon);
-  if (HL && ['pelvis', 'abdomen', 'chest', 'thighF', 'thighB'].includes(part)) return groups(myBody | torsoBit(i), 1 | otherBody | otherWeapon | weaponBit(i) | armSBit(i));
-  if (HL && (part === 'uarmS' || part === 'farmS')) return groups(myBody | armSBit(i), 1 | otherBody | otherWeapon | torsoBit(i));
+  if (['pelvis', 'abdomen', 'chest', 'thighF', 'thighB'].includes(part)) return groups(myBody | torsoBit(i), 1 | otherBody | otherWeapon | weaponBit(i) | armSBit(i));
+  if (part === 'uarmS' || part === 'farmS') return groups(myBody | armSBit(i), 1 | otherBody | otherWeapon | torsoBit(i));
   return groups(myBody, 1 | otherBody | otherWeapon);
 }
 
@@ -77,17 +76,16 @@ test('② 2:2 같은 편도 적과 똑같이 부딪힌다 (ffa — 사장님 10/
     }
   }
   assert.ok(mates > 0 && Object.values(foes).every((n) => n > 0));
-  // 제 몸끼리: 몸 ↔ 몸 · 칼 ↔ 발 · 칼 ↔ 팔다리는 지나감 · 칼 ↔ 제 몸통 · 칼팔 ↔ 제 몸통만 (BODY.humanLimits)
-  const HL = CONFIG.BODY.humanLimits;
+  // 제 몸끼리: 몸 ↔ 몸 · 칼 ↔ 발 · 칼 ↔ 팔다리는 지나감 · 칼 ↔ 제 몸통 · 칼팔 ↔ 제 몸통만 (사람 관절 한도)
   for (const f of F) {
     const torso = new Set(['pelvis', 'abdomen', 'chest', 'thighF', 'thighB']);
     for (const [pa, ca] of bodyCols(f)) {
       for (const [pb, cb] of bodyCols(f)) {
         if (pa >= pb) continue;
-        const want = HL && ((torso.has(pa) && (pb === 'uarmS' || pb === 'farmS')) || (torso.has(pb) && (pa === 'uarmS' || pa === 'farmS')));
+        const want = ((torso.has(pa) && (pb === 'uarmS' || pb === 'farmS')) || (torso.has(pb) && (pa === 'uarmS' || pa === 'farmS')));
         assert.equal(meets(ca.collisionGroups(), cb.collisionGroups()), want, `${f.name} 제 몸 ${pa} ↔ ${pb}`);
       }
-      for (const [, cw] of swordCols(f)) assert.equal(meets(ca.collisionGroups(), cw.collisionGroups()), HL && torso.has(pa), `${f.name} 제 칼 ↔ ${pa}`);
+      for (const [, cw] of swordCols(f)) assert.equal(meets(ca.collisionGroups(), cw.collisionGroups()), torso.has(pa), `${f.name} 제 칼 ↔ ${pa}`);
     }
   }
   // 남의 칼 비트 (mordschlag · revive 가 읽는다) = 나 빼고 모두의 칼

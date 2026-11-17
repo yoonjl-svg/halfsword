@@ -202,14 +202,6 @@ test('원으로 이을 몫 — 맞바꿈이 남으면 더 · 상대 유파 거�
   assert.equal(habitN(h), 1, '높음은 10.0 s 창');
   h.ibPlan.hitT[1] = h.sense.t - 2;
   assert.ok(spinK(h, 1.8) < h1, '되풀이 — 두 번 곱');
-  // 이어 돌리기가 꺼지면 원 후보 없음
-  const keep = IB_LINK.ai;
-  IB_LINK.ai = 0;
-  try {
-    assert.equal(spinK(fake(5), 1.8), 0);
-  } finally {
-    IB_LINK.ai = keep;
-  }
 });
 
 

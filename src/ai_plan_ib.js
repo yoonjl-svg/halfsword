@@ -13,7 +13,7 @@
 //  ai.js 는 플랜 표에 ib 표식이 있을 때만(this.ibPlan) 이 파일의 셈을 부른다 — 다른 유파 · 옛 판(`?aiPlan=0` · `?aiPlanIb=0`)은 한 줄도 안 탄다(굴림 그대로).
 //  연산: 스텝마다 새 객체 · 배열 없음(옆 박차기 칸 · 버릇 고리 버퍼는 AI 하나에 한 번) · 탐색 없음. 반사 층(막기 · 피하기 · 맞받기 · 비기)은 건드리지 않는다.
 // ─────────────────────────────────────────────────────────────
-import { AI_PLAN, IB_LINK, IB_FLOW, SECRET, STAMINA, GAIT } from './config.js';
+import { AI_PLAN, IB_FLOW, SECRET, STAMINA, GAIT } from './config.js';
 import { bandOf, axesOf } from './ai_plan.js';
 import { secretSpent } from './secret.js';
 import { padDist } from './ai_techniques.js';
@@ -61,7 +61,7 @@ export function ibInit(ai) {
 
 /** 맞바꿈(B12)이 남았나 — 이번 사슬에서 안 썼고 기력이 베기 한 번 값 이상 (내 몸 — 읽기만) */
 export function swapReady(me) {
-  if (!IB_LINK.trade || me.ibTradeUsed) return false;
+  if (me.ibTradeUsed) return false;
   const S = me.stamina;
   return !S || S.infinite || S.value >= STAMINA.cutCost * (S.weight ?? 1);
 }
@@ -104,7 +104,7 @@ export function schoolRead(ai, d) {
  */
 export function spinK(ai, d) {
   const me = ai.me;
-  if (!IB_LINK.ai || ai.kitLink === false || !me.sword || !me.armed || me.weaponBroken || me.state !== 'stand') return 0; // 11/16 칸 몫: 이어 돌리기 칸(B7 · B5)이 없으면 원 후보 없음 (ai.js applyKit kitLink)
+  if (ai.kitLink === false || !me.sword || !me.armed || me.weaponBroken || me.state !== 'stand') return 0; // 11/16 칸 몫: 이어 돌리기 칸(B7 · B5)이 없으면 원 후보 없음 (ai.js applyKit kitLink)
   const C = ai.planC;
   const k = ai.planK;
   const Lk = ai.planLuck;

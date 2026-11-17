@@ -22,12 +22,12 @@ import { STAMINA } from './config.js';
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF, AI_MAAI, IB_LINK } from './config.js';
-import { linkStart, linkEnd, bridgeMode, bridgePlan, bridgeStep, techDir, linkBoost } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — IB_LINK.ai · 기본 켬 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해')
+import { linkStart, linkEnd, bridgeMode, bridgePlan, bridgeStep, techDir, linkBoost } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해')
 import { ibInit, ibAfter, ibTick, ibCircle, ibSide, ibFeetV, ibWatch, ibSidePost, ibFwdPost } from './ai_plan_ib.js'; // 유파 플랜 2 단계 이베리아 (11/14 — 플랜 표 ib 표식일 때만 this.ibPlan · 셈은 그 파일)
 import { readInit, readTick, readNeed, readFeetV, readTechK, readChainK } from './ai_read.js'; // 3 단계 수 읽기 그릇 (11/14 — 플랜이 있는 몸만 this.read · 셈은 그 파일)
 import { Senses } from './ai_sense.js';
 import { padDist, WATCH_GUARDS } from './ai_techniques.js';
-import { TRADITIONS, IBERIAN_SPIN_DEF, traditionOf } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
+import { TRADITIONS, traditionOf } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
 import { schoolPassiveOn } from './school_passive.js'; // 유파 패시브 스위치 (10/21 — 이베리아 손목 힘 · 나머지 넷은 fighter.schoolPassive)
 import { closeStartD, bargeHeld, nearHilt } from './close_hold.js'; // 밀치기 시작 거리 (11/14 — AI 는 CLOSE.startAI)
@@ -768,7 +768,7 @@ export class AI {
   /**
    * AI 칸 몫을 몸에 둔다 (11/16 사장님 결정 'AI 숙련도 = 이 칸들을 익혔다' — config AI_KIT · skill_tree_data.js aiKitOf): 사람 main.js newRound 와 같은 몫 —
    *  skillKit(skill_kit.js kitOff · perkOff 를 묻는 자리 모두) · 보법 I 없음 = schoolFootwork false · 막기 I 없음 = schoolParry false. kit null(옛 판 · 유파 칸 없는 무기) = 몸을 그대로(옛 판은 손대지 않음).
-   *  kitLink = 이어 돌리기 AI 몫(IB_LINK.ai)을 낼 칸(사람 linkTry 와 같음 — B7 이어 돌리기 · B5 흐르는 긋기)
+   *  kitLink = 이어 돌리기 AI 몫을 낼 칸(사람 linkTry 와 같음 — B7 이어 돌리기 · B5 흐르는 긋기)
    */
   applyKit(kit, tradition) {
     const me = this.me;
@@ -1831,7 +1831,7 @@ export class AI {
     if (UA.rdAiWind && this.tech?.name === 'redondo' && !this.feint && !this.secretRun && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin(); // 부러진 칼은 옛 길 (사람도 부러지면 감기를 그만둠 — windStop 'armed')
     // 이어 돌리기 (11/14 IB_LINK.ai — 기본 켬 · 사장님 11/14 확인 'ai에게도 똑같이' · 사람 unique_assist.js linkTry 와 같은 뜻 · 원 동안 맞바꿈도 사람과 같음 — fighter.js ibTradeTry): 이베리아 AI 가 앞 공격이 끝나고 이어짐 창(afterWindow) 안에 큰 칼(시작 자리가 가슴 높이 이상인 베기)을
     //  새로 시작하는데 손이 그 시작 자리에서 떨어져 있으면 — 준비 자세로 손을 옮기는 대신 칼을 머리 위로 돌려 시작 자리로(iberian_link.js) · 다 돌면 곧장 친다(linkTick)
-    else if (IB_LINK.ai && this.kitLink && this.art.tradition === 'iberian' && this.phase === 'windup' && !opt.secret && !opt.passive && !this.feint && !this.secretRun && this.tech?.kind === 'cut' && this.tech.from[1] > 0 && cd > UA.padRadius && this.sense.t - this.lastAtkT <= UA.afterWindow && this.me.state === 'stand' && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.ibLink && !iaiBusy(this.me) && linkStart(this.me, this.tech.from, { tech: this.tech.name, bridge: this.linkBridge(L) })) {
+    else if (this.kitLink && this.art.tradition === 'iberian' && this.phase === 'windup' && !opt.secret && !opt.passive && !this.feint && !this.secretRun && this.tech?.kind === 'cut' && this.tech.from[1] > 0 && cd > UA.padRadius && this.sense.t - this.lastAtkT <= UA.afterWindow && this.me.state === 'stand' && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.ibLink && !iaiBusy(this.me) && linkStart(this.me, this.tech.from, { tech: this.tech.name, bridge: this.linkBridge(L) })) {
       this.phase = 'ibLink';
       (this.stats.ibLink ??= { fired: 0, done: 0, cancel: {} }).fired++;
     }
@@ -1911,7 +1911,7 @@ export class AI {
     this.attackT += dt;
     if (this.phase === 'rdWind') return this.rdWindTick(dt, d, th); // 풍차 베기 AI 몫 감기 (10/31 — 아래)
     if (this.phase === 'rdStrike') return this.rdStrikeTick();
-    if (this.phase === 'ibLink') return this.linkTick(dt); // AI 이어 돌리기 (11/14 — IB_LINK.ai)
+    if (this.phase === 'ibLink') return this.linkTick(dt); // AI 이어 돌리기 (11/14)
     // 약한 자세 겨눔: 준비하는 동안 다시 본다 (늦게 본 모습으로). 빈틈이 닫히면 보정만 내려놓고 하던 공격은 그대로 (치기 시작한 뒤엔 고정)
     if (this.vital && !this.vital.started && (this.phase === 'windup' || this.phase === 'approach')) this.vital = aiVitalPrepare(this, s, t);
     if (this.phase === 'windup') {
@@ -1956,7 +1956,6 @@ export class AI {
       // 달려드는 상대를 맞받을 때는 조금 일찍 친다: 상대가 휘두르기 전에 내 칼이 먼저 앞에 있어야 한다 (Vor)
       this.need = this.M.contact + t.reach * this.reachScale + 0.05 + (this.why === 'stop' ? 0.2 : 0);
       if (this.secretRun?.S.do.lead) this.need += this.secretVal(this.secretRun.S.do.lead); // 비기 앞당김: 긴 길(脇 → 上段 → 真向)이 닿기까지 다가오는 상대를 셈 — 그만큼 일찍 친다
-      if (t.name === 'cingir' && !this.feint && !IB_LINK.ai) this.need = Math.max(this.need, this.M.reach + SECRET.ibSpin.aiFire); // 11/11 싱지르 특수 공격: 전 비기 AI 와 같은 내는 거리(칼끝 거리 + aiFire — 상대 가슴) · 한 걸음 나가며 돎
       if (this.gnsW?.plan?.kind === 'commit') this.need = Math.max(this.need, this.M.reach); // 고노센 경계 결행 (10/25): 내 칼끝 거리(간격 끝)에서 벤다 — 긴 칼은 상대 발도 선 밖에서
       if (DIG_PROTO.ai && this.dig && !this.Mup) this.need += digStepIn(this, t); // 파고들기 A3 (11/14 사장님 'A안 켜고' — 기본 켬): 걸음 실린 기술은 그 앞 걸음 몫만큼 칼끝 밖에서 냄
       if (this.planFree) freeBeatOnWay(this, s, d); // 무유파 플랜 (3 단계): 다가가다 상대 칼끝 안에서 막히면 그 칼을 쳐내기로 (굴림 — AI_PLAN.beat 마다 한 번)
@@ -2330,27 +2329,8 @@ export class AI {
     return (s.mx - c.x) * (-uz / d) + (s.mz - c.z) * (ux / d) > 0 ? -1 : 1;
   }
 
-  cingirGo() {
-    const me = this.me;
-    if (me.state !== 'stand' || !me.armed || !me.skill.secret({ S: IBERIAN_SPIN_DEF, ctx: { ev: 'spin', turnDir: me.side >= 0 ? 1 : -1 }, special: 'cingir' })) {
-      (this.stats.cingir ??= { fired: 0, refused: 0 }).refused++;
-      return false;
-    }
-    const tech = this.tech;
-    this.secretRun = { S: IBERIAN_SPIN_DEF, stage: 'spin', t: 0, landed: false, peakE: 0, tr: this.art.tradition, special: 'cingir' };
-    this.mode = 'secret';
-    this.phase = 'ready';
-    this.path.length = 0;
-    this.stepT = 0;
-    this.hand.set(me.handOffset.x, me.handOffset.y);
-    this.specStart('cingir');
-    this.setTechCue(tech?.nameKo ?? '풍차 베기 (싱지르)', 'unique'); // 11/14 AI 풍차 베기는 IB_LINK.ai 0 판에만 — 사람 칸 이름은 '이어 돌리기 (싱지르)' 로 바뀌어 기술표 이름(schools.js cingir '풍차 베기 (싱지르)')을 씀
-    (this.stats.cingir ??= { fired: 0, refused: 0 }).fired++;
-    return true;
-  }
-
   /** 내려침이 끝날 때까지 (운동학 칼) → 뒤따름 (follow — 칼이 다 지나가면 afterStrike) */
-  /** AI 이어 돌리기 끝 보기 (11/14 IB_LINK.ai — 놓기는 skill.js 가 스텝마다 linkStep): 맞음 · 넘어짐 · 칼을 세게 맞음 · 다른 칼 길이면 그만둠(공격을 거둠) · 다 돌면 손 목표를 시작 자리로 놓고 곧장 친다 */
+  /** AI 이어 돌리기 끝 보기 (11/14 — 놓기는 skill.js 가 스텝마다 linkStep): 맞음 · 넘어짐 · 칼을 세게 맞음 · 다른 칼 길이면 그만둠(공격을 거둠) · 다 돌면 손 목표를 시작 자리로 놓고 곧장 친다 */
   /** 넘기기 길 (11/15 넘기기 판 — iberian_link.js bridgePlan · 사람 unique_assist.js linkTry 와 같은 셈): 지금 손 목표 · 걸러진 손 목표 빠르기(관성) → 이 칼 시작 자리 · 이 칼 첫 방향 × 베기 손 빠르기. 원 판이면 null */
   linkBridge(L) {
     if (!bridgeMode()) return null;
@@ -2410,7 +2390,6 @@ export class AI {
 
   startStrike() {
     if (this.tech?.name === 'cingir' && !this.feint && !this.secretRun) {
-      if (!IB_LINK.ai && this.cingirGo()) return; // 11/11 싱지르 특수 공격 — 길 대신 한 바퀴 (못 내면 아래 왼 가로베기 길 그대로) · 11/14 IB_LINK.ai 면 풍차 베기 없음(왼 가로베기 그대로 — 이어 돌리기가 잇는 칼)
       this.tech = this.tech.plain ?? this.tech;
     }
     if (this.inqArtOn(this.tech) && this.inqGo()) return; // 11/15 비껴서며 찌르기 = 사람과 같은 운동학 칼 (못 내면 아래 옛 길 — 탭 찌르기)
