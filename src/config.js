@@ -459,6 +459,18 @@ export const STRIKE = {
   edgeAlign: 0.6, // 칼날(날 선 쪽)이 움직이는 방향과 이만큼(cos) 맞아야 "베기". 아니면 칼 면으로 때린 것
   stabAlign: 0.75, // 칼끝 방향으로 이만큼 움직이면 "찌르기"
   minEnergy: 6, // 이보다 약한 접촉은 무시 (J)
+  // 칼날 자리 무게 · 걸음 운동량 (11/17 — [사장님 11/17 결정] 감독 권고 따름 · 간격과 박자 기록 docs/strike/measure_okori_2026-11-17.md §8 의 1 · 2 · 옮긴 기록 docs/strike/ae_port_2026-11-17.md §4):
+  //  거리 다툼이 AI 지시만이 아니라 물리에서도 나오게 — 사람 · AI 같은 판정 (combat.js analyze). 베기만 · 찌르기 · 둔타는 그대로
+  //  bladeW0    : 베기 판정 에너지 × 칼날 자리 무게 w(t) (t = 닿은 칼날 자리 — 손잡이 쪽 0 ~ 칼끝 1): t ≥ bladeWFull 이면 1 (끝 ⅓ 치는 자리) · 그 밑은 손잡이 끝 t = 0 의 bladeW0 까지 곧게 줄어듦
+  //               — 손잡이 쪽 ⅓(forte)로는 밀 뿐 베지 못함 (그 밖 물리 — 빠르기 · 유효 질량 · 튕김은 그대로). 칼날이 못 들어 멍이 되면 무게를 빼고 원래 에너지 그대로
+  //  bladeWFull : 무게 1 이 시작되는 칼날 자리 (⅔ — 칼을 셋으로 나눈 끝 ⅓)
+  //  stepMass   : 걸음 운동량 kg — 친 쪽 골반이 상대 쪽으로 v_body 로 들어가는 동안 닿은 베기는 판정 유효 질량에 stepMass × min(1, v_body ÷ stepVRef) 를 더함 (찌르기 팔 몫 thrustAssist 와 같은 자리 ·
+  //               찌르기는 thrustAssist 가 이미 있어 겹치지 않음) · 서 있거나 물러나며 친 칼은 더하지 않음 · 칼날이 못 들어 멍이 되면 빼고 원래 에너지 그대로
+  //  stepVRef   : 걸음 운동량이 다 실리는 골반 빠르기 m/s (1.0 — 걷기 빠르기의 반쯤)
+  bladeW0: 0.5,
+  bladeWFull: 2 / 3,
+  stepMass: 1.0,
+  stepVRef: 1.0,
   // 약화 배율은 상처에만 (11/15 — 사장님 '찌르기가 좀 이상해. 상대 몸에 박혀서 안 뽑히기도 하고 그러다 칼을 떨어뜨리기도 함. 공격이 종종 무시될 때도 있어.' · 기록 docs/strike/thrust_stuck_2026-11-15.md · 확인표 4440):
   //  1 보다 작은 판정 배율(combat.js analyze hk — 이탈리아 보통 찌르기 IT_OUTBOX.thrustMul 0.8 · 리솔루토 SECRET.risolutoHitMul 0.5)은 상처(심각도 · 둔타 에너지)에만 ·
   //   가름 · 판정 문턱(minEnergy) · 박힘(absorb) · 가르는 끌림은 배율 전 에너지로 — 0.8 이 물리까지 걸려 칼이 덜 가르고 더 박히던 몫을 뺌.

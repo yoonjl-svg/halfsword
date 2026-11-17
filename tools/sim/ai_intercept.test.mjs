@@ -103,7 +103,8 @@ test('띠 기울기 굴림: 숙련도 0(무) 은 가로막기 없음 · 5 ~ 6(�
 test('판에서 쓰임: 막기 굴림 · 겨눔 · 덮는 맞받기 셈', () => {
   {
     let arm = 0, aim = 0, cv = 0;
-    for (const seed of [1, 2]) {
+    // 씨앗 1 · 2 → 1 ~ 3 (11/17 C 물리 — 칼날 자리 무게 · 걸음 운동량으로 판이 짧아져(씨앗 2 는 10 s) 두 판에 맞받아 베기 자체가 없음 · 덮는 맞받기는 맞받아 베기 때만 굴림 — docs/strike/ae_port_2026-11-17.md §5)
+    for (const seed of [1, 2, 3]) {
       const { G, free } = round(6, seed);
       try {
         while (G.t < 30 && G.player.alive && G.enemy.alive) G.step();

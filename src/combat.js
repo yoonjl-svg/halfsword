@@ -82,6 +82,27 @@ function koteAfter(f, T) {
   return L?.unique === 'kote' && L.tEnd != null && u.t - L.tEnd <= T;
 }
 
+/** 칼날 자리 무게 w(t) (11/17 — config STRIKE.bladeW0 · bladeWFull): 끝 ⅓ 은 1 · 손잡이 쪽으로 곧게 줄어 손잡이 끝(t = 0) 에서 bladeW0 */
+export function bladeWeight(t) {
+  const T = STRIKE.bladeWFull;
+  return t >= T ? 1 : STRIKE.bladeW0 + ((1 - STRIKE.bladeW0) * Math.max(0, t)) / T;
+}
+
+/**
+ * 걸음 운동량 kg (11/17 — config STRIKE.stepMass · stepVRef): 친 쪽 골반이 상대 골반 쪽(바닥 위 방향)으로 들어가는 빠르기 v_body > 0 이면 stepMass × min(1, v_body ÷ stepVRef) · 아니면 0.
+ *  스텝 전 저장값(cacheState)만 읽음 — 예측(predicting)도 엔진을 부르지 않음 · 저장값이 없으면 0
+ */
+export function stepMassOf(att, vic) {
+  const a = att?.cache?.parts?.pelvis;
+  const b = vic?.cache?.parts?.pelvis;
+  if (!a || !b || !(STRIKE.stepMass > 0)) return 0;
+  const dx = b.p.x - a.p.x, dz = b.p.z - a.p.z;
+  const dd = Math.hypot(dx, dz);
+  if (!(dd > 1e-6)) return 0;
+  const v = (a.v.x * dx + a.v.z * dz) / dd;
+  return v > 0 ? STRIKE.stepMass * Math.min(1, v / STRIKE.stepVRef) : 0;
+}
+
 function velAt(st, point, out) {
   return out.copy(point).sub(st.com).cross(st.w).negate().add(st.v); // v + w × r
 }
@@ -269,7 +290,7 @@ export class Combat {
     //  1 보다 작은 판정 배율(이탈리아 보통 찌르기 IT_OUTBOX.thrustMul 0.8 · 리솔루토 SECRET.risolutoHitMul 0.5)은 상처(심각도 · 둔타 에너지)에만 걸고, 칼과 몸의 물리 —
     //  가름(pass) · 판정 문턱(STRIKE.minEnergy) · 박힘(absorb) · 가르는 끌림(afterStep Eleft) — 는 배율 전 에너지(physK 를 되곱함)로. 1 보다 큰 배율(비기 1.3 · 맞박자 등)은 그대로
     const physK = hk > 0 && hk < 1 ? 1 / hk : 1;
-    let assisted = null; // 찌르기 팔 유효 질량을 실었으면 싣기 전 값 (멍으로 바뀌면 되돌린다)
+    let assisted = null; // 찌르기 팔 유효 질량 · 베기 걸음 운동량 · 칼날 자리 무게를 실었으면 싣기 전 값 (멍으로 바뀌면 되돌린다)
 
     let type = 'blunt';
     let quality = 1;
@@ -302,6 +323,15 @@ export class Combat {
           quality = (edgeAlign - STRIKE.edgeAlign) / (1 - STRIKE.edgeAlign); // 날이 똑바로 설수록 잘 베인다
           quality = 0.4 + 0.6 * quality;
           // 칼날 길이 방향으로 미끄러지며 벨수록(당겨 베기) 잘 들고, 칼날 손잡이 쪽은 덜 든다
+          // 걸음 운동량 · 칼날 자리 무게 (11/17 — [사장님 11/17 결정] · config STRIKE.stepMass · bladeW0): 들어가며 친 베기는 몸무게 몫을 판정 유효 질량에 · 손잡이 쪽 ⅓ 로 닿은 베기는 판정 에너지를 덜.
+          //  사람 · AI 같음 · 칼날이 못 들어 멍이 되면 아래에서 싣기 전 값으로 되돌림(둔타는 그대로)
+          assisted = { mEff, ephys, energy };
+          const mStep = stepMassOf(att, pr.v.fighter);
+          if (mStep > 0) {
+            mEff += mStep;
+            ephys = 0.5 * mEff * speed * speed;
+          }
+          energy = ephys * STRIKE.energyScale * hk * bladeWeight(t);
         }
       }
     }
@@ -403,7 +433,7 @@ export class Combat {
         severity *= cnStepKeep(vic); // 동방 편섬 (11/15 사장님 '0.4초 50% 감소 (칼날 피해에 찌르기도 포함 맞지?)' — 베기 · 찌르기 둘 다 · 둔기 빼고): 꺾은 때부터 줄임 시간 안이면 × (1 − cut)
       } else if (!predicting) {
         type = 'blunt'; // 날이 들지 못했으면 멍만 든다
-        // 칼끝이 들어가지 못한 찌르기에는 팔 유효 질량을 싣지 않는다 (아픔·비틀거림·옷·투구·기절이 부풀지 않게)
+        // 칼끝이 들어가지 못한 찌르기에는 팔 유효 질량을 싣지 않는다 (아픔·비틀거림·옷·투구·기절이 부풀지 않게) · 칼날이 못 든 베기도 걸음 몫 · 칼날 자리 무게를 뺀다 (둔타는 그대로)
         if (assisted) ({ mEff, ephys, energy } = assisted);
       }
     }
