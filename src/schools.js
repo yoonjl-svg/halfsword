@@ -519,6 +519,11 @@ const IBERIAN_GUARDS = [
   { name: 'alber', pad: G.alber, threat: 0.1, high: 0, low: 1, w: 0.4 },
   { name: 'wechselR', pad: G.wechselR, threat: 0.1, high: 0, low: 1, w: 1.6 }, // 아래 탈류 (10/11 — 위 머리말)
   { name: 'wechselL', pad: G.wechselL, threat: 0.1, high: 0, low: 1, w: 1.5 }, // 아래 레베스
+  // ③ 자세 → 칼길 (11/17 — [사장님 11/17 결정] 설계 §8 결정 5 '더한다'): 싱지르 · 레돈두 · 탈류의 출발 자세가 목록에 없었다 — 뒤에서 오른 베기(옆 지킴 — 피 단Ⅲ · 고 규칙 8 '칼이 갈비를 휘감고') ·
+  //  오른 베기 준비(어깨 지붕 — 레돈두 · 나선 걸음 베기 자리 [코드]) · 왼 가로베기(왼 옆 자세 — 싱지르 자리 [코드]). threat · high · low 는 일본 와키가마에 · 롱소드 어깨 지붕 · 일본 히다리와키 와 같은 꼴 · w 는 칸 없는 자세와 같은 1 [감독 안 — 여쭘]
+  { name: 'nebenR', pad: G.nebenR, threat: 0, high: 0.6, low: 0.4, w: 1 },
+  { name: 'tagR', pad: G.tagR, threat: 0.1, high: 1, low: 0, w: 1 },
+  { name: 'sideL', pad: G.sideL, threat: 0.1, high: 0.3, low: 0.5, w: 1 },
 ];
 // 기술 가중치 (applySchoolArt — 앞무게 꾸러미 base 에 곱한다. 고유 동작은 받지 않는다):
 //  피게이레두 32 규칙의 낱말 셈 — talho 91 · revez 80 · 찌르기(estocada) 42(준비·찌름 두 번 셈 → 실제 ≈ 21) · altibaxo 9 · 가로(orizontal) 5 · '아래에서 위로' 18.
@@ -1105,6 +1110,67 @@ const CHINESE_WATCH = [
   { name: 'tagR', zh: '右翼', pad: G.tagR, threat: 0.1, high: 1, low: 0, w: 0.4 },
 ];
 TRADITIONS.chinese.guards = CHINESE_WATCH;
+
+// ── ③ 자세 → 칼길 (11/17 — 설계 docs/design/guard_line_2026-11-17.md §3 · [사장님 11/17 결정] '그래 너의 권고에 따르마' · src/guard_line.js · config GUARD_LINE) ──
+//  lineMap[자세 열쇠] = { P: 기본 기술, S: 보조 기술 } — 표에 없는 기술 = 드묾(U). 무게 P 1 · S 0.35 · U 0.08 (불가 0 없음 — 예외로 나오는 칼이 속임).
+//  열쇠 = AI 자세 열쇠(G 패드) — 보이는 손 자리에서 가장 가까운 자세(nearGuard)가 이 열쇠 가운데서 고름(공격하는 쪽 · 읽는 쪽 같은 목록).
+//  유파 버릇은 그대로 [사장님 11/17 결정 2]: 고유 기술은 원전에 출발 자세가 있는 넷만 묶는다 — 독일 실하우 · 크룸프하우 → 어깨 지붕 · 이탈리아 임브로카타 → 1번 자세 · 일본 츠바메가에시 → 조단.
+//   그 밖의 고유 기술(두플리렌 · 비껴 딛는 가로베기 · 파사타 소토 · 인콰르타타 · 레돈두 · 싱지르 · 나선 걸음 베기 · 코테 · 히라키기리 · 요격 · 체보요격 · 좌익격 …)은 표에 없음 = 묶지 않음(어느 자세에서나 무게 1).
+//  free = 줄을 정하지 않는 자세 (동방 간수세 — 모든 기술 무게 1 · 읽는 쪽에 줄 없음 [사장님 11/17 결정 6]).
+//  근거 표시(설계 §2-4): [원문] 원전 · [원전 2차] 해설서 · [해석] 읽은 쪽 풀이 · [추정] 값 · [코드] 패드 일치(TECH.from = 자세 패드). 원전을 못 찾은 칸은 [추정] 그대로.
+TRADITIONS.german.lineMap = {
+  tag: { P: ['oberhau', 'zornhau'], S: ['zornhauL', 'schielhau', 'krumphau'] }, // 마이어 「지붕에서 긴 자세를 지나 바보로」(guards.js 머리말) [원전 2차] · 줄은 [해석]
+  tagR: { P: ['zornhau', 'schielhau', 'krumphau'], S: ['oberhau', 'zornhauL'] }, // guards.js 「오른쪽 위(어깨 지붕) → 왼쪽 아래 = 사선 베기」 [원전 2차] · 실하우 링엑 58절 · 크룸프하우 링엑 42절 [원전 2차] · [코드]
+  ochsR: { P: ['stichOchs', 'stichOchsL'], S: ['stichPflug', 'zornhauL', 'schielhau'] }, // desc '머리 옆에서 얼굴을 찌른다' · 「Schieler bricht, was Büffel schlägt oder sticht」 [원전 2차] · [코드]
+  ochsL: { P: ['stichOchs', 'stichOchsL'], S: ['stichPflugL', 'zornhauL', 'schielhau'] }, // 위 거울
+  pflugR: { P: ['stichPflug', 'stichPflugL'], S: ['unterhau', 'stichOchs', 'zornhauL'] }, // desc '허리에서 겨누는 기본 자세' · guards.js 「황소 · 쟁기 → 긴 자세 = 찌르기」 [원전 2차]
+  pflugL: { P: ['stichPflug', 'stichPflugL'], S: ['unterhauL', 'stichOchsL', 'zornhauL'] }, // 위 거울 · 막기 thrust = 왼 쟁기(Absetzen) [원전 2차]
+  langort: { P: ['stichPflug', 'stichPflugL', 'stichOchs', 'stichOchsL'], S: ['zwerch', 'zwerchL', 'zornhauL', 'schielhau'] }, // 찌르기가 끝나는 자리 [원전 2차] · 베기는 칼끝을 누르며 [추정]
+  alber: { P: ['stichAlber', 'unterhau', 'unterhauL'], S: ['zornhauL', 'stichPflug', 'schielhau'] }, // 내려벤 칼이 멈추는 끝자리 [원전 2차] → 되올림 [해석] · 알버 직접 인용 없음 [추정]
+  wechselR: { P: ['unterhau', 'unterhauL'], S: ['stichPflug', 'stichAlber'] }, // desc '아래에서 올려벤다' · [코드]
+};
+TRADITIONS.italian.lineMap = {
+  pflugR: { P: ['stichPflug'], S: ['stichPflugL'] }, // 3번 — 카포 페로 「la stoccata … si parta dalla terza」 PDF 53쪽 [원문]
+  langort: { P: ['stichPflug', 'stichPflugL'], S: ['stichOchs'] }, // 뻗은 3번 — 파브리스 [28] [원문]
+  pflugL: { P: ['stichPflugL'], S: ['stichPflug'] }, // 4번 — 파브리스 [32] · 카포 페로 [99] [원문]
+  ochsR: { P: ['stichOchs', 'stichOchsL'], S: ['imbroccata', 'stichPflug'] }, // 2번 — 파브리스 [21] · [22] [원문 · 도판] · 줄 [추정]
+  tag: { P: ['imbroccata'], S: ['oberhau', 'zornhau'] }, // 1번 — 카포 페로 「l'imbroccata si parte dalla prima guardia」 PDF 53쪽 [원문]
+  alber: { P: ['stichAlber'], S: ['unterhau', 'stichPflug'] }, // 낮은 자세 (목록 밖 · 손이 지나는 자리) — 카포 페로 「punta in falso … in guardia bassa」 [원문]
+  wechselR: { P: [], S: ['stichPflug', 'stichAlber', 'unterhau'] }, // 낮은 3번 (목록 밖) — 파브리스 [16] · [98] · 기본이던 파사타 소토는 묶지 않음(결정 2)
+};
+TRADITIONS.iberian.lineMap = {
+  langort: { P: ['zornhau', 'zornhauL', 'talhoReves'], S: ['oberhau', 'unterhau', 'unterhauL', 'stichPflug'] }, // 곧은 자세 — 피게이레두 단Ⅰ · 단Ⅱ · 복Ⅶ 얼굴 앞에 멈춤 · 탈류 · 레베스 번갈아 [원문 영역]
+  ochsR: { P: ['stichOchs', 'stichOchsL'], S: ['oberhau', 'zornhauL'] }, // 귀 앞 겨눔 — 복Ⅱ · 복ⅩⅤ · 찌르기는 높은 손 [원문 영역] (IBERIAN_TECHK 높이 찌르기)
+  ochsL: { P: ['stichOchsL', 'stichOchs'], S: ['zornhauL', 'oberhau'] }, // 왼 높이 비낌 — 위 거울
+  pflugR: { P: ['zornhau', 'zornhauL', 'talhoReves'], S: ['stichPflug', 'unterhau'] }, // 비낀 자세 — 단ⅩⅣ 「deflect it with a talho … or a revez」 [원문 영역]
+  pflugL: { P: ['zornhau', 'zornhauL', 'talhoReves'], S: ['stichPflug', 'unterhauL'] }, // 왼 비낀 자세 — 복ⅩⅣ [원문 영역]
+  alber: { P: ['unterhau', 'unterhauL'], S: ['zornhau', 'zornhauL'] }, // 칼끝 땅에 — 복Ⅰ · 복Ⅶ 「always from low to high」 [원문 영역]
+  wechselR: { P: ['unterhau'], S: ['unterhauL'] }, // 오른 올려베기 — names '아래에서 위로' · 자리 [해석]
+  wechselL: { P: ['unterhauL'], S: ['unterhau'] }, // 왼 올려베기 — 위 거울
+  nebenR: { P: [], S: ['zornhauL', 'unterhau'] }, // 뒤에서 오른 베기 — 고디뉴 규칙 8 · 피 단Ⅲ [원문 독일어 역] · 기본이던 싱지르는 묶지 않음(결정 2) · 목록에 더함(결정 5)
+  tagR: { P: ['zornhau'], S: ['oberhau', 'talhoReves'] }, // 오른 베기 준비 — names '뒤로 감았다가 오른쪽에서 벤다' · [코드] · 목록에 더함(결정 5) · 보조 [추정]
+  sideL: { P: ['zwerchL'], S: ['zornhauL'] }, // 왼 가로베기 — names '왼쪽에서 가로로 벤다' (피 단Ⅺ · 복Ⅰ · 복Ⅺ) · [코드] · 목록에 더함(결정 5) · 보조 [추정]
+};
+TRADITIONS.japanese.lineMap = {
+  langort: { P: [], S: ['zornhau', 'stichPflug', 'oberhau'] }, // 추단 — 오륜서 表1 p22 [원문] · 기본이던 코테 · 히라키기리는 묶지 않음(결정 2)
+  tag: { P: ['oberhau', 'tsubameGaeshi'], S: ['zornhau', 'zornhauL'] }, // 조단 — 表2 p23 「上段に構へ … 一度に敵を打つ … 下よりすくひ上げて打つ」 [원문]
+  tagR: { P: ['zornhau'], S: ['oberhau', 'zornhauL'] }, // 핫소 — 검도형 4본 打太刀 [원문] · 줄 [해석]
+  alber: { P: ['unterhau', 'unterhauL'], S: ['stichAlber', 'stichPflug'] }, // 게단 — 表3 「下より手をはる」 p23 ~ 24 [원문]
+  nebenR: { P: ['zwerch', 'unterhau'], S: ['zornhau'] }, // 와키가마에 — 검도형 4본 仕太刀 · 줄 [추정]
+  sideR: { P: ['zwerch', 'unterhau', 'oberhau'], S: ['zornhau'] }, // 미기와키 — 表5 p24 ~ 25 [원문]
+  sideL: { P: ['unterhauL', 'zornhauL', 'zwerchL'], S: [] }, // 히다리와키 — 表4 p24 [원문]
+};
+TRADITIONS.chinese.lineMap = {
+  nebenR: { P: [], S: [], free: true }, // 간수세 「看守諸器 攻刺守定 … 相機隨勢滾殺」 무도 권2 p039/31 [원문] — 기미를 보고 따름: 줄을 정하지 않음 [사장님 11/17 결정 6]
+  langort: { P: [], S: ['oberhau', 'zornhau', 'zwerchL', 'stichPflug'] }, // 직부송서 — 본국검 p033/25 [원문] · 기본이던 요격 · 체보요격 · 좌익격은 묶지 않음(결정 2)
+  pflugR: { P: ['stichPflug'], S: ['zornhau', 'stichPflugL'] }, // 탄복세 「衝刺中殺」 쪽158/0572 [원문]
+  pflugL: { P: ['stichPflugL'], S: ['zwerchL', 'stichPflug'] }, // 좌협세 「左夾刺也」 무도 권2 p043/35 [원문]
+  sideR: { P: ['zwerch'], S: ['zornhau', 'zwerchL'] }, // 요격세 「橫衝中殺」 쪽166/0580 [원문]
+  ochsR: { P: ['stichOchs', 'stichOchsL'], S: ['oberhau', 'zornhau'] }, // 역린세 「直刺喉頸」 쪽173/0587 [원문]
+  alber: { P: ['stichAlber', 'unterhau'], S: ['wristCut', 'zornhauL'] }, // 점검세 「偏閃奏進搶殺」 쪽155/0569 [원문]
+  tag: { P: ['oberhau'], S: ['zornhau', 'zornhauL'] }, // 표두세 「霹擊上殺」 쪽157/0571 [원문]
+  tagR: { P: ['zornhau'], S: ['oberhau', 'zwerchL'] }, // 우익세 「剪殺兩翼」 쪽168/0582 [원문] · 자리 [해석]
+};
 
 // 중국 속임수 (전: 롱소드 넷 그대로 — 그 가운데 둘은 칼을 머리 위로 넘기는 Umschlagen(롱소드 고유)). 조선세법 24 세에서 속임은 斂翅勢 「佯北誘賺」 하나뿐이고
 //  그것은 이미 고유 동작 lianchi 다 → Umschlagen 둘을 뺀다(새 속임을 지어 넣지 않음). 남는 둘(위 → 다리 · 찌르기 → 베기)은 다섯 원전 모두에 있는 기본 속임.

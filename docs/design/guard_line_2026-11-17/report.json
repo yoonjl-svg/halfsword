@@ -1,0 +1,38 @@
+[
+ {
+  "tag": "german",
+  "weapon": "longsword",
+  "error": "TimeoutError: page.waitForFunction: Timeout 900000ms exceeded.",
+  "simTime": 27.741666666665733,
+  "gl": null,
+  "errors": []
+ },
+ {
+  "tag": "italian",
+  "weapon": "rapier",
+  "error": "TimeoutError: page.waitForFunction: Timeout 900000ms exceeded.",
+  "simTime": 0,
+  "gl": null,
+  "errors": []
+ },
+ {
+  "tag": "japanese",
+  "weapon": "uchigatana",
+  "guard": "tag",
+  "why": "patience",
+  "aim": [
+   0.119,
+   0.495
+  ],
+  "pad": [
+   0.02,
+   0.52
+  ],
+  "d": 1.91,
+  "simTime": 18.52,
+  "tech": {
+   "mode": "watch"
+  },
+  "errors": []
+ }
+]

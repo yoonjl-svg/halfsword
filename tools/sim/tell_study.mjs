@@ -67,8 +67,9 @@ export function runFight({ school, wi, seed, swap, prof = [4, 4], dur = 60 }) {
   const mk = () => ({
     t: fa(), px: fa(), pz: fa(), cx: fa(), cz: fa(), py: fa(), cy: fa(), comx: fa(), comz: fa(), fmx: fa(), fmz: fa(), ax: fa(), ay: fa(),
     hvx: fa(), hvy: fa(), tip: fa(), gx: fa(), gy: fa(), clos: fa(), away: fa(), stF: fa(Uint8Array), stB: fa(Uint8Array), mode: new Array(N), phase: new Array(N),
-    down: fa(Uint8Array), dcc: fa(), dpp: fa(), reach: fa(), hx: fa(), hy: fa(), hz: fa(), sa: fa(), okv: fa(),
+    down: fa(Uint8Array), dcc: fa(), dpp: fa(), reach: fa(), hx: fa(), hy: fa(), hz: fa(), sa: fa(), okv: fa(), glc: fa(Uint8Array),
   });
+  const GLC = [null, 'highL', 'highR', 'highC', 'lowL', 'lowR', 'thrust']; // ③ 읽은 자세 줄 덮기 (ai.glCover — 없는 판은 늘 0)
   const S = [mk(), mk()];
   const attacks = [[], []];
   const woundsBy = [[], []];
@@ -84,6 +85,7 @@ export function runFight({ school, wi, seed, swap, prof = [4, 4], dur = 60 }) {
         let near = null, nd = 9;
         for (const x of ai.school.guards) { const dd = Math.hypot(x.pad[0] - me.handOffset.x, x.pad[1] - me.handOffset.y); if (dd < nd) { nd = dd; near = x.name; } }
         attacks[i].push({ i, iD: Math.round(G.t / DT), tech: ai.tech?.name, open: ai.tech?.open, kind: ai.tech?.kind, why, chain: opt.chain ?? 0, secret: !!opt.secret, passive: !!opt.passive, drill: !!opt.drill, feint: !!ai.feint,
+          feintOpen: ai.feint?.open ?? null, beat: !!ai.glBeatNow, tr: ai.art?.tradition ?? null, aim: [me.skill.aim.x, me.skill.aim.y], // ③ 자세 → 칼길 재기 (11/17): 속임의 진짜 줄 · 공격 직전 자세 박자 뒤인가 · 보이는 손(걸러진 손 목표 — 읽는 눈과 같은 자리)
           guard: g?.name ?? null, near, nearD: nd, hand: [me.handOffset.x, me.handOffset.y], iS: null, iE: null, reachD: ai.M.reach, foeReachD: ai.foeReach });
       }
       return r;
@@ -115,6 +117,7 @@ export function runFight({ school, wi, seed, swap, prof = [4, 4], dur = 60 }) {
       s.ax[n] = f.skill.aim.x; s.ay[n] = f.skill.aim.y; s.hvx[n] = f.skill.aimVel.x; s.hvy[n] = f.skill.aimVel.y;
       s.tip[n] = f.tipVel.length();
       s.okv[n] = f.okoriVis ?? 0;
+      s.glc[n] = ai.glCover ? Math.max(0, GLC.indexOf(ai.glCover)) : 0;
       const bp = f.bladePoint(1); s.hx[n] = bp.x; s.hy[n] = bp.y; s.hz[n] = bp.z;
       const g = ai.guard; s.gx[n] = g ? g.pad[0] : 0; s.gy[n] = g ? g.pad[1] : 0;
       const dx = po.x - pe.x, dz = po.z - pe.z, dd = Math.hypot(dx, dz) || 1e-3;
@@ -131,7 +134,7 @@ export function runFight({ school, wi, seed, swap, prof = [4, 4], dur = 60 }) {
     }
     n++;
   }
-  const rec = { school, weapon, seed, swap, prof, endT: G.t, n, attacks: [], cueEv: {} };
+  const rec = { school, weapon, seed, swap, prof, endT: G.t, n, attacks: [], cueEv: {}, gl: A.map((a) => a.stats.gl ?? null), icp: A.map((a) => a.stats.icp ?? null) };
   const dt = DT;
   const smooth = (arr, i, w) => { let a = 0, c = 0; for (let k = Math.max(0, i - w + 1); k <= i; k++) { a += arr[k]; c++; } return a / c; };
   const sig = [0, 1].map((i) => {
@@ -181,6 +184,8 @@ export function runFight({ school, wi, seed, swap, prof = [4, 4], dur = 60 }) {
       const tD = tAt(a.iD), tC = tAt(iC);
       const r = { school, weapon, seed, swap, i, tech: a.tech, open: a.open, kind: a.kind, why: a.why, chain: a.chain, secret: a.secret, passive: a.passive, drill: a.drill, feint: a.feint,
         guard: a.guard, near: a.near, nearD: +a.nearD.toFixed(3), hand: a.hand.map((x) => +x.toFixed(2)), wound: ctype === 'wound', zone: w?.zone ?? null,
+        feintOpen: a.feintOpen, beat: a.beat, tr: a.tr, aim: a.aim.map((x) => +x.toFixed(3)),
+        cov: GLC[o.glc[a.iS]] ?? null, covAny: (() => { for (let j = a.iD; j <= a.iS; j++) if (o.glc[j]) return GLC[o.glc[j]]; return null; })(), // 막는 쪽이 휘두름 시작 때 덮던 읽은 줄 · 결정 ~ 휘두름 사이 덮은 줄
         tD: +tD.toFixed(3), tS: +tS.toFixed(3), tC: +tC.toFixed(3), tE: a.iE != null ? +tAt(a.iE).toFixed(3) : null,
         reach: +a.reachD.toFixed(2), foeReach: +a.foeReachD.toFixed(2), foeReachTrue: +A[1 - i].M.reach.toFixed(2),
         dccD: +s.dcc[a.iD].toFixed(2), dccS: +s.dcc[a.iS].toFixed(2), dccC: +s.dcc[iC].toFixed(2), dppD: +s.dpp[a.iD].toFixed(2), dppS: +s.dpp[a.iS].toFixed(2), dppC: +s.dpp[iC].toFixed(2),
