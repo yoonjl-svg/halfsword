@@ -1,5 +1,5 @@
 // 플레이어 고유 동작 (10/13 이어 주기 → 10/14 강화 — src/unique_assist.js · docs/strike/unique_player_2026-10-13.md) 브라우저 확인.
-//  10/14: 테스트 경로는 기본 끔이라 test.html 경우엔 &uniqueAssist=1 을 붙인다. 긋기마다 걸음 수 · 이음(뒷몫) 수 · 긋기 끝 몸 덧씌우기(가슴 돌림 °)도 적는다.
+//  10/14: (테스트 경로 켬 · 끔 주소 ?uniqueAssist · ?playerSecret 은 걷음 — 늘 켬). 긋기마다 걸음 수 · 이음(뒷몫) 수 · 긋기 끝 몸 덧씌우기(가슴 돌림 °)도 적는다.
 //   PNG 는 손을 뗀 곧바로(SHOT_WAIT ms, 기본 0 — 걸음·몸 꼴이 남아 있을 때) 찍는다
 //  실제 게임(index.html)을 띄워 터치 포인터 사건(pointerdown·move·up, pointerType 'touch')으로 긋는다 — 입력 길(input.js → main.js → 검술 층)이 그대로 돈다.
 //  긋기 시작 자리에 손을 놓는 것만 game.player.handOffset 으로 한다(시험 편의). 상대 AI 는 멈춰 둔다(game.ai.update 비움).
@@ -26,15 +26,14 @@ const STROKES = {
   unterhau: { from: G.wechselR, to: [[0.04, -0.08], [-0.22, 0.26]] },
 };
 const CASES = [
-  { label: 'test-longsword', q: '?test=1&weapon=longsword&uniqueAssist=1', strokes: ['zornhau', 'zwerch', 'oberhauUp'] },
-  { label: 'test-zweihander', q: '?test=1&weapon=zweihander&playerSecret=0&uniqueAssist=1', strokes: ['oberhauUp', 'zwerch', 'unterhau'] }, // 이베리아 길목 준비(멀리 서 있으면 켜짐)가 긋기를 비기로 가져가지 않게 — 비기가 먼저인 것은 test-zweihander-secret
-  { label: 'test-zweihander-secret', q: '?test=1&weapon=zweihander&uniqueAssist=1', strokes: ['oberhauUp'] },
-  { label: 'test-uchigatana', q: '?test=1&weapon=uchigatana&playerSecret=0&uniqueAssist=1', strokes: ['zornhauL', 'langortDown'] },
+  { label: 'test-longsword', q: '?test=1&weapon=longsword', strokes: ['zornhau', 'zwerch', 'oberhauUp'] },
+  { label: 'test-zweihander', q: '?test=1&weapon=zweihander', strokes: ['oberhauUp', 'zwerch', 'unterhau'] }, // 이베리아 길목 준비(멀리 서 있으면 켜짐)가 긋기를 비기로 가져가지 않게 — 비기가 먼저인 것은 test-zweihander-secret
+  { label: 'test-zweihander-secret', q: '?test=1&weapon=zweihander', strokes: ['oberhauUp'] },
+  { label: 'test-uchigatana', q: '?test=1&weapon=uchigatana', strokes: ['zornhauL', 'langortDown'] },
   { label: 'test-default', q: '?test=1&weapon=longsword', strokes: ['zwerch'] }, // 테스트 경로 기본 = 끔 (10/14 02:0x)
   { label: 'main-stage4', q: '?weapon=longsword&uniqueStage=4', strokes: ['zornhau'] },
   { label: 'main-default', q: '?weapon=longsword', strokes: ['zornhau', 'zwerch'] },
   { label: 'main-stage3', q: '?weapon=longsword&uniqueStage=3', strokes: ['zornhau', 'zwerch'] }, // 10/16 인장 없앰: 전 '?clears=60'(독일 인장 둘 = 1·2 단계) → 고유자세 책까지(넷 모두 — 3 급 책 하나)
-  { label: 'test-off', q: '?test=1&weapon=longsword&uniqueAssist=0', strokes: ['zornhau', 'zwerch'] },
 ];
 const out = [];
 const PIX = process.env.PIX === '1'; // 픽셀 모드(?pixel=1) — 소프트웨어 GL 프레임(≈100 ms)은 거의 줄지 않았다 (기본 끔)

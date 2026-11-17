@@ -10,7 +10,7 @@ const results=[];
 for(const mobile of [process.env.BROWSER_INPUT!=='keyboard']){
 const page=await browser.newPage({viewport:{width:1280,height:720},hasTouch:mobile,isMobile:mobile});const errors=[];
 page.on('pageerror',e=>errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-await page.goto(base+'/?weapon=rapier&foeWeapon=longsword&uniqueStage=2&stage=castle&slowMo=0&camOpen=old',{waitUntil:'networkidle'});
+await page.goto(base+'/?weapon=rapier&foeWeapon=longsword&uniqueStage=2&stage=castle&slowMo=0',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.game?.player?.sword);
 await page.evaluate(()=>{game.config.ARENA.startGap=1.4;});
 await page.getByText('여정 시작',{exact:true}).click();await page.waitForFunction(()=>window.game.state==='fight');

@@ -34,7 +34,7 @@ if (process.env.LOAD_JSON) await ctx.addInitScript((j) => { window.__loadJson = 
 const page = await ctx.newPage();
 page.on('pageerror', (e) => errors.push('pageerror ' + e));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-await page.goto(`${base}/?weapon=${WEAPON}&foeWeapon=longsword&skillNodes=B1,B5,B4&slowMo=0&camOpen=old${EXTRA}`, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?weapon=${WEAPON}&foeWeapon=longsword&skillNodes=B1,B5,B4&slowMo=0${EXTRA}`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 180000 });
 await page.evaluate((gap) => { game.config.ARENA.startGap = gap; game.config.ARENA.startHold = 0; }, +(process.env.GAP || 1.9));
 await page.getByText('여정 시작', { exact: true }).click();

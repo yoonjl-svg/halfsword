@@ -34,7 +34,7 @@ for (const [tag, extra] of TAGS) {
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, deviceScaleFactor: 1 });
   await ctx.addInitScript((ls) => { try { for (const [k, v] of Object.entries(ls)) localStorage.setItem(k, v); } catch { /* */ } }, save.ls);
   const page = await ctx.newPage();
-  await page.goto(`${base}/?weapon=uchigatana&foeWeapon=longsword&slowMo=0&camOpen=old${extra || ''}`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/?weapon=uchigatana&foeWeapon=longsword&slowMo=0${extra || ''}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 180000 });
   await page.evaluate(() => { game.config.ARENA.startGap = 2.0; game.config.ARENA.startHold = 0; });
   await page.getByText('여정 시작', { exact: true }).click();

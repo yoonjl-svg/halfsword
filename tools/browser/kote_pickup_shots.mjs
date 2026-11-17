@@ -49,7 +49,7 @@ await ctx.route('https://*.supabase.co/**', (r) => r.abort());
 const page = await ctx.newPage();
 page.on('pageerror', (e) => errors.push('pageerror ' + e));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-await page.goto(`${base}/?weapon=longsword&foeWeapon=longsword&pickup=block&slowMo=0&camOpen=old&emo=0`, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?weapon=longsword&foeWeapon=longsword&pickup=block&slowMo=0&emo=0`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 180000 });
 await page.evaluate((puSet) => { game.config.ARENA.startGap = 2.6; game.config.ARENA.startHold = 0; for (const [k, v] of puSet) game.config.PICKUP[k] = v; }, puSet);
 await page.getByText('여정 시작', { exact: true }).click();

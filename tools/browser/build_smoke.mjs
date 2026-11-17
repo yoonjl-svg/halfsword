@@ -9,7 +9,7 @@ const base = process.argv[2] || 'http://127.0.0.1:4173';
 const shotDir = process.argv[3] || null;
 if (shotDir) fs.mkdirSync(shotDir, { recursive: true });
 const WEAPONS = ['longsword', 'qinggang', 'monohoshizao', 'zweihander', 'sabre', 'frozen_tuna', 'rapier'];
-const URLS = [...WEAPONS.map((w) => `?weapon=${w}`), '?schoolArt=0', '?schoolRest=pflugR&weapon=qinggang', '?oneVersatile=thrust&weapon=qinggang', '?pommel=1', '?motionLib=0'];
+const URLS = WEAPONS.map((w) => `?weapon=${w}`);
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const rows = [];
 let settingsCheck = null;

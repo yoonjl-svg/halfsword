@@ -39,7 +39,7 @@ async function open(devName) {
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror ' + e));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`${base}/?atkStick=${MODE}&weapon=longsword&foeWeapon=longsword&slowMo=0&camOpen=old`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/?atkStick=${MODE}&weapon=longsword&foeWeapon=longsword&slowMo=0`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 240000 });
   return { ctx, page, errors };
 }

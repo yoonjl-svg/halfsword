@@ -22,7 +22,7 @@ async function openFight(style) {
   const page = await ctx.newPage();
   page.on('pageerror', (e) => report.errors.push(`${style} pageerror ${e}`));
   page.on('console', (m) => m.type() === 'error' && report.errors.push(`${style} console ${m.text()}`));
-  await page.goto(`${base}/?test=1&weapon=uchigatana&foe=heinrich&stage=poseidon&playerSecret=0&uniqueAssist=1&strikeCue=${style}`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/?test=1&weapon=uchigatana&foe=heinrich&stage=poseidon`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 120000 });
   await page.getByText('여정 시작').click();
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 120000 });

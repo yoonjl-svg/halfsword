@@ -85,7 +85,7 @@ async function run(crouch, scen) {
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror ' + e));
   page.on('console', (m) => { if (m.type() === 'error' && !/supabase|Failed to load resource/.test(m.text())) errors.push(m.text()); });
-  const url = `${base}/?weapon=${WEAPON}&foeWeapon=${FOE}&slowMo=0&camOpen=old&gnsCrouch=${crouch}${EXTRA}`;
+  const url = `${base}/?weapon=${WEAPON}&foeWeapon=${FOE}&slowMo=0&gnsCrouch=${crouch}${EXTRA}`;
   await page.goto(url, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 240000 });
   await page.getByText('여정 시작', { exact: true }).click();

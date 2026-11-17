@@ -78,7 +78,7 @@ if (who.includes('player')) {
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push('player pageerror ' + e));
   page.on('console', (m) => { if (m.type() === 'error') errors.push('player ' + m.text()); });
-  await page.goto(`${base}/?weapon=zweihander&foeWeapon=longsword&slowMo=0&camOpen=old${EXTRA}`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/?weapon=zweihander&foeWeapon=longsword&slowMo=0${EXTRA}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 180000 });
   await page.evaluate(() => { game.config.ARENA.startGap = 4.2; game.config.ARENA.startHold = 0; });
   await page.getByText('여정 시작', { exact: true }).click();
@@ -128,7 +128,7 @@ if (who.includes('ai')) {
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push('ai pageerror ' + e));
   page.on('console', (m) => { if (m.type() === 'error') errors.push('ai ' + m.text()); });
-  await page.goto(`${dev}/?weapon=longsword&foeWeapon=zweihander&slowMo=0&camOpen=old${EXTRA}`, { waitUntil: 'networkidle' });
+  await page.goto(`${dev}/?weapon=longsword&foeWeapon=zweihander&slowMo=0${EXTRA}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 180000 });
   await page.evaluate(() => { game.config.ARENA.startGap = 2.6; game.config.ARENA.startHold = 0; });
   await page.getByText('여정 시작', { exact: true }).click();

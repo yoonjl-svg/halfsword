@@ -1,6 +1,6 @@
 // 샛별 가져오기 2차 확인 그림 (10/12, docs/import/saetbyeol_round2_2026-10-12.md) — 작게 몇 장만
 //  ① 리볼버: 마야(id samira, 권총) 대 나(롱소드) — 겨눔 레이저가 상반신 둘레에 있는가 · 콘솔 에러 0
-//  ② 내려찍기: 상대를 크게 넘어뜨리고(AI 멈춤) 탭 한 번 — 주소 스위치(?finishMode=power25 등)를 그대로 붙여 같은 장면을 견준다
+//  ② 내려찍기: 상대를 크게 넘어뜨리고(AI 멈춤) 탭 한 번 (즉사 대신 힘 — 늘)
 //  ③ voices.html: 듣기 화면이 뜨는가 (버튼 수 · 콘솔 에러 0)
 //  실행: vite 개발 서버(디렉터 5173·5174 말고 내 포트)를 띄운 뒤
 //    node tools/browser/sb_import2_shots.mjs http://127.0.0.1:5291 docs/handoff/sb_import2
@@ -54,7 +54,7 @@ if (!ONLY || ONLY === 'revolver') {
 }
 
 // ② 내려찍기 (같은 장면, 스위치만 다르게)
-for (const [tag, q] of (ONLY && ONLY !== 'plunge' ? [] : [['kill', ''], ['power25', '&finishMode=power25']])) {
+for (const [tag, q] of (ONLY && ONLY !== 'plunge' ? [] : [['power25', '']])) { // 즉사 판 'kill' · ?finishMode 는 11/17 걷음 (늘 power25)
   const { page, errors } = await open(`/?test=1&weapon=longsword&hero=player&foe=isolde&stage=cathedral${q}`);
   await fight(page);
   await waitSim(page, 2.4);

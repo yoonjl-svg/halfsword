@@ -24,7 +24,7 @@ const page = await ctx.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push('pageerror ' + e));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-const url = `${base}/?weapon=longsword&foeWeapon=longsword&skillNodes=all&slowMo=0&camOpen=old${EXTRA}`;
+const url = `${base}/?weapon=longsword&foeWeapon=longsword&skillNodes=all&slowMo=0${EXTRA}`;
 await page.clock.install();
 await page.goto(url, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 120000, polling: 200 });

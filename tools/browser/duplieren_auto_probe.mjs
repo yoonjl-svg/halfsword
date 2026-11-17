@@ -23,7 +23,7 @@ for (const [tag, extra] of CASES.filter(([t]) => !process.env.TAGS || process.en
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror ' + e));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`${base}/?weapon=longsword&foeWeapon=longsword&skillNodes=G7&slowMo=0&camOpen=old${extra}`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/?weapon=longsword&foeWeapon=longsword&skillNodes=G7&slowMo=0${extra}`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 240000 });
   await page.evaluate((gap) => { game.config.ARENA.startGap = gap; game.config.ARENA.startHold = 0; }, GAP);
   await page.getByText('여정 시작', { exact: true }).click();
