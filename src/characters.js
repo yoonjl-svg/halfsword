@@ -23,7 +23,6 @@ import { WANDER_EXCLUSIVE } from './wander_rules.js'; // 방랑에서만 나오�
 import { WEAPONS, WEAPON_LIST } from './weapons.js';
 import { getLook, CHARACTER_LOOK_VERSION } from './looks.js';
 import { AI_LEVELS, AI_PROFICIENCY } from './config.js'; // 변형의 실력 숫자를 원본 실효값에서 계산 · 숙련도 → 실력 숫자 이름 (config.js는 아무것도 import하지 않아 순환이 없다)
-import { profBody } from './prof_body.js'; // 숙련도별 몸 값 (11/17 E — 변형 +20 % 의 힘 출발점 · 시트에 힘이 없을 때)
 import { traditionOf, schoolOf } from './schools.js'; // 인물의 유파 = AI 가 실제로 싸우는 유파 — 꾸러미 persona.school 이 있으면 그 유파, 없으면 시트 무기의 유파 (숙련도 표 열쇠 — 10/13 · 10/29 15:5x)
 
 export const CHARACTERS = [
@@ -591,7 +590,7 @@ export function aiAtProficiency(c, p) {
   const persona = { ...c.ai.persona, proficiency: { [tradition]: p }, mainProficiency: p };
   if (c.mad && !c.appearanceOnly && !c.retainBaseStats) {
     const base = CHARACTERS.find((x) => x.id === c.variantOf);
-    persona.level = scaledLevel({ level, persona: base.ai.persona }, MAD_SCALE, p);
+    persona.level = scaledLevel({ level, persona: base.ai.persona }, MAD_SCALE);
   }
   return { level, persona };
 }
@@ -633,9 +632,10 @@ const MAD_LEVEL_RULES = {
   aggression: [0], // 실력이 아니라 기질(조급함)이다 — 올리면 낮의 약점 "먼저 무리하게 들어온다"만 커진다
   skill: [+1, 1], // 0~1 척도
 };
-function scaledLevel(ai, scale, p) {
-  // 힘의 출발점 (11/17 E): AI_LEVELS 에 힘 칸이 없어져 그 숙련도의 몸 값 PROF_BODY.strength (원본 시트에 힘이 있으면 그 값 — 지금 하인리히 1.15)
-  const base = { ...(AI_LEVELS[ai.level] || AI_LEVELS.normal), strength: profBody(p).strength, ...ai.persona?.level };
+function scaledLevel(ai, scale) {
+  // 힘 (11/18 — 사장님 '3. 곱하기'): 시트 힘은 숙련도별 몸 값 PROF_BODY.strength 에 곱하는 몫이라 출발점 = 원본 시트 힘(없으면 1 — 지금 하인리히 1.15) ×1.2 →
+  //  AI 몸 힘 = 표[숙련도] × 원본 시트 힘 × 1.2 (ai.js setLevel 이 표와 곱함 — 광기의 몫이 같은 곱 위에 얹힘)
+  const base = { ...(AI_LEVELS[ai.level] || AI_LEVELS.normal), strength: 1, ...ai.persona?.level };
   const out = {};
   for (const [key, v] of Object.entries(base)) {
     const [dir, cap = Infinity] = MAD_LEVEL_RULES[key] || [0]; // 표에 없는 새 키는 그대로 둔다 (새 실력 숫자가 생기면 여기에 방향을 적는다)

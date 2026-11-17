@@ -13,3 +13,14 @@ export function profBody(p) {
   const i = bodyIndex(p);
   return { vitality: PROF_BODY.vitality[i], strength: PROF_BODY.strength[i] };
 }
+
+/**
+ * 생사전 동시 대전 AI 의 몸 값 숙련도 [사장님 11/18 결정 '4. 권고대로'] — 1:1 과 같이 본 유파 숙련도 (main.js teamAiOf → persona.bodyProficiency):
+ *  인물 = 시트 숙련도(본 유파) · 무명 검객 = 메인 유파 칸(person.main — 없으면 표에서 가장 높은 칸) · 숙련도 표가 없으면 fallback.
+ *  몸 값에만 — 손에 든 유파 숙련도(고유 동작 · 실력 이름 …)는 그대로
+ */
+export function teamBodyProficiency(e, sheet, fallback) {
+  if (sheet) return sheet.ai.proficiency;
+  if (!e?.prof) return fallback;
+  return e.prof[e.person?.main] ?? Math.max(0, ...Object.values(e.prof));
+}

@@ -200,10 +200,12 @@ test('읽는 쪽 (사람 상대): 걸어 들어오는 사람의 보이는 자세
 });
 
 test('읽는 쪽 (AI 상대): 덮은 줄 = 늦게 본 상대 손 자세의 기본 줄 · 휘두름이 보이면 실제 칼로 고쳐 겨눔', () => {
-  // 몸 값은 11/17 E 전 숙련 6 그대로(힘 1.1 · 버티는 힘 1.1) — 읽기 시험이라 몸은 판 꼴만 정함. 숙련도별 몸 값(6 칸 2.2 · 1.7)이면 숙련 6 거울이 짧아져 씨앗 1 ~ 6 어디서도 '읽은 줄을 덮는 중 휘두름'이 안 나옴(기록 docs/strike/prof_body_2026-11-17.md §7)
-  const body6 = { level: { strength: 1.1 } };
-  const G0 = newRound({ seed: 4, walls: true, weapon: 'longsword', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 6, ...body6 }, persona2: { proficiency: 6, ...body6 }, difficulty: 'expert', difficulty2: 'expert' });
-  G0.player.vitality = G0.enemy.vitality = 1.1;
+  const G0 = newRound({ seed: 4, walls: true, weapon: 'longsword', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 6 }, persona2: { proficiency: 6 }, difficulty: 'expert', difficulty2: 'expert' });
+  // 몸 값은 11/17 E 전 숙련 6 그대로(힘 1.1 · 버티는 힘 1.1) — 읽기 시험이라 몸은 판 꼴만 정함 · 숙련도별 몸 값이 바뀌어도 판이 그대로이게 (기록 docs/strike/prof_body_2026-11-17.md §7)
+  for (const [a, f] of [[G0.ai, G0.enemy], [G0.ai2, G0.player]]) {
+    a.level = { ...a.level, strength: 1.1 };
+    f.strength = f.vitality = 1.1;
+  }
   try {
     const ai = G0.ai;
     ai.level = { ...ai.level, read: 1 };

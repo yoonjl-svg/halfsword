@@ -26,7 +26,7 @@ import { SHOP } from './config.js'; // 상점 — 왕을 이긴 판의 뿔피리
 import { awardKingHorn } from './lobby_progress.js';
 import { HORN_REWARD_LABEL } from './shop_text.js';
 import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, migrateItalianSlots, playerLetters, humanProficiency } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
-import { profBody } from './prof_body.js'; // 숙련도별 몸 값 (11/17 E — config PROF_BODY): 사람 몸의 힘 · 버티는 힘 = 익힌 칸으로 센 숙련도의 칸 (AI 는 ai.js setLevel)
+import { profBody, teamBodyProficiency } from './prof_body.js'; // 숙련도별 몸 값 (11/17 E — config PROF_BODY): 사람 몸의 힘 · 버티는 힘 = 익힌 칸으로 센 숙련도의 칸 (AI 는 ai.js setLevel)
 import { letterMul } from './skill_tree_data.js'; // 편지 — 카드 뽑기 유파 무게 (10/21)
 import { convertSeals } from './seal_coins.js'; // 이미 받은 인장 → 금화 한 번 — 판을 처음 연 때 어느 길이든 (아래 testRoute 다음 · 10/16 08:1x 인장 없앰)
 import { InputTrail } from './trail.js';
@@ -684,13 +684,14 @@ function teamAiOf(e) {
   const top = AI_PROFICIENCY.levels.length - 1;
   const p = e.prof ? Math.max(0, Math.min(top, Math.round(profOfEntry(e)))) : null;
   const school = getWeapon(e.weapon).id;
+  // 몸 값 숙련도 [사장님 11/18 결정 '4. 권고대로'] — 1:1 처럼 본 유파 숙련도(인물 = 시트 · 무명 검객 = 메인 유파 칸 · 없으면 가장 높은 칸) · 몸 값(config PROF_BODY)에만 · 그 밖 생사전 숙련도(손에 든 유파)는 그대로
   if (ch) {
     const base = p != null ? aiAtProficiency(ch, p) : ch.ai;
-    const persona = { ...base.persona, ...(e.prof ? { proficiency: { ...e.prof } } : {}), ...(e.weapon !== ch.weapon && !ch.noSwordsmanship ? { school } : {}) };
+    const persona = { ...base.persona, ...(e.prof ? { proficiency: { ...e.prof } } : {}), ...(e.weapon !== ch.weapon && !ch.noSwordsmanship ? { school } : {}), bodyProficiency: teamBodyProficiency(e, ch) };
     return { level: base.level, persona };
   }
   const q = p ?? AI_PROFICIENCY.ofLevel.normal;
-  return { level: AI_PROFICIENCY.levels[q] ?? 'normal', persona: { proficiency: e.prof ? { ...e.prof } : q, school } };
+  return { level: AI_PROFICIENCY.levels[q] ?? 'normal', persona: { proficiency: e.prof ? { ...e.prof } : q, school, bodyProficiency: teamBodyProficiency(e, null, q) } };
 }
 
 /** 동시 대전 판 세우기 (시간은 흐르지 않는다 — newRound 와 같음). mods = saengsaMods() */
