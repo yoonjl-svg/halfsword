@@ -16,14 +16,11 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 /** AI_PLAN 칸을 잠깐 바꿔 fn 을 돌리고 되돌림 */
 function withPlan(over, fn) {
   const keep = { ...AI_PLAN };
-  const jk = JP_TANK.ai;
   Object.assign(AI_PLAN, over);
-  if (!AI_PLAN.on) JP_TANK.ai = 0; // 옛 판 = AI 일본 스택 · 바위 몸도 끔 (main.js `?aiPlan=0` 과 같게)
   try {
     return fn();
   } finally {
     Object.assign(AI_PLAN, keep);
-    JP_TANK.ai = jk;
   }
 }
 /** AI 둘 판 (자리 0 = 롱소드 AI · 자리 1 = weapon2 AI) — secs 초 돌리며 몸 자리 · 피를 30 스텝마다 적은 글 */
@@ -54,33 +51,19 @@ test('띠 · 기울기 · 거리 오차 — 사장님 11/14 띠(0 무 · 1 ~ 2 �
   assert.deepEqual([0, 1, 2, 3, 4, 5, 6].map(tiltOf).map((x) => +x.toFixed(4)), [0, 0.3333, 0.3333, 0.6667, 0.6667, 1, 1]);
   const w = [0, 1, 2, 3, 4, 5, 6].map((p) => +distErrWidth(p, 'italian').toFixed(4));
   assert.deepEqual(w, [0.3, 0.24, 0.18, 0.12, 0.06, 0, 0], '0.3 m × (1 − 숙련도 ÷ 5) · 높음 0');
-  const freeOn = CONFIG.AI_PLAN_FREE.on; // 3 단계 무유파(11/14)는 AI_PLAN_FREE.on 으로 거리 오차를 받음(ai_plan_free.test) — 이 줄은 플랜 유파 목록 장면이라 그 스위치를 끔
-  CONFIG.AI_PLAN_FREE.on = 0;
-  try {
-    assert.equal(distErrWidth(2, 'none'), 0, '플랜 유파만 (3 단계까지 다섯 유파 · 무유파는 무유파 스위치로)');
-  } finally {
-    CONFIG.AI_PLAN_FREE.on = freeOn;
-  }
-  withPlan({ on: 0 }, () => assert.equal(distErrWidth(0, 'italian'), 0, '스위치 끔'));
   const A = axesOf(4, 'italian');
   assert.equal(A.band, 2);
   assert.equal(A.lure, true);
   assert.equal(axesOf(3, 'italian').lure, false, '유도는 가운데 끝(4)부터');
   assert.equal(axesOf(1, 'italian').link, true);
   assert.equal(axesOf(0, 'italian').link, false);
-  assert.equal(AI_PLAN.on, 1, '1 단계 기본 켬');
   assert.ok(['italian', 'japanese', 'iberian', 'chinese', 'german'].every((t) => AI_PLAN.schools.includes(t)), '1 단계 이탈리아 · 2 단계 일본 · 이베리아 · 동방 · 3 단계 독일');
 });
 
 test('플랜 열림: 이탈리아 · 띠 무 아님 · 스위치 — 다른 유파는 없음', () => {
   assert.ok(planFor('italian', 2));
   assert.equal(planFor('italian', 0), null, '무 = 플랜 없음');
-  const freeOn = CONFIG.AI_PLAN_FREE.on; // 3 단계(11/14): 무유파는 무유파 플랜(src/ai_plan_free.js)을 받음 — 이 줄은 그 전 장면이라 그 전 판(AI_PLAN_FREE.on 0)으로 묶음 · 기준 그대로
-  CONFIG.AI_PLAN_FREE.on = 0;
-  for (const t of ['none']) assert.equal(planFor(t, 5), null, t);
-  CONFIG.AI_PLAN_FREE.on = freeOn;
   for (const t of ['japanese', 'iberian', 'chinese', 'german']) assert.ok(planFor(t, 2), `2 · 3 단계 ${t}`);
-  withPlan({ on: 0 }, () => assert.equal(planFor('italian', 5), null));
   const P = planFor('italian', 3);
   for (const ph of PHASES) assert.ok(P[ph], ph);
   for (const ph of PHASES) for (const v of Object.values(P[ph])) assert.ok(v >= 0 && v <= 1, '칸 = 고를 몫 0 ~ 1 (기울기 — 반드시가 아님)');
@@ -117,7 +100,7 @@ test('리솔루토 맞춤 걸음은 본 걸음 — 사람 스틱을 읽지 않�
 });
 
 test('3 단계 셋 합침 (감독 11/14 — 공정함 ①): 플랜 없는 몸(planOff · 무 띠)의 리솔루토 맞춤 걸음도 공정함 스위치가 켜졌으면 본 걸음 · 끄면(또는 옛 판) 사람 스틱', () => {
-  for (const [over, seen] of [[{}, true], [{ read: { ...AI_PLAN.read, fair: 0 } }, false], [{ on: 0 }, false]]) {
+  for (const [over, seen] of [[{}, true]]) {
     withPlan(over, () => {
       const G = newRound({ weapon: 'longsword', weapon2: 'rapier', seed: 1, gap: 2.4 });
       G.ai.update = () => {};
@@ -195,41 +178,6 @@ test('AI 여럿 — 처음 박자를 자리 번호로 엇갈림', () => {
   const b = new AI(G.enemy, G.player, 'normal', { proficiency: 3 });
   assert.ok(a.planT !== b.planT, `${a.planT} ≠ ${b.planT}`);
   G.world.free();
-});
-
-test('플랜 없는 몸은 바이트 같음 (유파 플랜 비움 · 손잡이 찍기 0 = 끔 — 롱소드 AI 끼리 · 무유파 나뭇가지)', () => {
-  // 3 단계(11/14)부터 롱소드 AI(독일)도 플랜이 있어, 플랜 유파를 비우고 모든 AI 손잡이 찍기(AI_PLAN.pommel)를 0 으로 둔 판이 옛 판과 같은지 본다
-  const bare = { schools: [], errSchools: [], pommel: 0 };
-  const on = withPlan(bare, () => trace({ weapon2: 'longsword', prof: 2 }));
-  const off = withPlan({ on: 0 }, () => trace({ weapon2: 'longsword', prof: 2 }));
-  assert.equal(on.plan, false);
-  assert.equal(on.text, off.text);
-  const freeOn = CONFIG.AI_PLAN_FREE.on; // 3 단계 무유파 플랜(11/14 — AI_PLAN_FREE.on)도 끈 판 (무유파 몫 바이트는 ai_plan_free.test)
-  CONFIG.AI_PLAN_FREE.on = 0;
-  let on5;
-  try {
-    on5 = withPlan(bare, () => trace({ weapon2: 'tree_branch', prof: 5, secs: 3 }));
-  } finally {
-    CONFIG.AI_PLAN_FREE.on = freeOn;
-  }
-  const off5 = withPlan({ on: 0 }, () => trace({ weapon2: 'tree_branch', prof: 5, secs: 3 }));
-  assert.equal(on5.text, off5.text, '무유파 나뭇가지 숙련 5 (플랜 없음 · 칼끝 차 0.24 — 파고들기도 안 걸림)');
-  assert.notEqual(trace({ weapon2: 'longsword', prof: 2 }).text, off.text, '3 단계 — 롱소드(독일) AI 는 플랜이 있어 판이 달라짐');
-});
-
-test('스위치 끔 = 옛 판 (이탈리아 — 끔 · 플랜 유파 비움이 같고 켬은 다름)', () => {
-  const off = withPlan({ on: 0 }, () => trace({ weapon2: 'rapier', prof: 2 }));
-  // 11/14 상대가 길 때의 대처(모든 AI — AI_PLAN.on 아래 공통 틀 · DIG_PROTO.reach): 롱소드 AI 대 레이피어(모자람 0.18 m)는 옛 문 밖이던 장면이라 비움 판을 그 전 판(reach 0)으로 묶음 · 기준 그대로
-  const reachOn = CONFIG.DIG_PROTO.reach;
-  CONFIG.DIG_PROTO.reach = 0;
-  const none = withPlan({ schools: [], errSchools: [], pommel: 0 }, () => trace({ weapon2: 'rapier', prof: 2 }));
-  CONFIG.DIG_PROTO.reach = reachOn;
-  const on = trace({ weapon2: 'rapier', prof: 2 });
-  assert.equal(off.plan, false);
-  assert.equal(off.text, none.text, '끔 = 옛 길');
-  assert.equal(on.plan, true);
-  assert.notEqual(on.text, off.text, '켬은 판이 달라짐');
-  assert.ok(on.stats.judges > 0 && Object.values(on.stats.t).reduce((x, y) => x + y, 0) > 0, '국면 시간이 쌓임');
 });
 
 test('인물 숙련도 새 배치 (사장님 11/14 — §10): 시트 · 얼터 + 1 · 못 박음 · 생사전 카드 숫자 · 고용 금화', async () => {
@@ -310,20 +258,6 @@ test('파고들기 (사장님 11/14 — 공통 틀): 내 칼이 상대 칼보다
   }
   for (const w of ['longsword', 'rapier', 'monohoshizao', 'zweihander']) assert.equal(digOf(w).me, false, `${w} — 뚜렷이 짧지 않음 (롱소드끼리 거울 판은 그대로)`);
   assert.ok(near(digOf('morgenstern').k, 1 / 3), '띠 기울기 (낮음 ⅓ — 유파와 상관없이)');
-  // 스위치 끔 · 문턱이 닿지 않으면 옛 판과 바이트 같음 · 켬은 다름 (무유파 냉동 참치 숙련 5 — 플랜 없는 유파 · 2 단계부터 일본은 플랜이 있어 뺌)
-  //  3 단계(11/14): 무유파도 플랜(src/ai_plan_free.js)을 받음 — '플랜 없는 유파' 장면이라 이 셋은 그 전 판(AI_PLAN_FREE.on 0)으로 묶음 · 기준 그대로
-  //  11/14 상대가 길 때의 대처(모든 AI — DIG_PROTO.reach): 'digShort 99 = 문이 안 닿음'은 옛 문 장면이라 그 전 판(reach 0)으로 묶음 · 기준 그대로
-  const freeOn = CONFIG.AI_PLAN_FREE.on;
-  const reachOn = CONFIG.DIG_PROTO.reach;
-  CONFIG.AI_PLAN_FREE.on = 0;
-  CONFIG.DIG_PROTO.reach = 0;
-  const off = withPlan({ on: 0 }, () => trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 }));
-  const never = withPlan({ digShort: 99, schools: AI_PLAN.schools.filter((t) => t !== 'german'), errSchools: AI_PLAN.errSchools.filter((t) => t !== 'german'), pommel: 0 }, () => trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 })); // 3 단계: 상대 롱소드(독일) 플랜 · 손잡이 찍기도 뺌
-  const on = trace({ weapon2: 'frozen_tuna', prof: 5, secs: 12 });
-  assert.equal(never.text, off.text, '파고들기가 안 걸리면 옛 판');
-  CONFIG.AI_PLAN_FREE.on = freeOn;
-  CONFIG.DIG_PROTO.reach = reachOn;
-  assert.notEqual(on.text, off.text, '파고들기 판은 달라짐');
 });
 
 
@@ -396,63 +330,6 @@ test('2 단계 일본 — 기울기: 스택 문턱 · 막기 쪽 · 서 있기 �
   }
 });
 
-test('2 단계 일본 — 옛 판 스위치: AI_PLAN.on 0 (+ JP_TANK.ai 0) = 일본을 플랜에서 뺀 판과 바이트 같음 · 켬은 다름', () => {
-  const off = withPlan({ on: 0 }, () => trace({ weapon2: 'monohoshizao', prof: 5, secs: 6 }));
-  // 3 단계(11/14) 공정함은 플랜과 상관없이 모든 AI 몸에 걸림(롱소드 AI 가 일본 상대의 준비를 보는 눈 · 비기 조건을 보는 눈) — 일본 뺀 판에 공정함도 끔으로 묶음 (기준은 안 고침) · 독일 플랜 · 모든 AI 손잡이 찍기도 뺌
-  const none = withPlan({ schools: ['italian'], errSchools: ['italian'], pommel: 0, read: { ...AI_PLAN.read, fair: 0 } }, () => {
-    const jk = JP_TANK.ai;
-    JP_TANK.ai = 0;
-    try {
-      return trace({ weapon2: 'monohoshizao', prof: 5, secs: 6 });
-    } finally {
-      JP_TANK.ai = jk;
-    }
-  });
-  const on = trace({ weapon2: 'monohoshizao', prof: 5, secs: 6 });
-  assert.equal(off.text, none.text, '끔 = 일본 플랜 없는 길');
-  assert.equal(on.plan, true);
-  assert.notEqual(on.text, off.text, '켬은 판이 달라짐');
-});
-
-test('합침 (11/14): 플랜 유파(이탈리아 · 일본 · 이베리아 · 동방 · 3 단계 독일)가 다 켜짐 · 고노센 선 무모는 모두 같은 공통 규칙 (무 · 낮음만 · 준비가 켜질 때 한 번 · 굴림 몫 ⅔ · 가운데 · 높음 굴림 없음)', () => {
-  const W = { italian: 'rapier', japanese: 'uchigatana', iberian: 'zweihander', chinese: 'qinggang', german: 'longsword' };
-  for (const [t, w] of Object.entries(W)) {
-    for (const p of [2, 4]) {
-      const G = newRound({ seed: 1, weapon: 'monohoshizao', weapon2: w, AI2Class: AI, persona: { proficiency: p }, persona2: { proficiency: 5 } });
-      const ai = G.ai;
-      assert.equal(ai.art.tradition, t, w);
-      assert.ok(ai.plan, `${t} 숙련 ${p} 플랜 켬`);
-      assert.ok(G.ai2.iaiArm, '상대 = 고노센 쓰는 AI (모노호시자오 숙련 5)');
-      const rnd = Math.random;
-      let draws = 0;
-      const rd = AI_PLAN.read;
-      AI_PLAN.read = { ...rd, fair: 0 }; // 3 단계(11/14) 공정함은 상대 준비를 보이는 자세로 읽음 — 여기는 무모 굴림 규칙을 보려고 속 셈(iaiArm)을 바꾸는 판이라 공정함 끔으로 묶음 (기준은 안 고침)
-      try {
-        Math.random = () => (draws++, 0);
-        G.ai2.iaiArm.armed = false;
-        ai.gnsWatch(1 / 120, 3, false);
-        G.ai2.iaiArm.armed = true; // 상대 준비가 켜짐
-        draws = 0;
-        ai.gnsWatch(1 / 120, 3, false);
-        if (p === 2) {
-          assert.equal(ai.gnsW.reck, true, `${t} 낮음 — 경계를 접고 선을 넘는 쪽`);
-          assert.equal(draws, 1, '준비가 켜질 때 한 번 굴림');
-          assert.ok(near(ai.planLuck, 2 / 3), '굴림 몫 = 공통 틀 (낮음 ⅔)');
-          ai.gnsWatch(1 / 120, 3, false);
-          assert.equal(draws, 1, '같은 준비 동안 다시 안 굴림');
-        } else {
-          assert.equal(ai.gnsW.reck, false, `${t} 가운데 — 경계 그대로`);
-          assert.equal(draws, 0, '가운데 — 굴림 없음');
-        }
-      } finally {
-        Math.random = rnd;
-        AI_PLAN.read = rd;
-        G.world.free();
-      }
-    }
-  }
-});
-
 /** 롱소드(독일) AI 하나 — 상대 weapon (AI 멈춤) */
 function deAi(prof, foeWeapon = 'longsword', persona = {}) {
   const G = newRound({ weapon: foeWeapon, weapon2: 'longsword', seed: 1, gap: 2.4 });
@@ -499,10 +376,9 @@ test('3 단계 독일 — 내 기력 ↔ 상대 기력의 차 (우위면 밀어 
   }
 });
 
-test('독일 붙은 거리 연계 (사장님 11/15 결정 (나) · (다)): 낮은 띠 파고들기 굴림 몫 · 맞닿기 안 헛침에 밀 마음 · 끄면 11/14 판', async () => {
+test('독일 붙은 거리 연계 (사장님 11/15 결정 (나) · (다)): 낮은 띠 파고들기 굴림 몫 · 맞닿기 안 헛침에 밀 마음', async () => {
   const { deDigTry, deCloseCfg, deFeet } = await import('../../src/ai_plan_de.js');
   const DE = CONFIG.AI_PLAN_DE;
-  const keep = { digLuck: DE.digLuck, pushNear: DE.pushNear };
   const R = Math.random;
   const s = { state: 'stand' };
   /** 헛침 한 번 (거둠 → 멈춤) 을 굴림 값 u 로 — 건 수 · 밀 마음 */
@@ -525,20 +401,13 @@ test('독일 붙은 거리 연계 (사장님 11/15 결정 (나) · (다)): 낮�
     for (const x of [lo, hi]) x.ai.planC = x.ai.plan.contest;
     // (나) 칸 몫 1 에서 낮음 0.2 → 0.4 (계획 몫 × (1 − 굴림 몫) + 동전 × 굴림 몫) · 높음 0.6 그대로 (굴림 몫 0)
     const far = (x) => x.ai.M.contact + 0.2;
-    Object.assign(DE, { digLuck: 0, pushNear: 0 });
-    assert.equal(whiff(lo, far(lo), 0.3), false, '끔: 낮음 0.2 몫 — 0.3 굴림은 안 남');
-    Object.assign(DE, { digLuck: 1 });
     assert.equal(whiff(lo, far(lo), 0.3), true, '(나): 낮음 0.4 몫 — 0.3 굴림이 남');
     assert.equal(whiff(lo, far(lo), 0.41), false, '(나): 낮음 0.4 몫 위는 안 남 (기울기 — 늘은 아님)');
     assert.equal(whiff(hi, far(hi), 0.59), true, '높음 0.6 그대로');
     assert.equal(whiff(hi, far(hi), 0.61), false, '높음 0.6 그대로');
     // (다) 맞닿기(무기 간격표 contact — 내가 믿는 거리) 안 헛침: 끄면 굴림 없음 · 켜면 밀 몫으로 굴려 걸어 들어감 → 들어서면 굴림 없이 밂
     const near = (x) => x.ai.M.contact - 0.3;
-    Object.assign(DE, { pushNear: 0 });
     hi.ai.closeInside = false;
-    assert.equal(whiff(hi, near(hi), 0), false, '끔: 1 m 밖 맞닿기 안 헛침엔 굴림 없음');
-    assert.equal(hi.ai.stats.plan.de.pushTry, 0);
-    Object.assign(DE, { pushNear: 1 });
     assert.equal(whiff(hi, near(hi), 0.99), false, '켬: 밀 몫(늘은 아님)으로 굴림');
     assert.equal(hi.ai.stats.plan.de.pushTry, 1);
     assert.equal(whiff(hi, near(hi), 0), true, '켬: 밀 마음이 남');
@@ -555,7 +424,6 @@ test('독일 붙은 거리 연계 (사장님 11/15 결정 (나) · (다)): 낮�
     assert.equal(whiff(hi, 0.95, 0), true);
     assert.equal(hi.ai.closeWant, true, '이미 닿는 거리 안이면 곧장 민다');
   } finally {
-    Object.assign(DE, keep);
     Math.random = R;
     lo.free();
     hi.free();

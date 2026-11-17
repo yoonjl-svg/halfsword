@@ -76,7 +76,7 @@ export function airOne({ ws = 'zweihander', next = ['zornhauL', 'zornhau'], v = 
   G.ai.update = () => E.move.set(0, 0);
   const uq = new PlayerUniqueAssist(P, { names: kit.unique });
   // repos: 다음 칼 시작 자리로 손가락을 옮긴 뒤 긋기(이어 돌리기가 없는 판 — 사람이 하던 대로 · school_balance 봇 strokeQ 와 같은 손: 자세로 돌아가는 빠르기 · 4 프레임 멈춤) · 아니면 곧장 그 방향만
-  const re = repos ?? !IB_LINK.on;
+  const re = repos ?? false;
   const q = [];
   const z = TECH_BY_NAME.zornhau;
   for (let i = 0; i < Math.round(0.6 / FRAME); i++) q.push([0, 0]);

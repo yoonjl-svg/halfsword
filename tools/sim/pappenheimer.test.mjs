@@ -11,7 +11,7 @@ import { weaponPhysics } from '../../src/weapon_class.js';
 import { traditionOf, schoolOf } from '../../src/schools.js';
 import { resolveSwordArt } from '../../src/sword_art.js';
 import { LIB_PARRY, HAND_GRIPS } from '../../src/frames.js';
-import { MEASURED, CUT_TIME_30, italianMeasureRows } from '../../src/weapon_measured.js';
+import { MEASURED, CUT_TIME_30, ITALIAN_THRUST } from '../../src/weapon_measured.js';
 import { THRUST } from '../../src/config.js';
 import { duelOneHandMult } from '../../src/combat.js';
 import { newRound, DT, AI } from './harness_m.mjs';
@@ -105,10 +105,9 @@ test('유파 · AI: 이탈리아 — 자세표 · 쥠 · 빈팔 · 막기 · 동
   const s = schoolOf('pappenheimer');
   assert.equal(s.weapon, 'pappenheimer');
   assert.equal(s.tradition, 'italian');
-  // 10/25 22:1x 이탈리아 간격 판 THRUST.itMeasure (기본 'full' — 찌르기 잣대 줄 · 'old' = 들일 때 잰 줄): 판에 맞는 줄인지 본다
-  const R = italianMeasureRows(THRUST.itMeasure).pappenheimer;
-  if (THRUST.itMeasure === 'old') assert.deepEqual(R.row, [1.51, 1.66, 1.20, 0.26]);
-  if (THRUST.itMeasure === 'full') assert.deepEqual(R.row, [1.69, 1.94, 1.34, 0.41]);
+  // 10/25 22:1x 이탈리아 간격 줄 (찌르기 잣대 줄)
+  const R = { row: ITALIAN_THRUST.MEASURED.pappenheimer, cut: ITALIAN_THRUST.CUT_TIME_30.pappenheimer };
+  assert.deepEqual(R.row, [1.69, 1.94, 1.34, 0.41]);
   assert.deepEqual(MEASURED.pappenheimer, R.row);
   assert.equal(CUT_TIME_30.pappenheimer, R.cut);
   assert.deepEqual(s.measure, { contact: R.row[0], reach: R.row[1], clinch: R.row[2], cutTime: R.cut });

@@ -15,9 +15,8 @@ const D = await import('../../src/skill_tree_data.js');
 const S = await import('../../src/skill_tree_store.js');
 const { readProgress, recordAcquisition, PROGRESS_KEY } = await import('../../src/lobby_progress.js');
 const { SECRET, STAMINA, GAIT, LETTER, UNIQUE_ASSIST, IB_FLOW } = await import('../../src/config.js');
-// 손목 치기 떨구기 10/24 판 시험들(사람만 굴림 · 칼 없는 AI 는 물러남)은 그때 규칙으로 — 11/05 기본 AI 손목 치기 떨굼(koteDrop.ai 1) · 줍기(PICKUP)는 tools/sim/kote_pickup.test.mjs 가 본다
+// 손목 치기 떨구기 10/24 판 시험들(사람만 굴림 · 칼 없는 AI 는 물러남)은 그때 규칙으로 — 11/05 기본 AI 손목 치기 떨굼(koteDrop.ai 1) (줍기는 tools/sim/kote_pickup.test.mjs)
 UNIQUE_ASSIST.koteDrop.ai = 0;
-{ const { PICKUP } = await import('../../src/config.js'); PICKUP.mode = 0; PICKUP.ai = 0; }
 const { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_DRAW, RETIRED_WEAPONS } = await import('../../src/weapons.js');
 const { traditionOf, TRADITIONS } = await import('../../src/schools.js');
 const { PLAYER_UNIQUE, PlayerUniqueAssist, strokeHitK, enhancedMoves } = await import('../../src/unique_assist.js');
@@ -755,29 +754,6 @@ test('실제 몸 — 칼 떨구기 판정(10/24 12:3x 판정 완화): cut = 칼�
     P.skill.uniq = null;
   });
   assert.deepEqual(log.map((e) => e.kind), ['sword', 'cut']);
-});
-test('실제 몸 — 칼 떨구기 뒤: 떨어진 칼은 땅으로 (값이 깨지지 않음) · 칼 없는 AI 는 치지 않고 물러남 · 다른 쪽 칼에는 판정 없음', () => {
-  const g = newRound({ weapon: 'monohoshizao', weapon2: 'longsword', seed: 4 });
-  try {
-    for (let i = 0; i < 360; i++) g.step(); // 판 시작 정지 뒤
-    const E = g.enemy, K = UNIQUE_ASSIST.koteDrop, p0 = K.p;
-    g.player.artTech = 'kote';
-    K.p = 1; try { g.combat.koteCheck(g.player, E, 'farmS', { type: 'cut', severity: 0.2 }); } finally { K.p = p0; }
-    g.player.artTech = null;
-    assert.equal(E.armed, false);
-    let attack = 0, minY = Infinity;
-    for (let i = 0; i < 480; i++) {
-      g.step();
-      const p = E.sword.translation(), v = E.sword.linvel();
-      assert.ok([p.x, p.y, p.z, v.x, v.y, v.z].every(Number.isFinite), 'NaN');
-      minY = Math.min(minY, p.y);
-      if (g.ai.mode === 'attack') attack++;
-    }
-    assert.equal(E.armed, false, '줍기 없음');
-    assert.ok(minY < 0.3, `칼이 땅으로 ${minY}`);
-    assert.equal(attack, 0, '칼 없는 AI 는 치지 않음');
-    assert.equal(E.alive, true);
-  } finally { g.world.free(); }
 });
 test('실제 몸 — 고유 공격 · 비기: 익힌 칸의 기술만 · 비기는 비기 칸(열린 유파만)', () => {
   const g = round('longsword', kitOf('german', 'G1', 'G8'), 9);

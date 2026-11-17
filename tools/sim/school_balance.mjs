@@ -163,7 +163,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     }
     return { kind: 'chain', cuts, k: 0, q: [], wait: null, want: 'chain', base: cuts[0] };
   };
-  const linkOn = () => !!uq.cingirE && !!CONFIG.IB_LINK.on && CONFIG.SECRET.iberianSecret === 'altib';
+  const linkOn = () => !!uq.cingirE && CONFIG.SECRET.iberianSecret === 'altib';
   const chainQ = (name, first) => {
     const T = TECH_BY_NAME[name];
     const v = 5 + rnd();
@@ -475,7 +475,6 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     const atkWin = !!W.open && !W.stickOwns() && !W.circleOwns() && !W.holdOwns();
     const stickGo = !!W.spinStick(FR, input.move, !secBusy && P.alive && closeGate.secretOk);
     const circleGo = !!W.spinCircle(FR, d, hand, !secBusy && P.alive && closeGate.secretOk);
-    if (uq.cingirE && !closeGate.near && uq.circleTick(FR, d, hand, !secBusy && P.alive)) secBusy = true; // 11/11 싱지르 특수 공격 (main.js 와 같은 차례)
     const gilReady = !!W.S?.do?.gilmok && !!W.gilArm?.armed;
     const secArm = !(CONFIG.SECRET.secretHold && (P.skill.tap || P.skill.pom));
     if ((((atkWin || gilReady) && (taps > 0 || (swipe && !W.S?.do?.tapOnly))) || stickGo || circleGo) && !secBusy && P.alive && secArm && closeGate.secretOk) {

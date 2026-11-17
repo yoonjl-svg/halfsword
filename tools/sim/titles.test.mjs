@@ -42,26 +42,6 @@ const enc = (foe) => () => ({ stage: 'poseidon', foe, foeWeapon: 'tizona' });
 const unlockWander = () => { for (const s of STAGE_ORDER) P.recordCampaignStage(s, STAGE_ORDER); };
 const fight = (foe, win) => { P.ensureWanderRun(enc(foe)); return P.settleWander(win, () => 10); };
 
-test('호칭 표: 유파 다섯 = 비기 원전 책 이름 + 계승자 (04:0x 줄인 이름) · 소드마스터 · 방랑자 · 왕 시해자 · 정복자 · 도살자 · 대부호 · 나무꾼 · 이름은 표 하나', (t) => {
-  // 11/14 그때 판으로 묶음 (B7 오의 출처가 이어 돌리기 글 — 피게이레두 『Memorial …』로 바뀜 · `?ibLink=0` 판은 고디뉴 『Arte de Esgrima』 그대로 B7_WINDMILL · 호칭 이름은 그대로 · 기준은 안 고침 — docs/strike/ib_link_2026-11-14.md §11)
-  const linkK = IB_LINK.on;
-  IB_LINK.on = 0;
-  t.after(() => (IB_LINK.on = linkK));
-  assert.deepEqual(R.TITLE_NAMES, {
-    'school:german': '캄프페히텐 계승자', 'school:italian': '스케르모 계승자', 'school:iberian': '에스그리마 계승자', 'school:japanese': '오륜서 계승자', 'school:chinese': '무비지 계승자',
-    swordmaster: '소드마스터', wander: '방랑자', regicide: '왕 시해자', conqueror: '정복자', butcher: '도살자', tycoon: '대부호', woodcutter: '나무꾼',
-  });
-  assert.equal(Object.values(R.TITLE_NAMES).includes('여행자'), false, "'여행자'는 호칭이 아님 (10/24)"); assert.equal(R.NO_TITLE_TEXT, '호칭 없음');
-  assert.deepEqual(Object.keys(R.TITLE_NAMES).slice(0, 5), D.TREE_SCHOOLS.map((s) => `school:${s}`));
-  // 원전 = 그 유파 비기 칸의 출처 줄 책 (skill_tree_data.js NODE_LORE src)
-  const book = { german: 'Kampffechten', italian: 'Lo Schermo', iberian: 'Arte de Esgrima', japanese: '오륜서', chinese: '무비지' };
-  // 11/11 이베리아 자리 바꿈: 호칭을 지은 원전 칸은 전 비기 칸 B7 싱지르(고디뉴 『Arte de Esgrima』) — 비기가 된 B4 알티바슈 포르트의 원전은 피게이레두 『Memorial …』라 호칭 이름을 바꿀지 사장님께 여쭘(docs/strike/ib_swap_2026-11-11.md)
-  const titleNode = (s) => (s === 'iberian' ? D.nodeOf(s, 'B7') : D.nodesOf(s).find((n) => n.cat === 'secret'));
-  for (const s of D.TREE_SCHOOLS) assert.match(titleNode(s).src, new RegExp(`『${book[s]}』`), s);
-  assert.equal(R.TITLE.countsLevel, true); assert.equal(R.TITLE.conquerWins, 10); // 사장님 10/29 18:2x '10연승' assert.equal(R.TITLE.butcherHeads, 100); assert.equal(R.TITLE.tycoonCoins, 10000);
-  assert.deepEqual([...R.KING_FOES], ['artoria', 'roland', 'bernardo']);
-});
-
 test('유파 호칭: 칸을 모두 익힌 저장에 얻음(칸을 산 저장과 같은 저장) · 하나 모자라면 없음 · 닫힌 칸은 뺌(10/24 일본 J8 열림 — 이제 듦) · 편지 · 곁가지는 듦', () => {
   fresh();
   assert.deepEqual(R.titleNodes('german'), D.nodesOf('german').map((n) => n.id)); assert.equal(R.titleNodes('german').length, 12); // 독일 칸 모두 (편지 G11 포함) · [사장님 11/14 결정] G12 칼 씨름도 듦 (전 11)

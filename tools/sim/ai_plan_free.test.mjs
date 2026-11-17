@@ -6,18 +6,8 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { planFor, distErrWidth } from '../../src/ai_plan.js';
 import { FREE_PLAN, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freePress, freeBackK } from '../../src/ai_plan_free.js';
-const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { AI_PLAN_FREE: F, AI_PLAN } = CONFIG;
-function withFree(over, fn) {
-  const keep = { ...F };
-  Object.assign(F, over);
-  try {
-    return fn();
-  } finally {
-    Object.assign(F, keep);
-  }
-}
 function withRandom(v, fn) {
   const r = Math.random;
   Math.random = () => v;
@@ -70,18 +60,10 @@ function fakeAi({ k = 1, lk = 0, high = false, d = 1.9 } = {}) {
 }
 const S = { state: 'stand', armed: true };
 
-test('무유파 플랜 기본 켬 · 값은 사다리 칸 · 무유파만 · 끄면 판이 바이트 같음 (값을 바꿔도 안 읽음)', () => {
-  assert.equal(F.on, 1, '사장님 11/14 \'독일과 함께 무유파 무모함 켜\'');
+test('무유파 플랜 · 값은 사다리 칸 · 무유파만', () => {
   assert.ok([0.3, 0.6].includes(F.beatOut) && [0.3, 0.6].includes(F.beatGap), '걸음 사다리');
   for (let p = 0; p <= 6; p++) assert.equal(planFor('none', p), FREE_PLAN, `무유파 숙련 ${p}`);
-  assert.equal(withFree({ on: 0 }, () => planFor('none', 3)), null, '끄면 플랜 없음');
   assert.ok(Math.abs(distErrWidth(0, 'none') - AI_PLAN.errMax) < 1e-9 && distErrWidth(5, 'none') === 0, '거리 오차 — 무 0.3 · 높음 0');
-  assert.equal(withFree({ on: 0 }, () => distErrWidth(0, 'none')), 0, '끄면 거리 오차 없음');
-  const a = withFree({ on: 0 }, () => trace());
-  const b = withFree({ on: 0, beat: 1, wild: 1, beatOut: 0.6, beatGap: 0.6, go: 1, press: 1, back: 1 }, () => trace());
-  assert.equal(a.text, b.text, '스위치가 꺼져 있으면 값은 판에 안 닿음');
-  assert.equal(a.free, null, '재기 칸도 안 생김');
-  assert.equal(a.plan, false);
 });
 
 test('무 띠(숙련 0)에도 굴림 — 기울기 0 · 굴림 몫 1 / 높음은 기울기 1 · 굴림 0 / 다른 유파 몸은 무유파 자리를 안 탐', () => {
@@ -182,20 +164,3 @@ test('쳐낸 뒤 건너 들어감(몫 = planK × go + 굴림 몫 × coin) · 그
   assert.equal(freeBackK(b), 1);
 });
 
-test('판에서 쓰임 — 모르겐슈테른 AI 숙련 5 는 쳐내기(계획) · 건너 들어감 · 숙련 0 은 막 휘두름만 (대 롱소드 AI · 씨앗 1 ~ 2 · 30 s)', (t) => {
-  pinArc0(t); // 11/15 그때 판(① 끔 — 둥근 칼 읽기 · 칼끝 틈이 판을 바꿈)으로 묶음 · 기준 그대로
-  const sum = (prof) => {
-    const T = { beat: 0, wild: 0, go: 0, goStrike: 0 };
-    for (const seed of [1, 2]) {
-      const r = trace({ weapon2: 'morgenstern', prof, secs: 30, seed });
-      for (const k in T) T[k] += r.free[k];
-    }
-    return T;
-  };
-  const hi = sum(5);
-  assert.ok(hi.beat > 0 && hi.go > 0, JSON.stringify(hi));
-  assert.equal(hi.wild, 0, '높음은 굴림 몫 0');
-  const lo = sum(0);
-  assert.equal(lo.beat, 0, '무 띠는 계획 몫 0');
-  assert.ok(lo.wild > 0, JSON.stringify(lo));
-});

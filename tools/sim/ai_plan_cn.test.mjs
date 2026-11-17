@@ -7,7 +7,6 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI, seedRandom } from './harness_m.mjs';
 import { planFor, distErrWidth, PHASES, SCHOOL_PLAN } from '../../src/ai_plan.js';
 import { cnTechW, cnNeed, cnHoldM, cnCircle, cnMeet, cnTick, cnFeint, cnNext, cnWill, cnWant } from '../../src/ai_plan_cn.js';
-const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { AI_PLAN, UNIQUE_ASSIST: UA, realS } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -57,7 +56,7 @@ function trace({ weapon2, prof = 2, secs = 4, seed = 2 } = {}) {
 }
 
 
-test('허리 베기 몫 — 띠 기울기 × 칸 · 다른 칼 · 쓰러진 상대 · 지친 국면은 그대로 · 기술 고르기에서 실제로 늚', () => {
+test('허리 베기 몫 — 띠 기울기 × 칸 · 다른 칼 · 쓰러진 상대 · 지친 국면은 그대로', () => {
   const lo = cnAi(2);
   const hi = cnAi(5);
   try {
@@ -91,32 +90,6 @@ test('허리 베기 몫 — 띠 기울기 × 칸 · 다른 칼 · 쓰러진 상�
     lo.free();
     hi.free();
   }
-  // 실제 기술 고르기: 같은 굴림 차례로 동방 몫 켬 · 끔 — 허리 베기 계열 몫이 늚
-  const G = newRound({ walls: true, seed: 2, weapon: 'longsword', weapon2: 'hwando', AI2Class: AI, persona: { proficiency: 5 }, persona2: { proficiency: 2, planOff: true } }); // 3 단계(11/14): 상대 롱소드 AI 는 옛 판(planOff)
-  while (G.t < 2) G.step();
-  const ai = G.ai;
-  const s = ai.lastSeen;
-  const count = () => {
-    seedRandom(7);
-    let w = 0;
-    for (let i = 0; i < 400; i++) if (UA.yaojiBleed.techs.includes(ai.pickTech(s, 'patience')?.name)) w++;
-    return w;
-  };
-  const rd = AI_PLAN.read;
-  AI_PLAN.read = { ...rd, on: 0 }; // 3 단계(11/14) 수 읽기(독일 상대엔 칼끝 밖 큰 칼을 덜)가 같은 기술 고르기에 겹쳐 — 동방 몫만 보려고 읽기 끔으로 묶음 (기준은 안 고침)
-  let on, off;
-  try {
-    on = count();
-    const keep = ai.planCn;
-    ai.planCn = undefined;
-    off = count();
-    ai.planCn = keep;
-  } finally {
-    AI_PLAN.read = rd;
-  }
-  G.world.free();
-  assert.ok(on > off, `허리 베기 ${on} > ${off} / 400`);
-  assert.ok(on < 400, '늘 그렇지는 않음 (기울기)');
 });
 
 test('겹이 쌓이면 몰아치기를 줄이고 돌며 지치게 — 상대가 지치면 · 안 치는 상대면 거둠 · 큰 틈은 그대로', () => {

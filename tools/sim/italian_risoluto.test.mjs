@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG, THREE } from './harness_m.mjs';
 import { coverDist, bladesNear, RisolutoWatch, lungeGap, lungeGapOk, foeStep, mirrorOk } from '../../src/italian_risoluto.js';
-import { MEASURED, risolutoContact } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 THRUST.itMeasure (old 기본 · contact · full — IT_MEASURE=…)
+import { MEASURED } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 THRUST.itMeasure (old 기본 · contact · full — IT_MEASURE=…)
 import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
 import { playerSecretDef, TRADITIONS } from '../../src/schools.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
@@ -366,8 +366,8 @@ test('10/24 13:2x 런지 간격 조건 (사장님 \'그럼 오히려 간격이 �
   };
   // 최소 간격 = 무기 실측 맞닿기 거리 measure.contact (13:4x 대안 ③ '맞닿는 거리만 막기' — 13:2x 첫 식 clinch + 앞발은 버림) — 새 수 없음
   // 'contact' 판(맞닿음만 찌르기 잣대 값)은 리솔루토만 지금 맞닿음 그대로(risolutoContact) · 'full' 판은 새 맞닿음 1.72 · 1.64 를 따름
-  for (const w of ['rapier', 'dartagnan', 'balisarda', 'pappenheimer']) at(w, 2.5, (p) => assert.equal(lungeGap(p), risolutoContact(w) ?? p.swordArt.measure.contact, w));
-  const C = CONFIG.THRUST.itMeasure === 'full' ? { rapier: 1.72, dartagnan: 1.64 } : { rapier: 1.54, dartagnan: 1.39 };
+  for (const w of ['rapier', 'dartagnan', 'balisarda', 'pappenheimer']) at(w, 2.5, (p) => assert.equal(lungeGap(p), p.swordArt.measure.contact, w));
+  const C = { rapier: 1.72, dartagnan: 1.64 };
   at('rapier', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - C.rapier) < 0.01, `레이피어 ${lungeGap(p)}`));
   at('dartagnan', 2.5, (p) => assert.ok(Math.abs(lungeGap(p) - C.dartagnan) < 0.01, `달타냥 ${lungeGap(p)}`));
   // 가까움(1.3 m — 맞닿기 1.54 안): 창 조건이 차도 창이 안 뜸 (금색 '!' 없음) · 그 밖(2.4 m): 뜸
@@ -471,54 +471,12 @@ test('10/25 칼끝 얽힘 창 (사장님 \'칼끝이 얽히자마자 그 순간�
   withCfg(OLD, () => { const b = tipTip(); assert.equal(new RisolutoWatch(b.me, b.foe).tick(DT, true), null); });
 });
 
-// 11/14 그때 판으로 묶음 (기준은 안 고침 — docs/strike/it_outbox_2026-11-14.md §6): 이 장면은 칼 우위(설계안 A — config IT_OUTBOX.edgeRiso · 리솔루토 창은 칼 우위 동안만) 전 판의 창 규칙을 잰다 —
-//  칼 우위를 켜 둔 판에선 칼끝 돌려 빼기 · 막아찌르기 · 비껴서며 찌르기 · 헛누름이 든 적 없는 이 몸에 창이 안 열려(그것이 새 규칙) 첫 닿음 창을 잴 수 없음. 새 규칙은 it_outbox.test.mjs
-test('10/25 칼끝 얽힘 창 · 실제 몸: 맞닿기 거리 밖이면 첫 닿음에 금색 창 · 맞닿기 거리 안이면 그대로 막힘(간격 조건 — ?risoGap=0 이면 뜸) · ?risoTouch=0 이면 0.6 s 뒤 (11/14 칼 우위 전 판 — edgeRiso 0)', () => keep(CONFIG.IT_OUTBOX, 'edgeRiso', 0, () => {
-  const at = (w, gap, fn) => {
-    const g = newRound({ weapon: w, weapon2: 'longsword', gap, seed: 9 });
-    const p = g.player, e = g.enemy;
-    g.ai.update = () => {}; p.foe = e; e.foe = p;
-    try {
-      g.step();
-      const ps = new PlayerSecretWatch(p, e);
-      p.stickX = 0; p.stickY = 1; // 스틱 앞
-      e.move.set(0, -1); // 상대가 물러서는 중 (10/28 상대 걸음에 맞춰 — AI 를 멈춰 두어 걸음 의도를 손으로)
-      const touch = () => { p.feel.touching = true; }; // 칼끼리 맞닿음 사건 (combat.js 가 스텝마다 적는 것 — 여기선 물리 스텝 없이 셈만)
-      return fn(p, ps, touch);
-    } finally { g.world.free(); }
-  };
-  at('rapier', 2.2, (p, ps, touch) => {
-    assert.ok(p.foeDistance() > lungeGap(p), `${p.foeDistance()}`);
-    assert.equal(ps.open, null);
-    touch(); ps.update(DT, false);
-    assert.equal(ps.open?.ctx?.path, 'touch', '첫 닿음 스텝에 창');
-    assert.ok(Math.abs(ps.open.t - SECRET.playerWindow) < 1e-9, '창 0.6 s 그대로');
-    const o = ps.fire();
-    assert.equal(o?.S?.name, 'andareRisoluto', '창 안의 탭 = 비기');
-  });
-  at('rapier', 1.3, (p, ps, touch) => {
-    assert.equal(lungeGapOk(p), false);
-    touch(); ps.update(DT, false);
-    assert.equal(ps.open, null, '맞닿기 거리 안 — 첫 닿음이어도 창 없음');
-    assert.equal(ps.riso.gapBlocked, 1);
-    assert.equal(ps.riso.opens.touch, 1);
-  });
-  withCfg({ risolutoGap: 0 }, () => at('rapier', 1.3, (p, ps, touch) => { touch(); ps.update(DT, false); assert.equal(ps.open?.ctx?.path, 'touch', '간격 조건 끔'); }));
-  withCfg(HOLD1024, () => at('rapier', 2.2, (p, ps, touch) => {
-    touch(); ps.update(DT, false);
-    assert.equal(ps.open, null, '10/24 판 — 첫 닿음엔 없음');
-    let k = 1;
-    for (; k < 200 && !ps.open; k++) { touch(); ps.update(DT, false); }
-    assert.equal(ps.open?.ctx?.path, 'hold');
-    assert.ok(Math.abs(k * DT - SECRET.risolutoHold) < 2 * DT, `${k}`);
-  }));
-}));
 
 // 10/24 14:0x 런지 자세 (사장님 '런지할 때 런지 자세가 되려면 앞무릎을 굽히면서 자세 낮춰야 하는데 지금 그렇게 보여?'): 앞무릎 굽힘 · 뒷다리 펴짐 · 골반 낮춤 — 무릎 굽힘 = 넓적다리(엉덩이 → 무릎)와 정강이(무릎 → 발목) 사이 각
 function lungePose(cfg) {
   return withCfg(cfg, () => {
     // 가슴 사이 2.2 m = 맞닿기 1.54 + 0.66(몸 미끄러짐이 한도 0.6 를 다 나가는 거리) — 'full' 판(맞닿기 1.72)은 같은 자리로 맞닿기 + 0.66
-    const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: CONFIG.THRUST.itMeasure === 'full' ? MEASURED.rapier[0] + 0.66 : 2.2, seed: 9 });
+    const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap: MEASURED.rapier[0] + 0.66, seed: 9 });
     const p = g.player, e = g.enemy;
     g.ai.update = () => {}; p.foe = e; e.foe = p;
     const V = (t) => new THREE.Vector3(t.x, t.y, t.z);

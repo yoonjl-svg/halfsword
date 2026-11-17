@@ -227,13 +227,13 @@ function diveTech(ai) {
  */
 export function cnDive(ai, th, d) {
   const C = ai.planC;
-  if (CN_STEP.mode !== 'turn' || !C?.dive || !CN().dive) return null;
+  if (CN_STEP.mode !== 'turn' || !C?.dive) return null;
   const me = ai.me;
   if (!cnStepOn(me) || !me.armed || me.state !== 'stand' || me.stamina?.exhausted || ai.staminaRest || (me.stamina?.value ?? 0) < STAMINA.pushCost || !diveTech(ai)) return null;
   if (gkLeft(ai) && cnWant(ai, th)) return null;
   const S = ai.planCn;
   S.st.diveRoll++;
-  if (!(Math.random() < Math.min(1, ai.planK * C.dive * CN().dive + (ai.planLuck ?? 0) * AI_PLAN.coin))) return null;
+  if (!(Math.random() < Math.min(1, ai.planK * C.dive + (ai.planLuck ?? 0) * AI_PLAN.coin))) return null;
   S.st.dive++;
   let side = awaySide(th, ai.pers?.circleDir || 1);
   const mv = me.move;

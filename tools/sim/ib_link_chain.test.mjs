@@ -6,7 +6,6 @@ import assert from 'node:assert/strict';
 import { CONFIG } from './harness_m.mjs';
 import { chainOne, chainRun } from './ib_link_chain.mjs';
 import { linkBoost } from '../../src/iberian_link.js';
-import { linkPeaks, BIG5 } from './ib_link_speed.mjs';
 
 const { IB_LINK, STAMINA } = CONFIG;
 
@@ -22,7 +21,6 @@ function same(r, names) {
 test('기본값 (사장님 11/16 결정 "이베리아 1~2번 적용해. 빨라지는 칼은 이어질 때마다 +10%로. 상한은 1.3배.") — 닿기 문 20° · 0.4 s · 사슬 칼 빠르기 켬 p 0.1 · 상한 1.3 · 무기마다 힘 배율', () => {
   assert.equal(IB_LINK.arriveDeg, 20);
   assert.equal(IB_LINK.arriveT, CONFIG.realS(0.4));
-  assert.equal(IB_LINK.chainSpeed.on, 1);
   assert.equal(IB_LINK.chainSpeed.p, 0.1);
   assert.equal(IB_LINK.chainSpeed.cap, 1.3);
   for (const T of [IB_LINK.chainSpeed.drive, IB_LINK.chainSpeed.driveAi]) for (const w of ['zweihander', 'flamberge', 'tizona', 'durandal', 'def']) assert.ok(Array.isArray(T[w]) && T[w].length >= 3 && T[w].every((x) => x >= 1), `${w} ${T[w]}`);
@@ -49,11 +47,7 @@ test('사슬 칼 빠르기 — 목표 s = min(1 + p × k, 1.3) · 힘 배율 = �
   const c0 = structuredClone(IB_LINK.chainSpeed);
   t.after(() => Object.assign(IB_LINK.chainSpeed, c0));
   const mk = (k, v, id = 'flamberge', ai = false) => ({ ibLinkK: k, aiControlled: ai, weapon: { id }, stamina: { value: v, weight: 1.5, spend(_, c) { this.value -= c; } } });
-  Object.assign(IB_LINK.chainSpeed, { on: 0 });
-  const f0 = mk(1, 100);
-  assert.equal(linkBoost(f0), null);
-  assert.equal(f0.ibBoostK, undefined);
-  Object.assign(IB_LINK.chainSpeed, { on: 1, p: 0.1, cap: 1.3, drive: { flamberge: [1.5, 1.7, 4, 7], def: [1.1, 1.2, 1.3] }, driveAi: { def: [2, 3, 4] } });
+  Object.assign(IB_LINK.chainSpeed, { p: 0.1, cap: 1.3, drive: { flamberge: [1.5, 1.7, 4, 7], def: [1.1, 1.2, 1.3] }, driveAi: { def: [2, 3, 4] } });
   const f = mk(2, 100);
   const b = linkBoost(f);
   assert.ok(Math.abs(b.s - 1.2) < 1e-12 && f.ibBoostK === 1.7);
@@ -65,22 +59,11 @@ test('사슬 칼 빠르기 — 목표 s = min(1 + p × k, 1.3) · 힘 배율 = �
   assert.equal(linkBoost(mk(3, 1)), null, '기력이 모자라면 안 더함');
 });
 
-test('사슬 칼 빠르기 (기본 켬) — 넘김마다 k 1 · 2 · 3 · 손 목표는 그대로(그은 길 · 박자) · 이은 칼이 끔보다 빠름 · 끄면 더함 없음', (t) => {
+test('사슬 칼 빠르기 (기본 켬) — 넘김마다 k 1 · 2 · 3 · 손 목표는 그대로(그은 길 · 박자)', (t) => {
   const c0 = structuredClone(IB_LINK.chainSpeed);
   t.after(() => Object.assign(IB_LINK.chainSpeed, c0));
   const seq = ['zornhau', 'zwerchL', 'zornhau', 'zwerch'];
   const R = chainRun({ seq, gap: 0.1 });
   assert.deepEqual(R.boost?.k, { 1: 1, 2: 1, 3: 1 }, JSON.stringify(R.boost));
   same(chainOne({ seq, gap: 0.1 }), ['zwerchL', 'zornhau', 'zwerch']);
-  Object.assign(IB_LINK.chainSpeed, { on: 0 });
-  assert.equal(chainRun({ seq, gap: 0.1 }).boost, null);
-  // 이은 칼이 빨라짐 (사슬 다섯 다섯 줄 · 넘김 k 째 칼끝 가장 빠름 평균의 비 — 줄 하나는 흔들림이 커서 다섯 줄 평균 · 25 줄 재어 맞춤은 기록 §9)
-  const per = {};
-  for (const sq of [0, 6, 12, 18, 24].map((i) => BIG5[i])) for (const on of [1, 0]) {
-    IB_LINK.chainSpeed.on = on;
-    linkPeaks(chainRun({ seq: sq, gap: 0.1 })).forEach((x, i) => (((per[i + 1] ??= { 1: [], 0: [] })[on]).push(x)));
-  }
-  const m = (a) => a.reduce((x, y) => x + y, 0) / a.length;
-  const r = Object.values(per).map((v) => m(v[1]) / m(v[0]));
-  assert.ok(r.every((x) => x >= 1) && m(r) >= 1.1, r.join(' · '));
 });

@@ -166,7 +166,7 @@ const ibArmed = (ai) => ai.read.idleT >= SECRET.ibSpin.armTime;
  */
 export function readNeed(ai, opp) {
   const R = ai.read;
-  if (!R || !P().on) return 0;
+  if (!R) return 0;
   const k = ai.planK;
   const foe = ai.foe;
   const d = ai.d;
@@ -216,15 +216,15 @@ export function readNeed(ai, opp) {
 /** 간 보기 다가가는 빠르기 (moveFeet — 플랜 걸음 뒤 · 고노센 경계 줄 앞): 이탈리아 — 곧게 걸어 들지 않음 · 칼 우위 빛 동안 거리를 벌림 / 이베리아 — 무장처럼 보이는 상대의 칼끝 + 0.3 안으로 안 듦 */
 export function readFeetV(ai, v, d) {
   const R = ai.read;
-  if (!R?.school || !P().on || ai.chasing) return v;
+  if (!R?.school || ai.chasing) return v;
   const r = ai.planK * P().risk;
   const t = school(ai);
   if (t === 'italian') {
-    if (itEdgeOn(ai.foe) && P().riso && bladesNear(ai.me, ai.foe)) {
+    if (itEdgeOn(ai.foe) && bladesNear(ai.me, ai.foe)) {
       // 11/16 3안 리솔루토 위험 (AI_PLAN.read.riso — 기본 0 끔): 칼 우위 빛 + 칼이 붙어 있음(둘 다 보임) — 물러서면 상대가 맞춰 들어와 리솔루토 셈이 돎(상대 걸음에 맞춘 덮인 채 나아가기) →
       //  물러서지 않고 발을 묶음(걸음 × (1 − 띠 세기 × riso)). 칼을 내지 않는 것(칼 우위 빛 — readNeed)은 그대로
       R.st.risoHold = (R.st.risoHold ?? 0) + 1;
-      return v * Math.max(0, 1 - ai.planK * P().riso);
+      return v * Math.max(0, 1 - ai.planK);
     }
     if (itEdgeOn(ai.foe)) return Math.min(v, -r); // 칼 우위 빛 — 거리를 벌림
     if (v > 0 && d < ai.foeReach + 0.3) return v * (1 - r); // 맞박자 — 곧게 걸어 들지 않음
@@ -238,7 +238,7 @@ export function readFeetV(ai, v, d) {
 /** 기술 고르기 곱 (pickTech — 굴림 없음): 독일 — 내 칼끝 언저리 밖에서 큰 칼(헛치기 쉬운 내려베기)을 덜 · 동방 — 지친 채 · 발톱 자국이 쌓이면 큰 칼을 아낌 / 대가 창(높음) — 빠른 칼 */
 export function readTechK(ai, t) {
   const R = ai.read;
-  if (!R || !P().on) return 1;
+  if (!R) return 1;
   let w = 1;
   if (R.school && t.presses) {
     const r = ai.planK * P().risk;
@@ -253,7 +253,7 @@ export function readTechK(ai, t) {
 /** 이어 칠 몫 곱 (afterStrike — 옛 이어 치기 굴림 자리): 독일 상대에게 헛쳤으면 덜 이음(헛친 뒤 물러나는 쪽 — 파고들기 두 걸음) */
 export function readChainK(ai) {
   const R = ai.read;
-  if (!R?.school || !P().on || ai.hitLanded || ai.bound || school(ai) !== 'german') return 1;
+  if (!R?.school || ai.hitLanded || ai.bound || school(ai) !== 'german') return 1;
   R.st.risk.german++;
   return 1 - ai.planK * P().risk;
 }

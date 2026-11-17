@@ -22,7 +22,7 @@ import { STAMINA } from './config.js';
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF, AI_MAAI, IB_LINK } from './config.js';
-import { linkStart, linkEnd, bridgeMode, bridgePlan, bridgeStep, techDir, linkBoost } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해')
+import { linkStart, linkEnd, bridgePlan, bridgeStep, techDir, linkBoost } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해')
 import { ibInit, ibAfter, ibTick, ibCircle, ibSide, ibFeetV, ibWatch, ibSidePost, ibFwdPost } from './ai_plan_ib.js'; // 유파 플랜 2 단계 이베리아 (11/14 — 플랜 표 ib 표식일 때만 this.ibPlan · 셈은 그 파일)
 import { readInit, readTick, readNeed, readFeetV, readTechK, readChainK } from './ai_read.js'; // 3 단계 수 읽기 그릇 (11/14 — 플랜이 있는 몸만 this.read · 셈은 그 파일)
 import { Senses } from './ai_sense.js';
@@ -47,10 +47,8 @@ import { requestInstant, requestIai, requestSweep, requestCombo, requestArtRetur
 import { windStart, windEnd, windRopesBack, windLoopOf, windSpec, windWoundT } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 08:xx — UNIQUE_ASSIST.rdAiWind · 사람과 같은 감기 · 내려침)
 import { parrySlotOf, bindGain, gilmokLine, gilmokLowGuard, gilmokWindT, secretVal, threatNow, foeRecentTipE, secretEvent, secretCond, chainRange, firstHitOk, BindCount, bladesTouch, IaiArm, montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindTouch, pressStep, gnsEnterLine, gnsOutside, gnsUser, gnsBlockOf, gnsArmTick, gnsMoving, gnsHumanUnsettled, armHold, secretSpent, useSecret, gnsHumanMoving, foeRecentTipSp, gkFreeOn, gkCooling, gkCoolFrom, secretCostOf } from './secret.js'; // 유파 비기 조건 — 플레이어 창과 같은 함수 (10/9 플레이어 비기) · pressStep 모르트슐라크 누르기 셈 (10/24) · gnsEnterLine · gnsOutside 고노센 들어옴 (10/25 — SECRET.gnsEnterAI 일 때만)
 import { mordHeadReach } from './mordschlag.js'; // 모르트슐라크 AI (10/24): 창 안에서 상대 머리가 칼자루 길에 닿나
-import { PICKUP } from './config.js'; // 떨어진 칼 줍기 (11/05)
-import { aiPickup } from './pickup.js'; // 떨어진 칼 줍기 — AI 몫 (11/05 · PICKUP.ai)
-import { IT_OUTBOX } from './config.js'; // 이탈리아 아웃복싱 AI 몫 (11/14 사장님 'ai에도 적용' — IT_OUTBOX.ai)
-import { aiBeatTick, aiBeatTech, itEdgeGrant, itStats, itEdgeOk, itEdgeOn } from './italian_outbox.js'; // 박자 찌르기 셈 · 칼 우위 (헛누름) · 재기 · 리솔루토 창 문 (11/14)
+import { aiPickup } from './pickup.js'; // 떨어진 칼 줍기 — AI 몫 (11/05)
+import { itEdgeGrant, itEdgeOk, itEdgeOn } from './italian_outbox.js'; // 칼 우위 (헛누름) · 리솔루토 창 문 (11/14)
 import { RisolutoWatch, lungeGapOk, bladesNear, foeStep } from './italian_risoluto.js'; // AI 안다레 리솔루토 (11/14 사장님 '리솔루토도 쓰게해' — 사람과 같은 셈 · risoTick)
 import { gyeoksalComboOpt } from './skill.js'; // 동방 격살 AI 몫 (11/14 사장님 '동방도 격살 쓰게 해') — 사람과 같은 한 칼 덧칸 (판정 · 사냥 겹 빠르기 · 잔상)
 import { huntN } from './cn_hunt.js'; // 동방 격살 AI 쓸 때 — 상대에 쌓인 사냥 겹 (11/14)
@@ -60,9 +58,9 @@ import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, j
 import { iaiSeated, drawStart, drawLog } from './iai_obi.js'; // 11/16 뽑기 — 칼집에 든 채 공격 · 막기는 SECRET.gnsDraw 초 뽑은 뒤 (사람과 같은 셈)
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
-import { DIG_PROTO, CN_STEP, AI_ARC, PHYSICS, AI_TELL, AI_KIT } from './config.js';
+import { DIG_PROTO, CN_STEP, AI_ARC, PHYSICS } from './config.js';
 import { aiKitOf } from './skill_tree_data.js'; // AI 숙련도 = 칸 (11/16 — config AI_KIT · 무기가 바뀌면 kitRefresh)
-import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 눈 (11/15 시제품 — AI_TELL.ai · 기본 끔) // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
+import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 눈 (11/15 — 사장님 11/16 묶음 P) // 짧은 칼 파고들기 (11/14 — A 기본 켬 · B · C 시제품 기본 끔 · src/dig_proto.js) · 동방 보법 회피 편섬 (11/15 — 시제품 기본 끔)
 import { cnSee, cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 시제품 (11/15 — CN_STEP.mode · 기본 끔)
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
@@ -79,7 +77,7 @@ const foeAttackingMe = (g, me) => g.foe === me && (g.aiCtl ? g.aiCtl.mode === 'a
 const reachOfFoe = (g) => g.aiCtl?.M?.reach ?? g.swordArt?.measure?.reach ?? 1.8;
 const rand = (a, b) => a + Math.random() * (b - a);
 /** 이탈리아 런지 찌르는 상대인가 (config AI_THRUST_DEF — 11/05 · THRUST.itLunge 를 쓰는 몸) */
-const lungeFoe = (f) => !!THRUST.itLunge && f?.swordArt?.tradition === 'italian';
+const lungeFoe = (f) => f?.swordArt?.tradition === 'italian';
 /** AI 가 어림하는 상대 칼 닿는 거리의 바탕 = 무기 간격 + 0.05 · 런지 찌르는 상대면 + AI_THRUST_DEF.lungeReach (기본 0 = 지금 그대로) */
 export const foeReachBase = (foeM, f) => { // 시험이 읽음 (tools/sim/jp_strength.test.mjs)
   let b = foeM.reach + 0.05;
@@ -164,7 +162,7 @@ export class AI {
     me.aiCtl = this; // 강화동작 이점(10/21 — unique_assist.js strokeTechOf): 맞는 순간 지금 기술 이름을 읽는다 · 읽기만
     me.aiControlled = true; // 유파 걸음(gait.js gaitParams): AI 가 모는 몸은 플레이어 완화 값(gait.player)을 받지 않는다 — 읽기 표시일 뿐
     this.persona = persona || {};
-    this.planOn = !!AI_PLAN.on && !this.persona.planOff; // 유파 AI 개편 판 (11/14 — AI_PLAN.on · 재기 도구가 한 몸만 옛 판으로 둘 때 persona.planOff)
+    this.planOn = !this.persona.planOff; // 유파 AI 개편 판 (11/14 — AI_PLAN.on · 재기 도구가 한 몸만 옛 판으로 둘 때 persona.planOff)
     // 근접 밀치기 (closeQuarters): persona.close 가 있는 인물만 스틱으로 민다. 기본 AI 는 밀지 않는다 (fights12·live_battery 그대로)
     if (this.persona.close) me.canShove = true;
     // 권총 사격 사이 쿨타임 배율을 인물이 따로 줄 때만 (persona.gunCooldownK — 지금 주는 인물 없음). 없으면 AI 권총 핸디캡 GUN.aiHandicapK 1.5(10/30 01:4x — 전 마야 시트 값)
@@ -185,14 +183,13 @@ export class AI {
     //  숙련도 (10/13): 손에 든 유파의 고유 동작은 단계 ≤ 숙련도인 것만 꾸러미에 (sword_art.js applySchoolArt) · 비기는 숙련도 5 에서만 (아래 this.secret)
     this.profSrc = this.persona.proficiency ?? AI_PROFICIENCY.ofLevel[levelName] ?? AI_PROFICIENCY.ofLevel.normal; // 숙련도 원본 (숫자 또는 { 유파: 숙련도 } — 무기가 바뀌면 칸 몫을 다시 셈 · kitRefresh)
     //  AI 숙련도 = 칸 (11/16 사장님 결정 — config AI_KIT · aiKit 를 넘기면 art.kit = 이 유파 숙련도의 사다리 칸 몫 · 유파 칸이 없는 무기는 null)
-    const art = resolveSwordArt(me.weapon, this.persona, { proficiency: this.profSrc, ...(AI_KIT.on ? { aiKit: true } : {}) });
+    const art = resolveSwordArt(me.weapon, this.persona, { proficiency: this.profSrc, aiKit: true });
     this.art = art;
     this.proficiency = art.proficiency; // 유파 몫: 손에 든 무기 유파의 숙련도 (고유 동작 · 비기 · schoolK · 패시브 · 흘림 문턱 · 마른 길 세기)
     // 사람 몫 (사장님 10/29 15:5x '반응은 본 유파 숙련도를 따르도록 해'): 인물의 본 유파 숙련도(characters.js aiAtProficiency → persona.mainProficiency) — 반응 시간(setLevel).
     //  인물이 아닌 AI(숫자 숙련도 · 난이도 이름만)는 지금처럼 위 값 — 그때는 둘이 같다
     this.mainProficiency = this.persona.mainProficiency ?? this.proficiency;
     // AI 칸 몫 (11/16 — config AI_KIT): 몸에 skillKit · 보법 I · 막기 I 을 사람과 같은 꼴로 (applyKit) · 칸 몫이 없으면(옛 판 · 유파 칸 없는 무기) kit null — 아래 모든 자리가 옛 숙련도 규칙
-    this.kitOn = !!AI_KIT.on;
     this.applyKit(art.kit ?? null, art.tradition);
     //  유파 패시브 (손목 힘 · 나머지 넷): 칸 몫이 있으면 패시브 칸(독일 G9 · 이탈리아 I10 · 이베리아 B10 · 일본 J10 · 동방 C10) · 없으면 옛 숙련도 SCHOOL_PASSIVE.at 이상
     this.kitPassive(art.tradition);
@@ -227,7 +224,7 @@ export class AI {
     // 유파 기질 (10/9 — schools.js *_TEMPER, docs/strike/school_temper_2026-10-09.md): 성격 칸의 기본 범위를 유파마다 둔다.
     //  [lo, hi] 면 rand 한 번, 숫자면 그대로. 유파에 없는 칸은 예전 기본값. 인물 값(P)이 늘 먼저 — 그때는 예전처럼 굴리지 않는다.
     //  rand 호출 차례는 예전 그대로(margin → aggr → circleDir → circleRate → rhythm → vor → patienceTime) → 독일·무유파 바이트 동일
-    const TP = (this.planOn && AI_PLAN.zeroPlain && this.proficiency === 0 ? TRADITIONS.none?.temper : TRADITIONS[this.art.tradition]?.temper) ?? {}; // 3 단계: 숙련도 0(무) = 기질은 무유파 범위
+    const TP = (this.planOn && this.proficiency === 0 ? TRADITIONS.none?.temper : TRADITIONS[this.art.tradition]?.temper) ?? {}; // 3 단계: 숙련도 0(무) = 기질은 무유파 범위
     const draw = (v) => (Array.isArray(v) ? rand(v[0], v[1]) : v);
     const guardPref = {};
     for (const g of this.school.guards) guardPref[g.name] = P.guardPref && g.name in P.guardPref ? P.guardPref[g.name] : rand(0.4, 1.6);
@@ -337,7 +334,7 @@ export class AI {
     const ST = aiUniqueStages(art.tradition);
     const open = aiStageOpen(ST, this.kit, this.proficiency); // 11/16 칸 몫이 있으면 그 칸(kit.unique) · 없으면 옛 단계 ≤ 숙련도
     const habitOk = (name) => !this.kit || !ST.habit.has(name) || this.kit.unique.has(ST.habit.get(name)); // 11/16 반응 버릇 '겹치기 (두플리렌)' · '빼서 찌르기 (카바치오네)' = 같은 이름 칸(G7 · I2)이 칸 몫에 있을 때만 [사장님 11/16 결정 '다 너의 권고대로 하마'] · 옛 판 늘
-    this.passives = SKILL.schoolArt && !(this.planOn && AI_PLAN.zeroPlain && this.proficiency === 0) ? (TRADITIONS[art.tradition]?.passives ?? []).filter((x) => x.ai !== false && open(ST.passive, x.name) && habitOk(x.name)) : []; // 3 단계: 숙련도 0(무) = 유파 패시브 없음
+    this.passives = SKILL.schoolArt && !(this.planOn && this.proficiency === 0) ? (TRADITIONS[art.tradition]?.passives ?? []).filter((x) => x.ai !== false && open(ST.passive, x.name) && habitOk(x.name)) : []; // 3 단계: 숙련도 0(무) = 유파 패시브 없음
     this.passiveAtk = null; // 지금 공격을 시작한 패시브 이름 (startAttack 이 지운다)
     this.pendingPassive = null; // 물러남 끝에 낼 패시브 (斂翅 꼴 at:'end')
     this.stepinArmed = true; // foeStepIn: 상대가 걸어 드는 한 번에 한 번만 굴린다
@@ -776,7 +773,6 @@ export class AI {
     this.kitSchool = tradition;
     this.kitWeapon = me.weapon;
     this.kitLink = !kit || (kit.unique.has('cingir') && !!kit.ibFlow);
-    if (!this.kitOn) return;
     if (!kit) {
       if (me.skillKit?.ai) delete me.skillKit, delete me.schoolFootwork, delete me.schoolParry; // 앞 칸 몫(다른 무기)을 걷음 — 사람 몸 칸 몫은 건드리지 않음
       return;
@@ -810,11 +806,8 @@ export class AI {
   }
 
   update(dt) {
-    if (this.kitOn && this.me.weapon !== this.kitWeapon) this.kitRefresh(); // 11/16 칸 몫 — 손에 든 무기가 바뀌면 그 유파 칸으로 (지금은 바뀌는 길 없음)
+    if (this.me.weapon !== this.kitWeapon) this.kitRefresh(); // 11/16 칸 몫 — 손에 든 무기가 바뀌면 그 유파 칸으로 (지금은 바뀌는 길 없음)
     this.specTick(); // 나간 특수 공격이 끝났나 (식힘은 끝난 때부터 — 10/29 19:4x · 19:5x 사람과 같게)
-    // 이탈리아 박자 찌르기 셈 (11/14 사장님 'ai에도 적용' — italian_outbox.js aiBeatTick · IT_OUTBOX.ai · beat): 비껴서며 찌르기를 꾸러미에 가진 AI 만 · 상대 휘두름이 선 때를 셈(굴림 없음)
-    //  11/15 사장님 'ai도 되돌려' — IT_OUTBOX.beatAi 1 일 때만 (기본 0 = 셈도 안 돎 — 11/14 전 판)
-    if (IT_OUTBOX.ai && IT_OUTBOX.beatAi && IT_OUTBOX.beat > 0 && this.school?.techByName?.inquartata) aiBeatTick((this.itBeat ??= { f: this.me, t: 0, foeAtk: null, foeSw: false, inqBeatSeen: -1 }), dt, AI_PLAN.on && AI_PLAN.read.fair ? this.seenSwing() : undefined); // 공정함 (3 단계 — 설계 §4-3 셋째 곳): 상대 휘두름을 기력 장부 대신 늦게 본 손 빠르기로
     if (this.rd || this.me.rdWind) this.rdKeep(dt); // 풍차 베기 AI 몫 (10/31): 감기 지킴 · 덧씌우기 칸 내려놓기 · 뗀 밧줄 다시
     if (this.secret && !this.secretRun && secretSpent(this.me)) this.dropSecret(); // 이 판 비기를 다 씀 (10/29 19:5x 판당 쓸 수 — 비기 없는 AI 와 같은 길)
     if (this.gkRun && !this.secretRun && !this.me.iai && !this.me.iaiReq) (this.gkRun = false), gkCoolFrom(this.me); // 격살 풀기 (11/16 — SECRET.gkFree): 격살 칼이 끝나 몸이 자유로운 때부터 식힘 (사람과 같은 셈)
@@ -835,7 +828,7 @@ export class AI {
     }
     this.updateCombat(dt);
     this.techPlanStep(dt); // 기술 길 덧칸 (10/25 곁눈 베기 다시 그린 길 — 덧칸 없는 기술이면 아무것도 안 함)
-    if (PICKUP.ai) aiPickup(this); // 떨어진 칼 줍기 (11/05 — src/pickup.js · 끔이면 안 부름): 칼을 놓쳤으면 제 칼로 걸어가 곁에서 줍는다
+    aiPickup(this); // 떨어진 칼 줍기 (11/05 — src/pickup.js · 끔이면 안 부름): 칼을 놓쳤으면 제 칼로 걸어가 곁에서 줍는다
     const ds = this.drySense;
     if (ds) this.dryRouteSide(ds);
     routeAroundStageObstacle(this);
@@ -1326,26 +1319,11 @@ export class AI {
     const foe = this.foe;
     const W = (this.gnsW ??= { user: gnsUser(foe), arm: null, line: 0, ready: false, cut: false, plan: null, feinted: false, n: { commit: 0, feint: 0, cut: 0 } });
     if (!W.user) return;
-    if (AI_PLAN.on && AI_PLAN.read.fair) {
-      // 공정함 (3 단계 11/14 — 설계 §4-3 둘째 곳): 상대 준비를 사람 스틱 · 공격 상태(또는 AI 의 속 셈) 대신 늦게 본 준비 자세(웅크림 · 허리 대기 — ai_sense ready)로 읽음 · 선은 보이는 칼(검술 풀이)로
-      const sv = this.sense.seen(this.level.reaction);
-      const M = foe.swordArt?.measure;
-      W.line = M ? gnsEnterLine({ reach: M.reach, contact: M.contact }) : W.line;
-      W.ready = !!SECRET.iai && sv.ready >= 0.5 && sv.state === 'stand' && sv.armed && foe.alive && !secretSpent(foe);
-    } else if (foe.aiControlled) {
-      W.line = gnsEnterLine(foe.aiCtl.M);
-      W.ready = !!SECRET.iai && !!foe.aiCtl.iaiArm?.armed;
-    } else {
-      const art = foe.swordArt;
-      const V = { reach: art.measure.reach, contact: art.measure.contact, foeReach: art.measureFor(this.me.weapon).reach + 0.05 }; // 사람 창 view() 와 같은 수
-      W.line = gnsEnterLine(V);
-      const A = (W.arm ??= new IaiArm());
-      const down = !foe.alive || !foe.armed || foe.state !== 'stand' || secretSpent(foe); // 10/29 19:5x: 이 판 비기를 다 쓴 사람은 준비가 아님 (사람 창이 무장을 안 거는 것과 같게)
-      const foeHurt = foe.pain > (W.pain ?? foe.pain) + 0.05; // 사람이 맞음 (사람 창과 같은 셈 — 10/25 22:3x 'idle')
-      W.pain = foe.pain;
-      gnsArmTick(A, dt, down || gnsHumanUnsettled(foe, foeHurt), gnsHumanMoving(foe), { outside: gnsOutside(d, V, A.armed, SECRET.gnsEnter && SECRET.gnsLong), busy: down || !!foe.skill?.swinging || !!foe.skill?.sec }, armHold(foe)); // 'idle' — 거리 안 봄 · 'dist' 옛 셈
-      W.ready = !!SECRET.iai && A.armed;
-    }
+    // 공정함 (3 단계 11/14 — 설계 §4-3 둘째 곳): 상대 준비를 사람 스틱 · 공격 상태(또는 AI 의 속 셈) 대신 늦게 본 준비 자세(웅크림 · 허리 대기 — ai_sense ready)로 읽음 · 선은 보이는 칼(검술 풀이)로
+    const sv = this.sense.seen(this.level.reaction);
+    const M = foe.swordArt?.measure;
+    W.line = M ? gnsEnterLine({ reach: M.reach, contact: M.contact }) : W.line;
+    W.ready = !!SECRET.iai && sv.ready >= 0.5 && sv.state === 'stand' && sv.armed && foe.alive && !secretSpent(foe);
     if (hurt && iaiBusy(foe)) {
       W.cut = true;
       W.n.cut++;
@@ -1741,7 +1719,7 @@ export class AI {
   startAttack(tech, why, opt = {}) {
     if (!tech || !this.me.armed || this.me.stamina.exhausted || (this.staminaRest)) return false; // 칼이 없으면 칠 수 없다
     if (drawGate(this.me, 'attack')) return false; // 11/16 뽑기 (SECRET.gnsDraw): 칼집에 든 채면 먼저 뽑음 · 뽑는 동안 공격 없음 — 끝나면 다시 고름
-    if (AI_ARC.on && !opt.chain && !opt.secret && !opt.passive && !opt.drill && !GAP_OPEN.has(why) && arcGapHold(this)) return void (this.stats.arcGap = (this.stats.arcGap ?? 0) + 1), false; // ① 칼끝 틈 건너기 (11/15): 긴 칼 앞 내 칼끝 밖 보통 공격은 띠 기울기만큼 참음
+    if (!opt.chain && !opt.secret && !opt.passive && !opt.drill && !GAP_OPEN.has(why) && arcGapHold(this)) return void (this.stats.arcGap = (this.stats.arcGap ?? 0) + 1), false; // ① 칼끝 틈 건너기 (11/15): 긴 칼 앞 내 칼끝 밖 보통 공격은 띠 기울기만큼 참음
     if (this.planDe && this.deDig.t > 0 && !opt.secret) return false; // 독일 파고들기 (3 단계 11/14): 건 동안(digT)은 새 공격을 미룸 — 박찬 두 걸음이 공격 걸음에 덮여 버려지지 않게 · 끝나면 그 자리에서 밀치기 · 공격 고르기 그대로
     // 붙은 거리 규칙 AI (11/14 — CLOSE.startAI · close_hold.js): 묶인 동안(내 밀치기든 상대가 나를 민 밀치기든 — 맞밀기로 둘 다 묶임) 공격 안 함 ·
     //  칼자루만 거리(가슴 사이 ≤ startAI)에선 공격 대신 손잡이 찍기
@@ -2319,7 +2297,7 @@ export class AI {
     return false;
   }
 
-  /** 몸 빼는 쪽 (+1 오른쪽 · −1 왼쪽 — italian_outbox.js beatSide 와 같은 부호 · 같은 셈을 늦게 본 모습으로): 본 상대 칼 타격점이 내 가슴 → 본 상대 가슴 줄의 오른쪽이면 왼쪽으로 */
+  /** 몸 빼는 쪽 (+1 오른쪽 · −1 왼쪽 — 늦게 본 모습으로): 본 상대 칼 타격점이 내 가슴 → 본 상대 가슴 줄의 오른쪽이면 왼쪽으로 */
   inqSide(s) {
     if (!s.armed || s.mx == null) return 1;
     const c = this.me.bodies.chest.translation();
@@ -2333,7 +2311,6 @@ export class AI {
   /** AI 이어 돌리기 끝 보기 (11/14 — 놓기는 skill.js 가 스텝마다 linkStep): 맞음 · 넘어짐 · 칼을 세게 맞음 · 다른 칼 길이면 그만둠(공격을 거둠) · 다 돌면 손 목표를 시작 자리로 놓고 곧장 친다 */
   /** 넘기기 길 (11/15 넘기기 판 — iberian_link.js bridgePlan · 사람 unique_assist.js linkTry 와 같은 셈): 지금 손 목표 · 걸러진 손 목표 빠르기(관성) → 이 칼 시작 자리 · 이 칼 첫 방향 × 베기 손 빠르기. 원 판이면 null */
   linkBridge(L) {
-    if (!bridgeMode()) return null;
     const me = this.me;
     const d = techDir(this.tech);
     const v = L.strikeSpeed * me.stamina.attackSpeed;
@@ -2406,7 +2383,7 @@ export class AI {
     //  칼끝 돌려 빼기가 숙련도 꾸러미에 든 AI 만(cavDeep — 곁눈 베기 무릎 꺾기 · 허리 베기 출혈처럼 AI 는 그 기술이 있으면 심화 이점도)
     if (this.passiveAtk === 'cavazione' && this.cavDeep && UA.cavArmSlowAi && UA.cavArmSlow > 0 && beginFlowRecovery(this.foe, this.me, UA.cavArmSlow)) {
       this.stats.cavArmSlow = (this.stats.cavArmSlow ?? 0) + 1;
-      itEdgeGrant(this.me, 'feint'); // 칼 우위 (11/14 'ai에도 적용' — 헛누름이 들면 · IT_OUTBOX.ai · 11/14 '리솔루토도 쓰게해' — 숙련도 5 AI 는 그동안 리솔루토 창이 열릴 수 있음 · risoTick)
+      itEdgeGrant(this.me, 'feint'); // 칼 우위 (11/14 'ai에도 적용' — 헛누름이 들면 · 11/14 '리솔루토도 쓰게해' — 숙련도 5 AI 는 그동안 리솔루토 창이 열릴 수 있음 · risoTick)
     }
     if (this.feint) {
       // 속임수: 가짜 기술의 앞부분만 가다가(내딛지 않고) 진짜 길로 바꾼다
@@ -2877,14 +2854,9 @@ export class AI {
     }
     // 1) 같은 순간에 맞받아 베기 (Indes): 들어오는 칼을 내 칼로 밀어내며 그대로 벤다 (겁먹으면 엄두를 못 낸다)
     if (!this.drillOut && Math.random() < L.counter * (1 - 0.8 * this.fear) && this.counterRange(d)) {
-      // 11/14 박자 찌르기 (사장님 '박자 찌르기는 비껴서며 찌르기를 대체' · 'ai에도 적용' — italian_outbox.js aiBeatTech): 상대가 치기 시작한 beat 초 안이면 맞받아 베기 칼이 비껴서며 찌르기
-      //  (굴림 · 거리 그대로 — 칼만 바꿈 · 식는 동안 · 이 공격에 이미 썼으면 · 꾸러미에 없으면 전 판 목록)
-      const tq = this.itBeat ? this.school.techByName.inquartata : null;
-      const tb = tq && !this.specCooling(tq.name) ? aiBeatTech(this.itBeat, tq) : null;
-      const t = tb ?? this.counterTech(th);
+      const t = this.counterTech(th);
       if (t && this.startAttack(t, 'counter', { noFeint: true, skipChamber: true })) {
         this.stats.counters++;
-        if (tb) (this.itBeat.inqBeatSeen = this.itBeat.foeAtk.n), itStats(this.me).beatFired++;
         return true;
       }
     }
@@ -3185,8 +3157,8 @@ export class AI {
       if (Math.hypot(hx, hz) > 0.55 || hy < -1.3 || hy > 0.75) continue;
       if (!hit || tc < hit.tc) hit = { tc, hx, hy, hz, vx, vy, vz, sp };
     }
-    if (!hit && AI_ARC.on) hit = this.arcHit(s, c); // ① 둥근 칼 읽기 (11/15 — 곧은 줄이 못 잡을 때만 · 같은 늦게 본 모습)
-    if (!hit && AI_TELL.ai && d < this.foeReach + 0.3) hit = thrustTell(s, c); // 찌르기 낌새 (11/15 시제품 — 칼이 칼날 줄로 나오기 시작함 · 같은 늦게 본 모습 · 상대 칼끝 어림 + 0.3 안)
+    if (!hit) hit = this.arcHit(s, c); // ① 둥근 칼 읽기 (11/15 — 곧은 줄이 못 잡을 때만 · 같은 늦게 본 모습)
+    if (!hit && d < this.foeReach + 0.3) hit = thrustTell(s, c); // 찌르기 낌새 (11/15 시제품 — 칼이 칼날 줄로 나오기 시작함 · 같은 늦게 본 모습 · 상대 칼끝 어림 + 0.3 안)
     if (!hit) return null;
     if (this.noThreat > NEW_THREAT_T) this.threatId++; // 잠깐 조용했다가 다시 오면 새 공격
     const lat = hit.hx * r.x + hit.hz * r.z; // + = 내 오른쪽
@@ -3311,7 +3283,7 @@ export class AI {
 
   /** 비기 조건을 알아채는 눈의 늦음 (3 단계 11/14 공정함 — AI_PLAN.read.fair: 숙련도 반응 시간 · 5 = 0.1 s · 6 = 0.05 s) · 옛 판 0 (완벽한 눈) */
   secretLag() {
-    return AI_PLAN.on && AI_PLAN.read.fair ? this.level.reaction : 0;
+    return this.level.reaction;
   }
 
   /**
@@ -3332,7 +3304,7 @@ export class AI {
 
   /** 리솔루토 맞춤 걸음을 본 걸음으로 읽나 — 플랜 몸(1 단계)은 늘 · 플랜 없는 몸은 공정함 스위치가 켜졌을 때 (3 단계 셋 합침 감독 11/14 결정 — 공정함 ①) */
   risoSeen() {
-    return !!this.plan || !!(AI_PLAN.on && AI_PLAN.read.fair);
+    return true;
   }
 
   /** 상대가 휘두르는 중인가 — 늦게 본 손 빠르기 (3 단계 공정함 — 박자 찌르기 셈 · 위협 · 헛친 뒤와 같은 3.5 패드 m/s) */
@@ -4084,7 +4056,7 @@ export class AI {
     const R = (this.stats.passiveRolls ??= {});
     R[P.name] = (R[P.name] ?? 0) + 1;
     // 숙련도가 높을수록 유파 고유 특성을 더 적극적으로 (사장님 10/18 23:4x — config AI_PROFICIENCY.schoolK, 숙련도 2 = 1 · 1 을 넘으면 1)
-    const k = this.planOn && AI_PLAN.zeroPlain && this.proficiency === 0 ? 0 : AI_PROFICIENCY.schoolK?.[this.proficiency] ?? 1; // 3 단계: 숙련도 0(무) = schoolK 0
+    const k = this.planOn && this.proficiency === 0 ? 0 : AI_PROFICIENCY.schoolK?.[this.proficiency] ?? 1; // 3 단계: 숙련도 0(무) = schoolK 0
     return Math.random() < (k === 1 ? P.p * (0.5 + 0.5 * this.level.read) : Math.min(1, P.p * (0.5 + 0.5 * this.level.read) * k));
   }
 
@@ -4547,7 +4519,7 @@ export class AI {
       return;
     }
     const itl = this.tech?.kind === 'thrust' ? this.me.skill.tap?.it : null; // 이탈리아 찌르기 ③: 거리만큼(0.6 m 까지) · 몸이 앞발을 따라 실리는 런지 (skill.js 탭 찌르기와 같은 걸음 장치)
-    if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: itl?.fwd > 0 ? Math.min(0.6, itl.fwd) : 0.6, hold: 0.3, leg, ...(itl?.fwd > 0 ? { push: SECRET.stepPush, ...(THRUST.itAccel ? { accel: true } : {}) } : {}) })) this.requestedStep = true; // THRUST.itAccel 0 (11/05 스위치 · 기본 1) = 사람 탭과 같게 몸 가속 없음
+    if (g.requestStep({ kind: this.tech?.kind === 'thrust' ? 'lunge' : 'pass', fwd: itl?.fwd > 0 ? Math.min(0.6, itl.fwd) : 0.6, hold: 0.3, leg, ...(itl?.fwd > 0 ? { push: SECRET.stepPush } : {}) })) this.requestedStep = true;
   }
 
   // ───────────────────────── 기술 걸음 (10/9 — 사장님 '비껴 들어가 베기', docs/strike/school_step_2026-10-09.md) ─────────────────────────

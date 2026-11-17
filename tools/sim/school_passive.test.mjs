@@ -46,16 +46,6 @@ test('book off / wrong school / low proficiency: no passive', () => {
   }
 });
 
-test('switches: SCHOOL_PASSIVE.on and per-school on turn it off', () => {
-  const fx = fixture('uchigatana');
-  try {
-    tick(fx, SP.japanese.full); // 10/28 02:0x 켄타이 6 s (전 10/25 2 s · 10/21 1.5)
-    assert.ok(Math.abs(fx.sp.charge - SP.japanese.gain) < 1e-9);
-    SP.on = false; assert.equal(fx.sp.charge, 0);
-    SP.on = true; SP.japanese.on = false; assert.equal(fx.sp.charge, 0);
-  } finally { SP.on = true; SP.japanese.on = true; fx.g.world.free(); }
-});
-
 // ── 이탈리아 곧은 선 ──
 for (const ai of [false, true]) {
   test(`italian: tip turns toward the target, capped and rate-limited (${ai ? 'AI half' : 'player'})`, () => {
@@ -266,14 +256,11 @@ test('kentai: 10/28 02:0x 6 s — a 2 s wait (gonosen arming) is +10 %, the full
   } finally { fx.g.world.free(); }
 });
 
-test("kentai: 10/28 01:5x gonosen binds the charge like a normal stroke and spends it on the first wound · other secrets none · ?kenSecret=0 = old", () => {
-  assert.equal(SP.japanese.secret, 1);
+test("kentai: 10/28 01:5x gonosen binds the charge like a normal stroke and spends it on the first wound · other secrets none", () => {
   const GNS = TRADITIONS.japanese.secret;
   assert.equal(GNS.name, 'goNoSen');
-  const run = (S, wait, cfg = 1) => {
+  const run = (S, wait) => {
     const fx = fixture('uchigatana');
-    const keep = SP.japanese.secret;
-    SP.japanese.secret = cfg;
     try {
       const { f, sp } = fx;
       tick(fx, wait);
@@ -283,7 +270,7 @@ test("kentai: 10/28 01:5x gonosen binds the charge like a normal stroke and spen
       const k = sp.dealtK();
       sp.onHit({ schoolK: k, schoolLock: sp.lastLock });
       return { charge, k, after: sp.dealtK(), lock: sp.lock, st: sp.stats.ken, idle: sp.charge };
-    } finally { SP.japanese.secret = keep; fx.f.skill.sec = null; fx.g.world.free(); }
+    } finally { fx.f.skill.sec = null; fx.g.world.free(); }
   };
   const full = run(GNS, SP.japanese.full + 0.5);
   assert.ok(Math.abs(full.k - 1.3) < 1e-9, `gonosen × 1.3 (${full.k})`);
@@ -295,8 +282,6 @@ test("kentai: 10/28 01:5x gonosen binds the charge like a normal stroke and spen
   assert.ok(Math.abs(arm.k - (1 + arm.charge)) < 1e-9 && Math.abs(arm.k - 1.1) < 0.002, `2 s × ${arm.k}`);
   const other = run({ name: 'singir' }, SP.japanese.full + 0.5);
   assert.deepEqual([other.k, other.lock.ken, other.lock.kenSec], [1, 0, false], 'other secret: none');
-  const off = run(GNS, SP.japanese.full + 0.5, 0);
-  assert.deepEqual([off.k, off.lock.ken], [1, 0], '?kenSecret=0: old (no kentai on secrets)');
   // AI 고노센 (secretRun — 숙련도 5): 같은 읽기
   const g = newRound({ weapon: 'longsword', weapon2: 'uchigatana', seed: 3, persona: { proficiency: 5 } });
   try {
@@ -310,7 +295,6 @@ test("kentai: 10/28 01:5x gonosen binds the charge like a normal stroke and spen
 });
 
 test("indes: 10/28 01:4x blade contact opens the window, keeps it open while touching, closes afterWindow after contact ends", () => {
-  assert.equal(SP.german.touch, 1);
   const fx = fixture('longsword');
   try {
     const { f, sp } = fx;
@@ -327,12 +311,10 @@ test("indes: 10/28 01:4x blade contact opens the window, keeps it open while tou
   } finally { fx.g.world.free(); }
 });
 
-test('indes: 10/28 a stroke started mid-bind gets ×1.3 · 0.7 s after contact ends none · duplieren always · secret (Mordschlag) none · ?indesTouch=0 = old', () => {
-  const at = (fn, cfg = 1) => {
+test('indes: 10/28 a stroke started mid-bind gets ×1.3 · 0.7 s after contact ends none · duplieren always · secret (Mordschlag) none', () => {
+  const at = (fn) => {
     const fx = fixture('longsword');
-    const keep = SP.german.touch;
-    SP.german.touch = cfg;
-    try { return fn(fx); } finally { SP.german.touch = keep; fx.f.skill.sec = null; fx.g.world.free(); }
+    try { return fn(fx); } finally { fx.f.skill.sec = null; fx.g.world.free(); }
   };
   const bind = (fx, sec) => { for (let i = 0; i < Math.round(sec / DT); i++) { fx.sp.bladeContact(); fx.sp.update(DT); } };
   at((fx) => {
@@ -352,7 +334,7 @@ test('indes: 10/28 a stroke started mid-bind gets ×1.3 · 0.7 s after contact e
     assert.deepEqual([fx.sp.indesOpen, fx.sp.lock.indes, fx.sp.dealtK()], [false, 0, 1], 'Mordschlag: no indes');
   });
   // 겹치기(duplieren)는 창이 닫혀 있어도 늘 (사장님 '겹치기는 맞물리면 인데스 늘 붙게 해' — 앞 긋기 끝 0.6 s 안에 나가 닿음이 먼저 끝났을 수 있음) · 스위치를 끄면 전
-  for (const touch of [1, 0]) at((fx) => {
+  for (const touch of [1]) at((fx) => {
     bind(fx, 0.3); tick(fx, CONFIG.realS(1.0)); assert.equal(fx.sp.indesOpen, false);
     startTapThrust(fx.f);
     fx.f.artTech = 'duplieren'; // 지금 긋는 기술 = 겹치기 (unique_assist.js strokeTechOf)
@@ -362,13 +344,7 @@ test('indes: 10/28 a stroke started mid-bind gets ×1.3 · 0.7 s after contact e
       fx.sp.onHit({ schoolK: k, schoolLock: fx.sp.lastLock });
       assert.deepEqual([fx.sp.stats.indes.dup, fx.sp.stats.indes.hits], touch ? [1, 1] : [0, 0]);
     } finally { fx.f.artTech = null; }
-  }, touch);
-  at((fx) => {
-    bind(fx, 0.3);
-    assert.deepEqual([fx.sp.indesOpen, fx.sp.stats.indes.touch], [false, 0], 'switch off: contact opens nothing');
-    fx.sp.foeFailed('blocked'); assert.equal(fx.sp.indesOpen, true, 'old foe-failed path kept');
-    startTapThrust(fx.f); assert.ok(Math.abs(fx.sp.dealtK() - 1.3) < 1e-9);
-  }, 0);
+  });
 });
 
 

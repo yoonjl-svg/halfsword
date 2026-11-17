@@ -152,8 +152,6 @@ export function linkProgress(t, S) {
   return (S.v0 * t + ((S.v1 - S.v0) * t * t) / (2 * S.T)) / Math.max(1e-6, len);
 }
 
-/** 넘기기 판인가 (11/15 — IB_LINK.mode 'bridge' 기본) */
-export const bridgeMode = () => IB_LINK.mode !== 'circle';
 /** 칼의 첫 방향 (패드 · 단위) */
 export function techDir(t) {
   const d = firstDir(t);
@@ -295,7 +293,6 @@ export function bridgeStep(f, dt) {
  */
 export function linkBoost(f) {
   const C = IB_LINK.chainSpeed;
-  if (!C?.on) return null;
   const k = Math.max(1, f.ibLinkK ?? 1);
   const s = Math.min(1 + C.p * k, C.cap);
   const T = (f.aiControlled ? C.driveAi : C.drive) ?? {};

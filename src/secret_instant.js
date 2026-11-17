@@ -20,7 +20,6 @@ import * as THREE from 'three';
 import { itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14): 끌고 가는 칼의 상처도 칼 우위 · 재기 (combat.js strike 와 같은 자리)
 import { SECRET, ARM, STRIKE, GAIT, ARENA, JOINTS, THRUST } from './config.js';
 import { obiOn, obiReadyInto, obiPathB, notoStep, notoStop, iaiSeated, drawStart, nukiStep, drawLog } from './iai_obi.js'; // 帯刀 — 대기 칼 자리 · 뽑는 자리 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi)
-import { risolutoContact } from './weapon_measured.js'; // 10/25 THRUST.itMeasure 'contact' 판: 리솔루토 런지 미끄러짐은 지금 맞닿음 그대로
 const GAIT_REACH = GAIT.reachMax;
 
 const _qc = new THREE.Quaternion();
@@ -3466,8 +3465,7 @@ function comboMoveStart(f, I, mi) {
   const d = Math.max(1e-3, Math.hypot(dx, dz));
   dx /= d;
   dz /= d;
-  // 안다레 리솔루토 런지(앞발 st.foot 이 있는 수 — SECRET.risolutoStep 만)는 이탈리아 간격 줄 'contact' 판에서 지금 맞닿음으로 멈춤 (weapon_measured.js risolutoContact · 없으면 몸 간격 그대로)
-  const contact = (st.foot != null && risolutoContact(f.weapon?.id)) || M.contact;
+  const contact = M.contact;
   let slide = fwd > 0 ? Math.min(st.close ? fwd : clamp(d - contact, 0, fwd), Math.max(0, d - (st.stop ?? M.clinch))) : fwd; // st.stop: 이 가슴 사이에서 멈춤 (겹치기 앞 박차기 — 죽음의 일격 거리 SECRET.mordCloseN · 없으면 clinch) // 앞 = 발도 미끄러짐과 같은 한도(close — 날개 접기 10/28: 맞닿기에서 멈추지 않고 걸음만큼 · clinch 안 금지 그대로) · 뒤(물러남 — 10/12 3 연격) = 반걸음 그대로
   if (slide < 0) {
     // 물러남은 경기장 테두리(ARENA.radius — 이미 있는 값)를 넘지 않게: 끝 자리 가슴이 반지름 밖이면 그 안까지만

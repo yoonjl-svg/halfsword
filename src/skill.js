@@ -145,21 +145,17 @@ function padStar(f, out) {
   return out;
 }
 
-/** 이탈리아 찌르기 ①~④ 가운데 k('aim' · 'chamber' · 'lunge' · 'hold' · ③ 의 'push' 몸 따라감 2.0 · 'accel' 몸 가속)가 켜졌나 — THRUST.itDrop(재기 스위치 · 기본 '' = 모두 켬 · '+' 로 여럿)에 있으면 꺼짐 (11/05 찌르기 막기 재기 — docs/strike/rapier_defence_2026-11-05.md) */
-export const itPartOn = (k) => !THRUST.itDrop || !String(THRUST.itDrop).split('+').includes(k);
 /**
  * 사람 탭 찌르기 몸 싣기 (11/15 사장님 '베기에 비해 동작이 너무 작고 느린 거 같아. 이탈리아 뿐만 아니라 모든 찌르기 동작을 강화하고 좀 빠르게 혹은 힘있게 찌르게 하는 것도 고려해.' —
- *  config THRUST.drive · 기본 0 = 끔 · 기록 docs/strike/thrust_stuck_2026-11-15.md §2): 사람이 내는 보통 탭 찌르기(쓰러진 상대 찍기 · 약한 자세 겨눔 · 간격 맞추기 뒤는 빼고)만 —
- *  AI 찌르기(ai.js startStrike 도 skill.thrust 를 부름)는 THRUST.driveAi(11/15 시제품 · 기본 0 = null 그대로)를 읽음. → { chamber, step, ride } 또는 null
+ *  config THRUST.driveChamber · driveStep · 기록 docs/strike/thrust_stuck_2026-11-15.md §2): 사람이 내는 보통 탭 찌르기(쓰러진 상대 찍기 · 약한 자세 겨눔 · 간격 맞추기 뒤는 빼고)만 —
+ *  AI 찌르기(ai.js startStrike 도 skill.thrust 를 부름)도 같음. → { chamber, step, ride }
  */
 /** 부탁한 걸음(req — 탭 런지)을 딛는 발이 떠 있나 (몸 싣기 머묾 — 부탁이 다른 걸음 뒤에 기다리는 동안 · 두 발 다 디딘 동안은 false) */
 function lungeSwing(g) {
   return (!g.legs.F.stance && g.legs.F.kind === 'req') || (!g.legs.B.stance && g.legs.B.kind === 'req');
 }
 export function thrustDrive(f) {
-  const D = f.aiControlled ? THRUST.driveAi : THRUST.drive; // AI 는 driveAi (11/15 시제품 — 기본 0 = 그대로)
-  if (!D) return null;
-  return { chamber: D & 1 ? THRUST.driveChamber : null, step: D & 2 ? THRUST.driveStep : null, ride: !!(D & 2), landed: false, passed: false };
+  return { chamber: THRUST.driveChamber, step: THRUST.driveStep, ride: true, landed: false, passed: false };
 }
 
 /** 이탈리아 찌르기 ④ (THRUST.itLunge): 런지가 아직 안 끝났나 — 몸이 실리는 런지 걸음(accel) 부탁이 딛기를 기다리거나(걷던 발이 아직 떠 있음 — gait.req) 그 몸 가속(gait.lungeBrake — 앞발이 나가는 동안 · 디딘 뒤 몸이 따라잡을 때까지)이 안 끝남 */
@@ -216,7 +212,6 @@ export class Skill {
     // 5) 탭 찌르기: 진행 중인 찌르기(tap)와 자세 지도 위에 덧씌우는 자세(thrustPose, guards.js guardAt 이 w 만큼 섞는다)
     this.tap = null;
     this.thrusts = 0;
-    this.sinceThrust = Infinity; // 바로 앞 찌르기가 끝난 뒤 지난 시간 (탭 연타 억제 — THRUST.bindRest)
     this.thrustPush = false; // 지금 칼끝을 뻗는 구간인가 (겨눈 뒤 ~ 뻗고 버티기 끝). combat.js 가 팔 유효 질량을 이때만 싣는다
     this.flowing = false; // 흐름(SKILL.flow) 중인가 — 끄면 늘 false
     // 손잡이 찍기(시제품, pommel()): 진행 중인 찍기와 센 수. 찌르기와 같은 덧씌우기 칸(thrustPose)을 쓴다 — 둘은 함께 돌지 않는다
@@ -293,8 +288,8 @@ export class Skill {
     const h0 = rangeCommit && this.thrustPose.w > 0 ? this.thrustPose.hand.slice() : g ? [g[0], g[1], g[2]] : [0.3, -0.2, 0.12];
     if (!f.aiControlled && !charged) f.stamina.attack('thrust'); // charged: 이미 청구한 탭 (칼끝 돌려 빼기 탭 — unique_assist.js tapChain)
     // 이탈리아 찌르기 (THRUST.itLunge — 10/25 · config 머리말 ①~④): 몸통을 겨누고 · 당기지 않고 · 거리만큼 몸이 실린 런지로 · 닿거나 몸이 다 실릴 때까지 뻗은 채
-    const it = !!THRUST.itLunge && f.swordArt?.tradition === 'italian' && !down && !V;
-    this.tap = { t: 0, h0, down, head: !down && !V && this.aimRaw.y > THRUST.headPad && !(it && itPartOn('aim')), K };
+    const it = f.swordArt?.tradition === 'italian' && !down && !V;
+    this.tap = { t: 0, h0, down, head: !down && !V && this.aimRaw.y > THRUST.headPad && !it, K };
     const dv = !down && !V && !rangeCommit ? thrustDrive(f) : null; // 사람 탭 찌르기 몸 싣기 (11/15 — THRUST.drive · 끄면 null)
     // 높은 자세(황소 · 지붕 — 손 패드가 headPad 위)에서는 몸 싣기 당김을 안 함 — 유파 제 당김 그대로 (11/16 — 손이 이미 어깨 위라 칼 선 뒤로 0.3 을 더 당기면 손이 어깨 위 뒤로 가 위팔 돌림이 사람 범위 밖:
     //  한손 탭 찌르기 레이피어 황소 뻗기 8 / 17 스텝 · 롱소드 황소 탭 1.5 ~ 2.3 m 찌름 2 → 0 · 머묾 손목 dev −22 → −45° — 기록 docs/strike/thrust_stuck_2026-11-15.md §8). 런지 · 머묾은 그대로
@@ -314,8 +309,6 @@ export class Skill {
     }
     if ((lowEntry || anyH) && down) this.tap.foe = f.foe; // 낮은 상대 진입 · 상태로 연 쪼개 내려치기: 시작한 상대 (바뀌면 거둔다)
     if (down && cleaveFinish(f)) this.tap.cleave = true; // 10/22 대검 마무리: 찍기 대신 쪼개 내려치기 (cleavePose — finish.js FINISH.cleave)
-    // 칼 길 잡기(R6): 칼이 맞닿았으면 그 칼 선 (아니면 null). 바로 앞 찌르기가 끝나고 bindRest 초 안의 탭(연타)은 잡지 않는다
-    this.tap.bound = down || this.sinceThrust < THRUST.bindRest ? null : this.boundAxis();
     this.thrusts++;
     if (down) {
       // 쓰러진 상대: 누운 몸 점이 닿는 곳(finish.js plunge.inside) 밖이고 걸어서 닿으면(plunge.walk) 걸어 들어간다 (plungePose — 디딤마다 본다).
@@ -329,11 +322,11 @@ export class Skill {
       // 몸 싣기 (THRUST.drive 걸음 칸): 걸음 사다리 한 칸 · 몸이 앞발을 따라 실림(리솔루토 런지 · 이탈리아 찌르기 ③ 과 같은 걸음 장치) — 탭의 제 걸음(THRUST.step)을 바꿀 뿐 하나 더 내지 않음.
       //  겹침 막기 (11/15 사장님 '런지가 이탈리아 보법이나 런지와 겹쳐서 움직임이 이상해지는지 확인 필요' — 기록 §7): 이탈리아 런지(THRUST.itLunge — 거리를 재어 그만큼 · 몸 실림)가 걷는 몸은
       //  제 걸음 그대로(이탈리아 잰 런지를 0.45 로 바꾸지 않음). 걷던 몸은 몸 실림 없이 걸음 길이만(걷던 몸에 몸 실림 2.0 을 얹으면 한 런지보다 멀리 미끄러짐 — 동방 걷다 탭 골반 0.97 → 1.50 m)
-      const ownLunge = !!il && itPartOn('lunge');
+      const ownLunge = !!il;
       if (f.gait?.active && dv?.step != null && !ownLunge) f.gait.requestStep({ kind: 'lunge', fwd: dv.step, duration: 0.3, ...(f.gait.walking ? {} : { push: SECRET.stepPush }) });
       else if (f.gait?.active) {
-        if (!il || !itPartOn('lunge')) f.gait.requestStep({ kind: 'lunge', fwd: THRUST.step, duration: 0.3 }); // itDrop 'lunge' = 보통 찌르기 걸음 (재기)
-        else if (il.fwd > 0) f.gait.requestStep({ kind: 'lunge', fwd: il.fwd, duration: 0.3, ...(itPartOn('push') ? { push: SECRET.stepPush } : {}), ...(itPartOn('accel') && THRUST.itAccel ? { accel: true } : {}) }); // 이탈리아 찌르기 ③: 거리만큼 런지 · 몸이 앞발을 따라 실림 (거리 안이면 걸음 없이 팔만) · itDrop 'push' · 'accel' = 그 몫 없이 (재기) · THRUST.itAccel 0 = 몸 가속 없음 (스위치)
+        if (!il) f.gait.requestStep({ kind: 'lunge', fwd: THRUST.step, duration: 0.3 });
+        else if (il.fwd > 0) f.gait.requestStep({ kind: 'lunge', fwd: il.fwd, duration: 0.3, push: SECRET.stepPush }); // 이탈리아 찌르기 ③: 거리만큼 런지 · 몸이 앞발을 따라 실림 (거리 안이면 걸음 없이 팔만) · THRUST.itAccel 0 = 몸 가속 없음 (스위치)
       } else this.lunge = SKILL.lungeTime;
     }
     return true;
@@ -350,7 +343,7 @@ export class Skill {
     const P = this.thrustTarget(_p);
     const tip = f.bladePoint(1, _u).sub(_c).applyQuaternion(_yawInv);
     const room = Math.max(0, ARM.upper + ARM.fore - ARM.slack - Math.hypot(h0[0], h0[1] - 0.1, h0[2] - 0.2));
-    return THREE.MathUtils.clamp(P.distanceTo(tip) - room, 0, THRUST.itStep != null ? Math.min(THRUST.step, THRUST.itStep) : THRUST.step); // THRUST.itStep(스위치 · 기본 null = 런지 덧씌우기 걸음 그대로)
+    return THREE.MathUtils.clamp(P.distanceTo(tip) - room, 0, THRUST.step);
   }
 
   /**
@@ -440,32 +433,6 @@ export class Skill {
     return out.sub(_c).applyQuaternion(_yawInv);
   }
 
-  /**
-   * 칼 길 잡기(R6): 찌르기를 시작할 때 내 칼과 상대 칼이 맞닿아(THRUST.bind m 안) 있으면 지금 내 칼 선(몸 기준 단위 벡터)을,
-   * 아니면 null. 맞닿은 채로 칼끝을 목표로 크게 돌리면 상대 칼을 쓸고 지나가다 걸리므로, 이 선을 거의 그대로 따라 민다(updateThrust)
-   */
-  boundAxis() {
-    const f = this.f;
-    const foe = f.foe;
-    if (!(THRUST.bind > 0) || !foe?.armed || foe.weaponBroken) return null;
-    if (segDist(f.bladePoint(0, _u), f.bladePoint(1, _b), foe.bladePoint(0, _c), foe.bladePoint(1, _p)) > THRUST.bind) return null;
-    const q = f.sword.rotation();
-    _sq.set(q.x, q.y, q.z, q.w);
-    _yawInv.copy(f.yaw).invert();
-    const ax = _u.set(0, 1, 0).applyQuaternion(_sq).applyQuaternion(_yawInv).toArray();
-    // 칼끝이 이미 목표 줄에 있을 때만(목표 방향과 bindAim 도 안) 맞댄 채 민다 — 아니면 몸을 비껴간다
-    //  (측정: 숨 고르고 찌른 탭에서는 칼 길을 잡은 탭의 상처율이 오히려 낮았다. 효과는 앞 찌르기로 칼이 줄에 놓인 연타에서만 났다)
-    if (THRUST.bindAim < 180) {
-      const c = f.bodies.chest.translation();
-      _c.set(c.x, c.y, c.z);
-      const P = this.thrustTarget(_p);
-      const h0 = this.tap.h0;
-      _b.set(P.x - h0[0], P.y - h0[1], P.z - h0[2]).normalize();
-      if (_b.x * ax[0] + _b.y * ax[1] + _b.z * ax[2] < Math.cos(THRUST.bindAim * D2R)) return null;
-    }
-    return ax;
-  }
-
   /** 매 스텝: 찌르기 자세(thrustPose) 갱신 */
   updateThrust(dt) {
     const tp = this.tap;
@@ -476,9 +443,7 @@ export class Skill {
     if (tp) {
       tp.t += dt * f.stamina.attackSpeed;
       // 이탈리아 찌르기 ④: 뻗고 버티기가 끝나도 런지가 안 끝났으면(걷던 발이 디디기를 기다리는 런지 부탁 · 몸 가속 lungeBrake — gait.js) 뻗은 채 머문다 — 몸이 따라잡거나 칼이 상대 몸에 닿으면(landed — combat.js strike) 자세로
-      // THRUST.itClashEnd (스위치 · 기본 0 = 끔 — 11/05 찌르기 막기): 뻗은 채 머무는 동안 칼끼리 닿으면(막힘) 닿은 것으로 보고 자세로 — 막힌 찌르기가 밀고 들어가지 않음
-      if (THRUST.itClashEnd && tp.it && !tp.it.landed && f.feel?.touching) tp.it.landed = 'steel';
-      if (tp.it && !tp.it.landed && tp.t >= K.aim + K.extend + K.hold && itLungeOn(f) && itPartOn('hold')) {
+      if (tp.it && !tp.it.landed && tp.t >= K.aim + K.extend + K.hold && itLungeOn(f)) {
         tp.t = K.aim + K.extend + K.hold - 1e-6;
         tp.it.hold += dt;
       }
@@ -529,29 +494,19 @@ export class Skill {
     //  뻗어서 손이 속도를 붙일 거리를 번다
     const h0 = tp.h0;
     _q.set(P.x - h0[0], P.y - h0[1], P.z - h0[2]).normalize();
-    // 칼 길 잡기(R6): 칼이 맞닿은 채 찌르면 지금 칼 선을 bindTurn 만큼만 목표 쪽으로 틀어 그 선으로 민다 (칼끝을 크게 돌리지 않는다)
-    const bd = tp.bound;
-    if (bd) _q.multiplyScalar(THRUST.bindTurn).add(_u.set(bd[0], bd[1], bd[2]).multiplyScalar(1 - THRUST.bindTurn)).normalize();
     //  팔이 이미 굽어 있으면(황소처럼 손이 머리 옆) 당길 필요가 없다 — 어깨에서 손까지 거리로 가늠한다.
-    //  (칼이 맞닿았으면 당기지 않고 곧게 민다. 쓰러진 상대는 plungePose)
+    //  (쓰러진 상대는 plungePose)
     const ext = Math.hypot(h0[0], h0[1] - 0.1, h0[2] - 0.2); // 어깨(가슴 기준 [0, 0.1, 0.2])에서 손까지
-    const ch = bd ? 0 : tp.drive?.chamber != null ? tp.drive.chamber : tp.it && itPartOn('chamber') ? 0 : T.chamber * THREE.MathUtils.clamp((ext - 0.36) / 0.12, 0, 1); // 이탈리아 찌르기 ②: 당기지 않는다 · 몸 싣기(THRUST.drive 당김 칸 — 11/15)면 유파 · 팔 굽힘과 상관없이 그만큼 당김
+    const ch = tp.drive?.chamber != null ? tp.drive.chamber : tp.it ? 0 : T.chamber * THREE.MathUtils.clamp((ext - 0.36) / 0.12, 0, 1); // 이탈리아 찌르기 ②: 당기지 않는다 · 몸 싣기(THRUST.drive 당김 칸 — 11/15)면 유파 · 팔 굽힘과 상관없이 그만큼 당김
     const a = THREE.MathUtils.clamp(t / K.aim, 0, 1);
     const s = THREE.MathUtils.clamp((t - K.aim) / K.extend, 0, 1);
     const e = -ch * a * a * (3 - 2 * a) + (ch + K.reach) * s * s * (3 - 2 * s);
     for (let k = 0; k < 3; k++) pose.hand[k] = h0[k] + _q.getComponent(k) * e;
-    if (bd) {
-      // 칼끝은 민 선 그대로 (돌리지 않는다)
-      pose.dir[0] = _q.x;
-      pose.dir[1] = _q.y;
-      pose.dir[2] = _q.z;
-      tp.dir = pose.dir;
-    }
     // 칼끝: 겨누는 동안은 지금 손(칼자루)에서 목표점 너머 past 의 점을 향해 돌리고, 뻗기 시작하면 그 방향을 붙잡는다.
     //  뻗는 동안 손은 거의 칼 축 방향으로 가는데(측정 0.96), 방향을 계속 고쳐 잡으면 손목이 5~9° 늦게 따라 돌며
     //  칼끝이 옆으로 쓸려 칼 축 방향 성분이 0.7까지 떨어졌다 → 붙잡아 두면 칼끝은 손과 함께 칼 축을 따라 나간다
     //  (쓰러진 상대는 plungePose 가 칼끝을 매 스텝 고쳐 잡는다)
-    if (!bd && (t < K.aim || !tp.dir)) {
+    if (t < K.aim || !tp.dir) {
       const sp = f.sword.translation();
       P.addScaledVector(_q, T.past);
       _q.set(sp.x, sp.y, sp.z).sub(_c).applyQuaternion(_yawInv);
@@ -1718,7 +1673,6 @@ export class Skill {
     const L = this.level;
     f.parryGuard?.opposition?.beforeSkill();
     if (f.stamina.exhausted) return this.holdExhausted(dt);
-    this.sinceThrust = this.tap ? 0 : this.sinceThrust + dt;
     if (this.sec) this.updateSecret(dt); // 플레이어 비기: 손 목표를 비기 길로 (이 스텝의 거르기·몸 따라가기는 아래 그대로)
     if (this.f.lungeRecover) this.lungeRecoverTick(dt); // 안다레 리솔루토 런지 되돌아오기 (10/24 14:0x — 앞발을 뒤로 거둠)
     if (f.rdWind && f.aiControlled && !this.uniq) windStep(f, dt); // AI 풍차 베기 감기 (10/31 08:xx — ai.js rdWindTick · UNIQUE_ASSIST.rdAiWind): 사람 holdTick 과 같은 자리에서 스텝마다 두 팔 · 칼을 놓음

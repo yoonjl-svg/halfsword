@@ -8,11 +8,9 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT } from './harness_m.mjs';
 import { thrustDrive } from '../../src/skill.js';
 import { allNodeIds, kitFromNodes } from '../../src/skill_tree_data.js';
-import { strokeRun } from './thrust_motion.mjs';
 
 const ST = CONFIG.STRIKE;
 const TH = CONFIG.THRUST;
-const withSet = (o, vals, fn) => { const old = { ...o }; Object.assign(o, vals); try { return fn(); } finally { Object.assign(o, old); } };
 
 /** 사람 이탈리아 레이피어가 맞닿기 거리(1.72 m)에서 선 상대(칼 아래)를 탭 찌르기 한 번 — 1.2 s 동안 사람 칼 → 상대 몸 판정 · 가르는 칼 장부 */
 function tapScene() {
@@ -49,7 +47,6 @@ function tapScene() {
 }
 
 test('기본값: 다 쓴 박힘 풀기 켬(사장님 11/15 결정 \'3-1과 3-2만 해\') · 몸 싣기 3 · 약화 배율 상처만 켬(사장님 11/16 결정 \'묶음 P 넣어.\') — 확인표 4440 ~ 4448 · 4570 ~', () => {
-  assert.equal(TH.drive, 3);
   assert.equal(TH.driveChamber, 0.3, '걸음 사다리 0.3');
   assert.equal(TH.driveStep, 0.45, '걸음 사다리 0.45');
 });
@@ -66,14 +63,6 @@ test('약화 배율(0.8) 찌르기는 physE = 판정 에너지 ÷ 0.8 · 박힘�
   }
 });
 
-
-test('THRUST.drive: 당김 = 칼끝이 더 빠름 · 몸 싣기 = 칼끝이 더 멀리 (사람 탭 찌르기 · 상대 3 m)', () => {
-  const run = (d, school, weapon) => withSet(TH, { drive: d }, () => strokeRun({ school, weapon, kind: 'tap', gap: 'air' }));
-  const it0 = run(0, 'italian', 'rapier'), it1 = run(1, 'italian', 'rapier');
-  assert.ok(it1.vMax > it0.vMax * 1.3, `이탈리아 당김 ${it0.vMax} → ${it1.vMax}`);
-  const de0 = run(0, 'german', 'longsword'), de2 = run(2, 'german', 'longsword');
-  assert.ok(de2.tip > de0.tip * 1.5, `독일 몸 싣기 ${de0.tip} → ${de2.tip} cm`);
-});
 
 test('THRUST.drive 겹침 막기 (사장님 11/15 \'런지가 이탈리아 보법이나 런지와 겹쳐서 움직임이 이상해지는지 확인 필요\'): 이탈리아 잰 런지 · 걷던 몸은 제 걸음 그대로 · 리솔루토가 탭 런지를 덮지 않음 · 옆걸음 뒤 오래 안 머묾', async () => {
   const { sceneRun } = await import('./thrust_drive_check.mjs');

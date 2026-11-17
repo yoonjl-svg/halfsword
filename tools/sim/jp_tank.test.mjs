@@ -15,7 +15,7 @@ const JT = CONFIG.JP_TANK;
 const SP = CONFIG.SCHOOL_PASSIVE;
 const UA = CONFIG.UNIQUE_ASSIST;
 const J0 = { ...JT };
-const restore = () => Object.assign(JT, { ...J0, speed: JT.speed }); // 11/16 스택 빠르기 스위치(JP_TANK.speed)는 그 시험이 묶은 판 그대로 (withJpSpeedOff)
+const restore = () => Object.assign(JT, J0);
 
 /** 사람(humanInput) 일본 몸 weapon · 상대 롱소드(AI 멈춤) · 판 시작 정지 지남 */
 function fixture(weapon = 'uchigatana', { human = true, ...opts } = {}) {
@@ -36,16 +36,10 @@ function startTapThrust(f) {
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 
 test('값: 사장님 11/14 — 1 초 · 맞음 1 · 막기 2 · 최대 10 · +8 %/스택 · 흘려 받기 3(감독 권고) · 바위 몸(밀치기 기력 0 · −4 %/스택) 켬 · C · E 끔', () => {
-  assert.equal(JT.stack, 1);
-  assert.equal(JT.ai, 1, '11/14 2 단계 일본 — AI 스택 · 바위 몸 켬 (사장님 확인 — 전 0 견줌)');
   assert.ok(near(JT.per, CONFIG.realS(1.0)));
   assert.deepEqual([JT.hit, JT.block, JT.flow, JT.max], [1, 2, 3, 10]);
   assert.ok(near(JT.each * JT.max, 0.8));
-  assert.equal(JT.lowShove, 1);
-  assert.equal(JT.rock, 1);
   assert.ok(near(JT.rockEach, 0.05), '11/16 사장님 "바위 몸 배율 0.04를 0.05로 바꿔" — 10 스택 −50 %');
-  assert.deepEqual([JT.counter, JT.keep], [0, 0]);
-  assert.ok(near(JT.counterWin, CONFIG.realS(0.6)));
 });
 
 test('스택 — 휘두르지 않은 1 초마다 +1 · 몫 = 스택 × 8 % · 판 시작 정지 동안은 안 셈', () => {
@@ -111,9 +105,8 @@ test('스택 — 막기 +2 · 흘려 받기 +3 · 한 공격에 둘이 함께 �
 
 
 
-test('스위치 끔(JP_TANK.stack 0) · AI(JP_TANK.ai 0 — 옛 판) · 시뮬 대본 몸 = 전 판 (6 s 곧은 오름 +30 %)', () => {
-  // 11/14 2 단계 일본 (사장님 '일본 스택과 바위 몸 AI 켜는 것도 이번 개편에 함께'): JP_TANK.ai 기본 1 — 'AI 몫' 줄은 옛 판(JP_TANK.ai 0)으로 묶어 본다
-  const cases = [['끔', { human: true }, () => (JT.stack = 0)], ['대본 몸', { human: false }, () => {}], ['AI 몫 (JP_TANK.ai 0)', { human: true }, (fx) => ((JT.ai = 0), (fx.sp.ai = true))]];
+test('시뮬 대본 몸 = 전 판 (6 s 곧은 오름 +30 %) · AI 스택', () => {
+  const cases = [['대본 몸', { human: false }, () => {}]];
   for (const [name, o, set] of cases) {
     const fx = fixture('uchigatana', o);
     try {
@@ -129,7 +122,6 @@ test('스위치 끔(JP_TANK.stack 0) · AI(JP_TANK.ai 0 — 옛 판) · 시뮬 �
   }
   const fa = fixture();
   try {
-    assert.equal(JT.ai, 1, '2 단계 일본 — AI 스택 기본 켬');
     fa.sp.ai = true;
     assert.equal(fa.sp.stackOn, true, 'AI 스택');
   } finally { restore(); fa.g.world.free(); }
@@ -140,7 +132,7 @@ test('스위치 끔(JP_TANK.stack 0) · AI(JP_TANK.ai 0 — 옛 판) · 시뮬 �
   } finally { de.g.world.free(); }
 });
 
-test('바위 몸 — 스택당 받는 피해 −5 % (10 스택 × 0.5 — 11/16 사장님 \'바위 몸 배율 0.04를 0.05로 바꿔\' · 전 −4 % × 0.6) · 칼을 내면 함께 사라짐 · 끄면 1', () => {
+test('바위 몸 — 스택당 받는 피해 −5 % (10 스택 × 0.5 — 11/16 사장님 \'바위 몸 배율 0.04를 0.05로 바꿔\' · 전 −4 % × 0.6) · 칼을 내면 함께 사라짐', () => {
   const fx = fixture();
   try {
     const { sp } = fx;
@@ -149,9 +141,6 @@ test('바위 몸 — 스택당 받는 피해 −5 % (10 스택 × 0.5 — 11/16 
     assert.ok(near(sp.takenK(), 0.75), `5 스택 ${sp.takenK()}`);
     tick(fx, sec(5));
     assert.ok(near(sp.takenK(), 0.5), '10 스택 × 0.5');
-    JT.rock = 0;
-    assert.equal(sp.takenK(), 1, '끔');
-    JT.rock = 1;
     startTapThrust(fx.f);
     assert.equal(sp.takenK(), 1, '칼을 내면 함께 사라짐');
   } finally { restore(); fx.g.world.free(); }
@@ -160,31 +149,7 @@ test('바위 몸 — 스택당 받는 피해 −5 % (10 스택 × 0.5 — 11/16 
 });
 
 
-test('C (끔이 기본): 켜면 흘려 받기가 든 스텝에 비기 창 (counterWin) — 그 안 공격이 고노센', () => {
-  for (const on of [0, 1]) {
-    const fx = fixture();
-    try {
-      JT.counter = on;
-      const { f, a, sp } = fx;
-      assert.equal(playerSecretOf(f)?.name, 'goNoSen');
-      const W = new PlayerSecretWatch(f, a);
-      W.update(DT, false);
-      assert.equal(W.open, null);
-      sp.guardEvent('flow', a, 9);
-      W.update(DT, false);
-      if (!on) { assert.equal(W.open, null, '끔'); continue; }
-      assert.equal(W.open?.ctx?.ev, 'counter');
-      assert.ok(near(W.open.t, JT.counterWin - DT, 1e-6) || near(W.open.t, JT.counterWin, 1e-6));
-      assert.equal(W.counterWins, 1);
-      const o = W.fire();
-      assert.equal(o?.S?.name, 'goNoSen', '공격 입력 → 고노센');
-      sp.guardEvent('flow', a, 9); W.update(DT, false);
-      assert.equal(W.open, null, '같은 공격의 흘림은 한 번');
-    } finally { restore(); fx.g.world.free(); }
-  }
-});
-
-test('바위 몸 — 사람 일본은 붙어 버티기(밀치기)에 기력 0 · 상대는 그대로 · 끄면 전 판', () => {
+test('바위 몸 — 사람 일본은 붙어 버티기(밀치기)에 기력 0 · 상대는 그대로', () => {
   const kitAll = kitFromNodes('japanese', allNodeIds('japanese'));
   const kitNoRock = kitFromNodes('japanese', new Set([...allNodeIds('japanese')].filter((n) => n !== 'J10' && n !== 'J12')));
   for (const [name, o, want] of [['사람 · 바위 몸', { kit: kitAll }, true], ['바위 몸 · 기다림과 침 안 익힘', { kit: kitNoRock }, false], ['대본 몸', { human: false }, false]]) {
@@ -194,34 +159,28 @@ test('바위 몸 — 사람 일본은 붙어 버티기(밀치기)에 기력 0 ·
       assert.equal(lowShoveFree(fx.a), false, `${name}: 상대`);
     } finally { fx.g.world.free(); }
   }
-  for (const on of [1, 0]) {
+  {
     const fx = fixture('uchigatana', { kit: kitAll });
     try {
-      JT.lowShove = on;
       const { f, a } = fx;
       f.stamina.canClinch = () => true; // 붙어 버팀 (밀치기 누르기 + 닿음 — 조건은 stamina.js canClinch)
       const p0 = f.stamina.value, q0 = a.stamina.value;
       for (let i = 0; i < 60; i++) { f.stamina.stepClinch(DT); a.stamina.stepClinch(DT); }
       const dP = p0 - f.stamina.value, dA = q0 - a.stamina.value;
       assert.ok(dA > 1, `상대 빠짐 ${dA}`);
-      if (on) assert.equal(dP, 0, '낮은 걸음 0');
-      else assert.ok(near(dP, dA, 1e-6), `끔 = 같이 빠짐 ${dP} · ${dA}`);
+      assert.equal(dP, 0, '낮은 걸음 0');
     } finally { restore(); fx.g.world.free(); }
   }
   const de = fixture('longsword');
   try { assert.equal(lowShoveFree(de.f), false, '독일 사람'); } finally { de.g.world.free(); }
 });
 
-test('다른 유파 · 전 봇 판은 바이트 같음 (스택 켬 · 끔 · 일본 봇 tank 끼움)', () => {
+test('다른 유파 · 전 봇 판은 바이트 같음 (일본 봇 tank 끼움)', () => {
   const h = (r) => createHash('sha256').update(JSON.stringify(r)).digest('hex');
   const one = (o) => fightOne({ school: 'german', weapon: 'longsword', opp: 'longsword', seed: 2, dur: 4, ...o });
   const base = h(one({}));
   try {
     assert.equal(h(one({ jpBot: 'tank' })), base, '독일 — 일본 봇 스위치');
-    Object.assign(JT, { stack: 0, lowShove: 0 });
-    assert.equal(h(one({})), base, '독일 — 스택 끔');
-    Object.assign(JT, { stack: 1, lowShove: 1, rock: 1, counter: 1, keep: 1, ai: 1 });
-    assert.equal(h(one({})), base, '독일 — 모두 켬');
   } finally { restore(); }
 });
 
@@ -241,26 +200,13 @@ test('몫 열쇠 (11/14 사장님 \'전부 권고대로\' · C 보류): 바위 �
       assert.ok(near(fx.sp.takenK(), want), `바위 몸 ${drop} ${fx.sp.takenK()}`);
     } finally { restore(); fx.g.world.free(); }
   }
-  // C (보류 — 기본 끔): 켜면 칸과 상관없이(스위치만) 받아 치기 창 · 끄면 없음
-  for (const [on, drop, want] of [[1, [], 'counter'], [1, ['J3'], 'counter'], [0, [], null]]) {
-    const fx = fixture('uchigatana', { kit: kit(drop) });
-    try {
-      JT.counter = on;
-      const W = new PlayerSecretWatch(fx.f, fx.a);
-      W.update(DT, false);
-      fx.sp.guardEvent('flow', fx.a, 3);
-      W.update(DT, false);
-      assert.equal(W.open?.ctx?.ev ?? null, want, `C ${on} ${drop}`);
-    } finally { restore(); fx.g.world.free(); }
-  }
 });
 
 test('바위 몸 — 묶인 동안(본판 독일 붙은 거리 규칙 · 기력 × 2 — close_hold.js)에도 밀치기 기력 0 · 상대는 × 2 그대로 (11/14 합침 고침)', () => {
   const kitAll = kitFromNodes('japanese', allNodeIds('japanese'));
-  const run = (on) => {
+  const run = () => {
     const fx = fixture('uchigatana', { kit: kitAll });
     try {
-      JT.lowShove = on;
       const { f, a } = fx;
       f.stamina.canClinch = () => true;
       f.barge = { phase: 'press', hold: 10, holdT: 0 }; // 묶임 안 (bargeHeld)
@@ -271,9 +217,7 @@ test('바위 몸 — 묶인 동안(본판 독일 붙은 거리 규칙 · 기력 
   };
   const k = CONFIG.CLOSE.holdDrain;
   assert.ok(k > 1, `묶임 기력 배율 ${k}`);
-  const on = run(1), off = run(0);
+  const on = run();
   assert.equal(on.dP, 0, '바위 몸 — 묶인 동안도 0');
-  assert.ok(near(on.dA, off.dA, 1e-6), `상대 빠짐 그대로 ${on.dA} · ${off.dA}`);
-  assert.ok(near(off.dA, CONFIG.STAMINA.clinchPerSecond * k * 30 * DT, 1e-6), `× ${k}`);
-  assert.ok(near(off.dP, off.dA, 1e-6), '끄면 같이 빠짐');
+  assert.ok(near(on.dA, CONFIG.STAMINA.clinchPerSecond * k * 30 * DT, 1e-6), `상대 × ${k} 그대로`);
 });

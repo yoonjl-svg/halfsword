@@ -35,9 +35,9 @@ function walker(g, press = () => false) {
 }
 const run = (g, s) => { for (let i = 0; i < s / DT; i++) g.step(); };
 
-test('기본값: 손목 치기 떨굼 완화 켬(ease 1 · 2 J · 0.4 s · 1.5 m/s) · AI 손목 치기도 떨굼(ai 1) · 줍기 막기 단추(mode block · ai 1) — 사장님 11/05', () => {
+test('기본값: 손목 치기 떨굼 완화 켬(ease 1 · 2 J · 0.4 s · 1.5 m/s) · AI 손목 치기도 떨굼(ai 1) · 줍기 막기 단추(AI 도) — 사장님 11/05', () => {
   assert.deepEqual([K.ease, K.easeE, K.easeAfter, K.easeVn, K.p, K.ai, K.once, K.judge, K.swordVn, K.swordHalf], [1, 2, 0.4, 1.5, 0.5, 1, 1, 'all', 3, 0.5]);
-  assert.deepEqual([PU.mode, PU.ai, PU.reach, PU.bend, PU.lift], ['block', 1, 0.9, 0.4, 0.2]); // reach 0.6 → 0.9 [사장님 11/16 결정] '활성화되는 거리를 늘려.'
+  assert.deepEqual([PU.reach, PU.bend, PU.lift], [0.9, 0.4, 0.2]); // reach 0.6 → 0.9 [사장님 11/16 결정] '활성화되는 거리를 늘려.'
   assert.deepEqual([PU.step, PU.stepFrom, PU.stepWait], [0.3, 0.6, 0.2], '11/16 내디딤');
   assert.ok([0.3, 0.45, 0.6, 0.9].includes(PU.reach) && [0.3, 0.45, 0.6, 0.9].includes(PU.step) && [0.3, 0.45, 0.6, 0.9].includes(PU.stepFrom), '걸음 사다리');
   assert.ok([0.2, 0.4, 0.6].includes(+(PU.bend + PU.stepWait).toFixed(2)), '시간 사다리 (내디딘 굽힘)');
@@ -104,55 +104,10 @@ test('완화: 손목 치기 긋기가 끝난 뒤 easeAfter(0.4 실제 s) 안 닿
   } finally { restore(); g.world.free(); }
 });
 
-test('줍기 끔(mode 0): 칼을 놓친 채 · 줍는 상태 없음', () => {
-  const g = round();
-  try {
-    PU.mode = 0; PU.ai = 0; // 11/05 기본은 막기 단추 — 끈 판
-    const P = g.player;
-    walker(g, () => true);
-    run(g, 1); P.dropSword(); run(g, 4);
-    assert.equal(P.armed, false); assert.equal(P.pickup ?? null, null); assert.equal(P.pickupLog, undefined);
-  } finally { restore(); g.world.free(); }
-});
-
-test('줍기 auto: 칼 곁에 가면 저절로 — 웅크려 쥐고 일어섬 · 다시 쥔 칼은 손목에 · 서 있음 · 값 깨짐 없음 · 칼이 순간이동하지 않음', () => {
-  const g = round();
-  try {
-    const P = g.player;
-    PU.mode = 'auto';
-    walker(g);
-    run(g, 1); P.dropSword();
-    let maxStep = 0, prev = null, minPelvis = Infinity, crouched = false;
-    for (let i = 0; i < 5 / DT && !P.armed; i++) {
-      g.step();
-      const s = P.sword.translation();
-      if (prev) maxStep = Math.max(maxStep, Math.hypot(s.x - prev.x, s.y - prev.y, s.z - prev.z));
-      prev = { ...s };
-      if (P.pickup?.phase === 'bend') { minPelvis = Math.min(minPelvis, P.bodies.pelvis.translation().y); crouched ||= !!P.secretStance; }
-    }
-    assert.equal(P.armed, true, '다시 쥠');
-    assert.ok(crouched && minPelvis < 0.8, `웅크림 (골반 ${minPelvis.toFixed(2)})`);
-    assert.ok(maxStep < 0.12, `한 스텝 칼 옮김 ${maxStep.toFixed(3)} m`);
-    run(g, 1);
-    const L = P.pickupLog;
-    assert.equal(L.length, 1); assert.equal(L[0].ok, true);
-    const motion = (L[0].t1 - L[0].t0) / CONFIG.TIME.k;
-    assert.ok(motion > 0.3 && motion < 0.7, `동작 ${motion.toFixed(2)} 실제 s (굽힘 0.4 + 올림 0.2)`);
-    assert.equal(P.state, 'stand');
-    const w = P.bodies.farmS, q = w.rotation(), t = w.translation();
-    const wrist = new THREE.Vector3(0.13, 0, 0).applyQuaternion(new THREE.Quaternion(q.x, q.y, q.z, q.w)).add(new THREE.Vector3(t.x, t.y, t.z));
-    const s = P.sword.translation();
-    assert.ok(wrist.distanceTo(new THREE.Vector3(s.x, s.y, s.z)) < 0.05, '칼자루가 손목에');
-    assert.ok(P.swordColliders.every((c) => c.collisionGroups() !== 0), '칼 충돌 되돌림');
-    assert.ok([s.x, s.y, s.z].every(Number.isFinite));
-  } finally { restore(); g.world.free(); }
-});
-
 test('줍기 block: 곁에 서도 단추를 안 누르면 그대로 · 누르면 주움 · 단추 글 = pickupReady', () => {
   const g = round('zweihander');
   try {
     const P = g.player;
-    PU.mode = 'block';
     let press = false;
     walker(g, () => press);
     run(g, 1); P.dropSword(); run(g, 3);
@@ -165,23 +120,22 @@ test('줍기 block: 곁에 서도 단추를 안 누르면 그대로 · 누르면
 });
 
 test('못 주움: 칼 팔 기능이 문턱 밑 · 휘는 마디 무기 · 넘어지면 그만둠(칼은 땅에 · 충돌 그대로)', () => {
-  PU.mode = 'auto';
   let g = round();
   try {
     const P = g.player;
-    walker(g);
+    walker(g, () => true);
     run(g, 1); P.dropSword(); P.limbs.armS = CONFIG.VITALS.dropSwordArm * 0.5; run(g, 3);
     assert.equal(P.armed, false); assert.equal(canPickup(P), false);
   } finally { g.world.free(); }
   g = round('druid_whip', 'longsword');
   try {
     const P = g.player;
-    if (P.flexWeapon) { walker(g); run(g, 1); P.dropSword(); run(g, 3); assert.equal(P.armed, false, '채찍은 줍지 않음'); }
+    if (P.flexWeapon) { walker(g, () => true); run(g, 1); P.dropSword(); run(g, 3); assert.equal(P.armed, false, '채찍은 줍지 않음'); }
   } finally { g.world.free(); }
   g = round();
   try {
     const P = g.player;
-    walker(g);
+    walker(g, () => true);
     run(g, 1); P.dropSword();
     for (let i = 0; i < 5 / DT && P.pickup?.phase !== 'bend'; i++) g.step();
     assert.equal(P.pickup?.phase, 'bend');
@@ -194,16 +148,13 @@ test('못 주움: 칼 팔 기능이 문턱 밑 · 휘는 마디 무기 · 넘어
   } finally { restore(); g.world.free(); }
 });
 
-test('AI 줍기: ai 1 이면 칼을 놓친 AI 가 걸어가 주움 · ai 0 이면 그대로(물러남)', () => {
-  for (const ai of [1, 0]) {
-    const g = newRound({ weapon: 'longsword', seed: 4, walls: true });
-    try {
-      PU.ai = ai;
-      run(g, 3); g.enemy.dropSword(); run(g, 6);
-      assert.equal(g.enemy.armed, !!ai, `ai ${ai}`);
-      if (ai) assert.equal(g.enemy.pickupLog?.at(-1)?.ok, true);
-    } finally { restore(); g.world.free(); }
-  }
+test('AI 줍기: 칼을 놓친 AI 가 걸어가 주움', () => {
+  const g = newRound({ weapon: 'longsword', seed: 4, walls: true });
+  try {
+    run(g, 3); g.enemy.dropSword(); run(g, 6);
+    assert.equal(g.enemy.armed, true);
+    assert.equal(g.enemy.pickupLog?.at(-1)?.ok, true);
+  } finally { restore(); g.world.free(); }
 });
 
 /** 멈춘 칼을 몸 기준 (d m · 방향 a° — 0 = 앞 · + = 오른쪽) 자리로 옮겨 둠 (칼 자세 · 높이 그대로) */
@@ -218,7 +169,7 @@ test('줍기 거리 0.9 · 내디딤 (사장님 11/16 \'활성화되는 거리�
     const g = round();
     try {
       const P = g.player;
-      Object.assign(PU, { mode: 'block', reach, step });
+      Object.assign(PU, { reach, step });
       let press = false;
       g.before = () => { P.move.set(0, 0); P.stickX = P.stickY = 0; P.pickupPress = press; };
       run(g, 1); P.dropSword(); run(g, 2.5);
@@ -249,27 +200,21 @@ test('줍기 거리 0.9 · 내디딤 (사장님 11/16 \'활성화되는 거리�
   }
 });
 
-test('몸 사본(이어하기): 칼을 놓친 채면 disarmed · 줍기 켠 몸만 새 판도 놓친 채 시작 · 끔이면 칼을 쥔 채(오늘)', () => {
+test('몸 사본(이어하기): 칼을 놓친 채면 disarmed · 새 판도 놓친 채 시작', () => {
   const body = (over = {}) => ({ weapon: { id: 'longsword', fragile: true }, blood: 1, bleed: 0, consciousness: 1, pain: 0, limbs: { armS: 1, armO: 1, legF: 1, legB: 1 }, wounds: [], weaponBroken: false, stamina: { value: 100, max: 130 }, secretUsed: 0, armed: true, human: true, dropSword() { this.armed = false; }, ...over });
   const s = JSON.parse(JSON.stringify(snapshotFighter(body({ armed: false }))));
   assert.equal(s.disarmed, true);
   assert.equal(snapshotFighter(body()).disarmed, undefined, '쥔 몸은 칸 없음 (옛 꼴 그대로)');
   try {
-    PU.mode = 0; PU.ai = 0; // 끈 판부터 (11/05 기본은 켬)
-    const a = body(); applyFighterSnapshot(a, s); assert.equal(a.armed, true, '줍기 끔 — 칼을 쥔 채');
-    PU.mode = 'block';
-    const b = body(); applyFighterSnapshot(b, s); assert.equal(b.armed, false, '줍기 켬 — 놓친 채');
-    const c = body({ human: false }); applyFighterSnapshot(c, s); assert.equal(c.armed, true, 'AI 몸은 PICKUP.ai');
-    PU.ai = 1;
+    const b = body(); applyFighterSnapshot(b, s); assert.equal(b.armed, false, '줍기 — 놓친 채');
     const d = body({ aiControlled: true }); applyFighterSnapshot(d, s); assert.equal(d.armed, false);
   } finally { restore(); }
   // 실제 몸: 놓친 채 시작한 판에서 주움
   const g = round();
   try {
-    PU.mode = 'auto';
     applyFighterSnapshot(g.player, s);
     assert.equal(g.player.armed, false);
-    walker(g); run(g, 5);
+    walker(g, () => true); run(g, 5);
     assert.equal(g.player.armed, true);
     assert.equal(snapshotFighter(g.player).disarmed, undefined, '주운 뒤 사본은 쥔 몸');
   } finally { restore(); g.world.free(); }

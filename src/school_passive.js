@@ -7,7 +7,7 @@
 //   · 일본 기다림과 침 (켄타이) — 휘두르지 않는 동안 full 초에 걸쳐 0 → gain 쌓임(곧은 오름) · 칼을 낸 순간(strokeStart — 기력 장부의 공격 청구) 그 칼에 묶이고 0 부터 다시.
 //     묶인 칼이 상처를 내면(combat.js strike → onHit) 그 맞음에 × (1 + 몫) 뒤 씀 · 못 맞히고(빗나감 · 막힘) 끝난 뒤 이어짐 창(UNIQUE_ASSIST.afterWindow) 안에 시작한 칼이
 //     츠바메가에시면 그 몫이 넘어감(unique_assist.js strokeTechOf — 맞는 순간 읽음) · 비기 칼엔 안 묶임 — 10/28 01:5x 사장님 '일본 기다림과 침도 고노센도 적용받게 해':
-//     일본 비기 고노센(goNoSen — 사람 skill.sec · AI secretRun)은 보통 칼처럼 묶고 첫 상처에 씀(SCHOOL_PASSIVE.japanese.secret 1 · 다른 비기는 그대로 없음)
+//     일본 비기 고노센(goNoSen — 사람 skill.sec · AI secretRun)은 보통 칼처럼 묶고 첫 상처에 씀(다른 비기는 그대로 없음)
 //   · 독일 인데스 — 상대 공격이 내게 실패(foeFailed: 헛침 = 칼에도 몸에도 안 닿음 · 막힘 = 내 칼에 닿고 나를 못 벰 — ai.js afterStrike · 사람 공격은 skill.js whiffTrack)하면
 //     이어짐 창(afterWindow)이 열리고, 그 안에 시작한 내 칼(비기 아님)은 주는 피해 × (1 + gain × aiK). 칼을 내면 창은 닫힘(그 칼이 되받아 친 칼).
 //     10/28 01:4x 사장님 '무기가 맞부딪혔을 때로 하면?' · '겹치기는 맞물리면 인데스 늘 붙게 해' (SCHOOL_PASSIVE.german.touch 1
@@ -36,11 +36,10 @@ const _p = new THREE.Vector3();
 const _h = new THREE.Vector3();
 const _w = new THREE.Vector3();
 const _ax = new THREE.Vector3();
-const KEEP_TECH = new Set(['kote', 'hirakiGiri']); // E (11/14 설계안 — JP_TANK.keep): 손목 치기(J7) · 비껴 베기(J6) — 스택을 쓰지도 지우지도 않는 견제
 
-/** 유파 패시브 스위치 — 모두(SCHOOL_PASSIVE.on) · 그 유파(.on) */
+/** 유파 패시브가 있는 유파인가 (config SCHOOL_PASSIVE) */
 export function schoolPassiveOn(tradition) {
-  return !!SP.on && !!SP[tradition] && SP[tradition].on !== false;
+  return !!SP[tradition];
 }
 
 /** 휘두르는 중인가 (켄타이 쌓임 멈춤 · 묶인 칼이 살아 있음 · 동방 숨 바꾸기) */
@@ -104,9 +103,9 @@ export class SchoolPassive {
     return this.ai ? SP[key]?.aiK ?? 1 : 1;
   }
 
-  /** 일본 스택 판인가 (11/14 — JP_TANK.stack · 사람 = 사람 입력이 모는 몸 humanInput · AI 는 JP_TANK.ai 견줌일 때만 · 시뮬 대본 몸은 전 판) */
+  /** 일본 스택 판인가 (11/14 — 사람 = 사람 입력이 모는 몸 humanInput · AI 도 · 시뮬 대본 몸은 전 판) */
   get stackOn() {
-    return !!JT.stack && this.on('japanese') && (this.ai ? !!JT.ai : !!this.f.humanInput);
+    return this.on('japanese') && (this.ai || !!this.f.humanInput);
   }
 
   /** 화면 표시 (stamina_hud.js — 스택 판일 때 지금 스택 수 · 아니면 null) */
@@ -120,7 +119,7 @@ export class SchoolPassive {
    *  스택 빠르기 판이 아니거나 묶인 칼이 없으면 1. tech = 지금 칼 이름 (제비 베기 'tsubameGaeshi' 를 가름)
    */
   speedOf(tech = null) {
-    if (!JT.speed || !this.stackOn) return 1;
+    if (!this.stackOn) return 1;
     const L = this.lock;
     if (!L || L.n !== this.n || L.kept) return 1;
     let n = L.stk ?? 0;
@@ -164,12 +163,11 @@ export class SchoolPassive {
           this.addStk(1, 'idle');
         }
       }
-      if (JT.keep) this.keepCheck();
     }
     if (this.win) this.tickIndes(dt);
     if (this.on('chinese') && !sw) this.stats.clotT += dt;
     // 11/16 스택 빠르기 (JP_TANK.speed — speedOf): 묶인 칼이 휘두르는 동안 빠르기 s · 서보 힘 s² (finger_cut.js fingerCutK 'arm' · ai.js moveHand 가 읽음 — 아니면 1)
-    if (JT.speed && this.stackOn) {
+    if (this.stackOn) {
       const s = sw ? this.speedOf(this.f.aiControlled ? this.f.aiCtl?.tech?.name ?? null : strokeTechOf(this.f)) : 1;
       this.f.jpSpeedS = s;
       this.f.jpArmK = s * s;
@@ -179,7 +177,7 @@ export class SchoolPassive {
   /** 묶인 칼이 상처를 냄 (11/16 스택 빠르기 판 — combat.js strike 가 패시브 배율 없는 맞음에 부름): 이어짐 창 안 제비 베기로 넘길 스택은 빗나간 칼만 (공격력 판 onHit 의 씀과 같은 표시) */
   landed() {
     const L = this.lock;
-    if (!JT.speed || !this.stackOn || !L || L.n !== this.n || L.spent || !swingingNow(this.f)) return;
+    if (!this.stackOn || !L || L.n !== this.n || L.spent || !swingingNow(this.f)) return;
     L.spent = true;
   }
 
@@ -240,7 +238,7 @@ export class SchoolPassive {
    *  일본 패시브가 켜져 있고 지금 내는 비기가 고노센(schools.js JAPANESE_SECRET name 'goNoSen' — 사람 skill.sec.S · AI secretRun.S)일 때만. 그 밖 비기는 그대로 없음
    */
   kenSecret() {
-    if (!SP.japanese?.secret || !this.on('japanese')) return false;
+    if (!this.on('japanese')) return false;
     const f = this.f;
     const S = f.skill?.sec?.S ?? (f.aiControlled ? f.aiCtl?.secretRun?.S : f.stamina?.controller?.secretRun?.S);
     return S?.name === 'goNoSen';
@@ -252,14 +250,13 @@ export class SchoolPassive {
     if (!L || L.n !== this.n || !this.school || !swingingNow(this.f)) return 1;
     const sec = !!this.f.stamina?.inSecret;
     if (sec && !L.kenSec) return 1; // 비기 칼 — 패시브 몫 없음 (인데스는 늘 · 켄타이는 고노센 빼고)
-    if (JT.keep && this.stackOn) this.keepCheck(); // E: 손목 치기 · 비껴 베기면 묶은 스택을 돌려받고 이 칼엔 안 실림 (맞는 순간에 이름이 먼저 섰을 때)
     let k = 1;
-    if (this.on('japanese') && !L.spent && !(JT.speed && this.stackOn)) k += Math.max(L.ken, !sec && L.carry > 0 && strokeTechOf(this.f) === 'tsubameGaeshi' ? L.carry : 0); // 11/16 스택 빠르기 판(JP_TANK.speed)은 공격력 몫 없음 — speedOf
+    if (this.on('japanese') && !L.spent && !this.stackOn) k += Math.max(L.ken, !sec && L.carry > 0 && strokeTechOf(this.f) === 'tsubameGaeshi' ? L.carry : 0); // 11/16 스택 빠르기 판(JP_TANK.speed)은 공격력 몫 없음 — speedOf
     if (this.on('german') && !sec) {
       // 10/28 '겹치기는 맞물리면 인데스 늘 붙게 해': 겹치기(duplieren — 앞 칼이 맞물린 뒤 낸 칼 · unique_assist.js strokeTechOf)는 창이 닫혀 있어도 몫 (touch 판만 —
       //  겹치기는 앞 긋기가 끝나고 afterWindow 안에 나가 닿음이 그보다 먼저 끝났을 수 있음: AI 겹치기 13 가운데 창 안 2 — 문서 decisions 10/28)
       let ind = L.indes;
-      if (!ind && SP.german.touch && strokeTechOf(this.f) === 'duplieren') {
+      if (!ind && strokeTechOf(this.f) === 'duplieren') {
         ind = SP.german.gain * this.aiK('german');
         if (!L.dup) (L.dup = true), this.stats.indes.dup++;
       }
@@ -334,28 +331,10 @@ export class SchoolPassive {
    *  받는 칼날 상처 심각도 · 둔타 에너지 배율 1 − rockEach × 스택 (10 스택 0.5 — combat.js analyze). 칼을 내면 스택과 함께 0 → 1
    */
   takenK() {
-    if (!JT.rock || !(this.stk > 0) || !this.stackOn || kitOff(this.f, 'jpRock')) return 1;
+    if (!(this.stk > 0) || !this.stackOn || kitOff(this.f, 'jpRock')) return 1;
     return Math.max(0, 1 - JT.rockEach * this.stk);
   }
 
-  /**
-   * E 잔기술은 견제로 (11/14 설계안 — JP_TANK.keep · 기본 끔): 지금 묶인 칼이 손목 치기(kote) · 비껴 베기(hirakiGiri)로 읽히면(unique_assist.js strokeTechOf — 긋기 시작 뒤 몇 스텝에 섬)
-   *  묶었던 스택을 돌려받고(상한 max) 그 칼의 몫은 0 — 스택을 쓰지도 지우지도 않음. 칼 하나에 한 번 (update · dealtK 가 부름)
-   */
-  keepCheck() {
-    const L = this.lock;
-    if (!L || L.kept || L.spent || !(L.stk > 0) || L.n !== this.n || !swingingNow(this.f)) return;
-    if (!KEEP_TECH.has(strokeTechOf(this.f))) return;
-    L.kept = true;
-    const S = this.stats.stk;
-    S.kept++;
-    S.strokes--;
-    S.sum -= L.stk;
-    if (L.ken > 0.005) this.stats.ken.charged--;
-    this.stk = Math.min(JT.max, this.stk + L.stk);
-    L.ken = 0;
-    L.stk = 0;
-  }
 
   /** 상대 공격이 내게 실패 — 'whiff' 헛침 · 'blocked' 내 칼에 막힘 (ai.js afterStrike · skill.js whiffEnd). 독일만 창을 연다 */
   foeFailed(kind) {
@@ -370,7 +349,7 @@ export class SchoolPassive {
    *  독일만 — 창이 없으면 열고(stats.indes.touch) · 있으면 창 시계를 0 으로(닿아 있는 동안 늘 열림 · 닿음이 끝나고 afterWindow 뒤 닫힘). 두 몸 모두 부름(제 몸 창만)
    */
   bladeContact() {
-    if (!SP.german.touch || !this.on('german') || !this.f.alive) return;
+    if (!this.on('german') || !this.f.alive) return;
     if (this.win) {
       this.win.t = 0;
       return;

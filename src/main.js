@@ -3019,12 +3019,10 @@ function playerInputFrame(dt, now) {
   //  10/24 공격 원 판 (사장님 02:5x '공격 동작 360도 원형 입력으로 변경' — 기본 'attackCircle'): 무장 창은 톡 · 끌기 하나로 나가지 않고(원이 아닌 공격은 보통 공격) 공격 손 움직임 d 로
   //  circleTime 초 안에 원 한 바퀴를 그리면 같은 길로 낸다 (secret.js spinCircle · src/attack_circle.js). 손가락이 닿아 있나 = 터치 손가락 · 잠긴 마우스(늘 — 멈춤으로 획을 가름)
   //  11/11 알티바슈 포르트 비기 (SECRET.iberianSecret 'altib'): 무장 창은 톡 · 끌기로 나가지 않고(holdOwns — 보통 공격) 길게 눌러 메기로만(아래 holdInput armed) ·
-  //  싱지르 특수 공격: 무장 없이 원 한 바퀴(unique_assist.js circleTick — 비기 판 원과 같은 셈 · 식힘) — 그 스텝은 비기 실행 중(secBusy)과 같게
   const atkWin = !!playerSecret?.open && !playerSecret.stickOwns() && !playerSecret.circleOwns() && !playerSecret.holdOwns();
   const stickGo = !!playerSecret?.spinStick(dt, input.move, !secBusy && player.alive && closeGate.secretOk);
   const handDown = input.activeTouch !== null || document.pointerLockElement === canvas;
   const circleGo = !!playerSecret?.spinCircle(dt, d, handDown, !secBusy && player.alive && closeGate.secretOk);
-  if (player.skill.uniq?.cingirE && !closeGate.near && player.skill.uniq.circleTick(dt, d, handDown, !secBusy && player.alive)) secBusy = true; // 칼자루만 거리(11/14 — close_hold.js)에선 원 긋기를 안 봄
   // 창 지킴 (10/25 21:0x — SECRET.secretHold): 보통 탭 찌르기 · 손잡이 찍기가 아직 도는 동안은 비기를 못 낸다(skill.secret 이 받지 않음) — 그 입력으로 창을 써 버리지 않고 남겨 둠
   const secArm = !(CONFIG.SECRET.secretHold && (player.skill.tap || player.skill.pom));
   if (((atkWin || gilReady) && (taps > 0 || secSwipe) || stickGo || circleGo) && !secBusy && player.alive && secArm && closeGate.secretOk) {
@@ -3107,7 +3105,7 @@ function playerInputFrame(dt, now) {
 // 막기 단추 글 (11/05 떨어진 칼 줍기 'block' — src/pickup.js): 칼을 놓쳤고 제 칼 곁(주울 수 있음)이거나 줍는 중이면 '줍기', 아니면 '막기'. 바뀔 때만 DOM 을 고친다
 let parryLabel = '막기';
 function updateParryLabel() {
-  const want = CONFIG.PICKUP.mode === 'block' && player && !player.armed && (player.pickup || pickupReady(player)) ? '줍기' : '막기';
+  const want = player && !player.armed && (player.pickup || pickupReady(player)) ? '줍기' : '막기';
   if (want === parryLabel) return;
   parryLabel = want;
   const b = $('btnParry');

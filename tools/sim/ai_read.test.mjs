@@ -11,25 +11,11 @@ import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { tiltOf, SCHOOL_PLAN } from '../../src/ai_plan.js';
 import { readInit, readNote, readLineN, readAtkN, readRepeatLine, readRaiseD, readTick, readNeed, readFeetV, readTechK, readChainK, costOpen, foeCost } from '../../src/ai_read.js';
 import { jpInit, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep, JP_PLAN } from '../../src/ai_plan_jp.js';
-import { aiBeatTick } from '../../src/italian_outbox.js';
 import { gnsEnterLine, useSecret } from '../../src/secret.js';
 
 const { AI_PLAN, AI_PLAN_JP, SECRET, STAMINA, JP_TANK, TIME } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 
-/** AI_PLAN.read 칸을 잠깐 바꿔 fn 을 돌리고 되돌림 · on = AI_PLAN.on */
-function withRead(over, fn, on = AI_PLAN.on) {
-  const rd = AI_PLAN.read;
-  const on0 = AI_PLAN.on;
-  AI_PLAN.read = { ...rd, ...over };
-  AI_PLAN.on = on;
-  try {
-    return fn();
-  } finally {
-    AI_PLAN.read = rd;
-    AI_PLAN.on = on0;
-  }
-}
 /** Math.random 을 잠깐 바꿈 (값 고정 · 굴림 셈) */
 function withRandom(val, fn) {
   const rnd = Math.random;
@@ -218,27 +204,6 @@ test('걸음 · 기술 · 이어 치기 곱 — 이탈리아 곧게 안 듦 · �
   assert.equal(readChainK(fake(2, 'german')), 1);
 });
 
-test('스위치 — read.on 0 이면 읽기 몫 0 · 곱 1 (그릇은 유파 버릇에 그대로 씀) · aiPlan 0 이면 그릇 없음', () => {
-  withRead({ on: 0 }, () => {
-    const de = fake(5, 'german', { d: 2.5 });
-    assert.equal(readNeed(de, { kind: 'patience' }), 0);
-    assert.equal(readTechK(de, { presses: true }), 1);
-    assert.equal(readChainK(de), 1);
-    assert.equal(readFeetV(fake(5, 'italian', { foe: { swordArt: { tradition: 'italian' }, itEdge: { until: 5 }, fightT: 1 } }), 1, 2.0), 1);
-    readNote(de, { id: 1, line: 'high' });
-    assert.equal(readLineN(de, 'high', AI_PLAN.read.habitT), 1, '버릇 그릇은 그대로');
-  });
-  const off = withRead({}, () => {
-    const G = newRound({ weapon: 'longsword', weapon2: 'rapier', seed: 1 });
-    const r = { read: G.ai.read, lag: G.ai.secretLag() };
-    G.world.free();
-    return r;
-  }, 0);
-  assert.equal(off.read, undefined, '`?aiPlan=0` — 그릇 없음');
-  assert.equal(off.lag, 0, '`?aiPlan=0` — 옛 판 눈');
-});
-
-
 /** 가짜 일본 AI (고노센 준비 셈만) */
 function fakeJp(prof, o = {}) {
   const ai = fake(prof, 'german', { planC: JP_PLAN.probe, iaiArm: { armed: false }, M: { reach: 1.75, contact: 1.07 }, foeReach: 1.85, ...o });
@@ -293,11 +258,6 @@ test('AI 고노센 준비 지키기 — 켜질 때 한 번 굴림 · 먼 위협 
   assert.equal(jpGnsHold(ai, raise, 2.4), false);
   assert.equal(jpGnsIgnore(ai, { id: 9 }, 3), false);
   assert.equal(G.keep || G.invite || G.struck || G.meet > 0, false);
-  // 스위치 gns 0 (`?aiGns=0`) = 그 전 판 — 준비가 켜져도 지키지 않음 · 굴림 없음
-  const g0 = fakeJp(5, { iaiArm: { armed: true } });
-  const off = withRead({ gns: 0 }, () => withRandom(0, () => [jpGnsKeep(g0), jpGnsIgnore(g0, { id: 1 }, 3), jpGnsHold(g0, raise, 3), jpGnsFeet(g0, 0.4, 3)]));
-  assert.deepEqual(off.r, [false, false, false, 0.4]);
-  assert.equal(off.draws(), 0);
   // 지킴 몫 = 띠 세기 × 칸 still × 서 있기 몫 — 굴림 값이 몫 바로 위면 안 지킴 · 낮음 · 서 있기 칸 0 도 그 몫
   const pk = (p, C) => tiltOf(p) * C.still * AI_PLAN_JP.still;
   for (const [p, C] of [[5, JP_PLAN.probe], [3, JP_PLAN.probe], [1, JP_PLAN.probe], [5, JP_PLAN.commit]]) {

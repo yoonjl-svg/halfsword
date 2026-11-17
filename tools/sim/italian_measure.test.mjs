@@ -1,14 +1,14 @@
 // 이탈리아 무기 간격 — 찌르기 잣대 시험 (10/25 — 파펜하이머 들임 중 '간격 생성기가 이탈리아 무기를 못 잼' · docs/strike/italian_measure_2026-10-25.md):
 //  간격 생성기(weapon_measure.mjs measureAll — 분노의 베기)는 이탈리아 자세표 무기를 깨진 값으로 잰다(대본 베기 — 기록 §2).
 //  이탈리아 유파 무기는 찌르기 잣대(measureThrust — 3번 자세 탭 찌르기 · 칼날 70 % 지점 · 같은 실행 롱소드 찌르기 비율)로 잰다 — 찌르기 잣대 줄(ITALIAN_THRUST)이 그 비율인지,
-//  판 스위치 THRUST.itMeasure 세 판('old' 지금 판 · 'contact' 맞닿음만 · 'full' 줄 통째)이 손 표에 맞게 들어가는지, 리솔루토가 'contact' 판에서 지금 맞닿음을 쓰는지,
+//  그 줄이 손 표에 들어가는지,
 //  잣대가 팔 두 판에서 같은지, 분노의 베기 잣대가 그대로 재는 한손 무기(세이버)에서 손 표와 맞는지 본다.
 //  node --test tools/sim/italian_measure.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG } from './harness_m.mjs';
 import { measureThrust, rulerOf } from './weapon_measure.mjs';
-import { MEASURED, CUT_TIME_30, ITALIAN_NOW, ITALIAN_THRUST, italianMeasureRows, risolutoContact } from '../../src/weapon_measured.js';
+import { MEASURED, CUT_TIME_30, ITALIAN_THRUST } from '../../src/weapon_measured.js';
 
 const { JOINTS, ARENA, THRUST } = CONFIG;
 const withSets = (L, fn) => {
@@ -34,22 +34,10 @@ test('잣대 고르기: 이탈리아 유파 무기(파펜하이머 포함)만 �
   assert.equal(rulerOf('sabre', 'thrust'), 'thrust');
 });
 
-test('판 스위치 세 판: old = 지금 줄 그대로 · contact = 맞닿음만 찌르기 잣대 · full = 줄 통째 (리솔루토는 contact 판에서 지금 맞닿음)', () => {
+test('손 표: 이탈리아 넷은 찌르기 잣대 줄 (사장님 10/25 22:1x \'전부 새 값으로\')', () => {
   for (const id of IT) {
-    const now = ITALIAN_NOW.MEASURED[id], thr = ITALIAN_THRUST.MEASURED[id];
-    const o = italianMeasureRows('old')[id], c = italianMeasureRows('contact')[id], f = italianMeasureRows('full')[id];
-    assert.deepEqual(o.row, now, `${id} old`);
-    assert.equal(o.cut, ITALIAN_NOW.CUT_TIME_30[id]);
-    assert.deepEqual(c.row, [thr[0], now[1], now[2], now[3]], `${id} contact`);
-    assert.equal(c.cut, ITALIAN_NOW.CUT_TIME_30[id]);
-    assert.deepEqual(f.row, thr, `${id} full`);
-    assert.equal(f.cut, ITALIAN_THRUST.CUT_TIME_30[id]);
-    const live = italianMeasureRows(THRUST.itMeasure)[id];
-    assert.deepEqual(MEASURED[id], live.row, `${id} 손 표 = 지금 판(${THRUST.itMeasure})`);
-    assert.equal(CUT_TIME_30[id], live.cut);
-    assert.equal(risolutoContact(id, 'contact'), now[0], `${id} contact 판 리솔루토 = 지금 맞닿음`);
-    assert.equal(risolutoContact(id, 'old'), null);
-    assert.equal(risolutoContact(id, 'full'), null);
+    assert.deepEqual(MEASURED[id], ITALIAN_THRUST.MEASURED[id], id);
+    assert.equal(CUT_TIME_30[id], ITALIAN_THRUST.CUT_TIME_30[id]);
   }
 });
 

@@ -340,46 +340,6 @@ test('④ 원 긋기: 손잡이로 테를 한 바퀴 넘게(0.8 s) 그리면 공
   assert.equal(draw(0.5, 0.8), false, '반 바퀴');
 });
 
-test('④ 원 긋기가 사람 특수 공격 싱지르를 냄 (실제 몸 — ib_swap.test.mjs 와 같은 판: B7 이어 돌리기 끔 · 공격 손 = 공격 조이스틱)', async () => {
-  const { newRound, DT } = await import('./harness_m.mjs');
-  const { PlayerUniqueAssist } = await import('../../src/unique_assist.js');
-  const { PlayerSecretWatch } = await import('../../src/secret.js');
-  const linkK = IB_LINK.on;
-  IB_LINK.on = 0;
-  const G = newRound({ seed: 3, weapon: 'zweihander', weapon2: 'longsword', gap: 1.9 });
-  try {
-    const Pl = G.player, E = G.enemy;
-    Pl.skill.autoGuard = true;
-    Pl.skill.level = 0.7;
-    G.ai.update = () => E.move.set(0, 0);
-    const W = new PlayerSecretWatch(Pl, E, { locked: false });
-    const uq = new PlayerUniqueAssist(Pl, { names: new Set(['redondo', 'cingir']) });
-    G.before = () => W.update(DT, !!Pl.skill.sec);
-    while (G.t < ARENA.startHold + 0.3) G.step();
-    const R = rig('stick');
-    const r = 0.9;
-    R.sDown(1, P(r, 0).x, P(r, 0).y);
-    let go = false;
-    const n = Math.round(1.0 / F); // 1 s 에 1.4 바퀴 (처음 쥘 때 손이 테로 가는 몫이 앞에 섞임 — 손가락도 원을 넉넉히 그림)
-    for (let i = 1; i <= n && !go; i++) {
-      const a = (i / n) * 1.4 * 2 * Math.PI;
-      R.sMove(1, P(r * Math.cos(a), r * Math.sin(a)).x, P(r * Math.cos(a), r * Math.sin(a)).y);
-      const { d } = frame(R, { x: Pl.handOffset.x, y: Pl.handOffset.y });
-      go = uq.circleTick(F, d, R.input.activeTouch !== null, !Pl.skill.sec && Pl.alive);
-      if (!go) { Pl.handOffset.x += d.x; Pl.handOffset.y += d.y; }
-      Pl.handHeld = true;
-      Pl.inputActive = Math.abs(d.x) + Math.abs(d.y) > 1e-5;
-      Pl.handGrip = R.input.atk.grip;
-      G.step(); G.step();
-    }
-    assert.equal(go, true, '원 한 바퀴 → 싱지르');
-    assert.equal(Pl.skill.sec?.special, 'cingir');
-  } finally {
-    IB_LINK.on = linkK;
-    G.world.free();
-  }
-});
-
 test('④ 권총: 조이스틱에 닿는 순간 쏨 (손가락과 같은 tapOnDown) · 고노센 뽑기: 칼을 쥔 엄지 = 쥠 · 얹은 엄지 = 아님 (drawInput 의 grip)', () => {
   const R = rig('stick');
   R.input.tapOnDown = true;
@@ -601,7 +561,7 @@ test('main.js 길 (브라우저 모듈이라 줄로 봄): 조이스틱 몫을 �
   };
   const add = i('if (input.atk) { const s = atkStickStep(input.atk, player.handOffset, dt); d.x += s.x; d.y += s.y; }');
   assert.ok(add > i('const d = input.consumeHandDelta();\n'), '손가락 몫 뒤');
-  for (const s of ['const swipe = Math.hypot(d.x, d.y)', 'playerSecret?.spinCircle(dt, d, handDown', 'player.skill.uniq.circleTick(dt, d, handDown', 'player.skill.uniq?.feed(d.x, d.y', 'player.handOffset.x += d.x * inScale', 'player.inputActive = !secBusy']) assert.ok(i(s) > add, `조이스틱 몫 뒤에 읽음: ${s}`);
+  for (const s of ['const swipe = Math.hypot(d.x, d.y)', 'playerSecret?.spinCircle(dt, d, handDown', 'player.skill.uniq?.feed(d.x, d.y', 'player.handOffset.x += d.x * inScale', 'player.inputActive = !secBusy']) assert.ok(i(s) > add, `조이스틱 몫 뒤에 읽음: ${s}`);
   i('grip: prD && !prD.mouse ? (prD.atk ? input.atk.grip : prD.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx))');
   i('player.handGrip = pr && !pr.mouse ? (pr.atk ? input.atk.grip : pr.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx)) : player.inputActive;');
   i("const atkStickOn = !!(input.isTouchDevice && attachAtkStick(input, $('atkStick'), $('atkKnob'), CONFIG.INPUT.atkStick));");

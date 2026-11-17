@@ -13,8 +13,6 @@ import * as D from '../../src/skill_tree_data.js';
 import { windRun } from './windmill.mjs';
 import { runOne } from './singir_fall.mjs';
 import { IB_LINK } from '../../src/config.js';
-/** 11/14 이어 돌리기(B7 — IB_LINK.on) 전 판으로 잠깐 (풍차 베기 원 긋기 장면 시험 — docs/strike/ib_link_2026-11-14.md §7) */
-const withLinkOff = (fn) => { const k = IB_LINK.on; IB_LINK.on = 0; try { return fn(); } finally { IB_LINK.on = k; } };
 
 const W4 = ['zweihander', 'flamberge', 'tizona', 'durandal'];
 const LADDER = [0.2, 0.4, 0.6, 1.2, 1.5]; // 시간 사다리 (사장님 10/28 — 반응 · 짧은 효과 · 이어짐/입력 · 1.2 · 무장)
@@ -95,39 +93,3 @@ test('걷다 내도 같은 차례 — 한 발이 떠 있을 때 (앞으로 걷�
   }
 });
 
-test('넘어짐 되살아나지 않음 (11/05 고친 것 — 손가락 봇 대 숙련 3 롱소드 AI · 특수 공격 판 · 씨앗 1 ~ 6): 풍차 베기 뒤 1 s 안 몸 균형 넘어짐 0', () => {
-  const HIT = new Set(['gauge', 'head', 'sever', 'buckle', 'revive']);
-  let n = 0;
-  for (const seed of [1, 2, 3, 4, 5, 6]) {
-    const r = withLinkOff(() => runOne({ weapon: 'zweihander', opp: 'longsword', seed, dur: 8, secret: false, ibBot: 'old' })); // 11/14 그때 판으로 묶음 (B7 = 풍차 베기 · 그때 봇 — 이어 돌리기 판엔 원 긋기 풍차 베기가 없음 · ib_link 기록 §7)
-    for (const s of r.probe.spins) {
-      n++;
-      assert.ok(!(s.fall && s.fall.dt <= 1 && !HIT.has(s.fall.why)), `씨앗 ${seed} 몸 균형 넘어짐 ${JSON.stringify(s.fall)}`);
-    }
-  }
-  assert.ok(n > 0, '봇이 풍차 베기를 냄');
-});
-
-
-test('이름 — 풍차 베기 (특수 공격 뜻 이름 · 원어 cingir 그대로 · 효과 글 · 입력 글 · 오의 · 출처 그대로)', (t) => {
-  // 11/14 그때 판으로 묶음 (B7 글이 이어 돌리기 글로 바뀜 — 사장님 '모두 본판에' · `?ibLink=0` 판은 11/12 풍차 베기 글 그대로 B7_WINDMILL · 기준은 안 고침 · docs/strike/ib_link_2026-11-14.md §11)
-  const k = IB_LINK.on;
-  IB_LINK.on = 0;
-  t.after(() => (IB_LINK.on = k));
-  const e = PLAYER_UNIQUE.iberian.find((x) => x.name === 'cingir');
-  assert.equal(e.nameKo, '풍차 베기 (싱지르)');
-  assert.equal(e.orig, 'cingir');
-  assert.equal(e.hint, '원을 그리며 그으면 한 걸음 나가며 몸을 한 바퀴 돌려 가로로 벤다'); // 사장님 11/12 글 — 새 동작 글 안은 기록에만 (코드 안 바꿈)
-  const n = D.nodeOf('iberian', 'B7');
-  assert.equal(n.name, '풍차 베기');
-  assert.equal(n.l1, '풍차 베기');
-  assert.equal(n.l2, '돌며 베기');
-  assert.equal(n.eff, '한 걸음 나가며 몸을 한 바퀴 돌려 가로로 벤다');
-  assert.equal(n.cmd, '원을 그리며 긋기(↻/↺)');
-  assert.equal(n.lore, '큰 칼로 갈비를 온통 휘감고, 온몸을 돌려라');
-  assert.equal(n.src, '고디뉴 『Arte de Esgrima』(1599) — 몬탄테 장 규칙 8');
-  assert.equal(nodeTitle('iberian', n).title, '풍차 베기 (싱지르 · cingir)');
-  // 옛 정수리 가르기(열쇠 redondo · 10/31 전 이름 '풍차 베기 (레돈두)')는 지금 알티바슈 포르트 — 같은 이름을 쓰지 않음
-  const rd = PLAYER_UNIQUE.iberian.find((x) => x.name === 'redondo');
-  assert.ok(!rd || !rd.nameKo.includes('풍차'), `redondo ${rd?.nameKo}`);
-});

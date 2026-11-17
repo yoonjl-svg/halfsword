@@ -27,10 +27,6 @@ const _r = new THREE.Vector3();
 const LOSE = 0.3; // 굽히는 동안 칼자루가 reach + 이만큼 넘게 멀어지면 그만둠 (m — 걸음 사다리 한 칸 · 11/16 전 reach × 1.5)
 const smooth = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
 
-/** 이 몸이 줍기를 쓰나: AI 가 모는 몸 = PICKUP.ai · 사람 = PICKUP.mode */
-export function pickupOn(f) {
-  return f.aiControlled ? !!PICKUP.ai : !!PICKUP.mode;
-}
 
 /** 주울 수 있는 몸 · 칼인가 (칼은 땅에 있고 그 칼을 다시 쥘 수 있는 팔) */
 export function canPickup(f) {
@@ -72,7 +68,7 @@ export function swordSettled(f) {
 
 /** 지금 줍기를 시작할 수 있나 (단추 누름 · 저절로 판정은 부르는 쪽) */
 export function pickupReady(f) {
-  return pickupOn(f) && canPickup(f) && swordSettled(f) && swordReachDist(f) <= PICKUP.reach;
+  return canPickup(f) && swordSettled(f) && swordReachDist(f) <= PICKUP.reach;
 }
 
 /** fighter.step (updateState 뒤) 에서: 줍기를 시작하거나 한 스텝 진행 */
@@ -81,8 +77,7 @@ export function pickupTick(f, dt) {
   if (!P) {
     f.pickW = 0;
     if (!pickupReady(f)) return;
-    const press = f.aiControlled || PICKUP.mode === 'block' ? !!f.pickupPress : true;
-    if (!press) return;
+    if (!f.pickupPress) return;
     if (f.mordGrip) resetReverseGrip(f); // 거꾸로 쥔 채(죽음의 일격) 놓친 칼: 다시 쥘 땐 보통 쥠 — 아래
     P = f.pickup = { phase: 'bend', t: 0, T: realS(PICKUP.bend), wHand: 0, g: gripPoint(f, new THREE.Vector3()), face: null, sword: null, saved: null, t0: f.fightT, reach: swordReachDist(f), hand: null };
   }
@@ -201,12 +196,11 @@ export function pickupHand(f, target) {
 }
 
 /**
- * AI 줍기 (PICKUP.ai — ai.js update 끝에서): 칼을 놓쳤고 주울 수 있으면 제 칼로 걸어가(스틱 = 몸 틀 앞 · 옆 몫) 곁에 서면 누른다(사람 'block' 과 같은 길).
+ * AI 줍기 (ai.js update 끝에서): 칼을 놓쳤고 주울 수 있으면 제 칼로 걸어가(스틱 = 몸 틀 앞 · 옆 몫) 곁에 서면 누른다(사람 'block' 과 같은 길).
  *  줍는 동안은 발을 멈춘다. 칼이 아직 떨어지는 중이거나(빠름) 못 줍는 칼이면 아무것도 안 함(오늘처럼 물러남)
  */
 export function aiPickup(ai) {
   const me = ai.me;
-  if (!PICKUP.ai) return;
   me.pickupPress = false;
   if (me.armed) return;
   if (me.pickup) {

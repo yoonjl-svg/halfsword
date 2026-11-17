@@ -56,7 +56,7 @@ export function ibInit(ai) {
     angSeq: -1,
   };
   ai.stats.ib = ibStats();
-  if (AI_PLAN.ib.chainBody) ai.me.ibChainAi = true; // B6 이어지는 흐름 — 사람과 같은 규칙 (fighter.js ibChainOn)
+  ai.me.ibChainAi = true; // B6 이어지는 흐름 — 사람과 같은 규칙 (fighter.js ibChainOn)
 }
 
 /** 맞바꿈(B12)이 남았나 — 이번 사슬에서 안 썼고 기력이 베기 한 번 값 이상 (내 몸 — 읽기만) */

@@ -59,7 +59,7 @@ export function jpNeed(ai, opp) {
   let n = 0;
   const f = jpStackF(ai);
   if (f != null && opp.kind !== 'recover' && opp.kind !== 'finish') n += ai.planK * (C.stack ?? 0) * J.stackAmp * (1 - 2 * f);
-  if (ai.iaiArm?.armed) n += ai.planK * (C.still ?? 0) * J.iaiWait * (AI_PLAN.read.gns && ai.d > gnsEnterLine(ai.M) ? 2 : 1); // 3 단계: 상대가 아직 내 발도 선 밖이면 두 배 — 준비를 지키며 기다림 (먼저 쳐서 풀지 않게)
+  if (ai.iaiArm?.armed) n += ai.planK * (C.still ?? 0) * J.iaiWait * (ai.d > gnsEnterLine(ai.M) ? 2 : 1); // 3 단계: 상대가 아직 내 발도 선 밖이면 두 배 — 준비를 지키며 기다림 (먼저 쳐서 풀지 않게)
   return n;
 }
 
@@ -144,7 +144,7 @@ export function jpTsubame(ai, canChain) {
  */
 function jpGnsArm(ai) {
   const G = ai.jpGns;
-  const armed = !!AI_PLAN.read.gns && !!SECRET.iai && !!ai.iaiArm?.armed; // AI_PLAN.read.gns 0 = 그 전 판 (`?aiGns=0`)
+  const armed = !!SECRET.iai && !!ai.iaiArm?.armed;
   if (armed && !G.was) {
     const line = gnsEnterLine(ai.M);
     const rd = readRaiseD(ai);

@@ -30,18 +30,16 @@ function swing({ rT = 1.5, rM = 1.3, a0 = 1.25, w = 6 } = {}) {
   return { tx: T[0], ty: T[1], tz: T[2], mx: M[0], my: M[1], mz: M[2], tvx: vT[0], tvy: vT[1], tvz: vT[2], mvx: vM[0], mvy: vM[1], mvz: vM[2], hx: 0, hy: 0, hvx: 0, hvy: 0 };
 }
 
-test('기본 켬 · 값 (0.6 s 시간 사다리 · 칸 = 물리 한 스텝 · 0.3 m 걸음 사다리) · 끄면 둥근 눈 · 칼끝 틈 셈이 안 탐', () => {
-  assert.equal(A.on, 1, '[사장님 11/15 결정]');
+test('값 (0.6 s 시간 사다리 · 칸 = 물리 한 스텝 · 0.3 m 걸음 사다리) · 둥근 눈 · 칼끝 틈 셈이 탐', () => {
   assert.ok(Math.abs(A.horizon - CONFIG.realS(0.6)) < 1e-9 && A.gap === 0.3 && !('step' in A) && !('minW' in A), '내다보는 칸 = 물리 한 스텝 (새 수 없음)');
-  const run = (on) => withArc({ on }, () => {
+  const run = () => {
     const { G, ai, free } = round();
     while (G.t < 12) G.step();
     const r = { arc: ai.stats.arcSeen ?? 0, gap: ai.stats.arcGap ?? 0 };
     free();
     return r;
-  });
-  assert.deepEqual(run(0), { arc: 0, gap: 0 });
-  const on = run(1);
+  };
+  const on = run();
   assert.ok(on.arc > 0 && on.gap > 0, JSON.stringify(on));
 });
 
@@ -51,7 +49,6 @@ test('둥근 눈: 둥글게 몸으로 오는 칼은 곧은 줄 눈(0.45 s)이 �
     const C = { x: 0, y: 1.2, z: 0 }, R = { x: 1, y: 0, z: 0 };
     ai.foeReach = 2.0;
     const s = swing();
-    assert.equal(withArc({ on: 0 }, () => ai.threat(s, C, R, 1.6)), null, '곧은 줄 눈은 못 봄');
     const th = ai.threat(s, C, R, 1.6);
     assert.ok(th && typeof th.line === 'string' && th.thrust === false, JSON.stringify(th));
     // 곧게 비껴 가는 칼 (회전 없음 — 칼끝 · 타격점이 같은 빠르기로 옆으로)

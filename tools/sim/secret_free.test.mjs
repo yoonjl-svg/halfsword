@@ -115,7 +115,6 @@ test('일본 기다림과 침 스택 = 빠르기 [사장님 11/16 결정] — �
   const { JP_TANK } = await import('../../src/config.js');
   const { fingerCutK } = await import('../../src/finger_cut.js');
   const { allNodeIds, kitFromNodes } = await import('../../src/skill_tree_data.js');
-  assert.equal(JP_TANK.speed, 1);
   assert.equal(JP_TANK.speedHuman, 0.05);
   assert.equal(JP_TANK.speedAi, 0.05); // 11/16 사장님 '사람과 ai 둘다 +5%로 하자' (전 0.025)
   const kit = kitFromNodes('japanese', allNodeIds('japanese'));

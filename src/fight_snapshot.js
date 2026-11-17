@@ -5,7 +5,7 @@
 //  상처 자국(그림)은 다시 그리지 않는다 — 상처 셈(팔다리 기능 · 출혈)만.
 //  생사전 (사장님 10/30 08:2x "몸 상태 이어받기 방랑 · 생사전 둘 다 켜."): 넷의 몸을 같은 꼴로 · 들고 온 상처 표시(carried — 경기 전 부상: 판 끝 결과에서 다시 세지 않음) · 죽은 몸은 죽은 채(dead)
 import * as THREE from 'three';
-import { VITALS, PICKUP } from './config.js';
+import { VITALS } from './config.js';
 
 /** 몸 → 사본 (JSON 으로 저장 가능) */
 export function snapshotFighter(f) {
@@ -62,7 +62,7 @@ export function applyFighterSnapshot(f, s) {
   if ((f.limbs?.armS ?? 1) < VITALS.dropSwordArm && f.armed && typeof f.dropSword === 'function') f.dropSword();
   // 칼을 놓친 채 그만둔 몸 (11/05 — config PICKUP · src/pickup.js): 줍기가 켜진 몸이면 새 판도 칼을 놓친 채 시작(칼은 발 앞에 떨어짐 — 주워야 함).
   //  줍기가 꺼진 몸은 오늘처럼 칼을 쥔 채 (못 줍는 칼을 판 내내 놓친 채 두지 않게). 사람 = PICKUP.mode · AI(또는 사람 아닌 몸) = PICKUP.ai
-  if (s.disarmed && f.armed && (f.aiControlled || f.human === false ? PICKUP.ai : PICKUP.mode) && typeof f.dropSword === 'function') f.dropSword();
+  if (s.disarmed && f.armed && typeof f.dropSword === 'function') f.dropSword();
   if (s.dead && f.alive !== false && typeof f.setState === 'function') { // 죽은 몸은 죽은 채 (부활 · 흙 몸 규칙을 다시 타지 않음 — 이미 셈이 끝난 죽음)
     f.causeOfDeath = s.cause ?? f.causeOfDeath ?? null;
     f.setState('dead');

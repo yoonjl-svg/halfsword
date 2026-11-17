@@ -6,7 +6,7 @@
 //  1 단계: 이탈리아만 플랜이 있다(config AI_PLAN.schools). 2 단계(11/14): 일본(src/ai_plan_jp.js — 유파 몫은 유파 파일에). 플랜이 없는 유파는 ai.js 가 이 파일의 어떤 셈도 부르지 않는다(바이트 같음).
 //  연산(사장님 11/14 '랙이 생기진 않을까'): 국면 판정은 AI_PLAN.tick 마다 한 번 · 스텝마다 새 객체 · 배열을 만들지 않음 · 탐색 · 미리 돌려 보기 같은 무거운 셈 없음.
 // ─────────────────────────────────────────────────────────────
-import { AI_PLAN, GAIT, AI_PLAN_FREE, realS } from './config.js';
+import { AI_PLAN, GAIT, realS } from './config.js';
 import { FREE_PLAN } from './ai_plan_free.js'; // 3 단계 무유파 플랜 칸 (11/14 — 유파 몫은 유파 파일에 묶음)
 import { itEdgeOn } from './italian_outbox.js';
 import { JP_PLAN } from './ai_plan_jp.js'; // 2 단계 일본 플랜 칸 (11/14 — 유파 몫은 유파 파일에 묶음)
@@ -36,7 +36,7 @@ export function luckOf(p) {
 
 /** ① 무기 이해 — 거리 오차 폭 m (0 = 굴리지 않음): 스위치 · 그 유파(1 단계 — 이탈리아) · 숙련도 (높음부터 0) */
 export function distErrWidth(p, tradition) {
-  if (!AI_PLAN.on || !(AI_PLAN.errSchools.includes(tradition) || (tradition === 'none' && AI_PLAN_FREE.on))) return 0; // 무유파 (3 단계 · 11/14): AI_PLAN_FREE.on 으로
+  if (!(AI_PLAN.errSchools.includes(tradition) || tradition === 'none')) return 0; // 무유파 (3 단계 · 11/14): AI_PLAN_FREE.on 으로
   return Math.max(0, AI_PLAN.errMax * (1 - (p ?? 0) / AI_PLAN.errClear));
 }
 
@@ -113,8 +113,8 @@ export const SCHOOL_PLAN = Object.freeze({
 
 /** 이 유파의 플랜 (스위치 · 유파 · 띠 무가 아니면) — 없으면 null */
 export function planFor(tradition, p) {
-  if (tradition === 'none') return AI_PLAN.on && AI_PLAN_FREE.on ? FREE_PLAN : null; // 무유파 '막싸움꾼' (3 단계 · 11/14 — src/ai_plan_free.js): 무 띠(0)에도 — 기울기 0 · 굴림 몫 1 (사장님 '독일과 함께 무유파 무모함 켜')
-  if (!AI_PLAN.on || !AI_PLAN.schools.includes(tradition) || bandOf(p) === 0) return null;
+  if (tradition === 'none') return FREE_PLAN; // 무유파 '막싸움꾼' (3 단계 · 11/14 — src/ai_plan_free.js): 무 띠(0)에도 — 기울기 0 · 굴림 몫 1 (사장님 '독일과 함께 무유파 무모함 켜')
+  if (!AI_PLAN.schools.includes(tradition) || bandOf(p) === 0) return null;
   return SCHOOL_PLAN[tradition] ?? null;
 }
 

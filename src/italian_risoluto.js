@@ -33,7 +33,6 @@ import { SECRET, SCHOOL_PASSIVE } from './config.js';
 import { segDist } from './skill.js';
 import { swingingNow } from './school_passive.js';
 import { iaiTipSpeed, ART_MIN } from './secret_instant.js';
-import { risolutoContact } from './weapon_measured.js'; // 10/25 THRUST.itMeasure 'contact' 판: 창 최소 간격은 지금 맞닿음 그대로
 
 const _a0 = new THREE.Vector3();
 const _a1 = new THREE.Vector3();
@@ -47,11 +46,9 @@ const D2R = Math.PI / 180;
  * 런지 최소 간격 (m — 10/24 13:2x 사장님 '그럼 오히려 간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게' · 13:4x 대안 ③ '맞닿는 거리만 막기'):
  *  = 맞닿기 거리(무기 실측 measure.contact — 칼이 제대로 들어가는 거리). 레이피어 1.54 · 달타냥 1.39 m. 새 수 없음.
  *  (13:2x 첫 식 '맞붙는 거리 clinch + 런지 앞발 0.9' 는 같은 운전 창 판당 0.97 → 0 이라 버림 · 앞발 0.9 · 몸 미끄러짐은 그대로 — 런지 뒤 몸이 붙는 것은 사장님이 받아들임)
- *  10/25 이탈리아 간격 줄 'contact' 판(THRUST.itMeasure — 맞닿음만 찌르기 잣대 값)에서는 지금 맞닿음 그대로(weapon_measured.js risolutoContact — 레이피어 1.54 · 달타냥 1.39 · 발리사르다 1.51 · 파펜하이머 1.51 —
- *   사장님이 쳐 본 리솔루토 그대로 · 새 수 아님) · 'full' 판은 새 맞닿음을 따름
  */
 export function lungeGap(me) {
-  return risolutoContact(me.weapon?.id) ?? me.swordArt?.measure?.contact ?? 0;
+  return me.swordArt?.measure?.contact ?? 0;
 }
 
 /** 런지를 쓸 수 있는 간격인가 (간격 조건 SECRET.risolutoGap · 런지 판 SECRET.risolutoLunge 일 때만 — 아니면 늘 true) */
@@ -242,7 +239,7 @@ export class RisolutoWatch {
         return { ev: 'risoluto', path: 'hold', held, ...this.foeCtx() };
       }
       // 다 붙음 창 (시험 SECRET.risolutoClose — 기본 끔 · 감독 10/22): 덮인 채 나아가다 맞닿기 거리(무기 실측 measure.contact — 칼이 제대로 들어가는 거리)에 든 순간 · 시간 조건 없음 · 덮인 채 나아가기 한 번에 한 번
-      const contact = lungeGap(me); // 몸 간격 measure.contact (10/25 THRUST.itMeasure 'contact' 판에서는 지금 맞닿음 그대로 — risolutoContact)
+      const contact = lungeGap(me); // 몸 간격 measure.contact
       if (SECRET.risolutoClose && canOpen && !this.closeDone && this.closeArmed && contact > 0 && gap <= contact) {
         this.closeArmed = false; // 다시 열려면 맞닿기 거리 밖으로 나갔다 들어와야 (닿은 '순간' — 10/23: 맞닿기 언저리에서 셈이 끊겼다 이어질 때마다 다시 열리지 않게)
         this.closeDone = true;

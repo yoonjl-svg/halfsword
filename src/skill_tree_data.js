@@ -5,7 +5,7 @@
 //  칸 → 판 몫(아래 f · u · perk): 칸 하나가 제 몫 하나만 켠다 — 몫 열쇠는 skill_kit.js kitOff 가 싸움 코드에서 읽는다(사람 · 11/16 부터 AI 도 — 숙련도 사다리 칸 config AI_KIT · 아래 aiKitOf).
 //   표 · 근거: IMPLEMENTATION.md §2 · docs/strike/school_kit_map.md §2 '스킬트리'. 글(l1 · l2 · eff)은 화면 글 지침(docs/text/editing_guide.md) — data.mjs eff 는 설계 메모라 고쳐 씀.
 //  이 파일은 저장 · 화면을 모른다(시험이 바로 읽음) — 저장은 skill_tree_store.js · 화면은 skill_tree.js.
-import { SECRET, LETTER, UNIQUE_ASSIST, IB_LINK, AI_KIT } from './config.js';
+import { SECRET, LETTER, UNIQUE_ASSIST, AI_KIT } from './config.js';
 
 /** 탭 차례 (감독 10/16: 독일 · 이탈리아 · 이베리아 · 일본 · 동방) */
 export const TREE_SCHOOLS = Object.freeze(['german', 'italian', 'iberian', 'japanese', 'chinese']);
@@ -235,23 +235,10 @@ export const G7_CMD_TAP = '긋기가 상대 칼에 닿은 채 탭';
 export const G7_CMD_AUTO = { both: NODE_CMD.G7, bind: '가까이서 칼을 맞댄 채 버티면 자동 발동' /* 10/31 사장님 '초안 ok.' */, clash2: '칼끼리 연달아 부딪히면 자동 발동' /* [검수 전] */ };
 /** 상세 카드 입력 줄 (skill_tree.js — 얼린 칸의 cmd · 겹치기 자동 판을 바꿨으면 G7 은 그 판 글) */
 export const nodeCmd = (n) => (n?.id !== 'G7' ? n?.cmd : !UNIQUE_ASSIST.dupAuto ? G7_CMD_TAP : G7_CMD_AUTO[UNIQUE_ASSIST.dupAuto] ?? n.cmd);
-/**
- * B7 글 두 판 (11/14 사장님 '모두 본판에 넣어' — 이어 돌리기 글 확정): 기본(IB_LINK.on 1) = 이어 돌리기 글(위 칸 · NODE_LORE · NODE_CMD) ·
- *  (11/12 풍차 베기 판 — 견줌) = 아래 그때 글 그대로. 판을 고르는 주소는 main.js 가 이 파일을 읽은 뒤 config 를 바꾸므로 글은 읽을 때 고름(칸의 그 글 칸만 getter).
- */
-export const B7_WINDMILL = Object.freeze({ name: '풍차 베기', l1: '풍차 베기', l2: '돌며 베기', eff: '한 걸음 나가며 몸을 한 바퀴 돌려 가로로 벤다', lore: '큰 칼로 갈비를 온통 휘감고, 온몸을 돌려라', src: '고디뉴 『Arte de Esgrima』(1599) — 몬탄테 장 규칙 8', cmd: '원을 그리며 긋기(↻/↺)' });
-const twoTexts = (x, old) => {
-  for (const k of Object.keys(old)) {
-    const now = x[k];
-    delete x[k];
-    Object.defineProperty(x, k, { get: () => (IB_LINK.on ? now : old[k]), enumerable: true });
-  }
-  return Object.freeze(x);
-};
 /** 칸 + 오의 (lore · src — 편지는 lore 만) + 입력 줄 (cmd — 정해진 입력으로 내는 칸만) */
 const withLore = (n) => {
   const x = { ...n, ...NODE_LORE[n.id], ...(NODE_CMD[n.id] ? { cmd: NODE_CMD[n.id] } : {}) };
-  return n.id === 'B7' ? twoTexts(x, B7_WINDMILL) : Object.freeze(x);
+  return Object.freeze(x);
 };
 /** 유파 → { gate?, nodes } (얼림) */
 export const TREE = Object.freeze(Object.fromEntries(Object.entries(TREE_SRC).map(([s, t]) => [s, Object.freeze({ ...t, nodes: Object.freeze(t.nodes.map(withLore)) })])));

@@ -14,7 +14,7 @@
 //   lure   유도(가운데 끝 4 부터) — 바보 자세로 칼끝 끝에 서서 내려베기를 꾐
 //   stam   내 기력 ↔ 상대 기력의 차 (사장님 11/14 '기력 우위일 경우엔 밀지 않을 이유도 없는') — 우위면 밀어 묶고 열세면 칼끝 밖에서 숨 고름 · 띠가 높을수록 또렷 · 높음은 바위 몸 상대면 뒤집음
 // ─────────────────────────────────────────────────────────────
-import { AI_PLAN_DE as D, JP_TANK, AI_PLAN } from './config.js';
+import { AI_PLAN_DE as D, AI_PLAN } from './config.js';
 import { lowShoveFree } from './jp_tank.js';
 
 const P = (o) => Object.freeze(o);
@@ -41,7 +41,7 @@ export function deInit(ai) {
 
 /** 상대가 바위 몸(밀치기에 기력 안 씀 — 사람 · AI 일본 jp_tank.js lowShoveFree)인가 */
 function rockFoe(ai) {
-  return !!JP_TANK.lowShove && lowShoveFree(ai.foe);
+  return lowShoveFree(ai.foe);
 }
 
 /**
@@ -101,7 +101,7 @@ export function deStickK(ai) {
  */
 function digP(ai, cell) {
   const p = D.dig * ai.planK * cell;
-  const Lk = D.digLuck ? ai.planLuck ?? 0 : 0;
+  const Lk = ai.planLuck ?? 0;
   return Lk > 0 ? p * (1 - Lk) + AI_PLAN.coin * Lk * cell : p;
 }
 
@@ -143,7 +143,7 @@ export function deDigTry(ai, s, d, recovering) {
   }
   if (!G.armed || G.t > 0) return false;
   G.armed = false;
-  if (D.pushNear && d < ai.M.contact) return dePushNear(ai, s);
+  if (d < ai.M.contact) return dePushNear(ai, s);
   const C = ai.planC;
   if (!C?.dig || d < ai.M.contact || d > ai.foeReach + 1.0 || s.state !== 'stand' || !ai.me.armed) return false;
   ai.stats.plan.de.digTry++;

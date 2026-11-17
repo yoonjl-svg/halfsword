@@ -2,9 +2,9 @@
 //  이탈리아 아웃복싱 — 칼끝으로 거리를 재고, 걸어 들어오는 상대를 그 박자에 찌른다 (사장님 11/14 '이탈리아는 아웃복싱 스타일이야. 너의 제안과 목표는 같아.
 //   '찌르기' 자체를 너프하자. 지금보다 약하게 하고 대신 타이밍을 맞춰서 걸어들어오는 상대를 카운터하면 +30%. 제안 A와 B 좋아.' — 값 config IT_OUTBOX ·
 //   설계안 docs/design/italian_point_control_2026-11-14.md · 기록 docs/strike/it_outbox_2026-11-14.md).
-//  이탈리아 몸(무기 유파 italian) — 사람 · AI 같게 (사장님 11/14 'ai에도 적용' — IT_OUTBOX.ai 1 · 0 이면 사람만 = 11/14 첫 판).
+//  이탈리아 몸(무기 유파 italian) — 사람 · AI 같게 (사장님 11/14 'ai에도 적용').
 //   AI 몫: 1 · 2 = AI 찌르기 기술(빼서 찌르기 패시브 = 칼끝 돌려 빼기 · 비껴서며 찌르기 = 특수) · 3 = AI 빼서 찌르기 · 비껴서며 찌르기가 상처를 내면 · 헛누름이 들면 칼 우위(AI 는 리솔루토가 없어 —
-//   SECRET.aiOpenSchools — 칼 우위는 빛 · 재기만) · 4 = AI 맞받아 베기(respond — 굴림 그대로)가 상대가 치기 시작한 beat 초 안이면 그 칼이 비껴서며 찌르기(aiBeatTick · aiBeatTech — 11/15 부터 beatAi 1 일 때만)
+//   SECRET.aiOpenSchools — 칼 우위는 빛 · 재기만)만)
 //   1 찌르기 약하게 — itThrust: 보통 찌르기(탭 찌르기 · 내려 찌르기 · 칼끝 돌려 빼기 · 그어 찌르기 · 막아찌르기)의 판정 에너지 × thrustMul.
 //      자리 = combat.js analyze 의 hk(비기 배율 secretHit — SECRET.risolutoHitMul 과 같은 자리 · 칼날 상처 · 둔타 모두 그 에너지에서 · 물리 빠르기 · 질량은 그대로).
 //      비기(리솔루토)는 빼고 · 특수 공격(비껴서며 찌르기)도 빼고(제 칼끝 빠르기 몫 specialShare 가 따로).
@@ -12,26 +12,22 @@
 //      보통 찌르기 = thrustMul × (1 + stop) (0.8 × 1.3 = 1.04) · 비껴서며 찌르기 = 1 × (1 + stop) (stopSpecial) · 비기 = 받지 않음.
 //      원전: 카포 페로 『Gran Simulacro』(1610) 쓰임 10 「Del ferire di contratempo」(원판 30쪽) — 상대가 칼을 얻으러 오른발을 옮기는 바로 그 박자에 찌른다.
 //   3 칼 우위 (설계안 A) — itOnStrike · itEdgeGrant: I2 · I6 · I9 가 상처를 내면 · I8 헛누름이 들면 edge 초. 리솔루토 창은 칼 우위 동안만(itEdgeOk — secret.js risoTick).
-//      11/16 시제품 1안 (IT_OUTBOX.edgeFrom — 기본 '' 끔): 'stop' = 맞박자 찌르기가 상처를 낼 때만 · 'counter' = 그것과 I9 (itEdgeFromOk).
-//   4 박자 찌르기 (설계안 B) — beatTick · beatOk · beatSide: 상대가 치기 시작한 beat 초 안의 탭 = 비껴서며 찌르기(I9 — unique_assist.js TAP_TRIG.inq).
-//      11/15 사장님 'l9는 이전처럼 되돌려' · 'ai도 되돌려' — 사람 몫 beatHuman 0 · AI 몫 beatAi 0 (둘 다 기본 끔 · 1 = 11/14 판). AI 가 비껴서며 찌르기를 더 고르는 것은 유파 플랜 기울기(ai_plan.js itInqP)
-//  재기(판정엔 안 씀): 몸의 itOut { edge 켜진 수 · by 갈래 · stopHits 맞박자 맞음 · thrustHits 약해진 찌르기 맞음 · beatFired · risoWait 칼 우위 없어 리솔루토 셈이 기다린 시간 }
+//  재기(판정엔 안 씀): 몸의 itOut { edge 켜진 수 · by 갈래 · stopHits 맞박자 맞음 · thrustHits 약해진 찌르기 맞음 · risoWait 칼 우위 없어 리솔루토 셈이 기다린 시간 }
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { IT_OUTBOX as IO, GAIT } from './config.js';
 import { kitOff } from './skill_kit.js';
 
-const _v = new THREE.Vector3();
 const isIt = (f) => f?.swordArt?.tradition === 'italian';
 
-/** 견줌 대상인 몸인가: 사람 이탈리아 (AI 는 IT_OUTBOX.ai 일 때만 — 1 · 2) */
+/** 견줌 대상인 몸인가: 이탈리아 (사람 · AI) */
 export function itBody(f) {
-  return !!IO.on && isIt(f) && (!f.aiControlled || !!IO.ai);
+  return isIt(f);
 }
 
 /** 재기 칸 (사람 몸 — 판마다 새 몸) */
 export function itStats(f) {
-  return (f.itOut ??= { edge: 0, by: {}, stopHits: 0, thrustHits: 0, beatFired: 0, risoWait: 0 });
+  return (f.itOut ??= { edge: 0, by: {}, stopHits: 0, thrustHits: 0, risoWait: 0 });
 }
 
 /**
@@ -66,7 +62,7 @@ export function itThrustKind(f) {
  */
 export function foeWalkingIn(me, foe) {
   if (!foe?.alive || foe.state !== 'stand') return false;
-  if (IO.stopWalk && !foe.gait?.walking) return false;
+  if (!foe.gait?.walking) return false;
   // 물리 스텝 직전 상태(fighter.cacheState — 충돌 훅 안에서 엔진을 건드리지 않게 · combat.js predict 와 같은 까닭) · 없으면(도구 · 시험) 지금 몸
   const pa = me?.cache?.parts?.pelvis;
   const pb = foe.cache?.parts?.pelvis;
@@ -78,7 +74,7 @@ export function foeWalkingIn(me, foe) {
   const dz = a.z - b.z;
   const L = Math.hypot(dx, dz);
   if (L < 1e-6) return false;
-  return (v.x * dx + v.z * dz) / L >= (IO.stopV ?? GAIT.walkMin);
+  return (v.x * dx + v.z * dz) / L >= GAIT.walkMin;
 }
 
 /**
@@ -90,7 +86,7 @@ export function itThrust(att, vic) {
   const kind = itThrustKind(att);
   if (!kind || kind === 'secret') return null;
   let k = kind === 'special' ? IO.inqMul ?? 1 : IO.thrustMul; // 비껴서며 찌르기 배율 (11/15 시제품 — IT_OUTBOX.inqMul · 기본 1 = 그대로 · 사람 · AI 같게)
-  const stop = IO.stop > 0 && (kind !== 'special' || !!IO.stopSpecial) && !kitOff(att, 'itTempo') && vic === att.foe && foeWalkingIn(att, vic);
+  const stop = IO.stop > 0 && !kitOff(att, 'itTempo') && vic === att.foe && foeWalkingIn(att, vic);
   if (stop) k *= 1 + IO.stop;
   return k === 1 && !stop ? null : { k, kind, stop };
 }
@@ -100,20 +96,15 @@ export function itEdgeOn(f) {
   return !!f?.itEdge && f.fightT < f.itEdge.until - 1e-9;
 }
 
-/** 리솔루토 창을 열어도 되나 (secret.js risoTick — 지금 조건에 더함): 스위치 끔 · 칼 우위 끔이면 늘 참 (전 판) */
+/** 리솔루토 창을 열어도 되나 (secret.js risoTick — 지금 조건에 더함): 칼 우위 끔이면 늘 참 */
 export function itEdgeOk(f) {
-  return !IO.on || !(IO.edge > 0) || !IO.edgeRiso || itEdgeOn(f);
+  return !(IO.edge > 0) || itEdgeOn(f);
 }
 
-/** 칼이 우위를 켜는 길인가 (11/16 시제품 IT_OUTBOX.edgeFrom — '' = 다 · 'stop' = 맞박자 찌르기만 · 'counter' = 맞박자 + 비껴서며 찌르기) */
-export function itEdgeFromOk(why) {
-  const F = IO.edgeFrom;
-  return !F || why === 'stop' || (F === 'counter' && why === 'special');
-}
 
-/** 칼 우위 켬 (사람 이탈리아만 · why = 'cav' I2 · 'opp' I6 · 'special' I9 · 'feint' I8 헛누름 · 'stop' 맞박자 찌르기 — edgeFrom 판만) — 켜진 동안 다시 들면 그때부터 다시 edge 초 */
+/** 칼 우위 켬 (사람 이탈리아만 · why = 'cav' I2 · 'opp' I6 · 'special' I9 · 'feint' I8 헛누름) — 켜진 동안 다시 들면 그때부터 다시 edge 초 */
 export function itEdgeGrant(f, why) {
-  if (!(IO.edge > 0) || !itBody(f) || !itEdgeFromOk(why)) return false;
+  if (!(IO.edge > 0) || !itBody(f)) return false;
   f.itEdge = { until: (f.fightT ?? 0) + IO.edge, why, t0: f.fightT ?? 0 };
   const S = itStats(f);
   S.edge++;
@@ -132,75 +123,7 @@ export function itOnStrike(att, vic, r) {
   if (r.itThrust?.stop) S.stopHits++;
   if (r.itThrust && r.itThrust.kind !== 'special') S.thrustHits++;
   const kind = r.itThrust?.kind ?? itThrustKind(att);
-  if (IO.edgeFrom) {
-    // 11/16 시제품 1안 (edgeFrom): 맞박자 찌르기가 상처를 내면 칼 우위 · 'counter' 면 비껴서며 찌르기도 (I2 · I6 · I8 헛누름은 안 켬)
-    if (r.itThrust?.stop) itEdgeGrant(att, 'stop');
-    else if (kind === 'special') itEdgeGrant(att, 'special');
-    return;
-  }
   if (kind === 'cav' || kind === 'opp' || kind === 'special') itEdgeGrant(att, kind);
-}
-
-/**
- * 상대 휘두름이 선 때 (4 박자 찌르기 — unique_assist.js drive 가 스텝마다 · 비껴서며 찌르기를 익힌 사람만): 상대가 휘두르기 시작한 스텝에 { n, t0 } (몸 시계 uq.t).
- *  '휘두름' = school_passive.js swingingNow 와 같은 셈(AI 공격의 긋기 · 지나감 단계 · 탭 · 찍기 · 비기 / 사람 기력 장부의 공격 중) — 서로 부르는 고리를 피해 여기 다시 적음
- */
-export function beatTick(uq) {
-  const foe = uq.f.foe;
-  const sw = !!foe && foeSwinging(foe);
-  if (sw && !uq.foeSw) uq.foeAtk = { n: (uq.foeAtk?.n ?? 0) + 1, t0: uq.t };
-  uq.foeSw = sw;
-}
-function foeSwinging(f) {
-  const sk = f.skill, st = f.stamina;
-  if (sk?.tap || sk?.pom || sk?.sec || st?.inSecret) return true;
-  if (f.aiControlled) {
-    const c = f.aiCtl;
-    return !!c && c.mode === 'attack' && (c.phase === 'strike' || c.phase === 'follow');
-  }
-  return !!(st?.attacking || f.parryGuard?.opposition?.run);
-}
-
-/**
- * AI 박자 찌르기 셈 (ai.js update — 스텝마다 · AI 이탈리아가 비껴서며 찌르기를 꾸러미에 가졌을 때만): 사람 beatTick 과 같은 셈 · 몸 시계 t (게임 s)
- *  B = ai.itBeat { f, t, foeAtk, foeSw, inqBeatSeen } — ai.js 가 처음 부를 때 만듦
- */
-export function aiBeatTick(B, dt, sw) {
-  B.t += dt;
-  if (sw === undefined) return beatTick(B); // 옛 판 — 상대 기력 장부 · 공격 꼴을 바로 읽음
-  if (sw && !B.foeSw) B.foeAtk = { n: (B.foeAtk?.n ?? 0) + 1, t0: B.t }; // 3 단계 공정함 (11/14 — 설계 §4-3): ai.js 가 늦게 본 손 빠르기로 넘긴 휘두름
-  B.foeSw = sw;
-}
-
-/**
- * AI 맞받아 베기 칼 (ai.js respond — 맞받아 베기 굴림이 나온 뒤 · 굴림 그대로): 스위치 · AI 몫 켬 · AI 박자 몫 켬(beatAi — 11/15 기본 끔) · 상대가 치기 시작한 beat 초 안 · 이 공격에 아직 안 씀 · 비껴서며 찌르기가 식지 않았으면
- *  그 기술(techNow 가 식힘을 거른 것) · 아니면 null(전 판 — 유파 맞받아 베기 목록 counterTech)
- */
-export function aiBeatTech(B, tech) {
-  if (!B || !tech || !IO.ai || !IO.beatAi || !beatOk(B)) return null; // beatAi 0 (11/15 사장님 'ai도 되돌려') = 전 판 목록
-  return tech;
-}
-
-/** 박자 찌르기 조건 (TAP_TRIG.inq — 스위치 · 이 공격에 아직 안 씀 · 치기 시작한 뒤 beat 초 안) */
-export function beatOk(uq) {
-  const A = uq.foeAtk;
-  return !!IO.on && IO.beat > 0 && !!A && uq.inqBeatSeen !== A.n && uq.t - A.t0 <= IO.beat + 1e-9;
-}
-
-/**
- * 박자 찌르기의 몸 빼는 쪽 (+1 = 내 오른쪽 · −1 = 왼쪽 — secret_instant.js 몸 빼기 lat 와 같은 부호): 상대 칼(0.7 자리)이 내 가슴 → 상대 가슴 줄의 오른쪽이면 왼쪽으로 · 아니면 오른쪽
- */
-export function beatSide(f) {
-  const foe = f.foe;
-  if (!foe?.armed || !foe.bodies?.chest) return 1;
-  const c = f.bodies.chest.translation();
-  const fc = foe.bodies.chest.translation();
-  const ux = fc.x - c.x;
-  const uz = fc.z - c.z;
-  const d = Math.hypot(ux, uz) || 1;
-  const p = foe.bladePoint(0.7, _v);
-  const s = (p.x - c.x) * (-uz / d) + (p.z - c.z) * (ux / d);
-  return s > 0 ? -1 : 1;
 }
 
 /**
@@ -209,7 +132,7 @@ export function beatSide(f) {
  */
 export function itEdgeLook(f, T = THREE) {
   if (!f?.swordGroup) return;
-  const on = !!IO.edgeLook && itEdgeOn(f) && f.armed && !f.weaponBroken;
+  const on = itEdgeOn(f) && f.armed && !f.weaponBroken;
   let g = f.itEdgeMesh;
   if (!g) {
     if (!on) return;

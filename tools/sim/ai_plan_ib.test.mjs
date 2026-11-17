@@ -103,7 +103,6 @@ test('이베리아 플랜 열림 · 표 · 거리 오차 — 띠 무는 플랜 �
   assert.equal(planFor('iberian', 3), SCHOOL_PLAN.iberian);
   assert.equal(SCHOOL_PLAN.iberian.ib, true);
   assert.equal(SCHOOL_PLAN.iberian.lureAt, 4, '유도는 가운데 끝(4)부터');
-  withPlan({ on: 0 }, () => assert.equal(planFor('iberian', 5), null, '`?aiPlan=0`'));
   withPlan({ schools: ['italian'] }, () => assert.equal(planFor('iberian', 5), null, '`?aiPlanIb=0` — 이베리아만 뺌'));
   for (const ph of PHASES) {
     const C = SCHOOL_PLAN.iberian[ph];
@@ -117,7 +116,6 @@ test('이베리아 플랜 열림 · 표 · 거리 오차 — 띠 무는 플랜 �
   assert.ok(Math.abs(I.dashT - CONFIG.realS(0.4)) < 1e-12 && Math.abs(I.armWait - CONFIG.realS(3.0)) < 1e-12, '시간 사다리 0.4 · 3.0 s');
   assert.equal(I.outStep, 0.3, '걸음 사다리 0.3 m');
   assert.equal(I.readCut, 0.6);
-  assert.equal(I.chainBody, 1);
 });
 
 
