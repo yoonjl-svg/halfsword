@@ -25,7 +25,8 @@ import { HORN_ICON } from './wallet_icons.js'; // 결과 창 뿔피리 (10/30 �
 import { SHOP } from './config.js'; // 상점 — 왕을 이긴 판의 뿔피리 (10/30 · 10/31 본판 켬)
 import { awardKingHorn } from './lobby_progress.js';
 import { HORN_REWARD_LABEL } from './shop_text.js';
-import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, migrateItalianSlots, playerLetters } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
+import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, migrateItalianSlots, playerLetters, humanProficiency } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
+import { profBody } from './prof_body.js'; // 숙련도별 몸 값 (11/17 E — config PROF_BODY): 사람 몸의 힘 · 버티는 힘 = 익힌 칸으로 센 숙련도의 칸 (AI 는 ai.js setLevel)
 import { letterMul } from './skill_tree_data.js'; // 편지 — 카드 뽑기 유파 무게 (10/21)
 import { convertSeals } from './seal_coins.js'; // 이미 받은 인장 → 금화 한 번 — 판을 처음 연 때 어느 길이든 (아래 testRoute 다음 · 10/16 08:1x 인장 없앰)
 import { InputTrail } from './trail.js';
@@ -533,6 +534,7 @@ function newRound(weaponId) {
     schoolParry: kit ? kit.parry : undefined,
     schoolPassive: kit ? kit.passive : undefined, // 패시브 칸 (이베리아 손목 힘 · 이탈리아 · 일본 · 독일 · 동방 — school_passive.js)
     skillKit: kit ?? undefined,
+    ...profBody(humanProficiency({ test: testRoute.active })), // 몸 값 (11/17 E — config PROF_BODY): 다섯 유파 가운데 가장 높은 숙련도(익힌 칸 문턱 5 · 7 · 9 · 11)의 힘 · 버티는 힘 — AI 와 같은 표
     ...testRoute.player, // ?hero=<인물 id>: 겉모습·이름만 그 인물 (유파·비기는 무기를 따른다)
   });
   let enemyLook = currentFoe ? currentFoe.look : LOOKS.enemy;
@@ -551,7 +553,7 @@ function newRound(weaponId) {
     weapon: foeWeapon, // prepareRound 가 정한 상대 무기
     revive: currentFoe?.revive, // 부활 (이졸데: 처음 죽으면 한 번 다시 일어선다, src/revive.js)
     physiology: currentFoe?.physiology, // 몸 규칙 (병마용: 출혈 0 · 머리가 떨어져야만 죽음 · 흙 몸 / 광기의 병마용: 사람 몸 · 흰 피 — fighter.js HUMAN_BODY). 없으면 사람
-    vitality: currentFoe?.vitality, // 버티는 힘 (10/24 — 롤랑 · 베르나르도 1.1 · 없으면 1, fighter.js)
+    // 버티는 힘은 시트가 아니라 숙련도별 몸 값 (11/17 E — config PROF_BODY · AI 가 몸에 넣음 ai.js setLevel · 전 시트 vitality: 숙련도 6 = 1.1)
   });
   fighters = [player, enemy]; // 1:1 — 두 몸 고리 · 효과가 읽는다 (예전 [player, enemy] 와 같은 차례)
   teamRun = null;
@@ -717,8 +719,8 @@ function newTeamRound(spec, mods = {}) {
       weapon: e.weapon,
       ffa: E.length > 2, // 셋 이상 판: 같은 편도 적과 똑같이 부딪히고 벤다 (사장님 10/29 22:3x · fighter.js FFA_*)
       ...(e.human
-        ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined }
-        : { revive: ch?.revive, physiology: ch?.physiology, vitality: ch?.vitality }),
+        ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined, ...profBody(humanProficiency({ test: testRoute.active })) } // 몸 값 (11/17 E — 1:1 과 같음)
+        : { revive: ch?.revive, physiology: ch?.physiology }), // 버티는 힘 · 힘 = 숙련도별 몸 값 (AI — ai.js setLevel)
     });
   });
   for (const f of fighters) f.applySnapshot(E[f.index].snapshot); // 들어올 때 상태 (생사전 체력 · 부상 — 6단계)

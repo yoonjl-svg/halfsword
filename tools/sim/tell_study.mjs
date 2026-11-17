@@ -11,7 +11,7 @@ import { writeFileSync, readFileSync } from 'node:fs';
 import { newRound, AI, DT } from './harness_m.mjs';
 import { WEAPONS } from './ai_ring_measure.mjs';
 import { LOOKS } from '../../src/looks.js';
-import { AI_PROFICIENCY, PROF6_VITALITY } from '../../src/config.js';
+import { AI_PROFICIENCY } from '../../src/config.js';
 import { isMain } from './is_main.mjs';
 import { applyCfgArgs } from './cfg_override.mjs';
 // config 수 덮어쓰기 (재기 전용 · 게임 값 그대로 — cfg_override.mjs): --cfg=OKORI.T.2:0.3,… (간격과 박자 · 오코리는 11/17 부터 기본 판 — 켜고 끄는 칸 없음)
@@ -59,8 +59,7 @@ export function runFight({ school, wi, seed, swap, prof = [4, 4], dur = 60 }) {
     seed: seed * 100 + wi * 10 + (swap ? 1 : 0), walls: true, weapon, weapon2: weapon, AI2Class: AI, look: lk, look2: lk,
     difficulty: L[pE], difficulty2: L[pP], persona: { proficiency: pE }, persona2: { proficiency: pP },
   });
-  if (pP === 6) G.player.vitality = PROF6_VITALITY;
-  if (pE === 6) G.enemy.vitality = PROF6_VITALITY;
+  // 몸 값(힘 · 버티는 힘)은 AI 가 숙련도별 몸 값 표 PROF_BODY 에서 넣음 (ai.js setLevel — 11/17 E · 전 숙련 6 만 PROF6_VITALITY)
   const F = [G.player, G.enemy];
   const A = [G.ai2, G.ai]; // F[i] 를 모는 AI
   const N = Math.ceil(dur / DT) + 8;

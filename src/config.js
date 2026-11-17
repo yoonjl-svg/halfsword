@@ -1580,13 +1580,14 @@ export const SKILL_BODY = {
 //  predict: 상대 몸의 움직임을 앞질러 내다보는 정도 (0~1), read: 상대 자세의 빈틈을 읽는 눈 (0~1)
 //  discipline: 간격을 지키는 정도 (0~1)
 //  aggression: 인내심이 줄어드는 빠르기·공격 성향, skill: 검술 보정(자세 지도를 따르는 정도)
+//  힘(strength)은 이 표에 없다 — 11/17 부터 숙련도별 몸 값 PROF_BODY.strength (인물 시트 persona.level.strength 가 있으면 그 값이 이김 · ai.js setLevel)
 export const AI_LEVELS = {
-  easy: { reaction: realS(0.38), windup: 1.2, chamberSpeed: 2.2, strikeSpeed: 8, parrySpeed: 3.5, guardChance: 0.4, predict: 0.4, counter: 0, feint: 0, followUp: 0.25, read: 0.35, discipline: 0.6, strength: 0.9, aggression: 0.6, skill: 0.4 }, // [사장님 11/16 결정 '쉬움 칼 빠르기 8로. 힘은 0.9로. 막을 확률 0.4.' — 전 7.5 · 0.8 · 0.35 · strikeSpeed 는 보통 베기(운동학 칼)에 안 쓰임 — 이어 돌리기 넘기기 · 비기 고리 손만]
-  normal: { reaction: realS(0.26), windup: 0.6, chamberSpeed: 3, strikeSpeed: 11, parrySpeed: 4.5, guardChance: 0.6, predict: 0.75, counter: 0.2, feint: 0.15, followUp: 0.5, read: 0.65, discipline: 0.85, strength: 1.0, aggression: 0.9, skill: 0.7 },
-  hard: { reaction: realS(0.17), windup: 0.4, chamberSpeed: 3.8, strikeSpeed: 13, parrySpeed: 5.5, guardChance: 0.8, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.1, aggression: 1.0, skill: 0.85 }, // [사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]
+  easy: { reaction: realS(0.38), windup: 1.2, chamberSpeed: 2.2, strikeSpeed: 8, parrySpeed: 3.5, guardChance: 0.4, predict: 0.4, counter: 0, feint: 0, followUp: 0.25, read: 0.35, discipline: 0.6, aggression: 0.6, skill: 0.4 }, // [사장님 11/16 결정 '쉬움 칼 빠르기 8로. 힘은 0.9로. 막을 확률 0.4.' — 전 7.5 · 0.8 · 0.35 · strikeSpeed 는 보통 베기(운동학 칼)에 안 쓰임 — 이어 돌리기 넘기기 · 비기 고리 손만] · 힘 0.9 는 11/17 부터 PROF_BODY.strength(숙련도 0 · 1 칸)
+  normal: { reaction: realS(0.26), windup: 0.6, chamberSpeed: 3, strikeSpeed: 11, parrySpeed: 4.5, guardChance: 0.6, predict: 0.75, counter: 0.2, feint: 0.15, followUp: 0.5, read: 0.65, discipline: 0.85, aggression: 0.9, skill: 0.7 }, // 힘 1.0 은 11/17 부터 PROF_BODY.strength(숙련도 2 · 3 칸)
+  hard: { reaction: realS(0.17), windup: 0.4, chamberSpeed: 3.8, strikeSpeed: 13, parrySpeed: 5.5, guardChance: 0.8, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, aggression: 1.0, skill: 0.85 }, // [사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85] · 힘 1.1 은 11/17 부터 PROF_BODY.strength(숙련도 4 · 5 칸)
   // 최고 (11/16 신설 — 사장님 '높음 다음의 등급을 신설해. 칼 빠르기 15 힘 1.1 휘두르기 전 준비 0.3 막을 확률 0.9 - 아니 칼 빠르기 어차피 한계에 가까우면 14?' → 감독 '칼 빠르기는 보통 베기에 안 쓰여 효과 없음 — 14' ·
   //  숙련도 6 만 (AI_PLAN.levels · AI_PROFICIENCY.levels — [사장님 11/16 결정 '단 실력 등급은 높음을 4~5, 최고를 6으로'] · 전 감독 안 5 · 6) · 나머지 숫자는 높음 그대로 [감독 안 — 사장님 '다 끝나고 적용해도 됨'])
-  expert: { reaction: realS(0.17), windup: 0.3, chamberSpeed: 3.8, strikeSpeed: 14, parrySpeed: 5.5, guardChance: 0.9, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, strength: 1.1, aggression: 1.0, skill: 0.85 }, // [사장님 11/16 결정]
+  expert: { reaction: realS(0.17), windup: 0.3, chamberSpeed: 3.8, strikeSpeed: 14, parrySpeed: 5.5, guardChance: 0.9, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, aggression: 1.0, skill: 0.85 }, // [사장님 11/16 결정] · 힘 1.1 은 11/17 부터 PROF_BODY.strength(숙련도 6 칸)
 };
 
 // AI 숙련도 (사장님 결정 10/13 22:4x~23:0x — '난이도'를 숙련도로 개편: "각 검술의 숙련도가 있고 캐릭터마다 숙련도가 달라", 메뉴의 상대 난이도는 뺌.
@@ -1617,10 +1618,22 @@ export const AI_PROFICIENCY = {
   //  전 [0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05] (한 단계마다 0.05 s 빨라짐 · 감독 안)
   reaction: [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2].map(realS), // 표준 시간: 실제 초 (10/25) [사장님 11/16 결정 '다 너의 권고대로 하마']
 };
-// 숙련도 6 버티는 힘 (사장님 10/29 22:4x '지금 숙련도 6인 캐릭터는 (롤랑과 베르나르도의 경우를 보면) 체력 10% 보너스가 있었어. 그와 동일한 방식으로 숙련도 6캐릭터는 모두같은 보너스를 주도록 해'):
-//  인물 시트의 실효 숙련도(ai.proficiency — 얼터는 원본 +1 · 상한 맞춤 뒤)가 6 이면 시트 vitality = 이 값(characters.js 한 곳 — 시트마다 손으로 적지 않음).
-//  뜻은 10/24 롤랑 · 베르나르도 1.1 과 같다: 초당 잃는 피 · 머리를 맞아 잃는 의식 ÷ vitality(fighter.js) — 피가 10 % 많은 것과 같음
-export const PROF6_VITALITY = 1.1;
+// 숙련도별 몸 값 (E — [사장님 11/17 결정 'A~E 기본으로'] · 기록 docs/strike/prof_body_2026-11-17.md · src/prof_body.js · 시험 tools/sim/prof_body.test.mjs):
+//  같은 유파 숙련도 차이의 이김 몫 목표(한 칸 55 ~ 75 % · 2:4 · 4:6 65 ~ 85 % · 2:6 85 ~ 95 % — [사장님 11/16 결정 '목표 승률 모두 ok'])를 몸 값으로 맞춤.
+//  AI 판단 · 낌새 · 읽기는 사다리를 못 움직였고(docs/strike/block2_2026-11-17.md · ai_intercept_2026-11-17.md) 움직인 손잡이는 칸 몫 · 힘 · 버티는 힘뿐.
+//  칸 = 숙련도 0 ~ 6. 늘 켬(스위치 없음 — 사장님 규칙).
+//   vitality  버티는 힘 — 초당 잃는 피 · 머리를 맞아 잃는 의식 ÷ 이 값(fighter.js — 1.1 이면 피가 10 % 많은 것과 같음). 즉사(참수 · 치명 머리 상처) · 팔다리 기능 · 주저앉음은 그대로
+//   strength  몸의 힘 — 칼 팔 관절 근육 · 손목 힘 · 손목 빠르기 한계(√) · 밀치기 · 다리 밀기 (fighter.js). 옛 AI_LEVELS 이름마다의 힘을 갈음(그 값 = 아래 칸의 출발점)
+//  받는 쪽:
+//   AI — 사람 몫 숙련도(ai.js mainProficiency — 인물은 본 유파 숙련도 · 숫자 숙련도 AI 는 그 숫자 · 이름만 받은 AI 는 AI_PROFICIENCY.ofLevel)로 ai.js setLevel 이 몸에 넣음.
+//        인물 시트가 힘을 적었으면(persona.level.strength — 브론 1.3 · 이졸데 0.85 · 롤랑 1.1 …) 그 값이 이김(시트의 몸) · 버티는 힘을 적은 시트는 없음.
+//   사람 — 익힌 스킬 칸으로 센 숙련도(skill_tree_store.js playerProficiency — 문턱 5 · 7 · 9 · 11 칸 [사장님 11/16 결정 '사람 셈도 문턱 기준으로 바꿔'])의
+//        다섯 유파 가운데 가장 높은 값으로 같은 칸 (main.js — 1:1 · 동시 대전 둘 다 · 사람은 1 ~ 5). '스킬을 익히는 것이 곧 수련'.
+//  옛 PROF6_VITALITY 1.1(숙련도 6 시트만 — [사장님 10/29 22:4x]) · AI_LEVELS 힘(쉬움 0.9 · 보통 1.0 · 높음 · 최고 1.1 — [사장님 11/16 결정])은 이 표가 갈음
+export const PROF_BODY = {
+  vitality: [1, 1, 1, 1, 1, 1, 1.1],
+  strength: [0.9, 0.9, 1, 1, 1.1, 1.1, 1.1],
+};
 
 // AI 숙련도 = 스킬트리 칸 (11/16 — 기록 docs/strike/prof_kit_2026-11-16.md · src/skill_tree_data.js aiKitOf · src/ai.js applyKit · 시험 tools/sim/prof_kit.test.mjs):
 //  사장님 11/16 결정 — AI 숙련도는 '이 칸들을 익혔다'는 뜻. 사람과 같은 규칙으로 AI 몸에도 skillKit(skill_kit.js kitOff · perkOff 가 읽는 몫)을 넣고,
