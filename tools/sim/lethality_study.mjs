@@ -8,13 +8,16 @@
 //        (seed × 100 + 무기 번호 × 10 + 자리) · 숙련 6 은 두 몸 모두 버팀 PROF6_VITALITY (prof_gap_measure 와 같은 뜻)
 //  bot : 사람 손가락 봇(0 번 자리 — special_balance.mjs fightRun 꼴에서 특수 공격 · 고유 강화를 뺀 판: 기본 긋기 열셋 · 15 % 탭 찌르기 · 3 ~ 5.5 패드 m/s ·
 //        시작 자리 흔들림 σ 0.06 · 상대 칼이 빠르게 오면 0.15 ~ 0.25 s 뒤 반은 막기 단추 · 반은 맞받아 긋기) 대 AI (같은 무기 · 같은 숙련도) · 60 s
-//  판마다 상처 기록(onWound — 맞힌 쪽 · 꼴 · 부위 · 심각도 · 판정 에너지 · 칼날 자리 t · 친 쪽 골반이 상대 쪽으로 드는 빠르기 · 가름 · 참수) · 죽음(까닭 · 때 · 그 앞 받은 상처 수)
+//  판마다 상처 기록(onWound — 맞힌 쪽 · 꼴 · 부위 · 심각도 · 판정 에너지 · 칼날 자리 t · 친 쪽 골반이 상대 쪽으로 드는 빠르기 · 가름 · 가르는 길 · 박힘 · 참수) · 죽음(까닭 · 때 · 그 앞 받은 상처 수)
+//  칼이 몸을 지남 · 박힘 · 멈춤: 가르는 길(물리 걸이가 칼을 몸 속으로 보냄)에서 판정 에너지 > 흡수면 지남(계속 휘둘러 감) · ≤ 흡수면 박힘 · 튕긴 길은 멈춤
 //  죽음 까닭: 참수(목 '목' + decapitated) · 목 치명(참수 아님) · 머리 치명('머리') · 출혈('출혈') · 기절('기절') · 비김(60 s 둘 다 섬)
-//  한 칼 죽음(정의): 진 쪽이 죽을 때까지 받은 칼날 상처(베기 · 찌르기 · 심각도 > 0)가 하나뿐 — 즉사 한 칼(그 첫 상처가 목 · 머리 즉사) · 출혈 한 칼(그 하나로 피가 다 빠짐)
+//  한 칼 죽음(정의): 진 쪽이 죽을 때까지 받은 칼날 상처(베기 · 찌르기 · 심각도 > 0)가 하나뿐이고 그것으로 죽음 — 즉사 한 칼(그 첫 상처가 목 · 머리 즉사) · 출혈 한 칼(그 하나로 피가 다 빠짐) · 기절은 뺌
+//   첫 칼 즉사 = 판 전체의 첫 칼날 상처(어느 쪽이든)가 곧 즉사 결정타 (가장 좁은 뜻)
 //   첫 피 승 = 판의 첫 칼날 상처를 낸 쪽이 이김 (넓은 뜻 '첫 칼이 판을 정함')
 //  node tools/sim/lethality_study.mjs run [--prof=4] [--seeds=1-12] [--schools=…] [--shard=i/n] [--json=out.json] [--cfg=PATH:수,…] [--dur=60]
 //  node tools/sim/lethality_study.mjs bot [--prof=4] [--seeds=1-6] [--shard=i/n] [--json=out.json] [--cfg=…]
 //  node tools/sim/lethality_study.mjs agg a.json …                        (한 묶음 자세한 표)
+//  node tools/sim/lethality_study.mjs cf a.json …                         (지금 머리 판 상처마다 거꾸로 셈 — 걸음 운동량 0 · 0.5 kg · 칼날 무게 끔 · 목엔 걸음 몫 안 셈 등의 첫째 차수)
 //  node tools/sim/lethality_study.mjs cmp 이름=a.json,b.json 이름=… [--side=0|1]  (묶음마다 한 줄 견줌 표 · side = 그 자리가 진 판 · 그 자리를 친 상처만)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync } from 'node:fs';
@@ -85,7 +88,7 @@ function recorder(G, F, AIs = [null, null]) {
     const ai = AIs[a];
     // ef · th = 판정 실효 에너지 · 문턱 (combat.js analyze eff · thr — 심각도 = (ef − th) ÷ 90(베기) · 60(찌르기) · 가름 = ef × physK > th × 1.25) · why = AI 가 친 칼의 까닭(공격 중일 때 — 'stepin' = 걸음에 치기 · 들어옴)
     const w = { t: r3(G.t), a, z: r.zone, ty, sev: r3(sev), E: r2(r.energy), Ep: r2(r.ephys), m: r3(r.mEff), u: r3(r.t), sp: r2(r.speed), v: r2(closing(att, vic)), pass: r.pass ? 1 : 0, psg: passing == null ? null : passing ? 1 : 0,
-      ef: r2(r.eff), th: r2(r.thr), why: ai ? (ai.mode === 'attack' ? ai.why ?? null : ai.mode ?? null) : null, k: null, dc: 0 };
+      ef: r2(r.eff), th: r2(r.thr), st: r.stuck == null ? null : r.stuck ? 1 : 0, why: ai ? (ai.mode === 'attack' ? ai.why ?? null : ai.mode ?? null) : null, k: null, dc: 0 };
     if (!wasDead[v] && !dead[v] && vic.state === 'dead' && INSTANT.has(vic.causeOfDeath)) {
       dead[v] = { t: r3(G.t), cause: vic.causeOfDeath, decap: vic.decapitated ? 1 : 0, w: wounds.length };
       w.k = vic.causeOfDeath;
@@ -257,6 +260,12 @@ const dmg = (w) => w.ty !== 'b' && w.sev > 0;
 /** 상처 하나가 새 몸이었다면 즉사인가 (fighter.js applyWound 치명상 문턱 그대로) */
 const lethalW = (w) => dmg(w) && ((w.z === 'neck' && w.sev > 0.5) || (w.z === 'head' && ((w.ty === 'c' && w.sev > 0.8) || (w.ty === 's' && w.sev > 0.5))));
 
+// 칼이 몸을 어떻게 지났나 (combat.js strike · afterStep): 가르는 길(psg 1 — 물리 걸이가 칼을 몸 속으로 보냄) 가운데 판정 에너지 > 흡수(absorb)면 '지남'(흡수만큼 끌리고 계속 휘둘러 감) ·
+//  ≤ 흡수면 '박힘'(stuck — 다 쓰고 붙잡힘) · 튕긴 길(psg 0 — 접촉힘 충돌)은 '멈춤 · 튕김'. 박힘 기록(st)이 없는 옛 기록은 ANATOMY 흡수표(판 다섯 모두 같음 · 투구 없는 겉모습)로 다시 셈
+const ABSORB = { head: 140, neck: 45, chest: 110, abdomen: 90, pelvis: 100, arm: 45, leg: 60 };
+export const stuckOf = (w) => (w.st != null ? w.st === 1 : (w.E ?? 0) <= (ABSORB[w.z] ?? 100));
+export const passKind = (w) => (w.psg === 1 ? (stuckOf(w) ? 'lodge' : 'through') : w.psg === 0 ? 'stop' : null);
+
 /** 판 묶음 → 셈 (판마다 · 상처마다) */
 /** side: null = 두 쪽 모두 · 0 / 1 = 그 자리가 진 판 · 그 자리를 친 상처만 (봇 판 — 0 = 사람 봇 · 1 = AI) */
 export function summarize(runs, side = null) {
@@ -275,9 +284,10 @@ export function summarize(runs, side = null) {
   S.ko = cnt((d) => d.cause === '기절');
   S.other = S.decided - S.decap - S.neck - S.head - S.bleed - S.ko;
   S.instant = S.decap + S.neck + S.head;
-  S.obk = cnt((d) => d.nRecv <= 1); // 한 칼 죽음 (받은 칼날 상처 하나 이하)
+  S.obk = cnt((d) => d.nRecv <= 1 && (INSTANT.has(d.cause) || d.cause === '출혈')); // 한 칼 죽음 (받은 칼날 상처 하나뿐 · 그 상처로 즉사 또는 출혈 — 기절은 둔타가 쌓인 것이라 뺌)
   S.obkInstant = cnt((d) => d.nRecv <= 1 && INSTANT.has(d.cause));
   S.obkBleed = cnt((d) => d.nRecv <= 1 && d.cause === '출혈');
+  S.firstBlow = cnt((d, r) => !!r.wounds.find(dmg)?.k); // 첫 칼 즉사: 판의 첫 칼날 상처(어느 쪽이든)가 곧 즉사 결정타
   S.firstWin = dec.filter((r) => { const f = r.wounds.find(dmg); return f && f.a === 1 - r.loser; }).length;
   S.lenMean = runs.reduce((s, r) => s + r.endT, 0) / n;
   S.lenMed = med(runs.map((r) => r.endT));
@@ -311,6 +321,11 @@ export function summarize(runs, side = null) {
   // 칼날이 몸에 닿은 모든 베기 꼴 닿음 (가르지 못해 멍이 된 것까지 — 판정 에너지 · 분포)
   S.eContact = ePair(W);
   S.stepShare = [C.filter((w) => w.v != null && w.v >= 0.5).length, C.length];
+  // 칼날 베기 상처가 몸을 지남 · 박힘 · 멈춤 (몫 — 베기 상처 중) · 들어가며 친 베기만 따로
+  const kinds = (xs) => { const o = { through: 0, lodge: 0, stop: 0, n: xs.length }; for (const w of xs) { const k = passKind(w); if (k) o[k]++; } return o; };
+  S.pkCut = kinds(C);
+  S.pkCutStep = kinds(C.filter((w) => w.v != null && w.v >= 0.5));
+  S.pkCutStand = kinds(C.filter((w) => w.v != null && Math.abs(w.v) < 0.2));
   S.vPos = [C.filter((w) => w.v != null && w.v > 0).length, C.length];
   S.debana = runs.every((r) => r.debana != null) ? runs.reduce((s, r) => s + r.debana, 0) / n : null;
   S.zones = {};
@@ -318,11 +333,12 @@ export function summarize(runs, side = null) {
   return S;
 }
 
-const CMP_HEAD = '| 묶음 | 판 | 참수 % [95 %] | 한 칼 죽음 % [95 %] | 즉사 한 칼 % | 즉사(목 · 머리) 모두 % | 출혈 % | 비김 % | 판 길이 평균 · 중앙 s | 첫 상처 s (중앙) | 판당 칼날 상처 | 진 쪽 받은 상처 (평균) | 즉사 상처 몫 (상처당) | 칼날 상처 E 중앙 · p90 J | 베기 E 중앙 · p90 | 찌르기 E 중앙 · p90 | 들어가며 베기 E 중앙 · p90 (수) | 서서 베기 E 중앙 · p90 (수) | 걸음에 치기 /판 |';
+const CMP_HEAD = '| 묶음 | 판 | 참수 % [95 %] | 한 칼 죽음 % [95 %] | 즉사 한 칼 % | 첫 칼 즉사 % | 즉사(목 · 머리) 모두 % | 출혈 % | 비김 % | 판 길이 평균 · 중앙 s | 첫 상처 s (중앙) | 판당 칼날 상처 | 진 쪽 받은 상처 (평균) | 즉사 상처 몫 (상처당) | 칼날 상처 E 중앙 · p90 J | 베기 E 중앙 · p90 | 찌르기 E 중앙 · p90 | 들어가며 베기 E 중앙 · p90 (수) | 서서 베기 E 중앙 · p90 (수) | 베기 상처 지남 · 박힘 · 멈춤 % | 들어가며 베기 지남 % | 서서 베기 지남 % | 걸음에 치기 /판 |';
+const pk3 = (o) => (o.n ? `${((100 * o.through) / o.n).toFixed(0)} · ${((100 * o.lodge) / o.n).toFixed(0)} · ${((100 * o.stop) / o.n).toFixed(0)}` : '-');
 export function cmpRow(label, S) {
   const e = (p) => `${f1(p[0])} · ${f1(p[1])}`;
   const en = (p) => `${f1(p[0])} · ${f1(p[1])} (${p[2]})`;
-  return `| ${label} | ${S.n} | ${pcI(S.decap, S.n)} | ${pcI(S.obk, S.n)} | ${pcS(S.obkInstant, S.n)} | ${pcI(S.instant, S.n)} | ${pcS(S.bleed, S.n)} | ${pcS(S.draw, S.n)} | ${f1(S.lenMean)} · ${f1(S.lenMed)} | ${f1(S.firstWMed)} | ${f2(S.woundsPF)} | ${f2(S.nRecvMean)} | ${pcS(S.lethalW, S.nD)} | ${e(S.eAll)} | ${e(S.eCut)} | ${e(S.eStab)} | ${en(S.eCutStep)} | ${en(S.eCutStand)} | ${S.debana == null ? '-' : f2(S.debana)} |`;
+  return `| ${label} | ${S.n} | ${pcI(S.decap, S.n)} | ${pcI(S.obk, S.n)} | ${pcS(S.obkInstant, S.n)} | ${pcS(S.firstBlow, S.n)} | ${pcI(S.instant, S.n)} | ${pcS(S.bleed, S.n)} | ${pcS(S.draw, S.n)} | ${f1(S.lenMean)} · ${f1(S.lenMed)} | ${f1(S.firstWMed)} | ${f2(S.woundsPF)} | ${f2(S.nRecvMean)} | ${pcS(S.lethalW, S.nD)} | ${e(S.eAll)} | ${e(S.eCut)} | ${e(S.eStab)} | ${en(S.eCutStep)} | ${en(S.eCutStand)} | ${pk3(S.pkCut)} | ${pcS(S.pkCutStep.through, S.pkCutStep.n)} | ${pcS(S.pkCutStand.through, S.pkCutStand.n)} | ${S.debana == null ? '-' : f2(S.debana)} |`;
 }
 export const cmpHead = () => `${CMP_HEAD}\n|${CMP_HEAD.split('|').slice(1, -1).map(() => '---').join('|')}|`;
 
@@ -338,9 +354,10 @@ export function report(runs, side = null) {
   for (const [k, v] of [['참수', S.decap], ['목 치명 (참수 아님)', S.neck], ['머리 치명', S.head], ['출혈', S.bleed], ['기절', S.ko], ['그 밖', S.other], ['비김 (60 s)', S.draw]]) out.push(`| ${k} | ${v} | ${pcI(v, S.n)} |`);
   out.push('\n### 한 칼 · 첫 칼');
   out.push('| 칸 | 판 | 몫 |\n|---|---|---|');
-  out.push(`| 한 칼 죽음 (진 쪽이 받은 칼날 상처 ≤ 1) | ${S.obk} | ${pcI(S.obk, S.n)} |`);
+  out.push(`| 한 칼 죽음 (진 쪽이 받은 칼날 상처가 하나뿐이고 그것으로 즉사 · 출혈) | ${S.obk} | ${pcI(S.obk, S.n)} |`);
   out.push(`| — 그중 즉사 (목 · 머리) | ${S.obkInstant} | ${pcI(S.obkInstant, S.n)} |`);
   out.push(`| — 그중 출혈 | ${S.obkBleed} | ${pcI(S.obkBleed, S.n)} |`);
+  out.push(`| 첫 칼 즉사 (판의 첫 칼날 상처가 곧 즉사 결정타) | ${S.firstBlow} | ${pcI(S.firstBlow, S.n)} |`);
   out.push(`| 첫 피 승 (첫 칼날 상처를 낸 쪽이 이김 · 승부 난 판 중) | ${S.firstWin} | ${pcI(S.firstWin, S.decided)} |`);
   out.push(`\n판 길이 평균 ${f1(S.lenMean)} · 중앙 ${f1(S.lenMed)} s · 죽음까지 중앙 ${f1(S.deathMed)} s · 첫 칼날 상처 중앙 ${f1(S.firstWMed)} s · 첫 상처 → 끝 중앙 ${f1(S.killAfterFirst)} s · 진 쪽이 받은 칼날 상처 평균 ${f2(S.nRecvMean)} (중앙 ${f1(S.nRecvMed)})`);
   out.push(`판당 칼날 상처 ${f2(S.woundsPF)} · 판당 닿음(멍 포함) ${f2(S.contactsPF)} · 상처당 즉사 몫 ${pcI(S.lethalW, S.nD)} · 목 치명 상처 ${S.neckLethal} (베기 ${S.neckLethalCut}) → 참수 ${S.decapW} · 심각도 중앙 ${f2(S.sevMed)} · p90 ${f2(S.sevP90)} · ≥ 1 몫 ${pcS(S.sev1, S.nD)}`);
@@ -348,6 +365,7 @@ export function report(runs, side = null) {
   out.push('| 칸 | 중앙 | p90 | 수 |\n|---|---|---|---|');
   for (const [k, p] of [['칼날 상처 모두', S.eAll], ['베기', S.eCut], ['찌르기', S.eStab], ['베기 — 들어가며 (골반 ≥ 0.5 m/s)', S.eCutStep], ['베기 — 서서 (±0.2)', S.eCutStand], ['베기 — 물러나며 (≤ −0.2)', S.eCutBack], ['베기 — 칼날 끝 ⅓', S.eCutTip], ['베기 — 손잡이 쪽 ⅓', S.eCutHilt], ['몸 닿음 모두 (멍 포함 · 10 J 넘는 둔타)', S.eContact]]) out.push(`| ${k} | ${f1(p[0])} | ${f1(p[1])} | ${p[2]} |`);
   out.push(`\n들어가며 친 베기 몫 ${pcS(...S.stepShare)} · 골반이 조금이라도 드는 베기 몫 ${pcS(...S.vPos)} · 걸음에 치기 판당 ${S.debana == null ? '-' : f2(S.debana)}`);
+  out.push(`베기 상처가 몸을 지남 · 박힘 · 멈춤(튕긴 길): 모두 ${pk3(S.pkCut)} % (${S.pkCut.n}) · 들어가며 ${pk3(S.pkCutStep)} % (${S.pkCutStep.n}) · 서서 ${pk3(S.pkCutStand)} % (${S.pkCutStand.n})`);
   out.push(`부위 (칼날 상처): ${Object.entries(S.zones).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${pcS(v, S.nD)}`).join(' · ')}`);
   out.push('\n### 유파별 (참수 · 한 칼 죽음 · 판 길이)');
   out.push('| 유파 | 판 | 참수 | 한 칼 죽음 | 즉사 모두 | 판 길이 평균 | 판당 칼날 상처 |\n|---|---|---|---|---|---|---|');
@@ -360,9 +378,73 @@ export function report(runs, side = null) {
   return out.join('\n');
 }
 
+
+// ── cf: 한 상처씩 거꾸로 셈 (판은 그대로 두고 그 상처의 실효 에너지만 바꿔 봄 — 첫째 차수 · 판이 이어졌을 일은 못 봄 · 게임 값은 그대로) ──
+//  지금 머리 판(걸음 운동량 · 칼날 자리 무게가 실린 판)의 베기 상처(심각도 > 0)마다: 걸음 몫 mS = stepMass × min(1, max(0, v) ÷ stepVRef) (찌르기 공격 중 베기 꼴 닿음도 실렸다고 봄 — 드묾)
+//   ef′ = ef × (m − mS + mS′) ÷ m × (칼날 무게 끔이면 ÷ w(u)) · 심각도′ = 심각도 × (ef′ − th) ÷ (ef − th) (막기 · 편섬 등 심각도 곱은 그대로 실림) · 가름′ = ef′ > 1.25 th
+//   즉사′ = 목 심각도′ > 0.5 · 머리 베기 심각도′ > 0.8 · 참수′ = 목 즉사′ ∧ 가름′ ∧ 가르는 길
+const CF = {
+  now: { ko: '지금 (그대로)', mS: (v, S) => S.stepMass * Math.min(1, Math.max(0, v) / S.stepVRef) },
+  noStep: { ko: '걸음 운동량 0', mS: () => 0 },
+  step05: { ko: '걸음 운동량 0.5 kg', mS: (v, S) => 0.5 * Math.min(1, Math.max(0, v) / S.stepVRef) },
+  vref2: { ko: '걸음 다 실리는 빠르기 2.0 m/s', mS: (v, S) => S.stepMass * Math.min(1, Math.max(0, v) / 2) },
+  noBlade: { ko: '칼날 자리 무게 끔', mS: (v, S) => S.stepMass * Math.min(1, Math.max(0, v) / S.stepVRef), blade: false },
+  capNeck: { ko: '목 · 머리엔 걸음 몫 안 셈 (그 밖 그대로)', mS: (v, S) => S.stepMass * Math.min(1, Math.max(0, v) / S.stepVRef), capZones: new Set(['neck', 'head']) },
+  capDecap: { ko: '참수 판정만 걸음 몫 뺌 (죽음은 그대로)', mS: (v, S) => S.stepMass * Math.min(1, Math.max(0, v) / S.stepVRef), capDecap: true },
+};
+export function cfReport(runs, STRIKE) {
+  const bw = (u) => (u >= STRIKE.bladeWFull ? 1 : STRIKE.bladeW0 + ((1 - STRIKE.bladeW0) * Math.max(0, u)) / STRIKE.bladeWFull);
+  const out = [];
+  const cuts = runs.flatMap((r) => r.wounds.map((w) => ({ w, r }))).filter(({ w }) => w.ty === 'c' && w.sev > 0 && w.ef != null && w.th != null && w.m > 0);
+  // 맞춤 확인: 기록된 심각도 ≈ (ef − th) ÷ 90 · 가름 ≈ ef > 1.25 th
+  const okSev = cuts.filter(({ w }) => Math.abs(w.sev - (w.ef - w.th) / 90) < 0.01).length;
+  const okPass = cuts.filter(({ w }) => (w.pass === 1) === (w.ef > 1.25 * w.th)).length;
+  out.push(`베기 상처 ${cuts.length} · 심각도 = (ef − th) ÷ 90 맞음 ${pcS(okSev, cuts.length)} (나머지는 막기 · 편섬 · 흘림 곱) · 가름 = ef > 1.25 th 맞음 ${pcS(okPass, cuts.length)}`);
+  out.push('\n| 갈래 | 베기 E 중앙 · p90 J (그 갈래에서도 상처인 것) | 즉사 베기 상처 (목 · 머리) | 그중 참수 | 즉사 결정타 → 즉사 아님 (판) | 참수 → 참수 아님 (판) | 심각도 0 이 되는 베기 (상처) |\n|---|---|---|---|---|---|---|');
+  const base = {};
+  for (const [key, sc] of Object.entries(CF)) {
+    let lethal = 0, decap = 0, lostKill = 0, lostDecapFights = 0, zero = 0;
+    const Es = [];
+    for (const { w, r } of cuts) {
+      const mS = STRIKE.stepMass * Math.min(1, Math.max(0, w.v ?? 0) / STRIKE.stepVRef);
+      const mS2 = sc.capZones?.has(w.z) ? 0 : sc.mS(w.v ?? 0, STRIKE);
+      const kB = sc.blade === false ? 1 / bw(w.u) : 1;
+      const ef2 = (w.ef * Math.max(0.05, w.m - mS + mS2)) / w.m * kB;
+      const E2 = (w.E * Math.max(0.05, w.m - mS + mS2)) / w.m * kB;
+      const sev2 = ef2 > w.th ? (w.sev * (ef2 - w.th)) / (w.ef - w.th) : 0;
+      if (!(sev2 > 0)) zero++;
+      else Es.push(E2); // 그 갈래에서도 칼날 상처인 것만 (판 표의 '베기 E' 와 같은 뜻)
+      const isL = (w.z === 'neck' && sev2 > 0.5) || (w.z === 'head' && sev2 > 0.8);
+      let pass2 = ef2 > 1.25 * w.th;
+      let neckL = w.z === 'neck' && sev2 > 0.5;
+      if (sc.capDecap) { const ef0 = (w.ef * Math.max(0.05, w.m - mS)) / w.m; const s0 = ef0 > w.th ? (w.sev * (ef0 - w.th)) / (w.ef - w.th) : 0; pass2 = ef0 > 1.25 * w.th; neckL = w.z === 'neck' && s0 > 0.5; }
+      const dc = neckL && pass2 && w.psg === 1 && isL;
+      if (isL) lethal++;
+      if (dc) decap++;
+      if (w.k && INSTANT.has(w.k) && !isL) lostKill++;
+      if (w.dc && !dc) lostDecapFights++;
+    }
+    if (key === 'now') Object.assign(base, { lethal, decap });
+    out.push(`| ${sc.ko} | ${f1(med(Es))} · ${f1(q(Es, 0.9))} | ${lethal} | ${decap} | ${lostKill} | ${lostDecapFights} | ${zero} |`);
+  }
+  const kills = cuts.filter(({ w }) => w.k && INSTANT.has(w.k));
+  const dcs = cuts.filter(({ w }) => w.dc);
+  out.push(`\n(판에서 실제로 나온 즉사 베기 결정타 ${kills.length} · 참수 ${dcs.length} — 판 ${runs.length}. '지금' 줄의 즉사 · 참수 수는 판에서 죽은 몸 뒤 상처가 없어 결정타 수와 거의 같음)`);
+  // 즉사 베기 · 참수 베기의 걸음 · 칼날 자리
+  const row = (nm, xs) => `| ${nm} | ${xs.length} | ${pcS(xs.filter(({ w }) => w.v != null && w.v >= 0.5).length, xs.length)} | ${pcS(xs.filter(({ w }) => w.v != null && w.v > 0).length, xs.length)} | ${f2(med(xs.map(({ w }) => w.v)))} | ${f1(med(xs.map(({ w }) => w.E)))} | ${pcS(xs.filter(({ w }) => w.u >= 2 / 3).length, xs.length)} | ${pcS(xs.filter(({ w }) => w.why === 'stepin').length, xs.length)} |`;
+  out.push('\n| 베기 상처 | 수 | 들어가며 (≥ 0.5 m/s) | 골반이 조금이라도 듦 | 드는 빠르기 중앙 m/s | E 중앙 | 칼날 끝 ⅓ | AI 까닭 stepin (걸음에 치기 · 들어옴) |\n|---|---|---|---|---|---|---|---|');
+  out.push(row('모든 베기 상처', cuts));
+  out.push(row('목 상처', cuts.filter(({ w }) => w.z === 'neck')));
+  out.push(row('즉사 결정타 (목 · 머리)', kills));
+  out.push(row('참수', dcs));
+  return out.join('\n');
+}
+
 if (isMain(import.meta.url)) {
   const files = (xs) => xs.flatMap((p) => JSON.parse(readFileSync(p, 'utf8')));
-  if (mode === 'agg') {
+  if (mode === 'cf') {
+    console.log(cfReport(files(args.slice(1).filter((x) => !x.startsWith('--'))), CONFIG.STRIKE));
+  } else if (mode === 'agg') {
     console.log(report(files(args.slice(1).filter((x) => !x.startsWith('--')))));
   } else if (mode === 'cmp') {
     const L = [cmpHead()];
