@@ -16,8 +16,8 @@ const { PROF_BODY, AI_LEVELS } = CONFIG;
 
 test('표 값 (11/17 재기로 찾은 값 — 숙련도 0 ~ 6)', () => {
   assert.deepEqual(PROF_BODY, {
-    vitality: [1, 1, 1, 1, 1, 1, 1.1],
-    strength: [0.9, 0.9, 1, 1, 1.1, 1.1, 1.1],
+    vitality: [0.5, 0.5, 0.7, 0.9, 1, 1.35, 2.2],
+    strength: [0.5, 0.5, 0.7, 0.9, 1, 1.25, 1.7],
   });
 });
 
