@@ -16,7 +16,7 @@
 import { CLOSE } from './config.js';
 
 /** 이 몸에 붙은 거리 규칙(시작 거리 · 묶임 · 칼자루만)이 걸리나 — 사람(사람 입력이 모는 몸 humanInput — main.js 플레이어 · 재기 손가락 봇) 늘 · AI 는 startAI 견줌일 때만 · 시뮬 대본 몸은 아님 */
-export const closeRulesOn = (f) => !!f.humanInput || (!!f.aiControlled && CLOSE.startAI > 0);
+export const closeRulesOn = (f) => !!f.humanInput || !!f.aiControlled;
 
 /** 이 몸의 밀치기 시작 거리(가슴 사이 m) — 사람 CLOSE.startD · AI CLOSE.startAI · 없으면(그 밖 · 끔) 무기 reach(옛 판 — 같은 수) */
 export function closeStartD(f, reach) {
@@ -39,12 +39,12 @@ export function closeLog(f) {
 }
 
 /**
- * 맞밀기 (CLOSE.holdPush — fighter.js step 이 closeStep 뒤에 부름): 상대가 나를 밀치는 묶임 안이면 내 골반을 상대 가슴 쪽으로 다리 밀기(legDrive × 내 근육 · 힘 —
+ * 맞밀기 (fighter.js step 이 closeStep 뒤에 부름): 상대가 나를 밀치는 묶임 안이면 내 골반을 상대 가슴 쪽으로 다리 밀기(legDrive × 내 근육 · 힘 —
  *  상대 closeStep 의 다리 밀기와 같은 셈 · 같은 값) — 내 발 하나라도 땅에 있고 서 있을 때만. 내 스텝에서 내 몸에만 힘을 건다(상대 스텝의 힘 지우기에 안 지워짐). 아니면 아무것도 안 함
  */
 export function holdPushBack(f) {
   const o = f.foe;
-  if (!CLOSE.holdPush || !o || !bargeHeld(o.barge) || f.state !== 'stand' || !f.alive || !f.gait?.active) return;
+  if (!o || !bargeHeld(o.barge) || f.state !== 'stand' || !f.alive || !f.gait?.active) return;
   if (!((f.gait.legs.F.N || 0) > 0 || (f.gait.legs.B.N || 0) > 0)) return;
   const a = f.bodies.chest.translation();
   const c = o.bodies.chest.translation();
@@ -65,7 +65,7 @@ export function clinchHoldK(a, b) {
 
 /** 칼자루만 거리인가 (묶임 밖 · 가슴 사이 ≤ 시작 거리 · 나 · 상대 서 있음 · 칼(총 아님)을 쥠) */
 export function nearHilt(f) {
-  if (!CLOSE.nearHilt || !CLOSE.on || !closeRulesOn(f) || bargeHeld(f.barge) || bargeHeld(f.foe?.barge)) return false;
+  if (!closeRulesOn(f) || bargeHeld(f.barge) || bargeHeld(f.foe?.barge)) return false;
   const o = f.foe;
   if (!o || !o.alive || o.state !== 'stand' || o.revival || f.state !== 'stand' || !f.armed || f.weapon?.gun) return false;
   return f.foeDistance() <= closeStartD(f, CLOSE.reach(f.weapon));
@@ -77,7 +77,7 @@ export function nearHilt(f) {
  */
 export function closeInputGate(f, watch) {
   if (!f.humanInput) return { lock: false, near: false, secretOk: true };
-  const lock = !!CLOSE.holdLock && (bargeHeld(f.barge) || bargeHeld(f.foe?.barge)); // 내 밀치기든 상대가 나를 민 밀치기든(AI 견줌 startAI 를 켰을 때만 AI 밀치기에 묶임이 걸림) — 맞밀기로 둘 다 묶임
+  const lock = !!(bargeHeld(f.barge) || bargeHeld(f.foe?.barge)); // 내 밀치기든 상대가 나를 민 밀치기든(AI 견줌 startAI 를 켰을 때만 AI 밀치기에 묶임이 걸림) — 맞밀기로 둘 다 묶임
   const near = !lock && nearHilt(f);
   return { lock, near, secretOk: !near || watch?.S?.name === 'mordschlag' };
 }

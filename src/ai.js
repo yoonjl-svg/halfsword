@@ -30,7 +30,7 @@ import { padDist, WATCH_GUARDS } from './ai_techniques.js';
 import { TRADITIONS, IBERIAN_SPIN_DEF, traditionOf } from './schools.js'; // 패시브 고유 동작 목록 (10/9 — TRADITIONS[유파].passives)
 import { resolveSwordArt } from './sword_art.js'; // 검술 풀이: 유파 꾸러미·라이브러리 병합·간격을 한 곳에서 (10/8 ① 구조)
 import { schoolPassiveOn } from './school_passive.js'; // 유파 패시브 스위치 (10/21 — 이베리아 손목 힘 · 나머지 넷은 fighter.schoolPassive)
-import { closeStartD, bargeHeld, nearHilt } from './close_hold.js'; // 밀치기 시작 거리 (11/14 — AI 는 CLOSE.startAI 견줌 · 기본 null = 무기 reach 그대로)
+import { closeStartD, bargeHeld, nearHilt } from './close_hold.js'; // 밀치기 시작 거리 (11/14 — AI 는 CLOSE.startAI)
 import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼기 심화 · 헛누름 AI 몫 — 상대 두 팔 늦춤 (10/31)
 import { aiUniqueStages, aiStageOpen, PLAYER_UNIQUE, specialShare, rdReleaseOpt, altibShot, altibAfter } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
@@ -818,10 +818,10 @@ export class AI {
     if (this.rd || this.me.rdWind) this.rdKeep(dt); // 풍차 베기 AI 몫 (10/31): 감기 지킴 · 덧씌우기 칸 내려놓기 · 뗀 밧줄 다시
     if (this.secret && !this.secretRun && secretSpent(this.me)) this.dropSecret(); // 이 판 비기를 다 씀 (10/29 19:5x 판당 쓸 수 — 비기 없는 AI 와 같은 길)
     if (this.gkRun && !this.secretRun && !this.me.iai && !this.me.iaiReq) (this.gkRun = false), gkCoolFrom(this.me); // 격살 풀기 (11/16 — SECRET.gkFree): 격살 칼이 끝나 몸이 자유로운 때부터 식힘 (사람과 같은 셈)
-    // 동방 AI 걸음 박자 (10/15 — GAIT.cnLightAi · docs/strike/cn_light_feet_2026-10-15.md §7): 가벼운 발 몸(유파 걸음 칸 light)의 AI 는 공격 꼴(준비·다가가기·벰·뒤따름)일 때만 가벼운 발 —
+    // 동방 AI 걸음 박자 (10/15 — docs/strike/cn_light_feet_2026-10-15.md §7): 가벼운 발 몸(유파 걸음 칸 light)의 AI 는 공격 꼴(준비·다가가기·벰·뒤따름)일 때만 가벼운 발 —
     //  간 보기·막기·물러남(비기 꼴 포함)의 발놀림 박자(간격 비례 제어·잔걸음·'관성으로 너무 멀리 가지 않게' 늦추는 물러남)는 옛 가속(3.2 m/s²) 몸에 맞춘 값이라 그 꼴에서는 옛 가속으로 민다
     //  (fighter.js driveBalance 가 읽음 — 지난 스텝의 꼴 · 칸 없는 몸은 어차피 × 1). 끄면(0) 늘 false(사람·AI 같이 — 지금 판, 바이트 같음). 사람은 AI 가 없어 그대로
-    this.me.aiLightHold = GAIT.cnLightAi ? this.mode !== 'attack' : false;
+    this.me.aiLightHold = this.mode !== 'attack';
     // 기력 탈진 (샛별 저장소 6ac1070d — docs/strike/stamina_import_2026-10-15.md): 2.5 s 제자리 숨 고르기 — 비기·공격·막기·걸음 의도를 모두 거두고 스틱 0 (몸은 물리대로 · 균형 디딤 그대로). 기력 끔이면 늘 거짓
     if (this.me.stamina.exhausted) {
       if (this.secretRun) this.secretAbort();
@@ -1743,11 +1743,11 @@ export class AI {
     if (drawGate(this.me, 'attack')) return false; // 11/16 뽑기 (SECRET.gnsDraw): 칼집에 든 채면 먼저 뽑음 · 뽑는 동안 공격 없음 — 끝나면 다시 고름
     if (AI_ARC.on && !opt.chain && !opt.secret && !opt.passive && !opt.drill && !GAP_OPEN.has(why) && arcGapHold(this)) return void (this.stats.arcGap = (this.stats.arcGap ?? 0) + 1), false; // ① 칼끝 틈 건너기 (11/15): 긴 칼 앞 내 칼끝 밖 보통 공격은 띠 기울기만큼 참음
     if (this.planDe && this.deDig.t > 0 && !opt.secret) return false; // 독일 파고들기 (3 단계 11/14): 건 동안(digT)은 새 공격을 미룸 — 박찬 두 걸음이 공격 걸음에 덮여 버려지지 않게 · 끝나면 그 자리에서 밀치기 · 공격 고르기 그대로
-    // 붙은 거리 규칙 AI 견줌 (11/14 — CLOSE.startAI · 기본 null 이면 안 탐 · close_hold.js): 묶인 동안(내 밀치기든 상대가 나를 민 밀치기든 — 맞밀기로 둘 다 묶임) 공격 안 함 ·
+    // 붙은 거리 규칙 AI (11/14 — CLOSE.startAI · close_hold.js): 묶인 동안(내 밀치기든 상대가 나를 민 밀치기든 — 맞밀기로 둘 다 묶임) 공격 안 함 ·
     //  칼자루만 거리(가슴 사이 ≤ startAI)에선 공격 대신 손잡이 찍기
     if (this.me.ringHit) return false; // 칼 씨름에 무너진 동안(11/14 — de_dirty.js ringStep · 0.6 s) 공격을 시작하지 않음 (기본 끔이면 ringHit 이 없음)
     const held = bargeHeld(this.me.barge) || bargeHeld(this.foe?.barge);
-    if (CLOSE.startAI > 0 && (held || nearHilt(this.me))) {
+    if (held || nearHilt(this.me)) {
       if (!held && this.me.skill.pommel()) this.stats.closePommel = (this.stats.closePommel ?? 0) + 1;
       return false;
     }
@@ -2521,7 +2521,7 @@ export class AI {
    */
   closeQuarters(s, d) {
     const C = this.closeCfg(); // 인물 칸 · 독일 플랜 밀치기 · 모든 AI 손잡이 찍기 (3 단계 11/14) — 옛 판은 인물 칸 그대로
-    if (!CLOSE.on || !C) return;
+    if (!C) return;
     const me = this.me;
     const foe = this.foe;
     // 끝난 밀치기: fighter.closeStep 이 barge 를 지우고 까닭을 bargeEnd 에 남긴다 (같은 스텝에 발사·거절된 것은 shoves 로 본다)
@@ -2529,8 +2529,8 @@ export class AI {
     this.closeWasBarge = !!me.barge;
     this.closeShoves = me.shoves;
     const up = me.state === 'stand' && foe.alive && foe.state === 'stand' && s.state === 'stand' && !foe.revival;
-    // then 'pommel'(손잡이 찍기 시제품): 인물표에 쓰거나 CLOSE.pommelAll(주소 ?pommel=1)이면 persona.close 가 있는 모두. 기본 = 인물표 그대로
-    const then = CLOSE.pommelAll ? 'pommel' : C.then;
+    // then: 인물표 그대로 ('pommel' = 손잡이 찍기)
+    const then = C.then;
     let cut = false;
     if (ended) {
       this.closeWant = false;
@@ -2630,7 +2630,7 @@ export class AI {
   afterStrike(d) {
     const L = this.level;
     // 헛침(아래 패시브 사건 'missed' 와 같은 가름 — 몸에도 칼에도 안 닿음)이면 상대 걸음에 알린다: 독일 유파 몸이면 간격 잡기 받을 창(gait.js foeWhiff — 10/15).
-    //  GAIT.deChase 0 이면 걸음 쪽이 아무것도 안 한다. 읽기·알림만(난수·이 AI 상태 그대로)
+    //  읽기·알림만(난수·이 AI 상태 그대로)
     if (!this.hitLanded && !this.bound) this.foe.gait?.foeWhiff();
     // 독일 인데스 (10/21 — school_passive.js foeFailed): 내 공격이 상대를 못 벰 — 헛침(위와 같은 가름) · 막힘(칼끼리 닿음) → 상대 몸에 되받아 칠 창. 읽기 · 알림만
     if (!this.hitLanded) this.foe.schoolPassive?.foeFailed(this.bound ? 'blocked' : 'whiff');
@@ -3600,7 +3600,7 @@ export class AI {
    */
   mordPressGo(why) {
     const C = this.closeCfg(); // 인물 칸 · 독일 플랜 밀치기 (3 단계 11/14 — 칼 씨름 · 무너진 상대에게 다시 밀치기 → 모르트슐라크) · 옛 판은 인물 칸 그대로
-    if (!CLOSE.on || !C || !(C.rate > 0) || this.press.go || this.me.barge || this.me.stamina.exhausted || this.foe.state !== 'stand' || !this.me.armed) return false;
+    if (!C || !(C.rate > 0) || this.press.go || this.me.barge || this.me.stamina.exhausted || this.foe.state !== 'stand' || !this.me.armed) return false;
     if (!(Math.random() < C.rate)) return false;
     this.press.go = true;
     this.press.goWhy = why;
@@ -4501,7 +4501,7 @@ export class AI {
       side = side || this.pers.circleDir * 0.5;
     }
     // 독일 파고들기 (3 단계 11/14 — deDigTry 가 걸면 digT 동안): 간 보기 · 공격 준비 · 다가감에서 스틱 앞 끝 (두 걸음 박찬 앞 걸음 — gait.js deDigAi)
-    const dg = this.planDe ? deFeet(this, dt, d, CLOSE.startAI > 0 ? CLOSE.startAI : this.M.clinch) : null;
+    const dg = this.planDe ? deFeet(this, dt, d, CLOSE.startAI) : null;
     if (dg != null && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend' || (this.mode === 'attack' && (this.phase === 'windup' || this.phase === 'approach')))) {
       fwd = dg;
       side = 0;
@@ -4527,7 +4527,7 @@ export class AI {
     // 근접 밀치기: 닿는 거리 안에서 스틱만 (벽 처리 뒤라 side 를 ±k 로 바꾸지 못한다). 걸쇠가 꺼져 있으면 한 스텝 0 으로 장전,
     //  켜져 있으면 1 로 발사, 밀치는 동안 closeWant 면 1 유지(누르기). 휘두르는 중·베는 중(strike·follow, 팔이 묶임)은 미룬다
     const armsBusy = this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow' || this.phase === 'rdWind' || this.phase === 'rdStrike'); // 풍차 베기 감기 · 내려침도 팔이 묶임 (10/31)
-    if (CLOSE.on && this.closeInside && !me.skill.swinging && (me.barge || (this.closeWant && !armsBusy))) {
+    if (this.closeInside && !me.skill.swinging && (me.barge || (this.closeWant && !armsBusy))) {
       fwd = me.barge ? (this.closeWant ? 1 : 0) : me.closeArmed ? 1 : 0; // 밀치는 중엔 closeWant 동안만 누른다 (풀리면 release)
       side = 0;
     }

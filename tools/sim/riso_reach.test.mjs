@@ -12,7 +12,6 @@ import { playerSecretDef, TRADITIONS } from '../../src/schools.js';
 import { risoHitMul, gyeoksalHitMul } from '../../src/skill.js';
 import { mordHitMul } from '../../src/mordschlag.js';
 import { lungeAt } from './riso_reach.mjs';
-import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 
 const { SECRET } = CONFIG;
 const rs = CONFIG.realS;
@@ -63,28 +62,6 @@ test("A [사장님 11/11 결정] '리솔루토를 70%로 상향하고 파괴력�
   assert.deepEqual(t13.tapHits, [1.3]);
 });
 
-test("A [사장님 11/11 결정] '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경': 빠르기 몫 0.7 · 격살 판정 배율 1 · 격살 한 칼 요청에 실림 · ?gyeoksalHitMul=1.3 · 다른 비기 1.3 그대로", (t) => {
-  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-  assert.equal(SECRET.gyeoksal.share, 0.7);
-  assert.equal(SECRET.gyeoksalHitMul, 1);
-  assert.equal(SECRET.gyeoksal.power, 'hit');
-  assert.equal(gyeoksalHitMul(), 1);
-  withCfg({ gyeoksalHitMul: null }, () => assert.equal(gyeoksalHitMul(), SECRET.hitMul));
-  const req = (vals) => withCfg(vals, () => {
-    const G = newRound({ weapon: 'qinggang', weapon2: 'longsword', seed: 1, gap: 1.35 });
-    G.ai.update = () => {};
-    try {
-      while (G.t < 1.0) G.step();
-      assert.ok(G.player.skill.secret({ S: TRADITIONS.chinese.playerSecret, ctx: { slot: 'yoryak', stance: 'yoryak' } }));
-      return { ...G.player.iaiReq };
-    } finally { G.world.free(); }
-  });
-  const now = req({});
-  assert.equal(now.hitMul, 1);
-  assert.equal(now.share, 0.7);
-  assert.equal(req({ gyeoksalHitMul: 1.3 }).hitMul, 1.3, '?gyeoksalHitMul=1.3 = 전 판');
-  assert.ok(SECRET.aiOpenSchools.includes('chinese'), 'AI 동방 격살 열림 (11/14 사장님 \'동방도 격살 쓰게 해\' — 전 닫힘 · 사람만)');
-});
 
 test('A: 11/14 사장님 \'리솔루토도 쓰게해\' — AI 이탈리아 비기도 리솔루토(사람과 같은 칸 · aiSecret) · 옛 엇박 찌르기는 secret 칸에 남음 · ?itSecret=contratempo 면 AI 몫 없음', () => {
   assert.equal(playerSecretDef('italian').when, 'risoluto');

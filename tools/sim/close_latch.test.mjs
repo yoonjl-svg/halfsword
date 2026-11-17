@@ -1,4 +1,4 @@
-// 밀치기 걸쇠 없앰 (10/25 23:3x 사장님 '밀치기는 붙은 거리 안에서 스틱을 한 번 놓았다가 다시 밀어야 시작됩니다 -> 이 걸쇠 없애. 밀치기의 도입 취지와도 맞지 않아.' — CLOSE.latch · fighter.js closeStep):
+// 밀치기 걸쇠 없앰 (10/25 23:3x 사장님 '밀치기는 붙은 거리 안에서 스틱을 한 번 놓았다가 다시 밀어야 시작됩니다 -> 이 걸쇠 없애. 밀치기의 도입 취지와도 맞지 않아.' — fighter.js closeStep):
 //  ① 스틱을 앞으로 쥔 채 걸어 들어오면 닿는 거리 안에서 곧장 밀치기 · 밀치는 동안은 새로 안 붙음 · 끝나도 밀고 있으면 곧장 다음 · ?closeLatch=1 이면 전 판(놓았다 밀어야)
 //  ② 탈진으로 풀린 누르기는 한 번 놓아야 다시 (stamina.js '누르기 해제' 가 같은 스텝에 다시 눌리지 않게)
 //  node --test tools/sim/close_latch.test.mjs
@@ -35,18 +35,11 @@ function holdIn(T = 6) {
   return out;
 }
 
-test('기본값: 걸쇠 없음 (사람 · AI)', () => {
-  assert.equal(CLOSE.latch, 0);
-  assert.equal(CLOSE.latchAI, 0);
-});
-
-test('① 쥔 채 걸어 들어오면 곧장 밀치기 · 밀치는 동안 새로 안 붙음(밀치기 하나 = 시작 하나) · 전 판(?closeLatch=1)은 밀치기 없음', () => {
+test('① 쥔 채 걸어 들어오면 곧장 밀치기 · 밀치는 동안 새로 안 붙음(밀치기 하나 = 시작 하나) ', () => {
   const on = holdIn();
   assert.ok(on.starts >= 1 && on.firstAt != null, `밀치기 ${on.starts}`);
   assert.equal(on.shoves, on.starts, '시작 셈 = 밀치기 셈 (한 밀치기가 스텝마다 다시 붙지 않음)');
   assert.ok(on.starts < 6 / 0.3, `밀치기 ${on.starts} — 스텝마다 거듭 안 남`);
-  const off = withClose({ latch: 1 }, () => holdIn());
-  assert.equal(off.starts, 0, '걸쇠 판 — 스틱을 놓지 않으면 밀치기 없음');
 });
 
 test('② 탈진으로 풀린 누르기는 스틱을 한 번 놓아야 다시 (bargeEnd exhausted — 걸쇠처럼)', () => {

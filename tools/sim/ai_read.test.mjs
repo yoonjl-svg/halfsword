@@ -13,9 +13,6 @@ import { readInit, readNote, readLineN, readAtkN, readRepeatLine, readRaiseD, re
 import { jpInit, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep, JP_PLAN } from '../../src/ai_plan_jp.js';
 import { aiBeatTick } from '../../src/italian_outbox.js';
 import { gnsEnterLine, useSecret } from '../../src/secret.js';
-import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
-import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-import { pinReactOld } from './react_old.mjs'; // 11/16 AI 반응 시간 0.2 s 하나 전 판으로 묶을 옛 장면
 
 const { AI_PLAN, AI_PLAN_JP, SECRET, STAMINA, JP_TANK, TIME } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -69,25 +66,6 @@ function fake(prof, tr = 'german', o = {}) {
 const still = { hvx: 0, hvy: 0, hx: 0, hy: 0, state: 'stand' };
 const raise = { hvx: 0, hvy: 2.5, hx: 0, hy: 0.3, state: 'stand' };
 
-test('읽기 그릇 — 띠마다 칸 (무 · 낮음은 안 읽음 · 가운데 상대 유파 · 버릇 · 높음 되풀이 · 대가 창 · 기력) · 값', (t) => {
-  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-  const R = AI_PLAN.read;
-  assert.equal(R.on, 1);
-  assert.equal(R.fair, 1);
-  assert.equal(R.gns, 1);
-  assert.ok(near(R.habitT, 6.0 * TIME.k) && near(R.repeatT, 10.0 * TIME.k), '버릇 6.0 s · 되풀이 10.0 s (2 단계 값 그대로 — 그릇 하나로)');
-  for (const k of ['risk', 'cost', 'stamina']) assert.ok(R[k] > 0 && R[k] < 1, `${k} 기울기 몫 0 ~ 1`);
-  const row = (p) => {
-    const r = fake(p).read;
-    return [r.school, r.habit, r.repeat];
-  };
-  assert.deepEqual(row(1), [false, false, false], '낮음');
-  assert.deepEqual(row(2), [false, false, false], '낮음');
-  assert.deepEqual(row(3), [true, true, false], '가운데');
-  assert.deepEqual(row(4), [true, true, false], '가운데');
-  assert.deepEqual(row(5), [true, true, true], '높음');
-  assert.deepEqual(row(6), [true, true, true], '높음');
-});
 
 test('본 칼 적기 — 같은 위협 번호는 한 번 · 버릇 창 · 지금 칼 뺌 · 되풀이 줄 · 칼 든 거리(두 번부터) · 굴림 없음 · 새 배열 없음', () => {
   const ai = fake(5);
@@ -260,64 +238,6 @@ test('스위치 — read.on 0 이면 읽기 몫 0 · 곱 1 (그릇은 유파 버
   assert.equal(off.lag, 0, '`?aiPlan=0` — 옛 판 눈');
 });
 
-test('공정함 — 비기 조건을 알아채는 눈에 반응 시간(몸 자리는 앞질러) · 박자 찌르기는 늦게 본 휘두름 · 고노센 경계는 늦게 본 준비 자세 (스틱 · 속 셈 아님) · 끄면 옛 판', () => withSecretFreeOff(() => { // 11/16 그때 판(판당 1 — 끝없는 비기 끔)으로 묶음 · 기준 그대로
-  // ① 비기 조건 눈 (secretScan · spinTick — 실행은 그대로)
-  const G = newRound({ weapon: 'uchigatana', weapon2: 'longsword', seed: 1 });
-  try {
-    const ai = G.ai;
-    ai.update = () => {};
-    while (G.t < 0.5) G.step();
-    assert.ok(ai.level.reaction > 0);
-    assert.equal(ai.secretLag(), ai.level.reaction);
-    assert.equal(withRead({ fair: 0 }, () => ai.secretLag()), 0, 'fair 0 — 옛 판 (지금 모습)');
-    // 손 · 칼 · 자세는 늦게 · 몸 자리는 간 보기 거리 셈처럼 앞질러 (본 자리 + 골반 속도 × 반응 시간 × predict)
-    const sv = ai.sense.seen(ai.level.reaction);
-    const o = ai.secretSeen();
-    const a = ai.level.reaction * ai.level.predict;
-    assert.ok(near(o.cx, sv.cx + sv.vx * a) && near(o.cz, sv.cz + sv.vz * a), '몸 자리 앞질러 봄');
-    assert.deepEqual([o.hx, o.hy, o.hvx, o.hvy, o.state, o.tx, o.tz], [sv.hx, sv.hy, sv.hvx, sv.hvy, sv.state, sv.tx, sv.tz], '손 · 칼 · 자세는 늦은 그대로');
-    assert.equal(ai.secretSeen(), o, '덧칸 하나를 다시 씀 (새 객체 없음)');
-    assert.equal(withRead({ fair: 0 }, () => ai.secretSeen()), ai.sense.seen(0), 'fair 0 — 지금 모습');
-    // ② 박자 찌르기 — 늦게 본 손 빠르기
-    const seen = ai.sense.seen.bind(ai.sense);
-    let hand = 4;
-    let ready = 0;
-    ai.sense.seen = (lag) => ({ ...seen(lag), hvx: hand, hvy: 0, ready, state: 'stand', armed: true });
-    assert.equal(ai.seenSwing(), true);
-    hand = 1;
-    assert.equal(ai.seenSwing(), false);
-    const B = { t: 0, foeAtk: null, foeSw: false };
-    aiBeatTick(B, 0.01, true);
-    aiBeatTick(B, 0.01, true);
-    assert.equal(B.foeAtk.n, 1, '휘두름 하나에 한 번');
-    aiBeatTick(B, 0.01, false);
-    aiBeatTick(B, 0.01, true);
-    assert.equal(B.foeAtk.n, 2);
-    // ③ 고노센 경계 — 사람 상대(우치가타나)의 준비를 늦게 본 준비 자세로
-    const d = ai.d;
-    ai.gnsW = null;
-    ai.gnsWatch(1 / 120, d, false);
-    assert.equal(ai.gnsW.user, true, '사람 우치가타나 — 고노센 쓰는 몸');
-    assert.equal(ai.gnsW.ready, false, '자세 없음');
-    ready = 1;
-    ai.gnsWatch(1 / 120, d, false);
-    assert.equal(ai.gnsW.ready, true, '준비 자세가 보임 (스틱으로 2.6 s 서 있지 않았어도)');
-    assert.ok(near(ai.gnsW.line, gnsEnterLine({ reach: G.player.swordArt.measure.reach, contact: G.player.swordArt.measure.contact })), '선은 보이는 칼로');
-    withRead({ fair: 0 }, () => {
-      ai.gnsW = null;
-      ai.gnsWatch(1 / 120, d, false);
-      assert.equal(ai.gnsW.ready, false, 'fair 0 — 옛 판(사람 스틱 셈 — 판 시작 0.5 s 는 아직)');
-    });
-    ai.gnsW = null;
-    ai.gnsWatch(1 / 120, d, false);
-    assert.equal(ai.gnsW.ready, true);
-    useSecret(G.player);
-    ai.gnsWatch(1 / 120, d, false);
-    assert.equal(ai.gnsW.ready, false, '이 판 비기를 다 쓴 사람은 자세가 보여도 준비 아님 (옛 눈과 같은 규칙)');
-  } finally {
-    G.world.free();
-  }
-}));
 
 /** 가짜 일본 AI (고노센 준비 셈만) */
 function fakeJp(prof, o = {}) {
@@ -426,21 +346,3 @@ test('AI 고노센 꾐 — 상대가 칼을 드는 거리(버릇)가 선 밖이�
   assert.equal(e.jpGns.invite, true, '모름 — 어림 거리(상대 칼끝 + 0.4)가 선 밖 · 굴림 몫 아래');
 });
 
-test('판: 일본 숙련 5 대 롱소드 AI (씨앗 1 · 2) — AI 고노센이 남 · 지킴 · 읽기 판단이 남', (t) => {
-  pinReactOld(t); // 11/16 AI 반응 시간 숙련도 사다리(전 판 [0.35 … 0.05])로 묶음 (tools/sim/react_old.mjs) — 반응 0.1 · 0.25 → 0.2 s 로 씨앗 1 · 2 판이 갈림 · 기준 그대로
-  let fired = 0;
-  let keep = 0;
-  let risk = 0;
-  for (const seed of [1, 2]) {
-    const G = newRound({ walls: true, seed, weapon: 'longsword', weapon2: 'uchigatana', AI2Class: AI, persona: { proficiency: 5 }, persona2: { proficiency: 2, planOff: true } }); // 3 단계 셋 합침(11/14): 상대 롱소드 AI 는 잰 때의 몸(독일 플랜 · 손잡이 찍기 없는 옛 판 — persona.planOff)
-    const ai = G.ai;
-    while (G.t < 30 && G.player.alive && G.enemy.alive) G.step();
-    fired += ai.stats.secrets?.goNoSen?.fired ?? 0;
-    keep += ai.stats.plan.jp.keep;
-    risk += Object.values(ai.stats.read.risk).reduce((s, x) => s + x, 0);
-    G.world.free();
-  }
-  assert.ok(keep >= 1, `지킴 ${keep}`);
-  assert.ok(fired >= 1, `AI 고노센 ${fired}`);
-  assert.ok(risk >= 1, `상대 유파 위험 읽기 ${risk}`);
-});

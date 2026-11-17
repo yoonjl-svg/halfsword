@@ -14,10 +14,7 @@ import { drillRun, fightRun } from './special_balance.mjs';
 import { classifyStroke } from '../../src/attack_stroke.js';
 import { G as PAD } from '../../src/ai_techniques.js';
 import { iaiTipSpeed } from '../../src/secret_instant.js'; // 11/11 칼끝 돌려 빼기 = 고노센 칼끝 × specialShare.cavazione
-import { withArmOld } from './arm_real_pin.mjs';
 import { THRUST_STYLE } from '../../src/weapons.js'; // 11/14 틈 파고들기 그때 값으로 묶음 (아래 ② 넘어짐 전 판)
-import { withPOff } from './p_pin.mjs'; // 11/16 묶음 P · 3안 전 판으로 묶음 (아래 ② 판 · ② 넘어짐 전 판)
-import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const { realS, THRUST } = CONFIG;
@@ -284,85 +281,7 @@ test('① 내려 찌르기 닿게 (씨앗 1 · 서 있는 상대): 찌른 상처
   assert.equal(typeof strokeTechOf, 'function');
 });
 
-test('② 판 (씨앗 901 · 롱소드 AI · 12 s · 칼끼리 닿음을 느끼면 0.25 ~ 0.95 s 뒤 탭하는 손): 실제 닿음 뒤 칼끝 돌려 빼기가 나감 · 셈 밖 닿음은 내 긋기 동안만', () => {
-  // 3 단계(11/14) 그때 판으로 묶음 (기준은 안 고침): 롱소드 AI 의 독일 플랜 · 모든 AI 손잡이 찍기로 씨앗 901 판이 갈라짐 → 그 전 판(독일 · 찍기만 뺌)
-  const apD = [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools, CONFIG.AI_PLAN.pommel];
-  for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'german');
-  CONFIG.AI_PLAN.pommel = 0;
-  // 11/14 상대가 길 때의 대처(모든 AI — DIG_PROTO.reach): 롱소드 AI 가 레이피어 사람보다 0.18 m 짧아 파고들기 몫을 받아 씨앗 901 판이 갈라짐 → 그 전 판(옛 문 reach 0)으로도 묶음 · 기준 그대로
-  const reachOn = CONFIG.DIG_PROTO.reach;
-  CONFIG.DIG_PROTO.reach = 0;
-  let r;
-  try {
-    r = withPOff(() => fightRun('cavTouch', 901, 'longsword', { variant: 'on', dur: 12 })); // 11/16 그때 판으로 묶음 (기준은 안 고침): 묶음 P(사람 탭 찌르기 몸 싣기 · AI 몸 싣기 · 낌새 눈)로 씨앗 901 판이 갈라져 칼끝 돌려 빼기가 안 나옴
-  } finally {
-    [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools, CONFIG.AI_PLAN.pommel] = apD;
-    CONFIG.DIG_PROTO.reach = reachOn;
-  }
-  assert.ok((r.fired.cavazione ?? 0) >= 1, `나감 ${r.fired.cavazione}`);
-  assert.ok(r.it.touches >= r.fired.cavazione && r.it.touchCut <= r.it.touches, JSON.stringify({ touches: r.it.touches, cut: r.it.touchCut }));
-  assert.ok(r.it.fires.every((x) => !x || x.E >= 0), '낸 칼 결과');
-});
 
-test('② 넘어짐 고침 (cavSelfFree 1 · 확인표 3260): 칼끝 돌려 빼기 수 동안 칼 어깨 면 밧줄을 떼고 끝나면 다시 검 · 0 = 전 판(씨앗 902 츠바이핸더 7.05 s 수 뒤 발 밖 넘어짐)', (t) => {
-  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 씨앗 902 AI 판이 칸 몫으로 갈림 · 기준 그대로
-  const watch = () => {
-    const seen = { during: 0, ropesDuring: 0, after: 0, ropesAfter: 0, was: false };
-    const probe = (G, P) => {
-      const on = P.iai?.tech === 'cavazione';
-      if (on) (seen.during++, P.shoulderRopes && seen.ropesDuring++);
-      else if (seen.was) (seen.after++, P.shoulderRopes && seen.ropesAfter++);
-      seen.was = on;
-    };
-    return { seen, probe };
-  };
-  const a = watch();
-  // 11/14 둘째 그때 판으로 묶음 (기준은 안 고침): 이베리아 플랜 변칙(옆 박차기 · 비스듬히 들어감 — src/ai_plan_ib.js)으로 씨앗 902 츠바이핸더 AI 판이 갈라져 칼끝 돌려 빼기 수가 안 나옴 → 이베리아 플랜 전 판(`?aiPlanIb=0` 꼴)으로
-  const ap0 = [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools, CONFIG.AI_PLAN.pommel];
-  for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'iberian' && x !== 'german'); // 3 단계(11/14): 독일 플랜 · 모든 AI 손잡이 찍기도 그 전 판으로 (상대 롱소드 AI)
-  CONFIG.AI_PLAN.pommel = 0;
-  let on;
-  try {
-    on = fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: a.probe });
-  } finally {
-    [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools, CONFIG.AI_PLAN.pommel] = ap0;
-  }
-  assert.ok(a.seen.during > 0 && a.seen.ropesDuring === 0, `수 동안 밧줄 없음 ${JSON.stringify(a.seen)}`);
-  assert.ok(a.seen.after > 0 && a.seen.ropesAfter === a.seen.after, `끝나면 다시 ${JSON.stringify(a.seen)}`);
-  const body = (r) => (r.it.knock ?? []).filter((k) => (k.why === 'footing' || k.why === 'tilt') && r.it.fireT.some((t) => k.t >= t && k.t <= t + 0.4));
-  assert.equal(body(on).length, 0, JSON.stringify(on.it.knock));
-  const sf = UA.cavSelfFree;
-  const sm = UA.cavSpeedMul;
-  const sh = UA.cavShare;
-  const bn = CONFIG.BIND.natural;
-  const ts = CONFIG.SKILL.thrustScale;
-  UA.cavSelfFree = 0;
-  UA.cavSpeedMul = 1; // 전 판 넘어짐 재현은 고칠 때의 빠르기(× 1 — 10/31 18:xx 기본 × 1.2 전)로: 판이 달라지면 씨앗 902 의 그 수가 안 나옴
-  UA.cavShare = 0; // 같은 까닭 — 고칠 때의 빠르기 바탕(보통 찌르기 빠르기 — 11/11 고노센 × 0.35 전)
-  CONFIG.BIND.natural = 0; // 같은 까닭으로 고칠 때의 칼 물리(자연 바인드 끔 — 10/31 19:xx 본판 전)로 (켜면 칼끼리 덜 튕겨 씨앗 902 의 그 수 · 넘어짐이 안 나옴)
-  const gp = [THRUST_STYLE.rapier.gap, UA.imbroccataGap];
-  THRUST_STYLE.rapier.gap = 0.3; // 11/14 그때 판으로 묶음 (기준은 안 고침): 사장님 '기본찌르기는 0.6 위에서 내려찌르기는 0.9' 로 레이피어 틈 0.3 → 0.6 · 내려 찌르기 0.6 → 0.9 — 판이 달라져 씨앗 902 의 그 수 뒤 넘어짐이 안 나옴 → 고칠 때의 값으로
-  UA.imbroccataGap = 0.6;
-  CONFIG.SKILL.thrustScale = 'off'; // 같은 까닭 — 고칠 때의 사람 레이피어 손 매핑(11/12 한손 찌르기 잣대 'base' 전 — docs/strike/arm_reach_audit_2026-11-12.md: 켜면 씨앗 902 판의 그 수 뒤 넘어짐이 안 나옴)
-  const ap = [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools];
-  for (const k of ['schools', 'errSchools']) CONFIG.AI_PLAN[k] = CONFIG.AI_PLAN[k].filter((x) => x !== 'iberian'); // 11/14 그때 판으로 묶음 (기준은 안 고침): 유파 플랜 2 단계 이베리아(츠바이핸더 AI)가 판을 바꿔 씨앗 902 의 그 수 뒤 넘어짐이 안 나옴 → 이베리아 플랜 전 판으로
-  try {
-    const b = watch();
-    // 11/12 둘째 두 팔 엇갈림 막기(AI 몫 · 칼자루 끝 앞 바닥 — 상대 AI 팔 · 사람 두손 칼 손 목표가 바뀜)로도 그 수 뒤 넘어짐이 안 나옴 → 고칠 때의 팔(11/12 첫 판 — arm_real_pin armClear2)로 묶음
-    // 11/16 묶음 P(사람 탭 찌르기 몸 싣기 · 낌새 눈)로도 그 수 뒤 넘어짐이 안 나옴 → 묶음 P · 3안 전 판으로도 묶음 (기준은 안 고침)
-    const off = withPOff(() => withArmOld(() => fightRun('cavTouch', 902, 'zweihander', { variant: 'on', dur: 8, probe: b.probe }), ['armClear2']));
-    assert.ok(b.seen.during > 0 && b.seen.ropesDuring === b.seen.during, '전 판: 밧줄 그대로');
-    assert.ok(body(off).some((k) => k.why === 'footing'), `전 판: 낸 뒤 발 밖 넘어짐 ${JSON.stringify(off.it.knock)}`);
-  } finally {
-    UA.cavSelfFree = sf;
-    UA.cavSpeedMul = sm;
-    UA.cavShare = sh;
-    CONFIG.BIND.natural = bn;
-    CONFIG.SKILL.thrustScale = ts;
-    [THRUST_STYLE.rapier.gap, UA.imbroccataGap] = gp;
-    [CONFIG.AI_PLAN.schools, CONFIG.AI_PLAN.errSchools] = ap;
-  }
-});
 
 test('② 세게 하는 시제품 A ~ E (10/31 16:xx 사장님 물음 · 확인표 3263 ~ · 기본 모두 끔): A 빠르기 배 · D 판정 배율 → 요청 · C 상대 반응 묶음(ai.js respond) · E 막기 단추로 거둠 · B 는 combat.js(재기로 봄)', () => {
   assert.deepEqual([UA.cavSpeedMul, UA.cavGap, UA.cavParryLock, UA.cavHitMul, UA.cavCancel], [1.2, 0, 0, 1, 0], '기본: A × 1.2(사장님 10/31 18:xx \'1.2배로 해\' · 11/12 감독 보류로 그대로) · 나머지 끔');

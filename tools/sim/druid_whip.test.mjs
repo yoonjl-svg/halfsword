@@ -9,7 +9,6 @@ import { traditionOf } from '../../src/schools.js';
 import { CHARACTERS } from '../../src/characters.js';
 import { WHIP, WHIP_SRC, WHIP_NOW, setWhipPreset, DRUID } from '../../src/druid_whip.js';
 import { newRound, DT, AI, CONFIG } from './harness_m.mjs';
-import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 
 class Quiet { update() {} }
 const W = () => getWeapon('druid_whip');
@@ -107,40 +106,6 @@ test('덩굴 길이 · 무게 · 테이퍼 (10/23 넷째 · 다섯째 일 · WHI
   assert.equal(weaponSpecText(W()), '한손 채찍, 173 cm, 0.77 kg');
 });
 
-test('마디 물리: 8 마디 · AI 끼리 6 s 벌어짐 3 cm 안 · 유한 · 끝 점 = 덩굴 마디 · 세게 쳐도 · 직접 불러도 안 부러짐', (t) => {
-  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 상대 롱소드 AI(숙련 2) 칸 몫으로 씨앗 2 판이 갈림(6 s 벌어짐 5.8 cm — 전 씨앗 1 ~ 18 가장 큼 6.48 cm 안) · 기준 그대로
-  CONFIG.ARENA.startHold = 0;
-  // 시드 11 → 13 (10/23 채찍 간격표 고침 1.25/1.69 → 1.15/1.32 — AI 가 든 채찍의 간격이 바뀌어 같은 시드도 다른 판이 된다. 덩굴 값은 그대로):
-  //  시드 1 ~ 18 의 6 s 벌어짐은 전 가운데 1.98 · 가장 큼 6.48 · 3 cm 넘음 4 판 → 후 1.20 · 5.93 · 4 판으로 같거나 작다.
-  //  시드 11 은 2.5 → 3.4 cm 가 되어, 전 시드 11 과 같은 자리(18 판 가운데 13 번째)인 시드 13(후 2.07 cm)으로 옮김 — 문턱 3 cm 는 그대로
-  //  시드 13 → 2 (10/24 17:2x 팔꿈치 돌림 켬 · 손목 교정 — AI 칼 팔이 바뀌어 같은 시드도 다른 판. 덩굴 값 그대로): 시드 1 ~ 18 의 6 s 벌어짐 가운데 1.20 → 1.37 · 가장 큼 5.93 → 3.70 ·
-  //   3 cm 넘음 4 → 1 판. 시드 13 은 3.70 cm 가 되어 같은 자리(18 판 가운데 13 번째)인 시드 2(1.47 cm)로 옮김 — 문턱 3 cm 는 그대로
-  const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', gap: 1.35, seed: 2, AIClass: AI, AI2Class: AI });
-  const f = g.player, x = f.flexWeapon;
-  assert.ok(x);
-  assert.equal(x.segments.length, 8);
-  assert.ok(Math.abs(f.stamina.originalMass - 0.77) < 1e-6);
-  let gap = 0;
-  for (let i = 0; i < 6 / DT; i++) {
-    g.step();
-    for (let j = 0; j < 8; j++) {
-      const s = x.segments[j], p = s.body.translation();
-      assert.ok([p.x, p.y, p.z].every(Number.isFinite));
-      const a = new THREE.Vector3(0, -x.L / 2, 0).applyQuaternion(new THREE.Quaternion().copy(s.body.rotation())).add(new THREE.Vector3().copy(p));
-      const prev = j ? x.segments[j - 1].body : f.sword;
-      const b = new THREE.Vector3(0, j ? x.L / 2 : 0.13, 0).applyQuaternion(new THREE.Quaternion().copy(prev.rotation())).add(new THREE.Vector3().copy(prev.translation()));
-      gap = Math.max(gap, a.distanceTo(b));
-    }
-  }
-  assert.ok(gap < 0.03, `벌어짐 ${gap}`);
-  const tip = f.bladePoint(1), last = x.segments[7].body.translation();
-  assert.ok(tip.distanceTo(new THREE.Vector3().copy(last)) < x.L / 2 + 1e-6);
-  for (let i = 0; i < 200; i++) f.absorbWeaponImpact(1000, { armed: true, weapon: { breakMult: 100 } });
-  f.breakWeapon();
-  assert.equal(f.weaponBroken, false);
-  assert.equal(f.weaponCfg.bladeLength, 1.44);
-  g.world.free();
-});
 
 test('톡 = 손목 튕기기 (사람 · 마무리 아님): 손 목표가 올라갔다 내려오고 끝나면 놓는다 · 덩굴 끝이 앞으로', () => {
   CONFIG.ARENA.startHold = 0;

@@ -121,7 +121,7 @@ export class Stamina {
 
   /** 기존 누르기 단계 + 실제 팔/칼 접촉. 거리만 가깝거나 공격 중인 것은 클린치가 아니다. */
   canClinch(other) {
-    if (!CLOSE.on || !(STAMINA.clinchPerSecond > 0) || !other || other === this) return false;
+    if (!(STAMINA.clinchPerSecond > 0) || !other || other === this) return false;
     const a = this.fighter, b = other.fighter;
     if (a.foe !== b || b.foe !== a) return false;
     for (const s of [this, other]) {
@@ -280,7 +280,7 @@ export class Stamina {
   }
 
   /** 첫 걸음 박차기 (우리 본판 gait.js fastBegin — 박찬 걸음을 뗄 때 한 번): pushCost 12, 무게 배율 없음 · 회복 0.6 s 시계를 다시 센다(공격·막아 받기·비기와 같이).
-   *  박차기가 걸리는 몸만 부른다 — 독일 뒤(비스듬히 뒤) · 이베리아 옆(비스듬히 옆) · 지금은 플레이어만(GAIT.stepBurst · burstDe). 박찬 걸음의 걸은 거리는 걷기 비용으로 따로 센다 */
+   *  박차기가 걸리는 몸만 부른다 — 독일 뒤(비스듬히 뒤) · 이베리아 옆(비스듬히 옆) · 지금은 플레이어만. 박찬 걸음의 걸은 거리는 걷기 비용으로 따로 센다 */
   burst() {
     if (this.exhausted) return;
     if (this.spend('push', STAMINA.pushCost)) this.counts.push++;

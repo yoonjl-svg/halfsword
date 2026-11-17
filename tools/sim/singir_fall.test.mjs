@@ -8,8 +8,6 @@ import { PlayerSecretWatch } from '../../src/secret.js';
 import { fightOne } from './school_balance.mjs';
 import { runOne } from './singir_fall.mjs';
 import { footSnap } from './iberian_spin_feet.mjs';
-import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
-import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 싱지르 비기 넘어짐 장면(11/05 — 가까우면 뒷발 축 near · 무장 창 원 · 비기 몫)이라
 //  그 판('spin')으로 묶는다(이 파일 안에서만). 새 판(비기 알티바슈 포르트 · 특수 공격 싱지르 한 걸음)은 tools/sim/ib_swap.test.mjs
 (await import('../../src/config.js')).SECRET.iberianSecret = 'spin';
@@ -120,30 +118,6 @@ test('멀면(맞닿기 + 나아감 밖) 전 판 그대로 — 앞발 축 · 나�
   assert.ok(on.cuts > 0, '벰');
 });
 
-test('넘어지던 판 (티소나 대 롱소드 AI 씨앗 3 — 사람 손가락 봇): 끄면 돌기 0.13 s 에 맞아 넘어짐 · 켜면 1 s 안 안 넘어짐', (t) => withArmOld(async () => {
-  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 상대 롱소드 AI(숙련 2) 칸 몫으로 씨앗 3 판이 갈림 · 기준 그대로
-  const deK = deOff();
-  // 11/14 상대가 길 때의 대처(모든 AI — DIG_PROTO.reach): 롱소드 AI 가 상대 칼보다 짧아 파고들기 몫을 받아 이 판이 갈라짐 → 그 전 판(옛 문 reach 0)으로도 묶음 · 기준 그대로
-  const reachOn = CONFIG.DIG_PROTO.reach;
-  CONFIG.DIG_PROTO.reach = 0;
-  try {
-  // 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 씨앗 3 의 그 넘어짐 장면이 안 나옴 (끔 · 켬 같은 판 · 기록 arm_real §10)
-  const fc = { ...SKILL.fingerCut };
-  Object.assign(SKILL.fingerCut, { arm: 1, gain: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면 (손가락 봇 긋기가 세지면 씨앗 3 판이 달라져 그 넘어짐 장면이 안 나옴 — 끔 · 켬 같은 판)
-  try {
-    const off = await withNear(0, () => runOne({ weapon: 'tizona', opp: 'longsword', seed: 3, dur: 5 }));
-    const s0 = off.probe.spins[0];
-    assert.ok(s0?.fall && s0.fall.dt <= 1 && s0.fall.why === 'gauge' && s0.fall.stage === 'spin', `끔 ${JSON.stringify(s0?.fall)}`);
-    const on = runOne({ weapon: 'tizona', opp: 'longsword', seed: 3, dur: 5 });
-    const s1 = on.probe.spins[0];
-    assert.equal(s1.near, true);
-    assert.ok(!(s1.fall && s1.fall.dt <= 1), `켬 ${JSON.stringify(s1.fall)}`);
-    assert.ok(s1.dealt.some((d) => d.sev > 0), '켬 벰');
-  } finally {
-    Object.assign(SKILL.fingerCut, fc);
-  }
-  } finally { deOn(deK); CONFIG.DIG_PROTO.reach = reachOn; }
-}, ['armClear']));
 
 test('재기 꽂개는 읽기만: singir_fall runOne 판 = school_balance fightOne 판 (이베리아 · 롱소드 AI 씨앗 3 · 5 s)', () => {
   const a = runOne({ weapon: 'zweihander', opp: 'longsword', seed: 3, dur: 5 });

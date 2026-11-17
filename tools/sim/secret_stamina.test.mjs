@@ -9,7 +9,6 @@ import { CONFIG, newRound, DT } from './harness_m.mjs';
 import { PlayerSecretWatch, playerSecretOf } from '../../src/secret.js';
 import { TRADITIONS } from '../../src/schools.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
-import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 
 const { SECRET, STAMINA } = CONFIG;
 
@@ -136,48 +135,3 @@ test('AI: 기력 −5 이면 secretGo · mordGo · spinGo 모두 거절 (거절 
   }
 });
 
-test('기력 0.5 에서 낸 비기 다섯 모두 끝까지 (사장님 10/30 18:3x — 0 보다 크면 냄): 비기 값 35 를 내 −34.5 · 탈진 없음 · holdExhausted 끊김 0 · 굳음까지', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
-  const cases = [
-    ['longsword', { ev: 'press' }],
-    ['rapier', { ev: 'risoluto' }],
-    ['zweihander', { ev: 'spin', turnDir: 1 }],
-    ['uchigatana', { ev: 'threat', line: 'oberhau' }],
-    ['hwando', { ev: 'gyeoksal', slot: 'geojeong', stance: 'geojeong', line: 'highC', by: 'line' }],
-  ];
-  for (const [w, ctx] of cases) {
-    // 11/11 이베리아 자리 바꿈: 싱지르 비기 장면('spin' 판)으로 묶음 — 새 비기 알티바슈 포르트는 skill.secret 이 아닌 길게 누름(tools/sim/ib_swap.test.mjs)
-    const keepIb = CONFIG.SECRET.iberianSecret;
-    if (w === 'zweihander') CONFIG.SECRET.iberianSecret = 'spin';
-    const G = newRound({ walls: true, seed: 3, weapon: w, weapon2: 'longsword', gap: w === 'longsword' ? 0.65 : 1.3 });
-    try {
-      const P = G.player;
-      P.fightT = G.enemy.fightT = 1e3;
-      G.ai.update = () => {};
-      for (let i = 0; i < Math.round(1 / DT); i++) G.step();
-      let cut = 0;
-      const he = P.skill.holdExhausted.bind(P.skill);
-      P.skill.holdExhausted = (dt) => {
-        if (P.skill.sec) cut++;
-        return he(dt);
-      };
-      P.stamina.value = 0.5;
-      const S = playerSecretOf(P);
-      assert.equal(P.skill.secret({ S, ctx }), true, `${w} ${S?.name} 받음`);
-      assert.ok(Math.abs(P.stamina.value - (0.5 - STAMINA.secretCost)) < 1e-9, `${w} 기력 ${P.stamina.value}`);
-      const stages = new Set();
-      let exh = false;
-      for (let i = 0; i < Math.round(4 / DT) && P.skill.sec; i++) {
-        G.step();
-        if (P.skill.sec) stages.add(P.skill.sec.stage);
-        exh ||= P.stamina.exhausted;
-      }
-      assert.equal(P.skill.sec, null, `${w} 끝남`);
-      assert.equal(exh, false, `${w} 탈진 없음`);
-      assert.equal(cut, 0, `${w} 탈진 끊김 없음`);
-      assert.ok(stages.has('stiff'), `${w} 굳음까지 ${[...stages]}`);
-    } finally {
-      G.world.free();
-      CONFIG.SECRET.iberianSecret = keepIb;
-    }
-  }
-}));

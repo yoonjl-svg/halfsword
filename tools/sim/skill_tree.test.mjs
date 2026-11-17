@@ -477,12 +477,9 @@ test('실제 몸 — 보법: 이탈리아 I1 = 박자 걸음(뒤 느려짐 그�
   const g = round('monohoshizao', kitOf('japanese'));
   try { g.step(); assert.equal(g.player.gait.P, GAIT); assert.equal(g.player.swayScale, 1); assert.equal(g.enemy.gait.P.tradition, 'japanese'); } finally { g.world.free(); }
 });
-// 11/14 옛 장면 시험 — 그때 판으로 묶음(GAIT.deDig 0 · 기준은 안 고침): 사람의 옛 간격 잡기는 11/14 파고들기(사장님 '간격 잡기를 파고들기로 바꿔')로 거둠 → 이 시험은 `?deDig=0` 판에서 그대로 ·
-//  이 몸은 시뮬 몸(humanInput 없음)이라 deDig 와 상관없이도 같은 결과(사람 몸만 거둠) — 묶음은 뜻을 적어 둠. 새 판(파고들기 G2 몫)은 tools/sim/de_dirty.test.mjs
-test('실제 몸 — 독일 간격 잡기(옛 판 · deDig 0): G1 만이면 상대 헛침에 창이 안 열림 · G1 + G2 면 열림', () => {
-  const keep = GAIT.deDig;
-  GAIT.deDig = 0;
-  try {
+// 사람의 옛 간격 잡기는 11/14 파고들기(사장님 '간격 잡기를 파고들기로 바꿔')로 거둠 — 이 몸은 시뮬 몸(humanInput 없음)이라 옛 간격 잡기 그대로. 파고들기(G2 몫)는 tools/sim/de_dirty.test.mjs
+test('실제 몸 — 독일 간격 잡기(시뮬 몸): G1 만이면 상대 헛침에 창이 안 열림 · G1 + G2 면 열림', () => {
+  {
     for (const [kit, want] of [[kitOf('german', 'G1'), false], [kitOf('german', 'G1', 'G2'), true]]) {
       const g = round('longsword', kit);
       try {
@@ -492,7 +489,7 @@ test('실제 몸 — 독일 간격 잡기(옛 판 · deDig 0): G1 만이면 상�
         assert.equal(!!g.player.gait.chase, want);
       } finally { g.world.free(); }
     }
-  } finally { GAIT.deDig = keep; }
+  }
 });
 test('실제 몸 — 걷기 기력: 동방 C1 만 = 보통 4 · C1 + C2 = 2 · 일본 J1 = 6 (10/31 — 전 1.4 · 0.7 · 2.1)', () => {
   const actor = (kit) => {

@@ -19,7 +19,6 @@ import { inputOne } from './ib_link_input.mjs';
 import { bridgeOne } from './ib_link_bridge.mjs';
 import { fightOne } from './school_balance.mjs';
 import { AI } from '../../src/ai.js';
-import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 
 const LADDER = [0.2, 0.4, 0.6, 1.2, 1.5, 2.0, 3.0, 6.0, 10.0].map((s) => realS(s));
 const keep = () => ({ ...IB_LINK });
@@ -305,52 +304,6 @@ test('맞바꿈 B12 — 칼끼리 맞아 돌던 칼이 서는 것(jolt)은 넘�
   }
 });
 
-test('AI 에도 똑같이 (11/14 사장님 \'모두 본판에 넣어 ai에게도 똑같이 적용해\') — AI 이베리아가 이어 돌리기를 쓰고 풍차 베기는 안 냄 · 맞바꿈도 같은 규칙(칸 없이 늘)', (t) => {
-  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — AI 몸에 칸 몫이 없다는 옛 전제(맞바꿈 늘) · 판도 갈림 · 기준 그대로
-  const o = keep();
-  // 11/14 둘째 그때 판으로 묶음 (기준은 안 고침): 이베리아 플랜 변칙(옆 박차기 · 비스듬히 들어감 — src/ai_plan_ib.js)으로 씨앗 2 판이 갈라져 20 s 안에 이어 돌리기가 안 남 → 이베리아 플랜 전 판(`?aiPlanIb=0` 꼴)으로
-  const AP = CONFIG.AI_PLAN;
-  const ap = [AP.schools, AP.errSchools, AP.pommel];
-  for (const k of ['schools', 'errSchools']) AP[k] = AP[k].filter((x) => x !== 'iberian' && x !== 'german'); // 3 단계(11/14): 독일 플랜 · 모든 AI 손잡이 찍기도 그 전 판으로 (상대 롱소드 AI)
-  AP.pommel = 0;
-  // 11/14 상대가 길 때의 대처(모든 AI — DIG_PROTO.reach): 롱소드 AI 가 상대 칼보다 짧아 파고들기 몫을 받아 이 판이 갈라짐 → 그 전 판(옛 문 reach 0)으로도 묶음 · 기준 그대로
-  const reachOn = CONFIG.DIG_PROTO.reach;
-  CONFIG.DIG_PROTO.reach = 0;
-  const G = newRound({ walls: false, weapon: 'longsword', weapon2: 'zweihander', seed: 2, gap: 2.4, persona: { proficiency: 5 }, AI2Class: AI }); // AI 대 AI (롱소드 AI 대 츠바이핸더 이베리아 AI)
-  const P = G.player;
-  const E = G.enemy;
-  try {
-    while (G.t < 20 && P.alive && E.alive && !(G.ai.stats.ibLink?.fired > 0)) G.step();
-    assert.ok(G.ai.stats.ibLink?.fired > 0, `AI 이어 돌리기 ${JSON.stringify(G.ai.stats.ibLink ?? null)}`);
-    assert.equal(G.ai.stats.cingir?.fired ?? 0, 0, 'AI 풍차 베기 없음 (IB_LINK.ai 1)');
-    // 맞바꿈 — AI 는 skillKit 이 없어 늘 가짐 · 사람과 같은 규칙
-    assert.equal(E.skillKit ?? null, null);
-    E.ibLink = { wounds0: E.wounds.length };
-    E.ibTradeUsed = false;
-    E.ibTradeHit = null;
-    E.stamina.value = STAMINA.max;
-    P.stamina.attackId = 777;
-    assert.equal(E.ibTradeTry(P, { type: 'cut', severity: 0.8 }), true, 'AI 이베리아 원 동안 첫 맞음 넘김');
-    assert.ok(Math.abs(STAMINA.max - E.stamina.value - STAMINA.cutCost * E.stamina.weight) < 1e-9, '기력 = 그 무기 베기 한 번 값');
-    P.stamina.attackId = 778;
-    assert.equal(E.ibTradeTry(P, { type: 'cut', severity: 0.8 }), false, '사슬당 한 번');
-    IB_LINK.trade = 0;
-    E.ibTradeUsed = false;
-    E.ibTradeHit = null;
-    P.stamina.attackId = 779;
-    assert.equal(E.ibTradeTry(P, { type: 'cut', severity: 0.8 }), false, '끄면 AI 도 없음');
-    IB_LINK.trade = 1;
-    P.ibLink = { wounds0: P.wounds.length };
-    assert.equal(P.ibTradeTry(E, { type: 'cut', severity: 0.8 }), false, '이베리아가 아닌 몸은 없음');
-  } finally {
-    E.ibLink = null;
-    P.ibLink = null;
-    restore(o);
-    [AP.schools, AP.errSchools, AP.pommel] = ap;
-    CONFIG.DIG_PROTO.reach = reachOn;
-    G.world.free();
-  }
-});
 
 // ── 11/15 넘기기 판 (사장님 11/15 "내가 실제로 조작한 다음칼이 나가지도 않았어" · "'원'을 … 브릿지로서의 메타포로 이해해 … 최소의 동작" — 기록 §12) ──
 test('넘기기 — 기본 판 · 다음 칼 입력(큰 칼 다섯)은 그 칼로 나감 · 올려 베기는 원을 부르지 않고 그 칼 · 탭은 찌르기', () => {

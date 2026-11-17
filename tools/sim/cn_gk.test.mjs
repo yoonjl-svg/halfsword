@@ -7,7 +7,6 @@ import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { secretUsesOf, secretSpent, gkCooling, gkCoolFrom } from '../../src/secret.js';
 import { gyeoksalComboOpt } from '../../src/skill.js';
 import { cnMeet, cnWill } from '../../src/ai_plan_cn.js';
-import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 
 const S = CONFIG.SECRET;
 function withGk(v, fn) {
@@ -47,19 +46,6 @@ test('기본 안 A 켬 [사장님 11/16 결정 \'A안으로 해\'] · 안 A · B
   });
 });
 
-test('풀면 동방 격살만 끝없음 (사람 · AI 같은 표) · 다른 유파는 그대로', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
-  const cn = { swordArt: { tradition: 'chinese' }, secretUsed: 3 };
-  const de = { swordArt: { tradition: 'german' }, secretUsed: 1 };
-  withGk(0, () => {
-    assert.equal(secretUsesOf(cn), CONFIG.UNIQUE_ASSIST.secretUses.chinese);
-    assert.equal(secretSpent(cn), true);
-  });
-  withGk('A', () => {
-    assert.equal(secretUsesOf(cn), Infinity);
-    assert.equal(secretSpent(cn), false);
-    assert.equal(secretSpent(de), true, '독일은 그대로');
-  });
-}));
 
 test('칼끝 빠르기 몫: 풀면 기본 + 겹 × 더함 (A 0.35 + 0.10 [사장님 11/16 — 전 0.08] · B 0.50 + 0.05 · 겹 5 = A 0.85 · B 0.75) · 지금 판은 0.7 × (1 + 0.08 × 겹) 곱 · 쌓는 몸이 아니면 겹 없음', () => {
   const D = { power: 'gyeoksal' };

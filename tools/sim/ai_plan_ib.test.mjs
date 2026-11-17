@@ -11,10 +11,6 @@ import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { planFor, tiltOf, luckOf, distErrWidth, PHASES, SCHOOL_PLAN } from '../../src/ai_plan.js';
 import { readNote } from '../../src/ai_read.js';
 import { ibStats, chainWant, spinK, armK, habitN, ibTick, ibCircle, ibFeetV, schoolRead, swapReady, nextFree, ibSidePost, ibFwdPost, ibAfter, foeAtkN } from '../../src/ai_plan_ib.js';
-import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
-import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
-import { pinReactOld } from './react_old.mjs'; // 11/16 AI 반응 시간 0.2 s 하나 전 판으로 묶을 옛 장면
 const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { AI_PLAN, IB_LINK, STAMINA } = CONFIG;
@@ -124,33 +120,6 @@ test('이베리아 플랜 열림 · 표 · 거리 오차 — 띠 무는 플랜 �
   assert.equal(I.chainBody, 1);
 });
 
-test('AI 이베리아 차림 — 띠마다 (플랜 · 유도 4 부터 · 알티바슈 무장 5 부터 · B6 몸 · 거리 오차)', (t) => {
-  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — B6 이어지는 흐름 AI 몫이 플랜 몸 → 4 단계 · 기준 그대로
-  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-  const got = [0, 1, 2, 3, 4, 5, 6].map((p) => {
-    const { ai, free } = ibAi(p);
-    const r = { ib: !!ai.ibPlan, lure: !!ai.planLure, arm: !!ai.spinArm, chainOn: !!ai.me.ibChainOn(), err: ai.distErr, read: ai.ibPlan?.read ?? false, repeat: ai.ibPlan?.repeat ?? false, mem: ai.ibPlan?.mem ?? 0 };
-    free();
-    return r;
-  });
-  assert.deepEqual(got.map((r) => r.ib), [false, true, true, true, true, true, true], '무 = 플랜 없음');
-  assert.deepEqual(got.map((r) => r.lure), [false, false, false, false, true, true, true]);
-  assert.deepEqual(got.map((r) => r.arm), [false, false, false, false, false, true, true], '알티바슈 = 지금 비기 숙련도 5');
-  assert.deepEqual(got.map((r) => r.chainOn), [false, true, true, true, true, true, true], 'B6 이어지는 흐름 — 플랜이 있는 AI 몸 (chainBody 1)');
-  assert.deepEqual(got.map((r) => r.read), [false, false, false, true, true, true, true], '상대 유파 읽기는 가운데부터');
-  assert.deepEqual(got.map((r) => r.repeat), [false, false, false, false, false, true, true], '되풀이는 높음');
-  assert.deepEqual(got.map((r) => r.mem), [0, 0, 0, 6, 6, 10, 10], '기억 창 6.0 · 10.0 s');
-  got.forEach((r, p) => {
-    const w = distErrWidth(p, 'iberian');
-    if (w > 0) assert.ok(r.err != null && Math.abs(r.err) <= w + 1e-12, `숙련도 ${p} 오차 ±${w}`);
-    else assert.equal(r.err, undefined, `숙련도 ${p} 오차 없음`);
-  });
-  withPlan({ 'ib.chainBody': 0 }, () => {
-    const { ai, free } = ibAi(5);
-    assert.equal(ai.me.ibChainOn(), false, 'chainBody 0 — AI 몸은 그 전 판');
-    free();
-  });
-});
 
 test('사슬을 이을 마음 — 기울기 (이을수록 · 기력 0 칼 · 무장 쪽 · 불리 · 무계획) · 늘 이음이 아님 · 굴림 없음', () => {
   const { r, draws } = withRandom(null, () => {
@@ -243,28 +212,6 @@ test('원으로 이을 몫 — 맞바꿈이 남으면 더 · 상대 유파 거�
   }
 });
 
-test('알티바슈 무장 쪽 몫 — 높음 · 비기가 남았을 때 · 기력이 많을수록 (비기 몫 35 위)', () => withSecretFreeOff(() => { // 11/16 그때 판(판당 1 — 끝없는 비기 끔)으로 묶음 · 기준 그대로
-  const { ai, free } = ibAi(5);
-  ai.planC = SCHOOL_PLAN.iberian.commit;
-  const S = ai.me.stamina;
-  S.value = S.max;
-  const full = armK(ai);
-  S.value = 60;
-  const half = armK(ai);
-  S.value = STAMINA.secretCost;
-  assert.ok(full > half && half > 0 && armK(ai) === 0, `${full.toFixed(3)} > ${half.toFixed(3)} > 0`);
-  S.value = S.max;
-  ai.planC = SCHOOL_PLAN.iberian.finish;
-  assert.equal(armK(ai), 0, '끝내기 — 무장(2 s)보다 곧장 사슬');
-  ai.planC = SCHOOL_PLAN.iberian.commit;
-  ai.me.secretUsed = 99;
-  assert.equal(armK(ai), 0, '비기를 다 씀');
-  free();
-  const g = ibAi(4);
-  g.ai.planC = SCHOOL_PLAN.iberian.commit;
-  assert.equal(armK(g.ai), 0, '숙련 4 — 비기 없음');
-  g.free();
-}));
 
 test('버릇 고리 버퍼 — 원 한 번에 한 번 · 굴림 없음 · 새 배열 없음 · 옆 박차기 진행', () => {
   const { ai, free } = ibAi(5);
@@ -448,60 +395,5 @@ test('칼끝 밖 무장 기다림 (고노센 선 무모는 11/14 합치며 공�
   assert.equal(ibFeetV(o, 0.18, o.M.reach + 0.5), 0.18);
 });
 
-test('판: AI 이베리아 숙련 2 대 롱소드 AI — 국면 · 이베리아 행동(사슬 · 이어 돌리기 · 원으로 이음 · 옆 박차기)이 남', (t) => {
-  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 숙련 2 이베리아는 이어 돌리기(B7 · 4 단계)가 없음 · 기준 그대로
-  const tot = { judges: 0, cont: 0, end: 0, link: 0, spin: 0, dash: 0, phT: 0 };
-  for (const seed of [1, 3, 6]) {
-    const G = newRound({ walls: true, seed, weapon: 'longsword', weapon2: 'zweihander', AI2Class: AI, persona: { proficiency: 2 }, persona2: { proficiency: 2 } });
-    while (G.t < 20 && G.player.alive && G.enemy.alive) G.step();
-    const st = G.ai.stats;
-    tot.judges += st.plan.judges;
-    tot.phT += Object.values(st.plan.t).reduce((a, b) => a + b, 0);
-    tot.cont += st.ib.cont;
-    tot.end += st.ib.end;
-    tot.spin += st.ib.spinPick;
-    tot.dash += st.ib.dash;
-    tot.link += st.ibLink?.fired ?? 0;
-    G.world.free();
-  }
-  assert.ok(tot.judges > 0 && tot.phT > 0, '국면 시간이 쌓임');
-  assert.ok(tot.cont + tot.end > 0, `이베리아 사슬 판단 ${JSON.stringify(tot)}`);
-  assert.ok(tot.link > 0, '이어 돌리기');
-  assert.ok(tot.spin + tot.dash > 0, '원으로 이음 · 옆 박차기');
-});
 
-test('판: AI 이베리아 숙련 2 대 롱소드 AI (씨앗 4) — 옆 박차기 → 나선 걸음 베기 · 비스듬히 들어감이 남 (11/14 둘째 — 종종)', (t) => {
-  pinReactOld(t); // 11/16 AI 반응 시간 숙련도 사다리(전 판 [0.35 … 0.05])로 묶음 (tools/sim/react_old.mjs) — 반응 0.25 → 0.2 s(숙련 2 두 몸)로 씨앗 4 판이 갈림 · 기준 그대로
-  pinArc0(t); // 11/15 그때 판(① 끔 — 둥근 칼 읽기 · 칼끝 틈이 판을 바꿈)으로 묶음 · 기준 그대로
-  // 11/15 그때 판으로 묶음 (이어 돌리기 = 넘기기 판 기본 — 사장님 11/15 '브릿지로서의 메타포' · AI 이어 돌리기 길이 바뀌어 이 씨앗 판이 갈라짐: 비스듬히 들어감 0 · 기준은 안 고침 — docs/strike/ib_link_2026-11-14.md §12)
-  const mk = IB_LINK.mode;
-  IB_LINK.mode = 'circle';
-  t.after(() => (IB_LINK.mode = mk));
-  const G = newRound({ walls: true, seed: 4, weapon: 'longsword', weapon2: 'zweihander', AI2Class: AI, persona: { proficiency: 2 }, persona2: { proficiency: 2, planOff: true } }); // 3 단계(11/14): 상대 롱소드 AI 는 옛 판(planOff)
-  while (G.t < 20 && G.player.alive && G.enemy.alive) G.step();
-  const st = G.ai.stats.ib;
-  G.world.free();
-  assert.ok(st.dash >= 1, `옆 박차기 ${JSON.stringify(st)}`);
-  assert.ok(st.slant >= 1, '나선 걸음 베기');
-  assert.ok(st.odd >= 1, '비스듬히 들어감');
-});
 
-test('스위치 끔 = 옛 판 (이베리아 — `?aiPlan=0` · 이베리아만 뺌이 같고 켬은 다름) · 다른 유파는 이베리아 칸을 안 읽음', (t) => {
-  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 숙련 2 이베리아는 B6(4 단계)이 없어 켬 판 몸 표식이 다름 · 기준 그대로
-  const off = withPlan({ on: 0 }, () => trace({ prof: 2 }));
-  const noIb = (k) => AI_PLAN[k].filter((t) => t !== 'iberian');
-  const none = withPlan({ schools: noIb('schools'), errSchools: noIb('errSchools'), pommel: 0 }, () => trace({ prof: 2 })); // 3 단계(11/14): 모든 AI 손잡이 찍기도 뺌
-  const on = trace({ prof: 2 });
-  assert.equal(off.ib, false);
-  assert.equal(off.chainOn, false, '옛 판 AI 몸 — B6 없음');
-  assert.equal(off.text, none.text, '끔 = 옛 길 (파고들기도 안 걸림 — 츠바이핸더는 짧지 않음)');
-  assert.equal(on.ib, true);
-  assert.equal(on.chainOn, true);
-  assert.notEqual(on.text, off.text, '켬은 판이 달라짐');
-  // 이탈리아 · 롱소드 판은 이베리아를 켜도 그대로
-  for (const w of ['rapier', 'longsword']) {
-    const a = trace({ weapon2: w, prof: 2, secs: 4 });
-    const b = withPlan({ schools: noIb('schools'), errSchools: noIb('errSchools') }, () => trace({ weapon2: w, prof: 2, secs: 4 }));
-    assert.equal(a.text, b.text, `${w} 판`);
-  }
-});

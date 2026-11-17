@@ -11,7 +11,6 @@ import { schoolOf } from '../../src/schools.js';
 import { AI_PROFICIENCY, SCHOOL_PASSIVE, THRUST } from '../../src/config.js';
 import { italianMeasureRows } from '../../src/weapon_measured.js';
 import { newRound, AI } from './harness_m.mjs';
-import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 
 const C = CHARACTERS_BY_ID;
 const near = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) <= eps, `${a} ≠ ${b}`);
@@ -64,24 +63,6 @@ test('광기의 하인리히 AI: 이탈리아 자세 · 기술 · 파펜하이�
   G.world.free();
 });
 
-test('투야나 숙련도 2(사장님 11/14 — 재미 예외 · 전 10/25 3) · 광기의 투야나 3(얼터 규칙 — 따로 적지 않음)', (tc) => {
-  pinAiKitOff(tc); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 옛 단계표(칼끝 돌려 빼기 2 · 비껴서며 찌르기 3 · 패시브 4)를 보는 시험 — 칸 판은 prof_kit.test.mjs · 기준 그대로
-  const t = C.eira, tm = C.eira_mad;
-  assert.equal(t.weapon, 'rapier');
-  assert.equal(t.ai.proficiency, 2); // 11/14 사장님 결정 3 → 2
-  assert.equal(t.ai.level, 'normal');
-  assert.deepEqual(t.ai.persona.proficiency, { italian: 2 });
-  assert.equal(tm.ai.proficiency, 3);
-  assert.equal(tm.ai.level, 'hard');
-  assert.deepEqual(tm.ai.persona.proficiency, { italian: 3 });
-  assert.ok(tm.appearanceOnly);
-  assert.deepEqual(tm.ai.persona.level, t.ai.persona.level); // 외양만 얼터 — 실력 숫자 +20 % 없음
-  const a = aiOf('eira').ai, b = aiOf('eira_mad').ai;
-  assert.ok(a.uniqueByName.has('칼끝 돌려 빼기 (카바치오네)') && !a.uniqueByName.has('inquartata')); // 10/31 자리 바꿈: 칼끝 돌려 빼기 2 · 비껴서며 찌르기(특수 공격) 3 에서 열림 — 11/14 투야나 2 라 비껴서며 찌르기는 닫힘(§10)
-  assert.ok(b.uniqueByName.has('inquartata')); // 광기의 투야나 3 — 열림
-  assert.ok(a.proficiency < SCHOOL_PASSIVE.at && b.proficiency < SCHOOL_PASSIVE.at); // 11/14: 얼터도 3 이라 패시브 칸(곧은 선 — 4 부터)은 둘 다 닫힘 (전 얼터 4 — 열림)
-  assert.equal(b.secret, null);
-});
 
 test('옛 저장의 상대 무기: 시트 무기가 바뀌었으면 지금 시트 무기 · 대체 무기가 있는 인물 · 같은 무기는 그대로', () => {
   assert.equal(savedFoeWeapon(C.heinrich_mad, 'excalibur_replica'), 'pappenheimer');

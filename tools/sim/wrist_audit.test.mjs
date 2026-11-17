@@ -16,11 +16,7 @@ import { HUMAN, wristClamp } from '../../src/fighter.js';
 import { mordGripOf } from '../../src/mordschlag.js';
 import { standTrial } from './tap_thrust.mjs';
 import { TRADITIONS } from '../../src/schools.js';
-import { withArmOld } from './arm_real_pin.mjs';
 import { ITALIAN_NOW } from '../../src/weapon_measured.js'; // 10/25 이탈리아 간격 판 'full' 이면 옛 판 재현을 그때 간격 줄로
-import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
-import { pinPOff } from './p_pin.mjs'; // 11/16 묶음 P · 리솔루토 3안이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
 
 const { SECRET, JOINTS } = CONFIG;
@@ -61,47 +57,7 @@ test('값: 운동학 겨눈 찌름 팔 뻗음 SECRET.thrustArm 1 · 팔꿈치 �
 //  11/11 사장님 "런지 거리는 0.45로 해, 다른 거리 잴 필요 없어."(risolutoSlide 0.45) 뒤에도 10/24 런지 값 몸 미끄러짐 0.6(그때 고노센 iaiStep 과 같은 수) 으로 본다 — 옛 장면 재현 (0.45 면 달타냥 2.2 m 런지가 닿는 끝 밖)
 const LUNGE1024 = [[SECRET, 'risolutoStiff', 0.6], [SECRET, 'risolutoArmSlow', 0.6], [SECRET, 'risolutoShare', 1], [SECRET, 'risolutoHitMul', 1.3], [SECRET, 'risolutoSlide', 0.6]];
 const withLunge1024 = (fn) => withSets(LUNGE1024, fn);
-test('10/24 런지 손목: 맞힌 자세 아래팔-칼 ≤ 135° · 손이 어깨 앞 팔 길이 0.8 이상 · 새끼 쪽 아님 · 굳음 동안 뻗은 채 (레이피어 · 달타냥 · 2.2 m)', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
-  for (const w of ['rapier', 'dartagnan']) {
-    const r = withLunge1024(() => lungeRun(w, { gap: 2.2 }));
-    assert.ok(r.fired && r.res?.ok, `${w} 런지`);
-    assert.ok(r.res.hit, `${w} 맞힘`);
-    const h = r.hit;
-    assert.ok(h.wrist <= 135, `${w} 맞힌 자세 아래팔-칼 ${h.wrist.toFixed(0)}°`);
-    assert.ok(h.along >= 0.8, `${w} 맞힌 자세 손 앞 ${h.along.toFixed(2)} 팔 길이`);
-    assert.ok(h.dev >= ULNAR, `${w} 맞힌 자세 손 면 dev ${h.dev.toFixed(0)}°`);
-    const S = ph(r.T, 'stiff');
-    assert.ok(S.n > 60, `${w} 굳음 스텝 ${S.n}`);
-    assert.ok(S.aSum / S.n >= 0.85, `${w} 굳음 손 앞 평균 ${(S.aSum / S.n).toFixed(2)}`);
-    assert.ok(S.wSum / S.n <= 30, `${w} 굳음 아래팔-칼 평균 ${(S.wSum / S.n).toFixed(0)}°`);
-    assert.ok(S.revUp / S.n < 0.1, `${w} 굳음 거꾸로 · 아래팔 섬 몫 ${((100 * S.revUp) / S.n).toFixed(0)} %`);
-    // 칼끝 빠르기 = 고노센 × risolutoShare 그대로 (italian_risoluto.test.mjs 와 같은 기준)
-    assert.ok(r.res.tipVmax >= 0.9 * r.res.v && r.res.tipV >= 0.8 * r.res.v, `${w} 칼끝 ${r.res.tipV.toFixed(1)} · 최고 ${r.res.tipVmax.toFixed(1)} / 길 ${r.res.v.toFixed(1)}`);
-  }
-}));
 
-test('10/24 런지 `?thrustArm=0&elbowSwivel=0&wristGuard=0` = 옛 꼴 그대로: 굳음 동안 손이 어깨 앞 팔 길이 0.5 아래 · 칼이 새끼 쪽으로 75° 안팎 (거꾸로 쥔 꼴) — 손목 교정만 켜면 같은 굽은 팔에서 범위 안', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
-  // 옛 판 재현 = 그때 간격 줄로 (THRUST.itMeasure 'full' — 런지 몸 미끄러짐은 맞닿기에서 멈춰 새 줄에선 끝 자리가 0.18 ~ 0.25 m 멀어 옛 꼴이 안 남 · 'old' · 'contact' 는 지금 맞닿음 그대로라 덮지 않음)
-  const old = (w) => (CONFIG.THRUST.itMeasure === 'full' ? { contact: ITALIAN_NOW.MEASURED[w][0], reach: ITALIAN_NOW.MEASURED[w][1], clinch: ITALIAN_NOW.MEASURED[w][2], cutTime: ITALIAN_NOW.CUT_TIME_30[w] } : null);
-  withSets([[SECRET, 'thrustArm', 0], ...OLD, ...LUNGE1024.slice(1)], () => {
-    for (const w of ['rapier', 'dartagnan']) {
-      const r = lungeRun(w, { gap: 2.2, measure: old(w) });
-      assert.ok(r.fired && r.res?.ok && r.res.hit, `${w} 런지 · 맞힘`);
-      const S = ph(r.T, 'stiff');
-      assert.ok(S.aSum / S.n < 0.5, `${w} 옛 굳음 손 앞 평균 ${(S.aSum / S.n).toFixed(2)}`);
-      assert.ok(S.devSum / S.n < -60, `${w} 옛 굳음 손 면 dev 평균 ${(S.devSum / S.n).toFixed(0)}°`);
-      assert.ok(S.rev / S.n > 0.5, `${w} 옛 굳음 거꾸로 몫 ${((100 * S.rev) / S.n).toFixed(0)} %`);
-    }
-  });
-  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 — 멈춰 선 상대 롱소드도 AI 몸이라 그 겨눔 칼 · 팔이 바뀜)로 런지가 상대 칼과 닿는 꼴이 달라져 굳음 손목이 옮겨감 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
-  withArmOld(() => withSets([[SECRET, 'thrustArm', 0], ...LUNGE1024.slice(1)], () => {
-    const r = lungeRun('rapier', { gap: 2.2, measure: old('rapier') });
-    assert.ok(r.fired && r.res?.ok && r.res.hit, '교정 켬 · 옛 팔 길 런지 맞힘');
-    const S = ph(r.T, 'stiff');
-    assert.ok(S.aSum / S.n < 0.5, `팔은 그대로 굽음 (팔을 펴게 하지 않음) ${(S.aSum / S.n).toFixed(2)}`);
-    assert.ok(S.devSum / S.n >= ULNAR - 5 && S.rev / S.n < 0.1, `손목은 범위 안 dev ${(S.devSum / S.n).toFixed(0)}° · 거꾸로 ${S.rev} / ${S.n}`); // 옛 꼴 거꾸로 > 50 %
-  }), ['armClear2']);
-}));
 
 test('격살 허파 찌르기(봉두세)도 같은 길: 굳음 동안 뻗은 채 · 새끼 쪽 아님 — `?thrustArm=0` 은 옛 꼴(새끼 쪽)', () => {
   const now = gyeoksalRun('qinggang', 'bongdu');
@@ -150,51 +106,6 @@ test('10/24 17:2x 뒤 탭 찌르기 (롱소드 황소 → 칼 내린 상대 · 1
   assert.equal(v17.stab, 0, `17:2x 판 찌름 ${v17.stab}`);
 });
 
-test('격살 허파 찌르기 맞닿기 언저리 (맞닿기 −0.1 ~ +0.1 m · 상대 롱소드 · 우치가타나 · 청강검 · 사브르): 첫 맞음이 베기 아님 — SECRET.thrustSweep 0 이면 겨눔 토막 옆 움직임이 섞여 베기', (t) => {
-  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-  const run = () => {
-    const T = { stab: 0, cut: 0, n: 0 };
-    const g0 = newRound({ weapon: 'qinggang', weapon2: 'longsword', seed: 1 });
-    const contact = g0.player.swordArt.measure.contact;
-    g0.world.free();
-    for (const gp of [-0.1, 0, 0.1]) for (const fw of ['longsword', 'uchigatana', 'qinggang', 'sabre']) {
-      const g = newRound({ weapon: 'qinggang', weapon2: fw, seed: 1, gap: contact + gp });
-      try {
-        g.ai.update = () => {};
-        const p = g.player;
-        p.foe = g.enemy;
-        g.enemy.foe = p;
-        p.skill.autoGuard = true;
-        while (g.t < 1.0) g.step();
-        let first = null;
-        const pw = g.combat.hooks.onWound;
-        g.combat.hooks.onWound = (att, vic, r, ...rest) => {
-          pw?.(att, vic, r, ...rest);
-          if (att === p && !first) first = r.type;
-        };
-        p.skill.secret({ S: TRADITIONS.chinese.playerSecret, ctx: { slot: 'bongdu', stance: 'bongdu' } });
-        for (let i = 0; i < 150 && (p.skill.sec || p.iai); i++) g.step();
-        T.n++;
-        if (first === 'stab') T.stab++;
-        if (first === 'cut') T.cut++;
-      } finally {
-        g.world.free();
-      }
-    }
-    return T;
-  };
-  // 11/11 사장님 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' 뒤에도 이 시험은 10/24 thrustSweep 고침 장면(격살 빠르기 0.6 · 판정 배율 1.3)으로 본다 — 옛 장면 재현.
-  //  새 값(0.7 · 1)에서는 첫 맞음 베기 0 · 찌름 9 / 12 였음 — 3 장면은 겨눔 → 찌름을 넘는 스텝의 찌름 첫 조각이 0.8 m/s 로 읽혀 상처 없이 '수마다 한 번'을 써 버림 (기록 docs/strike/riso_reach_2026-11-11.md §격살 · 여쭘)
-  //  → 11/11 사장님 '격살 오류 고쳐' 헛맞음 고침(SECRET.spendOnWound — 문턱 밑 닿음은 맞음을 쓰지 않음) 뒤 찌름 12 / 12 (tools/sim/gk_ghost.test.mjs · docs/strike/gk_ghost_2026-11-11.md)
-  const GK1024 = [[SECRET.gyeoksal, 'share', 0.6], [SECRET, 'gyeoksalHitMul', 1.3]];
-  const now = withSets(GK1024, run);
-  assert.equal(now.cut, 0, `기본 첫 맞음 베기 ${now.cut} / ${now.n}`);
-  assert.ok(now.stab >= 10, `기본 첫 맞음 찌름 ${now.stab} / ${now.n}`);
-  const cur = run(); // 지금 기본값(11/11 격살 0.7 · 1)에서도 첫 맞음이 베기가 아님은 그대로
-  assert.equal(cur.cut, 0, `11/11 값 첫 맞음 베기 ${cur.cut} / ${cur.n}`);
-  const off = withSets([...GK1024, [SECRET, 'thrustSweep', 0]], run);
-  assert.ok(off.cut >= 3, `thrustSweep 0: 첫 맞음 베기 ${off.cut} / ${off.n}`);
-});
 
 // 손 자리는 10/25 손을 뻗기 전 1번 자세 [0.5, 0.28, 0.12] (지금 표는 [0.62, 0.26, 0.12] — school_kit_map 10/25 · 기록 §12): 이 시험은 그 자리에서 돌림이 한 일을 본다
 const PRIMA_OLD = [[TRADITIONS.italian.guardTable['지붕 (폼 타크)'], 'hand', [0.5, 0.28, 0.12]]];
@@ -260,24 +171,6 @@ test('손목 교정 끔 · 켬 · 밧줄 — 자세표(롱소드 · 레이피어
   assert.ok(rope.oorX <= 0.01 && rope.rev <= 0.01, `밧줄: > ${OOR_X}° ${pc(rope.oorX)} % · 거꾸로 ${pc(rope.rev)} %`);
 });
 
-// 기본 판은 씨앗 셋(11 · 12 · 13) 합: 15 s 한 판은 누가 언제 쓰러지느냐로 자세 몫이 크게 바뀐다 (10/25 엎친 손 뒤 사브르 > 10° 씨앗 11 · 12 · 13 = 11.4 · 6.1 · 10.6 % — 엎친 손 전 7.3 · 4.2 · 11.6 % · 기록 §12)
-test('AI 끼리 15 s (롱소드 · 사브르 — 씨앗 셋 합): 기본 범위 밖 > 10° ≤ 10 % · 거꾸로 · 아래팔 섬 ≤ 6 % (10/25 한손 사람 팔 범위 뒤 사브르 3.4 → 5.1 % — 팔 비틀어 맞추던 몫이 손목으로 · 기록 §10-5) · 시험 밧줄 켜면(씨앗 11) > 10° ≤ 1 % · 거꾸로 ≤ 1 %', (t) => {
-  pinArc0(t); // 11/15 그때 판(① 끔 — 둥근 칼 읽기 · 칼끝 틈이 판을 바꿈)으로 묶음 · 기준 그대로
-  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫)로 AI 몸 팔이 바뀌어 씨앗 셋 판이 갈라짐(롱소드 > 10° 12.1 % — 씨앗 판 흔들림: 넓게 잰 AI 끼리 396 몸-판은 두손 보통 손목 범위 밖 8.7 → 8.2 % ·
-  //  docs/strike/arm_clear2_2026-11-12.md §4 · 새 AI 몫 잣대는 arm_clear2.test.mjs) — 씨앗 셋 판은 잰 때의 팔(arm_real_pin armClear2)로 묶음
-  //  11/14 유파 AI 3 단계(독일 플랜 · 모든 AI 손잡이 찍기)로 두 무기(독일 유파) AI 의 판이 바뀜(사브르 > 10° 11.0 %) — 잰 때의 AI(독일 플랜 · 찍기 뺌)로 묶음 · 기준은 그대로
-  const P = CONFIG.AI_PLAN;
-  const DE_OLD = [[P, 'schools', P.schools.filter((t) => t !== 'german')], [P, 'errSchools', P.errSchools.filter((t) => t !== 'german')], [P, 'pommel', 0]];
-  for (const w of ['longsword', 'sabre']) withSets(DE_OLD, () => withArmOld(() => {
-    const T = new WristTally();
-    for (const seed of [11, 12, 13]) T.merge(aiRun(w, { seed }).T, `${seed}:`);
-    const s = shares(T);
-    assert.ok(s.n > 1000, `${w} 스텝 ${s.n}`);
-    assert.ok(s.oorX <= 0.1 && s.revUp <= 0.06, `${w} 기본: > ${OOR_X}° ${pc(s.oorX)} % · 거꾸로 · 아래팔 섬 ${pc(s.revUp)} %`);
-    const r = withSets(ROPE, () => shares(aiRun(w, { seed: 11 }).T));
-    assert.ok(r.oorX <= 0.01 && r.rev <= 0.01, `${w} 밧줄: > ${OOR_X}° ${pc(r.oorX)} % · 거꾸로 ${pc(r.rev)} %`);
-  }, ['armClear2']));
-});
 
 test('시험 손목 치우침 밧줄: 켜면(`?wristRope=1`) 손목 원뿔에 둘 더 (gripDev — 척측 · 엄지 쪽) · 기본 · 전 판은 없음 · 칼날을 거꾸로 쥔 동안 떼고 돌아오면 다시', () => {
   const mk = () => newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 2.6, seed: 3 });

@@ -1,5 +1,5 @@
 // 독일 더티복싱 · 붙은 거리 규칙 (11/14 — 기록 docs/strike/de_dirty_2026-11-14.md · 확인표 3740 ~)
-//  ① 파고들기 (사장님 11/14 '간격 잡기를 파고들기로 바꿔 … 두 걸음 빠르게 … 거리 제한은 없음' — config GAIT.deDig · gait.js): 두 걸음 · 기력 한 번 · 거리 제한 없음 · G2 몫 · 끄면 옛 간격 잡기 · 다른 유파 · AI 그대로
+//  ① 파고들기 (사장님 11/14 '간격 잡기를 파고들기로 바꿔 … 두 걸음 빠르게 … 거리 제한은 없음' — gait.js): 두 걸음 · 기력 한 번 · 거리 제한 없음 · G2 몫 · 끄면 옛 간격 잡기 · 다른 유파 · AI 그대로
 //  ② 붙은 거리 규칙 (사장님 11/14 '밀치기 기준 1m' · '묶인 1.2초 동안은 아무 공격도 못하고 기력이 2배' · '1m 이내에서는 손잡이 찍기만' · '2초간 다시 강제로 묶이지 않아' — config CLOSE · close_hold.js)
 //  ③ 칼 씨름 (사장님 11/14 '1번으로 해' — config DE_DIRTY · de_dirty.js · 기본 켬) · 설계안 B · C 는 사장님 11/14 폐기(시험도 걷어냄)
 import test from 'node:test';
@@ -22,15 +22,12 @@ const withCfg = (obj, patch, fn) => { const keep = Object.fromEntries(Object.key
 
 // ── ① 파고들기 ──
 test('기본값: 파고들기 켬 · 두 걸음 · 목표 2.5 m/s (사장님 11/14 결정 · 빠르기는 감독 안) · 붙은 거리 규칙 1.0 m · 1.2 s · × 2 · 2.0 s · 칼자루만 켬 · AI 도 같은 규칙(11/14) · 칼 씨름 켬 · 겹치기 ⓒ · 쌓임 0.4 s', () => {
-  assert.equal(GAIT.deDig, 1);
   assert.equal(GAIT.digSteps, 2);
   assert.equal(GAIT.digV, GAIT.burstBackV, '앞 박찬 걸음 목표 = 뒤 박차기와 같은 절대 목표');
   assert.equal(CLOSE.startD, 1.0);
   near(CLOSE.holdMin, realS(1.2));
   assert.equal(CLOSE.holdDrain, 2);
   near(CLOSE.holdCool, realS(2.0));
-  assert.equal(CLOSE.holdLock, 1);
-  assert.equal(CLOSE.nearHilt, 1);
   assert.equal(CLOSE.startAI, 1.0, 'AI 도 같은 규칙 (사장님 11/14 \'2는 ai도 동일하게\')');
   assert.deepEqual({ ...DE_DIRTY, ringT: 0, ringNoRecover: 0 }, { ring: 1, ringDist: 0.6, ringT: 0, ringNoRecover: 0 }, '칼 씨름 기본 켬 (사장님 11/14 \'1번으로 해\') · B · C 폐기 (11/14)');
   assert.equal(CONFIG.DE_DIRTY_ON, undefined, 'B · C 켤 때 값도 걷어냄');
@@ -51,7 +48,7 @@ test('파고들기 몸: 서서 앞으로 세게 밀면 박찬 앞 걸음 둘(× 
   assert.ok(dig.t10 < walk.t10 - 0.2, `1 m 에 닿는 시간 파고들기 ${dig.t10} s · 보통 ${walk.t10} s`);
 });
 
-test('거리 제한 없음: 칼 거리(measure.contact) 근처에서 시작해도 서지 않음(잡기 없음 · 그 안으로 더 들어감) — 옛 간격 잡기(deDig 0)는 칼 거리에서 섬', () => {
+test('거리 제한 없음: 칼 거리(measure.contact) 근처에서 시작해도 서지 않음(잡기 없음 · 그 안으로 더 들어감) — 옛 간격 잡기(시뮬 몸)는 칼 거리에서 섬', () => {
   const dig = digRun({ mode: 'dig', gap: 2.0, dur: 0.9 });
   const old = digRun({ mode: 'chase', gap: 2.0, dur: 0.9 });
   assert.equal(dig.held, false, '파고들기는 잡기(deHold)를 안 검');
@@ -60,7 +57,7 @@ test('거리 제한 없음: 칼 거리(measure.contact) 근처에서 시작해�
   assert.ok(dig.dx06 > old.dx06 + 0.1, `0.6 s 에 간 거리 파고들기 ${dig.dx06} · 옛 ${old.dx06}`);
 });
 
-test('스킬트리 G2(몫 열쇠 chase — 이름만 파고들기) 없으면 안 남 · 뒤로 · 옆으로 밀면 안 남 · 끄면(deDig 0) 안 남', () => {
+test('스킬트리 G2(몫 열쇠 chase — 이름만 파고들기) 없으면 안 남 · 뒤로 · 옆으로 밀면 안 남', () => {
   const kitG1 = kitFromNodes('german', new Set(['G1']));
   const run = (kit, stick, side = 0) => {
     const G = newRound({ weapon: 'longsword', seed: 3, kit, gap: 2.6, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
@@ -78,10 +75,9 @@ test('스킬트리 G2(몫 열쇠 chase — 이름만 파고들기) 없으면 안
   assert.equal(run(kitFromNodes('german', new Set(['G1', 'G2'])), -1), 0, '뒤로 = 뒤 박차기');
   assert.equal(run(kitFromNodes('german', new Set(['G1', 'G2'])), 0.3, 0.9), 0, '옆 몫이 큼');
   assert.equal(run(kitFromNodes('german', new Set(['G1', 'G2'])), 0.5), 0, 'burstStick 아래 (살짝 밀기)');
-  withCfg(GAIT, { deDig: 0 }, () => assert.equal(run(kitFromNodes('german', new Set(['G1', 'G2'])), 1), 0, '끔'));
 });
 
-test('옛 간격 잡기: 사람(humanInput)은 거둠 · 끄면(deDig 0) 사람도 받을 창 · AI · 시뮬 몸은 늘 그대로', () => {
+test('옛 간격 잡기: 사람(humanInput)은 거둠 · AI · 시뮬 몸은 늘 그대로', () => {
   const G = newRound({ weapon: 'longsword', seed: 3, kit: kitFromNodes('german', allNodeIds('german')) });
   try {
     for (let i = 0; i < 300; i++) G.step();
@@ -92,13 +88,12 @@ test('옛 간격 잡기: 사람(humanInput)은 거둠 · 끄면(deDig 0) 사람�
     P.gait.chase = null; P.humanInput = true;
     P.gait.foeWhiff();
     assert.equal(P.gait.chase, null, '사람 — 거둠');
-    withCfg(GAIT, { deDig: 0 }, () => { P.gait.foeWhiff(); assert.ok(P.gait.chase, '끄면 사람도 옛 판'); });
   } finally { G.world.free(); }
 });
 
-test('다른 유파 · AI: 서서 앞으로 세게 밀어도 파고들기 없음 — 몸 길이 파고들기 켬 · 끔 바이트 같음', () => {
+test('다른 유파 · AI: 서서 앞으로 세게 밀어도 파고들기 없음', () => {
   for (const [weapon, school] of [['rapier', 'italian'], ['uchigatana', 'japanese']]) {
-    const path = (dig) => withCfg(GAIT, { deDig: dig }, () => {
+    const path = () => {
       const G = newRound({ weapon, seed: 5, kit: kitFromNodes(school, allNodeIds(school)), gap: 2.6, onFighter(f) { if (f.index === 0) f.humanInput = true; } });
       try {
         G.ai.update = () => {};
@@ -107,23 +102,19 @@ test('다른 유파 · AI: 서서 앞으로 세게 밀어도 파고들기 없음
         for (let i = 0; i < 400; i++) { if (i > 250) { P.move.set(0, 1); P.stickX = 0; P.stickY = 1; } G.step(); if (i % 10 === 0) xs.push(P.bodies.pelvis.translation().x); }
         return { xs, digs: P.gait.digs };
       } finally { G.world.free(); }
-    });
-    const a = path(0), b = path(1);
-    assert.equal(b.digs, 0, school);
-    assert.deepEqual(a.xs, b.xs, `${school} 몸 길 같음`);
+    };
+    assert.equal(path().digs, 0, school);
   }
 });
 
 // ── ② 붙은 거리 규칙 ──
-test('시작 거리: 사람 · AI 1.0 m(무기와 상관없이 — reach 가 더 길면 떨어짐만 reach · 11/14 AI 도) · 끄면 reach · 시뮬 대본 몸은 reach', () => {
+test('시작 거리: 사람 · AI 1.0 m(무기와 상관없이 — reach 가 더 길면 떨어짐만 reach · 11/14 AI 도) · 시뮬 대본 몸은 reach', () => {
   const human = { humanInput: true }, ai = { aiControlled: true }, sim = {};
   assert.equal(closeStartD(human, 0.77), 1.0);
   assert.equal(closeStartD(ai, 0.77), 1.0);
   assert.equal(closeStartD(sim, 0.77), 0.77);
   assert.equal(closeRulesOn(ai), true);
   assert.equal(closeRulesOn(sim), false);
-  withCfg(CLOSE, { startD: null }, () => assert.equal(closeStartD(human, 0.77), 0.77));
-  withCfg(CLOSE, { startAI: null }, () => { assert.equal(closeStartD(ai, 0.77), 0.77); assert.equal(closeRulesOn(ai), false); });
 });
 
 /** 실제 몸 밀치기 장면: 사람(롱소드 · 무유파 아님)이 상대(AI 끔 — 서 있음)를 가슴 사이 d0 에서 앞으로 민다 */
@@ -143,7 +134,6 @@ test('실제 몸 — 1.0 m 안에서 밀면 밀치기가 남(옛 판 reach 0.77 
   shoveScene(({ G, P, push }) => {
     let d = P.foeDistance();
     assert.ok(d > 0.8 && d < 1.0, `시작 가슴 사이 ${d}`);
-    withCfg(CLOSE, { startD: null }, () => { push(0.9); G.step(); assert.equal(P.shoves, 0, '옛 판 — 닿는 거리 밖'); });
     push(0.9);
     let tPress = null;
     for (let i = 0; i < 400 && tPress == null; i++) { G.step(); if (P.barge?.phase === 'press') tPress = G.t; }
@@ -165,19 +155,6 @@ test('실제 몸 — 1.0 m 안에서 밀면 밀치기가 남(옛 판 reach 0.77 
   });
 });
 
-test('끄면(holdMin 0 · startD null) 밀치기 셈은 옛 판: 묶임 없음 · 스틱을 놓으면 그 스텝에 끝(release)', () => {
-  withCfg(CLOSE, { startD: null, holdMin: 0 }, () => shoveScene(({ G, P, push }) => {
-    push(0.9);
-    for (let i = 0; i < 600 && P.barge?.phase !== 'press'; i++) G.step();
-    assert.equal(P.barge?.phase, 'press');
-    assert.equal(P.barge.hold, 0);
-    push(0);
-    G.step();
-    assert.equal(P.barge, null);
-    assert.equal(P.bargeEnd, 'release');
-  }, { gap: 0.75 }));
-});
-
 test('입력 문: 묶인 동안 lock(비기 창도 안 씀) · 묶임 밖 1.0 m 안 = 칼자루만(공격 → 손잡이 찍기 · 모르트슐라크 창만 비기 허용) · 넘어진 상대 곁 · 총 · AI 는 아님', () => {
   const mk = (d, o = {}) => ({ humanInput: true, alive: true, state: 'stand', armed: true, weapon: { hiltLength: 0.13 }, foeDistance: () => d, foe: { alive: true, state: 'stand' }, barge: null, skill: { pommel() { this.n = (this.n ?? 0) + 1; return true; } }, ...o });
   const heldBarge = { phase: 'press', hold: 1, holdT: 0.5 };
@@ -190,7 +167,6 @@ test('입력 문: 묶인 동안 lock(비기 창도 안 씀) · 묶임 밖 1.0 m 
   assert.equal(closeInputGate(mk(0.9, { foe: { alive: true, state: 'down' } }), null).near, false, '넘어진 상대 — 마무리는 그대로');
   assert.equal(closeInputGate(mk(0.9, { weapon: { gun: true } }), null).near, false);
   assert.deepEqual(closeInputGate(mk(0.9, { humanInput: undefined, aiControlled: true }), null), { lock: false, near: false, secretOk: true });
-  withCfg(CLOSE, { nearHilt: 0 }, () => assert.equal(closeInputGate(mk(0.9), null).near, false));
   // 바꿈: 칼자루만 — 공격 입력이면 찍기 · 손가락 버림 / 느린 끌기는 그대로 / 묶임 — 다 버림
   const f = mk(0.9);
   const d = { x: 0.1, y: 0.2 };
@@ -236,12 +212,11 @@ test('묶인 동안 붙어 버티기 기력 × 2 (두 몸 · 스틱을 놓고 �
   withCfg(CLOSE, { holdDrain: 1 }, () => { const g = pair(); g[0].barge = { phase: 'press', hold: 1, holdT: 0 }; clinchStep(g, dt); near(g[0].stamina.spent.clinch, STAMINA.clinchPerSecond * dt, 1e-9); });
 });
 
-test('closeHoldT · bargeHeld: 쿨타임 안 0 · 끄면 0 · AI 도(11/14) · AI 를 옛 판으로 돌리면 0 · 시뮬 대본 몸 0', () => {
+test('closeHoldT · bargeHeld: 쿨타임 안 0 · 끄면 0 · AI 도(11/14) · 시뮬 대본 몸 0', () => {
   assert.ok(Math.abs(closeHoldT({ humanInput: true }) - realS(1.2)) < 1e-9);
   assert.equal(closeHoldT({ humanInput: true, holdCool: 0.5 }), 0);
   assert.ok(Math.abs(closeHoldT({ aiControlled: true }) - realS(1.2)) < 1e-9);
   assert.equal(closeHoldT({}), 0);
-  withCfg(CLOSE, { startAI: null }, () => assert.equal(closeHoldT({ aiControlled: true }), 0));
   withCfg(CLOSE, { holdMin: 0 }, () => assert.equal(closeHoldT({ humanInput: true }), 0));
   assert.equal(bargeHeld({ phase: 'step', hold: 1, holdT: 0 }), false);
   assert.equal(bargeHeld({ phase: 'press', hold: 1, holdT: 1 }), false);

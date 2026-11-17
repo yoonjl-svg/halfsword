@@ -260,13 +260,11 @@ test('고유 공격 칸 글 = 고유 공격 표(PLAYER_UNIQUE): 스틱 쪽 · �
 });
 
 test('걸음 · 막기 칸 글 = 코드 스위치: 뒤 박차기(독일 보법) · 옆 박차기(옆 누르면 늘) · 파고들기(멈춘 채 앞 — 11/14 · 전 간격 잡기 상대 헛침 뒤 앞 걸음) · 막아찌르기(막기 새 누름)', () => {
-  assert.ok(GAIT.stepBurst && GAIT.burstDe, '뒤 박차기 = 서 있다 뒤로 (독일만)');
   assert.equal(cmdOf('german', 'G1'), '멈춘 상태에서 뒤로 이동(↓)');
-  assert.ok(GAIT.burstWalkSide, '옆 박차기 = 옆 누르면 늘 (서 있든 걷든 · 어느 쪽이든)');
   assert.ok(D.nodeOf('iberian', 'B2').f.includes('burstSide'));
   assert.equal(cmdOf('iberian', 'B2'), '좌우 이동(←/→)');
-  // 11/14 사장님 '간격 잡기를 파고들기로 바꿔' (GAIT.deDig — 서서 앞으로 세게 밀면 두 걸음 · 헛침 조건 없음): G1 글의 거울 · 몫 열쇠 'chase' 그대로 · 전 글 '상대가 헛치면 앞으로 이동(↑)'(`?deDig=0` 판)
-  assert.ok(GAIT.deDig && GAIT.digSteps === 2 && D.nodeOf('german', 'G2').f.includes('chase'));
+  // 11/14 사장님 '간격 잡기를 파고들기로 바꿔' (서서 앞으로 세게 밀면 두 걸음 · 헛침 조건 없음): G1 글의 거울 · 몫 열쇠 'chase' 그대로 · 전 글 '상대가 헛치면 앞으로 이동(↑)'(`?deDig=0` 판)
+  assert.ok(GAIT.digSteps === 2 && D.nodeOf('german', 'G2').f.includes('chase'));
   assert.equal(cmdOf('german', 'G2'), '멈춘 상태에서 앞으로 이동(↑)');
   assert.ok(SKILL.itOpposition && D.nodeOf('italian', 'I6').f.includes('opposition'));
   assert.equal(cmdOf('italian', 'I6'), '막기');
@@ -283,9 +281,8 @@ test("비기 칸 글 = 사람 비기 조건 (schools.js playerSecretDef · confi
   const secs = (c) => +/(\d+(?:\.\d+)?)초/.exec(c)?.[1];
   const de = playerSecretDef('german');
   assert.ok(SECRET.deMord && de.when === 'press' && SECRET.mordPress > 0, '독일 = 밀치기 누르기 (모르트슐라크)');
-  // 10/25 23:3x 밀치기 걸쇠 없앰(CLOSE.latch 0 — 닿는 거리 안에서 밀면 곧장 · fighter.js closeStep) → '붙은 채 … 밀치면(↑)' · 글 속 시간 = mordPress
+  // 10/25 23:3x 밀치기 걸쇠 없앰(닿는 거리 안에서 밀면 곧장 · fighter.js closeStep) → '붙은 채 … 밀치면(↑)' · 글 속 시간 = mordPress
   const { CLOSE } = await import('../../src/config.js');
-  assert.equal(CLOSE.latch, 0, "G10 '붙은 채 밀치면' = 놓았다 밀 것 없음");
   assert.ok(src('fighter.js').includes('push && (this.closeArmed || (!latch && !g?.req))'), 'fighter.js closeStep — 걸쇠 없는 판은 밂이 곧 발사');
   assert.equal(realS(secs(OWNER.G10)), SECRET.mordPress, 'G10 글 속 시간(실제 초) = SECRET.mordPress');
   assert.equal(sec('german').cmd, OWNER.G10);

@@ -1474,7 +1474,7 @@ export class PlayerUniqueAssist {
     const foe = f.foe;
     const touch = this.bladeTouch();
     const d = f.foeDistance();
-    const lo = UA.dupBandMin ?? (CLOSE.nearHilt && f.humanInput && CLOSE.startD > 0 ? CLOSE.startD : SECRET.mordCloseN ?? 0); // 11/14 1 m 규칙(1 m 안은 손잡이 찍기만)이 켜진 사람 몸은 띠 아래 끝 1.0 m — 그 안에선 긴 칼이 안 나가니
+    const lo = UA.dupBandMin ?? (f.humanInput ? CLOSE.startD : SECRET.mordCloseN ?? 0); // 11/14 1 m 규칙(1 m 안은 손잡이 찍기만)이 켜진 사람 몸은 띠 아래 끝 1.0 m — 그 안에선 긴 칼이 안 나가니
     const hi = mode === 'clash2' ? (UA.dupClashMax > 0 ? UA.dupClashMax : Infinity) : UA.dupBandMax;
     const band = d > lo && d <= hi;
     const bandC = mode === 'both' ? d > lo && d <= (UA.dupClashMax > 0 ? UA.dupClashMax : Infinity) : band; // 'both'(11/14 견줌): clash2 몫은 제 띠

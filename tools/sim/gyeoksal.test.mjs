@@ -3,7 +3,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, DT, CONFIG } from './harness_m.mjs';
-import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 
 const { SECRET } = CONFIG;
 const { TRADITIONS } = await import('../../src/schools.js');
@@ -161,42 +160,6 @@ test('한 칼 세기: 판정 에너지 × FINISH.power (결정타 hitMul 대신)
   }
 });
 
-test('스위치: 칼끝 빠르기 몫 SECRET.gyeoksal.share(11/11 0.7 · 10/22 확정 0.6) · 어거 길 armPath down · 잔상 굵기 trailWidth', (t) => {
-  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-  assert.equal(SECRET.gyeoksal.share, 0.7); // 11/11 사장님 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' (전 0.6 — 10/22 23:0x 사장님 확정 · 그 전 null = 연환 0.3)
-  assert.equal(SECRET.gyeoksalHitMul, 1); // 같은 말씀 — 격살만 판정 배율 1 (다른 비기 SECRET.hitMul 1.3 그대로)
-  assert.equal(SECRET.hitMul, 1.3);
-  assert.equal(SECRET.gyeoksal.trailWidth, 0);
-  assert.equal(SECRET.gyeoksal.armPath, 'across');
-  const S = TRADITIONS.chinese.playerSecret;
-  assert.equal(S.do.combo.eogeo.seq[0].name, 'gkArm');
-  const T = (share) => {
-    SECRET.gyeoksal.share = share;
-    const G = newRound({ weapon: 'qinggang', weapon2: 'longsword', seed: 1, gap: 1.35 });
-    G.ai.update = () => {};
-    while (G.t < 1.0) G.step();
-    assert.ok(G.player.skill.secret({ S, ctx: { slot: 'yoryak', stance: 'yoryak' } }));
-    const t0 = G.t;
-    while (G.t < t0 + 1.2 && G.player.skill.sec) G.step();
-    arc = G.player.instantArc;
-    return G.player.instantResult.T;
-  };
-  let arc = null;
-  try {
-    SECRET.gyeoksal.armPath = 'down';
-    assert.equal(S.do.combo.eogeo.seq[0].name, 'gkArmDown');
-    assert.ok(T(1) < T(null), '고노센 빠르기 몫이면 한 칼이 더 짧다');
-    assert.equal(arc.width, undefined); // 잔상 굵기 스위치 끔 = 칼날 전부 (지금 그대로)
-    SECRET.gyeoksal.trailWidth = 1;
-    T(0.6);
-    assert.equal(arc.share, 0.6);
-    assert.equal(arc.width, 0.6); // 켬 = 굵기도 빠르기 몫
-  } finally {
-    SECRET.gyeoksal.share = 0.7; // 기본값으로 되돌림 (11/11)
-    SECRET.gyeoksal.armPath = 'across';
-    SECRET.gyeoksal.trailWidth = 0;
-  }
-});
 
 test('스킬트리 C9 막아 죽이기: 열림 · 익히면 비기 몫 · 글은 숫자 없는 온전한 한 문장', () => {
   const n = D.nodeOf('chinese', 'C9');

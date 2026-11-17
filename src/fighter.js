@@ -1600,9 +1600,9 @@ export class Fighter {
    *  누르기 동안 다리 밀기(CLOSE.legDrive) 하나를 더하고, 팔은 접기를 풀어 코등이·팔뚝이 상대 몸통에 버팀으로 닿는다 (driveSword).
    *  넘어짐은 상대 균형이 정한다.
    *  발사 = 걸쇠 && 밂 && 준비. 1단계(step) 딛기 → req 다리 착지 → 2단계(press) 누르기 → 물리 사건으로 끝 → lift·closeW 되돌림.
-   *  10/25 23:3x 사장님 '밀치기는 붙은 거리 안에서 스틱을 한 번 놓았다가 다시 밀어야 시작됩니다 -> 이 걸쇠 없애. 밀치기의 도입 취지와도 맞지 않아.' (CLOSE.latch 0):
+   *  10/25 23:3x 사장님 '밀치기는 붙은 거리 안에서 스틱을 한 번 놓았다가 다시 밀어야 시작됩니다 -> 이 걸쇠 없애. 밀치기의 도입 취지와도 맞지 않아.':
    *   발사 = 닿는 거리 안 && 밂 && 준비 — 놓았다 밀 것 없음. 밀치는 동안은 새로 안 붙음(barge 가 있으면 이 칸을 안 탐) · 끝나면 그대로 밀고 있으면 곧장 다음 밀치기 ·
-   *   다른 걸음 요청(gait.req)이 걸려 있는 동안은 기다림(새 수 없음 — 찌르기 · 베기 걸음 위에 밀치기 걸음을 덮어 거듭 내지 않게). AI 는 CLOSE.latchAI(사람과 따로 — 아래)
+   *   다른 걸음 요청(gait.req)이 걸려 있는 동안은 기다림(새 수 없음 — 찌르기 · 베기 걸음 위에 밀치기 걸음을 덮어 거듭 내지 않게). AI 도 같다
    */
   closeStep() {
     const dt = this.lastDt;
@@ -1625,7 +1625,7 @@ export class Fighter {
       // 묶임 (11/14 사장님 '최소 n초 무조건 유지' → '1.2초로 해' · '묶인 1.2초 동안은 아무 공격도 못하고' — CLOSE.holdMin · holdLock · close_hold.js): 누르기에 든 뒤 hold 초 동안은
       //  몸 상태(나 · 상대 넘어짐 · 쓰러짐 · 걸음 꺼짐)만 끝냄 — 떨어짐 · 스틱 놓음 · 팔 다 펴짐 · 긋기 · 찌르기는 안 끝냄(묶인 동안 공격 입력은 안 나감 — 남은 휘두름이 있어도 그대로)
       const held = bargeHeld(b);
-      const keepAtk = held && !!CLOSE.holdLock;
+      const keepAtk = held;
       if (this.state !== 'stand' || !foeUp || !g?.active) end = 'state';
       else if (sk.swinging && !keepAtk) end = 'swing';
       else if (sk.tap && !keepAtk) end = 'thrust';
@@ -1656,9 +1656,9 @@ export class Fighter {
       }
     }
     if (!b) {
-      // 걸쇠: 밀치는 중엔 건드리지 않는다 (1단계 중 엄지가 가운데를 지나도 재발사 없음) — 걸쇠 판(CLOSE.latch · AI 는 latchAI)만 발사에 씀 · closeArmed 는 늘 같은 셈(AI moveFeet 이 읽는다)
+      // 걸쇠: 밀치는 중엔 건드리지 않는다 (1단계 중 엄지가 가운데를 지나도 재발사 없음) · closeArmed 는 늘 같은 셈(AI moveFeet 이 읽는다)
       // 탈진으로 풀린 누르기(stamina.js stepClinch — '누르기 해제')는 걸쇠 판처럼 스틱을 한 번 놓아야 다시 — 걸쇠 없는 판이 같은 스텝에 곧장 다시 눌러 풀림이 사라지지 않게 (새 수 없음)
-      const latch = (this.aiControlled ? CLOSE.latchAI : CLOSE.latch) || this.bargeEnd === 'exhausted';
+      const latch = this.bargeEnd === 'exhausted';
       if (!(d <= startD)) this.closeArmed = false;
       else if (idle) this.closeArmed = true;
       else if (push && (this.closeArmed || (!latch && !g?.req))) {
@@ -1781,8 +1781,8 @@ export class Fighter {
     this.driveBalance(dt);
     if (this.gait?.active) this.gait.pinFeet();
     this.applyPose(dt);
-    if (this.canShove && CLOSE.on) this.closeStep(); // 근접 밀치기: 누르기 동안 다리 밀기만 더한다 (shove() 의 힘 순서 그대로)
-    if (CLOSE.holdPush && CLOSE.on) holdPushBack(this); // 맞밀기 (11/14 — 상대가 나를 밀치는 최소 유지 안이면 내 골반도 상대 쪽으로 · close_hold.js — 아니면 아무것도 안 함)
+    if (this.canShove) this.closeStep(); // 근접 밀치기: 누르기 동안 다리 밀기만 더한다 (shove() 의 힘 순서 그대로)
+    holdPushBack(this); // 맞밀기 (11/14 — 상대가 나를 밀치는 최소 유지 안이면 내 골반도 상대 쪽으로 · close_hold.js — 아니면 아무것도 안 함)
     this.shove();
     this.updateIbFlow(dt); // 이베리아 이어 긋기 흐름 (시험 IB_FLOW — 끄면 아무것도 안 함)
     this.driveSword(); // 팔 목표(IK)를 정한 뒤
@@ -2984,10 +2984,10 @@ export class Fighter {
     const st = this.stumble;
     if (CN_STEP.mode) cnStepTick(this, dt); // 동방 보법 회피 편섬 (11/15 시제품 — 기본 끔 · src/cn_step.js): 공격 창 · 꺾음 · 박찬 한 걸음
     let mvIn = this.feetHeld ? HELD_MOVE : (CN_STEP.mode && cnStepMove(this)) || this.move; // 시작 정지: 조종 입력(플레이어·AI·기술 내딛기)만 0, 균형 잡는 걸음(stumble)은 그대로
-    // 독일 간격 잡기의 잡기 (10/15 — GAIT.deHold, gait.js holdTick · docs/strike/german_hold_2026-10-15.md): 플레이어(AI 가 몰지 않는 몸)만 — 조종 입력을 읽기 전에 걸고·풀고·시간을 센다.
+    // 독일 간격 잡기의 잡기 (10/15 — gait.js holdTick · docs/strike/german_hold_2026-10-15.md): 플레이어(AI 가 몰지 않는 몸)만 — 조종 입력을 읽기 전에 걸고·풀고·시간을 센다.
     //  잡는 동안 조종 입력의 앞(상대 쪽 — 몸은 늘 상대를 본다) 몫만 0 — 옆·뒤 몫·균형 걸음(stumble)·기술 걸음(gait req)은 그대로, 몸이 가진 빠르기는 물리대로(아래 가속 한도).
     //  끄면(0)·AI 는 부르지도 읽지도 않는다(바이트 같음)
-    if (hybrid && GAIT.deHold && !this.aiControlled && G.active) G.holdTick(dt);
+    if (hybrid && !this.aiControlled && G.active) G.holdTick(dt);
     if (hybrid && G.hold && mvIn.y > 0) {
       HOLD_MOVE.x = mvIn.x;
       mvIn = HOLD_MOVE;
@@ -3034,21 +3034,8 @@ export class Fighter {
     const chest = this.bodies.chest;
     const push = (fx, fy, fz) => {
       const up = BODY.upperShare; // 가슴(+머리·팔)이 몸무게에서 차지하는 비율
-      // R2′ 걸음 조율 채널 A (GAIT.pushAtFoot, 확인표 181, 10/8): 수평 추진력의 골반 몫을 딛은 발 자리(발바닥 가운데 x·z, 골반 높이)에 하중 비율대로 건다 — 크기·방향은 같고 점만 옮기므로
-      //  직진은 그대로, 발이 몸 중심선에서 옆으로 치우친 만큼 yaw 짝힘이 저절로 생긴다(오른발이 밀면 왼쪽으로 돈다 = 사람의 베는 걸음). 두 발 대칭이면 서로 지워져 오늘과 같다. 수직 받침 fy 와 가슴 몫은 오늘 자리. 0 = 오늘(바이트 동일)
-      const paf = hybrid && GAIT.pushAtFoot > 0 && loadSum > 1e-3 && (fx !== 0 || fz !== 0) ? Math.min(1, GAIT.pushAtFoot) : 0;
-      pelvis.addForce({ x: fx * (1 - up) * (1 - paf), y: fy, z: fz * (1 - up) * (1 - paf) }, true);
+      pelvis.addForce({ x: fx * (1 - up), y: fy, z: fz * (1 - up) }, true);
       chest.addForce({ x: fx * up, y: 0, z: fz * up }, true);
-      if (paf > 0) {
-        const py = pelvis.translation().y;
-        for (const k of ['F', 'B']) {
-          const w = load[k] / loadSum;
-          if (w <= 0) continue;
-          const l = G.legs[k];
-          const pt = l.stance ? l.pinC : l.plant;
-          pelvis.addForceAtPoint({ x: fx * (1 - up) * paf * w, y: 0, z: fz * (1 - up) * paf * w }, { x: pt.x, y: py, z: pt.z }, true);
-        }
-      }
       if (loadSum < 1e-3 || BODY.footReaction === 0) return;
       for (const [k, shin] of [['F', 'shinF'], ['B', 'shinB']]) {
         const w = load[k] / loadSum;
@@ -3077,12 +3064,12 @@ export class Fighter {
     const dvz = want.z - v.z;
     const grip = Math.min(1, loadSum * 1.5);
     // 빠른 걸음(10/15 — gait.js fastBegin)이 가속 한도 배율을 두면(독일 간격 잡기 빠른 디딤 chase.accel — 헛침 뒤 박차고 들어감) 그 걸음 동안만 곱한다. 보통 걸음·이탈리아 박자 걸음은 × 1 (같은 수)
-    //  첫 걸음 박차기(10/15 — GAIT.stepBurst)는 박찬 걸음 뒤에도 몸이 박찬 빠르기를 다 줄일 때까지(gait.burstBrake) 같은 배율 — 세게 멈춤. 간격 잡기의 잡기(gait.holdBrake)도
+    //  첫 걸음 박차기(10/15)는 박찬 걸음 뒤에도 몸이 박찬 빠르기를 다 줄일 때까지(gait.burstBrake) 같은 배율 — 세게 멈춤. 간격 잡기의 잡기(gait.holdBrake)도
     //  잡기를 건 뒤 몸이 설 때까지 같은 배율(같은 값 — 새 값 없음). 둘 다 플레이어만이라 AI 는 늘 같은 수
-    //  동방 보법 '가벼운 발'(10/15 — GAIT.cnLight · 유파 걸음 칸 light, 동방 1.5 · docs/strike/cn_light_feet_2026-10-15.md): 위 셋이 아닌 보통 걸음 몫(× 1)만 곱한다 —
+    //  동방 보법 '가벼운 발'(10/15 — 유파 걸음 칸 light, 동방 1.5 · docs/strike/cn_light_feet_2026-10-15.md): 위 셋이 아닌 보통 걸음 몫(× 1)만 곱한다 —
     //  걷기 시작·멈춤·방향 바꿈이 같은 한도라 함께 빨라지고 최고 빠르기(speed)는 그대로. 몸의 일이라 사람·AI 같이. 칸 없는 유파·끔(0)은 × 1 그대로(바이트 같음)
-    //  동방 AI 걸음 박자(10/15 — GAIT.cnLightAi · ai.js update 의 aiLightHold): 가벼운 발 몸의 AI 가 공격 꼴이 아닐 때(간 보기·막기·물러남)는 보통 걸음 몫 × 1(옛 가속) — 사람·끔은 그대로
-    const lim = M * (hybrid ? GAIT.maxAccel * (G.fastK > 1 ? G.fastAcc : G.burstBrake || G.holdBrake || G.lungeBrake ? GAIT.burstAccel : GAIT.cnLight && !this.aiLightHold ? (G.P.light ?? 1) : 1) : BODY.maxAccel) * grip; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
+    //  동방 AI 걸음 박자(10/15 — ai.js update 의 aiLightHold): 가벼운 발 몸의 AI 가 공격 꼴이 아닐 때(간 보기·막기·물러남)는 보통 걸음 몫 × 1(옛 가속) — 사람·끔은 그대로
+    const lim = M * (hybrid ? GAIT.maxAccel * (G.fastK > 1 ? G.fastAcc : G.burstBrake || G.holdBrake || G.lungeBrake ? GAIT.burstAccel : !this.aiLightHold ? (G.P.light ?? 1) : 1) : BODY.maxAccel) * grip; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
     const fx = THREE.MathUtils.clamp(M * BODY.moveAccel * dvx, -lim, lim) * mus;
     const fz = THREE.MathUtils.clamp(M * BODY.moveAccel * dvz, -lim, lim) * mus;
     push(fx, 0, fz);

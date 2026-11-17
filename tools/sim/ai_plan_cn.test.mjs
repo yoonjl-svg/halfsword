@@ -7,13 +7,7 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI, seedRandom } from './harness_m.mjs';
 import { planFor, distErrWidth, PHASES, SCHOOL_PLAN } from '../../src/ai_plan.js';
 import { cnTechW, cnNeed, cnHoldM, cnCircle, cnMeet, cnTick, cnFeint, cnNext, cnWill, cnWant } from '../../src/ai_plan_cn.js';
-import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
-import { pinReactOld } from './react_old.mjs'; // 11/16 AI 반응 시간 0.2 s 하나 전 판으로 묶을 옛 장면
 const pinArc0 = (t) => { const on = CONFIG.AI_ARC.on; CONFIG.AI_ARC.on = 0; t.after(() => { CONFIG.AI_ARC.on = on; }); }; // 11/15 ① 둥근 칼 읽기 · 칼끝 틈(모든 AI — 사장님 11/15 결정)이 판을 바꾼 옛 장면은 그때 판(① 끔)으로 묶음 · 기준 그대로
-// 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
-//  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
-const pinLodge0 = (t) => { const lh = CONFIG.STRIKE.lodgeHold; CONFIG.STRIKE.lodgeHold = 0; t.after(() => { CONFIG.STRIKE.lodgeHold = lh; }); };
 
 const { AI_PLAN, UNIQUE_ASSIST: UA, realS } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -62,39 +56,6 @@ function trace({ weapon2, prof = 2, secs = 4, seed = 2 } = {}) {
   return r;
 }
 
-test('동방 플랜 열림 — 숙련도(무 = 없음) · 스위치 · 거리 오차 · 칸 = 고를 몫 0 ~ 1', (t) => {
-  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-  assert.ok(AI_PLAN.schools.includes('chinese'), '2 단계 기본 켬');
-  assert.equal(planFor('chinese', 0), null, '무 = 플랜 없음');
-  for (const p of [1, 2, 3, 4, 5, 6]) assert.equal(planFor('chinese', p), SCHOOL_PLAN.chinese, `숙련도 ${p}`);
-  withPlan({ on: 0 }, () => assert.equal(planFor('chinese', 5), null, '`?aiPlan=0`'));
-  withPlan(CN_OFF, () => {
-    assert.equal(planFor('chinese', 5), null, '`?aiPlanCn=0`');
-    assert.equal(distErrWidth(2, 'chinese'), 0);
-  });
-  assert.deepEqual([0, 1, 2, 3, 4, 5, 6].map((p) => +distErrWidth(p, 'chinese').toFixed(4)), [0.3, 0.24, 0.18, 0.12, 0.06, 0, 0], '0.3 m × (1 − 숙련도 ÷ 5) · 높음 0');
-  const P = SCHOOL_PLAN.chinese;
-  for (const ph of PHASES) {
-    assert.deepEqual(Object.keys(P[ph]).sort(), ['circle', 'close', 'dive', 'lure', 'meet', 'waist', 'wear'], ph); // 11/15 칸 dive 더함 (偏閃奏進 — 사장님 '동방 유파 설계에 이것도 감안한 전투 스타일과 뛰어들기가 나오도록 해' · cn_step.test)
-    for (const v of Object.values(P[ph])) assert.ok(v >= 0 && v <= 1, '칸 = 고를 몫 0 ~ 1 (기울기)');
-  }
-  const got = [0, 1, 2, 3, 4, 5, 6].map((p) => {
-    const { ai, free } = cnAi(p);
-    const r = { cn: !!ai.planCn, lure: !!ai.planLure, gk: ai.secret?.when === 'gyeoksal', err: ai.distErr, habit: ai.planCn?.habitT ?? 0, repeat: ai.planCn?.repeatT ?? 0 };
-    free();
-    return r;
-  });
-  assert.deepEqual(got.map((r) => r.cn), [false, true, true, true, true, true, true]);
-  assert.deepEqual(got.map((r) => r.lure), [false, false, false, false, true, true, true], '유도는 가운데 끝(4)부터');
-  assert.deepEqual(got.map((r) => r.gk), [false, false, false, false, false, true, true], '격살 = 지금 비기 숙련도 5 (SECRET.aiOpenSchools · secretAt 그대로)');
-  got.forEach((r, p) => {
-    const w = distErrWidth(p, 'chinese');
-    if (w > 0) assert.ok(r.err != null && Math.abs(r.err) <= w + 1e-12, `숙련도 ${p} 오차 ±${w}`);
-    else assert.equal(r.err, undefined, `숙련도 ${p} 오차 없음 (굴리지 않음)`);
-  });
-  assert.deepEqual(got.map((r) => +(r.habit / realS(1)).toFixed(3)), [0, 0, 0, 6, 6, 10, 10], '버릇 창 — 가운데 6.0 s · 높음 10.0 s');
-  assert.deepEqual(got.map((r) => +(r.repeat / realS(1)).toFixed(3)), [0, 0, 0, 0, 0, 10, 10], '되풀이 창 — 높음 10.0 s');
-});
 
 test('허리 베기 몫 — 띠 기울기 × 칸 · 다른 칼 · 쓰러진 상대 · 지친 국면은 그대로 · 기술 고르기에서 실제로 늚', () => {
   const lo = cnAi(2);
@@ -281,147 +242,7 @@ test('유도 (가운데 끝 4 부터): 겹이 있으면 간 보기 한 번에 �
   }
 });
 
-test('나서며 받기 — 격살이 남았고 이 위협에 노릴 마음이 났으면(cnWant) 물러나 피하기를 칼로 받기로 → respond 가 나서며 받음', (t) => {
-  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-  const hi = cnAi(5);
-  const lo = cnAi(4);
-  try {
-    const { ai, foe } = hi;
-    ai.me.fightT = 1;
-    foe.stamina.level = 0;
-    let id = 100;
-    const th = () => ({ id: ++id, line: 'highL', thrust: false });
-    withRolls([0], (R) => {
-      assert.equal(cnMeet(lo.ai, th()), false, '숙련 4 — 격살 없음');
-      assert.equal(R.n, 0, '굴리지 않음');
-    });
-    withRolls([0.99], (R) => {
-      const t = th();
-      assert.equal(cnMeet(ai, t), false, '마음이 안 남 (겹 0 · 초반 — 마음 0.2)');
-      assert.equal(R.n, 1);
-      assert.equal(cnMeet(ai, t), false);
-      assert.equal(R.n, 1, '같은 위협은 다시 굴리지 않음');
-    });
-    withRolls([0, AI_PLAN.cn.meetFresh - 1e-6], (R) => {
-      assert.equal(cnMeet(ai, th()), true, '겹 0 · 초반에도 마음이 나면 — 안 지친 상대 meetFresh 몫');
-      assert.equal(R.n, 2);
-    });
-    withRolls([0, AI_PLAN.cn.meetFresh + 1e-6], () => assert.equal(cnMeet(ai, th()), false));
-    foe.stamina.level = 1;
-    withRolls([0, 0.999], () => assert.equal(cnMeet(ai, th()), true, '지친 상대 — 띠 기울기 × 칸 (높음 1)'));
-    foe.stamina.level = 0;
-    ai.planCn.rep = 'highL';
-    withRolls([0, 0.999], () => assert.equal(cnMeet(ai, th()), true, '되풀이 줄 — 받을 준비'));
-    ai.planCn.rep = null;
-    const td = th();
-    ai.planCn.drawnId = td.id;
-    withRolls([0, 0.999], () => assert.equal(cnMeet(ai, td), true, '유도가 끌어낸 칼 — 유도 중과 같게'));
-    ai.planCn.drawnId = -1;
-    // respond 안에서: 굴림 차례 = 알아챔 · 맞받아 베기 · 피하기 · 노릴 마음 · 나서며 받기
-    const d = ai.foeReach; // 간격 끝 — 피하기 몫 0.8
-    // 11/15 偏閃奏進(ai_plan_cn.js cnDive — respond 의 맞받아 베기 뒤 굴림)이 굴림 차례를 바꿔 이 장면은 偏閃奏進 없는 판(`AI_PLAN.cn.dive` 0 — 그때 판)으로 묶음 · 기준 그대로
-    const resp = (rolls) => withRolls(rolls, () => {
-      const keepDive = AI_PLAN.cn.dive;
-      AI_PLAN.cn.dive = 0;
-      try {
-        ai.mode = 'watch';
-        assert.ok(ai.respond(th(), d));
-        return { void: ai.defVoid, gk: !!ai.gk };
-      } finally {
-        AI_PLAN.cn.dive = keepDive;
-      }
-    });
-    assert.deepEqual(resp([0, 0.99, 0, 0, 0]), { void: false, gk: true }, '피하기 → 칼로 받아 나서며 받음');
-    assert.deepEqual(resp([0, 0.99, 0, 0, 0.99]), { void: true, gk: false }, '마음은 났지만 나서지 않음 (기울기)');
-    assert.deepEqual(resp([0, 0.99, 0, 0.99]), { void: true, gk: false }, '마음이 안 남');
-    assert.deepEqual(resp([0, 0.99, 0.99, 0]), { void: false, gk: true }, '칼로 받기로 정한 막기 + 마음 → 격살 시도');
-    assert.deepEqual(resp([0, 0.99, 0.99, 0.99]), { void: false, gk: false }, '칼로 받되 노리지 않음 (겹 0 · 초반 — 옛 문이면 늘 안 노림 · 이제는 마음 0.2)');
-    ai.me.secretUsed = 9;
-    withRolls([0], (R) => {
-      assert.equal(cnMeet(ai, th()), false, '이 판 격살을 다 씀');
-      assert.equal(R.n, 0);
-    });
-  } finally {
-    hi.free();
-    lo.free();
-  }
-});
 
-test('격살을 노릴 마음 (사장님 11/14 \'절대적 규칙은 지우자 마음의 기울기로\') — 겹 0 · 초반에도 가끔 · 겹이 많을수록 · 판이 길수록 · 지칠수록 더 · 높음도 반드시 없음 · 옛 판은 문 그대로', (t) => {
-  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-  const hi = cnAi(5);
-  const mid = cnAi(3);
-  const lo = cnAi(2);
-  try {
-    const { ai, foe } = hi;
-    const G = CONFIG.SECRET.gyeoksalAi;
-    const w0 = AI_PLAN.cn.will0;
-    const at = (n, t, tired = 0, x = ai, th = null) => {
-      setHunt(x.foe, n);
-      x.foe.stamina.level = tired;
-      x.me.fightT = t;
-      return cnWill(x, th);
-    };
-    assert.ok(near(at(0, 0), w0) && w0 > 0, '겹 0 · 초반 — 0 이 아님 (작게)');
-    assert.ok(near(at(G.stacks, 0), 0.5), '기준점(겹 1) 하나 — 반쯤 기욺');
-    assert.ok(near(at(0, G.late), 0.5), '기준점(10 s) 하나');
-    assert.ok(near(at(0, 0, 1), 0.5), '지친 상대');
-    const byN = [0, 1, 2, 3, 5].map((n) => at(n, 2));
-    for (let i = 1; i < byN.length; i++) assert.ok(byN[i] > byN[i - 1], `겹이 많을수록 ${byN.map((x) => x.toFixed(3))}`);
-    const byT = [0, 5, 10, 20, 30].map((t) => at(0, realS(t)));
-    for (let i = 1; i < byT.length; i++) assert.ok(byT[i] > byT[i - 1], `판이 길수록 ${byT.map((x) => x.toFixed(3))}`);
-    assert.ok(at(1, 2, 1) > at(1, 2, 0), '지칠수록');
-    const top = at(5, realS(30), 1, ai, { id: 7, line: 'highL' });
-    assert.ok(top < 1 - w0 + 1e-12 && top > 0.75, `높음도 반드시 없음 (${top.toFixed(4)} ≤ ${1 - w0})`);
-    // 높음은 칠 낌새를 읽음 (유도가 끌어낸 칼 · 되풀이 줄) — 가운데는 안 읽음
-    ai.planCn.drawnId = 7;
-    const th7 = { id: 7, line: 'highL' };
-    assert.ok(at(0, 0, 0, ai, th7) > at(0, 0, 0, ai, { id: 8, line: 'highL' }), '높음 — 끌어낸 칼');
-    mid.ai.planCn.drawnId = 7;
-    const m7 = at(0, 0, 0, mid.ai, th7);
-    // 무계획 (굴림 몫 Lk): 그 몫만큼 동전 — 가운데 ⅓ · 낮음 ⅔
-    assert.ok(near(m7, (1 / 3) * AI_PLAN.coin + (2 / 3) * w0), `가운데 — 낌새 안 읽음 · 굴림 몫 ⅓ (${m7.toFixed(4)})`);
-    assert.ok(near(at(0, 0, 0, lo.ai), (2 / 3) * AI_PLAN.coin + (1 / 3) * w0), '낮음 — 아무 때나 노리기도');
-    // 실제 굴림: 겹 0 · 초반에도 가끔 · 겹이 많으면 더 자주 (위협 하나에 한 번)
-    const count = (n) => {
-      seedRandom(5);
-      let k = 0;
-      for (let i = 0; i < 400; i++) {
-        setHunt(foe, n);
-        foe.stamina.level = 0;
-        ai.me.fightT = 0.5;
-        if (cnWant(ai, { id: 1000 * (n + 1) + i, line: 'highL' })) k++;
-      }
-      return k;
-    };
-    const c0 = count(0);
-    const c3 = count(3);
-    assert.ok(c0 > 0 && c0 < 400, `겹 0 · 초반 ${c0} / 400 — 가끔`);
-    assert.ok(c3 > c0 && c3 < 400, `겹 3 ${c3} > ${c0}`);
-    // ai.gkWant: 플랜 몸 = 마음 · 옛 판(`?aiPlan=0`) = 문 그대로
-    setHunt(foe, 0);
-    ai.me.fightT = 0.5;
-    withRolls([0], () => assert.equal(ai.gkWant({ id: 99999, line: 'highL' }), true, '플랜 몸 — 겹 0 · 초반에도 마음이 나면'));
-    const old = withPlan({ on: 0 }, () => cnAi(5));
-    try {
-      assert.equal(old.ai.planCn, undefined);
-      setHunt(old.foe, 0);
-      old.ai.me.fightT = 0.5;
-      withRolls([0], (R) => {
-        assert.equal(old.ai.gkWant({ id: 1, line: 'highL' }), false, '옛 판 — 겹 0 · 10 s 전이면 안 노림 (문)');
-        assert.equal(R.n, 0);
-      });
-      setHunt(old.foe, 1);
-      assert.equal(old.ai.gkWant(), true);
-    } finally {
-      old.free();
-    }
-  } finally {
-    hi.free();
-    mid.free();
-    lo.free();
-  }
-});
 
 test('수 읽기의 동방 몫 — 가운데 버릇(안 치는 상대) · 높음 되풀이(같은 줄 두 번 10.0 s 안) · 낮음은 없음 · 본 위협만', () => {
   const lo = cnAi(2);
@@ -496,27 +317,3 @@ test('다른 유파 판은 동방 몫과 상관없이 바이트 같음 · 동방
   assert.notEqual(cn1.text, cn0.text, '동방 켬은 판이 달라짐');
 });
 
-// 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 상대 롱소드 AI(숙련 2) 칸 몫(곁눈 베기 듦 · 왕관 빠짐)으로 씨앗 11 판이 갈림 · 기준 그대로
-// 11/16 AI 반응 시간 숙련도 사다리(전 판 [0.35 … 0.05])로 묶음 (tools/sim/react_old.mjs) — 반응 0.1 · 0.25 → 0.2 s 로 씨앗 11 판이 또 갈림 · 기준 그대로
-test('판 하나 — AI 동방(환도 숙련 5 · P 자리) 대 롱소드 AI(숙련 2) 씨앗 11: 허리 베기 → 사냥 겹 → 지치게 · 유도 · 노릴 마음 · 나서며 받기 · 격살 시도 · 국면이 실제로 남', (t) => pin1116(t) || pinLodge0(t) || pinArc0(t) || pinAiKitOff(t) || pinReactOld(t) || withPlan({ read: { ...AI_PLAN.read, on: 0, fair: 0 } }, () => { // 3 단계(11/14) 그때 판으로 묶음 (기준은 안 고침): 수 읽기 · 공정함으로 씨앗 11 판이 갈라짐 (사냥 겹 0)
-  const G = newRound({ walls: true, seed: 11, weapon: 'hwando', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 2, planOff: true }, persona2: { proficiency: 5 } }); // 3 단계(11/14): 상대 롱소드 AI 는 옛 판(planOff)
-  const ai = G.ai2;
-  let waist = 0;
-  const sa = ai.startAttack;
-  ai.startAttack = function (...a) {
-    const r = sa.apply(this, a);
-    if (r && this.mode === 'attack' && !this.secretRun && UA.yaojiBleed.techs.includes(this.feint ? this.uniqueByName.get(this.feint.name)?.name : this.tech?.name)) waist++;
-    return r;
-  };
-  while (G.t < 30 && G.player.alive && G.enemy.alive) G.step();
-  const C = ai.stats.cn;
-  const P = ai.stats.plan;
-  const gkTry = ai.stats.gkTry ?? 0;
-  const hunt = G.enemy.cnHunt?.n ?? 0;
-  G.world.free();
-  assert.ok(waist > 0, `허리 베기 ${waist}`);
-  assert.ok(hunt >= 1 && C.wearT > 0, `사냥 겹 ${hunt} · 지치게 ${C.wearT}`);
-  assert.ok(C.lure > 0 && C.meet > 0 && C.want > 0, JSON.stringify(C));
-  assert.ok(gkTry > 0, `격살 시도 막기 ${gkTry}`);
-  assert.ok(P.judges > 0 && Object.values(P.t).reduce((x, y) => x + y, 0) > 0, '국면 시간이 쌓임');
-}));

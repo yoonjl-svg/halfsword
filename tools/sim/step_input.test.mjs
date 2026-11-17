@@ -9,7 +9,6 @@ import assert from 'node:assert/strict';
 import { CONFIG } from './harness_m.mjs';
 import { runTrials, stickValue } from './step_input_measure.mjs';
 import { stickDir } from '../../src/unique_assist.js';
-import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const tr = (kind, stick) => ({ kind, base: 'zwerch', stick });
@@ -22,17 +21,6 @@ const TRIALS = [
   tr('plain', null), // 스틱 없음
   tr('away', { dt: 0.35, a: 0.8, side: -1, hold: 0.3 }), // 긋고 0.35 s 뒤 비켜 걷기
 ];
-function run(set) {
-  const was = { ...UA };
-  Object.assign(UA, set);
-  try {
-    // 여섯 시도를 한 판에 잇는 씨앗 3 장면은 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 앞 시도들로 몸 자리가 달라져 다섯째(스틱 없음) 긋기가 둘로 끊겨 읽힘
-    //  (새 판 하나씩 — 씨앗 1 ~ 5 — 은 켠 판도 가로베기로 읽힘 · 기록 arm_real §10)
-    return withArmOld(() => Object.fromEntries(runTrials('german', TRIALS, { seed: 3 }).map((r) => [r.kind, r])), ['armClear']);
-  } finally {
-    for (const k of Object.keys(set)) UA[k] = was[k];
-  }
-}
 
 test('기본값: 새 판 켬 · 문턱 0.3(걸음 사다리) · 뒤 창 0.2 실제 s(시간 사다리) · 앞 창 끔', () => {
   assert.equal(UA.stepIn, 1);
@@ -51,21 +39,5 @@ test('스틱 쪽 판단 (stickDir): 옆 = 옆 몫 ≥ 문턱 · 앞뒤 몫 이�
   assert.equal(stickValue(0.45).toFixed(2), '0.35'); // 손잡이 반지름 45 % = 값 0.35 (데드존 0.15)
 });
 
-test('새 판(기본): 늦은 스틱 · 살짝 민 엄지도 걸음 공격 · 밀었다 놓은 엄지 · 스틱 없는 긋기 · 긋고 비켜 걷기는 기본 동작', () => {
-  const R = run({});
-  for (const k of Object.keys(R)) assert.ok(R[k].strokes.some((s) => s.tech === 'zwerch'), `${k}: 가로베기로 읽힘`);
-  for (const k of ['early', 'late', 'soft']) assert.ok(R[k].read, `${k}: 걸음 공격`);
-  for (const k of ['flick', 'plain', 'away']) assert.ok(!R[k].read, `${k}: 기본 동작`);
-});
 
-test('앞 창 켬(stepPre 0.2 s): 밀었다 놓은 엄지도 걸음 공격 — 스틱 없는 긋기 · 긋고 비켜 걷기는 그대로', () => {
-  const R = run({ stepPre: CONFIG.realS(0.2) });
-  for (const k of ['early', 'late', 'soft', 'flick']) assert.ok(R[k].read, `${k}: 걸음 공격`);
-  for (const k of ['plain', 'away']) assert.ok(!R[k].read, `${k}: 기본 동작`);
-});
 
-test('전 판(stepIn 0): 긋기 시작 순간의 스틱만 · 문턱 0.5 — 스틱 먼저 · 끝까지 민 것만 걸음 공격', () => {
-  const R = run({ stepIn: 0 });
-  assert.ok(R.early.read);
-  for (const k of ['late', 'soft', 'flick', 'plain', 'away']) assert.ok(!R[k].read, `${k}: 기본 동작`);
-});

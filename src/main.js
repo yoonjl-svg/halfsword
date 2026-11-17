@@ -149,8 +149,7 @@ const saveSettings = () => {
   }
 };
 
-// 보이지 않는 받침(GAIT.assist 0.2)·붙잡기 반사(GAIT.catchMode)·다리 근육 상한(BODY.legTorque)은 config.js 에서만 온다
-//  (탐색판 주소 스위치 ?assist ?catch ?legs 는 값이 정해져(사장님 10/1 21:10 받침 0.2·반사 켬·다리 그대로) 본판에서 뺐다, 10/1 22:05)
+// 보이지 않는 받침(GAIT.assist 0.2)·붙잡기 반사·다리 근육 상한은 config.js 에서만 온다 (사장님 10/1 21:10 받침 0.2·반사 켬·다리 그대로)
 
 // ── 겉모습 미리보기 (모델링 PM 라운드): 마음에 안 들어도 지우지 않고 archive에 쌓아 둔 옛 버전들을
 //  주소창에서 바로 볼 수 있게 한다. 플레이어 외형에는 적용하지 않는다(감독 지시: 주인공은 그대로).
@@ -623,7 +622,7 @@ function newRound(weaponId) {
   player.skill.corr = CONFIG.SKILL.corr; // 플레이어 보정 = 새 보정 하나 (Skill 생성자도 같은 값을 읽는다. 설정·주소 스위치 없음, 디렉터 결정 10/1 22:05)
   player.skill.corrTip = CONFIG.SKILL.corrTip; // 끝점 겨눔 ② 끔 (같은 결정)
   player.skill.autoGuard = true; // 베고 나면 기본 자세로 돌아간다 (AI는 스스로 자세를 고른다)
-  player.canShove = true; // 근접 밀치기: 플레이어는 스틱으로 (CLOSE.on 이 통째로 끄고 켠다)
+  player.canShove = true; // 근접 밀치기: 플레이어는 스틱으로
   combat = new Combat(colliderInfo, { onWound, onClash });
   // 몸 소리(발소리·쓰러짐·무기 부러짐·죽음 목소리): 캐릭터마다 목소리가 다르다
   const foeVoice = voiceOf(currentFoe);
@@ -3046,7 +3045,7 @@ function playerInputFrame(dt, now) {
     d.x = 0;
     d.y = 0;
   } else if (drawTapTake(player) && !secBusy) taps++; // 쥔 탭은 한 번만 — 몸이 못 내는 프레임이면 버림
-  // 붙은 거리 규칙 (11/14 사장님 '묶인 1.2초 동안은 아무 공격도 못하고' · '1m 이내에서는 손잡이 찍기만' — config CLOSE.holdLock · nearHilt · close_hold.js — 모든 유파 사람):
+  // 붙은 거리 규칙 (11/14 사장님 '묶인 1.2초 동안은 아무 공격도 못하고' · '1m 이내에서는 손잡이 찍기만' — close_hold.js — 모든 유파 사람):
   //  묶임 = 위에서 비기 실행 중처럼(secBusy — 손 · 공격 · 비기 모두 안 남) · 칼자루만 거리 = 공격 입력(탭 · 빠른 끌기)은 손잡이 찍기(모르트슐라크 창은 위 비기 차례가 먼저 — closeGate.secretOk)
   if (player.alive && (closeGate.lock || !secBusy) && closeInputApply(player, closeGate, d, taps, swipe, dt)) taps = 0;
   // 중국 막기 연환 미리 받기 (10/12 — SECRET.cnBuffer, secret.js canBuffer): 정한 자세로 막아 칼이 맞닿은 동안 온 공격 입력을 받아 두고(칼이 떨어지는 스텝에 곧장 연환),

@@ -8,7 +8,6 @@ import { TRADITIONS } from '../../src/schools.js';
 import { PlayerSecretWatch } from '../../src/secret.js';
 import { spinProgress, spinRate } from '../../src/iberian_spin.js';
 import * as D from '../../src/skill_tree_data.js';
-import { withArmOld } from './arm_real_pin.mjs';
 // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본 · 싱지르 = 특수 공격): 이 파일은 싱지르 비기 판 장면(무장 창 · 비기 몫 0.5 · 11/05 대본)이라
 //  그 판('spin')으로 묶는다. 특수 공격 판(무장 없음 · 0.3 · 한 걸음 나가며)의 같은 성질은 tools/sim/ib_swap.test.mjs
 SECRET.iberianSecret = 'spin';
@@ -360,19 +359,6 @@ test('원 입력 싱지르 칼 높이 (10/24): 전에 머리 위로 솟던 큰 �
   assert.ok(highOff >= 2, `고침을 끈 판 솟음 ${highOff} / 3`);
 });
 
-test('땅은 막힘 아님 (10/24 floor): 원을 아래에서 끝내 감기 첫 스텝에 칼끝이 땅을 스친 판 — 고친 판은 한 바퀴 · 끄면 막힘(진행 ≈ 0)', async () => {
-  const { runCircle } = await import('./iberian_spin_circle.mjs');
-  const c = { r: 50, T: 0.8, a0: 0, dir: 'ccw', close: 380 };
-  // 장면 = 10/24 기록 그대로: 원은 무장 0.3 s 뒤에 긋는다 — 무장 시간이 바뀌면(10/25 22:3x 1.5 → 2 s) 원을 긋는 때의 몸 · 칼 자리가 달라져 옛 결함(땅 스침)이 안 날 수 있어 그때 시간(1.5)으로 고정
-  const at = { armTime: 1.5 };
-  // 11/12 둘째(두 팔 엇갈림 막기 — 원을 긋는 동안 사람 두손 칼 칼자루 끝 앞 바닥 · 상대 AI 팔)로 원을 긋는 때의 칼 자리가 달라져 옛 결함(땅 스침)이 안 남 — 10/24 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
-  const r = await withArmOld(() => withScene1024(() => withSpin(at, () => runCircle('zweihander', 'langort', 'circle', c))), ['armClear2']);
-  assert.equal(r.why, 'done');
-  assert.equal(r.q, 1);
-  const b = await withArmOld(() => withScene1024(() => withJoints(WRIST_OLD, () => withSpin({ ...at, floor: 0 }, () => runCircle('zweihander', 'langort', 'circle', c)))), ['armClear2']); // 옛 결함은 옛 손목 판에서 (새 손목 판은 꺼도 칼끝이 땅을 안 스침)
-  assert.equal(b.why, 'blocked');
-  assert.ok(b.q < 0.05, `진행 ${b.q}`);
-});
 
 test('작은 원 (10/24 circleR 0): 반지름 8 · 15 px 원도 싱지르가 한 바퀴 다 돌고 몸통 높이 · 하한 0.15 m 판은 원으로 안 읽힘', async () => {
   const { runCircle } = await import('./iberian_spin_circle.mjs');

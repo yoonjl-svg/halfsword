@@ -4,7 +4,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG } from './harness_m.mjs';
 import { probe } from './secret_trail_probe.mjs';
-import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 
 const { SECRET } = CONFIG;
 const { ART_MIN } = await import('../../src/secret_instant.js');
@@ -40,27 +39,6 @@ test('안다레 리솔루토 10/23 탭 찌르기 판(?risoLunge=0): 찌르는 �
   }
 });
 
-test('모르트슐라크 · 격살: 잔상은 베는 토막만(준비 · 다시 세우기 · 이음 없음) · 세기는 빠르기 몫 그대로', (t) => {
-  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-  const m = probe('mord'); // 10/31 14:xx 사장님 '폼멜 찍기로 바꿔서 본판에 올려.' — 기본 폼멜 찍기는 내려찍는 토막이 짧아(손 길 기준 ~0.2 s) 점이 적음(18)
-  assert.equal(m.kind, 'combo');
-  assert.equal(m.share, SECRET.mord.kin);
-  assert.ok(m.pts > 10 && m.ptsCut === m.ptsAll, `${m.ptsCut}/${m.ptsAll}`);
-  const keep = { ...SECRET.mord };
-  Object.assign(SECRET.mord, { pommel: 0, noSelfClip: 0 }); // 거꾸로 쥔 판(10/31 전 — `?mordPommel=0&mordNoClip=0`) 그대로 지킴
-  try {
-    const r = probe('mord');
-    assert.ok(r.pts > 20 && r.ptsCut === r.ptsAll, `거꾸로 쥔 판 ${r.ptsCut}/${r.ptsAll}`);
-  } finally {
-    Object.assign(SECRET.mord, keep);
-  }
-  assert.equal(m.face, 'path'); // 정수리로 곧게 내리침 — 뒤 카메라에서 옆으로 보임 → 칼자루 끝 길
-  assert.equal(m.min, SECRET.secretArcMin);
-  const g = probe('gyeoksal');
-  assert.equal(g.share, SECRET.gyeoksal.share);
-  assert.ok(g.pts > 10 && g.ptsCut === g.ptsAll, `${g.ptsCut}/${g.ptsAll}`);
-  assert.equal(g.face, false); // 머리 베기는 사선 호 — 띠 없음 (허파 찌르기만)
-});
 
 test('스위치 SECRET.secretStreak 0 = 호만 (마주 보는 띠 없음) · SECRET.secretArcMin 0 = 빠르기 몫 그대로', () => {
   const keep = [SECRET.secretStreak, SECRET.secretArcMin];

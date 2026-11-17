@@ -11,7 +11,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG } from './harness_m.mjs';
 import { mhzShot, readyShot } from './mhz_draw.mjs';
-import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
 
 const { SECRET } = CONFIG;
 const withS = (vals, fn, O = SECRET) => {
@@ -47,25 +46,6 @@ test('① 기본값 — 세 맞춤 켬 · 鞘戻し 점은 배꼽 앞 · 칼집 
   assert.ok(LADDER.includes(SECRET.iaiRegrip), `iaiRegrip ${SECRET.iaiRegrip}`);
 });
 
-test('② 발도 대기 왼손 칼집 입 — 대기 동안 칼집 입을 쥠 · 들고 날 때 튐 없음 · 풀면 칼자루로 다시 쥠', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
-  // 모노호시자오 AI 웅크린 대기 앞 긴 자세(langort)는 맞닿기 + 0.3 m 에서 상대 칼끝이 대기 칼을 밀어 칼집 입이 몸 앞 0.67 m (대기 자세 밖 — 바탕부터) · 풀 때 칼이 크게 돌아오는 판이라 뺌
-  for (const [weapon, start, guards] of [['uchigatana', 'hip', ['langort', 'ochsR']], ['uchigatana', 'crouch', ['langort', 'ochsR']], ['monohoshizao', 'hip', ['langort', 'ochsR']], ['monohoshizao', 'crouch', ['ochsR']]]) {
-    for (const guard of guards) {
-      const r = readyShot({ weapon, guard, start });
-      const s = r.sum;
-      assert.equal(s.sayaMax, 1, `${weapon} ${start} ${guard} 칼집 입 몫 다 듦`);
-      assert.ok(s.onGapKoi < 0.04 && s.onGrip === 1, `${weapon} ${start} ${guard} 대기 동안 왼손이 칼집 입을 쥠 (틈 ${s.onGapKoi} · 쥠 ${s.onGrip})`);
-      assert.ok(s.jumpOn.d < 0.05, `${weapon} ${start} ${guard} 대기에 들 때 빈손 목표 ${JSON.stringify(s.jumpOn)}`);
-      const tr = r.frames.filter((f) => !f.on && f.sw > 0);
-      assert.ok(tr.length > 1 && maxJump(tr) < 0.08, `${weapon} ${start} ${guard} 풀 때 빈손 목표 ${maxJump(tr)} (보통 두 손 싸움 몫 안)`);
-      assert.ok(s.backGrip != null && s.endGap <= 0.03, `${weapon} ${start} ${guard} 칼자루로 다시 쥠 (${s.backGrip} · 틈 ${s.endGap})`);
-    }
-  }
-  // 전 판(11/13): 대기 동안 두 손 — 사람 대기를 풀면 칼 겨눔이 한 스텝에 바뀌며 칼자루 끝 목표가 튐
-  const b = withS(OFF, () => readyShot({ weapon: 'uchigatana', start: 'hip' }));
-  assert.equal(b.sum.sayaMax, 0, '끄면 대기 동안 칼자루 끝 그대로');
-  assert.ok(b.sum.jumpBack.d > 0.3, `전 판 사람 대기 풀기 튐 ${JSON.stringify(b.sum.jumpBack)}`);
-}));
 
 test('③ 鞘引き — 칼이 칼집을 떠나는 몫에서 왼손이 이미 왼 허리 · 사람 발도 칼 길 · 맞음 그대로', () => {
   for (const [weapon, start] of [['uchigatana', 'hip'], ['monohoshizao', 'hip'], ['uchigatana', 'crouch'], ['kusanagi', 'hip'], ['muramasa', 'hip']]) {

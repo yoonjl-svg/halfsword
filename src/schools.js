@@ -318,7 +318,7 @@ const CHINESE_TEMPER = { ...GERMAN_TEMPER, margin: [0.1, 0.3], circleRate: [0.2,
 //  gait.js gaitParams 가 무기의 유파(fighter.swordArt.tradition)로 읽어 GAIT 위에 덮는다 — 몸의 일이라 플레이어도 같은 걸음(사장님 05:1x).
 //  기질(temper)은 '어디로 가려 하나'(AI 스틱), 걸음은 '그걸 어떤 발로 하나'(gait.js) — 빠르기(moveSpeed·sideFactor·backFactor)는 여기 두지 않는다(기질 스틱과 곱해짐).
 //  독일·무유파: 칸 없음 = 지금 걸음(바이트 같음). 값은 모두 사장님 확인 전 (확인표 500~)
-//  보폭 규칙 strideK (10/15 20:3x 사장님 '보폭 규칙안대로 가자' — docs/strike/stride_rule_2026-10-15.md · config GAIT.strideRule · `?strideRule=0` = 아래 칸 값 그대로):
+//  보폭 규칙 strideK (10/15 20:3x 사장님 '보폭 규칙안대로 가자' — docs/strike/stride_rule_2026-10-15.md):
 //   걷는 최고 빠르기는 모든 유파 같고(moveSpeed 등 그대로 — 10/29 부터 일본만 speedMul 로 줄임) 보폭 상한 maxStride = 0.62 × k · 1 m/s 박자 cadence0 = 2.05 ÷ k(박자는 빠르기 ÷ 보폭) — gait.js gaitParams 가 맨 끝에 덮음
 //   (사람·AI 같음 — 이탈리아 player 칸의 maxStride·cadence0 도 이것으로, 다른 덮어쓰기 칸·이베리아 옆걸음 sideStride·sideMul·모노호시자오 byFrame 은 그대로).
 //   k 는 컨셉에서 0.1 단위: 이탈리아 0.7(작게 빨리 — 0.434 m · 2.93) · 일본 0.8(0.496 · 2.56 — 10/29 뺌: 칸 설계 박자 2.2 · 보폭 0.5 + speedMul 0.67(10/31 0.70) · 아래 JAPANESE_GAIT) · 동방 0.9(0.558 · 2.28 — 10/29 0.75: 0.465 · 2.73 · 아래 CHINESE_GAIT) · 독일 1.0(칸 없음 = 기본 0.62 · 2.05) · 이베리아 1.2(크게 느리게 — 0.744 · 1.71)
@@ -367,23 +367,23 @@ const ITALIAN_OLD_MUL = 1.5; // 지난 판 비교 갈래(`?itRhythm=4+2` · `3+2
 const ITALIAN_STRIDE = { short: 0.62, long: 0.85, speed: 1.3 };
 //   **10/17 14:5x 사장님 결정** '멈춤 기준을 0.6초로 하고(왜냐하면 독일 박차기로 0.6초 멈춤이 기준이기 때문) 막기 중엔 셈을 지우지 않게 함' → idle **0.7 → 0.6 s**.
 //    독일 쪽 0.6 s 는 독일 보법 '간격 잡기'(아래 GERMAN_CHASE.window)의 값이다: 받은 빠른 디딤 사이 걸음이 끝나고 0.6 s 안에 새 걸음이 없으면 남은 빠른 디딤이 사라지는 멈춤 기준
-//    (헛침 뒤 받을 창 · 잡기 시간도 같은 0.6 s). 첫 걸음 박차기(config GAIT.stepBurst)에는 시간 문턱이 없다 — 골반 수평 빠르기 0.3 m/s(burstStandV) 밑이면 '서 있음'.
+//    (헛침 뒤 받을 창 · 잡기 시간도 같은 0.6 s). 첫 걸음 박차기에는 시간 문턱이 없다 — 골반 수평 빠르기 0.3 m/s(burstStandV) 밑이면 '서 있음'.
 //    막는 동안은 셈 시계가 0 에 머문다(gait.js parrying — 같은 결정 · 확인표 2038 · 2039)
 const ITALIAN_RHYTHM = { count: 'foot', normal: 2, fast: 2, every: 3, mul: (ITALIAN_STRIDE.long * ITALIAN_STRIDE.speed) / ITALIAN_STRIDE.short, speedMul: ITALIAN_STRIDE.speed, timeOnly: true, shortFirst: true, idle: 0.6, brake: 0.2, accel: 1.5, accent: FAST_ACCENT }; // accel: 짧은 디딤 몸 가속 한도 × 1.5 (10/21 R0 — 독일 간격 잡기 chase.accel 과 같은 값 · 없으면 몸 가속 한도에 막혀 짧은 디딤이 빨라지지 않았다)
 //  ⓐ″ 독일 보법 '간격 잡기'의 빠른 디딤 chase (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md · 그때 이름 '따라 들어가기' — 10/15 18:0x 부터 '간격 잡기',
-//   AI 패시브 '따라 들어가기 (Nachreisen)'(GERMAN_PASSIVES)와 다른 것. 잡기 = config GAIT.deHold · gait.js holdTick — docs/strike/german_hold_2026-10-15.md): 상대 공격이 칼에도 몸에도 닿지 않고 끝나면(헛침 —
+//   AI 패시브 '따라 들어가기 (Nachreisen)'(GERMAN_PASSIVES)와 다른 것. 잡기 = gait.js holdTick — docs/strike/german_hold_2026-10-15.md): 상대 공격이 칼에도 몸에도 닿지 않고 끝나면(헛침 —
 //   ai.js afterStrike 의 missed · 사람 휘두르기는 skill.js whiffTrack) 그 뒤 window s 안에 앞으로 걷기 시작해야 받고, 받으면 앞으로 steps 걸음이 각각 ×mul —
 //   이탈리아 박자 걸음과 같은 빠른 걸음(gait.js fastBegin — 몸 빠르기·발 박자 ×mul · 같은 발소리 강조). 뒤·옆 걸음은 받지도 쓰지도 않음 · 몸이 아직 뒤로 brake m/s 넘게 가는 앞 걸음은
 //   받기만 하고 빠른 걸음은 다음 앞 걸음부터(박자 걸음 brake 와 같은 까닭). accel = 그 걸음 동안 몸 가속 한도(GAIT.maxAccel) 배율 — 서 있다가 박차고 들어가는 걸음은
 //   가속 한도에 묶여 목표 빠르기만 올려서는 몸이 빨라지지 않는다(chase_step_feel: 끝까지 밀어 1 m 까지 0.95 → 0.87 s 뿐, 한도 × 1.5 면 0.73 s). 박자 걸음엔 없음(뒤 짝걸음 일찍 디딤이 늘어서).
-//   독일 유파 몸만(유파 칸이 아니라 TRADITIONS.german 에 — 독일 걸음 칸이 없어야 지금 걸음 그대로라서). 스위치 GAIT.deChase(`?deChase=0` 끔).
+//   독일 유파 몸만(유파 칸이 아니라 TRADITIONS.german 에 — 독일 걸음 칸이 없어야 지금 걸음 그대로라서).
 //   두 걸음 · ×1.5 · 헛침만 = 사장님 결정 10/15, window 0.6 s · brake 0.2 · accel 1.5 는 사장님 확인 전 (확인표 1512~)
-//   잡기(10/15 18:0x — GAIT.deHold, 플레이어만)는 새 값 없이 이 window 를 잡는 시간으로 다시 쓴다(확인표 1638~ — 잡는 거리는 무기 measure.contact · 풀림은 스틱 데드존)
+//   잡기(10/15 18:0x — 플레이어만)는 새 값 없이 이 window 를 잡는 시간으로 다시 쓴다(확인표 1638~ — 잡는 거리는 무기 measure.contact · 풀림은 스틱 데드존)
 const GERMAN_CHASE = { window: realS(0.6), steps: 2, mul: 1.5, brake: 0.2, accel: 1.5, accent: FAST_ACCENT };
-//  burst: false — 첫 걸음 박차기(10/15 바탕 걸음, config GAIT.stepBurst · docs/strike/step_burst_2026-10-15.md)를 이 유파는 받지 않는다(gait.js 가 gaitParams 로 읽음).
+//  burst: false — 첫 걸음 박차기(10/15 바탕 걸음 · docs/strike/step_burst_2026-10-15.md)를 이 유파는 받지 않는다(gait.js 가 gaitParams 로 읽음).
 //   서 있다가 뒤로 떼는 첫 걸음이 박차기이면서 박자 걸음 첫 디딤이라 '느·느·느·느·빠·빠'가 '빠·느·…'로 흐트러진다(사장님 10/15 13:3x 걱정) — 감독 권고 2안, 사장님 확인 전 (확인표 1580~).
 //   지우면(또는 true) 이탈리아도 박차기를 받는다 — 다른 유파는 칸이 없어 받는다
-//  even: 고른 바탕 걸음 (10/15 — config GAIT.itEven 1 일 때 gait.js gaitParams 가 위에 덮음 · `?itGait=old` = 덮지 않음, 옛 짝걸음 바이트 같음 · docs/strike/italian_rhythm_2026-10-15.md §10):
+//  even: 고른 바탕 걸음 (10/15 — gait.js gaitParams 가 위에 덮음 · docs/strike/italian_rhythm_2026-10-15.md §10):
 //   짝걸음(가까이 · 앞뒤로 천천히)을 고른 짝(ITALIAN_PAIR_EVEN)으로. 지나 딛기(멀리·빨리)의 보폭·박자는 보폭 규칙(strideK 0.7 — 아래 칸 · config GAIT.strideRule)이 맡는다. 값은 사장님 확인 전 (확인표 1710~)
 const ITALIAN_EVEN = { pair: ITALIAN_PAIR_EVEN, dsFrac: 0.21, player: { dsFrac: 0.21 } };
 //  backCap: 뒤 느려짐 없앰(backMul 'flat')에 걸음 수 한도 (10/31 08:xx 사장님 결정 '다른 모든 유파는 물러설 때 70%이지? 그럼 이탈리아도 네걸음 이후에는 (다섯 걸음째부터) 70% 적용'):
@@ -411,7 +411,6 @@ const CHINESE_BOW = { drop: 0.22, lowMax: 0.24, rate: 1.2, inTime: 0.12, outTime
 //   가벼운 발 light (10/15 18:3x 사장님 '가벼운 발로 가자' — 1.5 는 감독 제안 · docs/strike/cn_light_feet_2026-10-15.md · 확인표 1649~): 발로 내는 몸 가속 한도
 //    (GAIT.maxAccel 3.2 m/s²)의 보통 걸음 몫(× 1)에 곱한다(fighter.js driveBalance) — 걷기 시작·멈춤·방향 바꿈이 같은 한도라 셋이 함께 빨라지고, 최고 빠르기(moveSpeed)는 그대로
 //    ('빠르진 않지만 신속하다'). 빠른 걸음·첫 걸음 박차기·세게 멈춤(fastAcc · burstAccel)엔 곱하지 않는다(그 값 그대로). 몸의 일이라 사람·AI 같이 · 칼 입력은 읽지 않는다(보법 = 다리만).
-//    스위치 GAIT.cnLight(`?cnLight=0` = 끔) · 걸음 칸에서 읽으므로 `?schoolGait=0` 이어도 꺼진다
 export const CHINESE_GAIT = { guardHeight: 0.88, walkHeight: 0.95, guardLength: 0.55, guardWidth: 0.16, weightFront: 0.55, maxStride: 0.5, cadence0: 2.5, dsFrac: 0.18, width: 0.07, minWidth: 0.11, lift: 0.05, liftSettle: 0.03, toeUp: 0.15, sway: 0.018, bobAdd: 0.015, dsLow: 1.2, footwork: 'follow', followIn: 3.3, followVmax: 0.8, trailReach: 0.42, dragLift: 0.03, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, guardLow: CHINESE_GUARD_LOW, bow: CHINESE_BOW, light: 1.5, strideK: 0.75 };
 //  ↑ 동방 박자 (10/29 21:0x 사장님 '동방 박자도 바꾸고' — docs/strike/cn_cadence_2026-10-29.md): 보폭 규칙 k 0.9 → 0.75 — 같은 꼭대기(2.0 m/s)를 더 잦고 짧은 걸음으로
 //   (보폭 상한 0.558 → 0.465 · 1 m/s 박자 2.28 → 2.73 · 초당 3.26 → 3.83 걸음 × 0.63 → 0.55 m · 90 % 까지 0.55 → 0.54 s — 가벼운 발 그대로). 독일(k 1.0)은 그대로. 전 판 = `?cnGait=old`
@@ -426,8 +425,8 @@ export function setChineseGait(o) {
 //   · 옆으로 갈 땐 가는 쪽 발 먼저(sideLead · 621) · 옆 보폭 sideStride 0.5 → 0.7(파체코 보통 걸음 3 피에 — 발이 ≈ 0.56 m 옮김, 에텐하르트 60~61 쪽 · 622)
 //   · 옆 빠르기 ×1.3(sideMul — 사장님 '넣기', 확인표 509 를 이베리아 옆만 풂 · 623) · 몸 곧게 = 골반 낮춤 뺌(티보 1630 표 I 원 No.4 '몸을 곧게', 피게이레두 규칙 I · 624)
 //   · 두 발 너비 0.34 그대로(사장님 '다양성을 고려해 지금 유지' · 625). 발끝 틀기 arcYaw·옆 몫 문턱 crossFrom 은 그대로
-//  burstSide: true — 첫 걸음 박차기(config GAIT.stepBurst)의 옆 박차기(옆·비스듬히 옆)는 이 유파만(10/15 15:1x 사장님 '옆으로 박차기는 이베리아 유파만 사용하게 바꿔' — 둥근 걸음·옆 빠르기의 유파).
-//   (10/15 20:4x 사장님 '박차기는 독일 보법으로 넣어' — 뒤 박차기는 독일 유파만 · config GAIT.burstDe · gait.js update 걷기 시작 자리: 이베리아는 옆만 · 그 밖 유파는 박차기 없음.
+//  burstSide: true — 첫 걸음 박차기의 옆 박차기(옆·비스듬히 옆)는 이 유파만(10/15 15:1x 사장님 '옆으로 박차기는 이베리아 유파만 사용하게 바꿔' — 둥근 걸음·옆 빠르기의 유파).
+//   (10/15 20:4x 사장님 '박차기는 독일 보법으로 넣어' — 뒤 박차기는 독일 유파만 · gait.js update 걷기 시작 자리: 이베리아는 옆만 · 그 밖 유파는 박차기 없음.
 //    아래 옛 설명 '다른 유파는 뒤 박차기만'은 `?burstDe=0` 판) 다른 유파는 뒤 박차기만(뒤 몫이 옆 몫 이상 — 비스듬히 뒤면 앞뒤 몫만 빠르게) · 이탈리아는 박차기 없음(burst: false) — gait.js 가 gaitParams 로 읽음 (확인표 1631~ · docs/strike/step_burst_2026-10-15.md §8)
 const IBERIAN_GAIT = { guardLength: 0.62, guardWidth: 0.34, weightFront: 0.5, maxStride: 0.68, cadence0: 1.85, cadenceK: 0.45, width: 0.13, minWidth: 0.16, lift: 0.08, sway: 0.025, arcYaw: 0.35, crossFrom: 0.5, sideStride: 0.7, sideLead: true, sideMul: 1.3, burstSide: true, strideK: 1.2 };
 //  ⓒ 일본: 스리아시·오쿠리아시 [원문 검도형 p24·p06] · 늘 걷듯이·뜬발을 꺼림 [원문 고린노쇼 p20] — 낮고 안정, 짧은 앞뒤 간격. 앞무게 틀(모노호시자오 — 큰 칼)은 byFrame.heavy: 앞뒤 조금 길게, 발 놀림은 번갈아 걷기(고린노쇼 음양의 발 [원문] — follow 는 48×2 판 옮겨 딛기 1.73 → 3.2~4.2/판, 잣대 ×1.5 밖)

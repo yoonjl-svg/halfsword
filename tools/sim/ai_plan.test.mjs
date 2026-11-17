@@ -10,10 +10,6 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
 import { bandOf, tiltOf, luckOf, distErrWidth, planFor, judgePhase, seenStep, axesOf, PHASES } from '../../src/ai_plan.js';
 import { foeStep, mirrorOk, mirrorStep } from '../../src/italian_risoluto.js';
-import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
-// 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
-//  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
-const pinLodge0 = (t) => { const lh = CONFIG.STRIKE.lodgeHold; CONFIG.STRIKE.lodgeHold = 0; t.after(() => { CONFIG.STRIKE.lodgeHold = lh; }); };
 
 const { AI_PLAN, JP_TANK } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -330,14 +326,6 @@ test('파고들기 (사장님 11/14 — 공통 틀): 내 칼이 상대 칼보다
   assert.notEqual(on.text, off.text, '파고들기 판은 달라짐');
 });
 
-test('파고들기 판: 모르겐슈테른 AI 대 롱소드 AI — 헛친 틈 · 늘린 시간 한도 · 받으며 들어감이 쓰임', (t) => { pinLodge0(t);
-  const G = newRound({ seed: 1, walls: true, weapon: 'longsword', weapon2: 'morgenstern', AI2Class: AI, difficulty: 'normal', persona: { proficiency: 5 }, persona2: { proficiency: 5 } });
-  while (G.t < 20 && G.player.alive && G.enemy.alive) G.step();
-  const D = G.ai.stats.dig;
-  G.world.free();
-  assert.ok(D, '파고들기 재기 칸');
-  assert.ok(D.recover + D.keep + D.long > 0, JSON.stringify(D));
-});
 
 /** 판을 만들고 시작 정지를 지난 뒤 일본 AI 하나 — 상대 롱소드 */
 function jpAi(prof, weapon = 'uchigatana') {
@@ -348,29 +336,6 @@ function jpAi(prof, weapon = 'uchigatana') {
   return { G, ai, free: () => G.world.free() };
 }
 
-test('2 단계 일본 — 플랜 · 스택 · 바위 몸 AI (사장님 11/14 확인) · 숙련도 4 부터 스택 · 옛 판 스위치', async (t) => {
-  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 일본 바위 몸 AI 몫이 4 → 5 단계(J12) · 기준 그대로
-  const { lowShoveFree } = await import('../../src/jp_tank.js');
-  assert.equal(JP_TANK.ai, 1);
-  const got = [0, 2, 3, 4, 5].map((p) => {
-    const { ai, free } = jpAi(p);
-    const r = { p, plan: !!ai.plan, jp: !!ai.planJp, stack: !!ai.me.schoolPassive?.stackOn, rock: lowShoveFree(ai.me), tsubame: !!ai.school.techByName.tsubameGaeshi, lure: !!ai.planLure, dig: ai.digNow() };
-    free();
-    return r;
-  });
-  assert.deepEqual(got.map((r) => r.jp), [false, true, true, true, true], '무 = 플랜 없음');
-  assert.deepEqual(got.map((r) => r.stack), [false, false, false, true, true], '스택 = 4 급 유파 패시브(숙련도 4 부터 — 사람 4 급 책과 같음)');
-  assert.deepEqual(got.map((r) => r.rock), [false, false, false, true, true], '바위 몸 밀치기 기력 0 도 스택 판인 AI');
-  assert.deepEqual(got.map((r) => r.lure), [false, false, false, true, true], '유도 4 부터');
-  assert.ok(got.every((r) => r.dig), '우치가타나 — 짧은 칼 파고들기는 플랜과 함께 그대로 걸림');
-  withPlan({ on: 0 }, () => {
-    const { ai, free } = jpAi(5);
-    assert.equal(ai.plan, null);
-    assert.equal(ai.me.schoolPassive.stackOn, false, '옛 판 = AI 스택 끔');
-    assert.equal(lowShoveFree(ai.me), false);
-    free();
-  });
-});
 
 test('2 단계 일본 — 기울기: 스택 문턱 · 막기 쪽 · 서 있기 · 기술 · 버릇 · 되풀이 · 제비 베기 (절대 규칙 없음)', async () => {
   const { jpNeed, jpVoid, jpStill, jpTechK, jpSeeThreat, jpGuardChance, jpRead, jpTsubame } = await import('../../src/ai_plan_jp.js');
@@ -497,49 +462,6 @@ function deAi(prof, foeWeapon = 'longsword', persona = {}) {
   return { G, ai, free: () => G.world.free() };
 }
 
-test('3 단계 독일 — 플랜 · 인물 칸 없는 밀치기 · 칼 씨름 · 파고들기 · 뒤 박차기 장치 · 옛 판 스위치', async (t) => {
-  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 칼 씨름 AI 몫이 독일 플랜 몸 → 5 단계(G12) · 기준 그대로
-  const { deDirtyBody } = await import('../../src/de_dirty.js');
-  const got = [0, 2, 4, 5].map((p) => {
-    const { ai, free } = deAi(p);
-    ai.planC = ai.plan?.contest ?? null;
-    const C = ai.closeCfg();
-    const r = { p, de: !!ai.planDe, shove: !!ai.me.canShove, rate: C?.rate ?? 0, pommel: C?.pommel ?? 0, ring: deDirtyBody(ai.me, 'deRing'), lure: !!ai.planLure };
-    free();
-    return r;
-  });
-  assert.deepEqual(got.map((r) => r.de), [false, true, true, true], '무 = 플랜 없음');
-  assert.deepEqual(got.map((r) => r.ring), [false, true, true, true], '칼 씨름 AI 몫 = 독일 플랜 몸');
-  assert.ok(got.slice(1).every((r) => r.shove && r.rate > 0 && r.rate < 1), '인물 칸 없는 밀치기 — 밀 몫은 기울기(늘은 아님)');
-  assert.ok(got[1].rate < got[3].rate, `띠가 높을수록 더 밂 ${got[1].rate} < ${got[3].rate}`);
-  assert.equal(got[0].pommel, AI_PLAN.pommel, '무(플랜 없음)도 손잡이 찍기 — 모든 AI');
-  assert.deepEqual(got.map((r) => r.lure), [false, false, true, true], '바보 자세 유도 4 부터');
-  // 파고들기 · 뒤 박차기 장치 (사람과 같은 박찬 걸음) — 독일 몸만
-  const { ai, free } = deAi(2);
-  ai.me.gait.burst = null;
-  assert.equal(ai.me.gait.deDigAi(), true);
-  assert.equal(ai.me.gait.burst.dig, CONFIG.GAIT.digSteps, '두 걸음');
-  ai.me.gait.burst = null;
-  assert.equal(ai.me.gait.backBurstAi(), true);
-  free();
-  const it = itAi(2);
-  while (it.G.t < (CONFIG.ARENA.startHold ?? 0) + 0.1) it.G.step();
-  it.ai.me.gait.burst = null;
-  assert.equal(it.ai.me.gait.deDigAi(), false, '이탈리아 몸은 안 걸림');
-  it.free();
-  // 옛 판 스위치 · 한 몸만 옛 판(persona.planOff — 재기 도구)
-  withPlan({ on: 0 }, () => {
-    const o = deAi(5);
-    assert.equal(o.ai.plan, null);
-    assert.equal(o.ai.closeCfg(), null, '옛 판 = 인물 칸 없으면 밀치기 · 찍기 없음');
-    assert.equal(deDirtyBody(o.ai.me, 'deRing'), false);
-    o.free();
-  });
-  const off1 = deAi(5, 'longsword', { planOff: true });
-  assert.equal(off1.ai.plan, null);
-  assert.equal(off1.ai.closeCfg(), null);
-  off1.free();
-});
 
 test('3 단계 독일 — 내 기력 ↔ 상대 기력의 차 (우위면 밀어 묶음 · 열세면 숨 고름 · 띠가 높을수록 또렷 · 높음은 바위 몸 상대면 뒤집음)', async () => {
   const { deDiff, deCloseCfg, deHoldM } = await import('../../src/ai_plan_de.js');
@@ -640,22 +562,3 @@ test('독일 붙은 거리 연계 (사장님 11/15 결정 (나) · (다)): 낮�
   }
 });
 
-test('3 단계 — 숙련도 실력 숫자 새 띠 (3 = normal · 4 = hard) · 숙련도 0 = 유파 패시브 · schoolK 0 (권고대로 · 옛 판은 그대로)', (t) => {
-  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 옛 판(플랜 끔) 숙련 0 레이피어 AI 의 유파 패시브 = 반응 버릇 빼서 찌르기 하나뿐 — 칸 판은 칼끝 돌려 빼기 칸(I2)이 있어야 · 기준 그대로
-  const lv = (p, on = 1) => withPlan({ on }, () => {
-    const G = newRound({ weapon: 'longsword', weapon2: 'rapier', seed: 1 });
-    const ai = new AI(G.enemy, G.player, CONFIG.AI_PROFICIENCY.levels[p], { proficiency: p });
-    const r = { name: ai.levelName, passives: ai.passives.length };
-    G.world.free();
-    return r;
-  });
-  assert.deepEqual([0, 1, 2, 3, 4, 5, 6].map((p) => lv(p).name), AI_PLAN.levels, '새 띠 표');
-  assert.equal(lv(3, 0).name, 'hard', '옛 판 — 3 = hard');
-  assert.equal(lv(3).name, 'normal');
-  assert.equal(lv(0).passives, 0, '숙련도 0 — 유파 패시브 없음');
-  assert.ok(lv(0, 0).passives > 0, '옛 판 — 숙련도 0 도 유파 패시브');
-  // 인물이 아닌 이름(난이도 'normal' 그대로 · 숙련도 5)은 바꾸지 않음 — 표에서 고른 이름일 때만
-  const G = newRound({ weapon: 'longsword', weapon2: 'rapier', seed: 1 });
-  assert.equal(new AI(G.enemy, G.player, 'normal', { proficiency: 5 }).levelName, 'normal');
-  G.world.free();
-});

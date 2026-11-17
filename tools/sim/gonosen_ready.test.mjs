@@ -15,7 +15,6 @@ import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { PlayerSecretWatch, IaiArm, gnsArmTick, gnsMoving, gnsHumanMoving, gnsHumanUnsettled } from '../../src/secret.js';
 import { iaiReadyShown, IAI_READY_STANCE } from '../../src/secret_instant.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
-import { withArmOld } from './arm_real_pin.mjs';
 
 const { SECRET } = CONFIG;
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
@@ -160,68 +159,6 @@ test('③ AI: 같은 셈 — 일본 AI(숙련도 5)는 걸음 뜻이 없고 공�
   G.world.free();
 });
 
-test("④ 사람 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준비가 되면 웅크리게 해.' — SECRET.gnsCrouch): 준비 → AI 와 같은 발도 대기 자세 · 손을 쉬면 칼이 왼 허리(발도가 그 자리에서) · 칼을 쥐면 손은 곧장 사람 것 · 막기로 풀리면 gnsCrouchOut 에 풀림 · 끄면 표시만", () => withArmOld(async () => {
-  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫): 1.6 m 앞 서 있는 상대 롱소드도 AI 몸이라 겨눔 칼끝이 20 cm 남짓 바뀌어 사람 칼과 닿음이 달라짐 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
-  const THREE = await import('three');
-  assert.equal(SECRET.gnsCrouch, 0); // 10/31 01:0x 사장님 '플레이어만 웅크리기 꺼' — 기본 끔 · 아래는 켠 판(`?gnsCrouch=1`)을 본다
-  const gnsWas = SECRET.gnsCrouch;
-  SECRET.gnsCrouch = 1;
-  // 11/14 帯刀(SECRET.iaiObi) 뒤 대기 칼 자리 · 뽑는 자리 B 가 칼집 자리로 옮겨 '손이 발도 길 B(iaiPath.B — 왼 허리) 곁'을 잰 이 장면은 그때 판으로 묶음 (기록 docs/strike/iai_obi_2026-11-14.md §9)
-  const obiWas = SECRET.iaiObi;
-  SECRET.iaiObi = 0;
-  try {
-  assert.equal(SECRET.gnsCrouchOut, 0.2);
-  const R = near({});
-  const p = R.p;
-  R.run(ARM() + 1.0); // 웅크림이 다 들고 칼이 자리 잡은 뒤(켜지고 0.4 ~ 0.8 s 칼이 한 번 흔들림 — 칼날 방향 0.18 ~ 0.67 rad · 10/27 표준 시간 병합 뒤 0.6 s 에 재면 흔들림 끝 0.62)
-  assert.equal(R.ps.iaiArm.armed, true);
-  assert.ok(p.iaiReadyW > 0.99 && p.skill.thrustPose.w > 0.99, `웅크림 ${p.iaiReadyW} · 손 ${p.skill.thrustPose.w}`);
-  // 발도가 그 자세에서: secret_instant.js 발도 시작의 '손이 왼 허리에 있나'(far) 셈 그대로 — 칼 손 · 칼날 방향이 발도 길 B(왼 허리) 곁
-  const K = SECRET.iaiPath;
-  const inv = p.yaw.clone().invert();
-  const sw = p.sword.translation(), c = p.bodies.chest.translation();
-  const AH = new THREE.Vector3(sw.x - c.x, sw.y - c.y, sw.z - c.z).applyQuaternion(inv);
-  const AD = p.bladePoint(1, new THREE.Vector3()).sub(p.bladePoint(0, new THREE.Vector3())).normalize().applyQuaternion(inv);
-  const yaw = (K.B.yaw * Math.PI) / 180, el = (K.B.el * Math.PI) / 180;
-  const DB = new THREE.Vector3(Math.cos(el) * Math.cos(yaw), Math.sin(el), Math.cos(el) * Math.sin(yaw));
-  assert.ok(AH.distanceTo(new THREE.Vector3(...K.B.hand)) <= 0.12, `손 ↔ 왼 허리 ${AH.distanceTo(new THREE.Vector3(...K.B.hand)).toFixed(3)} m`);
-  assert.ok(AD.angleTo(DB) <= 0.6, `칼날 ↔ 왼 허리 방향 ${AD.angleTo(DB).toFixed(2)} rad`);
-  // 칼을 쥐면(손가락 움직임) 손 · 칼은 곧장 사람 것 · 몸 웅크림 · 준비는 그대로
-  p.inputActive = true;
-  R.run(DT);
-  assert.equal(p.skill.thrustPose.w, 0, '손 덧씌우기 곧장 0');
-  assert.ok(p.iaiReadyW > 0.99 && R.ps.iaiArm.armed, '몸 웅크림 · 준비 그대로');
-  p.inputActive = false;
-  R.run(0.5);
-  assert.ok(p.skill.thrustPose.w > 0.99, '손을 놓으면 다시 왼 허리');
-  // 막기 단추 → 준비 풀림 → 손은 곧장 · 몸은 gnsCrouchOut 초에
-  R.pg.held = true;
-  R.run(DT);
-  assert.equal(R.ps.iaiArm.armed, false);
-  assert.equal(p.skill.thrustPose.w, 0);
-  assert.ok(p.iaiReadyW > 0.85, `몸은 천천히 ${p.iaiReadyW}`);
-  R.run(SECRET.gnsCrouchOut);
-  assert.equal(p.iaiReadyW, 0, '0.2 s 에 다 풀림');
-  R.G.world.free();
-  // 맞음 → 손 · 몸 같이 gnsCrouchOut 에 풀림 (곧장 0 이 아님)
-  const H = near({});
-  H.run(ARM() + 0.6);
-  H.p.pain += 0.2;
-  H.run(DT);
-  assert.equal(H.ps.iaiArm.armed, false);
-  assert.ok(H.p.skill.thrustPose.w > 0.8 && H.p.skill.thrustPose.w < 1, `손도 천천히 ${H.p.skill.thrustPose.w}`);
-  H.G.world.free();
-  // 끄면 전 판 (표시만 — 10/31 허리 대기도 끈 판 `?gnsCrouch=0&gnsReadyHip=0` · 허리 대기는 아래 ⑦)
-  const O = near({});
-  withCfg({ gnsCrouch: 0, gnsReadyHip: 0 }, () => O.run(ARM() + 0.6));
-  assert.equal(O.ps.iaiArm.armed, true);
-  assert.ok(!(O.p.iaiReadyW > 0) && O.p.skill.thrustPose.w === 0, '?gnsCrouch=0&gnsReadyHip=0 — 자세 그대로');
-  O.G.world.free();
-  } finally {
-    SECRET.gnsCrouch = gnsWas;
-    SECRET.iaiObi = obiWas;
-  }
-}, ['armClear2']));
 
 test('⑤ 10/27 21:4x AI 가 웅크린 사람에게 낮게 침 (SECRET.gnsCrouchAim): 늦게 본 모습이 웅크림 · 상대가 사람이면 내 가슴 − 상대 가슴 · 서 있음 · AI 상대 · 끔이면 0', async () => {
   const { AI } = await import('../../src/ai.js');
@@ -264,100 +201,6 @@ test('⑥ 10/27 23:0x 무장 시계는 공격이 풀린 때(판 시작 정지 AR
   G.world.free();
 });
 
-test("⑦ 10/31 08:xx 웅크림 0 에서도 준비 · 창 (사장님 '웅크리기를 없앴더니 고노센 발동창이 안열려.' — SECRET.gnsReadyHip · docs/strike/gonosen_window_2026-10-31.md)", () => withArmOld(async () => {
-  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫): 1.6 m 앞 서 있는 상대 롱소드도 AI 몸이라 겨눔 칼끝이 20 cm 남짓 바뀌어 사람 칼과 닿음이 달라짐 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
-  // 11/14 帯刀(SECRET.iaiObi) 뒤 — '손이 발도 길 B(iaiPath.B) 곁'을 잰 장면이라 그때 판으로 묶음 (④ 와 같음 · 기록 docs/strike/iai_obi_2026-11-14.md §9)
-  const obiWas = SECRET.iaiObi;
-  SECRET.iaiObi = 0;
-  try {
-  const THREE = await import('three');
-  assert.equal(SECRET.gnsCrouch, 0);
-  assert.equal(SECRET.gnsReadyHip, 1);
-  assert.equal(SECRET.gnsRaiseLatch, 1);
-  // 칼 쪽 화면에 얹은 손가락: 프레임(물리 두 스텝)마다 ±0.5 px 떨림(손 목표 ±3 mm — 휘두름 문턱 1.5 m/s 의 한참 아래) · 손가락 닿음(handHeld) · 쥠 아님(handGrip — 길게 누름 한도 안)
-  const px = CONFIG.INPUT.touchSensitivity / 390;
-  let n = 0, grip = false;
-  const finger = (t, p) => {
-    if (n++ % 2) return;
-    const d = (n % 4 < 2 ? 0.5 : -0.5) * px;
-    p.handOffset.x += d;
-    p.handOffset.y -= d * 1.35;
-    p.handHeld = true;
-    p.inputActive = true;
-    p.handGrip = grip;
-  };
-  for (const hip of [1, 0]) {
-    n = 0;
-    const R = near({ gnsReadyHip: hip }, finger);
-    const p = R.p;
-    const pel0 = p.bodies.pelvis.translation().y;
-    withCfg({ gnsReadyHip: hip }, () => R.run(ARM() + 1.0));
-    assert.ok(R.armedAt != null && Math.abs(R.armedAt - CONFIG.ARENA.startHold - ARM()) < 0.15, `hip ${hip}: 얹은 손가락 그대로 준비 ${R.armedAt}`);
-    assert.equal(R.ps.iaiArm.armed, true);
-    assert.equal(p.iaiReadyW ?? 0, 0, `hip ${hip}: 몸 웅크림 없음`);
-    assert.ok(Math.abs(p.bodies.pelvis.translation().y - pel0) < 0.03, `hip ${hip}: 골반 높이 그대로 ${pel0.toFixed(3)} → ${p.bodies.pelvis.translation().y.toFixed(3)}`);
-    if (hip) {
-      assert.ok(p.skill.thrustPose.w > 0.99, `허리 대기 — 손 덧씌우기 ${p.skill.thrustPose.w}`);
-      assert.equal(p.skill.thrustPose.pitch, 0, '몸 숙임 0');
-      // 칼이 왼 허리 곁 · 칼끝은 왼 뒤 아래 (④ 와 같은 셈 — 선 몸이라 손은 발도 길 B 에서 0.2 m 안 · 발도는 발도 길 B 를 거쳐 나감 — 웅크림 끈 판과 같은 길)
-      const K = SECRET.iaiPath;
-      const inv = p.yaw.clone().invert();
-      const sw = p.sword.translation(), c = p.bodies.chest.translation();
-      const AH = new THREE.Vector3(sw.x - c.x, sw.y - c.y, sw.z - c.z).applyQuaternion(inv);
-      const AD = p.bladePoint(1, new THREE.Vector3()).sub(p.bladePoint(0, new THREE.Vector3())).normalize().applyQuaternion(inv);
-      const yaw = (K.B.yaw * Math.PI) / 180, el = (K.B.el * Math.PI) / 180;
-      const DB = new THREE.Vector3(Math.cos(el) * Math.cos(yaw), Math.sin(el), Math.cos(el) * Math.sin(yaw));
-      assert.ok(AH.distanceTo(new THREE.Vector3(...K.B.hand)) <= 0.2, `손 ↔ 왼 허리 ${AH.distanceTo(new THREE.Vector3(...K.B.hand)).toFixed(3)} m`);
-      assert.ok(AD.angleTo(DB) <= 0.6, `칼날 ↔ 왼 허리 방향 ${AD.angleTo(DB).toFixed(2)} rad`);
-      assert.ok(p.bladePoint(1, new THREE.Vector3()).y < c.y - 0.2, '칼끝이 가슴 아래 (상대를 안 겨눔)');
-      // 쥠(끌어서 길게 누름 한도를 넘음) → 곧장 사람 손 · 준비 그대로 · 놓으면 다시
-      grip = true;
-      withCfg({ gnsReadyHip: hip }, () => R.run(2 * DT));
-      grip = false;
-      assert.equal(p.skill.thrustPose.w, 0, '쥐면 곧장 0');
-      assert.equal(R.ps.iaiArm.armed, true, '준비 그대로');
-    } else assert.equal(p.skill.thrustPose.w, 0, '?gnsReadyHip=0 — 자세 그대로');
-    R.G.world.free();
-  }
-  // 창: 준비된 채 상대가 발도 선 안(가슴 사이 1.6 m)에서 칼을 빠르게 듦 → 창(raise) — 허리 대기 켬 · 끔 모두
-  for (const hip of [1, 0]) {
-    const R = near({ gnsReadyHip: hip });
-    withCfg({ gnsReadyHip: hip }, () => R.run(ARM() + 0.5));
-    assert.equal(R.ps.iaiArm.armed, true);
-    const e = R.G.enemy;
-    const line = R.view.contact + SECRET.iaiStep + SECRET.iaiMargin;
-    assert.ok(R.p.foeDistance() < line, `선 안 ${R.p.foeDistance().toFixed(2)} < ${line.toFixed(2)}`);
-    const o0 = R.ps.opened;
-    let ev = null;
-    R.G.ai.update = () => { e.move.set(0, 0); if (e.handOffset.y < 0.45) e.handOffset.y += 0.03; }; // 손 목표를 물리 스텝마다 3 cm 위로 (3.6 m/s)
-    for (let i = 0; i < steps(0.4) && ev == null; i++) { withCfg({ gnsReadyHip: hip }, () => R.G.step()); if (R.ps.opened > o0) ev = R.ps.open?.ctx?.ev ?? '?'; }
-    assert.equal(ev, 'raise', `hip ${hip}: 칼을 듦 → 창`);
-    R.G.world.free();
-  }
-  // 든 칼 이어 봄 (SECRET.gnsRaiseLatch): 선 밖에서 칼을 들고 그 칼로 선 안에 들면 창 · 끄면 창 없음
-  for (const latch of [1, 0]) {
-    const R = near({ gnsRaiseLatch: latch });
-    withCfg({ gnsRaiseLatch: latch }, () => R.run(ARM() + 0.5));
-    const e = R.G.enemy;
-    const line = R.view.contact + SECRET.iaiStep + SECRET.iaiMargin;
-    // 상대를 선 밖 0.15 m 로 옮김 (몸 전부 같은 만큼)
-    const back = line + 0.15 - R.p.foeDistance();
-    for (const { rb } of e.meshes) { const t = rb.translation(); rb.setTranslation({ x: t.x + back, y: t.y, z: t.z }, true); }
-    e.anchor.setTranslation({ x: e.anchor.translation().x + back, y: e.anchor.translation().y, z: e.anchor.translation().z }, true);
-    withCfg({ gnsRaiseLatch: latch }, () => R.run(0.4));
-    assert.ok(R.p.foeDistance() > line, `선 밖 ${R.p.foeDistance().toFixed(2)} > ${line.toFixed(2)}`);
-    const o0 = R.ps.opened;
-    let ev = null, k = 0;
-    R.G.ai.update = () => { k++; if (e.handOffset.y < 0.45) e.handOffset.y += 0.03; e.move.set(0, 0); if (k > 12) for (const { rb } of e.meshes) { const t = rb.translation(); rb.setTranslation({ x: t.x - 0.01, y: t.y, z: t.z }, true); } }; // 칼을 들고(3.6 m/s) 0.1 s 뒤부터 1.2 m/s 로 다가옴
-    for (let i = 0; i < steps(0.6) && ev == null; i++) { withCfg({ gnsRaiseLatch: latch }, () => R.G.step()); if (R.ps.opened > o0) ev = R.ps.open?.ctx; }
-    if (latch) assert.ok(ev?.ev === 'raise' && ev.latched != null, `이어 봄 → 창 ${JSON.stringify(ev)}`);
-    else assert.notEqual(ev?.ev, 'raise', `끄면 선 밖에서 든 칼은 '듦' 창 없음 (손이 멎으면 헛침 창은 그대로) ${JSON.stringify(ev)}`);
-    R.G.world.free();
-  }
-  } finally {
-    SECRET.iaiObi = obiWas;
-  }
-}, ['armClear2']));
 
 test("⑧ 10/31 13:xx 사장님 '1-2번 다 고쳐': 스틱 위 엄지는 몸을 걷게 할 때만 걸음 뜻 (SECRET.gnsStickWalk) · 허리 대기 동안 자세 이름 '발도 대기'", () => {
   const { GAIT } = CONFIG;

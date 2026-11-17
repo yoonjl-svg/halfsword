@@ -121,17 +121,16 @@ function mkLeg(k, side) {
 
 /**
  * 유파 걸음 (10/10 비싼 층 — docs/strike/school_gait_design_2026-10-10.md): 무기의 유파(fighter.swordArt.tradition) 걸음 칸
- *  TRADITIONS[t].gait 를 GAIT 위에 덮은 값. 칸이 없는 유파(독일·무유파)와 GAIT.school 0(`?schoolGait=0`)은 **GAIT 객체 그 자체** →
- *  읽는 값·연산이 한 비트도 안 바뀐다. 칸이 있으면 GAIT 를 프로토타입으로 둔 객체(덮지 않은 열쇠는 전역 값 — with_config·주소 손잡이도 그대로 따라감).
+ *  TRADITIONS[t].gait 를 GAIT 위에 덮은 값. 칸이 없는 유파(독일·무유파)는 **GAIT 객체 그 자체** →
+ *  읽는 값·연산이 한 비트도 안 바뀐다. 칸이 있으면 GAIT 를 프로토타입으로 둔 객체(덮지 않은 열쇠는 전역 값 — with_config 도 그대로 따라감).
  *  byFrame[틀]: 그 몸 틀(swordArt.frame)만 더 덮는 값(일본 앞무게 = 모노호시자오). 플레이어도 같은 걸음(사장님 10/10 05:1x '플레이어도 유파 영향') —
  *  player: 플레이어 쪽(fighter.index 0 이고 AI 가 몰지 않을 때)만 다시 덮는 값(조작감 완화용)
- *  even: GAIT.itEven(10/15 이탈리아 '고른 바탕 걸음' — `?itGait=old` 면 0)일 때 그 위에 다시 덮는 값(even.player 는 플레이어만) — 끄면 덮지 않아 옛 걸음 그대로
- *  보폭 규칙 (10/15 20:3x 사장님 — GAIT.strideRule, docs/strike/stride_rule_2026-10-15.md): 칸에 strideK(k)가 있으면 맨 끝에 보폭 상한 = GAIT.maxStride × k · 1 m/s 박자 = GAIT.cadence0 ÷ k 로
+ *  even: 그 위에 다시 덮는 값 (10/15 이탈리아 '고른 바탕 걸음' — even.player 는 플레이어만)
+ *  보폭 규칙 (10/15 20:3x 사장님 — docs/strike/stride_rule_2026-10-15.md): 칸에 strideK(k)가 있으면 맨 끝에 보폭 상한 = GAIT.maxStride × k · 1 m/s 박자 = GAIT.cadence0 ÷ k 로
  *   (덮어쓰기 칸 byFrame·player 의 그 두 값도 이것으로 — 사람·AI 같은 보폭 · 박자는 빠르기 ÷ 보폭). 끄면(0) 칸 값 그대로(바이트 같음) — 일본은 10/29 strideK 뺌(설계 박자 · 보폭 칸 그대로)
  *  speedMul: 가려는 빠르기 배율(update — 일본 0.70 · 10/29 사장님 '확연히 느려도 돼' · 10/31 '일본 바로잡아' 0.67 → 0.70) · settleStance: 서 있는 자세 길이 고쳐 딛기(settleLeg · target — 일본)
  */
 export function gaitParams(f, isPlayer = false) {
-  if (!GAIT.school) return GAIT;
   const art = f.swordArt;
   const g = TRADITIONS[footworkTradition(f)]?.gait; // 대기실 스킬트리 보법 I 을 안 익혔으면(플레이어만 — schools.js footworkTradition) 기본 걸음
   if (!g) return GAIT;
@@ -143,11 +142,11 @@ export function gaitParams(f, isPlayer = false) {
   put(g);
   put(g.byFrame?.[art.frame]);
   if (isPlayer) put(g.player);
-  if (g.even && GAIT.itEven) {
+  if (g.even) {
     put(g.even);
     if (isPlayer) put(g.even.player);
   }
-  if (GAIT.strideRule && g.strideK) {
+  if (g.strideK) {
     P.maxStride = GAIT.maxStride * g.strideK;
     P.cadence0 = GAIT.cadence0 / g.strideK;
   }
@@ -161,11 +160,11 @@ export function gaitParams(f, isPlayer = false) {
 
 /**
  * follow 안 'pass' → lunge + 끌어붙임(passAs) 걸음 길이 (10/29 18:5x 사장님 '네 제안대로' — docs/strike/step_ladder_2026-10-29.md §11):
- *  GAIT.passAsRung 1 = 가까운 사다리 칸(GAIT.stepRungs)으로 맞춘 뒤 한 칸 아래 · 맨 아래 칸(0.3) 이하는 그대로(늘리지 않음) · pa.rung === false 면 옛 꼴 ·
- *  0 = 옛 판 × pa.fwdK (0.85). 뒤 · 0 걸음은 그대로
+ *  가까운 사다리 칸(GAIT.stepRungs)으로 맞춘 뒤 한 칸 아래 · 맨 아래 칸(0.3) 이하는 그대로(늘리지 않음) · pa.rung === false 면 × pa.fwdK ·
+ *  뒤 · 0 걸음은 그대로
  */
 export function passAsFwd(fwd, pa) {
-  if (!GAIT.passAsRung || pa?.rung === false) return fwd * (pa?.fwdK ?? 1);
+  if (pa?.rung === false) return fwd * (pa?.fwdK ?? 1);
   const R = GAIT.stepRungs;
   if (!(fwd > R[0])) return fwd;
   let i = 0;
@@ -219,10 +218,10 @@ export class Gait {
     this.digStep = false; // 지금 걸음이 파고들기 박찬 앞 걸음인가 (11/14 — fastBegin · 그 순간 창 시계가 멈춤 school_passive.js)
     this.digs = 0; // 파고들기를 낸 수 (첫 박찬 앞 걸음을 뗀 수 — 재기만)
     this.digSteps = 0; // 파고들기 박찬 앞 걸음 수 (재기만)
-    // 간격 잡기의 잡기(10/15 — GAIT.deHold, holdTick · 플레이어만): hold = 잡는 중 { t 지난 시간, T 잡는 시간 } · holdBrake = 걸 때 상대 쪽 단위 벡터(세게 멈춤 — 몸이 설 때까지) ·
+    // 간격 잡기의 잡기(10/15 — holdTick · 플레이어만): hold = 잡는 중 { t 지난 시간, T 잡는 시간 } · holdBrake = 걸 때 상대 쪽 단위 벡터(세게 멈춤 — 몸이 설 때까지) ·
     //  holdEnd = 마지막 잡기가 풀린 까닭('time' · 'stick' · 'state' — 읽기만 하는 표시)
     this.hold = this.holdBrake = this.holdEnd = null;
-    // 첫 걸음 박차기(10/15 — GAIT.stepBurst): burst = 서 있다가 뒤·옆으로 걷기 시작한 순간 걸고(update) 첫 걸음을 뗄 때 쓴다(fastBegin) — { fore, side 스틱 방향 부호 · lat 옆 몫 비율 } ·
+    // 첫 걸음 박차기(10/15): burst = 서 있다가 뒤·옆으로 걷기 시작한 순간 걸고(update) 첫 걸음을 뗄 때 쓴다(fastBegin) — { fore, side 스틱 방향 부호 · lat 옆 몫 비율 } ·
     //  burstLeg = 그 걸음의 발(디딜 자리를 박찬 가속으로 내다봄 — burstAhead) · burstBrake = 박찬 쪽 단위 벡터(몸이 따라잡을 때까지 가속 한도 그대로 — 세게 멈춤)
     this.burst = this.burstLeg = this.burstBrake = null;
     this.lungeBrake = null; // 안다레 리솔루토 런지 걸음 몸 가속 (아래 req.accel)
@@ -359,7 +358,7 @@ export class Gait {
    *  push: 기술 걸음 동안 몸이 따라 나가는 배율 (없으면 1 — 전과 같다. 일본 後の先 ② '앞발을 강하게')
    */
   requestStep(o = {}) {
-    if (!GAIT.requestSteps || !this.active || this.f.state !== 'stand') return false;
+    if (!this.active || this.f.state !== 'stand') return false;
     if (this.f.feetHeld || this.f.fireHold) return false; // 판 시작 정지 (ARENA.startHold): 기술 걸음도 받지 않는다 · AI 가 쏘는 동안(fireHold — 10/29)도
     // 물러나는 중이면 받지 않는다 (몸은 뒤로, 발은 앞으로 가면 넘어진다). 뒤로 딛는 걸음(retreat)은 예외
     if (this.f.move.y < -0.1 && o.kind !== 'retreat' && !o.force) return false; // force: 겹치기 앞 박차기 (몸은 이미 미끄러져 나감 — 발도 따라 디뎌야 넘어지지 않음)
@@ -372,7 +371,7 @@ export class Gait {
     const pa = this.follow && o.kind === 'pass' ? this.P.passAs : null;
     if (pa) {
       this.req.kind = pa.kind;
-      this.req.fwd = passAsFwd(this.req.fwd, pa); // 걸음 사다리 한 칸 아래 (GAIT.passAsRung — 0 이면 옛 × fwdK)
+      this.req.fwd = passAsFwd(this.req.fwd, pa); // 걸음 사다리 한 칸 아래
       this.req.leg = null;
       if (pa.draw) this.req.draw = true;
     }
@@ -382,22 +381,22 @@ export class Gait {
   /**
    * 독일 간격 잡기 — 받을 창 (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md, 그때 이름 '따라 들어가기'): 상대 공격이 칼에도 몸에도 닿지 않고 끝났다(헛침) —
    *  ai.js afterStrike 의 missed · 사람 휘두르기는 skill.js whiffTrack 이 부른다. 내 무기가 독일 유파(TRADITIONS.german.chase)이고 서서 걷는 몸이면 받을 창을 연다(새 헛침이면 새로).
-   *  잡기(GAIT.deHold — 10/15 18:0x, docs/strike/german_hold_2026-10-15.md): 플레이어(AI 가 몰지 않는 몸)는 헛침 때 이미 내 칼이 제대로 들어가는 거리(swordArt.measure.contact —
+   *  잡기(10/15 18:0x, docs/strike/german_hold_2026-10-15.md): 플레이어(AI 가 몰지 않는 몸)는 헛침 때 이미 내 칼이 제대로 들어가는 거리(swordArt.measure.contact —
    *   가슴-가슴, holdTick 과 같은 잣대) 안이면 창을 열지 않는다(이미 가까움). AI 는 그대로.
-   *  GAIT.deChase 0 이면 아무것도 안 한다(전 판). 상태만 적고 난수·몸은 건드리지 않는다
+   *  상태만 적고 난수·몸은 건드리지 않는다
    */
   foeWhiff() {
-    if (!GAIT.deChase || !this.active || this.f.state !== 'stand') return;
-    if (GAIT.deDig && this.f.humanInput) return; // 11/14 사장님 '간격 잡기를 파고들기로 바꿔' — 사람(사람 입력이 모는 몸 humanInput — main.js 플레이어)의 옛 간격 잡기(받을 창 · 빠른 디딤 · 잡기)는 거둠(GAIT.deDig · 파고들기는 update 걷기 시작) · AI · 시뮬 대본 몸은 그대로
+    if (!this.active || this.f.state !== 'stand') return;
+    if (this.f.humanInput) return; // 11/14 사장님 '간격 잡기를 파고들기로 바꿔' — 사람(사람 입력이 모는 몸 humanInput — main.js 플레이어)의 옛 간격 잡기(받을 창 · 빠른 디딤 · 잡기)는 거둠(파고들기는 update 걷기 시작) · AI · 시뮬 대본 몸은 그대로
     const def = TRADITIONS[footworkTradition(this.f)]?.chase; // 독일 간격 잡기 — 보법 I 을 안 익힌 플레이어는 없음
     if (!def || kitOff(this.f, 'chase')) return; // 사람은 스킬트리 G2 '보법 II · 간격 잡기' (10/21 — G1 은 뒤 박차기만)
-    if (GAIT.deHold && !this.f.aiControlled && this.f.foeDistance() <= this.f.swordArt.measure.contact) return;
+    if (!this.f.aiControlled && this.f.foeDistance() <= this.f.swordArt.measure.contact) return;
     this.chase = { def, t: 0, left: def.steps, got: false };
   }
 
   /**
    * 독일 간격 잡기 — 잡기 (10/15 18:0x 사장님 승인 "'간격 잡기'로 네가 잡은 기준으로 테스트 해봐" · 감독 보충 '거기서 서야' — docs/strike/german_hold_2026-10-15.md):
-   *  플레이어(AI 가 몰지 않는 몸)만, GAIT.deHold 일 때 fighter.js driveBalance 가 조종 입력을 읽기 전에 매 스텝 부른다. 칼 입력은 읽지 않는다(다리만의 규칙).
+   *  플레이어(AI 가 몰지 않는 몸)만, fighter.js driveBalance 가 조종 입력을 읽기 전에 매 스텝 부른다. 칼 입력은 읽지 않는다(다리만의 규칙).
    *  걸기: 받을 창이 열려 있거나(this.chase — 받기 전·받은 뒤 남은 걸음) 간격 잡기 빠른 디딤 중(fastK > 1 · chaseStep)에
    *   '지금 거리 − 멈추는 거리' ≤ 내 무기 swordArt.measure.contact(칼이 제대로 들어가는 거리 — 롱소드 1.57 m, 무기별 실측)이면 —
    *   거리 = 가슴-가슴 수평(fighter.foeDistance — AI 가 measure 와 견주는 d 와 같은 잣대) · 멈추는 거리 = v² ÷ (2 · maxAccel · burstAccel)
@@ -533,7 +532,7 @@ export class Gait {
       this.fastK = 1;
       this.rhyTrail = false;
     }
-    // 첫 걸음 박차기 (10/15 — GAIT.stepBurst, update 의 걷기 시작에서 건 this.burst): 걷기 시작 뒤 처음 뗀 걸음이 걷는 걸음(walk·catch — 짝걸음은 이끄는 발로 여는 한 짝)이면
+    // 첫 걸음 박차기 (10/15 — update 의 걷기 시작에서 건 this.burst): 걷기 시작 뒤 처음 뗀 걸음이 걷는 걸음(walk·catch — 짝걸음은 이끄는 발로 여는 한 짝)이면
     //  그 걸음을 빠른 걸음으로 — 몸 빠르기·발 박자 × fastK · 가속 한도 × burstAccel · 발소리 강조는 빠른 걸음과 같은 FAST_ACCENT(10/15 15:2x 사장님 '박차기에 발소리 강조 붙여' —
     //  박찬 발 디딤만: 다음 걸음은 fastK 1 이라 update ③ 이 그 발의 fastStep 을 지움). 박자 걸음 셈은 위에서 그대로(이 걸음도 센다), 배율만 덮는다.
     //  fastK = 절대 목표 빠르기 ÷ 그 쪽 걷는 빠르기(뒤 burstBackV ÷ (moveSpeed × backFactor) · 옆 burstSideV ÷ (moveSpeed × sideFactor) — 스틱의 옆 몫 비율 lat 로 섞음, 1 아래로는 안 내림)
@@ -703,25 +702,25 @@ export class Gait {
    */
   sideDash(side) {
     const f = this.f;
-    if (!side || !this.P.burstSide || !GAIT.stepBurst || f.feetHeld || f.finish?.amt > 0.5 || this.burstBrake || this.burst || this.fastK > 1) return false;
+    if (!side || !this.P.burstSide || f.feetHeld || f.finish?.amt > 0.5 || this.burstBrake || this.burst || this.fastK > 1) return false;
     this.burst = { fore: 0, side: Math.sign(side), lat: 1 };
     return true;
   }
 
   /**
-   * 독일 파고들기 · 뒤 박차기 명령 — AI 몫 (11/14 3 단계 독일 플랜 · src/ai_plan_de.js): 사람 장치(파고들기 GAIT.deDig — 앞 digSteps 걸음 박찬 걸음 · 뒤 박차기 GAIT.burstDe)와 같은 this.burst 를
+   * 독일 파고들기 · 뒤 박차기 명령 — AI 몫 (11/14 3 단계 독일 플랜 · src/ai_plan_de.js): 사람 장치(파고들기 — 앞 digSteps 걸음 박찬 걸음 · 뒤 박차기)와 같은 this.burst 를
    *  다음에 떼는 걸음에 건다(옆 박차기 sideDash 와 같은 꼴 — 걷는 중에도). 무기 유파 독일 · 판 시작 정지 · 마무리 · 박찬 뒤 세게 멈춤 · 이미 박찬 걸음 중이면 무시. 걸었으면 true
    */
   deDigAi() {
     const f = this.f;
-    if (!GAIT.deDig || !GAIT.stepBurst || footworkTradition(f) !== 'german' || kitOff(f, 'chase') || f.feetHeld || f.finish?.amt > 0.5 || this.burstBrake || this.burst || this.fastK > 1) return false; // 11/16 칸 몫: 파고들기 칸 G2(열쇠 chase — 사람과 같음)
+    if (footworkTradition(f) !== 'german' || kitOff(f, 'chase') || f.feetHeld || f.finish?.amt > 0.5 || this.burstBrake || this.burst || this.fastK > 1) return false; // 11/16 칸 몫: 파고들기 칸 G2(열쇠 chase — 사람과 같음)
     this.burst = { fore: 1, side: 0, lat: 0, foreOnly: false, dig: GAIT.digSteps, ai: 2 };
     return true;
   }
 
   backBurstAi() {
     const f = this.f;
-    if (!GAIT.burstDe || !GAIT.stepBurst || footworkTradition(f) !== 'german' || f.feetHeld || f.finish?.amt > 0.5 || this.burstBrake || this.burst || this.fastK > 1) return false;
+    if (footworkTradition(f) !== 'german' || f.feetHeld || f.finish?.amt > 0.5 || this.burstBrake || this.burst || this.fastK > 1) return false;
     this.burst = { fore: -1, side: 0, lat: 0 };
     return true;
   }
@@ -801,12 +800,6 @@ export class Gait {
     // 유파 걸음 빠르기 (10/29 21:0x 사장님 '일본 걸음 … 다른 유파보다 확연히 느려도 돼' — P.speedMul · docs/strike/jp_gait_2026-10-29.md): 가려는 빠르기 전부(앞 · 뒤 · 옆)에 곱한다.
     //  박자는 아래 cad(빠르기 ÷ 보폭)가 따라 내린다. 칸 없으면 셈하지 않는다(바이트 같음)
     if (this.P.speedMul && this.P.speedMul !== 1 && !f.feetHeld) want.multiplyScalar(this.P.speedMul);
-    // 비스듬히 앞으로 박차기 (10/21 GAIT.burstFwdDeg — 이베리아 둥근 걸음): 옆 박찬 걸음(fastSide · fastK > 1) 동안 가려는 빠르기에 옆 몫 × tan(각)만큼 앞(상대 쪽)을 더한다.
-    //  스틱에 뒤 몫이 있으면(물러나며 옆) 더하지 않음 · 플레이어 몸만(AI 는 박차지 않음)
-    if (GAIT.burstFwdDeg > 0 && this.fastSide && this.fastK > 1 && !f.feetHeld && f.move.y > -0.05) {
-      const wl = Math.abs(want.x * rgt.x + want.z * rgt.z);
-      want.addScaledVector(fwd, wl * Math.tan((GAIT.burstFwdDeg * Math.PI) / 180));
-    }
     // 막대가 가리키는 걷기 빠르기(유파 옆 빠르기까지) — 아래 붙잡기 반사 느림(slow)·reachSlow·좌우 흔들기로 줄기 전 값. 첫 걸음 박차기 뒤 세게 멈춤의 바닥(아래 ⑥ 앞)만 읽는다
     const wsx = want.x;
     const wsz = want.z;
@@ -851,20 +844,11 @@ export class Gait {
     //  보조가 커지면 딛은 발의 정지 마찰(pinFeet)도 약해져서 발이 끌려가며 버틴다
     {
       const sag = Math.max(this.h, this.hNom - 0.04) - f.bodies.pelvis.translation().y;
-      const cm = GAIT.catchMode;
-      let need;
-      if (cm === 'on') {
-        need = Math.max(
-          clamp((sag - GAIT.catchSag) / 0.08, 0, 1),
-          clamp((f.tiltDeg() - GAIT.catchTilt) / 20, 0, 1),
-          clamp((f.offBalance - GAIT.catchOff) / 0.25, 0, 1),
-        );
-      } else {
-        // 'fall' = 균형 잃음만, 'off' = 0. tiltDeg 는 값을 안 써도 같은 때 부른다
-        //  (fighter.js 임시 벡터 _v1 을 'on' 과 똑같이 덮어써서 걸음이 손잡이 하나만큼만 바뀌게)
-        f.tiltDeg();
-        need = cm === 'fall' ? clamp((f.offBalance - GAIT.catchOff) / 0.25, 0, 1) : 0;
-      }
+      const need = Math.max(
+        clamp((sag - GAIT.catchSag) / 0.08, 0, 1),
+        clamp((f.tiltDeg() - GAIT.catchTilt) / 20, 0, 1),
+        clamp((f.offBalance - GAIT.catchOff) / 0.25, 0, 1),
+      );
       if (need > this.levC) this.levC += (need - this.levC) * Math.min(1, dt * 30);
       this.lev = Math.max(this.levH, this.levC);
     }
@@ -896,36 +880,33 @@ export class Gait {
     //  걷기 ↔ 서기가 번갈아 바뀌면 발이 헛디딘다)
     this.speedF += (speed - this.speedF) * Math.min(1, dt * GAIT.walkFilter);
     const walkNow = this.walking ? this.speedF > GAIT.walkMin * 0.6 : this.speedF > GAIT.walkMin || speed > GAIT.walkMin * 2;
-    // 첫 걸음 박차기 (10/15 — GAIT.stepBurst · docs/strike/step_burst_2026-10-15.md): 서 있던 몸(걷지 않았고 골반이 burstStandV 보다 느림)이 지금 걷기 시작하고
+    // 첫 걸음 박차기 (10/15 — docs/strike/step_burst_2026-10-15.md): 서 있던 몸(걷지 않았고 골반이 burstStandV 보다 느림)이 지금 걷기 시작하고
     //  스틱을 burstStick 넘게 뒤·옆(앞 몫 < burstFwdMax)으로 밀었으면 건다 → 첫 걸음을 뗄 때 fastBegin 이 쓴다. 지금은 플레이어만(AI 가 몰면 aiControlled) ·
     //  유파 걸음 칸 burst: false(이탈리아 — 박자 걸음 첫 디딤과 겹침)는 받지 않음 · 박찬 몸이 아직 박찬 빠르기를 다 줄이기 전(burstBrake)엔 다시 걸지 않음 ·
     //  판 시작 정지·마무리 중엔 걸지 않는다. 시간 값 없음 — 걷기 시작마다 한 번. 끄면(0) 셈하지 않는다
     //  뒤(비스듬히 뒤 포함 — side 0) 박차기는 두 발이 다 땅에 있을 때만 건다(10/15 뒤 2 s 고침 — docs/strike/step_burst_2026-10-15.md §7): 자세 고치던 발이 아직 떠 있으면 첫 걸음이
     //   그 발이 디딜 때까지 늦고 그동안 보통 걸음으로 움직인 몸에서 박차게 되어, 박찬 발(앞발이 몸 뒤로 크게 건너감)이 닿지 않는 데(엉덩이 뒤 0.5 m · 발바닥 0.1 m 위)에
     //   떨어져 붙잡기 반사로 몸이 거의 선다(그 걸음은 그 유파 보통 첫 걸음). 옆 박차기는 그대로(가는 쪽 발을 짧게 옮겨 늦게 차도 발이 땅에 닿음)
-    if (walkNow && !this.walking && GAIT.stepBurst && pl && this.P.burst !== false && mv && !this.burstBrake && !(f.finish?.amt > 0.5)) {
+    if (walkNow && !this.walking && pl && this.P.burst !== false && mv && !this.burstBrake && !(f.finish?.amt > 0.5)) {
       const m = mv.length();
       const side = Math.abs(mv.x) > Math.abs(mv.y) ? Math.sign(mv.x) : 0;
       if (m >= GAIT.burstStick && mv.y / m < GAIT.burstFwdMax && Math.hypot(this.vf.x, this.vf.z) < GAIT.burstStandV && (side || (this.legs.F.stance && this.legs.B.stance))) {
         // 옆 박차기(옆·비스듬히 옆 — 옆 몫이 뒤 몫보다 큼)는 유파 걸음 칸 burstSide(이베리아)만(10/15 15:1x 사장님 '옆으로 박차기는 이베리아 유파만 사용하게 바꿔' — §8).
         //  다른 유파는 뒤 몫이 옆 몫 이상일 때만 건다 — 비스듬히 뒤면 몸 빠르기의 앞뒤 몫만 빠르게(foreOnly — 옆 몫은 보통 빠르기: fastBegin · update ③ 뒤 · burstAhead · 세게 멈춤 쪽).
         //  스틱이 곧장 뒤(옆 몫 0)면 전과 같은 길
-        //  박차기는 독일 보법(10/15 20:4x 사장님 '박차기는 독일 보법으로 넣어' — GAIT.burstDe · docs/strike/step_burst_2026-10-15.md §10): 뒤(비스듬히 뒤 — 뒤 몫 ≥ 옆 몫) 박차기는
+        //  박차기는 독일 보법(10/15 20:4x 사장님 '박차기는 독일 보법으로 넣어' — docs/strike/step_burst_2026-10-15.md §10): 뒤(비스듬히 뒤 — 뒤 몫 ≥ 옆 몫) 박차기는
         //   내 무기 유파가 독일(swordArt.tradition — 독일은 유파 걸음 칸이 없어 무기 유파를 바로 읽음)일 때만 · 옆(비스듬히 옆) 박차기는 burstSide(이베리아)만 그대로 →
-        //   이베리아는 옆만(뒤 박차기 없음) · 일본·동방·이탈리아·무유파는 박차기 없음. 끄면(0) 아래 지금 판 그대로(바이트 같음)
-        if (GAIT.burstDe) {
-          if (side) {
-            if (this.P.burstSide) this.burst = { fore: Math.sign(mv.y), side, lat: (mv.x * mv.x) / (m * m) };
-          } else if (mv.y < 0 && footworkTradition(f) === 'german') this.burst = { fore: -1, side: 0, lat: 0, foreOnly: mv.x !== 0 };
-        } else if (this.P.burstSide) this.burst = { fore: Math.sign(mv.y), side, lat: (mv.x * mv.x) / (m * m) };
-        else if (!side && mv.y < 0) this.burst = { fore: -1, side: 0, lat: 0, foreOnly: mv.x !== 0 };
+        //   이베리아는 옆만(뒤 박차기 없음) · 일본·동방·이탈리아·무유파는 박차기 없음
+        if (side) {
+          if (this.P.burstSide) this.burst = { fore: Math.sign(mv.y), side, lat: (mv.x * mv.x) / (m * m) };
+        } else if (mv.y < 0 && footworkTradition(f) === 'german') this.burst = { fore: -1, side: 0, lat: 0, foreOnly: mv.x !== 0 };
       }
     }
     // 파고들기 (11/14 사장님 결정 "간격 잡기를 파고들기로 바꿔. '앞 박차기'인데 한 걸음이 아니라 두 걸음 빠르게 들어가는 기술이야. 거리 제한은 없음" — GAIT.deDig):
     //  사람(사람 입력이 모는 몸 humanInput — main.js 플레이어 · 시뮬 대본 몸 · AI 는 아님) · 무기 유파 독일(보법 I 을 익힌 몸 — footworkTradition) · 스킬트리 G2(열쇠 'chase' — 옛 이름 그대로)가 뒤 박차기와 같은 '서 있음'(걷지 않았고 골반 burstStandV 아래 ·
     //  두 발 땅)에서 스틱을 burstStick 넘게 앞으로(앞 몫 > 0 · 앞 몫 ≥ 옆 몫) 밀며 걷기 시작하면 → 앞 digSteps 걸음을 박찬 걸음으로(fastBegin). 헛침 조건 · 거리 제한(칼 거리 잡기) 없음 ·
     //  비스듬히 앞이면 앞 몫만 빠르게(foreOnly — 뒤 박차기와 같은 꼴). 박찬 몸이 아직 박찬 빠르기를 다 줄이기 전(burstBrake) · 판 시작 정지 · 마무리 중엔 걸지 않음. 끄면(0) 셈하지 않는다
-    if (GAIT.deDig && walkNow && !this.walking && f.humanInput && mv && !this.burst && !this.burstBrake && !f.feetHeld && !(f.finish?.amt > 0.5) && footworkTradition(f) === 'german' && !kitOff(f, 'chase')) {
+    if (walkNow && !this.walking && f.humanInput && mv && !this.burst && !this.burstBrake && !f.feetHeld && !(f.finish?.amt > 0.5) && footworkTradition(f) === 'german' && !kitOff(f, 'chase')) {
       const m = mv.length();
       if (m >= GAIT.burstStick && mv.y > 0 && mv.y >= Math.abs(mv.x) && Math.hypot(this.vf.x, this.vf.z) < GAIT.burstStandV && this.legs.F.stance && this.legs.B.stance) this.burst = { fore: 1, side: 0, lat: 0, foreOnly: mv.x !== 0, dig: GAIT.digSteps };
     }
@@ -935,10 +916,10 @@ export class Gait {
       const m = mv.length();
       if (m >= GAIT.burstStick && mv.y > 0 && mv.y >= Math.abs(mv.x) && Math.hypot(this.vf.x, this.vf.z) < GAIT.burstStandV && this.legs.F.stance && this.legs.B.stance) this.burst = { fore: 1, side: 0, lat: 0, foreOnly: mv.x !== 0, dig: DIG_PROTO.stepN };
     }
-    // 옆 누르면 첫 걸음에 늘 옆 박차기 (10/21 GAIT.burstWalkSide — 사장님 '그냥 옆 누르면 첫 걸음에 무조건 나가야지'): 스틱이 옆으로 바뀌는 순간(옆 몫 > 앞뒤 몫 ·
+    // 옆 누르면 첫 걸음에 늘 옆 박차기 (10/21 사장님 '그냥 옆 누르면 첫 걸음에 무조건 나가야지'): 스틱이 옆으로 바뀌는 순간(옆 몫 > 앞뒤 몫 ·
     //  burstStick 넘게 · 앞 몫 < burstFwdMax — 서 있든 걷든 · 거꾸로 옆으로 틀어도) 다음에 떼는 걸음을 옆 박찬 걸음으로(sideDash — 이베리아만). 아직 걷기 문턱 전이면
     //  걷기 시작할 때까지(0.3 s 안) 미뤄 둔다(걷지 않는 몸에 건 박차기는 아래에서 버려지므로). 플레이어만
-    if (pl && GAIT.burstWalkSide && mv) {
+    if (pl && mv) {
       this.dashClock = (this.dashClock ?? 0) + dt;
       const m = mv.length();
       const s = m >= GAIT.burstStick && Math.abs(mv.x) > Math.abs(mv.y) && mv.y / m < GAIT.burstFwdMax ? Math.sign(mv.x) : 0;
@@ -968,11 +949,11 @@ export class Gait {
     const T = walkNow ? 1 / cad : GAIT.settleT / (1 - this.P.dsFrac);
     this.stepT += (T - this.stepT) * Math.min(1, dt * 6);
     // 빠른 걸음 (10/15): 박자 걸음(P.rhythm — 이탈리아, docs/strike/italian_rhythm_2026-10-15.md)은 켜졌을 때만 센다(rhythmOn — 디딤 셈 N + M 또는 옛 짝 셈 · `?itRhythm=0` = 칸 없는 것과 같은 길) ·
-    //  간격 잡기 빠른 디딤(this.chase — 독일, 상대 헛침 뒤 받을 창 · docs/strike/german_chase_2026-10-15.md)은 GAIT.deChase 일 때만(잡기는 holdTick — driveBalance 가 먼저 부름).
+    //  간격 잡기 빠른 디딤(this.chase — 독일, 상대 헛침 뒤 받을 창 · docs/strike/german_chase_2026-10-15.md)(잡기는 holdTick — driveBalance 가 먼저 부름).
     //  판 시작 정지·마무리 중엔 세지 않고 처음부터(받을 창도 버림) · 걷지 않으면 빠른 걸음 끝. 둘 다 없고 빠른 걸음도 아니면 셈하지 않는다
     //  빠른 걸음 중 스틱 앞뒤가 뒤집히면(가려는 속도 앞 몫의 부호가 그 걸음과 반대) 거기서 끝 — 멈춰 서는 동안 서두르지 않게
     let RH = rhythmOn(this.P.rhythm) ? this.P.rhythm : null;
-    let CH = GAIT.deChase ? this.chase : null;
+    let CH = this.chase;
     //  첫 걸음 박차기(this.burst — 위 걷기 시작에서 건 것)도 같은 자리: 첫 걸음을 떼기 전에 멈추면 버린다 · 박찬 걸음 중 스틱이 거꾸로(옆 박차기는 옆으로 거꾸로) 가면 거기서 끝 ·
     //  박찬 발이 떠 있고 스틱을 밀고 있는 동안은 '걷지 않음'으로 끝내지 않는다(느린 옆·뒤 출발은 걸러진 빠르기가 둘째 스텝에 걷기 문턱 아래로 한 번 깜빡인다 — 그 깜빡임에 박차기가 끊기지 않게)
     if (RH || CH || this.burst || this.fastK > 1) {
@@ -1136,7 +1117,7 @@ export class Gait {
         // 걷기 시작: 가려는 쪽에서 뒤에 있는 발부터 (앞발부터 내딛으면 몸이 달아난다). 걷는 중: 번갈아
         //  (앞뒤로 걷기 시작할 땐 방금 디딘 발이라도 뒤에 있는 발부터: 앞발부터 내딛으면 뒷발이 닿지 않을 만큼 멀어진다)
         const fore = Math.abs(want.x * fwd.x + want.z * fwd.z) > vLat;
-        if (this.walkT > sT * 1.2 || (this.sinceTD < sT && !(this.P.startRear && fore))) next = this.lastTD === 'F' ? 'B' : 'F';
+        if (this.walkT > sT * 1.2 || (this.sinceTD < sT && !fore)) next = this.lastTD === 'F' ? 'B' : 'F';
         else {
           const df = (L.F.plant.x - L.B.plant.x) * want.x + (L.F.plant.z - L.B.plant.z) * want.z;
           next = df > 0 ? 'B' : 'F';

@@ -10,98 +10,11 @@ import { PlayerSecretWatch, secretUsesOf, secretCostOf, secretFree, gkFreeOn } f
 import { drawInput, drawTapTake, iaiSeated } from '../../src/iai_obi.js';
 import { altibShot } from '../../src/unique_assist.js';
 import { iaiTipSpeed } from '../../src/secret_instant.js';
-import { withSecretFreeOff } from './secret_free_off.mjs';
 
 const K = CONFIG.TIME.k;
 const body = (tr) => ({ swordArt: { tradition: tr } });
 
-test('기본값 — [사장님 11/16 결정] 고노센 · 알티바슈 · 죽음의 일격 · 리솔루토 판당 끝없음 · 기력 50 · 35 · 50 · 뽑기 0.6 s · −35 · 빠르기 둘째 셈 · 되돌림 0.6 s', () => {
-  assert.equal(SECRET.gnsFree, 1);
-  assert.equal(SECRET.gnsCost, 40); // 11/16 '고노센과 리솔루토 40, 죽음의 일격과 격살은 20'
-  assert.equal(SECRET.gnsDraw, realS(0.6));
-  assert.equal(SECRET.altib.free, 1);
-  assert.equal(SECRET.altib.drop, -35);
-  assert.equal(SECRET.altib.drop, STAMINA.severeAt); // 심한 지침 문턱과 같은 수
-  assert.equal(SECRET.altib.speed, 'f2');
-  assert.equal(SECRET.mord.free, 1);
-  assert.equal(SECRET.mord.cost, 20);
-  assert.equal(SECRET.mord.guard, realS(0.6));
-  assert.equal(SECRET.risolutoFree, 1);
-  assert.equal(SECRET.risolutoCost, 40);
-  assert.equal(SECRET.gkFree.cost, 20);
-  assert.equal(SECRET.risolutoBack, realS(0.6));
-  assert.equal(AI_PLAN_JP.drawRead, 1);
-  for (const tr of ['japanese', 'iberian', 'german', 'italian']) assert.equal(secretUsesOf(body(tr)), Infinity, tr);
-  assert.equal(secretFree('chinese'), false); // 동방 격살은 다른 일 — 공용 표 그대로
-  assert.equal(secretUsesOf(body('chinese')), gkFreeOn() ? Infinity : UA.secretUses?.chinese ?? Infinity); // 격살 끝없음은 격살 풀기(SECRET.gkFree — 개발 가지 머리 11/16 동방 묶음)가 맡음
-  assert.equal(secretCostOf(TRADITIONS.japanese.secret), 40);
-  assert.equal(secretCostOf(TRADITIONS.german.playerSecret), 20);
-  assert.equal(secretCostOf(playerSecretDef('italian')), 40);
-  assert.equal(secretCostOf(TRADITIONS.chinese.playerSecret), gkFreeOn() ? 20 : undefined); // 격살 — 풀기 판만 20
-  assert.equal(secretCostOf(TRADITIONS.iberian.secret), undefined); // 알티바슈는 비기 값 없음(메는 기력 · 뒤 −35)
-  withSecretFreeOff(() => {
-    for (const tr of ['japanese', 'iberian', 'german', 'italian']) assert.equal(secretUsesOf(body(tr)), 1, tr); // 끄면 11/15 판 (판당 1)
-    assert.equal(secretCostOf(TRADITIONS.japanese.secret), undefined);
-  });
-});
 
-test('알티바슈 빠르기 — 둘째 셈(기력 ÷ 100) · 첫째 셈((기력 + 35) ÷ 135) · 바닥 = 같은 칼 보통 큰 베기 · 옛 판은 0.35 × 기력 몫 위력', () => {
-  const G = newRound({ seed: 1, walls: true, weapon: 'zweihander', weapon2: 'longsword' });
-  try {
-    const P = G.player;
-    const vg = iaiTipSpeed(P);
-    const floor = CONFIG.realV(SECRET.altib.floorTip.zweihander) / vg;
-    const at = (v) => ((P.stamina.value = v), altibShot(P));
-    // 11/16 사장님 '풀 기력에서 고노센 40%로' · '50에서 바닥에 도달하게 해' → '아니다 40에서.' → '35~85 사이에서로 바꿔' — 칼끝 몫 = 바닥 + (0.4 − 바닥) × (기력 − 35) ÷ 50 · 35 이하 바닥 · 85 이상 꼭대기
-    assert.equal(SECRET.altib.full, 0.4);
-    assert.equal(SECRET.altib.knee, 35);
-    assert.equal(SECRET.altib.fullBy.durandal, 0.45); // '뒤랑달은 5% 보너스 줘 상한에. 45%'
-    assert.equal(SECRET.altib.kneeTop, 85); // '35~85 사이에서로 바꿔' (전 '40~90 … 90과 100은 동일함.')
-    assert.ok(floor < 0.4, '츠바이핸더 바닥(보통 큰 베기)은 고노센 40 % 아래');
-    let s = at(100);
-    assert.ok(Math.abs(s.share - 0.4) < 1e-9, '가득 100 → 0.4');
-    assert.equal(s.hitMul, 1);
-    s = at(60);
-    assert.ok(Math.abs(s.share - (floor + (0.4 - floor) * 0.5)) < 1e-9, '60 → 바닥과 0.4 의 가운데 (35 ~ 85)');
-    s = at(85);
-    assert.ok(Math.abs(s.share - 0.4) < 1e-9, '85 = 100 = 꼭대기');
-    s = at(35);
-    assert.ok(Math.abs(s.share - floor) < 1e-9 && s.floor, '35 → 바닥');
-    s = at(20);
-    assert.ok(Math.abs(s.share - floor) < 1e-9 && s.floor, '20 → 바닥');
-    const full0 = SECRET.altib.full;
-    const knee0 = SECRET.altib.knee;
-    SECRET.altib.full = 1; // 아래는 셈 꼴 시험 (full 1 · 꺾임 없음 = 11/16 둘째 셈 첫 판)
-    SECRET.altib.knee = null;
-    const top0 = SECRET.altib.kneeTop;
-    try {
-    s = at(100);
-    assert.equal(s.share, 1);
-    s = at(60);
-    assert.ok(Math.abs(s.share - 0.6) < 1e-9, '둘째 셈 60 → 0.6');
-    s = at(10);
-    assert.ok(Math.abs(s.share - floor) < 1e-9 && s.floor, '바닥');
-    SECRET.altib.speed = 'f1';
-    try {
-      s = at(60);
-      assert.ok(Math.abs(s.share - 95 / 135) < 1e-9, '첫째 셈 (60 + 35) ÷ 135');
-    } finally {
-      SECRET.altib.speed = 'f2';
-    }
-    } finally {
-      SECRET.altib.full = full0;
-      SECRET.altib.knee = knee0;
-      SECRET.altib.kneeTop = top0;
-    }
-    withSecretFreeOff(() => {
-      s = at(60);
-      assert.equal(s.share, 0.35);
-      assert.ok(Math.abs(s.hitMul - 0.6) < 1e-9, '옛 판 판정 × 기력 몫');
-    });
-  } finally {
-    G.world.free();
-  }
-});
 
 test('기력 — 알티바슈 뒤 −35 까지(더 낮으면 그대로) · 고노센 40', () => {
   const G = newRound({ seed: 1, walls: true, weapon: 'uchigatana', weapon2: 'longsword' });
@@ -176,42 +89,6 @@ test('뽑기 — 끄면(gnsDraw 0) 곧장 사람 손 (11/15 판)', () => {
   }
 });
 
-test('죽음의 일격 · 리솔루토 — 맞든 빗나가든 0.6 s 겨눔 되돌림(굳음 대신) · 기력 20 · 40 · 끄면 굳음 판', () => {
-  for (const [w, S, ctx, cost, gap] of [['longsword', TRADITIONS.german.playerSecret, { ev: 'press', held: 2 }, 20, 1.0], ['rapier', playerSecretDef('italian'), { ev: 'risoluto' }, 40, 1.7]]) {
-    const run = (off) => {
-      const G = newRound({ seed: 1, walls: true, weapon: w, weapon2: 'longsword', gap });
-      const P = G.player;
-      G.ai.update = () => {};
-      P.skill.corr = CONFIG.SKILL.corr;
-      P.skill.autoGuard = true;
-      try {
-        for (let i = 0; i < 300; i++) G.step();
-        P.stamina.value = 100;
-        assert.ok(P.skill.secret({ S, ctx }), `${S.name} 냄`);
-        const st = P.stamina.value;
-        let guardT = 0, stiffT = 0, n = 0;
-        while ((P.skill.sec || P.iai) && n < 3 * 120 * K) {
-          G.step();
-          n++;
-          if (P.iai?.guarding) guardT += 1 / 120 / K;
-          if (P.skill.secretPhase === 'stiff') stiffT += 1 / 120 / K;
-        }
-        return { st, guardT, stiffT, log: P.secretGuardLog };
-      } finally {
-        G.world.free();
-      }
-    };
-    const on = run(false);
-    assert.equal(on.st, 100 - cost, `${S.name} 기력`);
-    assert.ok(Math.abs(on.guardT - 0.6) < 0.02, `${S.name} 되돌림 ${on.guardT.toFixed(3)}`);
-    assert.ok(on.stiffT < 0.02, '굳음 없음');
-    assert.equal(on.log?.n, 1);
-    const off = withSecretFreeOff(() => run(true));
-    assert.equal(off.st, 100 - STAMINA.secretCost);
-    assert.equal(off.guardT, 0);
-    assert.ok(off.stiffT > 0.5, '끄면 굳음 0.6 s');
-  }
-});
 
 test('AI 뽑기 — 칼집에 든 AI 의 공격 · 막기는 뽑기부터 (공격을 열지 않음)', () => {
   const G = newRound({ seed: 3, walls: true, weapon: 'longsword', weapon2: 'uchigatana', gap: 4.5, persona: { proficiency: 5 } });

@@ -8,7 +8,6 @@ import { PlayerSecretWatch, secretEvent, gnsEnterLine, foeOnline, gnsUser, gnsBl
 import { playerSecretDef, JAPANESE_GAIT, setJapaneseGait } from '../../src/schools.js';
 import { requestIai } from '../../src/secret_instant.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
-import { withReadOld } from './ai_read_pin.mjs'; // 11/14 유파 AI 3 단계 수 읽기 · 공정함 · AI 고노센 지키기 — 옛 장면은 잰 때 판으로 (docs/strike/ai_read_2026-11-14.md §6)
 // 준비까지 (11/14 사장님 '2초 후에 납도 시작' — 일본 준비는 iaiArmTime 뒤 납도 SECRET.iaiSheathe 가 끝나야 · 帯刀 끄면 납도 없음 · secret.js IaiArm.extra)
 const ARM = () => CONFIG.SECRET.iaiArmTime + (CONFIG.SECRET.iaiObi && CONFIG.SECRET.iaiSheathe > 0 ? CONFIG.SECRET.iaiSheathe : 0);
 
@@ -208,46 +207,8 @@ function standoff(id, vals) {
   });
 }
 
-// 경계를 끈 판(10/25 01:3x 판)의 기어 듦은 그때 걸음(일본 걸음 전 판 `?jpGait=old` — 모노호시자오 서 있는 자세 0.35)에서 본다: 10/29 일본 걸음(자세 0.51)에선
-//  씨앗 1 ~ 6 모두 '준비된 발도 + 간 보기 꼴'로 선을 넘는 일이 없음(이솔데는 선 2.33 m 안 0.8 ~ 1.4 m 까지 들어오나 그 조건 밖 — docs/strike/jp_gait_2026-10-29.md §10). 켠 판(지금 판)은 새 걸음 그대로
-const withJpOld = (fn) => {
-  const keep = { ...JAPANESE_GAIT };
-  setJapaneseGait('old');
-  try {
-    return fn();
-  } finally {
-    for (const k of Object.keys(JAPANESE_GAIT)) delete JAPANESE_GAIT[k];
-    Object.assign(JAPANESE_GAIT, keep);
-  }
-};
 
-// 11/14 (사장님 '권고대로 고노센도 무모하게 넘고'): 유파 플랜 무 · 낮음 띠는 굴림 몫만큼 선을 넘는다 — 이 시험은 10/25 결정 장면이라 옛 판(AI_PLAN.on 0)으로 묶어 기준 그대로 본다 (아래 '무모' 시험이 새 판)
-const withPlanOff = (fn) => {
-  const keep = CONFIG.AI_PLAN.on;
-  CONFIG.AI_PLAN.on = 0;
-  try {
-    return fn();
-  } finally {
-    CONFIG.AI_PLAN.on = keep;
-  }
-};
 
-test('⑤ 실제 몸: 경계를 끄면 AI 가 간 보기로 준비된 사람 발도 선 안에 기어 든다(10/25 01:3x 판) · 켜면 간 보기로는 선 밖에서 기다림 (옛 판 — AI_PLAN.on 0)', () => withPlanOff(() => {
-  const off = withJpOld(() => standoff('isolde', { gnsWary: 0 }));
-  assert.equal(off.W, null); // 끄면 경계 칸 자체가 없다 (옛 판 그대로)
-  assert.ok(off.creep > 0, `off creep ${off.creep}`);
-  // 11/14 칼집 각도 · 납도(준비 2.0 → 2.6 s)로 이 씨앗 판이 갈려 이솔데가 11.6 s 에 간 보기(holdDist 2.52 · 스틱 0 곁) 동안 걸음 한 번에 선 안 6 cm 로 듦 — 경계 셈은 그대로라
-  //  이 씨앗 장면은 그 전 판(납도 없음 · 쉬는 칼집 11/14 자리)으로 묶음 · 기준은 그대로 (docs/strike/iai_obi_2026-11-14.md §13-5) · 토메 · 라트나는 지금 판
-  const on = standoff('isolde', { iaiSheathe: 0, iaiObiSayaMouth: [0.21, 0.085, 0.02], iaiObiSayaAxis: { yaw: -121, el: -15 }, iaiObiPull: { yaw: -160, el: -25 }, iaiObiFollow: { m: 0.06, deg: 20 } });
-  assert.ok(on.W?.user && on.ready > 0, JSON.stringify(on.W?.n));
-  assert.equal(on.creep, 0);
-  const rows = [];
-  for (const id of ['tome', 'ratna']) {
-    const o = standoff(id, {});
-    rows.push(`${id} ${o.creep}`);
-    assert.equal(o.creep, 0, rows.join(' · '));
-  }
-}));
 
 /** 무모 판 (11/14): 서서 기다리는 모노호시자오 사람 대 이탈리아 레이피어 AI(숙련 prof — 플랜 켬) — 씨앗 seed · 사람 들어옴 창이 열리면 곧장 고노센을 냄(fire) · 기어 듦 수 · 굴림이 경계를 접은 준비 수 · 고노센에 베인 수 */
 function reckStandoff(prof, seed) {
@@ -291,37 +252,3 @@ test('⑤ 무모 (11/14 사장님 \'권고대로 고노센도 무모하게 넘�
   assert.equal(sum(mid, 'creep'), 0, `가운데 — 간 보기로는 선 밖 ${JSON.stringify(mid)}`);
 });
 
-test('⑤ 속임 → 결행: 속임은 준비 한 번에 한 번 (선 밖에서 들었다 거둠) · 다음 칠 때는 결행 — 상대가 고노센 쓰는 몸이 아니면 아무 일 없음', () => withReadOld(() => {
-  // 11/14 3 단계 공정함(AI_PLAN.read.fair)이면 사람 준비를 늦게 본 준비 자세(켜짐 0.35 s + 반응 시간)로 읽어 준비가 막 켜진 이 때엔 아직 안 보임 → 속임 표식이 지워짐 —
-  //  속임 → 결행 셈 시험이라 그 전 판 눈(사람 스틱 셈)으로 묶음 (기록 ai_read §6 · 공정한 눈의 준비 읽기는 ai_read.test '공정함')
-  const G = newRound({ weapon: 'monohoshizao', weapon2: 'longsword', seed: 1, difficulty: 'normal' });
-  const ai = G.ai;
-  for (let i = 0; i < (CONFIG.ARENA.startHold + ARM() + 0.1) / DT; i++) G.step(); // 사람 준비가 켜질 때까지 (무장 시계는 판 시작 정지 뒤부터 — 10/27 23:0x · 실제 2 s)
-  ai.gnsWatch(DT, ai.d, false);
-  const W = ai.gnsW;
-  assert.equal(W.user, true);
-  const s = ai.sense.seen(0);
-  const rnd = Math.random;
-  try {
-    Math.random = () => 0.999; // vor 보다 큼 → 속임
-    W.feinted = false;
-    assert.equal(ai.gnsAct(s, { kind: 'patience' }), true);
-    assert.equal(W.plan?.kind, 'feint');
-    assert.equal(ai.mode, 'attack');
-    ai.abortAttack();
-    ai.gnsWatch(DT, ai.d, false);
-    assert.equal(W.plan, null);
-    W.ready = true;
-    assert.equal(ai.gnsAct(s, { kind: 'patience' }), true); // 속인 뒤엔 굴림 없이 결행
-    assert.equal(W.plan?.kind, 'commit');
-    assert.equal(W.feinted, false);
-  } finally {
-    Math.random = rnd;
-  }
-  G.world.free();
-  const K = newRound({ weapon: 'longsword', weapon2: 'longsword', seed: 1 });
-  for (let i = 0; i < 1 / DT; i++) K.step();
-  assert.equal(K.ai.gnsW?.user, false);
-  assert.equal(K.ai.holdDist(), withCfg({ gnsWary: 0 }, () => K.ai.holdDist()));
-  K.world.free();
-}));

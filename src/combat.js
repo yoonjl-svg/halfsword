@@ -184,10 +184,10 @@ export class Combat {
     const key = `${pr.wc}:${pr.vc}`;
     let cut = this.cutting.get(key);
     if (cut) {
-      // 다 쓴 박힘 풀기 (11/15 사장님 '찌르기가 … 상대 몸에 박혀서 안 뽑히기도 하고 그러다 칼을 떨어뜨리기도 함. 공격이 종종 무시될 때도' — STRIKE.lodgeHold · 기본 0 = 끔 ·
+      // 다 쓴 박힘 풀기 (11/15 사장님 '찌르기가 … 상대 몸에 박혀서 안 뽑히기도 하고 그러다 칼을 떨어뜨리기도 함. 공격이 종종 무시될 때도' —
       //  기록 docs/strike/thrust_stuck_2026-11-15.md): 박힌 칼(stuck)이 끌림(Eleft)과 붙잡는 시간(stuckTime)을 다 쓰면 장부를 지우고 이 짝을 다시 맞부딪히게 한다 — 칼이 몸에서 밀려 나옴.
       //  끄면 몸과 겹치는 동안 장부가 남아 칼이 몸을 맞부딪힘 없이 지나가(두 몸이 가슴 사이 0.4 m 까지 붙음) 안 뽑힌 것처럼 보이고, 그동안 같은 부위의 새 찌르기는 판정이 안 났다
-      if (STRIKE.lodgeHold && cut.applied && cut.stuck && !(cut.Eleft > 0) && !(cut.stuckT > 0)) {
+      if (cut.applied && cut.stuck && !(cut.Eleft > 0) && !(cut.stuckT > 0)) {
         this.cutting.delete(key);
         return 1;
       }
@@ -265,10 +265,10 @@ export class Combat {
     const itk = itThrust(att, pr.v.fighter);
     const hk = (att.secretHit ?? 1) * strokeHitK(att) * fingerCutK(att, 'hit') * (itk ? itk.k : 1);
     let energy = ephys * STRIKE.energyScale * hk;
-    // 약화 배율은 상처에만 (11/15 사장님 '찌르기가 상대 몸에 박혀서 안 뽑히기도 … 공격이 종종 무시될 때도' — STRIKE.hitKPhys · 기본 0 = 끔 · 기록 docs/strike/thrust_stuck_2026-11-15.md):
-    //  1 이면 1 보다 작은 판정 배율(이탈리아 보통 찌르기 IT_OUTBOX.thrustMul 0.8 · 리솔루토 SECRET.risolutoHitMul 0.5)은 상처(심각도 · 둔타 에너지)에만 걸고, 칼과 몸의 물리 —
-    //  가름(pass) · 판정 문턱(STRIKE.minEnergy) · 박힘(absorb) · 가르는 끌림(afterStep Eleft) — 는 배율 전 에너지(physK 를 되곱함)로. 1 보다 큰 배율(비기 1.3 · 맞박자 등)은 그대로. 0 = 지금(배율이 물리까지)
-    const physK = STRIKE.hitKPhys && hk > 0 && hk < 1 ? 1 / hk : 1;
+    // 약화 배율은 상처에만 (11/15 사장님 '찌르기가 상대 몸에 박혀서 안 뽑히기도 … 공격이 종종 무시될 때도' — 사장님 11/16 '묶음 P' · 기록 docs/strike/thrust_stuck_2026-11-15.md):
+    //  1 보다 작은 판정 배율(이탈리아 보통 찌르기 IT_OUTBOX.thrustMul 0.8 · 리솔루토 SECRET.risolutoHitMul 0.5)은 상처(심각도 · 둔타 에너지)에만 걸고, 칼과 몸의 물리 —
+    //  가름(pass) · 판정 문턱(STRIKE.minEnergy) · 박힘(absorb) · 가르는 끌림(afterStep Eleft) — 는 배율 전 에너지(physK 를 되곱함)로. 1 보다 큰 배율(비기 1.3 · 맞박자 등)은 그대로
+    const physK = hk > 0 && hk < 1 ? 1 / hk : 1;
     let assisted = null; // 찌르기 팔 유효 질량을 실었으면 싣기 전 값 (멍으로 바뀌면 되돌린다)
 
     let type = 'blunt';
@@ -398,7 +398,7 @@ export class Combat {
       if (att.effMul) eff *= att.effMul; // 동방 격살 (10/22 — secret_instant.js instantWound · skill.js): 그 한 칼 동안만 같은 자리에 FINISH.power(SECRET.gyeoksal.power) · 다른 칼은 없음(그대로)
       if (eff > thr) {
         severity = (eff - thr) / (type === 'cut' ? 90 : 60);
-        pass = eff * physK > thr * (1.25 - emoPass); // (physK — 위 hitKPhys · 끄면 1) 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
+        pass = eff * physK > thr * (1.25 - emoPass); // (physK — 위 약화 배율 되곱) 확실히 파고들 때만 튕기지 않고 가르고 들어간다 (집념·분노면 더 쉽게 가른다)
         // 동방 막는 동안 피해 감소 (10/17 연구 — SKILL.cnParryDmgCut, 판 값 0 = 끔 · docs/strike/chinese_parry_brace_2026-10-17.md): 받는 쪽이 동방 막기 책을 쥐고
         //  막기 단추로 막는 중(parry_button.js woundKeep)이면 이 칼날 상처의 심각도만 × (1 − cut). 팔다리 기능 · 피 흘림 · 의식 · 목/머리 죽음 문턱 · 절단이 모두
         //  심각도에서 나와(fighter.applyWound) 같이 준다. 에너지 · 가르나 튕기나(pass) · 박힘은 그대로 — 칼과 몸의 물리(충격 · 휘청임 · 투구/판 닳음)는 바뀌지 않는다
@@ -473,7 +473,7 @@ export class Combat {
       ...(duel !== 1 ? { duelOneHand: duel } : {}), // 총사의 결투 배율이 실렸을 때만 (달타냥이 한손검 상대를 쳤을 때 — 시험 · 잼이 읽는다)
       ...(spK !== 1 ? { schoolK: spK, schoolLock: att.schoolPassive.lastLock } : {}), // 유파 패시브 배율이 실렸을 때만 (strike → onHit 이 켄타이를 씀)
       ...(itk ? { itThrust: itk } : {}), // 이탈리아 아웃복싱 배율이 실렸을 때만 (strike → itOnStrike 가 셈 · 칼 우위)
-      ...(physK !== 1 ? { physE: energy * physK } : {}), // 약화 배율 전 에너지 (STRIKE.hitKPhys 일 때만 붙음 — strike 판정 문턱 · 박힘 · afterStep 끌림이 읽음 · 없으면 energy)
+      ...(physK !== 1 ? { physE: energy * physK } : {}), // 약화 배율 전 에너지 (약화 배율이 있을 때만 붙음 — strike 판정 문턱 · 박힘 · afterStep 끌림이 읽음 · 없으면 energy)
     };
   }
 
@@ -508,7 +508,7 @@ export class Combat {
         c.applied = true;
         const r = this.strike(c.pr, point, true); // 상처는 처음 닿는 순간에 한 번
         // 몸이 흡수할 실제 에너지 (판정용 보정 전 값)
-        c.Eleft = r ? Math.min(r.physE ?? r.energy, r.absorb) / STRIKE.energyScale : 0; // physE: 약화 배율 전 에너지 (STRIKE.hitKPhys — 끄면 없음 = energy)
+        c.Eleft = r ? Math.min(r.physE ?? r.energy, r.absorb) / STRIKE.energyScale : 0; // physE: 약화 배율 전 에너지 (없으면 energy)
         c.stuck = r ? r.stuck : false;
         c.mFree = r ? r.mFree : 0.3;
         c.stuckT = 0;
@@ -521,9 +521,9 @@ export class Combat {
       const vv = vb.velocityAtPoint(vp(point));
       const rel = _e.set(va.x - vv.x, va.y - vv.y, va.z - vv.z);
       const s = rel.length();
-      // 다 쓴 박힘 풀기 (STRIKE.lodgeHold — 위 filterContactPair): 박힌 칼이 몸 안에서 거의 멈추면(판정 빠르기 바닥 0.5 m/s 밑 — analyze 와 같은 수) 남은 끌림을 다 쓴 것으로 보고 붙잡는 시간으로 —
+      // 다 쓴 박힘 풀기 (위 filterContactPair): 박힌 칼이 몸 안에서 거의 멈추면(판정 빠르기 바닥 0.5 m/s 밑 — analyze 와 같은 수) 남은 끌림을 다 쓴 것으로 보고 붙잡는 시간으로 —
       //  끄면 멈춘 칼은 끌림이 끝나지 않아(흡수 = c · 빠르기² · dt) 칼을 대고 미는 동안 몇 초씩 몸 안에 남았다
-      if (STRIKE.lodgeHold && c.stuck && c.Eleft > 0 && s < 0.5) {
+      if (c.stuck && c.Eleft > 0 && s < 0.5) {
         c.Eleft = 0;
         c.stuckT = STRIKE.stuckTime;
       }
@@ -549,25 +549,20 @@ export class Combat {
         const ax = _a.set(0, 1, 0).applyQuaternion(rotQ(sw));
         const o = tv(sw.translation());
         const pA = o.clone().addScaledVector(ax, _b.copy(point).sub(o).dot(ax));
-        // 몸 쪽 반작용 (STRIKE.cutReact, 사장님 결정 10/8 02:15 same): legacy = 0.8·J 를 뼈 중심선 점에(9/26 이전부터, 근거 기록 없음) · full = J 를 뼈 점에 · same = J 를 칼과 같은 점에(작용·반작용 그대로)
-        const mode = STRIKE.cutReact || 'legacy';
-        const kv = mode === 'legacy' ? 0.8 : 1;
-        const pv = mode === 'same' ? pA : onBone(c.pr.v, point);
-        if (mode === 'same') {
-          // 끌림은 미는 힘이지 튕기는 힘이 아니다: 한 스텝의 충격량이 닿은 점의 상대 속도를 뒤집지 못하게 한다 — 두 강체의 그 점·그 방향 유효 질량으로
-          //  J ≤ s / (1/m_칼 + 1/m_부위). 얇은 팔(축 둘레 관성이 작다)에 겉면 점으로 주면 이 상한 없이는 팔이 팽이처럼 돈다(10/8 측정: 접촉 뒤 |ω| p90 86 rad/s).
-          //  덜 흡수한 에너지는 남겨 다음 스텝에 마저 흡수한다 (총 흡수 에너지는 같다)
-          const att = c.pr.w.fighter;
-          const mB = att.swordProps ? gripMass(att.swordProps, liveState(sw), pA, dir, STEEL.handMass) : c.mFree + STRIKE.armAssist;
-          const mV = bodyMass(vb, pA, dir);
-          const Jcap = s / (1 / mB + 1 / mV);
-          if (J > Jcap) {
-            if (inDrag) c.Eleft += (J - Jcap) * s;
-            J = Jcap;
-          }
+        // 몸 쪽 반작용 (사장님 결정 10/8 02:15 same): J 를 칼과 같은 점(칼날 중심선 점)에 — 작용·반작용(운동량·각운동량 보존)
+        // 끌림은 미는 힘이지 튕기는 힘이 아니다: 한 스텝의 충격량이 닿은 점의 상대 속도를 뒤집지 못하게 한다 — 두 강체의 그 점·그 방향 유효 질량으로
+        //  J ≤ s / (1/m_칼 + 1/m_부위). 얇은 팔(축 둘레 관성이 작다)에 겉면 점으로 주면 이 상한 없이는 팔이 팽이처럼 돈다(10/8 측정: 접촉 뒤 |ω| p90 86 rad/s).
+        //  덜 흡수한 에너지는 남겨 다음 스텝에 마저 흡수한다 (총 흡수 에너지는 같다)
+        const att = c.pr.w.fighter;
+        const mB = att.swordProps ? gripMass(att.swordProps, liveState(sw), pA, dir, STEEL.handMass) : c.mFree + STRIKE.armAssist;
+        const mV = bodyMass(vb, pA, dir);
+        const Jcap = s / (1 / mB + 1 / mV);
+        if (J > Jcap) {
+          if (inDrag) c.Eleft += (J - Jcap) * s;
+          J = Jcap;
         }
         sw.applyImpulseAtPoint({ x: -dir.x * J, y: -dir.y * J, z: -dir.z * J }, vp(pA), true);
-        vb.applyImpulseAtPoint({ x: dir.x * J * kv, y: dir.y * J * kv, z: dir.z * J * kv }, vp(pv), true);
+        vb.applyImpulseAtPoint({ x: dir.x * J, y: dir.y * J, z: dir.z * J }, vp(pA), true);
         if (globalThis.__cutLog) { // 측정용(도구만 켠다): 접촉별 몫 — 칼 충격량 합, 몸 부위 속도 변화
           if (!c.log) { const v = vb.linvel(), w = vb.angvel(), vs = sw.linvel(); c.log = { who: c.pr.v.fighter.name, part: c.pr.v.part, v0: [v.x, v.y, v.z], w0: [w.x, w.y, w.z], s0: s, swv0: [vs.x, vs.y, vs.z], Jsum: 0, steps: 0, mode }; globalThis.__cutLog.push(c.log); }
           const v = vb.linvel(), w = vb.angvel(), vs = sw.linvel();
@@ -1004,7 +999,7 @@ export class Combat {
       return r;
     }
     const r = this.analyze(pr, point, S, P);
-    if (!r || (r.physE ?? r.energy) < STRIKE.minEnergy) { // physE: 약화 배율 전 에너지 (STRIKE.hitKPhys — 끄면 없음 = energy)
+    if (!r || (r.physE ?? r.energy) < STRIKE.minEnergy) { // physE: 약화 배율 전 에너지 (없으면 energy)
       if (r && UA.koteDrop?.ease && r.energy >= UA.koteDrop.easeE) this.koteCheck(att, vic, pr.v.part, r); // 손목 치기 떨굼 완화(11/05 — koteDrop.ease): 판정 문턱(minEnergy) 밑이라도 easeE 넘게 아래팔을 친 손목 치기는 굴림 (상처 · 판정은 그대로 없음)
       return null;
     }

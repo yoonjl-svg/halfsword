@@ -22,7 +22,6 @@ test('기본값 — 묶음 P 켬 (사장님 11/16 결정 "묶음 P 넣어.") · 
   assert.equal(T.ray, 0.9);
   assert.equal(CONFIG.THRUST.driveAi, 3);
   assert.equal(CONFIG.THRUST.drive, 3);
-  assert.equal(CONFIG.STRIKE.hitKPhys, 1);
   assert.equal(CONFIG.IT_OUTBOX.inqMul, 0.5);
 });
 

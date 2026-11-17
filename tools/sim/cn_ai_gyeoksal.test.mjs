@@ -6,7 +6,6 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT, AI } from './harness_m.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { useSecret } from '../../src/secret.js';
-import { pin1116 } from './pin_1116.mjs'; // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
 
 const { SECRET, UNIQUE_ASSIST: UA, AI_PLAN } = CONFIG;
 /** 옛 판(`?aiPlan=0` — 유파 플랜 끔)으로 fn: 11/14 사장님 '동방도 반드시 스택이 쌓여야 격살을 쓴다는 절대적 규칙은 지우자 마음의 기울기로 남겨둬' 뒤
@@ -52,61 +51,8 @@ function attempt(ai, { line = 'highR', stick = [0, 1], touches = [true, true, fa
   return sent;
 }
 
-test('열림: aiOpenSchools 에 동방 · AI 몫(aiSecret) = 격살 · 숙련도 5 이상만 · 격살 끔이면 옛 막기 연환 · AI 사냥 겹 켬 · 쓸 때 값 [사장님 11/14]', (t) => {
-  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-  assert.ok(SECRET.aiOpenSchools.includes('chinese'));
-  assert.equal(TRADITIONS.chinese.aiSecret.name, 'gyeoksal');
-  assert.equal(UA.cnHunt.ai, 1);
-  assert.deepEqual(SECRET.gyeoksalAi, { stacks: 1, late: CONFIG.realS(10) }); // 11/14 사장님 '3스택 이상 -> 1스택 이상'
-  for (const [prof, want] of [[5, 'gyeoksal'], [4, null]]) {
-    const B = cnAi(prof);
-    try { assert.equal(B.ai.secret?.name ?? null, want, `숙련도 ${prof}`); } finally { B.free(); }
-  }
-  const keep = SECRET.gyeoksal.on;
-  SECRET.gyeoksal.on = 0;
-  const B = cnAi(5);
-  try { assert.equal(B.ai.secret.name, 'lianhuanParry', '`?gyeoksal=0` = 옛 막기 연환'); } finally { B.free(); SECRET.gyeoksal.on = keep; }
-});
 
-test('쓸 때 (gkWant — 판당 1 번이라 아낌): 상대 사냥 겹 1 이상(11/14 사장님 — 전 3) · 또는 판이 10 s 넘음 — 그 전엔 보통 막기 [옛 판 — 플랜 몸은 마음의 기울기 · ai_plan_cn.test]', (t) => pin1116(t) || oldPlan(() => {
-  const B = cnAi();
-  const { ai } = B;
-  try {
-    ai.me.fightT = 0;
-    ai.foe.cnHunt = { n: 0, hits: 0, last: new Map(), t5: null };
-    assert.equal(ai.gkWant(), false);
-    ai.foe.cnHunt.n = 1;
-    assert.equal(ai.gkWant(), true);
-    ai.foe.cnHunt.n = 0;
-    ai.me.fightT = CONFIG.realS(10);
-    assert.equal(ai.gkWant(), true);
-  } finally { B.free(); }
-}));
 
-test('나서며 받음: 칼로 받기로 정한 막기(respond)에 격살 시도를 두고 걸음은 앞(스틱 1) — 칼이 닿거나 때(gyeoksal.press)가 지나면 보통 막기 걸음(−0.3) · 피하기 · 다 쓴 판은 시도 없음 [옛 판 — 쓸 때를 옛 문(10 s)으로 여는 장면 · 플랜 몸은 ai_plan_cn.test]', (t) => pin1116(t) || oldPlan(() => {
-  const B = cnAi();
-  const { ai } = B;
-  try {
-    ai.me.fightT = CONFIG.realS(10);
-    const rnd = Math.random;
-    let k = 0;
-    Math.random = () => (k++ === 0 ? 0 : 0.99); // 막기 봄(첫 굴림) · 패시브 · 맞받아 베기 · 피하기 안 함
-    try { assert.equal(ai.respond({ id: 1, line: 'highR', thrust: false }, 1.35), true); } finally { Math.random = rnd; }
-    assert.equal(ai.mode, 'defend');
-    assert.equal(ai.defVoid, false);
-    assert.ok(ai.gk && !ai.gk.seen);
-    ai.moveFeet(DT, 1.35);
-    assert.equal(ai.me.stickY, 1, '나섬');
-    ai.gk.t = SECRET.gyeoksal.press + 0.01;
-    ai.moveFeet(DT, 1.35);
-    assert.equal(ai.me.stickY, -0.3, '때가 지남 — 보통 막기');
-    useSecret(ai.me);
-    k = 0;
-    Math.random = () => (k++ === 0 ? 0 : 0.99);
-    try { ai.respond({ id: 2, line: 'highR', thrust: false }, 1.35); } finally { Math.random = rnd; }
-    assert.equal(ai.gk, null, '판당 1 번을 다 씀');
-  } finally { B.free(); }
-}));
 
 test('조건 (사람 gyeoksalTick 과 같음): 처음 닿음이 press 안 · 걸음 앞 · 상대 칼 들어옴 · 0.6 s 안 안 베임 · 받은 줄이 격살 자세 → 갈라지는 스텝에 받은 자세의 급소로 (ctx gk)', () => {
   const B = cnAi();
@@ -136,22 +82,3 @@ test('조건 (사람 gyeoksalTick 과 같음): 처음 닿음이 press 안 · 걸
   } finally { B.free(); }
 });
 
-test('한 칼 = 사람과 같은 격살 (secretGo → requestCombo 덧칸 — 판정 배율 · 칼끝 빠르기 0.7 × 사냥 겹) · AI 쉼 걸쇠는 격살엔 안 걸림 · 판당 1 번 셈', (t) => {
-  pin1116(t); // 11/16 사장님 결정 묶음(격살 A · 꺾음 · 偏閃奏進 · 사냥 겹 다시 짬 · 요격 출혈 × 2 · 시간 사다리 10 → 8 s)이 바꾼 옛 장면 — 그때 판으로 묶음 · 기준 그대로
-  for (const [n, share] of [[0, 0.7], [5, 0.7 * 1.4]]) {
-    const B = cnAi();
-    const { ai, G } = B;
-    try {
-      if (n) ai.foe.cnHunt = { n, hits: n, last: new Map(), t5: null };
-      ai.staminaRest = true;
-      assert.equal(ai.secretGo(ai.secret, { slot: 'yoryak' }), false, '쉼 걸쇠 — 보통 비기 길은 막힘');
-      assert.equal(ai.secretGo(ai.secret, { slot: 'yoryak', gk: true }), true, '격살은 기력 0 이하만 막음');
-      assert.equal(ai.me.secretUsed, 1);
-      assert.ok(Math.abs(ai.me.iaiReq.share - share) < 1e-12, `겹 ${n}`);
-      assert.equal(ai.me.iaiReq.hitMul, SECRET.gyeoksalHitMul ?? SECRET.hitMul);
-      assert.equal(ai.me.iaiReq.arcCut, true);
-      assert.equal(ai.secretGo(ai.secret, { slot: 'yoryak', gk: true }), false, '판당 1 번');
-      for (let i = 0; i < 3; i++) G.step();
-    } finally { B.free(); }
-  }
-});

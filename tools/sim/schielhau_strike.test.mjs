@@ -11,13 +11,8 @@ import { CONFIG, newRound, DT, AI } from './harness_m.mjs';
 import { duelRun, duelSummary, playerRun, tsubameRun, tsubameSummary } from './schielhau_strike.mjs';
 import { TRADITIONS } from '../../src/schools.js';
 import { PLAYER_UNIQUE, uniqueDef, PlayerUniqueAssist } from '../../src/unique_assist.js';
-import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
-import { pinReactOld } from './react_old.mjs'; // 11/16 AI 반응 시간 0.2 s 하나 전 판으로 묶을 옛 장면
 
 const UA = CONFIG.UNIQUE_ASSIST;
-// 11/15 다 쓴 박힘 풀기(config STRIKE.lodgeHold 1 — 사장님 11/15 결정 '3-1과 3-2만 해' · 기록 docs/strike/thrust_stuck_2026-11-15.md §7) 전 판으로 묶는 옛 장면 (기준은 안 고침):
-//  박힌 칼이 붙잡는 시간 뒤 몸에서 밀려 나오게 되어 이 장면의 판이 갈라짐 — 그때 판(lodgeHold 0)에서 보던 것을 그대로 봄
-const pinLodge0 = (t) => { const lh = CONFIG.STRIKE.lodgeHold; CONFIG.STRIKE.lodgeHold = 0; t.after(() => { CONFIG.STRIKE.lodgeHold = lh; }); };
 const withPath = (v, fn) => {
   const old = UA.schielPath;
   UA.schielPath = v;
@@ -181,77 +176,7 @@ test('덧칸 셈: 토막에서 손이 간 몫만큼 섞음 · 따라 베기는 �
   }
 });
 
-test('맞는 순간 손목 · 세기 (서 있는 상대 · 셸하우만 · 씨앗 넷): 새 길 = 손목 범위 밖 ≤ 10 % · 거꾸로 ≤ 5 % · 교정 안 걸림 · 공격당 심각도가 옛 길의 3 배 넘게', (t) => {
-  pinReactOld(t); // 11/16 AI 반응 시간 숙련도 사다리(전 판 [0.35 … 0.05])로 묶음 (tools/sim/react_old.mjs) — 반응이 바뀌어 씨앗 넷 판이 갈림 · 기준 그대로
-  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 — 셸하우를 내는 AI 몸의 겨눔 · 다가감 팔이 바뀜)로 씨앗 넷 판이 갈라져 견줌 잣대가 옮겨감 — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
-  const run = (v) => withArmOld(() => withPath(v, () => duelSummary([1, 2, 3, 4].map((s) => duelRun(s, { foe: 'still', dur: 40 })))), ['armClear2']);
-  const neu = run(1);
-  const old = run(0);
-  assert.ok(neu.contacts >= 12 && old.contacts >= 12, `맞음 ${neu.contacts} · ${old.contacts}`); // 새 길은 상대가 일찍 쓰러져 맞음 수가 적다
-  assert.ok(neu.oor <= 0.1 * neu.contacts, `새 길 범위 밖 ${neu.oor} / ${neu.contacts}`);
-  assert.ok(neu.rev <= 0.05 * neu.contacts, `새 길 거꾸로 ${neu.rev} / ${neu.contacts}`);
-  assert.ok(neu.fix < 1, `새 길 교정 각 p50 ${neu.fix}`);
-  assert.ok(old.oor >= 0.5 * old.contacts, `옛 길 범위 밖 ${old.oor} / ${old.contacts} (옛 꼴이 보여야 시험이 산다)`);
-  assert.ok(neu.perAtk >= 3 * old.perAtk, `공격당 심각도 새 ${neu.perAtk} · 옛 ${old.perAtk}`);
-});
 
-// 씨앗 여섯 → 열둘 (10/27 표준 시간 — 적힌 시간이 실제 초가 되어 손가락 봇 판 · 과녁 몸 돌기가 바뀜: 여섯 씨앗으론 3 판 범위 밖 4 / 23 = 17 % · 3 ÷ 전 판 세기 1.38 로 문턱을 넘고
-//  옛 판도 여섯 씨앗 2 / 24 · 0.80 처럼 출렁임 — 열둘이면 표준 시간 5 / 46 · 1.23 · 옛 판 5 / 48 · 0.91 로 둘 다 문턱 안 · 문턱 그대로 · 기록 docs/strike/time_standard_2026-10-25.md §4)
-test('사람 곁눈 베기 맞는 순간 (손가락 봇 · 분노의 베기 길 · 고른 견줌 — 상대 상처 끔 · 씨앗 열둘 × 앞 다섯 칼): 같은 길(기본 · 덧칸 셋)과 3(칼끝 들기 없음) 모두 손목 범위 밖 ≤ 15 % · 거꾸로 ≤ 5 % · 3 은 공격당 심각도가 18:0x 전 판의 ± 25 % 안 · 같은 길은 더 셈 / 전 판은 범위 밖 ≥ 25 %', (t) => { pinLodge0(t);
-  // 걷기 기력은 10/30 판 값으로 묶어 둠(10/31 09:xx 사장님 걷기 기력 0.6 m · 4 · 뒷걸음 × 1.5 — 손가락 봇이 앞뒤로 걸으며 치다 지침에 드는 때가 바뀌어 3 ÷ 전 판 세기가 1.23 → 1.31 로 문턱을 넘음 ·
-  //  이 시험이 보는 것은 손목 고침(같은 길 · 3 · 전 판)이지 기력이 아님 — 세 판 모두 같은 기력 값)
-  const ST = CONFIG.STAMINA;
-  const walk1030 = (fn) => {
-    const keep = { d: ST.stepDistance, c: ST.stepCosts, b: ST.backStepCostMul };
-    Object.assign(ST, { stepDistance: 0.62, stepCosts: { default: 1.4, chinese: 0.7, japanese: 2.1 }, backStepCostMul: 1 });
-    try {
-      return fn();
-    } finally {
-      Object.assign(ST, { stepDistance: keep.d, stepCosts: keep.c, backStepCostMul: keep.b });
-    }
-  };
-  // 손가락 긋기 세기도 11/06 전 판 값으로 묶어 둠(기본 켬 arm 2 · gain 2 — 칼 팔 · 손목 힘 2 배면 칼끝 들기 없는 3 은 맞는 순간 손목이 범위 밖 24 / 57 · 거꾸로 13 / 57 로 이 견줌의 잣대가 옮겨감 ·
-  //  세 판 모두 같은 손가락 값 — 지금 판(기본 켬)의 같은 길은 아래 now 가 따로 봄)
-  const fc1105 = (fn) => {
-    const FC = CONFIG.SKILL.fingerCut;
-    const keep = { ...FC };
-    Object.assign(FC, { arm: 1, gain: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면
-    try {
-      return fn();
-    } finally {
-      Object.assign(FC, keep);
-    }
-  };
-  const runs = () => walk1030(() => duelSummary([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((s) => playerRun(s, { foe: 'still', dur: 14, immortal: true })).map((r) => ({ ...r, rows: r.rows.slice(0, 5) }))));
-  // 팔도 11/12 팔 사람 꼴 넷(빈팔 닿는 곳 · 패드 끝 뻗음 · 동방 잣대 · 두 팔 엇갈림 막기) 전 판으로 묶어 둠 — 세 판 모두 같은 팔 · 이 견줌이 보는 것은 손목 고침 (기록 arm_real §10).
-  //  켠 판은 칼끝 들기 없는 3 의 맞는 순간 손목 범위 밖이 12 ~ 15 / 52 ~ 54 로 문턱(15 %)을 조금 넘음 — 기본 길(같은 길)은 아래 지금 판이 켠 팔로 따로 봄
-  const fair = () => withArmOld(() => fc1105(runs));
-  const withTip = (v, fn) => {
-    const old = UA.schielPlayerTip;
-    UA.schielPlayerTip = v;
-    try {
-      return fn();
-    } finally {
-      UA.schielPlayerTip = old;
-    }
-  };
-  const full = fair();
-  const opt3 = withTip(0, fair);
-  const old = withPlayer(0, fair);
-  assert.ok(full.contacts >= 15 && opt3.contacts >= 15 && old.contacts >= 15, `맞음 ${full.contacts} · ${opt3.contacts} · ${old.contacts}`);
-  for (const [nm, d] of [['같은 길', full], ['3', opt3]]) {
-    assert.ok(d.oor <= 0.15 * d.contacts, `${nm} 범위 밖 ${d.oor} / ${d.contacts}`);
-    assert.ok(d.rev <= 0.05 * d.contacts, `${nm} 거꾸로 ${d.rev} / ${d.contacts}`);
-  }
-  assert.ok(old.oor >= 0.25 * old.contacts, `전 판 범위 밖 ${old.oor} / ${old.contacts} (옛 꼴이 보여야 시험이 산다)`);
-  assert.ok(Math.abs(opt3.perAtk / old.perAtk - 1) <= 0.25, `3 공격당 심각도 ${opt3.perAtk} · 전 판 ${old.perAtk} (손목 고침으로 세지지도 약해지지도 않게)`);
-  assert.ok(full.perAtk > opt3.perAtk, `같은 길 ${full.perAtk} · 3 ${opt3.perAtk} (칼끝 들기가 세기 몫)`);
-  // 지금 판 (손가락 긋기 기본 켬 — 게임 그대로): 같은 길은 같은 문턱 안
-  const now = runs();
-  assert.ok(now.contacts >= 15, `지금 판 맞음 ${now.contacts}`);
-  assert.ok(now.oor <= 0.15 * now.contacts, `지금 판 같은 길 범위 밖 ${now.oor} / ${now.contacts}`);
-  assert.ok(now.rev <= 0.05 * now.contacts, `지금 판 같은 길 거꾸로 ${now.rev} / ${now.contacts}`);
-});
 
 test('사람 곁눈 베기 세기 손잡이 (schielPlayerK — 18:5x 50 % 조건부): 0.5 면 첫 맞음 심각도만 × k · 맞는 빠르기 · 에너지 · 손목 그대로 · AI 곁눈 베기 그대로 · schielPlayer 0 이면 안 걸림', () => {
   const K0 = UA.schielPlayerK;

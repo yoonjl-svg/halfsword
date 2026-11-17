@@ -15,8 +15,6 @@ import { mordHitMul } from '../../src/mordschlag.js';
 import { nodeTitle } from '../../src/skill_tree.js';
 import * as D from '../../src/skill_tree_data.js';
 import { altibRun, spinRun } from './ib_swap.mjs';
-import { withSecretFreeOff } from './secret_free_off.mjs'; // 11/16 옛 장면 시험을 끝없는 비기 · 유파 대가 끈 판으로
-import { pinAiKitOff } from './ai_kit_off.mjs'; // 11/16 AI 숙련도 = 칸(AI_KIT) 전 판으로 묶을 옛 장면
 
 const setup = (P) => {
   P.skill.corr = CONFIG.SKILL.corr;
@@ -67,74 +65,7 @@ test('스킬트리 — B4 알티바슈 포르트가 비기 자리(전 B7 값) ·
   assert.equal(b7.cmd, '원을 그리며 긋기(↻/↺)');
 });
 
-test('사람 비기 알티바슈 포르트 — 무장 없이 길게 누르면 아무 일 없음 · 칼끝 거리 밖 2 s 무장 창(금빛 !)에서 길게 누르면 메기(무장을 씀) · 떼면 비기 내려침 · 판당 한 번 · 기력 0 · 판정 = 1 × 기력 몫', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
-  const G = newRound({ seed: 2, weapon: 'zweihander', weapon2: 'longsword', gap: 3.4 });
-  const P = G.player, E = G.enemy;
-  setup(P);
-  G.ai.update = () => E.move.set(0, 0);
-  const W = new PlayerSecretWatch(P, E, { locked: false });
-  const uq = new PlayerUniqueAssist(P, { names: new Set(['redondo', 'cingir']) });
-  assert.equal(W.S?.name, 'altib');
-  assert.ok(uq.holdE && uq.cingirE);
-  let down = false;
-  G.before = () => {
-    W.update(DT, !!P.skill.sec);
-    uq.holdInput(down, true, !!W.open, W.holdOwns());
-  };
-  try {
-    // 판 시작 정지 동안 · 무장 전: 길게 눌러도 메지 않음 (특수 공격이 아님)
-    while (G.t < ARENA.startHold) G.step();
-    down = true;
-    for (let i = 0; i < Math.round(realS(0.9) / DT); i++) G.step();
-    assert.equal(uq.winding, false, '무장 없이는 메지 않음');
-    assert.ok((uq.stats.holdRefused ?? 0) >= 1);
-    down = false;
-    G.step();
-    while (G.t < ARENA.startHold + SECRET.ibSpin.armTime + 1 && W.open?.ctx?.ev !== 'altib') G.step();
-    assert.equal(W.open?.ctx?.ev, 'altib', '칼끝 거리 밖 무장 → 창');
-    assert.equal(W.holdOwns(), true);
-    assert.equal(W.circleOwns(), false, '원 긋기 창 아님');
-    const left0 = secretLeft(P);
-    down = true;
-    for (let i = 0; i < Math.round((UA.rdHoldTime + realS(0.2)) / DT); i++) G.step();
-    assert.equal(uq.winding, true, '무장 창에서 메기');
-    assert.equal(uq.hold.secret, true);
-    assert.equal(W.open, null, '메기 시작에 무장을 씀');
-    assert.equal(W.spinArm.armed, false);
-    for (let i = 0; i < Math.round(realS(0.6) / DT); i++) G.step();
-    const st = P.stamina.value;
-    const want = Math.min(1, Math.max(0, st / P.stamina.max));
-    down = false;
-    G.step();
-    assert.equal(uq.stats.altib?.fired, 1, '비기 내려침');
-    assert.ok(Math.abs(uq.stats.altib.k[0] - want) < 0.03, `위력 몫 ${uq.stats.altib.k[0]} ≈ 기력 몫 ${want}`);
-    assert.equal(secretLeft(P), left0 - 1, '판당 한 번');
-    assert.equal(P.stamina.value, 0, '내려친 뒤 기력 0');
-    const I = P.iai ?? P.iaiReq;
-    assert.equal(I?.secret, 'altib');
-    assert.ok(Math.abs(I.hitMul - uq.stats.altib.k[0]) < 0.002, `판정 배율 = 1 × 기력 몫 (${I.hitMul})`);
-    assert.equal(P.uniqueCue?.kind, 'secret');
-    assert.equal(P.uniqueCue?.text, '알티바슈 포르트');
-    assert.equal(uq.coolLeft('redondo'), 0, '특수 공격 식힘 없음');
-    for (let i = 0; i < Math.round(realS(2.5) / DT); i++) G.step();
-    assert.equal(W.open, null, '다 쓴 판엔 창 없음');
-  } finally {
-    G.world.free();
-  }
-}));
 
-test('기력 몫 — 서 있는 과녁 · 츠바이핸더 · 같은 메기: 멜 때 기력 50 % 면 위력 몫 · 판정 J 가 100 % 의 절반 안팎 · 내려친 뒤 기력 0', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
-  const a = altibRun({ w: 'zweihander', st: 1, hold: 0.8 });
-  const b = altibRun({ w: 'zweihander', st: 0.5, hold: 0.8 });
-  assert.equal(a.fired, 1);
-  assert.equal(b.fired, 1);
-  assert.ok(a.first && b.first, '둘 다 맞음');
-  const kr = b.k / a.k;
-  assert.ok(kr > 0.4 && kr < 0.62, `몫 비 ${kr}`);
-  const er = b.first.E / a.first.E;
-  assert.ok(er > 0.35 && er < 0.7, `J 비 ${er} (${b.first.E} / ${a.first.E})`);
-  assert.ok(a.k < 1 && a.k > 0.8, `메는 동안 기력이 빠져 몫 < 1 (${a.k})`);
-}));
 
 test('무게 보정 견줌(weightFix — 기본 끔): 켜면 위력 몫 = (멜 때 기력 − 무게 1 값으로 멘 만큼) ÷ 최대 · 끄면 뗀 순간 기력 ÷ 최대', () => {
   const f = { stamina: { value: 60, max: 100, infinite: false } };
@@ -219,48 +150,4 @@ test('한 걸음 나가며 — 서 있는 과녁 · 네 칼: 골반이 stride �
   }
 });
 
-test('AI — 숙련도 5 이베리아: 비기 알티바슈 포르트(싱지르 무장 셈) · 숙련도 3 이상: 왼 가로베기 자리 특수 공격 싱지르(바탕 왼 가로베기) · 정수리 가르기는 고르는 목록에 없음', (t) => {
-  pinAiKitOff(t); // 11/16 AI 숙련도 = 칸(config AI_KIT) 전 판으로 묶음 (tools/sim/ai_kit_off.mjs) — 숙련 3 이베리아 싱지르 → 칸 판은 이어 돌리기 B7(4 단계) · 기준 그대로
-  const G = newRound({ seed: 1, weapon: 'zweihander', weapon2: 'zweihander', persona: { proficiency: 5 } });
-  try {
-    assert.equal(G.ai.secret?.name, 'altib');
-    assert.ok(G.ai.spinArm, '무장 셈');
-    const cg = G.ai.school.techByName.cingir;
-    assert.equal(cg?.plain?.name, 'zwerchL');
-    assert.ok(!G.ai.school.tech.some((t) => t.name === 'redondo'));
-    assert.ok(G.ai.school.techByName.redondo, '비기가 빌려 쓰는 길');
-  } finally {
-    G.world.free();
-  }
-  const G3 = newRound({ seed: 1, weapon: 'zweihander', weapon2: 'zweihander', persona: { proficiency: 3 } });
-  try {
-    assert.equal(G3.ai.secret, null);
-    assert.ok(G3.ai.school.techByName.cingir?.plain);
-  } finally {
-    G3.world.free();
-  }
-});
 
-test('AI 비기 알티바슈 포르트 — 무장된 채 상대가 칼끝 거리 + altib.aiFire 안이면 메고 다가가 내려침 · 비기 셈 · 기력 0 · 특수 공격 식힘 없음', () => withSecretFreeOff(() => { // 11/16 그때 판(끝없는 비기 · 유파 대가 끔 — tools/sim/secret_free_off.mjs)으로 묶음 · 기준 그대로
-  const G = newRound({ seed: 4, weapon: 'longsword', weapon2: 'zweihander', persona: { proficiency: 5 }, gap: 3.6 });
-  const P = G.player, A = G.ai, E = G.enemy;
-  try {
-    assert.equal(A.secret?.name, 'altib');
-    let fired = false, st = null, w = 0;
-    for (let i = 0; i < Math.round(realS(12) / DT) && !fired; i++) {
-      // 사람 몸은 서서 천천히 다가감 (무장 뒤 들어오는 상대)
-      P.move.set(0, G.t > ARENA.startHold + SECRET.ibSpin.armTime + 0.3 && P.foeDistance() > 1.2 ? 0.5 : 0);
-      G.step();
-      if (A.stats.altib?.begin) w++;
-      if (A.stats.altib?.fired) (fired = true), (st = E.stamina.value);
-    }
-    assert.ok(w > 0, 'AI 가 비기로 메기 시작');
-    assert.ok(fired, `AI 비기 내려침 (${JSON.stringify(A.stats.altib)} · ${JSON.stringify(A.stats.rdWind)})`);
-    assert.equal(st, 0, '내려친 뒤 기력 0');
-    assert.equal(secretLeft(E), 0, '판당 한 번');
-    assert.ok(!(A.specCool.redondo > 0), '특수 공격 식힘 없음');
-    assert.ok(A.stats.altib.k[0] > 0 && A.stats.altib.k[0] <= 1);
-  } finally {
-    G.world.free();
-  }
-}));

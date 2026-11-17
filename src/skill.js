@@ -1769,7 +1769,7 @@ export class Skill {
     }
     this.swinging = swinging;
     this.inputSwinging = this.inputMotion ? this.inputMotion.vel.length() > SKILL.swingSpeed && f.alive && f.armed : swinging;
-    if (!f.aiControlled) this.whiffTrack(dt, swinging); // 사람 휘두르기 헛침 → 상대 걸음(독일 간격 잡기, 10/15 — gait.foeWhiff 가 GAIT.deChase 를 봄) · 헛침 · 막힘 → 상대 인데스(10/21). AI 는 ai.js afterStrike 가 알린다
+    if (!f.aiControlled) this.whiffTrack(dt, swinging); // 사람 휘두르기 헛침 → 상대 걸음(독일 간격 잡기, 10/15 — gait.foeWhiff) · 헛침 · 막힘 → 상대 인데스(10/21). AI 는 ai.js afterStrike 가 알린다
     if (this.uniq) this.uniq.detect(dt, this.inputSwinging, this.inputMotion?.vel); // 원래 입력 시계/방향으로 인식. 유파 동작·보법 정의는 그대로.
     // 플레이어 막기 버튼 (10/11 — parry_button.js): 버튼이 손 목표를 휘두르기 문턱보다 빠르게 옮기는 동안은 AI 막기(손이 parrySpeed 로 옮겨져 휘두르기로 잡힘)처럼
     //  휘두르기 꼴의 거르기·몸 따라가기를 쓴다. 휘두르기 사건(swinging — 내딛기·베기 덩이·자세로 돌아가기)은 손가락 끌기만 (버튼이 prev 도 옮긴다). 버튼이 없으면 guardDrive 없음 → 그대로

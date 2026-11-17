@@ -7,10 +7,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, CONFIG, AI, THREE } from './harness_m.mjs';
 import { runDir } from './arm_reach_audit.mjs';
-import { withArmOld } from './arm_real_pin.mjs';
 
 const { SKILL } = CONFIG;
-const was2 = (fn) => withArmOld(fn, ['armOdd']); // 11/12 둘째 판 (쥐면 곧장 — frontIn 0)
 
 test('기본값 — armClear.frontIn 0.1 s (다른 칸 그대로)', () => {
   const C = SKILL.armClear;
@@ -36,27 +34,7 @@ function gripJump(weapon, dir, mode) {
   return mx;
 }
 
-test('쥐는 순간 손 목표가 안 튐 — 대검 · 일본 두손 천천히 끌기 (손가락 몫이 작은 판 · 둘째 판은 한 스텝에 5 cm 넘게)', () => {
-  for (const [w, dir, mode] of [['zweihander', 'up', 'slow'], ['uchigatana', 'right', 'slow'], ['durandal', 'downRight', 'slow']]) {
-    const now = gripJump(w, dir, mode);
-    const was = was2(() => gripJump(w, dir, mode));
-    assert.ok(was > 0.05, `${w} ${dir} ${mode} 둘째 판 튐 ${was.toFixed(3)}`);
-    assert.ok(now < 0.015, `${w} ${dir} ${mode} 튐 ${was.toFixed(3)} → ${now.toFixed(3)}`);
-  }
-});
 
-test('고친 칸 — 뒤랑달 우하 거꾸로 쥠 · 츠바이핸더 · 티소나 우하 손목 범위 밖 · 플랑베르주 왼쪽 위팔 돌림 (빠르게): 둘째 판은 걸림 · 지금은 안 걸림 · 뻗음 그대로 · 새 꼴 없음', () => {
-  const cells = [['durandal', 'downRight', 'rev'], ['zweihander', 'downRight', 'oor'], ['tizona', 'downRight', 'oor'], ['flamberge', 'left', 'shRot']];
-  for (const [w, dir, k] of cells) {
-    const now = runDir({ weapon: w, dir, mode: 'fast' });
-    const was = was2(() => runDir({ weapon: w, dir, mode: 'fast' }));
-    assert.ok(was.flags.includes(k), `${w} ${dir} 둘째 판 ${k} ${was.frac[k]}`);
-    assert.ok(!now.flags.includes(k), `${w} ${dir} ${k} ${was.frac[k].toFixed(3)} → ${now.frac[k].toFixed(3)}`);
-    for (const x of ['arms', 'elbowUp', 'shPlane', 'shRot', 'rev', 'body', 'sword', 'grip', 'roll']) assert.ok(!now.flags.includes(x), `${w} ${dir} 새 ${x} ${now.frac[x]}`);
-    assert.equal(now.frac.grip, 0, `${w} ${dir} 빈손 놓침`);
-    assert.ok(now.end.reach > was.end.reach - 0.01, `${w} ${dir} 뻗음 ${was.end.reach.toFixed(3)} → ${now.end.reach.toFixed(3)}`);
-  }
-});
 
 /** n 스텝 뒤 두 몸 가슴 · 칼 자리 (바이트 견줌) */
 function snapAfter(o, n) {
@@ -69,11 +47,3 @@ function snapAfter(o, n) {
   }
 }
 
-test('AI 몸 · 한손 칼은 안 걸림 — AI 끼리 츠바이핸더 · 우치가타나 · 사람 세이버 한 칸 바이트 같음', () => {
-  const ai = { AI2Class: AI, persona: { proficiency: 3 }, persona2: { proficiency: 3 } };
-  for (const o of [{ weapon: 'zweihander', weapon2: 'longsword', ...ai }, { weapon: 'uchigatana', weapon2: 'zweihander', ...ai }]) {
-    assert.deepEqual(snapAfter(o, 600), was2(() => snapAfter(o, 600)), `${o.weapon} 대 ${o.weapon2}`);
-  }
-  const pose = () => { const r = runDir({ weapon: 'sabre', dir: 'right', mode: 'fast' }); return { hand: r.end.hand, frac: r.frac }; };
-  assert.deepEqual(pose(), was2(pose));
-});

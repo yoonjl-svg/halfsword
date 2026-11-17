@@ -110,7 +110,7 @@ export function aiFrontDash(ai) {
   const g = f.gait;
   if (!g?.active || g.burst || g.burstBrake || g.fastK > 1 || f.feetHeld || f.finish?.amt > 0.5 || f.state !== 'stand') return false;
   if (Math.hypot(g.vf.x, g.vf.z) >= GAIT.burstStandV || !(g.legs.F.stance && g.legs.B.stance)) return false;
-  const n = GAIT.deDig && ai.art?.tradition === 'german' ? GAIT.digSteps : D.stepN;
+  const n = ai.art?.tradition === 'german' ? GAIT.digSteps : D.stepN;
   g.burst = { fore: 1, side: 0, lat: 0, foreOnly: false, dig: n };
   statsOf(ai).dash++;
   return true;

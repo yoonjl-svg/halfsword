@@ -15,7 +15,6 @@ import { lowShoveFree } from '../../src/jp_tank.js';
 import { aiWoundKeep } from '../../src/ai_block_cut.js';
 import { kitOff, uniqueOff, perkOff } from '../../src/skill_kit.js';
 import { playerProficiency } from '../../src/saengsa_roster.js';
-import { withAiKitOff } from './ai_kit_off.mjs';
 
 const { AI_KIT, SAENGSA, SCHOOL_PASSIVE, AI_PROFICIENCY, AI_PLAN } = CONFIG;
 const WEAPON = { german: 'longsword', italian: 'rapier', iberian: 'zweihander', japanese: 'uchigatana', chinese: 'qinggang' };
@@ -120,17 +119,6 @@ test('11/16 사장님 \'다 너의 권고대로 하마\' ① 내려 찌르기 �
   assert.equal(CONFIG.UNIQUE_ASSIST.imbroccataGap, 0.9);
 });
 
-test('11/16 사장님 \'다 너의 권고대로 하마\' ③ AI 반응 버릇 \'겹치기 (두플리렌)\' = 겹치기 칸 G7 · \'빼서 찌르기 (카바치오네)\' = 칼끝 돌려 빼기 칸 I2 · 옛 판은 늘', () => {
-  const has = (s, p, name) => match(s, p).ai.passives.some((x) => x.name === name);
-  assert.deepEqual([3, 4].map((p) => has('german', p, 'duplieren')), [false, true]);
-  assert.deepEqual([2, 3].map((p) => has('italian', p, 'cavazione')), [false, true]);
-  assert.equal(has('german', 4, 'indes'), true, '다른 버릇은 그대로');
-  assert.equal(has('german', 1, 'nachreisen'), true);
-  withAiKitOff(() => {
-    assert.equal(has('german', 1, 'duplieren'), true);
-    assert.equal(has('italian', 1, 'cavazione'), true);
-  });
-});
 
 test('11/16 사장님 \'단 실력 등급은 높음을 4~5, 최고를 6으로\' · \'다 너의 권고대로 하마\' ⑥ 반응 시간 모든 숙련도 0.2 s', () => {
   assert.deepEqual(AI_PLAN.levels, ['easy', 'easy', 'normal', 'normal', 'hard', 'hard', 'expert']);
@@ -249,53 +237,7 @@ test('손에 든 무기가 바뀌면 칸 몫을 그 유파 숙련도로 다시 (
   assert.equal(A.me.schoolFootwork, undefined);
 });
 
-test('`?aiKit=0` (AI_KIT.on 0) = 옛 판: 몸에 칸 몫 없음 · 옛 단계표 · 패시브 4 · 비기 5', () => {
-  withAiKitOff(() => {
-    for (const s of TREE_SCHOOLS) {
-      const ST = aiUniqueStages(s);
-      for (const p of [0, 1, 2, 3, 4, 5, 6]) {
-        const A = match(s, p).ai;
-        const me = A.me;
-        assert.equal(A.kit, null);
-        assert.ok(!('skillKit' in me) && !('schoolFootwork' in me) && !('schoolParry' in me), `${s} ${p} 몸 그대로`);
-        assert.equal(A.school, A.art.school);
-        assert.ok(!('kit' in A.art));
-        const pkg = pkgNames(A);
-        for (const [ai, st] of ST.unique) {
-          if (ST.retired.has(ai) || !(TRADITIONS[s].unique ?? []).some((u) => u.name === ai && u.ai !== false && !u.counter)) continue;
-          assert.equal(pkg.has(ai), st <= p, `${s} ${p} ${ai}`);
-        }
-        if (s === 'iberian') assert.equal(me.wristK, p >= SCHOOL_PASSIVE.at ? SCHOOL_PASSIVE.iberian.wrist : 1);
-        else assert.equal(me.schoolPassive.school, p >= SCHOOL_PASSIVE.at ? s : null);
-        assert.equal(!!A.secret, p >= AI_PROFICIENCY.secretAt);
-        assert.equal(A.kitLink, true);
-      }
-    }
-    assert.equal(huntOn(match('chinese', 1).ai.me), true); // 옛 판: AI 사냥 겹은 스위치만
-    assert.equal(deDirtyBody(match('german', 2).ai.me, 'deRing'), true);
-  });
-});
 
-test('`?aiKit=0` 판은 몇 초 싸움이 칸 몫 판과 따로 같은 수를 낸다 (같은 씨앗 두 번 — 굴림 차례 그대로)', () => {
-  const run = () => {
-    let s = 7;
-    const keep = Math.random;
-    Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
-    try {
-      const G = match('german', 2);
-      for (let i = 0; i < 3 / DT; i++) G.step();
-      const p = G.enemy.bodies.pelvis.translation();
-      return [p.x, p.z, G.hits.length].map((v) => +(+v).toFixed(6));
-    } finally {
-      Math.random = keep;
-    }
-  };
-  const a = withAiKitOff(run);
-  const b = withAiKitOff(run);
-  assert.deepEqual(a, b);
-  const c = run();
-  assert.ok(c.every(Number.isFinite));
-});
 
 test('사람 숙련도 (11/16 사장님 \'사람 셈도 문턱 기준으로 바꿔\'): 익힌 칸 수 문턱 = AI 사다리 쌓임 칸 수 — 사다리 1 ~ L 단계를 다 익힌 사람 = 숙련도 L 인 AI 와 같은 숫자 · 옛 규칙 mode \'old\'', () => {
   const P = SAENGSA.playerProf;

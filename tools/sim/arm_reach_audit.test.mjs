@@ -10,7 +10,6 @@ import assert from 'node:assert/strict';
 import { newRound, CONFIG } from './harness_m.mjs';
 import { runDir, flagsOf, weaponCells, DIRS, FLAGS } from './arm_reach_audit.mjs';
 import { WEAPONS } from '../../src/weapons.js';
-import { withArmOld } from './arm_real_pin.mjs';
 
 const { SKILL } = CONFIG;
 const ITALIAN = ['rapier', 'dartagnan', 'balisarda', 'pappenheimer'];
@@ -61,39 +60,8 @@ test('② 다른 무기 날것 매핑 그대로 (thrustScale 끔과 바이트 �
   }
 });
 
-test('① 이탈리아 무기 오른쪽 끝까지 — 손이 칼 어깨보다 오른쪽 · 이상 꼴 없음 (전 판은 손이 어깨 안쪽 · 팔꿈치 더 굽음)', () => withArmOld(() => {
-  for (const w of ITALIAN) {
-    const now = runDir({ weapon: w, dir: 'right', mode: 'slow' });
-    const old = withSkill({ thrustScale: 'off' }, () => runDir({ weapon: w, dir: 'right', mode: 'slow' }));
-    assert.ok(now.end.hand[2] > now.poseEnd.shS[2], `${w} 손 옆 ${now.end.hand[2].toFixed(3)} ≤ 칼 어깨 ${now.poseEnd.shS[2].toFixed(3)}`);
-    assert.deepEqual(now.flags, [], `${w} 이상 꼴 ${now.flags}`);
-    assert.ok(old.end.hand[2] < old.poseEnd.shS[2] && old.end.elbow > now.end.elbow, `${w} 전 판 손 옆 ${old.end.hand[2].toFixed(3)} · 어깨 ${old.poseEnd.shS[2].toFixed(3)} · 팔꿈치 ${old.end.elbow.toFixed(0)} (지금 ${now.end.elbow.toFixed(0)})`);
-    assert.ok(now.end.reach > old.end.reach, `${w} 뻗음 ${old.end.reach.toFixed(3)} → ${now.end.reach.toFixed(3)}`);
-  }
-}, ['edgeReach', 'armClear']));
 
-test('① 레전드 발리사르다 여덟 방향 — 전 판보다 뻗고 한손 칼 묶음 가장 낮은 값(동방 환도) 이상 · 빠르게 긋기도', () => withArmOld(() => {
-  for (const mode of ['slow', 'fast']) {
-    for (const dir of Object.keys(DIRS)) {
-      const now = runDir({ weapon: 'balisarda', dir, mode });
-      const old = withSkill({ thrustScale: 'off' }, () => runDir({ weapon: 'balisarda', dir, mode }));
-      const ref = runDir({ weapon: 'hwando', dir, mode });
-      const tag = `${mode} ${dir}`;
-      if (!(mode === 'slow' && dir === 'down')) assert.ok(now.end.reach > old.end.reach, `${tag} 뻗음 ${old.end.reach.toFixed(3)} → ${now.end.reach.toFixed(3)}`); // 천천히 아래: 전 판은 손 목표가 배 앞에 묻혀 팔이 늘어져 0.96 (목표와 21 cm 어긋남 — 기록 §3)
-      assert.ok(now.end.reach >= ref.end.reach, `${tag} 뻗음 ${now.end.reach.toFixed(3)} < 환도 ${ref.end.reach.toFixed(3)}`);
-    }
-  }
-}, ['edgeReach', 'eastScale', 'armClear']));
 
-test('③ 두손 칼 빈팔 닿는 곳 (twoHandReach — 11/12 기본 1): 오른쪽 끝에서 손이 몸 뒤로 끌려가지 않음 (전 판 0 은 끌려감) · 한손 칼 그대로', () => {
-  const old = withArmOld(() => runDir({ weapon: 'longsword', dir: 'right', mode: 'slow' }), ['twoHandReach', 'armClear']); // 전 판 꼴 (두 팔 엇갈림 막기도 전 — 그것만 켜도 손이 몸 앞에 남음)
-  const on = runDir({ weapon: 'longsword', dir: 'right', mode: 'slow' });
-  assert.ok(old.end.hand[0] < 0 && old.end.err > 0.2, `전 판 손 앞 ${old.end.hand[0].toFixed(3)} · 오차 ${old.end.err.toFixed(3)} (빈팔이 끌어당김)`);
-  assert.ok(on.end.hand[0] > 0 && on.end.err < old.end.err, `켬 손 앞 ${on.end.hand[0].toFixed(3)} · 오차 ${on.end.err.toFixed(3)}`);
-  const sab = runDir({ weapon: 'sabre', dir: 'right', mode: 'slow' });
-  const sabOld = withSkill({ twoHandReach: 0 }, () => runDir({ weapon: 'sabre', dir: 'right', mode: 'slow' }));
-  assert.deepEqual(sabOld.end, sab.end);
-});
 
 test('③ 패드 끝 뻗음 (edgeReach — 11/12 기본 1): 한손 칼 오른쪽 끝 팔이 펴짐 (전 판 0 보다) · 쉼 자리 손 목표 그대로 · 두손 칼 그대로', () => {
   const pad = (w) => {

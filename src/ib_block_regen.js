@@ -12,7 +12,7 @@ import { kitOff } from './skill_kit.js';
 
 /** 이 몸이 막아 내면 기력을 되찾나 */
 export function ibBlockOn(f) {
-  return !!SKILL.ibBlockRegen && !!f?.swordArt?.tradition === 'iberian' && f.schoolParry !== false && !kitOff(f, 'blockRegen');
+  return !!SKILL.ibBlockRegen && f?.swordArt?.tradition === 'iberian' && f.schoolParry !== false && !kitOff(f, 'blockRegen');
 }
 
 /** 되찾는 몫 n — 'cut' = 내 무기로 베기 한 번 값(11/15 사장님 '권고대로 무기 베기 한 번 값으로 해' · 맞바꿈과 같은 셈 · 기본) · 'fixed' = 고정 30(전 판) · 'foe2' = 상대 무기 베기 기력 × 2(견줌) */

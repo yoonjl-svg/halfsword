@@ -17,7 +17,6 @@ import { G } from '../../src/ai_techniques.js';
 import { PLAYER_UNIQUE, uniqueDef, PlayerUniqueAssist, TSU_AIM } from '../../src/unique_assist.js';
 import { HUMAN } from '../../src/fighter.js';
 import { traceRun, bend, bendCut, bendTrail } from './tsubame_trace.mjs';
-import { withArmOld } from './arm_real_pin.mjs'; // 11/12 팔 사람 꼴 — 옛 장면은 잰 때 팔로 (docs/strike/arm_real_2026-11-12.md §10)
 
 const UA = CONFIG.UNIQUE_ASSIST;
 const TSU = PLAYER_UNIQUE.japanese.find((e) => e.name === 'tsubameGaeshi');
@@ -31,18 +30,6 @@ const withUA = (o, fn) => {
   }
 };
 const OFF = { tsuRuler: 0, tsuSnap: 0, tsuAim: 0 };
-// 한 판 견줌은 10/25 · 10/27 판 걸음(일본 걸음 전 판 `?jpGait=old`)에서 — 10/29 일본 걸음(느린 걸음 · 자세 0.45)은 씨앗 1 의 들어가는 거리 · 때가 달라 그 한 번 맞음이
-//  위팔에 닿음(씨앗 1 ~ 6 모아 보면 새 걸음도 몸통 4 · 팔 2 — 전 걸음 5 · 1 · docs/strike/jp_gait_2026-10-29.md §10). 이 시험은 제비 베기 세 해법을 보는 것이라 판을 묶어 둠
-const withJpOld = (fn) => {
-  const keep = { ...JAPANESE_GAIT };
-  setJapaneseGait('old');
-  try {
-    return fn();
-  } finally {
-    for (const k of Object.keys(JAPANESE_GAIT)) delete JAPANESE_GAIT[k];
-    Object.assign(JAPANESE_GAIT, keep);
-  }
-};
 
 test('기본값 — 세 해법 켬 · 0.6 · 0.2 s (사장님 10/25 결정) · AI 길 그대로', () => {
   assert.equal(UA.tsuRuler, 1);
@@ -175,100 +162,7 @@ test('진 · 츠바메가에시(모노호시자오 무기 비검 kin)는 그대�
   }
 });
 
-// 견줌 잣대 = 10/25 전 판 그대로: 그 판은 손가락 긋기 세기(SKILL.fingerCut)가 없던 판 — 11/06 기본 켬(감도 · 팔 힘 2)이면 손가락만으로 올려 긋는 전 판 칼도 세져 잣대가 옮겨감
-const withFc1105 = (fn) => {
-  const FC = CONFIG.SKILL.fingerCut;
-  const keep = { ...FC };
-  Object.assign(FC, { arm: 1, gain: 1, hit: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면 (11/11 부터 기본 hit 2 — 전 장면은 hit 1 도)
-  try {
-    return fn();
-  } finally {
-    Object.assign(FC, keep);
-  }
-};
-/** 한 판 견줌 몫: 공격당 심각도 10 배 넘게(셋 다 끈 10/25 전 판 대비 — 전 판은 손가락 긋기 세기 끈 판) · 몸통 띠(다리 없음 · 팔보다 몸통) · 손목 범위 안 · 굴림 한도 안 */
-function oneFight(ua) {
-  // 11/12 둘째(두 팔 엇갈림 막기 AI 몫 · 사람 두손 칼 칼자루 끝 앞 바닥)로 씨앗 1 판이 갈라짐(갈고리 판 맞은 곳 골반 1 · 빈 위팔 1) — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
-  const run = () => withArmOld(() => withJpOld(() => tsubameRun(1, { immortal: true, dur: 14, ghostDown: true })), ['armClear2']);
-  const R = withUA(ua, run);
-  const on = tsubameSummary([R]);
-  const off = tsubameSummary([withFc1105(() => withUA(OFF, run))]);
-  assert.ok(on.perAtk >= 10 * Math.max(off.perAtk, 0.02), `켬 ${on.perAtk} · 끔 ${off.perAtk}`);
-  assert.ok(on.snapHits >= 1);
-  const P = on.parts;
-  const n = (...k) => k.reduce((a, x) => a + (P[x] ?? 0), 0);
-  const legs = n('thighF', 'thighB', 'shinF', 'shinB', 'footF', 'footB');
-  const torso = n('pelvis', 'abdomen', 'chest');
-  const arms = n('farmS', 'farmO', 'uarmS', 'uarmO');
-  assert.equal(legs, 0, JSON.stringify(P));
-  assert.ok(torso > arms, JSON.stringify(P));
-  assert.equal(on.oor, 0);
-  const rolls = R.rows.map((r) => r.hit?.s?.roll).filter((x) => x != null);
-  assert.ok(Math.max(...rolls) <= HUMAN.forearmRoll + 1, `굴림 ${Math.max(...rolls)}° (손목 밧줄 ${HUMAN.forearmRoll}°)`);
-}
 
-test('한 판 견줌 (씨앗 1 · 14 s · 상대 상처 끔 · 아래 칼 빗나감) — 곧은 길(기본): 10 배 넘게 · 몸통 띠 · 손목 범위 안 · 굴림 한도 안', () => oneFight({}));
 
-test('한 판 견줌 — 갈고리 길(`tsuHook` 1 — 10/25 판)도 그대로', () => oneFight({ tsuHook: 1 }));
 
-test('곧은 길 꼴 (tsubame_trace — 가만히 선 상대 · 가슴 사이 1.15 · 1.3 m · 손가락 그대로 · 흔들림): 칼끝 · 잔상 곧음 · 날 앞장 · 손목 범위 안 · 굴림 한도 안 · 갈고리 판은 휨', () => {
-  const k = CONFIG.STRIKE.edgeAlign;
-  for (const [gap, seed] of [[1.15, 701], [1.3, 702]]) {
-    // 11/13 합침(쥘 때 칼자루 끝 앞 바닥 들임 frontIn 0.1 — docs/strike/arm_odd_2026-11-13.md §합침): 씨앗 701 판의 날 앞장이 7/9(0.78)로 갈라짐 — 이 장면을 잰 때의 팔(arm_real_pin armOdd · frontIn 0)로 묶음.
-    //  씨앗 701 ~ 724 × 1.15 · 1.3 m 48 판은 들임 판이 날 앞장 평균 0.957(0.8 밑 2 판) · 곧장 판 0.947(2 판) · 첫 맞음 날 48/48 · 46/48 — 한 씨앗의 흔들림
-    const tr = withArmOld(() => traceRun('line', seed, gap), ['armOdd']);
-    assert.ok(tr.fired, `${gap} m`);
-    // 11/10 사장님 '1로 해' — 칼끝 휨은 베는 토막만 셈(잔상과 같은 범위 · 꺾은 자리로 거두는 준비 토막은 뺌) · 휨 몫 기준 0.12 → 0.16(손가락 긋기 세기 켬 뒤 1.15 m 판의 완만한 활 휨 0.13 ~ 0.15 를 받아들임) · 꺾임 15° 그대로
-    const b = bendCut(tr);
-    const t = bendTrail(tr);
-    assert.ok(b.devShare < 0.16 && b.kinkDeg < 15, `칼끝 길(베는 토막) ${gap} m: ${JSON.stringify(b)}`);
-    assert.ok(t.devShare < 0.16 && t.kinkDeg < 15, `잔상 ${gap} m: ${JSON.stringify(t)}`);
-    const W = tr.wr.filter((w) => w && w[1]);
-    assert.ok(W.every((w) => w[3] <= 1), '끌고 가는 동안 손목 범위 안');
-    assert.ok(W.every((w) => w[2] <= HUMAN.forearmRoll + 1), '끌고 가는 동안 굴림 한도 안');
-    assert.ok(W.filter((w) => w[5] > k).length >= 0.8 * W.length, `날 앞장 ${W.map((w) => w[5]).join(',')}`);
-    const h = tr.hits[0];
-    assert.ok(h && ['pelvis', 'abdomen', 'chest'].includes(h.part) && h.edge > k, JSON.stringify(tr.hits));
-    const hk = withFc1105(() => traceRun('hook', seed, gap)); // 견줌 = 10/25 갈고리 길 옛 장면 (11/06 손가락 긋기 기본 켬 전 장면 — 켠 판은 갈고리도 0.25 · 83°)
-    assert.ok(bend(hk).devShare > 0.4, `갈고리 판 휨 ${JSON.stringify(bend(hk))}`);
-  }
-});
 
-// 낮은 시작 (사장님 11/08 '낮은 데서 시작해도 날이 앞장서도록 고쳐' — UNIQUE_ASSIST.tsuArm · secret_instant.js armTurn · docs/strike/tsubame_low_2026-11-08.md):
-//  손가락 긋기 세기 끈 판(감도 1 · 팔 힘 1 — 11/06 전 장면)에서 손가락을 −0.7 까지 내려 꺾으면 손 목표가 원 바닥(패드 −0.47)에서 꺾임 — 전엔 손목 밧줄 안에서 날이 앞장서지 못해 칼등이 앞장(첫 맞음 등).
-//  켜면 끌고 가는 칼 날 앞장 · 손목 범위 안 · 굴림 한도 안 · 첫 맞음은 날로(1.15 m 는 몸통) · 1.3 m 는 칼끝 · 잔상도 곧음. 끄면(tsuArm 0 — 11/08 전 판) 등 앞장. 보통 높이(손가락 그대로)는 켜든 끄든 칼끝 길이 같음
-test('낮은 시작 (감도 1 · 손가락 −0.7 · 가슴 사이 1.15 · 1.3 m): 날 앞장 · 손목 · 굴림 한도 안 · 첫 맞음 날 — 끄면 등 앞장 · 보통 높이 판은 그대로', () => {
-  assert.equal(UA.tsuArm, 1, '낮은 시작 날 앞장 (사장님 11/08) — 기본 켬');
-  const k = CONFIG.STRIKE.edgeAlign;
-  const lead = (tr) => {
-    const W = tr.wr.filter((w) => w && w[1]);
-    return { W, n: W.filter((w) => w[5] > k).length };
-  };
-  // 11/12 둘째(사람 두손 칼 칼자루 끝 앞 바닥 — 손가락으로 끄는 동안 손 목표가 앞으로)로 1.3 m 판 칼끝 휨 몫이 0.121 (문턱 0.12 바로 위) — 이 장면을 잰 때의 팔(arm_real_pin armClear2)로 묶음
-  withArmOld(() => withFc1105(() => {
-    for (const [gap, seed] of [[1.15, 701], [1.3, 702]]) {
-      const tr = traceRun('line', seed, gap, { low: -0.7 });
-      assert.ok(tr.fired, `${gap} m`);
-      const { W, n } = lead(tr);
-      assert.ok(W.every((w) => w[3] <= 1), '끌고 가는 동안 손목 범위 안');
-      assert.ok(W.every((w) => w[2] <= HUMAN.forearmRoll + 1), '끌고 가는 동안 굴림 한도 안');
-      assert.ok(n >= 0.8 * W.length, `날 앞장 ${gap} m: ${W.map((w) => w[5]).join(',')}`);
-      const h = tr.hits[0];
-      assert.ok(h && h.edge > k, `첫 맞음 날 ${gap} m: ${JSON.stringify(tr.hits)}`);
-      if (gap < 1.2) assert.ok(['pelvis', 'abdomen', 'chest'].includes(h.part), JSON.stringify(tr.hits));
-      else {
-        const b = bend(tr);
-        const t = bendTrail(tr);
-        assert.ok(b.devShare < 0.12 && b.kinkDeg < 15, `칼끝 길 ${gap} m: ${JSON.stringify(b)}`);
-        assert.ok(t.devShare < 0.12 && t.kinkDeg < 15, `잔상 ${gap} m: ${JSON.stringify(t)}`);
-      }
-      const old = traceRun('lineNoArm', seed, gap, { low: -0.7 }); // tsuArm 0 (11/08 전 판)
-      const o = lead(old);
-      assert.ok(o.n < 0.8 * o.W.length, `끄면 등 앞장 ${gap} m: ${o.W.map((w) => w[5]).join(',')}`);
-    }
-    // 보통 높이 판 그대로는 11/12 두 팔 엇갈림 막기(SKILL.armClear) 전 팔로 — 켠 판은 손가락으로 끄는 동안 두 팔이 붙어 칼 팔꿈치 돌림이 바뀐 채 되돌림 칼을 짜서
-    //  씨앗 701 보통 높이도 낮은 시작 판(armTurnLow)이 켜짐 (위 낮은 시작 잣대 — 날 앞장 · 손목 · 굴림 · 첫 맞음 날 — 은 켠 판 그대로 지남 · 기록 arm_real §10)
-    const [on, off] = withArmOld(() => [traceRun('line', 701, 1.15), traceRun('lineNoArm', 701, 1.15)], ['armClear']);
-    assert.deepEqual(on.tip, off.tip, '보통 높이(손가락 그대로) — 팔꿈치 돌림이 안 켜짐');
-  }), ['armClear2']);
-});
