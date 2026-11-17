@@ -9,6 +9,7 @@
 //  좌표 약속: 몸 기준(로컬)으로 +x가 앞, +y가 위, +z가 오른쪽이다.
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
+import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
 import { runTick } from './dig_proto.js'; // 시제품 C 달림 (11/14 — config DIG_PROTO.run · 기본 끔)
@@ -1740,9 +1741,10 @@ export class Fighter {
     let hit = false;
     for (const a of mine) {
       for (const c of theirs) {
-        this.world.contactPair(a, c, (m) => {
+        this.world.contactPair(a, c, guarded(this, (m) => {
           if (m.numContacts() > 0) hit = true;
-        });
+        }));
+        rethrowRapier(this); // 11/17 콜백 예외 드러내기 (rapier_guard.js)
         if (hit) return true;
       }
     }

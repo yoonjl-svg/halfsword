@@ -22,9 +22,11 @@
 //     닿은 자리의 작은 점. 매 프레임 gun.js 와 같은 광선으로 잰다(world·combat 필요, 판정과 무관한 읽기뿐). 장전 중에도 같은 밝기 —
 //     장전 표시는 하지 않는다(사장님). 겉모습은 여기서만 정한다: gun.js 의 GUN.laser 는 무기 PM 이 끈다 (두 겹으로 그리지 않게).
 // ─────────────────────────────────────────────────────────────
+import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import * as THREE from 'three';
 import { GUN, GUN_HOOKS, gunshotSound } from './gun.js';
 import { canvasTex } from './stage_kit.js';
+const _rg = {}; // Rapier 콜백 예외 통 (11/17 — rapier_guard.js: 콜백 안 예외를 적고 엔진 부름 뒤 node 에서 다시 던짐)
 
 const FLASH_T = 0.11; // 초: 섬광·화염이 보이는 시간 — 처음 FLASH_HOLD 는 최대 밝기(2~3프레임), 그 뒤 빠르게 감쇠
 const FLASH_HOLD = 0.04; // 초: 최대 밝기 유지
@@ -331,7 +333,8 @@ export function installGunFx({ scene, sound, world = null, combat = null, shake 
     if (!w?.castRay) return GUN.range;
     const info = getCombat()?.info;
     const ray = { origin: { x: o.x, y: o.y, z: o.z }, dir: { x: d.x, y: d.y, z: d.z } };
-    const hit = w.castRay(ray, GUN.range, true, undefined, undefined, undefined, undefined, (c) => info?.get(c.handle)?.fighter !== f);
+    const hit = w.castRay(ray, GUN.range, true, undefined, undefined, undefined, undefined, guarded(_rg, (c) => info?.get(c.handle)?.fighter !== f, false));
+    rethrowRapier(_rg);
     return hit ? (hit.timeOfImpact ?? hit.toi) : GUN.range;
   };
 

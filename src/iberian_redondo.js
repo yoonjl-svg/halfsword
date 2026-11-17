@@ -25,9 +25,11 @@
 //  10/31 19:xx 사장님 '칼을 더 들어올리거나 아예 어깨에 얹거나. 그리고 칼 끝이 머리 뒤로 넘어와서 땅쪽으로 기울어 있어야 해' — 기본 'load'(UNIQUE_ASSIST.rdLoad — 칼 든 어깨에 메어 칼끝이 머리 뒤 · 땅 쪽 ·
 //   놓기는 'shoulder' 와 같은 틀) · 내려침은 멘 어깨에서 반대쪽 아래로 사선(secret_instant.js comboPlanRdTajo) · 흐름과 무관(config IB_FLOW.windmillApart) — 기록 docs/strike/b4_rework_2026-10-31.md
 // ─────────────────────────────────────────────────────────────
+import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import * as THREE from 'three';
 import { UNIQUE_ASSIST as UA } from './config.js';
 import { placeArmsAt, armRopes } from './secret_instant.js';
+const _rg = {}; // Rapier 콜백 예외 통 (11/17 — rapier_guard.js: 콜백 안 예외를 적고 엔진 부름 뒤 node 에서 다시 던짐)
 
 const D2R = Math.PI / 180;
 const TAU = Math.PI * 2;
@@ -165,19 +167,21 @@ export function windContact(f) { // 11/14 이어 돌리기도 읽음 (iberian_li
   const foeSword = foe?.sword?.handle;
   let out = null;
   for (const c1 of f.swordColliders) {
-    Wd.contactPairsWith(c1, (c2) => {
+    Wd.contactPairsWith(c1, guarded(_rg, (c2) => {
       if (out) return;
       const h = c2.parent()?.handle;
       if (h != null && mine.has(h)) return;
-      Wd.contactPair(c1, c2, (m) => {
+      Wd.contactPair(c1, c2, guarded(_rg, (m) => {
         for (let i = 0; i < m.numContacts(); i++) {
           if (m.contactDist(i) <= 0) {
             out = h === foeSword ? 'blade' : foeB.has(h) ? 'body' : 'other';
             return;
           }
         }
-      });
-    });
+      }));
+      rethrowRapier(_rg);
+    }));
+    rethrowRapier(_rg);
     if (out) break;
   }
   return out;

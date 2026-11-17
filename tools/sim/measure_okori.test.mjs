@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
-import { msLine, msHold, msFeetV, msRead, okoriStart, okoriFrom, okoriCue } from '../../src/ai_measure.js';
+import { msLine, msHold, msFeetV, msRead, msDebanaTick, okoriStart, okoriFrom, okoriCue } from '../../src/ai_measure.js';
 
 const M = CONFIG.MEASURE;
 const O = CONFIG.OKORI;
@@ -136,7 +136,7 @@ test('사람 손의 느린 바깥 감기를 AI 가 늦게 본 눈으로 읽음 (
 
 // 사장님 11/17 '데바나 살려' — 걸음에 치기: 들어옴 읽기(read × 띠 기울기)가 나오고 상대가 내 칼끝 + 0.3 안이면 줄 닫기 앞에 debana × 띠 기울기로 그 걸음에 침 ·
 //  안 나오면 줄 닫기 · 아직 멀면 줄 닫기 (가지 코드에선 줄 닫기가 늘 먼저라 닿지 않던 갈래)
-test('걸음에 치기: 칼 든 AI 는 칼끝 + 0.3 안으로 걸어 드는 상대를 띠 기울기만큼 그 걸음에 침 · 아니면 줄 닫기 · 멀면 줄 닫기', () => {
+test('걸음에 치기: 칼 든 AI 는 칼끝 + 0.3 안으로 걸어 드는 상대를 띠 기울기만큼 그 걸음에 침 · 아니면 줄 닫기 · 멀면 줄 닫고 칼끝 안에 들 때 한 번 더 · 준비 없는 칼', () => {
   const G = newRound({ seed: 3, walls: true, weapon: 'longsword', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 4 }, persona2: { proficiency: 4 } });
   try {
     while (G.t < 1) G.step();
@@ -151,6 +151,7 @@ test('걸음에 치기: 칼 든 AI 는 칼끝 + 0.3 안으로 걸어 드는 상�
       ai.phase = 'ready';
       ai.icpPre = ai.icp = false;
       ai.okori = null;
+      ai.dbn = null;
       ai.msArmed = true; // 들어옴 하나 (걸쇠 새로)
       ai.foeClosing = 1.0; // 늦게 본 상대 골반이 1 m/s 로 다가옴
       const took = msRead(ai, s0, d, 1 / 120, 1);
@@ -165,6 +166,55 @@ test('걸음에 치기: 칼 든 AI 는 칼끝 + 0.3 안으로 걸어 드는 상�
     assert.equal(ai.why, 'stepin');
     const S = ai.stats.ms;
     assert.ok(S.debana === near.strike && S.debanaRoll === near.strike + near.close, JSON.stringify(S));
+    // 칼끝 + 0.3 밖에서 줄을 닫은 들어옴은 상대가 칼끝 + 0.3 안에 들 때 한 번 더 — 들어옴 하나에 굴림 하나 (감독 11/17 — '데바나 살려' 안에서)
+    const late = { strike: 0, close: 0, twice: 0 };
+    for (let i = 0; i < 40; i++) {
+      const r = trial(dFar);
+      if (r === 'none') continue; // 들어옴 읽기(read × 띠 기울기)가 안 나옴 — 반응 없음 (그대로)
+      assert.equal(r, 'close');
+      assert.ok(ai.dbn && !ai.dbn.rolled, '열린 들어옴 · 아직 안 굴림');
+      const hit = msDebanaTick(ai, s0, dIn, 1 / 120, null, 1);
+      late[hit ? 'strike' : 'close']++;
+      if (hit) {
+        assert.ok(ai.mode === 'attack' && ai.why === 'stepin' && ai.okori === null && ai.phase === 'approach', '준비 없는 칼 — 오코리 없음 · 곧장 다가감');
+        ai.mode = 'defend';
+        ai.icpPre = true;
+      }
+      if (msDebanaTick(ai, s0, dIn, 1 / 120, null, 1)) late.twice++;
+    }
+    assert.ok(late.strike > 0 && late.close > 0 && late.twice === 0, `칼끝 안에 들 때 굴림 · 한 번만 ${JSON.stringify(late)}`);
+    // 그친 들어옴은 닫힘 (상대가 다가오지 않은 채 rearm 넘게)
+    while (trial(dFar) !== 'close');
+    ai.foeClosing = 0;
+    msDebanaTick(ai, s0, dFar, 0.6, null, 0.5);
+    msDebanaTick(ai, s0, dFar, 0.6, null, 0.5);
+    assert.equal(ai.dbn, null, '그친 들어옴 닫힘');
+  } finally {
+    G.world.free();
+  }
+});
+
+test('걸음에 치기 — 덮은 채 걸어 듦(미리 줄 닫기 anticStep)도: 줄을 닫은 뒤 칼끝 + 0.3 안에 들면 굴림', () => {
+  // 상대(플레이어 자리)가 더 긴 칼 — 덮은 들어옴을 내 칼끝 + 0.3 밖에서 봄 (같은 칼이면 상대 칼끝 어림 + 0.3 이 곧 내 칼끝 + 0.3 이라 처음 볼 때 이미 안)
+  const G = newRound({ seed: 4, walls: true, weapon: 'zweihander', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 6 }, persona2: { proficiency: 6 } });
+  try {
+    while (G.t < 1) G.step();
+    const ai = G.ai;
+    const c = ai.me.bodies.chest.translation();
+    const f = ai.me.forward();
+    const s = { ...ai.lastSeen, tx: c.x + f.x * 0.6, ty: c.y, tz: c.z + f.z * 0.6, mx: c.x + f.x * 0.9, my: c.y, mz: c.z + f.z * 0.9, tvx: 0, tvy: 0, tvz: 0, mvx: 0, mvy: 0, mvz: 0, state: 'stand', armed: true };
+    assert.ok(ai.foeClass(s).online, '상대 칼끝이 나를 겨눔 (덮은 채)');
+    ai.mode = 'watch';
+    ai.dbn = null;
+    ai.anArmed = true;
+    ai.foeClosing = 1.0;
+    const dFar = ai.M.reach + 0.35;
+    assert.ok(dFar < ai.foeReach + 0.3, `상대 칼끝 어림 + 0.3 안 ${dFar} · ${ai.foeReach}`);
+    assert.equal(ai.anticStep(s, dFar, 1 / 120), true, '높은 띠 — 줄 닫기 굴림 늘');
+    assert.ok(ai.mode === 'defend' && ai.icpPre && ai.dbn && !ai.dbn.rolled, '줄을 미리 닫고 들어옴 열림');
+    assert.equal(msDebanaTick(ai, s, ai.M.reach + 0.1, 1 / 120, null, 1), true, '높은 띠 — 칼끝 안에 들면 늘 침');
+    assert.ok(ai.mode === 'attack' && ai.why === 'stepin' && ai.okori === null);
+    assert.equal(ai.stats.ms.debanaLate, 1);
   } finally {
     G.world.free();
   }

@@ -1,6 +1,8 @@
 // 봉인의 중정 실제 사선 (샛별 저장소 연구 courtyard_cover_study_20261019 — 사장님 10/20 00:4x '샛별이 제안한 마야 ai 변화 3종 적용해'):
 //  총구에서 상대 골반 · 배 · 가슴(가운데 · 좌우 0.14 m) · 머리 6 점으로 광선을 쏴, 모두 급수정에 가리면 '사선이 막힘'. 쏘기 · 쿨타임 · 명중 · 위력은 그대로.
+import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import * as THREE from 'three';
+const _rg = {}; // Rapier 콜백 예외 통 (11/17 — rapier_guard.js: 콜백 안 예외를 적고 엔진 부름 뒤 node 에서 다시 던짐)
 export const COVER_SIGHT = { on: true, handles: new WeakMap() }; // world → 급수정 충돌체 handle 모음 (configureStageObstacle 이 채움)
 const _q = new THREE.Quaternion();
 export function coverSight(shooter, target) {
@@ -18,7 +20,8 @@ export function coverSight(shooter, target) {
       const point = new THREE.Vector3(0, 0, side).applyQuaternion(_q.set(r.x, r.y, r.z, r.w)).add(new THREE.Vector3(bp.x, bp.y, bp.z));
       const dir = point.clone().sub(origin), length = dir.length();
       dir.multiplyScalar(1 / Math.max(length, 1e-9));
-      const hit = handles && shooter.world.castRay({ origin, dir }, Math.max(0, length - 0.01), true, undefined, undefined, undefined, undefined, (c) => handles.has(c.handle));
+      const hit = handles && shooter.world.castRay({ origin, dir }, Math.max(0, length - 0.01), true, undefined, undefined, undefined, undefined, guarded(_rg, (c) => handles.has(c.handle), false));
+      rethrowRapier(_rg);
       samples.push(!!hit);
     }
   }

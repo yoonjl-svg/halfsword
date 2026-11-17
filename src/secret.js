@@ -8,6 +8,7 @@
 //  view = 판정하는 쪽의 간격 { reach(내 간격 끝), foeReach(상대 칼 닿는 거리 추정), clinch } — AI 는 this.M·this.foeReach,
 //   플레이어는 검술 풀이의 measure(같은 꾸러미 값)
 // ─────────────────────────────────────────────────────────────
+import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import * as THREE from 'three';
 import { SECRET, BIND, CLOSE, UNIQUE_ASSIST, GAIT, realS } from './config.js';
 import { playerSecretDef } from './schools.js';
@@ -17,6 +18,7 @@ import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동
 import { RisolutoWatch, lungeGapOk, bladesNear } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
 import { itEdgeOk, itStats } from './italian_outbox.js'; // 이탈리아 칼 우위 (11/14 설계안 A — 리솔루토 창은 칼 우위 동안만 · config IT_OUTBOX.edgeRiso)
 import { iaiReadyPosePlayer } from './secret_instant.js'; // 사람 고노센 준비 웅크림 (10/25 23:0x — SECRET.gnsCrouch)
+const _rg = {}; // Rapier 콜백 예외 통 (11/17 — rapier_guard.js: 콜백 안 예외를 적고 엔진 부름 뒤 node 에서 다시 던짐)
 
 const clamp = THREE.MathUtils.clamp;
 const _r = new THREE.Vector3();
@@ -470,7 +472,8 @@ export function wideTouch(me, foe) {
   const touch = (A, B) => {
     for (const x of A) for (const y of B) {
       let hit = false;
-      W.contactPair(x, y, (m) => { if (m.numContacts() > 0) hit = true; });
+      W.contactPair(x, y, guarded(_rg, (m) => { if (m.numContacts() > 0) hit = true; }));
+      rethrowRapier(_rg);
       if (hit) return true;
     }
     return false;
