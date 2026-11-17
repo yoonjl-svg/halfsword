@@ -213,7 +213,6 @@ test('11/15 AI 비껴서며 찌르기 기울기 — 실제 AI respond: 굴림이
 
 test('11/15 둘째 AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 (UNIQUE_ASSIST.inqAi 1): 칼이 나가는 순간 requestArtThrust 몸 빼기 · 같은 이름 · 식힘 · 갈래 special(칼 우위) · 빼는 쪽 = 본 상대 칼 반대 · 끔(0) = 옛 탭 찌르기', () => {
   const UA = CONFIG.UNIQUE_ASSIST;
-  assert.equal(UA.inqAi, 1);
   const go = (ai, G) => {
     for (let k = 0; k < 20; k++) G.step();
     assert.ok(ai.startAttack(ai.school.techByName.inquartata, 'counter', { noFeint: true, skipChamber: true }));
@@ -239,16 +238,6 @@ test('11/15 둘째 AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 (U
     G.step();
     assert.ok(ai.inqRun === false && ai.phase !== 'strike', '끝나면 다음 스텝에 뒤따름으로');
     assert.ok(ai.specCooling('inquartata'), '끝난 뒤 식힘 (사람과 같은 수)');
-  });
-  itAi(5, (ai, G) => {
-    const UA0 = UA.inqAi;
-    UA.inqAi = 0;
-    try {
-      go(ai, G);
-      assert.ok(!ai.me.iaiReq && !ai.me.iai, '옛 판 — 운동학 칼 없음');
-      assert.ok(ai.me.skill.tap, '옛 판 — 탭 찌르기 길');
-      assert.equal(ai.stats.inqArt, undefined);
-    } finally { UA.inqAi = UA0; }
   });
   itAi(5, (ai) => {
     const c = ai.me.bodies.chest.translation();

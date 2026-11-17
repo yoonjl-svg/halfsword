@@ -36,7 +36,7 @@ function walker(g, press = () => false) {
 const run = (g, s) => { for (let i = 0; i < s / DT; i++) g.step(); };
 
 test('기본값: 손목 치기 떨굼 완화 켬(ease 1 · 2 J · 0.4 s · 1.5 m/s) · AI 손목 치기도 떨굼(ai 1) · 줍기 막기 단추(AI 도) — 사장님 11/05', () => {
-  assert.deepEqual([K.ease, K.easeE, K.easeAfter, K.easeVn, K.p, K.ai, K.once, K.judge, K.swordVn, K.swordHalf], [1, 2, 0.4, 1.5, 0.5, 1, 1, 'all', 3, 0.5]);
+  assert.deepEqual([K.easeE, K.easeAfter, K.easeVn, K.p, K.swordHalf], [2, 0.4, 1.5, 0.5, 0.5]);
   assert.deepEqual([PU.reach, PU.bend, PU.lift], [0.9, 0.4, 0.2]); // reach 0.6 → 0.9 [사장님 11/16 결정] '활성화되는 거리를 늘려.'
   assert.deepEqual([PU.step, PU.stepFrom, PU.stepWait], [0.3, 0.6, 0.2], '11/16 내디딤');
   assert.ok([0.3, 0.45, 0.6, 0.9].includes(PU.reach) && [0.3, 0.45, 0.6, 0.9].includes(PU.step) && [0.3, 0.45, 0.6, 0.9].includes(PU.stepFrom), '걸음 사다리');
@@ -45,7 +45,7 @@ test('기본값: 손목 치기 떨굼 완화 켬(ease 1 · 2 J · 0.4 s · 1.5 m
   assert.ok(CONFIG.SECRET.stance.pickup.drop > 0);
 });
 
-test('완화: 판정 문턱(6 J) 밑 아래팔 닿음도 easeE 넘으면 굴림 · ease 0 이면 10/24 판 그대로 · 손목 치기 아닌 긋기는 아님', () => {
+test('완화: 판정 문턱(6 J) 밑 아래팔 닿음도 easeE 넘으면 굴림 · 손목 치기 아닌 긋기는 아님', () => {
   const g = round('monohoshizao', 'longsword', 9, false);
   try {
     const P = g.player, E = g.enemy, C = g.combat;
@@ -60,10 +60,6 @@ test('완화: 판정 문턱(6 J) 밑 아래팔 닿음도 easeE 넘으면 굴림 
     assert.equal(C.koteLog?.length, 1, '3 J — 굴림');
     hit(1.5);
     assert.equal(C.koteLog.length, 1, '1.5 J (easeE 밑) — 아님');
-    K.ease = 0; P.artTech = 'zornhau'; hit(3); P.artTech = 'kote';
-    assert.equal(C.koteLog.length, 1, 'ease 0 · 다른 긋기 — 아님');
-    hit(3);
-    assert.equal(C.koteLog.length, 1, 'ease 0 — 10/24 판(6 J 밑은 굴리지 않음)');
   } finally { restore(); g.world.free(); }
 });
 
@@ -82,10 +78,6 @@ test('완화: 손목 치기 긋기가 끝난 뒤 easeAfter(0.4 실제 s) 안 닿
     P.skill.uniq.t = 1.3; P.skill.uniq.cur = { unique: null }; // (0.2 s 안이면 strokeTechOf 가 그대로 손목 치기라 0.3 s 로)
     C.koteCheck(P, E, 'farmS', cut);
     assert.equal(C.koteLog.length, 1, '다음 긋기가 시작됨 — 아님');
-    P.skill.uniq.cur = null; K.ease = 0;
-    C.koteCheck(P, E, 'farmS', cut);
-    assert.equal(C.koteLog.length, 1, 'ease 0 — strokeTechOf 의 0.2 s 창만');
-    K.ease = 1;
     // 칼 반쪽: 맞부딪는 빠르기 2 m/s — 완화 켬이면 굴림 · 끔이면 아님
     P.skill.uniq = { cur: { unique: 'kote' }, last: null, t: 0, stats: { strokes: 2 } };
     const clash = (vn) => {
@@ -98,9 +90,6 @@ test('완화: 손목 치기 긋기가 끝난 뒤 easeAfter(0.4 실제 s) 안 닿
     assert.equal(C.koteLog.length, 1, '1.2 m/s — 문턱 밑');
     clash(2);
     assert.equal(C.koteLog.length, 2, '2 m/s — 굴림');
-    P.skill.uniq = { cur: { unique: 'kote' }, last: null, t: 0, stats: { strokes: 3 } };
-    K.ease = 0; clash(2);
-    assert.equal(C.koteLog.length, 2, 'ease 0 — 3 m/s 문턱');
   } finally { restore(); g.world.free(); }
 });
 

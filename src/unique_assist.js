@@ -308,7 +308,7 @@ export function uniqueDef(tradition, e) {
   let u = list.find((x) => x.name === key);
   if (!u) return null;
   // 같은 길 (사장님 10/25 18:0x '같은 길 입혀' — config UNIQUE_ASSIST.schielPlayer · 지금은 곁눈 베기만): redraw 칸이 있으면 AI 와 같은 다시 그린 길 점 · 길 덧칸(plan — 아래 planStep)
-  if (u.redraw && UA.schielPath && UA.schielPlayer) u = { ...u, ...u.redraw };
+  if (u.redraw) u = { ...u, ...u.redraw };
   if (u.feint) {
     const fk = TECH_BY_NAME[u.feint.fake];
     if (!fk) return null;
@@ -320,9 +320,9 @@ export function uniqueDef(tradition, e) {
   const def = { name: e.name, nameKo: e.nameKo ?? u.nameKo ?? u.name, orig: e.orig ?? u.orig ?? null, kind: u.kind, pts: [u.from.slice(), ...u.path.map((p) => p.slice())], step: e.step ?? u.step ?? null }; // step = 표 칸이 있으면 그것(플레이어만 — 10/21 체보요격)
   if (u.plan) def.plan = u.plan; // [from, ...path] 점마다 [칼끝 들기 °, 손 뻗기 m, 손 돌리기 °] (10/25 18:0x)
   // 사람 제비 베기 올려 긋는 길 (사장님 10/25 21:1x 해법 ③ — config UNIQUE_ASSIST.tsuAim · 표의 aim 칸): 꺾는 자리(chain.at 점)까지는 그대로 · 그 뒤 점을 aim.path 로 · 덧칸 = 앞 몫 0 + aim.plan
-  if (e.aim && UA.tsuAim && e.chain) {
+  if (e.aim && e.chain) {
     const at = Math.min(e.chain.at, def.pts.length - 1);
-    const band = UA.tsuBand && e.aim.band ? (!UA.tsuHook && e.aim.line ? e.aim.line : e.aim.band) : null; // 몸통 띠 판(10/25 23:1x — tsuBand) · 곧은 길(10/31 — tsuHook 0 이면 line)
+    const band = e.aim.band ? (e.aim.line ? e.aim.line : e.aim.band) : null; // 몸통 띠 판(10/25 23:1x — tsuBand) · 곧은 길(10/31 — tsuHook 0 이면 line)
     const lead = (P) => [...Array.from({ length: at }, () => [0, 0, 0]), ...P.map((p) => p.slice())];
     const A = band ?? e.aim;
     def.pts = [...def.pts.slice(0, at + 1), ...A.path.map((p) => p.slice())];
@@ -387,7 +387,6 @@ const TAP_TRIG = {
     return { spend: () => (rec.dupSpent = true) };
   },
 };
-const TAP_ON = { cav: 'cavTap', lian: 'lianTap', dup: 'dupTap', inq: 'inqTap' }; // 탭 조건마다 켜는 칸 (config UNIQUE_ASSIST)
 /** 칼끝 돌려 빼기 칼끝 빠르기 (m/s — 10/31 '보통 찌르기 빠르기'): UNIQUE_ASSIST.cavSpeed 'tap' = 탭 찌르기가 칼 선을 따라 뻗는 몫 (THRUST.reach + THRUST.chamber) ÷ THRUST.extend · 숫자면 그것 */
 export const cavTipSpeed = () => (typeof UA.cavSpeed === 'number' && UA.cavSpeed > 0 ? UA.cavSpeed : (THRUST.reach + THRUST.chamber) / THRUST.extend);
 
@@ -410,7 +409,7 @@ export class PlayerUniqueAssist {
     // 진 · 츠바메가에시(무기 비검 kin — 모노호시자오)는 그 되돌림 칼 그대로 (10/25 제비 베기 세 해법의 길 · 끌고 감은 보통 제비 베기만)
     const widen = (e) => { const w = widen0(e); return SB?.kin && SB.tech === e.name && w.aim ? { ...w, aim: null, snap: 0 } : w; };
     const opened = (e) => (names ? names.has(e.name) : e.stage <= stage) || sbOn(e);
-    this.list = UA.on && !f.weapon?.gun ? (PLAYER_UNIQUE[tradition] ?? []).filter(opened).map(widen).map((e) => ({ ...e, U: uniqueDef(tradition, e) })).filter((e) => e.U) : [];
+    this.list = !f.weapon?.gun ? (PLAYER_UNIQUE[tradition] ?? []).filter(opened).map(widen).map((e) => ({ ...e, U: uniqueDef(tradition, e) })).filter((e) => e.U) : [];
     this.r = null; // 강화 중인 긋기 { e, U, part(1 앞 긋기 | 2 잇는 뒷몫), t, travel, len, stepAsked, chainable }
     this.t = 0;
     this.cur = null; // 지금 긋기 { tech, kind, pad, t0, dir, landed, bound, tEnd, unique }
@@ -444,7 +443,6 @@ export class PlayerUniqueAssist {
     this.inqSeen = -1; // 비껴서며 찌르기를 낸 위협 번호 (한 공격에 한 번)
     // 걸음 공격 스틱 읽기 (11/05 — UNIQUE_ASSIST.stepIn · stickOk · stickTick · stepLateTick): 쪽마다 마지막으로 스틱이 그 쪽이던 때 { t, v [x, y] } ·
     //  stickUsed = 마지막으로 받아들인 스틱 [x, y] (걸음 · 몸 빼기 좌우) · stepLate = 긋기 시작 때 스틱이 안 맞은 걸음 명령 긋기 { cur, t0 시작 때, list 기다리는 걸음 명령 }
-    this.stickMem = { side: null, fwd: null };
     this.stickUsed = null;
     this.stickVia = null;
     this.stepLate = null;
@@ -484,7 +482,7 @@ export class PlayerUniqueAssist {
   busy(held = false) {
     const f = this.f;
     const sk = f.skill;
-    return (held === 'any' ? false : held ? this.handHeld : this.blocked) || !UA.on || !!sk.sec || !!sk.tap || !!sk.pom || !!sk.vitalRange || !f.alive || !f.armed || f.weaponBroken || f.state !== 'stand' || !f.foe || f.finish?.amt > 0.5;
+    return (held === 'any' ? false : held ? this.handHeld : this.blocked) || !!sk.sec || !!sk.tap || !!sk.pom || !!sk.vitalRange || !f.alive || !f.armed || f.weaponBroken || f.state !== 'stand' || !f.foe || f.finish?.amt > 0.5;
   }
 
   /** 긋기 결과 적기: 맞힘(상대 아픔 +0.05 — 비기와 같은 눈) · 칼 맞물림(ai.js checkBind 와 같은 기하 0.07 m). 탭 찌르기도 한 긋기로 센다 */
@@ -612,7 +610,7 @@ export class PlayerUniqueAssist {
     for (const e of this.tapList) {
       const cav = e.tapKey === 'cav';
       const thrustTap = cav || e.tapKey === 'inq'; // 찌르는 탭 칼 (칼끝 돌려 빼기 · 비껴서며 찌르기 — 기력 · 앞 칼 기록 꼴)
-      if (!UA[TAP_ON[e.tapKey]] || this.cooling(e, now)) continue; // 식힘 중: 조건을 보지 않음(이른 탭 규칙도) — 이 탭은 보통 탭 찌르기 (10/28 02:0x)
+      if (this.cooling(e, now)) continue; // 식힘 중: 조건을 보지 않음(이른 탭 규칙도) — 이 탭은 보통 탭 찌르기 (10/28 02:0x)
       const ok = TAP_TRIG[e.tapKey]?.(this, now);
       if (!ok) continue;
       const f = this.f;
@@ -667,16 +665,16 @@ export class PlayerUniqueAssist {
     // 비껴서며 찌르기 (10/31 — 특수 공격): 스틱 쪽으로 몸을 빼며(옆 · 앞 = schools.js inquartata step · 뒷발을 그쪽으로 돌려 디딤) 넷째 자세로 가슴 — 고노센 칼끝 × specialShare.inquartata · 잔상
     if (e.tapVoid && UA.enhance > 0) {
       const st = U.step ?? { lat: 0.3, fwd: 0.15 };
-      const sg = ok?.side ?? (Math.sign(UA.stepIn && this.stickUsed ? this.stickUsed[0] : f.stickX ?? 0) || 1); // 새 판(11/05): 조건이 받아들인 스틱 쪽 (밀었다 놓은 엄지도)
+      const sg = ok?.side ?? (Math.sign(this.stickUsed ? this.stickUsed[0] : f.stickX ?? 0) || 1); // 새 판(11/05): 조건이 받아들인 스틱 쪽 (밀었다 놓은 엄지도)
       const B = e.body ? [Math.abs(e.body[0]) * sg * (e.bodyMirror ?? 1), Math.abs(e.body[1]) * sg * (e.bodyMirror ?? 1), e.body[2], e.body[3]] : null;
-      if (requestArtThrust(f, { share: specialShare(e.name), maxT: UA.inqSnapTime, tech: U.name, under: false, capFromCut: true, voidStep: { lat: Math.abs(st.lat) * sg, fwd: st.fwd ?? 0 }, bodyPose: B })) {
+      if (requestArtThrust(f, { share: specialShare(e.name), tech: U.name, under: false, capFromCut: true, voidStep: { lat: Math.abs(st.lat) * sg, fwd: st.fwd ?? 0 }, bodyPose: B })) {
         this.stats.snap = (this.stats.snap ?? 0) + 1;
         return true;
       }
     }
     // 날개 접기 (사장님 10/28 00:3x): 오른 허리 옆으로 거뒀다 앞으로 반걸음 들며 허리를 오른 → 왼 가로 호로 — 고노센 칼끝 × specialShare.lianchi (10/29 02:0x)
     if (e.tapFold && UA.enhance > 0) {
-      if (requestArtFold(f, { share: specialShare(e.name), maxT: UA.lianSnapTime, tech: U.name, step: { kind: 'lunge', fwd: UA.lianStep ?? SECRET.chineseStep } })) { // 앞 걸음 = 날개 접기만의 lianStep 0.45 (10/29 14:3x)
+      if (requestArtFold(f, { share: specialShare(e.name), tech: U.name, step: { kind: 'lunge', fwd: UA.lianStep ?? SECRET.chineseStep } })) { // 앞 걸음 = 날개 접기만의 lianStep 0.45 (10/29 14:3x)
         this.stats.snap = (this.stats.snap ?? 0) + 1;
         return true;
       }
@@ -714,10 +712,6 @@ export class PlayerUniqueAssist {
   /** 특수 공격이 나감 — 그 기술 식힘 시작 (조건이 받아들여진 순간 · 'fire' 가 아니면 끝날 때까지 식힘 중 — coolTick 이 끝난 때를 적음) */
   coolStart(e) {
     if (!e.special) return;
-    if (UA.specialCoolFrom === 'fire') {
-      this.coolT[e.name] = this.t;
-      return;
-    }
     this.coolT[e.name] = Infinity;
     this.coolRun[e.name] = { t0: this.t, motion: null };
   }
@@ -730,14 +724,13 @@ export class PlayerUniqueAssist {
     const f = this.f;
     for (const name in this.coolRun) {
       const R = this.coolRun[name];
-      const moving = !!f.iai || !!f.iaiReq || f.skill.tap?.uniqTech === name || this.r?.e?.name === name || (!!f.skill.sec?.special && f.skill.sec.special === name); // 싱지르 특수 공격 (11/11): 검술 층 실행(대본 · 따라 지나감 · 굳음)이 끝날 때까지
+      const moving = !!f.iai || !!f.iaiReq || f.skill.tap?.uniqTech === name || this.r?.e?.name === name; // 검술 층 실행(대본 · 따라 지나감 · 굳음)이 끝날 때까지
       if (R.motion == null) {
         if (moving) continue;
         R.motion = this.t;
-        if (UA.specialCoolFrom === 'motion') this.coolT[name] = R.motion;
       }
       if (moving || f.iaiHoldT > 0 || f.iaiFade > 0) continue;
-      if (UA.specialCoolFrom !== 'motion') this.coolT[name] = this.t;
+      this.coolT[name] = this.t;
       (this.stats.coolRuns ??= []).push({ name, motion: R.motion - R.t0, free: this.t - R.t0 });
       delete this.coolRun[name];
     }
@@ -863,7 +856,6 @@ export class PlayerUniqueAssist {
     if (f.stamina.exhausted) return 'exhausted';
     if (f.jolt > 0.5) return 'jolt'; // 칼을 세게 맞음 (맞아 흔들림 = 끊김 — 막기 연환 secret.js 와 같은 문턱)
     if (sk.tap || sk.pom || f.iai || f.iaiReq || !f.foe) return 'busy';
-    if (!UA.on) return 'off';
     return null;
   }
 
@@ -1092,7 +1084,6 @@ export class PlayerUniqueAssist {
     if (f.stamina.exhausted) return 'exhausted';
     if (sk.tap || sk.pom || f.iai || f.iaiReq || !f.foe) return 'busy';
     if (this.blocked) return 'busy'; // 11/15 (2) 막기 단추가 손을 쥠 — 받아 둔 손가락 몫을 버리고 막기에 손을 줌
-    if (!UA.on) return 'off';
     return null;
   }
 
@@ -1368,7 +1359,7 @@ export class PlayerUniqueAssist {
     const band = d > lo && d <= hi;
     const bandC = mode === 'both' ? d > lo && d <= (UA.dupClashMax > 0 ? UA.dupClashMax : Infinity) : band; // 'both'(11/14 견줌): clash2 몫은 제 띠
     const parry = !UA.dupAutoParry && this.blocked;
-    const dead = !UA.on || this.cooling(e) || iaiBusy(f) || !!f.skill.sec || !f.alive || f.state !== 'stand' || !foe || foe.state !== 'stand' || !f.armed || !foe.armed || f.weaponBroken || f.stamina.exhausted || parry;
+    const dead = this.cooling(e) || iaiBusy(f) || !!f.skill.sec || !f.alive || f.state !== 'stand' || !foe || foe.state !== 'stand' || !f.armed || !foe.armed || f.weaponBroken || f.stamina.exhausted || parry;
     let ready = false;
     if (mode === 'bind' || mode === 'both') {
       const live = touch && band && !dead;
@@ -1492,24 +1483,12 @@ export class PlayerUniqueAssist {
   stickOk(want) {
     const x = this.f.stickX ?? 0, y = this.f.stickY ?? 0;
     if (want !== 'side' && want !== 'fwd') return true;
-    if (stickDir(want, x, y, UA.stepIn ? UA.stepStick : 0.5)) {
+    if (stickDir(want, x, y, UA.stepStick)) {
       this.stickUsed = [x, y];
       this.stickVia = 'now';
       return true;
     }
-    const M = UA.stepIn ? this.stickMem[want] : null;
-    if (M && UA.stepPre > 0 && this.t - M.t <= UA.stepPre) {
-      this.stickUsed = M.v;
-      this.stickVia = 'mem';
-      return true;
-    }
     return false;
-  }
-
-  /** 스틱 기억 (새 판 stepIn 만 · 스텝마다 drive 머리): 쪽마다 마지막으로 스틱이 그 쪽(문턱 stepStick)이던 때 */
-  stickTick() {
-    const x = this.f.stickX ?? 0, y = this.f.stickY ?? 0;
-    for (const want of ['side', 'fwd']) if (stickDir(want, x, y, UA.stepStick)) this.stickMem[want] = { t: this.t, v: [x, y] };
   }
 
   /**
@@ -1628,7 +1607,7 @@ export class PlayerUniqueAssist {
     const pick = this.choose(cur, hand, dir, now);
     if (pick) this.start(pick.e, cur, 1);
     // 늦은 스틱을 기다릴 걸음 명령 (새 판 — 11/05): 긋기 조건은 맞는데 스틱만 안 맞은 것
-    if (UA.stepIn && UA.stepPost > 0 && pick?.e.role !== 'step') {
+    if (UA.stepPost > 0 && pick?.e.role !== 'step') {
       const list = this.list.filter((e) => e.role === 'step' && e.stick && !this.cooling(e, now) && e.on.some((c) => this.condOk(c, cur, dir, now)));
       if (list.length) this.stepLate = { cur, t0: now, list };
     }
@@ -1640,7 +1619,7 @@ export class PlayerUniqueAssist {
     const U = e.U;
     const at = e.chain ? Math.min(e.chain.at, U.pts.length - 1) : U.pts.length - 1;
     // 끝 힘 잣대: 앞 긋기 = 길 처음 ~ 잇는 자리 · 뒷몫 = 잇는 자리 ~ 끝. 제비 베기(ruler 'turn' — 사장님 10/25 해법 ① · UNIQUE_ASSIST.tsuRuler)는 강화되는 긋기가 곧 올려 긋기라 꺾은 자리부터
-    const fromTurn = part === 2 || (e.ruler === 'turn' && UA.tsuRuler);
+    const fromTurn = part === 2 || e.ruler === 'turn';
     const len = fromTurn ? PlayerUniqueAssist.lenOf(U.pts, at) : PlayerUniqueAssist.lenOf(U.pts, 0, at);
     this.r = { e, U, part, t: 0, travel: 0, len: Math.max(0.05, len), stepAsked: false };
     // 이어 그을수록 강해짐 (강화동작 stack — 이베리아 머리 위 돌려 베기): 같은 동작을 이어짐 창(afterWindow 0.6 s — 10/21 0.45 에서 통일) 안에 다시 그으면 하나씩(셋까지) — 맞는 순간 에너지 × (1 + stack × 그 수) (strokeHitK)
@@ -1655,31 +1634,26 @@ export class PlayerUniqueAssist {
     this.coolStart(e);
     f.uniqueCue = { text: U.nameKo, kind: 'unique', who: 'me', schoolKo: TRADITIONS[this.tradition]?.nameKo ?? '', name: U.name, t: this.t };
     // 걸음 명령의 옆 걸음은 스틱 쪽으로(표의 lat 크기 · 부호는 스틱) — 10/21 · 새 판(stepIn — 11/05)은 받아들인 스틱(stickUsed — 밀었다 놓은 엄지도 그 쪽)
-    const sx = UA.stepIn && e.role === 'step' && this.stickUsed ? this.stickUsed[0] : this.f.stickX ?? 0;
+    const sx = e.role === 'step' && this.stickUsed ? this.stickUsed[0] : this.f.stickX ?? 0;
     if (U.step && e.stick === 'side' && Math.abs(sx) > 0.01) this.r.step = { ...U.step, lat: Math.abs(U.step.lat) * Math.sign(sx) };
-    if (e.role === 'step' && e.stick && this.stickVia === 'mem') this.stats.stepMem = (this.stats.stepMem ?? 0) + 1; // 기억한 스틱으로 읽힘 (재기)
     if (U.step && UA.enhance > 0) this.r.stepAsked = this.askStep(this.r.step ?? U.step);
     // 진 · 츠바메가에시 (10/21 — 무기 비검 kin): 되돌림 칼을 고노센의 kin 몫 빠르기로 끌고 간다 (길 = 이 기술의 되돌림 몫 — 이어 긋기 at 부터)
     const SB = f.weapon?.secretBlade;
     if (SB?.kin && SB.tech === e.name) {
       const at = Math.min(e.chain?.at ?? 2, U.pts.length - 2);
       if (requestArtReturn(f, U.pts[at], U.pts.slice(at + 1), SB)) this.end('yield');
-    } else if (e.snap && UA.tsuSnap && UA.enhance > 0) {
+    } else if (e.snap && UA.enhance > 0) {
       // 제비 베기 되돌림 칼 (사장님 10/25 21:1x 해법 ② — 중력과 관성을 거스름): 꺾은 자리(지금 손 목표)에서 올려 긋는 길을 고노센 칼끝 빠르기 × specialShare.tsubameGaeshi 로 tsuSnapTime 초까지 끌고 간다.
       //  강화(몸 · 끝 힘 · 덧칸)는 그대로 둔다 — 끌고 가는 칼이 끝나면 손가락이 이어 긋는다
       const at = Math.min(e.chain?.at ?? 2, U.pts.length - 2);
       //  길 덧칸(해법 ③ 손 돌리기 등)은 끌고 가는 칼에도 같은 점마다 (U.plan 의 꺾은 자리부터)
       const so = U.snapOpt; // 곧은 길 (10/31): shift 'none' = 띠 높이 옮김 없이 굴림 묶음만
       //  armTurn (사장님 11/08 '낮은 데서 시작해도 날이 앞장서도록' — UNIQUE_ASSIST.tsuArm): 곧은 길만 — 손이 낮아 밧줄 끝에서도 날이 문턱 밖이면 팔꿈치를 돌려 날 앞장 (secret_instant.js armTurn)
-      //  미끄러져 들어감 (11/05 일본 강화 길 — UNIQUE_ASSIST.tsuStep · 기본 0): 상대 가슴이 내 칼이 맞는 거리 밖이면 그 거리까지(tsuStep m 한도) 몸이 칼과 함께 미끄러지고 앞발을 디딤 (끌고 가는 칼 걸음 수 step — comboMoveStart)
-      const M = f.swordArt?.measure;
-      const gap = UA.tsuStep > 0 && M && f.foe ? f.foeDistance() - M.contact : 0;
-      const step = gap > 1e-3 ? { fwd: Math.min(UA.tsuStep, gap) } : null;
-      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), maxT: UA.tsuSnapTime, tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band && so?.shift !== 'none', roll: !!U.band && so?.shift === 'none', shift: so?.shift && so.shift !== 'none' ? so.shift : null, pathHint: !!so?.pathHint, arcCut: !!so?.arcCut, step, armTurn: !!so && !!U.band && !!UA.tsuArm, tipLine: so && U.band ? +UA.tsuTip || 0 : 0 })) { // tipLine (11/13 — UNIQUE_ASSIST.tsuTip): 곧은 길 베는 토막을 칼끝 곧은 줄로
+      const step = null;
+      if (requestArtSnap(f, [f.handOffset.x, f.handOffset.y], U.pts.slice(at + 1), { share: specialShare(e.name), tech: e.name, plan: U.band ? U.snapPlan.slice(at) : U.plan ? U.plan.slice(at) : null, band: !!U.band && so?.shift !== 'none', roll: !!U.band && so?.shift === 'none', shift: so?.shift && so.shift !== 'none' ? so.shift : null, pathHint: !!so?.pathHint, arcCut: !!so?.arcCut, step, armTurn: !!so && !!U.band, tipLine: so && U.band ? 1 : 0 })) { // tipLine (11/13 — UNIQUE_ASSIST.tsuTip): 곧은 길 베는 토막을 칼끝 곧은 줄로
         this.stats.snap = (this.stats.snap ?? 0) + 1;
-        if (step) this.stats.tsuStep = (this.stats.tsuStep ?? 0) + 1; // 재기 (판정에는 안 씀)
       }
-    } else if (e.tap && UA.imbroReach) {
+    } else if (e.tap) {
       // 위에서 내려 찌르기 닿게 (사장님 10/27 23:5x '찌르기 뻗게 고치고'): 읽힌 순간 탭 찌르기 덧씌우기로 찌른다 — AI 임브로카타(ai.js startStrike → skill.thrust)와 같은 길
       //  (이탈리아 찌르기 THRUST.itLunge — 몸통 겨눔 · 팔만으로 안 닿으면 거리만큼 런지). 그 탭이 도는 동안 강화(몸 · 끝 힘)는 물러남(busy) · 맞은 상처는 이 기술(strokeTechOf — I8 틈 파고들기).
       //  기력: 손가락 긋기가 곧 이 탭 — 긋기 몫은 청구하지 않고(stamina.dropStroke) 탭 하나만
@@ -1700,7 +1674,6 @@ export class PlayerUniqueAssist {
     if (this.cingirE) this.linkWatch(); // B7 이어 돌리기 (11/14): 손가락 긋기 시작을 손가락으로 봄 (손 목표가 손 반지름 끝에 막혀 못 움직여도)
     if (this.link) this.linkTick(dt); // B7 이어 돌리기 (11/14): 도는 동안 손 목표를 쥐고 · 끝나면 받아 둔 긋기를 다시 그음
     if (this.cingirE) this.fingerEnd();
-    if (UA.stepIn && UA.stepPre > 0) this.stickTick(); // 걸음 공격 스틱 기억 (11/05 — 앞 창 stepPre · 기본 끔)
     if (UA.cavCancel && this.cavFire) this.cavCancelTick();
     if (this.holdE) this.holdTick(dt); // 풍차 베기 (B4 — 길게 눌러 감다 떼면 내려침 · 10/29)
     if ((UA.dupAny || UA.dupGrace > 0) && UA.dupTap && this.list.some((x) => x.tapKey === 'dup')) {
@@ -1796,7 +1769,7 @@ export class PlayerUniqueAssist {
       const k = Math.min(1, UA.enhance);
       const mix = (j) => ((a[j] ?? 0) + ((b[j] ?? 0) - (a[j] ?? 0)) * u) * k;
       // 칼끝 들기는 UNIQUE_ASSIST.schielPlayerTip 일 때만 (기본 1 — 사장님 10/25 20:2x '칼끝 들기 빼지 마' · 0 = 시험용: 길 끝을 지나 계속 긋는 손가락에서 칼끝을 채찍처럼 떨구는 몫을 뺌)
-      f.techPlan = { tilt: UA.schielPlayerTip ? mix(0) * D2R : 0, reach: mix(1), turn: mix(2) * D2R };
+      f.techPlan = { tilt: mix(0) * D2R, reach: mix(1), turn: mix(2) * D2R };
       this.planFade = null;
     } else if (f.techPlan) {
       // 놓음 (ai.js techPlanStep 과 같음): 손 목표가 한 스텝에 손 뻗기만큼 튀지 않게 그때 값을 planRelease 초에 걸쳐 0 으로

@@ -23,10 +23,8 @@ const TRIALS = [
 ];
 
 test('기본값: 새 판 켬 · 문턱 0.3(걸음 사다리) · 뒤 창 0.2 실제 s(시간 사다리) · 앞 창 끔', () => {
-  assert.equal(UA.stepIn, 1);
   assert.equal(UA.stepStick, 0.3);
   assert.ok(Math.abs(UA.stepPost - CONFIG.realS(0.2)) < 1e-12);
-  assert.equal(UA.stepPre, 0);
 });
 
 test('스틱 쪽 판단 (stickDir): 옆 = 옆 몫 ≥ 문턱 · 앞뒤 몫 이하 / 앞 = 앞 몫 ≥ 문턱 · 옆 몫보다 큼', () => {

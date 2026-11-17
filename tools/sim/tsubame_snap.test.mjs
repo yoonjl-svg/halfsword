@@ -32,15 +32,9 @@ const withUA = (o, fn) => {
 const OFF = { tsuRuler: 0, tsuSnap: 0, tsuAim: 0 };
 
 test('기본값 — 세 해법 켬 · 0.6 · 0.2 s (사장님 10/25 결정) · AI 길 그대로', () => {
-  assert.equal(UA.tsuRuler, 1);
-  assert.equal(UA.tsuSnap, 1);
-  assert.equal(UA.tsuAim, 1);
-  assert.equal(UA.tsuBand, 1);
-  assert.equal(UA.tsuHook, 0, '곧은 길 (사장님 10/31 16:xx)');
   assert.deepEqual(TSU_AIM.line, { path: [[-0.3, 0.25]], plan: [[0, 0, 0], [0, 0, 0]], shift: 'slide', pathHint: true, arcCut: true });
   assert.deepEqual(TSU_AIM.band.path, [[0.2, -0.2], [0, 0.1]], '갈고리 길은 `?tsuHook=1` 로 그대로');
   assert.equal(UA.specialShare.tsubameGaeshi, 0.6); // 10/29 02:0x 특수 공격 칼끝 = 고노센 × n 한 표 (제비 베기는 전과 같은 0.6)
-  assert.equal(UA.tsuSnapTime, 0); // 11/01 00:xx 사장님 '공격이 몇 초 안에 끝나야한다 이런 기준 없애라고 햇지' — 상한 없음(0)
   const u = TRADITIONS.japanese.unique.find((x) => x.name === 'tsubameGaeshi');
   assert.deepEqual([u.from, ...u.path], [G.tag, [0.0, 0.14], G.alber, [0.06, -0.15], G.ochsR]); // AI 가 읽는 길은 그대로
 });
@@ -54,22 +48,6 @@ test('③ 사람 잣대 길: 꺾는 자리까지 그대로 · 그 뒤 곧은 길
   assert.deepEqual(ln.snapPlan.slice(2), TSU_AIM.line.plan, '끌고 가는 칼 덧칸 0');
   assert.equal(ln.band, true, '몸통 띠 · 굴림 묶음 그대로');
   assert.deepEqual(ln.snapOpt, { shift: 'slide', pathHint: true, arcCut: true });
-  const on = withUA({ tsuHook: 1 }, () => uniqueDef('japanese', TSU));
-  assert.deepEqual(on.pts.slice(0, 3), [G.tag, [0.0, 0.14], G.alber]);
-  assert.deepEqual(on.pts.slice(3), TSU_AIM.band.path);
-  assert.equal(on.plan.length, on.pts.length);
-  assert.deepEqual(on.plan.slice(2), TSU_AIM.plan, '손가락 몫 덧칸은 21:1x 그대로');
-  assert.deepEqual(on.snapPlan.slice(2), TSU_AIM.band.plan, '끌고 가는 칼 덧칸');
-  assert.equal(on.band, true);
-  assert.equal(on.snapOpt, undefined, '갈고리 판은 10/25 그대로 (띠 옮김 꼴 · 날 쪽 셈 · 잔상)');
-  const old = withUA({ tsuBand: 0 }, () => uniqueDef('japanese', TSU));
-  assert.deepEqual(old.pts.slice(3), TSU_AIM.path);
-  assert.deepEqual(old.plan.slice(2), TSU_AIM.plan);
-  assert.ok(!old.band);
-  const off = withUA({ tsuAim: 0 }, () => uniqueDef('japanese', TSU));
-  assert.deepEqual(off.pts.slice(3), [[0.06, -0.15], G.ochsR]);
-  assert.equal(off.plan, undefined);
-  assert.ok(!off.band);
 });
 
 /** 제비 베기 강화를 손으로 연다 (앞 칼 빗나감 뒤 위로 — 조건은 detect 가 보지만 여기선 start 만) → 걸린 끌고 감 요청 */
@@ -83,7 +61,7 @@ function fire(weapon = 'uchigatana') {
   return { g, P, uq, e };
 }
 
-test('① 끝 힘 잣대 = 꺾은 자리부터 (끄면 내려베기 몫)', () => {
+test('① 끝 힘 잣대 = 꺾은 자리부터', () => {
   const lenOf = PlayerUniqueAssist.lenOf;
   const a = fire();
   try {
@@ -91,25 +69,9 @@ test('① 끝 힘 잣대 = 꺾은 자리부터 (끄면 내려베기 몫)', () =>
   } finally {
     a.g.world.free();
   }
-  const b = withUA({ tsuRuler: 0 }, fire);
-  try {
-    assert.ok(Math.abs(b.uq.r.len - lenOf(b.e.U.pts, 0, 2)) < 1e-12);
-  } finally {
-    b.g.world.free();
-  }
 });
 
 test('② 꺾는 순간 끌고 감: 몫 0.6 · 0.2 s 상한 · 붙잡기 0 · 손가락 긋기와 같은 공격 · 덧칸 — 끝나면 0.2 s 에 손가락으로 · 끄면 요청 없음 · 갈고리 판(tsuHook 1) 요청 그대로', () => {
-  const h = withUA({ tsuHook: 1 }, fire);
-  try {
-    const m = h.P.iaiReq.moves[0];
-    assert.deepEqual(m.path, TSU_AIM.band.path);
-    assert.deepEqual(m.plan, TSU_AIM.band.plan);
-    assert.equal(m.band, true);
-    assert.ok(!m.shift && !m.pathHint && !m.cleanArc && !m.roll && !h.P.iaiReq.arcCut, '10/25 갈고리 판 그대로');
-  } finally {
-    h.g.world.free();
-  }
   const a = fire();
   try {
     const R = a.P.iaiReq;
@@ -140,12 +102,6 @@ test('② 꺾는 순간 끌고 감: 몫 0.6 · 0.2 s 상한 · 붙잡기 0 · �
     assert.equal(a.P.skill.thrustPose.w, 0, '0.2 s 뒤 손가락으로');
   } finally {
     a.g.world.free();
-  }
-  const b = withUA({ tsuSnap: 0 }, fire);
-  try {
-    assert.equal(b.P.iaiReq ?? null, null);
-  } finally {
-    b.g.world.free();
   }
 });
 

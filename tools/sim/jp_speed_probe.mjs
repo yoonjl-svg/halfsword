@@ -93,7 +93,7 @@ export function humanRun(kind, n, seed = 1) {
     for (let t = 0; t < 0.4 * K; t += DT) G.step();
     P.stamina.attack('cut'); // 제비 베기 칼 (빗나간 앞 칼에서 n 스택을 들고 온 것으로 — 묶인 칼의 carryStk)
     SP.lock.carryStk = n;
-    if (!requestArtSnap(P, [P.handOffset.x, P.handOffset.y], [PAD.ochsR.slice()], { share: specialShare('tsubameGaeshi'), maxT: CONFIG.UNIQUE_ASSIST.tsuSnapTime, tech: 'tsubameGaeshi' })) throw new Error('제비 베기를 못 냄');
+    if (!requestArtSnap(P, [P.handOffset.x, P.handOffset.y], [PAD.ochsR.slice()], { share: specialShare('tsubameGaeshi'), tech: 'tsubameGaeshi' })) throw new Error('제비 베기를 못 냄');
     v = peak(G, P, 0.6);
   }
   const s = kind === 'cut' ? P.jpSMax : SP.lock ? SP.speedOf(kind === 'tsu' ? 'tsubameGaeshi' : null) : 1;

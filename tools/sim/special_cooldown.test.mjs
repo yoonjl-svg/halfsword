@@ -16,7 +16,6 @@ const CD = realS(3.0);
 
 test('기본값 — 식힘 실제 3 s · 끝난 때(몸이 자유로울 때 free)부터 · 표 칸 special = 제비 베기 · 겹치기 · 날개 접기 · 비껴서며 찌르기 · 풍차 베기 다섯뿐 (10/31 — 칼끝 돌려 빼기는 특수 공격 아님)', () => {
   assert.ok(Math.abs(UA.specialCooldown - CD) < 1e-12);
-  assert.equal(UA.specialCoolFrom, 'free');
   const sp = Object.values(PLAYER_UNIQUE).flat().filter((e) => e.special).map((e) => e.name).sort();
   assert.deepEqual(sp, ['cingir', 'duplieren', 'inquartata', 'lianchi', 'redondo', 'tsubameGaeshi']); // 11/11 싱지르 특수 공격 칸 더함 (redondo 칸은 'spin' 판 특수 공격 · 'altib' 판은 비기 실행 칸 — 식힘 없이 holdTick 이 비기로)
 });
@@ -152,26 +151,6 @@ test('제비 베기: 이어 긋기 뒷몫(part 2)은 새로 나간 것이 아님
   } finally {
     B.G.world.free();
   }
-});
-
-test("세기 시작하는 때: 'motion' = 동작 끝(풀기 0.2 s 빼고 — free 보다 이름) · 'fire' = 나간 순간(10/28 판)", () => {
-  const got = {};
-  for (const from of ['free', 'motion', 'fire']) {
-    UA.specialCoolFrom = from;
-    const B = body('hwando', 'lianchi');
-    try {
-      const tap = tapper(B, 'lianchi', TAPS.lianchi[1]);
-      const tFire = B.uq.t;
-      assert.equal(tap(), true);
-      B.until(() => B.free() && !B.uq.coolRun.lianchi, 3);
-      got[from] = B.uq.coolT.lianchi - tFire;
-    } finally {
-      UA.specialCoolFrom = 'free';
-      B.G.world.free();
-    }
-  }
-  assert.ok(Math.abs(got.fire) < 1e-9, `fire ${got.fire}`);
-  assert.ok(got.motion > 0 && got.free > got.motion + 0.15, `motion ${got.motion} · free ${got.free}`);
 });
 
 test('기술마다 따로 · 몸마다 따로 · 0 = 끔', () => {

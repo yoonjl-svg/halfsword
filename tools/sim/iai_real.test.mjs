@@ -27,7 +27,6 @@ const withS = (vals, fn, O = SECRET) => {
 };
 
 test('① 기본값 — 원전 꼴 켬 · 뽑는 자리 · 배를 지나는 자리는 전 길 그대로 · 제비 베기 칼끝 곧은 줄 켬', () => {
-  assert.equal(UA.tsuTip, 1);
   const R = SECRET.iaiPathReal;
   assert.deepEqual(R.B, SECRET.iaiPathRise.B, '뽑는 자리 (왼 허리) 그대로');
   assert.ok(R.N.at > 0 && R.N.at < R.M.at && R.M.at < 1, '뽑아 냄 → 배 → 끝 차례');

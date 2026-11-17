@@ -18,7 +18,7 @@ const OBI2_OLD = { iaiSheathe: 0, iaiObiSayaMouth: [0.21, 0.085, 0.02], iaiObiSa
 const withNoto0 = (fn) => { const S = CONFIG.SECRET; const was = {}; for (const k of Object.keys(OBI2_OLD)) (was[k] = S[k]), (S[k] = OBI2_OLD[k]); try { return fn(); } finally { Object.assign(S, was); } };
 
 const { SECRET, UNIQUE_ASSIST: UA, AI_MAAI } = CONFIG;
-const allOff = () => { SECRET.gnsHurtKeep = 0; SECRET.gnsThrough = 0; UA.tsuStep = 0; AI_MAAI.hide = 0; };
+const allOff = () => { SECRET.gnsHurtKeep = 0; SECRET.gnsThrough = 0; AI_MAAI.hide = 0; };
 
 // 3 단계(11/14) 그때 판으로 묶음 (기준은 안 고침): 롱소드 AI 의 독일 플랜 · 모든 AI 손잡이 찍기를 뺀 판 (이 장면을 잰 때의 상대)
 const deOff = () => { const P = CONFIG.AI_PLAN, k = [P.schools, P.errSchools, P.pommel]; for (const x of ['schools', 'errSchools']) P[x] = P[x].filter((t) => t !== 'german'); P.pommel = 0; return k; };
@@ -26,7 +26,6 @@ const deOn = (k) => { const P = CONFIG.AI_PLAN; [P.schools, P.errSchools, P.pomm
 const withDeOff = (fn) => { const k = deOff(); try { return fn(); } finally { deOn(k); } };
 
 test('기본값: 새 스위치 모두 끔 · 일본 걷기 빠르기 그대로', () => {
-  assert.equal(UA.tsuStep, 0);
   assert.equal(AI_MAAI.hide, 0);
   assert.equal(JAPANESE_GAIT.speedMul, 0.7);
 });
@@ -69,7 +68,6 @@ test('켜도 일본이 아닌 칸은 그대로: 네 스위치를 켠 독일 롱�
     const a = fightOne({ school: 'german', weapon: 'longsword', opp: 'longsword', seed: 2, dur: 8 });
     SECRET.gnsHurtKeep = 1;
     SECRET.gnsThrough = 1;
-    UA.tsuStep = 0.3;
     AI_MAAI.hide = 0.3;
     const b = fightOne({ school: 'german', weapon: 'longsword', opp: 'longsword', seed: 2, dur: 8 });
     assert.equal(JSON.stringify(b), JSON.stringify(a), '독일 롱소드 칸');

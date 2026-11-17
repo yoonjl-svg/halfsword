@@ -20,7 +20,6 @@ test('기본값 — 길게 누름 실제 0.6 s · 기력 초당 붙어 버티기
   assert.ok(Math.abs(UA.rdHoldTime - realS(0.6)) < 1e-12); // 사장님 '0.6초'
   assert.equal(UA.specialShare.redondo, 0.25); // 11/01 00:xx 사장님 '알티바슈는 25%로 하고' (전 0.2 ← 0.3)
   assert.ok(Math.abs(UA.specialCooldown - realS(3.0)) < 1e-12); // 10/29 19:5x 사장님 '특수공격 3초(발동이 완료된 시점부터)' (전 6 s · 나간 순간부터)
-  assert.equal(UA.specialCoolFrom, 'free');
   const e = PLAYER_UNIQUE.iberian.find((x) => x.name === 'redondo');
   assert.equal(e.role, 'hold');
   assert.deepEqual(e.on, []); // 사람: 긋기 조건 없음 — 왼 가로베기는 보통 긋기

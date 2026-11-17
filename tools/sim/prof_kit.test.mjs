@@ -185,15 +185,7 @@ test('고유 공격 · 유파 패시브 · 비기는 칸을 따른다 (옛 단�
 
 test('AI 만의 스위치도 칸을 묻는다: 사냥 겹 C12 · 칼 씨름 G12 · 바위 몸 밀치기 J12 · 이어 돌리기 B7 · 파고들기 G2 · 막는 동안 피해 감소 C8', () => {
   const cn4 = match('chinese', 4).ai, cn5 = match('chinese', 5).ai;
-  assert.equal(CONFIG.UNIQUE_ASSIST.cnHunt.ai, 1);
   assert.deepEqual([huntOn(cn4.me), huntOn(cn5.me)], [false, true]);
-  const keep = CONFIG.UNIQUE_ASSIST.cnHunt.ai;
-  CONFIG.UNIQUE_ASSIST.cnHunt.ai = 0; // AI 스위치를 끄면 칸이 있어도 끔 (사장님이 끈 AI 스위치는 그대로)
-  try {
-    assert.equal(huntOn(cn5.me), false);
-  } finally {
-    CONFIG.UNIQUE_ASSIST.cnHunt.ai = keep;
-  }
   const de4 = match('german', 4).ai, de5 = match('german', 5).ai;
   assert.ok(de4.planDe && de5.planDe);
   assert.deepEqual([deDirtyBody(de4.me, 'deRing'), deDirtyBody(de5.me, 'deRing')], [false, true]);

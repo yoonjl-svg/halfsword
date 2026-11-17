@@ -13,9 +13,9 @@ const H = () => UA.cnHunt;
 /** 이 몸이 사냥 겹을 쌓는가 (동방 무기 · 사람 = 스킬트리 C12 몫 · 스킬트리가 없는 몸(시뮬) = ai 스위치 · AI = ai 스위치 그리고 칸 몫 C12 — 11/16 AI 숙련도 = 칸 config AI_KIT · 칸 몫이 없으면 스위치만) */
 export function huntOn(f) {
   const C = H();
-  if (!C?.on || f?.swordArt?.tradition !== 'chinese') return false;
-  if (f.aiControlled) return !!C.ai && !kitOff(f, 'cnHunt');
-  return f.skillKit ? !!f.skillKit.cnHunt : !!C.ai;
+  if (!C || f?.swordArt?.tradition !== 'chinese') return false;
+  if (f.aiControlled) return !kitOff(f, 'cnHunt');
+  return f.skillKit ? !!f.skillKit.cnHunt : true;
 }
 
 /**
@@ -72,10 +72,3 @@ export function huntStacksFor(f) {
   return n && huntOn(f) ? n : 0;
 }
 
-/** 격살 칼끝 빠르기 몫 배율 (skill.js gyeoksalReq): 쌓는 몸이 겨눈 상대(f.foe)의 겹 × share 를 더함 · 겹 없음 = 1 */
-export function huntShareK(f) {
-  const n = huntN(f?.foe);
-  if (!n || !huntOn(f)) return 1;
-  const C = H();
-  return C.share > 0 ? 1 + C.share * n : 1;
-}

@@ -6,7 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT } from './harness_m.mjs';
-import { huntOn, huntHit, huntRegenK, huntShareK, huntN } from '../../src/cn_hunt.js';
+import { huntOn, huntHit, huntRegenK, huntN } from '../../src/cn_hunt.js';
 import { recoverRate } from '../../src/stamina.js';
 import { Combat } from '../../src/combat.js';
 import { secretUsesOf, secretLeft, useSecret } from '../../src/secret.js';
@@ -25,7 +25,7 @@ const C = Object.create(Combat.prototype); // huntWound · yaojiDeep 은 this �
 const cut = (zone = 'abdomen', o = {}) => ({ type: 'cut', zone, severity: 0.4, ...o });
 
 test('기본값 — 켬 · 상한 5 · 기력 회복 −10 %/겹(11/16 — 전 −8 %) · 격살 빠르기 몫 share 0.08(풀기 끔 판) · 몸 어디든 · AI 도 쌓음 · 모든 칼날 상처로 쌓임 · 8.0 s 뒤 사라짐(11/16) · 동방 판당 1 번(공용 표) [사장님 11/14 · 11/16]', (t) => {
-  assert.deepEqual(UA.cnHunt, { on: 1, max: 5, regen: 0.1, share: 0.08, torso: 0, ai: 1, life: CONFIG.realS(8.0), any: 1 }); // 11/16 사장님 결정 '대신 기력 회복 -10%' · '8초로 하자' · '모든 공격 성공으로 쌓이게' — regen 0.08 → 0.10 · life · any 더함 (ai 1 = 11/14 '동방도 격살 쓰게 해')
+  assert.deepEqual(UA.cnHunt, { max: 5, regen: 0.1, life: CONFIG.realS(8.0) }); // 11/16 사장님 결정 '대신 기력 회복 -10%' · '8초로 하자' · '모든 공격 성공으로 쌓이게' — regen 0.08 → 0.10 · life · any 더함 (ai 1 = 11/14 '동방도 격살 쓰게 해')
   assert.deepEqual(UA.secretUses, { default: 1, chinese: 1 }); // 11/14 '다른 비기처럼 1번으로' — 사람 · AI 같은 표 (전 chinese 3)
   assert.deepEqual(UA.yaojiBleed.techs, ['yaoji', 'chebuYaoji', 'lianchi']);
   assert.deepEqual(UA.yaojiBleed.zones, ['chest', 'abdomen', 'pelvis']);
@@ -59,52 +59,13 @@ test('공격 하나에 한 겹 (같은 공격 번호의 두 번째 상처는 셈
 
 
 
-test('AI 스위치: 켬(기본 — 11/14)이면 스킬트리 없는 몸(AI · 시뮬)도 쌓음 · 끄면(`?cnHuntAi=0`) 안 쌓음', () => {
+test('스킬트리 없는 몸(AI · 시뮬)도 쌓음 (11/14)', () => {
   try {
     const ai = body({ kit: null });
-    UA.cnHunt.ai = 0;
-    assert.equal(huntOn(ai), false);
     const v = {};
-    C.huntWound(ai, v, cut());
-    assert.equal(huntN(v), 0);
-    UA.cnHunt.ai = 1;
     assert.equal(huntOn(ai), true);
     C.huntWound(ai, v, cut());
     assert.equal(huntN(v), 1);
   } finally { reset(); }
 });
 
-test('스위치 끔(on 0 — `?cnHunt=0`)이면 겹 전 판: 안 쌓음 · 회복 · 빠르기 그대로', () => {
-  try {
-    UA.cnHunt.on = 0;
-    const v = {};
-    C.huntWound(body(), v, cut());
-    assert.equal(huntN(v), 0);
-    assert.equal(huntRegenK({ cnHunt: { n: 5 } }), 1);
-    assert.equal(huntShareK({ swordArt: { tradition: 'chinese' }, skillKit: kitAll(), foe: { cnHunt: { n: 5 } } }), 1);
-  } finally { reset(); }
-});
-
-/** 실제 판 한 토막의 몸 자리 (바이트 견줌) */
-function trace(o, steps = 420) {
-  const G = newRound({ seed: 5, ...o });
-  try {
-    const out = [];
-    for (let i = 0; i < steps; i++) {
-      G.step();
-      if (i % 30 === 0) for (const f of [G.player, G.enemy]) { const p = f.bodies.chest.translation(); out.push(p.x, p.y, p.z, f.stamina.value, f.wounds.length); }
-    }
-    return JSON.stringify(out);
-  } finally { G.world.free(); }
-}
-test('다른 유파 · AI 판은 바이트 같음: 사냥 켬과 끔이 같은 판 (독일 · 일본 사람 몫 · 동방 AI 끼리 — AI 사냥 겹 끔 판에서 · 켬이면 AI 동방이 쌓아 다름)', () => {
-  try {
-    UA.cnHunt.ai = 0;
-    for (const o of [{ weapon: 'longsword', weapon2: 'longsword', kit: kitAll('german') }, { weapon: 'uchigatana', weapon2: 'hwando', kit: kitAll('japanese') }, { weapon: 'hwando', weapon2: 'hwando' }]) {
-      UA.cnHunt.on = 1;
-      const a = trace(o);
-      UA.cnHunt.on = 0;
-      assert.equal(trace(o), a, o.weapon);
-    }
-  } finally { reset(); }
-});

@@ -21,7 +21,6 @@ const { realS, THRUST } = CONFIG;
 const it = Object.fromEntries(PLAYER_UNIQUE.italian.map((e) => [e.name, e]));
 
 test('기본값 (10/31): 칼끝 돌려 빼기 = 기본 기술(특수 공격 아님 · 보통 찌르기 빠르기 · 잔상 없음) · 비껴서며 찌르기 = 특수 공격(고노센 × 0.3) · 헛누름 1.2 s · 내려 긋기 67.5°', () => {
-  assert.equal(UA.cavTap, 1);
   assert.equal(UA.cavSnap, 1);
   assert.ok(Math.abs(UA.cavFrom - realS(0.2)) < 1e-12 && Math.abs(UA.cavTo - realS(1.2)) < 1e-12, '창 그대로 (사장님 값)');
   assert.equal(UA.cavSpeed, 'tap');
@@ -29,7 +28,6 @@ test('기본값 (10/31): 칼끝 돌려 빼기 = 기본 기술(특수 공격 아�
   assert.equal(UA.cavSide, 'contact');
   assert.ok(Math.abs(UA.cavArmSlow - realS(1.2)) < 1e-12, "헛누름 — 사장님 '1.2초로 할게'");
   assert.equal(UA.cavArmSlowAi, 1);
-  assert.equal(UA.inqTap, 1);
   assert.ok(Math.abs(UA.inqThreat - realS(0.25)) < 1e-12);
   assert.equal(UA.specialShare.inquartata, 0.3); // 10/31 16:xx 감독 판단(사장님 위임 — 확인표 3217)
   assert.equal(UA.imbroDown, 67.5);
@@ -93,7 +91,7 @@ test('② 칼끼리 닿음 처음부터 실제 0.5 s 의 탭 = 칼끝 돌려 빼
   }
 });
 
-test('② 이른 탭(0.1 s — 그 닿음의 기회를 없앰) · 늦은 탭(마지막 닿음에서 1.3 s) · 내 긋기 동안의 닿음 · 닿음 없음 · 끔(cavTap 0) = 보통 탭', () => {
+test('② 이른 탭(0.1 s — 그 닿음의 기회를 없앰) · 늦은 탭(마지막 닿음에서 1.3 s) · 내 긋기 동안의 닿음 · 닿음 없음 = 보통 탭', () => {
   const B = body();
   try {
     B.uq.touch = null;
@@ -108,12 +106,6 @@ test('② 이른 탭(0.1 s — 그 닿음의 기회를 없앰) · 늦은 탭(마
     B.touch(realS(0.5), 0.05, true);
     assert.equal(B.tap(), false, '내 긋기 동안 닿음 (셈 밖)');
     B.touch(realS(0.5));
-    UA.cavTap = 0;
-    try {
-      assert.equal(B.tap(), false, '끔');
-    } finally {
-      UA.cavTap = 1;
-    }
   } finally {
     B.free();
   }
@@ -219,7 +211,7 @@ test('④ 비껴서며 찌르기: 상대 칼이 들어오는 동안(위협) 스�
     assert.ok(R.share === 0.3 && !R.noArc && !(R.speed > 0), '고노센 × 0.3 · 잔상');
     assert.deepEqual(R.moves[0].dyn.void, { lat: -0.3, fwd: 0.15 }, '스틱 쪽(왼) 옆 0.3 · 앞 0.15 (schools.js inquartata step)');
     assert.deepEqual(R.moves[0].bodyPose, [-18, -10, 5, 0.025], '몸 꼴은 디딘 쪽');
-    assert.equal(R.maxT, UA.inqSnapTime);
+    assert.equal(R.maxT, 0);
     assert.equal(B.tap('inquartata'), false, '한 공격에 한 번');
     assert.equal(B.uq.stats.fired.cavazione, 1, '그 탭은 닿음 조건으로 칼끝 돌려 빼기');
   } finally {
@@ -264,20 +256,10 @@ test('① 내려 찌르기 (I7 · 사장님 10/31): 아래로 가는 베기는 �
   }
 });
 
-test('① 내려 찌르기 닿게 (씨앗 1 · 서 있는 상대): 찌른 상처가 남 · 끄면(imbroReach 0) 전 판(칼날 상처 0)', () => {
+test('① 내려 찌르기 닿게 (씨앗 1 · 서 있는 상대): 찌른 상처가 남', () => {
   const on = drillRun('italian', 1, { foe: 'still', variant: 'on', dur: 14 });
   const stab = on.atts.flatMap((a) => a.hits).filter((h) => h.tech === 'imbroccata' && h.type === 'stab' && h.sev > 0);
   assert.ok(stab.length >= 1, `찌른 상처 ${stab.length}`);
-  UA.imbroReach = 0;
-  const fc = { ...CONFIG.SKILL.fingerCut };
-  Object.assign(CONFIG.SKILL.fingerCut, { arm: 1, gain: 1 }); // 11/06 손가락 긋기 기본 켬 전 장면 (감도 2 면 손가락 길만으로도 손이 두 배로 가 칼끝이 머리에 닿아 옛 결함 '옆으로 쓸고 지나감'이 안 남)
-  try {
-    const off = drillRun('italian', 1, { foe: 'still', variant: 'on', dur: 14 });
-    assert.equal(off.atts.flatMap((a) => a.hits).filter((h) => h.sev > 0).length, 0);
-  } finally {
-    UA.imbroReach = 1;
-    Object.assign(CONFIG.SKILL.fingerCut, fc);
-  }
   assert.equal(typeof strokeTechOf, 'function');
 });
 

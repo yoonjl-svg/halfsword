@@ -1606,10 +1606,6 @@ export class AI {
     const now = this.sense.t;
     (this.stats.specials ??= {})[name] = (this.stats.specials[name] ?? 0) + 1;
     if (this.specRun) this.specEnd(this.specRun, now, now); // (한 유파에 특수 공격 하나 — 오지 않는 길)
-    if (UA.specialCoolFrom === 'fire') {
-      this.specCool[name] = now;
-      return;
-    }
     this.specCool[name] = Infinity;
     this.specRun = { name, seq: this.atkSeq, t0: now, motion: null };
   }
@@ -1628,14 +1624,13 @@ export class AI {
     if (R.motion == null) {
       if (moving) return;
       R.motion = now;
-      if (UA.specialCoolFrom === 'motion') this.specCool[R.name] = now;
     }
     if (live || moving || me.iaiHoldT > 0 || me.iaiFade > 0) return;
     this.specEnd(R, R.motion, now);
   }
 
   specEnd(R, motion, now) {
-    if (UA.specialCoolFrom !== 'fire') this.specCool[R.name] = UA.specialCoolFrom === 'motion' ? motion ?? now : now;
+    this.specCool[R.name] = now;
     (this.stats.specRuns ??= []).push({ name: R.name, motion: (motion ?? now) - R.t0, free: now - R.t0 });
     this.specRun = null;
   }
@@ -2191,7 +2186,7 @@ export class AI {
    */
   /** 이 기술을 사람과 같은 운동학 비껴서며 찌르기로 내나 (11/15 — UNIQUE_ASSIST.inqAi · 속임 · 비기 · 헛스윙 연습 칼은 아님) */
   inqArtOn(t) {
-    return !!UA.inqAi && UA.enhance > 0 && t?.name === 'inquartata' && !this.feint && !this.secretRun && !this.drillAtk;
+    return UA.enhance > 0 && t?.name === 'inquartata' && !this.feint && !this.secretRun && !this.drillAtk;
   }
 
   /**
@@ -2208,7 +2203,7 @@ export class AI {
     const st = t.step ?? { lat: 0.3, fwd: 0.15 };
     const sg = this.inqSide(s);
     const B = e?.body ? [Math.abs(e.body[0]) * sg * (e.bodyMirror ?? 1), Math.abs(e.body[1]) * sg * (e.bodyMirror ?? 1), e.body[2], e.body[3]] : null;
-    if (!requestArtThrust(me, { share: specialShare('inquartata'), maxT: UA.inqSnapTime, tech: 'inquartata', under: false, capFromCut: true, voidStep: { lat: Math.abs(st.lat) * sg, fwd: st.fwd ?? 0 }, bodyPose: B })) return this.inqRefuse();
+    if (!requestArtThrust(me, { share: specialShare('inquartata'), tech: 'inquartata', under: false, capFromCut: true, voidStep: { lat: Math.abs(st.lat) * sg, fwd: st.fwd ?? 0 }, bodyPose: B })) return this.inqRefuse();
     me.stamina.attack('thrust'); // 찌르기 한 번 (사람 탭 하나와 같은 값)
     this.phase = 'strike';
     this.inqRun = true;

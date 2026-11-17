@@ -15,8 +15,6 @@ const D = await import('../../src/skill_tree_data.js');
 const S = await import('../../src/skill_tree_store.js');
 const { readProgress, recordAcquisition, PROGRESS_KEY } = await import('../../src/lobby_progress.js');
 const { SECRET, STAMINA, GAIT, LETTER, UNIQUE_ASSIST, IB_FLOW } = await import('../../src/config.js');
-// 손목 치기 떨구기 10/24 판 시험들(사람만 굴림 · 칼 없는 AI 는 물러남)은 그때 규칙으로 — 11/05 기본 AI 손목 치기 떨굼(koteDrop.ai 1) (줍기는 tools/sim/kote_pickup.test.mjs)
-UNIQUE_ASSIST.koteDrop.ai = 0;
 const { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_DRAW, RETIRED_WEAPONS } = await import('../../src/weapons.js');
 const { traditionOf, TRADITIONS } = await import('../../src/schools.js');
 const { PLAYER_UNIQUE, PlayerUniqueAssist, strokeHitK, enhancedMoves } = await import('../../src/unique_assist.js');
@@ -663,97 +661,6 @@ test('이어지는 흐름 (B6 — 사장님 10/29 01:4x · 01:5x · 14:1x · 14:
       assert.equal(P.ibChainCostK(), 1, why);
     } finally { r.world.free(); }
   }
-});
-test('실제 몸 — 손목 치기 칼 떨구기(J8 · 10/24): J8 을 익혀야 · 손목 치기만 · 칼 쥔 아래팔(손 · 손목)만 · 50 % 는 친 쪽 전용 난수 · 떨구면 칼을 놓침 · 못 떨구면 보통 맞음 그대로 · AI 가 모는 몸은 굴리지 않음', () => {
-  const K = UNIQUE_ASSIST.koteDrop;
-  assert.equal(K.p, 0.5); // 사장님 10/24 '너무 강하면 50%로'
-  assert.deepEqual(K.parts, ['farmS', 'farmO']);
-  assert.equal(Object.hasOwn(K, 'loose'), false); // 12:0x '0.6초 동안 한 손을 놓음 이 효과는 빼' — 손 풀림 없음
-  assert.equal(K.judge, 'all'); // 12:3x 판정 완화 (감독 추천 — 아래팔 맞음 모두 + 상대 칼 손 쪽 절반)
-  const lcg = (s) => ((Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296; // fighter.buckleRandom 한 번
-  const cut = { type: 'cut', severity: 0.2 }; // 칼날이 들어간 베기
-  const J = ['J1', 'J7'];
-  // J8 없음 → 굴리지 않음
-  let g = round('monohoshizao', kitOf('japanese', ...J), 9);
-  try {
-    g.player.artTech = 'kote';
-    g.combat.koteCheck(g.player, g.enemy, 'farmS', cut);
-    assert.equal((g.combat.koteLog ?? []).length, 0); assert.equal(g.enemy.armed, true);
-  } finally { g.world.free(); }
-  // J8 있음: 손목 · 아래팔 아닌 곳 · 다른 기술 · 빈손 쪽(두 손으로 쥐지 않은 한 손 칼) · AI 가 모는 몸 · 맞음 없음 → 굴리지 않음
-  g = round('monohoshizao', kitOf('japanese', ...J, 'J8'), 9);
-  try {
-    const P = g.player, E = g.enemy;
-    P.artTech = 'kote';
-    for (const part of ['head', 'chest', 'uarmS', 'uarmO', 'thighF', 'shinB']) g.combat.koteCheck(P, E, part, cut);
-    P.artTech = 'hirakiGiri'; g.combat.koteCheck(P, E, 'farmS', cut);
-    P.artTech = 'kote'; E.gripping = false; g.combat.koteCheck(P, E, 'farmO', cut);
-    P.aiControlled = true; g.combat.koteCheck(P, E, 'farmS', cut); P.aiControlled = false;
-    g.combat.koteCheck(P, E, 'farmS', null);
-    assert.equal((g.combat.koteLog ?? []).length, 0); assert.equal(E.armed, true);
-    // 50 %: 친 쪽 전용 난수(무릎 꺾기와 같은 줄)로 한 번 굴림 — 못 떨구면 칼 · 손 · 걸음 그대로
-    const keep = Math.random; Math.random = () => { throw Error('Math.random 을 쓰면 안 됨'); };
-    try {
-      let tries = 0;
-      while (E.armed && tries < 40) {
-        const want = lcg(P._buckleSeed) < K.p;
-        const before = { grip: E.gripJoint, cone: E.gripCone, state: E.state, limbs: { ...E.limbs } };
-        g.combat.koteCheck(P, E, tries % 2 ? 'farmO' : 'farmS', tries % 3 ? cut : { type: 'blunt', severity: 0 }); E.gripping = true; // 짝수 = 칼 든 손 · 홀수 = 두 손으로 쥔 빈손 쪽 · 칼면 맞음도
-        const last = g.combat.koteLog.at(-1);
-        assert.equal(last.drop, want); tries++;
-        if (!want) { assert.equal(E.armed, true); assert.equal(E.gripJoint, before.grip); assert.equal(E.gripCone, before.cone); assert.equal(E.state, before.state); assert.deepEqual(E.limbs, before.limbs); }
-      }
-      assert.equal(E.armed, false, '떨굼'); assert.ok(g.combat.koteLog.length >= 1);
-      assert.ok(Number.isFinite(E.koteDropAt));
-      const n = g.combat.koteLog.length;
-      g.combat.koteCheck(P, E, 'farmS', cut); assert.equal(g.combat.koteLog.length, n, '칼이 없으면 더 굴리지 않음');
-    } finally { Math.random = keep; }
-  } finally { g.world.free(); }
-  // 굴린 수 가운데 떨군 몫 ≈ 50 % (같은 난수 줄을 1000 번)
-  let s = 12345, d = 0; for (let i = 0; i < 1000; i++) { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; if (s / 4294967296 < K.p) d++; }
-  assert.ok(d > 450 && d < 550, `${d}`);
-  // 몫 없는 몸(시뮬 · 테스트 경로 = 모두 켬)은 굴림 · p 0 이면 끔
-  g = round('monohoshizao', null, 9);
-  try {
-    g.player.artTech = 'kote';
-    const p0 = K.p; K.p = 0; try { g.combat.koteCheck(g.player, g.enemy, 'farmS', cut); } finally { K.p = p0; }
-    assert.equal((g.combat.koteLog ?? []).length, 0);
-    K.p = 1; try { g.combat.koteCheck(g.player, g.enemy, 'farmS', cut); } finally { K.p = p0; }
-    assert.equal(g.combat.koteLog.length, 1); assert.equal(g.enemy.armed, false);
-  } finally { g.world.free(); }
-});
-test('실제 몸 — 칼 떨구기 판정(10/24 12:3x 판정 완화): cut = 칼날 베기 · 심각도 > 0 만 / arm = 아래팔 맞음 모두(칼면 · 심각도 0) / all = + 상대 칼 손 쪽 절반을 세게 친 순간 · 손목 치기 한 번에 한 번', () => {
-  const K = UNIQUE_ASSIST.koteDrop, keep = { p: K.p, judge: K.judge };
-  const flat = { type: 'blunt', severity: 0, energy: 6 }, nick = { type: 'cut', severity: 0 };
-  const run = (fn) => { const g = round('monohoshizao', null, 9); try { g.player.artTech = 'kote'; g.combat.koteProbe = []; fn(g); return g.combat.koteLog ?? []; } finally { g.world.free(); Object.assign(K, keep); } };
-  // 아래팔 칼면 · 심각도 0 — cut 판은 굴리지 않음(적기만) · arm · all 은 굴림
-  K.judge = 'cut'; assert.equal(run((g) => { g.combat.koteCheck(g.player, g.enemy, 'farmS', flat); g.combat.koteCheck(g.player, g.enemy, 'farmS', nick); assert.deepEqual(g.combat.koteProbe.map((e) => e.kind), ['arm', 'arm']); }).length, 0);
-  for (const j of ['arm', 'all']) { K.judge = j; assert.equal(run((g) => g.combat.koteCheck(g.player, g.enemy, 'farmS', flat)).length, 1, j); }
-  // 상대 칼 손 쪽 절반: 맞닿은 자리 = 상대 칼날 0.2(손 쪽) · 맞부딪는 빠르기 > 3 · 내 칼이 그 자리로 들어감 → all 만 굴림
-  const clash = (g, { at = 0.2, vn = 4, v = 2 } = {}) => {
-    const P = g.player, E = g.enemy, point = E.bladePoint(at), c = P.sword.translation();
-    const nrm = new Vector3(point.x - c.x, point.y - c.y, point.z - c.z).normalize(); // 앞 칼(P — 번호가 작은 쪽) → 뒤 칼
-    const S = (vel) => ({ com: point.clone(), w: new Vector3(), v: vel });
-    g.combat.koteSword({ fighter: P }, { fighter: E }, S(nrm.clone().multiplyScalar(v)), S(new Vector3()), point, nrm, vn);
-  };
-  K.judge = 'all'; assert.equal(run((g) => clash(g)).length, 1);
-  assert.equal(run((g) => clash(g)).at(-1).kind, 'sword');
-  K.judge = 'all'; assert.equal(run((g) => clash(g, { at: 0.8 })).length, 0, '칼끝 쪽 절반은 아님');
-  K.judge = 'all'; assert.equal(run((g) => clash(g, { at: -0.05 })).length, 1, '코등이 · 자루 쪽도 손 쪽');
-  K.judge = 'all'; assert.equal(run((g) => clash(g, { vn: K.ease ? K.easeVn : K.swordVn })).length, 0, '맞부딪는 빠르기가 문턱 이하'); // 11/05 완화(koteDrop.ease)면 문턱 easeVn — kote_pickup.test.mjs
-  K.judge = 'all'; assert.equal(run((g) => clash(g, { v: 0.4 })).length, 0, '내 칼이 들어간 맞부딪힘이 아님');
-  K.judge = 'arm'; assert.equal(run((g) => { clash(g); assert.equal(g.combat.koteProbe.at(-1).kind, 'sword'); }).length, 0, 'arm 판은 칼 닿음을 굴리지 않음');
-  K.judge = 'all'; assert.equal(run((g) => { g.player.aiControlled = true; clash(g); }).length, 0, 'AI 가 모는 몸은 아님');
-  // 손목 치기 한 번에 한 번: 같은 긋기(skill.uniq.cur)에서 칼 → 손목이 이어 닿아도 한 번 · 다음 긋기는 다시
-  K.judge = 'all'; K.p = 1e-9; // 떨구지 않고 굴림만 셈
-  const log = run((g) => {
-    const P = g.player; P.artTech = null; P.skill.uniq = { cur: { unique: 'kote' }, last: null, stats: { strokes: 1 } };
-    clash(g); g.combat.koteCheck(P, g.enemy, 'farmS', { type: 'cut', severity: 0.3 });
-    P.skill.uniq.last = P.skill.uniq.cur; P.skill.uniq.cur = { unique: 'kote' }; P.skill.uniq.stats.strokes = 2;
-    g.combat.koteCheck(P, g.enemy, 'farmS', { type: 'cut', severity: 0.3 });
-    P.skill.uniq = null;
-  });
-  assert.deepEqual(log.map((e) => e.kind), ['sword', 'cut']);
 });
 test('실제 몸 — 고유 공격 · 비기: 익힌 칸의 기술만 · 비기는 비기 칸(열린 유파만)', () => {
   const g = round('longsword', kitOf('german', 'G1', 'G8'), 9);

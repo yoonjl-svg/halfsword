@@ -13,31 +13,9 @@ import { TRADITIONS } from '../../src/schools.js';
 import { PLAYER_UNIQUE, uniqueDef, PlayerUniqueAssist } from '../../src/unique_assist.js';
 
 const UA = CONFIG.UNIQUE_ASSIST;
-const withPath = (v, fn) => {
-  const old = UA.schielPath;
-  UA.schielPath = v;
-  try {
-    return fn();
-  } finally {
-    UA.schielPath = old;
-  }
-};
-const withPlayer = (v, fn) => {
-  const old = UA.schielPlayer;
-  UA.schielPlayer = v;
-  try {
-    return fn();
-  } finally {
-    UA.schielPlayer = old;
-  }
-};
 const schielOf = (ai) => ai.school.tech.find((t) => t.name === 'schielhau');
 
 test('값 · 자료 꼴 (기본 켬 · 놓는 시간 0.2 s — 시간 사다리 · 덧칸은 [from, ...path] 점마다 셋 · from 은 0)', () => {
-  assert.equal(UA.schielPath, 1);
-  assert.equal(UA.schielPlayer, 1);
-  assert.equal(UA.schielPlayerK, 1); // 사장님 10/25 20:2x 결정 — 세기 100 % (0.5 는 시험용 · wrist_audit §15)
-  assert.equal(UA.schielPlayerTip, 1); // 사장님 10/25 20:2x '칼끝 들기 빼지 말란 얘기야' — 같은 길 그대로(덧칸 셋) · 0 은 시험용
   assert.equal(UA.planRelease, 0.2);
   const u = TRADITIONS.german.unique.find((x) => x.name === 'schielhau');
   assert.ok(u.redraw?.path?.length && u.redraw.plan?.length);
@@ -55,23 +33,14 @@ test('AI 꾸러미: 켜면 다시 그린 길 · 덧칸 · 끄면 옛 길 · 덧�
     G.world.free();
     return t;
   };
-  const on = withPath(1, mk);
+  const on = mk();
   assert.deepEqual(on.path, u.redraw.path);
   assert.deepEqual(on.plan, u.redraw.plan);
   assert.deepEqual(on.from, u.from);
-  const off = withPath(0, mk);
-  assert.deepEqual(off.path, u.path);
-  assert.equal(off.plan, undefined);
   const e = PLAYER_UNIQUE.german.find((x) => x.name === 'schielhau');
   const both = uniqueDef('german', e);
   assert.deepEqual(both.pts, [u.from, ...u.redraw.path]);
   assert.deepEqual(both.plan, u.redraw.plan);
-  for (const d of [withPlayer(0, () => uniqueDef('german', e)), withPath(0, () => uniqueDef('german', e))]) {
-    assert.deepEqual(d.pts, [u.from, ...u.path]);
-    assert.equal('plan' in d, false); // 18:0x 전 판과 같은 꼴
-  }
-  // AI 꾸러미는 사람 스위치와 상관없음
-  assert.deepEqual(withPlayer(0, mk).plan, u.redraw.plan);
 });
 
 test('사람 덧칸 셈: 손 목표를 다시 그린 길에 비춘 자리로 섞음 · 뒤로 가지 않음 · 길 끝을 지나면 끝 점 값 · 강화가 끝나면 planRelease 에 걸쳐 0 · 끄면 늘 null', () => {
@@ -91,15 +60,6 @@ test('사람 덧칸 셈: 손 목표를 다시 그린 길에 비춘 자리로 섞
     assert.ok(Math.abs(P.techPlan.reach - (L[0][1] + L[1][1]) / 2) < 1e-9);
     assert.ok(Math.abs(P.techPlan.tilt - ((L[0][0] + L[1][0]) / 2) * HD) < 1e-9); // 기본: AI 와 같은 덧칸 셋
     assert.ok(Math.abs(P.techPlan.turn - ((L[0][2] + L[1][2]) / 2) * HD) < 1e-9);
-    const tip0 = UA.schielPlayerTip;
-    UA.schielPlayerTip = 0; // 세 갈래 3: 사람은 칼끝 들기 없음
-    try {
-      uq.planStep(DT);
-      assert.equal(P.techPlan.tilt, 0);
-      assert.ok(Math.abs(P.techPlan.reach - (L[0][1] + L[1][1]) / 2) < 1e-9);
-    } finally {
-      UA.schielPlayerTip = tip0;
-    }
     // 길 끝 너머(손가락은 분노의 베기처럼 더 긋는다) = 끝 점 값 · 손이 되돌아가도 그대로
     const z = U.pts[U.pts.length - 1];
     P.handOffset.set(z[0] - 0.3, z[1] - 0.3);
@@ -117,15 +77,6 @@ test('사람 덧칸 셈: 손 목표를 다시 그린 길에 비춘 자리로 섞
       steps++;
     }
     assert.ok(Math.abs(steps * DT - UA.planRelease) <= 2 * DT, `놓는 데 ${steps * DT} s`);
-    // 끔: 옛 잣대 · 덧칸 없음 → techPlan 이 생기지 않음
-    withPlayer(0, () => {
-      const uq0 = new PlayerUniqueAssist(P, { names: new Set(['schielhau']) });
-      const e0 = uq0.list.find((x) => x.name === 'schielhau');
-      uq0.r = { e: e0, U: e0.U, part: 1, t: 0, travel: 0, len: 0.6, stepAsked: true };
-      P.handOffset.set(0.1, 0.1);
-      uq0.planStep(DT);
-      assert.equal(P.techPlan, null);
-    });
   } finally {
     G.world.free();
   }
@@ -178,38 +129,10 @@ test('덧칸 셈: 토막에서 손이 간 몫만큼 섞음 · 따라 베기는 �
 
 
 
-test('사람 곁눈 베기 세기 손잡이 (schielPlayerK — 18:5x 50 % 조건부): 0.5 면 첫 맞음 심각도만 × k · 맞는 빠르기 · 에너지 · 손목 그대로 · AI 곁눈 베기 그대로 · schielPlayer 0 이면 안 걸림', () => {
-  const K0 = UA.schielPlayerK;
-  const firstHit = (k, fn) => {
-    UA.schielPlayerK = k;
-    try {
-      return fn();
-    } finally {
-      UA.schielPlayerK = K0;
-    }
-  };
-  const pl = () => playerRun(1, { foe: 'still', dur: 12 }).rows.find((x) => x.hit).hit;
-  const a = firstHit(1, pl);
-  const b = firstHit(0.5, pl);
-  assert.ok(a.sev > 0);
-  assert.ok(Math.abs(b.sev - 0.5 * a.sev) < 1e-12, `심각도 ${b.sev} · ${a.sev}`);
-  assert.equal(b.energy, a.energy);
-  assert.equal(b.speed, a.speed);
-  assert.equal(b.s.dev, a.s.dev);
-  // 끔: 같은 길이 아니면 세기 값이 안 걸림
-  const c = withPlayer(0, () => firstHit(1, pl));
-  const d = withPlayer(0, () => firstHit(0.5, pl));
-  assert.equal(d.sev, c.sev);
-  // AI 곁눈 베기는 그대로
-  const ai = (k) => firstHit(k, () => duelRun(2, { foe: 'still', dur: 12 }).rows.map((x) => x.hit?.sev ?? null));
-  assert.deepEqual(ai(0.5), ai(1));
-});
-
 test('제비 베기 견줌 판 (10/25 20:3x — 재기 도구만): 정수리 내려베기 → 곧장 위로 한 벌이 제비 베기로 강화됨 · ghostDown 이면 아래 칼 맞음 없음 · 게임 값 그대로', () => {
   const r = tsubameRun(1, { immortal: true, dur: 14, ghostDown: true });
   const d = tsubameSummary([r]);
   assert.ok(d.combos >= 2, `한 벌 ${d.combos}`);
   assert.ok(d.firedCombos >= 1, `제비 베기 ${d.firedCombos} / ${d.combos}`);
   assert.equal(d.downContacts, 0);
-  assert.equal(UA.schielPlayerTip, 1);
 });

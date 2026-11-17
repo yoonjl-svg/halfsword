@@ -437,8 +437,6 @@ export class Combat {
     if (SB && dir.y > SB.upY && strokeTechOf(att) === SB.tech) { if (type === 'blunt') energy *= SB.k; else severity *= SB.k; }
     // 사람 곁눈 베기 세기 손잡이 (config UNIQUE_ASSIST.schielPlayerK — 사장님 10/25 20:2x 결정 기본 1 = 안 걸림 · 0.5 는 시험용 · 같은 길(schielPlayer)일 때만 · 사람 강화(skill.uniq)가 긋는 곁눈 베기):
     //  칼날 상처 심각도 · 둔타 에너지 × k. 물리(빠르기 · 가르나 튕기나) · 길 · 손목은 그대로 · AI 곁눈 베기 · 다른 기술은 그대로
-    const spl = UA.schielPlayerK;
-    if (spl !== 1 && UA.schielPath && UA.schielPlayer && att.skill?.uniq && strokeTechOf(att) === 'schielhau') { if (type === 'blunt') energy *= spl; else severity *= spl; }
     // 이베리아 흐르는 긋기 위력 (10/28 22:0x 사장님 '위력도 그만큼 올려' — config IB_FLOW.power · 확인표 2724): 흐름이 켜진 채(fighter.js updateIbFlow — 사람은 B5 · AI 이베리아는 늘)
     //  맞힌 긋기의 칼날 상처 심각도 · 둔타 에너지 × power. 찌르기 · 비기 칼(secretHit ≠ 1)은 그대로 · 물리(빠르기 · 가르나 튕기나)는 그대로
     //  10/29 01:5x 이어지는 흐름(B6 — 사람만 · fighter.js ibFlowK): 이어 그은 수 n 만큼 더하기 1 + (power − 1) × n · AI 는 그대로 power
@@ -938,7 +936,7 @@ export class Combat {
     }
     const r = this.analyze(pr, point, S, P);
     if (!r || (r.physE ?? r.energy) < STRIKE.minEnergy) { // physE: 약화 배율 전 에너지 (없으면 energy)
-      if (r && UA.koteDrop?.ease && r.energy >= UA.koteDrop.easeE) this.koteCheck(att, vic, pr.v.part, r); // 손목 치기 떨굼 완화(11/05 — koteDrop.ease): 판정 문턱(minEnergy) 밑이라도 easeE 넘게 아래팔을 친 손목 치기는 굴림 (상처 · 판정은 그대로 없음)
+      if (r && r.energy >= UA.koteDrop.easeE) this.koteCheck(att, vic, pr.v.part, r); // 손목 치기 떨굼 완화(11/05 — koteDrop.ease): 판정 문턱(minEnergy) 밑이라도 easeE 넘게 아래팔을 친 손목 치기는 굴림 (상처 · 판정은 그대로 없음)
       return null;
     }
     if (att.skill?.tap?.drive && vic === att.foe) att.skill.tap.drive.landed = true; // 사람 탭 찌르기 몸 싣기 (11/15 — THRUST.drive · 끄면 drive 없음): 판정이 났으면 뻗은 채 머물기를 거둠 (skill.js updateThrust)
@@ -1007,8 +1005,6 @@ export class Combat {
    */
   huntWound(att, vic, r, tn = strokeTechOf(att), deep = null) {
     if (!(r?.severity > 0) || r.type === 'blunt') return;
-    if (!UA.cnHunt?.any && (r.type !== 'cut' || !yaojiBleedTech(tn))) return; // 11/16 사장님 '동방 스탯을 모든 공격 성공으로 쌓이게' (cnHunt.any 1) — 칼날 상처(베기 · 찌르기)를 낸 공격이면 겹 · 0 = 전 판(허리 베기 셋의 베기만)
-    if (UA.cnHunt?.torso && !(deep ?? this.yaojiDeep(att, r, tn))) return;
     huntHit(att, vic);
   }
 
@@ -1039,7 +1035,6 @@ export class Combat {
     if (part === 'farmO' && !vic.gripping) return; // 빈손 쪽 아래팔은 그 손이 칼자루를 쥔 동안(두 손 쥠 — fighter.offHand)만 — 한 손 칼의 빈손을 쳐서는 칼이 안 떨어진다
     const kind = r.type === 'cut' && r.severity > 0 ? 'cut' : 'arm';
     this.koteProbe?.push({ t: +(this.stepNo * (this.dt ?? 1 / 60)).toFixed(2), kind, part, stroke: att.skill?.uniq?.stats?.strokes ?? null }); // 재는 도구만 (판정 넷을 한 판에서 견줌 — tools/sim/kote_drop_duel.mjs)
-    if (kind === 'arm' && K.judge === 'cut') return;
     this.koteRoll(att, vic, part, kind);
   }
 
@@ -1049,7 +1044,7 @@ export class Combat {
    */
   koteSword(A, B, SA, SB, point, nrm, vn) {
     const K = UA.koteDrop;
-    if (!K || !(vn > (K.ease ? K.easeVn : K.swordVn))) return; // 완화(ease)면 맞부딪는 빠르기 문턱 easeVn (11/05)
+    if (!K || !(vn > K.easeVn)) return; // 완화(ease)면 맞부딪는 빠르기 문턱 easeVn (11/05)
     for (const [att, vic, S, sg] of [[A.fighter, B.fighter, SA, 1], [B.fighter, A.fighter, SB, -1]]) {
       if (!this.koteOn(att, vic) || !vic.sword || !vic.weaponCfg) continue;
       if (sg * velAt(S, point, _k1).dot(nrm) <= 0.5) continue; // 내 칼이 들어간 맞부딪힘만 (받는 쪽의 멈춘 칼은 아님)
@@ -1057,7 +1052,6 @@ export class Combat {
       const at = (_k1.copy(point).sub(tv(vic.sword.translation())).dot(ax) - vic.weaponCfg.hiltLength) / vic.weaponCfg.bladeLength; // 상대 칼 위 자리 (0 = 칼날 밑동 · 1 = 칼끝 · 0 아래 = 코등이 · 자루)
       if (!(at <= K.swordHalf)) continue;
       this.koteProbe?.push({ t: +(this.stepNo * (this.dt ?? 1 / 60)).toFixed(2), kind: 'sword', part: 'sword', at: +at.toFixed(2), vn: +vn.toFixed(1), stroke: att.skill?.uniq?.stats?.strokes ?? null });
-      if (K.judge !== 'all') continue;
       this.koteRoll(att, vic, 'sword', 'sword');
     }
   }
@@ -1067,7 +1061,7 @@ export class Combat {
   koteOn(att, vic) {
     const K = UA.koteDrop;
     if (!vic?.alive || !vic.armed || vic.revival) return false;
-    return !(att.aiControlled && !K.ai) && (strokeTechOf(att) === 'kote' || (K.ease > 0 && koteAfter(att, K.easeAfter))) && !perkOff(att, 'kote');
+    return (strokeTechOf(att) === 'kote' || koteAfter(att, K.easeAfter)) && !perkOff(att, 'kote');
   }
 
   /**
@@ -1078,7 +1072,7 @@ export class Combat {
     const K = UA.koteDrop;
     if (!(K.p > 0)) return;
     const u = att.skill?.uniq, st = u ? u.cur ?? u.last : null;
-    if (K.once && st?.koteRolled) return;
+    if (st?.koteRolled) return;
     if (st) st.koteRolled = true;
     const t = this.stepNo * (this.dt ?? 1 / 60);
     const drop = att.buckleRandom() < K.p;
