@@ -176,7 +176,7 @@ test('안 B shoulder — 오른 어깨에 얹어 멈춤(칼끝이 거의 안 움
       const tip = P.bladePoint(1, new THREE.Vector3()).sub(new THREE.Vector3(c.x, c.y, c.z)).applyQuaternion(inv);
       const turns = W.turns;
       press.down = false; steps(DT * 3);
-      return { tipV, tip, turns, fired: uq.stats.fired.redondo ?? 0, chain: uq.stats.windChain?.at(-1) };
+      return { tipV, tip, turns, fired: uq.stats.fired.redondo ?? 0 };
     } finally { B.free(); }
   };
   const long = run(1.4); // 감기 1.4 s = 섞기 0.6 + 얹은 채 0.8

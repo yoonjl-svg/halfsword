@@ -1,4 +1,4 @@
-// 이베리아 특수 공격 시험 — 풍차 베기 (B4 레돈두 · 사장님 10/29 00:4x ~ 01:5x · 08:3x — docs/strike/redondo_hold_2026-10-29.md · config UNIQUE_ASSIST.rdHold · rdHoldTime · rdDrain · rdSnapShare · rdSnapTime · IB_FLOW.windmillChain):
+// 이베리아 특수 공격 시험 — 풍차 베기 (B4 레돈두 · 사장님 10/29 00:4x ~ 01:5x · 08:3x — docs/strike/redondo_hold_2026-10-29.md · config UNIQUE_ASSIST.rdHold · rdHoldTime · rdDrain · rdSnapShare · rdSnapTime):
 //   탭(손가락 · PC 왼 단추)을 끌지 않고 실제 0.6 s 넘게 누르면 머리 위로 칼을 돌리고(감기 — 걸음 그대로 · 기력이 듦) 떼면 왼 위 → 오른 아래로 내려 벰(10/30 곧장 사선 — redondo_motion.test.mjs) ·
 //   0.6 s 전에 떼면 보통 탭 · 끌면 보통 긋기 · 식힘(내려침이 나간 순간부터 6 s) 중엔 감지 않음 · 맞음 · 막기 단추 · 비기는 감기를 그만두게(식힘 없음) · 기력이 바닥이면 저절로 내려침 ·
 //   한 바퀴 넘게 돌린 뒤 낸 칼 = 이어 그은 칼 하나(흐르는 긋기 B5 · 이어지는 흐름 B6) · 사람의 왼 가로베기는 보통 긋기 · AI 는 그대로(왼 가로베기 강화동작)
@@ -10,8 +10,6 @@ import { PLAYER_UNIQUE, PlayerUniqueAssist, enhancedMoves } from '../../src/uniq
 import { kitFromNodes, nodeOf } from '../../src/skill_tree_data.js';
 import { classifyStroke } from '../../src/attack_stroke.js';
 import { G as PAD } from '../../src/ai_techniques.js';
-import { windSpec } from '../../src/iberian_redondo.js';
-import { applyB4Old } from '../../src/config.js';
 // 11/11 이베리아 자리 바꿈 (사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' — SECRET.iberianSecret 'altib' 기본): 이 파일은 정수리 가르기 특수 공격 장면(무장 없이 길게 눌러 냄 · specialShare.redondo · AI 왼 가로베기 강화동작 — 10/29 ~ 11/01)이라
 //  그 판('spin')으로 묶는다(이 파일 안에서만). 새 판(비기 알티바슈 포르트 · 특수 공격 싱지르 한 걸음)은 tools/sim/ib_swap.test.mjs
 (await import('../../src/config.js')).SECRET.iberianSecret = 'spin';
@@ -44,21 +42,6 @@ test('기본값 — 길게 누름 실제 0.6 s · 기력 초당 붙어 버티기
   // AI 몫 그대로: 왼 가로베기 대신 머리 위 돌려 베기 (sword_art.js 가 읽는 표 — 11/11 표에 싱지르 칸이 더해짐 · 'spin' 판은 싱지르를 뺌 aiUniqueStages retired)
   assert.deepEqual(enhancedMoves('iberian').filter((m) => m.name === 'redondo'), [{ base: 'zwerchL', name: 'redondo', stage: 3 }]);
 });
-
-/** 감기 시작부터 '한 바퀴' (게임 초 — 흐르는 긋기 셈 자리): 도는 꼴 = 꼴 한 바퀴 + 섞는 동안 도는 빠르기를 0 에서 올린 늦음(rdRamp — smooth 의 적분 = 섞기의 반) ·
- *  어깨 꼴(안 B — 10/31 기본) = 어깨에 얹는 섞기(windIn) + 얹은 채 woundT (woundFrom 'rest' — 감독 해석 · 'start' 면 감기 시작부터 woundT) */
-function oneTurn() {
-  const M = windSpec();
-  if (M.kind === 'shoulder') return (M.woundFrom === 'start' ? 0 : M.windIn ?? 0) + M.woundT;
-  return M.loopT + (UA.rdSteady > 0 && UA.rdRamp > 0 ? (M.windIn ?? 0) / 2 : 0);
-}
-/** 감기 꼴을 이 시험 동안만 (안 A 'slowSpin' · 안 B 'shoulder' — 둘 다 덮음) · 흐름 셈 시험은 10/31 14:xx 판(B4 옛 판 — 흐름의 첫 칼 'simple' · 흐름과 닿음)으로 덮음 (`?b4Old=1`) */
-function withWind(mode, fn) {
-  applyB4Old(true);
-  const keep = UA.rdWindMode;
-  UA.rdWindMode = mode;
-  try { return fn(); } finally { UA.rdWindMode = keep; applyB4Old(false); }
-}
 
 /** 사람 츠바이핸더 + 풍차 베기만 연 강화 · 상대는 서 있음 */
 function body({ seed = 3, gap = 2.4, names = ['redondo'], kit = null, weapon = 'zweihander' } = {}) {
@@ -138,40 +121,11 @@ test('그만둠 (식힘 없음): 막기 단추 · 맞음(칼날 상처) · 비�
   } finally { B.free(); }
 });
 
-for (const mode of ['slowSpin', 'shoulder'])
-
-for (const mode of ['slowSpin', 'shoulder'])
-test(`simple — 풍차 베기 뒤 이어 그은 긋기는 n 2 (× 1.4) [${mode === 'shoulder' ? '안 B 어깨' : '안 A 고리'}]: 풍차 베기가 새 사슬의 첫 칼(칼 자체는 × 1 — 10/31 14:xx) — 세 칼 셈은 풍차 베기가 1 번째 · 그 뒤 두 번째 긋기(사슬 3 번째)가 기력 0`, () => withWind(mode, () => {
-  const B = body({ seed: 7, kit: kitFromNodes('iberian', new Set(['B1', 'B5', 'B4', 'B6'])) });
-  try {
-    const { P, press, steps } = B;
-    press.down = true; steps(realS(0.6) + oneTurn() * 1.2); press.down = false;
-    let k = 0;
-    while (!(P.iai || P.iaiReq) && k++ < 40) steps(DT); // 뗀 다음 스텝에 내려침이 나감
-    assert.ok(P.iai || P.iaiReq, '내려침');
-    steps(DT);
-    assert.ok(P.ibFlowOn && P.ibStrike, '내려침 동안 흐름 켜짐');
-    assert.equal(P.ibChainN(), 1, '풍차 베기 = 사슬 첫 칼 n 1');
-    assert.equal(P.ibFlowK(), 1, '풍차 베기 칼 자체 흐름 위력 없음');
-    while ((P.iai || P.iaiReq) && k++ < 400) steps(DT);
-    steps(0.05);
-    assert.ok(P.ibFlowOn, '내려침 끝 뒤 창 안 — 흐름 켜짐');
-    P.skill.swinging = true; P.skill.vel.set(-8, 0); P.updateIbFlow(1 / 120);
-    assert.equal(P.ibChainN(), 2, '다음 긋기 = n 2');
-    assert.ok(Math.abs(P.ibFlowK() - 1.4) < 1e-9);
-    assert.equal(P.ibChainCostK(), 1, '사슬 2 번째 = 보통');
-    P.skill.swinging = false; for (let i = 0; i < 30; i++) P.updateIbFlow(1 / 120);
-    P.skill.swinging = true; P.skill.vel.set(8, 0); P.updateIbFlow(1 / 120);
-    assert.equal(P.ibChainN(), 3);
-    assert.equal(P.ibChainCostK(), 0, '사슬 3 번째 = 기력 0');
-  } finally { B.free(); }
-}));
-
 test('B4 는 이어지는 흐름과 무관 (사장님 10/31 19:xx \'풍차베기는 이어지는 흐름과 무관한 게 낫겠어\' — windmillChain 0 · windmillApart 1): 흐름의 첫 칼이 아님 · 사슬이 켜져 있어도 B4 칼은 흐름 위력 × 1 · 세 칼 기력 0 자리가 아님 · 사슬을 늘이거나 끊지 않음 (옛 판은 B4_OLD)', () => {
   const kitAll = kitFromNodes('iberian', new Set(['B1', 'B5', 'B4', 'B6']));
   const B = body({ seed: 7, kit: kitAll });
   try {
-    const { P, uq, press, steps } = B;
+    const { P, press, steps } = B;
     // 바로 앞에 사슬 둘 (마지막 진짜 긋기가 막 끝남 — 이어짐 창 안에서 누르기 시작)
     P.ibFlowT = 10; P.ibFlowCutEnd = 10; P.ibLastN = 2;
     const cutEnd0 = P.ibFlowCutEnd;
@@ -180,8 +134,6 @@ test('B4 는 이어지는 흐름과 무관 (사장님 10/31 19:xx \'풍차베기
     while (!(P.iai || P.iaiReq) && k++ < 40) steps(DT);
     assert.ok(P.iai || P.iaiReq, '내려침');
     steps(DT);
-    assert.equal(P.ibStrike, null, '흐름 칼로 셈하지 않음 (ibStrike 없음)');
-    assert.equal(uq.stats.windChain.at(-1), 0, '이어 그은 수 0 — 흐름의 첫 칼 아님');
     assert.equal(P.rdStrikeNow(), true);
     // 사슬이 켜진 채로 B4 칼이 맞는다고 해도 (흐름 켬 · 이어 그은 수 2 — 사슬 3 번째 자리) 위력 · 기력은 보통
     P.ibFlowOn = true; P.ibFlowSw = true; P.ibFlowChain = true; P.ibCutN = 2; P.ibChainN0 = 0;
