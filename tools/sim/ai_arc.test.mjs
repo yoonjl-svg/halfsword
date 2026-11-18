@@ -15,9 +15,9 @@ function withArc(o, fn) {
     Object.assign(A, keep);
   }
 }
-/** 동방(환도) AI 숙련 p 대 츠바이핸더 — 동방 = E 자리(G.ai) */
-function round(p = 5, foe = 'zweihander', seed = 1) {
-  const G = newRound({ seed, walls: true, weapon: foe, weapon2: 'hwando', AI2Class: AI, persona: { proficiency: p }, persona2: { proficiency: 5 } }); // persona = E 자리 AI(G.ai)
+/** 동방(환도 — me) AI 숙련 p 대 츠바이핸더 — 재는 쪽 = E 자리(G.ai) */
+function round(p = 5, foe = 'zweihander', seed = 1, me = 'hwando') {
+  const G = newRound({ seed, walls: true, weapon: foe, weapon2: me, AI2Class: AI, persona: { proficiency: p }, persona2: { proficiency: 5 } }); // persona = E 자리 AI(G.ai)
   return { G, ai: G.ai, free: () => G.world.free() };
 }
 /** 가슴 (0, 1.2, 0) 앞 1.6 m 의 o 를 축 (0, 1, 0) 으로 도는 칼 — 칼끝 반지름 rT · 타격점 rM · 지금 각 a0(0 = 가슴 쪽) · 각이 w rad/s 로 줄어듦 (늦게 본 모습 s).
@@ -33,8 +33,10 @@ function swing({ rT = 1.5, rM = 1.3, a0 = 1.25, w = 6 } = {}) {
 test('값 (0.6 s 시간 사다리 · 칸 = 물리 한 스텝 · 0.3 m 걸음 사다리) · 둥근 눈 · 칼끝 틈 셈이 탐', () => {
   assert.ok(Math.abs(A.horizon - CONFIG.realS(0.6)) < 1e-9 && A.gap === 0.3 && !('step' in A) && !('minW' in A), '내다보는 칸 = 물리 한 스텝 (새 수 없음)');
   const run = () => {
-    const { G, ai, free } = round();
-    while (G.t < 12) G.step();
+    // 유파 마음가짐 (11/18): 동방(거리 3)은 츠바이핸더 칼끝 밖 0.5 m 남짓에 서서 받아 치기만 함 — 제 칼끝 밖에서 먼저 치려는 칼이 없어 칼끝 틈을 참을 일이 없음.
+    //  판에서 쓰이는지는 먼저 치는 독일(롱소드 — 선공 5 · 거리 1)로 봄 — 둘 다 나올 때까지 (40 s 안 · 시간 상한 기준 없음)
+    const { G, ai, free } = round(5, 'zweihander', 1, 'longsword');
+    while (G.t < 40 && !((ai.stats.arcSeen ?? 0) > 0 && (ai.stats.arcGap ?? 0) > 0)) G.step();
     const r = { arc: ai.stats.arcSeen ?? 0, gap: ai.stats.arcGap ?? 0 };
     free();
     return r;

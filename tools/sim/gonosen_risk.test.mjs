@@ -143,9 +143,10 @@ function standoff(id, vals) {
 
 
 
-/** 무모 판 (11/14): 서서 기다리는 모노호시자오 사람 대 이탈리아 레이피어 AI(숙련 prof — 플랜 켬) — 씨앗 seed · 사람 들어옴 창이 열리면 곧장 고노센을 냄(fire) · 기어 듦 수 · 굴림이 경계를 접은 준비 수 · 고노센에 베인 수 */
-function reckStandoff(prof, seed) {
-  const G = newRound({ weapon: 'monohoshizao', weapon2: 'rapier', seed, persona: { proficiency: prof }, walls: true });
+/** 무모 판 (11/14): 서서 기다리는 모노호시자오 사람 대 AI(무기 weapon · 숙련 prof — 플랜 켬) — 씨앗 seed · 사람 들어옴 창이 열리면 곧장 고노센을 냄(fire) · 기어 듦 수 · 굴림이 경계를 접은 준비 수 · 고노센에 베인 수
+ *  유파 마음가짐 (11/18): 옛 판은 이탈리아 레이피어 — 이탈리아 거리 5 (선 여유 0.7)는 무모하게 경계를 접어도 제 거리에서 고노센 선 밖에 섬. 무모 셈 시험은 거리 1 독일 롱소드로 (경계를 접으면 걸어 듦) */
+function reckStandoff(prof, seed, weapon = 'longsword') {
+  const G = newRound({ weapon: 'monohoshizao', weapon2: weapon, seed, persona: { proficiency: prof }, walls: true });
   const p = G.player;
   p.skill.autoGuard = true;
   const ps = new PlayerSecretWatch(p, G.enemy);

@@ -141,6 +141,7 @@ test('걸음에 치기: 칼 든 AI 는 칼끝 + 0.3 안으로 걸어 드는 상�
   try {
     while (G.t < 1) G.step();
     const ai = G.ai;
+    ai.mind = null; // 유파 마음가짐 (11/18): 독일 거리 1 의 선(gap −0.2)은 상대 칼끝 안 — '칼끝 + 0.3 밖 · 선 + 0.3 안' 띠가 없음. 이 셈 시험은 옛 선(MEASURE.gap 0.15 — 마음가짐 없는 몸)으로
     const L = msLine(ai);
     const dIn = Math.min(ai.M.reach + 0.2, L + 0.25);
     const dFar = ai.M.reach + 0.35;

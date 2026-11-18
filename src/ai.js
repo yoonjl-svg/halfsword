@@ -1367,12 +1367,12 @@ export class AI {
     m += this.fear * 0.35; // 겁먹으면 상대 칼에서 더 멀찍이 선다
     m -= this.obsession * 0.15; // 물고 늘어질 땐 간격 끝보다 조금 더 안쪽에 선다
     m += (1 - this.me.vigor) * 0.3; // 다쳐서 힘이 빠지면 더 조심스럽게 선다
-    if (!this.me.armed) m += 0.6; // 칼을 놓쳤으면 상대 칼이 닿지 않게 멀찍이 선다
+    if (!this.me.armed && !this.mind) m += 0.6; // 칼을 놓쳤으면 상대 칼이 닿지 않게 멀찍이 선다 (마음가짐 몸은 아래 묶음 뒤에 더함)
     const mW = m; // 고노센 경계 선 밖 여유 (10/25 사장님 '⑤' — 경계를 지키는 동안은 아래 무모 몫을 얹지 않음 · 무 · 낮음이 선을 넘는 것은 굴림 W.reck 하나로 — 11/14 '고노센도 무모하게 넘고')
     if (this.plan && this.planLuck > 0) m *= 1 - 0.5 * this.planLuck; // 무모 (11/14 — 유파 플랜 굴림 몫): 상대 칼끝 거리 밖 여유를 덜 셈 (낮음 ⅔ → 여유 ⅔) · 플랜 없는 몸은 이 줄을 안 탐
     if (this.planCn) m = cnHoldM(this, m); // 동방 플랜 (11/14): 가까운 간격 · 유도 동안 상대 칼끝 바로 밖
     if (this.planDe) m = deHoldM(this, m); // 독일 플랜 (11/14 3 단계): 상대 칼끝 바로 밖 · 기력 열세면 칼끝 밖에서 숨 고름
-    if (this.mind) m = Math.min(m, mindMargin(this) + MINDSET.planOut); // 유파 마음가짐 (11/18 — 거리 '새 점수가 이김'): 플랜이 더한 여유(숨 고름 등)도 마음가짐 여유 + planOut 을 넘지 않음
+    if (this.mind) m = Math.min(m, mindMargin(this) + MINDSET.planOut) + (this.me.armed ? 0 : 0.6); // 유파 마음가짐 (11/18 — 거리 '새 점수가 이김'): 플랜이 더한 여유(숨 고름 등) · 겁 · 다침 몫도 마음가짐 여유 + planOut 을 넘지 않음 — 칼을 놓친 몸의 0.6 만 그 위에 (몸을 지킴)
     if (DIG_PROTO.ai && this.dig && !this.Mup && !this.chasing) m = digMix(m, Math.min(m, DIG_PROTO.holdM), this.digW); // 파고들기 A1 (11/14 사장님 'A안 켜고' — 기본 켬): 짧은 칼은 상대 칼끝 바로 밖에 섬
     // 빈손 상대는 칼이 닿지 않는다: 내 칼이 닿는 거리까지 다가선다
     const W = this.gnsW;

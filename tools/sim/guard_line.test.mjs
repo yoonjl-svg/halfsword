@@ -154,6 +154,7 @@ test('공격하는 쪽 (실제 고르기): 손을 자세에 둔 AI 의 pickTech 
 function humanWalkIn(weapon, pad) {
   const G0 = newRound({ seed: 2, walls: true, weapon, weapon2: 'longsword', persona: { proficiency: 6 } });
   const P = G0.player, ai = G0.ai;
+  ai.mind = null; // 유파 마음가짐 (11/18): 독일 거리 1 의 선(상대 칼끝 안 0.2)이면 들어옴이 늘 걸음에 치기 띠(내 칼끝 + 0.3) 안 — 걸음에 치기가 먼저 굴림. 이 읽기 시험은 옛 선(마음가짐 없는 몸)으로
   ai.level = { ...ai.level, read: 1 };
   const got = [];
   const go = ai.anticGo.bind(ai);
@@ -200,7 +201,8 @@ test('읽는 쪽 (사람 상대): 걸어 들어오는 사람의 보이는 자세
 });
 
 test('읽는 쪽 (AI 상대): 덮은 줄 = 늦게 본 상대 손 자세의 기본 줄 · 휘두름이 보이면 실제 칼로 고쳐 겨눔', () => {
-  const G0 = newRound({ seed: 4, walls: true, weapon: 'longsword', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 6 }, persona2: { proficiency: 6 }, difficulty: 'expert', difficulty2: 'expert' });
+  // 유파 마음가짐 (11/18): 씨앗 4 → 1 — 마음가짐 독일 거울판은 씨앗 4 에서 40 s 안에 읽을 들어옴이 없음 (씨앗 1 ~ 8 가운데 1 · 2 · 6 · 7 은 읽기 · 휘두름 고쳐 겨눔 모두 나옴)
+  const G0 = newRound({ seed: 1, walls: true, weapon: 'longsword', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 6 }, persona2: { proficiency: 6 }, difficulty: 'expert', difficulty2: 'expert' });
   // 몸 값은 11/17 E 전 숙련 6 그대로(힘 1.1 · 버티는 힘 1.1) — 읽기 시험이라 몸은 판 꼴만 정함 · 숙련도별 몸 값이 바뀌어도 판이 그대로이게 (기록 docs/strike/prof_body_2026-11-17.md §7)
   for (const [a, f] of [[G0.ai, G0.enemy], [G0.ai2, G0.player]]) {
     a.level = { ...a.level, strength: 1.1 };

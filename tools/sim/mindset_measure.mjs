@@ -422,8 +422,8 @@ export function aggTable(rows, before = null, ten1 = null) {
   // 집요함 (11/18 사장님 '상대의 상태에 반응하는 정도'): 상태마다 네 행동 지표가 바탕에서 움직인 폭 (점 — 점수 1 점마다 지표가 움직이는 폭 smSlopes 로 나눔)
   const slopes = smSlopes(rows);
   const pct = (x) => `${(100 * x).toFixed(1)} %`;
-  row('반응 크기 (상대 상태마다 네 지표가 바탕에서 움직인 폭 · 절댓값 — 점 · 상태 시간 무게)', 'tenacity', (q) => reactSize(q, slopes), (x) => x.toFixed(2), { info: !!ten1 });
-  row('정한 쪽 반응 (상태마다 미는 쪽으로 움직인 크기 — 점 · 부호)', 'tenacity', (q) => reactDir(q, slopes), (x) => x.toFixed(2), { main: !ten1, info: !!ten1 });
+  row('반응 크기 (자유 판 상대 상태마다 네 지표가 바탕에서 움직인 폭 · 절댓값 — 점 · 상태 시간 무게)', 'tenacity', (q) => reactSize(q, slopes), (x) => x.toFixed(2), { info: true });
+  row('정한 쪽 반응 (자유 판 상대 상태마다 미는 쪽으로 움직인 크기 — 점 · 부호 · 상대 반응이 섞임 — 판정은 상태 들임 표 induceagg)', 'tenacity', (q) => reactDir(q, slopes), (x) => x.toFixed(2), { info: true });
   if (ten1) {
     const key = (r) => `${r.school}|${r.weapon}|${r.seed}|${r.swap}`;
     const T1 = new Map(ten1.map((r) => [key(r), r]));
@@ -432,7 +432,7 @@ export function aggTable(rows, before = null, ten1 = null) {
     for (const s of SCHOOLS) if (!P[s].length && SCORE.tenacity[s] === 1) P[s] = A[s].map((r) => ({ r, r1: r }));
     const pf = (f) => (q, s) => f(P[s].length === A[s].length ? q.map((r) => ({ r, r1: T1.get(key(r)) ?? (SCORE.tenacity[s] === 1 ? r : undefined) })).filter((p) => p.r1) : P[s]);
     row('반응 크기 — 집요함 1 로 묶은 같은 AI(같은 판)와의 차 · 절댓값 (점)', 'tenacity', pf((ps) => reactSize(ps.map((p) => p.r), slopes, ps.map((p) => p.r1))), (x) => x.toFixed(2), { info: true });
-    row('정한 쪽 반응 — 집요함 1 로 묶은 같은 AI 와의 차를 상태마다 미는 쪽으로 (점 · 부호 — 우연 흔들림은 0 으로 지워짐)', 'tenacity', pf((ps) => reactDir(ps.map((p) => p.r), slopes, ps.map((p) => p.r1))), (x) => x.toFixed(2), { main: true });
+    row('정한 쪽 반응 — 집요함 1 로 묶은 같은 AI 와의 차를 상태마다 미는 쪽으로 (점 · 부호 — 자유 판 · 판정은 상태 들임 표 induceagg)', 'tenacity', pf((ps) => reactDir(ps.map((p) => p.r), slopes, ps.map((p) => p.r1))), (x) => x.toFixed(2), { info: true });
     row('몫 — 이김 몫 차 (집요함 그대로 − 집요함 1)', 'tenacity', pf((ps) => (ps.reduce((a, p) => a + (p.r.result === 'win' ? 1 : p.r.result === 'draw' ? 0.5 : 0) - (p.r1.result === 'win' ? 1 : p.r1.result === 'draw' ? 0.5 : 0), 0)) / Math.max(1, ps.length)), (x) => `${x >= 0 ? '+' : ''}${(100 * x).toFixed(1)} 점`, { info: true });
     row('몫 — 약한 틈에 준 상처 몫 차 (그대로 − 집요함 1)', 'tenacity', pf((ps) => { const f = (k) => sum(ps, (p) => p[k].sevVuln) / Math.max(1e-9, sum(ps, (p) => p[k].sevDealt)); return f('r') - f('r1'); }), (x) => `${x >= 0 ? '+' : ''}${(100 * x).toFixed(1)} 점`, { info: true });
   }
