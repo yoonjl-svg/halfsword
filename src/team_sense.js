@@ -15,9 +15,16 @@
 //   협공 자리 (§3-3)      동료가 붙은 내 상대를 그 상대 자리에서 본 동료와 나 사이 각 θ 가 층 목표 θ*(바탕 60° — 나란히 · 동료 뒤 줄만 피함)보다 작으면 그 상대를 축으로 돎
 //   엄호 겨눔 (§3-6)      넘어짐 · 무릎 · 피 cover.blood 밑 동료를 겨눈 적 − cover.sub (상대 고르기 점수 — targeting.js) · 바꿈 기다림 cover.hold
 //   열세 바탕 (§3-5)      숙련도 레버(줄 세우기 · 피하기 — ai.js teamFeet)의 몫을 out.base 부터 · 열세는 '내 둘레의 수' — 내 동료와 붙은 적은 줄 세우기 · 둘러싸임에서 뺌
+//  행동 (P2 가운데 3 ~ 5 — 몫 k 로 커짐 · 위 6 은 k = 1 위에 P3):
+//   노릴 상대 (§3-2)      내 동료와 붙었고(셋 따로 판은 제삼자와도) 내게 옆 · 등을 보인 적 − opp.side × k · 다친 적 − opp.wound × 다침 × k · 지친 적 − opp.tired × k ·
+//                          다친 적(피 opp.focus 밑)은 나눠 맡기(+ allyAdd)를 k 만큼 거둠 = 몰아침 (§3-7) — 내가 지금 상대에게 붙잡혀 있으면(그 상대가 나를 겨눠 붙음) 이 덧셈은 없음(등을 보이지 않게)
+//   협공 자리 (§3-3)      θ* = 바탕 → mid 를 k 만큼 (3 = 80° · 4 = 100° · 5 = 120°)
+//   옆 기습 (§3-4)        겨눈 상대가 내 동료와(셋 따로 판은 제삼자와도) 붙었고 내가 그 앞(± ambush.front°) 밖이면 빈틈 점수 + ambush.mid × k ('ambush' — ai.js opportunity)
+//   끼어듦 (§3-6)         겨눈 상대가 다친 동료를 겨누면 그 상대를 축으로 동료 쪽으로 돌아 사이에 섬 (cover.k × k)
 // ─────────────────────────────────────────────────────────────
-import { TEAM_SENSE } from './config.js';
+import { TEAM_SENSE, TEAM_FIGHT } from './config.js';
 import { sameSide } from './team.js';
+import { woundDegree } from './combat.js';
 
 const DEG = Math.PI / 180;
 const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
@@ -51,6 +58,7 @@ function bodyRec(f) {
     foe: f.foe ? f.foe.index : -1,
     atk: f.alive && isAtk(f),
     blood: f.blood,
+    wound: woundDegree(f),
     tired: !!f.stamina?.exhausted || (f.stamina?.level ?? 0) > 0,
     reach: reachOf(f),
     busy: false, // 겨눈 상대와 붙음 (아래에서 — 모든 칸을 적은 뒤)
@@ -126,10 +134,31 @@ export function viewOf(ai) {
 /** 그 장에서 b 칸 몸이 a 칸 몸과 같은 편인가 (판 사본은 칸 번호 — 몸 목록에서 편을 읽음) */
 const sameAt = (S, i, j) => sameSide(S.fighters[i], S.fighters[j]);
 
-/** 그 장에서 j 가 내 동료(i 와 같은 편 · 나 아님)와 붙어 있나 */
-export function busyWithMate(S, fr, i, j) {
+/**
+ * 그 장에서 적 j 가 나(i) 아닌 서 있는 몸과 붙어 있나 — 두 편 판에서는 그 몸이 늘 내 동료(j 는 제 편을 겨누지 않음) · 셋 이상 따로 싸우는 판에서는 제삼자도
+ *  (편 수를 셈하지 않음 — 사장님 11/18 '셋 이상의 난전도 만들 계획 있어': 남과 붙은 적은 내 둘레의 수가 아니고 칼이 그쪽에 있다)
+ */
+export function busyWithOther(S, fr, i, j) {
   const r = fr.b[j];
-  return r.busy && r.foe >= 0 && r.foe !== i && sameAt(S, i, r.foe) && fr.b[r.foe].stand;
+  return r.busy && r.foe >= 0 && r.foe !== i && fr.b[r.foe].stand;
+}
+
+/** 그 장에서 j 의 앞(± deg°) 밖에 i 가 있나 (j 가 i 에게 옆 · 등을 보임) */
+export function outsideFront(fr, j, i, deg) {
+  const g = fr.b[j];
+  const a = fr.b[i];
+  const x = a.x - g.x;
+  const z = a.z - g.z;
+  const d = Math.hypot(x, z);
+  if (d < 1e-6) return false;
+  return (x * g.fx + z * g.fz) / d < Math.cos(deg * DEG);
+}
+
+/** 그 장에서 i 가 지금 상대 j 에게 붙잡혀 있나 (j 가 i 를 겨눠 제 칼끝 + engage 안) — 이때는 다른 적을 노리는 덧셈이 없음 (등을 보이지 않게) */
+export function pinnedBy(fr, i, j) {
+  if (j < 0) return false;
+  const g = fr.b[j];
+  return g.live && g.foe === i && g.busy;
 }
 
 // ───────────────────────── 상대 고르기 덧셈 (targeting.js targetScore — M.sense 있을 때 · AI 만) ─────────────────────────
@@ -145,14 +174,25 @@ function coverFoe(S, fr, i, j) {
 /**
  * f 가 g 를 겨눌 점수 덧셈 (m, 낮을수록 고름 · 0 = 그대로). 사람 몸(aiCtl 없음)은 0 — 사람의 상대는 사람이 정한다(지금 그대로).
  *  바탕: 다친 동료를 겨눈 적 − cover.sub (내 눈에 보일 때)
+ *  가운데 · 위 (몫 k): 내 동료와 붙어 내게 옆 · 등을 보인 적 · 다친 적 · 지친 적 − · 다친 적은 나눠 맡기를 거둠 (지금 상대에게 붙잡혀 있지 않을 때)
  */
 export function senseScore(M, f, g) {
   const ai = f.aiCtl;
   if (!ai || !f.teamSense) return 0;
   const v = viewOf(ai);
   if (!v || !v.sees(g.index)) return 0;
+  const S = M.sense;
+  const O = TEAM_SENSE.opp;
   let s = 0;
-  if (coverFoe(M.sense, v.fr, f.index, g.index)) s -= TEAM_SENSE.cover.sub;
+  if (coverFoe(S, v.fr, f.index, g.index)) s -= TEAM_SENSE.cover.sub;
+  const k = v.T.k;
+  if (k > 0 && (g === ai.foe || !pinnedBy(v.fr, v.i, ai.foe?.index ?? -1))) {
+    const r = v.fr.b[g.index];
+    if (busyWithOther(S, v.fr, v.i, g.index) && outsideFront(v.fr, g.index, v.i, TEAM_SENSE.ambush.front)) s -= O.side * k;
+    s -= O.wound * r.wound * k;
+    if (r.tired) s -= O.tired * k;
+    if (r.blood < O.focus) for (const m of M.fighters) if (m !== f && sameSide(m, f) && m.alive && m.foe === g) s -= TEAM_FIGHT.target.allyAdd * k; // 몰아침 (§3-7): 나눠 맡기 덧셈을 거둠
+  }
   return s;
 }
 
@@ -217,10 +257,46 @@ export function laneHold(ai) {
 
 /** 재기 칸 (ai.stats.team) */
 export function teamStats() {
-  return { laneHold: 0, laneStep: 0, pincer: 0 };
+  return { laneHold: 0, laneStep: 0, pincer: 0, interpose: 0, ambush: 0 };
+}
+
+// ───────────────────────── 기습 (§3-4 — ai.js opportunity · me.foes 갈래) ─────────────────────────
+
+/**
+ * 빈틈 점수 덧셈 { v, kind: 'ambush' } 또는 null: 겨눈 상대가 내 동료와 붙었고 내가 그 앞(± ambush.front°) 밖 (가운데 · 위 — 몫 k).
+ *  가운데: + ambush.mid × k
+ */
+export function ambushOpp(ai) {
+  const v = viewOf(ai);
+  if (!v || !ai.foe || v.T.k <= 0) return null;
+  const S = ai.me.teamSense;
+  const j = ai.foe.index;
+  if (!busyWithOther(S, v.fr, v.i, j) || !outsideFront(v.fr, j, v.i, TEAM_SENSE.ambush.front)) return null;
+  return { v: TEAM_SENSE.ambush.mid * v.T.k, kind: 'ambush' };
 }
 
 // ───────────────────────── 발 (ai.js teamFeet 끝 — 간 보기 · 물러남 · 공격 준비) ─────────────────────────
+
+/** o 자리에서 본 a · b 사이 각 (라디안 · 장의 칸) */
+function angAt(o, a, b) {
+  const ux = a.x - o.x;
+  const uz = a.z - o.z;
+  const wx = b.x - o.x;
+  const wz = b.z - o.z;
+  return Math.acos(clamp((ux * wx + uz * wz) / ((Math.hypot(ux, uz) * Math.hypot(wx, wz)) || 1), -1, 1));
+}
+
+/** me 가 o 를 축으로 돌 때 옆 스틱 부호: away = 1 이면 b 에게서 멀어지는 쪽(각 ↑) · −1 이면 b 쪽(각 ↓). 스틱 오른쪽 = me 의 바라보는 쪽에서 시계 방향 90° */
+function orbit(o, me, b, away) {
+  const ux = me.x - o.x;
+  const uz = me.z - o.z;
+  const wx = b.x - o.x;
+  const wz = b.z - o.z;
+  let tx = -uz;
+  let tz = ux;
+  if ((tx * wx + tz * wz) * away > 0) (tx = -tx), (tz = -tz);
+  return Math.sign(tx * -me.fz + tz * me.fx || 1);
+}
 
 /** 협공 목표 각 θ* (°) — 층 상한 */
 export function pincerGoal(T) {
@@ -242,8 +318,18 @@ export function senseFeet(ai, fwd, side) {
     side -= L.side * TEAM_SENSE.lane.k * clamp(1 - L.perp / TEAM_SENSE.lane.w, 0.3, 1);
     St.laneStep++;
   }
-  // ② 협공 자리: 내 상대 X 에 붙은(또는 겨눈) 동료 B — X 자리에서 본 B · 나 사이 각이 목표보다 작으면 X 를 축으로 B 에게서 멀어지는 쪽으로 돎
+  // ② 끼어듦 (가운데 · 위 — §3-6): 겨눈 상대 X 가 다친 동료 D 를 겨누면 X 를 축으로 D 쪽으로 돌아 X 와 D 사이에 섬
   const X = v.fr.b[ai.foe.index];
+  if (X.live && !L && v.T.k > 0 && (ai.mode === 'watch' || ai.mode === 'withdraw') && coverFoe(S, v.fr, v.i, ai.foe.index)) {
+    const D = v.fr.b[X.foe];
+    const th = angAt(X, v.me, D);
+    if (th > TEAM_SENSE.pincer.tol * DEG) {
+      side += orbit(X, v.me, D, -1) * TEAM_SENSE.cover.k * v.T.k * clamp(th / (Math.PI / 2), 0.3, 1);
+      St.interpose++;
+    }
+    return [fwd, side];
+  }
+  // ③ 협공 자리: 내 상대 X 에 붙은(또는 겨눈) 동료 B — X 자리에서 본 B · 나 사이 각이 목표보다 작으면 X 를 축으로 B 에게서 멀어지는 쪽으로 돎
   if (X.live && !L && (ai.mode === 'watch' || ai.mode === 'withdraw')) {
     const goal = pincerGoal(v.T) * DEG;
     let B = null;
@@ -254,23 +340,9 @@ export function senseFeet(ai, fwd, side) {
       if (!B || Math.hypot(X.x - m.x, X.z - m.z) < Math.hypot(X.x - B.x, X.z - B.z)) B = m;
     }
     if (B) {
-      const ux = v.me.x - X.x;
-      const uz = v.me.z - X.z;
-      const wx = B.x - X.x;
-      const wz = B.z - X.z;
-      const nu = Math.hypot(ux, uz) || 1;
-      const nw = Math.hypot(wx, wz) || 1;
-      const th = Math.acos(clamp((ux * wx + uz * wz) / (nu * nw), -1, 1));
-      const tol = TEAM_SENSE.pincer.tol * DEG;
-      if (th < goal - tol) {
-        // X 둘레를 도는 쪽: u 에 수직인 두 쪽 가운데 B 에게서 멀어지는 쪽
-        let tx = -uz;
-        let tz = ux;
-        if (tx * wx + tz * wz > 0) (tx = -tx), (tz = -tz);
-        const rx = -v.me.fz;
-        const rz = v.me.fx;
-        const k = TEAM_SENSE.pincer.k * clamp((goal - th) / (goal / 2), 0.3, 1);
-        side += Math.sign(tx * rx + tz * rz || 1) * k;
+      const th = angAt(X, v.me, B);
+      if (th < goal - TEAM_SENSE.pincer.tol * DEG) {
+        side += orbit(X, v.me, B, 1) * TEAM_SENSE.pincer.k * clamp((goal - th) / (goal / 2), 0.3, 1);
         St.pincer++;
       }
     }
@@ -284,9 +356,9 @@ export function outSkill(ai) {
   return TEAM_SENSE.out.base + (1 - TEAM_SENSE.out.base) * T.k;
 }
 
-/** 열세 셈에서 뺄 적인가 (ai.js teamFeet 둘러싸임 · 줄 세우기): 내 눈에 보이고 내 동료와 붙어 있으면 true — 내 둘레의 수가 아님 */
+/** 열세 셈에서 뺄 적인가 (ai.js teamFeet 둘러싸임 · 줄 세우기): 내 눈에 보이고 나 아닌 몸(두 편 판 = 내 동료)과 붙어 있으면 true — 내 둘레의 수가 아님 */
 export function busyFoe(ai, g) {
   const v = viewOf(ai);
   if (!v || !v.sees(g.index)) return false;
-  return busyWithMate(ai.me.teamSense, v.fr, v.i, g.index);
+  return busyWithOther(ai.me.teamSense, v.fr, v.i, g.index);
 }

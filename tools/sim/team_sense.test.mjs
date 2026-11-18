@@ -4,11 +4,12 @@
 //  ③ 판 사본 사실: 늦은 장 고르기 · 붙음 · 시야 밖 몸은 안 보임 · 지금 겨눈 상대는 늘 보임
 //  ④ 엄호 겨눔 (다친 동료를 겨눈 적 −) · 사람 몸은 덧셈 없음 · 칼길 비우기(동료가 칼 부채꼴 · 줄 위) · 열세 셈에서 동료와 붙은 적 뺌
 //  ⑤ 편 수를 셈하지 않음 — 셋 따로(편 0 · 1 · 2)에서 남의 편 몸은 동료로 안 읽음 · 새 셈은 난수를 부르지 않음
+//  ⑥ (P2 가운데 3 ~ 5) 노릴 상대(옆 · 등 보인 붙은 적 · 다친 적 · 지친 적 · 몰아침 — 붙잡혀 있으면 없음) · 협공 각 80 / 100 / 120° · 옆 기습 빈틈(바탕은 없음) · 끼어듦
 //  node --test tools/sim/team_sense.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newMatch, CONFIG, DT } from './jelly_harness.mjs';
-import { createSense, recordSense, frameAt, tierOfProf, viewOf, senseScore, senseHold, laneMate, laneHold, busyFoe, outSkill, senseFeet, busyWithMate, pincerGoal } from '../../src/team_sense.js';
+import { createSense, recordSense, frameAt, tierOfProf, viewOf, senseScore, senseHold, laneMate, laneHold, busyFoe, outSkill, senseFeet, busyWithOther, pincerGoal, ambushOpp } from '../../src/team_sense.js';
 import { targetScore } from '../../src/targeting.js';
 
 const TS = CONFIG.TEAM_SENSE;
@@ -175,17 +176,25 @@ test('④ 열세 셈: 내 동료와 붙은 적은 뺌 (눈에 보일 때) · 아
   assert.equal(busyFoe(G[0].aiCtl, G[3]), false);
 });
 
-test('⑤ 셋 따로(편 0 · 1 · 2): 남의 편 몸은 동료로 안 읽음 · 새 셈은 난수를 부르지 않음', () => {
+test('⑤ 셋 따로(편 0 · 1 · 2): 남의 편 몸은 동료로 안 읽음 · 제삼자와 붙은 적은 열세 셈에서 뺌 · 새 셈은 난수를 부르지 않음', () => {
   // 셋이 저마다 편 · 2 가 무릎 · 1 이 2 를 겨눔 — 0 에게 2 는 동료가 아님 → 엄호 덧셈 없음
   const F = [fake(0, 0, 0, 0, 0), fake(1, 1, 2, 0, Math.PI), fake(2, 2, 1.2, 0.2, 0, { state: 'kneel' })];
   const M = board(F, [1, 2, 1]);
   noRandom(() => {
     assert.equal(senseScore(M, F[0], F[1]), 0);
     assert.equal(laneMate(F[0].aiCtl), null, '남의 편 몸은 칼길 동료가 아님');
-    assert.equal(busyWithMate(M.sense, M.sense.frames.at(-1), 0, 1), false);
+    assert.equal(busyWithOther(M.sense, M.sense.frames.at(-1), 0, 1), false, '무릎 꿇은 몸과는 붙음으로 안 셈');
     assert.equal(busyFoe(F[0].aiCtl, F[1]), false);
     senseFeet(F[0].aiCtl, 0, 0);
     recordSense(Object.assign(M, { t: 1 }));
+  });
+  // 1 이 서 있는 2 와 붙음 → 0 에게 1 은 '남과 붙은 적' (열세 셈에서 뺌 · 숙련 4 면 옆 기습 빈틈)
+  const E = [fake(0, 0, 0, 0, 0, { prof: 4 }), fake(1, 1, 2, 0, Math.PI / 2), fake(2, 2, 2, -1.2, -Math.PI / 2)];
+  const ME = board(E, [1, 2, 1]);
+  noRandom(() => {
+    assert.equal(busyWithOther(ME.sense, ME.sense.frames.at(-1), 0, 1), true);
+    assert.equal(busyFoe(E[0].aiCtl, E[1]), true);
+    assert.equal(ambushOpp(E[0].aiCtl)?.kind, 'ambush');
   });
   // 실제 판: 2:2 몇 스텝 동안 새 셈만 부른 난수 0 (판 사본 적기 · 상대 고르기 덧셈 · 발)
   const G = newMatch({ count: 4, ai: 'all', seed: 2 });
@@ -198,4 +207,61 @@ test('⑤ 셋 따로(편 0 · 1 · 2): 남의 편 몸은 동료로 안 읽음 ·
       senseFeet(f.aiCtl, 0.3, 0);
     }
   });
+});
+
+test('⑥ P2 노릴 상대 (가운데 몫 k): 동료와 붙어 옆을 보인 적 · 다친 적 · 지친 적 · 몰아침 · 붙잡혀 있으면 없음 · 바탕은 없음', () => {
+  // 나(0, 숙련 5)는 원점에서 +x · 지금 상대 1 은 +x 3 m 에서 동료 2 를 겨눔(붙음 — 2 는 1 에서 −z 1.2 m) → 1 은 −z 를 봄 · 나는 1 의 옆
+  const mk = (prof) => [fake(0, 0, 0, 0, 0, { prof }), fake(1, 1, 3, 0, Math.PI / 2), fake(2, 0, 3, -1.2, -Math.PI / 2), fake(3, 1, -3, 0, 0)];
+  const F = mk(5);
+  const M = board(F, [3, 2, 1, 0]); // 나는 3 을 겨눔(3 이 나를 겨눔 — 멀어서 안 붙음)
+  assert.equal(senseScore(M, F[0], F[1]), -TS.opp.side, '옆을 보인 붙은 적 − side × 1');
+  const F4 = mk(4);
+  const M4 = board(F4, [3, 2, 1, 0]);
+  assert.ok(Math.abs(senseScore(M4, F4[0], F4[1]) + TS.opp.side * (2 / 3)) < 1e-9, '숙련 4 = ⅔');
+  const F2 = mk(2);
+  const M2 = board(F2, [3, 2, 1, 0]);
+  assert.equal(senseScore(M2, F2[0], F2[1]), 0, '바탕은 없음');
+  // 그 적이 나를 보고 있으면(앞 ± 60° 안) 옆 덧셈 없음
+  const G = [fake(0, 0, 0, 0, 0, { prof: 5 }), fake(1, 1, 3, 0, Math.PI), fake(2, 0, 3.8, -0.9, Math.PI), fake(3, 1, -3, 0, 0)];
+  const MG = board(G, [3, 2, 1, 0]);
+  assert.equal(senseScore(MG, G[0], G[1]), 0);
+  // 다친 적 · 지친 적
+  const H = [fake(0, 0, 0, 0, 0, { prof: 5 }), fake(1, 1, 3, 0, Math.PI, { blood: 0.7 }), fake(2, 0, -2, 4, 0), fake(3, 1, -3, 0, 0)];
+  H[1].stamina.level = 1;
+  const MH = board(H, [3, 0, 3, 0]);
+  const wd = (1 - 0.7) / (1 - CONFIG.VITALS.collapseBlood);
+  assert.ok(Math.abs(senseScore(MH, H[0], H[1]) - (-TS.opp.wound * Math.min(1, wd) - TS.opp.tired)) < 1e-9);
+  // 붙잡혀 있으면(지금 상대 3 이 나를 겨눠 붙음) 다른 적 덧셈 없음 · 지금 상대는 그대로
+  const P = [fake(0, 0, 0, 0, 0, { prof: 5 }), fake(1, 1, 3, 0, Math.PI / 2, { blood: 0.7 }), fake(2, 0, 3, -1.2, -Math.PI / 2), fake(3, 1, -1.5, 0, 0)];
+  const MP = board(P, [3, 2, 1, 0]);
+  assert.equal(senseScore(MP, P[0], P[1]), 0);
+  // 몰아침: 피 focus 밑 적은 나눠 맡기 덧셈을 거둠 (동료 2 가 그 적을 겨눔)
+  const Q = [fake(0, 0, 0, 0, 0, { prof: 5 }), fake(1, 1, 3, 0, Math.PI, { blood: TS.opp.focus - 0.05 }), fake(2, 0, -2, 4, 0), fake(3, 1, -3, 0, 0)];
+  const MQ = board(Q, [3, 0, 1, 0]);
+  const wq = Math.min(1, (1 - Q[1].blood) / (1 - CONFIG.VITALS.collapseBlood));
+  assert.ok(Math.abs(senseScore(MQ, Q[0], Q[1]) - (-TS.opp.wound * wq - CONFIG.TEAM_FIGHT.target.allyAdd)) < 1e-9);
+});
+
+test('⑥ P2 협공 각 · 옆 기습 빈틈 (가운데만 — 바탕 없음) · 끼어듦', () => {
+  assert.deepEqual([3, 4, 5].map((p) => Math.round(pincerGoal(tierOfProf(p)))), [80, 100, 120]);
+  // 겨눈 상대 1 이 동료 2 와 붙음 · 나는 1 의 옆(앞 밖)
+  const mk = (prof) => [fake(0, 0, 0, 0, 0, { prof }), fake(1, 1, 2, 0, Math.PI / 2), fake(2, 0, 2, -1.2, -Math.PI / 2)];
+  const F = mk(4);
+  board(F, [1, 2, 1]);
+  const A = noRandom(() => ambushOpp(F[0].aiCtl));
+  assert.equal(A.kind, 'ambush');
+  assert.ok(Math.abs(A.v - TS.ambush.mid * (2 / 3)) < 1e-9);
+  const B = mk(2);
+  board(B, [1, 2, 1]);
+  assert.equal(ambushOpp(B[0].aiCtl), null, '바탕은 기습 없음');
+  // 내가 그 적 앞이면 없음
+  const C = [fake(0, 0, 0, 0, 0, { prof: 4 }), fake(1, 1, 2, 0, Math.PI), fake(2, 0, 2.6, -1.2, Math.PI)];
+  board(C, [1, 2, 1]);
+  assert.equal(ambushOpp(C[0].aiCtl), null);
+  // 끼어듦: 겨눈 상대 1 이 무릎 꿇은 동료 2 를 겨눔 — 1 을 축으로 2 쪽으로 돎 (2 는 1 에서 +z · 나는 1 에서 −x → 2 쪽 = 내 오른쪽(+z))
+  const D = [fake(0, 0, -1, 0, 0, { prof: 5 }), fake(1, 1, 1.5, 0, -Math.PI / 2), fake(2, 0, 1.5, 1.5, Math.PI / 2, { state: 'kneel' })];
+  board(D, [1, 2, 1]);
+  const [, side] = senseFeet(D[0].aiCtl, 0, 0);
+  assert.ok(side > 0, `side ${side}`);
+  assert.equal(D[0].aiCtl.stats.team.interpose, 1);
 });

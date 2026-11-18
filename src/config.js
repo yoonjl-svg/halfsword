@@ -146,8 +146,14 @@ export const TEAM_SENSE = {
   // 협공 자리 (§3-3): 목표 각 θ*(°) — 바탕 base(나란히 · 동료 뒤 줄만 피함) · 가운데 base → mid(몫 k) · 위 top. 못 미친 각이 tol° 넘으면 상대를 축으로 도는 스틱 몫 k ·
   //  동료가 그 상대에 '가까움' = 동료 칼끝 + engage + near m 안
   pincer: { base: 60, mid: 120, top: 160, tol: 15, k: 0.6, near: 0.6 },
-  // 엄호 (§3-6 — 바탕): 넘어짐 · 무릎 · 피 blood 밑 동료를 겨눈 적 − sub (상대 고르기 점수) · 그 바꿈은 hold(실제 초) 기다림 (예전 1.2 s 대신)
-  cover: { sub: 1.5, blood: 0.75, hold: realS(0.4) },
+  // 엄호 (§3-6 — 바탕): 넘어짐 · 무릎 · 피 blood 밑 동료를 겨눈 적 − sub (상대 고르기 점수) · 그 바꿈은 hold(실제 초) 기다림 (예전 1.2 s 대신) ·
+  //  가운데 · 위: 그 적과 동료 사이로 끼어드는 스틱 몫 k × 층 몫
+  cover: { sub: 1.5, blood: 0.75, hold: realS(0.4), k: 0.6 },
+  // 노릴 상대 (§3-2 — 가운데 · 위, × 층 몫 k): 내 동료와 붙어 내게 옆 · 등을 보인 적 − side · 다친 적 − wound × 다침(combat.js woundDegree) · 지친 적 − tired ·
+  //  피 focus 밑 적은 나눠 맡기 덧셈(TEAM_FIGHT.target.allyAdd)을 거둠(몰아침 §3-7) — 지금 상대가 나를 붙잡고 있으면(나를 겨눠 붙음) 이 덧셈은 없음
+  opp: { side: 1.0, wound: 0.6, tired: 0.4, focus: 0.6 },
+  // 기습 (§3-4): 겨눈 상대가 내 동료와 붙었고 내가 그 앞(± front°) 밖이면 빈틈 점수 + mid × 층 몫 ('ambush' — ai.js opportunity)
+  ambush: { front: 60, mid: 0.6 },
   // 수적 열세 (§3-5): 숙련도 레버(TEAM_FIGHT.lever 줄 세우기 · 피하기)의 몫 = base + (1 − base) × 층 몫 (숙련 0 ~ 2 = base · 5 · 6 = 1) · 내 동료와 붙은 적은 열세 셈에서 뺌
   out: { base: 0.3 },
 };

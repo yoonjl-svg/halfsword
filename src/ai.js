@@ -67,7 +67,7 @@ import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 눈 (11/15 �
 import { cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 — 偏閃奏進 꺾는 스틱)
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
-import { laneHold, senseFeet, outSkill, busyFoe } from './team_sense.js'; // 무리 싸움 판단 (11/18 — 셋 이상 판의 me.foes 갈래 안에서만 부름 · 1:1 은 안 탐)
+import { laneHold, senseFeet, outSkill, busyFoe, ambushOpp, teamStats } from './team_sense.js'; // 무리 싸움 판단 (11/18 — 셋 이상 판의 me.foes 갈래 안에서만 부름 · 1:1 은 안 탐)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -109,7 +109,7 @@ const STEP_T = 0.3; // 기술 걸음 'strike'(유파 고유 동작 step 칸): �
 //  빠른 틈(this.quick — 그 순간을 놓치지 않게 빠르게 친다). 풍차 베기 AI 몫(10/31 13:4x — rdSkipWhy)도 같은 셈으로 빠른 틈을 가른다
 const SLOW_WHY = new Set(['patience', 'open', 'weak', 'offbalance', 'drill']);
 /** ① 칼끝 틈 건너기 (11/15 — AI_ARC.gap): 긴 칼 앞 내 칼끝 밖에서도 여는 공격 까닭 — 상대가 헛친 틈 · 무너짐 · 들어옴 · 받아 친 틈 · 이어 치기 · 파고들기(헛친 뒤) · 偏閃奏進 */
-const GAP_OPEN = new Set(['recover', 'finish', 'offbalance', 'stepin', 'counter', 'riposte', 'follow', 'stop', 'dig', 'dive']);
+const GAP_OPEN = new Set(['recover', 'finish', 'offbalance', 'stepin', 'counter', 'riposte', 'follow', 'stop', 'dig', 'dive', 'ambush']); // ambush: 무리 싸움 판단 기습 (11/18 — 셋 이상 판만 · 겨눈 상대가 내 동료와 붙어 칼이 그쪽에 있음)
 // 막기 2.0 공격 절제 · 간격과 박자 깊은 안 참기 (11/17)가 참지 않는 공격: 상대가 헛친 뒤(Nach) · 무너짐 · 들어옴 · 드는 순간(Vor) · 맞받기 · 되받기(Indes) · 이어 치기 · 몸으로 미는 틈 · 쳐내기 · 파고들기
 const DISC_OPEN = new Set([...GAP_OPEN, 'windup', 'press', 'shove', 'beat']);
 // ③ 자세 → 칼길 (11/17): 공격 직전 자세 한 박자를 거치는 공격 = 간 보기에서 고른 느긋한 틈 (SLOW_WHY 에서 헛스윙 연습 뺌 — 빠른 틈은 지금 손 자리에서 곧장)
@@ -1622,6 +1622,12 @@ export class AI {
     // 6) 인내심이 떨어지면 먼저 들어간다 (주도권)
     add((1 - this.patience) * 1.1, 'patience');
     if (this.desperate) add(0.25, 'patience');
+    // 7) 무리 싸움 판단 기습 (11/18 — 셋 이상 판만 · src/team_sense.js ambushOpp): 겨눈 상대가 내 동료와 붙었고 내가 그 앞 밖 — 숙련 3 부터 (몫 k)
+    if (this.me.foes && this.me.teamSense) {
+      const A = ambushOpp(this);
+      if (A?.kind) add(A.v, A.kind), (this.stats.team ??= teamStats()).ambush++;
+      if (A?.hold) score -= A.hold;
+    }
     if (this.cautious) score -= 0.2 * (1 - Lk); // 무모(굴림 몫): 피를 덜 흘린 우위도 덜 아낌
     // 내 상태가 나쁘면 참는다 (무모 — 그 몫만큼 덜 참음)
     if (this.me.offBalance > 0.03 || this.me.pain > 0.9) score -= 0.5 * (1 - Lk);
