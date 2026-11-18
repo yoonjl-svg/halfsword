@@ -1741,8 +1741,9 @@ export class AI {
     let best = null;
     let bestW = -1;
     for (const t0 of this.school.tech) {
-      const t = this.techNow(t0); // 식는 특수 공격은 바탕 동작 또는 건너뜀 (10/29 19:4x — 사람과 같게)
+      let t = this.techNow(t0); // 식는 특수 공격은 바탕 동작 또는 건너뜀 (10/29 19:4x — 사람과 같게)
       if (!t) continue;
+      if (t.name === 'cingir' && t.plain && !SLOW_WHY.has(why)) t = t.plain; // 11/19 B7 (사장님 '권고대로' — 기록 docs/strike/de_band3_2026-11-19.md §B7): 이어 돌리기 칼(왼 가로베기 자리 강화동작)은 짧은 틈 공격(헛친 틈 · 들어옴 · 되받기 … SLOW_WHY 밖)엔 고르지 않음 — 바탕 동작(왼 가로베기)의 몫 그대로
       if (vKind && t.kind !== vKind) continue;
       let w = this.pers.techPref[t0.name] * t.base;
       if (t.kind === 'thrust') w *= thrustBias;
@@ -1857,7 +1858,8 @@ export class AI {
     if (this.tech?.name === 'redondo' && !this.feint && !this.secretRun && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin(); // 부러진 칼은 옛 길 (사람도 부러지면 감기를 그만둠 — windStop 'armed')
     // 이어 돌리기 (11/14 IB_LINK.ai — 기본 켬 · 사장님 11/14 확인 'ai에게도 똑같이' · 사람 unique_assist.js linkTry 와 같은 뜻 · 원 동안 맞바꿈도 사람과 같음 — fighter.js ibTradeTry): 이베리아 AI 가 앞 공격이 끝나고 이어짐 창(afterWindow) 안에 큰 칼(시작 자리가 가슴 높이 이상인 베기)을
     //  새로 시작하는데 손이 그 시작 자리에서 떨어져 있으면 — 준비 자세로 손을 옮기는 대신 칼을 머리 위로 돌려 시작 자리로(iberian_link.js) · 다 돌면 곧장 친다(linkTick)
-    else if (this.kitLink && this.art.tradition === 'iberian' && this.phase === 'windup' && !opt.secret && !opt.passive && !this.feint && !this.secretRun && this.tech?.kind === 'cut' && this.tech.from[1] > 0 && cd > UA.padRadius && this.sense.t - this.lastAtkT <= UA.afterWindow && this.me.state === 'stand' && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.ibLink && !iaiBusy(this.me) && linkStart(this.me, this.tech.from, { tech: this.tech.name, bridge: this.linkBridge(L) })) {
+    //  11/19 B7 (사장님 '권고대로'): AI 는 원을 사슬 안의 다리로만(이어 치기 opt.chain) — 짧은 틈 공격(헛친 틈 · 되받기 …)이 원을 그리는 0.4 s 에 틈을 놓치지 않게 (사람 이어 돌리기는 그대로)
+    else if (this.kitLink && this.art.tradition === 'iberian' && this.phase === 'windup' && opt.chain && !opt.secret && !opt.passive && !this.feint && !this.secretRun && this.tech?.kind === 'cut' && this.tech.from[1] > 0 && cd > UA.padRadius && this.sense.t - this.lastAtkT <= UA.afterWindow && this.me.state === 'stand' && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.ibLink && !iaiBusy(this.me) && linkStart(this.me, this.tech.from, { tech: this.tech.name, bridge: this.linkBridge(L) })) {
       this.phase = 'ibLink';
       (this.stats.ibLink ??= { fired: 0, done: 0, cancel: {} }).fired++;
     }
