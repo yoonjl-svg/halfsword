@@ -44,7 +44,8 @@ export function deInit(ai) {
   ai.me.canShove = true; // 인물 칸 없는 밀치기 (독일 유파 몫 — fighter.closeStep 을 탐)
   ai.deClose = { rate: 0, then: 'pommel', pommel: 0 }; // closeQuarters 가 읽는 칸 (밀 몫은 deCloseCfg 가 사건마다 새로 — 객체는 하나)
   ai.deDig = { t: 0, armed: true, after: 0, push: false }; // after = 파고들기 뒤 밀치기를 크게 기울이는 남은 시간 (digT + AI_PLAN.beat) · push = 밀 마음(pushNear — 맞닿기 안 헛침에서 굴려 났음 · 닿는 거리에 들면 굴림 없이 민다 · 밀거나 after 가 끝나면 지움)
-  ai.stats.plan.de = { digTry: 0, dig: 0, back: 0, lure: 0, diffUp: 0, diffDown: 0, pushTry: 0, pushGo: 0 };
+  ai.stats.plan.de = { digTry: 0, dig: 0, back: 0, lure: 0, diffUp: 0, diffDown: 0, pushTry: 0, pushGo: 0, knee: 0, kneeGo: 0 };
+  ai.deKnee = { at: null, live: false, seen: false }; // G6 무릎 꺾기 뒤 끝내기 (11/19 — deKnee): 마지막으로 본 꺾음(foe.buckleAt) · 그 꺾음에 아직 끝내기를 안 냄 · 꿇은 모습을 봄
   ai.deNach = null; // 띠 높음 뒤 칼 (11/19 — deNachTick): 박찬 뒤 { t0 · tau(그 칼이 가장 가까워질 어림 초) · until · w0(내 상처 수) · voided · fired · seq · fw0(상대 상처 수) }
   ai.deCue = master(ai) ? { t: -Infinity, id: -1 } : null; // 띠 높음 칼 든 낌새 (11/19 — deCueTick): 마지막으로 본 때 · 그 낌새가 시작될 때의 위협 번호
   if (master(ai)) Object.assign(ai.stats.plan.de, { backSee: 0, backFar: 0, backWalk: 0, backDeep: 0, backCue: 0, backStam: 0, backVoid: 0, backHit: 0, nach: 0, nachHit: 0, nachW: 0, nachLost: 0 }); // 재기 (11/19)
@@ -340,6 +341,37 @@ export function deNachTick(ai, s, d, th, recovering) {
   N.seq = ai.atkSeq;
   N.fw0 = foe.wounds?.length ?? 0;
   st.nach++;
+  return true;
+}
+
+/**
+ * G6 무릎 꺾기 뒤 끝내기 (11/19 사장님 '권고대로' — 기록 docs/strike/de_band3_2026-11-19.md §G6 · 단계 덜어 보기 §2-2 안): 내 곁눈 베기가 상대 무릎을 꺾었으면
+ *  (foe.buckleAt 이 바뀜 — 내 칼이 낸 사건 · 꿇는 몸은 눈에 보임) 늦게 본 모습(s)에 상대가 서 있지 않은 동안(꿇음 0.6 s + 일어남 — 그 한 번) 다음 간 보기 박자를 기다리지 않고
+ *  곧장 '끝내기' 공격(pickTech 'finish' — 위에서 내려치기 쪽 · 빠른 준비). 늦게 본 모습이 다시 서 있으면 그 꺾음은 끝. 간 보기에서 칠 거리(holdDist + watchReachOut) 밖 ·
+ *  내가 서 있지 않음 · 칼 없음이면 내지 않음(다음 스텝 다시 봄). chain = afterStrike 에서 부르면 이어 치기 번호 (간 보기 · 물러남은 0). 냈으면 true
+ */
+export function deKnee(ai, s, d, chain = 0) {
+  const K = ai.deKnee;
+  if (!K) return false;
+  const b = ai.foe.buckleAt;
+  if (b != null && b !== K.at) {
+    K.at = b;
+    K.live = true;
+    K.seen = false;
+    ai.stats.plan.de.knee++;
+  }
+  if (!K.live) return false;
+  if (s.state === 'stand') {
+    if (K.seen) K.live = false;
+    return false;
+  }
+  K.seen = true;
+  const me = ai.me;
+  if (!ai.foe.alive || me.state !== 'stand' || !me.armed || ai.secretRun || d > ai.holdDist() + ai.watchReachOut()) return false;
+  const o = chain ? { chain, noFeint: true, fastChamber: true } : { noFeint: true, fastChamber: true };
+  if (!ai.startAttack(ai.pickTech(s, 'finish'), 'finish', o)) return false;
+  K.live = false;
+  ai.stats.plan.de.kneeGo++;
   return true;
 }
 

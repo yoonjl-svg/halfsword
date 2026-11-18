@@ -57,7 +57,7 @@ import { planFor, tiltOf, luckOf, bandOf, distErrWidth, judgePhase, seenStep, pl
 import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, jpBeat, jpRead, jpTsubame, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep, jpArmRead } from './ai_plan_jp.js'; // 2 단계 일본 플랜 몫 (11/14 — ai.planJp 일 때만)
 import { iaiSeated, drawStart, drawLog } from './iai_obi.js'; // 11/16 뽑기 — 칼집에 든 채 공격 · 막기는 SECRET.gnsDraw 초 뽑은 뒤 (사람과 같은 셈)
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
-import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead, deNachTick, deReserve, deCueTick } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만) · 11/19 띠 높음 칼 든 낌새 · 뒤 칼 · 누르는 동안만 비기 기력
+import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead, deNachTick, deReserve, deCueTick, deKnee } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만) · 11/19 띠 높음 칼 든 낌새 · 뒤 칼 · 누르는 동안만 비기 기력 · G6 무릎 꺾기 뒤 끝내기
 import { DIG_PROTO, AI_ARC, PHYSICS, GUARD_LINE } from './config.js';
 import { icpArm, icpAim, coverTech, icpStats, discHold, anticAim, anticRoll, swingMark, swingTurn } from './ai_intercept.js'; // 막기 2.0 읽기 묶음 (11/17 — config AI_INTERCEPT · [사장님 11/17 결정] 기본 판): 가로막기 · 덮는 맞받기 · 공격 절제 · 미리 줄 닫기 · 새 휘두름
 import { msTick, msLine, msChainWant, msHold, msFeetV, msWdEnd, msInsideHold, msAttackStart, msTempoFeet, msWindupFeet, msRead, msDebanaOpen, msDebanaTry, msDebanaTick, okoriStart, okoriFrom, okoriTick, okoriEnd, okoriBody, okoriHold, okoriCue } from './ai_measure.js'; // 간격과 박자 · 오코리 (11/17 — config MEASURE · OKORI · [사장님 11/17 결정] 기본 판)
@@ -1035,7 +1035,9 @@ export class AI {
     if (this.ibPlan) ibTick(this, dt, th, hurt); // 이베리아 플랜 (2 단계): 원 사이를 치는 버릇 기억 · 옆 박차기 진행 · 무장 기다림 끝 (굴림 없음)
     // 독일 파고들기 (3 단계 11/14): 간 보기 · 물러남 · 막기에서 상대 헛침(seize 의 recovering 과 같은 셈 — 늦게 본 모습)을 본 한 번에 굴림
     if (this.deCue) deCueTick(this, s); // 11/19 띠 높음: 칼 든 낌새 (읽고 박차기의 첫 문 — 굴림 없음)
-    if (this.planDe && !kneeling && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend')) {
+    if (this.planDe && !kneeling && (this.mode === 'watch' || this.mode === 'withdraw') && deKnee(this, s, d)) {
+      // 11/19 G6: 내 곁눈 베기가 무릎을 꺾은 상대 — 다음 간 보기 박자를 기다리지 않고 곧장 끝내기 (ai_plan_de.js deKnee)
+    } else if (this.planDe && !kneeling && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend')) {
       const recovering = this.sense.recentHandSpeed(L.reaction, realS(0.6)) > 3.5 && Math.hypot(s.hvx, s.hvy) < 1.8;
       if (!(this.deNach && deNachTick(this, s, d, th, recovering))) deDigTry(this, s, d, recovering); // 11/19 띠 높음: 읽고 박찬 뒤 뒤 칼이 먼저 (냈으면 그 스텝 파고들기 굴림 없음)
     } else if (this.deNach) deNachTick(this, s, d, th, false); // 뒤 칼이 끝났나 · 비꼈나 · 기다림 시간 (공격 꼴 · 무릎 — 내지 않음)
@@ -2601,6 +2603,7 @@ export class AI {
       if (this.binds) this.binds.strike((this.foe.wounds?.length ?? 0) > (this.atkWounds0 ?? 0), this.bound || this.atkClash); // 이베리아 맺힘 셈: 칼끼리 닿고 피해 없음 +1 · 피해 0 · 헛침 그대로
       if (this.secretCombo(d) || this.secretFirstHit(d)) return;
     }
+    if (this.planDe && this.foe.alive && deKnee(this, this.sense.seen(L.reaction), d, this.chain + 1)) return; // 11/19 G6: 이 칼(곁눈 베기)이 무릎을 꺾었으면 이어 치기 굴림 · 물러남 대신 곧장 끝내기 (ai_plan_de.js deKnee)
     // 모르트슐라크 몸 붙이기 'after' (10/24 14:2x — SECRET.mordNear): 내 칼이 막혀 맞물린 채(칼끼리 닿음 · 못 벰) 붙은 거리(M.clinch) 안에서 끝났으면 — 둘이 엉킨 채 가까움 — 인물 밀치기 확률로 이어 치기 · 물러남 대신 붙어 민다
     if (this.press && this.bound && !this.hitLanded && this.foe.alive && d < this.M.clinch && this.mordPressGo('after')) return;
     // 이어 치기(Nachschlag): 막히거나 헛쳤어도 이어 친다. 완전히 붙어 씨름하는 거리(0.75m 아래)만 거른다 —
