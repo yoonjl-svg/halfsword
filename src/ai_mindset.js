@@ -6,26 +6,28 @@
 //   선공 · 거리 · 일격 · 횡보 = 유파의 바탕 점수. 집요함 = 상대 상태에 반응해 그 넷을 바탕에서 얼마나 옮길 수 있나 — 폭 (집요함 − 1) × MINDSET.band 점
 //   (일본 1 → 0 — 제 페이스 · 독일 ±0.5 · 이베리아 ±1 · 이탈리아 ±1.5 · 동방 ±2) · 옮긴 점수는 1 ~ 5 안.
 //   사장님 11/18: '집요함은 상대의 상태에 반응하는 정도야. 출혈, 기력 회복 저하, 부상, 칼 떨어짐 등 모든 상태 이상이나 상대 전략(6초, 10초 기억)을 통해서
-//                 나의 움직임이나 공격을 유리한 쪽으로 수정함.'
+//                 나의 움직임이나 공격을 유리한 쪽으로 수정함.' · 11/19: '5번은 상대 버릇 읽기 말한 거야' (6 s · 10 s = 수 읽기 그릇의 버릇 · 되풀이 창 — 되풀이는 11/16 에 8 s)
+//   숙련도 [사장님 11/19 '검술이 높을수록 유파다워진다']: 바탕 점수 = 3 + (점수 − 3) × f(숙련도) · 폭 × f (config MINDSET.profF — 숙련 6 이 1 · 1 이 0) — mindInit
 //
 //  ① 상대 상태 읽기 (mindTick — 매 스텝 · 본 것만): 칼 떨어짐 · 지침(탈진 · 기력 낮음 · 기력 회복 저하 — 맹호은림 사냥 겹) · 출혈(나보다 더) · 다리 · 칼 팔 부상 ·
-//     본 특수 공격(그 뒤 MINDSET.specialMem 동안 기억) · 본 비기(MINDSET.secretMem 동안) · 상대 비기가 남음(이 유파 · 이 몸이 아직 쓸 수 있음).
+//     상대 비기가 남음(이 유파 · 이 몸이 아직 쓸 수 있음) · 상대 버릇(수 읽기 그릇 ai_read.js 가 배운 것 — 자주 침 busy · 안 침 quiet · 같은 줄 되풀이 repeat).
 //     상태마다 세기 0 ~ 1 → MINDSET.ramp 로 부드럽게 따라감(들고 남이 끊기지 않게) → 항목마다 Σ 세기 × 미는 쪽(MINDSET.react) 을 −1 ~ 1 로 자름 × 폭 = 옮긴 점수.
 //     쓰러짐 · 무릎 꿇음은 옛 끝내기 셈 그대로 (여기서 밀지 않음).
 //  ② 옮긴 점수로 손잡이 (바탕 손잡이 + 기울기 × 옮긴 점수 — 기질 굴림 값(ai.pers)은 그 위에 옮긴 몫만 더함):
 //     선공 mindAggr · mindPatienceT · mindNeed · mindOppK · mindAnsK — 공격 성향 · 참을성 · 공격 거는 문턱 · 먼저 치는 빈틈 / 받아 치는 몫 곱
-//     거리 mindMargin · mindGap · mindCreep · mindGive — 간 보는 여유 · 선 여유(MEASURE.gap 대신 · 바닥) · 다가드는 잔걸음 · 다가오면 물러나는 몫
+//     거리 mindMargin · mindGap · mindCreep · mindGive · mindStay — 간 보는 여유 · 선 여유(MEASURE.gap 대신 · 바닥) · 다가드는 잔걸음 · 다가오면 물러나는 몫 · 내 칼 뒤 붙어 남음
 //     일격 mindReward → mindTechW · mindRiskK · mindChain — 입힐 피해와 받을 피해 가운데 무엇으로 판단하나 (기술 고르기 · 공격 절제 · 이어 치기)
 //     횡보 mindCircle · mindSide · mindSideK — 간 보기 · 물러남 걸음 옆 몫을 목표(1 점 0 % · 5 점 50 %)로
 //  마음가짐이 있는 몸은 옛 '상대 상태 반응'(피를 더 흘리는 상대엔 기다림 hurry cautious · 지친 상대 문턱 −0.2 / −0.45)을 쓰지 않는다 — 집요함이 갈음 (일본 = 반응 없음).
 //  ai.mind 가 없는 몸(무유파 · 숙련도 0)은 이 파일의 셈을 하나도 안 탐 — 옛 셈 그대로.
 //  굴림 없음 — 곱 · 문턱 · 지수 평균 · 옆 크기 제어만 (난수 차례는 옛 굴림 그대로 — 굴림 몫만 바뀜).
 // ─────────────────────────────────────────────────────────────
-import { MINDSET, SECRET } from './config.js';
+import { MINDSET, SECRET, AI_PLAN } from './config.js';
 import { SCHOOL_MINDSET } from './schools.js';
 import { secretLeft, playerSecretOf } from './secret.js';
 import { kitOff } from './skill_kit.js';
 import { huntN } from './cn_hunt.js';
+import { readAtkN, readRepeatLine } from './ai_read.js';
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 /** 항목 순서 (옮긴 점수 칸) */
@@ -45,8 +47,24 @@ export function mindOf(tradition, proficiency, planOn = true) {
   return SCHOOL_MINDSET[tradition] ?? null;
 }
 
-/** 집요함 폭 (점) */
+/** 집요함 폭 (점 — 값 표 · 숙련 6) */
 export const bandOf = (M) => (M.score[SC.tenacity] - 1) * MINDSET.band;
+/** 숙련도 → 마음가짐을 따르는 몫 f (0 ~ 1 — MINDSET.profF) */
+export const profF = (p) => MINDSET.profF[clamp(Math.round(p ?? 6), 0, MINDSET.profF.length - 1)];
+
+/**
+ * 생성자 (this.mind 를 정한 뒤 한 번): 숙련도 몫 f · 바탕 점수 = 3 + (점수 − 3) × f — 값 표 점수에서 옮긴 몫(mindP)을 옮긴 점수 칸(mindShift)의 처음 값으로.
+ *  기질 굴림 값(값 표 점수의 가운데 ± 폭)은 그대로 — 손잡이는 '기질 + 기울기 × 옮긴 몫'이라 숙련도 몫도 같은 길로 탐
+ */
+export function mindInit(ai) {
+  const M = ai.mind;
+  if (!M) return;
+  const f = profF(ai.proficiency);
+  ai.mindF = f;
+  ai.mindP = Float64Array.from(AXES, (a) => (3 - M.score[SC[a]]) * (1 - f));
+  ai.mindShift = Float64Array.from(ai.mindP);
+  ai.mindTen = new Float64Array(AXES.length); // 집요함이 옮긴 몫만 (재기 — 잘림 뒤)
+}
 
 // ───────── ① 상대 상태 읽기 ─────────
 /** 상대가 아직 비기를 쓸 수 있나 (AI = 비기를 쥠 · 사람 = 열린 유파 비기 · 비기 칸 · 판당 쓸 수가 남음 — 고노센 읽기 gnsUser 와 같은 규칙) */
@@ -58,7 +76,9 @@ function foeSecretLeft(foe) {
 
 /**
  * 상대 상태 세기 (지금 본 것 — 0 ~ 1): s = 늦게 본 상대 모습 (칼 쥠 · 서 있음) · 몸 표식(피 · 다리 · 팔 · 기력 막대 · 사냥 겹)은 화면에 보이는 것.
- *  본 특수 공격 · 비기는 낸 순간을 기억(ai.mindSeen) — 그 기억 창 안이면 1.
+ *  상대 버릇은 수 읽기 그릇(ai.read — 플랜이 있는 몸 · 버릇은 가운데 띠부터 · 되풀이는 높음부터 — 그릇이 닫힌 띠는 0)이 적은 상대 칼(늦게 본 위협)로만:
+ *   busy = 버릇 창(habitT) 안 상대 칼 수 n → (n − 1) ÷ 2 (둘 0.5 · 셋 1) · quiet = 판 시간이 버릇 창을 넘었고 그 창 동안 상대 칼 없음 → 1 ·
+ *   repeat = 되풀이 창(repeatT) 안에 같은 줄이 두 번 넘게 옴(readRepeatLine) → 1
  */
 export function foeStates(ai, s) {
   const foe = ai.foe, me = ai.me;
@@ -76,10 +96,15 @@ export function foeStates(ai, s) {
   I('bleed', foe.bleed > 0.005 ? (loss(foe) - loss(me)) / 0.24 : 0);
   I('leg', (1 - foe.legHealth) / 0.5);
   I('arm', (1 - (foe.limbs?.armS ?? 1)) / 0.5);
-  const S = ai.mindSeen;
-  I('special', t - S.special < MINDSET.specialMem ? 1 : 0);
-  I('secretUsed', t - S.secret < MINDSET.secretMem ? 1 : 0);
   I('secretReady', foeSecretLeft(foe) ? MINDSET.readyK : 0);
+  const R = ai.read;
+  if (R?.habit) {
+    const W = AI_PLAN.read.habitT;
+    const n = readAtkN(ai, W);
+    I('busy', (n - 1) / 2);
+    I('quiet', n === 0 && (ai.me.fightT ?? 0) > W && t - R.lastT > W ? 1 : 0);
+  }
+  if (R?.repeat) I('repeat', readRepeatLine(ai, AI_PLAN.read.repeatT) ? 1 : 0);
   return out;
 }
 
@@ -97,29 +122,31 @@ export function mindTick(ai, dt, s) {
     ai.mindLat = (ai.mindLat ?? 0) + (Math.abs(mv?.x ?? 0) - (ai.mindLat ?? 0)) * a;
     ai.mindRad = (ai.mindRad ?? 0) + (Math.abs(mv?.y ?? 0) - (ai.mindRad ?? 0)) * a;
   }
-  // 상대 특수 공격 · 비기를 본 때 (몸 셈이 바뀐 스텝 + 반응 시간 — 보이고 나서야 앎)
-  const foe = ai.foe;
-  const S = (ai.mindSeen ??= { special: -Infinity, secret: -Infinity, nSp: foe?.specialN ?? 0, nSe: foe?.secretUsed ?? 0 });
-  const t = ai.sense.t;
-  if ((foe?.specialN ?? 0) !== S.nSp) (S.nSp = foe.specialN), (S.special = t + ai.level.reaction);
-  if ((foe?.secretUsed ?? 0) !== S.nSe) (S.nSe = foe.secretUsed), (S.secret = t + ai.level.reaction);
-  const band = M.band ?? bandOf(M);
+  if (!ai.mindP) mindInit(ai);
+  const band = (M.band ?? bandOf(M)) * ai.mindF; // 숙련도 몫만큼 (숙련 6 = 값 표 폭)
   const sm = (ai.mindI ??= new Float64Array(STATES.length));
-  const sh = (ai.mindShift ??= new Float64Array(AXES.length));
-  if (!(band > 0)) return void sh.fill(0);
+  const sh = ai.mindShift, ten = ai.mindTen, P = ai.mindP;
+  if (!(band > 0)) {
+    sh.set(P);
+    ten.fill(0);
+    return;
+  }
   const raw = foeStates(ai, s);
   const a = Math.min(1, dt / MINDSET.ramp);
   for (let i = 0; i < STATES.length; i++) sm[i] += (raw[i] - sm[i]) * a;
   for (let k = 0; k < AXES.length; k++) {
     let v = 0;
     for (let i = 0; i < STATES.length; i++) v += sm[i] * MINDSET.react[STATES[i]][k];
-    const base = M.score[SC[AXES[k]]];
-    sh[k] = clamp(base + band * clamp(v, -1, 1), 1, 5) - base;
+    const base = M.score[SC[AXES[k]]] + P[k]; // 숙련도 몫으로 옮긴 바탕
+    ten[k] = clamp(base + band * clamp(v, -1, 1), 1, 5) - base; // 1 ~ 5 에서 잘림 — 잘린 몫은 다른 항목으로 안 넘김 [사장님 11/19]
+    sh[k] = P[k] + ten[k];
   }
 }
 
-/** 옮긴 점수 (항목 이름) — 없으면 0 */
+/** 옮긴 점수 (항목 이름 — 값 표 점수에서: 숙련도 몫 + 집요함 몫) — 없으면 0 */
 export const mindShiftOf = (ai, axis) => ai.mindShift?.[AX[axis]] ?? 0;
+/** 집요함이 옮긴 몫만 (재기 · 시험) */
+export const mindTenOf = (ai, axis) => ai.mindTen?.[AX[axis]] ?? 0;
 /** 지금 점수 (바탕 + 옮긴 점수) */
 export const mindScore = (ai, axis) => ai.mind.score[SC[axis]] + mindShiftOf(ai, axis);
 
@@ -140,6 +167,8 @@ export const mindMargin = (ai) => ai.pers.margin + slope('margin') * mindShiftOf
 export const mindCreep = (ai) => knobAt('creep', mindScore(ai, 'distance'));
 /** 거리 — 상대가 다가오면 물러나는 몫 곱 (moveFeet — 옛 1 · 멀리 서는 유파는 더 · 가까이 서는 유파는 덜) */
 export const mindGive = (ai) => knobAt('give', mindScore(ai, 'distance'));
+/** 거리 — 내 칼 뒤 물러나지 않고 붙어 남을 몫 0 ~ 1 (afterStrike — 마음가짐 없으면 0) [사장님 11/19 독일 '붙어서 싸운다'] */
+export const mindStay = (ai) => (ai.mind ? clamp(knobAt('stay', mindScore(ai, 'distance')), 0, 1) : 0);
 /** 거리 — 간격과 박자 선 여유 m (ai_measure.js msLine — 마음가짐이 없으면 undefined → MEASURE.gap 그대로) */
 export const mindGap = (ai) => (ai.mind ? knobAt('gap', mindScore(ai, 'distance')) : undefined);
 /** 일격 — 입힐 피해로 판단하는 몫 0 ~ 1 */

@@ -310,11 +310,11 @@ const NONE_TEMPER = OLD_TEMPER;
 //   band                                          집요함 — 옮길 수 있는 폭 (점) = (집요함 − 1) × 0.5 [사장님 11/18 결정 '네 권고대로 하마']
 export const SCHOOL_MINDSET = Object.freeze({
   //   점수 [선공, 거리, 집요함, 일격, 횡보] → 손잡이
-  german: Object.freeze({ score: Object.freeze([5, 1, 2, 3, 2]), aggr: 1.3, patienceTime: 5, need: -0.3, first: 1.6, answer: 0.4, margin: 0, gap: -0.2, creep: 0.45, give: 0.4, reward: 0.5, latShare: 0.125, circleRate: 0.175, band: 0.5 }),
-  italian: Object.freeze({ score: Object.freeze([2, 5, 4, 2, 1]), aggr: 0.925, patienceTime: 11.75, need: 0.075, first: 0.7, answer: 1.3, margin: 1.2, gap: 0.7, creep: 0.18, give: 1.2, reward: 0.25, latShare: 0, circleRate: 0.1, band: 1.5 }),
-  iberian: Object.freeze({ score: Object.freeze([4, 4, 3, 5, 5]), aggr: 1.175, patienceTime: 7.25, need: -0.175, first: 1.3, answer: 0.7, margin: 0.9, gap: 0.475, creep: 0.2475, give: 1, reward: 1, latShare: 0.5, circleRate: 0.4, band: 1 }),
-  japanese: Object.freeze({ score: Object.freeze([1, 2, 1, 4, 3]), aggr: 0.8, patienceTime: 14, need: 0.2, first: 0.4, answer: 1.6, margin: 0.3, gap: 0.025, creep: 0.3825, give: 0.6, reward: 0.75, latShare: 0.25, circleRate: 0.25, band: 0 }),
-  chinese: Object.freeze({ score: Object.freeze([3, 3, 5, 1, 4]), aggr: 1.05, patienceTime: 9.5, need: -0.05, first: 1, answer: 1, margin: 0.6, gap: 0.25, creep: 0.315, give: 0.8, reward: 0, latShare: 0.375, circleRate: 0.325, band: 2 }),
+  german: Object.freeze({ score: Object.freeze([5, 1, 2, 3, 2]), aggr: 1.3, patienceTime: 5, need: -0.3, first: 1.6, answer: 0.4, margin: 0, gap: -0.2, creep: 0.45, give: 0.4, reward: 0.5, latShare: 0.125, circleRate: 0.175, stay: 0.6, band: 0.5 }),
+  italian: Object.freeze({ score: Object.freeze([2, 5, 4, 2, 1]), aggr: 0.925, patienceTime: 11.75, need: 0.075, first: 0.7, answer: 1.3, margin: 1.2, gap: 0.7, creep: 0.18, give: 1.2, reward: 0.25, latShare: 0, circleRate: 0.1, stay: -0.6, band: 1.5 }),
+  iberian: Object.freeze({ score: Object.freeze([4, 4, 3, 5, 5]), aggr: 1.175, patienceTime: 7.25, need: -0.175, first: 1.3, answer: 0.7, margin: 0.9, gap: 0.475, creep: 0.2475, give: 1, reward: 1, latShare: 0.5, circleRate: 0.4, stay: -0.3, band: 1 }),
+  japanese: Object.freeze({ score: Object.freeze([1, 2, 1, 4, 3]), aggr: 0.8, patienceTime: 14, need: 0.2, first: 0.4, answer: 1.6, margin: 0.3, gap: 0.025, creep: 0.3825, give: 0.6, reward: 0.75, latShare: 0.25, circleRate: 0.25, stay: 0.3, band: 0 }),
+  chinese: Object.freeze({ score: Object.freeze([3, 3, 5, 1, 4]), aggr: 1.05, patienceTime: 9.5, need: -0.05, first: 1, answer: 1, margin: 0.6, gap: 0.25, creep: 0.315, give: 0.8, reward: 0, latShare: 0.375, circleRate: 0.325, stay: 0, band: 2 }),
 });
 /** 마음가짐 값 표 줄의 기질 칸 네 개 → 범위 (가운데 ± config MINDSET.spread · 소수 넷째 자리) */
 const mindTemper = (m) => {

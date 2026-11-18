@@ -67,7 +67,7 @@ import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 눈 (11/15 �
 import { cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 — 偏閃奏進 꺾는 스틱)
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
-import { mindOf, mindTick, mindAggr, mindPatienceT, mindNeed, mindOppK, mindAnsK, mindMargin, mindGap, mindStakes, mindTechW, mindChain, mindCircle, mindCircleOut, mindSideK, mindSide, mindCreep, mindGive } from './ai_mindset.js'; // 유파 마음가짐 (11/18 — 다섯 항목 점수 → 손잡이 · 집요함 = 상대 상태에 따라 넷을 옮기는 폭 · 값 표 schools.js SCHOOL_MINDSET · 마음가짐이 없는 몸은 옛 셈)
+import { mindOf, mindInit, mindStay, mindTick, mindAggr, mindPatienceT, mindNeed, mindOppK, mindAnsK, mindMargin, mindGap, mindStakes, mindTechW, mindChain, mindCircle, mindCircleOut, mindSideK, mindSide, mindCreep, mindGive } from './ai_mindset.js'; // 유파 마음가짐 (11/18 — 다섯 항목 점수 → 손잡이 · 집요함 = 상대 상태에 따라 넷을 옮기는 폭 · 값 표 schools.js SCHOOL_MINDSET · 마음가짐이 없는 몸은 옛 셈)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -286,6 +286,7 @@ export class AI {
     };
     // 유파 마음가짐 (11/18 — src/ai_mindset.js): 기질 범위 칸(선공 · 거리 · 횡보 빠르기)은 위 TP 로 이미 들어옴 — 그 밖 셈(문턱 · 선 여유 · 피해 견줌 · 옆 몫 · 집요함 — 상대 상태로 옮김)이 읽는 줄. 숙련도 0(무) · 무유파는 null
     this.mind = mindOf(this.art.tradition, this.proficiency, this.planOn);
+    if (this.mind) mindInit(this); // 숙련도 몫 (11/19 사장님 '검술이 높을수록 유파다워진다'): 바탕 점수 = 3 + (점수 − 3) × f(숙련도) · 폭 × f
     // 감정 셋 (공포·분노·집념): 지배 감정 하나 + 세기 0~1 + 시간 감쇠 — 자세히는 emote() 참고.
     //  판정(사건·세기·감쇠·지배·텀·무기 사건 한 번만·막힌 시각)은 emotions.js Emotions 한 곳이 한다 (플레이어와 같은 규칙).
     //  문턱값은 this.pers 를 그대로 읽는다. this.emo(세기)·this.emotion(지배 감정)은 그 판정의 값이다
@@ -1360,6 +1361,7 @@ export class AI {
     if (this.drillOut) return this.drill.dist(this); // 시험: 헛스윙 연습 — 드릴 거리 (물러남이 거기서 끝난다)
     // 싱지르 무장 + 기다리지 않는 인물(pers.spinHold false — 10/29 15:5x ~ 21:0x 베르나르도 · 지금 쓰는 인물 없음): 내기 거리(칼끝 거리 + aiFire)의 절반 안쪽까지 걸어 들어가 상대를 넣는다 — 들어서면 spinTick 이 낸다
     if (this.spinArm?.armed && !this.pers.spinHold && !this.chasing) return this.M.reach + SECRET.altib.aiFire * 0.5;
+    if (this.mindStayT > this.sense.t && this.me.armed && !this.chasing) return CLOSE.pommelDist; // 유파 마음가짐 (11/19 — 거리): 내 칼 뒤 붙어 남는 동안은 손잡이 찍기 거리
     const L = this.level;
     let m = (this.mind ? mindMargin(this) : this.pers.margin) * (0.3 + 0.7 * this.patience) * (0.6 + 0.4 * L.discipline * (1 - 0.3 * this.anger)); // 화나면 규율이 흐트러진다 · 유파 마음가짐(11/18): 거리 — 집요함이 옮긴 몫까지
     if (this.guard?.name === 'alber') m -= 0.12; // 바보 자세: 머리를 비워 두고 조금 더 다가가 유인한다
@@ -1682,7 +1684,6 @@ export class AI {
   specStart(name) {
     const now = this.sense.t;
     (this.stats.specials ??= {})[name] = (this.stats.specials[name] ?? 0) + 1;
-    this.me.specialN = (this.me.specialN ?? 0) + 1; // 몸 셈 (11/18 유파 마음가짐 — 상대 AI 가 '특수 공격을 봄'으로 읽음 · 읽기만)
     if (this.specRun) this.specEnd(this.specRun, now, now); // (한 유파에 특수 공격 하나 — 오지 않는 길)
     this.specCool[name] = Infinity;
     this.specRun = { name, seq: this.atkSeq, t0: now, motion: null };
@@ -2663,6 +2664,18 @@ export class AI {
     }
     // 한 번 주고받았으니 다시 간을 본다 (인내심이 조금 돌아온다)
     this.patience = Math.max(this.patience, rand(0.45, 0.75) * (1 - 0.7 * this.anger)); // 화나면 간을 볼 참을성이 안 돌아온다
+    // 유파 마음가짐 (11/19 — 거리 [사장님 11/19 독일 '붙어서 싸운다']): 내 칼 뒤 stay 몫으로 물러나지 않고 붙어 남음 — stayT 동안 간 보는 거리 = 손잡이 찍기 거리(holdDist)
+    //  붙은 거리(CLOSE.startAI 안)에선 공격이 손잡이 찍기 · 밀치기로 (atkGate · closeCfg 그대로). 상대가 서서 칼을 쥐고 · 내가 칼을 쥔 때만
+    const stay = this.mind && this.foe.alive && this.foe.state === 'stand' && this.me.armed ? mindStay(this) : 0;
+    if (stay > 0 && Math.random() < stay) {
+      this.mode = 'watch';
+      this.phase = 'ready';
+      this.path.length = 0;
+      this.guardTimer = realS(rand(0.3, 0.8));
+      this.mindStayT = this.sense.t + MINDSET.stayT;
+      this.stats.mindStay = (this.stats.mindStay ?? 0) + 1;
+      return;
+    }
     this.startWithdraw((0.9 - 0.4 * this.obsession) * (this.planFree ? freeBackK(this) : 1)); // 물고 늘어질 땐 짧게만 물러난다 (막기는 그대로) · 무유파 플랜(3 단계): 붙어 두들김 — 짧게
   }
 
@@ -4435,7 +4448,7 @@ export class AI {
         }
         v = this.shuffle;
       }
-      v = msFeetV(this, v, d); // 간격과 박자 (11/17): 선 안으로 잔걸음 · 다가감이 기어 들지 않음 (유파 플랜 걸음 · 경계는 아래 그대로)
+      if (!(this.mindStayT > this.sense.t)) v = msFeetV(this, v, d); // 간격과 박자 (11/17): 선 안으로 잔걸음 · 다가감이 기어 들지 않음 (유파 플랜 걸음 · 경계는 아래 그대로) · 유파 마음가짐(11/19): 내 칼 뒤 붙어 남는 동안은 손잡이 찍기 거리까지 다가듦
       const GW = this.gnsW;
       if (this.plan && !this.chasing) v = this.planFeet(v, d, hold, dt); // 유파 플랜 걸음 (11/14 — 물러서기 · 멈춤 · 꾐 · 칼 맞대기 · 고노센 경계 줄보다 먼저: 경계가 이김)
       if (this.ibPlan) v = ibFeetV(this, v, d); // 이베리아 플랜 (2 단계): 칼끝 밖 무장 기다림 (고노센 경계 줄보다 먼저 — 경계가 이김 · 무 · 낮음의 선 넘기는 공통 W.reck 하나로)
