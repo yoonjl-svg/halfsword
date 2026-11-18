@@ -209,6 +209,8 @@ export function gnsProbe({ G, aiHi, aiLo, hiF, loF, dt }) {
   const done = () => {
     aiHi.secretGo = sg;
     aiHi.anticGo = ag;
+    // 판이 그 발도로 끝남 (결과를 읽기 전에 상대가 쓰러짐) — 맞힘으로 셈 · kill 표시
+    for (const f of fires) if (f.hit == null && (!loF.alive || loF.state === 'dead')) (f.hit = true), (f.kill = true);
     if (rdy) (rdy.end = 'end'), (rdy.dur = r3(G.t - rdy.t0)), (rdy.minD = r3(rdy.minD));
     for (const x of ready) x.waryT = r3(x.waryT);
     for (const x of foeAtkArmed) if (typeof x.maxCl !== 'number' || !Number.isFinite(x.maxCl)) x.maxCl = null; else x.maxCl = r3(x.maxCl);
@@ -242,7 +244,7 @@ export function funnelTable(rows) {
   const per = (f) => (sum(f) / N).toFixed(2);
   const add = (k) => G.reduce((o, g) => { for (const [a, v] of Object.entries(g[k] ?? {})) o[a] = (o[a] ?? 0) + v; return o; }, {});
   const ready = G.flatMap((g) => g.ready);
-  const fires = G.flatMap((g) => g.fires);
+  const fires = R.flatMap((r) => r.gns.fires.map((f) => (f.hit == null && r.result === 'hi' && r.endT - f.t < 0.6 ? { ...f, hit: true, kill: true } : f))); // 옛 판 기록: 발도로 판이 끝나 결과를 못 읽은 것 = 맞힘
   const lures = G.flatMap((g) => g.lures);
   const arms = G.flatMap((g) => g.arms);
   const fa = G.flatMap((g) => g.foeAtkArmed ?? []);

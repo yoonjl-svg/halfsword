@@ -155,7 +155,7 @@ function drawGate(me, why) {
  */
 function atkGate(ai, why, opt = {}) {
   if (!ai.me.armed || ai.me.stamina.exhausted || (ai.staminaRest)) return true; // 칼이 없으면 칠 수 없다
-  if (ai.planJp && !opt.secret && jpGnsDrawHold(ai)) return true; // 일본 고노센 (11/19): 칼집에 든 준비 — 뽑는 0.6 s 동안 상대 칼이 닿을 거리면 뽑아 치지 않음 (준비를 지킴 · 비기 셈이 냄)
+  if (ai.planJp && !opt.secret && jpGnsDrawHold(ai)) return true; // 일본 고노센 (11/19): 칼집에 든 준비 — 뽑는 0.6 s 동안 상대가 한 걸음에 닿을 거리면 뽑아 치지 않음 (준비를 지킴 · 비기 셈이 냄 · 조용한 상대 gnsWait 뒤엔 거둠)
   if (drawGate(ai.me, 'attack')) return true; // 11/16 뽑기 (SECRET.gnsDraw): 칼집에 든 채면 먼저 뽑음 · 뽑는 동안 공격 없음 — 끝나면 다시 고름
   if (!opt.chain && !opt.secret && !opt.passive && !opt.drill && !GAP_OPEN.has(why) && arcGapHold(ai)) return void (ai.stats.arcGap = (ai.stats.arcGap ?? 0) + 1), true; // ① 칼끝 틈 건너기 (11/15): 긴 칼 앞 내 칼끝 밖 보통 공격은 띠 기울기만큼 참음
   if (!opt.chain && !opt.secret && !opt.passive && !opt.drill && !DISC_OPEN.has(why) && discHold(ai)) return true; // 막기 2.0 공격 절제 (11/17 — ai_intercept.js discHold): 준비된 상대 칼끝이 내 줄이면 새 공격을 띠 기울기만큼 참음
