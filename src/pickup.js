@@ -3,8 +3,10 @@
 //   무기 주위로 가서 막기 버튼을 누르거나 혹은 주위로 가면 자동으로 줍게, 적은 추가 비용으로 개발이 가능한가?' — config PICKUP · 기록 docs/strike/kote_pickup_2026-11-05.md)
 //
 //  칼을 놓친 몸(fighter.dropSword — 손목 치기 떨굼 · 칼 팔을 크게 다침 · 판 이어하기)이 땅에 떨어진 제 칼 곁에 서면:
-//   · 사람: PICKUP.mode 'block' = 막기 단추(f.pickupPress — main.js · 재는 도구 손가락 봇) · 'auto' = 곁에 가면 저절로
-//   · AI: PICKUP.ai = aiPickup 이 제 칼로 걸어가 곁에서 같은 누름
+//   · 사람(humanInput — main.js 플레이어 · 재는 도구 손가락 봇): 칼자루가 골반 PICKUP.near 안이면 저절로(humanPickup — 11/18 사장님 '자동으로 줍게 하자') —
+//     그때부터 입력과 무관히 aiPickup 과 같은 길로 칼자루까지 걸어가 같은 누름 · 그동안 main.js 는 이동 · 공격 · 막기 입력을 버림(f.autoPick)
+//     칼 팔을 다쳐 놓친 칼(wreckedArm — 못 주움 그대로)은 놓친 때 한 줄(PICKUP_HOOKS.onArmDrop — main.js '칼 팔을 다쳐 칼을 쥘 수 없다')
+//   · AI: aiPickup 이 제 칼로 걸어가 곁에서 같은 누름
 //  흐름 (실제 초 — 시간 사다리):
 //   bend (PICKUP.bend 0.4 s): 칼 쪽으로 몸을 돌리며(f.pickup.face — fighter.updateHeading · 쥘 때까지) 웅크리고(f.pickW → secret_instant.js stanceTick 'pickup' — 골반 낮춤 · 몸통 숙임)
 //        칼 손 목표를 칼자루로(pickupHand — fighter.driveSword). 손이 칼자루 grab 안에 오거나 bend 가 차면 쥔다
@@ -30,11 +32,16 @@ const LOSE = 0.3; // 굽히는 동안 칼자루가 reach + 이만큼 넘게 멀�
 const smooth = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
 
 
+/** 칼 팔을 잃었거나 칼을 쥘 힘이 없다 (VITALS.dropSwordArm 밑 — 칼을 놓치는 문턱과 같음 · 주워도 곧 놓침) — 못 주움 (11/05 · 11/18 사장님 '못 줍는 규칙은 그대로') */
+export function wreckedArm(f) {
+  return !!f.severedLimbs?.has('armS') || !(f.limbs.armS >= VITALS.dropSwordArm);
+}
+
 /** 주울 수 있는 몸 · 칼인가 (칼은 땅에 있고 그 칼을 다시 쥘 수 있는 팔) */
 export function canPickup(f) {
   if (!f.alive || f.armed || !f.sword || f.revival || f.state !== 'stand') return false;
   if (f.flexWeapon) return false; // 휘는 마디 무기(채찍): 마디 강체가 따로 놀아 손잡이만 손으로 옮기면 마디 관절이 늘어난다
-  if (f.severedLimbs?.has('armS') || !(f.limbs.armS >= VITALS.dropSwordArm)) return false; // 칼 팔을 잃었거나 칼을 쥘 힘이 없다(주워도 곧 놓침)
+  if (wreckedArm(f)) return false; // 칼 팔을 잃었거나 칼을 쥘 힘이 없다(주워도 곧 놓침)
   if (f.stamina?.exhausted) return false;
   if (f.iai || f.rdWind) return false; // 비기 · 특수 공격 대본이 몸 · 칼을 쥔 동안(놓친 채 남은 대본)은 기다림
   const col = f.swordColliders?.[0];
@@ -190,7 +197,33 @@ export function pickupHand(f, target) {
 }
 
 /**
- * AI 줍기 (ai.js update 끝에서): 칼을 놓쳤고 주울 수 있으면 제 칼로 걸어가(스틱 = 몸 틀 앞 · 옆 몫) 곁에 서면 누른다(사람 'block' 과 같은 길).
+ * 칼자루로 다가가기 (AI · 사람 저절로 줍기 같은 길): 골반 ↔ 칼자루 수평 거리가 maxD 넘으면 아무것도 안 하고 false.
+ *  reach × 0.85 안이면 서서 누름 · 밖이면 칼자루 쪽으로 걸음(스틱 = 몸 틀 앞 · 옆 몫 · 다가갈수록 늦춤) — true
+ */
+function approachSword(me, maxD = Infinity) {
+  const p = me.bodies.pelvis.translation();
+  const g = gripPoint(me);
+  const dx = g.x - p.x;
+  const dz = g.z - p.z;
+  const d = Math.hypot(dx, dz);
+  if (d > maxD) return false;
+  if (d <= PICKUP.reach * 0.85) {
+    me.move.set(0, 0);
+    me.stickX = me.stickY = 0;
+    me.pickupPress = true;
+    return true;
+  }
+  const F = me.forward(_f);
+  const R = me.right(_r);
+  const k = Math.min(1, 0.35 + (d - PICKUP.reach * 0.85) / 0.6); // 다가갈수록 늦춤 (지나치지 않게)
+  me.move.set(((dx * R.x + dz * R.z) / d) * k, ((dx * F.x + dz * F.z) / d) * k);
+  me.stickX = me.move.x;
+  me.stickY = me.move.y;
+  return true;
+}
+
+/**
+ * AI 줍기 (ai.js update 끝에서): 칼을 놓쳤고 주울 수 있으면 제 칼로 걸어가(스틱 = 몸 틀 앞 · 옆 몫) 곁에 서면 누른다(사람 저절로 줍기와 같은 길).
  *  줍는 동안은 발을 멈춘다. 칼이 아직 떨어지는 중이거나(빠름) 못 줍는 칼이면 아무것도 안 함(오늘처럼 물러남)
  */
 export function aiPickup(ai) {
@@ -203,21 +236,38 @@ export function aiPickup(ai) {
     return;
   }
   if (!canPickup(me) || !swordSettled(me)) return;
-  const p = me.bodies.pelvis.translation();
-  const g = gripPoint(me);
-  const dx = g.x - p.x;
-  const dz = g.z - p.z;
-  const d = Math.hypot(dx, dz);
-  if (d <= PICKUP.reach * 0.85) {
-    me.move.set(0, 0);
-    me.stickX = me.stickY = 0;
-    me.pickupPress = true;
+  approachSword(me);
+}
+
+/** 사람 몸 알림 걸이 (main.js 가 채움): onArmDrop(f) = 칼 팔을 다쳐 칼을 놓친 때 한 번 (손목 치기 떨굼 · AI 몸은 안 부름) */
+export const PICKUP_HOOKS = { onArmDrop: null };
+
+/**
+ * 사람 저절로 줍기 (11/18 [사장님 11/18 결정] '자동으로 줍게 하자. 어차피 칼을 떨어트리면 할 수 있는 일이 없어. 일단 칼 근처로 가면 그 다음부터는 내 입력과 무관히 자동으로 다가가서 칼을 주움.'):
+ *  fighter.step(updateState 뒤 · pickupTick 앞)에서 사람 몸(humanInput · AI 가 몰지 않음)마다. 사람 입력(main.js — 프레임마다)이 둔 이동 · 누름을 이 스텝에서 덮는다.
+ *  · 칼을 놓친 채 주울 수 있는 칼(canPickup · swordSettled)이 골반 PICKUP.near(감독 안 1.5 m) 안이면 시작 → f.autoPick 을 세우고 aiPickup 과 같은 길(approachSword)로 걸어가 누름 →
+ *    줍는 동안(f.pickup — bend → lift → settle) 발을 멈춤 → 다시 쥐면 f.autoPick 을 걷고 손을 돌려줌. 그동안 main.js 는 이동 · 공격 · 막기 입력을 버린다(f.autoPick).
+ *  · 그만둠(손을 돌려줌): 넘어짐 · 죽음 · 못 줍는 칼(구름 · 칼 팔 다침 · 탈진 …) · 칼자루가 near + 0.3(걸음 사다리 한 칸 — 굽힘 그만둠 LOSE 와 같은 수) 넘게 멀어짐. 다시 near 안이면 또 시작.
+ *  · 막기 단추 누름(pickupPress)은 사람에게 쓰지 않는다 — 이 함수만 누름.
+ *  · 칼 팔을 다쳐 칼을 놓쳤으면(wreckedArm — 잘린 팔 포함 · 못 주움 그대로) 놓친 때 한 번 PICKUP_HOOKS.onArmDrop (f.armDropNotes 셈)
+ */
+export function humanPickup(f) {
+  const was = f.armedPrev ?? f.armed;
+  f.armedPrev = f.armed;
+  if (was && !f.armed && f.alive && !f.revival && wreckedArm(f)) {
+    f.armDropNotes = (f.armDropNotes ?? 0) + 1;
+    PICKUP_HOOKS.onArmDrop?.(f);
+  }
+  f.pickupPress = false;
+  if (f.pickup) {
+    f.autoPick ??= { t0: f.fightT };
+    f.move.set(0, 0);
+    f.stickX = f.stickY = 0;
     return;
   }
-  const F = me.forward(_f);
-  const R = me.right(_r);
-  const k = Math.min(1, 0.35 + (d - PICKUP.reach * 0.85) / 0.6); // 다가갈수록 늦춤 (지나치지 않게)
-  me.move.set(((dx * R.x + dz * R.z) / d) * k, ((dx * F.x + dz * F.z) / d) * k);
-  me.stickX = me.move.x;
-  me.stickY = me.move.y;
+  if (f.armed || !canPickup(f) || !swordSettled(f) || !approachSword(f, f.autoPick ? PICKUP.near + LOSE : PICKUP.near)) {
+    f.autoPick = null;
+    return;
+  }
+  f.autoPick ??= { t0: f.fightT };
 }
