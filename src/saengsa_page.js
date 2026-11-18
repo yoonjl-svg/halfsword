@@ -20,7 +20,7 @@ import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamO
 import { syncSaengsa, readSaengsa, playMine, claimChests, signUp, newSeed, saveResume } from './saengsa_store.js';
 import { fighterName, portraitOf, weaponName, weaponThumb, weaponInfo, SAENGSA_DATA, ownedWeapons, entryState, hireCostOf } from './saengsa_roster.js';
 import { makeNamelessFaces } from './saengsa_nameless.js';
-import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, clockText as clockWords, untilText, roundName, teamName, resultLine, myResultLine, nextMatchLine, outLine, chestLine, chestGot, injuryText, signupHours, entryLine } from './saengsa_text.js';
+import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, clockText as clockWords, untilText, roundName, teamName, resultLine, myResultLine, nextMatchLine, outLine, chestLine, chestGot, injuryText, signupHours, entryLine, shortLine } from './saengsa_text.js';
 import { makeEngine } from './saengsa_engine.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -147,7 +147,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
   on($('sgNextCup'), 'click', () => {
     const t0 = now(), d = readSaengsa().draft, entry = entryState();
     const res = signUp({ now: t0, companions: d.companions, seed: newSeed(), data: { ...SAENGSA_DATA, owned: entry.owned, hasTitle: entry.hasTitle, hireCostOf } });
-    if (!res.ok) { status({ coins: T.noCoins, busy: T.busy, team: T.pickTwo, entry: entryLine(entry.missing) }[res.why] ?? T.saveFail, 'alert'); return; }
+    if (!res.ok) { status(res.short?.length ? shortLine(res.short) : { busy: T.busy, team: T.pickTwo, entry: entryLine(entry.missing) }[res.why] ?? T.saveFail, 'alert'); return; } // 모자란 재화 (금화 · 머리 · 뿔피리 — 11/19)
     status(T.signed, 'notice');
     render({ scroll: true });
     $('sgHeading').focus({ preventScroll: true });

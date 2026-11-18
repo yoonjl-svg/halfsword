@@ -201,7 +201,7 @@ test('저장 왕복 · 신청(입장 조건 · 고용 금화 — 11/18 무기 �
   assert.equal(S.signUp({ now: at(29, 23), companions: ['a'], seed: 1, data }).why, 'team'); // 동료 둘
   assert.equal(P.readProgress().coins, 100);
   const ok = S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data }); // 11/18: 무기 없이 — 옛 weapons 를 넘겨도 쓰지 않음
-  assert.deepEqual([ok.ok, ok.cost, P.readProgress().coins], [true, 40, 60]);
+  assert.deepEqual([ok.ok, ok.cost, P.readProgress().coins], [true, { coins: 40, heads: 0, horns: 0 }, 60]); // 11/19: 값 = 금화 · 머리 · 뿔피리 합
   const t0 = S.readSaengsa().current;
   assert.deepEqual(t0.teams[0].members.map((f) => [f.weapon, f.school, f.tier]), [[null, null, null], [null, null, null], [null, null, null]]); // 내 팀은 무기 없이 대회에 듦
   assert.equal(S.validTournament(t0), true, '무기 없는 내 팀도 저장 모양이 맞음');
@@ -667,4 +667,85 @@ test('쥘리아 생사전 몫 (사장님 10/30 22:1x \'상점주인이자 방랑
   assert.deepEqual([a.distance, a.feint, a.counter, a.wounded, a.team.target], [0.45, 0.84, 0.481, 'withdraw', 'weakest'], '최신 본판 쥘리아 시트의 간격 · 속임 · 받아치기와 일치 — 실제 AI는 유지');
   assert.ok(b !== a && b.press > a.press && b.patience < a.patience && b.composure === 1 && b.finisher === 1, '얼터: 더 차갑고 끈질김');
   assert.equal(T.temperamentOf('minami_mad'), T.temperamentOf('minami'), '다른 얼터는 원본 칸 그대로');
+});
+
+test('고용 값 덤 (사장님 11/19 \'숙련 6 캐릭터들은 금화에 더해 뿔피리 1개로 가격 책정. 5 캐릭은 금화에 더해 머리 1~3개 랜덤\'): 규칙 · 그날 안에는 같은 값 · 날마다 다시', async () => {
+  const roster = await import('../../src/saengsa_roster.js');
+  const T = await import('../../src/saengsa_text.js');
+  assert.deepEqual(SAENGSA.hire, { base: 20, step: 20, extra: { 6: { horns: [1, 1] }, 5: { heads: [1, 3] } } });
+  // 규칙: 금화 = 20 + 20 × 가장 높은 숙련도(그대로) · 6 = 뿔피리 1 · 5 = 머리 1 ~ 3 · 그 밖 덤 없음
+  assert.deepEqual(R.hireCost(6, { id: 'x', day: '2026-11-19' }), { coins: 140, horns: 1 });
+  assert.deepEqual(R.hireCost(4, { id: 'x', day: '2026-11-19' }), { coins: 100 });
+  assert.deepEqual(R.hireCost(0, { id: 'x', day: '2026-11-19' }), { coins: 20 });
+  const days = Array.from({ length: 60 }, (_, i) => C.shiftDay('2026-11-01', i));
+  const seen = new Set();
+  for (const day of days) for (const id of ['a', 'b', 'c']) {
+    const c = R.hireCost(5, { id, day });
+    assert.equal(c.coins, 120);
+    assert.equal(c.horns, undefined);
+    assert.ok(Number.isInteger(c.heads) && c.heads >= 1 && c.heads <= 3, `${id} ${day} 머리 ${c.heads}`);
+    assert.deepEqual(R.hireCost(5, { id, day }), c, '같은 날 · 같은 인물 = 같은 값');
+    seen.add(c.heads);
+  }
+  assert.deepEqual([...seen].sort(), [1, 2, 3], '날 · 인물마다 1 · 2 · 3 이 다 나옴');
+  const byDay = new Set(days.map((day) => R.hireCost(5, { id: 'a', day }).heads));
+  assert.ok(byDay.size > 1, '날이 바뀌면 다시 굴림');
+  // 로스터: 가장 높은 숙련도 6 → 뿔피리 1 · 5 → 머리 1 ~ 3 · 무명 검객 덤 없음 · 같은 날은 몇 번을 불러도 같음 · day 를 안 주면 지금 신청 창의 날
+  const day = C.signupWindow(at(29, 23)).day;
+  let six = 0, five = 0;
+  for (const id of roster.SAENGSA_ROSTER) {
+    const best = Math.max(...Object.values(roster.profOf(id))), c = roster.hireCostOf(id, day);
+    assert.equal(c.coins, SAENGSA.hire.base + SAENGSA.hire.step * best, id);
+    assert.equal(c.horns, best === 6 ? 1 : undefined, `${id} 뿔피리`);
+    assert.ok(best === 5 ? c.heads >= 1 && c.heads <= 3 : c.heads === undefined, `${id} 머리`);
+    assert.deepEqual(roster.hireCostOf(id, day), c);
+    six += best === 6; five += best === 5;
+  }
+  assert.ok(six > 0 && five > 0, `숙련 6 ${six} · 5 ${five}`);
+  assert.deepEqual(roster.hireCostOf(R.NAMELESS, day), { coins: 20 });
+  assert.equal(roster.hireDay(at(30, 1, 30)), roster.hireDay(at(29, 22, 10)), '자정을 넘어도 그 신청 창의 날');
+  // 화면 글 (화면 읽기 · 모자란 것 — ~습니다)
+  assert.equal(T.hireLine({ coins: 140, horns: 1 }), '고용 금화 140 · 뿔피리 1');
+  assert.equal(T.hireLine({ coins: 120, heads: 2 }), '고용 금화 120 · 머리 2');
+  assert.equal(T.hireLine(40), '고용 금화 40');
+  assert.deepEqual([T.shortLine(['heads']), T.shortLine(['horns', 'coins']), T.shortLine(['coins', 'heads', 'horns']), T.shortLine([])], ['머리가 모자랍니다.', '금화와 뿔피리가 모자랍니다.', '금화 · 머리 · 뿔피리가 모자랍니다.', '']);
+});
+
+test('고용 값 내기 (11/19): 신청은 금화 · 머리 · 뿔피리를 한꺼번에 · 하나라도 모자라면 신청 안 됨(아무것도 안 냄) · 돌려줄 때 셋 모두 · 번 것 그대로', () => {
+  mem.clear();
+  mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1 })); // 빈 저장 (열쇠가 없으면 앞 시험의 대회를 쥐고 있음)
+  const OWNED = ['tree_branch', 'druid_whip', 'w1', 'w2', 'w3'];
+  const days = [];
+  const cost = { a: { coins: 140, horns: 1 }, b: { coins: 120, heads: 2 } };
+  const data = { ...DATA, owned: OWNED, hasTitle: true, hireCostOf: (id, day) => { days.push(day); return cost[id]; } };
+  const wallet = () => { const p = P.readProgress(); return { coins: p.coins, heads: p.heads, horns: p.horns }; };
+  P.setCoins(300); P.setHeads(1); P.setHorns(0);
+  const earned0 = structuredClone(P.readProgress().earned);
+  // 머리 · 뿔피리가 모자람 → 신청 안 됨 · 지갑 그대로 · 대회 없음 · 모자란 것 모두(차례 금화 · 머리 · 뿔피리)
+  let r = S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data });
+  assert.deepEqual([r.ok, r.why, r.short, r.cost], [false, 'heads', ['heads', 'horns'], { coins: 260, heads: 2, horns: 1 }]);
+  assert.deepEqual(wallet(), { coins: 300, heads: 1, horns: 0 });
+  assert.equal(S.readSaengsa().current, null);
+  assert.ok(days.length === 2 && days.every((d) => d === C.signupWindow(at(29, 23)).day), '신청 창의 날을 넘김 (고르기 카드와 같은 값)');
+  P.setHeads(5);
+  r = S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data });
+  assert.deepEqual([r.why, r.short], ['horns', ['horns']]);
+  P.setCoins(100); P.setHorns(3);
+  r = S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data });
+  assert.deepEqual([r.why, r.short], ['coins', ['coins']]);
+  assert.deepEqual(wallet(), { coins: 100, heads: 5, horns: 3 });
+  // 다 있으면 셋을 한 번에 냄
+  P.setCoins(300);
+  r = S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data });
+  assert.equal(r.ok, true);
+  assert.deepEqual(wallet(), { coins: 40, heads: 3, horns: 2 });
+  assert.ok(S.readSaengsa().current);
+  // 돌려주기 (신청 저장 실패 때 signUp 이 쓰는 길): 셋 모두 · payHire 의 거꾸로 · 모자라면 payHire 는 아무것도 안 냄
+  assert.equal(S.refundHire(r.cost), true);
+  assert.deepEqual(wallet(), { coins: 300, heads: 5, horns: 3 });
+  assert.deepEqual(S.payHire({ coins: 10, heads: 9, horns: 0 }), { ok: false, short: ['heads'] });
+  assert.deepEqual(wallet(), { coins: 300, heads: 5, horns: 3 });
+  assert.deepEqual(S.payHire({ coins: 10, heads: 1, horns: 1 }), { ok: true, short: [] });
+  assert.deepEqual(wallet(), { coins: 290, heads: 4, horns: 2 });
+  assert.deepEqual(P.readProgress().earned, earned0, '번 것(도살자 · 대부호 셈)은 내고 돌려받아도 그대로');
 });

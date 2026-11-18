@@ -42,7 +42,6 @@ export const SAENGSA_TEXT = Object.freeze({
   willSign: '입장하면 이 팀으로 신청합니다.', // 옛 규칙(SAENGSA.instant false — 아침 10시 첫 대진)
   willSignNow: '입장하면 이 팀으로 첫 경기가 시작됩니다.', // 바로 시작 (사장님 11/12 '참여하면 바로 시작') · 글은 사장님 11/12 08:0x 문장 그대로
   signed: '생사전에 신청했습니다.',
-  noCoins: '금화가 모자랍니다.',
   busy: '진행 중인 대회가 있습니다.',
   saveFail: '저장하지 못했습니다. 다시 시도해 주십시오.',
   notReady: '지금은 이 경기를 할 수 없습니다.',
@@ -112,7 +111,19 @@ export const chestLine = (n) => `${SAENGSA_TEXT.chest} ${n}개를 열 수 있습
 export const chestGot = (coins) => `${SAENGSA_TEXT.chest}에서 금화 ${coins.toLocaleString('ko-KR')}을 받았습니다.`;
 /** 고르기 카드 화면 읽기 글 — '가진 일본 무기 2개' (카드에는 '일본 2') */
 export const schoolCountLine = (school, n) => `가진 ${school} 무기 ${n}개`;
-/** 고용 값 줄 */
-export const hireLine = (coins) => `고용 금화 ${coins.toLocaleString('ko-KR')}`;
+/** 재화 이름 (고용 값 · 모자란 것 — 지갑 열쇠 차례 금화 · 머리 · 뿔피리) */
+export const CURRENCY_KO = Object.freeze({ coins: '금화', heads: '머리', horns: '뿔피리' });
+const COST_KEYS = Object.keys(CURRENCY_KO);
+/** 고용 값 줄 (화면 읽기 글): 수(금화만) 또는 { coins, heads?, horns? } — '고용 금화 140 · 뿔피리 1' (11/19 덤) */
+export const hireLine = (cost) => {
+  const c = typeof cost === 'number' ? { coins: cost } : cost ?? {};
+  return `고용 ${COST_KEYS.filter((k) => c[k]).map((k) => `${CURRENCY_KO[k]} ${c[k].toLocaleString('ko-KR')}`).join(' · ') || `${CURRENCY_KO.coins} 0`}`;
+};
+/** 모자란 재화 한 줄 (신청 · 고르기 안내 — 11/19): '머리가 모자랍니다.' · '금화와 뿔피리가 모자랍니다.' · '금화 · 머리 · 뿔피리가 모자랍니다.' (세 이름 모두 받침 없음 — 와 · 가) */
+export const shortLine = (short) => {
+  const ns = COST_KEYS.filter((k) => (short ?? []).includes(k)).map((k) => CURRENCY_KO[k]);
+  if (!ns.length) return '';
+  return `${ns.length === 2 ? `${ns[0]}와 ${ns[1]}` : ns.join(' · ')}가 모자랍니다.`;
+};
 /** 입장 조건에서 모자란 것 (saengsa_rules.js entryMissing — 사장님 10/29 18:2x): '정복자 호칭이 필요합니다 · 무기 5개가 필요합니다 (지금 2개)' */
 export const entryLine = (missing) => missing.map((x) => (x.kind === 'title' ? `${titleName(SAENGSA.entry.title)} 호칭이 필요합니다` : `무기 ${x.need}개가 필요합니다 (지금 ${x.have}개)`)).join(' · ');

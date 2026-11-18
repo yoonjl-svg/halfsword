@@ -9,7 +9,8 @@
 //  숙련도: 인물 = saengsa_proficiency.js proficiencyOf(character_temperament.js 표) · 무명 검객 = 대회마다 새로(saengsa_rules.js makeNameless — 사장님 10/29 18:2x) ·
 //   나 = 스킬트리 — 그 유파에서 익힌 칸 수로(11/16 사장님 '사람 셈도 문턱 기준으로 바꿔' — 5 · 7 · 9 · 11 칸 · 전 10/29 17:5x · 18:1x — config SAENGSA.playerProf · 확인표 2792 · 4599 ~) · 무유파 무기는 빠른 셈 규칙(saengsa_rules.js profFor)
 //  고용 금화 (사장님 10/29 14:5x '동료를 고용할 때 금화를 내는 걸로' · 15:5x '고용비는 그대로 둬'): SAENGSA.hire.base + step × 가장 높은 숙련도 ·
-//   무명 검객 = SAENGSA.nameless.hire (15:5x '무명 검객은 고용비 20') — 특별 동료(특별한 증표로 고용 — 나중)는 { token } 자리만
+//   11/19 덤 (사장님 '숙련 6 캐릭터들은 금화에 더해 뿔피리 1개 … 5 캐릭은 금화에 더해 머리 1~3개 랜덤'): SAENGSA.hire.extra — 수는 신청 창의 날 + 인물로 (saengsa_rules.js hireCost) ·
+//   무명 검객 = SAENGSA.nameless.hire (15:5x '무명 검객은 고용비 20' · 덤 없음) — 특별 동료(특별한 증표로 고용 — 나중)는 { token } 자리만
 import { SAENGSA } from './config.js';
 import { CHARACTERS_BY_ID } from './characters.js';
 import { WEAPON_LIST, RETIRED_WEAPONS, getWeapon, drawWeaponCards, TIER_DRAW, BREAK } from './weapons.js';
@@ -20,7 +21,8 @@ import { ownedWeapons } from './owned_weapons.js';
 import { readProgress } from './lobby_progress.js';
 import { readProfile } from './player_profile.js';
 import { proficiencyOf } from './saengsa_proficiency.js';
-import { NAMELESS, entryMissing } from './saengsa_rules.js';
+import { NAMELESS, entryMissing, hireCost } from './saengsa_rules.js';
+import { clockFrom, signupWindow } from './saengsa_clock.js';
 import { namelessFace } from './saengsa_nameless.js';
 import { SAENGSA_TEXT, CLOTH_KO } from './saengsa_text.js';
 
@@ -89,13 +91,18 @@ export function entryState() {
 export { playerProficiency };
 /** 인물(또는 'player') → 숙련도 */
 export const profOf = (id) => (id === 'player' ? playerProficiency() : proficiencyOf(id));
-/** 고용 값: { coins } (특별 동료면 { token }) */
-export function hireCostOf(id) {
+/** 지금 신청 창의 날 (고용 덤 수의 씨앗 — 주소 saengsaNow 시각을 따름 · 그 창 동안 같은 날) */
+export const hireDay = (t = clockFrom()()) => signupWindow(t).day;
+/**
+ * 고용 값: { coins, heads?, horns? } (특별 동료면 { token }) — day = 신청 창의 날(hireDay — 고르기 카드 · 칸 · 신청이 같은 날을 넘김: 보이는 값 = 내는 값).
+ *  무명 검객 · 특별 동료는 덤 없음 (사장님 11/19 — 숙련 6 · 5 인물만)
+ */
+export function hireCostOf(id, day = hireDay()) {
   const special = SPECIAL_COMPANIONS.find((c) => c.id === id);
   if (special) return { token: special.token };
   if (id === NAMELESS) return { coins: SAENGSA.nameless.hire };
   const best = Math.max(...Object.values(proficiencyOf(id)));
-  return { coins: SAENGSA.hire.base + SAENGSA.hire.step * best };
+  return hireCost(best, { id, day });
 }
 /** 화면 이름 (나 = 대기실 이름) */
 export const nameOf = (id) => (id === 'player' ? readProfile().name : id === NAMELESS ? SAENGSA_TEXT.nameless : CHARACTERS_BY_ID[id]?.name ?? id);

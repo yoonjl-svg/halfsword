@@ -180,6 +180,32 @@ export function aiArm(team, cfg = SAENGSA) {
   return !!best;
 }
 
+// ── 고용 값 (사장님 10/29 14:5x '동료를 고용할 때 금화를 내는 걸로' · 11/19 '숙련 6 캐릭터들은 금화에 더해 뿔피리 1개로 가격 책정. 5 캐릭은 금화에 더해 머리 1~3개 랜덤') ──
+/** 고용에 쓰는 재화 차례 (금화 · 머리 · 뿔피리 — lobby_progress.js 지갑 열쇠) */
+export const HIRE_CURRENCIES = Object.freeze(['coins', 'heads', 'horns']);
+/**
+ * 이름난 인물 고용 값: best = 그 인물의 가장 높은 숙련도 → { coins, heads?, horns? } (덤이 없으면 그 열쇠도 없음).
+ *  금화 = hire.base + hire.step × best (그대로) · 덤 = hire.extra[best] 의 [적어도, 많아야] 에서 씨앗 난수 hash32('hire', day, id) —
+ *  day = 신청 창의 날(saengsa_clock.js signupWindow().day — 자정을 넘어도 그 창 동안 같음) · 같은 날 · 같은 인물이면 어디서 보아도 같은 값 · 날이 바뀌면 다시 굴림 (Math.random 안 씀)
+ */
+export function hireCost(best, { id = '', day = '' } = {}, cfg = SAENGSA) {
+  const H = cfg.hire, out = { coins: H.base + H.step * best };
+  const ex = H.extra?.[best];
+  if (!ex) return out;
+  const r = rng(hash32('hire', day, id));
+  for (const k of HIRE_CURRENCIES) {
+    if (!ex[k]) continue;
+    const [lo, hi] = ex[k];
+    const n = lo + Math.min(hi - lo, Math.floor(r() * (hi - lo + 1)));
+    if (n > 0) out[k] = n;
+  }
+  return out;
+}
+/** 고용 값 여럿의 합 → { coins, heads, horns } (없는 재화는 0 · 특별 동료 { token } 은 0) */
+export const sumCost = (costs) => Object.fromEntries(HIRE_CURRENCIES.map((k) => [k, (costs ?? []).reduce((s, c) => s + (c?.[k] ?? 0), 0)]));
+/** 지갑 { coins, heads, horns } 으로 cost 를 낼 때 모자란 재화 (차례 금화 · 머리 · 뿔피리 — 빈 목록이면 낼 수 있음) */
+export const shortOf = (wallet, cost) => HIRE_CURRENCIES.filter((k) => (wallet?.[k] ?? 0) < (cost?.[k] ?? 0));
+
 // ── 입장 조건 · 무기 배정 (사장님 10/29 18:2x) ──
 /** 입장(신청) 조건에서 모자란 것: [{ kind 'title' }, { kind 'weapons', have, need }] — 빈 목록이면 됨. hasTitle = 호칭(cfg.entry.title)을 가졌나 · owned = 가진 무기 수 */
 export function entryMissing({ hasTitle, owned }, cfg = SAENGSA) {

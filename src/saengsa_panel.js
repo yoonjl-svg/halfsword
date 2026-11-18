@@ -13,12 +13,12 @@
 //   열린 때 밖(새로 들어갈 수 없음 · 이어 할 대회도 없음)에는 '생사전 입장'이 꺼지고 일정 알약이 다음 열림 · 지난 대회가 있으면 '대진표'로 보기만 · 시작한 대회는 새벽 2시 뒤에도 '생사전 입장'으로 이어 함.
 import { SAENGSA } from './config.js';
 import { clockFrom, signupWindow } from './saengsa_clock.js';
-import { scheduleState, canSignUp, myMatch, myTeamOut, sidesOf, winnerOf, readyAt, matchState, chestCount, seatOrder, noWait, NAMELESS, toggleCompanion } from './saengsa_rules.js';
+import { scheduleState, canSignUp, myMatch, myTeamOut, sidesOf, winnerOf, readyAt, matchState, chestCount, seatOrder, noWait, NAMELESS, toggleCompanion, sumCost, shortOf } from './saengsa_rules.js';
 import { syncSaengsa, readSaengsa, saveDraft, signUp, newSeed } from './saengsa_store.js';
 import { SAENGSA_DATA, HIRE_ROSTER, entryState, hireCostOf, nameOf, spokenName, fighterName, portraitOf, weaponName, hireSchoolOf, ownedBySchool } from './saengsa_roster.js';
 import { makeNamelessFaces } from './saengsa_nameless.js';
-import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, signupHours, nextMatchLine, outLine, chestLine, hireLine, roundName, teamName, entryLine, schoolCountLine } from './saengsa_text.js';
-import { COIN_ICON } from './wallet_icons.js';
+import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, signupHours, nextMatchLine, outLine, chestLine, hireLine, shortLine, roundName, teamName, entryLine, schoolCountLine } from './saengsa_text.js';
+import { COIN_ICON, POUCH_ICON, HORN_ICON } from './wallet_icons.js'; // 금화 · 머리 · 뿔피리 그림 (대기실 지갑과 같은 그림 — 고용 값 11/19)
 // 칼 표 — 인물 카드의 '가진 그 유파 무기 수' 앞 (사장님 11/18 — '독일 3' 이 숙련도 3 으로 읽히지 않게). 대기실 고르개 표(lobby.js CHEVRON · CHECK)와 같은 꼴: 선 · 글자 색 · 둥근 끝.
 //  칼날(굵게) · 짧은 코등이 · 손잡이 · 둥근 머리 — 코등이를 길게 그리면 9 px 에서 '×'(곱하기)로 읽혀 짧게 (견본으로 봄)
 const SWORD = '<svg class="sg-sword" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1 4.4 5.6" stroke-width="1.7"/><path d="M3.2 4.7l2.1 2.1M4.3 5.7 2.2 7.8" stroke-width="1.3"/><circle cx="1.6" cy="8.4" r="1" fill="currentColor" stroke="none"/></svg>';
@@ -34,12 +34,12 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
   host.innerHTML = `<div class="sg-body"><p class="sg-desc">${esc(T.desc)}</p>
     <div class="sg-team" role="group" aria-label="${T.myTeam}"><div class="sg-slot" data-slot="0" data-me></div>${[1, 2].map((i) => `<button type="button" class="sg-slot" data-slot="${i}"></button>`).join('')}</div>
     <p class="sg-note" id="sgNote"></p></div>
-    <div class="sg-foot"><span class="sg-cost wallet" id="sgCost" hidden>${COIN_ICON}<b></b></span><button type="button" class="secondary small sg-look" id="sgLook" hidden>${T.bracket}</button><button type="button" class="primary sg-enter" id="saengsaEnter">${T.enter}</button></div>
+    <div class="sg-foot"><span class="sg-cost wallet" id="sgCost" hidden></span><button type="button" class="secondary small sg-look" id="sgLook" hidden>${T.bracket}</button><button type="button" class="primary sg-enter" id="saengsaEnter">${T.enter}</button></div>
     <section class="sg-picker" id="sgPicker" hidden aria-labelledby="sgPickTitle"><button type="button" class="detail-close" id="sgPickClose" aria-label="닫기">×</button>
       <b class="sg-pick-title" id="sgPickTitle" tabindex="-1">${T.pick}</b>
       <div class="sg-pick-main"><div class="sg-roster" id="sgRoster" role="listbox" aria-multiselectable="true" aria-label="${T.pick}"></div>
         <section class="sg-owned" aria-labelledby="sgOwnedTitle"><b class="sg-owned-title" id="sgOwnedTitle">${T.owned}</b><div class="sg-owned-list" id="sgOwned"></div></section></div>
-      <div class="sg-pick-actions"><span class="sg-cost wallet" id="sgPickCost">${COIN_ICON}<b></b></span><button type="button" class="primary" id="sgPickOk">${T.confirm}</button></div>
+      <div class="sg-pick-actions"><span class="sg-cost wallet" id="sgPickCost"></span><button type="button" class="primary" id="sgPickOk">${T.confirm}</button></div>
     </section>`;
   const $ = (sel) => host.querySelector(sel), events = new AbortController();
   const on = (el, type, fn) => el.addEventListener(type, fn, { signal: events.signal });
@@ -48,7 +48,9 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
   let view = null; // 지금 그린 것 { editable, draft, t, blocked, cost }
 
   const draftOf = () => readSaengsa().draft;
-  const costOf = (ids) => ids.filter(Boolean).reduce((s, id) => s + (hireCostOf(id).coins ?? 0), 0);
+  const dayNow = () => signupWindow(now()).day; // 고용 덤 수의 씨앗 = 이 신청 창의 날 (signUp 과 같은 날 — 보이는 값 = 내는 값)
+  const costOf = (ids, day = dayNow()) => sumCost(ids.filter(Boolean).map((id) => hireCostOf(id, day))); // { coins, heads, horns }
+  const anyCost = (c) => c.coins + c.heads + c.horns > 0;
   /** 인물의 유파 줄 ('일본' + 가진 그 유파 무기 수 — saengsa_roster.js hireSchoolOf) — 무명 검객 · 모르는 인물은 null */
   const schoolOf = (id, owned) => { const s = hireSchoolOf(id); return s ? { s, n: owned[s]?.length ?? 0 } : null; };
   function slotHtml({ id, sub = '', price, empty, cloth = 0, name = nameOf(id) }) {
@@ -56,7 +58,12 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
     // 칸 = 얼굴 · 이름 · (유파 또는 든 무기 · 고용 금화) — '나' · '동료' 는 칸 자리로 읽히고 화면 읽기 글(aria-label)에 있다
     return `<img class="sg-slot-face" src="${esc(portraitOf(id, cloth))}" alt="" draggable="false"><span class="sg-slot-body"><b class="sg-slot-name">${esc(name)}</b><span class="sg-slot-meta"><small class="sg-slot-sub">${esc(sub)}</small>${price ?? ''}</span></span>`;
   }
-  const priceHtml = (id) => { const c = hireCostOf(id); return c.coins != null ? `<span class="sg-price">${COIN_ICON}${c.coins}</span>` : ''; };
+  // 고용 값 그림 + 수 (금화 · 머리 · 뿔피리 — 있는 것만 · 11/19 덤): 인물 카드 · 칸은 작게(.sg-price) · 합은 크게(.sg-cost — 대기실 지갑 꼴)
+  const ICONS = { coins: COIN_ICON, heads: POUCH_ICON, horns: HORN_ICON };
+  const costParts = (c, cls) => ['coins', 'heads', 'horns'].filter((k) => c[k] != null && (k === 'coins' || c[k] > 0)).map((k) => `<span class="${cls}" data-cur="${k}">${ICONS[k]}<b>${c[k].toLocaleString('ko-KR')}</b></span>`).join('');
+  const priceHtml = (id, day = dayNow()) => { const c = hireCostOf(id, day); return c.coins != null ? `<span class="sg-prices">${costParts(c, 'sg-price')}</span>` : ''; };
+  /** 합 칸(#sgCost · #sgPickCost): 셋을 모두 더한 값 · 없으면 숨김 */
+  const paintCost = (el, c) => { el.hidden = !anyCost(c); el.innerHTML = costParts(c, 'sg-cur'); el.setAttribute('aria-label', hireLine(c)); };
 
   function render() {
     const t0 = now(), st = syncSaengsa(t0), t = st.current, sched = scheduleState(t0, t), w = signupWindow(t0);
@@ -70,23 +77,21 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
     $('#saengsaEnter').disabled = blocked || shut; // 입장 조건을 못 채움 — 신청은 못 하고 대진표 보기만(사장님 10/29 18:2x)
     $('#sgLook').hidden = !(blocked || (shut && t));
     if (editable) {
-      // 신청 전: 고른 것(draft) — '나' 칸은 보이기만 · 동료 칸 = 본 유파 · 고용 금화
-      const ids = ['player', ...draft.companions], owned = ownedBySchool(entry.owned);
+      // 신청 전: 고른 것(draft) — '나' 칸은 보이기만 · 동료 칸 = 본 유파 · 고용 값(금화 + 덤)
+      const ids = ['player', ...draft.companions], owned = ownedBySchool(entry.owned), day = signupWindow(t0).day;
       slots.forEach((b, i) => {
         const id = ids[i], sc = i && id ? schoolOf(id, owned) : null;
         if (i) b.disabled = false;
         b.dataset.state = id ? 'set' : 'empty';
-        b.innerHTML = slotHtml({ id, empty: !id, sub: sc ? SCHOOL_KO[sc.s] : '', price: id && i ? priceHtml(id) : '', cloth: i - 1 }); // 내 무명 검객 옷 색 = 자리 1 → 줄 0 · 자리 2 → 줄 1 (saengsa_rules.js createTournament 와 같게)
-        const price = id && i ? hireCostOf(id).coins : null;
-        b.setAttribute('aria-label', id ? `${i ? T.companion : T.me} · ${spokenName(id, i - 1)}${sc ? ` · ${SCHOOL_KO[sc.s]}` : ''}${price != null ? ` · ${hireLine(price)}` : ''}` : T.pick);
+        b.innerHTML = slotHtml({ id, empty: !id, sub: sc ? SCHOOL_KO[sc.s] : '', price: id && i ? priceHtml(id, day) : '', cloth: i - 1 }); // 내 무명 검객 옷 색 = 자리 1 → 줄 0 · 자리 2 → 줄 1 (saengsa_rules.js createTournament 와 같게)
+        const price = id && i ? hireCostOf(id, day) : null;
+        b.setAttribute('aria-label', id ? `${i ? T.companion : T.me} · ${spokenName(id, i - 1)}${sc ? ` · ${SCHOOL_KO[sc.s]}` : ''}${price?.coins != null ? ` · ${hireLine(price)}` : ''}` : T.pick);
       });
-      const cost = costOf(draft.companions);
+      const cost = costOf(draft.companions, day);
       view.cost = cost;
-      $('#sgCost').hidden = !cost;
-      $('#sgCost b').textContent = cost.toLocaleString('ko-KR');
-      $('#sgCost').setAttribute('aria-label', hireLine(cost));
-      const full = draft.companions.every(Boolean), poor = readProgress().coins < cost;
-      $('#sgNote').textContent = blocked ? entryLine(entry.missing) : !w.open ? signupHours(w.from, w.to) : !full ? T.pickTwo : poor ? T.noCoins : noWait() ? T.willSignNow : T.willSign;
+      paintCost($('#sgCost'), cost);
+      const full = draft.companions.every(Boolean), short = shortOf(readProgress(), cost), poor = short.length > 0;
+      $('#sgNote').textContent = blocked ? entryLine(entry.missing) : !w.open ? signupHours(w.from, w.to) : !full ? T.pickTwo : poor ? shortLine(short) : noWait() ? T.willSignNow : T.willSign;
       $('#sgNote').dataset.tone = blocked || (w.open && full && poor) ? 'alert' : '';
     } else {
       // 신청한 대회 (또는 끝난 대회): 그 팀 그대로 · 누를 수 없음 · 둘째 줄 = 지금 든 무기(첫 경기 무기 배정 전에는 빈칸)
@@ -129,20 +134,17 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
     $('#sgPickTitle').focus({ preventScroll: true });
   }
   function drawPicker() {
-    const ids = picker.ids, full = ids.length >= MAX, owned = ownedBySchool(entryState().owned);
+    const ids = picker.ids, full = ids.length >= MAX, owned = ownedBySchool(entryState().owned), day = dayNow();
     $('#sgRoster').innerHTML = HIRE_ROSTER.map((id) => {
       const at = ids.flatMap((x, k) => (x === id ? [k] : [])); // 고른 자리 (무명 검객은 둘일 수 있음)
       const on = at.length > 0, shut = full && !on; // 둘을 다 골랐으면 고르지 않은 카드는 흐리게(누르면 아무 일 없음)
-      const sc = schoolOf(id, owned), price = hireCostOf(id).coins;
+      const sc = schoolOf(id, owned), price = hireCostOf(id, day);
       const badge = at.map((k) => `<i>${k + 1}</i>`).join('');
       const school = sc ? `<span class="sg-pick-school">${SCHOOL_KO[sc.s]} <span class="sg-pick-own"${sc.n ? '' : ' data-none'}>${SWORD}<b>${sc.n}</b></span></span>` : '<span class="sg-pick-school"></span>';
-      const label = `${nameOf(id)}${sc ? ` · ${schoolCountLine(SCHOOL_KO[sc.s], sc.n)}` : ''}${price != null ? ` · ${hireLine(price)}` : ''}${on ? ` · ${at.map((k) => `${T.companion} ${k + 1}`).join(' · ')}` : ''}`;
-      return `<button type="button" class="sg-pick" role="option" data-id="${id}" aria-selected="${on}"${shut ? ' aria-disabled="true" data-shut' : ''} aria-label="${esc(label)}">${badge ? `<span class="sg-order" aria-hidden="true">${badge}</span>` : ''}<img src="${esc(portraitOf(id, at[0] ?? 0))}" alt="" draggable="false"><span class="sg-pick-name">${esc(nameOf(id))}</span>${school}${priceHtml(id)}</button>`;
+      const label = `${nameOf(id)}${sc ? ` · ${schoolCountLine(SCHOOL_KO[sc.s], sc.n)}` : ''}${price.coins != null ? ` · ${hireLine(price)}` : ''}${on ? ` · ${at.map((k) => `${T.companion} ${k + 1}`).join(' · ')}` : ''}`;
+      return `<button type="button" class="sg-pick" role="option" data-id="${id}" aria-selected="${on}"${shut ? ' aria-disabled="true" data-shut' : ''} aria-label="${esc(label)}">${badge ? `<span class="sg-order" aria-hidden="true">${badge}</span>` : ''}<img src="${esc(portraitOf(id, at[0] ?? 0))}" alt="" draggable="false"><span class="sg-pick-name">${esc(nameOf(id))}</span>${school}${priceHtml(id, day)}</button>`;
     }).join('');
-    const cost = costOf(ids);
-    $('#sgPickCost').hidden = !cost;
-    $('#sgPickCost b').textContent = cost.toLocaleString('ko-KR');
-    $('#sgPickCost').setAttribute('aria-label', hireLine(cost));
+    paintCost($('#sgPickCost'), costOf(ids, day)); // 합 = 금화 · 머리 · 뿔피리 셋 모두 (11/19)
   }
   /** 가진 무기 (보기만 — 유파마다 한 묶음 · 이름은 감아 여러 줄 · 묶음 사이는 조금 띄움 · 유파 이름은 화면에 쓰지 않음 — 사장님 11/18 · 화면 읽기 글에만) */
   function drawOwned() {
@@ -183,7 +185,7 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
       if (entry.missing.length) { status(entryLine(entry.missing)); render(); return; }
       if (!d.companions.every(Boolean)) { status(T.pickTwo); return; }
       const res = signUp({ now: t0, companions: d.companions, seed: newSeed(), data: { ...SAENGSA_DATA, owned: entry.owned, hasTitle: entry.hasTitle, hireCostOf } });
-      if (!res.ok) { status({ coins: T.noCoins, busy: T.busy, team: T.pickTwo, entry: entryLine(entryState().missing), closed: signupHours(signupWindow(t0).from, signupWindow(t0).to) }[res.why] ?? T.saveFail); render(); return; }
+      if (!res.ok) { status(res.short?.length ? shortLine(res.short) : { busy: T.busy, team: T.pickTwo, entry: entryLine(entryState().missing), closed: signupHours(signupWindow(t0).from, signupWindow(t0).to) }[res.why] ?? T.saveFail); render(); return; } // 모자란 재화 = 한 줄 ('머리가 모자랍니다.' — 11/19)
       onWallet();
       status(T.signed, 'notice');
       onEnter({ fresh: true }); // 바로 시작 — 생사전 화면이 내 첫 경기를 곧바로 연다 (사장님 11/12)

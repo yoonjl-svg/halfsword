@@ -28,11 +28,17 @@ button.sg-slot:not(:disabled):hover { border-color: var(--c-sub); }
 .sg-price { display: inline-flex; align-items: center; gap: 2px; font-size: 10.5px; line-height: 1; color: var(--c-accent); font-variant-numeric: tabular-nums; }
 .sg-slot .sg-price { flex: none; }
 .sg-price .coin-icon { width: 11px; height: 11px; }
+.sg-price b { font-weight: inherit; }
+.sg-prices { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; } /* 고용 값 — 금화 + 덤(머리 · 뿔피리 — 11/19) 한 줄 · 그림은 대기실 지갑 그림(.coin-icon 꼴) */
+.sg-slot .sg-prices { flex: none; }
 .sg-note { min-height: 17px; margin: 7px 0 0; font-size: var(--fs-s); line-height: 1.4; color: var(--c-text); word-break: keep-all; }
 .sg-note[data-tone="alert"] { color: var(--c-alert); }
 .sg-foot { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 8px; }
 .sg-cost { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
 .sg-cost .coin-icon { width: 15px; height: 15px; }
+.sg-cost { gap: 10px; } /* 합 — 재화 사이 */
+.sg-cost .sg-cur { display: inline-flex; align-items: center; gap: 4px; }
+.sg-cost .sg-cur .pouch-icon { margin-left: 0; } /* 대기실 지갑 줄의 머리 앞 틈(lobby.css .wallet .pouch-icon)은 여기선 gap 이 맡음 */
 :host .sg-enter { min-width: 132px; }
 :host .sg-look[hidden] { display: none; } /* 입장 조건을 못 채웠을 때 대진표 보기 */
 /* 고르기 카드 (동료 칸을 누름 — 판 전체를 덮음 · 스킬 상세 카드와 같은 꼴) · 11/18 사장님: 동료 둘을 한 번에(고른 차례 표 1 · 2) · 무기 배정 없음 ·
