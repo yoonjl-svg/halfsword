@@ -56,7 +56,7 @@ import { AI_PLAN } from './config.js'; // 유파 AI 기본 전투 흐름 (11/14 
 import { planFor, tiltOf, luckOf, bandOf, distErrWidth, judgePhase, seenStep, planStats, digStats, itInqP } from './ai_plan.js'; // 국면 판정 · 유파 플랜 · 숙련도 띠 (플랜 없는 유파는 안 부름)
 import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, jpBeat, jpRead, jpTsubame, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep, jpArmRead } from './ai_plan_jp.js'; // 2 단계 일본 플랜 몫 (11/14 — ai.planJp 일 때만)
 import { iaiSeated, drawStart, drawLog } from './iai_obi.js'; // 11/16 뽑기 — 칼집에 든 채 공격 · 막기는 SECRET.gnsDraw 초 뽑은 뒤 (사람과 같은 셈)
-import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
+import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick, cnGuardChance } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
 import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead, deNachTick, deReserve, deCueTick, deKnee } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만) · 11/19 띠 높음 칼 든 낌새 · 뒤 칼 · 누르는 동안만 비기 기력 · G6 무릎 꺾기 뒤 끝내기
 import { DIG_PROTO, AI_ARC, PHYSICS, GUARD_LINE } from './config.js';
 import { icpArm, icpAim, coverTech, icpStats, discHold, anticAim, anticRoll, swingMark, swingTurn } from './ai_intercept.js'; // 막기 2.0 읽기 묶음 (11/17 — config AI_INTERCEPT · [사장님 11/17 결정] 기본 판): 가로막기 · 덮는 맞받기 · 공격 절제 · 미리 줄 닫기 · 새 휘두름
@@ -2782,7 +2782,7 @@ export class AI {
     if (th.id === this.threatSeen) return false;
     if (this.me.iaiDraw) return drawGate(this.me, 'guard') && false; // 11/16 뽑는 중: 이 위협은 뽑은 뒤 다시 봄 (굴림 없음)
     this.threatSeen = th.id;
-    const gc = this.planJp ? jpGuardChance(this, th, L.guardChance) : L.guardChance; // 일본 (11/14): 가운데부터 버릇 — 같은 줄이 다시 오면 막을 눈이 조금 큼 (굴림 수 그대로)
+    const gc = this.planJp ? jpGuardChance(this, th, L.guardChance) : this.planCn ? cnGuardChance(this, th, L.guardChance) : L.guardChance; // 일본 (11/14): 가운데부터 버릇 — 같은 줄이 다시 오면 막을 눈이 조금 큼 (굴림 수 그대로) · 동방 (11/19): expert 의 +0.1 은 격살을 노릴 위협에만
     if (this.planJp) jpSeeThreat(this, th); // 상대 공격 줄 기억 (본 것만)
     if (Math.random() > gc) return false; // 못 봤거나 늦었다
     if (drawGate(this.me, 'guard')) return void (this.threatSeen = null), false; // 11/16 뽑기 (SECRET.gnsDraw): 칼집에 든 채면 먼저 뽑음 · 뽑는 동안 막기 · 맞받기 없음 — 같은 위협은 뽑은 뒤 다시 봄

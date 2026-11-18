@@ -19,7 +19,7 @@
 //   몫 = 띠 기울기 × 칸 dive × AI_PLAN.cn.dive + 굴림 몫 × 동전 — 무 · 낮음은 운에 기대 아무 때나 · 숙련 5 는 늘(칸 1 이면).
 //  연산: 스텝마다 새 객체 · 배열 없음(기억은 길이 4 고리) · 굴림은 유도(간 보기 · 물러남 한 번) · 위협 하나 · 기술 고르기 · 속임 고르기에만.
 // ─────────────────────────────────────────────────────────────
-import { AI_PLAN, UNIQUE_ASSIST as UA, SECRET, CN_STEP, STAMINA, realS } from './config.js';
+import { AI_PLAN, UNIQUE_ASSIST as UA, SECRET, CN_STEP, STAMINA, AI_LEVELS, realS } from './config.js';
 import { cnStepOn, awaySide } from './cn_step.js'; // 편섬 꺾음 (11/15 — 偏閃奏進 뛰어들기)
 import { huntN } from './cn_hunt.js';
 import { secretSpent, gkCooling } from './secret.js';
@@ -50,7 +50,7 @@ export function cnInit(ai) {
     quiet: false, // 안 치는 상대 (버릇)
     rep: null, // 되풀이 줄 (높음)
     repT: 0,
-    st: (ai.stats.cn = { lure: 0, lureDraw: 0, meet: 0, rep: 0, wearT: 0, quietT: 0, lianchi: 0, wantRoll: 0, want: 0, diveRoll: 0, dive: 0, diveGo: 0 }),
+    st: (ai.stats.cn = { lure: 0, lureDraw: 0, meet: 0, rep: 0, wearT: 0, quietT: 0, lianchi: 0, wantRoll: 0, want: 0, diveRoll: 0, dive: 0, diveGo: 0, gcWant: 0, gcCut: 0 }),
   };
 }
 
@@ -207,6 +207,19 @@ export function cnWant(ai, th) {
     if (S.want) S.st.want++;
   }
   return S.want;
+}
+
+/**
+ * 막을 눈 (ai.js respond — 위협 하나에 한 번 · 11/19 사장님 '권고대로' — 기록 docs/strike/de_band3_2026-11-19.md §동방 · 단계 덜어 보기 §6-1 안):
+ *  실력 이름 expert 의 막을 눈 +0.1(hard 0.8 → 0.9)은 격살을 노릴 마음이 난 위협(격살이 남았고 cnWant — 위협 하나에 한 번 굴려 붙잡은 같은 답)에만 ·
+ *  그 밖의 위협엔 hard 와 같은 값 (막는 꼴이 늘어 제 칼이 줄지 않게). expert 가 아니거나 막을 눈이 hard 위가 아니면 그대로(굴림 없음)
+ */
+export function cnGuardChance(ai, th, gc) {
+  const lo = AI_LEVELS.hard.guardChance;
+  if (ai.levelName !== 'expert' || !(gc > lo)) return gc;
+  const want = gkLeft(ai) && cnWant(ai, th);
+  ai.planCn.st[want ? 'gcWant' : 'gcCut']++;
+  return want ? gc : lo;
 }
 
 /** 뛰어들 칼 — 체보요격(掣步 — 끌어 딛는 걸음 0.3 · 걸음 사다리) · 식는 중이면 요격 */
