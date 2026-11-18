@@ -77,7 +77,7 @@ function foeSecretLeft(foe) {
 /**
  * 상대 상태 세기 (지금 본 것 — 0 ~ 1): s = 늦게 본 상대 모습 (칼 쥠 · 서 있음) · 몸 표식(피 · 다리 · 팔 · 기력 막대 · 사냥 겹)은 화면에 보이는 것.
  *  상대 버릇은 수 읽기 그릇(ai.read — 플랜이 있는 몸 · 버릇은 가운데 띠부터 · 되풀이는 높음부터 — 그릇이 닫힌 띠는 0)이 적은 상대 칼(늦게 본 위협)로만:
- *   busy = 버릇 창(habitT) 안 상대 칼 수 n → (n − 1) ÷ 2 (둘 0.5 · 셋 1) · quiet = 판 시간이 버릇 창을 넘었고 그 창 동안 상대 칼 없음 → 1 ·
+ *   busy = 버릇 창(habitT) 안 상대 칼 수 n → (n − 3) ÷ 2 (넷 0.5 · 다섯 1 — 보통 빠르기(두셋) 위만) · quiet = 판 시간이 버릇 창을 넘었고 그 창 동안 상대 칼 없음 → 1 ·
  *   repeat = 되풀이 창(repeatT) 안에 같은 줄이 두 번 넘게 옴(readRepeatLine) → 1
  */
 export function foeStates(ai, s) {
@@ -101,7 +101,7 @@ export function foeStates(ai, s) {
   if (R?.habit) {
     const W = AI_PLAN.read.habitT;
     const n = readAtkN(ai, W);
-    I('busy', (n - 1) / 2);
+    I('busy', (n - 3) / 2); // 넷 0.5 · 다섯 1 — 중립 상대(무유파 숙련 4)도 6 s 에 두셋은 침(재기 11/19) · 그보다 잦을 때만 '자주 침'
     I('quiet', n === 0 && (ai.me.fightT ?? 0) > W && t - R.lastT > W ? 1 : 0);
   }
   if (R?.repeat) I('repeat', readRepeatLine(ai, AI_PLAN.read.repeatT) ? 1 : 0);

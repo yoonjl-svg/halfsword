@@ -164,8 +164,8 @@ test('집요함 — 상대 버릇 (사장님 11/19 \'6초, 10초 기억\' = 수 
   assert.ok(R?.habit && R?.repeat, '높음 띠는 버릇 · 되풀이를 읽음');
   const s = { state: 'stand', armed: true };
   const run = (sec) => { for (let t = 0; t < sec; t += 0.05) { ai.sense.t += 0.05; M.mindTick(ai, 0.05, s); } return [...ai.mindTen]; };
-  // 상대가 같은 줄로 세 번 (2 s 사이) — 자주 침 + 되풀이
-  for (let i = 0; i < 3; i++) { ai.sense.t += 0.6; R.n++; const j = (R.n - 1) % R.t.length; R.t[j] = ai.sense.t; R.line[j] = 'highR'; R.id[j] = 100 + i; R.lastT = ai.sense.t; }
+  // 상대가 같은 줄로 다섯 번 (3 s 사이) — 자주 침(넷 0.5 · 다섯 1) + 되풀이
+  for (let i = 0; i < 5; i++) { ai.sense.t += 0.6; R.n++; const j = (R.n - 1) % R.t.length; R.t[j] = ai.sense.t; R.line[j] = 'highR'; R.id[j] = 100 + i; R.lastT = ai.sense.t; }
   const a = run(2);
   assert.ok(a[0] < -1.5 && a[1] > 1.5 && a[2] > 1.5, `자주 침 · 되풀이: 선공 ↓ 거리 ↑ 일격 ↑ ${a}`);
   // 버릇 창(6 s)을 넘게 상대가 칼을 안 냄 — 안 침

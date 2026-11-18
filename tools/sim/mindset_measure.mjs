@@ -466,14 +466,15 @@ export function aggTable(rows, before = null, ten1 = null) {
   L.push('', '집요함 — 자유 판 옮긴 점수 (참고 · 상태마다 AI 안 세기로 무게 · 정한 쪽 평균 점 — 상대 버릇 busy · quiet · repeat 포함)', '', freeTenTable(rows));
   L.push('', '상대 상태마다 (상태 − 바탕, 점) — 선공 · 거리 · 일격 · 횡보' + (ten1 ? ' · 집요함 1 의 같은 차를 뺀 값' : ''), '', stateTable(rows, slopes, ten1));
   const lt = verdicts.lateral;
-  if (lt) L.push('', `횡보 목표 몫 (1 점 0 % · 5 점 50 % — 바탕): ${SCHOOLS.map((s) => `${KO[s]} 목표 ${(12.5 * (SCORE.lateral[s] - 1)).toFixed(1)} % · 잼 ${pct(lt.vals[s])}`).join(' / ')}`);
+  const pf = rows[0]?.prof != null ? MINDSET.profF[rows[0].prof] ?? 1 : 1; // 숙련도 몫 (11/19 — 바탕 점수 = 3 + (점수 − 3) × f)
+  if (lt) L.push('', `횡보 목표 몫 (1 점 0 % · 5 점 50 % — 바탕 · 숙련도 몫 ${pf} 를 곱한 바탕 점수로): ${SCHOOLS.map((s) => `${KO[s]} 목표 ${(12.5 * (3 + (SCORE.lateral[s] - 3) * pf - 1)).toFixed(1)} % · 잼 ${pct(lt.vals[s])}`).join(' / ')}`);
   return { md: L.join('\n'), verdicts };
 }
 
 // ───────────── 집요함 상태 들임 표 ─────────────
 /** 상태 들임 판들 → 유파 × 상태: 집요함 그대로 − 집요함 1 의 네 지표 차 (점 — 같은 상태 · 같은 판 짝) · 정한 쪽 반응 (미는 쪽 평균 · 부호) · 이김 몫 차 */
 export function induceTable(runs) {
-  // 판정 (11/19 [사장님 11/19 '권고대로'] — 집요함은 옮긴 점수로): 들인 상태의 미는 쪽으로 AI 가 옮긴 점수(잘림 뒤 · 정한 쪽 평균 — tenTick dirS ÷ dirT) · 행동 지표 차는 참고
+  // 판정 (11/19 [사장님 11/19 '권고대로'] — 집요함은 옮긴 점수로): 들인 상태의 미는 쪽으로 AI 가 옮긴 점수(잘림 뒤 · 정한 쪽 평균 — 그 상태 AI 안 세기로 무게 · tenTick td ÷ tw) · 행동 지표 차는 참고
   const slopes = smSlopes();
   const states = [...new Set(runs.map((r) => r.induce))];
   const L = [`| 유파 (집요함 · 폭 × 숙련 몫) | ${states.map((x) => `${x}: 옮김 (점) · 행동 정한 쪽 (참고)`).join(' | ')} | **옮긴 점수 평균** [95 %] | 행동 정한 쪽 평균 (참고) | 이김 몫 차 (참고) |`, `|---|${states.map(() => '---').join('|')}|---|---|---|`];
@@ -490,7 +491,8 @@ export function induceTable(runs) {
       const dd = ds.map((x, k) => (DIR[st]?.[k] ? x * DIR[st][k] : NaN)).filter(Number.isFinite);
       return dd.length ? dd.reduce((p, x) => p + x, 0) / dd.length : NaN;
     };
-    const app = (q) => { let a = 0, t = 0; for (const r of q) (a += r.dirS ?? 0), (t += r.dirT ?? 0); return t > 0 ? a / t : NaN; };
+    // 들인 상태가 AI 눈에 켜진 동안만 (AI 안 세기 mindI 로 무게 — 칼 떨어짐은 한 번 들이고 주우면 끝이라 판 내내가 아님)
+    const app = (q) => { if (one) return 0; let a = 0, t = 0; for (const r of q) { const i = MSTATES.indexOf(r.induce); if (r.tw && i >= 0) (a += r.td[i]), (t += r.tw[i]); } return t > 0 ? a / t : NaN; }; // 일본(폭 0)은 세기도 안 셈 — 옮김 0
     const cells = [], sets = [];
     for (const st of states) {
       const q = rs.filter((r) => r.induce === st && !r.ten1), q1 = one ? q : rs.filter((r) => r.induce === st && r.ten1);
