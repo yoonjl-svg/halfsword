@@ -17,15 +17,16 @@
 //   --levelHi=normal : 높은 쪽 실력 이름 (easy · normal · hard · expert — 판 동안만 AI_PLAN.levels[높은 숙련도] 를 바꿈 · 낮은 쪽 숙련도 칸은 그대로)
 //   --bandHi=2 : 높은 쪽 플랜 띠 0 ~ 3 (판 동안만 AI_PLAN.bands[높은 숙련도] 를 바꿈 — 띠는 늘 제 숙련도로 읽으므로 낮은 쪽은 그대로)
 //   --techHi=schielhau:1.4,… : 높은 쪽 AI 꾸러미에서 그 기술의 고르는 무게 base 를 이 값으로 ('…:1.4:nofit' = 상황 선호 fit 칸도 뺌) — 고침 안의 효과를 미리 재는 용 (꾸러미는 새 객체 · 게임 값 그대로)
+//   --keepBaseHi=schielhau : 높은 쪽 AI 꾸러미에서 그 강화동작이 가져간 바탕 기술(sword_art.js 의 plain — 곁눈 베기면 분노의 베기)을 따로 되살림 — 강화동작 무게는 제 몫(더한 바탕 무게를 뺌) · 바탕 이름은 바탕 기술로 · 기술 취향은 강화동작 것을 복사 (재기 전용 — '바탕을 남기고 강화동작은 제자리에서만' 안을 미리 재는 용)
 //   --noThrustFollowHi=schielhau : 높은 쪽 AI 가 그 기술 뒤 이어 치기(why 'follow')를 찌르기로 열지 않음 (startAttack 을 거절 → 옛 길대로 물러남) — 고침 안의 효과를 미리 재는 용
 //   --levelHiSet=read:0.35,… : 높은 쪽 AI 의 실력 숫자(ai.level — setLevel 이 이름 표에서 복사한 것) 몇 칸만 덮음 (만든 뒤 · 몸 값은 그대로) — 실력 이름 가운데 어느 숫자인가를 가르는 용
 //   --passiveHi=seguirRoda:0.45,… : 높은 쪽 AI 의 유파 패시브(반응 버릇 — schools.js *_PASSIVES) 굴림 몫 p 를 이 값으로 (만든 뒤 그 AI 의 패시브 목록만 새 객체로 · 0 = 그 패시브 안 냄)
 //   --gwHi=0.64 : 높은 쪽 몸의 '검술 자세 지도를 따르는 몫'(fighter.guardWeight — 옛 보정은 skill.level × 1.6 · 1 에서 자름)만 이 값으로 (skill.level 의 이어 베기 몫은 그대로) — 실력 숫자 skill 가르기 용
 //   --cfgHi=PATH:수,… : config 수를 높은 쪽 AI 의 매 스텝 판단(ai.update) 동안만 바꿈 (--cfg 와 같은 꼴 · 낮은 쪽 · 몸 · 판정은 그대로 — 플랜 값 한 칸이 높은 쪽에 주는 몫을 재는 용)
 //   --stats : 판 기록에 두 쪽 AI 의 stats 요약(hiStats · loStats — 배열은 줄임) · 기력 장부(hiStam · loStam — 갈래마다 쓴 기력 spent · 횟수 counts) · 무릎 꺾기 굴림(buckle — 곁눈 베기 G6 · combat.buckleLog 수) + 흔적(hiTrace · loTrace — 공격마다 기술 이름 · 까닭 · 거리 ·
-//             그 칼 동안 준 상처 · 받은 상처 · 끝난 뒤 0.8 s 안에 받은 상처 · 칼 부딪힘 · 그때 상대 꼴 / 꼴마다 머문 시간 · 꼴마다 받은 상처). 읽기만 (난수 · 몸에 손대지 않음)
-//   node tools/sim/prof_gap_measure.mjs trace a.json … [--lo] [--top=14] : --stats 로 잰 판 기록의 요약 (11/18 · 읽기만) — hi 몫 · 꼴 몫 · 꼴마다 준 · 받은 상처 ·
-//             기술마다 판당 수 · 맞힘 · 맞음 · 끝난 뒤 0.8 s 안 맞음 · 칼 부딪힘 몫 · 거리 · 칼 시간 · 그때 상대 꼴 · 까닭 (--lo = 낮은 쪽 흔적)
+//             그 칼 동안 준 상처 · 받은 상처 · 끝난 뒤 0.8 s 안에 받은 상처 · 칼 부딪힘 · 그때 상대 꼴 · 그때 상대 칼(vs) · 이어 친 앞 칼(from) / 꼴마다 머문 시간 · 꼴마다 받은 상처). 읽기만 (난수 · 몸에 손대지 않음)
+//   node tools/sim/prof_gap_measure.mjs trace a.json … [--lo] [--vs] [--top=14] : --stats 로 잰 판 기록의 요약 (11/18 · 읽기만) — hi 몫 · 꼴 몫 · 꼴마다 준 · 받은 상처 ·
+//             기술마다 판당 수 · 맞힘 · 맞음 · 끝난 뒤 0.8 s 안 맞음 · 칼 부딪힘 몫 · 거리 · 칼 시간 · 그때 상대 꼴 · 까닭 (--lo = 낮은 쪽 흔적 · --vs = 칼을 열 때 상대 칼 · 이어 친 칼의 앞 칼)
 //  출력 — 합산 hi 몫 = (승 + 무 ½) / 판 수 · 95 % 윌슨 구간 · 승 / 무 / 패 · 평균 끝 시각 · 유파별 hi 몫 (무 수)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync, existsSync, renameSync } from 'node:fs';
@@ -102,8 +103,8 @@ export function measureFight(f, dur, opt = {}) {
 
 /** 높은 쪽 AI 클래스 (재기 전용): --dropHi = 만드는 동안만 그 유파 사다리에서 칸을 빼고 되돌림(무기가 바뀌어 칸 몫을 다시 셀 때 kitRefresh 도 같게) ·
  *  --techHi = 만든 뒤 꾸러미의 그 기술 base(· fit) 를 바꾼 새 꾸러미로 · --noThrustFollowHi = 그 기술 뒤 찌르기 이어 치기를 거절 */
-function hiClass(school, { dropHi: drop, techHi, noThrustFollowHi: noTF } = {}) {
-  if (!drop?.size && !techHi?.size && !noTF?.size) return AI;
+function hiClass(school, { dropHi: drop, techHi, noThrustFollowHi: noTF, keepBaseHi: keepB } = {}) {
+  if (!drop?.size && !techHi?.size && !noTF?.size && !keepB?.size) return AI;
   const cut = () => {
     const L = AI_KIT.ladder[school];
     if (!drop?.size) return () => {};
@@ -114,6 +115,22 @@ function hiClass(school, { dropHi: drop, techHi, noThrustFollowHi: noTF } = {}) 
     constructor(...a) {
       const back = cut();
       try { super(...a); } finally { back(); }
+      if (keepB?.size) {
+        const S = this.school;
+        const tech = [];
+        const by = { ...S.techByName };
+        for (const t of S.tech) {
+          if (keepB.has(t.name) && t.plain) {
+            const E = { ...t, base: Math.max(0.01, t.base - t.plain.base) };
+            delete E.plain;
+            tech.push(E, t.plain);
+            by[t.name] = E;
+            by[t.plain.name] = t.plain;
+            this.pers.techPref[t.plain.name] ??= this.pers.techPref[t.name];
+          } else tech.push(t);
+        }
+        this.school = { ...S, tech, techByName: by };
+      }
       if (techHi?.size) {
         const S = this.school;
         const rep = new Map();
@@ -419,6 +436,7 @@ if (isMain(import.meta.url)) {
       return [n, { base: +b, nofit: f === 'nofit' }];
     }));
     const noThrustFollowHi = new Set((arg('noThrustFollowHi', '') || '').split(',').filter(Boolean));
+    const keepBaseHi = new Set((arg('keepBaseHi', '') || '').split(',').filter(Boolean));
     const levelHiSet = (arg('levelHiSet', '') || '').split(',').filter(Boolean).map((x) => {
       const [k, v] = x.split(':');
       if (!(k in AI_LEVELS.normal) || k === 'strength' || !Number.isFinite(+v)) throw new Error(`--levelHiSet=칸:수 — ${x}`);
@@ -434,6 +452,7 @@ if (isMain(import.meta.url)) {
     const cfgHi = resolveCfg(arg('cfgHi', ''));
     if (cfgHi.length) console.error(`높은 쪽 판단 동안만 cfg: ${arg('cfgHi', '')}`);
     const stats = args.includes('--stats');
+    if (keepBaseHi.size) console.error(`높은 쪽 바탕 기술 되살림: ${[...keepBaseHi].join(', ')}`);
     if (dropHi.size || levelHi || bandHi != null || techHi.size || noThrustFollowHi.size) console.error(`높은 쪽만: 칸 뺌 [${[...dropHi].join(', ')}] · 실력 이름 ${levelHi ?? '그대로'} · 띠 ${bandHi ?? '그대로'} · 기술 무게 [${[...techHi].map(([n, o]) => `${n} ${o.base}${o.nofit ? ' nofit' : ''}`).join(', ')}] · 찌르기 이어 치기 막음 [${[...noThrustFollowHi].join(', ')}]`);
     const out = arg('json', null);
     const runs = out && args.includes('--resume') && existsSync(out) ? JSON.parse(readFileSync(out, 'utf8')) : [];
@@ -441,7 +460,7 @@ if (isMain(import.meta.url)) {
     if (done.size) console.error(`이어 재기: ${done.size} 판 있음`);
     for (const { f, k } of mine) {
       if (done.has(k)) continue;
-      const r = { k, ...measureFight(f, dur, { look, dropHi, levelHi, bandHi, stats, techHi, noThrustFollowHi, cfgHi, levelHiSet, passiveHi, gwHi }) };
+      const r = { k, ...measureFight(f, dur, { look, dropHi, levelHi, bandHi, stats, techHi, noThrustFollowHi, keepBaseHi, cfgHi, levelHiSet, passiveHi, gwHi }) };
       runs.push(r);
       console.error(`[${k + 1}/${all.length}] ${f.school} ${f.lo}:${f.hi} w${f.wi} s${f.seed} ${f.swap ? 'swap' : 'std'} → ${r.result} @${r.endT}s`);
       if (out && runs.length % 10 === 0) saveRuns(out, runs);
