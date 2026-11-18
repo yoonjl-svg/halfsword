@@ -695,6 +695,7 @@ export class PlayerUniqueAssist {
   /** 특수 공격이 나감 — 그 기술 식힘 시작 (조건이 받아들여진 순간 · 'fire' 가 아니면 끝날 때까지 식힘 중 — coolTick 이 끝난 때를 적음) */
   coolStart(e) {
     if (!e.special) return;
+    this.f.specialN = (this.f.specialN ?? 0) + 1; // 몸 셈 (11/18 유파 마음가짐 — 상대 AI 가 '특수 공격을 봄'으로 읽음 · 읽기만 · 조건 · 식힘 그대로)
     this.coolT[e.name] = Infinity;
     this.coolRun[e.name] = { t0: this.t, motion: null };
   }

@@ -26,6 +26,7 @@
 import { MEASURE, OKORI, AI_PLAN, SKILL_BODY } from './config.js';
 import { tiltOf, bandOf, luckOf } from './ai_plan.js';
 import { bladesTouch } from './secret.js';
+import { mindGap, mindRiskK } from './ai_mindset.js'; // 유파 마음가짐 (11/18): 선 여유(거리) · 절제 몫(일격)
 
 const tilt = (ai, k) => k * tiltOf(ai.proficiency ?? 2);
 const roll = (p) => p >= 1 || (p > 0 && Math.random() < p);
@@ -54,7 +55,7 @@ export function msLine(ai) {
   const tr = ai.art?.tradition;
   if (tr === 'german' && ai.msBindT != null && ai.sense.t - ai.msBindT <= MEASURE.bindT) return -Infinity;
   const G = MEASURE.gap;
-  return ai.foeReach + (G[tr] ?? G.other);
+  return ai.foeReach + (mindGap(ai) ?? G[tr] ?? G.other); // 유파 마음가짐 (11/18 — 거리): 다섯 유파는 마음가짐 값 표의 gap · 무유파 · 숙련도 0 은 MEASURE.gap
 }
 
 /** holdDist 바닥 — 선 + 옛 최소 여유 0.08 */
@@ -88,7 +89,7 @@ export function msInsideHold(ai) {
   const S = ST(ai);
   if (!(t - (ai.msInT ?? -Infinity) < AI_PLAN.beat)) {
     ai.msInT = t;
-    ai.msInOk = roll(tilt(ai, MEASURE.inside));
+    ai.msInOk = roll(tilt(ai, MEASURE.inside) * mindRiskK(ai)); // 유파 마음가짐 (11/18 — 일격): 받을 피해로 판단할수록 더 참음
     S.inRoll++;
   }
   if (ai.msInOk) S.inHold++;
