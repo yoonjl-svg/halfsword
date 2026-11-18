@@ -33,17 +33,12 @@ function swing({ rT = 1.5, rM = 1.3, a0 = 1.25, w = 6 } = {}) {
 test('값 (0.6 s 시간 사다리 · 칸 = 물리 한 스텝 · 0.3 m 걸음 사다리) · 둥근 눈 · 칼끝 틈 셈이 탐', () => {
   assert.ok(Math.abs(A.horizon - CONFIG.realS(0.6)) < 1e-9 && A.gap === 0.3 && !('step' in A) && !('minW' in A), '내다보는 칸 = 물리 한 스텝 (새 수 없음)');
   const run = () => {
-    // 유파 마음가짐 (11/18): 동방(거리 3)은 츠바이핸더 칼끝 밖 0.5 m 남짓에 서서 받아 치기만 함 — 제 칼끝 밖에서 먼저 치려는 칼이 없어 칼끝 틈을 참을 일이 없음.
-    //  판에서 쓰이는지는 먼저 치는 독일(롱소드 — 선공 5 · 거리 1)로 봄 — 둘 다 나올 때까지 (40 s 안 · 시간 상한 기준 없음)
-    //  (11/19 숙련도 몫 · 붙어 남음 판: 씨앗 1 은 40 s 안에 칼끝 틈이 안 나옴 — 둘 다 나온 판까지 씨앗을 넘김)
-    let r = null;
-    for (const seed of [1, 2, 3, 4]) {
-      const { G, ai, free } = round(5, 'zweihander', seed, 'longsword');
-      while (G.t < 40 && !((ai.stats.arcSeen ?? 0) > 0 && (ai.stats.arcGap ?? 0) > 0)) G.step();
-      r = { seed, arc: ai.stats.arcSeen ?? 0, gap: ai.stats.arcGap ?? 0 };
-      free();
-      if (r.arc > 0 && r.gap > 0) break;
-    }
+    // 유파 마음가짐 (11/18 · 11/19): 동방 숙련 5 (옛 판 그대로의 판) — 칼끝 틈을 처음 참는 때가 판마다 다름 (9 ~ 14 s) — 둘 다 나올 때까지 (40 s 안 · 시간 상한 기준 없음)
+    //  (11/18 · v1 ~ v2 엔 동방이 츠바이핸더 앞에서 받아 치기만 해 독일 롱소드로 봤음 — 11/19 합침 판에선 동방이 다시 먼저 치고 독일 롱소드는 40 s 안에 안 나옴)
+    const { G, ai, free } = round();
+    while (G.t < 40 && !((ai.stats.arcSeen ?? 0) > 0 && (ai.stats.arcGap ?? 0) > 0)) G.step();
+    const r = { arc: ai.stats.arcSeen ?? 0, gap: ai.stats.arcGap ?? 0 };
+    free();
     return r;
   };
   const on = run();

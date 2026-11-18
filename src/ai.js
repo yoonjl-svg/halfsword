@@ -1274,6 +1274,7 @@ export class AI {
     if (this.planCn) need = cnNeed(this, need, opp.kind); // 동방 플랜 (11/14): 겹이 쌓이면 몰아치기를 줄임 · 유도 동안 먼저 치지 않음 (큰 틈은 그대로)
     if (DIG_PROTO.ai && this.dig && !this.Mup && opp.kind !== 'recover' && opp.kind !== 'finish') need = digWallNeed(this, need); // 파고들기 A5 (11/14 사장님 'A안 켜고' — 기본 켬): 상대 등이 울타리 · 지친 상대면 몰아침
     if (this.read) need += readNeed(this, opp); // 수 읽기 (3 단계): 상대 유파 대표 위험(가운데부터) · 대가 창 · 상대 기력(높음)
+    if (this.mind && opp.kind === 'patience' && this.patience <= 0) need = Math.min(need, opp.score); // 유파 마음가짐 (11/19 합침 — 선공은 기울기): 참을성이 다 닳으면 문턱(일본 플랜 · 읽기 몫 포함)을 넘음 — '얼마나 오래'는 참을성 길이 · '언제'는 아래 거리 · 공격 문(고노센 뽑기 걸쇠 jpGnsDrawHold · 경계 선)이 정함
     const reachOut = this.watchReachOut();
     if (this.passives.length && !(this.planJp && jpGnsKeep(this)) && this.passiveWatch(s, d, opp, reachOut)) return; // 패시브 (standoff·foeStepIn) — 목록이 비면 건너뜀 · 일본 고노센 준비를 지키는 중(3 단계)엔 出端 패시브로 먼저 치지 않음
     const score = this.plan ? this.planGamble(opp.score) : opp.score; // 무계획(11/14 — 굴림 몫): 빈틈 판단이 흐림 · 플랜 없는 몸은 그대로
