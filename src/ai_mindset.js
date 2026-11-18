@@ -10,7 +10,7 @@
 //   숙련도 [사장님 11/19 '검술이 높을수록 유파다워진다']: 바탕 점수 = 3 + (점수 − 3) × f(숙련도) · 폭 × f (config MINDSET.profF — 숙련 6 이 1 · 1 이 0) — mindInit
 //
 //  ① 상대 상태 읽기 (mindTick — 매 스텝 · 본 것만): 칼 떨어짐 · 지침(탈진 · 기력 낮음 · 기력 회복 저하 — 맹호은림 사냥 겹) · 출혈(나보다 더) · 다리 · 칼 팔 부상 ·
-//     상대 비기가 남음(이 유파 · 이 몸이 아직 쓸 수 있음) · 상대 버릇(수 읽기 그릇 ai_read.js 가 배운 것 — 자주 침 busy · 안 침 quiet · 같은 줄 되풀이 repeat).
+//     상대 비기가 남음(이 유파 · 이 몸이 아직 쓸 수 있음) · 상대 버릇(수 읽기 그릇 ai_read.js 가 배운 것 — 안 침 quiet · 한 줄 되풀이 repeat).
 //     상태마다 세기 0 ~ 1 → MINDSET.ramp 로 부드럽게 따라감(들고 남이 끊기지 않게) → 항목마다 Σ 세기 × 미는 쪽(MINDSET.react) 을 −1 ~ 1 로 자름 × 폭 = 옮긴 점수.
 //     쓰러짐 · 무릎 꿇음은 옛 끝내기 셈 그대로 (여기서 밀지 않음).
 //  ② 옮긴 점수로 손잡이 (바탕 손잡이 + 기울기 × 옮긴 점수 — 기질 굴림 값(ai.pers)은 그 위에 옮긴 몫만 더함):
@@ -27,7 +27,7 @@ import { SCHOOL_MINDSET } from './schools.js';
 import { secretLeft, playerSecretOf } from './secret.js';
 import { kitOff } from './skill_kit.js';
 import { huntN } from './cn_hunt.js';
-import { readAtkN, readRepeatLine } from './ai_read.js';
+import { readAtkN, readLineN } from './ai_read.js';
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 /** 항목 순서 (옮긴 점수 칸) */
@@ -74,11 +74,25 @@ function foeSecretLeft(foe) {
   return SECRET.openSchools.includes(foe.swordArt?.tradition) && !!playerSecretOf(foe) && !kitOff(foe, 'secret');
 }
 
+/** 되풀이 — 되풀이 창(win) 안 상대 칼(넷 넘게) 가운데 가장 잦은 줄의 몫 (0 ~ 1 · 모자라면 0) — 읽기 그릇 고리를 읽기만 */
+function lineShare(ai, win) {
+  const R = ai.read;
+  const t0 = ai.sense.t - win;
+  let n = 0, top = 0;
+  for (let k = 0; k < R.t.length; k++) {
+    if (!(R.t[k] >= t0) || !R.line[k]) continue;
+    n++;
+    top = Math.max(top, readLineN(ai, R.line[k], win));
+  }
+  return n >= 4 ? top / n : 0;
+}
+
 /**
  * 상대 상태 세기 (지금 본 것 — 0 ~ 1): s = 늦게 본 상대 모습 (칼 쥠 · 서 있음) · 몸 표식(피 · 다리 · 팔 · 기력 막대 · 사냥 겹)은 화면에 보이는 것.
  *  상대 버릇은 수 읽기 그릇(ai.read — 플랜이 있는 몸 · 버릇은 가운데 띠부터 · 되풀이는 높음부터 — 그릇이 닫힌 띠는 0)이 적은 상대 칼(늦게 본 위협)로만:
- *   busy = 버릇 창(habitT) 안 상대 칼 수 n → (n − 3) ÷ 2 (넷 0.5 · 다섯 1 — 보통 빠르기(두셋) 위만) · quiet = 판 시간이 버릇 창을 넘었고 그 창 동안 상대 칼 없음 → 1 ·
- *   repeat = 되풀이 창(repeatT) 안에 같은 줄이 두 번 넘게 옴(readRepeatLine) → 1
+ *   quiet = 판 시간이 버릇 창을 넘었고 그 창 동안 상대 칼 없음 → 1 (하나 0.5) ·
+ *   repeat = 되풀이 창(repeatT) 안 상대 칼 넷 넘게 가운데 한 줄 몫 → (몫 − 0.5) ÷ 0.25 (60 % 0.4 · 75 % 1).
+ *   '자주 침'(busy)은 뺌 (11/19 재기 — 읽기 그릇 고리 8 칸이 AI 상대에겐 판의 절반 넘게 가득(6 s 에 여덟) — 자주 침을 가리지 못함 · 처음 판 '두 번 넘게 온 줄'도 숙련 6 에서 판의 77 % 켜짐)
  */
 export function foeStates(ai, s) {
   const foe = ai.foe, me = ai.me;
@@ -101,10 +115,9 @@ export function foeStates(ai, s) {
   if (R?.habit) {
     const W = AI_PLAN.read.habitT;
     const n = readAtkN(ai, W);
-    I('busy', (n - 3) / 2); // 넷 0.5 · 다섯 1 — 중립 상대(무유파 숙련 4)도 6 s 에 두셋은 침(재기 11/19) · 그보다 잦을 때만 '자주 침'
-    I('quiet', n === 0 && (ai.me.fightT ?? 0) > W && t - R.lastT > W ? 1 : 0);
+    if ((ai.me.fightT ?? 0) > W) I('quiet', n === 0 ? 1 : n === 1 ? 0.5 : 0); // 버릇 창 동안 상대 칼 없음 1 · 하나 0.5
   }
-  if (R?.repeat) I('repeat', readRepeatLine(ai, AI_PLAN.read.repeatT) ? 1 : 0);
+  if (R?.repeat) I('repeat', (lineShare(ai, AI_PLAN.read.repeatT) - 0.5) / 0.25); // 한 줄이 되풀이 창 칼의 60 % 0.4 · 75 % 넘게 1
   return out;
 }
 

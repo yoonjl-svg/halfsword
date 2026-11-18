@@ -156,18 +156,18 @@ test('거리 — 내 칼 뒤 붙어 남음 (사장님 11/19 독일 \'붙어서 �
   G.world.free();
 });
 
-test('집요함 — 상대 버릇 (사장님 11/19 \'6초, 10초 기억\' = 수 읽기 그릇): 자주 침 → 기다림 · 멀리 / 같은 줄 되풀이 → 기다림 · 큰 칼 / 안 침 → 먼저 · 본 특수 공격 · 비기 기억은 없음', () => {
+test('집요함 — 상대 버릇 (사장님 11/19 \'6초, 10초 기억\' = 수 읽기 그릇): 한 줄 되풀이 → 기다림 · 큰 칼 / 안 침 → 먼저 · 본 특수 공격 · 비기 기억 · 자주 침은 없음', () => {
   assert.ok(!M.STATES.includes('special') && !M.STATES.includes('secretUsed'));
-  assert.ok(M.STATES.includes('busy') && M.STATES.includes('quiet') && M.STATES.includes('repeat'));
+  assert.ok(!M.STATES.includes('busy') && M.STATES.includes('quiet') && M.STATES.includes('repeat'));
   const { G, ai } = setup('hwando', 6); // 동방 폭 ±2 · 숙련 6 (높음 — 버릇 · 되풀이 그릇이 열림)
   const R = ai.read;
   assert.ok(R?.habit && R?.repeat, '높음 띠는 버릇 · 되풀이를 읽음');
   const s = { state: 'stand', armed: true };
   const run = (sec) => { for (let t = 0; t < sec; t += 0.05) { ai.sense.t += 0.05; M.mindTick(ai, 0.05, s); } return [...ai.mindTen]; };
-  // 상대가 같은 줄로 다섯 번 (3 s 사이) — 자주 침(넷 0.5 · 다섯 1) + 되풀이
+  // 상대가 같은 줄로 다섯 번 (3 s 사이) — 한 줄 몫 100 % (되풀이 가득)
   for (let i = 0; i < 5; i++) { ai.sense.t += 0.6; R.n++; const j = (R.n - 1) % R.t.length; R.t[j] = ai.sense.t; R.line[j] = 'highR'; R.id[j] = 100 + i; R.lastT = ai.sense.t; }
   const a = run(2);
-  assert.ok(a[0] < -1.5 && a[1] > 1.5 && a[2] > 1.5, `자주 침 · 되풀이: 선공 ↓ 거리 ↑ 일격 ↑ ${a}`);
+  assert.ok(a[0] < -1.5 && Math.abs(a[1]) < 0.05 && a[2] > 1.5, `되풀이: 선공 ↓ 일격 ↑ (거리 그대로) ${a}`);
   // 버릇 창(6 s)을 넘게 상대가 칼을 안 냄 — 안 침
   ai.me.fightT = 99;
   const b = run(12);
