@@ -6,7 +6,8 @@
 //  사용 / 봉인(10/16 책)은 칸마다 두지 않는다 — 앞 칸을 봉인하면 뒤 칸 몫이 어긋나 판이 복잡해지고, 유파 초기화가 되돌리기를 맡는다(IMPLEMENTATION.md §4).
 //  판에 미치는 곳 (사람만 — AI · 시뮬은 그대로): main.js newRound → playerKit → 몸의 skillKit · schoolFootwork · schoolParry · schoolPassive · 고유 공격 이름 · 비기 잠금.
 import { readProgress, purchase, update } from './lobby_progress.js';
-import { TREE_SCHOOLS, nodeOf, canLearn, kitFromNodes, allNodeIds, nodesUpToStage, nodesParam, letterSchools, RESET_HEADS } from './skill_tree_data.js';
+import { TREE_SCHOOLS, nodeOf, canLearn, kitFromNodes, allNodeIds, nodesUpToStage, nodesParam, letterSchools, RESET_HEADS, nodesOf, isClosed } from './skill_tree_data.js';
+import { SAENGSA } from './config.js'; // 내 숙련도 문턱 SAENGSA.playerProf (11/16)
 
 export const skillReceipt = (school, id) => `skill:${school}:${id}`;
 /** receipt → { school, id } (모르는 칸이면 null) */
@@ -167,6 +168,31 @@ export const skillNodesParam = nodesParam;
 export function stageParam(raw) {
   const n = raw == null || raw === '' ? NaN : Number(raw);
   return Number.isInteger(n) && n >= 0 && n <= 5 ? n : null;
+}
+/**
+ * 내 숙련도 — 유파마다 그 유파 스킬 칸(편지 · 닫힌 칸 뺌)에서 익힌 칸 수로 (18:1x '플레이어 숙련도는 0이 없고 1부터 시작' — 가장 낮게 1). learned = { 유파: Set(칸 id) } (readLearned)
+ *  11/16 [사장님 11/16 결정 '사람 셈도 문턱 기준으로 바꿔']: at2(5) 칸 이상 2 · at3(7) 3 · at4(9) 4 · at5(11 — 모두) 5 — AI 사다리(config AI_KIT.ladder) 쌓임 칸 수와 같은 문턱
+ *  (10/29 17:5x 옛 규칙 — 비기 · 특수공격 칸 — 은 11/17 지움) · 11/17 E: 생사전(saengsa_roster.js — 그대로 내보냄)과 판의 몸 값(main.js humanProficiency)이 함께 쓰려 이 모듈로 옮김
+ */
+export function playerProficiency(learned = readLearned(), cfg = SAENGSA.playerProf) {
+  const out = Object.fromEntries(TREE_SCHOOLS.map((s) => [s, 1]));
+  for (const s of TREE_SCHOOLS) {
+    const has = new Set(learned[s] ?? []);
+    const skills = nodesOf(s).filter((n) => n.cat !== 'letter' && !isClosed(s, n));
+    const got = skills.filter((n) => has.has(n.id));
+    let v = 1;
+    if (got.length >= cfg.at2) v = 2;
+    if (got.length >= cfg.at3) v = 3;
+    if (got.length >= cfg.at4) v = 4;
+    if (got.length >= cfg.at5) v = 5;
+    out[s] = v;
+  }
+  return out;
+}
+/** 판의 몸 값에 쓰는 사람 숙련도 (11/17 E — config PROF_BODY): 다섯 유파 가운데 가장 높은 값 (AI 인물의 본 유파 숙련도처럼 사람 몫 — 손에 든 무기와 상관없음) · 테스트 경로 = 모든 칸 익힘 */
+export function humanProficiency({ test = false, learned = null } = {}) {
+  const L = test ? Object.fromEntries(TREE_SCHOOLS.map((s) => [s, new Set(allNodeIds(s))])) : learned ?? readLearned();
+  return Math.max(...Object.values(playerProficiency(L)));
 }
 /** 편지를 가진 유파 (카드 뽑기 — main.js drawCardIds): 테스트 경로 = 모두 */
 export const playerLetters = ({ test = false } = {}) => (test ? new Set(TREE_SCHOOLS) : letterSchools(readLearned()));

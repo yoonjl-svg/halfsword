@@ -92,13 +92,13 @@ test('유파 · AI: 이베리아 몬탄테 — 자세표 · 쥠 · 빈팔 · 막
   assert.deepEqual(s.measure, { contact: 1.69, reach: 1.91, clinch: 1.34, cutTime: 0.30 });
 });
 
-test('롤랑: 무기 · AI 꾸러미 = 뒤랑달 · 숙련도 6 · 버티는 힘 1.1 그대로 · 베르나르도는 티소나 그대로', () => {
+test('롤랑: 무기 · AI 꾸러미 = 뒤랑달 · 숙련도 6 · 버티는 힘은 몸 값 표(시트 칸 없음) · 베르나르도는 티소나 그대로', () => {
   const r = CHARACTERS_BY_ID.roland, b = CHARACTERS_BY_ID.bernardo;
   assert.equal(r.weapon, 'durandal');
   assert.equal(r.ai.persona.school, 'durandal');
   assert.equal(r.ai.proficiency, 6);
   assert.deepEqual(r.ai.persona.proficiency, { iberian: 6 });
-  assert.equal(r.vitality, 1.1);
+  assert.equal(r.vitality, undefined); // 버티는 힘은 시트가 아니라 숙련도별 몸 값 PROF_BODY 6 칸 (11/17 E — 전 시트 1.1 · prof_body.test.mjs)
   assert.equal(b.weapon, 'tizona');
   assert.equal(b.ai.persona.school, 'tizona');
 });

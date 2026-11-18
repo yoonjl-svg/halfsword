@@ -108,6 +108,8 @@ export function standTrial({ gap, pad, foePad, seed, weapon, before }) {
   before?.(G);
   const P = G.player;
   const E = G.enemy;
+  E.strength = 1; // 서 있는 과녁은 숙련도 몸이 아님 — 11/17 E 전 몸 그대로(보통 = 힘 1 · 버티는 힘 1). 숙련도별 몸 값(config PROF_BODY 2 칸 0.7)이면 과녁 칼이 처져 찌름 판이 바뀜
+  E.vitality = 1;
   setHand(P, pad);
   setHand(E, foePad);
   const W = watch(G);

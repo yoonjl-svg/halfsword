@@ -514,6 +514,8 @@ export function notoRun({ weapon = 'uchigatana', mode = 'hip', seed = 1, look = 
   const P = G.player;
   const A = G.enemy;
   G.ai.update = () => { A.move.set(0, 0); A.handOffset.set(0, 0); };
+  A.strength = 1; // 서 있는 과녁 몸은 11/17 E 전 그대로(숙련 3 = 보통 힘 1 · 버티는 힘 1) — 숙련도별 몸 값(0.9)이면 쿠사나기 허리 납도 칼끝이 입 곁 문턱을 넘음(단면 1.1 → 1.2 배 · 기록 docs/strike/prof_body_2026-11-17.md §7)
+  A.vitality = 1;
   let arm = null;
   let ps = null;
   if (ai) {

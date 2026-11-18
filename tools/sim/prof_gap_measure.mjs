@@ -2,22 +2,24 @@
 //  prof_gap_measure.mjs — 숙련도 차이만 있는 같은 유파 거울 맞대결 (숙련도 격차 재기 · 목표 — 2:4 · 4:6 = 65 ~ 85 %, 2:6 = 85 ~ 95 %, 한 칸 차이 = 55 ~ 75 % (사장님 11/16 '목표 승률 모두 ok'))
 //  유파 다섯(독일 · 이탈리아 · 이베리아 · 일본 · 동방) × 짝 여덟(1:2 · 2:3 · 3:4 · 4:5 · 5:6 · 2:4 · 4:6 · 2:6) = 칸 40.
 //  칸마다 판 12 = 유파 대표 무기 둘 × 씨앗 1 ~ 3 × 자리 둘 (높은 쪽이 플레이어 자리 또는 상대 자리). 두 쪽 모두 같은 무기 · 같은 AI 클래스 · 숙련도만 다르다.
-//  숙련도 6 은 시트와 같이 버팀 vitality = PROF6_VITALITY (src/characters.js · config.js — 숙련도 6 시트 규칙과 같은 뜻).
+//  몸 값(힘 · 버티는 힘)은 게임과 같이 AI 가 숙련도별 몸 값 표 config PROF_BODY 에서 넣음(ai.js setLevel — 11/17 E · 전 숙련도 6 만 PROF6_VITALITY 를 이 도구가 넣음).
 //  사장님 결정: '60초에도 승부 안 나면 비김으로 기록해. 2:6도 넣고 4갈래 동시 실행해.' · 목표 '65~85, 85~95 이렇게 해.'
 //  기록 — 결과 hi(높은 쪽 이김) · lo(낮은 쪽 이김) · draw(60 s 까지 둘 다 서 있음 · 동시에 쓰러짐도 비김). 타이브레이크 없음.
-//  판마다: 칸 · 짝 · 무기 · 씨앗 · 자리 · 결과 · 끝 시각 · 서로 준 상처 수 · 끝 피 · 비밀 기술 낸 수.
+//  판마다: 칸 · 짝 · 무기 · 씨앗 · 자리 · 결과 · 끝 시각 · 서로 준 상처 수 · 끝 피 · 비밀 기술 낸 수 · 쓰러진 까닭.
 //  node tools/sim/prof_gap_measure.mjs [--schools=german,italian,…] [--pairs=1:2,2:4,…] [--seeds=1-3] [--dur=60] [--shard=i/n] [--json=path]
 //  node tools/sim/prof_gap_measure.mjs agg a.json b.json …   ·  4 갈래 동시 실행: --shard=1/4 … --shard=4/4 (네 개 모두 옵션을 같게 — 옵션으로 만든 전체 목록 번호를 n 으로 나눔)
 //   --look=enemy : 두 자리 모두 같은 겉모습 LOOKS.enemy (11/17 — 감독 '겉모습 같게'. 안 주면 옛 판 그대로 — 자리마다 기본 겉모습)
 //   --cfg=PATH:수,… : config 수 덮어쓰기 (재기 전용 · 게임 값은 그대로 — cfg_override.mjs · 예: --cfg=AI_LEVELS.normal.strikeSpeed:12)
+//   --vit=v0,v1,…,v6 · --str=s0,…,s6 : 몸 값 표 PROF_BODY.vitality · strength 를 통째로 (재기 전용 · 숙련도 0 ~ 6 일곱 수 — 11/17 E 찾기)
+//   --resume : --json 파일이 있으면 그 판들(판 번호 k)은 건너뛰고 이어 잼 (판 10 개마다 파일을 씀 — 11/18)
 //  출력 — 합산 hi 몫 = (승 + 무 ½) / 판 수 · 95 % 윌슨 구간 · 승 / 무 / 패 · 평균 끝 시각 · 유파별 hi 몫 (무 수)
 // ─────────────────────────────────────────────────────────────
-import { writeFileSync, readFileSync } from 'node:fs';
+import { writeFileSync, readFileSync, existsSync, renameSync } from 'node:fs';
 import { newRound, AI } from './harness_m.mjs';
 import { wilson } from './ref_duel.mjs';
 import { isMain } from './is_main.mjs';
 import { WEAPONS } from './ai_ring_measure.mjs';
-import { PROF6_VITALITY, AI_PROFICIENCY } from '../../src/config.js';
+import { AI_PROFICIENCY, PROF_BODY } from '../../src/config.js';
 import { LOOKS } from '../../src/looks.js';
 import { applyCfgArgs } from './cfg_override.mjs';
 
@@ -70,8 +72,7 @@ export function measureFight(f, dur, opt = {}) {
   const loF = swap ? G.player : G.enemy;
   const aiHi = swap ? G.ai : G.ai2;
   const aiLo = swap ? G.ai2 : G.ai;
-  if (hi === 6 && !process.env.NO_VITAL) hiF.vitality = PROF6_VITALITY;
-  if (lo === 6) loF.vitality = PROF6_VITALITY;
+  // 몸 값: AI 가 PROF_BODY[숙련도] 를 넣었음 (ai.js setLevel — 게임과 같음)
 
   const dealt = new Map([[hiF, 0], [loF, 0]]);
   G.onWound = (att, vic, r) => { if (r.severity > 0 && dealt.has(att)) dealt.set(att, dealt.get(att) + 1); };
@@ -85,10 +86,14 @@ export function measureFight(f, dur, opt = {}) {
     hiWounds: dealt.get(hiF), loWounds: dealt.get(loF),
     hiBlood: +hiF.blood.toFixed(3), loBlood: +loF.blood.toFixed(3),
     hiSecrets: secretsFired(aiHi), loSecrets: secretsFired(aiLo),
+    hiCause: hiF.causeOfDeath ?? null, loCause: loF.causeOfDeath ?? null, // 쓰러진 까닭 (출혈 · 기절 · 목 · 머리 … — 11/17 E: 버티는 힘이 닿는 몫을 보려고 · 읽기만)
   };
   G.world.free();
   return rec;
 }
+
+/** 판 기록을 한 번에 갈아 씀 (임시 파일 → 이름 바꿈 — 쓰는 중에 멈춰도 옛 파일이 남게) */
+const saveRuns = (out, runs) => { writeFileSync(`${out}.tmp`, JSON.stringify(runs)); renameSync(`${out}.tmp`, out); };
 
 const pct = (x) => `${x.toFixed(1)} %`;
 /** 기록 배열 → Markdown 표 (짝마다 한 줄 · 합산 · 유파별) */
@@ -137,20 +142,33 @@ if (isMain(import.meta.url)) {
     const look = arg('look', null);
     if (look && !LOOKS[look]) throw new Error(`unknown look: ${look}`);
     applyCfgArgs(); // config 수 덮어쓰기 (재기 전용)
+    for (const [k, key] of [['vit', 'vitality'], ['str', 'strength']]) {
+      const v = arg(k, null);
+      if (v == null) continue;
+      const xs = v.split(',').map(Number);
+      if (xs.length !== PROF_BODY[key].length || !xs.every((x) => x > 0)) throw new Error(`--${k}= 는 양수 ${PROF_BODY[key].length} 개 (숙련도 0 ~ 6)`);
+      PROF_BODY[key].splice(0, xs.length, ...xs);
+    }
+    console.error(`몸 값 PROF_BODY vitality [${PROF_BODY.vitality.join(', ')}] · strength [${PROF_BODY.strength.join(', ')}]`);
     const shard = arg('shard', '1/1').split('/').map(Number);
     const [si, sn] = shard;
     if (!(sn >= 1 && si >= 1 && si <= sn)) throw new Error('--shard=i/n 은 1 ≤ i ≤ n');
     const all = planFights({ schools, pairs, seeds });
     const mine = all.map((f, k) => ({ f, k })).filter(({ k }) => k % sn === si - 1);
     console.error(`전체 ${all.length} 판 · 이 샤드 ${mine.length} 판 (${si}/${sn})`);
-    const runs = [];
+    // --json 은 판 10 개마다 그때까지를 씀(11/18 — 컨테이너가 다시 서도 남게) · --resume 이면 그 파일에 이미 있는 판(번호 k)은 건너뜀 (옵션은 같게)
+    const out = arg('json', null);
+    const runs = out && args.includes('--resume') && existsSync(out) ? JSON.parse(readFileSync(out, 'utf8')) : [];
+    const done = new Set(runs.map((r) => r.k));
+    if (done.size) console.error(`이어 재기: ${done.size} 판 있음`);
     for (const { f, k } of mine) {
-      const r = measureFight(f, dur, { look });
+      if (done.has(k)) continue;
+      const r = { k, ...measureFight(f, dur, { look }) };
       runs.push(r);
       console.error(`[${k + 1}/${all.length}] ${f.school} ${f.lo}:${f.hi} w${f.wi} s${f.seed} ${f.swap ? 'swap' : 'std'} → ${r.result} @${r.endT}s`);
+      if (out && runs.length % 10 === 0) saveRuns(out, runs);
     }
-    const out = arg('json', null);
-    if (out) writeFileSync(out, JSON.stringify(runs));
+    if (out) saveRuns(out, runs);
     console.log(aggTable(runs));
   }
 }

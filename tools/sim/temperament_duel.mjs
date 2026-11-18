@@ -1,7 +1,7 @@
 // 인물 맞대결 + 싸움 결 재기 (사장님 10/29 15:5x — docs/characters/temperament_2026-10-29.md §7: 반응 = 본 유파 · 광기의 브론 · 롤랑 / 베르나르도 가르기)
 //  사용: node tools/sim/temperament_duel.mjs <A[:무기]> <B[:무기]> [판 수 8] [초 45] [--json]
 //   A · B = 인물 id (CHARACTERS_BY_ID). ':무기' = 그 판에 드는 무기 — 시트와 다르면 main.js 처럼 유파 꾸러미도 그 무기 것(검술을 배우지 못한 인물은 그대로)
-//   판마다 자리를 바꾼다(홀수 판 A = 상대 자리 · 짝수 판 A = 플레이어 자리 — 둘 다 AI). 겉모습(투구 · 판금) · 버티는 힘(vitality)은 시트 그대로
+//   판마다 자리를 바꾼다(홀수 판 A = 상대 자리 · 짝수 판 A = 플레이어 자리 — 둘 다 AI). 겉모습(투구 · 판금)은 시트 그대로 · 버티는 힘 · 힘은 게임처럼 AI 가 숙련도별 몸 값(config PROF_BODY · 시트 힘이 이김)으로 (11/17 E)
 //  찍는 것 (인물마다): 이김 · 반응(s) · AI 숙련도(손에 든 유파) · 분당 공격 · 첫 공격까지(s) · 속임 몫 · 받아치기 몫(맞받기 + 먼저 끊기 ÷ 공격) · 이어 치기 몫 · 맞힘 ·
 //   간 볼 때 평균 거리(m — 판 시작 정지 ARENA.startHold + 1 s 뒤만) · 판당 비기 · 판당 밀치기 ·
 //   고른 기술 몫(가로 zwerch* · 내려 zornhau* · oberhau · 올려 unterhau* · 찌르기 stich*) · 간 볼 때 낮은 자세 몫(바꿈 wechsel* · 바보 alber) ·
@@ -43,8 +43,6 @@ for (let s = 1; s <= SEEDS; s++) {
   const E = aEnemy ? A : B, P = aEnemy ? B : A;
   const G = newRound({ seed: s, difficulty: E.level, persona: E.persona, weapon2: E.weapon, look2: E.c.look, revive: E.c.revive,
     AI2Class: AI, difficulty2: P.level, persona2: P.persona, weapon: P.weapon, look: P.c.look, revive2: P.c.revive });
-  G.enemy.vitality = E.c.vitality > 0 ? E.c.vitality : 1;
-  G.player.vitality = P.c.vitality > 0 ? P.c.vitality : 1;
   const sides = [[aEnemy ? 'A' : 'B', G.ai, G.enemy], [aEnemy ? 'B' : 'A', G.ai2, G.player]];
   for (const [k, ai] of sides) { // 고른 기술 셈 — startAttack 을 감싸 읽기만 한다 (행동은 그대로)
     const orig = ai.startAttack.bind(ai);

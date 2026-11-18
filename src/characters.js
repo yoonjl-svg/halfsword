@@ -22,7 +22,7 @@ import { WANDER_EXCLUSIVE } from './wander_rules.js'; // 방랑에서만 나오�
 
 import { WEAPONS, WEAPON_LIST } from './weapons.js';
 import { getLook, CHARACTER_LOOK_VERSION } from './looks.js';
-import { AI_LEVELS, AI_PROFICIENCY, PROF6_VITALITY } from './config.js'; // 변형의 실력 숫자를 원본 실효값에서 계산 · 숙련도 → 실력 숫자 이름 (config.js는 아무것도 import하지 않아 순환이 없다)
+import { AI_LEVELS, AI_PROFICIENCY } from './config.js'; // 변형의 실력 숫자를 원본 실효값에서 계산 · 숙련도 → 실력 숫자 이름 (config.js는 아무것도 import하지 않아 순환이 없다)
 import { traditionOf, schoolOf } from './schools.js'; // 인물의 유파 = AI 가 실제로 싸우는 유파 — 꾸러미 persona.school 이 있으면 그 유파, 없으면 시트 무기의 유파 (숙련도 표 열쇠 — 10/13 · 10/29 15:5x)
 
 export const CHARACTERS = [
@@ -633,7 +633,9 @@ const MAD_LEVEL_RULES = {
   skill: [+1, 1], // 0~1 척도
 };
 function scaledLevel(ai, scale) {
-  const base = { ...(AI_LEVELS[ai.level] || AI_LEVELS.normal), ...ai.persona?.level };
+  // 힘 (11/18 — 사장님 '3. 곱하기'): 시트 힘은 숙련도별 몸 값 PROF_BODY.strength 에 곱하는 몫이라 출발점 = 원본 시트 힘(없으면 1 — 지금 하인리히 1.15) ×1.2 →
+  //  AI 몸 힘 = 표[숙련도] × 원본 시트 힘 × 1.2 (ai.js setLevel 이 표와 곱함 — 광기의 몫이 같은 곱 위에 얹힘)
+  const base = { ...(AI_LEVELS[ai.level] || AI_LEVELS.normal), strength: 1, ...ai.persona?.level };
   const out = {};
   for (const [key, v] of Object.entries(base)) {
     const [dir, cap = Infinity] = MAD_LEVEL_RULES[key] || [0]; // 표에 없는 새 키는 그대로 둔다 (새 실력 숫자가 생기면 여기에 방향을 적는다)
@@ -1025,10 +1027,8 @@ for (const c of CHARACTER_VARIANTS) {
   }
 }
 
-// 숙련도 6 버티는 힘 (사장님 10/29 22:4x '지금 숙련도 6인 캐릭터는 (롤랑과 베르나르도의 경우를 보면) 체력 10% 보너스가 있었어. 그와 동일한 방식으로 숙련도 6캐릭터는 모두같은 보너스를 주도록 해'):
-//  모든 시트(기본 회전 · 얼터 · 손님)의 실효 숙련도 = 위 맞춤까지 끝난 ai.proficiency. 6 이면 vitality = PROF6_VITALITY(config.js — 1.1, 롤랑 · 베르나르도의 10/24 값과 같은 뜻).
-//  시트에 손으로 적던 1.1(롤랑 · 베르나르도)은 지움 — 이 한 곳이 정한다. 6 아래는 시트 그대로(지금 모두 없음 = 1)
-for (const c of [...CHARACTERS, ...CHARACTER_VARIANTS, ...CHARACTER_GUESTS]) if (c.ai?.proficiency === 6) c.vitality = PROF6_VITALITY;
+// 버티는 힘 (11/17 E): 옛 '숙련도 6 시트 = vitality 1.1'(PROF6_VITALITY — [사장님 10/29 22:4x]) 규칙은 지움 — 숙련도별 몸 값 config PROF_BODY 가 모든 AI 에 준다(ai.js setLevel · 시트 값 없음).
+//  시트에 vitality 를 손으로 적은 인물은 없다(롤랑 · 베르나르도의 10/24 1.1 은 10/29 에 이미 숙련도 6 규칙으로 옮겨졌음 — 이제 PROF_BODY 6 칸).
 
 /** id → 시트. 기본 회전·변형·손님 인물까지 (변형은 여정의 정해진 자리·?foe=id, 손님 인물은 여정의 제 무대(STAGE_FOE)·테스트 경로의 상대 고르기·?foe=id) */
 export const CHARACTERS_BY_ID = Object.fromEntries([...CHARACTERS, ...CHARACTER_VARIANTS, ...CHARACTER_GUESTS].map((c) => [c.id, c]));

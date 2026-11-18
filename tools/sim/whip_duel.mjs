@@ -11,7 +11,7 @@
 //                                [--stand=reach|contact|수]  봇이 서는 간격 끝(기본 reach = 한 걸음 내디뎌 닿는 거리 — 둘째 일 표 · contact = 맞닿는 간격 — 셋째 일 표, §12)
 //                                [--measure=c,r,cl,cut] 채찍 간격표 · [--flexMax=] 휘는 마디 물리 튐 문턱(STRIKE.flexSpeedMax) · [--speedBonus=k] 견줌만(게임에 없음) 판정 에너지 × (1 + k × 닿은 빠르기 ÷ 20) — 넷째 일 §14
 //   (채찍) 판마다 덩굴 닿음 빠르기도 셈: 닿음 수 cN · 30 m/s 넘음 c30 · 문턱에 버려짐 cDrop · 가장 빠른 닿음 cMax · 30 넘어 난 판정 J fastJ · 그 마디 fastSeg · 마디 최고 빠르기 segVmax · 기력 평균 stam · 지친 시간 exhaustT
-//   상대는 인물 시트 모두(손님 인물 롤랑 · 베르나르도 · 백린 포함 — CHARACTERS_BY_ID · 10/24) · 시트에 버티는 힘(vitality)이 있으면 상대 몸에 그대로
+//   상대는 인물 시트 모두(손님 인물 롤랑 · 베르나르도 · 백린 포함 — CHARACTERS_BY_ID · 10/24) · 버티는 힘은 상대 AI 가 숙련도별 몸 값으로 (11/17 E)
 //   (10/24) 획마다 손맛도 셈: 긋기 시작(감기 · 멈춤 뒤) → 칼끝(몸통 기준) 가장 빠른 때 swingT · 그 빠르기 tipV · 손가락을 뗀 뒤 칼끝이 몸통 기준 3 m/s 아래로 0.1 s 머물기까지 recT(회수) · 판정 하나의 J 평균
 //                                [--sound]  (10/24) 채찍 소리 때: 게임과 같은 휙 · 딱 걸쇠(src/whip_sound.js whipTipStep)를 화면마다(물리 2 스텝 = 60 fps) 돌려 딱이 난 때와 채찍 맞음(판정 5 J 넘음 · 살 · 옷 / 투구 · 판금) 때를 적고 맞음마다 가장 가까운 딱까지 시간을 셈 — 맞음 소리와 딱이 겹치나 (docs/import/bernardo_whip_import_2026-10-24.md)
 //                                [--diag]  획 진단: 몸 닿음 · 칼만 · 둘 다 아님 갈래마다 시작 거리 · 덩굴 끝이 상대 쪽으로 간 거리 · 상대 몸통 · 머리와 가장 가까움 · 상대가 서 있던 획 몫
@@ -75,7 +75,7 @@ function duel(wSpec, oppId, seed, dur) {
   const base = { seed, weapon: w, ...(aiDrive ? { AI2Class: AI } : {}) };
   const G = newRound(ch ? { ...base, weapon2: ch.weapon, difficulty: ch.ai.level, persona: ch.ai.persona, look2: ch.look, revive: ch.revive } : { ...base, weapon2: 'longsword' });
   const P = G.player, E = G.enemy;
-  if (ch?.vitality > 0) E.vitality = ch.vitality; // 버티는 힘 (롤랑 · 베르나르도 1.1 — 게임 main.js 와 같게 · 다른 인물은 시트에 없어 1)
+  // 버티는 힘 · 힘: 상대 AI 가 숙련도별 몸 값(config PROF_BODY — 11/17 E · ai.js setLevel)으로 넣음 (게임과 같음 · 전 시트 vitality)
   P.skill.corr = SKILL.corr; P.skill.autoGuard = true;
   const guard = aiDrive ? null : new PlayerParryGuard(P, E);
   let rs = (seed * 7919 + oppId.length * 104729) >>> 0;
