@@ -462,11 +462,13 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       }
     }
     if (P.openHold) (sx = 0), (sy = 0), (guardPress = false);
-    if (botHook) { const o = botHook({ t, sx, sy, guardPress, seen }); if (o) ({ sx, sy, guardPress } = { sx, sy, guardPress, ...o }); } // 재는 도구 손 (kote_pickup.mjs — 칼을 놓치면 칼로 걸어가 줍기) · 없으면 그대로
+    if (botHook) { const o = botHook({ t, sx, sy, guardPress, seen }); if (o) ({ sx, sy, guardPress } = { sx, sy, guardPress, ...o }); } // 재는 도구 손 (kote_pickup.mjs — 칼을 놓치면 칼로 걸어감) · 없으면 그대로
+    const autoPick = !!P.autoPick; // 11/18 저절로 줍기 (main.js playerInputFrame 과 같음 — src/pickup.js humanPickup 이 발 · 누름을 쥔 동안 이동 · 공격 · 막기 입력을 버림)
+    if (autoPick) guardPress = false;
     // ── main.js playerInputFrame 과 같은 차례 ──
     const d = input.consumeHandDelta();
     let taps = input.consumeTaps();
-    if (P.stamina.exhausted) (d.x = 0), (d.y = 0), (taps = 0);
+    if (P.stamina.exhausted || autoPick) (d.x = 0), (d.y = 0), (taps = 0);
     const closeGate = closeInputGate(P, W); // 붙은 거리 규칙 (11/14 — main.js 와 같은 차례)
     let secBusy = busy || closeGate.lock;
     const swipe = Math.hypot(d.x, d.y) / FR >= CONFIG.SKILL.swingSpeed;
@@ -490,7 +492,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     const bufHold = !secBusy && !!W.bufferHold;
     if (secBusy || bufHold) taps = 0;
     guard.held = guardPress && !P.iaiDraw; // 11/16 뽑는 동안 막기 없음 (main.js 와 같음)
-    P.pickupPress = guardPress; // 떨어진 칼 줍기 'block' (main.js playerInputFrame 과 같은 차례 — 막기 단추 = 줍기 누름)
+    // 떨어진 칼 줍기 누름은 11/18 부터 src/pickup.js humanPickup 이 쥔다 (main.js 와 같음 — 막기 단추로 줍지 않음)
     if (guard.broken && (!guard.held || (!P.skill.swinging && !P.skill.tap && !swipe && taps === 0))) guard.broken = false;
     if (guard.held && !bufHold && (swipe || taps > 0)) guard.broken = true;
     const guardHold = guard.held && !guard.broken && !secBusy;
@@ -498,7 +500,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     if (uq.holdE) {
       const hs0 = input.holdState();
       const hs = closeGate.lock || closeGate.near ? { ...hs0, down: false } : hs0; // 붙은 거리 규칙 (11/14 — main.js 와 같음)
-      uq.holdInput(hs.down && !P.stamina.exhausted, hs.still, !!W.open, W.holdOwns());
+      uq.holdInput(hs.down && !P.stamina.exhausted && !autoPick, hs.still, !!W.open, W.holdOwns());
     }
     const winding = !!uq.winding;
     if (P.alive && !secBusy && !guardHold && !bufHold && !winding) (P.handOffset.x += d.x), (P.handOffset.y += d.y);
@@ -508,7 +510,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     P.handGrip = pr ? pr.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx) : P.inputActive;
     if (taps > 0 && P.alive) P.skill.thrust();
     const m = input.move;
-    const feet = P.alive && !P.stamina.exhausted && P.skill.secretPhase !== 'stiff';
+    const feet = P.alive && !P.stamina.exhausted && !autoPick && P.skill.secretPhase !== 'stiff';
     P.move.set(feet ? m.x : 0, feet ? m.y : 0);
     P.stickX = feet ? m.x : 0;
     P.stickY = feet ? m.y : 0;

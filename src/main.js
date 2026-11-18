@@ -64,7 +64,7 @@ import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비�
 import { drawInput, drawTapTake } from './iai_obi.js'; // 11/16 뽑기 — 사람 입력 잠금 (SECRET.gnsDraw)
 import { IAI_READY_STANCE, iaiReadyShown } from './secret_instant.js'; // 고노센 발도 대기 자세 이름 (① 자세 칸 — 10/31 13:xx)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
-import { pickupReady } from './pickup.js'; // 떨어진 칼 줍기 (11/05 — 막기 단추 글 '줍기')
+import { pickupReady, PICKUP_HOOKS } from './pickup.js'; // 떨어진 칼 줍기 (11/05 — 막기 단추 글 '줍기' · 11/18 저절로 줍기 · 칼 팔 다침 한 줄)
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { itEdgeLook } from './italian_outbox.js'; // 이탈리아 칼 우위 빛 (11/14 설계안 A — 그림만 · config IT_OUTBOX.edgeLook)
 import { TRADITIONS, traditionOf } from './schools.js';
@@ -2280,6 +2280,11 @@ function watchMudNotice() {
   mudNoticeShown = true;
   showEmoMsg('진흙 · 발이 느려집니다', 'mud', 2000);
 }
+// 칼 팔을 다쳐 칼을 놓친 때 한 줄 ([사장님 11/18 결정] '못 줍는 규칙은 그대로 두고, 떨어질 때 칼 팔을 다쳐 칼을 쥘 수 없다 같은 한 줄을 띄웁니다. -> ok' — src/pickup.js humanPickup):
+//  사람 몸만 · 놓칠 때마다 한 번 · 알림 줄(E — 진흙 · 부활 · 경직과 같은 자리). 손목 치기 떨굼(칼 팔 멀쩡 — 저절로 주움) · AI 몸은 안 띄움
+PICKUP_HOOKS.onArmDrop = () => {
+  if (state === 'fight' && !roundOver) showEmoMsg('칼 팔을 다쳐 칼을 쥘 수 없다', 'disarm', 2400);
+};
 /** 감정 줄을 비운다 (새 판) */
 function clearEmoMsg() {
   emoQueue.length = 0;
@@ -2965,13 +2970,16 @@ function playerInputFrame(dt, now) {
   // 공격 조이스틱 (11/17 — src/atk_stick.js): 손잡이 자리가 정한 손 목표 몫을 손가락 끌기 몫에 더함 — 아래 긋기 · 비기 · 원 · 고유 동작 · 막기 · 기력 판정이 손가락과 같은 길로 읽는다
   if (input.atk) { const s = atkStickStep(input.atk, player.handOffset, dt); d.x += s.x; d.y += s.y; }
   const exhausted = player.stamina.exhausted;
-  if (exhausted) { d.x = 0; d.y = 0; }
+  // 저절로 줍기 (11/18 사장님 '일단 칼 근처로 가면 그 다음부터는 내 입력과 무관히 자동으로 다가가서 칼을 주움' — src/pickup.js humanPickup 이 물리 스텝마다 발 · 누름을 쥠):
+  //  그동안 이동 · 공격(끌기 · 톡 · 비기) · 막기 입력을 버린다 (지난 스텝에 세운 player.autoPick)
+  const autoPick = !!player.autoPick;
+  if (exhausted || autoPick) { d.x = 0; d.y = 0; }
   // 멈칫하는 동안엔 손가락 움직임도 느리게 반영한다 (멈칫이 끝나는 순간 손이 휙 튀지 않게)
   const inScale = hitStop.left > 0 ? 0.25 : 1;
   // 칼 쪽 화면을 톡 치면(마우스는 끌지 않고 클릭) 찌른다 (skill.js thrust). 권총은 손가락이 닿는 순간 쏜다 (쏘는 타이밍이 실력이라 뗄 때까지 늦추지 않는다)
   input.tapOnDown = !!player.weapon?.gun;
   let taps = input.consumeTaps();
-  if (exhausted) taps = 0;
+  if (exhausted || autoPick) taps = 0;
   // 플레이어 비기 (10/9 23:5x): 창이 열려 있을 때 공격 입력(톡 = 찌르기, 휘두르기만큼 빠른 끌기 = 베기)이 오면 그 입력 대신 비기 완벽 실행.
   //  실행·경직 동안은 칼 입력(끌기·톡)을 무시한다 — 발(스틱)은 실행 동안 내 것, 경직 동안은 안 듣는다 (사장님 10/10 20:5x '잠깐 아예 못 움직이게' — 칼은 skill.js holdStiff 가 멈춰 둔다)
   const swipe = Math.hypot(d.x, d.y) / Math.max(dt, 1e-3) >= CONFIG.SKILL.swingSpeed;
@@ -2994,7 +3002,7 @@ function playerInputFrame(dt, now) {
   //  칼이 칼집에 든 채(고노센 준비) 고노센 아닌 탭 · 칼을 쥠(손가락이 길게 누름 한도를 넘게 끎 · 마우스는 움직임) · 막기 단추면 뽑기 — 뽑는 동안 손가락 움직임 · 탭 · 막기를 버림(비기 실행 중과 같은 secBusy) ·
   //  뽑는 동안 든 탭 하나는 끝난 뒤 이 차례에서 냄 (몸이 칼을 낼 수 없으면 아래 길이 버림)
   const prD = input.press;
-  const parryDown = (parryHold.btn != null || parryHold.key) && !roundOver;
+  const parryDown = (parryHold.btn != null || parryHold.key) && !roundOver && !autoPick;
   if (player.alive && drawInput(player, { taps, grip: prD && !prD.mouse ? (prD.atk ? input.atk.grip : prD.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx)) : Math.abs(d.x) + Math.abs(d.y) > 1e-5, guard: parryDown }, secBusy)) {
     secBusy = true;
     d.x = 0;
@@ -3011,10 +3019,10 @@ function playerInputFrame(dt, now) {
   // 막기 버튼 (10/11): 누르는 동안 손은 막기가 쥔다 (느린 끌기는 버림). 누른 채 휘두르거나(swipe — 비기 입력과 같은 문턱) 톡 치면 그 공격이 끝날 때까지 놓는다 —
   //  공격이 끝남 = 검술 층의 휘두르기·찌르기가 꺼짐 (지난 스텝 값). 막기 연환 창이 열려 있었으면 위에서 이미 비기로 나갔다
   let guardHold = false;
-  player.pickupPress = (parryHold.btn != null || parryHold.key) && !roundOver; // 떨어진 칼 줍기 'block' (11/05 — src/pickup.js): 칼을 놓친 동안 막기 단추 · F 가 줍기 (막기는 칼이 없으면 아무 일도 안 함)
+  // 떨어진 칼 줍기 누름(player.pickupPress)은 11/18 부터 src/pickup.js humanPickup 이 쥔다 (칼 곁이면 저절로 — 막기 단추 · F 로 줍지 않음)
   if (playerGuard) {
     const G = playerGuard;
-    G.held = (parryHold.btn != null || parryHold.key) && !roundOver && !player.iaiDraw; // 11/16 뽑는 동안 막기 없음 (SECRET.gnsDraw)
+    G.held = (parryHold.btn != null || parryHold.key) && !roundOver && !player.iaiDraw && !autoPick; // 11/16 뽑는 동안 막기 없음 (SECRET.gnsDraw) · 11/18 저절로 줍는 동안 막기 없음
     if (G.broken && (!G.held || (!player.skill.swinging && !player.skill.tap && !swipe && taps === 0))) G.broken = false;
     if (G.held && !bufHold && (swipe || taps > 0)) G.broken = true;
     guardHold = G.held && !G.broken && !secBusy;
@@ -3028,7 +3036,7 @@ function playerInputFrame(dt, now) {
   if (player.skill.uniq?.holdE) {
     const hs0 = input.holdState();
     const hs = closeGate.lock || closeGate.near ? { ...hs0, down: false } : hs0; // 붙은 거리 규칙(11/14 — 묶임 · 칼자루만 거리)에선 길게 눌러 감지 않음 (놓은 것으로)
-    player.skill.uniq.holdInput(hs.down && !exhausted, hs.still, !!playerSecret?.open, !!playerSecret?.holdOwns()); // 11/11 알티바슈 포르트 무장 창이면 길게 눌러 메기 = 비기
+    player.skill.uniq.holdInput(hs.down && !exhausted && !autoPick, hs.still, !!playerSecret?.open, !!playerSecret?.holdOwns()); // 11/11 알티바슈 포르트 무장 창이면 길게 눌러 메기 = 비기
   }
   const winding = !!player.skill.uniq?.winding;
   // 권총: 자동 조준이라 끌기는 손을 움직이지 않는다 (빠른 끌기가 내딛기·자세 복귀를 부르지 않게)
@@ -3048,7 +3056,7 @@ function playerInputFrame(dt, now) {
   watchMudNotice(); // 잠든 습지: 진흙을 처음 밟으면 알림 줄 한 번 (다른 무대는 배율 1 이라 안 뜬다)
   const m = input.move;
   const emv = player.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고 공포면 빨라진다
-  const feet = player.alive && !exhausted && player.skill.secretPhase !== 'stiff'; // 비기 경직: 스틱이 안 듣는다 (걸음·근접 밀치기 없음 — 몸은 물리대로)
+  const feet = player.alive && !exhausted && !autoPick && player.skill.secretPhase !== 'stiff'; // 비기 경직: 스틱이 안 듣는다 (걸음·근접 밀치기 없음 — 몸은 물리대로)
   player.move.set(feet ? m.x * emv : 0, feet ? m.y * emv : 0);
   player.stickX = feet ? m.x : 0; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
   player.stickY = feet ? m.y : 0;
@@ -3059,10 +3067,10 @@ function playerInputFrame(dt, now) {
   if (mouseMode && player.alive) trail.addPad(player.skill.aim.x, player.skill.aim.y, now / 1000);
 }
 
-// 막기 단추 글 (11/05 떨어진 칼 줍기 'block' — src/pickup.js): 칼을 놓쳤고 제 칼 곁(주울 수 있음)이거나 줍는 중이면 '줍기', 아니면 '막기'. 바뀔 때만 DOM 을 고친다
+// 막기 단추 글 (11/05 떨어진 칼 줍기 — src/pickup.js): 칼을 놓쳤고 제 칼 곁(주울 수 있음)이거나 줍는 중(11/18 저절로 줍기 포함)이면 '줍기', 아니면 '막기'. 바뀔 때만 DOM 을 고친다
 let parryLabel = '막기';
 function updateParryLabel() {
-  const want = player && !player.armed && (player.pickup || pickupReady(player)) ? '줍기' : '막기';
+  const want = player && !player.armed && (player.pickup || player.autoPick || pickupReady(player)) ? '줍기' : '막기';
   if (want === parryLabel) return;
   parryLabel = want;
   const b = $('btnParry');
