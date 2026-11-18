@@ -262,7 +262,7 @@
 | 파일 | 무엇 | 크기 |
 |---|---|---|
 | `src/team_sense.js` (새) | 판 사본 · 층별 읽기(시야 · 늦음 · 내다봄) · 행동 셈 여덟(겨눔 덧셈 · 자리 목표 스틱 · 기습 갈래 · 칼길 · 엄호 · 몰아 / 나눔 · 방패 · 이끌기). 다른 src 를 거의 안 읽음(`team.js` 처럼) | 300 ~ 400 줄 |
-| `src/config.js` `TEAM_SENSE` | 층 표 · 값 · 마음가짐 기울기 · 스위치 `on` | 40 ~ 60 줄 |
+| `src/config.js` `TEAM_SENSE` | 층 표 · 값 · 마음가짐 기울기 (스위치 없음 — 사장님 규칙 '재지 말고 그냥 지워') | 40 ~ 60 줄 |
 | `src/match.js` | `createMatch` 가 셋 이상 판에만 `M.sense` · `stepMatch` ① 뒤 한 장 적기 | + 10 줄 |
 | `src/targeting.js` | `targetScore` 덧셈(§3-2 · §3-6) · 바꿈 문턱 기울기 — `M.sense` 있을 때만 | + 15 줄 |
 | `src/ai.js` | `teamFeet` 에 자리 목표 한 줄(협공 · 칼길 · 엄호 · 방패 · 이끌기) · `watch` 빈틈 점수에 '기습' 갈래 · 공격 시작 앞 칼길 검사 — 모두 `me.foes` 갈래 안 | + 30 ~ 40 줄 |
@@ -277,7 +277,7 @@
 - 새 길은 모두 셋 이상 판에서만: `M.sense` 는 `createMatch` 가 싸움꾼 셋 이상일 때만 만들고, AI 쪽은 이미 쓰는 갈래 `me.foes`(1:1 은 없음 — `ai.js` 4495 · `fighter.js` 1127 와 같은 가름) 안에서만 부른다. 1:1 의 `main.js newRound` 고리는 `stepMatch` 를 타지 않는다.
 - 난수를 부르지 않는다 → 1:1 의 `Math.random` 차례 그대로 · 무리 판도 같은 씨앗이면 같은 판.
 - 관문 그대로여야 넣음: `fights12` · `live_battery` · `finish_thrust` · `match_twin`(= fights12) · `corr_s0` 12 IDENTICAL · `weapon_smoke` · `node --test` · build.
-- 스위치 `TEAM_SENSE.on`(주소 `?teamSense=0`)로 지금 판과 바로 견줌.
+- 스위치는 두지 않는다(사장님 규칙). 지금 판과의 견줌은 재기 도구 `tools/sim/team_sense.mjs` 의 재기 전용 옵션으로만(게임 값 · 주소 인자 없음).
 
 ### 7-3. 재기 계획
 
