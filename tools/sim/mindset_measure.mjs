@@ -26,8 +26,11 @@ import { writeFileSync, readFileSync, existsSync, renameSync } from 'node:fs';
 import { newRound, AI, DT } from './harness_m.mjs';
 import { isMain } from './is_main.mjs';
 import { applyCfgArgs } from './cfg_override.mjs';
-import { AI_PROFICIENCY, MINDSET } from '../../src/config.js';
-import { STATES as MSTATES } from '../../src/ai_mindset.js';
+import * as CFG from '../../src/config.js';
+// 마음가짐이 없는 옛 판(견줌 — ce506130 · 개발 머리)에서도 돌게: 마음가짐 칸은 있으면 씀
+const { AI_PROFICIENCY } = CFG;
+const MINDSET = CFG.MINDSET ?? { react: {}, profF: [] };
+const MSTATES = await import('../../src/ai_mindset.js').then((m) => m.STATES).catch(() => []);
 import { LOOKS } from '../../src/looks.js';
 import { SCHOOLS as PKGS } from '../../src/schools.js';
 import { huntN } from '../../src/cn_hunt.js';
@@ -624,7 +627,7 @@ if (isMain(import.meta.url)) {
     applyCfgArgs();
     const dur = +arg('dur', 20), prof = +arg('prof', 4);
     const schools = arg('schools', SCHOOLS.join(',')).split(',');
-    const states = arg('states', 'bleed,tired,leg,arm,disarmed,cool').split(',');
+    const states = arg('states', 'bleed,tired,leg,arm,disarmed').split(','); // 11/19 — 'cool'(비기 뒤 기억) 뺌
     const list = [];
     for (const f of planFights({ schools, seeds: range(arg('seeds', '1-4')) })) for (const induce of states) for (const ten1 of SCORE.tenacity[f.school] === 1 ? [false] : [false, true]) list.push({ ...f, induce, ten1 });
     const runs = runList(list, (f) => measureFight({ ...f, dur, prof }), '집요함 상태 들임');
