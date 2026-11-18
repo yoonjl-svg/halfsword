@@ -154,11 +154,15 @@ export function chainWant(ai, base, aK = armK(ai)) {
   return w;
 }
 
-/** 이어 칠 칼: 지금 손에서 바로 이어지는 칼(옛 판과 같은 셈) + 원으로 이을 큰 칼(시작 자리가 가슴 높이 이상인 베기 — 손이 멀어도 이어 돌리기가 머리 위로 넘김) */
+/**
+ * 이어 칠 칼: 지금 손에서 바로 이어지는 칼(옛 판과 같은 셈) + 원으로 이을 큰 칼(시작 자리가 가슴 높이 이상인 베기 — 손이 멀어도 이어 돌리기가 머리 위로 넘김)
+ *  11/19 B7 (사장님 '권고대로' — 기록 docs/strike/de_band3_2026-11-19.md §B7): 손 0.35 안에 가까운 이어 치기 후보가 있으면 원으로 넘길 몫(spinK)을 반으로 — 맞힘이 높은 가까운 이어 치기를 먼 큰 칼로 덜 바꿈
+ */
 export function nextTech(ai, d) {
   const me = ai.me;
   const hand = [me.handOffset.x, me.handOffset.y];
-  const S = spinK(ai, d);
+  let S = spinK(ai, d);
+  if (S > 0 && ai.school.tech.some((t0) => { const t = ai.techNow(t0); return !!t && t0 !== ai.tech && t !== ai.tech && padDist(hand, t.from) <= 0.35; })) S *= 0.5;
   let best = null;
   let bestW = -1;
   let spin = false;

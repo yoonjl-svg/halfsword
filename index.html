@@ -88,6 +88,12 @@
         /* 무기 등급 (예전 룰렛 색 그대로) — 글자 색 규칙의 예외: 카드 이름 · 등급 딱지 · 특수 능력 줄 · 테두리 · 빛 (사장님 10/14 11:0x '카드 등급 색은 유지. 재미 요소야') */
         --tier-trash: #b8b6b0; --tier-common: #fff3c4; --tier-rare: #8cc4ff; --tier-epic: #d6a8ff; --tier-legend: #ffd24a; --tier-mystery: #8fe3c6;
         --foe: #b0473b;
+        /* 동시 대전 체력 칸 색 넷 (사장님 11/18 '원래 초록색이다가 80% 아래로 내려가면 노랑색 50% 아래로 내려가면 주황색 20% 아래로 내려가면 빨강색' — src/hp_strip.js · 편과 무관).
+           11/18 둘째 (사장님 '체력 바가 너무 튀는 색깔이네. 채도 낮추면서 지금 컬러칩과 디자인 언어를 맞춰'): 새 색을 만들지 않고 있는 색에서 — OKLCH 채도 0.11 ~ 0.14 (전 0.16 ~ 0.20)
+            노랑 = --c-accent 그대로 (0.75 0.13 80°) · 빨강 = --foe 그대로 (0.54 0.14 29° — 피 색 BLOOD_RED 색상 · 상대 카드 테) ·
+            주황 = 그 둘의 OKLCH 가운데 (0.64 0.135 54.5°) · 초록 = 10/30 아군 체력 막대 녹색(ALLY_HP_COLOR — 색상 145° · 채도 = 적 색 FOE_COLOR 채도 0.114 = 피 채도 × foeChromaK)을
+            작은 칸이 어두운 무대에서도 보이게 밝기만 0.40 → 0.70 (작업자 — 노랑 0.75 와 주황 0.64 사이). 맞는지는 tools/sim/hp_strip.test.mjs 가 셈으로 본다 */
+        --hp-green: #6fb171; --hp-yellow: var(--c-accent); --hp-orange: #cb7431; --hp-red: var(--foe);
         /* 자리: 안전 영역 · 왼쪽 위/오른쪽 위 칸 폭 (가운데 일시정지 단추 38px 양옆 10px 비움) */
         --safe-t: max(12px, env(safe-area-inset-top));
         --safe-r: max(14px, env(safe-area-inset-right));
@@ -99,8 +105,8 @@
         --notice-up: 34px;
       }
       @media (orientation: portrait) {
-        /* 세로: 칸 폭은 일시정지 단추까지 · 안내는 조이스틱(아래 20 + 110px) 위로 · 안내가 두 줄이라 알림 줄을 더 위로 */
-        :root { --side-w: calc(50vw - 43px); --hint-b: calc(var(--safe-b) + 130px); --notice-up: 54px; }
+        /* 세로: 칸 폭은 일시정지 단추까지 · 안내는 조이스틱(아래 20 + 132px — 11/18 뛰기로 키움) 위로 · 안내가 두 줄이라 알림 줄을 더 위로 */
+        :root { --side-w: calc(50vw - 43px); --hint-b: calc(var(--safe-b) + 152px); --notice-up: 54px; }
       }
       * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
       button, input, select, textarea { font-family: inherit; } /* 단추·입력 칸도 화면 글꼴을 물려받는다 (브라우저 기본은 시스템 글꼴) — 크기·굵기는 저마다의 줄 그대로 */
@@ -155,20 +161,26 @@
       #staminaHud { position: fixed; inset: 0; pointer-events: none; }
       .stamina-bar { position: absolute; width: 56px; height: 2px; transform: translate(-50%, -100%); background: rgba(24,18,14,.35); border-radius: 1px; overflow: hidden; box-shadow: 0 0 0 .25px var(--c-text), 0 0 0 .5px var(--c-accent); }
       .stamina-bar > span { display: block; width: 100%; height: 100%; background: var(--c-sub); opacity: .85; transform-origin: left center; }
-      .ken-pips { position: absolute; display: flex; gap: 1px; width: 56px; height: 2px; transform: translate(-50%, 2px); pointer-events: none; }
-      .ken-pips > i { flex: 1; background: rgba(24,18,14,.35); border-radius: .5px; box-shadow: 0 0 0 .25px var(--c-text); }
-      .ken-pips > i[data-on="true"] { background: var(--c-accent); }
-      .ken-pips[data-full="true"] > i { box-shadow: 0 0 2px .5px var(--c-accent); }
-      /* 동시 대전 이름 · 체력 목록 (src/team_hud.js — 사장님 10/29 22:3x '왼쪽 상단에 작게 이름과 체력바'): 글자 = 기술 칸 둘째 줄(.slot small · #techSlot small)과 같은
-         크기 · 굵기 · 줄 높이 · 색 · 외곽선 · 막대 40 × 2 px = 기력 막대(56 × 2)의 약 70 % · 채움 = 편 색 · 죽으면 흐림. 1:1 엔 없음 */
-      /*  10/30 01:0x: 짧은 이름 밑에 막대 · 한 줄에 둘 — 첫 줄 상대 · 둘째 줄 내 편 */
-      #teamList { position: absolute; left: var(--safe-l); top: var(--safe-t); display: flex; flex-direction: column; gap: 3px; max-width: var(--side-w); text-shadow: var(--hud-outline); }
-      #teamList .tl-row { display: flex; gap: 12px; }
-      #teamList .tl-c { display: flex; flex-direction: column; gap: 1px; min-width: 40px; max-width: 7em; }
-      #teamList .tl-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-s); font-weight: var(--fw-body); line-height: 1.35; color: var(--c-sub); word-break: keep-all; }
-      #teamList .tl-b { display: block; width: 40px; height: 2px; background: rgba(24,18,14,.35); border-radius: 1px; overflow: hidden; box-shadow: 0 0 0 .25px var(--c-text), 0 0 0 .5px var(--c-accent); }
-      #teamList .tl-b > span { display: block; width: 100%; height: 100%; opacity: .9; transform-origin: left center; transition: transform .25s; }
-      #teamList .dead { opacity: .4; }
+      /* 동시 대전 체력 칸 (사장님 11/18 '좌측 상단 … 체력바 … 없애고 기력바랑 같이 뜨게 해 … 점선 모양의 바 … 10칸' — src/stamina_hud.js · 규칙 src/hp_strip.js):
+         기력 막대 바로 위(틈 2px — config TEAM_FIGHT.hpStrip.gap) · 같은 너비 56px · 높이 3px(h — 막대보다 1px 높게: 색이 갈려 읽히게) · 10 칸 사이 1px 틈 = 점선 꼴(기력 막대는 2px 한 줄 실선 · 무채색).
+         켜진 칸 = 체력 색(--hp-* — 편과 무관) · 짙은 외곽선(--outline-c — HUD 글자 외곽선과 같은 색 · 금빛 테는 노랑과 섞이고 빨강을 주황으로 보이게 해 켜진 칸엔 쓰지 않음) ·
+         꺼진 칸 = 기력 막대 바닥과 같은 바탕(rgba(24,18,14,.35)) + 막대 테의 옅은 흰 실선 — 어두운 무대에서도 칸 자리가 보임 (11/18 둘째 — 기력 막대와 꼴을 맞춤).
+         점멸(출혈 · 중상) = 칸 전체가 부드럽게 깜빡임(기력 막대 숨 · 끊어지는 움직임 steps() 는 쓰지 않음 — docs/design_language.md '속' 규칙 1) — 움직임을 줄인 기기는 깜빡임 대신 붉은 테두리.
+         [hidden] 을 따로 적는다 — display: flex 가 숨김 속성을 덮지 않게 (11/18 — 옛 기세 칸 · 발톱 자국이 이 까닭으로 숨겨도 남았다) */
+      .hp-cells { position: absolute; display: flex; gap: 1px; width: 56px; height: 3px; transform: translate(-50%, calc(-100% - 4px)); pointer-events: none; }
+      .hp-cells[hidden] { display: none; }
+      .hp-cells > i { flex: 1; background: rgba(24,18,14,.35); border-radius: .5px; box-shadow: 0 0 0 .25px rgba(13,9,7,.9), 0 0 0 .5px rgba(243,233,216,.22); }
+      .hp-cells > i[data-on="true"] { box-shadow: 0 0 0 .25px var(--outline-c); }
+      .hp-cells[data-tone="green"] > i[data-on="true"] { background: var(--hp-green); }
+      .hp-cells[data-tone="yellow"] > i[data-on="true"] { background: var(--hp-yellow); }
+      .hp-cells[data-tone="orange"] > i[data-on="true"] { background: var(--hp-orange); }
+      .hp-cells[data-tone="red"] > i[data-on="true"] { background: var(--hp-red); }
+      .hp-cells[data-blink="true"] { animation: hp-blink .9s ease-in-out infinite; }
+      @keyframes hp-blink { 50% { opacity: .2; } }
+      @media (prefers-reduced-motion: reduce) {
+        .hp-cells[data-blink="true"] { animation: none; }
+        .hp-cells[data-blink="true"] > i { box-shadow: 0 0 0 .75px var(--hp-red); }
+      }
       .stamina-bar { transition: opacity .4s; }
       .stamina-bar[data-full="true"] { opacity: .6; }
       .stamina-bar[data-level="1"], .stamina-bar[data-level="2"] { animation: stamina-breath 1.8s ease-in-out infinite; }
@@ -177,11 +189,6 @@
       .stamina-bar[data-exhausted="true"] > span { background: #948e7c; }
       @keyframes stamina-breath { 50% { opacity: .38; } }
       @media (prefers-reduced-motion: reduce) { .stamina-bar { animation: none !important; } }
-      /* 동방 맹호은림 사냥 겹 (11/14 — src/cn_hunt_hud.js): 겹이 쌓인 몸의 기력 막대 바로 위 작은 발톱 자국 다섯 · 찬 자국 = 겹 · 글 없음 */
-      .hunt-marks { position: absolute; display: flex; gap: 3px; transform: translate(-50%, calc(-100% - 5px)); }
-      .hunt-marks > i { display: block; width: 1.5px; height: 6px; border-radius: 1px; transform: skewX(-20deg); background: rgba(24,18,14,.35); box-shadow: 0 0 0 .25px var(--c-text); }
-      .hunt-marks > i[data-on="true"] { background: var(--c-alert); opacity: .8; }
-      .hunt-marks[data-full="true"] > i { opacity: 1; }
       /* ② 패시브·비기: 줄 하나(40px) — 자세 칸처럼 새 알림이 오면 그 자리에서 바꿔 끼운다. 10/14 03:1x: 마지막 기술이 계속 보인다(새 판에 비움),
          비기 창·고노센 준비만 잠깐 덮었다가 마지막 기술로 돌아온다 (main.js techPut · techTick) */
       .stack .slot { height: 40px; translate: 6px 0; }
@@ -341,15 +348,18 @@
       @keyframes grandPulse { from { opacity: .55; } to { opacity: 1; } }
 
       /* 터치 이동 조이스틱 (싸우는 동안) */
-      #moveStick { position: fixed; left: max(20px, env(safe-area-inset-left)); bottom: max(20px, env(safe-area-inset-bottom)); width: 110px; height: 110px; border-radius: 50%; border: 1px solid var(--line); background: rgba(24, 18, 14, 0.45); display: none; touch-action: none; }
+      /* 11/18 뛰기 (사장님 '이동용 스틱 크기를 지금보다 조금 키우고'): 원 110 → 132px · 손잡이 48 → 58px · 손잡이 길 40 → 48px (+20 % — src/input.js MOVE_STICK_R).
+         끝까지 밀면 뛴다 — 뛰는 동안만 테두리를 본문 색으로 (.run · 글자 없음) */
+      #moveStick { position: fixed; left: max(20px, env(safe-area-inset-left)); bottom: max(20px, env(safe-area-inset-bottom)); width: 132px; height: 132px; border-radius: 50%; border: 1px solid var(--line); background: rgba(24, 18, 14, 0.45); display: none; touch-action: none; }
       #moveStick.show { display: block; }
+      #moveStick.run { border-color: var(--c-text); }
       /* 막기 단추 (10/11 — 누르고 있는 동안 유파 막기 자세, src/parry_button.js): 오른쪽 아래, 조이스틱과 마주 보는 자리 · 같은 바탕·테두리. 오른 엄지가 칼 끌기와 오가며 닿는다.
          누르는 동안 밝게 (.on). 아래 가운데 알림 줄(#emoMsg · #hint)과 오른쪽 위 칸에 닿지 않는다 */
       #btnParry { position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); width: 84px; height: 84px; border-radius: 50%; border: 1px solid var(--line); background: rgba(24, 18, 14, 0.45); color: var(--c-text); font-family: inherit; font-size: var(--fs-m); font-weight: var(--fw-head); letter-spacing: var(--ls-label); text-shadow: var(--hud-outline); display: none; touch-action: none; padding: 0; }
       #btnParry.show { display: block; }
       #btnParry.on { background: rgba(243, 230, 200, 0.32); border-color: var(--c-text); }
       #btnParry.pick { border-color: var(--c-text); box-shadow: 0 0 0 2px rgba(243, 230, 200, 0.35); } /* 떨어진 칼 곁 — 단추가 '줍기' (11/05 src/pickup.js) */
-      #moveKnob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); pointer-events: none; }
+      #moveKnob { position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; margin: -29px 0 0 -29px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); pointer-events: none; }
       /* 공격 조이스틱 (11/17 — 설정 '공격 조이스틱'을 켰을 때만 · src/atk_stick.js): 오른쪽 아래, 이동 스틱과 거울 자리 · 같은 꼴 · 크기 · 손잡이.
          이 판에서는 막기 단추가 조이스틱 왼쪽 위 대각선(원 사이 12px)으로 비키고(오른 엄지가 조이스틱에서 미끄러져 닿음), 아래 가운데 안내 줄은 두 조이스틱 사이 폭 안 ·
          세로 화면 안내는 막기 단추 위로 (body.atkstick — main.js 가 붙임) */
@@ -357,7 +367,7 @@
       #atkStick.show { display: block; }
       #atkKnob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); pointer-events: none; }
       body.atkstick #btnParry { right: calc(max(20px, env(safe-area-inset-right)) + 90px); bottom: calc(max(20px, env(safe-area-inset-bottom)) + 90px); }
-      body.atkstick { --atk-side: calc(100vw - 2 * (max(20px, env(safe-area-inset-left), env(safe-area-inset-right)) + 118px)); } /* 두 조이스틱(110px) 사이 폭 — 원에서 8px 비움 */
+      body.atkstick { --atk-side: calc(100vw - 2 * (max(20px, env(safe-area-inset-left), env(safe-area-inset-right)) + 140px)); } /* 두 조이스틱 사이 폭 — 큰 쪽(이동 132px — 11/18) 원에서 8px 비움 · 가운데 맞춤이라 양쪽 같은 폭 */
       body.atkstick { --notice-up: 54px; } /* 안내가 좁은 폰에서 두 줄이 되어도 알림 줄과 안 겹치게 (세로와 같은 값) */
       body.atkstick #hint { max-width: min(64vw, 520px, var(--atk-side)); white-space: normal; text-align: center; width: max-content; word-break: keep-all; border-radius: 14px; } /* 두 조이스틱 사이 폭이 좁으면 두 줄 (자르지 않음) */
       body.atkstick #emoMsg { max-width: min(64vw, 480px, var(--atk-side)); }

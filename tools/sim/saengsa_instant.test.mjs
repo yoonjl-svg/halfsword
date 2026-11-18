@@ -20,7 +20,9 @@ const PROF = { german: 2, italian: 1, iberian: 1, japanese: 0, chinese: 0, none:
 const OWNED = ['w1', 'w2', 'w3', 'w4', 'w5'];
 const DATA = { roster: ROSTER, drawWeapon: (r) => ['w1', 'w2', 'w3'][Math.floor(r() * 3)], weaponInfo: () => ({ school: 'german', tier: 'common' }), profOf: () => ({ ...PROF }),
   owned: OWNED, hasTitle: true, hireCostOf: () => ({ coins: 20 }) };
-const join = (now, seed = 1) => S.signUp({ now, companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], seed, data: DATA });
+/** 신청 + 첫 경기 무기 배정 (11/18 — 신청은 무기 없이 · 무기는 생사전 화면 경기마다 · 그 배정을 바로 저장에 해 둠) */
+const arm = () => S.updateSaengsa((d) => R.assignWeapons(d.current, ['w1', 'w2', 'w3'], { owned: OWNED, weaponInfo: DATA.weaponInfo }));
+const join = (now, seed = 1, cfg = SAENGSA) => { const res = S.signUp({ now, companions: ['a', 'b'], seed, data: DATA, cfg }); if (res.ok) arm(); return res; };
 const fresh = () => { mem.clear(); mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1 })); P.setCoins(1000); }; // 빈 저장 (열쇠가 없으면 저장 모듈이 이번 실행 값을 쥐고 있음)
 /** 내 경기를 내 팀이 이긴 엔진 결과 (체력 · 부상 그대로) */
 const winMine = (t, m) => ({ winner: R.sidesOf(t, m)[0] === 0 ? 'a' : 'b', fighters: {} });
@@ -170,7 +172,7 @@ test('이어하기: 새로고침 · 앱 다시 열기(같은 저장 · 새 모�
 test('옛 규칙 스위치(instant false): 신청 뒤 아침 10시 첫 대진까지 기다림 · 결과 뒤 2시간 — 그대로 돈다', () => {
   const OLD = { ...SAENGSA, instant: false };
   fresh();
-  assert.equal(S.signUp({ now: at(12, 22, 30), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], seed: 1, data: DATA, cfg: OLD }).ok, true);
+  assert.equal(join(at(12, 22, 30), 1, OLD).ok, true);
   const t = S.syncSaengsa(at(12, 22, 30), { cfg: OLD }).current;
   assert.deepEqual(R.scheduleState(at(12, 22, 30), t, OLD), { kind: 'waiting', startAt: at(13, 10) });
   assert.equal(TX.stateLine(R.scheduleState(at(12, 22, 30), t, OLD)), '첫 대진 아침 10시');

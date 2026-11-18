@@ -54,10 +54,10 @@ import { gyeoksalComboOpt } from './skill.js'; // 동방 격살 AI 몫 (11/14 �
 import { huntN } from './cn_hunt.js'; // 동방 격살 AI 쓸 때 — 상대에 쌓인 사냥 겹 (11/14)
 import { AI_PLAN } from './config.js'; // 유파 AI 기본 전투 흐름 (11/14 — 설계안 docs/design/ai_school_baseline_2026-11-14.md §9)
 import { planFor, tiltOf, luckOf, bandOf, distErrWidth, judgePhase, seenStep, planStats, digStats, itInqP } from './ai_plan.js'; // 국면 판정 · 유파 플랜 · 숙련도 띠 (플랜 없는 유파는 안 부름)
-import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, jpBeat, jpRead, jpTsubame, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep, jpArmRead } from './ai_plan_jp.js'; // 2 단계 일본 플랜 몫 (11/14 — ai.planJp 일 때만)
+import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, jpRead, jpTsubame, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep, jpGnsSeat, jpGnsVoid, jpGnsVoidFeet, jpGnsPrep, jpGnsDrawHold, jpArmRead } from './ai_plan_jp.js'; // 2 단계 일본 플랜 몫 (11/14 — ai.planJp 일 때만)
 import { iaiSeated, drawStart, drawLog } from './iai_obi.js'; // 11/16 뽑기 — 칼집에 든 채 공격 · 막기는 SECRET.gnsDraw 초 뽑은 뒤 (사람과 같은 셈)
-import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
-import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
+import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick, cnGuardChance } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
+import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead, deNachTick, deReserve, deCueTick, deKnee } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만) · 11/19 띠 높음 칼 든 낌새 · 뒤 칼 · 누르는 동안만 비기 기력 · G6 무릎 꺾기 뒤 끝내기
 import { DIG_PROTO, AI_ARC, PHYSICS, GUARD_LINE } from './config.js';
 import { icpArm, icpAim, coverTech, icpStats, discHold, anticAim, anticRoll, swingMark, swingTurn } from './ai_intercept.js'; // 막기 2.0 읽기 묶음 (11/17 — config AI_INTERCEPT · [사장님 11/17 결정] 기본 판): 가로막기 · 덮는 맞받기 · 공격 절제 · 미리 줄 닫기 · 새 휘두름
 import { msTick, msLine, msChainWant, msHold, msFeetV, msWdEnd, msInsideHold, msAttackStart, msTempoFeet, msWindupFeet, msRead, msDebanaOpen, msDebanaTry, msDebanaTick, okoriStart, okoriFrom, okoriTick, okoriEnd, okoriBody, okoriHold, okoriCue } from './ai_measure.js'; // 간격과 박자 · 오코리 (11/17 — config MEASURE · OKORI · [사장님 11/17 결정] 기본 판)
@@ -68,6 +68,7 @@ import { cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 �
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
 import { mindOf, mindInit, mindStay, mindTick, mindAggr, mindPatienceT, mindNeed, mindOppK, mindAnsK, mindMargin, mindGap, mindStakes, mindTechW, mindChain, mindCircle, mindCircleOut, mindSideK, mindSide, mindCreep, mindGive } from './ai_mindset.js'; // 유파 마음가짐 (11/18 — 다섯 항목 점수 → 손잡이 · 집요함 = 상대 상태에 따라 넷을 옮기는 폭 · 값 표 schools.js SCHOOL_MINDSET · 마음가짐이 없는 몸은 옛 셈)
+import { laneHold, senseFeet, outSkill, busyFoe, ambushOpp, shieldOpp, teamStats, huntFree, ambushHold } from './team_sense.js'; // 무리 싸움 판단 (11/18 — 셋 이상 판의 me.foes 갈래 안에서만 부름 · 1:1 은 안 탐)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -109,11 +110,13 @@ const STEP_T = 0.3; // 기술 걸음 'strike'(유파 고유 동작 step 칸): �
 //  빠른 틈(this.quick — 그 순간을 놓치지 않게 빠르게 친다). 풍차 베기 AI 몫(10/31 13:4x — rdSkipWhy)도 같은 셈으로 빠른 틈을 가른다
 const SLOW_WHY = new Set(['patience', 'open', 'weak', 'offbalance', 'drill']);
 /** ① 칼끝 틈 건너기 (11/15 — AI_ARC.gap): 긴 칼 앞 내 칼끝 밖에서도 여는 공격 까닭 — 상대가 헛친 틈 · 무너짐 · 들어옴 · 받아 친 틈 · 이어 치기 · 파고들기(헛친 뒤) · 偏閃奏進 */
-const GAP_OPEN = new Set(['recover', 'finish', 'offbalance', 'stepin', 'counter', 'riposte', 'follow', 'stop', 'dig', 'dive']);
+const GAP_OPEN = new Set(['recover', 'finish', 'offbalance', 'stepin', 'counter', 'riposte', 'follow', 'stop', 'dig', 'dive', 'ambush']); // ambush: 무리 싸움 판단 기습 (11/18 — 셋 이상 판만 · 겨눈 상대가 내 동료와 붙어 칼이 그쪽에 있음)
 // 막기 2.0 공격 절제 · 간격과 박자 깊은 안 참기 (11/17)가 참지 않는 공격: 상대가 헛친 뒤(Nach) · 무너짐 · 들어옴 · 드는 순간(Vor) · 맞받기 · 되받기(Indes) · 이어 치기 · 몸으로 미는 틈 · 쳐내기 · 파고들기
 const DISC_OPEN = new Set([...GAP_OPEN, 'windup', 'press', 'shove', 'beat']);
 // ③ 자세 → 칼길 (11/17): 공격 직전 자세 한 박자를 거치는 공격 = 간 보기에서 고른 느긋한 틈 (SLOW_WHY 에서 헛스윙 연습 뺌 — 빠른 틈은 지금 손 자리에서 곧장)
 const GL_BEAT_WHY = new Set([...SLOW_WHY].filter((w) => w !== 'drill'));
+// 무리 싸움 판단 칼길 비우기 (11/18 — 셋 이상 판만)가 미루지 않는 공격: 막기에서 나온 맞받기 · 되받기 · 달려드는 몸 맞받기 (설계 §3-1 '막기 · 맞받기는 그대로')
+const LANE_FREE = new Set(['counter', 'riposte', 'stop']);
 /**
  * ① 칼끝 틈 건너기 (11/15 — AI_ARC.gap · 앞서 사장님 '상대 무기가 나보다 길 때의 대처 전략으로 모든 ai에게 기본으로'): 상대 칼끝 어림이 내 칼끝보다 gap 넘게 길고 내 칼끝 밖이면
  *  보통 공격을 띠 기울기 몫으로 참음 — AI_PLAN.beat 마다 한 번 굴림(같은 박자 안 거듭 부름은 같은 답). 참으면 true · 칼끝 · 거리를 모르는 몸(시험 몸)은 false
@@ -156,10 +159,12 @@ function drawGate(me, why) {
  */
 function atkGate(ai, why, opt = {}) {
   if (!ai.me.armed || ai.me.stamina.exhausted || (ai.staminaRest)) return true; // 칼이 없으면 칠 수 없다
+  if (ai.planJp && !opt.secret && jpGnsDrawHold(ai)) return true; // 일본 고노센 (11/19): 칼집에 든 준비 — 뽑는 0.6 s 동안 상대가 한 걸음에 닿을 거리면 뽑아 치지 않음 (준비를 지킴 · 비기 셈이 냄 · 조용한 상대 gnsWait 뒤엔 거둠)
   if (drawGate(ai.me, 'attack')) return true; // 11/16 뽑기 (SECRET.gnsDraw): 칼집에 든 채면 먼저 뽑음 · 뽑는 동안 공격 없음 — 끝나면 다시 고름
   if (!opt.chain && !opt.secret && !opt.passive && !opt.drill && !GAP_OPEN.has(why) && arcGapHold(ai)) return void (ai.stats.arcGap = (ai.stats.arcGap ?? 0) + 1), true; // ① 칼끝 틈 건너기 (11/15): 긴 칼 앞 내 칼끝 밖 보통 공격은 띠 기울기만큼 참음
   if (!opt.chain && !opt.secret && !opt.passive && !opt.drill && !DISC_OPEN.has(why) && discHold(ai)) return true; // 막기 2.0 공격 절제 (11/17 — ai_intercept.js discHold): 준비된 상대 칼끝이 내 줄이면 새 공격을 띠 기울기만큼 참음
   if (!opt.chain && !opt.secret && !opt.passive && !opt.drill && !DISC_OPEN.has(why) && msInsideHold(ai)) return true; // 간격과 박자 (11/17 — ai_measure.js): 선 깊이 안에서 칼이 자유로운 채 새로 여는 공격은 띠 기울기만큼 참음 (참 빈틈은 그대로)
+  if (ai.me.foes && ai.me.teamSense && !opt.chain && !opt.secret && !opt.passive && !opt.drill && !LANE_FREE.has(why) && laneHold(ai)) return true; // 무리 싸움 판단 칼길 비우기 (11/18 — 셋 이상 판만): 동료가 내 칼 부채꼴 · 나 → 상대 사이면 새 공격을 미룸 (막기 · 맞받기 · 되받기는 그대로)
   if (ai.planDe && ai.deDig.t > 0 && !opt.secret) return true; // 독일 파고들기 (3 단계 11/14): 건 동안(digT)은 새 공격을 미룸 — 박찬 두 걸음이 공격 걸음에 덮여 버려지지 않게 · 끝나면 그 자리에서 밀치기 · 공격 고르기 그대로
   // 붙은 거리 규칙 AI (11/14 — CLOSE.startAI · close_hold.js): 묶인 동안(내 밀치기든 상대가 나를 민 밀치기든 — 맞밀기로 둘 다 묶임) 공격 안 함 ·
   //  칼자루만 거리(가슴 사이 ≤ startAI)에선 공격 대신 손잡이 찍기
@@ -604,7 +609,7 @@ export class AI {
     if (Lk > 0) r -= Lk * Math.max(0, r - STAMINA.aiAggressiveRestAt);
     const safe = (this.d > this.foeReach + 0.6 && this.foeClosing < GAIT.walkMin) || !!this.foe.stamina?.exhausted;
     if (safe) r += this.planK * Math.max(0, STAMINA.aiResumeAt - r) * 0.5;
-    if (bandOf(this.proficiency) >= 3 && (this.secret || this.riso) && !secretSpent(this.me)) r = Math.max(r, STAMINA.secretCost);
+    if (bandOf(this.proficiency) >= 3 && (this.secret || this.riso) && !secretSpent(this.me) && (!this.planDe || deReserve(this))) r = Math.max(r, STAMINA.secretCost); // 독일 (11/19 [사장님 결정] '비기 기력은 모르트슐라크로 누르는 동안에만 남겨') — ai_plan_de.js deReserve
     return r;
   }
 
@@ -702,18 +707,19 @@ export class AI {
     const F = me.forward(_v2);
     const R = me.right(_v1);
     const near = [];
+    const TS = !!me.teamSense; // 무리 싸움 판단 (11/18): 판 사본이 있는 판 (createMatch — 셋 이상 판은 늘)
     for (const g of me.foes) {
       if (!g.alive || g.revival) continue;
       const p = g.bodies.chest.translation();
       const x = p.x - c.x;
       const z = p.z - c.z;
-      near.push({ g, x, z, d: Math.hypot(x, z) });
+      near.push({ g, x, z, d: Math.hypot(x, z), busy: TS && g !== this.foe && busyFoe(this, g) }); // busy: 내 눈에 보이고 내 동료와 붙은 적 — 열세 셈(둘러싸임 · 줄 세우기)에서 뺌 (§3-5 '내 둘레의 수')
     }
     const t = near.find((o) => o.g === this.foe);
     if (t && (this.mode === 'watch' || this.mode === 'withdraw')) {
       let fl = null;
       for (const o of near) {
-        if (o === t || o.d > TF.flank.range || o.d < 1e-6) continue;
+        if (o === t || o.busy || o.d > TF.flank.range || o.d < 1e-6) continue;
         const cos = (o.x * t.x + o.z * t.z) / (o.d * (t.d || 1));
         if (Math.acos(clamp(cos, -1, 1)) > (TF.flank.angle * Math.PI) / 180 && (!fl || o.d < fl.d)) fl = o;
       }
@@ -723,11 +729,11 @@ export class AI {
     //  ① 줄 세우기: 가장 가까운 다른 상대가 지금 상대 뒤로 가게 지금 상대를 축으로 돈다 (벌어진 각만큼) · 집게(각 > backFrom°)면 물러나 둘을 앞에 둔다
     //  ② 피하기: 지금 상대가 아닌 상대가 나를 치러 제 칼끝 거리 + gap 안에 들면 그 몸에서 비킨다 (모든 상대의 위협을 읽음 — 겨눈 상대를 바꾸지 않고)
     const LV = TF.lever;
-    const sk = (LV.lineUp.on || LV.evade.on) && near.length >= 2 ? teamSkill(this.proficiency) : 0;
+    const sk = (LV.lineUp.on || LV.evade.on) && (TS ? near.filter((o) => !o.busy).length : near.length) >= 2 ? (TS ? outSkill(this) : teamSkill(this.proficiency)) : 0; // 무리 싸움 판단 (11/18 §3-5): 몫 = 바탕 0.3 부터 (TEAM_SENSE.out) · 열세 = 내 동료와 붙지 않은 적 둘 이상
     if (sk > 0 && t && this.mode !== 'secret' && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow'))) {
       if (LV.lineUp.on) {
         let o = null;
-        for (const q of near) if (q !== t && q.d <= LV.lineUp.range && q.d > 1e-6 && (!o || q.d < o.d)) o = q;
+        for (const q of near) if (q !== t && !q.busy && q.d <= LV.lineUp.range && q.d > 1e-6 && (!o || q.d < o.d)) o = q;
         if (o) {
           const at = Math.atan2(t.x * R.x + t.z * R.z, t.x * F.x + t.z * F.z); // 내 눈 기준 각 (오른쪽 +)
           let da = Math.atan2(o.x * R.x + o.z * R.z, o.x * F.x + o.z * F.z) - at;
@@ -758,6 +764,7 @@ export class AI {
       fwd -= k * uf;
       side -= k * ur;
     }
+    if (TS && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') [fwd, side] = senseFeet(this, fwd, side); // 무리 싸움 판단 (11/18): 칼길 비우기 · 협공 자리 (src/team_sense.js)
     if (!(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') {
       for (const m of me.mates) {
         if (!m.alive) continue;
@@ -973,6 +980,9 @@ export class AI {
     const ux = dx / d; // 나 → 상대 방향
     const uz = dz / d;
     this.d = d;
+    // 무리 싸움 판단 (11/18 — 셋 이상 판만 · src/team_sense.js huntFree): 겨눈 상대가 나 아닌 몸과 붙었고 나를 붙잡은 적이 없음 — 상대가 들어오기를 기다리는 꼴(고노센 준비 · 싱지르 · 리솔루토 · 이베리아 무장 기다림)은 이때 기다리지 않음
+    //  (11/18 재기: 이 꼴들이 1:1 의 '상대가 나를 친다'를 바탕으로 기다려, 동료와 붙은 상대 앞에서 영영 서 있거나 돌기만 함 — 2:1 을 못 끝낸 판의 까닭). 1:1 은 undefined (아래 갈래 그대로)
+    if (me.foes && me.teamSense) this.tsFree = huntFree(this);
     this.digW = this.planOn ? digWeight(this) : 0; // 파고들기 몫 (11/14 사장님 '상대 무기가 나보다 길 때의 대처 … 모든 ai에게 기본으로' — 문 → 기울기 · DIG_PROTO.reach 0 = 옛 문 digNow)
     this.dig = this.digW > 0; // 파고들기 판 (몫이 있음)
     this.foeClosing = -(s.vx * ux + s.vz * uz); // 상대가 나에게 다가오는 빠르기 (m/s)
@@ -1039,7 +1049,13 @@ export class AI {
     if (this.read) readTick(this, dt, d, s, th); // 수 읽기 그릇 (3 단계): 본 위협 · 칼 든 거리 · 보이는 대가 적기 (유파 덧칸 앞 — 그 몫들이 이 기억을 읽음 · 굴림 없음)
     if (this.ibPlan) ibTick(this, dt, th, hurt); // 이베리아 플랜 (2 단계): 원 사이를 치는 버릇 기억 · 옆 박차기 진행 · 무장 기다림 끝 (굴림 없음)
     // 독일 파고들기 (3 단계 11/14): 간 보기 · 물러남 · 막기에서 상대 헛침(seize 의 recovering 과 같은 셈 — 늦게 본 모습)을 본 한 번에 굴림
-    if (this.planDe && !kneeling && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend')) deDigTry(this, s, d, this.sense.recentHandSpeed(L.reaction, realS(0.6)) > 3.5 && Math.hypot(s.hvx, s.hvy) < 1.8);
+    if (this.deCue) deCueTick(this, s); // 11/19 띠 높음: 칼 든 낌새 (읽고 박차기의 첫 문 — 굴림 없음)
+    if (this.planDe && !kneeling && (this.mode === 'watch' || this.mode === 'withdraw') && deKnee(this, s, d)) {
+      // 11/19 G6: 내 곁눈 베기가 무릎을 꺾은 상대 — 다음 간 보기 박자를 기다리지 않고 곧장 끝내기 (ai_plan_de.js deKnee)
+    } else if (this.planDe && !kneeling && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend')) {
+      const recovering = this.sense.recentHandSpeed(L.reaction, realS(0.6)) > 3.5 && Math.hypot(s.hvx, s.hvy) < 1.8;
+      if (!(this.deNach && deNachTick(this, s, d, th, recovering))) deDigTry(this, s, d, recovering); // 11/19 띠 높음: 읽고 박찬 뒤 뒤 칼이 먼저 (냈으면 그 스텝 파고들기 굴림 없음)
+    } else if (this.deNach) deNachTick(this, s, d, th, false); // 뒤 칼이 끝났나 · 비꼈나 · 기다림 시간 (공격 꼴 · 무릎 — 내지 않음)
     if (this.planCn) cnTick(this, dt, d, s, th); // 동방 플랜 전략 층 덧칸 (11/14): 수 읽기 기억 · 유도 박자 (고노센 경계 무모는 공통 W.reck)
     if (this.dbn && !kneeling) msDebanaTick(this, s, d, dt, th, EV_REARM); // 걸음에 치기 (11/17 — ai_measure.js): 열린 들어옴 — 상대가 내 칼끝 + 0.3 안에 들면 한 번 굴려 그 걸음에 침 (줄을 이미 닫았어도)
 
@@ -1213,19 +1229,20 @@ export class AI {
     //  인물 손잡이 pers.spinHold (10/29 15:5x — 사장님 '롤랑과 베르나르도의 … 싸움 스타일도 바꾸도록 해'): 걸쇠는 둘 다 같고, 발만 다르다 —
     //   true(기본 · 롤랑) = 칼끝 거리에서 서서 상대가 들어오기를 기다림(전 그대로) · false = 내가 걸어 들어가 상대를 칼끝 거리 안에 넣음(holdDist — 15:5x ~ 21:0x 베르나르도.
     //   21:0x '롤랑의 상극' 부터 베르나르도도 true — 쓰는 인물 없음 · 둘이 함께 내는 맞냄에서 걸어 들어간 쪽이 졌다: docs/characters/temperament_2026-10-29.md §7-5)
-    if (this.ibPlan && ibWatch(this, s, d, CALM_T)) return; // 이베리아 플랜 (2 단계): 무장 뒤 안 들어오면 사슬로 · 칼끝 밖 무장 기다림 · 옆 박차기 뒤 나선 걸음 베기 · 원 돌려 보이기
-    if (this.spinArm?.armed) return;
+    if (this.ibPlan && !this.tsFree && ibWatch(this, s, d, CALM_T)) return; // 이베리아 플랜 (2 단계): 무장 뒤 안 들어오면 사슬로 · 칼끝 밖 무장 기다림 · 옆 박차기 뒤 나선 걸음 베기 · 원 돌려 보이기
+    if (this.spinArm?.armed && !this.tsFree) return; // 무리 싸움 (11/18 tsFree — 겨눈 상대가 남과 붙어 나를 칠 일이 없음): 들어오기를 기다리는 무장은 소용없음 — 보통 판단으로
     // 안다레 리솔루토 무장 (11/14 사장님 '리솔루토도 쓰게해' — risoTick): 같은 걸쇠 — 칼 우위 동안 칼끼리 붙어 있으면 먼저 치지 않고(덮음을 베기로 끊지 않게 — 사람 조건 '휘두르지 않음') 발은 상대 걸음에 맞춘다(moveFeet). 들어오는 칼(위 respond)은 그대로 받는다
-    if (this.riso?.armed) return;
+    if (this.riso?.armed && !this.tsFree) return;
     if (this.plan && this.planBind(s, d)) return; // 유파 플랜 첫 고리 (11/14 이탈리아): 칼이 맞닿은 순간 빼서 찌르기 쪽으로 기울임
     // 모르트슐라크 몸 붙이기 (10/24): 같은 걸쇠 — 미는 동안은 먼저 치지 않는다(누르기가 베기로 끊기지 않게 — fighter.closeStep 'swing'). 들어오는 칼(위 respond)은 그대로 받는다.
     //  붙으러 걸어 들어가는 동안은 칠 때가 오면 친다(10/24 13:3x 사장님 '걸어가며 치기도 같이 넣어' — SECRET.mordWalkStrike · 0 이면 걸어가는 동안도 걸쇠 — 12:0x 판). 치면 붙이기는 끝(mordTick — 간 보기를 벗어남)
     if (this.press?.go && !(this.mordWalking())) return;
     // 치려는 낌새(간격 가까이서 칼을 들며 다가온다) → 들어오는 순간을 먼저 치거나(Vor), 물러난다
-    if (this.planJp && jpGnsHold(this, s, d)) return; // 일본 고노센 (3 단계): 준비가 켜졌으면 낌새에 먼저 치거나 물러나지 않고 기다림 · 선 밖이면 맞으러 나감 (굴림 — 낌새 하나에 한 번)
-    if (this.guardRead(s, d, dt)) return; // ③ 자세 → 칼길 (11/17): 걸어 들어오는 상대의 보이는 자세 — 그 자세의 기본 줄을 미리 덮음 (들어옴 하나에 한 번 read)
-    if (this.anticStep(s, d, dt)) return; // 막기 2.0 미리 줄 닫기 (11/17): 덮은 채 걸어 들어오는 상대 — 그 줄을 미리 닫음 (띠 기울기)
-    if (msRead(this, s, d, dt, EV_REARM)) return; // 간격과 박자 (11/17): 상대가 내 선 안으로 걸어 듦 — 줄 닫기 · 물러남 (띠 기울기)
+    if (this.planJp && !this.tsFree && jpGnsHold(this, s, d)) return; // 무리 싸움 (11/18 tsFree): 겨눈 상대가 남과 붙었으면 기다리지 않음 · 일본 고노센 (3 단계): 준비가 켜졌으면 낌새에 먼저 치거나 물러나지 않고 기다림 · 선 밖이면 맞으러 나감 (굴림 — 낌새 하나에 한 번)
+    const seat = this.planJp && jpGnsSeat(this); // 일본 고노센 (11/19): 칼이 칼집에 든 준비 — 아래 미리 줄 닫기 · 걸음에 치기는 칼을 뽑아야(0.6 s) 해서 준비만 풀림 → 건너뜀 (걸어 드는 상대는 비기 셈 · jpGnsHold 가 맡음)
+    if (!seat && this.guardRead(s, d, dt)) return; // ③ 자세 → 칼길 (11/17): 걸어 들어오는 상대의 보이는 자세 — 그 자세의 기본 줄을 미리 덮음 (들어옴 하나에 한 번 read)
+    if (!seat && this.anticStep(s, d, dt)) return; // 막기 2.0 미리 줄 닫기 (11/17): 덮은 채 걸어 들어오는 상대 — 그 줄을 미리 닫음 (띠 기울기)
+    if (!seat && msRead(this, s, d, dt, EV_REARM)) return; // 간격과 박자 (11/17): 상대가 내 선 안으로 걸어 듦 — 줄 닫기 · 물러남 (띠 기울기)
     if (this.preThreat(s, d, dt)) return;
     if (this.seize(s, d, dt)) return;
     if (this.glBeat && this.glBeatTick(dt, s)) return; // ③ 자세 → 칼길 (11/17): 공격 직전 자세 옮김 한 박자 — 끝나면 그 자세에서 침
@@ -1236,7 +1253,6 @@ export class AI {
       this.guardTimer = realS(this.pers.rhythm * rand(0.6, 1.4)) * (this.planJp ? 1 + jpStill(this) : 1); // 자세 바꾸는 박자 rhythm = 실제 초 · 일본 서 있기(11/14): 자세를 드물게
       this.guard = this.pickGuard(s);
       if (this.plan) this.planBeat(s, d); // 유파 플랜 유도 (11/14 이탈리아 — 자세 박자마다 한 번: 칼 맞대기 · 꾐)
-      if (this.planJp) jpBeat(this); // 일본 (11/14): 유도 — 준비 자세로 서서 묶음 (4 부터)
       if (this.planDe) deBeat(this); // 독일 (11/14 3 단계): 유도 — 바보 자세로 칼끝 끝에 서서 내려베기를 꾐 (4 부터)
     }
     this.hand.set(this.guard.pad[0], this.guard.pad[1]);
@@ -1380,7 +1396,8 @@ export class AI {
     const W = this.gnsW;
     const wary = !!W && ((W.ready && !W.reck) || W.cut) && !this.chasing; // 무모(W.reck — 11/14 플랜 유파 무 · 낮음)는 준비된 선을 안 셈 (그 발도에 막 베인 뒤 W.cut 은 그대로 물러섬) · 고노센 경계 (10/25): 준비된 고노센 상대(또는 그 발도에 막 베임)면 상대 발도 선 밖에 선다 — 여유는 위와 같은 m (최소 0.08)
     const h = (this.chasing ? this.M.contact : this.foeReach) + Math.max(this.mind ? 0.08 + mindGap(this) : 0.08, m); // 유파 마음가짐 (11/18 — 거리): 바닥 여유 = 선 여유 + 0.08 (거리 1 은 상대 칼끝 안 −0.12 까지 · 옛 0.08 하나)
-    return msHold(this, wary ? Math.max(h, W.line + Math.max(0.08, mW)) : h); // 간격과 박자 (11/17): 바닥 = 선(상대 칼끝 어림 + 유파 여유) + 0.08
+    const H = msHold(this, wary ? Math.max(h, W.line + Math.max(0.08, mW)) : h); // 간격과 박자 (11/17): 바닥 = 선(상대 칼끝 어림 + 유파 여유) + 0.08
+    return this.tsFree ? ambushHold(this, H) : H; // 무리 싸움 판단 기습 자리 (11/18 — 셋 이상 판 · 숙련 3 부터): 겨눈 상대가 남과 붙었으면 그 칼끝이 아니라 내 칼끝 + ambush.near 에 섬
   }
 
   /**
@@ -1625,6 +1642,14 @@ export class AI {
     // 6) 인내심이 떨어지면 먼저 들어간다 (주도권)
     add((1 - this.patience) * 1.1, 'patience');
     if (this.desperate) add(0.25, 'patience');
+    // 7) 무리 싸움 판단 기습 · 방패 (11/18 — 셋 이상 판만 · src/team_sense.js ambushOpp · shieldOpp): 겨눈 상대가 내 동료와 붙었고 내가 그 앞 밖 — 숙련 3 부터 (몫 k) · 6 은 칼 내는 순간 · 방패
+    if (this.me.foes && this.me.teamSense) {
+      const A = ambushOpp(this);
+      if (A?.kind) add(A.v, A.kind), (this.stats.team ??= teamStats()).ambush++;
+      if (A?.hold) score -= A.hold; // 6: 칼 내는 순간을 기다림 (TEAM_SENSE.ambush.wait 까지)
+      const Sh = shieldOpp(this); // 6: 방패 — 지금 상대 뒤로 다른 적이 한 줄이면 앞 적을 몰아침
+      if (Sh) add(Sh.v, Sh.kind);
+    }
     if (this.cautious && !this.mind) score -= 0.2 * (1 - Lk); // 무모(굴림 몫): 피를 덜 흘린 우위도 덜 아낌 · 유파 마음가짐(11/18): 집요함이 갈음
     // 내 상태가 나쁘면 참는다 (무모 — 그 몫만큼 덜 참음)
     if (this.me.offBalance > 0.03 || this.me.pain > 0.9) score -= 0.5 * (1 - Lk);
@@ -1744,13 +1769,14 @@ export class AI {
     // ③ 자세 → 칼길 (11/17 — guard_line.js · [사장님 11/17 결정]): 보이는 내 손 자세(nearGuard — 읽는 쪽과 같은 함수)가 약속한 줄 — 무게 × W^τ · κ (τ = read · 헛스윙 연습은 그대로)
     const near = why === 'drill' ? null : nearGuard(this.me, this.art.tradition);
     // 유파 마음가짐 (11/18 — 일격): 후보마다 입힐 피해 · 받을 피해를 먼저 어림 (평균으로 나눠 견줌 · 마음가짐 없으면 null — 셈 그대로)
-    const stakes = this.mind ? mindStakes(this, this.school.tech.map((t0) => { const t = this.techNow(t0); return t && !(vKind && t.kind !== vKind) ? t : null; }), hand, padDist) : null;
+    const stakes = this.mind ? mindStakes(this, this.school.tech.map((t0) => { let t = this.techNow(t0); if (t?.name === 'cingir' && t.plain && !SLOW_WHY.has(why)) t = t.plain; return t && !(vKind && t.kind !== vKind) ? t : null; }), hand, padDist) : null; // B7 갈음(아래 고르기와 같게) 뒤 칼로
     let best = null;
     let bestW = -1;
     for (let ti = 0; ti < this.school.tech.length; ti++) {
       const t0 = this.school.tech[ti];
-      const t = this.techNow(t0); // 식는 특수 공격은 바탕 동작 또는 건너뜀 (10/29 19:4x — 사람과 같게)
+      let t = this.techNow(t0); // 식는 특수 공격은 바탕 동작 또는 건너뜀 (10/29 19:4x — 사람과 같게)
       if (!t) continue;
+      if (t.name === 'cingir' && t.plain && !SLOW_WHY.has(why)) t = t.plain; // 11/19 B7 (사장님 '권고대로' — 기록 docs/strike/de_band3_2026-11-19.md §B7): 이어 돌리기 칼(왼 가로베기 자리 강화동작)은 짧은 틈 공격(헛친 틈 · 들어옴 · 되받기 … SLOW_WHY 밖)엔 고르지 않음 — 바탕 동작(왼 가로베기)의 몫 그대로
       if (vKind && t.kind !== vKind) continue;
       let w = this.pers.techPref[t0.name] * t.base;
       if (t.kind === 'thrust') w *= thrustBias;
@@ -1866,7 +1892,8 @@ export class AI {
     if (this.tech?.name === 'redondo' && !this.feint && !this.secretRun && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin(); // 부러진 칼은 옛 길 (사람도 부러지면 감기를 그만둠 — windStop 'armed')
     // 이어 돌리기 (11/14 IB_LINK.ai — 기본 켬 · 사장님 11/14 확인 'ai에게도 똑같이' · 사람 unique_assist.js linkTry 와 같은 뜻 · 원 동안 맞바꿈도 사람과 같음 — fighter.js ibTradeTry): 이베리아 AI 가 앞 공격이 끝나고 이어짐 창(afterWindow) 안에 큰 칼(시작 자리가 가슴 높이 이상인 베기)을
     //  새로 시작하는데 손이 그 시작 자리에서 떨어져 있으면 — 준비 자세로 손을 옮기는 대신 칼을 머리 위로 돌려 시작 자리로(iberian_link.js) · 다 돌면 곧장 친다(linkTick)
-    else if (this.kitLink && this.art.tradition === 'iberian' && this.phase === 'windup' && !opt.secret && !opt.passive && !this.feint && !this.secretRun && this.tech?.kind === 'cut' && this.tech.from[1] > 0 && cd > UA.padRadius && this.sense.t - this.lastAtkT <= UA.afterWindow && this.me.state === 'stand' && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.ibLink && !iaiBusy(this.me) && linkStart(this.me, this.tech.from, { tech: this.tech.name, bridge: this.linkBridge(L) })) {
+    //  11/19 B7 (사장님 '권고대로'): AI 는 원을 사슬 안의 다리로만(이어 치기 opt.chain) — 짧은 틈 공격(헛친 틈 · 되받기 …)이 원을 그리는 0.4 s 에 틈을 놓치지 않게 (사람 이어 돌리기는 그대로)
+    else if (this.kitLink && this.art.tradition === 'iberian' && this.phase === 'windup' && opt.chain && !opt.secret && !opt.passive && !this.feint && !this.secretRun && this.tech?.kind === 'cut' && this.tech.from[1] > 0 && cd > UA.padRadius && this.sense.t - this.lastAtkT <= UA.afterWindow && this.me.state === 'stand' && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.ibLink && !iaiBusy(this.me) && linkStart(this.me, this.tech.from, { tech: this.tech.name, bridge: this.linkBridge(L) })) {
       this.phase = 'ibLink';
       (this.stats.ibLink ??= { fired: 0, done: 0, cancel: {} }).fired++;
     }
@@ -2608,6 +2635,7 @@ export class AI {
       if (this.binds) this.binds.strike((this.foe.wounds?.length ?? 0) > (this.atkWounds0 ?? 0), this.bound || this.atkClash); // 이베리아 맺힘 셈: 칼끼리 닿고 피해 없음 +1 · 피해 0 · 헛침 그대로
       if (this.secretCombo(d) || this.secretFirstHit(d)) return;
     }
+    if (this.planDe && this.foe.alive && deKnee(this, this.sense.seen(L.reaction), d, this.chain + 1)) return; // 11/19 G6: 이 칼(곁눈 베기)이 무릎을 꺾었으면 이어 치기 굴림 · 물러남 대신 곧장 끝내기 (ai_plan_de.js deKnee)
     // 모르트슐라크 몸 붙이기 'after' (10/24 14:2x — SECRET.mordNear): 내 칼이 막혀 맞물린 채(칼끼리 닿음 · 못 벰) 붙은 거리(M.clinch) 안에서 끝났으면 — 둘이 엉킨 채 가까움 — 인물 밀치기 확률로 이어 치기 · 물러남 대신 붙어 민다
     if (this.press && this.bound && !this.hitLanded && this.foe.alive && d < this.M.clinch && this.mordPressGo('after')) return;
     // 이어 치기(Nachschlag): 막히거나 헛쳤어도 이어 친다. 완전히 붙어 씨름하는 거리(0.75m 아래)만 거른다 —
@@ -2799,9 +2827,10 @@ export class AI {
     if (th.id === this.threatSeen) return false;
     if (this.me.iaiDraw) return drawGate(this.me, 'guard') && false; // 11/16 뽑는 중: 이 위협은 뽑은 뒤 다시 봄 (굴림 없음)
     this.threatSeen = th.id;
-    const gc = this.planJp ? jpGuardChance(this, th, L.guardChance) : L.guardChance; // 일본 (11/14): 가운데부터 버릇 — 같은 줄이 다시 오면 막을 눈이 조금 큼 (굴림 수 그대로)
+    const gc = this.planJp ? jpGuardChance(this, th, L.guardChance) : this.planCn ? cnGuardChance(this, th, L.guardChance) : L.guardChance; // 일본 (11/14): 가운데부터 버릇 — 같은 줄이 다시 오면 막을 눈이 조금 큼 (굴림 수 그대로) · 동방 (11/19): expert 의 +0.1 은 격살을 노릴 위협에만
     if (this.planJp) jpSeeThreat(this, th); // 상대 공격 줄 기억 (본 것만)
     if (Math.random() > gc) return false; // 못 봤거나 늦었다
+    if (this.planJp && jpGnsVoid(this)) return true; // 일본 고노센 (11/19): 칼집에 든 준비 — 뽑아 받는 대신 물러나 헛치게 (준비 유지 · 헛친 칼은 비기 셈이 냄)
     if (drawGate(this.me, 'guard')) return void (this.threatSeen = null), false; // 11/16 뽑기 (SECRET.gnsDraw): 칼집에 든 채면 먼저 뽑음 · 뽑는 동안 막기 · 맞받기 없음 — 같은 위협은 뽑은 뒤 다시 봄
     this.defLine = th.line;
     // 패시브 threat (이 위협에 한 번 — threatSeen 과 같은 번호): 맞받아치기 목록 바꿈·막기·피하기 강제. 없으면 난수 없이 아래 그대로
@@ -2856,7 +2885,7 @@ export class AI {
     this.defVoid = digKeep ? false : !this.me.armed || Math.random() < pVoid + (1 - pVoid) * this.fear * 0.8; // 파고들기 받으며 들어감은 칼로 받음 (물러나 피하지 않음)
     if (this.defVoid && this.planCn && cnMeet(this, th)) this.defVoid = false; // 동방 플랜 (11/14): 격살 쓰는 때면 물러나 피하기 대신 나서며 받는 쪽으로 (아래 gk)
     if (digKeep) (this.stats.dig ??= digStats()).keep++;
-    if (this.defVoid && this.planDe) deBack(this); // 독일 (11/14 3 단계): 물러나 피하기 → 뒤 박차기로 빠짐 (빠진 뒤 헛침을 꾐 — 파고들기)
+    if (this.defVoid && this.planDe) deBack(this, th, d); // 독일 (11/14 3 단계): 물러나 피하기 → 뒤 박차기로 빠짐 (빠진 뒤 헛침을 꾐 — 파고들기) · 11/19 띠 높음: 닿는 칼을 읽었을 때만 박차고 뒤 칼로 이음
     if (this.defVoid) this.stats.voids++;
     else this.stats.parries++;
     // 동방 격살 (11/14 사장님 '동방도 격살 쓰게 해'): 칼로 받기로 정했고 이 판 격살이 남았으면, 쓸 때(gkWant)엔 나서며 받는다 — 굴림 없음 (gyeoksalAi · moveFeet)
@@ -3194,7 +3223,7 @@ export class AI {
       else if (hit.hy > -0.1) line = lat > 0.12 ? 'highR' : lat < -0.12 ? 'highL' : 'highC';
       else line = lat >= 0 ? 'lowR' : 'lowL';
     }
-    return { id: this.threatId, line, thrust };
+    return { id: this.threatId, line, thrust, tc: hit.tc }; // tc = 늦게 본 모습에서 칼끝이 가장 가까워지는 데 남은 초 (11/19 — 독일 띠 높음 읽고 박차기 ai_plan_de.js deBackRead 가 읽음 · 읽기만)
   }
 
   /**
@@ -3217,6 +3246,7 @@ export class AI {
     this.preArmed = false; // 한 번 몰아칠 때 한 번만 판단한다
     // 달려드는 것은 누구나 알아본다. 제자리에서 칼을 드는 낌새는 숙련될수록 잘 읽는다
     if (Math.random() > (charging ? Math.max(0.9, L.guardChance) : L.guardChance)) return false;
+    if (this.planJp && jpGnsVoid(this)) return this.stats.voids++, true; // 일본 고노센 (11/19): 칼집에 든 준비 — 맞받아 치기 · 줄 닫기는 뽑기부터(0.6 s · 준비만 풀림) → 물러나 헛치게 (준비 유지)
     // 패시브 foeRaise·foeCharge (이 낌새에 한 번 — preArmed 걸쇠): 치기 가지를 늘 고른다(prefer 는 기술 고르기 곱). 없으면 난수 없이 아래 그대로
     const P = this.passives.length ? this.passiveFor(charging ? 'foeCharge' : 'foeRaise') : null;
     if (P && (charging || d < this.M.reach + 0.3) && this.passiveRoll(P) && this.passiveGo(P, s, charging ? 'stop' : 'windup')) {
@@ -4359,6 +4389,7 @@ export class AI {
     const L = this.level;
     let fwd = 0;
     let side = 0;
+    let sideLock = false; // 일부러 옆을 0 으로 둔 걸음(고노센 준비 제자리 · 리솔루토 맞받기 · 독일 파고들기) — 유파 마음가짐 옆 몫(mindSide)이 덮지 않음 (11/19)
     const speed = BODY.moveSpeed;
     // 원하는 "다가가는 빠르기"(m/s, + = 다가감) → 조이스틱 값 (뒤로는 75% 빠르기)
     const toStick = (v) => (v >= 0 ? v / speed : v / (speed * 0.75));
@@ -4421,6 +4452,7 @@ export class AI {
       // 간격 밖까지 물러난다. 가까워질수록 천천히 (관성으로 너무 멀리 가지 않게)
       //  (-0.2보다 더 당겨야 검술 층이 손 움직임을 휘두르기로 보고 앞으로 내딛지 않는다)
       fwd = Math.min(-0.25, toStick(clamp((d - this.holdDist() - 0.05) * 3, -1.9, -0.3)));
+      if (this.planJp) fwd = jpGnsVoidFeet(this, fwd, d); // 일본 고노센 (11/19): 칼집에 든 준비로 물러나 피하는 박자 — 뒤 끝 · 발도 선 안에서 멈춤
     } else if (this.mode === 'defend') {
       fwd = this.defVoid ? -1 : this.gk && !this.gk.seen && this.gk.t <= SECRET.gyeoksal.press ? 1 : this.digDef ? 0.3 : -0.3; // 파고들기 받으며 들어감(11/14): 칼로 받으며 그대로 다가감 (물러서는 막기 −0.3 의 반대) // 막을 때도 살짝 물러선다 (앞으로 쏠리지 않게) · 동방 격살 시도(11/14)는 나서며 받음 — 칼이 닿거나 때(gyeoksal.press)가 지나면 그대로
     } else if (this.mode === 'secret') {
@@ -4451,9 +4483,9 @@ export class AI {
       if (!(this.mindStayT > this.sense.t)) v = msFeetV(this, v, d); // 간격과 박자 (11/17): 선 안으로 잔걸음 · 다가감이 기어 들지 않음 (유파 플랜 걸음 · 경계는 아래 그대로) · 유파 마음가짐(11/19): 내 칼 뒤 붙어 남는 동안은 손잡이 찍기 거리까지 다가듦
       const GW = this.gnsW;
       if (this.plan && !this.chasing) v = this.planFeet(v, d, hold, dt); // 유파 플랜 걸음 (11/14 — 물러서기 · 멈춤 · 꾐 · 칼 맞대기 · 고노센 경계 줄보다 먼저: 경계가 이김)
-      if (this.ibPlan) v = ibFeetV(this, v, d); // 이베리아 플랜 (2 단계): 칼끝 밖 무장 기다림 (고노센 경계 줄보다 먼저 — 경계가 이김 · 무 · 낮음의 선 넘기는 공통 W.reck 하나로)
+      if (this.ibPlan && !this.tsFree) v = ibFeetV(this, v, d); // 이베리아 플랜 (2 단계): 칼끝 밖 무장 기다림 (고노센 경계 줄보다 먼저 — 경계가 이김 · 무 · 낮음의 선 넘기는 공통 W.reck 하나로)
       if (this.read) v = readFeetV(this, v, d); // 수 읽기 (3 단계): 이탈리아 상대엔 곧게 걸어 들지 않음 · 칼 우위 빛 동안 물러섬 · 무장처럼 보이는 이베리아 상대의 칼끝 밖
-      if (this.planJp) v = jpGnsFeet(this, v, d); // 일본 고노센 (3 단계): 준비를 지키며 상대가 칼을 드는 거리에 맞춰 선 안으로 꾐
+      if (this.planJp && !this.tsFree) v = jpGnsFeet(this, v, d); // 일본 고노센 (3 단계): 준비를 지키며 상대가 칼을 드는 거리에 맞춰 선 안으로 꾐
       if (GW && ((GW.ready && !GW.reck) || GW.cut) && !this.chasing && d <= GW.line + 0.08) v = Math.min(v, 0); // 고노센 경계 (10/25): 준비된 고노센 상대의 선 언저리(최소 여유 0.08 안)에선 앞으로 안 감 — 잔걸음이 선 안으로 기어 들지 않게
       fwd = toStick(v);
       // 옆으로 돌기 (가끔 방향을 바꾸고 가끔 멈춘다)
@@ -4473,7 +4505,7 @@ export class AI {
       // 고노센 준비 쌓기 (10/25 22:5x 사장님 '아무 행동 없이 2초' — SECRET.gnsReady 'idle' · 감독 'AI 도 같은 생각 — AI 의 걸음 뜻으로' · SECRET.gnsAiSettle):
       //  고노센 AI 가 준비 전이면 간 보기 동안 다가가기 · 잔걸음 · 옆 돌기 없이 제자리에 선다(스틱 0 — 사람이 스틱을 놓고 기다리는 것과 같은 셈 · 새 수 없음) ·
       //  준비가 켜지면 다시 간 보기 걸음(걸어도 유지). 너무 붙음 · 울타리 · 밀치기 걸음(아래)은 그대로. 빈손 상대를 쫓을 때 · 'dist' 판 · 끄면 이 줄을 안 탐
-      if (this.iaiArm && !this.iaiArm.armed && !this.chasing) fwd = side = 0;
+      if (this.iaiArm && !this.iaiArm.armed && !this.chasing && !this.tsFree && (!this.planJp || jpGnsPrep(this))) (fwd = side = 0), (sideLock = true); // 일본 플랜 (11/19): 준비를 결심한 동안만 (jpBeat · jpGnsPrep — 틈이 줄면 그만둠) · 무리 싸움 (11/18 tsFree): 겨눈 상대가 남과 붙었으면 제자리 준비를 쌓지 않고 다가감
     }
     if (this.ibPlan) (side = ibSidePost(this, side)), (fwd = ibFwdPost(this, fwd)); // 이베리아 플랜 (11/14 둘째 — 변칙): 옆 박차기 동안 옆 끝(간 보기 · 물러남 · 막기) · 비스듬히 들어감
     // 안다레 리솔루토 무장 (11/14 사장님 '리솔루토도 쓰게해' — risoTick · 사람 조건 10/28 '상대가 물러서면 내가 들어가고, 상대가 들어오면 내가 나가는 걸로'): 간 보기 · 물러남 동안
@@ -4483,6 +4515,7 @@ export class AI {
     if (this.riso?.armed && (this.mode === 'watch' || this.mode === 'withdraw') && !this.chasing && (rSeen ? seenStep(this.foeClosing) : foeStep(this.foe))) {
       fwd = rSeen ? clamp(toStick(-this.foeClosing), -1, 1) : clamp(-(this.foe.move?.y ?? 0), -1, 1);
       side = 0;
+      sideLock = true;
     }
     // 너무 붙음 → 떨어진다 (밀쳐내기는 fighter.shove가 뒤로 물러날 때 자동으로)
     if (d < this.M.clinch && this.mode !== 'attack' && this.mode !== 'secret') {
@@ -4494,8 +4527,9 @@ export class AI {
     if (dg != null && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend' || (this.mode === 'attack' && (this.phase === 'windup' || this.phase === 'approach')))) {
       fwd = dg;
       side = 0;
+      sideLock = true;
     }
-    if (this.mind && (this.mode === 'watch' || this.mode === 'withdraw') && !this.chasing) side = mindSide(this, side, dt); // 유파 마음가짐 (11/18 — 횡보): 간 보기 · 물러남 걸음의 옆 몫을 목표로 (0 이면 옆걸음 없음 — 울타리 빠짐은 아래 그대로)
+    if (this.mind && !sideLock && (this.mode === 'watch' || this.mode === 'withdraw') && !this.chasing) side = mindSide(this, side, dt); // 유파 마음가짐 (11/18 — 횡보): 간 보기 · 물러남 걸음의 옆 몫을 목표로 (0 이면 옆걸음 없음 — 울타리 빠짐은 아래 그대로)
     // 울타리에 몰리면 옆으로 빠져 가운데로 (구석에 갇히지 않게)
     const a = me.bodies.pelvis.translation();
     const rA = Math.hypot(a.x, a.z);

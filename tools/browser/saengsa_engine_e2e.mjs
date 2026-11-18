@@ -30,9 +30,8 @@ const shot = async (name, fight = false) => { if (fight) { await render(true); a
 const fightLook = () => p.evaluate(() => {
   const R = window.game.teamRun;
   return { state: window.game.state, over: !!R?.M.over, sim: +window.game.stats.simTime.toFixed(1), human: R?.human?.index ?? null,
-    hud: [...document.querySelectorAll('#teamHud .tl-n')].map((e) => e.textContent), // 왼쪽 위 이름 · 체력 목록 (wk/team-fight ecacc60b · v3 짧은 이름 61f13e9b)
-    rows: [...document.querySelectorAll('#teamList .tl-row')].map((r) => [...r.querySelectorAll('.tl-n')].map((e) => e.textContent)), // 줄마다 (첫 줄 상대 · 둘째 줄 아군)
-    bars: [...document.querySelectorAll('#teamList .tl-b > span')].map((e) => getComputedStyle(e).backgroundColor),
+    hud: window.game.fighters.map((f) => f.shortName ?? ''), // 짧은 이름 (11/18 왼쪽 위 체력 목록을 걷음 — 화면에 쓰는 곳 없음 · 이름 규칙만 봄)
+    bars: [...document.querySelectorAll('#staminaHud .hp-cells')].filter((e) => !e.hidden).map((e) => `${e.dataset.tone}:${e.querySelectorAll('i[data-on="true"]').length}${e.dataset.blink === 'true' ? ' 점멸' : ''}`), // 기력 막대 위 체력 칸 (11/18 hp_strip.js)
     fighters: window.game.fighters.map((f) => ({ name: f.name, team: f.team, weapon: f.weapon.id, broken: !!f.weaponBroken, blood: +f.blood.toFixed(3), bleed: +(f.bleed ?? 0).toFixed(3), carried: (f.wounds ?? []).filter((w) => w.carried).map((w) => `${w.part}:${w.severity}`), parts: (f.wounds ?? []).map((w) => w.part).join(','), fresh: (f.wounds ?? []).filter((w) => !w.carried).length, alive: f.alive })) };
 });
 /** 판 하나 (전투 입장 → 판 → 끝) — 돌려줌: 시작 · 끝 모습 */
@@ -63,7 +62,7 @@ async function playOut(tag, { quit = false, hurt = 0 } = {}) {
   return { first, start, end: L };
 }
 /** 짧은 이름 점검: 목록 이름 = 몸마다 shortName · '무명 검객' · '광기의' · 띄어쓰기 없음 · 내가 나서면 '나' */
-const shortCheck = (L) => ({ hud: L.hud, rows: L.rows, ok: L.hud.length === L.fighters.length && L.hud.every((n) => n && !/무명 검객|광기의|\s/.test(n)) && (L.human == null) === !L.hud.includes('나') });
+const shortCheck = (L) => ({ hud: L.hud, ok: L.hud.length === L.fighters.length && L.hud.every((n) => n && !/무명 검객|광기의|\s/.test(n)) && (L.human == null) === !L.hud.includes('나') });
 const saved_ = () => p.evaluate(() => JSON.parse(localStorage.getItem('stillness.saengsa.v1'))); // 시험판 저장(열쇠 앞 stillness.test. — 페이지 안에서는 그대로 읽힘)
 
 try {
@@ -75,9 +74,8 @@ try {
     await tap(`#${id}`);
   }
   // ① 신청
-  await tap('.sg-slot[data-slot="0"]'); await tap('.sg-chip-btn[data-weapon="longsword"]'); await tap('#sgPickOk');
-  await tap('.sg-slot[data-slot="1"]'); await tap('.sg-pick[data-id="nameless"]'); await tap('.sg-chip-btn[data-weapon="rapier"]'); await tap('#sgPickOk');
-  await tap('.sg-slot[data-slot="2"]'); await tap('.sg-pick[data-id="nameless"]'); await tap('.sg-chip-btn[data-weapon="uchigatana"]'); await tap('#sgPickOk');
+  // 11/18: 동료 둘을 한 카드에서 (무명 검객 두 번 = 동료 1 · 2) · 무기는 첫 경기 화면에서
+  await tap('.sg-slot[data-slot="1"]'); await tap('.sg-pick[data-id="nameless"]'); await tap('.sg-pick[data-id="nameless"]'); await tap('#sgPickOk');
   await tap('#saengsaEnter');
   await until(() => !!document.querySelector('#gameEntrance').shadowRoot.querySelector('.sg-m[data-state="ready"]'), 100, 300);
   if (await inRoot(`return !root.getElementById('sgMatch').hidden;`)) await tap('#sgMatchBack'); // 11/12 바로 시작: 신청하면 내 첫 경기 화면이 곧바로 열림 → 대진표로 (아래 차례 그대로)
@@ -85,6 +83,9 @@ try {
   // ② 지켜보기 경기: 동료 둘만
   const m1 = await inRoot(`return root.querySelector('.sg-m[data-state="ready"]').dataset.match;`);
   await tap(`.sg-m[data-match="${m1}"]`);
+  await tap('#sgArmBtn'); // 첫 경기 무기 배정 (11/18 — 신청 때 배정을 걷음)
+  for (const [slot, w] of [[0, 'longsword'], [1, 'rapier'], [2, 'uchigatana']]) await tap(`#sgArmRows .sg-chip-btn[data-slot="${slot}"][data-weapon="${w}"]`);
+  await tap('#sgArmOk');
   await tap('button.sg-card[data-key="0-1"]'); await tap('button.sg-card[data-key="0-2"]');
   await shot('e2_watch_pick');
   const before1 = await saved_();

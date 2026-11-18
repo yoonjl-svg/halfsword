@@ -5,6 +5,7 @@ import { bargeHeld, clinchHoldK } from './close_hold.js'; // 밀치기 묶임 �
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 유파 걷기 기력: 일본 보법 J1 · 동방 보법 II C2)
 import { huntRegenK } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 몸은 자연 회복 × (1 − regen × 겹)
 import { ibBlockMark, ibBlockTick } from './ib_block_regen.js'; // 이베리아 막아 내면 기력 되찾음 (11/15 사장님 — B9)
+import { runSpend } from './run.js'; // 뛰기 (11/18 사장님 — 초당 걷기의 RUN.cost 배 · '대신 기력 회복이 안 되는 걸로' — 사람 몸이 뛰는 동안만)
 import { lowShoveFree } from './jp_tank.js'; // 일본 바위 몸 — 밀치기에 기력 안 씀 (11/14 사장님 · config JP_TANK.lowShove · 묶임 × 2 갈래에도)
 // 표준 시간 (10/25 22:3x): 공격 번호가 살아 있는 시간 · 긋기 꼬리는 실제 초로 적는다 (STAMINA 의 초 · 초당 값은 config 에서 realS · realRate)
 const ATTACK_LIFE = realS(1.5); // 공격을 낸 뒤 그 공격 번호가 살아 있는 시간 (막아 받기 청구 · 옛 흘림 판정)
@@ -439,7 +440,8 @@ export class Stamina {
     this.lastShots = shots;
     // 걷기 의도가 있는 실제 전진거리만. 정지 흔들림/기술 내딛기/역방향 피격 이동은 제외.
     const mv = f.move;
-    if (p && old && f.state === 'stand' && !f.feetHeld && !this.inSecret && !f.gait?.req && !(f.skill?.lunge > 0) && !f.skill?.thrustPush && mv && Math.hypot(mv.x, mv.y) > 0.05) {
+    if (f.run?.on) runSpend(this, f, dt); // 뛰는 동안 (11/18 — src/run.js · 사람 몸만): 걸은 거리 셈 대신 초당 runCostRate · 자연 회복 쉼(아래 회복 시계가 0 에서 다시)
+    else if (p && old && f.state === 'stand' && !f.feetHeld && !this.inSecret && !f.gait?.req && !(f.skill?.lunge > 0) && !f.skill?.thrustPush && mv && Math.hypot(mv.x, mv.y) > 0.05) {
       const heading = f.heading ?? 0;
       const dx = p.x - old.x, dz = p.z - old.z;
       const along = dx * (Math.cos(heading) * mv.y + Math.sin(heading) * mv.x) + dz * (-Math.sin(heading) * mv.y + Math.cos(heading) * mv.x);

@@ -7,7 +7,7 @@
 //      ② 비기 입력: secret.js PlayerSecretWatch.open { S, ctx, t } — t 가 줄어든다. 금빛
 //      ③ 인데스(독일 패시브 — 다른 가지에서 들어옴): player.indesOpen === true · player.indesLeft(초 또는 null). 없으면 그냥 안 뜬다
 //   여럿이 겹치면 비기 → 이어 긋기 → 인데스 차례로 하나만.
-//  꼴: 내 머리 위 느낌표 · 비기 창이면 화면 가장자리 금색 테두리(screen_tint.js)
+//  꼴: 내 머리 위 느낌표 · 비기 창이면 화면 가장자리 금색 테두리(screen_tint.js) · 동시 대전은 기력 막대 위 체력 칸(11/18 stamina_hud.js) 위로 raise px 더
 //  남은 시간: 열린 때 불투명 0.7 → 닫힐 즈음 0.3 (남은 몫만큼 — 남은 시간을 모르면 열린 뒤 0.6 s 에 걸쳐). 0.08 s 에 커지며 나타나고
 //   창이 닫히면 0.1 s 에 사라진다. 위아래 흔들림 없음. 늘 맨 위에 그린다(깊이 시험 없음 — 상대 몸 · 칼이 가리지 않게).
 //  싸움 화면 밖 · 판 끝 · 상대가 죽었거나 화면 밖이면 그리지 않는다. 그림 하나(스프라이트)를 다시 쓰고 프레임마다 새로 만드는 것이 없다.
@@ -121,6 +121,7 @@ export function createStrikeCue(scene, tint) {
   const P = new Vector3(), Q = new Vector3();
   const plain = new Color(C.plain), gold = new Color(C.gold);
   let sprite = null, mat = null;
+  let raise = 0; // 기력 막대 위에 더 선 것의 높이(px) — 동시 대전 체력 칸(11/18 hp_strip.js hpLift · main.js 가 판마다 둠) · 1:1 은 0
   if (scene) {
     mat = new SpriteMaterial({ map: markTexture(), color: plain, transparent: true, opacity: 0, depthTest: false, depthWrite: false, fog: false, toneMapped: false });
     sprite = new Sprite(mat);
@@ -143,7 +144,7 @@ export function createStrikeCue(scene, tint) {
     if (depth < 0.2) return false; // 카메라 뒤 · 너무 가까움
     const pxPerM = viewH / (2 * depth * Math.tan((camera.fov * Math.PI) / 360));
     const h = Math.min(Math.max(C.worldH, C.minPx / pxPerM), C.maxPx / pxPerM);
-    P.y += C.gapPx / pxPerM;
+    P.y += (C.gapPx + raise) / pxPerM;
     Q.copy(P).project(camera);
     if (Q.x < -0.98 || Q.x > 0.98 || Q.y < -1 || Q.y > 0.98) return false; // 화면 밖 (아래 끝이 위 가장자리 넘음 포함) — 그리지 않는다
     const k = 0.5 + 0.5 * (1 - (1 - Math.min(1, S.age / C.pop)) ** 3); // 나타날 때 0.5 → 1 (흔들림 없음 — 닫힐 땐 크기 그대로)
@@ -156,6 +157,13 @@ export function createStrikeCue(scene, tint) {
   return {
     get sprite() {
       return sprite;
+    },
+    /** 느낌표를 기력 막대 위로 더 올릴 px (동시 대전 체력 칸 — main.js) */
+    get raise() {
+      return raise;
+    },
+    set raise(px) {
+      raise = Math.max(0, +px || 0);
     },
     update(dt, camera, live, player, foe, unique, secret, viewH = globalThis.innerHeight || 390) {
       const w = readCueWindow(live ? player : null, unique, secret, win);

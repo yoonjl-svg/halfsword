@@ -1,23 +1,24 @@
 // 생사전 저장 (localStorage 'stillness.saengsa.v1' — 방랑 판(lobby_progress.js wander.run)처럼 한 번의 저장으로 고치는 update 틀)
-//  { version 1, current: 대회 | null (끝난 대회도 다음 신청까지 둔다 — 대기실 칸이 '지난 대회'를 보임), draft: { companions: [id | null, id | null], weapons: [무기 | null × 3] } }
-//   draft.weapons = 내 팀 세 자리에 배정할 무기(사장님 10/29 18:2x — 전 lend { weapon, to } 는 읽을 때 그 자리 무기로 옮김)
+//  { version 1, current: 대회 | null (끝난 대회도 다음 신청까지 둔다 — 대기실 칸이 '지난 대회'를 보임), draft: { companions: [id | null, id | null] } }
+//   draft 는 동료 둘만 (사장님 11/18 '캐릭터 선택 ui에는 무기까지 배정할 필요가 없어' — 전 draft.weapons(10/29 18:2x 신청 때 배정할 무기) · 그 전 lend { weapon, to } 는
+//    읽을 때 버린다. 무기는 생사전 화면에서 경기마다 — 첫 경기 전에 처음 배정). 진행 중인 옛 대회(신청 때 무기를 받은 팀)는 그 무기 그대로 이어 함
 //  금화(고용 값 · 왕의 하사품)는 lobby_progress.js 지갑 — 두 저장의 차례: 고용은 금화를 먼저 내고 대회를 적는다(대회를 못 적으면 돌려줌) ·
 //   하사품은 연 것을 대회에 먼저 적고 금화를 더한다(새로고침해도 두 번 받지 않음 — 그 사이에 막히면 그 하사품 금화를 잃을 수 있다).
 //  저장이 막히면 이번 실행 동안만 메모리 값(다음 실행은 저장된 옛 값).
 import { SAENGSA } from './config.js';
-import { createTournament, advance, canSignUp, openChests, myMatch, matchById, finishMine, assignWeapons, validAssignment, entryMissing, NAMELESS } from './saengsa_rules.js';
+import { createTournament, advance, canSignUp, openChests, myMatch, matchById, finishMine, assignWeapons, entryMissing, NAMELESS, HIRE_CURRENCIES, sumCost, shortOf } from './saengsa_rules.js';
 import { signupWindow } from './saengsa_clock.js';
 import { update as updateWallet, addCoins } from './lobby_progress.js';
 
 export const SAENGSA_KEY = 'stillness.saengsa.v1';
 /** 새 대회 씨앗 (신청마다) */
 export const newSeed = () => (globalThis.crypto?.getRandomValues ? globalThis.crypto.getRandomValues(new Uint32Array(1))[0] : Math.floor(Math.random() * 2 ** 32));
-const blank = () => ({ version: 1, current: null, draft: { companions: [null, null], weapons: [null, null, null] } });
+const blank = () => ({ version: 1, current: null, draft: { companions: [null, null] } });
 let session = blank();
 const store = (s) => { try { return s ?? globalThis.localStorage ?? null; } catch { return null; } };
 
 const isDay = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
-const isFighter = (f) => f && typeof f.key === 'string' && typeof f.id === 'string' && typeof f.weapon === 'string' && Number.isFinite(f.hp) && Array.isArray(f.injuries) && f.prof && typeof f.prof === 'object';
+const isFighter = (f) => f && typeof f.key === 'string' && typeof f.id === 'string' && (typeof f.weapon === 'string' || f.weapon === null) && Number.isFinite(f.hp) && Array.isArray(f.injuries) && f.prof && typeof f.prof === 'object'; // 무기 null = 내 팀 첫 경기 배정 전 (11/18)
 /** 저장된 대회 모양이 맞나 (아니면 버림 — 옛 판 · 깨진 글) */
 export function validTournament(t) {
   if (!t || t.v !== 1 || !isDay(t.day) || !Number.isFinite(t.seed) || !Array.isArray(t.teams) || !Array.isArray(t.matches)) return false;
@@ -31,12 +32,8 @@ function normalize(v) {
   if (v?.version !== 1) return out;
   if (validTournament(v.current)) out.current = v.current;
   const c = Array.isArray(v.draft?.companions) ? v.draft.companions : [];
-  out.draft.companions = [0, 1].map((i) => (typeof c[i] === 'string' && (c[i] !== c[1 - i] || c[i] === NAMELESS) ? c[i] : null)); // 무명 검객은 둘 다여도 됨
-  const w = Array.isArray(v.draft?.weapons) ? v.draft.weapons : [];
-  out.draft.weapons = [0, 1, 2].map((i) => (typeof w[i] === 'string' ? w[i] : null));
-  const l = v.draft?.lend; // 옛 꼴(빌려 줄 무기 하나)
-  if (!Array.isArray(v.draft?.weapons) && l && typeof l.weapon === 'string' && Number.isInteger(l.to) && l.to >= 0 && l.to < SAENGSA.teamSize) out.draft.weapons[l.to] = l.weapon;
-  if (SAENGSA.assignUnique) out.draft.weapons = out.draft.weapons.map((x, i, all) => (x && all.indexOf(x) === i ? x : null)); // 한 무기는 한 자리에
+  const ids = [0, 1].map((i) => (typeof c[i] === 'string' && (c[i] !== c[1 - i] || c[i] === NAMELESS) ? c[i] : null)); // 무명 검객은 둘 다여도 됨
+  out.draft.companions = [...ids.filter(Boolean), null, null].slice(0, 2); // 빈 자리는 뒤로 (고르기 카드의 고른 차례 = 동료 1 · 2 — 11/18) · 옛 draft.weapons · lend 는 버림
   return out;
 }
 /** 지금 저장 (사본) */
@@ -62,36 +59,53 @@ export function syncSaengsa(now, { cfg = SAENGSA, storage } = {}) {
   updateSaengsa((d) => advance(d.current, now, cfg) > 0, storage);
   return readSaengsa(storage);
 }
-/** 신청 전 고른 것(동료 · 배정할 무기)을 둔다 */
+/** 신청 전 고른 동료를 둔다 */
 export function saveDraft(draft, storage) {
-  return updateSaengsa((d) => { d.draft = { companions: [...draft.companions], weapons: [...(draft.weapons ?? [])] }; return true; }, storage).saved;
+  return updateSaengsa((d) => { d.draft = { companions: [...draft.companions] }; return true; }, storage).saved;
 }
 /**
- * 신청 (사장님 10/29 — 신청 창 안에서만): 입장 조건(호칭 · 가진 무기 수 — 18:2x) · 동료 둘 · 세 사람의 무기 배정 · 고용 금화를 내고 대회를 만든다.
- *  data = { roster(이름난 인물), drawWeapon, weaponInfo, profOf, owned: [가진 무기], hasTitle(입장 호칭을 가졌나), hireCostOf(id) → { coins } | { token } } ·
- *  동료 = 로스터 인물(서로 다르게) 또는 무명 검객(NAMELESS — 둘 다여도 됨) · weapons = [나, 동료 1, 동료 2] 가진 무기(assignUnique 면 서로 다르게)
- *  지난 대회가 남아 있으면(내 팀은 떨어짐) 남은 경기를 끝내고 하사품을 연 뒤 바꾼다.
- *  돌려줌 { ok, why, cost } — why: 'closed' 신청 창 밖 · 'entry' 입장 조건 · 'busy' 진행 중인 내 대회 · 'team' 동료가 틀림 · 'weapons' 무기 배정이 틀림 · 'token' 아직 없는 고용 · 'coins' 금화 모자람
+ * 고용 값 내기 (사장님 11/19 — 금화 · 머리 · 뿔피리를 한 번의 저장으로 한꺼번에): cost = { coins, heads, horns } (sumCost) ·
+ *  하나라도 모자라면 아무것도 안 냄. 돌려줌 { ok, short: [모자란 재화 — 차례 금화 · 머리 · 뿔피리] } · '번 것'(earned)은 건드리지 않는다(lobby_progress.js update)
  */
-export function signUp({ now, companions, weapons = [], seed, data, cfg = SAENGSA, storage }) {
+export function payHire(cost) {
+  let short = [];
+  const res = updateWallet((w) => { short = shortOf(w, cost); if (short.length) return false; for (const k of HIRE_CURRENCIES) w[k] -= cost?.[k] ?? 0; return true; });
+  return { ok: res.changed, short };
+}
+/** 고용 값 돌려주기 — payHire 의 거꾸로(셋 모두 · 한 번의 저장 · '번 것'은 그대로). 돌려줌: 저장했나 */
+export function refundHire(cost) {
+  return updateWallet((w) => { for (const k of HIRE_CURRENCIES) w[k] += cost?.[k] ?? 0; return true; }).saved;
+}
+/**
+ * 신청 (사장님 10/29 — 신청 창 안에서만): 입장 조건(호칭 · 가진 무기 수 — 18:2x) · 동료 둘 · 고용 값(금화 + 11/19 덤 머리 · 뿔피리)을 내고 대회를 만든다.
+ *  무기는 배정하지 않는다(사장님 11/18 — 내 팀 세 사람은 무기 없이 들고 첫 경기 화면 '무기 배정'에서 받는다 · 전 10/29 18:2x 세 사람의 무기 배정).
+ *  data = { roster(이름난 인물), drawWeapon, weaponInfo, profOf, owned: [가진 무기], hasTitle(입장 호칭을 가졌나), hireCostOf(id, day) → { coins, heads?, horns? } | { token } } ·
+ *   day = 이 신청 창의 날(고용 덤 수의 씨앗 — 고르기 카드가 보인 값과 같은 날) ·
+ *  동료 = 로스터 인물(서로 다르게) 또는 무명 검객(NAMELESS — 둘 다여도 됨)
+ *  지난 대회가 남아 있으면(내 팀은 떨어짐) 남은 경기를 끝내고 하사품을 연 뒤 바꾼다.
+ *  돌려줌 { ok, why, cost, short } — why: 'closed' 신청 창 밖 · 'entry' 입장 조건 · 'busy' 진행 중인 내 대회 · 'team' 동료가 틀림 · 'token' 아직 없는 고용 ·
+ *   'coins' · 'heads' · 'horns' 모자람(모자란 것 가운데 첫째 — short = 모자란 재화 모두 · lobby_progress.js purchase 와 같은 꼴) · 'save' 저장 실패(낸 값은 셋 모두 돌려줌)
+ */
+export function signUp({ now, companions, seed, data, cfg = SAENGSA, storage }) {
   const before = syncSaengsa(now, { cfg, storage });
   if (!signupWindow(now, cfg).open) return { ok: false, why: 'closed' };
   if (entryMissing({ hasTitle: !!data.hasTitle, owned: data.owned.length }, cfg).length) return { ok: false, why: 'entry' };
   if (!canSignUp(now, before.current, cfg)) return { ok: false, why: 'busy' };
   const team = (companions ?? []).filter((id, i, all) => id === NAMELESS || (data.roster.includes(id) && all.indexOf(id) === i));
   if (team.length !== cfg.teamSize - 1 || team.length !== (companions ?? []).length) return { ok: false, why: 'team' };
-  if (!validAssignment(weapons, data.owned, [0, 1, 2], cfg)) return { ok: false, why: 'weapons' };
-  const costs = team.map((id) => data.hireCostOf(id));
+  const day = signupWindow(now, cfg).day;
+  const costs = team.map((id) => data.hireCostOf(id, day));
   if (costs.some((c) => c.token)) return { ok: false, why: 'token' };
-  const cost = costs.reduce((s, c) => s + c.coins, 0);
-  if (!updateWallet((w) => { if (w.coins < cost) return false; w.coins -= cost; return true; }).changed) return { ok: false, why: 'coins', cost };
+  const cost = sumCost(costs);
+  const paid = payHire(cost);
+  if (!paid.ok) return { ok: false, why: paid.short[0] ?? 'save', short: paid.short, cost };
   const old = before.current;
   if (old && old.status !== 'done') advance(old, Infinity, cfg); // 떨어진 지난 대회는 남은 경기를 끝까지
   const prize = old ? openChests(old, cfg) : null;
   const keep = cfg.keepBrokenAfterCup && old ? (old.broken ?? []) : []; // 부러진 내 무기를 다음 대회로 넘길지 (사장님 10/29 20:3x — 대회가 끝나면 원래대로 · 기본 false)
-  const t = createTournament({ day: signupWindow(now, cfg).day, seed, at: now, companions: team, roster: data.roster, weapons: [...weapons], broken: keep, drawWeapon: data.drawWeapon, drawPool: data.drawPool, signatureOf: data.signatureOf, weaponInfo: data.weaponInfo, profOf: data.profOf, cfg });
-  const res = updateSaengsa((d) => { d.current = t; d.draft = { companions: [...team], weapons: [...weapons] }; return true; }, storage);
-  if (!res.changed) { updateWallet((w) => { w.coins += cost; return true; }); return { ok: false, why: 'save' }; }
+  const t = createTournament({ day: signupWindow(now, cfg).day, seed, at: now, companions: team, roster: data.roster, broken: keep, drawWeapon: data.drawWeapon, drawPool: data.drawPool, signatureOf: data.signatureOf, weaponInfo: data.weaponInfo, profOf: data.profOf, cfg });
+  const res = updateSaengsa((d) => { d.current = t; d.draft = { companions: [...team] }; return true; }, storage);
+  if (!res.changed) { refundHire(cost); return { ok: false, why: 'save' }; } // 낸 금화 · 머리 · 뿔피리를 모두 돌려줌
   if (prize) addCoins(prize.reduce((s, x) => s + (x.kind === 'coins' ? x.amount : 0), 0));
   return { ok: true, why: null, cost, saved: res.saved };
 }
