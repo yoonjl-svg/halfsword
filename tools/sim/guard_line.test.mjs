@@ -200,7 +200,8 @@ test('읽는 쪽 (사람 상대): 걸어 들어오는 사람의 보이는 자세
 });
 
 test('읽는 쪽 (AI 상대): 덮은 줄 = 늦게 본 상대 손 자세의 기본 줄 · 휘두름이 보이면 실제 칼로 고쳐 겨눔', () => {
-  const G0 = newRound({ seed: 4, walls: true, weapon: 'longsword', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 6 }, persona2: { proficiency: 6 }, difficulty: 'expert', difficulty2: 'expert' });
+  // 씨앗 4 → 3 (11/19 — 독일 띠 높음 읽고 박차기 · 누르는 동안만 비기 기력(docs/strike/de_band3_2026-11-19.md)이 숙련 6 독일 거울의 판 흐름을 바꿔 씨앗 4 는 40 s 안에 덮은 채 걸어 드는 장면이 안 나옴 — 읽기 장치는 그대로 · 장면만 다시 고름)
+  const G0 = newRound({ seed: 3, walls: true, weapon: 'longsword', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 6 }, persona2: { proficiency: 6 }, difficulty: 'expert', difficulty2: 'expert' });
   // 몸 값은 11/17 E 전 숙련 6 그대로(힘 1.1 · 버티는 힘 1.1) — 읽기 시험이라 몸은 판 꼴만 정함 · 숙련도별 몸 값이 바뀌어도 판이 그대로이게 (기록 docs/strike/prof_body_2026-11-17.md §7)
   for (const [a, f] of [[G0.ai, G0.enemy], [G0.ai2, G0.player]]) {
     a.level = { ...a.level, strength: 1.1 };
