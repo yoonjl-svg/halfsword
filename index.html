@@ -88,9 +88,12 @@
         /* 무기 등급 (예전 룰렛 색 그대로) — 글자 색 규칙의 예외: 카드 이름 · 등급 딱지 · 특수 능력 줄 · 테두리 · 빛 (사장님 10/14 11:0x '카드 등급 색은 유지. 재미 요소야') */
         --tier-trash: #b8b6b0; --tier-common: #fff3c4; --tier-rare: #8cc4ff; --tier-epic: #d6a8ff; --tier-legend: #ffd24a; --tier-mystery: #8fe3c6;
         --foe: #b0473b;
-        /* 동시 대전 체력 칸 색 넷 (사장님 11/18 '원래 초록색이다가 80% 아래로 내려가면 노랑색 50% 아래로 내려가면 주황색 20% 아래로 내려가면 빨강색' — src/hp_strip.js · 편과 무관):
-           OKLCH 초록 (0.74 0.17 142°) · 노랑 (0.86 0.16 95°) · 주황 (0.75 0.16 58°) · 빨강 (0.63 0.20 27°) — 작은 칸이 밝은 하늘 · 어두운 벽에서도 갈리게 밝게 (작업자 고름) */
-        --hp-green: #65c55b; --hp-yellow: #f2cf3b; --hp-orange: #f79133; --hp-red: #e94740;
+        /* 동시 대전 체력 칸 색 넷 (사장님 11/18 '원래 초록색이다가 80% 아래로 내려가면 노랑색 50% 아래로 내려가면 주황색 20% 아래로 내려가면 빨강색' — src/hp_strip.js · 편과 무관).
+           11/18 둘째 (사장님 '체력 바가 너무 튀는 색깔이네. 채도 낮추면서 지금 컬러칩과 디자인 언어를 맞춰'): 새 색을 만들지 않고 있는 색에서 — OKLCH 채도 0.11 ~ 0.14 (전 0.16 ~ 0.20)
+            노랑 = --c-accent 그대로 (0.75 0.13 80°) · 빨강 = --foe 그대로 (0.54 0.14 29° — 피 색 BLOOD_RED 색상 · 상대 카드 테) ·
+            주황 = 그 둘의 OKLCH 가운데 (0.64 0.135 54.5°) · 초록 = 10/30 아군 체력 막대 녹색(ALLY_HP_COLOR — 색상 145° · 채도 = 적 색 FOE_COLOR 채도 0.114 = 피 채도 × foeChromaK)을
+            작은 칸이 어두운 무대에서도 보이게 밝기만 0.40 → 0.70 (작업자 — 노랑 0.75 와 주황 0.64 사이). 맞는지는 tools/sim/hp_strip.test.mjs 가 셈으로 본다 */
+        --hp-green: #6fb171; --hp-yellow: var(--c-accent); --hp-orange: #cb7431; --hp-red: var(--foe);
         /* 자리: 안전 영역 · 왼쪽 위/오른쪽 위 칸 폭 (가운데 일시정지 단추 38px 양옆 10px 비움) */
         --safe-t: max(12px, env(safe-area-inset-top));
         --safe-r: max(14px, env(safe-area-inset-right));
@@ -159,18 +162,21 @@
       .stamina-bar { position: absolute; width: 56px; height: 2px; transform: translate(-50%, -100%); background: rgba(24,18,14,.35); border-radius: 1px; overflow: hidden; box-shadow: 0 0 0 .25px var(--c-text), 0 0 0 .5px var(--c-accent); }
       .stamina-bar > span { display: block; width: 100%; height: 100%; background: var(--c-sub); opacity: .85; transform-origin: left center; }
       /* 동시 대전 체력 칸 (사장님 11/18 '좌측 상단 … 체력바 … 없애고 기력바랑 같이 뜨게 해 … 점선 모양의 바 … 10칸' — src/stamina_hud.js · 규칙 src/hp_strip.js):
-         기력 막대 바로 위(틈 2px — config TEAM_FIGHT.hpStrip.gap) · 같은 너비 56px · 높이 3px(h) · 10 칸 사이 1px 틈 = 점선 꼴(기력 막대는 2px 한 줄 실선 · 무채색).
-         켜진 칸 = 체력 색(--hp-* — 편과 무관) · 꺼진 칸 = 어두운 바탕 · 점멸(출혈 · 중상) = 칸 전체가 깜빡임 — 움직임을 줄인 기기는 깜빡임 대신 붉은 테두리.
+         기력 막대 바로 위(틈 2px — config TEAM_FIGHT.hpStrip.gap) · 같은 너비 56px · 높이 3px(h — 막대보다 1px 높게: 색이 갈려 읽히게) · 10 칸 사이 1px 틈 = 점선 꼴(기력 막대는 2px 한 줄 실선 · 무채색).
+         켜진 칸 = 체력 색(--hp-* — 편과 무관) · 짙은 외곽선(--outline-c — HUD 글자 외곽선과 같은 색 · 금빛 테는 노랑과 섞이고 빨강을 주황으로 보이게 해 켜진 칸엔 쓰지 않음) ·
+         꺼진 칸 = 기력 막대 바닥과 같은 바탕(rgba(24,18,14,.35)) + 막대 테의 옅은 흰 실선 — 어두운 무대에서도 칸 자리가 보임 (11/18 둘째 — 기력 막대와 꼴을 맞춤).
+         점멸(출혈 · 중상) = 칸 전체가 부드럽게 깜빡임(기력 막대 숨 · 끊어지는 움직임 steps() 는 쓰지 않음 — docs/design_language.md '속' 규칙 1) — 움직임을 줄인 기기는 깜빡임 대신 붉은 테두리.
          [hidden] 을 따로 적는다 — display: flex 가 숨김 속성을 덮지 않게 (11/18 — 옛 기세 칸 · 발톱 자국이 이 까닭으로 숨겨도 남았다) */
       .hp-cells { position: absolute; display: flex; gap: 1px; width: 56px; height: 3px; transform: translate(-50%, calc(-100% - 4px)); pointer-events: none; }
       .hp-cells[hidden] { display: none; }
-      .hp-cells > i { flex: 1; background: rgba(24,18,14,.45); border-radius: .5px; box-shadow: 0 0 0 .25px rgba(13,9,7,.9); }
+      .hp-cells > i { flex: 1; background: rgba(24,18,14,.35); border-radius: .5px; box-shadow: 0 0 0 .25px rgba(13,9,7,.9), 0 0 0 .5px rgba(243,233,216,.22); }
+      .hp-cells > i[data-on="true"] { box-shadow: 0 0 0 .25px var(--outline-c); }
       .hp-cells[data-tone="green"] > i[data-on="true"] { background: var(--hp-green); }
       .hp-cells[data-tone="yellow"] > i[data-on="true"] { background: var(--hp-yellow); }
       .hp-cells[data-tone="orange"] > i[data-on="true"] { background: var(--hp-orange); }
       .hp-cells[data-tone="red"] > i[data-on="true"] { background: var(--hp-red); }
-      .hp-cells[data-blink="true"] { animation: hp-blink .9s steps(2, jump-none) infinite; }
-      @keyframes hp-blink { 0% { opacity: 1; } 100% { opacity: .2; } }
+      .hp-cells[data-blink="true"] { animation: hp-blink .9s ease-in-out infinite; }
+      @keyframes hp-blink { 50% { opacity: .2; } }
       @media (prefers-reduced-motion: reduce) {
         .hp-cells[data-blink="true"] { animation: none; }
         .hp-cells[data-blink="true"] > i { box-shadow: 0 0 0 .75px var(--hp-red); }
@@ -183,21 +189,6 @@
       .stamina-bar[data-exhausted="true"] > span { background: #948e7c; }
       @keyframes stamina-breath { 50% { opacity: .38; } }
       @media (prefers-reduced-motion: reduce) { .stamina-bar { animation: none !important; } }
-      /* 스택 칸 (사장님 11/18 '스택을 표시하는 위치를 따로 만들고 머리 위에선 빼버려. 좌측 중상단이나 좌측 중단에 작게?' — src/stack_hud.js):
-         왼쪽 안전 여백 · 화면 높이 38 % 에서 아래로 — 위 무대 이름(#stageInfo) · 아래 이동 조이스틱(아래 20 + 110px) 사이 (844 × 390: 148 ~ 최대 넷 줄 ≈ 225px · 조이스틱 위 끝 260px).
-         한 줄 = 짧은 이름 · 갈래마다 이름표 + 칸 (찬 칸 = 스택 수 · 기세 강조 색 · 사냥 상태 색 · 가득이면 옅은 빛). 글 = 기술 칸 둘째 줄(.slot small) 꼴 — 작게 · 보통 굵기 · 보조 색 · 외곽선 */
-      #stackHud { position: fixed; z-index: 2; left: var(--safe-l); top: 38%; display: grid; gap: 3px 8px; align-items: center; max-width: var(--side-w); pointer-events: none; text-shadow: var(--hud-outline); font-size: var(--fs-s); font-weight: var(--fw-body); line-height: 1.35; color: var(--c-sub); word-break: keep-all; }
-      #stackHud[hidden] { display: none; }
-      #stackHud .sk-row { display: contents; } /* 줄 = 격자 한 줄 (이름 칸 너비 = 가장 긴 이름 · 갈래 칸이 줄마다 같은 자리 — stack_hud.js 가 칸 수를 둠) */
-      #stackHud .sk-n { max-width: 6em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      #stackHud .sk-s[data-empty] { visibility: hidden; } /* 그 몸에 없는 갈래 — 자리만 (세로 맞춤) */
-      #stackHud .sk-s { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-      #stackHud .sk-c { display: inline-flex; gap: 1px; }
-      #stackHud .sk-c > i { display: block; width: 4px; height: 7px; border-radius: .5px; background: rgba(24,18,14,.45); box-shadow: 0 0 0 .25px var(--c-sub); }
-      #stackHud .sk-s[data-kind="ki"] .sk-c > i[data-on] { background: var(--c-accent); }
-      #stackHud .sk-s[data-kind="hunt"] .sk-c > i[data-on] { background: var(--c-alert); }
-      #stackHud .sk-s[data-kind="ki"] .sk-c[data-full] > i { box-shadow: 0 0 2px .5px var(--c-accent); }
-      #stackHud .sk-s[data-kind="hunt"] .sk-c[data-full] > i { box-shadow: 0 0 2px .5px var(--c-alert); }
       /* ② 패시브·비기: 줄 하나(40px) — 자세 칸처럼 새 알림이 오면 그 자리에서 바꿔 끼운다. 10/14 03:1x: 마지막 기술이 계속 보인다(새 판에 비움),
          비기 창·고노센 준비만 잠깐 덮었다가 마지막 기술로 돌아온다 (main.js techPut · techTick) */
       .stack .slot { height: 40px; translate: 6px 0; }
@@ -518,7 +509,6 @@
     <!-- 오른쪽 위 두 묶음: ① 자세 · (#techCue 안) ② 패시브·비기 — 둘 다 줄 하나 (10/10 20:3x, §14) -->
     <div id="guardName" class="slot"></div>
     <div id="staminaHud"></div>
-    <div id="stackHud" hidden></div>
     <div id="techCue"><div id="techSlot" class="stack" aria-live="polite"><div class="slot"></div></div></div>
     <div id="moveStick" aria-label="이동 조이스틱"><div id="moveKnob"></div></div>
     <button id="btnParry" aria-label="막기 (누르고 있기)">막기</button>

@@ -50,12 +50,14 @@ button.sg-slot:not(:disabled):hover { border-color: var(--c-sub); }
 .sg-order { position: absolute; top: 2px; left: 2px; display: flex; gap: 1px; pointer-events: none; } /* 고른 차례 = 동료 1 · 2 (무명 검객은 둘일 수 있음) */
 .sg-order i { min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background: var(--c-accent); color: var(--c-on-accent); font-style: normal; font-size: 10px; font-weight: var(--fw-head); line-height: 14px; text-align: center; font-variant-numeric: tabular-nums; }
 .sg-pick-school { min-height: 12px; font-size: 10px; line-height: 12px; color: var(--c-sub); white-space: nowrap; } /* 인물의 유파 + 가진 그 유파 무기 수 */
-.sg-pick-school b { font-weight: var(--fw-head); color: var(--c-text); font-variant-numeric: tabular-nums; }
-.sg-pick-school b[data-none] { color: var(--c-alert); } /* 그 유파 무기가 하나도 없음 */
+.sg-pick-own { display: inline-flex; align-items: center; gap: 1px; vertical-align: top; } /* 칼 표 + 가진 그 유파 무기 수 (11/18 — 숙련도와 헷갈리지 않게) */
+.sg-sword { flex: none; width: 10px; height: 10px; margin-top: 1px; color: var(--c-sub); }
+.sg-pick-own b { font-weight: var(--fw-head); color: var(--c-text); font-variant-numeric: tabular-nums; }
+.sg-pick-own[data-none] b, .sg-pick-own[data-none] .sg-sword { color: var(--c-alert); } /* 그 유파 무기가 하나도 없음 */
 .sg-owned { min-height: 0; overflow-y: auto; padding-left: 8px; border-left: 1px solid var(--line); scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .sg-owned-title { display: block; font-size: var(--fs-s); line-height: 1.3; color: var(--c-sub); }
-.sg-own-g { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
-.sg-own-g > small { flex: 0 0 100%; font-size: 10.5px; line-height: 1.2; color: var(--c-sub); }
+.sg-own-g { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 8px; } /* 유파마다 한 묶음 — 묶음 사이(8) > 묶음 안 줄 사이(3) · 유파 이름은 쓰지 않음 (11/18) */
+.sg-own-g:first-child { margin-top: 5px; }
 .sg-own-w { padding: 1px 6px; border: 1px solid var(--line); border-radius: 999px; font-size: 11px; line-height: 15px; color: var(--c-text); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; } /* 보기만 (누르지 않음) */
 .sg-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .sg-chip-btn { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-s); line-height: 16px; color: var(--c-sub); background: none; }
@@ -75,11 +77,12 @@ button.sg-slot:not(:disabled):hover { border-color: var(--c-sub); }
   .sg-pick img { width: 30px; height: 30px; }
   .sg-pick-name { font-size: 9.5px; line-height: 1.15; min-height: 0; }
   .sg-pick-school { font-size: 9.5px; line-height: 11px; min-height: 11px; }
+  .sg-sword { width: 9px; height: 9px; }
   .sg-order i { min-width: 12px; height: 12px; font-size: 9px; line-height: 12px; padding: 0 2px; }
   .sg-pick-main { gap: 6px; }
   .sg-owned { padding-left: 6px; }
-  .sg-own-g { margin-top: 3px; gap: 2px; align-items: center; }
-  .sg-own-g > small { flex: none; margin-right: 2px; } /* 낮은 화면(폰 가로): 유파 이름을 첫 무기와 한 줄에 — 묶음마다 한 줄을 아낌 */
+  .sg-own-g { margin-top: 6px; gap: 2px; }
+  .sg-own-g:first-child { margin-top: 3px; }
   .sg-own-w { padding: 0 5px; font-size: 10.5px; line-height: 14px; }
   :host .sg-pick-actions .primary { padding-top: 7px; padding-bottom: 7px; }
 }

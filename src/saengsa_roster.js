@@ -3,7 +3,7 @@
 //   (사장님 10/29 22:3x — 롤랑 · 베르나르도 · 아르토리아 · 얼터도 생사전 인물 · 기본 인물과 얼터는 다른 사람 · 감독 전달). 한 대회에 한 사람 한 번씩 (전: 주 인물에서 아르토리아를 뺀 열하나).
 //  무기: 내 팀 세 사람 = 내가 가진 무기에서 배정(사장님 10/29 18:2x '무기는 랜덤 뽑기가 아니라 플레이어가 배정해 주는거야' — 경기마다 · 11/18 신청 때 배정은 걷음) — 가진 무기 = owned_weapons.js ownedWeapons(상점이 채울 자리).
 //   고르기 카드 참고(11/18): 인물의 유파(hireSchoolOf — 숙련도가 가장 높은 유파) · 가진 무기를 유파마다(ownedBySchool) — 생사전에서 사람은 든 무기 유파의 숙련도로 싸운다(main.js teamAiOf · 빠른 셈 profFor)
-//   상대 팀 = 팀마다 무기 다섯(사장님 10/29 19:5x — 전용무기 + 카드 뽑기와 같은 목록 · 같은 등급 확률에서 ??? 를 뺀 표 · 서로 다르게 · 씨앗 난수 — drawPool · signatureOf) → AI 가 나눠 줌(saengsa_rules.js aiArm).
+//   상대 팀 = 팀마다 무기 아홉(사장님 11/19 '9개로 하자' · 전 다섯 10/29 19:5x — 11/19 무작위만 · 카드 뽑기와 같은 목록 · 같은 등급 확률에서 ??? 를 뺀 표 · 서로 다르게 · 씨앗 난수 — drawPool · signatureOf) → AI 가 나눠 줌(saengsa_rules.js aiArm).
 //   전용무기 = 표 SAENGSA.signature (사장님 10/29 22:3x — 인물 하나에 하나 · 기본 인물과 얼터를 가름 · 생사전에서만) — 무명 검객은 없음.
 //  입장 조건(18:2x): 호칭 SAENGSA.entry.title(정복자) + 가진 무기 SAENGSA.entry.weapons 개 — entryState
 //  숙련도: 인물 = saengsa_proficiency.js proficiencyOf(character_temperament.js 표) · 무명 검객 = 대회마다 새로(saengsa_rules.js makeNameless — 사장님 10/29 18:2x) ·

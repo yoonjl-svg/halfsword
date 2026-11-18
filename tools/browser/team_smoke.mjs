@@ -71,8 +71,9 @@ for (const C of CASES) {
       human: R?.human?.index ?? null,
       bars: [...document.querySelectorAll('#staminaHud .hp-cells')].filter((e) => !e.hidden).length, // 기력 막대 위 체력 칸 (11/18 — 전 왼쪽 위 이름 · 체력 목록) · 화면 안의 산 몸만
       hpShown: [...document.querySelectorAll('#staminaHud .hp-cells')].filter((e) => !e.hidden).length,
-      stage: document.getElementById('stageInfo').classList.contains('show'), // 무대 이름 (생사전은 감춤)
-      listNames: game.fighters.map((f) => f.shortName ?? ''), // 짧은 이름 (스택 칸 줄 이름 — 11/18)
+      stage: document.getElementById('stageInfo').classList.contains('show'), // 무대 이름 (생사전도 띄움 — 11/18 '생사전 · 무대')
+      stageText: document.querySelector('#stageInfo .stg')?.textContent ?? '',
+      listNames: game.fighters.map((f) => f.shortName ?? ''), // 짧은 이름 (11/18 목록 걷음 — 화면에 쓰는 곳 없음 · 이름 규칙만 봄)
       arrows: hud ? [...hud.querySelectorAll('.th-arrow[data-kind="edge"]')].filter((a) => a.style.display !== 'none').length : 0,
       heads: hud ? [...hud.querySelectorAll('.th-arrow[data-kind="head"]')].filter((a) => a.style.display !== 'none').length : 0,
       switches: R ? game.fighters.map((f) => R.M.targeting?.get(f)?.switches ?? 0) : [],
@@ -133,7 +134,7 @@ for (const C of CASES) {
   row.errors = errors;
   const okSaengsa = !C.saengsa || (row.saengsa && ['a', 'b'].includes(row.saengsa.winner) && Object.keys(row.saengsa.fighters).length === C.n && Object.values(row.saengsa.fighters).every((f) => Number.isInteger(f.hp) && Array.isArray(f.injuries) && typeof f.alive === 'boolean' && typeof f.weaponBroken === 'boolean')
     && row.start?.broken === '0100' && row.saengsa.fighters['5-0'].weaponBroken === true // 5-0 (자리 1) 은 부러진 칼로 서고 결과에도 부러진 채
-    && row.start?.stage === false // 생사전은 무대 이름 감춤
+    && row.start?.stage === true && row.start.stageText.startsWith('생사전 · ') // 생사전도 무대 줄 (11/18 — 전 10/29 감춤)
     && row.start?.listNames?.includes('오토') && !row.start.listNames.some((n) => n.startsWith('무명 검객')) // 무명 검객은 붙인 이름만 (사장님 10/30 01:0x)
     && row.start.listNames.includes('A.미나미') // 얼터 = 'A.' + 본캐 짧은 이름
     && (row.end?.winner == null || C.saengsa.entrants[row.saengsa.winner].some((k) => row.saengsa.fighters[k].alive))); // 이긴 편에 산 몸 (판이 끝난 스텝의 몸으로 적음)

@@ -317,7 +317,7 @@ test('⑨ 죽은 몸 쉬게 하기 (셋 이상 판만) · 카메라 물러남 �
   assert.ok(Math.abs(pull([fake(-2, 0)]).up - pull([fake(-2, 0)]).back * CONFIG.TEAM_FIGHT.cam.upK) < 1e-12);
 });
 
-test('⑩ 짧은 이름 (사장님 10/30 01:0x — 얼터 A. · 11/18 스택 칸 줄 이름) · 적 색 · 머리 위 세모 자리', () => {
+test('⑩ 짧은 이름 (사장님 10/30 01:0x — 얼터 A.) · 적 색 · 머리 위 세모 자리', () => {
   const S = (id) => shortNameOf(CHARACTERS_BY_ID[id]);
   assert.deepEqual(['isolde', 'bernardo', 'samira', 'liao', 'white_scale', 'minami'].map(S), ['이졸데', '베르나르도', '마야', '랴오', '백귀', '미나미']); // 백린의 전사 = 백귀 (사장님 10/30 18:3x)
   assert.deepEqual(['minami_mad', 'bran_mad', 'heinrich_mad'].map(S), ['A.미나미', 'A.브론', 'A.하인리히']);

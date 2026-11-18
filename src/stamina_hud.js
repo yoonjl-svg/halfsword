@@ -8,7 +8,7 @@ import { hpStrip } from './hp_strip.js';
  *   (사장님 11/18 '생사전에서 좌측 상단에 캐릭터 체력바가 뜨는데 그거 없애고 기력바랑 같이 뜨게 해. 기력바 위나 아래에. … 점선 모양의 바 … 10칸' — 규칙 hp_strip.js ·
  *    전 10/29 22:3x 왼쪽 위 이름 · 체력 목록(team_hud.js #teamList)은 걷음.) 1:1(setTeam false)은 체력 칸이 없다 — 예전 그대로.
  *   기력 무한(용사의 눈물)이라 기력 막대가 없는 몸도 체력 칸은 같은 자리에 그린다.
- *  11/18 머리 위 스택 표시(일본 기세 칸 — 막대 밑)는 걷음 — 왼쪽 가운데 스택 칸(stack_hud.js) */
+ *  11/18 머리 위 스택 표시(일본 기세 칸 — 막대 밑)는 걷음 — 스택은 화면에 띄우지 않는다(사장님 11/18 '스택 표시는 어떻게 해도 별로다 그냥 빼') */
 export function createStaminaHud(root) {
   const point = new Vector3();
   const viewPoint = new Vector3();

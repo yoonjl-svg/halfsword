@@ -416,7 +416,7 @@ test('시험판(testMode): 신청 늘 열림 · 모든 경기 바로 · 쉬는 �
   assert.equal(C.signupWindow(now).open, false);
 });
 
-test('상대 팀 무기 다섯 · 전용무기 · AI 나눠 주기 (사장님 10/29 19:5x)', async () => {
+test('상대 팀 무기 묶음 · 전용무기 · AI 나눠 주기 (사장님 10/29 19:5x · 11/19 아홉 \'9개로 하자\' · 무작위뿐 — 전용무기를 먼저 넣지 않음 · 저마다 가장 잘 맞는 무기)', async () => {
   const roster = await import('../../src/saengsa_roster.js');
   const { getWeapon } = await import('../../src/weapons.js');
   // 전용무기 = 시트 무기 등급 에픽 이상 — 로스터에서는 랴오 청강검 · 미나미 모노호시자오 (마야 · 김씨의 ??? 무기는 아님 — 확인 전)
@@ -431,11 +431,12 @@ test('상대 팀 무기 다섯 · 전용무기 · AI 나눠 주기 (사장님 10
     for (const team of t.teams.slice(1)) {
       const ids = team.pool.map((w) => w.weapon);
       assert.equal(ids.length, SAENGSA.aiPool.size);
-      assert.equal(new Set(ids).size, ids.length, '서로 다른 다섯');
+      assert.equal(SAENGSA.aiPool.size, 9, '사장님 11/19 \'9개로 하자\' (전 5)');
+      assert.equal(new Set(ids).size, ids.length, '서로 다른 아홉');
       assert.ok(team.pool.every((w) => w.tier !== 'mystery' && getWeapon(w.weapon).tier === w.tier), '??? 없음');
       for (const f of team.members) {
-        assert.ok(ids.includes(f.weapon), '받은 무기 다섯 가운데서');
-        if (f.sig) { sigs++; sigHeld += f.weapon === f.sig; assert.ok(ids.includes(f.sig), '전용무기는 다섯 안에'); }
+        assert.ok(ids.includes(f.weapon), '받은 무기 묶음 가운데서');
+        if (f.sig && ids.includes(f.sig)) { sigs++; sigHeld += f.weapon === f.sig; } // 전용무기가 우연히 묶음에 든 때만 셈
       }
       assert.equal(new Set(team.members.map((f) => f.weapon)).size, team.members.length, '한 무기는 한 사람');
       // 다 세어 본 가장 큰 합과 같은가 · 숙련도 0 인 사람 수는 줄일 수 없는가
@@ -451,7 +452,18 @@ test('상대 팀 무기 다섯 · 전용무기 · AI 나눠 주기 (사장님 10
       assert.equal(zeros(now), fewest, `씨앗 ${seed} 0 을 피함`);
     }
   }
-  assert.ok(sigs > 0 && sigHeld / sigs > 0.85, `전용무기를 주인이 듦 ${sigHeld}/${sigs}`);
+  assert.ok(sigs === 0 || sigHeld / sigs > 0.8, `묶음에 든 전용무기를 주인이 듦 ${sigHeld}/${sigs}`);
+  // 무기 묶음 = 무작위 뽑기뿐 (11/19 사장님 '늘 전용무기가 아니라') — 뽑기는 팀마다 아홉을 · 미리 든 무기 없이 · 주인의 전용무기는 우연히 들 때만(씨앗 400 개에서 약 22 %)
+  const calls = [];
+  const spy = (rnd, n, taken) => { calls.push([n, taken.length]); return roster.drawPool(rnd, n, taken); };
+  let owners = 0, inPool = 0, held = 0;
+  for (let seed = 1; seed <= 300; seed++) {
+    const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: [R.NAMELESS, R.NAMELESS], ...roster.SAENGSA_DATA, drawPool: spy });
+    for (const team of t.teams.slice(1)) for (const f of team.members) if (f.sig) { owners++; const has = team.pool.some((w) => w.weapon === f.sig); inPool += has; held += has && f.weapon === f.sig; }
+  }
+  assert.ok(calls.length > 0 && calls.every(([n, k]) => n === SAENGSA.aiPool.size && k === 0), '아홉을 미리 든 무기 없이 뽑음');
+  assert.ok(owners > 1000 && inPool > 0 && inPool / owners < 0.4, `전용무기가 묶음에 든 몫 ${inPool}/${owners} (우연히만)`);
+  assert.ok(held / inPool > 0.8, `묶음에 든 전용무기를 주인이 듦 ${held}/${inPool}`);
   // 다친 · 죽은 사람이 생기면 다시 나눈다 (산 사람만 · 죽은 사람의 무기도 쓸 수 있음)
   const pool = [{ weapon: 'a1', school: 'german', tier: 'legend' }, { weapon: 'a2', school: 'italian', tier: 'common' }, { weapon: 'a3', school: 'japanese', tier: 'common' }];
   const p = (o) => ({ german: 0, italian: 0, iberian: 0, japanese: 0, chinese: 0, ...o });
@@ -499,7 +511,7 @@ test('부러진 무기는 대회 끝까지 · 빠른 셈 부러짐 · 레전드�
   assert.ok(branch > 200, `나뭇가지 ${branch}/300`);
   assert.equal(R.quickResolve({ a: [f('0-0', 'excalibur', { broken: true })], b: [f('1-0', 'excalibur')] }, 1).fighters['0-0'].broken, true); // 이미 부러진 것은 그대로
   assert.ok(R.power(f('x', 'longsword', { broken: true })) < R.power(f('x', 'longsword')));
-  // 결과에 부러짐이 오면: 내 팀 = t.broken (다시 배정해도 부러진 채) · 상대 팀 = 무기 다섯의 그 줄 (다시 나눠도 부러진 채 · 점수 감점)
+  // 결과에 부러짐이 오면: 내 팀 = t.broken (다시 배정해도 부러진 채) · 상대 팀 = 무기 묶음의 그 줄 (다시 나눠도 부러진 채 · 점수 감점)
   const t = R.createTournament({ day: '2026-10-30', seed: 8, at: 0, companions: [R.NAMELESS, R.NAMELESS], weapons: ['longsword', 'rapier', 'uchigatana'], ...roster.SAENGSA_DATA });
   assert.deepEqual(t.broken, []);
   R.advance(t, at(30, 10));
@@ -560,7 +572,7 @@ test('엔진 잇기: 내 경기 = game.launchSaengsa (스위치 SAENGSA.engine.m
   assert.equal(R.matchSetup(t, m, ['0-0', '0-1'], at(30, 10)).control, 'player');
 });
 
-test('전용무기 표 — 한 무기는 한 사람 · 한 대회에 같은 전용무기 둘 없음 · 주인이 나오면 무작위로 안 뽑힘 (사장님 10/29 22:3x)', async () => {
+test('전용무기 표 — 한 무기는 한 사람 (10/29 22:3x) · 전용무기는 팀마다 하나 — 팀 사이에는 막지 않음 (사장님 11/18 \'전용무기는 팀당 하나야\' · 11/19 우연히 들 때만)', async () => {
   const roster = await import('../../src/saengsa_roster.js');
   const { getWeapon } = await import('../../src/weapons.js');
   const { CHARACTERS_BY_ID } = await import('../../src/characters.js');
@@ -571,32 +583,32 @@ test('전용무기 표 — 한 무기는 한 사람 · 한 대회에 같은 전�
   assert.equal(CHARACTERS_BY_ID.minami.weapon, 'kusanagi'); // 인물 시트 무기도 쿠사나기 (사장님 10/29 22:4x '미나미 스테이지 무기도 쿠사나기로 바꿔' — 본판 8980a3f4) · 광기의 미나미 무라마사(레어 — 전용무기 아님)
   assert.equal(CHARACTERS_BY_ID.minami_mad.weapon, 'muramasa');
   for (const id of ['minami_mad', 'silver_wanderer', 'liao_mad', 'artoria_mad', 'julia_mad']) assert.equal(roster.signatureOf(id), null, id);
+  // 상대 팀마다: 무기 묶음은 서로 다름(한 팀 안에 같은 무기 둘 없음) · 주인 표시(f.sig)는 그대로 — 내 동료 · 내가 가진 무기와 상관없이
+  const OWNED = ['tree_branch', 'druid_whip', 'longsword', 'excalibur', 'kusanagi'];
+  let seenArt = 0;
   for (let seed = 1; seed <= 60; seed++) {
-    const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: ['minami', R.NAMELESS], weapons: ['tree_branch', 'druid_whip', 'longsword'], ...roster.SAENGSA_DATA });
-    const pools = t.teams.slice(1).flatMap((x) => x.pool.map((w) => w.weapon));
-    const sigs = pools.filter((w) => ws.includes(w));
-    assert.equal(new Set(sigs).size, sigs.length, `씨앗 ${seed} 같은 전용무기 둘`);
-    assert.ok(!pools.includes('kusanagi'), `씨앗 ${seed} 미나미(내 동료)의 쿠사나기가 상대에`);
-    for (const x of t.teams.slice(1)) for (const f of x.members) if (sig[f.id]) assert.ok(x.pool.some((w) => w.weapon === sig[f.id]), `${f.id} 전용무기`);
-    const present = new Set(t.teams.flatMap((x) => x.members.map((f) => f.id)));
-    for (const [id, w] of Object.entries(sig)) if (present.has(id)) assert.ok(pools.filter((x) => x === w).length <= (id === 'minami' ? 0 : 1), `씨앗 ${seed} ${w}`);
-  }
-  // 내 팀이 전용무기를 들고 나오면: 주인은 이번 대회 전용무기 없음 · 상대 무기 다섯에 그 무기 없음
-  const OWNED = ['tree_branch', 'druid_whip', 'excalibur'];
-  let seen = 0;
-  for (let seed = 1; seed <= 40; seed++) {
-    const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: [R.NAMELESS, R.NAMELESS], weapons: OWNED, ...roster.SAENGSA_DATA });
+    const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: ['minami', R.NAMELESS], ...roster.SAENGSA_DATA });
+    assert.ok(t.teams[0].members.every((f) => f.weapon === null), '신청은 무기 없이');
+    for (const x of t.teams.slice(1)) {
+      const ids = x.pool.map((w) => w.weapon);
+      assert.equal(new Set(ids).size, ids.length, `씨앗 ${seed} 한 팀에 같은 무기 둘`);
+      for (const f of x.members) if (sig[f.id]) assert.equal(f.sig, sig[f.id], `${f.id} 주인`); // 주인 표시만 — 묶음에 드는지는 우연 (11/19)
+    }
     const art = t.teams.slice(1).flatMap((x) => x.members).find((f) => f.id === 'artoria');
-    if (art) { seen++; assert.equal(art.sig, undefined); }
-    assert.ok(!t.teams.slice(1).some((x) => x.pool.some((w) => w.weapon === 'excalibur')), `씨앗 ${seed}`);
+    if (art) seenArt++;
   }
-  assert.ok(seen > 0);
-  // 대회 도중: 상대 팀 무기 다섯에 든 전용무기는 내 팀에 배정할 수 없음
-  const t = R.createTournament({ day: '2026-10-30', seed: 2, at: 0, companions: [R.NAMELESS, R.NAMELESS], weapons: ['tree_branch', 'druid_whip', 'longsword'], ...roster.SAENGSA_DATA });
-  const locked = [...R.lockedSignatures(t)];
-  assert.ok(locked.length > 0);
-  assert.equal(R.assignWeapons(t, [locked[0], 'druid_whip', 'longsword'], { owned: ['tree_branch', 'druid_whip', 'longsword', locked[0]], weaponInfo: roster.weaponInfo }), false);
-  assert.equal(R.assignWeapons(t, ['tree_branch', 'druid_whip', 'longsword'], { owned: ['tree_branch', 'druid_whip', 'longsword'], weaponInfo: roster.weaponInfo }), true);
+  assert.ok(seenArt > 0);
+  // 팀 사이에는 막지 않음: 모든 상대 팀 무기 묶음에 엑스칼리버가 들게(뽑기를 바꿔) — 여러 팀이 함께 들고 · 아르토리아 팀에선 아르토리아가 듦(덤) · 내 팀도 배정
+  const withExc = (rnd, n, taken) => ['excalibur', ...roster.drawPool(rnd, n - 1, [...taken, 'excalibur'])];
+  const t = R.createTournament({ day: '2026-10-30', seed: 5, at: 0, companions: [R.NAMELESS, R.NAMELESS], ...roster.SAENGSA_DATA, drawPool: withExc });
+  const foes = t.teams.slice(1);
+  assert.ok(foes.every((x) => x.pool.filter((w) => w.weapon === 'excalibur').length === 1), '팀마다 하나 — 모든 상대 팀이 하나씩');
+  const art = foes.flatMap((x) => x.members).find((f) => f.id === 'artoria');
+  if (art) assert.equal(art.weapon, 'excalibur', '묶음에 들면 주인에게 (덤)');
+  assert.equal(R.assignWeapons(t, ['excalibur', 'kusanagi', 'longsword'], { owned: OWNED, weaponInfo: roster.weaponInfo }), true, '상대 팀이 든 전용무기도 내 팀에 배정');
+  assert.deepEqual(t.teams[0].members.map((f) => f.weapon), ['excalibur', 'kusanagi', 'longsword']);
+  assert.equal(R.assignWeapons(t, ['excalibur', 'excalibur', 'longsword'], { owned: OWNED, weaponInfo: roster.weaponInfo }), false, '내 팀 안에서는 한 무기 한 사람');
+  assert.equal(typeof R.lockedSignatures, 'undefined', '팀 사이 잠금은 걷음');
   // 고용 값: 숙련도 6 → 20 + 20 × 6 = 140 (손님 둘 · 아르토리아 6 — 사장님 10/29 22:4x) · 광기의 미나미 6(얼터 +1 · 상한 6 — 사장님 '광기는 상한에 걸려서 6임')
   assert.deepEqual([roster.hireCostOf('roland').coins, roster.hireCostOf('bernardo').coins, roster.hireCostOf('artoria').coins, roster.profOf('minami_mad').japanese, roster.profOf('artoria').german], [140, 140, 140, 6, 6]);
 });

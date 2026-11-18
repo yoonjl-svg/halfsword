@@ -3,8 +3,11 @@
 //  node --test tools/sim/hp_strip.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { TEAM_FIGHT, VITALS, SAENGSA } from '../../src/config.js';
 import { hpShare, hpLit, hpTone, hpAlarm, hpStrip, hpLift } from '../../src/hp_strip.js';
+import { hexToOklch, oklchToCss } from '../../src/oklch.js';
+import { BLOOD_RED } from '../../src/blood_palette.js';
 
 const C0 = VITALS.collapseBlood;
 /** 가짜 몸: 체력 몫 share (피 = 쓰러지는 문턱 + 몫 × 나머지) · 출혈 · 상처 */
@@ -53,4 +56,34 @@ test('점멸 — 출혈(초당 0.002 넘게) 또는 중상 이상 상처(심각�
   const s = hpStrip(body(0.15, { bleed: 0.01 }));
   assert.deepEqual(s, { lit: 2, tone: 'red', blink: true, pct: 15 });
   assert.deepEqual(hpStrip(body(0.9)), { lit: 9, tone: 'green', blink: false, pct: 90 });
+});
+
+test('스택 표시 없음 — 머리 위 기세 칸 · 사냥 발톱 자국 · 왼쪽 스택 칸 · 왼쪽 위 체력 목록 (사장님 11/18 \'스택 표시는 … 그냥 빼\')', () => {
+  // 옛 머리 위 칸은 CSS display 가 hidden 을 덮어 숨겨도 남았다(왼쪽 위 모서리 점선 · 허공에 남은 수 — 기록 §3-1) — 그 판 · 꼴이 다시 들어오지 않게
+  const read = (f) => fs.readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8');
+  for (const f of ['src/cn_hunt_hud.js', 'src/stack_hud.js']) assert.ok(!fs.existsSync(new URL(`../../${f}`, import.meta.url)), `${f} 가 남음`);
+  assert.ok(!/stackShow|ken-pips|huntN/.test(read('src/stamina_hud.js')), 'stamina_hud.js 에 스택 칸이 남음');
+  assert.ok(!/\.ken-pips|\.hunt-marks|#teamList|stackHud/.test(read('index.html')), 'index.html 에 스택 · 왼쪽 위 체력 목록 꼴이 남음');
+  assert.ok(!/createHuntHud|createStackHud|from '\.\/(stack_hud|cn_hunt_hud)\.js'/.test(read('src/main.js')), 'main.js 가 스택 판을 만듦');
+});
+
+test('색 넷 — 있는 색에서 끌어냄 (사장님 11/18 둘째 \'채도 낮추면서 지금 컬러칩과 디자인 언어를 맞춰\' — index.html --hp-*)', () => {
+  const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  const tok = (name) => html.match(new RegExp(`--${name}:\\s*([^;]+);`))?.[1].trim();
+  const hex = (v) => parseInt(v.slice(1), 16);
+  const A = hexToOklch(hex(tok('c-accent'))), FOE = hexToOklch(hex(tok('foe')));
+  assert.equal(tok('hp-yellow'), 'var(--c-accent)', '노랑 = 강조 금색 그대로');
+  assert.equal(tok('hp-red'), 'var(--foe)', '빨강 = 상대 색(피 색상) 그대로');
+  assert.equal(tok('hp-orange'), oklchToCss(A.map((v, i) => (v + FOE[i]) / 2)), '주황 = 노랑 · 빨강의 OKLCH 가운데');
+  const allyC = hexToOklch(BLOOD_RED.splash)[1] * TEAM_FIGHT.hudColor.foeChromaK; // 10/30 아군 체력 막대 녹색의 채도 (= 적 색 채도)
+  assert.equal(tok('hp-green'), oklchToCss([0.7, allyC, 145]), '초록 = 10/30 아군 녹색(145° · 적 색 채도) · 밝기 0.70');
+  // 채도: 전(0.16 ~ 0.20)보다 낮고 UI 색(강조 0.13 · 상대 0.14) 안 · 넷이 서로 갈림(밝기나 색상이 넉넉히 다름)
+  const lch = { green: hexToOklch(hex(tok('hp-green'))), yellow: A, orange: hexToOklch(hex(tok('hp-orange'))), red: FOE };
+  for (const [k, [, C]] of Object.entries(lch)) assert.ok(C <= 0.145, `${k} 채도 ${C.toFixed(3)}`);
+  const ks = Object.keys(lch);
+  for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) {
+    const [p, q] = [lch[ks[i]], lch[ks[j]]];
+    const dh = Math.abs(((p[2] - q[2] + 540) % 360) - 180);
+    assert.ok(Math.abs(p[0] - q[0]) >= 0.05 || dh >= 40, `${ks[i]} · ${ks[j]} 가 비슷함`);
+  }
 });

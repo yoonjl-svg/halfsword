@@ -19,6 +19,9 @@ import { SAENGSA_DATA, HIRE_ROSTER, entryState, hireCostOf, nameOf, spokenName, 
 import { makeNamelessFaces } from './saengsa_nameless.js';
 import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, signupHours, nextMatchLine, outLine, chestLine, hireLine, roundName, teamName, entryLine, schoolCountLine } from './saengsa_text.js';
 import { COIN_ICON } from './wallet_icons.js';
+// 칼 표 — 인물 카드의 '가진 그 유파 무기 수' 앞 (사장님 11/18 — '독일 3' 이 숙련도 3 으로 읽히지 않게). 대기실 고르개 표(lobby.js CHEVRON · CHECK)와 같은 꼴: 선 · 글자 색 · 둥근 끝.
+//  칼날(굵게) · 짧은 코등이 · 손잡이 · 둥근 머리 — 코등이를 길게 그리면 9 px 에서 '×'(곱하기)로 읽혀 짧게 (견본으로 봄)
+const SWORD = '<svg class="sg-sword" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1 4.4 5.6" stroke-width="1.7"/><path d="M3.2 4.7l2.1 2.1M4.3 5.7 2.2 7.8" stroke-width="1.3"/><circle cx="1.6" cy="8.4" r="1" fill="currentColor" stroke="none"/></svg>';
 import { readProgress } from './lobby_progress.js';
 
 const MAX = SAENGSA.teamSize - 1; // 동료 수 (나 + 둘)
@@ -132,7 +135,7 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
       const on = at.length > 0, shut = full && !on; // 둘을 다 골랐으면 고르지 않은 카드는 흐리게(누르면 아무 일 없음)
       const sc = schoolOf(id, owned), price = hireCostOf(id).coins;
       const badge = at.map((k) => `<i>${k + 1}</i>`).join('');
-      const school = sc ? `<span class="sg-pick-school">${SCHOOL_KO[sc.s]} <b${sc.n ? '' : ' data-none'}>${sc.n}</b></span>` : '<span class="sg-pick-school"></span>';
+      const school = sc ? `<span class="sg-pick-school">${SCHOOL_KO[sc.s]} <span class="sg-pick-own"${sc.n ? '' : ' data-none'}>${SWORD}<b>${sc.n}</b></span></span>` : '<span class="sg-pick-school"></span>';
       const label = `${nameOf(id)}${sc ? ` · ${schoolCountLine(SCHOOL_KO[sc.s], sc.n)}` : ''}${price != null ? ` · ${hireLine(price)}` : ''}${on ? ` · ${at.map((k) => `${T.companion} ${k + 1}`).join(' · ')}` : ''}`;
       return `<button type="button" class="sg-pick" role="option" data-id="${id}" aria-selected="${on}"${shut ? ' aria-disabled="true" data-shut' : ''} aria-label="${esc(label)}">${badge ? `<span class="sg-order" aria-hidden="true">${badge}</span>` : ''}<img src="${esc(portraitOf(id, at[0] ?? 0))}" alt="" draggable="false"><span class="sg-pick-name">${esc(nameOf(id))}</span>${school}${priceHtml(id)}</button>`;
     }).join('');
@@ -141,10 +144,10 @@ export function mountSaengsaPanel(host, { chip, status = () => {}, onEnter = () 
     $('#sgPickCost b').textContent = cost.toLocaleString('ko-KR');
     $('#sgPickCost').setAttribute('aria-label', hireLine(cost));
   }
-  /** 가진 무기 (보기만 — 유파마다 한 묶음 · 이름은 감아 여러 줄) */
+  /** 가진 무기 (보기만 — 유파마다 한 묶음 · 이름은 감아 여러 줄 · 묶음 사이는 조금 띄움 · 유파 이름은 화면에 쓰지 않음 — 사장님 11/18 · 화면 읽기 글에만) */
   function drawOwned() {
     const owned = ownedBySchool(entryState().owned);
-    $('#sgOwned').innerHTML = Object.entries(owned).map(([s, list]) => `<div class="sg-own-g" role="group" aria-label="${esc(SCHOOL_KO[s])}"><small>${esc(SCHOOL_KO[s])}</small>${list.map((w) => `<span class="sg-own-w">${esc(weaponName(w))}</span>`).join('')}</div>`).join('');
+    $('#sgOwned').innerHTML = Object.entries(owned).map(([s, list]) => `<div class="sg-own-g" role="group" aria-label="${esc(SCHOOL_KO[s])}">${list.map((w) => `<span class="sg-own-w">${esc(weaponName(w))}</span>`).join('')}</div>`).join('');
   }
   function closePicker(save) {
     if (save && picker) {

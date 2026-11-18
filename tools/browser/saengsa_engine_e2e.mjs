@@ -30,7 +30,7 @@ const shot = async (name, fight = false) => { if (fight) { await render(true); a
 const fightLook = () => p.evaluate(() => {
   const R = window.game.teamRun;
   return { state: window.game.state, over: !!R?.M.over, sim: +window.game.stats.simTime.toFixed(1), human: R?.human?.index ?? null,
-    hud: window.game.fighters.map((f) => f.shortName ?? ''), // 짧은 이름 (11/18 왼쪽 위 체력 목록을 걷음 — 스택 칸 줄 이름 · stack_hud.js)
+    hud: window.game.fighters.map((f) => f.shortName ?? ''), // 짧은 이름 (11/18 왼쪽 위 체력 목록을 걷음 — 화면에 쓰는 곳 없음 · 이름 규칙만 봄)
     bars: [...document.querySelectorAll('#staminaHud .hp-cells')].filter((e) => !e.hidden).map((e) => `${e.dataset.tone}:${e.querySelectorAll('i[data-on="true"]').length}${e.dataset.blink === 'true' ? ' 점멸' : ''}`), // 기력 막대 위 체력 칸 (11/18 hp_strip.js)
     fighters: window.game.fighters.map((f) => ({ name: f.name, team: f.team, weapon: f.weapon.id, broken: !!f.weaponBroken, blood: +f.blood.toFixed(3), bleed: +(f.bleed ?? 0).toFixed(3), carried: (f.wounds ?? []).filter((w) => w.carried).map((w) => `${w.part}:${w.severity}`), parts: (f.wounds ?? []).map((w) => w.part).join(','), fresh: (f.wounds ?? []).filter((w) => !w.carried).length, alive: f.alive })) };
 });
