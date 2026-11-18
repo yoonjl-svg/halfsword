@@ -67,6 +67,7 @@ import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 눈 (11/15 �
 import { cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 — 偏閃奏進 꺾는 스틱)
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
+import { laneHold, senseFeet, outSkill, busyFoe } from './team_sense.js'; // 무리 싸움 판단 (11/18 — 셋 이상 판의 me.foes 갈래 안에서만 부름 · 1:1 은 안 탐)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -113,6 +114,8 @@ const GAP_OPEN = new Set(['recover', 'finish', 'offbalance', 'stepin', 'counter'
 const DISC_OPEN = new Set([...GAP_OPEN, 'windup', 'press', 'shove', 'beat']);
 // ③ 자세 → 칼길 (11/17): 공격 직전 자세 한 박자를 거치는 공격 = 간 보기에서 고른 느긋한 틈 (SLOW_WHY 에서 헛스윙 연습 뺌 — 빠른 틈은 지금 손 자리에서 곧장)
 const GL_BEAT_WHY = new Set([...SLOW_WHY].filter((w) => w !== 'drill'));
+// 무리 싸움 판단 칼길 비우기 (11/18 — 셋 이상 판만)가 미루지 않는 공격: 막기에서 나온 맞받기 · 되받기 · 달려드는 몸 맞받기 (설계 §3-1 '막기 · 맞받기는 그대로')
+const LANE_FREE = new Set(['counter', 'riposte', 'stop']);
 /**
  * ① 칼끝 틈 건너기 (11/15 — AI_ARC.gap · 앞서 사장님 '상대 무기가 나보다 길 때의 대처 전략으로 모든 ai에게 기본으로'): 상대 칼끝 어림이 내 칼끝보다 gap 넘게 길고 내 칼끝 밖이면
  *  보통 공격을 띠 기울기 몫으로 참음 — AI_PLAN.beat 마다 한 번 굴림(같은 박자 안 거듭 부름은 같은 답). 참으면 true · 칼끝 · 거리를 모르는 몸(시험 몸)은 false
@@ -159,6 +162,7 @@ function atkGate(ai, why, opt = {}) {
   if (!opt.chain && !opt.secret && !opt.passive && !opt.drill && !GAP_OPEN.has(why) && arcGapHold(ai)) return void (ai.stats.arcGap = (ai.stats.arcGap ?? 0) + 1), true; // ① 칼끝 틈 건너기 (11/15): 긴 칼 앞 내 칼끝 밖 보통 공격은 띠 기울기만큼 참음
   if (!opt.chain && !opt.secret && !opt.passive && !opt.drill && !DISC_OPEN.has(why) && discHold(ai)) return true; // 막기 2.0 공격 절제 (11/17 — ai_intercept.js discHold): 준비된 상대 칼끝이 내 줄이면 새 공격을 띠 기울기만큼 참음
   if (!opt.chain && !opt.secret && !opt.passive && !opt.drill && !DISC_OPEN.has(why) && msInsideHold(ai)) return true; // 간격과 박자 (11/17 — ai_measure.js): 선 깊이 안에서 칼이 자유로운 채 새로 여는 공격은 띠 기울기만큼 참음 (참 빈틈은 그대로)
+  if (ai.me.foes && ai.me.teamSense && !opt.chain && !opt.secret && !opt.passive && !opt.drill && !LANE_FREE.has(why) && laneHold(ai)) return true; // 무리 싸움 판단 칼길 비우기 (11/18 — 셋 이상 판만): 동료가 내 칼 부채꼴 · 나 → 상대 사이면 새 공격을 미룸 (막기 · 맞받기 · 되받기는 그대로)
   if (ai.planDe && ai.deDig.t > 0 && !opt.secret) return true; // 독일 파고들기 (3 단계 11/14): 건 동안(digT)은 새 공격을 미룸 — 박찬 두 걸음이 공격 걸음에 덮여 버려지지 않게 · 끝나면 그 자리에서 밀치기 · 공격 고르기 그대로
   // 붙은 거리 규칙 AI (11/14 — CLOSE.startAI · close_hold.js): 묶인 동안(내 밀치기든 상대가 나를 민 밀치기든 — 맞밀기로 둘 다 묶임) 공격 안 함 ·
   //  칼자루만 거리(가슴 사이 ≤ startAI)에선 공격 대신 손잡이 찍기
@@ -698,18 +702,19 @@ export class AI {
     const F = me.forward(_v2);
     const R = me.right(_v1);
     const near = [];
+    const TS = !!me.teamSense; // 무리 싸움 판단 (11/18): 판 사본이 있는 판 (createMatch — 셋 이상 판은 늘)
     for (const g of me.foes) {
       if (!g.alive || g.revival) continue;
       const p = g.bodies.chest.translation();
       const x = p.x - c.x;
       const z = p.z - c.z;
-      near.push({ g, x, z, d: Math.hypot(x, z) });
+      near.push({ g, x, z, d: Math.hypot(x, z), busy: TS && g !== this.foe && busyFoe(this, g) }); // busy: 내 눈에 보이고 내 동료와 붙은 적 — 열세 셈(둘러싸임 · 줄 세우기)에서 뺌 (§3-5 '내 둘레의 수')
     }
     const t = near.find((o) => o.g === this.foe);
     if (t && (this.mode === 'watch' || this.mode === 'withdraw')) {
       let fl = null;
       for (const o of near) {
-        if (o === t || o.d > TF.flank.range || o.d < 1e-6) continue;
+        if (o === t || o.busy || o.d > TF.flank.range || o.d < 1e-6) continue;
         const cos = (o.x * t.x + o.z * t.z) / (o.d * (t.d || 1));
         if (Math.acos(clamp(cos, -1, 1)) > (TF.flank.angle * Math.PI) / 180 && (!fl || o.d < fl.d)) fl = o;
       }
@@ -719,11 +724,11 @@ export class AI {
     //  ① 줄 세우기: 가장 가까운 다른 상대가 지금 상대 뒤로 가게 지금 상대를 축으로 돈다 (벌어진 각만큼) · 집게(각 > backFrom°)면 물러나 둘을 앞에 둔다
     //  ② 피하기: 지금 상대가 아닌 상대가 나를 치러 제 칼끝 거리 + gap 안에 들면 그 몸에서 비킨다 (모든 상대의 위협을 읽음 — 겨눈 상대를 바꾸지 않고)
     const LV = TF.lever;
-    const sk = (LV.lineUp.on || LV.evade.on) && near.length >= 2 ? teamSkill(this.proficiency) : 0;
+    const sk = (LV.lineUp.on || LV.evade.on) && (TS ? near.filter((o) => !o.busy).length : near.length) >= 2 ? (TS ? outSkill(this) : teamSkill(this.proficiency)) : 0; // 무리 싸움 판단 (11/18 §3-5): 몫 = 바탕 0.3 부터 (TEAM_SENSE.out) · 열세 = 내 동료와 붙지 않은 적 둘 이상
     if (sk > 0 && t && this.mode !== 'secret' && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow'))) {
       if (LV.lineUp.on) {
         let o = null;
-        for (const q of near) if (q !== t && q.d <= LV.lineUp.range && q.d > 1e-6 && (!o || q.d < o.d)) o = q;
+        for (const q of near) if (q !== t && !q.busy && q.d <= LV.lineUp.range && q.d > 1e-6 && (!o || q.d < o.d)) o = q;
         if (o) {
           const at = Math.atan2(t.x * R.x + t.z * R.z, t.x * F.x + t.z * F.z); // 내 눈 기준 각 (오른쪽 +)
           let da = Math.atan2(o.x * R.x + o.z * R.z, o.x * F.x + o.z * F.z) - at;
@@ -754,6 +759,7 @@ export class AI {
       fwd -= k * uf;
       side -= k * ur;
     }
+    if (TS && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') [fwd, side] = senseFeet(this, fwd, side); // 무리 싸움 판단 (11/18): 칼길 비우기 · 협공 자리 (src/team_sense.js)
     if (!(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') {
       for (const m of me.mates) {
         if (!m.alive) continue;

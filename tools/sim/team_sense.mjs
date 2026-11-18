@@ -4,8 +4,16 @@
 //   겉모습 모두 같음(투구 없음) · 벽 있음 · 한 편 전멸(ffa3 = 하나 남음) 또는 maxSecs.
 //  ffa3 = 셋이 저마다 따로인 판 — 게임에는 없는 판이다(Fighter 편은 0 · 1 만 · 편 전멸도 두 편). 이 도구만 몸을 세운 뒤 f.team 을 자리 번호로 바꿔 흉내 낸다
 //   (셋 이상 판의 ffa 비트는 자리마다라 물리는 그대로 · sameSide 가 자기만 같은 편 → 상대 고르기 · 상대 목록이 셋 따로).
-//  쓰임: node tools/sim/team_sense.mjs [판 수/모드 48] [maxSecs 90] [--modes=2v2,2v1,ffa3] [--profs=2,4,6] [--sides=6:5] [--lever=none] [--json] [--out=파일]
+//  쓰임: node tools/sim/team_sense.mjs [판 수/모드 48] [maxSecs 90] [--modes=2v2,2v1,ffa3] [--profs=2,4,6] [--sides=6:5] [--lever=none] [--seeding=old] [--json] [--out=파일]
 //   --sides=A:B  편마다 숙련도 (2:2 는 A 편을 판마다 0 편 · 1 편 번갈아 · 2:1 은 A = 혼자) — sideAWinPct (ffa3 는 쓰지 않음)
+//  판 짜기 (11/18 P1 — 무리 싸움 판단 작업에서 고침): 무기 배정(loadout)의 씨앗과 숙련 · 편을 서로 엇갈리게 —
+//   예전 짜기(--seeding=old)는 판 k 의 씨앗 k + 1 로 무기를 나눠 ① 2:2 --sides 에서 A 편이 늘 홀수 칸 무기(츠바이핸더 · 사브르 · 에스톡)를,
+//   B 편이 늘 짝수 칸 무기(롱소드 · 레이피어 · 우치가타나)를 들었고 ② 숙련도를 판마다 돌릴 때 숙련마다 무기 배정이 두 벌뿐이었다(씨앗 mod 6).
+//   새 짜기: 2:2 --sides 는 무기 씨앗 하나를 두 판(A 편 = 0 편 · 1 편)으로 거울 — 같은 무기 · 같은 난수 씨앗에서 숙련만 맞바꿈 ·
+//   숙련 돌림은 무기 씨앗 = ⌊k ÷ 숙련 수⌋ + 1 (숙련마다 같은 무기 배정 차례). 난수 씨앗은 판마다 k + 1 (거울 짝은 같은 씨앗)
+//  더한 잣대 (11/18 P1): hitBackPct 상처 가운데 등 뒤(맞은 서 있는 몸이 바라보는 쪽에서 120° 넘게)에서 · firstKillMedSec 첫 죽음 판 시간 가운데 · maxQuietMedSec 상처 없이 흐른
+//   가장 긴 시간 가운데(멈춘 판 잣대) · teamSense 무리 싸움 판단 재기 칸 합(ai.stats.team — 칼길 미룸 · 비킴 · 집게 돎 · 기습 … · 역할 수)
+//  편마다 재기 (--sides): sideStats — 편 A · B 의 공격 시작 / 산 분 · 상처 낸 수 / 산 분 · 받은 상처 가운데 겨누지 않은 몸에게(옆 · 뒤에서 온 칼) 몫 · 꼴 몫(간 보기 · 공격 · 막기 · 물러남)
 //  재는 것 (뜻은 docs/design/team_sense_2026-11-18.md §2 표 — 아래 주석과 같음):
 //   표본(20 Hz — 6 스텝마다, 판이 살아 있는 동안):
 //    focus      같은 편 둘(서 있음)이 같은 상대를 겨눈 몫 (상대도 둘 이상 서 있을 때 — 2:2 만 뜻이 있음)
@@ -44,6 +52,7 @@ const PROFS = String(flag('profs', '2,4,6')).split(',').map(Number);
 const LEVER_OFF = flag('lever', '') === 'none'; // --lever=none: 숙련도 레버(TEAM_FIGHT.lever 줄 세우기 · 피하기)를 끈 판 (재기 전용 — 까닭 가르기)
 if (LEVER_OFF) for (const v of Object.values(CONFIG.TEAM_FIGHT.lever)) if (v && typeof v === 'object' && 'on' in v) v.on = false;
 const SIDES = flag('sides', null) ? String(flag('sides')).split(':').map(Number) : null; // --sides=6:5 — 편마다 숙련도 (A:B · 판마다 A 편을 0 편 · 1 편으로 번갈아 — 자리 쏠림 없게). 2:1 은 A = 혼자(자리 1) 고정
+const OLD_SEEDING = flag('seeding', '') === 'old'; // --seeding=old: 예전 판 짜기 (무기 씨앗 = 판 씨앗 = k + 1 — 위 '판 짜기' — 견줌 전용)
 const WEAPONS = ['longsword', 'zweihander', 'rapier', 'sabre', 'uchigatana', 'estoc'];
 const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 5) % WEAPONS.length]);
 const SAMPLE = 6; // 6 스텝 = 20 Hz
@@ -109,11 +118,11 @@ const isAtk = (f) => !!f.aiCtl && (f.aiCtl.mode === 'attack' || !!f.aiCtl.secret
 /** x 가 a 아닌 다른 몸과 붙어 있나 (그 몸을 겨눔 · 서로 닿는 거리) */
 const busyWithOther = (x, a) => !!x.foe && x.foe !== a && targetable(x.foe) && engaged(x, x.foe);
 
-function fight(mode, seed, prof, sideA = null) {
+function fight(mode, seed, prof, sideA = null, wseed = seed) {
   let s = seed * 9301 + 49297;
   Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
   const count = mode === '2v1' || mode === 'ffa3' ? 3 : 4;
-  const weapons = loadout(seed, count);
+  const weapons = loadout(wseed, count);
   const profOf = (i) => (sideA == null ? prof : (i % 2 === sideA ? SIDES[0] : SIDES[1])); // --sides: 자리 홀짝 = 편
   const aiOf = (i) => aiAtProficiency({ ai: { persona: {} }, weapon: weapons[i] }, profOf(i));
   const G = mode === 'ffa3' ? newFfa(count, { seed, weapons, aiOf }) : newMatch({ count, ai: 'all', seed, walls: true, weapons, looks: Array(count).fill(LOOKS.enemy), aiOf });
@@ -121,7 +130,10 @@ function fight(mode, seed, prof, sideA = null) {
   const mates = (f) => F.filter((g) => g !== f && g.team === f.team);
   const foes = (f) => F.filter((g) => g.team !== f.team);
   const C = { samples: 0, pairS: 0, focus: 0, coS: 0, co: 0, solo: 0, pincer: [], fS: 0, back: 0, outS: 0, outFront: 0, outSep: [], blockS: 0, blocked: 0, oppS: 0, oppUp: 0, oppClose: 0,
-    hits: 0, unatt: 0, busy: 0, blind: 0, onDown: 0, atk: 0, coAtk: 0, intoBusy: 0, mate: 0, mateSevere: 0, mateKill: 0, helpEv: 0, helpSwitch: 0, helpClose: 0, helpHitAgain: 0, downEv: 0, aliveMin: 0 };
+    hits: 0, unatt: 0, busy: 0, blind: 0, onDown: 0, atk: 0, coAtk: 0, intoBusy: 0, mate: 0, mateSevere: 0, mateKill: 0, helpEv: 0, helpSwitch: 0, helpClose: 0, helpHitAgain: 0, downEv: 0, aliveMin: 0,
+    hitBack: 0, firstKill: null, lastHitT: 0, maxQuiet: 0,
+    side: [0, 1].map(() => ({ aliveMin: 0, atk: 0, hits: 0, got: 0, gotUnatt: 0, modeS: 0, watch: 0, attack: 0, defend: 0, withdraw: 0 })) }; // 편마다 (--sides: 0 = A 편 · 1 = B 편)
+  const sideOf = (f) => (sideA == null ? (f.team === 0 ? 0 : 1) : f.team === sideA ? 0 : 1);
   const wasAlive = new Map();
   const lastAtk = new Map(); // 싸움꾼 → { t, foe } 마지막 공격 시작
   const prevMode = new Map();
@@ -132,9 +144,14 @@ function fight(mode, seed, prof, sideA = null) {
     if (!wasAlive.get(vic) || att === vic || (r?.severity ?? 0) < HIT_SEV) return; // 심각도 0 의 닿음(몸 · 칼 부딪힘)은 빼고 상처만
     if (att.team === vic.team) { C.mate++; if ((r?.severity ?? 0) >= 0.5) C.mateSevere++; if (!vic.alive) C.mateKill++; return; }
     C.hits++;
+    C.side[sideOf(att)].hits++;
+    C.side[sideOf(vic)].got++;
     if (vic.state !== 'stand') C.onDown++;
-    if (vic.foe !== att) C.unatt++;
+    if (vic.foe !== att) C.unatt++, C.side[sideOf(vic)].gotUnatt++;
     if (vic.state === 'stand' && busyWithOther(vic, att)) { C.busy++; if (offFacing(vic, att) > Math.PI / 3) C.blind++; }
+    if (vic.state === 'stand' && offFacing(vic, att) > (2 * Math.PI) / 3) C.hitBack++; // 등 뒤에서 (맞은 몸이 바라보는 쪽에서 120° 넘게)
+    C.maxQuiet = Math.max(C.maxQuiet, G.t - C.lastHitT);
+    C.lastHitT = G.t;
     for (const w of watches) if (w.b === vic && G.t <= w.until) w.hitAgain = true;
   };
   G.before = () => { for (const f of F) wasAlive.set(f, f.alive); };
@@ -143,7 +160,8 @@ function fight(mode, seed, prof, sideA = null) {
   let i = 0;
   for (; i < n && live(); i++) {
     G.step();
-    for (const f of F) if (f.alive) C.aliveMin += DT / 60;
+    for (const f of F) if (f.alive) (C.aliveMin += DT / 60), (C.side[sideOf(f)].aliveMin += DT / 60);
+    if (C.firstKill == null && F.some((f) => !f.alive)) C.firstKill = G.t; // 첫 죽음 (판 시간)
     // 사건: AI 공격 시작
     for (const f of F) {
       const m = f.aiCtl?.mode;
@@ -151,6 +169,7 @@ function fight(mode, seed, prof, sideA = null) {
       prevMode.set(f, m);
       if (!f.alive || m !== 'attack' || was === 'attack' || !f.foe) continue;
       C.atk++;
+      C.side[sideOf(f)].atk++;
       const x = f.foe;
       if (mates(f).some((g) => g.alive && g.foe === x && (isAtk(g) || (lastAtk.get(g)?.foe === x && G.t - lastAtk.get(g).t <= 0.6)))) C.coAtk++;
       if (busyWithOther(x, f)) C.intoBusy++;
@@ -191,6 +210,9 @@ function fight(mode, seed, prof, sideA = null) {
       const fs = foes(a).filter(standing);
       if (!fs.length) continue;
       C.fS++;
+      const sd = C.side[sideOf(a)], am = a.aiCtl?.mode;
+      sd.modeS++;
+      if (am === 'watch' || am === 'attack' || am === 'defend' || am === 'withdraw') sd[am]++;
       if (fs.some((x) => hd(a, x) <= 2.5 && offFacing(a, x) > (2 * Math.PI) / 3)) C.back++;
       const near = fs.filter((x) => hd(a, x) <= 4).sort((p, q) => hd(a, p) - hd(a, q));
       if (near.length >= 2) {
@@ -231,9 +253,13 @@ function fight(mode, seed, prof, sideA = null) {
   for (const w of watches) if (!w.done) { w.done = true; C.helpEv += w.ms.length; C.helpSwitch += w.sw.size; C.helpClose += w.close.size; if (w.down && w.hitAgain) C.helpHitAgain++; }
   const sw = { n: 0, gone: 0, attacked: 0, held: 0 };
   for (const f of F) { const st = G.targeting?.get(f); if (!st) continue; sw.n += st.switches; for (const k of ['gone', 'attacked', 'held']) sw[k] += st.why[k]; }
+  C.maxQuiet = Math.max(C.maxQuiet, G.t - C.lastHitT); // 상처 없이 흐른 가장 긴 시간 (멈춘 판 잣대)
+  const team = {}; // 무리 싸움 판단 재기 칸 (ai.stats.team — 몸마다 더함 · 판 사본 역할 수)
+  for (const f of F) for (const [k, v] of Object.entries(f.aiCtl?.stats?.team ?? {})) team[k] = (team[k] ?? 0) + v;
+  for (const [k, v] of Object.entries(G.sense?.roleN ?? {})) team[`role_${k}`] = v;
   const alive = F.filter((f) => f.alive);
   const winner = mode === 'ffa3' ? (alive.length === 1 ? alive[0].index : null) : G.winner;
-  return { mode, seed, prof, sideA, aWon: sideA == null ? null : winner === sideA, t: +G.t.toFixed(2), over: mode === 'ffa3' ? alive.length <= 1 : G.over, winner, sw, ...C };
+  return { mode, seed, wseed, prof, sideA, team, aWon: sideA == null ? null : winner === sideA, t: +G.t.toFixed(2), over: mode === 'ffa3' ? alive.length <= 1 : G.over, winner, sw, ...C };
 }
 
 const rows = [];
@@ -241,7 +267,11 @@ const t0 = Date.now();
 for (const mode of MODES) for (let k = 0; k < N; k++) {
   const prof = SIDES ? -1 : PROFS[k % PROFS.length];
   const sideA = SIDES ? (mode === '2v1' ? 1 : k % 2) : null;
-  const r = fight(mode, k + 1, prof, sideA);
+  // 판 짜기 (위 머리 주석): 새 = 2:2 편 숙련은 거울 짝(같은 씨앗 · A 편 0 · 1) · 숙련 돌림은 숙련마다 같은 무기 차례 · 2:1 편 숙련은 예전과 같음
+  const mirror = SIDES && mode !== '2v1';
+  const seed = OLD_SEEDING ? k + 1 : mirror ? Math.floor(k / 2) + 1 : k + 1;
+  const wseed = OLD_SEEDING ? k + 1 : mirror ? seed : SIDES ? k + 1 : Math.floor(k / PROFS.length) + 1;
+  const r = fight(mode, seed, prof, sideA, wseed);
   rows.push(r);
   process.stderr.write(`${mode} #${k + 1} p${prof} ${r.t}s (${((Date.now() - t0) / 1000).toFixed(0)}s)\n`);
 }
@@ -261,12 +291,20 @@ function summary(R, label) {
     outnumberedSamplesPct: pct(S('outS'), S('fS')), outBothFrontPct: pct(S('outFront'), S('outS')), outSepMedDeg: med(sep), outSepLe45Pct: pct(sep.filter((x) => x <= 45).length, sep.length), outSepGe120Pct: pct(sep.filter((x) => x >= 120).length, sep.length),
     blockedByMatePct: pct(S('blocked'), S('blockS')),
     ambushOppPct: pct(S('oppS'), S('fS')), ambushUptakePct: pct(S('oppUp'), S('oppS')), ambushClosePct: pct(S('oppClose'), S('oppS')),
+    firstKillMedSec: med(R.filter((r) => r.firstKill != null).map((r) => r.firstKill)), maxQuietMedSec: med(R.map((r) => r.maxQuiet)), hitBackPct: pct(S('hitBack'), S('hits')),
     hitsPerAliveMin: +(S('hits') / Math.max(1e-9, am)).toFixed(2), hitUnattendedPct: pct(S('unatt'), S('hits')), hitBusyPct: pct(S('busy'), S('hits')), hitBlindBusyPct: pct(S('blind'), S('hits')), hitOnDownPct: pct(S('onDown'), S('hits')),
     attacksPerAliveMin: +(S('atk') / Math.max(1e-9, am)).toFixed(2), coAttackPct: pct(S('coAtk'), S('atk')), attackIntoBusyPct: pct(S('intoBusy'), S('atk')),
     switchesPerAliveMin: +(R.reduce((s, r) => s + r.sw.n, 0) / Math.max(1e-9, am)).toFixed(2), switchWhy: ['gone', 'attacked', 'held'].map((k) => `${k} ${R.reduce((s, r) => s + r.sw[k], 0)}`).join(' · '),
     helpEvents: S('helpEv'), helpSwitchPct: pct(S('helpSwitch'), S('helpEv')), helpClosePct: pct(S('helpClose'), S('helpEv')), downEvents: S('downEv'), downedHitAgainPct: pct(S('helpHitAgain'), S('downEv')),
     mateWoundsPerFight: +(S('mate') / Math.max(1, R.length)).toFixed(2), mateSevere: S('mateSevere'), mateKills: S('mateKill'),
-    ...(SIDES ? { sideAWinPct: pct(R.filter((r) => r.aWon).length, R.length), sideA: SIDES[0], sideB: SIDES[1] } : {}),
+    ...(SIDES ? { sideAWinPct: pct(R.filter((r) => r.aWon).length, R.length), sideAWins: R.filter((r) => r.aWon).length, sideBWins: R.filter((r) => r.over && r.winner != null && !r.aWon).length, sideA: SIDES[0], sideB: SIDES[1] } : {}),
+    sideStats: [0, 1].map((k) => {
+      const Sd = (q) => R.reduce((s, r) => s + r.side[k][q], 0);
+      const m = Sd('aliveMin');
+      return { atkPerMin: +(Sd('atk') / Math.max(1e-9, m)).toFixed(2), hitsPerMin: +(Sd('hits') / Math.max(1e-9, m)).toFixed(2), gotPerMin: +(Sd('got') / Math.max(1e-9, m)).toFixed(2), gotUnattPct: pct(Sd('gotUnatt'), Sd('got')),
+        watchPct: pct(Sd('watch'), Sd('modeS')), attackPct: pct(Sd('attack'), Sd('modeS')), defendPct: pct(Sd('defend'), Sd('modeS')), withdrawPct: pct(Sd('withdraw'), Sd('modeS')) };
+    }),
+    teamSense: (() => { const o = {}; for (const r of R) for (const [k, v] of Object.entries(r.team ?? {})) o[k] = (o[k] ?? 0) + v; return o; })(),
     wins: (() => { const w = {}; for (const r of R) w[r.winner ?? 'none'] = (w[r.winner ?? 'none'] ?? 0) + 1; return w; })(),
   };
 }
@@ -276,7 +314,7 @@ for (const mode of MODES) {
   out.push(summary(R, SIDES ? `${mode} ${SIDES.join(' vs ')}` : `${mode} all`));
   if (!SIDES) for (const p of PROFS) out.push(summary(R.filter((r) => r.prof === p), `${mode} p${p}`));
 }
-console.log(`무리 싸움 판단 바탕 — 모드마다 ${N} 판 · 최대 ${MAX} s · ${SIDES ? `편 숙련 ${SIDES.join(' 대 ')}` : `숙련도 ${PROFS.join('/')} 돌아가며`}${LEVER_OFF ? ' · 숙련도 레버 끔' : ''} · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+console.log(`무리 싸움 판단 바탕 — 모드마다 ${N} 판 · 최대 ${MAX} s · ${SIDES ? `편 숙련 ${SIDES.join(' 대 ')}` : `숙련도 ${PROFS.join('/')} 돌아가며`}${LEVER_OFF ? ' · 숙련도 레버 끔' : ''}${OLD_SEEDING ? ' · 예전 판 짜기' : ''} · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
 for (const o of out) console.log(JSON.stringify(o));
 if (flag('json', false)) for (const r of rows) console.log(JSON.stringify({ ...r, pincer: undefined, outSep: undefined }));
 const OUT = flag('out', null);

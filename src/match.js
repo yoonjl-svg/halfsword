@@ -9,11 +9,13 @@
 //   ③ 몸                 자리 차례로 f.step → (hooks.afterFighters) → 자리 차례로 f.cacheState
 //   ④ 물리 · 전투        world.step → combat.afterStep → (hooks.afterWorld) → 판 끝 보기(한 편에 산 싸움꾼 0 — M.over · M.winner)
 //  1:1 의 상대 고르기 = 다른 하나 (산 · 죽음 상관없이 — 예전 그대로). 셋 이상은 src/targeting.js chooseTarget (2단계) —
-//  그때만 싸움꾼에 f.foes · f.mates(상대 편 · 같은 편 목록)를 달고 AI 에 상대마다 눈을 둔다(addFoe). 1:1 은 둘 다 없어 예전 길 그대로
+//  그때만 싸움꾼에 f.foes · f.mates(상대 편 · 같은 편 목록) · f.teamSense(무리 싸움 판단 판 사본 M.sense — 11/18 src/team_sense.js)를 달고 AI 에 상대마다 눈을 둔다(addFoe).
+//  1:1 은 셋 다 없어 예전 길 그대로
 // ─────────────────────────────────────────────────────────────
 import { sameSide, teamOfIndex } from './team.js';
 import { chooseTarget } from './targeting.js';
 import { TEAM_FIGHT } from './config.js';
+import { createSense, recordSense } from './team_sense.js'; // 무리 싸움 판단 (11/18 — 셋 이상 판만 판 사본 M.sense)
 
 /**
  * 판 하나를 묶는다. o = { world, eventQueue, combat, fighters(자리 차례 — fighters[i].index === i), controllers([{ me, update(dt), setFoe?(f) }] — AI 들), foeOf?(f, M) }
@@ -27,9 +29,11 @@ export function createMatch(o) {
   M.order = orderControllers(M.controllers);
   if (M.fighters.length > 2) {
     M.foeOf ??= chooseTarget;
+    M.sense = createSense(M); // 무리 싸움 판단 판 사본 (11/18 — src/team_sense.js · 셋 이상 판만 · 1:1 은 없음)
     for (const f of M.fighters) {
       f.foes = foesOf(M, f);
       f.mates = matesOf(M, f);
+      f.teamSense = M.sense;
     }
     for (const c of M.controllers) if (c.addFoe) for (const g of c.me.foes) c.addFoe(g); // 상대마다 눈 · 간격 어림을 판 시작에 (같은 시계)
   }
@@ -166,6 +170,7 @@ export function stepMatch(M, dt, hooks = {}) {
     if (t) f.faceTarget = t;
   }
   for (const c of M.order) if (c.setFoe && c.me.foe && c.foe !== c.me.foe) c.setFoe(c.me.foe);
+  if (M.sense) recordSense(M); // 무리 싸움 판단 (11/18): 판 사본 한 장 (TEAM_SENSE.frame 마다 — 셋 이상 판만)
   // ② 조종
   const team = F.length > 2; // 셋 이상 판만: 쉬는 죽은 몸(f.settled — 아래 settleDead)은 조종 · 스텝을 건너뛴다 (1:1 은 예전 그대로 모두)
   for (const c of M.order) if (!(team && c.me.settled)) c.update(dt);
