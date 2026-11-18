@@ -57,7 +57,7 @@ import { planFor, tiltOf, luckOf, bandOf, distErrWidth, judgePhase, seenStep, pl
 import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, jpBeat, jpRead, jpTsubame, jpGnsFeet, jpGnsHold, jpGnsIgnore, jpGnsKeep, jpArmRead } from './ai_plan_jp.js'; // 2 단계 일본 플랜 몫 (11/14 — ai.planJp 일 때만)
 import { iaiSeated, drawStart, drawLog } from './iai_obi.js'; // 11/16 뽑기 — 칼집에 든 채 공격 · 막기는 SECRET.gnsDraw 초 뽑은 뒤 (사람과 같은 셈)
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
-import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만)
+import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead, deNachTick, deReserve, deCueTick } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만) · 11/19 띠 높음 칼 든 낌새 · 뒤 칼 · 누르는 동안만 비기 기력
 import { DIG_PROTO, AI_ARC, PHYSICS, GUARD_LINE } from './config.js';
 import { icpArm, icpAim, coverTech, icpStats, discHold, anticAim, anticRoll, swingMark, swingTurn } from './ai_intercept.js'; // 막기 2.0 읽기 묶음 (11/17 — config AI_INTERCEPT · [사장님 11/17 결정] 기본 판): 가로막기 · 덮는 맞받기 · 공격 절제 · 미리 줄 닫기 · 새 휘두름
 import { msTick, msLine, msChainWant, msHold, msFeetV, msWdEnd, msInsideHold, msAttackStart, msTempoFeet, msWindupFeet, msRead, msDebanaOpen, msDebanaTry, msDebanaTick, okoriStart, okoriFrom, okoriTick, okoriEnd, okoriBody, okoriHold, okoriCue } from './ai_measure.js'; // 간격과 박자 · 오코리 (11/17 — config MEASURE · OKORI · [사장님 11/17 결정] 기본 판)
@@ -600,7 +600,7 @@ export class AI {
     if (Lk > 0) r -= Lk * Math.max(0, r - STAMINA.aiAggressiveRestAt);
     const safe = (this.d > this.foeReach + 0.6 && this.foeClosing < GAIT.walkMin) || !!this.foe.stamina?.exhausted;
     if (safe) r += this.planK * Math.max(0, STAMINA.aiResumeAt - r) * 0.5;
-    if (bandOf(this.proficiency) >= 3 && (this.secret || this.riso) && !secretSpent(this.me)) r = Math.max(r, STAMINA.secretCost);
+    if (bandOf(this.proficiency) >= 3 && (this.secret || this.riso) && !secretSpent(this.me) && (!this.planDe || deReserve(this))) r = Math.max(r, STAMINA.secretCost); // 독일 (11/19 [사장님 결정] '비기 기력은 모르트슐라크로 누르는 동안에만 남겨') — ai_plan_de.js deReserve
     return r;
   }
 
@@ -1034,7 +1034,11 @@ export class AI {
     if (this.read) readTick(this, dt, d, s, th); // 수 읽기 그릇 (3 단계): 본 위협 · 칼 든 거리 · 보이는 대가 적기 (유파 덧칸 앞 — 그 몫들이 이 기억을 읽음 · 굴림 없음)
     if (this.ibPlan) ibTick(this, dt, th, hurt); // 이베리아 플랜 (2 단계): 원 사이를 치는 버릇 기억 · 옆 박차기 진행 · 무장 기다림 끝 (굴림 없음)
     // 독일 파고들기 (3 단계 11/14): 간 보기 · 물러남 · 막기에서 상대 헛침(seize 의 recovering 과 같은 셈 — 늦게 본 모습)을 본 한 번에 굴림
-    if (this.planDe && !kneeling && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend')) deDigTry(this, s, d, this.sense.recentHandSpeed(L.reaction, realS(0.6)) > 3.5 && Math.hypot(s.hvx, s.hvy) < 1.8);
+    if (this.deCue) deCueTick(this, s); // 11/19 띠 높음: 칼 든 낌새 (읽고 박차기의 첫 문 — 굴림 없음)
+    if (this.planDe && !kneeling && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend')) {
+      const recovering = this.sense.recentHandSpeed(L.reaction, realS(0.6)) > 3.5 && Math.hypot(s.hvx, s.hvy) < 1.8;
+      if (!(this.deNach && deNachTick(this, s, d, th, recovering))) deDigTry(this, s, d, recovering); // 11/19 띠 높음: 읽고 박찬 뒤 뒤 칼이 먼저 (냈으면 그 스텝 파고들기 굴림 없음)
+    } else if (this.deNach) deNachTick(this, s, d, th, false); // 뒤 칼이 끝났나 · 비꼈나 · 기다림 시간 (공격 꼴 · 무릎 — 내지 않음)
     if (this.planCn) cnTick(this, dt, d, s, th); // 동방 플랜 전략 층 덧칸 (11/14): 수 읽기 기억 · 유도 박자 (고노센 경계 무모는 공통 W.reck)
     if (this.dbn && !kneeling) msDebanaTick(this, s, d, dt, th, EV_REARM); // 걸음에 치기 (11/17 — ai_measure.js): 열린 들어옴 — 상대가 내 칼끝 + 0.3 안에 들면 한 번 굴려 그 걸음에 침 (줄을 이미 닫았어도)
 
@@ -2830,7 +2834,7 @@ export class AI {
     this.defVoid = digKeep ? false : !this.me.armed || Math.random() < pVoid + (1 - pVoid) * this.fear * 0.8; // 파고들기 받으며 들어감은 칼로 받음 (물러나 피하지 않음)
     if (this.defVoid && this.planCn && cnMeet(this, th)) this.defVoid = false; // 동방 플랜 (11/14): 격살 쓰는 때면 물러나 피하기 대신 나서며 받는 쪽으로 (아래 gk)
     if (digKeep) (this.stats.dig ??= digStats()).keep++;
-    if (this.defVoid && this.planDe) deBack(this); // 독일 (11/14 3 단계): 물러나 피하기 → 뒤 박차기로 빠짐 (빠진 뒤 헛침을 꾐 — 파고들기)
+    if (this.defVoid && this.planDe) deBack(this, th, d); // 독일 (11/14 3 단계): 물러나 피하기 → 뒤 박차기로 빠짐 (빠진 뒤 헛침을 꾐 — 파고들기) · 11/19 띠 높음: 닿는 칼을 읽었을 때만 박차고 뒤 칼로 이음
     if (this.defVoid) this.stats.voids++;
     else this.stats.parries++;
     // 동방 격살 (11/14 사장님 '동방도 격살 쓰게 해'): 칼로 받기로 정했고 이 판 격살이 남았으면, 쓸 때(gkWant)엔 나서며 받는다 — 굴림 없음 (gyeoksalAi · moveFeet)
@@ -3168,7 +3172,7 @@ export class AI {
       else if (hit.hy > -0.1) line = lat > 0.12 ? 'highR' : lat < -0.12 ? 'highL' : 'highC';
       else line = lat >= 0 ? 'lowR' : 'lowL';
     }
-    return { id: this.threatId, line, thrust };
+    return { id: this.threatId, line, thrust, tc: hit.tc }; // tc = 늦게 본 모습에서 칼끝이 가장 가까워지는 데 남은 초 (11/19 — 독일 띠 높음 읽고 박차기 ai_plan_de.js deBackRead 가 읽음 · 읽기만)
   }
 
   /**

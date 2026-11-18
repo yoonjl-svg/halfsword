@@ -199,6 +199,26 @@ function traceAI(G, ai, me, other) {
     last = { A, end: G.t, key: cur.key };
     cur = null;
   };
+  // 뒤 박차기 흔적 (독일 — gait.backBurstAi 를 감쌈 · 읽기만): 건 때 거리 · 상대 칼끝 어림 · 다가오는 빠르기 → 닿는 칼이었나(d − 다가옴 × 0.3 ≤ 칼끝 어림 + 0.05) · 건 뒤 0.8 s 안에 맞았나
+  const bursts = [];
+  const gait = me.gait;
+  const bb0 = gait?.backBurstAi;
+  if (bb0) gait.backBurstAi = function () {
+    const ok = bb0.call(this);
+    if (ok) bursts.push({ t: G.t, reach: ai.d - Math.max(0, ai.foeClosing ?? 0) * 0.3 <= ai.foeReach + 0.05, w0: me.wounds.length });
+    return ok;
+  };
+  T.burstDone = () => {
+    const o = { n: bursts.length, reach: 0, clean: 0, reachClean: 0 };
+    for (const b of bursts) {
+      const hit = G.wounds.some((w) => w.vic === me && w.severity > 0 && w.t > b.t && w.t <= b.t + 0.8);
+      if (b.reach) o.reach++;
+      if (!hit) o.clean++;
+      if (b.reach && !hit) o.reachClean++;
+    }
+    if (bb0) gait.backBurstAi = bb0;
+    return o;
+  };
   T.curKey = () => cur?.key ?? null;
   Object.defineProperty(T, 'last', { get: () => last });
   const keyNow = () => (ai.secretRun ? `secret:${ai.secretRun.stage ?? '?'}` : ai.passiveAtk ? `passive:${ai.passiveAtk}` : ai.feint ? `feint:${ai.feint.name}` : ai.tech?.name ?? '?');
@@ -233,7 +253,7 @@ function traceAI(G, ai, me, other) {
     close();
     for (const A of Object.values(T.atk)) { A.d = +(A.dSum / A.n).toFixed(3); A.t = +(A.tSum / A.n).toFixed(3); delete A.dSum; delete A.tSum; }
     for (const k of Object.keys(T.modeT)) T.modeT[k] = +T.modeT[k].toFixed(2);
-    const out = { modeT: T.modeT, atk: T.atk, dealtBy: T.dealtBy, tookBy: T.tookBy, dWatch: T.nWatch ? +(T.dWatch / T.nWatch).toFixed(3) : null, contact: +ai.M.contact.toFixed(3), reach: +(ai.M.reach ?? 0).toFixed(3) };
+    const out = { modeT: T.modeT, atk: T.atk, dealtBy: T.dealtBy, tookBy: T.tookBy, burst: T.burstDone(), dWatch: T.nWatch ? +(T.dWatch / T.nWatch).toFixed(3) : null, contact: +ai.M.contact.toFixed(3), reach: +(ai.M.reach ?? 0).toFixed(3) };
     ai.startAttack = orig;
     return out;
   };
@@ -359,6 +379,8 @@ export function traceTable(rows, side = 'hi', top = 14) {
   for (const t of T) sumInto(modeT, t.modeT), sumInto(dealtBy, t.dealtBy), sumInto(tookBy, t.tookBy);
   const tot = Object.values(modeT).reduce((a, v) => a + v, 0);
   L.push(`[${side}] 꼴 몫 ${Object.entries(modeT).sort((a, b) => b[1] - a[1]).map(([m, v]) => `${m} ${((100 * v) / tot).toFixed(0)} %`).join(' · ')} · 간 보기 거리 ${(T.reduce((a, t) => a + (t.dWatch ?? 0), 0) / N).toFixed(2)} m · 맞닿기 ${(T.reduce((a, t) => a + t.contact, 0) / N).toFixed(2)} m`);
+  const BU = T.reduce((o, t) => { for (const k of ['n', 'reach', 'clean', 'reachClean']) o[k] += t.burst?.[k] ?? 0; return o; }, { n: 0, reach: 0, clean: 0, reachClean: 0 });
+  if (BU.n) L.push(`뒤 박차기 판당 ${(BU.n / N).toFixed(2)} · 닿는 칼에 건 몫 ${((100 * BU.reach) / BU.n).toFixed(0)} % · 건 뒤 0.8 s 안 안 맞음 ${((100 * BU.clean) / BU.n).toFixed(0)} % · 닿는 칼을 비낌(닿는 칼 · 안 맞음) ${((100 * BU.reachClean) / BU.n).toFixed(0)} %`);
   L.push(`준 상처 (판당) ${Object.entries(dealtBy).map(([m, v]) => `${m} ${(v / N).toFixed(2)}`).join(' · ')} | 받은 상처 ${Object.entries(tookBy).map(([m, v]) => `${m} ${(v / N).toFixed(2)}`).join(' · ')}`);
   const A = {};
   for (const t of T) for (const [k, a] of Object.entries(t.atk)) {
