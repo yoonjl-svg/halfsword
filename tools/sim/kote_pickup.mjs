@@ -143,9 +143,10 @@ export function funnelMarkdown(groups) {
 }
 
 // ── 줍기 재기 ──
-//  pick   : 사람 몸(손가락 봇 — fightOne) 칼을 판 시작 dropAt 실제 s 뒤에 떨굼(dropSword — 손목 치기 떨굼과 같은 길) → 봇은 react 실제 s 뒤 제 칼로 걸어가
-//           (스틱 = 몸 틀 앞 · 옆 몫) 'block' 이면 주울 수 있을 때(단추 글 '줍기' — pickupReady) 막기 단추 · 'auto' 면 걷기만 · 0 = 줍기 끔(견줌 — 그대로 맞섬)
-//  aipick : 상대 AI 칼을 dropAt 에 떨굼 · PICKUP.ai 1 이면 AI 가 걸어가 주움 (봇은 보통대로 침)
+//  pick   : 사람 몸(손가락 봇 — fightOne) 칼을 판 시작 dropAt 실제 s 뒤에 떨굼(dropSword — 손목 치기 떨굼과 같은 길) → 봇은 react 실제 s 뒤 제 칼로 걸어감
+//           (스틱 = 몸 틀 앞 · 옆 몫) — 칼자루가 PICKUP.near 안이면 저절로 줍기(11/18 — src/pickup.js humanPickup)가 발 · 누름을 쥠 (막기 단추 누름 없음)
+//  aipick : 상대 AI 칼을 dropAt 에 떨굼 · AI 가 걸어가 주움 (봇은 보통대로 침)
+//  11/18: 지운 PICKUP.mode · PICKUP.ai 칸을 더 적지 않음 (--mode 인자 없음 — 줍기 끈 견줌 판은 이제 없다)
 //  PK_TRACE=1 : 칼이 한 스텝에 0.1 m 넘게 옮긴 때 · 0.25 s 마다 줍기 상태를 stderr 로
 //  --dropAt=none : 억지로 떨구지 않고 저절로 놓친 첫 때부터 (예: --set=UNIQUE_ASSIST.koteDrop.ai=1 + 일본 AI 상대 — AI 손목 치기가 나를 떨굼)
 //  11/16 (줍기 거리 — docs/strike/pickup_reach_2026-11-16.md): --aim=grip|sword (사람 봇이 칼자루로 · 눈에 보이는 칼로 — 아래 pickOne) · --near=0.45 · --giveUp=0.6 · --focus=kote (aipick 에서 일본 봇이 손목 치기만)
@@ -178,34 +179,28 @@ export function pickupWhyNot(f) {
   return 'ok';
 }
 //  aim (사람 봇이 어디로 걷나 — 11/16 사장님 '칼 줍는 기능이 잘 안쓰게 돼' 재기):
-//   'grip'  = 11/05 봇 그대로 — 칼자루까지 reach × 0.75 안으로 걸어가 단추 글이 '줍기'(pickupReady)일 때만 누름 (칼자루 자리를 아는 봇)
-//   'sword' = 사람 흉내 — 눈에 보이는 칼(칼자루 ~ 칼끝)에서 가장 가까운 자리로 걸어가 그 자리가 골반 near m 안이면 섬 · 단추 글과 상관없이 막기 단추를 누른 채 ·
-//             누른 채 giveUp 실제 s 지나도 줍기가 안 시작되면 칼자루 쪽으로 걸음(누른 채 — 사람이 '손잡이 쪽이구나' 알아차림)
-export function pickOne({ school, weapon, opp, seed, dur = 20, tech = 0.35, dropAt = 6, mode = 'block', react = 0.22, who = 'P', window = 4, aim = 'grip', near = 0.45, giveUp = 0.6, focus = null }) {
+//   'grip'  = 칼자루 쪽으로 걸음 (칼자루 자리를 아는 봇)
+//   'sword' = 사람 흉내 — 눈에 보이는 칼(칼자루 ~ 칼끝)에서 가장 가까운 자리로 걸어가 그 자리가 골반 near m 안이면 섬 · giveUp 실제 s 지나면 칼자루 쪽으로 걸음
+//   11/18: 칼자루가 PICKUP.near 안에 들면 저절로 줍기(humanPickup)가 발 · 누름을 쥐어 봇은 손을 놓음 — 막기 단추를 누르지 않음
+export function pickOne({ school, weapon, opp, seed, dur = 20, tech = 0.35, dropAt = 6, react = 0.22, who = 'P', window = 4, aim = 'grip', near = 0.45, giveUp = 0.6, focus = null }) {
   const PU = CONFIG.PICKUP;
-  const keep = { mode: PU.mode, ai: PU.ai };
-  if (who === 'P') PU.mode = mode; else PU.ai = mode ? 1 : 0;
   let G, P, A, X, tOpen = null, td = null, ta = null, prevS = null, cons0 = null, armT = null, arrived = null, pressPrev = false, pDrop = null;
-  const m = { seed, cell: `${school}:${weapon}:${opp}`, who, mode, aim, dropT: null, rearm: null, motion: null, sev: 0, cons: 0, hits: 0, falls: 0, foeAtk: 0, maxStep: 0, selfTouch: 0, attachWound: 0, nan: false, swordDist: null, log: null, end: null,
+  const m = { seed, cell: `${school}:${weapon}:${opp}`, who, aim, dropT: null, rearm: null, motion: null, sev: 0, cons: 0, hits: 0, falls: 0, foeAtk: 0, maxStep: 0, selfTouch: 0, attachWound: 0, nan: false, swordDist: null, log: null, end: null,
     land: null, tries: 0, triesOk: 0, firstWhy: null, failT: {}, failReach: [] }; // 11/16: land = 칼이 처음 멈춘(settle 밑 · 골반 밑) 때 몸 기준 자리 · tries = 누름 마디 · failT = 누른 채 못 시작한 실제 초 (까닭별) · failReach = 'reach' 로 막힌 누름 마디 첫 거리
   const own = () => ['pelvis', 'abdomen', 'chest', 'thighF', 'thighB'].map((k) => X.bodies[k].collider(0));
   const stick = (dx, dz, k) => { const d = Math.hypot(dx, dz) || 1, F = P.forward(), R = P.right(); return { sx: ((dx * R.x + dz * R.z) / d) * k, sy: ((dx * F.x + dz * F.z) / d) * k }; };
   const botHook = ({ t }) => {
-    if (who !== 'P' || td == null || P.armed || !P.alive || !PU.mode) return null;
-    if (t < td + react) return { sx: 0, sy: 0, guardPress: false };
-    if (!canPickup(P)) return { sx: 0, sy: 0, guardPress: false };
+    if (who !== 'P' || td == null || P.armed || !P.alive) return null;
+    if (t < td + react || P.pickup || P.autoPick || !canPickup(P)) return { sx: 0, sy: 0, guardPress: false }; // 저절로 줍는 동안은 손 놓음 (humanPickup 이 발 · 누름을 쥠)
     const p = P.bodies.pelvis.translation(), g = P.sword.translation();
-    const dx = g.x - p.x, dz = g.z - p.z, d = Math.hypot(dx, dz);
-    const blk = PU.mode === 'block';
+    const dx = g.x - p.x, dz = g.z - p.z;
     if (aim === 'sword') {
-      if (P.pickup) return { sx: 0, sy: 0, guardPress: blk };
       const N = swordNearest(P);
       if (arrived == null && N.d <= near) arrived = t;
       if (arrived == null) return { ...stick(N.x - p.x, N.z - p.z, 0.9), guardPress: false };
-      if (t - arrived < giveUp || d <= PU.reach * 0.75) return { sx: 0, sy: 0, guardPress: blk };
-      return { ...stick(dx, dz, 0.6), guardPress: blk };
+      if (t - arrived < giveUp) return { sx: 0, sy: 0, guardPress: false };
+      return { ...stick(dx, dz, 0.6), guardPress: false };
     }
-    if (P.pickup || d <= PU.reach * 0.75) return { sx: 0, sy: 0, guardPress: blk && (!!P.pickup || pickupReady(P)) };
     return { ...stick(dx, dz, 0.9), guardPress: false };
   };
   const onRound = (o) => {
@@ -269,12 +264,7 @@ export function pickOne({ school, weapon, opp, seed, dur = 20, tech = 0.35, drop
       if (vic === X && att !== X && td != null && (ta == null ? G.t / K <= td + window : false)) (m.hitW ??= []).push([r.zone, r.type, r3(r.energy), r3(r.severity), r3(G.t / K - td)]);
     };
   };
-  let r;
-  try {
-    r = fightOne({ school, weapon, opp, seed, dur, tech, onRound, botHook, ...(focus ? { focus } : {}) });
-  } finally {
-    PU.mode = keep.mode; PU.ai = keep.ai;
-  }
+  const r = fightOne({ school, weapon, opp, seed, dur, tech, onRound, botHook, ...(focus ? { focus } : {}) });
   if (cons0 != null && m.rearm == null) m.cons = r3(Math.max(0, cons0 - X.consciousness));
   m.sev = r3(m.sev);
   for (const k in m.failT) m.failT[k] = r3(m.failT[k]);
@@ -352,21 +342,20 @@ if (isMain(import.meta.url)) {
     applySets(arg('set', ''));
     const cells = arg('cells', 'german:longsword:longsword,japanese:uchigatana:longsword').split(',');
     const seeds = range(arg('seeds', '1-8'));
-    const pm = arg('mode', 'block');
     const ms = [];
     const t0 = Date.now();
     for (const c of cells) {
       const [school, weapon, opp] = c.split(':');
       for (const seed of seeds) {
-        const r = pickOne({ school, weapon, opp, seed, dur: +arg('dur', 20), tech: +arg('tech', 0.35), dropAt: arg('dropAt', '6') === 'none' ? null : +arg('dropAt', 6), mode: pm === '0' ? 0 : pm, who: mode === 'pick' ? 'P' : 'A', aim: arg('aim', 'grip'), near: +arg('near', 0.45), giveUp: +arg('giveUp', 0.6), focus: arg('focus', null) });
+        const r = pickOne({ school, weapon, opp, seed, dur: +arg('dur', 20), tech: +arg('tech', 0.35), dropAt: arg('dropAt', '6') === 'none' ? null : +arg('dropAt', 6), who: mode === 'pick' ? 'P' : 'A', aim: arg('aim', 'grip'), near: +arg('near', 0.45), giveUp: +arg('giveUp', 0.6), focus: arg('focus', null) });
         ms.push(r);
         console.error(JSON.stringify({ c, seed, rearm: r.rearm, sev: r.sev, falls: r.falls, ms: Date.now() - t0 }));
       }
     }
     const json = arg('json', null);
-    if (json) writeFileSync(json, JSON.stringify({ tag: arg('tag', ''), mode: pm, who: mode, runs: ms }));
-    console.log(pickMarkdown([[arg('tag', `${mode} ${pm}`), ms]]));
-    console.log('\n' + whyMarkdown([[arg('tag', `${mode} ${pm}`), ms]]));
+    if (json) writeFileSync(json, JSON.stringify({ tag: arg('tag', ''), who: mode, runs: ms }));
+    console.log(pickMarkdown([[arg('tag', mode), ms]]));
+    console.log('\n' + whyMarkdown([[arg('tag', mode), ms]]));
   } else if (mode === 'pickagg') {
     const groups = new Map();
     for (const p of rest.filter((x) => !x.startsWith('--'))) { const J = JSON.parse(readFileSync(p, 'utf8')); const g = J.tag || p; groups.set(g, [...(groups.get(g) ?? []), ...J.runs]); }
