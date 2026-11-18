@@ -62,7 +62,7 @@ export function jpNeed(ai, opp) {
   let n = 0;
   const f = jpStackF(ai);
   if (f != null && opp.kind !== 'recover' && opp.kind !== 'finish') n += ai.planK * (C.stack ?? 0) * J.stackAmp * (1 - 2 * f);
-  if (ai.iaiArm?.armed) n += ai.planK * (C.still ?? 0) * J.iaiWait * (ai.d > gnsEnterLine(ai.M) ? 2 : 1); // 3 단계: 상대가 아직 내 발도 선 밖이면 두 배 — 준비를 지키며 기다림 (먼저 쳐서 풀지 않게)
+  if (ai.iaiArm?.armed && !ai.tsFree) n += ai.planK * (C.still ?? 0) * J.iaiWait * (ai.d > gnsEnterLine(ai.M) ? 2 : 1); // 3 단계: 상대가 아직 내 발도 선 밖이면 두 배 — 준비를 지키며 기다림 (먼저 쳐서 풀지 않게) · 무리 싸움(11/18 ai.tsFree — 셋 이상 판만: 겨눈 상대가 남과 붙음)엔 안 기다림
   return n;
 }
 

@@ -5,11 +5,14 @@
 //   화면 밖 화살표: 살아 있는 싸움꾼이 화면 밖(또는 카메라 뒤)이면 화면 가장자리에 그쪽을 가리키는 작은 화살표 (편 색)
 //   편 표시: 화면 안의 산 상대(1 편) 머리 위에 같은 화살표를 작게 붉게 아래로 — 무명 검객처럼 겉모습이 같아도 편이 보이게 (내 편 금색 세모는 뺌 — 사장님 10/29 20:3x '우리편 머리의 금색 세모는 없어도 돼')
 //    자리 (11/18): 기력 막대 자리(머리 위 0.28 m — stamina_hud.js)에서 체력 칸 위로 화면 px 만큼(HEAD_MARK_UP) — 전엔 머리 위 0.5 m 라 멀면 막대 위 칸에 겹쳤다
+//   등 뒤 알림 (사장님 11/18 '권고대로' — 무리 싸움 판단 설계 §8-7): 나(사람 몸)를 겨눈 AI 가 등 뒤에서 칠 참이면(team_sense.js backThreat) 그 몸의 화면 밖 화살표가
+//    밝은 붉은색 · 조금 크게 깜빡임(TEAM_SENSE.back.blink Hz) — 글 · 소리 없음 · 화면 안이면 없음 · 지켜보기(사람 몸 없음)면 없음
 //   카메라 물러남 몫: 보는 몸(focus)에서 TEAM_FIGHT.cam.radius 안의 산 싸움꾼이 모두 들어오게 뒤로 · 위로 (main.js updateCamera 가 부드럽게)
 //  1:1 판에서는 만들지도 부르지도 않는다 (main.js — teamRun 이 있을 때만)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { TEAM_FIGHT, CAMERA } from './config.js';
+import { TEAM_FIGHT, TEAM_SENSE, CAMERA } from './config.js';
+import { backThreat } from './team_sense.js'; // 등 뒤 알림 (11/18 — 무리 싸움 판단 P3)
 import { BLOOD_RED } from './blood_palette.js';
 import { hexToOklch, oklchToCss } from './oklch.js';
 import { hpLift } from './hp_strip.js';
@@ -78,8 +81,8 @@ export function createTeamHud(doc = document) {
     root.style.display = 'none';
   }
 
-  /** 프레임마다: 화살표 · 편 표시 (visible 거짓이면 모두 숨김 — 메뉴 · 판 끝). me = 사람 몸 (지켜보기면 null) */
-  function update(camera, focus, visible, me = null, width = window.innerWidth, height = window.innerHeight) {
+  /** 프레임마다: 화살표 · 편 표시 (visible 거짓이면 모두 숨김 — 메뉴 · 판 끝). me = 사람 몸 (지켜보기면 null) · now = 등 뒤 알림 깜빡임 시계 */
+  function update(camera, focus, visible, me = null, width = window.innerWidth, height = window.innerHeight, now = performance.now()) {
     const m = 22; // 가장자리 여백 (px)
     for (const { f, a } of marks) {
       if (!visible || !f.alive || (f === focus && f === me)) {
@@ -101,6 +104,7 @@ export function createTeamHud(doc = document) {
         }
         a.style.display = '';
         a.dataset.kind = 'head';
+        if (a.dataset.warn) (a.dataset.warn = ''), (a.style.borderBottomColor = TEAM_COLORS[f.team] ?? '#888'); // 등 뒤 알림이 걷힘 (화면 안)
         a.style.opacity = '0.85';
         a.style.transform = `translate(${(((_v.x + 1) / 2) * width - 7).toFixed(1)}px, ${(hy - 6.5).toFixed(1)}px) rotate(${Math.PI.toFixed(3)}rad) scale(0.6)`;
         continue;
@@ -111,6 +115,11 @@ export function createTeamHud(doc = document) {
       }
       a.style.opacity = '1';
       a.dataset.kind = 'edge';
+      // 등 뒤 알림 (11/18): 나를 등 뒤에서 칠 참인 AI — 화살표가 밝은 붉은색 · 1.3 배로 깜빡 (꺼진 박자는 제 편 색)
+      const warn = !!me && backThreat(me, f);
+      const on = warn && Math.floor((now / 1000) * TEAM_SENSE.back.blink * 2) % 2 === 0;
+      a.dataset.warn = warn ? '1' : '';
+      a.style.borderBottomColor = on ? TEAM_SENSE.back.color : TEAM_COLORS[f.team] ?? '#888';
       // 화면 가운데 → 그 몸 방향의 선이 가장자리(여백 안)와 만나는 곳
       const s = 1 / Math.max(Math.abs(x) / (1 - (2 * m) / width), Math.abs(y) / (1 - (2 * m) / height), 1e-6);
       x *= s;
@@ -119,7 +128,7 @@ export function createTeamHud(doc = document) {
       const py = ((1 - y) / 2) * height;
       const ang = Math.atan2(x * width, y * height); // 위(+y)가 0 · 시계 방향
       a.style.display = '';
-      a.style.transform = `translate(${(px - 7).toFixed(1)}px, ${(py - 6.5).toFixed(1)}px) rotate(${ang.toFixed(3)}rad)`;
+      a.style.transform = `translate(${(px - 7).toFixed(1)}px, ${(py - 6.5).toFixed(1)}px) rotate(${ang.toFixed(3)}rad)${warn ? ' scale(1.3)' : ''}`;
     }
   }
 

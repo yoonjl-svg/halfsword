@@ -139,6 +139,45 @@ export const TEAM_FIGHT = {
   },
 };
 
+// 무리 싸움 판단 (사장님 11/18 — 설계 docs/design/team_sense_2026-11-18.md · src/team_sense.js · 기록 docs/strike/team_sense_p1_2026-11-18.md ~).
+//  셋 이상 판의 AI 만 읽는다 (1:1 은 판 사본이 없어 안 탐). 스위치 없음 — 지금 판과의 견줌은 재기 도구 tools/sim/team_sense.mjs 옵션만.
+//  값은 모두 작업자 안 [사장님 11/18 결정 '정할 것에 대해서는 너의 권고대로 할게' — 설계 §8-8: 재기 뒤 다듬음] · 시간 사다리(0.2 · 0.4 · 0.6 · 1.2 · 1.5 · 2.0 · 3.0 s) · 걸음 사다리(0.3 · 0.45 · 0.6 · 0.9 m) 안
+export const TEAM_SENSE = {
+  frame: 0.05, // 판 사본 한 장 간격 (게임 초 — 표본 박자 · 사람이 느끼는 규칙 시간이 아님)
+  // 층마다 눈 (§3-0 · §4): 앞 fov° 안만 보임 · lag(실제 초) 지난 장을 읽음 · 지금 겨눈 상대는 늘 보임. 6 = 사방 [사장님 11/18 결정 1 '발소리로 듣는 셈']
+  eye: { base: { fov: 120, lag: realS(0.6) }, mid: { fov: 200, lag: realS(0.4) }, top: { fov: 360, lag: realS(0.2), ahead: realS(1.2) } },
+  engage: 0.5, // 붙음 = 겨눈 상대가 제 칼끝 + 이 m 안 (재기 도구 team_sense.mjs 의 '닿는 거리'와 같음)
+  // 칼길 비우기 (§3-1 — 바탕): 나 → 상대 줄에서 w m 안에 선 동료 · 그 동료가 내 칼끝 + sweep m 안 · 앞 ± fan° 면 새 공격을 hold(실제 초) 동안 미룸 · 줄에서 비키는 스틱 몫 k
+  lane: { w: 0.45, sweep: 0.3, fan: 45, hold: realS(0.2), k: 0.6 },
+  // 협공 자리 (§3-3): 목표 각 θ*(°) — 바탕 base(나란히 · 동료 뒤 줄만 피함) · 가운데 base → mid(몫 k) · 위 top. 못 미친 각이 tol° 넘으면 상대를 축으로 도는 스틱 몫 k ·
+  //  동료가 그 상대에 '가까움' = 동료 칼끝 + engage + near m 안
+  pincer: { base: 60, mid: 120, top: 160, tol: 15, k: 0.6, kTop: 1.0, near: 0.6 }, // kTop: 6 의 도는 스틱 몫
+  // 엄호 (§3-6 — 바탕): 넘어짐 · 무릎 · 피 blood 밑 동료를 겨눈 적 − sub (상대 고르기 점수) · 그 바꿈은 hold(실제 초) 기다림 (예전 1.2 s 대신) ·
+  //  가운데 · 위: 그 적과 동료 사이로 끼어드는 스틱 몫 k × 층 몫
+  cover: { sub: 1.5, blood: 0.75, hold: realS(0.4), k: 0.6 },
+  // 노릴 상대 (§3-2 — 가운데 · 위, × 층 몫 k): 내 동료와 붙어 내게 옆 · 등을 보인 적 − side · 다친 적 − wound × 다침(combat.js woundDegree) · 지친 적 − tired ·
+  //  피 focus 밑 적은 나눠 맡기 덧셈(TEAM_FIGHT.target.allyAdd)을 거둠(몰아침 §3-7) — 지금 상대가 나를 붙잡고 있으면(나를 겨눠 붙음) 이 덧셈은 없음
+  opp: { side: 1.0, wound: 0.6, tired: 0.4, focus: 0.6 },
+  // 기습 (§3-4): 겨눈 상대가 내 동료와 붙었고 내가 그 앞(± front°) 밖이면 빈틈 점수 + mid × 층 몫 ('ambush' — ai.js opportunity) ·
+  //  6: 그 상대가 동료에게 칼을 내는 순간 + top · 내지 않는 동안 wait(실제 초)까지 빈틈 점수 − hold(기다림) · 지나면 + mid
+  //  기습 자리: 가운데 · 위는 그 상대가 남과 붙은 동안 내 칼끝 + near m 에 섬 (그 상대의 칼끝 밖이 아니라 — ai.js holdDist)
+  ambush: { front: 60, mid: 0.6, top: 1.2, wait: realS(1.2), hold: 0.3, near: 0.3 },
+  // 틈 베기 (§3-4 · §3-7 — 6): 남과 붙어 내게 옆 · 등을 보인 적이 내 칼끝 + near m 안이고 지금 상대가 나를 치는 중이 아니면 붙잡혀 있어도 − sub · hold(실제 초) 만에 바꿈 · 기습 빈틈은 기다림 없이 + ambush.top
+  shot: { near: 0.3, sub: 1.0, hold: realS(0.2) },
+  // 2:2 → 2:1 (§3-7 — 6): 내 동료와 붙은 적을 옆 · 등을 안 보여도 − opp.side · 동료가 지고 있으면(서 있지 않음 · 내다본 피가 그 적보다 margin 넘게 낮음) − sub 더
+  two: { sub: 0.8, margin: 0.15 },
+  // 방패 (§3-5 — 6): 지금 상대 뒤로 남과 붙지 않은 다른 적이 한 줄(나에게서 angle° 안 · range m 안 · 더 멂)이면 앞 적을 몰아침 — 빈틈 점수 + add ('press')
+  shield: { angle: 20, range: 4.5, add: 0.5 },
+  // 이끌기 (§3-8 — 6): 물러나는 동안 range m 안의 비어 있는 동료 쪽으로 옆 스틱 k × 물러나는 몫
+  lure: { range: 4.5, k: 0.5 },
+  // 역할 (사장님 11/18 결정 3 — 6 → 같은 편 AI 동료): 묶기 받은 몸은 그 상대 점수 − pin · 이어 치기 받은 몸은 − follow · 역할은 ttl(실제 초) 동안 (다시 주면 늘어남)
+  role: { pin: 0.6, follow: 1.2, ttl: realS(1.5) },
+  // 등 뒤 알림 (사장님 11/18 결정 7 — 사람 몸 · team_hud.js): 나를 겨눈 AI 가 공격 꼴로 칼끝 + engage 안 · 내 바라보는 쪽에서 deg° 넘게 뒤 → 그 몸의 화면 밖 화살표가 color 로 blink Hz 깜빡
+  back: { deg: 90, blink: 4, color: '#ff3b2f' },
+  // 수적 열세 (§3-5): 숙련도 레버(TEAM_FIGHT.lever 줄 세우기 · 피하기)의 몫 = base + (1 − base) × 층 몫 (숙련 0 ~ 2 = base · 5 · 6 = 1) · 내 동료와 붙은 적은 열세 셈에서 뺌
+  out: { base: 0.3 },
+};
+
 export const CAMERA = {
   back: 2.9, // 내 캐릭터 뒤로 얼마나 떨어질지
   height: 2.3, // 카메라 높이

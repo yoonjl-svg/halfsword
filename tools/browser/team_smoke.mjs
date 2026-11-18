@@ -1,5 +1,6 @@
 // 동시 대전 브라우저 스모크 (3단계 10/29 — docs/strike/team_fight_2026-10-29.md §11): 2:2 · 2:1 · 1:2 · 지켜보기 · 생사전 길(game.launchSaengsa 가짜 setup)
-//  판마다: 페이지 에러 0 · 콘솔 에러 0 · 판이 끝남(한 편 전멸 — teamRun.M.over) · 화면 844×390 스크린샷(시작 · 한창 · 끝) · 편 막대 · 화살표 수 · 생사전 판 뒤 1:1 이 다시 열림
+//  판마다: 페이지 에러 0 · 콘솔 에러 0 · 판이 끝남(한 편 전멸 — teamRun.M.over) · 화면 844×390 스크린샷(시작 · 한창 · 끝) · 편 막대 · 화살표 수 · 생사전 판 뒤 1:1 이 다시 열림 ·
+//   등 뒤 알림 깜빡인 수 warn (11/18 무리 싸움 판단 P3 — 사람 몸이 있는 판 · 판정엔 안 씀)
 //  시계는 playwright 시계로 빨리 돌린다(그리기는 스크린샷 때만 — renderCap.tick). 사람 몸은 손대지 않는다(서 있기만 — 동료 · 상대 AI 가 판을 끝냄)
 //  끝에 ?fps=1 읽기(실제 시계 · 그리기 켬): 1:1 과 2:2 를 같은 브라우저에서 몇 초씩 — 폰 값과 견줄 메모 (headless swiftshader 라 그리기 ms 는 폰과 다르다 · 물리 ms 를 본다)
 //  실행: npx vite build && npx vite preview --port 4391 --strictPort &
@@ -96,6 +97,8 @@ for (const C of CASES) {
     }
     await page.evaluate(() => { game.renderCap.tick = () => false; });
     row.start = await look();
+    // 등 뒤 알림 (11/18 무리 싸움 판단 P3 — team_hud.js): 사람 몸이 있는 판에서 화면 밖 화살표가 붉게 깜빡인 수 (data-warn 이 '1' 로 바뀐 번 — 판정엔 안 씀 · 등 뒤 공격이 났는지에 달림)
+    await page.evaluate(() => { window.__warn = 0; const hud = document.getElementById('teamHud'); if (hud) new MutationObserver((ms) => { for (const m of ms) if (m.target.dataset?.warn === '1') window.__warn++; }).observe(hud, { attributes: true, subtree: true, attributeFilter: ['data-warn'] }); });
     if (!(row.start.state === 'fight' && row.start.n === C.n)) throw new Error(`판이 안 열림 (${row.start.state} · ${row.start.n})`);
     await page.clock.runFor(2500);
     await shot('start');
@@ -110,6 +113,7 @@ for (const C of CASES) {
       if (!mid && (L.alive.includes('0') || L.sim > 25)) (mid = true), await shot('mid');
     }
     row.end = L;
+    row.warn = await page.evaluate(() => window.__warn ?? 0);
     if (L.over) {
       await page.clock.runFor(600);
       await shot('end');
