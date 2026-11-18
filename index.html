@@ -131,7 +131,7 @@
       /* E 알림 줄 (부활): 아래 가운데, 안내 위. 한 줄, 넘치면 … (감정 상태는 오른쪽 위 ③ 묶음으로 옮겼다) */
       #emoMsg { position: fixed; left: 50%; bottom: calc(var(--hint-b) + var(--notice-up)); transform: translateX(-50%); max-width: min(64vw, 480px); font-size: var(--fs-m); font-weight: var(--fw-label); line-height: var(--lh-tight); color: var(--c-text); text-shadow: var(--hud-outline); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; opacity: 0; transition: opacity .35s; }
       #emoMsg.show { opacity: 1; transition-duration: .2s; }
-      #emoMsg[data-emotion="fear"], #emoMsg[data-emotion="obsession"], #emoMsg[data-emotion="anger"], #emoMsg[data-emotion="stiff"] { color: var(--c-alert); } /* 상태 3종 한 색 = 상태·상대 색 (경직은 main.js STIFF_TEXT 를 켰을 때만) */
+      #emoMsg[data-emotion="fear"], #emoMsg[data-emotion="obsession"], #emoMsg[data-emotion="anger"], #emoMsg[data-emotion="stiff"], #emoMsg[data-emotion="disarm"] { color: var(--c-alert); } /* 상태 3종 한 색 = 상태·상대 색 (경직은 main.js STIFF_TEXT 를 켰을 때만) */
       #emoMsg[data-emotion="revive"] { color: var(--c-text); text-shadow: var(--hud-outline), 0 0 10px rgba(255,205,110,.85), 0 0 22px rgba(255,190,80,.45); } /* 부활: 글자는 본문 색, 금빛 그늘(빛 효과)만 — 하늘에서 내린 빛 (src/revive_fx.js) */
       /* H 안내 (조작 안내): 아래 가운데 알약 — 바탕이 있으니 외곽선 없음. 가로 한 줄(…), 세로 두 줄 */
       #hint { position: fixed; bottom: var(--hint-b); left: 50%; transform: translateX(-50%); max-width: min(64vw, 520px); font-size: var(--fs-s); font-weight: var(--fw-body); line-height: var(--lh-text); color: var(--c-text); background: var(--hud-guide-bg); padding: 6px 12px; border-radius: 999px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; opacity: 0; transition: opacity .3s; }
