@@ -25,6 +25,7 @@
 //   --cfgHi=PATH:수,… : config 수를 높은 쪽 AI 의 매 스텝 판단(ai.update) 동안만 바꿈 (--cfg 와 같은 꼴 · 낮은 쪽 · 몸 · 판정은 그대로 — 플랜 값 한 칸이 높은 쪽에 주는 몫을 재는 용)
 //   --stats : 판 기록에 두 쪽 AI 의 stats 요약(hiStats · loStats — 배열은 줄임) · 기력 장부(hiStam · loStam — 갈래마다 쓴 기력 spent · 횟수 counts) · 무릎 꺾기 굴림(buckle — 곁눈 베기 G6 · combat.buckleLog 수) + 흔적(hiTrace · loTrace — 공격마다 기술 이름 · 까닭 · 거리 ·
 //             그 칼 동안 준 상처 · 받은 상처 · 끝난 뒤 0.8 s 안에 받은 상처 · 칼 부딪힘 · 그때 상대 꼴 · 그때 상대 칼(vs) · 이어 친 앞 칼(from) / 꼴마다 머문 시간 · 꼴마다 받은 상처). 읽기만 (난수 · 몸에 손대지 않음)
+//   --gns : 판 기록에 높은 쪽 고노센 깔때기 흔적 gns (11/19 · 읽기만 — tools/sim/gns_funnel.mjs gnsProbe · 요약은 node tools/sim/gns_funnel.mjs a.json)
 //   node tools/sim/prof_gap_measure.mjs trace a.json … [--lo] [--vs] [--top=14] : --stats 로 잰 판 기록의 요약 (11/18 · 읽기만) — hi 몫 · 꼴 몫 · 꼴마다 준 · 받은 상처 ·
 //             기술마다 판당 수 · 맞힘 · 맞음 · 끝난 뒤 0.8 s 안 맞음 · 칼 부딪힘 몫 · 거리 · 칼 시간 · 그때 상대 꼴 · 까닭 (--lo = 낮은 쪽 흔적 · --vs = 칼을 열 때 상대 칼 · 이어 친 칼의 앞 칼)
 //  출력 — 합산 hi 몫 = (승 + 무 ½) / 판 수 · 95 % 윌슨 구간 · 승 / 무 / 패 · 평균 끝 시각 · 유파별 hi 몫 (무 수)
@@ -38,6 +39,7 @@ import { AI_PROFICIENCY, PROF_BODY, AI_KIT, AI_PLAN, AI_LEVELS } from '../../src
 import { LOOKS } from '../../src/looks.js';
 import { applyCfgArgs } from './cfg_override.mjs';
 import * as CFG from '../../src/config.js';
+import { gnsProbe } from './gns_funnel.mjs';
 
 /** --cfgHi 풀이: 'A.b.c:1,…' → [[객체, 열쇠, 새 값]] (cfg_override.mjs applyCfg 와 같은 규칙 — 없는 칸 · 수 아닌 값은 멈춤) */
 function resolveCfg(spec) {
@@ -283,12 +285,15 @@ function measureFight0(f, dur, opt) {
   const trH = opt.stats ? traceAI(G, aiHi, hiF, aiLo) : null;
   const trL = opt.stats ? traceAI(G, aiLo, loF, aiHi) : null;
   if (trH) (trH.peer = trL), (trL.peer = trH);
+  // --gns (11/19 · 읽기만): 높은 쪽 고노센 깔때기 흔적 (gns_funnel.mjs)
+  const gP = opt.gns ? gnsProbe({ G, aiHi, aiLo, hiF, loF, dt: DT }) : null;
   G.onWound = (att, vic, r) => {
     if (r.severity > 0 && dealt.has(att)) dealt.set(att, dealt.get(att) + 1);
     if (r.severity > 0 && trH) trH.wound(att, vic), trL.wound(att, vic);
+    if (gP) gP.wound(att, vic, r);
   };
 
-  if (trH) while (G.t < dur && !outOf(hiF) && !outOf(loF)) G.step(), trH.poll(), trL.poll();
+  if (trH || gP) while (G.t < dur && !outOf(hiF) && !outOf(loF)) G.step(), trH?.poll(), trL?.poll(), gP?.poll();
   else while (G.t < dur && !outOf(hiF) && !outOf(loF)) G.step();
   const hOut = outOf(hiF), lOut = outOf(loF);
   const result = lOut && !hOut ? 'hi' : hOut && !lOut ? 'lo' : 'draw';
@@ -306,6 +311,7 @@ function measureFight0(f, dur, opt) {
       if (b.hit && G.wounds.some((w) => w.att === (side === 'hi' ? hiF : loF) && w.severity > 0 && w.t > b.t + 0.05 && w.t <= b.t + 1.5)) o[`${side}Follow`] = (o[`${side}Follow`] ?? 0) + 1; // 꿇린 뒤 1.5 s 안에 그 쪽이 다시 벰
       return o;
     }, {}), hiStam: compactStats({ spent: hiF.stamina?.spent, counts: hiF.stamina?.counts }), loStam: compactStats({ spent: loF.stamina?.spent, counts: loF.stamina?.counts }), hiTrace: trH.done(), loTrace: trL.done(), hiLevel: aiHi.levelName, hiKit: aiHi.kit ? [...aiHi.kit.unique].concat(Object.keys(aiHi.kit).filter((k) => aiHi.kit[k] === true)) : null } : {}),
+    ...(gP ? { gns: gP.done() } : {}),
   };
   G.world.free();
   return rec;
@@ -452,6 +458,7 @@ if (isMain(import.meta.url)) {
     const cfgHi = resolveCfg(arg('cfgHi', ''));
     if (cfgHi.length) console.error(`높은 쪽 판단 동안만 cfg: ${arg('cfgHi', '')}`);
     const stats = args.includes('--stats');
+    const gns = args.includes('--gns');
     if (keepBaseHi.size) console.error(`높은 쪽 바탕 기술 되살림: ${[...keepBaseHi].join(', ')}`);
     if (dropHi.size || levelHi || bandHi != null || techHi.size || noThrustFollowHi.size) console.error(`높은 쪽만: 칸 뺌 [${[...dropHi].join(', ')}] · 실력 이름 ${levelHi ?? '그대로'} · 띠 ${bandHi ?? '그대로'} · 기술 무게 [${[...techHi].map(([n, o]) => `${n} ${o.base}${o.nofit ? ' nofit' : ''}`).join(', ')}] · 찌르기 이어 치기 막음 [${[...noThrustFollowHi].join(', ')}]`);
     const out = arg('json', null);
@@ -460,7 +467,7 @@ if (isMain(import.meta.url)) {
     if (done.size) console.error(`이어 재기: ${done.size} 판 있음`);
     for (const { f, k } of mine) {
       if (done.has(k)) continue;
-      const r = { k, ...measureFight(f, dur, { look, dropHi, levelHi, bandHi, stats, techHi, noThrustFollowHi, keepBaseHi, cfgHi, levelHiSet, passiveHi, gwHi }) };
+      const r = { k, ...measureFight(f, dur, { look, dropHi, levelHi, bandHi, stats, gns, techHi, noThrustFollowHi, keepBaseHi, cfgHi, levelHiSet, passiveHi, gwHi }) };
       runs.push(r);
       console.error(`[${k + 1}/${all.length}] ${f.school} ${f.lo}:${f.hi} w${f.wi} s${f.seed} ${f.swap ? 'swap' : 'std'} → ${r.result} @${r.endT}s`);
       if (out && runs.length % 10 === 0) saveRuns(out, runs);
