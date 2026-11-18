@@ -601,7 +601,7 @@ export class Combat {
         sw.applyImpulseAtPoint({ x: -dir.x * J, y: -dir.y * J, z: -dir.z * J }, vp(pA), true);
         vb.applyImpulseAtPoint({ x: dir.x * J, y: dir.y * J, z: dir.z * J }, vp(pA), true);
         if (globalThis.__cutLog) { // 측정용(도구만 켠다): 접촉별 몫 — 칼 충격량 합, 몸 부위 속도 변화
-          if (!c.log) { const v = vb.linvel(), w = vb.angvel(), vs = sw.linvel(); c.log = { who: c.pr.v.fighter.name, part: c.pr.v.part, v0: [v.x, v.y, v.z], w0: [w.x, w.y, w.z], s0: s, swv0: [vs.x, vs.y, vs.z], Jsum: 0, steps: 0, mode }; globalThis.__cutLog.push(c.log); }
+          if (!c.log) { const v = vb.linvel(), w = vb.angvel(), vs = sw.linvel(); c.log = { who: c.pr.v.fighter.name, part: c.pr.v.part, v0: [v.x, v.y, v.z], w0: [w.x, w.y, w.z], s0: s, swv0: [vs.x, vs.y, vs.z], Jsum: 0, steps: 0 }; globalThis.__cutLog.push(c.log); } // 11/18 — 정리 2b(5ae6ec7c)가 지운 cutReact mode 를 읽던 칸 뺌 (도구가 __cutLog 를 켜면 ReferenceError)
           const v = vb.linvel(), w = vb.angvel(), vs = sw.linvel();
           c.log.v1 = [v.x, v.y, v.z]; c.log.w1 = [w.x, w.y, w.z]; c.log.s1 = s; c.log.swv1 = [vs.x, vs.y, vs.z]; c.log.Jsum += J; c.log.steps++;
         }
