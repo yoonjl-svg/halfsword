@@ -8,7 +8,7 @@ import { closeInputGate, closeInputApply } from './close_hold.js'; // 붙은 거
 import { PHYSICS, ARENA, CAMERA, AI_PROFICIENCY } from './config.js';
 import { Fighter, GROUND_GROUPS } from './fighter.js';
 import { createStaminaHud } from './stamina_hud.js';
-import { createHuntHud } from './cn_hunt_hud.js'; // 동방 맹호은림 사냥 겹 표시 (11/14)
+import { hpLift } from './hp_strip.js'; // 동시 대전 체력 칸 높이 (11/18 — 칠 때 알림 느낌표를 그 위로)
 import { applyAweStart } from './stamina.js'; // 티소나 '위세' 판 시작 깎임 (10/24)
 import { createScreenTint } from './screen_tint.js';
 import { createStrikeCue } from './strike_cue.js'; // 칠 때 알림 — 이어 긋기 · 비기 · 인데스 창 동안 내 머리 위 '!' (10/21)
@@ -70,7 +70,7 @@ import { itEdgeLook } from './italian_outbox.js'; // 이탈리아 칼 우위 빛
 import { TRADITIONS, traditionOf } from './schools.js';
 import { createMatch, stepMatch, spawnSpots, orderControllers, pairFoe, matchResult } from './match.js'; // 동시 대전 판 (10/29 3단계 — 2:2 · 2:1 · 1:2 · 지켜보기)
 import { createTeamHud, teamFramePull } from './team_hud.js';
-import { shortNameOf } from './short_names.js'; // 체력 목록 짧은 이름 (사장님 10/30 01:0x) // 동시 대전 화면 (위 막대 넷 · 화면 밖 화살표 · 카메라 물러남)
+import { shortNameOf } from './short_names.js'; // 짧은 이름 (사장님 10/30 01:0x — 전 체력 목록) // 동시 대전 화면 (화면 밖 화살표 · 카메라 물러남)
 import { specFromSetup, resultFromMatch, profOfEntry, fallbackInjuries } from './saengsa_match.js'; // 생사전 ↔ 엔진 (game.launchSaengsa)
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
 import { portraitIdOf, portraitSrc } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
@@ -86,9 +86,9 @@ await RAPIER.init();
 // 주소 인자는 길 찾기 · 시험 경로 · 브라우저 도구 장면만 읽는다 (11/17 스위치 정리 — 남긴 목록 docs/strike/switch_cleanup_2026-11-17.md):
 //  weapon · foeWeapon · foe · stage · hero · test · team · foeWhiff · look · cards · emo · slowMo · openSweep · skillNodes · uniqueStage · foeProficiency · fps · horn · atkStick
 const params = new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')); // 주소에 ? 를 두 번 써도 뒤쪽 인자까지 읽는다 (사장님 10/8 08:30 링크 입력 실수 대비)
-const teamHud = createTeamHud(); // 동시 대전 위 막대 · 화면 밖 화살표 (1:1 은 숨긴 채 — team_hud.js)
+const teamHud = createTeamHud(); // 동시 대전 화면 밖 화살표 · 상대 머리 위 붉은 세모 (1:1 은 숨긴 채 — team_hud.js · 체력은 stamina_hud.js 체력 칸)
 const staminaHud = createStaminaHud(document.getElementById('staminaHud')); // 두 검객 머리 위 기력 막대 (src/stamina_hud.js)
-const huntHud = createHuntHud(document.getElementById('staminaHud')); // 동방 맹호은림 사냥 겹 — 기력 막대 위 발톱 자국 (11/14 — src/cn_hunt_hud.js)
+// 스택(일본 기세 · 동방 사냥 겹)은 화면에 띄우지 않는다 (사장님 11/18 '스택 표시는 어떻게 해도 별로다 그냥 빼' — 전 머리 위 cn_hunt_hud.js · 기력 막대 밑 칸은 걷음)
 const screenTint = createScreenTint(); // 출혈·감정 화면 물들임을 게임 캔버스에 합성 (샛별 저장소 2f593ba6 — 전엔 #vignette · #emotion CSS 층. 기력 스위치와 상관없이 늘 이 길)
 // 주인공은 판마다 무기 카드 세 장 중 하나를 골라 받는다 (아래 "무기 뽑기"). 주소에 ?weapon=을 적으면 뽑기 없이 그 무기로 고정.
 //  진짜 엑스칼리버는 주인공만 받을 수 있고, 복제품은 하인리히 몫이라 뽑기에서 뺀다
@@ -676,7 +676,7 @@ function teamLook(e, mods) {
   return LOOKS.enemy;
 }
 const teamName = (e) => e.name ?? (e.id === 'player' ? '나' : CHARACTERS_BY_ID[e.id]?.name ?? (e.id === 'nameless' ? '무명 검객' : '검객'));
-/** 체력 목록의 짧은 이름 (사장님 10/30 01:0x '이름만 표기되게. 무명 검객도 마찬가지'): 나 · 무명 검객은 붙인 이름(tag)만 · 인물은 short_names.js (얼터 'A.' + 본캐) · 그 밖은 준 이름 */
+/** 짧은 이름 (사장님 10/30 01:0x '이름만 표기되게. 무명 검객도 마찬가지' — 전 왼쪽 위 체력 목록 · 11/18 걷음): 나 · 무명 검객은 붙인 이름(tag)만 · 인물은 short_names.js (얼터 'A.' + 본캐) · 그 밖은 준 이름 */
 const teamShort = (e) => e.short ?? (e.human || e.id === 'player' ? '나' : e.id === 'nameless' ? e.person?.tag || e.tag || '무명' : CHARACTERS_BY_ID[e.id] ? shortNameOf(CHARACTERS_BY_ID[e.id]) : teamName(e));
 /** AI 실력 · 성격: 인물 시트(숙련도를 주면 그 숙련도 — 생사전 사람의 유파별 숙련도 표 그대로) · 시트가 없으면(무명 검객) 숙련도에서. 시트와 다른 무기면 유파 꾸러미는 그 무기 것 (newRound 와 같은 규칙) */
 function teamAiOf(e) {
@@ -725,7 +725,7 @@ function newTeamRound(spec, mods = {}) {
     });
   });
   for (const f of fighters) f.applySnapshot(E[f.index].snapshot); // 들어올 때 상태 (생사전 체력 · 부상 — 6단계)
-  for (const f of fighters) f.shortName = teamShort(E[f.index]); // 체력 목록 이름 (team_hud.js)
+  for (const f of fighters) f.shortName = teamShort(E[f.index]); // 짧은 이름 (전 왼쪽 위 체력 목록 — 11/18 걷음 · 지금 화면에 쓰는 곳 없음 · 도구 team_smoke · saengsa_engine_e2e 가 읽음)
   {
     // 사람 몸의 대기실 장비 — 1:1 newRound 와 똑같이 (사장님 10/29 22:3x '완전 동일해야 함'): 케틀 햇 기력 +30 · 용사의 눈물 기력 무한 (첫 화면에서 연 판만 — journeyLoadout)
     const H0 = fighters.find((f) => f.human);
@@ -825,8 +825,8 @@ function newTeamRound(spec, mods = {}) {
   hitStop.quiet = CONFIG.IMPACT_FX.chainGap;
   for (const f of fighters) f.syncMeshes();
   warmRoundFx(fxWarm);
-  teamHud.show(fighters, stageInfo.classList.contains('show') ? stageInfo : null); // 왼쪽 위 이름 · 체력 목록 (무대 이름이 보이면 그 밑 — 생사전은 무대 이름을 감춰 그 자리)
-  staminaHud.setTeam(true); // 동시 대전: 기력 막대 이름표 = 싸움꾼 이름
+  teamHud.show(fighters); // 화면 밖 화살표 · 상대 머리 위 붉은 세모 (11/18 왼쪽 위 이름 · 체력 목록은 걷음 — 체력은 기력 막대 위 체력 칸)
+  staminaHud.setTeam(true); // 동시 대전: 기력 막대 이름표 = 싸움꾼 이름 · 막대 위 체력 칸 (11/18 — stamina_hud.js · hp_strip.js)
 }
 
 /** stepMatch 갈고리 — 1:1 고리의 같은 자리 (사람 몸의 비기 창 · 막기 단추는 AI 조종 뒤 · 몸 스텝 앞) */
@@ -1001,7 +1001,9 @@ async function teamStart(spec, mods = {}, opts = {}) {
   techClear();
   guardClear();
   currentFoe = null; // 동시 대전은 가운데 상대 소개 없음 (판 알림 · 안내만 — showFightCues)
-  if (opts.saengsa) stageInfo.classList.remove('show'); // 생사전: 무대 이름을 감춘다 (사장님 10/29 22:3x — 그 자리에 이름 · 체력 목록 · 다른 판은 그대로 — startFight 가 다시 띄움)
+  // 생사전: 왼쪽 위 무대 줄을 다른 판처럼 띄운다 (11/18 사장님 '권고대로' — 10/29 22:3x 엔 그 자리에 이름 · 체력 목록을 두고 감췄음 · 목록은 11/18 걷음).
+  //  '스테이지 N' 은 스테이지 차례라 생사전엔 맞지 않아 방랑('방랑 N · 무대')처럼 '생사전 · 무대 이름'
+  if (opts.saengsa) stageInfo.querySelector('.stg').textContent = `생사전 · ${STAGE_NAME_KO[stages.id] ?? stages.id}`;
   newTeamRound(spec, mods);
   teamRun.opts = opts;
   teamSaveT = 0;
@@ -3200,8 +3202,8 @@ function frame(now) {
   }
   updateCamera(dt); // 거르는 프레임에도: 흔들림 스프링·발걸음(player.footstep 소비)·소리 자리(sound.listener)가 여기 달려 있다
   staminaHud.update(fighters, camera, state === 'fight' && !roundOver);
-  huntHud.update(fighters, camera, state === 'fight' && !roundOver); // 사냥 겹이 쌓인 몸만 (11/14)
-  if (teamRun) teamHud.update(camera, teamRun.focus, state === 'fight' && !roundOver, teamRun.human); // 동시 대전 화면 밖 화살표 · 상대 머리 위 붉은 세모 (체력 막대는 staminaHud)
+  if (teamRun) teamHud.update(camera, teamRun.focus, state === 'fight' && !roundOver, teamRun.human); // 동시 대전 화면 밖 화살표 · 상대 머리 위 붉은 세모 (체력은 staminaHud 체력 칸)
+  strikeCue.raise = teamRun ? hpLift() : 0; // 동시 대전: 내 머리 위 느낌표를 기력 막대 위 체력 칸 위로 (1:1 은 그대로)
   strikeCue.update(dt, camera, state === 'fight' && !roundOver && (!teamRun || !!teamRun.human), player, enemy, playerUnique, playerSecret); // 칠 때 알림: 카메라가 정해진 뒤 · 그리기 전
   screenTint.update(dt);
   let renderMs = 0;
