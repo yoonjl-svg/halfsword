@@ -2,9 +2,10 @@
 //  빠른 셈 · 결과 적기 · 쉬는 동안 회복 · 왕의 하사품.
 //  순수 함수 — 인물 · 무기 자료는 부르는 쪽이 넘긴다(src/saengsa_roster.js · 시험 tools/sim/saengsa.test.mjs 는 가짜 자료). 값은 config.js SAENGSA 한 곳.
 //  대회 t = { v, day, seed, signedAt, teams: [{ mine, members: [사람] }], matches: [경기], status 'active' | 'done', champion, endedAt, chests }
-//   사람 = { key '팀-자리', id(인물 id · 'player' · 'nameless'), weapon, school(그 무기 유파), tier(무기 등급), prof { german … chinese (, none) }, hp, injuries [부상], dead,
+//   사람 = { key '팀-자리', id(인물 id · 'player' · 'nameless'), weapon(내 팀은 첫 경기 무기 배정 전까지 null), school(그 무기 유파), tier(무기 등급), prof { german … chinese (, none) }, hp, injuries [부상], dead,
 //          cloth · tag · main · sub(무명 검객만 — 옷 색 줄 번호 · 붙인 이름 · 메인 · 보조 유파 — 대회마다 새로 만든다, makeNameless) · sig(상대 팀 인물만 — 전용무기 id) }
-//   내 팀 무기 = 내가 배정(신청 때 · 경기마다 — 사장님 10/29 18:2x · assignWeapons). 입장 조건 = entryMissing (호칭 · 가진 무기 수)
+//   내 팀 무기 = 내가 배정(경기마다 — 사장님 10/29 18:2x · assignWeapons). 신청 때는 배정하지 않는다(사장님 11/18 '캐릭터 선택 ui에는 무기까지 배정할 필요가 없어' —
+//    대회에 들 때 내 팀 세 사람은 무기 없이(null) · 첫 경기 화면의 '무기 배정'에서 처음 받는다 · 무기 없는 사람은 나서지 못함 validPicks). 입장 조건 = entryMissing (호칭 · 가진 무기 수)
 //   부러진 무기 (사장님 10/29 20:1x): 사람 broken(지금 든 무기가 부러짐) · 내 팀 = 대회 t.broken [무기 id] · 상대 팀 = pool[].broken — 대회 끝까지 그대로 · 결과 fighters[key].broken
 //   상대 팀 = { mine false, members, pool: [{ weapon, school, tier }] } — 무기 다섯(전용무기 + 카드 확률 뽑기 · ??? 뺌 — 사장님 10/29 19:5x · makePool) · 사람 무기 = aiArm(신청 때 · 경기 뒤마다)
 //  시험판(cfg.testMode — 사장님 10/29 17:5x): 신청 창 늘 열림 · 내 경기는 두 팀을 알면 바로 · 상대끼리 경기는 앞 대진이 다 끝나면 바로 · 쉬는 시간 · 대진 시각 · 기권 없음 · 결과 시각 = 셈한 때
@@ -60,7 +61,10 @@ export const roundsOf = (teamCount) => Math.round(Math.log2(teamCount));
  *  companions: 동료 둘 — 인물 id 또는 NAMELESS(무명 검객 — 둘 다여도 됨 · 옷 색 = 자리 1 → 줄 0 · 자리 2 → 줄 1, 고르기 칸 미리 보기와 같게)
  *  roster: 이름난 인물 id 목록 — 상대 팀에는 한 대회에 한 번씩만(내 동료는 뺌 · 사장님 10/29 15:5x): 팀을 섞은 차례로 한 팀에 한 명씩 돌려 넣고(16 팀이면 아홉 팀에 한 명씩)
  *   남는 자리는 무명 검객 — 옷 색은 팀마다 서로 다르게(씨앗)
- *  weapons: 내 팀 세 자리의 무기 [나, 동료 1, 동료 2] (내가 배정 — 사장님 10/29 18:2x) · 빈 자리(시험의 옛 꼴)는 drawWeapon(rnd) 무작위
+ *  weapons: 내 팀 세 자리의 처음 무기 [나, 동료 1, 동료 2] — 신청(saengsa_store.js signUp)은 넘기지 않아 모두 null(첫 경기 무기 배정에서 받음 — 사장님 11/18) ·
+ *   시험이 무기를 든 팀을 바로 만들 때만 준다(전 10/29 18:2x 신청 때 배정 · 그 전 빈 자리는 drawWeapon 무작위 — 11/18 걷음: 난수를 쓰지 않음)
+ *   한 대회에 같은 전용무기 둘 없음(10/29 22:3x)의 '내 팀이 든 전용무기' = 이 처음 무기 — 신청은 무기가 없으니 상대 팀 주인은 늘 제 전용무기를 받고, 대회 도중 그 무기는 내 팀에 못 줌(lockedSignatures) ·
+ *   내 동료가 그 주인이면 상대 팀 누구도 받지 않아 내가 줄 수 있다
  *  상대 팀: 무기 다섯 = makePool(전용무기 signatureOf(id) + drawPool(rnd, n, 이미 든 무기)) → aiArm 이 사람마다 나눠 줌 (사장님 10/29 19:5x)
  *  weaponInfo(id) → { school, tier } · profOf(인물 id) → { german … chinese, none }
  */
@@ -71,7 +75,7 @@ export function createTournament({ day, seed, at, companions, roster, weapons = 
   const usedNames = new Set();
   const fighter = (team, slot, id, given = null, cloth = null) => {
     const f = { key: `${team}-${slot}`, id, weapon: null, school: null, tier: null, prof: { ...profOf(id) }, hp: cfg.hpMax, injuries: [], dead: false };
-    if (team === 0) { const weapon = given ?? drawWeapon(r); Object.assign(f, { weapon }, pickInfo(weaponInfo(weapon))); if (broken.includes(weapon)) f.broken = true; } // 상대 팀 무기는 아래 aiArm
+    if (team === 0 && given) { Object.assign(f, { weapon: given }, pickInfo(weaponInfo(given))); if (broken.includes(given)) f.broken = true; } // 내 팀은 준 무기만(신청은 없음 — 첫 경기 무기 배정) · 상대 팀 무기는 아래 aiArm
     if (id === NAMELESS) Object.assign(f, { cloth: cloth ?? 0 }, makeNameless(r, usedNames, cfg));
     else if (team !== 0 && sigOf(id) && !weapons.includes(sigOf(id))) f.sig = sigOf(id); // 내 팀이 그 전용무기를 들고 나오면 주인은 이번 대회 전용무기 없음(같은 무기 둘을 피함)
     return f;
@@ -181,6 +185,19 @@ export function entryMissing({ hasTitle, owned }, cfg = SAENGSA) {
   if (!hasTitle) out.push({ kind: 'title' });
   if (!(owned >= cfg.entry.weapons)) out.push({ kind: 'weapons', have: owned | 0, need: cfg.entry.weapons });
   return out;
+}
+/**
+ * 동료 고르기 한 번 누름 (대기실 고르기 카드 — 사장님 11/18 '한 번에 모든 캐릭터를 복수 선택할 수 잇게'): ids = 고른 차례(동료 1 · 동료 2) → 새 목록 (원본은 그대로).
+ *  고른 인물을 누르면 뺌(뒤 사람이 앞으로) · 안 고른 인물은 자리가 남으면 뒤에 · 다 찼으면 그대로(누를 수 없음).
+ *  무명 검객(둘 다여도 됨): 자리가 남으면 하나 더 · 다 찼으면 무명 검객을 모두 뺌 — 0 → 1 → 2 → 0
+ */
+export function toggleCompanion(ids, id, max = SAENGSA.teamSize - 1) {
+  const out = (ids ?? []).filter(Boolean).slice(0, max);
+  if (!id) return out;
+  const has = out.includes(id);
+  if (id === NAMELESS) return out.length < max ? [...out, id] : out.filter((x) => x !== id);
+  if (has) return out.filter((x) => x !== id);
+  return out.length < max ? [...out, id] : out;
 }
 /** 배정이 맞나: 자리마다(only 의 자리만) 가진 무기 · assignUnique 면 서로 다르게 */
 export function validAssignment(weapons, owned, only = [0, 1, 2], cfg = SAENGSA) {
@@ -433,10 +450,10 @@ export function advance(t, now, cfg = SAENGSA) {
   }
   return n;
 }
-/** 내가 고른 사람이 맞나 (내 팀 · 살아 있음 · 1 ~ entrantsMax · 겹치지 않음) */
+/** 내가 고른 사람이 맞나 (내 팀 · 살아 있음 · 무기를 받음(11/18 — 첫 경기 무기 배정 전에는 없음) · 1 ~ entrantsMax · 겹치지 않음) */
 export function validPicks(t, picks, cfg = SAENGSA) {
   if (!Array.isArray(picks) || picks.length < 1 || picks.length > cfg.entrantsMax || new Set(picks).size !== picks.length) return false;
-  return picks.every((k) => t.teams[0].members.some((f) => f.key === k && !f.dead));
+  return picks.every((k) => t.teams[0].members.some((f) => f.key === k && !f.dead && typeof f.weapon === 'string'));
 }
 /**
  * 내 경기 판 (2단계 엔진에 넘기는 꼴 — 설계 §8): { matchId, round, seed, mineSide, sides: { a: [사람], b: [사람] }, entrants: { a, b }, control }

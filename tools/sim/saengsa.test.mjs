@@ -17,7 +17,7 @@ const at = (d, h, mi = 0) => new Date(2026, 9, d, h, mi).getTime(); // 2026-10-d
 const ROSTER = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k'];
 const PROF = { german: 2, italian: 1, iberian: 1, japanese: 0, chinese: 0, none: 1 };
 const DATA = { roster: ROSTER, drawWeapon: (r) => ['w1', 'w2', 'w3'][Math.floor(r() * 3)], weaponInfo: () => ({ school: 'german', tier: 'common' }), profOf: () => ({ ...PROF }) };
-const make = (seed = 7, extra = {}) => R.createTournament({ day: '2026-10-30', seed, at: at(29, 23), companions: ['a', 'b'], ...DATA, ...extra });
+const make = (seed = 7, extra = {}) => R.createTournament({ day: '2026-10-30', seed, at: at(29, 23), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], ...DATA, ...extra }); // 11/18: 신청은 무기 없이(첫 경기 배정) — 시험은 무기를 든 팀을 바로 만든다
 const OLD = { ...SAENGSA, instant: false }; // 옛 규칙 (11/12 전 — 아침 10시 첫 대진 · 대진 2시간마다 · 결과 뒤 2시간 쉼) — 스위치가 그대로 도는지
 /** 내 경기를 이 쪽이 이긴 결과로 (체력 · 부상은 넘긴 대로) */
 const winFor = (t, m, fighters = {}) => ({ winner: R.sidesOf(t, m)[0] === 0 ? 'a' : 'b', fighters });
@@ -182,7 +182,7 @@ test('하사품: 우승 셋 · 준우승 하나 · 하나에 금화 500 · 한 �
   assert.deepEqual([u.status, R.placeOf(u), R.chestCount(u)], ['done', 'final', 1]);
 });
 
-test('저장 왕복 · 신청(입장 조건 · 무기 배정 · 고용 금화) · 깨진 저장은 버림', () => {
+test('저장 왕복 · 신청(입장 조건 · 고용 금화 — 11/18 무기 배정 없음) · 첫 경기 무기 배정 · 깨진 저장은 버림', () => {
   mem.clear();
   const t = make(5);
   assert.equal(S.updateSaengsa((d) => { d.current = t; return true; }).saved, true);
@@ -193,25 +193,29 @@ test('저장 왕복 · 신청(입장 조건 · 무기 배정 · 고용 금화) �
   P.setCoins(30);
   const OWNED = ['tree_branch', 'druid_whip', 'w1', 'w2', 'w3'], W = ['tree_branch', 'w1', 'w2'];
   const data = { ...DATA, owned: OWNED, hasTitle: true, hireCostOf: () => ({ coins: 20 }) };
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: W, seed: 1, data: { ...data, hasTitle: false } }).why, 'entry'); // 정복자 호칭 없음
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: W, seed: 1, data: { ...data, owned: OWNED.slice(0, 4) } }).why, 'entry'); // 무기 넷
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: W, seed: 1, data }).why, 'coins');
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data: { ...data, hasTitle: false } }).why, 'entry'); // 정복자 호칭 없음
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data: { ...data, owned: OWNED.slice(0, 4) } }).why, 'entry'); // 무기 넷
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data }).why, 'coins');
   P.setCoins(100);
-  assert.equal(S.signUp({ now: at(29, 21), companions: ['a', 'b'], weapons: W, seed: 1, data }).why, 'closed');
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: ['tree_branch', 'w1'], seed: 1, data }).why, 'weapons'); // 셋 다
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: ['tree_branch', 'w1', 'w1'], seed: 1, data }).why, 'weapons'); // 한 무기는 한 사람에게(확인 전)
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: ['tree_branch', 'w1', 'longsword'], seed: 1, data }).why, 'weapons'); // 안 가진 무기
+  assert.equal(S.signUp({ now: at(29, 21), companions: ['a', 'b'], seed: 1, data }).why, 'closed');
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a'], seed: 1, data }).why, 'team'); // 동료 둘
   assert.equal(P.readProgress().coins, 100);
-  const ok = S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: W, seed: 1, data });
+  const ok = S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data }); // 11/18: 무기 없이 — 옛 weapons 를 넘겨도 쓰지 않음
   assert.deepEqual([ok.ok, ok.cost, P.readProgress().coins], [true, 40, 60]);
-  assert.deepEqual(S.readSaengsa().current.teams[0].members.map((f) => f.weapon), W);
-  assert.deepEqual(S.readSaengsa().draft.weapons, W);
-  assert.equal(S.signUp({ now: at(29, 23, 30), companions: ['a', 'b'], weapons: W, seed: 2, data }).why, 'busy');
-  // 경기마다 배정: 살아 있는 사람만 · 가진 무기 · 서로 다르게 — 결과의 pre 에 그 경기 무기
+  const t0 = S.readSaengsa().current;
+  assert.deepEqual(t0.teams[0].members.map((f) => [f.weapon, f.school, f.tier]), [[null, null, null], [null, null, null], [null, null, null]]); // 내 팀은 무기 없이 대회에 듦
+  assert.equal(S.validTournament(t0), true, '무기 없는 내 팀도 저장 모양이 맞음');
+  assert.deepEqual(S.readSaengsa().draft, { companions: ['a', 'b'] });
+  assert.equal(S.signUp({ now: at(29, 23, 30), companions: ['a', 'b'], seed: 2, data }).why, 'busy');
+  // 무기를 받기 전에는 나서지 못함 (빠른 셈 · 엔진 판 모두 — validPicks)
   S.syncSaengsa(at(30, 10));
   const m0 = R.myMatch(S.readSaengsa().current);
+  assert.equal(R.matchSetup(S.readSaengsa().current, m0, ['0-0'], at(30, 10)), null);
+  assert.equal(S.playMine(m0.id, ['0-0'], at(30, 10), null), null);
+  // 경기마다 배정: 살아 있는 사람만 · 가진 무기 · 서로 다르게 — 결과의 pre 에 그 경기 무기 (첫 경기 배정 = 처음 받는 무기)
   const info = (w) => ({ school: w === 'w3' ? 'italian' : 'german', tier: 'rare' });
   assert.equal(S.playMine(m0.id, ['0-0'], at(30, 10), null, { arm: { weapons: ['w3', 'w1', 'w1'], owned: OWNED, weaponInfo: info } }), null);
+  assert.equal(S.playMine(m0.id, ['0-0'], at(30, 10), null, { arm: { weapons: ['w3', 'w1'], owned: OWNED, weaponInfo: info } }), null); // 셋 다
   const res = S.playMine(m0.id, ['0-0'], at(30, 10), null, { arm: { weapons: ['w3', 'druid_whip', 'w2'], owned: OWNED, weaponInfo: info } });
   const mineSide = R.sidesOf(S.readSaengsa().current, m0)[0] === 0 ? 'a' : 'b';
   assert.deepEqual([res.pre[mineSide][0].weapon, res.pre[mineSide][0].school, res.pre[mineSide][0].tier], ['w3', 'italian', 'rare']);
@@ -223,10 +227,40 @@ test('저장 왕복 · 신청(입장 조건 · 무기 배정 · 고용 금화) �
   assert.deepEqual(R.entryMissing({ hasTitle: false, owned: 2 }), [{ kind: 'title' }, { kind: 'weapons', have: 2, need: 5 }]);
   assert.deepEqual(R.entryMissing({ hasTitle: true, owned: 5 }), []);
   mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1 })); // 빈 저장 (저장소 열쇠가 없으면 이번 실행 값을 쥐고 있으니 빈 판을 적는다)
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'a'], weapons: W, seed: 3, data }).why, 'team');
-  assert.equal(S.signUp({ now: at(29, 23), companions: [R.NAMELESS, R.NAMELESS], weapons: W, seed: 3, data }).ok, true); // 무명 검객은 둘 다여도 됨
-  mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1, draft: { companions: ['a', 'b'], lend: { weapon: 'w2', to: 1 } } })); // 옛 꼴 → 그 자리 무기
-  assert.deepEqual(S.readSaengsa().draft, { companions: ['a', 'b'], weapons: [null, 'w2', null] });
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'a'], seed: 3, data }).why, 'team');
+  assert.equal(S.signUp({ now: at(29, 23), companions: [R.NAMELESS, R.NAMELESS], seed: 3, data }).ok, true); // 무명 검객은 둘 다여도 됨
+  // 옛 저장 (11/18 전): draft.weapons · 그 전 lend 는 버림 · 빈 자리는 뒤로 · 신청 때 무기를 받은 진행 중 대회는 그대로
+  mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1, draft: { companions: ['a', 'b'], lend: { weapon: 'w2', to: 1 } } }));
+  assert.deepEqual(S.readSaengsa().draft, { companions: ['a', 'b'] });
+  mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1, current: make(6, { weapons: W }), draft: { companions: [null, 'b'], weapons: W } }));
+  assert.deepEqual(S.readSaengsa().draft, { companions: ['b', null] });
+  assert.deepEqual(S.readSaengsa().current.teams[0].members.map((f) => f.weapon), W);
+  assert.equal(S.saveDraft({ companions: ['c', R.NAMELESS], weapons: W }), true);
+  assert.deepEqual(JSON.parse(mem.get(S.SAENGSA_KEY)).draft, { companions: ['c', R.NAMELESS] });
+  mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1 })); // 빈 저장으로 돌려 둠 (저장소 열쇠가 없으면 이번 실행 값을 쥐고 있어 뒤 시험이 진행 중 대회를 봄)
+  S.readSaengsa();
+});
+
+test('동료 고르기 한 번 누름 (사장님 11/18 — 한 번에 둘 · 고른 차례 = 동료 1 · 2 · 누르면 빼고 뒤가 앞으로 · 무명 검객 0 → 1 → 2 → 0)', () => {
+  const T = (ids, id) => R.toggleCompanion(ids, id, 2);
+  assert.deepEqual(T([], 'a'), ['a']);
+  assert.deepEqual(T(['a'], 'b'), ['a', 'b']);
+  assert.deepEqual(T(['a', 'b'], 'c'), ['a', 'b'], '둘을 다 고르면 그대로');
+  assert.deepEqual(T(['a', 'b'], 'a'), ['b'], '앞을 빼면 뒤가 동료 1');
+  assert.deepEqual(T(['a', 'b'], 'b'), ['a']);
+  assert.deepEqual(T([null, 'b'], 'c'), ['b', 'c'], '빈 자리는 건너뜀');
+  const N = R.NAMELESS;
+  assert.deepEqual(T([], N), [N]);
+  assert.deepEqual(T([N], N), [N, N], '무명 검객은 둘 다여도 됨');
+  assert.deepEqual(T([N, N], N), [], '다 찼으면 모두 뺌');
+  assert.deepEqual(T(['a', N], N), ['a']);
+  assert.deepEqual(T([N, 'a'], N), ['a']);
+  assert.deepEqual(T([N, 'a'], 'a'), [N]);
+  const ids = ['a'];
+  T(ids, 'b');
+  assert.deepEqual(ids, ['a'], '원본은 그대로');
+  assert.deepEqual(R.toggleCompanion([], 'a'), ['a'], '기본 상한 = 팀 인원 − 나');
+  assert.equal(SAENGSA.teamSize - 1, 2);
 });
 
 test('가진 무기 · 입장 조건 글 (사장님 10/29 18:2x)', async () => {
@@ -355,7 +389,7 @@ test('시험판(testMode): 신청 늘 열림 · 모든 경기 바로 · 쉬는 �
   const cfg = { ...SAENGSA, testMode: true };
   const now = at(30, 15, 7); // 신청 창 밖 · 대진 시각과 무관한 때
   assert.deepEqual(C.signupWindow(now, cfg), { open: true, day: '2026-10-30', from: now, to: null });
-  const t = R.createTournament({ day: '2026-10-30', seed: 21, at: now, companions: ['a', 'b'], ...DATA, cfg });
+  const t = R.createTournament({ day: '2026-10-30', seed: 21, at: now, companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], ...DATA, cfg });
   assert.deepEqual(R.scheduleState(now, t, cfg), { kind: 'running' });
   assert.equal(R.advance(t, now, cfg), 7); // 16강 상대끼리 일곱은 바로
   for (let r = 0; r < 4; r++) {
@@ -371,7 +405,7 @@ test('시험판(testMode): 신청 늘 열림 · 모든 경기 바로 · 쉬는 �
   assert.deepEqual([t.status, R.placeOf(t), R.chestCount(t, cfg)], ['done', 'champion', 3]);
   assert.equal(R.canSignUp(now, t, cfg), true); // 같은 날 바로 다음 대회
   // 앞 대진이 다 끝나기 전엔 상대끼리 다음 경기도 기다림 · 내가 지면 대회는 바로 끝까지
-  const u = R.createTournament({ day: '2026-10-30', seed: 22, at: now, companions: ['a', 'b'], ...DATA, cfg });
+  const u = R.createTournament({ day: '2026-10-30', seed: 22, at: now, companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], ...DATA, cfg });
   R.advance(u, now, cfg);
   assert.equal(u.matches.filter((x) => x.round === 1 && x.result).length, 0);
   const m = R.myMatch(u), w = winFor(u, m);
@@ -494,13 +528,16 @@ test('부러진 무기는 대회 끝까지 · 빠른 셈 부러짐 · 레전드�
   const OWNED = ['tree_branch', 'druid_whip', 'w1', 'w2', 'w3'];
   const data = { ...DATA, owned: OWNED, hasTitle: true, hireCostOf: () => ({ coins: 20 }) };
   const cfgT = { ...SAENGSA, testMode: true };
-  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], seed: 4, data, cfg: cfgT }).ok);
+  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], seed: 4, data, cfg: cfgT }).ok);
   S.updateSaengsa((d) => { d.current.broken = ['w1']; d.current.status = 'done'; return true; });
-  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], seed: 5, data, cfg: cfgT }).ok);
-  assert.deepEqual([S.readSaengsa().current.broken, !!S.readSaengsa().current.teams[0].members[0].broken], [[], false]);
+  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], seed: 5, data, cfg: cfgT }).ok);
+  assert.deepEqual(S.readSaengsa().current.broken, []);
   S.updateSaengsa((d) => { d.current.broken = ['w1']; d.current.status = 'done'; return true; });
-  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], seed: 6, data, cfg: { ...cfgT, keepBrokenAfterCup: true } }).ok);
-  assert.deepEqual([S.readSaengsa().current.broken, S.readSaengsa().current.teams[0].members[0].broken], [['w1'], true]);
+  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], seed: 6, data, cfg: { ...cfgT, keepBrokenAfterCup: true } }).ok);
+  const kept = S.readSaengsa().current;
+  assert.deepEqual(kept.broken, ['w1']);
+  assert.ok(R.assignWeapons(kept, ['w1', 'w2', 'w3'], { owned: OWNED, weaponInfo: DATA.weaponInfo })); // 11/18: 신청은 무기 없이 — 첫 배정에서 넘어온 부러진 무기를 받으면 부러진 채
+  assert.deepEqual(kept.teams[0].members.map((x) => !!x.broken), [true, false, false]);
 });
 
 test('엔진 잇기: 내 경기 = game.launchSaengsa (스위치 SAENGSA.engine.mine) · 없으면 빠른 셈 · 판 사람에 broken', async () => {

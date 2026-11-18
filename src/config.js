@@ -122,8 +122,14 @@ export const TEAM_FIGHT = {
   cam: { radius: 7, fit: 0.85, minDepth: 2.4, max: 3.0, upK: 0.45, tau: realS(0.6) }, // 보는 몸에서 radius m 안의 산 싸움꾼이 모두 화면에 들게 뒤로(≤ max m): 화면 가로 반폭의 fit 몫 안 · 카메라 앞 깊이 minDepth m 넘게 · 위로 그 × upK · 시간 상수 tau (2875)
   deadSettle: { t: realS(1.5), v: 0.05 }, // 죽은 지 t 넘게 · 몸 부위가 모두 v m/s 밑이면 그 몸은 스텝 · 조종 · 칼 잔상 · 바람 소리를 쉼 (셋 이상 판만 — 2876)
   // 화면 색 (사장님 10/30 02:0x '적군 체력바 색과 적군 머리 위 기호 색을 현재 전투에서 쓰고 있는 피 색으로 바꾸자. 저기서 채도만 낮춰서.' — team_hud.js):
-  //  적 = 피 색(blood_palette.js BLOOD_RED.splash)의 OKLCH 채도만 × foeChromaK (밝기 · 색상 그대로) · 아군 체력 막대 = 같은 밝기 · 채도로 색상만 allyHue°(녹색) — 확인표 2890 (사장님 확인 전 — 0.7 · 145° 는 작업자)
-  hudColor: { foeChromaK: 0.7, allyHue: 145 },
+  //  적 = 피 색(blood_palette.js BLOOD_RED.splash)의 OKLCH 채도만 × foeChromaK (밝기 · 색상 그대로) — 확인표 2890 (사장님 확인 전 — 0.7 은 작업자)
+  //  (11/18 왼쪽 위 체력 목록을 걷으며 아군 체력 막대 녹색 allyHue 145° 도 걷음 — 체력은 아래 hpStrip 칸 색)
+  hudColor: { foeChromaK: 0.7 },
+  // 체력 칸 (사장님 11/18 '좌측 상단 … 체력바 … 없애고 기력바랑 같이 뜨게 해. 기력바 위나 아래에 … 점선 모양의 바 … 10칸 정도로 … 원래 초록색이다가 80% 아래로 내려가면 노랑색
+  //  50% 아래로 내려가면 주황색 20% 아래로 내려가면 빨강색. 출혈이나 중상 이상의 부상 상태에서는 어떤 색이든 점멸.' — src/hp_strip.js · stamina_hud.js · 기록 docs/strike/saengsa_ui_2026-11-18.md):
+  //  cells 칸 수 · tones [문턱, 색] 위에서부터 (몫 ≥ 문턱이면 그 색 · 다 못 넘으면 low) [사장님 11/18 결정 — 80 · 50 · 20 %] ·
+  //  bleedAt 점멸 출혈 문턱(초당 피 몫 — main.js updateHud 1:1 출혈 맥박과 같은 0.002 · 작업자) · h 칸 높이 · gap 기력 막대와의 틈(px — 꾸밈 · 작업자)
+  hpStrip: { cells: 10, tones: [[0.8, 'green'], [0.5, 'yellow'], [0.2, 'orange']], low: 'red', bleedAt: 0.002, h: 3, gap: 2 },
   // 2:1 숙련도 몫 (사장님 10/29 20:4x '높은 숙련도가 똑똑해지도록 · 잘 싸워서 이긴 느낌' — 셋 이상 판의 AI 만 · ai.js teamFeet). 숙련도 몫 sk = (p − prof[0]) ÷ (prof[1] − prof[0]) 를 0 ~ 1 로
   //  목표 띠는 확인표 2881(사장님 결정) · 값은 2882 · 2883 (사장님 확인 전 — 12 판 2차 값 · 띠에 못 미침: docs/strike/team_fight_2026-10-29.md §13) · 끄기 tools/sim/team_balance.mjs --lever=none
   lever: {

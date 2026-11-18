@@ -108,7 +108,7 @@ export class SchoolPassive {
     return this.on('japanese') && (this.ai || !!this.f.humanInput);
   }
 
-  /** 화면 표시 (stamina_hud.js — 스택 판일 때 지금 스택 수 · 아니면 null) */
+  /** 화면 표시 (stack_hud.js 왼쪽 가운데 스택 칸 '기세' — 11/18 전 stamina_hud.js 머리 위 칸 · 스택 판일 때 지금 스택 수 · 아니면 null) */
   get stackShow() {
     return this.stackOn ? this.stk : null;
   }

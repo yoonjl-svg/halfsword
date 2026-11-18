@@ -69,10 +69,10 @@ for (const C of CASES) {
       broken: game.fighters.map((f) => (f.weaponBroken ? 1 : 0)).join(''),
       focus: R?.focus?.index ?? null,
       human: R?.human?.index ?? null,
-      bars: document.querySelectorAll('#teamList .tl-b').length, // 왼쪽 위 이름 · 체력 목록 줄 수 (사장님 10/29 22:3x)
-      hpShown: hud && hud.style.display !== 'none' ? document.querySelectorAll('#teamList .tl-b').length : 0,
+      bars: [...document.querySelectorAll('#staminaHud .hp-cells')].filter((e) => !e.hidden).length, // 기력 막대 위 체력 칸 (11/18 — 전 왼쪽 위 이름 · 체력 목록) · 화면 안의 산 몸만
+      hpShown: [...document.querySelectorAll('#staminaHud .hp-cells')].filter((e) => !e.hidden).length,
       stage: document.getElementById('stageInfo').classList.contains('show'), // 무대 이름 (생사전은 감춤)
-      listNames: [...document.querySelectorAll('#teamList .tl-n')].map((n) => n.textContent),
+      listNames: game.fighters.map((f) => f.shortName ?? ''), // 짧은 이름 (스택 칸 줄 이름 — 11/18)
       arrows: hud ? [...hud.querySelectorAll('.th-arrow[data-kind="edge"]')].filter((a) => a.style.display !== 'none').length : 0,
       heads: hud ? [...hud.querySelectorAll('.th-arrow[data-kind="head"]')].filter((a) => a.style.display !== 'none').length : 0,
       switches: R ? game.fighters.map((f) => R.M.targeting?.get(f)?.switches ?? 0) : [],
@@ -120,7 +120,7 @@ for (const C of CASES) {
         await page.evaluate(() => document.getElementById('btnStart').click());
         for (let i = 0; i < 200 && !(await page.evaluate(() => game.state === 'fight')); i++) await page.clock.runFor(50);
         await page.clock.runFor(1500);
-        row.oneAfter = await page.evaluate(() => ({ state: game.state, n: game.fighters.length, teamRun: !!game.teamRun, hpShown: document.getElementById('teamHud')?.style.display !== 'none' ? 1 : 0, staminaShown: [...document.querySelectorAll('.stamina-bar')].filter((b) => !b.hidden).length, stage: document.getElementById('stageInfo').classList.contains('show') }));
+        row.oneAfter = await page.evaluate(() => ({ state: game.state, n: game.fighters.length, teamRun: !!game.teamRun, hpShown: [...document.querySelectorAll('#staminaHud .hp-cells')].filter((e) => !e.hidden).length, staminaShown: [...document.querySelectorAll('.stamina-bar')].filter((b) => !b.hidden).length, stage: document.getElementById('stageInfo').classList.contains('show') }));
       } else {
         for (let i = 0; i < 40 && (await page.evaluate(() => game.state === 'fight')); i++) await page.clock.runFor(250);
         row.after = await page.evaluate(() => ({ state: game.state, title: document.getElementById('menuTitle')?.textContent, sub: document.getElementById('menuSub')?.textContent, again: document.getElementById('btnStart')?.textContent }));
@@ -137,8 +137,8 @@ for (const C of CASES) {
     && row.start?.listNames?.includes('오토') && !row.start.listNames.some((n) => n.startsWith('무명 검객')) // 무명 검객은 붙인 이름만 (사장님 10/30 01:0x)
     && row.start.listNames.includes('A.미나미') // 얼터 = 'A.' + 본캐 짧은 이름
     && (row.end?.winner == null || C.saengsa.entrants[row.saengsa.winner].some((k) => row.saengsa.fighters[k].alive))); // 이긴 편에 산 몸 (판이 끝난 스텝의 몸으로 적음)
-  const okAfter = !C.saengsa || (row.oneAfter?.state === 'fight' && row.oneAfter.n === 2 && !row.oneAfter.teamRun && row.oneAfter.hpShown === 0 && row.oneAfter.stage === true); // 1:1 엔 목록 없음 · 무대 이름 다시
-  row.ok = !errors.length && !!row.end?.over && row.start?.n === C.n && (row.start?.human != null) === C.human && row.start?.bars === C.n && okSaengsa && okAfter;
+  const okAfter = !C.saengsa || (row.oneAfter?.state === 'fight' && row.oneAfter.n === 2 && !row.oneAfter.teamRun && row.oneAfter.hpShown === 0 && row.oneAfter.stage === true); // 1:1 엔 체력 칸 없음 · 무대 이름 다시
+  row.ok = !errors.length && !!row.end?.over && row.start?.n === C.n && (row.start?.human != null) === C.human && row.start?.bars >= 1 && row.start?.bars <= C.n && okSaengsa && okAfter;
   rows.push(row);
   console.log(JSON.stringify(row));
   await page.close();

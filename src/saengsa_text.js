@@ -16,7 +16,8 @@ export const SAENGSA_TEXT = Object.freeze({
   companion: '동료',
   pick: '동료 고르기',
   weapon: '무기',
-  noWeapon: '무기 없음',
+  noWeapon: '무기 없음', // 경기 화면 내 카드 — 첫 경기 무기 배정 전 (11/18 신청 때 배정을 걷음)
+  owned: '가진 무기', // 대기실 동료 고르기 카드 — 유파마다 묶은 내 무기 (보기만 · 사장님 11/18)
   broken: '부러짐', // 부러진 무기(사장님 10/29 20:1x — 대회 끝까지 부러진 채) · 카드 무기 이름 옆 · 무기 배정 칸 · 팀 무기
   pickWeapons: '세 사람 모두 무기를 고르십시오.',
   arm: '무기 배정', // 경기 화면 — 나설 사람의 무기를 바꿈(사장님 10/29 18:2x 경기마다 배정)
@@ -109,6 +110,8 @@ export const outLine = (round, forfeit) => (forfeit ? `내 팀은 ${round}에서
 /** 하사품 안내 · 연 뒤 */
 export const chestLine = (n) => `${SAENGSA_TEXT.chest} ${n}개를 열 수 있습니다.`;
 export const chestGot = (coins) => `${SAENGSA_TEXT.chest}에서 금화 ${coins.toLocaleString('ko-KR')}을 받았습니다.`;
+/** 고르기 카드 화면 읽기 글 — '가진 일본 무기 2개' (카드에는 '일본 2') */
+export const schoolCountLine = (school, n) => `가진 ${school} 무기 ${n}개`;
 /** 고용 값 줄 */
 export const hireLine = (coins) => `고용 금화 ${coins.toLocaleString('ko-KR')}`;
 /** 입장 조건에서 모자란 것 (saengsa_rules.js entryMissing — 사장님 10/29 18:2x): '정복자 호칭이 필요합니다 · 무기 5개가 필요합니다 (지금 2개)' */
