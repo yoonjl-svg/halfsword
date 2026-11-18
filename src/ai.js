@@ -1593,7 +1593,7 @@ export class AI {
     const swungRecently = this.sense.recentHandSpeed(L.reaction, realS(0.7)) > 3.5;
     const mk = this.mind ? mindOppK(this) : null; // 유파 마음가짐 (11/18 — 선공): 먼저 치는 빈틈(참다 · 칼끝 비킴 · 다침 · 기우뚱) × 앞 · 받아 치는 빈틈(헛친 뒤 · 들어옴) × 뒤
     const add = (v, k) => {
-      if (mk) v *= k === 'recover' || k === 'stepin' ? mk[1] : k === 'finish' ? 1 : mk[0];
+      if (mk) v *= k === 'recover' || k === 'stepin' ? mk[1] : k === 'finish' ? 1 : k === 'patience' ? Math.max(1, mk[0]) : mk[0]; // 참다는 1 밑으로 줄이지 않음 — 선공이 낮아도 참을성이 다 닳으면 먼저 들어감 (사장님 11/14 '절대적 규칙은 빼' · 선공 낮은 쪽은 참을성 길이 patienceTime 이 늦춤 — 이탈리아 거울판이 60 s 마주 서던 것)
       if (v > top) {
         top = v;
         kind = k;

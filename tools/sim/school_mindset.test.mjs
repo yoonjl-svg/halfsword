@@ -1,6 +1,7 @@
 // 유파 마음가짐 (11/18 — src/ai_mindset.js · 값 표 schools.js SCHOOL_MINDSET · 끝 값 config MINDSET · 기록 docs/strike/school_mindset_2026-11-18.md)
 //  ① 값 표가 점수 · 곧은 줄 셈과 같다 (한눈에 보이는 수 = 셈) ② 기질 범위 = 가운데 ± 폭 · 무유파는 옛 값 ③ 집요함 — 일본은 상대 상태에 안 움직이고 동방은 폭 ±2 안에서 정한 쪽으로
 //  ④ 일격 — 입힐 피해로 판단하면 큰 베기 · 받을 피해로 판단하면 짧은 칼 ⑤ 횡보 1(이탈리아)은 옆으로 돌지 않음 ⑥ 짧은 판 하나 — 다섯 유파 모두 옮긴 점수가 1 ~ 5 안
+//  ⑦ 선공은 기울기 — 참을성이 다 닳으면 선공 1 · 2 도 먼저 들어감
 //  node --test tools/sim/school_mindset.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -113,6 +114,20 @@ test('짧은 판 (6 s) — 다섯 유파 모두 마음가짐이 있고 옮긴 �
         assert.ok(Math.abs(sh) <= band + 1e-9 && v >= 1 - 1e-9 && v <= 5 + 1e-9, `${s} ${ax} ${sh} ${v}`);
       }
     }
+    G.world.free();
+  }
+});
+
+test('선공은 기울기 — 선공 1 · 2 도 참을성이 다 닳으면 먼저 들어감 (참다 빈틈은 1 밑으로 줄지 않음 · 이탈리아 거울판이 마주 서기만 하던 것)', () => {
+  for (const [s, w] of [['japanese', 'uchigatana'], ['italian', 'rapier'], ['german', 'longsword']]) {
+    const { G, ai } = setup(w);
+    for (let i = 0; i < Math.round(2 / DT); i++) G.step();
+    const seen = { ...ai.lastSeen, state: 'stand', armed: true };
+    ai.patience = 0;
+    const k = M.mindOppK(ai)[0];
+    ai.me.offBalance = 0; // 내 몸 흔들림 감점(−0.5)은 빼고 봄
+    const o = ai.opportunity(seen, ai.holdDist());
+    assert.ok(o.score >= 1.1 * Math.max(1, k) - 1e-9, `${s}: 참을성 0 — 빈틈 점수 ${o.score.toFixed(3)} (${o.kind}) · 앞 곱 ${k.toFixed(2)}`);
     G.world.free();
   }
 });
