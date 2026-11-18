@@ -2963,6 +2963,7 @@ let acc = 0;
 //  물리 스텝·입력·소리·카메라 따라가기는 rAF 마다 예전 그대로. 거르는 건 renderer.render 와 그 직전의 겉모습 갱신뿐
 const renderCap = createRenderCap();
 
+let moveStickRun = false; // 이동 스틱 뛰기 표시(#moveStick.run)가 켜져 있나 — 바뀔 때만 DOM 을 고친다
 /** 프레임마다 사람 몸의 입력 (손 · 탭 · 비기 창 · 막기 단추 · 고유 동작 · 감정 · 걸음) — 게임 루프에서 옮김 (줄 그대로) */
 function playerInputFrame(dt, now) {
   // 손 목표 갱신 (입력 → 플레이어)
@@ -2980,6 +2981,7 @@ function playerInputFrame(dt, now) {
   input.tapOnDown = !!player.weapon?.gun;
   let taps = input.consumeTaps();
   if (exhausted || autoPick) taps = 0;
+  const tapsIn = taps; // 뛰기 끊기 (11/18 — 아래 runBreak): 이 프레임에 들어온 공격 입력 (뒤 길에서 0 으로 바뀌기 전)
   // 플레이어 비기 (10/9 23:5x): 창이 열려 있을 때 공격 입력(톡 = 찌르기, 휘두르기만큼 빠른 끌기 = 베기)이 오면 그 입력 대신 비기 완벽 실행.
   //  실행·경직 동안은 칼 입력(끌기·톡)을 무시한다 — 발(스틱)은 실행 동안 내 것, 경직 동안은 안 듣는다 (사장님 10/10 20:5x '잠깐 아예 못 움직이게' — 칼은 skill.js holdStiff 가 멈춰 둔다)
   const swipe = Math.hypot(d.x, d.y) / Math.max(dt, 1e-3) >= CONFIG.SKILL.swingSpeed;
@@ -3060,6 +3062,11 @@ function playerInputFrame(dt, now) {
   player.move.set(feet ? m.x * emv : 0, feet ? m.y * emv : 0);
   player.stickX = feet ? m.x : 0; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
   player.stickY = feet ? m.y : 0;
+  // 뛰기 (11/18 — src/run.js · 물리 스텝마다 읽음): 스틱 손잡이 길 몫(PC Shift + 방향 = 1) · 공격(톡 · 휘두르는 끌기) · 막기 입력이면 이 프레임에 뛰기를 끊음
+  player.runReach = feet ? input.runReach : 0;
+  if (tapsIn > 0 || swipe || parryDown) player.runBreak = true;
+  const runOn = !!player.run?.on;
+  if (runOn !== moveStickRun) $('moveStick').classList.toggle('run', (moveStickRun = runOn)); // 뛰는 동안 스틱 테두리만 밝게 (글자 없음)
   updateGuardName();
   updateParryLabel();
   // 마우스로 조작할 땐 손가락 흔적 대신 오른쪽 아래 원판에 손 위치의 흔적을 그린다

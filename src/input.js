@@ -4,13 +4,16 @@
 //              왼쪽 아래 조이스틱으로 걷는다 (기울여서 걷기는 10/10 사장님 '어차피 안 씀'으로 기능째 지웠다).
 //   - PC: 화면 클릭 → 마우스 잠금. 마우스를 움직이면 칼, 끌지 않고 클릭하면 찌르기, WASD(방향키)로 이동.
 // ─────────────────────────────────────────────────────────────
-import { INPUT } from './config.js';
+import { INPUT, RUN } from './config.js';
 import { flushHaptic } from './effects.js';
 import { MOBILE_VERTICAL_GAIN, mapMobileHandDelta } from './mobile_intent.js'; // 10/7 폰 세로 1.35 배 (사장님 선택, 샛별 일반판 그대로)
 import { STICK_DEAD } from './stick_turn.js'; // 조이스틱 데드존 0.15 — 스틱 돌리기 몸짓 읽기(10/23 이베리아 휘감아 돌기)와 같은 수 한 곳
 import { atkStickState, atkStickGrab, atkStickKnob, atkStickRelease } from './atk_stick.js'; // 공격 조이스틱 (11/17 — 설정 '공격 조이스틱' · 아래 attachAtkStick · useAtkStick)
 
-const STICK_R = 40; // 화면 조이스틱 손잡이가 움직이는 반지름 (px — 이동 · 공격 조이스틱 같은 수)
+const STICK_R = 40; // 공격 조이스틱 손잡이가 움직이는 반지름 (px)
+// 이동 스틱 손잡이가 움직이는 반지름 (px — 11/18 뛰기 사장님 '이동용 스틱 크기를 지금보다 조금 키우고': 40 → 48 · +20 % · index.html #moveStick 110 → 132 px · 손잡이 48 → 58 px).
+//  늘어난 바깥 몫이 뛰기 자리다 — 걷는 빠르기는 길의 RUN.walkFull(85 % ≈ 41 px — 전 스틱은 40 px)에서 다 차고, 길의 RUN.stickIn(95 %) 넘게 밀면 뜀 (src/run.js)
+const MOVE_STICK_R = 48;
 
 export class Input {
   constructor(canvas, { verticalGain = MOBILE_VERTICAL_GAIN.default } = {}) {
@@ -20,6 +23,7 @@ export class Input {
     this.handDY = 0; // +y = 위
     this.keys = new Set();
     this.stickMove = { x: 0, y: 0 }; // 화면 조이스틱 (터치 이동)
+    this.stickReach = 0; // 이동 스틱 손잡이가 길(MOVE_STICK_R)의 몇 몫까지 나갔나 0 ~ 1 (데드존 · 걷기 몫 바꾸기 전 — 뛰기 runReach)
     this.enabled = false;
     this.activeTouch = null;
     this.lastX = 0;
@@ -67,6 +71,7 @@ export class Input {
   resetTransient() {
     this.resetHand();
     this.stickMove = { x: 0, y: 0 };
+    this.stickReach = 0;
     for (const reset of this._resetHooks) reset();
   }
 
@@ -185,6 +190,18 @@ export class Input {
     }
     return { x, y };
   }
+
+  /**
+   * 뛰기 입력 (11/18 — src/run.js 가 RUN.stickIn · stickOut 으로 읽음): 이동 스틱 손잡이 길 몫 0 ~ 1 · PC 는 Shift(왼 · 오른)를 누른 채 방향 키가 눌렸으면 1
+   *  (Shift 는 다른 데 묶이지 않았음 — 키는 WASD · 방향키 · F 막기 · P 정지 · 1 · 2 · 스페이스 · 엔터). 아날로그 끝이 없는 키보드의 '스틱 끝'
+   */
+  get runReach() {
+    if (!this.enabled) return 0;
+    const k = this.keys;
+    const dirKey = k.has('KeyA') || k.has('KeyD') || k.has('KeyW') || k.has('KeyS') || k.has('ArrowLeft') || k.has('ArrowRight') || k.has('ArrowUp') || k.has('ArrowDown');
+    if (dirKey && (k.has('ShiftLeft') || k.has('ShiftRight'))) return 1;
+    return this.stickReach;
+  }
 }
 
 /**
@@ -195,7 +212,7 @@ export class Input {
 export function attachStick(input, pad, knob) {
   let id = null;
   let ring = false; // 스틱 둘레에서 쥔 손가락 (10/31 — 아래 input.stickGuard · 캡처가 안 걸린 환경에서도 창 사건으로 따라감)
-  const R = STICK_R;
+  const R = MOVE_STICK_R;
   const DEAD = STICK_DEAD; // 가운데 근처 살짝 건드린 건 무시 (0.15)
   const reset = () => {
     const captured = id;
@@ -203,6 +220,7 @@ export function attachStick(input, pad, knob) {
     ring = false;
     knob.style.transform = '';
     input.stickMove = { x: 0, y: 0 };
+    input.stickReach = 0;
     if (captured !== null && pad.releasePointerCapture) {
       try {
         if (!pad.hasPointerCapture || pad.hasPointerCapture(captured)) pad.releasePointerCapture(captured);
@@ -224,8 +242,10 @@ export function attachStick(input, pad, knob) {
     let x = dx / R;
     let y = -dy / R;
     const m = Math.hypot(x, y);
-    const k = m < DEAD ? 0 : (m - DEAD) / (1 - DEAD) / m;
+    // 걷기 몫: 데드존 밖에서 길의 RUN.walkFull 몫까지 0 → 1 (그 밖은 걷기 끝 — 11/18 뛰기: 늘어난 바깥 몫은 뛰기 자리 · 전엔 길 끝 1 에서 다 참) · 방향 그대로
+    const k = m < DEAD ? 0 : Math.min(1, (m - DEAD) / (RUN.walkFull - DEAD)) / m;
     input.stickMove = { x: x * k, y: y * k };
+    input.stickReach = Math.min(1, m); // 뛰기 (src/run.js — 길 끝 RUN.stickIn 넘게 밀면 뜀)
   };
   pad.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
