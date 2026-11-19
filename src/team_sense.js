@@ -38,7 +38,7 @@
 //                          이어 치기(나를 붙잡은 상대를 비어 있는 동료가 겨눔). 동료는 제 층 그대로 실행 · 사람 동료에게는 없음 · 화면 신호 없음
 //   등 뒤 알림 (사장님 11/18 7)  backThreat — 사람 몸을 겨눈 AI 가 등 뒤(± back.deg° 밖)에서 칼끝 + engage 안에서 공격 꼴이면 참 (main.js → team_hud.js 화면 밖 화살표가 붉게 깜빡)
 // ─────────────────────────────────────────────────────────────
-import { TEAM_SENSE, TEAM_FIGHT } from './config.js';
+import { TEAM_SENSE, TEAM_FIGHT, TEAM_SUPPORT } from './config.js';
 import { sameSide } from './team.js';
 import { woundDegree } from './combat.js';
 import { duelK } from './team_support.js'; // 서포트 (11/19): 이탈리아 결투 고집 — 동료를 위한 몫을 거둠 (team_support.js 는 이 파일을 읽지 않음)
@@ -475,6 +475,7 @@ export function outSkill(ai) {
  *  이때는 상대가 들어오기를 기다리는 꼴(고노센 준비 · 싱지르 · 리솔루토 · 이베리아 무장 기다림)을 기다리지 않는다 (상대는 나를 치러 오지 않는다 — 11/18 재기의 멈춘 판)
  */
 export function huntFree(ai) {
+  if (duelK(ai) >= TEAM_SUPPORT.it.hunt) return false; // 서포트 (11/19 — team_support.js): 이탈리아 결투 고집 — 제 간격에서 상대를 기다리는 꼴 그대로
   const v = viewOf(ai);
   if (!v || !ai.foe) return false;
   const S = ai.me.teamSense;

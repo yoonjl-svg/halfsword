@@ -1,18 +1,18 @@
 // 서포트 (11/19 — 사장님 '동방과 독일이 서포트에 강하고 이베리아가 서포트에 특별히 도움 안 되는 걸로 하자' · src/team_support.js · 기록 docs/strike/team_support_2026-11-19.md):
 //  ① 1:1 AI 는 이 셈을 하나도 타지 않음 (supS · stats.support 없음) · 셋 이상 판(2:1)의 AI 는 탐
 //  ② 몫 = 숙련 곡선 MINDSET.profF (숙련 2 이하 0 · 4 = 0.75 · 6 = 1) · 유파 칸 없는 몸(일본 · 무유파) 0 · 이탈리아 결투 고집 duelK
-//  ③ 독일 · 동방 돌기: 동료가 붙은 내 상대를 축으로 동료에게서 먼 쪽 · 각이 넉넉하면 그대로 · 다른 유파 · 숙련 2 는 그대로 · 동료 칼길에 서면 비킴 · 묶기 역할은 앞을 지킴
+//  ③ 독일 · 동방 돌기: 동료와 붙은 내 상대를 축으로 동료에게서 먼 쪽 · 각이 넉넉하면 · 상대가 나를 겨누면 그대로 · 다른 유파 · 숙련 2 는 그대로 · 동료 칼길에 서면 비킴 · 묶기 역할은 앞을 지킴
 //  ④ 이베리아: 칼길 한가운데가 아니면 미루지 않음 · 같은 편 비킴 몫 · 나눠 맡기를 덜 봄 · 혼자(동료 없음)는 덧셈 없음
-//  ⑤ 독일 동료와 붙은 적 겨눔 (붙잡혀 있으면 없음) · 동료 칼끝 쪽 밀치기 · 동료에게서 멀어지게는 안 밂 · 동료가 칠 때 박자
+//  ⑤ 독일 동료와 붙은 적 겨눔 (붙잡혀 있으면 없음) · 동료 칼끝 쪽 밀치기 · 동료가 칠 때 박자
 //  ⑥ 동방 기습 (그 적 앞 밖만) · 치고 빠짐
-//  ⑦ 이탈리아 결투 고집: 무리 싸움 판단의 엄호 덧셈을 거둠 (다른 유파는 그대로)
+//  ⑦ 이탈리아 결투 고집: 무리 싸움 판단의 엄호 덧셈을 거둠 · 사냥할 때로 보지 않음 (다른 유파 · 숙련 2 는 그대로)
 //  ⑧ 난수를 부르지 않음
 //  node --test tools/sim/team_support.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newMatch, CONFIG } from './jelly_harness.mjs';
 import { aiAtProficiency } from '../../src/characters.js';
-import { createSense, recordSense, senseScore } from '../../src/team_sense.js';
+import { createSense, recordSense, senseScore, huntFree } from '../../src/team_sense.js';
 import { supportOf, duelK, supportScore, supportFeet, laneFree, mateSepK, supportOpp, shoveToMate, supportChain } from '../../src/team_support.js';
 
 const TS = CONFIG.TEAM_SENSE;
@@ -78,7 +78,7 @@ test('③ 독일 · 동방 돌기: 동료에게서 먼 쪽으로 · 각이 넉�
   // 나(0) (0, 0) → +x 를 봄 · 상대(1) (1.5, 0) · 동료(2) (−0.3, 1.2) 가 같은 상대를 겨눔 (상대 자리에서 본 각 ≈ 34° · 내가 동료 칼길 밖) — 동료는 숙련 4 (6 이면 내게 묶기 역할을 줌 → 앞을 지킴)
   for (const school of ['german', 'chinese']) {
     const F = [fake(0, 0, 0, 0, 0, { school }), fake(1, 1, 1.5, 0, Math.PI), fake(2, 0, -0.3, 1.2, 0, { prof: 4 })];
-    board(F, [1, 0, 1]);
+    board(F, [1, 2, 1]); // 상대(1)는 동료(2)와 붙음 (동료가 앞을 잡음)
     const [fwd, side] = noRandom(() => supportFeet(F[0].aiCtl, 0, 0));
     assert.equal(fwd, 0);
     assert.ok(side < -0.3, `${school}: 동료(+z)에게서 먼 쪽(−z = 왼쪽)으로 돎 — ${side}`);
@@ -89,18 +89,22 @@ test('③ 독일 · 동방 돌기: 동료에게서 먼 쪽으로 · 각이 넉�
   assert.deepEqual(supportFeet(F[0].aiCtl, 0.2, 0.1), [0.2, 0.1]);
   for (const o of [{ school: 'japanese' }, { school: 'german', prof: 2 }, { school: 'italian' }]) {
     const G = [fake(0, 0, 0, 0, 0, o), fake(1, 1, 1.5, 0, Math.PI), fake(2, 0, -0.3, 1.2, 0, { prof: 4 })];
-    board(G, [1, 0, 1]);
+    board(G, [1, 2, 1]);
     assert.deepEqual(supportFeet(G[0].aiCtl, 0.2, 0.1), [0.2, 0.1], JSON.stringify(o));
   }
   // 동방은 공격 다가감에서는 돌지 않음 · 독일은 돎
   const C = [fake(0, 0, 0, 0, 0, { school: 'chinese', mode: 'attack' }), fake(1, 1, 1.5, 0, Math.PI), fake(2, 0, -0.3, 1.2, 0, { prof: 4 })];
   C[0].aiCtl.phase = 'approach';
-  board(C, [1, 0, 1]);
+  board(C, [1, 2, 1]);
   assert.deepEqual(supportFeet(C[0].aiCtl, 0.3, 0), [0.3, 0]);
   const D = [fake(0, 0, 0, 0, 0, { school: 'german', mode: 'attack' }), fake(1, 1, 1.5, 0, Math.PI), fake(2, 0, -0.3, 1.2, 0, { prof: 4 })];
   D[0].aiCtl.phase = 'approach';
-  board(D, [1, 0, 1]);
+  board(D, [1, 2, 1]);
   assert.ok(supportFeet(D[0].aiCtl, 0.3, 0)[1] < 0);
+  // 상대가 나를 겨눔 (동료와 붙지 않음) → 돌지 않음
+  const E = [fake(0, 0, 0, 0, 0, { school: 'chinese' }), fake(1, 1, 1.5, 0, Math.PI), fake(2, 0, -0.3, 1.2, 0, { prof: 4 })];
+  board(E, [1, 0, 1]);
+  assert.deepEqual(supportFeet(E[0].aiCtl, 0.2, 0.1), [0.2, 0.1]);
   // 동료 칼길 밖: 동료(2) (0, 0) → 그 상대(1) (3, 0) 줄 위 (1.5, 0.2) 에 선 나(0) 는 줄에서 먼 쪽(+z = 오른쪽)으로 비킴 · 일본은 그대로
   for (const school of ['german', 'chinese', 'japanese']) {
     const Q = [fake(0, 0, 1.5, 0.2, 0, { school }), fake(1, 1, 3, 0, Math.PI), fake(2, 0, 0, 0, 0, { prof: 4 })];
@@ -157,13 +161,13 @@ test('⑤ 독일: 동료와 붙은 적 겨눔 · 동료 칼끝 쪽 밀치기 · 
   // 밀치기: 나(0) → 상대(1) 0.6 m · 동료(2) 가 상대 맞은편 (1.6, 0.2) → 밀면 동료 칼끝 쪽
   const S = [fake(0, 0, 0, 0, 0, { school: 'german' }), fake(1, 1, 0.6, 0, Math.PI), fake(2, 0, 1.6, 0.2, Math.PI)];
   board(S, [1, 0, 1]);
-  assert.equal(noRandom(() => shoveToMate(S[0].aiCtl)), 1);
+  assert.equal(noRandom(() => shoveToMate(S[0].aiCtl)), true);
   const T = [fake(0, 0, 0, 0, 0, { school: 'german' }), fake(1, 1, 0.6, 0, Math.PI), fake(2, 0, -0.2, 0.8, 0)];
   board(T, [1, 0, 1]);
-  assert.equal(shoveToMate(T[0].aiCtl), -1, '동료가 내 곁 · 뒤면 밀지 않음 (밀면 상대가 동료 칼에서 멀어짐)');
+  assert.equal(shoveToMate(T[0].aiCtl), false, '동료가 내 곁이면 밀기로 정하지 않음 (굴림대로)');
   const U = [fake(0, 0, 0, 0, 0, { school: 'chinese' }), fake(1, 1, 0.6, 0, Math.PI), fake(2, 0, 1.6, 0.2, Math.PI)];
   board(U, [1, 0, 1]);
-  assert.equal(shoveToMate(U[0].aiCtl), 0, '독일만');
+  assert.equal(shoveToMate(U[0].aiCtl), false, '독일만');
   // 박자: 동료(2) 가 내 상대(1)를 치는 중 (공격 꼴 · 붙음)
   const A = [fake(0, 0, 0, 0, 0, { school: 'german' }), fake(1, 1, 1.5, 0, Math.PI), fake(2, 0, 1.5, 1.2, 0, { mode: 'attack' })];
   const MA = board(A, [1, 2, 1]);
@@ -190,7 +194,7 @@ test('⑥ 동방: 동료와 붙은 적의 앞 밖이면 기습 · 앞이면 없�
   assert.equal(supportOpp(H[0].aiCtl), null);
 });
 
-test('⑦ 이탈리아 결투 고집: 엄호 덧셈을 거둠 (독일은 그대로)', () => {
+test('⑦ 이탈리아 결투 고집: 엄호 덧셈을 거둠 · 사냥할 때로 보지 않음 (독일은 그대로)', () => {
   // team_sense.test ④ 엄호와 같은 판: 2 가 무릎 · 3 이 2 를 겨눔 · 0 은 1 을 겨눔
   const mk = (school, prof) => [fake(0, 0, 0, 0, 0, { school, prof }), fake(1, 1, 2, 0, Math.PI), fake(2, 0, 1.5, 2.5, 0, { state: 'kneel' }), fake(3, 1, 2.5, 2.5, Math.PI)];
   const D = mk('german', 2);
@@ -202,4 +206,13 @@ test('⑦ 이탈리아 결투 고집: 엄호 덧셈을 거둠 (독일은 그대�
   const I6 = mk('italian', 6);
   const MI6 = board(I6, [1, 0, 3, 2]);
   assert.equal(senseScore(MI6, I6[0], I6[3]) + 0, 0, '숙련 6: 엄호 덧셈 없음');
+  // 사냥할 때(겨눈 상대가 동료와 붙음): 독일은 참 · 이탈리아 숙련 6 은 거짓 (제 간격에서 기다리는 꼴 그대로) · 숙련 2 는 참
+  const hunt = (school, prof) => {
+    const H = [fake(0, 0, 0, 0, 0, { school, prof }), fake(1, 1, 2.5, 0, Math.PI / 2), fake(2, 0, 2.5, 1.5, -Math.PI / 2)];
+    board(H, [1, 2, 1]);
+    return huntFree(H[0].aiCtl);
+  };
+  assert.equal(hunt('german', 6), true);
+  assert.equal(hunt('italian', 6), false);
+  assert.equal(hunt('italian', 2), true);
 });

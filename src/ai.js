@@ -2630,7 +2630,7 @@ export class AI {
       this.closeWant = true;
       this.closeEv.won++;
     }
-    if (!me.barge && me.foes && me.teamSense) { const sv = shoveToMate(this); if (sv) this.closeWant = sv > 0; } // 서포트 (11/19 — team_support.js): 독일 — 내 → 상대가 동료 칼끝 쪽이면 밂 · 동료에게서 멀어지게 밀면 안 밂 (몸은 같은 밀치기)
+    if (!this.closeWant && !me.barge && me.foes && me.teamSense && shoveToMate(this)) this.closeWant = true; // 서포트 (11/19 — team_support.js): 독일 — 내 → 상대가 동료 칼끝 쪽이면 밀기로 정함 (몸은 같은 밀치기)
     let bind = false;
     if (me.armed && foe.armed && me.tipPrev && foe.tipPrev) {
       me.bladePoint(0.1, _a0);

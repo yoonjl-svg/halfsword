@@ -9,13 +9,14 @@
 //  이 파일은 team_sense.js · targeting.js · ai.js 를 읽지 않는다 (셋이 이 파일을 읽음 — 돌림 import 없게) — 판 사본 읽기(층 눈의 늦은 장)는 team_sense.js 와 같은 작은 셈을 여기 둔다.
 //
 //  독일 (묶어 주는 동료 — 선공 · 붙어 싸움):
-//   ① 칼길 옆 (발): 내 상대 X 에 동료 B 가 붙어(겨눠) 있으면 X 자리에서 본 B · 나 사이 각 θ 를 de.goal° 까지 X 를 축으로 B 에게서 먼 쪽으로 돎 —
-//      간 보기 · 물러남 · 공격 준비 · 다가감 동안 (B 의 칼길을 막지 않고 · X 를 B 칼끝 쪽으로 밀 자리) [사장님 11/19 답 '동료 칼길 옆에서 묶기']
+//   ① 칼길 옆 (발): 동료 칼길(동료 → 그 상대 선분 laneW m 안)에 서면 줄에서 먼 쪽으로 비킴 (간 보기 · 물러남 · 막기 · 공격 준비 · 다가감) ·
+//      내 상대 X 가 동료 B 와 붙어 있으면 X 자리에서 본 B · 나 사이 각 θ 를 de.goal° 까지 X 를 축으로 B 에게서 먼 쪽으로 돎 (내 칼끝 + near 안 · 간 보기 · 물러남 · 공격 준비 · 다가감)
+//      — B 의 칼길을 막지 않고 옆에서 묶음 [사장님 11/19 답 '동료 칼길 옆에서 묶기']
 //   ② 동료 칼끝 쪽으로 밀치기 (ai.js closeQuarters): X 에게 붙은 거리 안 · θ ≥ de.shove° (내 → X 가 B 쪽) · X 가 B 칼끝 + de.reach 안이면 밀기로 정함 — 몸은 사람과 같은 밀치기(fighter.closeStep)
 //   ③ 박자 (ai.js opportunity): B 가 X 를 치는 중(그 칼끝 + engage 안)이면 빈틈 점수 + de.follow ('ambush' — 동료와 같은 박자에 침)
 //   ④ 동료와 붙은 적 (targeting.js): 내 동료와 붙은 적 − de.focus (지금 상대에게 붙잡혀 있으면 없음)
 //  동방 (돌아 치는 동료 — 집요함 · 횡보):
-//   ① 옆 · 등 (발): 동료와 붙은 내 상대 X 를 cn.goal° 까지 돎 (간 보기 · 물러남)
+//   ① 옆 · 등 (발): 동료 칼길 밖(독일 ① 과 같음) · 동료와 붙은 내 상대 X 를 cn.goal° 까지 돎 (내 칼끝 + near 안 · 간 보기 · 물러남)
 //   ② 기습 (opportunity): 그 X 가 동료와 붙었고 내가 그 앞(± TEAM_SENSE.ambush.front°) 밖이면 빈틈 점수 + cn.ambush
 //   ③ 치고 빠짐 (ai.js afterStrike): X 가 동료와 붙어 있으면 내 칼 뒤 이어 치기 마음 × (1 − cn.run) — 빠져 다시 돎 (동방 몸의 사냥 겹 · 칼 떨굼은 그대로 — 새 수 없음)
 //   ④ 동료와 붙은 적 (targeting.js) − cn.focus
@@ -46,7 +47,7 @@ const wOf = (ai, key) => { const S = supportOf(ai); return S.key === key ? S.w :
 
 /** 재기 칸 (ai.stats.support) */
 export function supportStats() {
-  return { deLane: 0, deOrbit: 0, deShove: 0, deHold: 0, deFollow: 0, cnLane: 0, cnOrbit: 0, cnAmbush: 0, cnRun: 0, ibLaneFree: 0, ibLaneStep: 0 };
+  return { deLane: 0, deOrbit: 0, deShove: 0, deFollow: 0, cnLane: 0, cnOrbit: 0, cnAmbush: 0, cnRun: 0, ibLaneFree: 0, ibLaneStep: 0 };
 }
 const stats = (ai) => (ai.stats.support ??= supportStats());
 
@@ -249,7 +250,7 @@ export function supportFeet(ai, fwd, side) {
   const R = v.S.roles?.get(ai.me);
   if (R && R.role === 'pin' && R.x === x && R.until >= v.fr.t) return [fwd, side]; // 6 이 준 묶기 역할: 앞을 지킴 (team_sense.js 와 같음)
   const b = mateOn(v, x);
-  if (b < 0) return [fwd, side];
+  if (b < 0 || X.foe !== b || !X.busy) return [fwd, side]; // 그 적이 그 동료와 붙어 있을 때만 (동료가 앞을 잡음 — 나를 겨눈 적 둘레를 돌지 않음)
   const B = v.fr.b[b];
   const th = angAt(X, v.me, B);
   const goal = C.goal * DEG;
@@ -307,31 +308,27 @@ export function supportOpp(ai) {
 }
 
 /**
- * 독일 밀치기 판단 (ai.js closeQuarters — 붙은 거리 안): +1 = 밀기로 정함 · −1 = 밀지 않음 · 0 = 그대로(굴림대로).
- *  +1: 내 → X 가 동료 쪽(X 자리에서 본 나 · 동료 사이 각 ≥ de.shove°)이고 X 가 그 동료 칼끝 + de.reach 안 — 동료 칼끝 쪽으로 밂
- *  −1: 그 각이 de.away° 밑(동료가 내 뒤 · 곁)이고 X 가 그 동료 칼끝 + de.far 안 — 밀면 X 가 동료 칼에서 멀어짐
+ * 독일 밀치기 (ai.js closeQuarters — 붙은 거리 안 · 아직 밀기로 안 정함): 내 → X 가 동료 쪽(X 자리에서 본 나 · 동료 사이 각 ≥ de.shove°)이고
+ *  X 가 그 동료 칼끝 + de.reach 안이면 true — 동료 칼끝 쪽으로 밂 (몸은 사람과 같은 밀치기 · 그 밖의 밀치기는 굴림대로)
  */
 export function shoveToMate(ai) {
   const w = wOf(ai, 'de');
-  if (!(w > 0) || !ai.foe || !ai.me.teamSense) return 0;
+  if (!(w > 0) || !ai.foe || !ai.me.teamSense) return false;
   const v = viewOf(ai);
-  if (!v) return 0;
+  if (!v) return false;
   const x = ai.foe.index;
   const X = v.fr.b[x];
-  if (!X.stand) return 0;
+  if (!X.stand) return false;
   const D = TEAM_SUPPORT.de;
-  let out = 0;
   for (let j = 0; j < v.fr.b.length; j++) {
     if (j === v.i || !sameSide(v.S.fighters[j], v.S.fighters[v.i])) continue;
     const m = v.fr.b[j];
     if (!m.stand || !(m.foe === x || !m.busy)) continue; // 그 적을 겨눈 동료 · 비어 있는 동료
-    const dm = Math.hypot(X.x - m.x, X.z - m.z);
-    const th = angAt(X, v.me, m);
-    if (th >= D.shove * DEG && dm <= m.reach + D.reach) return stats(ai).deShove++, 1;
-    if (th < D.away * DEG && dm <= m.reach + D.far) out = -1;
+    if (Math.hypot(X.x - m.x, X.z - m.z) > m.reach + D.reach || angAt(X, v.me, m) < D.shove * DEG) continue;
+    stats(ai).deShove++;
+    return true;
   }
-  if (out < 0) stats(ai).deHold++;
-  return out;
+  return false;
 }
 
 /** 동방 치고 빠짐 (ai.js afterStrike — 이어 치기 마음): 내 상대가 동료와 붙어 있으면 × (1 − cn.run × w) */
