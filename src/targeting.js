@@ -13,10 +13,10 @@
 //  값: config.js TEAM_FIGHT.target (모두 사장님 확인 전 — 확인표 2864 ~ 2869 · 2877)
 // ─────────────────────────────────────────────────────────────
 import { TEAM_FIGHT } from './config.js';
+import { supportScore } from './team_support.js'; // 서포트 (11/19): 유파마다 동료로서의 겨눔 덧셈 — 판 사본이 있는 판의 AI 만
 import { sameSide } from './team.js';
 import { woundDegree } from './combat.js';
 import { senseScore, senseHold } from './team_sense.js'; // 무리 싸움 판단 (11/18): 판 사본(M.sense)이 있는 판의 AI 만 — 덧셈 · 바꿈 기다림
-import { supportScore } from './team_support.js'; // 서포트 (11/19): 유파마다 동료로서의 겨눔 덧셈 — 판 사본이 있는 판의 AI 만
 
 const hdist = (a, b) => {
   const p = a.bodies.chest.translation();
