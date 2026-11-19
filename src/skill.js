@@ -618,7 +618,7 @@ export class Skill {
   // ───────────────────────── 플레이어 비기 (10/9 23:5x — docs/strike/player_secret_2026-10-09.md) ─────────────────────────
   //  사장님 '인간 플레이어로서는 비기를 아예 못 쓰겠어' → 창(secret.js PlayerSecretWatch, main.js)이 열린 동안 공격 입력이 오면 secret() 로 완벽 실행.
   //  pommel() 시제품과 같은 꼴(칼을 잠깐 대본대로 움직이고 끝나면 조작으로) — 다만 덧씌우기 칸 대신 손 목표(handOffset)를 AI 와 같은 패드 길로 옮긴다
-  //  (ai.js moveHand 와 같은 '제한 속도로 목표점 쫓기'). 길·걸음·터뜨림 창·경직은 AI 비기(ai.js secretGo·secretRelease·secretStiffen)와 같은 칸을 읽는다.
+  //  (ai.js moveHand 와 같은 '제한 속도로 목표점 쫓기'). 길·걸음·경직은 AI 비기(ai.js secretGo·secretStiffen)와 같은 칸을 읽는다.
   //  반응 지연 0(창이 이미 지금 모습으로 봤다) · 정확도 1(길 그대로) · 손 속도 배율(do.hand·loopHand 또는 SECRET.handSpeed) · 서보 힘 창(powerMul) · 몸의 힘(do.strength) ·
   //  결정타 판정 배율(secretHit = SECRET.hitMul, 베기 길·따라 지나감 동안) · 경직(SECRET.stiff — 그동안 칼·발 조작이 안 듣고 칼은 그 자리에 멈춤: holdStiff, 10/10 20:5x). 손 빠르기 바탕은 AI 보통 난이도(AI_LEVELS.normal)
 
@@ -705,14 +705,6 @@ export class Skill {
       run.instant = true;
       requestSweep(f, { side: Math.abs(f.stickX ?? 0) > 0.3 ? Math.sign(f.stickX) : 1 });
       this.secretBursts++;
-    } else if (D.path) {
-      // 이베리아: 몸 뒤 고리를 돌다(준비) 터뜨림 창에 들면 고리 꼭대기에서 사선으로
-      run.loop = (D.loop ?? []).map((p) => p.slice());
-      run.tech = { name: S.name, from: D.loop ? D.loop[D.loop.length - 1] : hand, path: D.path, kind: 'cut', reach: D.reach ?? 0 };
-      const lat = secVal(D.side ?? 0) * (Math.abs(f.stickX ?? 0) > 0.3 ? Math.sign(f.stickX) : 1); // 옆걸음 쪽: 스틱이 옆을 누르고 있으면 그쪽, 아니면 오른쪽 [해석]
-      const back = secVal(D.sideBack ?? 0);
-      if (lat) run.loopStep = { kind: back < 0 ? 'retreat' : 'pass', fwd: back, side: lat };
-      run.stage = 'loop';
     } else if (D.combo) {
       // 막기 연환 (10/11): 창을 연 막기의 자리(ctx.slot)의 두 수 — 이음새 고리 없이 앞 수 끝에서 곧장 (AI ai.js secretGo 와 같은 칸)
       const C = D.combo[run.ctx?.slot];
@@ -826,35 +818,6 @@ export class Skill {
     return true;
   }
 
-  /** 지금 터뜨리면 닿을 때 거리 (ai.js secretDistAtHit 와 같은 식 — 지금 모습) */
-  secretDistAtHit() {
-    const f = this.f;
-    const c = f.bodies.chest.translation();
-    const fc = f.foe.bodies.chest.translation();
-    const dx = fc.x - c.x;
-    const dz = fc.z - c.z;
-    const d0 = Math.max(0.01, Math.hypot(dx, dz));
-    const fv = f.foe.bodies.pelvis.linvel();
-    const mv = f.bodies.pelvis.linvel();
-    const foeIn = -(fv.x * dx + fv.z * dz) / d0;
-    const myIn = (mv.x * dx + mv.z * dz) / d0;
-    return d0 - (Math.max(0, foeIn) + Math.max(0, myIn) * 0.7) * SECRET.releaseT;
-  }
-
-  /** 터뜨림 창 (do.release): 창에 들거나 이미 창보다 가까우면 true(터뜨림), maxHold 가 지나면 가까우면 치고 멀면 거둠('drop') */
-  secretRelease(dt) {
-    const run = this.sec;
-    const R = run.S.do.release;
-    const [lo, hi] = secVal(R.dist);
-    const reach = this.f.swordArt.measure.reach;
-    run.holdT = (run.holdT ?? 0) + dt;
-    const dc = this.secretDistAtHit();
-    // 창 안이면 터뜨린다. 창보다 이미 가까우면(상대가 달려듦) 기다리지 않고 곧장 — AI 는 maxHold 까지 기다리지만, 플레이어는 그 사이 맞아 끊기는 일이 잦았다(브라우저 시험) [해석]
-    if (dc <= reach + hi && (dc >= reach + lo || this.f.foeDistance() < reach + lo)) return true;
-    if (run.holdT > secVal(R.maxHold)) return dc > reach + hi ? 'drop' : true;
-    return false;
-  }
-
   /** 매 스텝 (skill.update 머리): 비기 단계 */
   updateSecret(dt) {
     const f = this.f;
@@ -869,8 +832,8 @@ export class Skill {
     run.painFoe = foe.pain;
     const hurt = f.pain > run.painMe + 0.05;
     run.painMe = f.pain;
-    // 준비·붙잡는 동안 맞으면 비기는 끊긴다 (AI 는 물러남) — 베기 길·경직 동안은 그대로
-    if (hurt && (run.stage === 'chamber' || run.stage === 'back' || run.stage === 'hold' || run.stage === 'loop')) return this.secretEnd();
+    // 준비 · 담는 동안 맞으면 비기는 끊긴다 (AI 는 물러남) — 베기 길·경직 동안은 그대로
+    if (hurt && (run.stage === 'chamber' || run.stage === 'back')) return this.secretEnd();
     const handMul = secVal(D.hand ?? 'handSpeed');
     const g = f.gait;
     const ask = (o) => !!(g?.requestStep && g.active && g.requestStep(o));
@@ -915,40 +878,11 @@ export class Skill {
       if (!run.stepAsked && run.t < 0.25) run.stepAsked = ask({ kind: 'retreat', fwd: secVal(B.fwd), side: 0, duration: 0.3 });
       const handIn = padD([f.handOffset.x, f.handOffset.y], B.guard) < 0.06;
       if ((handIn && (!g?.req || run.t > 0.6) && run.t > 0.15) || run.t > 0.8) {
-        run.stage = 'hold';
-        run.t = 0;
-        run.holdT = 0;
-      }
-      return;
-    }
-    if (run.stage === 'hold') {
-      const B = D.back;
-      this.secretMove(B.guard[0], B.guard[1], L.parrySpeed, dt);
-      const r = this.secretRelease(dt);
-      if (r === 'drop') return this.secretEnd(true);
-      if (r) {
+        // 담았으면 곧장 친다 (11/19 — 10/9 터뜨림 창 do.release 를 지움: 그 창을 쓰던 일본 비기는 10/10 부터 순간 베기 do.instant 라 사람 · AI 모두 이 길을 안 탐 — AI secretMen 과 같은 규칙)
         const T = D.tech;
         run.cur = { ...T, reach: secVal(T.reach), step: { ...D.step, fwd: secVal(D.step.fwd), push: secVal(D.step.push) } };
         this.secretStrikeStart();
       }
-      return;
-    }
-    if (run.stage === 'loop') {
-      // 이베리아 고리: 점을 차례로 (베기 빠르기 × loopHand), 처음 0.3 s 안에 옆(뒤)으로 비껴 딛기
-      if (run.loopStep && run.t < 0.3 && ask({ ...run.loopStep, duration: 0.35 })) run.loopStep = null;
-      const LP = run.loop;
-      if (LP.length) {
-        if (this.secretMove(LP[0][0], LP[0][1], L.strikeSpeed * secVal(D.loopHand ?? 'handSpeed'), dt)) LP.shift();
-        return;
-      }
-      const r = this.secretRelease(dt);
-      if (r === 'drop') return this.secretEnd(true);
-      if (r) {
-        run.cur = run.tech;
-        this.secretStrikeStart();
-        return;
-      }
-      run.loop = D.loop.map((p) => p.slice()); // 몬탄테는 멈추지 않고 돈다 — 고리 되풀이
       return;
     }
     if (run.stage === 'chamber') {

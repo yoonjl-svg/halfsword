@@ -153,7 +153,7 @@ export function gaitParams(f, isPlayer = false) {
     P.cadence0 = GAIT.cadence0 / g.strideK;
   }
   // 스킬트리 (10/21 — 사람만 · skill_kit.js): 보법 I 은 유파 걸음 칸 전부, 보법 II 칸 몫만 따로 — 이탈리아 I3 물러서기 = 뒤 느려짐 없앰(backMul — 10/31 부터 이어 물러선 네 디딤까지 · backCap) ·
-  //  이베리아 B2 옆 박차기 = burstSide(첫 걸음 옆 박차기 · 옆 누르면 늘 박차기 · 비스듬히 앞으로). 그 칸을 안 익혔으면 그 몫만 걸음 칸에서 뺀다. AI 는 skillKit 이 없어 그대로
+  //  이베리아 B2 옆 박차기 = burstSide(첫 걸음 옆 박차기 · 옆 누르면 늘 박차기 · 비스듬히 앞으로). 그 칸을 안 익혔으면 그 몫만 걸음 칸에서 뺀다. AI 도 같은 칸 몫(11/16 config AI_KIT — ai.js applyKit)
   if (kitOff(f, 'backFlat')) P.backMul = undefined;
   if (kitOff(f, 'burstSide')) P.burstSide = false;
   P.tradition = art.tradition;
@@ -736,7 +736,7 @@ export class Gait {
       this._art = f.swordArt;
       this._pl = pl;
       this._kit = f.skillKit; // 스킬트리 칸 몫 (10/21 — 사람만 · AI 는 늘 없음)
-      this._fw = f.schoolFootwork; // 대기실 스킬트리 보법 I (플레이어만 — 판을 세울 때 정한다 · 칸 몫 skillKit 도 그때)
+      this._fw = f.schoolFootwork; // 스킬트리 보법 I (사람 = 대기실 칸 · AI = 칸 몫 AI_KIT — 11/16 ai.js applyKit · 판을 세울 때 정한다 · 칸 몫 skillKit 도 그때)
       this.P = gaitParams(f, pl);
     }
     // 뛰는 걸음 꼴 (11/18 뛰기 — src/run.js 가 사람 몸에만 f.run 을 둠): 0 이면 아래 섞기는 모두 걷는 값 그대로

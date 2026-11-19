@@ -479,7 +479,7 @@ export class Combat {
     //  칼날 상처 심각도 · 둔타 에너지 × k. 물리(빠르기 · 가르나 튕기나) · 길 · 손목은 그대로 · AI 곁눈 베기 · 다른 기술은 그대로
     // 이베리아 흐르는 긋기 위력 (10/28 22:0x 사장님 '위력도 그만큼 올려' — config IB_FLOW.power · 확인표 2724): 흐름이 켜진 채(fighter.js updateIbFlow — 사람은 B5 · AI 이베리아는 늘)
     //  맞힌 긋기의 칼날 상처 심각도 · 둔타 에너지 × power. 찌르기 · 비기 칼(secretHit ≠ 1)은 그대로 · 물리(빠르기 · 가르나 튕기나)는 그대로
-    //  10/29 01:5x 이어지는 흐름(B6 — 사람만 · fighter.js ibFlowK): 이어 그은 수 n 만큼 더하기 1 + (power − 1) × n · AI 는 그대로 power
+    //  10/29 01:5x 이어지는 흐름(B6 — fighter.js ibFlowK · ibChainOn): 이어 그은 수 n 만큼 더하기 1 + (power − 1) × n — 사람 B6 칸 · 이베리아 플랜 AI 도 같은 규칙(ai_plan_ib.js ibChainAi) · 그 밖 몸은 power
     const ibK = att.ibFlowOn && type !== 'stab' && (att.secretHit ?? 1) === 1 ? (att.ibFlowK ? att.ibFlowK() : IB_FLOW.power) : 1;
     if (ibK !== 1) { if (type === 'blunt') energy *= ibK; else severity *= ibK; }
     return {
@@ -1066,7 +1066,7 @@ export class Combat {
   /**
    * 손목 치기 칼 떨구기 (일본 강화동작 이점 · 심화 칸 J8 — 사장님 10/24 11:5x · 12:0x · 12:3x, config UNIQUE_ASSIST.koteDrop) — 손목 치기가 칼을 쥔 손의 손목 · 아래팔 · 손(parts — 빈손 쪽은 두 손으로 쥔 동안만)에
    *  판정이 난 맞음(strike 가 돌려준 맞음 r — STRIKE.minEnergy 를 넘음)이면 koteRoll. judge 'cut'(11:5x 판)은 칼날이 들어간 베기(심각도 > 0)만 · 'arm' · 'all' 은 칼면 · 심각도 0 도.
-   *  사람만(ai 0 — AI 가 모는 몸은 굴리지 않는다 · AI 끼리 판 그대로) · 사람은 J8 을 익혀야(perkOff). 맞은 쪽이 살아 칼을 쥐고 부활 중이 아닐 때만.
+   *  사람 · AI 같음(AI 는 손목 치기 기술 칼 — strokeTechOf 가 ai.tech 를 읽음) · 둘 다 J8 칸을 익혀야(perkOff — AI 는 11/16 칸 몫 AI_KIT). 맞은 쪽이 살아 칼을 쥐고 부활 중이 아닐 때만.
    */
   koteCheck(att, vic, part, r) {
     const K = UA.koteDrop;
@@ -1189,9 +1189,8 @@ function gripTwist(f) {
   const ax = _gt.set(0, 1, 0).applyQuaternion(rotQ(sw)); // 칼 길이 축 (월드)
   const w = sw.angvel();
   const wAx = w.x * ax.x + w.y * ax.y + w.z * ax.z;
-  // 플레이어 칼만 다른 손아귀 한도 (STEEL.gripTwistMaxPlayer, 기본 null = 같음 — docs/motion/player_edge_2026-10-10.md, 사장님 확인 전 실험 스위치)
-  const gmax = STEEL.gripTwistMaxPlayer != null && f.skill?.autoGuard === true ? STEEL.gripTwistMaxPlayer : STEEL.gripTwistMax;
-  const lim = Math.max(Math.abs(f.cache.sword.w.dot(ax)), gmax);
+  // 사람 · AI 같은 손아귀 한도 (11/19 — 플레이어 칼만 다른 한도 실험 스위치 STEEL.gripTwistMaxPlayer 를 지움: 10/10 부터 기본 null = 같음 · 켠 적 없음 — docs/strike/human_ai_parity_2026-11-19.md)
+  const lim = Math.max(Math.abs(f.cache.sword.w.dot(ax)), STEEL.gripTwistMax);
   if (Math.abs(wAx) <= lim) return;
   const dw = wAx - Math.sign(wAx) * lim; // 손아귀가 받아 없애는 축 각속도
   sw.setAngvel({ x: w.x - ax.x * dw, y: w.y - ax.y * dw, z: w.z - ax.z * dw }, true);

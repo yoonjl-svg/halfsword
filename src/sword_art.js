@@ -126,7 +126,7 @@ function applySchoolArt(school, tradition, frame, style, prof = null, openTech =
   // 숙련도가 높을수록 고유 동작(길)을 더 자주 고른다 (사장님 10/18 23:4x — config AI_PROFICIENCY.schoolK: 가중치 base × k · 숙련도 2 · 플레이어 · 도구(prof null) = 그대로)
   const kq = prof == null ? 1 : AI_PROFICIENCY.schoolK?.[prof] ?? 1;
   // 길 다시 그림 (사장님 10/25 08:0x '셸하우 3번' — config UNIQUE_ASSIST.schielPath · 곁눈 베기): redraw 칸이 있는 고유 동작은 AI 꾸러미에서 그 길 점 · 길 덧칸(plan — ai.js techPlanStep)으로.
-  //  사람 쪽(unique_assist.js uniqueDef — 강화 끝 힘 잣대 길)은 원래 from · path 그대로. 끄면 지나치기만 한다(바이트 같음)
+  //  사람 쪽(unique_assist.js uniqueDef — 강화 끝 힘 잣대 길 · planStep 덧칸)도 같은 다시 그린 길(10/25 18:0x 사장님 '같은 길 입혀') — 사람은 손 길만 손가락
   const uqR = uqOpen.map((u) => (u.redraw ? { ...u, ...u.redraw } : u));
   const uq = kq === 1 ? uqR : uqR.map((u) => (!u.feint && !u.counter && u.base != null ? { ...u, base: u.base * kq } : u));
   if (uq.length) out = mergeUnique(out, uq.filter((u) => !u.counter)); // 고유 동작(길·속임수) — 맞받아치기 꼴은 유파 counterArt 뒤에
