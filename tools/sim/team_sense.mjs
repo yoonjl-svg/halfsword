@@ -4,7 +4,7 @@
 //   겉모습 모두 같음(투구 없음) · 벽 있음 · 한 편 전멸(ffa3 = 하나 남음) 또는 maxSecs.
 //  ffa3 = 셋이 저마다 따로인 판 — 게임에는 없는 판이다(Fighter 편은 0 · 1 만 · 편 전멸도 두 편). 이 도구만 몸을 세운 뒤 f.team 을 자리 번호로 바꿔 흉내 낸다
 //   (셋 이상 판의 ffa 비트는 자리마다라 물리는 그대로 · sameSide 가 자기만 같은 편 → 상대 고르기 · 상대 목록이 셋 따로).
-//  쓰임: node tools/sim/team_sense.mjs [판 수/모드 48] [maxSecs 90] [--modes=2v2,2v1,ffa3] [--profs=2,4,6] [--sides=6:5] [--lever=none] [--seeding=old] [--ks=1,5] [--json] [--out=파일]
+//  쓰임: node tools/sim/team_sense.mjs [판 수/모드 48] [maxSecs 90] [--modes=2v2,2v1,ffa3] [--profs=2,4,6] [--sides=6:5] [--lone=german] [--lever=none] [--seeding=old] [--ks=1,5] [--json] [--out=파일]
 //   --sides=A:B  편마다 숙련도 (2:2 는 A 편을 판마다 0 편 · 1 편 번갈아 · 2:1 은 A = 혼자) — sideAWinPct (ffa3 는 쓰지 않음)
 //  판 짜기 (11/18 P1 — 무리 싸움 판단 작업에서 고침): 무기 배정(loadout)의 씨앗과 숙련 · 편을 서로 엇갈리게 —
 //   예전 짜기(--seeding=old)는 판 k 의 씨앗 k + 1 로 무기를 나눠 ① 2:2 --sides 에서 A 편이 늘 홀수 칸 무기(츠바이핸더 · 사브르 · 에스톡)를,
@@ -13,7 +13,9 @@
 //   숙련 돌림은 무기 씨앗 = ⌊k ÷ 숙련 수⌋ + 1 (숙련마다 같은 무기 배정 차례). 난수 씨앗은 판마다 k + 1 (거울 짝은 같은 씨앗)
 //  더한 잣대 (11/18 P1): hitBackPct 상처 가운데 등 뒤(맞은 서 있는 몸이 바라보는 쪽에서 120° 넘게)에서 · firstKillMedSec 첫 죽음 판 시간 가운데 · maxQuietMedSec 상처 없이 흐른
 //   가장 긴 시간 가운데(멈춘 판 잣대) · teamSense 무리 싸움 판단 재기 칸 합(ai.stats.team — 칼길 미룸 · 비킴 · 집게 돎 · 기습 … · 역할 수)
-//  편마다 재기 (--sides): sideStats — 편 A · B 의 공격 시작 / 산 분 · 상처 낸 수 / 산 분 · 받은 상처 가운데 겨누지 않은 몸에게(옆 · 뒤에서 온 칼) 몫 · 꼴 몫(간 보기 · 공격 · 막기 · 물러남)
+//  편마다 재기 (--sides): sideStats — 편 A · B 의 공격 시작 / 산 분 · 상처 낸 수 / 산 분 · 받은 상처 가운데 겨누지 않은 몸에게(옆 · 뒤에서 온 칼) 몫 · 꼴 몫(간 보기 · 공격 · 막기 · 물러남) ·
+//   (11/19 고수 혼자) outFrontPct 4 m 안 적 둘 표본에서 둘 다 앞(±60°) · outLinePct 그 둘 사이 각 45° 밑(한 줄) · in2Pct · in1Pct 서 있는 적 둘 이상인 표본에서 내게 닿는(그 적 칼끝 + 0.5 안) 적이 둘 · 하나 ·
+//   killMedSec · killN 그 편의 적이 처음 죽은 판 시간 가운데 · 판 수 · exhPct 탈진(제자리 숨 고르기) 표본 몫 · lowPct 기력 20 밑(탈진 아님) 몫
 //  재는 것 (뜻은 docs/design/team_sense_2026-11-18.md §2 표 — 아래 주석과 같음):
 //   표본(20 Hz — 6 스텝마다, 판이 살아 있는 동안):
 //    focus      같은 편 둘(서 있음)이 같은 상대를 겨눈 몫 (상대도 둘 이상 서 있을 때 — 2:2 만 뜻이 있음)
@@ -59,6 +61,10 @@ const LEVER_OFF = flag('lever', '') === 'none'; // --lever=none: 숙련도 레�
 if (LEVER_OFF) for (const v of Object.values(CONFIG.TEAM_FIGHT.lever)) if (v && typeof v === 'object' && 'on' in v) v.on = false;
 const KS = flag('ks', null) ? new Set(String(flag('ks')).split(',').map(Number)) : null; // --ks=3,7: 그 판 번호(1 부터)만 돌림 (까닭 가르기 — 판 짜기는 그대로)
 const SIDES = flag('sides', null) ? String(flag('sides')).split(':').map(Number) : null; // --sides=6:5 — 편마다 숙련도 (A:B · 판마다 A 편을 0 편 · 1 편으로 번갈아 — 자리 쏠림 없게). 2:1 은 A = 혼자(자리 1) 고정
+// --lone=german (11/19 고수 혼자 · 유파별): 2:1 --sides 판의 혼자(자리 1) 무기를 그 유파 대표 무기 둘(ai_ring_measure.mjs 와 같음)에서 씨앗 홀짝으로 · 둘 쪽은 그대로(loadout 섞인 무기)
+const LONE_W = { german: ['longsword', 'kriegsmesser'], italian: ['rapier', 'pappenheimer'], iberian: ['zweihander', 'flamberge'], japanese: ['uchigatana', 'monohoshizao'], chinese: ['hwando', 'qinggang'] };
+const LONE = flag('lone', null);
+if (LONE && !LONE_W[LONE]) throw new Error(`--lone=${LONE}`);
 const OLD_SEEDING = flag('seeding', '') === 'old'; // --seeding=old: 예전 판 짜기 (무기 씨앗 = 판 씨앗 = k + 1 — 위 '판 짜기' — 견줌 전용)
 const WEAPONS = ['longsword', 'zweihander', 'rapier', 'sabre', 'uchigatana', 'estoc'];
 const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 5) % WEAPONS.length]);
@@ -132,6 +138,7 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
   Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
   const count = mode === '2v1' || mode === 'ffa3' ? 3 : 4;
   const weapons = loadout(wseed, count);
+  if (LONE && mode === '2v1' && sideA === 1) weapons[1] = LONE_W[LONE][seed % 2]; // 혼자 유파 (--lone)
   const profOf = (i) => (sideA == null ? prof : (i % 2 === sideA ? SIDES[0] : SIDES[1])); // --sides: 자리 홀짝 = 편
   const aiOf = (i) => aiAtProficiency({ ai: { persona: {} }, weapon: weapons[i] }, profOf(i));
   const G = mode === 'ffa3' ? newFfa(count, { seed, weapons, aiOf }) : newMatch({ count, ai: 'all', seed, walls: true, weapons, looks: Array(count).fill(LOOKS.enemy), aiOf });
@@ -141,7 +148,7 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
   const C = { samples: 0, pairS: 0, focus: 0, coS: 0, co: 0, solo: 0, pincer: [], fS: 0, back: 0, outS: 0, outFront: 0, outSep: [], blockS: 0, blocked: 0, oppS: 0, oppUp: 0, oppClose: 0,
     hits: 0, unatt: 0, busy: 0, blind: 0, onDown: 0, atk: 0, coAtk: 0, intoBusy: 0, mate: 0, mateSevere: 0, mateKill: 0, helpEv: 0, helpSwitch: 0, helpClose: 0, helpHitAgain: 0, downEv: 0, aliveMin: 0,
     hitBack: 0, firstKill: null, lastHitT: 0, maxQuiet: 0, hitRun: 0, hitRunBack: 0, runEnd: [], far: [],
-    side: [0, 1].map(() => ({ aliveMin: 0, atk: 0, hits: 0, hitBusy: 0, hitBack: 0, got: 0, gotUnatt: 0, modeS: 0, watch: 0, attack: 0, defend: 0, withdraw: 0 })) }; // 편마다 (--sides: 0 = A 편 · 1 = B 편)
+    side: [0, 1].map(() => ({ aliveMin: 0, atk: 0, hits: 0, hitBusy: 0, hitBack: 0, got: 0, gotUnatt: 0, modeS: 0, watch: 0, attack: 0, defend: 0, withdraw: 0, outS: 0, outFront: 0, outLine: 0, inS: 0, in2: 0, in1: 0, killT: null, exh: 0, low: 0 })) }; // 편마다 (--sides: 0 = A 편 · 1 = B 편) · 열세 · 닿는 적 수 · 첫 적 죽인 때 (11/19 고수 혼자)
   const sideOf = (f) => (sideA == null ? (f.team === 0 ? 0 : 1) : f.team === sideA ? 0 : 1);
   const wasAlive = new Map();
   const lastAtk = new Map(); // 싸움꾼 → { t, foe } 마지막 공격 시작
@@ -174,6 +181,7 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
     G.step();
     for (const f of F) if (f.alive) (C.aliveMin += DT / 60), (C.side[sideOf(f)].aliveMin += DT / 60);
     if (C.firstKill == null && F.some((f) => !f.alive)) C.firstKill = G.t; // 첫 죽음 (판 시간)
+    for (const k of [0, 1]) if (C.side[k].killT == null && F.some((f) => !f.alive && sideOf(f) !== k)) C.side[k].killT = G.t; // 편 k 의 적이 처음 죽은 때
     // 뛰기 끝 · 먼 다가감
     for (const f of F) {
       const on = !!f.run?.on;
@@ -238,12 +246,22 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
       const sd = C.side[sideOf(a)], am = a.aiCtl?.mode;
       sd.modeS++;
       if (am === 'watch' || am === 'attack' || am === 'defend' || am === 'withdraw') sd[am]++;
+      if (a.stamina.exhausted) sd.exh++; // 탈진 (제자리 숨 고르기)
+      else if (a.stamina.value < 20) sd.low++; // 기력 20 밑
       if (fs.some((x) => hd(a, x) <= 2.5 && offFacing(a, x) > (2 * Math.PI) / 3)) C.back++;
       const near = fs.filter((x) => hd(a, x) <= 4).sort((p, q) => hd(a, p) - hd(a, q));
       if (near.length >= 2) {
         C.outS++;
-        if (offFacing(a, near[0]) <= Math.PI / 3 && offFacing(a, near[1]) <= Math.PI / 3) C.outFront++;
+        sd.outS++;
+        if (offFacing(a, near[0]) <= Math.PI / 3 && offFacing(a, near[1]) <= Math.PI / 3) C.outFront++, sd.outFront++;
         C.outSep.push(deg(angAt(a, near[0], near[1])));
+        if (angAt(a, near[0], near[1]) <= Math.PI / 4) sd.outLine++;
+      }
+      if (fs.length >= 2) { // 적 둘 이상 서 있음: 내게 닿는(그 적 칼끝 + 0.5 안) 적 수
+        sd.inS++;
+        const nIn = fs.filter((x) => hd(a, x) <= reachOf(x) + 0.5).length;
+        if (nIn >= 2) sd.in2++;
+        else if (nIn === 1) sd.in1++;
       }
       const x = a.foe;
       const ms = mates(a).filter(standing);
@@ -334,7 +352,10 @@ function summary(R, label) {
       const m = Sd('aliveMin');
       return { atkPerMin: +(Sd('atk') / Math.max(1e-9, m)).toFixed(2), hitsPerMin: +(Sd('hits') / Math.max(1e-9, m)).toFixed(2), gotPerMin: +(Sd('got') / Math.max(1e-9, m)).toFixed(2), gotUnattPct: pct(Sd('gotUnatt'), Sd('got')),
         hitBusyPct: pct(Sd('hitBusy'), Sd('hits')), hitBackPct: pct(Sd('hitBack'), Sd('hits')),
-        watchPct: pct(Sd('watch'), Sd('modeS')), attackPct: pct(Sd('attack'), Sd('modeS')), defendPct: pct(Sd('defend'), Sd('modeS')), withdrawPct: pct(Sd('withdraw'), Sd('modeS')) };
+        watchPct: pct(Sd('watch'), Sd('modeS')), attackPct: pct(Sd('attack'), Sd('modeS')), defendPct: pct(Sd('defend'), Sd('modeS')), withdrawPct: pct(Sd('withdraw'), Sd('modeS')),
+        outFrontPct: pct(Sd('outFront'), Sd('outS')), outLinePct: pct(Sd('outLine'), Sd('outS')), in2Pct: pct(Sd('in2'), Sd('inS')), in1Pct: pct(Sd('in1'), Sd('inS')),
+        killMedSec: med(R.filter((r) => r.side[k].killT != null).map((r) => r.side[k].killT)), killN: R.filter((r) => r.side[k].killT != null).length,
+        exhPct: pct(Sd('exh'), Sd('modeS')), lowPct: pct(Sd('low'), Sd('modeS')) };
     }),
     teamSense: (() => { const o = {}; for (const r of R) for (const [k, v] of Object.entries(r.team ?? {})) o[k] = (o[k] ?? 0) + v; return o; })(),
     ...runSummary(R),
@@ -364,7 +385,7 @@ function runSummary(R) {
 const out = [];
 for (const mode of MODES) {
   const R = rows.filter((r) => r.mode === mode);
-  out.push(summary(R, SIDES ? `${mode} ${SIDES.join(' vs ')}` : `${mode} all`));
+  out.push(summary(R, SIDES ? `${mode} ${SIDES.join(' vs ')}${LONE ? ` lone ${LONE}` : ''}` : `${mode} all`));
   if (!SIDES) for (const p of PROFS) out.push(summary(R.filter((r) => r.prof === p), `${mode} p${p}`));
 }
 console.log(`무리 싸움 판단 바탕 — 모드마다 ${N} 판 · 최대 ${MAX} s · ${SIDES ? `편 숙련 ${SIDES.join(' 대 ')}` : `숙련도 ${PROFS.join('/')} 돌아가며`}${LEVER_OFF ? ' · 숙련도 레버 끔' : ''}${OLD_SEEDING ? ' · 예전 판 짜기' : ''} · ${((Date.now() - t0) / 1000).toFixed(0)} s`);

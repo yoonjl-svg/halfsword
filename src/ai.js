@@ -71,6 +71,7 @@ import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, fre
 import { mindOf, mindInit, mindStay, mindTick, mindAggr, mindPatienceT, mindNeed, mindOppK, mindAnsK, mindMargin, mindGap, mindStakes, mindTechW, mindChain, mindCircle, mindCircleOut, mindSideK, mindSide, mindCreep, mindGive } from './ai_mindset.js'; // 유파 마음가짐 (11/18 — 다섯 항목 점수 → 손잡이 · 집요함 = 상대 상태에 따라 넷을 옮기는 폭 · 값 표 schools.js SCHOOL_MINDSET · 마음가짐이 없는 몸은 옛 셈)
 import { laneHold, senseFeet, outSkill, busyFoe, ambushOpp, shieldOpp, teamStats, huntFree, ambushHold } from './team_sense.js'; // 무리 싸움 판단 (11/18 — 셋 이상 판의 me.foes 갈래 안에서만 부름 · 1:1 은 안 탐)
 import { aiRunFeet } from './ai_run.js'; // AI 뛰기 (11/19 사장님 '뛰기 AI에도 넣고 무리 싸움에 먼저 넣어.' — 셋 이상 판만 · 뛰는 셈은 사람과 같은 src/run.js)
+import { loneFeet } from './ai_lone.js'; // 혼자 싸움 판단 (11/19 사장님 '고수 한 명이 하수 두 명을 이기는 방법은 존재해야' — 셋 이상 판만 · 판단만)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -770,6 +771,7 @@ export class AI {
       side -= k * ur;
     }
     if (TS && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') [fwd, side] = senseFeet(this, fwd, side); // 무리 싸움 판단 (11/18): 칼길 비우기 · 협공 자리 (src/team_sense.js)
+    if (TS && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') [fwd, side] = loneFeet(this, fwd, side); // ── 혼자 싸움 판단 (11/19 — src/ai_lone.js): 수가 밀리면 둘째 칼끝 밖으로
     if (!(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') {
       for (const m of me.mates) {
         if (!m.alive) continue;
