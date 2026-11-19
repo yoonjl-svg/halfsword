@@ -69,7 +69,7 @@ import { cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 �
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
 import { mindOf, mindInit, mindStay, mindTick, mindAggr, mindPatienceT, mindNeed, mindOppK, mindAnsK, mindMargin, mindGap, mindStakes, mindTechW, mindChain, mindCircle, mindCircleOut, mindSideK, mindSide, mindCreep, mindGive } from './ai_mindset.js'; // 유파 마음가짐 (11/18 — 다섯 항목 점수 → 손잡이 · 집요함 = 상대 상태에 따라 넷을 옮기는 폭 · 값 표 schools.js SCHOOL_MINDSET · 마음가짐이 없는 몸은 옛 셈)
-import { supportFeet, mateSepK, laneFree, supportOpp, shoveToMate, supportChain } from './team_support.js'; // 서포트 (11/19 사장님 '동방과 독일이 서포트에 강하고 이베리아가 서포트에 특별히 도움 안 되는 걸로 하자' — 셋 이상 판의 me.foes 갈래 안에서만 · 판단만)
+import { supportFeet, laneFree, supportOpp, shoveToMate, supportChain } from './team_support.js'; // 서포트 (11/19 사장님 '동방과 독일이 서포트에 강하고 이베리아가 서포트에 특별히 도움 안 되는 걸로 하자' — 셋 이상 판의 me.foes 갈래 안에서만 · 판단만)
 import { laneHold, senseFeet, outSkill, busyFoe, ambushOpp, shieldOpp, teamStats, huntFree, ambushHold } from './team_sense.js'; // 무리 싸움 판단 (11/18 — 셋 이상 판의 me.foes 갈래 안에서만 부름 · 1:1 은 안 탐)
 import { aiRunFeet } from './ai_run.js'; // AI 뛰기 (11/19 사장님 '뛰기 AI에도 넣고 무리 싸움에 먼저 넣어.' — 셋 이상 판만 · 뛰는 셈은 사람과 같은 src/run.js)
 
@@ -782,7 +782,7 @@ export class AI {
         const z = p.z - c.z;
         const dm = Math.hypot(x, z);
         if (dm >= TF.mateSep.dist || dm < 1e-6) continue;
-        const k = TF.mateSep.k * (1 - dm / TF.mateSep.dist) * (TS ? mateSepK(this) : 1); // 서포트 (11/19 — team_support.js): 이베리아는 같은 편 비킴을 덜 함
+        const k = TF.mateSep.k * (1 - dm / TF.mateSep.dist);
         fwd -= (k * (x * F.x + z * F.z)) / dm;
         side -= (k * (x * R.x + z * R.z)) / dm;
       }
