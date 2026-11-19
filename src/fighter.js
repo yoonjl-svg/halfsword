@@ -614,6 +614,7 @@ export class Fighter {
     if (o.schoolFootwork === false) this.schoolFootwork = false; // schools.js footworkTradition — gait.js · stamina.js
     if (o.schoolParry === false) this.schoolParry = false; // parry_button.js
     if (o.skillKit) this.skillKit = o.skillKit; // 스킬트리 칸마다의 몫 (10/21 — 걸음 · 막기 · 흘림 · 이어 긋기 흐름 · 강화동작 이점을 칸 하나씩 켬, 사람만)
+    if (Number.isFinite(o.bodyProficiency)) this.bodyProficiency = o.bodyProficiency; // 사람 몸의 숙련도 (11/19 — 몸 값과 같은 수 · main.js humanProficiency): 막기 단추 · 비기 대본 손 빠르기의 실력 이름 (prof_body.js scriptLevel) · 없으면 속성도 없다(AI · 시뮬 = 보통)
     if (o.human === true) this.humanInput = true; // 사람 입력이 모는 몸 (main.js — 기력 회복 사람 값 stamina.js recoverRate · 사장님 10/29 17:5x '인간 플레이어의 기력 회복 속도 25로') · 'index 0' 판정이 아님
     this.name = o.name;
     this.side = 1; // 오른손잡이

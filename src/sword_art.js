@@ -126,7 +126,7 @@ function applySchoolArt(school, tradition, frame, style, prof = null, openTech =
   // 숙련도가 높을수록 고유 동작(길)을 더 자주 고른다 (사장님 10/18 23:4x — config AI_PROFICIENCY.schoolK: 가중치 base × k · 숙련도 2 · 플레이어 · 도구(prof null) = 그대로)
   const kq = prof == null ? 1 : AI_PROFICIENCY.schoolK?.[prof] ?? 1;
   // 길 다시 그림 (사장님 10/25 08:0x '셸하우 3번' — config UNIQUE_ASSIST.schielPath · 곁눈 베기): redraw 칸이 있는 고유 동작은 AI 꾸러미에서 그 길 점 · 길 덧칸(plan — ai.js techPlanStep)으로.
-  //  사람 쪽(unique_assist.js uniqueDef — 강화 끝 힘 잣대 길)은 원래 from · path 그대로. 끄면 지나치기만 한다(바이트 같음)
+  //  사람 쪽(unique_assist.js uniqueDef — 강화 끝 힘 잣대 길 · planStep 덧칸)도 같은 다시 그린 길(10/25 18:0x 사장님 '같은 길 입혀') — 사람은 손 길만 손가락
   const uqR = uqOpen.map((u) => (u.redraw ? { ...u, ...u.redraw } : u));
   const uq = kq === 1 ? uqR : uqR.map((u) => (!u.feint && !u.counter && u.base != null ? { ...u, base: u.base * kq } : u));
   if (uq.length) out = mergeUnique(out, uq.filter((u) => !u.counter)); // 고유 동작(길·속임수) — 맞받아치기 꼴은 유파 counterArt 뒤에
@@ -134,12 +134,13 @@ function applySchoolArt(school, tradition, frame, style, prof = null, openTech =
   if (C && Object.values(C).every((names) => names.every((n) => out.techByName[n]))) out = { ...out, counter: C };
   if (uq.length) out = mergeUnique(out, uq.filter((u) => u.counter));
   // 강화동작 (10/21 사장님 '강화동작' — unique_assist.js enhancedMoves): 이 꾸러미에 강화동작이 열려 있으면(숙련도 거르기 뒤) 그 기본 동작을 고르는 목록에서 빼고
-  //  그 몫(가중치)을 강화동작에 더한다 — 기본 동작 이름으로 찾는 자리(맞받아치기 · 비기 · 패시브)는 강화동작을 받는다(이름 표에 그 이름으로 강화동작)
+  //  강화동작이 그 자리를 그 몫(가중치) 그대로 받는다 — 기본 동작 이름으로 찾는 자리(맞받아치기 · 비기 · 패시브)는 강화동작을 받는다(이름 표에 그 이름으로 강화동작)
+  //  11/19 사람 · AI 같게 E1 (사장님 11/19 · docs/strike/human_ai_parity_2026-11-19.md): 강화동작 무게 = 바탕 무게 — 사람은 바탕 긋기를 그으면 강화동작으로 나갈 뿐이라 더하지 않음 (전 강화동작 제 무게 + 바탕 무게 — 곁눈 베기 0.7 × schoolK + 1.4)
   for (const m of SCHOOL_ART.unique ? enhancedMoves(tradition) : []) {
     const E = out.techByName[m.name];
     const B0 = out.techByName[m.base];
     if (!E || !B0 || E === B0 || !out.tech.includes(B0)) continue;
-    const E2 = { ...E, base: (E.base ?? 1) + (B0.base ?? 1), plain: B0 }; // plain = 바탕 동작 (특수 공격 AI 몫 식힘 동안 그 자리를 바탕으로 — ai.js techNow · 10/29 19:4x)
+    const E2 = { ...E, base: B0.base ?? 1, plain: B0 }; // base = 바탕 무게 (11/19 E1) · plain = 바탕 동작 (특수 공격 AI 몫 식힘 동안 그 자리를 바탕으로 — ai.js techNow · 10/29 19:4x)
     const tech = out.tech.filter((t) => t !== B0).map((t) => (t === E ? E2 : t));
     out = { ...out, tech, techByName: { ...Object.fromEntries(tech.map((t) => [t.name, t])), [m.base]: E2 } };
   }

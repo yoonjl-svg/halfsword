@@ -77,7 +77,7 @@ test('스킬트리 G2(몫 열쇠 chase — 이름만 파고들기) 없으면 안
   assert.equal(run(kitFromNodes('german', new Set(['G1', 'G2'])), 0.5), 0, 'burstStick 아래 (살짝 밀기)');
 });
 
-test('옛 간격 잡기: 사람(humanInput)은 거둠 · AI · 시뮬 몸은 늘 그대로', () => {
+test('옛 간격 잡기: 사람(humanInput) · AI(aiControlled) 모두 거둠 (사람 11/14 · AI 11/19 — 사람 · AI 같게) · 시뮬 몸은 그대로', () => {
   const G = newRound({ weapon: 'longsword', seed: 3, kit: kitFromNodes('german', allNodeIds('german')) });
   try {
     for (let i = 0; i < 300; i++) G.step();
@@ -88,6 +88,10 @@ test('옛 간격 잡기: 사람(humanInput)은 거둠 · AI · 시뮬 몸은 늘
     P.gait.chase = null; P.humanInput = true;
     P.gait.foeWhiff();
     assert.equal(P.gait.chase, null, '사람 — 거둠');
+    P.gait.chase = null; P.humanInput = undefined; P.aiControlled = true;
+    P.gait.foeWhiff();
+    assert.equal(P.gait.chase, null, 'AI — 거둠 (11/19)');
+    P.aiControlled = undefined;
   } finally { G.world.free(); }
 });
 

@@ -154,7 +154,7 @@ export function gaitParams(f, isPlayer = false) {
     P.cadence0 = GAIT.cadence0 / g.strideK;
   }
   // 스킬트리 (10/21 — 사람만 · skill_kit.js): 보법 I 은 유파 걸음 칸 전부, 보법 II 칸 몫만 따로 — 이탈리아 I3 물러서기 = 뒤 느려짐 없앰(backMul — 10/31 부터 이어 물러선 네 디딤까지 · backCap) ·
-  //  이베리아 B2 옆 박차기 = burstSide(첫 걸음 옆 박차기 · 옆 누르면 늘 박차기 · 비스듬히 앞으로). 그 칸을 안 익혔으면 그 몫만 걸음 칸에서 뺀다. AI 는 skillKit 이 없어 그대로
+  //  이베리아 B2 옆 박차기 = burstSide(첫 걸음 옆 박차기 · 옆 누르면 늘 박차기 · 비스듬히 앞으로). 그 칸을 안 익혔으면 그 몫만 걸음 칸에서 뺀다. AI 도 같은 칸 몫(11/16 config AI_KIT — ai.js applyKit)
   if (kitOff(f, 'backFlat')) P.backMul = undefined;
   if (kitOff(f, 'burstSide')) P.burstSide = false;
   P.tradition = art.tradition;
@@ -383,12 +383,12 @@ export class Gait {
    * 독일 간격 잡기 — 받을 창 (10/15 사장님 결정 '헛침만, 앞으로 두 걸음 50%로 가자' — docs/strike/german_chase_2026-10-15.md, 그때 이름 '따라 들어가기'): 상대 공격이 칼에도 몸에도 닿지 않고 끝났다(헛침) —
    *  ai.js afterStrike 의 missed · 사람 휘두르기는 skill.js whiffTrack 이 부른다. 내 무기가 독일 유파(TRADITIONS.german.chase)이고 서서 걷는 몸이면 받을 창을 연다(새 헛침이면 새로).
    *  잡기(10/15 18:0x, docs/strike/german_hold_2026-10-15.md): 플레이어(AI 가 몰지 않는 몸)는 헛침 때 이미 내 칼이 제대로 들어가는 거리(swordArt.measure.contact —
-   *   가슴-가슴, holdTick 과 같은 잣대) 안이면 창을 열지 않는다(이미 가까움). AI 는 그대로.
+   *   가슴-가슴, holdTick 과 같은 잣대) 안이면 창을 열지 않는다(이미 가까움). 11/19 부터 사람 · AI 모두 받지 않음(아래 첫 줄 — 시뮬 대본 몸만).
    *  상태만 적고 난수·몸은 건드리지 않는다
    */
   foeWhiff() {
     if (!this.active || this.f.state !== 'stand') return;
-    if (this.f.humanInput) return; // 11/14 사장님 '간격 잡기를 파고들기로 바꿔' — 사람(사람 입력이 모는 몸 humanInput — main.js 플레이어)의 옛 간격 잡기(받을 창 · 빠른 디딤 · 잡기)는 거둠(파고들기는 update 걷기 시작) · AI · 시뮬 대본 몸은 그대로
+    if (this.f.humanInput || this.f.aiControlled) return; // 11/14 사장님 '간격 잡기를 파고들기로 바꿔' — 사람 · AI 모두 옛 간격 잡기(받을 창 · 빠른 디딤 · 잡기)는 거둠(파고들기가 맡음 — 사람 gait.js update 걷기 시작 · AI dig_proto · deDigAi). 사람은 11/14 · AI 는 11/19(사장님 '사람 · AI 같게' — 독일 대 이탈리아 숙련 5 · 40 판 있음 23.8 / 없음 25.0 % · docs/strike/human_ai_parity_2026-11-19.md §7) · 시뮬 대본 몸만 그대로
     const def = TRADITIONS[footworkTradition(this.f)]?.chase; // 독일 간격 잡기 — 보법 I 을 안 익힌 플레이어는 없음
     if (!def || kitOff(this.f, 'chase')) return; // 사람은 스킬트리 G2 '보법 II · 간격 잡기' (10/21 — G1 은 뒤 박차기만)
     if (!this.f.aiControlled && this.f.foeDistance() <= this.f.swordArt.measure.contact) return;
@@ -738,7 +738,7 @@ export class Gait {
       this._art = f.swordArt;
       this._pl = pl;
       this._kit = f.skillKit; // 스킬트리 칸 몫 (10/21 — 사람만 · AI 는 늘 없음)
-      this._fw = f.schoolFootwork; // 대기실 스킬트리 보법 I (플레이어만 — 판을 세울 때 정한다 · 칸 몫 skillKit 도 그때)
+      this._fw = f.schoolFootwork; // 스킬트리 보법 I (사람 = 대기실 칸 · AI = 칸 몫 AI_KIT — 11/16 ai.js applyKit · 판을 세울 때 정한다 · 칸 몫 skillKit 도 그때)
       this.P = gaitParams(f, pl);
     }
     // 뛰는 걸음 꼴 (11/18 뛰기 — src/run.js 가 사람 몸에만 f.run 을 둠): 0 이면 아래 섞기는 모두 걷는 값 그대로

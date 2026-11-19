@@ -17,7 +17,8 @@ const { readProgress, recordAcquisition, PROGRESS_KEY } = await import('../../sr
 const { SECRET, STAMINA, GAIT, LETTER, UNIQUE_ASSIST, IB_FLOW } = await import('../../src/config.js');
 const { WEAPON_LIST, getWeapon, drawWeaponCards, TIER_DRAW, RETIRED_WEAPONS } = await import('../../src/weapons.js');
 const { traditionOf, TRADITIONS } = await import('../../src/schools.js');
-const { PLAYER_UNIQUE, PlayerUniqueAssist, strokeHitK, enhancedMoves } = await import('../../src/unique_assist.js');
+const UA_MOD = await import('../../src/unique_assist.js');
+const { PLAYER_UNIQUE, PlayerUniqueAssist, enhancedMoves } = UA_MOD;
 const { kitOff, perkOff } = await import('../../src/skill_kit.js');
 const { flowShieldKeep } = await import('../../src/nagashi_redesign.js');
 const { newRound } = await import('./harness_m.mjs');
@@ -539,10 +540,9 @@ test('실제 몸 — 강화동작 이점은 심화 칸: 곁눈 베기 무릎 꺾
     g.combat.buckleCheck(g.player, g.enemy, 'head');
     assert.equal(g.combat.buckleLog.length, 1);
   } finally { g.world.free(); }
-  const f = { artTech: 'redondo', skill: { uniq: { stackN: 2 } } };
-  assert.ok(Math.abs(strokeHitK(f) - 1.2) < 1e-9); // AI 꼴(몫 없음) — 그대로
-  f.skillKit = kitOf('iberian', 'B1', 'B4'); assert.equal(strokeHitK(f), 1);
-  f.skillKit = kitOf('iberian', 'B1', 'B4', 'B5', 'B6'); assert.equal(strokeHitK(f), 1); // 10/29: 사람 쌓기 칸 없음 (AI 꼴 — 몫 없음 — 은 위에서 그대로 1.2)
+  // 이어 그을수록 강해짐(stack) 은 11/19 지움 (사람 · AI 같게 — 칸 몫이 있는 몸엔 닿지 않던 AI 몫 · 둘 다 B6 이어지는 흐름): 표에 stack 칸 없음 · 배율 함수 없음
+  assert.equal(UA_MOD.strokeHitK, undefined);
+  for (const e of Object.values(PLAYER_UNIQUE).flat()) assert.ok(!e.stack, e.name);
   for (const [kit, want] of [[kitOf('iberian', 'B1', 'B4'), false], [kitOf('iberian', 'B1', 'B4', 'B5'), true]]) {
     const r = round('zweihander', kit, 9);
     try {

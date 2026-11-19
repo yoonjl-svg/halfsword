@@ -127,10 +127,10 @@ export const PLAYER_UNIQUE = {
     { stage: 1, name: 'talhoRodeado', role: 'step', stick: 'side', hint: '옆으로 걸으며 사선 내려 긋기', body: [-15, -8, 4, 0.02], /* 10/21 전수 조사: 탈류(오른쪽 위 → 왼쪽 아래) · 원전 「왼쪽 위로 나사처럼」 — 몸 왼쪽(−) · 전 +15 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 옆 + 분노의 베기
     // 풍차 베기 (B4 레돈두 — 이베리아 특수 공격 · 사장님 10/29 01:3x '레돈두를 지금 우리가 개발 중인 특수공격으로' · 01:5x '레돈두는 풍차 베기로' — config UNIQUE_ASSIST.rdHold · 확인표 2727):
     //  사람 = role 'hold' — 탭을 길게 눌러 머리 위로 칼을 돌리다(iberian_redondo.js) 떼면 곧장 왼 위 → 오른 아래 사선으로 내려 벰(secret_instant.js requestArtRedondo — 10/30 rdRelease 'direct' · 'chamber' = 10/29 판 왼팔 위로 떨어뜨림) · 왼 가로베기는 사람에게 보통 긋기로 돌아감(긋기 조건 on 없음).
-    //  ai = AI 몫 그대로(전 판 강화동작 — 왼 가로베기 대신 · enhancedMoves · sword_art.js 가 읽음) · stack = AI 이어 그을수록 맞는 순간 에너지 + 10 %(셋까지 — strokeHitK · 사람은 쌓기 칸이 없어 안 받음 — 10/29 B6 은 이어지는 흐름)
+    //  ai = AI 몫 그대로(전 판 강화동작 — 왼 가로베기 대신 · enhancedMoves · sword_art.js 가 읽음) · (전 stack 0.1 — 이어 그을수록 맞는 순간 에너지 + 10 % · 칸 몫이 있는 몸엔 닿지 않던 AI 몫 · 11/19 지움 — 사람 · AI 모두 B6 이어지는 흐름)
     // 10/31 19:xx 사장님 결정 — 이름 '정수리 가르기 (알티바슈 포르트)' (전 '풍차 베기 (레돈두)' · 확인표 3290): 원어 'altibaxo forte' 는 피게이레두의 낱말 altibaxo(위에서 아래로 내려 베기 — 피 단Ⅸ · 복ⅩⅤ)에
     //  forte(센)를 붙여 지은 이름이고 검술서에 그대로 나오는 말은 아님 · 원어 글자는 대기실 스킬에서만(화면 글 지침 §1). 열쇠 name 'redondo' 는 그대로(바꾸면 저장 · 주소 · 시험이 닿음 — 기록 docs/strike/b4_rework_2026-10-31.md §7)
-    { stage: 3, name: 'redondo', role: 'hold', hold: 1, special: true, nameKo: '정수리 가르기 (알티바슈 포르트)', orig: 'altibaxo forte', hint: '탭을 길게 눌러 칼을 어깨에 메었다가 떼면 정수리로 내려 가른다', on: [], ai: { role: 'enh', replaces: 'zwerchL' }, stack: 0.1 },
+    { stage: 3, name: 'redondo', role: 'hold', hold: 1, special: true, nameKo: '정수리 가르기 (알티바슈 포르트)', orig: 'altibaxo forte', hint: '탭을 길게 눌러 칼을 어깨에 메었다가 떼면 정수리로 내려 가른다', on: [], ai: { role: 'enh', replaces: 'zwerchL' } },
     // 11/11 사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' (SECRET.iberianSecret 'altib' — 기록 docs/strike/ib_swap_2026-11-11.md): 위 redondo 칸은 비기 알티바슈 포르트의 실행 칸이 됨
     //  (특수 공격 식힘 · 이름 알림 · 흐름 셈 없음 — holdTick 이 비기 무장(창 ev 'altib')일 때만 메기 · windFire 가 비기 셈 · AI 는 ai.js altibGo) · AI 왼 가로베기 자리는 아래 싱지르가 이어받음(aiUniqueStages retired).
     //  싱지르 = 이베리아 특수 공격 (role 'circle' — 원을 그리며 긋기(↻/↺) 한 바퀴면 무장 없이 냄 · circleTick · 칼끝 고노센 × specialShare.cingir · 식힘 specialCooldown · 실행부 = skill.secret 의 싱지르 대본(special — 비기 셈 · 판정 배율 없음))
@@ -199,16 +199,6 @@ export function strokeTechOf(f) {
   }
   const ai = f?.aiCtl;
   return ai && ai.mode === 'attack' ? ai.tech?.name ?? null : null;
-}
-
-const STACK_BY_NAME = Object.fromEntries(Object.values(PLAYER_UNIQUE).flat().filter((e) => e.stack).map((e) => [e.name, e.stack]));
-/** 이어 그을수록 강해짐의 판정 에너지 배율 (10/21): 지금 긋는 기술에 stack 이 있으면 1 + stack × 이어 그은 수(플레이어 PlayerUniqueAssist.stackN · AI ai.stackN — 셋까지) · 아니면 1 */
-export function strokeHitK(f) {
-  const name = strokeTechOf(f);
-  const s = name && !perkOff(f, name) ? STACK_BY_NAME[name] : 0; // 사람은 심화 칸(이베리아 B6 쌓기 — 10/21)을 익혀야
-  if (!s) return 1;
-  const n = f.skill?.uniq ? f.skill.uniq.stackN ?? 0 : f.aiCtl?.stackN ?? 0;
-  return 1 + s * n;
 }
 
 export function enhancedMoves(tradition) {
@@ -379,6 +369,20 @@ const TAP_TRIG = {
 };
 /** 칼끝 돌려 빼기 칼끝 빠르기 (m/s — 10/31 '보통 찌르기 빠르기'): UNIQUE_ASSIST.cavSpeed 'tap' = 탭 찌르기가 칼 선을 따라 뻗는 몫 (THRUST.reach + THRUST.chamber) ÷ THRUST.extend · 숫자면 그것 */
 export const cavTipSpeed = () => (THRUST.reach + THRUST.chamber) / THRUST.extend;
+/**
+ * 탭 고유 동작 셋의 운동학 칼 — 사람 탭(launchTap)과 AI(ai.js artGo)가 같은 함수를 부른다 (11/19 사람 · AI 같게 A9 · docs/strike/human_ai_parity_2026-11-19.md — 비껴서며 찌르기 inqGo 와 같은 꼴):
+ *  'cav' 칼끝 돌려 빼기 = 상대 칼 밑으로 돌려 빼 반대쪽을 찌름(보통 찌르기 빠르기 cavTipSpeed × cavSpeedMul · 잔상 없음 · side = 비킨 쪽 — 닿았을 때 상대 칼 쪽, 없으면 상대 칼 쪽 기본) ·
+ *  'lian' 날개 접기 = 오른 허리로 거뒀다 앞으로 디디며 허리 가로 베기(고노센 칼끝 × specialShare · 앞 걸음 lianStep) ·
+ *  'dup' 겹치기 = 맞물린 자리에서 상대 칼 뒤로 밀어 넣어 얼굴 사선 베기(고노센 칼끝 × specialShare · 앞 박차기 dupBurst). 강화 끔(UA.enhance 0) · 이미 끌고 가는 중이면 false
+ */
+export const TAP_ART = { cav: 'cavazione', lian: 'lianchi', dup: 'duplieren' };
+export function tapArt(f, key, { side = null, tech = TAP_ART[key] } = {}) {
+  if (!(UA.enhance > 0)) return false;
+  if (key === 'cav') return requestArtThrust(f, { v: cavTipSpeed() * UA.cavSpeedMul, trail: false, tech, under: true, capFromCut: false, side, tapTiming: true, selfFree: 1, hitMul: 1 }); // 보통 찌르기 빠르기 × cavSpeedMul (10/31 판 1.2) · 탭 찌르기 박자 — 길 끝(거둠)까지 시간 상한 없음
+  if (key === 'lian') return requestArtFold(f, { share: specialShare(TAP_ART.lian), tech, step: { kind: 'lunge', fwd: UA.lianStep ?? SECRET.chineseStep } }); // 앞 걸음 = 날개 접기만의 lianStep 0.45 (10/29 14:3x)
+  if (key === 'dup') return requestArtDup(f, { share: specialShare(TAP_ART.dup), tech, face: UA.dupFace, follow: UA.dupFollow, body: UA.dupBody, burst: UA.dupBurst > 0 ? { fwd: UA.dupBurst, free: true, sync: 1, T: 0, match: 1, fit: { point: UA.dupFitPoint ?? 0.6, min: UA.dupFitMin ?? 0.05, floor: UA.dupFitFloor ?? 0.5 } } : null });
+  return false;
+}
 
 /**
  * 플레이어 한 명의 고유 동작 강화 (10/14 — 궤적은 손가락, 고유 동작은 손가락으로 못 하는 몫만). 붙이면(f.skill.uniq = this) 검술 층이 매 스텝
@@ -637,14 +641,10 @@ export class PlayerUniqueAssist {
       this.stats.armSlow = (this.stats.armSlow ?? 0) + 1;
       itEdgeGrant(f, 'feint'); // 칼 우위 (11/14 설계안 A — 헛누름이 들면 · 사람 이탈리아만 · config IT_OUTBOX.edge)
     }
-    if (e.tapSnap && UA.enhance > 0) {
-      const side = ok?.touch?.n ?? null; // 비킨 쪽 = 닿았을 때 상대 칼 쪽
-      // 탭 찌르기 박자 — 길 끝(거둠)까지 시간 상한 없음: 상한에서 끊으면 뻗은 칼이 상대 몸 · 칼 안에 든 채 충돌이 돌아와 내 몸이 튕겨 넘어졌음
-      const vCav = cavTipSpeed() * UA.cavSpeedMul; // 보통 찌르기 빠르기 × cavSpeedMul (10/31 판 1.2)
-      if (requestArtThrust(f, { v: vCav, trail: false, tech: U.name, under: true, capFromCut: false, side, tapTiming: true, selfFree: 1, hitMul: 1 })) {
-        this.stats.snap = (this.stats.snap ?? 0) + 1;
-        return true;
-      }
+    //  탭 찌르기 박자 — 길 끝(거둠)까지 시간 상한 없음: 상한에서 끊으면 뻗은 칼이 상대 몸 · 칼 안에 든 채 충돌이 돌아와 내 몸이 튕겨 넘어졌음 · 칼은 tapArt (AI 와 같은 함수 — 11/19 A9)
+    if (e.tapSnap && tapArt(f, 'cav', { side: ok?.touch?.n ?? null, tech: U.name })) { // 비킨 쪽 = 닿았을 때 상대 칼 쪽
+      this.stats.snap = (this.stats.snap ?? 0) + 1;
+      return true;
     }
     // 비껴서며 찌르기 (10/31 — 특수 공격): 스틱 쪽으로 몸을 빼며(옆 · 앞 = schools.js inquartata step · 뒷발을 그쪽으로 돌려 디딤) 넷째 자세로 가슴 — 고노센 칼끝 × specialShare.inquartata · 잔상
     if (e.tapVoid && UA.enhance > 0) {
@@ -657,19 +657,15 @@ export class PlayerUniqueAssist {
       }
     }
     // 날개 접기 (사장님 10/28 00:3x): 오른 허리 옆으로 거뒀다 앞으로 반걸음 들며 허리를 오른 → 왼 가로 호로 — 고노센 칼끝 × specialShare.lianchi (10/29 02:0x)
-    if (e.tapFold && UA.enhance > 0) {
-      if (requestArtFold(f, { share: specialShare(e.name), tech: U.name, step: { kind: 'lunge', fwd: UA.lianStep ?? SECRET.chineseStep } })) { // 앞 걸음 = 날개 접기만의 lianStep 0.45 (10/29 14:3x)
-        this.stats.snap = (this.stats.snap ?? 0) + 1;
-        return true;
-      }
+    if (e.tapFold && tapArt(f, 'lian', { tech: U.name })) { // 칼은 tapArt (AI 와 같은 함수 — 11/19 A9)
+      this.stats.snap = (this.stats.snap ?? 0) + 1;
+      return true;
     }
     // 겹치기 (10/28): 맞물린 자리에서 상대 칼 뒤로 밀어 넣어 엇갈린 손으로 얼굴을 사선으로 — 고노센 칼끝 × specialShare.duplieren (10/29 02:0x)
     //  10/31 19:xx 사장님 '가장 효율적이고 단순한 움직임 … 박차기를 앞으로 쓰면서 치는 효과': 길 = 맞닿은 자리 축 한 번 돌림(dupOld 0) · 앞 박차기 dupBurst m(겹치기와 함께만 — 죽음의 일격 거리에서 멈춤 · 기력 pushCost — dupBurstFree 면 안 냄)
-    if (e.tapDup && UA.enhance > 0) {
-      if (requestArtDup(f, { share: specialShare(e.name), tech: U.name, face: UA.dupFace, follow: UA.dupFollow, body: UA.dupBody, burst: UA.dupBurst > 0 ? { fwd: UA.dupBurst, free: true, sync: 1, T: 0, match: 1, fit: { point: UA.dupFitPoint ?? 0.6, min: UA.dupFitMin ?? 0.05, floor: UA.dupFitFloor ?? 0.5 } } : null })) {
-        this.stats.snap = (this.stats.snap ?? 0) + 1;
-        return true;
-      }
+    if (e.tapDup && tapArt(f, 'dup', { tech: U.name })) { // 칼은 tapArt (AI 와 같은 함수 — 11/19 A9)
+      this.stats.snap = (this.stats.snap ?? 0) + 1;
+      return true;
     }
     if (auto) return false; // 저절로 낸 칼은 탭 찌르기로 바꾸지 않음 (dupAutoTick 이 운동학 칼이 나갈 수 있을 때만 부름)
     // 운동학 칼이 없으면(끔 · 이미 끌고 가는 중) 탭 찌르기 덧씌우기에 이름만
@@ -1569,8 +1565,6 @@ export class PlayerUniqueAssist {
     const fromTurn = part === 2 || e.ruler === 'turn';
     const len = fromTurn ? PlayerUniqueAssist.lenOf(U.pts, at) : PlayerUniqueAssist.lenOf(U.pts, 0, at);
     this.r = { e, U, part, t: 0, travel: 0, len: Math.max(0.05, len), stepAsked: false };
-    // 이어 그을수록 강해짐 (강화동작 stack — 이베리아 머리 위 돌려 베기): 같은 동작을 이어짐 창(afterWindow 0.6 s — 10/21 0.45 에서 통일) 안에 다시 그으면 하나씩(셋까지) — 맞는 순간 에너지 × (1 + stack × 그 수) (strokeHitK)
-    if (e.stack) { this.stackN = this.stackE === e.name && this.t - (this.stackT ?? -9) <= UA.afterWindow ? Math.min(3, (this.stackN ?? 0) + 1) : 0; this.stackE = e.name; }
     cur.kind = part === 2 ? cur.kind : U.kind;
     cur.unique = U.name;
     if (part === 2) {
@@ -1736,16 +1730,9 @@ export class PlayerUniqueAssist {
   end(why, tEnd = this.t) {
     const R = this.r;
     this.r = null;
-    if (R?.e.stack) this.stackT = tEnd; // 이어 그을수록 강해짐 — 끝난 때부터 chainWait 를 잰다
     this.dropPower();
     this.stats.ends[why] = (this.stats.ends[why] ?? 0) + 1;
     if (why === 'done' && R?.part === 1 && R.e.chain) this.chainFrom = { e: R.e, U: R.U, tEnd };
   }
 }
-/** 지금 긋는 기술의 이어 그은 수 (stack 이 있는 기술만 — 이베리아 머리 위 돌려 베기 · 없으면 0) */
-export function strokeStackN(f) {
-  const name = strokeTechOf(f);
-  if (!name || !STACK_BY_NAME[name] || perkOff(f, name)) return 0; // 쌓기 잔상도 심화 칸과 같이 (10/21)
-  return f.skill?.uniq ? f.skill.uniq.stackN ?? 0 : f.aiCtl?.stackN ?? 0;
-}
-setArtTechOf(strokeTechOf, strokeStackN); // 고유 동작 잔상(secret_instant.js artTrailTick · artFlash)이 지금 기술 이름 · 이어 그은 수를 읽게
+setArtTechOf(strokeTechOf); // 고유 동작 잔상(secret_instant.js artTrailTick · artFlash)이 지금 기술 이름을 읽게 (이어 그은 수 stack 은 11/19 지움 — 늘 0)

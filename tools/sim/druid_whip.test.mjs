@@ -115,7 +115,7 @@ test('톡 = 손목 튕기기 (사람 · 마무리 아님): 손 목표가 올라�
   g.world.free();
 });
 
-test('무릎 꿇리기 (사장님 10/23 · config WHIP_KNEEL): 채찍만 · 한 획에 한 번(첫 맞음) · p 1 이면 맞은 쪽이 꿇음 · p 0 이면 없음 · AI 채찍은 굴리지 않음', async () => {
+test('무릎 꿇리기 (사장님 10/23 · config WHIP_KNEEL): 채찍만 · 한 획에 한 번(첫 맞음) · p 1 이면 맞은 쪽이 꿇음 · p 0 이면 없음 · AI 채찍도 같음(11/19 — 사람 · AI 같게)', async () => {
   const { WHIP_KNEEL } = await import('../../src/config.js');
   assert.equal(WHIP_KNEEL.p, 0.5); assert.equal(WHIP_KNEEL.kneel, CONFIG.realS(0.6)); /* 11/15 사장님 '채찍도 같이 0.6초로 해' (전 0.4) */ // 꿇는 시간 실제 0.4 s (표준 시간 10/25)
   assert.equal(W().kneelHit, true);
@@ -147,8 +147,9 @@ test('무릎 꿇리기 (사장님 10/23 · config WHIP_KNEEL): 채찍만 · 한 
   const b = run(0);
   assert.equal(b.log.length, 0);
   assert.equal(b.kneeled, false);
-  const c = run(1, true); // AI 가 든 채찍 — 굴리지 않음
-  assert.equal(c.log.filter((x) => x.att === 0).length, 0);
+  const c = run(1, true); // AI 가 든 채찍 — 사람과 같이 굴림 (11/19 · 전엔 굴리지 않음)
+  const cAi = c.log.filter((x) => x.att === 0).length;
+  assert.ok(c.hits === 0 || cAi > 0, `AI 채찍 판정 ${c.hits} · 굴림 ${cAi}`);
   WHIP_KNEEL.p = p0;
 });
 
