@@ -36,7 +36,7 @@ import { FINISH, cleaveFoe } from './finish.js'; // 마무리 찍기 힘 배율 
 import { lowFinishPosture } from './finish_entry.js';
 import { UNIQUE_ASSIST as UA, IB_FLOW } from './config.js'; // IB_FLOW.power: 이베리아 흐르는 긋기 위력 (10/28 — analyze)
 import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 판정 배율 (11/06 — SKILL.fingerCut.hit · 기본 1 = 끔)
-import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
+import { strokeTechOf } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
 import { perkOff, uniqueOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4 · 11/16 내려 찌르기 틈 파고들기 = 내려 찌르기 칸 I7 [사장님 11/16 결정 '다 너의 권고대로 하마'])
 import { itThrust, itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14 — 사람 이탈리아 찌르기 판정 배율 · 맞박자 찌르기 · 칼 우위 — config IT_OUTBOX)
 import { aiWoundKeep } from './ai_block_cut.js';
@@ -300,12 +300,12 @@ export class Combat {
     // 게임 속 판정용 에너지: 실제 에너지 × 보정값. 이 모델의 베는 속도가 실제(칼날 치는 부분 약 20m/s)보다
     // 조금 낮아서, 상처 문턱값(ANATOMY)과 기절·비틀거림 같은 효과가 예전과 같은 세기로 나오게 맞춘 값이다
     // 결정타 (10/9 23:5x — 유파 비기, AI·플레이어 공통): 비기 베기 동안 공격자 secretHit(SECRET.hitMul)를 상처 에너지에 곱한다. 물리(속도·질량)는 그대로, 판정만. 1 이면 그대로
-    // 이어 그을수록 강해짐 (이베리아 머리 위 돌려 베기 — 10/21 사장님 '너의 제안대로'): 이어 그은 수 × stack 만큼 같은 자리(판정 에너지)에 곱한다 · 물리는 그대로
+    // (전 이어 그을수록 강해짐 stack — 10/21 · 11/19 지움: 칸 몫이 있는 몸엔 닿지 않던 AI 몫 · 사람 · AI 모두 B6 이어지는 흐름 ibFlowK)
     //  손가락 긋기 판정 배율 (11/06 — finger_cut.js · SKILL.fingerCut.hit · 기본 1 = 끔): 사람 손가락 긋기 동안 · 그 끝 recoverDelay 안의 닿음만 같은 자리에 × hit · 물리는 그대로
     //  이탈리아 아웃복싱 (11/14 사장님 '찌르기 자체를 너프하자 … 걸어들어오는 상대를 카운터하면 +30%' — italian_outbox.js itThrust · config IT_OUTBOX): 사람 이탈리아 보통 찌르기 × thrustMul ·
     //   걸어 들어오는 상대를 받아 찌름 × (1 + stop). 비기 배율과 같은 자리(판정 에너지) · 물리 그대로 · 사람 이탈리아가 아니면 null(× 1 — AI 판 그대로)
     const itk = itThrust(att, pr.v.fighter);
-    const hk = (att.secretHit ?? 1) * strokeHitK(att) * fingerCutK(att, 'hit') * (itk ? itk.k : 1);
+    const hk = (att.secretHit ?? 1) * fingerCutK(att, 'hit') * (itk ? itk.k : 1);
     let energy = ephys * STRIKE.energyScale * hk;
     // 약화 배율은 상처에만 (11/15 사장님 '찌르기가 상대 몸에 박혀서 안 뽑히기도 … 공격이 종종 무시될 때도' — 사장님 11/16 '묶음 P' · 기록 docs/strike/thrust_stuck_2026-11-15.md):
     //  1 보다 작은 판정 배율(이탈리아 보통 찌르기 IT_OUTBOX.thrustMul 0.8 · 리솔루토 SECRET.risolutoHitMul 0.5)은 상처(심각도 · 둔타 에너지)에만 걸고, 칼과 몸의 물리 —
@@ -1013,7 +1013,7 @@ export class Combat {
    */
   whipKneelCheck(att, vic, part) {
     const K = WHIP_KNEEL, X = att.flexWeapon;
-    if (!(K.p > 0) || !X || att.aiControlled) return; // 사람 채찍만 (AI 채찍은 굴리지 않는다)
+    if (!(K.p > 0) || !X) return; // 사람 · AI 채찍 같음 (11/19 — 사장님 10/23 '채찍으로 맞을 때마다 일정 확률로 무릎 꿇게 해줘(모든 종류의 타격 대상)' · 전 '사람 채찍만'은 일꾼이 고른 것 · docs/strike/human_ai_parity_2026-11-19.md)
     const n = X.strokes ?? 0;
     if (n <= (X.rolled ?? 0)) return; // 이 획은 이미 굴렸다 (마디가 여러 번 닿아도 한 번)
     X.rolled = n;

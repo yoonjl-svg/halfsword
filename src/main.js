@@ -534,6 +534,7 @@ function newRound(weaponId) {
     schoolParry: kit ? kit.parry : undefined,
     schoolPassive: kit ? kit.passive : undefined, // 패시브 칸 (이베리아 손목 힘 · 이탈리아 · 일본 · 독일 · 동방 — school_passive.js)
     skillKit: kit ?? undefined,
+    bodyProficiency: humanProficiency({ test: testRoute.active }), // 막기 단추 · 비기 손 빠르기의 숙련도 (11/19 — 몸 값과 같은 수 · prof_body.js scriptLevel)
     ...profBody(humanProficiency({ test: testRoute.active })), // 몸 값 (11/17 E — config PROF_BODY): 다섯 유파 가운데 가장 높은 숙련도(익힌 칸 문턱 5 · 7 · 9 · 11)의 힘 · 버티는 힘 — AI 와 같은 표
     ...testRoute.player, // ?hero=<인물 id>: 겉모습·이름만 그 인물 (유파·비기는 무기를 따른다)
   });
@@ -720,7 +721,7 @@ function newTeamRound(spec, mods = {}) {
       weapon: e.weapon,
       ffa: E.length > 2, // 셋 이상 판: 같은 편도 적과 똑같이 부딪히고 벤다 (사장님 10/29 22:3x · fighter.js FFA_*)
       ...(e.human
-        ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined, ...profBody(humanProficiency({ test: testRoute.active })) } // 몸 값 (11/17 E — 1:1 과 같음)
+        ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined, bodyProficiency: humanProficiency({ test: testRoute.active }), ...profBody(humanProficiency({ test: testRoute.active })) } // 몸 값 (11/17 E — 1:1 과 같음) · 막기 단추 · 비기 손 빠르기 숙련도 (11/19)
         : { revive: ch?.revive, physiology: ch?.physiology }), // 버티는 힘 · 힘 = 숙련도별 몸 값 (AI — ai.js setLevel)
     });
   });

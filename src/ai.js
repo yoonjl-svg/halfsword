@@ -1841,9 +1841,6 @@ export class AI {
     }
     const L = this.level;
     const hand = [this.me.handOffset.x, this.me.handOffset.y];
-    // 이어 그을수록 강해짐 (강화동작 stack — 10/21, unique_assist.js strokeHitK): 앞 공격도 같은 기술이고 그 공격 꼴이 끝난 뒤 이어짐 창(afterWindow 0.6 s) 안에 다시 시작하면 하나씩(셋까지) — 플레이어와 같은 셈 · 난수 없음
-    this.stackN = tech.name === this.prevAtkName && this.sense.t - this.lastAtkT <= UA.afterWindow ? Math.min(3, (this.stackN ?? 0) + 1) : 0;
-    this.prevAtkName = tech.name;
     this.atkSeq++; // 특수 공격이 끝났나 보는 공격 번호 (10/29)
     this.mode = 'attack';
     this.drillAtk = !!opt.drill; // 시험: 헛스윙 연습 공격 — 그 자리에서 친다 (attack 다가가기·stepTime·moveFeet)

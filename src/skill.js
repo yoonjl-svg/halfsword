@@ -27,6 +27,7 @@ import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 감도 (11/06 
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { SKILL, WEAPON, THRUST, POMMEL, SECRET, AI_LEVELS, ARM, UNIQUE_ASSIST, realS } from './config.js';
+import { scriptLevel } from './prof_body.js'; // 비기 대본 손 빠르기 = 숙련도의 실력 숫자 (11/19 — 사람 · AI 같게)
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { startFlick, flickDrive } from './druid_whip.js'; // 휘는 무기(드루이드의 채찍)의 톡 = 손목 튕기기 (10/23)
 import { FINISH, armRay, updateFinish, cleaveFinish, cleaveRaise, cleaveReach } from './finish.js';
@@ -620,7 +621,7 @@ export class Skill {
   //  pommel() 시제품과 같은 꼴(칼을 잠깐 대본대로 움직이고 끝나면 조작으로) — 다만 덧씌우기 칸 대신 손 목표(handOffset)를 AI 와 같은 패드 길로 옮긴다
   //  (ai.js moveHand 와 같은 '제한 속도로 목표점 쫓기'). 길·걸음·경직은 AI 비기(ai.js secretGo·secretStiffen)와 같은 칸을 읽는다.
   //  반응 지연 0(창이 이미 지금 모습으로 봤다) · 정확도 1(길 그대로) · 손 속도 배율(do.hand·loopHand 또는 SECRET.handSpeed) · 서보 힘 창(powerMul) · 몸의 힘(do.strength) ·
-  //  결정타 판정 배율(secretHit = SECRET.hitMul, 베기 길·따라 지나감 동안) · 경직(SECRET.stiff — 그동안 칼·발 조작이 안 듣고 칼은 그 자리에 멈춤: holdStiff, 10/10 20:5x). 손 빠르기 바탕은 AI 보통 난이도(AI_LEVELS.normal)
+  //  결정타 판정 배율(secretHit = SECRET.hitMul, 베기 길·따라 지나감 동안) · 경직(SECRET.stiff — 그동안 칼·발 조작이 안 듣고 칼은 그 자리에 멈춤: holdStiff, 10/10 20:5x). 손 빠르기 바탕은 숙련도의 실력 숫자(11/19 — prof_body.js scriptLevel · 전 늘 AI 보통 AI_LEVELS.normal)
 
   /**
    * 플레이어 비기 시작. o = { S(유파 비기 schools.js *_SECRET), ctx(창을 연 상대 사건 — 독일은 들어오는 줄) }. 시작했으면 true
@@ -823,7 +824,7 @@ export class Skill {
     const f = this.f;
     const run = this.sec;
     const D = run.S.do;
-    const L = AI_LEVELS.normal;
+    const L = scriptLevel(f); // 감기 · 벰 손 빠르기의 실력 숫자 (11/19 — 사람 = 몸 값 숙련도 · AI = 제 실력 숫자 · 시뮬 몸 = 보통 — prof_body.js · 전 늘 보통)
     run.t += dt;
     const foe = f.foe;
     if (!f.alive || !f.armed || f.state !== 'stand' || !foe) return this.secretEnd();

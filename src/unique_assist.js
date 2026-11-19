@@ -127,10 +127,10 @@ export const PLAYER_UNIQUE = {
     { stage: 1, name: 'talhoRodeado', role: 'step', stick: 'side', hint: '옆으로 걸으며 사선 내려 긋기', body: [-15, -8, 4, 0.02], /* 10/21 전수 조사: 탈류(오른쪽 위 → 왼쪽 아래) · 원전 「왼쪽 위로 나사처럼」 — 몸 왼쪽(−) · 전 +15 · +8 은 긋기와 반대 */ on: [{ tech: 'zornhau' }] }, // 둥근 걸음 탈류 ← 옆 + 분노의 베기
     // 풍차 베기 (B4 레돈두 — 이베리아 특수 공격 · 사장님 10/29 01:3x '레돈두를 지금 우리가 개발 중인 특수공격으로' · 01:5x '레돈두는 풍차 베기로' — config UNIQUE_ASSIST.rdHold · 확인표 2727):
     //  사람 = role 'hold' — 탭을 길게 눌러 머리 위로 칼을 돌리다(iberian_redondo.js) 떼면 곧장 왼 위 → 오른 아래 사선으로 내려 벰(secret_instant.js requestArtRedondo — 10/30 rdRelease 'direct' · 'chamber' = 10/29 판 왼팔 위로 떨어뜨림) · 왼 가로베기는 사람에게 보통 긋기로 돌아감(긋기 조건 on 없음).
-    //  ai = AI 몫 그대로(전 판 강화동작 — 왼 가로베기 대신 · enhancedMoves · sword_art.js 가 읽음) · stack = AI 이어 그을수록 맞는 순간 에너지 + 10 %(셋까지 — strokeHitK · 사람은 쌓기 칸이 없어 안 받음 — 10/29 B6 은 이어지는 흐름)
+    //  ai = AI 몫 그대로(전 판 강화동작 — 왼 가로베기 대신 · enhancedMoves · sword_art.js 가 읽음) · (전 stack 0.1 — 이어 그을수록 맞는 순간 에너지 + 10 % · 칸 몫이 있는 몸엔 닿지 않던 AI 몫 · 11/19 지움 — 사람 · AI 모두 B6 이어지는 흐름)
     // 10/31 19:xx 사장님 결정 — 이름 '정수리 가르기 (알티바슈 포르트)' (전 '풍차 베기 (레돈두)' · 확인표 3290): 원어 'altibaxo forte' 는 피게이레두의 낱말 altibaxo(위에서 아래로 내려 베기 — 피 단Ⅸ · 복ⅩⅤ)에
     //  forte(센)를 붙여 지은 이름이고 검술서에 그대로 나오는 말은 아님 · 원어 글자는 대기실 스킬에서만(화면 글 지침 §1). 열쇠 name 'redondo' 는 그대로(바꾸면 저장 · 주소 · 시험이 닿음 — 기록 docs/strike/b4_rework_2026-10-31.md §7)
-    { stage: 3, name: 'redondo', role: 'hold', hold: 1, special: true, nameKo: '정수리 가르기 (알티바슈 포르트)', orig: 'altibaxo forte', hint: '탭을 길게 눌러 칼을 어깨에 메었다가 떼면 정수리로 내려 가른다', on: [], ai: { role: 'enh', replaces: 'zwerchL' }, stack: 0.1 },
+    { stage: 3, name: 'redondo', role: 'hold', hold: 1, special: true, nameKo: '정수리 가르기 (알티바슈 포르트)', orig: 'altibaxo forte', hint: '탭을 길게 눌러 칼을 어깨에 메었다가 떼면 정수리로 내려 가른다', on: [], ai: { role: 'enh', replaces: 'zwerchL' } },
     // 11/11 사장님 '싱지르와 알티바슈 포르트의 위치와 역할을 바꾸자' (SECRET.iberianSecret 'altib' — 기록 docs/strike/ib_swap_2026-11-11.md): 위 redondo 칸은 비기 알티바슈 포르트의 실행 칸이 됨
     //  (특수 공격 식힘 · 이름 알림 · 흐름 셈 없음 — holdTick 이 비기 무장(창 ev 'altib')일 때만 메기 · windFire 가 비기 셈 · AI 는 ai.js altibGo) · AI 왼 가로베기 자리는 아래 싱지르가 이어받음(aiUniqueStages retired).
     //  싱지르 = 이베리아 특수 공격 (role 'circle' — 원을 그리며 긋기(↻/↺) 한 바퀴면 무장 없이 냄 · circleTick · 칼끝 고노센 × specialShare.cingir · 식힘 specialCooldown · 실행부 = skill.secret 의 싱지르 대본(special — 비기 셈 · 판정 배율 없음))
@@ -199,16 +199,6 @@ export function strokeTechOf(f) {
   }
   const ai = f?.aiCtl;
   return ai && ai.mode === 'attack' ? ai.tech?.name ?? null : null;
-}
-
-const STACK_BY_NAME = Object.fromEntries(Object.values(PLAYER_UNIQUE).flat().filter((e) => e.stack).map((e) => [e.name, e.stack]));
-/** 이어 그을수록 강해짐의 판정 에너지 배율 (10/21): 지금 긋는 기술에 stack 이 있으면 1 + stack × 이어 그은 수(플레이어 PlayerUniqueAssist.stackN · AI ai.stackN — 셋까지) · 아니면 1 */
-export function strokeHitK(f) {
-  const name = strokeTechOf(f);
-  const s = name && !perkOff(f, name) ? STACK_BY_NAME[name] : 0; // 사람은 심화 칸(이베리아 B6 쌓기 — 10/21)을 익혀야
-  if (!s) return 1;
-  const n = f.skill?.uniq ? f.skill.uniq.stackN ?? 0 : f.aiCtl?.stackN ?? 0;
-  return 1 + s * n;
 }
 
 export function enhancedMoves(tradition) {
@@ -1569,8 +1559,6 @@ export class PlayerUniqueAssist {
     const fromTurn = part === 2 || e.ruler === 'turn';
     const len = fromTurn ? PlayerUniqueAssist.lenOf(U.pts, at) : PlayerUniqueAssist.lenOf(U.pts, 0, at);
     this.r = { e, U, part, t: 0, travel: 0, len: Math.max(0.05, len), stepAsked: false };
-    // 이어 그을수록 강해짐 (강화동작 stack — 이베리아 머리 위 돌려 베기): 같은 동작을 이어짐 창(afterWindow 0.6 s — 10/21 0.45 에서 통일) 안에 다시 그으면 하나씩(셋까지) — 맞는 순간 에너지 × (1 + stack × 그 수) (strokeHitK)
-    if (e.stack) { this.stackN = this.stackE === e.name && this.t - (this.stackT ?? -9) <= UA.afterWindow ? Math.min(3, (this.stackN ?? 0) + 1) : 0; this.stackE = e.name; }
     cur.kind = part === 2 ? cur.kind : U.kind;
     cur.unique = U.name;
     if (part === 2) {
@@ -1736,16 +1724,9 @@ export class PlayerUniqueAssist {
   end(why, tEnd = this.t) {
     const R = this.r;
     this.r = null;
-    if (R?.e.stack) this.stackT = tEnd; // 이어 그을수록 강해짐 — 끝난 때부터 chainWait 를 잰다
     this.dropPower();
     this.stats.ends[why] = (this.stats.ends[why] ?? 0) + 1;
     if (why === 'done' && R?.part === 1 && R.e.chain) this.chainFrom = { e: R.e, U: R.U, tEnd };
   }
 }
-/** 지금 긋는 기술의 이어 그은 수 (stack 이 있는 기술만 — 이베리아 머리 위 돌려 베기 · 없으면 0) */
-export function strokeStackN(f) {
-  const name = strokeTechOf(f);
-  if (!name || !STACK_BY_NAME[name] || perkOff(f, name)) return 0; // 쌓기 잔상도 심화 칸과 같이 (10/21)
-  return f.skill?.uniq ? f.skill.uniq.stackN ?? 0 : f.aiCtl?.stackN ?? 0;
-}
-setArtTechOf(strokeTechOf, strokeStackN); // 고유 동작 잔상(secret_instant.js artTrailTick · artFlash)이 지금 기술 이름 · 이어 그은 수를 읽게
+setArtTechOf(strokeTechOf); // 고유 동작 잔상(secret_instant.js artTrailTick · artFlash)이 지금 기술 이름을 읽게 (이어 그은 수 stack 은 11/19 지움 — 늘 0)

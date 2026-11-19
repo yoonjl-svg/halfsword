@@ -3396,8 +3396,8 @@ function endCombo(f, combat) {
 // ─────────────────────────────────────────────────────────────
 export const ART_TRAIL = new Set(['tsubameGaeshi']); // 되돌림 칼이 그리는 동안 잔상 (칼끝이 위로)
 //  이점이 터진 순간 잔상 (10/21 16:1x 사장님 '잔상은 이점 터진 순간만 넣는 안으로 해'): 칼은 늘 최근 ART_HIST 초의 길(칼자루 · 칼끝)을 기억하고,
-//  이점이 터지면(곁눈 베기 무릎 꺾임 · 내려 찌르기 상처 · 요격 몸통 출혈 — combat.js) 그 길을 한 번에 잔상으로 그린다(artFlash). 이베리아 머리 위 돌려 베기는
-//  이어 그은 둘째 칼부터 그리는 동안 잔상(세기 + ART_STACK × 쌓인 수 — 몰아치는 흐름). 세기는 늘 칼끝 평균 빠르기 ÷ 고노센 칼끝 빠르기(ART_MIN 0.3 ~ 1)
+//  이점이 터지면(곁눈 베기 무릎 꺾임 · 내려 찌르기 상처 · 요격 몸통 출혈 — combat.js) 그 길을 한 번에 잔상으로 그린다(artFlash). 세기는 늘 칼끝 평균 빠르기 ÷ 고노센 칼끝 빠르기(ART_MIN 0.3 ~ 1)
+//  (전 이베리아 머리 위 돌려 베기의 이어 그은 둘째 칼부터 잔상 — stack 과 함께 11/19 지움)
 /** 진 · 츠바메가에시 되돌림 칼: from(패드) → path(패드들)를 끌고 간다. 이미 끌고 가는 중이면 거절(false) */
 export function requestArtReturn(f, from, path, SB) {
   if (f.iai || f.iaiReq || !SB?.kin || !path?.length) return false;
@@ -3474,7 +3474,6 @@ export function requestArtRedondo(f, { share, maxT, tech, loop = null, tajo = nu
   return true;
 }
 export const ART_HIST = 0.3; // s — 잔상으로 그릴 지난 길 (감독 값)
-export const ART_STACK = 0.1; // 이어 그은 수 하나마다 더하는 잔상 세기 (감독 값)
 export const ART_MIN = 0.3; // 고유 동작 잔상의 가장 흐린 세기 (10/21 16:2x 사장님 '0.3' — 연환 잔상 30 % · 일반 칼 궤적 띠 가장 진한 30 % 와 같게 · 빠른 칼은 빠르기만큼 더 진함)
 const HIST_N = 64;
 function speedShare(f, sum, n) { return clamp(sum / Math.max(1, n) / Math.max(1, iaiTipSpeed(f)), ART_MIN, 1); }
@@ -3489,8 +3488,7 @@ function artTrailTick(f) {
   if (H.pts.length > HIST_N) H.pts.shift();
   if (f.iai) { f.artTrail = null; return; }
   const name = artTechOf(f);
-  const stack = name ? artStackOf(f) : 0;
-  const on = name && ((ART_TRAIL.has(name) && (f.tipVel?.y ?? 0) > 1.5) || (stack >= 1 && sp > 8));
+  const on = name && ART_TRAIL.has(name) && (f.tipVel?.y ?? 0) > 1.5;
   if (!on) { f.artTrail = null; return; }
   let A = f.artTrail;
   if (!A || A.name !== name) {
@@ -3500,7 +3498,7 @@ function artTrailTick(f) {
   A.arc.pts.push([a.x, a.y, a.z, b.x, b.y, b.z]);
   A.sum += sp;
   A.n++;
-  A.arc.share = clamp(speedShare(f, A.sum, A.n) + ART_STACK * stack, ART_MIN, 1);
+  A.arc.share = clamp(speedShare(f, A.sum, A.n), ART_MIN, 1);
 }
 /** 이점이 터진 순간: 그 칼이 지나온 최근 ART_HIST 초의 길을 잔상으로 (비기 · 끌고 가는 칼이 그리는 중이면 안 함) */
 export function artFlash(f, dt = 1 / 120) {
@@ -3512,5 +3510,4 @@ export function artFlash(f, dt = 1 / 120) {
   f.artTrail = null;
 }
 let artTechOf = () => null; // unique_assist.js strokeTechOf 를 이어 둔다 (서로 부르는 고리를 피함)
-let artStackOf = () => 0; // unique_assist.js strokeStackN
-export function setArtTechOf(fn, stackFn) { artTechOf = fn; if (stackFn) artStackOf = stackFn; }
+export function setArtTechOf(fn) { artTechOf = fn; }
