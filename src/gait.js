@@ -903,7 +903,8 @@ export class Gait {
       const vNow = Math.hypot(this.vf.x, this.vf.z);
       if (vNow > speed) cad = Math.max(cad, vNow / runMix(this.P.maxStride, RUN.stride, rk));
     }
-    // 날며 뛰기 (11/20 사장님 '뛰는 속도가 느리더라. 지금 4지? 최소 5에서 6은 돼야겠던데?' — 기록 docs/strike/run_2026-11-20.md): 뛰는 몸(f.run.fast — 뛰는 중 · 뛰다 멈춰 줄어드는 중)이
+    // 날며 뛰기 (11/20 사장님 '뛰는 속도가 느리더라. 지금 4지? 최소 5에서 6은 돼야겠던데?' — 기록 docs/strike/run_2026-11-20.md): 뛰는 몸(f.run.on · 섞임 RUN.flyK 넘음 —
+    //  날기 시작한 뒤엔 뛰기가 끝나 줄어드는 동안도 RUN.flyFrom × flyOut 밑으로 줄 때까지)이
     //  몸 앞으로 RUN.flyFrom 넘게 빨리 가면 한 발이 땅을 딛는 시간을 Tc(= RUN.flyContact ÷ 빠르기)로 줄이고 그 뒤 두 발이 모두 뜬 채 나간다 — 걸음이 길어지고 박자가 느려짐
     //  (박자 = RUN.flyCad[0] + flyCad[1] × 빠르기). 몸이 몸 앞쪽으로 가는 동안만(비스듬히 · 돌아서는 동안은 아래 걷는 박자) · 섞임 rk 0 이면 셈하지 않음(f.run 없는 몸 · 1:1 AI · 시뮬 몸은 늘 끔)
     if (rk > 0) {
