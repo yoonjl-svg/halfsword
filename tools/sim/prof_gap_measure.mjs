@@ -34,6 +34,8 @@
 //   --gns : 판 기록에 높은 쪽 고노센 깔때기 흔적 gns (11/19 · 읽기만 — tools/sim/gns_funnel.mjs gnsProbe · 요약은 node tools/sim/gns_funnel.mjs a.json)
 //  ── 1:1 숙련 격차 진단 (11/19 감독 — 사장님 '고수 한 명이 하수 두 명을 이기는 방법은 존재해야' · 재기 전용 · 안 주면 판 그대로):
 //   --foe=even : 낮은 쪽 무기를 다섯 유파 대표 무기(ai_ring_measure WEAPONS)로 고르게 — 칸마다 높은 쪽 무기 둘 × 낮은 쪽 유파 다섯 × 씨앗 × 자리 둘 (낮은 쪽 무기 = 그 유파 둘 가운데 (씨앗 + wi + 유파 번호) 홀짝)
+//   --foe=none : 낮은 쪽을 무유파 칼잡이로 — 롱소드 · AI 꾸러미 유파 none (재기 전용 꾸러미 SCHOOLS.none_sword — lone_duel · team_sense --field=none 과 같음)
+//   --loNoKit : 낮은 쪽 몸에 빈 칸 몫(skillKit — 모든 칸 꺼짐 · 보법 I · 막기 I 끔) — 칸 몫이 없는 몸(무유파 · 옛 판)은 kitOff 가 늘 거짓이라 칸에 걸린 몫이 모두 켜짐을 가르는 용
 //   --loAs=level:4,band:4,body:4,kit:4,schoolK:4 : 낮은 쪽의 그 몫만 숙련 p 의 값으로 (level = AI_PLAN.levels 실력 이름 · band = AI_PLAN.bands 플랜 띠 · body = PROF_BODY 힘 · 버티는 힘 ·
 //               kit = AI_KIT 사다리 칸 몫(만들 때 · 고유 동작 · 비기 · 패시브 포함) · schoolK = AI_PROFICIENCY.schoolK 유파 특성 몫 ·
 //               err = 거리 오차 폭(ai_plan.js distErrWidth — 같은 굴림을 폭만 바꿈) · mind = 마음가짐을 따르는 몫(MINDSET.profF) · lure = 플랜 유도(planLure)) — 판 동안만 · 높은 쪽 숙련 칸은 그대로
@@ -48,6 +50,7 @@ import { isMain } from './is_main.mjs';
 import { WEAPONS } from './ai_ring_measure.mjs';
 import { AI_PROFICIENCY, PROF_BODY, AI_KIT, AI_PLAN, AI_LEVELS, MINDSET } from '../../src/config.js';
 import { distErrWidth } from '../../src/ai_plan.js';
+import { kitFromNodes } from '../../src/skill_tree_data.js';
 import { LOOKS } from '../../src/looks.js';
 import { applyCfgArgs } from './cfg_override.mjs';
 import * as CFG from '../../src/config.js';
@@ -95,7 +98,8 @@ export function planFights({ schools, pairs, seeds, foe = null }) {
     const [lo, hi] = key.split(':').map(Number);
     WEAPONS[school].forEach((weapon, wi) => {
       for (const seed of seeds) {
-        if (foe === 'even') for (let li = 0; li < SCHOOLS.length; li++) for (const swap of [false, true]) list.push({ school, lo, hi, weapon, wi, seed, swap, li, loSchool: SCHOOLS[li], loW: WEAPONS[SCHOOLS[li]][(seed + wi + li) % 2] });
+        if (foe === 'none') for (const swap of [false, true]) list.push({ school, lo, hi, weapon, wi, seed, swap, loSchool: 'none', loPack: 'none_sword', loW: 'longsword' });
+        else if (foe === 'even') for (let li = 0; li < SCHOOLS.length; li++) for (const swap of [false, true]) list.push({ school, lo, hi, weapon, wi, seed, swap, li, loSchool: SCHOOLS[li], loW: WEAPONS[SCHOOLS[li]][(seed + wi + li) % 2] });
         else for (const swap of [false, true]) list.push({ school, lo, hi, weapon, wi, seed, swap });
       }
     });
@@ -118,7 +122,7 @@ export function measureFight(f, dur, opt = {}) {
   if (LA.has('level')) AI_PLAN.levels[lo] = AI_PLAN.levels[LA.get('level')];
   if (LA.has('band')) AI_PLAN.bands[lo] = AI_PLAN.bands[LA.get('band')];
   if (LA.has('schoolK')) AI_PROFICIENCY.schoolK[lo] = AI_PROFICIENCY.schoolK[LA.get('schoolK')];
-  if (LA.has('kit')) { const L = savedLo.ladder, q = LA.get('kit'); AI_KIT.ladder[loSch] = [...L.slice(0, lo - 1), L.slice(lo - 1, q).flat(), ...L.slice(q)]; } // 앞 lo 칸 = 숙련 q 의 칸 몫
+  if (LA.has('kit') && savedLo.ladder) { const L = savedLo.ladder, q = LA.get('kit'); AI_KIT.ladder[loSch] = [...L.slice(0, lo - 1), L.slice(lo - 1, q).flat(), ...L.slice(q)]; } // 앞 lo 칸 = 숙련 q 의 칸 몫
   try {
     return measureFight0(f, dur, opt);
   } finally {
@@ -371,7 +375,7 @@ function measureFight0(f, dur, opt) {
     seed: rngSeed, walls: true, weapon: swap ? loW : weapon, weapon2: swap ? weapon : loW, AIClass: swap ? HiAI : AI, AI2Class: swap ? AI : HiAI, ...(lk ? { look: lk, look2: lk } : {}),
     // 실력 등급: 게임과 같게 숙련도 표의 이름을 넘김(main.js · characters.js aiAtProficiency — AI 가 AI_PLAN.levels 로 바꿈) · 11/17 고침: 전엔 harness 기본 'normal' 이라 모든 숙련도가 보통 숫자
     difficulty: AI_PROFICIENCY.levels[swap ? hi : lo], difficulty2: AI_PROFICIENCY.levels[swap ? lo : hi],
-    persona: { proficiency: swap ? hi : lo }, persona2: { proficiency: swap ? lo : hi },
+    persona: { proficiency: swap ? hi : lo, ...(swap || !f.loPack ? {} : { school: f.loPack }) }, persona2: { proficiency: swap ? lo : hi, ...(swap && f.loPack ? { school: f.loPack } : {}) },
   });
   const hiF = swap ? G.enemy : G.player;
   const loF = swap ? G.player : G.enemy;
@@ -379,6 +383,7 @@ function measureFight0(f, dur, opt) {
   const aiLo = swap ? G.ai2 : G.ai;
   // 몸 값: AI 가 PROF_BODY[숙련도] 를 넣었음 (ai.js setLevel — 게임과 같음) · --loAs=body:p 면 낮은 쪽 몸만 숙련 p 의 값으로 (setLevel 과 같은 세 자리)
   if (opt.loAs?.has('err') && aiLo.distErr) { const w0 = distErrWidth(aiLo.proficiency, aiLo.art.tradition), w1 = distErrWidth(opt.loAs.get('err'), aiLo.art.tradition); const e1 = w0 > 0 ? (aiLo.distErr * w1) / w0 : 0; aiLo.M = { ...aiLo.M, contact: aiLo.M.contact - aiLo.distErr + e1, reach: aiLo.M.reach - aiLo.distErr + e1 }; aiLo.distErr = e1; } // 같은 굴림 · 폭만
+  if (opt.loNoKit) { const k = kitFromNodes('german', new Set()); k.school = loF.swordArt?.tradition ?? 'none'; k.ai = true; aiLo.kit = k; loF.skillKit = k; loF.schoolFootwork = false; loF.schoolParry = false; }
   if (opt.loAs?.has('lure') && aiLo.plan) aiLo.planLure = opt.loAs.get('lure') >= aiLo.plan.lureAt;
   if (opt.loAs?.has('body')) { const q = opt.loAs.get('body'); aiLo.level = { ...aiLo.level, strength: PROF_BODY.strength[q] }; loF.strength = PROF_BODY.strength[q]; loF.vitality = PROF_BODY.vitality[q]; }
 
@@ -432,7 +437,7 @@ function measureFight0(f, dur, opt) {
   const hOut = outOf(hiF), lOut = outOf(loF);
   const result = lOut && !hOut ? 'hi' : hOut && !lOut ? 'lo' : 'draw';
   const rec = {
-    school, lo, hi, weapon, seed, swap, result, ...(f.loW ? { loW, loSchool: f.loSchool } : {}), ...(opt.loAs?.size ? { loAs: Object.fromEntries(opt.loAs) } : {}),
+    school, lo, hi, weapon, seed, swap, result, ...(f.loW ? { loW, loSchool: f.loSchool } : {}), ...(f.loPack ? { loTr: aiLo.art?.tradition ?? null, loFTr: loF.swordArt?.tradition ?? null } : {}), ...(opt.loAs?.size ? { loAs: Object.fromEntries(opt.loAs) } : {}), ...(opt.loNoKit ? { loNoKit: true } : {}),
     endT: +G.t.toFixed(2),
     hiWounds: dealt.get(hiF), loWounds: dealt.get(loF),
     hiBlood: +hiF.blood.toFixed(3), loBlood: +loF.blood.toFixed(3),
@@ -563,7 +568,8 @@ if (isMain(import.meta.url)) {
     const [si, sn] = shard;
     if (!(sn >= 1 && si >= 1 && si <= sn)) throw new Error('--shard=i/n 은 1 ≤ i ≤ n');
     const foe = arg('foe', null);
-    if (foe != null && foe !== 'even') throw new Error('--foe 는 even');
+    if (foe != null && foe !== 'even' && foe !== 'none') throw new Error('--foe 는 even · none');
+    if (foe === 'none') { const S = await import('../../src/schools.js'); const { WEAPONS: WP } = await import('../../src/weapons.js'); S.SCHOOLS.none_sword ??= S.weaponSchool(WP.longsword, 'none'); }
     const all = planFights({ schools, pairs, seeds, foe });
     const loAs = new Map((arg('loAs', '') || '').split(',').filter(Boolean).map((x) => { const [a, v] = x.split(':'); if (!['level', 'band', 'body', 'kit', 'schoolK', 'err', 'mind', 'lure'].includes(a) || !(+v >= 0 && +v <= 6)) throw new Error(`--loAs=몫:숙련 — ${x}`); return [a, +v]; }));
     if (loAs.size) console.error(`낮은 쪽만 숙련 값: ${arg('loAs', '')}`);
@@ -617,7 +623,7 @@ if (isMain(import.meta.url)) {
     if (done.size) console.error(`이어 재기: ${done.size} 판 있음`);
     for (const { f, k } of mine) {
       if (done.has(k)) continue;
-      const r = { k, ...measureFight(f, dur, { loAs, look, dropHi, levelHi, bandHi, stats, gns, techHi, noThrustFollowHi, keepBaseHi, cfgHi, levelHiSet, passiveHi, gwHi, corrHi, corrLo, corrHeld }) };
+      const r = { k, ...measureFight(f, dur, { loAs, loNoKit: args.includes('--loNoKit'), look, dropHi, levelHi, bandHi, stats, gns, techHi, noThrustFollowHi, keepBaseHi, cfgHi, levelHiSet, passiveHi, gwHi, corrHi, corrLo, corrHeld }) };
       runs.push(r);
       console.error(`[${k + 1}/${all.length}] ${f.school} ${f.lo}:${f.hi} w${f.wi} s${f.seed} ${f.swap ? 'swap' : 'std'} → ${r.result} @${r.endT}s`);
       if (out && runs.length % 10 === 0) saveRuns(out, runs);
