@@ -199,8 +199,8 @@ export class AI {
     me.aiControlled = true; // 유파 걸음(gait.js gaitParams): AI 가 모는 몸은 플레이어 완화 값(gait.player)을 받지 않는다 — 읽기 표시일 뿐
     this.persona = persona || {};
     this.planOn = !this.persona.planOff; // 유파 AI 개편 판 (11/14 — AI_PLAN.on · 재기 도구가 한 몸만 옛 판으로 둘 때 persona.planOff)
-    // 근접 밀치기 (closeQuarters): persona.close 가 있는 인물만 스틱으로 민다. 기본 AI 는 밀지 않는다 (fights12·live_battery 그대로)
-    if (this.persona.close) me.canShove = true;
+    // 근접 밀치기 (closeQuarters): 인물 칸(persona.close) · 유파 플랜 몸(11/19 E2 — AI_PLAN.shove · 독일 플랜은 deCloseCfg)이 스틱으로 민다. 플랜 없는 옛 판 AI 는 밀지 않는다
+    if (this.persona.close || (this.planOn && AI_PLAN.shove > 0)) me.canShove = true; // 11/19 E2: 유파 플랜 몸은 모두 밀 수 있음 (AI_PLAN.shove — 사람과 같은 몸 · 언제 미는지는 closeQuarters 굴림)
     // 권총 사격 사이 쿨타임 배율을 인물이 따로 줄 때만 (persona.gunCooldownK — 지금 주는 인물 없음). 없으면 AI 권총 핸디캡 GUN.aiHandicapK 1.5(10/30 01:4x — 전 마야 시트 값)
     if (this.persona.gunCooldownK) me.gunCooldownK = this.persona.gunCooldownK;
     if (this.persona.close?.kind === 'kick') me.closeStepKind = 'pass'; // 랴오 발차기 = 뒷발이 지나 딛는 몸 부딪기 (발차기 명령·발 충돌이 없다)
@@ -2531,10 +2531,10 @@ export class AI {
   }
 
   /**
-   * 근접 밀치기 (docs/strike/shove_design_2026-09-30.md): 인물(persona.close = { rate, kind, then })만 정한다. 몸은 플레이어와 같은
+   * 근접 밀치기 (docs/strike/shove_design_2026-09-30.md): 인물(persona.close = { rate, kind, then }) · 독일 플랜 · 유파 플랜 몸(AI_PLAN.shove — 11/19 E2)이 정한다(closeCfg). 몸은 플레이어와 같은
    *  규칙(fighter.closeStep)이고 AI 는 스틱만 움직인다 (moveFeet). 시간·쿨다운 없이 사건마다 한 번 Math.random() < rate:
    *  E1 닿는 거리 안으로 들어섬, E2 칼이 맞물림(checkBind 와 같은 기하, 읽기만), E4 내 밀치기가 끝났는데 여전히 안쪽.
-   *  kind 'kick'(랴오)도 같은 몸 부딪기 (발차기 명령·발 충돌이 없다). 기본 AI 는 첫 줄에서 돌아간다 (난수 없음)
+   *  kind 'kick'(랴오)도 같은 몸 부딪기 (발차기 명령·발 충돌이 없다). 칸이 없는 몸(closeCfg null — 플랜 없는 옛 판)은 첫 줄에서 돌아간다 (난수 없음) · 유파 플랜 몸은 11/19 부터 AI_PLAN.shove (E2)
    */
   closeQuarters(s, d) {
     const C = this.closeCfg(); // 인물 칸 · 독일 플랜 밀치기 · 모든 AI 손잡이 찍기 (3 단계 11/14) — 옛 판은 인물 칸 그대로
@@ -2602,14 +2602,14 @@ export class AI {
 
   /**
    * 붙은 거리 칸 (closeQuarters · mordPressGo — 3 단계 11/14): 인물 칸(persona.close)이 있으면 그것 · 독일 플랜 몸은 인물 칸 없는 밀치기(deCloseCfg — 밀 몫은 기울기 · 기력 차) ·
-   *  유파 플랜 판(AI_PLAN.on)의 다른 몸은 손잡이 찍기만(rate 0 · pommel AI_PLAN.pommel — '붙은 거리 손잡이 찍기를 모든 AI 에') · 옛 판은 인물 칸 그대로(없으면 null)
+   *  유파 플랜 판(AI_PLAN.on)의 다른 몸은 밀 몫 AI_PLAN.shove(11/19 E2 — 밀치기를 모든 AI 에) · 손잡이 찍기 AI_PLAN.pommel('붙은 거리 손잡이 찍기를 모든 AI 에') · 옛 판은 인물 칸 그대로(없으면 null)
    */
   closeCfg() {
     if (this.persona.close) return this.persona.close;
     if (!this.planOn) return null;
     if (this.planDe) return deCloseCfg(this, AI_PLAN.pommel ?? 0);
-    if (!(AI_PLAN.pommel > 0)) return null;
-    return (this.pommelCfg ??= { rate: 0, then: 'none', pommel: AI_PLAN.pommel });
+    if (!(AI_PLAN.pommel > 0) && !(AI_PLAN.shove > 0)) return null;
+    return (this.pommelCfg ??= { rate: AI_PLAN.shove ?? 0, then: 'none', pommel: AI_PLAN.pommel ?? 0 }); // 11/19 E2: 밀 몫 AI_PLAN.shove (전 0 — 찍기만)
   }
 
   /**
