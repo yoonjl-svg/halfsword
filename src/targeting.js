@@ -16,6 +16,7 @@ import { TEAM_FIGHT } from './config.js';
 import { sameSide } from './team.js';
 import { woundDegree } from './combat.js';
 import { senseScore, senseHold } from './team_sense.js'; // 무리 싸움 판단 (11/18): 판 사본(M.sense)이 있는 판의 AI 만 — 덧셈 · 바꿈 기다림
+import { fixHoldK } from './ai_lone.js'; // 결투 고집 (11/19 — 이탈리아 마음가짐 many.fix): 수가 밀리면 바꿈 기다림을 길게
 
 const hdist = (a, b) => {
   const p = a.bodies.chest.translation();
@@ -106,8 +107,9 @@ export function chooseTarget(f, M, dt = 0) {
     } else {
       if (st.cand !== best) (st.cand = best), (st.held = 0);
       st.held += dt;
-      if (attacking(best, f) && (T.attackHold <= 0 || (st.atk.get(best) ?? 0) >= T.attackHold)) take(best, 'attacked'); // 나를 치는 상대는 hold 를 기다리지 않는다 (attackHold 만큼 내리 쳤으면)
-      else if (st.held >= ((M.sense && senseHold(M, f, best)) ?? T.hold)) take(best, 'held'); // 무리 싸움 판단 (11/18): 엄호 바꿈은 짧게 기다림 (TEAM_SENSE.cover.hold)
+      const fk = M.sense ? fixHoldK(f) : 1; // 결투 고집 (11/19 — ai_lone.js · 이탈리아): 수가 밀려도 겨눈 상대를 붙듦 — 바꿈 기다림 × (1 + fix × w)
+      if (attacking(best, f) && (T.attackHold <= 0 || (st.atk.get(best) ?? 0) >= T.attackHold * fk)) take(best, 'attacked'); // 나를 치는 상대는 hold 를 기다리지 않는다 (attackHold 만큼 내리 쳤으면)
+      else if (st.held >= ((M.sense && senseHold(M, f, best)) ?? T.hold) * fk) take(best, 'held'); // 무리 싸움 판단 (11/18): 엄호 바꿈은 짧게 기다림 (TEAM_SENSE.cover.hold)
     }
   } else (st.cand = null), (st.held = 0);
   return st.foe;
