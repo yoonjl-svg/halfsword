@@ -30,7 +30,7 @@ function fingerCutRaw(f, key) {
   const k = SKILL.fingerCut?.[key] ?? 1;
   if (k === 1 || !f) return 1;
   const sk = f.skill;
-  if (sk?.autoGuard !== true && !(key === 'hit' && f.aiControlled && sk?.corr === 'v2')) return 1; // AI 는 hit 만 (C1 — 11/19)
+  if (sk?.autoGuard !== true && !(key === 'hit' && f.aiControlled)) return 1; // AI 는 hit 만 (C1 — 11/19 · AI 몸은 늘 v2 — skill.corr 로 가르지 않음: corr_s0 '설정 0 동일'이 깨짐)
   if (!strokeBody(f)) return 1;
   if (key === 'hit') return sk.swinging || sk.quiet <= SKILL.recoverDelay ? k : 1;
   return sk.swinging ? k : 1;
