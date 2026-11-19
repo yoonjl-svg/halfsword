@@ -348,7 +348,7 @@ const trail = new InputTrail(canvas); // 방금 조작한 흔적 (반투명 선)
 input.trail = trail;
 
 let world, eventQueue, colliderInfo, player, enemy, ai, combat;
-let fighters = []; // 이번 판 싸움꾼 — 1:1 = [player, enemy] (예전 두 몸 고리와 같은 차례) · 동시 대전 = 자리 차례 넷까지 (newTeamRound)
+let fighters = []; // 이번 판 싸움꾼 — 1:1 = [player, enemy] (예전 두 몸 고리와 같은 차례) · 동시 대전 = 자리 차례 (newTeamRound — 11/20 넷 제한 없음)
 let teamRun = null; // 동시 대전 판 상태 (newTeamRound — 판 꼴 spec · match · 사람 몸 · 보는 몸 focus · AI · 생사전 opts) — 1:1 이면 null
 let arenaStone = null; // 무대 고정 장애물 (잠든 습지 석상 — arena_obstacle.js, 다른 무대는 null)
 let arenaGround = null; // 지형 무대의 바닥 { floor, lava, terrain } (화산섬 — etna_ground.js, 평지 무대는 null)
@@ -655,7 +655,7 @@ function newRound(weaponId) {
 //   물리 스텝 = src/match.js stepMatch (상대 고르기 · 상대마다 눈 · 편 전멸) · 화면 = team_hud.js · 결과 = matchResult / 생사전 resultFromMatch.
 //  1:1 판(newRound · startFight)은 이 길을 하나도 타지 않는다 (teamRun = null)
 // ─────────────────────────────────────────────────────────────
-const TEAM_TEST = ['2v2', '2v1', '1v2', 'watch'].includes(params.get('team')) ? params.get('team') : null; // ?team= 시험 판 (test.html '동시 대전')
+const TEAM_TEST = ['2v2', '2v1', '1v2', '3v3', 'watch'].includes(params.get('team')) ? params.get('team') : null; // ?team= 시험 판 (test.html '동시 대전' · 3v3 = 11/20 넷 제한 걷음)
 const SAENGSA_RULES = import.meta.glob('./saengsa_rules.js'); // 생사전 가지를 합치면 생기는 모듈 — injuriesFromWounds (없으면 빈 묶음 → saengsa_match.js fallbackInjuries)
 const SAENGSA_NAMELESS = import.meta.glob('./saengsa_nameless.js'); // 무명 검객 겉모습 namelessLook(옷 색 번호) (없으면 LOOKS.enemy)
 /** 생사전 가지 모듈 (있을 때만): { injuriesFromWounds, namelessLook } */
@@ -720,7 +720,6 @@ function newTeamRound(spec, mods = {}) {
       terrain,
       look: teamLook(e, mods),
       weapon: e.weapon,
-      ffa: E.length > 2, // 셋 이상 판: 같은 편도 적과 똑같이 부딪히고 벤다 (사장님 10/29 22:3x · fighter.js FFA_*)
       ...(e.human
         ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined, bodyProficiency: humanProficiency({ test: testRoute.active }), ...profBody(humanProficiency({ test: testRoute.active })) } // 몸 값 (11/17 E — 1:1 과 같음) · 막기 단추 · 비기 손 빠르기 숙련도 (11/19)
         : { revive: ch?.revive, physiology: ch?.physiology }), // 버티는 힘 · 힘 = 숙련도별 몸 값 (AI — ai.js setLevel)
@@ -1012,10 +1011,10 @@ async function teamStart(spec, mods = {}, opts = {}) {
   beginFight();
   return teamRun;
 }
-/** ?team= 시험 판 (test.html '동시 대전'): 나(고른 무기 · 고른 인물 겉모습) + 무작위 동료 대 무작위 상대(고른 상대가 있으면 첫째) — 지켜보기는 넷 모두 AI */
+/** ?team= 시험 판 (test.html '동시 대전'): 나(고른 무기 · 고른 인물 겉모습) + 무작위 동료 대 무작위 상대(고른 상대가 있으면 첫째) — 지켜보기는 넷 모두 AI · 3v3 = 나 + 동료 둘 대 셋 (11/20) */
 function teamTestSpec() {
-  const mineN = TEAM_TEST === '1v2' ? 1 : 2;
-  const foeN = TEAM_TEST === '2v1' ? 1 : 2;
+  const mineN = TEAM_TEST === '1v2' ? 1 : TEAM_TEST === '3v3' ? 3 : 2;
+  const foeN = TEAM_TEST === '2v1' ? 1 : TEAM_TEST === '3v3' ? 3 : 2;
   const used = new Set(testRoute.hero ? [testRoute.hero.id] : []);
   const pickChar = (pref) => {
     let c = pref && !used.has(pref.id) ? pref : null;
@@ -1038,7 +1037,7 @@ function teamTestSpec() {
     foes.push({ id: c.id, weapon: pickCharacterWeapon(c) });
   }
   const seq = [];
-  for (let k = 0; k < 2; k++) {
+  for (let k = 0; k < Math.max(mineN, foeN); k++) {
     if (mine[k]) seq.push({ ...mine[k], team: 0 });
     if (foes[k]) seq.push({ ...foes[k], team: 1 });
   }
@@ -1091,7 +1090,7 @@ let secretBurstsSeen = 0;
 let secretSfx = null; // 비기 소리 걸쇠 (10/25 — 판마다 새로, src/secret_sfx.js)
 let secretOpenSeen = 0;
 // 비기 화면 연출 (10/10 발도 섬광 · 이베리아 카메라): 본 잔상 수 · 카메라 돌림 { t, sign }
-const secretArcSeen = [0, 0, 0, 0]; // 자리마다 (동시 대전 넷까지)
+const secretArcSeen = [0, 0]; // 자리마다 (동시 대전은 판 시작에 자리 수만큼 — newTeamRound)
 const camSwing = { t: -1, sign: 1 };
 // 런지 카메라 (10/25 14:0x 사장님 '리솔루토 쓰는 순간 비기인 줄 모르겠더라' → 안 1 — SECRET.risoCam): 시계 t · 런지 방향 (dx, dz — 수평 단위) · 본 런지(skill.sec 한 덩이)
 const camPush = { t: -1, dx: 0, dz: 0, run: null };
@@ -3248,7 +3247,7 @@ window.game = {
     return ai;
   },
   get fighters() {
-    return fighters; // 이번 판 싸움꾼 (1:1 = [player, enemy] · 동시 대전 넷까지)
+    return fighters; // 이번 판 싸움꾼 (1:1 = [player, enemy] · 동시 대전 자리 차례 — 11/20 넷 제한 없음)
   },
   get teamRun() {
     return teamRun; // 동시 대전 판 (spec · M · human · focus · result) — tools/browser/team_smoke.mjs 가 읽는다

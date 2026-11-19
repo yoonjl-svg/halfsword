@@ -19,8 +19,8 @@ const LEVERS = String(flag('lever', '')).split(',').filter(Boolean);
 const ATK_HOLD = flag('atkHold', null);
 const SETS = String(flag('set', '')).split(',').filter(Boolean).map((kv) => kv.split('=')); // --set=lineUp.side=1,evade.k=1.2 (TEAM_FIGHT.lever 값 시험)
 const WORKER = flag('worker', null);
-const WEAPONS = ['longsword', 'zweihander', 'rapier', 'kriegsmesser', 'uchigatana', 'hwando']; // (11/19 사브르 · 에스톡 → 크릭스메서 · 환도 — 재기에 estoc · sabre 를 쓰지 않음)
-const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 5) % WEAPONS.length]);
+const WEAPONS = ['longsword', 'kriegsmesser', 'rapier', 'pappenheimer', 'zweihander', 'flamberge', 'uchigatana', 'monohoshizao', 'hwando', 'qinggang']; // 11/19 사장님 '잴 때(뭘 재는 거든) 에스톡과 세이버는 쓰지 마' — 다섯 유파 대표 무기 열 (유파마다 둘 · ai_ring_measure.mjs 와 같음)
+const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 3) % WEAPONS.length]); // 걸음 3 — 한 판 넷까지 서로 다른 무기 (0 · 3 · 6 · 9) · 씨앗 7 걸음으로 열을 다 돎
 
 async function fight(lone, pair, seed) {
   const { newMatch, DT, CONFIG } = await import('./jelly_harness.mjs');

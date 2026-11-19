@@ -38,7 +38,7 @@ for (const gap of GAPS) for (const gd of GUARDS) {
     G.step();
     if (!fired && G.t > 2.4) {
       fired = P.skill.secret({ S, ctx: { ev: 'press' } }); tFire = G.t;
-      if (process.env.NOSELF) for (const c of P.swordColliders) c.setCollisionGroups(c.collisionGroups() & ~256); // 시험: 내 칼 ↔ 내 몸통 충돌 끔 (torsoBit(0) = 256)
+      if (process.env.NOSELF) for (const c of P.swordColliders) P.colliderInfo.get(c.handle).self = 0; // 시험: 내 칼 ↔ 내 몸통 충돌 끔 (11/20 — 제 몸 부류 0 · src/self_contact.js — 전엔 torsoBit(0) 256 을 거름에서 뺌)
     }
     if (E.state !== 'stand') Emin = E.state;
     if (fired && P.skill.sec) {

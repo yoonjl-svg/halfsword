@@ -12,6 +12,7 @@
 //  실행: node tools/sim/courtyard_camera_map.mjs [결과.json] [--d=2.0] [--stages=courtyard,sluice,open] · 걷기 확인만: [결과.json] --walk (맨 아래 walkCheck)
 import fs from 'node:fs';
 import { newRound, RAPIER, THREE } from './harness_m.mjs';
+import { selfHooks } from '../../src/self_contact.js';
 import { GROUND_GROUPS } from '../../src/fighter.js';
 import { configureStageObstacle, clampStageCamera, BEAR_NAVIGATION } from '../../src/arena_obstacle.js';
 import { COURTYARD_NAVIGATION } from '../../src/stage_courtyard_cover.js';
@@ -34,7 +35,7 @@ for (const stage of STAGES) {
   const G = newRound({ seed: 7, weapon: 'longsword' });
   const ob = stage === 'open' ? null : configureStageObstacle(RAPIER, G.world, stage, GROUND_GROUPS);
   const nav = ob?.navigation ?? null;
-  G.world.step();
+  G.world.step(G.eventQueue, selfHooks(G.combat.info)); // 제 몸 쌍은 걸이가 버린다 (11/20 — self_contact.js)
   const P = G.player, E = G.enemy;
   // 선 자세의 몸 부위 자리를 골반 기준으로 적어 둔다 — 나는 +x 를, 상대는 −x 를 본다 (옮길 때 돌려 쓴다)
   const rel = (f, parts) => { const p = f.bodies.pelvis.translation(); const o = {}; for (const k of parts) { const t = f.bodies[k].translation(); o[k] = [t.x - p.x, t.y, t.z - p.z]; } return o; };

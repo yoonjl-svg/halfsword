@@ -30,7 +30,7 @@ test('① 1:1 AI 는 뛰지 않음: 15 s 판에서 두 AI 몸 모두 f.run · ru
 });
 
 test('② 셋 이상 판 AI 는 사람과 같은 규칙으로 뜀 (2:1 판 시작 — 짝의 둘째가 동료와 붙은 혼자에게)', () => {
-  const W = ['zweihander', 'longsword', 'estoc'];
+  const W = ['zweihander', 'longsword', 'flamberge']; // 11/19 재기에 에스톡 · 세이버 안 씀 (전 estoc)
   const G = newMatch({ count: 3, ai: 'all', seed: 1, walls: true, weapons: W, looks: Array(3).fill(LOOKS.enemy), aiOf: (i) => aiAtProficiency({ ai: { persona: {} }, weapon: W[i] }, 4) });
   assert.ok(G.sense);
   const F = G.fighters;

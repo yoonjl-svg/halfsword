@@ -26,7 +26,9 @@ const STEEL = new THREE.Color(0xc4cad2); // 칼날 색을 못 읽을 때의 강�
 export function trailFor(weapon) {
   return !!weapon && weapon.material === 'steel' && !weapon.gun && weapon.tier !== 'trash' && weapon.edged !== false;
 }
-const MAX_FIGHTERS = 4; // 동시 대전 2:2 넷까지 (10/29 — 1:1 은 둘째 뒤 칸이 비어 그리는 것이 그대로)
+// 그리기 칸은 판의 싸움꾼 수만큼 (11/20 — 넷 제한 걷음): 처음 둘(1:1) · attach 가 더 많은 판을 받으면 그 수로 늘린다(새 기하 — 줄이지는 않음).
+//  칸마다 꼭짓점: 보통 띠 (K − 1) × 6 · 비기 호 · 섬광 480 × 6 · 반짝임 48 (10/29 ~ 11/19 넷 몫 고정 — 그때와 칸 하나의 몫은 같다)
+const FIRST_SLOTS = 2;
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
 
@@ -38,13 +40,19 @@ function makeSlot() {
 
 export function createSwordTrails(scene) {
   const K = SWORD_TRAIL.samples;
-  const maxVerts = MAX_FIGHTERS * (K - 1) * 6; // 자세 사이마다 사각형 하나 = 삼각형 둘
-  const pos = new Float32Array(maxVerts * 3);
-  const col = new Float32Array(maxVerts * 4); // RGBA — 보통 섞기에서 꼭짓점마다 불투명도
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
-  geo.setAttribute('color', new THREE.BufferAttribute(col, 4).setUsage(THREE.DynamicDrawUsage));
-  geo.setDrawRange(0, 0);
+  // 꼭짓점 칸 verts 개짜리 기하 (위치 xyz · 색 RGBA — 보통 섞기에서 꼭짓점마다 불투명도)
+  const makeGeo = (verts) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(verts * 4), 4).setUsage(THREE.DynamicDrawUsage));
+    g.setDrawRange(0, 0);
+    return g;
+  };
+  let cap = FIRST_SLOTS; // 지금 칸 수 (싸움꾼 수 — ensure 가 늘림)
+  let maxVerts = cap * (K - 1) * 6; // 자세 사이마다 사각형 하나 = 삼각형 둘
+  let geo = makeGeo(maxVerts);
+  let pos = geo.attributes.position.array;
+  let col = geo.attributes.color.array;
   const mesh = new THREE.Mesh(
     geo,
     new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide }),
@@ -61,13 +69,10 @@ export function createSwordTrails(scene) {
   //  칼이 쓴 면이 뒤 카메라에서 옆으로 보여 호가 선 하나로 줄어드는 비기) 호에 더해 카메라 쪽으로 펼친 띠로도 그린다 — face 'path' = 치는 끝(호의 바깥 끝과 같은 점)의 길
   //  (정수리 내리치기) · 'line' = 칼이 지나간 곧은 줄(처음 칼자루 → 가장 멀리 간 칼끝 — 찌르기는 칼끝이 제 축을 따라 20 cm 안팎만 나가 끝 길이 점에 가깝다).
   //  반 폭 = 칼자루 → 끝 길이의 8 %(호를 칼끝 쪽으로 넓히는 몫과 같은 수) · 가운데 짙고 가장자리 0 · 밝기 · 남는 시간 · 색 · 섬광은 호와 같다. 카메라는 그리기 직전 콜백(onBeforeRender)에서 받아 둔다
-  const ARC_MAX = MAX_FIGHTERS * 480 * 6; // 조각 480 개 몫 (10/23 — 마주 보는 띠는 조각마다 사각형 둘을 더 쓴다)
-  const apos = new Float32Array(ARC_MAX * 3);
-  const acol = new Float32Array(ARC_MAX * 4);
-  const ageo = new THREE.BufferGeometry();
-  ageo.setAttribute('position', new THREE.BufferAttribute(apos, 3).setUsage(THREE.DynamicDrawUsage));
-  ageo.setAttribute('color', new THREE.BufferAttribute(acol, 4).setUsage(THREE.DynamicDrawUsage));
-  ageo.setDrawRange(0, 0);
+  let ARC_MAX = cap * 480 * 6; // 조각 480 개 몫 (10/23 — 마주 보는 띠는 조각마다 사각형 둘을 더 쓴다)
+  let ageo = makeGeo(ARC_MAX);
+  let apos = ageo.attributes.position.array;
+  let acol = ageo.attributes.color.array;
   const amesh = new THREE.Mesh(ageo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
   amesh.name = 'secretArc';
   amesh.frustumCulled = false;
@@ -75,13 +80,10 @@ export function createSwordTrails(scene) {
   amesh.visible = false;
   scene.add(amesh);
   // 섬광 선 (흰색, 더하기 섞기, 0.08 s)
-  const FL_MAX = MAX_FIGHTERS * 480 * 6;
-  const fpos = new Float32Array(FL_MAX * 3);
-  const fcol = new Float32Array(FL_MAX * 4);
-  const fgeo = new THREE.BufferGeometry();
-  fgeo.setAttribute('position', new THREE.BufferAttribute(fpos, 3).setUsage(THREE.DynamicDrawUsage));
-  fgeo.setAttribute('color', new THREE.BufferAttribute(fcol, 4).setUsage(THREE.DynamicDrawUsage));
-  fgeo.setDrawRange(0, 0);
+  let FL_MAX = cap * 480 * 6;
+  let fgeo = makeGeo(FL_MAX);
+  let fpos = fgeo.attributes.position.array;
+  let fcol = fgeo.attributes.color.array;
   const fmesh = new THREE.Mesh(fgeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
   fmesh.name = 'secretFlash';
   fmesh.frustumCulled = false;
@@ -91,27 +93,26 @@ export function createSwordTrails(scene) {
   const FLASH_MS = 80;
   const LUNGE_SEG = 8; // 런지 빛줄기 토막 수 (창끝 꼴 폭을 부드럽게)
   // 런지 빛줄기 끝 반짝임 (10/25 — 아래 lunges 머리말): 흰 별(가로 · 세로 팔 + 가운데 빛) · 더하기 섞기 · 깊이 안 봄(끝 E 는 상대 몸 안 — 몸 겉에 가리지 않게) · 런지당 한 번 SECRET.risoGlintLife 초
-  const GL_MAX = MAX_FIGHTERS * 48;
-  const gpos = new Float32Array(GL_MAX * 3);
-  const gcol = new Float32Array(GL_MAX * 4);
-  const ggeo = new THREE.BufferGeometry();
-  ggeo.setAttribute('position', new THREE.BufferAttribute(gpos, 3).setUsage(THREE.DynamicDrawUsage));
-  ggeo.setAttribute('color', new THREE.BufferAttribute(gcol, 4).setUsage(THREE.DynamicDrawUsage));
-  ggeo.setDrawRange(0, 0);
+  let GL_MAX = cap * 48;
+  let ggeo = makeGeo(GL_MAX);
+  let gpos = ggeo.attributes.position.array;
+  let gcol = ggeo.attributes.color.array;
   const gmesh = new THREE.Mesh(ggeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, depthTest: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
   gmesh.name = 'secretGlint';
   gmesh.frustumCulled = false;
   gmesh.renderOrder = 6;
   gmesh.visible = false;
   scene.add(gmesh);
-  const arcs = Array.from({ length: MAX_FIGHTERS }, () => ({ id: 0, pts: null, t0: 0 }));
+  const makeArc = () => ({ id: 0, pts: null, t0: 0 });
+  const arcs = Array.from({ length: cap }, makeArc);
   // 런지 빛줄기 (사장님 10/25 14:0x '리솔루토 쓰는 순간 비기인 줄 모르겠더라' → 안 1 결정 · SECRET.risoStreak · docs/strike/italian_risoluto_2026-10-22.md §15):
   //  안다레 리솔루토 런지는 칼이 제 축을 따라 나가 뒤 카메라에서 호 · 마주 보는 띠('line')가 선 하나로 줄었다(그림 docs/handoff/risoluto_fx_2026-10-25 before) →
   //  런지 잔상(f.instantArc 에 lunge = 런지를 시작한 스텝의 칼날 밑동 — secret_instant.js startCombo)이 오면 그 점 S → 가장 멀리 간 칼끝 E 곧은 줄을 화면 쪽으로 펼친 띠로 그린다:
   //  반 폭 SECRET.risoStreakWidth(칼끝 쪽으로 굵어지다 E 에서 모임 — 창끝 꼴) · 몸 = 비기 잔상과 같은 칼날 색 · 같은 밝기(0.95 × max(빠르기 몫, secretArcMin)) · 보통 섞기 ·
   //  심 = 가운데 흰 빛(더하기 섞기 — 섬광과 같은 흰빛 · 처음 FLASH_MS 동안 더 밝게) · 다 그린 때부터 SECRET.risoStreakLife 동안 옅어짐. 이 줄을 그리는 런지는 'line' 띠를 그리지 않는다(겹침).
   //  뒤 카메라에서 찌르는 줄은 카메라에서 멀어지는 쪽이라 화면에 짧다(폰 가로 36 ~ 39 px · 상대 몸통 안 — 그림) → 끝 E 에 화면 가로 · 세로로 펼친 흰 반짝임 별(SECRET.risoGlintLife · risoGlintK)을 더한다
-  const lunges = Array.from({ length: MAX_FIGHTERS }, () => ({ A: null, S: null, E: null, d: -1, n: 0, t0: 0, tf: 0, share: 1 }));
+  const makeLunge = () => ({ A: null, S: null, E: null, d: -1, n: 0, t0: 0, tf: 0, share: 1 });
+  const lunges = Array.from({ length: cap }, makeLunge);
   let cam = null; // 마주 보는 띠가 바라볼 카메라 (그려질 때 받아 둔 같은 물체 — 자리는 그때그때 읽는다)
   const grab = (r, sc, c) => void (cam = c);
   mesh.onBeforeRender = grab;
@@ -119,7 +120,36 @@ export function createSwordTrails(scene) {
   fmesh.onBeforeRender = grab;
   gmesh.onBeforeRender = grab;
 
-  const slots = Array.from({ length: MAX_FIGHTERS }, makeSlot);
+  const slots = Array.from({ length: cap }, makeSlot);
+  /** 칸을 n 개로 늘린다 (판의 싸움꾼이 지금 칸보다 많을 때만 — 기하를 새로 만들고 옛것은 버림 · 줄이지 않음) */
+  const ensure = (n) => {
+    if (n <= cap) return;
+    cap = n;
+    maxVerts = cap * (K - 1) * 6;
+    ARC_MAX = cap * 480 * 6;
+    FL_MAX = cap * 480 * 6;
+    GL_MAX = cap * 48;
+    const swap = (m, verts) => {
+      m.geometry.dispose();
+      m.geometry = makeGeo(verts);
+      return m.geometry;
+    };
+    geo = swap(mesh, maxVerts);
+    pos = geo.attributes.position.array;
+    col = geo.attributes.color.array;
+    ageo = swap(amesh, ARC_MAX);
+    apos = ageo.attributes.position.array;
+    acol = ageo.attributes.color.array;
+    fgeo = swap(fmesh, FL_MAX);
+    fpos = fgeo.attributes.position.array;
+    fcol = fgeo.attributes.color.array;
+    ggeo = swap(gmesh, GL_MAX);
+    gpos = ggeo.attributes.position.array;
+    gcol = ggeo.attributes.color.array;
+    while (slots.length < cap) slots.push(makeSlot());
+    while (arcs.length < cap) arcs.push(makeArc());
+    while (lunges.length < cap) lunges.push(makeLunge());
+  };
   let now = 0; // 게임 시간 (스텝 합)
 
   /** 물리 스텝 뒤에 한 번: 두 검객의 칼자루·칼끝을 기록한다 */
@@ -507,7 +537,8 @@ export function createSwordTrails(scene) {
   /** 판마다: 이번 판 검객들을 붙이고 지난 띠는 지운다. 검객마다 { setTone } 손잡이를 돌려준다 */
   const attach = (fighters) => {
     const handles = [];
-    for (let i = 0; i < MAX_FIGHTERS; i++) {
+    ensure(fighters.length);
+    for (let i = 0; i < cap; i++) {
       const s = slots[i];
       const f = fighters[i] ?? null;
       s.f = f;
@@ -537,5 +568,5 @@ export function createSwordTrails(scene) {
     mesh.visible = false;
   };
 
-  return { sample, update, attach, clear, mesh };
+  return { sample, update, attach, clear, mesh, get slots() { return cap; } };
 }

@@ -21,6 +21,7 @@ import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜�
 import * as THREE from 'three';
 import { PICKUP, VITALS, SECRET, realS } from './config.js';
 import { startSwordReturn, flySword, attachSword, holdRot } from './revive.js';
+import { pairAllowed } from './self_contact.js'; // 제 몸 쌍 (11/20 — 충돌 그룹에 싸움꾼마다 비트가 없어 겹침 물음도 같은 판정을 거른다)
 const _rg = {}; // Rapier 콜백 예외 통 (11/17 — rapier_guard.js: 콜백 안 예외를 적고 엔진 부름 뒤 node 에서 다시 던짐)
 
 const _g = new THREE.Vector3();
@@ -168,12 +169,15 @@ function revivalHandoff(f) {
   f.pickW = 0;
 }
 
-/** 쥔 칼(충돌 꺼짐)이 원래 그룹이면 부딪힐 것과 겹쳐 있나 (칼 몸체는 뺌) */
+/** 쥔 칼(충돌 꺼짐)이 원래 그룹이면 부딪힐 것과 겹쳐 있나 (칼 몸체는 뺌 · 제 몸은 걸이와 같은 판정 — 제 몸통만 · self_contact.js pairAllowed) */
 function swordOverlaps(f, saved) {
   let hit = false;
+  const info = f.colliderInfo;
   for (const [col, g] of saved) {
-    if (!col.isEnabled() || f.colliderInfo?.get(col.handle)?.detached) continue;
-    f.world.intersectionsWithShape(col.translation(), col.rotation(), col.shape, guarded(_rg, () => ((hit = true), false), false), undefined, g, undefined, f.sword);
+    if (!col.isEnabled() || info?.get(col.handle)?.detached) continue;
+    const me = info?.get(col.handle);
+    const own = guarded(_rg, (c) => pairAllowed(me, info?.get(c.handle)), false);
+    f.world.intersectionsWithShape(col.translation(), col.rotation(), col.shape, guarded(_rg, () => ((hit = true), false), false), undefined, g, undefined, f.sword, own);
     rethrowRapier(_rg);
     if (hit) return true;
   }

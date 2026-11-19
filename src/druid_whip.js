@@ -169,11 +169,11 @@ export function drawDruidWhip(group) {
 
 /**
  * 칼 몸체(손잡이)에 붙어 만들어진 마디 콜라이더 8 개를 떼어 마디 강체 8 개로 옮기고 구면 관절로 잇는다 (fighter.js 생성자 — spec.flexible).
- *  ownTorsoBit: 제 몸통 · 허벅지 충돌 비트(사람 관절 한도). 단단한 손잡이는 사람 관절 · 몸 한계를 그대로 지키고,
- *  휘는 덩굴만 제 몸에서 빼 준다 — 마찰 있는 마디가 제 몸에 감겨 다시 휘두르지 못하던 것(샛별 749a7b367). 상대 몸 · 땅 · 장애물 비트는 그대로 · 상대 무기 비트(foeWeaponBit)는 WHIP.bladeFrom 번 마디부터만.
+ *  제 몸통 · 허벅지: 단단한 손잡이는 사람 관절 · 몸 한계를 그대로 지키고(colliderInfo.self 칼), 휘는 덩굴 마디만 제 몸에서 빼 준다 — 마디의 self 0 (src/self_contact.js — 11/20 전엔 & ~ownTorsoBit) ·
+ *  마찰 있는 마디가 제 몸에 감겨 다시 휘두르지 못하던 것(샛별 749a7b367). 상대 몸 · 땅 · 장애물 비트는 그대로 · 무기 비트(foeWeaponBit — 칼 부류)는 WHIP.bladeFrom 번 마디부터만.
  *  돌려줌 flex: step(dt) 굽힘 복원 · cache(put) 스텝 전 상태 · point(t, out) 덩굴 위 한 점 · sync() 메쉬 휨
  */
-export function attachDruidWhip(f, ownTorsoBit, foeWeaponBit = 0) {
+export function attachDruidWhip(f, foeWeaponBit = 0) {
   const R = f.R, world = f.world, root = f.sword;
   Object.assign(f.weaponCfg, WHIP.servo); // 손잡이 서보 (판 고르기 — 기본은 weapons.js controlOverrides 와 같은 값)
   const parts = f.weapon.buildParts({}), L = WHIP.lash / DRUID.count;
@@ -182,7 +182,7 @@ export function attachDruidWhip(f, ownTorsoBit, foeWeaponBit = 0) {
   let previous = root;
   for (let i = 0; i < DRUID.count; i++) {
     const part = parts[i + 2], old = f.swordColliders[i + 2];
-    const groups = old.collisionGroups() & ~ownTorsoBit & ~(i < WHIP.bladeFrom ? foeWeaponBit : 0);
+    const groups = old.collisionGroups() & ~(i < WHIP.bladeFrom ? foeWeaponBit : 0);
     f.colliderInfo.delete(old.handle); world.removeCollider(old, true);
     const pos = new THREE.Vector3(0, part[1], 0).applyQuaternion(q0).add(p0);
     const body = world.createRigidBody(R.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setRotation(q0)
@@ -191,10 +191,11 @@ export function attachDruidWhip(f, ownTorsoBit, foeWeaponBit = 0) {
     const col = world.createCollider(R.ColliderDesc.cuboid(part[0][1], L / 2, part[0][3])
       .setMassProperties(m, { x: 0, y: 0, z: 0 }, { x: Ie, y: It, z: Ie }, { x: 0, y: 0, z: 0, w: 1 })
       .setFriction(WHIP.friction).setRestitution(WHIP.restitution).setCollisionGroups(groups)
-      .setActiveEvents(R.ActiveEvents.CONTACT_FORCE_EVENTS).setContactForceEventThreshold(.1), body);
+      .setActiveEvents(R.ActiveEvents.CONTACT_FORCE_EVENTS).setContactForceEventThreshold(.1)
+      .setActiveHooks(R.ActiveHooks.FILTER_CONTACT_PAIRS), body); // 제 몸 쌍 버리기 걸이 (11/20 — 마디는 self 0 · 가르기 걸이 cutHook 없음 = 예전처럼 엔진 기본)
     const state = {};
     // 접촉 기록(combat.js): 이 마디의 스텝 전 상태(state) · 질량 · 관성(props)으로 둔타를 셈 · flexible = 팔 보조 질량 0.12 · 되튐 없음
-    const info = { fighter: f, kind: 'weapon', part: 'blade', body, flexible: true, armAssist: Array.isArray(WHIP.armAssist) ? WHIP.armAssist[i] : WHIP.armAssist, state,
+    const info = { fighter: f, kind: 'weapon', part: 'blade', body, flexible: true, self: 0, armAssist: Array.isArray(WHIP.armAssist) ? WHIP.armAssist[i] : WHIP.armAssist, state,
       props: { m, I: { x: Ie, y: It, z: Ie }, frame: new THREE.Quaternion() } };
     f.colliderInfo.set(col.handle, info);
     f.swordColliders[i + 2] = col; f.bladeColliders[i] = col;

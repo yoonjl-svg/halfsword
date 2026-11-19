@@ -142,8 +142,8 @@ function postBuild(f) {
   // colOff=i+j   잰 쪽 칼 부품 충돌체(자루 0 · 폼멜 1 · 코등이 2)가 아무것과도 안 닿음 · selfOff=i+j  그 부품만 제 몸통(골반 · 배 · 가슴 · 허벅지)과 안 닿음 (BODY.humanLimits 제 몸 충돌)
   if (ablVal('colOff')) for (const i of String(ablVal('colOff')).split('+').map(Number)) f.sword.collider(i).setCollisionGroups(0);
   if (ablVal('selfOff')) {
-    const tm = (f.bodies.chest.collider(0).collisionGroups() >>> 16) & 0xffff; // 제 몸통 소속 비트 (myBody | myTorso)
-    for (const i of String(ablVal('selfOff')).split('+').map(Number)) { const c = f.sword.collider(i); c.setCollisionGroups(c.collisionGroups() & ~tm); }
+    // 그 부품의 제 몸 부류를 0 으로 (11/20 — src/self_contact.js: 제 몸통과 닿는 것은 걸이가 colliderInfo.self 로 정함 · 전엔 거름에서 제 몸통 비트를 뺌 — 같은 뜻)
+    for (const i of String(ablVal('selfOff')).split('+').map(Number)) f.colliderInfo.get(f.sword.collider(i).handle).self = 0;
   }
   if (ablVal('roll') && f.gripCone?.[1]) {
     f.world.removeImpulseJoint(f.gripCone[1], true); // 아래팔 돌림 밧줄(HUMAN.forearmRoll 80°)만 걷음 — 양날 고르기(rollSide)는 그대로

@@ -3,7 +3,7 @@ import { TEAM_FIGHT } from './config.js';
 import { hpStrip } from './hp_strip.js';
 
 /** 두 검객의 머리 위에 붙이는 화면 크기 고정 기력 바. 판마다 DOM을 만들지 않는다.
- *  동시 대전(10/29 — 넷까지): 셋째 · 넷째 바는 셋 이상 판이 처음 올 때만 만든다 (1:1 DOM 은 예전 그대로 둘).
+ *  동시 대전(10/29 · 11/20 넷 제한 걷음): 셋째부터의 바는 그 수의 판이 처음 올 때만 만든다 (1:1 DOM 은 예전 그대로 둘 · 줄이지 않음 — 빈 자리는 숨김).
  *   setTeam(true) 인 판(동시 대전 — main.js newTeamRound · 생사전 판 모두)은 이름표를 싸움꾼 이름으로 · 기력 막대 바로 위에 체력 칸(.hp-cells — 같은 너비 · 10 칸 점선 꼴)을 함께.
  *   (사장님 11/18 '생사전에서 좌측 상단에 캐릭터 체력바가 뜨는데 그거 없애고 기력바랑 같이 뜨게 해. 기력바 위나 아래에. … 점선 모양의 바 … 10칸' — 규칙 hp_strip.js ·
  *    전 10/29 22:3x 왼쪽 위 이름 · 체력 목록(team_hud.js #teamList)은 걷음.) 1:1(setTeam false)은 체력 칸이 없다 — 예전 그대로.
@@ -34,7 +34,8 @@ export function createStaminaHud(root) {
     return { bar, fill, name, who: null, hp, hpKey: '' };
   };
   const bars = ['나', '상대'].map(make);
-  const more = ['동료', '상대 2'];
+  // 셋째부터의 기본 이름표 (동시 대전은 setTeam 뒤 싸움꾼 이름으로 바뀜): 자리 2 = 동료 · 3 = 상대 2 · 4 = 동료 2 · 5 = 상대 3 … (자리 홀짝 = 편)
+  const nameAt = (i) => (i % 2 ? `상대 ${(i + 1) / 2}` : i === 2 ? '동료' : `동료 ${i / 2}`);
   let team = false;
   return {
     /** 동시 대전 판이면 true (이름표 = 싸움꾼 이름 · 체력 칸) · 1:1 판이면 false (이름표 예전 그대로 · 체력 칸 없음) */
@@ -44,7 +45,7 @@ export function createStaminaHud(root) {
     },
     update(fighters, camera, visible, width = window.innerWidth, height = window.innerHeight) {
       camera.updateMatrixWorld();
-      while (bars.length < Math.min(4, fighters.length)) bars.push(make(more[bars.length - 2]));
+      while (bars.length < fighters.length) bars.push(make(nameAt(bars.length)));
       bars.forEach((b, i) => {
         const { bar, fill, hp } = b;
         const f = fighters[i];

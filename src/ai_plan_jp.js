@@ -52,6 +52,7 @@ export function jpStackF(ai) {
 
 /** 서 있기 세기 0 ~ still (띠 기울기 × 칸) */
 export function jpStill(ai) {
+  if (ai.manyGo > 0) return 0; // 다적의 자리 (11/19 — src/ai_lone.js): 수가 밀리면 멈춰 서지 않음
   return ai.planK * (ai.planC?.still ?? 0) * J.still;
 }
 
