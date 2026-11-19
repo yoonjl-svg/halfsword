@@ -3,6 +3,11 @@
 실제 `src/` 코드를 그대로 불러와 1/120초 고정 스텝으로 돌린다. 결정적(같은 입력 → 같은 결과).
 `npm install` 후 저장소 루트에서 실행:
 
+## 재기 무기 규칙 (사장님 11/19)
+
+- 어떤 재기에서도 에스톡(estoc) · 세이버(sabre)를 쓰지 않는다 — 플레이어가 쓰지 않는 무기. 무기 고르기는 다섯 유파 대표 무기 열 개(longsword · kriegsmesser · rapier · pappenheimer · zweihander · flamberge · uchigatana · monohoshizao · hwando · qinggang)에서.
+- 무리 싸움 재기의 상대 쪽 유파는 다섯 유파에서 고르게(한 유파가 상대 대부분이 되지 않게). 무기가 돌아가는지만 보는 시험(weapon_smoke 등)은 재기가 아니다.
+
 ## 관문과 소음 폭
 - 체중 방식 기본값(`BODY.weightMode`)은 게임과 같은 `hybrid`다(9/29 감사 R-003). 그 전 levitate 기본값으로 잰 숫자와 곧바로 견주지 않는다. 옛 숫자를 다시 보려면 `node tools/sim/with_config.mjs BODY.weightMode=levitate <스크립트>`.
 - 게임 불변 관문: 바꾸기 전·후 stdout 이 바이트 같아야 한다(`cmp`, 기록은 sha256).
