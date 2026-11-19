@@ -1,6 +1,6 @@
 // 혼자 싸움 판단 시험 (11/19 사장님 '고수 한 명이 하수 두 명을 이기는 방법은 존재해야 하고, 그래야 의외성이 생겨' — src/ai_lone.js · config LONE · 기록 docs/strike/lone_master_2026-11-19.md):
 //  ① 숙련 몫 w = MINDSET.profF (6 = 1 · 2 이하 0) ② 수가 밀림 = 내 동료와 붙지 않은 서 있는 적 둘 이상이 range 안 (동료와 붙은 적 · 멀리 있는 적은 안 셈)
-//  ③ 둘째 칼끝 밖 — 둘째가 그 칼끝 + out 안이면 그 몸에서 멀어지는 스틱 (숙련 몫만큼 · 가까울수록) ④ 난수 안 부름 · 판 사본이 없으면(1:1) 그대로
+//  ③ 둘째 칼끝 밖 (마음가짐 줄에 many.out 이 있는 유파만 — 일본) — 둘째가 그 칼끝 + out 안이면 그 몸에서 멀어지는 스틱 (숙련 몫 × 유파 곱 · 가까울수록) ④ 난수 안 부름 · 판 사본이 없으면(1:1) 그대로
 //  ⑤ 다적의 자리 (일본만 — SCHOOL_MINDSET.japanese.many): 수가 밀리면 manyW = w · 줄 세우기 옆 스틱 (둘째를 겨눈 상대 뒤로) · 다른 유파 · 수가 안 밀리면 0
 //  ⑥ 결투 고집 (이탈리아 — many.lever · many.out): 곱 1 − (1 − 값) × w — 숙련 6 은 둘째 칼끝 밖 걸음 0 · 다른 유파 1
 //  ⑦ 결투 고집 — 겨눈 상대 붙듦 (many.fix · targeting.js): 수가 밀리면 상대 바꿈 기다림 × (1 + fix × w) · 수가 안 밀림 · 다른 유파 · 판 사본 없음 1
@@ -69,22 +69,28 @@ test('② 수가 밀림: 떨어진 적 둘이 range 안 — 둘째 = 겨눈 상�
   assert.equal(loneOf(K[0].aiCtl), null);
 });
 
-test('③ 둘째 칼끝 밖: 둘째가 그 칼끝 + out 안이면 그 몸에서 멀어지는 스틱 (숙련 몫 · 가까울수록) · 바깥이면 그대로', () => {
-  // 나는 +x 를 봄(heading 0) · 둘째가 오른쪽(+z 가 오른쪽 — fighter.right = (−앞.z, 앞.x) = (0, 1))
-  const F = [fake(0, 1, 0, 0, 0), fake(1, 0, 2, 0, Math.PI), fake(2, 0, 0, 1.8 + LONE.out / 2, -Math.PI / 2)];
-  board(F, [1, 0, 0]);
+test('③ 둘째 칼끝 밖 (마음가짐 줄에 many.out 이 있는 유파만): 둘째가 그 칼끝 + out 안이면 그 몸에서 멀어지는 스틱 (숙련 몫 · 유파 곱 · 가까울수록) · 바깥 · many.out 없는 유파는 그대로', () => {
+  // 나는 +x 를 봄(heading 0) · 둘째가 오른쪽(+z 가 오른쪽 — fighter.right = (−앞.z, 앞.x) = (0, 1)) · manyGo 없음(줄 세우기 옆 스틱 안 탐)
+  const jp = SCHOOL_MINDSET.japanese;
+  const mk = (mind, prof, z2) => {
+    const F = [fake(0, 1, 0, 0, 0, { prof }), fake(1, 0, 2, 0, Math.PI), fake(2, 0, 0, z2, -Math.PI / 2)];
+    F[0].aiCtl.mind = mind;
+    board(F, [1, 0, 0]);
+    return F;
+  };
+  const near = 1.8 + LONE.out / 2;
+  const F = mk(jp, 6, near);
   const [fw, sd] = noRandom(() => loneFeet(F[0].aiCtl, 0, 0));
   assert.ok(Math.abs(fw) < 1e-9);
-  assert.ok(Math.abs(sd + LONE.outK * 0.5) < 1e-9, `왼쪽으로 비킴 ${sd} (칼끝 + out 의 반 — outK × ½)`);
-  const P4 = [fake(0, 1, 0, 0, 0, { prof: 4 }), fake(1, 0, 2, 0, Math.PI), fake(2, 0, 0, 1.8 + LONE.out / 2, -Math.PI / 2)];
-  board(P4, [1, 0, 0]);
-  assert.ok(Math.abs(loneFeet(P4[0].aiCtl, 0, 0)[1] + LONE.outK * 0.5 * MINDSET.profF[4]) < 1e-9, '숙련 4 는 ¾');
-  const H = [fake(0, 1, 0, 0, 0), fake(1, 0, 2, 0, Math.PI), fake(2, 0, 0, 1.8 + LONE.out / 2, -Math.PI / 2)];
-  for (const f of H) f.foe = null;
+  assert.ok(Math.abs(sd + LONE.outK * jp.many.out * 0.5) < 1e-9, `왼쪽으로 비킴 ${sd} (칼끝 + out 의 반 — outK × many.out × ½)`);
+  const w4 = MINDSET.profF[4];
+  assert.ok(Math.abs(loneFeet(mk(jp, 4, near)[0].aiCtl, 0, 0)[1] + LONE.outK * 0.5 * w4 * (1 - (1 - jp.many.out) * w4)) < 1e-9, '숙련 4 — w × 유파 곱');
+  for (const s of ['german', 'iberian', 'chinese']) assert.deepEqual(loneFeet(mk(SCHOOL_MINDSET[s], 6, near)[0].aiCtl, 0.3, 0.1), [0.3, 0.1], `${s} — many.out 없음 (11/19 고른 판: 다섯 유파 모두에 걸면 없음과 같음)`);
+  assert.deepEqual(loneFeet(mk(undefined, 6, near)[0].aiCtl, 0.3, 0.1), [0.3, 0.1], '마음가짐 없는 몸 — 그대로');
+  const H = [fake(0, 1, 0, 0, 0), fake(1, 0, 2, 0, Math.PI), fake(2, 0, 0, near, -Math.PI / 2)];
+  H[0].aiCtl.mind = jp;
   assert.deepEqual(loneFeet(H[0].aiCtl, 0.3, 0.1), [0.3, 0.1], '판 사본 없음 (1:1) — 그대로');
-  const G = [fake(0, 1, 0, 0, 0), fake(1, 0, 2, 0, Math.PI), fake(2, 0, 0, 1.8 + LONE.out + 0.2, -Math.PI / 2)];
-  board(G, [1, 0, 0]);
-  assert.deepEqual(loneFeet(G[0].aiCtl, 0.3, 0.1), [0.3, 0.1]);
+  assert.deepEqual(loneFeet(mk(jp, 6, 1.8 + LONE.out + 0.2)[0].aiCtl, 0.3, 0.1), [0.3, 0.1], '칼끝 + out 밖');
 });
 
 test('⑤ 다적의 자리: 일본(마음가짐 many)만 · 수가 밀리면 w · 줄 세우기 옆 스틱으로 둘째를 겨눈 상대 뒤로', () => {

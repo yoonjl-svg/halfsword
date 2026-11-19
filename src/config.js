@@ -501,6 +501,7 @@ export const RUN = {
 // 혼자 싸움 판단 (11/19 사장님 '고수 한 명이 하수 두 명을 이기는 방법은 존재해야 하고, 그래야 의외성이 생겨' — src/ai_lone.js · 기록 docs/strike/lone_master_2026-11-19.md):
 //  셋 이상 판에서 내 동료와 붙지 않은 적 둘 이상이 range m 안 = 수가 밀림. 몫 w = MINDSET.profF[본 유파 숙련] (규칙 · 몸은 그대로 — 판단만)
 //  out · outK  둘째(겨눈 상대 말고 가장 가까운 적)가 그 칼끝 + out(m) 안이면 그 몸에서 멀어지는 쪽으로 스틱 outK × w × (가까울수록 · 1 까지)
+//              — 유파 마음가짐 줄에 many.out 이 있는 유파만 (지금 일본 · schools.js SCHOOL_MINDSET)
 export const LONE = { range: 6, out: 0.6, outK: 0.8 };
 
 // AI 뛰기 (11/19 사장님 '뛰기 AI에도 넣고 무리 싸움에 먼저 넣어.' — src/ai_run.js · 기록 docs/strike/ai_run_2026-11-19.md): 셋 이상 판 AI 가 언제 스틱을 끝까지 미나만.
