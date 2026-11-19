@@ -30,7 +30,7 @@
 //                AI 는 손가락이 없어 휘두름(손 목표 1.5 m/s 넘음) · 비기 동안만 0 · 준비하고 멈춘 자리 · 막고 선 자리는 자세 지도 쪽으로 감 — 그 몫을 가르는 용 · 읽는 곳은 updateBodyPose 하나)
 //   --stats : 판 기록에 두 쪽 AI 의 stats 요약(hiStats · loStats — 배열은 줄임) · 기력 장부(hiStam · loStam — 갈래마다 쓴 기력 spent · 횟수 counts) · 붙은 거리 사건(hiClose · loClose — closeQuarters 굴린 사건 · 이긴 수 · 몸의 밀치기 수 shoves · 11/19 E2) · 무릎 꺾기 굴림(buckle — 곁눈 베기 G6 · combat.buckleLog 수) + 흔적(hiTrace · loTrace — 공격마다 기술 이름 · 까닭 · 거리 ·
 //             그 칼 동안 준 상처 · 받은 상처 · 끝난 뒤 0.8 s 안에 받은 상처 · 칼 부딪힘 · 그때 상대 꼴 · 그때 상대 칼(vs) · 이어 친 앞 칼(from) / 꼴마다 머문 시간 · 꼴마다 받은 상처). 읽기만 (난수 · 몸에 손대지 않음)
-//            11/19 흔적에 bw — 뒤 박차기 헛침 경직(burst_whiff.js): 내가 굳음 · 도구 눈으로 다시 가른 헛 굳음(박찬 걸음 · 칼끝 거리 · 상처 · 칼 부딪힘) · 상대 굳음 창과 그 창에 벰 · 독일 뒤 칼과 굳음 (읽기만)
+//            11/19 흔적에 bw — 뒤 박차기 헛침 경직(burst_whiff.js): 내가 굳음 · 도구 눈으로 다시 가른 헛 굳음(박찬 걸음 · 칼이 닿을 때쯤 칼끝 거리(박차기 전 자리 포함) · 몸 상처 — 칼 부딪힘은 헛침을 안 깸 · 그 굳음 수만 clashStiff) · 상대 굳음 창과 그 창에 벰 · 독일 뒤 칼과 굳음 (읽기만)
 //   --gns : 판 기록에 높은 쪽 고노센 깔때기 흔적 gns (11/19 · 읽기만 — tools/sim/gns_funnel.mjs gnsProbe · 요약은 node tools/sim/gns_funnel.mjs a.json)
 //   node tools/sim/prof_gap_measure.mjs trace a.json … [--lo] [--vs] [--top=14] : --stats 로 잰 판 기록의 요약 (11/18 · 읽기만) — hi 몫 · 꼴 몫 · 꼴마다 준 · 받은 상처 ·
 //             기술마다 판당 수 · 맞힘 · 맞음 · 끝난 뒤 0.8 s 안 맞음 · 칼 부딪힘 몫 · 거리 · 칼 시간 · 그때 상대 꼴 · 까닭 (--lo = 낮은 쪽 흔적 · --vs = 칼을 열 때 상대 칼 · 이어 친 칼의 앞 칼)
@@ -240,19 +240,35 @@ function traceAI(G, ai, me, other) {
   // 뒤 박차기 헛침 경직 흔적 (11/19 — burst_whiff.js · 읽기만 · 판 결과 그대로): 내 굳음 — 도구 눈으로 다시 가름(박찬 걸음 · 칼끝 거리 · 상처 · 칼 부딪힘)해 어긋나면 '헛 굳음' ·
   //  상대 굳음 창 — 그 창 안에 내가 벰 · 독일 띠 높음 뒤 칼(deNach) — 낸 때 · 칼이 나간 때 상대가 굳었나 · 굳은 동안 벰 · 굳음 시작에서 칼이 나갈 때까지 초
   const ob = other?.me; // 상대 몸 (other = 상대 AI)
-  const hd = (a, b) => { const p = a.bodies.chest.translation(), q = b.bodies.chest.translation(); return Math.hypot(q.x - p.x, q.z - p.z); };
+  // 칼이 닿을 때쯤 거리 (도구 눈 — 가슴 사이 − 서로 다가오는 빠르기 × 베는 시간 · from = 상대가 박차기 전 자리면 그 자리 · 다가옴은 내 몸 몫만)
+  const hd = (a, b, from = null) => {
+    const p = a.bodies.chest.translation(), q = from ?? b.bodies.chest.translation();
+    const dx = q.x - p.x, dz = q.z - p.z, d = Math.hypot(dx, dz) || 1e-6;
+    const va = a.bodies.pelvis.linvel(), vb = from ? { x: 0, z: 0 } : b.bodies.pelvis.linvel();
+    return d - Math.max(0, ((va.x - vb.x) * dx + (va.z - vb.z) * dz) / d) * (a.swordArt?.measure?.cutTime ?? 0);
+  };
+  let obBurst = null; // 상대가 뒤 박찬 걸음을 뗀 때 · 가슴 자리 (도구 눈 — 걸음 장치 fastK)
   const BW = { trig: 0, falseTrig: 0, falseWhy: {}, win: 0, winHit: 0, nach: 0, nachStiffFire: 0, nachStiffStrike: 0, nachHit: 0, nachHitStiff: 0, delay: 0, delayN: 0 };
   let atk0 = null, prevMy = false, prevFoe = false, foeWin = null, nachRec = null;
   const ss0 = ai.startStrike;
-  ai.startStrike = function () { atk0 = { t: G.t, d: hd(me, ob), reach: me.swordArt?.measure?.reach ?? 1.8, w: G.wounds.length, c: G.clashes, burst: false }; return ss0.call(this); };
+  ai.startStrike = function () {
+    const nowB = obBurst && G.t - obBurst.t <= CFG.GAIT.burstT + 1e-9;
+    atk0 = { t: G.t, d: Math.min(hd(me, ob), nowB ? hd(me, ob, obBurst.p) : Infinity), reach: Math.max(me.swordArt?.measure?.reach ?? 1.8, this.need ?? 0), w: G.wounds.length, c: G.clashes, burst: !!nowB };
+    return ss0.call(this);
+  };
+  let obFk = false;
   const bwPoll = () => {
     const og = ob?.gait;
+    const fk = !!og && og.fastK > 1 && og.fastDir < 0 && !og.fastSide;
+    if (fk && !obFk) { const q = ob.bodies.chest.translation(); obBurst = { t: G.t, p: { x: q.x, z: q.z } }; }
+    obFk = fk;
     if (atk0 && og && ai.mode === 'attack' && (ai.phase === 'strike' || ai.phase === 'follow') && og.fastK > 1 && og.fastDir < 0 && !og.fastSide) atk0.burst = true;
     const my = me.bwStiffT > 0;
     if (my && !prevMy) {
       BW.trig++;
-      const why = !atk0 ? 'noAtk' : !atk0.burst ? 'noBurst' : atk0.d > atk0.reach ? 'far' : G.wounds.slice(atk0.w).some((w) => w.att === me && w.vic === ob) ? 'wound' : G.clashes > atk0.c ? 'clash' : null;
+      const why = !atk0 ? 'noAtk' : !atk0.burst ? 'noBurst' : atk0.d > atk0.reach ? 'far' : G.wounds.slice(atk0.w).some((w) => w.att === me && w.vic === ob) ? 'wound' : null; // 11/19 칼끼리 닿음은 헛침을 깨지 않음 (아래 clash 는 재기만)
       if (why) { BW.falseTrig++; BW.falseWhy[why] = (BW.falseWhy[why] ?? 0) + 1; }
+      if (atk0 && G.clashes > atk0.c) BW.clashStiff = (BW.clashStiff ?? 0) + 1;
     }
     prevMy = my;
     const fs = (ob?.bwStiffT ?? 0) > 0;

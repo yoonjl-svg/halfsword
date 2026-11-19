@@ -4,25 +4,38 @@
 //
 //  한 공격 = 사람: 검술 층 휘두르기 덩이(skill.js whiffTrack — 휘두름 · 탭이 이어진 동안 + 칼이 다 지나갈 때까지 · 기력 장부가 공격으로 센 것만) ·
 //            AI: 칼이 나가는 순간(ai.js startStrike) ~ 친 뒤(afterStrike). 비기 칼은 셈하지 않음(비기는 제 경직이 있음).
-//  ① 공격 시작 (bwAtkStart): 그때 겨눈 상대(f.foe)가 내 칼끝 거리(검술 풀이 간격 measure.reach — 가슴 사이 수평 거리) 안이었나를 적음 — 밖이면 처음부터 닿지 않을 칼
-//  ② 닿음 (bwTouch — combat.js): 이 공격 동안 내 칼이 그 상대 몸에 닿음(판정 문턱 밑 닿음도) · 칼끼리 닿음(코등이 · 자루 포함) → 헛침 아님
+//  ① 공격 시작 (bwAtkStart): 그때 겨눈 상대(f.foe)가 내 칼끝 거리 안이었나를 적음 — 칼이 닿을 때쯤의 거리(가슴 사이 − 서로 다가오는 빠르기 × 베는 시간 cutTime — AI contactDist 와 같은 뜻)가
+//     검술 풀이 간격 measure.reach (AI 는 그 칼을 낸 거리 need — 기술 걸음 몫 — 가 더 길면 그것) 안. 밖이면 처음부터 닿지 않을 칼
+//  ② 닿음 (bwTouch — combat.js · secret_instant.js): 이 공격 동안 내 칼이 그 상대 몸에 닿음(판정 문턱 밑 닿음도) → 헛침 아님 ·
+//     칼끼리 · 코등이 닿음(막기로 받아낸 칼 포함)은 헛침을 깨지 않음 ([사장님 11/19 결정] '권고대로' — 몸에 안 닿으면 헛친 것 · 재기로만 셈)
 //  ③ 뒤 박차기 (gait.js — 독일 보법 G1 · 앞뒤 몫만 · 옆 박차기 · 파고들기는 아님): 박차기를 걸 때(사람 스틱 뒤 · AI backBurstAi — bwAim) 나를 겨눠 나가는 중인 칼
 //     (칼이 나간 뒤 다 지나갈 때까지 — AI 'strike' · 'follow' · 사람 휘두름 덩이)을 적고, 그 박찬 걸음을 실제로 뗄 때(fastBegin — bwBurst) 그 칼이 아직 안 끝났으면 표시 ·
 //     뗄 때 나가는 중인 칼도 표시 (칼을 들 때 미리 읽고 건 박차기 — 걸 때는 칼이 아직 안 나감). 걸었다가 못 뗀 박차기 · 칼이 끝난 뒤에야 뗀 걸음은 표시 없음
-//  ④ 공격 끝 (bwAtkEnd): 표시가 있고 · 시작 때 칼끝 거리 안 · 닿음 없음(그 몸의 맞힘 · 맞물림 셈도 없음)이면 굳음 BURST_WHIFF.stiff — 끝난 때부터
+//     박찬 걸음(발 뜬 시간 GAIT.burstT) 동안 나간 칼도 표시 (11/19 §8 — 칼이 떠나는 순간을 읽고 먼저 박참 · 칼끝 거리는 박차기 전 자리로도 봄)
+//  ④ 공격 끝 (bwAtkEnd): 표시가 있고 · 시작 때 칼끝 거리 안 · 몸 닿음 없음(그 몸의 맞힘 셈도 없음)이면 굳음 BURST_WHIFF.stiff — 끝난 때부터
 //  굳음 = 비기 경직과 같은 꼴: 칼(손 목표)은 굳은 자리에 멈춤(skill.js holdStiff) · 걸음 없음 · 막기 · 공격 없음
 //   (사람: 검술 층 secretPhase 'stiff' → main.js 가 칼 · 막기 · 스틱 입력을 막음 · 막기 단추 parry_button.js · AI: ai.js 공격 문 · respond · 꼴 분기 · 걸음)
 // ─────────────────────────────────────────────────────────────
-import { BURST_WHIFF } from './config.js';
+import { BURST_WHIFF, GAIT } from './config.js';
 
-const hdist = (a, b) => {
-  const p = a.bodies.chest.translation();
-  const q = b.bodies.chest.translation();
-  return Math.hypot(q.x - p.x, q.z - p.z);
-};
+/** y 의 칼끝 거리 (검술 풀이 간격 — 무기 실측 · AI 어림 오차가 섞이지 않은 몸의 값) · AI 는 그 칼을 낸 거리(need — 기술 걸음 몫까지 닿는다고 보고 낸 거리)가 더 길면 그것 */
+const reachOf = (y) => Math.max(y.swordArt?.measure?.reach ?? y.aiCtl?.M?.reach ?? 1.8, y.aiCtl?.mode === 'attack' ? y.aiCtl.need ?? 0 : 0);
 
-/** y 의 칼끝 거리 (검술 풀이 간격 — 무기 실측 · AI 어림 오차가 섞이지 않은 몸의 값) */
-const reachOf = (y) => y.swordArt?.measure?.reach ?? y.aiCtl?.M?.reach ?? 1.8;
+/**
+ * 칼이 닿을 때쯤의 거리 (y 가 칼을 낼 때 — ai.js contactDist 와 같은 뜻을 두 몸의 물리로): 지금 가슴 사이 − 두 몸이 서로 다가오는 빠르기 × 베는 시간(검술 풀이 cutTime) ·
+ *  from = x 의 자리를 바꿔 볼 때(박차기 전 자리 — 그 자리에 섰다면 · 다가옴은 y 몸 몫만)
+ */
+function reachDist(y, x, from = null) {
+  const p = y.bodies.chest.translation();
+  const q = from ?? x.bodies.chest.translation();
+  const dx = q.x - p.x;
+  const dz = q.z - p.z;
+  const d = Math.hypot(dx, dz) || 1e-6;
+  const vy = y.bodies.pelvis?.linvel?.() ?? { x: 0, z: 0 };
+  const vx = from ? { x: 0, z: 0 } : x.bodies.pelvis?.linvel?.() ?? { x: 0, z: 0 };
+  const closing = ((vy.x - vx.x) * dx + (vy.z - vx.z) * dz) / d; // + = 서로 다가옴
+  return d - Math.max(0, closing) * (y.swordArt?.measure?.cutTime ?? 0);
+}
 
 /** f 가 지금 굳었나 (뒤 박차기 헛침 경직) */
 export const bwStiff = (f) => (f?.bwStiffT ?? 0) > 0;
@@ -33,15 +46,33 @@ function inFlight(y) {
   return y.aiCtl ? !y.aiCtl.secretRun : !y.skill?.sec;
 }
 
-/** 재기 칸 (읽기만): 시작 · 박차기 표시 · 굳음 · 닿아서 안 굳음 · 칼끝 밖이라 안 굳음 */
-const statOf = (f) => (f.bwStats ??= { atk: 0, burst: 0, stiff: 0, touched: 0, far: 0, log: [] });
+/** 재기 칸 (읽기만): 시작 · 박차기 표시 · 굳음 · 몸에 닿아서 안 굳음 · 칼끝 밖이라 안 굳음 · 칼끼리만 닿은 채 굳음(bladeOnly) */
+const statOf = (f) => (f.bwStats ??= { atk: 0, burst: 0, stiff: 0, touched: 0, far: 0, bladeOnly: 0, log: [] });
+
+/** x 가 지금 뒤 박찬 걸음 동안인가 (gait.js fastBegin 이 뗀 때를 적음 · 그 걸음의 발 뜬 시간 GAIT.burstT 안) */
+const bursting = (x) => x?.bwBurstAt != null && (x.fightT ?? 0) - x.bwBurstAt <= GAIT.burstT + 1e-9;
+
+/** 뒤 박찬 걸음을 뗀 자리 · 때 (gait.js 가 bwBurst 로 부름 — 걸음을 뗄 때 가슴 자리: 칼이 그 뒤에 나가도 '박차기 전에 칼끝 거리 안이었나'를 이 자리로 봄) */
+function burstMark(x) {
+  const p = x.bodies?.chest?.translation();
+  x.bwBurstAt = x.fightT ?? 0;
+  x.bwBurstFrom = p ? { x: p.x, z: p.z } : null;
+}
 
 /** ① 공격 시작 (사람 whiffTrack 덩이 시작 · AI startStrike) */
 export function bwAtkStart(y) {
   const x = y.foe;
   if (y.bwAtk) y.bwAtk.live = false;
-  y.bwAtk = { y, tgt: x, inReach: !!x && x.alive && !!x.bodies && hdist(y, x) <= reachOf(y), burst: false, touched: false, live: true };
-  statOf(y).atk++;
+  y.bwAtk = { y, tgt: x, inReach: !!x && x.alive && !!x.bodies && reachDist(y, x) <= reachOf(y), burst: false, touched: false, blade: false, live: true };
+  const st = statOf(y);
+  st.atk++;
+  // 상대가 뒤 박찬 걸음을 떼는 중에 칼이 나감 (칼이 떠나는 순간을 읽고 먼저 박참 — 그 걸음이 칼과 겹침): 칼이 나가는 동안 박찬 것과 같음 ·
+  //  칼끝 거리는 박차기 전 자리(걸음을 뗀 자리)로도 봄 — 박차지 않았으면 닿았을 칼
+  if (bursting(x) && !(y.aiCtl ? y.aiCtl.secretRun : y.skill?.sec)) {
+    y.bwAtk.burst = true;
+    st.burst++;
+    if (!y.bwAtk.inReach && x.bwBurstFrom) y.bwAtk.inReach = reachDist(y, x, x.bwBurstFrom) <= reachOf(y);
+  }
 }
 
 /**
@@ -50,7 +81,11 @@ export function bwAtkStart(y) {
  */
 export function bwTouch(y, x, kind = 'body') {
   const A = y?.bwAtk;
-  if (A && A.tgt === x && !A.touched) A.touched = kind; // 'body' 몸 · 'blade' 칼끼리 · 'kin' 운동학 칼 (재기 — 처음 닿은 꼴)
+  if (kind === 'blade') {
+    if (A && A.tgt === x) A.blade = true; // 칼끼리 · 코등이 닿음 — 헛침을 깨지 않음 (재기만)
+    return;
+  }
+  if (A && A.tgt === x && !A.touched) A.touched = kind; // 'body' 몸 · 'kin' 운동학 칼의 몸 맞음 (재기 — 처음 닿은 꼴)
   const E = y?.bwEnd;
   if (E && E.tgt === x && (y.fightT ?? 0) - E.t <= (y.lastDt ?? 0) + 1e-9) {
     y.bwEnd = null;
@@ -74,6 +109,7 @@ export function bwAim(x) {
 
 /** ③-2 x 가 그 뒤 박찬 걸음을 실제로 뗌 (gait.js fastBegin): 건 때 적은 칼(list)이 아직 안 끝났으면 · 지금 x 를 겨눠 나가는 중인 칼이면 표시 */
 export function bwBurst(x, list) {
+  burstMark(x);
   for (const A of [...(list ?? []), ...(bwAim(x) ?? [])]) {
     if (!A.live || A.burst) continue;
     A.burst = true;
@@ -81,20 +117,21 @@ export function bwBurst(x, list) {
   }
 }
 
-/** ④ y 의 공격이 끝남 (사람 whiffEnd · AI afterStrike): landed · bound = 그 몸이 센 맞힘 · 맞물림. 굳었으면 true */
-export function bwAtkEnd(y, landed = false, bound = false) {
+/** ④ y 의 공격이 끝남 (사람 whiffEnd · AI afterStrike): landed = 그 몸이 센 맞힘(상대 아픔이 오름 — 몸 닿음). 굳었으면 true */
+export function bwAtkEnd(y, landed = false) {
   const A = y.bwAtk;
   y.bwAtk = null;
   if (A) A.live = false;
   if (!A?.burst) return false;
   const st = statOf(y);
   if (!A.inReach) return void st.far++, false;
-  if (A.touched || landed || bound) {
+  if (A.touched || landed) {
     st.touched++;
-    const k = `t_${A.touched || (bound ? 'bound' : 'landed')}`;
+    const k = `t_${A.touched || 'landed'}`;
     st[k] = (st[k] ?? 0) + 1; // 재기: 처음 닿은 꼴
     return false;
   }
+  if (A.blade) st.bladeOnly++; // 재기: 칼끼리 · 코등이만 닿은 채 헛침 (11/19 '몸에 안 닿으면 헛친 것')
   y.bwStiffT = BURST_WHIFF.stiff;
   y.bwEnd = { tgt: A.tgt, t: y.fightT ?? 0 }; // 같은 물리 스텝의 닿음이 오면 거둠 (bwTouch)
   st.stiff++;

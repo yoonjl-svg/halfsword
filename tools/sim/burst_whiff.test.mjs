@@ -1,8 +1,9 @@
 // 뒤 박차기 헛침 경직 시험 (11/19 [사장님 결정] '뒤로 박차서 상대 칼을 헛치게 하면, 그 상대는 헛친 칼이 끝난 뒤 0.6초 동안 경직 (막기 · 공격 불가)'
 //  — src/burst_whiff.js · config BURST_WHIFF · 기록 docs/strike/burst_whiff_2026-11-19.md)
-//  ① 칼이 나가는 동안 뒤 박차기 + 아무 데도 안 닿고 끝남 → 굳음 ② 몸 · 칼에 닿음 → 안 굳음 ③ 박차기 없음 → 안 굳음 ④ 처음부터 칼끝 밖 → 안 굳음
+//  ① 칼이 나가는 동안 뒤 박차기 + 아무 데도 안 닿고 끝남 → 굳음 ② 몸에 닿음 → 안 굳음 · 칼끼리 · 코등이 닿음은 헛침 그대로 (11/19 [사장님 답] '권고대로' — 몸에 안 닿으면 헛침) ③ 박차기 없음 → 안 굳음 ④ 처음부터 칼끝 밖 → 안 굳음
 //  ⑤ 칼이 나가기 전(기록 없음) · 칼이 끝난 뒤에야 뗀 박찬 걸음 · 비기 칼 → 표시 없음 ⑥ 굳은 동안 AI 는 막기 · 공격 없음 · 걸음 0 ⑦ 굳은 동안 사람은 막기 단추 · 칼 · 입력 막음(검술 층 'stiff')
 //  ⑧ 걸음 장치: 사람 독일 몸이 서 있다가 뒤로 밀면 뗀 박찬 걸음이 표시를 남김 (gait.js fastBegin)
+//  ⑨ 박찬 걸음(발 뜬 시간) 동안 나간 칼도 박찬 칼 · 칼끝 거리는 박차기 전 자리로도 봄 (11/19 §8 — 칼이 떠나는 순간을 읽고 먼저 박참)
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, CONFIG, DT } from './harness_m.mjs';
@@ -49,17 +50,31 @@ test('① 칼이 나가는 동안 뒤 박차기 + 아무 데도 안 닿고 끝�
   }
 });
 
-test('② 몸에 닿음 · 칼끼리 닿음 · 그 몸이 센 맞힘 · 맞물림 → 안 굳음', () => {
+test('② 몸에 닿음(판정 문턱 밑 · 운동학 칼) · 그 몸이 센 맞힘 → 안 굳음 · 칼끼리 · 코등이 닿음(막기로 받아낸 칼)은 헛침 그대로 (11/19 몸에 안 닿으면 헛친 것)', () => {
   const D = duel(1.3);
   try {
-    for (const hit of ['touch', 'landed', 'bound']) {
+    for (const hit of ['body', 'kin', 'landed']) {
       swing(D);
       bwBurst(D.X);
-      if (hit === 'touch') bwTouch(D.Y, D.X);
-      assert.equal(bwAtkEnd(D.Y, hit === 'landed', hit === 'bound'), false, hit);
+      if (hit !== 'landed') bwTouch(D.Y, D.X, hit);
+      assert.equal(bwAtkEnd(D.Y, hit === 'landed'), false, hit);
       assert.ok(!bwStiff(D.Y), hit);
     }
     assert.equal(D.Y.bwStats.touched, 3);
+    swing(D);
+    bwBurst(D.X);
+    bwTouch(D.Y, D.X, 'blade'); // 칼끼리 닿음 (막기 단추 · AI 막기가 받아냄 · 코등이)
+    assert.equal(bwAtkEnd(D.Y), true, '칼끼리만 닿음 → 헛침 → 굳음');
+    assert.equal(D.Y.bwStats.bladeOnly, 1);
+    D.Y.bwStiffT = 0;
+    // 굳은 바로 그 스텝의 칼끼리 닿음도 거두지 않음 (몸 닿음만 거둠)
+    swing(D);
+    bwBurst(D.X);
+    assert.equal(bwAtkEnd(D.Y), true);
+    D.Y.fightT += D.Y.lastDt;
+    bwTouch(D.Y, D.X, 'blade');
+    assert.ok(bwStiff(D.Y), '같은 스텝 칼끼리 닿음은 그대로 굳음');
+    D.Y.bwStiffT = 0;
     // 그 칼이 끝난 바로 그 물리 스텝의 닿음(끝을 정한 뒤 다 느려진 칼끝이 스침)도 그 공격의 닿음 → 막 건 굳음을 거둠 · 한 스텝 뒤 닿음은 아님
     swing(D);
     bwBurst(D.X);
@@ -118,12 +133,14 @@ test('⑤ 칼이 나가기 전(공격 기록 없음 — AI 는 startStrike 에�
     bwBurst(D.X, early); // 뗄 때 나가는 중 → 표시
     assert.equal(D.Y.bwAtk.burst, true, '미리 읽고 건 박차기도 뗄 때 칼이 나가는 중이면 표시');
     bwAtkDrop(D.Y);
+    D.X.bwBurstAt = null; // (그 걸음이 다 끝난 뒤)
     swing(D);
     const aim = bwAim(D.X);
     assert.equal(aim?.length, 1, '박차기를 걸 때 나가는 칼');
     bwAtkDrop(D.Y); // 그 칼이 끝남(거둠)
     bwBurst(D.X, aim); // 그 뒤에야 박찬 걸음을 뗌
     assert.equal(aim[0].burst, false, '끝난 칼엔 표시 없음');
+    D.X.bwBurstAt = null; // (그 걸음이 다 끝난 뒤)
     swing(D);
     const aim2 = bwAim(D.X);
     assert.equal(bwAtkEnd(D.Y), false, '박찬 걸음을 떼기 전에 칼이 끝남 → 안 굳음');
@@ -230,6 +247,37 @@ test('⑧ 걸음 장치: 사람 독일 몸이 서 있다가(두 발 땅) 뒤로 
     for (let i = 0; i < 60 && X.gait.burst; i++) D.G.step();
     assert.equal(X.gait.burst, null, '옆 박찬 걸음을 뗌');
     assert.equal(Y.bwAtk.burst, false, '옆 박찬 걸음은 표시 없음');
+  } finally {
+    D.G.world.free();
+  }
+});
+
+test('⑨ 칼이 떠나는 순간을 읽고 먼저 박참: 박찬 걸음(발 뜬 시간 GAIT.burstT) 동안 칼이 나가면 그 칼도 박찬 칼 · 걸음이 끝난 뒤 나간 칼은 아님', () => {
+  const D = duel(1.3);
+  try {
+    bwBurst(D.X); // 뒤 박찬 걸음을 막 뗌 (gait.js fastBegin — 그때 나가는 칼은 없음 · 뗀 때 · 자리를 적음)
+    swing(D);
+    assert.equal(D.Y.bwAtk.burst, true, '걸음 동안 칼이 나감');
+    assert.equal(bwAtkEnd(D.Y), true);
+    D.Y.bwStiffT = 0;
+    D.X.bwBurstAt = D.X.fightT - CONFIG.GAIT.burstT - 0.05; // 걸음이 끝난 뒤
+    swing(D);
+    assert.equal(D.Y.bwAtk.burst, false, '걸음이 끝난 뒤 나간 칼');
+    assert.equal(bwAtkEnd(D.Y), false);
+    // 박찬 걸음으로 칼끝 밖에 나간 뒤 칼이 나감: 박차기 전 자리가 칼끝 거리 안이면 닿았을 칼 → 칼끝 안으로 봄
+    bwBurst(D.X);
+    const art = D.Y.swordArt;
+    D.Y.swordArt = { ...art, measure: { ...art.measure, reach: 0.5 } }; // 지금 가슴 사이(1.3 m)는 칼끝 밖이라고 놓음
+    const p = D.X.bodies.chest.translation();
+    const q = D.Y.bodies.chest.translation();
+    D.X.bwBurstFrom = { x: q.x + 0.3 * Math.sign(p.x - q.x), z: q.z }; // 박차기 전엔 0.3 m — 칼끝 안
+    swing(D);
+    assert.equal(D.Y.bwAtk.burst, true);
+    assert.equal(D.Y.bwAtk.inReach, true, '박차기 전 자리로 칼끝 안');
+    D.X.bwBurstAt = null;
+    swing(D);
+    assert.equal(D.Y.bwAtk.inReach, false, '박차기 없이는 지금 거리로 — 칼끝 밖');
+    D.Y.swordArt = art;
   } finally {
     D.G.world.free();
   }

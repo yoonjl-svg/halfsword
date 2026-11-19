@@ -1534,7 +1534,7 @@ export class Skill {
 
   whiffEnd(W, foe) {
     W.on = false;
-    if (W.att) bwAtkEnd(this.f, W.landed, W.bound); // 뒤 박차기 헛침 경직 (11/19): 박찬 상대에게 아무 데도 안 닿은 공격이면 이 몸이 굳음
+    if (W.att) bwAtkEnd(this.f, W.landed); // 뒤 박차기 헛침 경직 (11/19): 박찬 상대 몸에 안 닿은 공격이면 이 몸이 굳음 (칼끼리 맞물림은 헛침을 깨지 않음)
     else bwAtkDrop(this.f);
     if (!W.landed && !W.bound) foe?.gait?.foeWhiff();
     if (W.att && !W.landed) foe?.schoolPassive?.foeFailed(W.bound ? 'blocked' : 'whiff'); // 독일 인데스 (10/21)

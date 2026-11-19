@@ -199,10 +199,13 @@ export function msDebanaTick(ai, s, d, dt, th, rearm) {
 
 // ───────────────────────── ② 오코리 ─────────────────────────
 
-/** 공격 시작 (startAttack 끝 · 준비 · 다가감 꼴일 때): 오코리 칸 — 띠의 시간 · 크기 · 베기 방향의 반대 */
+/**
+ * 공격 시작 (startAttack 끝 · 준비 · 다가감 꼴일 때): 오코리 칸 — 띠의 시간 · 크기 · 베기 방향의 반대.
+ *  이어 치기 · 비기 · 연습 · 준비 건너뜀 · 뒤 칼(opt.nach — 독일 띠 높음 박찬 걸음에서 곧장 이어 가는 칼 · 11/19 ai_plan_de.js deNachTick: 이어 치기처럼 몸이 이미 움직이는 중)은 없음
+ */
 export function okoriStart(ai, opt) {
   ai.okori = null;
-  if (opt.chain || opt.secret || opt.drill || opt.skipChamber || ai.secretRun || ai.me.iai || ai.me.iaiReq) return;
+  if (opt.chain || opt.nach || opt.secret || opt.drill || opt.skipChamber || ai.secretRun || ai.me.iai || ai.me.iaiReq) return;
   if (ai.phase !== 'windup' && ai.phase !== 'approach') return;
   const t = ai.tech;
   if (!t?.from) return;
