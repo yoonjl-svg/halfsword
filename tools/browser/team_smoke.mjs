@@ -1,4 +1,4 @@
-// 동시 대전 브라우저 스모크 (3단계 10/29 — docs/strike/team_fight_2026-10-29.md §11): 2:2 · 2:1 · 1:2 · 지켜보기 · 생사전 길(game.launchSaengsa 가짜 setup)
+// 동시 대전 브라우저 스모크 (3단계 10/29 — docs/strike/team_fight_2026-10-29.md §11): 2:2 · 2:1 · 1:2 · 3:3(11/20) · 지켜보기 · 생사전 길(game.launchSaengsa 가짜 setup)
 //  판마다: 페이지 에러 0 · 콘솔 에러 0 · 판이 끝남(한 편 전멸 — teamRun.M.over) · 화면 844×390 스크린샷(시작 · 한창 · 끝) · 편 막대 · 화살표 수 · 생사전 판 뒤 1:1 이 다시 열림 ·
 //   등 뒤 알림 깜빡인 수 warn (11/18 무리 싸움 판단 P3 — 사람 몸이 있는 판 · 판정엔 안 씀)
 //  시계는 playwright 시계로 빨리 돌린다(그리기는 스크린샷 때만 — renderCap.tick). 사람 몸은 손대지 않는다(서 있기만 — 동료 · 상대 AI 가 판을 끝냄)
@@ -37,6 +37,7 @@ const CASES = [
   { id: '2v2', q: '?test=1&weapon=longsword&team=2v2&emo=0', n: 4, human: true },
   { id: '2v1', q: '?test=1&weapon=longsword&team=2v1&emo=0', n: 3, human: true },
   { id: '1v2', q: '?test=1&weapon=longsword&team=1v2&emo=0', n: 3, human: true },
+  { id: '3v3', q: '?test=1&weapon=longsword&team=3v3&emo=0', n: 6, human: true }, // 11/20 — 넷 제한 걷음 (자리 0 ~ 5)
   { id: 'watch', q: '?test=1&weapon=longsword&team=watch&emo=0', n: 4, human: false },
   { id: 'saengsa', q: '?test=1&weapon=longsword&emo=0', n: 4, human: false, saengsa: SAENGSA_SETUP },
 ].filter((c) => !only.length || only.includes(c.id));
@@ -152,7 +153,7 @@ for (const C of CASES) {
 // ?fps=1 읽기 (실제 시계 · 그리기 켬): 1:1 · 2:2 — 판 시작 4 s 뒤부터 4 s 동안의 마지막 표
 const fps = [];
 if (!only.length || only.includes('fps')) {
-  for (const [id, q] of [['1v1', '?test=1&weapon=longsword&foe=default&emo=0&fps=1'], ['2v2', '?test=1&weapon=longsword&team=2v2&emo=0&fps=1'], ['watch', '?test=1&weapon=longsword&team=watch&emo=0&fps=1']]) {
+  for (const [id, q] of [['1v1', '?test=1&weapon=longsword&foe=default&emo=0&fps=1'], ['2v2', '?test=1&weapon=longsword&team=2v2&emo=0&fps=1'], ['3v3', '?test=1&weapon=longsword&team=3v3&emo=0&fps=1'], ['watch', '?test=1&weapon=longsword&team=watch&emo=0&fps=1']]) {
     const page = await browser.newPage({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1 });
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));

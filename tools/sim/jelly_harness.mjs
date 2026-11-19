@@ -88,7 +88,7 @@ export function newRound(opts = {}) {
 }
 
 // ── 동시 대전 판 (10/29 — src/match.js stepMatch · docs/strike/team_fight_2026-10-29.md) ──
-//  newRound 와 같은 평지 세계(지형 없음)에 싸움꾼 count 명(자리 0 ~ 3 — 0 편 = 0 · 2, 1 편 = 1 · 3)을 세우고, 스텝은 src/match.js 의 공용 차례로 돈다.
+//  newRound 와 같은 평지 세계(지형 없음)에 싸움꾼 count 명(자리 0, 1, 2, … — 11/20 넷 제한 없음 · 0 편 = 짝수 자리, 1 편 = 홀수 자리)을 세우고, 스텝은 src/match.js 의 공용 차례로 돈다.
 //  1:1(count 2)은 newRound 와 같은 자리 · 겉모습 · 시드 · 만드는 차례 — tools/sim/match_twin.mjs 가 fights12 해시로 확인한다.
 //  opts: count(2) · gap(ARENA.startGap) · mateGap(TEAM_FIGHT.mateGap — 한 편 둘 사이 옆 간격) · seed · walls · iters · difficulty ·
 //        ai(AI 를 붙일 자리 — 안 주면 [1] = newRound 처럼 상대만. 'all' 이면 모두) · foeOf(f, M, dt)(상대 고르기 — 안 주면 둘이면 다른 하나 · 셋 이상이면 src/targeting.js chooseTarget) · weapons(자리마다 무기 id) · looks(자리마다 겉모습 — 안 주면 0 편 LOOKS.player(케틀 투구) · 1 편 LOOKS.enemy(투구 없음): newRound 와 같음) · onFighter
@@ -117,8 +117,9 @@ export function newMatch(opts = {}) {
   const scene = new THREE.Scene();
   const count = opts.count ?? 2;
   const spots = spawnSpots(count, { gap: opts.gap ?? ARENA.startGap, mateGap: opts.mateGap ?? CONFIG.TEAM_FIGHT.mateGap });
-  const NAMES = ['P', 'E', 'P2', 'E2'];
-  const W = (i) => ({ ...(opts.weapons?.[i] ? { weapon: opts.weapons[i] } : {}), ...(count > 2 && opts.ffa !== false ? { ffa: true } : {}) }); // 자리마다 무기 (안 주면 Fighter 기본 — 롱소드) · 셋 이상 판은 같은 편도 같은 물리 (ffa — opts.ffa false 면 예전 편 비트, 전후 비교)
+  // 이름: 0 편 P · P2 · P3 …, 1 편 E · E2 · E3 … (편 안 차례 — 2:2 는 예전 P · E · P2 · E2 그대로)
+  const NAMES = spots.map((s, i) => { const k = spots.slice(0, i).filter((o) => o.team === s.team).length; return (s.team === 0 ? 'P' : 'E') + (k ? k + 1 : ''); });
+  const W = (i) => (opts.weapons?.[i] ? { weapon: opts.weapons[i] } : {}); // 자리마다 무기 (안 주면 Fighter 기본 — 롱소드) · 같은 편도 같은 물리 (11/20 — 제 몸만 걸이가 버림 · src/self_contact.js)
   const fighters = spots.map((s, i) => (s.z === 0
     ? new Fighter(RAPIER, world, scene, colliderInfo, { index: i, name: NAMES[i], x: s.x, heading: s.heading, look: opts.looks?.[i] ?? (s.team === 0 ? LOOKS.player : LOOKS.enemy), breakSeed: opts.seed, ...W(i) })
     : new Fighter(RAPIER, world, scene, colliderInfo, { index: i, name: NAMES[i], x: s.x, z: s.z, heading: s.heading, look: opts.looks?.[i] ?? (s.team === 0 ? LOOKS.player : LOOKS.enemy), breakSeed: opts.seed, ...W(i) })));

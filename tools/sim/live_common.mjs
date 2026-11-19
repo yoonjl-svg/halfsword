@@ -616,12 +616,16 @@ export function sampleFighter(ctx) {
   if (ctx.meta) {
     const grp = (c) => (c && c.collisionGroups ? c.collisionGroups() >>> 0 : null);
     const meets = (a, b) => (a == null || b == null ? null : (((a >>> 16) & (b & 0xffff)) !== 0 && ((b >>> 16) & (a & 0xffff)) !== 0));
+    // 제 몸 쌍 걸이 (11/20 — 충돌 그룹은 부류만 · 제 몸끼리는 걸이가 colliderInfo.self 로 버림: src/self_contact.js pairAllowed 와 같은 셈 — 이 함수는 글로 옮겨지므로 들여오지 않고 옮겨 적음). 정보가 없으면(흉내 몸) 그룹만
+    const infoOf = (c) => (c && f.colliderInfo && f.colliderInfo.get ? f.colliderInfo.get(c.handle) : null);
+    const selfOk = (a, b) => { const A = infoOf(a), B = infoOf(b); if (!A || !B) return true; const k = (A.self | 0) | (B.self | 0); return k === 3 || k === 5; };
+    const ownMeets = (a, b) => { const m = meets(grp(a), grp(b)); return m && !selfOk(a, b) ? false : m; };
     const own = {};
     const torso = ['chest', 'abdomen', 'pelvis', 'thighF', 'thighB'];
     const limbs = ['uarmS', 'farmS', 'uarmO', 'farmO'];
     for (const tn of torso) {
-      for (const ln of limbs) own[`${ln}-${tn}`] = meets(grp(colOf(ln)), grp(colOf(tn)));
-      (f.swordColliders || []).forEach((c, i) => (own[`sword${i}-${tn}`] = meets(grp(c), grp(colOf(tn)))));
+      for (const ln of limbs) own[`${ln}-${tn}`] = ownMeets(colOf(ln), colOf(tn));
+      (f.swordColliders || []).forEach((c, i) => (own[`sword${i}-${tn}`] = ownMeets(c, colOf(tn))));
     }
     const jc = {};
     for (const j of f.joints || []) if (j.joint && j.joint.contactsEnabled) jc[j.name] = j.joint.contactsEnabled();

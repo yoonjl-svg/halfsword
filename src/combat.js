@@ -43,7 +43,8 @@ import { itThrust, itOnStrike } from './italian_outbox.js'; // 이탈리아 아�
 import { aiWoundKeep } from './ai_block_cut.js';
 import { ibBlockHit } from './ib_block_regen.js'; // 이베리아 막아 내면 기력 되찾음 (11/15 — 기다리는 공격의 칼날 상처면 못 막아 냄) // AI 막는 동안 피해 감소 (11/15 — 늘 켬)
 import { huntHit } from './cn_hunt.js'; // 동방 맹호은림 사냥 겹 (11/14 — 출혈 이점이 붙는 맞음에서 · 쌓는 몸만)
-import { MAX_FIGHTERS } from './team.js'; // 셋 이상 판: 같은 편도 적과 똑같이 상처 · 칼 겨루기 (사장님 10/29 22:3x — 제 몸끼리만 버린다)
+import { pairKey } from './team.js'; // 셋 이상 판: 같은 편도 적과 똑같이 상처 · 칼 겨루기 (사장님 10/29 22:3x — 제 몸끼리만 버린다) · 싸움꾼 짝 열쇠 (11/20 — 자리 수 제한 없음)
+import { pairAllowed } from './self_contact.js'; // 제 몸 쌍 버리기 (11/20 — 충돌 그룹에 싸움꾼마다 비트가 없음)
 
 /** 발도 충돌 끔 쌍: 서로 다른 싸움꾼이고, 충돌을 끄는 중인 쪽의 칼·칼 쪽 팔·빈팔이 낀 쌍 (팔 ↔ 몸, 칼 ↔ 칼) */
 const IAI_GHOST_PARTS = new Set(['uarmS', 'farmS', 'uarmO', 'farmO']);
@@ -191,14 +192,14 @@ export class Combat {
     // 칼끼리 닿은 마지막 스텝. 떨어진 지 STEEL.rearmSteps가 지나야 다시 튕길 수 있다 (어느 짝이든 — 짝마다는 bladePairs, 싸움꾼마다는 bladeLastOf)
     this.bladeLast = -1e9;
     this.steelArmed = true; // 칼 재질에 반발이 켜져 있는가의 처음 값 (싸움꾼마다 지금 값은 steelArmedOf)
-    // 칼 겨루기는 싸움꾼 짝마다 (2:2 동시 대전 10/29 — bladeClash): 짝 열쇠(앞 자리 × MAX_FIGHTERS + 뒤 자리) → { last(그 짝이 마지막으로 닿은 스텝 — fresh), bc(소리용 접촉) }.
+    // 칼 겨루기는 싸움꾼 짝마다 (2:2 동시 대전 10/29 — bladeClash): 짝 열쇠(team.js pairKey(앞 자리, 뒤 자리)) → { last(그 짝이 마지막으로 닿은 스텝 — fresh), bc(소리용 접촉) }.
     //  처음 생긴 짝의 bc 는 위 this.bladeContact 그 객체 — 1:1 은 짝이 하나라 main.js 긁는 소리가 읽는 값이 예전 그대로다
     this.bladePairs = new Map();
     this.bladeLastOf = new Map(); // 싸움꾼 → 그 칼이 마지막으로 칼에 닿은 스텝 (armSteel — 반발을 싸움꾼마다 끄고 켬)
     this.steelArmedOf = new Map(); // 싸움꾼 → 지금 칼 재질에 반발이 켜져 있나 (없으면 this.steelArmed)
     this.touching = new Map(); // "칼콜라이더:몸콜라이더" → 마지막으로 닿은 스텝 (투구·뼈 되튐을 한 번만)
     this.fighters = [...new Set([...colliderInfo.values()].map((i) => i.fighter))];
-    // Rapier 물리 훅: 칼과 상대 몸이 부딪히려 할 때마다(매 스텝) 불린다.
+    // Rapier 물리 훅: 싸움꾼 콜라이더가 낀 쌍이 부딪히려 할 때마다(매 스텝) 불린다 — 제 몸 쌍 버리기(11/20) · 칼과 상대 몸(칼날 cutHook).
     // 여기서는 엔진 함수를 부르면 안 되므로, 스텝 직전에 저장해 둔 값(cacheState)만 쓴다.
     this.physicsHooks = {
       filterContactPair: guarded(this, (c1, c2) => this.filterContactPair(c1, c2), 1), // 11/17 콜백 예외 드러내기 (rapier_guard.js — 예외면 1 = 평소처럼 부딪힘 · 적고 afterStep 첫머리에서 다시 던짐)
@@ -220,6 +221,9 @@ export class Combat {
   }
 
   filterContactPair(c1, c2) {
+    const a = this.info.get(c1), b = this.info.get(c2);
+    if (!pairAllowed(a, b)) return null; // 제 몸 쌍 (11/20 — 예전엔 싸움꾼마다 충돌 비트가 버림 · 같은 결정 · self_contact.js)
+    if (!a?.cutHook && !b?.cutHook) return 1; // 칼날이 없는 쌍: 예전엔 걸이가 불리지 않던 쌍 — 엔진 기본(부딪힘) 그대로
     const pr = this.pairOf(c1, c2);
     if (pr && (pr.w.fighter.instantGhost > 0 || pr.w.fighter.holdGhost > 0)) return 0; // 순간 베기 직후(SECRET.instantNoCollide): 몸 안에 놓인 칼이 튀지 않게 내 칼 ↔ 상대 몸 충돌 끔 · holdGhost = 팔을 뻗은 겨눈 찌름이 맞힌 뒤 굳음 동안 (secret_instant.js endCombo — 10/24 SECRET.thrustArm · 사람 비기만)
     if (!pr && this.anyInstantGhost() && iaiGhostPair(this.info.get(c1), this.info.get(c2))) return 0; // 발도(운동학 팔·칼) 동안: 내 칼 ↔ 상대 칼, 내 칼 팔 ↔ 상대 몸·칼 충돌도 끔
@@ -677,10 +681,10 @@ export class Combat {
     const fb = this.info.get(pairs[0][1]).fighter;
     let one = true;
     for (let i = 1; i < pairs.length && one; i++) one = this.info.get(pairs[i][0]).fighter === fa && this.info.get(pairs[i][1]).fighter === fb;
-    if (one) return [{ key: fa.index * MAX_FIGHTERS + fb.index, pairs, A: this.info.get(pairs[0][0]), B: this.info.get(pairs[0][1]) }];
+    if (one) return [{ key: pairKey(fa.index, fb.index), pairs, A: this.info.get(pairs[0][0]), B: this.info.get(pairs[0][1]) }];
     const by = new Map();
     for (const p of pairs) {
-      const key = this.info.get(p[0]).fighter.index * MAX_FIGHTERS + this.info.get(p[1]).fighter.index;
+      const key = pairKey(this.info.get(p[0]).fighter.index, this.info.get(p[1]).fighter.index);
       let g = by.get(key);
       if (!g) by.set(key, (g = { key, pairs: [], A: this.info.get(p[0]), B: this.info.get(p[1]) }));
       g.pairs.push(p);
