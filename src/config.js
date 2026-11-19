@@ -97,6 +97,7 @@ export const ARENA_SCALE = Math.SQRT2;
 export const ARENA = {
   radius: 6.5 * ARENA_SCALE, // 원형 경기장 반지름 (대리석 경계 테두리 위치)
   startGap: 5.6, // 시작할 때 두 검투사 사이 거리. 사장님 9/30 "멀리 떨어트려 맵을 보게"(4.2 → 7.0) → 09:10 "너무 떨어져 있어, 조금만 붙이자, 그래도 초기보다는 멀게"(→ 5.6, 롱소드 닿는 거리 밖 3.6 m)
+  aiWall: 1.9, // AI 울타리 몰림 띠: 반지름 − aiWall(m) 밖이면 옆으로 빠져 가운데로 (ai.js moveFeet · 유파 마음가짐 걸음 셈이 같은 띠를 뺌) — 10/16 경기장 √2 전 6.5 − 4.6 = 1.9 m 간격 그대로 [사장님 11/19 'AI 울타리 피함 거리는 경기장 크기에 다시 맞춰' — 전 4.6 m 박힘]
   startHold: 2.0, // 판 시작 뒤 이 시간(초) 동안 둘 다 발만 묶는다 (팔·칼은 자유). 사장님 값 (fighter.js feetHeld) · 표준 시간(10/25): 이 수는 시뮬 · 도구 판의 게임 초(도구 장면 시각의 바탕 — 그대로) · 브라우저는 판마다 카메라 실제 초 × 템포로 덮고(main.js planOpening) `?openSweep=0` 판도 실제 2.0 s(realS)
 };
 
@@ -530,6 +531,12 @@ export const RUN = {
   arcOut: 0.1,
   flyReach: 0.3,
 };
+
+// 혼자 싸움 판단 (11/19 사장님 '고수 한 명이 하수 두 명을 이기는 방법은 존재해야 하고, 그래야 의외성이 생겨' — src/ai_lone.js · 기록 docs/strike/lone_master_2026-11-19.md):
+//  셋 이상 판에서 내 동료와 붙지 않은 적 둘 이상이 range m 안 = 수가 밀림. 몫 w = MINDSET.profF[본 유파 숙련] (규칙 · 몸은 그대로 — 판단만)
+//  out · outK  둘째(겨눈 상대 말고 가장 가까운 적)가 그 칼끝 + out(m) 안이면 그 몸에서 멀어지는 쪽으로 스틱 outK × w × (가까울수록 · 1 까지)
+//              — 유파 마음가짐 줄에 many.out 이 있는 유파만 (지금 일본 · schools.js SCHOOL_MINDSET)
+export const LONE = { range: 6, out: 0.6, outK: 0.8 };
 
 // AI 뛰기 (11/19 사장님 '뛰기 AI에도 넣고 무리 싸움에 먼저 넣어.' — src/ai_run.js · 기록 docs/strike/ai_run_2026-11-19.md): 셋 이상 판 AI 가 언제 스틱을 끝까지 미나만.
 //  뛰는 몸(들어감 · 나감 · 빠르기 · 기력 · 돌아섬 · 공격 · 막기가 끊음)은 위 RUN 그대로 — 사람과 같음 (AI 몫 빠르기 · 기력 · 돌기 값 없음). 1:1 AI 는 뛰지 않음
@@ -1978,7 +1985,7 @@ export const AI_PLAN_DE = {
 //  crossT     A2 상대가 헛친 틈은 건널 수 있는 거리에서만 노림 — 칠 거리 + crossT × 앞 걷는 빠르기 안 · 그 공격은 스틱 끝으로 건넘 (시간 사다리 0.6 s) [사장님 확인 전]
 //  stepIn     A3 걸음이 실린 기술(기술 걸음 'strike' — 체보요격 · 비껴 딛는 가로베기 …)은 그 앞 걸음 몫 × stepIn 만큼 일찍(칼끝 밖에서) 냄 · 그런 기술을 (1 + 띠 기울기) 배 더 고름 [사장님 확인 전]
 //  keep       A4 붙은 뒤(맞힘 · 막힘) 이어 칠 몫 + (1 − 몫) × keep × 띠 기울기 — 들어간 거리를 지킴 [사장님 확인 전]
-//  wall · wallNeed  A5 상대 등이 울타리 가까이(가운데에서 반지름 wall m — 울타리 몰림 4.6 − 걸음 사다리 0.6)거나 상대가 지쳤으면 공격 문턱 − wallNeed × 띠 기울기 (물러섬 끝을 노림) [사장님 확인 전]
+//  wall · wallNeed  A5 상대 등이 울타리 가까이(가운데에서 반지름 wall m — AI 울타리 몰림 띠(ARENA.radius − ARENA.aiWall) − 걸음 사다리 0.6)거나 상대가 지쳤으면 공격 문턱 − wallNeed × 띠 기울기 (물러섬 끝을 노림) [사장님 확인 전]
 //  ── B. 앞 박차기 모두에게 (사람 · AI 같게)
 //  stepN      박찬 앞 걸음 수 — 독일 파고들기(G2 · GAIT.digSteps 2)를 안 받는 몸 · 독일은 두 걸음 그대로 (서 있다가 스틱을 앞으로 세게 — 뒤 박차기 · 파고들기와 같은 조건 · 기력 pushCost 12) [사장님 확인 전]
 //  dashGap · dashWait  AI: 칠 거리까지 dashGap(걸음 사다리 0.45 m) 넘게 남은 다가감이면 첫 걸음을 박참 · 사람과 같은 '서 있음'이 아니면 dashWait(시간 사다리 0.2 s) 동안 발을 멈춰 섰다 박참 [사장님 확인 전]
@@ -1993,7 +2000,7 @@ export const DIG_PROTO = {
   crossT: realS(0.6),
   stepIn: 1,
   keep: 0.5,
-  wall: 4.0,
+  wall: ARENA.radius - ARENA.aiWall - 0.6, // 11/19 경기장에 맞춤 (울타리 몰림 띠 − 걸음 사다리 0.6 · 전 4.0 = 옛 4.6 − 0.6 박힘 — 사장님 11/19 '경기장 크기에 다시 맞춰')
   wallNeed: 0.45,
   step: 0,
   stepN: 1,

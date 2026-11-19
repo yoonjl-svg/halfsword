@@ -71,6 +71,7 @@ import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, fre
 import { mindOf, mindInit, mindStay, mindTick, mindAggr, mindPatienceT, mindNeed, mindOppK, mindAnsK, mindMargin, mindGap, mindStakes, mindTechW, mindChain, mindCircle, mindCircleOut, mindSideK, mindSide, mindCreep, mindGive } from './ai_mindset.js'; // 유파 마음가짐 (11/18 — 다섯 항목 점수 → 손잡이 · 집요함 = 상대 상태에 따라 넷을 옮기는 폭 · 값 표 schools.js SCHOOL_MINDSET · 마음가짐이 없는 몸은 옛 셈)
 import { laneHold, senseFeet, outSkill, busyFoe, ambushOpp, shieldOpp, teamStats, huntFree, ambushHold } from './team_sense.js'; // 무리 싸움 판단 (11/18 — 셋 이상 판의 me.foes 갈래 안에서만 부름 · 1:1 은 안 탐)
 import { aiRunFeet } from './ai_run.js'; // AI 뛰기 (11/19 사장님 '뛰기 AI에도 넣고 무리 싸움에 먼저 넣어.' — 셋 이상 판만 · 뛰는 셈은 사람과 같은 src/run.js)
+import { loneFeet, manyW, manyMul } from './ai_lone.js'; // 혼자 싸움 판단 (11/19 사장님 '고수 한 명이 하수 두 명을 이기는 방법은 존재해야' — 셋 이상 판만 · 판단만)
 
 // 공포 떨림의 최대 크기 (m, 공포 세기 1일 때 손 위치 잔떨림). 눈에 더 띄게 하려면 올린다 — moveHand() 참고
 const FEAR_TREMOR = 0.03;
@@ -731,13 +732,17 @@ export class AI {
         const cos = (o.x * t.x + o.z * t.z) / (o.d * (t.d || 1));
         if (Math.acos(clamp(cos, -1, 1)) > (TF.flank.angle * Math.PI) / 180 && (!fl || o.d < fl.d)) fl = o;
       }
-      if (fl) side = -Math.sign(fl.x * R.x + fl.z * R.z || 1) * TF.flank.side; // 다른 상대가 오른쪽이면 왼쪽으로
+      if (fl) {
+        const fs = -Math.sign(fl.x * R.x + fl.z * R.z || 1) * TF.flank.side; // 다른 상대가 오른쪽이면 왼쪽으로
+        const fk = TS ? manyMul(this, 'lever') : 1; // 결투 고집 (11/19 — 이탈리아 마음가짐 many.lever · ai_lone.js): 둘러싸임 비켜 서기도 그 몫만큼 (0 = 겨눈 상대와의 걸음 그대로)
+        side = fk === 1 ? fs : side + fk * (fs - side);
+      }
     }
     // 2:1 숙련도 몫 (10/29 20:4x 사장님 '높은 숙련도가 똑똑해지도록' — TEAM_FIGHT.lever): 상대가 둘 이상이고 베는 중이 아닐 때 숙련도가 높을수록
     //  ① 줄 세우기: 가장 가까운 다른 상대가 지금 상대 뒤로 가게 지금 상대를 축으로 돈다 (벌어진 각만큼) · 집게(각 > backFrom°)면 물러나 둘을 앞에 둔다
     //  ② 피하기: 지금 상대가 아닌 상대가 나를 치러 제 칼끝 거리 + gap 안에 들면 그 몸에서 비킨다 (모든 상대의 위협을 읽음 — 겨눈 상대를 바꾸지 않고)
     const LV = TF.lever;
-    const sk = (LV.lineUp.on || LV.evade.on) && (TS ? near.filter((o) => !o.busy).length : near.length) >= 2 ? (TS ? outSkill(this) : teamSkill(this.proficiency)) : 0; // 무리 싸움 판단 (11/18 §3-5): 몫 = 바탕 0.3 부터 (TEAM_SENSE.out) · 열세 = 내 동료와 붙지 않은 적 둘 이상
+    const sk = (LV.lineUp.on || LV.evade.on) && (TS ? near.filter((o) => !o.busy).length : near.length) >= 2 ? (TS ? outSkill(this) * manyMul(this, 'lever') : teamSkill(this.proficiency)) : 0; // 무리 싸움 판단 (11/18 §3-5): 몫 = 바탕 0.3 부터 (TEAM_SENSE.out) · 열세 = 내 동료와 붙지 않은 적 둘 이상 · 결투 고집(11/19 — 이탈리아 마음가짐 many.lever · ai_lone.js)
     if (sk > 0 && t && this.mode !== 'secret' && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow'))) {
       if (LV.lineUp.on) {
         let o = null;
@@ -773,6 +778,7 @@ export class AI {
       side -= k * ur;
     }
     if (TS && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') [fwd, side] = senseFeet(this, fwd, side); // 무리 싸움 판단 (11/18): 칼길 비우기 · 협공 자리 (src/team_sense.js)
+    if (TS && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') [fwd, side] = loneFeet(this, fwd, side); // ── 혼자 싸움 판단 (11/19 — src/ai_lone.js): 수가 밀리면 둘째 칼끝 밖으로
     if (!(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') {
       for (const m of me.mates) {
         if (!m.alive) continue;
@@ -992,7 +998,10 @@ export class AI {
     if (me.feel?.touching && me.feel.normal.lengthSq() > 1e-8) (this.touchN ??= new THREE.Vector3()).copy(me.feel.normal).negate(), (this.touchT = this.sense.t); // 마지막 칼끼리 닿음의 상대 칼 쪽 (11/19 A9 칼끝 돌려 빼기 — 사람 touchTick 과 같은 셈 · 읽기만)
     // 무리 싸움 판단 (11/18 — 셋 이상 판만 · src/team_sense.js huntFree): 겨눈 상대가 나 아닌 몸과 붙었고 나를 붙잡은 적이 없음 — 상대가 들어오기를 기다리는 꼴(고노센 준비 · 싱지르 · 리솔루토 · 이베리아 무장 기다림)은 이때 기다리지 않음
     //  (11/18 재기: 이 꼴들이 1:1 의 '상대가 나를 친다'를 바탕으로 기다려, 동료와 붙은 상대 앞에서 영영 서 있거나 돌기만 함 — 2:1 을 못 끝낸 판의 까닭). 1:1 은 undefined (아래 갈래 그대로)
-    if (me.foes && me.teamSense) this.tsFree = huntFree(this);
+    if (me.foes && me.teamSense) {
+      this.manyGo = manyW(this); // 다적의 자리 (11/19 — src/ai_lone.js · 일본): 수가 밀리면 몫 w
+      this.tsFree = huntFree(this) || this.manyGo > 0; // … 기다리는 꼴을 안 기다림
+    }
     this.digW = this.planOn ? digWeight(this) : 0; // 파고들기 몫 (11/14 사장님 '상대 무기가 나보다 길 때의 대처 … 모든 ai에게 기본으로' — 문 → 기울기 · DIG_PROTO.reach 0 = 옛 문 digNow)
     this.dig = this.digW > 0; // 파고들기 판 (몫이 있음)
     this.foeClosing = -(s.vx * ux + s.vz * uz); // 상대가 나에게 다가오는 빠르기 (m/s)
@@ -1290,6 +1299,7 @@ export class AI {
     if (DIG_PROTO.ai && this.dig && !this.Mup && opp.kind !== 'recover' && opp.kind !== 'finish') need = digWallNeed(this, need); // 파고들기 A5 (11/14 사장님 'A안 켜고' — 기본 켬): 상대 등이 울타리 · 지친 상대면 몰아침
     if (this.read) need += readNeed(this, opp); // 수 읽기 (3 단계): 상대 유파 대표 위험(가운데부터) · 대가 창 · 상대 기력(높음)
     if (this.mind && opp.kind === 'patience' && this.patience <= 0) need = Math.min(need, opp.score); // 유파 마음가짐 (11/19 합침 — 선공은 기울기): 참을성이 다 닳으면 문턱(일본 플랜 · 읽기 몫 포함)을 넘음 — '얼마나 오래'는 참을성 길이 · '언제'는 아래 거리 · 공격 문(고노센 뽑기 걸쇠 jpGnsDrawHold · 경계 선)이 정함
+    if (this.manyGo > 0) need -= this.mind.many.press * this.manyGo; // ── 다적의 자리 (11/19 — src/ai_lone.js · 일본): 수가 밀리면 먼저 닿는 적을 몰아침
     const reachOut = this.watchReachOut();
     if (this.passives.length && !(this.planJp && jpGnsKeep(this)) && this.passiveWatch(s, d, opp, reachOut)) return; // 패시브 (standoff·foeStepIn) — 목록이 비면 건너뜀 · 일본 고노센 준비를 지키는 중(3 단계)엔 出端 패시브로 먼저 치지 않음
     const score = this.plan ? this.planGamble(opp.score) : opp.score; // 무계획(11/14 — 굴림 몫): 빈틈 판단이 흐림 · 플랜 없는 몸은 그대로
@@ -4563,15 +4573,16 @@ export class AI {
       sideLock = true;
     }
     if (this.mind && !sideLock && (this.mode === 'watch' || this.mode === 'withdraw') && !this.chasing) side = mindSide(this, side, dt); // 유파 마음가짐 (11/18 — 횡보): 간 보기 · 물러남 걸음의 옆 몫을 목표로 (0 이면 옆걸음 없음 — 울타리 빠짐은 아래 그대로)
-    // 울타리에 몰리면 옆으로 빠져 가운데로 (구석에 갇히지 않게)
+    // 울타리에 몰리면 옆으로 빠져 가운데로 (구석에 갇히지 않게) — 띠 = 반지름 − ARENA.aiWall 밖 (11/19 경기장에 맞춤 · 전 4.6 m)
     const a = me.bodies.pelvis.translation();
     const rA = Math.hypot(a.x, a.z);
-    if (rA > 4.6 && !(this.mode === 'attack' && this.phase === 'strike')) {
+    const wallIn = ARENA.radius - ARENA.aiWall;
+    if (rA > wallIn && !(this.mode === 'attack' && this.phase === 'strike')) {
       const f = me.forward(_v2);
       const r = me.right(_v1);
       const outBack = -(a.x * f.x + a.z * f.z) / rA; // 등이 울타리 쪽이면 +
       const toCenter = -(a.x * r.x + a.z * r.z) / rA; // 가운데가 내 오른쪽이면 +
-      const k = clamp((rA - 4.6) * 1.2, 0, 1);
+      const k = clamp((rA - wallIn) * 1.2, 0, 1);
       if (fwd < 0 && outBack > 0.3) fwd *= 1 - k * 0.8; // 뒤로는 더 못 간다
       side = side * (1 - k) + Math.sign(toCenter || 1) * k;
       if (this.mode === 'watch') this.patience = Math.max(0, this.patience - dt * realRate(0.15) * k); // 몰렸으면 먼저 친다
