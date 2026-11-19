@@ -13,8 +13,10 @@
 //     뗄 때 나가는 중인 칼도 표시 (칼을 들 때 미리 읽고 건 박차기 — 걸 때는 칼이 아직 안 나감). 걸었다가 못 뗀 박차기 · 칼이 끝난 뒤에야 뗀 걸음은 표시 없음
 //     박찬 걸음(발 뜬 시간 GAIT.burstT) 동안 나간 칼도 표시 (11/19 §8 — 칼이 떠나는 순간을 읽고 먼저 박참 · 칼끝 거리는 박차기 전 자리로도 봄)
 //  ④ 공격 끝 (bwAtkEnd): 표시가 있고 · 시작 때 칼끝 거리 안 · 몸 닿음 없음(그 몸의 맞힘 셈도 없음)이면 굳음 BURST_WHIFF.stiff — 끝난 때부터
-//  굳음 = 비기 경직과 같은 꼴: 칼(손 목표)은 굳은 자리에 멈춤(skill.js holdStiff) · 걸음 없음 · 막기 · 공격 없음
-//   (사람: 검술 층 secretPhase 'stiff' → main.js 가 칼 · 막기 · 스틱 입력을 막음 · 막기 단추 parry_button.js · AI: ai.js 공격 문 · respond · 꼴 분기 · 걸음)
+//  굳음 꼴 ([사장님 11/19 승인] 1.2 s · '헛친 칼에 끌려갔다가 되찾는' 꼴 — 값 config BURST_WHIFF): 앞 drag 초 끌려감(칼이 휘두름 길 끝 너머로 흘러감 — skill.js whiffDrag ·
+//   몸이 따라 숙고 돎 — bwBody → fighter.js updateBodyPose · 반걸음 비틀 걸음 — 아래 bwTick 이 조종 스틱을 덮음) → 뒤 되찾음(칼을 쉴 자세로 천천히 거둠 · 몸 바로).
+//   내내 막기 · 공격 없음 · 뜻대로 걷기 없음 (사람: 검술 층 secretPhase 'stiff' → main.js 가 칼 · 막기 · 스틱 입력을 막음 · 막기 단추 parry_button.js ·
+//   AI: ai.js 공격 문 · respond · 꼴 분기 · 걸음 0 · 손 목표 그대로) · 비기 경직은 멈춤 꼴(holdStiff) 그대로
 // ─────────────────────────────────────────────────────────────
 import { BURST_WHIFF, GAIT } from './config.js';
 
@@ -63,7 +65,7 @@ function burstMark(x) {
 export function bwAtkStart(y) {
   const x = y.foe;
   if (y.bwAtk) y.bwAtk.live = false;
-  y.bwAtk = { y, tgt: x, inReach: !!x && x.alive && !!x.bodies && reachDist(y, x) <= reachOf(y), burst: false, touched: false, blade: false, live: true };
+  y.bwAtk = { y, tgt: x, inReach: !!x && x.alive && !!x.bodies && reachDist(y, x) <= reachOf(y), burst: false, touched: false, blade: false, live: true, h0: y.handOffset ? [y.handOffset.x, y.handOffset.y] : null };
   const st = statOf(y);
   st.atk++;
   // 상대가 뒤 박찬 걸음을 떼는 중에 칼이 나감 (칼이 떠나는 순간을 읽고 먼저 박참 — 그 걸음이 칼과 겹침): 칼이 나가는 동안 박찬 것과 같음 ·
@@ -133,6 +135,7 @@ export function bwAtkEnd(y, landed = false) {
   }
   if (A.blade) st.bladeOnly++; // 재기: 칼끼리 · 코등이만 닿은 채 헛침 (11/19 '몸에 안 닿으면 헛친 것')
   y.bwStiffT = BURST_WHIFF.stiff;
+  y.bwDrag = dragOf(y, A); // 끌려가는 쪽 (휘두름 방향)
   y.bwEnd = { tgt: A.tgt, t: y.fightT ?? 0 }; // 같은 물리 스텝의 닿음이 오면 거둠 (bwTouch)
   st.stiff++;
   if (st.log.length < 64) st.log.push(y.fightT ?? 0);
@@ -145,7 +148,55 @@ export function bwAtkDrop(y) {
   y.bwAtk = null;
 }
 
-/** 물리 스텝마다 (fighter.step): 굳음 시간이 줄어듦 */
+/** 헛친 칼이 끌려가는 쪽 (패드 — 그 칼을 낸 때 손 → 끝난 때 손 · 패드 길이 0.1 밑이면 찌르기처럼 방향 없음 [0, 0]) */
+function dragOf(y, A) {
+  const h = y.handOffset;
+  const dx = A.h0 && h ? h.x - A.h0[0] : 0;
+  const dy = A.h0 && h ? h.y - A.h0[1] : 0;
+  const n = Math.hypot(dx, dy);
+  return { dir: n > 0.1 ? [dx / n, dy / n] : [0, 0] };
+}
+
+/** 굳은 뒤 흐른 시간 (0 ~ stiff) · 굳지 않았으면 null */
+export const bwElapsed = (f) => (bwStiff(f) ? BURST_WHIFF.stiff - f.bwStiffT : null);
+
+const easeOut = (u) => 1 - (1 - u) * (1 - u);
+const smooth = (u) => u * u * (3 - 2 * u);
+
+/** 끌려감 몫 (0 ~ 1): 끌려감 동안 빠르게 1 로(처음 빠르게 차츰 느리게) · 되찾는 동안 1 → 0 (부드럽게) */
+export function bwDragW(f) {
+  const el = bwElapsed(f);
+  if (el == null) return 0;
+  const T1 = BURST_WHIFF.drag;
+  if (el < T1) return easeOut(Math.min(1, el / T1));
+  return 1 - smooth(Math.min(1, (el - T1) / Math.max(1e-6, BURST_WHIFF.stiff - T1)));
+}
+
+/**
+ * 물리 스텝마다 (fighter.step — driveBalance 가 조종 스틱을 읽기 전): 굳음 시간이 줄어듦 · 굳은 동안 꼴 —
+ *  몸 덧씌우기 bwBody(숙임 · 칼 쪽 돌림 · 낮춤 × 끌려감 몫 — fighter.js updateBodyPose) · 조종 스틱 = 비틀 걸음(앞 stepT 초 · 휘두른 쪽 — 앞 + 옆 몫 절반)만, 그 밖엔 0
+ *  (사람 · AI 가 넣은 스틱을 덮음 — 뜻대로 걷기 없음 · 균형 걸음 stumble 은 그대로)
+ */
 export function bwTick(f, dt) {
   if (f.bwStiffT > 0) f.bwStiffT = Math.max(0, f.bwStiffT - dt);
+  if (!(f.bwStiffT > 0)) {
+    if (f.bwBody) f.bwBody = null;
+    return;
+  }
+  const W = BURST_WHIFF;
+  const w = bwDragW(f);
+  const dx = f.bwDrag?.dir?.[0] ?? 0;
+  const B = (f.bwBody ??= { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 });
+  B.chestYaw = W.turn * dx * w;
+  B.pelvisYaw = B.chestYaw; // updateBodyPose 가 골반은 ½ 로 (자세표 몸 돌림 · 오코리와 같은 몫)
+  B.pitch = W.lean * w;
+  B.drop = W.drop * w;
+  if (f.move) {
+    if (bwElapsed(f) < W.stepT) {
+      const sx = 0.5 * dx;
+      const n = Math.hypot(sx, 1);
+      f.move.set((W.step * sx) / n, W.step / n);
+    } else f.move.set(0, 0);
+  }
+  if (f.stickX != null) f.stickX = f.stickY = 0;
 }

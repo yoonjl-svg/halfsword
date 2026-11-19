@@ -26,7 +26,7 @@ import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 감도 (11/06 
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SKILL, WEAPON, THRUST, POMMEL, SECRET, AI_LEVELS, ARM, UNIQUE_ASSIST, realS } from './config.js';
+import { SKILL, WEAPON, THRUST, POMMEL, SECRET, AI_LEVELS, ARM, UNIQUE_ASSIST, realS, BURST_WHIFF } from './config.js';
 import { scriptLevel } from './prof_body.js'; // 비기 대본 손 빠르기 = 숙련도의 실력 숫자 (11/19 — 사람 · AI 같게)
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { startFlick, flickDrive } from './druid_whip.js'; // 휘는 무기(드루이드의 채찍)의 톡 = 손목 튕기기 (10/23)
@@ -40,7 +40,7 @@ import { linkStep } from './iberian_link.js'; // AI 이어 돌리기 (11/14)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain, gnsBlockOf, secretCostOf } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf, mordMode } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
-import { bwStiff, bwAtkStart, bwAtkEnd, bwAtkDrop } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 [사장님 결정] — 굳음은 비기 경직과 같은 꼴)
+import { bwStiff, bwAtkStart, bwAtkEnd, bwAtkDrop, bwElapsed, bwDragW } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 [사장님 결정] — 굳음은 비기 경직과 같은 꼴)
 import { huntStacksFor } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 상대를 겨눈 격살 칼끝 빠르기 몫 × (1 + share × 겹)
 
 const D2R = Math.PI / 180;
@@ -1473,10 +1473,37 @@ export class Skill {
    *  손 목표(handOffset)·가죽끈·이어 베기·거르기를 모두 그 자리로 맞추고 속도는 0 → 칼이 처지거나 흔들리지 않고 서보가 그 자리를 붙든다.
    *  휘두름(내딛기)·들어가며 막기·흐름·자세로 돌아가기 없음. 몸은 물리대로(맞고 밀림·균형 걸음은 gait 몫)
    */
-  holdStiff(dt) {
+  whiffDrag(dt) {
+    // 뒤 박차기 헛침 경직 꼴 ([사장님 11/19 승인] '헛친 칼에 끌려갔다가 되찾는' 꼴 — config BURST_WHIFF · burst_whiff.js): 손 목표를 굳음이 시작된 자리에서
+    //  휘두른 쪽으로 over 만큼 더(끌려감 몫 bwDragW — 처음 빠르게 차츰 느리게) → 되찾는 동안 쉴 자세(검술 풀이 restGuard · 없으면 SKILL.homeGuard)로 부드럽게.
+    //  거르기 · 이어 베기 · 휘두름 셈은 holdStiff 처럼 그 자리로 맞추고 속도 0 (새 휘두름 · 내딛기 · 흐름이 생기지 않게 — 칼은 서보가 그 자리를 쫓음)
+    const f = this.f;
+    const W = BURST_WHIFF;
+    const D = (f.bwDrag ??= { dir: [0, 0] });
+    if (!this.stiffHeld || !D.from) {
+      D.from = [this.aim.x, this.aim.y];
+      const R = WEAPON.reach;
+      let tx = D.from[0] + D.dir[0] * W.over;
+      let ty = D.from[1] + D.dir[1] * W.over;
+      const n = Math.hypot(tx, ty);
+      if (n > R) (tx *= R / n), (ty *= R / n);
+      D.to = [tx, ty];
+      D.home = (f.swordArt?.restGuard?.pad ?? SKILL.homeGuard).slice(0, 2);
+    }
+    const el = bwElapsed(f) ?? 0;
+    const w = bwDragW(f);
+    const back = el >= W.drag;
+    const end = back ? D.home : D.from;
+    const x = end[0] + (D.to[0] - end[0]) * w;
+    const y = end[1] + (D.to[1] - end[1]) * w;
+    this.holdStiff(dt, x, y);
+  }
+
+  holdStiff(dt, hx = null, hy = null) {
     const f = this.f;
     const off = f.handOffset;
-    if (!this.stiffHeld) off.copy(this.aim); // 경직이 시작된 자리
+    if (hx != null) off.set(hx, hy); // 뒤 박차기 헛침 경직: 끌려가는 · 되찾는 자리 (whiffDrag)
+    else if (!this.stiffHeld) off.copy(this.aim); // 경직이 시작된 자리
     this.stiffHeld = true;
     this.prev.copy(off);
     this.anchor.copy(off);
@@ -1582,7 +1609,8 @@ export class Skill {
     observeTempoInput(this, dt);
     const off = tempoHand(this, dt);
     if (off !== f.handOffset && off.length() > R) off.setLength(R);
-    if (this.sec?.stage === 'stiff' || f.secretStiff || bwStiff(f)) return this.holdStiff(dt); // 비기 경직 (플레이어 sec · AI 는 ai.js moveHand 가 secretStiff 를 켠다) · 뒤 박차기 헛침 경직 (11/19 — 사람 · AI 같음)
+    if (this.sec?.stage === 'stiff' || f.secretStiff) return this.holdStiff(dt); // 비기 경직 (플레이어 sec · AI 는 ai.js moveHand 가 secretStiff 를 켠다) — 멈춤 꼴
+    if (bwStiff(f)) return this.whiffDrag(dt); // 뒤 박차기 헛침 경직 (11/19 [사장님 승인] — 끌려갔다가 되찾는 꼴 · 사람 · AI 같음) — 사람 · AI 같음)
     this.stiffHeld = false;
 
     // 손 목표 속도 (손가락 떨림을 거르기 위해 살짝 부드럽게)

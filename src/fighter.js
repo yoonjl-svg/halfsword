@@ -724,6 +724,7 @@ export class Fighter {
     // idle: 보정 v2 쉼 무게 (0 = 손길·휘두름 날것, 1 = 쉼 자세 지도). v2 가지만 쫓고 driveSword 가 읽는다 — 판은 쉼에서 시작
     this.bodyPose = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0, idle: 1 };
     this.okoriBody = null; // 오코리 몸 덧씌우기 { pelvisYaw, chestYaw, pitch, drop } (11/17 — ai_measure.js okoriBody · AI 몸만 · 사람 몸은 늘 null) — 아래 updateBodyPose 가 자세표 덧씌우기와 같은 꼴로 더함
+    this.bwBody = null; // 뒤 박차기 헛침 경직 끌려감의 몸 덧씌우기 { pelvisYaw, chestYaw, pitch, drop } (11/19 — burst_whiff.js bwTick · 사람 · AI 같음)
     this.okoriFront = 0; // 오코리 무게 옮김 — 선 몸의 무게 자리를 앞발 쪽으로 (gait.js · 사람 몸은 늘 0)
     this.okoriVis = 0; // 오코리 보이는 크기 0 ~ 1 (AI 눈이 늦게 봄 — ai_sense.js · 사람 몸은 늘 0)
     this.bodyPoseVel = { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0, idle: 0 };
@@ -1492,6 +1493,13 @@ export class Fighter {
         piT += ob.pitch;
         dT += ob.drop;
       }
+      const wb = this.bwBody; // 뒤 박차기 헛침 경직 끌려감 (11/19 — burst_whiff.js bwTick · 사람 · AI 같음 · 굳지 않았으면 null): 같은 꼴로 더함
+      if (wb) {
+        pT += -wb.pelvisYaw * 0.5;
+        cT += -wb.chestYaw;
+        piT += wb.pitch;
+        dT += wb.drop;
+      }
       // 마무리(쓰러진 상대 내려찍기)만 자세 당김 예외 (사장님 9/30 23:40): FINISH_GUARDS 몫만(finishAt, 보통 자세표·찌르기 덧씌우기 없음)을
       //  s·(마무리 무게 몫, fin.amt 포함) 로 명령
       if (this.finish.amt > 0) {
@@ -1537,6 +1545,13 @@ export class Fighter {
         cT1 += -ob.chestYaw;
         piT1 += ob.pitch;
         dT1 += ob.drop;
+      }
+      const wb = this.bwBody; // 뒤 박차기 헛침 경직 끌려감 (11/19 — 위 가지와 같은 꼴)
+      if (wb) {
+        pT1 += -wb.pelvisYaw * 0.5;
+        cT1 += -wb.chestYaw;
+        piT1 += wb.pitch;
+        dT1 += wb.drop;
       }
       follow('pelvisYaw', pT1, SKILL_BODY.pelvis * spd * arcSpd0);
       follow('chestYaw', cT1, SKILL_BODY.chest * spd * arcSpd0);

@@ -931,7 +931,7 @@ export class AI {
     // 무릎 꿇었거나 일어나는 중: 다리는 못 놀리지만 칼은 쥘 수 있다 → 가만히 가리고만 있지 않고,
     //  사정거리 안까지 다가온 적은 아래에서도 위협하거나 짧게 친다 (발놀림은 아래에서 0으로 막는다)
     const kneeling = me.state !== 'stand';
-    const stiff = bwStiff(me); // 뒤 박차기 헛침 경직 (11/19): 막기 · 공격 · 걸음 없음 — 칼은 검술 층 holdStiff 가 굳은 자리에 멈춤
+    const stiff = bwStiff(me); // 뒤 박차기 헛침 경직 (11/19): 막기 · 공격 · 걸음 없음 — 칼은 검술 층 whiffDrag 가 끌려갔다가 쉴 자세로 (1.2 s 승인 꼴) · 비틀 걸음은 burst_whiff.js bwTick
     const limit = this.plan ? this.planRestAt() : this.restAt; // 공격적 기질 −10 · 아니면 20 (아래 aggressiveTemper) · 유파 플랜(11/14 — 이탈리아)은 띠마다 기력 셈(planRestAt)
     const resume = this.plan ? Math.max(STAMINA.aiResumeAt, limit + STAMINA.stageBack) : STAMINA.aiResumeAt; // 플랜: 쉼 문턱을 올렸으면(비기 몫) 다시 나가는 기력도 그만큼 위 (지침 한 칸 되돌림 stageBack 15 — 새 수 없음)
     if (me.stamina.value < limit) {
@@ -3941,7 +3941,7 @@ export class AI {
 
   /**
    * 뒤 박차기 헛침 경직 (11/19 [사장님 결정] — burst_whiff.js · 굳음 시간은 몸 me.bwStiffT): 친 뒤(afterStrike) 이어 치기 · 물러남 없이 그 자리에서 굳음 —
-   *  꼴은 간 보기(굳은 동안 update 꼴 분기 · respond · 공격 문이 모두 거름 · 칼은 검술 층 holdStiff · 걸음 0) · 풀리면 간 보기부터 그대로
+   *  꼴은 간 보기(굳은 동안 update 꼴 분기 · respond · 공격 문이 모두 거름 · 칼은 검술 층 whiffDrag 끌려감 → 쉴 자세 · 걸음은 비틀 걸음만) · 풀리면 간 보기부터 그대로
    */
   bwStiffen() {
     this.mode = 'watch';
@@ -4269,7 +4269,7 @@ export class AI {
     const off = this.me.handOffset;
     // 비기 경직 (사장님 10/10 20:5x '잠깐 아예 못 움직이게'): 손 목표를 그대로 둔다 — 떨림도 없음. 검술 층(skill.js update)이 secretStiff 를 보고 걸러진 목표까지 붙든다
     this.me.secretStiff = this.secretRun?.stage === 'stiff';
-    if (this.me.secretStiff || bwStiff(this.me)) return; // 뒤 박차기 헛침 경직 (11/19)도 같은 꼴 — 손 목표를 그대로 (검술 층 holdStiff 가 붙듦)
+    if (this.me.secretStiff || bwStiff(this.me)) return; // 뒤 박차기 헛침 경직 (11/19)도 — 손 목표를 그대로 (검술 층이 쥠: 비기 경직 holdStiff 멈춤 · 헛침 경직 whiffDrag 끌려감 → 되찾음)
     if (this.secretRun?.stage === 'mord' || this.secretRun?.stage === 'riso') return; // 안다레 리솔루토(11/14)도 · 싱지르 · 모르트슐라크 (10/24): 대본 · 따라 지나감 · 굳음 동안 손 목표는 검술 층(skill.sec — 덧씌우기 · holdStiff)이 쥔다
     if (this.feintHold > 0) {
       this.feintHold -= dt;
@@ -4551,7 +4551,7 @@ export class AI {
     if (!this.foe.alive) fwd = side = 0;
     if (this.secretRun?.stage === 'stiff' || ((this.secretRun?.stage === 'mord' || this.secretRun?.stage === 'riso') && me.skill.sec?.stage === 'stiff')) fwd = side = 0; // 비기 경직: 걸음 없음 — 울타리 빠짐·근접 밀치기 스틱도 (10/10 20:5x) · 싱지르(10/24 — 검술 층 skill.sec 이 대본 · 굳음까지 몸을 쥔다) · 모르트슐라크(10/24 — 사람과 같게 굳음 동안만)
     if (!armsBusy) [fwd, side] = cnAiTurn(this, fwd, side); // 동방 편섬 (11/15): 'turn' — 偏閃奏進이 꺾는 동안 옆 스틱 · 견줌 ⓐ ⓑ — 창에서 꺾음(띠 기울기 + 굴림)
-    if (bwStiff(me)) fwd = side = 0; // 뒤 박차기 헛침 경직 (11/19): 걸음 없음 (비기 경직과 같음 — 몸은 물리대로)
+    if (bwStiff(me)) fwd = side = 0; // 뒤 박차기 헛침 경직 (11/19): 뜻대로 걷기 없음 (비틀 걸음은 burst_whiff.js bwTick 이 스틱을 덮어 — 사람 · AI 같음)
     // ── AI 뛰기 (11/19 — src/ai_run.js · 셋 이상 판만): 먼 상대에게 스틱 끝 · 공격 · 막기 꼴이면 끊음 — 사람과 같은 입력 칸(runReach · runBreak)
     if (me.teamSense) [fwd, side] = aiRunFeet(this, fwd, side);
     me.stickX = side; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
