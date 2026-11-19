@@ -43,6 +43,7 @@ import { SchoolPassive, schoolPassiveOn } from './school_passive.js'; // 유파 
 import { fighterWetlandMoveScale } from './wetland_ground.js';
 import { closeStartD, closeHoldT, bargeHeld, closeLog, holdPushBack } from './close_hold.js'; // 밀치기 시작 거리 1.0 m · 최소 유지 · 맞밀기 (11/14 사장님 — config CLOSE.startD · holdMin)
 import { ringCheck, ringStep } from './de_dirty.js'; // 독일 칼 씨름 1] (11/14 — config DE_DIRTY · 기본 켬)
+import { bwTick } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 — 굳음 시간 · config BURST_WHIFF)
 
 const KNEEL_T = realS(1.1); // 넘어졌다 일어날 때 무릎 꿇은 채 기다림 (실제 초 — 표준 시간 10/25 · 곁눈 베기 꿇음은 UNIQUE_ASSIST.buckle.kneel)
 // 충돌 그룹 비트. 자기 몸과 자기 칼끼리는 부딪히지 않게 한다.
@@ -1757,6 +1758,7 @@ export class Fighter {
   step(dt) {
     this.lastDt = dt;
     this.stateTime += dt;
+    bwTick(this, dt); // 뒤 박차기 헛침 경직 (11/19 — burst_whiff.js): 굳음 시간
     this.updateState(dt);
     if (this.humanInput && !this.aiControlled) humanPickup(this); // 사람 저절로 줍기 (11/18 사장님 — 칼 곁(PICKUP.near)이면 입력과 무관히 걸어가 줍기 · 칼 팔을 다쳐 놓친 때 한 줄 걸이 — src/pickup.js)
     if (this.pickup || !this.armed) pickupTick(this, dt); // 떨어진 칼 줍기 (11/05 — src/pickup.js)

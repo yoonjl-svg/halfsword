@@ -19,6 +19,7 @@
 import * as THREE from 'three';
 import { itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14): 끌고 가는 칼의 상처도 칼 우위 · 재기 (combat.js strike 와 같은 자리)
 import { SECRET, ARM, STRIKE, GAIT, ARENA, JOINTS, THRUST } from './config.js';
+import { bwTouch } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 — 운동학 칼의 닿음도 셈: 몸에 맞음 · 상대 칼에 막힘)
 import { obiOn, obiReadyInto, obiPathB, notoStep, notoStop, iaiSeated, drawStart, nukiStep, drawLog } from './iai_obi.js'; // 帯刀 — 대기 칼 자리 · 뽑는 자리 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi)
 const GAIT_REACH = GAIT.reachMax;
 
@@ -300,6 +301,7 @@ function runInstant(f, combat) {
 
 /** 쓸린 자리의 첫 부위에 기존 상처 함수(combat.analyze → applyWound)로 상처. 에너지 = instantJ × hitMul 이 나오게 분석 속도를 고른다 */
 function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, hitMul = SECRET.hitMul, effMul = null, grip = null, plan = null) {
+  bwTouch(f, foe, 'kin'); // 뒤 박차기 헛침 경직 (11/19): 운동학 칼이 그 몸에 닿음
   // plan (11/04 — SECRET.sweepCap · stepCombo): 이 조각의 짠 길 칼 자세 둘 [앞, 뒤] (월드 — 칼 밑동 B · 칼 축 D · 놓인 칼과 같은 꼴). 있으면 맞은 점의 쓸린 길이를 짠 길이 같은 점을 옮긴 길이까지만 (아래)
   const { i, best } = hit;
   const P = cut[i];
@@ -882,6 +884,7 @@ function stepIai(f, combat) {
       // 이베리아 휩쓸기: 몸보다 먼저 상대 칼에 닿으면 막힘 — 맞음 판정을 멈추고 상대를 밀어낸다 (sweepShove), 칼은 그 자리에서 멈춤
       if (I.block && !I.hit && !I.blocked && foe.armed && foe.sword && segSegApprox(B, tip, foe.bladePoint(0, new THREE.Vector3()), foe.bladePoint(1, new THREE.Vector3())) < SECRET.iberianBlockDist) {
         I.blocked = true;
+        bwTouch(f, foe, 'kin'); // 뒤 박차기 헛침 경직 (11/19): 상대 칼에 막힘 = 닿음
         I.uEnd = Math.max(I.ab, u - (1 - w) * (dt / I.T));
         if (I.kind === 'sweep') sweepShove(f, foe); // 발도(고노센 여쭘 B)는 막힌 자리에서 멈추기만 — 연환 · 격살 · 런지 막힘과 같음
       }
@@ -3289,6 +3292,7 @@ function lungeSweep(f, I, combat, t0, t1) {
           I.blockM = true;
           I.blocked++;
           blocked = true;
+          bwTouch(f, foe, 'kin'); // 뒤 박차기 헛침 경직 (11/19): 상대 칼에 막힘 = 닿음
         }
       }
       let best = null;
