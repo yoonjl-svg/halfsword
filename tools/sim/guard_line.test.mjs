@@ -237,7 +237,8 @@ test('읽는 쪽 (AI 상대): 덮은 줄 = 늦게 본 상대 손 자세의 기�
     assert.equal(x.line, x.read.line, '덮은 줄 = 그 자세의 기본 줄');
     assert.ok(Object.values(PARRY_LINE).includes(x.line));
   }
-  assert.ok(S.go === got.length && S.th + S.end <= S.go, JSON.stringify(S));
+  // 들어감 go 는 줄 닫기(anticGo — got)와 간격과 박자 걸음에 치기(debana — 11/17 msDebanaTry · anticGo 없이 돌아감) 둘로 갈림 (11/19 합침 — 고른 판에 debana 가 처음 나옴)
+  assert.ok(S.go === got.length + (S.debana ?? 0) && S.th + S.end <= got.length, JSON.stringify(S));
   assert.ok(S.th >= 1 && aim > 0, `읽은 줄을 덮는 중 휘두름이 보임 → 가로막기가 실제 칼 길로 겨눔 ${JSON.stringify(S)} · icp.aim ${aim}`);
 });
 
