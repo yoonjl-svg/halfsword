@@ -296,12 +296,12 @@ export function deBack(ai, th, d) {
 
 /**
  * 뒤 칼 (띠 높음 · 11/19 — 나흐라이젠 · 나흐슐라크): 읽고 박찬 뒤 2 박자(AI_PLAN.beat × 2 = 1.32 게임 초) 안에 —
- *  내가 맞지 않은 채 그 칼이 가장 가까워질 어림 초(tau)가 지났고 지금 오는 칼이 없으면(th — 늦게 본 모습) 그 칼을 비낀 것(backVoid)이고,
- *  상대 칼이 다한 틈(헛친 뒤 손이 멎음 — seize 의 recovering 과 같은 늦게 본 셈)에 곧장 다시 들어가 침:
+ *  내가 맞지 않은 채 그 칼이 가장 가까워질 어림 초(tau)가 지났고 지금 오는 칼이 없으면(th — 늦게 본 모습) 그 칼을 비낀 것(backVoid)이고, 곧장 다시 들어가 침
+ *  (11/19 [사장님 결정] 뒤 박차기 헛침 경직 — 헛친 상대는 그 칼이 끝난 뒤 0.6 s 굳음(burst_whiff.js) · 그 창에 닿게 비낀 순간 바로 · 전 판은 상대 손이 멎은 틈 recovering 까지 기다림):
  *  내 맞닿기 거리 밖이면 두 걸음 박찬 앞 걸음(gait.deDigAi — 파고들기와 같은 장치 · 박찰 기력이 있을 때) + 'recover' 공격(독일 꾸러미에서 고름 · 빠른 준비).
  *  상대 칼끝 어림 + 1.0(두 걸음) 밖 · 붙은 거리 안 · 상대가 서 있지 않음이면 내지 않음. 낸 칼이 끝나면 그 칼이 낸 상처를 셈(재기). 냈으면 true
  */
-export function deNachTick(ai, s, d, th, recovering) {
+export function deNachTick(ai, s, d, th) {
   const N = ai.deNach;
   if (!N) return false;
   const st = ai.stats.plan.de;
@@ -329,7 +329,7 @@ export function deNachTick(ai, s, d, th, recovering) {
     N.voided = true;
     st.backVoid++;
   }
-  if (!recovering || ai.mode === 'attack' || ai.secretRun || !foe.alive || s.state !== 'stand' || me.state !== 'stand' || !me.armed || d > ai.foeReach + 1.0 || d < ai.M.clinch) return false;
+  if (ai.mode === 'attack' || ai.secretRun || !foe.alive || s.state !== 'stand' || me.state !== 'stand' || !me.armed || d > ai.foeReach + 1.0 || d < ai.M.clinch) return false;
   if (d > ai.M.contact && burstStamOk(ai)) me.gait?.deDigAi?.();
   const t = ai.pickTech(s, 'recover');
   if (!t || !ai.startAttack(t, 'recover', { noFeint: true, fastChamber: true })) {

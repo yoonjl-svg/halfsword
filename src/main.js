@@ -64,6 +64,7 @@ import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비�
 import { drawInput, drawTapTake } from './iai_obi.js'; // 11/16 뽑기 — 사람 입력 잠금 (SECRET.gnsDraw)
 import { IAI_READY_STANCE, iaiReadyShown } from './secret_instant.js'; // 고노센 발도 대기 자세 이름 (① 자세 칸 — 10/31 13:xx)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
+import { bwStiff } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 — 경직 글 STIFF_TEXT 가 상대 굳음도 봄 · 사람 굳음은 검술 층 secretPhase 'stiff')
 import { pickupReady, PICKUP_HOOKS } from './pickup.js'; // 떨어진 칼 줍기 (11/05 — 막기 단추 글 '줍기' · 11/18 저절로 줍기 · 칼 팔 다침 한 줄)
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { itEdgeLook } from './italian_outbox.js'; // 이탈리아 칼 우위 빛 (11/14 설계안 A — 그림만 · config IT_OUTBOX.edgeLook)
@@ -2939,7 +2940,7 @@ function updateTechCue(dt) {
   }
   // 경직 글 (STIFF_TEXT, 기본 끔): 켜면 경직이 시작될 때 감정 줄에 한 번
   const myStiff = liveMine && pPhase === 'stiff';
-  const foeStiff = live && ai?.secretRun?.stage === 'stiff';
+  const foeStiff = live && (ai?.secretRun?.stage === 'stiff' || bwStiff(enemy)); // 11/19 뒤 박차기 헛침 경직도 같은 '상대 경직'
   if (STIFF_TEXT && myStiff && !stiffSeen.me) showEmoMsg('경직', 'stiff', 1200);
   if (STIFF_TEXT && foeStiff && !stiffSeen.foe) showEmoMsg('상대 경직', 'stiff', 1200);
   stiffSeen = { me: myStiff, foe: foeStiff };

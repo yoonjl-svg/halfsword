@@ -25,6 +25,7 @@
 //   --cfgHi=PATH:수,… : config 수를 높은 쪽 AI 의 매 스텝 판단(ai.update) 동안만 바꿈 (--cfg 와 같은 꼴 · 낮은 쪽 · 몸 · 판정은 그대로 — 플랜 값 한 칸이 높은 쪽에 주는 몫을 재는 용)
 //   --stats : 판 기록에 두 쪽 AI 의 stats 요약(hiStats · loStats — 배열은 줄임) · 기력 장부(hiStam · loStam — 갈래마다 쓴 기력 spent · 횟수 counts) · 무릎 꺾기 굴림(buckle — 곁눈 베기 G6 · combat.buckleLog 수) + 흔적(hiTrace · loTrace — 공격마다 기술 이름 · 까닭 · 거리 ·
 //             그 칼 동안 준 상처 · 받은 상처 · 끝난 뒤 0.8 s 안에 받은 상처 · 칼 부딪힘 · 그때 상대 꼴 · 그때 상대 칼(vs) · 이어 친 앞 칼(from) / 꼴마다 머문 시간 · 꼴마다 받은 상처). 읽기만 (난수 · 몸에 손대지 않음)
+//            11/19 흔적에 bw — 뒤 박차기 헛침 경직(burst_whiff.js): 내가 굳음 · 도구 눈으로 다시 가른 헛 굳음(박찬 걸음 · 칼끝 거리 · 상처 · 칼 부딪힘) · 상대 굳음 창과 그 창에 벰 · 독일 뒤 칼과 굳음 (읽기만)
 //   --gns : 판 기록에 높은 쪽 고노센 깔때기 흔적 gns (11/19 · 읽기만 — tools/sim/gns_funnel.mjs gnsProbe · 요약은 node tools/sim/gns_funnel.mjs a.json)
 //   node tools/sim/prof_gap_measure.mjs trace a.json … [--lo] [--vs] [--top=14] : --stats 로 잰 판 기록의 요약 (11/18 · 읽기만) — hi 몫 · 꼴 몫 · 꼴마다 준 · 받은 상처 ·
 //             기술마다 판당 수 · 맞힘 · 맞음 · 끝난 뒤 0.8 s 안 맞음 · 칼 부딪힘 몫 · 거리 · 칼 시간 · 그때 상대 꼴 · 까닭 (--lo = 낮은 쪽 흔적 · --vs = 칼을 열 때 상대 칼 · 이어 친 칼의 앞 칼)
@@ -231,7 +232,51 @@ function traceAI(G, ai, me, other) {
     if (ok && this.atkSeq !== seq0) { close(); open(null); cur.why = (o.chain ? 'chain:' : '') + (why ?? '-'); }
     return ok;
   };
+  // 뒤 박차기 헛침 경직 흔적 (11/19 — burst_whiff.js · 읽기만 · 판 결과 그대로): 내 굳음 — 도구 눈으로 다시 가름(박찬 걸음 · 칼끝 거리 · 상처 · 칼 부딪힘)해 어긋나면 '헛 굳음' ·
+  //  상대 굳음 창 — 그 창 안에 내가 벰 · 독일 띠 높음 뒤 칼(deNach) — 낸 때 · 칼이 나간 때 상대가 굳었나 · 굳은 동안 벰 · 굳음 시작에서 칼이 나갈 때까지 초
+  const ob = other?.me; // 상대 몸 (other = 상대 AI)
+  const hd = (a, b) => { const p = a.bodies.chest.translation(), q = b.bodies.chest.translation(); return Math.hypot(q.x - p.x, q.z - p.z); };
+  const BW = { trig: 0, falseTrig: 0, falseWhy: {}, win: 0, winHit: 0, nach: 0, nachStiffFire: 0, nachStiffStrike: 0, nachHit: 0, nachHitStiff: 0, delay: 0, delayN: 0 };
+  let atk0 = null, prevMy = false, prevFoe = false, foeWin = null, nachRec = null;
+  const ss0 = ai.startStrike;
+  ai.startStrike = function () { atk0 = { t: G.t, d: hd(me, ob), reach: me.swordArt?.measure?.reach ?? 1.8, w: G.wounds.length, c: G.clashes, burst: false }; return ss0.call(this); };
+  const bwPoll = () => {
+    const og = ob?.gait;
+    if (atk0 && og && ai.mode === 'attack' && (ai.phase === 'strike' || ai.phase === 'follow') && og.fastK > 1 && og.fastDir < 0 && !og.fastSide) atk0.burst = true;
+    const my = me.bwStiffT > 0;
+    if (my && !prevMy) {
+      BW.trig++;
+      const why = !atk0 ? 'noAtk' : !atk0.burst ? 'noBurst' : atk0.d > atk0.reach ? 'far' : G.wounds.slice(atk0.w).some((w) => w.att === me && w.vic === ob) ? 'wound' : G.clashes > atk0.c ? 'clash' : null;
+      if (why) { BW.falseTrig++; BW.falseWhy[why] = (BW.falseWhy[why] ?? 0) + 1; }
+    }
+    prevMy = my;
+    const fs = (ob?.bwStiffT ?? 0) > 0;
+    if (fs && !prevFoe) foeWin = { t0: G.t, w: G.wounds.length, hit: false };
+    if (foeWin && G.wounds.slice(foeWin.w).some((w) => w.att === me && w.vic === ob && w.severity > 0)) foeWin.hit = true;
+    if (!fs && prevFoe && foeWin) { BW.win++; if (foeWin.hit) BW.winHit++; foeWin = null; }
+    prevFoe = fs;
+    const N = ai.deNach;
+    if (N?.fired && (!nachRec || nachRec.N !== N)) {
+      nachRec = { N, seq: N.seq, w: G.wounds.length, strike: false, hitStiff: false };
+      BW.nach++;
+      if (fs) BW.nachStiffFire++;
+    }
+    if (nachRec) {
+      if (!nachRec.strike && ai.mode === 'attack' && ai.atkSeq === nachRec.seq && ai.phase === 'strike') {
+        nachRec.strike = true;
+        if (fs) { BW.nachStiffStrike++; if (foeWin) (BW.delay += G.t - foeWin.t0), BW.delayN++; }
+      }
+      const nw = G.wounds.slice(nachRec.w).filter((w) => w.att === me && w.vic === ob && w.severity > 0);
+      if (nw.length && fs) nachRec.hitStiff = true;
+      if (!(ai.mode === 'attack' && ai.atkSeq === nachRec.seq) && G.t > (nachRec.t1 ??= G.t + 0.3)) {
+        if (nw.length) BW.nachHit++;
+        if (nachRec.hitStiff) BW.nachHitStiff++;
+        nachRec = null;
+      }
+    }
+  };
   T.poll = () => {
+    bwPoll();
     const m = ai.mode;
     T.modeT[m] = (T.modeT[m] ?? 0) + DT;
     if (m === 'watch') { T.dWatch += ai.d; T.nWatch++; }
@@ -255,8 +300,9 @@ function traceAI(G, ai, me, other) {
     close();
     for (const A of Object.values(T.atk)) { A.d = +(A.dSum / A.n).toFixed(3); A.t = +(A.tSum / A.n).toFixed(3); delete A.dSum; delete A.tSum; }
     for (const k of Object.keys(T.modeT)) T.modeT[k] = +T.modeT[k].toFixed(2);
-    const out = { modeT: T.modeT, atk: T.atk, dealtBy: T.dealtBy, tookBy: T.tookBy, burst: T.burstDone(), dWatch: T.nWatch ? +(T.dWatch / T.nWatch).toFixed(3) : null, contact: +ai.M.contact.toFixed(3), reach: +(ai.M.reach ?? 0).toFixed(3) };
+    const out = { modeT: T.modeT, atk: T.atk, dealtBy: T.dealtBy, tookBy: T.tookBy, burst: T.burstDone(), bw: { ...BW, delay: BW.delayN ? +(BW.delay / BW.delayN).toFixed(3) : null, stats: me.bwStats ? { ...me.bwStats, log: undefined } : null }, dWatch: T.nWatch ? +(T.dWatch / T.nWatch).toFixed(3) : null, contact: +ai.M.contact.toFixed(3), reach: +(ai.M.reach ?? 0).toFixed(3) };
     ai.startAttack = orig;
+    ai.startStrike = ss0;
     return out;
   };
   return T;
@@ -386,6 +432,8 @@ export function traceTable(rows, side = 'hi', top = 14) {
   const tot = Object.values(modeT).reduce((a, v) => a + v, 0);
   L.push(`[${side}] 꼴 몫 ${Object.entries(modeT).sort((a, b) => b[1] - a[1]).map(([m, v]) => `${m} ${((100 * v) / tot).toFixed(0)} %`).join(' · ')} · 간 보기 거리 ${(T.reduce((a, t) => a + (t.dWatch ?? 0), 0) / N).toFixed(2)} m · 맞닿기 ${(T.reduce((a, t) => a + t.contact, 0) / N).toFixed(2)} m`);
   const BU = T.reduce((o, t) => { for (const k of ['n', 'reach', 'clean', 'reachClean']) o[k] += t.burst?.[k] ?? 0; return o; }, { n: 0, reach: 0, clean: 0, reachClean: 0 });
+  const BWs = T.reduce((o, t) => { for (const k of ['trig', 'falseTrig', 'win', 'winHit', 'nach', 'nachStiffFire', 'nachStiffStrike', 'nachHit', 'nachHitStiff']) o[k] += t.bw?.[k] ?? 0; return o; }, { trig: 0, falseTrig: 0, win: 0, winHit: 0, nach: 0, nachStiffFire: 0, nachStiffStrike: 0, nachHit: 0, nachHitStiff: 0 });
+  if (BWs.trig || BWs.win || BWs.nach) L.push(`뒤 박차기 헛침 경직 — 내가 굳음 판당 ${(BWs.trig / N).toFixed(2)} (헛 굳음 ${BWs.falseTrig}) · 상대 굳음 창 판당 ${(BWs.win / N).toFixed(2)} · 그 창에 벰 ${BWs.win ? ((100 * BWs.winHit) / BWs.win).toFixed(0) : '-'} % · 뒤 칼 판당 ${(BWs.nach / N).toFixed(2)} · 낼 때 굳음 ${BWs.nachStiffFire} · 칼이 나갈 때 굳음 ${BWs.nachStiffStrike} · 맞힘 ${BWs.nachHit} (굳은 동안 ${BWs.nachHitStiff})`);
   if (BU.n) L.push(`뒤 박차기 판당 ${(BU.n / N).toFixed(2)} · 닿는 칼에 건 몫 ${((100 * BU.reach) / BU.n).toFixed(0)} % · 건 뒤 0.8 s 안 안 맞음 ${((100 * BU.clean) / BU.n).toFixed(0)} % · 닿는 칼을 비낌(닿는 칼 · 안 맞음) ${((100 * BU.reachClean) / BU.n).toFixed(0)} %`);
   L.push(`준 상처 (판당) ${Object.entries(dealtBy).map(([m, v]) => `${m} ${(v / N).toFixed(2)}`).join(' · ')} | 받은 상처 ${Object.entries(tookBy).map(([m, v]) => `${m} ${(v / N).toFixed(2)}`).join(' · ')}`);
   const A = {};

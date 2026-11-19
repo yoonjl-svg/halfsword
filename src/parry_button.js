@@ -26,6 +26,7 @@ import { AI_LEVELS, SKILL, realS } from './config.js';
 import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 (11/15 — 사장님 11/16 묶음 P)
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
 import { threatNow } from './secret.js';
+import { bwStiff } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19): 굳은 동안 막기 없음
 import { TRADITIONS } from './schools.js';
 import { GUARD_BASE } from './guards.js';
 import { installCover } from './frames.js';
@@ -130,7 +131,7 @@ export class PlayerParryGuard {
     this.opposition.beginGuardStep();
     recordFoeSenses(this, dt); // 1:1 = this.sense.record(dt) 그대로 (2:2 는 상대마다 — setFoe)
     sk.guardDrive = 0;
-    const can = !me.stamina.exhausted && this.held && !this.broken && me.alive && me.armed && !me.weapon?.gun && !sk.sec && !sk.tap && !sk.pom && (me.state === 'stand' || me.state === 'kneel') && !!this.school && !me.ibLink; // 11/14 이어 돌리기(머리 위 원) 동안 막기 안 됨 — 슬러거의 대가 (iberian_link.js · IB_LINK)
+    const can = !me.stamina.exhausted && this.held && !this.broken && me.alive && me.armed && !me.weapon?.gun && !sk.sec && !sk.tap && !sk.pom && (me.state === 'stand' || me.state === 'kneel') && !!this.school && !me.ibLink && !bwStiff(me); // 11/14 이어 돌리기(머리 위 원) 동안 막기 안 됨 — 슬러거의 대가 (iberian_link.js · IB_LINK) · 11/19 뒤 박차기 헛침 경직 동안 막기 없음
     // 위협 읽기 (누르지 않아도 센다 — 누르는 순간 이미 오는 칼을 읽게. 번호는 ai.js threat 와 같은 규칙)
     const L = this.L;
     const s = this.sense.seen(this.lag);

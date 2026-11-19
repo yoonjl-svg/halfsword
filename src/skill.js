@@ -39,6 +39,7 @@ import { linkStep } from './iberian_link.js'; // AI 이어 돌리기 (11/14)
 import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain, gnsBlockOf, secretCostOf } from './secret.js'; // 이베리아 멈추지 않는 흐름의 수 (10/11 — AI 와 같은 함수. secret.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 선언이라 읽는 때에 이미 있다)
 import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf, mordMode } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
 import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
+import { bwStiff, bwAtkStart, bwAtkEnd, bwAtkDrop } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 [사장님 결정] — 굳음은 비기 경직과 같은 꼴)
 import { huntStacksFor } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 상대를 겨눈 격살 칼끝 빠르기 몫 × (1 + share × 겹)
 
 const D2R = Math.PI / 180;
@@ -1081,9 +1082,10 @@ export class Skill {
     this.anchor.copy(f.handOffset);
   }
 
-  /** 지금 비기 단계 (main.js HUD·입력 막기): null | 'run' | 'stiff' */
+  /** 지금 비기 단계 (main.js HUD·입력 막기): null | 'run' | 'stiff' — 뒤 박차기 헛침 경직(11/19 — burst_whiff.js)도 'stiff' (비기 경직과 같은 입력 막음 · 같은 꼴) */
   get secretPhase() {
-    return !this.sec ? null : this.sec.stage === 'stiff' ? 'stiff' : 'run';
+    if (this.sec) return this.sec.stage === 'stiff' ? 'stiff' : 'run';
+    return bwStiff(this.f) ? 'stiff' : null;
   }
 
   /**
@@ -1579,6 +1581,7 @@ export class Skill {
         W.landed = false;
         W.bound = false;
         W.att = false;
+        bwAtkStart(f); // 뒤 박차기 헛침 경직 (11/19): 이 덩이를 낼 때 겨눈 상대가 칼끝 거리 안이었나
       }
       W.quiet = 0;
       W.tail = 0;
@@ -1596,6 +1599,8 @@ export class Skill {
 
   whiffEnd(W, foe) {
     W.on = false;
+    if (W.att) bwAtkEnd(this.f, W.landed, W.bound); // 뒤 박차기 헛침 경직 (11/19): 박찬 상대에게 아무 데도 안 닿은 공격이면 이 몸이 굳음
+    else bwAtkDrop(this.f);
     if (!W.landed && !W.bound) foe?.gait?.foeWhiff();
     if (W.att && !W.landed) foe?.schoolPassive?.foeFailed(W.bound ? 'blocked' : 'whiff'); // 독일 인데스 (10/21)
   }
@@ -1642,7 +1647,7 @@ export class Skill {
     observeTempoInput(this, dt);
     const off = tempoHand(this, dt);
     if (off !== f.handOffset && off.length() > R) off.setLength(R);
-    if (this.sec?.stage === 'stiff' || f.secretStiff) return this.holdStiff(dt); // 비기 경직 (플레이어 sec · AI 는 ai.js moveHand 가 secretStiff 를 켠다)
+    if (this.sec?.stage === 'stiff' || f.secretStiff || bwStiff(f)) return this.holdStiff(dt); // 비기 경직 (플레이어 sec · AI 는 ai.js moveHand 가 secretStiff 를 켠다) · 뒤 박차기 헛침 경직 (11/19 — 사람 · AI 같음)
     this.stiffHeld = false;
 
     // 손 목표 속도 (손가락 떨림을 거르기 위해 살짝 부드럽게)
