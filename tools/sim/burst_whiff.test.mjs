@@ -8,7 +8,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newRound, CONFIG, DT } from './harness_m.mjs';
 import { PlayerParryGuard } from '../../src/parry_button.js';
-import { bwAtkStart, bwAtkEnd, bwAtkDrop, bwAim, bwBurst, bwTouch, bwStiff } from '../../src/burst_whiff.js';
+import { bwAtkStart, bwAtkEnd, bwAtkDrop, bwAim, bwBurst, bwTouch, bwStiff, bwElapsed, bwDragW } from '../../src/burst_whiff.js';
 
 const { BURST_WHIFF, ARENA } = CONFIG;
 
@@ -27,13 +27,14 @@ function swing(D) {
   bwAtkStart(D.Y);
 }
 
-test('① 칼이 나가는 동안 뒤 박차기 + 아무 데도 안 닿고 끝남 → 그 칼이 끝난 때부터 BURST_WHIFF.stiff 동안 굳음 (시간 사다리 0.6 — 비기 경직과 같은 값)', () => {
-  const D = duel(1.3);
+test('① 칼이 나가는 동안 뒤 박차기 + 몸에 안 닿고 끝남 → 그 칼이 끝난 때부터 BURST_WHIFF.stiff 동안 굳음 ([사장님 11/19 승인] 시간 사다리 1.2 · 그 가운데 앞 0.6 끌려감)', () => {
+  const D = duel(1.6); // 11/19 보정 v2 묶음: 1.3 m 에선 손으로 놓은 AI 꼴(날것 손 목표)의 칼이 첫 스텝에 사람 칼에 닿아 그 공격의 닿음이 됨 — 칼끝 거리 안 1.6
   try {
-    assert.ok(Math.abs(BURST_WHIFF.stiff - CONFIG.realS(0.6)) < 1e-12);
-    assert.ok(Math.abs(BURST_WHIFF.stiff - CONFIG.SECRET.stiff.german) < 1e-12, '비기 경직과 같은 값');
+    assert.ok(Math.abs(BURST_WHIFF.stiff - CONFIG.realS(1.2)) < 1e-12);
+    assert.ok(Math.abs(BURST_WHIFF.drag - CONFIG.realS(0.6)) < 1e-12, '끌려감 = 앞 0.6');
+    assert.ok(Math.abs(CONFIG.SECRET.stiff.german - CONFIG.realS(0.6)) < 1e-12, '비기 경직은 그대로 0.6');
     swing(D);
-    assert.equal(D.Y.bwAtk.inReach, true, '가슴 사이 1.3 m — 롱소드 칼끝 거리 안');
+    assert.equal(D.Y.bwAtk.inReach, true, '가슴 사이 1.6 m — 롱소드 칼끝 거리 안');
     bwBurst(D.X);
     assert.equal(D.Y.bwAtk.burst, true);
     assert.equal(bwAtkEnd(D.Y, false, false), true);
@@ -51,7 +52,7 @@ test('① 칼이 나가는 동안 뒤 박차기 + 아무 데도 안 닿고 끝�
 });
 
 test('② 몸에 닿음(판정 문턱 밑 · 운동학 칼) · 그 몸이 센 맞힘 → 안 굳음 · 칼끼리 · 코등이 닿음(막기로 받아낸 칼)은 헛침 그대로 (11/19 몸에 안 닿으면 헛친 것)', () => {
-  const D = duel(1.3);
+  const D = duel(1.6); // 11/19 보정 v2 묶음: 1.3 m 에선 손으로 놓은 AI 꼴(날것 손 목표)의 칼이 첫 스텝에 사람 칼에 닿아 그 공격의 닿음이 됨 — 칼끝 거리 안 1.6
   try {
     for (const hit of ['body', 'kin', 'landed']) {
       swing(D);
@@ -155,7 +156,7 @@ test('⑤ 칼이 나가기 전(공격 기록 없음 — AI 는 startStrike 에�
   }
 });
 
-test('⑥ 굳은 AI: 공격 문이 막힘 · 위협에 답하지 않음(위협 번호도 안 씀) · 꼴 분기 없음 · 걸음 0 · 칼은 굳은 자리 — 풀리면 다시 막음', () => {
+test('⑥ 굳은 AI: 공격 문이 막힘 · 위협에 답하지 않음(위협 번호도 안 씀) · 꼴 분기 없음 · 뜻대로 걷기 없음(비틀 걸음만) · 칼은 끌려갔다가 쉴 자세로 — 풀리면 다시 막음', () => {
   const D = duel(1.6);
   const { ai, Y, X } = D;
   try {
@@ -165,6 +166,7 @@ test('⑥ 굳은 AI: 공격 문이 막힘 · 위협에 답하지 않음(위협 �
     ai.hitLanded = ai.bound = false;
     ai.afterStrike(1.6);
     assert.ok(bwStiff(Y), 'afterStrike 가 굳힘');
+    Y.bwEnd = null; // 끝난 스텝의 늦은 닿음 셈(②)은 이 시험 밖 — 11/19 보정 v2 묶음: 원래 판단으로 돌린 AI 의 간 보기 손이 첫 스텝에 사람 칼에 닿아 굳음을 거두던 장면
     assert.equal(ai.mode, 'watch', '이어 치기 · 물러남 없이 간 보기 꼴로');
     assert.equal(ai.stats.bwStiff, 1);
     const tech = ai.school.tech[0];
@@ -173,14 +175,17 @@ test('⑥ 굳은 AI: 공격 문이 막힘 · 위협에 답하지 않음(위협 �
     const seen = ai.threatSeen;
     assert.equal(ai.respond({ id: 777, line: 'highC', thrust: false, tc: 0.1 }, 1.6), false, '막기 없음');
     assert.equal(ai.threatSeen, seen, '위협 번호 그대로');
-    const h0 = Y.handOffset.clone();
     for (let i = 0; i < 10; i++) D.G.step();
     assert.ok(bwStiff(Y));
     assert.notEqual(ai.mode, 'attack');
     assert.notEqual(ai.mode, 'defend');
-    assert.equal(Y.move.length(), 0, '걸음 0');
-    assert.ok(Y.handOffset.distanceTo(h0) < 1e-6, '칼(손 목표)은 굳은 자리');
+    const { step, stepT } = BURST_WHIFF;
+    assert.ok(Math.abs(Y.move.length() - step) < 1e-6 && Y.move.y > 0, '비틀 걸음 스틱 (앞으로 step)');
+    while (bwStiff(Y) && bwElapsed(Y) < stepT + DT) D.G.step();
+    assert.equal(Y.move.length(), 0, '비틀 걸음 뒤엔 걸음 0 (AI 걸음 판단은 0 · 굳음이 스틱을 덮음)');
     while (bwStiff(Y)) D.G.step();
+    const home = Y.swordArt?.restGuard?.pad ?? CONFIG.SKILL.homeGuard;
+    assert.ok(Math.hypot(Y.handOffset.x - home[0], Y.handOffset.y - home[1]) < 0.02, '굳음 끝 = 쉴 자세');
     ai.threatSeen = -1;
     ai.level = { ...ai.level, guardChance: 1 };
     assert.equal(ai.respond({ id: 778, line: 'highC', thrust: false, tc: 0.1 }, 1.6), true, '풀리면 다시 막음');
@@ -208,7 +213,7 @@ test('⑦ 굳은 사람: 검술 층 secretPhase = stiff (main.js 가 칼 · 막�
     D.G.step();
     P.handOffset.x += 0.3; // 손 목표를 한 스텝에 크게 끌어도 (main.js 는 굳은 동안 손가락 끌기를 더하지 않음 — 여기선 문을 건너 직접)
     D.G.step();
-    assert.equal(P.skill.swinging, false, '휘두름이 안 섬 (holdStiff — 손 빠르기 0)');
+    assert.equal(P.skill.swinging, false, '휘두름이 안 섬 (whiffDrag — 손 목표는 끌려감 · 되찾음 길 · 손 빠르기 0)');
     assert.equal(P.skill.vel.length(), 0);
     while (bwStiff(P)) D.G.step();
     assert.equal(P.skill.secretPhase, null, '풀림');
@@ -278,6 +283,63 @@ test('⑨ 칼이 떠나는 순간을 읽고 먼저 박참: 박찬 걸음(발 뜬
     swing(D);
     assert.equal(D.Y.bwAtk.inReach, false, '박차기 없이는 지금 거리로 — 칼끝 밖');
     D.Y.swordArt = art;
+  } finally {
+    D.G.world.free();
+  }
+});
+
+test('⑩ 굳음 꼴 ([사장님 11/19 승인] 끌려갔다가 되찾음 — 사람 · AI 같음): 손 목표가 휘두른 쪽으로 over 만큼 더 흘러감 · 몸이 숙고 칼 쪽으로 돎 · 반걸음 비틀 걸음 · 되찾음 끝엔 쉴 자세 · 비기 경직은 멈춤 그대로', () => {
+  const W = BURST_WHIFF;
+  for (const who of ['X', 'Y']) {
+    const D = duel(2.4); // 칼이 상대 몸에 안 닿는 거리 (같은 스텝 몸 닿음 거둠이 없게)
+    const F = D[who]; // X = 사람 몸 · Y = AI 몸 (AI 판단은 멈춤)
+    try {
+      F.handOffset.set(0.4, 0.4);
+      F.skill.aim.set(0.4, 0.4);
+      F.bwAtk = { y: F, tgt: F.foe, inReach: true, burst: true, touched: false, blade: false, live: true, h0: [0.4, 0.4] };
+      F.handOffset.set(-0.2, -0.2); // 휘두름 끝 (오른 위 → 왼 아래)
+      F.skill.aim.set(-0.2, -0.2);
+      assert.equal(bwAtkEnd(F), true, who);
+      F.bwEnd = null;
+      const dir = F.bwDrag.dir;
+      assert.ok(Math.abs(dir[0] + Math.SQRT1_2) < 1e-6 && Math.abs(dir[1] + Math.SQRT1_2) < 1e-6, '휘두른 쪽');
+      const p0 = F.bodies.pelvis.translation();
+      const P0 = [p0.x, p0.z];
+      let maxPitch = 0;
+      let maxTurn = 0;
+      while (bwStiff(F) && bwElapsed(F) < W.drag - DT) {
+        D.G.step();
+        maxPitch = Math.max(maxPitch, F.bwBody?.pitch ?? 0);
+        maxTurn = Math.min(maxTurn, F.bwBody?.chestYaw ?? 0);
+      }
+      const to = F.bwDrag.to;
+      assert.ok(Math.hypot(to[0] - (-0.2 - W.over * Math.SQRT1_2), to[1] - (-0.2 - W.over * Math.SQRT1_2)) < 1e-6, '끌려감 끝 = 휘두름 끝 너머 over');
+      assert.ok(Math.hypot(F.handOffset.x - to[0], F.handOffset.y - to[1]) < 0.02, `${who}: 끌려감 끝에 손 목표가 거기`);
+      assert.ok(maxPitch > 0.9 * W.lean, '몸이 숙음');
+      assert.ok(maxTurn < -0.5 * W.turn * Math.SQRT1_2, '왼쪽으로 친 칼 → 가슴이 그쪽(−)으로');
+      const p1 = F.bodies.pelvis.translation();
+      assert.ok(Math.hypot(p1.x - P0[0], p1.z - P0[1]) > 0.1, `${who}: 비틀 걸음 (골반이 옮겨 감)`);
+      assert.equal(F.state, 'stand', '넘어지지 않음');
+      while (bwStiff(F)) D.G.step();
+      const home = F.swordArt?.restGuard?.pad ?? CONFIG.SKILL.homeGuard;
+      assert.ok(Math.hypot(F.handOffset.x - home[0], F.handOffset.y - home[1]) < 0.02, '되찾음 끝 = 쉴 자세');
+      assert.equal(F.bwBody, null, '몸 덧씌우기 끝');
+      assert.equal(bwDragW(F), 0);
+      assert.equal(F.state, 'stand');
+    } finally {
+      D.G.world.free();
+    }
+  }
+  // 비기 경직은 멈춤 꼴 그대로 (holdStiff — 손 목표가 그 자리)
+  const D = duel(1.6);
+  try {
+    const P = D.X;
+    P.secretStiff = true;
+    D.G.step();
+    const h = P.handOffset.clone();
+    for (let i = 0; i < 20; i++) D.G.step();
+    assert.ok(P.handOffset.distanceTo(h) < 1e-9, '비기 경직은 멈춤');
+    assert.equal(P.bwBody, null);
   } finally {
     D.G.world.free();
   }

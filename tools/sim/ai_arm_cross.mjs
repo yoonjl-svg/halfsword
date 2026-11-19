@@ -23,7 +23,7 @@ export const AI_GROUPS = {
   '두손 보통': ['longsword', 'excalibur', 'excalibur_replica'],
   '일본 두손': ['uchigatana', 'kusanagi', 'muramasa'],
   '대검': ['zweihander', 'monohoshizao'],
-  '한손 독일 · 무유파': ['sabre', 'falchion', 'tree_branch', 'morgenstern'],
+  '한손 독일 · 무유파': ['falchion', 'tree_branch', 'morgenstern'], // (11/19 사브르 뺌 — 재기에 estoc · sabre 를 쓰지 않음)
   '한손 동방': ['qinggang', 'hwando', 'goujian'],
   '한손 이탈리아': ['rapier', 'pappenheimer'],
 };
@@ -223,7 +223,7 @@ if (isMain(import.meta.url)) {
   const { CONFIG } = await import('./harness_m.mjs');
   applySets(CONFIG, arg('set', ''));
   let scenes = arg('scenes', 'fights12').split(',');
-  if (scenes.includes('sb')) scenes = scenes.flatMap((s) => (s === 'sb' ? ['german:longsword:longsword', 'german:sabre:longsword', 'italian:rapier:longsword', 'iberian:zweihander:longsword', 'japanese:uchigatana:longsword', 'chinese:hwando:longsword', 'none:morgenstern:longsword', 'italian:rapier:rapier', 'iberian:zweihander:zweihander', 'japanese:uchigatana:uchigatana', 'chinese:hwando:hwando', 'german:sabre:sabre', 'none:morgenstern:morgenstern'].map((c) => `school:${c}`) : [s]));
+  if (scenes.includes('sb')) scenes = scenes.flatMap((s) => (s === 'sb' ? ['german:longsword:longsword', 'italian:rapier:longsword', 'iberian:zweihander:longsword', 'japanese:uchigatana:longsword', 'chinese:hwando:longsword', 'none:morgenstern:longsword', 'italian:rapier:rapier', 'iberian:zweihander:zweihander', 'japanese:uchigatana:uchigatana', 'chinese:hwando:hwando', 'none:morgenstern:morgenstern'].map((c) => `school:${c}`) : [s]));
   if (scenes.includes('aiw')) scenes = scenes.flatMap((s) => (s === 'aiw' ? AI_WEAPONS.flatMap((w) => (w === 'longsword' ? ['pair:longsword:longsword'] : [`pair:${w}:longsword`, `pair:${w}:${w}`])) : [s]));
   const [si, sn] = arg('shard', '0/1').split('/').map(Number);
   scenes = scenes.filter((_, i) => i % sn === si);

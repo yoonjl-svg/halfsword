@@ -284,8 +284,10 @@ test('다른 유파 판은 동방 몫과 상관없이 바이트 같음 · 동방
   const ls1 = trace({ weapon2: 'longsword', prof: 5 });
   const ls0 = withPlan(CN_OFF, () => trace({ weapon2: 'longsword', prof: 5 }));
   assert.equal(ls1.text, ls0.text, '롱소드끼리');
-  const cn1 = trace({ weapon2: 'hwando', prof: 5, secs: 8 });
-  const cn0 = withPlan(CN_OFF, () => trace({ weapon2: 'hwando', prof: 5, secs: 8 }));
+  // 8 → 12 s (11/19 합침 — 사람 · AI 같게 v2 묶음 · C1 뺌 + 개발 쪽 AI 뛰기 · 뒤 박차기 몸 닿음 · AI 박차는 때): 켬 · 끔 판이 처음 갈리는 때가 씨앗 2 에서 6.5 s(개발 쪽) · 8.0 s(v2 가지 — 창 끝)
+  //  → 8.25 s 로 밀려 8 s 창 밖 (씨앗 1 은 10.75 · 3 은 7.25 s) — 동방 칸이 처음 몸을 바꾸는 때가 판 흐름 따라 옮긴 몫이라 창을 넓힘
+  const cn1 = trace({ weapon2: 'hwando', prof: 5, secs: 12 });
+  const cn0 = withPlan(CN_OFF, () => trace({ weapon2: 'hwando', prof: 5, secs: 12 }));
   assert.equal(cn1.cn, true);
   assert.equal(cn0.cn, false);
   assert.notEqual(cn1.text, cn0.text, '동방 켬은 판이 달라짐');

@@ -18,7 +18,7 @@ test('B7 이어 돌리기 칸 글 = 기본 판(이어 돌리기) 글 — 지운 
   for (const L of Object.values(PLAYER_UNIQUE)) for (const x of L) for (const [k, d] of Object.entries(Object.getOwnPropertyDescriptors(x))) assert.equal(typeof d.get, 'undefined', `${x.name}.${k} getter`);
 });
 
-// 11/16 끝 (54299e65) 에서 같은 도구로 잰 값 — [dur 게임 s, path m, vmax m/s, 낸 이름]
+// 11/16 끝 (54299e65) 에서 같은 도구로 잰 값 — [dur 게임 s, path m, vmax m/s, 낸 이름] (리솔루토 path 만 11/19 — 그 줄 주석)
 const PIN = {
   schielhau: [0.6, 4.164, 16.97, ['schielhau']],
   imbroccata: [0.9, 1.669, 8.56, ['imbroccata']],
@@ -33,7 +33,9 @@ const PIN = {
   lianchi: [0.383, 3.19, 17.27, ['lianchi']],
   gyeoksal: [0.217, 2.325, 11.8, ['gyeoksal']],
   mordschlag: [0.75, 6.546, 62.15, ['mordschlag']],
-  risoluto: [0.708, 1.252, 24.8, ['andareRisoluto']],
+  // 리솔루토 path 1.252 → 1.328 (+6 % · dur · vmax 그대로 — 11/19 보정 v2 묶음 A6 · 기록 human_ai_parity §10): 멈춘 상대(AI 두손 롱소드)가 사람과 같은 두손 칼 빈팔 닿는 곳 규칙(fighter.js twoHandReach)으로
+  //  칼을 쥐어 상대 칼 자리가 바뀜 → 런지 칼끝이 지나는 길이 늚. 묶음 전(f000cce0)에서 상대를 사람 손가락 몸(autoGuard)으로 두면 1.323 — 같은 몸 규칙 몫(사람 수 길이 바뀐 것이 아님)
+  risoluto: [0.708, 1.328, 24.8, ['andareRisoluto']],
 };
 const near = (a, b) => Math.abs(a - b) <= 0.05 * Math.abs(b) + 1e-9;
 

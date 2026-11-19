@@ -14,7 +14,7 @@ import { CONFIG } from './harness_m.mjs';
 import { isMain } from './is_main.mjs';
 
 const K = CONFIG.TIME.k;
-export const CELLS = ['german:longsword:longsword', 'german:sabre:longsword', 'german:sabre:sabre', 'german:longsword:rapier', 'german:longsword:uchigatana'];
+export const CELLS = ['german:longsword:longsword', 'german:kriegsmesser:longsword', 'german:kriegsmesser:kriegsmesser', /* 11/19 사브르 → 크릭스메서 (재기에 estoc · sabre 를 쓰지 않음) */ 'german:longsword:rapier', 'german:longsword:uchigatana'];
 const OFF_CLOSE = 'CLOSE.startD=null,CLOSE.holdMin=0,CLOSE.nearHilt=0,CLOSE.holdLock=0,CLOSE.holdDrain=1,CLOSE.holdCool=0';
 const OLD3 = 'DE_DIRTY.ring=0,UNIQUE_ASSIST.dupBandMin=0.8,UNIQUE_ASSIST.dupAuto=bind,UNIQUE_ASSIST.dupStackS=' + CONFIG.realS(0.6) + ',CLOSE.startAI=null';
 const OLD8 = 'CLOSE.startAI=null,UNIQUE_ASSIST.dupStackS=' + CONFIG.realS(0.6);

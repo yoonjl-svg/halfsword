@@ -35,7 +35,7 @@ for (const a of process.argv.slice(2)) {
   if (m) args[m[1]] = m[2] ?? true;
   else pos.push(a);
 }
-const ALL = ['longsword', 'zweihander', 'monohoshizao', 'uchigatana', 'sabre', 'falchion', 'qinggang', 'rapier', 'estoc'];
+const ALL = ['longsword', 'zweihander', 'monohoshizao', 'uchigatana', 'kriegsmesser', 'falchion', 'qinggang', 'rapier'];
 const WEAPONS = !pos[0] || pos[0] === 'all' ? ALL : pos[0].split(',');
 const FOES = String(args.foes ?? 'stand,block,ai').split(',');
 const ROUNDS = +(args.rounds ?? 6);

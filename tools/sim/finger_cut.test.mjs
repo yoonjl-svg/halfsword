@@ -25,7 +25,7 @@ test('기본값: 손가락 긋기 세기 hit 2 (11/11 사장님 — 조작 예�
   assert.deepEqual(SKILL.fingerCut, { arm: 1, gain: 1, hit: 2 }); // 11/11 사장님 — 조작 예전 · 판정 2 배
 });
 
-test('fingerCutK: 사람 손가락 팔이 긋는 동안만 · AI 는 안 받음 · 다른 동작은 1', () => {
+test('fingerCutK: 사람 손가락 팔이 긋는 동안만 · AI 는 안 받음(11/19 C1 뺌 — 사장님) · 다른 동작은 1', () => {
   const body = (o = {}) => ({ alive: true, armed: true, weapon: {}, ...o, skill: { autoGuard: true, swinging: true, quiet: 0, ...(o.skill ?? {}) } });
   const H = body();
   withFC({ arm: 1, gain: 1, hit: 1 }, () => { for (const k of ['arm', 'gain', 'hit']) assert.equal(fingerCutK(H, k), 1, `끔 ${k}`); });

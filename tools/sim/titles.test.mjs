@@ -344,7 +344,7 @@ test('나무꾼: 나뭇가지로 아르토리아 · 롤랑 · 베르나르도 �
   fresh(); unlockWander(); P.markTitleSeen('wander');
   fightWith('artoria', 'tree_branch', true); // 카드로 나뭇가지
   assert.deepEqual(saved().titles.map((t) => t.event), ['wander', 'woodcutter']);
-  assert.equal(R.playerWeapon({ weapon: null, lastWeapon: 'tree_branch' }), 'tree_branch'); assert.equal(R.playerWeapon({ weapon: 'saber', lastWeapon: 'tree_branch' }), 'saber');
+  assert.equal(R.playerWeapon({ weapon: null, lastWeapon: 'tree_branch' }), 'tree_branch'); assert.equal(R.playerWeapon({ weapon: 'kriegsmesser', lastWeapon: 'tree_branch' }), 'kriegsmesser');
 });
 
 // ── 호칭 하나마다 레전드 +0.2 %p · 커먼 −0.2 %p (사장님 10/24 04:0x — 내 카드 뽑기만 · TIER_DRAW 는 그대로) ──

@@ -106,6 +106,9 @@ const CALM_T = realS(2); // 대치: 위협 없이 이만큼 지나야 '조용히
 //  속임 꼴 고유 동작(날개 접기 · 칼끝 돌려 빼기 — schools.js *_UNIQUE feint) · 패시브(겹치기 · 빼서 찌르기 cavazione — 같은 이름 · 되받아 치기 kaeshi — 그 기술이 제비 베기)
 const SPECIALS = new Set(Object.values(PLAYER_UNIQUE).flat().filter((e) => e.special).map((e) => e.name));
 const SPECIAL_FEINT = new Map(Object.values(TRADITIONS).flatMap((T) => (T.unique ?? []).filter((u) => u.feint && SPECIALS.has(u.name)).map((u) => [u.feint.name, u.name])));
+const D2R_UB = Math.PI / 180;
+/** 고유 동작 강화의 몸 표 (11/19 A7 — 사람 unique_assist.js PLAYER_UNIQUE 의 body · bodyMirror): 유파 → (AI 기술 이름 = 표 path ?? name → 칸) */
+const UNIQUE_BODY = new Map(Object.entries(PLAYER_UNIQUE).map(([tr, list]) => [tr, new Map(list.filter((e) => e.body).map((e) => [e.path ?? e.name, e]))]));
 const FEINT_KEY = { cavazione: 'cav', lianchi: 'lian' }; // 속임 꼴 탭 고유 동작 (칼끝 돌려 빼기 · 날개 접기) → unique_assist.js tapArt 열쇠
 const FEINT_ART = new Map(Object.values(TRADITIONS).flatMap((T) => (T.unique ?? []).filter((u) => u.feint && FEINT_KEY[u.name]).map((u) => [u.feint.name, FEINT_KEY[u.name]]))); // 속임 이름 → 사람과 같은 운동학 칼 (11/19 A9 — artGo · 가짜 칼 뒤)
 /** 패시브 P 가 특수 공격의 AI 몫이면 그 이름 (같은 이름 · 그 기술 · 그 속임) — 아니면 null */
@@ -200,7 +203,7 @@ export class AI {
     this.foe = foe;
     this.sense = new Senses(me, foe);
     me.aiCtl = this; // 강화동작 이점(10/21 — unique_assist.js strokeTechOf): 맞는 순간 지금 기술 이름을 읽는다 · 읽기만
-    me.aiControlled = true; // 유파 걸음(gait.js gaitParams): AI 가 모는 몸은 플레이어 완화 값(gait.player)을 받지 않는다 — 읽기 표시일 뿐
+    me.aiControlled = true; // AI 가 모는 몸 표시 (읽기 — 사람만의 입력 몫 · AI 몸 규칙이 가름 · 11/19 A12 부터 유파 걸음 칸은 사람 · AI 같음)
     this.persona = persona || {};
     this.planOn = !this.persona.planOff; // 유파 AI 개편 판 (11/14 — AI_PLAN.on · 재기 도구가 한 몸만 옛 판으로 둘 때 persona.planOff)
     // 근접 밀치기 (closeQuarters): 인물 칸(persona.close) · 유파 플랜 몸(11/19 E2 — AI_PLAN.shove · 독일 플랜은 deCloseCfg)이 스틱으로 민다. 플랜 없는 옛 판 AI 는 밀지 않는다
@@ -649,7 +652,7 @@ export class AI {
     if (RX) this.level = { ...this.level, reaction: RX[Math.max(0, Math.min(RX.length - 1, Math.round(this.mainProficiency ?? this.proficiency ?? 2)))] };
     this.me.strength = this.level.strength;
     this.me.skill.level = this.level.skill;
-    this.me.skill.corr = 'old'; // AI 보정 방식 (사장님 9/30 23:40: 사람이 먼저, AI 는 옛 보정)
+    this.me.skill.corr = 'v2'; // AI 보정 방식 = 사람과 같은 v2 (11/19 사람 · AI 같게 A1 — 보정 v2 묶음 · 기록 docs/strike/human_ai_parity_2026-11-19.md §3 · §10 · 전 'old' — 사장님 9/30 23:40 '사람이 먼저') · '손가락이 닿음'은 AI 공격 · 비기 · 막기 꼴(skill.js aiHeld)
   }
 
   // ── 겨눌 상대 바꾸기 (2:2 동시 대전 10/29 — docs/strike/team_fight_2026-10-29.md · src/match.js · src/targeting.js) ──
@@ -933,7 +936,7 @@ export class AI {
     // 무릎 꿇었거나 일어나는 중: 다리는 못 놀리지만 칼은 쥘 수 있다 → 가만히 가리고만 있지 않고,
     //  사정거리 안까지 다가온 적은 아래에서도 위협하거나 짧게 친다 (발놀림은 아래에서 0으로 막는다)
     const kneeling = me.state !== 'stand';
-    const stiff = bwStiff(me); // 뒤 박차기 헛침 경직 (11/19): 막기 · 공격 · 걸음 없음 — 칼은 검술 층 holdStiff 가 굳은 자리에 멈춤
+    const stiff = bwStiff(me); // 뒤 박차기 헛침 경직 (11/19): 막기 · 공격 · 걸음 없음 — 칼은 검술 층 whiffDrag 가 끌려갔다가 쉴 자세로 (1.2 s 승인 꼴) · 비틀 걸음은 burst_whiff.js bwTick
     const limit = this.plan ? this.planRestAt() : this.restAt; // 공격적 기질 −10 · 아니면 20 (아래 aggressiveTemper) · 유파 플랜(11/14 — 이탈리아)은 띠마다 기력 셈(planRestAt)
     const resume = this.plan ? Math.max(STAMINA.aiResumeAt, limit + STAMINA.stageBack) : STAMINA.aiResumeAt; // 플랜: 쉼 문턱을 올렸으면(비기 몫) 다시 나가는 기력도 그만큼 위 (지침 한 칸 되돌림 stageBack 15 — 새 수 없음)
     if (me.stamina.value < limit) {
@@ -1109,6 +1112,7 @@ export class AI {
       iaiReadyPose(me, this.iaiArm.armed && this.mode !== 'attack', dt, this.mode !== 'attack' ? this.iaiArm.sheathe : 0); // 11/14 납도 (SECRET.iaiSheathe): 준비 전 iaiSheathe 초 동안 칼을 칼집에 (사람과 같은 셈)
     }
     this.moveHand(dt);
+    this.uniqBodyTick(dt); // 고유 동작 강화의 몸 (11/19 보정 v2 묶음 A7 — 사람과 같은 칸)
     this.moveFeet(dt, d);
     if (kneeling) me.move.set(0, 0); // 무릎 꿇거나 일어나는 중엔 발을 옮길 수 없다 (칼만 움직인다)
     if (me.bwAtk && this.mode !== 'attack') bwAtkDrop(me); // 뒤 박차기 헛침 경직 (11/19): 친 뒤(afterStrike) 없이 공격 꼴을 떠난 칼은 셈에서 지움
@@ -2316,6 +2320,43 @@ export class AI {
     S.fired++;
     if (sg < 0) S.left++;
     return true;
+  }
+
+  /**
+   * 고유 동작 강화의 몸 (11/19 보정 v2 묶음 A7 — 사람 unique_assist.js ② 몸과 같은 칸 · 같은 빠르기 · 기록 docs/strike/human_ai_parity_2026-11-19.md §7 #10):
+   *  고유 동작 칼이 나가는 동안(공격 꼴 strike — 속임 · 비기 · 운동학 칼 · 헛스윙 연습 빼고) 표의 body 만큼 몸통 돌림 · 숙임 · 낮춤을 UA.bodyIn 초에 얹고,
+   *  끝나면 UA.bodyOut 초에 걷음 → skill.uniqBody (fighter.js updateBodyPose · 날 세우기 앞당김 yawRate 가 읽음 — 사람과 같은 자리). bodyMirror = 기술 걸음 쪽(step.lat)에 맞춤
+   */
+  uniqBodyTick(dt) {
+    const E = UA.enhance;
+    const t = E > 0 && this.mode === 'attack' && this.phase === 'strike' && !this.feint && !this.secretRun && !this.artRun && !this.drillAtk ? this.tech : null;
+    const e = t ? UNIQUE_BODY.get(this.art?.tradition)?.get(t.name) ?? null : null;
+    let B = e?.body ?? null;
+    if (B && e.bodyMirror) {
+      const lat = t.step?.lat ?? 0;
+      if (lat) {
+        const sg = Math.sign(lat) * e.bodyMirror;
+        B = [Math.abs(B[0]) * sg, Math.abs(B[1]) * sg, B[2], B[3]];
+      }
+    }
+    const body = (this.uqBody ??= [0, 0, 0, 0]);
+    const k = Math.min(1, dt / (B ? UA.bodyIn : UA.bodyOut));
+    let any = false;
+    for (let i = 0; i < 4; i++) {
+      const tgt = B ? B[i] * (i < 3 ? D2R_UB : 1) * E : 0;
+      body[i] += (tgt - body[i]) * k;
+      if (Math.abs(body[i]) > 1e-4) any = true;
+      else if (!B) body[i] = 0;
+    }
+    const sk = this.me.skill;
+    if (any) {
+      const ub = (sk.uniqBody ??= { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 });
+      ub.pelvisYaw = body[0];
+      ub.yawRate = dt > 0 ? (body[1] - ub.chestYaw) / dt : 0;
+      ub.chestYaw = body[1];
+      ub.pitch = body[2];
+      ub.drop = body[3];
+    } else if (sk.uniqBody) sk.uniqBody = null;
   }
 
   inqRefuse() {
@@ -3947,7 +3988,7 @@ export class AI {
 
   /**
    * 뒤 박차기 헛침 경직 (11/19 [사장님 결정] — burst_whiff.js · 굳음 시간은 몸 me.bwStiffT): 친 뒤(afterStrike) 이어 치기 · 물러남 없이 그 자리에서 굳음 —
-   *  꼴은 간 보기(굳은 동안 update 꼴 분기 · respond · 공격 문이 모두 거름 · 칼은 검술 층 holdStiff · 걸음 0) · 풀리면 간 보기부터 그대로
+   *  꼴은 간 보기(굳은 동안 update 꼴 분기 · respond · 공격 문이 모두 거름 · 칼은 검술 층 whiffDrag 끌려감 → 쉴 자세 · 걸음은 비틀 걸음만) · 풀리면 간 보기부터 그대로
    */
   bwStiffen() {
     this.mode = 'watch';
@@ -4275,7 +4316,7 @@ export class AI {
     const off = this.me.handOffset;
     // 비기 경직 (사장님 10/10 20:5x '잠깐 아예 못 움직이게'): 손 목표를 그대로 둔다 — 떨림도 없음. 검술 층(skill.js update)이 secretStiff 를 보고 걸러진 목표까지 붙든다
     this.me.secretStiff = this.secretRun?.stage === 'stiff';
-    if (this.me.secretStiff || bwStiff(this.me)) return; // 뒤 박차기 헛침 경직 (11/19)도 같은 꼴 — 손 목표를 그대로 (검술 층 holdStiff 가 붙듦)
+    if (this.me.secretStiff || bwStiff(this.me)) return; // 뒤 박차기 헛침 경직 (11/19)도 — 손 목표를 그대로 (검술 층이 쥠: 비기 경직 holdStiff 멈춤 · 헛침 경직 whiffDrag 끌려감 → 되찾음)
     if (this.secretRun?.stage === 'mord' || this.secretRun?.stage === 'riso') return; // 안다레 리솔루토(11/14)도 · 싱지르 · 모르트슐라크 (10/24): 대본 · 따라 지나감 · 굳음 동안 손 목표는 검술 층(skill.sec — 덧씌우기 · holdStiff)이 쥔다
     if (this.feintHold > 0) {
       this.feintHold -= dt;
@@ -4557,7 +4598,7 @@ export class AI {
     if (!this.foe.alive) fwd = side = 0;
     if (this.secretRun?.stage === 'stiff' || ((this.secretRun?.stage === 'mord' || this.secretRun?.stage === 'riso') && me.skill.sec?.stage === 'stiff')) fwd = side = 0; // 비기 경직: 걸음 없음 — 울타리 빠짐·근접 밀치기 스틱도 (10/10 20:5x) · 싱지르(10/24 — 검술 층 skill.sec 이 대본 · 굳음까지 몸을 쥔다) · 모르트슐라크(10/24 — 사람과 같게 굳음 동안만)
     if (!armsBusy) [fwd, side] = cnAiTurn(this, fwd, side); // 동방 편섬 (11/15): 'turn' — 偏閃奏進이 꺾는 동안 옆 스틱 · 견줌 ⓐ ⓑ — 창에서 꺾음(띠 기울기 + 굴림)
-    if (bwStiff(me)) fwd = side = 0; // 뒤 박차기 헛침 경직 (11/19): 걸음 없음 (비기 경직과 같음 — 몸은 물리대로)
+    if (bwStiff(me)) fwd = side = 0; // 뒤 박차기 헛침 경직 (11/19): 뜻대로 걷기 없음 (비틀 걸음은 burst_whiff.js bwTick 이 스틱을 덮어 — 사람 · AI 같음)
     // ── AI 뛰기 (11/19 — src/ai_run.js · 셋 이상 판만): 먼 상대에게 스틱 끝 · 공격 · 막기 꼴이면 끊음 — 사람과 같은 입력 칸(runReach · runBreak)
     if (me.teamSense) [fwd, side] = aiRunFeet(this, fwd, side);
     me.stickX = side; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)

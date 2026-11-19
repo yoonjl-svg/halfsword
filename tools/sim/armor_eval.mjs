@@ -323,11 +323,11 @@ function probe() {
       const { out } = probeSeries(target, key, 'lightsaber', 100, 'cut', 1);
       console.log(`${key}: ${out[0]}`);
     }
-    console.log(`--- ${tid}: 찌르기 60J — 롱소드(틈 없음) 대 에스톡(thrustStyle.gap, 판 문턱 × (1 − gap/2)) ---`);
+    console.log(`--- ${tid}: 찌르기 60J — 롱소드(틈 없음) 대 레이피어(thrustStyle.gap, 판 문턱 × (1 − gap/2)) ---`);
     for (const key of keys.filter((k) => !k.endsWith('_elbow'))) {
       const a = probeSeries(target, key, 'longsword', 60, 'stab', 1).out[0];
-      const b = probeSeries(target, key, 'estoc', 60, 'stab', 1).out[0];
-      console.log(`${key}: 롱소드 ${a} · 에스톡 ${b}`);
+      const b = probeSeries(target, key, 'rapier', 60, 'stab', 1).out[0]; // (11/19 에스톡 → 레이피어 — 재기에 estoc · sabre 를 쓰지 않음)
+      console.log(`${key}: 롱소드 ${a} · 레이피어 ${b}`);
     }
   }
   // 견갑: 완전 파손 뒤 겉모습 — 판 메쉬가 몸에서 떨어져 조각(debris)으로 날다가 사라지고, 그 자리는 판이 없는 것으로 친다

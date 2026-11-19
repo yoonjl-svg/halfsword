@@ -256,7 +256,7 @@ if (isMain(import.meta.url)) {
   const set = opt('set', '') || '기본';
   const trace = args.includes('--trace');
   if (mode === 'script') {
-    const weapons = ids.length ? ids : ['rapier', 'dartagnan', 'balisarda', 'pappenheimer', 'sabre', 'falchion', 'qinggang', 'hwando'];
+    const weapons = ids.length ? ids : ['rapier', 'dartagnan', 'balisarda', 'pappenheimer', 'falchion', 'qinggang', 'hwando'];
     const K = 1.62 / scriptRun('longsword').raw;
     console.log(`대본 분노의 베기 (생성기 길) · ${set} — 롱소드 1.62 보정 ${K.toFixed(4)}`);
     console.log('| 무기 | 맞닿음 · 때 s | 70 % 가장 높이 m @ 앞 m | 70 % 머리 높이 내려 지남 앞 m | 교정 최대 ° | 손목 범위 밖 · 거꾸로 % | 팔꿈치 줄 위 · 30° 넘게 % | 위팔 돌림 밖 % | 굴림 ≥ 78 % | 날 맞춤 % · 가장 빠름 m/s |');
@@ -268,7 +268,7 @@ if (isMain(import.meta.url)) {
       if (trace) for (const x of r.rows.filter((_, i) => i % 3 === 0)) console.log(`  ${x.t.toFixed(3)} | 70 % ${f2(x.p70[0])},${f2(x.p70[1])} | 칼끝 ${f2(x.tip[0])},${f2(x.tip[1])} | 높이각 명령 ${x.el[0].toFixed(0)} · 교정 뒤 ${x.el[1].toFixed(0)} · 칼 ${x.el[2].toFixed(0)} | 돌림 ${x.swivel.toFixed(0)} · 교정 ${x.fix.toFixed(0)} · 엎친 손 ${x.plane} | dev ${x.s?.dev.toFixed(0)} · fe ${x.s?.fe.toFixed(0)} · 굴림 ${x.s?.roll.toFixed(0)} · 팔꿈치 위 ${x.s?.elbowUp.toFixed(0)}`);
     }
   } else if (mode === 'swipe') {
-    const weapons = ids.length ? ids : ['sabre', 'falchion', 'rapier', 'pappenheimer', 'qinggang', 'hwando'];
+    const weapons = ids.length ? ids : ['falchion', 'rapier', 'pappenheimer', 'qinggang', 'hwando'];
     console.log(`봇 획 (상대 치움 · 감기 1.6 · 긋기 ${speeds.join(' · ')} 패드 m/s) · ${set}`);
     console.log('| 무기 · 기술 · 빠르기 | 획 s | 70 % 가장 높이 m @ 앞 m | 칼끝 몸 높이 가장 앞 m | 70 % 머리 높이 내려 지남 앞 m | 교정 최대 ° | 손목 범위 밖 · 거꾸로 % | 팔꿈치 줄 위 · 30° 넘게 % | 위팔 돌림 밖 % | 굴림 ≥ 78 % | 날 맞춤 % · 70 % 가장 빠름 m/s |');
     console.log('|---|---|---|---|---|---|---|---|---|---|---|');
@@ -278,7 +278,7 @@ if (isMain(import.meta.url)) {
       if (trace) for (const x of M.rows.filter((_, i) => i % 2 === 0)) console.log(`  ${x.t.toFixed(3)} | 70 % ${f2(x.p70[0])},${f2(x.p70[1])} | 높이각 ${x.el.map((e) => e.toFixed(0)).join(' · ')} | 돌림 ${x.swivel.toFixed(0)} · 교정 ${x.fix.toFixed(0)} · 엎친 손 ${x.plane} | dev ${x.s?.dev.toFixed(0)} · fe ${x.s?.fe.toFixed(0)} · 팔꿈치 위 ${x.s?.elbowUp.toFixed(0)} | 날 ${f2(x.edge)} · ${x.v.toFixed(1)}`);
     }
   } else if (mode === 'board') {
-    const weapons = ids.length ? ids : ['sabre', 'falchion', 'rapier', 'pappenheimer', 'qinggang', 'hwando'];
+    const weapons = ids.length ? ids : ['falchion', 'rapier', 'pappenheimer', 'qinggang', 'hwando'];
     const gaps = opt('d', '1.1,1.2,1.3,1.4,1.5,1.6,1.7').split(',').map(Number);
     console.log(`서 있는 상대 판 (롱소드 · 칼 아래 · AI 끔 · 가슴 사이 ${gaps.join(' · ')} m × 긋기 ${speeds.join(' · ')} 패드 m/s) · ${set}`);
     console.log('| 무기 · 기술 | 몸에 닿은 획 / 획 | 날 베기 | 상처 심각도 합 | 처음 닿은 부위 |');
@@ -299,7 +299,7 @@ if (isMain(import.meta.url)) {
       console.log(`| ${w} ${tn} | ${h} / ${n} | ${c} | ${s.toFixed(2)} | ${Object.entries(parts).map(([k, x]) => `${k} ${x}`).join(' · ') || '-'} |`);
     }
   } else if (mode === 'drill') {
-    const weapons = ids.length ? ids : ['rapier', 'pappenheimer', 'sabre', 'falchion'];
+    const weapons = ids.length ? ids : ['rapier', 'pappenheimer', 'hwando', 'falchion'];
     const N = +opt('n', 4);
     console.log(`AI 기술 그 자리에서 (상대 4.5 m · ${N} 번) · ${set}`);
     console.log('| 무기 · 기술 | 긋기 s | 70 % 머리 높이 내려 지남 앞 m (가운데 · 번마다) | 70 % 가장 높이 m @ 앞 m | 교정 최대 ° |');

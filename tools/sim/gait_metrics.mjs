@@ -2,7 +2,7 @@
 //  판은 `motion_lab.mjs duel <무기> <N> main` 과 같다 — 시험 무기 AI(인물 꾸러미 = 무기 id, 없으면 롱소드) 대 롱소드 AI, 자리 바꿔 N+N, 같은 씨앗(1000+s · 2000+s), 벽, 40 s.
 //  읽기만 한다(난수·물리·AI 에 손대지 않음) — 승패 줄은 motion_lab duel main 첫 줄과 같아야 한다(같은 판이라는 확인).
 //
-//  실행: node tools/sim/gait_metrics.mjs [자리마다 판 수 24] [무기id ...]   (무기를 안 주면 longsword rapier zweihander monohoshizao uchigatana qinggang sabre)
+//  실행: node tools/sim/gait_metrics.mjs [자리마다 판 수 24] [무기id ...]   (무기를 안 주면 longsword rapier zweihander monohoshizao uchigatana qinggang kriegsmesser)
 //        설정을 바꿔 재기: node tools/sim/with_config.mjs GAIT.lift=0.04 gait_metrics.mjs 24 rapier
 //        JSON=파일 → 무기별 원값을 JSON 으로도 쓴다
 //
@@ -29,7 +29,7 @@ import { writeFileSync } from 'node:fs';
 if (process.env.GAIT_JSON) for (const [t, o] of Object.entries(JSON.parse(process.env.GAIT_JSON))) TRADITIONS[t].gait = { ...(TRADITIONS[t].gait ?? {}), ...o };
 const args = process.argv.slice(2);
 const N = +args[0] || 24;
-const ids = args.slice(1).length ? args.slice(1) : ['longsword', 'rapier', 'zweihander', 'monohoshizao', 'uchigatana', 'qinggang', 'sabre'];
+const ids = args.slice(1).length ? args.slice(1) : ['longsword', 'rapier', 'zweihander', 'monohoshizao', 'uchigatana', 'qinggang', 'kriegsmesser'];
 const _f = new THREE.Vector3();
 const _r = new THREE.Vector3();
 

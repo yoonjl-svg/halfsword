@@ -2,7 +2,7 @@
 //  한 표에 승률(윌슨 95 %)·낸 둔타 E 중앙값/상위 25 %/최대·맞은 자리의 팔 비율·머리·목 둔타·판금 완전 파손 수를 찍는다.
 //  스펙은 판마다 WEAPONS.morgenstern 의 controlOverrides.maxAimTorque·mBlunt 만 잠깐 바꾼다 (with_spec.mjs 와 같은 식 — 저장소 값은 안 바뀐다. 확인표 줄 134·137 의 대안 값을 재는 용도).
 //  부위 효과표 'on' 은 tools/sim/blunt_zones.mjs 시제품(R3, 줄 141)을 맞는 쪽에 감싼다 — 판금 위 둔타는 h.plateBlunt(줄 140)만큼만 효과에 싣는다.
-//  사용법: node tools/sim/morg_eval.mjs [자리마다 판 수=6] [--foes=longsword,sabre,heinrich] [--torques=22,28] [--zones=off,on] [--mblunt=1.0,1.3,1.8] [--secs=40] [--seed=1]
+//  사용법: node tools/sim/morg_eval.mjs [자리마다 판 수=6] [--foes=longsword,kriegsmesser,heinrich] [--torques=22,28] [--zones=off,on] [--mblunt=1.0,1.3,1.8] [--secs=40] [--seed=1]
 //   heinrich = 롱소드 + 하인리히 겉모습(판금 13부위, config.js ARMOR). 자리마다 n 판 × 자리 바꿔 2 (시드 1000+s / 2000+s, weapon_balance 와 같은 틀)
 import { newRound, DT, AI } from './harness_m.mjs';
 import { WEAPONS, getWeapon } from '../../src/weapons.js';
@@ -16,7 +16,7 @@ import { applyWeaponMeasure } from './weapon_measures.mjs';
 const argv = process.argv.slice(2);
 const opt = (k, d) => argv.find((a) => a.startsWith(`--${k}=`))?.split('=')[1] ?? d;
 const n = +(argv.find((a) => !a.startsWith('--')) ?? 6);
-const foes = opt('foes', 'longsword,sabre,heinrich').split(',');
+const foes = opt('foes', 'longsword,kriegsmesser,heinrich').split(',');
 const torques = opt('torques', '22,28').split(',').map(Number);
 const zonesL = opt('zones', 'off,on').split(',');
 const mblunts = opt('mblunt', '1.0,1.3,1.8').split(',').map(Number);

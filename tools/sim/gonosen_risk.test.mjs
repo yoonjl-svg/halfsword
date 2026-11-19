@@ -60,11 +60,11 @@ test('B 들어옴 발도 막힘 (10/25 16:0x 켬): 천천히 걸어 든 들어�
   assert.equal(req({ ev: 'raise', charge: true }), false);
   assert.equal(req({ ev: 'recover' }), false);
   withCfg({ gnsEnterBlock: 0 }, () => assert.equal(req({ ev: 'enter' }), false));
-  requestIai(p, { player: true, block: true });
+  requestIai(p, { block: true });
   assert.equal(p.iaiReq.block, true);
-  requestIai(p, { player: true });
+  requestIai(p, {});
   assert.equal(p.iaiReq.block, false);
-  requestIai(p, { player: true, block: 'cover' });
+  requestIai(p, { block: 'cover' });
   assert.equal(p.iaiReq.block, 'cover');
   G.world.free();
 });

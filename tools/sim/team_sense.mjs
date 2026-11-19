@@ -60,7 +60,7 @@ if (LEVER_OFF) for (const v of Object.values(CONFIG.TEAM_FIGHT.lever)) if (v && 
 const KS = flag('ks', null) ? new Set(String(flag('ks')).split(',').map(Number)) : null; // --ks=3,7: 그 판 번호(1 부터)만 돌림 (까닭 가르기 — 판 짜기는 그대로)
 const SIDES = flag('sides', null) ? String(flag('sides')).split(':').map(Number) : null; // --sides=6:5 — 편마다 숙련도 (A:B · 판마다 A 편을 0 편 · 1 편으로 번갈아 — 자리 쏠림 없게). 2:1 은 A = 혼자(자리 1) 고정
 const OLD_SEEDING = flag('seeding', '') === 'old'; // --seeding=old: 예전 판 짜기 (무기 씨앗 = 판 씨앗 = k + 1 — 위 '판 짜기' — 견줌 전용)
-const WEAPONS = ['longsword', 'zweihander', 'rapier', 'sabre', 'uchigatana', 'estoc'];
+const WEAPONS = ['longsword', 'zweihander', 'rapier', 'kriegsmesser', 'uchigatana', 'hwando']; // (11/19 사브르 · 에스톡 → 크릭스메서 · 환도 — 재기에 estoc · sabre 를 쓰지 않음)
 const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 5) % WEAPONS.length]);
 const SAMPLE = 6; // 6 스텝 = 20 Hz
 const FAR = 3; // 먼 다가감 문턱 (m — 제 칼끝 + 이만큼 넘게 떨어짐)

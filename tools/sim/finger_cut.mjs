@@ -102,6 +102,7 @@ export function airSwing({ weapon = 'longsword', school = 'german', A = [0.42, 0
   const G = newRound({ walls: true, seed, weapon, weapon2: 'longsword', ...(kit ? { kit } : {}), onFighter(f) { if (f.index === 0) f.humanInput = true; } });
   const P = G.player;
   G.ai.update = () => G.enemy.move.set(0, 0);
+  G.enemy.aiControlled = false; // 서 있는 과녁 몸 — AI 가 몰지 않음 (11/19 보정 v2 묶음: AI 몸 칼 팔 규칙 A4 ~ A6 · 닿음 신호가 몰지 않는 과녁의 자세를 바꿔 우치가타나 arm 2 비교가 뒤집혔음 — 과녁은 전 판 몸 그대로)
   P.skill.corr = CONFIG.SKILL.corr;
   P.skill.autoGuard = true;
   const FRAME = 2 * DT;

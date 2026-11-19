@@ -58,7 +58,7 @@ test('③ AI 발도(사람 아님)도 원전 꼴 (11/19 사장님 \'AI 도 원�
       const P = G.player;
       if (!player) P.aiControlled = true;
       for (let i = 0; i < 30; i++) G.step();
-      requestIai(P, player ? { player: true } : {});
+      requestIai(P, {});
       G.step();
       assert.ok(P.iai, '발도 시작');
       return { K: P.iai.K, hitFrom: P.iai.hitFrom, body: P.iai.body, real: P.iaiReal };

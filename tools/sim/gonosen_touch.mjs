@@ -27,7 +27,8 @@ const VG = 1.35; // 세로 배율 (mobile_intent.js 기본)
 const tk = CONFIG.TIME?.k ?? 1;
 const weapons = wArg.split(','), foes = fArg.split(',');
 const ZONES = {};
-const T = { rounds: 0, live: 0, armedT: 0, ons: 0, resets: 0, why: {}, win: 0, ev: {}, fired: 0, landed: 0, kill1: 0, pDead: 0, fDead: 0, atk: 0, atkArmed: 0, atkArmedIn: 0, atkIn: 0, crouchW: 0, handW: 0, wSamples: 0, firstWin: [], online: 0, onN: 0 };
+let lastIai = null;
+const T = { drawT: {}, rounds: 0, live: 0, armedT: 0, ons: 0, resets: 0, why: {}, win: 0, ev: {}, fired: 0, landed: 0, kill1: 0, pDead: 0, fDead: 0, atk: 0, atkArmed: 0, atkArmedIn: 0, atkIn: 0, crouchW: 0, handW: 0, wSamples: 0, firstWin: [], online: 0, onN: 0 };
 let rng = 1;
 const rand = () => ((rng = (rng * 16807) % 2147483647) / 2147483647);
 for (const w of weapons) for (const id of foes) {
@@ -117,8 +118,9 @@ for (const w of weapons) for (const id of foes) {
       if (live) { T.live += DT / tk; if (A.armed) T.armedT += DT / tk; }
       if (A.armed && !a0) { T.ons++; armT0 = t; }
       if (live && t0 > 0 && A.t === 0 && !A.armed) { T.resets++; for (const k of Object.keys(why)) if (why[k] && !(k === 'move' && a0)) T.why[k] = (T.why[k] ?? 0) + 1; }
+      if (p.iai && p.iai !== lastIai) { lastIai = p.iai; const k = `${p.iai.T.toFixed(2)}${p.iai.ab > 0 ? ' (허리 거쳐)' : ''}`; T.drawT[k] = (T.drawT[k] ?? 0) + 1; } // 발도 박자 (11/19 — 손이 대기 자리면 iaiTime · 아니면 iaiPlayerTime · 읽기만)
       if (A.armed && live) {
-        T.crouchW += p.iaiReadyW ?? 0; T.handW += p.skill.thrustPose?.w ?? 0; T.wSamples++;
+        T.handW += p.skill.thrustPose?.w ?? 0; T.wSamples++;
         if (ai.lastSeen) { T.onN++; if (ai.foeClass(ai.lastSeen).online) T.online++; }
       }
       if (ai.mode === 'attack' && lastMode !== 'attack' && live) { const dd = chest(); T.atk++; if (A.armed) T.atkArmed++; if (dd <= line) T.atkIn++; if (A.armed && dd <= line) T.atkArmedIn++; }
@@ -149,7 +151,8 @@ const q = (a, f) => { const s = [...a].sort((x, y) => x - y); return s.length ? 
 console.log(`[고노센 손가락 봇] 운전 ${DRIVE} · 웅크림 gnsCrouch ${S0.gnsCrouch}${'gnsReadyHip' in S0 ? ` · 허리 대기 gnsReadyHip ${S0.gnsReadyHip}` : ''}${'gnsRaiseLatch' in S0 ? ` · 든 칼 이어 봄 gnsRaiseLatch ${S0.gnsRaiseLatch}` : ''} · 무기 ${wArg} · 인물 ${foes.length} × 씨앗 ${SEEDS} × ${SIM} s · 반응 ${REACT} s · 떨림 ${JIT} px · 떠돎 ${DRIFT} px${IMPATIENT ? ` · 참지 못함 ${IMPATIENT} s` : ''}`);
 console.log(`판 ${T.rounds} · 비기를 쓸 수 있는 서 있는 때 ${T.live.toFixed(1)} s(실제) · 준비된 때 몫 ${(T.armedT / Math.max(1e-9, T.live) * 100).toFixed(0)} % · 준비 켜짐 ${T.ons} · 셈 0 으로 ${T.resets} (${Object.entries(T.why).map(([k, v]) => `${k} ${v}`).join(' · ')})`);
 console.log(`창 ${T.win} (${Object.entries(T.ev).map(([k, v]) => `${k} ${v}`).join(' · ')}) · 이어 봄 창 ${T.latched ?? 0} · 분당 창 ${pm(T.win)} · 낸 ${T.fired} (분당 ${pm(T.fired)}) · 맞힘 ${T.landed} · 1 s 안 죽임 ${T.kill1} · 첫 창까지 p50 ${q(T.firstWin, 0.5).toFixed(1)} s(게임) · 창이 연 판 ${T.firstWin.length} / ${T.rounds}`);
-console.log(`AI 공격 시작 ${T.atk} · 그때 준비 ${T.atkArmed} · 발도 선 안 ${T.atkIn} · 준비 + 선 안 ${T.atkArmedIn} · 준비된 동안 웅크림 무게 평균 ${(T.crouchW / Math.max(1, T.wSamples)).toFixed(2)} · 손 덧씌우기 평균 ${(T.handW / Math.max(1, T.wSamples)).toFixed(2)} · AI 가 본 칼끝 겨눔(준비된 동안) ${(100 * T.online / Math.max(1, T.onN)).toFixed(0)} % · 내 죽음 ${T.pDead} · 상대 죽음 ${T.fDead}`);
+console.log(`AI 공격 시작 ${T.atk} · 그때 준비 ${T.atkArmed} · 발도 선 안 ${T.atkIn} · 준비 + 선 안 ${T.atkArmedIn} · 손 덧씌우기 평균 ${(T.handW / Math.max(1, T.wSamples)).toFixed(2)} · AI 가 본 칼끝 겨눔(준비된 동안) ${(100 * T.online / Math.max(1, T.onN)).toFixed(0)} % · 내 죽음 ${T.pDead} · 상대 죽음 ${T.fDead}`);
+console.log(`발도 박자 (게임 s · 낸 수): ${Object.entries(T.drawT).map(([k, v]) => `${k} × ${v}`).join(' · ') || '-'}`);
 const zs = Object.entries(ZONES).sort((a, b) => b[1] - a[1]);
 const zt = zs.reduce((s, [, v]) => s + v, 0);
 console.log(`고노센 맞은 곳 (${zt}) ${zs.map(([k, v]) => `${k} ${v}`).join(' · ')} · 머리 · 목 ${(ZONES.head ?? 0) + (ZONES.neck ?? 0)} · 배 · 골반 ${(ZONES.abdomen ?? 0) + (ZONES.pelvis ?? 0)}`);
