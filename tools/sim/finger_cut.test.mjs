@@ -25,7 +25,7 @@ test('기본값: 손가락 긋기 세기 hit 2 (11/11 사장님 — 조작 예�
   assert.deepEqual(SKILL.fingerCut, { arm: 1, gain: 1, hit: 2 }); // 11/11 사장님 — 조작 예전 · 판정 2 배
 });
 
-test('fingerCutK: 사람 손가락 팔이 긋는 동안만 · AI 는 안 받음 · 다른 동작은 1', () => {
+test('fingerCutK: 사람 손가락 팔이 긋는 동안만 · AI 는 판정(hit)만 — 11/19 보정 v2 묶음 C1 · 다른 동작은 1', () => {
   const body = (o = {}) => ({ alive: true, armed: true, weapon: {}, ...o, skill: { autoGuard: true, swinging: true, quiet: 0, ...(o.skill ?? {}) } });
   const H = body();
   withFC({ arm: 1, gain: 1, hit: 1 }, () => { for (const k of ['arm', 'gain', 'hit']) assert.equal(fingerCutK(H, k), 1, `끔 ${k}`); });
@@ -39,7 +39,9 @@ test('fingerCutK: 사람 손가락 팔이 긋는 동안만 · AI 는 안 받음 
     assert.equal(fingerCutK(tail, 'hit'), 2, '긋기 끝 recoverDelay 안 닿음');
     assert.equal(fingerCutK(tail, 'arm'), 1, '팔 힘은 긋는 동안만');
     const AIb = body({ aiControlled: true, skill: { autoGuard: false } });
-    for (const k of ['arm', 'gain', 'hit']) assert.equal(fingerCutK(AIb, k), 1, `AI ${k}`);
+    for (const k of ['arm', 'gain']) assert.equal(fingerCutK(AIb, k), 1, `AI ${k}`);
+    assert.equal(fingerCutK(AIb, 'hit'), 2, 'AI 보통 베기 판정 × 2 (C1 — 11/19)');
+    assert.equal(fingerCutK(body({ aiControlled: true, secretHit: 1.3, skill: { autoGuard: false } }), 'hit'), 1, 'AI 비기 베기는 아님');
     const off = [
       ['비기', { skill: { sec: {} } }], ['탭 찌르기', { skill: { tap: {} } }], ['손잡이 찍기', { skill: { pom: {} } }], ['채찍 톡', { skill: { flick: {} } }],
       ['감기', { skill: { uniq: { winding: true } } }], ['끌고 가는 칼', { iai: {} }], ['끌고 갈 칼 부탁', { iaiReq: {} }], ['경직', { secretStiff: true }],
