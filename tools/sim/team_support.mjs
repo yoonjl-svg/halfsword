@@ -1,7 +1,7 @@
 // 서포트 재기 (11/19 — 사장님 11/19 '동방과 독일이 서포트에 강하고 이베리아가 서포트에 특별히 도움 안 되는 걸로 하자' · 기록 docs/strike/team_support_2026-11-19.md):
 //  유파마다 '동료로서 얼마나 돕나'. 동료 자리 X 의 유파만 바꾸고 나머지(상대 · 다른 동료 P · 숙련 · 자리 · 씨앗)는 판 묶음(field)마다 같게 — X 다섯이 같은 판을 돈다(짝 지은 견줌).
 //  재기 전용 도구 — 게임 코드는 읽기만 (team_sense.mjs 와 따로 둔 까닭: 다른 가지가 그 도구에 판 짜기 옵션을 넣는 중). 한 과정에서 판을 차례로 (자식 과정 없음).
-//  쓰임: node tools/sim/team_support.mjs [판 묶음 수 50] [maxSecs 90] [--modes=2v2,2v1] [--field=even|none] [--xs=german,…] [--profs=2,4,6] [--duel] [--duelSecs=60] [--lane=0/2] [--ks=1,5] [--out=파일]
+//  쓰임: node tools/sim/team_support.mjs [판 묶음 수 50] [maxSecs 90] [--modes=2v2,2v1] [--field=even|none] [--xs=german,…] [--profs=2,4,6] [--solo2v1=6:4] [--duel] [--duelSecs=60] [--lane=0/2] [--ks=1,5] [--out=파일]
 //        node tools/sim/team_support.mjs agg 파일 … — 여러 갈래(--lane) 결과를 합쳐 표
 //  판 짜기 (사장님 11/19 '상대 유파가 통제되지 않으면 확률이 오염됨'):
 //   --field=even (기본) 다른 동료 P · 상대 F1 · F2 의 유파를 다섯 유파에서 고르게 — 묶음 k 마다 P = 유파[k mod 5] · F1 = 유파[⌊k/5⌋ mod 5] · F2 = 유파[(k + 2⌊k/5⌋ + 1) mod 5]
@@ -67,6 +67,7 @@ function seedRandom(seed) {
 const aiFor = (b, prof) => aiAtProficiency({ ai: { persona: b.pack ? { school: b.pack } : {} }, weapon: b.weapon }, prof);
 
 /** 한 판 (2v2 · 2v1): X 자리 · P 자리 · 적 자리를 짜고 돌림 */
+const SOLO = flag('solo2v1', null) ? String(flag('solo2v1')).split(':').map(Number) : null; // --solo2v1=6:4 — 2:1 은 혼자 숙련 6 · 둘 숙련 4 (둘 쪽이 85 ~ 90 % 에 붙지 않게 — 감독 11/19) · 2:2 는 --profs 돌림 그대로
 function teamFight(mode, fd, x, MAX) {
   seedRandom(fd.seed);
   const X = xBody(x, fd.k);
@@ -88,7 +89,8 @@ function teamFight(mode, fd, x, MAX) {
     slots[xi] = X; slots[pi] = fd.P; slots[1] = fd.F1;
   }
   const count = slots.length;
-  const G = newMatch({ count, ai: 'all', seed: fd.seed, walls: true, weapons: slots.map((b) => b.weapon), looks: Array(count).fill(LOOKS.enemy), aiOf: (i) => aiFor(slots[i], fd.prof) });
+  const profAt = (i) => (mode === '2v1' && SOLO ? (i === 1 ? SOLO[0] : SOLO[1]) : fd.prof);
+  const G = newMatch({ count, ai: 'all', seed: fd.seed, walls: true, weapons: slots.map((b) => b.weapon), looks: Array(count).fill(LOOKS.enemy), aiOf: (i) => aiFor(slots[i], profAt(i)) });
   const F = G.fighters;
   const XF = F[xi], PF = F[pi];
   const foes = F.filter((f) => f.team !== XF.team);
@@ -264,7 +266,7 @@ if (MAIN && !AGG) {
     for (const x of XS) {
       for (const mode of MODES) {
         const r = teamFight(mode, fd, x, MAX);
-        rows.push({ kind: 'team', mode, field: FIELD, k, prof: fd.prof, x, P: fd.P.school, F1: fd.F1.school, F2: fd.F2.school, ...r });
+        rows.push({ kind: 'team', mode, field: FIELD, k, prof: mode === '2v1' && SOLO ? -1 : fd.prof, x, P: fd.P.school, F1: fd.F1.school, F2: fd.F2.school, ...r });
         process.stderr.write(`${mode} k${k + 1} p${fd.prof} X=${x} P=${fd.P.school} F=${fd.F1.school}${mode === '2v2' ? '+' + fd.F2.school : ''} → ${r.xWin} ${r.t}s 돕기 ${r.asHit}/${r.pHits} 같은편 ${r.ffXtoA}/${r.ffAtoX} (${((Date.now() - t0) / 1000).toFixed(0)}s)\n`);
       }
       if (DUEL) {
