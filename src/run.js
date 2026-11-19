@@ -36,7 +36,7 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 /** 이 몸의 뛰기 상태 (처음 부를 때 만든다). fast = 뛰는 가속 한도를 쓰는 동안(뛰는 중 · 뛰다 멈춰 줄어드는 중) · back = 스틱을 상대 틀로 읽는 동안 */
 export function runState(f) {
-  return (f.run ??= { on: false, armed: true, k: 0, vb: 0, fast: false, back: false, brake: false, curve: false, dx: 1, dz: 0, fx: undefined, fz: undefined, end: null, runs: 0, runT: 0 });
+  return (f.run ??= { on: false, armed: true, k: 0, vb: 0, fast: false, back: false, brake: false, curve: false, m0: 0, mx: NaN, my: NaN, dx: 1, dz: 0, fx: undefined, fz: undefined, end: null, runs: 0, runT: 0 });
 }
 
 /** 공격 · 막기 · 기술 중인가 (뛰기를 끊고 다시 들어가지 못하게) — 몸 상태 그대로 (사람 · AI 같음) */
@@ -121,7 +121,7 @@ export function runStep(f, dt) {
   // 돌아옴: 뛰기가 끝난 뒤 몸이 다시 상대를 볼 때까지(앞 사이 각 RUN.faceTol 안)는 스틱을 상대 틀로 읽음
   if (R.on) R.back = true;
   else if (R.back && (f.state !== 'stand' || Math.abs(wrap(Math.atan2(-fz, fx) - f.heading)) < RUN.faceTol)) R.back = false;
-  if (!R.back) return;
+  if (!R.back) return void (R.mx = NaN);
   // 뛰는 방향 = 스틱(상대 틀 — 앞 = 상대 쪽 · 오른쪽 = (−앞.z, 앞.x) fighter.right 와 같은 틀)
   //  내달리는 동안 꺾기 (11/20): 몸 빠르기가 걷는 끝 × RUN.curveFrom 을 넘으면 뛰는 쪽은 초당 RUN.curve ÷ 빠르기(rad — 옆으로 내는 가속 RUN.curve m/s²)까지만 돈다(둥글게 꺾음).
   //   지금 뛰는 쪽에서 RUN.curveMax 넘게 돌린 스틱(거꾸로 · 비스듬히 뒤)은 그쪽으로 돌지 않고 먼저 줄인다(R.brake — 덧 빠르기 0 · runWant) → 그 빠르기 밑으로 줄면 그 자리에서 돌아섬(전과 같음)
@@ -150,7 +150,10 @@ export function runStep(f, dt) {
   // 걸음 장치 · 기력 셈이 읽는 조종 입력(몸 틀)을 그 방향으로 — 크기(스틱 · 감정 배율)는 그대로.
   //  뛰는 동안 몸이 아직 뛰는 쪽을 보지 않으면(돌아서는 중) 크기를 줄인다 — 사이 각이 RUN.alignMax 넘으면 RUN.turnMove · 그 안에서는 각 0 의 1 까지 곧게
   //  (옆 · 뒷걸음으로 내달리며 돌면 걸음이 균형을 잃는다 — 거의 그 자리에서 돌아선 뒤 뜀)
-  let m = Math.hypot(f.move.x, f.move.y);
+  //  (11/20 고침: 사람 몸은 스틱을 화면마다 한 번 두고 물리 스텝은 화면마다 2 ~ 6 번 — 두 번째 스텝부터는 이 함수가 지난 스텝에 둔 몸 틀 입력을 다시 읽어 크기를 또 줄였다(돌아서는 동안 × 0.2 가 거듭 곱해짐).
+  //   지난 스텝에 둔 그대로면 그때 읽은 크기를 쓴다 — 스텝마다 입력을 두는 몸(AI · 시뮬 대본)은 전과 같음)
+  let m = f.move.x === R.mx && f.move.y === R.my ? R.m0 : Math.hypot(f.move.x, f.move.y);
+  R.m0 = m;
   if (!(m > 0)) return;
   const bf = Math.cos(f.heading);
   const bz = -Math.sin(f.heading);
@@ -159,6 +162,8 @@ export function runStep(f, dt) {
     m *= th >= RUN.alignMax ? RUN.turnMove : RUN.turnMove + (1 - RUN.turnMove) * (1 - th / RUN.alignMax);
   }
   f.move.set(m * (R.dx * -bz + R.dz * bf), m * (R.dx * bf + R.dz * bz));
+  R.mx = f.move.x;
+  R.my = f.move.y;
 }
 
 /** 뛰는 동안 바라볼 쪽 (fighter.updateHeading · gait.headAhead — 몸이 뛰는 쪽을 봄 · 아니면 null — 상대 쪽).

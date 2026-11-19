@@ -284,3 +284,20 @@ test('날며 뛰기는 뛰는 몸만 (11/20): f.run 이 없는 몸(1:1 AI · 대
   assert.equal(air, 0, '두 발 모두 뜬 스텝 없음');
   G.world.free();
 });
+
+test('물리 스텝이 화면마다 여럿이어도(사람 몸 — 스틱은 화면마다 한 번) 돌아서는 동안 걸음 입력이 거듭 줄지 않음 (11/20 고침)', () => {
+  for (const heading of [0, 0.2, 0.35]) {
+    const f = mock({ stickX: 0, stickY: -1, heading: Math.PI - heading });
+    f.runReach = 1;
+    f.move.set(0, -1);
+    runStep(f, DT);
+    const m1 = Math.hypot(f.move.x, f.move.y);
+    runStep(f, DT); // 같은 화면의 둘째 스텝 — main.js 가 move 를 다시 두지 않음
+    runStep(f, DT);
+    const m3 = Math.hypot(f.move.x, f.move.y);
+    assert.ok(near(m1, m3, 1e-12), `사이 각 ${heading}: ${m1} → ${m3}`);
+    f.move.set(0, -1); // 다음 화면: main.js 가 스틱을 다시 둠 — 그대로 읽음
+    runStep(f, DT);
+    assert.ok(near(Math.hypot(f.move.x, f.move.y), m1, 1e-12));
+  }
+});
