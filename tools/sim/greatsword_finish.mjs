@@ -19,7 +19,7 @@ import { isMain } from './is_main.mjs';
 
 const FIN_PARTS = new Set(['chest', 'abdomen', 'pelvis', 'head']);
 const PLATE = CHARACTERS.find((c) => c.id === 'heinrich').look;
-export const WEAPONS_DEFAULT = ['longsword', 'zweihander', 'flamberge', 'tizona', 'monohoshizao', 'estoc', 'excalibur', 'kriegsmesser', 'qinggang'];
+export const WEAPONS_DEFAULT = ['longsword', 'zweihander', 'flamberge', 'tizona', 'monohoshizao', 'excalibur', 'kriegsmesser', 'qinggang'];
 
 function setHand(f, xy) {
   f.handOffset.set(xy[0], xy[1]);

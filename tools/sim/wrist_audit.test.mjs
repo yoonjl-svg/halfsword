@@ -146,11 +146,12 @@ function shares(T) {
 const pc = (x) => (100 * x).toFixed(1);
 const ROPE = [[JOINTS, 'wristRope', 1]]; // 시험 손목 치우침 밧줄 켬
 
-test('손목 교정 끔 · 켬 · 밧줄 — 자세표(롱소드 · 레이피어 · 사브르) · 탭 찌르기(황소 · 긴 자세): 전 판 > 10° 넘침 35 % 안팎 · 기본(돌림 + 겨눔 교정) ≤ 10 % · 거꾸로 · 아래팔 섬 ≤ 8 % · 시험 밧줄 켜면 ≤ 1 %', () => {
+test('손목 교정 끔 · 켬 · 밧줄 — 자세표(롱소드 · 레이피어 · 환도) · 탭 찌르기(황소 · 긴 자세): 전 판 > 10° 넘침 35 % 안팎 · 기본(돌림 + 겨눔 교정) ≤ 10 % · 거꾸로 · 아래팔 섬 ≤ 8 % · 시험 밧줄 켜면 ≤ 1 %', () => {
   const run = () => {
     const T = new WristTally();
-    for (const w of ['longsword', 'rapier', 'sabre']) T.merge(guardsRun(w).T, `${w}:`);
-    for (const w of ['rapier', 'sabre']) for (const gd of ['ochs', 'langort']) T.merge(tapRun(w, gd).T, `${w}:${gd}:`);
+    // (11/19 사브르 → 환도 — 재기에 estoc · sabre 를 쓰지 않음(사장님 상시 규칙) · 환도는 같은 한손 곡도 표)
+    for (const w of ['longsword', 'rapier', 'hwando']) T.merge(guardsRun(w).T, `${w}:`);
+    for (const w of ['rapier', 'hwando']) for (const gd of ['ochs', 'langort']) T.merge(tapRun(w, gd).T, `${w}:${gd}:`);
     return shares(T);
   };
   const off = withSets(OLD, run);

@@ -3,7 +3,7 @@
 //   (창 · 조건 없이 skill.secret({ S: 격살, ctx: { slot: 자세 } }) — 판정 · 실행은 게임 함수 그대로). 상대 겉모습 셋: 맨몸 · 판금(하인리히 겉모습) · 투구(케틀햇).
 //  깊은 출혈 = 상처 하나의 심각도 ≥ 1.0 (절단 문턱 COMBAT.limbSeverSeverity 와 같은 '살 문턱 위 90 J' — 재는 이름일 뿐 게임 값 아님) — 그 상처 출혈(혈액 몫 / s)도 적는다.
 //  배율 'hit' = 다른 비기와 같은 hitMul 1.3 · SHARE=0.5 | 0.6 | 1 (격살 칼끝 빠르기 몫 — SECRET.gyeoksal.share) · ARM=down (어거 길) · STANCE= · LOOK=
-//  node tools/sim/gyeoksal_strike.mjs [무기 qinggang] [배율들 1,2.5] [상대 무기들 longsword,uchigatana,qinggang,sabre] [간격 몫 -0.1,0,0.2]   ·   CSV=1 줄마다
+//  node tools/sim/gyeoksal_strike.mjs [무기 qinggang] [배율들 1,2.5] [상대 무기들 longsword,uchigatana,qinggang,kriegsmesser] [간격 몫 -0.1,0,0.2]   ·   CSV=1 줄마다
 //   (상대 AI 를 멈춰 난수가 끼지 않으니 씨앗 대신 상대 무기 — 칼 든 자세가 무기마다 달라 팔 · 칼이 다른 자리에 선다)
 import { newRound, DT, CONFIG } from './harness_m.mjs';
 import { LOOKS } from '../../src/looks.js';
@@ -12,7 +12,7 @@ import { CHARACTERS_BY_ID } from '../../src/characters.js';
 
 const weapon = process.argv[2] || 'qinggang';
 const pows = ['판']; // 격살 판정 배율 갈래(전 argv[3] — SECRET.gyeoksal.power)는 11/17 걷음 — 판 값 하나
-const foes = (process.argv[4] || 'longsword,uchigatana,qinggang,sabre').split(',');
+const foes = (process.argv[4] || 'longsword,uchigatana,qinggang,kriegsmesser').split(',');
 const gaps = (process.argv[5] || '-0.1,0,0.2').split(',').map(Number);
 const looks = { 맨몸: LOOKS.enemy, 판금: CHARACTERS_BY_ID.heinrich.look, 투구: LOOKS.player }; // 판금 = 하인리히 인물 겉모습(판 13 부위 · 투구 없음) · 투구 = 케틀햇
 const stances = (process.env.STANCE || 'geojeong,eogeo,yoryak,bongdu').split(','); // STANCE= 로 고름 · LOOK=맨몸,판금 처럼 겉모습도

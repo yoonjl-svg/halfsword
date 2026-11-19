@@ -586,14 +586,14 @@ if (isMain(import.meta.url)) {
     } else if (mode === 'gonosen') {
       for (const w of pick(['uchigatana', 'monohoshizao'])) print(`고노센 ${w}`, gonosenRun(w).T);
     } else if (mode === 'tap') {
-      for (const w of pick(['rapier', 'dartagnan', 'balisarda', 'sabre', 'qinggang', 'moye', 'longsword', 'estoc', 'zweihander', 'tizona', 'uchigatana', 'monohoshizao'])) {
+      for (const w of pick(['rapier', 'dartagnan', 'balisarda', 'hwando', 'qinggang', 'moye', 'longsword', 'zweihander', 'tizona', 'uchigatana', 'monohoshizao'])) {
         const tot = new WristTally();
         for (const gd of Object.keys(TAP_PADS)) tot.merge(tapRun(w, gd).T, `${gd}:`);
         print(`탭 찌르기 ${w}`, tot);
       }
     } else if (mode === 'close') {
       // 바짝 붙음 (closeReach — 손 앞뒤를 상대 가슴 − 0.3 m 로 접음): 가슴 사이 0.7 · 0.9 m 에서 자세표 자리마다 붙잡기 + 탭 찌르기
-      for (const w of pick(['longsword', 'sabre', 'rapier', 'zweihander', 'uchigatana', 'qinggang'])) {
+      for (const w of pick(['longsword', 'hwando', 'rapier', 'zweihander', 'uchigatana', 'qinggang'])) {
         const tot = new WristTally();
         for (const gap of CLOSE_GAPS) {
           tot.merge(guardsRun(w, { gap }).T, `${gap} 자세:`);
@@ -602,14 +602,14 @@ if (isMain(import.meta.url)) {
         print(`바짝 ${w}`, tot);
       }
     } else if (mode === 'guards') {
-      for (const w of pick(['longsword', 'sabre', 'rapier', 'dartagnan', 'balisarda', 'zweihander', 'tizona', 'uchigatana', 'monohoshizao', 'qinggang', 'moye'])) print(`자세 ${w}`, guardsRun(w).T);
+      for (const w of pick(['longsword', 'hwando', 'rapier', 'dartagnan', 'balisarda', 'zweihander', 'tizona', 'uchigatana', 'monohoshizao', 'qinggang', 'moye'])) print(`자세 ${w}`, guardsRun(w).T);
     } else if (mode === 'cuts') {
-      for (const w of pick(['longsword', 'sabre', 'rapier', 'zweihander', 'tizona', 'uchigatana', 'monohoshizao', 'qinggang', 'moye'])) {
+      for (const w of pick(['longsword', 'hwando', 'rapier', 'zweihander', 'tizona', 'uchigatana', 'monohoshizao', 'qinggang', 'moye'])) {
         const r = cutsRun(w);
         print(`기술 ${w} (${r.trad})`, r.T);
       }
     } else if (mode === 'ai') {
-      for (const w of pick(['longsword', 'sabre', 'rapier', 'zweihander', 'tizona', 'uchigatana', 'monohoshizao', 'qinggang', 'moye'])) {
+      for (const w of pick(['longsword', 'hwando', 'rapier', 'zweihander', 'tizona', 'uchigatana', 'monohoshizao', 'qinggang', 'moye'])) {
         const tot = new WristTally();
         for (let s = 0; s < 2; s++) tot.merge(aiRun(w, { seed: 11 + s }).T);
         print(`AI ${w}`, tot);

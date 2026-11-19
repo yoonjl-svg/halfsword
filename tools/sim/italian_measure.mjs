@@ -66,7 +66,7 @@ if (mode === 'trace') {
   console.log(`AI 기술 그 자리에서 (상대 4.5 m 서 있음 · ${N} 번) · ${ARM}`);
   console.log('| 무기 | 기술 | 70 % 머리 높이 내려 지남 가장 먼 앞 (가운데 · 번마다) m | 칼끝 몸 높이 가장 먼 앞 m | 70 % 가장 높이 m |');
   console.log('|---|---|---|---|---|');
-  for (const wid of ids.length ? ids : ['longsword', 'rapier', 'dartagnan', 'balisarda', 'sabre']) for (const tn of techs) {
+  for (const wid of ids.length ? ids : ['longsword', 'rapier', 'dartagnan', 'balisarda', 'hwando']) for (const tn of techs) {
     const G = newRound({ weapon: 'longsword', weapon2: wid, seed: 7, gap: 4.5 });
     const ai = G.ai, E = G.enemy;
     ai.drill = { out: () => true, dist: () => 4.5, due: () => false, fired() {}, feet: () => 0, atkFeet: () => 0 }; // 헛스윙 연습 자리 — 드릴이 공격을 안 냄(아래에서 냄) · 걸음 없음
@@ -93,7 +93,7 @@ if (mode === 'trace') {
   }
 } else if (mode === 'sweep') {
   const sts = opt('st', '0.15,0.2,0.25,0.35').split(',').map(Number);
-  const list = ids.length ? ids : ['sabre', 'falchion', 'qinggang', 'hwando', 'rapier', 'dartagnan', 'balisarda'];
+  const list = ids.length ? ids : ['falchion', 'qinggang', 'hwando', 'rapier', 'dartagnan', 'balisarda'];
   console.log(`대본 분노의 베기 휘두르는 시간 (생성기 --down · 롱소드 raw → 1.62) · ${ARM}`);
   console.log(`| 시간 s | 롱소드 raw | ${list.join(' | ')} |`);
   console.log(`|---|---|${list.map(() => '---').join('|')}|`);
@@ -102,7 +102,7 @@ if (mode === 'trace') {
     console.log(`| ${st} | ${L.toFixed(3)} | ${list.map((id) => { const r = measureSwing(id, { down: true, swingTime: st }).raw; return Number.isFinite(r) ? (r * 1.62 / L).toFixed(2) : '−∞'; }).join(' | ')} |`);
   }
 } else if (mode === 'check') {
-  const list = ids.length ? ids : ['sabre', 'falchion', 'qinggang', 'hwando', 'ganjiang', 'moye', 'sain', 'goujian', 'estoc', ...Object.keys(WEAPONS).filter((id) => traditionOf(WEAPONS[id]) === 'italian')];
+  const list = ids.length ? ids : ['falchion', 'qinggang', 'hwando', 'ganjiang', 'moye', 'sain', 'goujian', ...Object.keys(WEAPONS).filter((id) => traditionOf(WEAPONS[id]) === 'italian')];
   const L = measureThrust('longsword');
   const LS = MEASURED.longsword;
   console.log(`찌르기 잣대 (3번 자세 탭 찌르기 · 상대 3.4 m) · ${ARM} — 롱소드 70 % ${L.raw.toFixed(3)} · 칼끝 ${L.tip.toFixed(3)} m · ${L.cutTime.toFixed(3)} s`);

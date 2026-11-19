@@ -13,7 +13,7 @@
 //
 //  쓰기: node tools/sim/thrust_stamina.mjs ai  [thrust=7] [itStep=1.4] [prof=2] [seeds=8] [secs=30] [set=all|rapier] [out=파일.json]
 //        node tools/sim/thrust_stamina.mjs bot [thrust=7] [gaps=0,0.3,0.6] [opps=still,longsword] [seeds=3] [secs=30]
-//        node tools/sim/thrust_stamina.mjs aivp [thrust=7] [w=rapier,estoc] [prof=2] [seeds=6] [secs=30]   (AI 대 사람 봇 — 아래 aivpMode)
+//        node tools/sim/thrust_stamina.mjs aivp [thrust=7] [w=rapier,longsword] [prof=2] [seeds=6] [secs=30]   (AI 대 사람 봇 — 아래 aivpMode)
 //        (thrust = 찌르기 값 · 모든 유파 · itStep = 이탈리아만 걷기 0.62 m 당 값 — 없으면 보통 1.4 그대로 · S.열쇠=값 = 그 밖 STAMINA 값)
 import { newRound, DT, AI } from './harness_m.mjs';
 import { STAMINA, AI_PROFICIENCY } from '../../src/config.js';
@@ -44,7 +44,7 @@ function aiMode() {
   const prof = +(opt.prof ?? 2), N = +(opt.seeds ?? 8);
   const level = AI_PROFICIENCY.levels[prof] ?? 'normal';
   const MAIN = ['longsword', 'rapier', 'zweihander', 'uchigatana', 'qinggang'];
-  const EXTRA = ['estoc', 'tizona'];
+  const EXTRA = ['tizona']; // (11/19 에스톡 뺌 — 재기에 estoc · sabre 를 쓰지 않음)
   const pairs = [];
   if ((opt.set ?? 'all') === 'rapier') for (const b of MAIN) pairs.push(['rapier', b]);
   else {
@@ -179,7 +179,7 @@ function botMode() {
 function aivpMode() {
   const prof = +(opt.prof ?? 2), N = +(opt.seeds ?? 6);
   const level = AI_PROFICIENCY.levels[prof] ?? 'normal';
-  const W = (opt.w ?? 'longsword,rapier,zweihander,uchigatana,qinggang,estoc,tizona').split(',');
+  const W = (opt.w ?? 'longsword,rapier,zweihander,uchigatana,qinggang,tizona').split(',');
   const samples = [];
   for (const w of W) for (let k = 0; k < N; k++) {
     const seed = 7600 + k;

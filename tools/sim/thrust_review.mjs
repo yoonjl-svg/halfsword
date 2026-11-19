@@ -98,7 +98,7 @@ export function stepReview(runs = 4) {
   const r = { thrusts: 0, skillAcc: 0, skillAccNoStep: 0, overwritten: 0, aiAcc: 0 };
   for (let s = 1; s <= runs; s++) {
     let log;
-    aiDuel('estoc', 3000 + s, 30, (G, ph) => {
+    aiDuel('longsword', 3000 + s, 30, (G, ph) => {
       if (ph !== 'init') return;
       const F = G.player;
       const ai = G.ai2;
@@ -165,7 +165,7 @@ export function downReview() {
 /** 4: 팔 유효 질량이 실리는 구간과 멍으로 바뀐 찌르기의 에너지 */
 export function assistReview(runs = 4) {
   const r = { assisted: 0, outside: 0, byPhase: {}, demoted: 0, demotedRatio: [] };
-  for (const weapon of ['estoc', 'rapier']) {
+  for (const weapon of ['longsword', 'rapier']) { // (11/19 에스톡 → 롱소드 — 재기에 estoc · sabre 를 쓰지 않음)
     for (let s = 1; s <= runs; s++) {
       aiDuel(weapon, 4000 + s, 30, (G, ph) => {
         if (ph !== 'init') return;

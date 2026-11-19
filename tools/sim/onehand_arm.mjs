@@ -5,7 +5,7 @@
 //    범위 밖(dev 가 [−31, 136] 밖 · 아래팔이 칼 면에서 70° 안) · 어깨 면 밖(shPlane −45 / 130) · 돌림 덜렁(twistLag > 45 — 실제 경첩 축이 명령에서 45° 넘게)
 //   모드: guards(자세표 자리마다 새 판 1.4 s 붙잡기 · 1.0 s 뒤 잼 — 첫 칸 'first' 따로 · FIRST=1 이면 첫 칸 자세값 줄) · tap(탭 찌르기 쟁기 · 황소 · 긴 자세 · 1.8 m) ·
 //    ai(같은 무기 AI 끼리 · 씨앗 11 · 12 · 15 s — 공격 중(긋기 · 따라 베기) · 탭 · 그 밖) · terra(병마용 기질 월왕구천검 AI 대 롱소드 · 레이피어 · 청강검 AI — 병마용 쪽만)
-//   node tools/sim/onehand_arm.mjs [GROUP.key=v,…] [모드들=guards,tap,ai] [무기들=rapier,dartagnan,balisarda,sabre,qinggang,moye,goujian,ganjiang]
+//   node tools/sim/onehand_arm.mjs [GROUP.key=v,…] [모드들=guards,tap,ai] [무기들=rapier,dartagnan,balisarda,hwando,qinggang,moye,goujian,ganjiang]
 //    전(손목 교정 전) = JOINTS.elbowSwivel=0,JOINTS.wristGuard=0,JOINTS.swivelThrust=0 · 10/24 17:2x 뒤 판 = JOINTS.swivelHuman=0
 // ─────────────────────────────────────────────────────────────
 import { newRound, DT, AI, CONFIG, THREE } from './harness_m.mjs';
@@ -19,7 +19,7 @@ for (const kv of (process.argv[2] || '').split(',').filter(Boolean)) {
   CONFIG[g][key] = isNaN(+v) ? v : +v;
 }
 const MODES = (process.argv[3] || 'guards,tap,ai').split(',');
-const WEAPONS = (process.argv[4] || 'rapier,dartagnan,balisarda,sabre,qinggang,moye,goujian,ganjiang').split(',');
+const WEAPONS = (process.argv[4] || 'rapier,dartagnan,balisarda,hwando,qinggang,moye,goujian,ganjiang').split(',');
 const V = (t) => new THREE.Vector3(t.x, t.y, t.z);
 const Qt = (r) => new THREE.Quaternion(r.x, r.y, r.z, r.w);
 /** 팔꿈치 자리: 어깨 → 손목 줄에서 팔꿈치가 비킨 방향의 위 몫(°, + = 줄보다 위) · 바깥 몫(°, + = 칼 든 쪽 바깥) — 가슴 틀 */

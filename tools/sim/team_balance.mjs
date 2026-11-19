@@ -19,7 +19,7 @@ const LEVERS = String(flag('lever', '')).split(',').filter(Boolean);
 const ATK_HOLD = flag('atkHold', null);
 const SETS = String(flag('set', '')).split(',').filter(Boolean).map((kv) => kv.split('=')); // --set=lineUp.side=1,evade.k=1.2 (TEAM_FIGHT.lever 값 시험)
 const WORKER = flag('worker', null);
-const WEAPONS = ['longsword', 'zweihander', 'rapier', 'sabre', 'uchigatana', 'estoc'];
+const WEAPONS = ['longsword', 'zweihander', 'rapier', 'kriegsmesser', 'uchigatana', 'hwando']; // (11/19 사브르 · 에스톡 → 크릭스메서 · 환도 — 재기에 estoc · sabre 를 쓰지 않음)
 const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 5) % WEAPONS.length]);
 
 async function fight(lone, pair, seed) {

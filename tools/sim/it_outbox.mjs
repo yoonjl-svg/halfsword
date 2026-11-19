@@ -11,7 +11,7 @@
 import { writeFileSync, readFileSync, appendFileSync, readdirSync } from 'node:fs';
 import { isMain } from './is_main.mjs';
 
-export const CELLS = ['italian:rapier:longsword', 'italian:rapier:rapier', 'italian:rapier:sabre', 'italian:rapier:uchigatana', 'italian:dartagnan:longsword', 'italian:dartagnan:dartagnan', 'italian:dartagnan:sabre', 'italian:dartagnan:uchigatana'];
+export const CELLS = ['italian:rapier:longsword', 'italian:rapier:rapier', 'italian:rapier:kriegsmesser', 'italian:rapier:uchigatana', 'italian:dartagnan:longsword', 'italian:dartagnan:dartagnan', 'italian:dartagnan:kriegsmesser', 'italian:dartagnan:uchigatana'];
 /** 판 묶음: bot = 'outbox' | '' (전 봇) · io = IT_OUTBOX 덮어쓰기 (edge · beat 는 실제 초 — realS 로 바꿔 넣음) */
 export const PRESETS = {
   main_old: { bot: '', io: { on: 0 } },
@@ -282,7 +282,7 @@ if (isMain(import.meta.url)) {
   const arg = (k, d) => { const a = rest.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
   if (mode === 'ai') {
     const presets = arg('presets', 'main,fin').split(',');
-    const cells = arg('cells', 'rapier:longsword,rapier:sabre').split(',');
+    const cells = arg('cells', 'rapier:longsword,rapier:kriegsmesser').split(',');
     const seeds = range(arg('seeds', '1-12'));
     const out = arg('out', null);
     for (const p of presets) for (const c of cells) for (const seed of seeds) {

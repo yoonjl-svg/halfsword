@@ -34,7 +34,7 @@ if (isMain(import.meta.url)) {
   const args = process.argv.slice(2);
   const pos = args.filter((a) => !a.startsWith('--'));
   const N = +(pos[0] || 4);
-  const weapons = pos.slice(1).length ? pos.slice(1) : ['estoc', 'rapier', 'longsword'];
+  const weapons = pos.slice(1).length ? pos.slice(1) : ['rapier', 'longsword'];
   const secs = +(args.find((a) => a.startsWith('--secs='))?.split('=')[1] ?? 40);
   const SE = strEmoOpts(args);
   const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN);
