@@ -15,6 +15,12 @@ import { fingerCutK } from '../../src/finger_cut.js';
 import { isMain } from './is_main.mjs';
 
 const K = CONFIG.TIME.k;
+// 파펜하이머 새김 띠 텍스처(src/pappenheimer_details.js inscription)가 캔버스를 그림 — school_balance 의 document 껍데기엔 createElement 가 없어 멈춤:
+//  아무것도 그리지 않는 캔버스 (재기 전용 · 그림만 · 몸 · 판 그대로)
+if (globalThis.document && typeof globalThis.document.createElement !== 'function') {
+  const noop = new Proxy(function () {}, { get: () => noop, apply: () => noop, set: () => true });
+  globalThis.document.createElement = () => ({ width: 0, height: 0, style: {}, getContext: () => noop });
+}
 const r3 = (x) => (x == null || !Number.isFinite(x) ? null : +x.toFixed(3));
 const range = (s) => String(s).split(',').flatMap((p) => { const m = p.match(/^(\d+)-(\d+)$/); if (!m) return [+p]; const o = []; for (let i = +m[1]; i <= +m[2]; i++) o.push(i); return o; });
 const TAIL = 0.35; // 칼이 끝난 뒤 닿음을 그 칼에 셈 (실제 s — 손가락 긋기 hit 창 recoverDelay 를 넉넉히 덮음)
