@@ -1,5 +1,6 @@
 // 동시 대전 브라우저 스모크 (3단계 10/29 — docs/strike/team_fight_2026-10-29.md §11): 2:2 · 2:1 · 1:2 · 지켜보기 · 생사전 길(game.launchSaengsa 가짜 setup)
-//  판마다: 페이지 에러 0 · 콘솔 에러 0 · 판이 끝남(한 편 전멸 — teamRun.M.over) · 화면 844×390 스크린샷(시작 · 한창 · 끝) · 편 막대 · 화살표 수 · 생사전 판 뒤 1:1 이 다시 열림
+//  판마다: 페이지 에러 0 · 콘솔 에러 0 · 판이 끝남(한 편 전멸 — teamRun.M.over) · 화면 844×390 스크린샷(시작 · 한창 · 끝) · 편 막대 · 화살표 수 · 생사전 판 뒤 1:1 이 다시 열림 ·
+//   등 뒤 알림 깜빡인 수 warn (11/18 무리 싸움 판단 P3 — 사람 몸이 있는 판 · 판정엔 안 씀)
 //  시계는 playwright 시계로 빨리 돌린다(그리기는 스크린샷 때만 — renderCap.tick). 사람 몸은 손대지 않는다(서 있기만 — 동료 · 상대 AI 가 판을 끝냄)
 //  끝에 ?fps=1 읽기(실제 시계 · 그리기 켬): 1:1 과 2:2 를 같은 브라우저에서 몇 초씩 — 폰 값과 견줄 메모 (headless swiftshader 라 그리기 ms 는 폰과 다르다 · 물리 ms 를 본다)
 //  실행: npx vite build && npx vite preview --port 4391 --strictPort &
@@ -69,10 +70,11 @@ for (const C of CASES) {
       broken: game.fighters.map((f) => (f.weaponBroken ? 1 : 0)).join(''),
       focus: R?.focus?.index ?? null,
       human: R?.human?.index ?? null,
-      bars: document.querySelectorAll('#teamList .tl-b').length, // 왼쪽 위 이름 · 체력 목록 줄 수 (사장님 10/29 22:3x)
-      hpShown: hud && hud.style.display !== 'none' ? document.querySelectorAll('#teamList .tl-b').length : 0,
-      stage: document.getElementById('stageInfo').classList.contains('show'), // 무대 이름 (생사전은 감춤)
-      listNames: [...document.querySelectorAll('#teamList .tl-n')].map((n) => n.textContent),
+      bars: [...document.querySelectorAll('#staminaHud .hp-cells')].filter((e) => !e.hidden).length, // 기력 막대 위 체력 칸 (11/18 — 전 왼쪽 위 이름 · 체력 목록) · 화면 안의 산 몸만
+      hpShown: [...document.querySelectorAll('#staminaHud .hp-cells')].filter((e) => !e.hidden).length,
+      stage: document.getElementById('stageInfo').classList.contains('show'), // 무대 이름 (생사전도 띄움 — 11/18 '생사전 · 무대')
+      stageText: document.querySelector('#stageInfo .stg')?.textContent ?? '',
+      listNames: game.fighters.map((f) => f.shortName ?? ''), // 짧은 이름 (11/18 목록 걷음 — 화면에 쓰는 곳 없음 · 이름 규칙만 봄)
       arrows: hud ? [...hud.querySelectorAll('.th-arrow[data-kind="edge"]')].filter((a) => a.style.display !== 'none').length : 0,
       heads: hud ? [...hud.querySelectorAll('.th-arrow[data-kind="head"]')].filter((a) => a.style.display !== 'none').length : 0,
       switches: R ? game.fighters.map((f) => R.M.targeting?.get(f)?.switches ?? 0) : [],
@@ -95,6 +97,8 @@ for (const C of CASES) {
     }
     await page.evaluate(() => { game.renderCap.tick = () => false; });
     row.start = await look();
+    // 등 뒤 알림 (11/18 무리 싸움 판단 P3 — team_hud.js): 사람 몸이 있는 판에서 화면 밖 화살표가 붉게 깜빡인 수 (data-warn 이 '1' 로 바뀐 번 — 판정엔 안 씀 · 등 뒤 공격이 났는지에 달림)
+    await page.evaluate(() => { window.__warn = 0; const hud = document.getElementById('teamHud'); if (hud) new MutationObserver((ms) => { for (const m of ms) if (m.target.dataset?.warn === '1') window.__warn++; }).observe(hud, { attributes: true, subtree: true, attributeFilter: ['data-warn'] }); });
     if (!(row.start.state === 'fight' && row.start.n === C.n)) throw new Error(`판이 안 열림 (${row.start.state} · ${row.start.n})`);
     await page.clock.runFor(2500);
     await shot('start');
@@ -109,6 +113,7 @@ for (const C of CASES) {
       if (!mid && (L.alive.includes('0') || L.sim > 25)) (mid = true), await shot('mid');
     }
     row.end = L;
+    row.warn = await page.evaluate(() => window.__warn ?? 0);
     if (L.over) {
       await page.clock.runFor(600);
       await shot('end');
@@ -120,7 +125,7 @@ for (const C of CASES) {
         await page.evaluate(() => document.getElementById('btnStart').click());
         for (let i = 0; i < 200 && !(await page.evaluate(() => game.state === 'fight')); i++) await page.clock.runFor(50);
         await page.clock.runFor(1500);
-        row.oneAfter = await page.evaluate(() => ({ state: game.state, n: game.fighters.length, teamRun: !!game.teamRun, hpShown: document.getElementById('teamHud')?.style.display !== 'none' ? 1 : 0, staminaShown: [...document.querySelectorAll('.stamina-bar')].filter((b) => !b.hidden).length, stage: document.getElementById('stageInfo').classList.contains('show') }));
+        row.oneAfter = await page.evaluate(() => ({ state: game.state, n: game.fighters.length, teamRun: !!game.teamRun, hpShown: [...document.querySelectorAll('#staminaHud .hp-cells')].filter((e) => !e.hidden).length, staminaShown: [...document.querySelectorAll('.stamina-bar')].filter((b) => !b.hidden).length, stage: document.getElementById('stageInfo').classList.contains('show') }));
       } else {
         for (let i = 0; i < 40 && (await page.evaluate(() => game.state === 'fight')); i++) await page.clock.runFor(250);
         row.after = await page.evaluate(() => ({ state: game.state, title: document.getElementById('menuTitle')?.textContent, sub: document.getElementById('menuSub')?.textContent, again: document.getElementById('btnStart')?.textContent }));
@@ -133,12 +138,12 @@ for (const C of CASES) {
   row.errors = errors;
   const okSaengsa = !C.saengsa || (row.saengsa && ['a', 'b'].includes(row.saengsa.winner) && Object.keys(row.saengsa.fighters).length === C.n && Object.values(row.saengsa.fighters).every((f) => Number.isInteger(f.hp) && Array.isArray(f.injuries) && typeof f.alive === 'boolean' && typeof f.weaponBroken === 'boolean')
     && row.start?.broken === '0100' && row.saengsa.fighters['5-0'].weaponBroken === true // 5-0 (자리 1) 은 부러진 칼로 서고 결과에도 부러진 채
-    && row.start?.stage === false // 생사전은 무대 이름 감춤
+    && row.start?.stage === true && row.start.stageText.startsWith('생사전 · ') // 생사전도 무대 줄 (11/18 — 전 10/29 감춤)
     && row.start?.listNames?.includes('오토') && !row.start.listNames.some((n) => n.startsWith('무명 검객')) // 무명 검객은 붙인 이름만 (사장님 10/30 01:0x)
     && row.start.listNames.includes('A.미나미') // 얼터 = 'A.' + 본캐 짧은 이름
     && (row.end?.winner == null || C.saengsa.entrants[row.saengsa.winner].some((k) => row.saengsa.fighters[k].alive))); // 이긴 편에 산 몸 (판이 끝난 스텝의 몸으로 적음)
-  const okAfter = !C.saengsa || (row.oneAfter?.state === 'fight' && row.oneAfter.n === 2 && !row.oneAfter.teamRun && row.oneAfter.hpShown === 0 && row.oneAfter.stage === true); // 1:1 엔 목록 없음 · 무대 이름 다시
-  row.ok = !errors.length && !!row.end?.over && row.start?.n === C.n && (row.start?.human != null) === C.human && row.start?.bars === C.n && okSaengsa && okAfter;
+  const okAfter = !C.saengsa || (row.oneAfter?.state === 'fight' && row.oneAfter.n === 2 && !row.oneAfter.teamRun && row.oneAfter.hpShown === 0 && row.oneAfter.stage === true); // 1:1 엔 체력 칸 없음 · 무대 이름 다시
+  row.ok = !errors.length && !!row.end?.over && row.start?.n === C.n && (row.start?.human != null) === C.human && row.start?.bars >= 1 && row.start?.bars <= C.n && okSaengsa && okAfter;
   rows.push(row);
   console.log(JSON.stringify(row));
   await page.close();

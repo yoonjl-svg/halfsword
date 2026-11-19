@@ -1,6 +1,6 @@
 // 생사전 1단계 사진 · 넘침 점검 (docs/design/saengsa_2026-10-29.md §9): 1280×720 · 844×390 · 932×430 마다
 //  ⓪ 입장 조건을 못 채운 저장(호칭 · 무기 둘) — 안내 줄 · '생사전 입장' 꺼짐 · '대진표' (사장님 10/29 18:2x)
-//  ① 정복자 호칭 + 무기 다섯을 저장에 넣고 신청 창(10/29 23:00 — ?saengsaNow) 대기실 생사전 칸 빈 판 · 동료 고르기 카드(둘째 자리 = 무명 검객 · 무기 배정) · 다 고른 판 → 입장(신청) → 생사전 화면(첫 대진 전)
+//  ① 정복자 호칭 + 무기 다섯을 저장에 넣고 신청 창(10/29 23:00 — ?saengsaNow) 대기실 생사전 칸 빈 판 · 동료 고르기 카드(동료 둘을 한 번에 — 미나미 · 무명 검객 · 가진 무기 보기 · 11/18) · 다 고른 판 → 입장(신청) → 생사전 화면(첫 대진 전)
 //  ② 다음 날 10:05 — 대진표(상대끼리 첫 대진 끝 · 내 경기 '입장 가능') · 무기 배정 창 · 경기 화면(나 + 무명 검객 카드 고름) · 결과 · 대기실 칸(대회 진행 중)
 //  11/12 바로 시작(SAENGSA.instant): 상대끼리 16강은 신청 때 끝나고 내 경기는 신청 때부터 '입장 가능'(① 의 생사전 화면 사진도 그 꼴) · 대진표에 시각 없음 — ② 는 다음 날 이어 하기로 남김
 //  점검: 화면이 옆 · 아래로 넘치지 않는가(대기실 · 생사전 화면 · 경기 화면) · 입장 단추가 칸 안인가 · 카드 · 경기 칸이 서로 겹치지 않는가 · 글이 잘리는가(말줄임 수)
@@ -25,7 +25,7 @@ const METRICS = `
   if(host&&vis(host)&&!inside(box(root.getElementById('saengsaEnter')),box(host)))out.push('입장 단추가 칸 밖');
   const pairs=(sel)=>{const l=[...root.querySelectorAll(sel)].filter(vis).map(e=>e.getBoundingClientRect());let n=0;for(let i=0;i<l.length;i++)for(let j=i+1;j<l.length;j++){const a=l[i],b=l[j];if(a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1)n++;}return n;};
   const scroll=(e)=>e&&vis(e)?{h:e.scrollHeight-e.clientHeight,w:e.scrollWidth-e.clientWidth}:null;
-  const clipped=[...root.querySelectorAll('.sg-tn,.sg-name,.sg-slot-name,.sg-slot-weapon,.sg-wpn>span,.sg-inj,.sg-m-state,.sg-next,.sg-pick-name')].filter(e=>vis(e)&&(e.scrollWidth>e.clientWidth+1||e.scrollHeight>e.clientHeight+1)).map(e=>e.textContent.trim()).slice(0,12);
+  const clipped=[...root.querySelectorAll('.sg-tn,.sg-name,.sg-slot-name,.sg-slot-sub,.sg-pick-school,.sg-own-w,.sg-wpn>span,.sg-inj,.sg-m-state,.sg-next,.sg-pick-name')].filter(e=>vis(e)&&(e.scrollWidth>e.clientWidth+1||e.scrollHeight>e.clientHeight+1)).map(e=>e.textContent.trim()).slice(0,12);
   return {overflow:out,overlapCards:pairs('.sg-card'),overlapMatches:pairs('.sg-m'),overlapSlots:pairs('.sg-slot'),scrollPage:scroll(root.querySelector('.saengsa')),scrollLobby:scroll(root.querySelector('.lobby')),
     scrollMatch:scroll(root.getElementById('sgMatch')),scrollPanelBody:scroll(root.querySelector('.sg-body')),scrollPicker:scroll(root.getElementById('sgPicker')),scrollArm:scroll(root.getElementById('sgArm')),clipped};`;
 for (const [size, width, height, phone] of SIZES) {
@@ -71,18 +71,11 @@ for (const [size, width, height, phone] of SIZES) {
   });
   await toLobby('2026-10-29T23:00', false);
   await shot('panel-signup');
-  await tap('.sg-slot[data-slot="1"]');
+  await tap('.sg-slot[data-slot="1"]'); // 동료 둘을 한 카드에서 (11/18 — 고른 차례 = 동료 1 · 2 · 무기 배정 없음)
   await tap('.sg-pick[data-id="minami"]');
-  await tap('.sg-chip-btn[data-weapon="rapier"]');
-  await tap('#sgPickOk');
-  await tap('.sg-slot[data-slot="2"]');
   await tap('.sg-pick[data-id="nameless"]'); // 무명 검객 (사장님 10/29 15:5x — 고용비 20)
-  await tap('.sg-chip-btn[data-weapon="uchigatana"]');
   await p.waitForTimeout(300); // 옷 색 얼굴을 칠하는 동안
   await shot('picker');
-  await tap('#sgPickOk');
-  await tap('.sg-slot[data-slot="0"]');
-  await tap('.sg-chip-btn[data-weapon="longsword"]');
   await tap('#sgPickOk');
   await shot('panel-ready');
   await tap('#saengsaEnter');
@@ -96,8 +89,8 @@ for (const [size, width, height, phone] of SIZES) {
   await p.locator('.sg-m[data-state="ready"]').waitFor({ state: 'visible', timeout: 30000 });
   await shot('page-ready');
   await tap('.sg-m[data-state="ready"]');
-  await tap('#sgArmBtn'); // 경기마다 무기 배정 — 나를 드루이드의 채찍으로
-  await tap('#sgArmRows .sg-chip-btn[data-slot="0"][data-weapon="druid_whip"]');
+  await tap('#sgArmBtn'); // 경기마다 무기 배정 — 첫 경기라 셋 모두 처음 받음(11/18) · 나를 드루이드의 채찍으로
+  for (const [slot, w] of [[0, 'druid_whip'], [1, 'rapier'], [2, 'uchigatana']]) await tap(`#sgArmRows .sg-chip-btn[data-slot="${slot}"][data-weapon="${w}"]`);
   await shot('arm');
   await tap('#sgArmOk');
   await tap('button.sg-card[data-key="0-0"]');

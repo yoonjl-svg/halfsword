@@ -84,17 +84,21 @@ test('2:2 자연 바인드: 맞닿은 두 칼만 반발을 끄고, 나머지 두
 
 test('밀기 칸 natP 는 모르트슐라크 누르기 셈(this.press)과 따로 (10/31 고침 — 10/11 판은 같은 칸을 써 10/24 뒤로 켜면 mordTick 이 비기 없는 AI 에서 멈춤)', () => {
   // 비기 없는 AI 둘 (숙련 2): 칼이 막혀 밀어도 press 칸은 그대로 null · 밀기는 natP
-  const G = newRound({ walls: true, seed: 1, AI2Class: AI });
+  // 유파 마음가짐 (11/19 — 숙련 2 는 마음가짐 몫 0 · 3 점 바탕): 씨앗 1 은 25 s 안에 칼이 붙은 공격이 없음 — 밀기가 나온 판까지 씨앗을 넘김 (판에서 쓰이는지만 봄)
   let pressed = 0;
-  for (let i = 0; i < 25 / DT; i++) {
-    G.step();
-    for (const A of [G.ai, G.ai2]) {
-      assert.equal(A.press, null);
-      if (A.natP) pressed++;
+  for (const seed of [1, 2, 3, 4]) {
+    const G = newRound({ walls: true, seed, AI2Class: AI });
+    for (let i = 0; i < 25 / DT; i++) {
+      G.step();
+      for (const A of [G.ai, G.ai2]) {
+        assert.equal(A.press, null);
+        if (A.natP) pressed++;
+      }
     }
+    G.world.free();
+    if (pressed > 0) break;
   }
   assert.ok(pressed > 0, '밀기가 한 번은 있어야 함');
-  G.world.free();
   // 모르트슐라크 AI (아르토리아 — 숙련 6 · 독일): press 는 누르기 셈 꼴 그대로(tech 칸 없음)
   const H = CHARACTERS_BY_ID.artoria;
   const G2 = newRound({ walls: true, seed: 2, weapon2: H.weapon, difficulty: H.ai.level, persona: H.ai.persona, look2: H.look, revive: H.revive, AI2Class: AI });

@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { newMatch, CONFIG } from './jelly_harness.mjs';
 import { sameSide, teamOfIndex } from '../../src/team.js';
 import { spawnSpots, orderControllers, pairFoe, standing, matchResult } from '../../src/match.js';
-import { teamFramePull, HP_COLORS, TEAM_COLORS } from '../../src/team_hud.js';
+import { teamFramePull, TEAM_COLORS, HEAD_MARK_UP } from '../../src/team_hud.js';
 import { shortNameOf, SHORT_NAMES } from '../../src/short_names.js';
 import { hexToOklch } from '../../src/oklch.js';
 import { CHARACTERS_BY_ID } from '../../src/characters.js';
@@ -317,7 +317,7 @@ test('⑨ 죽은 몸 쉬게 하기 (셋 이상 판만) · 카메라 물러남 �
   assert.ok(Math.abs(pull([fake(-2, 0)]).up - pull([fake(-2, 0)]).back * CONFIG.TEAM_FIGHT.cam.upK) < 1e-12);
 });
 
-test('⑩ 체력 목록 짧은 이름 (사장님 10/30 01:0x — 얼터 A.) · 막대 색', () => {
+test('⑩ 짧은 이름 (사장님 10/30 01:0x — 얼터 A.) · 적 색 · 머리 위 세모 자리', () => {
   const S = (id) => shortNameOf(CHARACTERS_BY_ID[id]);
   assert.deepEqual(['isolde', 'bernardo', 'samira', 'liao', 'white_scale', 'minami'].map(S), ['이졸데', '베르나르도', '마야', '랴오', '백귀', '미나미']); // 백린의 전사 = 백귀 (사장님 10/30 18:3x)
   assert.deepEqual(['minami_mad', 'bran_mad', 'heinrich_mad'].map(S), ['A.미나미', 'A.브론', 'A.하인리히']);
@@ -328,11 +328,10 @@ test('⑩ 체력 목록 짧은 이름 (사장님 10/30 01:0x — 얼터 A.) · �
   }
   const names = Object.keys(CHARACTERS_BY_ID).map(S);
   assert.equal(new Set(names).size, names.length, '짧은 이름이 겹치지 않음 (본캐 · 얼터 갈림)');
-  assert.deepEqual(HP_COLORS, ['#10561a', '#792820']); // 사장님 10/30 02:0x: 적 = 피 색 #8a0000 의 OKLCH 채도만 × 0.7 · 아군 = 같은 밝기 · 채도의 녹색(145°)
-  assert.equal(HP_COLORS[1], TEAM_COLORS[1]); // 머리 위 세모 · 화면 밖 화살표도 같은 적 색
+  // 11/18 왼쪽 위 체력 목록(아군 녹색 #10561a · 적 #792820 막대)은 걷음 — 체력은 기력 막대 위 체력 칸(hp_strip.test.mjs). 머리 위 세모 · 화면 밖 화살표의 적 색은 그대로
+  assert.deepEqual(TEAM_COLORS, ['#d9a441', '#792820']); // 사장님 10/30 02:0x: 적 = 피 색 #8a0000 의 OKLCH 채도만 × 0.7
   const [Lb, Cb, hb] = hexToOklch(0x8a0000);
-  const [Lf, Cf, hf] = hexToOklch(parseInt(HP_COLORS[1].slice(1), 16));
-  const [La, Ca, ha] = hexToOklch(parseInt(HP_COLORS[0].slice(1), 16));
+  const [Lf, Cf, hf] = hexToOklch(parseInt(TEAM_COLORS[1].slice(1), 16));
   assert.ok(Math.abs(Lf - Lb) < 0.005 && Math.abs(hf - hb) < 2 && Math.abs(Cf / Cb - 0.7) < 0.03, `적 = 피 색 채도만 낮춤 ${[Lf, Cf, hf]}`);
-  assert.ok(Math.abs(La - Lf) < 0.005 && Math.abs(Ca - Cf) < 0.006 && Math.abs(ha - 145) < 2, `아군 = 같은 밝기 · 채도 녹색 ${[La, Ca, ha]}`);
+  assert.equal(HEAD_MARK_UP(), 2 + 5 + 3 + 4, '머리 위 세모는 기력 막대(2) · 체력 칸(3 + 틈 2) 위');
 });

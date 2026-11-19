@@ -45,7 +45,7 @@
 import { G, WATCH_GUARDS, TECH, TECH_BY_NAME, FEINTS } from './ai_techniques.js';
 import { WEAPONS } from './weapons.js';
 import { schoolMeasure } from './weapon_measured.js';
-import { SECRET, SKILL, realS } from './config.js';
+import { SECRET, SKILL, MINDSET, realS } from './config.js';
 import { IBERIAN_TABLE } from './guards.js'; // 이베리아 몬탄테 자세표 (10/10 고증 — TRADITIONS.iberian.guardTable) // 무기별 간격은 한 곳(weapon_measured.js)에서 읽는다
 
 /** 기술 목록을 복사하면서 기술별 reach(닿는 거리 보정, m)를 무기에 맞게 바꾼다 (표에 없는 기술은 롱소드 값 그대로) */
@@ -294,22 +294,54 @@ const NONE_NAMES = {
 //  [lo, hi] = 그 사이에서 rand 로 한 번 굴림, 숫자 = 그 값 그대로. 없는 칸은 예전 기본값. 인물(characters.js persona.pers)이 정한 값이 늘 이긴다.
 //  물리·걸음은 그대로 — 간격을 얼마나 두고 서는가(margin m)·얼마나 도는가(circleRate)·자세 바꾸는 박자(rhythm s)·가까운 자세 고집(guardStick)·
 //  간 볼 때 손 빠르기(guardSpeed m/s)·달려드는 상대를 맞받는가(vor 0~1)·참을성(patienceTime s)·공격 성향(aggr) 만 바꾼다.
-//  칸마다 rand 호출 수가 예전과 같다(범위 칸은 범위 그대로, 숫자 칸은 예전에도 숫자) → 독일·무유파는 같은 난수를 같은 차례로 뽑아 바이트 동일.
-//  독일·무유파 = 예전 값 그대로 (롱소드 기준 회귀 sha 를 지킨다)
-const GERMAN_TEMPER = { margin: [0.2, 0.5], aggr: [0.85, 1.2], circleRate: [0.15, 0.4], rhythm: [2.4, 4.5], vor: [0.15, 0.6], patienceTime: [7, 12], guardStick: 2.5, guardSpeed: 0.9 };
-const NONE_TEMPER = GERMAN_TEMPER;
+//  칸마다 rand 호출 수가 예전과 같다(범위 칸은 범위 그대로, 숫자 칸은 예전에도 숫자).
+//  11/18 유파 마음가짐 (아래 SCHOOL_MINDSET — [사장님 11/18 승인] '새 점수가 이김'): 다섯 유파의 aggr · patienceTime(선공) · margin(거리) · circleRate(횡보) 범위는
+//   마음가짐 값 표의 가운데 ± config MINDSET.spread 로 바꿨다 (옛 → 새 는 줄마다 · 기록 docs/strike/school_mindset_2026-11-18.md §2). 나머지 칸(rhythm · vor · guardStick · guardSpeed)은 그대로.
+//  무유파 = 옛 독일 값 그대로 (마음가짐 점수가 없는 유파 — 재기 도구의 중립 상대 · 롱소드 기준 옛 판)
+const OLD_TEMPER = { margin: [0.2, 0.5], aggr: [0.85, 1.2], circleRate: [0.15, 0.4], rhythm: [2.4, 4.5], vor: [0.15, 0.6], patienceTime: [7, 12], guardStick: 2.5, guardSpeed: 0.9 };
+const NONE_TEMPER = OLD_TEMPER;
+
+// ── 유파 마음가짐 값 표 (11/18 — config MINDSET 의 끝 값 · 점수로 만든 수를 그대로 적음 — tools/sim/school_mindset.test.mjs 가 셈과 같은지 봄 · 셈 src/ai_mindset.js) ──
+//  값 = 1 점 값 + (5 점 값 − 1 점 값) × (점수 − 1) ÷ 4 · 선공 · 거리 · 일격 · 횡보 = 바탕 · 집요함 = 상대 상태에 따라 넷을 옮길 수 있는 폭 band (점)
+//   aggr · patienceTime · need · first · answer   선공 — 공격 성향 · 참을성 실제 초 · 공격 문턱 더함 · 먼저 치는 빈틈 곱 · 받아 치는 몫 곱
+//   margin · gap · creep · give                   거리 — 간 보는 여유 m · 간격과 박자 선 여유 m (MEASURE.gap 대신) · 다가드는 잔걸음 끝 m/s · 다가오면 물러나는 몫 곱
+//   reward                                        일격 — 입힐 피해로 판단하는 몫
+//   latShare · circleRate                         횡보 — 간 보기 걸음 옆 몫 목표 · 옆걸음 빠르기
+//   band                                          집요함 — 옮길 수 있는 폭 (점) = (집요함 − 1) × 0.5 [사장님 11/18 결정 '네 권고대로 하마']
+export const SCHOOL_MINDSET = Object.freeze({
+  //   점수 [선공, 거리, 집요함, 일격, 횡보] → 손잡이
+  german: Object.freeze({ score: Object.freeze([5, 1, 2, 3, 2]), aggr: 1.3, patienceTime: 5, need: -0.3, first: 1.6, answer: 0.4, margin: 0, gap: -0.2, creep: 0.45, give: 0.4, reward: 0.5, latShare: 0.125, circleRate: 0.175, stay: 0.6, band: 0.5 }),
+  italian: Object.freeze({ score: Object.freeze([2, 5, 4, 2, 1]), aggr: 0.925, patienceTime: 11.75, need: 0.075, first: 0.7, answer: 1.3, margin: 1.2, gap: 0.7, creep: 0.18, give: 1.2, reward: 0.25, latShare: 0, circleRate: 0.1, stay: -0.6, band: 1.5 }),
+  iberian: Object.freeze({ score: Object.freeze([4, 4, 3, 5, 5]), aggr: 1.175, patienceTime: 7.25, need: -0.175, first: 1.3, answer: 0.7, margin: 0.9, gap: 0.475, creep: 0.2475, give: 1, reward: 1, latShare: 0.5, circleRate: 0.4, stay: -0.3, band: 1 }),
+  japanese: Object.freeze({ score: Object.freeze([1, 2, 1, 4, 3]), aggr: 0.8, patienceTime: 14, need: 0.2, first: 0.4, answer: 1.6, margin: 0.3, gap: 0.025, creep: 0.3825, give: 0.6, reward: 0.75, latShare: 0.25, circleRate: 0.25, stay: 0.3, band: 0 }),
+  chinese: Object.freeze({ score: Object.freeze([3, 3, 5, 1, 4]), aggr: 1.05, patienceTime: 9.5, need: -0.05, first: 1, answer: 1, margin: 0.6, gap: 0.25, creep: 0.315, give: 0.8, reward: 0, latShare: 0.375, circleRate: 0.325, stay: 0, band: 2 }),
+});
+/** 마음가짐 값 표 줄의 기질 칸 네 개 → 범위 (가운데 ± config MINDSET.spread · 소수 넷째 자리) */
+const mindTemper = (m) => {
+  const S = MINDSET.spread;
+  const r = (c, w) => [+(c - w).toFixed(4), +(c + w).toFixed(4)];
+  return { aggr: r(m.aggr, S.aggr), patienceTime: r(m.patienceTime, S.patienceTime), margin: r(m.margin, S.margin), circleRate: r(m.circleRate, S.circleRate) };
+};
+
+// 독일 (더티 복서 — 선공 5 · 거리 1 · 횡보 2): 옛 = 위 OLD_TEMPER (margin 0.2~0.5 · aggr 0.85~1.2 · circleRate 0.15~0.4 · patienceTime 7~12) → 새 = 마음가짐 가운데 ± 폭 (값 · 옛 → 새 표는 기록 §2)
+const GERMAN_TEMPER = { ...OLD_TEMPER, ...mindTemper(SCHOOL_MINDSET.german) };
 // 이탈리아 (레이피어, 카포 페로) [추정 — 사장님 확인 전]: 좁은 간격(misura stretta 쪽에 붙어 선다)·거의 돌지 않음(곧은 선 위에서 칼끝을 겨눔)·
 //  짧은 박자(tempo 마다 칼끝 자리를 바꾼다)·가까운 자세 고집(테르차·콰르타 사이만 오간다)·손 빠름·박자에 맞받음(contratempo — 들어오는 박자에 찌른다)
-const ITALIAN_TEMPER = { ...GERMAN_TEMPER, margin: [0.1, 0.3], circleRate: [0.05, 0.2], rhythm: [1.8, 3.0], guardStick: 3.5, guardSpeed: 1.2, vor: [0.4, 0.8] };
+//  11/18 마음가짐 (선공 2 · 거리 5 · 횡보 1): 옛 margin 0.1~0.3 · aggr 0.85~1.2 · circleRate 0.05~0.2 · patienceTime 7~12 → 새 = 마음가짐 가운데 ± 폭 (기록 §2)
+//   (좁은 간격 → 칼끝 밖 — 설계 '거리 5 — 상대 칼끝 바로 밖 · 붙으면 물러섬')
+const ITALIAN_TEMPER = { ...OLD_TEMPER, circleRate: [0.05, 0.2], rhythm: [1.8, 3.0], guardStick: 3.5, guardSpeed: 1.2, vor: [0.4, 0.8], ...mindTemper(SCHOOL_MINDSET.italian) };
 // 이베리아 (몬탄테) [추정 — 사장님 확인 전]: 긴 칼을 휘둘러 자리를 차지한다 — 넓은 간격·많이 돎(둥글게 걸으며 휘두름)·자세를 자유로이 옮김(고집 약함)·맞받기 보통보다 조금 많이.
 //  처음 안(margin 0.35~0.6 · circleRate 0.35~0.6 · rhythm 2.0~3.5 · guardStick 1.5 · vor 0.3~0.7)은 츠바이핸더 48 판 21 → 13 승(−17 점)이라 모든 칸을 예전 값 쪽으로 반쯤 되돌렸다(21 승)
-const IBERIAN_TEMPER = { ...GERMAN_TEMPER, margin: [0.28, 0.55], circleRate: [0.25, 0.5], rhythm: [2.2, 4.0], guardStick: 2.0, vor: [0.22, 0.65] };
+//  11/18 마음가짐 (선공 4 · 거리 4 · 횡보 5): 옛 margin 0.28~0.55 · aggr 0.85~1.2 · circleRate 0.25~0.5 · patienceTime 7~12 → 새 = 마음가짐 가운데 ± 폭 (기록 §2)
+const IBERIAN_TEMPER = { ...OLD_TEMPER, rhythm: [2.2, 4.0], guardStick: 2.0, vor: [0.22, 0.65], ...mindTemper(SCHOOL_MINDSET.iberian) };
 // 일본 (한 칼 — 上段·八相에서 기다림) [추정 — 사장님 확인 전]: 간격 끝(一足一刀)에서 오래 기다린다·적게 돎·자세를 오래 지키고 고집·손 느긋함·
 //  먼저 치지 않다가 들어오는 순간(出鼻·先の先)을 맞받는다·참을성 김
 //  vor 0.5~0.9 → 0.2~0.5 (10/9 유파 설계 v3 — 사장님 '물러서는 백스텝을 잘 쓰게': 달려드는 상대를 맞받기보다 물러나 헛치게 한다. 헛친 뒤는 비기 後の先 몫)
-const JAPANESE_TEMPER = { ...GERMAN_TEMPER, margin: [0.3, 0.5], circleRate: [0.1, 0.25], rhythm: [4.0, 7.0], guardStick: 4.0, guardSpeed: 0.7, patienceTime: [9, 14], vor: [0.2, 0.5] };
+//  11/18 마음가짐 (선공 1 · 거리 2 · 횡보 3): 옛 margin 0.3~0.5 · aggr 0.85~1.2 · circleRate 0.1~0.25 · patienceTime 9~14 → 새 = 마음가짐 가운데 ± 폭 (기록 §2)
+const JAPANESE_TEMPER = { ...OLD_TEMPER, rhythm: [4.0, 7.0], guardStick: 4.0, guardSpeed: 0.7, vor: [0.2, 0.5], ...mindTemper(SCHOOL_MINDSET.japanese) };
 // 중국 (조선세법) [추정 — 사장님 확인 전]: 좁은 간격·몰아붙임(進步 — 걸어 들어가며 잇달아 친다)·자세를 자주 바꿈(勢 가 이어진다)·참을성 짧음·공격 성향 높음
-const CHINESE_TEMPER = { ...GERMAN_TEMPER, margin: [0.1, 0.3], circleRate: [0.2, 0.4], rhythm: [2.0, 3.5], aggr: [1.0, 1.3], patienceTime: [6, 10] };
+//  11/18 마음가짐 (선공 3 · 거리 3 · 횡보 4): 옛 margin 0.1~0.3 · aggr 1.0~1.3 · circleRate 0.2~0.4 · patienceTime 6~10 → 새 = 마음가짐 가운데 ± 폭 (기록 §2)
+const CHINESE_TEMPER = { ...OLD_TEMPER, rhythm: [2.0, 3.5], ...mindTemper(SCHOOL_MINDSET.chinese) };
 
 // ── 유파 걸음 (10/10 비싼 층 — docs/strike/school_gait_design_2026-10-10.md, 사장님 10/10 04:4x '비싼 변화도 오늘 밤에') ──
 //  gait.js gaitParams 가 무기의 유파(fighter.swordArt.tradition)로 읽어 GAIT 위에 덮는다 — 몸의 일이라 플레이어도 같은 걸음(사장님 05:1x).

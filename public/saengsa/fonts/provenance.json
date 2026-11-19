@@ -119,5 +119,21 @@
     "bytes": 3144,
     "sha256": "0e7673a865f42318780a8dcfe7ad1213b170fbb28d4f5718b84008f1421af443",
     "unitsPerEm": 1000
+  },
+  {
+    "file": "public/fonts/NotoSansSymbols2-hourglass.woff2",
+    "family": "Noto Sans Symbols 2",
+    "weight": 400,
+    "version": "Google Fonts v25",
+    "subset": "Google Fonts text= subset: U+231B, U+23F3 (hourglass — shop countdown, 10/31)",
+    "source": "https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols+2&text=%E2%8C%9B%E2%8F%B3",
+    "fontUrl": "https://fonts.gstatic.com/l/font?kit=I_uyMoGduATTei9eI8daxVHDyfisHr71ypbyf5R4e-GXqQ&skey=5cf84917987cc637&v=v25",
+    "license": "OFL-1.1",
+    "licenseFile": "public/fonts/NotoSansSymbols2-OFL.txt",
+    "licenseSource": "google/fonts ofl/notosanssymbols2/OFL.txt",
+    "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/symbols)",
+    "retrievedUtc": "2026-10-30T15:52Z",
+    "bytes": 3156,
+    "sha256": "1b75f3b89ef67d141802d1a16a4db2d3a3f6758bac4101a20fe44e9fe87b3900"
   }
 ]

@@ -6,6 +6,7 @@
 //   + allyAdd   내 편이 이미 겨눈 상대 하나마다 (나눠 맡기)
 //   − attackSub 나를 겨눠 제 칼끝 거리(reach) 안에서 치고 있는 상대
 //   + 인물 취향  f.targetPref ('weakest' · 'strongest' · 'allyAttacker' · 'nearest') × prefAdd — 갈고리만 (인물 시트가 아직 안 채움)
+//   + 무리 싸움 판단 (11/18 — src/team_sense.js senseScore · 판 사본 M.sense 가 있는 셋 이상 판의 AI 만 · 그 AI 의 눈(늦음 · 시야)으로 본 것만)
 //  바꾸는 때: 지금 상대가 죽었거나 부활하는 중이면 곧장 (붙잡고 있어도 — 죽은 몸을 겨눌 까닭이 없다).
 //   그 밖엔 다른 상대가 margin 넘게 낮은 채 hold 동안 이어지면. 나를 치고 있는 상대면 hold 를 기다리지 않는다 — 그 상대가 attackHold(실제 초 0.4) 동안 내리 쳤으면 (3단계 10/29 · 2877).
 //   붙잡힘(committed — 공격 · 비기 · 칼끼리 맞댐 · 밀치기) 동안은 바꾸지 않는다.
@@ -14,6 +15,7 @@
 import { TEAM_FIGHT } from './config.js';
 import { sameSide } from './team.js';
 import { woundDegree } from './combat.js';
+import { senseScore, senseHold } from './team_sense.js'; // 무리 싸움 판단 (11/18): 판 사본(M.sense)이 있는 판의 AI 만 — 덧셈 · 바꿈 기다림
 
 const hdist = (a, b) => {
   const p = a.bodies.chest.translation();
@@ -65,6 +67,7 @@ export function targetScore(M, f, g) {
   if (attacking(g, f)) s -= T.attackSub;
   const pref = f.targetPref && TARGET_PREFS[f.targetPref];
   if (pref) s += pref(M, f, g);
+  if (M.sense) s += senseScore(M, f, g); // 무리 싸움 판단 (11/18 — team_sense.js · 셋 이상 판의 AI 만): 다친 동료를 겨눈 적 …
   return s;
 }
 
@@ -104,7 +107,7 @@ export function chooseTarget(f, M, dt = 0) {
       if (st.cand !== best) (st.cand = best), (st.held = 0);
       st.held += dt;
       if (attacking(best, f) && (T.attackHold <= 0 || (st.atk.get(best) ?? 0) >= T.attackHold)) take(best, 'attacked'); // 나를 치는 상대는 hold 를 기다리지 않는다 (attackHold 만큼 내리 쳤으면)
-      else if (st.held >= T.hold) take(best, 'held');
+      else if (st.held >= ((M.sense && senseHold(M, f, best)) ?? T.hold)) take(best, 'held'); // 무리 싸움 판단 (11/18): 엄호 바꿈은 짧게 기다림 (TEAM_SENSE.cover.hold)
     }
   } else (st.cand = null), (st.held = 0);
   return st.foe;

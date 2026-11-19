@@ -38,10 +38,8 @@ try{
  x=await make(true);const {p,tap,until}=x;
  await tap('#tabShop');assert.equal(await p.locator('.shop-item').count(),3);checks.push('latest shop still shows three items');
  await tap('#tabEvent');await p.screenshot({path:out+'/lobby-saengsa.png'});
- for(const [slot,weapon] of [[0,'longsword'],[1,'rapier'],[2,'uchigatana']]){
-  await tap(`.sg-slot[data-slot="${slot}"]`);if(slot)await tap('.sg-pick[data-id="nameless"]');
-  await tap(`.sg-chip-btn[data-weapon="${weapon}"]`);await tap('#sgPickOk');
- }
+ // 11/18: 동료 둘을 한 카드에서 (무명 검객 두 번) · 무기는 첫 경기 화면에서
+ await tap('.sg-slot[data-slot="1"]');await tap('.sg-pick[data-id="nameless"]');await tap('.sg-pick[data-id="nameless"]');await tap('#sgPickOk');
  assert.ok(await p.locator('#saengsaEnter').isEnabled());
  const before=await p.evaluate(()=>JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).coins);
  await tap('#saengsaEnter');await until(()=>!!document.querySelector('#gameEntrance')?.shadowRoot?.querySelector('#sgBracket'));
@@ -53,6 +51,8 @@ try{
  await until(()=>{const r=document.querySelector('#gameEntrance')?.shadowRoot;return r&&!r.getElementById('sgMatch').hidden&&!r.getElementById('sgFight').hidden;});
  assert.equal(await p.locator('.sg-m[data-state="ready"]').count(),1);assert.equal(t.matches.filter(m=>m.result).length,7);
  await p.screenshot({path:out+'/match-open-at-signup.png'});checks.push('signup charges two nameless hires and creates a 16-team tournament, first match screen opens at once (11/12 instant start)');
+ assert.ok(await p.locator('#sgFight').isDisabled());checks.push('first match needs weapons (11/18 — no weapons at signup)');
+ await tap('#sgArmBtn');for(const [slot,weapon] of [[0,'longsword'],[1,'rapier'],[2,'uchigatana']])await tap(`#sgArmRows .sg-chip-btn[data-slot="${slot}"][data-weapon="${weapon}"]`);await tap('#sgArmOk');
  await tap('button.sg-card[data-key="0-0"]');await tap('button.sg-card[data-key="0-1"]');
  await p.screenshot({path:out+'/entrants.png'});
  await p.evaluate(()=>{game.renderCap.tick=()=>false;});await tap('#sgFight');

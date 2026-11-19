@@ -26,7 +26,7 @@ import * as THREE from 'three';
 import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import { beginFlowRecovery } from './nagashi_recovery.js';
 import { FLOW_REDESIGN, flowCandidate, spendFlowPenalty, flowShieldKeep } from './nagashi_redesign.js';
-import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL, IB_PARRY_BEAT, WHIP_KNEEL } from './config.js';
+import { STRIKE, ANATOMY, STEEL, ARMOR, BIND, VITALS, NAGASHI, SKILL, IB_PARRY_BEAT, WHIP_KNEEL, GAIT } from './config.js';
 import { cnStepKeep } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 · 11/16 사장님 결정 켬)
 import { WEAPON_ABILITY } from './config.js'; // 달타냥 '총사의 결투' 배율 (10/25 — duelOneHandMult)
 import { BREAK, isOneHandSword } from './weapons.js';
@@ -119,7 +119,9 @@ export function stepMassOf(att, vic) {
   const dd = Math.hypot(dx, dz);
   if (!(dd > 1e-6)) return 0;
   const v = (a.v.x * dx + a.v.z * dz) / dd;
-  return v > 0 ? STRIKE.stepMass * Math.min(1, v / STRIKE.stepVRef) : 0;
+  // 뛰기 (11/18 — 사람 몸 · src/run.js): 들어가는 빠르기는 걷는 끝 빠르기(GAIT.moveSpeed)까지만 센다 — 뛰며 친 베기의 걸음 몫이 걸으며 친 베기보다 크지 않게.
+  //  stepVRef(1.0)가 걷는 끝 빠르기(1.82)보다 작아 걷기 · AI 판은 한 비트도 안 바뀜 (stepVRef 를 걷는 끝 빠르기 위로 올리는 날에 쓰이는 문)
+  return v > 0 ? STRIKE.stepMass * Math.min(1, Math.min(v, GAIT.moveSpeed) / STRIKE.stepVRef) : 0;
 }
 
 function velAt(st, point, out) {

@@ -1,34 +1,31 @@
 // ─────────────────────────────────────────────────────────────
 //  동시 대전 화면 — 4단계 최소 (10/29 · docs/strike/team_fight_2026-10-29.md §11)
-//   이름 · 체력 목록 (사장님 10/29 22:3x '왼쪽 상단에 작게 이름과 체력바 … 글자 크기와 스타일은 전투 중 기술 상세 설명 표기할 때 쓰는 것으로 · 체력바도 기력바 크기보다 작게'
-//    · 10/30 01:0x '이름만 표기되게 … 체력바를 이름 아래에 … 한 줄에 이름은 두 개씩 … 적 한줄 아군 한줄 … 아군 체력바 색은 녹색 계열'):
-//    왼쪽 위 #teamList (index.html — 글자 = 기술 칸 둘째 줄 .slot small 과 같은 크기 · 굵기 · 색 · 외곽선) · 짧은 이름(f.shortName — short_names.js) 밑에 막대 40 × 2 px(기력 막대 56 × 2 의 약 70 %) ·
-//    한 줄에 둘 — 첫 줄 상대 · 둘째 줄 내 편 · 막대 색 HP_COLORS(아군 녹색 · 적 붉은색) · 죽으면 흐림.
-//    생사전 판은 무대 이름을 감추고 그 자리 · 시험 판은 무대 이름 밑 (그 전의 머리 위 체력 막대 · 정지 단추 밑 막대 묶음은 뺌)
+//   체력: 11/18 사장님 '생사전에서 좌측 상단에 캐릭터 체력바가 뜨는데 그거 없애고 기력바랑 같이 뜨게 해' — 왼쪽 위 이름 · 체력 목록(#teamList — 10/29 22:3x · 10/30 01:0x)을 걷고
+//    머리 위 기력 막대 바로 위 체력 칸(stamina_hud.js · 규칙 hp_strip.js)으로. 이 파일은 화살표 · 편 표시 · 카메라 물러남만.
 //   화면 밖 화살표: 살아 있는 싸움꾼이 화면 밖(또는 카메라 뒤)이면 화면 가장자리에 그쪽을 가리키는 작은 화살표 (편 색)
 //   편 표시: 화면 안의 산 상대(1 편) 머리 위에 같은 화살표를 작게 붉게 아래로 — 무명 검객처럼 겉모습이 같아도 편이 보이게 (내 편 금색 세모는 뺌 — 사장님 10/29 20:3x '우리편 머리의 금색 세모는 없어도 돼')
+//    자리 (11/18): 기력 막대 자리(머리 위 0.28 m — stamina_hud.js)에서 체력 칸 위로 화면 px 만큼(HEAD_MARK_UP) — 전엔 머리 위 0.5 m 라 멀면 막대 위 칸에 겹쳤다
+//   등 뒤 알림 (사장님 11/18 '권고대로' — 무리 싸움 판단 설계 §8-7): 나(사람 몸)를 겨눈 AI 가 등 뒤에서 칠 참이면(team_sense.js backThreat) 그 몸의 화면 밖 화살표가
+//    밝은 붉은색 · 조금 크게 깜빡임(TEAM_SENSE.back.blink Hz) — 글 · 소리 없음 · 화면 안이면 없음 · 지켜보기(사람 몸 없음)면 없음
 //   카메라 물러남 몫: 보는 몸(focus)에서 TEAM_FIGHT.cam.radius 안의 산 싸움꾼이 모두 들어오게 뒤로 · 위로 (main.js updateCamera 가 부드럽게)
 //  1:1 판에서는 만들지도 부르지도 않는다 (main.js — teamRun 이 있을 때만)
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { TEAM_FIGHT, VITALS, CAMERA } from './config.js';
+import { TEAM_FIGHT, TEAM_SENSE, CAMERA } from './config.js';
+import { backThreat } from './team_sense.js'; // 등 뒤 알림 (11/18 — 무리 싸움 판단 P3)
 import { BLOOD_RED } from './blood_palette.js';
 import { hexToOklch, oklchToCss } from './oklch.js';
+import { hpLift } from './hp_strip.js';
 
 /** 적 색 (사장님 10/30 02:0x '적군 체력바 색과 적군 머리 위 기호 색을 현재 전투에서 쓰고 있는 피 색으로 바꾸자. 저기서 채도만 낮춰서.'):
  *  피 색 BLOOD_RED.splash #8a0000 = OKLCH(0.398 0.163 29°) → 채도만 × TEAM_FIGHT.hudColor.foeChromaK(0.7) = #792820 */
 const BLOOD_LCH = hexToOklch(BLOOD_RED.splash);
 const FOE_LCH = [BLOOD_LCH[0], BLOOD_LCH[1] * TEAM_FIGHT.hudColor.foeChromaK, BLOOD_LCH[2]];
 export const FOE_COLOR = oklchToCss(FOE_LCH);
-/** 아군 체력 막대 녹색 (사장님 10/30 01:0x '아군 체력바 색은 녹색 계열로 … 적군 체력바 색과 톤과 채도와 명도는 어울리게'): 적 색과 같은 밝기 · 채도 · 색상만 allyHue°(145) = #10561a */
-export const ALLY_HP_COLOR = oklchToCss([FOE_LCH[0], FOE_LCH[1], TEAM_FIGHT.hudColor.allyHue]);
-/** 편 색: 0 편(내 편) 금색(--c-accent 와 같음) · 1 편 = 적 색 — 화면 밖 화살표 · 머리 위 세모 */
+/** 편 색: 0 편(내 편) 금색(--c-accent 와 같음) · 1 편 = 적 색 — 화면 밖 화살표 · 머리 위 세모 (11/18 아군 녹색 · 체력 막대 색은 체력 칸과 함께 걷음 — 체력 칸 색은 hp_strip.js) */
 export const TEAM_COLORS = Object.freeze(['#d9a441', FOE_COLOR]);
-/** 체력 막대 색: 아군 녹색 · 적 = 적 색 */
-export const HP_COLORS = Object.freeze([ALLY_HP_COLOR, FOE_COLOR]);
-
-/** 체력 몫 0 ~ 1 (피 1 = 1 · 쓰러져 죽는 문턱 = 0 · 죽으면 0) */
-export const hpShare = (f) => (f.alive ? Math.min(1, Math.max(0, (f.blood - VITALS.collapseBlood) / (1 - VITALS.collapseBlood))) : 0);
+/** 머리 위 세모 자리: 기력 막대 자리(머리 위 0.28 m)에서 위로 px = 막대 높이 2 + 체력 칸(hpLift) + 틈 3 + 세모 반 높이(13 × 0.6 ÷ 2 ≈ 4) */
+export const HEAD_MARK_UP = () => 2 + hpLift() + 3 + 4;
 
 /**
  * 카메라 물러남 몫 (m): 보는 몸에서 radius 안의 산 싸움꾼이 모두 화면에 들게 — 어깨 너머 카메라(보는 몸 뒤 CAMERA.back · 오른쪽 shoulder · 바라보는 쪽 dir)에서
@@ -61,48 +58,14 @@ export function createTeamHud(doc = document) {
   root.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2;display:none;font-family:var(--font-ui, system-ui);';
   const arrows = doc.createElement('div');
   arrows.style.cssText = 'position:absolute;inset:0;';
-  const list = doc.createElement('div');
-  list.id = 'teamList';
-  list.setAttribute('aria-label', '싸움꾼 체력');
-  root.append(arrows, list);
+  root.append(arrows);
   doc.body.appendChild(root);
   let marks = [];
-  let rows = [];
   const _v = new THREE.Vector3();
 
-  /** 판을 열 때: 싸움꾼마다 화살표 하나 (focus 는 화면 밖 화살표 없음 — 늘 화면 안) · 왼쪽 위 이름 · 체력 목록 (첫 줄 상대 · 둘째 줄 내 편 — 줄마다 자리 차례 · 한 칸 = 짧은 이름 위 · 막대 밑).
-   *  below = 그 밑에 둘 요소(무대 이름 — 생사전은 null) */
-  function show(fighters, below = null) {
+  /** 판을 열 때: 싸움꾼마다 화살표 하나 (focus 는 화면 밖 화살표 없음 — 늘 화면 안) */
+  function show(fighters) {
     arrows.replaceChildren();
-    list.replaceChildren();
-    rows = [];
-    for (const team of [1, 0]) {
-      const line = doc.createElement('div');
-      line.className = 'tl-row';
-      line.dataset.team = String(team);
-      for (const f of fighters.filter((g) => g.team === team).sort((a, b) => a.index - b.index)) {
-        const cell = doc.createElement('div');
-        cell.className = 'tl-c';
-        const n = doc.createElement('span');
-        n.className = 'tl-n';
-        n.textContent = f.shortName ?? f.name ?? '';
-        const bar = doc.createElement('span');
-        bar.className = 'tl-b';
-        bar.setAttribute('role', 'meter');
-        bar.setAttribute('aria-label', `${f.name ?? ''} 체력`);
-        bar.setAttribute('aria-valuemin', '0');
-        bar.setAttribute('aria-valuemax', '100');
-        const fill = doc.createElement('span');
-        fill.style.background = HP_COLORS[team] ?? '#888';
-        bar.append(fill);
-        cell.append(n, bar);
-        line.append(cell);
-        rows.push({ f, cell, bar, fill, last: -1, dead: false });
-      }
-      if (line.childElementCount) list.append(line);
-    }
-    const r = below?.getBoundingClientRect?.();
-    list.style.top = r && r.height > 0 ? `${Math.round(r.bottom + 6)}px` : '';
     marks = fighters.map((f) => {
       const a = doc.createElement('div');
       a.className = 'th-arrow';
@@ -118,18 +81,8 @@ export function createTeamHud(doc = document) {
     root.style.display = 'none';
   }
 
-  /** 프레임마다: 화살표 · 편 표시 (visible 거짓이면 모두 숨김 — 메뉴 · 판 끝) · 목록 체력 몫 (늘). me = 사람 몸 (지켜보기면 null) */
-  function update(camera, focus, visible, me = null, width = window.innerWidth, height = window.innerHeight) {
-    for (const r of rows) {
-      const v = hpShare(r.f);
-      if (Math.abs(v - r.last) > 0.004) {
-        r.last = v;
-        r.fill.style.transform = `scaleX(${v.toFixed(3)})`;
-        r.bar.setAttribute('aria-valuenow', String(Math.round(v * 100)));
-      }
-      const dead = !r.f.alive;
-      if (dead !== r.dead) (r.dead = dead), r.cell.classList.toggle('dead', dead);
-    }
+  /** 프레임마다: 화살표 · 편 표시 (visible 거짓이면 모두 숨김 — 메뉴 · 판 끝). me = 사람 몸 (지켜보기면 null) · now = 등 뒤 알림 깜빡임 시계 */
+  function update(camera, focus, visible, me = null, width = window.innerWidth, height = window.innerHeight, now = performance.now()) {
     const m = 22; // 가장자리 여백 (px)
     for (const { f, a } of marks) {
       if (!visible || !f.alive || (f === focus && f === me)) {
@@ -141,17 +94,19 @@ export function createTeamHud(doc = document) {
       let x = behind ? -_v.x : _v.x;
       let y = behind ? -_v.y : _v.y;
       if (!behind && Math.abs(x) <= 1 && Math.abs(y) <= 1) {
-        // 화면 안: 상대(1 편)만 머리 위(기력 · 체력 막대 위)에 작게 아래로 — 내 편은 없음
+        // 화면 안: 상대(1 편)만 머리 위(기력 막대 · 체력 칸 위)에 작게 아래로 — 내 편은 없음 · 11/18 막대 자리(머리 위 0.28 m)에서 화면 px 로 위 (HEAD_MARK_UP — 멀어도 칸에 안 겹침)
         const h = f.bodies.head.translation();
-        _v.set(h.x, h.y + 0.5, h.z).project(camera);
-        if (f.team === 0 || f === me || _v.z > 1 || Math.abs(_v.x) > 1 || Math.abs(_v.y) > 1) {
+        _v.set(h.x, h.y + 0.28, h.z).project(camera);
+        const hy = ((1 - _v.y) / 2) * height - HEAD_MARK_UP();
+        if (f.team === 0 || f === me || _v.z > 1 || Math.abs(_v.x) > 1 || Math.abs(_v.y) > 1 || hy < 0) {
           a.style.display = 'none';
           continue;
         }
         a.style.display = '';
         a.dataset.kind = 'head';
+        if (a.dataset.warn) (a.dataset.warn = ''), (a.style.borderBottomColor = TEAM_COLORS[f.team] ?? '#888'); // 등 뒤 알림이 걷힘 (화면 안)
         a.style.opacity = '0.85';
-        a.style.transform = `translate(${(((_v.x + 1) / 2) * width - 7).toFixed(1)}px, ${(((1 - _v.y) / 2) * height - 6.5).toFixed(1)}px) rotate(${Math.PI.toFixed(3)}rad) scale(0.6)`;
+        a.style.transform = `translate(${(((_v.x + 1) / 2) * width - 7).toFixed(1)}px, ${(hy - 6.5).toFixed(1)}px) rotate(${Math.PI.toFixed(3)}rad) scale(0.6)`;
         continue;
       }
       if (f === focus) {
@@ -160,6 +115,11 @@ export function createTeamHud(doc = document) {
       }
       a.style.opacity = '1';
       a.dataset.kind = 'edge';
+      // 등 뒤 알림 (11/18): 나를 등 뒤에서 칠 참인 AI — 화살표가 밝은 붉은색 · 1.3 배로 깜빡 (꺼진 박자는 제 편 색)
+      const warn = !!me && backThreat(me, f);
+      const on = warn && Math.floor((now / 1000) * TEAM_SENSE.back.blink * 2) % 2 === 0;
+      a.dataset.warn = warn ? '1' : '';
+      a.style.borderBottomColor = on ? TEAM_SENSE.back.color : TEAM_COLORS[f.team] ?? '#888';
       // 화면 가운데 → 그 몸 방향의 선이 가장자리(여백 안)와 만나는 곳
       const s = 1 / Math.max(Math.abs(x) / (1 - (2 * m) / width), Math.abs(y) / (1 - (2 * m) / height), 1e-6);
       x *= s;
@@ -168,7 +128,7 @@ export function createTeamHud(doc = document) {
       const py = ((1 - y) / 2) * height;
       const ang = Math.atan2(x * width, y * height); // 위(+y)가 0 · 시계 방향
       a.style.display = '';
-      a.style.transform = `translate(${(px - 7).toFixed(1)}px, ${(py - 6.5).toFixed(1)}px) rotate(${ang.toFixed(3)}rad)`;
+      a.style.transform = `translate(${(px - 7).toFixed(1)}px, ${(py - 6.5).toFixed(1)}px) rotate(${ang.toFixed(3)}rad)${warn ? ' scale(1.3)' : ''}`;
     }
   }
 

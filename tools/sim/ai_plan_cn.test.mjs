@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI, seedRandom } from './harness_m.mjs';
 import { planFor, distErrWidth, PHASES, SCHOOL_PLAN } from '../../src/ai_plan.js';
 import { cnTechW, cnNeed, cnHoldM, cnCircle, cnMeet, cnTick, cnFeint, cnNext, cnWill, cnWant } from '../../src/ai_plan_cn.js';
+import { mindGap } from '../../src/ai_mindset.js';
 
 const { AI_PLAN, UNIQUE_ASSIST: UA, realS } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -153,7 +154,7 @@ test('유도 (가운데 끝 4 부터): 겹이 있으면 간 보기 한 번에 �
       assert.equal(R.n, 1);
       assert.ok(S.lure > 0 && S.st.lure === 1);
       assert.equal(cnHoldM(ai, 0.2), 0, '상대 칼끝 바로 밖 (최소 여유)');
-      assert.ok(ai.holdDist() <= ai.foeReach + 0.08 + 1e-9, `간 보는 거리 ${ai.holdDist().toFixed(3)}`);
+      assert.ok(ai.holdDist() <= ai.foeReach + 0.08 + (mindGap(ai) ?? 0) + 1e-9, `간 보는 거리 ${ai.holdDist().toFixed(3)}`); // 유파 마음가짐 (11/18): 바닥 = 상대 칼끝 + 동방 거리 선 여유(gap 0.25) + 0.08
       assert.ok(near(cnNeed(ai, 1, 'patience'), 1 + AI_PLAN.cn.wear * ai.planK + AI_PLAN.cn.lureNeed * ai.planK), '먼저 치지 않는 쪽');
       assert.equal(cnNeed(ai, 1, 'recover'), 1, '큰 틈은 그대로');
       cnTick(ai, 1 / 120, 2, st, { id: 9, line: 'highL', thrust: false });

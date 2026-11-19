@@ -17,7 +17,7 @@ const at = (d, h, mi = 0) => new Date(2026, 9, d, h, mi).getTime(); // 2026-10-d
 const ROSTER = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k'];
 const PROF = { german: 2, italian: 1, iberian: 1, japanese: 0, chinese: 0, none: 1 };
 const DATA = { roster: ROSTER, drawWeapon: (r) => ['w1', 'w2', 'w3'][Math.floor(r() * 3)], weaponInfo: () => ({ school: 'german', tier: 'common' }), profOf: () => ({ ...PROF }) };
-const make = (seed = 7, extra = {}) => R.createTournament({ day: '2026-10-30', seed, at: at(29, 23), companions: ['a', 'b'], ...DATA, ...extra });
+const make = (seed = 7, extra = {}) => R.createTournament({ day: '2026-10-30', seed, at: at(29, 23), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], ...DATA, ...extra }); // 11/18: 신청은 무기 없이(첫 경기 배정) — 시험은 무기를 든 팀을 바로 만든다
 const OLD = { ...SAENGSA, instant: false }; // 옛 규칙 (11/12 전 — 아침 10시 첫 대진 · 대진 2시간마다 · 결과 뒤 2시간 쉼) — 스위치가 그대로 도는지
 /** 내 경기를 이 쪽이 이긴 결과로 (체력 · 부상은 넘긴 대로) */
 const winFor = (t, m, fighters = {}) => ({ winner: R.sidesOf(t, m)[0] === 0 ? 'a' : 'b', fighters });
@@ -182,7 +182,7 @@ test('하사품: 우승 셋 · 준우승 하나 · 하나에 금화 500 · 한 �
   assert.deepEqual([u.status, R.placeOf(u), R.chestCount(u)], ['done', 'final', 1]);
 });
 
-test('저장 왕복 · 신청(입장 조건 · 무기 배정 · 고용 금화) · 깨진 저장은 버림', () => {
+test('저장 왕복 · 신청(입장 조건 · 고용 금화 — 11/18 무기 배정 없음) · 첫 경기 무기 배정 · 깨진 저장은 버림', () => {
   mem.clear();
   const t = make(5);
   assert.equal(S.updateSaengsa((d) => { d.current = t; return true; }).saved, true);
@@ -193,25 +193,29 @@ test('저장 왕복 · 신청(입장 조건 · 무기 배정 · 고용 금화) �
   P.setCoins(30);
   const OWNED = ['tree_branch', 'druid_whip', 'w1', 'w2', 'w3'], W = ['tree_branch', 'w1', 'w2'];
   const data = { ...DATA, owned: OWNED, hasTitle: true, hireCostOf: () => ({ coins: 20 }) };
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: W, seed: 1, data: { ...data, hasTitle: false } }).why, 'entry'); // 정복자 호칭 없음
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: W, seed: 1, data: { ...data, owned: OWNED.slice(0, 4) } }).why, 'entry'); // 무기 넷
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: W, seed: 1, data }).why, 'coins');
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data: { ...data, hasTitle: false } }).why, 'entry'); // 정복자 호칭 없음
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data: { ...data, owned: OWNED.slice(0, 4) } }).why, 'entry'); // 무기 넷
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data }).why, 'coins');
   P.setCoins(100);
-  assert.equal(S.signUp({ now: at(29, 21), companions: ['a', 'b'], weapons: W, seed: 1, data }).why, 'closed');
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: ['tree_branch', 'w1'], seed: 1, data }).why, 'weapons'); // 셋 다
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: ['tree_branch', 'w1', 'w1'], seed: 1, data }).why, 'weapons'); // 한 무기는 한 사람에게(확인 전)
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: ['tree_branch', 'w1', 'longsword'], seed: 1, data }).why, 'weapons'); // 안 가진 무기
+  assert.equal(S.signUp({ now: at(29, 21), companions: ['a', 'b'], seed: 1, data }).why, 'closed');
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a'], seed: 1, data }).why, 'team'); // 동료 둘
   assert.equal(P.readProgress().coins, 100);
-  const ok = S.signUp({ now: at(29, 23), companions: ['a', 'b'], weapons: W, seed: 1, data });
-  assert.deepEqual([ok.ok, ok.cost, P.readProgress().coins], [true, 40, 60]);
-  assert.deepEqual(S.readSaengsa().current.teams[0].members.map((f) => f.weapon), W);
-  assert.deepEqual(S.readSaengsa().draft.weapons, W);
-  assert.equal(S.signUp({ now: at(29, 23, 30), companions: ['a', 'b'], weapons: W, seed: 2, data }).why, 'busy');
-  // 경기마다 배정: 살아 있는 사람만 · 가진 무기 · 서로 다르게 — 결과의 pre 에 그 경기 무기
+  const ok = S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data }); // 11/18: 무기 없이 — 옛 weapons 를 넘겨도 쓰지 않음
+  assert.deepEqual([ok.ok, ok.cost, P.readProgress().coins], [true, { coins: 40, heads: 0, horns: 0 }, 60]); // 11/19: 값 = 금화 · 머리 · 뿔피리 합
+  const t0 = S.readSaengsa().current;
+  assert.deepEqual(t0.teams[0].members.map((f) => [f.weapon, f.school, f.tier]), [[null, null, null], [null, null, null], [null, null, null]]); // 내 팀은 무기 없이 대회에 듦
+  assert.equal(S.validTournament(t0), true, '무기 없는 내 팀도 저장 모양이 맞음');
+  assert.deepEqual(S.readSaengsa().draft, { companions: ['a', 'b'] });
+  assert.equal(S.signUp({ now: at(29, 23, 30), companions: ['a', 'b'], seed: 2, data }).why, 'busy');
+  // 무기를 받기 전에는 나서지 못함 (빠른 셈 · 엔진 판 모두 — validPicks)
   S.syncSaengsa(at(30, 10));
   const m0 = R.myMatch(S.readSaengsa().current);
+  assert.equal(R.matchSetup(S.readSaengsa().current, m0, ['0-0'], at(30, 10)), null);
+  assert.equal(S.playMine(m0.id, ['0-0'], at(30, 10), null), null);
+  // 경기마다 배정: 살아 있는 사람만 · 가진 무기 · 서로 다르게 — 결과의 pre 에 그 경기 무기 (첫 경기 배정 = 처음 받는 무기)
   const info = (w) => ({ school: w === 'w3' ? 'italian' : 'german', tier: 'rare' });
   assert.equal(S.playMine(m0.id, ['0-0'], at(30, 10), null, { arm: { weapons: ['w3', 'w1', 'w1'], owned: OWNED, weaponInfo: info } }), null);
+  assert.equal(S.playMine(m0.id, ['0-0'], at(30, 10), null, { arm: { weapons: ['w3', 'w1'], owned: OWNED, weaponInfo: info } }), null); // 셋 다
   const res = S.playMine(m0.id, ['0-0'], at(30, 10), null, { arm: { weapons: ['w3', 'druid_whip', 'w2'], owned: OWNED, weaponInfo: info } });
   const mineSide = R.sidesOf(S.readSaengsa().current, m0)[0] === 0 ? 'a' : 'b';
   assert.deepEqual([res.pre[mineSide][0].weapon, res.pre[mineSide][0].school, res.pre[mineSide][0].tier], ['w3', 'italian', 'rare']);
@@ -223,10 +227,40 @@ test('저장 왕복 · 신청(입장 조건 · 무기 배정 · 고용 금화) �
   assert.deepEqual(R.entryMissing({ hasTitle: false, owned: 2 }), [{ kind: 'title' }, { kind: 'weapons', have: 2, need: 5 }]);
   assert.deepEqual(R.entryMissing({ hasTitle: true, owned: 5 }), []);
   mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1 })); // 빈 저장 (저장소 열쇠가 없으면 이번 실행 값을 쥐고 있으니 빈 판을 적는다)
-  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'a'], weapons: W, seed: 3, data }).why, 'team');
-  assert.equal(S.signUp({ now: at(29, 23), companions: [R.NAMELESS, R.NAMELESS], weapons: W, seed: 3, data }).ok, true); // 무명 검객은 둘 다여도 됨
-  mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1, draft: { companions: ['a', 'b'], lend: { weapon: 'w2', to: 1 } } })); // 옛 꼴 → 그 자리 무기
-  assert.deepEqual(S.readSaengsa().draft, { companions: ['a', 'b'], weapons: [null, 'w2', null] });
+  assert.equal(S.signUp({ now: at(29, 23), companions: ['a', 'a'], seed: 3, data }).why, 'team');
+  assert.equal(S.signUp({ now: at(29, 23), companions: [R.NAMELESS, R.NAMELESS], seed: 3, data }).ok, true); // 무명 검객은 둘 다여도 됨
+  // 옛 저장 (11/18 전): draft.weapons · 그 전 lend 는 버림 · 빈 자리는 뒤로 · 신청 때 무기를 받은 진행 중 대회는 그대로
+  mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1, draft: { companions: ['a', 'b'], lend: { weapon: 'w2', to: 1 } } }));
+  assert.deepEqual(S.readSaengsa().draft, { companions: ['a', 'b'] });
+  mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1, current: make(6, { weapons: W }), draft: { companions: [null, 'b'], weapons: W } }));
+  assert.deepEqual(S.readSaengsa().draft, { companions: ['b', null] });
+  assert.deepEqual(S.readSaengsa().current.teams[0].members.map((f) => f.weapon), W);
+  assert.equal(S.saveDraft({ companions: ['c', R.NAMELESS], weapons: W }), true);
+  assert.deepEqual(JSON.parse(mem.get(S.SAENGSA_KEY)).draft, { companions: ['c', R.NAMELESS] });
+  mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1 })); // 빈 저장으로 돌려 둠 (저장소 열쇠가 없으면 이번 실행 값을 쥐고 있어 뒤 시험이 진행 중 대회를 봄)
+  S.readSaengsa();
+});
+
+test('동료 고르기 한 번 누름 (사장님 11/18 — 한 번에 둘 · 고른 차례 = 동료 1 · 2 · 누르면 빼고 뒤가 앞으로 · 무명 검객 0 → 1 → 2 → 0)', () => {
+  const T = (ids, id) => R.toggleCompanion(ids, id, 2);
+  assert.deepEqual(T([], 'a'), ['a']);
+  assert.deepEqual(T(['a'], 'b'), ['a', 'b']);
+  assert.deepEqual(T(['a', 'b'], 'c'), ['a', 'b'], '둘을 다 고르면 그대로');
+  assert.deepEqual(T(['a', 'b'], 'a'), ['b'], '앞을 빼면 뒤가 동료 1');
+  assert.deepEqual(T(['a', 'b'], 'b'), ['a']);
+  assert.deepEqual(T([null, 'b'], 'c'), ['b', 'c'], '빈 자리는 건너뜀');
+  const N = R.NAMELESS;
+  assert.deepEqual(T([], N), [N]);
+  assert.deepEqual(T([N], N), [N, N], '무명 검객은 둘 다여도 됨');
+  assert.deepEqual(T([N, N], N), [], '다 찼으면 모두 뺌');
+  assert.deepEqual(T(['a', N], N), ['a']);
+  assert.deepEqual(T([N, 'a'], N), ['a']);
+  assert.deepEqual(T([N, 'a'], 'a'), [N]);
+  const ids = ['a'];
+  T(ids, 'b');
+  assert.deepEqual(ids, ['a'], '원본은 그대로');
+  assert.deepEqual(R.toggleCompanion([], 'a'), ['a'], '기본 상한 = 팀 인원 − 나');
+  assert.equal(SAENGSA.teamSize - 1, 2);
 });
 
 test('가진 무기 · 입장 조건 글 (사장님 10/29 18:2x)', async () => {
@@ -355,7 +389,7 @@ test('시험판(testMode): 신청 늘 열림 · 모든 경기 바로 · 쉬는 �
   const cfg = { ...SAENGSA, testMode: true };
   const now = at(30, 15, 7); // 신청 창 밖 · 대진 시각과 무관한 때
   assert.deepEqual(C.signupWindow(now, cfg), { open: true, day: '2026-10-30', from: now, to: null });
-  const t = R.createTournament({ day: '2026-10-30', seed: 21, at: now, companions: ['a', 'b'], ...DATA, cfg });
+  const t = R.createTournament({ day: '2026-10-30', seed: 21, at: now, companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], ...DATA, cfg });
   assert.deepEqual(R.scheduleState(now, t, cfg), { kind: 'running' });
   assert.equal(R.advance(t, now, cfg), 7); // 16강 상대끼리 일곱은 바로
   for (let r = 0; r < 4; r++) {
@@ -371,7 +405,7 @@ test('시험판(testMode): 신청 늘 열림 · 모든 경기 바로 · 쉬는 �
   assert.deepEqual([t.status, R.placeOf(t), R.chestCount(t, cfg)], ['done', 'champion', 3]);
   assert.equal(R.canSignUp(now, t, cfg), true); // 같은 날 바로 다음 대회
   // 앞 대진이 다 끝나기 전엔 상대끼리 다음 경기도 기다림 · 내가 지면 대회는 바로 끝까지
-  const u = R.createTournament({ day: '2026-10-30', seed: 22, at: now, companions: ['a', 'b'], ...DATA, cfg });
+  const u = R.createTournament({ day: '2026-10-30', seed: 22, at: now, companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], ...DATA, cfg });
   R.advance(u, now, cfg);
   assert.equal(u.matches.filter((x) => x.round === 1 && x.result).length, 0);
   const m = R.myMatch(u), w = winFor(u, m);
@@ -382,7 +416,7 @@ test('시험판(testMode): 신청 늘 열림 · 모든 경기 바로 · 쉬는 �
   assert.equal(C.signupWindow(now).open, false);
 });
 
-test('상대 팀 무기 다섯 · 전용무기 · AI 나눠 주기 (사장님 10/29 19:5x)', async () => {
+test('상대 팀 무기 묶음 · 전용무기 · AI 나눠 주기 (사장님 10/29 19:5x · 11/19 아홉 \'9개로 하자\' · 무작위뿐 — 전용무기를 먼저 넣지 않음 · 저마다 가장 잘 맞는 무기)', async () => {
   const roster = await import('../../src/saengsa_roster.js');
   const { getWeapon } = await import('../../src/weapons.js');
   // 전용무기 = 시트 무기 등급 에픽 이상 — 로스터에서는 랴오 청강검 · 미나미 모노호시자오 (마야 · 김씨의 ??? 무기는 아님 — 확인 전)
@@ -397,11 +431,12 @@ test('상대 팀 무기 다섯 · 전용무기 · AI 나눠 주기 (사장님 10
     for (const team of t.teams.slice(1)) {
       const ids = team.pool.map((w) => w.weapon);
       assert.equal(ids.length, SAENGSA.aiPool.size);
-      assert.equal(new Set(ids).size, ids.length, '서로 다른 다섯');
+      assert.equal(SAENGSA.aiPool.size, 9, '사장님 11/19 \'9개로 하자\' (전 5)');
+      assert.equal(new Set(ids).size, ids.length, '서로 다른 아홉');
       assert.ok(team.pool.every((w) => w.tier !== 'mystery' && getWeapon(w.weapon).tier === w.tier), '??? 없음');
       for (const f of team.members) {
-        assert.ok(ids.includes(f.weapon), '받은 무기 다섯 가운데서');
-        if (f.sig) { sigs++; sigHeld += f.weapon === f.sig; assert.ok(ids.includes(f.sig), '전용무기는 다섯 안에'); }
+        assert.ok(ids.includes(f.weapon), '받은 무기 묶음 가운데서');
+        if (f.sig && ids.includes(f.sig)) { sigs++; sigHeld += f.weapon === f.sig; } // 전용무기가 우연히 묶음에 든 때만 셈
       }
       assert.equal(new Set(team.members.map((f) => f.weapon)).size, team.members.length, '한 무기는 한 사람');
       // 다 세어 본 가장 큰 합과 같은가 · 숙련도 0 인 사람 수는 줄일 수 없는가
@@ -417,7 +452,18 @@ test('상대 팀 무기 다섯 · 전용무기 · AI 나눠 주기 (사장님 10
       assert.equal(zeros(now), fewest, `씨앗 ${seed} 0 을 피함`);
     }
   }
-  assert.ok(sigs > 0 && sigHeld / sigs > 0.85, `전용무기를 주인이 듦 ${sigHeld}/${sigs}`);
+  assert.ok(sigs === 0 || sigHeld / sigs > 0.8, `묶음에 든 전용무기를 주인이 듦 ${sigHeld}/${sigs}`);
+  // 무기 묶음 = 무작위 뽑기뿐 (11/19 사장님 '늘 전용무기가 아니라') — 뽑기는 팀마다 아홉을 · 미리 든 무기 없이 · 주인의 전용무기는 우연히 들 때만(씨앗 400 개에서 약 22 %)
+  const calls = [];
+  const spy = (rnd, n, taken) => { calls.push([n, taken.length]); return roster.drawPool(rnd, n, taken); };
+  let owners = 0, inPool = 0, held = 0;
+  for (let seed = 1; seed <= 300; seed++) {
+    const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: [R.NAMELESS, R.NAMELESS], ...roster.SAENGSA_DATA, drawPool: spy });
+    for (const team of t.teams.slice(1)) for (const f of team.members) if (f.sig) { owners++; const has = team.pool.some((w) => w.weapon === f.sig); inPool += has; held += has && f.weapon === f.sig; }
+  }
+  assert.ok(calls.length > 0 && calls.every(([n, k]) => n === SAENGSA.aiPool.size && k === 0), '아홉을 미리 든 무기 없이 뽑음');
+  assert.ok(owners > 1000 && inPool > 0 && inPool / owners < 0.4, `전용무기가 묶음에 든 몫 ${inPool}/${owners} (우연히만)`);
+  assert.ok(held / inPool > 0.8, `묶음에 든 전용무기를 주인이 듦 ${held}/${inPool}`);
   // 다친 · 죽은 사람이 생기면 다시 나눈다 (산 사람만 · 죽은 사람의 무기도 쓸 수 있음)
   const pool = [{ weapon: 'a1', school: 'german', tier: 'legend' }, { weapon: 'a2', school: 'italian', tier: 'common' }, { weapon: 'a3', school: 'japanese', tier: 'common' }];
   const p = (o) => ({ german: 0, italian: 0, iberian: 0, japanese: 0, chinese: 0, ...o });
@@ -465,7 +511,7 @@ test('부러진 무기는 대회 끝까지 · 빠른 셈 부러짐 · 레전드�
   assert.ok(branch > 200, `나뭇가지 ${branch}/300`);
   assert.equal(R.quickResolve({ a: [f('0-0', 'excalibur', { broken: true })], b: [f('1-0', 'excalibur')] }, 1).fighters['0-0'].broken, true); // 이미 부러진 것은 그대로
   assert.ok(R.power(f('x', 'longsword', { broken: true })) < R.power(f('x', 'longsword')));
-  // 결과에 부러짐이 오면: 내 팀 = t.broken (다시 배정해도 부러진 채) · 상대 팀 = 무기 다섯의 그 줄 (다시 나눠도 부러진 채 · 점수 감점)
+  // 결과에 부러짐이 오면: 내 팀 = t.broken (다시 배정해도 부러진 채) · 상대 팀 = 무기 묶음의 그 줄 (다시 나눠도 부러진 채 · 점수 감점)
   const t = R.createTournament({ day: '2026-10-30', seed: 8, at: 0, companions: [R.NAMELESS, R.NAMELESS], weapons: ['longsword', 'rapier', 'uchigatana'], ...roster.SAENGSA_DATA });
   assert.deepEqual(t.broken, []);
   R.advance(t, at(30, 10));
@@ -494,13 +540,16 @@ test('부러진 무기는 대회 끝까지 · 빠른 셈 부러짐 · 레전드�
   const OWNED = ['tree_branch', 'druid_whip', 'w1', 'w2', 'w3'];
   const data = { ...DATA, owned: OWNED, hasTitle: true, hireCostOf: () => ({ coins: 20 }) };
   const cfgT = { ...SAENGSA, testMode: true };
-  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], seed: 4, data, cfg: cfgT }).ok);
+  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], seed: 4, data, cfg: cfgT }).ok);
   S.updateSaengsa((d) => { d.current.broken = ['w1']; d.current.status = 'done'; return true; });
-  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], seed: 5, data, cfg: cfgT }).ok);
-  assert.deepEqual([S.readSaengsa().current.broken, !!S.readSaengsa().current.teams[0].members[0].broken], [[], false]);
+  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], seed: 5, data, cfg: cfgT }).ok);
+  assert.deepEqual(S.readSaengsa().current.broken, []);
   S.updateSaengsa((d) => { d.current.broken = ['w1']; d.current.status = 'done'; return true; });
-  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], weapons: ['w1', 'w2', 'w3'], seed: 6, data, cfg: { ...cfgT, keepBrokenAfterCup: true } }).ok);
-  assert.deepEqual([S.readSaengsa().current.broken, S.readSaengsa().current.teams[0].members[0].broken], [['w1'], true]);
+  assert.ok(S.signUp({ now: at(30, 15), companions: ['a', 'b'], seed: 6, data, cfg: { ...cfgT, keepBrokenAfterCup: true } }).ok);
+  const kept = S.readSaengsa().current;
+  assert.deepEqual(kept.broken, ['w1']);
+  assert.ok(R.assignWeapons(kept, ['w1', 'w2', 'w3'], { owned: OWNED, weaponInfo: DATA.weaponInfo })); // 11/18: 신청은 무기 없이 — 첫 배정에서 넘어온 부러진 무기를 받으면 부러진 채
+  assert.deepEqual(kept.teams[0].members.map((x) => !!x.broken), [true, false, false]);
 });
 
 test('엔진 잇기: 내 경기 = game.launchSaengsa (스위치 SAENGSA.engine.mine) · 없으면 빠른 셈 · 판 사람에 broken', async () => {
@@ -523,7 +572,7 @@ test('엔진 잇기: 내 경기 = game.launchSaengsa (스위치 SAENGSA.engine.m
   assert.equal(R.matchSetup(t, m, ['0-0', '0-1'], at(30, 10)).control, 'player');
 });
 
-test('전용무기 표 — 한 무기는 한 사람 · 한 대회에 같은 전용무기 둘 없음 · 주인이 나오면 무작위로 안 뽑힘 (사장님 10/29 22:3x)', async () => {
+test('전용무기 표 — 한 무기는 한 사람 (10/29 22:3x) · 전용무기는 팀마다 하나 — 팀 사이에는 막지 않음 (사장님 11/18 \'전용무기는 팀당 하나야\' · 11/19 우연히 들 때만)', async () => {
   const roster = await import('../../src/saengsa_roster.js');
   const { getWeapon } = await import('../../src/weapons.js');
   const { CHARACTERS_BY_ID } = await import('../../src/characters.js');
@@ -534,32 +583,32 @@ test('전용무기 표 — 한 무기는 한 사람 · 한 대회에 같은 전�
   assert.equal(CHARACTERS_BY_ID.minami.weapon, 'kusanagi'); // 인물 시트 무기도 쿠사나기 (사장님 10/29 22:4x '미나미 스테이지 무기도 쿠사나기로 바꿔' — 본판 8980a3f4) · 광기의 미나미 무라마사(레어 — 전용무기 아님)
   assert.equal(CHARACTERS_BY_ID.minami_mad.weapon, 'muramasa');
   for (const id of ['minami_mad', 'silver_wanderer', 'liao_mad', 'artoria_mad', 'julia_mad']) assert.equal(roster.signatureOf(id), null, id);
+  // 상대 팀마다: 무기 묶음은 서로 다름(한 팀 안에 같은 무기 둘 없음) · 주인 표시(f.sig)는 그대로 — 내 동료 · 내가 가진 무기와 상관없이
+  const OWNED = ['tree_branch', 'druid_whip', 'longsword', 'excalibur', 'kusanagi'];
+  let seenArt = 0;
   for (let seed = 1; seed <= 60; seed++) {
-    const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: ['minami', R.NAMELESS], weapons: ['tree_branch', 'druid_whip', 'longsword'], ...roster.SAENGSA_DATA });
-    const pools = t.teams.slice(1).flatMap((x) => x.pool.map((w) => w.weapon));
-    const sigs = pools.filter((w) => ws.includes(w));
-    assert.equal(new Set(sigs).size, sigs.length, `씨앗 ${seed} 같은 전용무기 둘`);
-    assert.ok(!pools.includes('kusanagi'), `씨앗 ${seed} 미나미(내 동료)의 쿠사나기가 상대에`);
-    for (const x of t.teams.slice(1)) for (const f of x.members) if (sig[f.id]) assert.ok(x.pool.some((w) => w.weapon === sig[f.id]), `${f.id} 전용무기`);
-    const present = new Set(t.teams.flatMap((x) => x.members.map((f) => f.id)));
-    for (const [id, w] of Object.entries(sig)) if (present.has(id)) assert.ok(pools.filter((x) => x === w).length <= (id === 'minami' ? 0 : 1), `씨앗 ${seed} ${w}`);
-  }
-  // 내 팀이 전용무기를 들고 나오면: 주인은 이번 대회 전용무기 없음 · 상대 무기 다섯에 그 무기 없음
-  const OWNED = ['tree_branch', 'druid_whip', 'excalibur'];
-  let seen = 0;
-  for (let seed = 1; seed <= 40; seed++) {
-    const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: [R.NAMELESS, R.NAMELESS], weapons: OWNED, ...roster.SAENGSA_DATA });
+    const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: ['minami', R.NAMELESS], ...roster.SAENGSA_DATA });
+    assert.ok(t.teams[0].members.every((f) => f.weapon === null), '신청은 무기 없이');
+    for (const x of t.teams.slice(1)) {
+      const ids = x.pool.map((w) => w.weapon);
+      assert.equal(new Set(ids).size, ids.length, `씨앗 ${seed} 한 팀에 같은 무기 둘`);
+      for (const f of x.members) if (sig[f.id]) assert.equal(f.sig, sig[f.id], `${f.id} 주인`); // 주인 표시만 — 묶음에 드는지는 우연 (11/19)
+    }
     const art = t.teams.slice(1).flatMap((x) => x.members).find((f) => f.id === 'artoria');
-    if (art) { seen++; assert.equal(art.sig, undefined); }
-    assert.ok(!t.teams.slice(1).some((x) => x.pool.some((w) => w.weapon === 'excalibur')), `씨앗 ${seed}`);
+    if (art) seenArt++;
   }
-  assert.ok(seen > 0);
-  // 대회 도중: 상대 팀 무기 다섯에 든 전용무기는 내 팀에 배정할 수 없음
-  const t = R.createTournament({ day: '2026-10-30', seed: 2, at: 0, companions: [R.NAMELESS, R.NAMELESS], weapons: ['tree_branch', 'druid_whip', 'longsword'], ...roster.SAENGSA_DATA });
-  const locked = [...R.lockedSignatures(t)];
-  assert.ok(locked.length > 0);
-  assert.equal(R.assignWeapons(t, [locked[0], 'druid_whip', 'longsword'], { owned: ['tree_branch', 'druid_whip', 'longsword', locked[0]], weaponInfo: roster.weaponInfo }), false);
-  assert.equal(R.assignWeapons(t, ['tree_branch', 'druid_whip', 'longsword'], { owned: ['tree_branch', 'druid_whip', 'longsword'], weaponInfo: roster.weaponInfo }), true);
+  assert.ok(seenArt > 0);
+  // 팀 사이에는 막지 않음: 모든 상대 팀 무기 묶음에 엑스칼리버가 들게(뽑기를 바꿔) — 여러 팀이 함께 들고 · 아르토리아 팀에선 아르토리아가 듦(덤) · 내 팀도 배정
+  const withExc = (rnd, n, taken) => ['excalibur', ...roster.drawPool(rnd, n - 1, [...taken, 'excalibur'])];
+  const t = R.createTournament({ day: '2026-10-30', seed: 5, at: 0, companions: [R.NAMELESS, R.NAMELESS], ...roster.SAENGSA_DATA, drawPool: withExc });
+  const foes = t.teams.slice(1);
+  assert.ok(foes.every((x) => x.pool.filter((w) => w.weapon === 'excalibur').length === 1), '팀마다 하나 — 모든 상대 팀이 하나씩');
+  const art = foes.flatMap((x) => x.members).find((f) => f.id === 'artoria');
+  if (art) assert.equal(art.weapon, 'excalibur', '묶음에 들면 주인에게 (덤)');
+  assert.equal(R.assignWeapons(t, ['excalibur', 'kusanagi', 'longsword'], { owned: OWNED, weaponInfo: roster.weaponInfo }), true, '상대 팀이 든 전용무기도 내 팀에 배정');
+  assert.deepEqual(t.teams[0].members.map((f) => f.weapon), ['excalibur', 'kusanagi', 'longsword']);
+  assert.equal(R.assignWeapons(t, ['excalibur', 'excalibur', 'longsword'], { owned: OWNED, weaponInfo: roster.weaponInfo }), false, '내 팀 안에서는 한 무기 한 사람');
+  assert.equal(typeof R.lockedSignatures, 'undefined', '팀 사이 잠금은 걷음');
   // 고용 값: 숙련도 6 → 20 + 20 × 6 = 140 (손님 둘 · 아르토리아 6 — 사장님 10/29 22:4x) · 광기의 미나미 6(얼터 +1 · 상한 6 — 사장님 '광기는 상한에 걸려서 6임')
   assert.deepEqual([roster.hireCostOf('roland').coins, roster.hireCostOf('bernardo').coins, roster.hireCostOf('artoria').coins, roster.profOf('minami_mad').japanese, roster.profOf('artoria').german], [140, 140, 140, 6, 6]);
 });
@@ -618,4 +667,85 @@ test('쥘리아 생사전 몫 (사장님 10/30 22:1x \'상점주인이자 방랑
   assert.deepEqual([a.distance, a.feint, a.counter, a.wounded, a.team.target], [0.45, 0.84, 0.481, 'withdraw', 'weakest'], '최신 본판 쥘리아 시트의 간격 · 속임 · 받아치기와 일치 — 실제 AI는 유지');
   assert.ok(b !== a && b.press > a.press && b.patience < a.patience && b.composure === 1 && b.finisher === 1, '얼터: 더 차갑고 끈질김');
   assert.equal(T.temperamentOf('minami_mad'), T.temperamentOf('minami'), '다른 얼터는 원본 칸 그대로');
+});
+
+test('고용 값 덤 (사장님 11/19 \'숙련 6 캐릭터들은 금화에 더해 뿔피리 1개로 가격 책정. 5 캐릭은 금화에 더해 머리 1~3개 랜덤\'): 규칙 · 그날 안에는 같은 값 · 날마다 다시', async () => {
+  const roster = await import('../../src/saengsa_roster.js');
+  const T = await import('../../src/saengsa_text.js');
+  assert.deepEqual(SAENGSA.hire, { base: 20, step: 20, extra: { 6: { horns: [1, 1] }, 5: { heads: [1, 3] } } });
+  // 규칙: 금화 = 20 + 20 × 가장 높은 숙련도(그대로) · 6 = 뿔피리 1 · 5 = 머리 1 ~ 3 · 그 밖 덤 없음
+  assert.deepEqual(R.hireCost(6, { id: 'x', day: '2026-11-19' }), { coins: 140, horns: 1 });
+  assert.deepEqual(R.hireCost(4, { id: 'x', day: '2026-11-19' }), { coins: 100 });
+  assert.deepEqual(R.hireCost(0, { id: 'x', day: '2026-11-19' }), { coins: 20 });
+  const days = Array.from({ length: 60 }, (_, i) => C.shiftDay('2026-11-01', i));
+  const seen = new Set();
+  for (const day of days) for (const id of ['a', 'b', 'c']) {
+    const c = R.hireCost(5, { id, day });
+    assert.equal(c.coins, 120);
+    assert.equal(c.horns, undefined);
+    assert.ok(Number.isInteger(c.heads) && c.heads >= 1 && c.heads <= 3, `${id} ${day} 머리 ${c.heads}`);
+    assert.deepEqual(R.hireCost(5, { id, day }), c, '같은 날 · 같은 인물 = 같은 값');
+    seen.add(c.heads);
+  }
+  assert.deepEqual([...seen].sort(), [1, 2, 3], '날 · 인물마다 1 · 2 · 3 이 다 나옴');
+  const byDay = new Set(days.map((day) => R.hireCost(5, { id: 'a', day }).heads));
+  assert.ok(byDay.size > 1, '날이 바뀌면 다시 굴림');
+  // 로스터: 가장 높은 숙련도 6 → 뿔피리 1 · 5 → 머리 1 ~ 3 · 무명 검객 덤 없음 · 같은 날은 몇 번을 불러도 같음 · day 를 안 주면 지금 신청 창의 날
+  const day = C.signupWindow(at(29, 23)).day;
+  let six = 0, five = 0;
+  for (const id of roster.SAENGSA_ROSTER) {
+    const best = Math.max(...Object.values(roster.profOf(id))), c = roster.hireCostOf(id, day);
+    assert.equal(c.coins, SAENGSA.hire.base + SAENGSA.hire.step * best, id);
+    assert.equal(c.horns, best === 6 ? 1 : undefined, `${id} 뿔피리`);
+    assert.ok(best === 5 ? c.heads >= 1 && c.heads <= 3 : c.heads === undefined, `${id} 머리`);
+    assert.deepEqual(roster.hireCostOf(id, day), c);
+    six += best === 6; five += best === 5;
+  }
+  assert.ok(six > 0 && five > 0, `숙련 6 ${six} · 5 ${five}`);
+  assert.deepEqual(roster.hireCostOf(R.NAMELESS, day), { coins: 20 });
+  assert.equal(roster.hireDay(at(30, 1, 30)), roster.hireDay(at(29, 22, 10)), '자정을 넘어도 그 신청 창의 날');
+  // 화면 글 (화면 읽기 · 모자란 것 — ~습니다)
+  assert.equal(T.hireLine({ coins: 140, horns: 1 }), '고용 금화 140 · 뿔피리 1');
+  assert.equal(T.hireLine({ coins: 120, heads: 2 }), '고용 금화 120 · 머리 2');
+  assert.equal(T.hireLine(40), '고용 금화 40');
+  assert.deepEqual([T.shortLine(['heads']), T.shortLine(['horns', 'coins']), T.shortLine(['coins', 'heads', 'horns']), T.shortLine([])], ['머리가 모자랍니다.', '금화와 뿔피리가 모자랍니다.', '금화 · 머리 · 뿔피리가 모자랍니다.', '']);
+});
+
+test('고용 값 내기 (11/19): 신청은 금화 · 머리 · 뿔피리를 한꺼번에 · 하나라도 모자라면 신청 안 됨(아무것도 안 냄) · 돌려줄 때 셋 모두 · 번 것 그대로', () => {
+  mem.clear();
+  mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1 })); // 빈 저장 (열쇠가 없으면 앞 시험의 대회를 쥐고 있음)
+  const OWNED = ['tree_branch', 'druid_whip', 'w1', 'w2', 'w3'];
+  const days = [];
+  const cost = { a: { coins: 140, horns: 1 }, b: { coins: 120, heads: 2 } };
+  const data = { ...DATA, owned: OWNED, hasTitle: true, hireCostOf: (id, day) => { days.push(day); return cost[id]; } };
+  const wallet = () => { const p = P.readProgress(); return { coins: p.coins, heads: p.heads, horns: p.horns }; };
+  P.setCoins(300); P.setHeads(1); P.setHorns(0);
+  const earned0 = structuredClone(P.readProgress().earned);
+  // 머리 · 뿔피리가 모자람 → 신청 안 됨 · 지갑 그대로 · 대회 없음 · 모자란 것 모두(차례 금화 · 머리 · 뿔피리)
+  let r = S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data });
+  assert.deepEqual([r.ok, r.why, r.short, r.cost], [false, 'heads', ['heads', 'horns'], { coins: 260, heads: 2, horns: 1 }]);
+  assert.deepEqual(wallet(), { coins: 300, heads: 1, horns: 0 });
+  assert.equal(S.readSaengsa().current, null);
+  assert.ok(days.length === 2 && days.every((d) => d === C.signupWindow(at(29, 23)).day), '신청 창의 날을 넘김 (고르기 카드와 같은 값)');
+  P.setHeads(5);
+  r = S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data });
+  assert.deepEqual([r.why, r.short], ['horns', ['horns']]);
+  P.setCoins(100); P.setHorns(3);
+  r = S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data });
+  assert.deepEqual([r.why, r.short], ['coins', ['coins']]);
+  assert.deepEqual(wallet(), { coins: 100, heads: 5, horns: 3 });
+  // 다 있으면 셋을 한 번에 냄
+  P.setCoins(300);
+  r = S.signUp({ now: at(29, 23), companions: ['a', 'b'], seed: 1, data });
+  assert.equal(r.ok, true);
+  assert.deepEqual(wallet(), { coins: 40, heads: 3, horns: 2 });
+  assert.ok(S.readSaengsa().current);
+  // 돌려주기 (신청 저장 실패 때 signUp 이 쓰는 길): 셋 모두 · payHire 의 거꾸로 · 모자라면 payHire 는 아무것도 안 냄
+  assert.equal(S.refundHire(r.cost), true);
+  assert.deepEqual(wallet(), { coins: 300, heads: 5, horns: 3 });
+  assert.deepEqual(S.payHire({ coins: 10, heads: 9, horns: 0 }), { ok: false, short: ['heads'] });
+  assert.deepEqual(wallet(), { coins: 300, heads: 5, horns: 3 });
+  assert.deepEqual(S.payHire({ coins: 10, heads: 1, horns: 1 }), { ok: true, short: [] });
+  assert.deepEqual(wallet(), { coins: 290, heads: 4, horns: 2 });
+  assert.deepEqual(P.readProgress().earned, earned0, '번 것(도살자 · 대부호 셈)은 내고 돌려받아도 그대로');
 });

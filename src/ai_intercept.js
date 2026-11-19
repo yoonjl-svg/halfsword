@@ -19,6 +19,7 @@ import * as THREE from 'three';
 import { AI_INTERCEPT, AI_ARC, AI_PLAN, PHYSICS, ARM, realS } from './config.js';
 import { tiltOf } from './ai_plan.js';
 import { padDist } from './ai_techniques.js';
+import { mindRiskK } from './ai_mindset.js'; // 유파 마음가짐 (11/18 — 일격): 공격 절제 몫
 
 const LINES = ['highL', 'highR', 'highC', 'lowL', 'lowR', 'thrust'];
 const H_STEPS = 3; // 길 표본 = 물리 세 스텝 (1/40 s) — 풀이 해상도 (값이 아님)
@@ -414,7 +415,7 @@ export function discHold(ai) {
   const S = (ai.stats.icp ??= icpStats());
   if (!(t - (ai.discT ?? -Infinity) < AI_PLAN.beat)) {
     ai.discT = t;
-    ai.discOk = Math.random() < tilt(ai, AI_INTERCEPT.discipline);
+    ai.discOk = Math.random() < tilt(ai, AI_INTERCEPT.discipline) * mindRiskK(ai); // 유파 마음가짐 (11/18 — 일격): 받을 피해로 판단할수록 더 참음 · 입힐 피해로 판단하면 덜
     S.discRoll++;
   }
   if (ai.discOk) S.disc++;

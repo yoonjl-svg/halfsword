@@ -257,7 +257,8 @@ test('새 휘두름: 칼 가는 방향이 90° 넘게 꺾이면 높음 띠는 �
 test('STEP C 판에서 쓰임: 절제 굴림 · 미리 닫음 · 꺾임 셈', () => {
   {
     const t = { discRoll: 0, ant: 0, swTurn: 0 };
-    for (const seed of [1, 2, 3]) {
+    // 유파 마음가짐 합침 (11/19): 독일 거울 숙련 4 는 판이 짧아(7 ~ 32 s) 씨앗 1 ~ 3 에 절제 굴림이 안 나옴 — 씨앗 1 ~ 6 을 합침 (판에서 쓰이는지만 봄)
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
       const { G, free } = round(4, seed);
       try {
         while (G.t < 40 && G.player.alive && G.enemy.alive) G.step();

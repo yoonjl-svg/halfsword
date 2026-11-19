@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI, DT, THREE } from './harness_m.mjs';
 import { digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, aiFrontDash, runTick, techStepFwd, digProtoOn, digWeight, digShortM, digMix } from '../../src/dig_proto.js';
+import { mindGap } from '../../src/ai_mindset.js';
 
 const { DIG_PROTO: D, GAIT, SECRET } = CONFIG;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
@@ -85,7 +86,7 @@ test('A — AI 판단 셈: 헛친 틈 거리 · 걸음 실린 기술 · 붙은 �
     const h0 = ai.holdDist();
     ai.dig = true;
     const h1 = withDig({ ai: 1 }, () => ai.holdDist());
-    assert.ok(h1 <= h0 && near(h1, ai.foeReach + 0.08), `상대 칼끝 바로 밖 ${h1.toFixed(3)} ≤ ${h0.toFixed(3)}`);
+    assert.ok(h1 <= h0 && near(h1, ai.foeReach + 0.08 + (mindGap(ai) ?? 0)), `상대 칼끝 바로 밖 ${h1.toFixed(3)} ≤ ${h0.toFixed(3)}`); // 유파 마음가짐 (11/18): 바닥 = 상대 칼끝 + 유파 거리 선 여유(gap — 동방 거리 3 은 0.25) + 0.08
   } finally {
     G.world.free();
   }

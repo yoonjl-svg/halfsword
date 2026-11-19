@@ -5,6 +5,7 @@
 //  ② 경기 화면(경기 칸을 누름 — 화면 전체를 덮는 층): 상대 팀 카드 셋 · 내 팀 카드 셋(얼굴 · 이름 · 체력 막대 · 부상 · 무기 · 다섯 유파 숙련도 · 죽은 사람은 흐림).
 //     내 경기면 내 카드를 한두 장 골라 '전투 입장' — 상대는 가린 채 함께 고르고 입장 때 함께 보인다(사장님 10/29 14:5x). 결과는 카드 위에 그대로(경기 뒤 체력 · 부상 · 죽음 · 출전 표시).
 //     '무기 배정'(사장님 10/29 18:2x 경기마다 내가 배정): 살아 있는 내 팀 세 사람마다 가진 무기 한 자루 — 카드에 바로 보이고 '전투 입장' 때 저장.
+//      11/18 신청 때 배정을 걷음(사장님 '캐릭터 선택 ui에는 무기까지 배정할 필요가 없어') — 내 팀은 무기 없이 대회에 들어 첫 경기 화면에서 처음 배정(카드 '무기 없음' · 배정 전엔 '전투 입장' 꺼짐)
 //     내 경기는 실제 2:2 싸움(saengsa_engine.js — game.launchSaengsa · 나섬 = 내 몸 · 동료만 = 지켜봄) · 엔진이 없으면 빠른 셈 · 상대끼리 경기는 빠른 셈.
 //  바로 시작 (사장님 11/12 '참여하면 바로 시작'): 막 신청하고 열면(openMine) 내 첫 경기 화면을 곧바로 · 결과 뒤 내 다음 경기가 열려 있으면 '다음 경기'(곧장 그 경기 화면) · '확인'은 대진표로(쉬었다 이어 함) ·
 //     경기 사이 기다림이 없어 대진표 · 경기 화면에 시각을 보이지 않는다(시험판과 같음 — saengsa_rules.js noWait).
@@ -15,11 +16,11 @@ import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { SAENGSA } from './config.js';
 import { clockFrom, signupWindow, roundAt } from './saengsa_clock.js';
-import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, isMine, assignWeapons, validAssignment, lockedSignatures, resumeOf, noWait } from './saengsa_rules.js';
+import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, isMine, assignWeapons, validAssignment, resumeOf, noWait } from './saengsa_rules.js';
 import { syncSaengsa, readSaengsa, playMine, claimChests, signUp, newSeed, saveResume } from './saengsa_store.js';
 import { fighterName, portraitOf, weaponName, weaponThumb, weaponInfo, SAENGSA_DATA, ownedWeapons, entryState, hireCostOf } from './saengsa_roster.js';
 import { makeNamelessFaces } from './saengsa_nameless.js';
-import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, clockText as clockWords, untilText, roundName, teamName, resultLine, myResultLine, nextMatchLine, outLine, chestLine, chestGot, injuryText, signupHours, entryLine } from './saengsa_text.js';
+import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, clockText as clockWords, untilText, roundName, teamName, resultLine, myResultLine, nextMatchLine, outLine, chestLine, chestGot, injuryText, signupHours, entryLine, shortLine } from './saengsa_text.js';
 import { makeEngine } from './saengsa_engine.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -142,11 +143,11 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
     render();
     if (!$('sgNextCup').hidden) $('sgNextCup').focus({ preventScroll: true });
   });
-  // 시험판 '다음 대회': 지난 팀(동료 · 신청 때 배정한 무기) 그대로 바로 새 대회 — 고용 금화는 시험판 지갑에서
+  // 시험판 '다음 대회': 지난 팀(동료) 그대로 바로 새 대회 — 고용 금화는 시험판 지갑에서 · 무기는 첫 경기 화면에서 (11/18)
   on($('sgNextCup'), 'click', () => {
     const t0 = now(), d = readSaengsa().draft, entry = entryState();
-    const res = signUp({ now: t0, companions: d.companions, weapons: d.weapons, seed: newSeed(), data: { ...SAENGSA_DATA, owned: entry.owned, hasTitle: entry.hasTitle, hireCostOf } });
-    if (!res.ok) { status({ coins: T.noCoins, busy: T.busy, team: T.pickTwo, weapons: T.pickWeapons, entry: entryLine(entry.missing) }[res.why] ?? T.saveFail, 'alert'); return; }
+    const res = signUp({ now: t0, companions: d.companions, seed: newSeed(), data: { ...SAENGSA_DATA, owned: entry.owned, hasTitle: entry.hasTitle, hireCostOf } });
+    if (!res.ok) { status(res.short?.length ? shortLine(res.short) : { busy: T.busy, team: T.pickTwo, entry: entryLine(entry.missing) }[res.why] ?? T.saveFail, 'alert'); return; } // 모자란 재화 (금화 · 머리 · 뿔피리 — 11/19)
     status(T.signed, 'notice');
     render({ scroll: true });
     $('sgHeading').focus({ preventScroll: true });
@@ -160,12 +161,13 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
     const cells = f.prof && 'none' in f.prof && f.id !== 'player' ? [...SCHOOL_CELLS, 'none'] : SCHOOL_CELLS;
     const prof = cells.map((s) => `<span class="sg-pc"${s === f.school ? ' data-on' : ''}><small>${SCHOOL_KO[s]}</small><b>${f.prof?.[s] ?? 0}</b></span>`).join('');
     const tag = pick ? 'button' : 'div';
-    const label = `${fighterName(f)} · 체력 ${hp} · ${injuryText(inj, (i) => isSerious(i))} · ${weaponName(f.weapon)}${f.broken ? ` ${T.broken}` : ''}${dead ? ` · ${T.dead}` : ''}`;
+    const wname = f.weapon ? weaponName(f.weapon) : T.noWeapon; // 내 팀 첫 경기 무기 배정 전 (11/18)
+    const label = `${fighterName(f)} · 체력 ${hp} · ${injuryText(inj, (i) => isSerious(i))} · ${wname}${f.broken ? ` ${T.broken}` : ''}${dead ? ` · ${T.dead}` : ''}`;
     return `<${tag} ${pick ? 'type="button" ' : ''}class="sg-card" data-key="${f.key}"${pick ? ` aria-pressed="${picked}"` : ''}${dead ? ' data-dead' : ''}${entrant ? ' data-entrant' : ''}${mine ? ' data-mine' : ''}${pick && dead ? ' disabled' : ''} aria-label="${esc(label)}">
       <img class="sg-face" src="${esc(portraitOf(f.id, f.cloth))}" alt="" draggable="false">
       <span class="sg-card-body"><b class="sg-name">${esc(fighterName(f))}</b>
         <span class="sg-hp"><span class="sg-hp-bar"><i style="width:${hpPct}%"></i></span><span class="sg-hp-num">${hp}</span></span>
-        <span class="sg-wpn"><img src="${esc(weaponThumb(f.weapon))}" alt="" draggable="false"><span>${esc(weaponName(f.weapon))}</span>${f.broken ? `<i class="sg-tag" data-kind="broken">${T.broken}</i>` : ''}</span>
+        <span class="sg-wpn"${f.weapon ? '' : ' data-none'}>${f.weapon ? `<img src="${esc(weaponThumb(f.weapon))}" alt="" draggable="false">` : ''}<span>${esc(wname)}</span>${f.broken ? `<i class="sg-tag" data-kind="broken">${T.broken}</i>` : ''}</span>
         <span class="sg-inj"${inj.length ? ' data-hurt' : ''}>${esc(injuryText(inj, (i) => isSerious(i)))}</span></span>
       <span class="sg-prof" aria-hidden="true">${prof}</span>${dead ? `<span class="sg-badge" data-kind="dead">${T.dead}</span>` : entrant ? `<span class="sg-badge">${T.entrant}</span>` : ''}</${tag}>`;
   }
@@ -254,16 +256,16 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
   });
   // ── 무기 배정 (경기마다 — 살아 있는 내 팀 세 사람 · 가진 무기 · 한 무기는 한 사람에게(SAENGSA.assignUnique)) ──
   const aliveIdx = () => t.teams[0].members.map((f, i) => (f.dead ? -1 : i)).filter((i) => i >= 0);
-  const armsValid = () => !!open && validAssignment(open.arms, ownedWeapons(), aliveIdx()) && !aliveIdx().some((i) => lockedSignatures(t).has(open.arms[i])); // 상대 팀이 가진 전용무기는 못 씀 (사장님 10/29 22:3x)
+  const armsValid = () => !!open && validAssignment(open.arms, ownedWeapons(), aliveIdx()); // 가진 무기 아무것이나 — 상대 팀이 같은 전용무기를 들었어도 (전용무기는 팀마다 하나 — 사장님 11/18 · 전 10/29 22:3x 엔 못 씀)
   function drawArm() {
     const owned = ownedWeapons(), members = t.teams[0].members, brokenMine = new Set(t.broken ?? []);
     $('sgArmRows').innerHTML = members.map((f, i) => {
       if (f.dead) return '';
-      const taken = new Set([...(SAENGSA.assignUnique ? aliveIdx().filter((j) => j !== i).map((j) => armDraft[j]) : []), ...lockedSignatures(t)]); // 다른 사람에게 준 무기 · 상대 팀이 가진 전용무기
+      const taken = new Set(SAENGSA.assignUnique ? aliveIdx().filter((j) => j !== i).map((j) => armDraft[j]) : []); // 다른 사람에게 준 무기 (한 팀 안에서 한 무기는 한 사람)
       const chips = owned.map((w) => `<button type="button" class="sg-chip-btn" role="radio" data-slot="${i}" data-weapon="${w}" aria-checked="${armDraft[i] === w}"${taken.has(w) ? ' disabled' : ''}${brokenMine.has(w) ? ' data-broken' : ''}>${esc(weaponName(w))}${brokenMine.has(w) ? ` · ${T.broken}` : ''}</button>`).join('');
       return `<div class="sg-arm-row"><span class="sg-arm-who"><img src="${esc(portraitOf(f.id, f.cloth))}" alt="" draggable="false"><b>${esc(fighterName(f))}</b></span><div class="sg-chips" role="radiogroup" aria-label="${esc(fighterName(f))} · ${T.weapon}">${chips}</div></div>`;
     }).join('');
-    $('sgArmOk').disabled = !validAssignment(armDraft, owned, aliveIdx()) || aliveIdx().some((j) => lockedSignatures(t).has(armDraft[j]));
+    $('sgArmOk').disabled = !validAssignment(armDraft, owned, aliveIdx());
   }
   function openArm() {
     armDraft = [...open.arms];

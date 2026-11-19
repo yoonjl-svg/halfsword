@@ -47,7 +47,7 @@ async function fightOut(shotName = null) {
 // ① 본 게임 저장 (같은 출처) — 이 값들이 끝까지 그대로여야 한다
 const REAL = {
   'stillness.lobby.progress.v1': JSON.stringify({ version: 1, coins: 77, heads: 3, acquisitions: [{ receipt: 'skill:german:G1', kind: 'skill' }], titles: [], title: '' }),
-  'stillness.saengsa.v1': JSON.stringify({ version: 1, current: null, draft: { companions: ['minami', null], weapons: ['tree_branch', null, null] } }),
+  'stillness.saengsa.v1': JSON.stringify({ version: 1, current: null, draft: { companions: ['minami', null], weapons: ['tree_branch', null, null] } }), // 옛 꼴 그대로(11/18 전 draft.weapons) — 시험판은 본 저장을 읽지 않는다
   'stillness.lobby.weapon.v1': JSON.stringify({ version: 1, weapon: 'tree_branch' }),
 };
 await p.goto(`${base}/`);
@@ -67,19 +67,13 @@ const wallet0 = await p.evaluate(() => JSON.parse(localStorage.getItem('stillnes
 log.push({ step: 'open', title: await p.title(), fontsOk, testWallet: { coins: wallet0.coins, titles: wallet0.titles.map((t) => t.name), weapons: wallet0.acquisitions.filter((a) => a.kind === 'item').length } });
 await shot('tp1_panel');
 
-// ② 팀 · 무기 배정
-await tap('.sg-slot[data-slot="0"]');
-await tap('.sg-chip-btn[data-weapon="longsword"]');
-await tap('#sgPickOk');
+// ② 팀 (11/18 — 동료 둘을 한 카드에서 · 무기는 대회마다 첫 경기 화면에서)
 // 동료 = 미나미(일본 — 우치가타나) · 랴오(동방 — 환도): 제 유파 칼을 주어 지켜보기 경기를 이길 만하게 (하사품까지 가 보려고)
 await tap('.sg-slot[data-slot="1"]');
-await tap('.sg-pick[data-id="minami"]');
-await tap('.sg-chip-btn[data-weapon="uchigatana"]');
-await shot('tp2_picker');
-await tap('#sgPickOk');
-await tap('.sg-slot[data-slot="2"]');
+await tap('.sg-pick[data-id="minami"]'); // 남은 저장의 미나미는 이미 동료 1 — 누르면 빠짐 → 다시 누름
+if (!(await inRoot(`return root.querySelector('.sg-pick[data-id="minami"]').getAttribute('aria-selected') === 'true';`))) await tap('.sg-pick[data-id="minami"]');
 await tap('.sg-pick[data-id="liao"]');
-await tap('.sg-chip-btn[data-weapon="hwando"]');
+await shot('tp2_picker');
 await tap('#sgPickOk');
 await shot('tp3_panel_ready');
 await tap('#saengsaEnter');
@@ -95,10 +89,10 @@ for (cups = 1; cups <= MAX_CUPS && !prize; cups++) {
     const id = await readyId();
     if (!id) break;
     await tap(`.sg-m[data-match="${id}"]`);
-    if (firstMatch) { // 경기마다 무기 배정 — 첫 경기에서 나(이번엔 안 나섬)를 크리그스메서로
+    if (await inRoot(`return !!root.querySelector('#sgCardsB .sg-wpn[data-none]');`)) { // 대회 첫 경기 — 무기를 처음 배정 (11/18 신청 때 배정을 걷음): 나(이번엔 안 나섬) 크리그스메서 · 미나미 우치가타나 · 랴오 환도
       await tap('#sgArmBtn');
-      await tap('#sgArmRows .sg-chip-btn[data-slot="0"][data-weapon="kriegsmesser"]');
-      await shot('tp5_arm');
+      for (const [slot, w] of [[0, 'kriegsmesser'], [1, 'uchigatana'], [2, 'hwando']]) if (await p.locator(`#sgArmRows .sg-chip-btn[data-slot="${slot}"][data-weapon="${w}"]`).count()) await tap(`#sgArmRows .sg-chip-btn[data-slot="${slot}"][data-weapon="${w}"]`);
+      if (firstMatch) await shot('tp5_arm');
       await tap('#sgArmOk');
     }
     const alive = await inRoot(`return [...root.querySelectorAll('#sgCardsB button.sg-card:not([disabled])')].map((b) => b.dataset.key);`);
