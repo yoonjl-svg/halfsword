@@ -1,7 +1,7 @@
 // 동방 맹호은림 (猛虎隱林 — 사냥 스택 · 새 칸 C12 · 몫 열쇠 'cnHunt' · 값 config UNIQUE_ASSIST.cnHunt · 기록 docs/strike/cn_hunt_2026-11-14.md)
 //  사장님 11/14 '동방은 사냥감을 말려죽이는 고양이과 맹수야.' · '빠지는 규칙은 안 둘게.' · '격살이 세지는 만큼 3번 제한을 다른 비기처럼 1번으로' · '스택당 기력 회복 -8% 격살 빠르기 +8%'.
 //  허리를 베는 세 칼(요격 · 끌어 딛고 허리 베기 · 날개 접기)이 상대 몸 어디든 칼날 상처를 낸 맞음마다(공격 하나에 한 겹 — 11/14 '전부 권고대로' · 전 판 몸통만 = cnHunt.torso 1) 맞은 몸에 한 겹 · 상한 max · 판 끝까지 빠지지 않음.
-//  겹마다 맞은 몸 자연 회복 −regen · 그 몸을 겨눈 격살 칼끝 빠르기 +share. 사람 = C12 를 익힌 몸만 · AI · 시뮬 몸 = cnHunt.ai 스위치(기본 끔).
+//  겹마다 맞은 몸 자연 회복 −regen · 그 몸을 겨눈 격살 칼끝 빠르기 +share. 사람 = C12 를 익힌 몸만 · AI = 칸 몫 C12(11/16 config AI_KIT — 사람과 같은 칸) · 스킬트리가 없는 시뮬 몸 = 늘.
 //  부르는 곳(좁게 하나씩): combat.js strike · Combat.huntWound(운동학 칼 — secret_instant.js) → huntHit · stamina.js recoverRate → huntRegenK · skill.js gyeoksalReq → huntShareK.
 //  격살 판당 1 번은 공용 표 UNIQUE_ASSIST.secretUses.chinese (11/14 — 사람 · AI 같음 · secret.js secretUsesOf).
 //  아무것도 쌓이지 않은 몸은 늘 1 · 겹 칸 자체가 없다(난수 · 몸 · 장부 그대로 — 다른 유파 판은 바이트 같음).
@@ -10,7 +10,7 @@ import { kitOff } from './skill_kit.js';
 
 const H = () => UA.cnHunt;
 
-/** 이 몸이 사냥 겹을 쌓는가 (동방 무기 · 사람 = 스킬트리 C12 몫 · 스킬트리가 없는 몸(시뮬) = ai 스위치 · AI = ai 스위치 그리고 칸 몫 C12 — 11/16 AI 숙련도 = 칸 config AI_KIT · 칸 몫이 없으면 스위치만) */
+/** 이 몸이 사냥 겹을 쌓는가 (동방 무기 · 사람 = 스킬트리 C12 몫 · AI = 칸 몫 C12 — 11/16 AI 숙련도 = 칸 config AI_KIT · 스킬트리가 없는 몸(시뮬) = 늘) */
 export function huntOn(f) {
   const C = H();
   if (!C || f?.swordArt?.tradition !== 'chinese') return false;

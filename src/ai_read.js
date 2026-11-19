@@ -67,7 +67,7 @@ function foeStack(foe) {
 /** 지금 상대 몸에 보이는 대가 — 비기 뒤 굳음(AI 몸 secretStiff · 사람 검술 층 굳음) · 이어 돌리기 원 */
 export function foeCost(foe) {
   if (foe.ibLink) return 'circle';
-  if (foe.secretStiff || foe.skill?.sec?.stage === 'stiff') return 'stiff';
+  if (foe.secretStiff || foe.skill?.sec?.stage === 'stiff' || foe.bwStiffT > 0) return 'stiff'; // 11/19 뒤 박차기 헛침 경직도 같은 꼴 (굳은 칼 — 보이는 대가)
   return null;
 }
 

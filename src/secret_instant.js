@@ -19,6 +19,7 @@
 import * as THREE from 'three';
 import { itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14): 끌고 가는 칼의 상처도 칼 우위 · 재기 (combat.js strike 와 같은 자리)
 import { SECRET, ARM, STRIKE, GAIT, ARENA, JOINTS, THRUST } from './config.js';
+import { bwTouch } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 — 운동학 칼의 닿음도 셈: 몸에 맞음 · 상대 칼에 막힘)
 import { obiOn, obiReadyInto, obiPathB, notoStep, notoStop, iaiSeated, drawStart, nukiStep, drawLog } from './iai_obi.js'; // 帯刀 — 대기 칼 자리 · 뽑는 자리 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi)
 const GAIT_REACH = GAIT.reachMax;
 
@@ -300,6 +301,7 @@ function runInstant(f, combat) {
 
 /** 쓸린 자리의 첫 부위에 기존 상처 함수(combat.analyze → applyWound)로 상처. 에너지 = instantJ × hitMul 이 나오게 분석 속도를 고른다 */
 function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, hitMul = SECRET.hitMul, effMul = null, grip = null, plan = null) {
+  bwTouch(f, foe, 'kin'); // 뒤 박차기 헛침 경직 (11/19): 운동학 칼이 그 몸에 닿음
   // plan (11/04 — SECRET.sweepCap · stepCombo): 이 조각의 짠 길 칼 자세 둘 [앞, 뒤] (월드 — 칼 밑동 B · 칼 축 D · 놓인 칼과 같은 꼴). 있으면 맞은 점의 쓸린 길이를 짠 길이 같은 점을 옮긴 길이까지만 (아래)
   const { i, best } = hit;
   const P = cut[i];
@@ -882,6 +884,7 @@ function stepIai(f, combat) {
       // 이베리아 휩쓸기: 몸보다 먼저 상대 칼에 닿으면 막힘 — 맞음 판정을 멈추고 상대를 밀어낸다 (sweepShove), 칼은 그 자리에서 멈춤
       if (I.block && !I.hit && !I.blocked && foe.armed && foe.sword && segSegApprox(B, tip, foe.bladePoint(0, new THREE.Vector3()), foe.bladePoint(1, new THREE.Vector3())) < SECRET.iberianBlockDist) {
         I.blocked = true;
+        bwTouch(f, foe, 'kin'); // 뒤 박차기 헛침 경직 (11/19): 상대 칼에 막힘 = 닿음
         I.uEnd = Math.max(I.ab, u - (1 - w) * (dt / I.T));
         if (I.kind === 'sweep') sweepShove(f, foe); // 발도(고노센 여쭘 B)는 막힌 자리에서 멈추기만 — 연환 · 격살 · 런지 막힘과 같음
       }
@@ -3289,6 +3292,7 @@ function lungeSweep(f, I, combat, t0, t1) {
           I.blockM = true;
           I.blocked++;
           blocked = true;
+          bwTouch(f, foe, 'kin'); // 뒤 박차기 헛침 경직 (11/19): 상대 칼에 막힘 = 닿음
         }
       }
       let best = null;
@@ -3396,8 +3400,8 @@ function endCombo(f, combat) {
 // ─────────────────────────────────────────────────────────────
 export const ART_TRAIL = new Set(['tsubameGaeshi']); // 되돌림 칼이 그리는 동안 잔상 (칼끝이 위로)
 //  이점이 터진 순간 잔상 (10/21 16:1x 사장님 '잔상은 이점 터진 순간만 넣는 안으로 해'): 칼은 늘 최근 ART_HIST 초의 길(칼자루 · 칼끝)을 기억하고,
-//  이점이 터지면(곁눈 베기 무릎 꺾임 · 내려 찌르기 상처 · 요격 몸통 출혈 — combat.js) 그 길을 한 번에 잔상으로 그린다(artFlash). 이베리아 머리 위 돌려 베기는
-//  이어 그은 둘째 칼부터 그리는 동안 잔상(세기 + ART_STACK × 쌓인 수 — 몰아치는 흐름). 세기는 늘 칼끝 평균 빠르기 ÷ 고노센 칼끝 빠르기(ART_MIN 0.3 ~ 1)
+//  이점이 터지면(곁눈 베기 무릎 꺾임 · 내려 찌르기 상처 · 요격 몸통 출혈 — combat.js) 그 길을 한 번에 잔상으로 그린다(artFlash). 세기는 늘 칼끝 평균 빠르기 ÷ 고노센 칼끝 빠르기(ART_MIN 0.3 ~ 1)
+//  (전 이베리아 머리 위 돌려 베기의 이어 그은 둘째 칼부터 잔상 — stack 과 함께 11/19 지움)
 /** 진 · 츠바메가에시 되돌림 칼: from(패드) → path(패드들)를 끌고 간다. 이미 끌고 가는 중이면 거절(false) */
 export function requestArtReturn(f, from, path, SB) {
   if (f.iai || f.iaiReq || !SB?.kin || !path?.length) return false;
@@ -3474,7 +3478,6 @@ export function requestArtRedondo(f, { share, maxT, tech, loop = null, tajo = nu
   return true;
 }
 export const ART_HIST = 0.3; // s — 잔상으로 그릴 지난 길 (감독 값)
-export const ART_STACK = 0.1; // 이어 그은 수 하나마다 더하는 잔상 세기 (감독 값)
 export const ART_MIN = 0.3; // 고유 동작 잔상의 가장 흐린 세기 (10/21 16:2x 사장님 '0.3' — 연환 잔상 30 % · 일반 칼 궤적 띠 가장 진한 30 % 와 같게 · 빠른 칼은 빠르기만큼 더 진함)
 const HIST_N = 64;
 function speedShare(f, sum, n) { return clamp(sum / Math.max(1, n) / Math.max(1, iaiTipSpeed(f)), ART_MIN, 1); }
@@ -3489,8 +3492,7 @@ function artTrailTick(f) {
   if (H.pts.length > HIST_N) H.pts.shift();
   if (f.iai) { f.artTrail = null; return; }
   const name = artTechOf(f);
-  const stack = name ? artStackOf(f) : 0;
-  const on = name && ((ART_TRAIL.has(name) && (f.tipVel?.y ?? 0) > 1.5) || (stack >= 1 && sp > 8));
+  const on = name && ART_TRAIL.has(name) && (f.tipVel?.y ?? 0) > 1.5;
   if (!on) { f.artTrail = null; return; }
   let A = f.artTrail;
   if (!A || A.name !== name) {
@@ -3500,7 +3502,7 @@ function artTrailTick(f) {
   A.arc.pts.push([a.x, a.y, a.z, b.x, b.y, b.z]);
   A.sum += sp;
   A.n++;
-  A.arc.share = clamp(speedShare(f, A.sum, A.n) + ART_STACK * stack, ART_MIN, 1);
+  A.arc.share = clamp(speedShare(f, A.sum, A.n), ART_MIN, 1);
 }
 /** 이점이 터진 순간: 그 칼이 지나온 최근 ART_HIST 초의 길을 잔상으로 (비기 · 끌고 가는 칼이 그리는 중이면 안 함) */
 export function artFlash(f, dt = 1 / 120) {
@@ -3512,5 +3514,4 @@ export function artFlash(f, dt = 1 / 120) {
   f.artTrail = null;
 }
 let artTechOf = () => null; // unique_assist.js strokeTechOf 를 이어 둔다 (서로 부르는 고리를 피함)
-let artStackOf = () => 0; // unique_assist.js strokeStackN
-export function setArtTechOf(fn, stackFn) { artTechOf = fn; if (stackFn) artStackOf = stackFn; }
+export function setArtTechOf(fn) { artTechOf = fn; }

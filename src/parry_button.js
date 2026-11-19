@@ -7,7 +7,7 @@
 //     사람의 반응은 버튼을 누르는 때다(늦게 누르면 손이 막기 빠르기로 제때 못 닿음). AI 처럼 AI_LEVELS.normal.reaction 만큼 늦게 보는 판은 lag 로 잰다(기록 §4).
 //     한 공격(위협 번호 — 0.25 s 조용했다가 다시 오면 새 공격, ai.js threat 와 같은 규칙)에 한 번 줄을 정한다(ai.js respond).
 //   · 막기 자리 = 내 꾸러미 school.parry[줄] (없으면 pose.point — ai.js defend 그대로). 중국·독일(왕관 — 10/12)은 그 줄의 몸꼴 덧씌우기(parryCover — frames.js installCover, AI 와 같은 함수).
-//   · 손 빠르기 = AI 막기 빠르기 L.parrySpeed (L = AI_LEVELS.normal — 플레이어 비기 손 빠르기 바탕과 같은 난이도, skill.js updateSecret). 손 목표를 그 빠르기로 옮긴다
+//   · 손 빠르기 = AI 막기 빠르기 L.parrySpeed (L = 숙련도의 실력 숫자 — 11/19 prof_body.js scriptLevel · 몸 값과 같은 숙련도 · 비기 손 빠르기와 같은 표 · 전 늘 AI_LEVELS.normal). 손 목표를 그 빠르기로 옮긴다
 //     (ai.js moveHand 와 같은 꼴 — 순간이동 없음). 막혔는지는 물리.
 //     동방 막기 책(무기 유파 chinese · 책 사용)만 그 빠르기에 SKILL.cnParrySpeedK 를 곱한다 (10/17 사장님 승인 — 판 값 1 = 그대로, docs/strike/chinese_parry_speed_2026-10-17.md)
 //     동방 막기 마지막 안 둘 (10/17 20:1x 사장님 — 판 값 0 = 끔, docs/strike/chinese_parry_brace_2026-10-17.md): 막는 중(mode 'defend')만 ⓐ 버티는 힘 SKILL.cnBraceK — 서보 힘 × (1 + K)
@@ -23,9 +23,11 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { AI_LEVELS, SKILL, realS } from './config.js';
+import { scriptLevel } from './prof_body.js';
 import { thrustTell } from './thrust_tell.js'; // 찌르기 낌새 (11/15 — 사장님 11/16 묶음 P)
 import { Senses, addFoeSense, setFoeSense, recordFoeSenses } from './ai_sense.js';
 import { threatNow } from './secret.js';
+import { bwStiff } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19): 굳은 동안 막기 없음
 import { TRADITIONS } from './schools.js';
 import { GUARD_BASE } from './guards.js';
 import { installCover } from './frames.js';
@@ -50,11 +52,15 @@ function coverLineOf(school, s, p) {
 }
 
 export class PlayerParryGuard {
+  /** 손 빠르기의 실력 숫자 (11/19 사장님 '사람 막기 단추 손 빠르기는 숙련도를 따름' — prof_body.js scriptLevel: 몸 값과 같은 숙련도의 이름 · 숙련도가 없는 몸(재는 도구)은 보통 = 전 판) */
+  get L() {
+    return scriptLevel(this.me);
+  }
+
   constructor(me, foe) {
     this.me = me;
     this.foe = foe;
     me.parryGuard = this; // 흘려 받기(combat.js — config NAGASHI)가 '막기 단추를 누름'을 읽는다
-    this.L = AI_LEVELS.normal;
     this.sense = new Senses(me, foe);
     this.lag = 0; // 위협을 몇 초 전 모습으로 읽나 (0 = 지금. 재기: AI_LEVELS.normal.reaction 0.26 이면 AI 보통과 같은 눈)
     this.held = false; // 버튼·키를 누르고 있나 (main.js)
@@ -130,7 +136,7 @@ export class PlayerParryGuard {
     this.opposition.beginGuardStep();
     recordFoeSenses(this, dt); // 1:1 = this.sense.record(dt) 그대로 (2:2 는 상대마다 — setFoe)
     sk.guardDrive = 0;
-    const can = !me.stamina.exhausted && this.held && !this.broken && me.alive && me.armed && !me.weapon?.gun && !sk.sec && !sk.tap && !sk.pom && (me.state === 'stand' || me.state === 'kneel') && !!this.school && !me.ibLink; // 11/14 이어 돌리기(머리 위 원) 동안 막기 안 됨 — 슬러거의 대가 (iberian_link.js · IB_LINK)
+    const can = !me.stamina.exhausted && this.held && !this.broken && me.alive && me.armed && !me.weapon?.gun && !sk.sec && !sk.tap && !sk.pom && (me.state === 'stand' || me.state === 'kneel') && !!this.school && !me.ibLink && !bwStiff(me); // 11/14 이어 돌리기(머리 위 원) 동안 막기 안 됨 — 슬러거의 대가 (iberian_link.js · IB_LINK) · 11/19 뒤 박차기 헛침 경직 동안 막기 없음
     // 위협 읽기 (누르지 않아도 센다 — 누르는 순간 이미 오는 칼을 읽게. 번호는 ai.js threat 와 같은 규칙)
     const L = this.L;
     const s = this.sense.seen(this.lag);

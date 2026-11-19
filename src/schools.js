@@ -496,7 +496,7 @@ const GERMAN_UNIQUE = [
   // 굽은 베기: 오른 어깨에서 팔을 엇걸어 왼쪽 아래로 — 칼끝을 상대 손 위로 던진다(몸통보다 가까운 손을 노려 reach +0.2). 황소를 깬다
   { name: 'krumphau', nameKo: '굽은 베기 (크룸프하우)', orig: 'Krumphau', from: G.tagR, path: [[0.3, 0.3], [0.0, 0.05], G.pflugL], open: 'UL', kind: 'cut', reach: 0.2, base: 0.6, fit: { online: 2.0, high: 1.3 }, src: 'Zettel 「Krump auf behende, wirf den Ort auf die Hände」 · Ringeck 주해 42절 · Meyer 1570 장검 4장 [원전 2차 — docs/motion/clips/krumphau_*.json 출처] · 길의 수 [추정]' },
   // 사팔뜨기 베기: 오른 어깨에서 손을 뒤집어 뒷날로 위에서 상대 칼·오른 어깨를 치고, 팔을 뻗어 칼끝으로 겨눈 채 끝낸다(긴 자세). 쟁기·찌르기를 깬다
-  //  10/25 08:0x 사장님 '셸하우 3번 — 길 다시 그림'(config UNIQUE_ASSIST.schielPath 1 · 0 = 아래 from · path 그대로): AI 는 redraw 의 길 점과 길 덧칸(plan)으로 친다 (sword_art.js applySchoolArt).
+  //  10/25 08:0x 사장님 '셸하우 3번 — 길 다시 그림'(config UNIQUE_ASSIST.schielPath 1 · 0 = 아래 from · path 그대로): AI 는 redraw 의 길 점과 길 덧칸(plan)으로 친다 (sword_art.js applySchoolArt) · 사람 강화동작도 같은 길을 잣대로 같은 덧칸(10/25 18:0x 사장님 '같은 길 입혀' — unique_assist.js uniqueDef · planStep · 손 길만 손가락).
   //   까닭: 전 길은 손이 아직 높고 팔꿈치가 굽은 채(아래팔 30 ~ 45° 섬) 칼이 곧장 아래로 내려와 맞아, 맞는 순간 손목이 새끼 쪽 −60°(사람 −30 의 두 배) — 손목 교정이 그 칼끝을 굴림 0 손 면 둘레로
   //   들어 올리며 옆으로 돌려 긋는 줄이 머리 옆으로 비꼈다(기록 wrist_audit §11). 새 길: 손이 먼저 앞 · 아래로 뻗고(손 뻗기 — 팔이 펴져 아래팔이 누움) 그동안 칼끝은 들고 있다가(칼끝 들기)
   //   끝에서 떨어지며, 손을 엎쳐(손 돌리기 — 원전 '손을 뒤집어 뒷날로') 칼날이 왼쪽 아래로 긋는 줄에 맞게 — 맞는 순간 손목이 사람 범위 안 · 교정이 건드릴 것이 없다. 길 끝은 왼 긴 자세 쪽(가슴 높이)
@@ -730,12 +730,11 @@ const JAPANESE_SECRET = {
     open: 'H', kind: 'cut', reach: 'japaneseReach', base: 1, presses: true },
     step: { lat: 0, fwd: 'japaneseStep', when: 'strike', kind: 'lunge', push: 'stepPush' },
     zanshin: 'langort',
-    release: { dist: 'japaneseRelease', maxHold: 'releaseMaxHold' }, // 10/9 3차: 脇構え 로 담은 채 닿는 거리 창에 들 때까지 붙잡았다 터뜨림
     power: 'japanesePower', // 서보 힘 창 배율 (SECRET 열쇠 — 공통 power 대신)
     strength: 'japaneseStrength', // 보조 힘·속도: 베기 구간만 몸의 힘 배율
     lead: 0, // 앞당김(m): 脇 → 上段 → 真向 길이 길어 닿기 전에 상대가 더 다가온다 — 그만큼 일찍 친다
     hand: 'japaneseHand', // 손 속도 배율 (공통 handSpeed 대신)
-    instant: true, // 10/10: SECRET.instant 면 순간 베기(secret_instant.js) — 위 back·release 는 쓰지 않고 tech.path 끝 자세로 곧장. 0 이면 10/9 길
+    instant: true, // 10/10: 순간 베기(secret_instant.js) — 위 back 은 쓰지 않고 tech.path 끝 자세로 곧장. 0 이면 10/9 길(물러서며 담고 곧장 내려침 — 10/9 터뜨림 창 release 는 11/19 지움)
     stiffPose: 'instantStiffPose', // 경직 동안 칼끝을 떨어뜨린 손 자리 (보이는 경직)
   },
   src: '검도 용어 後の先(상대가 먼저 일으킨 치기를 받아 이김)·引き技(물러서며 침) [전승 — 원문 쪽 없음] · 脇構え 자리 검도형 p11/10 [원문] · 이름은 가칭 · 길·걸음 수 [추정]',

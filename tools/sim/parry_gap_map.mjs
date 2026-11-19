@@ -14,6 +14,7 @@
 //  꼴 cn<배율> (10/17 동방 막기 단추 손 빠르기 — docs/strike/chinese_parry_speed_2026-10-17.md): 그 판에만 SKILL.cnParrySpeedK = 배율 (판 값 1).  예) node tools/sim/parry_gap_map.mjs qinggang,qinggang:cn1.15,qinggang:cn1.3
 //  꼴 cnB<K> · cnD<몫> (10/17 동방 막기 마지막 안 — docs/strike/chinese_parry_brace_2026-10-17.md): 그 판에만 SKILL.cnBraceK = K(버티는 힘) · SKILL.cnParryDmgCut = 몫(막는 동안 피해 감소) (판 값 0).
 //   연구 판 json 칸 w 를 쓰고, 그 상처마다 여섯째 칸 = 입은 때 막는 중(mode 'defend')이면 1 · 아니면 0.  예) node tools/sim/parry_gap_map.mjs qinggang:cnB0,qinggang:cnB0.5,qinggang:cnD0.25
+//  STR=<힘> (11/19 — docs/strike/human_ai_parity_2026-11-19.md §7): 막는 쪽(사람 자리) 몸의 힘 fighter.strength 만 이 값으로 (숙련 1 몸 값 0.6 — 하니스 몸은 1 · 재기 전용).
 //  PRESS=<s> (같은 동방 연구 — 늦게 누르기): 막기 단추를 처음부터 누르지 않고 긋기 시작(대본 3 단계 — 0.15 s 멈춤이 끝난 때) + s 초에 누른다(−0.15 까지 = 멈춤 중 · 99 = 끝까지 안 누름).
 //   json 칸 t3 = 긋기 시작 · tp = 누른 때 · tc = 처음 벤 때 (연구 판 칸 w · dead · d1 도 씀) — 사람이 칼이 오는 것을 보고 얼마나 늦게 눌러도 막나
 //   연구 판(RIPOSTE · NOHOLD · cn<배율> — 기본 판 json 은 그대로)의 json 칸 w = 막는 쪽이 입은 칼날 상처 [부위 · 자리 · c 베기 / s 찌르기 · 심각도 · J] 모두 · dead = 그 판에 죽은 까닭 · d1 = 처음 읽은 때 거리
@@ -45,6 +46,7 @@ const PRESS = process.env.PRESS != null ? +process.env.PRESS : null; // 늦게 �
 //  싸움 한가운데처럼 두 몸 fightT = startHold 로(fighter.feetHeld 가 읽는 판 시계를 묶임 끝으로 — 10/18 에 지운 대기실 3D 몸 lobby_rig.js 가 쓰던 길) · NOHOLD=D = 막는 쪽만(치는 쪽은 묶인 채 — 베기에 몸 내딛기가 안 붙는 지금 판 공격 그대로).
 //  물러서기 연구는 바탕까지 모두 같은 판으로 견준다(짝 비교)
 const NOHOLD = process.env.NOHOLD ?? '';
+const STR = process.env.STR != null ? +process.env.STR : null; // 막는 쪽 몸의 힘 (재기 전용 — 위 trialRun)
 const byName = Object.fromEntries(TECH.map((t) => [t.name, t]));
 const lerp = (a, b, f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
 const ALL = [
@@ -108,6 +110,7 @@ function trialRun(cfg, atk, gap) {
   if (NOHOLD && NOHOLD !== 'D') A.fightT = ARENA.startHold;
   D.skill.corr = SKILL.corr;
   D.skill.autoGuard = true;
+  if (STR != null) D.strength = STR; // STR (재기 전용 · 11/19 사람 · AI 같게 다시 검토): 막는 쪽 몸의 힘 (숙련 1 사람 몸 값 0.6 — config PROF_BODY · 게임은 main.js 가 넣음)
   if (cfg.mode === 'basic') D.schoolParry = false;
   // nocover: 이 판의 유파 덧씌우기만 잠깐 뺀다 (지킴이를 만들 때 installCover 가 읽는다)
   const tr = D.swordArt?.tradition;

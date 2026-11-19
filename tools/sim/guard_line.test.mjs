@@ -126,6 +126,7 @@ test('공격하는 쪽 (실제 고르기): 손을 자세에 둔 AI 의 pickTech 
     for (let i = 0; i < 240; i++) G0.step();
     const ai = G0.ai, me = G0.enemy;
     const s = ai.sense.seen(ai.level.reaction);
+    ai.d = ai.M.contact - 0.05; // 곁눈 베기 제자리(상대 칼끝이 겨눔 · 맞닿기 안 — 11/19 사람 · AI 같게 E1 짝)에서 고름 — 밖이면 곁눈 베기가 후보에서 빠져 드묾 칸이 거의 빔 (거리는 이 셈의 다른 무게에 안 들어감)
     // 독일 (고유 기술 넷 가운데 둘 묶임 — 실하우가 버릇): 간 보는 자세 아홉에 손을 두고 고른 기술의 칸 (τ 말고는 같은 몸 · 같은 상대 모습)
     const picks = (tau) => {
       ai.level = { ...ai.level, read: tau };
@@ -227,7 +228,7 @@ test('읽는 쪽 (AI 상대): 덮은 줄 = 늦게 본 상대 손 자세의 기�
     }
   };
   let r = null;
-  for (const seed of [3, 1, 2, 6, 7]) if ((r = one(seed)).got.length > 0 && r.S?.th >= 1 && r.aim > 0) break; // 합침 (11/19): 개발 쪽 씨앗 3 을 먼저
+  for (const seed of [1, 3, 2, 6, 7]) if ((r = one(seed)).got.length > 0 && r.S?.th >= 1 && r.aim > 0) break; // 합침 (11/19): 개발 쪽 씨앗 3 을 먼저 → 사람 · AI 같게 E1(곁눈 베기 제자리 · 11/19) 뒤 씨앗 1 을 먼저 — 씨앗 3 은 줄 없는 데바나 칼 하나가 go 에 더해짐(1 은 읽기 셋 · 덮는 중 휘두름 · 고쳐 겨눔 모두)
   const { got, S, aim } = r;
   assert.ok(got.length > 0, '판에서 읽기 나옴');
   for (const x of got) {

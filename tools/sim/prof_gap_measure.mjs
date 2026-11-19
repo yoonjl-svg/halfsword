@@ -23,8 +23,14 @@
 //   --passiveHi=seguirRoda:0.45,… : 높은 쪽 AI 의 유파 패시브(반응 버릇 — schools.js *_PASSIVES) 굴림 몫 p 를 이 값으로 (만든 뒤 그 AI 의 패시브 목록만 새 객체로 · 0 = 그 패시브 안 냄)
 //   --gwHi=0.64 : 높은 쪽 몸의 '검술 자세 지도를 따르는 몫'(fighter.guardWeight — 옛 보정은 skill.level × 1.6 · 1 에서 자름)만 이 값으로 (skill.level 의 이어 베기 몫은 그대로) — 실력 숫자 skill 가르기 용
 //   --cfgHi=PATH:수,… : config 수를 높은 쪽 AI 의 매 스텝 판단(ai.update) 동안만 바꿈 (--cfg 와 같은 꼴 · 낮은 쪽 · 몸 · 판정은 그대로 — 플랜 값 한 칸이 높은 쪽에 주는 몫을 재는 용)
-//   --stats : 판 기록에 두 쪽 AI 의 stats 요약(hiStats · loStats — 배열은 줄임) · 기력 장부(hiStam · loStam — 갈래마다 쓴 기력 spent · 횟수 counts) · 무릎 꺾기 굴림(buckle — 곁눈 베기 G6 · combat.buckleLog 수) + 흔적(hiTrace · loTrace — 공격마다 기술 이름 · 까닭 · 거리 ·
+//  ── 사람 · AI 보정 같게 보기 (11/19 — 기록 docs/strike/human_ai_parity_2026-11-19.md · 재기 전용 · 안 주면 판 그대로):
+//   --corr=v2 : 두 쪽 AI 몸의 검술 보정 방식(skill.corr — ai.js setLevel 이 늘 'old' 로 둠)을 판 시작에 이 값으로 (사람 몸과 같은 'v2' · 숙련 · 실력 숫자 skill 은 그대로)
+//   --corrHi=v2 · --corrLo=v2 : 높은 쪽 · 낮은 쪽 몸만 (--corr 보다 이김). 판 기록에 corr(두 쪽 방식) · sane(NaN · 날 맞춤 창 열림 수 · 공격 · 맞힘 · 헛친 칼 수 — 읽기만)
+//   --corrHeld : v2 로 바꾼 AI 몸의 '손가락이 닿음'을 AI 꼴로 (공격 · 비기 · 막기 꼴 동안 skill.idleGoal = 0 — 사람 v2 는 손가락이 닿은 동안 쉼 무게 0 인데
+//                AI 는 손가락이 없어 휘두름(손 목표 1.5 m/s 넘음) · 비기 동안만 0 · 준비하고 멈춘 자리 · 막고 선 자리는 자세 지도 쪽으로 감 — 그 몫을 가르는 용 · 읽는 곳은 updateBodyPose 하나)
+//   --stats : 판 기록에 두 쪽 AI 의 stats 요약(hiStats · loStats — 배열은 줄임) · 기력 장부(hiStam · loStam — 갈래마다 쓴 기력 spent · 횟수 counts) · 붙은 거리 사건(hiClose · loClose — closeQuarters 굴린 사건 · 이긴 수 · 몸의 밀치기 수 shoves · 11/19 E2) · 무릎 꺾기 굴림(buckle — 곁눈 베기 G6 · combat.buckleLog 수) + 흔적(hiTrace · loTrace — 공격마다 기술 이름 · 까닭 · 거리 ·
 //             그 칼 동안 준 상처 · 받은 상처 · 끝난 뒤 0.8 s 안에 받은 상처 · 칼 부딪힘 · 그때 상대 꼴 · 그때 상대 칼(vs) · 이어 친 앞 칼(from) / 꼴마다 머문 시간 · 꼴마다 받은 상처). 읽기만 (난수 · 몸에 손대지 않음)
+//            11/19 흔적에 bw — 뒤 박차기 헛침 경직(burst_whiff.js): 내가 굳음 · 도구 눈으로 다시 가른 헛 굳음(박찬 걸음 · 칼끝 거리 · 상처 · 칼 부딪힘) · 상대 굳음 창과 그 창에 벰 · 독일 뒤 칼과 굳음 (읽기만)
 //   --gns : 판 기록에 높은 쪽 고노센 깔때기 흔적 gns (11/19 · 읽기만 — tools/sim/gns_funnel.mjs gnsProbe · 요약은 node tools/sim/gns_funnel.mjs a.json)
 //   node tools/sim/prof_gap_measure.mjs trace a.json … [--lo] [--vs] [--top=14] : --stats 로 잰 판 기록의 요약 (11/18 · 읽기만) — hi 몫 · 꼴 몫 · 꼴마다 준 · 받은 상처 ·
 //             기술마다 판당 수 · 맞힘 · 맞음 · 끝난 뒤 0.8 s 안 맞음 · 칼 부딪힘 몫 · 거리 · 칼 시간 · 그때 상대 꼴 · 까닭 (--lo = 낮은 쪽 흔적 · --vs = 칼을 열 때 상대 칼 · 이어 친 칼의 앞 칼)
@@ -231,7 +237,51 @@ function traceAI(G, ai, me, other) {
     if (ok && this.atkSeq !== seq0) { close(); open(null); cur.why = (o.chain ? 'chain:' : '') + (why ?? '-'); }
     return ok;
   };
+  // 뒤 박차기 헛침 경직 흔적 (11/19 — burst_whiff.js · 읽기만 · 판 결과 그대로): 내 굳음 — 도구 눈으로 다시 가름(박찬 걸음 · 칼끝 거리 · 상처 · 칼 부딪힘)해 어긋나면 '헛 굳음' ·
+  //  상대 굳음 창 — 그 창 안에 내가 벰 · 독일 띠 높음 뒤 칼(deNach) — 낸 때 · 칼이 나간 때 상대가 굳었나 · 굳은 동안 벰 · 굳음 시작에서 칼이 나갈 때까지 초
+  const ob = other?.me; // 상대 몸 (other = 상대 AI)
+  const hd = (a, b) => { const p = a.bodies.chest.translation(), q = b.bodies.chest.translation(); return Math.hypot(q.x - p.x, q.z - p.z); };
+  const BW = { trig: 0, falseTrig: 0, falseWhy: {}, win: 0, winHit: 0, nach: 0, nachStiffFire: 0, nachStiffStrike: 0, nachHit: 0, nachHitStiff: 0, delay: 0, delayN: 0 };
+  let atk0 = null, prevMy = false, prevFoe = false, foeWin = null, nachRec = null;
+  const ss0 = ai.startStrike;
+  ai.startStrike = function () { atk0 = { t: G.t, d: hd(me, ob), reach: me.swordArt?.measure?.reach ?? 1.8, w: G.wounds.length, c: G.clashes, burst: false }; return ss0.call(this); };
+  const bwPoll = () => {
+    const og = ob?.gait;
+    if (atk0 && og && ai.mode === 'attack' && (ai.phase === 'strike' || ai.phase === 'follow') && og.fastK > 1 && og.fastDir < 0 && !og.fastSide) atk0.burst = true;
+    const my = me.bwStiffT > 0;
+    if (my && !prevMy) {
+      BW.trig++;
+      const why = !atk0 ? 'noAtk' : !atk0.burst ? 'noBurst' : atk0.d > atk0.reach ? 'far' : G.wounds.slice(atk0.w).some((w) => w.att === me && w.vic === ob) ? 'wound' : G.clashes > atk0.c ? 'clash' : null;
+      if (why) { BW.falseTrig++; BW.falseWhy[why] = (BW.falseWhy[why] ?? 0) + 1; }
+    }
+    prevMy = my;
+    const fs = (ob?.bwStiffT ?? 0) > 0;
+    if (fs && !prevFoe) foeWin = { t0: G.t, w: G.wounds.length, hit: false };
+    if (foeWin && G.wounds.slice(foeWin.w).some((w) => w.att === me && w.vic === ob && w.severity > 0)) foeWin.hit = true;
+    if (!fs && prevFoe && foeWin) { BW.win++; if (foeWin.hit) BW.winHit++; foeWin = null; }
+    prevFoe = fs;
+    const N = ai.deNach;
+    if (N?.fired && (!nachRec || nachRec.N !== N)) {
+      nachRec = { N, seq: N.seq, w: G.wounds.length, strike: false, hitStiff: false };
+      BW.nach++;
+      if (fs) BW.nachStiffFire++;
+    }
+    if (nachRec) {
+      if (!nachRec.strike && ai.mode === 'attack' && ai.atkSeq === nachRec.seq && ai.phase === 'strike') {
+        nachRec.strike = true;
+        if (fs) { BW.nachStiffStrike++; if (foeWin) (BW.delay += G.t - foeWin.t0), BW.delayN++; }
+      }
+      const nw = G.wounds.slice(nachRec.w).filter((w) => w.att === me && w.vic === ob && w.severity > 0);
+      if (nw.length && fs) nachRec.hitStiff = true;
+      if (!(ai.mode === 'attack' && ai.atkSeq === nachRec.seq) && G.t > (nachRec.t1 ??= G.t + 0.3)) {
+        if (nw.length) BW.nachHit++;
+        if (nachRec.hitStiff) BW.nachHitStiff++;
+        nachRec = null;
+      }
+    }
+  };
   T.poll = () => {
+    bwPoll();
     const m = ai.mode;
     T.modeT[m] = (T.modeT[m] ?? 0) + DT;
     if (m === 'watch') { T.dWatch += ai.d; T.nWatch++; }
@@ -255,11 +305,20 @@ function traceAI(G, ai, me, other) {
     close();
     for (const A of Object.values(T.atk)) { A.d = +(A.dSum / A.n).toFixed(3); A.t = +(A.tSum / A.n).toFixed(3); delete A.dSum; delete A.tSum; }
     for (const k of Object.keys(T.modeT)) T.modeT[k] = +T.modeT[k].toFixed(2);
-    const out = { modeT: T.modeT, atk: T.atk, dealtBy: T.dealtBy, tookBy: T.tookBy, burst: T.burstDone(), dWatch: T.nWatch ? +(T.dWatch / T.nWatch).toFixed(3) : null, contact: +ai.M.contact.toFixed(3), reach: +(ai.M.reach ?? 0).toFixed(3) };
+    const out = { modeT: T.modeT, atk: T.atk, dealtBy: T.dealtBy, tookBy: T.tookBy, burst: T.burstDone(), bw: { ...BW, delay: BW.delayN ? +(BW.delay / BW.delayN).toFixed(3) : null, stats: me.bwStats ? { ...me.bwStats, log: undefined } : null }, dWatch: T.nWatch ? +(T.dWatch / T.nWatch).toFixed(3) : null, contact: +ai.M.contact.toFixed(3), reach: +(ai.M.reach ?? 0).toFixed(3) };
     ai.startAttack = orig;
+    ai.startStrike = ss0;
     return out;
   };
   return T;
+}
+
+/** --corr 판의 몸 점검 (읽기만): 몸 · 칼 자리에 NaN 이 있나 · 보정 v2 날 맞춤 창이 열린 수(fighter.corr) · 공격 · 맞힘 · 헛친 칼(ai.stats) */
+function saneOf(F, ai) {
+  const fin = (v) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
+  const nan = !fin(F.bodies.chest.translation()) || !fin(F.bodies.pelvis.translation()) || (F.sword ? !fin(F.sword.translation()) : false);
+  const st = ai.stats ?? {};
+  return { nan, opens: F.corr?.opens ?? 0, attacks: st.attacks ?? 0, landed: st.landed ?? 0, aborted: st.aborted ?? 0, misses: st.misses ?? st.missed ?? null };
 }
 
 function measureFight0(f, dur, opt) {
@@ -287,6 +346,18 @@ function measureFight0(f, dur, opt) {
   }
   // --gwHi (재기 전용): 높은 쪽 몸의 자세 지도 몫만 (인스턴스 덮기 — 낮은 쪽 · 사람 그대로)
   if (opt.gwHi != null) hiF.guardWeight = () => opt.gwHi;
+  // --corr · --corrHi · --corrLo (재기 전용 · 11/19): AI 몸의 보정 방식만 바꿈 (setLevel 뒤 · 생성자 밖 — 게임은 늘 'old')
+  if (opt.corrHi) hiF.skill.corr = opt.corrHi;
+  if (opt.corrLo) loF.skill.corr = opt.corrLo;
+  if (opt.corrHeld) for (const [F, A] of [[hiF, aiHi], [loF, aiLo]]) {
+    if (F.skill.corr !== 'v2') continue;
+    const up = F.skill.update;
+    F.skill.update = function (dt) {
+      const r = up.call(this, dt);
+      if (A.mode === 'attack' || A.mode === 'secret' || A.mode === 'defend') this.idleGoal = 0;
+      return r;
+    };
+  }
   // --levelHiSet (재기 전용): 높은 쪽 실력 숫자 몇 칸만 (힘 strength 은 몸 값이라 받지 않음)
   if (opt.levelHiSet?.length) {
     for (const [k, v] of opt.levelHiSet) aiHi.level[k] = v;
@@ -324,13 +395,14 @@ function measureFight0(f, dur, opt) {
     hiBlood: +hiF.blood.toFixed(3), loBlood: +loF.blood.toFixed(3),
     hiSecrets: secretsFired(aiHi), loSecrets: secretsFired(aiLo),
     hiCause: hiF.causeOfDeath ?? null, loCause: loF.causeOfDeath ?? null, // 쓰러진 까닭 (출혈 · 기절 · 목 · 머리 … — 11/17 E: 버티는 힘이 닿는 몫을 보려고 · 읽기만)
+    ...(opt.corrHi || opt.corrLo ? { corr: [hiF.skill.corr, loF.skill.corr], ...(opt.corrHeld ? { corrHeld: true } : {}), sane: [saneOf(hiF, aiHi), saneOf(loF, aiLo)] } : {}),
     ...(trH ? { hiStats: compactStats(aiHi.stats), loStats: compactStats(aiLo.stats), buckle: (G.combat.buckleLog ?? []).reduce((o, b) => {
       const side = b.att === hiF.index ? 'hi' : 'lo';
       const k = `${side}${b.hit ? 'Hit' : 'Roll'}`;
       o[k] = (o[k] ?? 0) + 1;
       if (b.hit && G.wounds.some((w) => w.att === (side === 'hi' ? hiF : loF) && w.severity > 0 && w.t > b.t + 0.05 && w.t <= b.t + 1.5)) o[`${side}Follow`] = (o[`${side}Follow`] ?? 0) + 1; // 꿇린 뒤 1.5 s 안에 그 쪽이 다시 벰
       return o;
-    }, {}), hiStam: compactStats({ spent: hiF.stamina?.spent, counts: hiF.stamina?.counts }), loStam: compactStats({ spent: loF.stamina?.spent, counts: loF.stamina?.counts }), hiTrace: trH.done(), loTrace: trL.done(), hiLevel: aiHi.levelName, hiKit: aiHi.kit ? [...aiHi.kit.unique].concat(Object.keys(aiHi.kit).filter((k) => aiHi.kit[k] === true)) : null } : {}),
+    }, {}), hiStam: compactStats({ spent: hiF.stamina?.spent, counts: hiF.stamina?.counts }), loStam: compactStats({ spent: loF.stamina?.spent, counts: loF.stamina?.counts }), hiClose: { ...aiHi.closeEv, shoves: hiF.shoves ?? 0 }, loClose: { ...aiLo.closeEv, shoves: loF.shoves ?? 0 }, hiTrace: trH.done(), loTrace: trL.done(), hiLevel: aiHi.levelName, hiKit: aiHi.kit ? [...aiHi.kit.unique].concat(Object.keys(aiHi.kit).filter((k) => aiHi.kit[k] === true)) : null } : {}),
     ...(gP ? { gns: gP.done() } : {}),
   };
   G.world.free();
@@ -386,6 +458,8 @@ export function traceTable(rows, side = 'hi', top = 14) {
   const tot = Object.values(modeT).reduce((a, v) => a + v, 0);
   L.push(`[${side}] 꼴 몫 ${Object.entries(modeT).sort((a, b) => b[1] - a[1]).map(([m, v]) => `${m} ${((100 * v) / tot).toFixed(0)} %`).join(' · ')} · 간 보기 거리 ${(T.reduce((a, t) => a + (t.dWatch ?? 0), 0) / N).toFixed(2)} m · 맞닿기 ${(T.reduce((a, t) => a + t.contact, 0) / N).toFixed(2)} m`);
   const BU = T.reduce((o, t) => { for (const k of ['n', 'reach', 'clean', 'reachClean']) o[k] += t.burst?.[k] ?? 0; return o; }, { n: 0, reach: 0, clean: 0, reachClean: 0 });
+  const BWs = T.reduce((o, t) => { for (const k of ['trig', 'falseTrig', 'win', 'winHit', 'nach', 'nachStiffFire', 'nachStiffStrike', 'nachHit', 'nachHitStiff']) o[k] += t.bw?.[k] ?? 0; return o; }, { trig: 0, falseTrig: 0, win: 0, winHit: 0, nach: 0, nachStiffFire: 0, nachStiffStrike: 0, nachHit: 0, nachHitStiff: 0 });
+  if (BWs.trig || BWs.win || BWs.nach) L.push(`뒤 박차기 헛침 경직 — 내가 굳음 판당 ${(BWs.trig / N).toFixed(2)} (헛 굳음 ${BWs.falseTrig}) · 상대 굳음 창 판당 ${(BWs.win / N).toFixed(2)} · 그 창에 벰 ${BWs.win ? ((100 * BWs.winHit) / BWs.win).toFixed(0) : '-'} % · 뒤 칼 판당 ${(BWs.nach / N).toFixed(2)} · 낼 때 굳음 ${BWs.nachStiffFire} · 칼이 나갈 때 굳음 ${BWs.nachStiffStrike} · 맞힘 ${BWs.nachHit} (굳은 동안 ${BWs.nachHitStiff})`);
   if (BU.n) L.push(`뒤 박차기 판당 ${(BU.n / N).toFixed(2)} · 닿는 칼에 건 몫 ${((100 * BU.reach) / BU.n).toFixed(0)} % · 건 뒤 0.8 s 안 안 맞음 ${((100 * BU.clean) / BU.n).toFixed(0)} % · 닿는 칼을 비낌(닿는 칼 · 안 맞음) ${((100 * BU.reachClean) / BU.n).toFixed(0)} %`);
   L.push(`준 상처 (판당) ${Object.entries(dealtBy).map(([m, v]) => `${m} ${(v / N).toFixed(2)}`).join(' · ')} | 받은 상처 ${Object.entries(tookBy).map(([m, v]) => `${m} ${(v / N).toFixed(2)}`).join(' · ')}`);
   const A = {};
@@ -478,6 +552,13 @@ if (isMain(import.meta.url)) {
     if (gwHi != null && !(gwHi >= 0 && gwHi <= 1)) throw new Error('--gwHi 는 0 ~ 1');
     if (gwHi != null) console.error(`높은 쪽 자세 지도 몫: ${gwHi}`);
     const cfgHi = resolveCfg(arg('cfgHi', ''));
+    const corrAll = arg('corr', null);
+    const corrHi = arg('corrHi', corrAll);
+    const corrLo = arg('corrLo', corrAll);
+    for (const c of [corrHi, corrLo]) if (c != null && c !== 'v2' && c !== 'old') throw new Error('--corr · --corrHi · --corrLo 는 v2 · old');
+    if (corrHi || corrLo) console.error(`AI 보정 방식 (재기 전용): 높은 쪽 ${corrHi ?? '그대로(old)'} · 낮은 쪽 ${corrLo ?? '그대로(old)'}`);
+    const corrHeld = args.includes('--corrHeld');
+    if (corrHeld) console.error('v2 AI 몸: 공격 · 비기 · 막기 꼴 동안 손가락이 닿은 것으로 (쉼 무게 목표 0)');
     if (cfgHi.length) console.error(`높은 쪽 판단 동안만 cfg: ${arg('cfgHi', '')}`);
     const stats = args.includes('--stats');
     const gns = args.includes('--gns');
@@ -489,7 +570,7 @@ if (isMain(import.meta.url)) {
     if (done.size) console.error(`이어 재기: ${done.size} 판 있음`);
     for (const { f, k } of mine) {
       if (done.has(k)) continue;
-      const r = { k, ...measureFight(f, dur, { look, dropHi, levelHi, bandHi, stats, gns, techHi, noThrustFollowHi, keepBaseHi, cfgHi, levelHiSet, passiveHi, gwHi }) };
+      const r = { k, ...measureFight(f, dur, { look, dropHi, levelHi, bandHi, stats, gns, techHi, noThrustFollowHi, keepBaseHi, cfgHi, levelHiSet, passiveHi, gwHi, corrHi, corrLo, corrHeld }) };
       runs.push(r);
       console.error(`[${k + 1}/${all.length}] ${f.school} ${f.lo}:${f.hi} w${f.wi} s${f.seed} ${f.swap ? 'swap' : 'std'} → ${r.result} @${r.endT}s`);
       if (out && runs.length % 10 === 0) saveRuns(out, runs);

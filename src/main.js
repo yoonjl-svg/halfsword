@@ -64,6 +64,7 @@ import { PlayerSecretWatch, bindGain } from './secret.js'; // 플레이어 비�
 import { drawInput, drawTapTake } from './iai_obi.js'; // 11/16 뽑기 — 사람 입력 잠금 (SECRET.gnsDraw)
 import { IAI_READY_STANCE, iaiReadyShown } from './secret_instant.js'; // 고노센 발도 대기 자세 이름 (① 자세 칸 — 10/31 13:xx)
 import { PlayerParryGuard } from './parry_button.js'; // 플레이어 막기 버튼 (10/11 — AI 막기와 같은 판단으로 유파 막기 자리로)
+import { bwStiff } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 — 경직 글 STIFF_TEXT 가 상대 굳음도 봄 · 사람 굳음은 검술 층 secretPhase 'stiff')
 import { pickupReady, PICKUP_HOOKS } from './pickup.js'; // 떨어진 칼 줍기 (11/05 — 막기 단추 글 '줍기' · 11/18 저절로 줍기 · 칼 팔 다침 한 줄)
 import { PlayerUniqueAssist } from './unique_assist.js'; // 플레이어 고유 동작 강화 (10/13 이어 주기 → 10/14 강화 — docs/strike/unique_player_2026-10-13.md)
 import { itEdgeLook } from './italian_outbox.js'; // 이탈리아 칼 우위 빛 (11/14 설계안 A — 그림만 · config IT_OUTBOX.edgeLook)
@@ -534,6 +535,7 @@ function newRound(weaponId) {
     schoolParry: kit ? kit.parry : undefined,
     schoolPassive: kit ? kit.passive : undefined, // 패시브 칸 (이베리아 손목 힘 · 이탈리아 · 일본 · 독일 · 동방 — school_passive.js)
     skillKit: kit ?? undefined,
+    bodyProficiency: humanProficiency({ test: testRoute.active }), // 막기 단추 · 비기 손 빠르기의 숙련도 (11/19 — 몸 값과 같은 수 · prof_body.js scriptLevel)
     ...profBody(humanProficiency({ test: testRoute.active })), // 몸 값 (11/17 E — config PROF_BODY): 다섯 유파 가운데 가장 높은 숙련도(익힌 칸 문턱 5 · 7 · 9 · 11)의 힘 · 버티는 힘 — AI 와 같은 표
     ...testRoute.player, // ?hero=<인물 id>: 겉모습·이름만 그 인물 (유파·비기는 무기를 따른다)
   });
@@ -720,7 +722,7 @@ function newTeamRound(spec, mods = {}) {
       weapon: e.weapon,
       ffa: E.length > 2, // 셋 이상 판: 같은 편도 적과 똑같이 부딪히고 벤다 (사장님 10/29 22:3x · fighter.js FFA_*)
       ...(e.human
-        ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined, ...profBody(humanProficiency({ test: testRoute.active })) } // 몸 값 (11/17 E — 1:1 과 같음)
+        ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined, bodyProficiency: humanProficiency({ test: testRoute.active }), ...profBody(humanProficiency({ test: testRoute.active })) } // 몸 값 (11/17 E — 1:1 과 같음) · 막기 단추 · 비기 손 빠르기 숙련도 (11/19)
         : { revive: ch?.revive, physiology: ch?.physiology }), // 버티는 힘 · 힘 = 숙련도별 몸 값 (AI — ai.js setLevel)
     });
   });
@@ -2939,7 +2941,7 @@ function updateTechCue(dt) {
   }
   // 경직 글 (STIFF_TEXT, 기본 끔): 켜면 경직이 시작될 때 감정 줄에 한 번
   const myStiff = liveMine && pPhase === 'stiff';
-  const foeStiff = live && ai?.secretRun?.stage === 'stiff';
+  const foeStiff = live && (ai?.secretRun?.stage === 'stiff' || bwStiff(enemy)); // 11/19 뒤 박차기 헛침 경직도 같은 '상대 경직'
   if (STIFF_TEXT && myStiff && !stiffSeen.me) showEmoMsg('경직', 'stiff', 1200);
   if (STIFF_TEXT && foeStiff && !stiffSeen.foe) showEmoMsg('상대 경직', 'stiff', 1200);
   stiffSeen = { me: myStiff, foe: foeStiff };

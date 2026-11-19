@@ -36,7 +36,8 @@ import { FINISH, cleaveFoe } from './finish.js'; // 마무리 찍기 힘 배율 
 import { lowFinishPosture } from './finish_entry.js';
 import { UNIQUE_ASSIST as UA, IB_FLOW } from './config.js'; // IB_FLOW.power: 이베리아 흐르는 긋기 위력 (10/28 — analyze)
 import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 판정 배율 (11/06 — SKILL.fingerCut.hit · 기본 1 = 끔)
-import { strokeTechOf, strokeHitK } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
+import { strokeTechOf } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
+import { bwTouch } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 — 닿음 셈: 칼이 몸에 · 칼끼리)
 import { perkOff, uniqueOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4 · 11/16 내려 찌르기 틈 파고들기 = 내려 찌르기 칸 I7 [사장님 11/16 결정 '다 너의 권고대로 하마'])
 import { itThrust, itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14 — 사람 이탈리아 찌르기 판정 배율 · 맞박자 찌르기 · 칼 우위 — config IT_OUTBOX)
 import { aiWoundKeep } from './ai_block_cut.js';
@@ -300,12 +301,12 @@ export class Combat {
     // 게임 속 판정용 에너지: 실제 에너지 × 보정값. 이 모델의 베는 속도가 실제(칼날 치는 부분 약 20m/s)보다
     // 조금 낮아서, 상처 문턱값(ANATOMY)과 기절·비틀거림 같은 효과가 예전과 같은 세기로 나오게 맞춘 값이다
     // 결정타 (10/9 23:5x — 유파 비기, AI·플레이어 공통): 비기 베기 동안 공격자 secretHit(SECRET.hitMul)를 상처 에너지에 곱한다. 물리(속도·질량)는 그대로, 판정만. 1 이면 그대로
-    // 이어 그을수록 강해짐 (이베리아 머리 위 돌려 베기 — 10/21 사장님 '너의 제안대로'): 이어 그은 수 × stack 만큼 같은 자리(판정 에너지)에 곱한다 · 물리는 그대로
+    // (전 이어 그을수록 강해짐 stack — 10/21 · 11/19 지움: 칸 몫이 있는 몸엔 닿지 않던 AI 몫 · 사람 · AI 모두 B6 이어지는 흐름 ibFlowK)
     //  손가락 긋기 판정 배율 (11/06 — finger_cut.js · SKILL.fingerCut.hit · 기본 1 = 끔): 사람 손가락 긋기 동안 · 그 끝 recoverDelay 안의 닿음만 같은 자리에 × hit · 물리는 그대로
     //  이탈리아 아웃복싱 (11/14 사장님 '찌르기 자체를 너프하자 … 걸어들어오는 상대를 카운터하면 +30%' — italian_outbox.js itThrust · config IT_OUTBOX): 사람 이탈리아 보통 찌르기 × thrustMul ·
     //   걸어 들어오는 상대를 받아 찌름 × (1 + stop). 비기 배율과 같은 자리(판정 에너지) · 물리 그대로 · 사람 이탈리아가 아니면 null(× 1 — AI 판 그대로)
     const itk = itThrust(att, pr.v.fighter);
-    const hk = (att.secretHit ?? 1) * strokeHitK(att) * fingerCutK(att, 'hit') * (itk ? itk.k : 1);
+    const hk = (att.secretHit ?? 1) * fingerCutK(att, 'hit') * (itk ? itk.k : 1);
     let energy = ephys * STRIKE.energyScale * hk;
     // 약화 배율은 상처에만 (11/15 사장님 '찌르기가 상대 몸에 박혀서 안 뽑히기도 … 공격이 종종 무시될 때도' — 사장님 11/16 '묶음 P' · 기록 docs/strike/thrust_stuck_2026-11-15.md):
     //  1 보다 작은 판정 배율(이탈리아 보통 찌르기 IT_OUTBOX.thrustMul 0.8 · 리솔루토 SECRET.risolutoHitMul 0.5)은 상처(심각도 · 둔타 에너지)에만 걸고, 칼과 몸의 물리 —
@@ -479,7 +480,7 @@ export class Combat {
     //  칼날 상처 심각도 · 둔타 에너지 × k. 물리(빠르기 · 가르나 튕기나) · 길 · 손목은 그대로 · AI 곁눈 베기 · 다른 기술은 그대로
     // 이베리아 흐르는 긋기 위력 (10/28 22:0x 사장님 '위력도 그만큼 올려' — config IB_FLOW.power · 확인표 2724): 흐름이 켜진 채(fighter.js updateIbFlow — 사람은 B5 · AI 이베리아는 늘)
     //  맞힌 긋기의 칼날 상처 심각도 · 둔타 에너지 × power. 찌르기 · 비기 칼(secretHit ≠ 1)은 그대로 · 물리(빠르기 · 가르나 튕기나)는 그대로
-    //  10/29 01:5x 이어지는 흐름(B6 — 사람만 · fighter.js ibFlowK): 이어 그은 수 n 만큼 더하기 1 + (power − 1) × n · AI 는 그대로 power
+    //  10/29 01:5x 이어지는 흐름(B6 — fighter.js ibFlowK · ibChainOn): 이어 그은 수 n 만큼 더하기 1 + (power − 1) × n — 사람 B6 칸 · 이베리아 플랜 AI 도 같은 규칙(ai_plan_ib.js ibChainAi) · 그 밖 몸은 power
     const ibK = att.ibFlowOn && type !== 'stab' && (att.secretHit ?? 1) === 1 ? (att.ibFlowK ? att.ibFlowK() : IB_FLOW.power) : 1;
     if (ibK !== 1) { if (type === 'blunt') energy *= ibK; else severity *= ibK; }
     return {
@@ -734,6 +735,8 @@ export class Combat {
     }
     A.fighter.stamina.block(B.fighter);
     B.fighter.stamina.block(A.fighter);
+    bwTouch(A.fighter, B.fighter, 'blade'); // 뒤 박차기 헛침 경직 (11/19): 칼끼리 닿음 (코등이 · 자루 포함 — 읽기만)
+    bwTouch(B.fighter, A.fighter, 'blade');
     let ps = this.bladePairs.get(g.key); // 이 짝의 겨룸 상태 (처음 생긴 짝의 소리 접촉 = this.bladeContact)
     if (!ps) this.bladePairs.set(g.key, (ps = { last: -1e9, bc: this.bladePairs.size ? { last: -1e9, start: 0, slide: 0, press: 0 } : this.bladeContact }));
     const fresh = this.stepNo - ps.last > STEEL.rearmSteps; // 떨어져 있다가 새로 부딪힘 (이 짝이)
@@ -962,6 +965,7 @@ export class Combat {
   strike(pr, point, passing) {
     const att = pr.w.fighter;
     const vic = pr.v.fighter;
+    bwTouch(att, vic); // 뒤 박차기 헛침 경직 (11/19): 이 공격의 칼이 겨눈 몸에 닿음 (판정 문턱 밑 · 같은 부위 쉼도 — 읽기만)
     const key = `${att.index}:${pr.v.part}`;
     // 속도는 스텝 "직전" 값을 쓴다. 튕긴 충돌은 스텝 뒤엔 이미 속도가 꺾여 있어서 에너지가 작게 나온다.
     const S = pr.w.state || att.cache?.sword || liveState(pr.w.body); // 휘는 마디 무기: 그 마디의 스텝 전 상태
@@ -1013,7 +1017,7 @@ export class Combat {
    */
   whipKneelCheck(att, vic, part) {
     const K = WHIP_KNEEL, X = att.flexWeapon;
-    if (!(K.p > 0) || !X || att.aiControlled) return; // 사람 채찍만 (AI 채찍은 굴리지 않는다)
+    if (!(K.p > 0) || !X) return; // 사람 · AI 채찍 같음 (11/19 — 사장님 10/23 '채찍으로 맞을 때마다 일정 확률로 무릎 꿇게 해줘(모든 종류의 타격 대상)' · 전 '사람 채찍만'은 일꾼이 고른 것 · docs/strike/human_ai_parity_2026-11-19.md)
     const n = X.strokes ?? 0;
     if (n <= (X.rolled ?? 0)) return; // 이 획은 이미 굴렸다 (마디가 여러 번 닿아도 한 번)
     X.rolled = n;
@@ -1066,7 +1070,7 @@ export class Combat {
   /**
    * 손목 치기 칼 떨구기 (일본 강화동작 이점 · 심화 칸 J8 — 사장님 10/24 11:5x · 12:0x · 12:3x, config UNIQUE_ASSIST.koteDrop) — 손목 치기가 칼을 쥔 손의 손목 · 아래팔 · 손(parts — 빈손 쪽은 두 손으로 쥔 동안만)에
    *  판정이 난 맞음(strike 가 돌려준 맞음 r — STRIKE.minEnergy 를 넘음)이면 koteRoll. judge 'cut'(11:5x 판)은 칼날이 들어간 베기(심각도 > 0)만 · 'arm' · 'all' 은 칼면 · 심각도 0 도.
-   *  사람만(ai 0 — AI 가 모는 몸은 굴리지 않는다 · AI 끼리 판 그대로) · 사람은 J8 을 익혀야(perkOff). 맞은 쪽이 살아 칼을 쥐고 부활 중이 아닐 때만.
+   *  사람 · AI 같음(AI 는 손목 치기 기술 칼 — strokeTechOf 가 ai.tech 를 읽음) · 둘 다 J8 칸을 익혀야(perkOff — AI 는 11/16 칸 몫 AI_KIT). 맞은 쪽이 살아 칼을 쥐고 부활 중이 아닐 때만.
    */
   koteCheck(att, vic, part, r) {
     const K = UA.koteDrop;
@@ -1189,9 +1193,8 @@ function gripTwist(f) {
   const ax = _gt.set(0, 1, 0).applyQuaternion(rotQ(sw)); // 칼 길이 축 (월드)
   const w = sw.angvel();
   const wAx = w.x * ax.x + w.y * ax.y + w.z * ax.z;
-  // 플레이어 칼만 다른 손아귀 한도 (STEEL.gripTwistMaxPlayer, 기본 null = 같음 — docs/motion/player_edge_2026-10-10.md, 사장님 확인 전 실험 스위치)
-  const gmax = STEEL.gripTwistMaxPlayer != null && f.skill?.autoGuard === true ? STEEL.gripTwistMaxPlayer : STEEL.gripTwistMax;
-  const lim = Math.max(Math.abs(f.cache.sword.w.dot(ax)), gmax);
+  // 사람 · AI 같은 손아귀 한도 (11/19 — 플레이어 칼만 다른 한도 실험 스위치 STEEL.gripTwistMaxPlayer 를 지움: 10/10 부터 기본 null = 같음 · 켠 적 없음 — docs/strike/human_ai_parity_2026-11-19.md)
+  const lim = Math.max(Math.abs(f.cache.sword.w.dot(ax)), STEEL.gripTwistMax);
   if (Math.abs(wAx) <= lim) return;
   const dw = wAx - Math.sign(wAx) * lim; // 손아귀가 받아 없애는 축 각속도
   sw.setAngvel({ x: w.x - ax.x * dw, y: w.y - ax.y * dw, z: w.z - ax.z * dw }, true);
