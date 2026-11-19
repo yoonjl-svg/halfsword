@@ -369,6 +369,20 @@ const TAP_TRIG = {
 };
 /** 칼끝 돌려 빼기 칼끝 빠르기 (m/s — 10/31 '보통 찌르기 빠르기'): UNIQUE_ASSIST.cavSpeed 'tap' = 탭 찌르기가 칼 선을 따라 뻗는 몫 (THRUST.reach + THRUST.chamber) ÷ THRUST.extend · 숫자면 그것 */
 export const cavTipSpeed = () => (THRUST.reach + THRUST.chamber) / THRUST.extend;
+/**
+ * 탭 고유 동작 셋의 운동학 칼 — 사람 탭(launchTap)과 AI(ai.js artGo)가 같은 함수를 부른다 (11/19 사람 · AI 같게 A9 · docs/strike/human_ai_parity_2026-11-19.md — 비껴서며 찌르기 inqGo 와 같은 꼴):
+ *  'cav' 칼끝 돌려 빼기 = 상대 칼 밑으로 돌려 빼 반대쪽을 찌름(보통 찌르기 빠르기 cavTipSpeed × cavSpeedMul · 잔상 없음 · side = 비킨 쪽 — 닿았을 때 상대 칼 쪽, 없으면 상대 칼 쪽 기본) ·
+ *  'lian' 날개 접기 = 오른 허리로 거뒀다 앞으로 디디며 허리 가로 베기(고노센 칼끝 × specialShare · 앞 걸음 lianStep) ·
+ *  'dup' 겹치기 = 맞물린 자리에서 상대 칼 뒤로 밀어 넣어 얼굴 사선 베기(고노센 칼끝 × specialShare · 앞 박차기 dupBurst). 강화 끔(UA.enhance 0) · 이미 끌고 가는 중이면 false
+ */
+export const TAP_ART = { cav: 'cavazione', lian: 'lianchi', dup: 'duplieren' };
+export function tapArt(f, key, { side = null, tech = TAP_ART[key] } = {}) {
+  if (!(UA.enhance > 0)) return false;
+  if (key === 'cav') return requestArtThrust(f, { v: cavTipSpeed() * UA.cavSpeedMul, trail: false, tech, under: true, capFromCut: false, side, tapTiming: true, selfFree: 1, hitMul: 1 }); // 보통 찌르기 빠르기 × cavSpeedMul (10/31 판 1.2) · 탭 찌르기 박자 — 길 끝(거둠)까지 시간 상한 없음
+  if (key === 'lian') return requestArtFold(f, { share: specialShare(TAP_ART.lian), tech, step: { kind: 'lunge', fwd: UA.lianStep ?? SECRET.chineseStep } }); // 앞 걸음 = 날개 접기만의 lianStep 0.45 (10/29 14:3x)
+  if (key === 'dup') return requestArtDup(f, { share: specialShare(TAP_ART.dup), tech, face: UA.dupFace, follow: UA.dupFollow, body: UA.dupBody, burst: UA.dupBurst > 0 ? { fwd: UA.dupBurst, free: true, sync: 1, T: 0, match: 1, fit: { point: UA.dupFitPoint ?? 0.6, min: UA.dupFitMin ?? 0.05, floor: UA.dupFitFloor ?? 0.5 } } : null });
+  return false;
+}
 
 /**
  * 플레이어 한 명의 고유 동작 강화 (10/14 — 궤적은 손가락, 고유 동작은 손가락으로 못 하는 몫만). 붙이면(f.skill.uniq = this) 검술 층이 매 스텝
@@ -627,14 +641,10 @@ export class PlayerUniqueAssist {
       this.stats.armSlow = (this.stats.armSlow ?? 0) + 1;
       itEdgeGrant(f, 'feint'); // 칼 우위 (11/14 설계안 A — 헛누름이 들면 · 사람 이탈리아만 · config IT_OUTBOX.edge)
     }
-    if (e.tapSnap && UA.enhance > 0) {
-      const side = ok?.touch?.n ?? null; // 비킨 쪽 = 닿았을 때 상대 칼 쪽
-      // 탭 찌르기 박자 — 길 끝(거둠)까지 시간 상한 없음: 상한에서 끊으면 뻗은 칼이 상대 몸 · 칼 안에 든 채 충돌이 돌아와 내 몸이 튕겨 넘어졌음
-      const vCav = cavTipSpeed() * UA.cavSpeedMul; // 보통 찌르기 빠르기 × cavSpeedMul (10/31 판 1.2)
-      if (requestArtThrust(f, { v: vCav, trail: false, tech: U.name, under: true, capFromCut: false, side, tapTiming: true, selfFree: 1, hitMul: 1 })) {
-        this.stats.snap = (this.stats.snap ?? 0) + 1;
-        return true;
-      }
+    //  탭 찌르기 박자 — 길 끝(거둠)까지 시간 상한 없음: 상한에서 끊으면 뻗은 칼이 상대 몸 · 칼 안에 든 채 충돌이 돌아와 내 몸이 튕겨 넘어졌음 · 칼은 tapArt (AI 와 같은 함수 — 11/19 A9)
+    if (e.tapSnap && tapArt(f, 'cav', { side: ok?.touch?.n ?? null, tech: U.name })) { // 비킨 쪽 = 닿았을 때 상대 칼 쪽
+      this.stats.snap = (this.stats.snap ?? 0) + 1;
+      return true;
     }
     // 비껴서며 찌르기 (10/31 — 특수 공격): 스틱 쪽으로 몸을 빼며(옆 · 앞 = schools.js inquartata step · 뒷발을 그쪽으로 돌려 디딤) 넷째 자세로 가슴 — 고노센 칼끝 × specialShare.inquartata · 잔상
     if (e.tapVoid && UA.enhance > 0) {
@@ -647,19 +657,15 @@ export class PlayerUniqueAssist {
       }
     }
     // 날개 접기 (사장님 10/28 00:3x): 오른 허리 옆으로 거뒀다 앞으로 반걸음 들며 허리를 오른 → 왼 가로 호로 — 고노센 칼끝 × specialShare.lianchi (10/29 02:0x)
-    if (e.tapFold && UA.enhance > 0) {
-      if (requestArtFold(f, { share: specialShare(e.name), tech: U.name, step: { kind: 'lunge', fwd: UA.lianStep ?? SECRET.chineseStep } })) { // 앞 걸음 = 날개 접기만의 lianStep 0.45 (10/29 14:3x)
-        this.stats.snap = (this.stats.snap ?? 0) + 1;
-        return true;
-      }
+    if (e.tapFold && tapArt(f, 'lian', { tech: U.name })) { // 칼은 tapArt (AI 와 같은 함수 — 11/19 A9)
+      this.stats.snap = (this.stats.snap ?? 0) + 1;
+      return true;
     }
     // 겹치기 (10/28): 맞물린 자리에서 상대 칼 뒤로 밀어 넣어 엇갈린 손으로 얼굴을 사선으로 — 고노센 칼끝 × specialShare.duplieren (10/29 02:0x)
     //  10/31 19:xx 사장님 '가장 효율적이고 단순한 움직임 … 박차기를 앞으로 쓰면서 치는 효과': 길 = 맞닿은 자리 축 한 번 돌림(dupOld 0) · 앞 박차기 dupBurst m(겹치기와 함께만 — 죽음의 일격 거리에서 멈춤 · 기력 pushCost — dupBurstFree 면 안 냄)
-    if (e.tapDup && UA.enhance > 0) {
-      if (requestArtDup(f, { share: specialShare(e.name), tech: U.name, face: UA.dupFace, follow: UA.dupFollow, body: UA.dupBody, burst: UA.dupBurst > 0 ? { fwd: UA.dupBurst, free: true, sync: 1, T: 0, match: 1, fit: { point: UA.dupFitPoint ?? 0.6, min: UA.dupFitMin ?? 0.05, floor: UA.dupFitFloor ?? 0.5 } } : null })) {
-        this.stats.snap = (this.stats.snap ?? 0) + 1;
-        return true;
-      }
+    if (e.tapDup && tapArt(f, 'dup', { tech: U.name })) { // 칼은 tapArt (AI 와 같은 함수 — 11/19 A9)
+      this.stats.snap = (this.stats.snap ?? 0) + 1;
+      return true;
     }
     if (auto) return false; // 저절로 낸 칼은 탭 찌르기로 바꾸지 않음 (dupAutoTick 이 운동학 칼이 나갈 수 있을 때만 부름)
     // 운동학 칼이 없으면(끔 · 이미 끌고 가는 중) 탭 찌르기 덧씌우기에 이름만

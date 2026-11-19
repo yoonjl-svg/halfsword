@@ -225,7 +225,7 @@ test('11/15 둘째 AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 (U
     assert.ok(me.iaiReq || me.iai, '운동학 칼 부탁');
     assert.equal((me.iaiReq ?? me.iai).tech, 'inquartata', '같은 이름');
     assert.equal(ai.phase, 'strike');
-    assert.equal(ai.inqRun, true);
+    assert.equal(ai.artRun, true);
     assert.equal(ai.stats.inqArt.fired, 1);
     assert.equal(ai.stats.specials.inquartata, 1, '특수 공격 셈 (식힘 시작)');
     assert.ok(me.stamina.value < st0 || me.stamina.infinite, '찌르기 기력');
@@ -236,7 +236,7 @@ test('11/15 둘째 AI 비껴서며 찌르기 = 사람과 같은 운동학 칼 (U
     }
     assert.ok(k < 240, '칼이 끝남');
     G.step();
-    assert.ok(ai.inqRun === false && ai.phase !== 'strike', '끝나면 다음 스텝에 뒤따름으로');
+    assert.ok(ai.artRun === false && ai.phase !== 'strike', '끝나면 다음 스텝에 뒤따름으로');
     assert.ok(ai.specCooling('inquartata'), '끝난 뒤 식힘 (사람과 같은 수)');
   });
   itAi(5, (ai) => {
