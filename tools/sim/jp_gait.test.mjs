@@ -4,11 +4,12 @@ import assert from 'node:assert/strict';
 import { JAPANESE_GAIT } from '../../src/schools.js';
 import { newRound, DT } from './harness_m.mjs';
 
-test('일본 걸음 칸: 보폭 규칙 밖 · 설계 박자 2.2 · 보폭 0.5 · 사람 칸은 trailReach 만 · speedMul 0.70 · settleStance · 전 판 스위치', () => {
+test('일본 걸음 칸: 보폭 규칙 밖 · 설계 박자 2.2 · 보폭 0.5 · trailReach 0.36 (사람 · AI 같음 — 11/19 A12 · 전 사람 칸) · speedMul 0.70 · settleStance · 전 판 스위치', () => {
   assert.equal(JAPANESE_GAIT.strideK, undefined);
   assert.equal(JAPANESE_GAIT.cadence0, 2.2);
   assert.equal(JAPANESE_GAIT.maxStride, 0.5);
-  assert.deepEqual(JAPANESE_GAIT.player, { trailReach: 0.36 });
+  assert.equal(JAPANESE_GAIT.player, undefined, '사람 덮개 칸 없음 (11/19 A12)');
+  assert.equal(JAPANESE_GAIT.trailReach, 0.36);
   assert.equal(JAPANESE_GAIT.speedMul, 0.7);
   assert.equal(JAPANESE_GAIT.settleStance, true);
 });

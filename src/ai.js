@@ -198,7 +198,7 @@ export class AI {
     this.foe = foe;
     this.sense = new Senses(me, foe);
     me.aiCtl = this; // 강화동작 이점(10/21 — unique_assist.js strokeTechOf): 맞는 순간 지금 기술 이름을 읽는다 · 읽기만
-    me.aiControlled = true; // 유파 걸음(gait.js gaitParams): AI 가 모는 몸은 플레이어 완화 값(gait.player)을 받지 않는다 — 읽기 표시일 뿐
+    me.aiControlled = true; // AI 가 모는 몸 표시 (읽기 — 사람만의 입력 몫 · AI 몸 규칙이 가름 · 11/19 A12 부터 유파 걸음 칸은 사람 · AI 같음)
     this.persona = persona || {};
     this.planOn = !this.persona.planOff; // 유파 AI 개편 판 (11/14 — AI_PLAN.on · 재기 도구가 한 몸만 옛 판으로 둘 때 persona.planOff)
     // 근접 밀치기 (closeQuarters): 인물 칸(persona.close) · 유파 플랜 몸(11/19 E2 — AI_PLAN.shove · 독일 플랜은 deCloseCfg)이 스틱으로 민다. 플랜 없는 옛 판 AI 는 밀지 않는다
