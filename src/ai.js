@@ -1773,8 +1773,9 @@ export class AI {
     // ③ 자세 → 칼길 (11/17 — guard_line.js · [사장님 11/17 결정]): 보이는 내 손 자세(nearGuard — 읽는 쪽과 같은 함수)가 약속한 줄 — 무게 × W^τ · κ (τ = read · 헛스윙 연습은 그대로)
     const near = why === 'drill' ? null : nearGuard(this.me, this.art.tradition);
     const schielOk = cls.online && this.d <= this.M.contact; // 곁눈 베기 제자리 (11/19 E1 짝 — 아래 고르기)
+    const dupOk = (this.bound || !!this.me.feel?.touching) && this.me.foeDistance() <= UA.dupBandMax; // 겹치기는 칼이 맞물렸고 가슴 사이가 사람 겹치기 띠(dupBandMax) 안일 때만 (11/19 A9 — 사람 겹치기는 맞댄 칼에서만 나감 · 운동학 칼이 맞물린 자리에서 시작)
     // 유파 마음가짐 (11/18 — 일격): 후보마다 입힐 피해 · 받을 피해를 먼저 어림 (평균으로 나눠 견줌 · 마음가짐 없으면 null — 셈 그대로)
-    const stakes = this.mind ? mindStakes(this, this.school.tech.map((t0) => { let t = this.techNow(t0); if (t?.name === 'cingir' && t.plain && !SLOW_WHY.has(why)) t = t.plain; return t && !(vKind && t.kind !== vKind) && !(t.name === 'schielhau' && !schielOk) ? t : null; }), hand, padDist) : null; // B7 갈음 · 곁눈 베기 제자리(아래 고르기와 같게) 뒤 칼로
+    const stakes = this.mind ? mindStakes(this, this.school.tech.map((t0) => { let t = this.techNow(t0); if (t?.name === 'cingir' && t.plain && !SLOW_WHY.has(why)) t = t.plain; return t && !(vKind && t.kind !== vKind) && !(t.name === 'schielhau' && !schielOk) && !(t.name === 'duplieren' && !dupOk) ? t : null; }), hand, padDist) : null; // B7 갈음 · 곁눈 베기 제자리 · 겹치기 맞물림(아래 고르기와 같게) 뒤 칼로
     let best = null;
     let bestW = -1;
     for (let ti = 0; ti < this.school.tech.length; ti++) {
@@ -1783,6 +1784,7 @@ export class AI {
       if (!t) continue;
       if (t.name === 'cingir' && t.plain && !SLOW_WHY.has(why)) t = t.plain; // 11/19 B7 (사장님 '권고대로' — 기록 docs/strike/de_band3_2026-11-19.md §B7): 이어 돌리기 칼(왼 가로베기 자리 강화동작)은 짧은 틈 공격(헛친 틈 · 들어옴 · 되받기 … SLOW_WHY 밖)엔 고르지 않음 — 바탕 동작(왼 가로베기)의 몫 그대로
       if (vKind && t.kind !== vKind) continue;
+      if (t.name === 'duplieren' && !dupOk) continue; // 11/19 A9: 겹치기는 칼이 맞물렸을 때만 (사람과 같음 — 그 밖의 겹치기는 사람에게 없는 칼)
       if (t.name === 'schielhau' && !schielOk) continue; // 11/19 E1 짝 (감독 · 기록 docs/strike/human_ai_parity_2026-11-19.md): 곁눈 베기는 제자리(상대 칼끝이 나를 겨눔 · 맞닿기 거리 안 — 칼끝을 눌러 비키며 베는 기술)에서만 · 밖에선 다른 칼 — 분노의 베기는 남기지 않음(사람은 곁눈 베기를 익히면 분노의 베기가 안 나감)
       let w = this.pers.techPref[t0.name] * t.base;
       if (t.kind === 'thrust') w *= thrustBias;
@@ -2311,12 +2313,13 @@ export class AI {
 
   /**
    * 탭 고유 동작 셋을 사람과 같은 운동학 칼로 내나 (11/19 사람 · AI 같게 A9 — unique_assist.js tapArt · 비껴서며 찌르기 inqGo 와 같은 꼴 · 속임 · 비기 · 헛스윙 연습 칼은 아님):
-   *  칼이 나가는 순간(startStrike)의 칼 — 'cav' = 빼서 찌르기 패시브(칼이 맞물린 뒤 — parried · bindDef) · 없으면 null. 언제 내나는 AI 판단 그대로 · 패드 길 대신 그 칼
+   *  칼이 나가는 순간(startStrike)의 칼 — 'cav' = 빼서 찌르기 패시브(칼이 맞물린 뒤 — parried · bindDef) · 'dup' = 겹치기 기술 · 없으면 null. 언제 내나는 AI 판단 그대로 · 패드 길 대신 그 칼
    *  (속임 꼴 둘 — 칼끝 돌려 빼기 · 날개 접기 — 은 가짜 칼 뒤 moveHand 가 FEINT_ART 로 부름)
    */
   artKey() {
     if (!(UA.enhance > 0) || this.feint || this.secretRun || this.drillAtk) return null;
     if (this.passiveAtk === 'cavazione') return 'cav';
+    if (this.tech?.name === 'duplieren') return 'dup'; // 겹치기 — 맞물린 칼에서 고른 것(pickTech dupOk · 독일 느낌 감아 돌아감 natPress)
     return null;
   }
 

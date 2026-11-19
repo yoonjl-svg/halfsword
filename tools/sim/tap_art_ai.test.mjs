@@ -10,11 +10,11 @@ function aiOf(prof, weapon2, fn) {
   try { return fn(G.ai, G); } finally { G.world.free(); }
 }
 /** 운동학 칼이 끝날 때까지 (끝나면 다음 스텝에 뒤따름) */
-function runOut(ai, G) {
+function runOut(ai, G, lim = 240) {
   const me = ai.me;
   let k = 0;
-  while ((me.iai || me.iaiReq) && k++ < 240) G.step();
-  assert.ok(k < 240, '칼이 끝남');
+  while ((me.iai || me.iaiReq) && k++ < lim) G.step();
+  assert.ok(k < lim, '칼이 끝남');
   G.step();
   assert.ok(ai.artRun === false && ai.phase !== 'strike', '끝나면 뒤따름으로');
 }
@@ -95,5 +95,39 @@ test('날개 접기 속임 — 가짜 칼(쟁기 찌르기 앞몫) 뒤 진짜 �
     assert.equal(ai.path.length, 0, '속임 뒤 패드 길 없음');
     assert.equal(ai.artRun, true);
     runOut(ai, G);
+  });
+});
+
+test('겹치기 — 고른 겹치기 칼 = 사람과 같은 운동학 칼 (이름 duplieren · 특수 공격 식힘) · 칼이 맞물리지 않았으면 고르지 않음', () => {
+  aiOf(4, 'longsword', (ai, G) => {
+    const me = ai.me;
+    for (let k = 0; k < 20; k++) G.step();
+    const t = ai.school.techByName.duplieren;
+    assert.ok(t, '꾸러미에 겹치기 (숙련 4)');
+    const s = ai.sense.seen(0);
+    const pick = (bound, d, n = 300) => {
+      const fd = me.foeDistance;
+      me.foeDistance = () => d;
+      ai.bound = bound;
+      me.feel.touching = false;
+      try {
+        let c = 0;
+        for (let k = 0; k < n; k++) if (ai.pickTech(s, 'follow')?.name === 'duplieren') c++;
+        return c;
+      } finally {
+        me.foeDistance = fd;
+      }
+    };
+    assert.equal(pick(false, 1.2), 0, '맞물림 없음 — 안 고름');
+    assert.equal(pick(true, 2.4), 0, '맞물렸어도 겹치기 띠(가슴 사이 1.6 m) 밖 — 안 고름');
+    assert.ok(pick(true, 1.2) > 0, '맞물림 · 띠 안 — 고를 수 있음');
+    ai.bound = true;
+    assert.ok(ai.startAttack(t, 'follow', { noFeint: true, skipChamber: true }));
+    ai.startStrike();
+    assert.equal((me.iaiReq ?? me.iai)?.tech, 'duplieren', '같은 이름 운동학 칼');
+    assert.equal(ai.stats.tapArt.dup.fired, 1);
+    assert.equal(ai.stats.specials?.duplieren, 1, '특수 공격 셈');
+    assert.equal(ai.path.length, 0, '패드 길 없음');
+    runOut(ai, G, 600); // 이 시험은 5.6 m 에서 냄 — 앞 박차기(dupBurst)가 죽음의 일격 거리까지 가서 벰
   });
 });
