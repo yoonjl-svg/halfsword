@@ -22,7 +22,7 @@
 //  ai.mind 가 없는 몸(무유파 · 숙련도 0)은 이 파일의 셈을 하나도 안 탐 — 옛 셈 그대로.
 //  굴림 없음 — 곱 · 문턱 · 지수 평균 · 옆 크기 제어만 (난수 차례는 옛 굴림 그대로 — 굴림 몫만 바뀜).
 // ─────────────────────────────────────────────────────────────
-import { MINDSET, SECRET, AI_PLAN } from './config.js';
+import { MINDSET, SECRET, AI_PLAN, ARENA } from './config.js';
 import { SCHOOL_MINDSET } from './schools.js';
 import { secretLeft, playerSecretOf } from './secret.js';
 import { kitOff } from './skill_kit.js';
@@ -128,8 +128,8 @@ export function mindTick(ai, dt, s) {
   const M = ai.mind;
   if (!M) return;
   const pp = ai.me.bodies?.pelvis?.translation?.();
-  if ((ai.mode === 'watch' || ai.mode === 'withdraw') && !ai.staminaRest && !(pp && Math.hypot(pp.x, pp.z) > 4.6)) {
-    // 내가 고른 걸음 (기력 쉼 · 울타리 띠 빼고 — 물러나 숨 고르기 · 울타리 빠짐은 고른 걸음이 아님) (지난 스텝 스틱 옆 · 앞뒤 — 몸 흔들림 · 돌아섬 · 밀림이 아니라 고른 것)
+  if ((ai.mode === 'watch' || ai.mode === 'withdraw') && !ai.staminaRest && !(pp && Math.hypot(pp.x, pp.z) > ARENA.radius - ARENA.aiWall)) {
+    // 내가 고른 걸음 (기력 쉼 · 울타리 띠(ai.js moveFeet 와 같은 반지름 − ARENA.aiWall — 11/19 전 4.6) 빼고 — 물러나 숨 고르기 · 울타리 빠짐은 고른 걸음이 아님) (지난 스텝 스틱 옆 · 앞뒤 — 몸 흔들림 · 돌아섬 · 밀림이 아니라 고른 것)
     const a = Math.min(1, dt / MINDSET.latTau);
     const mv = ai.me.move;
     ai.mindLat = (ai.mindLat ?? 0) + (Math.abs(mv?.x ?? 0) - (ai.mindLat ?? 0)) * a;

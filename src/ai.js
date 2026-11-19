@@ -4522,15 +4522,16 @@ export class AI {
       sideLock = true;
     }
     if (this.mind && !sideLock && (this.mode === 'watch' || this.mode === 'withdraw') && !this.chasing) side = mindSide(this, side, dt); // 유파 마음가짐 (11/18 — 횡보): 간 보기 · 물러남 걸음의 옆 몫을 목표로 (0 이면 옆걸음 없음 — 울타리 빠짐은 아래 그대로)
-    // 울타리에 몰리면 옆으로 빠져 가운데로 (구석에 갇히지 않게)
+    // 울타리에 몰리면 옆으로 빠져 가운데로 (구석에 갇히지 않게) — 띠 = 반지름 − ARENA.aiWall 밖 (11/19 경기장에 맞춤 · 전 4.6 m)
     const a = me.bodies.pelvis.translation();
     const rA = Math.hypot(a.x, a.z);
-    if (rA > 4.6 && !(this.mode === 'attack' && this.phase === 'strike')) {
+    const wallIn = ARENA.radius - ARENA.aiWall;
+    if (rA > wallIn && !(this.mode === 'attack' && this.phase === 'strike')) {
       const f = me.forward(_v2);
       const r = me.right(_v1);
       const outBack = -(a.x * f.x + a.z * f.z) / rA; // 등이 울타리 쪽이면 +
       const toCenter = -(a.x * r.x + a.z * r.z) / rA; // 가운데가 내 오른쪽이면 +
-      const k = clamp((rA - 4.6) * 1.2, 0, 1);
+      const k = clamp((rA - wallIn) * 1.2, 0, 1);
       if (fwd < 0 && outBack > 0.3) fwd *= 1 - k * 0.8; // 뒤로는 더 못 간다
       side = side * (1 - k) + Math.sign(toCenter || 1) * k;
       if (this.mode === 'watch') this.patience = Math.max(0, this.patience - dt * realRate(0.15) * k); // 몰렸으면 먼저 친다
