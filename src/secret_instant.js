@@ -420,7 +420,7 @@ const OFF_PARTS = ['uarmO', 'farmO'];
  *  opt.block: 막힐 수 있는 발도 — 칼이 몸보다 먼저 상대 칼에 닿으면 막힘(이베리아 휩쓸기 · 연환과 같은 거리 iberianBlockDist · 밀어냄 없음). 고노센 B(SECRET.gnsEnterBlock — 천천히 걸어 든 들어옴 창에서 낸 것만 · 10/25) ·
  *  'cover' = 그에 더해 상대 칼끝이 내 몸을 겨누고 있었음(낼 때 — secret.js foeOnline) — 몸에 닿는 그 자리에서 그 칼에 막힘 (SECRET.gnsEnterBlock 2 · 10/25 16:0x 시험) */
 export function requestIai(f, opt = {}) {
-  f.iaiReq = { player: !!opt.player, block: opt.block === 'cover' ? 'cover' : !!opt.block };
+  f.iaiReq = { block: opt.block === 'cover' ? 'cover' : !!opt.block }; // (전 player — 사람 발도 박자 · 11/19 두 몸 같은 규칙)
   f.instantResult = null;
 }
 
@@ -809,7 +809,7 @@ function startIai(f, combat) {
   const K = obiB ? { ...SECRET.iaiPath, B: obiB } : SECRET.iaiPath;
   const DB = dirOf(K.B.yaw, K.B.el);
   const far = AH.distanceTo(new THREE.Vector3(...K.B.hand)) > 0.12 || AD.angleTo(DB) > 0.6;
-  const T = (req.player || far ? SECRET.iaiPlayerTime : SECRET.iaiTime) / (f.schoolPassive?.speedOf?.() ?? 1); // 대기 자세(손이 왼 허리)면 곧장 가로, 아니면 왼 허리를 거쳐 · 11/16 일본 스택 빠르기(JP_TANK.speed — 고노센에 묶인 스택 · 없으면 1)
+  const T = (far ? SECRET.iaiPlayerTime : SECRET.iaiTime) / (f.schoolPassive?.speedOf?.() ?? 1); // 11/19 사람 · AI 같은 규칙(감독 — 보정 v2 묶음): 대기 자세(손이 왼 허리)면 곧장 iaiTime, 아니면 (전 사람 발도는 늘 iaiPlayerTime — req.player) 왼 허리를 거쳐 · 11/16 일본 스택 빠르기(JP_TANK.speed — 고노센에 묶인 스택 · 없으면 1)
   // 10/12 03:2x 사장님 '기술길이 좀 더 상승하게 … 사선 올려베기처럼' · '한 팔 완전히 쭉 뻗어서 써야 맞는 거 아냐?' (SECRET.iaiRise): 길 = 올려베기(그 길은 11/13 원전 꼴 iaiPathReal 로 · 11/19 모든 몸 — 아래) ·
   //  한 손 = 칼 쪽 손만 쥐고 빈손은 칼을 놓고 배 앞으로(10/14 — 전 왼 허리 뒤 鞘引き · fighter.js applyPose 가 iai.oneHand 를 읽어 빈팔을 SECRET.iaiSayaHand 로 · offHand 쥐기 쉼).
   //   11/13 사장님 '욍손자리 원전대로' (SECRET.iaiSaya 1): 빈손은 칼집 입을 쥐고 왼 허리(左帯)로 당긴 자리 SECRET.iaiSayaHip (골반 틀 — fighter.js sayaHandW)

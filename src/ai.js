@@ -104,6 +104,9 @@ const CALM_T = realS(2); // 대치: 위협 없이 이만큼 지나야 '조용히
 //  속임 꼴 고유 동작(날개 접기 · 칼끝 돌려 빼기 — schools.js *_UNIQUE feint) · 패시브(겹치기 · 빼서 찌르기 cavazione — 같은 이름 · 되받아 치기 kaeshi — 그 기술이 제비 베기)
 const SPECIALS = new Set(Object.values(PLAYER_UNIQUE).flat().filter((e) => e.special).map((e) => e.name));
 const SPECIAL_FEINT = new Map(Object.values(TRADITIONS).flatMap((T) => (T.unique ?? []).filter((u) => u.feint && SPECIALS.has(u.name)).map((u) => [u.feint.name, u.name])));
+const D2R_UB = Math.PI / 180;
+/** 고유 동작 강화의 몸 표 (11/19 A7 — 사람 unique_assist.js PLAYER_UNIQUE 의 body · bodyMirror): 유파 → (AI 기술 이름 = 표 path ?? name → 칸) */
+const UNIQUE_BODY = new Map(Object.entries(PLAYER_UNIQUE).map(([tr, list]) => [tr, new Map(list.filter((e) => e.body).map((e) => [e.path ?? e.name, e]))]));
 const FEINT_KEY = { cavazione: 'cav', lianchi: 'lian' }; // 속임 꼴 탭 고유 동작 (칼끝 돌려 빼기 · 날개 접기) → unique_assist.js tapArt 열쇠
 const FEINT_ART = new Map(Object.values(TRADITIONS).flatMap((T) => (T.unique ?? []).filter((u) => u.feint && FEINT_KEY[u.name]).map((u) => [u.feint.name, FEINT_KEY[u.name]]))); // 속임 이름 → 사람과 같은 운동학 칼 (11/19 A9 — artGo · 가짜 칼 뒤)
 /** 패시브 P 가 특수 공격의 AI 몫이면 그 이름 (같은 이름 · 그 기술 · 그 속임) — 아니면 null */
@@ -647,7 +650,7 @@ export class AI {
     if (RX) this.level = { ...this.level, reaction: RX[Math.max(0, Math.min(RX.length - 1, Math.round(this.mainProficiency ?? this.proficiency ?? 2)))] };
     this.me.strength = this.level.strength;
     this.me.skill.level = this.level.skill;
-    this.me.skill.corr = 'old'; // AI 보정 방식 (사장님 9/30 23:40: 사람이 먼저, AI 는 옛 보정)
+    this.me.skill.corr = 'v2'; // AI 보정 방식 = 사람과 같은 v2 (11/19 사람 · AI 같게 A1 — 보정 v2 묶음 · 기록 docs/strike/human_ai_parity_2026-11-19.md §3 · §10 · 전 'old' — 사장님 9/30 23:40 '사람이 먼저') · '손가락이 닿음'은 AI 공격 · 비기 · 막기 꼴(skill.js aiHeld)
   }
 
   // ── 겨눌 상대 바꾸기 (2:2 동시 대전 10/29 — docs/strike/team_fight_2026-10-29.md · src/match.js · src/targeting.js) ──
@@ -1105,6 +1108,7 @@ export class AI {
       iaiReadyPose(me, this.iaiArm.armed && this.mode !== 'attack', dt, this.mode !== 'attack' ? this.iaiArm.sheathe : 0); // 11/14 납도 (SECRET.iaiSheathe): 준비 전 iaiSheathe 초 동안 칼을 칼집에 (사람과 같은 셈)
     }
     this.moveHand(dt);
+    this.uniqBodyTick(dt); // 고유 동작 강화의 몸 (11/19 보정 v2 묶음 A7 — 사람과 같은 칸)
     this.moveFeet(dt, d);
     if (kneeling) me.move.set(0, 0); // 무릎 꿇거나 일어나는 중엔 발을 옮길 수 없다 (칼만 움직인다)
     if (me.bwAtk && this.mode !== 'attack') bwAtkDrop(me); // 뒤 박차기 헛침 경직 (11/19): 친 뒤(afterStrike) 없이 공격 꼴을 떠난 칼은 셈에서 지움
@@ -2310,6 +2314,43 @@ export class AI {
     S.fired++;
     if (sg < 0) S.left++;
     return true;
+  }
+
+  /**
+   * 고유 동작 강화의 몸 (11/19 보정 v2 묶음 A7 — 사람 unique_assist.js ② 몸과 같은 칸 · 같은 빠르기 · 기록 docs/strike/human_ai_parity_2026-11-19.md §7 #10):
+   *  고유 동작 칼이 나가는 동안(공격 꼴 strike — 속임 · 비기 · 운동학 칼 · 헛스윙 연습 빼고) 표의 body 만큼 몸통 돌림 · 숙임 · 낮춤을 UA.bodyIn 초에 얹고,
+   *  끝나면 UA.bodyOut 초에 걷음 → skill.uniqBody (fighter.js updateBodyPose · 날 세우기 앞당김 yawRate 가 읽음 — 사람과 같은 자리). bodyMirror = 기술 걸음 쪽(step.lat)에 맞춤
+   */
+  uniqBodyTick(dt) {
+    const E = UA.enhance;
+    const t = E > 0 && this.mode === 'attack' && this.phase === 'strike' && !this.feint && !this.secretRun && !this.artRun && !this.drillAtk ? this.tech : null;
+    const e = t ? UNIQUE_BODY.get(this.art?.tradition)?.get(t.name) ?? null : null;
+    let B = e?.body ?? null;
+    if (B && e.bodyMirror) {
+      const lat = t.step?.lat ?? 0;
+      if (lat) {
+        const sg = Math.sign(lat) * e.bodyMirror;
+        B = [Math.abs(B[0]) * sg, Math.abs(B[1]) * sg, B[2], B[3]];
+      }
+    }
+    const body = (this.uqBody ??= [0, 0, 0, 0]);
+    const k = Math.min(1, dt / (B ? UA.bodyIn : UA.bodyOut));
+    let any = false;
+    for (let i = 0; i < 4; i++) {
+      const tgt = B ? B[i] * (i < 3 ? D2R_UB : 1) * E : 0;
+      body[i] += (tgt - body[i]) * k;
+      if (Math.abs(body[i]) > 1e-4) any = true;
+      else if (!B) body[i] = 0;
+    }
+    const sk = this.me.skill;
+    if (any) {
+      const ub = (sk.uniqBody ??= { pelvisYaw: 0, chestYaw: 0, pitch: 0, drop: 0 });
+      ub.pelvisYaw = body[0];
+      ub.yawRate = dt > 0 ? (body[1] - ub.chestYaw) / dt : 0;
+      ub.chestYaw = body[1];
+      ub.pitch = body[2];
+      ub.drop = body[3];
+    } else if (sk.uniqBody) sk.uniqBody = null;
   }
 
   inqRefuse() {

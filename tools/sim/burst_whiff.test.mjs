@@ -27,12 +27,12 @@ function swing(D) {
 }
 
 test('① 칼이 나가는 동안 뒤 박차기 + 아무 데도 안 닿고 끝남 → 그 칼이 끝난 때부터 BURST_WHIFF.stiff 동안 굳음 (시간 사다리 0.6 — 비기 경직과 같은 값)', () => {
-  const D = duel(1.3);
+  const D = duel(1.6); // 11/19 보정 v2 묶음: 1.3 m 에선 손으로 놓은 AI 꼴(날것 손 목표)의 칼이 첫 스텝에 사람 칼에 닿아 그 공격의 닿음이 됨 — 칼끝 거리 안 1.6
   try {
     assert.ok(Math.abs(BURST_WHIFF.stiff - CONFIG.realS(0.6)) < 1e-12);
     assert.ok(Math.abs(BURST_WHIFF.stiff - CONFIG.SECRET.stiff.german) < 1e-12, '비기 경직과 같은 값');
     swing(D);
-    assert.equal(D.Y.bwAtk.inReach, true, '가슴 사이 1.3 m — 롱소드 칼끝 거리 안');
+    assert.equal(D.Y.bwAtk.inReach, true, '가슴 사이 1.6 m — 롱소드 칼끝 거리 안');
     bwBurst(D.X);
     assert.equal(D.Y.bwAtk.burst, true);
     assert.equal(bwAtkEnd(D.Y, false, false), true);
@@ -50,7 +50,7 @@ test('① 칼이 나가는 동안 뒤 박차기 + 아무 데도 안 닿고 끝�
 });
 
 test('② 몸에 닿음 · 칼끼리 닿음 · 그 몸이 센 맞힘 · 맞물림 → 안 굳음', () => {
-  const D = duel(1.3);
+  const D = duel(1.6); // 11/19 보정 v2 묶음: 1.3 m 에선 손으로 놓은 AI 꼴(날것 손 목표)의 칼이 첫 스텝에 사람 칼에 닿아 그 공격의 닿음이 됨 — 칼끝 거리 안 1.6
   try {
     for (const hit of ['touch', 'landed', 'bound']) {
       swing(D);
@@ -148,6 +148,7 @@ test('⑥ 굳은 AI: 공격 문이 막힘 · 위협에 답하지 않음(위협 �
     ai.hitLanded = ai.bound = false;
     ai.afterStrike(1.6);
     assert.ok(bwStiff(Y), 'afterStrike 가 굳힘');
+    Y.bwEnd = null; // 끝난 스텝의 늦은 닿음 셈(②)은 이 시험 밖 — 11/19 보정 v2 묶음: 원래 판단으로 돌린 AI 의 간 보기 손이 첫 스텝에 사람 칼에 닿아 굳음을 거두던 장면
     assert.equal(ai.mode, 'watch', '이어 치기 · 물러남 없이 간 보기 꼴로');
     assert.equal(ai.stats.bwStiff, 1);
     const tech = ai.school.tech[0];
@@ -156,8 +157,9 @@ test('⑥ 굳은 AI: 공격 문이 막힘 · 위협에 답하지 않음(위협 �
     const seen = ai.threatSeen;
     assert.equal(ai.respond({ id: 777, line: 'highC', thrust: false, tc: 0.1 }, 1.6), false, '막기 없음');
     assert.equal(ai.threatSeen, seen, '위협 번호 그대로');
+    D.G.step(); // 굳음 첫 스텝이 손 목표를 걸러진 자리(aim)에 붙듦 (skill.js holdStiff — 11/19 보정 v2 묶음: AI 손 목표와 걸러진 자리가 다를 수 있음)
     const h0 = Y.handOffset.clone();
-    for (let i = 0; i < 10; i++) D.G.step();
+    for (let i = 0; i < 9; i++) D.G.step();
     assert.ok(bwStiff(Y));
     assert.notEqual(ai.mode, 'attack');
     assert.notEqual(ai.mode, 'defend');

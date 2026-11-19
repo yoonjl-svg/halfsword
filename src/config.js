@@ -1157,8 +1157,8 @@ export const SECRET = {
     pickup: { drop: 0.4, pitch: 60, rate: 1.6, inTime: 0.25, outTime: 0.3 }, // 떨어진 칼 줍기 웅크림 (11/05 — 비기가 아님 · 같은 틀만 씀 · PICKUP · src/pickup.js): 골반 0.4 m 낮춤 · 몸통 60° 숙임 — 손이 땅 0.3 m 안까지 [감독 · 사장님 확인 전]
   },
   iaiDrawStep: 0.7, // 발도 순간 앞발을 크게 내딛는 걸음 (m, gait lunge — 몸 미끄러짐과 따로). 0.4 는 몸이 함께 미끄러져 두 발 사이 0.18 m 로 좁았다(캡처)
-  iaiTime: 0.12, // 대기 자세(손이 왼 허리)에서 가로 휩쓸기 끝까지 (s, 60 fps 로 7 프레임 안팎)
-  iaiPlayerTime: 0.15, // 손이 왼 허리에 없을 때(플레이어·대기 아닌 AI) 지금 손 → 왼 허리 → 가로 끝까지 (s)
+  iaiTime: 0.12, // 대기 자세(손이 왼 허리)에서 휩쓸기 끝까지 (s, 60 fps 로 7 프레임 안팎) — 사람 · AI 같은 규칙 (11/19 · 전 사람 발도는 손이 대기 자리여도 늘 iaiPlayerTime)
+  iaiPlayerTime: 0.15, // 손이 왼 허리 대기 자리에 없을 때(사람 · AI — 칼을 쥔 채 · 대기 아님) 지금 손 → 왼 허리 → 끝까지 (s)
   iaiDrawShare: 0.33, // 그때 왼 허리까지 가는 몫 (iaiPlayerTime 의)
   iaiStep: 0.6, // 발도 동안 몸이 미끄러지는 최대 (m — 순간 베기 instantStep 과 같은 한도). 맞닿기 거리에서 멈추고 clinch 안 금지
   iaiSlideShare: 0.5, // 그 미끄러짐을 발도 시간의 이 몫 안에 마친다 (칼이 가운데를 지나기 전)
