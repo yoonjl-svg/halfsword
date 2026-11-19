@@ -76,8 +76,9 @@ function inputEnv(fn) {
 globalThis.document ??= { pointerLockElement: null };
 globalThis.matchMedia ??= () => ({ matches: true });
 
-/** 유파 칸: 유파 · 내 무기 · 상대 무기 (기본 칸 = 유파 대표 커먼 무기 대 롱소드 AI · 거울) */
-export const CELLS = ['german:longsword:longsword', 'german:sabre:longsword', 'italian:rapier:longsword', 'iberian:zweihander:longsword', 'japanese:uchigatana:longsword', 'chinese:hwando:longsword', 'none:morgenstern:longsword', 'italian:rapier:rapier', 'iberian:zweihander:zweihander', 'japanese:uchigatana:uchigatana', 'chinese:hwando:hwando', 'german:sabre:sabre', 'none:morgenstern:morgenstern'];
+/** 유파 칸: 유파 · 내 무기 · 상대 무기 (기본 칸 = 유파 대표 커먼 무기 대 롱소드 AI · 거울)
+ *  11/19 사장님 상시 규칙 '재기에 estoc · sabre 를 쓰지 않음'(플레이어가 쓰지 않는 무기): 사브르 칸 둘(german:sabre:longsword · german:sabre:sabre)을 뺌 — 13 → 11 칸 */
+export const CELLS = ['german:longsword:longsword', 'italian:rapier:longsword', 'iberian:zweihander:longsword', 'japanese:uchigatana:longsword', 'chinese:hwando:longsword', 'none:morgenstern:longsword', 'italian:rapier:rapier', 'iberian:zweihander:zweihander', 'japanese:uchigatana:uchigatana', 'chinese:hwando:hwando', 'none:morgenstern:morgenstern'];
 const BASIC = ['zornhau', 'zornhauL', 'oberhau', 'zwerch', 'zwerchL', 'unterhau', 'unterhauL', 'stichPflug', 'stichOchs', 'stichPflugL'];
 const TSU = (() => {
   const u = TRADITIONS.japanese.unique.find((x) => x.name === 'tsubameGaeshi');
