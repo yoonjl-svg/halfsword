@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { newMatch, CONFIG } from './jelly_harness.mjs';
 import { aiAtProficiency } from '../../src/characters.js';
 import { createSense, recordSense, senseScore, huntFree } from '../../src/team_sense.js';
-import { supportOf, duelK, supportScore, supportFeet, laneFree, mateSepK, supportOpp, shoveToMate, supportChain } from '../../src/team_support.js';
+import { supportOf, duelK, duelHunt, supportScore, supportFeet, laneFree, mateSepK, supportOpp, shoveToMate, supportChain } from '../../src/team_support.js';
 
 const TS = CONFIG.TEAM_SENSE;
 const SU = CONFIG.TEAM_SUPPORT;
@@ -71,6 +71,10 @@ test('② 몫 = 숙련 곡선 · 일본 · 무유파 0 · 이탈리아 결투 �
   assert.equal(duelK({ art: { tradition: 'italian' }, proficiency: 6 }), SU.it.duel);
   assert.equal(duelK({ art: { tradition: 'italian' }, proficiency: 2 }), 0);
   assert.equal(duelK({ art: { tradition: 'german' }, proficiency: 6 }), 0);
+  assert.equal(duelK({ art: { tradition: 'iberian' }, proficiency: 6 }), SU.ib.coop);
+  assert.equal(duelHunt({ art: { tradition: 'iberian' }, proficiency: 6 }), false, '이베리아는 사냥할 때 그대로');
+  assert.equal(duelHunt({ art: { tradition: 'italian' }, proficiency: 6 }), true);
+  assert.equal(duelHunt({ art: { tradition: 'italian' }, proficiency: 3 }), false, '숙련 3 (몫 0.44) — 문턱 밑');
   assert.equal(duelK(null), 0);
 });
 
@@ -203,6 +207,9 @@ test('⑦ 이탈리아 결투 고집: 엄호 덧셈을 거둠 · 사냥할 때�
   const I = mk('italian', 2);
   const MI = board(I, [1, 0, 3, 2]);
   assert.equal(senseScore(MI, I[0], I[3]), -TS.cover.sub, '숙련 2: 몫 0 — 그대로');
+  const B6 = mk('iberian', 6);
+  const MB6 = board(B6, [1, 0, 3, 2]);
+  assert.equal(senseScore(MB6, B6[0], B6[3]), -TS.cover.sub * (1 - SU.ib.coop), '이베리아: coop 만큼 거둠');
   const I6 = mk('italian', 6);
   const MI6 = board(I6, [1, 0, 3, 2]);
   assert.equal(senseScore(MI6, I6[0], I6[3]) + 0, 0, '숙련 6: 엄호 덧셈 없음');

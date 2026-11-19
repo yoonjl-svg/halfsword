@@ -183,14 +183,15 @@ export const TEAM_SENSE = {
 //  de 독일: laneK 동료 칼길에서 벗어나는 옆 스틱 몫 · goal 동료와 벌릴 각(°) · tol 너그러움(°) · k 도는 스틱 몫 · near 도는 거리 = 내 칼끝 + m (멀면 다가감이 먼저) ·
 //          shove 밀기로 정하는 각(°) · reach 밀린 적이 들 동료 칼끝 + m · follow 동료가 칠 때 빈틈 점수 · focus 동료와 붙은 적 겨눔 덧셈(m)
 //  cn 동방: laneK · goal · tol · k · near (위와 같은 뜻) · ambush 동료와 붙은 적의 앞 밖에서 빈틈 점수 · run 그 적을 친 뒤 이어 치기 마음을 거둘 몫 · focus
-//  ib 이베리아: lane 칼길을 덜 보는 몫(미룸 줄 폭 × (1 − lane) · 비킴 걸음 × (1 − lane)) · sep 같은 편 비킴(TEAM_FIGHT.mateSep)을 거둘 몫 · share 나눠 맡기(TEAM_FIGHT.target.allyAdd)를 거둘 몫
+//  ib 이베리아: lane 칼길을 덜 보는 몫(미룸 줄 폭 × (1 − lane) · 비킴 걸음 × (1 − lane)) · sep 같은 편 비킴(TEAM_FIGHT.mateSep)을 거둘 몫 · share 나눠 맡기(TEAM_FIGHT.target.allyAdd)를 거둘 몫 ·
+//           coop 무리 싸움 판단(TEAM_SENSE)의 동료를 위한 몫을 거둘 몫 (이탈리아 duel 과 같은 길 · 사냥할 때는 그대로)
 //  it 이탈리아: duel 결투 고집 — 무리 싸움 판단(TEAM_SENSE)의 동료를 위한 몫(엄호 · 노릴 상대 · 역할 · 끼어듦 · 이끌기 · 집게 · 기습)을 거둘 몫 ·
 //           몫 ≥ hunt 면 겨눈 상대가 동료와 붙어도 '사냥할 때'(team_sense.js huntFree)로 보지 않음 — 제 간격에서 상대를 기다리는 꼴 그대로 (제 상대와의 거리 싸움만)
 export const TEAM_SUPPORT = {
   laneW: 0.6, // 동료 칼길 = 동료 → 그 상대 선분에서 이 m 안 (독일 · 동방이 벗어남 — 재기 '칼길 막음' 0.5 m 와 걸음 사다리 0.6)
   de: { laneK: 0.8, goal: 75, tol: 15, k: 0.8, near: 0.9, shove: 100, reach: 0.6, follow: 0.8, focus: 0.6 },
   cn: { laneK: 0.8, goal: 130, tol: 15, k: 0.8, near: 0.9, ambush: 1.0, run: 0.5, focus: 0.6 },
-  ib: { lane: 0.8, sep: 0.7, share: 1 },
+  ib: { lane: 0.8, sep: 0.7, share: 1, coop: 0.5 },
   it: { duel: 1, hunt: 0.5 },
 };
 

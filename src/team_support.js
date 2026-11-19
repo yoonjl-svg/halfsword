@@ -24,6 +24,7 @@
 //   ① 칼길 (ai.js atkGate): 동료가 내 칼길 한가운데(줄에서 lane.w × (1 − ib.lane) 안)가 아니면 공격을 미루지 않음 · 줄에서 비키는 걸음(team_sense 칼길 비우기)도 ib.lane 만큼 거둠
 //   ② 같은 편 비킴(0.9 m — ai.js teamFeet) × (1 − ib.sep)
 //   ③ 나눠 맡기를 덜 봄 (targeting.js): 동료가 이미 겨눈 적의 + allyAdd 를 ib.share 만큼 거둠 → 동료 곁으로 붐빔 · 큰 칼이 때로 동료를 벰 (대본 아님 — 재서 봄)
+//   ④ 동료와 맞추지 않음 (team_sense.js): 무리 싸움 판단의 동료를 위한 몫(엄호 · 노릴 상대 · 끼어듦 · 이끌기 · 집게 · 기습)을 ib.coop 만큼 거둠 — 제 둥근 걸음으로 돎
 //  이탈리아 (결투 고집 — 동료를 돌보지 않음 · 사장님 11/19 '이탈리아 다수전 하위'): team_sense.js 의 상대 고르기 덧셈(엄호 · 노릴 상대 · 역할) · 끼어듦 · 이끌기 · 집게 · 기습 몫 × (1 − it.duel)
 //   — 동료를 치는 적으로 바꾸지 않음 · 구하러 가지 않음 · 제 상대와의 거리 싸움만 (칼길 비우기 · 열세 줄 세우기는 그대로)
 //  일본: 칸 없음 (혼자 대 다수 유파 — 서포트는 지금 그대로)
@@ -156,10 +157,16 @@ function laneOf(ai, v) {
 /** 그 장에서 i 가 지금 상대 j 에게 붙잡혀 있나 (team_sense.js pinnedBy 와 같음) */
 const pinnedBy = (fr, i, j) => j >= 0 && fr.b[j].live && fr.b[j].foe === i && fr.b[j].busy;
 
-// ───────── 이탈리아 결투 고집 (team_sense.js 가 읽음) ─────────
-/** 무리 싸움 판단 가운데 동료를 위한 몫을 거둘 몫 0 ~ 1 (이탈리아 it.duel × w · 다른 유파 0) */
+// ───────── 동료를 덜 봄 (team_sense.js 가 읽음) ─────────
+/** 무리 싸움 판단 가운데 동료를 위한 몫을 거둘 몫 0 ~ 1 — 이탈리아 결투 고집 it.duel × w · 이베리아 ib.coop × w · 다른 유파 0 */
 export function duelK(ai) {
-  return ai ? TEAM_SUPPORT.it.duel * wOf(ai, 'it') : 0;
+  if (!ai) return 0;
+  const S = supportOf(ai);
+  return S.key === 'it' ? TEAM_SUPPORT.it.duel * S.w : S.key === 'ib' ? TEAM_SUPPORT.ib.coop * S.w : 0;
+}
+/** 이탈리아 결투 고집이 '사냥할 때'(team_sense.js huntFree)를 끄나 — it.duel × w ≥ it.hunt (제 간격에서 상대를 기다리는 꼴 그대로) */
+export function duelHunt(ai) {
+  return !!ai && TEAM_SUPPORT.it.duel * wOf(ai, 'it') >= TEAM_SUPPORT.it.hunt;
 }
 
 // ───────── 상대 고르기 덧셈 (targeting.js targetScore — M.sense 있을 때 · AI 만) ─────────
