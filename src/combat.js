@@ -120,7 +120,7 @@ export function stepMassOf(att, vic) {
   const dd = Math.hypot(dx, dz);
   if (!(dd > 1e-6)) return 0;
   const v = (a.v.x * dx + a.v.z * dz) / dd;
-  // 뛰기 (11/18 — 사람 몸 · src/run.js): 들어가는 빠르기는 걷는 끝 빠르기(GAIT.moveSpeed)까지만 센다 — 뛰며 친 베기의 걸음 몫이 걸으며 친 베기보다 크지 않게.
+  // 뛰기 (11/18 — src/run.js · 사람 · AI 같음): 들어가는 빠르기는 걷는 끝 빠르기(GAIT.moveSpeed)까지만 센다 — 뛰며 친 베기의 걸음 몫이 걸으며 친 베기보다 크지 않게.
   //  stepVRef(1.0)가 걷는 끝 빠르기(1.82)보다 작아 걷기 · AI 판은 한 비트도 안 바뀜 (stepVRef 를 걷는 끝 빠르기 위로 올리는 날에 쓰이는 문)
   return v > 0 ? STRIKE.stepMass * Math.min(1, Math.min(v, GAIT.moveSpeed) / STRIKE.stepVRef) : 0;
 }

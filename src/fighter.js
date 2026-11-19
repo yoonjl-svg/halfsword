@@ -13,7 +13,7 @@ import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜�
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
 import { runTick } from './dig_proto.js'; // 시제품 C 달림 (11/14 — config DIG_PROTO.run · 기본 끔)
-import { runStep, runFace, runWant } from './run.js'; // 뛰기 (11/18 사장님 — 사람 몸만 · config RUN)
+import { runStep, runFace, runWant } from './run.js'; // 뛰기 (11/18 사장님 · config RUN — 사람 · 11/19 셋 이상 판 AI 같은 셈)
 import { cnStepTick } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 · 11/16 사장님 결정 켬)
 import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, RUN, realS } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
@@ -1159,7 +1159,7 @@ export class Fighter {
         const p = this.bodies.pelvis.translation();
         const tg0 = this.aiControlled && AI_REACT.on ? this.reactTarget(dt) : this.faceTarget; // AI 반응 시간(AI_REACT): face s 전의 상대 자리를 본다
         const tg = this.pickup?.face ?? tg0; // 떨어진 칼을 줍는 동안(웅크려 손을 뻗는 동안만)은 칼 쪽으로 (src/pickup.js)
-        const rf = this.run?.on ? runFace(this) : null; // 뛰는 동안은 뛰는 쪽을 봄 (11/18 — src/run.js · 사람 몸만 · 빠르기는 아래 그대로)
+        const rf = this.run?.on ? runFace(this) : null; // 뛰는 동안은 뛰는 쪽을 봄 (11/18 — src/run.js · 빠르기는 아래 그대로)
         const want = rf ?? Math.atan2(-(tg.z - p.z), tg.x - p.x);
         let diff = want - this.heading;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
@@ -1775,7 +1775,7 @@ export class Fighter {
     for (const { rb } of this.meshes) rb.resetForces(true), rb.resetTorques(true);
     this.jolt = Math.max(0, this.jolt - dt / RECOIL.joltTime);
 
-    if (this.humanInput && !this.aiControlled) runStep(this, dt); // 뛰기 (11/18 — src/run.js · 사람 몸만: 들어감 · 나감 · 뛰는 쪽 · 조종 입력을 몸 틀로 — AI · 시뮬 대본 몸은 부르지 않음)
+    if ((this.humanInput && !this.aiControlled) || this.run || this.runReach > 0) runStep(this, dt); // 뛰기 (11/18 — src/run.js: 들어감 · 나감 · 뛰는 쪽 · 조종 입력을 몸 틀로) — 사람 몸은 늘(예전 그대로) · 다른 몸은 스틱 길 몫(runReach)을 둔 때부터(11/19 셋 이상 판 AI — ai_run.js) · 1:1 AI · 시뮬 대본 몸은 두지 않아 안 부름
     if (this.ringHit) ringStep(this, dt); // 칼 씨름에 무너진 몸 (11/14 — de_dirty.js · 0.6 s 뒤로 물러남 · 칼 손 옆 지킴 · 없으면 안 부름)
     else this.updateHeading(dt);
     if (this.stamina.exhausted) {
@@ -2915,7 +2915,7 @@ export class Fighter {
     const along = mv.y * speed * (mv.y < 0 ? (hybrid ? GAIT.backFactor : 0.75) : 1);
     const side = mv.x * speed * (hybrid ? GAIT.sideFactor : 0.8);
     const want = _v4.set(fwd.x * along + rgt.x * side, 0, fwd.z * along + rgt.z * side);
-    if (this.run && hybrid) runWant(this, want, fwd, dt); // 뛰기 (11/18 — src/run.js · 사람 몸만): 몸 앞 몫 × RUN.mul (뛰는 쪽을 볼수록 · 명령은 RUN.accel 로만 오르내림)
+    if (this.run && hybrid) runWant(this, want, fwd, dt); // 뛰기 (11/18 — src/run.js): 몸 앞 몫 × RUN.mul (뛰는 쪽을 볼수록 · 명령은 RUN.accel 로만 오르내림)
     if (DIG_PROTO.run && hybrid) runTick(this, dt, want, fwd, mvIn); // 시제품 C (11/14 — 기본 끔 · src/dig_proto.js): 기력 문턱 위 · 스틱 앞 끝이면 달림 (사람 · AI 같게)
     this.updateFooting(dt, fwd, rgt, want);
     if (hybrid) G.update(dt, want, fwd, rgt);
@@ -2981,7 +2981,7 @@ export class Fighter {
     //  걷기 시작·멈춤·방향 바꿈이 같은 한도라 함께 빨라지고 최고 빠르기(speed)는 그대로. 몸의 일이라 사람·AI 같이. 칸 없는 유파·끔(0)은 × 1 그대로(바이트 같음)
     //  동방 AI 걸음 박자(10/15 — ai.js update 의 aiLightHold): 가벼운 발 몸의 AI 가 공격 꼴이 아닐 때(간 보기·막기·물러남)는 보통 걸음 몫 × 1(옛 가속) — 사람·끔은 그대로
     let aLim = hybrid ? GAIT.maxAccel * (G.fastK > 1 ? G.fastAcc : G.burstBrake || G.holdBrake || G.lungeBrake ? GAIT.burstAccel : !this.aiLightHold ? (G.P.light ?? 1) : 1) : BODY.maxAccel; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
-    if (this.run?.fast && hybrid) aLim = Math.max(aLim, RUN.accel); // 뛰기 (11/18 — 사람 몸만): 뛰는 동안 · 뛰다 멈춰 걷는 빠르기로 줄 때까지 가속 한도 RUN.accel
+    if (this.run?.fast && hybrid) aLim = Math.max(aLim, RUN.accel); // 뛰기 (11/18): 뛰는 동안 · 뛰다 멈춰 걷는 빠르기로 줄 때까지 가속 한도 RUN.accel
     const lim = M * aLim * grip;
     const fx = THREE.MathUtils.clamp(M * BODY.moveAccel * dvx, -lim, lim) * mus;
     const fz = THREE.MathUtils.clamp(M * BODY.moveAccel * dvz, -lim, lim) * mus;
