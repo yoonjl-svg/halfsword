@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {newRound,RAPIER,THREE,DT} from './harness_m.mjs';
 import {GROUND_GROUPS} from '../../src/fighter.js';
+import {selfHooks} from '../../src/self_contact.js'; // 걸이 없는 한 스텝도 제 몸 쌍은 버린다 (11/20 — 충돌 그룹에 싸움꾼마다 비트가 없음)
 import {configureStageObstacle,clampStageCamera,stageStartZ} from '../../src/arena_obstacle.js';
 import {COURTYARD_NAVIGATION as nav} from '../../src/stage_courtyard_cover.js';
 import {gunCanFire,updateGun} from '../../src/gun.js';
@@ -14,11 +15,11 @@ function obstacle(G){const ob=configureStageObstacle(RAPIER,G.world,'courtyard',
 // 실제 총 길로 몸통을 정확히 겨눠 쏜다 — 이 충돌 시험에서만 겨눔 오차를 없앤다(게임은 그대로). 경우마다 새 판
 for(const z of [0,.4,-.4,2.5,-2.5]){
  const G=newRound({seed:71,weapon:'longsword',weapon2:'pistol'});obstacle(G);G.ai.update=()=>{};
- shift(G.player,-2.8,z);shift(G.enemy,2.8,z);G.world.step();const f=G.enemy;f.foe=G.player;f.fightT=3;
+ shift(G.player,-2.8,z);shift(G.enemy,2.8,z);G.world.step(G.eventQueue,selfHooks(G.combat.info));const f=G.enemy;f.foe=G.player;f.fightT=3;
  const c=G.player.bodies.chest.translation();const target=new THREE.Vector3(c.x,c.y-.1,c.z),origin=new THREE.Vector3(2.4,c.y-.1,z);
  const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),target.clone().sub(origin).normalize());f.sword.setRotation(q,true);f.sword.setTranslation(origin,true);
  // 정확한 AI 겨눔은 엄폐 약속을 보이려고만 쓴다 — 반동 · 흩어짐과 상관없이
- gunCanFire(f,{now:true});f.gun.aim=1;G.world.step();updateGun(f,G.world,G.combat,DT);
+ gunCanFire(f,{now:true});f.gun.aim=1;G.world.step(G.eventQueue,selfHooks(G.combat.info));updateGun(f,G.world,G.combat,DT);
  const result={z,shots:f.gun.shots,what:{...f.gun.what},wounds:G.wounds.length};report.shots.push(result);
  if(Math.abs(z)<1){assert.equal(result.what.world,1);assert.equal(result.wounds,0);}else assert.equal(result.what.body,1);
  G.world.free();

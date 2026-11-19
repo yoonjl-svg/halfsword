@@ -8,6 +8,7 @@ import { WEAPONS, WEAPON_LIST, RETIRED_WEAPONS, TIER_DRAW, getWeapon, weaponSpec
 import { traditionOf } from '../../src/schools.js';
 import { CHARACTERS } from '../../src/characters.js';
 import { WHIP, WHIP_NOW, DRUID } from '../../src/druid_whip.js';
+import { pairAllowed } from '../../src/self_contact.js'; // 제 몸 쌍 걸이 (11/20 — 충돌 그룹은 부류만 · 제 몸통 빠짐은 colliderInfo.self)
 import { newRound, DT, AI, CONFIG } from './harness_m.mjs';
 
 class Quiet { update() {} }
@@ -58,14 +59,15 @@ test('칼 닿는 마디 (10/23 셋째 일 · WHIP.bladeFrom): 지금 = 마디 4 
   for (const [p, from] of [['now', 3]]) {
     const g = newRound({ weapon: 'druid_whip', weapon2: 'longsword', gap: 1.35, seed: 3, AIClass: Quiet, AI2Class: Quiet });
     const P = g.player, E = g.enemy;
-    const foeBlade = E.swordColliders[0].collisionGroups() >>> 16, foeBody = E.bodies.chest.collider(0).collisionGroups() >>> 16;
-    const myTorso = P.bodies.chest.collider(0).collisionGroups() >>> 16;
+    // 엔진이 접촉을 셈하는 쌍 = 충돌 그룹(구성원 & 거름 양쪽) + 제 몸 쌍 걸이 (11/20 — 전엔 비트만: 마디 거름에서 제 몸통 비트를 뺌)
+    const meets = (a, b) => ((a >>> 16) & b & 0xffff) !== 0 && ((b >>> 16) & a & 0xffff) !== 0;
+    const hits = (ca, cb) => meets(ca.collisionGroups(), cb.collisionGroups()) && pairAllowed(g.combat.info.get(ca.handle), g.combat.info.get(cb.handle));
     P.flexWeapon.segments.forEach((sg, i) => {
-      const filter = sg.col.collisionGroups() & 0xffff;
-      assert.equal(!!(filter & foeBlade), i >= from, `${p} 마디 ${i + 1} 상대 칼`);
-      assert.ok(filter & foeBody, `${p} 마디 ${i + 1} 상대 몸`);
-      assert.equal(filter & myTorso, 0, `${p} 마디 ${i + 1} 제 몸통`);
+      assert.equal(hits(sg.col, E.swordColliders[0]), i >= from, `${p} 마디 ${i + 1} 상대 칼`);
+      assert.ok(hits(sg.col, E.bodies.chest.collider(0)), `${p} 마디 ${i + 1} 상대 몸`);
+      assert.equal(hits(sg.col, P.bodies.chest.collider(0)), false, `${p} 마디 ${i + 1} 제 몸통`);
     });
+    assert.ok(hits(P.swordColliders[0], P.bodies.chest.collider(0)), '손잡이는 제 몸통과 닿음 (사람 관절 한도)');
     g.world.free();
   }
 });

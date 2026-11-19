@@ -3,8 +3,9 @@
 //  AI = aiAtProficiency(무기만 가진 시트 — 무명 검객 꼴, 숙련도 p) · 한 판의 넷은 같은 숙련도(판마다 --profs 를 돌아가며) · 섞인 무기(team_fights.mjs 와 같은 loadout) ·
 //   겉모습 모두 같음(투구 없음) · 벽 있음 · 한 편 전멸(ffa3 = 하나 남음) 또는 maxSecs.
 //  ffa3 = 셋이 저마다 따로인 판 — 게임에는 없는 판이다(Fighter 편은 0 · 1 만 · 편 전멸도 두 편). 이 도구만 몸을 세운 뒤 f.team 을 자리 번호로 바꿔 흉내 낸다
-//   (셋 이상 판의 ffa 비트는 자리마다라 물리는 그대로 · sameSide 가 자기만 같은 편 → 상대 고르기 · 상대 목록이 셋 따로).
-//  쓰임: node tools/sim/team_sense.mjs [판 수/모드 48] [maxSecs 90] [--modes=2v2,2v1,ffa3] [--profs=2,4,6] [--sides=6:5] [--lever=none] [--seeding=old] [--ks=1,5] [--json] [--out=파일]
+//   (충돌은 편과 상관없이 제 몸만 버려 물리는 그대로 · sameSide 가 자기만 같은 편 → 상대 고르기 · 상대 목록이 셋 따로). ffa4 · ffa6 … 도 같은 길 (11/20 — 넷 제한 걷음).
+//  3v3 = 3:3 (11/20 — 자리 0 ~ 5 · 편 = 자리 홀짝 · newMatch 그대로). 같은 편 짝 잣대(focus · coEngage · pincer)는 편 안의 짝마다
+//  쓰임: node tools/sim/team_sense.mjs [판 수/모드 48] [maxSecs 90] [--modes=2v2,2v1,ffa3 — 3v3 · ffaN 도] [--profs=2,4,6] [--sides=6:5] [--lever=none] [--seeding=old] [--ks=1,5] [--json] [--out=파일]
 //   --sides=A:B  편마다 숙련도 (2:2 는 A 편을 판마다 0 편 · 1 편 번갈아 · 2:1 은 A = 혼자) — sideAWinPct (ffa3 는 쓰지 않음)
 //  판 짜기 (11/18 P1 — 무리 싸움 판단 작업에서 고침): 무기 배정(loadout)의 씨앗과 숙련 · 편을 서로 엇갈리게 —
 //   예전 짜기(--seeding=old)는 판 k 의 씨앗 k + 1 로 무기를 나눠 ① 2:2 --sides 에서 A 편이 늘 홀수 칸 무기(츠바이핸더 · 사브르 · 에스톡)를,
@@ -54,6 +55,10 @@ const flag = (k, d) => { const a = args.find((x) => x === `--${k}` || x.startsWi
 const N = +(pos[0] ?? 48);
 const MAX = +(pos[1] ?? 90);
 const MODES = String(flag('modes', '2v2,2v1,ffa3')).split(',');
+// 모드 → 싸움꾼 수 (11/20 — 넷 제한 걷음): 2v2 넷 · 2v1 셋 · 3v3 여섯 (편 = 자리 홀짝 · newMatch) · ffaN 저마다 따로 N 명 (ffa3 · ffa4 … — 재기 전용 newFfa)
+const countOf = (mode) => (mode === '2v2' ? 4 : mode === '2v1' ? 3 : mode === '3v3' ? 6 : /^ffa[3-9]\d*$/.test(mode) ? +mode.slice(3) : NaN);
+for (const m of MODES) if (!Number.isInteger(countOf(m))) throw new Error(`--modes: ${m} — 2v2 · 2v1 · 3v3 · ffaN(N ≥ 3) 만`);
+const isFfa = (mode) => mode.startsWith('ffa');
 const PROFS = String(flag('profs', '2,4,6')).split(',').map(Number);
 const LEVER_OFF = flag('lever', '') === 'none'; // --lever=none: 숙련도 레버(TEAM_FIGHT.lever 줄 세우기 · 피하기)를 끈 판 (재기 전용 — 까닭 가르기)
 if (LEVER_OFF) for (const v of Object.values(CONFIG.TEAM_FIGHT.lever)) if (v && typeof v === 'object' && 'on' in v) v.on = false;
@@ -92,9 +97,9 @@ function newFfa(count, { seed, weapons, aiOf }) {
   const fighters = [];
   for (let i = 0; i < count; i++) {
     const a = Math.PI + (2 * Math.PI * i) / count; // 자리 0 = −x (1:1 의 자리 0 과 같은 쪽)
-    fighters.push(new Fighter(RAPIER, world, scene, colliderInfo, { index: i, team: i % 2, name: `F${i}`, x: r * Math.cos(a), z: r * Math.sin(a), heading: Math.PI - a, look: LOOKS.enemy, breakSeed: seed, weapon: weapons[i], ffa: true }));
+    fighters.push(new Fighter(RAPIER, world, scene, colliderInfo, { index: i, team: i % 2, name: `F${i}`, x: r * Math.cos(a), z: r * Math.sin(a), heading: Math.PI - a, look: LOOKS.enemy, breakSeed: seed, weapon: weapons[i] }));
   }
-  for (const f of fighters) f.team = f.index; // 셋 따로 (재기 전용 — 물리 비트는 ffa 자리마다라 그대로)
+  for (const f of fighters) f.team = f.index; // 셋 따로 (재기 전용 — 충돌은 편과 상관없이 제 몸만 버림 · src/self_contact.js)
   const M0 = { fighters };
   const order = orderControllers(fighters.map((f) => ({ me: f }))).map((c) => c.me.index);
   const ais = [];
@@ -130,11 +135,11 @@ const busyWithOther = (x, a) => !!x.foe && x.foe !== a && targetable(x.foe) && e
 function fight(mode, seed, prof, sideA = null, wseed = seed) {
   let s = seed * 9301 + 49297;
   Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
-  const count = mode === '2v1' || mode === 'ffa3' ? 3 : 4;
+  const count = countOf(mode);
   const weapons = loadout(wseed, count);
   const profOf = (i) => (sideA == null ? prof : (i % 2 === sideA ? SIDES[0] : SIDES[1])); // --sides: 자리 홀짝 = 편
   const aiOf = (i) => aiAtProficiency({ ai: { persona: {} }, weapon: weapons[i] }, profOf(i));
-  const G = mode === 'ffa3' ? newFfa(count, { seed, weapons, aiOf }) : newMatch({ count, ai: 'all', seed, walls: true, weapons, looks: Array(count).fill(LOOKS.enemy), aiOf });
+  const G = isFfa(mode) ? newFfa(count, { seed, weapons, aiOf }) : newMatch({ count, ai: 'all', seed, walls: true, weapons, looks: Array(count).fill(LOOKS.enemy), aiOf });
   const F = G.fighters;
   const mates = (f) => F.filter((g) => g !== f && g.team === f.team);
   const foes = (f) => F.filter((g) => g.team !== f.team);
@@ -168,7 +173,7 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
   };
   G.before = () => { for (const f of F) wasAlive.set(f, f.alive); };
   const n = Math.round(MAX / DT);
-  const live = () => (mode === 'ffa3' ? F.filter((f) => f.alive).length > 1 : !G.over);
+  const live = () => (isFfa(mode) ? F.filter((f) => f.alive).length > 1 : !G.over);
   let i = 0;
   for (; i < n && live(); i++) {
     G.step();
@@ -261,18 +266,19 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
         break;
       }
     }
-    // 같은 편 둘
+    // 같은 편 둘 (11/20 — 3:3 은 편 안의 짝마다 · 2:2 · 2:1 은 짝 하나라 예전과 같음)
     for (const t of new Set(F.map((f) => f.team))) {
-      const pair = F.filter((f) => f.team === t && standing(f));
-      if (pair.length < 2) continue;
-      const [a, b] = pair;
-      const fs = foes(a).filter(standing);
-      if (!fs.length) continue;
-      if (fs.length >= 2) { C.pairS++; if (a.foe === b.foe) C.focus++; }
-      C.coS++;
-      const x = fs.find((y) => engaged(a, y) && engaged(b, y));
-      if (x) { C.co++; C.pincer.push(deg(angAt(x, a, b))); }
-      else if (fs.some((y) => (engaged(a, y) && b.foe === y) || (engaged(b, y) && a.foe === y))) C.solo++; // 둘이 같은 상대를 겨눴는데 하나만 닿는 거리 — 다른 하나는 뒤에서 기다림
+      const side = F.filter((f) => f.team === t && standing(f));
+      for (let ia = 0; ia < side.length; ia++) for (let ib = ia + 1; ib < side.length; ib++) {
+        const a = side[ia], b = side[ib];
+        const fs = foes(a).filter(standing);
+        if (!fs.length) continue;
+        if (fs.length >= 2) { C.pairS++; if (a.foe === b.foe) C.focus++; }
+        C.coS++;
+        const x = fs.find((y) => engaged(a, y) && engaged(b, y));
+        if (x) { C.co++; C.pincer.push(deg(angAt(x, a, b))); }
+        else if (fs.some((y) => (engaged(a, y) && b.foe === y) || (engaged(b, y) && a.foe === y))) C.solo++; // 둘이 같은 상대를 겨눴는데 하나만 닿는 거리 — 다른 하나는 뒤에서 기다림
+      }
     }
   }
   for (const w of watches) if (!w.done) { w.done = true; C.helpEv += w.ms.length; C.helpSwitch += w.sw.size; C.helpClose += w.close.size; if (w.down && w.hitAgain) C.helpHitAgain++; }
@@ -287,9 +293,9 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
   for (const f of F) for (const [k, v] of Object.entries(f.aiCtl?.stats?.team ?? {})) team[k] = (team[k] ?? 0) + v;
   for (const [k, v] of Object.entries(G.sense?.roleN ?? {})) team[`role_${k}`] = v;
   const alive = F.filter((f) => f.alive);
-  const winner = mode === 'ffa3' ? (alive.length === 1 ? alive[0].index : null) : G.winner;
+  const winner = isFfa(mode) ? (alive.length === 1 ? alive[0].index : null) : G.winner;
   const end = F.map((f) => `${sideOf(f) ? 'B' : 'A'}${f.alive ? (f.state === 'stand' ? '' : f.state[0]) + f.blood.toFixed(2) : 'x'}`).join(' '); // 판 끝 몸 (편 · 꼴 첫 글자 · 피 · x 죽음)
-  return { mode, seed, wseed, prof, sideA, team, end, runs, runSec, runKinds, aWon: sideA == null ? null : winner === sideA, t: +G.t.toFixed(2), over: mode === 'ffa3' ? alive.length <= 1 : G.over, winner, sw, ...C };
+  return { mode, seed, wseed, prof, sideA, team, end, runs, runSec, runKinds, aWon: sideA == null ? null : winner === sideA, t: +G.t.toFixed(2), over: isFfa(mode) ? alive.length <= 1 : G.over, winner, sw, ...C };
 }
 
 const rows = [];

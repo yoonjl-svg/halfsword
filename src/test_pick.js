@@ -82,13 +82,14 @@ const WHIFF_PICKS = [
   { id: 'off', name: '끔', sub: '평소 상대' },
   { id: 'on', name: '켬', sub: '닿지 않는 거리에서 2~3초마다 허공을 벰 · 다가가면 평소대로' },
 ];
-// 동시 대전 (10/29 사장님 14:2x 생사전 — 한 판에 넷이 함께 · docs/strike/team_fight_2026-10-29.md §11): 시작 주소의 team 으로 (main.js TEAM_TEST)
+// 동시 대전 (10/29 사장님 14:2x 생사전 — 한 판에 넷이 함께 · docs/strike/team_fight_2026-10-29.md §11 · 11/20 3:3 — 넷 제한 걷음): 시작 주소의 team 으로 (main.js TEAM_TEST)
 //  나 = 고른 무기 · 겉모습 · 동료 · 상대 = 무작위 인물(상대 첫째는 고른 상대). 기억하지 않는다
 const TEAM_PICKS = [
   { id: 'off', name: '1:1', sub: '지금 게임 (한 명씩)' },
   { id: '2v2', name: '2:2', sub: '나 + 동료 하나 대 둘' },
   { id: '2v1', name: '2:1', sub: '나 + 동료 대 하나' },
   { id: '1v2', name: '1:2', sub: '나 혼자 대 둘' },
+  { id: '3v3', name: '3:3', sub: '나 + 동료 둘 대 셋' },
   { id: 'watch', name: '지켜보기', sub: '넷 모두 AI · 나는 본다' },
 ];
 const saved = loadPick();
