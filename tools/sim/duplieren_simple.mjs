@@ -7,7 +7,7 @@
 //    상대 칼 지나감(duplieren_check sample far) · 넘어짐 · 기울기 · 맞음(때 · 곳 · 에너지 · 심각도)
 //   잼: 휨(tsubame_trace bendOf — 칼끝 길의 곧은 줄 대비 몫 · 꺾임 · 몸 틀(가슴 따라)과 세계 둘) · 때 맞춤(칼 시작 · 첫 맞음 · 칼 끝 ↔ 앞발 뜸 · 디딤) · 손 ↔ 골반 빠르기(앞 몫 상관 · 늦음)
 //  갈래: old = 10/28 길 · 몫 0.5 · 박차기 없음 (`?dupOld=1`) · new:<몫>:<박차기 m>[:<손발 순서 1|2|0>[:<박차기 시간 실제 초 — 0 = GAIT.burstT>[:<몸 꼴 dupBurstMatch 0|1|2>[:<길이 맞춤 칼날 자리 — 0 끔 · 0.6 = dupBurstFit 1 · dupFitPoint 0.6>]]]] (예 new:0.3:0.45 · new:0.5:0 = 단순 길만 · new:0.3:0.45:0 = 칼은 몫 빠르기 그대로 · new:0.3:0.45:1:0:1 = 첫 걸음 박차기 물리)
-//  node tools/sim/duplieren_simple.mjs [--variants=old,new:0.1:0.45] [--weapons=longsword,sabre,kriegsmesser] [--opps=longsword,uchigatana,zweihander,rapier] [--seeds=901,902,903,904] [--dur=30] [--json=파일] [--v]
+//  node tools/sim/duplieren_simple.mjs [--variants=old,new:0.1:0.45] [--weapons=longsword,kriegsmesser] [--opps=longsword,uchigatana,zweihander,rapier] [--seeds=901,902,903,904] [--dur=30] [--json=파일] [--v]
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
 import { DT, CONFIG, THREE } from './harness_m.mjs';
@@ -320,7 +320,7 @@ export function summary(ms) {
 if (isMain(import.meta.url)) {
   const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
   const names = arg('variants', 'old,new:0.1:0.45').split(',');
-  const weapons = arg('weapons', 'longsword,sabre,kriegsmesser').split(',');
+  const weapons = arg('weapons', 'longsword,kriegsmesser').split(',');
   const opps = arg('opps', 'longsword,uchigatana,zweihander,rapier').split(',');
   const seeds = arg('seeds', '901,902,903,904').split(',').map(Number);
   const dur = +arg('dur', 30);

@@ -85,10 +85,15 @@ test('10/24 17:2x 뒤 탭 찌르기 (롱소드 황소 → 칼 내린 상대 · 1
   const now = run();
   // 17:2x 판(옛 결함) 재현은 그때 걷기 빠르기(게임 1.8 m/s)로 — 표준 시간 걷기 실제 2.0(게임 1.818)이면 탭 찌르기 디딤이 1 % 더 나가 1.5 m 판 하나가 찌름 1 (docs/strike/time_standard_2026-10-25.md §4)
   const v17 = withSets([[JOINTS, 'swivelThrust', 0], [CONFIG.GAIT, 'moveSpeed', 1.8]], run);
-  assert.ok(old.stab >= 1, `전 판 찌름 ${old.stab} / 5`);
+  // 11/19 보정 v2 묶음 (기록 docs/strike/human_ai_parity_2026-11-19.md §10): 서 있는 과녁(AI 롱소드 몸)이 사람과 같은 칼 팔 몸 규칙(A4 ~ A6 — fighter.js bodyArm) · 보정 v2(A1)로 칼을 쥠 →
+  //  과녁 칼 · 몸이 1 cm 남짓 옮겨 전 판(돌림 · 교정 끔) 찌름 1 → 0 / 5(1.5 m) · 기본 2 → 1 / 5(1.5 m 는 칼끝이 닿지 않음 · 1.7 m 찌름) · 17:2x 판 0 → 1 / 5
+  //  (1.5 m — 첫 닿음은 머리 둔타 · 걸음 1.8 m/s 라 디딤 자리가 다름). 묶음 전(f000cce0)에서 과녁을 사람 손가락 몸(autoGuard · 보정 v2)으로 두면 세 판 모두 똑같이 0 · 1 · 1 —
+  //  고장이 아니라 과녁 몸이 사람 몸과 같아진 몫. 그래서 '전 판도 찌른다(≥ 1)' 대신 '기본이 찌른다(≥ 1)' · '17:2x 판 찌름 0' 대신 '17:2x 판이 기본보다 더 찌르지 않음'으로 묶음
+  //  (대본 몸 · 보정 old 과녁이면 0 · 2 · 0 — 그 과녁은 지금 어느 몸과도 같지 않아 쓰지 않음)
+  assert.ok(now.stab >= 1, `기본 찌름 ${now.stab} / 5 (전 판 ${old.stab})`);
   assert.ok(now.stab >= old.stab, `기본 찌름 ${now.stab} ≥ 전 판 ${old.stab}`);
   assert.ok(now.dev >= ULNAR - 5, `기본 머묾 손 면 dev 평균 ${now.dev.toFixed(0)}° (전 판 ${old.dev.toFixed(0)}°)`);
-  assert.equal(v17.stab, 0, `17:2x 판 찌름 ${v17.stab}`);
+  assert.ok(v17.stab <= now.stab, `17:2x 판 찌름 ${v17.stab} ≤ 기본 ${now.stab}`);
 });
 
 
@@ -141,11 +146,12 @@ function shares(T) {
 const pc = (x) => (100 * x).toFixed(1);
 const ROPE = [[JOINTS, 'wristRope', 1]]; // 시험 손목 치우침 밧줄 켬
 
-test('손목 교정 끔 · 켬 · 밧줄 — 자세표(롱소드 · 레이피어 · 사브르) · 탭 찌르기(황소 · 긴 자세): 전 판 > 10° 넘침 35 % 안팎 · 기본(돌림 + 겨눔 교정) ≤ 10 % · 거꾸로 · 아래팔 섬 ≤ 8 % · 시험 밧줄 켜면 ≤ 1 %', () => {
+test('손목 교정 끔 · 켬 · 밧줄 — 자세표(롱소드 · 레이피어 · 환도) · 탭 찌르기(황소 · 긴 자세): 전 판 > 10° 넘침 35 % 안팎 · 기본(돌림 + 겨눔 교정) ≤ 10 % · 거꾸로 · 아래팔 섬 ≤ 8 % · 시험 밧줄 켜면 ≤ 1 %', () => {
   const run = () => {
     const T = new WristTally();
-    for (const w of ['longsword', 'rapier', 'sabre']) T.merge(guardsRun(w).T, `${w}:`);
-    for (const w of ['rapier', 'sabre']) for (const gd of ['ochs', 'langort']) T.merge(tapRun(w, gd).T, `${w}:${gd}:`);
+    // (11/19 사브르 → 환도 — 재기에 estoc · sabre 를 쓰지 않음(사장님 상시 규칙) · 환도는 같은 한손 곡도 표)
+    for (const w of ['longsword', 'rapier', 'hwando']) T.merge(guardsRun(w).T, `${w}:`);
+    for (const w of ['rapier', 'hwando']) for (const gd of ['ochs', 'langort']) T.merge(tapRun(w, gd).T, `${w}:${gd}:`);
     return shares(T);
   };
   const off = withSets(OLD, run);

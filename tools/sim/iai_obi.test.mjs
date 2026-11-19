@@ -282,11 +282,15 @@ function human(vals, drive) {
 const notoRuns = {};
 const noto = (weapon, mode) => (notoRuns[`${weapon} ${mode}`] ??= notoRun({ weapon, mode }));
 
-test('⑭ 칼끝이 칼집 입으로 들어감 — 칼집 몸 옆으로 드는 스텝 없음 (사람 허리 대기 × 우치가타나 · 무라마사 · 쿠사나기)', () => {
-  // 11/19 AI 도 선 채 허리 대기(사장님 'AI 도 원전 꼴' — 전 웅크린 대기는 이 시험을 넘었음): AI 몸 납도는 칼끝이 입 밖 0.28 ~ 0.44 m 에서 칼집 옆으로 듦 —
-  //  사람 팔 몫(playerArm — 손목 겨눔 등 A4 ~ A6)을 켜면 셋 다 입으로 듦(재 봄) → 4 단계(보정 v2 묶음 — A4 ~ A6 을 AI 에)에서 'ai' 를 다시 넣음 (기록 human_ai_parity §9)
+test('⑭ 칼끝이 칼집 입으로 들어감 — 칼집 몸 옆으로 드는 스텝 없음 (사람 · AI 허리 대기 × 우치가타나 · 무라마사 · 쿠사나기)', () => {
+  // 11/19 A11: AI 도 선 채 허리 대기(사장님 'AI 도 원전 꼴' — 전 웅크린 대기는 이 시험을 넘었음) → AI 몸 납도 칼끝이 입 밖 0.28 ~ 0.44 m 에서 칼집 옆으로 들었음.
+  //  11/19 보정 v2 묶음(4 단계): 칼 팔 몸 규칙 A4 ~ A6(손 목표 자르기 · 날 미리 돌리기 · 두손 칼 빈팔 닿는 곳 — 사람과 같은 조건) · 닿음 신호(납도 = 기다리는 꼴 — 앞 바닥 · 엇갈림 막기 꺼짐)로
+  //  우치가타나 · 무라마사는 사람과 같게 입으로 듦. 쿠사나기 AI 는 입 밖 3.3 cm(문턱 3 cm · 사람 2.5 cm)라 아직 뺌 — A12(걸음 덮개 지움) 뒤에도 같음.
+  //  남은 몫은 몸 규칙이 아니라 AI 반응 시간(AI_REACT.face 0.2 s — fighter.js updateHeading 이 0.2 s 전 과녁 자리를 봄 · AI 감각 — 기록 human_ai_parity A17 '그대로 — AI 본성' · §10):
+  //  사람 몸에 aiControlled 만 켜도 3.3 cm · AI 몸에서 그 반응 시간만 빼면(재기만) 2.4 cm. 긴 칼날이라 몸 돌림 차가 칼끝에서 커짐 — 반응 시간은 AI 본성이라 그대로 두고 뺌
   for (const weapon of WEAPONS)
-    for (const mode of ['hip']) {
+    for (const mode of ['hip', 'ai']) {
+      if (mode === 'ai' && weapon === 'kusanagi') continue;
       if (weapon === 'monohoshizao') continue; // (웅크림 판 AI 는) 대기 칼이 자세를 못 지킴 (② 머리말) · 허리 대기는 칼집 입을 허리띠 곁에 둔 뒤 팔 · 손목이 칼끝을 입에 못 댐 (11/14 '허공에 붕 떠보이는데' 뒤 — 모자람 · 기록 §15)
       const e = noto(weapon, mode).even;
       assert.ok(e && e.entry, `${weapon} ${mode} 칼끝이 칼집 안으로 듦`);

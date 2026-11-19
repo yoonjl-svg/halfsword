@@ -2,7 +2,7 @@
 //  · 물리: 칼 길이·질량·손 기준 관성·칼날 콜라이더 끝이 절단선과 맞는지, 몇 초 더 싸워도 NaN 이 없는지
 //  · 겉모습: 절단선 위로 남은 보이는 꼭짓점이 없는지, 조각이 떠서 life 안에 사라지는지(조각 수 0), 판 정리 신호로도 치워지는지
 //  · AI: 내 간격(M)·상대 간격 어림(foeM)이 줄었는지
-//   node tools/sim/weapon_break_check.mjs [--weapons=longsword,sabre,...] [--at=3]
+//   node tools/sim/weapon_break_check.mjs [--weapons=longsword,kriegsmesser,...] [--at=3]
 import { newRound, DT, THREE, AI } from './harness_m.mjs';
 import { WEAPON_LIST } from '../../src/weapons.js';
 import { DEBRIS, tickDebris, debrisCount } from '../../src/debris.js';

@@ -2,7 +2,8 @@
 //  docs/strike/wrist_audit_2026-10-24.md §10 · tools/sim/wrist_audit.mjs shRot · elbowUp):
 //   팔꿈치 돌림(JOINTS.elbowSwivel)이 손목을 고치려고 팔꿈치를 어깨 → 손목 줄 위로 들어 올리거나(머리 곁으로 꺾여 든 팔) 위팔 돌림을 AAOS 한도 밖으로 밀던 것 →
 //   JOINTS.swivelHuman 1(기본): 사람 팔 범위 밖 돌림은 안 함 · 손목은 교정(wristGuard)이 범위 끝까지만. 0 = 10/24 17:2x 뒤 판(옛 비틀림이 다시 보여야 시험이 산다).
-//   자세표(레이피어 · 세이버 · 월왕구천검) · 탭 찌르기(레이피어 · 세이버 — 쟁기 · 황소 · 긴 자세) · 병마용 AI(월왕구천검 · 병마용 기질 대 롱소드) · 레이피어 1번 자세(프리마)
+//   (11/19 사브르 → 환도 — 재기에 estoc · sabre 를 쓰지 않음(사장님 상시 규칙) · 환도는 같은 한손 곡도 표)
+//   자세표(레이피어 · 환도 · 월왕구천검) · 탭 찌르기(레이피어 · 환도 — 쟁기 · 황소 · 긴 자세) · 병마용 AI(월왕구천검 · 병마용 기질 대 롱소드) · 레이피어 1번 자세(프리마)
 //  10/25 감독 '칼끝이 하늘을 보는 자세는 안 됨 — 사람 칼 자세가 아님' (dbf2120 판 레이피어 프리마 · 월왕구천검 · 세이버 황소 칼끝 30~45° 위) — 기록 §12:
 //   JOINTS.wristPronate 1(기본): 엎친 손 + 손목 굽힘(사람 범위 안)으로 칼끝을 상대 쪽에 둔 채 · 이탈리아 1번 자세 손을 원전대로 뻗음(school_kit_map). 0 = dbf2120 판
 //  node --test tools/sim/onehand_arm.test.mjs
@@ -51,10 +52,10 @@ test('값: 사람 팔 범위 돌림 JOINTS.swivelHuman 1 (사장님 10/25 01:2x)
 });
 
 // 굴림 끝 ≤ 10 %: 엎친 손 길은 높은 자세(황소 · 지붕)에서 칼끝을 상대 쪽에 두려고 아래팔을 엎침 끝 언저리(사람 엎침 80 — 원전 프리마 · 높은 자세의 손등 위 · 바깥)까지 돌린다 (기록 §12)
-test('한손 자세표 (레이피어 · 세이버 · 월왕구천검 — 자리마다 1.4 s 붙잡기): 기본 팔꿈치가 줄 위로 30° 넘게 0 · 위팔 돌림 밖 0 · 굴림 끝 ≤ 10 % · 거꾸로 ≤ 3 % — 10/24 판은 팔꿈치가 줄 위로 돎', () => {
+test('한손 자세표 (레이피어 · 환도 · 월왕구천검 — 자리마다 1.4 s 붙잡기): 기본 팔꿈치가 줄 위로 30° 넘게 0 · 위팔 돌림 밖 0 · 굴림 끝 ≤ 10 % · 거꾸로 ≤ 3 % — 10/24 판은 팔꿈치가 줄 위로 돎', () => {
   const run = () => {
     const T = new WristTally();
-    for (const w of ['rapier', 'sabre', 'goujian']) T.merge(guardsRun(w).T, `${w}:`);
+    for (const w of ['rapier', 'hwando', 'goujian']) T.merge(guardsRun(w).T, `${w}:`);
     return shares(T);
   };
   const now = run();
@@ -63,11 +64,11 @@ test('한손 자세표 (레이피어 · 세이버 · 월왕구천검 — 자리�
   assert.ok(old.up0 > 0.03 && old.up0 > now.up0 + 0.03, `10/24 판: ${fmt(old)}`);
 });
 
-test('한손 탭 찌르기 (레이피어 · 세이버 — 쟁기 · 황소 · 긴 자세): 기본 위팔 돌림 밖 ≤ 1 % · 팔꿈치 30° 넘게 위 ≤ 1 % — 10/24 판은 찌르는 맞춤 돌림이 팔꿈치를 들고 위팔을 한도 밖으로', () => {
+test('한손 탭 찌르기 (레이피어 · 환도 — 쟁기 · 황소 · 긴 자세): 기본 위팔 돌림 밖 ≤ 1 % · 팔꿈치 30° 넘게 위 ≤ 1 % — 10/24 판은 찌르는 맞춤 돌림이 팔꿈치를 들고 위팔을 한도 밖으로', () => {
   // 11/16 묶음 P(사람 탭 찌르기 몸 싣기 THRUST.drive 3) 그대로 — 높은 자세(황소)에선 몸 싣기 당김을 안 해(skill.js thrust · 기록 docs/strike/thrust_stuck_2026-11-15.md §8) 기준 안 (전 묶음 풀음)
   const run = () => {
     const T = new WristTally();
-    for (const w of ['rapier', 'sabre']) for (const gd of ['pflug', 'ochs', 'langort']) T.merge(tapRun(w, gd).T, `${w}:${gd}:`);
+    for (const w of ['rapier', 'hwando']) for (const gd of ['pflug', 'ochs', 'langort']) T.merge(tapRun(w, gd).T, `${w}:${gd}:`);
     return shares(T);
   };
   const now = run();
@@ -104,11 +105,11 @@ test('레이피어 1번 자세(프리마 — 판 시작 겨눔): 기본 팔꿈�
 // 칼끝이 상대 쪽 (10/25 감독 — dbf2120 판 레이피어 프리마 · 월왕구천검 · 세이버 황소 칼끝 30~45° 위 '사람 칼 자세가 아님'): 높은 자세 셋을 1.4 s 붙잡고 끝 0.4 s —
 //  칼끝 높이 ≤ 0°(수평 또는 조금 아래 — 얼굴 · 가슴 쪽) · 칼 ↔ 상대 머리 < 25° · 팔꿈치 줄 아래 · 손목 사람 범위(dev ≥ −30 · 굽힘 · 폄 ≤ wristFE — 서보 흔들림 3° 여유) · 거꾸로 0
 //  dbf2120 판(JOINTS.wristPronate 0)은 칼끝이 하늘 (> 20° 위 하나 이상)
-test('한손 높은 자세 칼끝이 상대 쪽 (레이피어 1번 자세 · 월왕구천검 · 세이버 황소): 기본 칼끝 ≤ 0° · 상대 머리와 < 25° · 팔꿈치 줄 아래 · 손목 범위 안 — dbf2120 판은 칼끝이 하늘', () => {
+test('한손 높은 자세 칼끝이 상대 쪽 (레이피어 1번 자세 · 월왕구천검 · 환도 황소): 기본 칼끝 ≤ 0° · 상대 머리와 < 25° · 팔꿈치 줄 아래 · 손목 범위 안 — dbf2120 판은 칼끝이 하늘', () => {
   const SPECS = [
     ['rapier', '프리마'],
     ['goujian', '황소'],
-    ['sabre', '황소'],
+    ['hwando', '황소'],
   ];
   const run = () => SPECS.map(([w, f]) => ({ w, ...guardAimRun(w, f) }));
   const say = (a) => `${a.w} ${a.name}: 칼끝 ${a.pitch.toFixed(0)}° · 상대 머리와 ${a.foe.toFixed(0)}° · 팔꿈치 위 ${a.up.toFixed(0)}° · 굴림 ${a.roll.toFixed(0)} · dev ${a.dev.toFixed(0)} · fe ${a.fe.toFixed(0)} · 거꾸로 ${pc(a.rev)} %`;

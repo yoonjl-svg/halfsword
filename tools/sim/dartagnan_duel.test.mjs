@@ -35,7 +35,7 @@ test('배율: 달타냥이 한손검을 쥔 상대 × 1.15 · 양손검 · 날 �
   for (const v of ONE_HAND_SWORDS) near(duelOneHandMult(f('dartagnan'), f(v)), 1.15);
   for (const v of ['longsword', 'zweihander', 'tizona', 'estoc', 'morgenstern', 'tree_branch', 'pistol']) assert.equal(duelOneHandMult(f('dartagnan'), f(v)), 1, v);
   assert.equal(duelOneHandMult(f('dartagnan'), f('rapier', false)), 1); // 칼을 놓친 상대
-  assert.equal(duelOneHandMult(f('rapier'), f('sabre')), 1); // 능력 없는 칼
+  assert.equal(duelOneHandMult(f('rapier'), f('hwando')), 1); // 능력 없는 칼 (11/19 사브르 → 환도 — 재기에 sabre 를 쓰지 않음)
   assert.equal(duelOneHandMult(f('balisarda'), f('rapier')), 1);
   withK(1, () => assert.equal(duelOneHandMult(f('dartagnan'), f('rapier')), 1)); // ?dartagnanAbility=0
   withK(0, () => assert.equal(duelOneHandMult(f('dartagnan'), f('rapier')), 1));
@@ -61,8 +61,8 @@ function sameHit(weapon, weapon2) {
   return { on: hit(), off: withK(1, hit) };
 }
 
-test('판정: 한손검 상대(레이피어 · 세이버)는 같은 맞음의 판정 에너지 × 1.15 · 양손검 상대(롱소드 · 츠바이핸더)는 그대로 · 끔이면 그대로', () => {
-  for (const v of ['rapier', 'sabre']) {
+test('판정: 한손검 상대(레이피어 · 환도)는 같은 맞음의 판정 에너지 × 1.15 · 양손검 상대(롱소드 · 츠바이핸더)는 그대로 · 끔이면 그대로', () => {
+  for (const v of ['rapier', 'hwando']) {
     const { on, off } = sameHit('dartagnan', v);
     assert.equal(on.type, 'cut', v);
     near(on.eff / off.eff, 1.15, 1e-12);

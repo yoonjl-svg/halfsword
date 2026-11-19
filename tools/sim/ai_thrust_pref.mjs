@@ -7,7 +7,7 @@ import { getWeapon } from '../../src/weapons.js';
 import { applyWeaponMeasure } from './weapon_measures.mjs';
 
 const N = +(process.argv[2] || 6);
-const ids = process.argv.slice(3).length ? process.argv.slice(3) : ['longsword', 'estoc', 'rapier'];
+const ids = process.argv.slice(3).length ? process.argv.slice(3) : ['longsword', 'rapier'];
 
 function run(id, seed) {
   const G = newRound({ walls: true, weapon: id, weapon2: 'longsword', seed, AI2Class: AI });

@@ -28,7 +28,7 @@ function gkScenes() {
   const g0 = newRound({ weapon: 'qinggang', weapon2: 'longsword', seed: 1 });
   const contact = g0.player.swordArt.measure.contact;
   g0.world.free();
-  for (const gp of [-0.1, 0, 0.1]) for (const fw of ['longsword', 'uchigatana', 'qinggang', 'sabre']) {
+  for (const gp of [-0.1, 0, 0.1]) for (const fw of ['longsword', 'uchigatana', 'qinggang', 'kriegsmesser']) { // (11/19 사브르 → 크릭스메서 — 재기에 estoc · sabre 를 쓰지 않음)
     const g = newRound({ weapon: 'qinggang', weapon2: fw, seed: 1, gap: contact + gp });
     try {
       g.ai.update = () => {};

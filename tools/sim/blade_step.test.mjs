@@ -2,6 +2,7 @@
 //  옮긴 기록 docs/strike/ae_port_2026-11-17.md §4): 베기 판정 에너지 × w(t) (끝 ⅓ = 1 · 손잡이 끝 0.5) · 들어가며 친 베기 판정 유효 질량 + 1.0 kg × min(1, v ÷ 1.0) ·
 //  찌르기 · 둔타는 그대로 · 찌르기 공격 중(탭 · 운동학 찌름 · 리솔루토 런지 끝 붙잡기 · AI 찌르기 기술)의 베기 꼴 닿음도 걸음 몫 없음 · 사람 · AI 같은 판정.
 //  node --test tools/sim/blade_step.test.mjs
+import { fingerCutK } from '../../src/finger_cut.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, AI } from './harness_m.mjs';
@@ -66,7 +67,7 @@ test('판에서: 베기 판정 = ½ × (자유 칼 + 팔 + 걸음 몫) × 빠르
   // 씨앗 1 · 2 → 1 ~ 3 (11/17 ③ 자세 → 칼길 — 판 흐름이 갈라져 씨앗 1 · 2 판이 20.2 · 13.5 s 에 끝나고 베기 상처 여섯이 모두 칼날 끝 ⅓ 에 닿음 · 씨앗 3 을 더하면 베기 13 · 무게 < 1 하나 — 뜻 그대로)
   for (const seed of [1, 2, 3]) {
     const G = newRound({ seed, walls: true, weapon: 'longsword', weapon2: 'longsword', AI2Class: AI, persona: { proficiency: 4 }, persona2: { proficiency: 4 } });
-    G.onWound = (att, vic, r) => (r.type === 'cut' ? cut : other).push({ ...r, sh: att.secretHit ?? 1 });
+    G.onWound = (att, vic, r) => (r.type === 'cut' ? cut : other).push({ ...r, sh: (att.secretHit ?? 1) * fingerCutK(att, 'hit') }); // 판정 배율 — 비기 secretHit · 손가락 긋기 판정 × 2 (11/19 보정 v2 묶음 C1 부터 AI 보통 베기에도)
     try {
       while (G.t < 40 && G.player.alive && G.enemy.alive) G.step();
     } finally {

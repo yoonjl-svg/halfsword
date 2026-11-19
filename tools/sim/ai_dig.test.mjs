@@ -166,20 +166,21 @@ test('C — 달림: 기력 문턱 위 · 스틱 앞 끝 · 휘두르지 않을 �
 });
 
 test('켜면 판에서 실제로 쓰임 — A 걸음 실린 칼 · 건넘 · B 박참 · C 달림 (환도 숙련 5 대 롱소드 AI 숙련 5 · 씨앗 1 ~ 4 가운데 처음 난 판)', () => {
+  // 11/19 C1 뺌(사장님 — AI 판정 × 1) 뒤: 씨앗 2 는 A 가 셈에 잡히나(11.8 · 14.5 s 걸음 실린 칼 · 붙듦) 몸 자리 · 피가 끈 판과 바이트까지 같음 — 쓰였어도 같은 걸음이 되는 판이 있어
+  //  '쓰인 첫 판이 끈 판과 다름' 대신 '쓰인 판 가운데 처음으로 끈 판과 다른 판'을 찾음 (씨앗 1 ~ 4 그대로)
   const first = (over, ok) => {
     for (const seed of [1, 2, 3, 4]) {
       const r = withDig(over, () => trace({ secs: 30, seed }));
-      if (ok(r)) return { ...r, seed };
+      if (ok(r) && r.text !== withDig({ ai: 0 }, () => trace({ secs: 30, seed })).text) return { ...r, seed };
     }
     return null;
   };
   const a = first({ ai: 1 }, (r) => (r.dP.stepIn ?? 0) + (r.dP.cross ?? 0) + (r.dP.keep ?? 0) > 0);
-  assert.ok(a, 'A 가 쓰인 판');
+  assert.ok(a, 'A 가 쓰여 끈 판(A 도 끔)과 달라진 판');
   const b = first({ ai: 0, step: 1 }, (r) => (r.dP.dash ?? 0) > 0 && r.digs > 0);
-  assert.ok(b, 'B 박찬 판');
+  assert.ok(b, 'B 박차 끈 판과 달라진 판');
   const c = first({ ai: 0, run: 1 }, (r) => (r.dP.runT ?? 0) > 0);
-  assert.ok(c, 'C 달린 판');
-  for (const r of [a, b, c]) assert.notEqual(r.text, withDig({ ai: 0 }, () => trace({ secs: 30, seed: r.seed })).text, '끈 판(A 도 끔)과 다름');
+  assert.ok(c, 'C 달려 끈 판과 달라진 판');
 });
 
 test('상대가 길 때의 대처 — 모든 AI 기본 (11/14 사장님): 문 → 기울기 · 몫 = 길이 모자람 s × 띠 세기(+ 굴림) · 같은 칼은 0 · 끄면 · 쓰러진 상대 간격은 옛 문', () => {

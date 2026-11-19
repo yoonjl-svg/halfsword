@@ -7,7 +7,7 @@ import { PlayerUniqueAssist } from '../../src/unique_assist.js';
 import { requestIai } from '../../src/secret_instant.js';
 import { STAMINA, SECRET, realS } from '../../src/config.js'; // realS: 표준 시간(10/25) — 0.6 s 기다림 · 초당 21 · 15 · 탈진 시간은 실제 초
 const near=(a,b,e=1e-5)=>assert.ok(Math.abs(a-b)<e,`${a} != ${b}`);
-function game(fn,weapon='longsword'){const g=newRound({weapon,seed:7});try{return fn(g);}finally{g.world.free();}}
+function game(fn,weapon='longsword',seed=7){const g=newRound({weapon,seed});try{return fn(g);}finally{g.world.free();}}
 test('실제 사람/AI는0.6초 뒤 각각21/s·15/s 회복하며100을 넘지 않음',()=>game(g=>{
  g.ai.update=()=>{};for(let i=0;i<240;i++)g.step();
  for(const f of [g.player,g.enemy]){f.stamina.value=20;f.stamina.rest=0;}
@@ -55,11 +55,12 @@ test('진행 중 발도는 탈진 때 끝나고 팔·칼의 동적 물리와 양
   for(let i=0;i<60;i++)g.step();assert.ok(Number.isFinite(p.bodies.pelvis.translation().y));
  },'uchigatana');
 });
+// 씨앗 7 → 1 (11/19 보정 v2 묶음 — AI v2 · 판정 × 2: 씨앗 7 은 막기 단추를 누른 채 첫 AI 칼에 8.2 s 에 쓰러져 칼 충돌 0 · 씨앗 1 은 20 s 동안 막음 74 충돌)
 test('실제 칼 충돌을 상대 공격당 한 번의 막기 비용으로 셈',()=>game(g=>{
  const guard=new PlayerParryGuard(g.player,g.enemy);g.player.stamina.controller=guard;guard.held=true;g.before=()=>guard.step(DT);
  for(let i=0;i<2400&&g.player.alive;i++)g.step();
  assert.ok(g.clashes>0);assert.ok(g.player.stamina.counts.block>0);near(g.player.stamina.spent.block,g.player.stamina.counts.block*3);near(g.player.stamina.spent.attack,0);
-}));
+},'longsword',1));
 test('실제 플레이어 비기의 구성 찌르기는35에 포함',()=>game(g=>{
  g.ai.update=()=>{};g.step();const p=g.player;assert.ok(p.skill.secret({S:TRADITIONS.italian.secret}));
  for(let i=0;i<120;i++)g.step();near(p.stamina.spent.secret,35);near(p.stamina.spent.attack,0);near(p.stamina.spent.move,0);

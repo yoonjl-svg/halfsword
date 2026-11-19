@@ -79,6 +79,8 @@ function makeRig({ school, weapon, gap = 3.2, seed = 3, foeWeapon = 'longsword' 
   const E = G.enemy;
   E.strength = 1; // 멈춘 상대 몸은 11/16 판 그대로(숙련 3 = 보통 힘 1 · 버티는 힘 1) — 숙련도별 몸 값(E · config PROF_BODY 3 칸 0.8)이면 상대 칼 · 몸이 처져 사람 수 길이 바뀜. 이 도구는 사람 수만 견줌
   E.vitality = 1;
+  E.skill.corr = 'old'; // 멈춘 상대 몸 11/16 판 그대로 ② (11/19 보정 v2 묶음 — AI 몸 보정 v2 · 닿음 신호가 멈춘 상대의 칼 · 몸 자리를 바꿔 사람 비기 · 특수 공격 겨눔이 달라졌음: 알티바슈 dur 0.333 → 0.425 등)
+  E.aiCtl = null; //  · AI 판단 없는 몸 (닿음 신호 밖 — 손을 쥔 몸 그대로)
   P.skill.corr = CONFIG.SKILL.corr;
   P.skill.autoGuard = true;
   P.canShove = true;

@@ -29,9 +29,9 @@ const IT = ['rapier', 'dartagnan', 'balisarda', 'pappenheimer'];
 
 test('잣대 고르기: 이탈리아 유파 무기(파펜하이머 포함)만 찌르기 · 나머지는 분노의 베기 · 강제 둘', () => {
   for (const id of IT) assert.equal(rulerOf(id), 'thrust', id);
-  for (const id of ['longsword', 'sabre', 'falchion', 'qinggang', 'estoc', 'zweihander']) assert.equal(rulerOf(id), 'zornhau', id);
+  for (const id of ['longsword', 'kriegsmesser', 'hwando', 'falchion', 'qinggang', 'zweihander']) assert.equal(rulerOf(id), 'zornhau', id); // (11/19 사브르 · 에스톡 → 크릭스메서 · 환도 — 재기에 estoc · sabre 를 쓰지 않음)
   assert.equal(rulerOf('rapier', 'zornhau'), 'zornhau');
-  assert.equal(rulerOf('sabre', 'thrust'), 'thrust');
+  assert.equal(rulerOf('hwando', 'thrust'), 'thrust');
 });
 
 test('손 표: 이탈리아 넷은 찌르기 잣대 줄 (사장님 10/25 22:1x \'전부 새 값으로\')', () => {
@@ -50,9 +50,10 @@ test('찌르기 잣대는 팔 두 판(사람 팔 범위 swivelHuman · 엎친 �
   });
 });
 
-test('맞춰 봄: 분노의 베기 잣대가 그대로 재는 세이버는 찌르기 잣대로도 손 표 contact 와 0.06 m 안', () => {
+test('맞춰 봄: 분노의 베기 잣대가 그대로 재는 청강검(11/19 세이버 → 청강검 — 재기에 sabre 를 쓰지 않음)은 찌르기 잣대로도 손 표 contact 와 0.06 m 안', () => {
   withSets(HOLD0, () => {
-    const k = measureThrust('sabre').raw / measureThrust('longsword').raw;
-    assert.ok(Math.abs(MEASURED.longsword[0] * k - MEASURED.sabre[0]) < 0.06, `세이버 찌르기 잣대 ${(MEASURED.longsword[0] * k).toFixed(3)} · 손 표 ${MEASURED.sabre[0]}`);
+    // 11/19 세이버(1.427 · 표 1.39 — +0.037) 대신: 청강검 −0.013 · 팔치온 +0.026 · 환도 −0.069 · 크릭스메서 −0.112(두손) — 한손 곧은 칼 청강검으로 (동방 대표 무기)
+    const k = measureThrust('qinggang').raw / measureThrust('longsword').raw;
+    assert.ok(Math.abs(MEASURED.longsword[0] * k - MEASURED.qinggang[0]) < 0.06, `청강검 찌르기 잣대 ${(MEASURED.longsword[0] * k).toFixed(3)} · 손 표 ${MEASURED.qinggang[0]}`);
   });
 });

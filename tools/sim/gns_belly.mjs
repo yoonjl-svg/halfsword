@@ -105,7 +105,7 @@ export function standShot({ foeW = 'longsword', guard = 'langort', start = 'hip'
   while (G.t < settle) G.step();
   const d0 = P.foeDistance();
   const foeY0 = Object.fromEntries(['chest', 'abdomen', 'pelvis'].map((n) => [n, A.bodies[n].translation().y]));
-  requestIai(P, start === 'ai' ? {} : { player: true });
+  requestIai(P, {}); // (11/19 사람 · AI 같은 발도 규칙 — 전 사람은 { player: true })
   fired = true;
   const touch = {};
   // 그림 틀 (tools/sim/secret_trace.mjs 와 같은 꼴 — 낸 때 내 가슴 원점 · x 앞 · y 위 · z 칼 든 쪽): secret_trace_draw.py 가 그대로 읽음

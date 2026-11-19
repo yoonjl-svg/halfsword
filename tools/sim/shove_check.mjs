@@ -816,7 +816,7 @@ function coreTable(rows) {
 function modeCore() {
   const cells = [];
   for (const start of ['glued', 'walkin', 'bound', 'foewall', 'selfwall'])
-    for (const foe of ['braced', 'backing']) for (const weapon of ['longsword', 'sabre', 'tree_branch']) cells.push({ id: `${start}/${foe}/${weapon}`, start, foe, weapon });
+    for (const foe of ['braced', 'backing']) for (const weapon of ['longsword', 'kriegsmesser', 'tree_branch']) cells.push({ id: `${start}/${foe}/${weapon}`, start, foe, weapon });
   cells.push({ id: 'plate:glued/braced/longsword', start: 'glued', foe: 'braced', weapon: 'longsword', plate: 'heinrich', extra: true });
   cells.push({ id: 'roof:glued/braced/longsword', start: 'glued', foe: 'braced', weapon: 'longsword', pad: ROOF, extra: true });
   cells.push({ id: 'mutual:glued/braced/longsword', start: 'glued', foe: 'braced', weapon: 'longsword', mutual: true, extra: true });
