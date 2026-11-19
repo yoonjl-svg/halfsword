@@ -2,7 +2,7 @@
 //  ① 1:1 AI 는 뛰지 않음 (runReach 를 두지 않아 f.run 이 없음 — 관문 바이트 같음)
 //  ② 셋 이상 판 AI 는 사람과 같은 규칙으로 뜀 (2:1 판 시작 — 짝의 둘째가 혼자와 붙은 동료에게 끼어듦): 걷는 끝보다 빠름 · 뛰는 동안 기력 초당 runCostRate · 회복 없음 ·
 //     몸이 뛰는 쪽을 봄 · 닿기 전에 멈춤 · 닿을 때 기력 AI_RUN.keep 넘게
-//  ③ 언제 (가짜 판): 겨눈 상대가 남을 겨눔 → join · 나를 겨눠 다가옴 → 안 뜀 · 나를 겨눈 채 멀어짐 → chase · 다른 적이 칼끝 + near 안 → 안 뜀 ·
+//  ③ 언제 (가짜 판): 겨눈 상대가 내 동료를 겨눔 → join · 나를 겨눠 다가옴 · 제삼자와 붙음(셋 따로) → 안 뜀 · 나를 겨눈 채 멀어짐 → chase · 다른 적이 칼끝 + near 안 → 안 뜀 ·
 //     닿을 때 기력 어림이 keep 밑 → 안 뜀 · 간 보기 꼴이 아님 → 안 뜀 · 공격 꼴이면 runBreak · 뛰는 쪽 옆 몫 ≤ 앞 몫 × lat · 난수 안 부름
 //  node --test tools/sim/ai_run.test.mjs
 import test from 'node:test';
@@ -104,7 +104,7 @@ const noRandom = (fn) => {
   try { return fn(); } finally { Math.random = r; }
 };
 
-test('③ 언제 뛰나: 겨눈 상대가 남을 겨눔 → join · 나를 겨눠 다가옴 → 안 뜀 · 나를 겨눈 채 멀어짐 → chase', () => {
+test('③ 언제 뛰나: 겨눈 상대가 내 동료를 겨눔 → join · 나를 겨눠 다가옴 → 안 뜀 · 나를 겨눈 채 멀어짐 → chase · 셋 따로 제삼자와 붙음 → 안 뜀', () => {
   // 0 편: 나(0) · 동료(2) — 1 편: 적(1) 은 동료(2)와 붙음 · 나는 7 m 밖
   const F = [fake(0, 0, -7, 0, 0), fake(1, 1, 0, 0, Math.PI), fake(2, 0, 2, 0, Math.PI)];
   board(F, [1, 2, 1]);
@@ -129,6 +129,15 @@ test('③ 언제 뛰나: 겨눈 상대가 남을 겨눔 → join · 나를 겨�
   G[0].aiCtl.chasing = true;
   aiRunFeet(G[0].aiCtl, 0.48, 0);
   assert.equal(G[0].aiCtl.runWhy, 'chase');
+  // 셋 따로(편 0 · 1 · 2): 겨눈 상대가 제삼자와 붙음 — 안 뜀 (동료가 아님)
+  const H = [fake(0, 0, -7, 0, 0), fake(1, 1, 0, 0, Math.PI), fake(2, 2, 2, 0, Math.PI)];
+  board(H, [1, 2, 1]);
+  H[0].aiCtl.foeClosing = 1;
+  aiRunFeet(H[0].aiCtl, 0.48, 0);
+  assert.equal(H[0].aiCtl.runWhy, null, '제삼자와 붙은 적에게는 안 뜀');
+  H[0].aiCtl.foeClosing = -(AI_RUN.flee + 0.1);
+  aiRunFeet(H[0].aiCtl, 0.48, 0);
+  assert.equal(H[0].aiCtl.runWhy, null, '나를 겨누지 않은 채 멀어짐은 쫓기 아님');
 });
 
 test('③ 안 뜀: 다른 적이 칼끝 + near 안 (등이 열림) · 가까움(gap 안) · 닿을 때 기력 keep 밑 · 간 보기 꼴 아님 · 쉼 · 넘어짐 · 앞으로 안 감', () => {

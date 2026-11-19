@@ -37,7 +37,7 @@
 //    runEnd          뛰기가 끝난 때(on → off): 까닭(f.run.end) · 기력 · 겨눈 상대 칼끝까지 남은 거리(가슴 사이 − 상대 칼끝 reach — 0 밑 = 칼끝 안에서 끝남)
 //    far             먼 다가감: 서 있는 몸(판 시작 발 묶임 뒤)이 겨눈 상대(서 있음)와 제 칼끝 + FAR 넘게 떨어진 때부터 그 상대에게 닿는 거리(칼끝 + 0.5) 안에 들 때까지 —
 //                    걸린 시간 · 닿은 때 기력 · 그 사이 뛰었나 (상대를 바꾸거나 쓰러지면 버림) · farLate = 판 시작 다가감(발 묶임이 풀린 뒤 1 s 안에 시작)을 뺀 것
-//    hitRun          상처 가운데 맞은 몸이 뛰는 중이거나 뛴 뒤 상대 쪽으로 돌아오는 중(f.run.back) · 그 가운데 등 뒤(120° 넘게)에서
+//    hitRun          상처 가운데 맞은 몸이 뛰는 중이거나 뛴 뒤 상대 쪽으로 돌아오는 중(f.run.back) · 친 몸이 살아 있음(막 죽은 몸의 쓰러지는 칼은 뺌) · 그 가운데 등 뒤(120° 넘게)에서
 import { RAPIER, THREE, CONFIG, AI, newMatch, DT } from './jelly_harness.mjs';
 import { Fighter, GROUND_GROUPS } from '../../src/fighter.js';
 import { Combat } from '../../src/combat.js';
@@ -161,7 +161,7 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
     if (vic.foe !== att) C.unatt++, C.side[sideOf(vic)].gotUnatt++;
     if (vic.state === 'stand' && busyWithOther(vic, att)) { C.busy++; C.side[sideOf(att)].hitBusy++; if (offFacing(vic, att) > Math.PI / 3) C.blind++; }
     if (vic.state === 'stand' && offFacing(vic, att) > (2 * Math.PI) / 3) C.hitBack++, C.side[sideOf(att)].hitBack++; // 등 뒤에서 (맞은 몸이 바라보는 쪽에서 120° 넘게)
-    if (vic.run?.on || vic.run?.back) { C.hitRun++; if (offFacing(vic, att) > (2 * Math.PI) / 3) C.hitRunBack++; } // 뛰는 중 · 뛴 뒤 돌아오는 중에 맞음
+    if ((vic.run?.on || vic.run?.back) && att.alive) { C.hitRun++; if (offFacing(vic, att) > (2 * Math.PI) / 3) C.hitRunBack++; } // 뛰는 중 · 뛴 뒤 돌아오는 중에 산 적에게 맞음 (막 죽은 몸의 쓰러지는 칼은 뺌)
     C.maxQuiet = Math.max(C.maxQuiet, G.t - C.lastHitT);
     C.lastHitT = G.t;
     for (const w of watches) if (w.b === vic && G.t <= w.until) w.hitAgain = true;

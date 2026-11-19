@@ -7,9 +7,11 @@
 //   f.run 이 생기지 않는다 (관문 바이트 같음). 난수를 부르지 않는다.
 //
 //  언제 (까닭 — 둘 중 하나):
-//   join   겨눈 상대가 나 아닌 몸을 겨눔 — 동료와 붙은 적 · 다친 동료를 겨눈 적(엄호 겨눔 — team_sense.js) · 셋 따로 판의 제삼자와 붙은 적에게 끼어듦
+//   join   겨눈 상대가 내 동료를 겨눔 — 동료와 붙은 적 · 다친 동료를 겨눈 적(엄호 겨눔 — team_sense.js)에게 달려가 끼어듦
 //   chase  겨눈 상대가 빈손(ai.chasing) · 나를 겨눈 채 AI_RUN.flee 넘게 멀어짐(물러나 숨 고름)
 //   나를 겨눠 다가오는 상대에게는 안 뜀 (판 시작처럼 — 어차피 오는 상대에게 기력만 씀)
+//   셋 따로 판의 제삼자와 붙은 적에게는 안 뜀 (둘이 싸우는 데 달려들면 내 적 하나를 돕는 셈 — 걸어서 다가가는 기습은 team_sense.js 그대로 ·
+//    11/19 재기: 판 시작 거리 같음 겨눔에서 자리 2 가 자리 0 에게 뛰어들어 자리 0 이김 13 → 5 / 60)
 //  조건: 간 보기(watch) 중 · 서 있음 · 쉼(기력 쉼) · 밀치기 아님 · 겨눈 상대까지 간 보는 거리(holdDist) 밖으로 AI_RUN.gap 넘게 남음 ·
 //   뛰어 닿을 때 기력이 AI_RUN.keep 넘게 남음(남은 길 ÷ 뛰는 끝 빠르기 × 초당 기력 어림) · 겨눈 상대 말고 다른 적이 제 칼끝 + AI_RUN.near 안에 없음
 //   (뛰면 몸이 뛰는 쪽을 보고 옆 · 등이 열린다 — 판 사본의 제 층 눈(늦음)으로 읽되 시야는 묻지 않음) → 스틱을 상대 쪽 끝으로 (옆 몫은 앞 몫 × AI_RUN.lat 안 — 몸이 거의 안 돌고 뜀)
@@ -50,8 +52,10 @@ function runWhy(ai) {
   if (ai.chasing) return 'chase';
   const v = viewOf(ai);
   if (!v) return null;
-  if (v.fr.b[ai.foe.index].foe !== v.i) return 'join';
-  return (ai.foeClosing ?? 0) < -AI_RUN.flee ? 'chase' : null;
+  const S = ai.me.teamSense;
+  const t = v.fr.b[ai.foe.index].foe; // 겨눈 상대가 겨눈 몸
+  if (t >= 0 && t !== v.i && sameSide(S.fighters[v.i], S.fighters[t])) return 'join';
+  return t === v.i && (ai.foeClosing ?? 0) < -AI_RUN.flee ? 'chase' : null;
 }
 
 /**
