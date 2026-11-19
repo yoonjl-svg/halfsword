@@ -37,7 +37,7 @@ import { lowFinishPosture } from './finish_entry.js';
 import { UNIQUE_ASSIST as UA, IB_FLOW } from './config.js'; // IB_FLOW.power: 이베리아 흐르는 긋기 위력 (10/28 — analyze)
 import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 판정 배율 (11/06 — SKILL.fingerCut.hit · 기본 1 = 끔)
 import { strokeTechOf } from './unique_assist.js'; // 강화동작 이점 (10/21): 맞는 순간 지금 기술 이름
-import { bwTouch } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 — 닿음 셈: 칼이 몸에 · 칼끼리)
+import { bwTouch } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 — 닿음 셈: 칼이 몸에 닿으면 헛침이 깨짐 · 칼끼리는 재기만)
 import { perkOff, uniqueOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 흘려 받기 J3 · 강화동작 이점 = 심화 칸 G6 · I8 · C4 · 11/16 내려 찌르기 틈 파고들기 = 내려 찌르기 칸 I7 [사장님 11/16 결정 '다 너의 권고대로 하마'])
 import { itThrust, itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14 — 사람 이탈리아 찌르기 판정 배율 · 맞박자 찌르기 · 칼 우위 — config IT_OUTBOX)
 import { aiWoundKeep } from './ai_block_cut.js';
@@ -735,7 +735,7 @@ export class Combat {
     }
     A.fighter.stamina.block(B.fighter);
     B.fighter.stamina.block(A.fighter);
-    bwTouch(A.fighter, B.fighter, 'blade'); // 뒤 박차기 헛침 경직 (11/19): 칼끼리 닿음 (코등이 · 자루 포함 — 읽기만)
+    bwTouch(A.fighter, B.fighter, 'blade'); // 뒤 박차기 헛침 경직 (11/19): 칼끼리 닿음 (코등이 · 자루 포함) — 헛침을 깨지 않음 · 재기만
     bwTouch(B.fighter, A.fighter, 'blade');
     let ps = this.bladePairs.get(g.key); // 이 짝의 겨룸 상태 (처음 생긴 짝의 소리 접촉 = this.bladeContact)
     if (!ps) this.bladePairs.set(g.key, (ps = { last: -1e9, bc: this.bladePairs.size ? { last: -1e9, start: 0, slide: 0, press: 0 } : this.bladeContact }));

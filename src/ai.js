@@ -58,7 +58,7 @@ import { jpInit, jpNeed, jpStill, jpTechK, jpVoid, jpSeeThreat, jpGuardChance, j
 import { iaiSeated, drawStart, drawLog } from './iai_obi.js'; // 11/16 뽑기 — 칼집에 든 채 공격 · 막기는 SECRET.gnsDraw 초 뽑은 뒤 (사람과 같은 셈)
 import { cnInit, cnTick, cnHoldM, cnNeed, cnTechW, cnFeint, cnCircle, cnMeet, cnNext, cnWant, cnDive, cnDiveTick, cnGuardChance } from './ai_plan_cn.js'; // 동방 플랜 (2 단계 · 11/14 — this.planCn 이 있는 몸만 부름)
 import { bwStiff, bwAtkStart, bwAtkEnd, bwAtkDrop } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 [사장님 결정] — 사람 · AI 같은 규칙 · 굳은 동안 막기 · 공격 · 걸음 없음)
-import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead, deNachTick, deReserve, deCueTick, deKnee } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만) · 11/19 띠 높음 칼 든 낌새 · 뒤 칼 · 누르는 동안만 비기 기력 · G6 무릎 꺾기 뒤 끝내기
+import { deInit, deCloseCfg, deHoldM, deStickK, deDigTry, deFeet, deBack, deBeat, deRead, deNachTick, deReserve, deCueTick, deKnee, deLeaveTick, deNachKeep } from './ai_plan_de.js'; // 3 단계 독일 플랜 몫 (11/14 — ai.planDe 일 때만) · 11/19 띠 높음 칼 든 낌새 · 뒤 칼 · 누르는 동안만 비기 기력 · G6 무릎 꺾기 뒤 끝내기
 import { DIG_PROTO, AI_ARC, PHYSICS, GUARD_LINE } from './config.js';
 import { icpArm, icpAim, coverTech, icpStats, discHold, anticAim, anticRoll, swingMark, swingTurn } from './ai_intercept.js'; // 막기 2.0 읽기 묶음 (11/17 — config AI_INTERCEPT · [사장님 11/17 결정] 기본 판): 가로막기 · 덮는 맞받기 · 공격 절제 · 미리 줄 닫기 · 새 휘두름
 import { msTick, msLine, msChainWant, msHold, msFeetV, msWdEnd, msInsideHold, msAttackStart, msTempoFeet, msWindupFeet, msRead, msDebanaOpen, msDebanaTry, msDebanaTick, okoriStart, okoriFrom, okoriTick, okoriEnd, okoriBody, okoriHold, okoriCue } from './ai_measure.js'; // 간격과 박자 · 오코리 (11/17 — config MEASURE · OKORI · [사장님 11/17 결정] 기본 판)
@@ -1057,6 +1057,7 @@ export class AI {
     if (this.ibPlan) ibTick(this, dt, th, hurt); // 이베리아 플랜 (2 단계): 원 사이를 치는 버릇 기억 · 옆 박차기 진행 · 무장 기다림 끝 (굴림 없음)
     // 독일 파고들기 (3 단계 11/14): 간 보기 · 물러남 · 막기에서 상대 헛침(seize 의 recovering 과 같은 셈 — 늦게 본 모습)을 본 한 번에 굴림
     if (this.deCue) deCueTick(this, s); // 11/19 띠 높음: 칼 든 낌새 (읽고 박차기의 첫 문 — 굴림 없음)
+    if (this.deLeave && !kneeling && !stiff && (this.mode === 'watch' || this.mode === 'withdraw') && deLeaveTick(this, s, d, th)) this.voidBurst(); // 11/19 띠 높음 출발 읽기: 감아 든 꼴을 읽고 서서 기다리다 상대가 칼이 떠나면 닿는 거리에 들면 그때 뒤로 박참 (물러나 피하기 꼴로)
     if (this.planDe && !kneeling && !stiff && (this.mode === 'watch' || this.mode === 'withdraw') && deKnee(this, s, d)) {
       // 11/19 G6: 내 곁눈 베기가 무릎을 꺾은 상대 — 다음 간 보기 박자를 기다리지 않고 곧장 끝내기 (ai_plan_de.js deKnee)
     } else if (this.planDe && !kneeling && !stiff && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend')) {
@@ -1977,7 +1978,7 @@ export class AI {
       if (this.secretRun) this.handSpeed *= this.secretVal(this.secretRun.S.do.hand ?? 'handSpeed'); // 비기: 손 속도 최대
       // 준비하는 동안 상대 칼이 들어오면: 숙련자는 공격을 거두고 막는다 (패시브가 낸 공격은 걸쇠 0.5 s 동안 거두지 않는다 — passiveLock)
       //  무모(11/14 — 유파 플랜 굴림 몫): 위협 하나를 그 몫만큼 접지 않고 넘김 (planReck — 플랜 없으면 굴림 없이 false)
-      if (th && !this.actLocked && this.noticedThreat(th) && !this.planReck(th) && this.respond(th, d)) return;
+      if (th && !this.actLocked && this.noticedThreat(th) && !this.planReck(th) && !(this.deNach && deNachKeep(this, th)) && this.respond(th, d)) return; // 11/19 §8 뒤 칼은 비낀 칼의 꼬리를 다시 막지 않음 (deNachKeep)
       if (padDist([me.handOffset.x, me.handOffset.y], tF) < 0.03) {
         if (this.gnsW?.plan?.kind === 'feint') return this.abortAttack(); // 고노센 경계 속임 (10/25): 들기를 마치면 거둔다 (선 밖 — 상대 창 없음)
         this.phase = 'approach';
@@ -2008,7 +2009,7 @@ export class AI {
         return;
       }
 
-      if (th && !this.actLocked && this.noticedThreat(th) && !this.planReck(th) && this.respond(th, d)) return;
+      if (th && !this.actLocked && this.noticedThreat(th) && !this.planReck(th) && !(this.deNach && deNachKeep(this, th)) && this.respond(th, d)) return; // 11/19 §8 뒤 칼은 비낀 칼의 꼬리를 다시 막지 않음 (deNachKeep)
       // 상대가 물러나 따라잡을 수 없거나 너무 오래 걸리면 그만둔다 (좀비처럼 쫓지 않는다)
       const keep = (1 + 0.5 * this.obsession) * (this.plan ? 1 + this.planLuck : 1); // 물고 늘어질 땐 접근을 쉽게 포기하지 않는다 · 무모(11/14 유파 플랜 굴림 몫): 끝까지 밀어붙임
       const hold = this.secretRun?.S.do.loop ? 1 : 0; // 이베리아 비기: 고리를 준비로 도는 몫만큼 1 s 더 버틴다 (다른 공격·비기는 0 — 같은 수)
@@ -2655,7 +2656,7 @@ export class AI {
       this.evParried = true; // 감정층 사건: 막혔다
     }
     // 뒤 박차기 헛침 경직 (11/19 [사장님 결정]): 상대가 뒤 박차서 이 칼이 아무 데도 안 닿고 끝났으면 — 이어 치기 · 패시브 · 물러남 대신 굳음 (사람 whiffEnd 와 같은 셈)
-    if (bwAtkEnd(this.me, this.hitLanded, this.bound || this.atkClash)) return void this.bwStiffen();
+    if (bwAtkEnd(this.me, this.hitLanded)) return void this.bwStiffen(); // 몸에 안 닿았으면 헛침 (칼끼리 맞물림 · 칼 부딪힘은 헛침을 깨지 않음 — 11/19)
     // 유파 비기 (10/9): 비기의 베기가 끝났다 → 비기 몫으로 (이어 칠 수가 남았거나 경직). 비기가 아니면 끊기지 않은 베기를 세고, 비기(combo·firstHit)를 패시브보다 먼저 본다
     if (this.secretRun) {
       this.secretAfter(d);
@@ -2928,6 +2929,22 @@ export class AI {
     this.icpPick(); // 막기 2.0 가로막기 (11/17): 칼로 막기면 가로막기로 할지 띠 기울기만큼 한 번 굴림
     this.timer = DEF_T;
     return true;
+  }
+
+  /** 출발 읽기로 뒤 박찬 뒤 (11/19 — ai_plan_de.js deLeaveTick): 물러나 피하기 꼴 (respond 의 피하기와 같은 꼴 · 걸음이 뒤로 — 박찬 걸음을 뗌) */
+  voidBurst() {
+    this.mode = 'defend';
+    this.phase = 'guard';
+    this.path.length = 0;
+    this.stepT = 0;
+    this.defBindSeen = false;
+    this.parryComboReset();
+    this.defVoid = true;
+    this.defLine = null;
+    this.cnDive = null;
+    this.icpPick();
+    this.stats.voids++;
+    this.timer = DEF_T;
   }
 
   /** 막기 2.0 가로막기 (11/17 — ai_intercept.js icpArm): 칼로 막는 막기면 가로막기 굴림 · 물러나 피하기면 끔 */
@@ -4495,6 +4512,12 @@ export class AI {
     const dg = this.planDe ? deFeet(this, dt, d, CLOSE.startAI) : null;
     if (dg != null && (this.mode === 'watch' || this.mode === 'withdraw' || this.mode === 'defend' || (this.mode === 'attack' && (this.phase === 'windup' || this.phase === 'approach')))) {
       fwd = dg;
+      side = 0;
+      sideLock = true;
+    }
+    // 독일 띠 높음 출발 읽기 (11/19 §8 — ai_plan_de.js deLeaveTick): 감아 든 꼴을 읽은 동안 간 보기 · 물러남 걸음을 세우고 섬 — 박차는 때에 서 있다가 박찬 첫 걸음을 곧장 뗌 (걷는 중이면 디디던 걸음이 끝나야 뗌)
+    if (this.deLeave?.set && (this.mode === 'watch' || this.mode === 'withdraw')) {
+      fwd = 0;
       side = 0;
       sideLock = true;
     }

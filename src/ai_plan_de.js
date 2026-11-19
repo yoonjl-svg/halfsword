@@ -17,8 +17,9 @@
 //  띠 높음 (숙련 5 ~ · planK 1 — [사장님 11/19 결정] "숙련 5면 이미 대가잖아. 상대 칼을 예측 가능해서 그 동작이 의미 있을 때 뒤로 박차야해. 박찬 다음에는 실제 그로 인한
 //   이득이 취해지도록 다음 동작을 연계해야 하고. 비기 기력은 모르트슐라크로 누르는 동안에만 남겨." · 기록 docs/strike/de_band3_2026-11-19.md):
 //   ① 읽고 박차기 — 뒤 박차기는 상대가 칼을 낸 것을 읽었고(칼 든 낌새를 본 뒤 그 칼의 첫 휘두름 · 달려듦 — deCommit) 그 칼이 지금 자리에 닿는데
-//      걷는 뒷걸음으론 못 빠지고 박찬 뒷걸음으로는 빠질 때만 (deBackRead) · 기력이 쉼 문턱 + 박차기 값 아래면 안 박참
-//   ② 뒤 칼 — 박차서 그 칼을 비낀 뒤 상대 칼이 다한 틈(헛친 뒤 손이 멎음)에 곧장 다시 들어가 침 (deNachTick — 나흐라이젠 · 나흐슐라크 · 기술은 독일 꾸러미 'recover' 고르기)
+//      걷는 뒷걸음으론 못 빠지고 박찬 뒷걸음으로는 빠질 때만 (deBackRead) · 쉬는 중이거나 기력이 쉼 문턱 + 박차기 값 + 베기 값 아래면 안 박참 (11/19 §8 — 뒤 칼까지 낼 기력)
+//      11/19 §8 출발 읽기 (deLeaveTick): 감아 든 꼴(오코리 · 느린 감기)을 읽었으면 칼이 떠나는 때(상대 몸이 칠 거리에 막 듦)에 박참 — 박찬 걸음이 그 칼의 출발과 겹침
+//   ② 뒤 칼 — 박차서 그 칼을 비낀 뒤 상대 칼이 다한 틈(헛친 뒤 굳음 0.6 s)에 곧장 다시 들어가 침 (deNachTick — 나흐라이젠 · 나흐슐라크 · 기술은 독일 꾸러미 'recover' 고르기 · 오코리 없음)
 //   ③ 비기 기력 35 남김은 모르트슐라크로 누르는 동안만 (deReserve — ai.js planRestAt)
 //   띠 낮음 · 가운데(숙련 1 ~ 4)는 한 줄도 안 바뀜 (옛 굴림 그대로)
 // ─────────────────────────────────────────────────────────────
@@ -46,9 +47,10 @@ export function deInit(ai) {
   ai.deDig = { t: 0, armed: true, after: 0, push: false }; // after = 파고들기 뒤 밀치기를 크게 기울이는 남은 시간 (digT + AI_PLAN.beat) · push = 밀 마음(pushNear — 맞닿기 안 헛침에서 굴려 났음 · 닿는 거리에 들면 굴림 없이 민다 · 밀거나 after 가 끝나면 지움)
   ai.stats.plan.de = { digTry: 0, dig: 0, back: 0, lure: 0, diffUp: 0, diffDown: 0, pushTry: 0, pushGo: 0, knee: 0, kneeGo: 0 };
   ai.deKnee = { at: null, live: false, seen: false }; // G6 무릎 꺾기 뒤 끝내기 (11/19 — deKnee): 마지막으로 본 꺾음(foe.buckleAt) · 그 꺾음에 아직 끝내기를 안 냄 · 꿇은 모습을 봄
-  ai.deNach = null; // 띠 높음 뒤 칼 (11/19 — deNachTick): 박찬 뒤 { t0 · tau(그 칼이 가장 가까워질 어림 초) · until · w0(내 상처 수) · voided · fired · seq · fw0(상대 상처 수) }
+  ai.deNach = null; // 띠 높음 뒤 칼 (11/19 — deNachTick): 박찬 뒤 { t0 · tau(그 칼이 가장 가까워질 어림 초) · until · w0(내 상처 수) · f0 · lift(박찬 걸음을 뗌 — 몸 시계 fightT) · seen(나를 겨눈 칼을 봄) · thId(본 칼의 위협 번호) · vT(비낀 때) · voided · fired · seq · fw0(상대 상처 수) · dig(앞 박차기를 아직 못 뗌 — 다시 걺) }
   ai.deCue = master(ai) ? { t: -Infinity, id: -1 } : null; // 띠 높음 칼 든 낌새 (11/19 — deCueTick): 마지막으로 본 때 · 그 낌새가 시작될 때의 위협 번호
-  if (master(ai)) Object.assign(ai.stats.plan.de, { backSee: 0, backFar: 0, backWalk: 0, backDeep: 0, backCue: 0, backStam: 0, backVoid: 0, backHit: 0, nach: 0, nachHit: 0, nachW: 0, nachLost: 0 }); // 재기 (11/19)
+  ai.deLeave = master(ai) ? { on: false, ok: false, done: false, set: false } : null; // 띠 높음 출발 읽기 (11/19 — deLeaveTick): 감아 든 꼴 하나 · 읽었나 · 그 꼴에서 박찰지 봤나 · 서서 기다림(moveFeet)
+  if (master(ai)) Object.assign(ai.stats.plan.de, { backSee: 0, backFar: 0, backWalk: 0, backDeep: 0, backCue: 0, backStam: 0, backVoid: 0, backHit: 0, nach: 0, nachHit: 0, nachW: 0, nachLost: 0, leaveSee: 0, leaveRead: 0, leave: 0 }); // 재기 (11/19)
 }
 
 /** 띠 높음(숙련 5 ~ — 띠 기울기 1)인가 — 11/19 '대가' 몫(읽고 박차기 · 뒤 칼 · 누르는 동안만 비기 기력)을 받는 몸 */
@@ -119,6 +121,15 @@ export function deCommit(ai, th) {
 function burstStamOk(ai) {
   const S = ai.me.stamina;
   return !S || S.infinite || S.value >= ai.planRestAt() + STAMINA.pushCost;
+}
+
+/**
+ * 박차고 이어 칠 기력이 있나 (띠 높음 · 11/19 §8 — 출발 읽기 · 읽고 박차기): 쉬는 중(staminaRest — 다시 나갈 기력까지 쉼) 아님 ·
+ *  쉼 문턱 + 박차기 값 + 베기 값(STAMINA.cutCost 12) 위 — 박찬 뒤 뒤 칼이 기력 쉼에 막히지 않을 때만 박참 (박찬 다음에 그 이득을 취할 다음 동작이 있어야). 기력 무한이면 늘
+ */
+function leaveStamOk(ai) {
+  const S = ai.me.stamina;
+  return !S || S.infinite || (!ai.staminaRest && S.value >= ai.planRestAt() + STAMINA.pushCost + STAMINA.cutCost);
 }
 
 /** 비기 기력 35 를 남길 때인가 (띠 높음 독일 · 11/19 — ai.js planRestAt): 모르트슐라크로 누르는 동안(몸 붙이기를 정했거나 밀치기 중)만 */
@@ -260,9 +271,55 @@ export function deFeet(ai, dt, d, startD) {
 }
 
 /**
+ * 출발 읽기 (띠 높음 · [사장님 11/19 결정] '권고대로' — 상대 칼이 떠나는 순간을 읽고 그때 박참 · 기록 docs/strike/burst_whiff_2026-11-19.md §8):
+ *  사람과 같은 눈 — 늦게 본 모습 s (반응 시간 그대로 · 칼이 나가기 시작하는 것은 내다보지 않음)와 앞질러 본 몸 거리 d (몸 움직임만 반응 시간 × predict 만큼 — ai.js 와 같은 셈).
+ *  ① 감아 든 꼴: 칼 든 낌새(deCue — 손 듦 · 오코리 OKORI.see 띠 문턱 · 느린 감기 · 사람 몸도 보임)를 판정 박자 두 칸 안에 봄 · 감은 상대가 한 박자 안에 칠 거리
+ *     (deBackRead τ = AI_PLAN.beat 가 'far' 아님 — 멀리서 감은 꼴은 가까이 올 때 읽음). 꼴 하나에 한 번 읽기 굴림 OKORI.read × 띠 기울기
+ *     (planK — 숙련도에 따라 읽기 정확도). 읽었으면 그 꼴 동안 간 보기 · 물러남 걸음을 세우고 섬(set — ai.js moveFeet): 서 있다가 뒤로 밀면 첫 걸음을 박차는 G1 그대로라
+ *     박차는 때에 박찬 걸음을 곧장 뗌 (걷는 중이면 디디던 걸음이 끝나야 뗌 — 사람은 서 있을 때만 박참).
+ *  ② 칼이 떠나는 때: 감아 든 상대 몸이 그 칼이 떠나면 닿는 거리에 듦 — deBackRead(τ = 판정 박자 한 칸 — 떠난 칼이 나에게 닿기까지 · 박찬 걸음을 떼기까지) 가 'read'
+ *     (닿는 칼 · 걸어선 못 빠짐 · 박차면 빠짐). 감은 상대는 칠 거리(맞닿기 + 기술 걸음)에 들면 칼을 내므로 박찬 걸음이 칼이 떠나는 때와 겹침 —
+ *     칼이 나가는 것을 본 뒤(반응 시간 + 걸음 떼는 시간)엔 칼이 이미 닿거나 지나감(사람 시험대 '보고 0.2 s 뒤'와 같은 꼴 · §5).
+ *  ③ 박차고 이어 칠 기력(leaveStamOk) · 국면 칸 back 몫 → 박참 (ai.js voidBurst — 물러나 피하기 꼴로) · 뒤 칼 기다림(deNach) — 꼴 하나에 한 번. 박찼으면 true.
+ *  박찬 걸음과 상대 칼이 나가는 때가 겹치면 그 칼이 박찬 칼(burst_whiff.js bwAtkStart · bwBurst) · 몸에 안 닿고 끝나면 상대가 0.6 s 굳음 → 뒤 칼(deNachTick)이 그 창에
+ */
+export function deLeaveTick(ai, s, d, th) {
+  const L = ai.deLeave;
+  if (!L) return false;
+  const st = ai.stats.plan.de;
+  const coil = ai.sense.t - (ai.deCue?.t ?? -Infinity) <= 2 * AI_PLAN.tick;
+  if (!coil) {
+    L.on = L.set = false;
+    return false;
+  }
+  if (deBackRead(ai, { tc: AI_PLAN.beat }, d) === 'far') {
+    L.set = false; // 감은 상대가 한 박자(AI_PLAN.beat) 안에 칠 거리 밖 — 아직 읽지 않음 (가까이 오면 그때 그 꼴을 읽음)
+    return false;
+  }
+  if (!L.on) {
+    L.on = true;
+    L.done = false;
+    L.ok = Math.random() < OKORI.read * ai.planK;
+    st.leaveSee++;
+    if (L.ok) st.leaveRead++;
+  }
+  L.set = L.ok && !L.done;
+  const C = ai.planC;
+  if (!L.set || !C?.back || deBackRead(ai, { tc: AI_PLAN.tick }, d) !== 'read' || !leaveStamOk(ai)) return false;
+  L.done = true; // 이 꼴에서 박찰지는 한 번만 굴림
+  L.set = false;
+  if (!(Math.random() < C.back) || !ai.me.gait?.backBurstAi?.()) return false;
+  ai.deDig.t = ai.deDig.after = 0; // 걸어 둔 파고들기 앞 끝 스틱(deFeet — 걸음 · 뒤 밀치기 창)은 거둠 — 박찬 걸음이 뒤로 떼어지게
+  st.leave++;
+  st.back++;
+  ai.deNach = { t0: ai.sense.t, tau: 2 * AI_PLAN.tick, until: ai.sense.t + 2 * AI_PLAN.beat, w0: ai.me.wounds?.length ?? 0, f0: ai.me.fightT ?? 0, lift: false, seen: !!th, thId: th?.id ?? null, vT: 0, voided: false, fired: false, seq: -1, fw0: 0, dig: false };
+  return true;
+}
+
+/**
  * 뒤 박차기 (respond — 물러나 피하기로 정한 위협 th · 본 거리 d):
  *  띠 낮음 · 가운데 = back × 기울기 × 칸 몫으로 gait.backBurstAi (굴림은 이때만 — 11/14 그대로)
- *  띠 높음 (11/19) = 읽고 박차기: deBackRead 가 'read' 이고 박찰 기력이 있을 때만 칸 몫(back 칸)으로 박참 → 뒤 칼 기다림(deNach)을 엶. 아니면 박차지 않고 걷는 물러나 피하기 그대로
+ *  띠 높음 (11/19) = 읽고 박차기: deBackRead 가 'read' 이고 박차고 이어 칠 기력(leaveStamOk)이 있을 때만 칸 몫(back 칸)으로 박참 → 뒤 칼 기다림(deNach)을 엶. 아니면 박차지 않고 걷는 물러나 피하기 그대로
  */
 export function deBack(ai, th, d) {
   const C = ai.planC;
@@ -284,21 +341,26 @@ export function deBack(ai, th, d) {
     st.backCue++;
     return false;
   }
-  if (!burstStamOk(ai)) {
+  if (!leaveStamOk(ai)) {
     st.backStam++;
     return false;
   }
   if (!(Math.random() < C.back) || !ai.me.gait?.backBurstAi?.()) return false;
+  ai.deDig.t = ai.deDig.after = 0; // 걸어 둔 파고들기 앞 끝 스틱(deFeet — 걸음 · 뒤 밀치기 창)은 거둠 — 박찬 걸음이 뒤로 떼어지게 (11/19 §8)
   st.back++;
-  ai.deNach = { t0: ai.sense.t, tau: Math.max(th?.tc ?? 0, AI_PLAN.tick), until: ai.sense.t + 2 * AI_PLAN.beat, w0: ai.me.wounds?.length ?? 0, voided: false, fired: false, seq: -1, fw0: 0 };
+  ai.deNach = { t0: ai.sense.t, tau: Math.max(th?.tc ?? 0, AI_PLAN.tick), until: ai.sense.t + 2 * AI_PLAN.beat, w0: ai.me.wounds?.length ?? 0, f0: ai.me.fightT ?? 0, lift: false, seen: !!th, thId: th?.id ?? null, vT: 0, voided: false, fired: false, seq: -1, fw0: 0, dig: false };
   return true;
 }
 
 /**
  * 뒤 칼 (띠 높음 · 11/19 — 나흐라이젠 · 나흐슐라크): 읽고 박찬 뒤 2 박자(AI_PLAN.beat × 2 = 1.32 게임 초) 안에 —
- *  내가 맞지 않은 채 그 칼이 가장 가까워질 어림 초(tau)가 지났고 지금 오는 칼이 없으면(th — 늦게 본 모습) 그 칼을 비낀 것(backVoid)이고, 곧장 다시 들어가 침
+ *  박찬 걸음을 뗀 뒤 내가 맞지 않은 채 그 칼을 비꼈으면(backVoid) 곧장 다시 들어가 침. 비낌 = 늦게 본 모습(th)에 나를 겨눈 칼이 보였다가 지금 안 보임(그 칼이 나를 지나감 —
+ *  상대 칼의 뒤따름 동안 들어가기 시작해야 굳은 창에 닿음) · 아직 한 번도 안 보였으면 걸음을 뗀 뒤 그 칼이 가장 가까워질 어림 초(tau)가 지나도록 오는 칼이 없음.
+ *  들어가는 동안(준비 · 다가감) 비낀 그 칼의 꼬리(같은 휘두름 번호 · 방향이 한 번 꺾인 번호 — 판정 박자 두 칸 안)는 다시 막지 않음(deNachKeep — 박찬 다음 동작을 잇는 결단)
  *  (11/19 [사장님 결정] 뒤 박차기 헛침 경직 — 헛친 상대는 그 칼이 끝난 뒤 0.6 s 굳음(burst_whiff.js) · 그 창에 닿게 비낀 순간 바로 · 전 판은 상대 손이 멎은 틈 recovering 까지 기다림):
- *  내 맞닿기 거리 밖이면 두 걸음 박찬 앞 걸음(gait.deDigAi — 파고들기와 같은 장치 · 박찰 기력이 있을 때) + 'recover' 공격(독일 꾸러미에서 고름 · 빠른 준비).
+ *  'recover' 공격(독일 꾸러미에서 고름 · 빠른 준비 · 오코리 없음 opt.nach — 박찬 걸음에서 곧장 이어 가는 칼) · 내 맞닿기 거리 밖이면 그 칼의 준비 · 다가감 동안
+ *  두 걸음 박찬 앞 걸음(gait.deDigAi — 파고들기와 같은 장치 · 박찰 기력이 있을 때 · 박찬 몸이 다 멈추기 전(burstBrake)엔 걸음 장치가 안 받음 — 사람과 같음 · 받을 때까지 다시 걺)과
+ *  스틱 앞 끝(deDig.t — 파고들기와 같은 deFeet 몫). §8 (11/19 '박찬 다음에는 실제 그로 인한 이득이 취해지도록 다음 동작을 연계') — 박찬 몸이 뒤로 실려 가는 동안 준비를 해 두고 멈추는 대로 박차 들어감.
  *  상대 칼끝 어림 + 1.0(두 걸음) 밖 · 붙은 거리 안 · 상대가 서 있지 않음이면 내지 않음. 낸 칼이 끝나면 그 칼이 낸 상처를 셈(재기). 냈으면 true
  */
 export function deNachTick(ai, s, d, th) {
@@ -308,7 +370,10 @@ export function deNachTick(ai, s, d, th) {
   const me = ai.me;
   const foe = ai.foe;
   if (N.fired) {
-    if (ai.mode === 'attack' && ai.atkSeq === N.seq) return false;
+    if (ai.mode === 'attack' && ai.atkSeq === N.seq) {
+      if (N.dig && (ai.phase === 'windup' || ai.phase === 'approach') && d > ai.M.contact && burstStamOk(ai) && me.gait?.deDigAi?.()) N.dig = false;
+      return false;
+    }
     const w = (foe.wounds?.length ?? 0) - N.fw0;
     if (w > 0) st.nachHit++;
     st.nachW += Math.max(0, w);
@@ -324,15 +389,31 @@ export function deNachTick(ai, s, d, th) {
     ai.deNach = null;
     return false;
   }
+  if (!N.lift) {
+    // 박찬 걸음을 뗐나 (burst_whiff.js 가 뗀 때를 적음 — 내 몸) · 걸음 장치가 그 박차기를 안 쓰고 버렸으면 뒤 칼도 없음 · 떼기 전엔 비낌을 보지 않음 (뒤 칼이 박찬 걸음을 덮지 않게)
+    if ((me.bwBurstAt ?? -Infinity) >= N.f0) {
+      N.lift = true;
+      N.t0 = ai.sense.t; // 비낌 어림(tau)은 걸음을 뗀 때부터
+      N.until = Math.max(N.until, N.t0 + 2 * AI_PLAN.beat);
+    } else {
+      if (!me.gait?.burst) ai.deNach = null;
+      return false;
+    }
+  }
   if (!N.voided) {
-    if (ai.sense.t - N.t0 < N.tau || th) return false;
+    if (th) {
+      N.seen = true;
+      N.thId = th.id;
+      return false;
+    }
+    if (!N.seen && ai.sense.t - N.t0 < N.tau) return false;
     N.voided = true;
+    N.vT = ai.sense.t;
     st.backVoid++;
   }
   if (ai.mode === 'attack' || ai.secretRun || !foe.alive || s.state !== 'stand' || me.state !== 'stand' || !me.armed || d > ai.foeReach + 1.0 || d < ai.M.clinch) return false;
-  if (d > ai.M.contact && burstStamOk(ai)) me.gait?.deDigAi?.();
   const t = ai.pickTech(s, 'recover');
-  if (!t || !ai.startAttack(t, 'recover', { noFeint: true, fastChamber: true })) {
+  if (!t || !ai.startAttack(t, 'recover', { noFeint: true, fastChamber: true, nach: true })) {
     st.nachLost++;
     ai.deNach = null;
     return false;
@@ -340,8 +421,21 @@ export function deNachTick(ai, s, d, th) {
   N.fired = true;
   N.seq = ai.atkSeq;
   N.fw0 = foe.wounds?.length ?? 0;
+  if (d > ai.M.contact) {
+    ai.deDig.t = D.digT; // 스틱 앞 끝 (deFeet — 공격 준비 · 다가감에서)
+    N.dig = !(burstStamOk(ai) && me.gait?.deDigAi?.());
+  }
   st.nach++;
   return true;
+}
+
+/**
+ * 뒤 칼을 들어가는 동안 이 위협은 비낀 칼의 꼬리인가 (ai.js 공격 준비 · 다가감의 respond 앞 — 11/19 §8): 낸 뒤 칼이 아직 준비 · 다가감이고 ·
+ *  위협 번호가 비낄 때 본 번호 + 1 안(같은 휘두름 · 칼 방향이 한 번 꺾임 — 뒤따름) · 비낀 뒤 판정 박자 두 칸 안 → 막지 않고 그대로 들어감
+ */
+export function deNachKeep(ai, th) {
+  const N = ai.deNach;
+  return !!N && N.fired && N.thId != null && ai.atkSeq === N.seq && th.id <= N.thId + 1 && ai.sense.t - N.vT <= 2 * AI_PLAN.tick;
 }
 
 /**
