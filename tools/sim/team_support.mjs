@@ -26,10 +26,12 @@ import { bwStiff } from '../../src/burst_whiff.js';
 import { huntN } from '../../src/cn_hunt.js';
 import { LOOKS } from '../../src/looks.js';
 import { writeFileSync, readFileSync } from 'node:fs';
+import { isMain } from './is_main.mjs';
 void RAPIER; void THREE; void AI;
 
 const args = process.argv.slice(2);
-const AGG = args[0] === 'agg';
+const MAIN = isMain(import.meta.url); // 다른 도구가 aggregate 만 읽을 때는 돌리지 않음
+const AGG = MAIN && args[0] === 'agg';
 const pos = args.filter((a) => !a.startsWith('--'));
 const flag = (k, d) => { const a = args.find((x) => x === `--${k}` || x.startsWith(`--${k}=`)); return a == null ? d : a.includes('=') ? a.slice(k.length + 3) : true; };
 export const SCHOOLS5 = ['german', 'italian', 'iberian', 'japanese', 'chinese'];
@@ -101,7 +103,7 @@ function teamFight(mode, fd, x, MAX) {
     pHits: 0, pKills: 0, asHit: 0, asKill: 0, held: 0, heldKill: 0, cat: Object.fromEntries(CATS.map((c) => [c, 0])),
     xHits: 0, xKills: 0, xGot: 0, xDied: 0, pGot: 0, pSevere: 0, pDied: 0, pAliveMin: 0, xAliveMin: 0,
     outS: 0, out2: 0, ffXtoA: 0, ffXtoASub: 0, ffXtoASevere: 0, ffXKill: 0, ffAtoX: 0, ffAtoXSub: 0, xpClash: 0, laneS: 0, laneBlock: 0, pLaneHold: 0,
-    lat: 0, rad: 0, cells: 0, nearP: 0, nearS: 0,
+    lat: 0, rad: 0, cells: 0, nearP: 0, nearS: 0, coS: 0, coSum: 0, co90: 0, sup: null,
   };
   const wasAlive = new Map(F.map((f) => [f, true]));
   const prevHunt = new Map(F.map((f) => [f, 0]));
@@ -207,6 +209,12 @@ function teamFight(mode, fd, x, MAX) {
         if (tt > 0 && tt < L && perp < 0.5) C.laneBlock++;
       }
       if (standing(XF)) { C.nearS++; if (hd(XF, PF) <= 0.9) C.nearP++; }
+      // 집게 각: X · P 가 같은 적에게 함께 붙음 (둘 다 그 적의 제 칼끝 + 0.5 안) — 그 적 자리에서 본 X · P 사이 각
+      if (y && standing(y) && standing(XF) && XF.foe === y && hd(PF, y) <= reachOf(PF) + 0.5 && hd(XF, y) <= reachOf(XF) + 0.5) {
+        const o = chest(y), a = chest(XF), b = chest(PF);
+        const ang = Math.acos(Math.max(-1, Math.min(1, ((a.x - o.x) * (b.x - o.x) + (a.z - o.z) * (b.z - o.z)) / ((Math.hypot(a.x - o.x, a.z - o.z) * Math.hypot(b.x - o.x, b.z - o.z)) || 1)))) * 180 / Math.PI;
+        C.coS++; C.coSum += ang; if (ang >= 90) C.co90++;
+      }
     }
   }
   C.t = +G.t.toFixed(2);
@@ -216,6 +224,7 @@ function teamFight(mode, fd, x, MAX) {
   C.pDied = PF.alive ? 0 : 1;
   C.cells = visited.size;
   C.pLaneHold = PF.aiCtl?.stats?.team?.laneHold ?? 0;
+  C.sup = XF.aiCtl?.stats?.support ?? null; // 서포트 재기 칸 (X 몸 — src/team_support.js)
   C.lat = +C.lat.toFixed(2); C.rad = +C.rad.toFixed(2);
   C.pAliveMin = +C.pAliveMin.toFixed(4); C.xAliveMin = +C.xAliveMin.toFixed(4);
   return C;
@@ -234,7 +243,7 @@ function duel(fd, x, foe, MAX) {
 }
 
 // ───────────────────────── 돌림 ─────────────────────────
-if (!AGG) {
+if (MAIN && !AGG) {
   const N = +(pos[0] ?? 50);
   const MAX = +(pos[1] ?? 90);
   const MODES = String(flag('modes', '2v2,2v1')).split(',');
@@ -330,6 +339,8 @@ export function aggregate(rows) {
         pGotMin: f2(S('pGot') / Math.max(1e-9, S('pAliveMin'))), pSevere: f2(S('pSevere') / R.length), pDiedPct: pct(S('pDied'), R.length), xDiedPct: pct(S('xDied'), R.length), pOutPct: pct(S('out2'), S('outS')),
         ffXtoA: f2(S('ffXtoA') / R.length), ffXtoASevere: S('ffXtoASevere'), ffXKill: S('ffXKill'), ffXtoASub: f2(S('ffXtoASub') / R.length), ffAtoX: f2(S('ffAtoX') / R.length), xpClash: f2(S('xpClash') / R.length),
         laneBlockPct: pct(S('laneBlock'), S('laneS')), pLaneHold: f2(S('pLaneHold') / R.length),
+        coPct: pct(S('coS'), S('laneS')), coDeg: f2(S('coSum') / Math.max(1, S('coS'))), co90Pct: pct(S('co90'), S('coS')),
+        sup: (() => { const o = {}; for (const r of R) for (const [k, v] of Object.entries(r.sup ?? {})) o[k] = (o[k] ?? 0) + v; for (const k of Object.keys(o)) o[k] = f2(o[k] / R.length); return o; })(),
         latMin: f2(S('lat') / Math.max(1e-9, S('xAliveMin'))), radMin: f2(S('rad') / Math.max(1e-9, S('xAliveMin'))), latShare: pct(S('lat'), S('lat') + S('rad')), areaM2: f2((S('cells') * 0.25) / R.length), nearPPct: pct(S('nearP'), S('nearS')),
         medSec: (() => { const b = R.map((r) => r.t).sort((p, q) => p - q); return b[Math.floor(b.length / 2)]; })(), unfinished: R.filter((r) => !r.over).length,
       });
@@ -353,5 +364,8 @@ if (AGG) {
       console.log(`| ${KO[o.x] ?? o.x} | ${o.fights} | ${o.win} | ${o.lift} ± ${o.liftSE} | ${o.duel ?? '—'} | ${o.resid ?? '—'} · ${o.residK ?? '—'} | ${o.assistPct} (${o.assistKillPct}) | ${c.clash} · ${c.bind} · ${c.shove} · ${c.stiff} · ${c.drain} · ${c.wound} · ${c.disarm} | ${o.heldPct} | ${o.pGotMin} · ${o.pDiedPct} · ${o.pOutPct ?? '—'} | ${o.ffXtoA} (${o.ffXtoASevere}) · ${o.ffAtoX} · ${o.xpClash} | ${o.laneBlockPct} · ${o.pLaneHold} | ${o.latMin} · ${o.latShare} · ${o.areaM2} · ${o.nearPPct} |`);
     }
     console.log(`β (이김 ÷ 어림 1:1 — 묶음 · 유파 뺌) ${L[0].beta} · β 죽임 ${L[0].betaK}`);
+    console.log('| X | 함께 붙음 % · 집게 ° · ≥ 90° % | 서포트 재기 칸 / 판 |');
+    console.log('|---|---|---|');
+    for (const o of L) console.log(`| ${KO[o.x] ?? o.x} | ${o.coPct} · ${o.coDeg} · ${o.co90Pct} | ${Object.entries(o.sup ?? {}).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(' · ')} |`);
   }
 }

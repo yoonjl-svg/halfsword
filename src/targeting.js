@@ -16,6 +16,7 @@ import { TEAM_FIGHT } from './config.js';
 import { sameSide } from './team.js';
 import { woundDegree } from './combat.js';
 import { senseScore, senseHold } from './team_sense.js'; // 무리 싸움 판단 (11/18): 판 사본(M.sense)이 있는 판의 AI 만 — 덧셈 · 바꿈 기다림
+import { supportScore } from './team_support.js'; // 서포트 (11/19): 유파마다 동료로서의 겨눔 덧셈 — 판 사본이 있는 판의 AI 만
 
 const hdist = (a, b) => {
   const p = a.bodies.chest.translation();
@@ -67,7 +68,7 @@ export function targetScore(M, f, g) {
   if (attacking(g, f)) s -= T.attackSub;
   const pref = f.targetPref && TARGET_PREFS[f.targetPref];
   if (pref) s += pref(M, f, g);
-  if (M.sense) s += senseScore(M, f, g); // 무리 싸움 판단 (11/18 — team_sense.js · 셋 이상 판의 AI 만): 다친 동료를 겨눈 적 …
+  if (M.sense) s += senseScore(M, f, g) + supportScore(M, f, g); // 무리 싸움 판단 (11/18 — team_sense.js · 셋 이상 판의 AI 만): 다친 동료를 겨눈 적 … · 서포트 (11/19 — team_support.js): 유파마다 동료와 붙은 적 · 나눠 맡기
   return s;
 }
 

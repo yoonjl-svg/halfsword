@@ -41,6 +41,7 @@
 import { TEAM_SENSE, TEAM_FIGHT } from './config.js';
 import { sameSide } from './team.js';
 import { woundDegree } from './combat.js';
+import { duelK } from './team_support.js'; // 서포트 (11/19): 이탈리아 결투 고집 — 동료를 위한 몫을 거둠 (team_support.js 는 이 파일을 읽지 않음)
 
 const DEG = Math.PI / 180;
 const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
@@ -227,7 +228,7 @@ export function senseScore(M, f, g) {
   }
   const R = S.roles.get(f);
   if (R && R.x === g.index && R.until >= v.fr.t) s -= R.role === 'pin' ? TEAM_SENSE.role.pin : TEAM_SENSE.role.follow; // 6 이 준 역할 (사장님 11/18 3 — 받는 쪽 층 그대로)
-  return s;
+  return s * (1 - duelK(ai)); // 서포트 (11/19 — team_support.js): 이탈리아 결투 고집 — 엄호 · 노릴 상대 · 역할을 거둠 (동료를 치는 적으로 바꾸지 않음)
 }
 
 /**
@@ -327,18 +328,19 @@ export function ambushOpp(ai) {
   const A = TEAM_SENSE.ambush;
   const j = ai.foe.index;
   const now = ai.sense?.t ?? 0;
-  if (!busyWithOther(S, v.fr, v.i, j) || !outsideFront(v.fr, j, v.i, A.front)) {
+  const dk = 1 - duelK(ai); // 서포트 (11/19 — team_support.js): 이탈리아 결투 고집 — 동료와 붙은 적의 틈을 노리지 않음 (제 상대와의 거리 싸움만)
+  if (dk <= 0 || !busyWithOther(S, v.fr, v.i, j) || !outsideFront(v.fr, j, v.i, A.front)) {
     ai.tsAmbT = null;
     return null;
   }
-  if (v.T.tier !== 'top') return { v: A.mid * v.T.k, kind: 'ambush' };
+  if (v.T.tier !== 'top') return { v: A.mid * v.T.k * dk, kind: 'ambush' };
   // 6: 칼 내는 순간 — 그 적이 동료에게 칼을 내면 + top · 아니면 wait 까지 기다림(− hold) · 지나면 가운데처럼
   const St = (ai.stats.team ??= teamStats());
   ai.tsAmbT ??= now;
   const X = v.fr.b[j];
-  if (X.atk || Math.hypot(X.x - v.me.x, X.z - v.me.z) <= v.me.reach + TEAM_SENSE.shot.near) return St.ambushStrike++, { v: A.top, kind: 'ambush' }; // 칼을 내는 순간 · 이미 내 칼끝 안(틈 베기)이면 곧장
-  if (now - ai.tsAmbT < A.wait) return St.ambushWait++, { v: 0, hold: A.hold };
-  return { v: A.mid, kind: 'ambush' };
+  if (X.atk || Math.hypot(X.x - v.me.x, X.z - v.me.z) <= v.me.reach + TEAM_SENSE.shot.near) return St.ambushStrike++, { v: A.top * dk, kind: 'ambush' }; // 칼을 내는 순간 · 이미 내 칼끝 안(틈 베기)이면 곧장
+  if (now - ai.tsAmbT < A.wait) return St.ambushWait++, { v: 0, hold: A.hold * dk };
+  return { v: A.mid * dk, kind: 'ambush' };
 }
 
 /**
@@ -403,6 +405,7 @@ export function senseFeet(ai, fwd, side) {
   if (ai.iaiArm && !ai.iaiArm.armed && !ai.chasing && ai.mode === 'watch') return [fwd, side]; // 고노센 준비를 쌓는 중(제자리 — ai.js moveFeet 스틱 0): 걸음 뜻이 준비를 0 으로 되돌려 영영 못 들어가지 않게 (11/18 재기 — 멈춘 판의 까닭)
   const S = ai.me.teamSense;
   const St = (ai.stats.team ??= teamStats());
+  const dk = 1 - duelK(ai); // 서포트 (11/19 — team_support.js): 이탈리아 결투 고집 — 끼어듦 · 이끌기 · 집게를 거둠 (칼길 비우기는 그대로)
   // ① 칼길 비우기: 나 → 상대 줄에 선 동료에게서 옆으로 (가까울수록 세게)
   const L = laneMate(ai, v);
   if (L) {
@@ -415,7 +418,7 @@ export function senseFeet(ai, fwd, side) {
     const D = v.fr.b[X.foe]; // 넘어지거나 무릎 꿇은 동료만 (피가 줄었을 뿐 서 있는 동료 앞으로 들어가면 옆 · 등 자리를 버림 — 겨눔 바꿈만)
     const th = angAt(X, v.me, D);
     if (th > TEAM_SENSE.pincer.tol * DEG) {
-      side += orbit(X, v.me, D, -1) * TEAM_SENSE.cover.k * v.T.k * clamp(th / (Math.PI / 2), 0.3, 1);
+      side += orbit(X, v.me, D, -1) * TEAM_SENSE.cover.k * v.T.k * clamp(th / (Math.PI / 2), 0.3, 1) * dk;
       St.interpose++;
     }
     return [fwd, side];
@@ -433,7 +436,7 @@ export function senseFeet(ai, fwd, side) {
     }
     if (B) {
       const lat = (B.x - v.me.x) * -v.me.fz + (B.z - v.me.z) * v.me.fx; // + = 동료가 내 오른쪽
-      side += Math.sign(lat || 1) * TEAM_SENSE.lure.k * -fwd;
+      side += Math.sign(lat || 1) * TEAM_SENSE.lure.k * -fwd * dk;
       St.lure++;
     }
   }
@@ -452,7 +455,8 @@ export function senseFeet(ai, fwd, side) {
     if (B) {
       const th = angAt(X, v.me, B);
       if (th < goal - TEAM_SENSE.pincer.tol * DEG) {
-        side = orbit(X, v.me, B, 1) * (v.T.tier === 'top' ? TEAM_SENSE.pincer.kTop : TEAM_SENSE.pincer.k) * clamp((goal - th) / (goal / 2), 0.3, 1); // 간 보기 옆 돌기 대신
+        const o = orbit(X, v.me, B, 1) * (v.T.tier === 'top' ? TEAM_SENSE.pincer.kTop : TEAM_SENSE.pincer.k) * clamp((goal - th) / (goal / 2), 0.3, 1); // 간 보기 옆 돌기 대신
+        side = dk >= 1 ? o : side + (o - side) * dk; // 서포트 (11/19): 이탈리아 결투 고집은 dk 만큼만
         St.pincer++;
       }
     }

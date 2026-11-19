@@ -69,6 +69,7 @@ import { cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 �
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
 import { mindOf, mindInit, mindStay, mindTick, mindAggr, mindPatienceT, mindNeed, mindOppK, mindAnsK, mindMargin, mindGap, mindStakes, mindTechW, mindChain, mindCircle, mindCircleOut, mindSideK, mindSide, mindCreep, mindGive } from './ai_mindset.js'; // 유파 마음가짐 (11/18 — 다섯 항목 점수 → 손잡이 · 집요함 = 상대 상태에 따라 넷을 옮기는 폭 · 값 표 schools.js SCHOOL_MINDSET · 마음가짐이 없는 몸은 옛 셈)
+import { supportFeet, mateSepK, laneFree, supportOpp, shoveToMate, supportChain } from './team_support.js'; // 서포트 (11/19 사장님 '동방과 독일이 서포트에 강하고 이베리아가 서포트에 특별히 도움 안 되는 걸로 하자' — 셋 이상 판의 me.foes 갈래 안에서만 · 판단만)
 import { laneHold, senseFeet, outSkill, busyFoe, ambushOpp, shieldOpp, teamStats, huntFree, ambushHold } from './team_sense.js'; // 무리 싸움 판단 (11/18 — 셋 이상 판의 me.foes 갈래 안에서만 부름 · 1:1 은 안 탐)
 import { aiRunFeet } from './ai_run.js'; // AI 뛰기 (11/19 사장님 '뛰기 AI에도 넣고 무리 싸움에 먼저 넣어.' — 셋 이상 판만 · 뛰는 셈은 사람과 같은 src/run.js)
 
@@ -169,7 +170,7 @@ function atkGate(ai, why, opt = {}) {
   if (!opt.chain && !opt.secret && !opt.passive && !opt.drill && !GAP_OPEN.has(why) && arcGapHold(ai)) return void (ai.stats.arcGap = (ai.stats.arcGap ?? 0) + 1), true; // ① 칼끝 틈 건너기 (11/15): 긴 칼 앞 내 칼끝 밖 보통 공격은 띠 기울기만큼 참음
   if (!opt.chain && !opt.secret && !opt.passive && !opt.drill && !DISC_OPEN.has(why) && discHold(ai)) return true; // 막기 2.0 공격 절제 (11/17 — ai_intercept.js discHold): 준비된 상대 칼끝이 내 줄이면 새 공격을 띠 기울기만큼 참음
   if (!opt.chain && !opt.secret && !opt.passive && !opt.drill && !DISC_OPEN.has(why) && msInsideHold(ai)) return true; // 간격과 박자 (11/17 — ai_measure.js): 선 깊이 안에서 칼이 자유로운 채 새로 여는 공격은 띠 기울기만큼 참음 (참 빈틈은 그대로)
-  if (ai.me.foes && ai.me.teamSense && !opt.chain && !opt.secret && !opt.passive && !opt.drill && !LANE_FREE.has(why) && laneHold(ai)) return true; // 무리 싸움 판단 칼길 비우기 (11/18 — 셋 이상 판만): 동료가 내 칼 부채꼴 · 나 → 상대 사이면 새 공격을 미룸 (막기 · 맞받기 · 되받기는 그대로)
+  if (ai.me.foes && ai.me.teamSense && !opt.chain && !opt.secret && !opt.passive && !opt.drill && !LANE_FREE.has(why) && !laneFree(ai) && laneHold(ai)) return true; // 무리 싸움 판단 칼길 비우기 (11/18 — 셋 이상 판만): 동료가 내 칼 부채꼴 · 나 → 상대 사이면 새 공격을 미룸 (막기 · 맞받기 · 되받기는 그대로)
   if (ai.planDe && ai.deDig.t > 0 && !opt.secret) return true; // 독일 파고들기 (3 단계 11/14): 건 동안(digT)은 새 공격을 미룸 — 박찬 두 걸음이 공격 걸음에 덮여 버려지지 않게 · 끝나면 그 자리에서 밀치기 · 공격 고르기 그대로
   // 붙은 거리 규칙 AI (11/14 — CLOSE.startAI · close_hold.js): 묶인 동안(내 밀치기든 상대가 나를 민 밀치기든 — 맞밀기로 둘 다 묶임) 공격 안 함 ·
   //  칼자루만 거리(가슴 사이 ≤ startAI)에선 공격 대신 손잡이 찍기
@@ -778,11 +779,12 @@ export class AI {
         const z = p.z - c.z;
         const dm = Math.hypot(x, z);
         if (dm >= TF.mateSep.dist || dm < 1e-6) continue;
-        const k = TF.mateSep.k * (1 - dm / TF.mateSep.dist);
+        const k = TF.mateSep.k * (1 - dm / TF.mateSep.dist) * (TS ? mateSepK(this) : 1); // 서포트 (11/19 — team_support.js): 이베리아는 같은 편 비킴을 덜 함
         fwd -= (k * (x * F.x + z * F.z)) / dm;
         side -= (k * (x * R.x + z * R.z)) / dm;
       }
     }
+    if (TS && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') [fwd, side] = supportFeet(this, fwd, side); // 서포트 (11/19 — team_support.js): 독일 칼길 옆 · 동방 옆 · 등 · 이베리아 칼길 비킴 거둠
     return [clamp(fwd, -1, 1), clamp(side, -1, 1)];
   }
 
@@ -1661,6 +1663,8 @@ export class AI {
       if (A?.hold) score -= A.hold; // 6: 칼 내는 순간을 기다림 (TEAM_SENSE.ambush.wait 까지)
       const Sh = shieldOpp(this); // 6: 방패 — 지금 상대 뒤로 다른 적이 한 줄이면 앞 적을 몰아침
       if (Sh) add(Sh.v, Sh.kind);
+      const Su = supportOpp(this); // 서포트 (11/19 — team_support.js): 독일 동료와 같은 박자 · 동방 기습
+      if (Su) add(Su.v, Su.kind);
     }
     if (this.cautious && !this.mind) score -= 0.2 * (1 - Lk); // 무모(굴림 몫): 피를 덜 흘린 우위도 덜 아낌 · 유파 마음가짐(11/18): 집요함이 갈음
     // 내 상태가 나쁘면 참는다 (무모 — 그 몫만큼 덜 참음)
@@ -2585,6 +2589,7 @@ export class AI {
       this.closeWant = true;
       this.closeEv.won++;
     }
+    if (!me.barge && me.foes && me.teamSense) { const sv = shoveToMate(this); if (sv) this.closeWant = sv > 0; } // 서포트 (11/19 — team_support.js): 독일 — 내 → 상대가 동료 칼끝 쪽이면 밂 · 동료에게서 멀어지게 밀면 안 밂 (몸은 같은 밀치기)
     let bind = false;
     if (me.armed && foe.armed && me.tipPrev && foe.tipPrev) {
       me.bladePoint(0.1, _a0);
@@ -2696,6 +2701,7 @@ export class AI {
     let want = (this.hitLanded || this.bound ? L.followUp : L.followUp * 0.4) + 0.2 * this.anger; // 화나면 더 이어 친다
     if (this.plan && this.planLuck > 0) want = want * (1 - this.planLuck) + AI_PLAN.coin * this.planLuck; // 무계획(11/14 — 유파 플랜 굴림 몫): 이어 치기 · 물러남을 칼 끝(맞힘 · 막힘 · 헛침)에 맞춰 고르지 않음
     if (this.planCn) want = cnNext(this, want); // 동방 플랜 (11/14): 겹을 쌓은 뒤 맞혔으면 주고받기보다 빠져 돎
+    if (this.me.foes && this.me.teamSense) want = supportChain(this, want); // 서포트 (11/19 — team_support.js): 동방 치고 빠짐 — 내 상대가 동료와 붙어 있으면 이어 치기 마음을 거둠
     if (DIG_PROTO.ai && this.dig && !this.Mup) want = digKeepWant(this, want); // 파고들기 A4 (11/14 사장님 'A안 켜고' — 기본 켬): 붙은 뒤 이어 침
     if (this.planFree) want = freePress(this, want, d); // 무유파 플랜 (3 단계): 붙어 두들김 — 붙은 거리에서 이어 칠 마음
     if (this.read) want *= readChainK(this); // 수 읽기 (3 단계): 독일 상대에게 헛쳤으면 덜 이음 (파고들기 두 걸음)
