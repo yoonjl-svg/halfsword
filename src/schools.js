@@ -317,11 +317,12 @@ const NONE_TEMPER = OLD_TEMPER;
 //                           무리 싸움 판단(team_sense.js)의 동료를 위한 몫(엄호 겨눔 · 노릴 상대 · 역할 · 끼어듦 · 이끌기 · 집게 · 기습) × (1 − (1 − ally) × w) —
 //                           동료를 치는 적으로 바꾸지 않음 · 구하러 가지 않음 · 제 상대와의 거리 싸움만 · 그 곱이 hunt 밑이면(숙련 4 부터) 겨눈 상대가 동료와 붙어도
 //                           '사냥할 때'(huntFree)로 보지 않음 — 제 간격에서 상대를 기다리는 꼴 그대로 (칼길 비우기 · 열세 셈은 그대로)
+//                           이베리아는 ally 만 (0.5 — 합공에 덜 낌 · 제 넓은 원 · 11/19 서포트 src/team_support.js)
 export const SCHOOL_MINDSET = Object.freeze({
   //   점수 [선공, 거리, 집요함, 일격, 횡보] → 손잡이
   german: Object.freeze({ score: Object.freeze([5, 1, 2, 3, 2]), aggr: 1.3, patienceTime: 5, need: -0.3, first: 1.6, answer: 0.4, margin: 0, gap: -0.2, creep: 0.45, give: 0.4, reward: 0.5, latShare: 0.125, circleRate: 0.175, stay: 0.6, band: 0.5 }),
   italian: Object.freeze({ score: Object.freeze([2, 5, 4, 2, 1]), aggr: 0.925, patienceTime: 11.75, need: 0.075, first: 0.7, answer: 1.3, margin: 1.2, gap: 0.7, creep: 0.18, give: 1.2, reward: 0.25, latShare: 0, circleRate: 0.1, stay: -0.6, band: 1.5, many: Object.freeze({ lever: 0, out: 0, fix: 20, ally: 0, hunt: 0.5 }) }), // many: 결투 고집 (11/19 [사장님 결정] '이탈리아가 특별히 약해져야 이론상 맞는데. 노력해봐. 적어도 하위가 되도록.' — 수가 밀려도 한 적과의 찌르기 거리 싸움 · src/ai_lone.js)
-  iberian: Object.freeze({ score: Object.freeze([4, 4, 3, 5, 5]), aggr: 1.175, patienceTime: 7.25, need: -0.175, first: 1.3, answer: 0.7, margin: 0.9, gap: 0.475, creep: 0.2475, give: 1, reward: 1, latShare: 0.5, circleRate: 0.4, stay: -0.3, band: 1 }),
+  iberian: Object.freeze({ score: Object.freeze([4, 4, 3, 5, 5]), aggr: 1.175, patienceTime: 7.25, need: -0.175, first: 1.3, answer: 0.7, margin: 0.9, gap: 0.475, creep: 0.2475, give: 1, reward: 1, latShare: 0.5, circleRate: 0.4, stay: -0.3, band: 1, many: Object.freeze({ ally: 0.5 }) }), // many.ally: 합공에 덜 낌 (11/19 서포트 — 제 넓은 원 · 무리 싸움 판단의 동료를 위한 몫 × (1 − 0.5 × w) · src/team_support.js · 이탈리아 결투 고집과 같은 칸)
   japanese: Object.freeze({ score: Object.freeze([1, 2, 1, 4, 3]), aggr: 0.8, patienceTime: 14, need: 0.2, first: 0.4, answer: 1.6, margin: 0.3, gap: 0.025, creep: 0.3825, give: 0.6, reward: 0.75, latShare: 0.25, circleRate: 0.25, stay: 0.3, band: 0, many: Object.freeze({ go: 1, press: 0.3, line: 1.0, out: 1.5 }) }), // many: 다적의 자리 (11/19 [사장님 결정] '다수전에 특별히 강한 유파 = 일본' — src/ai_lone.js · 무사시 『오륜서』 물의 권 多敵の位)
   chinese: Object.freeze({ score: Object.freeze([3, 3, 5, 1, 4]), aggr: 1.05, patienceTime: 9.5, need: -0.05, first: 1, answer: 1, margin: 0.6, gap: 0.25, creep: 0.315, give: 0.8, reward: 0, latShare: 0.375, circleRate: 0.325, stay: 0, band: 2 }),
 });
