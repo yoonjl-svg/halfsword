@@ -189,8 +189,8 @@ export const TEAM_SENSE = {
 //           몫 ≥ hunt 면 겨눈 상대가 동료와 붙어도 '사냥할 때'(team_sense.js huntFree)로 보지 않음 — 제 간격에서 상대를 기다리는 꼴 그대로 (제 상대와의 거리 싸움만)
 export const TEAM_SUPPORT = {
   laneW: 0.6, // 동료 칼길 = 동료 → 그 상대 선분에서 이 m 안 (독일 · 동방이 벗어남 — 재기 '칼길 막음' 0.5 m 와 걸음 사다리 0.6)
-  de: { laneK: 0.8, goal: 75, tol: 15, k: 0.8, near: 0.9, shove: 100, reach: 0.6, follow: 0.8, focus: 0.6 },
-  cn: { laneK: 0.8, goal: 130, tol: 15, k: 0.8, near: 0.9, ambush: 1.0, run: 0.5, focus: 0.6 },
+  de: { laneK: 0.8, goal: 75, tol: 15, k: 0.8, near: 0.9, shove: 100, reach: 0.6, follow: 0.8, focus: 1.0 },
+  cn: { laneK: 0.8, goal: 130, tol: 15, k: 0.8, near: 0.9, ambush: 1.0, run: 0.5, focus: 1.0 },
   ib: { lane: 0.8, sep: 0.7, share: 1, coop: 0.5 },
   it: { duel: 1, hunt: 0.5 },
 };
