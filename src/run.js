@@ -83,18 +83,21 @@ export function runStep(f, dt) {
   const sx = f.stickX || 0;
   const sy = f.stickY || 0;
   const dirOk = sx * sx + sy * sy > 1e-6;
+  // 앞 반원만 (11/20 사장님 '뒤돌아 뛰는 거 자체를 없애는 게 나을 수도 있어 카메라 워크가 애매하면...'): 스틱이 상대 쪽에서 RUN.arc(rad) 안일 때만 뛴다 — 앞 · 옆 · 비스듬히 앞.
+  //  뒤 반원(비스듬히 뒤 · 뒤)은 뛰지 않고 전처럼 걷기(뒷걸음 — 몸은 상대를 봄 · 카메라 그대로). 뛰는 중 스틱이 RUN.arc + RUN.arcOut 밖으로 가면 걷기(옆 끝에서 엄지가 조금 흔들려도 들락날락하지 않게)
+  const front = dirOk && Math.atan2(Math.abs(sx), sy) <= RUN.arc + (R.on ? RUN.arcOut : 0);
   if (R.on) {
     let why = null;
     if (brk || busy) why = 'break';
     else if (v <= RUN.stopAt) why = 'stamina';
-    else if (reach < RUN.stickOut || !dirOk) why = 'stick';
+    else if (reach < RUN.stickOut || !front) why = 'stick';
     else if (!canRun(f)) why = 'state';
     if (why) {
       R.on = false;
       R.end = why;
       if (why === 'break') R.armed = false; // 끊은 뒤 스틱을 그대로 밀고 있어도 다시 뛰지 않음 — 한 번 되돌렸다 밀어야
     }
-  } else if (reach >= RUN.stickIn && dirOk && R.armed && v >= RUN.startAt && !brk && !busy && canRun(f)) {
+  } else if (reach >= RUN.stickIn && front && R.armed && v >= RUN.startAt && !brk && !busy && canRun(f)) {
     R.on = true;
     R.end = null;
     R.runs++;

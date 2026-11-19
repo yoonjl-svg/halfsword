@@ -526,6 +526,8 @@ export const RUN = {
   curve: 4,
   curveMax: 1.75,
   faceSlow: 0.5,
+  arc: 1.62,
+  arcOut: 0.1,
   flyReach: 0.3,
 };
 
