@@ -378,20 +378,20 @@ if (isMain(import.meta.url)) {
   const [script, ...rest] = process.argv.slice(2);
   if (script === 'rest') {
     // 플레이어 쉴 자세 칼끝 (skill.js ③ 되돌아옴의 목적지 = 유파 쉴 자세 패드, 없으면 SKILL.homeGuard): 보정 v2·autoGuard·숙련 0.7 (main.js 와 같음),
-    //  상대는 시작 거리에 멈춰 선다. 3 s 들고 마지막 1.5 s 평균. node tools/sim/joint_range.mjs rest sabre falchion rapier qinggang longsword
+    //  상대는 시작 거리에 멈춰 선다. 3 s 들고 마지막 1.5 s 평균. node tools/sim/joint_range.mjs rest hwando falchion rapier qinggang longsword
     const { newRound, DT } = await import('./harness_m.mjs');
     const T = new TipCounter();
     const info = [];
     //  REST_PAD=x,y: 다른 패드 하나(판 시작 = 0.15,0) · REST_PAD=all: 쉴 자세 + 바탕 자세 14 곳 패드마다 (손을 그 자리에 둔 채 — 벤 뒤 손가락을 든 채 멈춘 꼴)
     const jobs = [];
-    for (const w of rest.length ? rest : ['sabre', 'falchion', 'rapier', 'qinggang']) {
+    for (const w of rest.length ? rest : ['hwando', 'falchion', 'rapier', 'qinggang']) {
       if (process.env.REST_PAD === 'all') { jobs.push([w, null]); for (const g of GUARDS) if (!g.finish) jobs.push([w, g]); }
       else jobs.push([w, process.env.REST_PAD ? { pad: process.env.REST_PAD.split(',').map(Number) } : null]);
     }
     // REST_CUTS=1: 쉴 자세에서 손가락으로 벤 뒤 손을 떼고(되돌아옴 ③) 2.5 s 동안의 칼끝 — 사장님이 보는 '벤 사이' 꼴. 벤 길 = live_battery CUTS 와 그 거울
     if (process.env.REST_CUTS === '1') {
       const CUTS = { oberhau: [[0.02, 0.52], [0.0, -0.45]], zornhau: [[0.42, 0.42], [-0.4, -0.42]], zwerch: [[0.52, 0.06], [-0.5, 0.06]], unterhau: [[0.38, -0.44], [-0.3, 0.26]], zornhauL: [[-0.4, 0.42], [0.38, -0.44]], zwerchL: [[-0.5, 0.06], [0.52, 0.06]], unterhauL: [[-0.4, -0.42], [0.3, 0.26]] };
-      for (const w of rest.length ? rest : ['sabre', 'falchion', 'rapier', 'qinggang']) for (const [cn, [a, b]] of Object.entries(CUTS)) {
+      for (const w of rest.length ? rest : ['hwando', 'falchion', 'rapier', 'qinggang']) for (const [cn, [a, b]] of Object.entries(CUTS)) {
         const G = newRound({ walls: false, weapon: w, weapon2: 'longsword', seed: 7 });
         G.ai.update = () => {};
         const P = G.player;

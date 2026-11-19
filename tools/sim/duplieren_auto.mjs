@@ -5,7 +5,7 @@
 //    press   = 노리는 손 (띠 가운데 거리를 지키며 상대 칼을 가로지르는 긋기 → 닿으면 그 긋기 쪽으로 느리게(0.6 패드 m/s — 휘두르기 문턱 아래) 0.25 m 밀고 쥠 · 떨어지면 0.15 ~ 0.35 s 뒤 다시)
 //    clash   = 노리는 손 (같은 거리 · 닿으면 곧 반대쪽 긋기로 한 번 더 부딪침 — 'clash2' 용)
 //   겹치기 자동 판(UNIQUE_ASSIST.dupAuto)은 --set='{"dupAuto":"bind","dupStackS":…}' (초는 실제 초 — 여기서 realS 로 바꿈).
-//  node tools/sim/duplieren_auto.mjs run [--bot=normal|press|clash] [--weapons=longsword,sabre,kriegsmesser] [--opps=longsword,uchigatana,zweihander,rapier] [--seeds=901,902,903]
+//  node tools/sim/duplieren_auto.mjs run [--bot=normal|press|clash] [--weapons=longsword,kriegsmesser] [--opps=longsword,uchigatana,zweihander,rapier] [--seeds=901,902,903]
 //        [--dur=30] [--set=JSON] [--band=0.8,1.4] [--log=파일(스텝 기록 — sweep 용)] [--json=파일]
 //  node tools/sim/duplieren_auto.mjs sweep <log…>   (열린 고리 — 기록된 판에서 조건 값 묶음마다 '냈을' 수 · 그때 상태 · 겹치기가 판을 안 바꾼다고 침)
 //  node tools/sim/duplieren_auto.mjs agg <json…>    (닫힌 고리 결과 표)
@@ -448,7 +448,7 @@ if (isMain(import.meta.url)) {
     applySet(set);
     const band = list('band', `${UA.dupBandMin ?? MORD_N},${UA.dupBandMax}`).map(Number);
     const runs = [];
-    for (const weapon of list('weapons', 'longsword,sabre,kriegsmesser')) for (const opp of list('opps', 'longsword,uchigatana,zweihander,rapier')) for (const seed of list('seeds', '901,902,903').map(Number)) {
+    for (const weapon of list('weapons', 'longsword,kriegsmesser')) for (const opp of list('opps', 'longsword,uchigatana,zweihander,rapier')) for (const seed of list('seeds', '901,902,903').map(Number)) {
       const r = fight({ bot: args.bot ?? 'normal', weapon, opp, seed, dur: +(args.dur ?? 30), band, log: !!args.log });
       runs.push(r);
       console.error(weapon, opp, seed, JSON.stringify({ t: r.t, fired: r.fired, hits: r.spHits, touch: r3((r.touchSteps * DT) / STD) }));

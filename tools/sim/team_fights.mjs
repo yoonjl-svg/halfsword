@@ -21,7 +21,7 @@ const LOOKS_TEAM = flag('looks', 'same') === 'team'; // 겉모습: same(기본) 
 const ATK_HOLD = flag('atkHold', null); // 시험: --atkHold=0.4 = '나를 침' 바꿈은 그 상대가 실제 초 0.4 동안 내리 쳐야 (TEAM_FIGHT.target.attackHold — 3단계 2877)
 const FFA = flag('ffa', '1') !== '0'; // 시험: --ffa=0 = 같은 편 지나감 (사장님 10/29 22:3x 전 판 — 전후 비교)
 const WORKER = flag('worker', null);
-const WEAPONS = ['longsword', 'zweihander', 'rapier', 'sabre', 'uchigatana', 'estoc'];
+const WEAPONS = ['longsword', 'zweihander', 'rapier', 'kriegsmesser', 'uchigatana', 'hwando']; // (11/19 사브르 · 에스톡 → 크릭스메서 · 환도 — 재기에 estoc · sabre 를 쓰지 않음)
 export const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 5) % WEAPONS.length]);
 
 async function fight(mode, seed) {

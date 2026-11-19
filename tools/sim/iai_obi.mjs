@@ -520,6 +520,7 @@ export function notoRun({ weapon = 'uchigatana', mode = 'hip', seed = 1, look = 
   let ps = null;
   if (ai) {
     P.aiControlled = true;
+    P.aiCtl = { mode: 'watch' }; // AI 가 기다리는 꼴 (11/19 보정 v2 묶음 — 납도는 공격 · 비기 · 막기 꼴이 아닐 때라 '손가락 닿음' 신호 거짓 · 게임 AI 와 같음)
     arm = new IaiArm();
     G.before = () => { arm.tick(DT, true, P.openHold); iaiReadyPose(P, arm.armed, DT, arm.sheathe); };
   } else {

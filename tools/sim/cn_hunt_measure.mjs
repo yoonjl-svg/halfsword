@@ -16,7 +16,7 @@ import { isMain } from './is_main.mjs';
 
 const UA = CONFIG.UNIQUE_ASSIST;
 /** 재는 칸: 환도 · 청강검 대 롱소드 AI · 거울 둘 · 대 독일(세이버 AI) · 대 일본(우치가타나 AI) */
-export const HUNT_CELLS = ['chinese:hwando:longsword', 'chinese:qinggang:longsword', 'chinese:hwando:hwando', 'chinese:qinggang:qinggang', 'chinese:hwando:sabre', 'chinese:hwando:uchigatana'];
+export const HUNT_CELLS = ['chinese:hwando:longsword', 'chinese:qinggang:longsword', 'chinese:hwando:hwando', 'chinese:qinggang:qinggang', 'chinese:hwando:kriegsmesser', 'chinese:hwando:uchigatana'];
 /** 판 (cnHunt 덮는 값 · 사냥 봇) */
 //  11/14 둘째 판 (사장님 '동방과 일본은 전부 권고대로'): 6 = 새 가지 기본(몸 어디든 · 판당 1 번 공용 표) · 1 ~ 5 = 첫 판(몸통만 torso 1 — uses = 동방 판당 수 secretUses.chinese)
 export const CFGS = {

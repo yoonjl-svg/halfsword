@@ -33,7 +33,7 @@ const velAt = (f, lp) => {
 };
 
 if (isMain(import.meta.url)) {
-  const ids = process.argv.slice(2).length ? process.argv.slice(2) : ['longsword', 'zweihander', 'qinggang', 'rapier', 'sabre', 'monohoshizao'];
+  const ids = process.argv.slice(2).length ? process.argv.slice(2) : ['longsword', 'zweihander', 'qinggang', 'rapier', 'kriegsmesser', 'monohoshizao'];
   console.log(`칼날 70% 지점, 날 방향 · 한 스텝 ${(DT * 1000).toFixed(1)}ms`);
   for (const id of ids) {
     const out = [];

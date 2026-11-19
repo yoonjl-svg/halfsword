@@ -127,28 +127,24 @@ function mkLeg(k, side) {
  *  TRADITIONS[t].gait 를 GAIT 위에 덮은 값. 칸이 없는 유파(독일·무유파)는 **GAIT 객체 그 자체** →
  *  읽는 값·연산이 한 비트도 안 바뀐다. 칸이 있으면 GAIT 를 프로토타입으로 둔 객체(덮지 않은 열쇠는 전역 값 — with_config 도 그대로 따라감).
  *  byFrame[틀]: 그 몸 틀(swordArt.frame)만 더 덮는 값(일본 앞무게 = 모노호시자오). 플레이어도 같은 걸음(사장님 10/10 05:1x '플레이어도 유파 영향') —
- *  player: 플레이어 쪽(fighter.index 0 이고 AI 가 몰지 않을 때)만 다시 덮는 값(조작감 완화용)
- *  even: 그 위에 다시 덮는 값 (10/15 이탈리아 '고른 바탕 걸음' — even.player 는 플레이어만)
+ *  (전 player: 사람 쪽만 다시 덮는 값(조작감 완화용) — 남은 몫은 trailReach 0.36 하나였고 11/19 사람 · AI 같게 A12 로 칸 값 0.36 으로 · player 칸 지움)
+ *  even: 그 위에 다시 덮는 값 (10/15 이탈리아 '고른 바탕 걸음')
  *  보폭 규칙 (10/15 20:3x 사장님 — docs/strike/stride_rule_2026-10-15.md): 칸에 strideK(k)가 있으면 맨 끝에 보폭 상한 = GAIT.maxStride × k · 1 m/s 박자 = GAIT.cadence0 ÷ k 로
- *   (덮어쓰기 칸 byFrame·player 의 그 두 값도 이것으로 — 사람·AI 같은 보폭 · 박자는 빠르기 ÷ 보폭). 끄면(0) 칸 값 그대로(바이트 같음) — 일본은 10/29 strideK 뺌(설계 박자 · 보폭 칸 그대로)
+ *   (덮어쓰기 칸 byFrame 의 그 두 값도 이것으로 — 사람·AI 같은 보폭 · 박자는 빠르기 ÷ 보폭). 끄면(0) 칸 값 그대로(바이트 같음) — 일본은 10/29 strideK 뺌(설계 박자 · 보폭 칸 그대로)
  *  speedMul: 가려는 빠르기 배율(update — 일본 0.70 · 10/29 사장님 '확연히 느려도 돼' · 10/31 '일본 바로잡아' 0.67 → 0.70) · settleStance: 서 있는 자세 길이 고쳐 딛기(settleLeg · target — 일본)
  */
-export function gaitParams(f, isPlayer = false) {
+export function gaitParams(f) {
   const art = f.swordArt;
   const g = TRADITIONS[footworkTradition(f)]?.gait; // 대기실 스킬트리 보법 I 을 안 익혔으면(플레이어만 — schools.js footworkTradition) 기본 걸음
   if (!g) return GAIT;
   const P = Object.create(GAIT);
   const put = (o) => {
     if (!o) return;
-    for (const k of Object.keys(o)) if (k !== 'byFrame' && k !== 'player' && k !== 'even') P[k] = o[k];
+    for (const k of Object.keys(o)) if (k !== 'byFrame' && k !== 'even') P[k] = o[k];
   };
   put(g);
   put(g.byFrame?.[art.frame]);
-  if (isPlayer) put(g.player);
-  if (g.even) {
-    put(g.even);
-    if (isPlayer) put(g.even.player);
-  }
+  if (g.even) put(g.even);
   if (g.strideK) {
     P.maxStride = GAIT.maxStride * g.strideK;
     P.cadence0 = GAIT.cadence0 / g.strideK;
@@ -732,14 +728,13 @@ export class Gait {
    */
   update(dt, want, fwd, rgt) {
     const f = this.f;
-    // 유파 걸음 값: 무기(검술 풀이)가 바뀌었거나 조종이 바뀌었으면(AI 가 몰면 aiControlled) 다시 고른다 — 칸 없는 유파는 늘 GAIT 그대로
-    const pl = !f.aiControlled;
-    if (this._art !== f.swordArt || this._pl !== pl || this._fw !== f.schoolFootwork || this._kit !== f.skillKit) {
+    const pl = !f.aiControlled; // 사람 쪽 몸 (아래 박차기 · 옆 박차기 — 스틱 입력 몫)
+    // 유파 걸음 값: 무기(검술 풀이)가 바뀌었으면 다시 고른다 — 칸 없는 유파는 늘 GAIT 그대로 (11/19 A12 — 사람 덮개 칸을 지워 조종(aiControlled)과 상관없음)
+    if (this._art !== f.swordArt || this._fw !== f.schoolFootwork || this._kit !== f.skillKit) {
       this._art = f.swordArt;
-      this._pl = pl;
       this._kit = f.skillKit; // 스킬트리 칸 몫 (10/21 — 사람만 · AI 는 늘 없음)
       this._fw = f.schoolFootwork; // 스킬트리 보법 I (사람 = 대기실 칸 · AI = 칸 몫 AI_KIT — 11/16 ai.js applyKit · 판을 세울 때 정한다 · 칸 몫 skillKit 도 그때)
-      this.P = gaitParams(f, pl);
+      this.P = gaitParams(f);
     }
     // 뛰는 걸음 꼴 (11/18 뛰기 — src/run.js 가 스틱 길 몫을 둔 몸(사람 · 셋 이상 판 AI)에만 f.run 을 둠): 0 이면 아래 섞기는 모두 걷는 값 그대로
     const rk = f.run ? f.run.k : 0;

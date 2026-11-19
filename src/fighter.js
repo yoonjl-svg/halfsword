@@ -18,7 +18,7 @@ import { cnStepTick } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15
 import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, RUN, realS } from './config.js';
 import { COMBAT_HOOKS } from './combat.js';
 import { MAX_FIGHTERS, teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
-import { Skill } from './skill.js';
+import { Skill, aiFingerHeld } from './skill.js';
 import { GUN, gunFiring } from './gun.js'; // 쏘는 동안 발 묶음 (fireHold — AI 권총)
 import { Stamina } from './stamina.js';
 import { Gait, hybridJointDefs } from './gait.js';
@@ -212,6 +212,10 @@ function ikReach(a, b, player = false) {
 /** 사람 손가락이 모는 칼인가: skill.autoGuard 는 플레이어만 true (main.js newRound · 시뮬 입력 길 corr_lib inputPump). skill.corr 로 가르면
  *  corr_s0 (모든 파이터 corr old/v2 바꿔 끼움)의 '설정 0 동일'이 깨져서 쓰지 않는다 */
 const playerArm = (f) => f.skill?.autoGuard === true;
+/** 칼 팔의 몸 규칙을 받는 몸 (11/19 보정 v2 묶음 A4 · A5 · A6 — 사람 손가락 칼 · AI 같게): 손 목표 자르기 ikReach · 날 미리 돌리기 inputEdgeLead · 두손 칼 빈팔 닿는 곳 twoHandReach. 시뮬 대본 몸은 그대로 */
+const bodyArm = (f) => playerArm(f) || !!f.aiControlled;
+/** 칼 손을 쥐고 모는 중인가 (11/19 보정 v2 묶음 — 닿음 신호): 사람 = 손가락이 쥠(handHeld · inputActive) · AI = 공격 · 비기 · 막기 꼴(skill.js aiFingerHeld) · 시뮬 대본 몸 = 늘 (전 AI 도 늘) */
+const armHeld = (f) => (playerArm(f) ? !!(f.handHeld || f.inputActive) : f.aiCtl ? aiFingerHeld(f) : true);
 const _pe0 = new THREE.Vector3(), _pe1 = new THREE.Vector3(); // inputEdgeLead scratch
 /**
  * armIK 의 위팔 방향 u (가슴 틀): 손 목표 T(가슴 틀)·어깨 S 에서 armIK 와 같은 식 (같은 IK_POLE·IK_DMIN·IK_MARGIN·ARM 길이). out 에 쓴다.
@@ -337,9 +341,9 @@ const _thq = new THREE.Quaternion(), _thy = new THREE.Quaternion(), _thS = new T
  *  칼자루 끝 앞 바닥 (11/12 둘째 SKILL.armClear.front — 사장님 11/12 '남은 팔 엇갈림 고치고 ai에도 넣어' · docs/strike/arm_clear2_2026-11-12.md §2): 두 팔 엇갈림 막기를 켠 몸은
  *   칼자루 끝(빈손 쥠 자리)을 가슴 틀 앞 front m 밖으로도 — 빈팔 길이 공과 그 앞 반공간이 겹친 곳의 가장 가까운 점으로(빈손 아래팔이 가슴 · 칼 어깨 앞을 지나게).
  *   대검 오른쪽(칼자루 끝이 칼 어깨 바로 앞 — 빈 아래팔이 칼 위팔 뿌리를 뚫음) · 일본 두손 왼쪽(손 목표가 몸 쪽이라 칼자루 끝이 가슴 안 — 몸이 목표를 못 따라감)이 이 몫.
- *   aiOnly: AI 몸 — 빈팔 닿는 곳(A)은 안 타고, 칼자루 끝이 앞 바닥 안쪽일 때만 옮긴다 (AI 손 목표는 그 밖엔 그대로)
+ *   사람 손가락 칼 · AI 같은 길 (11/19 보정 v2 묶음 A6 — 전 AI 는 aiOnly: 빈팔 닿는 곳 A 없이 앞 바닥만)
  */
-function twoHandReach(f, hand, off, aiOnly = false) {
+function twoHandReach(f, hand, off) {
   const ch = f.bodies.chest;
   rot(ch, _thq);
   _thq.premultiply(_thy.copy(f.yaw).invert()); // 가슴 돌림을 헤딩 틀로
@@ -358,26 +362,24 @@ function twoHandReach(f, hand, off, aiOnly = false) {
   if (X0 > 0) {
     const tau = JOINTS.swivelTau;
     const dt = f.lastDt || 1 / 120;
-    const held = !playerArm(f) || f.handHeld || f.inputActive;
-    const tin = playerArm(f) ? SKILL.armClear.frontIn ?? 0 : 0; // AI 는 늘 곧장 (AI 몸 그대로)
+    const held = armHeld(f);
+    const tin = bodyArm(f) ? SKILL.armClear.frontIn ?? 0 : 0; // 쥐면 frontIn 초로 들임 (11/19 AI 도 — 닿음 신호로 켜고 끄니 · 시뮬 대본 몸은 늘 곧장)
     const w0 = f.frontW ?? 0;
     f.frontW = held ? (tin > 0 ? 1 - (1 - w0) * Math.exp(-dt / tin) : 1) : w0 * (tau > 0 ? Math.exp(-dt / tau) : 0);
   } else f.frontW = 0;
   if (X0 > 0 && f.frontW > 1e-4) {
     // 칼자루 끝 앞 바닥 (위 머리말): 가슴 틀에서 공(빈 어깨 · R) ∩ {앞 ≥ X0} 의 가장 가까운 점 · 섞음 frontW 로 공만의 점(아래 전 판 줄과 같은 점)과 섞음 (둘 다 공 안 — 섞어도 공 안)
     const pc = _thE.copy(P).add(So).applyQuaternion(_thy.copy(_thq).invert()); // 칼자루 끝 (가슴 틀 · 가슴 원점)
-    if (aiOnly && pc.x >= X0) return void (f.thReach = false);
     const sc = _thF.set(ARM.shoulder[0], ARM.shoulder[1], -f.side * ARM.shoulder[2]);
     const q = projBallFront(pc, sc, R, X0, _thG);
     if (f.frontW < 1) {
-      const qa = aiOnly ? _thH.copy(pc) : pc.distanceTo(sc) > R ? _thH.copy(pc).sub(sc).setLength(R).add(sc) : _thH.copy(pc); // A 만의 점 (AI 는 옮기지 않음)
+      const qa = pc.distanceTo(sc) > R ? _thH.copy(pc).sub(sc).setLength(R).add(sc) : _thH.copy(pc); // A 만의 점
       q.sub(qa).multiplyScalar(f.frontW).add(qa);
     }
     f.thReach = q.distanceToSquared(pc) > 1e-10;
     if (f.thReach) hand.add(q.sub(pc).applyQuaternion(_thq));
     return;
   }
-  if (aiOnly) return void (f.thReach = false);
   f.thReach = L > R; // 넘쳐 옮긴 스텝: 팔꿈치 돌림도 한손 칼처럼 사람 팔 범위(swivelHuman)로 — 안 그러면 돌림이 칼 팔꿈치를 어깨 위로 세움 (armIK)
   if (L > R) hand.addScaledVector(P, -(L - R) / L);
 }
@@ -505,7 +507,7 @@ function armClearNear(f, qInv, c) {
   f.armClrGap = g; // 두 팔 겉 틈 지금 몸 (빈손 비킴 — offHand gripClear 가 읽음)
   const dt = f.lastDt || 1 / 120;
   // 손가락이 손을 쥔 동안(handHeld · inputActive)만 켬 — 손을 뗀 쉼 자세는 전 판 그대로(두손 롱소드 쉼은 두 팔이 0 ~ 1 cm 맞닿은 꼴). AI 는 늘 손을 모는 몸이라 늘
-  f.armClrT = g < C.near && (f.handHeld || f.inputActive || !playerArm(f)) ? C.hold : Math.max(0, (f.armClrT || 0) - dt);
+  f.armClrT = g < C.near && armHeld(f) ? C.hold : Math.max(0, (f.armClrT || 0) - dt); // 11/19: AI 는 닿음 신호(공격 · 비기 · 막기 꼴) 동안 (전 늘)
   return f.armClrT > 0;
 }
 /** 칼 팔(IK 자세 — armIK 가 남김 f._swGeo) ↔ 빈팔 후보(so · eo · w — 가슴 틀) 겉 틈 */
@@ -1303,7 +1305,7 @@ export class Fighter {
       const [p0, p1] = HUMAN.shoulderPlane;
       // 밧줄 밖 = 두 반공간 중 하나라도 u·n < 0 (n 은 shoulderOn 의 rope(c) 방향) = 면 각 φ 가 [p0, p1] 밖 (밖이 아니면 null)
       const phiOut = (psi) => {
-        const u = armU(tc(psi), sh, side, _ct4, playerArm(this));
+        const u = armU(tc(psi), sh, side, _ct4, bodyArm(this));
         const outside = [p1 - 90, p0 + 90].some((c) => Math.sin(c * HD) * u.x + side * Math.cos(c * HD) * u.z < 0);
         return outside ? Math.atan2(u.x, side * u.z) / HD : null;
       };
@@ -1477,7 +1479,7 @@ export class Fighter {
         piT += (th.pitch - piT) * kt;
         dT += (th.drop - 0.06 - dT) * kt;
       }
-      // 플레이어 고유 동작 강화의 몸 (10/14 — unique_assist.js skill.uniqBody, 플레이어만 · 없으면 null 이라 그대로): 덧씌우기 칸 몸 값과 같은 꼴로 더한다(골반은 절반).
+      // 고유 동작 강화의 몸 (10/14 — unique_assist.js skill.uniqBody · 11/19 A7 부터 AI 도 ai.js uniqBodyTick · 없으면 null 이라 그대로): 덧씌우기 칸 몸 값과 같은 꼴로 더한다(골반은 절반).
       //  손 목표·칼끝 방향은 건드리지 않는다 — 궤적은 손가락
       const ub = sk.uniqBody;
       if (ub) {
@@ -3550,9 +3552,8 @@ export class Fighter {
     //  칼자루 끝이 빈팔 길이(offArmIK 와 같은 0.3 + 0.275 − 0.005) 안에 오도록 손 목표를 빈 어깨 쪽으로 그 넘친 만큼 옮긴다 — 사람 손가락 칼 · 빈손이 쥘 때만 (AI · 한손 칼 그대로)
     //  사람 발도 원전 꼴(11/13 SECRET.iaiReal — secret_instant.js f.iaiReal: 뽑기 · 굳음 · 풀기 동안) 동안은 빠짐 — 두 손 발도(모노호시자오 · 틀 'heavy')의 굳음 손 목표를 칼자루 끝이 빈팔 길이 안에 오게 끌어
     //   굳음 팔꿈치가 71 → 87° 로 더 굽었다(11/12 A 뒤 — docs/strike/iai_real_2026-11-13.md §1)
-    if (playerArm(this) && this.weaponCfg.twoHand && GRIP.on && this.limbs.armO > 0.3 && !(this.iai?.oneHand || this.iaiOneHold) && !this.iaiReal) twoHandReach(this, handLocal, off);
-    // AI 두손 칼 (11/12 둘째 — 두 팔 엇갈림 막기 AI 몫): 빈팔 닿는 곳(A)은 안 타고 칼자루 끝 앞 바닥만 (twoHandReach 머리말 aiOnly). 비기 · 특수 공격 · 대본 손 동안은 전 판
-    else if (this.weaponCfg.twoHand && GRIP.on && armClearOn(this) && !playerArm(this) && !(this.iai?.oneHand || this.iaiOneHold)) twoHandReach(this, handLocal, off, true);
+    //  11/19 보정 v2 묶음 A6: AI 도 같은 길 · 같은 조건(빈팔 닿는 곳 A + 앞 바닥 — 전 AI 는 두 팔 엇갈림 막기를 받는 동안 앞 바닥만 aiOnly)
+    if (bodyArm(this) && this.weaponCfg.twoHand && GRIP.on && this.limbs.armO > 0.3 && !(this.iai?.oneHand || this.iaiOneHold) && !this.iaiReal) twoHandReach(this, handLocal, off);
     else this.thReach = false;
     const target = this.handTarget.copy(handLocal).applyQuaternion(this.yaw).add(_v1.set(c.x, c.y, c.z));
     if (this.pickup) pickupHand(this, target); // 떨어진 칼 줍기: 칼 손을 칼자루로 (src/pickup.js)
@@ -3704,7 +3705,7 @@ export class Fighter {
     const edgeDir = new THREE.Vector3(bv.x, bv.y, bv.z);
     // 플레이어 입력 미리 돌리기 (10/10 플레이어 칼 면 — docs/motion/player_edge_2026-10-10.md · 'goal' 늘 켬): 사람 손가락 칼(playerArm)만.
     //  거른 손 목표가 아직 따라갈 몫으로 겨눔이 곧 돌 빠르기를 칼날 70 % 지점 속도로 바꿔 날 방향에 더한다 — 칼이 실제로 빨라지기 전에 날이 먼저 그쪽을 본다
-    if (playerArm(this)) this.inputEdgeLead(edgeDir, blade);
+    if (bodyArm(this)) this.inputEdgeLead(edgeDir, blade); // 11/19 A5: AI 도 (같은 거름 aimFilter 뒤처짐 — 몸의 일)
     edgeDir.addScaledVector(blade, -edgeDir.dot(blade));
     const mv0 = 0.5, mv1 = 2.5; // 날을 세우기 시작하는 칼날 빠르기 (m/s)
     // 가만히 있을 때: 칼 면이 몸 오른쪽을 본다 / 움직일 때: 날이 움직이는 쪽을 향한다.
@@ -3899,7 +3900,7 @@ export class Fighter {
     const kw = 1 - (sk.thrustPose?.w ?? 0);
     vx *= kw;
     vy *= kw;
-    // 플레이어 고유 동작 강화의 몸 돌림 (10/14 — skill.uniqBody.yawRate, 플레이어만 · 없으면 그대로): 덧씌운 가슴 돌림이 바뀌는 빠르기(가슴 명령 cT 에 − 로 더함 → 위축 둘레 −yawRate)로
+    // 고유 동작 강화의 몸 돌림 (10/14 — skill.uniqBody.yawRate · 11/19 A7 부터 AI 도 · 없으면 그대로): 덧씌운 가슴 돌림이 바뀌는 빠르기(가슴 명령 cT 에 − 로 더함 → 위축 둘레 −yawRate)로
     //  칼날 70 % 지점이 곧 낼 속도를 날 방향에 더한다 — 손가락 몫(위)만 읽으면 몸이 더 도는 몫을 날이 늦게 따라간다 (탐침 unique_enhance_measure feel: 날 각 23.4 → 22.2°, 부호를 뒤집으면 더 나빠짐 — 문서 §7)
     const ub = sk.uniqBody;
     if (ub?.yawRate) {
@@ -3961,7 +3962,7 @@ export class Fighter {
     const Dl = D.length();
     // 끔 = 위팔 + 아래팔 − 여유 (JOINTS reach ⓒ 면 팔 길이 × reachFrac — 팔이 늘 살짝 굽은 채로 뻗는다).
     //  비기 실행 동안(secretReaching — 경직 빼고, SECRET.secretReach)은 위팔 + 아래팔 그대로: 팔꿈치가 곧게(0°)까지 펴진다 (평소 여유 0.005 m 는 팔꿈치 15° · 플레이어 × 0.975 는 26°) — 사장님 10/12 03:0x
-    const dMax = this.secretReaching() ? a + b : ikReach(a, b, playerArm(this));
+    const dMax = this.secretReaching() ? a + b : ikReach(a, b, bodyArm(this));
     this.armFull = Dl >= dMax; // 팔이 다 펴짐 = 목표가 팔 길이 밖 (근접 밀치기 누르기 끝을 읽는다)
     const d = THREE.MathUtils.clamp(Dl, IK_DMIN, dMax);
     const Dn = D.normalize();

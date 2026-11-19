@@ -28,13 +28,13 @@ function swing(D) {
 }
 
 test('① 칼이 나가는 동안 뒤 박차기 + 몸에 안 닿고 끝남 → 그 칼이 끝난 때부터 BURST_WHIFF.stiff 동안 굳음 ([사장님 11/19 승인] 시간 사다리 1.2 · 그 가운데 앞 0.6 끌려감)', () => {
-  const D = duel(1.3);
+  const D = duel(1.6); // 11/19 보정 v2 묶음: 1.3 m 에선 손으로 놓은 AI 꼴(날것 손 목표)의 칼이 첫 스텝에 사람 칼에 닿아 그 공격의 닿음이 됨 — 칼끝 거리 안 1.6
   try {
     assert.ok(Math.abs(BURST_WHIFF.stiff - CONFIG.realS(1.2)) < 1e-12);
     assert.ok(Math.abs(BURST_WHIFF.drag - CONFIG.realS(0.6)) < 1e-12, '끌려감 = 앞 0.6');
     assert.ok(Math.abs(CONFIG.SECRET.stiff.german - CONFIG.realS(0.6)) < 1e-12, '비기 경직은 그대로 0.6');
     swing(D);
-    assert.equal(D.Y.bwAtk.inReach, true, '가슴 사이 1.3 m — 롱소드 칼끝 거리 안');
+    assert.equal(D.Y.bwAtk.inReach, true, '가슴 사이 1.6 m — 롱소드 칼끝 거리 안');
     bwBurst(D.X);
     assert.equal(D.Y.bwAtk.burst, true);
     assert.equal(bwAtkEnd(D.Y, false, false), true);
@@ -52,7 +52,7 @@ test('① 칼이 나가는 동안 뒤 박차기 + 몸에 안 닿고 끝남 → �
 });
 
 test('② 몸에 닿음(판정 문턱 밑 · 운동학 칼) · 그 몸이 센 맞힘 → 안 굳음 · 칼끼리 · 코등이 닿음(막기로 받아낸 칼)은 헛침 그대로 (11/19 몸에 안 닿으면 헛친 것)', () => {
-  const D = duel(1.3);
+  const D = duel(1.6); // 11/19 보정 v2 묶음: 1.3 m 에선 손으로 놓은 AI 꼴(날것 손 목표)의 칼이 첫 스텝에 사람 칼에 닿아 그 공격의 닿음이 됨 — 칼끝 거리 안 1.6
   try {
     for (const hit of ['body', 'kin', 'landed']) {
       swing(D);
@@ -166,6 +166,7 @@ test('⑥ 굳은 AI: 공격 문이 막힘 · 위협에 답하지 않음(위협 �
     ai.hitLanded = ai.bound = false;
     ai.afterStrike(1.6);
     assert.ok(bwStiff(Y), 'afterStrike 가 굳힘');
+    Y.bwEnd = null; // 끝난 스텝의 늦은 닿음 셈(②)은 이 시험 밖 — 11/19 보정 v2 묶음: 원래 판단으로 돌린 AI 의 간 보기 손이 첫 스텝에 사람 칼에 닿아 굳음을 거두던 장면
     assert.equal(ai.mode, 'watch', '이어 치기 · 물러남 없이 간 보기 꼴로');
     assert.equal(ai.stats.bwStiff, 1);
     const tech = ai.school.tech[0];

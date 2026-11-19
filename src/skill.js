@@ -180,6 +180,12 @@ export function segDist(p1, q1, p2, q2) {
   return _r.copy(p1).addScaledVector(_d1, s).sub(p2).addScaledVector(_d2, -t).length();
 }
 
+/** AI 몸의 '손가락이 닿음' (11/19 보정 v2 묶음 — 닿음 신호 · 기록 docs/strike/human_ai_parity_2026-11-19.md §3 · §10): 손가락이 없으니 공격 · 비기 · 막기 꼴 동안. AI 가 아니면 false */
+export function aiFingerHeld(f) {
+  const a = f?.aiCtl;
+  return !!a && (a.mode === 'attack' || a.mode === 'secret' || a.mode === 'defend');
+}
+
 export class Skill {
   constructor(fighter, level = SKILL.level) {
     this.f = fighter;
@@ -691,7 +697,7 @@ export class Skill {
       run.stage = 'instant';
       run.instant = true;
       run.end = D.tech.path[D.tech.path.length - 1];
-      requestIai(f, { player: true, block: gnsBlockOf(run.ctx, f) }); // 10/10 발도: 지금 손 → 왼 허리 → 가로 (전체 iaiPlayerTime) · B(10/25 16:0x 사장님 켬): 천천히 걸어 든 들어옴 창 발도는 상대 칼에 막힐 수 있음 (달려듦 빠르기로 넘은 것 · 칼을 듦 · 달려듦 · 헛침 창은 그대로)
+      requestIai(f, { block: gnsBlockOf(run.ctx, f) }); // 10/10 발도: 손이 대기 자리면 곧장(iaiTime) · 아니면 지금 손 → 왼 허리 → 가로 (iaiPlayerTime — 11/19 AI 와 같은 규칙) · B(10/25 16:0x 사장님 켬): 천천히 걸어 든 들어옴 창 발도는 상대 칼에 막힐 수 있음 (달려듦 빠르기로 넘은 것 · 칼을 듦 · 달려듦 · 헛침 창은 그대로)
       this.secretBursts++;
     } else if (D.back) {
       run.stage = 'back'; // 일본 後の先 ①: 물러서며 脇構え 로 끌어 담기
@@ -1803,7 +1809,8 @@ export class Skill {
       // 보정 v2 쉼 무게의 목표 (fighter.updateBodyPose 가 SKILL_BODY 따라가기로 쫓고 driveSword 가 손·칼끝을 그만큼 옛 자세 지도 쪽으로 섞는다):
       //  손가락이 닿았거나 움직이거나 휘두르는 중 = 0 (날것), 되돌아오는 동안 = 걷기 진행 recoverP (무릎 걷기는 진행 값이 없어 끝날 때까지 0),
       //  벤 뒤 되돌아옴을 기다리는 동안 = 0, 그 밖(쉼, 되돌아옴 끝) = 1. 새 수·시계 없음 — 있는 사건만 읽는다
-      this.idleGoal = touched || moved || swinging || this.sec ? 0 : this.recovering ? (this.recoverD0 != null ? this.recoverP : 0) : this.cutPending && canRecover ? 0 : 1;
+      //  AI 몸(11/19 보정 v2 묶음 — 닿음 신호): 손가락이 없으니 공격 · 비기 · 막기 꼴 동안을 '손가락이 닿음'으로 — 준비 · 다가감 · 막고 선 동안도 날것(자세 지도 쪽으로 가지 않음)
+      this.idleGoal = touched || aiFingerHeld(f) || moved || swinging || this.sec ? 0 : this.recovering ? (this.recoverD0 != null ? this.recoverP : 0) : this.cutPending && canRecover ? 0 : 1;
     }
     if (this.lunge > 0) {
       this.lunge -= dt;

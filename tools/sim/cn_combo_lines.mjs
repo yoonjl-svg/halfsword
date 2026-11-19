@@ -3,12 +3,12 @@
 //  플레이어 비기 창(PlayerSecretWatch — main.js 와 같은 함수)도 스텝마다 부른다. 상대 = AI(무기 인자), 걸음은 AI 것.
 //  센 것: ① 막기 버튼이 정한 줄 (threatNow — 공격 한 번에 한 번, pg.stats.lines) · ② 칼이 새로 맞닿은 막기 성공(pc.ok)마다 그때 손이 간 줄(pg.line) ·
 //         ③ 정한 자세(pc.slot)·창(opened) 수. 창에서 내지는 않는다(재기만).
-//  실행: node tools/sim/cn_combo_lines.mjs [상대 무기들 longsword,qinggang,uchigatana,sabre] [씨앗 수 6] [초 30]
+//  실행: node tools/sim/cn_combo_lines.mjs [상대 무기들 longsword,qinggang,uchigatana,kriegsmesser] [씨앗 수 6] [초 30]
 import { newRound, DT } from './harness_m.mjs';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { PlayerSecretWatch } from '../../src/secret.js';
 
-const foes = (process.argv[2] || 'longsword,qinggang,uchigatana,sabre').split(',');
+const foes = (process.argv[2] || 'longsword,qinggang,uchigatana,kriegsmesser').split(',');
 const N = +(process.argv[3] || 6);
 const SIM = +(process.argv[4] || 30);
 const LINES = ['highL', 'highC', 'highR', 'lowL', 'lowR', 'thrust', 'point'];

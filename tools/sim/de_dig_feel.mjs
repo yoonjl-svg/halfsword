@@ -19,6 +19,7 @@ export function digRun({ mode = 'dig', gap = 2.6, dur = 1.5, stick = 1, side = 0
     G.ai.update = () => {};
     const P = G.player;
     const A = G.enemy;
+    A.aiCtl = null; // 서 있는 과녁 — AI 판단이 없는 몸 (11/19 보정 v2 묶음: AI 꼴에서 읽는 '손가락 닿음' 신호 밖 = 손을 쥔 몸 그대로 — 쉬는 AI 의 두손 칼 자리가 바뀌어 옛 간격 잡기 장면이 갈렸음)
     P.move.set(0, 0);
     for (let i = 0; i < Math.round((CONFIG.ARENA.startHold + 0.6) / CONFIG.PHYSICS.timestep); i++) G.step(); // 판 시작 정지 뒤 · 서 있음
     const g = P.gait;

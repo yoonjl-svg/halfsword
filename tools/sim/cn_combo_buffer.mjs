@@ -9,7 +9,7 @@ import { PlayerParryGuard } from '../../src/parry_button.js';
 import { PlayerSecretWatch } from '../../src/secret.js';
 
 const REACT = +(process.argv[2] || 0.25);
-const foes = (process.argv[3] || 'longsword,qinggang,uchigatana,sabre').split(',');
+const foes = (process.argv[3] || 'longsword,qinggang,uchigatana,kriegsmesser').split(',');
 const N = +(process.argv[4] || 3);
 const SIM = +(process.argv[5] || 30);
 const C = { pend: 0, input: 0, fireOpen: 0, buffered: 0, fireBuf: 0, drop: 0, cancel: 0, miss: 0, windows: 0, hits: 0, pendT: [] };

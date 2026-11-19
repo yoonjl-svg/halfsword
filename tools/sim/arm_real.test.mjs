@@ -43,8 +43,8 @@ test('A 두손 칼 15 개 (대검 · 레전드 포함) 오른쪽 끝 — 두 손
   }
 });
 
-test('B 한손 칼 패드 끝 — 세이버 · 레이피어 · 환도 오른쪽 · 위 끝에서 팔이 다 펴짐', () => {
-  for (const w of ['sabre', 'rapier', 'hwando']) {
+test('B 한손 칼 패드 끝 — 레이피어 · 환도 오른쪽 · 위 끝에서 팔이 다 펴짐 (11/19 세이버 뺌 — 재기에 sabre 를 쓰지 않음)', () => {
+  for (const w of ['rapier', 'hwando']) {
     for (const dir of ['right', 'up']) {
       const on = runDir({ weapon: w, dir, mode: 'slow' });
       assert.ok(on.end.reach >= 0.95, `${w} ${dir} ${on.end.reach.toFixed(3)}`);
@@ -53,12 +53,12 @@ test('B 한손 칼 패드 끝 — 세이버 · 레이피어 · 환도 오른쪽 
   }
 });
 
-test('C 동방 한손 일곱 — 배수 · 몸 돌림이 독일 세이버와 같음 · 비기 동안은 덮은 표(0.666)', () => {
+test('C 동방 한손 일곱 — 배수 · 몸 돌림이 모두 같음(환도 기준 — 독일 세이버 표 그대로 · 11/19 재기에 sabre 를 쓰지 않음) · 비기 동안은 덮은 표(0.666)', () => {
   assert.deepEqual(CHINESE_ONE.sort(), ['chixiao', 'ganjiang', 'goujian', 'hwando', 'moye', 'qinggang', 'sain']);
-  const sab = corr('sabre');
+  const sab = corr('hwando');
   for (const w of CHINESE_ONE) {
     const now = corr(w);
-    assert.ok(Math.abs(now.k - sab.k) < 0.002 && Math.abs(now.stC - sab.stC) < 1e-3, `${w} ${now.k} · 세이버 ${sab.k}`); // 틀 표 이웃 칸 섞음으로 1e-4 차이
+    assert.ok(Math.abs(now.k - sab.k) < 0.002 && Math.abs(now.stC - sab.stC) < 1e-3, `${w} ${now.k} · 환도 ${sab.k}`); // 틀 표 이웃 칸 섞음으로 1e-4 차이
     // 비기가 도는 동안(skill.sec)은 덮은 표 그대로 (대검 · 이탈리아 잣대와 같은 규칙)
     const sec = corr(w, (f) => { f.skill.sec = { stage: 'test' }; });
     assert.ok(Math.abs(sec.k - 0.666) < 0.002, `${w} 비기 동안 ${sec.k}`);

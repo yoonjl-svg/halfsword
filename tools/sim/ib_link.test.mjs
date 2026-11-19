@@ -103,7 +103,8 @@ test('맞바꿈 B12 (사장님 11/14 확인) — 이어 돌리는 동안 몸에 
   const o = keep();
   const all = allNodeIds('iberian');
   const kit = kitFromNodes('iberian', all);
-  const G = newRound({ walls: false, weapon: 'zweihander', weapon2: 'longsword', seed: 4, gap: 1.6, kit });
+  // 씨앗 4 → 1 (11/19 보정 v2 묶음 — AI v2 · 판정 × 2: 씨앗 4 의 첫 상대 칼날 맞음이 몸을 쓰러뜨려(죽은 몸은 기력을 안 씀) 넘김 셈을 못 봄 · 씨앗 1 은 첫 맞음 뒤 서 있음)
+  const G = newRound({ walls: false, weapon: 'zweihander', weapon2: 'longsword', seed: 1, gap: 1.6, kit });
   const P = G.player;
   const E = G.enemy;
   const real = G.combat.analyze;

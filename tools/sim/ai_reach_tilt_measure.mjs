@@ -14,8 +14,8 @@ import { isMain } from './is_main.mjs';
 const args = process.argv.slice(2);
 const arg = (k, d) => { const a = args.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
 const range = (s) => { const [a, b] = s.split('-').map(Number); return Array.from({ length: (b ?? a) - a + 1 }, (_, i) => a + i); };
-const KO = { longsword: '롱소드', zweihander: '츠바이핸더', rapier: '레이피어', uchigatana: '우치가타나', hwando: '환도', saber: '세이버' };
-export const PAIRS = ['longsword:zweihander', 'rapier:zweihander', 'uchigatana:longsword', 'hwando:rapier', 'saber:longsword'];
+const KO = { longsword: '롱소드', zweihander: '츠바이핸더', rapier: '레이피어', uchigatana: '우치가타나', hwando: '환도', kriegsmesser: '크릭스메서' };
+export const PAIRS = ['longsword:zweihander', 'rapier:zweihander', 'uchigatana:longsword', 'hwando:rapier', 'kriegsmesser:longsword']; // (11/19 세이버 → 크릭스메서 — 재기에 estoc · sabre 를 쓰지 않음)
 const VAR_KO = { now: '지금 (옛 문)', tilt: '기울기' };
 
 export function withReach(on, fn) {
