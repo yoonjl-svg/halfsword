@@ -134,12 +134,13 @@ function applySchoolArt(school, tradition, frame, style, prof = null, openTech =
   if (C && Object.values(C).every((names) => names.every((n) => out.techByName[n]))) out = { ...out, counter: C };
   if (uq.length) out = mergeUnique(out, uq.filter((u) => u.counter));
   // 강화동작 (10/21 사장님 '강화동작' — unique_assist.js enhancedMoves): 이 꾸러미에 강화동작이 열려 있으면(숙련도 거르기 뒤) 그 기본 동작을 고르는 목록에서 빼고
-  //  그 몫(가중치)을 강화동작에 더한다 — 기본 동작 이름으로 찾는 자리(맞받아치기 · 비기 · 패시브)는 강화동작을 받는다(이름 표에 그 이름으로 강화동작)
+  //  강화동작이 그 자리를 그 몫(가중치) 그대로 받는다 — 기본 동작 이름으로 찾는 자리(맞받아치기 · 비기 · 패시브)는 강화동작을 받는다(이름 표에 그 이름으로 강화동작)
+  //  11/19 사람 · AI 같게 E1 (사장님 11/19 · docs/strike/human_ai_parity_2026-11-19.md): 강화동작 무게 = 바탕 무게 — 사람은 바탕 긋기를 그으면 강화동작으로 나갈 뿐이라 더하지 않음 (전 강화동작 제 무게 + 바탕 무게 — 곁눈 베기 0.7 × schoolK + 1.4)
   for (const m of SCHOOL_ART.unique ? enhancedMoves(tradition) : []) {
     const E = out.techByName[m.name];
     const B0 = out.techByName[m.base];
     if (!E || !B0 || E === B0 || !out.tech.includes(B0)) continue;
-    const E2 = { ...E, base: (E.base ?? 1) + (B0.base ?? 1), plain: B0 }; // plain = 바탕 동작 (특수 공격 AI 몫 식힘 동안 그 자리를 바탕으로 — ai.js techNow · 10/29 19:4x)
+    const E2 = { ...E, base: B0.base ?? 1, plain: B0 }; // base = 바탕 무게 (11/19 E1) · plain = 바탕 동작 (특수 공격 AI 몫 식힘 동안 그 자리를 바탕으로 — ai.js techNow · 10/29 19:4x)
     const tech = out.tech.filter((t) => t !== B0).map((t) => (t === E ? E2 : t));
     out = { ...out, tech, techByName: { ...Object.fromEntries(tech.map((t) => [t.name, t])), [m.base]: E2 } };
   }

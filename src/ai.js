@@ -1769,8 +1769,9 @@ export class AI {
     const Lk = this.plan ? this.planLuck : 0; // 무 · 낮음 띠 굴림 몫 (11/14 — 플랜 없는 몸은 0 · 셈 그대로)
     // ③ 자세 → 칼길 (11/17 — guard_line.js · [사장님 11/17 결정]): 보이는 내 손 자세(nearGuard — 읽는 쪽과 같은 함수)가 약속한 줄 — 무게 × W^τ · κ (τ = read · 헛스윙 연습은 그대로)
     const near = why === 'drill' ? null : nearGuard(this.me, this.art.tradition);
+    const schielOk = cls.online && this.d <= this.M.contact; // 곁눈 베기 제자리 (11/19 E1 짝 — 아래 고르기)
     // 유파 마음가짐 (11/18 — 일격): 후보마다 입힐 피해 · 받을 피해를 먼저 어림 (평균으로 나눠 견줌 · 마음가짐 없으면 null — 셈 그대로)
-    const stakes = this.mind ? mindStakes(this, this.school.tech.map((t0) => { let t = this.techNow(t0); if (t?.name === 'cingir' && t.plain && !SLOW_WHY.has(why)) t = t.plain; return t && !(vKind && t.kind !== vKind) ? t : null; }), hand, padDist) : null; // B7 갈음(아래 고르기와 같게) 뒤 칼로
+    const stakes = this.mind ? mindStakes(this, this.school.tech.map((t0) => { let t = this.techNow(t0); if (t?.name === 'cingir' && t.plain && !SLOW_WHY.has(why)) t = t.plain; return t && !(vKind && t.kind !== vKind) && !(t.name === 'schielhau' && !schielOk) ? t : null; }), hand, padDist) : null; // B7 갈음 · 곁눈 베기 제자리(아래 고르기와 같게) 뒤 칼로
     let best = null;
     let bestW = -1;
     for (let ti = 0; ti < this.school.tech.length; ti++) {
@@ -1779,6 +1780,7 @@ export class AI {
       if (!t) continue;
       if (t.name === 'cingir' && t.plain && !SLOW_WHY.has(why)) t = t.plain; // 11/19 B7 (사장님 '권고대로' — 기록 docs/strike/de_band3_2026-11-19.md §B7): 이어 돌리기 칼(왼 가로베기 자리 강화동작)은 짧은 틈 공격(헛친 틈 · 들어옴 · 되받기 … SLOW_WHY 밖)엔 고르지 않음 — 바탕 동작(왼 가로베기)의 몫 그대로
       if (vKind && t.kind !== vKind) continue;
+      if (t.name === 'schielhau' && !schielOk) continue; // 11/19 E1 짝 (감독 · 기록 docs/strike/human_ai_parity_2026-11-19.md): 곁눈 베기는 제자리(상대 칼끝이 나를 겨눔 · 맞닿기 거리 안 — 칼끝을 눌러 비키며 베는 기술)에서만 · 밖에선 다른 칼 — 분노의 베기는 남기지 않음(사람은 곁눈 베기를 익히면 분노의 베기가 안 나감)
       let w = this.pers.techPref[t0.name] * t.base;
       if (t.kind === 'thrust') w *= thrustBias;
       // 빈틈: 상대 칼이 높으면 아래·찌르기, 낮으면 위, 한쪽으로 치우치면 반대쪽
