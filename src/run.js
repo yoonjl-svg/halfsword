@@ -19,10 +19,12 @@
 //     걸음 장치가 읽는 조종 입력(f.move)은 그 방향을 몸 틀로 옮긴 값 — 돌아서는 동안(사이 각 > RUN.alignMax)은 스틱 × RUN.turnMove 로 거의 그 자리에서 돌고 몸이 그쪽을 보면 앞걸음.
 //     뒤 · 옆 끝으로 밀어도 몸이 돌아 그쪽으로 뛴다(상대를 보며 뒷걸음으로 뛰지 않음 — 옆 · 뒤 배율 없음).
 //     끝난 뒤 몸이 다시 상대를 볼 때까지(RUN.faceTol 안)도 상대 틀로 읽음 — 등진 채 스틱을 뒤로 밀면 몸 틀로는 '뒷걸음 = 상대 쪽'이 되므로. 다 돌면 전과 같은 걷기(몸 틀)
-//   · 빠르기 = 걷는 앞 몫 + 덧 빠르기(걷는 앞 몫 × (RUN.mul − 1)) (runWant — 몸이 뛰는 쪽을 볼수록 다 실림 · 다친 다리 · 판금 · 무기 발 빠르기 · 유파 걸음 빠르기 · 진흙이 걷기처럼 곱해짐) ·
+//   · 빠르기 = 걷는 앞 몫 + 덧 빠르기(걷는 앞 몫 × (RUN.mul − 1) — 11/20 mul 3: 보통 실제 6.0 m/s) (runWant — 몸이 뛰는 쪽을 볼수록 다 실림 · 다친 다리 · 판금 · 무기 발 빠르기 · 유파 걸음 빠르기 · 진흙이 걷기처럼 곱해짐) ·
 //     덧 빠르기는 RUN.accel 로만 오르내리고 몸 빠르기 + RUN.lead 를 넘지 않음 · 발로 내는 가속 한도도 RUN.accel (뛰는 동안 · 뛰다 멈춰 몸이 걷는 끝 빠르기로 줄 때까지 — fighter.driveBalance)
-//   · 걸음 꼴 = gait.js 가 f.run.k(0 → 1, 뛰기 들어감 · 나감에 RUN.blend s 로 옮겨 감)만큼 뛰는 걸음 값으로 섞음 (보폭 상한 · 박자 · 두 발 디딤 · 무릎 · 골반 높이 · 덜 나감 문턱).
-//     날기(두 발 모두 뜸)는 없다 — 다리 걸음 장치가 한 번에 한 발만 드는 틀이라 낮게 잦은 걸음으로 뛴다
+//   · 걸음 꼴 = gait.js 가 f.run.k(0 → 1, 뛰기 들어감 · 나감에 RUN.blend s 로 옮겨 감 — 뛰다 멈춰 줄어드는 동안(fast)도 1 쪽)만큼 뛰는 걸음 값으로 섞음 (보폭 상한 · 박자 · 두 발 디딤 · 무릎 · 골반 높이 · 덜 나감 문턱).
+//     날며 뛰기 (11/20 — 빠르기 × 3): 몸 앞으로 RUN.flyFrom 넘게 빠르면 한 발 디딤을 짧게 · 두 발 모두 뜬 채 나감(긴 걸음 · 느린 박자 — gait.js fly · RUN.fly*)
+//   · 꺾기 (11/20): 내달리는 동안 뛰는 쪽은 RUN.curve 로 둥글게 돈다 · RUN.curveMax 넘게 거꾸로 민 스틱은 먼저 줄인 뒤 돌아섬(R.brake)
+//   · 끝난 뒤 (11/20): 몸이 걷는 끝 × RUN.faceSlow 넘게 가는 동안은 가는 쪽을 봄(runFace) — 서고 나서 상대 쪽으로 돎
 //   · 기력 = 초당 runCostRate(그 몸이 걷는 끝 빠르기로 걸을 때 초당 걸음 기력 × RUN.cost) · 자연 회복 없음 (stamina.js — 걸은 거리 셈은 쉼)
 //  화면 글자 없음 (스틱 테두리만 뛰는 동안 조금 밝게 — main.js · index.html #moveStick.run)
 // ─────────────────────────────────────────────────────────────
@@ -34,7 +36,7 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 /** 이 몸의 뛰기 상태 (처음 부를 때 만든다). fast = 뛰는 가속 한도를 쓰는 동안(뛰는 중 · 뛰다 멈춰 줄어드는 중) · back = 스틱을 상대 틀로 읽는 동안 */
 export function runState(f) {
-  return (f.run ??= { on: false, armed: true, k: 0, vb: 0, fast: false, back: false, dx: 1, dz: 0, fx: undefined, fz: undefined, end: null, runs: 0, runT: 0 });
+  return (f.run ??= { on: false, armed: true, k: 0, vb: 0, fast: false, back: false, brake: false, curve: false, m0: 0, mx: NaN, my: NaN, dx: 1, dz: 0, fx: undefined, fz: undefined, end: null, runs: 0, runT: 0 });
 }
 
 /** 공격 · 막기 · 기술 중인가 (뛰기를 끊고 다시 들어가지 못하게) — 몸 상태 그대로 (사람 · AI 같음) */
@@ -81,28 +83,32 @@ export function runStep(f, dt) {
   const sx = f.stickX || 0;
   const sy = f.stickY || 0;
   const dirOk = sx * sx + sy * sy > 1e-6;
+  // 앞 반원만 (11/20 사장님 '뒤돌아 뛰는 거 자체를 없애는 게 나을 수도 있어 카메라 워크가 애매하면...'): 스틱이 상대 쪽에서 RUN.arc(rad) 안일 때만 뛴다 — 앞 · 옆 · 비스듬히 앞.
+  //  뒤 반원(비스듬히 뒤 · 뒤)은 뛰지 않고 전처럼 걷기(뒷걸음 — 몸은 상대를 봄 · 카메라 그대로). 뛰는 중 스틱이 RUN.arc + RUN.arcOut 밖으로 가면 걷기(옆 끝에서 엄지가 조금 흔들려도 들락날락하지 않게)
+  const front = dirOk && Math.atan2(Math.abs(sx), sy) <= RUN.arc + (R.on ? RUN.arcOut : 0);
   if (R.on) {
     let why = null;
     if (brk || busy) why = 'break';
     else if (v <= RUN.stopAt) why = 'stamina';
-    else if (reach < RUN.stickOut || !dirOk) why = 'stick';
+    else if (reach < RUN.stickOut || !front) why = 'stick';
     else if (!canRun(f)) why = 'state';
     if (why) {
       R.on = false;
       R.end = why;
       if (why === 'break') R.armed = false; // 끊은 뒤 스틱을 그대로 밀고 있어도 다시 뛰지 않음 — 한 번 되돌렸다 밀어야
     }
-  } else if (reach >= RUN.stickIn && dirOk && R.armed && v >= RUN.startAt && !brk && !busy && canRun(f)) {
+  } else if (reach >= RUN.stickIn && front && R.armed && v >= RUN.startAt && !brk && !busy && canRun(f)) {
     R.on = true;
     R.end = null;
     R.runs++;
   }
-  R.k = clamp(R.k + (R.on ? dt : -dt) / RUN.blend, 0, 1);
   if (!R.on && f.state !== 'stand') R.vb = 0; // 넘어짐 · 무릎 — 덧 빠르기(runWant)를 버림
   if (R.on) R.runT += dt;
   // 뛰는 가속 한도 창: 뛰는 동안 + 끝난 뒤 몸 수평 빠르기가 걷는 끝 빠르기(+ 10 %)로 줄 때까지
   const pv = f.bodies.pelvis.linvel();
   R.fast = R.on || (R.fast && Math.hypot(pv.x, pv.z) > walkTopOf(f) * 1.1 && f.state === 'stand');
+  // 걸음 꼴 섞임: 뛰는 동안 · 뛰다 멈춰 줄어드는 동안(fast — 11/20: 뛰는 빠르기에서 걷는 걸음 꼴로 돌아가면 발이 못 따라감) 1 쪽으로
+  R.k = clamp(R.k + (R.fast ? dt : -dt) / RUN.blend, 0, 1);
   // 상대 틀 (나 → 바라볼 곳이 앞 — fighter.updateHeading 이 몸을 돌리는 쪽과 같은 셈). 너무 붙었으면 지난 틀
   const p = f.bodies.pelvis.translation();
   const tg = f.pickup?.face ?? f.faceTarget;
@@ -118,19 +124,39 @@ export function runStep(f, dt) {
   // 돌아옴: 뛰기가 끝난 뒤 몸이 다시 상대를 볼 때까지(앞 사이 각 RUN.faceTol 안)는 스틱을 상대 틀로 읽음
   if (R.on) R.back = true;
   else if (R.back && (f.state !== 'stand' || Math.abs(wrap(Math.atan2(-fz, fx) - f.heading)) < RUN.faceTol)) R.back = false;
-  if (!R.back) return;
+  if (!R.back) return void (R.mx = NaN);
   // 뛰는 방향 = 스틱(상대 틀 — 앞 = 상대 쪽 · 오른쪽 = (−앞.z, 앞.x) fighter.right 와 같은 틀)
+  //  내달리는 동안 꺾기 (11/20): 몸 빠르기가 걷는 끝 × RUN.curveFrom 을 넘으면 뛰는 쪽은 초당 RUN.curve ÷ 빠르기(rad — 옆으로 내는 가속 RUN.curve m/s²)까지만 돈다(둥글게 꺾음).
+  //   지금 뛰는 쪽에서 RUN.curveMax 넘게 돌린 스틱(거꾸로 · 비스듬히 뒤)은 그쪽으로 돌지 않고 먼저 줄인다(R.brake — 덧 빠르기 0 · runWant) → 그 빠르기 밑으로 줄면 그 자리에서 돌아섬(전과 같음)
+  R.brake = false;
   if (dirOk) {
     const dx = fx * sy - fz * sx;
     const dz = fz * sy + fx * sx;
     const dn = Math.hypot(dx, dz);
-    R.dx = dx / dn;
-    R.dz = dz / dn;
+    const vh = Math.hypot(pv.x, pv.z);
+    if (R.on && R.curve && vh > walkTopOf(f) * RUN.curveFrom) {
+      const a0 = Math.atan2(R.dz, R.dx);
+      const a = wrap(Math.atan2(dz, dx) - a0);
+      if (Math.abs(a) > RUN.curveMax) R.brake = true;
+      else {
+        const m = (RUN.curve / vh) * dt;
+        const b = a0 + clamp(a, -m, m);
+        R.dx = Math.cos(b);
+        R.dz = Math.sin(b);
+      }
+    } else {
+      R.dx = dx / dn;
+      R.dz = dz / dn;
+    }
+    R.curve = R.on; // (뛰기를 막 시작한 스텝은 스틱 쪽 그대로)
   }
   // 걸음 장치 · 기력 셈이 읽는 조종 입력(몸 틀)을 그 방향으로 — 크기(스틱 · 감정 배율)는 그대로.
   //  뛰는 동안 몸이 아직 뛰는 쪽을 보지 않으면(돌아서는 중) 크기를 줄인다 — 사이 각이 RUN.alignMax 넘으면 RUN.turnMove · 그 안에서는 각 0 의 1 까지 곧게
   //  (옆 · 뒷걸음으로 내달리며 돌면 걸음이 균형을 잃는다 — 거의 그 자리에서 돌아선 뒤 뜀)
-  let m = Math.hypot(f.move.x, f.move.y);
+  //  (11/20 고침: 사람 몸은 스틱을 화면마다 한 번 두고 물리 스텝은 화면마다 2 ~ 6 번 — 두 번째 스텝부터는 이 함수가 지난 스텝에 둔 몸 틀 입력을 다시 읽어 크기를 또 줄였다(돌아서는 동안 × 0.2 가 거듭 곱해짐).
+  //   지난 스텝에 둔 그대로면 그때 읽은 크기를 쓴다 — 스텝마다 입력을 두는 몸(AI · 시뮬 대본)은 전과 같음)
+  let m = f.move.x === R.mx && f.move.y === R.my ? R.m0 : Math.hypot(f.move.x, f.move.y);
+  R.m0 = m;
   if (!(m > 0)) return;
   const bf = Math.cos(f.heading);
   const bz = -Math.sin(f.heading);
@@ -139,12 +165,22 @@ export function runStep(f, dt) {
     m *= th >= RUN.alignMax ? RUN.turnMove : RUN.turnMove + (1 - RUN.turnMove) * (1 - th / RUN.alignMax);
   }
   f.move.set(m * (R.dx * -bz + R.dz * bf), m * (R.dx * bf + R.dz * bz));
+  R.mx = f.move.x;
+  R.my = f.move.y;
 }
 
-/** 뛰는 동안 바라볼 쪽 (fighter.updateHeading — 몸이 뛰는 쪽을 봄 · 아니면 null) */
+/** 뛰는 동안 바라볼 쪽 (fighter.updateHeading · gait.headAhead — 몸이 뛰는 쪽을 봄 · 아니면 null — 상대 쪽).
+ *  뛰기가 끝난 뒤(돌아오는 동안 — back) 몸이 아직 걷는 끝 빠르기 × RUN.faceSlow 넘게 가는 동안은 몸이 가는 쪽을 본다 (11/20 — 내달리는 채로 몸만 상대 쪽으로 돌리면
+ *  뒷걸음 · 옆걸음으로 내달리게 되어 발이 못 따라감 — 서고 나서 돈다) */
 export function runFace(f) {
   const R = f.run;
-  return R?.on ? Math.atan2(-R.dz, R.dx) : null;
+  if (R?.on) return Math.atan2(-R.dz, R.dx);
+  if (R?.back && f.state === 'stand') {
+    const v = f.bodies.pelvis.linvel();
+    const w = walkTopOf(f) * RUN.faceSlow;
+    if (v.x * v.x + v.z * v.z > w * w) return Math.atan2(-v.z, v.x);
+  }
+  return null;
 }
 
 /**
@@ -159,7 +195,7 @@ export function runWant(f, want, fwd, dt) {
   if (!R || (!R.on && !(R.vb > 0))) return;
   const wf = want.x * fwd.x + want.z * fwd.z;
   let tgt = 0;
-  if (R.on && wf > 0) {
+  if (R.on && !R.brake && wf > 0) {
     const c = clamp(R.dx * fwd.x + R.dz * fwd.z, -1, 1);
     tgt = wf * (RUN.mul - 1) * clamp(1 - Math.acos(c) / RUN.alignMax, 0, 1);
   }

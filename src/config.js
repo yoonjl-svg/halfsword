@@ -474,8 +474,21 @@ export const GAIT = {
 //  alignMax   몸 앞과 뛰는 쪽 사이 각이 이만큼(rad) 넘으면 덧 빠르기 0 (돌아서는 동안은 걷기) · 각 0 에서 다 실림
 //  turnMove   그렇게 돌아서는 동안 걷는 몫 (스틱 크기 × 이 값 — 옆 · 뒷걸음으로 내달리며 돌면 걸음이 균형을 잃는다 · 각 alignMax 안에서는 1 까지 곧게)
 //  faceTol    뛰기가 끝난 뒤 몸이 상대 쪽을 이 각(rad) 안으로 볼 때까지 스틱을 상대 틀로 읽음 (등진 채 뒷걸음 = 상대 쪽이 되지 않게)
-//  뛰는 걸음 꼴 (gait.js — 뛰기 섞임 k 만큼 · 날기(두 발 모두 뜸)는 없음 — 다리 걸음 장치가 한 번에 한 발만 들기 때문): stride 한 걸음 최대 길이(m — 걷기 0.62) ·
+//  뛰는 걸음 꼴 (gait.js — 뛰기 섞임 k 만큼): stride 한 걸음 최대 길이(m — 걷기 0.62) ·
 //   dsFrac 두 발 디딤 몫(걷기 0.15) · knee 딛은 다리 무릎 굽힘(rad — 걷기 0.1) · drop 골반을 더 낮춤(m — 유파 걸음은 유파 낮춤과 함께 GAIT.lowMax 안) · reachSlow 한 발로 설 때 엉덩이가 딛은 발보다 이만큼 앞서면 덜 나감(m — 걷기 0.38)
+//  ── 11/20 사장님 '뛰는 속도가 느리더라. 지금 4지? 최소 5에서 6은 돼야겠던데?' → mul 2 → 3 (보통 4.0 → 6.0 · 일본 J1 2.8 → 4.2 실제 m/s) · 기록 docs/strike/run_2026-11-20.md
+//  날며 뛰기 (gait.js — 뛰는 몸만): 몸 앞으로 flyFrom(실제 2.6 m/s) 넘게 빠르면 한 발이 땅을 딛는 시간을 줄이고 두 발이 모두 뜬 채 나간다 (전 걸음 꼴 — 날기 없이 잦은 걸음 — 은 4 m/s 에서도 출렁였다)
+//   flyK      뛰기 섞임이 이만큼 넘어야 날기 시작 · flyOut 날던 몸은 flyFrom × 이 몫 밑으로 줄 때까지 날기(뛰기가 끝나 줄어드는 동안도) · flyFore 몸이 가는 쪽이 몸 앞에서 이 cos 안일 때만(옆 · 뒤로 내달리는 동안은 걷는 박자)
+//   flyCad    박자 [바탕 초당 걸음, 빠르기 1 m/s 마다 더하는 걸음] (실제 초당 2.0 + 0.2 × 실제 m/s — 6 m/s 에서 3.2 걸음 · 한 걸음 약 1.9 m)
+//   flyContact 한 발 디딤 동안 엉덩이가 그 발 위를 지나는 길(m) — 디딤 시간 = 이 값 ÷ 빠르기 (그 발을 디딜 때의 빠르기 · 지금 빠르기 가운데 짧은 쪽) · flyDuty 디딤 시간은 한 걸음의 이 몫까지
+//   flyAhead  그 길의 이 몫을 엉덩이 앞에 딛는다(나머지는 뒤로 빠짐 — 다 편 다리로 닿으면 몸이 장대처럼 솟으며 섬) · flyReach 엉덩이 앞 이 거리(m)까지만(줄이는 동안도)
+//   flyLift   발 들기 높이(m — 걷기 0.07) · flyCarry 뗄 때 발이 몸 빠르기의 이 몫으로 출발(걷기 0.7 — 땅을 긁지 않게) · flySwingV 발이 엉덩이에 대해 움직이는 최고 빠르기(m/s — 걷기 6)
+//   flyDamp   두 발 모두 뜬 짧은 동안 골반 높이를 받치는 보조 힘의 감쇠(N·s/m — 서 있을 때 BODY.supportDamping 260 · 그동안 발 반작용 없음 · 앞으로 미는 힘 없음)
+//   flyPush   날며 뛰는 동안 땅을 딛는 짧은 동안의 가속 한도 = accel × 이 값 (한 걸음 평균이 accel 쯤 — 뛰기가 끝나 줄어들 때 · 거꾸로 꺾어 줄일 때는 accel 그대로)
+//   flyOver   날며 뛰는 동안 균형 셈(fighter.updateFooting)은 가려는 속도에서 벗어난 몫으로 잼 — 앞으로 빠른 몫은 이만큼(m/s)까지 셈하지 않음(줄이는 동안)
+//  내달리며 꺾기 (run.js): 몸 빠르기가 걷는 끝 × curveFrom 넘으면 뛰는 쪽은 초당 curve ÷ 빠르기(rad — 옆으로 내는 가속 curve m/s²)까지만 돈다 ·
+//   지금 뛰는 쪽에서 curveMax(rad) 넘게 돌린 스틱은 먼저 줄인 뒤(덧 빠르기 0) 그 빠르기 밑에서 돌아섬
+//  faceSlow  뛰기가 끝난 뒤 몸이 걷는 끝 × 이 몫 넘게 가는 동안은 가는 쪽을 봄(서고 나서 상대 쪽으로 돎 — 내달리는 채로 돌면 뒷걸음 · 옆걸음으로 내달림)
 export const RUN = {
   stickIn: 0.95,
   stickOut: 0.85,
@@ -483,7 +496,7 @@ export const RUN = {
   startAt: 50,
   stopAt: 0,
   cost: 1.5,
-  mul: 2,
+  mul: 3,
   accel: 4,
   lead: 0.5,
   blend: 0.3,
@@ -495,6 +508,27 @@ export const RUN = {
   knee: 0.15,
   drop: 0.06,
   reachSlow: 0.45,
+  flyK: 0.7,
+  flyFrom: realV(2.6),
+  flyOut: 0.6,
+  flyFore: 0.8,
+  flyCad: [realRate(2.0), 0.2],
+  flyContact: 0.8,
+  flyDuty: 0.8,
+  flyLift: 0.12,
+  flyCarry: 0.2,
+  flySwingV: 10,
+  flyDamp: 800,
+  flyAhead: 0.25,
+  flyPush: 2,
+  flyOver: 2,
+  curveFrom: 1.2,
+  curve: 4,
+  curveMax: 1.75,
+  faceSlow: 0.5,
+  arc: 1.62,
+  arcOut: 0.1,
+  flyReach: 0.3,
 };
 
 // AI 뛰기 (11/19 사장님 '뛰기 AI에도 넣고 무리 싸움에 먼저 넣어.' — src/ai_run.js · 기록 docs/strike/ai_run_2026-11-19.md): 셋 이상 판 AI 가 언제 스틱을 끝까지 미나만.

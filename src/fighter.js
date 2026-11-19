@@ -1126,7 +1126,7 @@ export class Fighter {
         const p = this.bodies.pelvis.translation();
         const tg0 = this.aiControlled && AI_REACT.on ? this.reactTarget(dt) : this.faceTarget; // AI 반응 시간(AI_REACT): face s 전의 상대 자리를 본다
         const tg = this.pickup?.face ?? tg0; // 떨어진 칼을 줍는 동안(웅크려 손을 뻗는 동안만)은 칼 쪽으로 (src/pickup.js)
-        const rf = this.run?.on ? runFace(this) : null; // 뛰는 동안은 뛰는 쪽을 봄 (11/18 — src/run.js · 빠르기는 아래 그대로)
+        const rf = this.run?.back ? runFace(this) : null; // 뛰는 동안은 뛰는 쪽을 봄 (11/18 — src/run.js · 빠르기는 아래 그대로) · 뛰다 멈춰 줄어드는 동안은 가는 쪽 (11/20)
         const want = rf ?? Math.atan2(-(tg.z - p.z), tg.x - p.x);
         let diff = want - this.heading;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
@@ -2937,7 +2937,11 @@ export class Fighter {
     };
 
     // 1) 체중 받치기 (다리를 펴는 힘)
-    if (mus > 0.1 && loadSum > 0) {
+    //  날며 뛰기 (11/20 — 뛰는 몸만 · gait.flyAir): 두 발 모두 뜬 동안(한 걸음의 짧은 몫)은 골반 높이를 보조 힘이 다 받친다 — 발 반작용 없음 · 앞으로 미는 힘은 아래 grip 그대로(땅을 못 밂)
+    if (mus > 0.1 && hybrid && G.flyAir) {
+      const vy = this.terrain ? v.y - this.groundVelocityAt(p.x, p.z, v) : v.y;
+      pelvis.addForce({ x: 0, y: THREE.MathUtils.clamp((M * g + BODY.supportStiffness * (G.h - p.y) - RUN.flyDamp * vy) * mus, 0, M * g * 2.5), z: 0 }, true);
+    } else if (mus > 0.1 && loadSum > 0) {
       // 지형 무대: 서는 높이는 골반 밑 땅 위로, 수직 속도는 비탈을 따라 오르내리는 몫을 뺀 값 (평지 무대는 아래 원래 식 그대로)
       const h = hybrid ? G.h : this.terrain ? this.terrain.heightAt(p.x, p.z) + BODY.standHeight - (1 - this.legHealth) * 0.1 - this.stanceDrop - this.crouch : BODY.standHeight - (1 - this.legHealth) * 0.1 - this.stanceDrop - this.crouch;
       const vy = this.terrain ? v.y - this.groundVelocityAt(p.x, p.z, v) : v.y;
@@ -2962,7 +2966,7 @@ export class Fighter {
     //  걷기 시작·멈춤·방향 바꿈이 같은 한도라 함께 빨라지고 최고 빠르기(speed)는 그대로. 몸의 일이라 사람·AI 같이. 칸 없는 유파·끔(0)은 × 1 그대로(바이트 같음)
     //  동방 AI 걸음 박자(10/15 — ai.js update 의 aiLightHold): 가벼운 발 몸의 AI 가 공격 꼴이 아닐 때(간 보기·막기·물러남)는 보통 걸음 몫 × 1(옛 가속) — 사람·끔은 그대로
     let aLim = hybrid ? GAIT.maxAccel * (G.fastK > 1 ? G.fastAcc : G.burstBrake || G.holdBrake || G.lungeBrake ? GAIT.burstAccel : !this.aiLightHold ? (G.P.light ?? 1) : 1) : BODY.maxAccel; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
-    if (this.run?.fast && hybrid) aLim = Math.max(aLim, RUN.accel); // 뛰기 (11/18): 뛰는 동안 · 뛰다 멈춰 걷는 빠르기로 줄 때까지 가속 한도 RUN.accel
+    if (this.run?.fast && hybrid) aLim = Math.max(aLim, RUN.accel * (G.fly && this.run.on && !this.run.brake ? RUN.flyPush : 1)); // 뛰기 (11/18): 뛰는 동안 · 뛰다 멈춰 걷는 빠르기로 줄 때까지 가속 한도 RUN.accel · 날며 뛰기(11/20)는 뛰는 동안 땅을 딛는 짧은 동안 × RUN.flyPush (한 걸음 평균이 RUN.accel 쯤 — 뛰기가 끝나 줄어들 때 · 거꾸로 꺾어 줄일 때는 그대로)
     const lim = M * aLim * grip;
     const fx = THREE.MathUtils.clamp(M * BODY.moveAccel * dvx, -lim, lim) * mus;
     const fz = THREE.MathUtils.clamp(M * BODY.moveAccel * dvz, -lim, lim) * mus;
@@ -2990,7 +2994,7 @@ export class Fighter {
     this.anchor.setNextKinematicRotation(vecQ(anchorQ));
     this.anchorUp = (this.anchorUp || new THREE.Vector3()).set(0, 1, 0).applyQuaternion(anchorQ);
     const hold = THREE.MathUtils.clamp(1 - this.offBalance / BALANCE.fallRange, 0.15, 1);
-    const assist = BODY.uprightAssist * mus * hold * (0.3 + 0.7 * Math.min(1, loadSum));
+    const assist = BODY.uprightAssist * mus * hold * (0.3 + 0.7 * Math.min(1, hybrid && G.flyAir ? 1 : loadSum)); // 날며 뛰기 (11/20): 두 발 모두 뜬 짧은 동안도 딛은 때처럼
     const raw = this.uprightJoint.rawSet;
     for (const ax of MOTOR_AXES) {
       const r = this.uprightRelax(ax); // 휘두르거나 부딪히는 동안 덜 붙잡기 (실험, 기본 1)
@@ -3079,7 +3083,17 @@ export class Fighter {
       return Math.hypot(x - pp.x, z - pp.z) + 0.05;
     };
     // 지금 발 위치 기준과, 계획한 다음 발 위치 기준 중 더 가까운 쪽
-    const off = Math.min(offFrom(cpx, cpz), offFrom(cpx - planX, cpz - planZ));
+    let off = Math.min(offFrom(cpx, cpz), offFrom(cpx - planX, cpz - planZ));
+    // 날며 뛰기 (11/20 — 뛰는 몸만 · gait.fly): 몸이 늘 딛은 발을 넘어 나가는 걸음이라 발 둘레 대신 가려는 속도에서 벗어난 몫(캡처 점 차이 = 속도 차 ÷ w0)으로 잰다
+    //  (맞아 밀리거나 발이 걸려 몸 빠르기가 가려는 속도에서 벗어나면 그만큼 — 휘청 · 붙잡기 반사 · 넘어짐 문턱은 그대로).
+    //  가려는 속도보다 앞으로 빠른 몫은 RUN.flyOver 까지 셈하지 않는다 — 멈추거나 칼을 내 줄어드는 동안은 다음 발을 앞에 딛어 줄인다(뛰는 사람이 서는 꼴)
+    if (G?.fly) {
+      const sm = G.P?.speedMul || 1; // (유파 걸음 빠르기 — 일본 0.70: 가려는 속도는 걸음 장치가 이 몫을 곱한 뒤의 값)
+      const dx = vel.x - want.x * sm;
+      const dz = vel.z - want.z * sm;
+      const da = dx * fwd.x + dz * fwd.z;
+      off = Math.hypot(dx * rgt.x + dz * rgt.z, da > 0 ? Math.max(0, da - RUN.flyOver) : da) / w0;
+    }
     this.offBalance = this.state === 'stand' ? Math.max(0, off - BALANCE.footMargin) : 0;
     // 유파 버티기 (swayScale ①): 발 둘레 여유(footMargin) 밖으로 벗어난 몫에만 곱한다 — 여유 안에서는 그대로 0, 아래 문턱(fallRange·stumbleRange)과
     //  걸음 쪽 문턱(hurryFrom·catchOff)은 그대로라 같은 밀림에 덜 휘청이고 덜 붙잡고 덜 넘어진다. 칸 없는 유파는 1 이라 건너뜀
