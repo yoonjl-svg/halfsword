@@ -4,7 +4,7 @@
 //   겉모습 모두 같음(투구 없음) · 벽 있음 · 한 편 전멸(ffa3 = 하나 남음) 또는 maxSecs.
 //  ffa3 = 셋이 저마다 따로인 판 — 게임에는 없는 판이다(Fighter 편은 0 · 1 만 · 편 전멸도 두 편). 이 도구만 몸을 세운 뒤 f.team 을 자리 번호로 바꿔 흉내 낸다
 //   (셋 이상 판의 ffa 비트는 자리마다라 물리는 그대로 · sameSide 가 자기만 같은 편 → 상대 고르기 · 상대 목록이 셋 따로).
-//  쓰임: node tools/sim/team_sense.mjs [판 수/모드 48] [maxSecs 90] [--modes=2v2,2v1,ffa3] [--profs=2,4,6] [--sides=6:5] [--lone=german] [--lever=none] [--seeding=old] [--ks=1,5] [--json] [--out=파일]
+//  쓰임: node tools/sim/team_sense.mjs [판 수/모드 48] [maxSecs 90] [--modes=2v2,2v1,ffa3] [--profs=2,4,6] [--sides=6:5] [--lone=german] [--field=even|none] [--lever=none] [--seeding=old] [--ks=1,5] [--json] [--out=파일]
 //   --sides=A:B  편마다 숙련도 (2:2 는 A 편을 판마다 0 편 · 1 편 번갈아 · 2:1 은 A = 혼자) — sideAWinPct (ffa3 는 쓰지 않음)
 //  판 짜기 (11/18 P1 — 무리 싸움 판단 작업에서 고침): 무기 배정(loadout)의 씨앗과 숙련 · 편을 서로 엇갈리게 —
 //   예전 짜기(--seeding=old)는 판 k 의 씨앗 k + 1 로 무기를 나눠 ① 2:2 --sides 에서 A 편이 늘 홀수 칸 무기(츠바이핸더 · 사브르 · 에스톡)를,
@@ -65,9 +65,19 @@ const SIDES = flag('sides', null) ? String(flag('sides')).split(':').map(Number)
 const LONE_W = { german: ['longsword', 'kriegsmesser'], italian: ['rapier', 'pappenheimer'], iberian: ['zweihander', 'flamberge'], japanese: ['uchigatana', 'monohoshizao'], chinese: ['hwando', 'qinggang'] };
 const LONE = flag('lone', null);
 if (LONE && !LONE_W[LONE]) throw new Error(`--lone=${LONE}`);
+// --field=even · none (11/19 — 사장님 '상대 쪽 유파가 통제되지 않으면 확률이 오염됨' · 2:1 --sides 판의 둘 쪽 · 안 주면 loadout 섞인 무기 그대로):
+//  even  둘 쪽 두 몸의 유파를 다섯 유파 순서 있는 짝 25 가지(같은 유파 짝 포함)로 판마다 돌림 (판 k → 짝 k mod 25) · 무기는 그 유파 대표 무기 둘(LONE_W)에서 씨앗 홀짝
+//  none  둘 쪽 두 몸을 무유파 칼잡이로 — 롱소드를 쥐되 AI 꾸러미 유파 none (재기 전용 꾸러미 SCHOOLS.none_sword = weaponSchool(롱소드, 'none') — 무유파 기술 · 비기 · 패시브 · 마음가짐 없음 ·
+//        몸 걸음은 롱소드 몸 그대로 = 독일 · 무유파 걸음 칸 없음)
+const FIELD = flag('field', null);
+const FIELD_SCH = ['german', 'italian', 'iberian', 'japanese', 'chinese'];
+if (FIELD && FIELD !== 'even' && FIELD !== 'none') throw new Error(`--field=${FIELD}`);
+if (FIELD === 'none') { const S = await import('../../src/schools.js'); const { WEAPONS: WP } = await import('../../src/weapons.js'); S.SCHOOLS.none_sword ??= S.weaponSchool(WP.longsword, 'none'); }
+/** 2:1 --field 판의 둘 쪽 몸 i(자리 0 · 2) 무기 · 꾸러미 (판 k · 씨앗 seed) */
+const fieldBody = (k, seed, i) => (FIELD === 'none' ? { weapon: 'longsword', school: 'none_sword' } : { weapon: LONE_W[FIELD_SCH[i === 0 ? Math.floor((k % 25) / 5) : k % 5]][seed % 2] });
 const OLD_SEEDING = flag('seeding', '') === 'old'; // --seeding=old: 예전 판 짜기 (무기 씨앗 = 판 씨앗 = k + 1 — 위 '판 짜기' — 견줌 전용)
-const WEAPONS = ['longsword', 'zweihander', 'rapier', 'sabre', 'uchigatana', 'estoc'];
-const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 5) % WEAPONS.length]);
+const WEAPONS = ['longsword', 'kriegsmesser', 'rapier', 'pappenheimer', 'zweihander', 'flamberge', 'uchigatana', 'monohoshizao', 'hwando', 'qinggang']; // 11/19 사장님 '잴 때(뭘 재는 거든) 에스톡과 세이버는 쓰지 마' — 다섯 유파 대표 무기 열 (유파마다 둘 · ai_ring_measure.mjs 와 같음)
+const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 3) % WEAPONS.length]); // 걸음 3 — 한 판 넷까지 서로 다른 무기 (0 · 3 · 6 · 9) · 씨앗 7 걸음으로 열을 다 돎
 const SAMPLE = 6; // 6 스텝 = 20 Hz
 const FAR = 3; // 먼 다가감 문턱 (m — 제 칼끝 + 이만큼 넘게 떨어짐)
 const OPEN_T = CONFIG.ARENA.startHold + 1; // 판 시작 다가감(발 묶임이 풀린 뒤 1 s 안에 시작)을 뺀 먼 다가감 = farLate
@@ -133,14 +143,16 @@ const isAtk = (f) => !!f.aiCtl && (f.aiCtl.mode === 'attack' || !!f.aiCtl.secret
 /** x 가 a 아닌 다른 몸과 붙어 있나 (그 몸을 겨눔 · 서로 닿는 거리) */
 const busyWithOther = (x, a) => !!x.foe && x.foe !== a && targetable(x.foe) && engaged(x, x.foe);
 
-function fight(mode, seed, prof, sideA = null, wseed = seed) {
+function fight(mode, seed, prof, sideA = null, wseed = seed, k = seed - 1) {
   let s = seed * 9301 + 49297;
   Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
   const count = mode === '2v1' || mode === 'ffa3' ? 3 : 4;
   const weapons = loadout(wseed, count);
   if (LONE && mode === '2v1' && sideA === 1) weapons[1] = LONE_W[LONE][seed % 2]; // 혼자 유파 (--lone)
+  const packs = [];
+  if (FIELD && mode === '2v1' && sideA === 1) for (const i of [0, 2]) { const b = fieldBody(k, seed, i); weapons[i] = b.weapon; packs[i] = b.school; } // 둘 쪽 (--field)
   const profOf = (i) => (sideA == null ? prof : (i % 2 === sideA ? SIDES[0] : SIDES[1])); // --sides: 자리 홀짝 = 편
-  const aiOf = (i) => aiAtProficiency({ ai: { persona: {} }, weapon: weapons[i] }, profOf(i));
+  const aiOf = (i) => aiAtProficiency({ ai: { persona: packs[i] ? { school: packs[i] } : {} }, weapon: weapons[i] }, profOf(i));
   const G = mode === 'ffa3' ? newFfa(count, { seed, weapons, aiOf }) : newMatch({ count, ai: 'all', seed, walls: true, weapons, looks: Array(count).fill(LOOKS.enemy), aiOf });
   const F = G.fighters;
   const mates = (f) => F.filter((g) => g !== f && g.team === f.team);
@@ -307,7 +319,7 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
   const alive = F.filter((f) => f.alive);
   const winner = mode === 'ffa3' ? (alive.length === 1 ? alive[0].index : null) : G.winner;
   const end = F.map((f) => `${sideOf(f) ? 'B' : 'A'}${f.alive ? (f.state === 'stand' ? '' : f.state[0]) + f.blood.toFixed(2) : 'x'}`).join(' '); // 판 끝 몸 (편 · 꼴 첫 글자 · 피 · x 죽음)
-  return { mode, seed, wseed, prof, sideA, team, end, runs, runSec, runKinds, aWon: sideA == null ? null : winner === sideA, t: +G.t.toFixed(2), over: mode === 'ffa3' ? alive.length <= 1 : G.over, winner, sw, ...C };
+  return { mode, seed, wseed, prof, sideA, team, end, runs, runSec, runKinds, weapons: [...weapons], packs: [...packs], aWon: sideA == null ? null : winner === sideA, t: +G.t.toFixed(2), over: mode === 'ffa3' ? alive.length <= 1 : G.over, winner, sw, ...C };
 }
 
 const rows = [];
@@ -320,7 +332,7 @@ for (const mode of MODES) for (let k = 0; k < N; k++) {
   const mirror = SIDES && mode !== '2v1';
   const seed = OLD_SEEDING ? k + 1 : mirror ? Math.floor(k / 2) + 1 : k + 1;
   const wseed = OLD_SEEDING ? k + 1 : mirror ? seed : SIDES ? k + 1 : Math.floor(k / PROFS.length) + 1;
-  const r = fight(mode, seed, prof, sideA, wseed);
+  const r = fight(mode, seed, prof, sideA, wseed, k);
   rows.push(r);
   process.stderr.write(`${mode} #${k + 1} p${prof} ${r.t}s ${r.over ? `이김 ${r.winner}` : '끝 안 남'} [${r.end}] (${((Date.now() - t0) / 1000).toFixed(0)}s)\n`);
 }
@@ -385,7 +397,7 @@ function runSummary(R) {
 const out = [];
 for (const mode of MODES) {
   const R = rows.filter((r) => r.mode === mode);
-  out.push(summary(R, SIDES ? `${mode} ${SIDES.join(' vs ')}${LONE ? ` lone ${LONE}` : ''}` : `${mode} all`));
+  out.push(summary(R, SIDES ? `${mode} ${SIDES.join(' vs ')}${LONE ? ` lone ${LONE}` : ''}${FIELD ? ` field ${FIELD}` : ''}` : `${mode} all`));
   if (!SIDES) for (const p of PROFS) out.push(summary(R.filter((r) => r.prof === p), `${mode} p${p}`));
 }
 console.log(`무리 싸움 판단 바탕 — 모드마다 ${N} 판 · 최대 ${MAX} s · ${SIDES ? `편 숙련 ${SIDES.join(' 대 ')}` : `숙련도 ${PROFS.join('/')} 돌아가며`}${LEVER_OFF ? ' · 숙련도 레버 끔' : ''}${OLD_SEEDING ? ' · 예전 판 짜기' : ''} · ${((Date.now() - t0) / 1000).toFixed(0)} s`);

@@ -21,8 +21,8 @@ const LOOKS_TEAM = flag('looks', 'same') === 'team'; // 겉모습: same(기본) 
 const ATK_HOLD = flag('atkHold', null); // 시험: --atkHold=0.4 = '나를 침' 바꿈은 그 상대가 실제 초 0.4 동안 내리 쳐야 (TEAM_FIGHT.target.attackHold — 3단계 2877)
 const FFA = flag('ffa', '1') !== '0'; // 시험: --ffa=0 = 같은 편 지나감 (사장님 10/29 22:3x 전 판 — 전후 비교)
 const WORKER = flag('worker', null);
-const WEAPONS = ['longsword', 'zweihander', 'rapier', 'sabre', 'uchigatana', 'estoc'];
-export const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 5) % WEAPONS.length]);
+const WEAPONS = ['longsword', 'kriegsmesser', 'rapier', 'pappenheimer', 'zweihander', 'flamberge', 'uchigatana', 'monohoshizao', 'hwando', 'qinggang']; // 11/19 사장님 '잴 때(뭘 재는 거든) 에스톡과 세이버는 쓰지 마' — 다섯 유파 대표 무기 열 (유파마다 둘 · ai_ring_measure.mjs 와 같음)
+export const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 3) % WEAPONS.length]); // 걸음 3 — 한 판 넷까지 서로 다른 무기 (0 · 3 · 6 · 9) · 씨앗 7 걸음으로 열을 다 돎
 
 async function fight(mode, seed) {
   const { newMatch, DT, CONFIG } = await import('./jelly_harness.mjs');
