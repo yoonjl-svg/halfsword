@@ -23,6 +23,7 @@ import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜�
 import * as THREE from 'three';
 import { BODY, GAIT, DIG_PROTO, RUN } from './config.js';
 import { TRADITIONS, FAST_ACCENT, footworkTradition } from './schools.js';
+import { runFace } from './run.js'; // 뛰는 동안 바라볼 쪽 (11/18 뛰기 · 11/20 멈추는 동안)
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 이탈리아 물러서기 I3 · 이베리아 옆 박차기 B2 · 독일 간격 잡기 G2)
 import { GUARD_BASE } from './guards.js';
 import { bwAim, bwBurst } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 — 걸 때 나를 겨눠 나가는 칼을 적고 · 뗄 때 표시)
@@ -303,6 +304,7 @@ export class Gait {
     this.burst = this.burstLeg = this.burstBrake = null;
     this.lungeBrake = null; // 안다레 리솔루토 런지 걸음 몸 가속 (아래 req.accel)
     this.backN = 0;
+    this.fly = this.flyAir = false; // 날며 뛰기 (11/20)
     const J = this.f.jointByName;
     for (const k of ['F', 'B']) {
       const l = this.legs[k];
@@ -817,7 +819,7 @@ export class Gait {
     // 돌면서 걸을 땐 (속도 × 도는 빠르기 = 방향을 트는 가속)이 발로 낼 수 있는 만큼만 빨리 간다
     //  (빠르게 걸으며 휙 돌면 몸이 옆으로 흘러 뒤에 남은 발이 닿지 않고 끌린다)
     if (GAIT.turnAccel > 0) {
-      const vMax = GAIT.turnAccel / Math.max(0.1, Math.abs(this.headRate));
+      const vMax = (this.fly ? Math.max(GAIT.turnAccel, RUN.curve * 1.5) : GAIT.turnAccel) / Math.max(0.1, Math.abs(this.headRate)); // 날며 뛰기 (11/20): 둥글게 꺾는 뛰기(RUN.curve)는 줄이지 않음
       const sp = Math.hypot(want.x, want.z);
       if (sp > vMax) want.multiplyScalar(vMax / sp);
     }
@@ -869,7 +871,7 @@ export class Gait {
     // 옆 누르면 첫 걸음에 늘 옆 박차기 (10/21 사장님 '그냥 옆 누르면 첫 걸음에 무조건 나가야지'): 스틱이 옆으로 바뀌는 순간(옆 몫 > 앞뒤 몫 ·
     //  burstStick 넘게 · 앞 몫 < burstFwdMax — 서 있든 걷든 · 거꾸로 옆으로 틀어도) 다음에 떼는 걸음을 옆 박찬 걸음으로(sideDash — 이베리아만). 아직 걷기 문턱 전이면
     //  걷기 시작할 때까지(0.3 s 안) 미뤄 둔다(걷지 않는 몸에 건 박차기는 아래에서 버려지므로). 플레이어만
-    if (pl && mv) {
+    if (pl && mv && !f.run?.fast) { // (뛰는 동안은 옆 박차기 없음 — 11/20)
       this.dashClock = (this.dashClock ?? 0) + dt;
       const m = mv.length();
       const s = m >= GAIT.burstStick && Math.abs(mv.x) > Math.abs(mv.y) && mv.y / m < GAIT.burstFwdMax ? Math.sign(mv.x) : 0;
@@ -901,13 +903,23 @@ export class Gait {
       const vNow = Math.hypot(this.vf.x, this.vf.z);
       if (vNow > speed) cad = Math.max(cad, vNow / runMix(this.P.maxStride, RUN.stride, rk));
     }
+    // 날며 뛰기 (11/20 사장님 '뛰는 속도가 느리더라. 지금 4지? 최소 5에서 6은 돼야겠던데?' — 기록 docs/strike/run_2026-11-20.md): 뛰는 몸(f.run.fast — 뛰는 중 · 뛰다 멈춰 줄어드는 중)이
+    //  몸 앞으로 RUN.flyFrom 넘게 빨리 가면 한 발이 땅을 딛는 시간을 Tc(= RUN.flyContact ÷ 빠르기)로 줄이고 그 뒤 두 발이 모두 뜬 채 나간다 — 걸음이 길어지고 박자가 느려짐
+    //  (박자 = RUN.flyCad[0] + flyCad[1] × 빠르기). 몸이 몸 앞쪽으로 가는 동안만(비스듬히 · 돌아서는 동안은 아래 걷는 박자) · 섞임 rk 0 이면 셈하지 않음(f.run 없는 몸 · 1:1 AI · 시뮬 몸은 늘 끔)
+    if (rk > 0) {
+      const vfw = this.vf.x * fwd.x + this.vf.z * fwd.z;
+      const vh = Math.hypot(this.vf.x, this.vf.z);
+      this.fly = (this.fly || (!!f.run?.on && rk >= RUN.flyK)) && walkNow && !f.feetHeld && f.state === 'stand' && vfw > RUN.flyFrom * (this.fly ? RUN.flyOut : 1) && vfw > RUN.flyFore * vh; // (뛰기가 끝나도 몸이 RUN.flyFrom × flyOut 밑으로 줄 때까지 — 줄어드는 동안도 이 걸음)
+      if (this.fly) cad = RUN.flyCad[0] + RUN.flyCad[1] * vfw;
+      this.flyV = vfw;
+    } else this.fly = false;
     const T = walkNow ? 1 / cad : GAIT.settleT / (1 - this.P.dsFrac);
     this.stepT += (T - this.stepT) * Math.min(1, dt * 6);
     // 빠른 걸음 (10/15): 박자 걸음(P.rhythm — 이탈리아, docs/strike/italian_rhythm_2026-10-15.md)은 켜졌을 때만 센다(rhythmOn — 디딤 셈 N + M 또는 옛 짝 셈 ·
     //  간격 잡기 빠른 디딤(this.chase — 독일, 상대 헛침 뒤 받을 창 · docs/strike/german_chase_2026-10-15.md)(잡기는 holdTick — driveBalance 가 먼저 부름).
     //  판 시작 정지·마무리 중엔 세지 않고 처음부터(받을 창도 버림) · 걷지 않으면 빠른 걸음 끝. 둘 다 없고 빠른 걸음도 아니면 셈하지 않는다
     //  빠른 걸음 중 스틱 앞뒤가 뒤집히면(가려는 속도 앞 몫의 부호가 그 걸음과 반대) 거기서 끝 — 멈춰 서는 동안 서두르지 않게
-    let RH = rhythmOn(this.P.rhythm) ? this.P.rhythm : null;
+    let RH = rhythmOn(this.P.rhythm) && !f.run?.fast ? this.P.rhythm : null; // (뛰는 동안 · 뛰다 줄어드는 동안은 박자 걸음 없음 — 11/20 · 빠른 디딤이 뛰는 빠르기에 또 곱해짐)
     let CH = this.chase;
     //  첫 걸음 박차기(this.burst — 위 걷기 시작에서 건 것)도 같은 자리: 첫 걸음을 떼기 전에 멈추면 버린다 · 박찬 걸음 중 스틱이 거꾸로(옆 박차기는 옆으로 거꾸로) 가면 거기서 끝 ·
     //  박찬 발이 떠 있고 스틱을 밀고 있는 동안은 '걷지 않음'으로 끝내지 않는다(느린 옆·뒤 출발은 걸러진 빠르기가 둘째 스텝에 걷기 문턱 아래로 한 번 깜빡인다 — 그 깜빡임에 박차기가 끊기지 않게)
@@ -934,11 +946,15 @@ export class Gait {
     this.sT = sT;
     const swT = PR ? this.stepT : sT;
     this.dsF = runMix(this.P.dsFrac, RUN.dsFrac, rk); // 두 발 디딤 몫 — 뛰는 걸음은 RUN.dsFrac (11/18 · 디딜 자리 target 도 이 값)
-    const Tds = swT * this.dsF;
-    const Tsw = swT - Tds;
+    // 날며 뛰기 (11/20): 한 발 디딤 Tc · 두 발 디딤 없음 · 발 뜬 시간 = 두 걸음 − Tc (한 발이 Tc 딛고 뗀 뒤 다른 발이 (한 걸음 − Tc) 뒤에 딛는다 — 그 사이 두 발 모두 뜸)
+    const Tc = this.fly ? Math.min(RUN.flyContact / Math.max(this.flyV, RUN.flyFrom), sT * RUN.flyDuty) : 0;
+    this.flyTc = Tc;
+    const Tds = this.fly ? 0 : swT * this.dsF;
+    const Tsw = this.fly ? 2 * sT - Tc : swT - Tds;
 
     const L = this.legs;
     let swing = L.F.stance ? (L.B.stance ? null : L.B) : L.F;
+    let swing2 = rk > 0 && swing === L.F && !L.B.stance ? L.B : null; // 날며 뛰기 (11/20): 두 발 모두 떠 있으면 둘째 발 (뛰는 섞임이 없는 몸은 늘 한 발만 뜸 — 셈하지 않음)
     this.sinceTD += dt;
     for (const k of ['F', 'B']) L[k].tLand += dt;
 
@@ -989,6 +1005,29 @@ export class Gait {
         // (발을 든 동안 발이 땅에 닿아 무게가 실리면(몸이 내려앉음) 그 자리에서 딛는다: 무게 실린 발을 끌고 가면 미끄러진다)
         this.touchdown(swing, speed);
         swing = null;
+      }
+    }
+    // 날며 뛰기 (11/20): 둘째로 뜬 발도 같은 셈 — 첫 발이 딛었으면 그 발이 '떠 있는 발'
+    if (swing2) {
+      swing2.t += dt * (1 + hurry);
+      const u = swing2.t / swing2.T;
+      if (u < GAIT.retarget) this.target(swing2, want, fwd, rgt, Math.max(0, swing2.T - swing2.t));
+      if ((u >= 1 && swing2.soleY < 0.02) || u >= 1 + GAIT.lateMax / swing2.T || (u > 0.8 && swing2.soleY < 0.004) || (u > GAIT.earlyTD && this.groundForce(swing2) > GAIT.earlyLoad * this.Mg)) {
+        this.touchdown(swing2, speed);
+        swing2 = null;
+      }
+      if (!swing) (swing = swing2), (swing2 = null);
+    }
+    // 날며 뛰기 (11/20): 딛은 발이 Tc 만큼 딛었으면 뗀다 → 떠 있는 발이 딛을 때까지 두 발 모두 뜸. 뗀 발은 떠 있는 발이 딛은 뒤 한 걸음(sT) 뒤에 딛게
+    //  (발 뜬 시간 = 떠 있는 발이 남은 시간 + sT — 고른 박자면 두 걸음 − Tc · 박자가 바뀌는 동안에도 두 발이 번갈아 딛음).
+    //  딛은 발을 더 오래 두면 몸이 그 발을 지나 다리가 닿지 않는 데까지 가서 끌린다. 발 들기 높이 RUN.flyLift · 뗄 때 발이 몸 빠르기의 RUN.flyCarry 몫으로 출발(땅을 긁지 않게)
+    if (this.fly && swing && !swing2 && swing.kind === 'walk' && f.muscle > 0.15 && !this.req) {
+      const st = swing === L.F ? L.B : L.F;
+      if (st.stance && st.tLand >= Math.min(st.flyTc || Tc, Tc)) {
+        this.begin(st, 'walk', clamp(Math.max(0, swing.T - swing.t) + sT, sT, 2 * sT));
+        this.flyStep(st);
+        this.target(st, want, fwd, rgt, Tsw);
+        swing2 = st;
       }
     }
 
@@ -1101,7 +1140,7 @@ export class Gait {
       //  (옆걸음은 빼고: 옆으로 벌려 딛은 발은 무게가 늦게 실려 기다리는 동안 다리가 벌어진다)
       //  (고른 짝걸음 pair.even 도 빼고: 디딤 간격이 박자 그 자체라 기다리면 간격이 깨진다 — 박자 걸음 빠른 한 짝 뒤 물러날 때 앞발에 무게가 덜 실려 0.1 s 기다리다
       //   몸이 앞서 나가 다음 따라붙는 발이 옮겨 딛기(catch)가 됐다(가까이 뒤 반 3 s catch 3 · gait_even_feel NI). 짝 발 뜬 시간이 짧아(0.13 s) 끌며 들어도 일찍 디딤·catch 가 늘지 않음)
-      if (next && kind === 'walk' && !PR?.even && GAIT.liftLoad > 0 && vLat < 0.6 * speed && this.sinceTD < (pairTrail ? gate : Tds) + GAIT.liftWait) {
+      if (next && kind === 'walk' && !PR?.even && !this.fly && GAIT.liftLoad > 0 && vLat < 0.6 * speed && this.sinceTD < (pairTrail ? gate : Tds) + GAIT.liftWait) {
         const o = L[next === 'F' ? 'B' : 'F'];
         //  (보조 힘이 많이 받칠 땐(일어선 직후 등) 다리에 실리는 무게도 그만큼 적다)
         //  (뗄 발에 이미 무게가 거의 없으면(뒤로 빠져 떠 있음) 기다리지 않는다: 뛰듯 갈 땐 기다리는 동안 딛은 발이 끌린다)
@@ -1115,6 +1154,7 @@ export class Gait {
         if (this.P.backCap && this.P.backMul === 'flat') this.backStep(kind, this.vf.x * fwd.x + this.vf.z * fwd.z);
         if (kind === 'walk' || kind === 'catch') Tstep /= 1 + hurry;
         this.begin(l, kind, Tstep);
+        if (this.fly && kind === 'walk') this.flyStep(l); // 날며 뛰기 (11/20)
         if (this.burstStep) {
           // 첫 걸음 박차기를 쓴 걸음: 그 발(디딜 자리를 박찬 가속으로 내다봄 — target) · 박찬 쪽(세게 멈춤 — 아래 burstBrake)
           this.burstStep = false;
@@ -1145,6 +1185,8 @@ export class Gait {
     }
     // 발을 뗀 뒤 땅에서 떨어지면 원래 무게로 (땅에 닿은 채 가벼워지면 다리 힘에 발이 휙 끌려 땅을 긁는다)
     if (swing && swing.extra && (swing.soleY > 0.015 || swing.t > 0.12)) this.footMass(swing, false);
+    if (swing2 && swing2.extra && (swing2.soleY > 0.015 || swing2.t > 0.12)) this.footMass(swing2, false); // 날며 뛰기 (11/20)
+    this.flyAir = !!swing2; // 두 발 모두 뜸 (fighter.driveBalance — 그동안 골반 높이는 보조 힘이 받침 · updateFooting)
     // 박자 걸음 셈 끊기(P.rhythm): 걸음(자세 고치기 빼고)이 끝난 뒤 RH.idle s 안에 새 걸음을 떼지 않으면 처음부터 — 발이 떠 있는 동안은 재지 않는다.
     //  옆 걸음·기술 걸음도 걸음이라 시계를 되돌린다(세지도 끊지도 않음). 칸 없으면 셈하지 않는다
     //  막는 동안도 걸음 중과 같게 시계가 0 에 머문다(사장님 결정 10/17 14:5x '막기 중엔 셈을 지우지 않게 함' — parrying): 막기를 놓은 뒤 RH.idle s 안에 걸으면 셈이 이어진다
@@ -1202,7 +1244,7 @@ export class Gait {
     // 한 발로 서 있는데 몸이 그 발에서 너무 멀어지면(다리가 곧 닿지 않는다) 내딛는 발이 닿을 때까지 덜 나간다
     //  (계속 밀고 나가면 뒤에 남은 발이 발끝으로 끌린다)
     const reachSlow = runMix(GAIT.reachSlow, RUN.reachSlow, rk); // 뛰는 걸음은 RUN.reachSlow (11/18)
-    if (swing && swing.kind !== 'req' && reachSlow > 0) {
+    if (swing && !swing2 && !this.fly && swing.kind !== 'req' && reachSlow > 0) {
       const st = swing === L.F ? L.B : L.F;
       const hx = st.hip.x - st.plant.x;
       const hz = st.hip.z - st.plant.z;
@@ -1226,7 +1268,7 @@ export class Gait {
     }
     // ④ 좌우 무게 옮기기: 한 발로 서는 동안 무게중심을 딛은 발 쪽으로 (want에 속도로 더한다)
     this.sway.set(0, 0, 0);
-    if (swing && swing.kind !== 'catch') {
+    if (swing && !swing2 && swing.kind !== 'catch') {
       const u = clamp(swing.t / swing.T, 0, 1);
       const st = swing === L.F ? L.B : L.F;
       const amp = this.P.sway * (walkNow ? 1 : 0.5) * (1 - this.lev);
@@ -1463,9 +1505,10 @@ export class Gait {
     let lead = clamp(this.headRate * GAIT.turnLead, -0.5, 0.5);
     // 돌아서려는 방향(바라볼 곳)을 알면 그쪽을 미리 본다 (한 걸음에 발을 더 많이 돌려 딛는다)
     //  (뛰는 동안은 뛰는 쪽 — 11/18 뛰기 · 사람 몸만 · fighter.updateHeading 이 도는 쪽과 같게)
-    if (GAIT.turnAhead > 0 && (f.faceTarget || f.run?.on)) {
+    const rf = f.run?.back ? runFace(f) : null; // (뛰다 멈춰 줄어드는 동안은 가는 쪽 — 11/20 · run.js runFace)
+    if (GAIT.turnAhead > 0 && (f.faceTarget || rf != null)) {
       const p = f.bodies.pelvis.translation();
-      const d = wrap((f.run?.on ? Math.atan2(-f.run.dz, f.run.dx) : Math.atan2(-(f.faceTarget.z - p.z), f.faceTarget.x - p.x)) - f.heading);
+      const d = wrap((rf != null ? rf : Math.atan2(-(f.faceTarget.z - p.z), f.faceTarget.x - p.x)) - f.heading);
       if (Math.abs(d) > Math.abs(lead)) lead = clamp(d, -GAIT.turnAhead, GAIT.turnAhead);
     }
     return f.heading + lead;
@@ -1473,6 +1516,12 @@ export class Gait {
 
   guardYaw(l) {
     return this.headAhead() + (l.k === 'B' ? -l.side * GAIT.rearToe : 0);
+  }
+
+  /** 날며 뛰기 걸음 (11/20): 발 들기 높이 RUN.flyLift · 뗄 때 발 출발 빠르기 몸의 RUN.flyCarry 몫 (begin 뒤) */
+  flyStep(l) {
+    l.lift = RUN.flyLift;
+    l.v0.set(this.vf.x * RUN.flyCarry, 0, this.vf.z * RUN.flyCarry);
   }
 
   begin(l, kind, T) {
@@ -1562,11 +1611,21 @@ export class Gait {
       // 몸이 닿을 때 있을 곳 + 속도 × (딛는 시간의 절반) (Raibert). 속도가 원하는 것보다 빠르면 더 멀리 딛어 받는다
       //  (첫 걸음 박차기 발이면 몸 빠르기·디딜 때 자리를 박찬 가속으로 내다본다 — burstAhead)
       const v = l === this.burstLeg ? this.burstAhead(p, want, remain, fwd) : this.vf;
-      const Tst = this.sT * (1 + (this.rk > 0 ? this.dsF : this.P.dsFrac)); // 뛰는 걸음은 두 발 디딤 몫 RUN.dsFrac 섞음 (11/18)
+      const Tst = this.fly ? this.flyTc : this.sT * (1 + (this.rk > 0 ? this.dsF : this.P.dsFrac)); // 뛰는 걸음은 두 발 디딤 몫 RUN.dsFrac 섞음 (11/18) · 날며 뛰기는 한 발 디딤 Tc (11/20)
       const px = l === this.burstLeg ? v.px : p.x + v.x * remain;
       const pz = l === this.burstLeg ? v.pz : p.z + v.z * remain;
-      const ox = want.x * Tst * 0.5 + GAIT.kv * (v.x - want.x);
-      const oz = want.z * Tst * 0.5 + GAIT.kv * (v.z - want.z);
+      const ah = this.fly ? RUN.flyAhead : 0.5; // 날며 뛰기 (11/20): 디딤 길의 RUN.flyAhead 몫만 몸 앞에 딛는다 — 무릎을 굽힌 채 닿게(다 편 다리로 닿으면 몸이 장대처럼 솟으며 선다)
+      let ox = want.x * Tst * ah + GAIT.kv * (v.x - want.x);
+      let oz = want.z * Tst * ah + GAIT.kv * (v.z - want.z);
+      if (this.fly) {
+        // (골반이 자세대로 틀어져 있어 뒷다리 엉덩이는 골반 가운데보다 뒤에 있다 — 그 발 엉덩이 기준으로 딛는다: 골반 가운데 기준이면 뒷발이 다리가 닿지 않을 만큼 앞에 떨어져 몸이 솟으며 선다)
+        //  (줄이는 동안(가려는 속도 < 몸 빠르기)도 엉덩이 앞 RUN.flyReach 까지만 — 더 멀리 딛으면 같은 까닭으로 솟음)
+        const hf = (l.hip.x - p.x) * fwd.x + (l.hip.z - p.z) * fwd.z;
+        const oa = ox * fwd.x + oz * fwd.z;
+        const cut = Math.min(0, RUN.flyReach - oa);
+        ox += fwd.x * (hf + cut);
+        oz += fwd.z * (hf + cut);
+      }
       const wd = this.P.width;
       out.set(px + ox + rgt.x * l.side * wd, ANKLE_H, pz + oz + rgt.z * l.side * wd);
       l.yaw1 = this.headAhead();
@@ -1615,6 +1674,7 @@ export class Gait {
 
   touchdown(l, speed) {
     l.stance = true;
+    if (this.fly) l.flyTc = this.flyTc; // 날며 뛰기 (11/20): 이 발이 딛는 시간은 디딜 때의 빠르기로 정함 (줄어드는 동안 Tc 가 늘어 발을 못 떼지 않게)
     if (l === this.burstLeg) this.burstLeg = null; // 첫 걸음 박차기 발이 디딤 (세게 멈춤 burstBrake 는 몸이 따라잡을 때까지 — update)
     // 디딜 때의 무릎 굽힘 (허벅지와 정강이 사이 각도)
     const bt = this.f.bodies[l.thigh].rotation();
@@ -1741,7 +1801,7 @@ export class Gait {
         // 엉덩이에 대한 발의 속도를 제한한다 (다리를 채찍처럼 휘두르면 그 반동이 몸을 떠민다)
         _d.subVectors(_a, l.hip);
         if (l.relOk) {
-          const mv = GAIT.swingVmax * f.lastDt;
+          const mv = (this.fly ? RUN.flySwingV : GAIT.swingVmax) * f.lastDt; // 날며 뛰기 (11/20): 긴 걸음이라 발이 더 빨리 앞으로 (RUN.flySwingV)
           _c.subVectors(_d, l.rel);
           if (_c.lengthSq() > mv * mv) {
             _c.setLength(mv);
