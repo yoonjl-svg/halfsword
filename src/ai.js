@@ -971,7 +971,7 @@ export class AI {
 
     // ── 보기 (반응 시간만큼 늦게) ──
     const s = this.sense.seen(L.reaction + realS(0.04) * this.anger); // 화나면 눈이 조금 늦다
-    this.lastSeen = s; // 늦게 본 모습 (startStrike 의 crouchLow 가 읽음 — 10/27)
+    this.lastSeen = s; // 늦게 본 모습 (가로막기 · 무유파 플랜이 읽음)
     // 약한 자세 겨눔 (10/12 — vital_target.js): 늦게 본 모습을 기술 고르기·공격 준비가 읽는다
     this.vitalS = s;
     const c = me.bodies.chest.translation();
@@ -1094,7 +1094,7 @@ export class AI {
     if (this.glCover && !this.icpPre) this.glCover = null; // ③ 자세 → 칼길 (11/17): 읽은 줄 덮기도 함께 끝
     if (this.glBeat && this.mode !== 'watch') this.glBeat = null; // ③ 공격 직전 자세 박자: 간 보기를 떠났으면(막기 · 물러남 · 공격) 끝
 
-    // 일본 발도 대기 (10/10 02:4x): 상대 간격 밖에 iaiArmTime 초 머물면 웅크린 발도 대기 자세 (간격 안·공격·막기면 풀림). 고노센은 이 자세에서만 (cond.armed)
+    // 일본 발도 대기 (10/10 02:4x): 상대 간격 밖에 iaiArmTime 초 머물면 발도 대기 자세 (간격 안·공격·막기면 풀림). 고노센은 이 자세에서만 (cond.armed) · 11/19 사람과 같은 선 채 허리 대기(전 웅크림 — 사장님 'AI 도 원전 꼴')
     //  10/25 22:3x · 22:5x 사장님 '거리와 상관없이 … 아무 행동 없이 2초' · '준비가 활성화되면 걸어도 유지' (SECRET.gnsReady 'idle' — 사람과 같은 셈 secret.js gnsArmTick): 공격 꼴 · 막기 꼴 · 비기 · 맞음 ·
     //   무릎 꿇음 · 헛스윙 연습이면 풀림 · 준비 전엔 걸음 뜻(moveFeet 의 스틱 원값 — 사람 스틱과 같은 칸)도 셈을 0 으로 · 거리는 안 봄. 'dist' 판 = 아래 옛 셈 그대로
     if (this.iaiArm) {
@@ -1754,7 +1754,7 @@ export class AI {
    *  비기 없는 AI(숙련도 밑 · 닫힌 유파)와 같은 길로 — 상대 사건 · 발도 대기(웅크림) · 길목 · 싱지르 무장 · 모르트슐라크 누르기 · 맺힘 셈 모두 없음. 판마다 새 AI · 새 몸이라 다음 판엔 다시
    */
   dropSecret() {
-    if (this.iaiArm) iaiReadyPose(this.me, false, 1); // 발도 대기 웅크림이 남아 있으면 풀기 (덧씌우기 칸을 가졌을 때만 — iaiReadyW > 0)
+    if (this.iaiArm) iaiReadyPose(this.me, false, 1); // 발도 대기가 남아 있으면 풀기 (덧씌우기 칸을 가졌을 때만)
     this.secret = null;
     this.iaiArm = this.spinArm = this.binds = null;
     this.riso = null; // 안다레 리솔루토 (11/14)
@@ -2481,9 +2481,6 @@ export class AI {
         q[1] = clamp(q[1] + ey, -0.6, 0.6);
       }
     }
-    // 웅크린 사람 (10/27 21:4x 사장님 — SECRET.gnsCrouchAim): 길을 그 몸 높이로 내린다 (난수 없음 · 서 있는 상대면 0 이라 그대로)
-    const low = this.crouchLow();
-    if (low > 0) for (const q of this.path) q[1] = clamp(q[1] - low, -0.6, 0.6);
     if (this.secretRun) this.secretRun.pathN = this.path.length; // 비기 서보 힘 창의 길 점 세기 (이베리아 powerFrom)
     if (this.secretRun && !this.secretRun.burst) {
       // 결정타 연출 (10/9 23:5x): 비기가 터뜨려지는 순간(그 비기의 첫 칼이 나감) — main.js 가 이 수가 바뀌면 화면 시간을 잠깐 늦춘다. 물리·난수와 상관없음
@@ -2512,17 +2509,6 @@ export class AI {
       // 이탈리아 찌르기 ③ (config THRUST.itLunge — 10/25): 팔만으로 안 닿으면(skill.js itMeasure > 0) 팔을 뻗은 뒤 몸 · 발이 따라가는 런지로 딛는다 — stepTime 이 0 이어도 (기술 걸음 'strike' 와 같은 STEP_T · 걸음은 gaitStep)
       if (this.me.skill.tap?.it?.fwd > 0 || (this.me.skill.tap?.drive?.step != null && !this.me.skill.tap.it)) this.stepT = Math.max(this.stepT, STEP_T); // AI 몸 싣기 (11/15 시제품 — THRUST.driveAi 걸음 칸)도 늘 한 걸음
     }
-  }
-
-  /**
-   * 웅크린 사람을 칠 때 길을 내리는 몫 (패드 y — 손 높이 1 m 당 1 · fighter.js rawHand) (10/27 21:4x 사장님 '다른 건 네 말대로 하고' — SECRET.gnsCrouchAim):
-   *  상대가 사람이고 반응 시간만큼 늦게 본 모습(lastSeen)이 고노센 웅크림(crouch = f.iaiReadyW > 0)이면 내 가슴과 그 상대 가슴의 높이 차(m — 낮을 때만).
-   *  새 수 없음(실제 몸 높이). 서 있는 상대 · AI 끼리 · 끄면 0 (그대로)
-   */
-  crouchLow() {
-    const s = this.lastSeen;
-    if (!s || !(s.crouch > 0) || this.foe.aiControlled) return 0;
-    return Math.max(0, this.me.bodies.chest.translation().y - s.cy);
   }
 
   /** 베며 내딛는 시간: 이미 닿는 거리면 내딛지 않는다 (다가오던 걸음의 관성으로 충분하다) */

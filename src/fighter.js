@@ -4030,7 +4030,7 @@ export class Fighter {
       const x = 1 - this.iaiRegripT / Math.max(1e-6, this.iaiRegripDur || 1);
       rgK = x * x * (3 - 2 * x);
     }
-    // 발도 대기 왼손 칼집 입 (11/14 사장님 '원전과 다른 셋 이어서 맞춰' ① — SECRET.iaiSayaReady · secret_instant.js iaiReadyPose(Player) 가 몫 iaiSayaReadyW 를 둠):
+    // 발도 대기 왼손 칼집 입 (11/14 사장님 '원전과 다른 셋 이어서 맞춰' ① — SECRET.iaiSayaReady · secret_instant.js iaiReadyPose 가 몫 iaiSayaReadyW 를 둠):
     //  대기 무게만큼 왼손이 칼자루 끝을 놓고 칼집 입(코등이에서 칼날 쪽 SECRET.iaiSayaKoi m — 칼집째 칼을 쥠)을 쥠 (아래 koiOn — 쥐는 자리 · 곡선 · 끈 힘).
     //  대기가 풀리면(칼을 쥠 · 공격 · 막기) 몫이 대기 무게를 따라 줄며 칼자루로 돌아옴 — 한 스텝에 0 이 되는 사람(칼을 쥠)은 SECRET.iaiRegrip 초에 걸쳐(한 스텝에 튀지 않게) · 발도 · 굳음 · 풀기 동안은 0 (발도 길이 왼손을 가짐)
     let syK = 0;

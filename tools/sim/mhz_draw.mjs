@@ -3,7 +3,7 @@
 //   기록 docs/strike/monohoshizao_draw_2026-11-13.md). 재기만 한다 — 게임 값은 --set 으로 이 프로세스 안에서만.
 //  shot: 서 있는 과녁(롱소드 AI 생각 끔 — 손 목표를 자세 패드에 묶음)에게 발도 한 번 —
 //   hip · held = 사람 발도(iai_real.mjs gnsShot 과 같은 길: 손가락 칼 몸 · PlayerSecretWatch 준비 · skill.secret → requestIai player) ·
-//   crouch = AI 발도(웅크린 대기 iaiReadyPose → requestIai — req.player 아님 · 몸은 AI 몸 표시 aiControlled).
+//   ai = AI 발도(발도 대기 iaiReadyPose → requestIai — req.player 아님 · 몸은 AI 몸 표시 aiControlled · 11/19 사람과 같은 선 채 허리 대기 — 전 'crouch' 웅크린 대기).
 //   스텝마다 iai_real.mjs pose()(낸 때 가슴 원점 · 헤딩 틀) + 빈손 목표(offArmIK 에 마지막으로 간 점 — 가슴 몸체 틀) · 칼 손 목표(armIK 마지막 점 — 가슴 몸체 틀) ·
 //   빈손 ↔ 칼자루 끝 거리(offHand 의 pommel — 칼 원점 + gripAlong) · 쥠(gripping) · 칼끝 빠르기.
 //   요약: 맞음 · 칼끝 길 · 빠르기 · 굳음 칼 · 팔 · 쥠 스텝 수(뽑기 · 굳음 · 풀기) · 다시 쥐기(풀기 끝 → 첫 쥠 · 자리 잡음 — 빈손 ↔ 칼자루 끝이 뽑기 전 거리 + 2 cm 안) ·
@@ -76,7 +76,7 @@ export function mhzShot({ weapon = 'monohoshizao', foeW = 'longsword', guard = '
   const G0 = newRound({ walls: false, weapon, weapon2: foeW, seed });
   const contact = G0.player.swordArt.measure.contact;
   G0.world.free();
-  const ai = start === 'crouch';
+  const ai = start === 'ai';
   const G = newRound({ walls: false, weapon, weapon2: foeW, seed, gap: contact + gapAdd, persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0 && !ai) f.humanInput = true; } });
   const P = G.player;
   const A = G.enemy;
@@ -88,7 +88,7 @@ export function mhzShot({ weapon = 'monohoshizao', foeW = 'longsword', guard = '
   let fired = false;
   if (ai) {
     P.aiControlled = true; // AI 몸 표시 (fighter.js armClearOn — AI 몸 몫)
-    G.before = () => iaiReadyPose(P, !fired, DT); // AI 고노센(숙련 5 일본)의 웅크린 발도 대기 (gns_belly.mjs standShot crouch 와 같음)
+    G.before = () => iaiReadyPose(P, !fired, DT); // AI 고노센(숙련 5 일본)의 발도 대기 (gns_belly.mjs standShot ai 와 같음 · 11/19 선 채)
   } else {
     P.skill.corr = CONFIG.SKILL.corr;
     P.skill.autoGuard = true;
@@ -223,7 +223,7 @@ export function readyShot({ weapon = 'uchigatana', foeW = 'longsword', guard = '
   const G0 = newRound({ walls: false, weapon, weapon2: foeW, seed });
   const contact = G0.player.swordArt.measure.contact;
   G0.world.free();
-  const ai = start === 'crouch';
+  const ai = start === 'ai';
   const G = newRound({ walls: false, weapon, weapon2: foeW, seed, gap: contact + gapAdd, persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0 && !ai) f.humanInput = true; } });
   const P = G.player;
   const A = G.enemy;
@@ -414,7 +414,7 @@ if (isMain(import.meta.url)) {
     if (json) writeFileSync(json, JSON.stringify({ set: arg('set', ''), rows }));
   } else if (mode === 'ready') {
     const rows = [];
-    for (const guard of arg('guards', 'langort,ochsR,pflugR').split(',')) for (const start of arg('start', 'hip,crouch').split(',')) {
+    for (const guard of arg('guards', 'langort,ochsR,pflugR').split(',')) for (const start of arg('start', 'hip,ai').split(',')) {
       const r = readyShot({ weapon: arg('weapon', 'uchigatana'), foeW: arg('foe', 'longsword'), guard, start });
       rows.push({ guard, start, sum: r.sum, frames: arg('trace', null) ? r.frames : undefined });
       const s = r.sum;

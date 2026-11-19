@@ -5,7 +5,7 @@
 //   ① 상대 몸 부위마다 칼이 처음 닿는 때(u — 발도 0 ~ 1 · secret_instant.js stepIai 와 같은 닿음 instantTouch) · 차례 ② 게임이 판정한 첫 닿음(부위 · 구역 · 심각도) · 베고 지나감 둘째 닿음
 //   ③ 칼이 상대 몸 가운데 줄(가슴 세로 축)을 지날 때 높이(땅 위 m) ④ 칼 가장 낮은 점(땅 위) · 제 다리 · 골반과 가장 가까운 거리 ⑤ 칼 팔 펴짐(어깨 ↔ 손목 / 팔 길이 — 가운데 · 끝) ⑥ 끝에 서 있나
 //   를 적는다. 자세 = 롱소드 AI 간 보는 자세(WATCH_GUARDS 아홉) · 일본 AI(JAPANESE_WATCH 일곱 — schools.js) · 처음 손 = 허리 대기(hip — 사람 준비 SECRET.gnsReadyHip 자세) · 겨눔(guard — 손 그대로) ·
-//   웅크림(crouch — AI 고노센의 발도 대기 iaiReadyPose 에서 AI 처럼 냄 · req.player 아님)
+//   ai — AI 고노센처럼 냄(발도 대기 iaiReadyPose — 11/19 사람과 같은 선 채 허리 대기 · req.player 아님 · 전 'crouch' 웅크린 대기)
 //  fight: jp_strength.mjs 싸움 그대로 + 고노센마다(발도 하나) 첫 닿음 부위 · 둘째 닿음 · 막힘 · 그때 AI 자세 · AI 몸짓(꽂개 — 읽기만)
 //  node tools/sim/gns_belly.mjs stand [--set=SECRET.iaiBelly=1,...] [--foe=longsword,uchigatana] [--start=hip,guard] [--gap=+0.3,+0.75] [--json=파일] [--trace=파일 (그림용 — 한 자세)]
 //  node tools/sim/gns_belly.mjs fight [--cells=...] [--seeds=1-24] [--set=...] [--par=4] [--tag=이름] [--json=파일]
@@ -15,7 +15,7 @@ import { writeFileSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { newRound, DT, CONFIG, THREE } from './harness_m.mjs';
-import { requestIai, iaiReadyPose, iaiReadyPosePlayer } from '../../src/secret_instant.js';
+import { requestIai, iaiReadyPose } from '../../src/secret_instant.js';
 import { applySets } from './rapier_defence.mjs';
 import { strengthProbe, strengthRow } from './jp_strength.mjs';
 import { fightOne } from './school_balance.mjs';
@@ -98,14 +98,14 @@ export function standShot({ foeW = 'longsword', guard = 'langort', start = 'hip'
   };
   const settle = CONFIG.ARENA.startHold + 1.4;
   G.before = () => {
-    if (start === 'hip' && !P.iai && !fired) iaiReadyPosePlayer(P, true, false, DT, true);
-    if (start === 'crouch') iaiReadyPose(P, !fired, DT); // AI 고노센(숙련 5 일본)의 웅크린 발도 대기 — 그 자리에서 곧장 (req.player 아님 · 발도 중엔 AI 처럼 iaiBusy 로 0)
+    if (start === 'hip' && !P.iai && !fired) iaiReadyPose(P, true, DT);
+    if (start === 'ai') iaiReadyPose(P, !fired, DT); // AI 고노센(숙련 5 일본)의 발도 대기(11/19 선 채 — 전 웅크림) — 그 자리에서 곧장 (req.player 아님 · 발도 중엔 AI 처럼 iaiBusy 로 0)
   };
   let fired = false;
   while (G.t < settle) G.step();
   const d0 = P.foeDistance();
   const foeY0 = Object.fromEntries(['chest', 'abdomen', 'pelvis'].map((n) => [n, A.bodies[n].translation().y]));
-  requestIai(P, start === 'crouch' ? {} : { player: true });
+  requestIai(P, start === 'ai' ? {} : { player: true });
   fired = true;
   const touch = {};
   // 그림 틀 (tools/sim/secret_trace.mjs 와 같은 꼴 — 낸 때 내 가슴 원점 · x 앞 · y 위 · z 칼 든 쪽): secret_trace_draw.py 가 그대로 읽음

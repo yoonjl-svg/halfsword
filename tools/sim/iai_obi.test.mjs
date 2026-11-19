@@ -1,6 +1,6 @@
 // 帯刀 시험 (사장님 11/14 결정 "권고대로 둘 다 진행해" — 기록 docs/strike/iai_obi_2026-11-14.md · 확인표 3870 ~ · src/iai_obi.js · 시간 상한 기준 없음 — 자리 · 거리 · 틈 · 뚫음만 봄)
 //  ① 기본값: SECRET.iaiObi · iaiObiSaya 1 · 칼집 입(= 칼날 시작)이 배꼽 앞(몸 가운데 · 배 앞면 밖 · 허리띠 높이) · 칼 축은 왼 뒤로 · 쉬는 칼집 축은 그보다 뒤로 · 새 시간 값 없음
-//  ② 대기 칼 자리 (사람 허리 대기 · AI 웅크린 대기 × 일본 칼 넷): 코등이가 배꼽 앞(골반 틀 몸 가운데 ±4 cm · 배 앞면 밖) · 칼이 칼집 안(칼집이 칼을 감싸고 칼날이 칼집 겉 밖으로 안 나옴) /
+//  ② 대기 칼 자리 (사람 허리 대기 · AI 허리 대기(11/19 — 전 웅크린 대기) × 일본 칼 넷): 코등이가 배꼽 앞(골반 틀 몸 가운데 ±4 cm · 배 앞면 밖) · 칼이 칼집 안(칼집이 칼을 감싸고 칼날이 칼집 겉 밖으로 안 나옴) /
 //     끄면(?iaiObi=0) 코등이가 몸 가운데에서 왼쪽 10 cm 넘게 (11/14 판)
 //  ③ 칼집은 골반을 따름: 서기 · 걷기 · 달리기 · 물러서기 동안 칼집이 골반 그림 그룹의 아이 · 골반 틀 자리 그대로(쉬는 칼집)
 //  ④ 칼집 입 ↔ 왼손: 대기 동안 왼손 쥠 자리(칼 축 칼날 시작 + iaiSayaKoi)가 칼집 입 + iaiSayaKoi 와 같은 점 · 鞘引き 끝(굳음)은 왼손이 칼집 입 쥠 자리 곁(5 cm 안) ·
@@ -28,7 +28,7 @@ import { readyShot, sayaScript, sayaMeasure, lookOf, WEAPONS, notoRun } from './
 import { PlayerSecretWatch, IaiArm } from '../../src/secret.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { mhzShot } from './mhz_draw.mjs';
-import { iaiReadyPose, iaiReadyPosePlayer, requestIai } from '../../src/secret_instant.js';
+import { iaiReadyPose, requestIai } from '../../src/secret_instant.js';
 import { obiGrip, obiPulled, obiSayaPose, obiRest } from '../../src/iai_obi.js';
 import * as THREE from '../../node_modules/three/build/three.module.js';
 
@@ -91,8 +91,8 @@ test('③ 칼집은 골반을 따름 — 골반 그림 그룹의 아이 · 걷�
 });
 
 test('④ 칼집 입 ↔ 왼손 쥠 자리 — 대기 동안 같은 점 · 鞘引き 끝은 왼손 곁', () => {
-  // 모노호시자오 AI 웅크린 대기는 바탕부터 대기 칼이 자세를 못 지킴(② 머리말) — 사람 허리 대기로
-  for (const [weapon, mode] of [['uchigatana', 'crouch'], ['monohoshizao', 'hip']]) {
+  // 모노호시자오 AI 대기는 바탕부터 대기 칼이 자세를 못 지킴(② 머리말 — 웅크린 대기 때 잰 것) — 사람 허리 대기로
+  for (const [weapon, mode] of [['uchigatana', 'ai'], ['monohoshizao', 'hip']]) {
     const hip = mode === 'hip';
     const G = newRound({ walls: false, weapon, weapon2: 'longsword', seed: 1, gap: 4, onFighter(f) { if (f.index === 0 && hip) f.humanInput = true; } });
     const P = G.player;
@@ -100,7 +100,7 @@ test('④ 칼집 입 ↔ 왼손 쥠 자리 — 대기 동안 같은 점 · 鞘�
       if (hip) { P.skill.corr = CONFIG.SKILL.corr; P.skill.autoGuard = true; } else P.aiControlled = true;
       G.ai.update = () => {};
       let fire = false;
-      G.before = () => (fire ? null : hip ? iaiReadyPosePlayer(P, true, false, DT, true) : iaiReadyPose(P, true, DT));
+      G.before = () => (fire ? null : hip ? iaiReadyPose(P, true, DT) : iaiReadyPose(P, true, DT));
       while (G.t < CONFIG.ARENA.startHold + 1.5) (G.step(), P.syncMeshes());
       // 대기: 칼집 입 쥠(칼집 틀 y = iaiSayaKoi) = 칼 축 칼날 시작 + iaiSayaKoi (offHand 가 쥐는 점) · 왼손이 그 곁
       const pose = obiSayaPose(P);
@@ -131,7 +131,7 @@ test('④ 칼집 입 ↔ 왼손 쥠 자리 — 대기 동안 같은 점 · 鞘�
     }
   }
   // 鞘戻し: 다시 쥐는 동안 빈손 목표(골반 틀)가 쉬는 칼집 입 쥠을 지남
-  for (const start of ['hip', 'crouch']) {
+  for (const start of ['hip', 'ai']) {
     const r = mhzShot({ weapon: 'uchigatana', foeW: 'longsword', guard: 'langort', start, gapAdd: 0.3 });
     const g = obiGrip({ side: 1 });
     const R = r.frames.filter((f) => f.rgK != null && f.offP);
@@ -282,10 +282,12 @@ function human(vals, drive) {
 const notoRuns = {};
 const noto = (weapon, mode) => (notoRuns[`${weapon} ${mode}`] ??= notoRun({ weapon, mode }));
 
-test('⑭ 칼끝이 칼집 입으로 들어감 — 칼집 몸 옆으로 드는 스텝 없음 (사람 허리 대기 · AI 웅크린 대기 × 우치가타나 · 무라마사 · 쿠사나기)', () => {
+test('⑭ 칼끝이 칼집 입으로 들어감 — 칼집 몸 옆으로 드는 스텝 없음 (사람 허리 대기 × 우치가타나 · 무라마사 · 쿠사나기)', () => {
+  // 11/19 AI 도 선 채 허리 대기(사장님 'AI 도 원전 꼴' — 전 웅크린 대기는 이 시험을 넘었음): AI 몸 납도는 칼끝이 입 밖 0.28 ~ 0.44 m 에서 칼집 옆으로 듦 —
+  //  사람 팔 몫(playerArm — 손목 겨눔 등 A4 ~ A6)을 켜면 셋 다 입으로 듦(재 봄) → 4 단계(보정 v2 묶음 — A4 ~ A6 을 AI 에)에서 'ai' 를 다시 넣음 (기록 human_ai_parity §9)
   for (const weapon of WEAPONS)
-    for (const mode of ['hip', 'crouch']) {
-      if (weapon === 'monohoshizao') continue; // AI 웅크림은 대기 칼이 자세를 못 지킴 (② 머리말) · 허리 대기는 칼집 입을 허리띠 곁에 둔 뒤 팔 · 손목이 칼끝을 입에 못 댐 (11/14 '허공에 붕 떠보이는데' 뒤 — 모자람 · 기록 §15)
+    for (const mode of ['hip']) {
+      if (weapon === 'monohoshizao') continue; // (웅크림 판 AI 는) 대기 칼이 자세를 못 지킴 (② 머리말) · 허리 대기는 칼집 입을 허리띠 곁에 둔 뒤 팔 · 손목이 칼끝을 입에 못 댐 (11/14 '허공에 붕 떠보이는데' 뒤 — 모자람 · 기록 §15)
       const e = noto(weapon, mode).even;
       assert.ok(e && e.entry, `${weapon} ${mode} 칼끝이 칼집 안으로 듦`);
       assert.ok(e.entry.viaMouth, `${weapon} ${mode} 칼끝이 칼집 입 곁에서 들어감 (앞 스텝 입 밖 ${e.entry.prevY} m · 단면 ${e.entry.prevE} 배)`);

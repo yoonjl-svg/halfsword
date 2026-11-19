@@ -17,7 +17,7 @@ import { segDist } from './skill.js';
 import { kitOff } from './skill_kit.js'; // 격살 (10/22): 받은 자세가 동방 막기 I(C7 — 몸꼴 parryCover)일 때만
 import { RisolutoWatch, lungeGapOk, bladesNear } from './italian_risoluto.js'; // 이탈리아 거침없이 나아가 찌르기 — 덮인 채 나아가기 (10/22 사람 먼저)
 import { itEdgeOk, itStats } from './italian_outbox.js'; // 이탈리아 칼 우위 (11/14 설계안 A — 리솔루토 창은 칼 우위 동안만 · config IT_OUTBOX.edgeRiso)
-import { iaiReadyPosePlayer } from './secret_instant.js'; // 사람 고노센 준비 웅크림 (10/25 23:0x — SECRET.gnsCrouch)
+import { iaiReadyPose } from './secret_instant.js'; // 고노센 발도 대기 — 선 채 허리 대기 (사람 · AI 같은 몸 — 11/19)
 const _rg = {}; // Rapier 콜백 예외 통 (11/17 — rapier_guard.js: 콜백 안 예외를 적고 엔진 부름 뒤 node 에서 다시 던짐)
 
 const clamp = THREE.MathUtils.clamp;
@@ -389,7 +389,7 @@ export class BindCount {
 
 /**
  * 일본 발도 대기 (10/10 02:4x 사장님 '뒤로 몇 초 이상 물러서면?'): 상대 간격 밖(상대 칼 닿는 거리 밖)에 SECRET.iaiArmTime 초 이상 계속 머물면 armed.
- *  간격 안으로 들어가거나 공격·막기(busy)면 풀린다. AI 는 이때 웅크린 발도 대기 자세(secret_instant.js iaiReadyPose), 플레이어는 '고노센 준비' 표시만.
+ *  간격 안으로 들어가거나 공격·막기(busy)면 풀린다. 사람 · AI 모두 이때 선 채 허리 발도 대기 자세(secret_instant.js iaiReadyPose — 11/19 · 전 AI 는 웅크림).
  *  고노센(cond.armed)은 armed 일 때만 — SECRET.iai 일 때. AI·플레이어 같은 셈
  */
 //  (10/11 이베리아 길목 지키기(v6)도 같은 셈을 썼다 — 비기 정의는 4차 · 읽는 코드는 11/17 걷음). 일본은 열쇠 없이 부르니 전과 같다.
@@ -800,7 +800,7 @@ export class PlayerSecretWatch {
       this.swing = null;
       this.combo = 0;
       this.iaiArm.tick(0, false, true);
-      if (S?.do?.instant) iaiReadyPosePlayer(me, false, true, dt, true); // 웅크림 · 허리 대기도 풀림 (손 · 칼은 곧장 · 몸은 gnsCrouchOut)
+      if (S?.do?.instant) iaiReadyPose(me, false, dt, 0, true); // 허리 대기도 풀림 (손 · 칼은 곧장 · 준비 무게는 gnsCrouchOut)
       this.spinArm.tick(0, false, true);
       if (this.pc) this.pc.pend = this.pc.buf = null;
       this.riso?.reset();
@@ -826,12 +826,12 @@ export class PlayerSecretWatch {
     // 고노센 준비 (10/25 22:3x · 22:5x 사장님 '거리와 상관없이 … 아무 행동 없이 2초' · '준비가 활성화되면 걸어도 유지' — gnsArmTick 'idle'): 휘두름 · 탭 · 손잡이 찍기 · 비기 · 막기 단추 · 맞음이면 풀림 ·
     //  준비 전엔 이동 입력도 셈을 0 으로 · 'dist'(10/25 전 판) = 상대 칼 거리 밖(긴 칼 상대 규칙 gnsLong 이 아니면 d0 > foeReach 그대로) · 휘두름 · 비기만 풀림
     if (S.do?.instant) gnsArmTick(this.iaiArm, dt, gnsHumanUnsettled(me, hurt) || busy, gnsHumanMoving(me), { outside: gnsOutside(d0, V, this.iaiArm.armed, 1), busy: sw || busy }, armHold(me)); // 판 시작 정지 동안 셈 0 (10/27 23:0x)
-    // 웅크림 (10/25 23:0x 사장님 '플레이어도 고노센 준비가 되면 웅크리게 해.' — SECRET.gnsCrouch · secret_instant.js iaiReadyPosePlayer): 준비된 동안 AI 와 같은 발도 대기 자세 ·
+    // 발도 대기 (10/25 23:0x 사장님 '플레이어도 고노센 준비가 되면 웅크리게 해.' — 그 웅크림은 10/31 걷음 · secret_instant.js iaiReadyPose — 11/19 AI 와 같은 함수): 준비된 동안 AI 와 같은 발도 대기 자세 ·
     //  칼을 쥐면(손가락 움직임 · 막기 단추 · 휘두름) 손 · 칼은 곧장 사람 것 — 몸 웅크림은 그대로 · 0 이면 '고노센 준비' 표시만(전 판)
     //  10/31 허리 대기 (사장님 08:xx '웅크리기를 없앴더니 고노센 발동창이 안열려.' — SECRET.gnsReadyHip · 웅크림 0 일 때): 몸은 선 채 손 · 칼만 왼 허리 발도 대기 —
     //   칼을 쥠 = 손가락이 닿은 자리에서 길게 누름 한도(INPUT.holdPx)를 넘게 끌었음(main.js handGrip — 얹은 손가락의 떨림 · 떠돎은 쥠이 아님) · 막기 단추 · 휘두름. 손가락 몸이 없으면(시뮬 · 마우스) 손가락 움직임 그대로
     //  11/14 납도 (SECRET.iaiSheathe — IaiArm.sheathe): 준비 셈이 iaiArmTime 을 넘은 뒤 준비 전 iaiSheathe 초 동안 칼을 칼집에 넣음 (손이 쉴 때만 — 쥐면 곧장 사람 손 · 셈은 그대로)
-    if (S.do?.instant) iaiReadyPosePlayer(me, this.iaiArm.armed && !busy, !!(me.handGrip ?? me.inputActive) || !!me.parryGuard?.held || sw, dt, true, busy ? 0 : this.iaiArm.sheathe);
+    if (S.do?.instant) iaiReadyPose(me, this.iaiArm.armed && !busy, dt, busy ? 0 : this.iaiArm.sheathe, !!(me.handGrip ?? me.inputActive) || !!me.parryGuard?.held || sw);
     if (S.do?.altib) this.spinTick(dt, d0, V, busy, sw); // 11/11 알티바슈 포르트도 싱지르 무장 그대로
     if (!sw && this.swing) {
       // 베기 하나가 끝났다

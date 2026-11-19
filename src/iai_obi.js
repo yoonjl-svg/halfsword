@@ -3,7 +3,7 @@
 //   — 기록 docs/strike/iai_obi_2026-11-14.md · 확인표 3870 ~)
 //  원전: 전일본검도연맹 거합 「指導上の留意点」 2025 作法 3② 帯刀 「右手で鍔がへそ前に来るように刀を帯びる」(코등이가 배꼽 앞) ·
 //   解説 1본 「刃を上にしたまま、鞘引きとともに刀を抜き出し」(날은 위 · 칼집을 당기며 뽑음) · 「鯉口をへそ前に戻しながら」(鞘戻し — 칼집 입을 배꼽 앞으로)
-//  ① 대기 칼 자리 (SECRET.iaiObi): 발도 대기(사람 허리 대기 · AI 웅크린 대기) 동안 칼은 허리띠에 찬 칼집 안 — 칼날 시작(칼 축 hiltLength · 칼집 입)이
+//  ① 대기 칼 자리 (SECRET.iaiObi): 발도 대기(사람 · AI 허리 대기 — 11/19 · 전 AI 는 웅크린 대기) 동안 칼은 허리띠에 찬 칼집 안 — 칼날 시작(칼 축 hiltLength · 칼집 입)이
 //   골반 몸체 틀 SECRET.iaiObiMouth · 칼 축(칼끝 쪽)이 SECRET.iaiObiAxis. 골반을 따름(칼집은 허리띠에 참) — 덧씌우기 칸(thrustPose)의 칼 손 · 칼날을 스텝마다 이 자리에서 셈 ·
 //   뽑는 길의 시작 자리(B)도 이 자리 (secret_instant.js startIai). 鞘戻し 점(fighter.js sayaMouthW)도 이 자리의 칼집 입 쥠(칼집 입 + iaiSayaKoi).
 //  ② 빈 칼집 (SECRET.iaiObiSaya — 그림만: 물리 몸 · 판정 · 난수 없음): 일본 칼 넷을 쥔 몸의 골반 그림에 칼집 하나 —
@@ -74,7 +74,7 @@ export function pelvisToWorld(f, v) {
 
 /**
  * ① 대기 칼 자리를 덧씌우기 칸 꼴로 (thrustPose hand = 칼 원점(손) · dir = 칼날 — 가슴 원점 · 몸 헤딩 틀 f.yaw): 칼집 입 M(월드) − 축 × hiltLength = 칼 원점.
- *  hand · dir 배열에 넣음 (iaiReadyPose · iaiReadyPosePlayer · startIai 뽑는 자리)
+ *  hand · dir 배열에 넣음 (iaiReadyPose · startIai 뽑는 자리)
  */
 export function obiReadyInto(f, hand, dir) {
   const r = f.bodies.pelvis.rotation();
@@ -218,7 +218,7 @@ export function notoPlan(f, u, N) {
   return N;
 }
 /**
- * 납도 한 스텝 (secret_instant.js iaiReadyPose · iaiReadyPosePlayer — 준비 전 납도 몫 s 0 → 1 · IaiArm.sheathe): hold = 손이 쉼(사람 — 칼을 쥐지 않음 · AI 늘 참).
+ * 납도 한 스텝 (secret_instant.js iaiReadyPose — 준비 전 납도 몫 s 0 → 1 · IaiArm.sheathe): hold = 손이 쉼(사람 — 칼을 쥐지 않음 · AI 늘 참).
  *  손을 놓은 첫 스텝(덧씌우기 몫 0 에서)에 지금 칼 자리(골반 틀 칼 원점 · 칼 축)를 잡아 남은 몫 동안 납도 길(notoPlan)을 감 — 잡은 자리가 첫 목표라 덧씌우기 몫 1 로 들어가도 튀지 않음.
  *  쥐면(hold 거짓) 몫 0 — 칼은 곧장 사람 손 (셈은 그대로 흐름 · 다시 놓으면 그 자리에서 이어감). hand · dir = 덧씌우기 칸. 돌려줌: 덧씌우기 몫
  */

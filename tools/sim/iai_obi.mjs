@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  iai_obi.mjs — 帯刀 대기 칼 자리 · 빈 칼집 재기 (사장님 11/14 결정 "권고대로 둘 다 진행해" — 기록 docs/strike/iai_obi_2026-11-14.md · src/iai_obi.js).
 //   재기만 한다 — 게임 값은 --set 으로 이 프로세스 안에서만.
-//  ready: 발도 대기에 들어 1.5 s — 사람 허리 대기(강제 iaiReadyPosePlayer standing) · AI 웅크린 대기(iaiReadyPose) × 무기:
+//  ready: 발도 대기에 들어 1.5 s — 사람 허리 대기 · AI 허리 대기(같은 iaiReadyPose — 11/19 · 전 AI 웅크린 대기 'crouch') × 무기:
 //   칼날 시작(칼집 입) · 코등이 골반 틀 자리 · 칼 축 · 목표(대기 칼 자리)와 어긋남 · 칼집이 칼을 감싼 몫 · 칼날 ↔ 칼집 (칼날 점이 칼집 단면 밖으로 나온 가장 큰 몫)
 //  saya: 칼집 뚫음 · 틈 — 동작 대본(서기 · 걷기 · 달리기 · 낮은 걸음 · 발도 대기 · 뽑기 · 잔심 · 다시 쥐기 · 밀치기 묶임 · 맞음 · 넘어짐 · 쓰러져 죽음)을 스텝마다:
 //   칼집 겉(단면 둘레 점 — 칼집 그림과 같은 단면 줄)에서 ① 골반 · 배 상자(물리 몸)까지 가장 가까운 틈(+ = 떨어짐 · − = 뚫음) — 떠 보임은 쉬는 칼집(제자리 · 鞘引き)이 몸에서 떨어진 몫 ·
@@ -11,13 +11,13 @@
 //  node tools/sim/iai_obi.mjs ready [--weapons=uchigatana,muramasa,kusanagi,monohoshizao] [--set=…] [--json=…]
 //  node tools/sim/iai_obi.mjs saya [--weapons=…] [--looks=player,minami,…] [--set=…] [--json=…]
 //  node tools/sim/iai_obi.mjs fight [--weapons=…] [--seeds=1-6] [--look=…] [--set=…] [--json=…]
-//  node tools/sim/iai_obi.mjs noto [--weapons=…] [--modes=hip,crouch] [--set=…] [--json=…] — 11/14 납도(SECRET.iaiSheathe): 사람 창 · AI 셈으로 납도 시작 · 준비 시각 ·
+//  node tools/sim/iai_obi.mjs noto [--weapons=…] [--modes=hip,ai] [--set=…] [--json=…] — 11/14 납도(SECRET.iaiSheathe): 사람 창 · AI 셈으로 납도 시작 · 준비 시각 ·
 //   칼날 ↔ 몸 · 다리 · 칼집이 감싼 칼날이 칼집 겉 밖 · 준비 뒤 칼이 칼집 안 · 칼집 ↔ 몸 · 한 스텝 옮김(튐) · 칼끝 빠르기 (대본 saya 에도 '납도' 동작)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync } from 'node:fs';
 import { newRound, DT, CONFIG, THREE, AI } from './harness_m.mjs';
 import { applySets } from './rapier_defence.mjs';
-import { iaiReadyPose, iaiReadyPosePlayer, requestIai } from '../../src/secret_instant.js';
+import { iaiReadyPose, requestIai } from '../../src/secret_instant.js';
 import { PlayerSecretWatch, IaiArm } from '../../src/secret.js';
 import { PlayerParryGuard } from '../../src/parry_button.js';
 import { obiReady, obiSayaPose, sageoPoints, notoBelt } from '../../src/iai_obi.js';
@@ -378,15 +378,15 @@ export function sayaFight({ weapon = 'uchigatana', look = 'player', seed = 1, du
   }
 }
 
-/** 대기 칼 자리 (사람 허리 대기 · AI 웅크린 대기) 한 판 */
+/** 대기 칼 자리 (사람 · AI 허리 대기 — 11/19 · 전 AI 웅크린 대기) 한 판 */
 export function readyShot({ weapon = 'uchigatana', mode = 'hip', seed = 1, look = 'player' } = {}) {
-  const ai = mode === 'crouch';
+  const ai = mode === 'ai';
   const G = newRound({ walls: false, weapon, weapon2: 'longsword', seed, gap: 2.4, look: lookOf(look), persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0 && !ai) f.humanInput = true; } });
   const P = G.player;
   const A = G.enemy;
   G.ai.update = () => { A.move.set(0, 0); A.handOffset.set(0, 0); };
   if (ai) { P.aiControlled = true; G.before = () => iaiReadyPose(P, true, DT); }
-  else { P.skill.corr = CONFIG.SKILL.corr; P.skill.autoGuard = true; G.before = () => iaiReadyPosePlayer(P, true, false, DT, true); }
+  else { P.skill.corr = CONFIG.SKILL.corr; P.skill.autoGuard = true; G.before = () => iaiReadyPose(P, true, DT); }
   const tEnd = CONFIG.ARENA.startHold + 1.5;
   const e = [];
   while (G.t < tEnd) {
@@ -504,12 +504,12 @@ export function notoEven(tr) {
 }
 
 /**
- * 납도 한 판 (11/14 사장님 '2초 후에 납도 시작' — SECRET.iaiSheathe): mode 'hip' = 사람 창(PlayerSecretWatch — 허리 대기) · 'crouch' = AI 몸 셈(IaiArm + iaiReadyPose — 웅크린 대기).
+ * 납도 한 판 (11/14 사장님 '2초 후에 납도 시작' — SECRET.iaiSheathe): mode 'hip' = 사람 창(PlayerSecretWatch — 허리 대기) · 'ai' = AI 몸 셈(IaiArm + iaiReadyPose — 11/19 사람과 같은 허리 대기 · 전 'crouch' 웅크린 대기).
  *  서 있는 롱소드 과녁(2.4 m) · 손 쉼. 스텝마다: 납도 몫 · 준비 · 칼날 ↔ 몸 · 칼집 입 안 칼날이 칼집 겉 밖 · 칼집 ↔ 몸 · 칼집 입 · 축이 한 스텝에 옮긴 길이 · 각(튐) · 칼끝 빠르기.
  *  onStep(t, P, row) — 그림 도구가 읽음
  */
 export function notoRun({ weapon = 'uchigatana', mode = 'hip', seed = 1, look = 'player', tEnd = 3.3, after = 0.3, gap = 2.4, keepTrace = false, onStep = null } = {}) {
-  const ai = mode === 'crouch';
+  const ai = mode === 'ai';
   const G = newRound({ walls: false, weapon, weapon2: 'longsword', seed, gap, look: lookOf(look), persona: { proficiency: 3 }, onFighter(f) { if (f.index === 0 && !ai) f.humanInput = true; } });
   const P = G.player;
   const A = G.enemy;
@@ -597,7 +597,7 @@ if (isMain(import.meta.url)) {
   const json = arg('json', null);
   if (mode === 'ready') {
     const rows = [];
-    for (const weapon of weapons) for (const m of arg('modes', 'hip,crouch').split(',')) {
+    for (const weapon of weapons) for (const m of arg('modes', 'hip,ai').split(',')) {
       const r = readyShot({ weapon, mode: m, look: arg('look', 'player') });
       rows.push(r);
       console.log(`${weapon.padEnd(13)} ${m.padEnd(6)} | 칼집 입(골반 틀 앞 · 위 · 칼 든 쪽 +) ${JSON.stringify(r.mouth)} · 코등이 ${JSON.stringify(r.tsuba)} · 칼 축 yaw ${r.yaw}° el ${r.el}° | 목표와 어긋남 가장 ${r.dm} m · ${r.da}° | 칼집이 칼을 감싼 몫 가장 낮음 ${r.follow} · 칼날이 칼집 겉 밖으로 가장 ${r.bladeOut} m | 날 위 cos ${r.edge} (가장 낮음 ${r.edgeMin})`);
@@ -614,7 +614,7 @@ if (isMain(import.meta.url)) {
     if (json) writeFileSync(json, JSON.stringify({ set: arg('set', ''), out }));
   } else if (mode === 'noto') {
     const out = [];
-    for (const weapon of weapons) for (const m of arg('modes', 'hip,crouch').split(',')) {
+    for (const weapon of weapons) for (const m of arg('modes', 'hip,ai').split(',')) {
       const r = notoRun({ weapon, mode: m, look: arg('look', 'player') });
       out.push(r);
       if (r.even) console.log(`${weapon.padEnd(13)} ${m.padEnd(6)} | 고른 밀도: 칼끝 스텝 가운데 ${r.even.tipStepMed} · 가장 ${r.even.tipStepMax} m · 칼집 축 가운데 ${r.even.angStepMed} · 가장 ${r.even.angStepMax}° · 0.1 s 칸 몫 칼끝 ${JSON.stringify(r.even.bins)} · 칼집 입 ${JSON.stringify(r.even.mouthBins)} · 칼집 축 ${JSON.stringify(r.even.angBins)} · 칼끝 길 ${r.even.tipPath} m · 칼집 입 길 ${r.even.mouthPath} m (스텝 가장 ${r.even.mouthStepMax}) · 칼집 축 돎 ${r.even.angPath}° · 위에서 본 칼집 각 가장 ${r.even.topMax}° | 입으로 듦 ${JSON.stringify(r.even.entry)} · 옆으로 듦 ${r.even.sideEntries}`);
