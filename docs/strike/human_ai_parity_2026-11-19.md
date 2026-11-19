@@ -385,6 +385,7 @@ node tools/sim/prof_gap_measure.mjs trace ib12_v2.json [--lo]     # 기술마다
 **넣은 것** (커밋 `45556dfe` · `6a9c6804` · `f088d2a0` · 시험 손봄 커밋)
 - **A1** AI 보정 방식 v2 (`ai.js setLevel` — 전 'old') + **닿음 신호** (`skill.js aiFingerHeld` — AI 공격 · 비기 · 막기 꼴 = 손가락이 닿음: 쉼 무게 0 · `fighter.js armHeld` 로 두손 칼 앞 바닥 · 두 팔 엇갈림 막기도 같은 신호 — 사람은 손가락이 쥘 때만이던 것과 같은 규칙).
 - **C1** 손가락 긋기 판정 × 2 를 AI 보통 베기에도 (`finger_cut.js` hit — AI 몸으로 가름 · skill.corr 로 가르면 corr_s0 '설정 0 동일'이 깨짐 · arm · gain 은 사람만 그대로).
+  - **사장님 11/19 — C1 뺌** ('ai는 실제로 손가락을 이용해 물리적으로 긋는 게 아니지 않나. 거기서 발생하는 지연과 한계가 없을텐데.'): AI hit × 1 · 사람 × 2 그대로 — 아래 표의 v2 숫자는 C1 든 판, 뺀 판은 §12.
 - **A4 · A5 · A6** 칼 팔 몸 규칙 (`fighter.js bodyArm` — 손 목표 자르기 0.975 · 날 미리 돌리기 · 두손 칼 빈팔 닿는 곳을 사람과 같은 조건으로 · AI 만의 aiOnly 가지 지움).
 - **A7** 고유 동작 강화의 몸을 AI 칼에도 (`ai.js uniqBodyTick` — 사람 ② 몸과 같은 표 · bodyIn / bodyOut · bodyMirror · yawRate).
 - **발도 박자 한 규칙** (감독 11/19): 손이 왼 허리 대기 자리면 `iaiTime` 0.12 · 아니면 `iaiPlayerTime` 0.15 — 두 몸 모두 (`req.player` 갈림 지움).
@@ -432,7 +433,7 @@ node tools/sim/prof_gap_measure.mjs trace ib12_v2.json [--lo]     # 기술마다
 
 ## 12. C1 거둠 재기 — v2 − C1 (AI 판정 × 1 · 사람 × 2 그대로) · 한 칼 견줌 (11/19 감독 — 사장님 'ai는 실제로 손가락을 이용해 물리적으로 긋는 게 아니지 않나. 거기서 발생하는 지연과 한계가 없을텐데.')
 
-재기 사본(가지 머리 + `finger_cut.js` 의 AI hit 가지만 뺌 — 커밋 없음)에서. 사람 입력 봇 표는 사브르 칸을 뺀 11 칸(11/19 사장님 상시 규칙 '재기에 estoc · sabre 를 쓰지 않음' — `school_balance.mjs CELLS` 13 → 11 칸)이라 바탕 · v2 도 같은 11 칸으로 다시 잼.
+**사장님 11/19 — C1 뺌** (AI hit × 1 · 사람 × 2 그대로 — 가지 wk/parity-v2 에 넣음 · 아래는 넣기 전 재기 사본에서 잰 것과 같은 src). 재기 사본(가지 머리 + `finger_cut.js` 의 AI hit 가지만 뺌)에서. 사람 입력 봇 표는 사브르 칸을 뺀 11 칸(11/19 사장님 상시 규칙 '재기에 estoc · sabre 를 쓰지 않음' — `school_balance.mjs CELLS` 13 → 11 칸)이라 바탕 · v2 도 같은 11 칸으로 다시 잼.
 
 | 무엇 | 바탕 f000cce0 | v2 (C1 든) | **v2 − C1** |
 |---|---|---|---|

@@ -5,7 +5,8 @@
 //           (칼 팔 관절 근육 · 손목 힘 · 손목 빠르기 한계 √) — 비기 do.strength(ai.js secretStrength · skill.js run.str0)가 그 베기 구간만 몸의 힘을 올리는 것과 같은 꼴. 칼이 실제로 빨라진다
 //    gain — 긋는 동안 손가락이 옮긴 손 목표 몫을 × gain (skill.js update 처음 — 빠른 끌기만 감도를 올림 · 손 목표 반지름 WEAPON.reach 그대로)
 //    hit  — 긋는 동안과 그 끝 recoverDelay 안의 닿음(combat.js analyze)의 판정 에너지를 × hit — 물리(빠르기 · 질량 · 가르나 튕기나 판단 앞 에너지)는 그대로, 판정만 (마지막 수단 — 보이는 움직임은 그대로)
-//    사람만 (AI 몸은 받지 않음) — 단 hit 은 11/19 보정 v2 묶음(C1)부터 AI 보통 베기에도: × 2 는 손가락보다 v2 매핑의 가벼움을 메우는 몫이라(기록 human_ai_parity §7 #12) v2 AI 도 같은 판정
+//    사람만 (AI 몸은 받지 않음 — 11/19 보정 v2 묶음 C1(AI 보통 베기에도 hit × 2)은 사장님 11/19 지적 'ai는 실제로 손가락을 이용해 물리적으로 긋는 게 아니지 않나'로 뺌:
+//     × 2 는 손가락 입력의 한계(긋는 빠르기 · 손 목표 원 끝 · 지연)를 메우는 몫이라 AI 는 받지 않음 — 기록 human_ai_parity §12)
 //   주소 손잡이 (main.js):
 //   새 문턱 · 상한 · 시간 없음 — '긋는 동안'은 skill.swinging(SKILL.swingSpeed), 끝 몫은 SKILL.recoverDelay(손가락을 떼고 자세로 돌아가기까지) 를 그대로 읽는다
 // ─────────────────────────────────────────────────────────────
@@ -30,7 +31,7 @@ function fingerCutRaw(f, key) {
   const k = SKILL.fingerCut?.[key] ?? 1;
   if (k === 1 || !f) return 1;
   const sk = f.skill;
-  if (sk?.autoGuard !== true && !(key === 'hit' && f.aiControlled)) return 1; // AI 는 hit 만 (C1 — 11/19 · AI 몸은 늘 v2 — skill.corr 로 가르지 않음: corr_s0 '설정 0 동일'이 깨짐)
+  if (sk?.autoGuard !== true) return 1;
   if (!strokeBody(f)) return 1;
   if (key === 'hit') return sk.swinging || sk.quiet <= SKILL.recoverDelay ? k : 1;
   return sk.swinging ? k : 1;
