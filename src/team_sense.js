@@ -41,7 +41,7 @@
 import { TEAM_SENSE, TEAM_FIGHT } from './config.js';
 import { sameSide } from './team.js';
 import { woundDegree } from './combat.js';
-import { duelK, duelHunt } from './team_support.js'; // 서포트 (11/19): 이탈리아 결투 고집 · 이베리아 — 동료를 위한 몫을 거둠 (team_support.js 는 이 파일을 읽지 않음)
+import { manyMul, manyHuntOff } from './ai_mindset.js'; // 결투 고집 (11/19 — 이탈리아 마음가짐 many.ally · many.hunt): 동료가 있을 때 동료를 위한 몫을 거둠 (ai_mindset.js 는 이 파일을 읽지 않음)
 
 const DEG = Math.PI / 180;
 const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
@@ -228,7 +228,7 @@ export function senseScore(M, f, g) {
   }
   const R = S.roles.get(f);
   if (R && R.x === g.index && R.until >= v.fr.t) s -= R.role === 'pin' ? TEAM_SENSE.role.pin : TEAM_SENSE.role.follow; // 6 이 준 역할 (사장님 11/18 3 — 받는 쪽 층 그대로)
-  return s * (1 - duelK(ai)); // 서포트 (11/19 — team_support.js): 이탈리아 결투 고집 · 이베리아 — 엄호 · 노릴 상대 · 역할을 거둠 (동료를 치는 적으로 바꾸지 않음)
+  return s * manyMul(ai, 'ally'); // 결투 고집 (11/19 — 이탈리아 many.ally): 엄호 · 노릴 상대 · 역할을 거둠 (동료를 치는 적으로 바꾸지 않음 · 숙련 곡선만큼)
 }
 
 /**
@@ -328,7 +328,7 @@ export function ambushOpp(ai) {
   const A = TEAM_SENSE.ambush;
   const j = ai.foe.index;
   const now = ai.sense?.t ?? 0;
-  const dk = 1 - duelK(ai); // 서포트 (11/19 — team_support.js): 이탈리아 결투 고집 · 이베리아 — 동료와 붙은 적의 틈을 덜 노림 (제 상대와의 거리 싸움 · 제 둥근 걸음)
+  const dk = manyMul(ai, 'ally'); // 결투 고집 (11/19 — 이탈리아 many.ally): 동료와 붙은 적의 틈을 노리지 않음 (제 상대와의 거리 싸움만)
   if (dk <= 0 || !busyWithOther(S, v.fr, v.i, j) || !outsideFront(v.fr, j, v.i, A.front)) {
     ai.tsAmbT = null;
     return null;
@@ -405,7 +405,7 @@ export function senseFeet(ai, fwd, side) {
   if (ai.iaiArm && !ai.iaiArm.armed && !ai.chasing && ai.mode === 'watch') return [fwd, side]; // 고노센 준비를 쌓는 중(제자리 — ai.js moveFeet 스틱 0): 걸음 뜻이 준비를 0 으로 되돌려 영영 못 들어가지 않게 (11/18 재기 — 멈춘 판의 까닭)
   const S = ai.me.teamSense;
   const St = (ai.stats.team ??= teamStats());
-  const dk = 1 - duelK(ai); // 서포트 (11/19 — team_support.js): 이탈리아 결투 고집 · 이베리아 — 끼어듦 · 이끌기 · 집게를 거둠 (칼길 비우기는 그대로)
+  const dk = manyMul(ai, 'ally'); // 결투 고집 (11/19 — 이탈리아 many.ally): 끼어듦 · 이끌기 · 집게를 거둠 · 구하러 가지 않음 (칼길 비우기는 그대로)
   // ① 칼길 비우기: 나 → 상대 줄에 선 동료에게서 옆으로 (가까울수록 세게)
   const L = laneMate(ai, v);
   if (L) {
@@ -456,7 +456,7 @@ export function senseFeet(ai, fwd, side) {
       const th = angAt(X, v.me, B);
       if (th < goal - TEAM_SENSE.pincer.tol * DEG) {
         const o = orbit(X, v.me, B, 1) * (v.T.tier === 'top' ? TEAM_SENSE.pincer.kTop : TEAM_SENSE.pincer.k) * clamp((goal - th) / (goal / 2), 0.3, 1); // 간 보기 옆 돌기 대신
-        side = dk >= 1 ? o : side + (o - side) * dk; // 서포트 (11/19): 이탈리아 결투 고집 · 이베리아는 dk 만큼만
+        side = dk >= 1 ? o : side + (o - side) * dk; // 결투 고집 (이탈리아 many.ally)은 dk 만큼만
         St.pincer++;
       }
     }
@@ -475,7 +475,7 @@ export function outSkill(ai) {
  *  이때는 상대가 들어오기를 기다리는 꼴(고노센 준비 · 싱지르 · 리솔루토 · 이베리아 무장 기다림)을 기다리지 않는다 (상대는 나를 치러 오지 않는다 — 11/18 재기의 멈춘 판)
  */
 export function huntFree(ai) {
-  if (duelHunt(ai)) return false; // 서포트 (11/19 — team_support.js): 이탈리아 결투 고집 — 제 간격에서 상대를 기다리는 꼴 그대로
+  if (manyHuntOff(ai)) return false; // 결투 고집 (11/19 — 이탈리아 many.hunt): 겨눈 상대가 동료와 붙어도 제 간격에서 상대를 기다리는 꼴 그대로
   const v = viewOf(ai);
   if (!v || !ai.foe) return false;
   const S = ai.me.teamSense;

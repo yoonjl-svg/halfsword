@@ -252,3 +252,20 @@ export function mindSide(ai, side, dt) {
 }
 /** 옆으로 비킬 몫 (moveFeet — 너무 붙었을 때 물러나며 옆으로): 지금 옆 몫 목표가 0 이면 곧게 물러남 */
 export const mindSideK = (ai) => (ai.mind && !(mindLatShare(ai) > 0) ? 0 : 1);
+
+// ───────── 수가 밀릴 때 · 동료가 있을 때 (마음가짐 many 칸 — ai_lone.js · team_sense.js 가 같이 읽음 · 11/19) ─────────
+/** many 칸 몫 w = 숙련 곡선 (본 유파 숙련도 — 판단의 격차 · 2 이하 0 · 6 이 1) */
+export function manyProfW(ai) {
+  const p = clamp(Math.round(ai.mainProficiency ?? ai.proficiency ?? 2), 0, 6);
+  return MINDSET.profF[p] ?? 0;
+}
+/** 결투 고집 곱 (many 칸 값 v — 1 − (1 − v) × w · 칸이 없으면 1): lever · out(수가 밀릴 때 — ai_lone.js) · ally(동료가 있을 때 — team_sense.js) */
+export function manyMul(ai, key) {
+  const v = ai?.mind?.many?.[key];
+  return v == null ? 1 : 1 - (1 - v) * manyProfW(ai);
+}
+/** 결투 고집 — 동료가 있을 때 '사냥할 때'(team_sense.js huntFree)를 끄나: many.hunt 가 있고 many.ally 곱이 그 밑 (이탈리아 숙련 4 부터) */
+export function manyHuntOff(ai) {
+  const h = ai?.mind?.many?.hunt;
+  return h != null && manyMul(ai, 'ally') <= h;
+}

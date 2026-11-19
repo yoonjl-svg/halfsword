@@ -18,15 +18,13 @@
 //   상대 바꿈 기다림(TEAM_FIGHT.target hold · attackHold — targeting.js)을 1 + fix × w 배로 (fix 20 — 겨눈 상대가 쓰러지기 전엔 거의 안 바꿈)
 //  재어 본 것 (11/19 · 기록 §5): 둘째 칼끝 밖을 다섯 유파 모두에 (고른 판 셋 칸 합 −2 점 — 없음과 같아 일본 마음가짐에만) · 쉼 문턱을 올리기 · 둘째가 못 닿을 때 몰아침 / 둘 다 닿을 때 아낌은 넣지 않음
 // ─────────────────────────────────────────────────────────────
-import { LONE, MINDSET } from './config.js';
+import { LONE } from './config.js';
+import { manyProfW, manyMul } from './ai_mindset.js'; // 결투 고집 곱 · 숙련 몫 (수가 밀릴 때 · 동료가 있을 때 한곳 — 11/19)
 import { viewOf, busyWithOther } from './team_sense.js';
 import { sameSide } from './team.js';
 
-/** 숙련 몫 w (본 유파 숙련도 — 판단의 격차) */
-export function loneW(ai) {
-  const p = Math.max(0, Math.min(6, Math.round(ai.mainProficiency ?? ai.proficiency ?? 2)));
-  return MINDSET.profF[p] ?? 0;
-}
+/** 숙련 몫 w (본 유파 숙련도 — 판단의 격차 · ai_mindset.js manyProfW — 결투 고집의 '동료가 있을 때' 몫과 한곳) */
+export const loneW = manyProfW;
 
 /**
  * 수가 밀리나 (스텝마다 한 번 셈 — ai.loneS): { w, n(둘레의 떨어진 적 수), d2 · r2(둘째까지 거리 · 그 칼끝) · x2 · z2(둘째 쪽 단위 벡터) } 또는 null.
@@ -68,11 +66,8 @@ export function manyW(ai) {
   return L ? L.w : 0;
 }
 
-/** 결투 고집 곱 (마음가짐 many.lever · many.out — 이탈리아 · 없으면 1): 1 − (1 − 값) × w (숙련이 높을수록 유파다움 — 2 이하 1) */
-export function manyMul(ai, key) {
-  const v = ai.mind?.many?.[key];
-  return v == null ? 1 : 1 - (1 - v) * loneW(ai);
-}
+/** 결투 고집 곱 (마음가짐 many.lever · many.out — 이탈리아 · 없으면 1): 1 − (1 − 값) × w (숙련이 높을수록 유파다움 — 2 이하 1) · 셈은 ai_mindset.js (동료가 있을 때 many.ally 와 한곳) */
+export { manyMul };
 
 /**
  * 결투 고집 — 겨눈 상대 붙듦 (마음가짐 many.fix · 이탈리아 · targeting.js chooseTarget): 수가 밀리면 상대 바꿈 기다림
