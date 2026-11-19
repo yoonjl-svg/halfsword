@@ -3,8 +3,10 @@
 //   우선 이동용 스틱 크기를 지금보다 조금 키우고 스틱을 가장 극단적인 값으로 밀면 뛰게 해.' → 같은 날 빠르기 걷기의 2 배 · 기력 걷기의 1.5 배 ·
 //   '대신 기력 회복이 안 되는 걸로' · 기력 50 이상에서 시작 0 까지 — 값 config RUN · 기록 docs/strike/run_2026-11-18.md)
 //
-//  사람 몸(사람 입력이 모는 몸 humanInput · AI 가 몰지 않음)만 — fighter.step 이 그 몸에만 runStep 을 부른다. AI · 시뮬 대본 몸은 f.run 이 없어
-//  걸음 · 몸 돌림 · 기력 셈이 한 글자도 다르지 않다(관문 바이트 같음).
+//  누가: 스틱 길 몫(f.runReach)을 두는 몸 — 사람(main.js · 프레임마다) · 셋 이상 판 AI(11/19 사장님 '뛰기 AI에도 넣고 무리 싸움에 먼저 넣어.' — src/ai_run.js 가
+//   사람과 같은 칸 runReach · stickX · stickY · move · runBreak 를 두고 '언제 미나'만 정함). fighter.step 은 사람 몸에는 늘 · 다른 몸에는 runReach 를 둔 때부터 runStep 을 부른다.
+//   규칙 · 값은 몸을 가리지 않는다 (아래 모두 사람 · AI 같음 — AI 몫 빠르기 · 기력 · 돌기 값 없음).
+//  1:1 AI · 시뮬 대본 몸은 runReach 를 두지 않아 f.run 이 없고 걸음 · 몸 돌림 · 기력 셈이 한 글자도 다르지 않다(관문 바이트 같음).
 //
 //  걷기와 뛰기는 두 상태다 (빠르기를 스틱에 비례해 잇지 않음 — 걷기는 전과 같은 걷기):
 //   들어감  스틱을 길 끝(손잡이 길의 RUN.stickIn 몫 넘게 · PC 는 Shift + 방향 키) · 기력 RUN.startAt(50) 이상 · 서 있음 · 다리 걸음 · 공격 · 막기 · 기술 걸음 · 비기 · 밀치기 · 줍기가 아님 ·
@@ -30,12 +32,12 @@ import { kitOff } from './skill_kit.js';
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
-/** 이 몸의 뛰기 상태 (사람 몸만 — 처음 부를 때 만든다). fast = 뛰는 가속 한도를 쓰는 동안(뛰는 중 · 뛰다 멈춰 줄어드는 중) · back = 스틱을 상대 틀로 읽는 동안 */
+/** 이 몸의 뛰기 상태 (처음 부를 때 만든다). fast = 뛰는 가속 한도를 쓰는 동안(뛰는 중 · 뛰다 멈춰 줄어드는 중) · back = 스틱을 상대 틀로 읽는 동안 */
 export function runState(f) {
   return (f.run ??= { on: false, armed: true, k: 0, vb: 0, fast: false, back: false, dx: 1, dz: 0, fx: undefined, fz: undefined, end: null, runs: 0, runT: 0 });
 }
 
-/** 공격 · 막기 · 기술 중인가 (뛰기를 끊고 다시 들어가지 못하게) — 사람 몸이 읽는 몸 상태 그대로 */
+/** 공격 · 막기 · 기술 중인가 (뛰기를 끊고 다시 들어가지 못하게) — 몸 상태 그대로 (사람 · AI 같음) */
 export function runBusy(f) {
   const sk = f.skill;
   return !!(sk?.swinging || sk?.tap || sk?.pom || sk?.sec || sk?.lunge > 0 || sk?.uniq?.winding || f.stamina?.attacking || f.stamina?.guarding || f.iaiDraw || f.ibLink || f.gait?.req || f.barge || f.pickup || f.autoPick);
@@ -63,9 +65,9 @@ export function runCostRate(f) {
 }
 
 /**
- * 스텝마다 (fighter.step — updateHeading 앞 · 사람 몸만 · 이름 runStep — 시제품 C 의 dig_proto.js runTick 과 다름): 들어감 · 나감 · 방향 · 걸음 꼴 섞기(k) · 가속 한도 창(fast) · 조종 입력을 몸 틀로.
- *  읽는 입력(main.js 가 프레임마다 둠): f.runReach — 스틱 손잡이 길 몫(0 ~ 1, PC Shift + 방향이면 1) · f.stickX · stickY — 스틱(상대 틀) ·
- *  f.runBreak — 이 프레임에 공격 · 막기 입력이 있었음(읽으면 지움)
+ * 스텝마다 (fighter.step — updateHeading 앞 · 이름 runStep — 시제품 C 의 dig_proto.js runTick 과 다름): 들어감 · 나감 · 방향 · 걸음 꼴 섞기(k) · 가속 한도 창(fast) · 조종 입력을 몸 틀로.
+ *  읽는 입력(사람 main.js 가 프레임마다 · AI ai_run.js 가 스텝마다 둠): f.runReach — 스틱 손잡이 길 몫(0 ~ 1, PC Shift + 방향이면 1 · AI 는 뛸 때 1) · f.stickX · stickY — 스틱(상대 틀) ·
+ *  f.runBreak — 이 프레임에 공격 · 막기 입력이 있었음(읽으면 지움 — AI 는 공격 · 막기 · 비기 꼴)
  */
 export function runStep(f, dt) {
   const R = runState(f);
@@ -146,7 +148,7 @@ export function runFace(f) {
 }
 
 /**
- * 가려는 속도에 뛰는 몫을 더함 (fighter.driveBalance — 걸음 장치에 넘기기 전 · 사람 몸만): 몸 앞 몫에 걷는 앞 몫 × (RUN.mul − 1) 을 덧 빠르기(R.vb)로 —
+ * 가려는 속도에 뛰는 몫을 더함 (fighter.driveBalance — 걸음 장치에 넘기기 전): 몸 앞 몫에 걷는 앞 몫 × (RUN.mul − 1) 을 덧 빠르기(R.vb)로 —
  *  몸이 뛰는 쪽을 볼수록 다 실림(뛰는 쪽과 몸 앞 사이 각이 RUN.alignMax 를 넘으면 0 — 돌아서는 동안은 걷는 빠르기).
  *  덧 빠르기는 곧장 붙지 않고 RUN.accel 로만 오르내린다 · 가려는 앞 빠르기가 몸이 낸 앞 빠르기보다 RUN.lead 넘게 앞서지 않음 — 몸이 따라갈 수 있는 가려는 속도라야
  *  균형 셈(캡처 점 · 다음 발 자리)이 '넘어지는 중'으로 읽지 않는다. 뛰기가 끝나면(공격 · 막기 · 스틱 · 기력) 같은 가속으로 0 까지 내려온다 — 몸이 한 번에 서지 않음.

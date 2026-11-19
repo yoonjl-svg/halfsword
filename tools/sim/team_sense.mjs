@@ -32,6 +32,12 @@
 //    mate       같은 편 상처 (산 몸) / 판 · 심각도 0.5 넘음 · 그 칼에 죽음
 //   상처 = 심각도 HIT_SEV(0.05) 넘는 것만 (닿기만 한 심각도 0 은 뺌 — team_fights.mjs 의 '상처'는 이것까지 셈)
 //    pairOneWaits 같은 편 둘이 같은 상대를 겨눴는데 하나만 닿는 거리 (다른 하나는 뒤에서 기다림) 몫 — coEngage 와 같은 바탕
+//  뛰기 재기 (11/19 AI 뛰기 — docs/strike/ai_run_2026-11-19.md):
+//    runs · runSec   판마다 뛰기 시작 수 · 뛴 시간 (몸마다 f.run.runs · runT 합) · runKinds = ai.stats.run 칸 합 (까닭마다 시작 수)
+//    runEnd          뛰기가 끝난 때(on → off): 까닭(f.run.end) · 기력 · 겨눈 상대 칼끝까지 남은 거리(가슴 사이 − 상대 칼끝 reach — 0 밑 = 칼끝 안에서 끝남)
+//    far             먼 다가감: 서 있는 몸(판 시작 발 묶임 뒤)이 겨눈 상대(서 있음)와 제 칼끝 + FAR 넘게 떨어진 때부터 그 상대에게 닿는 거리(칼끝 + 0.5) 안에 들 때까지 —
+//                    걸린 시간 · 닿은 때 기력 · 그 사이 뛰었나 (상대를 바꾸거나 쓰러지면 버림) · farLate = 판 시작 다가감(발 묶임이 풀린 뒤 1 s 안에 시작)을 뺀 것
+//    hitRun          상처 가운데 맞은 몸이 뛰는 중이거나 뛴 뒤 상대 쪽으로 돌아오는 중(f.run.back) · 그 가운데 등 뒤(120° 넘게)에서
 import { RAPIER, THREE, CONFIG, AI, newMatch, DT } from './jelly_harness.mjs';
 import { Fighter, GROUND_GROUPS } from '../../src/fighter.js';
 import { Combat } from '../../src/combat.js';
@@ -57,6 +63,8 @@ const OLD_SEEDING = flag('seeding', '') === 'old'; // --seeding=old: 예전 판 
 const WEAPONS = ['longsword', 'zweihander', 'rapier', 'sabre', 'uchigatana', 'estoc'];
 const loadout = (seed, count) => Array.from({ length: count }, (_, i) => WEAPONS[(seed * 7 + i * 5) % WEAPONS.length]);
 const SAMPLE = 6; // 6 스텝 = 20 Hz
+const FAR = 3; // 먼 다가감 문턱 (m — 제 칼끝 + 이만큼 넘게 떨어짐)
+const OPEN_T = CONFIG.ARENA.startHold + 1; // 판 시작 다가감(발 묶임이 풀린 뒤 1 s 안에 시작)을 뺀 먼 다가감 = farLate
 const HIT_SEV = 0.05; // 상처로 세는 심각도 (그 밑 = 닿기만 한 것 — 같은 편끼리 부딪힘이 대부분)
 const deg = (r) => (r * 180) / Math.PI;
 
@@ -132,7 +140,7 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
   const foes = (f) => F.filter((g) => g.team !== f.team);
   const C = { samples: 0, pairS: 0, focus: 0, coS: 0, co: 0, solo: 0, pincer: [], fS: 0, back: 0, outS: 0, outFront: 0, outSep: [], blockS: 0, blocked: 0, oppS: 0, oppUp: 0, oppClose: 0,
     hits: 0, unatt: 0, busy: 0, blind: 0, onDown: 0, atk: 0, coAtk: 0, intoBusy: 0, mate: 0, mateSevere: 0, mateKill: 0, helpEv: 0, helpSwitch: 0, helpClose: 0, helpHitAgain: 0, downEv: 0, aliveMin: 0,
-    hitBack: 0, firstKill: null, lastHitT: 0, maxQuiet: 0,
+    hitBack: 0, firstKill: null, lastHitT: 0, maxQuiet: 0, hitRun: 0, hitRunBack: 0, runEnd: [], far: [],
     side: [0, 1].map(() => ({ aliveMin: 0, atk: 0, hits: 0, hitBusy: 0, hitBack: 0, got: 0, gotUnatt: 0, modeS: 0, watch: 0, attack: 0, defend: 0, withdraw: 0 })) }; // 편마다 (--sides: 0 = A 편 · 1 = B 편)
   const sideOf = (f) => (sideA == null ? (f.team === 0 ? 0 : 1) : f.team === sideA ? 0 : 1);
   const wasAlive = new Map();
@@ -141,6 +149,8 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
   const prevStand = new Map(F.map((f) => [f, true]));
   const prevBlood = new Map(F.map((f) => [f, f.blood]));
   const watches = []; // 동료 돕기 창 { b(다친 몸), x(그 적), mates, until, sw:Set, close:Set, hitAgain, down }
+  const runOn = new Map(); // 뛰기 켜짐 (지난 스텝)
+  const farEp = new Map(); // 먼 다가감 { x, t, runs }
   G.combat.hooks.onWound = (att, vic, r) => {
     if (!wasAlive.get(vic) || att === vic || (r?.severity ?? 0) < HIT_SEV) return; // 심각도 0 의 닿음(몸 · 칼 부딪힘)은 빼고 상처만
     if (att.team === vic.team) { C.mate++; if ((r?.severity ?? 0) >= 0.5) C.mateSevere++; if (!vic.alive) C.mateKill++; return; }
@@ -151,6 +161,7 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
     if (vic.foe !== att) C.unatt++, C.side[sideOf(vic)].gotUnatt++;
     if (vic.state === 'stand' && busyWithOther(vic, att)) { C.busy++; C.side[sideOf(att)].hitBusy++; if (offFacing(vic, att) > Math.PI / 3) C.blind++; }
     if (vic.state === 'stand' && offFacing(vic, att) > (2 * Math.PI) / 3) C.hitBack++, C.side[sideOf(att)].hitBack++; // 등 뒤에서 (맞은 몸이 바라보는 쪽에서 120° 넘게)
+    if (vic.run?.on || vic.run?.back) { C.hitRun++; if (offFacing(vic, att) > (2 * Math.PI) / 3) C.hitRunBack++; } // 뛰는 중 · 뛴 뒤 돌아오는 중에 맞음
     C.maxQuiet = Math.max(C.maxQuiet, G.t - C.lastHitT);
     C.lastHitT = G.t;
     for (const w of watches) if (w.b === vic && G.t <= w.until) w.hitAgain = true;
@@ -163,6 +174,19 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
     G.step();
     for (const f of F) if (f.alive) (C.aliveMin += DT / 60), (C.side[sideOf(f)].aliveMin += DT / 60);
     if (C.firstKill == null && F.some((f) => !f.alive)) C.firstKill = G.t; // 첫 죽음 (판 시간)
+    // 뛰기 끝 · 먼 다가감
+    for (const f of F) {
+      const on = !!f.run?.on;
+      if (runOn.get(f) && !on) C.runEnd.push({ why: f.run.end, st: +f.stamina.value.toFixed(1), gap: f.foe ? +(hd(f, f.foe) - reachOf(f.foe)).toFixed(2) : null });
+      runOn.set(f, on);
+      const x = f.foe;
+      if (!standing(f) || f.feetHeld || !x || !standing(x)) { farEp.delete(f); continue; }
+      const ep = farEp.get(f);
+      const D = hd(f, x);
+      if (ep && ep.x !== x) farEp.delete(f);
+      if (!farEp.get(f)) { if (D > reachOf(f) + FAR) farEp.set(f, { x, t: G.t, d: D - reachOf(f), runs: f.run?.runs ?? 0 }); continue; }
+      if (D <= reachOf(f) + 0.5) { C.far.push({ t0: +ep.t.toFixed(2), d0: +ep.d.toFixed(2), dt: +(G.t - ep.t).toFixed(2), st: +f.stamina.value.toFixed(1), ran: (f.run?.runs ?? 0) > ep.runs }); farEp.delete(f); }
+    }
     // 사건: AI 공격 시작
     for (const f of F) {
       const m = f.aiCtl?.mode;
@@ -255,13 +279,17 @@ function fight(mode, seed, prof, sideA = null, wseed = seed) {
   const sw = { n: 0, gone: 0, attacked: 0, held: 0 };
   for (const f of F) { const st = G.targeting?.get(f); if (!st) continue; sw.n += st.switches; for (const k of ['gone', 'attacked', 'held']) sw[k] += st.why[k]; }
   C.maxQuiet = Math.max(C.maxQuiet, G.t - C.lastHitT); // 상처 없이 흐른 가장 긴 시간 (멈춘 판 잣대)
+  const runs = F.reduce((q, f) => q + (f.run?.runs ?? 0), 0);
+  const runSec = +F.reduce((q, f) => q + (f.run?.runT ?? 0), 0).toFixed(2);
+  const runKinds = {};
+  for (const f of F) for (const [k, v] of Object.entries(f.aiCtl?.stats?.run ?? {})) runKinds[k] = (runKinds[k] ?? 0) + v;
   const team = {}; // 무리 싸움 판단 재기 칸 (ai.stats.team — 몸마다 더함 · 판 사본 역할 수)
   for (const f of F) for (const [k, v] of Object.entries(f.aiCtl?.stats?.team ?? {})) team[k] = (team[k] ?? 0) + v;
   for (const [k, v] of Object.entries(G.sense?.roleN ?? {})) team[`role_${k}`] = v;
   const alive = F.filter((f) => f.alive);
   const winner = mode === 'ffa3' ? (alive.length === 1 ? alive[0].index : null) : G.winner;
   const end = F.map((f) => `${sideOf(f) ? 'B' : 'A'}${f.alive ? (f.state === 'stand' ? '' : f.state[0]) + f.blood.toFixed(2) : 'x'}`).join(' '); // 판 끝 몸 (편 · 꼴 첫 글자 · 피 · x 죽음)
-  return { mode, seed, wseed, prof, sideA, team, end, aWon: sideA == null ? null : winner === sideA, t: +G.t.toFixed(2), over: mode === 'ffa3' ? alive.length <= 1 : G.over, winner, sw, ...C };
+  return { mode, seed, wseed, prof, sideA, team, end, runs, runSec, runKinds, aWon: sideA == null ? null : winner === sideA, t: +G.t.toFixed(2), over: mode === 'ffa3' ? alive.length <= 1 : G.over, winner, sw, ...C };
 }
 
 const rows = [];
@@ -309,7 +337,28 @@ function summary(R, label) {
         watchPct: pct(Sd('watch'), Sd('modeS')), attackPct: pct(Sd('attack'), Sd('modeS')), defendPct: pct(Sd('defend'), Sd('modeS')), withdrawPct: pct(Sd('withdraw'), Sd('modeS')) };
     }),
     teamSense: (() => { const o = {}; for (const r of R) for (const [k, v] of Object.entries(r.team ?? {})) o[k] = (o[k] ?? 0) + v; return o; })(),
+    ...runSummary(R),
     wins: (() => { const w = {}; for (const r of R) w[r.winner ?? 'none'] = (w[r.winner ?? 'none'] ?? 0) + 1; return w; })(),
+  };
+}
+/** 뛰기 재기 묶음 (11/19) */
+function runSummary(R) {
+  const ends = R.flatMap((r) => r.runEnd);
+  const far = R.flatMap((r) => r.far);
+  const farRan = far.filter((e) => e.ran);
+  const why = {};
+  for (const e of ends) why[e.why] = (why[e.why] ?? 0) + 1;
+  const kinds = {};
+  for (const r of R) for (const [k, v] of Object.entries(r.runKinds ?? {})) kinds[k] = (kinds[k] ?? 0) + v;
+  const S = (k) => R.reduce((s, r) => s + r[k], 0);
+  return {
+    runsPerFight: +(S('runs') / Math.max(1, R.length)).toFixed(2), runSecPerFight: +(S('runSec') / Math.max(1, R.length)).toFixed(2), fightsWithRun: R.filter((r) => r.runs > 0).length, runKinds: kinds,
+    runEndWhy: why, runEndStMed: med(ends.map((e) => e.st)), runEndStMin: ends.length ? Math.min(...ends.map((e) => e.st)) : null,
+    runEndGapMed: med(ends.filter((e) => e.gap != null).map((e) => e.gap)), runEndInReach: ends.filter((e) => e.gap != null && e.gap < 0).length,
+    farN: far.length, farSecMed: med(far.map((e) => e.dt)), farStMed: med(far.map((e) => e.st)), farStLow: far.filter((e) => e.st < 35).length,
+    farLateN: far.filter((e) => e.t0 > OPEN_T).length, farLateSecMed: med(far.filter((e) => e.t0 > OPEN_T).map((e) => e.dt)), farLateStMed: med(far.filter((e) => e.t0 > OPEN_T).map((e) => e.st)),
+    farRanN: farRan.length, farRanSecMed: med(farRan.map((e) => e.dt)), farRanStMed: med(farRan.map((e) => e.st)), farRanStLow: farRan.filter((e) => e.st < 35).length,
+    hitRun: S('hitRun'), hitRunBack: S('hitRunBack'),
   };
 }
 const out = [];
@@ -320,6 +369,6 @@ for (const mode of MODES) {
 }
 console.log(`무리 싸움 판단 바탕 — 모드마다 ${N} 판 · 최대 ${MAX} s · ${SIDES ? `편 숙련 ${SIDES.join(' 대 ')}` : `숙련도 ${PROFS.join('/')} 돌아가며`}${LEVER_OFF ? ' · 숙련도 레버 끔' : ''}${OLD_SEEDING ? ' · 예전 판 짜기' : ''} · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
 for (const o of out) console.log(JSON.stringify(o));
-if (flag('json', false)) for (const r of rows) console.log(JSON.stringify({ ...r, pincer: undefined, outSep: undefined }));
+if (flag('json', false)) for (const r of rows) console.log(JSON.stringify({ ...r, pincer: undefined, outSep: undefined, runEnd: undefined, far: undefined }));
 const OUT = flag('out', null);
 if (OUT) writeFileSync(OUT, JSON.stringify({ N, MAX, MODES, PROFS, summary: out, rows: rows.map((r) => ({ ...r, pincer: undefined, outSep: undefined })) }, null, 1));

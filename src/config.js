@@ -497,6 +497,15 @@ export const RUN = {
   reachSlow: 0.45,
 };
 
+// AI 뛰기 (11/19 사장님 '뛰기 AI에도 넣고 무리 싸움에 먼저 넣어.' — src/ai_run.js · 기록 docs/strike/ai_run_2026-11-19.md): 셋 이상 판 AI 가 언제 스틱을 끝까지 미나만.
+//  뛰는 몸(들어감 · 나감 · 빠르기 · 기력 · 돌아섬 · 공격 · 막기가 끊음)은 위 RUN 그대로 — 사람과 같음 (AI 몫 빠르기 · 기력 · 돌기 값 없음). 1:1 AI 는 뛰지 않음
+//  gap   겨눈 상대까지 간 보는 거리(ai.holdDist) 밖으로 이만큼(m) 넘게 남았으면 뛰기 시작
+//  keep  닿을 때 기력을 이만큼 넘게 남김: 뛰기 전 어림(남은 길 ÷ 뛰는 끝 빠르기 × 초당 기력)이 이 밑이면 안 뜀 · 뛰다 이 밑이면 걷기 (사람이 뛰기 시작하는 기력 RUN.startAt 과 같은 50)
+//  near  겨눈 상대 말고 다른 적이 제 칼끝 + 이만큼(m) 안이면 안 뜀 (뛰면 몸이 뛰는 쪽을 봐 옆 · 등이 열림)
+//  lat   뛰는 쪽 = 상대 쪽 ± atan(lat) 안 (스틱 옆 몫 ≤ 앞 몫 × lat — 몸이 거의 돌지 않고 뜀: RUN.alignMax 안)
+//  flee  나를 겨눈 상대가 이만큼(m/s — 늦게 본 빠르기) 넘게 멀어지면 쫓아 뜀 (빈손 상대는 늘)
+export const AI_RUN = { gap: 3, keep: 50, near: 1, lat: 0.3, flee: 0.5 };
+
 // 칼 든 팔의 길이와 어깨 자리 (fighter.js armIK·shoulderOn, 보정 v2 날것 매핑 반지름 fighter.corrScale 이 같은 값을 읽는다 — 둘째 사본 없음).
 //  finish.js 가 내려찍기 닿는 곳(팔이 닿는 공)을 잴 때도 읽는다 (finish.js 가 fighter.js 를 부르면 서로 부르게 되어 여기 둔다).
 //  위팔 0.3 m · 아래팔 + 손목까지 0.27 m (팔 뻗은 길이 0.57 m), 어깨 = 가슴 몸체 기준 (앞, 위, 칼 쪽 × side) m (jointDefs uarmS 자리 − 가슴 자리)

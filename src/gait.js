@@ -73,7 +73,7 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
  *  꺼졌으면 칸 없는 것과 같은 길(셈하지 않음)
  */
 const rhythmOn = (R) => !!R && R.normal > 0 && R.fast > 0;
-/** 뛰는 걸음 꼴 섞기 (11/18 뛰기 — src/run.js · 사람 몸만): 걷는 값 a → 뛰는 값 b 를 k 만큼. k 0 이면 a 그대로(셈하지 않음 — AI · 시뮬 몸은 늘 0 · 바이트 같음) */
+/** 뛰는 걸음 꼴 섞기 (11/18 뛰기 — src/run.js): 걷는 값 a → 뛰는 값 b 를 k 만큼. k 0 이면 a 그대로(셈하지 않음 — 뛰지 않는 몸 · 1:1 AI · 시뮬 몸은 늘 0 · 바이트 같음) */
 const runMix = (a, b, k) => (k > 0 ? a + (b - a) * k : a);
 /** 부드러운 출발·도착 (속도·가속도 0) */
 const minJerk = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * u * (10 - 15 * u + 6 * u * u));
@@ -204,7 +204,7 @@ export class Gait {
     this.sinceEnter = 0;
     this.speedF = 0;
     this.runW = 0;
-    this.rk = 0; // 뛰는 걸음 꼴 섞임 (11/18 뛰기 — 사람 몸 f.run.k · 그 밖 늘 0)
+    this.rk = 0; // 뛰는 걸음 꼴 섞임 (11/18 뛰기 — f.run.k · f.run 이 없는 몸은 늘 0)
     // 빠른 걸음 (10/15 — 이탈리아 박자 걸음 P.rhythm): fastK = 지금 걸음의 몸 빠르기·발 박자 배율(1 = 보통) · rhyN = 이번 마디에 센 앞뒤 걸음(디딤 셈이면 보통 디딤) ·
     //  rhyF = 디딤 셈 빠른 몫에 남은 빠른 디딤 · rhyIdle = 걸음이 끝난 뒤 지난 시간
     //  rhyTrail = 짝걸음 빠른 걸음의 따라붙는 발이 아직 남았나 · chase = 독일 간격 잡기 받을 창(상대 헛침 뒤 — foeWhiff) · fastAccent = 지금 빠른 걸음의 발소리 강조 ·
@@ -739,7 +739,7 @@ export class Gait {
       this._fw = f.schoolFootwork; // 대기실 스킬트리 보법 I (플레이어만 — 판을 세울 때 정한다 · 칸 몫 skillKit 도 그때)
       this.P = gaitParams(f, pl);
     }
-    // 뛰는 걸음 꼴 (11/18 뛰기 — src/run.js 가 사람 몸에만 f.run 을 둠): 0 이면 아래 섞기는 모두 걷는 값 그대로
+    // 뛰는 걸음 꼴 (11/18 뛰기 — src/run.js 가 스틱 길 몫을 둔 몸(사람 · 셋 이상 판 AI)에만 f.run 을 둠): 0 이면 아래 섞기는 모두 걷는 값 그대로
     const rk = f.run ? f.run.k : 0;
     this.rk = rk;
     // 유파 옆 빠르기(P.sideMul — 10/10 이베리아 데스트레사 둥근 걸음, 사장님 '사이드스텝 이동량 증가' · 확인표 623): 조종 스틱에 옆 몫이 있을 때 가려는 속도의 옆 몫을 배율만큼.

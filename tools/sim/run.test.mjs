@@ -1,6 +1,7 @@
 // 뛰기 시험 (11/18 사장님 '… 스틱을 가장 극단적인 값으로 밀면 뛰게 해 …' · 같은 날 빠르기 걷기 × 2 · 기력 걷기 × 1.5 · 뛰는 동안 회복 없음 · 50 에서 시작 0 까지 —
 //  src/run.js · config RUN · 기록 docs/strike/run_2026-11-18.md): 들어감 · 나감 문턱과 사이 띠 · 기력 50 / 0 · 유파마다 초당 기력 · 공격 · 막기가 끊음 · 다시 걺 ·
-//  뛰는 동안 · 뒤의 바라봄 · 걸음 운동량 상한 · AI · 대본 몸은 f.run 이 없음 · PC Shift.  node --test tools/sim/run.test.mjs
+//  뛰는 동안 · 뒤의 바라봄 · 걸음 운동량 상한 · 스틱 길 몫을 안 둔 몸(1:1 AI · 대본 몸)은 f.run 이 없음 · PC Shift.  node --test tools/sim/run.test.mjs
+//  (AI 뛰기 — 셋 이상 판 · 11/19: tools/sim/ai_run.test.mjs)
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, newRound, DT, THREE } from './harness_m.mjs';
@@ -214,13 +215,20 @@ test('걸음 운동량(STRIKE.stepMass)은 걷는 끝 빠르기에서 멈춤 —
   }
 });
 
-test('사람 몸만: AI · 시뮬 대본 몸(humanInput 없음)은 f.run 이 생기지 않고 runReach 를 줘도 뛰지 않음', () => {
+test('스틱 길 몫(runReach)을 둔 몸만 (11/19 — 몸을 가리지 않음): 1:1 AI · runReach 를 안 둔 대본 몸은 f.run 이 없음 · runReach 를 둔 대본 몸은 같은 규칙으로 뜀', () => {
   const G = newRound({ weapon: 'longsword', seed: 3 });
-  G.before = () => { G.player.move.set(0, 1); G.player.stickY = 1; G.player.runReach = 1; };
+  G.before = () => { G.player.move.set(0, 1); G.player.stickY = 1; };
   for (let i = 0; i < 3 / DT; i++) G.step();
-  assert.equal(G.player.run, undefined, '대본 몸');
-  assert.equal(G.enemy.run, undefined, 'AI 몸');
+  assert.equal(G.player.run, undefined, '대본 몸 (runReach 없음)');
+  assert.equal(G.enemy.run, undefined, '1:1 AI 몸 (runReach 를 두지 않음 — src/ai_run.js 는 셋 이상 판만)');
+  assert.equal(G.enemy.runReach, undefined);
   G.world.free();
+  const H = newRound({ weapon: 'longsword', seed: 3 });
+  H.before = () => { H.player.move.set(0, 1); H.player.stickY = 1; H.player.runReach = 1; };
+  for (let i = 0; i < 3 / DT; i++) H.step();
+  assert.ok(H.player.run?.runs >= 1, '대본 몸도 스틱 끝이면 뜀 (사람 · AI 와 같은 runStep)');
+  assert.equal(H.enemy.run, undefined);
+  H.world.free();
   assert.equal(runState({}).on, false);
 });
 
