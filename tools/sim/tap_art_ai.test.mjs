@@ -77,3 +77,23 @@ test('칼끝 돌려 빼기 속임 — 가짜 칼(황소 찌르기 앞몫) 뒤 �
     assert.equal(ai.path.length, 0, '속임 뒤 패드 길 없음');
   });
 });
+
+test('날개 접기 속임 — 가짜 칼(쟁기 찌르기 앞몫) 뒤 진짜 칼 = 사람 탭과 같은 운동학 허리 베기 (이름 lianchi · 특수 공격 식힘은 칼이 나갈 때)', () => {
+  aiOf(5, 'hwando', (ai, G) => {
+    const me = ai.me;
+    for (let k = 0; k < 20; k++) G.step();
+    const fe = ai.school.feints.find((f) => f.name === '날개 접기 (염시)');
+    assert.ok(fe, '꾸러미에 속임 (숙련 5)');
+    assert.ok(ai.startAttack(ai.school.techByName[fe.fake], 'counter', { noFeint: true, skipChamber: true }));
+    ai.feint = fe;
+    ai.startStrike();
+    assert.equal(ai.stats.specials?.lianchi, 1, '특수 공격 셈 (startStrike — 속임)');
+    let k = 0;
+    while (!ai.stats.tapArt?.lian?.fired && k++ < 120) ai.moveHand(1 / 120);
+    assert.equal(ai.stats.tapArt.lian.fired, 1, '가짜 칼 뒤 냄');
+    assert.equal((me.iaiReq ?? me.iai)?.tech, 'lianchi');
+    assert.equal(ai.path.length, 0, '속임 뒤 패드 길 없음');
+    assert.equal(ai.artRun, true);
+    runOut(ai, G);
+  });
+});

@@ -103,7 +103,8 @@ const CALM_T = realS(2); // 대치: 위협 없이 이만큼 지나야 '조용히
 //  속임 꼴 고유 동작(날개 접기 · 칼끝 돌려 빼기 — schools.js *_UNIQUE feint) · 패시브(겹치기 · 빼서 찌르기 cavazione — 같은 이름 · 되받아 치기 kaeshi — 그 기술이 제비 베기)
 const SPECIALS = new Set(Object.values(PLAYER_UNIQUE).flat().filter((e) => e.special).map((e) => e.name));
 const SPECIAL_FEINT = new Map(Object.values(TRADITIONS).flatMap((T) => (T.unique ?? []).filter((u) => u.feint && SPECIALS.has(u.name)).map((u) => [u.feint.name, u.name])));
-const FEINT_ART = new Map(Object.values(TRADITIONS).flatMap((T) => (T.unique ?? []).filter((u) => u.feint && u.name === 'cavazione').map((u) => [u.feint.name, 'cav']))); // 속임 꼴 탭 고유 동작 → 사람과 같은 운동학 칼 (11/19 A9 — artGo · 가짜 칼 뒤)
+const FEINT_KEY = { cavazione: 'cav', lianchi: 'lian' }; // 속임 꼴 탭 고유 동작 (칼끝 돌려 빼기 · 날개 접기) → unique_assist.js tapArt 열쇠
+const FEINT_ART = new Map(Object.values(TRADITIONS).flatMap((T) => (T.unique ?? []).filter((u) => u.feint && FEINT_KEY[u.name]).map((u) => [u.feint.name, FEINT_KEY[u.name]]))); // 속임 이름 → 사람과 같은 운동학 칼 (11/19 A9 — artGo · 가짜 칼 뒤)
 /** 패시브 P 가 특수 공격의 AI 몫이면 그 이름 (같은 이름 · 그 기술 · 그 속임) — 아니면 null */
 const passiveSpecial = (P) => (SPECIALS.has(P.name) ? P.name : [].concat(P.do?.tech ?? []).find((n) => SPECIALS.has(n)) ?? (P.do?.feint ? SPECIAL_FEINT.get(P.do.feint) ?? null : null));
 const STEP_T = 0.3; // 기술 걸음 'strike'(유파 고유 동작 step 칸): 닿는 거리여도 내딛는 시간 (보통 내딛기의 최대와 같다)
@@ -2311,6 +2312,7 @@ export class AI {
   /**
    * 탭 고유 동작 셋을 사람과 같은 운동학 칼로 내나 (11/19 사람 · AI 같게 A9 — unique_assist.js tapArt · 비껴서며 찌르기 inqGo 와 같은 꼴 · 속임 · 비기 · 헛스윙 연습 칼은 아님):
    *  칼이 나가는 순간(startStrike)의 칼 — 'cav' = 빼서 찌르기 패시브(칼이 맞물린 뒤 — parried · bindDef) · 없으면 null. 언제 내나는 AI 판단 그대로 · 패드 길 대신 그 칼
+   *  (속임 꼴 둘 — 칼끝 돌려 빼기 · 날개 접기 — 은 가짜 칼 뒤 moveHand 가 FEINT_ART 로 부름)
    */
   artKey() {
     if (!(UA.enhance > 0) || this.feint || this.secretRun || this.drillAtk) return null;
