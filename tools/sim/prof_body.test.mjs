@@ -14,14 +14,14 @@ import { CHARACTERS_BY_ID as C } from '../../src/characters.js';
 
 const { PROF_BODY, AI_LEVELS } = CONFIG;
 
-test("표 값 [사장님 11/18 결정 '1부터 6까지 0.6 0.7 0.8 0.9 1.0 1.1 힘과 버티는 힘 모두' · '0은 0.6이야']", () => {
+test("표 값 [사장님 11/18 결정 '1부터 6까지 0.6 0.7 0.8 0.9 1.0 1.1 힘과 버티는 힘 모두' · '0은 0.6이야' · 11/20 '버티는 힘은 그대로 두고 힘만 … 15% 간격']", () => {
   assert.deepEqual(PROF_BODY, {
     vitality: [0.6, 0.6, 0.7, 0.8, 0.9, 1, 1.1],
-    strength: [0.6, 0.6, 0.7, 0.8, 0.9, 1, 1.1],
+    strength: [0.6, 0.6, 0.75, 0.9, 1.05, 1.2, 1.35], // 11/20 사장님 '힘만 15% 간격' (버티는 힘 그대로)
   });
 });
 
-test('표 모양: 일곱 칸 · 양수 · 숙련도가 오르면 줄지 않음 · 숙련 1 부터 한 칸 차 0.1 (10 %) · 0 = 1', () => {
+test('표 모양: 일곱 칸 · 양수 · 숙련도가 오르면 줄지 않음 · 숙련 1 부터 한 칸 차 버티는 힘 0.1 (10 %) · 힘 0.15 (11/20) · 0 = 1', () => {
   for (const k of ['vitality', 'strength']) {
     const xs = PROF_BODY[k];
     assert.equal(xs.length, CONFIG.AI_PROFICIENCY.levels.length, k);
@@ -30,7 +30,8 @@ test('표 모양: 일곱 칸 · 양수 · 숙련도가 오르면 줄지 않음 �
       if (i) assert.ok(xs[i] >= xs[i - 1], `${k} 오름 ${i - 1} → ${i}`);
     }
     assert.equal(xs[0], xs[1], `${k} 0 = 1`);
-    for (let i = 2; i < xs.length; i++) assert.ok(Math.abs(xs[i] - xs[i - 1] - 0.1) < 1e-9, `${k} ${i - 1} → ${i} 한 칸 0.1`);
+    const step = k === 'strength' ? 0.15 : 0.1;
+    for (let i = 2; i < xs.length; i++) assert.ok(Math.abs(xs[i] - xs[i - 1] - step) < 1e-9, `${k} ${i - 1} → ${i} 한 칸 ${step}`);
   }
 });
 
