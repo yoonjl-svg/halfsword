@@ -11,7 +11,7 @@
 //   --look=enemy : 두 자리 모두 같은 겉모습 LOOKS.enemy (11/17 — 감독 '겉모습 같게'. 안 주면 옛 판 그대로 — 자리마다 기본 겉모습)
 //   --cfg=PATH:수,… : config 수 덮어쓰기 (재기 전용 · 게임 값은 그대로 — cfg_override.mjs · 예: --cfg=AI_LEVELS.normal.strikeSpeed:12)
 //   --vit=v0,v1,…,v6 · --str=s0,…,s6 : 몸 값 표 PROF_BODY.vitality · strength 를 통째로 (재기 전용 · 숙련도 0 ~ 6 일곱 수 — 11/17 E 찾기)
-//   --resume : --json 파일이 있으면 그 판들(판 번호 k)은 건너뛰고 이어 잼 (판 10 개마다 파일을 씀 — 11/18)
+//   --resume : --json 파일이 있으면 그 판들(판 번호 k)은 건너뛰고 이어 잼 (판마다 파일을 씀 — 11/20 · 전 10 판마다)
 //  ── 단계 덜어 보기 (11/18 — 기록 docs/strike/stage_ablation_2026-11-18.md · 모두 재기 전용 · 안 주면 판 그대로 · 낮은 쪽은 늘 그대로):
 //   --dropHi=G3,G5 : 높은 쪽 AI 의 칸 몫에서 이 칸들을 뺌 (그 AI 를 만드는 동안만 config AI_KIT.ladder 에서 빼고 곧 되돌림 — 실력 이름 · 띠 · 몸은 그대로)
 //   --levelHi=normal : 높은 쪽 실력 이름 (easy · normal · hard · expert — 판 동안만 AI_PLAN.levels[높은 숙련도] 를 바꿈 · 낮은 쪽 숙련도 칸은 그대로)
@@ -626,7 +626,7 @@ if (isMain(import.meta.url)) {
       const r = { k, ...measureFight(f, dur, { loAs, loNoKit: args.includes('--loNoKit'), look, dropHi, levelHi, bandHi, stats, gns, techHi, noThrustFollowHi, keepBaseHi, cfgHi, levelHiSet, passiveHi, gwHi, corrHi, corrLo, corrHeld }) };
       runs.push(r);
       console.error(`[${k + 1}/${all.length}] ${f.school} ${f.lo}:${f.hi} w${f.wi} s${f.seed} ${f.swap ? 'swap' : 'std'} → ${r.result} @${r.endT}s`);
-      if (out && runs.length % 10 === 0) saveRuns(out, runs);
+      if (out) saveRuns(out, runs); // 판마다 (11/20 — 컨테이너가 다시 시작돼도 끊긴 판만 다시)
     }
     if (out) saveRuns(out, runs);
     console.log(aggTable(runs));
