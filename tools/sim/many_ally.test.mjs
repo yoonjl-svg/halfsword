@@ -1,6 +1,6 @@
 // 결투 고집 — 동료가 있을 때 (11/19 — 이탈리아 마음가짐 many.ally · many.hunt · 셈 src/ai_mindset.js manyMul · manyHuntOff · 쓰는 곳 src/team_sense.js ·
 //  기록 docs/strike/team_support_2026-11-19.md · 수가 밀릴 때의 결투 고집 many.lever · out · fix 와 한곳):
-//  ① 곱 = 1 − (1 − ally) × 숙련 곡선 (이탈리아 6 = 0 · 4 = 0.25 · 2 이하 1 · 이베리아 6 = 0.5) · 다른 유파 1 · 사냥 끔은 곱이 hunt 밑 (이탈리아 숙련 4 부터 · 이베리아 없음)
+//  ① 곱 = 1 − (1 − ally) × 숙련 곡선 (이탈리아 6 = 0 · 4 = 0.25 · 2 이하 1) · 다른 유파 1 · 사냥 끔은 곱이 hunt 밑 (숙련 4 부터)
 //  ② 엄호 겨눔 덧셈(넘어진 동료를 겨눈 적)을 거둠 — 숙련 2 · 독일은 그대로
 //  ③ 사냥할 때(겨눈 상대가 동료와 붙음)로 보지 않음 — 제 간격에서 기다리는 꼴 그대로 · 독일 · 숙련 2 는 그대로
 //  ④ 집게(동료가 붙은 내 상대를 축으로 돎) · 옆 기습 빈틈을 거둠 · 칼길 비우기는 그대로
@@ -49,8 +49,7 @@ test('① 곱 = 1 − (1 − ally) × 숙련 곡선 · 다른 유파 1 · 사냥
   for (let p = 0; p <= 6; p++) assert.ok(Math.abs(manyMul(ai('italian', p), 'ally') - (1 - (1 - IT.ally) * profF[p])) < 1e-12, `p${p}`);
   assert.equal(manyMul(ai('italian', 6), 'ally'), 0);
   assert.equal(manyMul(ai('italian', 2), 'ally'), 1);
-  for (const s of ['german', 'japanese', 'chinese']) assert.equal(manyMul(ai(s, 6), 'ally'), 1, s);
-  assert.equal(manyMul(ai('iberian', 6), 'ally'), SCHOOL_MINDSET.iberian.many.ally, '이베리아: 합공에 덜 낌 (11/19 서포트 — 같은 칸)');
+  for (const s of ['german', 'iberian', 'japanese', 'chinese']) assert.equal(manyMul(ai(s, 6), 'ally'), 1, s);
   assert.equal(manyMul(null, 'ally'), 1);
   assert.equal(manyMul({ mind: null, mainProficiency: 6 }, 'ally'), 1, '무유파 · 숙련 0 (마음가짐 없음)');
   assert.deepEqual([2, 3, 4, 5, 6].map((p) => manyHuntOff(ai('italian', p))), [false, false, true, true, true]);

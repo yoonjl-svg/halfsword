@@ -69,7 +69,7 @@ export function targetScore(M, f, g) {
   if (attacking(g, f)) s -= T.attackSub;
   const pref = f.targetPref && TARGET_PREFS[f.targetPref];
   if (pref) s += pref(M, f, g);
-  if (M.sense) s += senseScore(M, f, g) + supportScore(M, f, g); // 무리 싸움 판단 (11/18 — team_sense.js · 셋 이상 판의 AI 만): 다친 동료를 겨눈 적 … · 서포트 (11/19 — team_support.js): 독일 · 동방 동료와 붙은 적 · 이베리아는 피함
+  if (M.sense) s += senseScore(M, f, g) + supportScore(M, f, g); // 무리 싸움 판단 (11/18 — team_sense.js · 셋 이상 판의 AI 만): 다친 동료를 겨눈 적 … · 서포트 (11/19 — team_support.js): 동방 동료를 치는 적
   return s;
 }
 

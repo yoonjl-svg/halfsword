@@ -183,16 +183,15 @@ export const TEAM_SENSE = {
 //  셋 이상 판의 AI 만 · 판단 · 꼴만(규칙 · 몸 값 그대로) · 몫 = 아래 값 × 숙련 곡선 MINDSET.profF[손에 든 유파 숙련] [값은 작업자 안 — 사장님 확인 전]
 //  laneW 동료 칼길 = 동료 → 그 상대 선분에서 이 m 안 (독일 · 동방이 벗어남 · 독일은 그 위에서 밀지 않음 — 재기 '칼길 막음' 0.5 m 와 걸음 사다리 0.6)
 //  de 독일: laneK 동료 칼길에서 벗어나는 옆 스틱 몫 · goal 동료와 벌릴 각(°) · tol 너그러움(°) · k 도는 스틱 몫 · near 도는 거리 = 내 칼끝 + m (멀면 다가감이 먼저) ·
-//          shove 밀기로 정하는 각(°) · reach 밀린 적이 들 동료 칼끝 + m · pinR 묶기 — 서 있는 동료가 내 상대에서 이 m 안이면 붙은 거리에서 밂 ·
-//          follow 동료가 칠 때 빈틈 점수 · focus 동료와 붙은 적 겨눔 덧셈(m)
-//  cn 동방: laneK · goal · tol · k · near (위와 같은 뜻) · ambush 동료와 붙은 적의 앞 밖에서 빈틈 점수 · run 그 적을 친 뒤 이어 치기 마음을 거둘 몫 · focus
-//  ib 이베리아: sepX 같은 편 비킴 거리(TEAM_FIGHT.mateSep.dist)의 배 — 제 넓은 원 · avoid 동료와 붙은 적 겨눔 덧셈(m · + = 피함)
-//          (합공에 덜 낌은 마음가짐 줄 SCHOOL_MINDSET.iberian.many.ally — 이탈리아 결투 고집과 같은 칸)
+//          shove 밀기로 정하는 각(°) · reach 밀린 적이 들 동료 칼끝 + m · pinR 묶기 — 서 있는 동료가 내 상대에서 이 m 안이면 붙은 거리에서 밂 (2:2 의 제 적은 늘 묶음) ·
+//          follow 동료가 칠 때 빈틈 점수
+//  cn 동방: laneK (위와 같은 뜻) · focus 동료와 붙은 적 겨눔 덧셈(m) · hit 그 적이 동료를 치는 중이면 더 · ambush 그 적의 앞 밖에서 빈틈 점수 · run 그 적을 친 뒤 이어 치기 마음을 거둘 몫
+//  ib 이베리아: crossR 이 m 안의 서 있는 동료 쪽으로 제 원을 돎 · sepX 같은 편 비킴 거리 곱(숙련 6) · lane 칼길을 덜 보는 몫(미룸 줄 폭 × (1 − lane) · 비킴 걸음 × (1 − lane))
 export const TEAM_SUPPORT = {
   laneW: 0.6,
-  de: { laneK: 0.8, goal: 75, tol: 15, k: 0.8, near: 0.9, shove: 100, reach: 0.6, pinR: 3.0, follow: 1.2, focus: 1.0 },
-  cn: { laneK: 0.8, goal: 100, tol: 15, k: 0.8, near: 0.9, ambush: 1.5, run: 0.5, focus: 1.0 },
-  ib: { sepX: 2, avoid: 1.0 },
+  de: { laneK: 0.8, goal: 75, tol: 15, k: 0.8, near: 0.9, shove: 100, reach: 0.6, pinR: 3.0, follow: 1.2 },
+  cn: { laneK: 0.8, focus: 1.0, hit: 0.6, ambush: 1.5, run: 0.5 },
+  ib: { crossR: 3.0, sepX: 0.3, lane: 0.8 },
 };
 
 export const CAMERA = {
