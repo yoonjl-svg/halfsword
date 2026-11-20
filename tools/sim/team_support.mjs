@@ -267,6 +267,7 @@ if (MAIN && !AGG) {
       for (const mode of MODES) {
         const r = teamFight(mode, fd, x, MAX);
         rows.push({ kind: 'team', mode, field: FIELD, k, prof: mode === '2v1' && SOLO ? -1 : fd.prof, x, P: fd.P.school, F1: fd.F1.school, F2: fd.F2.school, ...r });
+        save(); // 판마다 적음 (컨테이너가 끊겨도 끝난 판은 남음 — 이어 돌릴 때 --ks 로 빠진 묶음만)
         process.stderr.write(`${mode} k${k + 1} p${fd.prof} X=${x} P=${fd.P.school} F=${fd.F1.school}${mode === '2v2' ? '+' + fd.F2.school : ''} → ${r.xWin} ${r.t}s 돕기 ${r.asHit}/${r.pHits} 같은편 ${r.ffXtoA}/${r.ffAtoX} (${((Date.now() - t0) / 1000).toFixed(0)}s)\n`);
       }
       if (DUEL) {
