@@ -37,7 +37,7 @@ import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧�
 import { MEASURED } from './weapon_measured.js';
 import { routeAroundStageObstacle, obstacleSegmentBlocked, OBSTACLE_ROUTE } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 막힌 길이면 스틱 방향만 둘레로 (석상 없는 무대는 아무 일 없음)
 import { avoidEtnaLava } from './terrain_navigation.js'; // 화산섬 용암: 내리막 자발 이동·기술 걸음만 돌리거나 취소 (지형 없는 무대는 아무 일 없음)
-import { profBody } from './prof_body.js'; // 숙련도별 몸 값 (11/17 E — config PROF_BODY)
+import { profBody, deVitalityK } from './prof_body.js'; // 숙련도별 몸 값 (11/17 E — config PROF_BODY)
 import { wetlandWetness, WETLAND_RIM, WETLAND_CORE_SPEED } from './wetland_ground.js'; // 마른 길을 아는 AI (라트나 · 잠든 습지만 — 아래 dry* · config.js DRYPATH): 물리와 같은 젖음 지도
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
@@ -648,7 +648,7 @@ export class AI {
     //  인물 시트 힘(PL.strength — 브론 1.3 · 롤랑 1.1 …)은 그 칸에 곱하는 몫 [사장님 11/18 결정 '3. 곱하기'] (없으면 1)
     const body = profBody(this.persona?.bodyProficiency ?? this.mainProficiency ?? this.proficiency);
     this.level = { ...base, ...PL, strength: body.strength * (PL?.strength ?? 1) };
-    this.me.vitality = body.vitality;
+    this.me.vitality = body.vitality * deVitalityK(this.art?.tradition, this.proficiency); // 11/20 독일 유파 버티는 힘 덤 (config DE_VITALITY — 손에 든 유파가 독일이면 그 숙련도 칸)
     const RX = AI_PROFICIENCY.reaction; // AI 반응 시간은 숙련도로 (10/21 — 인물 시트 · 이름 값보다 이김) · 10/29 15:5x 부터 본 유파 숙련도(사람 몫 — 다른 유파 무기를 들어도 그대로)
     if (RX) this.level = { ...this.level, reaction: RX[Math.max(0, Math.min(RX.length - 1, Math.round(this.mainProficiency ?? this.proficiency ?? 2)))] };
     this.me.strength = this.level.strength;
