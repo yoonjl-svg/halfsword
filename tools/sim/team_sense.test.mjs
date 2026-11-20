@@ -18,6 +18,14 @@ import { createTeamHud, TEAM_COLORS } from '../../src/team_hud.js';
 import * as THREE from 'three';
 
 const TS = CONFIG.TEAM_SENSE;
+// AI 굴림 씨앗 (11/20 — ai_run.test.mjs 와 같은 꼴): newMatch 의 seed 는 무기 파손 굴림(breakSeed)만 — AI 생성자 · 판단 굴림은 전역 Math.random 이라
+//  판마다 시험이 씨앗을 둔다 (fights12 · many_fighters.test.mjs 와 같은 굴림 · 같은 씨앗이면 늘 같은 싸움). 시험이 끝나면 원래 Math.random 으로 되돌림
+const realRandom = Math.random;
+const seedRand = (t, seed) => {
+  let s = seed * 9301 + 49297;
+  Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  t.after(() => { Math.random = realRandom; });
+};
 
 /** 가짜 몸: 가슴 (x, z) · 바라보는 각 heading(라디안 — fighter.forward = (cos h, −sin h)) · 편 · AI 꼴 */
 function fake(index, team, x, z, heading, o = {}) {
@@ -46,10 +54,12 @@ const noRandom = (fn) => {
   try { return fn(); } finally { Math.random = r; }
 };
 
-test('① 1:1 은 판 사본 없음 · 2:2 는 있고 스텝마다 장이 쌓임 (몸 넷 칸)', () => {
+test('① 1:1 은 판 사본 없음 · 2:2 는 있고 스텝마다 장이 쌓임 (몸 넷 칸)', (t) => {
+  seedRand(t, 1);
   const G1 = newMatch({ seed: 1 });
   assert.equal(G1.sense, undefined);
   for (const f of G1.fighters) assert.equal(f.teamSense, undefined);
+  seedRand(t, 1);
   const G = newMatch({ count: 4, ai: 'all', seed: 1 });
   assert.ok(G.sense);
   for (const f of G.fighters) assert.equal(f.teamSense, G.sense);
@@ -181,7 +191,7 @@ test('④ 열세 셈: 내 동료와 붙은 적은 뺌 (눈에 보일 때) · 아
   assert.equal(busyFoe(G[0].aiCtl, G[3]), false);
 });
 
-test('⑤ 셋 따로(편 0 · 1 · 2): 남의 편 몸은 동료로 안 읽음 · 제삼자와 붙은 적은 열세 셈에서 뺌 · 새 셈은 난수를 부르지 않음', () => {
+test('⑤ 셋 따로(편 0 · 1 · 2): 남의 편 몸은 동료로 안 읽음 · 제삼자와 붙은 적은 열세 셈에서 뺌 · 새 셈은 난수를 부르지 않음', (t) => {
   // 셋이 저마다 편 · 2 가 무릎 · 1 이 2 를 겨눔 — 0 에게 2 는 동료가 아님 → 엄호 덧셈 없음
   const F = [fake(0, 0, 0, 0, 0), fake(1, 1, 2, 0, Math.PI), fake(2, 2, 1.2, 0.2, 0, { state: 'kneel' })];
   const M = board(F, [1, 2, 1]);
@@ -202,6 +212,7 @@ test('⑤ 셋 따로(편 0 · 1 · 2): 남의 편 몸은 동료로 안 읽음 ·
     assert.equal(ambushOpp(E[0].aiCtl)?.kind, 'ambush');
   });
   // 실제 판: 2:2 몇 스텝 동안 새 셈만 부른 난수 0 (판 사본 적기 · 상대 고르기 덧셈 · 발)
+  seedRand(t, 2);
   const G = newMatch({ count: 4, ai: 'all', seed: 2 });
   for (let i = 0; i < 12; i++) G.step();
   noRandom(() => {

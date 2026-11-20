@@ -23,6 +23,14 @@ const filt = (g) => g & 0xffff;
 const meets = (a, b) => (mem(a) & filt(b)) !== 0 && (mem(b) & filt(a)) !== 0; // Rapier InteractionGroups.test
 const bodyCols = (f) => Object.entries(f.bodies).map(([k, rb]) => [k, rb.collider(0)]);
 const swordCols = (f) => f.swordColliders.map((c) => ['weapon', c]);
+// AI 굴림 씨앗 (11/20 — ai_run.test.mjs 와 같은 꼴): newMatch 의 seed 는 무기 파손 굴림(breakSeed)만 — AI 생성자 · 판단 굴림은 전역 Math.random 이라
+//  판마다 시험이 씨앗을 둔다 (fights12 · many_fighters.test.mjs 와 같은 굴림 · 같은 씨앗이면 늘 같은 싸움). 시험이 끝나면 원래 Math.random 으로 되돌림
+const realRandom = Math.random;
+const seedRand = (t, seed) => {
+  let s = seed * 9301 + 49297;
+  Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  t.after(() => { Math.random = realRandom; });
+};
 
 /** 예전(10/29 전) fighter.js 의 비트 식 — 자리 i 의 부위 이름 → 그룹 */
 function legacyGroups(i, part) {
@@ -63,7 +71,8 @@ function diffAll(G, legacy) {
   return { pairs: (C.length * (C.length - 1)) / 2, bad };
 }
 
-test('① 1:1 접촉 판정 = 예전 식 그대로 (편 = 자리 번호 · 11/20 부터 비트 값은 부류 · 판정은 쌍마다 같음)', () => {
+test('① 1:1 접촉 판정 = 예전 식 그대로 (편 = 자리 번호 · 11/20 부터 비트 값은 부류 · 판정은 쌍마다 같음)', (t) => {
+  seedRand(t, 1);
   const G = newMatch({ seed: 1 });
   for (const f of G.fighters) {
     assert.equal(f.team, f.index);
@@ -75,13 +84,15 @@ test('① 1:1 접촉 판정 = 예전 식 그대로 (편 = 자리 번호 · 11/20
   for (const [, , c] of allCols(G.fighters)) assert.ok(meets(c.collisionGroups(), GROUND_GROUPS), '땅'); // 땅 · 벽과는 모두
 });
 
-test('② 2:2 · 2:1 접촉 판정 = 예전 셋 이상 판(ffa) 비트 그대로 — 같은 편도 적과 똑같이 · 제 몸끼리만 지나감 · 투구와 안 겹침', () => {
+test('② 2:2 · 2:1 접촉 판정 = 예전 셋 이상 판(ffa) 비트 그대로 — 같은 편도 적과 똑같이 · 제 몸끼리만 지나감 · 투구와 안 겹침', (t) => {
   for (const count of [4, 3]) {
+    seedRand(t, 1);
     const G = newMatch({ count, ai: 'all', seed: 1 });
     const { pairs, bad } = diffAll(G, legacyFfaGroups);
     assert.ok(pairs >= 900, `${count}: 쌍 ${pairs}`);
     assert.deepEqual(bad, [], `${count} 명`);
   }
+  seedRand(t, 1);
   const G = newMatch({ count: 4, ai: 'all', seed: 1 });
   const F = G.fighters;
   assert.deepEqual(F.map((f) => f.team), [0, 1, 0, 1]);
@@ -114,7 +125,8 @@ test('② 2:2 · 2:1 접촉 판정 = 예전 셋 이상 판(ffa) 비트 그대로
   for (const f of F) assert.equal(f.bits.foeWeapon, F.filter((g) => g !== f).reduce((m, g) => m | mem(g.swordColliders[0].collisionGroups()), 0));
 });
 
-test('②-2 3:3 (11/20 — 자리 수 제한 없음): 자리 0 ~ 5 · 편 홀짝 · 남과는 부류 규칙 · 제 몸은 제 칼 · 칼팔 ↔ 제 몸통만 · 몇 명이든 같은 비트', () => {
+test('②-2 3:3 (11/20 — 자리 수 제한 없음): 자리 0 ~ 5 · 편 홀짝 · 남과는 부류 규칙 · 제 몸은 제 칼 · 칼팔 ↔ 제 몸통만 · 몇 명이든 같은 비트', (t) => {
+  seedRand(t, 3);
   const G = newMatch({ count: 6, ai: 'all', seed: 3, weapons: ['longsword', 'kriegsmesser', 'rapier', 'uchigatana', 'hwando', 'zweihander'] });
   const F = G.fighters;
   assert.deepEqual(F.map((f) => f.index), [0, 1, 2, 3, 4, 5]);
@@ -143,7 +155,8 @@ test('②-2 3:3 (11/20 — 자리 수 제한 없음): 자리 0 ~ 5 · 편 홀짝
   assert.equal(F[5].swordColliders[0].collisionGroups(), F[0].swordColliders[0].collisionGroups());
 });
 
-test('③ sameSide(겨눔만) · pairOf(제 몸만 버림) · 칼 쌍 묶기 · AI setFoe', () => {
+test('③ sameSide(겨눔만) · pairOf(제 몸만 버림) · 칼 쌍 묶기 · AI setFoe', (t) => {
+  seedRand(t, 2);
   const G = newMatch({ count: 4, ai: 'all', seed: 2 });
   const [P, E, P2, E2] = G.fighters;
   assert.ok(sameSide(P, P2) && sameSide(E, E2) && sameSide(P, P) && !sameSide(P, E) && !sameSide(P2, E));
@@ -178,12 +191,13 @@ test('③ sameSide(겨눔만) · pairOf(제 몸만 버림) · 칼 쌍 묶기 · 
   ai.setFoe(E); // 같은 상대: 아무 일 없음
   assert.equal(ai.sense, sE);
   // 1:1 AI 는 기록이 없다 (예전 길 그대로)
+  seedRand(t, 1);
   const G1 = newMatch({ ai: [1, 0], seed: 1 });
   assert.equal(G1.ais[1].foeRecs, undefined);
   assert.equal(G1.ais[0].foeRecs, undefined);
 });
 
-test('④ 시작 자리 · 조종 차례 · 기본 상대', () => {
+test('④ 시작 자리 · 조종 차례 · 기본 상대', (t) => {
   const gap = CONFIG.ARENA.startGap;
   assert.deepEqual(spawnSpots(2, { gap, mateGap: 1 }).map(({ x, z, heading }) => [x, z, heading]), [[-gap / 2, 0, 0], [gap / 2, 0, Math.PI]]);
   const s4 = spawnSpots(4, { gap, mateGap: 1.6 });
@@ -195,6 +209,7 @@ test('④ 시작 자리 · 조종 차례 · 기본 상대', () => {
   const me = (index, team, human = false) => ({ me: { index, team, human } });
   assert.deepEqual(orderControllers([me(0, 0, true), me(1, 1)]).map((c) => c.me.index), [1, 0], '1:1 — 상대 AI 먼저 (fights12)');
   assert.deepEqual(orderControllers([me(0, 0, true), me(1, 1), me(2, 0), me(3, 1)]).map((c) => c.me.index), [1, 3, 2, 0], '1 편 → 0 편 → 사람 맨 뒤');
+  seedRand(t, 3);
   const G = newMatch({ count: 4, ai: 'all', seed: 3 });
   const F = G.fighters;
   assert.deepEqual(F.map((f) => pairFoe(f, G).index), [1, 0, 3, 2]);
@@ -273,7 +288,8 @@ test('⑤ 상대 고르기: 가까움 · 같으면 작은 자리 · 쓰러짐 ·
   me.targetPref = null;
 });
 
-test('⑥ 편 전멸 = 판 끝 · 결과 (자리마다 alive · blood · wounds · causeOfDeath)', () => {
+test('⑥ 편 전멸 = 판 끝 · 결과 (자리마다 alive · blood · wounds · causeOfDeath)', (t) => {
+  seedRand(t, 4);
   const G = newMatch({ count: 3, ai: 'all', seed: 4 });
   assert.equal(G.over, false);
   G.step();
@@ -289,6 +305,7 @@ test('⑥ 편 전멸 = 판 끝 · 결과 (자리마다 alive · blood · wounds 
   assert.equal(R.fighters[1].causeOfDeath, '시험');
   for (const r of R.fighters) assert.ok(typeof r.blood === 'number' && Array.isArray(r.wounds) && 'causeOfDeath' in r);
   // 1:1 도 같은 규칙 (읽기만)
+  seedRand(t, 1);
   const G1 = newMatch({ ai: [1, 0], seed: 1 });
   G1.enemy.die('시험');
   G1.step();
@@ -296,7 +313,8 @@ test('⑥ 편 전멸 = 판 끝 · 결과 (자리마다 alive · blood · wounds 
   assert.equal(G1.winner, 0);
 });
 
-test('⑦ 상대를 아는 반응 시간: 상대를 바꾸면 새 상대의 face s 전 자리부터 (옛 상대 쪽으로 안 돎)', () => {
+test('⑦ 상대를 아는 반응 시간: 상대를 바꾸면 새 상대의 face s 전 자리부터 (옛 상대 쪽으로 안 돎)', (t) => {
+  seedRand(t, 5);
   const G = newMatch({ count: 4, ai: 'all', seed: 5 });
   const [P, E, , E2] = G.fighters;
   for (let i = 0; i < 60; i++) G.step();
@@ -307,12 +325,14 @@ test('⑦ 상대를 아는 반응 시간: 상대를 바꾸면 새 상대의 face
   assert.ok(Math.hypot(tg.x - q.x, tg.z - q.z) < 0.3, '새 상대 자리 근처');
   assert.ok(Math.hypot(tg.x - o.x, tg.z - o.z) > 1.0, '옛 상대 자리 아님');
   // 1:1 은 예전 기록 (상대 목록 없음)
+  seedRand(t, 1);
   const G1 = newMatch({ ai: [1, 0], seed: 1 });
   assert.equal(G1.player.foes, undefined);
   assert.equal(G1.player.mates, undefined);
 });
 
-test('⑧ AI 상대마다 몫 맞바꿈 (위협 걸쇠 · 몰아침 · 고노센 경계) · 그 상대와만의 셈은 0', () => {
+test('⑧ AI 상대마다 몫 맞바꿈 (위협 걸쇠 · 몰아침 · 고노센 경계) · 그 상대와만의 셈은 0', (t) => {
+  seedRand(t, 6);
   const G = newMatch({ count: 4, ai: 'all', seed: 6 });
   const ai = G.ais[0];
   const [, E, , E2] = G.fighters;
@@ -325,7 +345,8 @@ test('⑧ AI 상대마다 몫 맞바꿈 (위협 걸쇠 · 몰아침 · 고노센
   assert.deepEqual([ai.threatId, ai.threatSeen, ai.foeAggro, ai.preArmed, ai.gnsW.mark, ai.combo], [5, 5, 0.7, false, 1, 0]);
 });
 
-test('⑨ 죽은 몸 쉬게 하기 (셋 이상 판만) · 카메라 물러남 몫', () => {
+test('⑨ 죽은 몸 쉬게 하기 (셋 이상 판만) · 카메라 물러남 몫', (t) => {
+  seedRand(t, 6);
   const G = newMatch({ count: 4, ai: 'all', seed: 6 });
   const dead = G.fighters[3];
   let stepped = 0;
@@ -343,6 +364,7 @@ test('⑨ 죽은 몸 쉬게 하기 (셋 이상 판만) · 카메라 물러남 �
   assert.equal(stepped, before, '쉬는 몸이 스텝을 탐');
   assert.ok(G.fighters.slice(0, 3).every((f) => !f.settled));
   // 1:1 은 예전 그대로 (쉬지 않음)
+  seedRand(t, 1);
   const G1 = newMatch({ ai: [1, 0], seed: 1 });
   G1.enemy.die('시험');
   for (let i = 0; i < 400; i++) G1.step();

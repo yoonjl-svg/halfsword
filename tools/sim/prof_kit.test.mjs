@@ -32,6 +32,15 @@ const aiNamesOf = (s) => {
 };
 /** AI 꾸러미(uniqueByName)에 든 고유 동작 이름 (속임수 꼴은 u.name) */
 const pkgNames = (A) => new Set([...A.uniqueByName.values()].map((u) => u.name));
+// AI 굴림 씨앗 (11/20 — ai_run.test.mjs 와 같은 꼴): newMatch 의 seed 는 무기 파손 굴림(breakSeed)만 — AI 생성자 · 판단 굴림은 전역 Math.random 이라
+//  판마다 시험이 씨앗을 둔다 (fights12 · many_fighters.test.mjs 와 같은 굴림 · 같은 씨앗이면 늘 같은 싸움). 시험이 끝나면 원래 Math.random 으로 되돌림
+//  이 파일 판(match)은 newMatch seed 를 주지 않음 — 굴림 씨앗 1
+const realRandom = Math.random;
+const seedRand = (t, seed) => {
+  let s = seed * 9301 + 49297;
+  Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  t.after(() => { Math.random = realRandom; });
+};
 
 test('AI_KIT 기본값 — 켬 [사장님 11/16 결정] · 사다리 표(11/16 사장님 손목 힘 3단계 · 맞박자 찌르기 3단계 · 헛누름 4단계 · 막아찌르기 2단계 · 굳은 받기 2단계 반영)', () => {
   assert.deepEqual(AI_KIT.ladder, {
@@ -119,7 +128,8 @@ test('11/16 사장님 \'다 너의 권고대로 하마\' ① 내려 찌르기 �
 });
 
 
-test('11/16 사장님 \'단 실력 등급은 높음을 4~5, 최고를 6으로\' · \'다 너의 권고대로 하마\' ⑥ 반응 시간 모든 숙련도 0.2 s', () => {
+test('11/16 사장님 \'단 실력 등급은 높음을 4~5, 최고를 6으로\' · \'다 너의 권고대로 하마\' ⑥ 반응 시간 모든 숙련도 0.2 s', (t) => {
+  seedRand(t, 1);
   assert.deepEqual(AI_PLAN.levels, ['easy', 'easy', 'normal', 'normal', 'hard', 'hard', 'expert']);
   assert.deepEqual(AI_PROFICIENCY.levels, ['easy', 'easy', 'normal', 'hard', 'hard', 'hard', 'expert']);
   assert.equal(AI_PROFICIENCY.reaction.length, 7);
@@ -127,7 +137,8 @@ test('11/16 사장님 \'단 실력 등급은 높음을 4~5, 최고를 6으로\' 
   for (const p of [0, 2, 6]) assert.equal(match('german', p).ai.level.reaction, CONFIG.realS(0.2), `숙련 ${p}`);
 });
 
-test('AI 몸 칸 몫 (숙련도 0 ~ 6 · 다섯 유파): skillKit · 보법 I · 막기 I · 막기 자리 몸꼴 · 무유파 막기 자리', () => {
+test('AI 몸 칸 몫 (숙련도 0 ~ 6 · 다섯 유파): skillKit · 보법 I · 막기 I · 막기 자리 몸꼴 · 무유파 막기 자리', (t) => {
+  seedRand(t, 1);
   for (const s of TREE_SCHOOLS) {
     for (const p of [0, 1, 2, 3, 4, 5, 6]) {
       const G = match(s, p);
@@ -154,7 +165,8 @@ test('AI 몸 칸 몫 (숙련도 0 ~ 6 · 다섯 유파): skillKit · 보법 I ·
   }
 });
 
-test('고유 공격 · 유파 패시브 · 비기는 칸을 따른다 (옛 단계표 · SCHOOL_PASSIVE.at · secretAt 대신)', () => {
+test('고유 공격 · 유파 패시브 · 비기는 칸을 따른다 (옛 단계표 · SCHOOL_PASSIVE.at · secretAt 대신)', (t) => {
+  seedRand(t, 1);
   for (const s of TREE_SCHOOLS) {
     const names = aiNamesOf(s);
     const passiveSlot = nodesOf(s).find((n) => n.cat === 'passive' && n.f.includes('passive')).id;
@@ -183,7 +195,8 @@ test('고유 공격 · 유파 패시브 · 비기는 칸을 따른다 (옛 단�
   assert.deepEqual([2, 3, 4].map((p) => match('italian', p).ai.cavDeep), [false, false, true]);
 });
 
-test('AI 만의 스위치도 칸을 묻는다: 사냥 겹 C12 · 칼 씨름 G12 · 바위 몸 밀치기 J12 · 이어 돌리기 B7 · 파고들기 G2 · 막는 동안 피해 감소 C8', () => {
+test('AI 만의 스위치도 칸을 묻는다: 사냥 겹 C12 · 칼 씨름 G12 · 바위 몸 밀치기 J12 · 이어 돌리기 B7 · 파고들기 G2 · 막는 동안 피해 감소 C8', (t) => {
+  seedRand(t, 1);
   const cn4 = match('chinese', 4).ai, cn5 = match('chinese', 5).ai;
   assert.deepEqual([huntOn(cn4.me), huntOn(cn5.me)], [false, true]);
   const de4 = match('german', 4).ai, de5 = match('german', 5).ai;
@@ -209,7 +222,8 @@ test('AI 만의 스위치도 칸을 묻는다: 사냥 겹 C12 · 칼 씨름 G12 
   assert.equal(fake(3), 1 - cut0);
 });
 
-test('손에 든 무기가 바뀌면 칸 몫을 그 유파 숙련도로 다시 (kitRefresh — 숙련도 표 { 유파: 숙련도 })', () => {
+test('손에 든 무기가 바뀌면 칸 몫을 그 유파 숙련도로 다시 (kitRefresh — 숙련도 표 { 유파: 숙련도 })', (t) => {
+  seedRand(t, 1);
   const G = newMatch({ weapons: ['longsword', 'longsword'], ai: 'all', aiOf: () => ({ level: 'normal', persona: { proficiency: { german: 2, italian: 5 } } }) });
   const A = G.ai;
   assert.equal(A.kit.school, 'german');
@@ -244,9 +258,10 @@ test('사람 숙련도 (11/16 사장님 \'사람 셈도 문턱 기준으로 바�
   assert.equal(g(['G10', 'G7']), 1);
 });
 
-test('짧은 AI 대 AI 싸움 (다섯 유파 × 숙련도 1 · 2 · 4 · 6 — 4 초): 깨지지 않고 수가 모두 유한', () => {
+test('짧은 AI 대 AI 싸움 (다섯 유파 × 숙련도 1 · 2 · 4 · 6 — 4 초): 깨지지 않고 수가 모두 유한', (t) => {
   for (const s of TREE_SCHOOLS) {
     for (const p of [1, 2, 4, 6]) {
+      seedRand(t, 1);
       const G = match(s, p);
       for (let i = 0; i < 4 / DT; i++) G.step();
       for (const f of [G.player, G.enemy]) {

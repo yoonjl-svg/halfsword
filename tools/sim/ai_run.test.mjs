@@ -4,6 +4,7 @@
 //     몸이 뛰는 쪽을 봄 · 닿기 전에 멈춤 · 닿을 때 기력 AI_RUN.keep 넘게
 //  ③ 언제 (가짜 판): 겨눈 상대가 내 동료를 겨눔 → join · 나를 겨눠 다가옴 · 제삼자와 붙음(셋 따로) → 안 뜀 · 나를 겨눈 채 멀어짐 → chase · 다른 적이 칼끝 + near 안 → 안 뜀 ·
 //     닿을 때 기력 어림이 keep 밑 → 안 뜀 · 간 보기 꼴이 아님 → 안 뜀 · 공격 꼴이면 runBreak · 뛰는 쪽 옆 몫 ≤ 앞 몫 × lat · 난수 안 부름
+//  ① · ② 판은 AI 굴림(Math.random)에 씨앗을 둔다 (seedRand — 같은 씨앗이면 늘 같은 싸움)
 //  node --test tools/sim/ai_run.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,8 +17,18 @@ import { LOOKS } from '../../src/looks.js';
 
 const { AI_RUN, RUN, GAIT } = CONFIG;
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+// AI 굴림 씨앗 (11/20 들쭉날쭉 고침): newMatch 의 seed 는 무기 파손 굴림(breakSeed)만 — AI 생성자 · 판단 굴림은 전역 Math.random 이라 시험이 씨앗을 둔다
+//  (fights12 · many_fighters.test.mjs 와 같은 굴림). 안 두면 판마다 다른 싸움 — ② 가 20 번에 2 ~ 4 번 'AI 가 뜀'(아무도 안 뛴 판)으로 깨졌다.
+//  시험이 끝나면 원래 Math.random 으로 되돌림 (같은 파일 다른 시험에 새지 않게 — 한 시험에서 여러 번 불러도 처음 것으로)
+const realRandom = Math.random;
+const seedRand = (t, seed) => {
+  let s = seed * 9301 + 49297;
+  Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  t.after(() => { Math.random = realRandom; });
+};
 
-test('① 1:1 AI 는 뛰지 않음: 15 s 판에서 두 AI 몸 모두 f.run · runReach 가 없음 (판 사본도 없음)', () => {
+test('① 1:1 AI 는 뛰지 않음: 15 s 판에서 두 AI 몸 모두 f.run · runReach 가 없음 (판 사본도 없음)', (t) => {
+  seedRand(t, 2);
   const G = newMatch({ seed: 2, ai: 'all' });
   assert.equal(G.sense, undefined);
   for (let i = 0; i < 15 / DT && !G.over; i++) G.step();
@@ -29,7 +40,8 @@ test('① 1:1 AI 는 뛰지 않음: 15 s 판에서 두 AI 몸 모두 f.run · ru
   G.world.free();
 });
 
-test('② 셋 이상 판 AI 는 사람과 같은 규칙으로 뜀 (2:1 판 시작 — 짝의 둘째가 동료와 붙은 혼자에게)', () => {
+test('② 셋 이상 판 AI 는 사람과 같은 규칙으로 뜀 (2:1 판 시작 — 짝의 둘째가 동료와 붙은 혼자에게)', (t) => {
+  seedRand(t, 1);
   const W = ['zweihander', 'longsword', 'flamberge']; // 11/19 재기에 에스톡 · 세이버 안 씀 (전 estoc)
   const G = newMatch({ count: 3, ai: 'all', seed: 1, walls: true, weapons: W, looks: Array(3).fill(LOOKS.enemy), aiOf: (i) => aiAtProficiency({ ai: { persona: {} }, weapon: W[i] }, 4) });
   assert.ok(G.sense);

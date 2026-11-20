@@ -7,6 +7,14 @@ import { CHARACTERS_BY_ID } from '../../src/characters.js';
 
 const { BIND, realS } = CONFIG;
 const near = (a, b, e = 1e-9) => assert.ok(Math.abs(a - b) < e, `${a} != ${b}`);
+// AI 굴림 씨앗 (11/20 — ai_run.test.mjs 와 같은 꼴): newMatch 의 seed 는 무기 파손 굴림(breakSeed)만 — AI 생성자 · 판단 굴림은 전역 Math.random 이라
+//  판마다 시험이 씨앗을 둔다 (fights12 · many_fighters.test.mjs 와 같은 굴림 · 같은 씨앗이면 늘 같은 싸움). 시험이 끝나면 원래 Math.random 으로 되돌림
+const realRandom = Math.random;
+const seedRand = (t, seed) => {
+  let s = seed * 9301 + 49297;
+  Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  t.after(() => { Math.random = realRandom; });
+};
 
 test('기본값: 반발 0.2(사장님) · 마찰 1.2 · 밀기 0.2 m/s · 상한 실제 1.5 s · 성향 셈 켬 [0.5, 1.5]', () => {
   assert.equal(BIND.restitution, 0.2);
@@ -59,8 +67,9 @@ test('칼 면 (combat.js armSteel): 떨어져 있으면 반발 min(제 값, 0.2)
   }
 });
 
-test('2:2 자연 바인드: 맞닿은 두 칼만 반발을 끄고, 나머지 두 칼의 재질은 유지한다', async () => {
+test('2:2 자연 바인드: 맞닿은 두 칼만 반발을 끄고, 나머지 두 칼의 재질은 유지한다', async (t) => {
   const { newMatch } = await import('./jelly_harness.mjs');
+  seedRand(t, 3);
   const G = newMatch({ count: 4, seed: 3 });
   try {
     const C = G.combat;

@@ -13,6 +13,14 @@ import { specFromSetup, snapshotFromPerson, bloodFromHp, hpFromFighter, resultFr
 import { WOUND_LIMB, LIMB_LOSS } from '../../src/fighter.js';
 
 const V = CONFIG.VITALS;
+// AI 굴림 씨앗 (11/20 — ai_run.test.mjs 와 같은 꼴): newMatch 의 seed 는 무기 파손 굴림(breakSeed)만 — AI 생성자 · 판단 굴림은 전역 Math.random 이라
+//  판마다 시험이 씨앗을 둔다 (fights12 · many_fighters.test.mjs 와 같은 굴림 · 같은 씨앗이면 늘 같은 싸움). 시험이 끝나면 원래 Math.random 으로 되돌림
+const realRandom = Math.random;
+const seedRand = (t, seed) => {
+  let s = seed * 9301 + 49297;
+  Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  t.after(() => { Math.random = realRandom; });
+};
 const person = (key, id, extra = {}) => ({ key, id, weapon: 'longsword', school: 'german', tier: 1, prof: { german: 3, none: 1 }, lent: false, hp: 100, injuries: [], dead: false, ...extra });
 
 /** 가짜 setup: 내 편 b (나 + 동료) 대 a (무명 둘 — 하나는 죽어 빠짐 · 하나 남음 + 인물 하나) */
@@ -79,29 +87,34 @@ test('② 체력 ↔ 피 · 부상 → 닫힌 상처', () => {
   assert.equal(s.limbs.armS, 1);
 });
 
-test('③ 진짜 몸: 사본 → 입힘 → 사본 = 같은 값 · 칼 쥔 팔이 문턱 밑이면 칼을 놓침', () => {
+test('③ 진짜 몸: 사본 → 입힘 → 사본 = 같은 값 · 칼 쥔 팔이 문턱 밑이면 칼을 놓침', (t) => {
   const p = person('0-0', 'player', { hp: 35, injuries: [{ part: 'arm', sev: 0.6, rests: 0 }, { part: 'leg', sev: 0.4, rests: 2 }, { part: 'torso', sev: 0.3, rests: 0 }] });
+  seedRand(t, 3);
   const A = newMatch({ seed: 3, count: 4 });
   const f = A.fighters[2];
   f.applySnapshot(snapshotFromPerson(p));
   const s1 = f.snapshot();
   assert.equal(s1.wounds.length, 3);
   assert.ok(s1.wounds.every((w) => w.carried && w.bleed === 0));
+  seedRand(t, 9);
   const B = newMatch({ seed: 9, count: 4 });
   const g = B.fighters[1];
   g.applySnapshot(s1);
   assert.deepEqual(g.snapshot(), s1);
   // 두 번 돌려도 같은 값 (난수 없음)
+  seedRand(t, 3);
   const C = newMatch({ seed: 3, count: 4 });
   C.fighters[2].applySnapshot(snapshotFromPerson(p));
   assert.deepEqual(C.fighters[2].snapshot(), s1);
   // 칼 쥔 팔 기능이 문턱 밑인 사본 → 처음부터 칼을 놓침 (싸움 상처와 같은 규칙)
+  seedRand(t, 4);
   const D = newMatch({ seed: 4 });
   const h = D.fighters[0];
   assert.equal(h.armed, true);
   h.applySnapshot({ ...s1, limbs: { ...s1.limbs, armS: V.dropSwordArm - 0.01 } });
   assert.equal(h.armed, false);
   // 사본 없이 = 아무것도 안 바뀜
+  seedRand(t, 5);
   const E = newMatch({ seed: 5 });
   const before = E.fighters[0].snapshot();
   E.fighters[0].applySnapshot(null);
@@ -150,7 +163,7 @@ test('⑤ hpFromFighter: 죽음 0 · 산 몸 1 ~ 100 정수', () => {
   assert.equal(hpFromFighter({ alive: true, blood: bloodFromHp(73) }), 73);
 });
 
-test('⑥ 부러진 무기: 처음부터 부러짐 = 싸움에서 부러질 때와 같은 몸 · 난수 없음 · 결과 weaponBroken', () => {
+test('⑥ 부러진 무기: 처음부터 부러짐 = 싸움에서 부러질 때와 같은 몸 · 난수 없음 · 결과 weaponBroken', (t) => {
   // setup 꼴: weapon 이 id 문자열이든 { id, broken } 이든
   assert.deepEqual(weaponOfPerson({ weapon: 'rapier' }), { id: 'rapier', broken: false });
   assert.deepEqual(weaponOfPerson({ weapon: { id: 'rapier', broken: true } }), { id: 'rapier', broken: true });
@@ -169,8 +182,10 @@ test('⑥ 부러진 무기: 처음부터 부러짐 = 싸움에서 부러질 때�
     cols: f.swordColliders.map((c) => [c.collisionGroups(), c.mass(), c.translationWrtParent?.()?.y ?? null]),
   });
   for (const w of ['rapier', 'longsword', 'morgenstern', 'zweihander']) {
+    seedRand(t, 2);
     const A = newMatch({ seed: 2, count: 4, weapons: [w, w, w, w] });
     A.fighters[2].applySnapshot(snapshotFromPerson({ hp: 100, injuries: [], weapon: { id: w, broken: true } }));
+    seedRand(t, 2);
     const B = newMatch({ seed: 2, count: 4, weapons: [w, w, w, w] });
     B.fighters[2].breakWeapon();
     assert.equal(A.fighters[2].weaponBroken, true, w);
@@ -178,6 +193,7 @@ test('⑥ 부러진 무기: 처음부터 부러짐 = 싸움에서 부러질 때�
     assert.ok(A.fighters[2].weaponCfg.bladeLength < A.fighters[0].weaponCfg.bladeLength || w === 'morgenstern', w);
     assert.ok(A.fighters[2].swordMass < A.fighters[0].swordMass, `${w} 질량`);
     // 다시 한 판: 같은 값 (난수 없음) · 사본 → 입힘 → 사본 같음
+    seedRand(t, 7);
     const C = newMatch({ seed: 7, count: 4, weapons: [w, w, w, w] });
     const s1 = A.fighters[2].snapshot();
     C.fighters[2].applySnapshot(s1);
@@ -186,6 +202,7 @@ test('⑥ 부러진 무기: 처음부터 부러짐 = 싸움에서 부러질 때�
   }
   // 부러질 수 없는 무기(싸움에서도 안 부러짐 — 휘는 마디 무기 포함)는 그대로
   for (const w of ['druid_whip', 'excalibur', 'frozen_tuna']) {
+    seedRand(t, 3);
     const A = newMatch({ seed: 3, weapons: [w, w] });
     const before = body(A.fighters[0]);
     A.fighters[0].applySnapshot(snapshotFromPerson({ hp: 100, injuries: [], weapon: { id: w, broken: true } }));
