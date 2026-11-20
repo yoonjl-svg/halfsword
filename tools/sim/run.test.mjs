@@ -121,8 +121,8 @@ test('뛰는 방향은 상대 틀(나 → 상대가 앞) · 몸 틀 조종 입�
   assert.ok(near(Math.hypot(k.move.x, k.move.y), RUN.turnMove, 1e-9), '돌아서는 동안(사이 각 > alignMax) 크기 × turnMove');
 });
 
-test('초당 기력 = 그 몸의 걷는 끝 빠르기 걷기 초당 기력 × 1.5 (실제 초당 — 보통 20 · 동방 C2 10 · 일본 J1 21 · 일본 J1 없음 20)', () => {
-  assert.equal(RUN.cost, 1.5);
+test('초당 기력 = 그 몸의 걷는 끝 빠르기 걷기 초당 기력 × 2 (11/20 사장님 \'뛰기 기력 소모는 걷기의 2배\' — 실제 초당 보통 26.7 · 동방 C2 13.3 · 일본 J1 28 · 일본 J1 없음 26.7)', () => {
+  assert.equal(RUN.cost, 2);
   const rate = (weapon, kit) => {
     const G = newRound({ weapon, seed: 1, ...(kit ? { kit } : {}), onFighter(f) { if (f.index === 0) f.humanInput = true; } });
     G.step();
@@ -132,16 +132,16 @@ test('초당 기력 = 그 몸의 걷는 끝 빠르기 걷기 초당 기력 × 1.
     return { r, w };
   };
   const de = rate('longsword');
-  assert.ok(near(de.w, 2.0, 1e-9) && near(de.r, 20, 1e-9), `보통(독일) ${de.r}`);
-  assert.ok(near(rate('rapier').r, 20, 1e-9), '이탈리아');
-  assert.ok(near(rate('zweihander').r, 20, 1e-9), '이베리아');
+  assert.ok(near(de.w, 2.0, 1e-9) && near(de.r, 80 / 3, 1e-9), `보통(독일) ${de.r}`);
+  assert.ok(near(rate('rapier').r, 80 / 3, 1e-9), '이탈리아');
+  assert.ok(near(rate('zweihander').r, 80 / 3, 1e-9), '이베리아');
   const cn2 = rate('qinggang', kitFromNodes('chinese', new Set(['C1', 'C2'])));
-  assert.ok(near(cn2.r, 10, 1e-9), `동방 C2 ${cn2.r}`);
-  assert.ok(near(rate('qinggang', kitFromNodes('chinese', new Set(['C1']))).r, 20, 1e-9), '동방 C2 없음');
+  assert.ok(near(cn2.r, 40 / 3, 1e-9), `동방 C2 ${cn2.r}`);
+  assert.ok(near(rate('qinggang', kitFromNodes('chinese', new Set(['C1']))).r, 80 / 3, 1e-9), '동방 C2 없음');
   const jp1 = rate('uchigatana', kitFromNodes('japanese', new Set(['J1'])));
-  assert.ok(near(jp1.w, 1.4, 1e-9) && near(jp1.r, 21, 1e-9), `일본 J1 ${jp1.r} (걷는 끝 ${jp1.w})`);
+  assert.ok(near(jp1.w, 1.4, 1e-9) && near(jp1.r, 28, 1e-9), `일본 J1 ${jp1.r} (걷는 끝 ${jp1.w})`);
   const jp0 = rate('uchigatana', kitFromNodes('japanese', new Set()));
-  assert.ok(near(jp0.w, 2.0, 1e-9) && near(jp0.r, 20, 1e-9), `일본 J1 없음 — 보법 I(J1)을 안 익히면 보통 걸음 · 보통 걸음 기력 (${jp0.r})`);
+  assert.ok(near(jp0.w, 2.0, 1e-9) && near(jp0.r, 80 / 3, 1e-9), `일본 J1 없음 — 보법 I(J1)을 안 익히면 보통 걸음 · 보통 걸음 기력 (${jp0.r})`);
 });
 
 test('뛰는 동안 기력: 초당 runCostRate 그대로 빠지고 자연 회복 없음 · 0 밑으로 안 감 · 끝나면 recoverDelay 뒤 회복', () => {

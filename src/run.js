@@ -25,7 +25,7 @@
 //     날며 뛰기 (11/20 — 빠르기 × 3): 몸 앞으로 RUN.flyFrom 넘게 빠르면 한 발 디딤을 짧게 · 두 발 모두 뜬 채 나감(긴 걸음 · 느린 박자 — gait.js fly · RUN.fly*)
 //   · 꺾기 (11/20): 내달리는 동안 뛰는 쪽은 RUN.curve 로 둥글게 돈다 · RUN.curveMax 넘게 거꾸로 민 스틱은 먼저 줄인 뒤 돌아섬(R.brake)
 //   · 끝난 뒤 (11/20): 몸이 걷는 끝 × RUN.faceSlow 넘게 가는 동안은 가는 쪽을 봄(runFace) — 서고 나서 상대 쪽으로 돎
-//   · 기력 = 초당 runCostRate(그 몸이 걷는 끝 빠르기로 걸을 때 초당 걸음 기력 × RUN.cost) · 자연 회복 없음 (stamina.js — 걸은 거리 셈은 쉼)
+//   · 기력 = 초당 runCostRate(그 몸이 걷는 끝 빠르기로 걸을 때 초당 걸음 기력 × RUN.cost — 11/20 사장님 '걷기의 2배' 1.5 → 2) · 자연 회복 없음 (stamina.js — 걸은 거리 셈은 쉼)
 //  화면 글자 없음 (스틱 테두리만 뛰는 동안 조금 밝게 — main.js · index.html #moveStick.run)
 // ─────────────────────────────────────────────────────────────
 import { RUN, GAIT, STAMINA, ARMOR } from './config.js';
