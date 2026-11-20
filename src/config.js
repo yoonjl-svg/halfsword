@@ -1805,6 +1805,10 @@ export const PROF_BODY = {
   vitality: [0.6, 0.6, 0.7, 0.8, 0.9, 1, 1.1],
   strength: [0.6, 0.6, 0.75, 0.9, 1.05, 1.2, 1.35],
 };
+// 독일 유파 버티는 힘 덤 [사장님 11/20 '버티는 힘 보너스는 독일 유파에게 줘. 근접전 위주의 유파인데 너무 금방 죽는 거 같아. 1-2 숙련도는 1.05 3-4 숙련도는 1.15 5-6 숙련도는 1.25로 해.']:
+//  독일 유파로 싸우는 몸(손에 든 무기의 유파 = 독일 — 사람 · AI 같음)의 버티는 힘(PROF_BODY.vitality 칸)에 곱함 · 칸 = 독일 숙련도 0 ~ 6 (0 = 1 — 덤 없음).
+//  독일 숙련도: AI = 그 몸이 손에 든 유파(독일)의 숙련도(ai.js art.proficiency — 인물 시트 · 숫자 숙련도) · 사람 = 스킬트리 독일 칸으로 센 숙련도(skill_tree_store.js playerProficiency.german)
+export const DE_VITALITY = { k: [1, 1.05, 1.05, 1.15, 1.15, 1.25, 1.25] };
 
 // AI 숙련도 = 스킬트리 칸 (11/16 — 기록 docs/strike/prof_kit_2026-11-16.md · src/skill_tree_data.js aiKitOf · src/ai.js applyKit · 시험 tools/sim/prof_kit.test.mjs):
 //  사장님 11/16 결정 — AI 숙련도는 '이 칸들을 익혔다'는 뜻. 사람과 같은 규칙으로 AI 몸에도 skillKit(skill_kit.js kitOff · perkOff 가 읽는 몫)을 넣고,
