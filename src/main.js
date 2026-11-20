@@ -26,8 +26,8 @@ import { HORN_ICON } from './wallet_icons.js'; // 결과 창 뿔피리 (10/30 �
 import { SHOP } from './config.js'; // 상점 — 왕을 이긴 판의 뿔피리 (10/30 · 10/31 본판 켬)
 import { awardKingHorn } from './lobby_progress.js';
 import { HORN_REWARD_LABEL } from './shop_text.js';
-import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, migrateItalianSlots, playerLetters, humanProficiency } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
-import { profBody, teamBodyProficiency } from './prof_body.js'; // 숙련도별 몸 값 (11/17 E — config PROF_BODY): 사람 몸의 힘 · 버티는 힘 = 익힌 칸으로 센 숙련도의 칸 (AI 는 ai.js setLevel)
+import { readLearned, playerKit, stageParam, skillNodesParam, migrateSkillBooks, migrateItalianSlots, playerLetters, humanProficiency, humanSchoolProficiency } from './skill_tree_store.js'; // 대기실 스킬트리 = 플레이어 유파 몫 — 모든 판 (사장님 10/21 칸마다 몫 하나 · 옛 스킬북 옮기기, docs/strike/school_kit_map.md §2 · §3)
+import { profBody, teamBodyProficiency, deVitalityK } from './prof_body.js'; // 숙련도별 몸 값 (11/17 E — config PROF_BODY): 사람 몸의 힘 · 버티는 힘 = 익힌 칸으로 센 숙련도의 칸 (AI 는 ai.js setLevel)
 import { letterMul } from './skill_tree_data.js'; // 편지 — 카드 뽑기 유파 무게 (10/21)
 import { convertSeals } from './seal_coins.js'; // 이미 받은 인장 → 금화 한 번 — 판을 처음 연 때 어느 길이든 (아래 testRoute 다음 · 10/16 08:1x 인장 없앰)
 import { InputTrail } from './trail.js';
@@ -97,6 +97,12 @@ const screenTint = createScreenTint(); // 출혈·감정 화면 물들임을 게
 const PLAYER_WEAPON_POOL = WEAPON_LIST.map((w) => w.id).filter((id) => id !== 'excalibur_replica' && !RETIRED_WEAPONS.has(id)); // 빼 둔 무기(에스톡·세이버·팔쉬온 — 사장님 10/13 23:2x · 간장·막야 — 적소검이 대신함, 사장님 10/27)는 카드에 안 나온다
 const FIXED_WEAPON = params.get('weapon');
 const testRoute = createTestRoute(params); // 인자가 없으면 아무것도 바꾸지 않는다
+/** 사람 몸 값 (11/17 E — config PROF_BODY · 11/20 사장님 '버티는 힘 보너스는 독일 유파에게'): 다섯 유파 가운데 가장 높은 숙련도의 힘 · 버티는 힘 +
+ *  손에 든 무기가 독일 유파면 버티는 힘 × 스킬트리 독일 칸으로 센 숙련도의 덤 (config DE_VITALITY · prof_body.js deVitalityK — AI 는 ai.js setLevel) */
+function humanBodyOf(weaponId) {
+  const b = profBody(humanProficiency({ test: testRoute.active }));
+  return { ...b, vitality: b.vitality * deVitalityK(traditionOf(getWeapon(weaponId)), humanSchoolProficiency('german', { test: testRoute.active })) };
+}
 // 이미 받은 인장 → 금화 (사장님 10/16 04:2x · 08:1x '인장 제도 없애' — seal_coins.js): 이 판을 처음 연 때 한 번, 첫 화면 · 옛 메뉴 · 주소 판 어느 길이든(테스트 경로만 빼고).
 //  대기실을 기다리면 인장을 없앤 뒤 옛 메뉴·주소 판에서 깬 무대까지 옛 셈으로 금화가 된다 — 그래서 여기서 (확인표 1928). 알림은 다음 대기실이 한 번 (lobby.js)
 if (!testRoute.active) convertSeals();
@@ -537,7 +543,7 @@ function newRound(weaponId) {
     schoolPassive: kit ? kit.passive : undefined, // 패시브 칸 (이베리아 손목 힘 · 이탈리아 · 일본 · 독일 · 동방 — school_passive.js)
     skillKit: kit ?? undefined,
     bodyProficiency: humanProficiency({ test: testRoute.active }), // 막기 단추 · 비기 손 빠르기의 숙련도 (11/19 — 몸 값과 같은 수 · prof_body.js scriptLevel)
-    ...profBody(humanProficiency({ test: testRoute.active })), // 몸 값 (11/17 E — config PROF_BODY): 다섯 유파 가운데 가장 높은 숙련도(익힌 칸 문턱 5 · 7 · 9 · 11)의 힘 · 버티는 힘 — AI 와 같은 표
+    ...humanBodyOf(weaponId), // 몸 값 (11/17 E — config PROF_BODY · 11/20 독일 유파면 버티는 힘 덤 DE_VITALITY): 다섯 유파 가운데 가장 높은 숙련도(익힌 칸 문턱 5 · 7 · 9 · 11)의 힘 · 버티는 힘 — AI 와 같은 표
     ...testRoute.player, // ?hero=<인물 id>: 겉모습·이름만 그 인물 (유파·비기는 무기를 따른다)
   });
   let enemyLook = currentFoe ? currentFoe.look : LOOKS.enemy;
@@ -722,7 +728,7 @@ function newTeamRound(spec, mods = {}) {
       look: teamLook(e, mods),
       weapon: e.weapon,
       ...(e.human
-        ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined, bodyProficiency: humanProficiency({ test: testRoute.active }), ...profBody(humanProficiency({ test: testRoute.active })) } // 몸 값 (11/17 E — 1:1 과 같음) · 막기 단추 · 비기 손 빠르기 숙련도 (11/19)
+        ? { schoolFootwork: kit ? kit.footwork : undefined, schoolParry: kit ? kit.parry : undefined, schoolPassive: kit ? kit.passive : undefined, skillKit: kit ?? undefined, bodyProficiency: humanProficiency({ test: testRoute.active }), ...humanBodyOf(e.weapon) } // 몸 값 (11/17 E — 1:1 과 같음 · 11/20 독일 덤) · 막기 단추 · 비기 손 빠르기 숙련도 (11/19)
         : { revive: ch?.revive, physiology: ch?.physiology }), // 버티는 힘 · 힘 = 숙련도별 몸 값 (AI — ai.js setLevel)
     });
   });

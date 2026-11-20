@@ -29,9 +29,11 @@ export function windowOf(day, cfg = SAENGSA) {
   return { day, from: atHour(cfg.signupFrom > cfg.signupTo ? shiftDay(day, -1) : day, cfg.signupFrom), to: atHour(day, cfg.signupTo) };
 }
 /** 지금 열린 신청 창(open true) · 닫혀 있으면 다음 창(open false) — { open, day, from, to } · 시험판(cfg.testMode)은 늘 열림(to null · 대회 날 = 오늘) */
+/** 늘 열림 — 시험판(cfg.testMode) 또는 본판의 임시 상시 열림(cfg.anytime — 사장님 11/21 '생사전은 일시적으로 상시 무한 참여 가능으로 열어둬. 그래야 테스트 가능.') */
+export const openAlways = (cfg = SAENGSA) => !!(cfg.testMode || cfg.anytime);
 export function signupWindow(now, cfg = SAENGSA) {
   const today = dayKey(now);
-  if (cfg.testMode) return { open: true, day: today, from: now, to: null };
+  if (openAlways(cfg)) return { open: true, day: today, from: now, to: null };
   for (let i = 0; i < 3; i++) {
     const w = windowOf(shiftDay(today, i), cfg);
     if (now < w.to) return { ...w, open: now >= w.from };

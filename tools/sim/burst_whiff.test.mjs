@@ -17,6 +17,7 @@ function duel(gap) {
   const G = newRound({ seed: 2, walls: true, weapon: 'longsword', weapon2: 'longsword', gap });
   const ai = G.ai;
   ai.update = () => {};
+  G.enemy.strength = 0.7; // 손으로 놓은 AI 몸 힘은 11/18 표 숙련 2 칸 그대로 (11/20 힘 표 0.15 간격 — 0.75 면 쉬는 칼이 1.6 m 에서 사람 몸에 닿아 굳음을 거둠 · 이 시험은 굳음 규칙을 봄)
   while (G.t < ARENA.startHold + 0.1) G.step();
   return { G, X: G.player, Y: G.enemy, ai };
 }

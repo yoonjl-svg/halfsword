@@ -11,7 +11,7 @@
 //   --look=enemy : 두 자리 모두 같은 겉모습 LOOKS.enemy (11/17 — 감독 '겉모습 같게'. 안 주면 옛 판 그대로 — 자리마다 기본 겉모습)
 //   --cfg=PATH:수,… : config 수 덮어쓰기 (재기 전용 · 게임 값은 그대로 — cfg_override.mjs · 예: --cfg=AI_LEVELS.normal.strikeSpeed:12)
 //   --vit=v0,v1,…,v6 · --str=s0,…,s6 : 몸 값 표 PROF_BODY.vitality · strength 를 통째로 (재기 전용 · 숙련도 0 ~ 6 일곱 수 — 11/17 E 찾기)
-//   --resume : --json 파일이 있으면 그 판들(판 번호 k)은 건너뛰고 이어 잼 (판 10 개마다 파일을 씀 — 11/18)
+//   --resume : --json 파일이 있으면 그 판들(판 번호 k)은 건너뛰고 이어 잼 (판마다 파일을 씀 — 11/20 · 전 10 판마다)
 //  ── 단계 덜어 보기 (11/18 — 기록 docs/strike/stage_ablation_2026-11-18.md · 모두 재기 전용 · 안 주면 판 그대로 · 낮은 쪽은 늘 그대로):
 //   --dropHi=G3,G5 : 높은 쪽 AI 의 칸 몫에서 이 칸들을 뺌 (그 AI 를 만드는 동안만 config AI_KIT.ladder 에서 빼고 곧 되돌림 — 실력 이름 · 띠 · 몸은 그대로)
 //   --levelHi=normal : 높은 쪽 실력 이름 (easy · normal · hard · expert — 판 동안만 AI_PLAN.levels[높은 숙련도] 를 바꿈 · 낮은 쪽 숙련도 칸은 그대로)
@@ -32,6 +32,13 @@
 //             그 칼 동안 준 상처 · 받은 상처 · 끝난 뒤 0.8 s 안에 받은 상처 · 칼 부딪힘 · 그때 상대 꼴 · 그때 상대 칼(vs) · 이어 친 앞 칼(from) / 꼴마다 머문 시간 · 꼴마다 받은 상처). 읽기만 (난수 · 몸에 손대지 않음)
 //            11/19 흔적에 bw — 뒤 박차기 헛침 경직(burst_whiff.js): 내가 굳음 · 도구 눈으로 다시 가른 헛 굳음(박찬 걸음 · 칼이 닿을 때쯤 칼끝 거리(박차기 전 자리 포함) · 몸 상처 — 칼 부딪힘은 헛침을 안 깸 · 그 굳음 수만 clashStiff) · 상대 굳음 창과 그 창에 벰 · 독일 뒤 칼과 굳음 (읽기만)
 //   --gns : 판 기록에 높은 쪽 고노센 깔때기 흔적 gns (11/19 · 읽기만 — tools/sim/gns_funnel.mjs gnsProbe · 요약은 node tools/sim/gns_funnel.mjs a.json)
+//  ── 1:1 숙련 격차 진단 (11/19 감독 — 사장님 '고수 한 명이 하수 두 명을 이기는 방법은 존재해야' · 재기 전용 · 안 주면 판 그대로):
+//   --foe=even : 낮은 쪽 무기를 다섯 유파 대표 무기(ai_ring_measure WEAPONS)로 고르게 — 칸마다 높은 쪽 무기 둘 × 낮은 쪽 유파 다섯 × 씨앗 × 자리 둘 (낮은 쪽 무기 = 그 유파 둘 가운데 (씨앗 + wi + 유파 번호) 홀짝)
+//   --foe=none : 낮은 쪽을 무유파 칼잡이로 — 롱소드 · AI 꾸러미 유파 none (재기 전용 꾸러미 SCHOOLS.none_sword — lone_duel · team_sense --field=none 과 같음)
+//   --loNoKit : 낮은 쪽 몸에 빈 칸 몫(skillKit — 모든 칸 꺼짐 · 보법 I · 막기 I 끔) — 칸 몫이 없는 몸(무유파 · 옛 판)은 kitOff 가 늘 거짓이라 칸에 걸린 몫이 모두 켜짐을 가르는 용
+//   --loAs=level:4,band:4,body:4,kit:4,schoolK:4 : 낮은 쪽의 그 몫만 숙련 p 의 값으로 (level = AI_PLAN.levels 실력 이름 · band = AI_PLAN.bands 플랜 띠 · body = PROF_BODY 힘 · 버티는 힘 ·
+//               kit = AI_KIT 사다리 칸 몫(만들 때 · 고유 동작 · 비기 · 패시브 포함) · schoolK = AI_PROFICIENCY.schoolK 유파 특성 몫 ·
+//               err = 거리 오차 폭(ai_plan.js distErrWidth — 같은 굴림을 폭만 바꿈) · mind = 마음가짐을 따르는 몫(MINDSET.profF) · lure = 플랜 유도(planLure)) — 판 동안만 · 높은 쪽 숙련 칸은 그대로
 //   node tools/sim/prof_gap_measure.mjs trace a.json … [--lo] [--vs] [--top=14] : --stats 로 잰 판 기록의 요약 (11/18 · 읽기만) — hi 몫 · 꼴 몫 · 꼴마다 준 · 받은 상처 ·
 //             기술마다 판당 수 · 맞힘 · 맞음 · 끝난 뒤 0.8 s 안 맞음 · 칼 부딪힘 몫 · 거리 · 칼 시간 · 그때 상대 꼴 · 까닭 (--lo = 낮은 쪽 흔적 · --vs = 칼을 열 때 상대 칼 · 이어 친 칼의 앞 칼)
 //  출력 — 합산 hi 몫 = (승 + 무 ½) / 판 수 · 95 % 윌슨 구간 · 승 / 무 / 패 · 평균 끝 시각 · 유파별 hi 몫 (무 수)
@@ -41,7 +48,9 @@ import { newRound, AI, DT } from './harness_m.mjs';
 import { wilson } from './ref_duel.mjs';
 import { isMain } from './is_main.mjs';
 import { WEAPONS } from './ai_ring_measure.mjs';
-import { AI_PROFICIENCY, PROF_BODY, AI_KIT, AI_PLAN, AI_LEVELS } from '../../src/config.js';
+import { AI_PROFICIENCY, PROF_BODY, AI_KIT, AI_PLAN, AI_LEVELS, MINDSET } from '../../src/config.js';
+import { distErrWidth } from '../../src/ai_plan.js';
+import { kitFromNodes } from '../../src/skill_tree_data.js';
 import { LOOKS } from '../../src/looks.js';
 import { applyCfgArgs } from './cfg_override.mjs';
 import * as CFG from '../../src/config.js';
@@ -83,12 +92,16 @@ const outOf = (f) => !f.alive || f.state === 'dead';
 const secretsFired = (ai) => Object.values(ai?.stats?.secrets ?? {}).reduce((s, x) => s + (x.fired || 0), 0);
 
 /** 전체 판 목록 (순서 고정 — 샤딩 번호는 이 목록의 순서) */
-export function planFights({ schools, pairs, seeds }) {
+export function planFights({ schools, pairs, seeds, foe = null }) {
   const list = [];
   for (const school of schools) for (const key of pairs) {
     const [lo, hi] = key.split(':').map(Number);
     WEAPONS[school].forEach((weapon, wi) => {
-      for (const seed of seeds) for (const swap of [false, true]) list.push({ school, lo, hi, weapon, wi, seed, swap });
+      for (const seed of seeds) {
+        if (foe === 'none') for (const swap of [false, true]) list.push({ school, lo, hi, weapon, wi, seed, swap, loSchool: 'none', loPack: 'none_sword', loW: 'longsword' });
+        else if (foe === 'even') for (let li = 0; li < SCHOOLS.length; li++) for (const swap of [false, true]) list.push({ school, lo, hi, weapon, wi, seed, swap, li, loSchool: SCHOOLS[li], loW: WEAPONS[SCHOOLS[li]][(seed + wi + li) % 2] });
+        else for (const swap of [false, true]) list.push({ school, lo, hi, weapon, wi, seed, swap });
+      }
     });
   }
   return list;
@@ -97,15 +110,29 @@ export function planFights({ schools, pairs, seeds }) {
 /** 한 판: swap=false 면 높은 쪽이 플레이어 자리, true 면 상대 자리. 같은 무기 · 씨앗은 무기 · 씨앗 · 자리마다 다른 값 */
 export function measureFight(f, dur, opt = {}) {
   // 단계 덜어 보기 (11/18 · 재기 전용): 높은 쪽 실력 이름 · 띠는 그 숙련도 칸을 판 동안만 바꾸고 끝에 되돌림 (낮은 쪽은 다른 칸을 읽어 그대로)
-  const { hi } = f;
+  const { hi, lo } = f;
   const saved = { level: AI_PLAN.levels[hi], band: AI_PLAN.bands[hi] };
   if (opt.levelHi != null) AI_PLAN.levels[hi] = opt.levelHi;
   if (opt.bandHi != null) AI_PLAN.bands[hi] = opt.bandHi;
+  // --loAs (11/19 재기 전용): 낮은 쪽 숙련 칸만 숙련 p 의 값으로 — 실력 이름 · 띠 · 유파 특성 몫 · 칸 사다리 (높은 쪽은 다른 숙련 칸을 읽어 그대로)
+  const LA = opt.loAs ?? new Map();
+  const loSch = f.loSchool ?? f.school;
+  const savedLo = { level: AI_PLAN.levels[lo], band: AI_PLAN.bands[lo], sk: AI_PROFICIENCY.schoolK[lo], ladder: AI_KIT.ladder[loSch], mind: MINDSET.profF[lo] };
+  if (LA.has('mind')) MINDSET.profF[lo] = MINDSET.profF[LA.get('mind')];
+  if (LA.has('level')) AI_PLAN.levels[lo] = AI_PLAN.levels[LA.get('level')];
+  if (LA.has('band')) AI_PLAN.bands[lo] = AI_PLAN.bands[LA.get('band')];
+  if (LA.has('schoolK')) AI_PROFICIENCY.schoolK[lo] = AI_PROFICIENCY.schoolK[LA.get('schoolK')];
+  if (LA.has('kit') && savedLo.ladder) { const L = savedLo.ladder, q = LA.get('kit'); AI_KIT.ladder[loSch] = [...L.slice(0, lo - 1), L.slice(lo - 1, q).flat(), ...L.slice(q)]; } // 앞 lo 칸 = 숙련 q 의 칸 몫
   try {
     return measureFight0(f, dur, opt);
   } finally {
     AI_PLAN.levels[hi] = saved.level;
     AI_PLAN.bands[hi] = saved.band;
+    AI_PLAN.levels[lo] = savedLo.level;
+    AI_PLAN.bands[lo] = savedLo.band;
+    AI_PROFICIENCY.schoolK[lo] = savedLo.sk;
+    AI_KIT.ladder[loSch] = savedLo.ladder;
+    MINDSET.profF[lo] = savedLo.mind;
   }
 }
 
@@ -339,21 +366,26 @@ function saneOf(F, ai) {
 
 function measureFight0(f, dur, opt) {
   const { school, lo, hi, weapon, wi, seed, swap } = f;
-  const rngSeed = seed * 100 + wi * 10 + (swap ? 1 : 0);
+  const loW = f.loW ?? weapon; // --foe=even: 낮은 쪽 무기 (안 주면 거울 — 같은 무기)
+  const rngSeed = seed * 100 + wi * 10 + (swap ? 1 : 0) + (f.li != null ? (f.li + 1) * 1000 : 0);
   const lk = opt.look ? LOOKS[opt.look] : null; // --look=enemy: 두 자리 같은 겉모습 (11/17)
   const HiAI = hiClass(school, opt); // --dropHi · --techHi · --noThrustFollowHi (재기 전용 · 없으면 AI 그대로)
   // persona = 상대(E) 자리 AI · persona2 = 플레이어 자리 AI (ai2)
   const G = newRound({
-    seed: rngSeed, walls: true, weapon, weapon2: weapon, AIClass: swap ? HiAI : AI, AI2Class: swap ? AI : HiAI, ...(lk ? { look: lk, look2: lk } : {}),
+    seed: rngSeed, walls: true, weapon: swap ? loW : weapon, weapon2: swap ? weapon : loW, AIClass: swap ? HiAI : AI, AI2Class: swap ? AI : HiAI, ...(lk ? { look: lk, look2: lk } : {}),
     // 실력 등급: 게임과 같게 숙련도 표의 이름을 넘김(main.js · characters.js aiAtProficiency — AI 가 AI_PLAN.levels 로 바꿈) · 11/17 고침: 전엔 harness 기본 'normal' 이라 모든 숙련도가 보통 숫자
     difficulty: AI_PROFICIENCY.levels[swap ? hi : lo], difficulty2: AI_PROFICIENCY.levels[swap ? lo : hi],
-    persona: { proficiency: swap ? hi : lo }, persona2: { proficiency: swap ? lo : hi },
+    persona: { proficiency: swap ? hi : lo, ...(swap || !f.loPack ? {} : { school: f.loPack }) }, persona2: { proficiency: swap ? lo : hi, ...(swap && f.loPack ? { school: f.loPack } : {}) },
   });
   const hiF = swap ? G.enemy : G.player;
   const loF = swap ? G.player : G.enemy;
   const aiHi = swap ? G.ai : G.ai2;
   const aiLo = swap ? G.ai2 : G.ai;
-  // 몸 값: AI 가 PROF_BODY[숙련도] 를 넣었음 (ai.js setLevel — 게임과 같음)
+  // 몸 값: AI 가 PROF_BODY[숙련도] 를 넣었음 (ai.js setLevel — 게임과 같음) · --loAs=body:p 면 낮은 쪽 몸만 숙련 p 의 값으로 (setLevel 과 같은 세 자리)
+  if (opt.loAs?.has('err') && aiLo.distErr) { const w0 = distErrWidth(aiLo.proficiency, aiLo.art.tradition), w1 = distErrWidth(opt.loAs.get('err'), aiLo.art.tradition); const e1 = w0 > 0 ? (aiLo.distErr * w1) / w0 : 0; aiLo.M = { ...aiLo.M, contact: aiLo.M.contact - aiLo.distErr + e1, reach: aiLo.M.reach - aiLo.distErr + e1 }; aiLo.distErr = e1; } // 같은 굴림 · 폭만
+  if (opt.loNoKit) { const k = kitFromNodes('german', new Set()); k.school = loF.swordArt?.tradition ?? 'none'; k.ai = true; aiLo.kit = k; loF.skillKit = k; loF.schoolFootwork = false; loF.schoolParry = false; }
+  if (opt.loAs?.has('lure') && aiLo.plan) aiLo.planLure = opt.loAs.get('lure') >= aiLo.plan.lureAt;
+  if (opt.loAs?.has('body')) { const q = opt.loAs.get('body'); aiLo.level = { ...aiLo.level, strength: PROF_BODY.strength[q] }; loF.strength = PROF_BODY.strength[q]; loF.vitality = PROF_BODY.vitality[q]; }
 
   // --passiveHi (재기 전용): 높은 쪽 패시브 굴림 몫만 (패시브 객체는 유파 표와 함께 쓰므로 그 AI 목록만 새 객체로)
   if (opt.passiveHi?.size) {
@@ -405,7 +437,7 @@ function measureFight0(f, dur, opt) {
   const hOut = outOf(hiF), lOut = outOf(loF);
   const result = lOut && !hOut ? 'hi' : hOut && !lOut ? 'lo' : 'draw';
   const rec = {
-    school, lo, hi, weapon, seed, swap, result,
+    school, lo, hi, weapon, seed, swap, result, ...(f.loW ? { loW, loSchool: f.loSchool } : {}), ...(f.loPack ? { loTr: aiLo.art?.tradition ?? null, loFTr: loF.swordArt?.tradition ?? null } : {}), ...(opt.loAs?.size ? { loAs: Object.fromEntries(opt.loAs) } : {}), ...(opt.loNoKit ? { loNoKit: true } : {}),
     endT: +G.t.toFixed(2),
     hiWounds: dealt.get(hiF), loWounds: dealt.get(loF),
     hiBlood: +hiF.blood.toFixed(3), loBlood: +loF.blood.toFixed(3),
@@ -535,7 +567,12 @@ if (isMain(import.meta.url)) {
     const shard = arg('shard', '1/1').split('/').map(Number);
     const [si, sn] = shard;
     if (!(sn >= 1 && si >= 1 && si <= sn)) throw new Error('--shard=i/n 은 1 ≤ i ≤ n');
-    const all = planFights({ schools, pairs, seeds });
+    const foe = arg('foe', null);
+    if (foe != null && foe !== 'even' && foe !== 'none') throw new Error('--foe 는 even · none');
+    if (foe === 'none') { const S = await import('../../src/schools.js'); const { WEAPONS: WP } = await import('../../src/weapons.js'); S.SCHOOLS.none_sword ??= S.weaponSchool(WP.longsword, 'none'); }
+    const all = planFights({ schools, pairs, seeds, foe });
+    const loAs = new Map((arg('loAs', '') || '').split(',').filter(Boolean).map((x) => { const [a, v] = x.split(':'); if (!['level', 'band', 'body', 'kit', 'schoolK', 'err', 'mind', 'lure'].includes(a) || !(+v >= 0 && +v <= 6)) throw new Error(`--loAs=몫:숙련 — ${x}`); return [a, +v]; }));
+    if (loAs.size) console.error(`낮은 쪽만 숙련 값: ${arg('loAs', '')}`);
     const mine = all.map((f, k) => ({ f, k })).filter(({ k }) => k % sn === si - 1);
     console.error(`전체 ${all.length} 판 · 이 샤드 ${mine.length} 판 (${si}/${sn})`);
     // --json 은 판 10 개마다 그때까지를 씀(11/18 — 컨테이너가 다시 서도 남게) · --resume 이면 그 파일에 이미 있는 판(번호 k)은 건너뜀 (옵션은 같게)
@@ -586,10 +623,10 @@ if (isMain(import.meta.url)) {
     if (done.size) console.error(`이어 재기: ${done.size} 판 있음`);
     for (const { f, k } of mine) {
       if (done.has(k)) continue;
-      const r = { k, ...measureFight(f, dur, { look, dropHi, levelHi, bandHi, stats, gns, techHi, noThrustFollowHi, keepBaseHi, cfgHi, levelHiSet, passiveHi, gwHi, corrHi, corrLo, corrHeld }) };
+      const r = { k, ...measureFight(f, dur, { loAs, loNoKit: args.includes('--loNoKit'), look, dropHi, levelHi, bandHi, stats, gns, techHi, noThrustFollowHi, keepBaseHi, cfgHi, levelHiSet, passiveHi, gwHi, corrHi, corrLo, corrHeld }) };
       runs.push(r);
       console.error(`[${k + 1}/${all.length}] ${f.school} ${f.lo}:${f.hi} w${f.wi} s${f.seed} ${f.swap ? 'swap' : 'std'} → ${r.result} @${r.endT}s`);
-      if (out && runs.length % 10 === 0) saveRuns(out, runs);
+      if (out) saveRuns(out, runs); // 판마다 (11/20 — 컨테이너가 다시 시작돼도 끊긴 판만 다시)
     }
     if (out) saveRuns(out, runs);
     console.log(aggTable(runs));
