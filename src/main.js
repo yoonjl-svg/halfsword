@@ -2635,7 +2635,8 @@ function resetCamera() {
 /**
  * 뛰는 동안의 카메라 방위 (11/21 사장님 '몸이 상대를 안 봐도 괜찮아. 오히려 그게 맞지. 카메라 문제야 이건.' — CAMERA.run · 기록 docs/strike/cam_restore_2026-11-21.md):
  *  카메라 방위는 예전처럼 나 → 상대 방위(u)를 사이 각 × 3 (초당) 빠르기로 따라가되, 그 빠르기를 yawMax(뛰기가 끝난 뒤 따라잡는 동안 yawAfter) 안 · 바뀜을 yawAcc 안으로 —
- *  상대가 화면 가운데에서 가로 ndcFree 몫 넘게 벗어나면 한도를 edgeK × 넘은 몫만큼 늘리고 가속 한도 없이 (상대를 화면 밖으로 내보내지 않음).
+ *  상대가 화면 가운데에서 가로 ndcFree 몫 넘게 벗어나거나 사이 각이 lagFree 를 넘으면 한도를 edgeK · lagK × 넘은 몫만큼 늘리고 가속 한도 없이
+ *  (상대를 화면 밖으로 내보내지 않음 · 뛰기가 끝난 뒤 따라잡을 각이 크게 쌓이지 않음).
  *  켜짐: 내 몸이 뛰는 가속 한도 창(run.fast — 뛰는 중 · 뛰다 멈춰 걷는 빠르기로 줄 때까지)에 서 있을 때 · 꺼짐: 그 뒤 사이 각이 done 밑이 되면(예전 따라가기로 넘김 — 튀지 않음) ·
  *  상대가 near 안이면(붙어 싸움 — 예전 카메라 그대로) · 넘어지면 곧장.
  *  켜져 있으면 camDir 를 돌리고 true · 아니면 false (예전 lerp — 걷기 · 싸움 카메라는 한 글자도 바뀌지 않음). a = 따라가는 점 · b = 상대 무게중심
@@ -2651,8 +2652,8 @@ function camRunYaw(P, standing, u, a, b, dt) {
   _cv.set(b.x, b.y, b.z).project(camera);
   const ndc = _cv.z > 1 ? 9 : Math.abs(_cv.x);
   camRig.runNdc = ndc;
-  const edge = ndc > C.ndcFree;
-  const cap = (P.run?.on ? C.yawMax : C.yawAfter) + C.edgeK * Math.max(0, ndc - C.ndcFree);
+  const cap = (P.run?.on ? C.yawMax : C.yawAfter) + C.edgeK * Math.max(0, ndc - C.ndcFree) + C.lagK * Math.max(0, Math.abs(th) - C.lagFree);
+  const edge = ndc > C.ndcFree || Math.abs(th) > C.lagFree;
   const want = Math.max(-cap, Math.min(cap, 3 * th));
   const acc = C.yawAcc * dt;
   camRig.runYaw += Math.max(-acc, Math.min(acc, want - camRig.runYaw));
