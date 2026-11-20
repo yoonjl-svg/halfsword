@@ -7,6 +7,7 @@ import * as CONFIG from './config.js';
 import { closeInputGate, closeInputApply } from './close_hold.js'; // 붙은 거리 규칙 — 묶인 동안 공격 막음 · 1 m 안 손잡이 찍기만 (11/14 사장님)
 import { PHYSICS, ARENA, CAMERA, AI_PROFICIENCY } from './config.js';
 import { Fighter, GROUND_GROUPS } from './fighter.js';
+import { walkTopOf } from './run.js'; // 뛰는 동안 카메라 (11/21 — camRunPull: 걷는 끝 빠르기)
 import { createStaminaHud } from './stamina_hud.js';
 import { hpLift } from './hp_strip.js'; // 동시 대전 체력 칸 높이 (11/18 — 칠 때 알림 느낌표를 그 위로)
 import { applyAweStart } from './stamina.js'; // 티소나 '위세' 판 시작 깎임 (10/24)
@@ -2624,13 +2625,66 @@ function teamCam(dt, P) {
 function resetCamera() {
   const [P, E] = camPair();
   followReset(camRig, P.pelvisPos);
+  camRig.runYaw = null; // 뛰는 동안 카메라 (11/21 — camRunYaw · camRunPull)
+  camRig.runPull = 0;
   camSteps = 0;
   const e = E.pelvisPos;
   _cd.set(e.x - camFollow.x, 0, e.z - camFollow.z);
   if (_cd.length() > 0.3) camDir.copy(_cd.normalize()); // 지난 판 끝 방향에서 돌아오지 않게 (판 시작 자리가 이 방향으로 정해진다)
 }
+/**
+ * 뛰는 동안의 카메라 방위 (11/21 사장님 '몸이 상대를 안 봐도 괜찮아. 오히려 그게 맞지. 카메라 문제야 이건.' — CAMERA.run · 기록 docs/strike/cam_restore_2026-11-21.md):
+ *  카메라 방위는 예전처럼 나 → 상대 방위(u)를 사이 각 × 3 (초당) 빠르기로 따라가되, 그 빠르기를 yawMax(뛰기가 끝난 뒤 따라잡는 동안 yawAfter) 안 · 바뀜을 yawAcc 안으로 —
+ *  상대가 화면 가운데에서 가로 ndcFree 몫 넘게 벗어나거나 사이 각이 lagFree 를 넘으면 한도를 edgeK · lagK × 넘은 몫만큼 늘리고 가속 한도 없이
+ *  (상대를 화면 밖으로 내보내지 않음 · 뛰기가 끝난 뒤 따라잡을 각이 크게 쌓이지 않음).
+ *  켜짐: 내 몸이 뛰는 가속 한도 창(run.fast — 뛰는 중 · 뛰다 멈춰 걷는 빠르기로 줄 때까지)에 서 있을 때 · 꺼짐: 그 뒤 사이 각이 done 밑이 되면(예전 따라가기로 넘김 — 튀지 않음) ·
+ *  상대가 near 안이면(붙어 싸움 — 예전 카메라 그대로) · 넘어지면 곧장.
+ *  켜져 있으면 camDir 를 돌리고 true · 아니면 false (예전 lerp — 걷기 · 싸움 카메라는 한 글자도 바뀌지 않음). a = 따라가는 점 · b = 상대 무게중심
+ */
+const _cv = new THREE.Vector3();
+function camRunYaw(P, standing, u, a, b, dt) {
+  const C = CAMERA.run;
+  const th = Math.atan2(camDir.x * u.z - camDir.z * u.x, camDir.x * u.x + camDir.z * u.z); // camDir → u 사이 각 (+ = 위에서 볼 때 시계 반대 · 이 틀의 셈 그대로)
+  const on = standing && (!!P.run?.fast || (camRig.runYaw != null && Math.abs(th) > C.done && Math.hypot(b.x - a.x, b.z - a.z) > C.near));
+  if (!on) return void (camRig.runYaw = null), false;
+  if (camRig.runYaw == null) camRig.runYaw = (th * (1 - Math.exp(-dt * 3))) / Math.max(dt, 1e-6); // 들어설 때 지금 도는 빠르기에서 (튀지 않게)
+  // 상대가 화면 가운데에서 가로로 벗어난 몫 (지난 화면 카메라로 상대 무게중심을 비춘 NDC x 크기 — 카메라 뒤면 9)
+  _cv.set(b.x, b.y, b.z).project(camera);
+  const ndc = _cv.z > 1 ? 9 : Math.abs(_cv.x);
+  camRig.runNdc = ndc;
+  const cap = (P.run?.on ? C.yawMax : C.yawAfter) + C.edgeK * Math.max(0, ndc - C.ndcFree) + C.lagK * Math.max(0, Math.abs(th) - C.lagFree);
+  const edge = ndc > C.ndcFree || Math.abs(th) > C.lagFree;
+  const want = Math.max(-cap, Math.min(cap, 3 * th));
+  const acc = C.yawAcc * dt;
+  camRig.runYaw += Math.max(-acc, Math.min(acc, want - camRig.runYaw));
+  if (edge && Math.abs(want) > Math.abs(camRig.runYaw)) camRig.runYaw = want; // 상대가 화면 가장자리 쪽이면 가속 한도 없이
+  let step = camRig.runYaw * dt;
+  if (Math.abs(step) > Math.abs(th) && step * th > 0) (step = th), (camRig.runYaw = th / Math.max(dt, 1e-6)); // 넘어 돌지 않음
+  const c = Math.cos(step);
+  const s = Math.sin(step);
+  const x = camDir.x * c - camDir.z * s;
+  const z = camDir.x * s + camDir.z * c;
+  camDir.set(x, 0, z).normalize();
+  return true;
+}
+/** 뛰는 동안 카메라를 더 뒤로 · 위로 (11/21 — CAMERA.run.back · up): 몸 빠르기가 걷는 끝 → 뛰는 끝 사이 0 → 1 을 tau 로 거른 몫 (뛰는 가속 한도 창 · 서 있을 때만 — 아니면 0 쪽으로) */
+function camRunPull(P, standing, dt) {
+  const C = CAMERA.run;
+  let want = 0;
+  if (standing && P.run?.fast) {
+    const w = walkTopOf(P);
+    want = THREE.MathUtils.clamp((Math.hypot(camRig.vel.x, camRig.vel.z) - w) / Math.max(1e-6, w * (CONFIG.RUN.mul - 1)), 0, 1);
+  }
+  const r = camRig.runPull ?? 0;
+  camRig.runPull = r + (want - r) * (1 - Math.exp(-dt / C.tau));
+  if (camRig.runPull < 1e-4 && want === 0) camRig.runPull = 0;
+  return camRig.runPull;
+}
 function updateCamera(dt) {
   if (!player || window.game?.freeCam) return; // freeCam: 디버그용으로 카메라를 직접 조종
+  // 시야각: 셋 이상 판(동시 대전)은 + TEAM_FIGHT.cam.fovAdd (11/21 사장님 '다대다 전투에선 … 시야를 조금 넓히고') — 1:1 은 resize 가 둔 값 그대로
+  const fov = (camera.aspect < 1.2 ? CAMERA.fov + 15 : CAMERA.fov) + (teamRun ? CONFIG.TEAM_FIGHT.cam.fovAdd : 0);
+  if (camera.fov !== fov) (camera.fov = fov), camera.updateProjectionMatrix();
   const [P, E] = camPair(); // 1:1 = player · enemy
   // 흔들리는 골반 대신 몸 전체 무게중심을 따라간다 (참수된 몸은 무게중심에 날아가는 머리가 섞이니 골반을 따른다)
   const src = (!P.decapitated && P.com) || P.pelvisPos;
@@ -2640,14 +2694,17 @@ function updateCamera(dt) {
   const b = (!E.decapitated && E.com) || E.pelvisPos;
   // 나 → 상대 방향 (너무 붙어 있으면 이전 방향 유지) — 도는 것은 지금처럼 부드럽게(3/s)
   _cd.set(b.x - a.x, 0, b.z - a.z);
-  if (_cd.length() > 0.3) camDir.lerp(_cd.normalize(), 1 - Math.exp(-dt * 3)).normalize();
+  //  내 몸이 뛰는 동안(11/21 — 사장님 '카메라 문제야 이건.' · CAMERA.run): 도는 빠르기 · 가속에 한도 (camRunYaw) — 그 밖엔 예전 그대로
+  if (_cd.length() > 0.3) camRunYaw(P, standing, _cd.normalize(), a, b, dt) || camDir.lerp(_cd, 1 - Math.exp(-dt * 3)).normalize();
   const right = _cd.set(-camDir.z, 0, camDir.x);
   // 물러나는 동안 카메라를 조금 올린다 (CAMERA.retreatLift — 가까이 따라붙은 상대를 내 몸이 덜 가리게): 지난 화면 몸 빠르기의 카메라 방향 반대 몫으로 — camera_rig.retreatStep
   const lift = retreatStep(camRig, camDir.x, camDir.z, dt, standing, CAMERA);
   // 지형 무대(화산섬): 카메라 높이·바라보는 높이·해와 그림자 과녁을 내 무게중심 밑 땅 높이만큼 올린다 (평지 무대는 0 — 그대로)
   const terrainY = P.terrain ? P.terrain.heightAt(a.x, a.z) : 0;
-  const camH = (teamRun ? CAMERA.height + teamRun.pull.up : CAMERA.height) + CAMERA.retreatLift * lift + terrainY; // 동시 대전: 물러남 몫만큼 위로 (1:1 은 예전 식)
+  const rw = camRunPull(P, standing, dt); // 뛰는 동안 더 뒤로 · 위로 (11/21 — CAMERA.run.back · up) 0 ~ 1
+  const camH = (teamRun ? CAMERA.height + teamRun.pull.up : CAMERA.height) + CAMERA.retreatLift * lift + terrainY + CAMERA.run.up * rw; // 동시 대전: 물러남 몫만큼 위로 (1:1 은 예전 식)
   basePose(a, camDir.x, camDir.z, lift, terrainY, teamRun ? teamCam(dt, P) : CAMERA, camTarget); // 어깨 너머: a 에서 뒤로 back · 오른쪽 shoulder · 높이 camH
+  if (rw > 0) (camTarget.x -= camDir.x * CAMERA.run.back * rw), (camTarget.z -= camDir.z * CAMERA.run.back * rw), (camTarget.y += CAMERA.run.up * rw);
   // 비기 카메라 연출 (10/10 이베리아 사이드스텝 사선 베기): 내 쪽 무게중심을 축으로 SECRET.camSwing ° 를 camSwingIn 초에 돌렸다가 camSwingOut 초에 되돌림 (부드럽게)
   if (camSwing.t >= 0) {
     camSwing.t += dt;
@@ -2973,6 +3030,7 @@ let acc = 0;
 const renderCap = createRenderCap();
 
 let moveStickRun = false; // 이동 스틱 뛰기 표시(#moveStick.run)가 켜져 있나 — 바뀔 때만 DOM 을 고친다
+let moveStickHold = 0; // 이동 스틱 테두리가 차오른 몫(--runHold — 끝까지 민 채 버틴 시간 ÷ RUN.hold · 1/40 걸음) — 바뀔 때만 DOM 을 고친다
 /** 프레임마다 사람 몸의 입력 (손 · 탭 · 비기 창 · 막기 단추 · 고유 동작 · 감정 · 걸음) — 게임 루프에서 옮김 (줄 그대로) */
 function playerInputFrame(dt, now) {
   // 손 목표 갱신 (입력 → 플레이어)
@@ -3076,6 +3134,8 @@ function playerInputFrame(dt, now) {
   if (tapsIn > 0 || swipe || parryDown) player.runBreak = true;
   const runOn = !!player.run?.on;
   if (runOn !== moveStickRun) $('moveStick').classList.toggle('run', (moveStickRun = runOn)); // 뛰는 동안 스틱 테두리만 밝게 (글자 없음)
+  const holdQ = runOn ? 0 : Math.round(Math.min(1, (player.run?.hold || 0) / CONFIG.RUN.hold) * 40) / 40; // 끝까지 민 채 버티는 동안 테두리가 차오름 (11/21 — 실제 2 s · src/run.js)
+  if (holdQ !== moveStickHold) $('moveStick').style.setProperty('--runHold', String((moveStickHold = holdQ)));
   updateGuardName();
   updateParryLabel();
   // 마우스로 조작할 땐 손가락 흔적 대신 오른쪽 아래 원판에 손 위치의 흔적을 그린다
@@ -3288,7 +3348,7 @@ window.game = {
   camOpen,
   camPush, // 런지 카메라 (10/25 — t 시계 · dx dz 방향 · SECRET.risoCam) — tools/browser/risoluto_fx_shots.mjs 가 읽는다
   get camRig() {
-    return { follow: camFollow.clone(), vel: { ...camRig.vel }, lift: camRig.lift, look: camLook.clone(), dir: camDir.clone() }; // 따라가기 상태 (tools/browser/cam_follow_browser.mjs 가 잰다)
+    return { follow: camFollow.clone(), vel: { ...camRig.vel }, lift: camRig.lift, look: camLook.clone(), dir: camDir.clone(), runYaw: camRig.runYaw, runPull: camRig.runPull, runNdc: camRig.runNdc }; // 따라가기 상태 (tools/browser/cam_follow_browser.mjs 가 잰다 · 뛰는 동안 카메라 11/21 — cam_calm_strip.mjs)
   },
   /** 무대 훑기 길을 n 등분해 [{ pos, look }] (지금 평소 자리 기준, 무대 길 덮어쓰기 over) — 무대 소품 뚫음 검사용 (tools/browser/cam_open_shots.mjs) */
   camOpenPath(n = 60, over = null) {

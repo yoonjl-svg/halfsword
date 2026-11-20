@@ -15,6 +15,10 @@
 //  조건: 간 보기(watch) 중 · 서 있음 · 쉼(기력 쉼) · 밀치기 아님 · 겨눈 상대까지 간 보는 거리(holdDist) 밖으로 AI_RUN.gap 넘게 남음 ·
 //   뛰어 닿을 때 기력이 AI_RUN.keep 넘게 남음(남은 길 ÷ 뛰는 끝 빠르기 × 초당 기력 어림) · 겨눈 상대 말고 다른 적이 제 칼끝 + AI_RUN.near 안에 없음
 //   (뛰면 몸이 뛰는 쪽을 보고 옆 · 등이 열린다 — 판 사본의 제 층 눈(늦음)으로 읽되 시야는 묻지 않음) → 스틱을 상대 쪽 끝으로 (옆 몫은 앞 몫 × AI_RUN.lat 안 — 몸이 거의 안 돌고 뜀)
+//  미리 (11/21 사장님 '끝까지 밀고 2초 이상 유지하면 뛰기 시작.' — 사람과 같은 규칙: 스틱을 끝까지 민 채 RUN.hold 를 걸어야 뜀 · run.js):
+//   뛰기 전 남은 길에서 '버티며 걷는 길'(남은 버팀 시간 × (걷는 끝 빠르기 + 상대가 다가오는 빠르기 — 멀어지면 빼고))을 먼저 빼고 위 gap · 기력 어림을 셈 — 멀리서 미리 정해 밀기 시작 ·
+//   버티기 시작한 뒤에는 gap 대신 AI_RUN.holdGap 으로 셈(사이 띠 — 버티다 그만두지 않게 · 버틴 끝에 뛸 길이 거의 없는데 뛰지 않게) · 그동안 까닭이 사라지거나 다른 조건이 깨지면
+//   스틱 길 몫 0 (사람이 스틱을 되돌린 것과 같음 — 버틴 셈은 처음부터)
 //  끝: 남은 길이 멈추는 길(지금 빠르기에서 RUN.accel 로 줄며 가는 길 + 그동안 상대가 다가오는 길) 안 · 기력 keep 밑 · 위 조건이 깨짐 → 스틱 길 몫 0 (사람이 스틱을 되돌린 것과 같음)
 //  공격 · 막기 · 비기 꼴이면 runBreak (사람의 공격 · 막기 입력과 같은 끊기 — 끊긴 뒤 다시 걺도 run.js 그대로)
 //  숙련도는 판단에만: 겨눈 상대가 누구를 겨누나 · 다른 적이 둘레에 있나를 그 몸의 층 눈(바탕 0.6 s · 가운데 0.4 s · 위 0.2 s 늦은 장 — team_sense.js viewOf)으로 읽음
@@ -87,10 +91,12 @@ function runWant(ai, fwd) {
   if (st <= AI_RUN.keep) return null;
   const left = ai.d - ai.holdDist(); // 간 보는 거리까지 남은 길
   const on = !!me.run?.on;
-  if (!on && left <= AI_RUN.gap) return null;
+  const pre = on ? 0 : Math.max(0, RUN.hold - (me.run?.hold || 0)) * Math.max(0, walkTopOf(me) + (ai.foeClosing ?? 0)); // 버티며 걷는 동안 줄어드는 길 (11/21 — 뛰기 전 · 상대가 멀어지면 덜)
+  const holding = !on && (me.run?.hold || 0) > 0; // 버티는 중 — gap 대신 holdGap (멀리서 정한 것을 이어감 · 사이 띠)
+  if (!on && left - pre <= (holding ? AI_RUN.holdGap : AI_RUN.gap)) return null;
   const stop = brakeDist(ai);
-  if (left <= stop) return null;
-  if (!on && st - ((left - stop) / (walkTopOf(me) * RUN.mul)) * runCostRate(me) < AI_RUN.keep) return null; // 닿을 때 기력 어림 (뛰는 끝 빠르기로 — 가속 동안은 덜 씀)
+  if (left - pre <= stop) return null;
+  if (!on && st - ((left - pre - stop) / (walkTopOf(me) * RUN.mul)) * runCostRate(me) < AI_RUN.keep) return null; // 닿을 때 기력 어림 (뛰는 끝 빠르기로 — 가속 동안은 덜 씀 · 버티며 걷는 동안 걸음 기력은 셈하지 않음)
   const why = runWhy(ai);
   return why && !otherFoeNear(ai) ? why : null;
 }

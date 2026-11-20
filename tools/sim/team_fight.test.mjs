@@ -228,7 +228,7 @@ const pick = (M, f, dt = 0) => (f.foe = chooseTarget(f, M, dt));
 
 test('⑤ 상대 고르기: 가까움 · 같으면 작은 자리 · 쓰러짐 · 나눠 맡기 · 나를 침 · 기다림 · 붙잡힘 · 죽음 · 취향', () => {
   const T = CONFIG.TEAM_FIGHT.target;
-  const me = fake(0, 0, 0, 0), e1 = fake(1, 1, 2, 0), e3 = fake(3, 1, 0, 2), mate = fake(2, 0, 0, -1);
+  const me = fake(0, 0, 0, 0, { aiCtl: { mode: 'probe' } }), e1 = fake(1, 1, 2, 0), e3 = fake(3, 1, 0, 2), mate = fake(2, 0, 0, -1); // me = AI 몸 (사람 몸은 아래 ⑤-2)
   const M = fakeMatch([me, e1, mate, e3]);
   assert.equal(pick(M, me), e1, '같은 거리면 작은 자리');
   e3.pos.z = 1.9;
@@ -259,7 +259,7 @@ test('⑤ 상대 고르기: 가까움 · 같으면 작은 자리 · 쓰러짐 ·
   // 죽으면 붙잡혀 있어도 곧장
   e3.alive = false;
   assert.equal(pick(M, me, 0.01), e1);
-  me.aiCtl = null;
+  me.aiCtl = { mode: 'probe' };
   e3.alive = true;
   e3.pos.z = 1.0;
   e1.pos.x = 2;
@@ -286,6 +286,34 @@ test('⑤ 상대 고르기: 가까움 · 같으면 작은 자리 · 쓰러짐 ·
   e1.blood = 0.45; // VITALS.collapseBlood 까지 잃음 → 다친 정도 1
   assert.equal(+(s0 - targetScore(M, me, e1)).toFixed(6), T.prefAdd);
   me.targetPref = null;
+});
+
+test('⑤-2 사람 몸 (AI 조종 없음 — 11/21 사장님 \'가장 가까운 적을 자동으로 바라본다거나\'): 가장 가까운 적 — 나눠 맡기 없음 · margin · hold 짧게 · 쓰러진 적 뒤로 · 나를 치는 적 먼저는 그대로', () => {
+  const T = CONFIG.TEAM_FIGHT.target;
+  const H = T.human;
+  assert.ok(H && H.allyAdd === 0 && H.margin < T.margin && H.hold < T.hold);
+  const me = fake(0, 0, 0, 0), e1 = fake(1, 1, 2, 0), e3 = fake(3, 1, 0, 3), mate = fake(2, 0, 0, -1);
+  const M = fakeMatch([me, e1, mate, e3]);
+  mate.foe = e1;
+  assert.equal(targetScore(M, me, e1), 2, '동료가 겨눈 적도 더함 없음 (AI 는 + allyAdd)');
+  assert.equal(pick(M, me), e1, '가장 가까운 적');
+  // 더 가까워진 적: margin(사람) 넘게 가까운 채 hold(사람) 동안이면 바꿈
+  e3.pos.z = 2 - H.margin - 0.05;
+  let t = 0;
+  while (me.foe === e1 && t < 5) (t += 0.01), pick(M, me, 0.01);
+  assert.equal(me.foe, e3);
+  assert.ok(Math.abs(t - H.hold) <= 0.0101, `hold ${t} (사람 ${H.hold})`);
+  // margin(사람) 안이면 그대로
+  e1.pos.x = e3.pos.z - H.margin + 0.05;
+  for (let i = 0; i < 100; i++) pick(M, me, 0.01);
+  assert.equal(me.foe, e3, 'margin 안 — 그대로');
+  // 쓰러진 적은 뒤로 (다른 적이 downNear 안에 서 있으면)
+  e3.state = 'down';
+  assert.equal(targetScore(M, me, e3), e3.pos.z + T.downAdd);
+  e3.state = 'stand';
+  // AI 몸이면 예전 그대로 (나눠 맡기)
+  const ai = fake(4, 0, 0, 0, { aiCtl: { mode: 'probe' } });
+  assert.equal(targetScore(fakeMatch([ai, e1, mate, e3]), ai, e1), e1.pos.x + T.allyAdd);
 });
 
 test('⑥ 편 전멸 = 판 끝 · 결과 (자리마다 alive · blood · wounds · causeOfDeath)', (t) => {

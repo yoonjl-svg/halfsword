@@ -10,6 +10,7 @@
 //  바꾸는 때: 지금 상대가 죽었거나 부활하는 중이면 곧장 (붙잡고 있어도 — 죽은 몸을 겨눌 까닭이 없다).
 //   그 밖엔 다른 상대가 margin 넘게 낮은 채 hold 동안 이어지면. 나를 치고 있는 상대면 hold 를 기다리지 않는다 — 그 상대가 attackHold(실제 초 0.4) 동안 내리 쳤으면 (3단계 10/29 · 2877).
 //   붙잡힘(committed — 공격 · 비기 · 칼끼리 맞댐 · 밀치기) 동안은 바꾸지 않는다.
+//  사람 몸 (AI 조종이 없는 몸 — 11/21 사장님 '가장 가까운 적을 자동으로 바라본다거나'): 가장 가까운 적 — allyAdd 없음 · margin · hold 짧게 (TEAM_FIGHT.target.human · 쓰러진 적 뒤로 · 나를 치는 적 먼저는 그대로)
 //  값: config.js TEAM_FIGHT.target (모두 사장님 확인 전 — 확인표 2864 ~ 2869 · 2877)
 // ─────────────────────────────────────────────────────────────
 import { TEAM_FIGHT } from './config.js';
@@ -58,14 +59,18 @@ export const TARGET_PREFS = {
   allyAttacker: (M, f, g) => (M.fighters.some((m) => m !== f && sameSide(m, f) && m.alive && g.foe === m) ? -TEAM_FIGHT.target.prefAdd : 0), // 내 편을 겨눈 상대 먼저
 };
 
+/** 사람 몸 값 (AI 조종이 없는 몸 — 11/21 · TEAM_FIGHT.target.human) 또는 null */
+const humanT = (f) => (f.aiCtl ? null : TEAM_FIGHT.target.human ?? null);
+
 /** f 가 g 를 겨눌 점수 (m, 낮을수록 고름) — 읽기만 */
 export function targetScore(M, f, g) {
   const T = TEAM_FIGHT.target;
+  const allyAdd = humanT(f)?.allyAdd ?? T.allyAdd;
   let s = hdist(f, g);
   if (g.state !== 'stand') {
     for (const h of M.fighters) if (h !== g && !sameSide(h, f) && targetable(h) && h.state === 'stand' && hdist(f, h) <= T.downNear) { s += T.downAdd; break; }
   }
-  for (const m of M.fighters) if (m !== f && sameSide(m, f) && m.alive && m.foe === g) s += T.allyAdd;
+  if (allyAdd) for (const m of M.fighters) if (m !== f && sameSide(m, f) && m.alive && m.foe === g) s += allyAdd;
   if (attacking(g, f)) s -= T.attackSub;
   const pref = f.targetPref && TARGET_PREFS[f.targetPref];
   if (pref) s += pref(M, f, g);
@@ -94,6 +99,8 @@ export function chooseTarget(f, M, dt = 0) {
     if (s < bs) (bs = s), (best = g); // 같으면 먼저 본(작은) 자리
   }
   if (!best) return st.foe ?? f.foe ?? null; // 겨눌 상대가 없다 (판 끝) — 지금 상대 그대로
+  const H = humanT(f);
+  const margin = H?.margin ?? T.margin;
   const take = (g, why) => {
     if (st.foe && st.foe !== g) (st.switches++), st.why[why]++;
     st.foe = g;
@@ -102,7 +109,7 @@ export function chooseTarget(f, M, dt = 0) {
   };
   if (!targetable(st.foe)) take(best, 'gone'); // 처음 · 죽음 · 부활 — 곧장
   else if (best !== st.foe) {
-    if (committed(f) || cur - bs < T.margin) {
+    if (committed(f) || cur - bs < margin) {
       st.cand = null;
       st.held = 0;
     } else {
@@ -110,7 +117,7 @@ export function chooseTarget(f, M, dt = 0) {
       st.held += dt;
       const fk = M.sense ? fixHoldK(f) : 1; // 결투 고집 (11/19 — ai_lone.js · 이탈리아): 수가 밀려도 겨눈 상대를 붙듦 — 바꿈 기다림 × (1 + fix × w)
       if (attacking(best, f) && (T.attackHold <= 0 || (st.atk.get(best) ?? 0) >= T.attackHold * fk)) take(best, 'attacked'); // 나를 치는 상대는 hold 를 기다리지 않는다 (attackHold 만큼 내리 쳤으면)
-      else if (st.held >= ((M.sense && senseHold(M, f, best)) ?? T.hold) * fk) take(best, 'held'); // 무리 싸움 판단 (11/18): 엄호 바꿈은 짧게 기다림 (TEAM_SENSE.cover.hold)
+      else if (st.held >= ((M.sense && senseHold(M, f, best)) ?? H?.hold ?? T.hold) * fk) take(best, 'held'); // 무리 싸움 판단 (11/18): 엄호 바꿈은 짧게 기다림 (TEAM_SENSE.cover.hold)
     }
   } else (st.cand = null), (st.held = 0);
   return st.foe;

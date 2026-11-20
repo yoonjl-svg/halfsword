@@ -40,16 +40,22 @@ test('① 1:1 AI 는 뛰지 않음: 15 s 판에서 두 AI 몸 모두 f.run · ru
   G.world.free();
 });
 
-test('② 셋 이상 판 AI 는 사람과 같은 규칙으로 뜀 (2:1 판 시작 — 짝의 둘째가 동료와 붙은 혼자에게)', (t) => {
+test('② 셋 이상 판 AI 는 사람과 같은 규칙으로 뜀 (2:1 판 시작 — 짝의 둘째가 동료와 붙은 혼자에게 · 11/21 스틱을 끝까지 민 채 RUN.hold 를 걸은 뒤)', (t) => {
   seedRand(t, 1);
   const W = ['zweihander', 'longsword', 'flamberge']; // 11/19 재기에 에스톡 · 세이버 안 씀 (전 estoc)
-  const G = newMatch({ count: 3, ai: 'all', seed: 1, walls: true, weapons: W, looks: Array(3).fill(LOOKS.enemy), aiOf: (i) => aiAtProficiency({ ai: { persona: {} }, weapon: W[i] }, 4) });
+  // 판 시작 거리 16 m (11/21 — 뛰기 전에 2 초를 걸어야 해 ARENA.startGap 5.6 m 에서는 뛸 길이 남지 않음: 2:1 씨앗 1 ~ 8 모두 12 s 안에 안 뜀 ·
+  //  12 m 면 짝의 둘째가 0.5 ~ 0.8 s 만 뜀 — 16 m 면 혼자가 1.3 ~ 1.5 s 뜀)
+  const G = newMatch({ count: 3, ai: 'all', seed: 1, walls: true, gap: 16, weapons: W, looks: Array(3).fill(LOOKS.enemy), aiOf: (i) => aiAtProficiency({ ai: { persona: {} }, weapon: W[i] }, 4) });
   assert.ok(G.sense);
   const F = G.fighters;
   const rec = [];
-  for (let i = 0; i < 6 / DT && !G.over; i++) {
+  const last = new Map(); // 지난 스텝의 { on, hold } (몸마다)
+  for (let i = 0; i < 10 / DT && !G.over; i++) {
     G.step();
     for (const f of F) {
+      const L = last.get(f);
+      if (f.run?.on && L && !L.on) assert.ok(L.hold >= RUN.hold - 2 * DT, `스틱을 끝까지 민 채 RUN.hold 를 걸은 뒤 뜀 (버틴 ${L.hold.toFixed(2)} s)`);
+      last.set(f, { on: !!f.run?.on, hold: f.run?.hold ?? 0 });
       if (!f.run?.on) continue;
       const p = f.bodies.pelvis.translation();
       const v = f.bodies.pelvis.linvel();
@@ -59,10 +65,11 @@ test('② 셋 이상 판 AI 는 사람과 같은 규칙으로 뜀 (2:1 판 시�
   }
   const runners = [...new Set(rec.map((r) => r.f))];
   assert.ok(runners.length >= 1, 'AI 가 뜀');
+  assert.ok(runners.some((f) => f.run.runT >= 0.8), `0.8 s 넘게 뛴 몸이 있음 (${runners.map((f) => f.run.runT.toFixed(2)).join(' · ')})`);
   for (const f of runners) {
     const R = rec.filter((r) => r.f === f);
     assert.ok(f.run.runs >= 1);
-    assert.ok(R.some((r) => r.v > walkTopOf(f) * 1.3), `걷는 끝보다 빠름 (가장 빠름 ${Math.max(...R.map((r) => r.v)).toFixed(2)})`);
+    if (f.run.runT >= 0.8) assert.ok(R.some((r) => r.v > walkTopOf(f) * 1.3), `걷는 끝보다 빠름 (가장 빠름 ${Math.max(...R.map((r) => r.v)).toFixed(2)})`);
     for (let i = 1; i < R.length; i++) {
       if (R[i].t - R[i - 1].t > DT * 1.5) continue;
       assert.ok(R[i].st <= R[i - 1].st + 1e-9, '뛰는 동안 기력이 오르지 않음 (자연 회복 없음)');
@@ -117,8 +124,8 @@ const noRandom = (fn) => {
 };
 
 test('③ 언제 뛰나: 겨눈 상대가 내 동료를 겨눔 → join · 나를 겨눠 다가옴 → 안 뜀 · 나를 겨눈 채 멀어짐 → chase · 셋 따로 제삼자와 붙음 → 안 뜀', () => {
-  // 0 편: 나(0) · 동료(2) — 1 편: 적(1) 은 동료(2)와 붙음 · 나는 7 m 밖
-  const F = [fake(0, 0, -7, 0, 0), fake(1, 1, 0, 0, Math.PI), fake(2, 0, 2, 0, Math.PI)];
+  // 0 편: 나(0) · 동료(2) — 1 편: 적(1) 은 동료(2)와 붙음 · 나는 13 m 밖 (11/21: 뛰기 전에 RUN.hold 를 걸어야 해 — 전 7 m)
+  const F = [fake(0, 0, -13, 0, 0), fake(1, 1, 0, 0, Math.PI), fake(2, 0, 2, 0, Math.PI)];
   board(F, [1, 2, 1]);
   const ai = F[0].aiCtl;
   const [fw, sd] = noRandom(() => aiRunFeet(ai, 0.48, 0.1));
@@ -127,7 +134,7 @@ test('③ 언제 뛰나: 겨눈 상대가 내 동료를 겨눔 → join · 나�
   assert.ok(Math.abs(Math.hypot(fw, sd) - 1) < 1e-9 && fw > 0 && Math.abs(sd) <= AI_RUN.lat * fw + 1e-9, '상대 쪽 끝 · 옆 몫 ≤ 앞 몫 × lat');
   assert.deepEqual(ai.stats.run, { join: 1, chase: 0 });
   // 적이 나를 겨눠 다가옴 (판 시작처럼) — 안 뜀
-  const G = [fake(0, 0, -7, 0, 0), fake(1, 1, 0, 0, Math.PI, { foeClosing: 0 }), fake(2, 0, 2, 0, Math.PI)];
+  const G = [fake(0, 0, -13, 0, 0), fake(1, 1, 0, 0, Math.PI, { foeClosing: 0 }), fake(2, 0, 2, 0, Math.PI)];
   board(G, [1, 0, 1]);
   G[0].aiCtl.foeClosing = 1;
   assert.deepEqual(aiRunFeet(G[0].aiCtl, 0.48, 0.1), [0.48, 0.1], '스틱 그대로');
@@ -142,7 +149,7 @@ test('③ 언제 뛰나: 겨눈 상대가 내 동료를 겨눔 → join · 나�
   aiRunFeet(G[0].aiCtl, 0.48, 0);
   assert.equal(G[0].aiCtl.runWhy, 'chase');
   // 셋 따로(편 0 · 1 · 2): 겨눈 상대가 제삼자와 붙음 — 안 뜀 (동료가 아님)
-  const H = [fake(0, 0, -7, 0, 0), fake(1, 1, 0, 0, Math.PI), fake(2, 2, 2, 0, Math.PI)];
+  const H = [fake(0, 0, -13, 0, 0), fake(1, 1, 0, 0, Math.PI), fake(2, 2, 2, 0, Math.PI)];
   board(H, [1, 2, 1]);
   H[0].aiCtl.foeClosing = 1;
   aiRunFeet(H[0].aiCtl, 0.48, 0);
@@ -154,31 +161,42 @@ test('③ 언제 뛰나: 겨눈 상대가 내 동료를 겨눔 → join · 나�
 
 test('③ 안 뜀: 다른 적이 칼끝 + near 안 (등이 열림) · 가까움(gap 안) · 닿을 때 기력 keep 밑 · 간 보기 꼴 아님 · 쉼 · 넘어짐 · 앞으로 안 감', () => {
   const mk = (o = {}) => {
-    const F = [fake(0, 0, -7, 0, 0, o), fake(1, 1, 0, 0, Math.PI), fake(2, 0, 2, 0, Math.PI), fake(3, 1, o.ox ?? -9.5, o.oz ?? 0, 0)];
+    const F = [fake(0, 0, -13, 0, 0, o), fake(1, 1, 0, 0, Math.PI), fake(2, 0, 2, 0, Math.PI), fake(3, 1, o.ox ?? -15.5, o.oz ?? 0, 0)];
     board(F, [1, 2, 1, 2]);
     return F[0].aiCtl;
   };
   const why = (ai, fwd = 0.48) => (aiRunFeet(ai, fwd, 0), ai.runWhy);
-  assert.equal(why(mk({ ox: -12 })), 'join', '다른 적 멀리 — 뜀');
-  assert.equal(why(mk({ ox: -7 - (1.8 + AI_RUN.near - 0.1) })), null, '다른 적이 등 뒤 칼끝 + near 안 — 안 뜀');
-  assert.equal(why(mk({ ox: -7, oz: 1.8 + AI_RUN.near - 0.1 })), null, '옆도');
-  const near = mk({ ox: -12 });
-  near.d = near.holdDist() + AI_RUN.gap - 0.01;
-  assert.equal(why(near), null, '간 보는 거리 + gap 안 — 안 뜀');
-  const tired = mk({ ox: -12, st: 60 });
-  const left = tired.d - tired.holdDist();
-  assert.ok(60 - (left / (walkTopOf(tired.me) * RUN.mul)) * runCostRate(tired.me) < AI_RUN.keep);
+  assert.equal(why(mk({ ox: -18 })), 'join', '다른 적 멀리 — 뜀');
+  assert.equal(why(mk({ ox: -13 - (1.8 + AI_RUN.near - 0.1) })), null, '다른 적이 등 뒤 칼끝 + near 안 — 안 뜀');
+  assert.equal(why(mk({ ox: -13, oz: 1.8 + AI_RUN.near - 0.1 })), null, '옆도');
+  // 미리 (11/21 — 뛰기 전에 스틱을 끝까지 민 채 RUN.hold 를 걸음): 남은 길에서 버티며 걷는 길(RUN.hold × 걷는 끝 빠르기 — 상대가 다가오지 않을 때)을 빼고 gap
+  const near = mk({ ox: -18 });
+  const pre = RUN.hold * walkTopOf(near.me);
+  near.d = near.holdDist() + pre + AI_RUN.gap - 0.01;
+  assert.equal(why(near), null, '간 보는 거리 + 버티며 걷는 길 + gap 안 — 안 뜀');
+  near.d = near.holdDist() + pre + AI_RUN.gap + 0.01;
+  assert.equal(why(near), 'join', '그 밖 — 뜀 (스틱을 끝까지 밀어 버티기 시작)');
+  // 버티는 중: gap 대신 holdGap (멀리서 정한 것을 이어감 — 사이 띠) · 남은 버팀만큼만 미리 뺌
+  assert.ok(AI_RUN.holdGap < AI_RUN.gap);
+  near.me.run = { on: false, hold: RUN.hold / 2 };
+  near.d = near.holdDist() + (RUN.hold / 2) * walkTopOf(near.me) + AI_RUN.holdGap + 0.05;
+  assert.equal(why(near), 'join', '버티는 중 — gap 안이어도 holdGap 밖이면 이어감');
+  near.d = near.holdDist() + (RUN.hold / 2) * walkTopOf(near.me) + AI_RUN.holdGap - 0.05;
+  assert.equal(why(near), null, '버티는 중에도 holdGap 안이면 그만');
+  const tired = mk({ ox: -18, st: 60 });
+  const left = tired.d - tired.holdDist() - RUN.hold * walkTopOf(tired.me);
+  assert.ok(left > AI_RUN.gap && 60 - (left / (walkTopOf(tired.me) * RUN.mul)) * runCostRate(tired.me) < AI_RUN.keep);
   assert.equal(why(tired), null, '닿을 때 기력 어림 keep 밑 — 안 뜀');
-  const low = mk({ ox: -12, st: AI_RUN.keep });
+  const low = mk({ ox: -18, st: AI_RUN.keep });
   assert.equal(why(low), null, '기력 keep — 안 뜀');
-  for (const mode of ['attack', 'defend', 'withdraw', 'secret']) assert.equal(why(mk({ ox: -12, mode })), null, `${mode} — 안 뜀`);
-  const rest = mk({ ox: -12 });
+  for (const mode of ['attack', 'defend', 'withdraw', 'secret']) assert.equal(why(mk({ ox: -18, mode })), null, `${mode} — 안 뜀`);
+  const rest = mk({ ox: -18 });
   rest.staminaRest = true;
   assert.equal(why(rest), null, '기력 쉼');
-  const kneel = mk({ ox: -12 });
+  const kneel = mk({ ox: -18 });
   kneel.me.state = 'kneel';
   assert.equal(why(kneel), null, '무릎');
-  assert.equal(why(mk({ ox: -12 }), 0), null, '스틱이 앞으로 안 감 (간 보기 걸음이 기다림)');
+  assert.equal(why(mk({ ox: -18 }), 0), null, '스틱이 앞으로 안 감 (간 보기 걸음이 기다림)');
 });
 
 test('③ 뛰는 중: 멈추는 길(지금 빠르기에서 RUN.accel 로 줄며 가는 길 + 상대가 다가오는 길) 안이면 스틱을 되돌림 · 공격 꼴이면 runBreak', () => {
