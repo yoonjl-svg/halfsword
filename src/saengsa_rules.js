@@ -17,7 +17,7 @@
 //   by 'quick' | 'engine' | 'forfeit', seed, ver, pre { a: [사람], b: [사람] } } — seed · entrants · pre(경기 전 두 팀) · ver 는 2단계 다시보기 몫(사장님 10/29 14:5x — 같은 씨앗 · 같은 판으로 다시 셈).
 //   2단계 엔진(실제 2:2 싸움)도 같은 꼴을 돌려준다(matchSetup → 엔진 → finishMine · 설계 §8).
 import { SAENGSA } from './config.js';
-import { roundAt, restUntil, startAt, signupWindow, windowOf, shiftDay } from './saengsa_clock.js';
+import { roundAt, restUntil, startAt, signupWindow, windowOf, shiftDay, openAlways } from './saengsa_clock.js';
 import { NAMELESS_NAMES } from './saengsa_names.js';
 
 export const SCHOOLS5 = Object.freeze(['german', 'italian', 'iberian', 'japanese', 'chinese']);
@@ -301,7 +301,7 @@ export function matchState(t, m, now, cfg = SAENGSA) {
   const at = readyAt(t, m, cfg);
   if (at == null) return 'wait';
   if (now < at) return 'soon';
-  return isMine(t, m) && (cfg.testMode || now < deadlineOf(t, cfg)) ? 'ready' : 'due';
+  return isMine(t, m) && (openAlways(cfg) || now < deadlineOf(t, cfg)) ? 'ready' : 'due';
 }
 /** 내 팀이 떨어졌나 */
 export const myTeamOut = (t) => !!t && t.matches.some((m) => m.result && sidesOf(t, m).includes(0) && winnerOf(t, m) !== 0);
@@ -447,11 +447,11 @@ const membersOf = (t, team, keys) => keys.map((k) => t.teams[team].members.find(
  */
 export function advance(t, now, cfg = SAENGSA) {
   if (!t || t.status === 'done') return 0;
-  const deadline = cfg.testMode ? Infinity : deadlineOf(t, cfg); // 시험판은 기권 없음 (바로 시작은 기권 그대로 — 결과 시각 = 마감)
+  const deadline = openAlways(cfg) ? Infinity : deadlineOf(t, cfg); // 시험판은 기권 없음 (바로 시작은 기권 그대로 — 결과 시각 = 마감)
   const dueAt = (m) => {
     const at = readyAt(t, m, cfg);
     if (at == null) return Infinity;
-    if (isMine(t, m)) return cfg.testMode ? Infinity : Math.max(at, deadline);
+    if (isMine(t, m)) return openAlways(cfg) ? Infinity : Math.max(at, deadline);
     return at;
   };
   let n = 0;
@@ -537,7 +537,7 @@ export function openChests(t, cfg = SAENGSA) {
 /** 새로 신청할 수 있나: 신청 창이 열렸고 · 대회가 없거나 끝났거나 내 팀이 떨어졌고 · 그 창의 대회에 이미 들지 않았을 때 */
 export function canSignUp(now, t, cfg = SAENGSA) {
   const w = signupWindow(now, cfg);
-  return w.open && (!t || t.status === 'done' || myTeamOut(t)) && (cfg.testMode || t?.day !== w.day); // 시험판은 같은 날 몇 번이고
+  return w.open && (!t || t.status === 'done' || myTeamOut(t)) && (openAlways(cfg) || t?.day !== w.day); // 시험판 · 상시 열림은 같은 날 몇 번이고
 }
 /**
  * 일정 상태 (대기실 칸 · 생사전 화면 머리줄): kind

@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 const mem = new Map();
 globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
 const { SAENGSA } = await import('../../src/config.js');
+SAENGSA.anytime = false; // 본판 임시 상시 열림(사장님 11/21 — config SAENGSA.anytime)은 끈 판에서 일정 규칙을 시험 · 켠 판은 saengsa.test 의 따로 시험
 const C = await import('../../src/saengsa_clock.js');
 const R = await import('../../src/saengsa_rules.js');
 const S = await import('../../src/saengsa_store.js');
@@ -749,3 +750,19 @@ test('고용 값 내기 (11/19): 신청은 금화 · 머리 · 뿔피리를 한�
   assert.deepEqual(wallet(), { coins: 290, heads: 4, horns: 2 });
   assert.deepEqual(P.readProgress().earned, earned0, '번 것(도살자 · 대부호 셈)은 내고 돌려받아도 그대로');
 });
+
+test('본판 임시 상시 열림 (사장님 11/21 \'생사전은 일시적으로 상시 무한 참여 가능으로 열어둬. 그래야 테스트 가능.\'): 언제든 신청 창 열림 · 같은 날 다시 신청 · 기권 없음', async () => {
+  const C = await import('../../src/saengsa_clock.js');
+  const R = await import('../../src/saengsa_rules.js');
+  const ON = { ...SAENGSA, anytime: true, testMode: false };
+  assert.equal(C.openAlways(ON), true);
+  assert.equal(C.openAlways({ ...SAENGSA, anytime: false, testMode: false }), false);
+  for (const h of [3, 10, 15, 21]) {
+    const now = new Date(2026, 10, 21, h, 0, 0).getTime();
+    assert.equal(C.signupWindow(now, ON).open, true, `${h} 시`);
+    assert.equal(C.signupWindow(now, { ...ON, anytime: false }).open, false, `${h} 시 (끈 판은 닫힘)`);
+    const w = C.signupWindow(now, ON);
+    assert.equal(R.canSignUp(now, { status: 'done', day: w.day }, ON), true, '같은 날 끝낸 대회 뒤 다시');
+  }
+});
+

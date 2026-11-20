@@ -2618,6 +2618,7 @@ export const SHOP = {
 const VITE_ENV = import.meta.env || {};
 export const SAENGSA = {
   testMode: VITE_ENV.VITE_SAENGSA_TEST === '1', // 시험판: 신청 창 늘 열림 · 모든 경기 바로(쉬는 시간 · 대진 시각 · 기권 없음 — 상대끼리 경기는 앞 대진이 다 끝나면) · 대회가 끝나면 '다음 대회'
+  anytime: true, // 본판 임시 상시 열림 (사장님 11/21 '생사전은 일시적으로 상시 무한 참여 가능으로 열어둬. 그래야 테스트 가능.' — 신청 창 늘 열림 · 기권 없음 · 같은 날 몇 번이고 · 끝나면 다음 대회 단추. 저장 가름 · 시험 첫 금화는 시험판(testMode)만) — 시험이 끝나면 false 로 되돌림
   testCoins: 2000, // 시험판 첫 금화(시험판 저장에만 — 본 게임 지갑은 그대로) · 사장님 확인 전
   // 시험판 저장이 처음 열릴 때 주는 것(시험판 저장에만 — src/test_storage.js · 감독 10/29 18:2x 사장님이 배정을 해 보게): 정복자 호칭 + 가진 무기(시작 무기 둘 + 아래 여덟 = 열 · 다섯 유파 + 무유파) · 사장님 확인 전
   testWeapons: ['longsword', 'kriegsmesser', 'rapier', 'pappenheimer', 'zweihander', 'flamberge', 'uchigatana', 'hwando'],
