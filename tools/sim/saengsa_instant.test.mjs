@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 const mem = new Map();
 globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
 const { SAENGSA } = await import('../../src/config.js');
+SAENGSA.anytime = false; // 본판 임시 상시 열림(사장님 11/21 — config SAENGSA.anytime)은 끈 판에서 일정 규칙을 시험 · 켠 판은 saengsa.test 의 따로 시험
 const C = await import('../../src/saengsa_clock.js');
 const R = await import('../../src/saengsa_rules.js');
 const S = await import('../../src/saengsa_store.js');

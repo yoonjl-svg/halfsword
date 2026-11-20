@@ -1805,10 +1805,16 @@ export const AI_PROFICIENCY = {
 //  옛 PROF6_VITALITY 1.1(숙련도 6 시트만 — [사장님 10/29 22:4x]) · AI_LEVELS 힘(쉬움 0.9 · 보통 1.0 · 높음 · 최고 1.1 — [사장님 11/16 결정])은 이 표가 갈음
 //  값 [사장님 11/18 결정 '그냥 10%씩 차이나게 하자. 1부터 6까지 0.6 0.7 0.8 0.9 1.0 1.1 힘과 버티는 힘 모두' · '0은 0.6이야'] — 숙련 0 = 1 과 같은 0.6.
 //   이 표의 숙련 사다리(960 판 두 벌)가 새 목표 [사장님 11/18 결정 '1. b' — 작은 표 · 목표를 낮춤] (11/17 큰 표 0.5 ~ 2.2 · 0.5 ~ 1.7 은 기록 §0 ~ §8 — 지난 판)
+//  힘 [사장님 11/20 '버티는 힘은 그대로 두고 힘만 고쳐. 힘을 15% 간격으로 벌리면 0.6 0.75 0.9 1.05 …'] — 숙련 1 = 0.6 바닥 · 한 칸 0.15 (숙련 0 = 1) · 버티는 힘은 11/18 그대로
+//   (1:1 숙련 격차 진단 — 숙련 2 ↔ 4 차의 거의 전부가 몸 값 · 판단 숫자는 사다리를 못 움직임: 기록 docs/strike/human_ai_parity_2026-11-19.md §12 뒤 · 11/20)
 export const PROF_BODY = {
   vitality: [0.6, 0.6, 0.7, 0.8, 0.9, 1, 1.1],
-  strength: [0.6, 0.6, 0.7, 0.8, 0.9, 1, 1.1],
+  strength: [0.6, 0.6, 0.75, 0.9, 1.05, 1.2, 1.35],
 };
+// 독일 유파 버티는 힘 덤 [사장님 11/20 '버티는 힘 보너스는 독일 유파에게 줘. 근접전 위주의 유파인데 너무 금방 죽는 거 같아. 1-2 숙련도는 1.05 3-4 숙련도는 1.15 5-6 숙련도는 1.25로 해.']:
+//  독일 유파로 싸우는 몸(손에 든 무기의 유파 = 독일 — 사람 · AI 같음)의 버티는 힘(PROF_BODY.vitality 칸)에 곱함 · 칸 = 독일 숙련도 0 ~ 6 (0 = 1 — 덤 없음).
+//  독일 숙련도: AI = 그 몸이 손에 든 유파(독일)의 숙련도(ai.js art.proficiency — 인물 시트 · 숫자 숙련도) · 사람 = 스킬트리 독일 칸으로 센 숙련도(skill_tree_store.js playerProficiency.german)
+export const DE_VITALITY = { k: [1, 1.05, 1.05, 1.15, 1.15, 1.25, 1.25] };
 
 // AI 숙련도 = 스킬트리 칸 (11/16 — 기록 docs/strike/prof_kit_2026-11-16.md · src/skill_tree_data.js aiKitOf · src/ai.js applyKit · 시험 tools/sim/prof_kit.test.mjs):
 //  사장님 11/16 결정 — AI 숙련도는 '이 칸들을 익혔다'는 뜻. 사람과 같은 규칙으로 AI 몸에도 skillKit(skill_kit.js kitOff · perkOff 가 읽는 몫)을 넣고,
@@ -2618,6 +2624,7 @@ export const SHOP = {
 const VITE_ENV = import.meta.env || {};
 export const SAENGSA = {
   testMode: VITE_ENV.VITE_SAENGSA_TEST === '1', // 시험판: 신청 창 늘 열림 · 모든 경기 바로(쉬는 시간 · 대진 시각 · 기권 없음 — 상대끼리 경기는 앞 대진이 다 끝나면) · 대회가 끝나면 '다음 대회'
+  anytime: true, // 본판 임시 상시 열림 (사장님 11/21 '생사전은 일시적으로 상시 무한 참여 가능으로 열어둬. 그래야 테스트 가능.' — 신청 창 늘 열림 · 기권 없음 · 같은 날 몇 번이고 · 끝나면 다음 대회 단추. 저장 가름 · 시험 첫 금화는 시험판(testMode)만) — 시험이 끝나면 false 로 되돌림
   testCoins: 2000, // 시험판 첫 금화(시험판 저장에만 — 본 게임 지갑은 그대로) · 사장님 확인 전
   // 시험판 저장이 처음 열릴 때 주는 것(시험판 저장에만 — src/test_storage.js · 감독 10/29 18:2x 사장님이 배정을 해 보게): 정복자 호칭 + 가진 무기(시작 무기 둘 + 아래 여덟 = 열 · 다섯 유파 + 무유파) · 사장님 확인 전
   testWeapons: ['longsword', 'kriegsmesser', 'rapier', 'pappenheimer', 'zweihander', 'flamberge', 'uchigatana', 'hwando'],

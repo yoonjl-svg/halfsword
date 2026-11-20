@@ -194,5 +194,10 @@ export function humanProficiency({ test = false, learned = null } = {}) {
   const L = test ? Object.fromEntries(TREE_SCHOOLS.map((s) => [s, new Set(allNodeIds(s))])) : learned ?? readLearned();
   return Math.max(...Object.values(playerProficiency(L)));
 }
+/** 한 유파의 사람 숙련도 (11/20 독일 버티는 힘 덤 — config DE_VITALITY · main.js humanBodyOf): 그 유파 칸으로 센 숙련도 (playerProficiency 와 같은 셈 · 테스트 경로 = 모두 익힘) */
+export function humanSchoolProficiency(school, { test = false, learned = null } = {}) {
+  const L = test ? Object.fromEntries(TREE_SCHOOLS.map((s) => [s, new Set(allNodeIds(s))])) : learned ?? readLearned();
+  return playerProficiency(L)[school] ?? 1;
+}
 /** 편지를 가진 유파 (카드 뽑기 — main.js drawCardIds): 테스트 경로 = 모두 */
 export const playerLetters = ({ test = false } = {}) => (test ? new Set(TREE_SCHOOLS) : letterSchools(readLearned()));

@@ -15,7 +15,7 @@ import sgStyle from './saengsa.css?inline';
 import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { SAENGSA } from './config.js';
-import { clockFrom, signupWindow, roundAt } from './saengsa_clock.js';
+import { clockFrom, signupWindow, roundAt, openAlways } from './saengsa_clock.js';
 import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, isMine, assignWeapons, validAssignment, resumeOf, noWait } from './saengsa_rules.js';
 import { syncSaengsa, readSaengsa, playMine, claimChests, signUp, newSeed, saveResume } from './saengsa_store.js';
 import { fighterName, portraitOf, weaponName, weaponThumb, weaponInfo, SAENGSA_DATA, ownedWeapons, entryState, hireCostOf } from './saengsa_roster.js';
@@ -123,7 +123,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
       $('sgNext').textContent = `${T.champion} · ${tName(t.champion)}`;
       const chests = chestCount(t);
       if (chests && !t.chests) { $('sgPrize').hidden = false; $('sgPrizeText').textContent = chestLine(chests); }
-      else if (SAENGSA.testMode) $('sgNextCup').hidden = false; // 시험판: 하사품을 연 뒤(없으면 바로) 다음 대회
+      else if (openAlways()) $('sgNextCup').hidden = false; // 시험판: 하사품을 연 뒤(없으면 바로) 다음 대회
     } else if (m) $('sgNext').textContent = nextMatchLine(roundName(n, m.round), readyAt(t, m) ?? 0, matchState(t, m, t0), t0);
     else if (myTeamOut(t)) {
       const lost = t.matches.find((x) => x.result && sidesOf(t, x).includes(0) && winnerOf(t, x) !== 0);
