@@ -69,7 +69,7 @@ import { cnAiTurn } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 �
 import { digProtoOn, digRecoverReach, digStepIn, digTechW, digKeepWant, digWallNeed, digFeet, digWeight, digMix } from './dig_proto.js';
 import { freeInit, freeBeat, freeBeatOnWay, freeNeed, freeStepIn, freeAfter, freeFeet, freeStrike, freePress, freeBackK } from './ai_plan_free.js'; // 무유파 플랜 (3 단계 · 11/14 — this.planFree 가 있는 몸만 부름)
 import { mindOf, mindInit, mindStay, mindTick, mindAggr, mindPatienceT, mindNeed, mindOppK, mindAnsK, mindMargin, mindGap, mindStakes, mindTechW, mindChain, mindCircle, mindCircleOut, mindSideK, mindSide, mindCreep, mindGive } from './ai_mindset.js'; // 유파 마음가짐 (11/18 — 다섯 항목 점수 → 손잡이 · 집요함 = 상대 상태에 따라 넷을 옮기는 폭 · 값 표 schools.js SCHOOL_MINDSET · 마음가짐이 없는 몸은 옛 셈)
-import { supportFeet, mateSepX, laneFree, supportOpp, shoveToMate, supportChain } from './team_support.js'; // 서포트 (11/19 사장님 '동방과 독일이 서포트에 강하고 이베리아가 서포트에 특별히 도움 안 되는 걸로 하자' — 셋 이상 판의 me.foes 갈래 안에서만 · 판단만)
+import { supportFeet, mateSepX, laneFree, supportOpp, shoveToMate, supportChain, sweepOf, sweepW } from './team_support.js'; // 서포트 (11/19 사장님 '동방과 독일이 서포트에 강하고 이베리아가 서포트에 특별히 도움 안 되는 걸로 하자' — 셋 이상 판의 me.foes 갈래 안에서만 · 판단만)
 import { laneHold, senseFeet, outSkill, busyFoe, ambushOpp, shieldOpp, teamStats, huntFree, ambushHold } from './team_sense.js'; // 무리 싸움 판단 (11/18 — 셋 이상 판의 me.foes 갈래 안에서만 부름 · 1:1 은 안 탐)
 import { aiRunFeet } from './ai_run.js'; // AI 뛰기 (11/19 사장님 '뛰기 AI에도 넣고 무리 싸움에 먼저 넣어.' — 셋 이상 판만 · 뛰는 셈은 사람과 같은 src/run.js)
 import { loneFeet, manyW, manyMul } from './ai_lone.js'; // 혼자 싸움 판단 (11/19 사장님 '고수 한 명이 하수 두 명을 이기는 방법은 존재해야' — 셋 이상 판만 · 판단만)
@@ -787,14 +787,14 @@ export class AI {
         const x = p.x - c.x;
         const z = p.z - c.z;
         const dm = Math.hypot(x, z);
-        const sd = TF.mateSep.dist * (TS ? mateSepX(this) : 1); // 서포트 (11/19 — team_support.js): 이베리아는 동료 곁을 비키지 않고 지나감
+        const sd = TF.mateSep.dist * (TS ? mateSepX(this) : 1); // 서포트 (11/20 7 차 — team_support.js): 이베리아는 동료와 떨어져 섬 (제 넓은 원)
         if (dm >= sd || dm < 1e-6) continue;
         const k = TF.mateSep.k * (1 - dm / sd);
         fwd -= (k * (x * F.x + z * F.z)) / dm;
         side -= (k * (x * R.x + z * R.z)) / dm;
       }
     }
-    if (TS && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') [fwd, side] = supportFeet(this, fwd, side); // 서포트 (11/19 — team_support.js): 독일 · 동방 동료 칼길 밖 · 독일 옆에서 묶음 · 이베리아 원이 동료 쪽으로
+    if (TS && !(this.mode === 'attack' && (this.phase === 'strike' || this.phase === 'follow')) && this.mode !== 'secret') [fwd, side] = supportFeet(this, fwd, side); // 서포트 (11/19 — team_support.js): 독일 · 동방 동료 칼길 밖 · 독일 옆에서 묶음 · 이베리아 칼길 비킴 거둠 (7 차 마구잡이 베기)
     return [clamp(fwd, -1, 1), clamp(side, -1, 1)];
   }
 
@@ -1801,6 +1801,7 @@ export class AI {
     const near = why === 'drill' ? null : nearGuard(this.me, this.art.tradition);
     const schielOk = cls.online && this.d <= this.M.contact; // 곁눈 베기 제자리 (11/19 E1 짝 — 아래 고르기)
     const dupOk = (this.bound || !!this.me.feel?.touching) && this.me.foeDistance() <= UA.dupBandMax; // 겹치기는 칼이 맞물렸고 가슴 사이가 사람 겹치기 띠(dupBandMax) 안일 때만 (11/19 A9 — 사람 겹치기는 맞댄 칼에서만 나감 · 운동학 칼이 맞물린 자리에서 시작)
+    const swK = this.me.foes && this.me.teamSense ? sweepOf(this) : 0; // 서포트 (11/20 7 차 — team_support.js): 이베리아 마구잡이 베기 — 서 있는 동료가 있으면 크게 휩쓰는 베기를 더 고름 (셋 이상 판만)
     // 유파 마음가짐 (11/18 — 일격): 후보마다 입힐 피해 · 받을 피해를 먼저 어림 (평균으로 나눠 견줌 · 마음가짐 없으면 null — 셈 그대로)
     const stakes = this.mind ? mindStakes(this, this.school.tech.map((t0) => { let t = this.techNow(t0); if (t?.name === 'cingir' && t.plain && !SLOW_WHY.has(why)) t = t.plain; return t && !(vKind && t.kind !== vKind) && !(t.name === 'schielhau' && !schielOk) && !(t.name === 'duplieren' && !dupOk) ? t : null; }), hand, padDist) : null; // B7 갈음 · 곁눈 베기 제자리 · 겹치기 맞물림(아래 고르기와 같게) 뒤 칼로
     let best = null;
@@ -1843,6 +1844,7 @@ export class AI {
       const cd = padDist(hand, t.from);
       const quick = why === 'recover' || why === 'stepin' || why === 'windup' || why === 'riposte' || why === 'stop';
       w *= Math.exp(-cd / ((quick ? 0.3 : 0.55) + 0.4 * (1 - L.read)));
+      if (swK > 0) w *= sweepW(swK, t);
       if (stakes) w *= mindTechW(stakes, ti); // 유파 마음가짐 (11/18 — 일격): 입힐 피해 · 받을 피해 가운데 무엇으로 판단하나 (큰 칼은 그 결과)
       const noise = 0.2 + 0.5 * (1 - L.read) + (Lk > 0 ? 0.3 * Lk : 0); // 무계획: 흩어지게 고름 (굴림 수는 그대로 — 폭만)
       w *= rand(1 - noise, 1 + noise);
