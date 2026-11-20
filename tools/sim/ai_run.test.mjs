@@ -43,8 +43,9 @@ test('① 1:1 AI 는 뛰지 않음: 15 s 판에서 두 AI 몸 모두 f.run · ru
 test('② 셋 이상 판 AI 는 사람과 같은 규칙으로 뜀 (2:1 판 시작 — 짝의 둘째가 동료와 붙은 혼자에게 · 11/21 스틱을 끝까지 민 채 RUN.hold 를 걸은 뒤)', (t) => {
   seedRand(t, 1);
   const W = ['zweihander', 'longsword', 'flamberge']; // 11/19 재기에 에스톡 · 세이버 안 씀 (전 estoc)
-  // 판 시작 거리 12 m (11/21 — 뛰기 전에 2 초를 걸어야 해 ARENA.startGap 5.6 m 에서는 뛸 길이 남지 않음: 2:1 씨앗 1 ~ 8 모두 12 s 안에 안 뜀)
-  const G = newMatch({ count: 3, ai: 'all', seed: 1, walls: true, gap: 12, weapons: W, looks: Array(3).fill(LOOKS.enemy), aiOf: (i) => aiAtProficiency({ ai: { persona: {} }, weapon: W[i] }, 4) });
+  // 판 시작 거리 16 m (11/21 — 뛰기 전에 2 초를 걸어야 해 ARENA.startGap 5.6 m 에서는 뛸 길이 남지 않음: 2:1 씨앗 1 ~ 8 모두 12 s 안에 안 뜀 ·
+  //  12 m 면 짝의 둘째가 0.5 ~ 0.8 s 만 뜀 — 16 m 면 혼자가 1.3 ~ 1.5 s 뜀)
+  const G = newMatch({ count: 3, ai: 'all', seed: 1, walls: true, gap: 16, weapons: W, looks: Array(3).fill(LOOKS.enemy), aiOf: (i) => aiAtProficiency({ ai: { persona: {} }, weapon: W[i] }, 4) });
   assert.ok(G.sense);
   const F = G.fighters;
   const rec = [];
@@ -64,10 +65,11 @@ test('② 셋 이상 판 AI 는 사람과 같은 규칙으로 뜀 (2:1 판 시�
   }
   const runners = [...new Set(rec.map((r) => r.f))];
   assert.ok(runners.length >= 1, 'AI 가 뜀');
+  assert.ok(runners.some((f) => f.run.runT >= 0.8), `0.8 s 넘게 뛴 몸이 있음 (${runners.map((f) => f.run.runT.toFixed(2)).join(' · ')})`);
   for (const f of runners) {
     const R = rec.filter((r) => r.f === f);
     assert.ok(f.run.runs >= 1);
-    assert.ok(R.some((r) => r.v > walkTopOf(f) * 1.3), `걷는 끝보다 빠름 (가장 빠름 ${Math.max(...R.map((r) => r.v)).toFixed(2)})`);
+    if (f.run.runT >= 0.8) assert.ok(R.some((r) => r.v > walkTopOf(f) * 1.3), `걷는 끝보다 빠름 (가장 빠름 ${Math.max(...R.map((r) => r.v)).toFixed(2)})`);
     for (let i = 1; i < R.length; i++) {
       if (R[i].t - R[i - 1].t > DT * 1.5) continue;
       assert.ok(R[i].st <= R[i - 1].st + 1e-9, '뛰는 동안 기력이 오르지 않음 (자연 회복 없음)');

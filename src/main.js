@@ -2634,7 +2634,7 @@ function resetCamera() {
 }
 /**
  * 뛰는 동안의 카메라 방위 (11/21 사장님 '몸이 상대를 안 봐도 괜찮아. 오히려 그게 맞지. 카메라 문제야 이건.' — CAMERA.run · 기록 docs/strike/cam_restore_2026-11-21.md):
- *  카메라 방위는 예전처럼 나 → 상대 방위(u)를 사이 각 × 3 (초당) 빠르기로 따라가되, 그 빠르기를 yawMax 안 · 바뀜을 yawAcc 안으로 —
+ *  카메라 방위는 예전처럼 나 → 상대 방위(u)를 사이 각 × 3 (초당) 빠르기로 따라가되, 그 빠르기를 yawMax(뛰기가 끝난 뒤 따라잡는 동안 yawAfter) 안 · 바뀜을 yawAcc 안으로 —
  *  상대가 화면 가운데에서 가로 ndcFree 몫 넘게 벗어나면 한도를 edgeK × 넘은 몫만큼 늘리고 가속 한도 없이 (상대를 화면 밖으로 내보내지 않음).
  *  켜짐: 내 몸이 뛰는 가속 한도 창(run.fast — 뛰는 중 · 뛰다 멈춰 걷는 빠르기로 줄 때까지)에 서 있을 때 · 꺼짐: 그 뒤 사이 각이 done 밑이 되면(예전 따라가기로 넘김 — 튀지 않음) ·
  *  상대가 near 안이면(붙어 싸움 — 예전 카메라 그대로) · 넘어지면 곧장.
@@ -2652,7 +2652,7 @@ function camRunYaw(P, standing, u, a, b, dt) {
   const ndc = _cv.z > 1 ? 9 : Math.abs(_cv.x);
   camRig.runNdc = ndc;
   const edge = ndc > C.ndcFree;
-  const cap = C.yawMax + C.edgeK * Math.max(0, ndc - C.ndcFree);
+  const cap = (P.run?.on ? C.yawMax : C.yawAfter) + C.edgeK * Math.max(0, ndc - C.ndcFree);
   const want = Math.max(-cap, Math.min(cap, 3 * th));
   const acc = C.yawAcc * dt;
   camRig.runYaw += Math.max(-acc, Math.min(acc, want - camRig.runYaw));
@@ -3029,7 +3029,6 @@ let acc = 0;
 const renderCap = createRenderCap();
 
 let moveStickRun = false; // 이동 스틱 뛰기 표시(#moveStick.run)가 켜져 있나 — 바뀔 때만 DOM 을 고친다
-const _runFrame = { x: 1, z: 0, set(x, z) { this.x = x; this.z = z; return this; } }; // 뛰는 동안 스틱 화면 틀 (player.runFrame — camDir 수평)
 let moveStickHold = 0; // 이동 스틱 테두리가 차오른 몫(--runHold — 끝까지 민 채 버틴 시간 ÷ RUN.hold · 1/40 걸음) — 바뀔 때만 DOM 을 고친다
 /** 프레임마다 사람 몸의 입력 (손 · 탭 · 비기 창 · 막기 단추 · 고유 동작 · 감정 · 걸음) — 게임 루프에서 옮김 (줄 그대로) */
 function playerInputFrame(dt, now) {
@@ -3131,7 +3130,6 @@ function playerInputFrame(dt, now) {
   player.stickY = feet ? m.y : 0;
   // 뛰기 (11/18 — src/run.js · 물리 스텝마다 읽음): 스틱 손잡이 길 몫(PC Shift + 방향 = 1) · 공격(톡 · 휘두르는 끌기) · 막기 입력이면 이 프레임에 뛰기를 끊음
   player.runReach = feet ? input.runReach : 0;
-  player.runFrame = camRig.runYaw != null && (!teamRun || teamRun.focus === player) ? _runFrame.set(camDir.x, camDir.z) : null; // 뛰는 동안 카메라가 천천히 도는 동안 스틱은 화면 틀 (11/21 — run.js · camRunYaw)
   if (tapsIn > 0 || swipe || parryDown) player.runBreak = true;
   const runOn = !!player.run?.on;
   if (runOn !== moveStickRun) $('moveStick').classList.toggle('run', (moveStickRun = runOn)); // 뛰는 동안 스틱 테두리만 밝게 (글자 없음)

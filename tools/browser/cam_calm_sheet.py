@@ -9,10 +9,14 @@ TITLE = sys.argv[3]
 tags = [a.split('=', 1) if '=' in a else (a, a) for a in sys.argv[4:]]
 sc = 0.3
 pad = 40
-try:
-    font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 15)
-    small = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 12)
-except Exception:
+font = small = None
+for fb, fs in [('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'), ('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')]:  # 한글 글꼴 먼저
+    try:
+        font, small = ImageFont.truetype(fb, 16), ImageFont.truetype(fs, 13)
+        break
+    except Exception:
+        pass
+if font is None:
     font = small = ImageFont.load_default()
 TK = 1.1
 w = lambda a: math.atan2(math.sin(a), math.cos(a))
@@ -51,11 +55,11 @@ for ri, (label, files, log) in enumerate(rows):
         s = min(log, key=lambda r: abs(r['u'] - u)) if log else None
         st = ''
         if s:
-            st = 'RUN' if s['run'] else (f"hold {s.get('hold', 0) / (2.0 * TK) * 100:.0f}%" if s.get('hold') else 'walk')
+            st = '뜀' if s['run'] else (f"버팀 {s.get('hold', 0) / (2.0 * TK) * 100:.0f}%" if s.get('hold') else '걸음')
         d.text((x + 4, y0 + 2), f'{u:.1f} s  {st}', fill=(255, 255, 255), font=font)
         if s:
             yr = yaw_rate(log, u)
-            txt = f"{s['v']:.1f} m/s  turn {'-' if yr is None else f'{yr:.0f}'}°/s  foe x {s['foeX']:+.2f}"
+            txt = f"{s['v']:.1f} m/s · 카메라 {'-' if yr is None else f'{yr:.0f}'}°/s · 상대 x {s['foeX']:+.2f}"
             d.text((x + 4, y0 + 20 + th), txt, fill=(200, 200, 200), font=small)
 out.save(OUT, optimize=True)
 print(out.size)

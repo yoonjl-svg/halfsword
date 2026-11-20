@@ -139,16 +139,12 @@ export function runStep(f, dt) {
   else if (R.back && (f.state !== 'stand' || Math.abs(wrap(Math.atan2(-fz, fx) - f.heading)) < RUN.faceTol)) R.back = false;
   if (!R.back) return void (R.mx = NaN);
   // 뛰는 방향 = 스틱(상대 틀 — 앞 = 상대 쪽 · 오른쪽 = (−앞.z, 앞.x) fighter.right 와 같은 틀)
-  //  사람 몸 화면 틀 (11/21 사장님 '카메라 문제야 이건.'): main.js 가 뛰는 동안 카메라를 천천히 돌리는 동안(camRunYaw)은 f.runFrame = 카메라 방위(화면 위)를 두고 스틱을 그 틀로 읽는다 —
-  //   카메라가 상대 쪽보다 늦게 도는 동안에도 스틱 오른쪽 = 화면 오른쪽. 카메라가 상대 쪽을 다시 보면 null (상대 틀 — 둘이 같음) · AI · 대본 몸은 두지 않음(늘 상대 틀)
   //  내달리는 동안 꺾기 (11/20): 몸 빠르기가 걷는 끝 × RUN.curveFrom 을 넘으면 뛰는 쪽은 초당 RUN.curve ÷ 빠르기(rad — 옆으로 내는 가속 RUN.curve m/s²)까지만 돈다(둥글게 꺾음).
   //   지금 뛰는 쪽에서 RUN.curveMax 넘게 돌린 스틱(거꾸로 · 비스듬히 뒤)은 그쪽으로 돌지 않고 먼저 줄인다(R.brake — 덧 빠르기 0 · runWant) → 그 빠르기 밑으로 줄면 그 자리에서 돌아섬(전과 같음)
   R.brake = false;
   if (dirOk) {
-    const gx = f.runFrame ? f.runFrame.x : fx;
-    const gz = f.runFrame ? f.runFrame.z : fz;
-    const dx = gx * sy - gz * sx;
-    const dz = gz * sy + gx * sx;
+    const dx = fx * sy - fz * sx;
+    const dz = fz * sy + fx * sx;
     const dn = Math.hypot(dx, dz);
     const vh = Math.hypot(pv.x, pv.z);
     if (R.on && R.curve && vh > walkTopOf(f) * RUN.curveFrom) {
