@@ -2,7 +2,7 @@
 //  ① 1:1 AI 는 이 셈을 하나도 타지 않음 (supS · stats.support 없음) · 셋 이상 판(2:1)의 AI 는 탐
 //  ② 몫 = 숙련 곡선 MINDSET.profF (숙련 2 이하 0 · 4 = 0.75 · 6 = 1) · 유파 칸 없는 몸(일본 · 이탈리아 · 무유파) 0 — 이탈리아 결투 고집은 마음가짐 many 칸(many_ally.test.mjs)
 //  ③ 독일 돌기: 동료와 붙은 내 상대를 축으로 동료에게서 먼 쪽 · 각이 넉넉하면 · 상대가 나를 겨누면 그대로 · 다른 유파 · 숙련 2 · 동방(4 차 — 돌기 없음)은 그대로 · 동료 칼길에 서면 비킴 · 묶기 역할은 앞을 지킴
-//  ④ 이베리아 (7 차 — 사장님 11/20 '(나)로 · 좀 더 마구잡이로 베어서'): (나) 같은 편 비킴 거리 × sepX · 동료와 붙은 적을 피함 / 마구잡이 베기 버릇 몫 h = 1 − calm × 숙련 곡선 —
+//  ④ 이베리아 (7 차 — 사장님 11/20 '(나)로 · 좀 더 마구잡이로 베어서' · 8 차 'ㄱ으로 해'): (나) 같은 편 비킴 거리 × sepX · 동료와 붙은 적을 피하지 않음(8 차) / 마구잡이 베기 버릇 몫 h = 1 − calm × 숙련 곡선 —
 //     칼길: 줄에서 lane.w × (1 − h) 밖이면 미루지 않음 · 비키는 걸음 × (1 − h) · 서 있는 동료가 있으면 크게 휩쓰는 베기 무게 · 혼자(동료 없음)는 그대로
 //  ⑤ 독일: 동료의 적으로 겨눔을 바꾸지 않음 — 제 적이 이미 묶여 있을 때만(무릎 · 칼 놓침 …) 동료를 치는 적으로 · 동료 칼끝 쪽 밀치기 · 동료가 곁이면 묶기 · 2:2 의 제 적은 묶음 ·
 //     동료 칼길 위에서는 밀지 않음 · 혼자는 굴림대로 · 동료가 칠 때 박자
@@ -140,14 +140,12 @@ test('③ 독일 돌기: 동료에게서 먼 쪽으로 · 각이 넉넉하면 ·
   assert.deepEqual(supportFeet(P[0].aiCtl, 0.2, 0.1), [0.2, 0.1]);
 });
 
-test('④ 이베리아 (7 차): (나) 동료와 붙은 적을 피함 · 마구잡이 베기 — 칼길 · 비킴 거둠 · 휩쓰는 베기 · 혼자는 그대로', () => {
-  // (나) 동료가 붙은 적을 피함: 나(0) → 상대(1) · 동료(2) 와 붙은 적(3) 겨눔 + avoid × w
+test('④ 이베리아 (7 · 8 차): 겨눔 덧셈 없음 (8 차 — 동료와 붙은 적을 피하지 않음) · 마구잡이 베기 — 칼길 · 비킴 거둠 · 휩쓰는 베기 · 혼자는 그대로', () => {
+  // 8 차 (사장님 11/20 'ㄱ으로 해'): 동료(2) 와 붙은 적(3) 도 겨눔 덧셈 0 — 가까우면 동료의 적에게도 감
   const M = board([fake(0, 0, 0, 0, 0, { school: 'iberian' }), fake(1, 1, 2.5, 0, Math.PI), fake(2, 0, 1.0, 2.0, 0), fake(3, 1, 2.2, 2.0, Math.PI)], [1, 2, 3, 2]);
-  assert.ok(Math.abs(noRandom(() => supportScore(M, M.fighters[0], M.fighters[3])) - SU.ib.avoid) < 1e-12);
-  assert.equal(M.fighters[0].aiCtl.stats.support.ibAvoid, 1);
-  assert.equal(supportScore(M, M.fighters[0], M.fighters[1]), 0, '동료와 붙지 않은 적은 그대로');
-  const M2 = board([fake(0, 0, 0, 0, 0, { school: 'iberian', prof: 2 }), fake(1, 1, 2.5, 0, Math.PI), fake(2, 0, 1.0, 2.0, 0), fake(3, 1, 2.2, 2.0, Math.PI)], [1, 2, 3, 2]);
-  assert.equal(supportScore(M2, M2.fighters[0], M2.fighters[3]), 0, '숙련 2 는 (나) 몫 0');
+  assert.equal(noRandom(() => supportScore(M, M.fighters[0], M.fighters[3])), 0);
+  assert.equal(supportScore(M, M.fighters[0], M.fighters[1]), 0);
+  assert.equal(SU.ib.avoid, undefined);
   // 칼길: 나 → 상대 +x 2 m · 동료가 줄에서 0.3 m (칼 부채꼴 안) — 숙련 6 (h = 1 − calm): 줄 폭 lane.w × calm 밖 → 미루지 않음
   const h6 = 1 - SU.ib.calm;
   const L = [fake(0, 0, 0, 0, 0, { school: 'iberian' }), fake(1, 1, 2, 0, Math.PI), fake(2, 0, 1.0, 0.3, 0, { prof: 4 })];

@@ -30,7 +30,8 @@
 //  이베리아 (7 차 — 사장님 11/20 '이베리아 아까 기준 (나)로 해. (가)의 움직임이 너무 작위적이고 어색해. 대신 좀 더 마구잡이로 베어서 종종 같은 편에 피해를 주면 좋겠어.'):
 //   (나) 제 넓은 원 — 몫 w = 숙련 곡선 (3 차와 같음 · 4 ~ 6 차의 '원이 동료 자리를 가로지름'(가)는 걷음):
 //    ① 동료와 떨어져 섬 (ai.js teamFeet 같은 편 비킴): 비키는 거리 TEAM_FIGHT.mateSep.dist × (1 + (ib.sepX − 1) × w) — 제 둥근 걸음의 원을 지킴
-//    ② 동료가 붙은 적을 피함 (targeting.js): 내 동료와 붙은 적 + ib.avoid × w (낮을수록 고름 — 제 상대를 따로 맡음)
+//    ② (8 차 — 사장님 11/20 'ㄱ으로 해'): '동료가 붙은 적을 피함'(겨눔 덧셈 + 1.0 × w)은 뺌 — 가까운 적이면 동료의 적에게도 감 (동료 곁에서 휩쓰는 베기) ·
+//       2:1 은 적이 하나라 겨눔 덧셈이 고르기를 바꾸지 않음 (targeting.js chooseTarget — 적끼리 견줌만) → 7 차와 같음
 //    ③ 합공에 덜 낌: 무리 싸움 판단의 동료를 위한 몫 × (1 − (1 − many.ally) × w) — 마음가짐 줄 SCHOOL_MINDSET.iberian.many.ally (ai_mindset.js manyMul · team_sense.js)
 //   마구잡이 베기 — 버릇 몫 h = 1 − ib.calm × 숙련 곡선 (숙련이 낮을수록 크고 높아도 남음 — 이베리아 버릇 · 숙련 2 이하 1 · 6 은 1 − calm):
 //    ④ 칼길을 살피지 않음 (ai.js atkGate): 동료가 내 칼 부채꼴 · 나 → 상대 사이에 있어도 줄에서 lane.w × (1 − h) 밖이면 공격을 미루지 않음 (h = 1 이면 늘)
@@ -63,7 +64,7 @@ const wOf = (ai, key) => { const S = supportOf(ai); return S.key === key ? S.w :
 
 /** 재기 칸 (ai.stats.support) */
 export function supportStats() {
-  return { deLane: 0, deOrbit: 0, deSwitch: 0, deShove: 0, dePin: 0, deNoShove: 0, deFollow: 0, cnLane: 0, cnIn: 0, cnAmbush: 0, cnRun: 0, cnPress: 0, ibAvoid: 0, ibLaneFree: 0, ibLaneStep: 0, ibSweep: 0 };
+  return { deLane: 0, deOrbit: 0, deSwitch: 0, deShove: 0, dePin: 0, deNoShove: 0, deFollow: 0, cnLane: 0, cnIn: 0, cnAmbush: 0, cnRun: 0, cnPress: 0, ibLaneFree: 0, ibLaneStep: 0, ibSweep: 0 };
 }
 const stats = (ai) => (ai.stats.support ??= supportStats());
 
@@ -184,11 +185,10 @@ export function supportScore(M, f, g) {
   if (!ai || !f.teamSense) return 0;
   const S = supportOf(ai);
   if (!(S.w > 0)) return 0;
-  if (S.key !== 'cn' && S.key !== 'de' && S.key !== 'ib') return 0;
+  if (S.key !== 'cn' && S.key !== 'de') return 0;
   if (S.key === 'de' && !(g !== ai.foe && foeHeld(ai.foe))) return 0; // 독일: 제 적이 이미 묶여 있을 때만 (6 차)
   const v = viewOf(ai);
   if (!v || !sees(v, g.index) || !v.fr.b[g.index].stand || !busyWithMate(v, g.index)) return 0;
-  if (S.key === 'ib') return stats(ai).ibAvoid++, TEAM_SUPPORT.ib.avoid * S.w; // 이베리아 (나): 동료가 붙은 적을 피함 (제 상대를 따로)
   if (g !== ai.foe && pinnedBy(v.fr, v.i, ai.foe?.index ?? -1)) return 0; // 지금 상대에게 붙잡혀 있으면 등을 보이지 않음
   if (S.key === 'de') return stats(ai).deSwitch++, -TEAM_SUPPORT.de.focus * S.w;
   const C = TEAM_SUPPORT.cn;

@@ -188,14 +188,14 @@ export const TEAM_SENSE = {
 //  cn 동방: laneK (위와 같은 뜻) · inGap · inK 다가감(2:1 · 동료가 앞을 잡음) — 내 칼끝 + inGap m 밖이면 앞 스틱 inK 까지 · 그 안에서는 물러나지 않음 · focus 동료와 붙은 적 겨눔 덧셈(m) · hit 그 적이 동료를 치는 중이면 더 · ambush 그 적의 앞 밖에서 빈틈 점수 · run 그 적을 친 뒤 이어 치기 마음을 거둘 몫(2:2) ·
 //          press 바꿀 적이 없을 때(2:1) 이어 치기 마음을 더할 몫 — 붙어 싸움
 //  ib 이베리아 (7 차 — 사장님 11/20 '이베리아 아까 기준 (나)로 해 … 대신 좀 더 마구잡이로 베어서 종종 같은 편에 피해를 주면 좋겠어'):
-//     (나) 제 넓은 원 — 몫 w = 숙련 곡선: sepX 같은 편 비킴 거리 곱(숙련 6 — 동료와 떨어져 섬) · avoid 동료와 붙은 적 겨눔 덧셈(m — 피함) · 합공에 덜 낌은 마음가짐 줄 many.ally(schools.js)
+//     (나) 제 넓은 원 — 몫 w = 숙련 곡선: sepX 같은 편 비킴 거리 곱(숙련 6 — 동료와 떨어져 섬) · (동료와 붙은 적을 피함은 8 차에서 뺌 — 사장님 11/20 'ㄱ으로 해') · 합공에 덜 낌은 마음가짐 줄 many.ally(schools.js)
 //     마구잡이 베기 — 버릇 몫 h = 1 − calm × 숙련 곡선 (숙련이 낮을수록 · 높아도 남음 — 숙련 6 이 1 − calm): 칼길 미룸 줄 폭 × (1 − h) · 칼길 비킴 걸음 × (1 − h) ·
 //       서 있는 동료가 있으면 베기 고르기 무게 × (1 + sweep × h × min(1, 가로 길이 ÷ sweepDx m)) — 크게 휩쓰는 베기(가로 · 비스듬히)를 더 고름
 export const TEAM_SUPPORT = {
   laneW: 0.6,
   de: { laneK: 0.8, goal: 75, tol: 15, k: 0.8, near: 0.9, shove: 100, reach: 0.6, pinR: 3.0, follow: 1.2, focus: 1.0 },
   cn: { laneK: 0.8, inGap: 0.3, inK: 0.6, focus: 1.0, hit: 0.6, ambush: 1.5, run: 0.5, press: 0.5 },
-  ib: { sepX: 2, avoid: 1.0, calm: 0.25, sweep: 2.0, sweepDx: 0.8 },
+  ib: { sepX: 2, calm: 0.25, sweep: 2.0, sweepDx: 0.8 },
 };
 
 export const CAMERA = {
