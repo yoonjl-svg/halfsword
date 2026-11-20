@@ -10,7 +10,8 @@
 //
 //  독일 (묶어 주는 동료 — 선공 · 붙어 싸움):
 //   ① 동료 칼길 밖 (발): 동료 칼길(동료 → 그 상대 선분 laneW m 안)에 서면 줄에서 먼 쪽으로 비킴 (간 보기 · 물러남 · 막기 · 공격 준비 · 다가감) ·
-//      내 상대 X 가 동료 B 와 붙어 있으면 X 자리에서 본 B · 나 사이 각 θ 를 de.goal° 까지 X 를 축으로 B 에게서 먼 쪽으로 돎 — 옆에서 묶음 [사장님 11/19 답 '동료 칼길 옆에서 묶기']
+//      내 상대 X 가 동료 B 와 붙어 있으면 X 자리에서 본 B · 나 사이 각 θ 를 de.goal° 까지 X 를 축으로 B 에게서 먼 쪽으로 돎 — 옆에서 묶음 [사장님 11/19 답 '동료 칼길 옆에서 묶기'] /
+//      묶는 자리 (5 차 — 2:2 의 제 적 X · 동료가 X 에서 de.guardR m 안): X 와 동료 사이에 섬 — X 자리에서 본 나 · 동료 사이 각을 de.guard° 밑으로 (X 를 축으로 동료 쪽으로 돎) · 그 자리에서 묶고 밀면 X 가 동료에게서 멀어짐
 //   ② 밀치기 · 묶기 (ai.js closeQuarters — 붙은 거리 안 · 몸은 사람과 같은 밀치기 · 묶임 규칙 CLOSE.holdMin · holdLock 그대로):
 //      내 → X 가 동료 쪽(θ ≥ de.shove°)이고 X 가 동료 칼끝 + de.reach 안이면 밂 / 서 있는 동료가 X 에서 de.pinR m 안이면 묶음 /
 //      서 있는 적이 둘 이상이고 X 가 내 동료와 붙지 않았으면(제 적 — 2:2) 묶음: 묶인 동안 X 는 칼을 못 냄 — 제 적을 묶어 두어 동료에게 가지 않게 /
@@ -21,7 +22,8 @@
 //   ① 동료 칼길 밖 (발 — 간 보기 · 물러남)
 //   ② 동료를 치는 적 (targeting.js): 내 동료와 붙은 적 − cn.focus · 그 적이 동료를 치는 중이면 − cn.hit 더 (지금 상대에게 붙잡혀 있으면 없음)
 //   ③ 기습 (opportunity): 그 적이 동료와 붙었고 내가 그 앞(± TEAM_SENSE.ambush.front°) 밖이면 빈틈 점수 + cn.ambush
-//   ④ 치고 빠짐 (ai.js afterStrike): 내 상대가 동료와 붙어 있으면 내 칼 뒤 이어 치기 마음 × (1 − cn.run) — 빠져 다시 봄 (동방 몸의 사냥 겹 · 칼 떨굼은 그대로 — 새 수 없음)
+//   ④ 치고 빠짐 (ai.js afterStrike): 내 상대가 동료와 붙어 있으면 내 칼 뒤 이어 치기 마음 × (1 − cn.run) — 빠져 다시 봄 · 바꿀 적이 없으면(서 있는 적 하나 — 2:1) × (1 + cn.press) 붙어 싸움 (5 차)
+//      (동방 몸의 사냥 겹 · 칼 떨굼은 그대로 — 새 수 없음)
 //   옆 · 등으로 돌기는 뺌 (3 차 재기: 도움 칼만 올리고 동료가 받는 상처는 못 줄임)
 //  이베리아 (넓은 원이 동료 자리를 가로지름 — 감독 권고 11/19 · 사장님 '운신의 폭이 넓어지거나 때로는 팀킬도' — 사장님 답 전):
 //   ① 원 걸음 (발 — 간 보기 · 물러남): 서 있는 동료가 ib.crossR m 안이면 제 원을 그 동료 쪽으로 돎 (동료 앞 · 칼길을 지나감 — 크기는 제 걸음 그대로 · 쪽만)
@@ -50,7 +52,7 @@ const wOf = (ai, key) => { const S = supportOf(ai); return S.key === key ? S.w :
 
 /** 재기 칸 (ai.stats.support) */
 export function supportStats() {
-  return { deLane: 0, deOrbit: 0, deShove: 0, dePin: 0, deNoShove: 0, deFollow: 0, cnLane: 0, cnAmbush: 0, cnRun: 0, ibLaneFree: 0, ibLaneStep: 0, ibCross: 0 };
+  return { deLane: 0, deGuard: 0, deOrbit: 0, deShove: 0, dePin: 0, deNoShove: 0, deFollow: 0, cnLane: 0, cnAmbush: 0, cnRun: 0, cnPress: 0, ibLaneFree: 0, ibLaneStep: 0, ibCross: 0 };
 }
 const stats = (ai) => (ai.stats.support ??= supportStats());
 
@@ -207,6 +209,24 @@ function inMateLane(v) {
   return best;
 }
 
+/** 2:2 의 제 적 x (서 있는 적 둘 이상 · x 가 내 동료와 붙지 않음) 둘레에 서 있는 동료 칸 (x 에서 de.guardR m 안 · 가장 가까운) — 없으면 null (독일 묶는 자리) */
+function guardOf(v, x) {
+  let foes = 0;
+  for (let j = 0; j < v.fr.b.length; j++) if (j !== v.i && !sameSide(v.S.fighters[j], v.S.fighters[v.i]) && v.fr.b[j].stand) foes++;
+  if (foes < 2 || busyWithMate(v, x)) return null;
+  const X = v.fr.b[x];
+  let best = null;
+  let bd = TEAM_SUPPORT.de.guardR;
+  for (let j = 0; j < v.fr.b.length; j++) {
+    if (j === v.i || !sameSide(v.S.fighters[j], v.S.fighters[v.i])) continue;
+    const m = v.fr.b[j];
+    if (!m.stand) continue;
+    const d = Math.hypot(m.x - X.x, m.z - X.z);
+    if (d < bd) (bd = d), (best = m);
+  }
+  return best;
+}
+
 /** 스틱 (fwd 앞 · side 오른쪽) 을 고쳐 돌려줌 — 독일 · 동방: 동료 칼길 밖 · 돌기 / 이베리아: 칼길 비킴 거둠 */
 export function supportFeet(ai, fwd, side) {
   const S = supportOf(ai);
@@ -234,6 +254,16 @@ export function supportFeet(ai, fwd, side) {
   if (!modeOk || Math.hypot(X.x - v.me.x, X.z - v.me.z) > v.me.reach + C.near) return [fwd, side];
   const R = v.S.roles?.get(ai.me);
   if (R && R.role === 'pin' && R.x === x && R.until >= v.fr.t) return [fwd, side]; // 6 이 준 묶기 역할: 앞을 지킴 (team_sense.js 와 같음)
+  const G = guardOf(v, x);
+  if (G) {
+    // 묶는 자리 (2:2 의 제 적 — 5 차): 제 적 X 와 동료 사이에 섬 — X 자리에서 본 나 · 동료 사이 각을 guard° 밑으로 (X 를 축으로 동료 쪽으로 돎) · 밀면 X 가 동료에게서 멀어짐
+    const th = angAt(X, v.me, G);
+    if (th <= C.guard * DEG) return [fwd, side];
+    const want = -orbitAway(X, v.me, G) * C.k * clamp((th - C.guard * DEG) / (Math.PI / 2), 0.3, 1);
+    side += (want - side) * S.w;
+    St.deGuard++;
+    return [fwd, side];
+  }
   const b = mateOn(v, x);
   if (b < 0 || X.foe !== b || !X.busy) return [fwd, side]; // 그 적이 그 동료와 붙어 있을 때만 (동료가 앞을 잡음 — 나를 겨눈 적 둘레를 돌지 않음)
   const B = v.fr.b[b];
@@ -354,12 +384,15 @@ export function shoveToMate(ai) {
   return pin ? 1 : 0;
 }
 
-/** 동방 치고 빠짐 (ai.js afterStrike — 이어 치기 마음): 내 상대가 동료와 붙어 있으면 × (1 − cn.run × w) */
+/** 동방 치고 빠짐 (ai.js afterStrike — 이어 치기 마음): 내 상대가 동료와 붙어 있으면 — 서 있는 적이 둘 이상(2:2)이면 × (1 − cn.run × w) 치고 빠짐 · 하나뿐이면(2:1 — 바꿀 적이 없음) × (1 + cn.press × w) 붙어 싸움 */
 export function supportChain(ai, want) {
   const w = wOf(ai, 'cn');
   if (!(w > 0) || !ai.foe || !ai.me.teamSense) return want;
   const v = viewOf(ai);
   if (!v || !busyWithMate(v, ai.foe.index)) return want;
+  let foes = 0;
+  for (let j = 0; j < v.fr.b.length; j++) if (j !== v.i && !sameSide(v.S.fighters[j], v.S.fighters[v.i]) && v.fr.b[j].stand) foes++;
+  if (foes < 2) return stats(ai).cnPress++, want * (1 + TEAM_SUPPORT.cn.press * w); // 바꿀 적이 없음 (2:1) — 치고 빠지지 않고 붙어 싸움 (5 차)
   stats(ai).cnRun++;
   return want * (1 - TEAM_SUPPORT.cn.run * w);
 }
