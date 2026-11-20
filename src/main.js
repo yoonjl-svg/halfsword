@@ -2967,6 +2967,7 @@ let acc = 0;
 const renderCap = createRenderCap();
 
 let moveStickRun = false; // 이동 스틱 뛰기 표시(#moveStick.run)가 켜져 있나 — 바뀔 때만 DOM 을 고친다
+let moveStickHold = 0; // 이동 스틱 테두리가 차오른 몫(--runHold — 끝까지 민 채 버틴 시간 ÷ RUN.hold · 1/40 걸음) — 바뀔 때만 DOM 을 고친다
 /** 프레임마다 사람 몸의 입력 (손 · 탭 · 비기 창 · 막기 단추 · 고유 동작 · 감정 · 걸음) — 게임 루프에서 옮김 (줄 그대로) */
 function playerInputFrame(dt, now) {
   // 손 목표 갱신 (입력 → 플레이어)
@@ -3070,6 +3071,8 @@ function playerInputFrame(dt, now) {
   if (tapsIn > 0 || swipe || parryDown) player.runBreak = true;
   const runOn = !!player.run?.on;
   if (runOn !== moveStickRun) $('moveStick').classList.toggle('run', (moveStickRun = runOn)); // 뛰는 동안 스틱 테두리만 밝게 (글자 없음)
+  const holdQ = runOn ? 0 : Math.round(Math.min(1, (player.run?.hold || 0) / CONFIG.RUN.hold) * 40) / 40; // 끝까지 민 채 버티는 동안 테두리가 차오름 (11/21 — 실제 2 s · src/run.js)
+  if (holdQ !== moveStickHold) $('moveStick').style.setProperty('--runHold', String((moveStickHold = holdQ)));
   updateGuardName();
   updateParryLabel();
   // 마우스로 조작할 땐 손가락 흔적 대신 오른쪽 아래 원판에 손 위치의 흔적을 그린다

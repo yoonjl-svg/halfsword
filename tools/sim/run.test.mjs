@@ -34,19 +34,26 @@ const tick = (f, reach, extra = {}) => {
   runStep(f, DT);
   return f.run.on;
 };
+/** 끝까지 민 채 RUN.hold(11/21 — 실제 2 s) 동안 tick — 뛰기 시작했나 (그 전 스텝에는 늘 걷기여야 함) */
+const H = RUN.hold;
+const hold = (f, reach, extra = {}) => {
+  const n = Math.ceil(H / DT - 1e-9);
+  for (let i = 1; i < n; i++) assert.equal(tick(f, reach, extra), false, `버티는 동안 (${(i * DT).toFixed(3)} / ${H.toFixed(3)} s) 은 걷기`);
+  return tick(f, reach, extra);
+};
 
 test('들어감 · 나감 문턱과 사이 띠: 길의 0.95 넘게 밀면 뛰고 · 0.85 안으로 돌아오면 걷기 (0.85 ~ 0.95 는 하던 대로)', () => {
   assert.equal(RUN.stickIn, 0.95);
   assert.equal(RUN.stickOut, 0.85);
   const f = mock();
   assert.equal(tick(f, 0.94), false, '0.94 — 걷기');
-  assert.equal(tick(f, RUN.stickIn), true, '0.95 — 뜀');
+  assert.equal(hold(f, RUN.stickIn), true, '0.95 — 버티면 뜀');
   assert.equal(tick(f, 0.9), true, '0.9 — 사이 띠: 하던 대로 뜀');
   assert.equal(tick(f, 0.86), true);
   assert.equal(tick(f, 0.84), false, '0.84 — 걷기');
   assert.equal(f.run.end, 'stick');
   assert.equal(tick(f, 0.9), false, '0.9 — 사이 띠: 하던 대로 걷기');
-  assert.equal(tick(f, 1), true, '다시 끝까지 — 뜀');
+  assert.equal(hold(f, 1), true, '다시 끝까지 — 버티면 뜀');
   assert.equal(tick(f, 1, { stickX: 0, stickY: 0 }), false, '방향이 없으면 걷기');
 });
 
@@ -55,9 +62,10 @@ test('기력: 50 이상에서만 시작 · 0 까지 뛰고 걷기 · 다시 뛰�
   assert.equal(RUN.stopAt, 0);
   const f = mock();
   f.stamina.value = 49.9;
-  assert.equal(tick(f, 1), false, '49.9 — 시작 못 함');
+  for (let i = 0; i < 2 * H / DT; i++) assert.equal(tick(f, 1), false, '49.9 — 시작 못 함 (버텨도)');
+  assert.equal(f.run.hold, 0, '버티는 셈도 안 함 (테두리가 차지 않음)');
   f.stamina.value = 50;
-  assert.equal(tick(f, 1), true, '50 — 시작');
+  assert.equal(hold(f, 1), true, '50 — 버티면 시작');
   f.stamina.value = 20;
   assert.equal(tick(f, 1), true, '20 — 뛰는 중이면 계속');
   f.stamina.value = 0.5;
@@ -70,12 +78,12 @@ test('기력: 50 이상에서만 시작 · 0 까지 뛰고 걷기 · 다시 뛰�
   f.stamina.value = 49;
   assert.equal(tick(f, 1), false);
   f.stamina.value = 50;
-  assert.equal(tick(f, 1), true, '50 — 다시 뜀');
+  assert.equal(hold(f, 1), true, '50 — 버티면 다시 뜀');
   // 기력 무한(용사의 눈물)은 늘 뜰 수 있음
   const g = mock();
   g.stamina.value = 10;
   g.stamina.infinite = true;
-  assert.equal(tick(g, 1), true);
+  assert.equal(hold(g, 1), true);
 });
 
 test('공격 · 막기가 뛰기를 곧바로 끊음 · 끊은 뒤에는 스틱을 0.85 안으로 되돌렸다 다시 밀어야 뜀', () => {
@@ -87,37 +95,37 @@ test('공격 · 막기가 뛰기를 곧바로 끊음 · 끊은 뒤에는 스틱�
     ['비기', (f) => (f.skill.sec = {}), (f) => (f.skill.sec = null)],
   ]) {
     const f = mock();
-    assert.equal(tick(f, 1), true, name);
+    assert.equal(hold(f, 1), true, name);
     set(f);
     assert.equal(tick(f, 1), false, `${name} — 끊김`);
     assert.equal(f.run.end, 'break', name);
     clear(f);
     for (let i = 0; i < 10; i++) assert.equal(tick(f, 1), false, `${name} — 스틱을 그대로 밀고 있으면 다시 뛰지 않음`);
     assert.equal(tick(f, 0.5), false);
-    assert.equal(tick(f, 1), true, `${name} — 되돌렸다 밀면 뜀`);
+    assert.equal(hold(f, 1), true, `${name} — 되돌렸다 밀고 버티면 뜀`);
   }
   // 공격 중엔 시작하지 못함
   const g = mock();
   g.skill.swinging = true;
-  assert.equal(tick(g, 1), false);
+  for (let i = 0; i < 2 * H / DT; i++) assert.equal(tick(g, 1), false);
 });
 
 test('뛰는 방향은 상대 틀(나 → 상대가 앞) · 몸 틀 조종 입력으로 옮김 · 뛰는 동안 바라볼 쪽 = 뛰는 쪽', () => {
   // 상대가 +x. 스틱 비스듬히 앞 = 상대 틀 그대로 · 오른쪽 끝 = 상대 틀의 오른쪽
   const f = mock({ stickX: Math.SQRT1_2, stickY: Math.SQRT1_2 });
-  tick(f, 1);
+  hold(f, 1);
   assert.ok(near(f.run.dx, Math.SQRT1_2, 1e-12) && near(f.run.dz, Math.SQRT1_2, 1e-12), '비스듬히 앞 오른쪽');
   assert.ok(near(Math.abs(wrap(runFace(f) + Math.PI / 4)), 0, 1e-12), '바라볼 쪽 = 비스듬히 오른쪽');
   const right = new THREE.Vector3(Math.sin(0), 0, Math.cos(0)); // fighter.right (heading 0)
   const g = mock({ stickX: 1, stickY: 0 });
-  tick(g, 1);
+  hold(g, 1);
   assert.ok(near(g.run.dx, right.x, 1e-12) && near(g.run.dz, right.z, 1e-12), '오른쪽 = 몸 오른쪽(상대를 볼 때)');
   // 몸이 돌아 뛰는 쪽을 보면 조종 입력은 앞 (몸 틀) — 돌아서는 동안은 크기를 RUN.turnMove 로 줄임
   const h = mock({ stickX: 1, stickY: 0, heading: -Math.PI / 2 });
-  tick(h, 1);
+  hold(h, 1);
   assert.ok(near(h.move.x, 0, 1e-9) && near(h.move.y, 1, 1e-9), `몸이 옆으로 돌았으면 앞으로 걷는 입력 (${h.move.x}, ${h.move.y})`);
   const k = mock({ stickX: 1, stickY: 0, heading: 0 });
-  tick(k, 1);
+  hold(k, 1);
   assert.ok(near(Math.hypot(k.move.x, k.move.y), RUN.turnMove, 1e-9), '돌아서는 동안(사이 각 > alignMax) 크기 × turnMove');
 });
 
@@ -155,13 +163,13 @@ test('뛰는 동안 기력: 초당 runCostRate 그대로 빠지고 자연 회복
   runSpend(S, f, 0.5);
   assert.equal(S.value, 0, '0 에서 멈춤 (지침으로 넘지 않음)');
   // 판 안: 사람 몸이 뛰는 1 s 동안 기력이 runCostRate × 1 s 만큼 빠지고(회복 없음), 뛰기를 놓으면 recoverDelay 지나서 오름
-  const { P, rec } = runCase({ weapon: 'longsword', T: 3, script: (u) => (u < 1.5 ? { sx: 0, sy: 1, reach: 1 } : { sx: 0, sy: 0, reach: 0 }) });
+  const { P, rec } = runCase({ weapon: 'longsword', T: 3 + H, script: (u) => (u < H + 1.5 ? { sx: 0, sy: 1, reach: 1 } : { sx: 0, sy: 0, reach: 0 }) });
   const a = rec.find((x) => x.on);
   const b = rec.filter((x) => x.on).at(-1);
   const exp = runCostRate(P) * (b.u - a.u);
   assert.ok(Math.abs(a.st - b.st - exp) < runCostRate(P) * DT * 2, `뛴 동안 빠짐 ${a.st - b.st} ≈ ${exp}`);
   for (let i = 1; i < rec.length; i++) if (rec[i].on && rec[i - 1].on) assert.ok(rec[i].st <= rec[i - 1].st + 1e-9, '뛰는 동안 오르지 않음');
-  const stop = rec.find((x) => x.u >= 1.5 && !x.on);
+  const stop = rec.find((x) => x.u >= H + 1.5 && !x.on);
   const up = rec.find((x) => x.u > stop.u && x.st > stop.st + 1e-6);
   assert.ok(up && up.u - stop.u >= STAMINA.recoverDelay - 2 * DT, `회복은 recoverDelay 뒤 (${up?.u - stop.u})`);
 });
@@ -170,17 +178,17 @@ test('앞 반원만 뜀 (11/20 사장님 \'뒤돌아 뛰는 거 자체를 없애
   assert.ok(RUN.arc > Math.PI / 2 && RUN.arc < Math.PI / 2 + 0.1, `RUN.arc ${RUN.arc}`);
   for (const [sx, sy, on, name] of [[0, 1, true, '앞'], [1, 0, true, '옆'], [-1, 0, true, '왼옆'], [Math.SQRT1_2, Math.SQRT1_2, true, '비스듬히 앞'],
     [Math.SQRT1_2, -Math.SQRT1_2, false, '비스듬히 뒤'], [0, -1, false, '뒤'], [-0.2, -0.98, false, '거의 뒤'], [0.999, -0.04, true, '옆 (엄지가 조금 뒤로)'], [0.99, -0.14, false, '옆보다 8° 뒤']]) {
-    assert.equal(tick(mock({ stickX: sx, stickY: sy }), 1), on, name);
+    assert.equal(hold(mock({ stickX: sx, stickY: sy }), 1), on, name);
   }
   // 뛰는 중: 옆 끝에서 조금(RUN.arcOut 안) 뒤로 흔들려도 그대로 · 뒤 반원으로 당기면 걷기
   const f = mock({ stickX: 1, stickY: 0 });
-  assert.equal(tick(f, 1), true);
+  assert.equal(hold(f, 1), true);
   const a = RUN.arc + RUN.arcOut * 0.5;
   assert.equal(tick(f, 1, { stickX: Math.sin(a), stickY: Math.cos(a) }), true, '사이 띠');
   assert.equal(tick(f, 1, { stickX: 0, stickY: -1 }), false, '뒤로 당김 — 걷기');
   assert.equal(f.run.end, 'stick');
   assert.equal(tick(f, 1), false, '뒤 반원에 둔 채면 그대로 걷기');
-  assert.equal(tick(f, 1, { stickX: 0, stickY: 1 }), true, '앞으로 밀면 다시 뜀 (다시 걺 필요 없음)');
+  assert.equal(hold(f, 1, { stickX: 0, stickY: 1 }), true, '앞으로 밀고 버티면 다시 뜀 (다시 걺 필요 없음)');
 });
 
 test('판 안: 뒤 끝으로 밀면 뛰지 않고 상대를 본 채 뒷걸음 · 옆 끝으로 뛰면 걷는 끝보다 빠르고 · 놓으면 서고 나서 상대 쪽으로 돌아옴 · 넘어지지 않음', () => {
@@ -188,24 +196,26 @@ test('판 안: 뒤 끝으로 밀면 뛰지 않고 상대를 본 채 뒷걸음 ·
   assert.equal(B.P.run.runs, 0, '뒤 끝 — 뛰지 않음');
   assert.ok(B.rec.every((x) => Math.abs(wrap(x.head)) < 0.3), '몸은 상대(+x)를 봄');
   assert.ok(B.rec.at(-1).x < B.rec[0].x - 1, `뒷걸음으로 물러남 ${(B.rec.at(-1).x - B.rec[0].x).toFixed(2)} m`);
-  const { P, rec } = runCase({ weapon: 'longsword', T: 8, script: (u) => (u < 3.2 ? { sx: 1, sy: 0, reach: 1 } : { sx: 0, sy: 0, reach: 0 }) });
+  const { P, rec } = runCase({ weapon: 'longsword', T: 8 + H, script: (u) => (u < H + 3.2 ? { sx: 1, sy: 0, reach: 1 } : { sx: 0, sy: 0, reach: 0 }) });
+  const on0 = rec.find((x) => x.on);
   const side = rec.find((x) => x.on && Math.abs(wrap(x.head + Math.PI / 2)) < 0.15);
-  assert.ok(side && side.u < 1.5, `옆으로 돌아섬 ${side?.u}`);
+  assert.ok(on0 && on0.u >= H - DT && rec.filter((x) => x.u < on0.u).every((x) => Math.abs(wrap(x.head)) < 0.3), `버티는 ${H.toFixed(2)} s 동안은 상대를 본 채 옆걸음 (뛰기 시작 ${on0?.u.toFixed(2)})`);
+  assert.ok(side && side.u - on0.u < 1.5, `옆으로 돌아섬 ${side?.u - on0?.u}`);
   const w = Math.round(0.3 / DT);
   let vMax = 0;
   for (let i = 0; i + w < rec.length; i++) if (rec[i].on && rec[i + w].on) vMax = Math.max(vMax, Math.hypot(rec[i + w].x - rec[i].x, rec[i + w].z - rec[i].z) / (w * DT));
   assert.ok(vMax > walkTopOf(P) * 2, `뛰는 빠르기 ${vMax} > 걷는 끝 × 2`);
-  const back = rec.find((x) => x.u > 3.2 && Math.abs(wrap(Math.atan2(-(0 - x.z), 100 - x.x) - x.head)) < 0.15);
-  assert.ok(back && back.u - 3.2 < 3.5, `상대 쪽으로 돌아옴 ${back?.u - 3.2}`);
+  const back = rec.find((x) => x.u > H + 3.2 && Math.abs(wrap(Math.atan2(-(0 - x.z), 100 - x.x) - x.head)) < 0.15);
+  assert.ok(back && back.u - H - 3.2 < 3.5, `상대 쪽으로 돌아옴 ${back?.u - H - 3.2}`);
   // 놓은 뒤 몸이 걷는 끝 × RUN.faceSlow 밑으로 줄 때까지는 가는 쪽을 봄 — 내달리는 채로 돌지 않음
-  const turning = rec.find((x) => x.u > 3.2 && Math.abs(wrap(x.head + Math.PI / 2)) > 0.5);
+  const turning = rec.find((x) => x.u > H + 3.2 && Math.abs(wrap(x.head + Math.PI / 2)) > 0.5);
   assert.ok(turning && turning.v < walkTopOf(P) * RUN.faceSlow * 1.3, `돌기 시작할 때 빠르기 ${turning?.v}`);
   assert.ok(rec.every((x) => x.state === 'stand'), '넘어지지 않음');
 });
 
 test('공격 입력으로 끊으면 몸은 RUN.accel 안에서 걷는 빠르기로 줄어듦 (순간이동 없음)', () => {
-  const { P, rec } = runCase({ weapon: 'longsword', T: 4, script: (u) => ({ sx: 0, sy: 1, reach: 1, brk: u >= 2.5 && u < 2.5 + DT }) });
-  const i0 = rec.findIndex((x) => x.u >= 2.5);
+  const { P, rec } = runCase({ weapon: 'longsword', T: 4 + H, script: (u) => ({ sx: 0, sy: 1, reach: 1, brk: u >= H + 2.5 && u < H + 2.5 + DT }) });
+  const i0 = rec.findIndex((x) => x.u >= H + 2.5);
   assert.equal(rec[i0 + 1].on, false);
   assert.equal(rec[i0 + 1].end, 'break');
   // 0.2 s 창 평균 빠르기 (발마다 출렁임을 거름)
@@ -247,12 +257,12 @@ test('스틱 길 몫(runReach)을 둔 몸만 (11/19 — 몸을 가리지 않음)
   assert.equal(G.enemy.run, undefined, '1:1 AI 몸 (runReach 를 두지 않음 — src/ai_run.js 는 셋 이상 판만)');
   assert.equal(G.enemy.runReach, undefined);
   G.world.free();
-  const H = newRound({ weapon: 'longsword', seed: 3 });
-  H.before = () => { H.player.move.set(0, 1); H.player.stickY = 1; H.player.runReach = 1; };
-  for (let i = 0; i < 3 / DT; i++) H.step();
-  assert.ok(H.player.run?.runs >= 1, '대본 몸도 스틱 끝이면 뜀 (사람 · AI 와 같은 runStep)');
-  assert.equal(H.enemy.run, undefined);
-  H.world.free();
+  const K = newRound({ weapon: 'longsword', seed: 3 });
+  K.before = () => { K.player.move.set(0, 1); K.player.stickY = 1; K.player.runReach = 1; };
+  for (let i = 0; i < (3 + H) / DT; i++) K.step();
+  assert.ok(K.player.run?.runs >= 1, '대본 몸도 스틱 끝이면 (버틴 뒤) 뜀 (사람 · AI 와 같은 runStep)');
+  assert.equal(K.enemy.run, undefined);
+  K.world.free();
   assert.equal(runState({}).on, false);
 });
 
@@ -268,11 +278,11 @@ test('PC: Shift(왼 · 오른) + 방향 키 = 스틱 끝(1) · Shift 만 · 방�
   assert.equal(R(['ShiftLeft', 'KeyW'], 0, false), 0, '입력 꺼짐');
 });
 
-test('빠르기 (11/20 사장님 \'최소 5에서 6은 돼야겠던데?\' — RUN.mul 3): 보통 몸 뛰는 끝 실제 6.0 m/s · 날며 뜀(두 발 모두 뜬 몫) · 고른 빠르기에서 붙잡기 반사 · 넘어짐 없음 · 일본 J1 은 걷기 × 3 = 실제 4.2', () => {
-  assert.equal(RUN.mul, 3);
+test('빠르기 (11/20 사장님 \'최소 5에서 6은 돼야겠던데?\' — RUN.mul 3 → 11/21 \'너무 빠르더라. 2.5배로 하고\' 2.5): 보통 몸 뛰는 끝 실제 5.0 m/s · 날며 뜀(두 발 모두 뜬 몫) · 고른 빠르기에서 붙잡기 반사 · 넘어짐 없음 · 일본 J1 은 걷기 × 2.5 = 실제 3.5', () => {
+  assert.equal(RUN.mul, 2.5);
   const K = TIME.k;
-  for (const [weapon, kit, target] of [['longsword', null, 6.0], ['uchigatana', kitFromNodes('japanese', new Set(['J1'])), 4.2]]) {
-    const { P, rec } = runCase({ weapon, kit, T: 6, script: () => ({ sx: 0, sy: 1, reach: 1 }) });
+  for (const [weapon, kit, target] of [['longsword', null, 5.0], ['uchigatana', kitFromNodes('japanese', new Set(['J1'])), 3.5]]) {
+    const { P, rec } = runCase({ weapon, kit, T: 6 + H, script: () => ({ sx: 0, sy: 1, reach: 1 }) });
     assert.ok(near(walkTopOf(P) * RUN.mul * K, target, 1e-9), `${weapon} 뛰는 끝 ${walkTopOf(P) * RUN.mul * K}`);
     // 뛰기 시작 2.5 s 뒤 ~ 기력이 다하기 전 (게임 초) — 고른 빠르기
     const i0 = rec.findIndex((x) => x.on);
@@ -320,4 +330,39 @@ test('물리 스텝이 화면마다 여럿이어도(사람 몸 — 스틱은 화
     runStep(f, DT);
     assert.ok(near(Math.hypot(f.move.x, f.move.y), m1, 1e-12));
   }
+});
+
+test('들어가기 (11/21 사장님 \'끝까지 밀고 2초 이상 유지하면 뛰기 시작.\'): 끝까지 민 채 RUN.hold(실제 2 s) 넘게 버텨야 뜀 · stickOut 안으로 돌아오거나 방향이 RUN.holdTurn 넘게 돌면 처음부터 · 사이 띠(0.85 ~ 0.95)는 셈을 이어감', () => {
+  assert.ok(near(RUN.hold, 2.0 * TIME.k, 1e-12), `RUN.hold = realS(2.0) ${RUN.hold}`);
+  assert.ok(RUN.holdTurn > Math.PI / 4 && RUN.holdTurn < Math.PI / 2, `holdTurn ${RUN.holdTurn}`);
+  const f = mock();
+  assert.equal(hold(f, 1), true, '버틴 끝 스텝에 뜀');
+  assert.ok(near(f.run.runT, 0, 1e-12) || f.run.runT <= DT + 1e-12);
+  // 셈 이어감: 사이 띠 · 작은 방향 바뀜(holdTurn 안)
+  const g = mock();
+  const n = Math.ceil(H / DT - 1e-9);
+  for (let i = 1; i < n; i++) {
+    const a = i < n / 2 ? 0 : RUN.holdTurn * 0.9;
+    assert.equal(tick(g, i % 3 ? 1 : 0.88, { stickX: Math.sin(a), stickY: Math.cos(a) }), false);
+  }
+  assert.equal(tick(g, 1, { stickX: Math.sin(RUN.holdTurn * 0.9), stickY: Math.cos(RUN.holdTurn * 0.9) }), true, '사이 띠 · holdTurn 안의 방향 바뀜은 셈을 이어감');
+  // 처음부터: stickOut 안으로 돌아옴
+  const h = mock();
+  for (let i = 0; i < n - 2; i++) tick(h, 1);
+  assert.equal(tick(h, 0.84), false);
+  assert.equal(h.run.hold, 0, 'stickOut 안 — 처음부터');
+  assert.equal(hold(h, 1), true, '다시 RUN.hold 를 버텨야');
+  // 처음부터: 방향이 holdTurn 넘게 돎 (앞 → 옆) — 새 방향에서 셈을 새로
+  const k = mock();
+  for (let i = 0; i < n - 2; i++) tick(k, 1);
+  assert.equal(tick(k, 1, { stickX: 1, stickY: 0 }), false);
+  assert.ok(near(k.run.hold, DT, 1e-12), '옆으로 돌림 — 새 방향에서 처음부터');
+  for (let i = 2; i < n; i++) assert.equal(tick(k, 1, { stickX: 1, stickY: 0 }), false);
+  assert.equal(tick(k, 1, { stickX: 1, stickY: 0 }), true, '새 방향에서 RUN.hold 를 버틴 뒤 뜀');
+  // 처음부터: 버티는 동안 공격 입력
+  const m = mock();
+  for (let i = 0; i < n - 2; i++) tick(m, 1);
+  m.runBreak = true;
+  tick(m, 1);
+  assert.equal(m.run.hold, 0, '공격 입력 — 처음부터');
 });

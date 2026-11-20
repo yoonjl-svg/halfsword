@@ -9,7 +9,7 @@
 //  1:1 AI · 시뮬 대본 몸은 runReach 를 두지 않아 f.run 이 없고 걸음 · 몸 돌림 · 기력 셈이 한 글자도 다르지 않다(관문 바이트 같음).
 //
 //  걷기와 뛰기는 두 상태다 (빠르기를 스틱에 비례해 잇지 않음 — 걷기는 전과 같은 걷기):
-//   들어감  스틱을 길 끝(손잡이 길의 RUN.stickIn 몫 넘게 · PC 는 Shift + 방향 키) · 기력 RUN.startAt(50) 이상 · 서 있음 · 다리 걸음 · 공격 · 막기 · 기술 걸음 · 비기 · 밀치기 · 줍기가 아님 ·
+//   들어감  스틱을 길 끝(손잡이 길의 RUN.stickIn 몫 넘게 · PC 는 Shift + 방향 키)까지 민 채 RUN.hold(실제 2 s — 11/21 사장님 '끝까지 밀고 2초 이상 유지하면 뛰기 시작.') 넘게 버팀 · 기력 RUN.startAt(50) 이상 · 서 있음 · 다리 걸음 · 공격 · 막기 · 기술 걸음 · 비기 · 밀치기 · 줍기가 아님 ·
 //          지난 뛰기를 공격 · 막기로 끊었으면 스틱을 한 번 RUN.stickOut 안으로 되돌린 뒤(다시 걺 — armed · Shift 는 떼었다 누름)
 //   나감    스틱이 RUN.stickOut 안으로 돌아옴(들락날락 막는 사이 띠) · 기력이 RUN.stopAt(0)까지 닳음 · 공격 · 막기 입력(곧바로 — 몸은 RUN.accel 한도로 줄어듦) ·
 //          넘어짐 · 탈진 · 발 묶임 …
@@ -19,14 +19,14 @@
 //     걸음 장치가 읽는 조종 입력(f.move)은 그 방향을 몸 틀로 옮긴 값 — 돌아서는 동안(사이 각 > RUN.alignMax)은 스틱 × RUN.turnMove 로 거의 그 자리에서 돌고 몸이 그쪽을 보면 앞걸음.
 //     뒤 · 옆 끝으로 밀어도 몸이 돌아 그쪽으로 뛴다(상대를 보며 뒷걸음으로 뛰지 않음 — 옆 · 뒤 배율 없음).
 //     끝난 뒤 몸이 다시 상대를 볼 때까지(RUN.faceTol 안)도 상대 틀로 읽음 — 등진 채 스틱을 뒤로 밀면 몸 틀로는 '뒷걸음 = 상대 쪽'이 되므로. 다 돌면 전과 같은 걷기(몸 틀)
-//   · 빠르기 = 걷는 앞 몫 + 덧 빠르기(걷는 앞 몫 × (RUN.mul − 1) — 11/20 mul 3: 보통 실제 6.0 m/s) (runWant — 몸이 뛰는 쪽을 볼수록 다 실림 · 다친 다리 · 판금 · 무기 발 빠르기 · 유파 걸음 빠르기 · 진흙이 걷기처럼 곱해짐) ·
+//   · 빠르기 = 걷는 앞 몫 + 덧 빠르기(걷는 앞 몫 × (RUN.mul − 1) — 11/20 mul 3 → 11/21 사장님 '너무 빠르더라. 2.5배로 하고' mul 2.5: 보통 실제 5.0 m/s) (runWant — 몸이 뛰는 쪽을 볼수록 다 실림 · 다친 다리 · 판금 · 무기 발 빠르기 · 유파 걸음 빠르기 · 진흙이 걷기처럼 곱해짐) ·
 //     덧 빠르기는 RUN.accel 로만 오르내리고 몸 빠르기 + RUN.lead 를 넘지 않음 · 발로 내는 가속 한도도 RUN.accel (뛰는 동안 · 뛰다 멈춰 몸이 걷는 끝 빠르기로 줄 때까지 — fighter.driveBalance)
 //   · 걸음 꼴 = gait.js 가 f.run.k(0 → 1, 뛰기 들어감 · 나감에 RUN.blend s 로 옮겨 감 — 뛰다 멈춰 줄어드는 동안(fast)도 1 쪽)만큼 뛰는 걸음 값으로 섞음 (보폭 상한 · 박자 · 두 발 디딤 · 무릎 · 골반 높이 · 덜 나감 문턱).
 //     날며 뛰기 (11/20 — 빠르기 × 3): 몸 앞으로 RUN.flyFrom 넘게 빠르면 한 발 디딤을 짧게 · 두 발 모두 뜬 채 나감(긴 걸음 · 느린 박자 — gait.js fly · RUN.fly*)
 //   · 꺾기 (11/20): 내달리는 동안 뛰는 쪽은 RUN.curve 로 둥글게 돈다 · RUN.curveMax 넘게 거꾸로 민 스틱은 먼저 줄인 뒤 돌아섬(R.brake)
 //   · 끝난 뒤 (11/20): 몸이 걷는 끝 × RUN.faceSlow 넘게 가는 동안은 가는 쪽을 봄(runFace) — 서고 나서 상대 쪽으로 돎
 //   · 기력 = 초당 runCostRate(그 몸이 걷는 끝 빠르기로 걸을 때 초당 걸음 기력 × RUN.cost — 11/20 사장님 '걷기의 2배' 1.5 → 2) · 자연 회복 없음 (stamina.js — 걸은 거리 셈은 쉼)
-//  화면 글자 없음 (스틱 테두리만 뛰는 동안 조금 밝게 — main.js · index.html #moveStick.run)
+//  화면 글자 없음 (스틱 테두리만 뛰는 동안 조금 밝게 — main.js · index.html #moveStick.run · 11/21 끝까지 민 채 버티는 동안 테두리가 차오름 — #moveStick::before --runHold = R.hold ÷ RUN.hold)
 // ─────────────────────────────────────────────────────────────
 import { RUN, GAIT, STAMINA, ARMOR } from './config.js';
 import { kitOff } from './skill_kit.js';
@@ -36,7 +36,7 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 /** 이 몸의 뛰기 상태 (처음 부를 때 만든다). fast = 뛰는 가속 한도를 쓰는 동안(뛰는 중 · 뛰다 멈춰 줄어드는 중) · back = 스틱을 상대 틀로 읽는 동안 */
 export function runState(f) {
-  return (f.run ??= { on: false, armed: true, k: 0, vb: 0, fast: false, back: false, brake: false, curve: false, m0: 0, mx: NaN, my: NaN, dx: 1, dz: 0, fx: undefined, fz: undefined, end: null, runs: 0, runT: 0 });
+  return (f.run ??= { on: false, armed: true, k: 0, vb: 0, fast: false, back: false, brake: false, curve: false, m0: 0, mx: NaN, my: NaN, dx: 1, dz: 0, fx: undefined, fz: undefined, end: null, runs: 0, runT: 0, hold: 0, ha: 0 });
 }
 
 /** 공격 · 막기 · 기술 중인가 (뛰기를 끊고 다시 들어가지 못하게) — 몸 상태 그대로 (사람 · AI 같음) */
@@ -85,7 +85,7 @@ export function runStep(f, dt) {
   const dirOk = sx * sx + sy * sy > 1e-6;
   // 앞 반원만 (11/20 사장님 '뒤돌아 뛰는 거 자체를 없애는 게 나을 수도 있어 카메라 워크가 애매하면...'): 스틱이 상대 쪽에서 RUN.arc(rad) 안일 때만 뛴다 — 앞 · 옆 · 비스듬히 앞.
   //  뒤 반원(비스듬히 뒤 · 뒤)은 뛰지 않고 전처럼 걷기(뒷걸음 — 몸은 상대를 봄 · 카메라 그대로). 뛰는 중 스틱이 RUN.arc + RUN.arcOut 밖으로 가면 걷기(옆 끝에서 엄지가 조금 흔들려도 들락날락하지 않게)
-  const front = dirOk && Math.atan2(Math.abs(sx), sy) <= RUN.arc + (R.on ? RUN.arcOut : 0);
+  const front = dirOk && Math.atan2(Math.abs(sx), sy) <= RUN.arc + (R.on || R.hold > 0 ? RUN.arcOut : 0);
   if (R.on) {
     let why = null;
     if (brk || busy) why = 'break';
@@ -97,10 +97,23 @@ export function runStep(f, dt) {
       R.end = why;
       if (why === 'break') R.armed = false; // 끊은 뒤 스틱을 그대로 밀고 있어도 다시 뛰지 않음 — 한 번 되돌렸다 밀어야
     }
-  } else if (reach >= RUN.stickIn && front && R.armed && v >= RUN.startAt && !brk && !busy && canRun(f)) {
-    R.on = true;
-    R.end = null;
-    R.runs++;
+  } else {
+    // 들어가기 (11/21 사장님 '끝까지 밀고 2초 이상 유지하면 뛰기 시작.'): 스틱을 끝(RUN.stickIn)까지 민 채 RUN.hold(실제 2 s) 넘게 버티면 뜀 — 그동안은 걷기.
+    //  버티는 셈(R.hold)은 뛸 수 있을 때만 — 앞 쪽 · 기력 RUN.startAt 이상 · 서 있음 · 다시 걺 · 공격 · 막기 아님 (하나라도 깨지면 처음부터).
+    //  스틱이 RUN.stickOut 안으로 돌아오거나 · 버티기 시작한 스틱 방향에서 RUN.holdTurn(rad) 넘게 돌면 처음부터 (그 자리에서 새로 셈)
+    const ang = Math.atan2(sx, sy);
+    const ok = front && R.armed && v >= RUN.startAt && !brk && !busy && canRun(f);
+    if (R.hold > 0 && (!ok || reach < RUN.stickOut || Math.abs(wrap(ang - R.ha)) > RUN.holdTurn)) R.hold = 0;
+    if (ok && (R.hold > 0 || reach >= RUN.stickIn)) {
+      if (!(R.hold > 0)) R.ha = ang;
+      R.hold += dt;
+      if (R.hold >= RUN.hold - 1e-9) { // (스텝 dt 를 거듭 더한 셈의 끝자리 어긋남 — 1e-9)
+        R.on = true;
+        R.end = null;
+        R.runs++;
+        R.hold = 0;
+      }
+    }
   }
   if (!R.on && f.state !== 'stand') R.vb = 0; // 넘어짐 · 무릎 — 덧 빠르기(runWant)를 버림
   if (R.on) R.runT += dt;
