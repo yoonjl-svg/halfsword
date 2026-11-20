@@ -27,11 +27,17 @@
 //   ④ 치고 빠짐 (ai.js afterStrike): 내 상대가 동료와 붙어 있으면 내 칼 뒤 이어 치기 마음 × (1 − cn.run) — 빠져 다시 봄 · 바꿀 적이 없으면(서 있는 적 하나 — 2:1) × (1 + cn.press) 붙어 싸움 (5 차)
 //      (동방 몸의 사냥 겹 · 칼 떨굼은 그대로 — 새 수 없음)
 //   옆 · 등으로 돌기는 뺌 (3 차 재기: 도움 칼만 올리고 동료가 받는 상처는 못 줄임)
-//  이베리아 (넓은 원이 동료 자리를 가로지름 — 감독 권고 11/19 · 사장님 '운신의 폭이 넓어지거나 때로는 팀킬도' — 사장님 답 전):
-//   ① 원 걸음 (발 — 간 보기 · 물러남): 서 있는 동료가 ib.crossR m 안이면 제 원을 그 동료 쪽으로 돎 (동료 앞 · 칼길을 지나감 — 크기는 제 걸음 그대로 · 쪽만)
-//   ② 같은 편 비킴(TEAM_FIGHT.mateSep) 거리 × (1 − (1 − ib.sepX) × w) — 동료 곁을 비키지 않고 지나감 (부딪힘)
-//   ③ 칼길: 동료가 내 칼길 한가운데(줄에서 lane.w × (1 − ib.lane × w) 안)가 아니면 공격을 미루지 않음 (ai.js atkGate) · 칼길 비키는 걸음 × (1 − ib.lane × w)
-//   → 동료 칼길 가림 · 부딪힘 · 가끔 벰 (대본 아님 — 재서 봄) · 혼자 판은 그대로 (모두 '서 있는 동료'가 있을 때의 셈)
+//  이베리아 (7 차 — 사장님 11/20 '이베리아 아까 기준 (나)로 해. (가)의 움직임이 너무 작위적이고 어색해. 대신 좀 더 마구잡이로 베어서 종종 같은 편에 피해를 주면 좋겠어.'):
+//   (나) 제 넓은 원 — 몫 w = 숙련 곡선 (3 차와 같음 · 4 ~ 6 차의 '원이 동료 자리를 가로지름'(가)는 걷음):
+//    ① 동료와 떨어져 섬 (ai.js teamFeet 같은 편 비킴): 비키는 거리 TEAM_FIGHT.mateSep.dist × (1 + (ib.sepX − 1) × w) — 제 둥근 걸음의 원을 지킴
+//    ② 동료가 붙은 적을 피함 (targeting.js): 내 동료와 붙은 적 + ib.avoid × w (낮을수록 고름 — 제 상대를 따로 맡음)
+//    ③ 합공에 덜 낌: 무리 싸움 판단의 동료를 위한 몫 × (1 − (1 − many.ally) × w) — 마음가짐 줄 SCHOOL_MINDSET.iberian.many.ally (ai_mindset.js manyMul · team_sense.js)
+//   마구잡이 베기 — 버릇 몫 h = 1 − ib.calm × 숙련 곡선 (숙련이 낮을수록 크고 높아도 남음 — 이베리아 버릇 · 숙련 2 이하 1 · 6 은 1 − calm):
+//    ④ 칼길을 살피지 않음 (ai.js atkGate): 동료가 내 칼 부채꼴 · 나 → 상대 사이에 있어도 줄에서 lane.w × (1 − h) 밖이면 공격을 미루지 않음 (h = 1 이면 늘)
+//    ⑤ 칼길 비키는 걸음(team_sense.js senseFeet ①) × (1 − h) — 동료 앞을 비키지 않음
+//    ⑥ 크게 휩쓰는 베기 (ai.js pickTech): 서 있는 동료가 있으면 베기 무게 × (1 + ib.sweep × h × min(1, 가로 길이 ÷ ib.sweepDx)) — 가로 · 비스듬히 베기를 더 고름
+//      (베는 중에 동료를 맞힐 것 같아도 멈추는 셈은 처음부터 없음 — 칼은 사람과 같은 규칙으로 같은 편도 벰)
+//   혼자 판은 그대로 (모두 '서 있는 동료'가 있을 때의 셈 — 사장님 '이베리아 혼자 대 다수전을 특별히 낮춰잡을 필요는 없어')
 //  이탈리아: 결투 고집은 마음가짐 줄 many(ally · hunt — 수가 밀릴 때의 lever · out · fix 와 같은 칸)로 옮김 — 이 파일에는 없음
 //  일본: 칸 없음 (혼자 대 다수 유파)
 // ─────────────────────────────────────────────────────────────
@@ -47,14 +53,17 @@ export function supportOf(ai) {
   if (ai.supS) return ai.supS;
   const key = SCH[ai.art?.tradition] ?? null;
   const p = clamp(Math.round(ai.proficiency ?? 6), 0, MINDSET.profF.length - 1);
-  return (ai.supS = { key, w: key && TEAM_SUPPORT[key] ? MINDSET.profF[p] : 0 });
+  const w = key && TEAM_SUPPORT[key] ? MINDSET.profF[p] : 0;
+  return (ai.supS = { key, w, h: key === 'ib' ? 1 - TEAM_SUPPORT.ib.calm * MINDSET.profF[p] : 0 }); // h: 이베리아 마구잡이 베기 버릇 몫 (7 차)
 }
+/** 이베리아 마구잡이 베기 버릇 몫 h (아니면 0) */
+const hOf = (ai) => supportOf(ai).h;
 /** 그 유파 몫 (아니면 0) */
 const wOf = (ai, key) => { const S = supportOf(ai); return S.key === key ? S.w : 0; };
 
 /** 재기 칸 (ai.stats.support) */
 export function supportStats() {
-  return { deLane: 0, deOrbit: 0, deSwitch: 0, deShove: 0, dePin: 0, deNoShove: 0, deFollow: 0, cnLane: 0, cnIn: 0, cnAmbush: 0, cnRun: 0, cnPress: 0, ibLaneFree: 0, ibLaneStep: 0, ibCross: 0 };
+  return { deLane: 0, deOrbit: 0, deSwitch: 0, deShove: 0, dePin: 0, deNoShove: 0, deFollow: 0, cnLane: 0, cnIn: 0, cnAmbush: 0, cnRun: 0, cnPress: 0, ibAvoid: 0, ibLaneFree: 0, ibLaneStep: 0, ibSweep: 0 };
 }
 const stats = (ai) => (ai.stats.support ??= supportStats());
 
@@ -175,10 +184,11 @@ export function supportScore(M, f, g) {
   if (!ai || !f.teamSense) return 0;
   const S = supportOf(ai);
   if (!(S.w > 0)) return 0;
-  if (S.key !== 'cn' && S.key !== 'de') return 0;
+  if (S.key !== 'cn' && S.key !== 'de' && S.key !== 'ib') return 0;
   if (S.key === 'de' && !(g !== ai.foe && foeHeld(ai.foe))) return 0; // 독일: 제 적이 이미 묶여 있을 때만 (6 차)
   const v = viewOf(ai);
   if (!v || !sees(v, g.index) || !v.fr.b[g.index].stand || !busyWithMate(v, g.index)) return 0;
+  if (S.key === 'ib') return stats(ai).ibAvoid++, TEAM_SUPPORT.ib.avoid * S.w; // 이베리아 (나): 동료가 붙은 적을 피함 (제 상대를 따로)
   if (g !== ai.foe && pinnedBy(v.fr, v.i, ai.foe?.index ?? -1)) return 0; // 지금 상대에게 붙잡혀 있으면 등을 보이지 않음
   if (S.key === 'de') return stats(ai).deSwitch++, -TEAM_SUPPORT.de.focus * S.w;
   const C = TEAM_SUPPORT.cn;
@@ -228,13 +238,13 @@ function standingFoes(v) {
 /** 스틱 (fwd 앞 · side 오른쪽) 을 고쳐 돌려줌 — 독일 · 동방: 동료 칼길 밖 · 돌기 / 이베리아: 칼길 비킴 거둠 */
 export function supportFeet(ai, fwd, side) {
   const S = supportOf(ai);
+  if (S.key === 'ib') return S.h > 0 && ai.foe && ai.me.teamSense ? ibFeet(ai, S.h, fwd, side) : [fwd, side];
   if (!(S.w > 0) || !ai.foe || !ai.me.teamSense) return [fwd, side];
   const v = viewOf(ai);
   if (!v) return [fwd, side];
   const x = ai.foe.index;
   const X = v.fr.b[x];
   if (!X.live) return [fwd, side];
-  if (S.key === 'ib') return ibFeet(ai, v, S.w, fwd, side);
   if (S.key !== 'de' && S.key !== 'cn') return [fwd, side];
   const C = TEAM_SUPPORT[S.key];
   const St = stats(ai);
@@ -271,48 +281,53 @@ export function supportFeet(ai, fwd, side) {
   return [fwd, side];
 }
 
-/** 같은 편 비킴 거리 곱 (ai.js teamFeet — 이베리아 1 − (1 − ib.sepX) × w · 다른 몸 1): 동료 곁을 비키지 않고 지나감 */
+/** 같은 편 비킴 거리 곱 (ai.js teamFeet — 이베리아 1 + (ib.sepX − 1) × w · 다른 몸 1): 제 넓은 원을 지키며 동료와 떨어져 섬 (나) */
 export function mateSepX(ai) {
-  return 1 - (1 - TEAM_SUPPORT.ib.sepX) * wOf(ai, 'ib');
+  return 1 + (TEAM_SUPPORT.ib.sepX - 1) * wOf(ai, 'ib');
 }
 
-/** 칼길 미룸을 건너뛰나 (ai.js atkGate — 이베리아): 동료가 내 칼길 한가운데(줄에서 lane.w × (1 − ib.lane × w) 안)가 아니면 true */
+/** 칼길 미룸을 건너뛰나 (ai.js atkGate — 이베리아 마구잡이 베기): 동료가 내 칼 부채꼴 · 나 → 상대 사이에 있어도 줄에서 lane.w × (1 − h) 밖이면 true (h = 1 이면 늘) */
 export function laneFree(ai) {
-  const w = wOf(ai, 'ib');
-  if (!(w > 0) || !ai.foe || !ai.me.teamSense) return false;
+  const h = hOf(ai);
+  if (!(h > 0) || !ai.foe || !ai.me.teamSense) return false;
   const v = viewOf(ai);
   if (!v) return false;
   const L = laneOf(ai, v);
-  if (!L?.fan || L.perp <= TEAM_SENSE.lane.w * (1 - TEAM_SUPPORT.ib.lane * w)) return false;
+  if (!L?.fan || L.perp <= TEAM_SENSE.lane.w * (1 - h)) return false;
   stats(ai).ibLaneFree++;
   return true;
 }
 
 /**
- * 이베리아 발 (supportFeet — 간 보기 · 물러남): ① 서 있는 동료가 ib.crossR m 안이면 제 원(옆 스틱)의 쪽을 그 동료 쪽으로 — 크기는 제 걸음 그대로 (동료 앞 · 칼길을 지나감)
- *  ② 칼길 비우기 걸음(team_sense.js senseFeet ①)을 ib.lane × w 만큼 거둠
+ * 크게 휩쓰는 베기 몫 (ai.js pickTech — 셋 이상 판 · 이베리아 마구잡이 베기): 서 있는 동료가 있으면 ib.sweep × h · 아니면 0 (혼자 판은 그대로).
+ *  기술마다 무게 곱은 sweepW
  */
-function ibFeet(ai, v, w, fwd, side) {
-  const St = stats(ai);
-  const L = laneOf(ai, v);
-  if (L) {
-    side += L.side * TEAM_SENSE.lane.k * clamp(1 - L.perp / TEAM_SENSE.lane.w, 0.3, 1) * TEAM_SUPPORT.ib.lane * w;
-    St.ibLaneStep++;
-  }
-  if (ai.mode !== 'watch' && ai.mode !== 'withdraw') return [fwd, side];
-  let best = null;
+export function sweepOf(ai) {
+  const h = hOf(ai);
+  if (!(h > 0) || !ai.me.teamSense) return 0;
+  const v = viewOf(ai);
+  if (!v) return 0;
   for (let j = 0; j < v.fr.b.length; j++) {
-    if (j === v.i || !sameSide(v.S.fighters[j], v.S.fighters[v.i])) continue;
-    const m = v.fr.b[j];
-    if (!m.stand) continue;
-    const d = Math.hypot(m.x - v.me.x, m.z - v.me.z);
-    if (d <= TEAM_SUPPORT.ib.crossR && (!best || d < best.d)) best = { m, d };
+    if (j !== v.i && sameSide(v.S.fighters[j], v.S.fighters[v.i]) && v.fr.b[j].stand) return stats(ai).ibSweep++, TEAM_SUPPORT.ib.sweep * h;
   }
-  if (!best || Math.abs(side) < 1e-6) return [fwd, side];
-  const lat = (best.m.x - v.me.x) * -v.me.fz + (best.m.z - v.me.z) * v.me.fx; // + = 동료가 내 오른쪽
-  const toward = Math.sign(lat || 1) * Math.abs(side);
-  if (Math.sign(toward) !== Math.sign(side)) St.ibCross++;
-  return [fwd, side + (toward - side) * w];
+  return 0;
+}
+/** 기술 t 의 무게 곱: 베기면 1 + k × min(1, 가로 길이(시작 자세 → 끝 자세 x) ÷ ib.sweepDx) — 가로 · 비스듬히 크게 휩쓸수록 · 찌르기 · 곧게 내려베기는 1 */
+export function sweepW(k, t) {
+  if (!(k > 0) || t?.kind !== 'cut' || !t.from || !t.path?.length) return 1;
+  const end = t.path[t.path.length - 1];
+  return 1 + k * Math.min(1, Math.abs(end[0] - t.from[0]) / TEAM_SUPPORT.ib.sweepDx);
+}
+
+/** 이베리아 발 (supportFeet — 마구잡이 베기 ⑤): 칼길 비우기 걸음(team_sense.js senseFeet ① 과 같은 셈)을 h 만큼 거둠 — 동료 앞을 비키지 않음 */
+function ibFeet(ai, h, fwd, side) {
+  if (ai.iaiArm && !ai.iaiArm.armed && !ai.chasing && ai.mode === 'watch') return [fwd, side]; // senseFeet 이 칼길 걸음을 안 낸 때 (고노센 준비 — team_sense.js 와 같은 갈래)
+  const v = viewOf(ai);
+  if (!v || !v.fr.b[ai.foe.index].live) return [fwd, side];
+  const L = laneOf(ai, v);
+  if (!L) return [fwd, side];
+  stats(ai).ibLaneStep++;
+  return [fwd, side + L.side * TEAM_SENSE.lane.k * clamp(1 - L.perp / TEAM_SENSE.lane.w, 0.3, 1) * h];
 }
 
 // ───────── 빈틈 · 밀치기 · 이어 치기 (ai.js) ─────────
