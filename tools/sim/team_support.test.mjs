@@ -148,7 +148,7 @@ test('④ 이베리아 (7 차): (나) 동료와 붙은 적을 피함 · 마구�
   assert.equal(supportScore(M, M.fighters[0], M.fighters[1]), 0, '동료와 붙지 않은 적은 그대로');
   const M2 = board([fake(0, 0, 0, 0, 0, { school: 'iberian', prof: 2 }), fake(1, 1, 2.5, 0, Math.PI), fake(2, 0, 1.0, 2.0, 0), fake(3, 1, 2.2, 2.0, Math.PI)], [1, 2, 3, 2]);
   assert.equal(supportScore(M2, M2.fighters[0], M2.fighters[3]), 0, '숙련 2 는 (나) 몫 0');
-  // 칼길: 나 → 상대 +x 2 m · 동료가 줄에서 0.3 m (칼 부채꼴 안) — 숙련 6 (h 0.6): 줄 폭 lane.w × 0.4 밖 → 미루지 않음
+  // 칼길: 나 → 상대 +x 2 m · 동료가 줄에서 0.3 m (칼 부채꼴 안) — 숙련 6 (h = 1 − calm): 줄 폭 lane.w × calm 밖 → 미루지 않음
   const h6 = 1 - SU.ib.calm;
   const L = [fake(0, 0, 0, 0, 0, { school: 'iberian' }), fake(1, 1, 2, 0, Math.PI), fake(2, 0, 1.0, 0.3, 0, { prof: 4 })];
   board(L, [1, 0, 1]);

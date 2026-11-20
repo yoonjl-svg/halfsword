@@ -95,7 +95,8 @@ test('③ 둘째 칼끝 밖 (마음가짐 줄에 many.out 이 있는 유파만):
 
 test('⑤ 다적의 자리: 일본(마음가짐 many)만 · 수가 밀리면 w · 줄 세우기 옆 스틱으로 둘째를 겨눈 상대 뒤로', () => {
   assert.ok(SCHOOL_MINDSET.japanese.many.go);
-  for (const s of ['german', 'iberian', 'chinese']) assert.equal(SCHOOL_MINDSET[s].many, undefined, s);
+  for (const s of ['german', 'chinese']) assert.equal(SCHOOL_MINDSET[s].many, undefined, s);
+  assert.deepEqual(Object.keys(SCHOOL_MINDSET.iberian.many), ['ally'], '이베리아는 다적의 자리가 아님 (합공 덜 낌 ally 만 — 11/20 서포트 7 차)');
   assert.equal(SCHOOL_MINDSET.italian.many.go, undefined, '이탈리아는 다적의 자리가 아님 (결투 고집 — ⑥)');
   // 나 +x 를 봄 · 겨눈 상대 앞(2, 0) · 둘째 오른쪽 앞(1.5, 3) — 칼끝 + out 밖(둘째 칼끝 밖 몫 없음)
   const mk = (mind) => {
