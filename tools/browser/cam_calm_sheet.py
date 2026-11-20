@@ -28,7 +28,7 @@ for tag, label in tags:
 im0 = Image.open(rows[0][1][0])
 tw, th = int(im0.width * sc), int(im0.height * sc)
 ncol = max(len(r[1]) for r in rows)
-LW = 170
+LW = 230
 W = LW + ncol * (tw + 4)
 H = 30 + len(rows) * (th + pad + 18)
 out = Image.new('RGB', (W, H), (24, 24, 24))
