@@ -19,12 +19,12 @@ const { AI_RUN, RUN, GAIT } = CONFIG;
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 // AI 굴림 씨앗 (11/20 들쭉날쭉 고침): newMatch 의 seed 는 무기 파손 굴림(breakSeed)만 — AI 생성자 · 판단 굴림은 전역 Math.random 이라 시험이 씨앗을 둔다
 //  (fights12 · many_fighters.test.mjs 와 같은 굴림). 안 두면 판마다 다른 싸움 — ② 가 20 번에 2 ~ 4 번 'AI 가 뜀'(아무도 안 뛴 판)으로 깨졌다.
-//  시험이 끝나면 원래 Math.random 으로 되돌림 (같은 파일 다른 시험에 새지 않게)
+//  시험이 끝나면 원래 Math.random 으로 되돌림 (같은 파일 다른 시험에 새지 않게 — 한 시험에서 여러 번 불러도 처음 것으로)
+const realRandom = Math.random;
 const seedRand = (t, seed) => {
-  const real = Math.random;
   let s = seed * 9301 + 49297;
   Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
-  t.after(() => { Math.random = real; });
+  t.after(() => { Math.random = realRandom; });
 };
 
 test('① 1:1 AI 는 뛰지 않음: 15 s 판에서 두 AI 몸 모두 f.run · runReach 가 없음 (판 사본도 없음)', (t) => {

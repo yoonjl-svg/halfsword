@@ -6,6 +6,14 @@ import assert from 'node:assert/strict';
 import { newMatch, CONFIG, DT } from './jelly_harness.mjs';
 
 const { ARENA } = CONFIG;
+// AI 굴림 씨앗 (11/20 — ai_run.test.mjs 와 같은 꼴): newMatch 의 seed 는 무기 파손 굴림(breakSeed)만 — AI 생성자 · 판단 굴림은 전역 Math.random 이라
+//  판마다 시험이 씨앗을 둔다 (fights12 · many_fighters.test.mjs 와 같은 굴림 · 같은 씨앗이면 늘 같은 싸움). 시험이 끝나면 원래 Math.random 으로 되돌림
+const realRandom = Math.random;
+const seedRand = (t, seed) => {
+  let s = seed * 9301 + 49297;
+  Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  t.after(() => { Math.random = realRandom; });
+};
 
 test('띠 = 반지름 − 1.9 m (√2 전 6.5 − 4.6 과 같은 간격) · 파고들기 \'상대 등이 울타리 가까이\'(DIG_PROTO.wall)는 띠 − 0.6', () => {
   assert.equal(ARENA.aiWall, 1.9);
@@ -15,7 +23,8 @@ test('띠 = 반지름 − 1.9 m (√2 전 6.5 − 4.6 과 같은 간격) · 파�
 });
 
 /** 1:1 AI 판을 가운데에서 gap / 2 떨어진 자리로 세워 판 시작 정지 뒤 간 보기 스틱 옆 몫을 봄 */
-function sideAt(gap) {
+function sideAt(t, gap) {
+  seedRand(t, 1);
   const G = newMatch({ seed: 1, ai: 'all', gap, walls: true });
   const f = G.fighters[1];
   const side = [];
@@ -27,7 +36,7 @@ function sideAt(gap) {
   return Math.max(...side);
 }
 
-test('넓힌 경기장의 가운데 쪽(반지름 6 m)에서는 울타리로 옆으로 빠지지 않음 · 띠 안(8 m)에서는 빠짐', () => {
-  assert.ok(sideAt(12) < 0.5, '6 m — 띠 밖 (전 4.6 m 판은 여기서 옆 끝 1)');
-  assert.ok(sideAt(16) > 0.5, '8 m — 띠 안');
+test('넓힌 경기장의 가운데 쪽(반지름 6 m)에서는 울타리로 옆으로 빠지지 않음 · 띠 안(8 m)에서는 빠짐', (t) => {
+  assert.ok(sideAt(t, 12) < 0.5, '6 m — 띠 밖 (전 4.6 m 판은 여기서 옆 끝 1)');
+  assert.ok(sideAt(t, 16) > 0.5, '8 m — 띠 안');
 });

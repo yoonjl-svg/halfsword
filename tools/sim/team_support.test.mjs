@@ -18,6 +18,14 @@ import { supportOf, supportScore, supportFeet, mateSepX, laneFree, supportOpp, s
 const TS = CONFIG.TEAM_SENSE;
 const SU = CONFIG.TEAM_SUPPORT;
 const profF = CONFIG.MINDSET.profF;
+// AI 굴림 씨앗 (11/20 — ai_run.test.mjs 와 같은 꼴): newMatch 의 seed 는 무기 파손 굴림(breakSeed)만 — AI 생성자 · 판단 굴림은 전역 Math.random 이라
+//  판마다 시험이 씨앗을 둔다 (fights12 · many_fighters.test.mjs 와 같은 굴림 · 같은 씨앗이면 늘 같은 싸움). 시험이 끝나면 원래 Math.random 으로 되돌림
+const realRandom = Math.random;
+const seedRand = (t, seed) => {
+  let s = seed * 9301 + 49297;
+  Math.random = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  t.after(() => { Math.random = realRandom; });
+};
 
 /** 가짜 몸 (team_sense.test.mjs 와 같은 꼴 + 유파): 가슴 (x, z) · 바라보는 각 heading(라디안 — forward = (cos h, −sin h)) · 편 · 유파 · 숙련 */
 function fake(index, team, x, z, heading, o = {}) {
@@ -46,8 +54,9 @@ const noRandom = (fn) => {
 };
 const aiOf = (weapon, p) => aiAtProficiency({ ai: { persona: {} }, weapon }, p);
 
-test('① 1:1 AI 는 서포트 셈을 타지 않음 · 2:1 AI 는 탐', () => {
+test('① 1:1 AI 는 서포트 셈을 타지 않음 · 2:1 AI 는 탐', (t) => {
   const W = ['longsword', 'hwando'];
+  seedRand(t, 3);
   const G = newMatch({ count: 2, ai: 'all', seed: 3, walls: true, weapons: W, aiOf: (i) => aiOf(W[i], 6) });
   for (let i = 0; i < 900 && !G.over; i++) G.step();
   for (const a of G.ais) {
@@ -55,6 +64,7 @@ test('① 1:1 AI 는 서포트 셈을 타지 않음 · 2:1 AI 는 탐', () => {
     assert.equal(a.stats.support, undefined);
   }
   const W3 = ['longsword', 'uchigatana', 'hwando'];
+  seedRand(t, 3);
   const H = newMatch({ count: 3, ai: 'all', seed: 3, walls: true, weapons: W3, aiOf: (i) => aiOf(W3[i], 6) });
   for (let i = 0; i < 600 && !H.over; i++) H.step();
   assert.equal(H.ais[0].supS?.key, 'de');
