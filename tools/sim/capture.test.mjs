@@ -1,6 +1,6 @@
 // 거점전 — 두 거점 쥐기 (사장님 11/21 '생사전은 전멸을 목표로 해야 생사전이야. 거점전은 따로 만들자.' — src/capture.js · src/capture_ai.js · 기록 docs/strike/capture_mode_2026-11-21.md)
 //  ① 3 초 쥐기 · 함께 서면 · 비면 처음부터 ② 쓰러짐 · 일어나는 중 · 죽음 · 부활 중은 안 셈 (꿇은 채 싸우는 몸은 셈) ③ 두 거점 20 초 → 이김 ④ 상대가 원 안에 서 있으면 멈춤
-//  ⑤ 하나를 뺏기면 20 초부터 다시 ⑥ 전멸도 이김 · 쥐기로 끝난 판 ⑦ 생사전 · 다른 판은 거점이 없음(전멸만) ⑧ AI 자리 나눔 (둘 = 하나씩 · 셋 = 둘 + 하나 · 상대가 둘 다 쥐면 몰아 감)
+//  ⑤ 하나를 뺏기면 20 초부터 다시 ⑥ 전멸도 이김 · 쥐기로 끝난 판 ⑦ 생사전 · 다른 판은 거점이 없음(전멸만) ⑧ AI 자리 나눔 (둘 = 하나씩 · 셋 = 둘 + 하나 · 상대가 둘 다 쥐면 몰아 감 · 하나 대 하나는 싸움)
 //  node --test tools/sim/capture.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -176,6 +176,22 @@ test('AI 자리 나눔: 둘 = 거점마다 하나 · 셋 = 둘 + 하나(우리 �
   T = team(2, spots);
   g = T.map((f) => captureGoal(C, F, f));
   assert.deepEqual([...g].sort(), [0, 1]);
+  // 하나 대 하나: 맡은 거점 없음(상대와 싸움) — 상대가 두 거점을 다 쥐었을 때만 가까운 거점으로
+  const solo = body(0, -14, -2.5, { index: 0 });
+  solo.mates = [];
+  solo.foes = [body(1, 14, 0, { index: 1 })];
+  C = createCapture(mapGeo(SAENGSA_MAP_BY_ID.bridges).points);
+  C.points[0].owner = 0;
+  C.points[1].owner = 1;
+  assert.equal(captureGoal(C, F, solo), -1);
+  C = createCapture(mapGeo(SAENGSA_MAP_BY_ID.bridges).points);
+  for (const P of C.points) P.owner = 1;
+  C.holder = 1;
+  assert.equal(captureGoal(C, F, solo), 0, '상대가 둘 다 쥐면 가까운 거점(z − 쪽)으로');
+  solo.foes.push(body(1, 14, 2, { index: 3 })); // 하나 대 둘: 우리 것이 아닌 가까운 거점
+  C = createCapture(mapGeo(SAENGSA_MAP_BY_ID.bridges).points);
+  C.points[0].owner = 0;
+  assert.equal(captureGoal(C, F, solo), 1);
   // 사람 몸: 거점 1 옆에 선 사람은 거점 1 · AI 둘이 나머지(둘 + 하나 = 거점 0 둘)
   C = createCapture(mapGeo(SAENGSA_MAP_BY_ID.bridges).points);
   T = team(3, [[-4, 7], [-14, 0], [-14, 2.5]]);
