@@ -13,8 +13,8 @@
 |---|---|
 | 아르토리아 v1 | `looks_review_artoria_v1_{front,threeq,side,back,fight}.png` |
 | 김씨 v1 | `looks_review_renji_v1_{front,threeq,side,back,fight}.png` |
-| 사미라 전(v1)/후(v2) | `looks_review_samira_v1_*.png` / `looks_review_samira_v2_*.png` · 한 장 비교 `looks_review_samira_v1_v2.png` |
-| 투야나 전(v1)/후(v2) | `looks_review_eira_v1_*.png` / `looks_review_eira_v2_*.png` · 한 장 비교 `looks_review_eira_v1_v2.png` |
+| 사미라 전(v1)/후(v2) | `looks_review_samira_v1_*.png` / `looks_review_samira_v2_*.png` · 한 장 비교 `looks_review_samira_v1_v2.png (지움 · 686d0237)` |
+| 투야나 전(v1)/후(v2) | `looks_review_eira_v1_*.png` / `looks_review_eira_v2_*.png` · 한 장 비교 `looks_review_eira_v1_v2.png (지움 · 686d0237)` |
 
 ## 2. 디자인 리뷰 (가져온 그대로의 v1 기준)
 급: **꼭** = 사장님 지적 또는 게임에서 읽힘이 깨짐 · **권장** = 고치면 확실히 나아짐 · **취향** = 고르기 나름.

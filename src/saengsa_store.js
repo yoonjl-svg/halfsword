@@ -6,7 +6,7 @@
 //   하사품은 연 것을 대회에 먼저 적고 금화를 더한다(새로고침해도 두 번 받지 않음 — 그 사이에 막히면 그 하사품 금화를 잃을 수 있다).
 //  저장이 막히면 이번 실행 동안만 메모리 값(다음 실행은 저장된 옛 값).
 import { SAENGSA } from './config.js';
-import { createTournament, advance, canSignUp, openChests, myMatch, matchById, finishMine, assignWeapons, entryMissing, NAMELESS, HIRE_CURRENCIES, sumCost, shortOf } from './saengsa_rules.js';
+import { createTournament, advance, canSignUp, openChests, myMatch, matchById, finishMine, assignWeapons, entryMissing, takeGift, useAid, NAMELESS, HIRE_CURRENCIES, sumCost, shortOf } from './saengsa_rules.js';
 import { signupWindow } from './saengsa_clock.js';
 import { update as updateWallet, addCoins } from './lobby_progress.js';
 
@@ -103,7 +103,7 @@ export function signUp({ now, companions, seed, data, cfg = SAENGSA, storage }) 
   if (old && old.status !== 'done') advance(old, Infinity, cfg); // 떨어진 지난 대회는 남은 경기를 끝까지
   const prize = old ? openChests(old, cfg) : null;
   const keep = cfg.keepBrokenAfterCup && old ? (old.broken ?? []) : []; // 부러진 내 무기를 다음 대회로 넘길지 (사장님 10/29 20:3x — 대회가 끝나면 원래대로 · 기본 false)
-  const t = createTournament({ day: signupWindow(now, cfg).day, seed, at: now, companions: team, roster: data.roster, broken: keep, drawWeapon: data.drawWeapon, drawPool: data.drawPool, signatureOf: data.signatureOf, weaponInfo: data.weaponInfo, profOf: data.profOf, cfg });
+  const t = createTournament({ day: signupWindow(now, cfg).day, seed, at: now, companions: team, roster: data.roster, broken: keep, drawWeapon: data.drawWeapon, drawPool: data.drawPool, signatureOf: data.signatureOf, weaponInfo: data.weaponInfo, owned: data.owned, profOf: data.profOf, cfg });
   const res = updateSaengsa((d) => { d.current = t; d.draft = { companions: [...team] }; return true; }, storage);
   if (!res.changed) { refundHire(cost); return { ok: false, why: 'save' }; } // 낸 금화 · 머리 · 뿔피리를 모두 돌려줌
   if (prize) addCoins(prize.reduce((s, x) => s + (x.kind === 'coins' ? x.amount : 0), 0));
@@ -133,6 +133,18 @@ export function saveResume(matchId, resume, { cfg = SAENGSA, storage } = {}) {
     if (resume) t.resume = { ...resume, v: 1, matchId }; else if (t.resume) delete t.resume; else return false;
     return true;
   }, storage).saved;
+}
+/** 쉼 물건 고르기 (11/21 E — 결과 화면 · 쉰 내 사람마다 'aid' 응급처치약 · 'box' 무기상자) · 돌려줌: 받은 것 | null */
+export function chooseGift(matchId, key, kind, { cfg = SAENGSA, storage } = {}) {
+  let got = null;
+  updateSaengsa((d) => { const t = d.current, m = t && matchById(t, matchId); got = m ? takeGift(t, m, key, kind, cfg) : null; return !!got; }, storage);
+  return got;
+}
+/** 응급처치약 쓰기 (11/21 E — 고르기 화면 · 내 팀 산 사람의 그 부위 부상 한 단계) · 돌려줌: { part, from } | null */
+export function useAidKit(key, part, { cfg = SAENGSA, storage } = {}) {
+  let got = null;
+  updateSaengsa((d) => { const t = d.current; got = t && t.status !== 'done' ? useAid(t.teams[0], key, part, cfg) : null; return !!got; }, storage);
+  return got;
 }
 /** 왕의 하사품 열기 (우승 셋 · 준우승 하나) · 돌려줌: [{ kind, amount }] | null (열 것이 없음) */
 export function claimChests({ cfg = SAENGSA, storage } = {}) {

@@ -1,7 +1,7 @@
 // 안다레 리솔루토 11/11 (기록 docs/strike/riso_reach_2026-11-11.md · 확인표 3510 ~ 3519):
 //  A [사장님 11/11 결정] '리솔루토는 지금 상태에서 오히려 더 빠르게 하고 역방향의 위력 배율을 주자. 손맛을 살리기 위해. … 리솔루토를 70%로 상향하고 파괴력을 0.5로 해.'
 //   — 빠르기 몫 SECRET.risolutoShare 0.7 · 리솔루토만 비기 판정 배율 SECRET.risolutoHitMul 0.5 (다른 비기는 SECRET.hitMul 1.3 그대로 · 런지 · 탭 찌르기 둘 다 · AI 는 리솔루토를 안 씀)
-//  B (스위치 · 기본 끔 — 사장님 확인 전) 거리 판단 리솔루토 SECRET.risolutoReach: ① 칼이 떨어진 뒤에도 창 risolutoReachKeep 초 ② 런지 몸 미끄러짐 늘 같은 길이 → 멀리서 내면 빗나감
+//  B 거리 판단 리솔루토 스위치(기본 끔)는 11/17 스위치 정리 때 코드가 빠졌고 남은 칸 risolutoReachKeep 도 11/21 지움 — 아래 런지 거리 시험은 지금 런지 그대로 본다
 //  node --test tools/sim/riso_reach.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,9 +14,7 @@ import { mordHitMul } from '../../src/mordschlag.js';
 import { lungeAt } from './riso_reach.mjs';
 
 const { SECRET } = CONFIG;
-const rs = CONFIG.realS;
 const withCfg = (vals, fn) => { const old = {}; for (const k of Object.keys(vals)) (old[k] = SECRET[k]), (SECRET[k] = vals[k]); try { return fn(); } finally { Object.assign(SECRET, old); } };
-const REACH = (keep = 0.4, fixed = 1) => ({ risolutoReach: 1, risolutoReachKeep: rs(keep), risolutoReachFixed: fixed });
 
 /** 창을 열고 곧장 내는 몸 (멈춘 상대 · 판 시작 발 묶임 뒤) — 돌려줌: 낸 요청 · 찌르는 동안 판정 배율 */
 function fireOnce({ gap = 2.2, w = 'rapier', foeW = 'longsword', seed = 9 } = {}) {
@@ -68,34 +66,10 @@ test('A: 같은 자리 같은 런지 — 판정 배율 0.5 의 심각도 < 1.3 �
 });
 
 
-/** 창 하나를 열고 칼끼리 가까움(feel.touching — bladesNear 가 그대로 읽음)을 nearS 실제 초 동안 주고 그 뒤 떨어뜨림 — 창이 닫힌 때(연 뒤 실제 s) */
-function windowLife({ nearS = 0, gap = 4.5, max = 3, onStep = null } = {}) {
-  const g = newRound({ weapon: 'rapier', weapon2: 'longsword', gap, seed: 9 });
-  const p = g.player, e = g.enemy;
-  g.ai.update = () => {}; p.foe = e; e.foe = p;
-  try {
-    for (let i = 0; i < Math.round((CONFIG.ARENA.startHold + 0.3) / DT); i++) g.step();
-    p.stamina.controller = new PlayerParryGuard(p, e);
-    const ps = new PlayerSecretWatch(p, e);
-    ps.openWindow({ ev: 'risoluto', path: 'touch', held: 0 });
-    const K = CONFIG.TIME.k;
-    let t = 0;
-    for (let i = 0; i < Math.round((max * K) / DT); i++) {
-      g.step();
-      t += DT;
-      p.feel.touching = t <= nearS * K + 1e-9; // 가슴 사이 4.5 m — 두 칼은 모양으로는 떨어져 있음(겨눈 칼끼리는 3.8 m 안팎까지 0.15 m 안) · 맞닿음 느낌만 줌
-      onStep?.(p, e, t / K);
-      ps.update(DT, !!p.skill.sec);
-      if (!ps.open) return { closed: t / K, ext: ps.riso.reachExt ?? 0 };
-    }
-    return { closed: null, ext: ps.riso.reachExt ?? 0 };
-  } finally { g.world.free(); }
-}
-
-// 11/11 사장님 "런지 거리는 0.45로 해" 뒤에도 아래 둘(B ② · B 켬)은 이 기록을 쓴 때의 장면(리솔루토 미끄러짐 0.6 = 고노센 iaiStep)으로 본다 — 옛 장면 재현 (0.45 판은 gk_ghost.test.mjs)
+// 11/11 사장님 "런지 거리는 0.45로 해" 뒤에도 아래는 이 기록을 쓴 때의 장면(리솔루토 미끄러짐 0.6 = 고노센 iaiStep)으로 본다 — 옛 장면 재현 (0.45 판은 gk_ghost.test.mjs)
 const SLIDE06 = (fn) => withCfg({ risolutoSlide: 0.6 }, fn);
 
-test('B 켬: 가까우면 맞음 · 먼 데서 내면 칼끝이 모자라 빗나감 (자동 겨눔은 줄만 — 모자란 거리를 메우지 않음)', () => SLIDE06(() => withCfg(REACH(), () => {
+test('런지: 가까우면 맞음 · 먼 데서 내면 칼끝이 모자라 빗나감 (자동 겨눔은 줄만 — 모자란 거리를 메우지 않음)', () => SLIDE06(() => {
   for (const gap of [1.9, 2.2]) {
     const r = lungeAt({ gap });
     assert.ok(r.hit && r.sev > 0, `${gap} m 맞음 ${JSON.stringify(r)}`);
@@ -106,4 +80,4 @@ test('B 켬: 가까우면 맞음 · 먼 데서 내면 칼끝이 모자라 빗나
     assert.equal(r.hit, false, `${gap} m 빗나감 ${JSON.stringify(r)}`);
     assert.ok(r.over < -0.1, `${gap} m 칼끝 모자람 ${r.over}`);
   }
-})));
+}));

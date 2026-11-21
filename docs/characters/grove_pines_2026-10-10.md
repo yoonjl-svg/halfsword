@@ -11,9 +11,9 @@
 
 | 각도 | 그림 |
 |---|---|
-| 폰 가로 844×420, 경기 카메라 | `docs/handoff/grove_before_phone.png` |
-| 넓은 화면 1600×900, 결투장 뒤에서 신목 쪽 | `docs/handoff/grove_before_wide.png` |
-| 싸우는 중 (6초) | `docs/handoff/grove_before_fight.png` |
+| 폰 가로 844×420, 경기 카메라 | `docs/handoff/grove_before_phone.png (지움 · 528c2dff)` |
+| 넓은 화면 1600×900, 결투장 뒤에서 신목 쪽 | `docs/handoff/grove_before_wide.png (지움 · 528c2dff)` |
+| 싸우는 중 (6초) | `docs/handoff/grove_before_fight.png (지움 · 528c2dff)` |
 
 **나무가 만들어지던 방식.** 줄기는 직접 짠 관(`trunkGeometry`: 둘레 나무 10각×5단, 신목 42각×18단)으로, `pineCenter` 의 사인 굽이와 세로 홈(flute)·밑동 부풂을 주었다. 가지는 열린 원기둥(`CylinderGeometry`) 두 토막 + 곁가지 두 개를 줄기 높이 42~85% 에 황금각으로 다섯 개(신목은 아홉 개) 꽂았고, 잎은 **정이십면체 하나(20삼각형, 신목은 80삼각형)를 위아래로 0.36배 눌러 만든 납작한 원반** 한 가지를 모든 가지 끝에 가로 1.65 : 높이 0.95 : 세로 1.1 비로 얹었다(인스턴스 두 묶음, 색 세 가지). 줄기·가지는 `Kit` 으로 재질별 한 메쉬에 합쳤다. 그래서 (1) 잎이 모두 같은 매끈한 원반이라 '접시를 꽂은 장대'처럼 보이고, (2) 줄기가 밑동부터 꼭대기까지 같은 회갈색이며, (3) 나무가 높이·굽이만 다를 뿐 한 꼴이었다. 신목은 거대한 홈 파인 줄기에 원반이 붙어 활엽 거목에 가까웠다. 안개는 선형 `Fog(0x9fbab5, 23, 102)` 와 먼 둘레의 반투명 원통 세 장.
 
@@ -21,11 +21,11 @@
 
 | 각도 | 그림 |
 |---|---|
-| 폰 가로 844×420, 경기 카메라 | `docs/handoff/grove_after_phone.png` |
-| 넓은 화면 1600×900, 결투장 뒤에서 신목 쪽 | `docs/handoff/grove_after_wide.png` |
-| 싸우는 중 (6초) | `docs/handoff/grove_after_fight.png` |
-| 반대쪽 숲 (도리이 쪽, 둘레 소나무 꼴 확인) | `docs/handoff/grove_after_forest.png` |
-| 다음 무대(산사)로 넘긴 뒤 — 안개가 남지 않음 | `docs/handoff/grove_after_next_stage.png` |
+| 폰 가로 844×420, 경기 카메라 | `docs/handoff/grove_after_phone.png (지움 · 528c2dff)` |
+| 넓은 화면 1600×900, 결투장 뒤에서 신목 쪽 | `docs/handoff/grove_after_wide.png (지움 · 528c2dff)` |
+| 싸우는 중 (6초) | `docs/handoff/grove_after_fight.png (지움 · 528c2dff)` |
+| 반대쪽 숲 (도리이 쪽, 둘레 소나무 꼴 확인) | `docs/handoff/grove_after_forest.png (지움 · 528c2dff)` |
+| 다음 무대(산사)로 넘긴 뒤 — 안개가 남지 않음 | `docs/handoff/grove_after_next_stage.png (지움 · 528c2dff)` |
 
 모두 절차적 지오메트리(Three.js 기본 도형 + 병합 + 정점 색). 외부 모델·텍스처 없음. 캡처 도구 `tools/browser/grove_shots.mjs`.
 
@@ -55,7 +55,7 @@
 
 - 싸움꾼 재질은 원래 안개를 받지 않는다(`fighter_light.js` `mat.fog = false`) — 두 사람은 거리와 상관없이 또렷하다. 결투장 바닥도 카메라에서 15m 안이라 안개 8% 아래.
 - 물안개 판의 안쪽·바깥쪽 가장자리는 정점 색(알파로만 씀)으로 옅어지고, 결투장 안에는 판 자체가 없어서 싸우는 자리 위로는 겹쳐 그리기가 없다.
-- **무대를 떠날 때**: `src/stages.js` 의 `Stages.build()` 가 새 무대를 짓기 전에 `restore()` 로 안개·하늘색을 처음 값(main.js 포세이돈 값)으로 되돌리고, `clear()` 가 이 무대의 메쉬·재질·텍스처(물안개 텍스처 포함)를 푼다. 그래서 무대 전환 자리는 고치지 않았다. 확인: 산사로 넘긴 뒤 `scene.fog` = `Fog(#d3d8d4, 40, 560)`(산사 자신의 값), 이름이 `grove-` 로 시작하는 물체 0개 (`grove_after_next_stage.png`).
+- **무대를 떠날 때**: `src/stages.js` 의 `Stages.build()` 가 새 무대를 짓기 전에 `restore()` 로 안개·하늘색을 처음 값(main.js 포세이돈 값)으로 되돌리고, `clear()` 가 이 무대의 메쉬·재질·텍스처(물안개 텍스처 포함)를 푼다. 그래서 무대 전환 자리는 고치지 않았다. 확인: 산사로 넘긴 뒤 `scene.fog` = `Fog(#d3d8d4, 40, 560)`(산사 자신의 값), 이름이 `grove-` 로 시작하는 물체 0개 (`grove_after_next_stage.png (지움 · 528c2dff)`).
 
 ## 4. 성능 (폰 가로 844×420, 경기 카메라, 두 사람 정지 · `tools/browser/stage_cost.mjs`)
 

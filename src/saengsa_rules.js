@@ -21,6 +21,8 @@
 //   rest = 이긴 팀에서 그 경기에 나서지 않아 쉰 사람마다 되찾은 것 { gain(되찾은 체력), steps: [{ part, from 'serious' | 'light' }], hp, injuries(쉰 뒤) } — 결과 카드 글 몫 (11/21 · 결승 뒤 · 옛 저장에는 없음)
 //   2단계 엔진(실제 싸움 — 2:2 · 11/20 부터 3:3 까지)도 같은 꼴을 돌려준다(matchSetup → 엔진 → finishMine · 설계 §8).
 //   downed = 코마(11/21 — 이긴 편에서 출혈 · 기절로 쓰러졌다 산 사람: 체력 SAENGSA.downedHp · 중상 하나 넘게 · saengsa_match.js resultFromMatch · 빠른 셈 quickResolve) — 결과 카드 '코마' · 옛 저장에는 없음
+//   쉼 물건 (11/21 E — config SAENGSA.items): 팀 items { aid: 응급처치약 수 } · boxes [다음 무기상자 무기 — 대회를 만들 때 뽑아 둠] · 내 팀 pool [이번 대회 무기 — 연 무기상자] ·
+//    결과 gift { 쉰 사람 열쇠: 받은 물건 } — 내 팀은 결과 화면에서 고름(null = 아직 · 다음 내 경기 전에 안 고르면 응급처치약) · { kind 'aid' } | { kind 'box', weapon } · 옛 저장(saengsa-4 까지)에는 없음(상자 더미가 없으면 응급처치약만)
 import { SAENGSA } from './config.js';
 import { roundAt, restUntil, startAt, signupWindow, windowOf, shiftDay, openAlways } from './saengsa_clock.js';
 import { NAMELESS_NAMES } from './saengsa_names.js';
@@ -30,7 +32,7 @@ export const SCHOOLS5 = Object.freeze(['german', 'italian', 'iberian', 'japanese
 export const NAMELESS = 'nameless';
 export const INJURY_PARTS = Object.freeze(['arm', 'leg', 'torso', 'head']);
 /** 저장한 결과의 판 (다시보기가 같은 셈인지 가린다 — 빠른 셈 · 엔진 셈이 바뀌면 올린다) */
-export const SAENGSA_VER = 'saengsa-3'; // 11/21 코마(이긴 편 쓰러짐 → 체력 10 + 중상 · 빠른 셈 즉사 몫) · 한 단계 나음 끝쪽 띠 · 나은 흔적 (전 'saengsa-2' — 빠른 셈 이긴 쪽 피해 · 수 몫 · 쉼 규칙 · 'saengsa-1')
+export const SAENGSA_VER = 'saengsa-7'; // 11/21 G 맵은 회차로 (16강 열린 원 · 8강 두 다리 · 4강 · 결승 성벽 안뜰 — 같은 씨앗이어도 맵이 바뀐 경기는 엔진 판이 다름) (전 'saengsa-6' — F 상대 팀 무기 여섯 · AI 물건 고르기 기대 이득 · 'saengsa-5' — E 쉼 물건(응급처치약 · 무기상자) · 'saengsa-4' — C 잘린 팔다리 · 이탈 · 빠른 셈 잘림 · 'saengsa-3' — 코마(이긴 편 쓰러짐 → 체력 10 + 중상 · 빠른 셈 즉사 몫) · 한 단계 나음 끝쪽 띠 · 나은 흔적 (전 'saengsa-2' — 빠른 셈 이긴 쪽 피해 · 수 몫 · 쉼 규칙 · 'saengsa-1')
 
 // ── 씨앗 난수 (게임 난수 Math.random 을 건드리지 않는다) ──
 /** 글 · 수 묶음 → 32 비트 씨앗 (FNV-1a) */
@@ -51,6 +53,8 @@ export function rng(seed) {
   };
 }
 const pickOne = (r, list) => list[Math.min(list.length - 1, Math.floor(r() * list.length))];
+/** 무게 표 { 열쇠: 무게 } 에서 하나 */
+const pickWeighted = (r, table) => { const e = Object.entries(table), sum = e.reduce((s, [, w]) => s + w, 0); let u = r() * sum; for (const [k, w] of e) { if ((u -= w) < 0) return k; } return e.at(-1)[0]; };
 function shuffle(r, list) {
   const a = [...list];
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -78,7 +82,7 @@ export const roundsOf = (teamCount) => Math.round(Math.log2(teamCount));
  *  상대 팀: 무기 묶음 = makePool(drawPool(rnd, SAENGSA.aiPool.size — 아홉)) → aiArm 이 사람마다 나눠 줌 (사장님 10/29 19:5x · 11/19 — 전 10/29 '전용무기를 포함해서' 먼저 넣던 것을 걷음)
  *  weaponInfo(id) → { school, tier } · profOf(인물 id) → { german … chinese, none }
  */
-export function createTournament({ day, seed, at, companions, roster, weapons = [], broken = [], drawWeapon, drawPool = null, signatureOf = null, weaponInfo, profOf, cfg = SAENGSA }) {
+export function createTournament({ day, seed, at, companions, roster, weapons = [], broken = [], drawWeapon, drawPool = null, signatureOf = null, weaponInfo, profOf, owned = [], cfg = SAENGSA }) {
   const sigOf = signatureOf ?? ((id) => cfg.signature?.[id] ?? null);
   const n = bracketTeams(cfg), size = cfg.teamSize, r = rng(seed);
   const usedNames = new Set();
@@ -110,6 +114,12 @@ export function createTournament({ day, seed, at, companions, roster, weapons = 
   for (let rd = 0; rd < roundsOf(n); rd++) {
     for (let i = 0; i < n >> (rd + 1); i++) matches.push({ id: `r${rd}m${i}`, round: rd, index: i, a: rd ? null : seats[2 * i], b: rd ? null : seats[2 * i + 1], result: null });
   }
+  // 무기상자 더미 (11/21 E): 팀마다 따로 씨앗(대진 · 무기 묶음 뽑기와 섞이지 않게) · 상대 팀 무기 묶음과 같은 뽑기 · 그 팀이 이미 가진 무기(내 팀 = 가진 무기 · 상대 = 무기 묶음)는 빼고
+  teams.forEach((team, i) => {
+    const have = i === 0 ? [...owned] : (team.pool ?? []).map((w) => w.weapon);
+    team.items = { aid: 0 };
+    team.boxes = makePool(rng(hash32(seed, 'box', i)), [], { drawPool: drawPool && ((r, n) => drawPool(r, n, have)), drawWeapon: (r) => { for (let k = 0; k < 16; k++) { const w = drawWeapon(r); if (!have.includes(w)) return w; } return drawWeapon(r); }, weaponInfo }, { ...cfg, aiPool: { ...cfg.aiPool, size: cfg.items.boxStock } });
+  });
   return { v: 1, day, seed: seed >>> 0, signedAt: at, teams, matches, status: 'active', champion: null, endedAt: null, chests: null, broken: [...new Set(broken)] };
 }
 
@@ -167,7 +177,7 @@ export function armScore(f, w, cfg = SAENGSA) {
 export function aiArm(team, cfg = SAENGSA) {
   const pool = team?.pool;
   if (!Array.isArray(pool) || !pool.length || team.mine) return false;
-  const alive = team.members.filter((f) => !f.dead);
+  const alive = team.members.filter((f) => pickable(f, cfg)); // 이탈한 사람은 무기를 받지 않음 (11/21 C — 마지막 무기 그대로)
   const k = Math.min(alive.length, pool.length);
   const score = alive.map((f) => pool.map((w) => armScore(f, w, cfg)));
   let best = null, bestSum = -Infinity;
@@ -239,11 +249,11 @@ export function validAssignment(weapons, owned, only = [0, 1, 2], cfg = SAENGSA)
   if (!used.every((w) => typeof w === 'string' && owned.includes(w))) return false;
   return !cfg.assignUnique || new Set(used).size === used.length;
 }
-/** 경기 전 내 팀 무기 바꾸기 (살아 있는 사람만 — 죽은 사람은 그대로): weapons [나, 동료 1, 동료 2] · 돌려줌: 바꿨나(틀리면 아무것도 안 바꿈) ·
+/** 경기 전 내 팀 무기 바꾸기 (나설 수 있는 사람만 — 죽은 사람 · 이탈한 사람(11/21 C)은 그대로): weapons [나, 동료 1, 동료 2] · 돌려줌: 바꿨나(틀리면 아무것도 안 바꿈) ·
  *  가진 무기면 무엇이든 — 상대 팀이 같은 전용무기를 들었어도 (팀마다 하나 — 사장님 11/18 · 전 lockedSignatures 로 막던 것을 걷음) */
 export function assignWeapons(t, weapons, { owned, weaponInfo }, cfg = SAENGSA) {
   const members = t?.teams?.[0]?.members ?? [];
-  const alive = members.map((f, i) => (f.dead ? -1 : i)).filter((i) => i >= 0);
+  const alive = members.map((f, i) => (pickable(f, cfg) ? i : -1)).filter((i) => i >= 0);
   if (!validAssignment(weapons, owned, alive, cfg)) return false;
   const broken = new Set(t.broken ?? []);
   for (const i of alive) {
@@ -321,8 +331,115 @@ export function myMatch(t) {
 export const isSerious = (inj, cfg = SAENGSA) => inj.sev >= cfg.seriousAt;
 /** 나은 흔적인가 (경상이 쉬어 나은 자리 — sev < woundMin): 부상이 아님 · 실제 싸움에만 닫힌 상처로 들고 감 */
 export const isTrace = (inj, cfg = SAENGSA) => !(inj?.sev >= cfg.woundMin);
+/** 이탈인가 (11/21 C — 칼 팔이나 다리를 잃음 · SAENGSA.outLimbs): 살아 있으나 그 대회에 다시 나서지 못함 */
+export const isOut = (f, cfg = SAENGSA) => (f?.lost ?? []).some((l) => cfg.outLimbs.includes(l));
+/** 나설 수 있나 (살아 있음 · 이탈 아님) */
+export const pickable = (f, cfg = SAENGSA) => !!f && !f.dead && !isOut(f, cfg);
 /** 부상만 (나은 흔적을 뺌) — 부상 줄 · 힘 · 쉼 단계 · 고르기가 읽는 목록 */
 export const injuriesOf = (list, cfg = SAENGSA) => (list ?? []).filter((i) => !isTrace(i, cfg));
+// ── 쉼 물건 (11/21 E — config SAENGSA.items) ──
+const itemsOf = (team) => (team.items ??= { aid: 0 });
+/** 팀이 가진 응급처치약 수 */
+export const aidCount = (team) => team?.items?.aid ?? 0;
+/** 내 팀이 경기마다 배정에서 고를 수 있는 무기 = 가진 무기 + 이번 대회 무기(연 무기상자 — 내 팀 pool). F(대회 무기 목록)가 오면 여기 한 곳 */
+export const teamWeapons = (t, owned) => [...new Set([...(owned ?? []), ...(t?.teams?.[0]?.pool ?? []).map((w) => w.weapon)])];
+/** 무기상자 열기: 팀 상자 더미의 다음 무기 → 팀 무기(pool). 더미가 없으면(옛 저장 · 다 씀) null */
+export function openBox(team) {
+  const w = team?.boxes?.shift();
+  if (!w) return null;
+  (team.pool ??= []).push({ ...w });
+  return w;
+}
+/** 응급처치약 쓰기: 산 사람의 그 부위 부상(나은 흔적 말고) 한 단계(healStep) · 체력 그대로 · 돌려줌 { part, from } | null (약이 없음 · 사람 · 부상이 없음) */
+export function useAid(team, key, part, cfg = SAENGSA) {
+  const items = itemsOf(team), f = team.members.find((x) => x.key === key && !x.dead);
+  const i = f ? f.injuries.findIndex((x) => x.part === part && !isTrace(x, cfg)) : -1;
+  if (!(items.aid > 0) || i < 0) return null;
+  const from = isSerious(f.injuries[i], cfg) ? 'serious' : 'light';
+  f.injuries[i] = healStep(f.injuries[i], cfg);
+  items.aid--;
+  return { part, from };
+}
+/** AI 팀의 다음 경기 값 = 다음 경기에 나설 사람(aiPick)의 빠른 셈 힘(power) 합 */
+function teamValue(team, cfg, final) {
+  return aiPick(team.members, cfg, { final }).reduce((s, k) => s + power(team.members.find((f) => f.key === k), cfg), 0);
+}
+/**
+ * AI 가 고르는 물건 (11/21 F — 사장님 'ai도 상황에 따라 무기상자나 응급처치약을 고르게 해.' · 전 E: 부러진 무기 · 숙련도 0 무기가 있으면 상자):
+ *  두 물건의 기대 이득을 같은 잣대(다음 경기에 나설 사람의 빠른 셈 힘 합 — teamValue)로 견줘 큰 쪽 · 같으면 응급처치약. 난수 없음.
+ *  응급처치약 = 나설 수 있는 사람의 부상 하나를 한 단계 낫게 할 때 가운데 가장 큰 이득 (이미 가진 약은 먼저 쓴 몸에서 — aiUseAids 와 겹치지 않게)
+ *  무기상자 = 남은 상자 더미의 무기 하나하나를 무기 묶음에 더해 다시 나눠 줄 때(aiArm)의 이득 평균 — 다음 상자가 무엇인지는 보지 않음(더미 = 같은 뽑기의 표본) · 더미가 없으면 고르지 않음
+ *  final = 다음 경기가 결승인가 (결승은 산 사람 모두 나섬 — aiPick)
+ */
+export function aiGift(team, cfg = SAENGSA, { final = false } = {}) {
+  const now = structuredClone(team);
+  aiUseAids(now, cfg);
+  const base = teamValue(now, cfg, final);
+  let aid = 0;
+  for (const f of now.members) {
+    if (!pickable(f, cfg)) continue;
+    for (const inj of injuriesOf(f.injuries, cfg)) {
+      const keep = f.injuries;
+      f.injuries = keep.map((x) => (x === inj ? healStep(x, cfg) : x));
+      aid = Math.max(aid, teamValue(now, cfg, final) - base);
+      f.injuries = keep;
+    }
+  }
+  const stock = team.boxes ?? [];
+  if (!stock.length || !Array.isArray(team.pool)) return 'aid';
+  let box = 0;
+  for (const w of stock) {
+    const c = structuredClone(now);
+    c.pool.push({ ...w });
+    aiArm(c, cfg);
+    box += teamValue(c, cfg, final) - base;
+  }
+  return box / stock.length > aid + 1e-12 ? 'box' : 'aid';
+}
+/** AI 응급처치약 쓰기: 약이 있는 동안 — 고치면 빠른 셈 힘이 가장 많이 오르는 사람의 그 부상부터(나설 수 있는 사람만) */
+export function aiUseAids(team, cfg = SAENGSA) {
+  for (;;) {
+    if (!(aidCount(team) > 0)) return;
+    let best = null;
+    for (const f of team.members) {
+      if (!pickable(f, cfg)) continue;
+      const p0 = power(f, cfg);
+      for (const inj of injuriesOf(f.injuries, cfg)) {
+        const g = power({ ...f, injuries: f.injuries.map((x) => (x === inj ? healStep(x, cfg) : x)) }, cfg) - p0;
+        if (!best || g > best.g + 1e-12) best = { key: f.key, part: inj.part, g };
+      }
+    }
+    if (!best || !(best.g > 0)) return;
+    useAid(team, best.key, best.part, cfg);
+  }
+}
+/** 물건 받기 (쉰 사람 하나에 하나 — applyResult 의 rest 뒤): 내 팀 = 고를 몫(null) · AI 팀 = aiGift 대로 바로(상자는 열어 무기 묶음에 · 다시 나눠 줌) 뒤 약을 씀. 돌려줌: gift */
+function giveItems(team, keys, cfg, final = false) {
+  const gift = {};
+  for (const k of keys) {
+    if (team.mine) { gift[k] = null; continue; }
+    const kind = aiGift(team, cfg, { final }), w = kind === 'box' ? openBox(team) : null; // 상황에 따라 (11/21 F — 한 사람 몫마다 앞 몫을 쓴 뒤의 팀으로 다시 견줌)
+    if (w) { gift[k] = { kind: 'box', weapon: w.weapon }; aiArm(team, cfg); }
+    else { itemsOf(team).aid++; gift[k] = { kind: 'aid' }; }
+    aiUseAids(team, cfg);
+  }
+  return gift;
+}
+/** 내 팀 물건 고르기 (결과 화면 — 쉰 사람마다 응급처치약 · 무기상자 하나): 돌려줌 받은 것 | null (고를 몫이 아님 · 이미 고름 · 상자가 없음) */
+export function takeGift(t, m, key, kind, cfg = SAENGSA) {
+  const g = m?.result?.gift;
+  if (!g || !Object.hasOwn(g, key) || g[key] != null || !key.startsWith('0-')) return null;
+  const team = t.teams[0];
+  if (kind === 'box') { const w = openBox(team); if (!w) return null; g[key] = { kind: 'box', weapon: w.weapon }; }
+  else if (kind === 'aid') { itemsOf(team).aid++; g[key] = { kind: 'aid' }; }
+  else return null;
+  return g[key];
+}
+/** 고르지 않은 내 물건 = 응급처치약 (다음 내 경기를 적기 전 · 기권 전) */
+function settleGifts(t, cfg) {
+  for (const m of t.matches) for (const [k, v] of Object.entries(m.result?.gift ?? {})) if (v == null && k.startsWith('0-')) takeGift(t, m, k, 'aid', cfg);
+}
+
 /** 부상 몫 (빠른 셈 힘 · 무기 나눠 주기 — 부상 하나마다 × 경상 · 중상 값 · 나은 흔적은 안 셈) */
 const injuryK = (f, cfg) => injuriesOf(f.injuries, cfg).reduce((k, i) => k * (isSerious(i, cfg) ? cfg.quick.injuryK.serious : cfg.quick.injuryK.light), 1);
 /** 부상 더하기: 같은 부위에 이미 있으면 더 깊은 쪽 심각도로 · 쉰 수는 0 부터 (나은 흔적 자리를 또 다치면 새 부상이 덮음 — 새 부상은 늘 woundMin 이상) */
@@ -379,7 +496,7 @@ export function power(f, cfg = SAENGSA) {
   const q = cfg.quick;
   const prof = profFor(f);
   const hpK = q.hpFloor + (1 - q.hpFloor) * Math.max(0, Math.min(cfg.hpMax, f.hp)) / cfg.hpMax;
-  return (q.profBase + q.profStep * prof) * (q.tierK[f.tier] ?? 1) * hpK * injuryK(f, cfg) * (f.broken ? q.brokenK : 1);
+  return (q.profBase + q.profStep * prof) * (q.tierK[f.tier] ?? 1) * hpK * injuryK(f, cfg) * (f.broken ? q.brokenK : 1) * (f.lost?.includes('armO') ? q.oneArmK : 1); // 빈손 팔을 잃음 (11/21 C)
 }
 /** 나서는 쪽의 힘 = 힘 합 × 수 몫 (countK — 하나 · 둘 · 셋) */
 export function sidePower(list, cfg = SAENGSA) {
@@ -396,6 +513,7 @@ export function winChance(a, b, cfg = SAENGSA) {
  *  진 쪽 한 사람 = loseDmg 만큼 체력을 잃고 injury.lose 확률로 새 부상.
  *  이긴 쪽 한 사람 (11/21 — 설계안 §2-4 · P = 이긴 편의 경기 전 이김 확률): winDie 확률로 쓰러짐 · 아니면 0 ~ winLoss 체력을 잃고 winInjury 확률로 새 부상(심각도 injurySev).
  *   쓰러짐(11/21 코마 — 엔진 resultFromMatch 와 같은 뜻): winInstant 몫은 즉사(죽음) · 나머지는 코마(체력 downedHp + 중상 하나 · downed) · 잃은 체력이 남은 체력 이상이어도 코마(피를 다 흘림).
+ *   잘림(11/21 C — 엔진 재기 몫 winSever): 산 사람마다 out 확률로 이탈(칼 팔 · 다리 — lost · 그 부위 중상) · 아니면 armO 확률로 빈손 팔(lost armO · 팔 중상).
  *  이긴 쪽은 적어도 한 사람이 산다(모두 즉사면 경기 전 체력이 가장 많던 사람이 체력 1 로)
  */
 export function quickResolve(sides, seed, cfg = SAENGSA) {
@@ -424,6 +542,16 @@ export function quickResolve(sides, seed, cfg = SAENGSA) {
       else fighters[f.key] = { hp, injuries, alive: hp > 0 };
     }
   }
+  // 잘림 (11/21 C — 앞 굴림 다음): 이긴 쪽 산 사람만(진 쪽은 대회에서 빠짐 · 죽은 사람은 셈 없음)
+  for (const f of sides[winner]) {
+    const o = fighters[f.key];
+    if (!o.alive) continue;
+    const u = r(), S = q.winSever;
+    const limb = u < S.out ? pickWeighted(r, S.outSplit) : u < S.out + S.armO ? 'armO' : null;
+    if (!limb) continue;
+    o.lost = [...new Set([...(f.lost ?? []), limb])];
+    o.injuries = addInjury(o.injuries, limb.startsWith('arm') ? 'arm' : 'leg', heavy());
+  }
   const team = sides[winner];
   if (team.length && team.every((f) => !fighters[f.key].alive)) {
     const best = team.reduce((x, y) => (y.hp > x.hp ? y : x));
@@ -444,7 +572,7 @@ export function quickResolve(sides, seed, cfg = SAENGSA) {
  *  11/21 쉼 규칙(나서지 않은 사람만 + 35 · 한 단계 — rest) 아래 어림으로 정함(기록 docs/strike/saengsa_rest_2026-11-21.md) · 전 '체력 aiPairHp 40 이상 모두 · 둘 밑이면 가장 센 하나'
  */
 export function aiPick(members, cfg = SAENGSA, { final = false } = {}) {
-  const alive = members.filter((f) => !f.dead).sort((x, y) => power(y, cfg) - power(x, cfg) || (x.key < y.key ? -1 : 1)).slice(0, cfg.entrantsMax);
+  const alive = members.filter((f) => pickable(f, cfg)).sort((x, y) => power(y, cfg) - power(x, cfg) || (x.key < y.key ? -1 : 1)).slice(0, cfg.entrantsMax); // 이탈한 사람은 빼고 (11/21 C)
   const sit = !final && alive.length > 2 && alive.at(-1).hp < cfg.aiThirdHp; // 셋째가 지쳤으면 쉼
   return (sit ? alive.slice(0, -1) : alive).map((f) => f.key);
 }
@@ -466,6 +594,7 @@ export function applyResult(t, m, { winner, fighters, entrants, by = 'quick' }, 
       const o = fighters[f.key];
       if (!o) continue;
       f.hp = o.hp; f.injuries = o.injuries.map((i) => ({ ...i, sev: Math.max(0, Math.min(1, i.sev)) })); f.dead = !o.alive; // 실제 싸움 상처 심각도는 1 을 넘을 수 있다(2단계 — 2.23 까지) → 0 ~ 1
+      if (o.lost?.length) f.lost = [...new Set([...(f.lost ?? []), ...o.lost])]; // 잘린 팔다리는 대회 끝까지 (11/21 C — 결과에 없어도 지우지 않음)
       if (o.broken) { // 부러진 무기는 대회 끝까지 (사장님 10/29 20:1x): 내 팀 = t.broken · 상대 팀 = 무기 묶음의 그 줄
         f.broken = true;
         if (t.teams[team].mine) t.broken = [...new Set([...(t.broken ?? []), f.weapon])];
@@ -476,13 +605,19 @@ export function applyResult(t, m, { winner, fighters, entrants, by = 'quick' }, 
   const W = winner === 'a' ? A : B;
   if (m.round < roundsOf(t.teams.length) - 1) { // 이긴 팀은 쉼 (11/21 — 나서지 않은 사람만) · 이긴 상대 팀은 쉰 몸 · 죽음에 맞춰 무기를 다시 나눔 (사장님 10/29 19:5x)
     const healed = rest(t.teams[W].members, entrants[winner] ?? [], cfg);
-    if (Object.keys(healed).length) m.result.rest = healed;
+    if (Object.keys(healed).length) { m.result.rest = healed; m.result.gift = giveItems(t.teams[W], Object.keys(healed), cfg, m.round + 1 >= roundsOf(t.teams.length) - 1); } // 쉰 사람마다 물건 하나 (11/21 E · F — 다음 경기가 결승인가)
     aiArm(t.teams[W], cfg);
   }
   else { t.status = 'done'; t.champion = W; t.endedAt = at; }
   return m.result;
 }
 const membersOf = (t, team, keys) => keys.map((k) => t.teams[team].members.find((f) => f.key === k)).filter(Boolean);
+/** 내 경기에서 나설 사람이 없는 팀 (11/21 C — 모두 죽음 · 이탈): 'mine' · 'foe' · null (둘 다면 내 팀) */
+function noneLeft(t, m) {
+  const [A, B] = sidesOf(t, m), foe = A === 0 ? B : A;
+  if (!t.teams[0].members.some((f) => pickable(f))) return 'mine';
+  return foe != null && !t.teams[foe].members.some((f) => pickable(f)) ? 'foe' : null;
+}
 /**
  * 지금까지 끝날 경기를 저절로 끝낸다 (대진 차례대로): 상대끼리 경기 = 빠른 셈(결과 시각 = 그 경기를 시작할 수 있던 시각) ·
  *  마감(deadlineOf)까지 하지 않은 내 경기 = 기권(결과 시각 = 마감과 시작할 수 있던 시각 중 늦은 쪽 · 체력 · 부상 그대로). 돌려줌: 끝낸 경기 수
@@ -493,7 +628,7 @@ export function advance(t, now, cfg = SAENGSA) {
   const dueAt = (m) => {
     const at = readyAt(t, m, cfg);
     if (at == null) return Infinity;
-    if (isMine(t, m)) return openAlways(cfg) ? Infinity : Math.max(at, deadline);
+    if (isMine(t, m)) return noneLeft(t, m) ? at : openAlways(cfg) ? Infinity : Math.max(at, deadline); // 한 팀에 나설 사람이 없으면(모두 죽음 · 이탈 — 11/21 C) 곧바로 기권
     return at;
   };
   let n = 0;
@@ -502,12 +637,18 @@ export function advance(t, now, cfg = SAENGSA) {
     if (!m) break;
     const [A, B] = sidesOf(t, m), at = noWait(cfg) && !isMine(t, m) ? now : dueAt(m); // 기다림 없는 판의 상대끼리 경기는 셈한 때 (시험판 내 경기는 여기 오지 않음)
     if (isMine(t, m)) {
-      const mineSide = A === 0 ? 'a' : 'b';
-      applyResult(t, m, { winner: mineSide === 'a' ? 'b' : 'a', fighters: {}, entrants: { a: [], b: [] }, by: 'forfeit' }, at, cfg);
+      settleGifts(t, cfg); // 고르지 않은 내 물건은 응급처치약으로 (11/21 E)
+      const mineSide = A === 0 ? 'a' : 'b', foeGone = noneLeft(t, m) === 'foe'; // 상대 팀에 나설 사람이 없으면 상대 기권 (11/21 C) · 그 밖(마감 · 내 팀에 나설 사람 없음)은 내 기권
+      applyResult(t, m, { winner: (mineSide === 'a') === foeGone ? 'a' : 'b', fighters: {}, entrants: { a: [], b: [] }, by: 'forfeit' }, at, cfg);
     } else {
       const final = isFinal(t, m), entrants = { a: aiPick(t.teams[A].members, cfg, { final }), b: aiPick(t.teams[B].members, cfg, { final }) };
-      const res = quickResolve({ a: membersOf(t, A, entrants.a), b: membersOf(t, B, entrants.b) }, hash32(t.seed, m.id), cfg);
-      applyResult(t, m, { ...res, entrants, by: 'quick' }, at, cfg);
+      if (!entrants.a.length || !entrants.b.length) { // 나설 사람이 없는 팀(모두 죽음 · 이탈 — 11/21 C)은 기권으로 짐 · 둘 다 없으면 씨앗 굴림
+        const winner = entrants.a.length ? 'a' : entrants.b.length ? 'b' : rng(hash32(t.seed, m.id))() < 0.5 ? 'a' : 'b';
+        applyResult(t, m, { winner, fighters: {}, entrants: { a: [], b: [] }, by: 'forfeit' }, at, cfg);
+      } else {
+        const res = quickResolve({ a: membersOf(t, A, entrants.a), b: membersOf(t, B, entrants.b) }, hash32(t.seed, m.id), cfg);
+        applyResult(t, m, { ...res, entrants, by: 'quick' }, at, cfg);
+      }
     }
     n++;
     if (t.status === 'done') break;
@@ -517,10 +658,11 @@ export function advance(t, now, cfg = SAENGSA) {
 /** 내가 고른 사람이 맞나 (내 팀 · 살아 있음 · 무기를 받음(11/18 — 첫 경기 무기 배정 전에는 없음) · 1 ~ entrantsMax · 겹치지 않음) */
 export function validPicks(t, picks, cfg = SAENGSA) {
   if (!Array.isArray(picks) || picks.length < 1 || picks.length > cfg.entrantsMax || new Set(picks).size !== picks.length) return false;
-  return picks.every((k) => t.teams[0].members.some((f) => f.key === k && !f.dead && typeof f.weapon === 'string'));
+  return picks.every((k) => t.teams[0].members.some((f) => f.key === k && pickable(f, cfg) && typeof f.weapon === 'string')); // 이탈한 사람은 못 나섬 (11/21 C)
 }
 /**
- * 내 경기 판 (2단계 엔진에 넘기는 꼴 — 설계 §8): { matchId, round, seed, mineSide, sides: { a: [사람], b: [사람] }, entrants: { a, b }, control }
+ * 내 경기 판 (2단계 엔진에 넘기는 꼴 — 설계 §8): { matchId, round, rounds, seed, mineSide, sides: { a: [사람], b: [사람] }, entrants: { a, b }, control }
+ *  rounds = 대회 회차 수 (11/21 G — 맵은 회차로: saengsa_maps.js saengsaMapOf(round, rounds))
  *  control = 'player'(내가 나섬 — 내 몸은 내가 · 함께 나선 동료는 AI) · 'watch'(동료만 — 지켜봄) (사장님 10/29 14:2x · 14:5x).
  *  상대 고름은 여기서(내 고름과 무관 — 가린 채 함께 고르고 입장 때 함께 보임). 지금 싸울 수 없으면(내 경기가 아님 · 시각 전 · 마감 뒤 · 고름이 틀림) null
  */
@@ -530,7 +672,7 @@ export function matchSetup(t, m, picks, now, cfg = SAENGSA) {
   const entrants = { [mineSide]: [...picks], [mineSide === 'a' ? 'b' : 'a']: aiPick(t.teams[foe].members, cfg, { final: isFinal(t, m) }) };
   const team = (side) => (side === 'a' ? A : B);
   return {
-    matchId: m.id, round: m.round, seed: hash32(t.seed, m.id), mineSide, entrants,
+    matchId: m.id, round: m.round, rounds: roundsOf(t.teams.length), seed: hash32(t.seed, m.id), mineSide, entrants,
     sides: { a: structuredClone(membersOf(t, team('a'), entrants.a)), b: structuredClone(membersOf(t, team('b'), entrants.b)) },
     control: picks.includes('0-0') ? 'player' : 'watch',
   };
@@ -549,6 +691,7 @@ export function resumeOf(t, matchId, cfg = SAENGSA) {
 export function finishMine(t, m, picks, now, engineResult = null, cfg = SAENGSA) {
   const setup = matchSetup(t, m, picks, now, cfg);
   if (!setup) return null;
+  settleGifts(t, cfg); // 고르지 않은 내 물건은 응급처치약으로 (11/21 E)
   const res = engineResult ?? quickResolve(setup.sides, setup.seed, cfg);
   return applyResult(t, m, { winner: res.winner, fighters: res.fighters, entrants: setup.entrants, by: engineResult ? 'engine' : 'quick' }, now, cfg);
 }

@@ -62,7 +62,7 @@ const range = (s) => {
 //  값은 판정에 들어간 맞음의 분포 위끝(빨라짐 p99 390 m/s² · 순간 이동 p99 5.5 m/s — docs/strike/speed_cap_2026-10-23.md §3-1)
 export const FILTER = { jump: 1200, tel: 8 };
 const MIX_WEAPONS = ['longsword', 'zweihander', 'flamberge', 'uchigatana', 'rapier', 'morgenstern', 'druid_whip', 'kriegsmesser', 'qinggang'];
-// 사람 손가락 흉내: unique_study_player.mjs 의 손가락 봇과 같은 꼴(60 Hz 프레임마다 손 자리 이동 · 쥠 · 1.35 ~ 1.85 m 간격 · 공격 결정의 15 % 는 탭 찌르기)에
+// 사람 손가락 흉내: 옛 unique_study_player.mjs(11/21 지움)의 손가락 봇과 같은 꼴(60 Hz 프레임마다 손 자리 이동 · 쥠 · 1.35 ~ 1.85 m 간격 · 공격 결정의 15 % 는 탭 찌르기)에
 //  긋기 손 빠르기를 셋 중 하나로 — 4 패드/s(unique_study_player 와 같음) · 7 · 10(druid_whip.mjs swing 의 0.12 s 긋기 꼴). 긋기 길은 AI 기술 길(ai_techniques.js TECH) 열둘. 막기 · 비기 없음
 const PBOT = { speeds: [4, 7, 10], opps: ['longsword', 'zweihander'] };
 const BINS = [[30, 35], [35, 45], [45, 60], [60, Infinity]];

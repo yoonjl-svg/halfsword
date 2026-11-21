@@ -24,8 +24,8 @@
 - AI: 겨눈 지 1.5초 뒤(`aiFirst`), 총신이 가슴에서 12° 안(`aiAimTol`, 지금 `gun.js` 값은 3°)일 때만 쏜다.
 - 칼 싸움 불변: fights12 · hybrid fights12 · live_battery 모두 전과 바이트 동일. weapon_smoke 는 권총 줄만 달라짐.
 - 권총 수치 (전 → 후): ability_test 권총 12판 승률 100%(12-0, 명중 40/40) → **83%(10-2, 35/37)**. gun_dummy 세기 표 그대로. 반동 약 27°(팔을 뻗어 커짐). 가만히 겨눌 때 총신은 가슴에서 평균 약 10°(대개 아래로 5°) 벗어남. AI 명중: 랴오·이졸데 12/12, 브란(가만한 상대) 4/12.
-- 스크린샷: `docs/handoff/pistol_pose_v1.jpg` (겨눔·장전, 기본 카메라 844×390 + 옆), 콘솔 에러 0.
-- 자세 이름 표시: 사장님 결정 **"사격 자세"**. 문구는 gun.js `GUN_STANCE`, main.js `updateGuardName` 에 이음 한 곳(권총이면 GUARDS 대신 GUN_STANCE — 권총이 아니면 전과 같다). 브라우저 확인: 권총 "사격 자세", 롱소드 "긴 자세" 그대로, 콘솔 에러 0. 스크린샷 `docs/handoff/pistol_stance_label.jpg`.
+- 스크린샷: `docs/handoff/pistol_pose_v1.jpg (지움 · b2cc82f5)` (겨눔·장전, 기본 카메라 844×390 + 옆), 콘솔 에러 0.
+- 자세 이름 표시: 사장님 결정 **"사격 자세"**. 문구는 gun.js `GUN_STANCE`, main.js `updateGuardName` 에 이음 한 곳(권총이면 GUARDS 대신 GUN_STANCE — 권총이 아니면 전과 같다). 브라우저 확인: 권총 "사격 자세", 롱소드 "긴 자세" 그대로, 콘솔 에러 0. 스크린샷 `docs/handoff/pistol_stance_label.jpg (지움 · ca882b1f)`.
 
 ## 무기 유형·동작 라이브러리 (사장님: "분류에 이어 동작 개발까지 쭉 — 다음 버전에 쓰인다", 자율 작업)
 - 분류: `src/weapon_class.js` — 몸 틀(A 양손 보통·B 양손 앞무게·C 한손·D 사격·E 자루 무기) × 싸움 방식(두루·베기·찌르기·때리기·사격)을 질량 분포·배율로 자동 판정한다.
@@ -33,7 +33,7 @@
   - 표 도구: `tools/sim/weapon_classes.mjs`
 - 동작 라이브러리: `src/motion_library.js` (기본 꺼짐)
   - 몸 틀별 자세표, 방식별 기술, 런지·흐름 덧씌우기, 막기 덧씌우기 시제품
-  - 점검 도구: `tools/sim/motion_lab.mjs` (poses·swings·tap·duel·parry), `tools/browser/motion_gallery.mjs` → `docs/handoff/motion_gallery.jpg`
+  - 점검 도구: `tools/sim/motion_lab.mjs` (poses·swings·tap·duel·parry), `tools/browser/motion_gallery.mjs` → `docs/handoff/motion_gallery.jpg (지움 · 8990e7ad)`
 - 게임에 닿는 곳:
   - `guards.js` guardAt 이 `out.table` 을 읽는 한 줄 (없으면 예전 그대로)
   - `weapons.js` 모노호시자오 `motionSkip` 한 칸 (라이브러리만 읽는다)
@@ -205,7 +205,7 @@
 - 새 그림(weapon_looks.js `drawPistol(group, style)`): 손잡이가 총신에서 105°(리볼버 110°) 꺾여 아래·뒤로 내려오고 주먹은 손잡이 윗부분을 쥔다. 방아쇠울·공이치기가 보인다. 겨누는 자세에서 칼 몸체 −x 가 위(게임 화면에서 월드 y −0.99 로 확인).
   - **A 부싯돌식**: 팔각 총신을 나무 몸통이 총구 가까이까지 받치고, 놋쇠 앞마개·꽂을대, 옆 격발판·치기쇠·부싯돌 문 공이치기, 긴 놋쇠 방아쇠울, 휜 나무 손잡이 끝 놋쇠 마개.
   - **B 리볼버**: 여섯 모 약실·검은 강철 틀·윗줄 있는 총신·이젝터 막대·젖힌 공이치기·검은 고무 손잡이.
-  - 비교 이미지 `docs/handoff/pistol_look_v1.png` (위 카드 그림 · 가운데 기본 카메라 844×390 · 아래 손에 든 권총을 바로 옆에서), 만드는 도구 `tools/browser/pistol_look.mjs`.
+  - 비교 이미지 `docs/handoff/pistol_look_v1.png (지움 · bcc4ff71)` (위 카드 그림 · 가운데 기본 카메라 844×390 · 아래 손에 든 권총을 바로 옆에서), 만드는 도구 `tools/browser/pistol_look.mjs`.
 - 카드 그림: `spec.thumbScale` 0.6 — 같은 틀·여백에서 권총만 작게(weapon_thumbs_page.js 한 줄). 고르시기 전까지 기본은 A 로 뽑아 둠.
 - **물리는 이번에 안 바꿨다** (콜라이더·질량·총구 bladePoint(1)=0.20 m·발사 광선 그대로). 손잡이가 아래로 꺾여 콜라이더(칼 축을 따라 선 상자) 밖으로 약 9 cm 나온다 — 근접 판정이 없는 무기라 그대로 둠.
   - 참고: 바로 앞 커밋(968e4ed, 사장님 "짧은 권총으로 줄여줘")에서 물리를 바꿨다 — 손~총구 0.32 → 0.20 m, 몸통 콜라이더 0.26 → 0.15 m, 회전 관성·무게중심은 0.25 m 몸체 값(떨림 10° → 2.3°), 반동 위 0.7 → 0.9 N·s.

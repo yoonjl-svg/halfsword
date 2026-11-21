@@ -79,7 +79,7 @@ import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (t
 import { portraitIdOf, portraitSrc } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
 import { WhiffDrill } from './whiff_drill.js'; // 시험: 헛스윙 연습 상대 (?foeWhiff=1 — test.html '상대 헛스윙', docs/strike/german_hold_2026-10-15.md §7)
 import { configureStageObstacle, clampStageCamera, stageStartZ } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 충돌체 · 시작 비킴 · 카메라 보호 (docs/import/sluice_port_2026-10-14.md)
-import { fieldForStage, isSaengsaStage, mapSpawnSpots, pickSaengsaMap, SAENGSA_MAP_BY_STAGE } from './saengsa_maps.js'; // 생사전 전용 맵 (11/21 — 두 다리 개울 · 성벽 안뜰: 무대 표 · 지도 꼴 · 시작 자리 · 맵 뽑기)
+import { fieldForStage, isSaengsaStage, mapSpawnSpots, mapOfSetup, SAENGSA_MAP_BY_STAGE } from './saengsa_maps.js'; // 생사전 전용 맵 (11/21 — 두 다리 개울 · 성벽 안뜰: 무대 표 · 지도 꼴 · 시작 자리 · 회차 → 맵)
 import { fieldCamera, fieldCamBlocked, seeThroughStep } from './field_camera.js'; // 생사전 전용 맵 카메라 (11/21 — 테두리에 밀리면 위로 · 성벽 안뜰: 벽 둘레로 돌림 · 지붕 밑 · 벽 비침)
 import { configureWetlandMovement } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이 감속 (다른 무대는 배율 1)
 import { setSupportFloor } from './gait.js'; // 발 체중 받침은 바닥 콜라이더 접촉만 (10/14 — 벽·석상에 발이 닿은 힘은 받침이 아님)
@@ -325,11 +325,14 @@ function nextRoundStage() {
   stageFought = true;
 }
 useStage(STAGE_PIN || testRoute.nextStage(null) || nextStage());
-// 생사전 전용 맵 (사장님 11/21 '생사전 맵 1과 3으로 두 개 만들어.' — src/saengsa_maps.js): 생사전 판은 늘 전용 맵(낮 하나)에서 — 경기 씨앗으로 둘 가운데 하나(pickSaengsaMap — 고르기 화면 · 다시보기 · 이어받기 같음).
+// 생사전 맵 (사장님 11/21 '생사전 맵 1과 3으로 두 개 만들어.' · '16강전은 열린 원, 8강전은 두 다리, 4강전과 결승은 성벽 안뜰로 하자.' — src/saengsa_maps.js):
+//  회차로 (mapOfSetup → saengsaMapOf — 고르기 화면 · 다시보기 · 이어받기 같음): 8강 = 두 다리 개울 · 4강 · 결승 = 성벽 안뜰 (전용 맵 · 낮 하나) ·
+//  16강(그 앞) = 열린 원 — 맵 전 생사전처럼 지금 무대 그대로 (전용 맵에 있었으면 그 앞 무대로 — leaveSaengsaStage).
 //  그 앞 무대(여정 · 방랑 무대)는 적어 두었다가, 다음 1:1 판을 열 때 되돌린다 (생사전 경기를 잇달아 하면 다시 짓지 않음)
 let saengsaStageBack = null;
-function useSaengsaMap(seed) {
-  const map = pickSaengsaMap(seed);
+function useSaengsaMap(spec) {
+  const map = mapOfSetup(spec);
+  if (!map) { leaveSaengsaStage(); return null; } // 열린 원 회차 (11/21 G)
   if (!isSaengsaStage(stages.id)) saengsaStageBack = stages.id;
   if (useStage(map.stage)) {
     clearFlying();
@@ -347,6 +350,11 @@ function leaveSaengsaStage() {
   sound.setStage(stages.id);
   saengsaStageBack = null;
 }
+/** 생사전 열린 원 회차가 쓸 무대 이름 (고르기 화면 머리 — 11/21 G): 지금 무대 · 전용 맵에 있으면 돌아갈 그 앞 무대 (leaveSaengsaStage 와 같은 셈) */
+export const saengsaCircleStageName = () => {
+  const id = isSaengsaStage(stages.id) && stages.id !== STAGE_PIN ? saengsaStageBack || nextStage() : stages.id;
+  return STAGE_NAME_KO[id] ?? null;
+};
 // ── (배경 끝) ─────────────────────────────────────────────────────────────
 
 // ── 화면 크기 / 픽셀 모드 ──
@@ -1033,7 +1041,7 @@ async function teamStart(spec, mods = {}, opts = {}) {
   toast.classList.remove('show');
   $('menuReward').hidden = true;
   if (!opts.saengsa) nextRoundStage(); // 시험 판: 1:1 과 같이 무대를 넘긴다
-  else useSaengsaMap(spec.seed ?? 0); // 생사전: 전용 맵 (11/21 — 경기 씨앗으로 두 다리 개울 · 성벽 안뜰 가운데 하나 · 전 '지금 무대')
+  else useSaengsaMap(spec); // 생사전: 회차로 (11/21 G — 16강 열린 원(지금 무대) · 8강 두 다리 개울 · 4강 · 결승 성벽 안뜰 · 전 경기 씨앗으로 둘 가운데 하나)
   planOpening();
   hideFoeIntro();
   showStageInfo();

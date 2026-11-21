@@ -1,6 +1,6 @@
 # 고유 공격 실험 집계 (2026-10-20 감독 — docs/strike/unique_attack_study_result_2026-10-20.md)
 #  UQ_DIR=<결과 폴더> python3 tools/sim/unique_study_agg.py b | c | p3 | a
-#  폴더 안: b/<유파>_off|on.json (unique_study_ai.mjs) · c/<유파>_e0|1|2.json (unique_study_player.mjs) · p3/<유파>_<이름>.json (ARM=drop:) ·
+#  폴더 안: b/<유파>_off|on.json · c/<유파>_e0|1|2.json (옛 unique_study_ai · unique_study_player — 저장소에 없는 모델 파일을 불러 11/21 지움 · 그때 결과만 읽음) · p3/<유파>_<이름>.json (ARM=drop:) ·
 #   a/<유파>.json (parry_gap_map.mjs ATK=<유파 무기> UNIQUE=<넷> OUT=…). 통계 = 짝 차이 부트스트랩 95 % (4000 번)
 import json, glob, random, sys, os
 D = os.environ.get('UQ_DIR', '.').rstrip('/') + '/'

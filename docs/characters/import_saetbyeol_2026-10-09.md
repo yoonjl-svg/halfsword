@@ -81,10 +81,10 @@
 새 도구 결과: loggia → 토메 비달·rapier·italian / corsair → 오마리·zweihander·iberian / sacred_grove → 미나미·monohoshizao·japanese, 카드 뒷면 px 테마. SwiftShader 라 6초 동안 물리 0.6~1.0초만 흘렀다(실기기 성능 아님).
 
 ## 6. 캡처
-- `docs/handoff/import_saetbyeol_loggia_fight.png` — 붉은 회랑의 토메 비달
-- `docs/handoff/import_saetbyeol_corsair_draw.png` — 산호 항구 무기 카드(새 카드 뒷면)
-- `docs/handoff/import_saetbyeol_corsair_fight.png` — 산호 항구의 오마리(츠바이핸더)
-- `docs/handoff/import_saetbyeol_sacred_grove_fight.png` — 신목의 숲의 미나미
+- `docs/handoff/import_saetbyeol_loggia_fight.png (지움 · 3bec37f9)` — 붉은 회랑의 토메 비달
+- `docs/handoff/import_saetbyeol_corsair_draw.png (지움 · 3bec37f9)` — 산호 항구 무기 카드(새 카드 뒷면)
+- `docs/handoff/import_saetbyeol_corsair_fight.png (지움 · 3bec37f9)` — 산호 항구의 오마리(츠바이핸더)
+- `docs/handoff/import_saetbyeol_sacred_grove_fight.png (지움 · 3bec37f9)` — 신목의 숲의 미나미
 
 ## 7. 남은 것 (디렉터 판단)
 - 세 사람의 플레이 기질·설정·대사, 별명.

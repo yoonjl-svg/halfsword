@@ -49,7 +49,14 @@ export function snapshotFromPerson(p) {
     const limb = WOUND_LIMB[part];
     if (limb) limbs[limb] = Math.max(0, limbs[limb] - inj.sev * LIMB_LOSS);
   }
-  return { v: 1, blood: bloodFromHp(p.hp), bleed: 0, consciousness: 1, pain: 0, limbs, wounds, weaponBroken: weaponOfPerson(p).broken };
+  const lost = (p.lost ?? []).filter((l) => l in limbs); // 잘린 팔다리 (11/21 C — 대회 끝까지 · fighter.applySnapshot → startSevered)
+  for (const l of lost) limbs[l] = 0;
+  // 몸통 · 머리 부상 (11/21 D — 사장님 '몸통 · 머리에 남으면 -> 여기서도 어딘가 남아야 해'): 팔다리와 같은 잣대(심각도 × LIMB_LOSS) — 나은 흔적 · 경상 · 중상 모두
+  //  몸통 = 최대 기력 × (1 − 심각도 × 0.7) (stamK — 장비 덧 뒤에 곱함) · 머리 = 머리를 맞아 잃는 의식 × (1 + 심각도 × 0.7) (koK — 기절이 쉬움)
+  const sevOf = (part) => Math.max(0, ...(p.injuries ?? []).filter((i) => i.part === part && i.sev > 0).map((i) => i.sev));
+  const torso = sevOf('torso'), head = sevOf('head');
+  const scar = { ...(torso > 0 ? { stamK: Math.max(0, 1 - torso * LIMB_LOSS) } : {}), ...(head > 0 ? { koK: 1 + head * LIMB_LOSS } : {}) };
+  return { v: 1, blood: bloodFromHp(p.hp), bleed: 0, consciousness: 1, pain: 0, limbs, wounds, weaponBroken: weaponOfPerson(p).broken, ...(lost.length ? { lost } : {}), ...scar };
 }
 
 /**
@@ -76,7 +83,7 @@ export function specFromSetup(setup) {
     index, team, key: p.key, human: p === human, id: p.id, name: p === human ? undefined : nameOfPerson(p), weapon: weaponOfPerson(p).id, weaponBroken: weaponOfPerson(p).broken, school: p.school ?? null, prof: p.prof ?? null, cloth: p.cloth ?? null,
     snapshot: snapshotFromPerson(p), person: p,
   }));
-  return { matchId: setup.matchId ?? null, seed: setup.seed ?? 0, control: human ? 'player' : 'watch', mineSide: mine, fighters };
+  return { matchId: setup.matchId ?? null, seed: setup.seed ?? 0, round: setup.round ?? 0, rounds: setup.rounds ?? null, control: human ? 'player' : 'watch', mineSide: mine, fighters }; // round · rounds = 맵 (11/21 G — saengsa_maps.js mapOfSetup)
 }
 
 /** 이 사람이 든 무기의 숙련도 — 생사전 쪽 profFor(saengsa_rules.js)와 같은 셈: 무기 유파 칸 · 그 칸이 없고 무유파 무기면 다섯 유파 가운데 가장 높은 값 − 1 · 그 밖엔 0 */
@@ -126,6 +133,8 @@ export function resultFromMatch(spec, fighters, winnerTeam, injuriesFromWounds =
     const fresh = (f.wounds ?? []).filter((w) => !w.carried).map((w) => ({ part: w.part, severity: w.severity }));
     out[e.key] = { hp: hpFromFighter(f), injuries: injuriesFromWounds(e.person?.injuries ?? [], fresh), alive: !!f.alive, broken: !!f.weaponBroken, weaponBroken: !!f.weaponBroken };
     if (f.team === team && downedCause(f)) Object.assign(out[e.key], { hp: SAENGSA.downedHp, injuries: downedInjuries(out[e.key].injuries, fresh, f.causeOfDeath), alive: true, downed: true });
+    const lost = [...new Set([...(e.person?.lost ?? []), ...(f.severedLimbs ?? [])])]; // 잘린 팔다리 (11/21 C — 엔진 fighter.severedLimbs · 들어올 때 잃은 것도 그대로 · 대회 끝까지)
+    if (lost.length) out[e.key].lost = lost;
   }
   return { winner: team === 0 ? mine : other, fighters: out };
 }

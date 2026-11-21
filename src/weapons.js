@@ -51,7 +51,6 @@ export const SOUND_MATERIAL = { steel: 'steel', plasma: 'plasma', wood: 'wood', 
 // 0.4/0.8/0.85/0.95/1.0)가 다르다. 무기 스펙에 직접 적으면 그 값이 이기고, 안 적으면 등급 기본값을 받는다.
 // power는 combat.js가 실제로 에너지에 곱한다. durability는 계약 수치이고 실제 파손 확률은 아래 TIER_FRAGILITY 표가 정한다.
 // 부서지는 연출·그 뒤 흐름(맨손·주운 무기)은 감독이 붙인다.
-export const TIERS = ['trash', 'common', 'rare', 'epic', 'legend', 'mystery'];
 export const TIER_DEFAULTS = {
   trash: { power: 0.7, durability: 0.4 },
   common: { power: 1.0, durability: 0.8 },
@@ -886,7 +885,7 @@ const monohoshizao = finalizeSpec('monohoshizao', {
   school: 'japanese', // 유파(schools.js TRADITIONS): 틀은 앞무게(이베리아가 기본)지만 일본 도검술 — 10/8 ① 구조 (일본 유파는 아직 이베리아와 같은 내용의 자리만)
   tier: 'epic',
   ability: '비검: 진 · 제비 베기', // 10/23 02:2x 사장님 '모노호시자오 에픽 설명 진제비베기로 바꿔야겠네'(기술 이름 '제비 베기'에 맞춤 — 전 '진 · 츠바메가에시') // 10/21 15:4x 사장님 '진과 츠바메가에시 사이에 가운뎃점' // 10/21 15:2x 사장님 '비검: 진 츠바메가에시 이렇게 하자' · 15:0x 사장님 '모노호시자오 출혈 옵션 빼고 대신 츠바메가에시 데미지 3배 … 옵션 이름은 비검으로' (전 '제비 베기: 출혈')
-  // 동작 라이브러리(motion_library.js, 기본 꺼짐)의 앞무게 자세표에서 상단(上段)은 쓰지 않는다: 긴 자루·앞무게 칼이 칼끝을 뒤로 눕힌
+  // 동작 라이브러리(frames.js)의 앞무게 자세표에서 상단(上段)은 쓰지 않는다: 긴 자루·앞무게 칼이 칼끝을 뒤로 눕힌
   //  상단에서 빠르게 내리면 날이 서지 않는다(날 세움 0~0.7) → 실제 싸움 48판 31% (상단 빼면 46%, 라이브러리 끔 50%). 지붕 자세 그대로
   motionSkip: ['지붕 (폼 타크)'],
   // 에픽 특수 능력 '비검' (10/21 — 전 출혈 ×2 '제비 베기: 출혈' 를 바꿈): 이 칼로 츠바메가에시(제비 베기)를 그어 되돌려 올려 벤 칼(칼이 위로 움직임 — dir.y > upY)에

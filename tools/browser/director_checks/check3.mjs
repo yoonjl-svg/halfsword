@@ -1,4 +1,4 @@
-import { chromium } from '/home/user/halfsword/node_modules/playwright/index.mjs';
+import { chromium } from 'playwright';
 const [out, sizes, q, tag] = process.argv.slice(2);
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const errors = [];

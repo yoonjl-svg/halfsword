@@ -32,12 +32,10 @@ const body = (tradition, mode = 'defend', defVoid = false) => ({ aiCtl: { mode, 
 
 test('사람 막기 단추와 같은 유파 몫 · 막는 중(칼로 받기)만 · 피하기 · 공격 · 다른 유파는 1', () => {
   assert.equal(schoolParryCut('chinese'), S.cnParryDmgCut);
-  assert.equal(schoolParryCut('japanese'), S.jpParryDmgCut);
-  assert.equal(schoolParryCut('iberian'), S.ibParryDmgCut);
-  for (const t of ['german', 'italian', 'none']) assert.equal(schoolParryCut(t), 0, t);
+  for (const t of ['japanese', 'iberian', 'german', 'italian', 'none']) assert.equal(schoolParryCut(t), 0, t); // 일본 · 이베리아 0.2 는 11/15 사장님 결정으로 없앰 (칸은 11/21 지움)
   assert.equal(aiWoundKeep(body('chinese')), 1 - S.cnParryDmgCut);
-  assert.equal(aiWoundKeep(body('japanese')), 1 - S.jpParryDmgCut);
-  assert.equal(aiWoundKeep(body('iberian')), 1 - S.ibParryDmgCut);
+  assert.equal(aiWoundKeep(body('japanese')), 1);
+  assert.equal(aiWoundKeep(body('iberian')), 1);
   assert.equal(aiWoundKeep(body('chinese', 'defend', true)), 1, '물러나 피하기는 막기가 아님');
   assert.equal(aiWoundKeep(body('chinese', 'attack')), 1);
   assert.equal(aiWoundKeep(body('chinese', 'watch')), 1);
@@ -47,6 +45,6 @@ test('사람 막기 단추와 같은 유파 몫 · 막는 중(칼로 받기)만 
 
 test('롱소드끼리 판은 유파 몫 값을 안 읽음 (독일 — 감소 없음 · 바이트 같음)', () => {
   const a = trace({ weapon: 'longsword', weapon2: 'longsword', secs: 10 });
-  const b = withSkill({ cnParryDmgCut: 0.9, jpParryDmgCut: 0.9, ibParryDmgCut: 0.9 }, () => trace({ weapon: 'longsword', weapon2: 'longsword', secs: 10 }));
+  const b = withSkill({ cnParryDmgCut: 0.9 }, () => trace({ weapon: 'longsword', weapon2: 'longsword', secs: 10 }));
   assert.equal(a, b);
 });

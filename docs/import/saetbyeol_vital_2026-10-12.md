@@ -216,9 +216,9 @@
 
 | 그림 | 장면 | 결과 |
 |---|---|---|
-| `ai_neckcut_on.jpg` | 나를 무릎 꿇림 · `&vitalAi=1` · 상대 AI 의 첫 급소 공격 | 이번엔 찌르기(머리 겨눔, stichOchsL) → 팔에 먼저 닿음 (멍) |
-| `ai_neckcut_off.jpg` | 같은 장면 · `&vital=0` | 보통 공격 (zornhau) |
-| `tap_vital_on.jpg` | 상대 무릎 꿇림 · 1.6 m · 탭 | 간격 맞추기 2 s 넘김 → 보통 찌르기 (이번 판 접촉 없음). 앞 판에선 맞춘 뒤 머리·목 찌르기 상처 0.06·0.11 |
-| `tap_vital_off.jpg` | 같은 장면 · `&vital=0` | 보통 찌르기 → 목 (상처 0.07) |
+| `ai_neckcut_on.jpg (지움 · f7a0f2d4)` | 나를 무릎 꿇림 · `&vitalAi=1` · 상대 AI 의 첫 급소 공격 | 이번엔 찌르기(머리 겨눔, stichOchsL) → 팔에 먼저 닿음 (멍) |
+| `ai_neckcut_off.jpg (지움 · f7a0f2d4)` | 같은 장면 · `&vital=0` | 보통 공격 (zornhau) |
+| `tap_vital_on.jpg (지움 · f7a0f2d4)` | 상대 무릎 꿇림 · 1.6 m · 탭 | 간격 맞추기 2 s 넘김 → 보통 찌르기 (이번 판 접촉 없음). 앞 판에선 맞춘 뒤 머리·목 찌르기 상처 0.06·0.11 |
+| `tap_vital_off.jpg (지움 · f7a0f2d4)` | 같은 장면 · `&vital=0` | 보통 찌르기 → 목 (상처 0.07) |
 
 다시 찍기: `node tools/browser/vital_shots.mjs http://127.0.0.1:<내 포트> docs/handoff/vital_target`

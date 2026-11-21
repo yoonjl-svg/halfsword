@@ -123,9 +123,9 @@
 - ③ 맞붙어 계속 휘두르면 창이 열리지 않는다(v5 는 같은 대본에서 20 s 에 2 번 — 둘 다 그대로 비기가 됨).
 - ④ 발동: 감음 0.32 s(손이 옆 자세 밖이었음) → 가운데 0.04 s → 둘러 벰 0.52 s → 경직 0.49 s. 칼끝 최고 15.2 m/s.
 
-![칼끝 빠르기](../handoff/iberian_gilmok_tipspeed.png)
+*(그림 지움 — `git show f2964032:docs/handoff/iberian_gilmok_tipspeed.png`)*
 
-![세 순간 — 준비 · 창 · 한 칼](../handoff/iberian_gilmok_strip.png)
+*(그림 지움 — `git show f2964032:docs/handoff/iberian_gilmok_strip.png`)*
 
 ## 9. 구현
 
@@ -226,8 +226,8 @@
   - 4.2~4.8 s 뒤 상대가 2.06~2.07 m 로 넘어 들 때 창이 열린다.
   - 끌기 한 번으로 낸다. **4 번 모두 맞았다**(상처 2~4 개). 칼끝 최고 14.9~15.2 m/s.
   - 맞은 자리는 **넓적다리(thighB 세기 1.8~2.0)·정강이**다. 플레이어 판은 몸통보다 낮게 지난다(시뮬 AI 판은 −0.13~+0.35 m).
-- 세 순간 그림(준비 · 창 · 한 칼이 닿은 순간 — 셋째 칸 상대 다리에 피): `docs/handoff/iberian_gilmok_strip.png`
-- 칼끝 빠르기 그래프: `docs/handoff/iberian_gilmok_tipspeed.png`
+- 세 순간 그림(준비 · 창 · 한 칼이 닿은 순간 — 셋째 칸 상대 다리에 피): `docs/handoff/iberian_gilmok_strip.png (지움 · f2964032)`
+- 칼끝 빠르기 그래프: `docs/handoff/iberian_gilmok_tipspeed.png (지움 · f2964032)`
 
 ### 12-5. 여쭐 것 (2차)
 
@@ -289,7 +289,7 @@ fights12 cc4e62b1 ✓ · live_battery e7ee3d96 ✓ · finish_thrust 433ac984 ✓
 
 - 맞붙은 휘두르기 20 s: **창 0** 그대로.
 - 다가오는 상대에게 준비 · 창 · 한 칼: 창은 열리고 칼은 나가지만 **2 번 모두 헛침**(츠바이핸더).
-  - '몸통 높이로 닿는 그림'은 아직 없다. 그림(`docs/handoff/iberian_gilmok_strip.png`)은 2차의 넓적다리에 닿은 장면 그대로 뒀다.
+  - '몸통 높이로 닿는 그림'은 아직 없다. 그림(`docs/handoff/iberian_gilmok_strip.png (지움 · f2964032)`)은 2차의 넓적다리에 닿은 장면 그대로 뒀다.
 
 ### 13-5. 여쭐 것
 
@@ -352,7 +352,7 @@ fights12 cc4e62b1 ✓ · live_battery e7ee3d96 ✓ · finish_thrust 433ac984 ✓
 ### 14-4. 플레이어 확인 (브라우저, 콘솔 에러 0)
 
 - 맞붙은 휘두르기 20 s(522 번): **창 0**.
-- 다가오는 상대: 2/2 닿음(넓적다리). 세 순간 그림(셋째 칸이 닿은 순간): `docs/handoff/iberian_gilmok_strip.png`.
+- 다가오는 상대: 2/2 닿음(넓적다리). 세 순간 그림(셋째 칸이 닿은 순간): `docs/handoff/iberian_gilmok_strip.png (지움 · f2964032)`.
 
 ### 14-5. 관문 (4차, a46838c 대비)
 
@@ -386,7 +386,7 @@ fights12 cc4e62b1 ✓ · live_battery e7ee3d96 ✓ · finish_thrust 433ac984 ✓
 | 맞힘 | **0/5** (4차는 감는 토막이 붙어 2/2 넓적다리) |
 | 맞붙은 휘두르기 | 20 s · 376 번 — **창 0** |
 
-- 그림: 준비 중 낮은 자세 → 감기 시작 → 창 — `docs/handoff/iberian_gilmok_arm_strip.png`.
+- 그림: 준비 중 낮은 자세 → 감기 시작 → 창 — `docs/handoff/iberian_gilmok_arm_strip.png (지움 · c4b5a181)`.
 - 읽기 [해석]:
   - 감는 토막을 없애니 시간이 짧아졌다. 칼이 지날 때 상대는 아직 1.75 m 에 있고, 칼끝은 1.57 m 에서 그친다. 4차는 감는 0.3 s 동안 상대가 더 들어와 다리가 닿았다.
   - 높이도 가슴 −0.5 m 다. 탐침에서 손을 그 자리에 박아 두면 +0.1~0.3 m 였는데, 그보다 낮다. 쉴 빠르기로 막 감겨 들어온 칼이 아직 흔들리는 중(창 때 칼끝 0.8 m/s)인 것으로 보인다 [추정].
@@ -487,7 +487,7 @@ fights12 cc4e62b1 ✓ · live_battery e7ee3d96 ✓ · finish_thrust 433ac984 ✓
 
 - ② 는 닿지만 **몸통이 아니라 넓적다리**다(17-2 의 공용 처짐). ① 은 헛치고, 상대가 이 동안 멈춰 있어 경직 중 맞지는 않았다. ③ 은 상대가 1.75 m 근처에서 서 버려(롱소드 AI 의 간 보기 거리) '안쪽이라 걸림'이 아니라 '못 미침'이 났다.
 - press 대본(맞붙어 휘두르기 20 s · 249~277 번): **창 0**. 낸 1 은 대본 첫 휘두르기(걸어 드는 동안 준비가 켜져 있었고 유예 0.5 s 안 — 결정대로)다. 맞붙어 휘두르는 동안 준비 0 s · 비기 0.
-- 그림(준비 낮은 자세 → 감음 → 알맞게 낸 한 칼이 닿는 순간 — 넓적다리): `docs/handoff/iberian_gilmok_ready_strip.png`.
+- 그림(준비 낮은 자세 → 감음 → 알맞게 낸 한 칼이 닿는 순간 — 넓적다리): `docs/handoff/iberian_gilmok_ready_strip.png (지움 · 2db853dc)`.
 
 ### 17-5. 관문 (main 4577da9 대비)
 

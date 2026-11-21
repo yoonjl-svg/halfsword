@@ -12,7 +12,7 @@
 //   얼터의 숙련도 +1(characters.js VARIANT_PLUS — 시트 무기 유파에 붙음)은 지금처럼 characters.js 몫이다.
 // ─────────────────────────────────────────────────────────────
 
-export const STATUS = '사장님 확인 전'; // 이 파일의 모든 새 값 (기본 유파 숙련도만 사장님 결정 — 아래 PROFICIENCY 머리말)
+// 이 파일의 모든 새 값은 사장님 확인 전 (기본 유파 숙련도만 사장님 결정 — 아래 PROFICIENCY 머리말)
 
 // ── 숙련도 ──
 //  척도는 지금 그대로(docs/strike/ai_proficiency_2026-10-13.md · config.js AI_PROFICIENCY): 0 = 그 유파 고유 동작 없음 · 1 견습생 · 2 숙련자 · 3 전문가 · 4 마스터 · 5 신(비기) ·

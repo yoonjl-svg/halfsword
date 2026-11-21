@@ -251,7 +251,7 @@
 | `saetbyeol_import_samira_moye_{close,fight}.png` | 대성당 · 사미라(장밋빛 제복·리볼버) 대 막야(먹빛 기운) |
 | `saetbyeol_import_renji_sain_{close,fight}.png` | 산사 · 김씨(삿갓·철퇴) 대 사인검 |
 | `saetbyeol_import_eira_ice_{close,fight}.png` | 성 안뜰 · 에이라(겨울 사제복·레이피어) 대 아이스 |
-| `saetbyeol_import_test_list.png` | test.html 고르기 화면(새 무기·인물이 목록에) |
+| `saetbyeol_import_test_list.png (지움 · 271f062b)` | test.html 고르기 화면(새 무기·인물이 목록에) |
 
 ## 7. 사장님께 물을 것 (10/10 20:0x 답 뒤 남은 것 — 확인표 740~752)
 1. **간장·막야 세기 고르기** (§4-2 안별 표): 중국 유파가 오히려 깎는다(간장 31 → 독일 65 %). ① 중국 유파 그대로 두고 중국 꾸러미를 따로 손보기(청강검도 같이 오름) ② 간장·막야만 유파를 빼기(독일 — 劍인데 독일 이름표가 뜸) ③ 배율 1.25·능력 같은 작은 손잡이(효과 작음) ④ 그대로. (740)

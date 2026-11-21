@@ -74,9 +74,9 @@ node tools/sim/with_config.mjs JOINTS.kTwist=80 joint_range.mjs …             
 5. 어깨 폄은 최대 45° 로 60° 를 넘지 않았다(새 한도 불필요).
 
 그림 (게임 화면, 칼 쪽 옆 카메라, `tools/browser/joint_shots.mjs`, 위 글자는 그 프레임의 각):
-- `docs/handoff/joint_range_before_longsword_1.png` — 위팔 돌림 −98°, 명령에서 62° 밀림(팔꿈치가 위·바깥을 봄)
-- `docs/handoff/joint_range_before_longsword_2.png` — 팔꿈치 8°(쭉 뻗음), 플레이어 손가락이 패드 끝
-- `docs/handoff/joint_range_before_longsword_3.png` · `…_monohoshizao_1..3.png` — 같은 모양
+- `docs/handoff/joint_range_before_longsword_1.png (지움 · d5c9f613)` — 위팔 돌림 −98°, 명령에서 62° 밀림(팔꿈치가 위·바깥을 봄)
+- `docs/handoff/joint_range_before_longsword_2.png (지움 · d5c9f613)` — 팔꿈치 8°(쭉 뻗음), 플레이어 손가락이 패드 끝
+- `docs/handoff/joint_range_before_longsword_3.png (지움 · d5c9f613)` · `…_monohoshizao_1..3.png` — 같은 모양
 
 ## 4. 후보 (모두 `JOINTS` 뒤)
 
@@ -182,7 +182,7 @@ J = 베기 지표, ×날 세움 = 날이 선 몫을 곱한 값. 속도 = 칼날 
 
 | 그림 | 끔 | 권고 |
 |---|---|---|
-| 롱소드 프레임 97 | `docs/handoff/joint_range_before_longsword_1.png` 위팔 돌림 −98°·밀림 62° | `…_after_longsword_1.png` −86°·49° |
+| 롱소드 프레임 97 | `docs/handoff/joint_range_before_longsword_1.png (지움 · d5c9f613)` 위팔 돌림 −98°·밀림 62° | `…_after_longsword_1.png` −86°·49° |
 | 롱소드 프레임 176 (쭉 뻗음) | `…_before_longsword_2.png` 팔꿈치 8° | `…_after_longsword_2.png` 8° (ⓑ 는 명령을 안 바꿈 → §7) |
 | 롱소드 프레임 264 | `…_before_longsword_3.png` −99°·61° | `…_after_longsword_3.png` −81°·43° |
 | 모노호시자오 100·174·264 | `…_before_monohoshizao_1..3.png` −92°·55° / 7° / −90°·53° | `…_after_monohoshizao_1..3.png` −76°·38° / 6° / −78°·40° |
@@ -234,7 +234,7 @@ J = 베기 지표, ×날 세움 = 날이 선 몫을 곱한 값. 속도 = 칼날 
 | 그 화면 팔꿈치 명령 최소 | 15.2° | 25.7° |
 | 붙잡은 프레임 (177·175) 팔꿈치 | 7.5° / 5.9° | 19° / 15.9° |
 
-- 그림: `docs/handoff/joint_range_player_before.png` (팔꿈치 7.5°) · `docs/handoff/joint_range_player_after.png` (19°), 롱소드 프레임 177. 찍을 때 비틀기 서보는 25 였다.
+- 그림: `docs/handoff/joint_range_player_before.png (지움 · 01bd8076)` (팔꿈치 7.5°) · `docs/handoff/joint_range_player_after.png (지움 · 01bd8076)` (19°), 롱소드 프레임 177. 찍을 때 비틀기 서보는 25 였다.
 - **손실 한 곳**: 같은 자리(목)를 맞힌 첫 베기 E 가 110 → 96 J (−13 %)이다. 나머지 둘은 맞은 자리가 달라 견줄 수 없다. 칼날 속도·혼자 베기 J 는 그대로이므로, 곧은 팔이 칼 뒤에 싣던 유효 질량이 준 몫으로 읽는다(§6 팔꿈치 몫과 같은 물리). 표본이 세 번뿐이다.
 - 남은 '쭉 뻗음' 19~20 프레임은 명령이 아니라 **휘두르는 칼의 관성이 팔꿈치를 명령 너머로 펴는** 순간이다. 명령 최소가 25.7° 인데도 실제 p5 는 2~4° 다. 막으려면 팔꿈치 끝 스프링(§6, 맞음 E −10~−12 %)이나 경첩 한도가 필요하다. 이번에는 넣지 않았다.
 - 관문 영향: `live_battery`·`finish_thrust` 하니스의 플레이어는 autoGuard 를 켜지 않아 이 몫이 닿지 않는다(비틀기 25 로 돌리면 2991b855·55d5ccd3 그대로). 그래서 둘의 새 값은 아래 비틀기 서보 몫이다.

@@ -92,8 +92,8 @@
 
 - ① 중국 거정세 꼴(G.tag)로 막아 낸 뒤 창(표시 '연환 連環 · 내 중국 · 비기') → 0.25 s 뒤 입력 → 두 수: 거정 → 요격 13.6 · 역린자 16.2 m/s, 표두 → 역린자 5.4 · 좌익격 14.2 m/s. 창 0.5 s 안에 0.25 s 반응으로 모두 냄(놓침 0) → **n = playerWindow 0.5 s 그대로**(iberianWindow 1.5 로 늘릴 까닭 없음).
 - ② 다른 꼴(긴 자세)로 막으면 33 번 막아도 창 0. ③ 계속 휘두르기 1153 번에 창 0 — 자주 안 터짐.
-- ④ 독일: 황소로 4 번 막았으나 맞붙음이 최대 0.03 s — **deBindMin 0.3 s 에 닿지 않아 창 0**. 장치 확인만 하려고 그 판에서 deBindMin 0 으로(값 아님, `DEMO_MIN=0`) 돌리면 창 → Duplieren 한 수가 나간다(그림 `pcombo_longsword_demo_min0.png`).
-- 그림: `docs/handoff/parry_combo/pcombo_qinggang_slot_1.png`(막기 → 창 '연환') · `_2.png`(연격 둘째 수 역린자) · `pcombo_longsword_demo_min0.png`(독일 장치 — 값 아닌 판).
+- ④ 독일: 황소로 4 번 막았으나 맞붙음이 최대 0.03 s — **deBindMin 0.3 s 에 닿지 않아 창 0**. 장치 확인만 하려고 그 판에서 deBindMin 0 으로(값 아님, `DEMO_MIN=0`) 돌리면 창 → Duplieren 한 수가 나간다(그림 `pcombo_longsword_demo_min0.png (지움 · efb7f518)`).
+- 그림: `docs/handoff/parry_combo/pcombo_qinggang_slot_1.png (지움 · efb7f518)`(막기 → 창 '연환') · `_2.png`(연격 둘째 수 역린자) · `pcombo_longsword_demo_min0.png (지움 · efb7f518)`(독일 장치 — 값 아닌 판).
 - 진동은 창마다 부른다(다른 비기 창과 같은 줄 — main.js updateTechCue). 탐침의 진동 수는 맞음 진동이 섞여 따로 세지 않았다.
 
 ## 7. 관문

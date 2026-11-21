@@ -14,7 +14,6 @@ import { DE_PLAN } from './ai_plan_de.js'; // 3 단계 독일 플랜 칸 (11/14 
 
 /** 국면 일곱 (판정 차례는 judgePhase — 위에서부터) */
 export const PHASES = Object.freeze(['tired', 'behind', 'finish', 'ahead', 'commit', 'contest', 'probe']);
-export const PHASE_KO = Object.freeze({ tired: '지쳤을 때', behind: '불리할 때', finish: '끝내기', ahead: '우위를 쥔 뒤', commit: '들어감 / 받음', contest: '거리 다툼', probe: '간 보기' });
 /** 띠 이름 (config AI_PLAN.bands 의 값) */
 export const BANDS = Object.freeze(['무', '낮음', '가운데', '높음']);
 

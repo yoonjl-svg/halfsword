@@ -140,7 +140,7 @@
 
 ## 6. 캡처
 
-`docs/handoff/japanese_guard_before.png`(전 — 모노호시자오 AI 지붕·어깨 지붕·황소·왼 황소, 플레이어 쉼 모노호시자오·우치가타나) · `japanese_guard_after.png`(후 — 모노호시자오 AI 추단·조단·게단·핫소·와키가마에·미기와키·히다리와키, 플레이어 쉼) · `japanese_guard_after_uchigatana.png`(후 — 우치가타나 AI 추단·조단·게단, 플레이어 쉼). 줄마다 옆·앞·3/4. 시험만: AI 자세 고정·공격 끔·**발도 대기 끔**(끄지 않으면 간격 밖 1.5 s 뒤 왼 허리 웅크림이 덮는다). 캡처 빌드는 병합 전 c96feff(일본 수는 병합 뒤와 같음).
+`docs/handoff/japanese_guard_before.png (지움 · 3cb34a2d)`(전 — 모노호시자오 AI 지붕·어깨 지붕·황소·왼 황소, 플레이어 쉼 모노호시자오·우치가타나) · `japanese_guard_after.png (지움 · 3cb34a2d)`(후 — 모노호시자오 AI 추단·조단·게단·핫소·와키가마에·미기와키·히다리와키, 플레이어 쉼) · `japanese_guard_after_uchigatana.png (지움 · 3cb34a2d)`(후 — 우치가타나 AI 추단·조단·게단, 플레이어 쉼). 줄마다 옆·앞·3/4. 시험만: AI 자세 고정·공격 끔·**발도 대기 끔**(끄지 않으면 간격 밖 1.5 s 뒤 왼 허리 웅크림이 덮는다). 캡처 빌드는 병합 전 c96feff(일본 수는 병합 뒤와 같음).
 
 ## 7. 사장님 확인 필요
 

@@ -113,21 +113,3 @@ export function historicalDecorate(group){
  }
 }
 
-// 빈 칼집은 따로 허리에 단다(움직이는 칼에는 달지 않음). 박물관 칼집 길이를 늘린 날 길이만큼 늘였다.
-export function hwandoScabbard(bladeLength=HISTORICAL_WEAPON.hwando.blade){
- const group=new THREE.Group();group.name='hwando-black-scabbard';const L=bladeLength+.05;
- const s=new THREE.Shape();s.moveTo(-.023,0);
- for(let i=0;i<=32;i++){const t=i/32,c=4*.009*t*(1-t),w=.023*(1-.17*t);s.lineTo(c-w,-t*L);}
- s.quadraticCurveTo(.016,-L-.015,.025,-L);for(let i=32;i>=0;i--){const t=i/32,c=4*.009*t*(1-t),w=.023*(1-.17*t);s.lineTo(c+w,-t*L);}s.closePath();
- add(group,extrusion(s,.018),new THREE.MeshStandardMaterial({color:0x1d201d,roughness:.58}));
- const fitting=brass();
- for(const y of [0,-L*.18,-L*.37])box(group,.049,.012,.022,fitting,4*.009*(-y/L)*(1+y/L),y);
- for(const y of [-L*.18,-L*.37])ring(group,.0075,.0017,fitting,-.028,y,0);
- // 물결 모양 칼집 끝 쇠 — 위로 검은 나무가 그대로 보이게.
- const cap=poly([[-.018,-L+.037],[-.009,-L+.029],[0,-L+.037],[.009,-L+.029],[.018,-L+.037],[.023,-L+.006],[.014,-L-.009],[-.012,-L-.009],[-.022,-L+.006]]);
- add(group,extrusion(cap,.0205),fitting);
- // 없는 띠 고리 자리를 수수한 끈으로 해석 — 원형 복원이 아니다.
- const cord=new THREE.MeshStandardMaterial({color:0x62503b,roughness:1});
- for(const y of [-L*.18,-L*.37]){const points=[new THREE.Vector3(-.028,y,0),new THREE.Vector3(-.045,y*.52,0),new THREE.Vector3(-.02,.025,0)];add(group,new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),12,.0018,5,false),cord);}
- return group;
-}

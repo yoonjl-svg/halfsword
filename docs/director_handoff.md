@@ -17,7 +17,7 @@
 - **푸시는 한 디렉터만 합니다.** 옛 디렉터는 인계가 확인되면 배포를 멈추기로 했습니다. 같은 브랜치에 둘이 푸시하면 충돌이 납니다.
 - main에 올리면 GitHub Actions(`.github/workflows/deploy.yml`)가 빌드해 GitHub Pages에 올립니다. 몇 분 걸리고, 사장님께는 "새로고침" 안내를 붙입니다.
 - 라이브: https://yoonjl-svg.github.io/halfsword/
-- 온몸 타격 시험판(따로 빌드한 정적 파일, `public/wb/`): https://yoonjl-svg.github.io/halfsword/wb/
+- 생사전 시험판 `/saengsa/`는 배포(`.github/workflows/deploy.yml`)가 빌드합니다. `public/saengsa/`는 커밋하지 않습니다(.gitignore · 11/21 감사 N-005). 옛 시험판 `/wb/` 등은 11/21 지웠습니다.
 
 **지금 라이브에 있는 것 (main `249f59b`)**
 - 여정 6판, 고정 순서, 무대마다 그곳 검객:
@@ -626,12 +626,7 @@ git push origin …/first-game-development-2q36ha:main
   - 시험판 빌드 원본 `src_4b5c56a/`, 빌드 결과 `preview_dist/`
 - **이 파일들은 이 컨테이너 안에만 있습니다.** 다른 세션(예: 무기 PM)은 볼 수 없습니다. 필요하면 사장님께 여쭌 뒤 `tools/`에 올리거나 다시 만듭니다.
 
-**`/wb/` 시험판 다시 만들기** (지난번 방식)
-1. 워크트리 원본을 따로 복사합니다.
-2. `npx vite build --outDir <폴더> --emptyOutDir`로 빌드합니다.
-3. 결과를 main 쪽 `public/wb/`에 넣습니다.
-4. 개발 브랜치에서 커밋하고 배포합니다.
-- 시험판은 본 게임과 같은 설정 저장 키를 씁니다. 본 게임은 시험판 전용 키를 무시합니다.
+**시험판** (11/21 바뀜): `public/` 아래 따로 빌드한 시험판(`/wb/` · `/corr/` · `/r2p/` · `/support/` · `/shop/`)은 지웠습니다. 생사전 시험판은 배포가 `npx vite build --config tools/saengsa_page/vite.config.mjs --base=./ --outDir public/saengsa --emptyOutDir` 로 만들고, 일꾼 가지에서도 `public/saengsa/`를 다시 빌드해 커밋하지 않습니다.
 
 **워크플로 (울트라코드 Workflow 도구)**
 - 큰 일에 씁니다. 지금까지 한 예: 광기의 하인리히, 리볼버, 온몸 병합, 재설계, 역할 분담.

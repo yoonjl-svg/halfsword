@@ -47,10 +47,10 @@ v2 = v1 을 그대로 입고(얼굴·은발·수염·눈·눈썹·포도주색 �
 | | v1 (전) | v2 (후) |
 |---|---|---|
 | 정면 · 3/4 · 옆 · 뒤 (회색 경기장, 상대 AI 멈추고 1.2 초 선 뒤) | `docs/handoff/tome_v1_{front,threeq,side,back}.png` | `docs/handoff/tome_v2_{front,threeq,side,back}.png` |
-| 얼굴 가까이 (머리 보는 쪽 35°) | `docs/handoff/tome_v1_face.png` | `docs/handoff/tome_v2_face.png` |
-| 붉은 회랑 대전 장면 (`?stage=loggia`, 4 초 싸운 뒤 게임 카메라 그대로) | `docs/handoff/tome_v1_loggia.png` | `docs/handoff/tome_v2_loggia.png` |
-| 휘두름 (회랑, 토메 칼끝이 5 m/s 넘게 움직이는 순간을 멈춤) | `docs/handoff/tome_v1_swing.png` | `docs/handoff/tome_v2_swing.png` |
-| 무기 뽑기 화면 (상대 소개 칸 '토메 비달 / 볼로냐의 사서') | `docs/handoff/tome_v1_select.png`(외형만 v1 — 칭호는 인물 값이라 같이 보임; 전 main 은 빈칸) | `docs/handoff/tome_v2_select.png` |
+| 얼굴 가까이 (머리 보는 쪽 35°) | `docs/handoff/tome_v1_face.png (지움 · 3ad99f61)` | `docs/handoff/tome_v2_face.png (지움 · 3ad99f61)` |
+| 붉은 회랑 대전 장면 (`?stage=loggia`, 4 초 싸운 뒤 게임 카메라 그대로) | `docs/handoff/tome_v1_loggia.png (지움 · 3ad99f61)` | `docs/handoff/tome_v2_loggia.png (지움 · 3ad99f61)` |
+| 휘두름 (회랑, 토메 칼끝이 5 m/s 넘게 움직이는 순간을 멈춤) | `docs/handoff/tome_v1_swing.png (지움 · 3ad99f61)` | `docs/handoff/tome_v2_swing.png (지움 · 3ad99f61)` |
+| 무기 뽑기 화면 (상대 소개 칸 '토메 비달 / 볼로냐의 사서') | `docs/handoff/tome_v1_select.png (지움 · 3ad99f61)`(외형만 v1 — 칭호는 인물 값이라 같이 보임; 전 main 은 빈칸) | `docs/handoff/tome_v2_select.png (지움 · 3ad99f61)` |
 
 브라우저 콘솔 에러 0 (두 판 모두).
 

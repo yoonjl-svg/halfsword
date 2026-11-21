@@ -21,7 +21,7 @@
 // ─────────────────────────────────────────────────────────────
 import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import * as THREE from 'three';
-import { BODY, GAIT, DIG_PROTO, RUN } from './config.js';
+import { BODY, GAIT, RUN } from './config.js';
 import { TRADITIONS, FAST_ACCENT, footworkTradition } from './schools.js';
 import { runFace } from './run.js'; // 뛰는 동안 바라볼 쪽 (11/18 뛰기 · 11/20 멈추는 동안)
 import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 이탈리아 물러서기 I3 · 이베리아 옆 박차기 B2 · 독일 간격 잡기 G2)
@@ -861,12 +861,6 @@ export class Gait {
     if (walkNow && !this.walking && f.humanInput && mv && !this.burst && !this.burstBrake && !f.feetHeld && !(f.finish?.amt > 0.5) && footworkTradition(f) === 'german' && !kitOff(f, 'chase')) {
       const m = mv.length();
       if (m >= GAIT.burstStick && mv.y > 0 && mv.y >= Math.abs(mv.x) && Math.hypot(this.vf.x, this.vf.z) < GAIT.burstStandV && this.legs.F.stance && this.legs.B.stance) this.burst = { fore: 1, side: 0, lat: 0, foreOnly: mv.x !== 0, dig: GAIT.digSteps };
-    }
-    // 앞 박차기 모두에게 (시제품 B — 사장님 11/14 '앞 박차기를 모든 캐릭터에 공통으로' · config DIG_PROTO.step · 기본 끔 · src/dig_proto.js): 위 파고들기를 안 받은 사람 몸도 같은 '서 있음'에서
-    //  스틱을 앞으로 세게 밀며 걷기 시작하면 앞 DIG_PROTO.stepN 걸음을 박찬 걸음으로(같은 장치 · 기력 pushCost 한 번) — 독일 G2 는 위 두 걸음 그대로 · AI 는 dig_proto.js aiFrontDash
-    if (DIG_PROTO.step && walkNow && !this.walking && f.humanInput && mv && !this.burst && !this.burstBrake && !f.feetHeld && !(f.finish?.amt > 0.5)) {
-      const m = mv.length();
-      if (m >= GAIT.burstStick && mv.y > 0 && mv.y >= Math.abs(mv.x) && Math.hypot(this.vf.x, this.vf.z) < GAIT.burstStandV && this.legs.F.stance && this.legs.B.stance) this.burst = { fore: 1, side: 0, lat: 0, foreOnly: mv.x !== 0, dig: DIG_PROTO.stepN };
     }
     // 옆 누르면 첫 걸음에 늘 옆 박차기 (10/21 사장님 '그냥 옆 누르면 첫 걸음에 무조건 나가야지'): 스틱이 옆으로 바뀌는 순간(옆 몫 > 앞뒤 몫 ·
     //  burstStick 넘게 · 앞 몫 < burstFwdMax — 서 있든 걷든 · 거꾸로 옆으로 틀어도) 다음에 떼는 걸음을 옆 박찬 걸음으로(sideDash — 이베리아만). 아직 걷기 문턱 전이면

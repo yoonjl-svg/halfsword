@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  live_diag.mjs — R2 실전 진단 브라우저 하니스 (하니스 a). 폰 같은 프레임 빠르기로 실제 게임 길을 결정적으로 돌려 잰다
 //   출처: hs-diag(가지 wbs-diag 08b864a) tools/browser/live_diag.mjs 를 본판에 이식(R2′ W1a). 바뀐 것: M·C1·C2·C3 칸(src/strike 가 있는 가지의
-//   온몸·손짓·드라이브 칸) 제거 → 칸은 k<검술 보정> 하나 (옛 이름 C0-k<s> 도 받는다). R2′ 탐색판은 --url 에 그 빌드(public/r2p/?chain=legs 같은 주소 인자)를 준다.
+//   온몸·손짓·드라이브 칸) 제거 → 칸은 k<검술 보정> 하나 (옛 이름 C0-k<s> 도 받는다). 다른 빌드는 --url 에 그 주소를 준다(옛 R2′ 탐색판 public/r2p 는 11/21 지움).
 //   터치·프레임·표본·sha 정의는 그대로 (tools/sim/live_twin.mjs 와 같은 칸 이름·파일 꼴).
 //   · 결정적 브라우저 (det.mjs 방식을 옮김): 페이지 난수 씨앗 고정 · 소리 끔 · performance.now·rAF 를 손으로 넘김 · 캔버스 읽기
 //   · 프레임 간격 = live_common PACINGS (씨앗 고정). 프레임마다: 그 프레임 끝 시각까지의 터치 표본을 CDP Input.dispatchTouchEvent 로
@@ -23,7 +23,7 @@
 //        [--rounds=2] [--seed=7] [--out=폴더] [--render-skip] [--png] [--quick] [--full] [--max-s=60] [--tree=이름] [--serial] [--pad0-ms=0]
 //   node tools/browser/live_diag.mjs --table --out=폴더     (폴더의 <칸>__<빠르기>.json → table.md)
 //  칸: k<0|0.4|0.7|1> (본판 그대로, 검술 보정 세기만; --url 이 그 트리·그 주소 인자) · all = k0,k0.4,k1
-//  playwright 는 /home/user/halfsword/package.json 기준으로 찾는다 (det.mjs 와 같이). 크롬 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
+//  playwright 는 이 파일 자리에서 찾는다(저장소 의존성에 없음 — 전역 NODE_PATH). 크롬 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 // ─────────────────────────────────────────────────────────────
 import fs from 'node:fs';
 import path from 'node:path';
@@ -34,7 +34,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import * as L from '../sim/live_common.mjs';
 
-const require = createRequire('/home/user/halfsword/package.json');
+const require = createRequire(import.meta.url);
 const SELF = fileURLToPath(import.meta.url);
 const COMMON = path.join(path.dirname(SELF), '../sim/live_common.mjs');
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');

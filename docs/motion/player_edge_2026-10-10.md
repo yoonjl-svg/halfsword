@@ -128,9 +128,9 @@
 
 `node tools/browser/player_edge_shots.mjs <주소> <폴더> longsword goal` — 실제 게임 화면(성 밖 경기장, 상대 멈춤), 같은 손가락 대본(가로·사선·올려베기 6 획)을 `?playerEdge=off` 와 `goal` 로 그어 플레이어 칼날이 새 상처를 내는 순간 칼 든 쪽 옆에서 찍음. 콘솔 오류 0.
 
-- `docs/handoff/player_edge_before_longsword_flat.png` — 전: 가로 긋기 끝에 칼 면으로 상대 왼 위팔(날 각 65°, 2.4 m/s, 6 J)
-- `docs/handoff/player_edge_after_longsword_edge.png` — 후: 날이 선 채 가슴(날 각 2°, 6.0 m/s, 24.9 J)
-- `docs/handoff/player_edge_after_longsword_flat.png` — 후에도 남는 칼 면: 느린(2.3 m/s) 맞음이 앞팔에 49°
+- `docs/handoff/player_edge_before_longsword_flat.png (지움 · 876fae73)` — 전: 가로 긋기 끝에 칼 면으로 상대 왼 위팔(날 각 65°, 2.4 m/s, 6 J)
+- `docs/handoff/player_edge_after_longsword_edge.png (지움 · 876fae73)` — 후: 날이 선 채 가슴(날 각 2°, 6.0 m/s, 24.9 J)
+- `docs/handoff/player_edge_after_longsword_flat.png (지움 · 876fae73)` — 후에도 남는 칼 면: 느린(2.3 m/s) 맞음이 앞팔에 49°
 
 이 한 대본(6 획)은 맞음 12 · 14 번뿐이라 비율은 잣대가 못 된다(전 8 % · 후 21 %, 칼 면 1 · 3 번). 판단은 §4 계기(무기마다 약 950 맞음)로 한다. 같은 도구를 무기·설정 바꿔 다시 돌렸을 때 다가가기가 상대에 닿지 못해 0 맞음이 난 실행이 있었다(세이버 · 롱소드 2 회째 — 다가가기 거리 0.55 + 칼 길이 × 0.65 m 가 걸음보다 멀다) — 도구 손볼 곳.
 

@@ -351,7 +351,7 @@ export function secretCond(S, ctx, d, view) {
 }
 
 /**
- * 중국 연환삼격 조건 (10/10 01:2x 사장님 '쉬었다가 들어가며' → 정확한 값): 내 공격 없이 SECRET.chineseRest 초 이상 지난 뒤 들어가며 친 첫 칼이
+ * 중국 연환삼격 조건 (10/10 01:2x 사장님 '쉬었다가 들어가며' → 정확한 값): 내 공격 없이 cond.rest 초 이상 지난 뒤(칸이 있을 때만) 들어가며 친 첫 칼이
  *  맞았나 (cond.landed 면 맞물림 제외). rest = 그 칼을 시작하기 전 내 공격 없이 지난 시간 (s). AI(secretFirstHit)·플레이어 창이 같은 함수
  */
 export function firstHitOk(S, rest, landed, bound) {
@@ -787,7 +787,7 @@ export class PlayerSecretWatch {
     recordFoeSenses(this, dt); // 1:1 = this.sense.record(dt) 그대로 (2:2 는 상대마다 — setFoe)
     if (this.open) {
       this.open.age = (this.open.age ?? 0) + dt;
-      if ((this.open.t -= dt) <= 0 && !this.holding() && !this.reachHolding()) this.open = null; // 창 끝 (secretHold: 열린 뒤 playerWindow 초까지는 짧은 창도 지킴 · 거리 판단 리솔루토: 칼이 떨어진 뒤 risolutoReachKeep 초까지)
+      if ((this.open.t -= dt) <= 0 && !this.holding()) this.open = null; // 창 끝 (secretHold: 열린 뒤 playerWindow 초까지는 짧은 창도 지킴)
     }
     const S = this.S;
     const painUp = foe.pain > this.prevFoePain + 0.05;
@@ -1159,12 +1159,6 @@ export class PlayerSecretWatch {
    */
   holding() {
     return !!this.open && (this.open.age ?? 0) < SECRET.playerWindow - 1e-6; // 1e-6: 스텝 시간 더하기의 떠다니는 소수 (창 끝과 같은 스텝에 닫히게)
-  }
-
-
-  /** 거리 판단 리솔루토 ①: 칼이 떨어진 뒤 risolutoReachKeep 초가 안 됐으면 참 (스위치 끔 · 리솔루토 아님 · 창 없음이면 늘 거짓 — 전 판과 같음) */
-  reachHolding() {
-    return false;
   }
 
   /** 창 안의 공격 입력: 열린 창을 닫고 그 비기 { S, ctx } 를 돌려준다 (없으면 null) */

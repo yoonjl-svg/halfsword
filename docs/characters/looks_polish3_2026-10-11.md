@@ -32,10 +32,10 @@
 ## 2. 캡처 (`docs/handoff/`)
 | 인물 | 전/후 한 장 비교 (위 = 2차 판, 아래 = 이번 판) | 그 밖 |
 |---|---|---|
-| 마야 라토르 v3 → v4 | `looks_polish3_samira_v3_v4.png` | 싸우는 세 순간 `looks_polish3_samira_v4_motion.png` |
-| 김씨 v2 → v3 | `looks_polish3_renji_v2_v3.png` | |
-| 투야나 v3 → v4 | `looks_polish3_eira_v3_v4.png` | 흔들림 세 순간(양쪽) `looks_polish3_eira_v4_motion_{a,b}.png` · 폰 화면 `looks_polish3_eira_v4_phone.png` |
-| 아르토리아 v2 → v3 | `looks_polish3_artoria_v2_v3.png` | |
+| 마야 라토르 v3 → v4 | `looks_polish3_samira_v3_v4.png (지움 · 68cf14a2)` | 싸우는 세 순간 `looks_polish3_samira_v4_motion.png (지움 · 68cf14a2)` |
+| 김씨 v2 → v3 | `looks_polish3_renji_v2_v3.png (지움 · 68cf14a2)` | |
+| 투야나 v3 → v4 | `looks_polish3_eira_v3_v4.png (지움 · 68cf14a2)` | 흔들림 세 순간(양쪽) `looks_polish3_eira_v4_motion_{a,b}.png` · 폰 화면 `looks_polish3_eira_v4_phone.png (지움 · 68cf14a2)` |
+| 아르토리아 v2 → v3 | `looks_polish3_artoria_v2_v3.png (지움 · 68cf14a2)` | |
 - 투야나 폰 화면(게임 카메라, 싸운 지 8 초, 카메라 → 투야나 5.25 m): 왼손을 들고 있어 고리는 손 아래 짧은 검은 줄로 보인다 — 이 거리에선 작다. 더 크게 하려면 길이 27 → 35 cm·매듭 1.3 → 1.6 cm, 또는 팔에 걸치는 안(여쭐 것 2).
 - 후 방향별: `looks_polish3_{samira_v4,renji_v3,eira_v4,artoria_v3}_{front,threeq,side,back,fight}.png`.
 - 새 도구 `tools/browser/looks_motion_strip.mjs` — 물리를 멈추지 않고 상대를 따라가며 시뮬 시간 간격마다 찍어 가로로 이어 붙임.

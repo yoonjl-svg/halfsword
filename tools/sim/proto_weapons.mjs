@@ -9,7 +9,7 @@ import { WEAPONS } from '../../src/weapons.js';
 import { AI, MEASURED } from '../../src/ai.js';
 import { SCHOOLS } from '../../src/schools.js';
 import { classifyWeapon, weaponPhysics, FRAME_KO, STYLE_KO } from '../../src/weapon_class.js';
-import { applyMotionLibrary, motionFor } from '../../src/motion_library.js';
+import { applyMotionLibrary, motionFor } from '../motion/lib/motion_library.mjs';
 import { zoneEffects, zoneTick } from './blunt_zones.mjs';
 import { wilson } from './ref_duel.mjs';
 

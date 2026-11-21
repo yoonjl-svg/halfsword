@@ -406,7 +406,7 @@ node tools/browser/stage_light_check.mjs http://127.0.0.1:5173 --stages=<id> --o
 - **봄비**: 가는 빗줄기 2400개(점 스프라이트, 세로 줄 질감 한 장)가 24m 상자 안에 비스듬히 내린다. 낮은 자리 여덟 군데에 웅덩이가 하늘을 비춘다(납작한 원판, 반사 환경맵 약하게 — 결투 자리 안에도 있지만 1cm 두께라 카메라에 안 걸린다).
 - **빛**: 동쪽 트인 쪽 너머로 낮게 뜬 해(`sunOffset` 8.5, 2.9, −3.5) → 긴 그림자. 옅은 잿빛 안개 26~230m. `fighterLight`(level 0.9)로 캐릭터 바탕빛을 누런 아침 해 색으로 채운다.
 - **움직임**: 재 600알이 떠다닌다. 큰 타격이 나오면 재가 휘날리고 연기가 눕고 비가 휘몰아친다.
-- **카드 뒷면**: `px_clearing_*` — 탄 땅 검정 바탕, 빗줄기와 새싹 문양, 통나무 마구리(나이테) 띠, 가운데는 위에서 본 날개 편 까마귀(잿빛). `docs/handoff/card_back_clearing.png`. 1안 뒷면은 `px_clearing_a_*`로 보관.
+- **카드 뒷면**: `px_clearing_*` — 탄 땅 검정 바탕, 빗줄기와 새싹 문양, 통나무 마구리(나이테) 띠, 가운데는 위에서 본 날개 편 까마귀(잿빛). `docs/handoff/card_back_clearing.png (지움 · 15b8c68e)`. 1안 뒷면은 `px_clearing_a_*`로 보관.
 - **소리**: 소리 PM에게 요청했다(오너 지시). 제안: 빗소리(가늘게, 계속), 젖은 재를 밟는 발소리, 이따금 까마귀, 불더미의 약한 탁탁, 큰 타격 뒤 비바람. `sound.js` `STAGE_SOUND`에 `clearing`이 생길 때까지는 포세이돈 값으로 떨어진다.
 
 스크린샷:
@@ -452,7 +452,7 @@ node tools/browser/stage_light_check.mjs http://127.0.0.1:5173 --stages=<id> --o
 - **석상 앞 제물**(오너 요청): 받침 앞 땅바닥에 은화 아홉 닢(셋은 쌓였다), 타다 남은 밀랍 초 셋 — 둘은 꺼졌고 **하나는 켜져 있다**(밤이라 그래야 보이고, "누군가 조금 전에 다녀갔다"는 뜻. 촛불 빛은 둘레 땅·제물에 구웠다), 마른 꽃을 꽂은 질그릇. 아무도 안 오는 신전에 누군가 빌고 간 흔적.
   - 그을음·재는 넣지 않았다(오너와 의논): 밤 배경에서 짙은 그을음은 대비가 없어 안 보인다.
 - **움직임**: 큰 타격이 나오면 불꽃이 크게 일고 불티가 흩어지며, 낮 신전의 먼지도 같이 흩날린다(`day.excite`).
-- **카드 뒷면**: `px_poseidon_night_*` — 포세이돈의 밤 변주. 짙푸른 바탕에 어두운 물빛 마름모, 삼지창은 그대로, 물거품 자리에 이지러진 달과 별, 가운데는 초승달과 불꽃. `docs/handoff/card_back_poseidon_night.png`. main.js `PX_BACKS`에 `poseidon_night: '#0c1220'` 한 항목을 더했다(디렉터에게 보고).
+- **카드 뒷면**: `px_poseidon_night_*` — 포세이돈의 밤 변주. 짙푸른 바탕에 어두운 물빛 마름모, 삼지창은 그대로, 물거품 자리에 이지러진 달과 별, 가운데는 초승달과 불꽃. `docs/handoff/card_back_poseidon_night.png (지움 · 680444f2)`. main.js `PX_BACKS`에 `poseidon_night: '#0c1220'` 한 항목을 더했다(디렉터에게 보고).
 - **소리**: `STAGE_SOUND`에 없어 포세이돈(바다) 값으로 떨어진다 — 밤 바다라 그대로도 어울리지만, 불 타는 소리·먼 파도 정도를 소리 PM에게 제안한다.
 
 스크린샷:
@@ -526,7 +526,7 @@ node tools/browser/stage_light_check.mjs http://127.0.0.1:5173 --stages=<id> --o
 
   덜어 낸 곳: 88 m 밖(안개색 그대로)과 78 m 밖엔 나무를 심지 않고 먼 무리 그루 수를 줄임 · 36 m 밖 소나무는 간단한 꼴(전 40 m) · 50 m 밖 덤불 뺌 · 물안개 판 넉 장과 대기 띠 둘 걷음(투명 −6, 빛줄기 +1) · 돌 메쉬는 그림자 패스에서 뺌(납작한 디딤돌이나 그림자 상자 ±4 m 밖) · 이끼 방석을 돌 메쉬에 합침 · 고사리 잎 마디 6 → 4(12 m 밖) · 바닥 고리 128 → 96 조각. 싸움 화면에서 보이는 가까운 숲·신목·도리이·사슴은 꼴 그대로.
 - 무대를 넘기면 안개·빛이 처음 값으로 돌아오고 남는 물체 0(`tools/browser/grove_shots.mjs`, 콘솔 에러 0).
-- 전/후 (폰 가로 844×390, 디렉터 캡처와 같은 각도 — 폰 경기 화면 · 신목·도리이 쪽 · 높이서 본 숲): [나란히](handoff/grove_polish_before_after.jpg) · [해 쪽을 본 빛줄기](handoff/grove_polish_after_sunside.jpg).
+- 전/후 (폰 가로 844×390, 디렉터 캡처와 같은 각도 — 폰 경기 화면 · 신목·도리이 쪽 · 높이서 본 숲): 나란히 *(그림 지움 — `git show 63dbcd7b:docs/handoff/grove_polish_before_after.jpg`)* · 해 쪽을 본 빛줄기 *(그림 지움 — `git show 63dbcd7b:docs/handoff/grove_polish_after_sunside.jpg`)*.
 
 ### 다듬기 2차: 숲 덩어리 (사장님 10/11 01:5x "맑고 밝은 거 좋아. 성스러운 숲 치고는 나무가 듬성듬성해서 무슨 화전터 같아 … 나무를 좀 모아서 부분적인 밀도를 올려" — 가지 `…/grove-polish2-2q36ha`)
 
@@ -534,14 +534,14 @@ node tools/browser/stage_light_check.mjs http://127.0.0.1:5173 --stages=<id> --o
 - 덩어리 사이는 트인 이끼 풀밭으로 남긴다(외톨이·쌍둥이 몇 그루만). 1차의 고르게 흩은 무리(스물)를 덩어리로 모은 것 — 화전 터의 듬성한 들판과 갈린다. 신목 둘레 13.5 m · 신목 뒤 하늘 자리 · 도리이 둘레는 1차대로 비웠다. 맑고 밝은 오후 빛·대기 값은 그대로.
 - **그리기 양**: 1차(main 2d05769) 205 호출 · 142,916 삼각형 → **205 · 153,208 (+7.2 %)** — 처음(183,072)보다는 여전히 16 % 적다(같은 `stage_cost.mjs`, 같은 기계). 밀도는 결투장에서 보이는 중경에만 모으고 덜어 낸 곳: 안개 속 먼 숲 그림자 그루 수 반쯤 · 고사리 180 → 140 · 덩어리 안쪽 나무는 가지 두 층·맞은편 가지 없음 · 26 m 밖 지붕 덩어리와 30 m 밖 덩어리 나무는 간단한 꼴 · 잎 덩어리 꼴 하나(pad1) 뭉치 6 → 5. 잎은 모두 인스턴스, 줄기·가지는 한 메쉬라 그리기 호출은 늘지 않았다.
 - **빛줄기: 둔다.** 밑동을 해 쪽 숲 덩어리 **가장자리**(수관 지붕 끝)로 옮기고 밑동 쪽을 옅게 시작해 — 짙은 숲 벽 앞에서 수관 사이로 드는 빛으로 읽히고, 경기 화면(해를 등진 쪽)과 결투장 위는 가리지 않기 때문. 여덟 줄기, 세기 0.022~0.038(더하기 섞기).
-- 전/후 (폰 가로 844×390, 1차와 같은 각도 + 해 쪽 숲): [나란히](handoff/grove_polish2_before_after.jpg).
+- 전/후 (폰 가로 844×390, 1차와 같은 각도 + 해 쪽 숲): 나란히 *(그림 지움 — `git show 534bd4b7:docs/handoff/grove_polish2_before_after.jpg`)*.
 
 ### 다듬기 3차: 신목 양옆 숲 (디렉터 10/11 — 기본 경기 화면이 신목 쪽이라 거기서 빽빽함이 보이게, 가지 `…/grove-polish3-2q36ha`)
 
 - 경기 화면에서 신목 좌우(화면 가장자리 쪽)에 숲 덩어리 둘을 붙였다: (21, −18) 반지름 5.5 m 12 그루 · (24, 15) 5 m 10 그루. 신목 둘레 13.5 m 바로 밖에서 시작해 '빽빽한 숲 사이로 트인 창에 신목이 선' 그림이 된다. 신목 뒤 하늘 창(통로 반폭 6.5 m)·도리이 둘레 6 m 는 그대로 비웠다(도리이는 숲 어귀 앞에 선다).
 - 맞추려고 덜어 낸 곳: 경기 카메라 뒤쪽 덩어리 둘의 그루(15 → 9 · 9 → 6) · 안개 속 먼 나무 몇 그루 · 덩어리 안쪽 나무는 27 m 밖부터 간단한 꼴(전 30 m, 수관 지붕이 덮는다).
 - 그리기 양 (`stage_cost.mjs`, 같은 기계): 2차(main 92b4bff) 205 호출 · 153,208 삼각형 → **205 · 156,640 (+2.2 %)**.
-- 전/후 (폰 경기 화면 · 신목·도리이 쪽): [나란히](handoff/grove_polish3_before_after.jpg).
+- 전/후 (폰 경기 화면 · 신목·도리이 쪽): 나란히 *(그림 지움 — `git show 30c866ab:docs/handoff/grove_polish3_before_after.jpg`)*.
 
 ## 얼어붙은 만 (`frozen_bay`) — 투야나 니콜라예바의 무대
 
@@ -559,18 +559,18 @@ node tools/browser/stage_light_check.mjs http://127.0.0.1:5173 --stages=<id> --o
 - **2차 (사장님 10/11 00:1x — 가지 `…/stages-sb2-2q36ha`)**: "투야나는 빙판의 사제로 칭호 바꾸자. 빙판이 다 눈길이 되어서 좀 아쉬운데.. 이졸데 맵과 겹쳐서."
   - 칭호 '빙판의 사제'(디렉터, characters.js). 결투 자리의 밝은 눈 바닥을 **다시 빙판**으로: 둘레 먹청 얼음(#325568)보다 한참 밝고 맑은 **청백 얼음**(#9cc0d4 언저리 → 가장자리에서 먹청 얼음으로 녹아듦)에 흰 균열(그늘 줄 함께)·작은 기포·한 방향으로 얇게 날린 가루눈 줄, 반들한 반사(거칠기 0.42 — 해 반사가 번지지 않을 만큼).
   - 남색 사제복(v2 흰 어깨 망토·깃)은 밝은 얼음 위에서 읽힌다. 테두리광 1.35 · 눈 둑 고리 경계 · 앞 바닥 눈 무더기·갈대 · 등불 · 가루눈은 그대로.
-  - 전/후 (폰 가로 844×390, 같은 경기 카메라): [1차 눈 바닥](handoff/stage_sb_frozen_bay_phone.png) → [2차 빙판](handoff/stage_sb2_frozen_bay_after_phone.png) · [2차 다른 각도](handoff/stage_sb2_frozen_bay_after_view.png).
-  - 카드 뒷면 `px_frozen_bay_*`: 먹청 얼음빛 바탕에 옅은 얼음 균열 마름모 격자, 얼음 결정(흰 여섯 갈래 별)과 금 간 얼음 조각을 번갈아, 띠는 고드름, 가운데는 흰 균열이 간 둥근 얼음판. [실제 카드 화면](handoff/cardbacks_game_frozen_bay_sb2.png)
-  - **3차 카드 뒷면** (10/11, 디렉터 판단 — 사장님이 맡김): 바탕 가득한 눈송이가 '눈'으로 읽혀 이졸데의 눈 덮인 성 안뜰과 겹쳤다 → 바탕 무늬를 **얼음 언덕(토로스 — 밀려 솟은 얼음 판 줄)과 곧추선 날카로운 얼음 조각 무리**로 바꿨다. 가운데 금 간 얼음판·고드름 띠·금 간 얼음 조각은 그대로, 상대 칸 회색 조각도 다시 뽑음. 정교회 팔단 십자 배지는 넣지 않았다 — 아래 비스듬한 가로대 탓에 180° 돌리면 다른 꼴이 되어 카드 대칭 규칙과 안 맞는다. 전/후: [2차](handoff/cardbacks_game_frozen_bay_sb2.png) → [3차](handoff/cardbacks_game_frozen_bay.png)
+  - 전/후 (폰 가로 844×390, 같은 경기 카메라): 1차 눈 바닥 *(그림 지움 — `git show 66a8f2a7:docs/handoff/stage_sb_frozen_bay_phone.png`)* → 2차 빙판 *(그림 지움 — `git show bfccc6e2:docs/handoff/stage_sb2_frozen_bay_after_phone.png`)* · 2차 다른 각도 *(그림 지움 — `git show bfccc6e2:docs/handoff/stage_sb2_frozen_bay_after_view.png`)*.
+  - 카드 뒷면 `px_frozen_bay_*`: 먹청 얼음빛 바탕에 옅은 얼음 균열 마름모 격자, 얼음 결정(흰 여섯 갈래 별)과 금 간 얼음 조각을 번갈아, 띠는 고드름, 가운데는 흰 균열이 간 둥근 얼음판. 실제 카드 화면 *(그림 지움 — `git show 970a70fe:docs/handoff/cardbacks_game_frozen_bay_sb2.png`)*
+  - **3차 카드 뒷면** (10/11, 디렉터 판단 — 사장님이 맡김): 바탕 가득한 눈송이가 '눈'으로 읽혀 이졸데의 눈 덮인 성 안뜰과 겹쳤다 → 바탕 무늬를 **얼음 언덕(토로스 — 밀려 솟은 얼음 판 줄)과 곧추선 날카로운 얼음 조각 무리**로 바꿨다. 가운데 금 간 얼음판·고드름 띠·금 간 얼음 조각은 그대로, 상대 칸 회색 조각도 다시 뽑음. 정교회 팔단 십자 배지는 넣지 않았다 — 아래 비스듬한 가로대 탓에 180° 돌리면 다른 꼴이 되어 카드 대칭 규칙과 안 맞는다. 전/후: 2차 *(그림 지움 — `git show 970a70fe:docs/handoff/cardbacks_game_frozen_bay_sb2.png`)* → 3차 *(그림 지움 — `git show 970a70fe:docs/handoff/cardbacks_game_frozen_bay.png`)*
 - **3차 — 바이칼 표식 (디렉터 의견에 사장님 동의 10/11 01:0x, 가지 `…/stages-sb3-2q36ha`)**: '북쪽 어딘가의 얼어붙은 호수'까지만 읽히고 동시베리아(바이칼)는 약했고, 넓게 보면 눈 둑에 둘러싸인 작은 못 같았다. 결투 빙판·남색 사제복 읽힘·등불·가루눈은 그대로, `baikalBackdrop()` 로 셋을 더했다:
   - **얼음 언덕(토로스)**: 깨진 청록 얼음판(반투명 0.88, 윗면에 눈)이 비스듬히 겹쳐 솟은 능선 여섯(판 9~16 장씩, 높이 약 1~1.6 m) — 눈 둑 고리 바깥 13~21 m, 카메라 궤도 10.5 m 밖. 밑동엔 부서진 얼음 부스러기.
   - **먼 눈 덮인 산맥**: 맞은편 기슭(181 m) 너머 222~233 m 에 지평선을 따라 길게, 맞은편(+x)이 가장 높고(약 24 m) 뒤쪽은 낮은 구릉 뒤로 조금만. 안개(62~205 m)에 묻히지 않게 안개를 끄고, 하늘보다 조금 짙은 회청 몸 · 높은 봉우리만 새벽빛 받은 분홍빛 흰 눈머리를 꼭짓점 색에 구웠다 — 분홍 새벽 하늘에 실루엣이 읽힌다. 낮은 구릉은 그대로(산맥 앞 겹).
   - **통나무 정교회 예배당**(투야나의 교구): 선착장 뒤 둑 위 낙엽송 사이(−21.4, 27.2)에 작게 — 모서리에서 엇갈려 삐죽한 통나무 벽, 눈 덮인 박공지붕, 팔각 북 위 양파 지붕 하나(짙은 녹회색, 눈 조금), 팔단 십자(세로대 · 위 짧은 가로대 · 큰 가로대 · 아래 비스듬한 발판). 숲은 그 자리를 비운다(`CHAPEL`).
-  - **4차 (사장님 10/11 01:4x "예배당은 좀 더 멀리 작게 넣자. 자연이 강조되도록. 그만큼 안식이 멀다는 뜻이기도. 원경까진 아니고 중경과 원경 사이.", 가지 `…/stages-sb4-2q36ha`)**: 예배당을 선착장 뒤 둑 위에서 만 어귀 너머 맞은편 기슭 능선(약 188 m — 먼 산맥 222 m 보다 앞)으로 옮겼다. 경기 카메라 첫 화면 정면 조금 오른쪽, 산맥 앞에 실루엣이 겨우 읽히는 크기(폰 가로에서 약 20 px). 그 거리는 안개에 거의 묻혀 안개를 끄고 짙은 회청 먼 빛으로 칠했다(산맥과 같은 방식), 팔단 십자는 멀리서도 끝이 보이게 굵게. 가까운 숲은 옛 자리를 다시 채운다. [폰 경기 화면](handoff/stage_sb4_frozen_bay_chapel_far_phone.png)
+  - **4차 (사장님 10/11 01:4x "예배당은 좀 더 멀리 작게 넣자. 자연이 강조되도록. 그만큼 안식이 멀다는 뜻이기도. 원경까진 아니고 중경과 원경 사이.", 가지 `…/stages-sb4-2q36ha`)**: 예배당을 선착장 뒤 둑 위에서 만 어귀 너머 맞은편 기슭 능선(약 188 m — 먼 산맥 222 m 보다 앞)으로 옮겼다. 경기 카메라 첫 화면 정면 조금 오른쪽, 산맥 앞에 실루엣이 겨우 읽히는 크기(폰 가로에서 약 20 px). 그 거리는 안개에 거의 묻혀 안개를 끄고 짙은 회청 먼 빛으로 칠했다(산맥과 같은 방식), 팔단 십자는 멀리서도 끝이 보이게 굵게. 가까운 숲은 옛 자리를 다시 채운다. 폰 경기 화면 *(그림 지움 — `git show f685f4af:docs/handoff/stage_sb4_frozen_bay_chapel_far_phone.png`)*
   - **북극곰 (사장님 10/13 23:0x "그 앞에 북극곰이 앉아서 결투를 지켜보게 해줘" `…/bay-bear-2q36ha` → 10/13 23:4x '눈 둔덕 위에 올리고 1.5배로' `…/bay-bear2-2q36ha` → 사장님 결정 10/14 00:0x "북극곰 넘 작다; 예배당 근처 말고 돔 앞으로 옮겨" `…/bay-bear3-2q36ha`)**: '돔' = 결투 카메라 첫 화면 오른쪽 가장자리의 나무 없는 둥근 눈 언덕(물가 둑이 시작되는 오른쪽 곶, 방위 a ≈ 0.5~0.6 · 반지름 36~53 m — 디렉터 해석, 후보 셋을 표시한 화면으로 확인). 곰은 그 언덕 앞자락(물가 36.3 m 에서 3.7 m 올라간 첫 눈 비탈, (34.1, 0.75, 20.9) — 자리는 작업자가 고른 값)에 엉덩이를 깔고 앞다리를 곧게 세워 앉아 결투장 한가운데를 본다. 앉은 키 2.49 m 그대로, 크림빛 흰 털·검은 코와 눈, 892 삼각형. 결투 카메라에서 키 900×600 약 42 CSS px · 폰 가로 844×390 약 27 CSS px(전 9 · 6 px). 카메라 궤도(10.5 m)·결투 공간 밖, 물리 몸 없음. 예배당 박공벽 앞 눈 둔덕(옆 3.4 · 앞뒤 3.8 m, 꼭대기 1.75 m, 평면 음영)은 비탈 위에 들뜬 예배당 앞 틈을 가리려 그대로 둔다. 곰·둔덕 모두 예배당과 같은 재질 통(`frozen-bay-chapel-log`)에 합쳐 그리기 호출 그대로 · 그림자 없음 · 움직임 없음 · 무대 난수 순서 그대로(`chapelMoundAndBear`).
   - 그리기 양 (같은 판 `stage_cost.mjs`·헤드리스): 전 257 호출·154,042 삼각형·투명 2 → **후 267 호출·161,338 삼각형·투명 3** (같은 판 성 안뜰 230·72,653 / 신목의 숲 256·183,072 — 범위 안).
-  - 전/후: 폰 경기 화면 [전](handoff/stage_sb3_frozen_bay_before_phone.png) → [후](handoff/stage_sb3_frozen_bay_after_phone.png) · 넓은 장면 [전](handoff/stage_sb3_frozen_bay_before_wide.png) → [후](handoff/stage_sb3_frozen_bay_after_wide.png) · [예배당 쪽](handoff/stage_sb3_frozen_bay_after_chapel.png).
-- 캡처: [경기 카메라 900×600 (투야나 v1 옷)](handoff/stage_sb_frozen_bay_fight.png) · [폰 가로 844×390 (투야나 v2 겨울 사제복, main 2b00b00 뒤)](handoff/stage_sb_frozen_bay_phone.png) · [멀리서](handoff/stage_sb_frozen_bay_wide.png).
+  - 전/후: 폰 경기 화면 전 *(그림 지움 — `git show abe78314:docs/handoff/stage_sb3_frozen_bay_before_phone.png`)* → 후 *(그림 지움 — `git show abe78314:docs/handoff/stage_sb3_frozen_bay_after_phone.png`)* · 넓은 장면 전 *(그림 지움 — `git show abe78314:docs/handoff/stage_sb3_frozen_bay_before_wide.png`)* → 후 *(그림 지움 — `git show abe78314:docs/handoff/stage_sb3_frozen_bay_after_wide.png`)* · 예배당 쪽 *(그림 지움 — `git show abe78314:docs/handoff/stage_sb3_frozen_bay_after_chapel.png`)*.
+- 캡처: 경기 카메라 900×600 (투야나 v1 옷) *(그림 지움 — `git show 66a8f2a7:docs/handoff/stage_sb_frozen_bay_fight.png`)* · 폰 가로 844×390 (투야나 v2 겨울 사제복, main 2b00b00 뒤) *(그림 지움 — `git show 66a8f2a7:docs/handoff/stage_sb_frozen_bay_phone.png`)* · 멀리서 *(그림 지움 — `git show 66a8f2a7:docs/handoff/stage_sb_frozen_bay_wide.png`)*.
 
 ## 청람잔도 (`qinglan`) — 김씨의 무대
 
@@ -587,7 +587,7 @@ node tools/browser/stage_light_check.mjs http://127.0.0.1:5173 --stages=<id> --o
 - **소리**: 샛별 것 그대로 — 바람·잎 두 겹, 샘 낙수(springDrip, 보이는 물방울과 같은 때)·작은 새(cliffBird, 낭떠러지 위를 지나는 새가 보일 때). 자리만 새 꼴에 맞췄다(샘 −10.4·0.27·−10.9, 새는 마루 앞 허공). 발소리 돌(`STAGE_SOUND`, 샛별 값 — 판자 발소리 녹음이 따로 없다).
 - **무대 리뷰(10/10, 샛별 꼴을 폰 화면으로 본 것)에서 나온 것**: ① 바닥이 아주 밝은 회백색이라 밝은 옷이 묻힘 → 중간 밝기 판자(#76664f 언저리)로 바뀜 ② 바닥 가운데 방사형 줄무늬(부채꼴 삼각형 법선) → 판자 바닥은 판판한 한 면(ShapeGeometry, 법선 하나)이라 없음 ③ 언덕 위에 떠 보이던 다면체 바위 → 없앰 ④ 바닥 가장자리가 갑자기 끊김 → 들보·버팀대·사슬 난간과 그 너머 구름 바다까지 48 m 낭떠러지 ⑤ 한낮이라 그림자가 납작함 → 한낮 그대로 두고, 바위 기둥의 홈을 꼭짓점 색으로 어둡게 굽고 절벽은 면마다 명암(flatShading)으로 세로 면 입체를 냈다.
 - **물리·성능**: 물리 바닥·경계 벽은 다른 무대와 같다(떨어지는 판정 없음, 장식만). 마루는 카메라가 가는 곳(가운데에서 10.5 m)까지 덮는다. 그림자는 마루 위 난간·사슬·돌만 드리우고, 절벽·먼 경치는 드리우지 않는다. 투명 물체 둘(안개 띠).
-- 전/후 (같은 경기 카메라): [샛별 꼴 그대로](handoff/stage_sb_qinglan_before_fight.png) → [다듬은 꼴](handoff/stage_sb_qinglan_after_fight.png) · [멀리서](handoff/stage_sb_qinglan_after_wide.png) · [절벽 쪽](handoff/stage_sb_qinglan_after_wall.png) · [낭떠러지 쪽](handoff/stage_sb_qinglan_after_void.png) · [폰 가로 844×390](handoff/stage_sb_qinglan_after_phone.png).
+- 전/후 (같은 경기 카메라): 샛별 꼴 그대로 *(그림 지움 — `git show 66a8f2a7:docs/handoff/stage_sb_qinglan_before_fight.png`)* → 다듬은 꼴 *(그림 지움 — `git show 66a8f2a7:docs/handoff/stage_sb_qinglan_after_fight.png`)* · 멀리서 *(그림 지움 — `git show 66a8f2a7:docs/handoff/stage_sb_qinglan_after_wide.png`)* · 절벽 쪽 *(그림 지움 — `git show 66a8f2a7:docs/handoff/stage_sb_qinglan_after_wall.png`)* · 낭떠러지 쪽 *(그림 지움 — `git show 66a8f2a7:docs/handoff/stage_sb_qinglan_after_void.png`)* · 폰 가로 844×390 *(그림 지움 — `git show 66a8f2a7:docs/handoff/stage_sb_qinglan_after_phone.png`)*.
 
 ### 청람잔도 2차 (사장님 10/11 00:1x — 가지 `…/stages-sb2-2q36ha`)
 
@@ -599,8 +599,8 @@ node tools/browser/stage_light_check.mjs http://127.0.0.1:5173 --stages=<id> --o
   - 다시 들이지 않은 것: 초기 판의 둥근 초록 언덕(6dfd771 꼴)·떠 보이던 바위(능선 위 각진 바위·강가 다면체 돌)·밝은 바닥·방사 줄무늬(바위 쉼터 바닥)·언덕 길.
   - 불투명 구름 바다와 안개 띠 하나는 걷어 냈고, 협곡 허리(−34 m)에 **엷은 구름 띠 하나**(불투명도 0.18, 마루 바로 밑 60 m 안은 비움)만 남겼다. 바위 기둥 무리·태산 같은 산덩이는 그대로 두되 강 한가운데 서는 기둥은 빼고(`overRiver`), 가까운 겹 하나는 강 오른쪽으로 옮겼다.
   - 사장님 1차 요구(잔도 느낌 · 태산 같은 기암절벽 스케일 · 12~1시 한낮 · 초여름)는 그대로: 빛·하늘·안개 값 변화 없음.
-- 전/후 (폰 가로 844×390, 같은 경기 카메라): [1차](handoff/stage_sb_qinglan_after_phone.png) → [2차](handoff/stage_sb2_qinglan_after_phone.png) · 발아래가 보이는 넓은 장면: [난간 너머 내려다보기](handoff/stage_sb2_qinglan_after_below.png) · [협곡 쪽](handoff/stage_sb2_qinglan_after_gorge.png) · [멀리서](handoff/stage_sb2_qinglan_after_wide.png).
-- 카드 뒷면 `px_qinglan_*`: 짙은 옥빛 바탕에 옅은 마름모 격자, 솔을 인 바위 기둥 둘과 쇠사슬 사이 판자를 번갈아, 띠는 판자 잔도와 늘어진 사슬, 가운데는 초록 골짜기를 S 자로 굽이치는 옥빛 강. [실제 카드 화면](handoff/cardbacks_game_qinglan.png)
+- 전/후 (폰 가로 844×390, 같은 경기 카메라): 1차 *(그림 지움 — `git show 66a8f2a7:docs/handoff/stage_sb_qinglan_after_phone.png`)* → 2차 *(그림 지움 — `git show bfccc6e2:docs/handoff/stage_sb2_qinglan_after_phone.png`)* · 발아래가 보이는 넓은 장면: 난간 너머 내려다보기 *(그림 지움 — `git show bfccc6e2:docs/handoff/stage_sb2_qinglan_after_below.png`)* · 협곡 쪽 *(그림 지움 — `git show bfccc6e2:docs/handoff/stage_sb2_qinglan_after_gorge.png`)* · 멀리서 *(그림 지움 — `git show bfccc6e2:docs/handoff/stage_sb2_qinglan_after_wide.png`)*.
+- 카드 뒷면 `px_qinglan_*`: 짙은 옥빛 바탕에 옅은 마름모 격자, 솔을 인 바위 기둥 둘과 쇠사슬 사이 판자를 번갈아, 띠는 판자 잔도와 늘어진 사슬, 가운데는 초록 골짜기를 S 자로 굽이치는 옥빛 강. 실제 카드 화면 *(그림 지움 — `git show bfccc6e2:docs/handoff/cardbacks_game_qinglan.png`)*
 - 그리기 양 (2차, 같은 판 `stage_cost.mjs` 844×420 헤드리스 — 폰 수치 아님): 성 안뜰 230 호출·72,653 삼각형·600 ms / 신목의 숲 256·183,072·800 ms / **얼어붙은 만 257·154,042·617 ms** / **청람잔도 273·167,891·983 ms** (투명 물체 1). 청람잔도는 발아래 협곡(약 +3.6 만 삼각형)과 옛 널(약 600 장)로 1차(112,734)보다 늘었지만 신목의 숲·산사(약 16 만) 범위 안이다. 배경 바꾸기 세 바퀴(얼어붙은 만 → 청람잔도 → 성 안뜰) 같은 무대마다 GPU 모양·질감·셰이더 수 그대로(얼어붙은 만 128/9/53 · 청람잔도 137/10/55) — 누수 없음.
 - 카드 뒷면 두 무대 모두 `tools/cardbacks/gen_pixel_cardbacks.py` 에 함수 하나씩 더해 같은 규칙(16×32 바탕 · 20×20 테두리 · 14×14 가운데 · 10×10 배지, 색 수 제한, 180° 대칭)으로 뽑고 `grey_foe.py` 로 상대 칸 회색 조각을 만들었다(기존 무대 조각은 바이트 그대로). main.js `PX_BACKS` 에 두 줄 색(한 줄 고침).
 
@@ -612,7 +612,7 @@ node tools/browser/stage_light_check.mjs http://127.0.0.1:5173 --stages=<id> --o
 - 하늘: 지평선의 옅은 흰빛을 걷고 한낮의 짙은 푸른색(#1c64c4 → 지평선 #9cc8ec), 채도를 올렸다.
 - 대기(안개): 45~1000 m → 80~2000 m (400 m 에서 0.37 → 0.17) — 먼 능선까지 또렷하게.
 - **그리기 양 (같은 판 `stage_cost.mjs`·헤드리스)**: 2차 273 호출·167,891 삼각형 → **3차 246 호출·139,867 삼각형**(−17 %, 투명 물체 1 → 0). 줄인 곳(화면 차이 없음): 협곡 격자 156×44 → 128×36(27,456 → 18,432) · 강가 띠 150×10 → 120×8 · 양 끝 좁은 잔도는 40 m 밖 널을 두 배 넓게(11,656 → 7,756) · 쇠사슬(약 9.4 천 삼각형)은 그림자 그리기에서 뺌(한낮이라 사슬 그림자는 거의 안 보인다) · 구름 띠 없앰. 같은 판 신목의 숲 256 호출·183,072. 헤드리스 프레임 시간은 기계 부하로 흔들려(같은 판 신목의 숲 1250 ms · 청람잔도 1267 ms) 비교는 삼각형·호출 수로 한다.
-- 전/후 (폰 가로 844×390 경기 카메라): [2차](handoff/stage_sb2_qinglan_after_phone.png) → [3차](handoff/stage_sb3_qinglan_after_phone.png) · 내려다보기 [2차](handoff/stage_sb2_qinglan_after_below.png) → [3차](handoff/stage_sb3_qinglan_after_below.png).
+- 전/후 (폰 가로 844×390 경기 카메라): 2차 *(그림 지움 — `git show bfccc6e2:docs/handoff/stage_sb2_qinglan_after_phone.png`)* → 3차 *(그림 지움 — `git show 970a70fe:docs/handoff/stage_sb3_qinglan_after_phone.png`)* · 내려다보기 2차 *(그림 지움 — `git show bfccc6e2:docs/handoff/stage_sb2_qinglan_after_below.png`)* → 3차 *(그림 지움 — `git show 970a70fe:docs/handoff/stage_sb3_qinglan_after_below.png`)*.
 
 ### 청람잔도 되돌림 (사장님 10/15 23:1x — 가지 `…/visual-revert-2q36ha`)
 
@@ -673,10 +673,10 @@ node tools/browser/stage_light_check.mjs http://127.0.0.1:5173 --stages=<id> --o
 - 콘솔 오류 0(마지막 그림·잼 모두, 바깥 요청 없음).
 
 그림 (폰 가로 844×390 · 넓은 각도 1280×640):
-- 폰 경기 화면 — [지금 판](handoff/stage_qinglan_revert_before_phone.png) → [되돌림 + 고침](handoff/stage_qinglan_revert_after_phone.png) · 참고 [샛별 판 그대로(오늘 카메라)](handoff/stage_qinglan_revert_sb_phone.png) · 옮긴 날 그림 [샛별 꼴 그대로](handoff/stage_sb_qinglan_before_fight.png)
-- 넓은 장면(같은 카메라) — [지금 판](handoff/stage_qinglan_revert_before_wide.png) → [되돌림 + 고침](handoff/stage_qinglan_revert_after_wide.png) · [정자·샘·잔도 쪽](handoff/stage_qinglan_revert_after_wide2.png)
-- 잔도 — [가까이](handoff/stage_qinglan_revert_after_plank.png) · [두 사람이 자리를 바꿨을 때 경기 카메라](handoff/stage_qinglan_revert_after_back.png) · [판 시작 훑기 첫 화면](handoff/stage_qinglan_revert_after_open.png)
-- 가장자리 턱과 바위 면 — [강 머리 쪽에서](handoff/stage_qinglan_revert_after_edge.png)
+- 폰 경기 화면 — 지금 판 *(그림 지움 — `git show c46f6fb7:docs/handoff/stage_qinglan_revert_before_phone.png`)* → 되돌림 + 고침 *(그림 지움 — `git show c46f6fb7:docs/handoff/stage_qinglan_revert_after_phone.png`)* · 참고 샛별 판 그대로(오늘 카메라) *(그림 지움 — `git show c46f6fb7:docs/handoff/stage_qinglan_revert_sb_phone.png`)* · 옮긴 날 그림 샛별 꼴 그대로 *(그림 지움 — `git show 66a8f2a7:docs/handoff/stage_sb_qinglan_before_fight.png`)*
+- 넓은 장면(같은 카메라) — 지금 판 *(그림 지움 — `git show c46f6fb7:docs/handoff/stage_qinglan_revert_before_wide.png`)* → 되돌림 + 고침 *(그림 지움 — `git show c46f6fb7:docs/handoff/stage_qinglan_revert_after_wide.png`)* · 정자·샘·잔도 쪽 *(그림 지움 — `git show c46f6fb7:docs/handoff/stage_qinglan_revert_after_wide2.png`)*
+- 잔도 — 가까이 *(그림 지움 — `git show c46f6fb7:docs/handoff/stage_qinglan_revert_after_plank.png`)* · 두 사람이 자리를 바꿨을 때 경기 카메라 *(그림 지움 — `git show c46f6fb7:docs/handoff/stage_qinglan_revert_after_back.png`)* · 판 시작 훑기 첫 화면 *(그림 지움 — `git show c46f6fb7:docs/handoff/stage_qinglan_revert_after_open.png`)*
+- 가장자리 턱과 바위 면 — 강 머리 쪽에서 *(그림 지움 — `git show c46f6fb7:docs/handoff/stage_qinglan_revert_after_edge.png`)*
 - 눈으로 본 것: 되돌린 꼴은 옮긴 날 그림(`stage_sb_qinglan_before_*`)과 같은 구도(정면 큰 강 · 양쪽 능선과 소나무 · 각진 바위 · 오른쪽 능선 돌계단 길)로 읽힌다. 남은 아쉬움: 잔도는 쉼터 뒤에 있어 판 시작 경기 화면(강 쪽)에는 안 들어오고, 턱은 경기 카메라에서 얇은 띠라 '발밑 낭떠러지'는 넓은 각도에서 더 잘 읽힌다. 낮은 다각형 바위 면이라 가까이선 각이 보인다(샛별 판과 같은 결).
 
 ### 두 무대 그리기 양 (`tools/browser/stage_cost.mjs`, 844×420 경기 카메라, 헤드리스 SwiftShader — 폰 수치 아님, 같은 날 같은 기계)

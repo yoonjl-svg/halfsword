@@ -141,7 +141,7 @@ AI 6 판, 토막마다 (기본):
 
 `tools/browser/iberian_flow_probe.mjs` (츠바이핸더 플레이어 · 상대 롱소드 AI 는 멈춤 · 닿는 거리 안쪽 1.9 m 까지 걸어 들어가 창을 열고 왼 아래로 끌기 한 번) → `tools/browser/iberian_flow_chart.mjs`.
 
-![칼끝 빠르기](../handoff/iberian_flow_tipspeed.png)
+*(그림 지움 — `git show f37c1ea5:docs/handoff/iberian_flow_tipspeed.png`)*
 
 - 새 판: 끌기(왼 아래) → 왼쪽으로 떨어뜨림부터 시작했다(흐름 이어받기 ✓).
   - 단계: 떨어뜨림 → 올려 레베스 → 떨어뜨림 → 올려 탈류 → 넘김 → 둘러 벰 → 따라 지나감 → 경직 → 조작.
@@ -151,9 +151,9 @@ AI 6 판, 토막마다 (기본):
 - 옛 v4: 0.25 s 동안 칼끝 최고 **75 m/s**(스텝마다 자리 지정 — 물리 밖)였다. 그동안 플레이어 손 패드는 움직이지 않았다([0.15, 0] 그대로). 경직이 시작되자 칼끝이 한 스텝에 6 → 0 m/s 로 멎었다.
 - 세 순간 (옆에서, 왼쪽부터 올려 레베스 끝 · 올려 탈류 끝 · 둘러 베는 칼):
 
-![흐름 세 순간](../handoff/iberian_flow_strip_flow.png)
+*(그림 지움 — `git show f37c1ea5:docs/handoff/iberian_flow_strip_flow.png`)*
 
-- 옛 v4 세 순간 (0.06 · 0.13 · 0.20 s): `docs/handoff/iberian_flow_strip_v4.png`.
+- 옛 v4 세 순간 (0.06 · 0.13 · 0.20 s): `docs/handoff/iberian_flow_strip_v4.png (지움 · f37c1ea5)`.
 
 ## 10. 구현
 
