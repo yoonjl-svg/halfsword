@@ -1211,6 +1211,7 @@ export class Skill {
         tp.revProg = Math.max(tp.revProg ?? -Infinity, prog);
       }
       tp.va = va;
+      if (!tp.ended) this.settleEnd(tp); // 멈춤 끝 (11/22 — 흔들림 없이 선 칼)
     }
     this.thrustPush = !!tp.go && !tp.ended; // 팔 무게는 내려찍는 동안만 싣는다 (combat.js)
     // ── 4) 자세
@@ -1239,6 +1240,24 @@ export class Skill {
     pose.chestYaw = H.chestYaw * D2R;
     pose.pitch = B.pitch * D2R;
     pose.drop = B.drop;
+  }
+
+  /**
+   * 마무리 탭의 멈춤 끝 (11/22 — finish.js FINISH.settleV · settle · 찍기 plungePose · 쪼개 내려치기 cleavePose · 사람 · AI 같음): 내려친 뒤(go)
+   *  칼끝 빠르기(fighter.tipVel)가 판정 빠르기 바닥 밑으로 settle 초(탭 시계 tp.t) 내리 머물면 기존 끝과 똑같이 끝낸다(tEnd — 그 뒤 K.recover 동안 자세로).
+   *  바닥 위로 한 스텝이라도 움직이면 다시 셈. 기존 끝이 오는 탭은 그 전에 칼이 흔들리거나 움직여 이 끝에 닿지 않는다
+   */
+  settleEnd(tp) {
+    if (this.f.tipVel.length() >= FINISH.settleV) {
+      tp.stillT = null;
+      return false;
+    }
+    tp.stillT ??= tp.t;
+    if (tp.t - tp.stillT < FINISH.settle) return false;
+    tp.ended = true;
+    tp.tEnd = tp.t;
+    tp.endWhy = 'settle';
+    return true;
   }
 
   /**
@@ -1331,6 +1350,7 @@ export class Skill {
       }
       tp.va = va;
       tp.el = el;
+      if (!tp.ended) this.settleEnd(tp); // 멈춤 끝 (11/22 — 찍기와 같음)
     }
     this.thrustPush = !!tp.go && !tp.ended; // 내려치는 동안 (combat.js 마무리 판정 · 칼끝으로 닿으면 팔 무게)
     // ── 4) 자세

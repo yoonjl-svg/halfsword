@@ -89,6 +89,13 @@ export const FINISH = {
   // 내려찍는 동안 손목이 칼을 세우기 시작하는 때를 늦춘다 (fighter.driveSword 의 놓아주기 여유 × (1 − 이 값)).
   //  목표 각도가 몸 밑 땅속이라, 제동을 늦춰도 칼은 몸이나 땅에 먼저 닿는다
   brakeRelief: 0.8,
+  // 멈춤 끝 (11/22 — 탭 찍기 · 쪼개 내려치기 · 사람 · AI 같음 · skill.js settleEnd): 내려친 뒤(go) 칼끝 빠르기가 settleV 밑으로 settle 초 내리 머물면 탭을 끝낸다 (끝난 뒤는 보통처럼 자세로).
+  //  기존 끝(칼자루가 나아가다 멈춤 — 약 5 Hz 흔들림의 봉우리 · 골이 되풀이되어 둘째 멈춤에서 끝)은 칼이 흔들려야 온다. 흔들림 없이 선 칼(몸 위 허공 · 팔 끝)은 끝이 오지 않아
+  //  탭이 끝나지 않았다 — 상대가 일어나거나 죽을 때까지 칼을 든 채 섬 (fights12 씨앗 6: 못 일어나는 상대 위 0.24 m 에서 8 s 넘게 · 탭 동안 스틱을 놓는 AI 는 그동안 굳음).
+  //  settleV = 판정 빠르기 바닥 (combat.js analyze 의 0.5 m/s — 그 밑의 접촉은 판정이 안 나 찍기가 더 할 일이 없음 · 박힘 풀기의 '거의 멈춤'과 같은 수)
+  //  settle = 시간 사다리 0.6 (흔들림 한 주기 0.2 s 의 세 배 — 그동안 바닥 위로 한 번도 안 움직인 칼은 흔들림 끝이 오지 않는다)
+  settleV: 0.5,
+  settle: realS(0.6),
   hover: { pelvisYaw: 10, chestYaw: 12, pitch: 8, drop: 0.07 }, // 몸 (도, m)
   strike: { pelvisYaw: -5, chestYaw: -5, pitch: 22, drop: 0.13 },
   // AI 가 쓰러진 상대에게 쓰는 간격 (롱소드 기준 m, 무기 배율 k 를 곱한다. ai.js 가 간격 표 contact·reach·clinch 대신 쓴다).
