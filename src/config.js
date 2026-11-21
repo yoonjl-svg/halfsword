@@ -1617,7 +1617,7 @@ export const SHOP = {
 // ── 거점전: 두 거점 쥐기 판 — 원 안에 한 편 몸만 take 초면 그 편 거점 · 두 거점을 다 가진 채 hold 초면 이김 · 전멸도 이김 (src/capture.js · 기록 docs/strike/capture_mode_2026-11-21.md) [사장님 11/21 '거점전은 따로 만들자.']
 export const CAPTURE = {
   take: 3, // 쥐는 시간 (초) [사장님 11/21 '거점 쥐기 넣어' · 설계 값]
-  hold: 20, // 두 거점을 함께 쥔 채 이기는 시간 (초) · 같음
+  hold: 8, // 두 거점을 함께 쥔 채 이기는 시간 (초) [사장님 11/22 '거점전 점유 8초로' — 전 20]
 };
 
 // ── 생사전(3인의 맹약 — src/saengsa_rules.js · 설계 docs/design/saengsa_2026-10-29.md · 싸움 · 시뮬은 안 읽음 · 시각은 기기 현지 시각) · 시험판 빌드(VITE_SAENGSA_TEST=1)에서만 저장 열쇠를 가름 [사장님 10/29]

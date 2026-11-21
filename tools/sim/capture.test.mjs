@@ -1,6 +1,6 @@
 // 거점전 — 두 거점 쥐기 (사장님 11/21 '생사전은 전멸을 목표로 해야 생사전이야. 거점전은 따로 만들자.' — src/capture.js · src/capture_ai.js · 기록 docs/strike/capture_mode_2026-11-21.md)
-//  ① 3 초 쥐기 · 함께 서면 · 비면 처음부터 ② 쓰러짐 · 일어나는 중 · 죽음 · 부활 중은 안 셈 (꿇은 채 싸우는 몸은 셈) ③ 두 거점 20 초 → 이김 ④ 상대가 원 안에 서 있으면 멈춤
-//  ⑤ 하나를 뺏기면 20 초부터 다시 ⑥ 전멸도 이김 · 쥐기로 끝난 판 ⑦ 생사전 · 다른 판은 거점이 없음(전멸만) ⑧ AI 자리 나눔 (둘 = 하나씩 · 셋 = 둘 + 하나 · 상대가 둘 다 쥐면 몰아 감 · 하나 대 하나는 싸움)
+//  ① 3 초 쥐기 · 함께 서면 · 비면 처음부터 ② 쓰러짐 · 일어나는 중 · 죽음 · 부활 중은 안 셈 (꿇은 채 싸우는 몸은 셈) ③ 두 거점 8 초 → 이김 ④ 상대가 원 안에 서 있으면 멈춤
+//  ⑤ 하나를 뺏기면 8 초부터 다시 ⑥ 전멸도 이김 · 쥐기로 끝난 판 ⑦ 생사전 · 다른 판은 거점이 없음(전멸만) ⑧ AI 자리 나눔 (둘 = 하나씩 · 셋 = 둘 + 하나 · 상대가 둘 다 쥐면 몰아 감 · 하나 대 하나는 싸움)
 //  node --test tools/sim/capture.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,9 +16,9 @@ const PTS = [{ x: 0, z: -7, r: 1.3 }, { x: 0, z: 7, r: 1.3 }];
 const body = (team, x, z, extra = {}) => ({ team, alive: true, revival: null, state: 'stand', index: 0, bodies: { pelvis: { translation: () => ({ x, y: 1, z }) }, chest: { translation: () => ({ x, y: 1.3, z }) } }, ...extra });
 const run = (C, F, secs, dt = 1 / 60) => { let w = null; for (let t = 0; t < secs - 1e-9 && w == null; t += dt) w = stepCapture(C, F, dt); return w; };
 
-test('규칙 값 = 사장님 결정 (쥐기 3 초 · 함께 쥔 20 초) · 거점 원 = 맵 표 (두 다리 1.3 · 성벽 안뜰 1.2)', () => {
+test('규칙 값 = 사장님 결정 (쥐기 3 초 · 함께 쥔 8 초 — 11/22) · 거점 원 = 맵 표 (두 다리 1.3 · 성벽 안뜰 1.2)', () => {
   assert.equal(CAPTURE.take, 3);
-  assert.equal(CAPTURE.hold, 20);
+  assert.equal(CAPTURE.hold, 8);
   assert.deepEqual(mapGeo(SAENGSA_MAP_BY_ID.bridges).points.map((p) => p.r), [1.3, 1.3]);
   assert.deepEqual(mapGeo(SAENGSA_MAP_BY_ID.court).points.map((p) => p.r), [1.2, 1.2]);
 });
@@ -67,14 +67,14 @@ test('쓰러짐 · 일어나는 중 · 죽음 · 부활 중은 안 셈 — 꿇�
   assert.equal(C2.points[0].owner, 0);
 });
 
-test('20 초: 두 거점을 다 가진 채 20 초 → 이김 (19.9 초엔 아직) · 원을 떠나도 주인은 남음', () => {
+test('8 초: 두 거점을 다 가진 채 8 초 → 이김 (7.9 초엔 아직) · 원을 떠나도 주인은 남음', () => {
   const C = createCapture(PTS);
   const a = body(0, 0, -7), b = body(0, 0, 7);
   run(C, [a, b], 3.05);
   assert.deepEqual(C.points.map((P) => P.owner), [0, 0]);
   assert.equal(C.holder, 0);
   const away = [body(0, -10, 0)]; // 원 밖으로 — 주인은 남고 시계는 돈다
-  assert.equal(run(C, away, 19.85), null);
+  assert.equal(run(C, away, CAPTURE.hold - 0.15), null);
   assert.equal(C.winner, null);
   assert.ok(C.clock > 0 && C.clock < 0.3, String(C.clock));
   assert.equal(run(C, away, 0.3), 0);
@@ -98,7 +98,7 @@ test('멈춤: 상대 몸이 어느 원에든 서 있는 동안 시계가 멈춤 
   assert.ok(C.clock < left - 0.9);
 });
 
-test('뺏기면 처음부터: 상대가 거점 하나를 쥐면 20 초로 · 다시 둘 다 쥐어도 20 초부터', () => {
+test('뺏기면 처음부터: 상대가 거점 하나를 쥐면 8 초로 · 다시 둘 다 쥐어도 8 초부터', () => {
   const C = createCapture(PTS);
   run(C, [body(0, 0, -7), body(0, 0, 7)], 3.05);
   run(C, [], 12);
@@ -125,7 +125,7 @@ test('판: 거점전은 전멸도 이김 (endBy wipe) · 쥐기로 끝나면 end
   assert.equal(matchResult(G).by, 'wipe');
   const H = newMatch({ count: 4, ai: 'all', seed: 3, walls: true, map: 'court', capture: true });
   for (const P of H.capture.points) P.owner = 1;
-  H.step(); // 쥔 편이 바뀌면 20 초로
+  H.step(); // 쥔 편이 바뀌면 8 초로
   assert.equal(H.capture.holder, 1);
   H.capture.clock = DT / 2;
   H.step();
