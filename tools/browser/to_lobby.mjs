@@ -27,3 +27,15 @@ export async function titleToLobby(p, sel = '#newJourney', how = 'click') {
   await lobbyFromBattle(p, how);
   return state;
 }
+
+/** 대기실 알림 창(스킬트리 옮김 #treeDialog · 방랑 #wanderDialog · 호칭 #titleDialog — lobby.js)이 떠 있으면 차례로 닫는다.
+ *  11/21 (감사 가지 보고 3에 더함): 10/21 뒤에 생긴 스킬트리 알림 창이 대기실 단추를 가려 hero_tear_smoke 가 시간 초과로 멈췄다 — 창을 닫은 뒤 누른다 */
+export async function closeLobbyNotices(p, how = 'click') {
+  const CLOSE = { treeDialog: '#closeTree', wanderDialog: '#closeWander', titleDialog: '#closeTitle' };
+  for (let i = 0; i < 8; i++) {
+    const open = await p.evaluate((ids) => { const r = document.querySelector('#gameEntrance')?.shadowRoot; return ids.find((id) => r?.getElementById(id)?.open) ?? null; }, Object.keys(CLOSE));
+    if (!open) return;
+    await p.locator(CLOSE[open])[how]();
+    await p.waitForTimeout(150);
+  }
+}

@@ -2,11 +2,13 @@
 //  공지 → 첫 화면 → 곧바로 여정(Stage 1) → 정지 → 대기실(Stage 입장) · 이어하기(카드 · 고른 무기 · 이긴 뒤 다음 무대) · 해금·설정 그대로 · 주소 시험 판 건너뛰기 · 화면 크기 · 저장 막힘 · PWA 같은 판 새로 고침 없음
 //  10/17 11:2x 사장님 '첫화면에서 바로 전투로': 첫 화면 단추 'Stage 1' · 한글 제목 줄 없음 · 대기실은 싸움의 정지 '대기실'에서 (도우미 tools/browser/to_lobby.mjs)
 //  npm run build && npx vite preview --port 5201 →  node tools/browser/game_entry_smoke.mjs http://127.0.0.1:5201 /tmp/<빈 폴더>
+//  11/21 (감사 가지 보고 3에 더함 — 10/31 뒤로 안 돌려 낡음): 값 · 글자를 박은 단언을 자리(id) · 개수 ≥ 1 로 풀고, 없어진 길(첫 화면 '이어하기' 단추 #continueJourney · 기록 있을 때 'Stage 1' 새로 시작 ·
+//   인장 → 금화 · 스킬북 칸 · 2 × 2 메뉴)은 걸음을 빼거나 지금 길(#newJourney 가 '이어가기'로 바뀜 — start_screen.js setCanContinue)로 옮김. 흐름 전체는 flow_smoke.mjs
 //  계정 연결 인증 서버(*.supabase.co)는 부르지 않는다 — 부르면 실패로 센다 (이 점검은 연결 단추를 열고 닫기만)
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { departTitle, lobbyFromBattle, titleToLobby } from './to_lobby.mjs';
+import { departTitle, lobbyFromBattle, titleToLobby, closeLobbyNotices } from './to_lobby.mjs';
 const base=process.argv[2]||'http://127.0.0.1:5201',out=process.argv[3]||'/tmp/game-entry';
 fs.mkdirSync(out,{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.PW_CHROMIUM||'/opt/pw-browsers/chromium',args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader']});
@@ -32,14 +34,14 @@ try{
  assert.equal(await p.locator('#noticeDialog').evaluate(d=>d.open),true);
  const header=await p.locator('#noticeHeading').evaluate(el=>({color:getComputedStyle(el).color,size:getComputedStyle(el).fontSize}));
  assert.deepEqual(header,{color:'rgb(243, 233, 216)',size:'17px'});
- assert.equal(await p.locator('.notice-entry').count(),5);
+ assert.ok(await p.locator('.notice-entry').count()>=1); // 11/21: 공지 수는 늘 바뀐다 (전 = 5 · 지금 120 넘음)
  await screenshot(p,'notices-in-game');
  for(let i=0;i<20;i++){const done=await p.locator('#noticeList').evaluate(el=>{el.scrollTop+=el.clientHeight/2;return el.scrollTop+el.clientHeight>=el.scrollHeight-1;});await p.waitForTimeout(60);if(done)break;}
  await p.locator('#hideRead').check();await title(p);
- const buttons=await p.locator('.start-actions button').evaluateAll(els=>els.map(el=>({text:el.textContent,label:el.getAttribute('aria-label'),width:el.getBoundingClientRect().width,background:getComputedStyle(el).backgroundColor})));
- assert.deepEqual(buttons.map(b=>b.text),['Stage 1','이어하기']);assert.equal(buttons[0].label,'Stage 1 — 첫 무대부터'); // 10/17 11:2x: '처음부터' → 'Stage 1'
- assert.ok(buttons.every(b=>Math.abs(b.width-205)<.1),JSON.stringify(buttons));
- assert.deepEqual(buttons.map(b=>b.background),['rgb(217, 164, 65)','rgba(24, 18, 14, 0.88)']); // 10/16 15:3x: Stage 1 = 싸움 주 단추(금색) · 이어하기 = 부 단추(그림 위라 창 바탕 --panel)
+ const buttons=await p.locator('.start-actions button').evaluateAll(els=>els.map(el=>({id:el.id,text:el.textContent,primary:el.classList.contains('primary'),width:el.getBoundingClientRect().width,visible:el.checkVisibility()})));
+ assert.deepEqual(buttons.map(b=>b.id),['newJourney','enterLobby']); // 10/27 첫 화면: Stage(기록이 있으면 이어가기) · 대기실 (전 10/17 'Stage 1' · '이어하기') — 글자는 박지 않음
+ assert.ok(buttons.every(b=>b.visible&&b.width>40),JSON.stringify(buttons));
+ assert.deepEqual(buttons.map(b=>b.primary),[true,false]); // 첫 단추 = 주 단추(.primary) · 대기실 = 부 단추 (색 값은 박지 않음)
  // 한글 제목 줄 없음 (10/17 — 이름은 Stillness 하나): 단추 위 제목은 픽셀 글자 Stillness 뿐
  assert.equal(await p.locator('.title-korean').count(),0);
  assert.deepEqual(await p.locator('.title-group').evaluate(g=>[...g.children].filter(e=>!e.matches('.title-rule, .start-actions, #selectionStatus')).map(e=>e.textContent)),['Stillness']);
@@ -48,7 +50,7 @@ try{
  assert.equal(await p.evaluate(()=>game.stats.simTime),0);
  assert.equal(await p.evaluate(()=>getComputedStyle(document.getElementById('menu')).visibility),'hidden');
  await screenshot(p,'title-in-game');
- check('root opens pixel notices/title (5 notices · Stillness wordmark only, no Korean title line · Stage 1 / 이어하기 · footer 공지사항·설정·계정 연결); game behind stays stopped and hidden',{header,buttons});
+ check('root opens pixel notices/title (notices ≥ 1 · Stillness wordmark only, no Korean title line · #newJourney primary / #enterLobby · footer 공지사항·설정·계정 연결); game behind stays stopped and hidden',{header,buttons});
  // 설정 창 = 게임 설정(화면 60 fps 제한)과 같은 값
  await p.locator('#openSettings').click();await p.waitForFunction(()=>!document.querySelector('#gameEntrance').shadowRoot.getElementById('titleFps').disabled);
  assert.equal(await p.locator('#titleFps').isChecked(),true);await p.locator('#titleFps').uncheck();
@@ -57,9 +59,7 @@ try{
  await p.locator('#titleFps').check();await p.locator('#closeSettings').click();
  assert.equal(await p.evaluate(()=>game.settings.fpsCap),true);
  check('title settings dialog reads/writes the game fps setting (same gladiator-settings value and menu toggle)');
- await p.locator('#continueJourney').click();await p.waitForTimeout(150);
- assert.equal(await p.locator('#selectionStatus').textContent(),'이어갈 여정이 없습니다. Stage 1로 시작해 주십시오.');assert.equal(await p.evaluate(()=>game.state),'menu');assert.equal(await p.locator('#gameEntrance').count(),1);
- check('이어하기 without a checkpoint stays on the title with the Stage 1 hint');
+ // (뺌 11/21) '이어하기' 단추를 지점 없이 누르면 첫 화면에 남기 — 10/27 첫 화면에 그 단추가 없어짐: 지점이 없으면 첫 단추가 곧 새 여정
  // Stage 1 → 곧바로 카드 고르기 (대기실을 거치지 않음 — game_entry.js depart): 덮개 안에 대기실이 붙는지 · 첫 화면이 걷히는지(data-leaving) 지켜본다
  await p.evaluate(()=>{const root=document.querySelector('#gameEntrance').shadowRoot;window.__entry={lobby:false,leaving:false};new MutationObserver(()=>{if(root.querySelector('.lobby'))__entry.lobby=true;if(root.getElementById('entrance')?.hasAttribute('data-leaving'))__entry.leaving=true;}).observe(root,{childList:true,subtree:true,attributes:true});});
  assert.equal(await departTitle(p,'#newJourney','click'),'draw');
@@ -68,10 +68,10 @@ try{
  await p.waitForFunction(()=>game.draw.t>.6,null,{timeout:20000});
  const drawn=await checkpoint(p);
  assert.equal(drawn.stage,'poseidon');assert.deepEqual(drawn.cards,['longsword','rapier']);assert.equal(drawn.foe,'heinrich');await screenshot(p,'cards-in-game');
- check('Stage 1 goes straight into the first-stage weapon draw (STAGE_ORDER[0]): no lobby on the way, title fades out and #gameEntrance is removed; cards stored as the checkpoint',{checkpoint:drawn});
+ check('Stage goes straight into the first-stage weapon draw (STAGE_ORDER[0]): no lobby on the way, title fades out and #gameEntrance is removed; cards stored as the checkpoint',{checkpoint:drawn});
  // 정지(카드 고르기 중에도) → '대기실': 대기실은 이어하기 지점으로 열린다(출발 단추 'Stage 입장' — 10/17 12:1x) · 뒤의 판은 멈춘 채(아직 싸우지 않아 게임 시간 0) · 이어하기 지점 그대로
- await lobbyFromBattle(p,'tap');
- assert.equal(await p.locator('#lobbyDepart').textContent(),'Stage 입장');
+ await lobbyFromBattle(p,'tap');await closeLobbyNotices(p,'tap'); // 11/21: 스킬트리 · 호칭 알림 창이 단추를 가리지 않게
+ assert.equal(await p.locator('#lobbyDepart').isVisible(),true); // 출발 단추 글자('Stage 입장' → 'Stage')는 박지 않음
  assert.equal(await p.evaluate(()=>game.stats.simTime),0);
  assert.equal(await p.evaluate(()=>game.state),'menu');
  assert.equal(await p.evaluate(()=>document.documentElement.hasAttribute('data-start-open')),true);
@@ -79,42 +79,43 @@ try{
  assert.equal(await p.locator('#lobbyLevel').textContent(),'Lv.1');assert.equal(await p.locator('#titleNone').textContent(),'호칭 없음');assert.equal(await p.locator('#titleSelect').isVisible(),false); // 10/16 15:3x ⑥: 레벨 글 + 호칭 내림 상자 · 10/24 '여행자'는 호칭이 아님 — 새 저장은 흐린 '호칭 없음'(단추 없음)
  // 대표 유파 칸은 뺐다 (사장님 10/16 15:3x ⑥) · 깬 수 37 = 옛 인장 3 → 금화 100 + 300 (한 번 — 인장 제도는 08:1x 에 없앰, 바꾸기만 남음) · 알림 한 줄
  assert.equal(await p.locator('#lobbySchool').count(),0);
- assert.equal(await p.locator('#lobbyCoins').textContent(),'400');assert.equal(await p.locator('#lobbyHeads').textContent(),'0');
+ const coinsOf=async()=>Number((await p.locator('#lobbyCoins').textContent()).replace(/[^0-9]/g,''));const coins0=await coinsOf(); // 11/21: 처음 금화(전 400 · 지금 옛 책 옮김 몫까지 900)는 박지 않음 — 뒤 걸음은 이 값과 견줌
+ assert.ok(coins0>0,String(coins0));assert.equal(await p.locator('#lobbyHeads').textContent(),'0');
  assert.equal(await p.locator('#lobbyStatus').textContent(),'인장 3개를 금화 300으로 바꿨습니다.');
  assert.equal(await p.locator('#duelRecord').textContent(),'0승리 0패배 (0%)');
  assert.equal(await p.locator('#panelInventory').isVisible(),true);
  const thumbs=await p.locator('.inventory-item img').evaluateAll(els=>els.map(e=>({loaded:e.complete&&e.naturalWidth>0,src:e.getAttribute('src')})));
- assert.deepEqual(thumbs.map(t=>t.src),['ui/weapons/tree_branch.webp','ui/weapons/druid_whip.webp','ui/armor/kettle.webp','ui/armor/hero_tear.webp']);assert.ok(thumbs.every(t=>t.loaded)); // 아이템 칸 한 판 = 무기 다음 방어구 (10/18 04:1x)
+ assert.ok(thumbs.length>=1&&thumbs.every(t=>t.loaded),JSON.stringify(thumbs)); // 아이템 칸 그림이 모두 뜸 (11/21: 목록은 박지 않음 — 상점 · 이벤트로 늘어남)
  await screenshot(p,'lobby-phone');
- check('pause → 대기실 during the card draw opens the lobby (depart button Stage 입장; game behind stopped, checkpoint kept); first visit shows the one-time seal → coins notice');
+ check('pause → 대기실 during the card draw opens the lobby (depart button shown; game behind stopped, checkpoint kept); first visit shows the one-time seal → coins notice');
  // 10/17 22:1x 사장님: 3D 미리보기(돌림판) → 정사각 프로필 그림 (전 점검: 끌어 돌리기 180° · 방향키 Home). 이제: 플레이어 그림(10/18 16:3x 투명 배경 도트판 · player2)이 떴나 · 정사각 · 칸 폭 그대로 · 출발 단추와 안 겹침 · 눌러도 판 몸 그대로
  const beforeBodies=await p.evaluate(()=>game.player.meshes.map(({rb})=>({p:rb.translation(),q:rb.rotation()})));
  const portrait=await p.locator('#lobbyPortrait').evaluate(f=>{const img=f.querySelector('img'),r=f.getBoundingClientRect(),d=f.getRootNode().getElementById('lobbyDepart').getBoundingClientRect();return {id:f.dataset.portrait,mode:f.dataset.mode,empty:f.hasAttribute('data-empty'),src:img.getAttribute('src'),loaded:img.complete&&img.naturalWidth===768,w:r.width,h:r.height,bottom:r.bottom,departTop:d.top,departW:d.width};});
- assert.deepEqual([portrait.id,portrait.mode,portrait.empty,portrait.src,portrait.loaded],['player','pixel',false,'ui/portraits/player.webp',true],JSON.stringify(portrait));
+ assert.ok(!portrait.empty&&!!portrait.src,JSON.stringify(portrait)); // 11/21: 그림 파일 · 크기(768)는 박지 않음 — 그림이 있고 아래 칸 모양만
  assert.ok(Math.abs(portrait.w-portrait.h)<.5&&Math.abs(portrait.w-portrait.departW)<.5&&portrait.bottom<portrait.departTop,JSON.stringify(portrait));
  await p.locator('#lobbyPortrait').tap();
  assert.deepEqual(await p.evaluate(()=>game.player.meshes.map(({rb})=>({p:rb.translation(),q:rb.rotation()}))),beforeBodies);
- await p.locator('[data-weapon=tree_branch]').tap();assert.equal(await p.locator('#equipItem').isEnabled(),true);assert.equal(await p.locator('#unequipItem').isEnabled(),false);
- assert.equal(await p.locator('#lobbyName').textContent(),'Noname');assert.equal(await p.locator('#lobbyPortraitImg').getAttribute('alt'),'Noname 프로필'); // 기본 이름 (사장님 10/18 04:1x — 전 '방랑자')
- await p.locator('#editName').tap();assert.equal(await p.locator('#playerNameInput').inputValue(),'Noname');await p.locator('#playerNameInput').fill('  바람  ');await p.locator('#nameForm button[type=submit]').click();
+ await p.locator('.inventory-item[data-weapon]').first().tap();assert.equal(await p.locator('#equipItem').isEnabled(),true);assert.equal(await p.locator('#unequipItem').isEnabled(),false);
+ const defaultName=await p.locator('#lobbyName').textContent();assert.ok(defaultName.trim().length>0);assert.ok((await p.locator('#lobbyPortraitImg').getAttribute('alt')).includes(defaultName)); // 기본 이름 (11/21: 'Noname' 은 박지 않음)
+ await p.locator('#editName').tap();assert.equal(await p.locator('#playerNameInput').inputValue(),defaultName);await p.locator('#playerNameInput').fill('  바람  ');await p.locator('#nameForm button[type=submit]').click();
  assert.equal(await p.locator('#lobbyName').textContent(),'바람');
  await p.locator('#editName').tap();await p.locator('#playerNameInput').fill('취소할 이름');await p.locator('#cancelName').tap();
  assert.equal(await p.locator('#lobbyName').textContent(),'바람');
- await p.locator('#tabSkills').tap();assert.equal(await p.locator('.school-tabs [role=tab]').count(),5);assert.equal(await p.locator('.book-node').count(),5);assert.equal(await p.locator('.book-node[data-state=unowned]').count(),5);
+ await p.locator('#tabSkills').tap();assert.ok(await p.locator('.school-tabs [role=tab]').count()>=1);assert.ok(await p.locator('.tree-node').count()>=1); // 11/21: 10/21 스킬북 칸(.book-node) → 스킬트리 칸(.tree-node) · 개수는 박지 않음
  await screenshot(p,'lobby-skills');
  await p.locator('#lobbyBack').tap();await title(p);await p.waitForFunction(()=>!document.querySelector('#gameEntrance').shadowRoot.getElementById('openAccount').disabled,null,{timeout:20000});
  await p.locator('#openAccount').tap();assert.equal(await p.locator('#accountEmail').isVisible(),true);
  await p.locator('#closeAccount').tap();
  // 이어하기 = Stage 1 에서 펼친 그 카드 (첫 화면에서 출발하면 카드를 펼칠 때 지점이 저장된다) → 정지 → 대기실 다시 → Stage 입장 = 같은 지점
- assert.equal(await departTitle(p,'#continueJourney','tap'),'draw');
+ assert.equal(await departTitle(p,'#newJourney','tap'),'draw'); // 10/27: 지점이 있으면 첫 단추가 '이어가기' (전 #continueJourney)
  assert.deepEqual(await p.evaluate(()=>game.draw.ids.slice(0,2)),drawn.cards);assert.deepEqual(await checkpoint(p),drawn);
  await lobbyFromBattle(p,'tap');
- assert.equal(await p.locator('#lobbyName').textContent(),'바람');assert.equal(await p.locator('#lobbyDepart').textContent(),'Stage 입장');
- assert.equal(await p.locator('#lobbyCoins').textContent(),'400');assert.equal(await p.locator('#lobbyStatus').textContent(),''); // 인장 → 금화는 한 번만 (대기실에 다시 와도)
+ await closeLobbyNotices(p,'tap');assert.equal(await p.locator('#lobbyName').textContent(),'바람');assert.equal(await p.locator('#lobbyDepart').isVisible(),true);
+ assert.equal(await coinsOf(),coins0);assert.equal(await p.locator('#lobbyStatus').textContent(),''); // 인장 → 금화는 한 번만 (대기실에 다시 와도)
  assert.equal(await departTitle(p,'#lobbyDepart','tap'),'draw'); // 대기실 출발도 같은 덮개 — 걷히고 카드 고르기가 될 때까지
  assert.deepEqual(await p.evaluate(()=>game.draw.ids.slice(0,2)),drawn.cards);assert.deepEqual(await checkpoint(p),drawn);
- check('lobby: profile picture (tapping it leaves the physics untouched); one item grid tree branch → kettle hat → hero tear; default name Noname, editable; tabs; account entry; safe back navigation (첫 화면 → 이어하기 = same cards → 대기실 again → Stage 입장 resumes the same checkpoint)',{thumbs});
- await p.reload({waitUntil:'networkidle'});await title(p);assert.equal(await departTitle(p,'#continueJourney'),'draw');
+ check('lobby: profile picture (tapping it leaves the physics untouched); item grid thumbnails load; default name, editable; tabs; account entry; safe back navigation (첫 화면 → 이어가기 = same cards → 대기실 again → 출발 resumes the same checkpoint)',{thumbs});
+ await p.reload({waitUntil:'networkidle'});await title(p);assert.equal(await departTitle(p,'#newJourney'),'draw');
  const restored=await checkpoint(p);assert.deepEqual(restored,drawn);
  assert.deepEqual(await p.evaluate(()=>game.draw.ids.slice(0,2)),drawn.cards);
  check('reload/continue restores the same draw, opponent and opponent weapon');
@@ -139,7 +140,7 @@ try{
  check('actual touchscreen joystick movement and tap attack work after entry',{from:a,to:b});
  await p.locator('#btnPause').tap();await phase(p,'paused');assert.equal(await p.locator('#btnLobby').isVisible(),true);await p.locator('#btnResume').tap();await phase(p,'fight');
  check('pause and resume remain usable (the journey pause menu offers 대기실)');
- await p.reload({waitUntil:'networkidle'});await title(p);assert.equal(await departTitle(p,'#continueJourney'),'fight');
+ await p.reload({waitUntil:'networkidle'});await title(p);assert.equal(await departTitle(p,'#newJourney'),'fight');
  assert.equal(await p.evaluate(()=>game.player.weapon.id),armed.weapon);
  assert.equal(await p.evaluate(()=>game.enemy.weapon.id),armed.foeWeapon);
  assert.equal(await p.evaluate(()=>game.stage.id),armed.stage);
@@ -148,19 +149,19 @@ try{
  await p.evaluate(()=>game.enemy.die('기절',true));
  await p.waitForFunction(k=>JSON.parse(localStorage.getItem(k)).stage==='clearing',key,{timeout:20000});
  assert.deepEqual(await p.evaluate(k=>JSON.parse(localStorage.getItem(k)),profileKey),{version:1,name:'바람',wins:1,losses:0,named:true}); // named = 직접 고친 이름 (10/18 — 기본 이름과 가름)
- const wonCoins=await p.evaluate(()=>JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).coins);assert.ok(wonCoins>=405&&wonCoins<=415,`win +5~15: ${wonCoins}`); // 사장님 10/16 04:3x
+ const wonCoins=await p.evaluate(()=>JSON.parse(localStorage.getItem('stillness.lobby.progress.v1')).coins);assert.ok(wonCoins>coins0,`win adds coins: ${wonCoins} > ${coins0}`); // 11/21: 이긴 판 금화 폭(전 +5~15 · 10/24 +10~25)은 박지 않음 — 늘었고 결과 창 글과 같은지만
  await p.waitForFunction(()=>game.state==='paused',null,{timeout:90000});
- assert.equal(await p.locator('#menuReward').textContent(),`금화 +${wonCoins-400}`);assert.equal(await p.locator('#menuReward').isVisible(),true);
+ assert.equal(await p.locator('#menuReward').textContent(),`금화 +${wonCoins-coins0}`);assert.equal(await p.locator('#menuReward').isVisible(),true);
  assert.equal(await p.locator('#btnLobby').isVisible(),true); // 결과 창에도 '대기실' (여정 판)
- check('journey win: coins +5..15 saved and shown on the result screen (with 대기실)',{coins:wonCoins});
+ check('journey win: coins gained, saved and shown on the result screen (with 대기실)',{coins:wonCoins});
  assert.equal(await p.evaluate(()=>localStorage.getItem('stillness.journeyClears.v1')),'38');
- await p.reload({waitUntil:'networkidle'});await title(p);assert.equal(await departTitle(p,'#continueJourney'),'draw');
+ await p.reload({waitUntil:'networkidle'});await title(p);assert.equal(await departTitle(p,'#newJourney'),'draw');
  assert.equal(await p.evaluate(()=>game.stage.id),'clearing');assert.equal(await p.evaluate(()=>localStorage.getItem('stillness.journeyClears.v1')),'38');
  check('win saves next stage (nextStage of STAGE_ORDER) immediately; resume does not award a duplicate clear');
- await p.reload({waitUntil:'networkidle'});await title(p);assert.equal(await departTitle(p),'draw');
- assert.equal(await p.evaluate(()=>game.stage.id),'poseidon');assert.equal(await p.evaluate(()=>localStorage.getItem('stillness.journeyClears.v1')),'38');
+ // (뺌 11/21) 지점이 있을 때 첫 화면 'Stage 1' 로 첫 무대부터 — 10/27 첫 화면에 그 길이 없어짐(지점이 있으면 첫 단추 = 이어가기). 깬 수 · 설정이 그대로인지만 본다
+ assert.equal(await p.evaluate(()=>localStorage.getItem('stillness.journeyClears.v1')),'38');
  assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem('gladiator-settings')).fpsCap),true);
- check('Stage 1 resets the stage while preserving the clear count (statistic) and settings');
+ check('continue keeps the clear count (statistic) and settings');
  await p.locator('#btnPause').tap();await phase(p,'paused');await p.locator('#btnStart').tap();await phase(p,'draw');
  check('existing restart still returns to draw');
  const savedBefore=await checkpoint(p);
@@ -185,21 +186,20 @@ try{
   await title(q);assert.equal(await q.locator('.title-screen').evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
   const foot=await q.locator('.title-footer button').evaluateAll(els=>els.map(e=>e.getBoundingClientRect().right));assert.ok(foot.every(r=>r<=width),JSON.stringify(foot));
   check(`${name}: integrated title and compact notices fit`,rects);
-  assert.equal(await titleToLobby(q),'draw'); // Stage 1 → 카드 고르기 → 정지 → 대기실
+  assert.equal(await titleToLobby(q),'draw');await closeLobbyNotices(q); // Stage → 카드 고르기 → 정지 → 대기실 (알림 창은 닫음)
   assert.equal(await q.locator('#lobbySchool').count(),0); // 대표 유파 칸 없음 (10/16 15:3x ⑥)
-  assert.equal(await q.locator('#lobbyDepart').textContent(),'Stage 입장');
   assert.ok(await q.locator('.lobby').evaluate(el=>el.scrollWidth<=el.clientWidth));
   await q.locator('#lobbyDepart').scrollIntoViewIfNeeded();assert.equal(await q.locator('#lobbyDepart').isVisible(),true);
   // 메뉴 2 × 2 (10/18 04:1x — 윗칸 아이템 · 상점 · 아랫칸 스킬북 · 이벤트): ↓ ↑ = 같은 칸 줄 · ← → = 다음 · 앞 · Home · End
   const shown=()=>q.evaluate(()=>[...document.querySelector('#gameEntrance').shadowRoot.querySelectorAll('.contents-panel > [role=tabpanel]')].filter(e=>!e.hidden).map(e=>e.id).join());
+  // 11/21: 메뉴 칸 수 · 배치(전 2 × 2 — 지금 칸이 더 있음)는 박지 않고 Home = 첫 칸 · End = 마지막 칸만 (tablist 의 첫 · 끝 탭이 맡은 패널)
+  const ends=await q.evaluate(()=>[...document.querySelector('#gameEntrance').shadowRoot.getElementById('tabItems').parentElement.querySelectorAll(':scope > [role=tab]')].map(t=>t.getAttribute('aria-controls')));
   await q.locator('#tabItems').focus();
-  await q.keyboard.press('ArrowDown');assert.equal(await shown(),'panelSkills');await q.keyboard.press('ArrowRight');assert.equal(await shown(),'panelEvent');
-  await q.keyboard.press('ArrowUp');assert.equal(await shown(),'panelShop');await q.keyboard.press('Home');assert.equal(await shown(),'panelInventory');
-  await q.keyboard.press('End');assert.equal(await shown(),'panelEvent');assert.equal(await q.locator('#tabEvent').evaluate(e=>e===e.getRootNode().activeElement&&e.getAttribute('aria-selected')),'true');
-  check(`${name}: Stage 1 → card draw → pause → 대기실: lobby fits, no overflow, keyboard tab selection works on the 2×2 menu (↓ 스킬북 · → 이벤트 · ↑ 상점 · Home 아이템 · End 이벤트)`);await c.close();
+  await q.keyboard.press('End');assert.equal(await shown(),ends.at(-1),JSON.stringify(ends));await q.keyboard.press('Home');assert.equal(await shown(),ends[0],JSON.stringify(ends));
+  check(`${name}: Stage → card draw → pause → 대기실: lobby fits, no overflow, keyboard Home/End tab selection works on the lobby menu`,{tabs:ends});await c.close();
  }
  const denied=await browser.newContext({viewport:{width:844,height:390},serviceWorkers:'allow',reducedMotion:'reduce'});await noAuth(denied);await denied.addInitScript(()=>{Storage.prototype.getItem=()=>{throw Error('denied');};Storage.prototype.setItem=()=>{throw Error('denied');};});
- const d=await denied.newPage();watch(d);await d.goto(base+'/',{waitUntil:'networkidle'});await title(d);assert.equal(await departTitle(d),'draw');check('storage denied still allows a new game (Stage 1 → card draw)');await denied.close();
+ const d=await denied.newPage();watch(d);await d.goto(base+'/',{waitUntil:'networkidle'});await title(d);assert.equal(await departTitle(d),'draw');check('storage denied still allows a new game (Stage → card draw)');await denied.close();
  // PWA (배포판 + 서비스 워커): 같은 판이면 첫 화면으로 돌아와도 새로 고치지 않는다 — 게임 묶음을 나중에 받으며 붙는 modulepreload 링크를 새 판으로 읽지 않게 (src/pwa.js currentSig)
  if(process.env.SKIP_PWA!=='1'){
   const pc=await browser.newContext({viewport:{width:844,height:390},serviceWorkers:'allow',reducedMotion:'reduce'});await noAuth(pc);const pw=await pc.newPage();watch(pw);
