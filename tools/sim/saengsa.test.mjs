@@ -232,7 +232,7 @@ test('쉼 (사장님 11/21 \'쉬면 체력+35 부상 1단계씩 회복(중상->�
     '0-1': { gain: 35, steps: [{ part: 'leg', from: 'serious' }, { part: 'head', from: 'light' }], hp: 85, injuries: [{ part: 'leg', sev: 0.49, rests: 0 }, { part: 'head', sev: 0.09, rests: 0 }] },
     '0-2': { gain: 10, steps: [], hp: 100, injuries: [] },
   });
-  assert.equal(r0.ver, 'saengsa-4');
+  assert.equal(r0.ver, 'saengsa-5');
   assert.equal(r0.rest['0-0'], undefined);
   // ② 나는 쉬고 동료 둘이 나섬: 나 = + 35 · 중상 → 경상 · 경상 → 나음 / 동료 = 그대로
   R.advance(t, at(30, 10, 5));
@@ -367,15 +367,16 @@ test('쉼 글 (결과 카드 — 11/21): \'쉼 체력 + 35 · 다리 중상 → 
   assert.equal(X.SAENGSA_TEXT.rested, '쉼');
 });
 
-test('옛 저장 (판 saengsa-1 · 10/29 쉼 규칙 · 둘씩 나선 경기): 그대로 읽힘 · 옛 결과는 그대로 · 이어 하면 새 쉼 규칙 · 새 결과는 saengsa-4', () => {
-  assert.equal(R.SAENGSA_VER, 'saengsa-4');
+test('옛 저장 (판 saengsa-1 · 10/29 쉼 규칙 · 둘씩 나선 경기): 그대로 읽힘 · 옛 결과는 그대로 · 이어 하면 새 쉼 규칙 · 새 결과는 saengsa-5', () => {
+  assert.equal(R.SAENGSA_VER, 'saengsa-5');
   mem.clear();
   // 옛 꼴로 바꾼 진행 중 대회: 결과 ver 'saengsa-1' · 쉼 기록(rest) 없음 · 부상 쉰 수(rests) 1 · 둘씩 나섬
   const t = make(9);
   R.advance(t, at(30, 10));
   const m0 = R.myMatch(t);
   R.finishMine(t, m0, ['0-0', '0-1'], at(30, 10, 5), winFor(t, m0, { '0-0': { hp: 70, injuries: [], alive: true }, '0-1': { hp: 60, injuries: [], alive: true } }));
-  for (const x of t.matches.filter((y) => y.result)) { x.result.ver = 'saengsa-1'; delete x.result.rest; }
+  for (const x of t.matches.filter((y) => y.result)) { x.result.ver = 'saengsa-1'; delete x.result.rest; delete x.result.gift; }
+  for (const team of t.teams) { delete team.items; delete team.boxes; } // 쉼 물건 칸(11/21 E)도 없는 옛 꼴
   Object.assign(t.teams[0].members[2], { hp: 40, injuries: [{ part: 'arm', sev: 0.3, rests: 1 }, { part: 'leg', sev: 0.8, rests: 1 }] });
   mem.set(S.SAENGSA_KEY, JSON.stringify({ version: 1, current: t, draft: { companions: ['a', 'b'] } }));
   const old = S.readSaengsa().current;
@@ -386,11 +387,16 @@ test('옛 저장 (판 saengsa-1 · 10/29 쉼 규칙 · 둘씩 나선 경기): �
   const m1 = R.myMatch(old);
   const res = S.playMine(m1.id, ['0-0', '0-1'], at(30, 10, 10), winFor(old, m1, { '0-0': { hp: 50, injuries: [], alive: true }, '0-1': { hp: 40, injuries: [], alive: true } }));
   assert.ok(res);
-  assert.equal(res.ver, 'saengsa-4');
+  assert.equal(res.ver, 'saengsa-5');
   const now = S.readSaengsa().current;
   assert.deepEqual(now.teams[0].members[2].injuries, [{ part: 'arm', sev: 0.09, rests: 1 }, { part: 'leg', sev: 0.49, rests: 1 }], '옛 경상 0.3 → 흔적 · 옛 중상 → 0.49');
   assert.equal(now.teams[0].members[2].hp, 75);
   assert.deepEqual(res.rest['0-2'].steps, [{ part: 'arm', from: 'light' }, { part: 'leg', from: 'serious' }]);
+  // 옛 저장에도 쉼 물건: 고를 몫이 생기고 · 무기상자 더미가 없으니 상자는 못 고름(응급처치약만)
+  assert.deepEqual(res.gift, { '0-2': null });
+  assert.equal(S.chooseGift(m1.id, '0-2', 'box'), null, '상자 더미 없음');
+  assert.deepEqual(S.chooseGift(m1.id, '0-2', 'aid'), { kind: 'aid' });
+  assert.equal(R.aidCount(S.readSaengsa().current.teams[0]), 1);
   const oldResults = now.matches.filter((x) => x.result && x.result.ver === 'saengsa-1');
   assert.equal(oldResults.length, before.length, '옛 결과는 다시 셈하지 않음');
   assert.deepEqual(oldResults.map((x) => JSON.stringify(x.result)), before);
@@ -701,7 +707,9 @@ test('상대 팀 무기 묶음 · 전용무기 · AI 나눠 주기 (사장님 10
   const spy = (rnd, n, taken) => { calls.push([n, taken.length]); return roster.drawPool(rnd, n, taken); };
   let owners = 0, inPool = 0, held = 0;
   for (let seed = 1; seed <= 300; seed++) {
+    const c0 = calls.length;
     const t = R.createTournament({ day: '2026-10-30', seed, at: 0, companions: [R.NAMELESS, R.NAMELESS], ...roster.SAENGSA_DATA, drawPool: spy });
+    calls.splice(c0 + t.teams.length - 1); // 상대 팀 무기 묶음 뽑기만 (그 뒤는 무기상자 더미 — 11/21 E · 팀이 가진 무기를 뺌)
     for (const team of t.teams.slice(1)) for (const f of team.members) if (f.sig) { owners++; const has = team.pool.some((w) => w.weapon === f.sig); inPool += has; held += has && f.weapon === f.sig; }
   }
   assert.ok(calls.length > 0 && calls.every(([n, k]) => n === SAENGSA.aiPool.size && k === 0), '아홉을 미리 든 무기 없이 뽑음');
@@ -1174,4 +1182,98 @@ test('빠른 셈 잘림 (11/21 C — 엔진 재기 몫 winSever): 이긴 쪽 산
   near(armO / n, q.winSever.armO, 0.012, '빈손 팔');
   const r = R.quickResolve({ a: [f('a0', { lost: ['armO'] })], b: [f('b0', { hp: 1 })] }, 3);
   if (r.winner === 'a' && r.fighters.a0.alive) assert.ok(r.fighters.a0.lost === undefined || r.fighters.a0.lost.includes('armO'));
+});
+
+test('쉼 물건 (11/21 E — 사장님 \'한 캐릭터가 쉴 때마다 … 응급처치약이나 무기상자 하나를 주자.\'): 쉰 사람마다 하나 · 내 팀은 결과 화면에서 고름(안 고르면 다음 경기 전 응급처치약) · 응급처치약 = 부상 한 단계 · 무기상자 = 이번 대회 무기', async () => {
+  const roster = await import('../../src/saengsa_roster.js');
+  assert.deepEqual(SAENGSA.items, { boxStock: 9 });
+  const owned = ['longsword', 'rapier', 'uchigatana'];
+  const t = R.createTournament({ day: '2026-10-30', seed: 61, at: at(29, 23), companions: ['a', 'b'], ...DATA, drawWeapon: roster.drawWeapon, drawPool: roster.drawPool, weaponInfo: roster.weaponInfo, owned });
+  const again = R.createTournament({ day: '2026-10-30', seed: 61, at: at(29, 23), companions: ['a', 'b'], ...DATA, drawWeapon: roster.drawWeapon, drawPool: roster.drawPool, weaponInfo: roster.weaponInfo, owned });
+  assert.deepEqual(t.teams.map((x) => x.boxes), again.teams.map((x) => x.boxes), '같은 씨앗 = 같은 상자 더미');
+  for (const team of t.teams) {
+    assert.equal(team.boxes.length, 9);
+    assert.deepEqual(team.items, { aid: 0 });
+    const have = team.mine ? owned : team.pool.map((w) => w.weapon);
+    assert.ok(team.boxes.every((w) => !have.includes(w.weapon) && w.school && w.tier), '팀이 가진 무기는 빼고 뽑음');
+  }
+  R.assignWeapons(t, owned, { owned, weaponInfo: roster.weaponInfo });
+  R.advance(t, at(30, 10));
+  const team = t.teams[0];
+  // ① 나 + 0-1 이 나서 이김 → 0-2 만 쉼 → 0-2 몫 하나 (나선 사람 몫 없음)
+  const m0 = R.myMatch(t);
+  const r0 = R.finishMine(t, m0, ['0-0', '0-1'], at(30, 10, 5), winFor(t, m0, { '0-0': { hp: 60, injuries: [{ part: 'leg', sev: 0.7, rests: 0 }, { part: 'arm', sev: 0.3, rests: 0 }], alive: true }, '0-1': { hp: 50, injuries: [], alive: true } }));
+  assert.deepEqual(r0.gift, { '0-2': null });
+  assert.equal(R.takeGift(t, m0, '0-0', 'aid'), null, '나선 사람 몫은 없음');
+  assert.deepEqual(R.takeGift(t, m0, '0-2', 'box'), { kind: 'box', weapon: team.pool[0].weapon });
+  assert.equal(R.takeGift(t, m0, '0-2', 'aid'), null, '한 번만');
+  const boxW = team.pool[0].weapon;
+  assert.deepEqual(R.teamWeapons(t, owned), [...owned, boxW], '경기마다 배정에서 고를 수 있음 (가진 무기에는 안 더함)');
+  assert.equal(R.assignWeapons(t, [boxW, 'rapier', 'uchigatana'], { owned: R.teamWeapons(t, owned), weaponInfo: roster.weaponInfo }), true);
+  assert.equal(team.members[0].weapon, boxW);
+  assert.equal(owned.length, 3);
+  // ② 다음 경기: 0-2 만 나섬 → 나 · 0-1 쉼 → 몫 둘 · 하나만 고르고 다음 경기를 하면 남은 하나는 응급처치약
+  R.advance(t, at(30, 10, 5));
+  const m1 = R.myMatch(t);
+  const r1 = R.finishMine(t, m1, ['0-2'], at(30, 10, 6), winFor(t, m1, { '0-2': { hp: 70, injuries: [{ part: 'torso', sev: 0.6, rests: 0 }], alive: true } }));
+  assert.deepEqual(Object.keys(r1.gift).sort(), ['0-0', '0-1']);
+  assert.deepEqual(R.takeGift(t, m1, '0-0', 'aid'), { kind: 'aid' });
+  assert.equal(R.aidCount(team), 1);
+  // 응급처치약: 나선 사람(0-2 몸통 중상)에게 · 한 단계 · 체력 그대로 · 흔적 · 없는 부위 · 죽은 사람은 안 됨
+  assert.equal(R.useAid(team, '0-2', 'leg'), null, '그 부위 부상 없음');
+  assert.deepEqual(R.useAid(team, '0-2', 'torso'), { part: 'torso', from: 'serious' });
+  assert.deepEqual([team.members[2].hp, team.members[2].injuries.map((i) => i.sev), R.aidCount(team)], [70, [0.49], 0]);
+  assert.equal(R.useAid(team, '0-2', 'torso'), null, '약이 없음');
+  R.advance(t, at(30, 10, 6));
+  const m2 = R.myMatch(t);
+  R.finishMine(t, m2, ['0-2'], at(30, 10, 7), winFor(t, m2, { '0-2': { hp: 60, injuries: [], alive: true } }));
+  assert.deepEqual(m1.result.gift, { '0-0': { kind: 'aid' }, '0-1': { kind: 'aid' } }, '안 고른 몫은 다음 경기 전 응급처치약');
+  assert.equal(R.aidCount(team), 1);
+  team.members[0].injuries = [{ part: 'arm', sev: 0.3, rests: 0 }, { part: 'head', sev: 0.09, rests: 0 }];
+  assert.equal(R.useAid(team, '0-0', 'head'), null, '나은 흔적은 부상이 아님');
+  assert.deepEqual(R.useAid(team, '0-0', 'arm'), { part: 'arm', from: 'light' });
+  assert.deepEqual(team.members[0].injuries.map((i) => i.sev), [0.09, 0.09]);
+  // 결승 뒤에는 쉼 · 물건 없음
+  R.advance(t, at(30, 10, 7));
+  const m3 = R.myMatch(t);
+  assert.equal(m3.round, 3);
+  const r3 = R.finishMine(t, m3, ['0-2'], at(30, 10, 8), winFor(t, m3, { '0-2': { hp: 50, injuries: [], alive: true } }));
+  assert.deepEqual([r3.rest, r3.gift], [undefined, undefined]);
+});
+
+test('쉼 물건 — AI 팀 (11/21 E): 고르는 법 = 부러진 무기나 제 유파가 아닌 무기(숙련도 0)를 든 사람이 있으면 무기상자 · 아니면 응급처치약 · 상자 무기는 무기 묶음에 더해 다시 나눠 줌 · 약은 힘이 가장 오르는 부상부터', async () => {
+  const roster = await import('../../src/saengsa_roster.js');
+  const f = (key, extra = {}) => ({ key, id: key, weapon: 'longsword', school: 'german', tier: 'common', prof: { german: 3, italian: 0, iberian: 0, japanese: 0, chinese: 0 }, hp: 100, injuries: [], dead: false, ...extra });
+  const team = { mine: false, members: [f('1-0'), f('1-1'), f('1-2')], pool: [], boxes: [{ weapon: 'rapier', school: 'italian', tier: 'common' }], items: { aid: 0 } };
+  assert.equal(R.aiGift(team), 'aid', '모두 제 유파 · 성한 무기');
+  team.members[1].broken = true;
+  assert.equal(R.aiGift(team), 'box', '부러진 무기');
+  delete team.members[1].broken;
+  Object.assign(team.members[2], { weapon: 'rapier', school: 'italian' });
+  assert.equal(R.aiGift(team), 'box', '숙련도 0 인 무기');
+  team.members[2].lost = ['legF'];
+  assert.equal(R.aiGift(team), 'aid', '이탈한 사람은 안 봄');
+  delete team.members[2].lost;
+  assert.equal(R.aiGift({ ...team, boxes: [] }), 'aid', '상자가 없으면 응급처치약');
+  // 약 쓰기: 중상(× 0.85) 을 경상(× 0.95)으로 · 경상을 흔적으로 — 더 오르는 쪽부터
+  team.items.aid = 2;
+  team.members[0].injuries = [{ part: 'leg', sev: 0.3, rests: 0 }];
+  team.members[1].injuries = [{ part: 'torso', sev: 0.8, rests: 0 }];
+  R.aiUseAids(team);
+  assert.deepEqual([team.members[0].injuries[0].sev, team.members[1].injuries[0].sev, team.items.aid], [0.09, 0.49, 0]);
+  // 상대끼리 경기에서 받고 씀: 대회를 끝까지 — 상대 팀 결과에 물건이 적히고 · 상자 무기는 그 팀 묶음에 · 약 수는 0 이상
+  let gifts = 0, boxes = 0;
+  for (const seed of [71, 72, 73]) {
+    const t = R.createTournament({ day: '2026-10-30', seed, at: at(29, 23), companions: ['a', 'b'], ...DATA, drawWeapon: roster.drawWeapon, drawPool: roster.drawPool, weaponInfo: roster.weaponInfo, owned: ['longsword'] });
+    R.advance(t, Infinity);
+    for (const m of t.matches) for (const [k, g] of Object.entries(m.result?.gift ?? {})) {
+      if (k.startsWith('0-')) continue;
+      gifts++;
+      assert.ok(g && (g.kind === 'aid' || (g.kind === 'box' && typeof g.weapon === 'string')), `${m.id} ${k}`);
+      if (g.kind === 'box') { boxes++; const tm = t.teams[+k.split('-')[0]]; assert.ok(tm.pool.some((w) => w.weapon === g.weapon), '상자 무기가 묶음에'); }
+      assert.ok(m.result.rest[k], '쉰 사람만');
+    }
+    for (const tm of t.teams) assert.ok(R.aidCount(tm) >= 0);
+  }
+  assert.ok(gifts > 10 && boxes > 0, `상대 팀 물건 ${gifts} · 상자 ${boxes}`);
 });
