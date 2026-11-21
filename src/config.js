@@ -758,7 +758,7 @@ export const SKILL = {
   flowTurn: 2.2, // 끌기 방향이 휘어 돈 각도(rad)가 이보다 크면 흐름으로 본다 (멈추지 않은 채)
   flowFollow: 1.6, // 흐르는 동안 이어 베기(followGain·followMax) 배율
   flowBreak: realS(0.4), // 칼이 막혀 흐름이 끊긴 뒤 다시 흐를 수 있기까지 (초)
-  // 늘 켬 — 동작 라이브러리 · 유파 자료 · 유파 비기 · 독일 왕관 · 이탈리아 입력형 막아찌르기: shield 받는 피해 감소 시간 · shieldCut 감소 · dealt 주는 피해 몫 · aim · extend · hold · recover 동작 [사장님 10/21]
+  // 늘 켬 — 동작 라이브러리 · 유파 자료 · 유파 비기 · 독일 왕관 · 이탈리아 입력형 막아찌르기: shield 받는 피해 감소 시간 · shieldCut 감소 [사장님 10/21 '50% 0.6초'] · dealt 막아찌르기 동안 주는 피해 몫 · aim · extend · hold · recover · pull · reach · turn · side · lead · leadMax 동작 [확인 전 — 확인표 2126]
   itOppositionVals: { shield: realS(.6), shieldCut: .5, dealt: .6, aim: .10, extend: .28, hold: .12, recover: .16, pull: .10, reach: .42, turn: .65, side: .04, lead: .15, leadMax: .2 },
   // 막기 단추 따라가기 늘 켬 · 동방 막기 단추 손 빠르기 배율(1 = 끔) [사장님 10/16 · 10/17 · 확인 전]
   cnParrySpeedK: 1,
