@@ -1,0 +1,146 @@
+diff -ruN base/src/druid_whip.js wb/src/druid_whip.js
+--- base/src/druid_whip.js	2026-11-21 10:49:22.000000000 +0000
++++ wb/src/druid_whip.js	2026-11-21 11:53:37.971212608 +0000
+@@ -6,6 +6,7 @@
+ //  치수는 게임값(창작)이고 겉모습과 콜라이더가 같은 수를 쓴다. 치수 · 모양은 샛별 값 그대로, 덩굴 물리 · 손잡이 서보 · 톡 다섯 가지는 10/23 검수로 고침(아래 WHIP_NOW).
+ // ─────────────────────────────────────────────────────────────
+ import * as THREE from 'three';
++import { WEAPON_GROUPS, slotGroups } from './self_contact.js'; // 마디 충돌 그룹 (자리 비트)
+ 
+ // grip 손잡이(덩굴 시작까지) · lash 덩굴 길이 · count 마디 수 · mass 전체 질량 · handleMass 손잡이 + 끝 공 · tipWeight 끝 두 마디에 더한 무게(kg)
+ export const DRUID = Object.freeze({ grip: .26, lash: 1.44, count: 8, mass: .77, handleMass: .21, tipWeight: .12 });
+@@ -182,7 +183,7 @@
+   let previous = root;
+   for (let i = 0; i < DRUID.count; i++) {
+     const part = parts[i + 2], old = f.swordColliders[i + 2];
+-    const groups = old.collisionGroups() & ~(i < WHIP.bladeFrom ? foeWeaponBit : 0);
++    const groups = slotGroups(WEAPON_GROUPS & ~(i < WHIP.bladeFrom ? foeWeaponBit : 0), 0, f.slot); // 마디 self 0 (자리 비트 — self_contact.js)
+     f.colliderInfo.delete(old.handle); world.removeCollider(old, true);
+     const pos = new THREE.Vector3(0, part[1], 0).applyQuaternion(q0).add(p0);
+     const body = world.createRigidBody(R.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setRotation(q0)
+@@ -192,7 +193,7 @@
+       .setMassProperties(m, { x: 0, y: 0, z: 0 }, { x: Ie, y: It, z: Ie }, { x: 0, y: 0, z: 0, w: 1 })
+       .setFriction(WHIP.friction).setRestitution(WHIP.restitution).setCollisionGroups(groups)
+       .setActiveEvents(R.ActiveEvents.CONTACT_FORCE_EVENTS).setContactForceEventThreshold(.1)
+-      .setActiveHooks(R.ActiveHooks.FILTER_CONTACT_PAIRS), body); // 제 몸 쌍 버리기 걸이 (11/20 — 마디는 self 0 · 가르기 걸이 cutHook 없음 = 예전처럼 엔진 기본)
++      .setActiveHooks(f.slot == null ? R.ActiveHooks.FILTER_CONTACT_PAIRS : 0), body); // 제 몸 쌍 버리기 걸이 (11/20 — 마디는 self 0 · 가르기 걸이 cutHook 없음 = 예전처럼 엔진 기본 · 자리가 있으면 그룹이)
+     const state = {};
+     // 접촉 기록(combat.js): 이 마디의 스텝 전 상태(state) · 질량 · 관성(props)으로 둔타를 셈 · flexible = 팔 보조 질량 0.12 · 되튐 없음
+     const info = { fighter: f, kind: 'weapon', part: 'blade', body, flexible: true, self: 0, armAssist: Array.isArray(WHIP.armAssist) ? WHIP.armAssist[i] : WHIP.armAssist, state,
+diff -ruN base/src/fighter.js wb/src/fighter.js
+--- base/src/fighter.js	2026-11-21 10:49:22.000000000 +0000
++++ wb/src/fighter.js	2026-11-21 11:53:20.522740354 +0000
+@@ -18,7 +18,7 @@
+ import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, RUN, realS } from './config.js';
+ import { COMBAT_HOOKS } from './combat.js';
+ import { teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
+-import { BIT, GROUND_GROUPS, BODY_GROUPS, FOOT_GROUPS, WEAPON_GROUPS, HELMET_GROUPS, SELF } from './self_contact.js'; // 충돌 부류 · 제 몸 닿음 (11/20 — 자리 수 제한 없음)
++import { BIT, GROUND_GROUPS, BODY_GROUPS, FOOT_GROUPS, WEAPON_GROUPS, HELMET_GROUPS, SELF, WEAPON_MASK, takeSlot, slotGroups } from './self_contact.js'; // 충돌 부류 · 제 몸 닿음 (11/20 — 자리 수 제한 없음)
+ import { Skill, aiFingerHeld } from './skill.js';
+ import { GUN, gunFiring } from './gun.js'; // 쏘는 동안 발 묶음 (fireHold — AI 권총)
+ import { Stamina } from './stamina.js';
+@@ -54,6 +54,7 @@
+ //  자기 몸과 자기 칼끼리는 물리 걸이가 버린다(combat.js filterContactPair → pairAllowed) — 남는 것은 제 칼 ↔ 제 몸통 · 제 칼팔 ↔ 제 몸통 (colliderInfo.self).
+ //  같은 편도 적과 똑같이 부딪히고 벤다 (사장님 10/29 22:3x '같은 편도 공격할 수 있어야 해. 적과 아군 사이의 물리를 평등하게') — 1:1 · 2:2 의 접촉은 예전 비트와 같다 (관문 바이트 같음)
+ const TORSO_PARTS = new Set(['pelvis', 'abdomen', 'chest', 'thighF', 'thighB']);
++const partSelf = (name) => (TORSO_PARTS.has(name) ? SELF.torso : name === 'uarmS' || name === 'farmS' ? SELF.arm : SELF.none);
+ const ARM_JOINT = new Set(['uarmS', 'farmS', 'uarmO', 'farmO']); // 두 팔 관절 (armsPlaced — 대본이 놓는 팔)
+ // ── 팔·다리 절단 (COMBAT.limbSever, 설계 docs/strike/limb_sever_design_2026-10-07.md §2) ──
+ //  베인 부위 → 뗄 수 있는 관절 후보. 'own' = 그 부위 자신의 관절(앵커2 가 부위 틀), 'child' = 아래 부위의 관절(앵커1 이 부위 틀).
+@@ -730,7 +731,9 @@
+     //  제 몸끼리는 물리 걸이가 버린다 — 남는 것은 제 칼 · 제 칼팔(위팔 · 아래팔) ↔ 제 몸통(골반 · 배 · 가슴 · 허벅지) (colliderInfo.self · 사람 관절 한도).
+     //  제 몸 닿음은 combat.js 가 같은 싸움꾼 쌍을 버려 상처·부딪힘·불꽃·소리·멈칫이 되지 않는다(pairOf·접촉힘 사건)
+     // 이 몸의 비트 (읽기만 — revive.js 유령이 '남의 칼' 비트를 여기서 읽는다 · 모두 같은 부류 비트라 '남의 칼' = 칼 부류 전체 — 제 칼은 걸이가 버림)
+-    this.bits = Object.freeze({ body: BIT.body, weapon: BIT.weapon, foot: BIT.foot, foeBody: BIT.body, foeWeapon: BIT.weapon, foeFoot: BIT.foot });
++    this.bits = Object.freeze({ body: BIT.body, weapon: BIT.weapon, foot: BIT.foot, foeBody: BIT.body, foeWeapon: WEAPON_MASK, foeFoot: BIT.foot });
++    // 자리(self_contact.js takeSlot): 있으면 제 몸 쌍을 엔진 그룹이 버려 걸이는 칼날에만, 없으면(자리 다 참) 예전처럼 모든 부위에 걸이
++    this.slot = takeSlot(world);
+ 
+     const defs = partDefs(this.side);
+     this.headR = defs.find((d) => d.name === 'head').shape[1]; // 머리 공 반지름 (skill.js 찍기 겨눔이 머리 꼭대기 높이를 잰다)
+@@ -753,8 +756,8 @@
+         .setMass(d.mass)
+         // 옷·살끼리는 잘 미끄러진다 (마찰이 크면 팔이 상대 몸에 걸려 같이 끌려간다)
+         .setFriction(d.foot ? 0.9 : 0.25)
+-        .setCollisionGroups(d.foot ? FOOT_GROUPS : BODY_GROUPS)
+-        .setActiveHooks(RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS); // 제 몸 쌍은 걸이가 버린다 (11/20 — combat.js filterContactPair · self_contact.js)
++        .setCollisionGroups(slotGroups(d.foot ? FOOT_GROUPS : BODY_GROUPS, partSelf(d.name), this.slot));
++      if (this.slot == null) cd.setActiveHooks(RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS); // 제 몸 쌍은 걸이가 버린다 (11/20 — combat.js filterContactPair · self_contact.js · 자리가 있으면 그룹이)
+       const col = world.createCollider(cd, rb);
+       if (d.name === 'abdomen') {
+         // 배는 가볍고(10kg) 무거운 골반과 상체(30kg) 사이에 끼어 있어서, 엔진의 반복 계산(6회)으로는
+@@ -766,7 +769,7 @@
+         // 조금만 비틀어도 팽이처럼 돈다. 실제 팔 수준(약 0.004 kg·m²)을 더해 준다.
+         rb.setAdditionalMassProperties(0, { x: 0, y: 0, z: 0 }, { x: 0.004, y: 0, z: 0 }, vecQ(IDENTITY_Q), true);
+       }
+-      colliderInfo.set(col.handle, { fighter: this, kind: d.kind, part: d.name, body: rb, self: TORSO_PARTS.has(d.name) ? SELF.torso : d.name === 'uarmS' || d.name === 'farmS' ? SELF.arm : SELF.none });
++      colliderInfo.set(col.handle, { fighter: this, kind: d.kind, part: d.name, body: rb, self: partSelf(d.name) });
+ 
+       const group = new THREE.Group();
+       this.groups[d.name] = group;
+@@ -935,11 +938,11 @@
+         // 재질별 반발 계수. 곱하기 규칙이라 반발이 0인 몸·땅과는 그대로 0 (칼이 살에 튕기지 않는다)
+         .setRestitution(restitution)
+         .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Multiply)
+-        .setCollisionGroups(WEAPON_GROUPS)
++        .setCollisionGroups(slotGroups(WEAPON_GROUPS, SELF.weapon, this.slot))
+         .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS)
+-        .setContactForceEventThreshold(1)
+-        // 걸이는 모든 부품에 (11/20 — 제 몸 쌍 버리기). 칼날만(cutHook): 충돌 직전에 combat.js가 "가르고 지나갈지"를 정한다
+-        .setActiveHooks(RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS);
++        .setContactForceEventThreshold(1);
++      // 걸이는 모든 부품에 (11/20 — 제 몸 쌍 버리기 · 자리가 있으면 그룹이 버리니 칼날만). 칼날만(cutHook): 충돌 직전에 combat.js가 "가르고 지나갈지"를 정한다
++      if (isBlade || this.slot == null) cd.setActiveHooks(RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS);
+       if (pose?.rotZ) cd.setRotation(vecQ(new THREE.Quaternion().setFromAxisAngle(Z_AXIS, pose.rotZ)));
+       const col = world.createCollider(cd, sword);
+       this.swordColliders.push(col);
+diff -ruN base/src/self_contact.js wb/src/self_contact.js
+--- base/src/self_contact.js	2026-11-21 10:49:22.000000000 +0000
++++ wb/src/self_contact.js	2026-11-21 11:52:44.650680925 +0000
+@@ -31,6 +31,46 @@
+ /** 날아간 투구: 땅하고만 */
+ export const HELMET_GROUPS = groups(BIT.helmet, BIT.ground);
+ 
++/**
++ * 자리 비트 (엔진 안에서 제 몸 쌍 버리기 — 걸이 부름 줄이기). 남은 비트로 앞 SLOTS 명만 자리를 받고, 그 뒤는 걸이(pairAllowed)로 — 사람 수 제한 없음.
++ *  자리 k: 몸 B_k · 칼 W_k (부류 비트 몸 2 · 칼 4 대신). 함께 쓰는 비트: 몸통 T · 칼팔 A · 제 칼(self 칼) WS.
++ *  거름의 몸·칼 부류는 '남의' 자리 비트까지 넓힌다 (자리 없는 싸움꾼·땅은 모두). 제 몸통 ↔ 제 칼팔(T·A) · 제 몸통 ↔ 제 칼(T·WS)만 남긴다.
++ *  test(slotGroups(a), slotGroups(b)) === test(부류 a, 부류 b) && pairAllowed(a, b) — tools/sim 밖 검사(모든 부류·self·자리 조합)로 확인
++ */
++const SB = Object.freeze({ torso: 8, arm: 16, ws: 128 });
++export const SLOTS = 4;
++const slotB = (k) => 256 << (2 * k);
++const slotW = (k) => 512 << (2 * k);
++let ALL_B = 0, ALL_W = 0;
++for (let k = 0; k < SLOTS; k++) { ALL_B |= slotB(k); ALL_W |= slotW(k); }
++/** 칼 부류 비트 전부 (revive.js 유령 '남의 칼' — 자리 칼 · 제 칼 WS 포함) */
++export const WEAPON_MASK = BIT.weapon | ALL_W | SB.ws;
++const _slots = new WeakMap();
++/** 세계마다 앞에서부터 자리 하나 (다 차면 null = 걸이) */
++export function takeSlot(world) {
++  const n = _slots.get(world) ?? 0;
++  if (n >= SLOTS) return null;
++  _slots.set(world, n + 1);
++  return n;
++}
++/** 부류 그룹 g · 제 몸 부류 self · 자리 k(null = 자리 없음) → 실제 충돌 그룹 */
++export function slotGroups(g, self, k) {
++  const m = g >>> 16, f = g & 0xffff;
++  const own = k == null ? 0 : slotB(k) | slotW(k);
++  let fo = f & ~(BIT.body | BIT.weapon);
++  if (f & BIT.body) fo |= BIT.body | (ALL_B & ~own);
++  if (f & BIT.weapon) fo |= BIT.weapon | (ALL_W & ~own) | (k == null ? SB.ws : 0);
++  if (k == null) return ((m << 16) | fo) >>> 0;
++  let mo = m & ~(BIT.body | BIT.weapon);
++  if (m & BIT.body) mo |= slotB(k);
++  if (m & BIT.weapon) mo |= slotW(k) | (self === SELF_WEAPON ? SB.ws : 0);
++  if (self === SELF_TORSO) { mo |= SB.torso; fo |= SB.arm | SB.ws; }
++  else if (self === SELF_ARM) { mo |= SB.arm; fo |= SB.torso; }
++  else if (self === SELF_WEAPON) fo |= SB.torso;
++  return ((mo << 16) | fo) >>> 0;
++}
++const SELF_TORSO = 1, SELF_ARM = 2, SELF_WEAPON = 4; // 아래 SELF 와 같은 값
++
+ /** 제 몸 부류 (colliderInfo.self) — 제 몸통 ↔ 제 칼팔 · 제 몸통 ↔ 제 칼만 부딪힌다 */
+ export const SELF = Object.freeze({ none: 0, torso: 1, arm: 2, weapon: 4 });
+ const TORSO_ARM = SELF.torso | SELF.arm;

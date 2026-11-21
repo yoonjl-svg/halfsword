@@ -1,0 +1,32 @@
+diff -ruN base/src/corr.js work/src/corr.js
+--- base/src/corr.js	2026-11-21 10:49:22.000000000 +0000
++++ work/src/corr.js	2026-11-21 11:48:36.494047470 +0000
+@@ -52,8 +52,9 @@
+   };
+ }
+ 
+-/** 부위 하나를 지금 쓸기 면에 대어 본다. out 에 적고 후보면 true */
+-function evalPart(f, body, L, HL, out) {
++/** 부위 하나를 지금 쓸기 면에 대어 본다. out 에 적고 후보면 true
++ *  띠·닿음(needAhead 면 앞쪽까지) 밖이면 나머지 값은 쓰이지 않으니 거기서 false (out 의 나머지는 묵은 값) */
++function evalPart(f, body, L, HL, out, needAhead = false) {
+   const r = partRadius(body);
+   const ct = body.translation();
+   _c.set(ct.x, ct.y, ct.z);
+@@ -65,6 +66,7 @@
+   out.ahead = _u.dot(_t) > 0; // 면 안 각 φ(b → c−H) 가 도는 쪽
+   out.h = h;
+   out.r = r;
++  if (!out.band || !out.reach || (needAhead && !out.ahead)) return false;
+   // 닿는 점 p: 칼날 선분 위에서 부위 무게중심에 가장 가까운 점 (combat.js predict 와 같은 식, 살아 있는 몸)
+   _a.copy(_b).multiplyScalar(HL).add(_H);
+   _e.copy(_b).multiplyScalar(L - HL);
+@@ -149,7 +151,7 @@
+   let best = null;
+   let bestTau = Infinity;
+   for (const name in foe.bodies) {
+-    if (!evalPart(f, foe.bodies[name], L, HL, _ev) || !_ev.ahead) continue;
++    if (!evalPart(f, foe.bodies[name], L, HL, _ev, true) || !_ev.ahead) continue;
+     if (_ev.tau < bestTau) {
+       bestTau = _ev.tau;
+       best = name;

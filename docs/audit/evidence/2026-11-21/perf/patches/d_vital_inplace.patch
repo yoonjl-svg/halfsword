@@ -1,0 +1,58 @@
+diff -ruN base/src/ai_sense.js wd/src/ai_sense.js
+--- base/src/ai_sense.js	2026-11-21 10:49:22.000000000 +0000
++++ wd/src/ai_sense.js	2026-11-21 11:55:38.204571628 +0000
+@@ -8,7 +8,7 @@
+ // ─────────────────────────────────────────────────────────────
+ 
+ import { TIME } from './config.js';
+-import { captureVitalPose } from './vital_target.js';
++import { captureVitalPoseInto } from './vital_target.js';
+ 
+ const N = Math.round(96 * TIME.k); // 기록 개수 (1/120초마다 → 게임 0.8초 × std = 실제 0.8 초 — 표준 시간 10/25 · 옛 판 96)
+ 
+@@ -88,7 +88,9 @@
+     s.okori = f.okoriVis ?? 0; // 오코리 보이는 크기 (11/17 — 보이는 꼴)
+     s.ready = f.iaiReadyR ?? 0; // 고노센 준비 자세 (허리 대기 — 보이는 꼴 · 11/19 웅크림은 사람 · AI 모두 없음)
+     // 약한 자세 겨눔 (10/12): 머리·목·가슴·칼 자리 사본 — AI 는 이것도 반응 시간만큼 늦게 본다
+-    s.vital = captureVitalPose(f);
++    const vb = (this.vbox ||= []); // 칸마다 사본 하나를 고쳐 씀 (값은 captureVitalPose 와 같다 — 매 스텝 새 객체를 만들지 않게)
++    s.vital = captureVitalPoseInto(f, vb[this.head]);
++    if (s.vital) vb[this.head] = s.vital;
+   }
+ 
+   /** delay초 전의 모습 (기록이 모자라면 가장 오래된 것) */
+diff -ruN base/src/vital_target.js wd/src/vital_target.js
+--- base/src/vital_target.js	2026-11-21 10:49:22.000000000 +0000
++++ wd/src/vital_target.js	2026-11-21 11:55:38.205113049 +0000
+@@ -62,6 +62,31 @@
+   };
+ }
+ 
++const _lp = new THREE.Vector3();
++const _lq = new THREE.Quaternion();
++const _bp = new THREE.Vector3();
++const _blade = new WeakMap();
++const put = (o, v) => ((o.x = v.x), (o.y = v.y), (o.z = v.z), o);
++const putQ = (o, q) => ((o.x = q.x), (o.y = q.y), (o.z = q.z), (o.w = q.w), o);
++/** captureVitalPose 와 같은 값을 o(앞서 이 함수가 만든 사본 · 없으면 새로)에 고쳐 쓴다 — 반응 지연 기록 칸마다 하나 (ai_sense.js · 매 스텝 새 객체를 만들지 않게) */
++export function captureVitalPoseInto(f, o) {
++  if (!f?.bodies?.head || !f.bodies.chest || !f.bodies.pelvis) return null;
++  o ||= { targetId: 0, state: null, alive: false, armed: false, headOff: false, head: {}, chest: {}, pelvis: {}, headQ: {}, chestQ: {}, headRadius: 0, hasHelmet: false, neck: {}, face: {}, bladeBase: null, bladeTip: null };
++  const B = (_blade.get(o) ?? _blade.set(o, [{}, {}]).get(o)); // 칼 두 점 그릇 (키를 늘리지 않게 밖에)
++  const head = put(o.head, f.bodies.head.translation());
++  const headQ = putQ(o.headQ, f.bodies.head.rotation());
++  putQ(o.chestQ, f.bodies.chest.rotation());
++  o.targetId = f.index; o.state = f.state; o.alive = !!f.alive; o.armed = !!f.armed; o.headOff = !!f.decapitated;
++  put(o.chest, f.bodies.chest.translation());
++  put(o.pelvis, f.bodies.pelvis.translation());
++  o.headRadius = f.headR; o.hasHelmet = !!f.hasHelmet;
++  _lq.set(headQ.x, headQ.y, headQ.z, headQ.w);
++  put(o.neck, _lp.set(0, FINISH.neckAt, 0).applyQuaternion(_lq).add(_bp.set(head.x, head.y, head.z)));
++  put(o.face, _lp.set(VITAL.faceLocalX, VITAL.faceLocalY, 0).applyQuaternion(_lq).add(_bp.set(head.x, head.y, head.z)));
++  o.bladeBase = f.armed ? put(B[0], f.bladePoint(0, _lp)) : null;
++  o.bladeTip = f.armed ? put(B[1], f.bladePoint(1, _lp)) : null;
++  return o;
++}
+ function pointSegmentDistance(p, a, b) {
+   const d = vec(b).sub(vec(a));
+   const t = clamp(vec(p).sub(vec(a)).dot(d) / Math.max(d.lengthSq(), 1e-12), 0, 1);
