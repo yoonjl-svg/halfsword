@@ -15,6 +15,7 @@
 //     손목이 제동을 걸기 전이다 → 빠른 칼날이 들어간다
 //  두 사람 다 서 있으면 amt = 0 이고 자세 지도 계산은 예전과 한 비트도 다르지 않다.
 //  플레이어와 AI 가 같은 파이터 코드를 쓰므로 AI 의 내려베기도 그대로 마무리가 된다.
+//  AI 가 '마무리'로 칠 때는 사람 탭과 같은 마무리 탭(아래 찍기 · 쪼개 내려치기)을 낸다 (11/22 사장님 'ai 찍게 해' — ai.js finGo).
 //  탭 마무리 찌르기(skill.js plungePose, 사장님 9/30 "닿을 때까지 걸어들어가 … 양손을 번쩍 드는 동시에 칼날을 아래로 돌려잡고
 //   힘껏 내려찍음")는 fin.plunge 만 읽는다: 몸 점 T, 칼끝이 들어갈 끝 tip, 칼 방향 dir, 닿는 곳(inside·short·walk)
 // ─────────────────────────────────────────────────────────────
@@ -102,7 +103,7 @@ export const FINISH = {
   //  칼날을 곧게 내려친다 (skill.cleavePose). 세기는 찍기와 같은 판정 에너지 × power (combat.js — 베기에도), 투구 · 갑옷 · 옷 · 살 문턱은 그대로.
   //  찍는 동안 팔 · 손목 힘 배율(strikeArm · strikeWrist) · 손목 제동 늦춤(brakeRelief)도 찍기와 같이 걸린다. 새 상한 · 문턱 없음
   cleave: {
-    // 사람(플레이어) 칼만 — AI 마무리는 그대로(자세 지도 내려베기 · 스위치 걷음 11/17).
+    // 사람 · AI 칼 같음 (11/22 사장님 'ai 찍게 해' · '가급적 ai와 사람이 같아야 한다' — 전엔 사람 칼만 · AI 는 자세 지도 내려베기).
     // 쓰는 칼: 몸 틀(weapons.js frame = weapon_class.js 'B 양손 앞무게' — 두 손 · 무겁거나 칼끝 쪽 무게)이 이 값이고 날 있는 칼(부러지지 않은).
     //  지금 로스터: 츠바이핸더 · 플랑베르주 · 티소나 · 모노호시자오 (냉동 참치는 날이 없어 찍기 그대로 — 머리를 내려찍는다). 무기 칸 finishCleave(true | false)가 있으면 그 값
     frame: 'heavy',
@@ -119,9 +120,9 @@ export function cleaveFoe(vic) {
   return !!vic?.alive && (vic.state === 'kneel' || vic.state === 'getup' || vic.state === 'down');
 }
 
-/** 이 파이터의 탭 마무리가 쪼개 내려치기인가 (FINISH.cleave — 사람 칼만, 몸 틀, 무기 칸 finishCleave) · 그렇다면 상대 상태로 연다 (cleaveFoe) */
+/** 이 파이터의 탭 마무리가 쪼개 내려치기인가 (FINISH.cleave — 몸 틀, 무기 칸 finishCleave · 사람 · AI 같음 11/22) · 그렇다면 상대 상태로 연다 (cleaveFoe) */
 export function cleaveFinish(f) {
-  if (f.aiControlled || !f.weaponCfg?.edged || f.weaponBroken) return false;
+  if (!f.weaponCfg?.edged || f.weaponBroken) return false;
   return f.weapon?.finishCleave ?? f.weapon?.frame === FINISH.cleave.frame;
 }
 
@@ -188,7 +189,7 @@ export function updateFinish(f, dt) {
   fin.gap ??= { contact: FINISH.ai.contact * fin.k, reach: FINISH.ai.reach * fin.k, clinch: FINISH.ai.clinch * fin.k }; // AI 가 읽는 간격
   let on = false;
   // 낮은 상대 진입: state 이름 대신 몸 높이로 연다. 새로 시작해도 되나(canStart)는 이어 가기 여유 없이 따로 본다
-  // 10/22 23:0x 쪼개 내려치기 칼(사람 대검): 몸 높이 대신 상대 상태(무릎 꿇음 · 일어나는 중 · 쓰러짐)로 연다
+  // 10/22 23:0x 쪼개 내려치기 칼(대검 — 사람 · AI 11/22): 몸 높이 대신 상대 상태(무릎 꿇음 · 일어나는 중 · 쓰러짐)로 연다
   const anyH = cleaveFinish(f);
   fin.canStart = false;
   if (foe && (anyH ? cleaveFoe(foe) : lowFinishPosture(f, foe, lowFinishContinuing(f, foe))) && f.alive && f.armed && (f.state === 'stand' || f.state === 'kneel')) {
@@ -360,7 +361,7 @@ function aimPoses(f, fin, T, Tp) {
   const hd = H.dir;
   if (cleaveFinish(f)) {
     // 10/22 쪼개 내려치기 칼 (FINISH.cleave): 겨눔 자리 = 들기 자세(지붕 — 머리 위로 들어 힘을 모은 채). 탭하면 곧 힘 모으기 → 내려치기 (skill.cleavePose).
-    //  사람 칼만 (AI 는 이 줄을 타지 않아 자세 지도가 예전 그대로)
+    //  사람 · AI 같음 (11/22 — 전엔 사람 칼만이라 AI 대검의 겨눔 자리는 찍기 겨눔이었다)
     const R = cleaveRaise();
     for (let k = 0; k < 3; k++) (hh[k] = k === 2 ? R.hand[2] * side : R.hand[k]), (hd[k] = k === 2 ? R.dir[2] * side : R.dir[k]);
     return;
