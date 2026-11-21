@@ -153,6 +153,9 @@ button.sg-slot:not(:disabled):hover { border-color: var(--c-sub); }
 .sg-mh { flex: none; display: flex; align-items: center; gap: 10px; width: 100%; max-width: 1220px; margin: 0 auto; }
 .sg-mh b { font-size: var(--fs-m); outline: none; }
 .sg-mh-sub { font-size: var(--fs-s); color: var(--c-sub); }
+.sg-map { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-s); color: var(--c-text); white-space: nowrap; } /* 생사전 전용 맵 (11/21): 작은 그림 + 이름 */
+.sg-map[hidden] { display: none; }
+.sg-map svg { display: block; height: 34px; width: auto; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); }
 .sg-rows { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px; width: 100%; max-width: 1220px; margin: 0 auto; }
 .sg-row-label { margin: 0 0 3px; font-size: var(--fs-s); color: var(--c-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 내 경기의 두 줄 (11/21 사장님 '두 팀의 결과가 섞여 있어서 알아보기 어렵더라.' · '줄마다 큰 머리 글 두지마.'): 위 = 내 팀(따뜻한 금빛 바탕 · 왼쪽 금빛 테 · 이름표 금빛) · 아래 = 상대(가라앉은 어두운 바탕) · 줄 사이 틈 */

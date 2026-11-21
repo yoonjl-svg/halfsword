@@ -27,6 +27,7 @@ export const SAENGSA_TEXT = Object.freeze({
   myTeam: '내 팀',
   foeTeam: '상대 팀',
   fightEnter: '전투 입장',
+  map: '맵', // 경기 화면 머리 — 이 경기를 싸울 생사전 전용 맵(작은 그림 + 이름 · 11/21)
   pickHint: '나설 사람을 한 명에서 세 명까지 고르십시오.', // 11/20 3:3 (전 '나설 사람을 한두 명 고르십시오.')
   foeHidden: '상대는 입장할 때 함께 보입니다.',
   noInjury: '부상 없음',

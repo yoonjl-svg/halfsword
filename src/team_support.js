@@ -44,6 +44,7 @@
 // ─────────────────────────────────────────────────────────────
 import { TEAM_SUPPORT, TEAM_SENSE, MINDSET } from './config.js';
 import { sameSide } from './team.js';
+import { wallBetween } from './field.js'; // 성벽 안뜰 시야 가림 (11/21 — 판 사본 장에 담은 벽 광선)
 
 const DEG = Math.PI / 180;
 const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
@@ -97,6 +98,8 @@ function viewOf(ai) {
 }
 /** 그 장에서 i 가 j 를 보나 (± fov/2) */
 function sees(v, j) {
+  const F = v.S.fighters[v.i].field;
+  if (F?.hasSight && j !== v.i && wallBetween(F, v.fr, v.i, j)) return false; // 성벽 안뜰 (11/21): 벽 너머는 안 보임 (시야를 가리는 막이가 없는 판 — 원 무대 · 두 다리 — 은 묻지 않음)
   if (v.fov >= 360 || j === v.i) return true;
   const g = v.fr.b[j];
   const x = g.x - v.me.x;

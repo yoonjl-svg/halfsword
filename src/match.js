@@ -166,7 +166,7 @@ export function stepMatch(M, dt, hooks = {}) {
   // ① 상대 · 바라볼 곳 (모두 정한 뒤 바라볼 곳 — 1:1 의 예전 차례)
   for (const f of F) f.foe = foeOf(f, M, dt);
   for (const f of F) {
-    const t = hooks.faceOf?.(f, M) ?? f.foe?.bodies.pelvis.translation();
+    const t = hooks.faceOf?.(f, M) ?? f.fieldFace ?? f.foe?.bodies.pelvis.translation(); // f.fieldFace: 생사전 전용 맵에서 막이 너머 상대를 두고 길목 점으로 가는 AI (11/21 — field_route.js · 원 무대는 없음)
     if (t) f.faceTarget = t;
   }
   for (const c of M.order) if (c.setFoe && c.me.foe && c.foe !== c.me.foe) c.setFoe(c.me.foe);

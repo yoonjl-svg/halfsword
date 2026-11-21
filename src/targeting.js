@@ -22,9 +22,46 @@ import { fixHoldK } from './ai_lone.js'; // 결투 고집 (11/19 — 이탈리�
 
 const hdist = (a, b) => {
   const p = a.bodies.chest.translation();
-  const q = b.bodies.chest.translation();
-  return Math.hypot(q.x - p.x, q.z - p.z);
+  const q = a.seenPos?.get(b) ?? b.bodies.chest.translation(); // 성벽 안뜰 (11/21): 벽 너머 적은 마지막으로 본 자리 (sightTick)
+  // 생사전 전용 맵 (11/21 — src/field.js): 물 · 벽 너머 상대는 길목을 거쳐 걷는 길 길이 (같은 편 쪽 가까운 적 먼저) · 원 무대는 곧은 거리 그대로
+  return a.field ? pathDist(a, b, p, q) : Math.hypot(q.x - p.x, q.z - p.z);
 };
+/** 걷는 길 길이 — 막혔으면 길목 길(셈이 무거워 몸 짝마다 PATH_EVERY 게임 초 동안 그 길 길이에 곧은 거리 바뀜만 더해 씀) */
+const PATH_EVERY = 0.1;
+function pathDist(a, b, p, q) {
+  const F = a.field;
+  const d = Math.hypot(q.x - p.x, q.z - p.z);
+  if (!F.segBlocked(p, q)) return d;
+  const C = (a.pathCache ??= new Map());
+  const t = a.fightT ?? 0;
+  let c = C.get(b);
+  if (!c || t - c.t > PATH_EVERY || t < c.t) C.set(b, (c = { t, extra: F.pathLen(p, q) - d }));
+  return d + c.extra;
+}
+/**
+ * 시야 (생사전 성벽 안뜰 — 11/21 사장님 원칙 '가급적 ai와 사람이 같아야 한다'): 사람은 성벽 너머를 못 보니 AI 도 벽 광선에 막힌 적은 마지막으로 본 자리만 안다.
+ *  f.seenPos = 적 → 마지막으로 본 가슴 자리 (판 시작 = 그 적의 시작 자리 — 판 시작 훑기로 누구나 본 자리). 보이는 적은 지운다(지금 자리를 그대로 읽음).
+ *  안 본 지 SIGHT_FORGET 게임 초가 지나면 지운다 — 발소리 · 칼 소리로 어림 (벽 너머 낡은 자리만 쫓아 판이 멈추지 않게)
+ *  시야를 가리는 막이가 없는 판(원 무대 · 두 다리 개울)은 아무 일 없음
+ */
+export const SIGHT_FORGET = 6;
+export function sightTick(f, M) {
+  const F = f.field;
+  if (!F?.hasSight || !f.alive) return;
+  const seen = (f.seenPos ??= new Map());
+  const p = f.bodies.chest.translation();
+  const now = f.fightT ?? 0;
+  for (const g of M.fighters) {
+    if (sameSide(g, f)) continue;
+    const q = g.bodies.chest.translation();
+    const heard = (f.heard ??= new Set());
+    if (!F.sightBlocked(p, q)) { seen.delete(g); heard.delete(g); (f.lastSaw ??= new Map()).set(g, { x: q.x, z: q.z, t: now }); continue; } // 보임 — 지금 자리
+    if (heard.has(g)) continue; // 오래 안 보임 — 소리로 어림한 지금 자리
+    const m = seen.get(g) ?? f.lastSaw?.get(g) ?? { x: q.x, z: q.z, t: 0 }; // 안 보임 — 마지막으로 본 자리 (판 시작 = 시작 자리)
+    if (now - m.t > SIGHT_FORGET) { seen.delete(g); heard.add(g); } else seen.set(g, m);
+  }
+}
+
 /** 겨눌 수 있는 상대: 살아 있고 부활하는 중이 아님 */
 export const targetable = (g) => !!g && g.alive && !g.revival;
 
@@ -88,6 +125,7 @@ export function chooseTarget(f, M, dt = 0) {
   let st = S.get(f);
   if (!st) S.set(f, (st = { foe: null, cand: null, held: 0, switches: 0, why: { gone: 0, attacked: 0, held: 0 }, atk: new Map() }));
   if (!f.alive) return st.foe ?? f.foe ?? null;
+  sightTick(f, M); // 성벽 안뜰: 벽 너머 적은 마지막으로 본 자리로 (11/21 — 시야를 가리는 막이가 없는 판은 아무 일 없음)
   if (T.attackHold > 0) for (const g of M.fighters) if (!sameSide(g, f)) { if (attacking(g, f)) st.atk.set(g, (st.atk.get(g) ?? 0) + dt); else st.atk.delete(g); } // '나를 침'이 이어진 시간 (멈추면 0 부터)
   let best = null;
   let bs = Infinity;

@@ -40,6 +40,7 @@
 // ─────────────────────────────────────────────────────────────
 import { TEAM_SENSE, TEAM_FIGHT } from './config.js';
 import { sameSide } from './team.js';
+import { wallBetween } from './field.js'; // 성벽 안뜰 시야 가림 (11/21)
 import { woundDegree } from './combat.js';
 import { manyMul, manyHuntOff } from './ai_mindset.js'; // 결투 고집 (11/19 — 이탈리아 마음가짐 many.ally · many.hunt): 동료가 있을 때 동료를 위한 몫을 거둠 (ai_mindset.js 는 이 파일을 읽지 않음)
 
@@ -155,6 +156,9 @@ export function viewOf(ai) {
   if (!fr) return null;
   const i = ai.me.index;
   const foe = ai.foe?.index ?? -1;
+  // 성벽 안뜰 (11/21 — 사장님 원칙 '가급적 ai와 사람이 같아야 한다'): 벽 광선에 막힌 몸은 안 보임 (겨눈 상대여도) · 시야를 가리는 막이가 없는 판은 예전 그대로
+  const F = ai.me.field;
+  if (F?.hasSight) return { fr, T, i, me: fr.b[i], sees: (j) => !wallBetween(F, fr, i, j) && (j === foe || seesIn(fr, i, j, T.eye.fov)) };
   return { fr, T, i, me: fr.b[i], sees: (j) => j === foe || seesIn(fr, i, j, T.eye.fov) };
 }
 
