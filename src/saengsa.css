@@ -206,6 +206,9 @@ button.sg-card:disabled { cursor: default; }
 .sg-badge[data-kind="rest"] { background: var(--c-accent); }
 .sg-badge[data-kind="coma"] { background: var(--hp-orange); } /* 코마 (11/21) — 죽음(붉은 · 카드는 흐리게)과 갈리게 체력 칸 주황(낮은 체력) · 카드는 흐리게 하지 않음 */
 .sg-card[data-coma] { border-color: color-mix(in srgb, var(--hp-orange) 60%, transparent); }
+.sg-badge[data-kind="out"] { background: rgba(0, 0, 0, .55); color: var(--c-alert); box-shadow: inset 0 0 0 1px var(--c-alert); } /* 이탈 (11/21 C) — 죽음(붉은 바탕)과 갈리게 붉은 테 · 카드 몸만 흐리게(표는 그대로) */
+.sg-card[data-out] > :not(.sg-badge) { opacity: .5; filter: grayscale(.8); }
+.sg-inj [data-cut] { color: var(--c-alert); }
 .sg-mf { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 12px; width: 100%; max-width: 1220px; margin: 0 auto; }
 .sg-hint { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-s); line-height: 1.4; color: var(--c-sub); word-break: keep-all; }
 .sg-hint[hidden] { display: none; }

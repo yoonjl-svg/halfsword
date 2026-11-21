@@ -34,6 +34,7 @@ export const SAENGSA_TEXT = Object.freeze({
   dead: '죽음',
   entrant: '출전',
   rested: '쉼', // 결과 카드 — 이긴 팀에서 그 경기에 나서지 않아 쉰 사람 (11/21 쉼 규칙)
+  out: '이탈', // 고르기 · 결과 카드 — 칼 팔이나 다리를 잃어 이 대회에 다시 못 나서는 사람 (11/21 C — 사장님 '은퇴 대신 이탈')
   downed: '코마', // 결과 카드 — 이긴 팀에서 나섰다 쓰러졌으나 산 사람(체력 10 · 중상 — 11/21 사장님 '죽음, 코마, 이런 식으로 구분해 넣어.')
   win: '승리',
   loss: '패배',
@@ -93,6 +94,9 @@ export function stateLine(s) {
 }
 /** 신청 창 안내 */
 export const signupHours = (from, to) => `신청은 ${hourWords(from)}부터 ${hourWords(to)}까지입니다.`;
+/** 잘린 팔다리 한 마디 (11/21 C — 부상 줄 앞): 칼 팔 · 빈손 팔 · 다리(두 다리 같은 말 — 한 번만) */
+export const LOST_KO = Object.freeze({ armS: '칼 팔 잘림', armO: '빈손 팔 잘림', legF: '다리 잘림', legB: '다리 잘림' });
+export const lostText = (lost) => [...new Set((lost ?? []).map((l) => LOST_KO[l]).filter(Boolean))];
 /** 부상 한 줄 '팔 경상 · 다리 중상' */
 export const injuryText = (list, serious) => (list.length ? list.map((i) => `${INJURY_KO[i.part] ?? i.part} ${serious(i) ? '중상' : '경상'}`).join(' · ') : SAENGSA_TEXT.noInjury);
 /** 부상 한 단계 나음 한 마디 (rest 의 steps 하나): '다리 중상 → 경상' · '팔 경상 → 나음' */

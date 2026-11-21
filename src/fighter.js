@@ -609,6 +609,7 @@ export class Fighter {
     // 버티는 힘 (캐릭터 시트 vitality — 사장님 10/24 01:5x '롤랑과 베르나르도는 체력도 +10%' · 확인표 2338 '사장님 확인 전'): 1 = 사람 그대로(나머지 모두).
     //  초당 잃는 피 · 머리를 맞아 잃는 의식을 1/vitality 로 — 1.1 이면 피가 10 % 많은 것과 같다. 피 · 의식은 1(100 %)에서 시작 · 쓰러지는 문턱 · 즉사(참수 · 머리 · 내려찍기)는 그대로
     this.vitality = o.vitality > 0 ? o.vitality : 1;
+    this.koK = 1; // 머리 부상 몫 (생사전 11/21 D — 들고 온 머리 부상: 1 + 심각도 × LIMB_LOSS · applySnapshot ← saengsa_match.js snapshotFromPerson koK): 머리를 맞아 잃는 의식 × 이 값. 1 이면 그대로
     this.pain = 0; // 통증: 크게 맞으면 잠깐 힘이 빠진다
     this.limbs = { armS: 1, armO: 1, legF: 1, legB: 1 }; // 팔다리 기능 (1 = 멀쩡)
     this.wounds = []; // { part, type, severity, bleed, local(몸 기준 위치) }
@@ -1918,6 +1919,8 @@ export class Fighter {
         ...(w.stump ? { stump: true } : {}), ...(w.limb ? { limb: w.limb } : {}), ...(w.carried ? { carried: true } : {}),
       })),
       weaponBroken: this.weaponBroken, // 부러진 무기는 그 대회 끝까지 부러진 채 (사장님 10/29 20:1x — 생사전)
+      ...(this.severedLimbs?.size ? { lost: [...this.severedLimbs] } : {}), // 잘린 팔다리 (11/21 C — 생사전 대회 끝까지 · 없으면 칸 없음)
+      ...(this.stamina && this.stamina.scarK !== 1 ? { stamK: this.stamina.scarK } : {}), ...(this.koK !== 1 ? { koK: this.koK } : {}), // 몸통 · 머리 부상 몫 (11/21 D — 1 이면 칸 없음)
     };
   }
 
@@ -1936,6 +1939,9 @@ export class Fighter {
       ...(w.stump ? { stump: true } : {}), ...(w.limb ? { limb: w.limb } : {}), ...(w.carried ? { carried: true } : {}),
     }));
     if (s.weaponBroken && !this.weaponBroken && this.weapon.fragile) this.breakWeapon(true);
+    for (const limb of s.lost ?? []) this.startSevered(limb); // 판 시작부터 없는 팔다리 (생사전 11/21 C — 없으면 그대로)
+    if (s.stamK != null) this.stamina.setScar(s.stamK); // 몸통 부상: 최대 기력 × stamK (11/21 D — 없으면 그대로 · 옛 사본)
+    if (s.koK != null) this.koK = Math.max(1, +s.koK || 1); // 머리 부상: 머리를 맞아 잃는 의식 × koK (11/21 D)
     if (this.limbs.armS < VITALS.dropSwordArm && this.armed) this.dropSword();
   }
 
@@ -2003,7 +2009,7 @@ export class Fighter {
       //  곱하기로 되어 있다. 아픔·균형·판 닳음은 위에서 E 전체로 적었다. 머리·목은 판이 덮지 않는다 (투구는 helmetBlunt)
       if (Z === 'head' || Z === 'neck') {
         const k = h.helmet ? h.helmetBlunt : 1;
-        this.consciousness -= (h.energy * VITALS.concussionPerJoule * k) / this.vitality; // 버티는 힘 (10/24 — 1 이면 그대로 · 주저앉음 · 멍함은 에너지 그대로)
+        this.consciousness -= ((h.energy * VITALS.concussionPerJoule * k) / this.vitality) * this.koK; // 버티는 힘 (10/24 — 1 이면 그대로 · 주저앉음 · 멍함은 에너지 그대로) · 머리 부상 몫 koK (11/21 D — 1 이면 그대로)
         if (h.energy * k > 45) this.knockDown(h.energy * k > 90); // 머리를 세게 맞으면 주저앉거나 쓰러진다
         this.daze = Math.min(1, (this.daze || 0) + h.energy * k / 100); // 멍함
         // 흙 몸(병마용): 사람을 기절로 끝내는 같은 머리·목 둔타 문턱(의식 ≤ 0)에서 목이 부러져 머리가 떨어진다 (샛별 901b1f39 — 새 문턱 없음).
@@ -2039,7 +2045,7 @@ export class Fighter {
       this.limbs[limb] = Math.max(0, this.limbs[limb] - sev * LIMB_LOSS);
       if (limb === 'armS' && this.limbs.armS < VITALS.dropSwordArm) this.dropSword();
     }
-    if (Z === 'head' && h.type === 'cut') this.consciousness -= (sev * 0.5) / this.vitality; // 버티는 힘 (10/24)
+    if (Z === 'head' && h.type === 'cut') this.consciousness -= ((sev * 0.5) / this.vitality) * this.koK; // 버티는 힘 (10/24) · 머리 부상 몫 koK (11/21 D)
   }
 
   /**
@@ -2136,7 +2142,7 @@ export class Fighter {
    *  떨어진 부위는 잔해(상처를 내지도 받지도 않음, colliderInfo.detached). 칼 팔이면 칼은 잘린 아래팔과 함께 간다(쥠 관절 그대로, armed 만 false).
    *  다리를 잃으면 서지 않는다(한 다리 보행 없음) — 부활은 참수 아닌 한 허용(사장님 10/8 00:20), 누운 채 손목 제어는 오늘처럼 산다.
    */
-  sever(t, h) {
+  sever(t, h, quiet = false) { // quiet: 판 시작부터 없는 팔다리(startSevered) — 단면 상처 · 출혈 · 기록 · 효과 걸이 없음 (싸움 길은 그대로)
     const J = this.jointByName[t.joint];
     if (!J?.joint) return false;
     const PARTS = { farmS: ['farmS'], farmO: ['farmO'], uarmS: ['uarmS', 'farmS'], uarmO: ['uarmO', 'farmO'], shinF: ['shinF', 'footF'], shinB: ['shinB', 'footB'], thighF: ['thighF', 'shinF', 'footF'], thighB: ['thighB', 'shinB', 'footB'] }[t.joint];
@@ -2195,6 +2201,7 @@ export class Fighter {
       this.knockDown(true);
       this.downTime = 1e9; // 서지 않는다 (updateState 의 getup 전이도 missingLeg 를 본다)
     }
+    if (quiet) return fresh;
     // 5. 상처·출혈: 떨어진 부위의 상처는 더는 몸의 피가 아니다; 단면 상처를 몸 쪽 부위에 (참수와 같은 꼴)
     for (const w of this.wounds) if (this.detachedParts.has(w.part) && !w.detached) { this.bleed = Math.max(0, this.bleed - w.bleed); w.bleed = 0; w.detached = true; }
     const bleed = this.physiology.bleeds ? h.severity * (h.bleedPerSev ?? 0.012) : 0; // 피 없는 몸(병마용): 단면 출혈 0 (샛별 901b1f39 limb_sever 와 같은 뜻)
@@ -2203,6 +2210,24 @@ export class Fighter {
     this.severed ||= [];
     this.severed.push({ joint: t.joint, kind: t.kind, parts: PARTS, limb, parent: parentName, severity: h.severity, energy: h.energy, dist: t.dist, parentLocal: { x: a1.x, y: a1.y, z: a1.z }, childLocal: { x: a2.x, y: a2.y, z: a2.z } });
     COMBAT_HOOKS.onSever?.(this, t.kind, PARTS.map((p) => this.bodies[p]), parentName);
+    return true;
+  }
+
+  /**
+   * 판 시작부터 없는 팔다리 (생사전 11/21 C — 지난 경기에 잘린 팔다리는 대회 끝까지 돌아오지 않음 · saengsa_match.js snapshotFromPerson lost → applySnapshot):
+   *  싸움의 절단(sever)과 같은 관절 떼기 · 수동 관절 · 몸값 · 기능(빈손 팔이면 두 손 쥐기 없음 — gripping · limbs.armO 0) 뒤, 떨어진 부위(와 칼 팔이면 칼)를
+   *  세계에서 끄고(몸 · 충돌 없음) 그림을 숨긴다 — 잔해 · 떨어진 팔 · 피 · 소리 · 단면 상처 없음(들고 온 부상은 따로 닫힌 상처로 옴). 어깨 · 엉덩이에서 뗌.
+   *  생사전은 빈손 팔(armO)만 들어온다(칼 팔 · 다리를 잃은 사람은 이탈 — 나서지 못함). 판을 세운 뒤 · 첫 스텝 전에만. 돌려줌: 뗐나
+   */
+  startSevered(limb) {
+    const joint = { armS: 'uarmS', armO: 'uarmO', legF: 'thighF', legB: 'thighB' }[limb];
+    if (!joint || this.severedLimbs?.has(limb)) return false;
+    const fresh = this.sever({ joint, kind: limb.startsWith('arm') ? 'shoulder' : 'hip', dist: 0 }, null, true);
+    if (!fresh) return false;
+    const off = new Set(fresh.map((p) => this.bodies[p]));
+    if (limb === 'armS') for (const col of this.swordColliders ?? []) { const b = col.parent(); if (b) off.add(b); }
+    for (const b of off) b.setEnabled(false);
+    for (const m of this.meshes) if (off.has(m.rb)) m.group.visible = false;
     return true;
   }
 

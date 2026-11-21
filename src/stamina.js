@@ -25,6 +25,7 @@ export class Stamina {
     this.controller = null;
     this.aweLoss = 0; // 판 시작 최대 기력 깎임 (티소나 '위세' — applyAweStart · 그 판 내내)
     this.maxBonus = 0; // 최대 기력 덧 (대기실 장비 — 케틀 햇 '생존술: 기력 +30', main.js setMaxBonus · 플레이어만). 문턱 0 · −35 · −70 과 그 밖 규칙은 그대로
+    this.scarK = 1; // 최대 기력 몫 (생사전 몸통 부상 — 11/21 D: 1 − 심각도 × LIMB_LOSS · fighter.applySnapshot ← saengsa_match.js snapshotFromPerson stamK). 1 이면 그대로(1:1 · 다른 판)
     this.infinite = false; // 기력 무한 (대기실 장비 — 용사의 눈물 '기력 무한', main.js setInfinite · 플레이어만). 거짓이면 아래 모든 길이 전과 한 글자도 다르지 않다
     this.value = STAMINA.max;
     this.level = 0;
@@ -52,9 +53,14 @@ export class Stamina {
     this.clinchStep = null;
   }
 
-  /** 최대 기력: 100(STAMINA.max) + 장비 덧 */
-  get max() { return STAMINA.max + this.maxBonus - this.aweLoss; } // − 위세 깎임(10/24)
+  /** 최대 기력: (100(STAMINA.max) + 장비 덧) × 몸통 부상 몫(scarK — 장비 덧 뒤에 곱함) − 위세 깎임 */
+  get max() { return (STAMINA.max + this.maxBonus) * this.scarK - this.aweLoss; } // − 위세 깎임(10/24) · scarK 1 이면 전과 같은 값
   /** 판을 세울 때(main.js newRound — 첫 스텝 전) 장비 덧을 정하고 그 최대에서 시작한다 */
+  /** 몸통 부상 몫 (생사전 11/21 D — 판을 세울 때 · 첫 스텝 전): 그 최대에서 시작한다 */
+  setScar(k) {
+    this.scarK = Math.max(0, Math.min(1, +k || 0));
+    this.value = this.max;
+  }
   setMaxBonus(bonus) {
     this.maxBonus = Math.max(0, +bonus || 0);
     this.value = this.max;
