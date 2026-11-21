@@ -95,7 +95,7 @@ function engaged(F, f) {
 /**
  * 거점전 (11/21 — 사람 편 AI · 상대 AI 같은 규칙): 편 자리 나눔(capture_ai.js captureGoal)이 맡긴 거점으로 가서 원 안에 섬.
  *  싸우는 중(engaged)이면 싸움에 맡김 — 거점에 서려고 베이는 채 등을 보이지 않게. 다만 그 원이 우리 것이 아니거나 상대가 두 거점을 다 쥐었고 원이 CAPTURE_AI.press 안이면
- *  상대를 본 채 원으로 밀고 들어감(원 밖에서 간만 보다 시계를 내주지 않게 — 치기는 AI 그대로). 동료가 이미 그 원 안에 서 있으면 길목에 줄 서지 않고 내 쪽 머리 점 뒤에서 기다림(길목 나눠 쓰기와 같은 뜻).
+ *  상대를 본 채 원으로 밀고 들어감(원 밖에서 간만 보다 시계를 내주지 않게 — 치기는 AI 그대로) — 동료가 이미 그 원 안이면 밀고 들어가지 않음. 동료가 이미 그 원 안에 서 있으면 길목에 줄 서지 않고 내 쪽 머리 점 뒤에서 기다림(길목 나눠 쓰기와 같은 뜻).
  *  돌려줌: 스틱을 맡았나 (참이면 상대 쪽 길목 길은 건너뜀)
  */
 function captureSteer(ai, F) {
@@ -120,10 +120,12 @@ function captureSteer(ai, F) {
   };
   const watch = () => nearFoe() ?? { x: P.x + (f.team === 0 ? 4 : -4), y: p.y, z: P.z }; // 서 있을 때 바라볼 곳: 보이는 가장 가까운 적 · 없으면 상대 편 쪽
   const dP = Math.hypot(P.x - p.x, P.z - p.z);
+  const mateIn = (f.mates ?? []).some((m) => pointBody(m) && inPoint(P, m)); // 동료가 이미 그 원 안에 서 있음
   if (engaged(F, f)) {
-    // 싸우는 중: 싸움에 맡김 — 다만 맡은 원이 우리 것이 아니거나 상대가 두 거점을 다 쥐었고 원이 가까우면, 상대를 본 채 원으로 밀고 들어감(치기는 AI 그대로)
+    // 싸우는 중: 싸움에 맡김 — 다만 맡은 원이 우리 것이 아니거나 상대가 두 거점을 다 쥐었고 원이 가까우면, 상대를 본 채 원으로 밀고 들어감(치기는 AI 그대로).
+    //  동료가 이미 그 원 안에 서 있으면 밀고 들어가지 않음 (11/21 감독 — 좁은 문길 원에 몰려 같은 편 칼이 늘던 것): 아래 상대 쪽 길(길목 나눠 쓰기 — 동료가 선 길목이면 머리 뒤에서 기다림)에 맡김
     const urgent = C.holder === 1 - f.team || P.owner !== f.team;
-    if (!urgent || dP <= P.r - CAPTURE_AI.inside || dP > CAPTURE_AI.press || F.segBlocked(p, P)) return false;
+    if (!urgent || mateIn || dP <= P.r - CAPTURE_AI.inside || dP > CAPTURE_AI.press || F.segBlocked(p, P)) return false;
     const w = watch();
     f.fieldFace = { x: w.x, y: p.y, z: w.z };
     steerToward(ai, P);
@@ -135,7 +137,7 @@ function captureSteer(ai, F) {
     stand(ai);
     return true;
   }
-  if (L && !inLaneBox(L, p.x, p.z) && (f.mates ?? []).some((m) => pointBody(m) && inPoint(P, m))) { // 동료가 이미 원 안: 길목 머리 뒤에서 기다림
+  if (L && !inLaneBox(L, p.x, p.z) && mateIn) { // 동료가 이미 원 안: 길목 머리 뒤에서 기다림
     const [E0, E1] = L.ends;
     const A = Math.hypot(E0.x - p.x, E0.z - p.z) <= Math.hypot(E1.x - p.x, E1.z - p.z) ? E0 : E1;
     const cx = (L.x0 + L.x1) / 2, cz = (L.z0 + L.z1) / 2, d = Math.hypot(A.x - cx, A.z - cz) || 1;
