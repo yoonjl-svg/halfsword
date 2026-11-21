@@ -73,6 +73,7 @@ import { itEdgeLook } from './italian_outbox.js'; // 이탈리아 칼 우위 빛
 import { TRADITIONS, traditionOf } from './schools.js';
 import { createMatch, stepMatch, spawnSpots, orderControllers, pairFoe, matchResult } from './match.js'; // 동시 대전 판 (10/29 3단계 — 2:2 · 2:1 · 1:2 · 지켜보기)
 import { createTeamHud, teamFramePull } from './team_hud.js';
+import { createCaptureHud, captureLine } from './capture_hud.js'; // 거점전 (11/21): 위 가운데 거점 둘 · 남은 초 · 땅 고리
 import { shortNameOf } from './short_names.js'; // 짧은 이름 (사장님 10/30 01:0x — 전 체력 목록) // 동시 대전 화면 (화면 밖 화살표 · 카메라 물러남)
 import { specFromSetup, resultFromMatch, profOfEntry, fallbackInjuries } from './saengsa_match.js'; // 생사전 ↔ 엔진 (game.launchSaengsa)
 import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (test.html → ?test=1&weapon=&hero=&foe=random&stage=random, docs/test_route_2026-10-10.md)
@@ -92,6 +93,7 @@ await RAPIER.init();
 //  weapon · foeWeapon · foe · stage · hero · test · team · foeWhiff · look · cards · emo · slowMo · openSweep · skillNodes · uniqueStage · foeProficiency · fps · horn · atkStick
 const params = new URLSearchParams(location.search.slice(1).replace(/\?/g, '&')); // 주소에 ? 를 두 번 써도 뒤쪽 인자까지 읽는다 (사장님 10/8 08:30 링크 입력 실수 대비)
 const teamHud = createTeamHud(); // 동시 대전 화면 밖 화살표 · 상대 머리 위 붉은 세모 (1:1 은 숨긴 채 — team_hud.js · 체력은 stamina_hud.js 체력 칸)
+const captureHud = createCaptureHud(); // 거점전 판에서만 보임 (capture_hud.js)
 const staminaHud = createStaminaHud(document.getElementById('staminaHud')); // 두 검객 머리 위 기력 막대 (src/stamina_hud.js)
 // 스택(일본 기세 · 동방 사냥 겹)은 화면에 띄우지 않는다 (사장님 11/18 '스택 표시는 어떻게 해도 별로다 그냥 빼' — 전 머리 위 cn_hunt_hud.js · 기력 막대 밑 칸은 걷음)
 const screenTint = createScreenTint(); // 출혈·감정 화면 물들임을 게임 캔버스에 합성 (샛별 저장소 2f593ba6 — 전엔 #vignette · #emotion CSS 층. 기력 스위치와 상관없이 늘 이 길)
@@ -241,7 +243,12 @@ const strikeCue = createStrikeCue(scene, screenTint); // 칠 때 알림 — 내 
 //  짓는 동안의 멈칫(산사·대성당이 가장 길다, 개발 기계에서 0.3초 안팎)은 버튼을 누른 뒤 메뉴가 아직 떠 있는 동안 지나간다
 const stages = new Stages(scene, { hemi, sun }); // 지금의 빛·안개·하늘색(포세이돈)을 처음 값으로 적어 둔다
 // 생사전 전용 맵(두 다리 개울 · 성벽 안뜰 — 11/21)은 동시 대전 시험 판(test.html '동시 대전' + '생사전 맵')에서만 고정한다 — 1:1 판은 원 무대라 그 맵에 세우지 않음
-const STAGE_PIN = STAGE_IDS.includes(params.get('stage')) && (!isSaengsaStage(params.get('stage')) || ['2v2', '2v1', '1v2', '3v3', 'watch'].includes(params.get('team'))) ? params.get('stage') : null;
+// 거점전 (사장님 11/21 '거점전은 따로 만들자.' — test.html '거점전' · team=cap2v2 · cap2v3 · cap3v3): 맵은 생사전 전용 맵 둘 가운데 고른 것(stage=) · 안 고르면 두 다리 개울
+const CAPTURE_SIZES = { cap2v2: [2, 2], cap2v3: [2, 3], cap3v3: [3, 3] }; // 내 편 · 상대 수
+const CAPTURE_TEST = Object.hasOwn(CAPTURE_SIZES, params.get('team') ?? '') ? params.get('team') : null;
+const STAGE_PIN = CAPTURE_TEST
+  ? (isSaengsaStage(params.get('stage')) ? params.get('stage') : 'saengsa_bridges')
+  : STAGE_IDS.includes(params.get('stage')) && (!isSaengsaStage(params.get('stage')) || ['2v2', '2v1', '1v2', '3v3', 'watch'].includes(params.get('team'))) ? params.get('stage') : null;
 let arena = null; // 지금 배경 { update(dt), excite(amount) }
 let SUN_OFF = null; // 해가 싸우는 자리를 따라다닐 때의 방향 (배경마다 다르다)
 let stageFought = false; // 지금 배경에서 이미 한 판을 열었나 (그러면 다음 판을 열 때 다음 배경으로 넘어간다)
@@ -592,6 +599,7 @@ function newRound(weaponId) {
   fighters = [player, enemy]; // 1:1 — 두 몸 고리 · 효과가 읽는다 (예전 [player, enemy] 와 같은 차례)
   teamRun = null;
   teamHud.hide();
+  captureHud.hide();
   staminaHud.setTeam(false); // 1:1: 기력 막대 이름표 예전 그대로
   if (loadout?.armor === LOBBY_ARMOR.id) player.stamina.setMaxBonus(LOBBY_ARMOR.staminaBonus); // 케틀 햇 '생존술: 기력 +30' — 최대 130에서 시작·회복 (문턱 0 · −35 · −70 그대로 · 기력 끔이면 아무 일 없음)
   //  판 시작 장착으로 정한다: 판 중에 투구가 맞아 벗겨져도(fighter.js knockOffHelmet) 그 판은 130 그대로 — 사장님 결정 10/16 08:1x '아이템은 사라져도 효과는 그대로 둬.'
@@ -687,7 +695,7 @@ function newRound(weaponId) {
 //   물리 스텝 = src/match.js stepMatch (상대 고르기 · 상대마다 눈 · 편 전멸) · 화면 = team_hud.js · 결과 = matchResult / 생사전 resultFromMatch.
 //  1:1 판(newRound · startFight)은 이 길을 하나도 타지 않는다 (teamRun = null)
 // ─────────────────────────────────────────────────────────────
-const TEAM_TEST = ['2v2', '2v1', '1v2', '3v3', 'watch'].includes(params.get('team')) ? params.get('team') : null; // ?team= 시험 판 (test.html '동시 대전' · 3v3 = 11/20 넷 제한 걷음)
+const TEAM_TEST = ['2v2', '2v1', '1v2', '3v3', 'watch'].includes(params.get('team')) ? params.get('team') : CAPTURE_TEST; // ?team= 시험 판 (test.html '동시 대전' · 3v3 = 11/20 넷 제한 걷음 · 거점전 cap… = 11/21)
 const SAENGSA_RULES = import.meta.glob('./saengsa_rules.js'); // 생사전 가지를 합치면 생기는 모듈 — injuriesFromWounds (없으면 빈 묶음 → saengsa_match.js fallbackInjuries)
 const SAENGSA_NAMELESS = import.meta.glob('./saengsa_nameless.js'); // 무명 검객 겉모습 namelessLook(옷 색 번호) (없으면 LOOKS.enemy)
 /** 생사전 가지 모듈 (있을 때만): { injuriesFromWounds, namelessLook } */
@@ -807,7 +815,7 @@ function newTeamRound(spec, mods = {}) {
   }
   const H = fighters.find((f) => f.human) ?? null;
   combat = new Combat(colliderInfo, { onWound, onClash });
-  const M = createMatch({ world, eventQueue, combat, fighters, controllers: order.map((f) => ais.get(f)) });
+  const M = createMatch({ world, eventQueue, combat, fighters, controllers: order.map((f) => ais.get(f)), capture: !!spec.capture }); // spec.capture: 거점전 (11/21 — 두 거점 쥐기 · capture.js)
   player = H ?? fighters[0];
   enemy = pairFoe(player, M0);
   ai = ais.get(enemy) ?? null;
@@ -861,6 +869,8 @@ function newTeamRound(spec, mods = {}) {
   for (const f of fighters) f.syncMeshes();
   warmRoundFx(fxWarm);
   teamHud.show(fighters); // 화면 밖 화살표 · 상대 머리 위 붉은 세모 (11/18 왼쪽 위 이름 · 체력 목록은 걷음 — 체력은 기력 막대 위 체력 칸)
+  if (M.capture) captureHud.show(M.capture, scene); // 거점전: 위 가운데 거점 둘 · 땅 고리
+  else captureHud.hide();
   staminaHud.setTeam(true); // 동시 대전: 기력 막대 이름표 = 싸움꾼 이름 · 막대 위 체력 칸 (11/18 — stamina_hud.js · hp_strip.js)
 }
 
@@ -941,7 +951,8 @@ function teamFinish() {
   }
   const win = R.M.winner === 0;
   $('menuTitle').textContent = win ? '승리' : R.M.winner == null ? '무승부' : '패배';
-  $('menuSub').textContent = fighters.map((f) => `${f.name} ${f.alive ? '생존' : '쓰러짐'}`).join(' · ');
+  const people = fighters.map((f) => `${f.name} ${f.alive ? '생존' : '쓰러짐'}`).join(' · ');
+  $('menuSub').textContent = R.M.endBy === 'capture' ? `${captureLine(win)} · ${people}` : people; // 거점전 쥐기로 끝난 판: '거점 둘을 쥐었다' · '거점 둘을 빼앗겼다' (11/21)
   $('btnStart').textContent = '재대결';
   $('btnStart').hidden = false;
   $('btnStart').classList.remove('wander');
@@ -976,6 +987,7 @@ function teamLeave() {
   parryHold.key = false;
   applyMoveMode();
   teamHud.hide();
+  captureHud.hide();
   sound.ctx?.suspend?.()?.catch?.(() => {});
   showEntrance(overlay);
 }
@@ -1040,6 +1052,7 @@ async function teamStart(spec, mods = {}, opts = {}) {
   // 생사전: 왼쪽 위 무대 줄을 다른 판처럼 띄운다 (11/18 사장님 '권고대로' — 10/29 22:3x 엔 그 자리에 이름 · 체력 목록을 두고 감췄음 · 목록은 11/18 걷음).
   //  '스테이지 N' 은 스테이지 차례라 생사전엔 맞지 않아 방랑('방랑 N · 무대')처럼 '생사전 · 무대 이름'
   if (opts.saengsa) stageInfo.querySelector('.stg').textContent = `생사전 · ${STAGE_NAME_KO[stages.id] ?? stages.id}`;
+  else if (spec.capture) stageInfo.querySelector('.stg').textContent = `거점전 · ${STAGE_NAME_KO[stages.id] ?? stages.id}`; // 거점전 (11/21): 판 이름 · 맵
   newTeamRound(spec, mods);
   teamRun.opts = opts;
   teamSaveT = 0;
@@ -1048,8 +1061,8 @@ async function teamStart(spec, mods = {}, opts = {}) {
 }
 /** ?team= 시험 판 (test.html '동시 대전'): 나(고른 무기 · 고른 인물 겉모습) + 무작위 동료 대 무작위 상대(고른 상대가 있으면 첫째) — 지켜보기는 넷 모두 AI · 3v3 = 나 + 동료 둘 대 셋 (11/20) */
 function teamTestSpec() {
-  const mineN = TEAM_TEST === '1v2' ? 1 : TEAM_TEST === '3v3' ? 3 : 2;
-  const foeN = TEAM_TEST === '2v1' ? 1 : TEAM_TEST === '3v3' ? 3 : 2;
+  const mineN = CAPTURE_TEST ? CAPTURE_SIZES[CAPTURE_TEST][0] : TEAM_TEST === '1v2' ? 1 : TEAM_TEST === '3v3' ? 3 : 2;
+  const foeN = CAPTURE_TEST ? CAPTURE_SIZES[CAPTURE_TEST][1] : TEAM_TEST === '2v1' ? 1 : TEAM_TEST === '3v3' ? 3 : 2;
   const used = new Set(testRoute.hero ? [testRoute.hero.id] : []);
   const pickChar = (pref) => {
     let c = pref && !used.has(pref.id) ? pref : null;
@@ -1076,7 +1089,7 @@ function teamTestSpec() {
     if (mine[k]) seq.push({ ...mine[k], team: 0 });
     if (foes[k]) seq.push({ ...foes[k], team: 1 });
   }
-  return { control: TEAM_TEST === 'watch' ? 'watch' : 'player', mineSide: 'a', fighters: seq.map((e, index) => ({ human: false, ...e, index })) };
+  return { control: TEAM_TEST === 'watch' ? 'watch' : 'player', mineSide: 'a', fighters: seq.map((e, index) => ({ human: false, ...e, index })), ...(CAPTURE_TEST ? { capture: true } : {}) }; // 거점전: 두 거점 쥐기 (판 하나 — 대회 · 쉼 · 이어지는 부상 없음)
 }
 function startTeamTest() {
   return teamStart(teamTestSpec(), {}, {});
@@ -3324,6 +3337,7 @@ function frame(now) {
   updateCamera(dt); // 거르는 프레임에도: 흔들림 스프링·발걸음(player.footstep 소비)·소리 자리(sound.listener)가 여기 달려 있다
   staminaHud.update(fighters, camera, state === 'fight' && !roundOver);
   if (teamRun) teamHud.update(camera, teamRun.focus, state === 'fight' && !roundOver, teamRun.human); // 동시 대전 화면 밖 화살표 · 상대 머리 위 붉은 세모 (체력은 staminaHud 체력 칸)
+  if (teamRun?.M.capture) captureHud.update(teamRun.M.capture, state === 'fight' || state === 'paused'); // 거점전: 거점 둘 · 남은 초 · 땅 고리
   strikeCue.raise = teamRun ? hpLift() : 0; // 동시 대전: 내 머리 위 느낌표를 기력 막대 위 체력 칸 위로 (1:1 은 그대로)
   strikeCue.update(dt, camera, state === 'fight' && !roundOver && (!teamRun || !!teamRun.human), player, enemy, playerUnique, playerSecret); // 칠 때 알림: 카메라가 정해진 뒤 · 그리기 전
   screenTint.update(dt);
