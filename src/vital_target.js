@@ -40,26 +40,53 @@ const vec = (v) => new THREE.Vector3(v.x, v.y, v.z);
 const finite = (v) => !!v && Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
 const quat = (q) => new THREE.Quaternion(q.x, q.y, q.z, q.w);
 
-function localPoint(p, q, x, y, z) {
-  return xyz(new THREE.Vector3(x, y, z).applyQuaternion(quat(q)).add(vec(p)));
+/** 상대 모습 사본 (AI 는 반응 지연 기록에 넣어 늦게 본다 — ai_sense.js). 살아 있는 몸 참조를 담지 않는다 · 부를 때마다 새 사본 */
+export function captureVitalPose(f) {
+  return captureVitalPoseInto(f, newVitalPose());
 }
 
-/** 상대 모습 사본 (AI 는 반응 지연 기록에 넣어 늦게 본다 — ai_sense.js). 살아 있는 몸 참조를 담지 않는다 */
-export function captureVitalPose(f) {
-  if (!f?.bodies?.head || !f.bodies.chest || !f.bodies.pelvis) return null;
-  const head = xyz(f.bodies.head.translation());
-  const headQ = (({ x, y, z, w }) => ({ x, y, z, w }))(f.bodies.head.rotation());
-  const chestQ = (({ x, y, z, w }) => ({ x, y, z, w }))(f.bodies.chest.rotation());
+const P3 = () => ({ x: 0, y: 0, z: 0 });
+const put3 = (o, v) => ((o.x = v.x), (o.y = v.y), (o.z = v.z), o);
+const put4 = (o, q) => ((o.x = q.x), (o.y = q.y), (o.z = q.z), (o.w = q.w), o);
+/** 다시 쓰는 사본 칸 (ai_sense.js 기록 칸마다 하나 — 11/21 감사 N-010 (d): 스텝마다 객체 열둘을 새로 만들지 않음). pose 의 칸 · 차례는 captureVitalPose 의 사본과 같다 */
+export function newVitalPose() {
   return {
-    targetId: f.index, state: f.state, alive: !!f.alive, armed: !!f.armed, headOff: !!f.decapitated,
-    head, chest: xyz(f.bodies.chest.translation()), pelvis: xyz(f.bodies.pelvis.translation()), headQ, chestQ,
-    headRadius: f.headR, hasHelmet: !!f.hasHelmet,
-    // 목 점: 우리 목 구역 가운데 (finish.js FINISH.neckAt — 머리 몸체 아래 −0.10 ~ 투구 끝 −0.01 의 가운데)
-    neck: localPoint(head, headQ, 0, FINISH.neckAt, 0),
-    face: localPoint(head, headQ, VITAL.faceLocalX, VITAL.faceLocalY, 0),
-    bladeBase: f.armed ? xyz(f.bladePoint(0, new THREE.Vector3())) : null,
-    bladeTip: f.armed ? xyz(f.bladePoint(1, new THREE.Vector3())) : null,
+    pose: {
+      targetId: 0, state: '', alive: false, armed: false, headOff: false,
+      head: P3(), chest: P3(), pelvis: P3(), headQ: { x: 0, y: 0, z: 0, w: 1 }, chestQ: { x: 0, y: 0, z: 0, w: 1 },
+      headRadius: 0, hasHelmet: false, neck: P3(), face: P3(), bladeBase: null, bladeTip: null,
+    },
+    bladeBase: P3(),
+    bladeTip: P3(),
   };
+}
+const _lpV = new THREE.Vector3(), _lpP = new THREE.Vector3(), _lpQ = new THREE.Quaternion(), _bpV = new THREE.Vector3();
+/** 머리 몸체 틀의 점 (x, y, z) → 세계 점을 o 에 (임시 객체 없이 — 예전 localPoint 와 같은 셈) */
+function localPointInto(o, p, q, x, y, z) {
+  return put3(o, _lpV.set(x, y, z).applyQuaternion(_lpQ.set(q.x, q.y, q.z, q.w)).add(_lpP.set(p.x, p.y, p.z)));
+}
+/** 상대 모습을 칸 slot(newVitalPose)에 적고 slot.pose 를 돌려준다 (몸이 없으면 null). 값은 captureVitalPose 의 새 사본과 같다 */
+export function captureVitalPoseInto(f, slot) {
+  if (!f?.bodies?.head || !f.bodies.chest || !f.bodies.pelvis) return null;
+  const o = slot.pose;
+  const head = put3(o.head, f.bodies.head.translation());
+  const headQ = put4(o.headQ, f.bodies.head.rotation());
+  put4(o.chestQ, f.bodies.chest.rotation());
+  o.targetId = f.index;
+  o.state = f.state;
+  o.alive = !!f.alive;
+  o.armed = !!f.armed;
+  o.headOff = !!f.decapitated;
+  put3(o.chest, f.bodies.chest.translation());
+  put3(o.pelvis, f.bodies.pelvis.translation());
+  o.headRadius = f.headR;
+  o.hasHelmet = !!f.hasHelmet;
+  // 목 점: 우리 목 구역 가운데 (finish.js FINISH.neckAt — 머리 몸체 아래 −0.10 ~ 투구 끝 −0.01 의 가운데)
+  localPointInto(o.neck, head, headQ, 0, FINISH.neckAt, 0);
+  localPointInto(o.face, head, headQ, VITAL.faceLocalX, VITAL.faceLocalY, 0);
+  o.bladeBase = f.armed ? put3(slot.bladeBase, f.bladePoint(0, _bpV)) : null;
+  o.bladeTip = f.armed ? put3(slot.bladeTip, f.bladePoint(1, _bpV)) : null;
+  return o;
 }
 
 function pointSegmentDistance(p, a, b) {
