@@ -25,7 +25,7 @@ import { realS } from '../../src/config.js';
 import { bwStiff } from '../../src/burst_whiff.js';
 import { huntN } from '../../src/cn_hunt.js';
 import { LOOKS } from '../../src/looks.js';
-import { writeFileSync, readFileSync } from 'node:fs';
+import { writeFileSync, readFileSync, renameSync } from 'node:fs';
 import { isMain } from './is_main.mjs';
 void RAPIER; void THREE; void AI;
 
@@ -271,7 +271,7 @@ if (MAIN && !AGG) {
   const OUT = flag('out', null);
   const rows = [];
   const t0 = Date.now();
-  const save = () => { if (OUT) writeFileSync(OUT, JSON.stringify({ N, MAX, MODES, FIELD, XS, PROFS, rows })); };
+  const save = () => { if (OUT) writeFileSync(OUT + '.part', JSON.stringify({ N, MAX, MODES, FIELD, XS, PROFS, rows })), renameSync(OUT + '.part', OUT); }; // 새 파일에 다 쓴 뒤 바꿔 넣음 (11/21 — 디스크가 차서 쓰다 끊겨도 앞 판까지는 성함)
   for (let k = 0; k < N; k++) {
     if (k % laneN !== laneI || (KS && !KS.has(k + 1))) continue;
     const fd = fieldOf(k, FIELD, PROFS);
