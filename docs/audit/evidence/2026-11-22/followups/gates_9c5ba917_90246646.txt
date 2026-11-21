@@ -1,0 +1,9 @@
+# 관문 일곱 + 쓰러진 상대 찍기: 9c5ba917 대 90246646 (출력의 sha256 앞 8자, corr_s0 는 끝의 시간 줄을 뺌, 표준 오류 포함)
+A-fights12 a67a8d99 a67a8d99 같음
+A-live_battery 675170df 675170df 같음
+A-finish_thrust 989cc2da 989cc2da 같음
+Bx-match_twin a67a8d99 a67a8d99 같음
+Bx-corr_s0 b0ac0bfe b0ac0bfe 같음
+Bx-weapon_smoke ad932cfc ad932cfc 같음
+Bx-team_fights 25249151 25249151 같음
+X-finish_down 1597f6e0 1597f6e0 같음
