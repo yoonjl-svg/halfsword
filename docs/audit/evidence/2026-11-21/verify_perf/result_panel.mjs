@@ -1,0 +1,20 @@
+// 판 끝 결과 창이 떠 있는 동안 3D를 그리는지: node result_panel.mjs <base>
+import { createRequire } from 'node:module'; const { chromium } = createRequire(import.meta.url)('playwright');
+const base = process.argv[2] || 'http://127.0.0.1:5195';
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
+const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+const page = await ctx.newPage();
+await page.goto(base + '/?fps=1&stage=poseidon&weapon=longsword&emo=0', { waitUntil: 'networkidle' });
+await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
+await page.getByText('여정 시작').click();
+await page.waitForFunction(() => window.game.state === 'fight' && window.game.stats.simTime > 1.0, null, { timeout: 120000 });
+await page.evaluate(() => { const c = document.querySelector('canvas'); c.width = 8; c.height = 4; });
+const frames = () => page.evaluate(() => ({ f: window.game.renderInfo().frame, state: window.game.state, t: window.game.stats.simTime }));
+const sample = async (label, secs) => { const a = await frames(); await page.waitForTimeout(secs * 1000); const b = await frames(); console.log(JSON.stringify({ label, state: b.state, framesPerSec: +((b.f - a.f) / secs).toFixed(1), simAdvance: +(b.t - a.t).toFixed(2) })); };
+await sample('fight', 4);
+await page.evaluate(() => window.game.enemy.die('목', true));
+await page.waitForFunction(() => window.game.state !== 'fight', null, { timeout: 60000 }).catch(() => {});
+await page.waitForTimeout(3000);
+await sample('result-panel', 6);
+await sample('result-panel-later', 6);
+await browser.close();
