@@ -1,0 +1,24 @@
+{"fights":48,"deaths":38,"downs":45,"finishPick":70,"pickFoeDownOrGetup":38,"pickFoeUnarmed":31,"pickFoeOther":1,"finGoCalls":0,"finGoStarted":0,"tapDownStarts":0,"cleaveStarts":0,"finishPowerWounds":0,"woundsOnDownFoe":108,"deathsWhileDownAndFinisherPlunging":0,"deathsOfDownedFoe":14,"downSteps":8986}
+1:longsword/flamberge pick2 go0 ok0 tap0 fpw0
+2:kriegsmesser/hwando pick1 go0 ok0 tap0 fpw0
+4:pappenheimer/zweihander pick1 go0 ok0 tap0 fpw0
+5:zweihander/monohoshizao pick1 go0 ok0 tap0 fpw0
+8:monohoshizao/uchigatana pick1 go0 ok0 tap0 fpw0
+9:hwando/qinggang pick20 go0 ok0 tap0 fpw0
+11:longsword/flamberge pick1 go0 ok0 tap0 fpw0
+12:kriegsmesser/hwando pick1 go0 ok0 tap0 fpw0
+16:flamberge/longsword pick1 go0 ok0 tap0 fpw0
+18:monohoshizao/uchigatana pick3 go0 ok0 tap0 fpw0
+21:longsword/flamberge pick13 go0 ok0 tap0 fpw0
+26:flamberge/longsword pick1 go0 ok0 tap0 fpw0
+28:monohoshizao/uchigatana pick3 go0 ok0 tap0 fpw0
+29:hwando/qinggang pick1 go0 ok0 tap0 fpw0
+33:rapier/kriegsmesser pick1 go0 ok0 tap0 fpw0
+34:pappenheimer/zweihander pick5 go0 ok0 tap0 fpw0
+36:flamberge/longsword pick1 go0 ok0 tap0 fpw0
+37:uchigatana/pappenheimer pick3 go0 ok0 tap0 fpw0
+38:monohoshizao/uchigatana pick5 go0 ok0 tap0 fpw0
+40:qinggang/rapier pick2 go0 ok0 tap0 fpw0
+41:longsword/flamberge pick1 go0 ok0 tap0 fpw0
+42:kriegsmesser/hwando pick1 go0 ok0 tap0 fpw0
+47:uchigatana/pappenheimer pick1 go0 ok0 tap0 fpw0

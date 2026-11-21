@@ -1,0 +1,1 @@
+{"duels":12,"finishPick":2,"pickFoeDown":1,"pickFoeUnarmed":1,"pickFoeOther":0,"pickStartOk":0,"pickThrust":0,"tapDownStarts":0,"tapDownAbort":0,"tapDownGo":0,"tapDownEnded":0,"finishWounds":0,"finishPowerWounds":0,"powerContactsAny":0,"woundsOnDownFoe":48,"deathsByFinisher":0,"deaths":7,"downTimeFoe":0,"cleaveStarts":0,"kind_cut":2}
