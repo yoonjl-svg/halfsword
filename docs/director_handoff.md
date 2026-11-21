@@ -120,7 +120,7 @@ git push origin …/first-game-development-2q36ha:main
   - 캐릭터를 바꿀 때는 `characters_eval.mjs`도 봅니다.
 - 11/22 부터 관문은 여섯 값을 봅니다: fights12 · live_battery · `finish_thrust.mjs 1 --stand` · `finish_thrust.mjs 1`(쓰러진 상대 찍기 160 번 — 감사 N-028) · corr_s0 IDENTICAL 12 · weapon_smoke OK 수. 지금 기준 값은 결정 기록 맨 마지막 관문 줄에 있습니다.
 - 관문이 읽지 않는 파일(main.js · 화면 글자 · 대기실 · 효과 · 소리 · 무대 등 — 감사 증거 `never_loaded_by_gates.txt`)을 바꾼 커밋은 '관문 같음'만 적지 않고 무엇으로 확인했는지(브라우저 도구 · 소스 글 시험 · 손 확인)를 커밋 글에 적습니다(감사 N-029).
-- 그런 파일을 바꾼 본판 올림 앞에는 '배포 전 한 번' 묶음 `tools/browser/flow_smoke.mjs`(스스로 빌드 · 서버 · 흐름 끝까지 + 오류 0 만 봄 · 약 3 분) · `pause_freeze.mjs`(빌드판에 대고 — vite 개발 서버는 .tmp 작업 폴더를 훑다 죽음)를 돌리고 결과를 커밋 글에 적습니다(감사 N-031). 화면 · 대기실을 크게 바꿨으면 `game_entry_smoke.mjs` 도.
+- 그런 파일을 바꾼 본판 올림 앞에는 '배포 전 한 번' 묶음 `tools/browser/flow_smoke.mjs`(스스로 빌드 · 서버 · 흐름 끝까지 + 오류 0 만 봄 · 약 3 분) · `pause_freeze.mjs`(빌드판에 대고 — vite 개발 서버는 .tmp 작업 폴더를 훑다 죽음)를 돌리고 결과를 커밋 글에 적습니다(감사 N-031). 화면 · 대기실을 크게 바꿨으면 `game_entry_smoke.mjs` 도. 손 입력 코드(main.js 입력 · input.js · unique_assist 등)를 바꿨으면 `tools/browser/input_suite.mjs`(기본 입력 33 가지 · 손가락 → 동작 — 감사 3차 N-035)도.
 - 브라우저 스모크 `tools/browser/smoke.mjs`는 **콘솔 에러 0**이어야 합니다. 바뀐 기능은 전용 브라우저 스크립트로 실제 화면에서 확인합니다.
 - PM 코드도 병합 전에 읽고, 실제로 보이는지 확인합니다. 외형 PM `cfab046`에서 `return e;`가 함수 중간에 있어 총구 섬광이 사라진 것을 이렇게 잡았습니다.
 
