@@ -55,7 +55,7 @@ test('② main.js: 멈춤 창 · 결과 창이 떠 있으면 한 장만 그리�
   assert.match(frame, /perf\?\.raf\(frozen && pauseOpen\)/, '성능 표 다음 판 멈칫은 사람이 연 멈춤만 뺀다 (결과 창은 예전처럼 센다)');
   const head = frame.slice(frozenAt, frame.indexOf('const frameMs'));
   assert.match(head, /holdView\(true\)/, '멈추면 보는 시계를 멈춘다');
-  assert.match(head, /if \(frozenDrawn\) \{\s*last = now;\s*return;/, '한 장 그린 뒤로는 셈 · 그리기 없이 돌아간다');
+  assert.match(head, /if \(frozenDrawn\) \{\s*last = now;\s*if \(!pauseOpen\) prepNextStage\(\);[^\n]*\n\s*return;/, '한 장 그린 뒤로는 셈 · 그리기 없이 돌아간다 (결과 창만 다음 무대를 화면 밖에서 미리 — 일시정지 창은 아무것도)');
   assert.match(head, /holdView\(false\)/, '풀면 보는 시계를 다시 흘린다');
   assert.match(frame, /let dt = frozen \? 0 :/, '멈춤에 든 한 장은 시간 0');
   assert.match(frame, /const paint = frozen \|\|/, '멈춤에 든 한 장은 늘 그린다');

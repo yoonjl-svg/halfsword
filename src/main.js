@@ -316,12 +316,34 @@ function nextRoundStage() {
   }
   const advance = stageFought && testRoute.advance(lastRoundWon); // test=1: 이기든 지든 다음 판으로
   lastRoundWon = false;
-  if (advance && useStage(STAGE_PIN || testRoute.nextStage(stages.id) || nextStage(stages.id))) {
+  const planned = plannedStage?.from === stages.id ? plannedStage.id : null; // 결과 창에서 정해 미리 지은 무대 (upcomingStage — stage=random 을 다시 뽑지 않게)
+  plannedStage = null;
+  if (advance && useStage(planned || STAGE_PIN || testRoute.nextStage(stages.id) || nextStage(stages.id))) {
     clearFlying(); // 지난 판에 흩어지던 칼·방어구 조각과 벗겨진 투구가 새 배경에 남지 않게
-    stages.warm(renderer, camera); // 셰이더·모양·질감도 지금 GPU 에 올려 둔다 (싸움 첫 프레임에서 멈칫하지 않게)
+    stages.warm(renderer, camera); // 셰이더·모양·질감도 지금 GPU 에 올려 둔다 (싸움 첫 프레임에서 멈칫하지 않게) — 결과 창에서 다 해 두었으면 건너뛴다 (prepNextStage)
     sound.setStage(stages.id); // 배경 소리가 3초에 걸쳐 바뀐다 (발소리·쓰러짐의 바닥 소리도 배경을 따른다)
   }
   stageFought = true;
+}
+/**
+ * 결과 창(판 끝 — 3D 를 그리지 않고 쉰다: frame)에서 다음 판을 열면 지을 무대 — nextRoundStage 와 같은 셈. 무대가 그대로면 null.
+ *  방랑(무대는 판을 열 때 뽑는다) · 동시 대전 · 생사전 맵에서는 미리 짓지 않는다. stage=random 이면 여기서 한 번 뽑아 두고 nextRoundStage 가 그것을 쓴다
+ */
+let plannedStage = null; // { from: 그때 무대 id, id: 다음 무대 id }
+function upcomingStage() {
+  if (wanderMode || teamRun || isSaengsaStage(stages.id)) return null;
+  if (!stageFought || !testRoute.advance(lastRoundWon)) return null;
+  if (plannedStage?.from !== stages.id) plannedStage = { from: stages.id, id: STAGE_PIN || testRoute.nextStage(stages.id) || nextStage(stages.id) };
+  return plannedStage.id !== stages.id ? plannedStage.id : null;
+}
+/**
+ * 다음 판 멈칫 (사장님 11/22 '다음판 열 때 멈춰.' · 감사 N-025): 결과 창이 떠 있는 동안 프레임마다 한 걸음 — 다음 무대를 미리 짓고 · 셰이더를 만들고 ·
+ *  화면 밖 작은 판에 나눠 그려 둔다 (stages.js prepStep — 화면에 나가는 장 없음 · 결과 창 뒤는 마지막 장면 그대로).
+ *  단추('다음 여정' · 대기실 'Stage')를 누르면 useStage → stages.build 가 미리 지은 것을 올리기만 한다. 다 하기 전에 누르면 남은 일은 예전처럼 그 자리에서
+ */
+function prepNextStage() {
+  const id = upcomingStage();
+  if (id) stages.prepStep(id, renderer, camera);
 }
 useStage(STAGE_PIN || testRoute.nextStage(null) || nextStage());
 // 생사전 맵 (사장님 11/21 '생사전 맵 1과 3으로 두 개 만들어.' · '16강전은 열린 원, 8강전은 두 다리, 4강전과 결승은 성벽 안뜰로 하자.' — src/saengsa_maps.js):
@@ -3069,7 +3091,7 @@ function updateTechCue(dt) {
 // ── 게임 루프 ──
 // 성능 측정 표시: 주소에 ?fps=1 을 붙이면 왼쪽 위에 초당 프레임·물리·그리기 시간·게임 속도가 나온다.
 //  시험 화면(test.html → test=1 시험 경로)에서는 늘 (11/21 — 사장님은 설치한 앱에서만 시험하고 주소 인자를 못 붙인다 · 본판 · 여정 · 방랑 · 생사전은 그대로 없음)
-const perf = params.get('fps') || testRoute.active ? new PerfMeter(renderer, () => `배경 ${stages.id}  짓기 ${stages.buildMs.toFixed(0)}ms${stages.warmMs ? ` + GPU 준비 ${stages.warmMs.toFixed(0)}ms` : ''}`) : null;
+const perf = params.get('fps') || testRoute.active ? new PerfMeter(renderer, () => `배경 ${stages.id}  짓기 ${stages.buildMs.toFixed(0)}ms${stages.early ? '(결과 창)' : ''}${stages.warmMs ? ` + GPU 준비 ${stages.warmMs.toFixed(0)}ms` : ''}`) : null; // (결과 창) = 결과 창에서 미리 지음 (prepNextStage)
 let last = performance.now();
 let acc = 0;
 // 화면 갱신 상한 (CONFIG.RENDER.fpsCap, 사장님 9/30): 90/120 Hz 화면에서 그리기만 60 fps 로 거른다.
@@ -3226,6 +3248,7 @@ function frame(now) {
     holdView(true);
     if (frozenDrawn) {
       last = now;
+      if (!pauseOpen) prepNextStage(); // 결과 창: 다음 무대를 미리 (그리지 않고 — 위 prepNextStage)
       return;
     }
     frozenDrawn = true;
@@ -3461,7 +3484,7 @@ window.game = {
   strikeCue, // 칠 때 알림 (style · state) — tools/browser/strike_cue_shots.mjs 가 읽는다
   // 배경: game.stage 로 지금 배경·짓는 시간 확인, game.setStage('castle') 로 바로 바꿔 보기 (싸우는 중이면 잠깐 멈칫한다)
   get stage() {
-    return { id: stages.id, pinned: STAGE_PIN, buildMs: stages.buildMs, clearMs: stages.clearMs, warmMs: stages.warmMs };
+    return { id: stages.id, pinned: STAGE_PIN, buildMs: stages.buildMs, clearMs: stages.clearMs, warmMs: stages.warmMs, early: stages.early, next: stages.next ? { id: stages.next.id, step: stages.next.step, chunks: stages.next.drawn, tookMs: stages.next.tookMs } : null };
   },
   // 지형 무대의 땅 계약·용암 (화산섬 — 시험 도구가 읽는다. 평지 무대는 null)
   get terrain() {
