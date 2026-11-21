@@ -1,0 +1,24 @@
+total ms 2:5068 4:9557 6:13476
+fn  ms@2 ms@4 ms@6  ratio6/2 (3=linear 9=quadratic)  [sorted by excess over linear]
+0 66 93 x93300.0  teamFeet src/ai.js:715
+0 36 78 x77576.0  reactTargetFoes src/fighter.js:1109
+21 34 102 x4.9  record src/ai_sense.js:47
+107 222 355 x3.3  updateCombat src/ai.js:901
+107 283 353 x3.3  wasm-function[374] wasm:1
+21 49 95 x4.5  armIK src/fighter.js:3955
+23 79 102 x4.4  moveFeet src/ai.js:4437
+22 48 94 x4.3  offHand src/fighter.js:4043
+16 30 75 x4.7  captureVitalPose src/vital_target.js:48
+37 106 135 x3.6  applyPose src/fighter.js:3153
+15 19 66 x4.5  updateState src/fighter.js:1821
+24 70 93 x3.8  update src/skill.js:1593
+18 40 70 x4.0  translation @dimforge/rapier3d-compat/rapier.mjs:1
+113 211 354 x3.1  __destroy_into_raw @dimforge/rapier3d-compat/rapier.mjs:1
+26 72 95 x3.6  wasm-function[338] wasm:1
+20 52 72 x3.6  wasm-to-js wasm:1
+54 116 169 x3.1  driveJoints src/fighter.js:3275
+22 59 74 x3.3  updateFooting src/fighter.js:3055
+19 60 61 x3.1  recentHandSpeed src/ai_sense.js:104
+26 58 74 x2.8  segSegDist src/fighter.js:409
+29 52 79 x2.7  wasm-function[137] wasm:1
+31 66 85 x2.7  evalPart src/corr.js:56

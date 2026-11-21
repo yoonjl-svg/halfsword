@@ -1,0 +1,2 @@
+{"duels":12,"finishPick":3,"pickFoeDown":3,"pickFoeUnarmed":0,"pickFoeOther":0,"pickStartOk":0,"pickThrust":0,"tapDownStarts":0,"tapDownAbort":0,"tapDownGo":0,"tapDownEnded":0,"finishWounds":0,"finishPowerWounds":0,"powerContactsAny":0,"woundsOnDownFoe":17,"deathsByFinisher":0,"deaths":6,"downTimeFoe":0,"cleaveStarts":0,"kind_cut":1,"kind_thrust":2}
+[{"seed":1,"fins":[]},{"seed":2,"fins":[]},{"seed":3,"fins":[]},{"seed":4,"fins":[]}]

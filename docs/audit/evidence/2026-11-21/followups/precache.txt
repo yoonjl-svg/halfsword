@@ -1,0 +1,76 @@
+files 532 MB 12.69
+BY FOLDER
+assets: 38 files 5.59 MB
+icons: 38 files 3.10 MB
+ui/portraits: 39 files 1.18 MB
+fonts: 15 files 0.86 MB
+sfx/voice: 64 files 0.52 MB
+sfx/revolver: 10 files 0.34 MB
+ui/books: 35 files 0.29 MB
+(root): 10 files 0.13 MB
+ui/weapons: 34 files 0.12 MB
+sfx/step: 40 files 0.11 MB
+ui/cardbacks: 140 files 0.09 MB
+ui: 2 files 0.06 MB
+sfx/whip: 18 files 0.06 MB
+sfx: 9 files 0.06 MB
+sfx/stage: 6 files 0.06 MB
+sfx/hit: 18 files 0.04 MB
+ui/wallet: 3 files 0.02 MB
+sfx/flesh: 7 files 0.02 MB
+sfx/breath: 1 files 0.02 MB
+sfx/secret: 3 files 0.01 MB
+ui/armor: 2 files 0.01 MB
+BY EXT
+js: 37 files 5.52 MB
+png: 177 files 3.25 MB
+webp: 112 files 1.62 MB
+mp3: 163 files 0.87 MB
+woff2: 8 files 0.82 MB
+wav: 8 files 0.33 MB
+html: 8 files 0.13 MB
+svg: 5 files 0.07 MB
+txt: 7 files 0.05 MB
+json: 3 files 0.02 MB
+md: 2 files 0.01 MB
+webmanifest: 2 files 0.00 MB
+DUPES
+0.06 MB x 2 assets/frame1_portrait-DO8kidxT.png | ui/frame1_portrait.png
+0.07 MB x 3 icons/apple-touch-icon.png | icons/tree-sword-20261017-apple-touch-icon.png | icons/tree-sword-orig-20261020-apple-touch-icon.png
+0.00 MB x 5 icons/favicon-32.png | icons/px32.png | icons/px32_mask.png | icons/tree-sword-20261017-favicon-32.png | icons/tree-sword-orig-20261020-favicon-32.png
+0.01 MB x 3 icons/favicon-64.png | icons/tree-sword-20261017-favicon-64.png | icons/tree-sword-orig-20261020-favicon-64.png
+0.08 MB x 3 icons/icon-192.png | icons/tree-sword-20261017-icon-192.png | icons/tree-sword-orig-20261020-icon-192.png
+0.43 MB x 6 icons/icon-512.png | icons/icon-maskable-512.png | icons/tree-sword-20261017-icon-512.png | icons/tree-sword-20261017-icon-maskable-512.png | icons/tree-sword-orig-20261020-icon-512.png | icons/tree-sword-orig-20261020-icon-maskable-512.png
+0.00 MB x 2 icons/tree-sword-px22-20261019-apple-touch-icon.png | icons/tree-sword-px28-20261019-apple-touch-icon.png
+0.00 MB x 2 icons/tree-sword-px22-20261019-favicon-32.png | icons/tree-sword-px28-20261019-favicon-32.png
+0.00 MB x 2 icons/tree-sword-px22-20261019-favicon-64.png | icons/tree-sword-px28-20261019-favicon-64.png
+0.00 MB x 2 icons/tree-sword-px22-20261019-icon-192.png | icons/tree-sword-px28-20261019-icon-192.png
+0.00 MB x 4 icons/tree-sword-px22-20261019-icon-512.png | icons/tree-sword-px22-20261019-icon-maskable-512.png | icons/tree-sword-px28-20261019-icon-512.png | icons/tree-sword-px28-20261019-icon-maskable-512.png
+0.00 MB x 2 icons/tree-sword-px32-20261018-icon-512.png | icons/tree-sword-px32-20261018-icon-maskable-512.png
+0.00 MB x 2 manifest.webmanifest | stillness-20261018.webmanifest
+0.00 MB x 2 sfx/step/sand3.mp3 | sfx/step/sand7.mp3
+0.01 MB x 2 sfx/voice/margarethe_bleed1.mp3 | sfx/voice/margarethe_ko1.mp3
+0.00 MB x 3 ui/cardbacks/px_castle_plaque_foe.png | ui/cardbacks/px_courtyard_plaque_foe.png | ui/cardbacks/px_dunhuang_plaque_foe.png
+0.00 MB x 2 ui/cardbacks/px_cathedral_plaque_foe.png | ui/cardbacks/px_etna_plaque_foe.png
+0.00 MB x 2 ui/cardbacks/px_clearing_a_plaque.png | ui/cardbacks/px_clearing_plaque.png
+0.00 MB x 2 ui/cardbacks/px_clearing_a_plaque_foe.png | ui/cardbacks/px_clearing_plaque_foe.png
+0.00 MB x 2 ui/cardbacks/px_frozen_bay_plaque_foe.png | ui/cardbacks/px_sluice_plaque_foe.png
+0.00 MB x 2 ui/weapons/excalibur.webp | ui/weapons/excalibur_replica.webp
+wasted dup MB 2.57
+TOP15
+3.51 assets/main-f7JqcivX.js
+0.61 assets/shop_text-BGtUgCGa.js
+0.49 assets/weapons-DxVduSdg.js
+0.43 icons/icon-512.png
+0.43 icons/icon-maskable-512.png
+0.43 icons/tree-sword-20261017-icon-512.png
+0.43 icons/tree-sword-20261017-icon-maskable-512.png
+0.43 icons/tree-sword-orig-20261020-icon-512.png
+0.43 icons/tree-sword-orig-20261020-icon-maskable-512.png
+0.26 fonts/Pretendard-Bold.subset.woff2
+0.26 fonts/Pretendard-SemiBold.subset.woff2
+0.25 fonts/Pretendard-Regular.subset.woff2
+0.21 assets/title_account-DAg5D70s.js
+0.17 assets/characters-0pvgWqe5.js
+0.10 assets/sound-D9MereH2.js
+PNG/JPG with webp twin precached 0 0.00 MB

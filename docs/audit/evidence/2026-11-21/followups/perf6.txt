@@ -1,0 +1,5 @@
+using deprecated parameters for the initialization function; pass a single object instead
+{"node":"v22.23.5","cpu":"Intel(R) Xeon(R) Processor @ 2.30GHz","cores":4,"dt":0.008333333333333333,"seeds":2,"secs":12,"target":"score","mateGap":1.6}
+
+③ 물리 한 스텝 ms (첫 1 s 뺌 · 씨앗 2 · 12 s · 가운데 / p95 / 평균) — 몫: ctl 조종 · body 몸 step · phys cacheState+world.step · cmb combat.afterStep
+{"fighters":6,"ms":"3.757 / 7.181 / 4.235","ctl":"0.688 / 1.596 / 0.829","body":"2.098 / 4.064 / 2.378","phys":"0.766 / 1.404 / 0.903","cmb":"0.082 / 0.285 / 0.12","x2":null,"frame120":8.47,"cpuPerStep":"5.973 5.062"}

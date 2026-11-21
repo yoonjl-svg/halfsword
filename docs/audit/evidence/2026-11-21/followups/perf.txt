@@ -1,0 +1,8 @@
+using deprecated parameters for the initialization function; pass a single object instead
+{"node":"v22.23.5","cpu":"Intel(R) Xeon(R) Processor @ 2.30GHz","cores":4,"dt":0.008333333333333333,"seeds":2,"secs":12,"target":"score","mateGap":1.6}
+
+③ 물리 한 스텝 ms (첫 1 s 뺌 · 씨앗 2 · 12 s · 가운데 / p95 / 평균) — 몫: ctl 조종 · body 몸 step · phys cacheState+world.step · cmb combat.afterStep
+{"fighters":2,"ms":"1.127 / 2.039 / 1.263","ctl":"0.134 / 0.253 / 0.169","body":"0.655 / 1.127 / 0.751","phys":"0.273 / 0.401 / 0.298","cmb":"0.022 / 0.118 / 0.042","x2":1,"frame120":2.53,"cpuPerStep":"1.994 1.242"}
+{"fighters":3,"ms":"1.556 / 3.058 / 1.796","ctl":"0.246 / 0.444 / 0.292","body":"0.844 / 1.679 / 0.967","phys":"0.404 / 0.72 / 0.465","cmb":"0.049 / 0.159 / 0.069","x2":1.38,"frame120":3.59,"cpuPerStep":"2.513 2.105"}
+{"fighters":4,"ms":"2.132 / 3.741 / 2.396","ctl":"0.38 / 0.772 / 0.446","body":"1.124 / 2.094 / 1.312","phys":"0.514 / 0.738 / 0.564","cmb":"0.043 / 0.168 / 0.069","x2":1.89,"frame120":4.79,"cpuPerStep":"2.966 2.692"}
+{"fighters":6,"ms":"3.054 / 5.509 / 3.41","ctl":"0.594 / 1.033 / 0.672","body":"1.574 / 3.051 / 1.829","phys":"0.735 / 1.205 / 0.817","cmb":"0.065 / 0.195 / 0.086","x2":2.71,"frame120":6.82,"cpuPerStep":"4.157 3.807"}
