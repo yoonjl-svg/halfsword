@@ -21,6 +21,7 @@ git worktree add --detach /tmp/wt_main origin/main && cd /tmp/wt_main && npm ci 
 | `map/` | 9차 N-021: AI 판단 이유·기술 쓰임 세기(`audit_ai.mjs`, `audit_tab.mjs`, `audit_techlist.mjs`, 결과 `tab64.txt`), 입력·상태·AI 가짓수 지도(`notes_en.md`, 줄 번호 포함) | 복사본 `tools/sim`에 두고 `node tools/sim/audit_ai.mjs out.json 40 1 45` |
 | `rerun_real/` | 11차 보고: 게임의 꾸러미 바꿈 규칙(main.js:619)대로 고친 러너(`D_fights_real.mjs`, `audit_ai_real.mjs`)와 다시 돌린 결과(소음 폭 `real_perturb*.json`, 끄기 `real_*.json`·`real_abl_*.json`, 앞 러너 `old_*.json`), 켜진 횟수(`counts_*.txt`), AI 쓰임(`tab64_real.txt`), 시작 안 된 기술(`audit_never_real.mjs`, `never_real.txt`) | 세는 장치를 넣은 복사본 `tools/sim`에 두고 `J_COUNTS=1 node tools/sim/D_fights_real.mjs`, 끄기는 `J_ABL=<이름>` 또는 `AI_ABL=open` |
 | `perf/patches_f/` | 엔진 값 읽기 저장 패치(`f_read_cache.patch`), 관문 해시(`gates_*.txt`), 바뀌는 때 미세 시험(`micro.mjs`), 겹쳐 읽기 세기(`redund.mjs`, `wasm_count.mjs`), 몸 상태 해시(`smoke.mjs`), 시간 재기(`timing_run.sh`), 메모(`notes_en.md`) | `perf/patches/a_corr_early.patch`를 먼저 붙인 나무에 `patch -p1 < f_read_cache.patch` |
+| `perf/patches_g/` | 13차 보고: 결과를 안 쓰는 계산 건너뛰기 후보 셋(`g1`~`g3`, 모두 거둠), 관문(`gates_*.txt`), 시간(`timing.txt`, `timing_run.sh`), (a) 뒤 프로파일(`prof_1v1_top.txt`, `prof_2v2_top.txt`, 요약 `top.mjs`·`kids.mjs`·`callers.mjs`), 메모(`notes_en.md`) | (a)를 붙인 나무에 `patch -p1`, `node --cpu-prof` 뒤 `node top.mjs <폴더> 40` |
 | `storage/` | 어떤 문서도 안 가리키는 `docs/handoff` 그림 목록, 본판에 이미 든 원격 브랜치 목록 | 목록 그대로 |
 
 주의

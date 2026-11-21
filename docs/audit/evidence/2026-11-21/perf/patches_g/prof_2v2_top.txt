@@ -1,0 +1,63 @@
+total ms 29468
+== SELF
+   2612   8.9% rapier:__wrap
+   1711   5.8% step src/fighter.js:1740
+   1597   5.4% rapier:wasm-function[37]
+   1203   4.1% rapier:wasm-function[374]
+    907   3.1% updateCombat src/ai.js:901
+    891   3.0% rapier:wasm-function[259]
+    889   3.0% (garbage collector) :0
+    853   2.9% driveBalance src/fighter.js:2837
+    789   2.7% rapier:__destroy_into_raw
+    700   2.4% driveSword src/fighter.js:3421
+    518   1.8% update src/gait.js:731
+    371   1.3% stepMatch src/match.js:163
+    370   1.3% driveJoints src/fighter.js:3206
+    361   1.2% update src/ai.js:869
+    281   1.0% rapier:wasm-function[338]
+    254   0.9% rapier:wasm-function[302]
+    248   0.8% rapier:wasm-function[137]
+    242   0.8% segSegDist src/fighter.js:408
+    239   0.8% moveFeet src/ai.js:4437
+    236   0.8% rapier:wasm-to-js
+    232   0.8% applyPose src/fighter.js:3084
+    232   0.8% update src/skill.js:1593
+    207   0.7% rapier:WA
+    205   0.7% record src/ai_sense.js:47
+    187   0.6% armIK src/fighter.js:3886
+    177   0.6% updateFooting src/fighter.js:2986
+    172   0.6% teamFeet src/ai.js:715
+    172   0.6% updateBodyPose src/fighter.js:1380
+    171   0.6% recentHandSpeed src/ai_sense.js:104
+    166   0.6% wristPlane src/fighter.js:4672
+== TOTAL
+  29468 100.0% (root) :0
+  28340  96.2% (anon) tools/sim/team_perf.mjs:1
+  28318  96.1% run tools/sim/team_perf.mjs:72
+  27968  94.9% stepMatch src/match.js:163
+  13491  45.8% step src/fighter.js:1740
+   6842  23.2% rapier:step
+   6810  23.1% rapier:stepWithEvents
+   6783  23.0% rapier:wasm-function[184]
+   6687  22.7% rapier:wasm-function[37]
+   4605  15.6% update src/ai.js:869
+   4139  14.0% updateCombat src/ai.js:901
+   3376  11.5% driveSword src/fighter.js:3421
+   2846   9.7% driveBalance src/fighter.js:2837
+   2612   8.9% rapier:__wrap
+   1918   6.5% rapier:wasm-function[338]
+   1655   5.6% rapier:translation
+   1314   4.5% rapier:rotation
+   1282   4.4% cacheState src/fighter.js:4171
+   1276   4.3% rapier:wasm-to-js
+   1209   4.1% driveJoints src/fighter.js:3206
+   1203   4.1% rapier:wasm-function[374]
+   1191   4.0% rapier:fromRaw
+   1135   3.9% put src/fighter.js:4173
+   1104   3.7% rapier:rbTranslation
+   1065   3.6% rapier:free
+   1060   3.6% js-to-wasm:iiiiiiiiiiiiiii: :0
+   1049   3.6% rot src/fighter.js:247
+   1001   3.4% armIK src/fighter.js:3886
+    962   3.3% update src/gait.js:731
+    926   3.1% G.combat.afterStep tools/sim/team_perf.mjs:83

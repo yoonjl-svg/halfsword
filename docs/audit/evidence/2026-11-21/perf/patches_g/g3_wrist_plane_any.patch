@@ -1,0 +1,35 @@
+diff -ruN wa/src/fighter.js w3/src/fighter.js
+--- wa/src/fighter.js	2026-11-21 13:27:18.098772746 +0000
++++ w3/src/fighter.js	2026-11-21 13:59:26.042307412 +0000
+@@ -4533,7 +4533,7 @@
+     const y = _sw5.copy(f).addScaledVector(u, -f.dot(u));
+     if (y.lengthSq() < 1e-9) return true;
+     const z = _sw6.crossVectors(u, y.normalize()).normalize();
+-    return !!wristPlane(f, z, D, z, _sw7);
++    return !!wristPlane(f, z, D, z, _sw7, true);
+   };
+   const dev = (th) => {
+     const p = _sw2.copy(pDir).multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th));
+@@ -4669,7 +4669,7 @@
+  *  칼 방향은 그대로 두고 칼 면 법선 n(⊥ aim)을 칼 축 둘레로 3° 씩 돌려 ① 손목 굽힘 · 폄 |asin(fx·n)| ≤ JOINTS.wristFE ② 손 면 안 치우침(wristClamp 와 같은 dev) ∈ [−HUMAN.ulnarDev, HUMAN.wristThumb]
+  *  ③ 아래팔 굴림 zF·n ≥ cos HUMAN.forearmRoll 을 모두 지키는 n 가운데 pref(쉬는 칼 면)에 가장 가까운 것을 out 에. 없으면 null. 새 수 없음(한도는 사람 범위 그대로 · 3° 는 풀이 해상도)
+  */
+-export function wristPlane(fx, zF, aim, pref, out) {
++export function wristPlane(fx, zF, aim, pref, out, any = false) {
+   const c = THREE.MathUtils.clamp(fx.dot(aim), -1, 1);
+   const e1 = _wpE1.copy(fx).addScaledVector(aim, -c);
+   const s = e1.length();
+@@ -4684,11 +4684,12 @@
+   for (let k = 0; k < 120; k++) {
+     const ps = k * 3 * HD;
+     const cp = Math.cos(ps), sp = Math.sin(ps);
++    if (Math.abs(s * cp) > feMax) continue; // ① 굽힘 · 폄 (② 셈 앞 — 거르는 것은 같다)
+     let dev = 90 - Math.atan2(c, -s * sp) / HD; // ② (x = aim × n · fx·x = −s sin ψ)
+     if (dev > 180) dev -= 360;
+-    if (Math.abs(s * cp) > feMax) continue; // ① 굽힘 · 폄
+     if (dev < lo || dev > hi) continue;
+     if (cp * z1 + sp * z2 < COS_ROLL) continue; // ③ 굴림
++    if (any) return out; // 있나만 묻는 부름(elbowSwivel reach): 첫 자리에서 — out 은 안 씀
+     const sc = cp * p1 + sp * p2;
+     if (sc > best) {
+       best = sc;

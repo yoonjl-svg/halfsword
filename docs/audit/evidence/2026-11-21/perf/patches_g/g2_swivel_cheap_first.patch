@@ -1,0 +1,19 @@
+diff -ruN wa/src/fighter.js w2/src/fighter.js
+--- wa/src/fighter.js	2026-11-21 13:27:18.098772746 +0000
++++ w2/src/fighter.js	2026-11-21 13:59:26.035462507 +0000
+@@ -4586,13 +4586,13 @@
+     //  기본 팔꿈치(0)가 손목 한도 안이고 틈 있으면 0 · 아니면 지금 돌림에서 가장 가까운, 틈 있고 손목 한도 안인 돌림 ·
+     //  없으면 0 에서 가장 가까운 틈 있는 돌림(0 먼저 — 손목은 교정 wristGuard 가 범위 끝까지)
+     const wristOk = (th) => dev(th) >= lim || (pron && reach(th));
+-    if (!(clrGap(0) && wristOk(0))) {
++    if (!(wristOk(0) && clrGap(0))) { // 싼 쪽 먼저 (둘 다 순수 — 같은 참거짓)
+       want = null;
+       const STEP = 2 * HD; // 풀이 해상도 (기하)
+       for (let n = 0; n * STEP <= Math.PI && want === null; n++) {
+         for (const s of n ? [1, -1] : [1]) {
+           const th = th0 + s * n * STEP;
+-          if (armOk(th) && clrGap(th) && wristOk(th)) {
++          if (armOk(th) && wristOk(th) && clrGap(th)) {
+             want = th;
+             break;
+           }
