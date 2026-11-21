@@ -94,8 +94,8 @@ export const FINISH = {
   //  탭이 끝나지 않았다 — 상대가 일어나거나 죽을 때까지 칼을 든 채 섬 (fights12 씨앗 6: 못 일어나는 상대 위 0.24 m 에서 8 s 넘게 · 탭 동안 스틱을 놓는 AI 는 그동안 굳음).
   //  settleV = 판정 빠르기 바닥 (combat.js analyze 의 0.5 m/s — 그 밑의 접촉은 판정이 안 나 찍기가 더 할 일이 없음 · 박힘 풀기의 '거의 멈춤'과 같은 수)
   //  settle = 시간 사다리 0.6 (흔들림 한 주기 0.2 s 의 세 배 — 그동안 바닥 위로 한 번도 안 움직인 칼은 흔들림 끝이 오지 않는다)
-  settleV: 0.5,
-  settle: realS(0.6),
+  settleV: 0.5, // [사장님 11/22 권고대로]
+  settle: realS(0.6), // [사장님 11/22 권고대로]
   hover: { pelvisYaw: 10, chestYaw: 12, pitch: 8, drop: 0.07 }, // 몸 (도, m)
   strike: { pelvisYaw: -5, chestYaw: -5, pitch: 22, drop: 0.13 },
   // AI 가 쓰러진 상대에게 쓰는 간격 (롱소드 기준 m, 무기 배율 k 를 곱한다. ai.js 가 간격 표 contact·reach·clinch 대신 쓴다).
