@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  live_diag.mjs — R2 실전 진단 브라우저 하니스 (하니스 a). 폰 같은 프레임 빠르기로 실제 게임 길을 결정적으로 돌려 잰다
 //   출처: hs-diag(가지 wbs-diag 08b864a) tools/browser/live_diag.mjs 를 본판에 이식(R2′ W1a). 바뀐 것: M·C1·C2·C3 칸(src/strike 가 있는 가지의
-//   온몸·손짓·드라이브 칸) 제거 → 칸은 k<검술 보정> 하나 (옛 이름 C0-k<s> 도 받는다). R2′ 탐색판은 --url 에 그 빌드(public/r2p/?chain=legs 같은 주소 인자)를 준다.
+//   온몸·손짓·드라이브 칸) 제거 → 칸은 k<검술 보정> 하나 (옛 이름 C0-k<s> 도 받는다). 다른 빌드는 --url 에 그 주소를 준다(옛 R2′ 탐색판 public/r2p 는 11/21 지움).
 //   터치·프레임·표본·sha 정의는 그대로 (tools/sim/live_twin.mjs 와 같은 칸 이름·파일 꼴).
 //   · 결정적 브라우저 (det.mjs 방식을 옮김): 페이지 난수 씨앗 고정 · 소리 끔 · performance.now·rAF 를 손으로 넘김 · 캔버스 읽기
 //   · 프레임 간격 = live_common PACINGS (씨앗 고정). 프레임마다: 그 프레임 끝 시각까지의 터치 표본을 CDP Input.dispatchTouchEvent 로

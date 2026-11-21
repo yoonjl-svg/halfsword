@@ -1,6 +1,6 @@
 // 상점 시험 페이지 빌드 (사장님 10/30 — 본판에 올리기 전에 사장님이 해 보는 하위 경로 /shop/ · 생사전 시험판 tools/saengsa_page 와 같은 꼴)
 //  npx vite build --config tools/shop_page/vite.config.mjs --outDir <폴더> --emptyOutDir
-//   → <폴더> 를 개발 가지 위 따로 가지(wk/shop-page)의 public/shop/ 에 그대로 넣는다 (/saengsa/ · /wb/ 시험판과 같은 꼴 — 본 게임 오프라인 저장에선 뺌: tools/pwa/build.mjs EXCLUDED_DIRS).
+//   → <폴더> 는 .tmp 아래로 (tools/browser/shop_capture.mjs 사진용). public/shop/ 시험판은 11/21 지움(감사 N-005) — public 에 다시 넣지 않는다
 //  본판 vite.config.js 와 다른 점:
 //   - VITE_SHOP_TEST=1 → config SHOP.testMode 참(주소 스위치 · '다음 갱신') · src/shop_test.js 가 저장 열쇠를 가름('stillness.test.shop.') · pwa.js 등록 안 함 ·
 //     게임이 뜨면 곧바로 대기실 상점 칸(game_entry.js)
