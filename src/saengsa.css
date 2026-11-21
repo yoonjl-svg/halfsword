@@ -153,8 +153,22 @@ button.sg-slot:not(:disabled):hover { border-color: var(--c-sub); }
 .sg-mh { flex: none; display: flex; align-items: center; gap: 10px; width: 100%; max-width: 1220px; margin: 0 auto; }
 .sg-mh b { font-size: var(--fs-m); outline: none; }
 .sg-mh-sub { font-size: var(--fs-s); color: var(--c-sub); }
+.sg-map { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-s); color: var(--c-text); white-space: nowrap; } /* 생사전 전용 맵 (11/21): 작은 그림 + 이름 */
+.sg-map[hidden] { display: none; }
+.sg-map svg { display: block; height: 34px; width: auto; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); }
 .sg-rows { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px; width: 100%; max-width: 1220px; margin: 0 auto; }
 .sg-row-label { margin: 0 0 3px; font-size: var(--fs-s); color: var(--c-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 내 경기의 두 줄 (11/21 사장님 '두 팀의 결과가 섞여 있어서 알아보기 어렵더라.' · '줄마다 큰 머리 글 두지마.'): 위 = 내 팀(따뜻한 금빛 바탕 · 왼쪽 금빛 테 · 이름표 금빛) · 아래 = 상대(가라앉은 어두운 바탕) · 줄 사이 틈 */
+.sg-row[data-team] { margin: 0 -6px; padding: 3px 6px 5px; border-radius: 9px; }
+.sg-row[data-team="mine"] { background: color-mix(in srgb, var(--c-accent) 9%, transparent); box-shadow: inset 3px 0 0 color-mix(in srgb, var(--c-accent) 75%, transparent); }
+.sg-row[data-team="mine"] .sg-row-label { color: var(--c-accent); }
+.sg-row[data-team="foe"] { background: rgba(0, 0, 0, .28); }
+.sg-row[data-team="foe"] + .sg-row, .sg-row[data-team="mine"] + .sg-row { margin-top: 4px; }
+@media (max-height: 380px) { /* 낮은 화면(667 × 375 · 740 × 360): 줄 바탕의 위아래 틈을 이름표 밑 틈에서 덜어 높이가 늘지 않게 */
+  .sg-row[data-team] { padding: 1px 6px; }
+  .sg-row[data-team] .sg-row-label { margin-bottom: 1px; }
+  .sg-row[data-team] + .sg-row { margin-top: 0; }
+}
 .sg-row-pool i { font-style: normal; opacity: .6; } /* 상대 팀 무기 다섯 — 지금 든 무기만 밝게 */
 .sg-row-pool i[data-on] { opacity: 1; color: var(--c-text); }
 .sg-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -178,6 +192,9 @@ button.sg-card:disabled { cursor: default; }
 .sg-wpn[data-none] > span { color: var(--c-alert); } /* 내 팀 첫 경기 무기 배정 전 '무기 없음' (11/18) */
 .sg-inj { font-size: 11px; line-height: 1.3; color: var(--c-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sg-inj[data-hurt] { color: var(--c-alert); }
+.sg-inj[data-rest] { margin-right: -30px; color: var(--c-accent); white-space: normal; } /* 결과 카드 — 쉰 사람의 부상 한 단계 나음 (11/21 쉼 규칙 · 부상 줄 자리 · 머리 표 밑이라 오른쪽 틈까지 씀 · 길면 마디 사이에서 줄을 바꿈) */
+.sg-inj[data-rest] > span { white-space: nowrap; }
+.sg-gain { flex: none; font-size: 11px; line-height: 1; color: var(--c-accent); font-variant-numeric: tabular-nums; } /* 쉼으로 되찾은 체력 '+35' — 체력 수 앞 */
 .sg-prof { grid-area: prof; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; } /* 다섯 칸 (무유파가 주 유파인 인물은 여섯) */
 .sg-pc { display: flex; flex-direction: column; align-items: center; padding: 1px 0 2px; border-radius: 4px; }
 .sg-pc small { font-size: 9.5px; line-height: 1.2; color: var(--c-sub); white-space: nowrap; }
@@ -186,6 +203,9 @@ button.sg-card:disabled { cursor: default; }
 .sg-pc[data-on] small, .sg-pc[data-on] b { color: var(--c-accent); }
 .sg-badge { position: absolute; top: 6px; right: 7px; padding: 0 6px; border-radius: 999px; background: var(--c-sub); color: var(--c-on-accent); font-size: 10px; line-height: 15px; font-weight: var(--fw-label); }
 .sg-badge[data-kind="dead"] { background: var(--c-alert); }
+.sg-badge[data-kind="rest"] { background: var(--c-accent); }
+.sg-badge[data-kind="coma"] { background: var(--hp-orange); } /* 코마 (11/21) — 죽음(붉은 · 카드는 흐리게)과 갈리게 체력 칸 주황(낮은 체력) · 카드는 흐리게 하지 않음 */
+.sg-card[data-coma] { border-color: color-mix(in srgb, var(--hp-orange) 60%, transparent); }
 .sg-mf { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 12px; width: 100%; max-width: 1220px; margin: 0 auto; }
 .sg-hint { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-s); line-height: 1.4; color: var(--c-sub); word-break: keep-all; }
 .sg-hint[hidden] { display: none; }

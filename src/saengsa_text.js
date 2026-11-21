@@ -27,11 +27,14 @@ export const SAENGSA_TEXT = Object.freeze({
   myTeam: '내 팀',
   foeTeam: '상대 팀',
   fightEnter: '전투 입장',
-  pickHint: '나설 사람을 한두 명 고르십시오.',
+  map: '맵', // 경기 화면 머리 — 이 경기를 싸울 생사전 전용 맵(작은 그림 + 이름 · 11/21)
+  pickHint: '나설 사람을 한 명에서 세 명까지 고르십시오.', // 11/20 3:3 (전 '나설 사람을 한두 명 고르십시오.')
   foeHidden: '상대는 입장할 때 함께 보입니다.',
   noInjury: '부상 없음',
   dead: '죽음',
   entrant: '출전',
+  rested: '쉼', // 결과 카드 — 이긴 팀에서 그 경기에 나서지 않아 쉰 사람 (11/21 쉼 규칙)
+  downed: '코마', // 결과 카드 — 이긴 팀에서 나섰다 쓰러졌으나 산 사람(체력 10 · 중상 — 11/21 사장님 '죽음, 코마, 이런 식으로 구분해 넣어.')
   win: '승리',
   loss: '패배',
   champion: '우승',
@@ -92,6 +95,16 @@ export function stateLine(s) {
 export const signupHours = (from, to) => `신청은 ${hourWords(from)}부터 ${hourWords(to)}까지입니다.`;
 /** 부상 한 줄 '팔 경상 · 다리 중상' */
 export const injuryText = (list, serious) => (list.length ? list.map((i) => `${INJURY_KO[i.part] ?? i.part} ${serious(i) ? '중상' : '경상'}`).join(' · ') : SAENGSA_TEXT.noInjury);
+/** 부상 한 단계 나음 한 마디 (rest 의 steps 하나): '다리 중상 → 경상' · '팔 경상 → 나음' */
+export const stepText = (s) => `${INJURY_KO[s.part] ?? s.part} ${s.from === 'serious' ? '중상 → 경상' : '경상 → 나음'}`;
+/**
+ * 쉼으로 되찾은 것 한 줄 (결과 카드 화면 읽기 글 — saengsa_rules.js rest 의 쉼 { gain, steps }): '쉼 체력 + 35 · 다리 중상 → 경상 · 팔 경상 → 나음'
+ *  되찾은 것이 없으면(체력 가득 · 부상 없음) '쉼' 만. 카드 그림은 체력 옆 '+35' · 부상 줄 자리에 나음 마디 · 머리 표 '쉼'
+ */
+export const restText = (rs) => {
+  const parts = [...(rs.gain > 0 ? [`체력 + ${rs.gain}`] : []), ...(rs.steps ?? []).map(stepText)];
+  return parts.length ? `${SAENGSA_TEXT.rested} ${parts.join(' · ')}` : SAENGSA_TEXT.rested;
+};
 /** 팀 이름: 내 팀 · 'N번 팀'(대진표 자리 차례) */
 export const teamName = (seat, mine) => (mine ? SAENGSA_TEXT.myTeam : `${seat}번 팀`);
 /** 경기 한 줄 결과 (대진표 칸) */

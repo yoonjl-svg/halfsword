@@ -19,6 +19,7 @@
 import * as THREE from 'three';
 import { itOnStrike } from './italian_outbox.js'; // 이탈리아 아웃복싱 (11/14): 끌고 가는 칼의 상처도 칼 우위 · 재기 (combat.js strike 와 같은 자리)
 import { SECRET, ARM, STRIKE, GAIT, ARENA, JOINTS, THRUST } from './config.js';
+import { fieldOf } from './field.js'; // 지도 꼴 (11/21 — 물러남이 경기장 테두리를 넘지 않게: 원 무대는 가운데에서 거리 그대로)
 import { bwTouch } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 — 운동학 칼의 몸 맞음은 헛침을 깸 · 상대 칼에 막힘은 재기만)
 import { obiOn, obiReadyInto, obiPathB, notoStep, notoStop, iaiSeated, drawStart, nukiStep, drawLog } from './iai_obi.js'; // 帯刀 — 대기 칼 자리 · 뽑는 자리 (11/14 사장님 '권고대로 둘 다 진행해' — SECRET.iaiObi)
 const GAIT_REACH = GAIT.reachMax;
@@ -1899,7 +1900,7 @@ function mordClipPlan(f, I, pts, base, k, w, P, r) {
     const dl = Math.max(1e-3, Math.hypot(dx, dz));
     dx /= dl;
     dz /= dl;
-    if (dir < 0 && Math.hypot(c.x - dx * s, c.z - dz * s) > ARENA.radius) s = Math.max(0, Math.min(s, ARENA.radius - Math.hypot(c.x, c.z))); // 경기장 테두리 (comboMoveStart 물러남과 같은 규칙)
+    if (dir < 0 && fieldOf(f).radial(c.x - dx * s, c.z - dz * s) > ARENA.radius) s = Math.max(0, Math.min(s, ARENA.radius - fieldOf(f).radial(c.x, c.z))); // 경기장 테두리 (comboMoveStart 물러남과 같은 규칙 · 11/21 지도 꼴 — 원은 그대로)
     if (dir > 0) s = Math.min(s, Math.max(0, dl - (f.swordArt?.measure?.clinch ?? 0) * 0.5)); // 앞으로는 상대 몸을 뚫지 않게 (붙은 거리의 반까지)
     if (s > 1e-3) {
       e = new THREE.Vector3(dx, 0, dz).applyQuaternion(I.yaw.clone().invert()); // 몸 틀에서 상대 쪽 (물러나면 상대 머리가 이쪽으로 s 만큼 멀어짐)
@@ -2943,7 +2944,7 @@ function comboMoveStart(f, I, mi) {
     // 물러남은 경기장 테두리(ARENA.radius — 이미 있는 값)를 넘지 않게: 끝 자리 가슴이 반지름 밖이면 그 안까지만
     const ex = c.x + dx * slide;
     const ez = c.z + dz * slide;
-    if (Math.hypot(ex, ez) > ARENA.radius) slide = -Math.max(0, Math.min(-slide, ARENA.radius - Math.hypot(c.x, c.z)));
+    if (fieldOf(f).radial(ex, ez) > ARENA.radius) slide = -Math.max(0, Math.min(-slide, ARENA.radius - fieldOf(f).radial(c.x, c.z))); // 11/21 지도 꼴 (원은 가운데에서 거리 그대로)
   }
   if (Math.abs(slide) > 1e-3) I.slide = { dx, dz, slide, t0: I.t, span: 1, done: 0 };
 

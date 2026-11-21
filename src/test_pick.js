@@ -92,6 +92,13 @@ const TEAM_PICKS = [
   { id: '3v3', name: '3:3', sub: '나 + 동료 둘 대 셋' },
   { id: 'watch', name: '지켜보기', sub: '넷 모두 AI · 나는 본다' },
 ];
+// 생사전 맵 (사장님 11/21 '생사전 맵 1과 3으로 두 개 만들어.' — src/saengsa_maps.js 무대 표): 동시 대전 판을 그 맵에서. 고르면 무대 칸 대신 그 맵(주소 stage=) · 1:1 이면 3:3 으로.
+//  기억하지 않는다. 이름은 무대 표와 같게 (saengsa_maps.js 를 부르면 그림 코드가 딸려 오므로 이름만)
+const MAP_PICKS = [
+  { id: 'off', name: '맵 없음', sub: '동시 대전도 무대 칸대로 (지금 그대로)' },
+  { id: 'saengsa_bridges', name: '두 다리 개울', sub: '생사전 전용 맵 — 개울을 건너는 다리 둘 · 36 × 24 m' },
+  { id: 'saengsa_court', name: '성벽 안뜰', sub: '생사전 전용 맵 — 가운데 성벽을 지나는 문 둘 · 34 × 22 m' },
+];
 const saved = loadPick();
 const pick = {
   weapon: weapons.some((w) => w.id === saved.weapon) ? saved.weapon : NEW_WEAPONS[0],
@@ -100,6 +107,7 @@ const pick = {
   stage: 'random', // 무대도 기억하지 않는다 (열 때마다 무작위에서 — 고른 무대가 남아 '왜 늘 습지인가' 헷갈리지 않게)
   whiff: 'off', // 상대 헛스윙도 기억하지 않는다 (열 때마다 끔)
   team: 'off', // 동시 대전도 기억하지 않는다 (열 때마다 1:1)
+  map: 'off', // 생사전 맵도 기억하지 않는다
 };
 
 function weaponButton(w, big) {
@@ -183,6 +191,8 @@ function optionButton(x, kind) {
 
 function select(kind, id) {
   pick[kind] = id;
+  if (kind === 'map' && id !== 'off' && pick.team === 'off') pick.team = '3v3'; // 맵은 동시 대전 판에서만 (1:1 은 원 무대)
+  if (kind === 'team' && id === 'off') pick.map = 'off';
   savePick(pick);
   render();
 }
@@ -194,6 +204,7 @@ function render() {
   for (const el of document.querySelectorAll('#stagePick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.stage));
   for (const el of document.querySelectorAll('#whiffPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.whiff));
   for (const el of document.querySelectorAll('#teamPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.team));
+  for (const el of document.querySelectorAll('#mapPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.map));
   const w = weapons.find((x) => x.id === pick.weapon);
   const h = heroes.find((x) => x.id === pick.hero);
   const s = $('summary');
@@ -206,13 +217,14 @@ function render() {
   const f = foes.find((x) => x.id === pick.foe);
   const foeTxt = f && f.id !== 'random' ? `상대 ${f.name}` : '';
   const stageTxt = pick.stage !== 'random' && st ? `무대 ${st.name}` : '';
-  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${pick.team !== 'off' ? ` · 동시 대전 ${TEAM_PICKS.find((x) => x.id === pick.team)?.name ?? ''}` : ''}`);
+  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${pick.team !== 'off' ? ` · 동시 대전 ${TEAM_PICKS.find((x) => x.id === pick.team)?.name ?? ''}` : ''}${pick.map !== 'off' ? ` · 맵 ${MAP_PICKS.find((x) => x.id === pick.map)?.name ?? ''}` : ''}`);
 }
 
 function startUrl() {
   const q = new URLSearchParams({ test: '1', weapon: pick.weapon, hero: pick.hero, foe: pick.foe, stage: pick.stage }); // stage=<id> 면 main.js STAGE_PIN 으로 그 무대 고정 · foe=<id> 면 그 상대 (main.js pickFoe)
   if (pick.whiff === 'on') q.set('foeWhiff', '1'); // 상대 헛스윙 (main.js → whiff_drill.js) — 끄면 주소에 안 적는다
   if (pick.team !== 'off') q.set('team', pick.team); // 동시 대전 (main.js TEAM_TEST → startTeamTest) — 1:1 이면 안 적는다
+  if (pick.map !== 'off' && pick.team !== 'off') q.set('stage', pick.map); // 생사전 맵 = 그 맵 무대에 고정 (main.js STAGE_PIN — 동시 대전 판만)
   return `./index.html?${q.toString()}`;
 }
 
@@ -226,6 +238,7 @@ for (const f of foes) $('foes').append(heroButton(f, 'foe'));
 for (const x of STAGE_PICKS) $('stagePick').append(optionButton(x, 'stage'));
 for (const x of WHIFF_PICKS) $('whiffPick').append(optionButton(x, 'whiff'));
 for (const x of TEAM_PICKS) $('teamPick').append(optionButton(x, 'team'));
+for (const x of MAP_PICKS) $('mapPick').append(optionButton(x, 'map'));
 $('weaponCount').textContent = `${weapons.length}종`;
 $('heroNote').textContent =
   '고른 캐릭터는 겉모습과 이름만 가져옵니다. 투구·판금은 겉모습에 딸려 있어 실제로 막아 줍니다(기본 주인공은 투구). ' +

@@ -38,6 +38,7 @@ import { buildSluice } from './stage_sluice.js';
 import { buildDayr } from './stage_dayr.js';
 import { buildDunhuang } from './stage_dunhuang.js';
 import { buildEtna } from './stage_etna.js';
+import { buildSaengsaBridges, buildSaengsaCourt } from './stage_saengsa_maps.js'; // 생사전 전용 맵 (11/21 — 생사전 판에서만 · 여정 차례에 없음)
 
 // 배경 id → 짓는 함수. 짓는 함수는 { update(dt), excite(amount), sunOffset? } 를 돌려준다
 const BUILDERS = {
@@ -74,6 +75,9 @@ const BUILDERS = {
   // 샛별 저장소에서 가져온 무대 (사장님 10/14 19:4x — 화면 이름 '철불 절벽' · 벽화 그대로 · 결투장 띠 · 여정 정식 경로, docs/import/ironcliff_port_2026-10-14.md)
   dunhuang: buildDunhuang, // 철불 절벽: 침식된 절벽 앞 석굴 앞뜰의 초가을 아침, 6 층 누각과 창작 벽화 (stage_dunhuang.js). 코드 id 는 샛별 쪽 그대로 — 화면 이름에 '둔황'은 넣지 않는다
   // 샛별 저장소에서 가져온 무대 (사장님 10/14 19:4x — 화면 이름 '화산섬' · 결투장 전체 비탈 · 용암 규칙 약하게 · 결투장 띠 없음 · 여정 정식 경로, docs/import/volcano_port_2026-10-14.md)
+  // 생사전 전용 맵 (사장님 11/21 '생사전 맵 1과 3으로 두 개 만들어.' — 설계 docs/design/saengsa_3v3_2026-11-21.md · 무대 표 src/saengsa_maps.js): 생사전 판에서만 짓는다 (STAGE_ORDER 에 없음 · 낮 하나)
+  saengsa_bridges: buildSaengsaBridges, // 두 다리 개울: 강가 풀밭 · 개울을 건너는 돌 다리 둘 (stage_saengsa_maps.js)
+  saengsa_court: buildSaengsaCourt, // 성벽 안뜰: 가운데 성벽을 지나는 문 둘 (stage_saengsa_maps.js)
   etna: buildEtna, // 화산섬: 해 뜨기 전 화산 능선, 결투장 전체가 불규칙 산비탈(평균 약 10°) · 낮은 쪽 용암(화상 — 다리·팔 기능 감소, 사망 없음) (stage_etna.js · 땅 etna_ground.js). 코드 id 는 샛별 쪽 그대로
 };
 export const STAGE_IDS = Object.keys(BUILDERS);
@@ -156,6 +160,7 @@ export const STAGE_NAME_KO = {
   sacred_grove: '신목의 숲', frozen_bay: '얼어붙은 만', qinglan: '청람잔도', sluice: '잠든 습지',
   dayr: '소금 사막', // 사장님 10/14 08:1x (샛별 쪽 '소금길의 (마지막) 역참') — 코드 id 는 그대로
   dunhuang: '철불 절벽', // 사장님 10/14 19:4x (샛별 쪽 '천불의 절벽') — '둔황'은 화면 이름에 넣지 않는다. 코드 id 는 그대로
+  saengsa_bridges: '두 다리 개울', saengsa_court: '성벽 안뜰', // 생사전 전용 맵 (11/21 — src/saengsa_maps.js 무대 표 이름과 같음)
   etna: '화산섬', // 사장님 10/14 19:4x — 실제 지명은 화면에 쓰지 않는다 (코드 id 는 샛별 쪽 그대로)
 };
 /** 왼쪽 위 첫 줄: '스테이지 N · 이름' (순서표 밖이면 이름만) */

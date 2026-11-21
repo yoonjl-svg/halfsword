@@ -6,6 +6,7 @@
 //   (충돌은 편과 상관없이 제 몸만 버려 물리는 그대로 · sameSide 가 자기만 같은 편 → 상대 고르기 · 상대 목록이 셋 따로). ffa4 · ffa6 … 도 같은 길 (11/20 — 넷 제한 걷음).
 //  3v3 = 3:3 (11/20 — 자리 0 ~ 5 · 편 = 자리 홀짝 · newMatch 그대로). 같은 편 짝 잣대(focus · coEngage · pincer)는 편 안의 짝마다
 //  쓰임: node tools/sim/team_sense.mjs [판 수/모드 48] [maxSecs 90] [--modes=2v2,2v1,ffa3 — 3v3 · ffaN 도] [--profs=2,4,6] [--sides=6:5] [--lone=german] [--field=even|none] [--lever=none] [--seeding=old] [--ks=1,5] [--json] [--out=파일]
+//   --cfg=PATH:수,…  재기 전용 config 수 덮어쓰기 (11/21 · cfg_override.mjs — 게임 값 그대로 · 예: 독일 버티는 힘 덤 뺌 --cfg=DE_VITALITY.k.1:1,…,DE_VITALITY.k.6:1)
 //   --sides=A:B  편마다 숙련도 (2:2 는 A 편을 판마다 0 편 · 1 편 번갈아 · 2:1 은 A = 혼자) — sideAWinPct (ffa3 는 쓰지 않음)
 //  판 짜기 (11/18 P1 — 무리 싸움 판단 작업에서 고침): 무기 배정(loadout)의 씨앗과 숙련 · 편을 서로 엇갈리게 —
 //   예전 짜기(--seeding=old)는 판 k 의 씨앗 k + 1 로 무기를 나눠 ① 2:2 --sides 에서 A 편이 늘 홀수 칸 무기(츠바이핸더 · 사브르 · 에스톡)를,
@@ -50,7 +51,9 @@ import { targetable, reachOf } from '../../src/targeting.js';
 import { aiAtProficiency } from '../../src/characters.js';
 import { LOOKS } from '../../src/looks.js';
 import { writeFileSync } from 'node:fs';
+import { applyCfgArgs } from './cfg_override.mjs';
 
+applyCfgArgs(); // --cfg (재기 전용 · 11/21)
 const args = process.argv.slice(2);
 const pos = args.filter((a) => !a.startsWith('--'));
 const flag = (k, d) => { const a = args.find((x) => x === `--${k}` || x.startsWith(`--${k}=`)); return a == null ? d : a.includes('=') ? a.slice(k.length + 3) : true; };

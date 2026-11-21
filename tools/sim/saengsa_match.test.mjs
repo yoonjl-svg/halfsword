@@ -5,11 +5,13 @@
 //  ③ 진짜 몸에서 사본 → 입힘 → 사본 = 같은 값 (난수 없음) · 칼 쥔 팔이 문턱 밑이면 처음부터 칼을 놓침
 //  ⑥ 부러진 무기는 그 대회 끝까지 (사장님 10/29 20:1x): weapon { id, broken } → 처음부터 부러진 무기 = 싸움에서 부러질 때와 같은 몸 · 결과 weaponBroken
 //  ④ 결과 꼴 { winner, fighters { key: { hp, injuries, alive, weaponBroken } } } — 들어올 때 상처는 다시 세지 않음 · 둘 다 쓰러지면 피가 더 남은 편
+//  ⑧ 코마 (11/21 (나)): 이긴 편에서 출혈 · 기절로 쓰러진 몸 = 체력 10 · 중상 · downed (진짜 몸의 죽음 까닭) · 목 · 머리 즉사와 진 편은 그대로 · 둘 다 쓰러진 판도
 //  node --test tools/sim/saengsa_match.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newMatch, CONFIG } from './jelly_harness.mjs';
-import { specFromSetup, snapshotFromPerson, bloodFromHp, hpFromFighter, resultFromMatch, fallbackInjuries, profOfEntry, weaponOfPerson, INJURY_WOUND, HP_MAX } from '../../src/saengsa_match.js';
+import { newMatch, CONFIG, THREE } from './jelly_harness.mjs';
+import { specFromSetup, snapshotFromPerson, bloodFromHp, hpFromFighter, resultFromMatch, fallbackInjuries, profOfEntry, weaponOfPerson, INJURY_WOUND, HP_MAX, DOWNED_CAUSES, downedCause } from '../../src/saengsa_match.js';
+import { injuriesFromWounds as rulesInjuries } from '../../src/saengsa_rules.js';
 import { WOUND_LIMB, LIMB_LOSS } from '../../src/fighter.js';
 
 const V = CONFIG.VITALS;
@@ -214,4 +216,88 @@ test('⑥ 부러진 무기: 처음부터 부러짐 = 싸움에서 부러질 때�
   const res = resultFromMatch(spec, fake, 0);
   assert.deepEqual(Object.fromEntries(Object.entries(res.fighters).map(([k, v]) => [k, v.weaponBroken])), { '0-0': true, '3-0': false, '0-1': true, '3-1': false });
   assert.ok(Object.values(res.fighters).every((v) => v.broken === v.weaponBroken)); // 생사전 가지는 broken 을 읽음
+});
+
+test('⑦ 3:3 (사장님 11/20 \'생사전에서 3:3 쓸게.\'): 자리 0 ~ 5 · 편 번갈아 · 나 = 자리 0 · 진짜 3:3 판에 사본을 입혀 싸우고 결과 여섯', (t) => {
+  const three = fakeSetup({
+    entrants: { a: ['3-0', '3-1', '3-3'], b: ['0-2', '0-0', '0-1'] },
+    sides: {
+      a: [person('3-0', 'nameless', { cloth: 4 }), person('3-1', 'sigmund', { hp: 60, injuries: [{ part: 'leg', sev: 0.5, rests: 1 }] }), person('3-3', 'nameless', { cloth: 1, weapon: 'rapier', school: 'italian', prof: { italian: 2 } })],
+      b: [person('0-0', 'player', { hp: 80 }), person('0-1', 'nameless', { cloth: 2, weapon: 'uchigatana', school: 'japanese', prof: { japanese: 2 } }), person('0-2', 'nameless', { cloth: 5, weapon: 'hwando', school: 'chinese', prof: { chinese: 2 } })],
+    },
+  });
+  const s = specFromSetup(three);
+  assert.equal(s.control, 'player');
+  assert.deepEqual(s.fighters.map((e) => [e.index, e.team, e.key, e.human]), [
+    [0, 0, '0-0', true], // 내가 나서면 내 편 첫째 = 나
+    [1, 1, '3-0', false],
+    [2, 0, '0-2', false],
+    [3, 1, '3-1', false],
+    [4, 0, '0-1', false],
+    [5, 1, '3-3', false],
+  ]);
+  // 지켜보기 3:3 · 2:3 도 자리 빈틈 없음
+  assert.deepEqual(specFromSetup({ ...three, control: 'watch' }).fighters.map((e) => e.human), [false, false, false, false, false, false]);
+  assert.deepEqual(specFromSetup({ ...three, entrants: { a: three.entrants.a, b: ['0-1', '0-2'] } }).fighters.map((e) => [e.index, e.team]), [[0, 0], [1, 1], [2, 0], [3, 1], [4, 1]]);
+  // 진짜 판 (재기 하니스 newMatch — 자리 홀짝 = 편이 spec 과 같음): 사본을 입히고 12 s 싸움 → 결과 여섯 · 체력 정수 · 들어올 때 상처 그대로
+  seedRand(t, 6);
+  const G = newMatch({ seed: 6, count: 6, ai: 'all', weapons: s.fighters.map((e) => e.weapon) });
+  assert.deepEqual(G.fighters.map((f) => f.team), s.fighters.map((e) => e.team));
+  for (const f of G.fighters) f.applySnapshot(s.fighters[f.index].snapshot);
+  assert.ok(G.fighters[3].wounds.some((w) => w.carried), '지그문트 다리 상처를 지고 들어옴');
+  for (let i = 0; i < Math.round(12 / CONFIG.PHYSICS.timestep) && !G.over; i++) G.step();
+  const res = resultFromMatch(s, G.fighters, G.winner);
+  assert.deepEqual(Object.keys(res.fighters).sort(), ['0-0', '0-1', '0-2', '3-0', '3-1', '3-3']);
+  for (const [k, v] of Object.entries(res.fighters)) {
+    assert.ok(Number.isInteger(v.hp) && v.hp >= 0 && v.hp <= HP_MAX, `${k} 체력 ${v.hp}`);
+    assert.equal(v.alive, v.hp > 0, `${k} 삶 = 체력 > 0`);
+  }
+  assert.ok(res.fighters['3-1'].injuries.some((i) => i.part === 'leg' && i.sev >= 0.5), '들어올 때 부상은 남음 (이 판에서 같은 부위를 더 깊게 베이면 깊은 쪽 — 11/21 힘 표 뒤 씨앗 6 판은 다리 0.54)');
+  assert.ok(['a', 'b'].includes(res.winner));
+  G.world.free();
+});
+
+test('⑧ 코마 (11/21 (나) — 사장님 승인 H 10): 이긴 편의 출혈 · 기절 쓰러짐 = 체력 10 · 가장 깊은 상처 부위 중상 · downed / 목 · 머리 즉사 · 진 편 = 죽음 그대로 · 둘 다 쓰러진 판도 · 진짜 몸의 까닭', (t) => {
+  assert.deepEqual([...DOWNED_CAUSES], ['출혈', '기절']);
+  assert.equal(CONFIG.SAENGSA.downedHp, 10);
+  const spec = specFromSetup(fakeSetup()); // 자리 0 = 나(0-0 · 0 편) · 1 = 3-0(1 편) · 2 = 0-1(0 편) · 3 = 3-1(1 편)
+  const dead = (team, cause, wounds, blood = 0.3) => ({ team, alive: false, blood, causeOfDeath: cause, wounds });
+  const fake = [
+    dead(0, '출혈', [...spec.fighters[0].snapshot.wounds, { part: 'shinF', severity: 0.3 }, { part: 'chest', severity: 0.2 }]), // 나: 들고 온 팔 0.3 + 새 다리 0.3 · 가슴 0.2 → 가장 깊은 새 상처 = 다리
+    dead(1, '출혈', [{ part: 'abdomen', severity: 0.8 }]),
+    dead(0, '목', [{ part: 'neck', severity: 0.9 }]),
+    { team: 1, alive: true, blood: 0.6, wounds: [] },
+  ];
+  // 이긴 편 0: 나 = 코마 · 0-1(목) = 죽음 / 진 편 1: 3-0(출혈) = 죽음
+  const res = resultFromMatch(spec, fake, 0, rulesInjuries);
+  assert.deepEqual(res.fighters['0-0'], { hp: 10, alive: true, downed: true, broken: false, weaponBroken: false, injuries: [{ part: 'arm', sev: 0.3, rests: 0 }, { part: 'leg', sev: 0.5, rests: 0 }, { part: 'torso', sev: 0.2, rests: 0 }] }, '다리(가장 깊은 새 상처) 0.3 → 중상 문턱 0.5 · 가슴 0.2 는 경상 그대로');
+  assert.deepEqual([res.fighters['0-1'].alive, res.fighters['0-1'].hp, res.fighters['0-1'].downed], [false, 0, undefined], '목 즉사는 죽음');
+  assert.deepEqual([res.fighters['3-0'].alive, res.fighters['3-0'].hp, res.fighters['3-0'].downed], [false, 0, undefined], '진 편은 출혈이어도 죽음');
+  assert.equal(res.fighters['3-1'].alive, true);
+  // 같은 판을 1 편이 이긴 것으로: 3-0(출혈) = 코마 · 배 0.8 은 이미 중상(그대로) / 나(0 편 출혈) = 죽음
+  const res1 = resultFromMatch(spec, fake, 1, rulesInjuries);
+  assert.deepEqual(res1.fighters['3-0'], { hp: 10, alive: true, downed: true, broken: false, weaponBroken: false, injuries: [{ part: 'torso', sev: 0.8, rests: 0 }] });
+  assert.equal(res1.fighters['0-0'].alive, false);
+  // 기절 (상처 없음 — 머리 둔타) = 머리 중상 · 까닭을 모르면(옛 몸 · 가짜) 죽음 그대로 · 머리 즉사 = 죽음
+  const ko = [dead(0, '기절', []), dead(1, '머리', [{ part: 'head', severity: 0.9 }]), dead(0, undefined, [{ part: 'chest', severity: 0.6 }]), { team: 1, alive: false, blood: 0.2, causeOfDeath: '출혈', wounds: [] }];
+  const rk = resultFromMatch(spec, ko, 0, rulesInjuries);
+  assert.deepEqual([rk.fighters['0-0'].hp, rk.fighters['0-0'].downed, rk.fighters['0-0'].injuries], [10, true, [{ part: 'arm', sev: 0.3, rests: 0 }, { part: 'head', sev: 0.5, rests: 0 }]]);
+  assert.deepEqual([rk.fighters['0-1'].alive, rk.fighters['0-1'].downed], [false, undefined], '까닭 없는 쓰러짐은 짐작하지 않음 — 죽음');
+  // 둘 다 쓰러짐(winnerTeam null): 피가 더 남은 편이 이김 — 그 편의 출혈 · 기절 쓰러짐은 코마 · 진 편과 즉사는 죽음
+  const both = [dead(0, '출혈', [{ part: 'thighF', severity: 0.4 }], 0.44), dead(1, '출혈', [{ part: 'chest', severity: 0.7 }], 0.1), dead(0, '머리', [{ part: 'head', severity: 0.9 }], 0.9), dead(1, '기절', [], 0.2)];
+  const rb = resultFromMatch(spec, both, null, rulesInjuries);
+  assert.equal(rb.winner, 'b', '0 편 = 내 편 b (피 1.34 > 0.3)');
+  assert.deepEqual([rb.fighters['0-0'].alive, rb.fighters['0-0'].downed, rb.fighters['0-0'].hp], [true, true, 10]);
+  assert.deepEqual([rb.fighters['0-1'].alive, rb.fighters['3-0'].alive, rb.fighters['3-1'].alive], [false, false, false]);
+  // 옛 셈(fallbackInjuries)으로도 같은 꼴
+  assert.deepEqual(resultFromMatch(spec, fake, 0).fighters['0-0'].injuries, [{ part: 'arm', sev: 0.3, rests: 0 }, { part: 'leg', sev: 0.5, rests: 0 }, { part: 'torso', sev: 0.2, rests: 0 }]);
+  // 진짜 몸: 엔진이 적은 까닭을 읽는다 — 피를 문턱 밑으로 → die('출혈') · 의식 0 → die('기절') · 목 치명 상처 → die('목')
+  seedRand(t, 11);
+  const M = newMatch({ seed: 11, count: 4 });
+  const [a, b, c] = M.fighters;
+  a.blood = V.collapseBlood - 0.01; a.updateVitals(1 / 120);
+  b.consciousness = -0.01; b.updateVitals(1 / 120); // 의식은 스텝마다 조금 돌아오니 0 밑으로
+  c.applyWound({ part: 'neck', zone: 'neck', type: 'stab', severity: 0.8, energy: 60, local: new THREE.Vector3(), bleedPerSev: 0.2 });
+  assert.deepEqual([a.alive, a.causeOfDeath, b.alive, b.causeOfDeath, c.alive, c.causeOfDeath], [false, '출혈', false, '기절', false, '목']);
+  assert.deepEqual([downedCause(a), downedCause(b), downedCause(c), downedCause(M.fighters[3])], [true, true, false, false]);
 });

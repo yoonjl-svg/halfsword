@@ -8,6 +8,7 @@
 //  그림만 바꾼다 — 물리·판정·시뮬과 무관 (시뮬 관문 도구는 이 파일을 읽지 않는다). 자리 값은 x·y·z 칸만 쓴다 (THREE.Vector3 든 그냥 객체든)
 // ─────────────────────────────────────────────────────────────
 
+import { SAENGSA_MAP_BY_STAGE } from './saengsa_maps.js'; // 생사전 전용 맵 훑기 (무대 표)
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const smooth = (x) => { const t = clamp01(x); return t * t * (3 - 2 * t); }; // smoothstep: 양 끝 빠르기 0
 const smoother = (x) => { const t = clamp01(x); return t * t * t * (t * (t * 6 - 15) + 10); }; // smootherstep: 양 끝 빠르기·가속 0
@@ -89,7 +90,8 @@ export const SWEEP_STAGE = Object.freeze({
 
 export function sweepParams(stageId) {
   if(stageId === 'sluice_night')stageId = 'sluice';
-  return { ...SWEEP_DEFAULT, ...(SWEEP_STAGE[stageId] ?? {}) };
+  const map = SAENGSA_MAP_BY_STAGE[stageId]; // 생사전 전용 맵 (11/21): 맵 크기로 — 무대 표 sweep (두 다리 반지름 16 m · 높이 7 m — 설계 §3-6)
+  return { ...SWEEP_DEFAULT, ...(SWEEP_STAGE[stageId] ?? {}), ...(map?.sweep ?? {}) };
 }
 
 /**

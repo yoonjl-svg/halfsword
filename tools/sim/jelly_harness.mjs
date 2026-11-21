@@ -9,6 +9,8 @@ import { Combat } from '../../src/combat.js';
 import { setSupportFloor } from '../../src/gait.js';
 import { terrainForStage, createTerrainGround, applyTerrainHazards } from '../../src/etna_ground.js';
 import { createMatch, stepMatch, orderControllers, spawnSpots, pairFoe } from '../../src/match.js'; // 동시 대전 판 newMatch (10/29)
+import { fieldOfMap, mapSpawnSpots, SAENGSA_MAP_BY_ID } from '../../src/saengsa_maps.js'; // 생사전 전용 맵 (11/21 — newMatch opts.map)
+import { CIRCLE_FIELD } from '../../src/field.js';
 
 await RAPIER.init();
 export { RAPIER, THREE, CONFIG, AI };
@@ -103,26 +105,20 @@ export function newMatch(opts = {}) {
   const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
   const floor = world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
   setSupportFloor(world, floor);
-  const nw = 32;
-  const R = ARENA.radius + 0.25;
-  for (let i = 0; i < (opts.walls === false ? 0 : nw); i++) {
-    const a = (i / nw) * Math.PI * 2;
-    const half = R * Math.tan(Math.PI / nw) + 0.05;
-    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -a);
-    world.createCollider(
-      RAPIER.ColliderDesc.cuboid(0.2, 0.6, half).setTranslation(Math.cos(a) * R, 0.6, Math.sin(a) * R).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setCollisionGroups(GROUND_GROUPS),
-      ground,
-    );
-  }
+  // 경계 막이 = 지도 꼴의 벽 (11/21 — src/field.js): 원 무대 32 조각(예전 그대로) · opts.map('bridges' · 'court')이면 생사전 전용 맵의 둔덕 · 물가 · 난간 · 성벽 (main.js resetWorld 와 같음)
+  const field = opts.map ? fieldOfMap(opts.map) : CIRCLE_FIELD;
+  if (opts.walls !== false) field.walls(RAPIER, world, ground, GROUND_GROUPS);
   const scene = new THREE.Scene();
   const count = opts.count ?? 2;
-  const spots = spawnSpots(count, { gap: opts.gap ?? ARENA.startGap, mateGap: opts.mateGap ?? CONFIG.TEAM_FIGHT.mateGap });
+  // 시작 자리: 전용 맵이면 무대 표(편마다 x ∓ 14 · z −2.5 · 0 · +2.5 — main.js newTeamRound 와 같음) · 아니면 예전 그대로 (편 = 자리 홀짝)
+  const spots = opts.map ? mapSpawnSpots(SAENGSA_MAP_BY_ID[opts.map], Array.from({ length: count }, (_, i) => i % 2)) : spawnSpots(count, { gap: opts.gap ?? ARENA.startGap, mateGap: opts.mateGap ?? CONFIG.TEAM_FIGHT.mateGap });
   // 이름: 0 편 P · P2 · P3 …, 1 편 E · E2 · E3 … (편 안 차례 — 2:2 는 예전 P · E · P2 · E2 그대로)
   const NAMES = spots.map((s, i) => { const k = spots.slice(0, i).filter((o) => o.team === s.team).length; return (s.team === 0 ? 'P' : 'E') + (k ? k + 1 : ''); });
   const W = (i) => (opts.weapons?.[i] ? { weapon: opts.weapons[i] } : {}); // 자리마다 무기 (안 주면 Fighter 기본 — 롱소드) · 같은 편도 같은 물리 (11/20 — 제 몸만 걸이가 버림 · src/self_contact.js)
   const fighters = spots.map((s, i) => (s.z === 0
     ? new Fighter(RAPIER, world, scene, colliderInfo, { index: i, name: NAMES[i], x: s.x, heading: s.heading, look: opts.looks?.[i] ?? (s.team === 0 ? LOOKS.player : LOOKS.enemy), breakSeed: opts.seed, ...W(i) })
     : new Fighter(RAPIER, world, scene, colliderInfo, { index: i, name: NAMES[i], x: s.x, z: s.z, heading: s.heading, look: opts.looks?.[i] ?? (s.team === 0 ? LOOKS.player : LOOKS.enemy), breakSeed: opts.seed, ...W(i) })));
+  if (opts.map) for (const f of fighters) f.field = field; // 전용 맵: AI 띠 · 길목 길 · 물러남 끝이 읽는다 (원 무대는 달지 않음 — 예전 그대로)
   if (opts.onFighter) for (const f of fighters) opts.onFighter(f, world, RAPIER);
   const player = fighters[0];
   const enemy = fighters[1];

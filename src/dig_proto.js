@@ -10,6 +10,7 @@
 // ─────────────────────────────────────────────────────────────
 import { DIG_PROTO as D, GAIT, STAMINA, SECRET, PHYSICS, AI_PLAN } from './config.js';
 import { luckOf } from './ai_plan.js';
+import { fieldOf } from './field.js'; // 지도 꼴 (11/21 — 상대 등이 울타리 · 막이 가까이: 원 무대는 가운데에서 거리 그대로)
 
 /** 시제품 하나라도 켜졌나 (ai.js 다가감 걸음 자리 — 끄면 부르지 않음) */
 export const digProtoOn = () => !!(D.ai || D.step || D.run);
@@ -92,7 +93,7 @@ export function digKeepWant(ai, want) {
 export function digWallNeed(ai, need) {
   const foe = ai.foe;
   const p = foe.bodies?.pelvis?.translation();
-  const atWall = p && Math.hypot(p.x, p.z) > D.wall;
+  const atWall = p && fieldOf(foe).radial(p.x, p.z) > D.wall;
   const tired = (foe.stamina?.level ?? 0) > 0 || !!foe.stamina?.exhausted;
   if (!atWall && !tired) return need;
   statsOf(ai).wall++;
