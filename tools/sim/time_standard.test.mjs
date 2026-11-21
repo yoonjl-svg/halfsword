@@ -15,7 +15,7 @@ const { TIME, realS, realV, realRate, GAIT, SECRET } = CONFIG;
 const near = (a, b, e = 1e-9) => assert.ok(Math.abs(a - b) <= e, `${a} ≈ ${b}`);
 
 test('장치: 템포 1.1 · realS × 1.1 · realV ÷ 1.1 · realRate ÷ 1.1', () => {
-  near(TIME.tempo, 1.1); near(TIME.std, TIME.tempo); near(TIME.k, 1.1);
+  near(TIME.tempo, 1.1); near(TIME.k, 1.1);
   near(realS(0.6), 0.66); near(realV(1.1), 1); near(realRate(11), 10);
 });
 

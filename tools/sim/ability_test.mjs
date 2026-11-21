@@ -1,8 +1,7 @@
 // 에픽 특수 능력 시험 (사장님): 무기 X(주인공 대리) 대 롱소드(주인공 대리), 실제 승패 판 40초 (ref_duel 과 같은 판 길이·자리 바꾸기).
-//  능력 배율을 바꿔 가며 잰다 — breakMult(청강검 '창천': 칼끼리 부딪힐 때 상대 무기 파손 ×) · bleedMult(모노호시자오 '명검의 날': 출혈 ×)
+//  능력 배율을 바꿔 가며 잰다 — breakMult(청강검 '창천': 칼끼리 부딪힐 때 상대 무기 파손 ×) (옛 bleedMult 출혈 × 는 쓰는 무기가 없어 11/21 지움)
 //   node tools/sim/hybrid.mjs ability_test.mjs <무기id> <자리마다 판 수> <필드> <값>
 //   예) node tools/sim/hybrid.mjs ability_test.mjs qinggang 5 breakMult 3
-//       node tools/sim/hybrid.mjs ability_test.mjs monohoshizao 24 bleedMult 2
 //  권총이면 쏜 발 수·명중 수도 찍는다: node tools/sim/hybrid.mjs ability_test.mjs pistol 24 [GUN.energy=80 GUN.cooldown=4]
 //  찍는 것: 승·패·무와 윌슨 95%, 평균 종료, 상대(롱소드) 칼이 부러진 판·부러진 시각, 내 칼이 부러진 판
 import { newRound, DT } from './harness_m.mjs';

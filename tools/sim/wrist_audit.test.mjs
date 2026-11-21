@@ -4,7 +4,7 @@
 //   굳음 동안도 뻗은 채 · `?thrustArm=0` 은 옛 꼴(손이 어깨 가까이 · 칼이 새끼 쪽으로 75° 넘게 — 거꾸로 쥔 꼴) 그대로 ·
 //   JOINTS.elbowSwivel(10/24 17:2x 기본 켬): 끄면 레이피어 1번 자세(프리마)가 새끼 쪽 · 켜면 척측 한도 안.
 //   10/24 17:2x 비정상 손목 교정 (JOINTS.wristGuard 기본 켬 — 기록 §9): 겨눔 교정 wristClamp 기하 · 끄면(전 판) 범위 밖 몫이 크고 켜면 상한 아래 ·
-//   옛 굽은 팔 길(`?thrustArm=0`)도 교정이 손목을 범위 안으로 · 시험 손목 치우침 밧줄 둘(gripDev · `?wristRope=1`)은 켜면 범위 밖 0 · 칼날을 거꾸로 쥔 동안 뗐다가 돌아오면 다시.
+//   옛 굽은 팔 길(`?thrustArm=0`)도 교정이 손목을 범위 안으로 (시험 손목 치우침 밧줄 · 베는 동안 교정 스위치는 끈 채였고 11/21 지움).
 //   10/24 17:2x 뒤 고침 (기록 §9-9): 탭 찌르기 황소 → 칼 내린 상대 찌름 판정이 전 판만큼은 남(JOINTS.swivelThrust — 0 = 17:2x 판은 찌름 0) ·
 //   격살 허파 찌르기 맞닿기 언저리 첫 맞음이 베기로 셈되지 않음(SECRET.thrustSweep — 겨눔 토막 옆 움직임이 찌름 방향에 섞이지 않게).
 //  node --test tools/sim/wrist_audit.test.mjs
@@ -36,8 +36,6 @@ test('값: 운동학 겨눈 찌름 팔 뻗음 SECRET.thrustArm 1 · 팔꿈치 �
   assert.equal(JOINTS.swivelThrust, 1);
   assert.equal(JOINTS.swivelTau, 0.2);
   assert.equal(JOINTS.wristGuard, 1);
-  assert.equal(JOINTS.wristRope, 0); // 시험 밧줄 기본 끔 (켜면 AI 베기가 크게 약해짐 — 기록 §9)
-  assert.equal(JOINTS.wristSwing, 0); // 시험 베는 동안 손목 교정 기본 0 = 지금대로 (10/25 셸하우 — 기록 §11)
   assert.equal(HUMAN.ulnarDev, 30);
   assert.equal(HUMAN.wristThumb, 135);
   assert.ok(Math.abs(ARM_LEN - 0.57) < 1e-9);
@@ -144,9 +142,8 @@ function shares(T) {
   return { n, oor: oor / n, oorX: oorX / n, rev: rev / n, revUp: revUp / n };
 }
 const pc = (x) => (100 * x).toFixed(1);
-const ROPE = [[JOINTS, 'wristRope', 1]]; // 시험 손목 치우침 밧줄 켬
 
-test('손목 교정 끔 · 켬 · 밧줄 — 자세표(롱소드 · 레이피어 · 환도) · 탭 찌르기(황소 · 긴 자세): 전 판 > 10° 넘침 35 % 안팎 · 기본(돌림 + 겨눔 교정) ≤ 10 % · 거꾸로 · 아래팔 섬 ≤ 8 % · 시험 밧줄 켜면 ≤ 1 %', () => {
+test('손목 교정 끔 · 켬 — 자세표(롱소드 · 레이피어 · 환도) · 탭 찌르기(황소 · 긴 자세): 전 판 > 10° 넘침 35 % 안팎 · 기본(돌림 + 겨눔 교정) ≤ 10 % · 거꾸로 · 아래팔 섬 ≤ 8 %', () => {
   const run = () => {
     const T = new WristTally();
     // (11/19 사브르 → 환도 — 재기에 estoc · sabre 를 쓰지 않음(사장님 상시 규칙) · 환도는 같은 한손 곡도 표)
@@ -156,40 +153,10 @@ test('손목 교정 끔 · 켬 · 밧줄 — 자세표(롱소드 · 레이피어
   };
   const off = withSets(OLD, run);
   const on = run();
-  const rope = withSets(ROPE, run);
   assert.ok(off.oorX > 0.25 && off.rev > 0.15, `전 판: > ${OOR_X}° ${pc(off.oorX)} % · 거꾸로 ${pc(off.rev)} %`);
   assert.ok(on.oorX <= 0.1 && on.revUp <= 0.08 && on.oorX < off.oorX / 3, `기본: > ${OOR_X}° ${pc(on.oorX)} % · 거꾸로 · 아래팔 섬 ${pc(on.revUp)} %`);
-  assert.ok(rope.oorX <= 0.01 && rope.rev <= 0.01, `밧줄: > ${OOR_X}° ${pc(rope.oorX)} % · 거꾸로 ${pc(rope.rev)} %`);
 });
 
-
-test('시험 손목 치우침 밧줄: 켜면(`?wristRope=1`) 손목 원뿔에 둘 더 (gripDev — 척측 · 엄지 쪽) · 기본 · 전 판은 없음 · 칼날을 거꾸로 쥔 동안 떼고 돌아오면 다시', () => {
-  const mk = () => newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 2.6, seed: 3 });
-  const keepRope = JOINTS.wristRope;
-  JOINTS.wristRope = 1; // 밧줄은 몸이 만들어질 때 · 원래 쥠으로 돌아올 때 건다 — 이 판 내내 켬
-  const g = mk();
-  try {
-    const P = g.player;
-    for (let i = 0; i < 30; i++) g.step();
-    assert.ok(P.gripDev?.length === 2 && P.gripDev.every((j) => P.gripCone.includes(j)), '켬: 밧줄 둘 (척측 · 엄지 쪽)');
-    for (let i = 0; i < 30; i++) g.step();
-    const t = P.sword.translation();
-    assert.ok(Number.isFinite(t.x + t.y + t.z), 'NaN 없음');
-  } finally {
-    g.world.free();
-    JOINTS.wristRope = keepRope;
-  }
-  for (const L of [OLD, [[JOINTS, 'wristRope', 0]], [[JOINTS, 'wristRope', 1], [JOINTS, 'wristGuard', 0]]]) {
-    withSets(L, () => {
-      const g0 = mk();
-      try {
-        assert.equal(g0.player.gripDev, null, `끔(${L.map(([, k, v]) => `${k}=${v}`).join(' ')}): 밧줄 없음`);
-      } finally {
-        g0.world.free();
-      }
-    });
-  }
-});
 
 test('wristSample: 칼이 없으면 null', () => {
   assert.equal(wristSample({ bodies: {}, sword: null }), null);

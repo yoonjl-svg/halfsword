@@ -4454,7 +4454,7 @@ export class AI {
         const GP = this.gnsW?.plan?.kind;
         if (GP === 'commit' && d > want) fwd = 1; // 고노센 경계 결행 (10/25): 선 사이를 기어 들지 않고 스틱 끝으로
         else if (GP === 'feint') fwd = -0.21; // 고노센 경계 속임: 선 밖 제자리에서 든다 (위 '제자리'와 같은 당김)
-        else if (!this.chasing && digProtoOn() && d > want) fwd = digFeet(this, fwd, d - want); // 파고들기 A2 (기본 켬) · 시제품 B · C (기본 끔) — 11/14: 준비하며 다가가는 걸음도 같게
+        else if (!this.chasing && digProtoOn() && d > want) fwd = digFeet(this, fwd, d - want); // 파고들기 A2 (기본 켬) — 11/14: 준비하며 다가가는 걸음도 같게
         if (this.planFree && !this.chasing) fwd = freeFeet(this, fwd, d - want); // 무유파 플랜 (3 단계): 쳐낸 뒤 건너 들어가는 공격은 스틱 끝
         if (!this.chasing && !GP && !this.drillAtk) fwd = msWindupFeet(this, fwd, d, want); // 간격과 박자 (11/17): 한 걸음으로 닿을 거리면 서서 든다 (들어감은 다가감 첫머리의 박자 걸음)
       } else if (this.phase === 'approach' || this.phase === 'rdWind') { // rdWind = 풍차 베기 AI 몫 감기 (10/31) — 감으며 다가감
@@ -4465,7 +4465,7 @@ export class AI {
         if (this.chasing) fwd = d > this.M.contact ? 1 : -0.21; // 도망치는 빈손 상대는 뛰어서 쫓는다
         else if (this.gnsW?.plan?.kind === 'commit' && gap > 0) fwd = 1; // 고노센 경계 결행 (10/25): 스틱 끝으로 들어가 칼끝 거리에서 벤다
         if (this.planFree && !this.chasing) fwd = freeFeet(this, fwd, gap); // 무유파 플랜 (3 단계): 쳐낸 뒤 건너 들어가는 공격은 스틱 끝
-        if (!this.chasing && digProtoOn()) fwd = digFeet(this, fwd, gap); // 파고들기 A2 (기본 켬): 헛친 틈은 스틱 끝으로 건넘 · 시제품 B · C (기본 끔): 다가감 첫 걸음 박참 · 기력 위에서 달림 — 11/14
+        if (!this.chasing && digProtoOn()) fwd = digFeet(this, fwd, gap); // 파고들기 A2 (기본 켬 — 11/14): 헛친 틈은 스틱 끝으로 건넘
         if (this.phase === 'approach' && !this.gnsW?.plan) fwd = msTempoFeet(this, fwd, gap, dt); // 간격과 박자 (11/17): 남은 거리 0.3 ~ step 이면 기술 걸음 하나로 들어감 (박자)
         if (this.sideStepT != null) {
           // 비껴 딛는 중: 스틱도 그쪽으로 (gait 의 몸 목표가 옆으로도 가게), 뒤로는 당기지 않는다

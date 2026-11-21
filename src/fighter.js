@@ -12,7 +12,6 @@
 import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
-import { runTick } from './dig_proto.js'; // 시제품 C 달림 (11/14 — config DIG_PROTO.run · 기본 끔)
 import { runStep, runFace, runWant } from './run.js'; // 뛰기 (11/18 사장님 · config RUN — 사람 · 11/19 셋 이상 판 AI 같은 셈)
 import { cnStepTick } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 · 11/16 사장님 결정 켬)
 import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, RUN, realS } from './config.js';
@@ -2606,24 +2605,6 @@ export class Fighter {
     const rope = (deg, a1, a2) => this.world.createImpulseJoint(R.JointData.rope(len(deg), a1, a2), this.bodies.farmS, this.sword, true);
     // 손목 W = 아래팔 몸체 (0.13, 0, 0) = 칼 몸체 원점 (위 gripJoint)
     this.gripCone = [rope(HUMAN.gripFlex, { x: 0.13 + K, y: 0, z: 0 }, { x: 0, y: L, z: 0 }), rope(HUMAN.forearmRoll, { x: 0.13, y: 0, z: K }, { x: 0, y: 0, z: L })];
-    this.gripDev = null;
-    if (JOINTS.wristGuard && JOINTS.wristRope) this.gripDevOn();
-  }
-
-  /**
-   * 시험 손목 치우침 밧줄 둘 (JOINTS.wristGuard · JOINTS.wristRope 기본 끔 — 10/24 17:2x · 기록 docs/strike/wrist_audit_2026-10-24.md §9): 아래팔 축 W + K·x(아래팔) ↔ 손 면 안 φ 쪽 W + L·(cos φ, sin φ, 0)
-   *  (칼 틀 = 손 틀) 사이 각 ≤ 90° — 반공간 ⟺ |φ_아래팔 − φ| ≤ 90 (굽힘 · 폄과 무관). φ = HUMAN.ulnarDev(30) → 손 면 안 각 dev(wrist_audit 잣대 · 0 = 칼이 아래팔을 곧게 이음) ≥ −30 (척측) ·
-   *  φ = 180 − HUMAN.wristThumb(45) → dev ≤ 135 (엄지 쪽 · 어깨 메기). 둘을 겹쳐 [−30, 135]. 겨눔 교정(wristClamp)은 명령을 범위 안에 두고, 밧줄은 빠른 베기의 관성 · 굴림이
-   *  칼을 범위 밖으로 넘겨 돌리는 것을 막는다 (사람 손목이 거기서 멈추듯 — 위 손목 원뿔 (1) · (2) 와 같은 기하 · 90° 는 거리가 각에 가장 민감한 자리).
-   */
-  gripDevOn() {
-    if (this.gripDev || !this.gripCone) return;
-    const L = ROPE_L;
-    const K = ROPE_K;
-    const len = Math.sqrt(L * L + K * K); // 90°
-    const phis = [HUMAN.ulnarDev, 180 - HUMAN.wristThumb]; // 척측 (dev ≥ −30) · 엄지 쪽 (dev ≤ 135)
-    this.gripDev = phis.map((p) => this.world.createImpulseJoint(this.R.JointData.rope(len, { x: 0.13 + K, y: 0, z: 0 }, { x: L * Math.cos(p * HD), y: L * Math.sin(p * HD), z: 0 }), this.bodies.farmS, this.sword, true));
-    this.gripCone.push(...this.gripDev);
   }
 
   /** 비정상 손목 교정 (아래 모듈 wristClamp 그대로 — 운동학 비기 secret_instant.js placeIai 가 부른다: 그 모듈이 fighter.js 를 부르면 모듈 차례가 꼬여서) */
@@ -2654,18 +2635,6 @@ export class Fighter {
     const [p0, p1] = HUMAN.shoulderPlane;
     if ([p1 - 90, p0 + 90].some((c) => Math.sin(c * HD) * u.x + s * Math.cos(c * HD) * u.z < 0)) return false;
     return armTwistOk(u, z, s);
-  }
-
-  gripDevOff() {
-    if (!this.gripDev) return;
-    for (const j of this.gripDev) {
-      const i = this.gripCone ? this.gripCone.indexOf(j) : -1;
-      if (i >= 0) {
-        this.gripCone.splice(i, 1);
-        this.world.removeImpulseJoint(j, true);
-      } // 원뿔째 떼었으면(칼 놓침 · 휩쓸기) 이미 빠졌다
-    }
-    this.gripDev = null;
   }
 
   /**
@@ -2700,7 +2669,7 @@ export class Fighter {
   /**
    * 칼이 세게 막히거나 딱딱한 곳을 쳤다 (combat.js가 충격량 J(N·s)로 부른다).
    * 충격 자체는 물리 엔진이 칼 → 손목 → 팔 → 가슴으로 전한다. 여기선 "방금 크게 부딪혔다"는 신호만 남긴다
-   * (uprightRelax가 쓰고, 연출·AI도 읽을 수 있다).
+   * (흐름 끊김 · 비기 연환 · 고유 동작 · AI 가 읽는다).
    */
   takeJolt(J) {
     this.jolt = Math.max(this.jolt, Math.min(1, J / RECOIL.joltImpulse));
@@ -2842,25 +2811,6 @@ export class Fighter {
     );
   }
 
-  /**
-   * (실험, RECOIL.anchorRelax) 기준 막대(똑바로 서기 보조)가 몸을 붙잡는 힘의 비율. 모터 축 3 = 옆으로 기울기,
-   * 4 = 앞뒤로 숙이기, 5 = 몸통 비틀기. 칼을 휘두르거나 부딪히는 동안 숙이기·비틀기를 덜 붙잡아서
-   * 휘두르는 반작용과 충격이 골반·몸통으로 전해진다 (다리가 받아낸다).
-   */
-  uprightRelax(ax) {
-    if (!RECOIL.anchorRelax || ax === MOTOR_AXES[0] || this.state !== 'stand') return 1;
-    let swing = 0;
-    if (this.armed) {
-      const w = this.sword.angvel();
-      const b = _ur.set(0, 1, 0).applyQuaternion(rot(this.sword, _urq));
-      const wd = w.x * b.x + w.y * b.y + w.z * b.z; // 칼날 축으로 도는 몫(비틀기)은 뺀다
-      swing = Math.sqrt(Math.max(0, w.x * w.x + w.y * w.y + w.z * w.z - wd * wd));
-    }
-    const effort = Math.max(THREE.MathUtils.smoothstep(swing, 4, 10), this.jolt);
-    const min = ax === MOTOR_AXES[2] ? RECOIL.anchorYaw : RECOIL.anchorPitch;
-    return 1 - (1 - min) * effort;
-  }
-
   /** 몸통이 "의도한 자세"(가속할 때 숙인 것 포함)에서 벗어난 각도 */
   tiltDeg() {
     rot(this.bodies.chest, _q1);
@@ -2922,7 +2872,6 @@ export class Fighter {
     const side = mv.x * speed * (hybrid ? GAIT.sideFactor : 0.8);
     const want = _v4.set(fwd.x * along + rgt.x * side, 0, fwd.z * along + rgt.z * side);
     if (this.run && hybrid) runWant(this, want, fwd, dt); // 뛰기 (11/18 — src/run.js): 몸 앞 몫 × RUN.mul (뛰는 쪽을 볼수록 · 명령은 RUN.accel 로만 오르내림)
-    if (DIG_PROTO.run && hybrid) runTick(this, dt, want, fwd, mvIn); // 시제품 C (11/14 — 기본 끔 · src/dig_proto.js): 기력 문턱 위 · 스틱 앞 끝이면 달림 (사람 · AI 같게)
     this.updateFooting(dt, fwd, rgt, want);
     if (hybrid) G.update(dt, want, fwd, rgt);
     else if (G?.active) G.exit();
@@ -2953,12 +2902,6 @@ export class Fighter {
       const up = BODY.upperShare; // 가슴(+머리·팔)이 몸무게에서 차지하는 비율
       pelvis.addForce({ x: fx * (1 - up), y: fy, z: fz * (1 - up) }, true);
       chest.addForce({ x: fx * up, y: 0, z: fz * up }, true);
-      if (loadSum < 1e-3 || BODY.footReaction === 0) return;
-      for (const [k, shin] of [['F', 'shinF'], ['B', 'shinB']]) {
-        const w = load[k] / loadSum;
-        const r = BODY.footReaction ?? 1;
-        if (w > 0) this.bodies[shin].addForce({ x: -fx * w * r, y: -fy * w * r, z: -fz * w * r }, true);
-      }
     };
 
     // 1) 체중 받치기 (다리를 펴는 힘)
@@ -3002,28 +2945,16 @@ export class Fighter {
     const vFwd = v.x * fwd.x + v.z * fwd.z;
     this.localVel.set(vFwd, v.x * rgt.x + v.z * rgt.z);
     this.anchor.setNextKinematicTranslation({ x: p.x, y: p.y, z: p.z });
-    // 가속하는 방향으로 몸을 숙인다 (달리기 출발처럼). 기울기 = atan(가속도 / 중력).
-    // 발로 땅을 밀면 몸을 뒤로 넘기는 회전이 생기는데, 숙인 몸의 무게가 그걸 상쇄한다.
-    const fh = Math.hypot(fx, fz);
-    this.accelLean = this.accelLean || new THREE.Vector3();
-    this.accelLean.lerp(_v5.set(fx, 0, fz), Math.min(1, dt * 10));
-    const al = this.accelLean.length();
     // 자세에 따라 골반을 튼다 (서 있을 때만)
     let anchorQ = this.yaw;
     if (this.state === 'stand' && this.pelvisYawOffset) anchorQ = _qt.setFromAxisAngle(UP, this.heading + this.pelvisYawOffset);
-    if (al > 1) {
-      const ang = Math.atan(al / (M * g)) * BODY.accelLean;
-      _axis2.set(this.accelLean.z / al, 0, -this.accelLean.x / al);
-      anchorQ = _qt5.setFromAxisAngle(_axis2, ang).multiply(anchorQ);
-    }
     this.anchor.setNextKinematicRotation(vecQ(anchorQ));
     this.anchorUp = (this.anchorUp || new THREE.Vector3()).set(0, 1, 0).applyQuaternion(anchorQ);
     const hold = THREE.MathUtils.clamp(1 - this.offBalance / BALANCE.fallRange, 0.15, 1);
     const assist = BODY.uprightAssist * mus * hold * (0.3 + 0.7 * Math.min(1, hybrid && G.flyAir ? 1 : loadSum)); // 날며 뛰기 (11/20): 두 발 모두 뜬 짧은 동안도 딛은 때처럼
     const raw = this.uprightJoint.rawSet;
     for (const ax of MOTOR_AXES) {
-      const r = this.uprightRelax(ax); // 휘두르거나 부딪히는 동안 덜 붙잡기 (실험, 기본 1)
-      let kk = BODY.uprightStiffness * assist * r, dd = BODY.uprightDamping * assist * r;
+      let kk = BODY.uprightStiffness * assist, dd = BODY.uprightDamping * assist;
       if (ax === MOTOR_AXES[2] && BODY.anchorYawMax > 0 && this.state === 'stand') {
         // R2′ 닻 yaw 토크 상한(실험, 사장님 10/8 15:10; config BODY.anchorYawMax): 모터엔 상한 API 가 없어 이번 스텝의 요구 토크(k·e − d·ω, 아래 chainDbg.anchorTau 와 같은 식)가
         //  상한을 넘으면 그 비율만큼 강성·감쇠를 함께 낮춘다 → 이 스텝의 모터 토크 ≈ 상한(한 스텝 뒤처진 근사, 묵시 풀이라 안정). 0 = 오늘(무한)
@@ -4772,20 +4703,18 @@ export function wristPlane(fx, zF, aim, pref, out) {
  * driveSword 의 비정상 손목 교정: 아래팔 = 이 스텝 팔 명령(가슴 × 위팔 목표 × 아래팔 목표 — armIK 가 막 정함) · 손 면 = 굴림 0 손 면(법선 = 명령 아래팔 경첩 축 z).
  *  지금 칼 면(굴림)으로 재면 겨눔을 바꿈 → 칼이 움직임 → 날 세우기가 굴림을 바꿈 → 손 면이 바뀜 → 겨눔이 또 바뀜의 고리가 돌아 자세를 붙잡은 칼이 떨었다
  *  (자세표 112 자리 칼 각속도 평균 2.2 → 4.3 rad/s · 기록 §9). 굴림이 작으면 실제 손 면 ≈ 굴림 0 손 면이라 그대로 맞는다.
- *  굴림이 클 때(70° 넘게 — 돌린 팔꿈치 · 몸 앞을 가로지른 손)는 두 면이 달라 범위 밖이 남고(엄지 쪽은 굴림이 몫을 키움) 빠른 베기의 관성도 남는다 —
- *  그 몫을 막는 것은 시험 손목 치우침 밧줄(gripDevOn · JOINTS.wristRope 기본 끔 — 켜면 AI 베기가 크게 약해져서). 바꾼 각(°)
+ *  굴림이 클 때(70° 넘게 — 돌린 팔꿈치 · 몸 앞을 가로지른 손)는 두 면이 달라 범위 밖이 남고(엄지 쪽은 굴림이 몫을 키움) 빠른 베기의 관성도 남는다
+ *  (그 몫을 물리로 막던 시험 손목 치우침 밧줄은 켜면 AI 베기가 크게 약해져 끈 채였고 11/21 지움). 바꾼 각(°)
  */
 function wristGuardAim(f, aim) {
   const J = f.jointByName;
   if (!f.sword || !J.uarmS || !J.farmS) return 0;
-  const sw = JOINTS.wristSwing && cutSwing(f); // 시험 (기본 0 — 지금대로): 베는 토막
-  if (sw && JOINTS.wristSwing === 2) return 0; // 베는 동안 교정 안 함
   rot(f.bodies.chest, _wgQ).multiply(J.uarmS.target).multiply(J.farmS.target);
   const fx = _wgF.set(1, 0, 0).applyQuaternion(_wgQ);
   // 엎친 손 길 (JOINTS.wristPronate — 한손 무기 · 사장님 10/25 · 기록 wrist_audit §12): 칼끝을 그대로 두고 손 면(칼 면)을 아래팔 둘레로 돌려(엎침 · 뒤침 — 손목 밧줄 80 안)
   //  손목 굽힘(±JOINTS.wristFE) · 손 면 안 치우침([−30, 135])이 사람 범위 안이 되는 손 면이 있으면 겨눔은 안 바꾸고 그 손 면을 쉬는 칼 면 목표로(driveSword) — 높은 자세에서 손을 엎쳐
   //  손목을 굽혀 칼끝을 상대 쪽으로 내리는 사람 꼴. 그런 손 면이 없을 때만 아래 굴림 0 손 면 교정
-  if (!sw && JOINTS.wristPronate && !f.weaponCfg.twoHand && f.armed && !cutSwing(f) && (!JOINTS.cutPronate || pronateRest(f))) { // 베는 토막(긋기 · 따라 베기 · 손 휘두르기)은 날 세우기가 칼 면을 정함 — 아래 지금대로 · 사람 손이 자세 사이를 옮기는 동안도(JOINTS.cutPronate — pronateRest)
+  if (JOINTS.wristPronate && !f.weaponCfg.twoHand && f.armed && !cutSwing(f) && (!JOINTS.cutPronate || pronateRest(f))) { // 베는 토막(긋기 · 따라 베기 · 손 휘두르기)은 날 세우기가 칼 면을 정함 — 아래 지금대로 · 사람 손이 자세 사이를 옮기는 동안도(JOINTS.cutPronate — pronateRest)
     const tapping = !!f.skill.tap && !f.skill.tap.cleave;
     // 탭 찌르기 동안은 지금 아래팔(몸)로 — 빠른 겨눔 · 뻗음에서 팔 명령과 몸이 크게 어긋나(팔꿈치 명령 30° · 몸 85 ~ 130°) 명령 아래팔로 고른 손 면은 몸에서 손목이 거꾸로(dev −80)
     if (tapping) { rot(f.bodies.farmS, _wgQ); fx.set(1, 0, 0).applyQuaternion(_wgQ); }
@@ -4833,9 +4762,7 @@ function wristGuardAim(f, aim) {
       }
     }
   }
-  // 베는 동안 1: 손 면 = 지금 칼 면(칼 z) — 칼끝을 칼 면 안에서만 들거나 내림(긋는 줄을 따라 앞 · 뒤로). 굴림 0 손 면으로 돌리면 굴린 손에서는 칼끝이 옆으로 돌아 긋는 줄이 비킨다(셸하우 — 기록 §11)
-  const z = sw ? _wgZ.set(0, 0, 1).applyQuaternion(rot(f.sword, _wgQ)) : _wgZ.set(0, 0, 1).applyQuaternion(_wgQ);
-  return wristClamp(fx, aim, z);
+  return wristClamp(fx, aim, _wgZ.set(0, 0, 1).applyQuaternion(_wgQ));
 }
 /**
  * 엎친 손 규칙이 서는 때 (JOINTS.cutPronate — 사장님 10/25 19:0x '이탈리아 내려 긋기의 문제를 살펴보고 수정해' · 기록 docs/strike/wrist_audit_2026-10-24.md §15):
@@ -4851,7 +4778,7 @@ function pronateRest(f) {
   if (f.aiControlled || !sk || sk.tap || sk.pom || sk.sec || f.iai) return true; // AI · 탭 찌르기 · 손잡이 찍기 · 비기 · 운동학 비기는 손가락이 칼을 끌지 않음 — 10/25 전 규칙 그대로
   return !(sk.corr === 'v2' && sk.level > 0) || f.bodyPose.idle >= 0.5;
 }
-/** 베는 중인가 (시험 JOINTS.wristSwing — wristGuardAim): AI = 베기 기술의 긋기 · 따라 베기 · 사람 = 손 휘두르기(skill.swinging). 탭 찌르기 · 손잡이 찍기 · 비기 · 운동학 비기는 아님 */
+/** 베는 중인가 (wristGuardAim · pronateRest — 엎친 손 길은 베는 토막에 안 씀): AI = 베기 기술의 긋기 · 따라 베기 · 사람 = 손 휘두르기(skill.swinging). 탭 찌르기 · 손잡이 찍기 · 비기 · 운동학 비기는 아님 */
 function cutSwing(f) {
   const sk = f.skill;
   if (!sk || sk.tap || sk.pom || sk.sec || f.iai) return false;

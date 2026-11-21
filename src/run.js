@@ -67,7 +67,7 @@ export function runCostRate(f) {
 }
 
 /**
- * 스텝마다 (fighter.step — updateHeading 앞 · 이름 runStep — 시제품 C 의 dig_proto.js runTick 과 다름): 들어감 · 나감 · 방향 · 걸음 꼴 섞기(k) · 가속 한도 창(fast) · 조종 입력을 몸 틀로.
+ * 스텝마다 (fighter.step — updateHeading 앞 · 이름 runStep): 들어감 · 나감 · 방향 · 걸음 꼴 섞기(k) · 가속 한도 창(fast) · 조종 입력을 몸 틀로.
  *  읽는 입력(사람 main.js 가 프레임마다 · AI ai_run.js 가 스텝마다 둠): f.runReach — 스틱 손잡이 길 몫(0 ~ 1, PC Shift + 방향이면 1 · AI 는 뛸 때 1) · f.stickX · stickY — 스틱(상대 틀) ·
  *  f.runBreak — 이 프레임에 공격 · 막기 입력이 있었음(읽으면 지움 — AI 는 공격 · 막기 · 비기 꼴)
  */

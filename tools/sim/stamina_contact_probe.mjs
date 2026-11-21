@@ -1,7 +1,8 @@
 // 공격 단계의 첫 실제 접촉 시각 (사장님 10/16 기준 — 칼끝 최고 빠르기 시각이 아니라 처음 닿는 때). 샛별 저장소 47b2e16e 그대로 들임 (docs/import/stamina_contact_2026-10-17.md)
 // Passive fixed game-body colliders; no defending weapon. All attack code is real.
 import {tempoTrial,TEMPO_WEAPONS} from './stamina_tempo_probe.mjs';
-import {STAMINA} from '../../src/config.js';
+// 지친 공격의 겉 목표 (사장님 10/16 '공격 −20 % · −40 %' → 0.8 · 0.6): 게임은 이 둘을 읽지 않고 안쪽 계수 STAMINA.tempo* 를 읽는다 — 전 config STAMINA.attackTired · attackSevere (11/21 감사 N-004 로 여기로)
+const ATTACK_TIRED=0.8,ATTACK_SEVERE=0.6;
 import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 const [out='/tmp/tempo-contact',weapons='longsword,qinggang,uchigatana',actions='cut,thrust,pommel,secret',drivers='human,ai']=process.argv.slice(2);
 mkdirSync(out,{recursive:true});const rows=[];
@@ -17,7 +18,7 @@ for(const weapon of weapons==='all'?TEMPO_WEAPONS:weapons.split(',')){
 for(const r of rows){
  if(r.status!=='measured')continue;
  const base=rows.find(b=>b.weapon===r.weapon&&b.action===r.action&&b.driver===r.driver&&b.level===0);
- r.target=[1,1/STAMINA.attackTired,1/STAMINA.attackSevere][r.level];r.timeRatio=base.firstContact?.time>0&&r.firstContact?r.firstContact.time/base.firstContact.time:null;
+ r.target=[1,1/ATTACK_TIRED,1/ATTACK_SEVERE][r.level];r.timeRatio=base.firstContact?.time>0&&r.firstContact?r.firstContact.time/base.firstContact.time:null;
  r.error=r.timeRatio==null?null:Math.abs(r.timeRatio/r.target-1);
  r.contactPartChanged=!!r.firstContact&&!!base.firstContact&&r.firstContact.victimPart!==base.firstContact.victimPart;
  r.speedRatio=base.activePeak>0?r.activePeak/base.activePeak:null;

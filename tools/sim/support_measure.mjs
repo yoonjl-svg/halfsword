@@ -228,7 +228,7 @@ class Obs {
       const qp = this._q2.set(pq.x, pq.y, pq.z, pq.w);
       const qr = this._q3.copy(qa).invert().multiply(qp);
       const ang = rotVec(qr);
-      const tq = [0, 1, 2].map((i) => BODY.uprightStiffness * assist * f.uprightRelax(3 + i) * ang[i]);
+      const tq = [0, 1, 2].map((i) => BODY.uprightStiffness * assist * ang[i]);
       r.anchorT = Math.hypot(tq[0], tq[1], tq[2]);
       r.anchorTilt = Math.hypot(tq[0], tq[2]); // 기울기 축 (x 옆, z 앞뒤)
       r.anchorYaw = Math.abs(tq[1]);

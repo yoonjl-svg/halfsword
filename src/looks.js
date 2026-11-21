@@ -926,11 +926,6 @@ export function getLook(id, version) {
   return archive[version] ?? archive[fallback] ?? archive.v0 ?? null;
 }
 
-/** id가 가진 버전 이름 목록 (오래된 것부터). docs/character_looks.md, 미리보기 검증용 */
-export function lookVersionsOf(id) {
-  const archive = LOOK_ARCHIVE[id];
-  return archive ? Object.keys(archive).sort() : [];
-}
 
 // 예전 코드가 쓰던 자리 그대로 (player·enemy 기본 외형). 캐릭터별 look은 이제 characters.js가
 // getLook()으로 직접 가져온다.

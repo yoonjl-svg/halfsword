@@ -242,11 +242,6 @@ export const TREE = Object.freeze(Object.fromEntries(Object.entries(TREE_SRC).ma
 
 export const nodesOf = (school) => TREE[school]?.nodes ?? [];
 export const nodeOf = (school, id) => nodesOf(school).find((n) => n.id === id) ?? null;
-/** 칸 id → 유파 (G1 → german …) */
-export function schoolOfNode(id) {
-  for (const s of TREE_SCHOOLS) if (nodeOf(s, id)) return s;
-  return null;
-}
 /** 닫힌 칸('준비 중' — 살 수 없음 · 판 몫 없음): 비기 = SECRET.openSchools 에 없는 유파 · 그 밖 = closed 칸(지금 없음 — 일본 J8 은 10/24 열림) */
 export const isClosed = (school, node) => (node?.cat === 'secret' ? !SECRET.openSchools.includes(school) : !!node?.closed);
 /** 먼저 익힐 칸을 모두 익혔나 (뿌리는 늘 참) */

@@ -1,4 +1,4 @@
-// 동작 라이브러리 점검 (src/motion_library.js, docs/weapon_motions.md)
+// 동작 라이브러리 점검 (tools/motion/lib/motion_library.mjs, docs/weapon_motions.md)
 //   node tools/sim/hybrid.mjs motion_lab.mjs poses <무기id>          자세표: 자세마다 손·칼끝이 목표에 얼마나 붙나
 //   node tools/sim/hybrid.mjs motion_lab.mjs swings <무기id> [기술…]   기술마다 혼자 휘둘러: 걸린 시간, 칼날 70% 최고 속도, 베기 지표(J), 날 세움
 //   node tools/sim/hybrid.mjs motion_lab.mjs duel <무기id> <자리마다 판 수>   롱소드 상대 실제 승패 (ability_test 와 같은 판 · 본판 길)
@@ -59,9 +59,8 @@ function passiveList(ai) {
   return list;
 }
 // 유파 비기 (10/9 유파 설계 v3 — docs/strike/school_secret_2026-10-09.md): SCHOOL_SECRET=off = 시험 쪽(X) AI 만 비기 없음(상대 롱소드 AI 는 그대로) ·
-//  SECRET_LETHAL=수 = 독일 문턱 lethalJ 를 이 값으로 · SECRET_JSON = SECRET 칸 덮기 (재기용, 양쪽)
+//  SECRET_JSON = SECRET 칸 덮기 (재기용, 양쪽) · (옛 SECRET_LETHAL 은 읽는 곳 없는 lethalJ 를 바꾸던 것 — 11/21 지움)
 const SECRET_X_OFF = process.env.SCHOOL_SECRET === 'off';
-if (process.env.SECRET_LETHAL) SECRET.lethalJ = +process.env.SECRET_LETHAL;
 if (process.env.SECRET_JSON) Object.assign(SECRET, JSON.parse(process.env.SECRET_JSON));
 // SECRET_DO_JSON = '{"iberian":{"powerFrom":3,"path":[…]}}' — 유파 비기 do 칸 덮기 (재기용, 양쪽)
 if (process.env.SECRET_DO_JSON) for (const [t, o] of Object.entries(JSON.parse(process.env.SECRET_DO_JSON))) if (TRADITIONS[t]?.secret) TRADITIONS[t].secret = { ...TRADITIONS[t].secret, do: { ...TRADITIONS[t].secret.do, ...o } };
@@ -104,7 +103,7 @@ function swFlush(ai) {
 } // 비기 수 갈아 끼우기 (재기용, 예: '{"italianDist":[0,0.2]}')
 if (process.env.HEIGHT_RATE) GAIT.heightRate = +process.env.HEIGHT_RATE; // 점검: 골반 높이를 바꾸는 최고 빠르기 (런지 몸 낮춤)
 import { GUARD_BASE } from '../../src/guards.js';
-import { motionFor, MOTION, installFlow } from '../../src/motion_library.js';
+import { motionFor, MOTION, installFlow } from '../motion/lib/motion_library.mjs';
 for (const k of (process.env.MOTION_SKIP ?? '').split(',').filter(Boolean)) MOTION.skip.add(k);
 if (process.env.USE_PARRY === '1') MOTION.useParry = true;
 if (process.env.COVER_IN) MOTION.coverIn = +process.env.COVER_IN;

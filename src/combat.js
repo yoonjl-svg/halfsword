@@ -453,7 +453,7 @@ export class Combat {
         // 동방 막는 동안 피해 감소 (10/17 연구 — SKILL.cnParryDmgCut, 판 값 0 = 끔 · docs/strike/chinese_parry_brace_2026-10-17.md): 받는 쪽이 동방 막기 책을 쥐고
         //  막기 단추로 막는 중(parry_button.js woundKeep)이면 이 칼날 상처의 심각도만 × (1 − cut). 팔다리 기능 · 피 흘림 · 의식 · 목/머리 죽음 문턱 · 절단이 모두
         //  심각도에서 나와(fighter.applyWound) 같이 준다. 에너지 · 가르나 튕기나(pass) · 박힘은 그대로 — 칼과 몸의 물리(충격 · 휘청임 · 투구/판 닳음)는 바뀌지 않는다
-        //  일본 · 이베리아도 같은 칸으로 × (1 − 0.2) (사장님 10/18 22:1x — SKILL.jpParryDmgCut · ibParryDmgCut)
+        //  일본 · 이베리아 × (1 − 0.2)(10/18)는 사장님 11/15 결정으로 없앰 — 동방만
         if (vic.parryGuard?.woundKeep) severity *= vic.parryGuard.woundKeep();
         else if (vic.aiCtl) severity *= aiWoundKeep(vic); // AI 몸도 사람과 같게 (11/15 사장님 '동방 ai 막기 감소 켜' · src/ai_block_cut.js)
         severity *= cnStepKeep(vic); // 동방 편섬 (11/15 사장님 '0.4초 50% 감소 (칼날 피해에 찌르기도 포함 맞지?)' — 베기 · 찌르기 둘 다 · 둔기 빼고): 꺾은 때부터 줄임 시간 안이면 × (1 − cut)
@@ -496,7 +496,7 @@ export class Combat {
       severity,
       pass,
       absorb: A.absorb ?? 100,
-      bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed * (att.weapon?.bleedMult ?? 1) * (UA.yaojiBleed?.k > 0 && UA.yaojiBleed.zones.includes(zone) && yaojiBleedTech(strokeTechOf(att)) && !perkOff(att, 'yaoji') ? UA.yaojiBleed.k : 1), // 모노호시자오 '제비 베기': 출혈 배율 · 요격 몸통 깊은 출혈(10/21 UA.yaojiBleed · 10/28 체보요격 · 염시도 — 심화 칸 C4 하나)
+      bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed * (UA.yaojiBleed?.k > 0 && UA.yaojiBleed.zones.includes(zone) && yaojiBleedTech(strokeTechOf(att)) && !perkOff(att, 'yaoji') ? UA.yaojiBleed.k : 1), // 모노호시자오 '제비 베기': 출혈 배율 · 요격 몸통 깊은 출혈(10/21 UA.yaojiBleed · 10/28 체보요격 · 염시도 — 심화 칸 C4 하나)
       local: vicLocal,
       point: point.clone(),
       dir,

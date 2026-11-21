@@ -5,9 +5,11 @@
 //  그 밖(독일·이탈리아·이베리아·무유파·공용): 가나가 있으면 위반, 한자가 있으면 '한글 (漢字)' 꼴이어야 한다
 //  유파 소속: schools.js TRADITIONS(유파 자료) · 무기 school(traditionOf) · 몸 틀 자세표는 그 틀을 쓰는 무기들의 유파
 //  인물(src/characters.js)도 본다 (10/10 이식 끝 — 앞서는 보고만 했다)
+//  11/21 감사 N-003: 저장소 글 · 코드 파일의 금지 이름(모델 · 다른 회사 에이전트 이름)도 함께 본다 (forbidden_names.mjs)
 // 실행: node tools/text/name_policy.mjs
 // 종료 코드: 위반 0 → 0, 있으면 1
 import { collectTexts, policyProblem, schoolSet } from './texts.mjs';
+import { forbiddenHits } from './forbidden_names.mjs';
 
 const rows = await collectTexts({ characters: true });
 const bad = [];
@@ -27,9 +29,17 @@ console.log(`  유파별 (글 수 / 위반): ${Object.entries(count).map(([k, v]
 const show = (list) => {
   for (const r of list) console.log(`  [${r.school || '공용'}] ${r.cat} · ${r.loc}\n      "${r.text}" — ${r.why}`);
 };
-if (bad.length) {
-  console.log(`\n위반 ${bad.length} 건:`);
-  show(bad);
+const names = forbiddenHits();
+console.log(`  금지 이름 (저장소 글 · 코드 파일): ${names.length}`);
+if (bad.length || names.length) {
+  if (bad.length) {
+    console.log(`\n위반 ${bad.length} 건:`);
+    show(bad);
+  }
+  if (names.length) {
+    console.log(`\n금지 이름 ${names.length} 건:`);
+    for (const h of names) console.log(`  ${h.path}:${h.line}  ${h.text.trim().slice(0, 160)}`);
+  }
   process.exit(1);
 }
 console.log('\n위반 0');

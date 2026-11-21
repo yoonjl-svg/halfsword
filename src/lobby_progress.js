@@ -126,10 +126,6 @@ export function recordAcquisition({ receipt, kind, source }) {
   if (source === 'starter' || !validText(receipt) || !ACQ_KINDS.includes(kind) || session.acquisitions.some(a => a.receipt === receipt)) return false;
   session.acquisitions.push({ receipt, kind }); save(); return true;
 }
-/** 이 receipt 를 이미 얻었나 (스킬트리 칸 'skill:<유파>:<칸 id>') */
-export function owns(receipt) {
-  return readProgress().acquisitions.some(a => a.receipt === receipt);
-}
 /**
  * 사기: 금화 price · 머리 heads · 뿔피리 horns(10/30 상점)를 내고 receipt 를 얻는다 — 한 번의 저장(금화 · 머리 · 뿔피리 · 얻은 것 같이). 이미 가졌거나 돈이 모자라면 아무것도 안 바뀐다.
  *  낸 값은 paid 로 남긴다(유파 초기화가 그대로 돌려줌 — skill_tree_store.js resetSchool · 뿔피리는 낸 때만 paid.horns).
