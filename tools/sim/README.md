@@ -13,6 +13,7 @@
 - 게임 불변 관문: 바꾸기 전·후 stdout 이 바이트 같아야 한다(`cmp`, 기록은 sha256).
   - `node tools/sim/fights12.mjs` (기본 hybrid, 예전 `hybrid.mjs fights12.mjs`와 바이트 같다)
   - `node tools/sim/live_battery.mjs`
+  - `node tools/sim/finish_thrust.mjs 1 --stand` (서 있는 상대 — 마무리 길이 걸리지 않아야 함) · `node tools/sim/finish_thrust.mjs 1` (쓰러진 · 낮은 상대 찍기 160 번 — 11/22 감사 N-028 로 관문에 더함: 그 전엔 찍기 길을 지나는 관문 · 시험이 없었음)
   - `node tools/sim/match_twin.mjs` (10/29 동시 대전 배관 — fights12 를 공용 스텝 차례 `src/match.js stepMatch` · `jelly_harness.mjs newMatch` 로. **sha 가 그때의 fights12 와 같아야 한다** · 2:2 연기 · 성능은 `team_perf.mjs`, docs/strike/team_fight_2026-10-29.md)
   - 기준 sha256 앞 8자리 내력(9/29 ~ 10/8)은 `docs/strike/gate_history.md` 로 옮김(11/21). 그 뒤 기준 값은 커밋 글 · 결정 기록에.
   - 시작 정지는 시뮬에도 걸린다: 싸움꾼마다 `fightT`(fighter.step 이 센다)로 재서 판을 새로 만든 뒤 처음 2초는 조종 입력·기술 걸음·자세 고쳐 딛기가 없다(팔·칼·균형 걸음은 그대로). 판 초반을 재는 도구는 이 2초를 감안한다.
