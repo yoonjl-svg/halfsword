@@ -1,0 +1,15 @@
+import { createRequire } from 'node:module'; const { chromium } = createRequire(import.meta.url)('playwright');
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
+const c = await b.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+await c.addInitScript(() => { window.__src = {}; const r = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = (f) => { const k = (f.name || 'anon') + ':' + (new Error().stack.split('\n')[2]||'').trim().slice(-70); window.__src[k] = (window.__src[k]||0)+1; return r(f); }; });
+const p = await c.newPage();
+await p.goto(process.argv[2] + '/', { waitUntil: 'networkidle' }); await p.waitForTimeout(2000);
+await p.locator('#confirmNotices').click(); await p.waitForTimeout(500);
+await p.evaluate(()=>{window.__src={}}); await p.waitForTimeout(3000);
+console.log('title rAF sources/3s', JSON.stringify(await p.evaluate(()=>window.__src)));
+await p.locator('#enterLobby').click(); await p.waitForTimeout(3000);
+await p.screenshot({ path: 'dbg2.png' });
+console.log(await p.evaluate(() => [...document.getElementById('gameEntrance').shadowRoot.querySelectorAll('dialog')].map(d=>d.id+':'+d.open)));
+await p.evaluate(()=>{window.__src={}}); await p.waitForTimeout(3000);
+console.log('lobby rAF sources/3s', JSON.stringify(await p.evaluate(()=>window.__src)));
+await b.close();

@@ -22,6 +22,8 @@ git worktree add --detach /tmp/wt_main origin/main && cd /tmp/wt_main && npm ci 
 | `rerun_real/` | 11차 보고: 게임의 꾸러미 바꿈 규칙(main.js:619)대로 고친 러너(`D_fights_real.mjs`, `audit_ai_real.mjs`)와 다시 돌린 결과(소음 폭 `real_perturb*.json`, 끄기 `real_*.json`·`real_abl_*.json`, 앞 러너 `old_*.json`), 켜진 횟수(`counts_*.txt`), AI 쓰임(`tab64_real.txt`), 시작 안 된 기술(`audit_never_real.mjs`, `never_real.txt`) | 세는 장치를 넣은 복사본 `tools/sim`에 두고 `J_COUNTS=1 node tools/sim/D_fights_real.mjs`, 끄기는 `J_ABL=<이름>` 또는 `AI_ABL=open` |
 | `perf/patches_f/` | 엔진 값 읽기 저장 패치(`f_read_cache.patch`), 관문 해시(`gates_*.txt`), 바뀌는 때 미세 시험(`micro.mjs`), 겹쳐 읽기 세기(`redund.mjs`, `wasm_count.mjs`), 몸 상태 해시(`smoke.mjs`), 시간 재기(`timing_run.sh`), 메모(`notes_en.md`) | `perf/patches/a_corr_early.patch`를 먼저 붙인 나무에 `patch -p1 < f_read_cache.patch` |
 | `perf/patches_g/` | 13차 보고: 결과를 안 쓰는 계산 건너뛰기 후보 셋(`g1`~`g3`, 모두 거둠), 관문(`gates_*.txt`), 시간(`timing.txt`, `timing_run.sh`), (a) 뒤 프로파일(`prof_1v1_top.txt`, `prof_2v2_top.txt`, 요약 `top.mjs`·`kids.mjs`·`callers.mjs`), 메모(`notes_en.md`) | (a)를 붙인 나무에 `patch -p1`, `node --cpu-prof` 뒤 `node top.mjs <폴더> 40` |
+| `verify_perf/` | 14차 보고·덧붙임: 디렉터 성능 합침 확인(`verify.sh`, 관문 `gates_*.txt`, 시간 `timing_base_a_new.txt`), 멈춤 화면(`idle_check.mjs`, `idle_87f010d7.json`), 판 끝 결과 창(`result_panel.mjs`) | 개발 서버를 띄우고 `node result_panel.mjs http://127.0.0.1:5195` |
+| `idle_screens/` | 덧붙임 2 N-022: 싸우지 않는 화면의 초당 일(`idle_screens.mjs`, 결과 `idle_screens.json`), 프레임 콜백을 부르는 곳 찾기(`raf_sources.mjs`), 메모(`notes_en.md`) | 개발 서버를 띄우고 `node idle_screens.mjs http://127.0.0.1:5196` |
 | `storage/` | 어떤 문서도 안 가리키는 `docs/handoff` 그림 목록, 본판에 이미 든 원격 브랜치 목록 | 목록 그대로 |
 
 주의
