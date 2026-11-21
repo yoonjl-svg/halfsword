@@ -51,7 +51,12 @@ export function snapshotFromPerson(p) {
   }
   const lost = (p.lost ?? []).filter((l) => l in limbs); // 잘린 팔다리 (11/21 C — 대회 끝까지 · fighter.applySnapshot → startSevered)
   for (const l of lost) limbs[l] = 0;
-  return { v: 1, blood: bloodFromHp(p.hp), bleed: 0, consciousness: 1, pain: 0, limbs, wounds, weaponBroken: weaponOfPerson(p).broken, ...(lost.length ? { lost } : {}) };
+  // 몸통 · 머리 부상 (11/21 D — 사장님 '몸통 · 머리에 남으면 -> 여기서도 어딘가 남아야 해'): 팔다리와 같은 잣대(심각도 × LIMB_LOSS) — 나은 흔적 · 경상 · 중상 모두
+  //  몸통 = 최대 기력 × (1 − 심각도 × 0.7) (stamK — 장비 덧 뒤에 곱함) · 머리 = 머리를 맞아 잃는 의식 × (1 + 심각도 × 0.7) (koK — 기절이 쉬움)
+  const sevOf = (part) => Math.max(0, ...(p.injuries ?? []).filter((i) => i.part === part && i.sev > 0).map((i) => i.sev));
+  const torso = sevOf('torso'), head = sevOf('head');
+  const scar = { ...(torso > 0 ? { stamK: Math.max(0, 1 - torso * LIMB_LOSS) } : {}), ...(head > 0 ? { koK: 1 + head * LIMB_LOSS } : {}) };
+  return { v: 1, blood: bloodFromHp(p.hp), bleed: 0, consciousness: 1, pain: 0, limbs, wounds, weaponBroken: weaponOfPerson(p).broken, ...(lost.length ? { lost } : {}), ...scar };
 }
 
 /**

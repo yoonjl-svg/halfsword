@@ -346,3 +346,33 @@ test('⑨ 잘린 팔다리 (11/21 C): 결과 lost = 엔진 severedLimbs + 들어
   N.fighters[0].applySnapshot(snapshotFromPerson(person('0-0', 'player', { hp: 100 })));
   assert.ok(N.fighters[0].jointByName.uarmO.joint && !N.fighters[0].severedLimbs);
 });
+
+test('⑩ 몸통 · 머리 부상이 싸움에 남음 (11/21 D — 사장님 \'몸통 · 머리에 남으면 -> 여기서도 어딘가 남아야 해\'): 몸통 = 최대 기력 × (1 − 심각도 × 0.7) (장비 덧 뒤) · 머리 = 잃는 의식 × (1 + 심각도 × 0.7) · 흔적 · 경상 · 중상 · 부상 없으면 그대로', (t) => {
+  // 사본 몫: 흔적 0.09 · 경상 0.49 · 중상 0.5 · 1
+  for (const [sev, stamK, koK] of [[0.09, 0.937, 1.063], [0.49, 0.657, 1.343], [0.5, 0.65, 1.35], [1, 0.3, 1.7]]) {
+    const s = snapshotFromPerson(person('0-0', 'player', { injuries: [{ part: 'torso', sev, rests: 0 }, { part: 'head', sev, rests: 0 }] }));
+    assert.ok(Math.abs(s.stamK - stamK) < 1e-9 && Math.abs(s.koK - koK) < 1e-9, `${sev}: ${s.stamK} · ${s.koK}`);
+  }
+  const plain = snapshotFromPerson(person('0-0', 'player', { injuries: [{ part: 'arm', sev: 0.5, rests: 0 }, { part: 'leg', sev: 0.09, rests: 0 }] }));
+  assert.ok(!('stamK' in plain) && !('koK' in plain), '팔 · 다리만이면 칸 없음 (옛 사본과 같은 꼴)');
+  // 진짜 몸: 최대 기력 · 케틀 햇 덧 뒤에 곱함 · 머리 맞음의 의식 깎임
+  seedRand(t, 31);
+  const M = newMatch({ seed: 31, count: 2 });
+  const [a, b] = M.fighters;
+  const base = a.stamina.max;
+  a.applySnapshot(snapshotFromPerson(person('0-0', 'player', { injuries: [{ part: 'torso', sev: 0.5, rests: 0 }, { part: 'head', sev: 0.49, rests: 0 }] })));
+  assert.ok(Math.abs(a.stamina.max - base * 0.65) < 1e-9 && a.stamina.value === a.stamina.max, `최대 기력 ${a.stamina.max}`);
+  a.stamina.setMaxBonus(30);
+  assert.ok(Math.abs(a.stamina.max - (base + 30) * 0.65) < 1e-9, `케틀 햇 뒤 ${a.stamina.max}`);
+  assert.ok(Math.abs(a.koK - 1.343) < 1e-9);
+  assert.deepEqual([b.stamina.max, b.koK], [base, 1], '부상 없는 몸은 그대로');
+  const hit = { part: 'head', zone: 'head', type: 'blunt', severity: 0, energy: 30, local: new THREE.Vector3(), helmet: false };
+  const c0a = a.consciousness, c0b = b.consciousness;
+  a.applyWound({ ...hit }); b.applyWound({ ...hit });
+  const da = c0a - a.consciousness, db = c0b - b.consciousness;
+  assert.ok(db > 0 && Math.abs(da / db - 1.343 * (b.vitality / a.vitality)) < 1e-9, `머리 둔타 의식 깎임 ${da} vs ${db}`);
+  // 사본 왕복 (판 사이 · 이어받기): stamK · koK 그대로
+  const s1 = a.snapshot();
+  assert.ok(Math.abs(s1.stamK - 0.65) < 1e-9 && Math.abs(s1.koK - 1.343) < 1e-9);
+  assert.ok(!('stamK' in b.snapshot()) && !('koK' in b.snapshot()));
+});
