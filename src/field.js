@@ -234,7 +234,20 @@ export function rectField(g) {
      * p → q 길목 길 (점 몇 개의 가장 짧은 길 — p · 길목 양쪽 머리 점 · q 사이 곧은 줄이 막히지 않으면 이음): { lane(건넌 길목 차례 · 없으면 −1), way(다음에 갈 점), len }.
      *  keep(전에 건넌 길목)이 있으면 그 길목 길이 slack m 넘게 길어질 때만 바꾼다 (두 다리 사이에서 떨지 않게)
      */
-    route(p, q, keep = -1, slack = 2) {
+    route(p, q, keep = -1, slack = 2, bias = null, direct = -1) {
+      if (bias) {
+        // 길목마다 덧셈 bias[i] (m — 동료가 그 길목에서 싸움 · 그리 감 — field_route.js): 길목 하나씩만 써 본 가장 짧은 길 + 그 길목 덧셈 가운데 가장 작은 것.
+        //  direct ≥ 0: p → q 곧은 줄이 그 길목을 지남(상대가 다리 위) — 곧은 길도 그 길목 길로 셈
+        let b = null;
+        for (let i = 0; i < g.lanes.length; i++) {
+          const r = shortest(p, q, i);
+          if (r.len === Infinity) continue;
+          if (r.lane < 0 && direct >= 0) r.lane = direct;
+          const k = r.len + (r.lane >= 0 ? bias[r.lane] ?? 0 : 0) - (keep >= 0 && r.lane === keep ? slack : 0);
+          if (!b || k < b.k) b = { ...r, k };
+        }
+        if (b) return b;
+      }
       const best = shortest(p, q, -1);
       if (keep >= 0 && best.lane !== keep) {
         const alt = shortest(p, q, keep);
@@ -255,3 +268,7 @@ export function rectField(g) {
 
 /** 점(x, z)이 길목 안인가 (다리 위 · 문길 안) — 거점 · 시험 */
 export const inLane = (F, x, z) => !!F.geo?.lanes.some((L) => inBox(L, x, z));
+/** 점(x, z)이 길목 L 안인가 (e 만큼 넓혀) */
+export const inLaneBox = (L, x, z, e = 0) => inBox(L, x, z, e);
+/** 선분 p → q 가 길목 L 상자(e 만큼 넓힘)를 지나나 */
+export const segThroughLane = (L, p, q, e = 0) => segBox(L, p.x, p.z, q.x, q.z, e);

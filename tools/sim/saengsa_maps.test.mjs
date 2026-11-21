@@ -171,3 +171,35 @@ test('성벽 안뜰 카메라: 성벽에 등을 대면 벽을 따라 돌려 내 
   fieldCamera(B, { x: -14, y: 1, z: 0 }, c4, CONFIG.CAMERA.minDist);
   assert.deepEqual([c4.x, c4.y, c4.z], [-16.9, 2.3, 0.9]);
 });
+
+test('길목 나눠 쓰기: 동료가 다리 위에 있으면(싸우든 걷든) 그 뒤에 줄 서지 않고 다리 머리 뒤에서 기다림 · 동료가 가는 다리는 길게 셈', async () => {
+  const { routeThroughField, FIELD_ROUTE } = await import('../../src/field_route.js');
+  const F = fieldOfMap('bridges');
+  const V = (x, z) => ({ x, y: 1, z });
+  const body = (x, z) => ({ pelvis: { translation: () => V(x, z) }, chest: { translation: () => V(x, z) } });
+  const fighter = (x, z, extra = {}) => ({ alive: true, state: 'stand', armed: true, field: F, heading: 0, fightT: 10, bodies: body(x, z), move: { x: 0, y: 0.5, set(a, b) { this.x = a; this.y = b; } }, ...extra });
+  const run = (me, foe, mates) => { me.mates = mates; const ai = { me, foe, mode: 'watch', phase: 'ready' }; routeThroughField(ai); return ai; };
+  // 적(1 편)이 다리(z +7) 위 · 동료가 그 적과 붙어 싸움(동료가 내 쪽 머리에 더 가까움) · 나는 내 쪽 물가
+  const foe = fighter(0.5, 7);
+  const mate = fighter(-0.9, 7, { foe, aiCtl: { fieldLane: -1, M: { reach: 1.6 } } });
+  const me = fighter(-6, 5);
+  const ai = run(me, foe, [mate]);
+  assert.deepEqual([+ai.fieldRoute.way.x.toFixed(2), ai.fieldRoute.way.z], [-3.4 - FIELD_ROUTE.back, 7], '다리 머리 뒤 기다리는 자리');
+  assert.deepEqual([me.fieldFace.x, me.fieldFace.z], [0, 7], '다리 가운데를 봄');
+  const me2 = fighter(-3.4 - FIELD_ROUTE.back + 0.2, 7);
+  run(me2, foe, [mate]);
+  assert.deepEqual([me2.move.x, me2.move.y], [0, 0], '닿으면 섬');
+  // 동료가 다리 위를 걸어가기만 해도(상대가 멀리) 그 다리 안이면 들어가 뒤에 줄 서지 않음 · 다리에 아무도 없으면 곧장
+  const far = fighter(14, 0);
+  const walker = fighter(-0.9, 7, { foe: far, aiCtl: { fieldLane: 1 } });
+  const ai3 = run(fighter(-6, 5), foe, [walker]);
+  assert.deepEqual([+ai3.fieldRoute.way.x.toFixed(2), ai3.fieldRoute.way.z], [-3.4 - FIELD_ROUTE.back, 7], '걷는 동료 뒤에도 줄 서지 않음');
+  const ai3b = run(fighter(-6, 5), foe, [fighter(-9, -3, { foe: far, aiCtl: { fieldLane: -1 } })]);
+  assert.equal(ai3b.fieldRoute, null, '다리에 동료 없음 — 막히지 않은 곧은 길');
+  // 건너편 상대 · 동료 둘이 다리 z +7 로 가는 중 → 나는 다리 z −7 로 (나눠 건넘)
+  const me4 = fighter(-14, 0.5);
+  const ai4 = run(me4, fighter(14, 2), [fighter(-10, 3, { aiCtl: { fieldLane: 1 } }), fighter(-9, 4, { aiCtl: { fieldLane: 1 } })]);
+  assert.equal(ai4.fieldLane, 0);
+  const ai5 = run(fighter(-14, 0.5), fighter(14, 2), []);
+  assert.equal(ai5.fieldLane, 1, '동료가 없으면 가까운 다리');
+});
