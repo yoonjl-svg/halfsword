@@ -32,7 +32,7 @@ export const SCHOOLS5 = Object.freeze(['german', 'italian', 'iberian', 'japanese
 export const NAMELESS = 'nameless';
 export const INJURY_PARTS = Object.freeze(['arm', 'leg', 'torso', 'head']);
 /** 저장한 결과의 판 (다시보기가 같은 셈인지 가린다 — 빠른 셈 · 엔진 셈이 바뀌면 올린다) */
-export const SAENGSA_VER = 'saengsa-6'; // 11/21 F 상대 팀 무기 여섯 · AI 물건 고르기 기대 이득 (전 'saengsa-5' — E 쉼 물건(응급처치약 · 무기상자) · 'saengsa-4' — C 잘린 팔다리 · 이탈 · 빠른 셈 잘림 · 'saengsa-3' — 코마(이긴 편 쓰러짐 → 체력 10 + 중상 · 빠른 셈 즉사 몫) · 한 단계 나음 끝쪽 띠 · 나은 흔적 (전 'saengsa-2' — 빠른 셈 이긴 쪽 피해 · 수 몫 · 쉼 규칙 · 'saengsa-1')
+export const SAENGSA_VER = 'saengsa-7'; // 11/21 G 맵은 회차로 (16강 열린 원 · 8강 두 다리 · 4강 · 결승 성벽 안뜰 — 같은 씨앗이어도 맵이 바뀐 경기는 엔진 판이 다름) (전 'saengsa-6' — F 상대 팀 무기 여섯 · AI 물건 고르기 기대 이득 · 'saengsa-5' — E 쉼 물건(응급처치약 · 무기상자) · 'saengsa-4' — C 잘린 팔다리 · 이탈 · 빠른 셈 잘림 · 'saengsa-3' — 코마(이긴 편 쓰러짐 → 체력 10 + 중상 · 빠른 셈 즉사 몫) · 한 단계 나음 끝쪽 띠 · 나은 흔적 (전 'saengsa-2' — 빠른 셈 이긴 쪽 피해 · 수 몫 · 쉼 규칙 · 'saengsa-1')
 
 // ── 씨앗 난수 (게임 난수 Math.random 을 건드리지 않는다) ──
 /** 글 · 수 묶음 → 32 비트 씨앗 (FNV-1a) */
@@ -661,7 +661,8 @@ export function validPicks(t, picks, cfg = SAENGSA) {
   return picks.every((k) => t.teams[0].members.some((f) => f.key === k && pickable(f, cfg) && typeof f.weapon === 'string')); // 이탈한 사람은 못 나섬 (11/21 C)
 }
 /**
- * 내 경기 판 (2단계 엔진에 넘기는 꼴 — 설계 §8): { matchId, round, seed, mineSide, sides: { a: [사람], b: [사람] }, entrants: { a, b }, control }
+ * 내 경기 판 (2단계 엔진에 넘기는 꼴 — 설계 §8): { matchId, round, rounds, seed, mineSide, sides: { a: [사람], b: [사람] }, entrants: { a, b }, control }
+ *  rounds = 대회 회차 수 (11/21 G — 맵은 회차로: saengsa_maps.js saengsaMapOf(round, rounds))
  *  control = 'player'(내가 나섬 — 내 몸은 내가 · 함께 나선 동료는 AI) · 'watch'(동료만 — 지켜봄) (사장님 10/29 14:2x · 14:5x).
  *  상대 고름은 여기서(내 고름과 무관 — 가린 채 함께 고르고 입장 때 함께 보임). 지금 싸울 수 없으면(내 경기가 아님 · 시각 전 · 마감 뒤 · 고름이 틀림) null
  */
@@ -671,7 +672,7 @@ export function matchSetup(t, m, picks, now, cfg = SAENGSA) {
   const entrants = { [mineSide]: [...picks], [mineSide === 'a' ? 'b' : 'a']: aiPick(t.teams[foe].members, cfg, { final: isFinal(t, m) }) };
   const team = (side) => (side === 'a' ? A : B);
   return {
-    matchId: m.id, round: m.round, seed: hash32(t.seed, m.id), mineSide, entrants,
+    matchId: m.id, round: m.round, rounds: roundsOf(t.teams.length), seed: hash32(t.seed, m.id), mineSide, entrants,
     sides: { a: structuredClone(membersOf(t, team('a'), entrants.a)), b: structuredClone(membersOf(t, team('b'), entrants.b)) },
     control: picks.includes('0-0') ? 'player' : 'watch',
   };

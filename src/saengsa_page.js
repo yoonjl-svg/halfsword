@@ -22,7 +22,7 @@ import { fighterName, portraitOf, weaponName, weaponThumb, weaponInfo, SAENGSA_D
 import { makeNamelessFaces } from './saengsa_nameless.js';
 import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, clockText as clockWords, untilText, roundName, teamName, resultLine, myResultLine, nextMatchLine, outLine, chestLine, chestGot, injuryText, lostText, giftText, restText, stepText, signupHours, entryLine, shortLine } from './saengsa_text.js';
 import { makeEngine } from './saengsa_engine.js';
-import { mapOfMatch, mapThumbSvg } from './saengsa_maps.js'; // 생사전 전용 맵 (11/21 — 내 경기 화면 머리에 맵 이름 · 작은 그림)
+import { circleThumbSvg, mapOfMatch, mapThumbSvg } from './saengsa_maps.js'; // 생사전 맵 (11/21 — 내 경기 화면 머리에 맵 이름 · 작은 그림 · G 회차로)
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const SCHOOL_CELLS = ['german', 'italian', 'iberian', 'japanese', 'chinese'];
@@ -216,11 +216,13 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
     const s = stateOf(m, t0);
     $('sgMatchTitle').textContent = s.time ? `${roundName(n, m.round)} · ${s.time}` : roundName(n, m.round);
     $('sgMatchSub').textContent = result ? '' : s.text;
-    // 생사전 전용 맵 (사장님 11/21): 내 경기는 고르기 전에 이 경기의 맵(대회 씨앗으로 정함 — 다시보기 · 이어받기 같음)을 작은 그림과 이름으로 · 상대끼리 경기(빠른 셈)는 맵이 없음
-    const map = mineSide && engine.real ? mapOfMatch(t, m) : null;
-    $('sgMap').hidden = !map;
+    // 생사전 맵 (사장님 11/21): 내 경기는 고르기 전에 이 경기의 맵(회차로 정함 — G '16강전은 열린 원, 8강전은 두 다리, 4강전과 결승은 성벽 안뜰로 하자.' · 다시보기 · 이어받기 같음)을 작은 그림과 이름으로 ·
+    //  열린 원 회차 = 싸울 무대 이름(게임이 알려 줌 — 모르면 '열린 원') + 원 그림 · 상대끼리 경기(빠른 셈)는 맵이 없음
+    const showMap = !!mineSide && engine.real, map = showMap ? mapOfMatch(t, m) : null;
+    const mapName = map ? map.name : showMap ? (typeof game?.saengsaCircleStageName === 'function' && game.saengsaCircleStageName()) || T.mapCircle : '';
+    $('sgMap').hidden = !showMap;
     $('sgMatch').toggleAttribute('data-result', !!result); // 결과 화면 (낮은 화면에서 맵 그림을 접음 — saengsa.css)
-    if (map) { $('sgMap').innerHTML = `${mapThumbSvg(map, { w: 50 })}<span>${esc(map.name)}</span>`; $('sgMap').setAttribute('aria-label', `${T.map} ${map.name}`); }
+    if (showMap) { $('sgMap').innerHTML = `${map ? mapThumbSvg(map, { w: 50 }) : circleThumbSvg({ w: 50 })}<span>${esc(mapName)}</span>`; $('sgMap').setAttribute('aria-label', `${T.map} ${mapName}`); }
     // 결과 뒤 카드: 결과 전 상태(pre)에 결과 몫을 겹쳐 그린다 — 나선 사람은 경기 끝 몸 · 이긴 팀에서 쉰 사람은 쉰 뒤 몸과 되찾은 것(result.rest · 11/21)
     // 배정 중인 무기는 내 카드에 바로 (저장은 '전투 입장' 때)
     const brokenMine = new Set(t.broken ?? []);

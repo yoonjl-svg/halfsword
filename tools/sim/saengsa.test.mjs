@@ -232,7 +232,7 @@ test('쉼 (사장님 11/21 \'쉬면 체력+35 부상 1단계씩 회복(중상->�
     '0-1': { gain: 35, steps: [{ part: 'leg', from: 'serious' }, { part: 'head', from: 'light' }], hp: 85, injuries: [{ part: 'leg', sev: 0.49, rests: 0 }, { part: 'head', sev: 0.09, rests: 0 }] },
     '0-2': { gain: 10, steps: [], hp: 100, injuries: [] },
   });
-  assert.equal(r0.ver, 'saengsa-6');
+  assert.equal(r0.ver, 'saengsa-7');
   assert.equal(r0.rest['0-0'], undefined);
   // ② 나는 쉬고 동료 둘이 나섬: 나 = + 35 · 중상 → 경상 · 경상 → 나음 / 동료 = 그대로
   R.advance(t, at(30, 10, 5));
@@ -368,8 +368,8 @@ test('쉼 글 (결과 카드 — 11/21): \'쉼 체력 + 35 · 다리 중상 → 
   assert.equal(X.SAENGSA_TEXT.rested, '쉼');
 });
 
-test('옛 저장 (판 saengsa-1 · 10/29 쉼 규칙 · 둘씩 나선 경기): 그대로 읽힘 · 옛 결과는 그대로 · 이어 하면 새 쉼 규칙 · 새 결과는 saengsa-6', () => {
-  assert.equal(R.SAENGSA_VER, 'saengsa-6');
+test('옛 저장 (판 saengsa-1 · 10/29 쉼 규칙 · 둘씩 나선 경기): 그대로 읽힘 · 옛 결과는 그대로 · 이어 하면 새 쉼 규칙 · 새 결과는 saengsa-7', () => {
+  assert.equal(R.SAENGSA_VER, 'saengsa-7');
   mem.clear();
   // 옛 꼴로 바꾼 진행 중 대회: 결과 ver 'saengsa-1' · 쉼 기록(rest) 없음 · 부상 쉰 수(rests) 1 · 둘씩 나섬
   const t = make(9);
@@ -388,7 +388,7 @@ test('옛 저장 (판 saengsa-1 · 10/29 쉼 규칙 · 둘씩 나선 경기): �
   const m1 = R.myMatch(old);
   const res = S.playMine(m1.id, ['0-0', '0-1'], at(30, 10, 10), winFor(old, m1, { '0-0': { hp: 50, injuries: [], alive: true }, '0-1': { hp: 40, injuries: [], alive: true } }));
   assert.ok(res);
-  assert.equal(res.ver, 'saengsa-6');
+  assert.equal(res.ver, 'saengsa-7');
   const now = S.readSaengsa().current;
   assert.deepEqual(now.teams[0].members[2].injuries, [{ part: 'arm', sev: 0.09, rests: 1 }, { part: 'leg', sev: 0.49, rests: 1 }], '옛 경상 0.3 → 흔적 · 옛 중상 → 0.49');
   assert.equal(now.teams[0].members[2].hp, 75);
@@ -886,6 +886,48 @@ test('몸 상태 이어받기 (사장님 10/30 08:2x "몸 상태 이어받기 �
   assert.ok(res);
   assert.equal(S.readSaengsa().current.resume, undefined, '끝난 경기는 이어받을 몸이 없다');
   assert.equal(S.saveResume(m0.id, null), false, '지울 것이 없으면 저장 안 함');
+});
+
+test('맵 = 회차 (사장님 11/21 G \'16강전은 열린 원, 8강전은 두 다리, 4강전과 결승은 성벽 안뜰로 하자.\'): 판(matchSetup · spec)에 회차 · 고르기 화면 = 싸움 판 = 다시보기 · 옛 저장(옛 씨앗 규칙 · 이어받던 경기)도 깨지지 않음', async () => {
+  const M = await import('../../src/saengsa_maps.js');
+  const SM = await import('../../src/saengsa_match.js');
+  const id = (m) => m?.id ?? 'circle';
+  mem.clear();
+  S.updateSaengsa((d) => { d.current = make(5); return true; });
+  S.syncSaengsa(at(30, 10));
+  const cur = () => S.readSaengsa().current;
+  const seen = [];
+  for (let round = 0; round < 4; round++) {
+    const t = cur(), m = R.myMatch(t);
+    assert.equal(m.round, round);
+    const setup = R.matchSetup(t, m, ['0-0', '0-1'], at(30, 10 + round));
+    const spec = SM.specFromSetup(setup);
+    assert.deepEqual([setup.round, setup.rounds, spec.round, spec.rounds], [round, 4, round, 4]);
+    assert.equal(M.mapOfSetup(setup), M.mapOfMatch(t, m), '싸움 판 = 고르기 화면');
+    assert.equal(M.mapOfSetup(spec), M.mapOfMatch(t, m), 'main.js 가 읽는 spec 도 같음');
+    seen.push(id(M.mapOfMatch(t, m)));
+    if (round === 1) {
+      // 옛 저장 흉내: 이어받던 8강(옛 씨앗 규칙 때 적은 몸) · 앞 결과 판 saengsa-6 · 판에 rounds 없음 → 회차 맵(두 다리) · 깨지지 않음
+      const bodies = { '0-0': { v: 1, blood: 0.8, wounds: [] } };
+      assert.equal(S.saveResume(m.id, { picks: ['0-0', '0-1'], arms: ['w1', 'w2', 'w3'], bodies, at: at(30, 11, 1) }), true);
+      S.updateSaengsa((d) => { for (const x of d.current.matches) if (x.result) x.result.ver = 'saengsa-6'; return true; });
+      const old = cur(), Rm = R.resumeOf(old, m.id);
+      assert.deepEqual(Rm.picks, ['0-0', '0-1']);
+      const again = R.matchSetup(old, R.myMatch(old), Rm.picks, at(30, 11, 2));
+      const { rounds: _gone, ...oldSetup } = again;
+      assert.equal(M.mapOfSetup(oldSetup), M.SAENGSA_MAP_BY_ID.bridges, 'rounds 없는 옛 판 = 본판 크기로 회차 맵');
+      assert.equal(M.mapOfSetup(SM.specFromSetup(oldSetup)), M.SAENGSA_MAP_BY_ID.bridges);
+    }
+    assert.ok(S.playMine(m.id, ['0-0', '0-1'], at(30, 10 + round, 30), winFor(t, m)), `${round} 회차 이김`);
+  }
+  assert.deepEqual(seen, ['circle', 'bridges', 'court', 'court']);
+  // 다시보기 몫: 끝난 경기도 같은 맵 (결과 판 saengsa-7 · 옛 판 결과도 회차로 셈 — 깨지지 않음)
+  const done = cur();
+  assert.equal(done.status, 'done');
+  const mine = done.matches.filter((m) => R.isMine(done, m)).sort((x, y) => x.round - y.round);
+  assert.deepEqual(mine.map((m) => id(M.mapOfMatch(done, m))), seen);
+  assert.deepEqual(mine.map((m) => m.result.ver), ['saengsa-6', R.SAENGSA_VER, R.SAENGSA_VER, R.SAENGSA_VER]);
+  assert.equal(R.SAENGSA_VER, 'saengsa-7');
 });
 
 test('몸 사본 (생사전 넷): 들고 온 상처(carried) · 죽은 몸은 죽은 채 · 흙 몸도', async () => {

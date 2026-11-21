@@ -83,7 +83,7 @@ export function specFromSetup(setup) {
     index, team, key: p.key, human: p === human, id: p.id, name: p === human ? undefined : nameOfPerson(p), weapon: weaponOfPerson(p).id, weaponBroken: weaponOfPerson(p).broken, school: p.school ?? null, prof: p.prof ?? null, cloth: p.cloth ?? null,
     snapshot: snapshotFromPerson(p), person: p,
   }));
-  return { matchId: setup.matchId ?? null, seed: setup.seed ?? 0, control: human ? 'player' : 'watch', mineSide: mine, fighters };
+  return { matchId: setup.matchId ?? null, seed: setup.seed ?? 0, round: setup.round ?? 0, rounds: setup.rounds ?? null, control: human ? 'player' : 'watch', mineSide: mine, fighters }; // round · rounds = 맵 (11/21 G — saengsa_maps.js mapOfSetup)
 }
 
 /** 이 사람이 든 무기의 숙련도 — 생사전 쪽 profFor(saengsa_rules.js)와 같은 셈: 무기 유파 칸 · 그 칸이 없고 무유파 무기면 다섯 유파 가운데 가장 높은 값 − 1 · 그 밖엔 0 */

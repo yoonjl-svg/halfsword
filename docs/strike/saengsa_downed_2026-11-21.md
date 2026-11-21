@@ -238,3 +238,24 @@
 
 - 고정 팀(사람 같은 팀): 경기마다 가진 무기 + 연 상자에서 가장 맞게 배정(`aiArm` 과 같은 셈) · 고르기 `aiPick` · 물건은 AI 와 같은 셈 · 내 경기도 빠른 셈. 16 팀 고른 몫 6.25 %. 우승 몫 SE 약 0.5 %p.
 - 묶음을 줄이면 제 유파 무기를 못 받는 상대가 두 배(10 → 20 %) — 그만큼 무기상자를 더 고름(29 → 39 %). 사람 팀 우승은 mid 4.9 → 6.7 % · fresh 1.6 → 2.7 %.
+
+## 12. 맵은 회차로 (G — 사장님 11/21 '16강전은 열린 원, 8강전은 두 다리, 4강전과 결승은 성벽 안뜰로 하자.')
+
+| # | 규칙 | 자리 |
+|---|---|---|
+| 1 | 경기 → 맵은 한 셈 `saengsaMapOf(round, rounds)` — 결승에서 센 거리(`rounds − 1 − round`) 0 · 1 = 성벽 안뜰 · 2 = 두 다리 개울 · 그 앞 = 열린 원(`null`). 16 팀 = 16강 원 · 8강 두 다리 · 4강 · 결승 성벽 안뜰. 다른 크기도 같은 거리(8 팀 = 두 다리 · 안뜰 · 안뜰 · 32 팀 = 원 · 원 · 두 다리 · 안뜰 · 안뜰). 표 `SAENGSA_ROUND_MAPS`. 씨앗은 안 봄(전 `pickSaengsaMap(경기 씨앗)` 은 걷음) | `src/saengsa_maps.js` |
+| 2 | 고르기 화면 = `mapOfMatch(t, m)` · 싸움 판 = `mapOfSetup(setup)`(`matchSetup` 이 `rounds` 를 실음 · `specFromSetup` 이 `round · rounds` 를 넘김) · 다시보기 = 끝난 경기도 `mapOfMatch` — 모두 1 의 셈. `rounds` 가 없는 옛 판은 본판 대진표 크기로 | `saengsa_maps.js` · `saengsa_rules.js matchSetup` · `saengsa_match.js specFromSetup` |
+| 3 | 열린 원 회차: 맵 전 생사전처럼 **지금 무대 그대로**(전용 맵으로 안 바꿈). 전용 맵 위에 있었으면 그 앞 무대로(`leaveSaengsaStage` — 1:1 되돌림과 같은 셈). 시험 페이지 '생사전 맵'(`stage=`) 고정은 그대로 | `main.js useSaengsaMap` |
+| 4 | 고르기 화면 머리(열린 원 회차): **싸울 무대 이름 + 원 작은 그림**(전용 맵 그림과 같은 꼴 · 같은 높이 34 px · 바깥 = 둔덕 빛 · 원 = 땅과 울타리 · 두 편 시작 점 셋씩). 이름은 게임이 알려 줌(`saengsaCircleStageName` — 전용 맵 위면 돌아갈 무대) · 모르면 '열린 원'. 그림을 둔 까닭: 세 회차 머리 줄 꼴이 같아 '원 판'이 한눈에 보이고 높이 · 넓이가 같아 넘침이 늘지 않음. 결과 화면 낮은 높이 규칙(≤ 400 px 24 px · ≤ 380 px 접음) 그대로 | `saengsa_page.js` · `circleThumbSvg` |
+| 5 | 옛 저장: 이어받던 경기(옛 씨앗 규칙 때 세운 판)는 이제 회차 맵으로 다시 섬 — 몸 사본만 입히니(자리 · AI 는 새 판) 깨지지 않음(시험). `SAENGSA_VER` saengsa-7(같은 씨앗이어도 맵이 바뀐 경기는 엔진 판이 다름) · 공지 `20261121-saengsa-maps2` | |
+
+- 브라우저 점검(시험 페이지 빌드 · `game.launchSaengsa` 로 판을 세우고 그만둠 — `.tmp/shots/stage_g.mjs`): 16강 `poseidon`(지금 무대 · 왼쪽 위 '생사전 · 포세이돈 신전') → 8강 `saengsa_bridges` → 4강 · 결승 `saengsa_court` → 다시 16강 `poseidon`(그 앞 무대로) · `rounds` 없는 옛 판 8강 = 두 다리 · 8 팀 첫 회차 = 두 다리 · 페이지 오류 0.
+- 고르기 화면 사진 (844 × 390 · DPR 2 — `.tmp/wk-sghp/.tmp/shots/out_g/`): `g_r16_pick`(원 그림 · '포세이돈 신전') · `g_qf_pick`('두 다리 개울') · `g_sf_pick`('성벽 안뜰'). 세로 넘침 667 × 375 = 0 · 740 × 360 = 2 px(전과 같음 — 맵 그림) · 844 × 390 = 0 · 가로 넘침 · 오류 없음.
+
+### 12-1. 점검 (F · G — dev `10f7589f` 위)
+
+- 시험 `node --test --test-concurrency=2 tools/sim/*.test.mjs` — **962 / 962**.
+  - F(`saengsa.test.mjs`): 상대 팀 무기 묶음 여섯(서로 다름 · 미리 든 무기 없이) · AI 물건 — 같으면 약 · 제 유파 아닌 묶음 + 맞는 상자 → 상자 · 다친 사람 + 쓸모없는 상자 → 약 · 부러진 무기 + 맞는 상자 → 상자 · 상자 없음 → 약 · 첫 상자만 좋은 더미는 평균으로(엿보지 않음) · 약 쓰는 차례.
+  - G(`saengsa_maps.test.mjs` · `saengsa.test.mjs`): 회차 → 맵(16 · 2 · 4 · 8 · 32 팀 · 씨앗과 무관 · `rounds` 없는 판 · 빈 판) · 원 그림 높이 · 대회 한 판 네 회차 고르기 화면 = 싸움 판(`matchSetup` · `specFromSetup`) · 옛 저장(앞 결과 saengsa-6 · 이어받던 8강 · `rounds` 없는 판) 깨지지 않음 · 끝난 경기 다시보기 같은 맵.
+- 관문 줄(이 worktree · `10f7589f..` F · G): 이름 0 · fights12 `ca80b048` · live `1c110583` · ft `c0e8c0fc` · corr 12/12 · smoke 34/34 · 빌드 0 · 표기 방침 위반 0.
+- 생사전 시험 페이지 `/saengsa/` 다시 빌드 (F · G 커밋마다).
