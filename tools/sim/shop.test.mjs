@@ -21,7 +21,6 @@ const tierCount = (items) => items.reduce((m, it) => ((m[it.tier] = (m[it.tier] 
 const H = 3600e3;
 
 test('사장님 값이 config SHOP 에 그대로 (10/30 19:0x · 10/31 00:2x) · 본판 켬 · 다음 갱신 머리 1', () => {
-  assert.equal(SHOP.testMode, false); // 시험판 스위치(?shopAlter · ?shopSlot · ?horns · ?horn)는 시험판 빌드만
   assert.equal(SHOP.rerollHeads, 1); // 사장님 10/31 00:2x "'다음 갱신'도 재화가 필요해. 머리 1개로 하자." 
   assert.ok([2, 3].includes(SHOP.items)); // 파는 수 2 또는 3 (10/31 02:xx 견주기 — 사장님 확인 전)
   assert.deepEqual(SHOP.tierWeights, { common: 60, rare: 25, epic: 10, legend: 5 });
@@ -180,7 +179,7 @@ test('저장: 뿔피리 · 상점 칸이 금화 · 머리 옆에 남고 옛 저�
   const next = P.ensureShopStock({ slot: 51, roll: roll(51), valid });
   assert.equal(rolls, 2); assert.equal(next.seed, a.seed); assert.equal(next.slot, 51);
   assert.deepEqual(next.items, R.rollStock({ seed: a.seed, slot: 51, owned: ownedWeapons() }).items);
-  // 시험판 ?shopAlter=1 — 저장된 칸이 보통이면 같은 칸을 얼터로 다시
+  // forceAlter(시험용) — 저장된 칸이 보통이면 같은 칸을 얼터로 다시
   const forced = P.ensureShopStock({ slot: 51, roll: (seed) => R.rollStock({ seed, slot: 51, owned: ownedWeapons(), forceAlter: true }), valid, forceAlter: true });
   assert.equal(forced.alter, true); assert.equal(rolls, 2);
   // 깨진 저장 칸(모르는 무기)은 버리고 다시
@@ -240,7 +239,7 @@ test('왕 뿔피리: 왕을 이기고 난수 < 50 % 면 +1 저장 · 아니면 0
   assert.equal(P.awardKingHorn('isolde', { ...opts, roll: () => { asked++; return 0; } }), 0);
   assert.equal(asked, 0);
   for (const k of ['artoria', 'artoria_mad']) assert.equal(P.awardKingHorn(k, { ...opts, roll: () => 0 }), 1);
-  assert.equal(P.awardKingHorn('isolde', { ...opts, force: true }), 1); // 시험판 ?horn=1
+  assert.equal(P.awardKingHorn('isolde', { ...opts, force: true }), 1); // force(시험용)
   assert.equal(P.readProgress().horns, 4);
   // 기본 난수(rand01 — crypto)로 대략 반
   let got = 0;

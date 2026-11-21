@@ -97,7 +97,7 @@ const leftOf = (exclude) => {
 
 /**
  * 한 칸의 물건 뽑기 — 같은 seed · slot · owned 면 늘 같다.
- *  reroll = 이 칸에서 다시 들인 수(0 = 갱신 때 물건) · owned = 가진 무기 id 목록(시작 무기 포함 — owned_weapons.js ownedWeapons) · forceAlter = 시험판 ?shopAlter (true · false · null = 확률대로)
+ *  reroll = 이 칸에서 다시 들인 수(0 = 갱신 때 물건) · owned = 가진 무기 id 목록(시작 무기 포함 — owned_weapons.js ownedWeapons) · forceAlter = 시험용(true · false · null = 확률대로)
  *  돌려줌 { v 1, slot, rerolls, n, alter, items: [{ id, tier, coins, heads, horns }] } — n = 뽑은 수(SHOP.items) · 팔 무기가 모자라면 items 가 짧다(없으면 빈 목록).
  *  물건은 하나씩 차례로 뽑으므로 수만 늘리면(2 → 3) 앞 물건은 그대로 · 뒤에 하나 더 (topUpStock 은 저장된 물건을 지키며 채움)
  */

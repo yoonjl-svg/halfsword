@@ -11,7 +11,7 @@
 //   대기실이 걷혔으면(싸움 — lobby.destroy) 시계는 쉰다. 오른쪽 '[머리] 1 다음 갱신' = 머리 1 로 지금 칸 물건을 새로(rerollShopStock — 한 번의 저장 · 4 시간 갱신 시각 그대로) ·
 //   머리가 없으면 단추는 꺼지고 옆에 '머리가 부족합니다.'.
 //  새 물건이 들어오면(다시 들이기 · 상점을 보는 동안의 4 시간 갱신 — 사장님 10/31 01:3x '효과음도 나고 쥘리아 대사도 바뀌게') '철-컥' 소리(ui_sound.js — 대기실 소리 규칙 그대로) +
-//   지금과 다른 대사(얼터가 되면 얼터 대사 · 장면 글 켬 / 보통으로 돌아오면 보통 대사 · 장면 글 끔). 칸이 안 보일 때 지난 갱신은 소리 없이 — 다시 열면 새 대사로. 시험판(SHOP.testMode)만 주소 ?shopSlot=N(N 칸 뒤) · ?shopAlter=1 / 0(얼터 억지로 켬 / 끔)
+//   지금과 다른 대사(얼터가 되면 얼터 대사 · 장면 글 켬 / 보통으로 돌아오면 보통 대사 · 장면 글 끔). 칸이 안 보일 때 지난 갱신은 소리 없이 — 다시 열면 새 대사로.
 import { SHOP } from './config.js';
 import { readProgress, purchase, ensureShopStock, rerollShopStock, rand01 } from './lobby_progress.js';
 import { ownedWeapons, weaponReceipt } from './owned_weapons.js';
@@ -28,15 +28,7 @@ export function priceHtml(it, short = []) {
   const part = (k, icon, n) => (n ? `<span class="shop-cost${short.includes(k) ? ' short' : ''}" data-cost="${k}">${icon}<b>${num(n)}</b></span>` : '');
   return part('coins', COIN_ICON, it.coins) + part('heads', POUCH_ICON, it.heads) + part('horns', HORN_ICON, it.horns);
 }
-/** 시험판 주소 스위치 (SHOP.testMode 일 때만 읽음) */
-function testSwitches(search) {
-  const q = new URLSearchParams((search ?? '').slice(1).replace(/\?/g, '&'));
-  const a = q.get('shopAlter'), n = Number(q.get('shopSlot'));
-  return { alter: a === '1' ? true : a === '0' ? false : null, offset: q.has('shopSlot') && Number.isSafeInteger(n) ? n : 0 };
-}
-
-export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, now = () => Date.now(), search = globalThis.location?.search ?? '' } = {}) {
-  const test = SHOP.testMode ? testSwitches(search) : { alter: null, offset: 0 };
+export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, now = () => Date.now() } = {}) {
   const cost = SHOP.rerollHeads;
   host.dataset.count = String(SHOP.items); // 2 = 옆 그림 칸 · 3 = 세로 칸 (shop.css)
   host.innerHTML = `<div class="shop-keeper">
@@ -44,7 +36,7 @@ export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, n
       <div class="shop-say"><p class="shop-mood" hidden></p><p class="shop-name"></p><p class="shop-line"></p></div>
     </div>
     <div class="shop-items" aria-label="파는 물건"></div>
-    <p class="shop-foot"><span class="shop-refresh" role="timer"><span class="shop-hg" aria-hidden="true">${SHOP_HOURGLASS}</span><span class="shop-clock"></span><span class="shop-test"></span></span>
+    <p class="shop-foot"><span class="shop-refresh" role="timer"><span class="shop-hg" aria-hidden="true">${SHOP_HOURGLASS}</span><span class="shop-clock"></span></span>
       <span class="shop-reroll"><span class="shop-reroll-why" hidden>${SHOP_TEXT.rerollShort}</span><button type="button" class="secondary small shop-next" aria-label="${SHOP_TEXT.reroll} · ${SHOP_TEXT.heads} ${cost}"><span class="shop-cost" aria-hidden="true">${POUCH_ICON}<b>${cost}</b></span>${SHOP_TEXT.reroll}</button></span></p>
     <div class="shop-confirm" role="group" aria-label="${SHOP_TEXT.confirm}" hidden>
       <div class="shop-c-text">
@@ -63,12 +55,12 @@ export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, n
   on(img, 'error', () => { q('.shop-portrait').dataset.empty = ''; });
   loadUiCue('restock'); // 새 물건 소리 녹음을 미리 (누름 없이 받음)
   let stock = null, picked = null, shownLine = '', keeper = null, tickT = 0;
-  const slotNow = () => shopSlot(now()) + test.offset;
-  const rollFor = (slot) => { const owned = ownedWeapons(); return (seed, reroll) => rollStock({ seed, slot, reroll, owned, forceAlter: test.alter }); };
+  const slotNow = () => shopSlot(now());
+  const rollFor = (slot) => { const owned = ownedWeapons(); return (seed, reroll) => rollStock({ seed, slot, reroll, owned }); };
 
   function loadStock() {
     const slot = slotNow();
-    stock = ensureShopStock({ slot, roll: rollFor(slot), valid: (s) => !!normalizeShop(s), fix: (s) => topUpStock(s, { owned: ownedWeapons() }), forceAlter: test.alter }); // 옛 2 개 칸 → 지금 수만큼 채움 (10/31)
+    stock = ensureShopStock({ slot, roll: rollFor(slot), valid: (s) => !!normalizeShop(s), fix: (s) => topUpStock(s, { owned: ownedWeapons() }) }); // 옛 2 개 칸 → 지금 수만큼 채움 (10/31)
   }
   /** 지금 보이는 대사와 다른 대사 (보통 · 얼터 표 — nextLine) */
   function pickLine() {
@@ -105,7 +97,6 @@ export function mountShopPanel(host, { status = () => {}, onWallet = () => {}, n
     const left = clockText(msToNextSlot(now()));
     q('.shop-clock').textContent = left;
     q('.shop-refresh').setAttribute('aria-label', `${SHOP_TEXT.refreshLabel} ${left}`);
-    q('.shop-test').textContent = test.offset ? ` · 시험 칸 ${test.offset > 0 ? '+' : ''}${test.offset}` : '';
   }
   /** '다음 갱신' 단추: 머리가 값보다 적으면 꺼짐 + 옆에 짧은 까닭 */
   function renderReroll() {
