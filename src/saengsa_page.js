@@ -16,11 +16,11 @@ import typeStyle from './entrance_type.css?inline';
 import { createPixelGrove, paintPixelWordmark } from './pixel_grove.js';
 import { SAENGSA } from './config.js';
 import { clockFrom, signupWindow, roundAt, openAlways } from './saengsa_clock.js';
-import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, injuriesOf, isMine, assignWeapons, validAssignment, resumeOf, noWait } from './saengsa_rules.js';
+import { scheduleState, sidesOf, winnerOf, readyAt, matchState, myMatch, myTeamOut, roundsOf, matchById, matchSetup, chestCount, seatOrder, isSerious, injuriesOf, isOut, isMine, assignWeapons, validAssignment, resumeOf, noWait } from './saengsa_rules.js';
 import { syncSaengsa, readSaengsa, playMine, claimChests, signUp, newSeed, saveResume } from './saengsa_store.js';
 import { fighterName, portraitOf, weaponName, weaponThumb, weaponInfo, SAENGSA_DATA, ownedWeapons, entryState, hireCostOf } from './saengsa_roster.js';
 import { makeNamelessFaces } from './saengsa_nameless.js';
-import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, clockText as clockWords, untilText, roundName, teamName, resultLine, myResultLine, nextMatchLine, outLine, chestLine, chestGot, injuryText, restText, stepText, signupHours, entryLine, shortLine } from './saengsa_text.js';
+import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, clockText as clockWords, untilText, roundName, teamName, resultLine, myResultLine, nextMatchLine, outLine, chestLine, chestGot, injuryText, lostText, restText, stepText, signupHours, entryLine, shortLine } from './saengsa_text.js';
 import { makeEngine } from './saengsa_engine.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -160,7 +160,10 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
     //  머리 표 (11/21 사장님 '죽음, 코마, 이런 식으로 구분해 넣어.'): 죽음 · 코마(이긴 팀에서 나섰다 쓰러졌으나 산 사람 — result.fighters[key].downed) · 출전 · 쉼
     //  부상은 나은 흔적을 뺀 것만(injuriesOf — 11/21 경상이 나으면 흔적으로 남지만 부상이 아님)
     const o = result?.fighters?.[f.key], rs = !o && !f.dead ? result?.rest?.[f.key] : null;
+    //  이탈 (11/21 C — 칼 팔 · 다리를 잃음): 머리 표 '이탈'(죽음 > 이탈 > 코마 > 출전 · 쉼) · 고르기에서 흐리게 · 못 누름 · 부상 줄 앞에 잘린 팔다리('칼 팔 잘림' · '빈손 팔 잘림' · '다리 잘림')
     const hp = o ? o.hp : rs ? rs.hp : f.hp, inj = injuriesOf(o ? o.injuries : rs ? rs.injuries : f.injuries), dead = o ? !o.alive : f.dead, coma = !!o?.downed && !dead;
+    const lostP = { lost: [...new Set([...(f.lost ?? []), ...(o?.lost ?? [])])] }, out = !dead && isOut(lostP), cut = lostText(lostP.lost);
+    const injLine = cut.length ? [...cut, ...(inj.length ? [injuryText(inj, (i) => isSerious(i))] : [])].join(' · ') : injuryText(inj, (i) => isSerious(i));
     const restLine = rs ? restText(rs) : '';
     const hpPct = Math.max(0, Math.min(100, Math.round((hp / SAENGSA.hpMax) * 100)));
     // 다섯 유파 + 무유파가 주 유파인 인물만 무유파 칸 (숙련도 표에 none 이 있는 사람 — 브론 · 마야 · 김씨) · 든 무기의 유파 칸을 강조
@@ -168,14 +171,14 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
     const prof = cells.map((s) => `<span class="sg-pc"${s === f.school ? ' data-on' : ''}><small>${SCHOOL_KO[s]}</small><b>${f.prof?.[s] ?? 0}</b></span>`).join('');
     const tag = pick ? 'button' : 'div';
     const wname = f.weapon ? weaponName(f.weapon) : T.noWeapon; // 내 팀 첫 경기 무기 배정 전 (11/18)
-    const label = `${fighterName(f)} · 체력 ${hp} · ${injuryText(inj, (i) => isSerious(i))} · ${wname}${f.broken ? ` ${T.broken}` : ''}${dead ? ` · ${T.dead}` : coma ? ` · ${T.downed}` : ''}${restLine ? ` · ${restLine}` : ''}`;
-    return `<${tag} ${pick ? 'type="button" ' : ''}class="sg-card" data-key="${f.key}"${pick ? ` aria-pressed="${picked}"` : ''}${dead ? ' data-dead' : ''}${coma ? ' data-coma' : ''}${entrant ? ' data-entrant' : ''}${mine ? ' data-mine' : ''}${pick && dead ? ' disabled' : ''} aria-label="${esc(label)}">
+    const label = `${fighterName(f)} · 체력 ${hp} · ${injLine} · ${wname}${f.broken ? ` ${T.broken}` : ''}${dead ? ` · ${T.dead}` : out ? ` · ${T.out}` : coma ? ` · ${T.downed}` : ''}${restLine ? ` · ${restLine}` : ''}`;
+    return `<${tag} ${pick ? 'type="button" ' : ''}class="sg-card" data-key="${f.key}"${pick ? ` aria-pressed="${picked}"` : ''}${dead ? ' data-dead' : ''}${out ? ' data-out' : ''}${coma ? ' data-coma' : ''}${entrant ? ' data-entrant' : ''}${mine ? ' data-mine' : ''}${pick && (dead || out) ? ' disabled' : ''} aria-label="${esc(label)}">
       <img class="sg-face" src="${esc(portraitOf(f.id, f.cloth))}" alt="" draggable="false">
       <span class="sg-card-body"><b class="sg-name">${esc(fighterName(f))}</b>
         <span class="sg-hp"><span class="sg-hp-bar"><i style="width:${hpPct}%"></i></span>${rs?.gain > 0 ? `<span class="sg-gain">+${rs.gain}</span>` : ''}<span class="sg-hp-num">${hp}</span></span>
         <span class="sg-wpn"${f.weapon ? '' : ' data-none'}>${f.weapon ? `<img src="${esc(weaponThumb(f.weapon))}" alt="" draggable="false">` : ''}<span>${esc(wname)}</span>${f.broken ? `<i class="sg-tag" data-kind="broken">${T.broken}</i>` : ''}</span>
-        ${rs?.steps.length ? `<span class="sg-inj" data-rest>${rs.steps.map((x) => `<span>${esc(stepText(x))}</span>`).join(' · ')}</span>` : `<span class="sg-inj"${inj.length ? ' data-hurt' : ''}>${esc(injuryText(inj, (i) => isSerious(i)))}</span>`}</span>
-      <span class="sg-prof" aria-hidden="true">${prof}</span>${dead ? `<span class="sg-badge" data-kind="dead">${T.dead}</span>` : coma ? `<span class="sg-badge" data-kind="coma">${T.downed}</span>` : entrant ? `<span class="sg-badge">${T.entrant}</span>` : rs ? `<span class="sg-badge" data-kind="rest">${T.rested}</span>` : ''}</${tag}>`;
+        ${rs?.steps.length ? `<span class="sg-inj" data-rest>${[...cut.map((x) => `<span data-cut>${esc(x)}</span>`), ...rs.steps.map((x) => `<span>${esc(stepText(x))}</span>`)].join(' · ')}</span>` : `<span class="sg-inj"${inj.length || cut.length ? ' data-hurt' : ''}>${esc(injLine)}</span>`}</span>
+      <span class="sg-prof" aria-hidden="true">${prof}</span>${dead ? `<span class="sg-badge" data-kind="dead">${T.dead}</span>` : out ? `<span class="sg-badge" data-kind="out">${T.out}</span>` : coma ? `<span class="sg-badge" data-kind="coma">${T.downed}</span>` : entrant ? `<span class="sg-badge">${T.entrant}</span>` : rs ? `<span class="sg-badge" data-kind="rest">${T.rested}</span>` : ''}</${tag}>`;
   }
   function openMatch(id) {
     open = { id, picks: [], result: null, arms: t.teams[0].members.map((f) => f.weapon) };
@@ -263,12 +266,12 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
     root.querySelector(`button.sg-card[data-key="${k}"]`)?.focus({ preventScroll: true });
   });
   // ── 무기 배정 (경기마다 — 살아 있는 내 팀 세 사람 · 가진 무기 · 한 무기는 한 사람에게(SAENGSA.assignUnique)) ──
-  const aliveIdx = () => t.teams[0].members.map((f, i) => (f.dead ? -1 : i)).filter((i) => i >= 0);
+  const aliveIdx = () => t.teams[0].members.map((f, i) => (f.dead || isOut(f) ? -1 : i)).filter((i) => i >= 0); // 이탈한 사람은 무기를 받지 않음 (11/21 C)
   const armsValid = () => !!open && validAssignment(open.arms, ownedWeapons(), aliveIdx()); // 가진 무기 아무것이나 — 상대 팀이 같은 전용무기를 들었어도 (전용무기는 팀마다 하나 — 사장님 11/18 · 전 10/29 22:3x 엔 못 씀)
   function drawArm() {
     const owned = ownedWeapons(), members = t.teams[0].members, brokenMine = new Set(t.broken ?? []);
     $('sgArmRows').innerHTML = members.map((f, i) => {
-      if (f.dead) return '';
+      if (f.dead || isOut(f)) return '';
       const taken = new Set(SAENGSA.assignUnique ? aliveIdx().filter((j) => j !== i).map((j) => armDraft[j]) : []); // 다른 사람에게 준 무기 (한 팀 안에서 한 무기는 한 사람)
       const chips = owned.map((w) => `<button type="button" class="sg-chip-btn" role="radio" data-slot="${i}" data-weapon="${w}" aria-checked="${armDraft[i] === w}"${taken.has(w) ? ' disabled' : ''}${brokenMine.has(w) ? ' data-broken' : ''}>${esc(weaponName(w))}${brokenMine.has(w) ? ` · ${T.broken}` : ''}</button>`).join('');
       return `<div class="sg-arm-row"><span class="sg-arm-who"><img src="${esc(portraitOf(f.id, f.cloth))}" alt="" draggable="false"><b>${esc(fighterName(f))}</b></span><div class="sg-chips" role="radiogroup" aria-label="${esc(fighterName(f))} · ${T.weapon}">${chips}</div></div>`;

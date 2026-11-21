@@ -49,7 +49,9 @@ export function snapshotFromPerson(p) {
     const limb = WOUND_LIMB[part];
     if (limb) limbs[limb] = Math.max(0, limbs[limb] - inj.sev * LIMB_LOSS);
   }
-  return { v: 1, blood: bloodFromHp(p.hp), bleed: 0, consciousness: 1, pain: 0, limbs, wounds, weaponBroken: weaponOfPerson(p).broken };
+  const lost = (p.lost ?? []).filter((l) => l in limbs); // 잘린 팔다리 (11/21 C — 대회 끝까지 · fighter.applySnapshot → startSevered)
+  for (const l of lost) limbs[l] = 0;
+  return { v: 1, blood: bloodFromHp(p.hp), bleed: 0, consciousness: 1, pain: 0, limbs, wounds, weaponBroken: weaponOfPerson(p).broken, ...(lost.length ? { lost } : {}) };
 }
 
 /**
@@ -126,6 +128,8 @@ export function resultFromMatch(spec, fighters, winnerTeam, injuriesFromWounds =
     const fresh = (f.wounds ?? []).filter((w) => !w.carried).map((w) => ({ part: w.part, severity: w.severity }));
     out[e.key] = { hp: hpFromFighter(f), injuries: injuriesFromWounds(e.person?.injuries ?? [], fresh), alive: !!f.alive, broken: !!f.weaponBroken, weaponBroken: !!f.weaponBroken };
     if (f.team === team && downedCause(f)) Object.assign(out[e.key], { hp: SAENGSA.downedHp, injuries: downedInjuries(out[e.key].injuries, fresh, f.causeOfDeath), alive: true, downed: true });
+    const lost = [...new Set([...(e.person?.lost ?? []), ...(f.severedLimbs ?? [])])]; // 잘린 팔다리 (11/21 C — 엔진 fighter.severedLimbs · 들어올 때 잃은 것도 그대로 · 대회 끝까지)
+    if (lost.length) out[e.key].lost = lost;
   }
   return { winner: team === 0 ? mine : other, fighters: out };
 }

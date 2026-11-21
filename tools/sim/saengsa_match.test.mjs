@@ -301,3 +301,48 @@ test('⑧ 코마 (11/21 (나) — 사장님 승인 H 10): 이긴 편의 출혈 �
   assert.deepEqual([a.alive, a.causeOfDeath, b.alive, b.causeOfDeath, c.alive, c.causeOfDeath], [false, '출혈', false, '기절', false, '목']);
   assert.deepEqual([downedCause(a), downedCause(b), downedCause(c), downedCause(M.fighters[3])], [true, true, false, false]);
 });
+
+test('⑨ 잘린 팔다리 (11/21 C): 결과 lost = 엔진 severedLimbs + 들어올 때 잃은 것 · 사본 lost → 판 시작부터 그 팔 없음(관절 없음 · 두 손 쥐기 없음 · 떨어진 부위는 세계에서 꺼지고 그림 숨김 · 피 · 단면 상처 없음)', (t) => {
+  const spec = specFromSetup(fakeSetup({ sides: { ...fakeSetup().sides, b: [person('0-0', 'player', { hp: 80, lost: ['armO'], injuries: [{ part: 'arm', sev: 0.49, rests: 0 }] }), person('0-1', 'nameless', { cloth: 2 })] } }));
+  assert.deepEqual(spec.fighters[0].snapshot.lost, ['armO']);
+  assert.equal(spec.fighters[0].snapshot.limbs.armO, 0);
+  assert.equal(spec.fighters[2].snapshot.lost, undefined, '잃은 것 없으면 칸 없음 (옛 사본과 같은 꼴)');
+  const fake = [
+    { team: 0, alive: true, blood: 0.9, wounds: [] },
+    { team: 1, alive: false, blood: 0.3, causeOfDeath: '출혈', wounds: [{ part: 'thighF', severity: 1.1 }], severedLimbs: new Set(['legF']) },
+    { team: 0, alive: true, blood: 0.8, wounds: [{ part: 'farmS', severity: 1.2 }], severedLimbs: new Set(['armS']) },
+    { team: 1, alive: true, blood: 0.6, wounds: [] },
+  ];
+  const res = resultFromMatch(spec, fake, 0, rulesInjuries);
+  assert.deepEqual(res.fighters['0-0'].lost, ['armO'], '들어올 때 잃은 팔 그대로');
+  assert.deepEqual(res.fighters['0-1'].lost, ['armS']);
+  assert.deepEqual(res.fighters['3-0'].lost, ['legF'], '진 편(죽음)도 적음');
+  assert.equal(res.fighters['3-1'].lost, undefined);
+  // 진짜 몸: 사본 lost → startSevered (빈손 팔)
+  seedRand(t, 21);
+  const M = newMatch({ seed: 21, count: 2, weapons: ['longsword', 'longsword'] });
+  const f = M.fighters[0];
+  const parts = ['uarmO', 'farmO'].map((p) => f.bodies[p]);
+  const meshes = f.meshes.filter((m) => parts.includes(m.rb));
+  const mass0 = f.totalMass;
+  f.applySnapshot(snapshotFromPerson(person('0-0', 'player', { hp: 100, lost: ['armO'] })));
+  assert.equal(f.jointByName.uarmO.joint, null, '어깨 관절 없음');
+  assert.ok(f.severedLimbs.has('armO') && f.limbs.armO === 0 && f.gripping === false);
+  assert.ok(parts.every((b) => !b.isEnabled()), '떨어진 부위는 세계에서 꺼짐 (잔해 없음)');
+  assert.ok(meshes.length > 0 && meshes.every((m) => m.group.visible === false), '그림 숨김');
+  assert.ok(f.totalMass < mass0);
+  assert.deepEqual([f.bleed, f.wounds.filter((w) => w.stump).length, (f.severed ?? []).length], [0, 0, 0], '피 · 단면 상처 · 절단 기록 없음');
+  assert.equal(f.armed, true, '칼 팔은 그대로');
+  assert.deepEqual(f.snapshot().lost, ['armO'], '사본에 lost');
+  // 판을 돌려도 깨지지 않음 · 떨어진 팔은 제자리(움직이지 않음)
+  const p0 = parts[1].translation();
+  for (let i = 0; i < 240; i++) M.step();
+  const p1 = parts[1].translation();
+  assert.ok(Math.hypot(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z) < 1e-9, '꺼진 부위는 움직이지 않음');
+  assert.ok(Number.isFinite(f.bodies.chest.translation().y) && f.alive);
+  // 사본 없이 · lost 없이 = 그대로 (1:1 · 다른 판)
+  seedRand(t, 22);
+  const N = newMatch({ seed: 22, count: 2 });
+  N.fighters[0].applySnapshot(snapshotFromPerson(person('0-0', 'player', { hp: 100 })));
+  assert.ok(N.fighters[0].jointByName.uarmO.joint && !N.fighters[0].severedLimbs);
+});

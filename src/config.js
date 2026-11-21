@@ -2718,6 +2718,11 @@ export const SAENGSA = {
   // 코마 [사장님 11/21 — 기록 docs/strike/saengsa_wounded_2026-11-21.md (나) · docs/strike/saengsa_downed_2026-11-21.md]: 이긴 편에서 출혈 · 기절로 쓰러진 사람은 죽지 않고
   //  체력 downedHp + 중상 하나 넘게로 산다(saengsa_match.js resultFromMatch — 엔진의 죽음 까닭 causeOfDeath 를 읽음 · 목 · 머리 즉사는 그대로 죽음 · 진 편은 그대로) · 빠른 셈도 같은 몫(quick.winInstant)
   downedHp: 10,
+  // 팔다리 잘림 [사장님 11/21 '팔다리 부상은 권고대로 할게 but 은퇴 대신 이탈' — 기록 docs/strike/saengsa_downed_2026-11-21.md §7]:
+  //  잃은 팔다리(사람 lost — 엔진 fighter.severedLimbs: armS 칼 팔 · armO 빈손 팔 · legF · legB)는 대회 끝까지 돌아오지 않음(쉼으로도 — 단면 상처는 보통 부상처럼 한 단계씩 나음) ·
+  //  이탈 = outLimbs 가운데 하나를 잃음: 살아 있으나 그 대회에 다시 나서지 못함(saengsa_rules.js isOut · validPicks · aiPick) · 나설 사람이 없는 팀은 그 경기 기권으로 짐 ·
+  //  빈손 팔만 잃음 = 나설 수 있음 — 다음 실제 싸움은 그 팔 없이(fighter.js startSevered · 두 손 쥐기 없음) · 빠른 셈 힘 × quick.oneArmK
+  outLimbs: ['armS', 'legF', 'legB'],
   seriousAt: 0.5, // 중상 문턱 = 상처 심각도(combat.js severity — 1.0 = 뼈를 지날 만한 베기 · 목 0.5 · 머리 베기 0.8 이 죽음 문턱) 이 값 이상 · 사장님 확인 전
   woundMin: 0.1, // 2단계 실제 싸움 상처를 부상으로 셀 가장 작은 심각도 (긁힘은 뺌 — saengsa_rules.js injuriesFromWounds) · 사장님 확인 전
   aiThirdHp: 60, // 상대 팀 고르기 (saengsa_rules.js aiPick — 사람 팀과 같은 쉼 규칙 위): 가장 센 둘은 늘 · 셋째(가장 약한 사람)는 체력이 이 값 이상일 때만 · 결승은 산 사람 모두 ·
@@ -2736,6 +2741,9 @@ export const SAENGSA = {
     //  이긴 쪽 한 사람 (11/21 — 설계안 §2-4 권고 · 엔진 재기에 맞춘 꼴): P = 이긴 편의 경기 전 이김 확률(winChance) · 셋으로 쉽게 이기면 덜 다치고 둘로 셋을 겨우 이기면 크게 다친다
     //   전 winDmg [5, 45] × (0.5 + 0.5 × 팽팽함) · 새 부상 0.3 — 나선 수 · 앞섬과 상관없었다
     winDie: [0.12, 0.25], // 쓰러질 확률 = [0] + [1] × (1 − P) → P 0.77 · 0.5 · 0.23 = 18 · 25 · 31 % (11/21 전 '죽음 확률' — 이제 그 가운데 winInstant 만 죽음 · 나머지는 코마)
+    winSever: { out: 0.055, armO: 0.015, outSplit: { armS: 5, legF: 2, legB: 4 } }, // 이긴 쪽 산 사람(서 있음 · 코마) 한 사람의 잘림 확률 — out = 이탈(칼 팔 · 다리 — outSplit 무게로 armS · legF · legB) · armO = 빈손 팔만
+    //  엔진 재기(3:2 · 3:3 80 판 · 새 힘 표 0.5 ~ 1.2 · 숙련 2 · 4 · 6 · 열 무기): 이긴 편 산 사람 200 가운데 이탈 11(5.5 % — 칼 팔 5 · 앞다리 2 · 뒷다리 4) · 빈손 팔만 3(1.5 %) · 기록 §7
+    oneArmK: 1, // 빈손 팔을 잃은 사람의 힘 몫 — 엔진 1:1 한 팔 대 두 팔 60 판에서 한 팔 쪽 55 % 이김(± 6.5) → 깎을 근거 없음(1). 큰 두손 칼(츠바이핸더 · 플랑베르주 · 모노호시자오)은 한 팔이 15 / 18 이김 — 기록 §7
     winInstant: 0.42, // 쓰러진 사람 가운데 즉사(목 · 머리 — 죽음) 몫 · 나머지 = 코마(체력 downedHp + 중상 하나). 엔진 재기 이긴 편 쓰러짐 55 가운데 즉사 23 = 42 % · P 와 상관없음(P ≈ 0.5 · 0.7 · 0.3 갈래 41 · 43 · 43 % — docs/strike/saengsa_downed_2026-11-21.md)
     //  잃은 체력이 남은 체력 이상(피를 다 흘림)이어도 코마 — 엔진의 출혈 쓰러짐과 같은 뜻
     winLoss: [90, 1.1], // 산 사람이 잃는 체력 = 0 ~ [0] × ([1] − P) 고르게 (남은 체력 이상이면 죽음) → 평균 15 · 27 · 39

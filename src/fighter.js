@@ -1918,6 +1918,7 @@ export class Fighter {
         ...(w.stump ? { stump: true } : {}), ...(w.limb ? { limb: w.limb } : {}), ...(w.carried ? { carried: true } : {}),
       })),
       weaponBroken: this.weaponBroken, // 부러진 무기는 그 대회 끝까지 부러진 채 (사장님 10/29 20:1x — 생사전)
+      ...(this.severedLimbs?.size ? { lost: [...this.severedLimbs] } : {}), // 잘린 팔다리 (11/21 C — 생사전 대회 끝까지 · 없으면 칸 없음)
     };
   }
 
@@ -1936,6 +1937,7 @@ export class Fighter {
       ...(w.stump ? { stump: true } : {}), ...(w.limb ? { limb: w.limb } : {}), ...(w.carried ? { carried: true } : {}),
     }));
     if (s.weaponBroken && !this.weaponBroken && this.weapon.fragile) this.breakWeapon(true);
+    for (const limb of s.lost ?? []) this.startSevered(limb); // 판 시작부터 없는 팔다리 (생사전 11/21 C — 없으면 그대로)
     if (this.limbs.armS < VITALS.dropSwordArm && this.armed) this.dropSword();
   }
 
@@ -2136,7 +2138,7 @@ export class Fighter {
    *  떨어진 부위는 잔해(상처를 내지도 받지도 않음, colliderInfo.detached). 칼 팔이면 칼은 잘린 아래팔과 함께 간다(쥠 관절 그대로, armed 만 false).
    *  다리를 잃으면 서지 않는다(한 다리 보행 없음) — 부활은 참수 아닌 한 허용(사장님 10/8 00:20), 누운 채 손목 제어는 오늘처럼 산다.
    */
-  sever(t, h) {
+  sever(t, h, quiet = false) { // quiet: 판 시작부터 없는 팔다리(startSevered) — 단면 상처 · 출혈 · 기록 · 효과 걸이 없음 (싸움 길은 그대로)
     const J = this.jointByName[t.joint];
     if (!J?.joint) return false;
     const PARTS = { farmS: ['farmS'], farmO: ['farmO'], uarmS: ['uarmS', 'farmS'], uarmO: ['uarmO', 'farmO'], shinF: ['shinF', 'footF'], shinB: ['shinB', 'footB'], thighF: ['thighF', 'shinF', 'footF'], thighB: ['thighB', 'shinB', 'footB'] }[t.joint];
@@ -2195,6 +2197,7 @@ export class Fighter {
       this.knockDown(true);
       this.downTime = 1e9; // 서지 않는다 (updateState 의 getup 전이도 missingLeg 를 본다)
     }
+    if (quiet) return fresh;
     // 5. 상처·출혈: 떨어진 부위의 상처는 더는 몸의 피가 아니다; 단면 상처를 몸 쪽 부위에 (참수와 같은 꼴)
     for (const w of this.wounds) if (this.detachedParts.has(w.part) && !w.detached) { this.bleed = Math.max(0, this.bleed - w.bleed); w.bleed = 0; w.detached = true; }
     const bleed = this.physiology.bleeds ? h.severity * (h.bleedPerSev ?? 0.012) : 0; // 피 없는 몸(병마용): 단면 출혈 0 (샛별 901b1f39 limb_sever 와 같은 뜻)
@@ -2203,6 +2206,24 @@ export class Fighter {
     this.severed ||= [];
     this.severed.push({ joint: t.joint, kind: t.kind, parts: PARTS, limb, parent: parentName, severity: h.severity, energy: h.energy, dist: t.dist, parentLocal: { x: a1.x, y: a1.y, z: a1.z }, childLocal: { x: a2.x, y: a2.y, z: a2.z } });
     COMBAT_HOOKS.onSever?.(this, t.kind, PARTS.map((p) => this.bodies[p]), parentName);
+    return true;
+  }
+
+  /**
+   * 판 시작부터 없는 팔다리 (생사전 11/21 C — 지난 경기에 잘린 팔다리는 대회 끝까지 돌아오지 않음 · saengsa_match.js snapshotFromPerson lost → applySnapshot):
+   *  싸움의 절단(sever)과 같은 관절 떼기 · 수동 관절 · 몸값 · 기능(빈손 팔이면 두 손 쥐기 없음 — gripping · limbs.armO 0) 뒤, 떨어진 부위(와 칼 팔이면 칼)를
+   *  세계에서 끄고(몸 · 충돌 없음) 그림을 숨긴다 — 잔해 · 떨어진 팔 · 피 · 소리 · 단면 상처 없음(들고 온 부상은 따로 닫힌 상처로 옴). 어깨 · 엉덩이에서 뗌.
+   *  생사전은 빈손 팔(armO)만 들어온다(칼 팔 · 다리를 잃은 사람은 이탈 — 나서지 못함). 판을 세운 뒤 · 첫 스텝 전에만. 돌려줌: 뗐나
+   */
+  startSevered(limb) {
+    const joint = { armS: 'uarmS', armO: 'uarmO', legF: 'thighF', legB: 'thighB' }[limb];
+    if (!joint || this.severedLimbs?.has(limb)) return false;
+    const fresh = this.sever({ joint, kind: limb.startsWith('arm') ? 'shoulder' : 'hip', dist: 0 }, null, true);
+    if (!fresh) return false;
+    const off = new Set(fresh.map((p) => this.bodies[p]));
+    if (limb === 'armS') for (const col of this.swordColliders ?? []) { const b = col.parent(); if (b) off.add(b); }
+    for (const b of off) b.setEnabled(false);
+    for (const m of this.meshes) if (off.has(m.rb)) m.group.visible = false;
     return true;
   }
 

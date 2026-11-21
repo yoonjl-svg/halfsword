@@ -30,7 +30,7 @@ export const SCHOOLS5 = Object.freeze(['german', 'italian', 'iberian', 'japanese
 export const NAMELESS = 'nameless';
 export const INJURY_PARTS = Object.freeze(['arm', 'leg', 'torso', 'head']);
 /** 저장한 결과의 판 (다시보기가 같은 셈인지 가린다 — 빠른 셈 · 엔진 셈이 바뀌면 올린다) */
-export const SAENGSA_VER = 'saengsa-3'; // 11/21 코마(이긴 편 쓰러짐 → 체력 10 + 중상 · 빠른 셈 즉사 몫) · 한 단계 나음 끝쪽 띠 · 나은 흔적 (전 'saengsa-2' — 빠른 셈 이긴 쪽 피해 · 수 몫 · 쉼 규칙 · 'saengsa-1')
+export const SAENGSA_VER = 'saengsa-4'; // 11/21 C 잘린 팔다리 · 이탈 · 빠른 셈 잘림 (전 'saengsa-3' — 코마(이긴 편 쓰러짐 → 체력 10 + 중상 · 빠른 셈 즉사 몫) · 한 단계 나음 끝쪽 띠 · 나은 흔적 (전 'saengsa-2' — 빠른 셈 이긴 쪽 피해 · 수 몫 · 쉼 규칙 · 'saengsa-1')
 
 // ── 씨앗 난수 (게임 난수 Math.random 을 건드리지 않는다) ──
 /** 글 · 수 묶음 → 32 비트 씨앗 (FNV-1a) */
@@ -51,6 +51,8 @@ export function rng(seed) {
   };
 }
 const pickOne = (r, list) => list[Math.min(list.length - 1, Math.floor(r() * list.length))];
+/** 무게 표 { 열쇠: 무게 } 에서 하나 */
+const pickWeighted = (r, table) => { const e = Object.entries(table), sum = e.reduce((s, [, w]) => s + w, 0); let u = r() * sum; for (const [k, w] of e) { if ((u -= w) < 0) return k; } return e.at(-1)[0]; };
 function shuffle(r, list) {
   const a = [...list];
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -167,7 +169,7 @@ export function armScore(f, w, cfg = SAENGSA) {
 export function aiArm(team, cfg = SAENGSA) {
   const pool = team?.pool;
   if (!Array.isArray(pool) || !pool.length || team.mine) return false;
-  const alive = team.members.filter((f) => !f.dead);
+  const alive = team.members.filter((f) => pickable(f, cfg)); // 이탈한 사람은 무기를 받지 않음 (11/21 C — 마지막 무기 그대로)
   const k = Math.min(alive.length, pool.length);
   const score = alive.map((f) => pool.map((w) => armScore(f, w, cfg)));
   let best = null, bestSum = -Infinity;
@@ -239,11 +241,11 @@ export function validAssignment(weapons, owned, only = [0, 1, 2], cfg = SAENGSA)
   if (!used.every((w) => typeof w === 'string' && owned.includes(w))) return false;
   return !cfg.assignUnique || new Set(used).size === used.length;
 }
-/** 경기 전 내 팀 무기 바꾸기 (살아 있는 사람만 — 죽은 사람은 그대로): weapons [나, 동료 1, 동료 2] · 돌려줌: 바꿨나(틀리면 아무것도 안 바꿈) ·
+/** 경기 전 내 팀 무기 바꾸기 (나설 수 있는 사람만 — 죽은 사람 · 이탈한 사람(11/21 C)은 그대로): weapons [나, 동료 1, 동료 2] · 돌려줌: 바꿨나(틀리면 아무것도 안 바꿈) ·
  *  가진 무기면 무엇이든 — 상대 팀이 같은 전용무기를 들었어도 (팀마다 하나 — 사장님 11/18 · 전 lockedSignatures 로 막던 것을 걷음) */
 export function assignWeapons(t, weapons, { owned, weaponInfo }, cfg = SAENGSA) {
   const members = t?.teams?.[0]?.members ?? [];
-  const alive = members.map((f, i) => (f.dead ? -1 : i)).filter((i) => i >= 0);
+  const alive = members.map((f, i) => (pickable(f, cfg) ? i : -1)).filter((i) => i >= 0);
   if (!validAssignment(weapons, owned, alive, cfg)) return false;
   const broken = new Set(t.broken ?? []);
   for (const i of alive) {
@@ -321,6 +323,10 @@ export function myMatch(t) {
 export const isSerious = (inj, cfg = SAENGSA) => inj.sev >= cfg.seriousAt;
 /** 나은 흔적인가 (경상이 쉬어 나은 자리 — sev < woundMin): 부상이 아님 · 실제 싸움에만 닫힌 상처로 들고 감 */
 export const isTrace = (inj, cfg = SAENGSA) => !(inj?.sev >= cfg.woundMin);
+/** 이탈인가 (11/21 C — 칼 팔이나 다리를 잃음 · SAENGSA.outLimbs): 살아 있으나 그 대회에 다시 나서지 못함 */
+export const isOut = (f, cfg = SAENGSA) => (f?.lost ?? []).some((l) => cfg.outLimbs.includes(l));
+/** 나설 수 있나 (살아 있음 · 이탈 아님) */
+export const pickable = (f, cfg = SAENGSA) => !!f && !f.dead && !isOut(f, cfg);
 /** 부상만 (나은 흔적을 뺌) — 부상 줄 · 힘 · 쉼 단계 · 고르기가 읽는 목록 */
 export const injuriesOf = (list, cfg = SAENGSA) => (list ?? []).filter((i) => !isTrace(i, cfg));
 /** 부상 몫 (빠른 셈 힘 · 무기 나눠 주기 — 부상 하나마다 × 경상 · 중상 값 · 나은 흔적은 안 셈) */
@@ -379,7 +385,7 @@ export function power(f, cfg = SAENGSA) {
   const q = cfg.quick;
   const prof = profFor(f);
   const hpK = q.hpFloor + (1 - q.hpFloor) * Math.max(0, Math.min(cfg.hpMax, f.hp)) / cfg.hpMax;
-  return (q.profBase + q.profStep * prof) * (q.tierK[f.tier] ?? 1) * hpK * injuryK(f, cfg) * (f.broken ? q.brokenK : 1);
+  return (q.profBase + q.profStep * prof) * (q.tierK[f.tier] ?? 1) * hpK * injuryK(f, cfg) * (f.broken ? q.brokenK : 1) * (f.lost?.includes('armO') ? q.oneArmK : 1); // 빈손 팔을 잃음 (11/21 C)
 }
 /** 나서는 쪽의 힘 = 힘 합 × 수 몫 (countK — 하나 · 둘 · 셋) */
 export function sidePower(list, cfg = SAENGSA) {
@@ -396,6 +402,7 @@ export function winChance(a, b, cfg = SAENGSA) {
  *  진 쪽 한 사람 = loseDmg 만큼 체력을 잃고 injury.lose 확률로 새 부상.
  *  이긴 쪽 한 사람 (11/21 — 설계안 §2-4 · P = 이긴 편의 경기 전 이김 확률): winDie 확률로 쓰러짐 · 아니면 0 ~ winLoss 체력을 잃고 winInjury 확률로 새 부상(심각도 injurySev).
  *   쓰러짐(11/21 코마 — 엔진 resultFromMatch 와 같은 뜻): winInstant 몫은 즉사(죽음) · 나머지는 코마(체력 downedHp + 중상 하나 · downed) · 잃은 체력이 남은 체력 이상이어도 코마(피를 다 흘림).
+ *   잘림(11/21 C — 엔진 재기 몫 winSever): 산 사람마다 out 확률로 이탈(칼 팔 · 다리 — lost · 그 부위 중상) · 아니면 armO 확률로 빈손 팔(lost armO · 팔 중상).
  *  이긴 쪽은 적어도 한 사람이 산다(모두 즉사면 경기 전 체력이 가장 많던 사람이 체력 1 로)
  */
 export function quickResolve(sides, seed, cfg = SAENGSA) {
@@ -424,6 +431,16 @@ export function quickResolve(sides, seed, cfg = SAENGSA) {
       else fighters[f.key] = { hp, injuries, alive: hp > 0 };
     }
   }
+  // 잘림 (11/21 C — 앞 굴림 다음): 이긴 쪽 산 사람만(진 쪽은 대회에서 빠짐 · 죽은 사람은 셈 없음)
+  for (const f of sides[winner]) {
+    const o = fighters[f.key];
+    if (!o.alive) continue;
+    const u = r(), S = q.winSever;
+    const limb = u < S.out ? pickWeighted(r, S.outSplit) : u < S.out + S.armO ? 'armO' : null;
+    if (!limb) continue;
+    o.lost = [...new Set([...(f.lost ?? []), limb])];
+    o.injuries = addInjury(o.injuries, limb.startsWith('arm') ? 'arm' : 'leg', heavy());
+  }
   const team = sides[winner];
   if (team.length && team.every((f) => !fighters[f.key].alive)) {
     const best = team.reduce((x, y) => (y.hp > x.hp ? y : x));
@@ -444,7 +461,7 @@ export function quickResolve(sides, seed, cfg = SAENGSA) {
  *  11/21 쉼 규칙(나서지 않은 사람만 + 35 · 한 단계 — rest) 아래 어림으로 정함(기록 docs/strike/saengsa_rest_2026-11-21.md) · 전 '체력 aiPairHp 40 이상 모두 · 둘 밑이면 가장 센 하나'
  */
 export function aiPick(members, cfg = SAENGSA, { final = false } = {}) {
-  const alive = members.filter((f) => !f.dead).sort((x, y) => power(y, cfg) - power(x, cfg) || (x.key < y.key ? -1 : 1)).slice(0, cfg.entrantsMax);
+  const alive = members.filter((f) => pickable(f, cfg)).sort((x, y) => power(y, cfg) - power(x, cfg) || (x.key < y.key ? -1 : 1)).slice(0, cfg.entrantsMax); // 이탈한 사람은 빼고 (11/21 C)
   const sit = !final && alive.length > 2 && alive.at(-1).hp < cfg.aiThirdHp; // 셋째가 지쳤으면 쉼
   return (sit ? alive.slice(0, -1) : alive).map((f) => f.key);
 }
@@ -466,6 +483,7 @@ export function applyResult(t, m, { winner, fighters, entrants, by = 'quick' }, 
       const o = fighters[f.key];
       if (!o) continue;
       f.hp = o.hp; f.injuries = o.injuries.map((i) => ({ ...i, sev: Math.max(0, Math.min(1, i.sev)) })); f.dead = !o.alive; // 실제 싸움 상처 심각도는 1 을 넘을 수 있다(2단계 — 2.23 까지) → 0 ~ 1
+      if (o.lost?.length) f.lost = [...new Set([...(f.lost ?? []), ...o.lost])]; // 잘린 팔다리는 대회 끝까지 (11/21 C — 결과에 없어도 지우지 않음)
       if (o.broken) { // 부러진 무기는 대회 끝까지 (사장님 10/29 20:1x): 내 팀 = t.broken · 상대 팀 = 무기 묶음의 그 줄
         f.broken = true;
         if (t.teams[team].mine) t.broken = [...new Set([...(t.broken ?? []), f.weapon])];
@@ -483,6 +501,12 @@ export function applyResult(t, m, { winner, fighters, entrants, by = 'quick' }, 
   return m.result;
 }
 const membersOf = (t, team, keys) => keys.map((k) => t.teams[team].members.find((f) => f.key === k)).filter(Boolean);
+/** 내 경기에서 나설 사람이 없는 팀 (11/21 C — 모두 죽음 · 이탈): 'mine' · 'foe' · null (둘 다면 내 팀) */
+function noneLeft(t, m) {
+  const [A, B] = sidesOf(t, m), foe = A === 0 ? B : A;
+  if (!t.teams[0].members.some((f) => pickable(f))) return 'mine';
+  return foe != null && !t.teams[foe].members.some((f) => pickable(f)) ? 'foe' : null;
+}
 /**
  * 지금까지 끝날 경기를 저절로 끝낸다 (대진 차례대로): 상대끼리 경기 = 빠른 셈(결과 시각 = 그 경기를 시작할 수 있던 시각) ·
  *  마감(deadlineOf)까지 하지 않은 내 경기 = 기권(결과 시각 = 마감과 시작할 수 있던 시각 중 늦은 쪽 · 체력 · 부상 그대로). 돌려줌: 끝낸 경기 수
@@ -493,7 +517,7 @@ export function advance(t, now, cfg = SAENGSA) {
   const dueAt = (m) => {
     const at = readyAt(t, m, cfg);
     if (at == null) return Infinity;
-    if (isMine(t, m)) return openAlways(cfg) ? Infinity : Math.max(at, deadline);
+    if (isMine(t, m)) return noneLeft(t, m) ? at : openAlways(cfg) ? Infinity : Math.max(at, deadline); // 한 팀에 나설 사람이 없으면(모두 죽음 · 이탈 — 11/21 C) 곧바로 기권
     return at;
   };
   let n = 0;
@@ -502,12 +526,17 @@ export function advance(t, now, cfg = SAENGSA) {
     if (!m) break;
     const [A, B] = sidesOf(t, m), at = noWait(cfg) && !isMine(t, m) ? now : dueAt(m); // 기다림 없는 판의 상대끼리 경기는 셈한 때 (시험판 내 경기는 여기 오지 않음)
     if (isMine(t, m)) {
-      const mineSide = A === 0 ? 'a' : 'b';
-      applyResult(t, m, { winner: mineSide === 'a' ? 'b' : 'a', fighters: {}, entrants: { a: [], b: [] }, by: 'forfeit' }, at, cfg);
+      const mineSide = A === 0 ? 'a' : 'b', foeGone = noneLeft(t, m) === 'foe'; // 상대 팀에 나설 사람이 없으면 상대 기권 (11/21 C) · 그 밖(마감 · 내 팀에 나설 사람 없음)은 내 기권
+      applyResult(t, m, { winner: (mineSide === 'a') === foeGone ? 'a' : 'b', fighters: {}, entrants: { a: [], b: [] }, by: 'forfeit' }, at, cfg);
     } else {
       const final = isFinal(t, m), entrants = { a: aiPick(t.teams[A].members, cfg, { final }), b: aiPick(t.teams[B].members, cfg, { final }) };
-      const res = quickResolve({ a: membersOf(t, A, entrants.a), b: membersOf(t, B, entrants.b) }, hash32(t.seed, m.id), cfg);
-      applyResult(t, m, { ...res, entrants, by: 'quick' }, at, cfg);
+      if (!entrants.a.length || !entrants.b.length) { // 나설 사람이 없는 팀(모두 죽음 · 이탈 — 11/21 C)은 기권으로 짐 · 둘 다 없으면 씨앗 굴림
+        const winner = entrants.a.length ? 'a' : entrants.b.length ? 'b' : rng(hash32(t.seed, m.id))() < 0.5 ? 'a' : 'b';
+        applyResult(t, m, { winner, fighters: {}, entrants: { a: [], b: [] }, by: 'forfeit' }, at, cfg);
+      } else {
+        const res = quickResolve({ a: membersOf(t, A, entrants.a), b: membersOf(t, B, entrants.b) }, hash32(t.seed, m.id), cfg);
+        applyResult(t, m, { ...res, entrants, by: 'quick' }, at, cfg);
+      }
     }
     n++;
     if (t.status === 'done') break;
@@ -517,7 +546,7 @@ export function advance(t, now, cfg = SAENGSA) {
 /** 내가 고른 사람이 맞나 (내 팀 · 살아 있음 · 무기를 받음(11/18 — 첫 경기 무기 배정 전에는 없음) · 1 ~ entrantsMax · 겹치지 않음) */
 export function validPicks(t, picks, cfg = SAENGSA) {
   if (!Array.isArray(picks) || picks.length < 1 || picks.length > cfg.entrantsMax || new Set(picks).size !== picks.length) return false;
-  return picks.every((k) => t.teams[0].members.some((f) => f.key === k && !f.dead && typeof f.weapon === 'string'));
+  return picks.every((k) => t.teams[0].members.some((f) => f.key === k && pickable(f, cfg) && typeof f.weapon === 'string')); // 이탈한 사람은 못 나섬 (11/21 C)
 }
 /**
  * 내 경기 판 (2단계 엔진에 넘기는 꼴 — 설계 §8): { matchId, round, seed, mineSide, sides: { a: [사람], b: [사람] }, entrants: { a, b }, control }
