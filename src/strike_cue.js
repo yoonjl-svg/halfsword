@@ -117,7 +117,7 @@ function markTexture() {
 export function createStrikeCue(scene, tint) {
   const C = STRIKE_CUE;
   const win = {};
-  const S = { open: false, kind: null, token: null, gold: false, age: 0, out: 1, total: 0, frac: 0, env: 0, alpha: 0, px: 0, shown: false };
+  const S = { open: false, kind: null, token: null, gold: false, age: 0, out: 1, total: 0, frac: 0, env: 0, alpha: 0, px: 0, shown: false, rest: false }; // rest = 다 사라져 쉬는 중 (아래 update)
   const P = new Vector3(), Q = new Vector3();
   const plain = new Color(C.plain), gold = new Color(C.gold);
   let sprite = null, mat = null;
@@ -165,8 +165,12 @@ export function createStrikeCue(scene, tint) {
     set raise(px) {
       raise = Math.max(0, +px || 0);
     },
-    update(dt, camera, live, player, foe, unique, secret, viewH = globalThis.innerHeight || 390) {
+    update(dt, camera, live, player, foe, unique, secret, viewH) {
       const w = readCueWindow(live ? player : null, unique, secret, win);
+      // 쉼 (11/21 감사 — 창 없는 프레임마다 하던 일): 창이 없고 지난 프레임에 이미 다 사라졌으면(닫힌 뒤 fade 넘게 지남 → 싸움 안팎 어느 쪽이든 env 0)
+      //  아래는 같은 값(S.out 만 더 커짐 — fade 를 넘으면 쓰이지 않음 · 숨김 · 금색 테두리 0)을 다시 셈해 쓸 뿐이라 건너뛴다.
+      //  화면 높이(innerHeight — 레이아웃을 셈하게 할 수 있음)도 느낌표를 놓을 때만 읽는다. 창이 열리는 프레임부터는 예전 그대로
+      if (!w.kind && S.rest) return;
       if (w.kind) {
         if (!S.open || w.kind !== S.kind || w.token !== S.token) {
           // 새 창: 다시 나타난다
@@ -189,7 +193,7 @@ export function createStrikeCue(scene, tint) {
       S.env = !live ? 0 : S.open ? Math.min(1, S.age / C.pop) : Math.max(0, 1 - S.out / C.fade); // 싸움 밖이면 바로 숨김
       S.alpha = (C.alphaEnd + (C.alphaOpen - C.alphaEnd) * S.frac) * S.env;
       if (sprite) {
-        S.shown = S.env > 0.001 && place(camera, player, viewH); // 10/23 내 머리 위
+        S.shown = S.env > 0.001 && place(camera, player, viewH === undefined ? globalThis.innerHeight || 390 : viewH); // 10/23 내 머리 위 (viewH 없으면 화면 높이 — 예전 기본값 그대로)
         sprite.visible = S.shown;
         if (S.shown) {
           mat.opacity = S.alpha;
@@ -197,6 +201,7 @@ export function createStrikeCue(scene, tint) {
         }
       }
       if (tint?.setSecretEdge) tint.setSecretEdge(S.gold ? (C.edgeEnd + (1 - C.edgeEnd) * S.frac) * S.env : 0, C.secretEdgeLevel); // 비기 창 금색 테두리 (10/23)
+      S.rest = !w.kind && S.out >= C.fade; // 이 프레임에 숨김 · 테두리 0 을 썼고, 창이 열릴 때까지 다음 프레임도 같은 것을 쓴다
     },
     /** 탐침 · 스크린샷용 (tools/browser/strike_cue_shots.mjs) */
     get state() {
