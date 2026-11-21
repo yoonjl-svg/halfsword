@@ -2918,7 +2918,11 @@ export class Sound {
     const old = this._room;
     if (old) {
       for (const g of old.sends) g.gain.setTargetAtTime(0, t, 0.3);
-      if (!c.startRendering) setTimeout(() => old.conv.disconnect(), 4000);
+      // 다 줄어든 뒤 묶음 → 보냄 → 울림 이음을 모두 끊는다 (울림 출력만 끊으면 묶음이 옛 합성곱 노드를 계속 붙잡아 배경마다 하나씩 쌓였다 — 감사 N-019)
+      if (!c.startRendering) setTimeout(() => {
+        old.sends.forEach((g, i) => { old.buses[i].disconnect(g); g.disconnect(); });
+        old.conv.disconnect();
+      }, 4000);
     }
     this._room = null;
     const R = STAGE_SOUND[this.stage].room;
@@ -2932,13 +2936,15 @@ export class Sound {
     conv.buffer = ir;
     conv.connect(this.master);
     const sends = [];
+    const buses = []; // sends[i] 에 소리를 보내는 묶음 (바꿀 때 그 이음만 끊는다)
     for (const [bus, amt] of [[this.metalBus, R.metal], [this.fleshBus, R.flesh]]) {
       const g = c.createGain();
       g.gain.value = amt;
       bus.connect(g).connect(conv);
       sends.push(g);
+      buses.push(bus);
     }
-    this._room = { conv, sends };
+    this._room = { conv, sends, buses };
   }
 
   /** 이 배경이 계속되는 동안 lo~hi 밀리초마다 fn (분석용 OfflineAudioContext 에서는 직접 부른다) */
