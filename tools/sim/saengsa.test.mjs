@@ -142,10 +142,11 @@ test('빠른 셈: 같은 판 · 같은 씨앗이면 같은 결과 · 이긴 쪽�
   assert.ok(R.winChance([f('x', 100, 'legend')], [f('y', 30, 'trash')]) > 0.8);
 });
 
-test('빠른 셈 이긴 쪽 피해 = 경기 전 이김 확률 P 꼴 (11/21 · 설계안 §2-4 권고): 수 몫 1 · 0.85 · 0.78 · 죽음 0.12 + 0.25(1 − P) · 잃는 체력 0 ~ 90(1.1 − P) · 새 부상 0.45 + 0.4(1 − P) · 진 쪽 그대로', () => {
+test('빠른 셈 이긴 쪽 피해 = 경기 전 이김 확률 P 꼴 (11/21 · 설계안 §2-4 권고): 수 몫 1 · 0.85 · 0.78 · 쓰러짐 0.12 + 0.25(1 − P) — 그 가운데 즉사 42 % · 나머지 코마 (11/21 (나)) · 잃는 체력 0 ~ 90(1.1 − P) · 새 부상 0.45 + 0.4(1 − P) · 진 쪽 그대로', () => {
   const q = SAENGSA.quick;
   assert.deepEqual(q.countK, [1, 0.85, 0.78]);
-  assert.deepEqual([q.winDie, q.winLoss, q.winInjury, q.loseDmg, q.injury.lose], [[0.12, 0.25], [90, 1.1], [0.45, 0.4], [50, 120], 0.6]);
+  assert.deepEqual([q.winDie, q.winInstant, q.winLoss, q.winInjury, q.loseDmg, q.injury.lose], [[0.12, 0.25], 0.42, [90, 1.1], [0.45, 0.4], [50, 120], 0.6]);
+  assert.equal(SAENGSA.downedHp, 10);
   assert.equal(q.pairK, undefined, '전 pairK 0.85 (둘 · 셋 같음) 걷음');
   const f = (key, hp = 100) => ({ key, id: key, weapon: 'w', school: 'german', tier: 'common', prof: { ...PROF }, hp, injuries: [], dead: false });
   const one = R.power(f('x'));
@@ -157,47 +158,60 @@ test('빠른 셈 이긴 쪽 피해 = 경기 전 이김 확률 P 꼴 (11/21 · �
   // 같은 판을 씨앗 0 ~ 5999 로 굴려 이긴 쪽 · 진 쪽 한 사람 피해를 셈 (P 는 이긴 편의 경기 전 이김 확률)
   const roll = (sides, n = 6000) => {
     const pa = R.winChance(sides.a, sides.b);
-    const acc = { a: { n: 0, die: 0, loss: 0, live: 0, inj: 0, P: pa }, b: { n: 0, die: 0, loss: 0, live: 0, inj: 0, P: 1 - pa }, lose: { n: 0, loss: 0, inj: 0 } };
+    const blank = (P) => ({ n: 0, die: 0, coma: 0, comaOk: 0, loss: 0, live: 0, inj: 0, P });
+    const acc = { a: blank(pa), b: blank(1 - pa), lose: { n: 0, loss: 0, inj: 0, coma: 0 } };
     for (let s = 0; s < n; s++) {
       const r = R.quickResolve(sides, s), W = r.winner, L = W === 'a' ? 'b' : 'a';
       for (const x of sides[W]) {
         const o = r.fighters[x.key], c = acc[W];
-        c.n++; c.inj += o.injuries.length > 0;
-        if (!o.alive) c.die++; else { c.live++; c.loss += x.hp - o.hp; }
+        c.n++;
+        if (!o.alive) { c.die++; continue; }
+        if (o.downed) { c.coma++; c.comaOk += o.hp === SAENGSA.downedHp && o.injuries.some((i) => R.isSerious(i)); continue; }
+        c.live++; c.loss += x.hp - o.hp; c.inj += o.injuries.length > 0;
       }
-      for (const x of sides[L]) { const o = r.fighters[x.key]; acc.lose.n++; acc.lose.loss += Math.min(x.hp, x.hp - o.hp); acc.lose.inj += o.injuries.length > 0; }
+      for (const x of sides[L]) { const o = r.fighters[x.key]; acc.lose.n++; acc.lose.loss += Math.min(x.hp, x.hp - o.hp); acc.lose.inj += o.injuries.length > 0; acc.lose.coma += !!o.downed; }
     }
     return acc;
   };
   const near = (got, want, tol, what) => assert.ok(Math.abs(got - want) <= tol, `${what}: ${got.toFixed(3)} (기대 ${want.toFixed(3)})`);
   const acc = roll({ a: [f('0-0'), f('0-1'), f('0-2')], b: [f('1-0'), f('1-1')] }); // 셋 대 둘 — P 0.65 · 0.35
   for (const side of ['a', 'b']) {
-    const c = acc[side], P = c.P, n = side === 'a' ? 3 : 2, die = 0.12 + 0.25 * (1 - P), all = die ** n; // 모두 죽으면 한 사람이 체력 1 로 삶 (잃은 체력 99)
-    near(c.die / c.n, die - all / n, 0.03, `${side} 죽음`);
-    near(c.loss / c.live, (n * (1 - die) * 45 * (1.1 - P) + all * 99) / (n * (1 - die) + all), 3, `${side} 산 사람 잃은 체력`);
-    near(c.inj / c.n, 0.45 + 0.4 * (1 - P), 0.03, `${side} 새 부상`);
+    const c = acc[side], P = c.P, fall = 0.12 + 0.25 * (1 - P);
+    near(c.die / c.n, fall * 0.42, 0.025, `${side} 즉사`); // 모두 즉사(한 사람 체력 1 로 삶)는 드물어 셈에서 뺌
+    near(c.coma / c.n, fall * 0.58, 0.025, `${side} 코마 (체력 100 에서는 잃는 체력이 100 을 못 넘어 쓰러짐 굴림만)`);
+    assert.equal(c.comaOk, c.coma, `${side} 코마 = 체력 10 · 중상 하나 넘게`);
+    near(c.loss / c.live, 45 * (1.1 - P), 3, `${side} 서 있던 사람 잃은 체력`);
+    near(c.inj / c.live, 0.45 + 0.4 * (1 - P), 0.03, `${side} 서 있던 사람 새 부상`);
   }
   assert.ok(acc.a.loss / acc.a.live < acc.b.loss / acc.b.live, '셋으로 이기면 둘로 이길 때보다 덜 다침');
+  assert.equal(acc.lose.coma, 0, '진 쪽은 코마 없음');
   near(acc.lose.inj / acc.lose.n, 0.6, 0.03, '진 쪽 새 부상');
   near(acc.lose.loss / acc.lose.n, 85, 3, '진 쪽 잃은 체력 (50 ~ 120 — 체력 100 에서 끊김)');
-  // 다친 사람은 이겨도 더 잘 죽는다 (잃은 체력이 남은 체력 이상)
-  let hurtDie = 0, fitDie = 0, wins = 0;
+  // 다친 사람은 이겨도 더 잘 쓰러진다 (잃은 체력이 남은 체력 이상 → 코마 · 엔진의 출혈 쓰러짐과 같은 뜻) — 죽음(즉사)은 체력과 상관없음
+  let hurtComa = 0, fitComa = 0, hurtDie = 0, fitDie = 0, wins = 0;
   for (let s = 0; s < 3000; s++) {
     const r = R.quickResolve({ a: [f('0-0', 20), f('0-1')], b: [f('1-0'), f('1-1')] }, s);
     if (r.winner !== 'a') continue;
-    wins++; hurtDie += !r.fighters['0-0'].alive; fitDie += !r.fighters['0-1'].alive;
+    const h = r.fighters['0-0'], g = r.fighters['0-1'];
+    wins++; hurtComa += !!h.downed; fitComa += !!g.downed; hurtDie += !h.alive; fitDie += !g.alive;
+    if (h.downed) assert.equal(h.hp, SAENGSA.downedHp);
   }
-  assert.ok(hurtDie / wins > fitDie / wins + 0.2, `이긴 쪽 체력 20 죽음 ${(hurtDie / wins).toFixed(2)} · 체력 100 ${(fitDie / wins).toFixed(2)}`);
+  assert.ok(hurtComa / wins > fitComa / wins + 0.2, `이긴 쪽 코마 체력 20 ${(hurtComa / wins).toFixed(2)} · 체력 100 ${(fitComa / wins).toFixed(2)}`);
+  assert.ok(Math.abs(hurtDie - fitDie) / wins < 0.06, `즉사는 체력과 상관없음 ${(hurtDie / wins).toFixed(2)} · ${(fitDie / wins).toFixed(2)}`);
 });
 
 test('쉼 (사장님 11/21 \'쉬면 체력+35 부상 1단계씩 회복(중상->경상->완치.. 예시임) 출전하면 회복 불가.\'): 쉰 사람 체력 + 35 · 부상마다 한 단계 · 나선 사람 그대로 · 결과에 되찾은 것', () => {
   assert.equal(SAENGSA.restHeal, 35);
-  assert.ok(SAENGSA.restLightSev >= SAENGSA.woundMin && SAENGSA.restLightSev < SAENGSA.seriousAt, '한 단계 나은 중상은 경상 띠 안');
+  assert.equal(SAENGSA.restEdge, 0.01);
+  assert.equal(SAENGSA.restLightSev, undefined, '전 restLightSev 0.3 (경상 띠 가운데) 걷음 — 11/21 끝쪽 띠');
   assert.equal(SAENGSA.lightRests, undefined, '10/29 규칙 값(경상 두 번 쉬면 나음)은 걷음');
-  // 한 단계: 중상 → 경상(심각도 restLightSev) · 경상 → 나음
-  assert.deepEqual(R.healStep({ part: 'leg', sev: 0.9, rests: 0 }), { part: 'leg', sev: SAENGSA.restLightSev, rests: 0 });
-  assert.deepEqual(R.healStep({ part: 'leg', sev: SAENGSA.seriousAt, rests: 0 }), { part: 'leg', sev: SAENGSA.restLightSev, rests: 0 });
-  assert.equal(R.healStep({ part: 'arm', sev: SAENGSA.seriousAt - 0.01, rests: 1 }), null);
+  // 한 단계 (사장님 11/21 '중상에서 경상이 될 때는 경상에서 중상에 가장 가까운 끝쪽 띠에 넣어. 경상이 나을 때도 마찬가지.'): 중상 → 경상 0.49 · 경상 → 나은 흔적 0.09 · 흔적은 그대로
+  assert.deepEqual(R.healStep({ part: 'leg', sev: 0.9, rests: 0 }), { part: 'leg', sev: 0.49, rests: 0 });
+  assert.deepEqual(R.healStep({ part: 'leg', sev: SAENGSA.seriousAt, rests: 0 }), { part: 'leg', sev: 0.49, rests: 0 });
+  assert.deepEqual(R.healStep({ part: 'arm', sev: 0.49, rests: 1 }), { part: 'arm', sev: 0.09, rests: 1 });
+  assert.deepEqual(R.healStep({ part: 'arm', sev: SAENGSA.woundMin, rests: 0 }), { part: 'arm', sev: 0.09, rests: 0 });
+  assert.deepEqual(R.healStep({ part: 'arm', sev: 0.09, rests: 0 }), { part: 'arm', sev: 0.09, rests: 0 }, '나은 흔적은 더 나아가지 않음');
+  assert.ok(!R.isSerious({ sev: 0.49 }) && !R.isTrace({ sev: 0.49 }) && R.isTrace({ sev: 0.09 }) && !R.isTrace({ sev: 0.1 }), '0.49 = 경상 · 0.09 = 흔적');
   const t = make();
   R.advance(t, at(30, 10));
   const team = t.teams[0].members, me = () => team[0];
@@ -210,27 +224,30 @@ test('쉼 (사장님 11/21 \'쉬면 체력+35 부상 1단계씩 회복(중상->�
   assert.equal(me().hp, 20, '나선 사람은 체력을 되찾지 않음');
   assert.deepEqual(me().injuries.map((i) => [i.part, i.sev]), [['arm', light.sev], ['leg', serious.sev]], '나선 사람 부상 그대로');
   assert.equal(team[1].hp, 85);
-  assert.deepEqual(team[1].injuries.map((i) => [i.part, i.sev]), [['leg', SAENGSA.restLightSev]], '중상 → 경상 · 경상 → 나음');
+  assert.deepEqual(team[1].injuries.map((i) => [i.part, i.sev]), [['leg', 0.49], ['head', 0.09]], '중상 → 경상(0.49) · 경상 → 나은 흔적(0.09)');
+  assert.deepEqual(R.injuriesOf(team[1].injuries).map((i) => i.part), ['leg'], '흔적은 부상이 아님');
   assert.equal(team[2].hp, 100, '체력은 가득까지만');
   assert.deepEqual(r0.rest, {
-    '0-1': { gain: 35, steps: [{ part: 'leg', from: 'serious' }, { part: 'head', from: 'light' }], hp: 85, injuries: [{ part: 'leg', sev: SAENGSA.restLightSev, rests: 0 }] },
+    '0-1': { gain: 35, steps: [{ part: 'leg', from: 'serious' }, { part: 'head', from: 'light' }], hp: 85, injuries: [{ part: 'leg', sev: 0.49, rests: 0 }, { part: 'head', sev: 0.09, rests: 0 }] },
     '0-2': { gain: 10, steps: [], hp: 100, injuries: [] },
   });
-  assert.equal(r0.ver, 'saengsa-2');
+  assert.equal(r0.ver, 'saengsa-3');
   assert.equal(r0.rest['0-0'], undefined);
   // ② 나는 쉬고 동료 둘이 나섬: 나 = + 35 · 중상 → 경상 · 경상 → 나음 / 동료 = 그대로
   R.advance(t, at(30, 10, 5));
   const m1 = R.myMatch(t);
   const r1 = R.finishMine(t, m1, ['0-1', '0-2'], at(30, 10, 6), winFor(t, m1, { '0-1': { hp: 70, injuries: team[1].injuries, alive: true }, '0-2': { hp: 60, injuries: [], alive: true } }));
   assert.equal(me().hp, 55);
-  assert.deepEqual(me().injuries.map((i) => [i.part, i.sev]), [['leg', SAENGSA.restLightSev]]);
-  assert.deepEqual(r1.rest, { '0-0': { gain: 35, steps: [{ part: 'arm', from: 'light' }, { part: 'leg', from: 'serious' }], hp: 55, injuries: [{ part: 'leg', sev: SAENGSA.restLightSev, rests: 0 }] } });
+  assert.deepEqual(me().injuries.map((i) => [i.part, i.sev]), [['arm', 0.09], ['leg', 0.49]]);
+  assert.deepEqual(r1.rest, { '0-0': { gain: 35, steps: [{ part: 'arm', from: 'light' }, { part: 'leg', from: 'serious' }], hp: 55, injuries: [{ part: 'arm', sev: 0.09, rests: 0 }, { part: 'leg', sev: 0.49, rests: 0 }] } });
   assert.deepEqual([team[1].hp, team[2].hp], [70, 60], '나선 동료는 그대로');
   // ③ 또 쉼: 경상 → 나음 · 죽은 사람은 쉬지 않음 · 결승 뒤에는 쉼 없음
   R.advance(t, at(30, 10, 6));
   const m2 = R.myMatch(t);
   const r2 = R.finishMine(t, m2, ['0-1'], at(30, 10, 7), winFor(t, m2, { '0-1': { hp: 40, injuries: [], alive: true } }));
-  assert.deepEqual([me().hp, me().injuries], [90, []]);
+  assert.deepEqual([me().hp, me().injuries.map((i) => [i.part, i.sev])], [90, [['arm', 0.09], ['leg', 0.09]]], '팔 흔적은 그대로 · 다리 경상 → 흔적');
+  assert.deepEqual(r2.rest['0-0'].steps, [{ part: 'leg', from: 'light' }], '흔적은 단계 글 없음');
+  assert.deepEqual(R.injuriesOf(me().injuries), []);
   assert.deepEqual(Object.keys(r2.rest).sort(), ['0-0', '0-2']);
   R.advance(t, at(30, 10, 7));
   const m3 = R.myMatch(t);
@@ -250,7 +267,7 @@ test('쉼 (사장님 11/21 \'쉬면 체력+35 부상 1단계씩 회복(중상->�
         if (ent.includes(f.key) || f.dead) { assert.equal(got, undefined, `${x.id} ${f.key} 나섬 · 죽음 — 쉼 없음`); continue; }
         rested++;
         assert.equal(got.gain, Math.min(SAENGSA.hpMax, f.hp + SAENGSA.restHeal) - f.hp, `${x.id} ${f.key} 쉼 체력`);
-        assert.deepEqual(got.injuries, f.injuries.map((i) => R.healStep(i)).filter(Boolean), `${x.id} ${f.key} 쉼 부상`);
+        assert.deepEqual(got.injuries, f.injuries.map((i) => R.healStep(i)), `${x.id} ${f.key} 쉼 부상`);
       }
     }
   }
@@ -262,10 +279,82 @@ test('쉼 (사장님 11/21 \'쉬면 체력+35 부상 1단계씩 회복(중상->�
   const [QA] = R.sidesOf(v, qm), qa = v.teams[QA].members;
   Object.assign(qa[2], { hp: 30, injuries: [{ part: 'torso', sev: 0.7, rests: 0 }], dead: false });
   const qres = R.applyResult(v, qm, { winner: 'a', fighters: { [qa[0].key]: { hp: 60, injuries: [], alive: true }, [qa[1].key]: { hp: 50, injuries: [], alive: true } }, entrants: { a: [qa[0].key, qa[1].key], b: [] } }, at(30, 10));
-  assert.deepEqual([qa[2].hp, qa[2].injuries], [65, [{ part: 'torso', sev: SAENGSA.restLightSev, rests: 0 }]]);
+  assert.deepEqual([qa[2].hp, qa[2].injuries], [65, [{ part: 'torso', sev: 0.49, rests: 0 }]]);
   assert.deepEqual([qa[0].hp, qa[1].hp], [60, 50]);
   assert.deepEqual(Object.keys(qres.rest), [qa[2].key]);
   assert.deepEqual(R.injuriesFromWounds([], [{ part: 'uarmS', severity: 0.05 }, { part: 'neck', severity: 0.7 }]), [{ part: 'head', sev: 0.7, rests: 0 }]);
+});
+
+test('나은 흔적 (11/21 — 경상이 나으면 woundMin − restEdge 0.09 로 남음): 부상 줄 · 힘 · 무기 나눠 주기 · 고르기 · 쉼 단계 어디에도 부상이 아님 · 같은 부위를 또 다치면 새 부상 · 실제 싸움에는 닫힌 상처 (팔 기능 0.063 깎임)', async () => {
+  const X = await import('../../src/saengsa_text.js');
+  const M = await import('../../src/saengsa_match.js');
+  const { LIMB_LOSS } = await import('../../src/fighter.js');
+  const trace = { part: 'arm', sev: 0.09, rests: 0 }, light = { part: 'leg', sev: 0.3, rests: 0 }, serious = { part: 'torso', sev: 0.49 + 0.31, rests: 0 };
+  const f = (key, injuries = [], hp = 100) => ({ key, id: key, weapon: 'w', school: 'german', tier: 'common', prof: { ...PROF }, hp, injuries, dead: false });
+  // 부상 줄 (경기 화면 카드 — saengsa_page.js card 가 injuriesOf 로 거른 목록을 injuryText 에)
+  assert.deepEqual(R.injuriesOf([trace, light, serious]), [light, serious]);
+  assert.equal(X.injuryText(R.injuriesOf([trace]), (i) => R.isSerious(i)), '부상 없음');
+  assert.equal(X.injuryText(R.injuriesOf([trace, light]), (i) => R.isSerious(i)), '다리 경상');
+  // 힘 · 무기 나눠 주기 · 고르기: 흔적은 안 셈
+  assert.equal(R.power(f('a', [trace])), R.power(f('a')));
+  assert.ok(R.power(f('a', [light])) < R.power(f('a')));
+  const w = { weapon: 'w1', school: 'german', tier: 'common' };
+  assert.equal(R.armScore(f('a', [trace]), w), R.armScore(f('a'), w));
+  assert.deepEqual(R.aiPick([f('0', [trace, trace], 70), f('1', [], 70), f('2', [light], 70)]), ['0', '1', '2']); // 흔적이 있어도 힘 차례 그대로(같은 힘이면 열쇠 차례)
+  // 쉼: 흔적은 단계 글 없음 · 그대로 남음
+  const team = [f('0-0', [trace, light], 50)];
+  const got = R.rest(team, []);
+  assert.deepEqual(got['0-0'].steps, [{ part: 'leg', from: 'light' }]);
+  assert.deepEqual(team[0].injuries, [trace, { ...light, sev: 0.09 }]);
+  assert.deepEqual(R.rest(team, [])['0-0'].steps, [], '흔적만 남으면 단계 없음');
+  // 같은 부위를 또 다치면 새 부상이 덮음 (실제 싸움 상처 · 빠른 셈 새 부상 모두 addInjury)
+  assert.deepEqual(R.injuriesFromWounds([trace], [{ part: 'farmO', severity: 0.2 }]), [{ part: 'arm', sev: 0.2, rests: 0 }]);
+  assert.deepEqual(R.injuriesFromWounds([trace], [{ part: 'farmO', severity: 0.05 }]), [trace], '긁힘(woundMin 밑)은 흔적을 바꾸지 않음');
+  for (let s = 0; s < 400; s++) { // 빠른 셈 새 부상은 늘 woundMin 이상 — 흔적 자리를 덮어도 흔적이 되지 않음
+    const r = R.quickResolve({ a: [f('0-0', [trace, { ...trace, part: 'leg' }, { ...trace, part: 'torso' }, { ...trace, part: 'head' }])], b: [f('1-0')] }, s);
+    for (const i of r.fighters['0-0'].injuries) assert.ok(i.sev === 0.09 || i.sev >= SAENGSA.woundMin, `씨앗 ${s} ${JSON.stringify(i)}`);
+  }
+  // 실제 싸움: 흔적도 닫힌 상처로 들고 감 — 팔 = 빈손 팔(uarmO) 기능 1 − 0.09 × LIMB_LOSS
+  const snap = M.snapshotFromPerson({ hp: 100, injuries: [trace, { ...trace, part: 'leg' }, { ...trace, part: 'torso' }] });
+  assert.deepEqual(snap.wounds.map((x) => [x.part, x.severity, x.carried, x.bleed]), [['uarmO', 0.09, true, 0], ['thighB', 0.09, true, 0], ['abdomen', 0.09, true, 0]]);
+  assert.ok(Math.abs(snap.limbs.armO - (1 - 0.09 * LIMB_LOSS)) < 1e-12 && Math.abs(snap.limbs.armO - 0.937) < 1e-9, `빈손 팔 ${snap.limbs.armO}`);
+  assert.ok(Math.abs(snap.limbs.legB - 0.937) < 1e-9 && snap.limbs.armS === 1 && snap.limbs.legF === 1);
+});
+
+test('코마 (11/21 (나)) 결과 적기 · 다음 쉼: 체력 10 · 중상 → 산 사람으로 적힘(죽음 아님) · 쉬면 45 · 중상 → 경상 0.49 · 결과 카드 글 코마', async () => {
+  const X = await import('../../src/saengsa_text.js');
+  assert.equal(X.SAENGSA_TEXT.downed, '코마');
+  const t = make();
+  R.advance(t, at(30, 10));
+  const team = t.teams[0].members;
+  const m0 = R.myMatch(t);
+  const r0 = R.finishMine(t, m0, ['0-0', '0-1', '0-2'], at(30, 10, 5), winFor(t, m0, {
+    '0-0': { hp: 70, injuries: [], alive: true }, '0-1': { hp: 55, injuries: [{ part: 'arm', sev: 0.3, rests: 0 }], alive: true },
+    '0-2': { hp: 10, injuries: [{ part: 'leg', sev: 0.5, rests: 0 }, { part: 'arm', sev: 0.2, rests: 0 }], alive: true, downed: true },
+  }));
+  assert.equal(r0.fighters['0-2'].downed, true);
+  assert.deepEqual([team[2].dead, team[2].hp], [false, 10], '코마는 산 사람');
+  // 다음 경기에 둘만 나서고 코마였던 사람은 쉼: 체력 45 · 다리 중상 → 경상 0.49 · 팔 경상 → 흔적
+  R.advance(t, at(30, 10, 5));
+  const m1 = R.myMatch(t);
+  const r1 = R.finishMine(t, m1, ['0-0', '0-1'], at(30, 10, 6), winFor(t, m1, { '0-0': { hp: 60, injuries: [], alive: true }, '0-1': { hp: 50, injuries: [], alive: true } }));
+  assert.deepEqual([team[2].hp, team[2].injuries.map((i) => [i.part, i.sev])], [45, [['leg', 0.49], ['arm', 0.09]]]);
+  assert.deepEqual(r1.rest['0-2'].steps, [{ part: 'leg', from: 'serious' }, { part: 'arm', from: 'light' }]);
+  // 상대끼리 경기(빠른 셈)에도 코마가 적힘 · 코마는 이긴 편에만
+  let comas = 0;
+  for (const seed of [31, 32, 33, 34, 35, 36]) {
+    const u = make(seed);
+    R.advance(u, Infinity);
+    for (const x of u.matches.filter((y) => y.result?.by === 'quick')) {
+      for (const [key, o] of Object.entries(x.result.fighters)) {
+        if (!o.downed) continue;
+        comas++;
+        assert.ok(x.result.entrants[x.result.winner].includes(key), `${x.id} ${key} 코마는 이긴 편`);
+        assert.ok(o.alive && o.hp === SAENGSA.downedHp && o.injuries.some((i) => R.isSerious(i)), `${x.id} ${key}`);
+      }
+    }
+  }
+  assert.ok(comas > 0, `상대끼리 경기 코마 ${comas}`);
 });
 
 test('쉼 글 (결과 카드 — 11/21): \'쉼 체력 + 35 · 다리 중상 → 경상 · 팔 경상 → 나음\' · 되찾은 것이 없으면 \'쉼\'', async () => {
@@ -277,8 +366,8 @@ test('쉼 글 (결과 카드 — 11/21): \'쉼 체력 + 35 · 다리 중상 → 
   assert.equal(X.SAENGSA_TEXT.rested, '쉼');
 });
 
-test('옛 저장 (판 saengsa-1 · 10/29 쉼 규칙 · 둘씩 나선 경기): 그대로 읽힘 · 옛 결과는 그대로 · 이어 하면 새 쉼 규칙 · 새 결과는 saengsa-2', () => {
-  assert.equal(R.SAENGSA_VER, 'saengsa-2');
+test('옛 저장 (판 saengsa-1 · 10/29 쉼 규칙 · 둘씩 나선 경기): 그대로 읽힘 · 옛 결과는 그대로 · 이어 하면 새 쉼 규칙 · 새 결과는 saengsa-3', () => {
+  assert.equal(R.SAENGSA_VER, 'saengsa-3');
   mem.clear();
   // 옛 꼴로 바꾼 진행 중 대회: 결과 ver 'saengsa-1' · 쉼 기록(rest) 없음 · 부상 쉰 수(rests) 1 · 둘씩 나섬
   const t = make(9);
@@ -296,9 +385,9 @@ test('옛 저장 (판 saengsa-1 · 10/29 쉼 규칙 · 둘씩 나선 경기): �
   const m1 = R.myMatch(old);
   const res = S.playMine(m1.id, ['0-0', '0-1'], at(30, 10, 10), winFor(old, m1, { '0-0': { hp: 50, injuries: [], alive: true }, '0-1': { hp: 40, injuries: [], alive: true } }));
   assert.ok(res);
-  assert.equal(res.ver, 'saengsa-2');
+  assert.equal(res.ver, 'saengsa-3');
   const now = S.readSaengsa().current;
-  assert.deepEqual(now.teams[0].members[2].injuries, [{ part: 'leg', sev: SAENGSA.restLightSev, rests: 1 }]);
+  assert.deepEqual(now.teams[0].members[2].injuries, [{ part: 'arm', sev: 0.09, rests: 1 }, { part: 'leg', sev: 0.49, rests: 1 }], '옛 경상 0.3 → 흔적 · 옛 중상 → 0.49');
   assert.equal(now.teams[0].members[2].hp, 75);
   assert.deepEqual(res.rest['0-2'].steps, [{ part: 'arm', from: 'light' }, { part: 'leg', from: 'serious' }]);
   const oldResults = now.matches.filter((x) => x.result && x.result.ver === 'saengsa-1');
