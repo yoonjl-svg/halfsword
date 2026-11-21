@@ -1,0 +1,13 @@
+spin: 길게 누름 redondo · 꼴 undefined · 내려침 undefined · 휘청 고침 undefined · 칼끝 거리 2.01 m
+  SHOT 0 guard · 감기 - · 가슴 기울기 5.8°
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+page.waitForFunction: Timeout 120000ms exceeded.
+    at <본판>/tools/browser/redondo_motion_shots.mjs:131:14 {
+  log: [],
+  name: 'TimeoutError'
+}
+
+Node.js v22.23.5

@@ -1,0 +1,18 @@
+18:02:49 게임 뜸
+{"startedTitle":true,"info":{"state":"fight","weapon":"longsword","tradition":"german","secret":"mordschlag","closeN":0.8,"press":1.6500000000000001,"foe":"하인리히 도른","url":"http://127.0.0.1:5201/"}}
+18:02:51 {"t":0.13,"d":5.614,"open":false,"pressT":0,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:02:52 {"t":2.39,"d":5.653,"open":false,"pressT":0,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:02:53 {"t":4.63,"d":3.013,"open":false,"pressT":0,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:02:54 {"t":6.88,"d":1.296,"open":false,"pressT":0,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:02:54 {"t":9.12,"d":0.556,"open":false,"pressT":0.16,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:02:57 {"t":11.45,"d":0.436,"open":false,"pressT":0.83,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:02:58 {"t":13.71,"d":0.547,"open":false,"pressT":1.43,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:02:59 {"t":15.94,"d":0.545,"open":true,"pressT":0.35,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:03:00 {"t":18.19,"d":0.562,"open":false,"pressT":0.94,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:03:00 {"t":20.43,"d":0.542,"open":false,"pressT":1.52,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:03:01 {"t":22.68,"d":0.576,"open":true,"pressT":0.46,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:03:01 {"t":24.92,"d":0.558,"open":false,"pressT":1.03,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:03:02 {"t":27.17,"d":0.545,"open":false,"pressT":1.62,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:03:03 {"t":29.41,"d":0.55,"open":true,"pressT":0.55,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+18:03:03 {"t":31.66,"d":0.562,"open":false,"pressT":1.14,"sec":null,"st":130,"ready":true,"stand":"stand","foe":"stand","R":null}
+{"tag":"still","info":{"state":"fight","weapon":"longsword","tradition":"german","secret":"mordschlag","closeN":0.8,"press":1.6500000000000001,"foe":"하인리히 도른","url":"http://127.0.0.1:5201/"},"fired":true,"opened":true,"firstOpenT":10.63,"stages":[],"hits":[],"R":null,"rev":false,"front":null,"fell":false,"minD":0.376,"closeFrac":0.74,"pressMax":1.65,"stamina":{"min":130,"notReady":0},"frames":1800,"errors":[]}

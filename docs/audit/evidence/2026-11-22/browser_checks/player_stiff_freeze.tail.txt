@@ -1,0 +1,4 @@
+WEAPON longsword secret null
+STAGES [null]
+NO_STIFF {"sim":38.4,"state":"fight","open":false,"stage":null,"aim":[0.15,0],"off":[0.15,0],"move":[0,0],"pel":[-2.5729048252105713,-0.0544588640332222],"d":1.53,"reach":1.8,"when":[],"S":null}
+ERRORS []

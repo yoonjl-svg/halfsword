@@ -1,0 +1,25 @@
+    '      - element is visible, enabled and stable',
+    '      - scrolling into view if needed',
+    '      - done scrolling',
+    '      - <dialog open="" id="treeDialog" class="tree-dialog" aria-describedby="treeText" aria-labelledby="treeHeading">…</dialog> intercepts pointer events',
+    '    - retrying tap action',
+    '    - waiting 20ms',
+    '    2 × waiting for element to be visible, enabled and stable',
+    '      - element is visible, enabled and stable',
+    '      - scrolling into view if needed',
+    '      - done scrolling',
+    '      - <dialog open="" id="treeDialog" class="tree-dialog" aria-describedby="treeText" aria-labelledby="treeHeading">…</dialog> intercepts pointer events',
+    '    - retrying tap action',
+    '      - waiting 100ms',
+    '    56 × waiting for element to be visible, enabled and stable',
+    '       - element is visible, enabled and stable',
+    '       - scrolling into view if needed',
+    '       - done scrolling',
+    '       - <dialog open="" id="treeDialog" class="tree-dialog" aria-describedby="treeText" aria-labelledby="treeHeading">…</dialog> intercepts pointer events',
+    '     - retrying tap action',
+    '       - waiting 500ms'
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v22.23.5

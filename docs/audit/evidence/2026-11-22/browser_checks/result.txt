@@ -1,0 +1,10 @@
+build exit 0
+game_entry_smoke exit 1 secs 2
+ui_fix_smoke exit 1 secs 12
+stamina_smoke exit 1 secs 7
+hero_tear_smoke exit 1 secs 36
+player_stiff_freeze exit 1 secs 125
+mordschlag_real_check exit 0 secs 17
+skill_tree_layout exit 0 secs 22
+redondo_motion_shots exit 1 secs 147
+ALLDONE

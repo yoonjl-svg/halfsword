@@ -1,0 +1,15 @@
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: {"state":"fight","sim":6.066666666666758,"value":72.1742423497362,"level":0,"left":0,"pose":0,"move":[0,0],"guard":false,"spent":{"move":4,"attack":10.000000074505806,"block":0,"secret":0,"push":0,"clinch":0},"counts":{"cut":0,"thrust":1,"block":0,"secret":0,"push":0,"exhaustion":0},"messageColor":"rgb(184, 168, 142)","bars":[{"hidden":false,"color":"rgb(184, 168, 142)","opacity":"1","width":56,"height":2,"x":349,"y":171,"value":"72","text":"72%","level":"0","exhausted":"false"},{"hidden":false,"color":"rgb(184, 168, 142)","opacity":"0.6","width":56,"height":2,"
+    at <본판>/tools/browser/stamina_smoke.mjs:26:125 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v22.23.5
