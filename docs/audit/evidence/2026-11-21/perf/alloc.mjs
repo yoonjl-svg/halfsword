@@ -1,0 +1,20 @@
+import { chromium } from './P_pw/node_modules/playwright/index.mjs';
+const [base, stage='poseidon', secs='10'] = process.argv.slice(2);
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle','--use-angle=swiftshader','--no-sandbox','--enable-precise-memory-info'] });
+const ctx = await browser.newContext({ viewport:{width:844,height:390}, deviceScaleFactor:3, isMobile:true, hasTouch:true });
+const page = await ctx.newPage(); const cdp = await ctx.newCDPSession(page);
+await page.goto(`${base}/?stage=${stage}&weapon=longsword&emo=0`,{waitUntil:'networkidle'});
+await page.getByText('여정 시작').click();
+await page.waitForFunction(()=>window.game.state==='fight'&&window.game.stats.simTime>1,null,{timeout:90000});
+await page.evaluate(()=>{const g=window.game;const ai2=new g.AI(g.player,g.enemy,'normal');const a=g.ai,o=a.update.bind(a);a.update=(dt)=>{o(dt);ai2.update(dt)};const c=document.querySelector('canvas');c.width=8;c.height=4;});
+await page.waitForTimeout(2000);
+const ev=[]; cdp.on('Tracing.dataCollected',(e)=>ev.push(...e.value));
+const sim0=await page.evaluate(()=>window.game.stats.simTime);
+await cdp.send('Tracing.start',{categories:'v8,disabled-by-default-v8.gc,devtools.timeline',transferMode:'ReportEvents'});
+await page.waitForTimeout(+secs*1000);
+const done=new Promise(r=>cdp.once('Tracing.tracingComplete',r)); await cdp.send('Tracing.end'); await done;
+const sim1=await page.evaluate(()=>window.game.stats.simTime);
+let freed=0,n=0,gcms=0;
+for(const e of ev){ if((e.name==='MinorGC'||e.name==='MajorGC')&&e.ph==='X'){ const a=e.args?.usedHeapSizeBefore,b=e.args?.usedHeapSizeAfter; if(a!=null&&b!=null){freed+=a-b;n++;} gcms+=(e.dur||0)/1000; } }
+console.log(JSON.stringify({stage,wallS:+secs,simS:+(sim1-sim0).toFixed(2),gcEvents:n,freedMB:+(freed/1048576).toFixed(1),gcMs:+gcms.toFixed(1),allocMBperSimSec:+(freed/1048576/(sim1-sim0)).toFixed(2),allocMBperWallSec:+(freed/1048576/secs).toFixed(2)}));
+await browser.close();
