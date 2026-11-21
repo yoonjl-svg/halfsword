@@ -258,6 +258,7 @@ export function installGunFx({ scene, sound, world = null, combat = null, shake 
     e.glow.visible = true;
     e.flash.visible = e.core.visible = e.smoke.visible = e.flameIn.visible = e.flameOut.visible = e.sparks.visible = true;
     step(e, 0);
+    arm(); // 쉬고 있었으면 다시 돈다
     return e;
   };
 
@@ -436,7 +437,20 @@ export function installGunFx({ scene, sound, world = null, combat = null, shake 
   };
 
   let last = viewNow();
+  // 할 일이 있을 때만 돈다 (감사 N-022 — 첫 화면 · 대기실에서도 매 프레임 돌았다): 효과가 살아 있거나(t ≥ 0) · 예열 프레임이 남았거나 ·
+  //  이번 판에 총 든 검객이 있으면(조준 레이저 — 칼을 놓쳤다 다시 주워도 레이저가 돌아오게 총 든 동안은 계속) 다음 프레임을 건다.
+  //  쉬다가 쏨 · 예열(warmGunFx — 총 든 판을 세울 때 main.js 가 부른다)이 오면 다시 건다
+  let armed = false;
+  const gunRound = () => (getCombat()?.fighters ?? []).some((f) => f.weapon?.gun);
+  const busy = () => warmFrames > 0 || pool.some((e) => e.t >= 0) || gunRound();
+  const arm = () => {
+    if (armed) return;
+    armed = true;
+    last = viewNow(); // 쉰 시간을 첫 프레임에 몰지 않게 (돌던 동안의 프레임 사이 시간과 같은 뜻)
+    requestAnimationFrame(tick);
+  };
   const tick = () => {
+    armed = false;
     const now = viewNow(); // 보는 시계 (rAF 시각 대신 — 멈춘 동안은 흐르지 않아 풀 때 몰아 흐르지 않음)
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
@@ -447,9 +461,12 @@ export function installGunFx({ scene, sound, world = null, combat = null, shake 
       for (const e of pool) if (e.t >= 0) step(e, dt);
       updateLasers();
     }
-    requestAnimationFrame(tick);
+    if (busy()) {
+      armed = true;
+      requestAnimationFrame(tick);
+    }
   };
-  requestAnimationFrame(tick);
+  arm();
   // 첫 발 멈칫 방지: 효과 물체를 잠깐 임시 장면으로 옮겨(보이게) 지금 무대의 빛·안개로 컴파일하고 되돌린다 — 본 장면 전체를 다시 훑지 않는다
   let warmFrames = 0;
   _warm = (renderer, camera) => {
@@ -471,6 +488,7 @@ export function installGunFx({ scene, sound, world = null, combat = null, shake 
       }
       warmFrames = 2;
     } else for (const [o, v] of objs) o.visible = v;
+    arm(); // 예열 프레임 · 이번 판 조준 레이저
   };
   _clear = () => {
     for (const e of pool) {
