@@ -17,12 +17,12 @@ test('공격은 한 번에 베기12/찌르기10, 막기3; 무게는 원래 질�
  const w=actor({swordMass:2.9}); const k=Math.sqrt(2.9/1.6);near(w.stamina.weight,k);w.swordMass=.4;near(w.stamina.weight,k);w.stamina.attack();near(w.stamina.spent.attack,12*k);
 });
 test('무게 배율은 0.75~1.5',()=>{near(actor({swordMass:.1}).stamina.weight,.75);near(actor({swordMass:20}).stamina.weight,1.5);});
-test('찌르기 시간 분류는 원래 질량과 찌르기 특성 사용, 방어 근육은 기존 한도',()=>{
+test('찌르기 시간 분류는 원래 질량과 찌르기 특성 사용, 방어 근육은 severePower(11/21 사장님 권고대로 0.25 → 0.36)',()=>{
  const saved={...STAMINA};
  try{for(const [mass,style,rate] of [[1.6,null,.55],[2.9,null,.6],[1.1,{},.6]]){
   const f=actor({swordMass:mass,weaponCfg:{thrustStyle:style}});f.skill.tap={};f.stamina.value=-60;f.stamina.stages();
   near(f.stamina.attackSpeed,rate);f.swordMass=.2;near(f.stamina.attackSpeed,rate);
-  f.stamina.controller={held:true};near(f.stamina.motorSpeed,.5);near(f.stamina.power,.25);
+  f.stamina.controller={held:true};near(f.stamina.motorSpeed,.5);near(f.stamina.power,.36);
  }}finally{Object.assign(STAMINA,saved);}
 });
 test('짧은 입력 끊김/작은 방향 흔들림은 같은 긋기, 반대 방향은 새 공격',()=>{

@@ -178,7 +178,7 @@ export function setHeads(amount) {
   session.heads = amount;
   return save();
 }
-/** 뿔피리를 이 값으로 (상점 시험판 주소 `?horns=N` — shop_test.js · ?heads 와 같은 꼴) */
+/** 뿔피리를 이 값으로 (시험용 — setHeads 와 같은 꼴) */
 export function setHorns(amount) {
   readProgress();
   if (!count(amount) || amount > 1e7) return false;
@@ -190,8 +190,8 @@ export function setHorns(amount) {
 const newShopSeed = () => Math.floor(rand01() * 4294967296) >>> 0;
 /**
  * 이 칸(slot)의 물건: 저장된 칸이 같은 칸이고 맞으면(valid — 무기 id 맞춤) 그대로 · 아니면 roll(seed, reroll) 로 새로 뽑아 한 번 저장.
- *  같은 칸을 다시 뽑을 때(깨진 칸 · 시험판 forceAlter 가 다름)는 그 칸의 다시 들인 수 그대로 · 새 칸이면 0.
- *  forceAlter (시험판 ?shopAlter — true · false · null) 가 저장된 칸과 다르면 다시 뽑는다. 씨앗은 저장에 하나(없으면 만듦 — 같은 칸 · 같은 씨앗 · 같은 수 = 같은 물건).
+ *  같은 칸을 다시 뽑을 때(깨진 칸 · forceAlter 가 다름)는 그 칸의 다시 들인 수 그대로 · 새 칸이면 0.
+ *  forceAlter (시험용 — true · false · null) 가 저장된 칸과 다르면 다시 뽑는다. 씨앗은 저장에 하나(없으면 만듦 — 같은 칸 · 같은 씨앗 · 같은 수 = 같은 물건).
  *  fix(s) = 저장된 같은 칸을 고쳐 쓸 때(파는 수를 늘린 뒤 옛 2 개 칸 채우기 — shop_rules.js topUpStock): 고친 칸 · null(그대로) — 고치면 한 번 저장.
  *  돌려줌: { v, seed, slot, rerolls, n, alter, items } 사본 (저장이 막혀도 이번 실행 동안 같은 물건)
  */
@@ -231,7 +231,7 @@ export function rerollShopStock({ slot, roll, heads = 1 }) {
 }
 /**
  * 왕을 이긴 판의 뿔피리 (main.js checkRoundEnd — 여정 · 방랑 이긴 판 · config.js SHOP.hornKings · hornChance · hornAmount): 상대가 왕이고 roll() < chance 면 +amount 한 번 저장.
- *  force = 시험판 ?horn=1 (왕이 아니어도 · 확률 없이). 돌려줌: 얻은 수(0 = 못 얻음). roll 은 rand01(crypto — 게임 난수를 건드리지 않음 · 시험은 바꿔 넣음)
+ *  force = 시험용 (왕이 아니어도 · 확률 없이). 돌려줌: 얻은 수(0 = 못 얻음). roll 은 rand01(crypto — 게임 난수를 건드리지 않음 · 시험은 바꿔 넣음)
  */
 export function awardKingHorn(foe, { kings = [], chance = 0, amount = 1, roll = rand01, force = false } = {}) {
   if (!count(amount) || !amount) return 0;

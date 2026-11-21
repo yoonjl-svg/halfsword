@@ -145,7 +145,7 @@ git push origin …/first-game-development-2q36ha:main
 환경은 대부분 `env_01YG7HgthZqrnM2wyk4jrLkh`이고, 사운드 PM만 `env_01A6VUoNJgYWiFs5hTZrWavH`(음원 사이트 접속 가능)입니다. 모델 칸은 저장소에 올릴 때 지웁니다.
 
 ### 새 디렉터 (만들었음)
-- id: `session_014nJCzE4hyxiYc9innhSUng`. 지금 명단과 상태는 `docs/handoff/director_state.md`가 우선합니다(이 장은 9/29 09:55 기록).
+- id: `session_014nJCzE4hyxiYc9innhSUng`. 상태 문서는 이 파일 하나입니다(11/21 · 감사 N-008 — `docs/handoff/director_state.md` 는 보관 · 이 장은 9/29 09:55 기록).
 - 사장님 지정: 모델은 사장님이 고르신 것("…로"), 울트라코드("새 디렉터도 울트라코드야")
 - 브랜치: 같은 개발 브랜치 `…/first-game-development-2q36ha` → main
 

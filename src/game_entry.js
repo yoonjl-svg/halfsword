@@ -9,8 +9,6 @@
 //   단추 · 미닫이 · 탭은 싸움 화면 꼴을 같은 토큰 · 같은 값으로 옮긴 entrance_ui.css 하나 (사장님 10/16 15:3x ② ③ — docs/import/ui_unify_2026-10-16.md)
 //  디자인 보기용 주소 `?coins=N` = 대기실 금화를 N 으로 (lobby_progress.js setCoins — 게임 인자로 세지 않아 첫 화면이 뜬다 · lobby_fix §6) · `?heads=N` = 머리를 N 으로 (10/25 · setHeads — 같은 꼴)
 //  소리 (사장님 10/17 — docs/import/ui_sound_2026-10-17.md · ui_sound.js): 덮개 안 확인 류 단추 = 짧은 딸깍 · 첫 화면 = 바람(첫 누름에 스며들고 싸움 · 대기실로 가면 잦아들어 꺼짐)
-//  상점 시험판 빌드(`VITE_SHOP_TEST=1` — 사장님 10/30 상점을 본판 전에 해 보는 /shop/): 저장을 가른 뒤(shop_test.js — 맨 첫 들여오기) 게임이 뜨면 곧바로 대기실 상점 칸
-import { SHOP_TEST } from './shop_test.js';
 //  생사전 (10/29 — docs/design/saengsa_2026-10-29.md): 대기실 '생사전' 칸의 '생사전 입장' → showSaengsa(같은 덮개 안 · 대진표 화면 saengsa_page.js) · '대기실' 단추 → 대기실 생사전 칸.
 //   시험 주소 `?saengsaNow=2026-10-30T09:59` = 생사전 시계를 그 현지 시각에서 출발(saengsa_clock.js — 게임 인자로 세지 않아 첫 화면이 뜬다)
 //   생사전 시험판 빌드(config SAENGSA.testMode — 사장님 10/29 17:5x 시험 페이지): 저장을 가른 뒤(test_storage.js — 맨 첫 들여오기) 게임이 뜨면 곧바로 대기실 생사전 칸
@@ -136,6 +134,5 @@ if (skipsTitle(params)) {
   }
   showTitle();
   loaded.catch(() => screen?.setStatus('게임을 준비하지 못했습니다. 새로고침해 주십시오.'));
-  if (SHOP_TEST) loaded.then((game) => { if (screen && !lobby) return showLobby(game, game.canContinueJourney() ? 'continue' : 'new', 'Shop'); }).catch(() => {}); // 상점 시험판: 첫 화면을 건너 상점 칸
   if (SAENGSA.testMode) loaded.then((game) => { if (screen && !lobby && !saengsa) return showLobby(game, game.canContinueJourney() ? 'continue' : 'new', 'Event'); }).catch(() => {}); // 시험판: 첫 화면을 건너 생사전 칸
 }

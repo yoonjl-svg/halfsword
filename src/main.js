@@ -272,10 +272,8 @@ let roundReward = null;
 // 뿔피리 (사장님 10/30 19:0x "뿔피리는 '왕'을 잡으면 50% 확률로 얻어. 얻으면 전투 후 팝업에 획득 메시지가 뜸." — config.js SHOP · lobby_progress.js awardKingHorn):
 //  여정 · 방랑(내 저장 판 — careerSaves)에서 왕(SHOP.hornKings)을 이긴 판 끝에 한 번 · 난수 = rand01(crypto — 게임 난수 그대로).
 //  결과 창 = 금화 · 머리와 같은 줄에 '[뿔피리] 뿔피리 +1'(showRewardLine — 사장님 10/31 00:2x '금화나 목 획득처럼 아이콘만 넣고 따로 메시지 출력 안 함' · 전 10/30 은 금화 줄 아래 따로 한 줄 글).
-//  상점 시험판 `?horn=1` = 모든 상대 · 늘(사장님이 왕까지 가지 않고 창을 보게 — 본판에는 없음)
 let roundHorns = 0;
-const HORN_FORCE = SHOP.testMode && params.get('horn') === '1';
-const kingHorn = () => awardKingHorn(currentFoe?.id, { kings: SHOP.hornKings, chance: SHOP.hornChance, amount: SHOP.hornAmount, force: HORN_FORCE });
+const kingHorn = () => awardKingHorn(currentFoe?.id, { kings: SHOP.hornKings, chance: SHOP.hornChance, amount: SHOP.hornAmount });
 // 머리 (사장님 결정 10/16 04:3x '적의 머리를 베면 1개씩 주는 재화'): 참수가 일어난 순간 한 번 부르는 자리(combat.js COMBAT_HOOKS.onDecapitate — fighter.js applyWound ·
 //  흙 몸의 머리 떨어짐 detachHeadFromWound)에 건다. 이 판 상대만 · 한 상대에 한 번(lobby_progress.js awardHead). 시뮬은 이 훅을 걸지 않는다(null)
 //  방랑도 머리 1(WANDER_HEAD — 10/24 02:4x, 전 2) · 판마다 한 번 — 판 결과와 같은 저장에 적어 다시 열어도 두 번 받지 않는다(awardWanderHead). 쓰러뜨린 뒤 벤 목도 센다(여정과 같게)
