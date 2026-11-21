@@ -1908,7 +1908,7 @@ export class AI {
       const want = L.feint * (1 + Math.min(2, this.foeParried * 0.4));
       if (Math.random() < want * (1 - this.anger)) { // 화나면 속임수를 안 쓴다 (곧장 친다)
         const byName = this.school.techByName;
-        const cands = this.school.feints.filter((f) => padDist(hand, byName[f.fake].from) < 0.45 && !this.specCooling(SPECIAL_FEINT.get(f.name))); // 식는 특수 공격 속임(날개 접기 · 칼끝 돌려 빼기)은 빼고 (10/29 19:4x)
+        const cands = this.school.feints.filter((f) => byName[f.fake] && padDist(hand, byName[f.fake].from) < 0.45 && !this.specCooling(SPECIAL_FEINT.get(f.name))); // 식는 특수 공격 속임(날개 접기 · 칼끝 돌려 빼기)은 빼고 (10/29 19:4x) · 유파 기술표에 없는 가짜 기술의 속임은 빼고 (감사 N-020 — 브론 · 광기의 브론 칼 열아홉의 stichPflug: 지금은 속임 0 이라 안 닿음)
         if (cands.length) {
           this.feint = cands[Math.floor(Math.random() * cands.length)];
           if (this.planCn) this.feint = cnFeint(this, cands, this.feint); // 동방 플랜 (11/14): 날개 접기 쪽으로 (허리 몫)
