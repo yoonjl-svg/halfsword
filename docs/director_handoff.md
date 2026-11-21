@@ -118,6 +118,9 @@ git push origin …/first-game-development-2q36ha:main
   - `node tools/sim/live_battery.mjs`
   - fights12(12판)는 바이트 관문 전용이다. 좋다/나쁘다로 읽지 않는다(`tools/sim/README.md` '소음 폭').
   - 캐릭터를 바꿀 때는 `characters_eval.mjs`도 봅니다.
+- 11/22 부터 관문은 여섯 값을 봅니다: fights12 · live_battery · `finish_thrust.mjs 1 --stand` · `finish_thrust.mjs 1`(쓰러진 상대 찍기 160 번 — 감사 N-028) · corr_s0 IDENTICAL 12 · weapon_smoke OK 수. 지금 기준 값은 결정 기록 맨 마지막 관문 줄에 있습니다.
+- 관문이 읽지 않는 파일(main.js · 화면 글자 · 대기실 · 효과 · 소리 · 무대 등 — 감사 증거 `never_loaded_by_gates.txt`)을 바꾼 커밋은 '관문 같음'만 적지 않고 무엇으로 확인했는지(브라우저 도구 · 소스 글 시험 · 손 확인)를 커밋 글에 적습니다(감사 N-029).
+- 그런 파일을 바꾼 본판 올림 앞에는 '배포 전 한 번' 묶음 `tools/browser/game_entry_smoke.mjs` · `pause_freeze.mjs` · team_smoke_local 을 돌리고 결과를 커밋 글에 적습니다(감사 N-031).
 - 브라우저 스모크 `tools/browser/smoke.mjs`는 **콘솔 에러 0**이어야 합니다. 바뀐 기능은 전용 브라우저 스크립트로 실제 화면에서 확인합니다.
 - PM 코드도 병합 전에 읽고, 실제로 보이는지 확인합니다. 외형 PM `cfab046`에서 `return e;`가 함수 중간에 있어 총구 섬광이 사라진 것을 이렇게 잡았습니다.
 
