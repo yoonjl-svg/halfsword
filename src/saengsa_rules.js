@@ -11,10 +11,12 @@
 //   전용무기는 팀마다 하나(사장님 11/18 '전용무기는 팀당 하나야'): 팀 사이에는 막지 않는다 — 상대 팀은 무기 묶음에 우연히 들 때만 · 내가 가졌으면 내 팀도 배정 (createTournament 머리말)
 //  시험판(cfg.testMode — 사장님 10/29 17:5x): 신청 창 늘 열림 · 내 경기는 두 팀을 알면 바로 · 상대끼리 경기는 앞 대진이 다 끝나면 바로 · 쉬는 시간 · 대진 시각 · 기권 없음 · 결과 시각 = 셈한 때
 //  바로 시작(cfg.instant — 사장님 11/12 '참여하면 바로 시작 … 밤 10시부터 새벽 2시 사이'): 경기 차례 · 결과 시각은 시험판과 같다(noWait) · 신청 창(열리는 때) · 기권 마감 · 한 열림에 대회 하나는 그대로
-//   부상 = { part 'arm' | 'leg' | 'torso' | 'head', sev(상처 심각도 — combat.js 와 같은 잣대), rests(다친 뒤 쉰 수) } · 중상 = sev ≥ SAENGSA.seriousAt
+//   부상 = { part 'arm' | 'leg' | 'torso' | 'head', sev(상처 심각도 — combat.js 와 같은 잣대), rests } · 중상 = sev ≥ SAENGSA.seriousAt · 경상 = 그 밑
+//    rests 는 10/29 쉼 규칙(경상 두 번 쉬면 나음)의 쉰 수 — 11/21 쉼 규칙(한 단계씩 나음 · rest)부터 읽지 않는다(새 부상은 0 · 옛 저장 꼴 그대로 둠)
 //   팀 0 = 내 팀(자리 0 = 나) · 대진표 자리는 씨앗으로 섞는다 · 첫 대진 경기만 a · b(팀 번호)를 적고, 다음 대진은 앞 두 경기의 이긴 팀(sidesOf).
 //  경기 = { id 'r<대진>m<번호>', round, index, a, b, result } · 결과 = { at(저장 시각), winner 'a' | 'b', entrants { a: [key], b: [key] }, fighters { key: { hp, injuries, alive } },
-//   by 'quick' | 'engine' | 'forfeit', seed, ver, pre { a: [사람], b: [사람] } } — seed · entrants · pre(경기 전 두 팀) · ver 는 2단계 다시보기 몫(사장님 10/29 14:5x — 같은 씨앗 · 같은 판으로 다시 셈).
+//   by 'quick' | 'engine' | 'forfeit', seed, ver, pre { a: [사람], b: [사람] }, rest? { key: 쉼 } } — seed · entrants · pre(경기 전 두 팀) · ver 는 2단계 다시보기 몫(사장님 10/29 14:5x — 같은 씨앗 · 같은 판으로 다시 셈).
+//   rest = 이긴 팀에서 그 경기에 나서지 않아 쉰 사람마다 되찾은 것 { gain(되찾은 체력), steps: [{ part, from 'serious' | 'light' }], hp, injuries(쉰 뒤) } — 결과 카드 글 몫 (11/21 · 결승 뒤 · 옛 저장에는 없음)
 //   2단계 엔진(실제 싸움 — 2:2 · 11/20 부터 3:3 까지)도 같은 꼴을 돌려준다(matchSetup → 엔진 → finishMine · 설계 §8).
 import { SAENGSA } from './config.js';
 import { roundAt, restUntil, startAt, signupWindow, windowOf, shiftDay, openAlways } from './saengsa_clock.js';
@@ -25,7 +27,7 @@ export const SCHOOLS5 = Object.freeze(['german', 'italian', 'iberian', 'japanese
 export const NAMELESS = 'nameless';
 export const INJURY_PARTS = Object.freeze(['arm', 'leg', 'torso', 'head']);
 /** 저장한 결과의 판 (다시보기가 같은 셈인지 가린다 — 빠른 셈 · 엔진 셈이 바뀌면 올린다) */
-export const SAENGSA_VER = 'saengsa-1';
+export const SAENGSA_VER = 'saengsa-2'; // 11/21 빠른 셈 이긴 쪽 피해 · 수 몫 · 쉼 규칙 (전 'saengsa-1')
 
 // ── 씨앗 난수 (게임 난수 Math.random 을 건드리지 않는다) ──
 /** 글 · 수 묶음 → 32 비트 씨앗 (FNV-1a) */
@@ -331,13 +333,24 @@ export function injuriesFromWounds(prior, wounds, cfg = SAENGSA) {
   }
   return out;
 }
-/** 한 번 쉼 (이긴 팀 — 경기와 경기 사이): 살아 있는 사람 체력 + restHeal · 경상은 쉰 수 + 1 → lightRests 이면 나음 · 중상은 그대로 (사장님 10/29 14:5x) */
-function rest(members, cfg) {
+/** 부상 하나가 한 단계 나음: 중상 → 경상(심각도 restLightSev) · 경상 → 나음(null) */
+export const healStep = (inj, cfg = SAENGSA) => (isSerious(inj, cfg) ? { ...inj, sev: cfg.restLightSev } : null);
+/**
+ * 한 번 쉼 (이긴 팀 — 경기와 경기 사이 · 사장님 11/21 '쉬면 체력+35 부상 1단계씩 회복(중상->경상->완치.. 예시임) 출전하면 회복 불가.' · 사람 팀 · AI 팀 같음):
+ *  그 경기에 나서지 않은 산 사람 = 체력 + restHeal · 부상마다 한 단계(healStep) · 나선 사람 = 되찾음 없음.
+ *  돌려줌: { key: { gain, steps: [{ part, from }], hp, injuries } } (쉰 사람만 — 결과 카드 글 몫)
+ */
+export function rest(members, entrants, cfg = SAENGSA) {
+  const out = {};
   for (const f of members) {
-    if (f.dead) continue;
-    f.hp = Math.min(cfg.hpMax, f.hp + cfg.restHeal);
-    f.injuries = f.injuries.map((i) => (isSerious(i, cfg) ? i : { ...i, rests: i.rests + 1 })).filter((i) => isSerious(i, cfg) || i.rests < cfg.lightRests);
+    if (f.dead || entrants.includes(f.key)) continue;
+    const hp = Math.min(cfg.hpMax, f.hp + cfg.restHeal);
+    const steps = f.injuries.map((i) => ({ part: i.part, from: isSerious(i, cfg) ? 'serious' : 'light' }));
+    out[f.key] = { gain: hp - f.hp, steps, hp, injuries: f.injuries.map((i) => healStep(i, cfg)).filter(Boolean) };
+    f.hp = hp;
+    f.injuries = out[f.key].injuries.map((i) => ({ ...i }));
   }
+  return out;
 }
 
 // ── 빠른 셈 ──
@@ -357,10 +370,10 @@ export function power(f, cfg = SAENGSA) {
   const injK = (f.injuries ?? []).reduce((k, i) => k * (isSerious(i, cfg) ? q.injuryK.serious : q.injuryK.light), 1);
   return (q.profBase + q.profStep * prof) * (q.tierK[f.tier] ?? 1) * hpK * injK * (f.broken ? q.brokenK : 1);
 }
-/** 나서는 쪽의 힘 (둘이면 합 × pairK) */
+/** 나서는 쪽의 힘 = 힘 합 × 수 몫 (countK — 하나 · 둘 · 셋) */
 export function sidePower(list, cfg = SAENGSA) {
-  const sum = list.reduce((s, f) => s + power(f, cfg), 0);
-  return list.length > 1 ? sum * cfg.quick.pairK : sum;
+  const sum = list.reduce((s, f) => s + power(f, cfg), 0), k = cfg.quick.countK;
+  return list.length ? sum * k[Math.min(list.length, k.length) - 1] : 0;
 }
 /** a 쪽이 이길 확률 */
 export function winChance(a, b, cfg = SAENGSA) {
@@ -369,22 +382,23 @@ export function winChance(a, b, cfg = SAENGSA) {
 }
 /**
  * 빠른 셈 한 판 (씨앗 고정 — 같은 입력 · 같은 씨앗이면 늘 같은 결과): sides { a: [사람], b: [사람] } → { winner, fighters: { key: { hp, injuries, alive } } }
- *  진 쪽은 loseDmg · 이긴 쪽은 winDmg × (0.5 + 0.5 × 팽팽함) 만큼 체력을 잃고 · 경기마다 injury 확률로 새 부상 하나(심각도 injurySev) · 체력 0 = 죽음.
- *  이긴 쪽은 적어도 한 사람이 산다(모두 0 이 되면 남은 체력이 가장 많던 사람이 체력 1 로)
+ *  진 쪽 한 사람 = loseDmg 만큼 체력을 잃고 injury.lose 확률로 새 부상.
+ *  이긴 쪽 한 사람 (11/21 — 설계안 §2-4 · P = 이긴 편의 경기 전 이김 확률): winDie 확률로 죽음 · 아니면 0 ~ winLoss 체력을 잃고 winInjury 확률로 새 부상(심각도 injurySev) · 체력 0 = 죽음.
+ *  이긴 쪽은 적어도 한 사람이 산다(모두 죽으면 경기 전 체력이 가장 많던 사람이 체력 1 로)
  */
 export function quickResolve(sides, seed, cfg = SAENGSA) {
   const q = cfg.quick, r = rng(seed);
   const pa = winChance(sides.a, sides.b, cfg);
   const winner = r() < pa ? 'a' : 'b';
-  const close = 1 - Math.abs(2 * pa - 1);
+  const P = winner === 'a' ? pa : 1 - pa; // 이긴 편의 경기 전 이김 확률
   const fighters = {};
   for (const side of ['a', 'b']) {
     const won = side === winner;
-    const [lo, hi] = won ? q.winDmg : q.loseDmg;
     for (const f of sides[side]) {
-      const dmg = Math.round((lo + (hi - lo) * r()) * (won ? 0.5 + 0.5 * close : 1));
+      const die = won && r() < q.winDie[0] + q.winDie[1] * (1 - P);
+      const dmg = die ? f.hp : Math.round(won ? q.winLoss[0] * (q.winLoss[1] - P) * r() : q.loseDmg[0] + (q.loseDmg[1] - q.loseDmg[0]) * r());
       let injuries = (f.injuries ?? []).map((i) => ({ ...i }));
-      if (r() < (won ? q.injury.win : q.injury.lose)) {
+      if (r() < (won ? q.winInjury[0] + q.winInjury[1] * (1 - P) : q.injury.lose)) {
         const part = pickOne(r, INJURY_PARTS);
         injuries = addInjury(injuries, part, Math.round((q.injurySev[0] + (q.injurySev[1] - q.injurySev[0]) * r()) * 100) / 100);
       }
@@ -407,14 +421,17 @@ export function quickResolve(sides, seed, cfg = SAENGSA) {
   return { winner, fighters };
 }
 /**
- * 상대 팀이 내보낼 사람 (가린 채 고름 — 내 고름을 보지 않는다 · 사장님 10/29 14:5x): 체력 aiPairHp 이상인 사람이 둘 이상이면 그 가운데 센 차례로 entrantsMax 까지
- *  (11/20 3:3 — 사장님 '생사전에서 3:3 쓸게.': 문턱 위가 셋이면 셋 · 둘이면 둘) · 아니면 가장 센 하나 (문턱 밑 사람은 둘째 · 셋째로 내보내지 않는다 — 다친 사람을 아낌)
+ * 상대 팀이 내보낼 사람 (가린 채 고름 — 내 고름을 보지 않는다 · 사장님 10/29 14:5x): 산 사람을 센 차례로 세워
+ *  가장 센 둘은 늘 나가고 · 셋째(가장 약한 사람)는 체력 aiThirdHp 이상일 때만 · 결승(final — 뒤에 쉼이 없는 경기)은 산 사람 모두 (entrantsMax 까지)
+ *  11/21 쉼 규칙(나서지 않은 사람만 + 35 · 한 단계 — rest) 아래 어림으로 정함(기록 docs/strike/saengsa_rest_2026-11-21.md) · 전 '체력 aiPairHp 40 이상 모두 · 둘 밑이면 가장 센 하나'
  */
-export function aiPick(members, cfg = SAENGSA) {
-  const alive = members.filter((f) => !f.dead).sort((x, y) => power(y, cfg) - power(x, cfg) || (x.key < y.key ? -1 : 1));
-  const fit = alive.filter((f) => f.hp >= cfg.aiPairHp);
-  return (fit.length >= 2 ? fit.slice(0, cfg.entrantsMax) : alive.slice(0, 1)).map((f) => f.key);
+export function aiPick(members, cfg = SAENGSA, { final = false } = {}) {
+  const alive = members.filter((f) => !f.dead).sort((x, y) => power(y, cfg) - power(x, cfg) || (x.key < y.key ? -1 : 1)).slice(0, cfg.entrantsMax);
+  const sit = !final && alive.length > 2 && alive.at(-1).hp < cfg.aiThirdHp; // 셋째가 지쳤으면 쉼
+  return (sit ? alive.slice(0, -1) : alive).map((f) => f.key);
 }
+/** 이 경기가 결승인가 (뒤에 쉼이 없는 경기 — aiPick) */
+export const isFinal = (t, m) => m.round >= roundsOf(t.teams.length) - 1;
 
 // ── 결과 적기 ──
 /**
@@ -439,7 +456,11 @@ export function applyResult(t, m, { winner, fighters, entrants, by = 'quick' }, 
     }
   }
   const W = winner === 'a' ? A : B;
-  if (m.round < roundsOf(t.teams.length) - 1) { rest(t.teams[W].members, cfg); aiArm(t.teams[W], cfg); } // 이긴 상대 팀은 쉰 몸 · 죽음에 맞춰 무기를 다시 나눔 (사장님 10/29 19:5x)
+  if (m.round < roundsOf(t.teams.length) - 1) { // 이긴 팀은 쉼 (11/21 — 나서지 않은 사람만) · 이긴 상대 팀은 쉰 몸 · 죽음에 맞춰 무기를 다시 나눔 (사장님 10/29 19:5x)
+    const healed = rest(t.teams[W].members, entrants[winner] ?? [], cfg);
+    if (Object.keys(healed).length) m.result.rest = healed;
+    aiArm(t.teams[W], cfg);
+  }
   else { t.status = 'done'; t.champion = W; t.endedAt = at; }
   return m.result;
 }
@@ -466,7 +487,7 @@ export function advance(t, now, cfg = SAENGSA) {
       const mineSide = A === 0 ? 'a' : 'b';
       applyResult(t, m, { winner: mineSide === 'a' ? 'b' : 'a', fighters: {}, entrants: { a: [], b: [] }, by: 'forfeit' }, at, cfg);
     } else {
-      const entrants = { a: aiPick(t.teams[A].members, cfg), b: aiPick(t.teams[B].members, cfg) };
+      const final = isFinal(t, m), entrants = { a: aiPick(t.teams[A].members, cfg, { final }), b: aiPick(t.teams[B].members, cfg, { final }) };
       const res = quickResolve({ a: membersOf(t, A, entrants.a), b: membersOf(t, B, entrants.b) }, hash32(t.seed, m.id), cfg);
       applyResult(t, m, { ...res, entrants, by: 'quick' }, at, cfg);
     }
@@ -488,7 +509,7 @@ export function validPicks(t, picks, cfg = SAENGSA) {
 export function matchSetup(t, m, picks, now, cfg = SAENGSA) {
   if (!m || m.result || myMatch(t)?.id !== m.id || matchState(t, m, now, cfg) !== 'ready' || !validPicks(t, picks, cfg)) return null;
   const [A, B] = sidesOf(t, m), mineSide = A === 0 ? 'a' : 'b', foe = mineSide === 'a' ? B : A;
-  const entrants = { [mineSide]: [...picks], [mineSide === 'a' ? 'b' : 'a']: aiPick(t.teams[foe].members, cfg) };
+  const entrants = { [mineSide]: [...picks], [mineSide === 'a' ? 'b' : 'a']: aiPick(t.teams[foe].members, cfg, { final: isFinal(t, m) }) };
   const team = (side) => (side === 'a' ? A : B);
   return {
     matchId: m.id, round: m.round, seed: hash32(t.seed, m.id), mineSide, entrants,

@@ -250,7 +250,7 @@ test('⑦ 3:3 (사장님 11/20 \'생사전에서 3:3 쓸게.\'): 자리 0 ~ 5 ·
     assert.ok(Number.isInteger(v.hp) && v.hp >= 0 && v.hp <= HP_MAX, `${k} 체력 ${v.hp}`);
     assert.equal(v.alive, v.hp > 0, `${k} 삶 = 체력 > 0`);
   }
-  assert.ok(res.fighters['3-1'].injuries.some((i) => i.part === 'leg' && i.sev === 0.5), '들어올 때 부상 그대로');
+  assert.ok(res.fighters['3-1'].injuries.some((i) => i.part === 'leg' && i.sev >= 0.5), '들어올 때 부상은 남음 (이 판에서 같은 부위를 더 깊게 베이면 깊은 쪽 — 11/21 힘 표 뒤 씨앗 6 판은 다리 0.54)');
   assert.ok(['a', 'b'].includes(res.winner));
   G.world.free();
 });
