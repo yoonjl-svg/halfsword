@@ -10,6 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
+import { installBodyReads } from './body_reads.js'; // 몸 값 읽기 한 스텝 한 번 (11/21 감사 N-010 (c) · (f))
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
 import { runTick } from './dig_proto.js'; // 시제품 C 달림 (11/14 — config DIG_PROTO.run · 기본 끔)
@@ -562,6 +563,21 @@ function gripClear(f, P, c) {
   P.addScaledVector(n, c - dist);
 }
 
+/** 몸 하나의 스텝 전 상태 { p, q, com, v, w } 를 o 에 담는다 (cacheState · 휘는 마디 무기 flexWeapon.cache — 객체는 처음 한 번만 만든다) */
+function putState(b, o = {}) {
+  const t = b.translation();
+  const r = b.rotation();
+  const com = b.worldCom();
+  const v = b.linvel();
+  const w = b.angvel();
+  o.p = (o.p || new THREE.Vector3()).set(t.x, t.y, t.z);
+  o.q = (o.q || new THREE.Quaternion()).set(r.x, r.y, r.z, r.w);
+  o.com = (o.com || new THREE.Vector3()).set(com.x, com.y, com.z);
+  o.v = (o.v || new THREE.Vector3()).set(v.x, v.y, v.z);
+  o.w = (o.w || new THREE.Vector3()).set(w.x, w.y, w.z);
+  return o;
+}
+
 export class Fighter {
   /**
    * @param {object} o
@@ -579,6 +595,7 @@ export class Fighter {
    * @param {boolean} [o.human] true = 사람 손(입력)이 모는 몸(main.js 플레이어) → humanInput. 안 주면 속성도 없다 — 시뮬 도구의 자리 0(AI 가 모는 몸 · 대본 몸)은 아님 (10/29 17:5x)
    */
   constructor(RAPIER, world, scene, colliderInfo, o) {
+    installBodyReads(RAPIER); // 몸 값 읽기 한 스텝 한 번 (11/21 감사 N-010 — src/body_reads.js · 값은 엔진 읽기와 같음)
     this.R = RAPIER;
     this.world = world;
     this.colliderInfo = colliderInfo; // 절단(sever) 이 떨어진 부위의 collider 에 detached 표시를 적는다 (combat.js 가 상처를 건너뜀)
@@ -4236,25 +4253,13 @@ export class Fighter {
     this.hitPointPrev = mid;
   }
 
-  /** 물리 스텝 직전의 상태를 JS 쪽에 복사해 둔다 (충돌 훅이 엔진을 건드리지 않고 계산하도록) */
+  /** 물리 스텝 직전의 상태를 JS 쪽에 복사해 둔다 (충돌 훅이 엔진을 건드리지 않고 계산하도록).
+   *  읽기는 이 스텝에 이미 읽은 몸 값을 다시 쓴다 (src/body_reads.js — 11/21 감사 N-010 (c)) · 담는 객체는 판 내내 같은 것 */
   cacheState() {
     const c = (this.cache = this.cache || { parts: {} });
-    const put = (b, o = {}) => {
-      const t = b.translation();
-      const r = b.rotation();
-      const com = b.worldCom();
-      const v = b.linvel();
-      const w = b.angvel();
-      o.p = (o.p || new THREE.Vector3()).set(t.x, t.y, t.z);
-      o.q = (o.q || new THREE.Quaternion()).set(r.x, r.y, r.z, r.w);
-      o.com = (o.com || new THREE.Vector3()).set(com.x, com.y, com.z);
-      o.v = (o.v || new THREE.Vector3()).set(v.x, v.y, v.z);
-      o.w = (o.w || new THREE.Vector3()).set(w.x, w.y, w.z);
-      return o;
-    };
-    c.sword = put(this.sword, c.sword);
-    this.flexWeapon?.cache(put); // 휘는 마디 무기: 마디마다 스텝 전 상태 (combat.js 가 그 마디 접촉에 쓴다)
-    for (const name in this.bodies) c.parts[name] = put(this.bodies[name], c.parts[name]);
+    c.sword = putState(this.sword, c.sword);
+    this.flexWeapon?.cache(putState); // 휘는 마디 무기: 마디마다 스텝 전 상태 (combat.js 가 그 마디 접촉에 쓴다)
+    for (const name in this.bodies) c.parts[name] = putState(this.bodies[name], c.parts[name]);
   }
 
   syncMeshes() {
