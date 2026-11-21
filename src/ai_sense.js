@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { TIME } from './config.js';
-import { captureVitalPose } from './vital_target.js';
+import { captureVitalPoseInto, newVitalPose } from './vital_target.js';
 
 const N = Math.round(96 * TIME.k); // 기록 개수 (1/120초마다 → 게임 0.8초 × std = 실제 0.8 초 — 표준 시간 10/25 · 옛 판 96)
 
@@ -39,6 +39,7 @@ export class Senses {
     this.me = me;
     this.foe = foe;
     this.buf = Array.from({ length: N }, snap);
+    this.vital = Array.from({ length: N }, newVitalPose); // 칸마다 다시 쓰는 약한 자세 사본 (11/21 감사 N-010 (d) — 칸의 s.vital 은 그 칸이 다시 적힐 때 바뀜: 예전 새 사본과 같은 때)
     this.head = -1;
     this.t = 0;
   }
@@ -88,7 +89,7 @@ export class Senses {
     s.okori = f.okoriVis ?? 0; // 오코리 보이는 크기 (11/17 — 보이는 꼴)
     s.ready = f.iaiReadyR ?? 0; // 고노센 준비 자세 (허리 대기 — 보이는 꼴 · 11/19 웅크림은 사람 · AI 모두 없음)
     // 약한 자세 겨눔 (10/12): 머리·목·가슴·칼 자리 사본 — AI 는 이것도 반응 시간만큼 늦게 본다
-    s.vital = captureVitalPose(f);
+    s.vital = captureVitalPoseInto(f, this.vital[this.head]);
   }
 
   /** delay초 전의 모습 (기록이 모자라면 가장 오래된 것) */

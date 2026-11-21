@@ -10,6 +10,7 @@
 //  heading(라디안)은 몸이 월드에서 바라보는 방향. 항상 상대 쪽으로 천천히 돈다.
 // ─────────────────────────────────────────────────────────────
 import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
+import { installBodyReads } from './body_reads.js'; // 몸 값 읽기 한 스텝 한 번 (11/21 감사 N-010 (c) · (f))
 import * as THREE from 'three';
 import { flowRecoveryScale } from './nagashi_recovery.js';
 import { runStep, runFace, runWant } from './run.js'; // 뛰기 (11/18 사장님 · config RUN — 사람 · 11/19 셋 이상 판 AI 같은 셈)
@@ -444,6 +445,22 @@ function armGap(S, E, W, o) {
     segSegDist(E, wc, o.eo, o.wc) - ARM_R.f - ARM_R.f,
   );
 }
+/**
+ * armGap(S, E, W, o) ≥ gap 인가 (11/21 감사 N-010 (e) — 칼 팔꿈치 돌림 후보마다 부름): 같은 네 틈을 armGap 과 같은 식으로 재되, 하나라도 gap 밑이면
+ *  나머지는 재지 않는다. min(네 틈) ≥ gap ⇔ 네 틈이 모두 ≥ gap (NaN 이 끼면 둘 다 거짓)이라 답이 armGap(…) ≥ gap 과 늘 같다.
+ *  차례는 가장 자주 모자라는 틈 먼저 — 두손 칼은 두 손이 칼자루에서 붙어 아래팔 ↔ 아래팔이 모자라는 것이 84 % (fights12 잰 값)
+ */
+function armGapAtLeast(S, E, W, o, gap) {
+  const uo = _acO.copy(S).lerp(E, 1 / 3);
+  const L = E.distanceTo(W);
+  const wc = _acC.copy(W).lerp(E, Math.min(1, WRIST_CUT / Math.max(1e-6, L)));
+  return (
+    segSegDist(E, wc, o.eo, o.wc) - ARM_R.f - ARM_R.f >= gap &&
+    segSegDist(uo, E, o.eo, o.wc) - ARM_R.u - ARM_R.f >= gap &&
+    segSegDist(uo, E, o.so, o.eo) - ARM_R.u - ARM_R.u >= gap &&
+    segSegDist(E, wc, o.so, o.eo) - ARM_R.f - ARM_R.u >= gap
+  );
+}
 /** 빈팔 몸(지금 자리) → 가슴 틀 선분 (팔 뻗음 점검 armPts 와 같은 끝점 — 빈팔 몸은 −y 를 따라 눕힘) */
 const _aoQ = new THREE.Quaternion(), _aoA = new THREE.Vector3();
 function offArmSegs(f, qInv, c, out) {
@@ -561,6 +578,21 @@ function gripClear(f, P, c) {
   P.addScaledVector(n, c - dist);
 }
 
+/** 몸 하나의 스텝 전 상태 { p, q, com, v, w } 를 o 에 담는다 (cacheState · 휘는 마디 무기 flexWeapon.cache — 객체는 처음 한 번만 만든다) */
+function putState(b, o = {}) {
+  const t = b.translation();
+  const r = b.rotation();
+  const com = b.worldCom();
+  const v = b.linvel();
+  const w = b.angvel();
+  o.p = (o.p || new THREE.Vector3()).set(t.x, t.y, t.z);
+  o.q = (o.q || new THREE.Quaternion()).set(r.x, r.y, r.z, r.w);
+  o.com = (o.com || new THREE.Vector3()).set(com.x, com.y, com.z);
+  o.v = (o.v || new THREE.Vector3()).set(v.x, v.y, v.z);
+  o.w = (o.w || new THREE.Vector3()).set(w.x, w.y, w.z);
+  return o;
+}
+
 export class Fighter {
   /**
    * @param {object} o
@@ -578,6 +610,7 @@ export class Fighter {
    * @param {boolean} [o.human] true = 사람 손(입력)이 모는 몸(main.js 플레이어) → humanInput. 안 주면 속성도 없다 — 시뮬 도구의 자리 0(AI 가 모는 몸 · 대본 몸)은 아님 (10/29 17:5x)
    */
   constructor(RAPIER, world, scene, colliderInfo, o) {
+    installBodyReads(RAPIER); // 몸 값 읽기 한 스텝 한 번 (11/21 감사 N-010 — src/body_reads.js · 값은 엔진 읽기와 같음)
     this.R = RAPIER;
     this.world = world;
     this.colliderInfo = colliderInfo; // 절단(sever) 이 떨어진 부위의 collider 에 detached 표시를 적는다 (combat.js 가 상처를 건너뜀)
@@ -4167,25 +4200,13 @@ export class Fighter {
     this.hitPointPrev = mid;
   }
 
-  /** 물리 스텝 직전의 상태를 JS 쪽에 복사해 둔다 (충돌 훅이 엔진을 건드리지 않고 계산하도록) */
+  /** 물리 스텝 직전의 상태를 JS 쪽에 복사해 둔다 (충돌 훅이 엔진을 건드리지 않고 계산하도록).
+   *  읽기는 이 스텝에 이미 읽은 몸 값을 다시 쓴다 (src/body_reads.js — 11/21 감사 N-010 (c)) · 담는 객체는 판 내내 같은 것 */
   cacheState() {
     const c = (this.cache = this.cache || { parts: {} });
-    const put = (b, o = {}) => {
-      const t = b.translation();
-      const r = b.rotation();
-      const com = b.worldCom();
-      const v = b.linvel();
-      const w = b.angvel();
-      o.p = (o.p || new THREE.Vector3()).set(t.x, t.y, t.z);
-      o.q = (o.q || new THREE.Quaternion()).set(r.x, r.y, r.z, r.w);
-      o.com = (o.com || new THREE.Vector3()).set(com.x, com.y, com.z);
-      o.v = (o.v || new THREE.Vector3()).set(v.x, v.y, v.z);
-      o.w = (o.w || new THREE.Vector3()).set(w.x, w.y, w.z);
-      return o;
-    };
-    c.sword = put(this.sword, c.sword);
-    this.flexWeapon?.cache(put); // 휘는 마디 무기: 마디마다 스텝 전 상태 (combat.js 가 그 마디 접촉에 쓴다)
-    for (const name in this.bodies) c.parts[name] = put(this.bodies[name], c.parts[name]);
+    c.sword = putState(this.sword, c.sword);
+    this.flexWeapon?.cache(putState); // 휘는 마디 무기: 마디마다 스텝 전 상태 (combat.js 가 그 마디 접촉에 쓴다)
+    for (const name in this.bodies) c.parts[name] = putState(this.bodies[name], c.parts[name]);
   }
 
   syncMeshes() {
@@ -4499,16 +4520,18 @@ function elbowSwivel(pDir, Dn, S, d, alpha, D, a, th0 = 0, k = 1, align = 0, sid
     bp.normalize();
     bq = _swC6.crossVectors(bD, bp);
   }
-  const gapAt = (th) => {
+  //  틈 ≥ cx.gap 인가만 본다 (11/21 감사 N-010 (e)): 목표 자세 틈이 모자라면 지금 몸 손목 틈은 재지 않고 · 틈마다 모자라는 첫 것에서 멈춤 (armGapAtLeast) —
+  //   min(목표 틈, 지금 몸 틈) ≥ gap ⇔ 둘 다 ≥ gap 이라 예전 gapAt(th) ≥ cx.gap 과 답이 같다 (같은 식 · 같은 차례의 수 — 재지 않은 틈만 빠짐)
+  const gapOk = (th) => {
     const p = _swC1.copy(pDir).multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th));
     const E = _swC2.copy(S).addScaledVector(Dn, a * ca).addScaledVector(p, a * sa);
-    const g = armGap(S, E, _swC3.copy(S).addScaledVector(Dn, d), cx.o);
-    if (!bD) return g;
+    if (!armGapAtLeast(S, E, _swC3.copy(S).addScaledVector(Dn, d), cx.o, cx.gap)) return false;
+    if (!bD) return true;
     const p2 = _swC1.copy(bp).multiplyScalar(Math.cos(th)).addScaledVector(bq, Math.sin(th));
     const E2 = _swC2.copy(S).addScaledVector(bD, a * bca).addScaledVector(p2, a * bsa);
-    return Math.min(g, armGap(S, E2, cx.wb, cx.o));
+    return armGapAtLeast(S, E2, cx.wb, cx.o, cx.gap);
   };
-  const clrGap = cx ? (th) => gapAt(th) >= cx.gap : null;
+  const clrGap = cx ? gapOk : null;
   const lim = -HUMAN.ulnarDev * HD;
   // 사람 팔 범위 (JOINTS.swivelHuman — 사장님 10/25 01:2x '팔 관절이 비틀린 게 많아'): 돌린 팔이 ① 팔꿈치를 어깨 → 손 줄보다 위로 올리거나(가슴 틀 위 몫 > 0 — 기본 겨냥은 늘 아래)
   //  ② 칼 면을 굴림 목표에 세우려면 아래팔 굴림이 HUMAN.forearmRoll(80) 밖이거나 ③ 위팔 돌림이 AAOS 한도(JOINTS.twist 안쪽 70 · 바깥 90 — anatSoft 와 같은 정의, 들림 120° 아래만) 밖이면
@@ -4602,7 +4625,7 @@ function elbowSwivel(pDir, Dn, S, d, alpha, D, a, th0 = 0, k = 1, align = 0, sid
         for (const s of n ? [1, -1] : [1]) {
           const th = s * n * STEP;
           if (!armOk(th)) continue;
-          if (gapAt(th) >= cx.gap) {
+          if (gapOk(th)) {
             want = th;
             break;
           }

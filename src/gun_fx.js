@@ -26,6 +26,7 @@ import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜�
 import * as THREE from 'three';
 import { GUN, GUN_HOOKS, gunshotSound } from './gun.js';
 import { canvasTex } from './stage_kit.js';
+import { viewNow } from './view_clock.js'; // 보는 시계 — 싸움 중 멈춤 동안 흐르지 않음 (11/21 감사 N-011)
 const _rg = {}; // Rapier 콜백 예외 통 (11/17 — rapier_guard.js: 콜백 안 예외를 적고 엔진 부름 뒤 node 에서 다시 던짐)
 
 const FLASH_T = 0.11; // 초: 섬광·화염이 보이는 시간 — 처음 FLASH_HOLD 는 최대 밝기(2~3프레임), 그 뒤 빠르게 감쇠
@@ -434,8 +435,9 @@ export function installGunFx({ scene, sound, world = null, combat = null, shake 
     aimTrace(e, e.origin, _d.divideScalar(dist), dist);
   };
 
-  let last = performance.now();
-  const tick = (now) => {
+  let last = viewNow();
+  const tick = () => {
+    const now = viewNow(); // 보는 시계 (rAF 시각 대신 — 멈춘 동안은 흐르지 않아 풀 때 몰아 흐르지 않음)
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if (warmFrames > 0 && --warmFrames === 0) {

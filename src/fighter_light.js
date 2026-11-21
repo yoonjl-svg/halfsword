@@ -30,6 +30,7 @@
 //  자세한 약속은 docs/stages.md 의 "조명 약속".
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { viewNow } from './view_clock.js'; // 보는 시계 — 싸움 중 멈춤 동안 흐르지 않음 (11/21 감사 N-011)
 
 export const LEVEL = 0.38; // 캐릭터 세로 면에 닿는 스테이지 빛이 이보다 적으면 "어둡다"고 보고 채운다 (선형 조도. 포세이돈 ≈ 0.78, 대성당 ≈ 0.40, 어두운 홀 ≈ 0.03)
 export const LEVEL_MIN = 0.3; // 스테이지가 level 을 이보다 낮게 적어도 여기까지는 본다
@@ -238,7 +239,7 @@ export function createFighterLight(lights, stage = {}) {
   let shadeT = -1;
   let shadeWas = false;
   function shadeMeshes() {
-    const t = (globalThis.performance?.now?.() ?? Date.now()) / 1000;
+    const t = viewNow() / 1000;
     const k = shadeFn && shadeT >= 0 ? 1 - Math.exp(-Math.min(0.25, t - shadeT) / SHADE_TAU) : 1;
     shadeT = t;
     for (const mesh of meshes) {
