@@ -215,3 +215,42 @@ test('⑥ 부러진 무기: 처음부터 부러짐 = 싸움에서 부러질 때�
   assert.deepEqual(Object.fromEntries(Object.entries(res.fighters).map(([k, v]) => [k, v.weaponBroken])), { '0-0': true, '3-0': false, '0-1': true, '3-1': false });
   assert.ok(Object.values(res.fighters).every((v) => v.broken === v.weaponBroken)); // 생사전 가지는 broken 을 읽음
 });
+
+test('⑦ 3:3 (사장님 11/20 \'생사전에서 3:3 쓸게.\'): 자리 0 ~ 5 · 편 번갈아 · 나 = 자리 0 · 진짜 3:3 판에 사본을 입혀 싸우고 결과 여섯', (t) => {
+  const three = fakeSetup({
+    entrants: { a: ['3-0', '3-1', '3-3'], b: ['0-2', '0-0', '0-1'] },
+    sides: {
+      a: [person('3-0', 'nameless', { cloth: 4 }), person('3-1', 'sigmund', { hp: 60, injuries: [{ part: 'leg', sev: 0.5, rests: 1 }] }), person('3-3', 'nameless', { cloth: 1, weapon: 'rapier', school: 'italian', prof: { italian: 2 } })],
+      b: [person('0-0', 'player', { hp: 80 }), person('0-1', 'nameless', { cloth: 2, weapon: 'uchigatana', school: 'japanese', prof: { japanese: 2 } }), person('0-2', 'nameless', { cloth: 5, weapon: 'hwando', school: 'chinese', prof: { chinese: 2 } })],
+    },
+  });
+  const s = specFromSetup(three);
+  assert.equal(s.control, 'player');
+  assert.deepEqual(s.fighters.map((e) => [e.index, e.team, e.key, e.human]), [
+    [0, 0, '0-0', true], // 내가 나서면 내 편 첫째 = 나
+    [1, 1, '3-0', false],
+    [2, 0, '0-2', false],
+    [3, 1, '3-1', false],
+    [4, 0, '0-1', false],
+    [5, 1, '3-3', false],
+  ]);
+  // 지켜보기 3:3 · 2:3 도 자리 빈틈 없음
+  assert.deepEqual(specFromSetup({ ...three, control: 'watch' }).fighters.map((e) => e.human), [false, false, false, false, false, false]);
+  assert.deepEqual(specFromSetup({ ...three, entrants: { a: three.entrants.a, b: ['0-1', '0-2'] } }).fighters.map((e) => [e.index, e.team]), [[0, 0], [1, 1], [2, 0], [3, 1], [4, 1]]);
+  // 진짜 판 (재기 하니스 newMatch — 자리 홀짝 = 편이 spec 과 같음): 사본을 입히고 12 s 싸움 → 결과 여섯 · 체력 정수 · 들어올 때 상처 그대로
+  seedRand(t, 6);
+  const G = newMatch({ seed: 6, count: 6, ai: 'all', weapons: s.fighters.map((e) => e.weapon) });
+  assert.deepEqual(G.fighters.map((f) => f.team), s.fighters.map((e) => e.team));
+  for (const f of G.fighters) f.applySnapshot(s.fighters[f.index].snapshot);
+  assert.ok(G.fighters[3].wounds.some((w) => w.carried), '지그문트 다리 상처를 지고 들어옴');
+  for (let i = 0; i < Math.round(12 / CONFIG.PHYSICS.timestep) && !G.over; i++) G.step();
+  const res = resultFromMatch(s, G.fighters, G.winner);
+  assert.deepEqual(Object.keys(res.fighters).sort(), ['0-0', '0-1', '0-2', '3-0', '3-1', '3-3']);
+  for (const [k, v] of Object.entries(res.fighters)) {
+    assert.ok(Number.isInteger(v.hp) && v.hp >= 0 && v.hp <= HP_MAX, `${k} 체력 ${v.hp}`);
+    assert.equal(v.alive, v.hp > 0, `${k} 삶 = 체력 > 0`);
+  }
+  assert.ok(res.fighters['3-1'].injuries.some((i) => i.part === 'leg' && i.sev >= 0.5), '들어올 때 부상은 남음 (이 판에서 같은 부위를 더 깊게 베이면 깊은 쪽 — 11/21 힘 표 뒤 씨앗 6 판은 다리 0.54)');
+  assert.ok(['a', 'b'].includes(res.winner));
+  G.world.free();
+});
