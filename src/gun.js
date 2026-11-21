@@ -15,6 +15,7 @@
 import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
 import * as THREE from 'three';
 import { ANATOMY, ARENA, COMBAT, realS } from './config.js';
+import { fieldOf } from './field.js'; // 지도 꼴 (11/21 — 벽을 등짐: 원 무대는 가운데에서 거리 그대로)
 import { prepareRevolverReload, playRevolverReload } from './revolver_reload_audio.js';
 const _rg = {}; // Rapier 콜백 예외 통 (11/17 — rapier_guard.js: 콜백 안 예외를 적고 엔진 부름 뒤 node 에서 다시 던짐)
 
@@ -675,7 +676,7 @@ export function gunAI(ai, dt) {
   let fwd = d < 3.2 ? -1 : d > 5 ? 0.8 : 0;
   let side = Math.sin(ai.gunT * 0.9) * 0.6; // 옆으로 흔들며 움직인다 (가만히 서 있지 않게)
   const p = me.bodies.pelvis.translation();
-  const rr = Math.hypot(p.x, p.z);
+  const rr = fieldOf(me).radial(p.x, p.z);
   if (fwd < 0 && rr > ARENA.radius - 1.3) {
     // 벽을 등졌다: 뒤로 못 가니 옆으로 크게 돌아 빠져나간다
     fwd = 0;

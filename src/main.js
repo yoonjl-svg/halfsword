@@ -78,6 +78,8 @@ import { createTestRoute } from './test_route.js'; // 테스트 전용 경로 (t
 import { portraitIdOf, portraitSrc } from './portraits.js'; // 캐릭터 프로필 그림 (대기실 프로필 칸 · 패배 창 — docs/design/portrait_ui_2026-10-17.md)
 import { WhiffDrill } from './whiff_drill.js'; // 시험: 헛스윙 연습 상대 (?foeWhiff=1 — test.html '상대 헛스윙', docs/strike/german_hold_2026-10-15.md §7)
 import { configureStageObstacle, clampStageCamera, stageStartZ } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 충돌체 · 시작 비킴 · 카메라 보호 (docs/import/sluice_port_2026-10-14.md)
+import { fieldForStage, isSaengsaStage, mapSpawnSpots, pickSaengsaMap, SAENGSA_MAP_BY_STAGE } from './saengsa_maps.js'; // 생사전 전용 맵 (11/21 — 두 다리 개울 · 성벽 안뜰: 무대 표 · 지도 꼴 · 시작 자리 · 맵 뽑기)
+import { fieldCamera, fieldCamBlocked, seeThroughStep } from './field_camera.js'; // 생사전 전용 맵 카메라 (11/21 — 테두리에 밀리면 위로 · 성벽 안뜰: 벽 둘레로 돌림 · 지붕 밑 · 벽 비침)
 import { configureWetlandMovement } from './wetland_ground.js'; // 잠든 습지 진흙 웅덩이 감속 (다른 무대는 배율 1)
 import { setSupportFloor } from './gait.js'; // 발 체중 받침은 바닥 콜라이더 접촉만 (10/14 — 벽·석상에 발이 닿은 힘은 받침이 아님)
 import { terrainForStage, createTerrainGround, applyTerrainHazards } from './etna_ground.js'; // 화산섬 비탈 땅(삼각형 그물 바닥 · 땅 따라 올린 벽 · 용암 화상) — 지형 없는 무대는 아래 평평한 바닥 그대로 (docs/import/volcano_port_2026-10-14.md)
@@ -237,7 +239,8 @@ const strikeCue = createStrikeCue(scene, screenTint); // 칠 때 알림 — 내 
 //  메뉴 뒤에 보이는 배경(포세이돈)이 첫 판의 배경이다. 그 다음 판부터는 판을 열 때(startFight → nextRoundStage) 다음 배경을 짓는다.
 //  짓는 동안의 멈칫(산사·대성당이 가장 길다, 개발 기계에서 0.3초 안팎)은 버튼을 누른 뒤 메뉴가 아직 떠 있는 동안 지나간다
 const stages = new Stages(scene, { hemi, sun }); // 지금의 빛·안개·하늘색(포세이돈)을 처음 값으로 적어 둔다
-const STAGE_PIN = STAGE_IDS.includes(params.get('stage')) ? params.get('stage') : null;
+// 생사전 전용 맵(두 다리 개울 · 성벽 안뜰 — 11/21)은 동시 대전 시험 판(test.html '동시 대전' + '생사전 맵')에서만 고정한다 — 1:1 판은 원 무대라 그 맵에 세우지 않음
+const STAGE_PIN = STAGE_IDS.includes(params.get('stage')) && (!isSaengsaStage(params.get('stage')) || ['2v2', '2v1', '1v2', '3v3', 'watch'].includes(params.get('team'))) ? params.get('stage') : null;
 let arena = null; // 지금 배경 { update(dt), excite(amount) }
 let SUN_OFF = null; // 해가 싸우는 자리를 따라다닐 때의 방향 (배경마다 다르다)
 let stageFought = false; // 지금 배경에서 이미 한 판을 열었나 (그러면 다음 판을 열 때 다음 배경으로 넘어간다)
@@ -298,6 +301,7 @@ function useStage(id) {
  *  지거나 도중에 정지 창 "재대결"(10/24 02:4x — 전 '처음부터 다시')을 누르면 같은 배경 — 상대도 배경을 따르니 같은 상대와 다시 싸운다 (사장님 결정)
  */
 function nextRoundStage() {
+  leaveSaengsaStage(); // 생사전 전용 맵에서 돌아온 1:1 판: 그 앞 무대로 (11/21)
   if (wanderMode) {
     // 방랑: 무대는 startFight 가 지금 판(ensureWanderRun)대로 짓는다
     stageFought = true;
@@ -314,6 +318,28 @@ function nextRoundStage() {
   stageFought = true;
 }
 useStage(STAGE_PIN || testRoute.nextStage(null) || nextStage());
+// 생사전 전용 맵 (사장님 11/21 '생사전 맵 1과 3으로 두 개 만들어.' — src/saengsa_maps.js): 생사전 판은 늘 전용 맵(낮 하나)에서 — 경기 씨앗으로 둘 가운데 하나(pickSaengsaMap — 고르기 화면 · 다시보기 · 이어받기 같음).
+//  그 앞 무대(여정 · 방랑 무대)는 적어 두었다가, 다음 1:1 판을 열 때 되돌린다 (생사전 경기를 잇달아 하면 다시 짓지 않음)
+let saengsaStageBack = null;
+function useSaengsaMap(seed) {
+  const map = pickSaengsaMap(seed);
+  if (!isSaengsaStage(stages.id)) saengsaStageBack = stages.id;
+  if (useStage(map.stage)) {
+    clearFlying();
+    stages.warm(renderer, camera);
+  }
+  sound.setStage(stages.id);
+  return map;
+}
+function leaveSaengsaStage() {
+  if (!isSaengsaStage(stages.id) || stages.id === STAGE_PIN) return;
+  if (useStage(saengsaStageBack || nextStage())) {
+    clearFlying();
+    stages.warm(renderer, camera);
+  }
+  sound.setStage(stages.id);
+  saengsaStageBack = null;
+}
 // ── (배경 끝) ─────────────────────────────────────────────────────────────
 
 // ── 화면 크기 / 픽셀 모드 ──
@@ -355,6 +381,7 @@ const trail = new InputTrail(canvas); // 방금 조작한 흔적 (반투명 선)
 input.trail = trail;
 
 let world, eventQueue, colliderInfo, player, enemy, ai, combat;
+let arenaField = fieldForStage(null); // 이번 판 지도 꼴 (11/21 — src/field.js · 원 무대 · 생사전 전용 맵) — resetWorld 가 무대에서 정한다
 let fighters = []; // 이번 판 싸움꾼 — 1:1 = [player, enemy] (예전 두 몸 고리와 같은 차례) · 동시 대전 = 자리 차례 (newTeamRound — 11/20 넷 제한 없음)
 let teamRun = null; // 동시 대전 판 상태 (newTeamRound — 판 꼴 spec · match · 사람 몸 · 보는 몸 focus · AI · 생사전 opts) — 1:1 이면 null
 let arenaStone = null; // 무대 고정 장애물 (잠든 습지 석상 — arena_obstacle.js, 다른 무대는 null)
@@ -488,6 +515,7 @@ function resetWorld() {
 
   // 지형 무대(화산섬): 그림과 같은 삼각형 그물 바닥 + 땅을 따라 올린 경계 벽 + 용암 감지 상자 (etna_ground.js). 발 받침은 그물 접촉만
   const terrain = terrainForStage(stages.id);
+  arenaField = fieldForStage(stages.id); // 지도 꼴 (11/21 — 생사전 전용 맵만 직사각형 · 그 밖 원 무대)
   arenaGround = terrain ? createTerrainGround(RAPIER, world, GROUND_GROUPS, terrain, { radius: ARENA.radius }) : null;
   if (arenaGround) setSupportFloor(world, arenaGround.floor);
   else {
@@ -495,20 +523,8 @@ function resetWorld() {
   const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
   const floor = world.createCollider(RAPIER.ColliderDesc.cuboid(30, 0.5, 30).setTranslation(0, -0.5, 0).setFriction(0.9).setCollisionGroups(GROUND_GROUPS), ground);
   setSupportFloor(world, floor); // 발 체중 받침은 이 바닥 접촉만 센다 (gait.js groundForce — 벽·석상 접촉은 받침이 아님)
-  const n = 32;
-  const R = ARENA.radius + 0.25;
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2;
-    const half = R * Math.tan(Math.PI / n) + 0.05;
-    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -a);
-    world.createCollider(
-      RAPIER.ColliderDesc.cuboid(0.2, 0.6, half)
-        .setTranslation(Math.cos(a) * R, 0.6, Math.sin(a) * R)
-        .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w })
-        .setCollisionGroups(GROUND_GROUPS),
-      ground,
-    );
-  }
+  // 경계 막이 = 지도 꼴의 벽 (11/21 — src/field.js): 원 무대는 원형 경계 벽 32 조각(예전 그대로) · 생사전 전용 맵은 무대 표의 둔덕 · 물가 · 난간 · 성벽 상자
+  arenaField.walls(RAPIER, world, ground, GROUND_GROUPS);
   }
   particles.terrain = terrain; // 핏방울이 비탈에 앉고 용암에 사라진다 (평지 null — 그대로)
   DEBRIS.terrain = terrain; // 흩어지는 칼·방어구 조각의 바닥도 땅 높이로 (평지 null — 그대로)
@@ -708,7 +724,8 @@ function newTeamRound(spec, mods = {}) {
   const terrain = resetWorld();
   const before = new Set(scene.children);
   const E = spec.fighters;
-  const spots = spawnSpots(E.length, { gap: ARENA.startGap, mateGap: CONFIG.TEAM_FIGHT.mateGap, teams: E.map((e) => e.team) });
+  const fieldMap = SAENGSA_MAP_BY_STAGE[stages.id] ?? null; // 생사전 전용 맵 (11/21): 시작 자리는 무대 표 (편마다 x ∓ 14 · z −2.5 · 0 · +2.5)
+  const spots = fieldMap ? mapSpawnSpots(fieldMap, E.map((e) => e.team)) : spawnSpots(E.length, { gap: ARENA.startGap, mateGap: CONFIG.TEAM_FIGHT.mateGap, teams: E.map((e) => e.team) });
   const humanE = E.find((e) => e.human) ?? null;
   const kitSchool = humanE ? traditionOf(getWeapon(humanE.weapon)) : null;
   const kit = humanE ? playerKit(kitSchool, readLearned(), { test: testRoute.active, upTo: UNIQUE_STAGE, nodes: skillNodesParam(SKILL_NODES, kitSchool) }) : null;
@@ -747,6 +764,7 @@ function newTeamRound(spec, mods = {}) {
   for (const f of fighters) {
     configureWetlandMovement(f, stages.id);
     f.arenaObstacle = arenaStone?.navigation ?? null;
+    if (arenaField.kind !== 'circle') f.field = arenaField; // 생사전 전용 맵 (11/21): AI 띠 · 길목 길 · 물러남 끝이 읽는다 (원 무대는 달지 않음 — 예전 그대로)
   }
   arena?.watchFighters?.(fighters);
   for (const a of auras) a.dispose();
@@ -1002,7 +1020,8 @@ async function teamStart(spec, mods = {}, opts = {}) {
   closeDraw();
   toast.classList.remove('show');
   $('menuReward').hidden = true;
-  if (!opts.saengsa) nextRoundStage(); // 시험 판: 1:1 과 같이 무대를 넘긴다 · 생사전: 지금 무대
+  if (!opts.saengsa) nextRoundStage(); // 시험 판: 1:1 과 같이 무대를 넘긴다
+  else useSaengsaMap(spec.seed ?? 0); // 생사전: 전용 맵 (11/21 — 경기 씨앗으로 두 다리 개울 · 성벽 안뜰 가운데 하나 · 전 '지금 무대')
   planOpening();
   hideFoeIntro();
   showStageInfo();
@@ -2738,10 +2757,10 @@ function updateCamera(dt) {
       camTarget.z += camPush.dz * push;
     }
   }
-  // 경기장 바깥 돌벽을 뚫고 나가지 않게
-  const r = Math.hypot(camTarget.x, camTarget.z);
-  if (r > 10.5) camTarget.multiplyScalar(10.5 / r).setY(camH);
-  clampStageCamera(a, camTarget, arenaStone?.navigation); // 잠든 습지: 카메라가 석상을 가로지르거나 안으로 들어가지 않게 (석상 없으면 그대로)
+  // 경기장 바깥 돌벽을 뚫고 나가지 않게 (지도 꼴 — 원 무대는 반지름 10.5 m 예전 그대로 · 생사전 전용 맵은 무대 표 카메라 테두리)
+  arenaField.clampCamera(camTarget, camH);
+  clampStageCamera(a, camTarget, arenaStone?.navigation, { field: arenaField }); // 잠든 습지: 카메라가 석상을 가로지르거나 안으로 들어가지 않게 (석상 없으면 그대로)
+  if (arenaField.kind !== 'circle') fieldCamera(arenaField, a, camTarget, CAMERA.minDist); // 생사전 전용 맵 (11/21 — field_camera.js): 테두리에 밀리면 위로 · 성벽 안뜰은 벽 · 지붕 둘레로 돌림
   const look = _cl.copy(a).addScaledVector(camDir, CAMERA.lookAhead).setY(1.1 + terrainY);
   if (push) look.set(look.x + camPush.dx * push, look.y, look.z + camPush.dz * push); // 런지 카메라: 바라보는 점도 같이 (밀어 넣기 — 보는 각은 그대로)
   camOpen.endPos.copy(camTarget);
@@ -2758,6 +2777,7 @@ function updateCamera(dt) {
     camLook.copy(look);
   }
   if (P.terrain) camera.position.y = Math.max(camera.position.y, P.terrain.heightAt(camera.position.x, camera.position.z) + 0.45); // 비탈 위쪽으로 돈 카메라가 땅에 묻히지 않게 (샛별 값 0.45 m)
+  if (arena?.seeThrough) seeThroughStep(arena.seeThrough, fieldCamBlocked(arenaField, a, camera.position), dt); // 성벽 안뜰 (11/21): 그래도 벽 · 지붕에 내 몸이 가리면 안쪽 성벽 · 지붕을 비침
   // 발걸음: 디딜 때 살짝 내려앉음
   if (P.footstep > 0) {
     camShake.v.y -= CAMERA.stepBob * 12 * P.footstep;
@@ -3377,6 +3397,7 @@ window.game = {
   },
   freeCam: false,
   auraView: AURA_VIEW, // 레전드 기운 보기 손잡이 (on · t · tune — aura.js · tools/browser/legend_glow_measure.mjs 가 켬 · 끔을 견준다)
+  stageSee: () => arena?.seeThrough?.alpha ?? null, // 성벽 안뜰 벽 비침 불투명도 (1 = 안 비침 — 시험 도구가 읽는다 · 11/21)
   renderInfo: () => ({ frame: renderer.info.render.frame, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, ...renderer.info.memory, programs: renderer.info.programs?.length }),
   renderCap, // 화면 갱신 상한: game.renderCap.interval = 잰 화면 간격(초). 끄기는 설정 '화면 60 fps 제한' (game.settings.fpsCap)
   screenTint,

@@ -22,6 +22,7 @@ import { fighterName, portraitOf, weaponName, weaponThumb, weaponInfo, SAENGSA_D
 import { makeNamelessFaces } from './saengsa_nameless.js';
 import { SAENGSA_TEXT as T, SCHOOL_KO, stateLine, clockText as clockWords, untilText, roundName, teamName, resultLine, myResultLine, nextMatchLine, outLine, chestLine, chestGot, injuryText, restText, stepText, signupHours, entryLine, shortLine } from './saengsa_text.js';
 import { makeEngine } from './saengsa_engine.js';
+import { mapOfMatch, mapThumbSvg } from './saengsa_maps.js'; // 생사전 전용 맵 (11/21 — 내 경기 화면 머리에 맵 이름 · 작은 그림)
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const SCHOOL_CELLS = ['german', 'italian', 'iberian', 'japanese', 'chinese'];
@@ -40,7 +41,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
       <div class="sg-scroll" id="sgScroll"><div class="sg-bracket" id="sgBracket" role="list"></div><p class="sg-empty" id="sgEmpty" hidden></p></div>
     </section>
     <section class="sg-match" id="sgMatch" hidden aria-labelledby="sgMatchTitle">
-      <header class="sg-mh"><button type="button" class="secondary small" id="sgMatchBack">${T.bracket}</button><b id="sgMatchTitle" tabindex="-1"></b><span class="sg-mh-sub" id="sgMatchSub"></span></header>
+      <header class="sg-mh"><button type="button" class="secondary small" id="sgMatchBack">${T.bracket}</button><b id="sgMatchTitle" tabindex="-1"></b><span class="sg-mh-sub" id="sgMatchSub"></span><span class="sg-map" id="sgMap" hidden></span></header>
       <div class="sg-rows"><div class="sg-row"><p class="sg-row-label" id="sgRowA"></p><div class="sg-cards" id="sgCardsA"></div></div>
         <div class="sg-row"><p class="sg-row-label" id="sgRowB"></p><div class="sg-cards" id="sgCardsB"></div></div></div>
       <footer class="sg-mf"><p class="sg-outcome" id="sgOutcome" hidden><b id="sgOutBig"></b><span id="sgOutLine"></span></p><p class="sg-hint" id="sgHint"></p>
@@ -208,6 +209,10 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
     const s = stateOf(m, t0);
     $('sgMatchTitle').textContent = s.time ? `${roundName(n, m.round)} · ${s.time}` : roundName(n, m.round);
     $('sgMatchSub').textContent = result ? '' : s.text;
+    // 생사전 전용 맵 (사장님 11/21): 내 경기는 고르기 전에 이 경기의 맵(대회 씨앗으로 정함 — 다시보기 · 이어받기 같음)을 작은 그림과 이름으로 · 상대끼리 경기(빠른 셈)는 맵이 없음
+    const map = mineSide && engine.real ? mapOfMatch(t, m) : null;
+    $('sgMap').hidden = !map;
+    if (map) { $('sgMap').innerHTML = `${mapThumbSvg(map, { w: 50 })}<span>${esc(map.name)}</span>`; $('sgMap').setAttribute('aria-label', `${T.map} ${map.name}`); }
     // 결과 뒤 카드: 결과 전 상태(pre)에 결과 몫을 겹쳐 그린다 — 나선 사람은 경기 끝 몸 · 이긴 팀에서 쉰 사람은 쉰 뒤 몸과 되찾은 것(result.rest · 11/21)
     // 배정 중인 무기는 내 카드에 바로 (저장은 '전투 입장' 때)
     const brokenMine = new Set(t.broken ?? []);

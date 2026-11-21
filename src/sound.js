@@ -2882,6 +2882,7 @@ export class Sound {
    */
   setStage(id) {
     if (id === 'frozen_bay_night') id = 'frozen_bay'; // same lake ice / pier, never the fallback sea
+    id = { saengsa_bridges: 'qinglan', saengsa_court: 'dayr' }[id] ?? id; // 생사전 전용 맵 (11/21): 개울가 = 청람잔도의 트인 낮 바람 · 물소리 · 성벽 안뜰 = 소금 사막의 벽돌 안뜰 (새 소리는 아직 없음)
     const next = id in STAGE_SOUND ? id : 'poseidon';
     if (next === this.stage) return;
     this.stage = next;
