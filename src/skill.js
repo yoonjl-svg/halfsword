@@ -26,7 +26,7 @@ import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 감도 (11/06 
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SKILL, WEAPON, THRUST, POMMEL, SECRET, AI_LEVELS, ARM, UNIQUE_ASSIST, realS, BURST_WHIFF } from './config.js';
+import { SKILL, WEAPON, THRUST, POMMEL, SECRET, AI_LEVELS, ARM, UNIQUE_ASSIST, realS, BURST_WHIFF, BODY } from './config.js';
 import { scriptLevel } from './prof_body.js'; // 비기 대본 손 빠르기 = 숙련도의 실력 숫자 (11/19 — 사람 · AI 같게)
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { startFlick, flickDrive } from './druid_whip.js'; // 휘는 무기(드루이드의 채찍)의 톡 = 손목 튕기기 (10/23)
@@ -388,10 +388,17 @@ export class Skill {
     pose.drop = b.drop;
     this.thrustPush = false;
     this.activity = Math.max(this.activity, pose.w);
-    if (m.ready && m.aligned) {
+    // 간격 안 기다림 (11/22 감사 N-036): 간격 안(ready — 몸은 섬)에서는 선이 맞기를 VITAL.rangeHold 까지만 기다리고 그 자리에서 급소 찌르기
+    //  (간격 밖을 오가는 스텝은 세지 않고 0 으로 되돌리지도 않음 · 걸어 들어가는 몫은 rangeTimeout 그대로).
+    //  선이 안 오는 자리가 있었다 — 롱소드 무릎 꿇은 상대 1.7 m 남짓은 칼이 목 선보다 약 10° 아래로 처진 채 서고(겨눔 명령을 20° 더 올려도 안 움직임 = 팔 · 손목이 더 못 올림),
+    //  우치가타나는 선 1 ~ 6 cm 밖에서 떨며 안 들어옴. 그 탭은 2 s 를 다 쓰고 보통 찌르기로 넘어갔다 — 그동안 탭이 죽은 듯 보이고 손을 대면 탭이 사라짐
+    if (m.ready) R.held = (R.held ?? 0) + dt;
+    const held = m.ready && R.held >= VITAL.rangeHold;
+    if (m.ready && (m.aligned || held)) {
       this.vitalRange = null;
       f.move.y = 0;
-      this.lastVitalRange = 'committed';
+      this.lastVitalRange = m.aligned ? 'committed' : 'held';
+      if (!m.aligned) (this.vitalRangeEnds ||= {}).held = (this.vitalRangeEnds.held ?? 0) + 1; // 재기만
       this.thrust({ step: false, rangeCommit: true });
     } else {
       f.move.y = m.move;
@@ -1644,7 +1651,11 @@ export class Skill {
     this.vel.x += (rx - this.vel.x) * k;
     this.vel.y += (ry - this.vel.y) * k;
     const sp = this.vel.length();
-    const swinging = sp > SKILL.swingSpeed && f.alive && f.armed;
+    // 칼을 못 끄는 몸은 손가락을 그어도 휘두르기가 아님 (11/22 감사 N-037 — 탭이 막히는 것과 같게): 넘어져 누운 몸(state down — 근육 목표 0.1 이 손목 제어 문턱
+    //  BODY.wristMuscle 밑 · 탭처럼 쓰러진 그 스텝부터) · 근육 세기가 그 문턱 밑인 몸. 전엔 칼이 안 움직이는데 휘두르기 · 베기 기력(stamina.observeStroke) · 헛침 · 고유 동작 읽기가 돌았다.
+    //  사람 · AI 같음 · 일어나는 몸 · 다리를 잃고 누운 몸(근육 0.35 — 10/8 '누운 채 벤다')은 그대로 벤다
+    const wristLive = !(f.state === 'down' && !f.missingLeg) && (f.muscle ?? 1) >= BODY.wristMuscle;
+    const swinging = sp > SKILL.swingSpeed && f.alive && f.armed && wristLive;
     // 휘는 무기(채찍)의 획 세기 — 무릎 꿇리기는 한 획에 한 번 (combat.js whipKneelCheck): 사람 = 손가락을 댄 한 번에 하나(댄 동안 처음 휘두르기 빠르기를 넘을 때) ·
     //  손가락이 없는 몸(AI · 마우스)은 휘두르기가 시작될 때마다 하나 · 톡 튕기기는 startFlick 이 센다
     if (f.flexWeapon) {
@@ -1652,7 +1663,7 @@ export class Skill {
       if (!(f.aiControlled ? swinging : f.handHeld || swinging)) this.strokeOn = false;
     }
     this.swinging = swinging;
-    this.inputSwinging = this.inputMotion ? this.inputMotion.vel.length() > SKILL.swingSpeed && f.alive && f.armed : swinging;
+    this.inputSwinging = this.inputMotion ? this.inputMotion.vel.length() > SKILL.swingSpeed && f.alive && f.armed && wristLive : swinging;
     if (!f.aiControlled) this.whiffTrack(dt, swinging); // 사람 휘두르기 헛침 → 상대 걸음(독일 간격 잡기, 10/15 — gait.foeWhiff) · 헛침 · 막힘 → 상대 인데스(10/21). AI 는 ai.js afterStrike 가 알린다
     if (this.uniq) this.uniq.detect(dt, this.inputSwinging, this.inputMotion?.vel); // 원래 입력 시계/방향으로 인식. 유파 동작·보법 정의는 그대로.
     // 플레이어 막기 버튼 (10/11 — parry_button.js): 버튼이 손 목표를 휘두르기 문턱보다 빠르게 옮기는 동안은 AI 막기(손이 parrySpeed 로 옮겨져 휘두르기로 잡힘)처럼

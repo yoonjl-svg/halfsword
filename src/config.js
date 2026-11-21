@@ -187,6 +187,9 @@ export const BODY = {
   support: 1.0, // 골반을 떠받치는 힘(중력 대비 배수)
   supportStiffness: 2600, // 골반 높이 스프링 강도
   supportDamping: 260,
+  // 손목 제어 문턱 (근육 세기 fighter.muscle — 이 밑이면 손목 · 팔 IK 에 힘을 안 씀 = 칼을 못 끔: fighter.js driveSword · 보상 토크 · 11/22 감사 N-037 skill.js 휘두르기).
+  //  넘어진 몸 0.1 은 이 밑이라 '누운 채 벤다' 가 안 된다 · 다리를 잃고 누운 몸 0.35 는 위 (10/8 사장님 답 4] — docs/decisions/2026-10.md)
+  wristMuscle: 0.12,
   uprightStiffness: 2500, // 몸을 똑바로 세우는 힘 (평형감각, N·m/rad)
   uprightDamping: 330, // 감쇠: 출렁이지 않고 딱 멈추는 값(감쇠비 ≈ 1)
   uprightAssist: 1.0, // 위 보조 힘의 비율

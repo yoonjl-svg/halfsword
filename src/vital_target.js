@@ -32,6 +32,9 @@ export const VITAL = {
   rangeAlignCos: Math.cos((20 * Math.PI) / 180), // 칼 축이 목표 쪽 20° 안
   rangeLineMiss: 0.07, // 칼 선이 목표를 비껴가는 거리 한도 (m)
   manualDead: 0.15, // 조이스틱을 이만큼 넘게 밀면 간격 맞추기를 거둔다
+  // 간격 안에서 선(rangeAlignCos · rangeLineMiss)을 기다리는 몫 (11/22 감사 N-036 — skill.js updateVitalRange): 간격 안에 이만큼 섰는데 선이 안 맞으면 그 자리에서 급소 찌르기.
+  //  시간 사다리 0.6 (마무리 탭 멈춤 끝 FINISH.settle 과 같은 수). 바로 선이 맞는 탭은 0.2 ~ 0.4 s 에 나감 — 그대로
+  rangeHold: realS(0.6),
 };
 
 const clamp = THREE.MathUtils.clamp;
