@@ -7,6 +7,7 @@
 import { COURTYARD_COVER_SHAPES, COURTYARD_NAVIGATION, COURTYARD_START_Z, COURTYARD_START_Z_FOE } from './stage_courtyard_cover.js';
 import { COVER_SIGHT, coverSight } from './courtyard_cover.js'; // 중정 실제 사선 (사장님 10/20 00:4x — 샛별 제안 ①) // 봉인의 중정 가운데 급수정 (샛별 저장소에서 가져옴 10/17 — 중정만 등록 · 시작 자리 · 총수 우회)
 import { BEAR_OBSTACLE_SHAPES, BEAR_AVOID_RADIUS } from './stage_sluice_bear.js';
+import { CIRCLE_FIELD } from './field.js'; // 지도 꼴 (11/21 — 돌린 카메라도 테두리 안)
 
 export const BEAR_NAVIGATION = Object.freeze({ x: 0, z: 0, radius: BEAR_AVOID_RADIUS });
 // AI 돌아가기 (확인표 1117): 석상 반지름 + CLEAR 안을 지나는 길은 막힌 것으로 보고, 지금 각에서 STEP rad 앞 · 반지름 + CLEAR + RING 자리로 스틱을 돌린다
@@ -250,10 +251,9 @@ function swingTo(origin, base, a, out) {
   out.x = origin.x + vx * c - vz * s;
   out.z = origin.z + vx * s + vz * c;
   out.y = base.y;
-  const r = Math.hypot(out.x, out.z);
-  if (r > CAMERA_GUARD.wall) { out.x *= CAMERA_GUARD.wall / r; out.z *= CAMERA_GUARD.wall / r; }
-  return out;
+  return guardField.clampSwing(out, CAMERA_GUARD.wall); // 지도 꼴 (11/21 — 원 무대는 반지름 CAMERA_GUARD.wall 안 · 옛 줄 그대로)
 }
+let guardField = CIRCLE_FIELD; // 이번 화면 카메라 보호의 지도 꼴 (clampStageCamera opts.field)
 const _swung = { x: 0, y: 0, z: 0 };
 /** side(−1 어깨 쪽 · +1 반대쪽)로 돌려 막히지 않는 가장 작은 각(rad, 크기). swingMax 안에 없으면 null */
 function clearAngle(bodies, origin, base, side) {
@@ -289,6 +289,7 @@ const clockSec = () => (globalThis.performance?.now?.() ?? Date.now()) / 1000;
 export function clampStageCamera(origin, camera, obstacle, opts = {}) {
   const bodies = obstacle && (obstacle.camera ?? CAMERA_BODIES.get(obstacle));
   if (!bodies) return camera;
+  guardField = opts.field ?? CIRCLE_FIELD;
   const G = CAMERA_GUARD;
   let st = null;
   if (!opts.instant) {

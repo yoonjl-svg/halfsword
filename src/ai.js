@@ -35,6 +35,8 @@ import { beginFlowRecovery } from './nagashi_recovery.js'; // 칼끝 돌려 빼�
 import { aiUniqueStages, aiStageOpen, PLAYER_UNIQUE, specialShare, rdReleaseOpt, altibShot, altibAfter, tapArt } from './unique_assist.js'; // 숙련도 거르기 (10/13): 고유 동작·패시브 단계 표 한 곳
 import { installCover } from './frames.js'; // 유파 막기 자리 몸꼴 덧씌우기 (10/11 중국 — schools.js parryCover)
 import { MEASURED } from './weapon_measured.js';
+import { fieldOf } from './field.js'; // 지도 꼴 (11/21 — 원 무대 · 생사전 전용 맵): 울타리 띠 · 디딜 수 없는 곳
+import { routeThroughField } from './field_route.js'; // 생사전 전용 맵: 상대가 물 · 벽 너머면 길목 머리 점으로 스틱 방향만 (원 무대는 아무 일 없음)
 import { routeAroundStageObstacle, obstacleSegmentBlocked, OBSTACLE_ROUTE } from './arena_obstacle.js'; // 잠든 습지 가운데 석상: 막힌 길이면 스틱 방향만 둘레로 (석상 없는 무대는 아무 일 없음)
 import { avoidEtnaLava } from './terrain_navigation.js'; // 화산섬 용암: 내리막 자발 이동·기술 걸음만 돌리거나 취소 (지형 없는 무대는 아무 일 없음)
 import { profBody, deVitalityK } from './prof_body.js'; // 숙련도별 몸 값 (11/17 E — config PROF_BODY)
@@ -891,6 +893,7 @@ export class AI {
     const ds = this.drySense;
     if (ds) this.dryRouteSide(ds);
     routeAroundStageObstacle(this);
+    routeThroughField(this); // 생사전 전용 맵 (11/21): 막이 너머 상대면 길목 머리 점으로 (원 무대 — 1:1 · 여정 — 는 곧장 돌아감)
     if (ds) this.dryFeet(ds);
     avoidEtnaLava(this);
   }
@@ -4583,14 +4586,17 @@ export class AI {
     }
     if (this.mind && !sideLock && (this.mode === 'watch' || this.mode === 'withdraw') && !this.chasing) side = mindSide(this, side, dt); // 유파 마음가짐 (11/18 — 횡보): 간 보기 · 물러남 걸음의 옆 몫을 목표로 (0 이면 옆걸음 없음 — 울타리 빠짐은 아래 그대로)
     // 울타리에 몰리면 옆으로 빠져 가운데로 (구석에 갇히지 않게) — 띠 = 반지름 − ARENA.aiWall 밖 (11/19 경기장에 맞춤 · 전 4.6 m)
+    //  지도 꼴 (11/21 — src/field.js): 원 무대는 radial = 가운데에서 거리 · outward = (x, z) ÷ 그 거리 그대로 (바이트 같음) · 생사전 맵은 가장 가까운 막이(둔덕 · 물 · 벽)에서 잼
     const a = me.bodies.pelvis.translation();
-    const rA = Math.hypot(a.x, a.z);
+    const FL = fieldOf(me);
+    const rA = FL.radial(a.x, a.z);
     const wallIn = ARENA.radius - ARENA.aiWall;
     if (rA > wallIn && !(this.mode === 'attack' && this.phase === 'strike')) {
       const f = me.forward(_v2);
       const r = me.right(_v1);
-      const outBack = -(a.x * f.x + a.z * f.z) / rA; // 등이 울타리 쪽이면 +
-      const toCenter = -(a.x * r.x + a.z * r.z) / rA; // 가운데가 내 오른쪽이면 +
+      const o = FL.outward(a.x, a.z, _out);
+      const outBack = -(o.x * f.x + o.z * f.z) / o.len; // 등이 울타리 쪽이면 +
+      const toCenter = -(o.x * r.x + o.z * r.z) / o.len; // 가운데가 내 오른쪽이면 +
       const k = clamp((rA - wallIn) * 1.2, 0, 1);
       if (fwd < 0 && outBack > 0.3) fwd *= 1 - k * 0.8; // 뒤로는 더 못 간다
       side = side * (1 - k) + Math.sign(toCenter || 1) * k;
@@ -4719,7 +4725,7 @@ export class AI {
    */
   dryCost(x, z) {
     let w = wetlandWetness(x, z);
-    const edge = clamp((Math.hypot(x, z) - ARENA.radius + WETLAND_RIM) / WETLAND_RIM, 0, 1);
+    const edge = clamp((fieldOf(this.me).radial(x, z) - ARENA.radius + WETLAND_RIM) / WETLAND_RIM, 0, 1); // 지도 꼴 (원 = 가운데에서 거리 그대로)
     if (edge > 0) w = Math.max(w, edge * edge * (3 - 2 * edge));
     const ob = this.me.arenaObstacle;
     if (!ob) return w;
@@ -4872,6 +4878,7 @@ export class AI {
 // ── 도우미 ──
 const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
+const _out = { x: 0, z: 0, len: 1 }; // 지도 꼴 테두리 쪽 방향 (fieldOf(me).outward)
 const _a0 = new THREE.Vector3();
 const _b0 = new THREE.Vector3();
 const _d1 = new THREE.Vector3();
