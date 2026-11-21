@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  몸 값 읽기 한 스텝 한 번 (11/21 감사 N-010 (c) · (f) — 같은 결과로 덜 하기 · 기록 docs/strike/perf_2026-11-21.md)
+//   (c) worldCom · linvel · angvel (cacheState 가 몸마다 읽는 셋) · (f) translation · rotation · mass (온 코드가 읽는 자리 · 회전)
 //
 //  Rapier JS 의 몸 값 읽기(rb.translation() 따위)는 부를 때마다 엔진(WASM)을 다섯 번 남짓 건너고 임시 객체 둘을 만든다.
 //  한 스텝 안에서 같은 몸의 같은 값을 수십 번 읽는다(cacheState · 걸음 · AI · 보정 …). 몸 값은 물리 스텝(world.step)과
@@ -43,19 +44,22 @@ const COLLIDER_KEEP = new Set([
 
 /** 몸마다 적은 값 (e* = 적은 때의 EPOCH · 0 = 없음) */
 function slot(b) {
-  return (b._rd = { eC: 0, cx: 0, cy: 0, cz: 0, eV: 0, vx: 0, vy: 0, vz: 0, eW: 0, wx: 0, wy: 0, wz: 0 });
+  return (b._rd = {
+    eT: 0, tx: 0, ty: 0, tz: 0, eR: 0, rx: 0, ry: 0, rz: 0, rw: 0, eM: 0, m: 0,
+    eC: 0, cx: 0, cy: 0, cz: 0, eV: 0, vx: 0, vy: 0, vz: 0, eW: 0, wx: 0, wy: 0, wz: 0,
+  });
 }
 function forget(b) {
   const s = b._rd;
-  if (s) s.eC = s.eV = s.eW = 0;
+  if (s) s.eT = s.eR = s.eM = s.eC = s.eV = s.eW = 0;
 }
 
 const methods = (P) => Object.getOwnPropertyNames(P).filter((m) => m !== 'constructor' && typeof Object.getOwnPropertyDescriptor(P, m).value === 'function');
 
 /** RAPIER 의 몸 · 세계 · 콜라이더 메서드에 한 스텝 읽기 기억을 깐다 (여러 번 불러도 한 번) */
 export function installBodyReads(RAPIER) {
-  const RB = RAPIER?.RigidBody?.prototype, W = RAPIER?.World?.prototype, C = RAPIER?.Collider?.prototype, V3 = RAPIER?.Vector3;
-  if (!RB || !W || !C || !V3 || Object.prototype.hasOwnProperty.call(RB, '_bodyReads')) return;
+  const RB = RAPIER?.RigidBody?.prototype, W = RAPIER?.World?.prototype, C = RAPIER?.Collider?.prototype, V3 = RAPIER?.Vector3, Q4 = RAPIER?.Quaternion;
+  if (!RB || !W || !C || !V3 || !Q4 || Object.prototype.hasOwnProperty.call(RB, '_bodyReads')) return;
   Object.defineProperty(RB, '_bodyReads', { value: true });
   // 바꾸는 부름: 앞뒤로 지움 (부름 안에서 읽어 적은 값도 남기지 않게)
   for (const m of methods(RB)) {
@@ -96,7 +100,29 @@ export function installBodyReads(RAPIER) {
     };
   }
   // 읽기: 이 스텝(EPOCH)에 적은 값이 있으면 그 숫자로 새 객체 · 없으면 엔진에서 읽어 적음
-  const com = RB.worldCom, lin = RB.linvel, ang = RB.angvel;
+  const tra = RB.translation, rot = RB.rotation, mas = RB.mass, com = RB.worldCom, lin = RB.linvel, ang = RB.angvel;
+  RB.translation = function translation() {
+    const s = this._rd || slot(this);
+    if (s.eT === EPOCH) return new V3(s.tx, s.ty, s.tz);
+    const v = tra.call(this);
+    if (v) (s.tx = v.x), (s.ty = v.y), (s.tz = v.z), (s.eT = EPOCH);
+    return v;
+  };
+  RB.rotation = function rotation() {
+    const s = this._rd || slot(this);
+    if (s.eR === EPOCH) return new Q4(s.rx, s.ry, s.rz, s.rw);
+    const v = rot.call(this);
+    if (v) (s.rx = v.x), (s.ry = v.y), (s.rz = v.z), (s.rw = v.w), (s.eR = EPOCH);
+    return v;
+  };
+  RB.mass = function mass() {
+    const s = this._rd || slot(this);
+    if (s.eM === EPOCH) return s.m;
+    const m = mas.call(this);
+    s.m = m;
+    s.eM = EPOCH;
+    return m;
+  };
   RB.worldCom = function worldCom() {
     const s = this._rd || slot(this);
     if (s.eC === EPOCH) return new V3(s.cx, s.cy, s.cz);
