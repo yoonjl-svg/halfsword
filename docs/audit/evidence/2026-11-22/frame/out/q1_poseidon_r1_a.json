@@ -1,0 +1,134 @@
+{
+ "stage": "poseidon",
+ "rate": 1,
+ "secs": 20,
+ "wallS": 20.35,
+ "frames": 308,
+ "fps": 15.1,
+ "simSecs": 15.15,
+ "gameSpeed": 74.51,
+ "perfmeter": {
+  "physMs": 10.17,
+  "steps": 5.98,
+  "drawMs": 4.46,
+  "frameMs": 68.64
+ },
+ "domMutPerS": 301.9,
+ "mutAttrPerS": 301.5,
+ "mutChildPerS": 0.4,
+ "mutTextPerS": 0,
+ "styleMsPerS": 4.69,
+ "layoutMsPerS": 3.8,
+ "styleCountPerS": 20.9,
+ "layoutCountPerS": 17.2,
+ "scriptMsPerS": 227.8,
+ "taskMsPerS": 996.6,
+ "calls": 268,
+ "tris": 83097,
+ "programs": 32,
+ "states": [
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ]
+ ],
+ "ai2err": null,
+ "errors": [],
+ "perfSample": "FPS 17 (느린5% 12)  59.3ms  그림 17fps\n물리 6.5ms ×6.0스텝  그리기 2.8ms\n게임 속도 84%  밀림 9\n호출 268  삼각형 83k  8×4  메모리 157MB\n배경 poseidon  짓기 218ms"
+}

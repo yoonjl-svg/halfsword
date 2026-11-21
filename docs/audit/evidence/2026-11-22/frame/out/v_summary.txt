@@ -1,0 +1,14 @@
+v_base_1.json firstStart:217  clearing:1383(315)  castle:950(255)  loggia:1183(449)  cathedral:1283(254)  sameStage:83 
+v_base_2.json firstStart:183  clearing:1250(333)  castle:833(245)  loggia:1133(440)  cathedral:1467(250)  sameStage:83 
+v_base_3.json firstStart:250  clearing:1533(318)  castle:917(237)  loggia:1000(432)  cathedral:1217(242)  sameStage:67 
+  v_base stageChange: n=12 median 1217 range 833-1533
+  v_base sameStage: n=3 median 83 range 67-83
+  v_base firstStart: n=3 median 217 range 183-250
+  v_base own counters build+warm: median 315 range 237-449 | longest minus own: median 917 range 568-1217
+v_nock_1.json firstStart:200  clearing:1317(297)  castle:1017(249)  loggia:1250(466)  cathedral:1217(286)  sameStage:83 
+v_nock_2.json firstStart:233  clearing:1417(326)  castle:883(235)  loggia:1000(390)  cathedral:1483(285)  sameStage:67 
+v_nock_3.json firstStart:217  clearing:1233(272)  castle:917(243)  loggia:1083(410)  cathedral:1333(259)  sameStage:83 
+  v_nock stageChange: n=12 median 1233 range 883-1483
+  v_nock sameStage: n=3 median 83 range 67-83
+  v_nock firstStart: n=3 median 217 range 200-233
+  v_nock own counters build+warm: median 286 range 235-466 | longest minus own: median 931 range 610-1198

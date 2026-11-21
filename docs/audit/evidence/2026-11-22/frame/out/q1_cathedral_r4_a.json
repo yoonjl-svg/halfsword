@@ -1,0 +1,139 @@
+{
+ "stage": "cathedral",
+ "rate": 4,
+ "secs": 20,
+ "wallS": 20.78,
+ "frames": 147,
+ "fps": 7.1,
+ "simSecs": 7.14,
+ "gameSpeed": 35.43,
+ "perfmeter": {
+  "physMs": 46.49,
+  "steps": 5.99,
+  "drawMs": 14.94,
+  "frameMs": 159.8
+ },
+ "domMutPerS": 139.1,
+ "mutAttrPerS": 138.8,
+ "mutChildPerS": 0.3,
+ "mutTextPerS": 0,
+ "styleMsPerS": 8.04,
+ "layoutMsPerS": 7.2,
+ "styleCountPerS": 11,
+ "layoutCountPerS": 8.9,
+ "scriptMsPerS": 439.2,
+ "taskMsPerS": 997.3,
+ "calls": 269,
+ "tris": 83684,
+ "programs": 36,
+ "states": [
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ],
+  [
+   "fight",
+   true,
+   true
+  ]
+ ],
+ "ai2err": null,
+ "errors": [],
+ "perfSample": "FPS 8 (느린5% 5)  129.1ms  그림 8fps\n물리 34.0ms ×6.0스텝  그리기 17.3ms\n게임 속도 39%  밀림 4\n호출 271  삼각형 84k  8×4  메모리 187MB\n배경 cathedral  짓기 312ms"
+}
