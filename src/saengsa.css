@@ -178,6 +178,9 @@ button.sg-card:disabled { cursor: default; }
 .sg-wpn[data-none] > span { color: var(--c-alert); } /* 내 팀 첫 경기 무기 배정 전 '무기 없음' (11/18) */
 .sg-inj { font-size: 11px; line-height: 1.3; color: var(--c-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sg-inj[data-hurt] { color: var(--c-alert); }
+.sg-inj[data-rest] { margin-right: -30px; color: var(--c-accent); white-space: normal; } /* 결과 카드 — 쉰 사람의 부상 한 단계 나음 (11/21 쉼 규칙 · 부상 줄 자리 · 머리 표 밑이라 오른쪽 틈까지 씀 · 길면 마디 사이에서 줄을 바꿈) */
+.sg-inj[data-rest] > span { white-space: nowrap; }
+.sg-gain { flex: none; font-size: 11px; line-height: 1; color: var(--c-accent); font-variant-numeric: tabular-nums; } /* 쉼으로 되찾은 체력 '+35' — 체력 수 앞 */
 .sg-prof { grid-area: prof; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; } /* 다섯 칸 (무유파가 주 유파인 인물은 여섯) */
 .sg-pc { display: flex; flex-direction: column; align-items: center; padding: 1px 0 2px; border-radius: 4px; }
 .sg-pc small { font-size: 9.5px; line-height: 1.2; color: var(--c-sub); white-space: nowrap; }
@@ -186,6 +189,7 @@ button.sg-card:disabled { cursor: default; }
 .sg-pc[data-on] small, .sg-pc[data-on] b { color: var(--c-accent); }
 .sg-badge { position: absolute; top: 6px; right: 7px; padding: 0 6px; border-radius: 999px; background: var(--c-sub); color: var(--c-on-accent); font-size: 10px; line-height: 15px; font-weight: var(--fw-label); }
 .sg-badge[data-kind="dead"] { background: var(--c-alert); }
+.sg-badge[data-kind="rest"] { background: var(--c-accent); }
 .sg-mf { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 12px; width: 100%; max-width: 1220px; margin: 0 auto; }
 .sg-hint { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-s); line-height: 1.4; color: var(--c-sub); word-break: keep-all; }
 .sg-hint[hidden] { display: none; }

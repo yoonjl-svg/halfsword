@@ -70,7 +70,7 @@ export function specFromSetup(setup) {
     if (A[k]) seq.push([A[k], 0]);
     if (B[k]) seq.push([B[k], 1]);
   }
-  // 2:1 · 1:2 · 2:2 · 1:1 모두: 자리 차례 = [내 첫째, 상대 첫째, (내 둘째), (상대 둘째)] — 위 고리가 그 차례로 넣는다
+  // 1:1 ~ 3:3 모두: 자리 차례 = [내 첫째, 상대 첫째, (내 둘째), (상대 둘째), (내 셋째), (상대 셋째)] — 위 고리가 그 차례로 넣는다 (편 = 자리 홀짝이 아닐 수 있음 · 칸의 team)
   const fighters = seq.map(([p, team], index) => ({
     index, team, key: p.key, human: p === human, id: p.id, name: p === human ? undefined : nameOfPerson(p), weapon: weaponOfPerson(p).id, weaponBroken: weaponOfPerson(p).broken, school: p.school ?? null, prof: p.prof ?? null, cloth: p.cloth ?? null,
     snapshot: snapshotFromPerson(p), person: p,
