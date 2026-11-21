@@ -186,8 +186,10 @@ function collect(o, set) {
 }
 
 export class Stages {
-  /** scene 과 같이 쓰는 빛 { hemi, sun }. 만들 때의 빛·안개·하늘색을 처음 값으로 적어 둔다 (배경을 짓기 전에 만들 것) */
-  constructor(scene, { hemi, sun }) {
+  /** scene 과 같이 쓰는 빛 { hemi, sun }. 만들 때의 빛·안개·하늘색을 처음 값으로 적어 둔다 (배경을 짓기 전에 만들 것).
+   *  builders = 배경 id → 짓는 함수 (기본 BUILDERS — 시험이 작은 배경을 넣어 짓기 · 미리 짓기 · 올리기를 본다: tools/sim/stage_prep.test.mjs) */
+  constructor(scene, { hemi, sun }, builders = BUILDERS) {
+    this.builders = builders;
     this.scene = scene;
     this.hemi = hemi;
     this.sun = sun;
@@ -211,12 +213,19 @@ export class Stages {
     this.buildMs = 0; // 방금 짓는 데 걸린 시간 (ms) — ?fps=1 표시와 시험용
     this.clearMs = 0; // 먼저 지은 배경을 치우는 데 걸린 시간 (ms)
     this.warmMs = 0; // 새 배경을 GPU 에 미리 올리는 데 걸린 시간 (ms, warm)
+    this.next = null; // 결과 창에서 미리 지은 다음 배경 (prepStep — 장면에서 떼어 둔다) { id, arena, objects, env, buildMs, step, … } · 없으면 null
+    this.early = false; // 지금 배경을 결과 창에서 미리 지었나 (성능 표 · 시험용)
+    this.warmed = false; // 지금 배경의 GPU 준비를 결과 창에서 다 했나 (그러면 warm 이 건너뛴다)
+    this.prepFailed = null; // 미리 짓다 오류가 난 배경 id (다시 해 보지 않는다 — 단추를 누르면 build 가 예전처럼 짓는다)
   }
 
-  /** id 배경을 짓는다 (먼저 지은 배경은 치우고, 빛·안개·하늘색은 처음 값으로 되돌린 뒤). 반환: { update, excite, sunOffset } */
+  /** id 배경을 짓는다 (먼저 지은 배경은 치우고, 빛·안개·하늘색은 처음 값으로 되돌린 뒤). 반환: { update, excite, sunOffset }
+   *  결과 창에서 미리 지어 둔 배경이면(prepStep) 그것을 장면에 올리기만 한다 (adopt) */
   build(id) {
-    const make = BUILDERS[id];
+    const make = this.builders[id];
     if (!make) throw new Error(`모르는 배경: ${id}`);
+    if (this.next?.id === id) return this.adopt();
+    this.dropNext();
     const t0 = performance.now();
     this.clear();
     this.restore();
@@ -229,7 +238,210 @@ export class Stages {
     this.id = id;
     this.clearMs = t1 - t0;
     this.buildMs = performance.now() - t1;
+    this.early = this.warmed = false;
     return this.arena;
+  }
+
+  // ── 다음 판 배경을 결과 창에서 미리 (사장님 11/22 '다음판 열 때 멈춰.' · 감사 N-025) ──
+  //  무대가 바뀌는 판을 열 때 짓기 · 셰이더 만들기 · 그래픽 칩의 첫 그리기(헤드리스 크롬에서 약 1 초 — 셰이더마다 그리기 상태를 처음 맞추는 일)가
+  //  한 프레임에 몰려 화면이 멈췄다. 결과 창은 3D 를 그리지 않고 쉬므로(main.js frame) 그동안 한 프레임에 한 걸음씩 해 둔다:
+  //   ① 짓기 (장면에서 떼어 둔다 — 지금 배경 · 빛 · 안개는 그대로) ② 셰이더(compileAsync) · 질감 올리기 ③ 화면 밖 작은 판에 몇 재질씩 나눠 그리기.
+  //  모두 같은 일 차례 안에서 다음 배경을 잠깐 장면에 올렸다 되돌린다(withNext) — 그 사이 화면에 나가는 장은 없고, 결과 창 동안 화면 크기가 바뀌어
+  //  한 장 더 그려도 지금 배경 그대로다. 단추를 누르면 build(id) 가 미리 지은 것을 올리고(adopt) warm 은 남은 일만 한다.
+
+  /** 지금 빛 · 안개 · 하늘색 · 그림자 설정 (지금 배경과 미리 지은 배경을 오갈 때) */
+  envOf() {
+    return {
+      background: this.scene.background,
+      fog: this.scene.fog,
+      hemiColor: this.hemi.color.clone(),
+      hemiGround: this.hemi.groundColor.clone(),
+      hemiIntensity: this.hemi.intensity,
+      hemiPos: this.hemi.position.clone(),
+      sunColor: this.sun.color.clone(),
+      sunIntensity: this.sun.intensity,
+      sunPos: this.sun.position.clone(),
+      shadow: shadowOf(this.sun),
+      snap: this.snap,
+      sunOffset: this.sunOffset,
+    };
+  }
+
+  /** envOf 로 적어 둔 값으로 되돌린다 (그림자 지도 크기가 다르면 three 가 다음 그림에서 새로 만든다 — useShadow) */
+  setEnv(e) {
+    this.scene.background = e.background;
+    this.scene.fog = e.fog;
+    this.hemi.color.copy(e.hemiColor);
+    this.hemi.groundColor.copy(e.hemiGround);
+    this.hemi.intensity = e.hemiIntensity;
+    this.hemi.position.copy(e.hemiPos);
+    this.sun.color.copy(e.sunColor);
+    this.sun.intensity = e.sunIntensity;
+    this.sun.position.copy(e.sunPos);
+    this.sunOffset = e.sunOffset;
+    this.useShadow(e.shadow);
+    this.snap = e.snap;
+  }
+
+  /** id 배경을 지어 두되 장면에서 떼어 둔다 (지금 배경 · 빛 · 안개는 그대로 — build 와 같은 차례로 지은 뒤 되돌린다) */
+  prepare(id) {
+    const make = this.builders[id];
+    if (!make) throw new Error(`모르는 배경: ${id}`);
+    this.dropNext();
+    const t0 = performance.now();
+    const cur = this.envOf();
+    for (const o of this.objects) this.scene.remove(o); // 짓는 동안 장면은 build 의 clear 뒤와 같다 (이름으로 제 물체를 찾는 무대가 지금 배경 것을 집지 않게)
+    const before = new Set(this.scene.children);
+    let next = null;
+    try {
+      this.restore();
+      const arena = make(this.scene, { hemi: this.hemi, sun: this.sun });
+      this.sunOffset = arena.sunOffset ?? DEFAULT_SUN_OFFSET;
+      if (arena.shadow) this.useShadow(arena.shadow);
+      next = { id, arena, objects: this.scene.children.filter((o) => !before.has(o)), env: this.envOf(), step: 'compile' };
+    } finally {
+      for (const o of this.scene.children.filter((c) => !before.has(c))) this.scene.remove(o);
+      this.setEnv(cur);
+      for (const o of this.objects) this.scene.add(o);
+    }
+    next.buildMs = performance.now() - t0;
+    next.t0 = t0;
+    this.next = next;
+  }
+
+  /** 미리 지은 배경을 잠깐 장면에 올려 fn 을 부르고 지금 배경으로 되돌린다 (같은 일 차례 안 — 화면에 나가는 장 없음) */
+  withNext(fn) {
+    const n = this.next;
+    const cur = this.envOf();
+    for (const o of this.objects) this.scene.remove(o);
+    this.setEnv(n.env);
+    for (const o of n.objects) this.scene.add(o);
+    try {
+      return fn();
+    } finally {
+      for (const o of n.objects) this.scene.remove(o);
+      this.setEnv(cur);
+      for (const o of this.objects) this.scene.add(o);
+    }
+  }
+
+  /**
+   * 결과 창에서 프레임마다 한 걸음 (main.js frame — 3D 를 그리지 않고 쉬는 동안): 짓기 → 셰이더 · 질감 → 화면 밖 판에 나눠 그리기 → 끝.
+   *  다 하면 true. 셰이더는 compileAsync — 그래픽 칩이 따로 만드는 동안(KHR_parallel_shader_compile 이 없으면 몇 프레임 쉬어 준다) 기다리지 않는다
+   */
+  prepStep(id, renderer, camera) {
+    if (this.next && this.next.id !== id) this.dropNext();
+    if (!this.next) {
+      if (this.prepFailed === id) return false;
+      try {
+        this.prepare(id);
+      } catch (e) {
+        this.prepFailed = id; // 단추를 누르면 build 가 예전처럼 다시 짓는다 (오류도 그때 그대로 난다)
+        console.warn('다음 배경 미리 짓기 실패', id, e);
+      }
+      return false;
+    }
+    const n = this.next;
+    try {
+      return this.prepMore(n, renderer, camera);
+    } catch (e) {
+      n.step = 'failed'; // 지은 배경은 그대로 쓰고 GPU 준비는 단추를 누를 때 예전처럼 (warm)
+      n.rt?.dispose();
+      n.rt = null;
+      console.warn('다음 배경 미리 준비 실패', id, e);
+      return false;
+    }
+  }
+
+  /** prepStep 의 짓기 뒤 걸음들 */
+  prepMore(n, renderer, camera) {
+    if (n.step === 'compile') {
+      const res = new Set();
+      for (const o of n.objects) o.traverse((c) => collect(c, res));
+      this.withNext(() => {
+        // 확장(KHR_parallel_shader_compile)이 있으면 compileAsync 가 셰이더가 다 이어질 때까지 기다려 준다. 없으면 같은 compile 뒤 곧바로 풀리므로
+        //  그냥 compile (three 의 '확장 없음' 경고를 콘솔에 남기지 않게) — 그래픽 칩이 셰이더를 잇는 동안 아래서 몇 프레임 쉰다
+        if (renderer.extensions.has('KHR_parallel_shader_compile')) renderer.compileAsync(this.scene, camera).then(() => (n.ready = true));
+        else renderer.compile(this.scene, camera), (n.ready = true);
+        for (const r of res) if (r.isTexture) renderer.initTexture(r);
+      });
+      renderer.getContext().flush(); // 화면에 나가는 장이 없으면 명령이 쌓인 채 그래픽 칩에 안 간다 — 지금 보내 쉬는 동안 셰이더를 잇게
+      n.rest = PREP_REST;
+      n.step = 'wait';
+      return false;
+    }
+    if (n.step === 'wait') {
+      if (!n.ready || n.rest-- > 0) return false;
+      n.chunks = this.withNext(() => warmChunks(this.scene));
+      n.drawn = 0;
+      n.step = 'draw';
+    }
+    const gl = renderer.getContext();
+    if (n.step === 'draw') {
+      const chunk = n.chunks.shift();
+      if (chunk) {
+        n.rt ??= warmTarget(renderer);
+        this.withNext(() => drawOffscreen(renderer, this.scene, camera, chunk, n.rt));
+        n.drawn++;
+      }
+      // 그린 명령을 프레임마다 그래픽 칩에 보낸다 (안 보내면 쌓였다가 단추를 누른 뒤 첫 장과 함께 가서 그때 멈칫한다)
+      if (n.chunks.length) return gl.flush(), false;
+      n.rt?.dispose();
+      n.rt = null;
+      n.fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); // 그래픽 칩이 다 끝냈는지 기다리지 않고 묻는다 (다음 걸음)
+      n.gl = gl;
+      gl.flush();
+      n.step = 'fence';
+      return false;
+    }
+    if (n.step === 'fence') {
+      if (n.fence && gl.getSyncParameter(n.fence, gl.SYNC_STATUS) !== gl.SIGNALED) return false;
+      if (n.fence) gl.deleteSync(n.fence);
+      n.fence = null;
+      n.step = 'done';
+      n.tookMs = performance.now() - n.t0; // 짓기부터 그래픽 칩이 다 그릴 때까지 (시험용 — game.stage.next)
+    }
+    return n.step === 'done';
+  }
+
+  /** 미리 지은 배경을 장면에 올린다 (build 가 같은 id 를 부르면): 새 배경을 먼저 올리고 지금 배경을 치운다 — 둘이 같이 쓰는 자원(모듈에 한 번 만든 질감 등)은 풀지 않게 */
+  adopt() {
+    const n = this.next;
+    this.next = null;
+    n.rt?.dispose();
+    const t0 = performance.now();
+    for (const o of n.objects) this.scene.add(o);
+    this.clear();
+    this.setEnv(n.env);
+    this.objects = n.objects;
+    this.arena = n.arena;
+    this.id = n.id;
+    this.clearMs = performance.now() - t0;
+    this.buildMs = n.buildMs;
+    if (n.fence) n.gl.deleteSync(n.fence);
+    this.early = true;
+    this.warmed = n.step === 'done' || n.step === 'fence'; // 'fence' = 다 그려 보냈고 그래픽 칩이 마저 하는 중 — 캔버스에 다시 그리지 않는다 (남은 몫은 첫 장이 기다린다)
+    return this.arena;
+  }
+
+  /** 미리 지은 배경을 버린다 (다른 배경을 짓게 됐을 때): 지금 장면이 같이 쓰는 자원은 두고 푼다 (clear 와 같은 셈) */
+  dropNext() {
+    const n = this.next;
+    if (!n) return;
+    this.next = null;
+    n.rt?.dispose();
+    if (n.fence) n.gl.deleteSync(n.fence);
+    const keep = new Set([weaponEnv()]);
+    for (const o of this.scene.children) o.traverse((c) => collect(c, keep));
+    const res = new Set();
+    const objs = [];
+    for (const o of n.objects)
+      o.traverse((c) => {
+        objs.push(c);
+        collect(c, res);
+      });
+    for (const r of res) if (!keep.has(r)) r.dispose();
+    for (const c of objs) c.dispose?.();
   }
 
   /**
@@ -239,6 +451,12 @@ export class Stages {
    *  (한 번 그린 그림은 화면에 안 나간다: 같은 프레임 안에서 게임 루프가 다시 그린 뒤에 화면에 나간다)
    */
   warm(renderer, camera) {
+    if (this.warmed) {
+      // 결과 창에서 다 해 두었다 (prepStep — 셰이더 · 질감 · 화면 밖 그리기)
+      this.warmed = false;
+      this.warmMs = 0;
+      return;
+    }
     const t0 = performance.now();
     renderer.compile(this.scene, camera);
     const res = new Set();
@@ -334,6 +552,73 @@ export class Stages {
 }
 
 const _snap = new THREE.Vector3();
+
+const PREP_REST = 3; // 셰이더를 보낸 뒤 그리기 전에 쉬는 프레임 (확장 KHR_parallel_shader_compile 이 없을 때 그래픽 칩이 셰이더를 잇는 몫)
+const PREP_MATS = 10; // 화면 밖 판에 한 프레임에 처음 그리는 재질 수 (그래픽 칩의 첫 그리기 일을 여러 프레임에 나눈다 — 무대 하나가 10 ~ 20 프레임)
+const WARM_LAYER = 31; // 화면 밖 그리기 동안만 잠깐 켜는 층 (게임은 층을 쓰지 않는다 — 다 0)
+/** 장면의 보이는 물체를 차례대로 묶는다: 한 묶음에 처음 보는 재질이 PREP_MATS 개까지 (이미 본 재질만 쓰는 물체는 그 묶음에 같이) */
+function warmChunks(scene) {
+  const seen = new Set();
+  const chunks = [];
+  let cur = [];
+  let fresh = 0;
+  const walk = (o) => {
+    if (!o.visible) return;
+    if ((o.isMesh || o.isPoints || o.isLine || o.isSprite) && o.material) {
+      let n = 0;
+      for (const m of materialsOf(o)) if (!seen.has(m)) seen.add(m), n++;
+      if (n && cur.length && fresh + n > PREP_MATS) {
+        chunks.push(cur);
+        cur = [];
+        fresh = 0;
+      }
+      cur.push(o);
+      fresh += n;
+    }
+    for (const c of o.children) walk(c);
+  };
+  walk(scene);
+  if (cur.length) chunks.push(cur);
+  return chunks;
+}
+/**
+ * 캔버스와 같은 꼴의 작은 화면 밖 판 (색 RGBA8 · 깊이 + 스텐실 · 캔버스와 같은 표본 수). 꼴이 같아야 그래픽 칩이 여기서 맞춘 그리기 상태를 캔버스가 그대로 쓴다.
+ *  three 는 판에 그릴 때 셰이더의 sRGB 바꿈을 뺀다(다른 셰이더가 된다) — XR 판 표시로 캔버스와 같은 색 공간 · 같은 셰이더로 그리게 한다 (그림은 버린다).
+ *  헤드리스 크롬(ANGLE · SwiftShader, 재질 40 개 시험 쪽)에서 캔버스 첫 그림 3.5 ~ 4.0 s → 이 판에 먼저 그리면 0.05 ~ 0.19 s.
+ *  스텐실 없는 판 · 표본 없는 판은 꼴이 달라 다시 1.3 ~ 2.7 s 였다. 폰에서 캔버스 꼴이 다르면 그 몫이 캔버스 첫 그림에 남는다(예전과 같음)
+ */
+function warmTarget(renderer) {
+  renderer.setRenderTarget(null);
+  const gl = renderer.getContext();
+  const rt = new THREE.WebGLRenderTarget(16, 16, { samples: gl.getParameter(gl.SAMPLES) || 0, stencilBuffer: true });
+  rt.isXRRenderTarget = true;
+  rt.texture.colorSpace = renderer.outputColorSpace;
+  rt.texture.internalFormat = 'RGBA8'; // 풀어 옮길 판도 RGBA8 (sRGB 판이면 옮길 때 바꿈이 낀다 — 그림은 버리니 같은 꼴로)
+  return rt;
+}
+/** objs 만 화면 밖 판 rt 에 한 번 그린다 (빛은 다 — 셰이더가 같게 · 화면 밖 것까지 · 그림자 판 포함). 층 · 걸러내기 · 그릴 판은 되돌린다 */
+function drawOffscreen(renderer, scene, camera, objs, rt) {
+  const on = [];
+  const lift = (o) => {
+    if (!o.layers.isEnabled(WARM_LAYER)) o.layers.enable(WARM_LAYER), on.push(o);
+  };
+  scene.traverse((o) => o.isLight && lift(o));
+  for (const o of objs) lift(o);
+  const culled = objs.filter((o) => o.frustumCulled);
+  for (const o of culled) o.frustumCulled = false;
+  const mask = camera.layers.mask;
+  const target = renderer.getRenderTarget();
+  camera.layers.set(WARM_LAYER);
+  renderer.setRenderTarget(rt);
+  try {
+    renderer.render(scene, camera);
+  } finally {
+    renderer.setRenderTarget(target);
+    camera.layers.mask = mask;
+    for (const o of culled) o.frustumCulled = true;
+    for (const o of on) o.layers.disable(WARM_LAYER);
+  }
+}
 /** 해 그림자 설정의 지금 값 (처음 값을 적어 둘 때) */
 function shadowOf(sun) {
   const c = sun.shadow.camera;

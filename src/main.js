@@ -316,12 +316,34 @@ function nextRoundStage() {
   }
   const advance = stageFought && testRoute.advance(lastRoundWon); // test=1: 이기든 지든 다음 판으로
   lastRoundWon = false;
-  if (advance && useStage(STAGE_PIN || testRoute.nextStage(stages.id) || nextStage(stages.id))) {
+  const planned = plannedStage?.from === stages.id ? plannedStage.id : null; // 결과 창에서 정해 미리 지은 무대 (upcomingStage — stage=random 을 다시 뽑지 않게)
+  plannedStage = null;
+  if (advance && useStage(planned || STAGE_PIN || testRoute.nextStage(stages.id) || nextStage(stages.id))) {
     clearFlying(); // 지난 판에 흩어지던 칼·방어구 조각과 벗겨진 투구가 새 배경에 남지 않게
-    stages.warm(renderer, camera); // 셰이더·모양·질감도 지금 GPU 에 올려 둔다 (싸움 첫 프레임에서 멈칫하지 않게)
+    stages.warm(renderer, camera); // 셰이더·모양·질감도 지금 GPU 에 올려 둔다 (싸움 첫 프레임에서 멈칫하지 않게) — 결과 창에서 다 해 두었으면 건너뛴다 (prepNextStage)
     sound.setStage(stages.id); // 배경 소리가 3초에 걸쳐 바뀐다 (발소리·쓰러짐의 바닥 소리도 배경을 따른다)
   }
   stageFought = true;
+}
+/**
+ * 결과 창(판 끝 — 3D 를 그리지 않고 쉰다: frame)에서 다음 판을 열면 지을 무대 — nextRoundStage 와 같은 셈. 무대가 그대로면 null.
+ *  방랑(무대는 판을 열 때 뽑는다) · 동시 대전 · 생사전 맵에서는 미리 짓지 않는다. stage=random 이면 여기서 한 번 뽑아 두고 nextRoundStage 가 그것을 쓴다
+ */
+let plannedStage = null; // { from: 그때 무대 id, id: 다음 무대 id }
+function upcomingStage() {
+  if (wanderMode || teamRun || isSaengsaStage(stages.id)) return null;
+  if (!stageFought || !testRoute.advance(lastRoundWon)) return null;
+  if (plannedStage?.from !== stages.id) plannedStage = { from: stages.id, id: STAGE_PIN || testRoute.nextStage(stages.id) || nextStage(stages.id) };
+  return plannedStage.id !== stages.id ? plannedStage.id : null;
+}
+/**
+ * 다음 판 멈칫 (사장님 11/22 '다음판 열 때 멈춰.' · 감사 N-025): 결과 창이 떠 있는 동안 프레임마다 한 걸음 — 다음 무대를 미리 짓고 · 셰이더를 만들고 ·
+ *  화면 밖 작은 판에 나눠 그려 둔다 (stages.js prepStep — 화면에 나가는 장 없음 · 결과 창 뒤는 마지막 장면 그대로).
+ *  단추('다음 여정' · 대기실 'Stage')를 누르면 useStage → stages.build 가 미리 지은 것을 올리기만 한다. 다 하기 전에 누르면 남은 일은 예전처럼 그 자리에서
+ */
+function prepNextStage() {
+  const id = upcomingStage();
+  if (id) stages.prepStep(id, renderer, camera);
 }
 useStage(STAGE_PIN || testRoute.nextStage(null) || nextStage());
 // 생사전 맵 (사장님 11/21 '생사전 맵 1과 3으로 두 개 만들어.' · '16강전은 열린 원, 8강전은 두 다리, 4강전과 결승은 성벽 안뜰로 하자.' — src/saengsa_maps.js):
@@ -359,7 +381,7 @@ export const saengsaCircleStageName = () => {
 // ── 화면 크기 / 픽셀 모드 ──
 //  크기는 캔버스의 실제 CSS 상자(#game, 화면 가득)에서 읽는다 — innerWidth/innerHeight 가 아니라. 홈 화면 앱(아이폰 standalone)은 처음 열 때·돌릴 때
 //  innerHeight 와 resize 이벤트가 늦거나 빠질 수 있다고 알려져 있어, 상자가 실제로 바뀌면 ResizeObserver 가 한 번 더 잰다 (docs/ui/app_layout_2026-10-14.md)
-let frozenDrawn = false; // 싸움 중 멈춤(아래 frame)에 들어서 한 장 그렸나 — 화면 크기가 바뀌면(캔버스가 지워짐) · 멈춤 창 설정을 바꾸면 거짓으로(멈춘 그 장면을 한 번 더)
+let frozenDrawn = false; // 싸움 중 멈춤 · 판 끝 결과 창(아래 frame)에 들어서 한 장 그렸나 — 화면 크기가 바뀌면(캔버스가 지워짐) · 멈춤 창 설정을 바꾸면 거짓으로(멈춘 그 장면을 한 번 더)
 function resize() {
   frozenDrawn = false;
   const w = canvas.clientWidth || window.innerWidth;
@@ -3070,7 +3092,7 @@ function updateTechCue(dt) {
 // ── 게임 루프 ──
 // 성능 측정 표시: 주소에 ?fps=1 을 붙이면 왼쪽 위에 초당 프레임·물리·그리기 시간·게임 속도가 나온다.
 //  시험 화면(test.html → test=1 시험 경로)에서는 늘 (11/21 — 사장님은 설치한 앱에서만 시험하고 주소 인자를 못 붙인다 · 본판 · 여정 · 방랑 · 생사전은 그대로 없음)
-const perf = params.get('fps') || testRoute.active ? new PerfMeter(renderer, () => `배경 ${stages.id}  짓기 ${stages.buildMs.toFixed(0)}ms${stages.warmMs ? ` + GPU 준비 ${stages.warmMs.toFixed(0)}ms` : ''}`) : null;
+const perf = params.get('fps') || testRoute.active ? new PerfMeter(renderer, () => `배경 ${stages.id}  짓기 ${stages.buildMs.toFixed(0)}ms${stages.early ? '(결과 창)' : ''}${stages.warmMs ? ` + GPU 준비 ${stages.warmMs.toFixed(0)}ms` : ''}`) : null; // (결과 창) = 결과 창에서 미리 지음 (prepNextStage)
 let last = performance.now();
 let acc = 0;
 // 화면 갱신 상한 (CONFIG.RENDER.fpsCap, 사장님 9/30): 90/120 Hz 화면에서 그리기만 60 fps 로 거른다.
@@ -3222,13 +3244,16 @@ function frame(now) {
   // 싸움 중 멈춤 (11/21 감사 N-011 · 사장님 11/21 '멈춤 동안 멈춰.'): 일시정지 창(pause — 싸움 · 무기 뽑기 중에 연 창, 화면을 떠나 저절로 멈춘 때도)이 떠 있는 동안
   //  들어선 첫 화면 한 장만 시간 0(dt 0 — 카메라 · 화면 빛 · 무대 · 몸 그대로)으로 그려 싸움 글자를 숨기고, 그 뒤로는 셈도 그리기도 하지 않는다.
   //  보는 시계(view_clock.js — 기운 · 비기 잔상 · 장식 진자)도 멈추고 무대 움직임(arena.update)은 원래 부르지 않아, 풀면 멈춘 그 장면에서 이어 간다.
-  //  판 끝 결과 창(pauseOpen 아님 — 흩어지던 조각이 마저 떨어짐) · 첫 화면 · 대기실(위)은 예전 그대로
-  const frozen = state === 'paused' && pauseOpen;
-  perf?.raf(frozen); // 성능 표 다음 판 멈칫: 실제 시각으로 프레임 간격 (사람이 연 멈춤에 닿은 간격은 빼고 — 11/21 감사 N-025 · perfmeter.js)
+  //  판 끝 결과 창(pauseOpen 아님 · 사장님 11/22 '권고대로' — 감사 N-011 덧붙임)도 같다: 게임 시간은 이미 멈춰 있어 뒤의 3D 를 초당 26 ~ 28 장 다시 그리던 것을
+  //  들어선 한 장만 그리고 쉰다 (결과 창 뒤에 마지막 장면이 그대로 · 흩어지던 조각 · 카메라도 그 자리 — 예전엔 결과 창 뒤에서 마저 떨어졌다).
+  //  다음 판 · 재대결 · 대기실로 가면 다시 그린다. 첫 화면 · 대기실(위)은 예전 그대로
+  const frozen = state === 'paused';
+  perf?.raf(frozen && pauseOpen); // 성능 표 다음 판 멈칫: 실제 시각으로 프레임 간격 (사람이 연 멈춤에 닿은 간격은 빼고 — 결과 창은 예전처럼 센다 · 11/21 감사 N-025 · perfmeter.js)
   if (frozen) {
     holdView(true);
     if (frozenDrawn) {
       last = now;
+      if (!pauseOpen) prepNextStage(); // 결과 창: 다음 무대를 미리 (그리지 않고 — 위 prepNextStage)
       return;
     }
     frozenDrawn = true;
@@ -3341,7 +3366,7 @@ function frame(now) {
       updateDraw(dt);
       stageTick(dt);
     } else if (state === 'encounter') stageTick(dt); // 방랑 전용 상대 알림 창 (10/24): 판은 멈춘 채 바다 · 먼지만
-    // 판이 끝나 메뉴가 뜬 뒤에도 흩어지던 칼·투구·판금 조각은 마저 날아 사라진다 (판 끝 슬로모션 0.5배 그대로. 싸움 중 일시정지면 멈춘 채)
+    // 판 끝 결과 창: 들어선 한 장은 dt 0 이라 흩어지던 칼·투구·판금 조각도 그 자리에 멈춘 채 (위 frozen — 11/22 결과 창 쉼. 판 끝 슬로모션 동안은 물리 스텝이 마저 떨어뜨린다)
     if (roundOver) tickDebris(dt * 0.5);
   }
   updateCamera(dt); // 거르는 프레임에도: 흔들림 스프링·발걸음(player.footstep 소비)·소리 자리(sound.listener)가 여기 달려 있다
@@ -3464,7 +3489,7 @@ window.game = {
   strikeCue, // 칠 때 알림 (style · state) — tools/browser/strike_cue_shots.mjs 가 읽는다
   // 배경: game.stage 로 지금 배경·짓는 시간 확인, game.setStage('castle') 로 바로 바꿔 보기 (싸우는 중이면 잠깐 멈칫한다)
   get stage() {
-    return { id: stages.id, pinned: STAGE_PIN, buildMs: stages.buildMs, clearMs: stages.clearMs, warmMs: stages.warmMs };
+    return { id: stages.id, pinned: STAGE_PIN, buildMs: stages.buildMs, clearMs: stages.clearMs, warmMs: stages.warmMs, early: stages.early, next: stages.next ? { id: stages.next.id, step: stages.next.step, chunks: stages.next.drawn, tookMs: stages.next.tookMs } : null };
   },
   // 지형 무대의 땅 계약·용암 (화산섬 — 시험 도구가 읽는다. 평지 무대는 null)
   get terrain() {
