@@ -1,0 +1,5 @@
+chinese: AI 자리 25 · 기술 15개 · 시작 212번 · 한 번도 시작 안 됨 1: wristCut
+german: AI 자리 27 · 기술 15개 · 시작 273번 · 한 번도 시작 안 됨 2: zwerchL, duplieren
+iberian: AI 자리 26 · 기술 15개 · 시작 289번 · 한 번도 시작 안 됨 2: zwerchL, cingir
+italian: AI 자리 26 · 기술 14개 · 시작 261번 · 한 번도 시작 안 됨 3: zwerch, zwerchL, inquartata
+japanese: AI 자리 24 · 기술 16개 · 시작 134번 · 한 번도 시작 안 됨 3: zwerch, zwerchL, stichPflugL
