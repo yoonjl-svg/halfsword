@@ -171,19 +171,17 @@ const BASE_ONE_SABRE = oneHandTable(ONE_HAND_SABRE);
 const BASE_ONE_VERSATILE = oneHandTable(ONE_HAND_VERSATILE);
 const BASE_TWO_THRUST = oneHandTable(TWO_HAND_THRUST);
 
-/** 동작 라이브러리(motion_library.js)가 몸 틀별 자세표를 만들 때 바탕으로 쓰는 표 (교본 자세 NBASE 개, 같은 패드 자리) */
+/** 동작 라이브러리(frames.js)가 몸 틀별 자세표를 만들 때 바탕으로 쓰는 표 (교본 자세 NBASE 개, 같은 패드 자리) */
 export const GUARD_BASE = BASE;
 export const GUARD_BASE_ONE = BASE_ONE_SABRE;
 export const GUARD_BASE_ONE_THRUST = BASE_ONE_THRUST;
 export const GUARD_BASE_ONE_SABRE = BASE_ONE_SABRE;
-export const GUARD_BASE_ONE_VERSATILE = BASE_ONE_VERSATILE;
 /** 한손 무기 자세표 고르기 — style = weapon_class.js classifyStyle 값. 'versatile'(청강검)은 섞은 표 (10/9 안 A — 찌르기 표의 겨눔 6 곳 + 세이버 표의 감는 8 곳) */
 export function guardBaseOne(style) {
   if (style === 'thrust') return BASE_ONE_THRUST;
   if (style === 'versatile') return BASE_ONE_VERSATILE;
   return BASE_ONE_SABRE;
 }
-export const GUARD_BASE_TWO_THRUST = BASE_TWO_THRUST;
 /** 두손 무기 자세표 고르기 — style 'thrust'(에스톡) → 두손 찌르기 표, 그 밖은 교본 표 그대로 */
 export function guardBaseTwo(style) {
   return style === 'thrust' ? BASE_TWO_THRUST : BASE;
@@ -302,7 +300,7 @@ export function guardAt(x, y, out, fin = null, th = null) {
   out.pelvisYaw = out.chestYaw = out.pitch = out.drop = 0;
   const fa = fin ? fin.amt : 0;
   // 한손 무기면 한손 자세표 (fighter 가 무기의 oneHandStance 로 out.oneHand 를 켠다). out.table 이 있으면 그 표
-  //  (동작 라이브러리 motion_library.js — 몸 틀별 자세표. 같은 패드 자리·같은 순서. 없으면 예전 그대로)
+  //  (동작 라이브러리 frames.js — 몸 틀별 자세표. 같은 패드 자리·같은 순서. 없으면 예전 그대로)
   const T = out.table ?? (out.oneHand ? BASE_ONE_SABRE : GUARDS); // 찌르기 칼은 부르는 쪽이 out.table = guardBaseOne(style) 로 넘긴다
   for (let i = 0; i < NBASE; i++) {
     const g = T[i];

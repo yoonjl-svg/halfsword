@@ -38,7 +38,7 @@ for (const [name, wid, label, from, pathPts, speed, tap] of CLIPS) {
   await page.waitForFunction(() => window.game.state === 'fight', null, { timeout: 30000 });
   await page.addStyleTag({ content: 'body *{visibility:hidden!important} canvas{visibility:visible!important}' });
   await page.evaluate(async ([from]) => {
-    const lib = await import('/src/motion_library.js');
+    const lib = await import('/tools/motion/lib/motion_library.mjs');
     const g = window.game;
     if (g.ai) g.ai.update = () => {};
     lib.applyMotionLibrary(g.player);

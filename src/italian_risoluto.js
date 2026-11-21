@@ -29,7 +29,7 @@
 //  AI 는 쓰지 않는다(SECRET.aiOpenSchools — ai.js 는 TRADITIONS.italian.secret 옛 비기를 보고, 그마저 닫힘). 시뮬 도구엔 PlayerSecretWatch 가 없어 AI 끼리 판 그대로.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SECRET, SCHOOL_PASSIVE } from './config.js';
+import { SECRET } from './config.js';
 import { segDist } from './skill.js';
 import { swingingNow } from './school_passive.js';
 import { iaiTipSpeed, ART_MIN } from './secret_instant.js';
@@ -38,9 +38,6 @@ const _a0 = new THREE.Vector3();
 const _a1 = new THREE.Vector3();
 const _b0 = new THREE.Vector3();
 const _b1 = new THREE.Vector3();
-const _c = new THREE.Vector3();
-const _u = new THREE.Vector3();
-const D2R = Math.PI / 180;
 
 /**
  * 런지 최소 간격 (m — 10/24 13:2x 사장님 '그럼 오히려 간격이 약간 있어야 쓸 수 있게 해 너무 가까우면 못쓰게' · 13:4x 대안 ③ '맞닿는 거리만 막기'):
@@ -64,27 +61,6 @@ export function coverDist(me, foe) {
   foe.bladePoint(0.5, _b0);
   foe.bladePoint(1, _b1);
   return segDist(_a0, _a1, _b0, _b1);
-}
-
-/**
- * 칼을 대지 않는 덮음 — 줄 막기 (시험 스위치 SECRET.risolutoLine — 기본 끔 · 감독 10/22 '파브리스는 칼을 찾지 않고 줄만 막고 들어가는 판도 허락'):
- *  ① 겨눔: 내 칼 방향(칼자루 → 칼끝)과 칼자루 → 상대 가슴 방향 사이 각 ≤ 곧은 선 최대 각 SCHOOL_PASSIVE.italian.tipMax(12° — 이미 있는 수) ·
- *  ② 줄 막기: 내 칼 손 쪽 절반 선분 ↔ (상대 칼끝 → 내 가슴) 선분 가장 가까운 거리 ≤ SECRET.risolutoCover(덮음과 같은 0.07 m) — 상대 칼끝이 지금 줄로 나를 찌르러 오는 길 위에 내 강한 쪽이 있음.
- *  원전 [153] 「sicuro, che la nimica non poteua ferire nel luogo, oue si trouaua」(상대 칼이 지금 줄에서는 칠 수 없음) · [157] 각진 자세에는 칼날을 따라가지 않고 곧은 줄로 [원문 영역] · 기하 [해석]
- */
-export function lineCover(me, foe) {
-  if (!me?.armed || !foe?.armed || me.weaponBroken || foe.weaponBroken || me.weapon?.gun || foe.weapon?.gun) return false;
-  me.bladePoint(0, _a0);
-  me.bladePoint(1, _a1);
-  const ch = foe.bodies.chest.translation();
-  _u.set(ch.x - _a0.x, ch.y - _a0.y, ch.z - _a0.z).normalize();
-  _c.subVectors(_a1, _a0).normalize();
-  if (_c.dot(_u) < Math.cos(SCHOOL_PASSIVE.italian.tipMax * D2R)) return false;
-  me.bladePoint(0.5, _a1);
-  foe.bladePoint(1, _b0);
-  const mc = me.bodies.chest.translation();
-  _b1.set(mc.x, mc.y, mc.z);
-  return segDist(_a0, _a1, _b0, _b1) <= SECRET.risolutoCover;
 }
 
 /**

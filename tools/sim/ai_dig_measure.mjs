@@ -3,10 +3,10 @@
 //   값 config DIG_PROTO · 기록 docs/strike/ai_dig_2026-11-14.md). 사장님 11/14 'ai의 변화 재는 거 최소로 해' — 짧은 칼 넷 × 롱소드 AI · 숙련 5 · 씨앗 1 ~ 6 · 30 s · 벽 ·
 //   홀수 씨앗 = 짧은 칼이 E 자리 · 짝수 = P 자리.
 //  wall   — 지금 벽: 공격마다 시작 거리 · 다가감에서 가장 가까운 거리 · 칼 낸 거리 · 칠 거리(need) · 접은 까닭 · 다가가는 동안 내 다가섬 ↔ 롱소드 물러섬 · 간 보는 거리 · 다가가다 맞음
-//  speed  — 걸음 빠르기 (스틱 끝 앞 · 뒤 · 옆 — 몸이 실제로 낸 골반 빠르기 · 게임 m/s) · AI 스틱 길(ai.js moveFeet toStick) · 박찬 앞 걸음 · 달림(시제품 C)
+//  speed  — 걸음 빠르기 (스틱 끝 앞 · 뒤 · 옆 — 몸이 실제로 낸 골반 빠르기 · 게임 m/s) · AI 스틱 길(ai.js moveFeet toStick)
 //  human  — 사람(손가락 봇 — tools/sim/school_balance.mjs · 독일 롱소드 · 스킬트리 모두) 대 짧은 칼 AI(숙련 5): 같은 계기
-//  cmp    — 안 (지금 · A · B · C · A+B · A+C) × 짧은 칼 넷: 들어간 수 · 낸 칼 · 맞힌 칼 · 다가가다 맞음 · 사냥 겹 · 이김 · 짐 · 비김
-//  node tools/sim/ai_dig_measure.mjs wall|speed|human|cmp [--weapons=hwando,qinggang,frozen_tuna,morgenstern] [--seeds=1-6] [--prof=5] [--dur=30] [--vars=now,A,B,C,AB,AC] [--json=파일]
+//  cmp    — 안 (지금 · A — 시제품 B · C 는 11/21 지움) × 짧은 칼 넷: 들어간 수 · 낸 칼 · 맞힌 칼 · 다가가다 맞음 · 사냥 겹 · 이김 · 짐 · 비김
+//  node tools/sim/ai_dig_measure.mjs wall|speed|human|cmp [--weapons=hwando,qinggang,frozen_tuna,morgenstern] [--seeds=1-6] [--prof=5] [--dur=30] [--vars=now,A] [--json=파일]
 //  node tools/sim/ai_dig_measure.mjs agg <json ...>   (cmp 조각을 모아 표)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync } from 'node:fs';
@@ -21,13 +21,13 @@ const range = (s) => { const [a, b] = s.split('-').map(Number); return Array.fro
 const f2 = (x) => (Number.isFinite(x) ? x.toFixed(2) : '-');
 const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN);
 const p50 = (a) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : NaN; };
-export const VARS = { now: {}, A: { ai: 1 }, B: { step: 1 }, C: { run: 1 }, AB: { ai: 1, step: 1 }, AC: { ai: 1, run: 1 } };
-const VAR_KO = { now: '지금', A: 'A', B: 'B', C: 'C', AB: 'A + B', AC: 'A + C' };
+export const VARS = { now: {}, A: { ai: 1 } };
+const VAR_KO = { now: '지금', A: 'A' };
 const WKO = { hwando: '환도 (동방)', qinggang: '청강검 (동방)', frozen_tuna: '냉동 참치 (무유파)', morgenstern: '모르겐슈테른 (무유파)' };
 
 export function withDig(over, fn) {
   const keep = { ...DIG_PROTO };
-  Object.assign(DIG_PROTO, { ai: 0, step: 0, run: 0 }, over);
+  Object.assign(DIG_PROTO, { ai: 0 }, over);
   try { return fn(); } finally { Object.assign(DIG_PROTO, keep); }
 }
 
@@ -134,8 +134,7 @@ export function sumRows(rs) {
     hurtIn: sum((r) => r.hurtIn) / n, recvN: sum((r) => r.recvN) / n, dealtN: sum((r) => r.dealtN) / n, recv: sum((r) => r.recv) / n, dealt: sum((r) => r.dealt) / n,
     d0: p50(all((r) => r.d0)), dmin: p50(all((r) => r.dmin)), dStrike: p50(all((r) => r.dStrike)), need: p50(all((r) => r.need)),
     close: sum((r) => r.close), recede: sum((r) => r.recede), apT: sum((r) => r.apT), holdMe: p50(all((r) => r.holdMe)), holdFoe: p50(all((r) => r.holdFoe)),
-    hunt: sum((r) => r.hunt) / n, dash: sum((r) => r.digP?.dash ?? 0), runT: sum((r) => r.digP?.runT ?? 0), stepIn: sum((r) => r.digP?.stepIn ?? 0), cross: sum((r) => r.digP?.cross ?? 0), keep: sum((r) => r.digP?.keep ?? 0), wall: sum((r) => r.digP?.wall ?? 0),
-    foeDash: sum((r) => r.foeDigP?.dash ?? 0), foeRunT: sum((r) => r.foeDigP?.runT ?? 0),
+    hunt: sum((r) => r.hunt) / n, stepIn: sum((r) => r.digP?.stepIn ?? 0), cross: sum((r) => r.digP?.cross ?? 0), keep: sum((r) => r.digP?.keep ?? 0), wall: sum((r) => r.digP?.wall ?? 0),
     digRec: sum((r) => r.dig?.recover ?? 0),
   };
 }
@@ -147,18 +146,18 @@ function wallTable(rows) {
 }
 
 function cmpTable(rows) {
-  const L = ['| 짧은 칼 | 안 | 판 | 공격 / 판 | 들어간 수 / 판 (첫 칼을 냄) | 낸 칼 / 판 (이어 친 칼 포함) | 맞힌 칼 / 판 | 다가가다 맞음 / 판 | 준 · 받은 칼날 상처 / 판 | 사냥 겹 / 판 | 이김 · 짐 · 비김 | 시제품 쓰임 6 판 합: 박참(나 · 롱소드) · 달린 s(나 · 롱소드) · 걸음 실린 칼 · 건넘 · 붙어 이어 침 · 울타리/지친 상대 몰아침 |', '|---|---|---|---|---|---|---|---|---|---|---|---|'];
-  for (const [w, v, s] of rows) L.push(`| ${WKO[w] ?? w} | ${VAR_KO[v] ?? v} | ${s.n} | ${f2(s.atk)} | ${f2(s.entered)} | ${f2(s.strikes)} | ${f2(s.hits)} | ${f2(s.hurtIn)} | ${f2(s.dealtN)} · ${f2(s.recvN)} | ${w === 'hwando' || w === 'qinggang' ? f2(s.hunt) : '-'} | ${s.W} · ${s.L} · ${s.n - s.W - s.L} | ${s.dash} · ${s.foeDash} · ${f2(s.runT)} · ${f2(s.foeRunT)} · ${s.stepIn} · ${s.cross} · ${s.keep} · ${s.wall} |`);
+  const L = ['| 짧은 칼 | 안 | 판 | 공격 / 판 | 들어간 수 / 판 (첫 칼을 냄) | 낸 칼 / 판 (이어 친 칼 포함) | 맞힌 칼 / 판 | 다가가다 맞음 / 판 | 준 · 받은 칼날 상처 / 판 | 사냥 겹 / 판 | 이김 · 짐 · 비김 | 시제품 쓰임 6 판 합: 걸음 실린 칼 · 건넘 · 붙어 이어 침 · 울타리/지친 상대 몰아침 |', '|---|---|---|---|---|---|---|---|---|---|---|---|'];
+  for (const [w, v, s] of rows) L.push(`| ${WKO[w] ?? w} | ${VAR_KO[v] ?? v} | ${s.n} | ${f2(s.atk)} | ${f2(s.entered)} | ${f2(s.strikes)} | ${f2(s.hits)} | ${f2(s.hurtIn)} | ${f2(s.dealtN)} · ${f2(s.recvN)} | ${w === 'hwando' || w === 'qinggang' ? f2(s.hunt) : '-'} | ${s.W} · ${s.L} · ${s.n - s.W - s.L} | ${s.stepIn} · ${s.cross} · ${s.keep} · ${s.wall} |`);
   return L.join('\n');
 }
 
 /** 걸음 빠르기: E 몸을 스틱으로 몬다 (AI 끔) — 3 s 동안 마지막 1 s 의 골반 빠르기 앞뒤 · 옆 몫 (게임 m/s) */
-function speedRun(stick, { run = 0, dash = 0, weapon = 'hwando' } = {}) {
-  return withDig({ run, step: dash }, () => {
+function speedRun(stick, { weapon = 'hwando' } = {}) {
+  return withDig({}, () => {
     const G = newRound({ walls: false, seed: 1, weapon: 'longsword', weapon2: weapon, gap: 8 });
     G.ai.update = () => {};
     const E = G.enemy;
-    E.humanInput = true; // 사람 몸처럼 (박차기 조건 — gait humanInput)
+    E.humanInput = true; // 사람 몸처럼 (gait humanInput)
     let peak = 0;
     const acc = [];
     let k = 0;
@@ -178,7 +177,7 @@ function speedRun(stick, { run = 0, dash = 0, weapon = 'hwando' } = {}) {
       peak = Math.max(peak, Math.abs(v.x * f.x + v.z * f.z));
       if (i * DT > 1.5) acc.push(Math.hypot(v.x, v.z));
     }
-    const r = { v: mean(acc), peak, d06, stam: E.stamina.value - st0, digs: E.gait?.digs ?? 0 };
+    const r = { v: mean(acc), peak, d06, stam: E.stamina.value - st0 };
     G.world.free();
     return r;
   });
@@ -200,13 +199,13 @@ if (isMain(import.meta.url)) {
     rows.push(['longsword', '견줌 (롱소드끼리)', sumRows(ref)]);
     console.log(wallTable(rows));
   } else if (mode === 'speed') {
-    const L = ['| 걸음 (서 있다가 스틱 끝 2.5 s · 환도 몸) | 버틴 골반 빠르기 m/s (게임 · 끝 1 s) | 처음 0.6 s 에 간 거리 m | 박찬 걸음 |', '|---|---|---|---|'];
-    for (const [name, st, o] of [['앞', [0, 1], {}], ['뒤', [0, -1], {}], ['옆', [1, 0], {}], ['앞 — 박찬 첫 걸음 (시제품 B)', [0, 1], { dash: 1 }], ['앞 — 달림 (시제품 C · 기력 50 위)', [0, 1], { run: 1 }]]) {
-      const r = speedRun(st, o);
-      L.push(`| ${name} | ${f2(r.v)} | ${f2(r.d06)} | ${r.digs} |`);
+    const L = ['| 걸음 (서 있다가 스틱 끝 2.5 s · 환도 몸) | 버틴 골반 빠르기 m/s (게임 · 끝 1 s) | 처음 0.6 s 에 간 거리 m |', '|---|---|---|'];
+    for (const [name, st] of [['앞', [0, 1]], ['뒤', [0, -1]], ['옆', [1, 0]]]) {
+      const r = speedRun(st);
+      L.push(`| ${name} | ${f2(r.v)} | ${f2(r.d06)} |`);
     }
-    L.push(`| (셈) 걷는 앞 GAIT.moveSpeed · 뒤 × backFactor · 옆 × sideFactor | ${f2(GAIT.moveSpeed)} · ${f2(GAIT.moveSpeed * GAIT.backFactor)} · ${f2(GAIT.moveSpeed * GAIT.sideFactor)} | | |`);
-    L.push(`| (셈) AI 다가감 스틱 0.25 ~ 0.45 → 앞 빠르기 · AI 간 보기 물러섬 스틱 끝 (toStick ÷ BODY.moveSpeed ${BODY.moveSpeed} · 뒤 × 0.75) → 뒤 빠르기 | ${f2(0.25 * GAIT.moveSpeed)} ~ ${f2(0.45 * GAIT.moveSpeed)} · ${f2(GAIT.moveSpeed * GAIT.backFactor)} | | |`);
+    L.push(`| (셈) 걷는 앞 GAIT.moveSpeed · 뒤 × backFactor · 옆 × sideFactor | ${f2(GAIT.moveSpeed)} · ${f2(GAIT.moveSpeed * GAIT.backFactor)} · ${f2(GAIT.moveSpeed * GAIT.sideFactor)} | |`);
+    L.push(`| (셈) AI 다가감 스틱 0.25 ~ 0.45 → 앞 빠르기 · AI 간 보기 물러섬 스틱 끝 (toStick ÷ BODY.moveSpeed ${BODY.moveSpeed} · 뒤 × 0.75) → 뒤 빠르기 | ${f2(0.25 * GAIT.moveSpeed)} ~ ${f2(0.45 * GAIT.moveSpeed)} · ${f2(GAIT.moveSpeed * GAIT.backFactor)} | |`);
     console.log(L.join('\n'));
   } else if (mode === 'human') {
     const { fightOne: botFight } = await import('./school_balance.mjs');
@@ -218,7 +217,7 @@ if (isMain(import.meta.url)) {
         let S = null, ai = null, A = null, P = null;
         const res = botFight({ school: 'german', weapon: 'longsword', opp: w, seed, dur, onRound: ({ G, P: p, A: a }) => { ai = G.ai; A = a; P = p; S = instrument(G, G.ai, a, p); } });
         const out = (f) => !f.alive || f.state === 'dead';
-        rs.push({ weapon: w, seed, win: out(P) && !out(A), lose: out(A) && !out(P), hunt: P.cnHunt?.n ?? 0, digP: { ...(ai.stats.digP ?? {}) }, foeDigP: {}, ...S });
+        rs.push({ weapon: w, seed, win: out(P) && !out(A), lose: out(A) && !out(P), hunt: P.cnHunt?.n ?? 0, digP: { ...(ai.stats.digP ?? {}) }, ...S });
         void res;
       });
       rows.push([w, VAR_KO[v] ?? v, sumRows(rs)]);
@@ -226,7 +225,7 @@ if (isMain(import.meta.url)) {
     }
     console.log(wallTable(rows).replace('롱소드 AI (숙련 5)', '사람 손가락 봇 (독일 롱소드)'));
   } else if (mode === 'cmp') {
-    const vars = arg('vars', 'now,A,B,C,AB,AC').split(',');
+    const vars = arg('vars', 'now,A').split(',');
     const out = [];
     for (const w of weapons) for (const v of vars) {
       const rs = seeds.map((seed) => withDig(VARS[v], () => fightOne({ weapon: w, seed, prof, dur })));

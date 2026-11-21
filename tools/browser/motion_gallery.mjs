@@ -1,5 +1,5 @@
 // 동작 라이브러리 자세 모음 (docs/weapon_motions.md §2): 무기마다 새 자세를 게임 화면에서 옆·앞 비스듬히 찍어 한 장으로.
-//  src/motion_library.js 를 페이지에서 불러와 주인공에게 입히고(applyMotionLibrary), 손가락 자리(패드)를 자세 자리에 붙들어 둔다.
+//  tools/motion/lib/motion_library.mjs 를 페이지에서 불러와 주인공에게 입히고(applyMotionLibrary), 손가락 자리(패드)를 자세 자리에 붙들어 둔다.
 //  결과: docs/handoff/motion_gallery.jpg. 콘솔 에러도 센다.
 //   vite 개발 서버를 띄운 뒤: node tools/browser/motion_gallery.mjs http://127.0.0.1:5173
 import { chromium } from 'playwright';
@@ -31,7 +31,7 @@ for (const [wid, label, pads, mode] of SETS) {
   await page.addStyleTag({ content: 'body *{visibility:hidden!important} canvas{visibility:visible!important}' }); // 화면 글자·조이스틱 숨김
   // 상대 AI 를 멈추고(가만히) 주인공에게 라이브러리를 입힌다
   await page.evaluate(async () => {
-    const lib = await import('/src/motion_library.js');
+    const lib = await import('/tools/motion/lib/motion_library.mjs');
     const g = window.game;
     if (g.ai) g.ai.update = () => {};
     if (g.player.weapon.id !== 'longsword') lib.applyMotionLibrary(g.player, { overlay: false });

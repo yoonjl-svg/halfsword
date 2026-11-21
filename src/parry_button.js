@@ -247,8 +247,8 @@ export class PlayerParryGuard {
     const me = this.me;
     if (me.schoolParry === false) return 1;
     if (kitOff(me, 'parryCut')) return press; // 스킬트리(10/21): 막는 동안 피해 감소는 일본 J2 · 이베리아 B9 · 동방 C8
-    // 유파별 몫: 동방 cnParryDmgCut 0.5(10/17) · 일본 jpParryDmgCut · 이베리아 ibParryDmgCut 0.2(사장님 10/18 22:1x) — 다른 유파 · 책 해제 = 1
-    const cut = { chinese: SKILL.cnParryDmgCut, japanese: SKILL.jpParryDmgCut, iberian: SKILL.ibParryDmgCut }[me.swordArt?.tradition] ?? 0;
+    // 유파별 몫: 동방 cnParryDmgCut 0.5(10/17) — 일본 · 이베리아 0.2(10/18)는 사장님 11/15 결정으로 없앰 · 다른 유파 · 책 해제 = 1
+    const cut = { chinese: SKILL.cnParryDmgCut }[me.swordArt?.tradition] ?? 0;
     return (cut > 0 ? 1 - cut : 1) * press;
   }
 }

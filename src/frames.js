@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-//  틀 층 — 몸 틀 × 싸움 방식의 동작 자료 (검술 보정 v2 확장 ① 구조, 10/8: motion_library.js 의 자료·만들기·덧씌우기를 이 파일로 옮김.
-//   숫자·차례는 한 글자도 바꾸지 않았다. 옛 이름(motion_library.js)은 이 파일을 그대로 다시 내보낸다)
+//  틀 층 — 몸 틀 × 싸움 방식의 동작 자료 (검술 보정 v2 확장 ① 구조, 10/8: 옛 motion_library.js 의 자료·만들기·덧씌우기를 이 파일로 옮김.
+//   숫자·차례는 한 글자도 바꾸지 않았다. 옛 이름 겉면(도구 전용 tools/motion/lib/motion_library.mjs)이 이 파일을 그대로 다시 내보낸다)
 //
 //  동작 라이브러리 (무기 PM — 사장님: "분류에 이어 동작 개발까지", docs/weapon_motions.md)
 //  무기 유형(weapon_class.js: 몸 틀 × 싸움 방식)마다 동작 세 층을 모은다.
@@ -23,7 +23,7 @@ import { TECH, FEINTS, G, WATCH_GUARDS, TECH_BY_NAME } from './ai_techniques.js'
 import { THRUST } from './config.js';
 
 export const MOTION = {
-  // 본판 (사장님 10/8 18:50 '적용', 확인표 34 — 늘 켬): Fighter·AI 생성자가 sword_art.js resolveSwordArt 로 라이브러리 몫을 입힌다(옛 이름 applyMotionLibrary·libSchool 은 motion_library.js 호환 겉면).
+  // 본판 (사장님 10/8 18:50 '적용', 확인표 34 — 늘 켬): Fighter·AI 생성자가 sword_art.js resolveSwordArt 로 라이브러리 몫을 입힌다(옛 이름 applyMotionLibrary 는 도구 전용 겉면 tools/motion/lib/motion_library.mjs).
   coverIn: 0.08, // 막기 덧씌우기: 덮는 시간(초)
   coverOut: 0.15, // 걷는 시간(초)
   useParry: false, // 무기별 막기 자리(LIB_PARRY)를 AI 에 끼울까 — 기본 끔: 바뀐 자세표(막기 자세 포함)로 잰 값이라 지금 표와 맞지 않는다
@@ -128,7 +128,7 @@ export function frameTableWithCovers(frame, style = null) {
 /** 몸 틀(+싸움 방식)의 자세표 만들기 (guards.js 와 같은 순서·같은 패드). 고칠 것이 없으면 null(바탕 표 그대로).
  *  base: 바탕 표 — 본판(10/8)은 검객이 이미 쥔 무기별 표(동작 PM 10/1 한손 찌르기·세이버·두손 찌르기 표)를 넘겨 그 위에 덮는다.
  *  없으면 옛 바탕(한손·총 = 세이버 표, 그 밖 = 롱소드 표 — 무기 PM 이 96판을 잰 조건).
- *  고르는 곳은 sword_art.js resolveSwordArt 한 곳 (옛 이름 frameTable 은 motion_library.js 에서 그것을 거쳐 이 함수를 부른다) */
+ *  고르는 곳은 sword_art.js resolveSwordArt 한 곳 (옛 이름 frameTable 겉면은 아무도 안 불러 11/21 지움) */
 export function buildFrameTable(frame, style = null, skip = [], base = null) {
   const o = { ...(frame === 'pole' ? POLE_GUARDS : FRAME_GUARDS[frame] ?? {}), ...(STYLE_GUARDS[`${frame}:${style}`] ?? {}) };
   for (const k of MOTION.skip) delete o[k];
@@ -149,15 +149,6 @@ export const POLE_GUARDS = {
 };
 // 자세마다 어느 끝이 앞인가(frontEnd): 봉은 모두 'head'. 폴액스·나기나타는 꼬리(butt) 앞 자세가 있어 자세 칸 값으로 둔다 (docs/pole_frame_design.md §4-2)
 for (const g of Object.values(POLE_GUARDS)) g.frontEnd = 'head';
-
-// 손 간격(앞손~뒷손, m)은 자세 값이 아니라 무기·유파 값이다 → 스펙 handGap. [원전 2차] 영국 봉·나기나타, [추정] 마이어 봉·창
-export const POLE_HAND_GAP = { englishStaff: 0.35, naginata: 0.4, meyerStaff: 0.6, spear: [0.6, 0.9] };
-
-// 교차 베기(Kreutzhauw): 8자리를 멈추지 않고 거친다 — 연구 세션 pole_motion_research.md 로 고친 순서 [원전 2차]
-//  B 틀 talhoReves 처럼 흐름(flow)으로 잇는다. 오른/왼 지붕은 같은 Oberhut 을 좌우로 쓴다
-export const POLE_KREUTZHAUW = ['Nebenhut', 'Steurhut', 'Oberhut(R)', 'Wechselhut', 'Unterhut', 'Mittelhut', 'Oberhut(L)', 'Nebenhut'];
-// 마이어의 찌르기는 앞손을 놓지 않는다: 뒷손을 겨드랑이로 당겨(Ruck) 자루를 앞손 속으로 밀어낸다. 놓고 뻗는 찌르기는 영국 봉(스웻넘)
-export const POLE_THRUST = { meyer: 'ruck', english: 'release' };
 
 const POLE_STRIKES = new Set(['oberhau']); // E 자루가 쓰는 칼 베기 길: 정수리 내려치기만
 

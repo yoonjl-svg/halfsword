@@ -9,7 +9,6 @@ import { SAENGSA } from './config.js';
 import { CHARACTERS_BY_ID } from './characters.js';
 import { portraitSrc } from './portraits.js';
 
-export const NAMELESS_ID = 'nameless';
 export const NAMELESS_BASE = 'bran_mad'; // 옷차림 · 프로필 그림의 바탕 (광기의 브론)
 const LOOK_KEYS = ['tunic', 'quilt', 'sleeve', 'hoseUpper', 'hoseLower', 'belt', 'metal']; // outfit_alter.js alterLook 이 배색을 바로 거는 칸과 같다
 const REF_SAT = 0.3; // 바탕 옷의 기준 채도 — 새 채도 = 바탕 채도 × cloth.sat ÷ 이 값
@@ -51,7 +50,6 @@ export function namelessLook(i, cfg = SAENGSA) {
   for (const key of LOOK_KEYS) if (swapped.has(look[key])) look[key] = recolorHex(look[key], i, cfg);
   return look;
 }
-export const namelessLookVersion = (i) => `${CHARACTERS_BY_ID[NAMELESS_BASE].lookVersion}-nameless${i}`;
 
 // ── ② 카드 얼굴 (브라우저) ──
 const faces = new Map(); // 옷 색 줄 → 그림 주소(data URL)

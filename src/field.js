@@ -266,8 +266,6 @@ export function rectField(g) {
   return Object.freeze(F);
 }
 
-/** 점(x, z)이 길목 안인가 (다리 위 · 문길 안) — 거점 · 시험 */
-export const inLane = (F, x, z) => !!F.geo?.lanes.some((L) => inBox(L, x, z));
 /** 점(x, z)이 길목 L 안인가 (e 만큼 넓혀) */
 export const inLaneBox = (L, x, z, e = 0) => inBox(L, x, z, e);
 /** 선분 p → q 가 길목 L 상자(e 만큼 넓힘)를 지나나 */

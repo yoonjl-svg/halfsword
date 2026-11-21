@@ -42,7 +42,7 @@ await page.evaluate(async (lib) => {
   const { AI } = await import('/src/ai.js');
   const g = window.game;
   if (lib) {
-    const { applyMotionLibrary, motionFor } = await import('/src/motion_library.js');
+    const { applyMotionLibrary, motionFor } = await import('/tools/motion/lib/motion_library.mjs');
     const { SCHOOLS } = await import('/src/schools.js');
     const m = motionFor(g.enemy.weapon);
     SCHOOLS.staff_lib = { ...SCHOOLS.longsword, id: 'staff_lib', tech: m.tech, techByName: Object.fromEntries(m.tech.map((t) => [t.name, t])), feints: m.feints, ...(m.counter ? { counter: m.counter } : {}) };

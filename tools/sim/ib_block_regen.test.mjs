@@ -13,7 +13,7 @@ const body = (tradition = 'iberian', o = {}) => ({ alive: true, swordArt: { trad
 const foe = (id = 3, time = 1, until = 2, weight = 1.34) => ({ stamina: { attackId: id, time, attackUntil: until, weight } });
 
 test('값 · 켬: 이베리아 막는 동안 피해 감소 0(11/15) · 막아 내면 되찾음 · 이베리아만 · 사람은 B9', () => {
-  assert.equal(SKILL.ibParryDmgCut, 0, '[사장님 11/15 결정] 20 % 없앰');
+  assert.ok(!SKILL.ibParryDmgCut, '[사장님 11/15 결정] 20 % 없앰 (11/21 칸째 지움)');
   assert.equal(ibBlockOn(body('iberian')), true, 'AI(몫 열쇠 없음)는 늘');
   for (const t of ['german', 'japanese', 'chinese', 'italian', 'none']) assert.equal(ibBlockOn(body(t)), false, t);
   assert.equal(ibBlockOn(body('iberian', { schoolParry: false })), false, '막기 책 없음');

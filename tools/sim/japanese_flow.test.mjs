@@ -16,10 +16,10 @@ function actor(extra = {}) {
   f.stamina = new Stamina(f); return f;
 }
 
-test('판 값: 판정 개편 켬 · 공격 끝 = 실제 칼 기하 · 기력 60 · 창 0.2 s · 팔 늦춤 0.4 s(바닥 0.25 — 10/21 시간 통일) · 자연 회복 탈진 · 일본 · 이베리아 0(11/15 사장님 결정 — 전 0.2) · 동방 0.5', () => {
+test('판 값: 판정 개편 켬 · 공격 끝 = 실제 칼 기하 · 기력 60 · 창 0.2 s · 팔 늦춤 0.4 s(바닥 0.25 — 10/21 시간 통일) · 자연 회복 탈진 · 동방 0.5 (일본 · 이베리아는 11/15 사장님 결정으로 없앰 — 아래 woundKeep 시험)', () => {
   assert.equal(FLOW_REDESIGN.penalty, 60); assert.equal(FLOW_REDESIGN.window, realS(0.2));
   assert.equal(FLOW_RECOVERY.seconds, realS(0.4)); assert.equal(FLOW_RECOVERY.floor, 0.25);
-  assert.equal(SKILL.jpParryDmgCut, 0); assert.equal(SKILL.ibParryDmgCut, 0); assert.equal(SKILL.cnParryDmgCut, 0.5);
+  assert.equal(SKILL.cnParryDmgCut, 0.5);
 });
 
 test('흘림당한 쪽 기력 60: 공격 번호 하나에 한 번 · 다른 방어자를 만나도 다시 안 냄 · 새 공격이면 다시 · 공격 번호 없으면 없음 · 0 이면 없음', () => {
@@ -57,7 +57,6 @@ test('막는 동안 피해 감소: 동방 × 0.5 · 일본 · 이베리아(11/15
   near(keep('japanese'), 1); near(keep('iberian'), 1); near(keep('chinese'), 0.5); // 일본 · 이베리아 1 — 11/15 사장님 결정 둘
   for (const t of ['german', 'italian', 'none', undefined]) near(keep(t), 1);
   near(keep('japanese', { mode: 'idle' }), 1); near(keep('iberian', { schoolParry: false }), 1);
-  const was = { ...SKILL }; try { SKILL.jpParryDmgCut = 0; SKILL.ibParryDmgCut = 0; near(keep('japanese'), 1); near(keep('iberian'), 1); near(keep('chinese'), 0.5); } finally { SKILL.jpParryDmgCut = was.jpParryDmgCut; SKILL.ibParryDmgCut = was.ibParryDmgCut; }
 });
 
 test('흘린 공격의 피해 감소 0.7 (사장님 10/18 23:4x 0.8 → 11/15 \'70%로\'): 흘린 그 공격 번호만 × 0.3 · 다른 칼 주인 · 새 공격 · 표시 없음 = 1 · 끄면 1', () => {
