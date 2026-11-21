@@ -301,7 +301,7 @@ function runInstant(f, combat) {
 }
 
 /** 쓸린 자리의 첫 부위에 기존 상처 함수(combat.analyze → applyWound)로 상처. 에너지 = instantJ × hitMul 이 나오게 분석 속도를 고른다 */
-function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, hitMul = SECRET.hitMul, effMul = null, grip = null, plan = null) {
+function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, hitMul = SECRET.hitMul, grip = null, plan = null) {
   bwTouch(f, foe, 'kin'); // 뒤 박차기 헛침 경직 (11/19): 운동학 칼이 그 몸에 닿음
   // plan (11/04 — SECRET.sweepCap · stepCombo): 이 조각의 짠 길 칼 자세 둘 [앞, 뒤] (월드 — 칼 밑동 B · 칼 축 D · 놓인 칼과 같은 꼴). 있으면 맞은 점의 쓸린 길이를 짠 길이 같은 점을 옮긴 길이까지만 (아래)
   const { i, best } = hit;
@@ -362,12 +362,8 @@ function instantWound(f, foe, cut, hit, combat, J = SECRET.instantJ, dtSub = 0, 
   let r = null;
   if (dtSub > 0) {
     // 중국 빠른 연환 (10/12): 에너지를 정하지 않고 쓸린 그 점의 실제 빠르기로 분석 (기존 상처 함수 그대로 — 판정 배율 hitMul 은 아래 secretHit)
-    //  격살(10/22): effMul 이 있으면 그 분석 동안만 f.effMul — combat.js analyze 가 문턱과 견주는 판정 에너지(eff)에 곱한다 (마무리 찍기 FINISH.power 와 같은 자리)
     S.v.copy(tang).multiplyScalar(swept / dtSub).add(Pst.v);
-    const e0 = f.effMul;
-    if (effMul) f.effMul = effMul;
     r = combat.analyze(pr, point, S, Pst);
-    f.effMul = e0;
     f.secretHit = h0;
     if (!r || r.energy < STRIKE.minEnergy) return null;
     foe.hitCooldowns.set(`${f.index}:${best.info.part}`, STRIKE.hitCooldown);
@@ -1356,7 +1352,7 @@ const COMBO_TURN = 0.35; // 손이 있는 쪽으로 몸을 트는 계수 (rad / 
 
 /** 빠른 연환을 걸어 둔다. opt.moves = 두 수 (schools.js 막기 연환 seq 꼴, step.fwd 는 m 로 푼 것) */
 export function requestCombo(f, opt = {}) {
-  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, effMul: opt.effMul, width: opt.width, tech: opt.tech, mord: opt.mord ?? null, arcCut: !!opt.arcCut, face: opt.face || null, min: opt.min ?? 0, maxT: opt.maxT ?? 0, keepAim: !!opt.keepAim, attack: !!opt.attack, speed: opt.speed > 0 ? opt.speed : 0, noArc: !!opt.noArc, selfFree: +opt.selfFree || 0, ...(opt.secret ? { secret: opt.secret } : {}), ...(opt.guardT > 0 && opt.guardPad ? { guardT: opt.guardT, guardPad: opt.guardPad } : {}) }; // guardT · guardPad: 11/16 겨눔 되돌림 (죽음의 일격 · 리솔루토 — comboGuardBegin) // speed: 칼끝 빠르기 m/s 를 바로 (share 대신 — 10/31 칼끝 돌려 빼기 = 보통 찌르기 빠르기) · noArc: 잔상 없음 (10/31 — 특수 공격이 아닌 끌고 가는 칼) // width: 잔상 굵기 몫 (격살 시험 — sword_trail.js) · mord: 죽음의 일격 운동학 길(10/22 밤 — mordschlag.js) · arcCut: 잔상은 베는 토막만 · face: 마주 보는 띠('path' 치는 끝 길 · 'line' 찌르는 줄) · min: 잔상 밝기 바닥 (10/23 비기 잔상 점검 — 사람 비기만, 아래 stepCombo · sword_trail.js)
+  f.iaiReq = { combo: true, moves: opt.moves ?? [], share: opt.share, hold: opt.hold, hitMul: opt.hitMul, width: opt.width, tech: opt.tech, mord: opt.mord ?? null, arcCut: !!opt.arcCut, face: opt.face || null, min: opt.min ?? 0, maxT: opt.maxT ?? 0, keepAim: !!opt.keepAim, attack: !!opt.attack, speed: opt.speed > 0 ? opt.speed : 0, noArc: !!opt.noArc, selfFree: +opt.selfFree || 0, ...(opt.secret ? { secret: opt.secret } : {}), ...(opt.guardT > 0 && opt.guardPad ? { guardT: opt.guardT, guardPad: opt.guardPad } : {}) }; // guardT · guardPad: 11/16 겨눔 되돌림 (죽음의 일격 · 리솔루토 — comboGuardBegin) // speed: 칼끝 빠르기 m/s 를 바로 (share 대신 — 10/31 칼끝 돌려 빼기 = 보통 찌르기 빠르기) · noArc: 잔상 없음 (10/31 — 특수 공격이 아닌 끌고 가는 칼) // width: 잔상 굵기 몫 (격살 시험 — sword_trail.js) · mord: 죽음의 일격 운동학 길(10/22 밤 — mordschlag.js) · arcCut: 잔상은 베는 토막만 · face: 마주 보는 띠('path' 치는 끝 길 · 'line' 찌르는 줄) · min: 잔상 밝기 바닥 (10/23 비기 잔상 점검 — 사람 비기만, 아래 stepCombo · sword_trail.js)
   f.instantResult = null;
 }
 
@@ -1468,7 +1464,7 @@ function startCombo(f, combat, req) {
   }
   f.iai = {
     kind: 'combo', moves: req.moves, segs: [], si: 0, ts: 0, t: 0, v, yaw, mi: -1, moveName: null, cutting: false, cur: { H: AH, D: AD, px: f.handOffset.x }, last: null,
-    body: comboBody(f.handOffset.x), bodyAt: null, hold: req.hold ?? SECRET.stiff[f.swordArt?.tradition] ?? 0.3, hitMul: req.hitMul ?? SECRET.hitMul, effMul: req.effMul ?? null, tech: req.tech ?? null,
+    body: comboBody(f.handOffset.x), bodyAt: null, hold: req.hold ?? SECRET.stiff[f.swordArt?.tradition] ?? 0.3, hitMul: req.hitMul ?? SECRET.hitMul, tech: req.tech ?? null,
     off: !!(f.weaponCfg.twoHand && f.bodies.uarmO && f.limbs?.armO > 0.3), prev: null, hits: 0, E: 0, Emax: 0, blocked: 0, part: null, zone: null, type: null,
     arc: { id: (f.instantArc?.id ?? 0) + 1, kind: 'combo', share, pts: [], ...(req.width > 0 && req.width < 1 ? { width: req.width } : {}), ...(req.face ? { face: req.face } : {}), ...(req.min > 0 ? { min: req.min } : {}), ...(req.moves.some((m) => m.lunge) ? { lunge: lungeFrom(f) } : {}) }, slide: null, mord: req.mord ?? null, arcCut: !!req.arcCut,
     secret: req.secret ?? null, // 비기 이름 (11/11 알티바슈 포르트 — 재는 도구가 읽음 · 판정과 무관)
@@ -3105,7 +3101,7 @@ function stepCombo(f, combat) {
       const P0 = { B: I.prev.B.clone().lerp(cur.B, prevW), D: I.prev.D.clone().lerp(cur.D, prevW).normalize() };
       I.hitM = true;
       const plan = planCur ? [planLerp(I.planPrev, planCur, prevW), planLerp(I.planPrev, planCur, w)] : null;
-      const res = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, 0, dt / subs, I.hitMul, I.effMul, I.mord, plan);
+      const res = instantWound(f, foe, [P0, { B, D }], { i: 1, best }, combat, 0, dt / subs, I.hitMul, I.mord, plan);
       if (res) {
         I.hits++;
         I.E += res.energy;
@@ -3219,7 +3215,7 @@ function lungeSweep(f, I, combat, t0, t1) {
       }
       if (best) {
         I.hitM = true;
-        const res = instantWound(f, foe, [{ B: prev.B, D: prev.D }, { B, D }], { i: 1, best }, combat, 0, Math.max(1e-4, (t - prev.t) / rate), I.hitMul, I.effMul, null);
+        const res = instantWound(f, foe, [{ B: prev.B, D: prev.D }, { B, D }], { i: 1, best }, combat, 0, Math.max(1e-4, (t - prev.t) / rate), I.hitMul, null);
         if (res) {
           I.hits++;
           I.E += res.energy;

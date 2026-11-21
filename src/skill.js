@@ -58,11 +58,6 @@ const _d2 = new THREE.Vector3();
 const _r = new THREE.Vector3();
 const _u0 = [0, 0, 0];
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
-/** 비기 판정 에너지 배율 (do.power 칸 — 격살 'gyeoksal' 은 결정타라 여기 오지 않음): 'finish' = 마무리 찍기와 같은 FINISH.power · 'hit' = 1 · 수면 그 수 */
-const secretEffMul = (D) => {
-  const v = D.power;
-  return v === 'finish' ? FINISH.power : v === 'hit' ? 1 : +v || 1;
-};
 /** 격살 판정 배율 (11/11 사장님 '격살도 빠르기 70%로 올리고 파괴력 배율은 1.3에서 1로 변경' — SECRET.gyeoksalHitMul 1 · null 이면 다른 비기와 같은 SECRET.hitMul · 서보 길 둘 다 */
 export const gyeoksalHitMul = () => SECRET.gyeoksalHitMul ?? SECRET.hitMul;
 /** 격살 판정 묶음 (requestCombo 칸): 결정타 격살 배율 gyeoksalHitMul(판정 에너지 · secretHit) · 칼끝 빠르기 몫 = SECRET.gkFree.share + add × 겹(11/16 격살 풀기 — 사냥 겹 cn_hunt.js) */
@@ -70,7 +65,7 @@ const gyeoksalReq = (D, f) => {
   const pw = D.power === 'gyeoksal' ? 'hit' : D.power;
   const F = SECRET.gkFree;
   const sh = F.share + F.add * huntStacksFor(f);
-  return { ...(pw === 'hit' ? { hitMul: gyeoksalHitMul() } : { hitMul: 1, effMul: secretEffMul(D) }), share: sh };
+  return { hitMul: pw === 'hit' ? gyeoksalHitMul() : 1, share: sh }; // 판정 에너지 배율(effMul)은 늘 1 이라 지움 (감사 N-013 — do.power 는 SECRET 열쇠 이름 · 'gyeoksal' 뿐, 'finish' · 수는 없음)
 };
 /** 격살 한 칼 requestCombo 덧칸 (사람 skill.js · 11/14 AI ai.js secretGo 같이 — 사람과 같은 값): 판정 묶음(gyeoksalReq — 사냥 겹 빠르기 포함) · 잔상은 베는 토막만 · 찌르기면 마주 보는 띠 · 밝기 바닥 */
 export const gyeoksalComboOpt = (D, f, moves) => ({ ...gyeoksalReq(D, f), arcCut: true, face: moves.some((m) => m.kind === 'thrust') ? 'line' : null, min: SECRET.secretArcMin ?? 0 });
@@ -724,7 +719,7 @@ export class Skill {
         run.stage = 'instant';
         run.instant = true;
         const moves = run.queue.splice(0);
-        // 격살(10/22): 결정타 hitMul 대신 판정 에너지 × FINISH.power (시험 'hit' = 다른 비기와 같은 hitMul) · 시험 칼끝 빠르기 몫 SECRET.gyeoksal.share · 잔상 굵기 trailWidth ·
+        // 격살: 판정 = 결정타 배율 gyeoksalHitMul (11/11 — 10/22 판의 판정 에너지 × FINISH.power 는 쓰는 비기가 없어 감사 N-013 에서 지움) · 칼끝 빠르기 몫 SECRET.gkFree · 잔상 굵기 trailWidth ·
         //  잔상(10/23 점검): 베는 토막만(arcCut — 받은 자세에서 호 첫 자리로 옮기는 이음은 그리지 않음) · 허파 찌르기는 마주 보는 띠(face 'line' 찌르는 줄 — SECRET.secretStreak) · 밝기 바닥 SECRET.secretArcMin
         requestCombo(f, { moves, ...(D.power ? gyeoksalComboOpt(D, f, moves) : {}) });
         this.secretBursts++;
@@ -904,7 +899,6 @@ export class Skill {
       f.powerMul = inLoop ? 1 : secVal(D.power ?? 'power') * (run.gain ?? 1); // run.gain: 독일 막기 연환 붙은 시간 어드밴티지 (없으면 1 — 다른 비기는 전과 같음)
       const gkHit = D.power === 'gyeoksal' || D.power === 'hit'; // 격살 = 결정타 (gyeoksalHitMul)
       f.secretHit = inLoop ? 1 : D.power && !gkHit ? 1 : run.mord ? mordHitMul() : (D.power === 'gyeoksal' ? gyeoksalHitMul() : SECRET.hitMul) * (run.gain ?? 1); // 죽음의 일격: mordHitMul (SECRET.mordHitMul) · 격살 'hit' = gyeoksalHitMul (11/11 1 — 서보 길 cnFast 0)
-      if (D.power && !gkHit) f.effMul = secretEffMul(D); // 격살 서보 길(cnFast 0): 판정 에너지 × FINISH.power — 따라 지나감까지 (secretEnd 에서 지움)
       if (D.strength) f.strength = run.str0 * (inLoop ? 1 : secVal(D.strength));
       if (run.wantStep && !run.stepAsked && run.t >= 0.04 && run.t < 0.4) run.stepAsked = ask(run.wantStep);
       // 칼끼리 맞물림 (ai.js checkBind 와 같은 기하)
@@ -950,7 +944,6 @@ export class Skill {
       // 죽음의 일격은 치는 끝이 칼자루라 칼끝(손 뒤 꼬리) 대신 코등이 빠르기를 칼끝 거리 비로 줄인 문턱에 견준다 (mordSwinging — 같은 6 m/s · 같은 0.3 · 0.5 s)
       if ((run.t >= 0.3 && (run.mord ? !mordSwinging(f) : f.tipVel.length() < 6)) || run.t > 0.5) {
         f.secretHit = 1;
-        if (f.effMul != null) f.effMul = null;
         if (run.landed) this.secretStats[run.S.name].landed++;
         if (run.mord) {
           run.stage = 'mordBack'; // 죽음의 일격: 칼자루를 다시 세운 뒤 원래 쥠으로 (아래)
@@ -1016,7 +1009,6 @@ export class Skill {
     if (f.mordAim) mordEnd(f); // 죽음의 일격이 끊겼으면 원래 쥠 · 겨눔으로 (mordschlag.js)
     f.powerMul = 1;
     f.secretHit = 1;
-    if (f.effMul != null) f.effMul = null;
     if (run && run.str0 != null) f.strength = run.str0;
     if (dropped) this.secretDropped = (this.secretDropped ?? 0) + 1;
     this.prev.copy(f.handOffset); // 손 목표 속도가 튀지 않게
