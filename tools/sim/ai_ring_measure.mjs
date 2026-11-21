@@ -8,10 +8,14 @@
 //   --corr=v2 : 재기 전용 (11/19 — 기록 docs/strike/human_ai_parity_2026-11-19.md) — 같은 씨앗으로 '두 AI 몸 보정 v2' 판(v 'v2')을 본판 판 옆에 더 돈다
 //              (판 시작에 두 몸의 skill.corr = 'v2' — ai.js setLevel 이 늘 'old' 로 두는 것을 판 동안만 · 게임은 그대로) · --corrOnly = 본판 판은 건너뜀
 //   --corrHeld : 그 v2 판에서 AI 공격 · 비기 · 막기 꼴 동안 손가락이 닿은 것으로 (skill.idleGoal = 0 — prof_gap_measure.mjs --corrHeld 와 같음 · v 'v2h')
+//   --prof=N : 재기 전용 (11/21 — 기록 docs/strike/str_table2_2026-11-21.md) — 두 쪽 숙련도 N (안 주면 5 · 판 바이트 그대로) · 주면 게임처럼 숙련도 표의 실력 이름(AI_PROFICIENCY.levels[N])도 넘김
+//   --cfg=PATH:수,… : 재기 전용 config 수 덮어쓰기 (cfg_override.mjs · 게임 값 그대로 — 예: 독일 버티는 힘 덤 뺌 --cfg=DE_VITALITY.k.1:1,…,DE_VITALITY.k.6:1)
 // ─────────────────────────────────────────────────────────────
 import { writeFileSync, readFileSync } from 'node:fs';
 import { newRound, AI } from './harness_m.mjs';
 import { isMain } from './is_main.mjs';
+import { applyCfgArgs } from './cfg_override.mjs';
+import { AI_PROFICIENCY } from '../../src/config.js';
 
 const args = process.argv.slice(2);
 const mode = args[0] && !args[0].startsWith('--') ? args[0] : 'run';
@@ -28,8 +32,9 @@ export const PAIRS = [
 const VK = { main: '본판', v2: 'AI 보정 v2 (재기)', v2h: 'AI 보정 v2 + 닿음 (재기)' };
 
 /** 한 판: a 유파 무기 wa 대 b 유파 무기 wb · swap 이면 a 가 E 자리 — a 쪽 이김 · 짐 */
-export function ringFight({ wa, wb, seed, swap, dur = 30, corr = null, held = false }) {
-  const G = newRound({ seed, walls: true, weapon: swap ? wb : wa, weapon2: swap ? wa : wb, AI2Class: AI, persona: { proficiency: 5 }, persona2: { proficiency: 5 } });
+export function ringFight({ wa, wb, seed, swap, dur = 30, corr = null, held = false, prof = null }) {
+  const p = prof ?? 5; // --prof (재기 전용 · 11/21): 주면 두 쪽 숙련도 · 실력 이름(게임처럼 숙련도 표) — 안 주면 숙련 5 · 이름은 harness 기본 그대로
+  const G = newRound({ seed, walls: true, weapon: swap ? wb : wa, weapon2: swap ? wa : wb, AI2Class: AI, persona: { proficiency: p }, persona2: { proficiency: p }, ...(prof != null ? { difficulty: AI_PROFICIENCY.levels[p] } : {}) });
   if (corr) G.player.skill.corr = G.enemy.skill.corr = corr; // --corr (재기 전용 · 11/19): 두 AI 몸의 보정 방식만
   if (corr && held) for (const [F, A] of [[G.enemy, G.ai], [G.player, G.ai2]]) { // --corrHeld: 공격 · 비기 · 막기 꼴 = 손가락이 닿음 (쉼 무게 목표 0)
     const up = F.skill.update;
@@ -73,6 +78,9 @@ if (isMain(import.meta.url)) {
   if (mode === 'agg') {
     console.log(ringTable(args.slice(1).filter((a) => !a.startsWith('--')).flatMap((p) => JSON.parse(readFileSync(p, 'utf8')))));
   } else {
+    applyCfgArgs(); // --cfg (재기 전용)
+    const prof = arg('prof', null) != null ? +arg('prof') : null;
+    if (prof != null && !(Number.isInteger(prof) && prof >= 0 && prof < AI_PROFICIENCY.levels.length)) throw new Error(`--prof=${arg('prof')}`);
     const want = arg('pairs', null);
     const pairs = want ? want.split(',').map((s) => PAIRS.find(([a, b]) => `${a}:${b}` === s)).filter(Boolean) : PAIRS;
     const corrV = arg('corr', null);
@@ -86,8 +94,8 @@ if (isMain(import.meta.url)) {
       for (const wa of WEAPONS[a]) for (const wb of WEAPONS[b]) {
         for (const seed of seeds) {
           const swap = (ci + seed) % 2 === 1;
-          const r = ringFight({ wa, wb, seed, swap, corr: v === 'main' ? null : 'v2', held: v === 'v2h' });
-          runs.push({ a, b, wa, wb, seed, swap, v, ...r });
+          const r = ringFight({ wa, wb, seed, swap, corr: v === 'main' ? null : 'v2', held: v === 'v2h', prof });
+          runs.push({ a, b, wa, wb, seed, swap, v, ...(prof != null ? { prof } : {}), ...r });
           console.error(a, b, v, wa, wb, seed, r.win ? 'W' : r.lose ? 'L' : 'D');
         }
         ci++;
