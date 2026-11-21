@@ -1104,6 +1104,7 @@ export async function launchSaengsa(setup) {
   const spec = specFromSetup(setup);
   spec.resume = setup.resume && typeof setup.resume === 'object' ? setup.resume : null; // 그만둔 경기 넷의 몸 사본 { 열쇠: 사본 } (생사전 SAENGSA.resumeState)
   if (!spec.fighters.some((e) => e.team === 0) || !spec.fighters.some((e) => e.team === 1)) return null;
+  perf?.roundOpen(stages.id); // 성능 표 다음 판 멈칫: 경기 단추를 누른 때부터 (생사전은 ?fps=1 일 때만 표가 있다)
   const mods = await saengsaMods();
   return new Promise((resolve) => {
     const overlay = hideEntrance();
@@ -1890,6 +1891,7 @@ function applyWanderBody(run) {
 }
 async function startFight() {
   if (teamRun?.opts?.saengsa) return; // 생사전 판은 다시 굴리지 않는다 (결과 · 그만두기만 — launchSaengsa)
+  perf?.roundOpen(stages.id); // 성능 표 다음 판 멈칫 (11/21 감사 N-025 — perfmeter.js): 단추를 누른 때부터 (배경 짓기 · 카드 고르기 · 싸움 첫 3 초)
   if (TEAM_TEST) return startTeamTest(); // ?team= 시험 판 (동시 대전 — test.html '동시 대전')
   if (wanderMode && !openWanderRound()) return; // 방랑: 지금 판의 무대를 짓고 pendingJourney 에 넣는다 (버린 판을 패배로 셈했으면 결과 창 — 판을 열지 않음)
   $('btnStart').hidden = false;
@@ -2077,6 +2079,7 @@ export function setLobbySetting(key, enabled) {
 export async function launchJourney(choice) {
   const saved = choice === 'continue' ? validJourney() : null;
   if (choice === 'continue' && !saved) return false;
+  perf?.roundOpen(stages.id); // 성능 표 다음 판 멈칫: 출발 단추를 누른 때부터 (아래서 배경을 짓는다 — 이어지는 startFight 는 같은 일 차례라 다시 열지 않음)
   migrateLegacyWander(); // 옛 저장 인정 (한 번 — 첫 화면에서 곧장 싸움으로 가도)
   wanderMode = false;
   journeyMode = true;
@@ -2092,6 +2095,7 @@ export async function launchJourney(choice) {
 
 /** 무기를 받았다: 싸움 시작 (판 시작 알림, 조이스틱, 조작 안내) */
 function beginFight() {
+  perf?.roundFight(stages.id); // 성능 표 다음 판 멈칫: 싸움 시작 — 여기서 3 초 뒤까지 (11/21 감사 N-025)
   input.resetTransient();
   state = 'fight';
   input.enabled = true;
@@ -3208,13 +3212,14 @@ function stageTick(dt) {
 function frame(now) {
   requestAnimationFrame(frame);
   // 첫 화면·대기실이 앞에 있는 동안(game_entry.js — html[data-start-open])에는 뒤의 3D 그리기·물리 시간을 멈춘다 (화면이 가려져 있다)
-  if (document.documentElement.hasAttribute('data-start-open')) { last = now; acc = 0; return; }
+  if (document.documentElement.hasAttribute('data-start-open')) { last = now; acc = 0; perf?.raf(false); return; } // 성능 표 다음 판 멈칫: 대기실에서 출발해 짓는 동안도 센다
   sound.setPaused(state !== 'fight' && state !== 'draw' && state !== 'encounter'); // 샛별 저장소 무대 셋의 배경음·세부음만 메뉴·일시정지 동안 줄인다 (stage_detail_sound.js)
   // 싸움 중 멈춤 (11/21 감사 N-011 · 사장님 11/21 '멈춤 동안 멈춰.'): 일시정지 창(pause — 싸움 · 무기 뽑기 중에 연 창, 화면을 떠나 저절로 멈춘 때도)이 떠 있는 동안
   //  들어선 첫 화면 한 장만 시간 0(dt 0 — 카메라 · 화면 빛 · 무대 · 몸 그대로)으로 그려 싸움 글자를 숨기고, 그 뒤로는 셈도 그리기도 하지 않는다.
   //  보는 시계(view_clock.js — 기운 · 비기 잔상 · 장식 진자)도 멈추고 무대 움직임(arena.update)은 원래 부르지 않아, 풀면 멈춘 그 장면에서 이어 간다.
   //  판 끝 결과 창(pauseOpen 아님 — 흩어지던 조각이 마저 떨어짐) · 첫 화면 · 대기실(위)은 예전 그대로
   const frozen = state === 'paused' && pauseOpen;
+  perf?.raf(frozen); // 성능 표 다음 판 멈칫: 실제 시각으로 프레임 간격 (사람이 연 멈춤에 닿은 간격은 빼고 — 11/21 감사 N-025 · perfmeter.js)
   if (frozen) {
     holdView(true);
     if (frozenDrawn) {
