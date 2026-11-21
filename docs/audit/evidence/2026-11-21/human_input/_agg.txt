@@ -1,0 +1,17 @@
+_agg.txt NO COUNTERS
+cn_gk_human: strikeWounds=52 instWounds=3 | m.bladeWeight=21 m.fingerCut=5 m.stepMass=21 m.thrustAssist=1 mi.bladeWeight=1 mi.stepMass=3 | kd.balance.light=2
+finger_cut: strikeWounds=23 instWounds=0 | m.bladeWeight=4 m.fingerCut=22 m.schoolPassive=2 m.stepMass=10 | 
+finish_probe: strikeWounds=120 instWounds=0 | m.bladeWeight=36 m.helmet=7 m.stepMass=42 | kd.balance.light=3
+finish_thrust: strikeWounds=197 instWounds=0 | m.bladeWeight=2 m.finishPower=76 m.plate=68 m.stepMass=4 m.thrustAssist=122 | dropSword=1
+greatsword_finish: strikeWounds=173 instWounds=0 | m.bladeWeight=43 m.finishPower=44 m.stepMass=38 m.thrustAssist=1 | kd.balance.light=1 dropSword=1 decap=4
+gyeoksal_probe: strikeWounds=44 instWounds=2 | m.bladeWeight=21 m.helmet=3 m.stepMass=14 mi.bladeWeight=1 mi.stepMass=2 | kd.balance.light=2
+italian_press: strikeWounds=194 instWounds=3 | m.bladeWeight=45 m.cnStep=4 m.emoDealt=36 m.emoPass=38 m.emoTaken=4 m.gap=37 m.helmet=17 m.helmetIgnored=2 m.ibFlow=7 m.itThrust=49 m.opposition=30 m.parryKeep=19 m.rage=6 m.schoolPassive=4 m.stepMass=57 m.thrustAssist=36 mi.emoDealt=2 mi.emoPass=2 mi.gap=3 mi.itThrust=3 mi.parryKeep=2 roll.buckle=1 | kd.balance.light=8 dropSword=2 decap=2
+kote_drop_duel: strikeWounds=114 instWounds=0 | m.bladeWeight=36 m.fingerCut=52 m.gap=18 m.helmet=4 m.itThrust=26 m.schoolPassive=12 m.stepMass=28 m.thrustAssist=14 roll.buckle=2 roll.buckle.hit=2 roll.kote.arm=1 roll.kote.sword=1 | kd.balance.light=6 dropSword=2
+live_battery: strikeWounds=13 instWounds=0 | m.bladeWeight=9 m.stepMass=3 | kd.balance.light=3 decap=1
+mordschlag_duel: strikeWounds=32 instWounds=13 | m.bladeWeight=19 m.emoDealt=2 m.emoPass=2 m.gap=2 m.helmet=1 m.itThrust=3 m.rock=1 m.stepMass=1 m.thrustAssist=2 mi.emoPass=3 mi.rock=1 | 
+risoluto_tap: strikeWounds=96 instWounds=0 | m.bladeWeight=28 m.duel=8 m.gap=4 m.helmet=4 m.itThrust=20 m.stepMass=20 m.thrustAssist=4 | 
+secret_free: strikeWounds=228 instWounds=10 | m.aiParryKeep=5 m.bladeWeight=71 m.cnStep=4 m.flowShield=2 m.gap=5 m.helmet=11 m.ibFlow=4 m.itThrust=6 m.rock=14 m.schoolPassive=21 m.stepMass=63 m.thrustAssist=5 mi.bladeWeight=2 mi.gap=5 mi.itThrust=5 mi.secretBlade=1 mi.secretHit=2 mi.stepMass=4 | kd.balance.light=8 dropSword=1 clash.nagashi=3
+special_fight: strikeWounds=122 instWounds=1 | m.bladeWeight=24 m.fingerCut=31 m.flowShield=1 m.gap=16 m.helmet=8 m.itThrust=20 m.opposition=3 m.schoolPassive=22 m.stepMass=47 m.thrustAssist=15 mi.stepMass=1 roll.buckle=4 roll.kote.arm=2 | kd.balance.light=3 dropSword=1 decap=2 clash.nagashi=2
+unique_player: strikeWounds=0 instWounds=0 |  | 
+whip_duel: strikeWounds=78 instWounds=0 | m.bladeWeight=13 m.emoDealt=4 m.fingerCut=30 m.helmet=3 m.stepMass=7 | kd.balance.light=1
+TOTAL {"inst.applied":32,"m.bladeWeight":372,"m.fingerCut":140,"m.stepMass":355,"m.thrustAssist":200,"mi.bladeWeight":4,"mi.stepMass":10,"strikeWounds":1486,"m.schoolPassive":61,"m.helmet":58,"m.finishPower":120,"m.plate":68,"m.cnStep":8,"m.emoDealt":42,"m.emoPass":40,"m.emoTaken":4,"m.gap":82,"m.helmetIgnored":2,"m.ibFlow":11,"m.itThrust":124,"m.opposition":33,"m.parryKeep":19,"m.rage":6,"mi.emoDealt":2,"mi.emoPass":5,"mi.gap":8,"mi.itThrust":8,"mi.parryKeep":2,"roll.buckle":7,"roll.buckle.hit":2,"roll.kote.arm":3,"roll.kote.sword":1,"m.rock":15,"mi.rock":1,"m.duel":8,"m.aiParryKeep":5,"m.flowShield":3,"mi.secretBlade":1,"mi.secretHit":2}
