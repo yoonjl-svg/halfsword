@@ -5,7 +5,8 @@
 //   res = await game.launchSaengsa(setup)
 //   setup = { matchId, round, seed, mineSide 'a'|'b', entrants { a: [key], b: [key] }, sides { a: [사람], b: [사람] }, control 'player' | 'watch' }
 //    사람 = { key '팀-자리', id(인물 id · 'player' · 'nameless'), weapon(id 또는 { id, broken }), school, tier, prof { 유파: 숙련도 }, lent, hp 0~100, injuries [{ part 팔·다리·몸통·머리, sev, rests }], dead, cloth? }
-//   res = { winner 'a'|'b', fighters { key: { hp, injuries, alive, weaponBroken } } } (나선 사람만) · 그만두고 나오면 null
+//   res = { winner 'a'|'b', fighters { key: { hp, injuries, alive, weaponBroken, downed? } } } (나선 사람만) · 그만두고 나오면 null
+//    downed = 코마 (11/21 — 이긴 편에서 출혈 · 기절로 쓰러진 몸: 산 사람 · 체력 SAENGSA.downedHp · 중상 하나 넘게 — resultFromMatch)
 //   부러진 무기는 그 대회 끝까지 부러진 채 (사장님 10/29 20:1x): 사람 broken: true (생사전 가지 꼴) 또는 weapon { id, broken: true } 면 처음부터 부러진 무기로 서고(fighter.js applySnapshot → breakWeapon) ·
 //    판 끝 broken (= weaponBroken — 두 이름 다 적음)을 돌려준다
 //   이름: 사람 name · 무명 검객은 '무명 검객 ' + tag (생사전 가지 saengsa_roster.js fighterName 과 같은 꼴)
@@ -16,7 +17,7 @@
 //   판 끝 부상 = injuriesFromWounds(경기 전 부상, 이 판에 새로 난 상처만) — carried 상처를 다시 세지 않는다(쉰 수가 0 으로 돌아가지 않게).
 //  난수 없음 (같은 setup = 같은 판 꼴).
 // ─────────────────────────────────────────────────────────────
-import { VITALS } from './config.js';
+import { VITALS, SAENGSA } from './config.js';
 import { WOUND_LIMB, LIMB_LOSS } from './fighter.js';
 
 export const HP_MAX = 100;
@@ -88,8 +89,28 @@ export function profOfEntry(e) {
 }
 
 /**
- * 판 끝 → 생사전 결과 { winner 'a'|'b', fighters { key: { hp, injuries, alive, broken, weaponBroken } } } (broken = weaponBroken — 생사전 가지는 broken 을 읽음).
+ * 코마 (11/21 — 기록 docs/strike/saengsa_wounded_2026-11-21.md (나) · docs/strike/saengsa_downed_2026-11-21.md): 이긴 편에서 이 까닭으로 쓰러진 몸은 죽지 않는다.
+ *  까닭은 엔진이 적은 그대로(fighter.js die(cause) → causeOfDeath — 출혈: 피가 쓰러지는 문턱 VITALS.collapseBlood 밑 · 기절: 의식 0). 목 · 머리 즉사(그 밖의 까닭 모두)는 죽음 그대로
+ */
+export const DOWNED_CAUSES = Object.freeze(['출혈', '기절']);
+/** 이 몸이 코마로 살아남을 쓰러짐인가 (이긴 편인지는 부르는 쪽이 본다) */
+export const downedCause = (f) => !f.alive && DOWNED_CAUSES.includes(f.causeOfDeath);
+/** 코마의 중상: 이 판 상처 가운데 가장 깊은 것의 부위를 중상 문턱(SAENGSA.seriousAt)까지 올림 — 상처가 없으면(둔기 기절 · 들고 온 출혈) 기절은 머리 · 출혈은 몸통 */
+function downedInjuries(injuries, fresh, cause) {
+  let deep = null;
+  for (const w of fresh) if (WOUND_PART[w.part] && (!deep || w.severity > deep.severity)) deep = w;
+  const part = deep ? WOUND_PART[deep.part] : cause === '기절' ? 'head' : 'torso';
+  const out = injuries.map((i) => ({ ...i }));
+  const old = out.find((i) => i.part === part);
+  if (old) old.sev = Math.max(old.sev, SAENGSA.seriousAt);
+  else out.push({ part, sev: SAENGSA.seriousAt, rests: 0 });
+  return out;
+}
+
+/**
+ * 판 끝 → 생사전 결과 { winner 'a'|'b', fighters { key: { hp, injuries, alive, broken, weaponBroken, downed? } } } (broken = weaponBroken — 생사전 가지는 broken 을 읽음).
  *  winnerTeam = 이긴 편(0 = 내 편 · 1 = 상대 · null = 둘 다 쓰러짐 — 피가 더 남은 쪽, 같으면 상대) · injuriesFromWounds = 생사전 쪽 함수(saengsa_rules.js — 없으면 fallbackInjuries)
+ *  이긴 편(둘 다 쓰러져 피로 정한 편도)에서 출혈 · 기절로 쓰러진 사람 = 코마: alive · 체력 SAENGSA.downedHp · 부상 + 중상(downedInjuries) · downed (사람 몸 · AI 같음). 진 편은 그대로
  */
 export function resultFromMatch(spec, fighters, winnerTeam, injuriesFromWounds = fallbackInjuries) {
   const mine = spec.mineSide;
@@ -104,6 +125,7 @@ export function resultFromMatch(spec, fighters, winnerTeam, injuriesFromWounds =
     const f = fighters[e.index];
     const fresh = (f.wounds ?? []).filter((w) => !w.carried).map((w) => ({ part: w.part, severity: w.severity }));
     out[e.key] = { hp: hpFromFighter(f), injuries: injuriesFromWounds(e.person?.injuries ?? [], fresh), alive: !!f.alive, broken: !!f.weaponBroken, weaponBroken: !!f.weaponBroken };
+    if (f.team === team && downedCause(f)) Object.assign(out[e.key], { hp: SAENGSA.downedHp, injuries: downedInjuries(out[e.key].injuries, fresh, f.causeOfDeath), alive: true, downed: true });
   }
   return { winner: team === 0 ? mine : other, fighters: out };
 }

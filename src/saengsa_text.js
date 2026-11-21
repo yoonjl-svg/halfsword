@@ -33,6 +33,7 @@ export const SAENGSA_TEXT = Object.freeze({
   dead: '죽음',
   entrant: '출전',
   rested: '쉼', // 결과 카드 — 이긴 팀에서 그 경기에 나서지 않아 쉰 사람 (11/21 쉼 규칙)
+  downed: '코마', // 결과 카드 — 이긴 팀에서 나섰다 쓰러졌으나 산 사람(체력 10 · 중상 — 11/21 사장님 '죽음, 코마, 이런 식으로 구분해 넣어.')
   win: '승리',
   loss: '패배',
   champion: '우승',
