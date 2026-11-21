@@ -74,11 +74,11 @@
 
 전 — 처음 들어올 때(아이폰 모형: 웹킷 셈이 낸 17 px 을 크로미움에 입혀 그린 것) · 전 — '공지사항'으로 연 것(실제 화면)
 
-![전 — 처음 들어올 때 공지, 아이폰 모형 17 px](../handoff/notice_size/before_first_iphone-model_phone-landscape.png) ![전 — '공지사항'으로 연 공지 10 px](../handoff/notice_size/before_button_phone-landscape.png)
+*(그림 지움 — `git show b95560c7:docs/handoff/notice_size/before_first_iphone-model_phone-landscape.png`)* *(그림 지움 — `git show b95560c7:docs/handoff/notice_size/before_button_phone-landscape.png`)*
 
 후 — 처음 들어올 때 · '공지사항'으로 연 것(실제 화면 — 두 길 같은 10 px)
 
-![후 — 처음 들어올 때 공지 10 px](../handoff/notice_size/after_first_phone-landscape.png) ![후 — '공지사항'으로 연 공지 10 px](../handoff/notice_size/after_button_phone-landscape.png)
+*(그림 지움 — `git show b95560c7:docs/handoff/notice_size/after_first_phone-landscape.png`)* *(그림 지움 — `git show b95560c7:docs/handoff/notice_size/after_button_phone-landscape.png`)*
 
 (두 '새 소식' / '읽음' 표지 차이는 앞서 확인을 눌러 읽음으로 친 것 — 글자 크기와 상관없음. 도구 원본은 화소 비 3, 문서에는 2/3 로 줄여 넣음.)
 

@@ -103,7 +103,7 @@
   - 코등이 (가슴 기준 위 m) · 칼끝 올림 °: 역린세 0.19 → 0.13 · −16 → −7 / 탄복세 −0.20 → −0.26 · 26 → 4 / 요격세 0.33 → 0.06 · 57 → 20 (옆 114 → 91°) / 간수세 −0.29 · −26 (옆 21°) / 직부송서 같음.
 - `chinese_guard_{before,after}_player_rest_{side,front,q34}.png` — 플레이어 청강검 쉼(직부송서).
 - `chinese_guard_bow_{before,after}_{player,ai}.png` — 활 자세(앞으로 내딛는 기술 걸음 디딘 뒤 0.08~0.2 s), 옆에서 (`tools/browser/iberchina_shots.mjs` 를 전·후 빌드에 돌린 '후' 장면). 골반: 플레이어 0.773 → **0.758 m**(두 발 사이 0.55 → 0.94) · AI 0.691(과좌격) → 0.747(표두격 — 다른 기술·거리라 높이는 견주지 않음).
-- `chinese_guard_bow_pyodu_after_ai.png` — 표두격(oberhau) 활 자세: 골반 **0.698 m** · 두 발 사이 1.18 m. 전은 main 의 `chinese_bow_pyodu_after_ai.png`(골반 0.733 · 1.16 m — 같은 장면, 활 0.14). 전 빌드의 표두격 장면은 300 s 안에 안 잡혀 새로 못 찍음.
+- `chinese_guard_bow_pyodu_after_ai.png (지움 · 58d69623)` — 표두격(oberhau) 활 자세: 골반 **0.698 m** · 두 발 사이 1.18 m. 전은 main 의 `chinese_bow_pyodu_after_ai.png (지움 · 4b603588)`(골반 0.733 · 1.16 m — 같은 장면, 활 0.14). 전 빌드의 표두격 장면은 300 s 안에 안 잡혀 새로 못 찍음.
 
 ## 9. 사장님 확인 필요
 1. 자세표 7 칸 값(702~707)·봉두세 이름(708) · 간 보는 자세 잦기 수(701 — 간수세 넣기는 답 받음).

@@ -210,7 +210,7 @@ C 를 맨 끝에 두었다: 디렉터는 문서 커밋까지만 병합하고 C �
 
 ## 7. 캡처
 
-`docs/handoff/school_slots_compare.png` — 청강검 AI 를 막는 중(또는 패드 붙잡기)으로 고정해 3/4 에서. 왼쪽 = 전(main), 가운데 = 후(A·B), 오른쪽 = C 판. 콘솔 에러 0 (세 빌드).
+`docs/handoff/school_slots_compare.png (지움 · 8bddd420)` — 청강검 AI 를 막는 중(또는 패드 붙잡기)으로 고정해 3/4 에서. 왼쪽 = 전(main), 가운데 = 후(A·B), 오른쪽 = C 판. 콘솔 에러 0 (세 빌드).
 도구 `tools/browser/school_parry_shots.mjs`(새 — AI update 를 시험용으로 바꿔 줄을 막는 중으로 둠, 본판 덧씌우기가 그대로 돎). 빌드는 각 사본에서 `npx vite build` → `npx vite preview`(로컬, 띄운 서버는 끝에 끔).
 
 | 줄 · 자리 | 캡처 때 잰 코등이 [앞, 위, 칼 든 쪽] m · 칼끝 [올림, 옆] ° — 전 → 후 (C) |

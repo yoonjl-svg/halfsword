@@ -33,7 +33,7 @@
 - `tools/text/texts.mjs` — 화면 글 모으기(모듈 import: 유파·자세표·무기·사격 자세·인물·비기 수 이름 / 리터럴: `main.js`·`perfmeter.js`·`index.html`). 바탕 자세표가 여러 표에 되풀이되는 글은 한 줄로 모으고 위치에 표 이름을 덧붙임.
 - `tools/text/name_policy.mjs` — 표기 방침 검사기. 일본 글에 한자·가나 → 위반, 중국 글은 '한글 독음 (漢字)' 꼴(괄호 앞 한글 음절 수 = 한자 수), 그 밖은 가나 금지·한자는 '한글 (漢字)' 꼴. **인물(characters.js)도 이제 본다**(앞서는 이식 중이라 보고만). 한계: 한글만 쓴 한자말(예: 옛 '과좌·과우 번갈아')·국립국어원식 표기(쓰·고 따위)는 기계로 못 잡음 → 이번에 눈으로 훑어 고침.
 - `tools/text/extract_texts.mjs` — 시트용 CSV + JSON(전체 줄 · 바꾼 것 줄). 원어·국립국어원 표기·옛 표기·[추정] 비고 표(GLOSS)를 품음.
-- `tools/browser/text_policy_shot.mjs` — 브라우저 스모크(콘솔 에러 0 · 속임수 열쇠 찾기 · 자세 이름 HUD·기술 알림 사진 `docs/handoff/text_policy_hud.png`).
+- `tools/browser/text_policy_shot.mjs` — 브라우저 스모크(콘솔 에러 0 · 속임수 열쇠 찾기 · 자세 이름 HUD·기술 알림 사진 `docs/handoff/text_policy_hud.png (지움 · b200b070)`).
 
 ## 4. 확인 (최종 작업 트리)
 

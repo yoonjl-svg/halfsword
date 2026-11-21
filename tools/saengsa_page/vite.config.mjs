@@ -1,11 +1,10 @@
 // 생사전 시험 페이지 빌드 (사장님 10/29 17:5x — 본판에 올리기 전에 사장님이 해 보는 하위 경로 /saengsa/ · docs/design/saengsa_2026-10-29.md §12)
 //  npx vite build --config tools/saengsa_page/vite.config.mjs --base=./ --outDir <폴더> --emptyOutDir
-//   → <폴더> 를 개발 가지 위 따로 가지의 public/saengsa/ 에 그대로 넣는다 (/wb/ 시험판과 같은 꼴 — docs/director_handoff.md).
+//   → 배포(.github/workflows/deploy.yml)가 --outDir public/saengsa 로 빌드한다 (11/21 감사 N-005). public/saengsa/ 는 .gitignore — 커밋하지 않는다
 //  본판 vite.config.js 와 다른 점:
 //   - VITE_SAENGSA_TEST=1 → config SAENGSA.testMode 참(신청 늘 열림 · 모든 경기 바로 · 기권 없음 · '다음 대회') · src/test_storage.js 가 저장 열쇠를 가름 · pwa.js 등록 안 함
 //   - 게임 페이지(index.html) 하나만 · 소스맵 없음
-//   - public 은 게임이 쓰는 것만: fonts · sfx · ui · 탭 아이콘 셋을 .tmp/saengsa_public 에 모아 그 폴더를 public 으로 (옛 실험판 corr · r2p · support · wb · 검토용 encounters ·
-//     밤 만남 쪽 html · 매니페스트는 뺌). public 폴더로 알려야 빌드가 index.html 의 '/fonts/…' 를 페이지 기준 주소로 바꾼다(하위 경로에서 글꼴이 열림)
+//   - public 은 게임이 쓰는 것만: fonts · sfx · ui · 탭 아이콘 셋을 .tmp/saengsa_public 에 모아 그 폴더를 public 으로 (매니페스트 · 이 페이지 자신은 뺌). public 폴더로 알려야 빌드가 index.html 의 '/fonts/…' 를 페이지 기준 주소로 바꾼다(하위 경로에서 글꼴이 열림)
 //   - 매니페스트 링크를 뺀다(시험판이 또 하나의 'Stillness' 앱으로 설치되지 않게) · 탭 제목에 '생사전 시험판'
 import fs from 'node:fs';
 import path from 'node:path';

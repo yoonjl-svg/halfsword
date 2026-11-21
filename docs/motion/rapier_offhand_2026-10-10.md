@@ -96,10 +96,10 @@
 
 `node tools/browser/rapier_offhand_shots.mjs http://127.0.0.1:4191 <폴더>` (전은 `PREFIX=rapier_offhand_before` 로 main 빌드에서). 콘솔 에러 0 (전·후 모두). 위 줄 = 전(main 4e92fcc), 아래 줄 = 후, 왼쪽부터 옆·앞(상대 쪽 35°)·3/4.
 
-- `docs/handoff/rapier_offhand_ai_guard_compare.png` — AI 레이피어 간 보기(2.5 s)
-- `docs/handoff/rapier_offhand_ai_lunge_compare.png` — AI 비기 런지(무게 1.0, 비기를 직접 냄 — 조건 판정만 건너뜀)
-- `docs/handoff/rapier_offhand_player_guard_compare.png` — 플레이어 레이피어 대기
-- `docs/handoff/rapier_offhand_player_lunge_compare.png` — 플레이어 런지 자세(시험만: `lungeT` 를 직접 켬 — 칼은 대기 자리)
+- `docs/handoff/rapier_offhand_ai_guard_compare.png (지움 · e57fffd0)` — AI 레이피어 간 보기(2.5 s)
+- `docs/handoff/rapier_offhand_ai_lunge_compare.png (지움 · e57fffd0)` — AI 비기 런지(무게 1.0, 비기를 직접 냄 — 조건 판정만 건너뜀)
+- `docs/handoff/rapier_offhand_player_guard_compare.png (지움 · e57fffd0)` — 플레이어 레이피어 대기
+- `docs/handoff/rapier_offhand_player_lunge_compare.png (지움 · e57fffd0)` — 플레이어 런지 자세(시험만: `lungeT` 를 직접 켬 — 칼은 대기 자리)
 
 캡처 때 잰 빈손 자리 (가슴 몸체 기준 앞·위·바깥 m · 땅에서 손 높이 / 머리 중심 높이):
 

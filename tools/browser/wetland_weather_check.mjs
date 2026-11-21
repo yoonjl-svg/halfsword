@@ -23,7 +23,7 @@ try{
  report.day=await p.evaluate(()=>({weather:!!game.scene.getObjectByName('wetland-overcast-sky'),rain:!!game.scene.getObjectByName('wetland-mist-drizzle'),shafts:game.scene.getObjectByName('sluice-light-shafts').visible,obstacle:game.arenaObstacle,surface:game.enemy.movementSurface,level:game.fighterLight.level,env:game.fighterLight.env}));
  assert.equal(report.day.weather,false);assert.equal(report.day.rain,false);assert.equal(report.day.shafts,true);assert.equal(report.day.level,.89);assert.ok(report.day.env>=.4);assert.deepEqual(report.day.obstacle,report.night.obstacle);assert.equal(report.day.surface,report.night.surface);
  await p.close();
- const q=await b.newPage();q.on('pageerror',e=>errors.push(String(e)));await q.goto((process.env.SOURCE_BASE||base)+'/night-encounters-4.html');
+ const q=await b.newPage();q.on('pageerror',e=>errors.push(String(e)));await q.goto((process.env.SOURCE_BASE||base)+'/sounds.html'); // 모듈을 불러올 빈 페이지 (옛 night-encounters-4.html 은 11/21 지움)
  report.audio=await q.evaluate(async()=>{
   const {Sound,makeRng}=await import('/src/sound.js'),{StageDetailSound}=await import('/src/stage_detail_sound.js');
   const c=new AudioContext();await c.resume();const s=new Sound();s.ctx=c;s.stage='sluice_night';s.master=c.createGain();s.master.gain.value=0;s.master.connect(c.destination);

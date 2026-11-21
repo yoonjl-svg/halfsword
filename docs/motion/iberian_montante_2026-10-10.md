@@ -744,7 +744,7 @@ MONTANTE_HAND=guard node tools/sim/hybrid.mjs motion_lab.mjs duel zweihander 24 
 
 ### 16-8. 캡처
 
-- 나란히 한 장: `docs/handoff/iber_pass_compare.png` — 왼쪽 전 · 오른쪽 후, 위에서부터 지붕 · 어깨 지붕 · 왼 어깨 지붕 · 바꿈 · 왼 바꿈 · 옆 지킴.
+- 나란히 한 장: `docs/handoff/iber_pass_compare.png (지움 · b04f3c30)` — 왼쪽 전 · 오른쪽 후, 위에서부터 지붕 · 어깨 지붕 · 왼 어깨 지붕 · 바꿈 · 왼 바꿈 · 옆 지킴.
 - 츠바이핸더 AI 몸(상대 롱소드). 간 보는 자세를 그 패드로 붙잡고 1.4 s 뒤 빈손 쪽 옆에서, 폰 가로 844×420. 콘솔 에러 0.
 - 낱장(옆 자세 둘 포함 8 자리)은 작업 scratchpad `iber_pass/iber_pass_{before,after}_enemy_<자리>_side.png`.
 - 도구 `tools/browser/iber_pass_shots.mjs` (WHO=enemy|player · PADS · PREFIX). 오른쪽 자리를 다 돈 뒤 왼쪽으로 간다 — 오른 뒤(바꿈)에서 왼 뒤(왼 바꿈)로 곧장 옮기면 칼이 몸 앞에 걸린다. 기술 길에서는 왼 바꿈에 앞으로 들어오므로 생기지 않는다.
@@ -807,7 +807,7 @@ MONTANTE_HAND=guard node tools/sim/hybrid.mjs motion_lab.mjs duel zweihander 24 
 
 ### 17-4. 캡처
 
-`docs/handoff/ice_grip_compare.png` — 왼쪽 전(왼손이 폼멜 공 위) · 오른쪽 후(왼손이 폼멜 목, 자루가 아래로 늘어남). 아이스 AI(상대 롱소드)가 오른 높이 비낌에서 간 볼 때 빈손이 쥔 때, 칼자루 옆 0.75 m. 도구 `tools/browser/montante_grip_shots.mjs` 에 `WEAPON=` 을 더했다(`WEAPON=ice GUARD=ochsR`). 콘솔 에러 0.
+`docs/handoff/ice_grip_compare.png (지움 · 72be7159)` — 왼쪽 전(왼손이 폼멜 공 위) · 오른쪽 후(왼손이 폼멜 목, 자루가 아래로 늘어남). 아이스 AI(상대 롱소드)가 오른 높이 비낌에서 간 볼 때 빈손이 쥔 때, 칼자루 옆 0.75 m. 도구 `tools/browser/montante_grip_shots.mjs` 에 `WEAPON=` 을 더했다(`WEAPON=ice GUARD=ochsR`). 콘솔 에러 0.
 
 ### 17-5. 사장님 확인 필요
 

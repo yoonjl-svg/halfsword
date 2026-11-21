@@ -1,4 +1,4 @@
-import { chromium } from '/home/user/halfsword/node_modules/playwright/index.mjs';
+import { chromium } from 'playwright';
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 568, height: 320 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
 await page.goto('http://127.0.0.1:5173/?stage=castle&foe=isolde&cards=pistol,monohoshizao&foeWeapon=lightsaber', { waitUntil: 'networkidle' });

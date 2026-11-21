@@ -85,7 +85,7 @@
 뺀 것: 그쪽 검사·발행 스크립트와 json 영수증(우리 관문으로 대신). 첫 발 '장전 끝 알림'의 개발 계획 페이지 글.
 
 확인: `voices.html` 의 리볼버 칸 · 게임 `/?test=1&weapon=longsword&hero=player&foe=samira&stage=cathedral`.
-그림: `docs/handoff/sb_import2/revolver_aim.jpg`.
+그림: `docs/handoff/sb_import2/revolver_aim.jpg (지움 · 7845ff51)`.
 
 ## 라이선스 표
 
@@ -241,7 +241,7 @@
 
 작은 jpeg 여섯 장. 모두 콘솔 에러 0 (SwiftShader, 실기기 성능 아님).
 
-- `revolver_aim.jpg` — 마야(권총) 대 나. 쿨타임 배율 1.5 · 3.7 s 에 한 발 몸에 맞음(탄 5).
-- `plunge_kill_go.jpg` · `plunge_kill_after.jpg` — 쓰러진 이졸데, 롱소드 탭. 골반 찌르기(eff 27 J, 문턱 22) → 즉사 '내려찍기'.
-- `plunge_power25_go.jpg` · `plunge_power25_after.jpg` — 같은 장면 `?finishMode=power25`. 골반 찌르기 eff 75 J(× 2.5) → 상처 깊이 0.89, **살아 있음**.
-- `voices_page.jpg` — 듣기 화면 (카드 14 · 버튼 56).
+- `revolver_aim.jpg (지움 · 7845ff51)` — 마야(권총) 대 나. 쿨타임 배율 1.5 · 3.7 s 에 한 발 몸에 맞음(탄 5).
+- `plunge_kill_go.jpg (지움 · 7845ff51)` · `plunge_kill_after.jpg (지움 · 7845ff51)` — 쓰러진 이졸데, 롱소드 탭. 골반 찌르기(eff 27 J, 문턱 22) → 즉사 '내려찍기'.
+- `plunge_power25_go.jpg (지움 · 7845ff51)` · `plunge_power25_after.jpg (지움 · 7845ff51)` — 같은 장면 `?finishMode=power25`. 골반 찌르기 eff 75 J(× 2.5) → 상처 깊이 0.89, **살아 있음**.
+- `voices_page.jpg (지움 · 7845ff51)` — 듣기 화면 (카드 14 · 버튼 56).

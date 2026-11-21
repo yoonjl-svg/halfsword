@@ -11,7 +11,7 @@
 | 이어갈 여정이 없을 때 | '… 처음부터 시작해 주세요.' → '… Stage 1로 시작해 주세요.' | `src/game_entry.js` |
 | 제목 | 한글 제목 줄(픽셀 글자) 지움 — 'STILLNESS' 하나 | `src/start_screen.js` · `src/start_screen.css` · `src/start_pixel.css` |
 
-### 여백 점검 (폰 가로 844 × 390 · 667 × 375 · 932 × 430 · 태블릿 1180 × 820 · PC 1440 × 900 — 사진 `docs/handoff/title_stillness/title_before_after.png`)
+### 여백 점검 (폰 가로 844 × 390 · 667 × 375 · 932 × 430 · 태블릿 1180 × 820 · PC 1440 × 900 — 사진 `docs/handoff/title_stillness/title_before_after.png (지움 · 0799b740)`)
 
 - 줄을 지우기만 하면 제목 묶음이 가운데로 다시 모여 STILLNESS 가 24 px 올라간다. 태블릿 · PC 는 달이 멀어 그대로 좋다(묶음 가운데가 화면 가운데보다 16~18 px 위 — 눈으로 보는 가운데).
 - 폰 가로 화면(높이 500 px 이하)은 올라간 제목 끝(SS)이 **달을 가린다**(667 × 375 에서 달 아래쪽이 글자 뒤로) — 시안 넷을 견줌: 지우기만 · 제목 키움(490 px — 나무와 달에 붙음) · 위로 올림(달을 더 가림) · **원래 높이**.
@@ -25,7 +25,7 @@
 - 대기실 출발 단추 글: '여정 시작' · '여정 이어가기' → **'Stage 입장'** 하나(사장님 10/17 12:1x '대기실의 여정 시작 여정 이어가기는 Stage 입장으로 바꿈' · `src/lobby.js`). 영문 'Stage'는 게임의 라틴 글꼴(작은 대문자 꼴)로 보인다 — 첫 화면 'Stage 1'과 같은 꼴. 싸움 메뉴의 '여정 시작'(주소로 연 판 · 테스트 경로)은 대기실이 아니라 그대로.
 - 장비 · 이름 · 스킬북은 저장된 값이 그대로 싸움에 쓰인다(대기실을 거치지 않아도 — `src/main.js` journeyLoadout). 인장 → 금화 바꾸기는 게임을 열 때 이미 한다(대기실은 알림만).
 - 자리: `src/game_entry.js` `depart`(첫 화면 · 대기실이 같이 쓰는 출발) · `showLobby`(싸움에서) · `src/start_screen.css` `#entrance[data-leaving]`.
-- 사진: `docs/handoff/title_stillness/stage1_straight_to_cards.png`(Stage 1 → 곧바로 '스테이지 1 · 포세이돈 신전' 카드).
+- 사진: `docs/handoff/title_stillness/stage1_straight_to_cards.png (지움 · 0799b740)`(Stage 1 → 곧바로 '스테이지 1 · 포세이돈 신전' 카드).
 
 ## 3. 게임 이름 → Stillness
 

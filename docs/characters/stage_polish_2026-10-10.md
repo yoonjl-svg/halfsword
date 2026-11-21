@@ -10,9 +10,9 @@
 
 | 각도 | 전 | 후 |
 |---|---|---|
-| 폰 가로 844×420, 경기 카메라 | `docs/handoff/loggia_before_phone.png` | `docs/handoff/loggia_after_phone.png` |
-| 넓은 화면 1600×900, 서쪽 난간 앞에서 북쪽 회랑·동쪽 문 쪽 | `docs/handoff/loggia_before_wide.png` | `docs/handoff/loggia_after_wide.png` |
-| 싸우는 중 (6초, 폰 가로) | `docs/handoff/loggia_before_fight.png` | `docs/handoff/loggia_after_fight.png` |
+| 폰 가로 844×420, 경기 카메라 | `docs/handoff/loggia_before_phone.png (지움 · 5211d811)` | `docs/handoff/loggia_after_phone.png (지움 · 5211d811)` |
+| 넓은 화면 1600×900, 서쪽 난간 앞에서 북쪽 회랑·동쪽 문 쪽 | `docs/handoff/loggia_before_wide.png (지움 · 5211d811)` | `docs/handoff/loggia_after_wide.png (지움 · 5211d811)` |
+| 싸우는 중 (6초, 폰 가로) | `docs/handoff/loggia_before_fight.png (지움 · 5211d811)` | `docs/handoff/loggia_after_fight.png (지움 · 5211d811)` |
 
 - **바닥이 싸움을 먹었다.** 30m 바닥 한 장(1024 캔버스)의 한가운데, 두 사람이 서는 반지름 4.3m 안에 16점 나침반(초록 회색 `#7c8b7d` ↔ 크림 `#e9e0c9`, 명도 차 40% 안팎)과 그 둘레 고리 띠·마름모 48개가 있었다. 폰 카메라에서 칼·팔과 같은 크기·같은 방향의 뾰족한 살이 바로 밑에 깔려 칼끝이 묻혔다. 바깥은 1.07m 바둑판 + 모서리마다 초록 박이, 이음매는 2.4cm 짙은 선 + 1cm 밝은 선 두 겹이라 비스듬히 보면 자글자글 깨졌다.
 - **평평한 밝기.** 모든 돌이 거의 같은 베이지, 회랑 안도 밖과 같은 밝기. 해가 41° 높이라 그림자가 짧고, 그림자 지도는 두 사람 둘레 ±4m 만 그려 건물 그림자는 아예 없었다.
@@ -35,9 +35,9 @@
 
 | 각도 | 전 | 후 |
 |---|---|---|
-| 폰 가로 844×420, 경기 카메라 (바다 쪽을 봄) | `docs/handoff/corsair_before_phone.png` | `docs/handoff/corsair_after_phone.png` |
-| 넓은 화면 1600×900, 성문 쪽에서 앞마당·부두·바다 쪽 | `docs/handoff/corsair_before_wide.png` | `docs/handoff/corsair_after_wide.png` |
-| 싸우는 중 (6초, 폰 가로) | `docs/handoff/corsair_before_fight.png` | `docs/handoff/corsair_after_fight.png` |
+| 폰 가로 844×420, 경기 카메라 (바다 쪽을 봄) | `docs/handoff/corsair_before_phone.png (지움 · 5211d811)` | `docs/handoff/corsair_after_phone.png (지움 · 5211d811)` |
+| 넓은 화면 1600×900, 성문 쪽에서 앞마당·부두·바다 쪽 | `docs/handoff/corsair_before_wide.png (지움 · 5211d811)` | `docs/handoff/corsair_after_wide.png (지움 · 5211d811)` |
+| 싸우는 중 (6초, 폰 가로) | `docs/handoff/corsair_before_fight.png (지움 · 5211d811)` | `docs/handoff/corsair_after_fight.png (지움 · 5211d811)` |
 
 ### 무엇이 문제였나
 
@@ -122,10 +122,10 @@
 
 | 각도 | 전 (dae2262) | 후 |
 |---|---|---|
-| 폰 가로 844×420, 경기 카메라 | `docs/handoff/loggia2_before_phone.png` | `docs/handoff/loggia2_after_phone.png` |
-| 넓은 화면 1600×900 (북쪽 회랑·동쪽 문) | `docs/handoff/loggia2_before_wide.png` | `docs/handoff/loggia2_after_wide.png` |
-| 넓은 화면 (서쪽 난간·노을 쪽, 두 사람의 긴 그림자) | — | `docs/handoff/loggia2_after_west_wide.png` |
-| 싸우는 중 (6초) | — | `docs/handoff/loggia2_after_fight.png` |
+| 폰 가로 844×420, 경기 카메라 | `docs/handoff/loggia2_before_phone.png (지움 · aad826c0)` | `docs/handoff/loggia2_after_phone.png (지움 · aad826c0)` |
+| 넓은 화면 1600×900 (북쪽 회랑·동쪽 문) | `docs/handoff/loggia2_before_wide.png (지움 · aad826c0)` | `docs/handoff/loggia2_after_wide.png (지움 · aad826c0)` |
+| 넓은 화면 (서쪽 난간·노을 쪽, 두 사람의 긴 그림자) | — | `docs/handoff/loggia2_after_west_wide.png (지움 · aad826c0)` |
+| 싸우는 중 (6초) | — | `docs/handoff/loggia2_after_fight.png (지움 · aad826c0)` |
 
 - **색 (볼로냐의 붉은 주랑)**: 회랑 앞 아치 벽을 베이지 → 붉은 황토 회벽 `0xb35d3e`, 회랑 안 뒤 아치 벽은 그늘진 붉은 회벽 `0x8c4a34`, 동쪽 문 기둥 덩어리·위층(아틱)은 벽돌색 `0x9c5236`. 기둥·아치 테·처마·난간은 밝은 돌 그대로(돌기둥). 먼 마을 벽은 붉은·주황·황토 다섯 색, 창 덧문은 셋 중 둘을 녹색 `0x4e6a50`. 화분 꽃은 서쪽 둘 청색·흰색, 동쪽 둘 황토·녹 빛. 결투장 바닥 색은 손대지 않았다(싸움의 읽힘).
 - **볼로냐의 두 탑**: 동북쪽 지붕 너머(문 축을 비켜) 맨 벽돌의 높은 아시넬리 탑(34m, 총안 꼭대기)과 4° 기운 낮은 가리센다 탑(19m). 처음엔 문 바로 뒤에 두었다가 문 너머 풍경을 막아서(1차 캡처) 북동쪽으로 옮겼다.
@@ -146,9 +146,9 @@
 
 | 각도 | 전 (dae2262) | 후 |
 |---|---|---|
-| 폰 가로 844×420, 경기 카메라 | `docs/handoff/corsair2_before_phone.png` | `docs/handoff/corsair2_after_phone.png` |
-| 넓은 화면 1600×900 | `docs/handoff/corsair2_before_wide.png` | `docs/handoff/corsair2_after_wide.png` |
-| 싸우는 중 (6초) | — | `docs/handoff/corsair2_after_fight.png` |
+| 폰 가로 844×420, 경기 카메라 | `docs/handoff/corsair2_before_phone.png (지움 · aad826c0)` | `docs/handoff/corsair2_after_phone.png (지움 · aad826c0)` |
+| 넓은 화면 1600×900 | `docs/handoff/corsair2_before_wide.png (지움 · aad826c0)` | `docs/handoff/corsair2_after_wide.png (지움 · aad826c0)` |
+| 싸우는 중 (6초) | — | `docs/handoff/corsair2_after_fight.png (지움 · aad826c0)` |
 
 - **등대 섬**을 통째로 약 (147, 115) → **(75, 173)** 로: 바다 쪽 축에서 약 66° 오른쪽, 약 190m. 넓은 화면에서 큰 범선(약 28° 쪽)과 화면 반대편 오른쪽 끝에 따로 선다. 경기 카메라(바다를 보는 방향, 좌우 ±46°)에는 들어오지 않아 배·상대와 겹칠 일이 없다. 처음 옮긴 자리(165m)는 섬이 너무 크고 가까워 보여 25m 더 뺐다.
 - **큰 범선이 떠 보이던 것**: 배 밑 쪽 판(안으로 좁아지는 맨 아래 두 단)이 물 위로 드러나고 그 아래로 밝은 옥빛 물이 곧바로 이어져 '배 밑 틈'처럼 보였다. 배를 1.85m 더 가라앉히고(y −2.65 → −4.5), 먼 삼각돛배도 0.45m(−2.3 → −2.75), 두 배 둘레에 배 그늘이 진 짙은 물 띠(`0x174a49` 타원, 물 면 바로 위)를 깔았다. 흘수선이 물에 닿아 보인다.
@@ -193,7 +193,7 @@
 
 | 무엇 | 파일 |
 |---|---|
-| 기존 넷(성 안뜰·대성당·산사·밤의 포세이돈) · 새 셋 전(dae2262) · 새 셋 후를 같은 크기 카드로 나란히(카드 56×84 칸, 한 칸 4화소 — PC·가로 폰의 흔한 카드 크기) | `docs/handoff/cardbacks_compare.png` (도구 `tools/cardbacks/compare_cardbacks.py`, Pillow 필요) |
+| 기존 넷(성 안뜰·대성당·산사·밤의 포세이돈) · 새 셋 전(dae2262) · 새 셋 후를 같은 크기 카드로 나란히(카드 56×84 칸, 한 칸 4화소 — PC·가로 폰의 흔한 카드 크기) | `docs/handoff/cardbacks_compare.png (지움 · 9b31007c)` (도구 `tools/cardbacks/compare_cardbacks.py`, Pillow 필요) |
 | 게임 화면 카드 고르기(1280×800, 한 칸 4px) | `docs/handoff/cardbacks_game_{loggia,corsair,sacred_grove}.png` (도구 `tools/browser/cardback_shots.mjs`) |
 
 **디렉터가 본 문제**: 기존 뒷면은 격자(곧은 또는 사선 띠) 위에 두 무늬를 번갈아 놓고 대비가 강해 한눈에 무대가 읽힌다. 새 셋은 격자가 없어 휑하고, 무대 상징이 안 읽혔다.

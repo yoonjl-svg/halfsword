@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build && node tools/pwa/build.mjs",
-    "preview": "vite preview --host"
+    "preview": "vite preview --host",
+    "test": "node --test --test-concurrency=2 tools/sim/*.test.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.19.3",

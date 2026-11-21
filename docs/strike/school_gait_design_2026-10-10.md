@@ -365,10 +365,10 @@
 
 ### 11-7. 캡처 (`tools/browser/school_gait_shots.mjs`, 콘솔 에러 0)
 그 몸의 한 발이 떠 있는 물리 스텝에서 일시정지로 멈춰 옆에서. 시험만 상처 끔.
-- `docs/handoff/school_gait_italian_ai.png`·`_player.png` — 레이피어 follow 앞발 내딛기 끝(플레이어 두 발 0.60 m 벌어짐, 앞발 그대로 앞)
-- `docs/handoff/school_gait_japanese_ai.png`·`_player.png` — 우치가타나 오쿠리아시: AI 는 발도 대기 웅크림(골반 0.75) 위의 낮은 걸음(발바닥 0.011 m), 플레이어 발 들기 0.035
-- `docs/handoff/school_gait_iberian_ai.png`·`_player.png`·`_player_back.png` — 츠바이핸더 옆으로 돌며 엇갈리는 걸음(cross 걸음, 발 들기 0.08) — 옆·뒤에서 봐도 엇갈림은 작게 보인다(0.08 m)
-- `docs/handoff/school_gait_chinese_ai.png`·`_player.png` — 청강검 체보: 따라붙는 뒷발(발 들기 0.03)
+- `docs/handoff/school_gait_italian_ai.png (지움 · 1f7fc776)`·`_player.png` — 레이피어 follow 앞발 내딛기 끝(플레이어 두 발 0.60 m 벌어짐, 앞발 그대로 앞)
+- `docs/handoff/school_gait_japanese_ai.png (지움 · 1f7fc776)`·`_player.png` — 우치가타나 오쿠리아시: AI 는 발도 대기 웅크림(골반 0.75) 위의 낮은 걸음(발바닥 0.011 m), 플레이어 발 들기 0.035
+- `docs/handoff/school_gait_iberian_ai.png (지움 · 1f7fc776)`·`_player.png`·`_player_back.png` — 츠바이핸더 옆으로 돌며 엇갈리는 걸음(cross 걸음, 발 들기 0.08) — 옆·뒤에서 봐도 엇갈림은 작게 보인다(0.08 m)
+- `docs/handoff/school_gait_chinese_ai.png (지움 · 1f7fc776)`·`_player.png` — 청강검 체보: 따라붙는 뒷발(발 들기 0.03)
 
 ### 11-8. 남은 것
 1. 레이피어 플레이어 물러남·멈춤(§11-5) — 사장님 손 판정. 더 돌리려면 플레이어만 follow 를 끄는 안(`player: { footwork: 'pass' }`)이 있다(걸음 꼴은 보폭·박자·높이만 남음).
@@ -464,7 +464,7 @@ AI 48 판 (`gait_metrics 24` = `motion_lab duel … main` 과 같은 판 — 이
 fights12 **5480fbd3** · live_battery **e7ee3d96** · finish_thrust 1 --stand **433ac984** (모두 같음) · corr_s0 --limits=on,off --scenes=a,b IDENTICAL **12/12** · weapon_smoke **17/17** OK · vite build 통과 · name_policy 위반 **0** · `gait_rhythm` 롱소드 줄 main 과 바이트 같음.
 
 ### 12-7. 캡처 (`tools/browser/gait_rhythm_shots.mjs` + `gait_rhythm_strip.py`, 콘솔 에러 0)
-- `docs/handoff/gait_rhythm_strip.png` — 레이피어 플레이어 물러나기(스틱 0.6) 옆모습 연속, 위 = 전(짝걸음 끔 = main 걸음), 아래 = 후, 칸마다 물러나기 시작 뒤 시각(+0.35 ~ +0.95 s) + 놓은 뒤 0.15·0.3·0.6 s. 전: 골반 0.93 → 0.85 m 로 주저앉으며 뒷발이 오래 떠 있음, 후: 두 발 딛고 쉼 → '따·닥' (골반 0.89~0.94)
+- `docs/handoff/gait_rhythm_strip.png (지움 · 1bbe326a)` — 레이피어 플레이어 물러나기(스틱 0.6) 옆모습 연속, 위 = 전(짝걸음 끔 = main 걸음), 아래 = 후, 칸마다 물러나기 시작 뒤 시각(+0.35 ~ +0.95 s) + 놓은 뒤 0.15·0.3·0.6 s. 전: 골반 0.93 → 0.85 m 로 주저앉으며 뒷발이 오래 떠 있음, 후: 두 발 딛고 쉼 → '따·닥' (골반 0.89~0.94)
 - `gait_rhythm_{before_08|after_06}.png`(한 장 크게) · `gait_rhythm_{before|after}_stop_1.png`(놓은 뒤 0.15 s)
 - `docs/handoff/japanese_low_{before|after}_{idle|back|walk|ai}.png` — 우치가타나 플레이어 대기(골반 0.861 → **0.744**)·물러나기(0.892 → 0.801)·걷기, AI 걷기(발도 대기 아님, 0.903 → **0.817**)
 

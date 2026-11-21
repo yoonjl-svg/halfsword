@@ -16,7 +16,7 @@
 > - 카드 앞면은 원래 앞면을 유지한다(사장님: 앞면은 자세한 정보 자리, 뒷면과의 대비가 오히려 흥미롭다 → §4). 픽셀 앞면 시안 v1 은 기록으로만 둔다. v2(`p_*.svg`)도 기록으로만 둔다.
 
 실제 화면(844×390 가로 폰, 기본 모드와 픽셀 모드)을 찍어 보고 게임 전체에 공통된 '결'을 뽑았다.
-찍은 화면은 `docs/handoff/design_language/`에 있고, 카드 뒷면 비교는 `docs/handoff/card_backs_v3.png`에 있다.
+찍은 화면은 `docs/handoff/design_language/`에 있고, 카드 뒷면 비교는 `docs/handoff/card_backs_v3.png (지움 · f24151e1)`에 있다.
 
 ## 1. 지금 게임의 결
 
@@ -53,8 +53,8 @@
 **파일**: `public/ui/cardbacks/px_<테마>_{tile,frame,center,plaque}.png`
 - 테마: `poseidon` · `poseidon_night` · `clearing` · `castle` · `temple` · `cathedral`. 조각 하나가 100~250바이트다.
 - 생성기는 `tools/cardbacks/gen_pixel_cardbacks.py`다. 새 테마를 넣으면 `grey_foe.py` 도 다시 돌리고, main.js `PX_BACKS` 에 바탕색을 더한다.
-- `poseidon_night`(밤의 포세이돈, 하인리히 흑화): 포세이돈 안의 밤 변주. 바탕 `#0c1220` + 어두운 물빛 `#2a4d58` · 달빛 `#dfe3d8` · 불꽃 `#e0782a`. 마름모 격자와 삼지창·뇌문 띠는 포세이돈과 같고, 물거품 자리에 이지러진 달과 별, 가운데는 초승달과 불꽃. `docs/handoff/card_back_poseidon_night.png`.
-- `clearing`(화전 터, 브란 — 오너가 고른 2안): 바탕 `#1a1816`(탄 땅) + 잿빛 `#5e5c55` · 새싹 연두 `#8fae3e` · 양골담초 노랑 `#c9a83a` · 바랜 나무 `#6e665a`. 문양은 비스듬한 빗줄기와 새싹, 띠는 둥글게 이어 놓은 탄 통나무의 마구리(나이테), 가운데는 위에서 본 날개 편 까마귀(잿빛 — 옆모습은 180° 돌려 붙이면 덩어리로 보여 위에서 본 모습으로). `docs/handoff/card_back_clearing.png`. 1안 뒷면(새싹·밭돌·울타리·회초리)은 `px_clearing_a_*`로 보관한다(main.js 는 안 쓴다).
+- `poseidon_night`(밤의 포세이돈, 하인리히 흑화): 포세이돈 안의 밤 변주. 바탕 `#0c1220` + 어두운 물빛 `#2a4d58` · 달빛 `#dfe3d8` · 불꽃 `#e0782a`. 마름모 격자와 삼지창·뇌문 띠는 포세이돈과 같고, 물거품 자리에 이지러진 달과 별, 가운데는 초승달과 불꽃. `docs/handoff/card_back_poseidon_night.png (지움 · 680444f2)`.
+- `clearing`(화전 터, 브란 — 오너가 고른 2안): 바탕 `#1a1816`(탄 땅) + 잿빛 `#5e5c55` · 새싹 연두 `#8fae3e` · 양골담초 노랑 `#c9a83a` · 바랜 나무 `#6e665a`. 문양은 비스듬한 빗줄기와 새싹, 띠는 둥글게 이어 놓은 탄 통나무의 마구리(나이테), 가운데는 위에서 본 날개 편 까마귀(잿빛 — 옆모습은 180° 돌려 붙이면 덩어리로 보여 위에서 본 모습으로). `docs/handoff/card_back_clearing.png (지움 · 15b8c68e)`. 1안 뒷면(새싹·밭돌·울타리·회초리)은 `px_clearing_a_*`로 보관한다(main.js 는 안 쓴다).
 
 **조각으로 나눈 까닭**: 카드 비율이 화면마다 다르다(가로 폰 약 1:1.16, PC 1:1.5, 세로 폰 1:2.1). 그림 한 장을 늘리면 칸이 찌그러진다. 그래서 CSS가 조각을 정수 배로 붙인다.
 
@@ -93,12 +93,12 @@
 
 > 사장님: "카드 앞면은 원래가 낫다. 여긴 자세한 정보가 필요한 곳이라. 뒷면과의 대비가 오히려 흥미로워 보이기도 해."
 > 그래서 앞면은 픽셀 결로 맞추지 않는다. 뒷면(픽셀, 스테이지 테마)과 앞면(매끈한 그림, 등급색, 자세한 글)의 대비를 의도로 둔다.
-> 아래 v1 시안은 되돌렸고(`index.html`·`main.js` 원래대로), 기록과 도구만 보관한다: `public/ui/weapons_px/`, `tools/cardface/`, `docs/handoff/card_face_v1.png`.
+> 아래 v1 시안은 되돌렸고(`index.html`·`main.js` 원래대로), 기록과 도구만 보관한다: `public/ui/weapons_px/`, `tools/cardface/`, `docs/handoff/card_face_v1.png (지움 · 1122be24)`.
 > 다만 `tools/cardface/face_check.mjs`(무기 14종 × 6개 화면 넘침 점검)는 원래 앞면에도 그대로 쓸 수 있다.
 
 ### (보관) 카드 앞면 픽셀 시안 v1 — 채택 안 됨
 
-비교 이미지: `docs/handoff/card_face_v1.png`. 844×390과 568×320에서 기본·픽셀 모드로, 고르기 전과 뒤집힌 뒤의 전·후를 찍었다.
+비교 이미지: `docs/handoff/card_face_v1.png (지움 · 1122be24)`. 844×390과 568×320에서 기본·픽셀 모드로, 고르기 전과 뒤집힌 뒤의 전·후를 찍었다.
 
 - **테두리**: CSS 네모 선으로 그린다(그림 파일 없음). `box-shadow` 안쪽으로 짙은 선 한 칸 · 등급색 한 칸 · 짙은 선 한 칸을 넣는다(`.wface` 의 `--fr`). 네 귀퉁이에는 금빛 네모 징(두 칸)을 둔다. 모두 `--px`의 정수 배라 뒷면과 칸 크기가 같다.
 - **테두리 색 = 등급색** (스테이지 테마가 아님). 까닭은 셋이다.

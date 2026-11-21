@@ -1,8 +1,8 @@
 // 패배 창 프로필 + 대사 점검 (사장님 10/17 22:1x · 23:4x — docs/design/portrait_ui_2026-10-17.md §4)
 //  ① 여정(첫 화면 Stage 1 → 카드 → 싸움)에서 짐: 싸움 화면엔 승리 대사가 안 뜸(10/18 01:4x '싸움 화면쪽은 빼') → 패배 창 = 상대 프로필(원본을 줄인 768² · 그림 안 액자 1) + 그 오른쪽 같은 대사 ·
 //     그림 한 변 = 같은 화면 대기실 프로필 칸과 같은 CSS px(23:4x '패배 팝업 프로필도 같은 크기로') · 금화 줄 · 단추와 안 겹침 · 창이 화면 안 · 그 뒤 정지 창엔 없음
-//  ② 이긴 판: 프로필 · 대사 없음(전 그대로)  ③ 그림 없는 상대(?foe=default 기본 상대): 그림 칸 숨김 · 대사 없음(전 꼴)  ④ 변형(광기의 하인리히)은 자기 그림(10/18 16:3x — 전: 바탕 인물) · ?portrait=hd 예비 · ?portraitGrid=1 칸 줄
-//  ⑤ 출처 줄이 있는 대사(병마용)는 대사 아래 작은 줄 — 싸움 화면 대사 칸과 같은 꼴  ⑥ ?portrait=low = 예비 픽셀판(pixelated)
+//  ② 이긴 판: 프로필 · 대사 없음(전 그대로)  ③ 그림 없는 상대(?foe=default 기본 상대): 그림 칸 숨김 · 대사 없음(전 꼴)  ④ 변형(광기의 하인리히)은 자기 그림(10/18 16:3x — 전: 바탕 인물) · ?portraitGrid=1 칸 줄
+//  ⑤ 출처 줄이 있는 대사(병마용)는 대사 아래 작은 줄 — 싸움 화면 대사 칸과 같은 꼴  (옛 ?portrait=hd · low 예비 그림은 public/encounters 와 함께 11/21 지움)
 //  npm run build && npx vite preview --port 5182 →  node tools/browser/defeat_portrait_smoke.mjs http://127.0.0.1:5182 /tmp/<빈 폴더> [크기 WxH@dpr,…]
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
@@ -85,7 +85,7 @@ try {
     await c.close();
   }
   const s = sizes[0], tag = `${s.w}x${s.h}`;
-  // ② 이긴 판 · ③ 기본 상대(그림 없음) · ④ 변형(자기 그림) · hd 예비 · 칸 줄 · ⑤ 출처 줄 · ⑥ ?portrait=low
+  // ② 이긴 판 · ③ 기본 상대(그림 없음) · ④ 변형(자기 그림) · 칸 줄 · ⑤ 출처 줄
   {
     const c = await context(s), p = await c.newPage(); watch(p, tag);
     await urlFight(p, 'foe=heinrich&weapon=longsword');
@@ -100,10 +100,6 @@ try {
     const shownM = await lose(p); const m = await popup(p); await p.screenshot({ path: `${out}/loss_variant_${tag}.png` });
     assert.equal(m.id, 'heinrich_mad'); assert.equal(m.src, 'ui/portraits/heinrich_mad.webp'); assert.ok(winLineOf('광기의 하인리히 도른', m.line), m.line); assert.ok(!shownM.includes(m.line)); // 변형의 대사 · 10/18 16:3x 부터 얼터 자기 그림
     checks.push({ check: 'variant (heinrich_mad) has its own portrait (10/18 — was the base character portrait)', line: m.line });
-    await urlFight(p, 'foe=heinrich_mad&weapon=longsword&portrait=hd');
-    await lose(p); const h = await popup(p);
-    assert.deepEqual([h.id, h.mode, h.src, h.natural], ['heinrich', 'hd', 'encounters/portraits-hd-20261017/heinrich.webp', 768]); // 예비 hd = 10/17 원본 판 · 얼터는 바탕 인물
-    checks.push({ check: '?portrait=hd: the 10/17 high-resolution backup (variant → base portrait)' });
     await urlFight(p, 'foe=heinrich&weapon=longsword&portraitGrid=1');
     await lose(p); const g = await popup(p);
     assert.equal(await p.evaluate(() => { const f = document.getElementById('menuFoe'); return f.hasAttribute('data-grid') && /grid-overlay\.svg/.test(getComputedStyle(f, '::after').backgroundImage); }), true);
@@ -115,12 +111,6 @@ try {
     assert.equal(src.id, 'terracotta'); assert.ok(winLineOf('병마용', src.line), src.line); assert.equal(src.source, lineSourceOf(byName('병마용'), unq(src.line))); assert.ok(!src.shown.includes(src.line)); assert.deepEqual(src.overlap, []);
     checks.push({ check: `terracotta: win line + source line (lineSourceOf)${src.sourceShown ? '' : ' — no sourced line came up in 6 tries'}`, line: src.line, source: src.source });
     await c.close();
-    const c2 = await context(s), q = await c2.newPage(); watch(q, tag);
-    await urlFight(q, 'foe=samira&weapon=longsword&portrait=low');
-    await lose(q); const lo = await popup(q); await q.screenshot({ path: `${out}/loss_low_${tag}.png` });
-    assert.deepEqual([lo.id, lo.mode, lo.src, lo.natural, lo.rendering], ['samira', 'low', 'encounters/portraits-frame1-20261017/low/samira.png', 1254, 'pixelated']);
-    checks.push({ check: '?portrait=low: the backup pixel portrait (low.png 1254², pixelated)' });
-    await c2.close();
   }
   assert.deepEqual(errors, []);
 } finally {

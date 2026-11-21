@@ -458,8 +458,8 @@
 - **미리 그려 둔 그림**: 게임 안에 다라이시를 미리 그린 그림(카드·초상·명단 그림)은 없다 — 미리 그리는 것은 무기 카드 그림(`public/ui/weapons`)과 카드 뒷면뿐이다. 다시 그릴 것 없음.
 - 확인: 테스트 경로 `?stage=dayr&foe=silver_wanderer` 로 `?look=` 없이(= v7) · `:v10` 이 뜨고 싸운다 — 콘솔 오류 0. 관문 일곱 그대로(커밋 끝 줄).
 
-![폰 가로 844×390 경기 화면 — 왼쪽 v7(지금) · 오른쪽 v10. 소금 사막 · 상대 다라이시 · 모노호시자오 · AI 멈춤 · 판 시작 훑기 끝난 뒤](../handoff/daraishi_v7_phone.png)
+*(그림 지움 — `git show 50297a47:docs/handoff/daraishi_v7_phone.png`)*
 
-![가까이 — 위 v7(지금) · 아래 v10 / 왼쪽 정면 왼쪽 비스듬히(검집 쪽) · 오른쪽 왼옆](../handoff/daraishi_v7_close.png)
+*(그림 지움 — `git show 50297a47:docs/handoff/daraishi_v7_close.png`)*
 
 *헤드리스 SwiftShader · 화면 배율 1 — 이 가지의 개발 서버(자기 포트)에서 찍었다.*
