@@ -101,8 +101,9 @@ for (let f = 0; f < MAXS * 60; f++) {
     const A = { x: 640, y: 150, id: 2 };
     await touch('touchStart', [stickPt, A]);
     await run(17);
-    for (let k = 1; k <= 3; k++) { await touch('touchMove', [stickPt, { x: A.x - 35 * k, y: A.y + 30 * k, id: 2 }]); await run(17); }
-    await touch('touchEnd', [stickPt]);
+    let B = A;
+    for (let k = 1; k <= 3; k++) { B = { x: A.x - 35 * k, y: A.y + 30 * k, id: 2 }; await touch('touchMove', [stickPt, B]); await run(17); }
+    await touch('touchEnd', [B]); // CDP touchEnd 에는 떼는 손가락을 적는다 (남을 손가락을 적으면 그 손가락이 떼임 — 감사 가지 N-035 ①) · 스틱 엄지는 쥔 채
     fired = true;
   }
   if (fired && r.sec === 'instant' && !frames.some((x) => x.shotStrike)) { r.shotStrike = true; await shot('strike'); }
