@@ -1,0 +1,62 @@
+[
+ {
+  "rate": 1,
+  "label": "title",
+  "state": "menu",
+  "startOpen": true,
+  "rafPerSec": 119.8,
+  "threeFramesPerSec": 0,
+  "drawCallsLast": 1,
+  "mainTaskMsPerSec": 8.3,
+  "scriptMsPerSec": 2.4,
+  "layoutMsPerSec": 0,
+  "styleMsPerSec": 0,
+  "timersCreated": 2,
+  "heapMB": 122
+ },
+ {
+  "rate": 1,
+  "label": "menu(?stage=)",
+  "state": "menu",
+  "startOpen": false,
+  "rafPerSec": 4.3,
+  "threeFramesPerSec": 2.2,
+  "drawCallsLast": 264,
+  "mainTaskMsPerSec": 999.9,
+  "scriptMsPerSec": 7.3,
+  "layoutMsPerSec": 0,
+  "styleMsPerSec": 0.1,
+  "timersCreated": 1,
+  "heapMB": 115
+ },
+ {
+  "rate": 1,
+  "label": "paused-fight",
+  "state": "paused",
+  "startOpen": false,
+  "rafPerSec": 119.9,
+  "threeFramesPerSec": 0,
+  "drawCallsLast": 264,
+  "mainTaskMsPerSec": 19.3,
+  "scriptMsPerSec": 3,
+  "layoutMsPerSec": 0,
+  "styleMsPerSec": 0,
+  "timersCreated": 1,
+  "heapMB": 142
+ },
+ {
+  "rate": 1,
+  "label": "fake-hidden-fight",
+  "state": "paused",
+  "startOpen": false,
+  "rafPerSec": 120.2,
+  "threeFramesPerSec": 0,
+  "drawCallsLast": 264,
+  "mainTaskMsPerSec": 18.8,
+  "scriptMsPerSec": 2.9,
+  "layoutMsPerSec": 0,
+  "styleMsPerSec": 0,
+  "timersCreated": 1,
+  "heapMB": 142
+ }
+]
