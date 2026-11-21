@@ -6,20 +6,32 @@
       (선택) docs/devmeet/notes/YYYY-MM-DD-uhwa.md 남김말.
 하는 일: ① 작성 노트 docs/dev_exchange/notes/YYYY-MM-DD.md 를 일지와 같은 바이트로 만들어 먼저 커밋 (= manifest 의 source_sha)
          ② docs/devmeet/YYYY-MM-DD.json manifest(샛별 PROTOCOL.md v1: report_id, window, technical_base 14bcf1f, source_sha, notes_blob_sha,
-            notes_sha256, markdown_sha256, previous_*) 를 쓰고 일지·대장·남김말과 함께 커밋 ③ dev 가지와 main 에 push (디렉터만 main 에 올린다).
+            notes_sha256, markdown_sha256, previous_*) 를 쓰고 일지·대장·남김말과 함께 커밋 ③ 지금 가지(디렉터 체크아웃의 dev 가지)와 main 에 push (디렉터만 main 에 올린다).
 규칙: 발행한 날짜 문서·manifest 는 고치지 않는다 (정정은 다음 날 일지에). 모델 이름을 적지 않는다.
+커밋 끝 줄(서명)은 저장소 밖 TRAILER_PATH 에서 실행 때 읽는다 — 세션이 바뀌면 디렉터가 그 파일만 바꾼다. 파일이 없거나 비면 커밋하기 전에 멈춘다.
+커밋 작성자는 git 설정(user.name · user.email)을 그대로 쓴다 — 비어 있으면 멈춘다. (11/21 감사 N-003)
 """
 import hashlib, json, os, re, subprocess, sys
 from datetime import date, datetime, timedelta, timezone
 
 REPO = 'yoonjl-svg/halfsword'
 BASE = '14bcf1fe6bd205c775db91aa4ca36b9841b6d2bd'
-DEV = 'claude/first-game-development-2q36ha'
+TRAILER_PATH = '/root/ops_keep/commit_trailer.txt'
 KST = timezone(timedelta(hours=9))
 
 
 def sh(*a, check=True):
     return subprocess.run(a, check=check, capture_output=True, text=True).stdout.strip()
+
+
+def read_trailer():
+    try:
+        text = open(TRAILER_PATH, encoding='utf-8').read().strip()
+    except FileNotFoundError:
+        sys.exit(f'missing {TRAILER_PATH} (commit trailer, kept outside the repo) — create it before publishing; nothing was committed')
+    if not text:
+        sys.exit(f'{TRAILER_PATH} is empty — write the commit trailer lines into it before publishing; nothing was committed')
+    return text
 
 
 def main():
@@ -45,12 +57,18 @@ def main():
         sys.exit(f'{json_path} already published — do not republish; put corrections in tomorrow\'s log')
     if sh('git', 'status', '--porcelain', '--', 'src', 'index.html'):
         sys.exit('src/index.html have uncommitted changes — publish from a clean code state')
+    trailer = read_trailer()
+    if not (sh('git', 'config', 'user.name', check=False) and sh('git', 'config', 'user.email', check=False)):
+        sys.exit('git user.name / user.email are not set — set the commit identity in git config before publishing')
+    dev = sh('git', 'symbolic-ref', '-q', '--short', 'HEAD', check=False) if push else ''
+    if push and not dev:
+        sys.exit('HEAD is detached — check out the dev branch before publishing')
     # ① authored note = same bytes as the log, committed first
     os.makedirs(os.path.dirname(note_path), exist_ok=True)
     open(note_path, 'wb').write(md)
     sh('git', 'add', note_path)
-    sh('git', '-c', 'user.name=Claude', '-c', 'user.email=noreply@anthropic.com', 'commit', '-q', '-m',
-       f'Devmeet: authored note {day} (source for the published report)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_014nJCzE4hyxiYc9innhSUng')
+    sh('git', 'commit', '-q', '-m',
+       f'Devmeet: authored note {day} (source for the published report)\n\n{trailer}')
     source_sha = sh('git', 'rev-parse', 'HEAD')
     notes_blob = sh('git', 'rev-parse', f'HEAD:{note_path}')
     # ② manifest
@@ -83,12 +101,12 @@ def main():
     }
     open(json_path, 'w', encoding='utf-8').write(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
     sh('git', 'add', md_path, json_path, 'docs/devmeet/ledger.md', 'docs/devmeet/notes', 'docs/dev_exchange')
-    sh('git', '-c', 'user.name=Claude', '-c', 'user.email=noreply@anthropic.com', 'commit', '-q', '-m',
-       f'Devmeet: report {day} published (manifest, ledger, notes)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_014nJCzE4hyxiYc9innhSUng')
+    sh('git', 'commit', '-q', '-m',
+       f'Devmeet: report {day} published (manifest, ledger, notes)\n\n{trailer}')
     head = sh('git', 'rev-parse', 'HEAD')
     if push:
-        subprocess.run(['git', 'push', '-q', '-u', 'origin', DEV], check=True)
-        subprocess.run(['git', 'push', '-q', 'origin', f'{DEV}:main'], check=True)
+        subprocess.run(['git', 'push', '-q', '-u', 'origin', dev], check=True)
+        subprocess.run(['git', 'push', '-q', 'origin', f'{dev}:main'], check=True)
     print(json.dumps({'day': day, 'source_sha': source_sha, 'published_sha': head, 'markdown_sha256': manifest['markdown_sha256'], 'pushed': push}, ensure_ascii=False))
 
 
