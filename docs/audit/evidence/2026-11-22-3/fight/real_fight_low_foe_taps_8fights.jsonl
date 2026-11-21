@@ -1,0 +1,10 @@
+{"fight":1,"weapon":"longsword","end":{"state":"fight","alive":false,"foeAlive":true},"tapsAtLowFoe":0}
+{"fight":2,"weapon":"longsword","end":{"state":"fight","alive":true,"foeAlive":false},"tapsAtLowFoe":0}
+{"fight":3,"weapon":"longsword","end":{"state":"fight","alive":true,"foeAlive":true},"tapsAtLowFoe":0}
+{"fight":4,"weapon":"longsword","end":{"state":"fight","alive":false,"foeAlive":true},"tapsAtLowFoe":0}
+{"fight":5,"weapon":"longsword","tapNo":1,"at":{"es":"getup","d":1.62},"walkIntoRangeFrames":0,"thrustStartedAfterSec":0.02,"what":"plain thrust","howRangeStepEnded":null,"thrustCharged":1,"foeAfter":"stand","dAfter":0.79}
+{"fight":5,"weapon":"longsword","end":{"state":"fight","alive":true,"foeAlive":true},"tapsAtLowFoe":1}
+{"fight":6,"weapon":"longsword","end":{"state":"fight","alive":false,"foeAlive":true},"tapsAtLowFoe":0}
+{"fight":8,"weapon":"uchigatana","end":{"state":"fight","alive":true,"foeAlive":true},"tapsAtLowFoe":0}
+{"fight":7,"weapon":"zweihander","tapNo":1,"at":{"es":"getup","d":1.53},"walkIntoRangeFrames":0,"thrustStartedAfterSec":0.02,"what":"plunge","howRangeStepEnded":null,"thrustCharged":1,"foeAfter":"stand","dAfter":1.03}
+{"fight":7,"weapon":"zweihander","end":{"state":"fight","alive":true,"foeAlive":false},"tapsAtLowFoe":1}

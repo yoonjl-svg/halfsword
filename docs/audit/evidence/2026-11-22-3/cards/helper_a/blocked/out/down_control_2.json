@@ -1,0 +1,9754 @@
+{
+ "summary": {
+  "situation": "forced: player.knockDown(true); foe AI frozen",
+  "mode": "control",
+  "run": 2,
+  "ev": {
+   "start": {
+    "t": 3.167,
+    "state": "stand",
+    "armed": true,
+    "autoPick": false,
+    "pickup": false,
+    "thrust": 0,
+    "cut": 0,
+    "tap": false,
+    "swing": false,
+    "guard": false,
+    "move": [
+     0,
+     0
+    ],
+    "pelvis": [
+     -2.886,
+     -0.005
+    ],
+    "foe": [
+     2.897,
+     0.003
+    ],
+    "sword": null,
+    "hand": [
+     0.15,
+     0
+    ],
+    "sec": null,
+    "uq": null
+   },
+   "forcedAtF": 0,
+   "inputStartF": 11,
+   "freeF": 242,
+   "freeT": 7.708,
+   "blockedS": 4.541
+  },
+  "inputs": [],
+  "lateMoves": 0,
+  "counts": {
+   "before": {
+    "thrust": 0,
+    "cut": 0
+   },
+   "atFree": {
+    "thrust": 0,
+    "cut": 0
+   },
+   "end": {
+    "thrust": 0,
+    "cut": 0
+   }
+  },
+  "blockedPhase": {
+   "tapFrames": 0,
+   "swingFrames": 0,
+   "guardFrames": 0,
+   "moveNonZeroFrames": 0,
+   "pelvisStart": [
+    -2.881,
+    -0.001
+   ],
+   "pelvisAtFree": [
+    -2.108,
+    -0.272
+   ],
+   "pelvisPathLen": 1.693,
+   "sword": null
+  },
+  "after60": {
+   "tapFrames": 0,
+   "swingFrames": 0,
+   "guardFrames": 0,
+   "moveNonZeroFrames": 0,
+   "sec": [],
+   "thrustDelta": 0,
+   "cutDelta": 0
+  },
+  "errors": [],
+  "pointerLog": []
+ },
+ "frames": [
+  {
+   "t": 3.183,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.881,
+    -0.001
+   ],
+   "foe": [
+    2.897,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 1
+  },
+  {
+   "t": 3.217,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.877,
+    0
+   ],
+   "foe": [
+    2.898,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 2
+  },
+  {
+   "t": 3.233,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.876,
+    0
+   ],
+   "foe": [
+    2.898,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 3
+  },
+  {
+   "t": 3.25,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.876,
+    0.001
+   ],
+   "foe": [
+    2.898,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 4
+  },
+  {
+   "t": 3.267,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.876,
+    0.001
+   ],
+   "foe": [
+    2.898,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 5
+  },
+  {
+   "t": 3.283,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.876,
+    0.001
+   ],
+   "foe": [
+    2.899,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 6
+  },
+  {
+   "t": 3.308,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.876,
+    0.001
+   ],
+   "foe": [
+    2.899,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 7
+  },
+  {
+   "t": 3.325,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.876,
+    0.001
+   ],
+   "foe": [
+    2.899,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 8
+  },
+  {
+   "t": 3.342,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.877,
+    0
+   ],
+   "foe": [
+    2.899,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 9
+  },
+  {
+   "t": 3.358,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.878,
+    0
+   ],
+   "foe": [
+    2.899,
+    0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 10
+  },
+  {
+   "t": 3.375,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.879,
+    0
+   ],
+   "foe": [
+    2.898,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 11
+  },
+  {
+   "t": 3.392,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.881,
+    0
+   ],
+   "foe": [
+    2.898,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 12
+  },
+  {
+   "t": 3.408,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.882,
+    0
+   ],
+   "foe": [
+    2.897,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 13
+  },
+  {
+   "t": 3.425,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.884,
+    0
+   ],
+   "foe": [
+    2.896,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 14
+  },
+  {
+   "t": 3.442,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.884,
+    0
+   ],
+   "foe": [
+    2.895,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 15
+  },
+  {
+   "t": 3.467,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.884,
+    -0.001
+   ],
+   "foe": [
+    2.892,
+    -0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 16
+  },
+  {
+   "t": 3.483,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.883,
+    -0.001
+   ],
+   "foe": [
+    2.891,
+    -0.006
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 17
+  },
+  {
+   "t": 3.517,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.881,
+    -0.003
+   ],
+   "foe": [
+    2.887,
+    -0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 18
+  },
+  {
+   "t": 3.533,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.88,
+    -0.004
+   ],
+   "foe": [
+    2.886,
+    -0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 19
+  },
+  {
+   "t": 3.55,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.878,
+    -0.005
+   ],
+   "foe": [
+    2.885,
+    -0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 20
+  },
+  {
+   "t": 3.567,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.876,
+    -0.006
+   ],
+   "foe": [
+    2.884,
+    -0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 21
+  },
+  {
+   "t": 3.583,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.874,
+    -0.007
+   ],
+   "foe": [
+    2.884,
+    -0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 22
+  },
+  {
+   "t": 3.6,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.871,
+    -0.008
+   ],
+   "foe": [
+    2.883,
+    -0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 23
+  },
+  {
+   "t": 3.625,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.867,
+    -0.01
+   ],
+   "foe": [
+    2.883,
+    -0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 24
+  },
+  {
+   "t": 3.642,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.864,
+    -0.012
+   ],
+   "foe": [
+    2.883,
+    -0.006
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 25
+  },
+  {
+   "t": 3.658,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.86,
+    -0.013
+   ],
+   "foe": [
+    2.884,
+    -0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 26
+  },
+  {
+   "t": 3.675,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.857,
+    -0.015
+   ],
+   "foe": [
+    2.884,
+    -0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 27
+  },
+  {
+   "t": 3.692,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.853,
+    -0.016
+   ],
+   "foe": [
+    2.884,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 28
+  },
+  {
+   "t": 3.708,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.849,
+    -0.018
+   ],
+   "foe": [
+    2.884,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 29
+  },
+  {
+   "t": 3.725,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.845,
+    -0.02
+   ],
+   "foe": [
+    2.883,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 30
+  },
+  {
+   "t": 3.742,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.84,
+    -0.022
+   ],
+   "foe": [
+    2.883,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 31
+  },
+  {
+   "t": 3.758,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.836,
+    -0.024
+   ],
+   "foe": [
+    2.882,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 32
+  },
+  {
+   "t": 3.783,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.828,
+    -0.027
+   ],
+   "foe": [
+    2.876,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 33
+  },
+  {
+   "t": 3.817,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.818,
+    -0.031
+   ],
+   "foe": [
+    2.873,
+    0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 34
+  },
+  {
+   "t": 3.833,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.813,
+    -0.033
+   ],
+   "foe": [
+    2.873,
+    0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 35
+  },
+  {
+   "t": 3.85,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.807,
+    -0.035
+   ],
+   "foe": [
+    2.871,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 36
+  },
+  {
+   "t": 3.867,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.801,
+    -0.038
+   ],
+   "foe": [
+    2.87,
+    0.006
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 37
+  },
+  {
+   "t": 3.883,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.795,
+    -0.04
+   ],
+   "foe": [
+    2.868,
+    0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 38
+  },
+  {
+   "t": 3.9,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.789,
+    -0.043
+   ],
+   "foe": [
+    2.866,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 39
+  },
+  {
+   "t": 3.917,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.783,
+    -0.045
+   ],
+   "foe": [
+    2.864,
+    0.009
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 40
+  },
+  {
+   "t": 3.942,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.774,
+    -0.05
+   ],
+   "foe": [
+    2.86,
+    0.01
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 41
+  },
+  {
+   "t": 3.958,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.768,
+    -0.053
+   ],
+   "foe": [
+    2.858,
+    0.011
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 42
+  },
+  {
+   "t": 3.975,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.762,
+    -0.056
+   ],
+   "foe": [
+    2.855,
+    0.012
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 43
+  },
+  {
+   "t": 3.992,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.755,
+    -0.059
+   ],
+   "foe": [
+    2.852,
+    0.013
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 44
+  },
+  {
+   "t": 4.008,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.748,
+    -0.063
+   ],
+   "foe": [
+    2.849,
+    0.014
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 45
+  },
+  {
+   "t": 4.025,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.741,
+    -0.066
+   ],
+   "foe": [
+    2.846,
+    0.014
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 46
+  },
+  {
+   "t": 4.042,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.734,
+    -0.07
+   ],
+   "foe": [
+    2.842,
+    0.015
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 47
+  },
+  {
+   "t": 4.058,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.727,
+    -0.074
+   ],
+   "foe": [
+    2.839,
+    0.015
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 48
+  },
+  {
+   "t": 4.075,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.719,
+    -0.078
+   ],
+   "foe": [
+    2.835,
+    0.016
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 49
+  },
+  {
+   "t": 4.117,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.697,
+    -0.088
+   ],
+   "foe": [
+    2.825,
+    0.016
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 50
+  },
+  {
+   "t": 4.133,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.687,
+    -0.092
+   ],
+   "foe": [
+    2.821,
+    0.016
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 51
+  },
+  {
+   "t": 4.15,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.676,
+    -0.096
+   ],
+   "foe": [
+    2.816,
+    0.016
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 52
+  },
+  {
+   "t": 4.167,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.664,
+    -0.1
+   ],
+   "foe": [
+    2.811,
+    0.016
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 53
+  },
+  {
+   "t": 4.183,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.653,
+    -0.105
+   ],
+   "foe": [
+    2.805,
+    0.015
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 54
+  },
+  {
+   "t": 4.2,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.64,
+    -0.11
+   ],
+   "foe": [
+    2.8,
+    0.015
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 55
+  },
+  {
+   "t": 4.217,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.627,
+    -0.114
+   ],
+   "foe": [
+    2.794,
+    0.014
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 56
+  },
+  {
+   "t": 4.233,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.614,
+    -0.119
+   ],
+   "foe": [
+    2.789,
+    0.014
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 57
+  },
+  {
+   "t": 4.258,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.593,
+    -0.127
+   ],
+   "foe": [
+    2.783,
+    0.012
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 58
+  },
+  {
+   "t": 4.275,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.579,
+    -0.132
+   ],
+   "foe": [
+    2.78,
+    0.011
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 59
+  },
+  {
+   "t": 4.292,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.564,
+    -0.137
+   ],
+   "foe": [
+    2.778,
+    0.011
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 60
+  },
+  {
+   "t": 4.308,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.549,
+    -0.143
+   ],
+   "foe": [
+    2.778,
+    0.01
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 61
+  },
+  {
+   "t": 4.325,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.533,
+    -0.148
+   ],
+   "foe": [
+    2.777,
+    0.01
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 62
+  },
+  {
+   "t": 4.342,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.517,
+    -0.154
+   ],
+   "foe": [
+    2.777,
+    0.01
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 63
+  },
+  {
+   "t": 4.358,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.5,
+    -0.159
+   ],
+   "foe": [
+    2.777,
+    0.009
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 64
+  },
+  {
+   "t": 4.375,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.483,
+    -0.165
+   ],
+   "foe": [
+    2.777,
+    0.009
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 65
+  },
+  {
+   "t": 4.417,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.439,
+    -0.18
+   ],
+   "foe": [
+    2.777,
+    0.009
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 66
+  },
+  {
+   "t": 4.433,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.421,
+    -0.186
+   ],
+   "foe": [
+    2.777,
+    0.009
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 67
+  },
+  {
+   "t": 4.45,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.402,
+    -0.193
+   ],
+   "foe": [
+    2.777,
+    0.009
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 68
+  },
+  {
+   "t": 4.467,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.383,
+    -0.199
+   ],
+   "foe": [
+    2.777,
+    0.009
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 69
+  },
+  {
+   "t": 4.483,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.364,
+    -0.206
+   ],
+   "foe": [
+    2.778,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 70
+  },
+  {
+   "t": 4.5,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.345,
+    -0.212
+   ],
+   "foe": [
+    2.778,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 71
+  },
+  {
+   "t": 4.517,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.325,
+    -0.219
+   ],
+   "foe": [
+    2.778,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 72
+  },
+  {
+   "t": 4.533,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.306,
+    -0.227
+   ],
+   "foe": [
+    2.779,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 73
+  },
+  {
+   "t": 4.558,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.277,
+    -0.238
+   ],
+   "foe": [
+    2.779,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 74
+  },
+  {
+   "t": 4.575,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.258,
+    -0.246
+   ],
+   "foe": [
+    2.78,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 75
+  },
+  {
+   "t": 4.592,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.238,
+    -0.254
+   ],
+   "foe": [
+    2.78,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 76
+  },
+  {
+   "t": 4.608,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.219,
+    -0.262
+   ],
+   "foe": [
+    2.781,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 77
+  },
+  {
+   "t": 4.625,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.199,
+    -0.271
+   ],
+   "foe": [
+    2.781,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 78
+  },
+  {
+   "t": 4.642,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.18,
+    -0.279
+   ],
+   "foe": [
+    2.782,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 79
+  },
+  {
+   "t": 4.658,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.16,
+    -0.288
+   ],
+   "foe": [
+    2.782,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 80
+  },
+  {
+   "t": 4.675,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.141,
+    -0.297
+   ],
+   "foe": [
+    2.783,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 81
+  },
+  {
+   "t": 4.717,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.094,
+    -0.319
+   ],
+   "foe": [
+    2.784,
+    0.008
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 82
+  },
+  {
+   "t": 4.733,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.076,
+    -0.328
+   ],
+   "foe": [
+    2.784,
+    0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 83
+  },
+  {
+   "t": 4.75,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.058,
+    -0.338
+   ],
+   "foe": [
+    2.784,
+    0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 84
+  },
+  {
+   "t": 4.767,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.041,
+    -0.347
+   ],
+   "foe": [
+    2.785,
+    0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 85
+  },
+  {
+   "t": 4.783,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.024,
+    -0.357
+   ],
+   "foe": [
+    2.785,
+    0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 86
+  },
+  {
+   "t": 4.8,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.007,
+    -0.367
+   ],
+   "foe": [
+    2.785,
+    0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 87
+  },
+  {
+   "t": 4.817,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.99,
+    -0.377
+   ],
+   "foe": [
+    2.786,
+    0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 88
+  },
+  {
+   "t": 4.833,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.975,
+    -0.39
+   ],
+   "foe": [
+    2.786,
+    0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 89
+  },
+  {
+   "t": 4.85,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.961,
+    -0.403
+   ],
+   "foe": [
+    2.786,
+    0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 90
+  },
+  {
+   "t": 4.875,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.942,
+    -0.422
+   ],
+   "foe": [
+    2.787,
+    0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 91
+  },
+  {
+   "t": 4.892,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.93,
+    -0.436
+   ],
+   "foe": [
+    2.787,
+    0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 92
+  },
+  {
+   "t": 4.908,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.919,
+    -0.45
+   ],
+   "foe": [
+    2.787,
+    0.007
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 93
+  },
+  {
+   "t": 4.925,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.915,
+    -0.465
+   ],
+   "foe": [
+    2.787,
+    0.006
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 94
+  },
+  {
+   "t": 4.942,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.912,
+    -0.48
+   ],
+   "foe": [
+    2.788,
+    0.006
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 95
+  },
+  {
+   "t": 4.958,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.909,
+    -0.493
+   ],
+   "foe": [
+    2.788,
+    0.006
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 96
+  },
+  {
+   "t": 4.975,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.91,
+    -0.504
+   ],
+   "foe": [
+    2.788,
+    0.006
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 97
+  },
+  {
+   "t": 5.008,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.914,
+    -0.518
+   ],
+   "foe": [
+    2.788,
+    0.006
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 98
+  },
+  {
+   "t": 5.033,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.917,
+    -0.527
+   ],
+   "foe": [
+    2.789,
+    0.006
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 99
+  },
+  {
+   "t": 5.05,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.919,
+    -0.533
+   ],
+   "foe": [
+    2.789,
+    0.006
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 100
+  },
+  {
+   "t": 5.067,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.92,
+    -0.537
+   ],
+   "foe": [
+    2.789,
+    0.006
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 101
+  },
+  {
+   "t": 5.083,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.922,
+    -0.542
+   ],
+   "foe": [
+    2.789,
+    0.006
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 102
+  },
+  {
+   "t": 5.1,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.923,
+    -0.546
+   ],
+   "foe": [
+    2.789,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 103
+  },
+  {
+   "t": 5.117,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.924,
+    -0.55
+   ],
+   "foe": [
+    2.79,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 104
+  },
+  {
+   "t": 5.133,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.926,
+    -0.553
+   ],
+   "foe": [
+    2.79,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 105
+  },
+  {
+   "t": 5.15,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.927,
+    -0.556
+   ],
+   "foe": [
+    2.79,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 106
+  },
+  {
+   "t": 5.167,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.928,
+    -0.559
+   ],
+   "foe": [
+    2.79,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 107
+  },
+  {
+   "t": 5.192,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.93,
+    -0.563
+   ],
+   "foe": [
+    2.791,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 108
+  },
+  {
+   "t": 5.208,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.93,
+    -0.566
+   ],
+   "foe": [
+    2.791,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 109
+  },
+  {
+   "t": 5.225,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.931,
+    -0.568
+   ],
+   "foe": [
+    2.791,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 110
+  },
+  {
+   "t": 5.242,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.932,
+    -0.57
+   ],
+   "foe": [
+    2.791,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 111
+  },
+  {
+   "t": 5.258,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.933,
+    -0.572
+   ],
+   "foe": [
+    2.792,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 112
+  },
+  {
+   "t": 5.275,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.934,
+    -0.574
+   ],
+   "foe": [
+    2.792,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 113
+  },
+  {
+   "t": 5.308,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.935,
+    -0.577
+   ],
+   "foe": [
+    2.792,
+    0.005
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 114
+  },
+  {
+   "t": 5.325,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.935,
+    -0.578
+   ],
+   "foe": [
+    2.792,
+    0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 115
+  },
+  {
+   "t": 5.35,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.936,
+    -0.58
+   ],
+   "foe": [
+    2.793,
+    0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 116
+  },
+  {
+   "t": 5.367,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.936,
+    -0.581
+   ],
+   "foe": [
+    2.793,
+    0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 117
+  },
+  {
+   "t": 5.383,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.937,
+    -0.582
+   ],
+   "foe": [
+    2.793,
+    0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 118
+  },
+  {
+   "t": 5.4,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.937,
+    -0.584
+   ],
+   "foe": [
+    2.793,
+    0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 119
+  },
+  {
+   "t": 5.417,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.937,
+    -0.585
+   ],
+   "foe": [
+    2.793,
+    0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 120
+  },
+  {
+   "t": 5.433,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.938,
+    -0.586
+   ],
+   "foe": [
+    2.793,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 121
+  },
+  {
+   "t": 5.45,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.938,
+    -0.587
+   ],
+   "foe": [
+    2.793,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 122
+  },
+  {
+   "t": 5.467,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.939,
+    -0.588
+   ],
+   "foe": [
+    2.794,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 123
+  },
+  {
+   "t": 5.483,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.939,
+    -0.589
+   ],
+   "foe": [
+    2.794,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 124
+  },
+  {
+   "t": 5.508,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.939,
+    -0.59
+   ],
+   "foe": [
+    2.794,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 125
+  },
+  {
+   "t": 5.525,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.94,
+    -0.591
+   ],
+   "foe": [
+    2.794,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 126
+  },
+  {
+   "t": 5.542,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.94,
+    -0.592
+   ],
+   "foe": [
+    2.794,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 127
+  },
+  {
+   "t": 5.558,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.941,
+    -0.593
+   ],
+   "foe": [
+    2.794,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 128
+  },
+  {
+   "t": 5.575,
+   "state": "down",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.941,
+    -0.594
+   ],
+   "foe": [
+    2.794,
+    0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 129
+  },
+  {
+   "t": 5.608,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.944,
+    -0.604
+   ],
+   "foe": [
+    2.794,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 130
+  },
+  {
+   "t": 5.625,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.946,
+    -0.606
+   ],
+   "foe": [
+    2.794,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 131
+  },
+  {
+   "t": 5.642,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.947,
+    -0.606
+   ],
+   "foe": [
+    2.794,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 132
+  },
+  {
+   "t": 5.667,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.95,
+    -0.606
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 133
+  },
+  {
+   "t": 5.683,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.952,
+    -0.605
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 134
+  },
+  {
+   "t": 5.7,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.954,
+    -0.604
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 135
+  },
+  {
+   "t": 5.717,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.956,
+    -0.602
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 136
+  },
+  {
+   "t": 5.733,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.958,
+    -0.6
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 137
+  },
+  {
+   "t": 5.75,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.961,
+    -0.596
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 138
+  },
+  {
+   "t": 5.767,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.963,
+    -0.592
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 139
+  },
+  {
+   "t": 5.783,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.966,
+    -0.588
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 140
+  },
+  {
+   "t": 5.8,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.97,
+    -0.585
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 141
+  },
+  {
+   "t": 5.825,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.976,
+    -0.581
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 142
+  },
+  {
+   "t": 5.842,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.98,
+    -0.577
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 143
+  },
+  {
+   "t": 5.858,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.985,
+    -0.572
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 144
+  },
+  {
+   "t": 5.875,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.989,
+    -0.567
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 145
+  },
+  {
+   "t": 5.908,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.998,
+    -0.557
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 146
+  },
+  {
+   "t": 5.925,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.003,
+    -0.551
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 147
+  },
+  {
+   "t": 5.942,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.008,
+    -0.545
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 148
+  },
+  {
+   "t": 5.958,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.013,
+    -0.539
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 149
+  },
+  {
+   "t": 5.983,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.02,
+    -0.529
+   ],
+   "foe": [
+    2.795,
+    0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 150
+  },
+  {
+   "t": 6,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.025,
+    -0.522
+   ],
+   "foe": [
+    2.795,
+    0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 151
+  },
+  {
+   "t": 6.017,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.03,
+    -0.515
+   ],
+   "foe": [
+    2.795,
+    0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 152
+  },
+  {
+   "t": 6.033,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.034,
+    -0.508
+   ],
+   "foe": [
+    2.795,
+    0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 153
+  },
+  {
+   "t": 6.05,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.038,
+    -0.5
+   ],
+   "foe": [
+    2.795,
+    0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 154
+  },
+  {
+   "t": 6.067,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.042,
+    -0.492
+   ],
+   "foe": [
+    2.795,
+    0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 155
+  },
+  {
+   "t": 6.083,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.046,
+    -0.484
+   ],
+   "foe": [
+    2.795,
+    0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 156
+  },
+  {
+   "t": 6.1,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.05,
+    -0.477
+   ],
+   "foe": [
+    2.795,
+    0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 157
+  },
+  {
+   "t": 6.117,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.054,
+    -0.469
+   ],
+   "foe": [
+    2.795,
+    0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 158
+  },
+  {
+   "t": 6.142,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.059,
+    -0.46
+   ],
+   "foe": [
+    2.795,
+    0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 159
+  },
+  {
+   "t": 6.158,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.062,
+    -0.453
+   ],
+   "foe": [
+    2.795,
+    0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 160
+  },
+  {
+   "t": 6.175,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.064,
+    -0.448
+   ],
+   "foe": [
+    2.795,
+    0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 161
+  },
+  {
+   "t": 6.208,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.069,
+    -0.437
+   ],
+   "foe": [
+    2.794,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 162
+  },
+  {
+   "t": 6.225,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.07,
+    -0.432
+   ],
+   "foe": [
+    2.794,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 163
+  },
+  {
+   "t": 6.242,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.072,
+    -0.427
+   ],
+   "foe": [
+    2.794,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 164
+  },
+  {
+   "t": 6.258,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.073,
+    -0.422
+   ],
+   "foe": [
+    2.794,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 165
+  },
+  {
+   "t": 6.275,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.074,
+    -0.418
+   ],
+   "foe": [
+    2.794,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 166
+  },
+  {
+   "t": 6.3,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.075,
+    -0.412
+   ],
+   "foe": [
+    2.794,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 167
+  },
+  {
+   "t": 6.317,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.076,
+    -0.408
+   ],
+   "foe": [
+    2.794,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 168
+  },
+  {
+   "t": 6.333,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.077,
+    -0.404
+   ],
+   "foe": [
+    2.794,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 169
+  },
+  {
+   "t": 6.35,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.079,
+    -0.4
+   ],
+   "foe": [
+    2.793,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 170
+  },
+  {
+   "t": 6.367,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.08,
+    -0.396
+   ],
+   "foe": [
+    2.793,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 171
+  },
+  {
+   "t": 6.383,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.081,
+    -0.392
+   ],
+   "foe": [
+    2.793,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 172
+  },
+  {
+   "t": 6.4,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.082,
+    -0.388
+   ],
+   "foe": [
+    2.793,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 173
+  },
+  {
+   "t": 6.417,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.083,
+    -0.384
+   ],
+   "foe": [
+    2.793,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 174
+  },
+  {
+   "t": 6.433,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.084,
+    -0.38
+   ],
+   "foe": [
+    2.793,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 175
+  },
+  {
+   "t": 6.458,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.085,
+    -0.376
+   ],
+   "foe": [
+    2.793,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 176
+  },
+  {
+   "t": 6.475,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.086,
+    -0.373
+   ],
+   "foe": [
+    2.792,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 177
+  },
+  {
+   "t": 6.508,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.087,
+    -0.368
+   ],
+   "foe": [
+    2.792,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 178
+  },
+  {
+   "t": 6.525,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.089,
+    -0.366
+   ],
+   "foe": [
+    2.792,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 179
+  },
+  {
+   "t": 6.542,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.09,
+    -0.364
+   ],
+   "foe": [
+    2.792,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 180
+  },
+  {
+   "t": 6.558,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.092,
+    -0.363
+   ],
+   "foe": [
+    2.792,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 181
+  },
+  {
+   "t": 6.575,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.093,
+    -0.361
+   ],
+   "foe": [
+    2.792,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 182
+  },
+  {
+   "t": 6.6,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.096,
+    -0.358
+   ],
+   "foe": [
+    2.792,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 183
+  },
+  {
+   "t": 6.617,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.098,
+    -0.356
+   ],
+   "foe": [
+    2.791,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 184
+  },
+  {
+   "t": 6.633,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.1,
+    -0.354
+   ],
+   "foe": [
+    2.791,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 185
+  },
+  {
+   "t": 6.65,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.102,
+    -0.352
+   ],
+   "foe": [
+    2.791,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 186
+  },
+  {
+   "t": 6.667,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.104,
+    -0.35
+   ],
+   "foe": [
+    2.791,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 187
+  },
+  {
+   "t": 6.683,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.105,
+    -0.348
+   ],
+   "foe": [
+    2.791,
+    0
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 188
+  },
+  {
+   "t": 6.7,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.107,
+    -0.347
+   ],
+   "foe": [
+    2.791,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 189
+  },
+  {
+   "t": 6.717,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.109,
+    -0.345
+   ],
+   "foe": [
+    2.791,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 190
+  },
+  {
+   "t": 6.733,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.11,
+    -0.343
+   ],
+   "foe": [
+    2.791,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 191
+  },
+  {
+   "t": 6.758,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.113,
+    -0.34
+   ],
+   "foe": [
+    2.791,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 192
+  },
+  {
+   "t": 6.775,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.114,
+    -0.338
+   ],
+   "foe": [
+    2.791,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 193
+  },
+  {
+   "t": 6.808,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.117,
+    -0.334
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 194
+  },
+  {
+   "t": 6.825,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.117,
+    -0.333
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 195
+  },
+  {
+   "t": 6.842,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.117,
+    -0.331
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 196
+  },
+  {
+   "t": 6.858,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.116,
+    -0.33
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 197
+  },
+  {
+   "t": 6.875,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.114,
+    -0.328
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 198
+  },
+  {
+   "t": 6.892,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.113,
+    -0.327
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 199
+  },
+  {
+   "t": 6.917,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.11,
+    -0.325
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 200
+  },
+  {
+   "t": 6.933,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.107,
+    -0.324
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 201
+  },
+  {
+   "t": 6.95,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.105,
+    -0.323
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 202
+  },
+  {
+   "t": 6.967,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.102,
+    -0.322
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 203
+  },
+  {
+   "t": 6.983,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.099,
+    -0.321
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 204
+  },
+  {
+   "t": 7,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.097,
+    -0.32
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 205
+  },
+  {
+   "t": 7.017,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.094,
+    -0.319
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 206
+  },
+  {
+   "t": 7.033,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.091,
+    -0.318
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 207
+  },
+  {
+   "t": 7.05,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.089,
+    -0.318
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 208
+  },
+  {
+   "t": 7.075,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.086,
+    -0.316
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 209
+  },
+  {
+   "t": 7.108,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.082,
+    -0.314
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 210
+  },
+  {
+   "t": 7.125,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.08,
+    -0.313
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 211
+  },
+  {
+   "t": 7.142,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.079,
+    -0.312
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 212
+  },
+  {
+   "t": 7.158,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.077,
+    -0.31
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 213
+  },
+  {
+   "t": 7.175,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.077,
+    -0.309
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 214
+  },
+  {
+   "t": 7.192,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.076,
+    -0.308
+   ],
+   "foe": [
+    2.79,
+    -0.001
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 215
+  },
+  {
+   "t": 7.208,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.075,
+    -0.306
+   ],
+   "foe": [
+    2.79,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 216
+  },
+  {
+   "t": 7.233,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.075,
+    -0.304
+   ],
+   "foe": [
+    2.79,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 217
+  },
+  {
+   "t": 7.25,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.075,
+    -0.303
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 218
+  },
+  {
+   "t": 7.267,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.074,
+    -0.301
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 219
+  },
+  {
+   "t": 7.283,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.074,
+    -0.3
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 220
+  },
+  {
+   "t": 7.3,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.074,
+    -0.298
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 221
+  },
+  {
+   "t": 7.317,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.075,
+    -0.297
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 222
+  },
+  {
+   "t": 7.333,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.076,
+    -0.295
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 223
+  },
+  {
+   "t": 7.35,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.077,
+    -0.294
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 224
+  },
+  {
+   "t": 7.367,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.078,
+    -0.293
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 225
+  },
+  {
+   "t": 7.408,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.081,
+    -0.289
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 226
+  },
+  {
+   "t": 7.425,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.082,
+    -0.288
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 227
+  },
+  {
+   "t": 7.442,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.083,
+    -0.287
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 228
+  },
+  {
+   "t": 7.458,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.085,
+    -0.285
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 229
+  },
+  {
+   "t": 7.475,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.086,
+    -0.284
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 230
+  },
+  {
+   "t": 7.492,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.088,
+    -0.283
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 231
+  },
+  {
+   "t": 7.508,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.089,
+    -0.282
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 232
+  },
+  {
+   "t": 7.525,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.091,
+    -0.281
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 233
+  },
+  {
+   "t": 7.55,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.093,
+    -0.279
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 234
+  },
+  {
+   "t": 7.567,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.095,
+    -0.278
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 235
+  },
+  {
+   "t": 7.583,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.096,
+    -0.277
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 236
+  },
+  {
+   "t": 7.6,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.098,
+    -0.276
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 237
+  },
+  {
+   "t": 7.617,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.1,
+    -0.275
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 238
+  },
+  {
+   "t": 7.633,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.101,
+    -0.275
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 239
+  },
+  {
+   "t": 7.65,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.103,
+    -0.274
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 240
+  },
+  {
+   "t": 7.667,
+   "state": "getup",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.104,
+    -0.273
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 241
+  },
+  {
+   "t": 7.708,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.108,
+    -0.272
+   ],
+   "foe": [
+    2.789,
+    -0.002
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 242
+  },
+  {
+   "t": 7.725,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.108,
+    -0.271
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 243
+  },
+  {
+   "t": 7.742,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.108,
+    -0.27
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 244
+  },
+  {
+   "t": 7.758,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.107,
+    -0.268
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 245
+  },
+  {
+   "t": 7.775,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.107,
+    -0.268
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 246
+  },
+  {
+   "t": 7.792,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.107,
+    -0.267
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 247
+  },
+  {
+   "t": 7.808,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.107,
+    -0.266
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 248
+  },
+  {
+   "t": 7.825,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.108,
+    -0.265
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 249
+  },
+  {
+   "t": 7.842,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.112,
+    -0.264
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 250
+  },
+  {
+   "t": 7.867,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.122,
+    -0.263
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 251
+  },
+  {
+   "t": 7.883,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.126,
+    -0.262
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 252
+  },
+  {
+   "t": 7.9,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.129,
+    -0.261
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 253
+  },
+  {
+   "t": 7.917,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.132,
+    -0.26
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 254
+  },
+  {
+   "t": 7.933,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.132,
+    -0.259
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 255
+  },
+  {
+   "t": 7.95,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.132,
+    -0.259
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 256
+  },
+  {
+   "t": 7.967,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.13,
+    -0.258
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 257
+  },
+  {
+   "t": 8,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.122,
+    -0.257
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 258
+  },
+  {
+   "t": 8.025,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.114,
+    -0.256
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 259
+  },
+  {
+   "t": 8.042,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.109,
+    -0.256
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 260
+  },
+  {
+   "t": 8.058,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.105,
+    -0.255
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 261
+  },
+  {
+   "t": 8.075,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.102,
+    -0.255
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 262
+  },
+  {
+   "t": 8.092,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.1,
+    -0.255
+   ],
+   "foe": [
+    2.789,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 263
+  },
+  {
+   "t": 8.108,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.099,
+    -0.254
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 264
+  },
+  {
+   "t": 8.125,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.097,
+    -0.254
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 265
+  },
+  {
+   "t": 8.142,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.095,
+    -0.254
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 266
+  },
+  {
+   "t": 8.158,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.093,
+    -0.254
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 267
+  },
+  {
+   "t": 8.183,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.09,
+    -0.254
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 268
+  },
+  {
+   "t": 8.2,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.087,
+    -0.253
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 269
+  },
+  {
+   "t": 8.217,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.085,
+    -0.253
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 270
+  },
+  {
+   "t": 8.233,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.082,
+    -0.253
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 271
+  },
+  {
+   "t": 8.25,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.079,
+    -0.253
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 272
+  },
+  {
+   "t": 8.267,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.076,
+    -0.253
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 273
+  },
+  {
+   "t": 8.3,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.068,
+    -0.253
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 274
+  },
+  {
+   "t": 8.317,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.063,
+    -0.253
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 275
+  },
+  {
+   "t": 8.342,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.056,
+    -0.253
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 276
+  },
+  {
+   "t": 8.358,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.053,
+    -0.253
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 277
+  },
+  {
+   "t": 8.375,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.049,
+    -0.253
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 278
+  },
+  {
+   "t": 8.392,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.045,
+    -0.253
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 279
+  },
+  {
+   "t": 8.408,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.042,
+    -0.252
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 280
+  },
+  {
+   "t": 8.425,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.037,
+    -0.252
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 281
+  },
+  {
+   "t": 8.442,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.033,
+    -0.252
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 282
+  },
+  {
+   "t": 8.458,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.029,
+    -0.252
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 283
+  },
+  {
+   "t": 8.475,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.024,
+    -0.251
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 284
+  },
+  {
+   "t": 8.5,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.017,
+    -0.251
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 285
+  },
+  {
+   "t": 8.517,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.013,
+    -0.251
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 286
+  },
+  {
+   "t": 8.533,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.008,
+    -0.25
+   ],
+   "foe": [
+    2.788,
+    -0.003
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 287
+  },
+  {
+   "t": 8.55,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.004,
+    -0.25
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 288
+  },
+  {
+   "t": 8.567,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2,
+    -0.25
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 289
+  },
+  {
+   "t": 8.6,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.996,
+    -0.249
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 290
+  },
+  {
+   "t": 8.617,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.995,
+    -0.249
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 291
+  },
+  {
+   "t": 8.633,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.994,
+    -0.249
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 292
+  },
+  {
+   "t": 8.658,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.994,
+    -0.249
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 293
+  },
+  {
+   "t": 8.675,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.994,
+    -0.249
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 294
+  },
+  {
+   "t": 8.692,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.995,
+    -0.249
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 295
+  },
+  {
+   "t": 8.708,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -1.998,
+    -0.249
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 296
+  },
+  {
+   "t": 8.725,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.001,
+    -0.249
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 297
+  },
+  {
+   "t": 8.742,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.003,
+    -0.249
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 298
+  },
+  {
+   "t": 8.758,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.005,
+    -0.249
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 299
+  },
+  {
+   "t": 8.775,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.006,
+    -0.249
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 300
+  },
+  {
+   "t": 8.8,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.007,
+    -0.249
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 301
+  },
+  {
+   "t": 8.817,
+   "state": "stand",
+   "armed": true,
+   "autoPick": false,
+   "pickup": false,
+   "thrust": 0,
+   "cut": 0,
+   "tap": false,
+   "swing": false,
+   "guard": false,
+   "move": [
+    0,
+    0
+   ],
+   "pelvis": [
+    -2.008,
+    -0.25
+   ],
+   "foe": [
+    2.788,
+    -0.004
+   ],
+   "sword": null,
+   "hand": [
+    0.15,
+    0
+   ],
+   "sec": null,
+   "uq": null,
+   "f": 302
+  }
+ ]
+}

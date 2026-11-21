@@ -75,3 +75,57 @@ Checkout: main at bd9228dd, served at http://127.0.0.1:5310. Card text is `NODE_
 - No HUD evidence for the bursts or for B5/B7.
 - Discarded earlier passes: one lifted the wrong finger, one used stamina as the burst signal. Only the corrected runs are in results.json.
 - Incident: `pkill -f "cells.mjs http"` around 19:12 UTC also killed other auditors' harness runs with the same file name.
+
+---
+
+## Inputs while the player's body can't act (German longsword, foe AI frozen)
+Both situations are forced: (1) `player.knockDown(true)` and (2) `player.dropSword()` called by script, with `game.ai.update = () => game.enemy.move.set(0,0)`. Each ran 3 times with input and 3 times as a control (12 runs), all real CDP touches. Every touchMove waited for the page's pointermove counter to go up before the frame was stepped; `lateMoves` was 0 in every run. No wall-clock sleeps, and I stopped only processes by their PIDs.
+
+**Two things leak in both situations: a swipe while lying down counts as a cut, and the guard button stays held.** Nothing fires late after standing up or after picking the sword up.
+
+### (1) Lying down
+Inputs started 10 frames after the knockdown. The sequence was a tap (f12), a fast swipe (f19, 4 moves of 30/30 px), the guard held 15 frames (f20–35), then the stick fully right from f36 until standing.
+
+| Measure | Input runs (×3) | Control runs (×3) | What it means |
+|---|---|---|---|
+| Thrust count | 0 | 0 | The tap is dropped |
+| Cut count | +1 in every run | 0 | **The swipe while lying counts as a cut** |
+| `skill.tap` frames | 0 | 0 | |
+| `skill.swinging` frames | 6 / 6 / 5 | 0 | The swipe registers as swinging |
+| `playerGuard.held` frames | 15 / 15 / 15 | 0 | **The guard flag is true while lying** |
+| Frames with `player.move` non-zero | 207–208 | 0 | The stick is passed to the body |
+| Pelvis end point when standing | x about -2.195 | x about -2.108 | The stick moves the lying body only about 8 cm; path length is the same (1.69 m) |
+| Time down | 4.541 / 4.542 / 4.541 s (standing at f242–243) | the same | Input does not change it |
+| In the 60 frames after standing | no tap, swing, guard, move, secret or count change | the same | Nothing fires late |
+
+### (2) Sword dropped (auto-pickup)
+The pickup sequence was the same in every run, with or without input:
+- `autoPick` is on at f1–8/9.
+- **Then a gap of about 19 frames (f9/10 – f27/28) where `autoPick` is off and the sword is still not held.**
+- Then `autoPick` and `pickup` are on (f28/29 – f58/74).
+- The sword is held again at f56–75 (1.05–1.39 s).
+
+Inputs were sent from f2: tap f2, swipe f3–9, guard f10–25, stick from f26 held until the sword was held. Because of the gap, the tap and most of the swipe landed during `autoPick`, but the guard and the stick landed in the gap.
+
+| Measure | Input runs (×3) | Control runs (×3) | What it means |
+|---|---|---|---|
+| Thrust and cut counts | 0 | 0 | Tap and swipe are dropped (during `autoPick`, or with no sword) |
+| `skill.swinging` frames | 0 | 0 | |
+| `playerGuard.held` frames | 14 / 14 / 15 (f10/11–24) | 0 | **The guard is held in the gap** |
+| Frames with `player.move` non-zero | 3 / 3 / 2 (f26–28) | 0 | The stick drives the body in the gap; `move` goes back to 0 once `autoPick` is on again |
+| Time until the sword is held | 1.39 / 1.39 / 1.11 s | 1.39 / 1.14 / 1.05 s | No clear effect; the controls themselves vary by 0.3 s |
+| Pelvis end point | within about 4 cm of the matching control | | No real change to the path |
+| After the sword is held (60 frames) | nothing late | nothing late | |
+
+**Unfinished in (2): the stick did not point away from the sword as you asked.** I could not read the sword's position (`player.sword` gave no position), so the script fell back to stick fully right. Each run's JSON records the vector actually used, `stickVec [1,0]`.
+
+The guard and stick leak in (2) is a gap in the auto-pickup itself: the gap shows up in the control runs too, where nothing was pressed.
+
+### Files
+Scripts and raw results are in `<scratch>/a/blocked/`:
+- `run.mjs`: one run. Usage: `node blocked/run.mjs <baseUrl> <outDir> <down|drop> <input|control> <i>`. It reuses `../lib.mjs`.
+- `run_all.sh`: runs all six for one situation.
+- `out/*.json`: one file per run, with a summary, per-frame records and the pointer log.
+- `log_down.txt`, `log_drop.txt`: console output.
+
+My browsers are closed; the dev server and the checkout were not touched.

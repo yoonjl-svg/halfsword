@@ -5,18 +5,19 @@ import { createRequire } from 'node:module';
 const { chromium } = createRequire(import.meta.url)('playwright');
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export async function boot({ base, school = 'german', cells = [], weapon = 'longsword', freezeFoe = true, settle = 6000, tearOff = false }) {
+export async function boot({ base, school = 'german', cells = [], weapon = 'longsword', freezeFoe = true, settle = 6000, tearOff = false, stopAt = 'fight', atkStick = false }) { // weapon: null = nothing equipped in the lobby (the game then deals weapon cards: state 'draw') · stopAt: 'draw' hands the page over at the cards
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
   await ctx.route('https://*.supabase.co/**', (r) => r.abort());
-  await ctx.addInitScript(({ school, cells, weapon, tearOff }) => {
+  await ctx.addInitScript(({ school, cells, weapon, tearOff, atkStick }) => {
     if (localStorage.getItem('audit.seeded')) return;
-    const acquisitions = [...cells.map((id) => ({ receipt: `skill:${school}:${id}`, kind: 'skill' })), { receipt: `weapon:${weapon}`, kind: 'item' }];
+    const acquisitions = [...cells.map((id) => ({ receipt: `skill:${school}:${id}`, kind: 'skill' })), ...(weapon ? [{ receipt: `weapon:${weapon}`, kind: 'item' }] : [])];
     localStorage.setItem('stillness.lobby.progress.v1', JSON.stringify({ version: 1, acquisitions, coins: 100, heads: 0 }));
-    localStorage.setItem('stillness.lobby.weapon.v1', JSON.stringify({ version: 1, weapon }));
+    if (weapon) localStorage.setItem('stillness.lobby.weapon.v1', JSON.stringify({ version: 1, weapon }));
     if (tearOff) localStorage.setItem('stillness.lobby.neck.v1', JSON.stringify({ version: 1, neck: null })); // take off the default necklace (infinite stamina) — a player can do this in the lobby
+    if (atkStick) localStorage.setItem('gladiator-settings', JSON.stringify({ atkStick: true })); // the settings switch 'attack stick' (off by default) saved as on
     localStorage.setItem('audit.seeded', '1');
-  }, { school, cells, weapon, tearOff });
+  }, { school, cells, weapon, tearOff, atkStick });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(`pageerror ${String(e).slice(0, 200)}`));
@@ -30,18 +31,18 @@ export async function boot({ base, school = 'german', cells = [], weapon = 'long
   if (await page.locator('#noticeDialog').evaluate((d) => d.open).catch(() => false)) await tapSel('#confirmNotices');
   await run(2500);
   await tapSel('#newJourney');
-  for (let i = 0; i < 400 && !(await page.evaluate(() => window.game?.state === 'fight')); i++) {
+  for (let i = 0; i < 400 && !(await page.evaluate((st) => window.game?.state === 'fight' || window.game?.state === st, stopAt)); i++) {
     await run(100);
     if (i % 20 === 5) for (const s of ['#confirmNotices', '#newJourney']) await tapSel(s).catch(() => {});
   }
   const state = await page.evaluate(() => window.game?.state);
-  if (state !== 'fight') { await browser.close(); throw new Error('did not reach fight: ' + state); }
-  if (freezeFoe) await page.evaluate(() => { const g = window.game; g.ai.update = () => g.enemy.move.set(0, 0); });
+  if (state !== 'fight' && state !== stopAt) { await browser.close(); throw new Error('did not reach fight: ' + state); }
+  if (freezeFoe && state === 'fight') await page.evaluate(() => { const g = window.game; g.ai.update = () => g.enemy.move.set(0, 0); });
   // event counters the page itself sees (what reached the DOM) — for the wiring checks
   await page.evaluate(() => { window.__ev = { down: 0, up: 0, cancel: 0, move: 0 }; const c = document.getElementById('game'); c.addEventListener('pointerdown', () => window.__ev.down++); window.addEventListener('pointermove', () => window.__ev.move++, true); window.addEventListener('pointerup', () => window.__ev.up++); window.addEventListener('pointercancel', () => window.__ev.cancel++); });
   const cdp = await ctx.newCDPSession(page);
   const pad = await page.locator('#moveStick').boundingBox();
-  const SC = { x: pad.x + pad.width / 2, y: pad.y + pad.height / 2, r: pad.width / 2 };
+  const SC = pad ? { x: pad.x + pad.width / 2, y: pad.y + pad.height / 2, r: pad.width / 2 } : { x: 86, y: 304, r: 66 }; // the stick is hidden while the cards are up — use where it will be
   const pts = new Map(); // live touch points by id
   const send = (type) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: [...pts.values()] });
   const down = async (id, x, y) => { pts.set(id, { x, y, id }); await send('touchStart'); };
@@ -52,7 +53,7 @@ export async function boot({ base, school = 'german', cells = [], weapon = 'long
   // CDP: a touchEnd lists the point(s) being LIFTED (listing the remaining ones lifts those instead — checked with a pointer-event log)
   const up = async (id) => { const p = pts.get(id); pts.delete(id); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: p ? [p] : [] }); };
   const cancel = async () => { pts.clear(); await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] }); };
-  await run(settle); // opening camera + first stance
+  if (state === 'fight') await run(settle); // opening camera + first stance
   const snap = () => page.evaluate(() => {
     const g = window.game, p = g.player, e = g.enemy, sk = p.skill, st = p.stamina, G = g.playerGuard, W = g.playerSecret;
     const tp = sk.tap;

@@ -91,3 +91,65 @@ Nothing is left unfinished from this note. Files are in `<scratch>/b`:
 - `lib.mjs`
 - `cells.mjs`
 - `make_report.mjs`
+
+---
+
+Stiff-phase check for Japanese gonosen (J5): during stiff, the tap, the swipe and the stick do not get through, and nothing fires late after stiff ends. The one input that does get through is the guard button: `playerGuard.held` reads true for every frame it is held, while still stiff. The still-held stick starts walking on the very first frame after stiff. All 5 runs are done (3 input, 2 control); nothing is unfinished.
+
+**Setup:** real page on the normal game path, all 12 Japanese cells, uchigatana, foe 하인리히 도른 with real AI, a fresh fight for each run. Gonosen was fired as before: no input until the window opens, then one tap.
+
+**Clock and touches:**
+- Time is stepped only (`runFor(17)` per frame); there are no wall-clock waits.
+- Every touch event is sent, then I wait without stepping the clock until the page's own touch `pointerdown`/`pointermove`/`pointerup` counter has gone up, and only then step the frame. The swipe moves needed 8 to 16 checks before the page saw them, which confirms your "one beat late" finding; the downs and ups needed 0 to 1.
+- touchEnd lists only the finger being lifted.
+- Small exception: the stick goes down through my earlier helper, which steps one 17 ms frame between the thumb going down and tilting. That frame is not in the per-frame log.
+
+**Input order during stiff** (frames counted from the first stiff frame):
+
+| Frame | Input |
+|---|---|
+| 1 | tap: down, 17 ms stepped, up, 0 px |
+| 4–9 | fast swipe: down, 4 moves of (−24, +18) px one per frame, up |
+| 10–11 | stick thumb down, then tilted fully forward, held through stiff and the 60 frames after |
+| 12–27 | guard button held 15 frames |
+
+**Stiff length:** 0.685 to 0.694 game-seconds, 35 to 38 frames, in all 5 runs.
+
+**During stiff:**
+
+| | Input runs (3) | Control runs (2) |
+|---|---|---|
+| Stamina counts (thrust, cut, block, secret, push), change | 0 / 0 / 0 | 0 / 0 |
+| Stamina | 130 → 130 | 130 → 130 |
+| `skill.tap` or `skill.swinging` ever true | no | no |
+| Special-move fired counters, change | 0 | 0 |
+| Parry-thrust starts, change | 0 | 0 |
+| Frames with `player.move` non-zero | 0 (stick raw reads 0 while stiff) | 0 |
+| Largest hand-offset change | 0.02–0.03 m | 0.02–0.024 m |
+| Pelvis displacement | 0.057 / 0.018 / 0.087 m | 0.024 / 0.118 m |
+| Frames with `playerGuard.held` true | **15 / 15 / 15** | 0 |
+
+- The hand moved no more with a swipe than without one, so the swipe did not reach the hand.
+- Pelvis movement is within the range of the control runs, so the stick did not move the body.
+- The guard is the leak. I did not record the guard mode or pose, so whether a guard stance actually formed during stiff is **not measured**.
+
+**60 frames after stiff ends:**
+
+| | Input runs (3) | Control runs (2) |
+|---|---|---|
+| Late tap or swing (first frame `tap` / `swinging` true) | none | none |
+| Stamina counts or fired counters, change | 0 | 0 |
+| `player.move` on the first frame after stiff | [0, 1], [0, 1.09], [0, 1] | [0, 0] |
+| Pelvis displacement after 10 frames | 0.025 / 0.017 / 0.134 m | 0.02 / 0.036 m |
+| Pelvis displacement after 60 frames | **0.515 / 1.009 / 0.623 m** | 0.035 / 0.097 m |
+
+The HUD still read '고노센 · 내 일본 · 비기' at the end of every run, so nothing replaced it.
+
+**Notes:**
+- In 2 attempts the gonosen tap did not lead to a stiff phase within 200 frames. The script retried those automatically with a fresh fight; the reason was not investigated. Only completed runs are counted above.
+- I stopped only the process I started, by its PID; I killed nothing by name.
+
+Files are in `<scratch>/b/stiff`:
+- `stiff.mjs` — run as `node stiff.mjs <baseUrl> <outDir> [input,control,…]`; it uses `../lib.mjs`
+- `out/results.json` — per run: the summaries plus every frame from 2 frames before stiff to 60 frames after
+- `log.txt`
