@@ -44,6 +44,7 @@ import { wetlandWetness, WETLAND_RIM, WETLAND_CORE_SPEED } from './wetland_groun
 import { Emotions, emoMods } from './emotions.js';
 import { gunAI } from './gun.js';
 import { lowFinishPosture, lowFinishContinuing } from './finish_entry.js'; // 낮은 상대 진입 (10/12)
+import { cleaveFinish, cleaveFoe } from './finish.js'; // AI 마무리 탭 (11/22 — finGo · finPosture: 사람 탭과 같은 문)
 import { aiVitalCandidate, aiVitalPrepare } from './vital_target.js'; // 약한 자세 겨눔 (10/12)
 import { requestInstant, requestIai, requestSweep, requestCombo, requestArtReturn, requestArtRedondo, requestArtThrust, iaiReadyPose, startLunge, iaiBusy, snapAim } from './secret_instant.js'; // 일본 비기 순간 베기 (10/10) · iaiBusy 고노센 경계 — 상대 발도에 베였나 (10/25)
 import { windStart, windEnd, windRopesBack, windLoopOf } from './iberian_redondo.js'; // AI 풍차 베기 감기 (10/31 08:xx — UNIQUE_ASSIST.rdAiWind · 사람과 같은 감기 · 내려침)
@@ -1886,6 +1887,7 @@ export class AI {
     this.tech = tech;
     this.why = why;
     this.artRun = false; // 운동학 칼이 끄는 중 (비껴서며 찌르기 11/15 — inqGo · 탭 고유 동작 셋 11/19 — artGo)
+    this.finRun = false; // 마무리 탭이 끄는 중 (11/22 — finGo)
     this.hitLanded = false;
     this.bound = false;
     this.chain = opt.chain ?? 0;
@@ -1926,7 +1928,7 @@ export class AI {
     this.fastChamber = !!opt.fastChamber || this.quick;
     this.timer = this.phase === 'approach' && !this.quick ? realS(L.windup * 0.15) : 0; // 준비 자세 멈칫 = 실제 초
     // 풍차 베기 AI 몫 (사장님 10/31 08:xx '누가봐도 레돈두 준비처럼' — UNIQUE_ASSIST.rdAiWind): 머리 위 돌려 베기는 패드 길 대신 사람과 같은 감기로 (아래 rdWindTick)
-    if (this.tech?.name === 'redondo' && !this.feint && !this.secretRun && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin(); // 부러진 칼은 옛 길 (사람도 부러지면 감기를 그만둠 — windStop 'armed')
+    if (this.tech?.name === 'redondo' && !this.feint && !this.secretRun && !(why === 'finish' && this.finPosture()) && this.me.sword && this.me.armed && !this.me.weaponBroken && !this.me.rdWind && !this.me.iai && !this.me.iaiReq) this.rdBegin(); // 부러진 칼은 옛 길 (사람도 부러지면 감기를 그만둠 — windStop 'armed') · 마무리 자리(11/22)면 감지 않고 칼이 나갈 때 마무리 탭 (finGo)
     // 이어 돌리기 (11/14 IB_LINK.ai — 기본 켬 · 사장님 11/14 확인 'ai에게도 똑같이' · 사람 unique_assist.js linkTry 와 같은 뜻 · 원 동안 맞바꿈도 사람과 같음 — fighter.js ibTradeTry): 이베리아 AI 가 앞 공격이 끝나고 이어짐 창(afterWindow) 안에 큰 칼(시작 자리가 가슴 높이 이상인 베기)을
     //  새로 시작하는데 손이 그 시작 자리에서 떨어져 있으면 — 준비 자세로 손을 옮기는 대신 칼을 머리 위로 돌려 시작 자리로(iberian_link.js) · 다 돌면 곧장 친다(linkTick)
     //  11/19 B7 (사장님 '권고대로'): AI 는 원을 사슬 안의 다리로만(이어 치기 opt.chain) — 짧은 틈 공격(헛친 틈 · 되받기 …)이 원을 그리는 0.4 s 에 틈을 놓치지 않게 (사람 이어 돌리기는 그대로)
@@ -2048,6 +2050,14 @@ export class AI {
       }
       if (this.attackT > realS(lim) || d > this.holdDist() + (this.chasing ? 1.4 : 0.8) * keep + hold) this.abortAttack();
     } else if (this.phase === 'strike') {
+      if (this.finRun) {
+        // 마무리 탭이 끄는 동안 (11/22 — finGo): 칼 · 팔 · 몸은 검술 층(skill.js plungePose · cleavePose)이 쥠 · 탭이 끝나면(거둠 포함) 뒤따름 — 운동학 칼과 같은 꼴
+        if (me.skill.tap) return;
+        this.finRun = false;
+        this.phase = 'follow';
+        this.timer = 0.05;
+        return;
+      }
       if (this.artRun) {
         // 운동학 칼이 끄는 동안 (비껴서며 찌르기 11/15 — inqGo · 탭 고유 동작 셋 11/19 — artGo): 칼 · 팔 · 몸 빼기는 검술 층(secret_instant.js)이 쥠 · 끝나면 뒤따름(칼이 다 지나가면 afterStrike — 풍차 베기 rdStrikeTick 과 같음)
         if (me.iai || me.iaiReq) return;
@@ -2345,7 +2355,7 @@ export class AI {
    */
   uniqBodyTick(dt) {
     const E = UA.enhance;
-    const t = E > 0 && this.mode === 'attack' && this.phase === 'strike' && !this.feint && !this.secretRun && !this.artRun && !this.drillAtk ? this.tech : null;
+    const t = E > 0 && this.mode === 'attack' && this.phase === 'strike' && !this.feint && !this.secretRun && !this.artRun && !this.finRun && !this.drillAtk ? this.tech : null;
     const e = t ? UNIQUE_BODY.get(this.art?.tradition)?.get(t.name) ?? null : null;
     let B = e?.body ?? null;
     if (B && e.bodyMirror) {
@@ -2495,6 +2505,33 @@ export class AI {
     this.guardTimer = realS(rand(0.2, 0.6));
   }
 
+  /** 사람 탭이 지금 마무리가 될 상대 꼴인가 (11/22 — 몸 높이 · 상태만 · 닿는 곳은 skill.thrust 가 봄): 대검 = 쪼개 내려치기 문(cleaveFoe) · 그 밖 = 낮은 상대 진입(lowFinishPosture) */
+  finPosture() {
+    return cleaveFinish(this.me) ? cleaveFoe(this.foe) : lowFinishPosture(this.me, this.foe);
+  }
+
+  /**
+   * 마무리 탭 (11/22 사장님 'ai 찍게 해' · '가급적 ai와 사람이 같아야 한다' — 감사 N-015 · 기록 docs/strike/ai_finish_2026-11-22.md):
+   *  '마무리'(why 'finish')로 고른 공격의 칼이 나가는 순간(startStrike), 사람 탭이 마무리가 되는 자리면 자세 지도 내려베기 대신 사람 탭과 같은 skill.thrust 마무리를 낸다.
+   *  무기마다 사람 탭과 같은 길(skill.js thrust 의 down): 날 있는 칼 = 내리찍기(낮은 상대 진입 · 칼끝이 몸 겉면에 닿음) · 대검(몸 틀 heavy · 무기 칸 finishCleave) = 쪼개 내려치기
+   *  (무릎 꿇음 · 일어나는 중 · 쓰러짐) · 날 없는 무기 · 부러진 칼 = 머리 내려찍기. 찍기 힘(FINISH.power · cleave.power)은 combat.js 가 사람과 같은 조건으로 — AI 만의 힘 없음.
+   *  언제 · 어디서 치나(까닭 · 다가감 · 쓰러진 상대 간격)는 AI 판단 그대로. 탭은 사람 탭과 같은 부름(내딛기 칸 그대로 — 닿는 곳 밖이면 탭이 스스로 걸어 들어감 · 무릎 꿇은 채는 그 자리)이고
+   *  탭이 도는 동안 AI 는 사람처럼 스틱을 놓는다(moveFeet 끝 — 걸어 들어가기는 skill.js walkIn 이 민다).
+   *  사람 탭이 마무리가 아닌 자리(서 있는 상대 · 칼만 놓친 상대 · 대검 아닌 칼에 무릎 꿇은 상대 · 닿지 않음)는 false → 예전 길(자세 지도 기술 길). 탭이 끝날 때까지 칼이 나가는 꼴(strike — finRun)
+   */
+  finGo() {
+    const me = this.me;
+    if (this.feint || this.secretRun || !me.skill.thrust({ finish: true })) return false;
+    me.stamina.attack('thrust'); // 사람 탭 하나와 같은 값 (탭은 늘 찌르기 갈래로 청구)
+    this.phase = 'strike';
+    this.finRun = true;
+    this.path.length = 0;
+    this.sbFired = false;
+    this.stepT = 0; // 사람 마무리 탭은 내딛지 않음 (닿는 곳 밖이면 탭의 걸어 들어가기)
+    this.feintPts = 0;
+    return true;
+  }
+
   startStrike() {
     if (this.tech?.name === 'cingir' && !this.feint && !this.secretRun) {
       this.tech = this.tech.plain ?? this.tech;
@@ -2502,6 +2539,7 @@ export class AI {
     if (this.secretRun) bwAtkDrop(this.me); // 뒤 박차기 헛침 경직 (11/19): 비기 칼은 셈하지 않음 (제 경직이 있음)
     else bwAtkStart(this.me); // 칼이 나가는 순간 — 겨눈 상대가 내 칼끝 거리 안이었나
     if (this.okori) okoriEnd(this); // 오코리 (11/17): 칼이 나감 — 감은 몸이 풀림
+    if (this.why === 'finish' && this.finGo()) return; // 11/22 사장님 'ai 찍게 해': 마무리 자리면 사람 탭과 같은 마무리 탭 (못 내면 아래 옛 길)
     if (this.inqArtOn(this.tech) && this.inqGo()) return; // 11/15 비껴서며 찌르기 = 사람과 같은 운동학 칼 (못 내면 아래 옛 길 — 탭 찌르기)
     const ak = this.artKey();
     if (ak && this.artGo(ak)) return; // 11/19 A9 탭 고유 동작 = 사람과 같은 운동학 칼 (못 내면 아래 옛 길)
@@ -4621,6 +4659,7 @@ export class AI {
     if (bwStiff(me)) fwd = side = 0; // 뒤 박차기 헛침 경직 (11/19): 뜻대로 걷기 없음 (비틀 걸음은 burst_whiff.js bwTick 이 스틱을 덮어 — 사람 · AI 같음)
     // ── AI 뛰기 (11/19 — src/ai_run.js · 셋 이상 판만): 먼 상대에게 스틱 끝 · 공격 · 막기 꼴이면 끊음 — 사람과 같은 입력 칸(runReach · runBreak)
     if (me.teamSense) [fwd, side] = aiRunFeet(this, fwd, side);
+    if (this.finRun && this.mode === 'attack') fwd = side = 0; // 마무리 탭 (11/22 — finGo): 사람처럼 스틱을 놓음 — 닿는 곳 밖이면 탭이 스스로 걸어 들어감 (skill.js walkIn · 스틱을 −0.2 밑으로 당기면 거기서 찍음)
     me.stickX = side; // 스틱 원값 (감정 배수 전): 근접 밀치기 걸쇠가 읽는다 (fighter.closeStep)
     me.stickY = fwd;
     const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)

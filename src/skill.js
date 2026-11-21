@@ -225,16 +225,18 @@ export class Skill {
    * 칼 선을 따라 손을 뻗었다가 자세로 돌아온다. 찌르는 중엔 다시 받지 않는다.
    * @param opt.step false 면 내딛지 않는다 — AI 는 제 걸음(ai.js gaitStep·stepTime)으로 내딛을지 정하므로 false 로 부른다
    *  (검술 층이 따로 내딛기를 부탁하면 AI 가 "안 내딛는다"고 정한 때도 내딛고, 곧이어 AI 걸음이 그 부탁을 덮어써 두 번 내딛었다)
+   * @param opt.finish true 면 마무리 탭(쓰러진 · 낮은 상대 찍기 · 대검 쪼개 내려치기 — 아래 down)일 때만 시작한다 — 아니면 아무것도 하지 않고 false
+   *  (AI 마무리 — ai.js finGo · 11/22 사장님 'ai 찍게 해': 사람 탭과 같은 길 · 마무리가 안 되는 자리면 AI 는 제 길)
    * @returns 시작했으면 true
    */
-  thrust({ step = true, vital = undefined, rangeCommit = false, uniq = true, charged = false } = {}) {
+  thrust({ step = true, vital = undefined, rangeCommit = false, uniq = true, charged = false, finish = false } = {}) {
     const f = this.f;
     // 사람 탭으로 내는 이어 찌르기 (칼끝 돌려 빼기 — 사장님 10/28 00:5x · 01:0x · unique_assist.js tapChain): 내 찌르기가 상대 칼에 맞물린 때부터 창(cavFrom ~ cavTo) 안의 탭이면 보통 탭 찌르기 대신 그 칼 ·
     //  창보다 이른 탭은 그 기회를 없앰 — 다른 탭이 도는 중이라 아래에서 버려지는 탭도 셈(연달아 두드리면 안 나가게). AI 는 uniq 가 없음
     if (uniq && this.uniq && vital === undefined && !rangeCommit && !f.weapon?.gun && this.uniq.tapChain()) return true;
     if (f.stamina.exhausted || this.tap || this.pom || (this.vitalRange && !rangeCommit) || !f.alive || !f.armed || !f.foe || (f.state !== 'stand' && f.state !== 'kneel')) return false;
     // 권총(??? 등급): 찌르기 = 발사. 장전 중이면 쏘지 않는다 (gun.js)
-    if (f.weapon?.gun) return gunCanFire(f, { now: true }); // 권총: 찌르는 동작 없이 사격 자세(gunPose, 자동 조준 + 흔들림)의 지금 총신 방향으로 바로 쏜다 (AI 조준 보정은 gunAI)
+    if (f.weapon?.gun) return !finish && gunCanFire(f, { now: true }); // 권총(마무리 탭 없음 — finish 면 쏘지 않음): 찌르는 동작 없이 사격 자세(gunPose, 자동 조준 + 흔들림)의 지금 총신 방향으로 바로 쏜다 (AI 조준 보정은 gunAI)
     // 지금 손 목표 (몸 기준 [앞, 위, 칼 든 쪽]). 검술 보정이 다 걸려 있으면 자세 지도의 손, 덜 걸려 있으면(보정 약·끔)
     //  날것 손 위치와 섞인 실제 손 목표(fighter.handBase)에서 뻗는다 — 자세 지도의 손에서 뻗으면 실제 손보다 뒤에서 시작해 덜 나갔다
     // 보정 v2 (s > 0): 자세 지도의 손이 없다 → 늘 지금 손 목표(handBase)에서 뻗는다
@@ -242,9 +244,10 @@ export class Skill {
     // 쓰러진 상대: 누운 몸을 내리찌른다 (finish.js 가 겨눈 곳)
     //  낮은 상대 진입: 탭은 파이터 스텝보다 먼저 오므로 지금 몸으로 다시 잰다(dt 0 — 자세 섞기 amt 는 그대로).
     //  시작 허가는 amt 를 기다리지 않는다: 새로 열림(canStart) + 칼끝이 몸 겉면에 닿음(서서 걸을 수 있으면 걸어서 닿음도)
-    const anyH = cleaveFinish(f); // 10/22 23:0x 사람 대검: 상대 상태(무릎 · 일어나는 중 · 쓰러짐)로 여는 쪼개 내려치기 — 닿는 곳은 cleavePose 가 본다
+    const anyH = cleaveFinish(f); // 10/22 23:0x 대검(사람 · AI 11/22): 상대 상태(무릎 · 일어나는 중 · 쓰러짐)로 여는 쪼개 내려치기 — 닿는 곳은 cleavePose 가 본다
     updateFinish(f, 0);
     const down = anyH ? f.finish.canStart : f.finish.canStart && (f.finish.plunge.surfaceInside || (step !== false && f.state === 'stand' && f.finish.plunge.surfaceWalk));
+    if (finish && !down) return false; // AI 마무리 (11/22): 마무리 탭이 아니면 시작하지 않음 (위 updateFinish(f, 0) 는 파이터 스텝이 곧 같은 값으로 다시 셈 — 남는 것 없음)
     // 휘는 무기(채찍 — fighter.flexWeapon): 찌를 끝이 없으니 마무리가 아니면 톡 = 짧게 올렸다 내려 긋는 손목 튕기기 (druid_whip.js WHIP_FLICK — 사람 몫)
     if (f.flexWeapon && !down && !rangeCommit) {
       if (this.flick) return false;
@@ -301,7 +304,8 @@ export class Skill {
     this.thrusts++;
     if (down) {
       // 쓰러진 상대: 누운 몸 점이 닿는 곳(finish.js plunge.inside) 밖이고 걸어서 닿으면(plunge.walk) 걸어 들어간다 (plungePose — 디딤마다 본다).
-      //  AI(step:false — 제 걸음은 AI 가 정한다)·무릎 꿇은 채는 걷지 않고 그 자리에서 찍는다
+      //  step:false(AI 찌르기 기술 · 급소 찌르기 — 제 걸음은 AI 가 정한다)·무릎 꿇은 채는 걷지 않고 그 자리에서 찍는다.
+      //  AI 마무리 탭(ai.js finGo · 11/22)은 사람 탭과 같이 걷는다 — 그동안 AI 는 스틱을 놓는다
       const tp = this.tap;
       tp.walkOk = step !== false && f.state === 'stand';
       if (tp.walkOk && (tp.cleave ? cleaveReach(f.finish).walk : f.finish.plunge.walk || f.finish.plunge.surfaceWalk)) tp.walking = true;
@@ -1199,6 +1203,7 @@ export class Skill {
         tp.revProg = Math.max(tp.revProg ?? -Infinity, prog);
       }
       tp.va = va;
+      if (!tp.ended) this.settleEnd(tp); // 멈춤 끝 (11/22 — 흔들림 없이 선 칼)
     }
     this.thrustPush = !!tp.go && !tp.ended; // 팔 무게는 내려찍는 동안만 싣는다 (combat.js)
     // ── 4) 자세
@@ -1227,6 +1232,24 @@ export class Skill {
     pose.chestYaw = H.chestYaw * D2R;
     pose.pitch = B.pitch * D2R;
     pose.drop = B.drop;
+  }
+
+  /**
+   * 마무리 탭의 멈춤 끝 (11/22 — finish.js FINISH.settleV · settle · 찍기 plungePose · 쪼개 내려치기 cleavePose · 사람 · AI 같음): 내려친 뒤(go)
+   *  칼끝 빠르기(fighter.tipVel)가 판정 빠르기 바닥 밑으로 settle 초(탭 시계 tp.t) 내리 머물면 기존 끝과 똑같이 끝낸다(tEnd — 그 뒤 K.recover 동안 자세로).
+   *  바닥 위로 한 스텝이라도 움직이면 다시 셈. 기존 끝이 오는 탭은 그 전에 칼이 흔들리거나 움직여 이 끝에 닿지 않는다
+   */
+  settleEnd(tp) {
+    if (this.f.tipVel.length() >= FINISH.settleV) {
+      tp.stillT = null;
+      return false;
+    }
+    tp.stillT ??= tp.t;
+    if (tp.t - tp.stillT < FINISH.settle) return false;
+    tp.ended = true;
+    tp.tEnd = tp.t;
+    tp.endWhy = 'settle';
+    return true;
   }
 
   /**
@@ -1319,6 +1342,7 @@ export class Skill {
       }
       tp.va = va;
       tp.el = el;
+      if (!tp.ended) this.settleEnd(tp); // 멈춤 끝 (11/22 — 찍기와 같음)
     }
     this.thrustPush = !!tp.go && !tp.ended; // 내려치는 동안 (combat.js 마무리 판정 · 칼끝으로 닿으면 팔 무게)
     // ── 4) 자세
