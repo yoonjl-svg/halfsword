@@ -159,8 +159,12 @@ export class Kit {
   }
   /** light(x, y, z) → [r, g, b] 를 주면 꼭짓점 색에 (1 + 그 값) 을 곱해 둔다 (횃불·창빛 같은 따뜻한 빛을 미리 구워 넣기) */
   mesh(bin, mat, { cast = false, receive = true, light = null } = {}) {
-    if (!this.bins[bin]) return null;
+    if (!this.bins[bin]?.length) return null;
     const g = mergeGeometries(this.bins[bin], false);
+    // 합친 뒤 조각은 그려지지 않는다: 풀고 놓아준다 (무대의 update 가 Kit 을 붙잡고 있어도 조각이 남지 않게 — 감사 N-019, 대성당 조각 2,405 개가 남아 있었다).
+    //  빈 칸으로 두어 그 뒤 조각을 풀던 무대 쪽 고리는 그대로 돈다
+    for (const f of this.bins[bin]) f.dispose();
+    this.bins[bin] = [];
     if (light) bakeLight(g, light);
     const m = new THREE.Mesh(g, mat);
     m.castShadow = cast;

@@ -4,7 +4,7 @@ export function createPixelGrove(canvas, reducedMotion) {
   const ctx = canvas.getContext('2d', { alpha: false });
   const background = document.createElement('canvas'), bg = background.getContext('2d', { alpha: false });
   let w = 1, h = 1, treeX = 0, ground = 0, crown = 0, spread = 0;
-  let active = false, frame = 0, start = 0, last = -Infinity;
+  let active = false, frame = 0, timer = 0, seen = true, start = 0, last = -Infinity;
   const random = seed => { const n = Math.sin(seed * 143.71 + 23.53) * 43758.5453; return n - Math.floor(n); };
   const box = (c, x, y, width, height, color) => {
     c.fillStyle = color;
@@ -155,20 +155,28 @@ export function createPixelGrove(canvas, reducedMotion) {
     treeX=w*(w<h?.035:.15);ground=h*.88;crown=h*.74;spread=Math.min(w*.43,crown*.77);
     drawBackground();draw(active?(performance.now()-start)/1000:0);
   }
+  // 낙엽이 움직이는 동안(바람 뒤 · 화면에 보임 · 탭이 앞 · 움직임 줄이기 아님)만 돈다. 가라앉은 장면(calm · 움직임 줄이기)은 한 번만 그린다
+  const moving=()=>active&&seen&&!document.hidden&&!reducedMotion.matches;
+  function stop(){cancelAnimationFrame(frame);clearTimeout(timer);frame=timer=0;}
   function tick(now){
-    if(!active||document.hidden||reducedMotion.matches){frame=0;return;}
+    frame=0;
+    if(!moving())return;
     if(now-last>=1000/20){draw((now-start)/1000);last=now;}
-    frame=requestAnimationFrame(tick);
+    // 다음 장(초당 20 장) 차례 조금 앞까지 쉬었다가 그 프레임에 깬다 — 그리지 않는 사이 프레임마다 깨어 시각만 보던 것을 없앤다 (감사 N-022: 첫 화면 · 대기실 rAF 60 → 20 /s)
+    timer=setTimeout(()=>{timer=0;frame=requestAnimationFrame(tick);},Math.max(0,last+1000/20-performance.now()-12));
   }
-  function resume(){if(active&&!frame&&!document.hidden&&!reducedMotion.matches)frame=requestAnimationFrame(tick);}
-  function calm(){active=false;cancelAnimationFrame(frame);frame=0;draw(0);}
+  function resume(){if(moving()&&!frame&&!timer)frame=requestAnimationFrame(tick);}
+  function calm(){active=false;stop();draw(0);}
   function gust(){active=true;start=performance.now();last=-Infinity;draw(0);resume();}
   const observer=new ResizeObserver(resize);observer.observe(canvas);
-  const visibility=()=>{if(document.hidden){cancelAnimationFrame(frame);frame=0;}else resume();};
-  const motion=()=>{if(reducedMotion.matches){cancelAnimationFrame(frame);frame=0;draw(0);}else resume();};
+  // 캔버스가 화면에 안 보이면(덮개 숨김 · 크기 0) 멈추고 다시 보이면 잇는다
+  const sight=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{seen=entries[entries.length-1].isIntersecting;if(seen)resume();else stop();}):null;
+  sight?.observe(canvas);
+  const visibility=()=>{if(document.hidden)stop();else resume();};
+  const motion=()=>{if(reducedMotion.matches){stop();draw(0);}else resume();};
   document.addEventListener('visibilitychange',visibility);
   reducedMotion.addEventListener('change',motion);
-  const dispose=()=>{active=false;cancelAnimationFrame(frame);observer.disconnect();document.removeEventListener('visibilitychange',visibility);reducedMotion.removeEventListener('change',motion);};
+  const dispose=()=>{active=false;stop();observer.disconnect();sight?.disconnect();document.removeEventListener('visibilitychange',visibility);reducedMotion.removeEventListener('change',motion);};
   resize();return {calm,gust,dispose};
 }
 
