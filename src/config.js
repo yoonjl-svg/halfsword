@@ -72,7 +72,7 @@ export const STAMINA = {
   tempoRateTired: 0.8, tempoRateSevere: 0.6,
   tempoThrustTired: 0.75, tempoThrustSevere: 0.55, tempoHeavyMass: 2.5,
   tempoPommelTired: 0.72, tempoPommelSevere: 0.50,
-  tiredPower: 0.49, severePower: 0.25, // 지침·심한 지침의 팔·손목 힘 배율 — 막는 동안만(공격 중엔 tempoPower*) · 처음 들인 시작값 그대로 (사장님 확인 전)
+  tiredPower: 0.64, severePower: 0.36, // 지침·심한 지침의 팔·손목 힘 배율 — 막는 동안만(공격 중엔 tempoPower* — 같은 값) [사장님 11/21 권고대로 — 전 0.49 · 0.25 = 10/17 전 배율 0.7 · 0.5 의 제곱이 남은 시작값 · 감사 N-001 ⑤]
   aiRestAt: 20, aiAggressiveRestAt: -10, aiResumeAt: 35, // AI: 20 아래(공격적 기질 −10 아래) 새 공격 멈추고 물러남 · 35 에서 다시(되돌림 35 는 샛별 저장소 값 — 사장님 확인 전)
 };
 // 무기 특수 능력 값 (능력은 무기 스펙에 적고 — weapons.js — 값만 여기. 와신상담 woundRage · 창천 breakMult 처럼 늘 켜져 있다)
