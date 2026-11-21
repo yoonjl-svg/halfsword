@@ -1,0 +1,13 @@
+{"cell":"C3","move":"yaoji","pullBackPxPerFrame":2,"pullBackPxPerSec":118,"pullBackSec":0.82,"pauseFrames":0,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.62,0]}
+{"cell":"C3","move":"yaoji","pullBackPxPerFrame":2,"pullBackPxPerSec":118,"pullBackSec":0.82,"pauseFrames":6,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.619,0.029]}
+{"cell":"C3","move":"yaoji","pullBackPxPerFrame":3,"pullBackPxPerSec":176,"pullBackSec":0.54,"pauseFrames":0,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.619,0.029]}
+{"cell":"C3","move":"yaoji","pullBackPxPerFrame":3,"pullBackPxPerSec":176,"pullBackSec":0.54,"pauseFrames":6,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.619,0.029]}
+{"cell":"C3","move":"yaoji","pullBackPxPerFrame":4,"pullBackPxPerSec":235,"pullBackSec":0.41,"pauseFrames":0,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.619,0.029]}
+{"cell":"C3","move":"yaoji","pullBackPxPerFrame":4,"pullBackPxPerSec":235,"pullBackSec":0.41,"pauseFrames":6,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.619,0.029]}
+{"cell":"C3","move":"yaoji","pullBackPxPerFrame":6,"pullBackPxPerSec":353,"pullBackSec":0.27,"pauseFrames":0,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.619,0.029]}
+{"cell":"C3","move":"yaoji","pullBackPxPerFrame":6,"pullBackPxPerSec":353,"pullBackSec":0.27,"pauseFrames":6,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.619,0.029]}
+{"cell":"C3","move":"yaoji","pullBackPxPerFrame":8,"pullBackPxPerSec":471,"pullBackSec":0.2,"pauseFrames":0,"firedOf3":1,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,2],"handAtStroke":[0.619,0.029]}
+{"cell":"C3","move":"yaoji","pullBackPxPerFrame":8,"pullBackPxPerSec":471,"pullBackSec":0.2,"pauseFrames":6,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.619,0.029]}
+{"cell":"C3","move":"yaoji","pullBackPxPerFrame":12,"pullBackPxPerSec":706,"pullBackSec":0.14,"pauseFrames":0,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,2,2],"handAtStroke":[0.619,0.029]}
+{"cell":"C3","move":"yaoji","pullBackPxPerFrame":12,"pullBackPxPerSec":706,"pullBackSec":0.14,"pauseFrames":6,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.619,0.029]}
+DONE

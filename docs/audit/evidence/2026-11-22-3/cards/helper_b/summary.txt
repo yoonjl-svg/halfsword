@@ -1,0 +1,89 @@
+
+I6 (italian/rapier, foe 하인리히 도른 with excalibur_replica) canonical fired 3/3
+  - canon 1: guard press held 20 frames: ok=true fired=1 cls="" hud=""     d=5.768
+  - canon 2: held 40 frames: ok=true fired=1 cls="" hud=""     d=4.813
+  - canon 3: held 10 frames: ok=true fired=1 cls="" hud=""     d=3.627
+  - variant: very short guard tap (1 frame): ok=true fired=1 cls="" hud=""     d=2.726
+
+I7 (italian/rapier, foe 하인리히 도른 with excalibur_replica) canonical fired 3/3
+  - canon 1: ↓ from middle-high: ok=true fired={"imbroccata":1} cls={"tech":null,"pad":null,"dir":[-0.01,-1],"start":[0,0.3]} hud="내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작"     d=1.477
+  - canon 2: ↙ from right high: ok=true fired={"imbroccata":1} cls={"tech":"zornhau","pad":"tagR","dir":[-0.58,-0.81],"start":[0.43,0.42]} hud="내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작"     d=1.715
+  - canon 3: ↘ from left high: ok=true fired={"imbroccata":1} cls={"tech":"zornhauL","pad":"tagL","dir":[0.65,-0.76],"start":[-0.38,0.43]} hud="내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작"     d=1.585
+  - variant: shallow ↙ from right side (screen 1:0.35, hand ~66° from straight down): ok=true fired={"imbroccata":1} cls={"tech":"zwerch","pad":"sideR","dir":[-0.92,-0.39],"start":[0.51,0.07]} hud="내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작"     d=0.939
+  - variant: shallower ↙ from right side (screen 1:0.2, hand ~75° from straight down): ok=false fired={} cls={"tech":null,"pad":"pflugR","dir":[0.71,0.7],"start":[0.22,-0.22]} hud="내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작"     d=1.543
+  - variant: short ↓ from waist level: ok=true fired={"imbroccata":1} cls={"tech":null,"pad":"langort","dir":[-0.02,-1],"start":[0,0.03]} hud="내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작"     d=4.936
+
+I9 (italian/rapier, foe 하인리히 도른 with excalibur_replica) canonical fired 3/3
+  - canon 1: foe attacking, stick → + tap: ok=true fired={"inquartata":1} cls="" hud="비껴서며 찌르기인콰르타타 · 내 이탈리아 · 고유 동작"  noThreat=0   d=1.966
+  - canon 2: foe attacking, stick ← + tap: ok=true fired={"inquartata":1} cls="" hud="비껴서며 찌르기인콰르타타 · 내 이탈리아 · 고유 동작"  noThreat=0   d=1.458
+  - canon 3: foe attacking, stick → + tap: ok=true fired={"inquartata":1} cls="" hud="비껴서며 찌르기인콰르타타 · 내 이탈리아 · 고유 동작"  noThreat=0   d=1.709
+  - variant: foe attacking, stick diagonal ↗ + tap: ok=false fired={} cls="" hud=""  noThreat=0   d=1.931
+
+I2 (italian/rapier, foe 하인리히 도른 with excalibur_replica) canonical fired 2/3
+  - canon 1: tap 0.3 s after blade contact began: ok=false fired={} cls="" hud="" taps=[{"ageAtTap":0.3,"sinceLastTouch":0,"touchCut":false,"realMs":112}]    d=1.807
+  - canon 2: tap 0.5 s after contact: ok=true fired={"cavazione":1} cls="" hud="칼끝 돌려 빼기카바치오네 · 내 이탈리아 · 고유 동작" taps=[{"ageAtTap":0.508,"sinceLastTouch":0,"touchCut":false,"realMs":137}]    d=2.104
+  - canon 3: tap 0.25 s after contact: ok=true fired={"cavazione":1} cls="" hud="칼끝 돌려 빼기카바치오네 · 내 이탈리아 · 고유 동작" taps=[{"ageAtTap":0.25,"sinceLastTouch":0,"touchCut":false,"realMs":125}]    d=1.327
+  - variant: early tap at 0.05 s then tap at 0.4 s: ok=false fired={} cls="" hud="칼끝 돌려 빼기카바치오네 · 내 이탈리아 · 고유 동작" taps=[{"ageAtTap":0.058,"sinceLastTouch":0,"realMs":120},{"ageAtTap":0.408,"sinceLastTouch":0.033,"touchCut":false,"realMs":113}]    d=1.316
+
+I4 (italian/rapier, foe 하인리히 도른 with excalibur_replica) canonical fired 0/3
+  - canon 1: stick follows foe steps: ok=false fired="" cls="" hud=""    riso={"on":false,"held":0,"d":1.014,"ends":{"foeSwing":0,"uncover":0,"meSwing":0,"stick":2,"gap":0,"mirror":0},"gapBlocked":0} onF=31 d=0.759
+  - canon 2: ok=false fired="" cls="" hud=""    riso={"on":false,"held":0,"d":0.403,"ends":{"foeSwing":0,"uncover":0,"meSwing":0,"stick":0,"gap":0,"mirror":0},"gapBlocked":0} onF=0 d=1.44
+  - canon 3: ok=false fired="" cls="" hud=""    riso={"on":false,"held":0,"d":null,"ends":{"foeSwing":2,"uncover":0,"meSwing":0,"stick":1,"gap":0,"mirror":0},"gapBlocked":0} onF=115 d=0.972
+  - variant: stick opposite to foe steps: ok=false fired="" cls="" hud=""    riso={"on":false,"held":0,"d":0.382,"ends":{"foeSwing":1,"uncover":4,"meSwing":0,"stick":0,"gap":0,"mirror":0},"gapBlocked":0} onF=59 d=1.492
+
+J7 (japanese/uchigatana, foe 하인리히 도른 with excalibur_replica) canonical fired 3/3
+  - canon 1: short ↓ from middle: ok=true fired={"kote":1} cls={"tech":null,"pad":"langort","dir":[-0.03,-1],"start":[0,0.03]} hud="손목 치기코테 · 내 일본 · 고유 동작"     d=4.962
+  - canon 2: short ↓ from middle (slightly right): ok=true fired={"kote":1} cls={"tech":null,"pad":"langort","dir":[-0.02,-1],"start":[0.04,0.06]} hud="손목 치기코테 · 내 일본 · 고유 동작"     d=1.27
+  - canon 3: short ↓ from middle (slightly left): ok=true fired={"kote":1} cls={"tech":null,"pad":"langort","dir":[-0.02,-1],"start":[-0.04,0]} hud="손목 치기코테 · 내 일본 · 고유 동작"     d=4.835
+  - variant: short ↓ started a little higher (chest height): ok=false fired={} cls={"tech":null,"pad":null,"dir":[0,-1],"start":[0,0.29]} hud="손목 치기코테 · 내 일본 · 고유 동작"     d=2.397
+
+C3 (chinese/qinggang, foe 하인리히 도른 with excalibur_replica) canonical fired 3/3
+  - canon 1: ← from right side: ok=true fired={"yaoji":1} cls={"tech":"zwerch","pad":"sideR","dir":[-1,0],"start":[0.51,0.06]} hud="허리 베기요격 · 내 동방 · 고유 동작"     d=4.761
+  - canon 2: ← from right side (slightly in): ok=true fired={"yaoji":1} cls={"tech":"zwerch","pad":"sideR","dir":[-1,0.01],"start":[0.46,0.1]} hud="허리 베기요격 · 내 동방 · 고유 동작"     d=1.793
+  - canon 3: ← from right side (lower): ok=true fired={"yaoji":1} cls={"tech":"zwerch","pad":"sideR","dir":[-1,0.01],"start":[0.5,0]} hud="허리 베기요격 · 내 동방 · 고유 동작"     d=1.596
+  - variant: ← started from the middle: ok=false fired={} cls={"tech":null,"pad":"langort","dir":[-1,0.01],"start":[0,0.03]} hud=""     d=4.866
+  - variant: mirrored → from left side: ok=false fired={} cls={"tech":"zwerchL","pad":"sideL","dir":[1,0],"start":[-0.49,0.06]} hud=""     d=1.87
+
+C5 (chinese/qinggang, foe 하인리히 도른 with excalibur_replica) canonical fired 3/3
+  - canon 1: stick ↑ + ← from right side: ok=true fired={"chebuYaoji":1} cls={"tech":"zwerch","pad":"sideR","dir":[-1,0],"start":[0.51,0.06]} hud="끌어 딛고 허리 베기체보요격 · 내 동방 · 고유 동작"     d=3.819
+  - canon 2: stick ↑ (slightly right) + ←: ok=true fired={"chebuYaoji":1} cls={"tech":"zwerch","pad":"sideR","dir":[-1,-0.02],"start":[0.47,0.09]} hud="끌어 딛고 허리 베기체보요격 · 내 동방 · 고유 동작"     d=1.107
+  - canon 3: stick ↑ half tilt + ←: ok=true fired={"chebuYaoji":1} cls={"tech":"zwerch","pad":"sideR","dir":[-1,0.05],"start":[0.52,0.08]} hud="끌어 딛고 허리 베기체보요격 · 내 동방 · 고유 동작"     d=1.032
+  - variant: stick ↑ + ← from the middle: ok=false fired={} cls={"tech":null,"pad":"langort","dir":[-1,0.01],"start":[-0.03,0.03]} hud="끌어 딛고 허리 베기체보요격 · 내 동방 · 고유 동작"     d=1.086
+
+C6 (chinese/qinggang, foe 하인리히 도른 with excalibur_replica) canonical fired 3/3
+  - canon 1: stick ↓ held, tap: ok=true fired={"lianchi":1} cls="" hud="날개 접기염시 · 내 동방 · 고유 동작"     d=4.956
+  - canon 2: stick ↓ held, tap: ok=true fired={"lianchi":1} cls="" hud="날개 접기염시 · 내 동방 · 고유 동작"     d=2.137
+  - canon 3: stick ↓ released, tap 0.25 s later: ok=true fired={"lianchi":1} cls="" hud="날개 접기염시 · 내 동방 · 고유 동작"     d=1.268
+  - variant: stick ↓ at 40% tilt, tap: ok=false fired={} cls="" hud="날개 접기염시 · 내 동방 · 고유 동작"     d=1.228
+  - timing: tap 0.5 s after release: ok=true fired={"lianchi":1} cls="" hud="날개 접기염시 · 내 동방 · 고유 동작"     d=1.361
+  - timing: tap 0.7 s after release: ok=false fired={} cls="" hud=""     d=4.642
+
+J6 (japanese/uchigatana, foe 하인리히 도른 with excalibur_replica) canonical fired 2/3
+  - canon 1: stick → + ↘ from left high: ok=true fired={"hirakiGiri":1} cls={"tech":"zornhauL","pad":"tagL","dir":[0.6,-0.8],"start":[-0.42,0.44]} hud="비껴 베기히라키기리 · 내 일본 · 고유 동작"     d=1.717
+  - canon 2: stick ← + ↘ from left high: ok=false fired={} cls={"tech":null,"pad":null,"dir":[-0.41,0.91],"start":[0.04,-0.17]} hud="고노센내 일본 · 비기"     d=1.009
+  - canon 3: stick → (slightly fwd) + ↘: ok=true fired={"hirakiGiri":1} cls={"tech":"zornhauL","pad":"tagL","dir":[0.58,-0.81],"start":[-0.36,0.4]} hud="비껴 베기히라키기리 · 내 일본 · 고유 동작"     d=4.197
+  - variant: stick → + ↘ from the middle: ok=false fired={} cls={"tech":null,"pad":null,"dir":[0.6,-0.8],"start":[0.01,0.28]} hud=""     d=4.714
+  - variant: mirrored stick → + ↙ from right high: ok=false fired={} cls={"tech":"zornhau","pad":"tagR","dir":[-0.59,-0.81],"start":[0.41,0.41]} hud="고노센 준비내 일본 · 비기"     d=1.5
+
+J9 (japanese/uchigatana, foe 하인리히 도른 with excalibur_replica) canonical fired 2/3
+  - canon 1: ↙ cut (miss) then ↑ at once: ok=true fired={"tsubameGaeshi":1} cls={"first":"zornhau","second":null,"gap":0,"firstLanded":false} hud="제비 베기츠바메가에시 · 내 일본 · 고유 동작"     d=4.664
+  - canon 2: ↙ cut then ↑ after 6 frames still: ok=false fired={} cls="" hud="제비 베기츠바메가에시 · 내 일본 · 고유 동작"     d=1.327
+  - canon 3: ↓ from top then ↑ after 12 frames: ok=true fired={"tsubameGaeshi":1} cls={"first":"oberhau","second":"stichAlber","gap":0.175,"firstLanded":false} hud="제비 베기츠바메가에시 · 내 일본 · 고유 동작"     d=4.595
+  - timing: ↙ then ↑ after 30 frames: ok=true fired={"tsubameGaeshi":1} cls={"first":"zornhau","second":null,"gap":0.516,"firstLanded":false} hud="제비 베기츠바메가에시 · 내 일본 · 고유 동작"     d=1.766
+  - timing: ↙ then ↑ after 45 frames: ok=false fired={} cls={"first":"zornhau","second":null,"gap":0.759,"firstLanded":true} hud="제비 베기츠바메가에시 · 내 일본 · 고유 동작"     d=1.254
+  - variant: ↙ then ↗ (up-right) at once: ok=true fired={"tsubameGaeshi":1} cls={"first":"zornhau","second":null,"gap":0,"firstLanded":false} hud="제비 베기츠바메가에시 · 내 일본 · 고유 동작"     d=1.54
+
+J5 (japanese/uchigatana, foe 하인리히 도른 with excalibur_replica) canonical fired 3/3
+  - canon 1: no input, wait: ok=true fired="" cls="" hud="고노센내 일본 · 비기"   armed=5.74s window=10.03s ran=true  d=1.842
+  - canon 2: no input, wait: ok=true fired="" cls="" hud="고노센내 일본 · 비기"   armed=5.6s window=9.19s ran=true  d=1.822
+  - canon 3: no input, wait: ok=true fired="" cls="" hud="고노센내 일본 · 비기"   armed=5.6s window=9.97s ran=true  d=1.856
+  - variant: brief stick nudge at 1.5 s: ok=false setup=armed but window never opened fired="" cls="" hud=""   armed=5.74s window=nulls ran=undefined  d=1.514
+
+C9 (chinese/qinggang, foe 하인리히 도른 with excalibur_replica) canonical fired 3/6
+  - canon 1: stick ↑ + new guard press 1 frame after foe attack seen: ok=false fired={} cls="" hud=""     d=1.757
+  - canon 2: stick ↑ + new guard press 1 frame after foe attack seen: ok=true fired={"edges":2,"pend":1,"open":1,"auto":1,"busy":1} cls="" hud="격살내 동방 · 비기"     d=2.035
+  - canon 3: stick ↑ + new guard press 6 frames after foe attack seen: ok=false fired={} cls="" hud="격살내 동방 · 비기"     d=0.817
+  - canon 4: stick ↑ + new guard press 1 frame after foe attack seen: ok=false fired={} cls="" hud="격살내 동방 · 비기"     d=1.673
+  - canon 5: stick ↑ + new guard press 1 frame after foe attack seen: ok=true fired={"edges":1,"pend":1,"open":1,"auto":1} cls="" hud="격살내 동방 · 비기"     d=0.971
+  - canon 6: stick ↑ + new guard press 6 frames after foe attack seen: ok=true fired={"edges":2,"pend":1,"open":1,"auto":1,"busy":1} cls="" hud="격살내 동방 · 비기"     d=1.15
+  - variant: no stick, new guard press 1 frame after foe attack seen: ok=null setup=no foe attack seen fired="" cls="" hud=""     d=

@@ -1,0 +1,2 @@
+{"part":"zones","W":844,"Hh":390,"step":4,"total":20467,"stick":[20,238,132,132],"top":[{"el":"#game","share":93.62,"box":[0,0,844,388],"pointerEvents":"auto"},{"el":"#moveStick","share":4.25,"box":[20,236,152,368],"pointerEvents":"auto"},{"el":"#btnParry","share":1.73,"box":[740,284,824,368],"pointerEvents":"auto"},{"el":"#btnPause","share":0.35,"box":[404,8,440,44],"pointerEvents":"auto"},{"el":"#topButtons","share":0.05,"box":[404,8,440,44],"pointerEvents":"auto"}]}
+{"part":"stick_ring_px_outside_edge,thrust","ring":[[2,0],[8,0],[14,0],[16,1],[20,1],[30,1]]}

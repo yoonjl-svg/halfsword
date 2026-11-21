@@ -1,0 +1,8 @@
+{"part":"early","msAfterFightState":0,"thrust":1,"tapSeenAfterFrames":0,"ps":"stand","d":null}
+{"part":"early","msAfterFightState":300,"thrust":1,"tapSeenAfterFrames":0,"ps":"stand","d":5.55}
+{"part":"early","msAfterFightState":600,"thrust":1,"tapSeenAfterFrames":0,"ps":"stand","d":5.55}
+{"part":"early","msAfterFightState":1000,"thrust":1,"tapSeenAfterFrames":0,"ps":"stand","d":5.58}
+{"part":"early","msAfterFightState":1500,"thrust":1,"tapSeenAfterFrames":0,"ps":"stand","d":5.62}
+{"part":"early","msAfterFightState":2500,"thrust":1,"tapSeenAfterFrames":0,"ps":"stand","d":5.67}
+{"part":"early","msAfterFightState":4000,"thrust":1,"tapSeenAfterFrames":0,"ps":"stand","d":5.78}
+DONE

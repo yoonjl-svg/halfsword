@@ -1,0 +1,11 @@
+{"cell":"G5","move":"schielhau","pullBackPxPerFrame":8,"pullBackPxPerSec":471,"pullBackSec":0.2,"pauseFrames":0,"firedOf3":0,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.433,0.443]}
+{"cell":"G5","move":"schielhau","pullBackPxPerFrame":8,"pullBackPxPerSec":471,"pullBackSec":0.2,"pauseFrames":1,"firedOf3":0,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.422,0.455]}
+{"cell":"G5","move":"schielhau","pullBackPxPerFrame":8,"pullBackPxPerSec":471,"pullBackSec":0.2,"pauseFrames":2,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.422,0.455]}
+{"cell":"G5","move":"schielhau","pullBackPxPerFrame":8,"pullBackPxPerSec":471,"pullBackSec":0.2,"pauseFrames":3,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.421,0.455]}
+{"cell":"G5","move":"schielhau","pullBackPxPerFrame":8,"pullBackPxPerSec":471,"pullBackSec":0.2,"pauseFrames":4,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.422,0.455]}
+{"cell":"G5","move":"schielhau","pullBackPxPerFrame":12,"pullBackPxPerSec":706,"pullBackSec":0.14,"pauseFrames":0,"firedOf3":0,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.421,0.455]}
+{"cell":"G5","move":"schielhau","pullBackPxPerFrame":12,"pullBackPxPerSec":706,"pullBackSec":0.14,"pauseFrames":1,"firedOf3":0,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.422,0.454]}
+{"cell":"G5","move":"schielhau","pullBackPxPerFrame":12,"pullBackPxPerSec":706,"pullBackSec":0.14,"pauseFrames":2,"firedOf3":1,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.422,0.454]}
+{"cell":"G5","move":"schielhau","pullBackPxPerFrame":12,"pullBackPxPerSec":706,"pullBackSec":0.14,"pauseFrames":3,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.422,0.454]}
+{"cell":"G5","move":"schielhau","pullBackPxPerFrame":12,"pullBackPxPerSec":706,"pullBackSec":0.14,"pauseFrames":4,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.421,0.455]}
+DONE

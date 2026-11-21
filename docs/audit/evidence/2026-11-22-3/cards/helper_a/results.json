@@ -1,0 +1,2813 @@
+{
+ "G1": [
+  {
+   "run": "canonical#1",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick touchStart at centre, touchMove to (0,-1) of radius, held 60 frames",
+   "stillBefore": true,
+   "signal": {
+    "burstsUsed": [
+     {
+      "t": 3.3,
+      "fore": -1,
+      "side": 0,
+      "dig": 0,
+      "fastK": 1.96
+     }
+    ],
+    "fastStep": {
+     "t": 3.3,
+     "fastK": 1.96
+    }
+   },
+   "hud": [],
+   "fired": true,
+   "staminaNote": "stamina is infinite in this stage (stamina.infinite true) so the push charge is not counted; fast burst step (gait.fastK>1 with the burst direction) is the signal",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     363
+    ]
+   ]
+  },
+  {
+   "run": "canonical#2",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick touchStart at centre, touchMove to (0.15,-1) of radius, held 60 frames",
+   "stillBefore": true,
+   "signal": {
+    "burstsUsed": [
+     {
+      "t": 3.3,
+      "fore": -1,
+      "side": 0,
+      "dig": 0,
+      "fastK": 1.96
+     }
+    ],
+    "fastStep": {
+     "t": 3.3,
+     "fastK": 1.96
+    }
+   },
+   "hud": [],
+   "fired": true,
+   "staminaNote": "stamina is infinite in this stage (stamina.infinite true) so the push charge is not counted; fast burst step (gait.fastK>1 with the burst direction) is the signal",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     95,
+     363
+    ]
+   ]
+  },
+  {
+   "run": "canonical#3",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick touchStart at centre, touchMove to (0,-1) of radius, held 60 frames",
+   "stillBefore": true,
+   "signal": {
+    "burstsUsed": [
+     {
+      "t": 3.3,
+      "fore": -1,
+      "side": 0,
+      "dig": 0,
+      "fastK": 1.96
+     }
+    ],
+    "fastStep": {
+     "t": 3.3,
+     "fastK": 1.96
+    }
+   },
+   "hud": [],
+   "fired": true,
+   "staminaNote": "stamina is infinite in this stage (stamina.infinite true) so the push charge is not counted; fast burst step (gait.fastK>1 with the burst direction) is the signal",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     363
+    ]
+   ]
+  },
+  {
+   "run": "variant:variant",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick touchStart at centre, touchMove to (-0.8,-0.6) of radius, held 60 frames",
+   "stillBefore": true,
+   "signal": {
+    "burstsUsed": [],
+    "fastStep": null
+   },
+   "hud": [],
+   "fired": false,
+   "staminaNote": "stamina is infinite in this stage (stamina.infinite true) so the push charge is not counted; fast burst step (gait.fastK>1 with the burst direction) is the signal",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     38,
+     340
+    ]
+   ]
+  }
+ ],
+ "G2": [
+  {
+   "run": "canonical#1",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick to (0,1) of radius, held 60 frames",
+   "signal": {
+    "burstsUsed": [
+     {
+      "t": 3.3,
+      "fore": 1,
+      "side": 0,
+      "dig": 2,
+      "fastK": 1.38
+     },
+     {
+      "t": 3.583,
+      "fore": 1,
+      "side": 0,
+      "dig": 1,
+      "fastK": 1.38
+     }
+    ],
+    "fastFrames": 31,
+    "firstFast": 3.308
+   },
+   "hud": [],
+   "fired": true,
+   "staminaNote": "stamina infinite in this stage; signal = burst objects used by a step (dig>0 = dig-in) — fastK>1 alone also occurs on a plain forward start",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     245
+    ]
+   ]
+  },
+  {
+   "run": "canonical#2",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick to (0.15,1) of radius, held 60 frames",
+   "signal": {
+    "burstsUsed": [
+     {
+      "t": 3.3,
+      "fore": 1,
+      "side": 0,
+      "dig": 2,
+      "fastK": 1.38
+     },
+     {
+      "t": 3.583,
+      "fore": 1,
+      "side": 0,
+      "dig": 1,
+      "fastK": 1.38
+     }
+    ],
+    "fastFrames": 31,
+    "firstFast": 3.308
+   },
+   "hud": [],
+   "fired": true,
+   "staminaNote": "stamina infinite in this stage; signal = burst objects used by a step (dig>0 = dig-in) — fastK>1 alone also occurs on a plain forward start",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     95,
+     245
+    ]
+   ]
+  },
+  {
+   "run": "canonical#3",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick to (0,1) of radius, held 60 frames",
+   "signal": {
+    "burstsUsed": [
+     {
+      "t": 3.3,
+      "fore": 1,
+      "side": 0,
+      "dig": 2,
+      "fastK": 1.38
+     },
+     {
+      "t": 3.583,
+      "fore": 1,
+      "side": 0,
+      "dig": 1,
+      "fastK": 1.38
+     }
+    ],
+    "fastFrames": 31,
+    "firstFast": 3.308
+   },
+   "hud": [],
+   "fired": true,
+   "staminaNote": "stamina infinite in this stage; signal = burst objects used by a step (dig>0 = dig-in) — fastK>1 alone also occurs on a plain forward start",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     245
+    ]
+   ]
+  },
+  {
+   "run": "variant:half",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick to (0,0.5) of radius, held 60 frames",
+   "signal": {
+    "burstsUsed": [
+     {
+      "t": 3.3,
+      "fore": 1,
+      "side": 0,
+      "dig": 2,
+      "fastK": 1.38
+     },
+     {
+      "t": 3.583,
+      "fore": 1,
+      "side": 0,
+      "dig": 1,
+      "fastK": 1.38
+     }
+    ],
+    "fastFrames": 32,
+    "firstFast": 3.308
+   },
+   "hud": [],
+   "fired": true,
+   "staminaNote": "stamina infinite in this stage; signal = burst objects used by a step (dig>0 = dig-in) — fastK>1 alone also occurs on a plain forward start",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     274
+    ]
+   ]
+  }
+ ],
+ "G5": [
+  {
+   "run": "canonical#1",
+   "forced": false,
+   "precondition": "game path; foe far (no contact needed)",
+   "touch": "right finger down at (600,200), slow drag (<=2 px/frame) until hand target within 0.03 m of pad [0.42,0.42], then 4 frames of (-25,25) px per 17 ms frame, lift",
+   "handAtSwipe": [
+    0.423,
+    0.396
+   ],
+   "strokeRead": {
+    "tech": "zornhau",
+    "pad": "tagR",
+    "unique": "schielhau"
+   },
+   "signal": {
+    "cue": {
+     "t": 3.425,
+     "name": "schielhau",
+     "text": "곁눈 베기 (실하우)",
+     "kind": "unique"
+    },
+    "fired": {
+     "schielhau": 1
+    }
+   },
+   "hud": [
+    "곁눈 베기실하우 · 내 독일 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 3.425,
+     "name": "schielhau",
+     "text": "곁눈 베기 (실하우)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     200
+    ],
+    [
+     "U",
+     4,
+     "game",
+     541,
+     256
+    ]
+   ]
+  },
+  {
+   "run": "canonical#2",
+   "forced": false,
+   "precondition": "game path; foe far (no contact needed)",
+   "touch": "right finger down at (606,195), slow drag (<=2 px/frame) until hand target within 0.03 m of pad [0.42,0.42], then 4 frames of (-25,25) px per 17 ms frame, lift",
+   "handAtSwipe": [
+    0.423,
+    0.414
+   ],
+   "strokeRead": {
+    "tech": "zornhau",
+    "pad": "tagR",
+    "unique": "schielhau"
+   },
+   "signal": {
+    "cue": {
+     "t": 3.6,
+     "name": "schielhau",
+     "text": "곁눈 베기 (실하우)",
+     "kind": "unique"
+    },
+    "fired": {
+     "schielhau": 1
+    }
+   },
+   "hud": [
+    "곁눈 베기실하우 · 내 독일 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 3.6,
+     "name": "schielhau",
+     "text": "곁눈 베기 (실하우)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     606,
+     195
+    ],
+    [
+     "U",
+     4,
+     "game",
+     547,
+     249
+    ]
+   ]
+  },
+  {
+   "run": "canonical#3",
+   "forced": false,
+   "precondition": "game path; foe far (no contact needed)",
+   "touch": "right finger down at (612,190), slow drag (<=2 px/frame) until hand target within 0.03 m of pad [0.42,0.42], then 4 frames of (-25,25) px per 17 ms frame, lift",
+   "handAtSwipe": [
+    0.423,
+    0.414
+   ],
+   "strokeRead": {
+    "tech": "zornhau",
+    "pad": "tagR",
+    "unique": "schielhau"
+   },
+   "signal": {
+    "cue": {
+     "t": 3.883,
+     "name": "schielhau",
+     "text": "곁눈 베기 (실하우)",
+     "kind": "unique"
+    },
+    "fired": {
+     "schielhau": 1
+    }
+   },
+   "hud": [
+    "곁눈 베기실하우 · 내 독일 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 3.883,
+     "name": "schielhau",
+     "text": "곁눈 베기 (실하우)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     612,
+     190
+    ],
+    [
+     "U",
+     4,
+     "game",
+     553,
+     244
+    ]
+   ]
+  },
+  {
+   "run": "variant:variant",
+   "forced": false,
+   "precondition": "game path; foe far (no contact needed)",
+   "touch": "right finger down at (600,200) (no positioning), then 4 frames of (-25,25) px per 17 ms frame, lift",
+   "handAtSwipe": [
+    0.15,
+    0
+   ],
+   "strokeRead": {
+    "tech": null,
+    "pad": null,
+    "unique": null
+   },
+   "signal": {
+    "cue": null,
+    "fired": {}
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": false,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     200
+    ],
+    [
+     "U",
+     4,
+     "game",
+     500,
+     300
+    ]
+   ]
+  }
+ ],
+ "G8": [
+  {
+   "run": "canonical#1",
+   "forced": false,
+   "precondition": "game path; foe far (no contact needed)",
+   "touch": "stick held at (1,0); right finger down at (600,200), slow drag (<=2 px/frame) until hand target within 0.03 m of pad [0.52,0.06], then 4 frames of (-35,0) px per 17 ms frame, lift",
+   "handAtSwipe": [
+    0.51,
+    0.078
+   ],
+   "strokeRead": {
+    "tech": "zwerch",
+    "pad": "sideR",
+    "unique": "zwerchAbtritt"
+   },
+   "signal": {
+    "cue": {
+     "t": 3.692,
+     "name": "zwerchAbtritt",
+     "text": "비껴 딛는 가로베기 (츠베르히 미트 압트리트)",
+     "kind": "unique"
+    },
+    "fired": {
+     "zwerchAbtritt": 1
+    }
+   },
+   "hud": [
+    "비껴 딛는 가로베기츠베르히 미트 압트리트 · 내 독일 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 3.692,
+     "name": "zwerchAbtritt",
+     "text": "비껴 딛는 가로베기 (츠베르히 미트 압트리트)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "D",
+     5,
+     "game",
+     600,
+     200
+    ],
+    [
+     "U",
+     5,
+     "game",
+     514,
+     191
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     145,
+     304
+    ]
+   ]
+  },
+  {
+   "run": "canonical#2",
+   "forced": false,
+   "precondition": "game path; foe far (no contact needed)",
+   "touch": "stick held at (-1,0); right finger down at (606,195), slow drag (<=2 px/frame) until hand target within 0.03 m of pad [0.52,0.06], then 4 frames of (-35,0) px per 17 ms frame, lift",
+   "handAtSwipe": [
+    0.51,
+    0.06
+   ],
+   "strokeRead": {
+    "tech": "zwerch",
+    "pad": "sideR",
+    "unique": "zwerchAbtritt"
+   },
+   "signal": {
+    "cue": {
+     "t": 3.975,
+     "name": "zwerchAbtritt",
+     "text": "비껴 딛는 가로베기 (츠베르히 미트 압트리트)",
+     "kind": "unique"
+    },
+    "fired": {
+     "zwerchAbtritt": 1
+    }
+   },
+   "hud": [
+    "비껴 딛는 가로베기츠베르히 미트 압트리트 · 내 독일 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 3.975,
+     "name": "zwerchAbtritt",
+     "text": "비껴 딛는 가로베기 (츠베르히 미트 압트리트)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "D",
+     5,
+     "game",
+     606,
+     195
+    ],
+    [
+     "U",
+     5,
+     "game",
+     520,
+     188
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     27,
+     304
+    ]
+   ]
+  },
+  {
+   "run": "canonical#3",
+   "forced": false,
+   "precondition": "game path; foe far (no contact needed)",
+   "touch": "stick held at (1,0); right finger down at (612,190), slow drag (<=2 px/frame) until hand target within 0.03 m of pad [0.52,0.06], then 4 frames of (-35,0) px per 17 ms frame, lift",
+   "handAtSwipe": [
+    0.51,
+    0.076
+   ],
+   "strokeRead": {
+    "tech": "zwerch",
+    "pad": "sideR",
+    "unique": "zwerchAbtritt"
+   },
+   "signal": {
+    "cue": {
+     "t": 4.15,
+     "name": "zwerchAbtritt",
+     "text": "비껴 딛는 가로베기 (츠베르히 미트 압트리트)",
+     "kind": "unique"
+    },
+    "fired": {
+     "zwerchAbtritt": 1
+    }
+   },
+   "hud": [
+    "비껴 딛는 가로베기츠베르히 미트 압트리트 · 내 독일 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 4.15,
+     "name": "zwerchAbtritt",
+     "text": "비껴 딛는 가로베기 (츠베르히 미트 압트리트)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "D",
+     5,
+     "game",
+     612,
+     190
+    ],
+    [
+     "U",
+     5,
+     "game",
+     526,
+     182
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     145,
+     304
+    ]
+   ]
+  },
+  {
+   "run": "variant:variant",
+   "forced": false,
+   "precondition": "game path; foe far (no contact needed)",
+   "touch": "stick held at (1,0); right finger down at (600,200) (no positioning), then 4 frames of (-35,0) px per 17 ms frame, lift",
+   "handAtSwipe": [
+    0.15,
+    0
+   ],
+   "strokeRead": {
+    "tech": null,
+    "pad": null,
+    "unique": null
+   },
+   "signal": {
+    "cue": null,
+    "fired": {}
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": false,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "D",
+     5,
+     "game",
+     600,
+     200
+    ],
+    [
+     "U",
+     5,
+     "game",
+     460,
+     200
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     145,
+     304
+    ]
+   ]
+  }
+ ],
+ "G7": [
+  {
+   "run": "canonical#1",
+   "forced": false,
+   "precondition": "game path; real foe AI; walked in with stick ↑ until chests ≈ 1.4 m",
+   "touch": "stick (0,1) until d<=1.45 m, lifted; then guard button held (touch id 3) for up to 20 s",
+   "reach": {
+    "t": 5.508,
+    "d": 1.448
+   },
+   "bladeTouchFrames": 25,
+   "touchFramesInBand": 25,
+   "maxDupStack": 0.43,
+   "signal": {
+    "t": 6.158,
+    "why": "bind",
+    "d": 1.258
+   },
+   "hud": [
+    "겹치기두플리렌 · 내 독일 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 6.158,
+     "name": "duplieren",
+     "text": "겹치기 (두플리렌)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     245
+    ],
+    [
+     "D",
+     5,
+     "btnParry",
+     782,
+     328
+    ],
+    [
+     "U",
+     5,
+     "btnParry",
+     782,
+     328
+    ]
+   ]
+  },
+  {
+   "run": "canonical#2",
+   "forced": false,
+   "precondition": "game path; real foe AI; walked in with stick ↑ until chests ≈ 1.4 m",
+   "touch": "stick (0,1) until d<=1.40 m, lifted; then guard button held (touch id 3) for up to 20 s",
+   "reach": {
+    "t": 5.625,
+    "d": 1.345
+   },
+   "bladeTouchFrames": 14,
+   "touchFramesInBand": 14,
+   "maxDupStack": 0.43,
+   "signal": {
+    "t": 5.883,
+    "why": "bind",
+    "d": 1.088
+   },
+   "hud": [
+    "겹치기두플리렌 · 내 독일 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 5.883,
+     "name": "duplieren",
+     "text": "겹치기 (두플리렌)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     245
+    ],
+    [
+     "D",
+     5,
+     "btnParry",
+     782,
+     328
+    ],
+    [
+     "U",
+     5,
+     "btnParry",
+     782,
+     328
+    ]
+   ]
+  },
+  {
+   "run": "canonical#3",
+   "forced": false,
+   "precondition": "game path; real foe AI; walked in with stick ↑ until chests ≈ 1.4 m",
+   "touch": "stick (0,1) until d<=1.35 m, lifted; then guard button held (touch id 3) for up to 20 s",
+   "reach": {
+    "t": 5.667,
+    "d": 1.337
+   },
+   "bladeTouchFrames": 0,
+   "touchFramesInBand": 0,
+   "maxDupStack": 0,
+   "signal": {
+    "t": 5.683,
+    "why": "clash2",
+    "d": 1.308
+   },
+   "hud": [
+    "겹치기두플리렌 · 내 독일 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 5.383,
+     "name": "duplieren",
+     "text": "겹치기 (두플리렌)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     245
+    ],
+    [
+     "D",
+     5,
+     "btnParry",
+     782,
+     328
+    ],
+    [
+     "U",
+     5,
+     "btnParry",
+     782,
+     328
+    ]
+   ]
+  },
+  {
+   "run": "variant:variant",
+   "forced": false,
+   "precondition": "game path; real foe AI; walked in with stick ↑ until chests ≈ 1.4 m",
+   "touch": "stick (0,1) until d<=1.45 m, lifted; then nothing (no guard) for up to 20 s",
+   "reach": {
+    "t": 5.733,
+    "d": 1.443
+   },
+   "bladeTouchFrames": 161,
+   "touchFramesInBand": 0,
+   "maxDupStack": 0,
+   "signal": {
+    "t": 15.55,
+    "why": "clash2",
+    "d": 2.24
+   },
+   "hud": [
+    "겹치기두플리렌 · 내 독일 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 15.55,
+     "name": "duplieren",
+     "text": "겹치기 (두플리렌)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     245
+    ]
+   ]
+  }
+ ],
+ "G10": [
+  {
+   "run": "canonical#1",
+   "forced": false,
+   "precondition": "game path; real foe AI",
+   "touch": "stick to (0,1) held throughout; when window opens: right finger 3 frames of (-35,+30) px, lift",
+   "closeN": 0.8,
+   "firstCloseT": 5.925,
+   "window": {
+    "t": 9.175,
+    "ev": "press",
+    "pressT": 0.01,
+    "d": 0.79
+   },
+   "secondsFromFirstClose": 3.25,
+   "longestCloseRunS": 1.65,
+   "stages": [
+    "instant",
+    "stiff"
+   ],
+   "hud": [
+    "모르트슐라크내 독일 · 비기"
+   ],
+   "allCues": [],
+   "fired": true,
+   "opened": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "D",
+     5,
+     "game",
+     640,
+     150
+    ],
+    [
+     "U",
+     5,
+     "game",
+     535,
+     240
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     245
+    ]
+   ]
+  },
+  {
+   "run": "canonical#2",
+   "forced": false,
+   "precondition": "game path; real foe AI",
+   "touch": "stick to (0.12,1) held throughout; when window opens: right finger 3 frames of (-35,+30) px, lift",
+   "closeN": 0.8,
+   "firstCloseT": 6.025,
+   "window": {
+    "t": 7.7,
+    "ev": "press",
+    "pressT": 0.02,
+    "d": 0.518
+   },
+   "secondsFromFirstClose": 1.67,
+   "longestCloseRunS": 1.66,
+   "stages": [
+    "instant",
+    "stiff"
+   ],
+   "hud": [
+    "모르트슐라크내 독일 · 비기"
+   ],
+   "allCues": [],
+   "fired": true,
+   "opened": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "D",
+     5,
+     "game",
+     645,
+     150
+    ],
+    [
+     "U",
+     5,
+     "game",
+     540,
+     240
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     93,
+     245
+    ]
+   ]
+  },
+  {
+   "run": "canonical#3",
+   "forced": false,
+   "precondition": "game path; real foe AI",
+   "touch": "stick to (0,1) held throughout; when window opens: right finger 3 frames of (-35,+30) px, lift",
+   "closeN": 0.8,
+   "firstCloseT": 7.983,
+   "window": {
+    "t": 9.633,
+    "ev": "press",
+    "pressT": 0,
+    "d": 0.545
+   },
+   "secondsFromFirstClose": 1.65,
+   "longestCloseRunS": 1.66,
+   "stages": [
+    "instant",
+    "stiff"
+   ],
+   "hud": [
+    "겹치기두플리렌 · 내 독일 · 고유 동작",
+    "모르트슐라크내 독일 · 비기"
+   ],
+   "allCues": [
+    {
+     "t": 5.733,
+     "name": "duplieren",
+     "text": "겹치기 (두플리렌)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "opened": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "D",
+     5,
+     "game",
+     650,
+     150
+    ],
+    [
+     "U",
+     5,
+     "game",
+     545,
+     240
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     245
+    ]
+   ]
+  },
+  {
+   "run": "variant:variant",
+   "forced": false,
+   "precondition": "game path; real foe AI",
+   "touch": "stick to (0,1) held until chests within closeN, then lifted; when window opens: right finger 3 frames of (-35,+30) px, lift",
+   "closeN": 0.8,
+   "firstCloseT": 16.717,
+   "window": null,
+   "secondsFromFirstClose": null,
+   "longestCloseRunS": 5.42,
+   "stages": [],
+   "hud": [
+    "겹치기두플리렌 · 내 독일 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 10.967,
+     "name": "duplieren",
+     "text": "겹치기 (두플리렌)",
+     "kind": "unique"
+    },
+    {
+     "t": 16.267,
+     "name": "duplieren",
+     "text": "겹치기 (두플리렌)",
+     "kind": "unique"
+    }
+   ],
+   "fired": false,
+   "opened": false,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     245
+    ]
+   ]
+  }
+ ],
+ "B2": [
+  {
+   "run": "canonical#1",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick to (1,0) of radius, held 60 frames",
+   "signal": {
+    "burstsUsed": [
+     {
+      "t": 3.3,
+      "fore": 0,
+      "side": 1,
+      "dig": 0,
+      "fastK": 1.59
+     }
+    ],
+    "fastFrames": 15
+   },
+   "hud": [],
+   "fired": true,
+   "staminaNote": "stamina infinite in this stage; signal = side burst object used by a step",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     145,
+     304
+    ]
+   ]
+  },
+  {
+   "run": "canonical#2",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick to (-1,0) of radius, held 60 frames",
+   "signal": {
+    "burstsUsed": [
+     {
+      "t": 3.3,
+      "fore": 0,
+      "side": -1,
+      "dig": 0,
+      "fastK": 1.59
+     }
+    ],
+    "fastFrames": 15
+   },
+   "hud": [],
+   "fired": true,
+   "staminaNote": "stamina infinite in this stage; signal = side burst object used by a step",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     27,
+     304
+    ]
+   ]
+  },
+  {
+   "run": "canonical#3",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick to (1,0.1) of radius, held 60 frames",
+   "signal": {
+    "burstsUsed": [
+     {
+      "t": 3.3,
+      "fore": 1,
+      "side": 1,
+      "dig": 0,
+      "fastK": 1.59
+     }
+    ],
+    "fastFrames": 15
+   },
+   "hud": [],
+   "fired": true,
+   "staminaNote": "stamina infinite in this stage; signal = side burst object used by a step",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     145,
+     298
+    ]
+   ]
+  },
+  {
+   "run": "variant:variant",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick to (0.8,0.5) of radius, held 60 frames",
+   "signal": {
+    "burstsUsed": [],
+    "fastFrames": 0
+   },
+   "hud": [],
+   "fired": false,
+   "staminaNote": "stamina infinite in this stage; signal = side burst object used by a step",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     134,
+     274
+    ]
+   ]
+  }
+ ],
+ "B3": [
+  {
+   "run": "canonical#1",
+   "forced": false,
+   "precondition": "game path; foe far (no contact needed)",
+   "touch": "stick held at (1,0); right finger down at (600,200), slow drag (<=2 px/frame) until hand target within 0.03 m of pad [0.42,0.42], then 4 frames of (-25,25) px per 17 ms frame, lift",
+   "handAtSwipe": [
+    0.407,
+    0.428
+   ],
+   "strokeRead": {
+    "tech": "zornhau",
+    "pad": "tagR",
+    "unique": "talhoRodeado"
+   },
+   "signal": {
+    "cue": {
+     "t": 3.658,
+     "name": "talhoRodeado",
+     "text": "나선 걸음 베기 (탈류 로데아두)",
+     "kind": "unique"
+    },
+    "fired": {
+     "talhoRodeado": 1
+    }
+   },
+   "hud": [
+    "나선 걸음 베기탈류 로데아두 · 내 이베리아 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 3.658,
+     "name": "talhoRodeado",
+     "text": "나선 걸음 베기 (탈류 로데아두)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "D",
+     5,
+     "game",
+     600,
+     200
+    ],
+    [
+     "U",
+     5,
+     "game",
+     550,
+     250
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     145,
+     304
+    ]
+   ]
+  },
+  {
+   "run": "canonical#2",
+   "forced": false,
+   "precondition": "game path; foe far (no contact needed)",
+   "touch": "stick held at (-1,0); right finger down at (606,195), slow drag (<=2 px/frame) until hand target within 0.03 m of pad [0.42,0.42], then 4 frames of (-25,25) px per 17 ms frame, lift",
+   "handAtSwipe": [
+    0.423,
+    0.414
+   ],
+   "strokeRead": {
+    "tech": "zornhau",
+    "pad": "tagR",
+    "unique": "talhoRodeado"
+   },
+   "signal": {
+    "cue": {
+     "t": 3.8,
+     "name": "talhoRodeado",
+     "text": "나선 걸음 베기 (탈류 로데아두)",
+     "kind": "unique"
+    },
+    "fired": {
+     "talhoRodeado": 1
+    }
+   },
+   "hud": [
+    "나선 걸음 베기탈류 로데아두 · 내 이베리아 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 3.8,
+     "name": "talhoRodeado",
+     "text": "나선 걸음 베기 (탈류 로데아두)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "D",
+     5,
+     "game",
+     606,
+     195
+    ],
+    [
+     "U",
+     5,
+     "game",
+     547,
+     249
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     27,
+     304
+    ]
+   ]
+  },
+  {
+   "run": "canonical#3",
+   "forced": false,
+   "precondition": "game path; foe far (no contact needed)",
+   "touch": "stick held at (1,0); right finger down at (612,190), slow drag (<=2 px/frame) until hand target within 0.03 m of pad [0.42,0.42], then 4 frames of (-25,25) px per 17 ms frame, lift",
+   "handAtSwipe": [
+    0.423,
+    0.414
+   ],
+   "strokeRead": {
+    "tech": "zornhau",
+    "pad": "tagR",
+    "unique": "talhoRodeado"
+   },
+   "signal": {
+    "cue": {
+     "t": 3.958,
+     "name": "talhoRodeado",
+     "text": "나선 걸음 베기 (탈류 로데아두)",
+     "kind": "unique"
+    },
+    "fired": {
+     "talhoRodeado": 1
+    }
+   },
+   "hud": [
+    "나선 걸음 베기탈류 로데아두 · 내 이베리아 · 고유 동작"
+   ],
+   "allCues": [
+    {
+     "t": 3.958,
+     "name": "talhoRodeado",
+     "text": "나선 걸음 베기 (탈류 로데아두)",
+     "kind": "unique"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "D",
+     5,
+     "game",
+     612,
+     190
+    ],
+    [
+     "U",
+     5,
+     "game",
+     553,
+     244
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     145,
+     304
+    ]
+   ]
+  },
+  {
+   "run": "variant:variant",
+   "forced": false,
+   "precondition": "game path; foe far (no contact needed)",
+   "touch": "stick held at (1,0); right finger down at (600,200) (no positioning), then 4 frames of (-25,25) px per 17 ms frame, lift",
+   "handAtSwipe": [
+    0.15,
+    0
+   ],
+   "strokeRead": {
+    "tech": null,
+    "pad": null,
+    "unique": null
+   },
+   "signal": {
+    "cue": null,
+    "fired": {}
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": false,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "D",
+     5,
+     "game",
+     600,
+     200
+    ],
+    [
+     "U",
+     5,
+     "game",
+     500,
+     300
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     145,
+     304
+    ]
+   ]
+  }
+ ],
+ "B4": [
+  {
+   "run": "canonical#1",
+   "forced": false,
+   "precondition": "game path; real foe AI",
+   "window": {
+    "t": 5.508,
+    "d": 4.338
+   },
+   "waitedFromRecordStartS": 3.26,
+   "touch": "window open → right finger touchStart, kept still (0 px), fake clock advanced frame by frame until hold state \"wind\" (+10 frames) [real-time hold: several seconds of real time pass], then touchEnd",
+   "pressToWindS": 0.65,
+   "holdStates": [
+    "press",
+    "wind",
+    "idle"
+   ],
+   "secPhases": [],
+   "windowAfter": null,
+   "signal": {
+    "t": 6.35,
+    "name": "altib",
+    "text": "알티바슈 포르트",
+    "kind": "secret"
+   },
+   "holdRefused": 0,
+   "hud": [
+    "알티바슈 포르트내 이베리아 · 비기"
+   ],
+   "allCues": [
+    {
+     "t": 6.35,
+     "name": "altib",
+     "text": "알티바슈 포르트",
+     "kind": "secret"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     620,
+     180
+    ],
+    [
+     "U",
+     4,
+     "game",
+     620,
+     180
+    ]
+   ]
+  },
+  {
+   "run": "canonical#2",
+   "forced": false,
+   "precondition": "game path; real foe AI",
+   "window": {
+    "t": 5.508,
+    "d": 4.322
+   },
+   "waitedFromRecordStartS": 2.99,
+   "touch": "window open → right finger touchStart, kept still (0 px), fake clock advanced frame by frame until hold state \"wind\" (+10 frames) [real-time hold: several seconds of real time pass], then touchEnd",
+   "pressToWindS": 0.65,
+   "holdStates": [
+    "press",
+    "wind",
+    "idle"
+   ],
+   "secPhases": [],
+   "windowAfter": null,
+   "signal": {
+    "t": 6.35,
+    "name": "altib",
+    "text": "알티바슈 포르트",
+    "kind": "secret"
+   },
+   "holdRefused": 0,
+   "hud": [
+    "알티바슈 포르트내 이베리아 · 비기"
+   ],
+   "allCues": [
+    {
+     "t": 6.35,
+     "name": "altib",
+     "text": "알티바슈 포르트",
+     "kind": "secret"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     627,
+     184
+    ],
+    [
+     "U",
+     4,
+     "game",
+     627,
+     184
+    ]
+   ]
+  },
+  {
+   "run": "canonical#3",
+   "forced": false,
+   "precondition": "game path; real foe AI",
+   "window": {
+    "t": 5.508,
+    "d": 4.345
+   },
+   "waitedFromRecordStartS": 2.83,
+   "touch": "window open → right finger touchStart, kept still (0 px), fake clock advanced frame by frame until hold state \"wind\" (+10 frames) [real-time hold: several seconds of real time pass], then touchEnd",
+   "pressToWindS": 0.65,
+   "holdStates": [
+    "press",
+    "wind",
+    "idle"
+   ],
+   "secPhases": [],
+   "windowAfter": null,
+   "signal": {
+    "t": 6.35,
+    "name": "altib",
+    "text": "알티바슈 포르트",
+    "kind": "secret"
+   },
+   "holdRefused": 0,
+   "hud": [
+    "알티바슈 포르트내 이베리아 · 비기"
+   ],
+   "allCues": [
+    {
+     "t": 6.35,
+     "name": "altib",
+     "text": "알티바슈 포르트",
+     "kind": "secret"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     634,
+     188
+    ],
+    [
+     "U",
+     4,
+     "game",
+     634,
+     188
+    ]
+   ]
+  },
+  {
+   "run": "variant:variant",
+   "forced": false,
+   "precondition": "game path; real foe AI",
+   "window": {
+    "t": 5.508,
+    "d": 4.281
+   },
+   "waitedFromRecordStartS": 3.15,
+   "touch": "window open → right finger touchStart, kept still (0 px), fake clock advanced frame by frame until hold state \"wind\" (+10 frames) [real-time hold: several seconds of real time pass], then touchEnd",
+   "pressToWindS": 0.65,
+   "holdStates": [
+    "press",
+    "wind",
+    "idle"
+   ],
+   "secPhases": [],
+   "windowAfter": null,
+   "signal": {
+    "t": 6.35,
+    "name": "altib",
+    "text": "알티바슈 포르트",
+    "kind": "secret"
+   },
+   "holdRefused": 0,
+   "hud": [
+    "알티바슈 포르트내 이베리아 · 비기"
+   ],
+   "allCues": [
+    {
+     "t": 6.35,
+     "name": "altib",
+     "text": "알티바슈 포르트",
+     "kind": "secret"
+    }
+   ],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     620,
+     180
+    ],
+    [
+     "U",
+     4,
+     "game",
+     620,
+     180
+    ]
+   ]
+  }
+ ],
+ "B5": [
+  {
+   "run": "canonical#1",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 0.05s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.058,
+   "signal": {
+    "ibFlowOnFrames": 40,
+    "maxIbCutN": 2,
+    "ibLinkFrames": 22,
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    }
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  },
+  {
+   "run": "canonical#2",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 0.15s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.159,
+   "signal": {
+    "ibFlowOnFrames": 28,
+    "maxIbCutN": 1,
+    "ibLinkFrames": 35,
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    }
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     605,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     365,
+     280
+    ]
+   ]
+  },
+  {
+   "run": "canonical#3",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 0.25s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.25,
+   "signal": {
+    "ibFlowOnFrames": 43,
+    "maxIbCutN": 1,
+    "ibLinkFrames": 16,
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    }
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     610,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     370,
+     280
+    ]
+   ]
+  },
+  {
+   "run": "variant:variant",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 1s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.992,
+   "signal": {
+    "ibFlowOnFrames": 0,
+    "maxIbCutN": 0,
+    "ibLinkFrames": 0,
+    "linkStats": null
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": false,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  }
+ ],
+ "B7": [
+  {
+   "run": "canonical#1",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: cut 1 (-25,+30)×4, keep down, wait 0.05s, cut 2 (-35,0)×4 (← horizontal, starts far from side-guard pad), lift",
+   "gapEndOfCut1ToCut2StartS": 0.058,
+   "signal": {
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    },
+    "linkPhases": [
+     "turn",
+     "arrive",
+     "replay"
+    ]
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  },
+  {
+   "run": "canonical#2",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: cut 1 (-25,+30)×4, keep down, wait 0.15s, cut 2 (-35,0)×4 (← horizontal, starts far from side-guard pad), lift",
+   "gapEndOfCut1ToCut2StartS": 0.159,
+   "signal": {
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    },
+    "linkPhases": [
+     "turn",
+     "arrive",
+     "replay"
+    ]
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     605,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     365,
+     280
+    ]
+   ]
+  },
+  {
+   "run": "canonical#3",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: cut 1 (-25,+30)×4, keep down, wait 0.25s, cut 2 (-35,0)×4 (← horizontal, starts far from side-guard pad), lift",
+   "gapEndOfCut1ToCut2StartS": 0.25,
+   "signal": {
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    },
+    "linkPhases": [
+     "turn",
+     "arrive",
+     "replay"
+    ]
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     610,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     370,
+     280
+    ]
+   ]
+  },
+  {
+   "run": "variant:variant",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: cut 1 (-25,+30)×4, keep down, wait 1s, cut 2 (-35,0)×4 (← horizontal, starts far from side-guard pad), lift",
+   "gapEndOfCut1ToCut2StartS": 0.992,
+   "signal": {
+    "linkStats": null,
+    "linkPhases": []
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": false,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  }
+ ],
+ "G2:iberianControl": [
+  {
+   "run": "variant:iberianControl",
+   "forced": false,
+   "precondition": "game path; standing still at round start, foe far",
+   "touch": "stick to (0,1) of radius, held 60 frames",
+   "signal": {
+    "burstsUsed": [],
+    "fastFrames": 0,
+    "firstFast": null
+   },
+   "hud": [],
+   "fired": false,
+   "staminaNote": "stamina infinite in this stage; signal = burst objects used by a step (dig>0 = dig-in) — fastK>1 alone also occurs on a plain forward start",
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "moveStick",
+     86,
+     304
+    ],
+    [
+     "U",
+     4,
+     "moveStick",
+     86,
+     245
+    ]
+   ]
+  }
+ ],
+ "B4:swipe": [
+  {
+   "run": "variant:swipe",
+   "forced": false,
+   "precondition": "game path; real foe AI",
+   "window": {
+    "t": 5.508,
+    "d": 4.349
+   },
+   "waitedFromRecordStartS": 3.15,
+   "touch": "window open → fast swipe (4 frames of -25,+25 px) instead of a hold",
+   "holdStates": [
+    "idle"
+   ],
+   "secPhases": [],
+   "windowAfter": null,
+   "signal": null,
+   "holdRefused": 0,
+   "hud": [
+    "알티바슈 포르트내 이베리아 · 비기"
+   ],
+   "allCues": [],
+   "fired": false,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     620,
+     180
+    ],
+    [
+     "U",
+     4,
+     "game",
+     520,
+     280
+    ]
+   ]
+  }
+ ],
+ "B5:gap0.35": [
+  {
+   "run": "variant:gap0.35",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 0.35s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.35,
+   "signal": {
+    "ibFlowOnFrames": 43,
+    "maxIbCutN": 1,
+    "ibLinkFrames": 15,
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    }
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  }
+ ],
+ "B7:gap0.35": [
+  {
+   "run": "variant:gap0.35",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: cut 1 (-25,+30)×4, keep down, wait 0.35s, cut 2 (-35,0)×4 (← horizontal, starts far from side-guard pad), lift",
+   "gapEndOfCut1ToCut2StartS": 0.35,
+   "signal": {
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    },
+    "linkPhases": [
+     "turn",
+     "arrive",
+     "replay"
+    ]
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  }
+ ],
+ "B5:gap0.45": [
+  {
+   "run": "variant:gap0.45",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 0.45s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.442,
+   "signal": {
+    "ibFlowOnFrames": 44,
+    "maxIbCutN": 1,
+    "ibLinkFrames": 14,
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    }
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  }
+ ],
+ "B7:gap0.45": [
+  {
+   "run": "variant:gap0.45",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: cut 1 (-25,+30)×4, keep down, wait 0.45s, cut 2 (-35,0)×4 (← horizontal, starts far from side-guard pad), lift",
+   "gapEndOfCut1ToCut2StartS": 0.442,
+   "signal": {
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    },
+    "linkPhases": [
+     "turn",
+     "arrive",
+     "replay"
+    ]
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  }
+ ],
+ "B5:gap0.55": [
+  {
+   "run": "variant:gap0.55",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 0.55s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.542,
+   "signal": {
+    "ibFlowOnFrames": 43,
+    "maxIbCutN": 1,
+    "ibLinkFrames": 15,
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    }
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  }
+ ],
+ "B7:gap0.55": [
+  {
+   "run": "variant:gap0.55",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: cut 1 (-25,+30)×4, keep down, wait 0.55s, cut 2 (-35,0)×4 (← horizontal, starts far from side-guard pad), lift",
+   "gapEndOfCut1ToCut2StartS": 0.55,
+   "signal": {
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    },
+    "linkPhases": [
+     "turn",
+     "arrive",
+     "replay"
+    ]
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  }
+ ],
+ "B5:gap0.65": [
+  {
+   "run": "variant:gap0.65",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 0.65s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.65,
+   "signal": {
+    "ibFlowOnFrames": 43,
+    "maxIbCutN": 1,
+    "ibLinkFrames": 15,
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    }
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  }
+ ],
+ "B7:gap0.65": [
+  {
+   "run": "variant:gap0.65",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: cut 1 (-25,+30)×4, keep down, wait 0.65s, cut 2 (-35,0)×4 (← horizontal, starts far from side-guard pad), lift",
+   "gapEndOfCut1ToCut2StartS": 0.65,
+   "signal": {
+    "linkStats": {
+     "fired": 1,
+     "tech": {
+      "zwerch": 1
+     }
+    },
+    "linkPhases": [
+     "turn",
+     "arrive",
+     "replay"
+    ]
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  }
+ ],
+ "B5:gap0.75": [
+  {
+   "run": "variant:gap0.75",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 0.75s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.742,
+   "signal": {
+    "ibFlowOnFrames": 0,
+    "maxIbCutN": 0,
+    "ibLinkFrames": 0,
+    "linkStats": null
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": false,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  }
+ ],
+ "B7:gap0.75": [
+  {
+   "run": "variant:gap0.75",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: cut 1 (-25,+30)×4, keep down, wait 0.75s, cut 2 (-35,0)×4 (← horizontal, starts far from side-guard pad), lift",
+   "gapEndOfCut1ToCut2StartS": 0.742,
+   "signal": {
+    "linkStats": null,
+    "linkPhases": []
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": false,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     360,
+     280
+    ]
+   ]
+  }
+ ],
+ "B5:upcut": [
+  {
+   "run": "canonical#1",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 0.05s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.05,
+   "signal": {
+    "ibFlowOnFrames": 43,
+    "maxIbCutN": 1,
+    "ibLinkFrames": 0,
+    "linkStats": null
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     600,
+     160
+    ]
+   ]
+  },
+  {
+   "run": "canonical#2",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 0.15s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.159,
+   "signal": {
+    "ibFlowOnFrames": 43,
+    "maxIbCutN": 1,
+    "ibLinkFrames": 0,
+    "linkStats": null
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     605,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     605,
+     160
+    ]
+   ]
+  },
+  {
+   "run": "canonical#3",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 0.25s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.25,
+   "signal": {
+    "ibFlowOnFrames": 43,
+    "maxIbCutN": 1,
+    "ibLinkFrames": 0,
+    "linkStats": null
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": true,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     610,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     610,
+     160
+    ]
+   ]
+  },
+  {
+   "run": "variant:variant",
+   "forced": false,
+   "precondition": "game path; foe far",
+   "touch": "one finger: down, cut 1 = 4 frames of (-25,+30) px, keep finger down, wait 1s game time, cut 2 = 4 frames of (-35,0) px, lift",
+   "gapEndOfCut1ToCut2StartS": 0.984,
+   "signal": {
+    "ibFlowOnFrames": 0,
+    "maxIbCutN": 0,
+    "ibLinkFrames": 0,
+    "linkStats": null
+   },
+   "hud": [],
+   "allCues": [],
+   "fired": false,
+   "errors": [],
+   "pointerLog": [
+    [
+     "D",
+     4,
+     "game",
+     600,
+     160
+    ],
+    [
+     "U",
+     4,
+     "game",
+     600,
+     160
+    ]
+   ]
+  }
+ ]
+}

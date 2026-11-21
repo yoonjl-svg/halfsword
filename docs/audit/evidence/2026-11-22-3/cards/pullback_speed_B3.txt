@@ -1,0 +1,13 @@
+{"cell":"B3","move":"talhoRodeado","pullBackPxPerFrame":2,"pullBackPxPerSec":118,"pullBackSec":0.82,"pauseFrames":0,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.433,0.444]}
+{"cell":"B3","move":"talhoRodeado","pullBackPxPerFrame":2,"pullBackPxPerSec":118,"pullBackSec":0.82,"pauseFrames":6,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.363,0.503]}
+{"cell":"B3","move":"talhoRodeado","pullBackPxPerFrame":3,"pullBackPxPerSec":176,"pullBackSec":0.54,"pauseFrames":0,"firedOf3":3,"cutsDuringPullBack":[0,1,1],"cutsCharged":[1,2,2],"handAtStroke":[0.363,0.503]}
+{"cell":"B3","move":"talhoRodeado","pullBackPxPerFrame":3,"pullBackPxPerSec":176,"pullBackSec":0.54,"pauseFrames":6,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.362,0.504]}
+{"cell":"B3","move":"talhoRodeado","pullBackPxPerFrame":4,"pullBackPxPerSec":235,"pullBackSec":0.41,"pauseFrames":0,"firedOf3":2,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.358,0.506]}
+{"cell":"B3","move":"talhoRodeado","pullBackPxPerFrame":4,"pullBackPxPerSec":235,"pullBackSec":0.41,"pauseFrames":6,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.363,0.503]}
+{"cell":"B3","move":"talhoRodeado","pullBackPxPerFrame":6,"pullBackPxPerSec":353,"pullBackSec":0.27,"pauseFrames":0,"firedOf3":0,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.36,0.505]}
+{"cell":"B3","move":"talhoRodeado","pullBackPxPerFrame":6,"pullBackPxPerSec":353,"pullBackSec":0.27,"pauseFrames":6,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.363,0.502]}
+{"cell":"B3","move":"talhoRodeado","pullBackPxPerFrame":8,"pullBackPxPerSec":471,"pullBackSec":0.2,"pauseFrames":0,"firedOf3":0,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.366,0.5]}
+{"cell":"B3","move":"talhoRodeado","pullBackPxPerFrame":8,"pullBackPxPerSec":471,"pullBackSec":0.2,"pauseFrames":6,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.363,0.503]}
+{"cell":"B3","move":"talhoRodeado","pullBackPxPerFrame":12,"pullBackPxPerSec":706,"pullBackSec":0.14,"pauseFrames":0,"firedOf3":0,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.363,0.502]}
+{"cell":"B3","move":"talhoRodeado","pullBackPxPerFrame":12,"pullBackPxPerSec":706,"pullBackSec":0.14,"pauseFrames":6,"firedOf3":3,"cutsDuringPullBack":[0,0,0],"cutsCharged":[1,1,1],"handAtStroke":[0.365,0.501]}
+DONE

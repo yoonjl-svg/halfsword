@@ -1,0 +1,4108 @@
+{
+ "I6": {
+  "school": "italian",
+  "weapon": "rapier",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: guard press held 20 frames",
+    "input": {
+     "guardHoldFrames": 20,
+     "guardRealMs": 625
+    },
+    "oppStartsDelta": 1,
+    "firstRunFrame": 0,
+    "guardNameDuring": "뻗은 3번 자세테르차 · 찌르기가 끝나는 자리",
+    "guardNameShowedOpposition": true,
+    "oppRunFrames": 20,
+    "hudAfter": "",
+    "ok": true,
+    "gHeldSeen": true,
+    "d": 5.768,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      4,
+      "btnParry",
+      782,
+      328
+     ]
+    ]
+   },
+   {
+    "label": "canon 2: held 40 frames",
+    "input": {
+     "guardHoldFrames": 40,
+     "guardRealMs": 1310
+    },
+    "oppStartsDelta": 1,
+    "firstRunFrame": 0,
+    "guardNameDuring": "3번 자세테르차 · 가운데를 지키는 으뜸 자세",
+    "guardNameShowedOpposition": true,
+    "oppRunFrames": 35,
+    "hudAfter": "",
+    "ok": true,
+    "gHeldSeen": true,
+    "d": 4.813,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      5,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      5,
+      "btnParry",
+      782,
+      328
+     ]
+    ]
+   },
+   {
+    "label": "canon 3: held 10 frames",
+    "input": {
+     "guardHoldFrames": 10,
+     "guardRealMs": 197
+    },
+    "oppStartsDelta": 1,
+    "firstRunFrame": 0,
+    "guardNameDuring": "3번 자세테르차 · 가운데를 지키는 으뜸 자세",
+    "guardNameShowedOpposition": true,
+    "oppRunFrames": 10,
+    "hudAfter": "",
+    "ok": true,
+    "gHeldSeen": true,
+    "d": 3.627,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      6,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      6,
+      "btnParry",
+      782,
+      328
+     ]
+    ]
+   },
+   {
+    "label": "variant: very short guard tap (1 frame)",
+    "input": {
+     "guardHoldFrames": 1,
+     "guardRealMs": 127
+    },
+    "oppStartsDelta": 1,
+    "firstRunFrame": 0,
+    "guardNameDuring": "3번 자세테르차 · 가운데를 지키는 으뜸 자세",
+    "guardNameShowedOpposition": true,
+    "oppRunFrames": 1,
+    "hudAfter": "",
+    "ok": true,
+    "gHeldSeen": true,
+    "d": 2.726,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      7,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      7,
+      "btnParry",
+      782,
+      328
+     ]
+    ]
+   }
+  ]
+ },
+ "I7": {
+  "school": "italian",
+  "weapon": "rapier",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: ↓ from middle-high",
+    "input": {
+     "stick": null,
+     "startPad": [
+      0,
+      0.3
+     ],
+     "handAtStart": [
+      0,
+      0.301
+     ],
+     "swipeScreenDir": "↓",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": null,
+     "pad": null,
+     "kind": "thrust",
+     "unique": "imbroccata",
+     "dir": [
+      -0.01,
+      -1
+     ],
+     "start": [
+      0,
+      0.3
+     ],
+     "t0": 12.942
+    },
+    "fired": {
+     "imbroccata": 1
+    },
+    "ok": true,
+    "hudBefore": "",
+    "hudAfter": "내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작",
+    "cueAfter": "imbroccata|내려 찌르기 (임브로카타)|12.942",
+    "d": 1.477,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      8,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      8,
+      "game",
+      593,
+      221
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   },
+   {
+    "label": "canon 2: ↙ from right high",
+    "input": {
+     "stick": null,
+     "startPad": [
+      0.42,
+      0.42
+     ],
+     "handAtStart": [
+      0.416,
+      0.418
+     ],
+     "swipeScreenDir": "↙",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": "zornhau",
+     "pad": "tagR",
+     "kind": "thrust",
+     "unique": "imbroccata",
+     "dir": [
+      -0.58,
+      -0.81
+     ],
+     "start": [
+      0.43,
+      0.42
+     ],
+     "t0": 17.733
+    },
+    "fired": {
+     "imbroccata": 1
+    },
+    "ok": true,
+    "hudBefore": "내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작",
+    "hudAfter": "내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작",
+    "cueAfter": "imbroccata|내려 찌르기 (임브로카타)|17.733",
+    "d": 1.715,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      9,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      9,
+      "game",
+      588,
+      180
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   },
+   {
+    "label": "canon 3: ↘ from left high",
+    "input": {
+     "stick": null,
+     "startPad": [
+      -0.4,
+      0.42
+     ],
+     "handAtStart": [
+      -0.381,
+      0.435
+     ],
+     "swipeScreenDir": "↘",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": "zornhauL",
+     "pad": "tagL",
+     "kind": "thrust",
+     "unique": "imbroccata",
+     "dir": [
+      0.65,
+      -0.76
+     ],
+     "start": [
+      -0.38,
+      0.43
+     ],
+     "t0": 27.558
+    },
+    "fired": {
+     "imbroccata": 1
+    },
+    "ok": true,
+    "hudBefore": "내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작",
+    "hudAfter": "내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작",
+    "cueAfter": "imbroccata|내려 찌르기 (임브로카타)|27.558",
+    "d": 1.585,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      11,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      11,
+      "game",
+      688,
+      258
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 1
+   },
+   {
+    "label": "variant: shallow ↙ from right side (screen 1:0.35, hand ~66° from straight down)",
+    "input": {
+     "stick": null,
+     "startPad": [
+      0.52,
+      0.06
+     ],
+     "handAtStart": [
+      0.514,
+      0.074
+     ],
+     "swipeScreenDir": [
+      -1,
+      0.35
+     ],
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": "zwerch",
+     "pad": "sideR",
+     "kind": "thrust",
+     "unique": "imbroccata",
+     "dir": [
+      -0.92,
+      -0.39
+     ],
+     "start": [
+      0.51,
+      0.07
+     ],
+     "t0": 32.1
+    },
+    "fired": {
+     "imbroccata": 1
+    },
+    "ok": true,
+    "hudBefore": "내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작",
+    "hudAfter": "내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작",
+    "cueAfter": "imbroccata|내려 찌르기 (임브로카타)|32.100",
+    "d": 0.939,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      12,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      12,
+      "game",
+      581,
+      181
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   },
+   {
+    "label": "variant: shallower ↙ from right side (screen 1:0.2, hand ~75° from straight down)",
+    "input": {
+     "stick": null,
+     "startPad": [
+      0.52,
+      0.06
+     ],
+     "handAtStart": [
+      0.535,
+      0.062
+     ],
+     "swipeScreenDir": [
+      -1,
+      0.2
+     ],
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": null,
+     "pad": "pflugR",
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      0.71,
+      0.7
+     ],
+     "start": [
+      0.22,
+      -0.22
+     ],
+     "t0": 34.317
+    },
+    "fired": {},
+    "ok": false,
+    "hudBefore": "내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작",
+    "hudAfter": "내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작",
+    "cueAfter": "imbroccata|내려 찌르기 (임브로카타)|32.100",
+    "d": 1.543,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      13,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      13,
+      "game",
+      578,
+      172
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   },
+   {
+    "label": "variant: short ↓ from waist level",
+    "input": {
+     "stick": null,
+     "startPad": [
+      0,
+      0.03
+     ],
+     "handAtStart": [
+      0.005,
+      0.029
+     ],
+     "swipeScreenDir": "↓",
+     "steps": 2,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": null,
+     "pad": "langort",
+     "kind": "thrust",
+     "unique": "imbroccata",
+     "dir": [
+      -0.02,
+      -1
+     ],
+     "start": [
+      0,
+      0.03
+     ],
+     "t0": 4.425
+    },
+    "fired": {
+     "imbroccata": 1
+    },
+    "ok": true,
+    "hudBefore": "",
+    "hudAfter": "내려 찌르기임브로카타 · 내 이탈리아 · 고유 동작",
+    "cueAfter": "imbroccata|내려 찌르기 (임브로카타)|4.425",
+    "d": 4.936,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      4,
+      "game",
+      598,
+      235
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   }
+  ]
+ },
+ "I9": {
+  "school": "italian",
+  "weapon": "rapier",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: foe attacking, stick → + tap",
+    "input": {
+     "stick": [
+      1,
+      0
+     ],
+     "stickSeen": [
+      1,
+      0
+     ],
+     "tapRealMs": 121,
+     "stickToTapRealMs": 470
+    },
+    "waitedFramesForThreat": 9,
+    "noThreatAtTap": 0,
+    "threatId": 1,
+    "foeAtk": "follow",
+    "d": 1.966,
+    "fired": {
+     "inquartata": 1
+    },
+    "ok": true,
+    "hudAfter": "비껴서며 찌르기인콰르타타 · 내 이탈리아 · 고유 동작",
+    "cueAfter": "inquartata|비껴서며 찌르기 (인콰르타타)|5.942",
+    "coolBefore": {},
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      245
+     ],
+     [
+      "pointerdown",
+      5,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      6,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      6,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      5,
+      "moveStick",
+      145,
+      304
+     ]
+    ]
+   },
+   {
+    "label": "canon 2: foe attacking, stick ← + tap",
+    "input": {
+     "stick": [
+      -1,
+      0
+     ],
+     "stickSeen": [
+      -1,
+      0
+     ],
+     "tapRealMs": 170,
+     "stickToTapRealMs": 439
+    },
+    "waitedFramesForThreat": 99,
+    "noThreatAtTap": 0,
+    "threatId": 6,
+    "foeAtk": "follow",
+    "d": 1.458,
+    "fired": {
+     "inquartata": 1
+    },
+    "ok": true,
+    "hudAfter": "비껴서며 찌르기인콰르타타 · 내 이탈리아 · 고유 동작",
+    "cueAfter": "inquartata|비껴서며 찌르기 (인콰르타타)|11.767",
+    "coolBefore": {
+     "inquartata": 6.26
+    },
+    "pointerEvents": [
+     [
+      "pointerdown",
+      7,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      8,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      8,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      7,
+      "moveStick",
+      27,
+      304
+     ]
+    ]
+   },
+   {
+    "label": "canon 3: foe attacking, stick → + tap",
+    "input": {
+     "stick": [
+      1,
+      0
+     ],
+     "stickSeen": [
+      1,
+      0
+     ],
+     "tapRealMs": 132,
+     "stickToTapRealMs": 517
+    },
+    "waitedFramesForThreat": 73,
+    "noThreatAtTap": 0,
+    "threatId": 1,
+    "foeAtk": "follow",
+    "d": 1.709,
+    "fired": {
+     "inquartata": 1
+    },
+    "ok": true,
+    "hudAfter": "비껴서며 찌르기인콰르타타 · 내 이탈리아 · 고유 동작",
+    "cueAfter": "inquartata|비껴서며 찌르기 (인콰르타타)|7.125",
+    "coolBefore": {},
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      245
+     ],
+     [
+      "pointerdown",
+      5,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      6,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      6,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      5,
+      "moveStick",
+      145,
+      304
+     ]
+    ]
+   },
+   {
+    "label": "variant: foe attacking, stick diagonal ↗ + tap",
+    "input": {
+     "stick": [
+      0.6,
+      0.8
+     ],
+     "stickSeen": [
+      0.6,
+      0.8
+     ],
+     "tapRealMs": 153,
+     "stickToTapRealMs": 2450
+    },
+    "waitedFramesForThreat": 13,
+    "noThreatAtTap": 0,
+    "threatId": 1,
+    "foeAtk": "follow",
+    "d": 1.931,
+    "fired": {},
+    "ok": false,
+    "hudAfter": "",
+    "cueAfter": null,
+    "coolBefore": {},
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      245
+     ],
+     [
+      "pointerdown",
+      5,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      6,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      6,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      5,
+      "moveStick",
+      122,
+      256
+     ]
+    ]
+   }
+  ]
+ },
+ "I2": {
+  "school": "italian",
+  "weapon": "rapier",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: tap 0.3 s after blade contact began",
+    "taps": [
+     {
+      "ageAtTap": 0.3,
+      "sinceLastTouch": 0,
+      "touchCut": false,
+      "realMs": 112
+     }
+    ],
+    "waitedFramesForContact": 10,
+    "d": 1.807,
+    "foeAtk": "windup",
+    "fired": {},
+    "ok": false,
+    "hudAfter": "",
+    "cueAfter": null,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      7,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      7,
+      "moveStick",
+      86,
+      245
+     ],
+     [
+      "pointerdown",
+      8,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      8,
+      "game",
+      640,
+      170
+     ]
+    ]
+   },
+   {
+    "label": "canon 2: tap 0.5 s after contact",
+    "taps": [
+     {
+      "ageAtTap": 0.508,
+      "sinceLastTouch": 0,
+      "touchCut": false,
+      "realMs": 137
+     }
+    ],
+    "waitedFramesForContact": 23,
+    "d": 2.104,
+    "foeAtk": "ready",
+    "fired": {
+     "cavazione": 1
+    },
+    "ok": true,
+    "hudAfter": "칼끝 돌려 빼기카바치오네 · 내 이탈리아 · 고유 동작",
+    "cueAfter": "cavazione|칼끝 돌려 빼기 (카바치오네)|12.758",
+    "pointerEvents": [
+     [
+      "pointerdown",
+      9,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      9,
+      "game",
+      640,
+      170
+     ]
+    ]
+   },
+   {
+    "label": "canon 3: tap 0.25 s after contact",
+    "taps": [
+     {
+      "ageAtTap": 0.25,
+      "sinceLastTouch": 0,
+      "touchCut": false,
+      "realMs": 125
+     }
+    ],
+    "waitedFramesForContact": 7,
+    "d": 1.327,
+    "foeAtk": "ready",
+    "fired": {
+     "cavazione": 1
+    },
+    "ok": true,
+    "hudAfter": "칼끝 돌려 빼기카바치오네 · 내 이탈리아 · 고유 동작",
+    "cueAfter": "cavazione|칼끝 돌려 빼기 (카바치오네)|15.625",
+    "pointerEvents": [
+     [
+      "pointerdown",
+      10,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      10,
+      "game",
+      640,
+      170
+     ]
+    ]
+   },
+   {
+    "label": "variant: early tap at 0.05 s then tap at 0.4 s",
+    "taps": [
+     {
+      "ageAtTap": 0.058,
+      "sinceLastTouch": 0,
+      "realMs": 120
+     },
+     {
+      "ageAtTap": 0.408,
+      "sinceLastTouch": 0.033,
+      "touchCut": false,
+      "realMs": 113
+     }
+    ],
+    "waitedFramesForContact": 38,
+    "d": 1.316,
+    "foeAtk": "ready",
+    "fired": {},
+    "ok": false,
+    "hudAfter": "칼끝 돌려 빼기카바치오네 · 내 이탈리아 · 고유 동작",
+    "cueAfter": "cavazione|칼끝 돌려 빼기 (카바치오네)|15.625",
+    "pointerEvents": [
+     [
+      "pointerdown",
+      11,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      11,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerdown",
+      12,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      12,
+      "game",
+      640,
+      170
+     ]
+    ]
+   }
+  ]
+ },
+ "I4": {
+  "school": "italian",
+  "weapon": "rapier",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: stick follows foe steps",
+    "input": {
+     "mirrorFoeSteps": true
+    },
+    "framesCoveredAndMirroring": 31,
+    "riso": {
+     "on": false,
+     "held": 0,
+     "d": 1.014,
+     "ends": {
+      "foeSwing": 0,
+      "uncover": 0,
+      "meSwing": 0,
+      "stick": 2,
+      "gap": 0,
+      "mirror": 0
+     },
+     "gapBlocked": 0
+    },
+    "windowAfter_s": null,
+    "d": 0.759,
+    "ok": false,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      245
+     ],
+     [
+      "pointerdown",
+      5,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      5,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      6,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      6,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      7,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      7,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      8,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      8,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      9,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      9,
+      "moveStick",
+      86,
+      352
+     ],
+     [
+      "pointerdown",
+      10,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      10,
+      "moveStick",
+      86,
+      256
+     ]
+    ]
+   },
+   {
+    "label": "canon 2",
+    "input": {
+     "mirrorFoeSteps": true
+    },
+    "framesCoveredAndMirroring": 0,
+    "riso": {
+     "on": false,
+     "held": 0,
+     "d": 0.403,
+     "ends": {
+      "foeSwing": 0,
+      "uncover": 0,
+      "meSwing": 0,
+      "stick": 0,
+      "gap": 0,
+      "mirror": 0
+     },
+     "gapBlocked": 0
+    },
+    "windowAfter_s": null,
+    "d": 1.44,
+    "ok": false,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      245
+     ],
+     [
+      "pointerdown",
+      5,
+      "moveStick",
+      86,
+      304
+     ]
+    ]
+   },
+   {
+    "label": "canon 3",
+    "input": {
+     "mirrorFoeSteps": true
+    },
+    "framesCoveredAndMirroring": 115,
+    "riso": {
+     "on": false,
+     "held": 0,
+     "d": null,
+     "ends": {
+      "foeSwing": 2,
+      "uncover": 0,
+      "meSwing": 0,
+      "stick": 1,
+      "gap": 0,
+      "mirror": 0
+     },
+     "gapBlocked": 0
+    },
+    "windowAfter_s": null,
+    "d": 0.972,
+    "ok": false,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      245
+     ],
+     [
+      "pointerdown",
+      5,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      5,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      6,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      6,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      7,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      7,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      8,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      8,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      9,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      9,
+      "moveStick",
+      86,
+      256
+     ]
+    ]
+   },
+   {
+    "label": "variant: stick opposite to foe steps",
+    "input": {
+     "mirrorFoeSteps": false
+    },
+    "framesCoveredAndMirroring": 59,
+    "riso": {
+     "on": false,
+     "held": 0,
+     "d": 0.382,
+     "ends": {
+      "foeSwing": 1,
+      "uncover": 4,
+      "meSwing": 0,
+      "stick": 0,
+      "gap": 0,
+      "mirror": 0
+     },
+     "gapBlocked": 0
+    },
+    "windowAfter_s": null,
+    "d": 1.492,
+    "ok": false,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      245
+     ],
+     [
+      "pointerdown",
+      5,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      5,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      6,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      6,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      7,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      7,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      8,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      8,
+      "moveStick",
+      86,
+      352
+     ],
+     [
+      "pointerdown",
+      9,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      9,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      10,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      10,
+      "moveStick",
+      86,
+      352
+     ],
+     [
+      "pointerdown",
+      11,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      11,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      12,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      12,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      13,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      13,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      14,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      14,
+      "moveStick",
+      86,
+      352
+     ],
+     [
+      "pointerdown",
+      15,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      15,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      16,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      16,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      17,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      17,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      18,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      18,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      19,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      19,
+      "moveStick",
+      86,
+      352
+     ],
+     [
+      "pointerdown",
+      20,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      20,
+      "moveStick",
+      86,
+      352
+     ],
+     [
+      "pointerdown",
+      21,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      21,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      22,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      22,
+      "moveStick",
+      86,
+      352
+     ],
+     [
+      "pointerdown",
+      23,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      23,
+      "moveStick",
+      86,
+      256
+     ],
+     [
+      "pointerdown",
+      24,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      24,
+      "moveStick",
+      86,
+      352
+     ],
+     [
+      "pointerdown",
+      25,
+      "moveStick",
+      86,
+      304
+     ]
+    ]
+   }
+  ]
+ },
+ "J7": {
+  "school": "japanese",
+  "weapon": "uchigatana",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: short ↓ from middle",
+    "input": {
+     "stick": null,
+     "startPad": [
+      0,
+      0.03
+     ],
+     "handAtStart": [
+      0.005,
+      0.029
+     ],
+     "swipeScreenDir": "↓",
+     "steps": 2,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": null,
+     "pad": "langort",
+     "kind": "cut",
+     "unique": "kote",
+     "dir": [
+      -0.03,
+      -1
+     ],
+     "start": [
+      0,
+      0.03
+     ],
+     "t0": 4.425
+    },
+    "fired": {
+     "kote": 1
+    },
+    "ok": true,
+    "hudBefore": "",
+    "hudAfter": "손목 치기코테 · 내 일본 · 고유 동작",
+    "cueAfter": "kote|손목 치기 (코테)|4.425",
+    "d": 4.962,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      4,
+      "game",
+      598,
+      235
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   },
+   {
+    "label": "canon 2: short ↓ from middle (slightly right)",
+    "input": {
+     "stick": null,
+     "startPad": [
+      0.05,
+      0.05
+     ],
+     "handAtStart": [
+      0.035,
+      0.056
+     ],
+     "swipeScreenDir": "↓",
+     "steps": 2,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": null,
+     "pad": "langort",
+     "kind": "cut",
+     "unique": "kote",
+     "dir": [
+      -0.02,
+      -1
+     ],
+     "start": [
+      0.04,
+      0.06
+     ],
+     "t0": 12.95
+    },
+    "fired": {
+     "kote": 1
+    },
+    "ok": true,
+    "hudBefore": "손목 치기코테 · 내 일본 · 고유 동작",
+    "hudAfter": "손목 치기코테 · 내 일본 · 고유 동작",
+    "cueAfter": "kote|손목 치기 (코테)|12.950",
+    "d": 1.27,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      6,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      6,
+      "game",
+      620,
+      238
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 1
+   },
+   {
+    "label": "canon 3: short ↓ from middle (slightly left)",
+    "input": {
+     "stick": null,
+     "startPad": [
+      -0.04,
+      0
+     ],
+     "handAtStart": [
+      -0.037,
+      0
+     ],
+     "swipeScreenDir": "↓",
+     "steps": 3,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": null,
+     "pad": "langort",
+     "kind": "cut",
+     "unique": "kote",
+     "dir": [
+      -0.02,
+      -1
+     ],
+     "start": [
+      -0.04,
+      0
+     ],
+     "t0": 4.583
+    },
+    "fired": {
+     "kote": 1
+    },
+    "ok": true,
+    "hudBefore": "",
+    "hudAfter": "손목 치기코테 · 내 일본 · 고유 동작",
+    "cueAfter": "kote|손목 치기 (코테)|4.583",
+    "d": 4.835,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      4,
+      "game",
+      592,
+      262
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 1
+   },
+   {
+    "label": "variant: short ↓ started a little higher (chest height)",
+    "input": {
+     "stick": null,
+     "startPad": [
+      0,
+      0.3
+     ],
+     "handAtStart": [
+      0.001,
+      0.294
+     ],
+     "swipeScreenDir": "↓",
+     "steps": 2,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": null,
+     "pad": null,
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      0,
+      -1
+     ],
+     "start": [
+      0,
+      0.29
+     ],
+     "t0": 8.825
+    },
+    "fired": {},
+    "ok": false,
+    "hudBefore": "고노센 준비내 일본 · 비기",
+    "hudAfter": "손목 치기코테 · 내 일본 · 고유 동작",
+    "cueAfter": "kote|손목 치기 (코테)|4.583",
+    "d": 2.397,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      5,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      5,
+      "game",
+      617,
+      214
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   }
+  ]
+ },
+ "C3": {
+  "school": "chinese",
+  "weapon": "qinggang",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: ← from right side",
+    "input": {
+     "stick": null,
+     "startPad": [
+      0.52,
+      0.06
+     ],
+     "handAtStart": [
+      0.507,
+      0.058
+     ],
+     "swipeScreenDir": "←",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": "zwerch",
+     "pad": "sideR",
+     "kind": "cut",
+     "unique": "yaoji",
+     "dir": [
+      -1,
+      0
+     ],
+     "start": [
+      0.51,
+      0.06
+     ],
+     "t0": 4.725
+    },
+    "fired": {
+     "yaoji": 1
+    },
+    "ok": true,
+    "hudBefore": "",
+    "hudAfter": "허리 베기요격 · 내 동방 · 고유 동작",
+    "cueAfter": "yaoji|허리 베기 (요격)|4.725",
+    "d": 4.761,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      4,
+      "game",
+      578,
+      184
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   },
+   {
+    "label": "canon 2: ← from right side (slightly in)",
+    "input": {
+     "stick": null,
+     "startPad": [
+      0.48,
+      0.1
+     ],
+     "handAtStart": [
+      0.464,
+      0.098
+     ],
+     "swipeScreenDir": "←",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": "zwerch",
+     "pad": "sideR",
+     "kind": "cut",
+     "unique": "yaoji",
+     "dir": [
+      -1,
+      0.01
+     ],
+     "start": [
+      0.46,
+      0.1
+     ],
+     "t0": 9.4
+    },
+    "fired": {
+     "yaoji": 1
+    },
+    "ok": true,
+    "hudBefore": "허리 베기요격 · 내 동방 · 고유 동작",
+    "hudAfter": "허리 베기요격 · 내 동방 · 고유 동작",
+    "cueAfter": "yaoji|허리 베기 (요격)|9.400",
+    "d": 1.793,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      5,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      5,
+      "game",
+      594,
+      182
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   },
+   {
+    "label": "canon 3: ← from right side (lower)",
+    "input": {
+     "stick": null,
+     "startPad": [
+      0.5,
+      0
+     ],
+     "handAtStart": [
+      0.496,
+      0
+     ],
+     "swipeScreenDir": "←",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": "zwerch",
+     "pad": "sideR",
+     "kind": "cut",
+     "unique": "yaoji",
+     "dir": [
+      -1,
+      0.01
+     ],
+     "start": [
+      0.5,
+      0
+     ],
+     "t0": 14.15
+    },
+    "fired": {
+     "yaoji": 1
+    },
+    "ok": true,
+    "hudBefore": "허리 베기요격 · 내 동방 · 고유 동작",
+    "hudAfter": "허리 베기요격 · 내 동방 · 고유 동작",
+    "cueAfter": "yaoji|허리 베기 (요격)|14.150",
+    "d": 1.596,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      6,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      6,
+      "game",
+      600,
+      193
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   },
+   {
+    "label": "variant: ← started from the middle",
+    "input": {
+     "stick": null,
+     "startPad": [
+      0,
+      0.03
+     ],
+     "handAtStart": [
+      0.005,
+      0.029
+     ],
+     "swipeScreenDir": "←",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": null,
+     "pad": "langort",
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      -1,
+      0.01
+     ],
+     "start": [
+      0,
+      0.03
+     ],
+     "t0": 4.525
+    },
+    "fired": {},
+    "ok": false,
+    "hudBefore": "",
+    "hudAfter": "",
+    "cueAfter": null,
+    "d": 4.866,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      4,
+      "game",
+      502,
+      187
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 1
+   },
+   {
+    "label": "variant: mirrored → from left side",
+    "input": {
+     "stick": null,
+     "startPad": [
+      -0.52,
+      0.06
+     ],
+     "handAtStart": [
+      -0.493,
+      0.058
+     ],
+     "swipeScreenDir": "→",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0
+    ],
+    "classified": {
+     "tech": "zwerchL",
+     "pad": "sideL",
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      1,
+      0
+     ],
+     "start": [
+      -0.49,
+      0.06
+     ],
+     "t0": 9.242
+    },
+    "fired": {},
+    "ok": false,
+    "hudBefore": "",
+    "hudAfter": "",
+    "cueAfter": null,
+    "d": 1.87,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      5,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      5,
+      "game",
+      642,
+      187
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   }
+  ]
+ },
+ "C5": {
+  "school": "chinese",
+  "weapon": "qinggang",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: stick ↑ + ← from right side",
+    "input": {
+     "stick": [
+      0,
+      1
+     ],
+     "startPad": [
+      0.52,
+      0.06
+     ],
+     "handAtStart": [
+      0.507,
+      0.058
+     ],
+     "swipeScreenDir": "←",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     1
+    ],
+    "classified": {
+     "tech": "zwerch",
+     "pad": "sideR",
+     "kind": "cut",
+     "unique": "chebuYaoji",
+     "dir": [
+      -1,
+      0
+     ],
+     "start": [
+      0.51,
+      0.06
+     ],
+     "t0": 4.842
+    },
+    "fired": {
+     "chebuYaoji": 1
+    },
+    "ok": true,
+    "hudBefore": "",
+    "hudAfter": "끌어 딛고 허리 베기체보요격 · 내 동방 · 고유 동작",
+    "cueAfter": "chebuYaoji|끌어 딛고 허리 베기 (체보요격)|4.842",
+    "d": 3.819,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      5,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      5,
+      "game",
+      578,
+      184
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      245
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 1
+   },
+   {
+    "label": "canon 2: stick ↑ (slightly right) + ←",
+    "input": {
+     "stick": [
+      0.2,
+      0.9
+     ],
+     "startPad": [
+      0.48,
+      0.1
+     ],
+     "handAtStart": [
+      0.469,
+      0.099
+     ],
+     "swipeScreenDir": "←",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0.22,
+     0.98
+    ],
+    "classified": {
+     "tech": "zwerch",
+     "pad": "sideR",
+     "kind": "cut",
+     "unique": "chebuYaoji",
+     "dir": [
+      -1,
+      -0.02
+     ],
+     "start": [
+      0.47,
+      0.09
+     ],
+     "t0": 14.375
+    },
+    "fired": {
+     "chebuYaoji": 1
+    },
+    "ok": true,
+    "hudBefore": "끌어 딛고 허리 베기체보요격 · 내 동방 · 고유 동작",
+    "hudAfter": "끌어 딛고 허리 베기체보요격 · 내 동방 · 고유 동작",
+    "cueAfter": "chebuYaoji|끌어 딛고 허리 베기 (체보요격)|14.375",
+    "d": 1.107,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      8,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      9,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      9,
+      "game",
+      528,
+      190
+     ],
+     [
+      "pointerup",
+      8,
+      "moveStick",
+      98,
+      251
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 1
+   },
+   {
+    "label": "canon 3: stick ↑ half tilt + ←",
+    "input": {
+     "stick": [
+      0,
+      0.6
+     ],
+     "startPad": [
+      0.52,
+      0.06
+     ],
+     "handAtStart": [
+      0.517,
+      0.079
+     ],
+     "swipeScreenDir": "←",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     0.85
+    ],
+    "classified": {
+     "tech": "zwerch",
+     "pad": "sideR",
+     "kind": "cut",
+     "unique": "chebuYaoji",
+     "dir": [
+      -1,
+      0.05
+     ],
+     "start": [
+      0.52,
+      0.08
+     ],
+     "t0": 25.033
+    },
+    "fired": {
+     "chebuYaoji": 1
+    },
+    "ok": true,
+    "hudBefore": "끌어 딛고 허리 베기체보요격 · 내 동방 · 고유 동작",
+    "hudAfter": "끌어 딛고 허리 베기체보요격 · 내 동방 · 고유 동작",
+    "cueAfter": "chebuYaoji|끌어 딛고 허리 베기 (체보요격)|25.033",
+    "d": 1.032,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      12,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      13,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      13,
+      "game",
+      556,
+      187
+     ],
+     [
+      "pointerup",
+      12,
+      "moveStick",
+      86,
+      268
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 1
+   },
+   {
+    "label": "variant: stick ↑ + ← from the middle",
+    "input": {
+     "stick": [
+      0,
+      1
+     ],
+     "startPad": [
+      0,
+      0.03
+     ],
+     "handAtStart": [
+      -0.032,
+      0.03
+     ],
+     "swipeScreenDir": "←",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0,
+     1
+    ],
+    "classified": {
+     "tech": null,
+     "pad": "langort",
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      -1,
+      0.01
+     ],
+     "start": [
+      -0.03,
+      0.03
+     ],
+     "t0": 33.958
+    },
+    "fired": {},
+    "ok": false,
+    "hudBefore": "끌어 딛고 허리 베기체보요격 · 내 동방 · 고유 동작",
+    "hudAfter": "끌어 딛고 허리 베기체보요격 · 내 동방 · 고유 동작",
+    "cueAfter": "chebuYaoji|끌어 딛고 허리 베기 (체보요격)|25.033",
+    "d": 1.086,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      16,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      17,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      17,
+      "game",
+      524,
+      190
+     ],
+     [
+      "pointerup",
+      16,
+      "moveStick",
+      86,
+      245
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 1
+   }
+  ]
+ },
+ "C6": {
+  "school": "chinese",
+  "weapon": "qinggang",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: stick ↓ held, tap",
+    "input": {
+     "stickBack": 1,
+     "stickSeen": [
+      0,
+      -1
+     ],
+     "tapWhileBack": true,
+     "framesAfterRelease": null,
+     "msAfterRelease_game": null,
+     "tapRealMs": 155
+    },
+    "fired": {
+     "lianchi": 1
+    },
+    "ok": true,
+    "hudAfter": "날개 접기염시 · 내 동방 · 고유 동작",
+    "cueAfter": "lianchi|날개 접기 (염시)|4.517",
+    "tapState": false,
+    "d": 4.956,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      5,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      5,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      363
+     ]
+    ]
+   },
+   {
+    "label": "canon 2: stick ↓ held, tap",
+    "input": {
+     "stickBack": 1,
+     "stickSeen": [
+      0,
+      -1
+     ],
+     "tapWhileBack": true,
+     "framesAfterRelease": null,
+     "msAfterRelease_game": null,
+     "tapRealMs": 146
+    },
+    "fired": {
+     "lianchi": 1
+    },
+    "ok": true,
+    "hudAfter": "날개 접기염시 · 내 동방 · 고유 동작",
+    "cueAfter": "lianchi|날개 접기 (염시)|8.867",
+    "tapState": false,
+    "d": 2.137,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      6,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      7,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      7,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      6,
+      "moveStick",
+      86,
+      363
+     ]
+    ]
+   },
+   {
+    "label": "canon 3: stick ↓ released, tap 0.25 s later",
+    "input": {
+     "stickBack": 1,
+     "stickSeen": [
+      0,
+      -1
+     ],
+     "tapWhileBack": false,
+     "framesAfterRelease": 15,
+     "msAfterRelease_game": 255,
+     "tapRealMs": 128
+    },
+    "fired": {
+     "lianchi": 1
+    },
+    "ok": true,
+    "hudAfter": "날개 접기염시 · 내 동방 · 고유 동작",
+    "cueAfter": "lianchi|날개 접기 (염시)|13.433",
+    "tapState": false,
+    "d": 1.268,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      8,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      8,
+      "moveStick",
+      86,
+      363
+     ],
+     [
+      "pointerdown",
+      9,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      9,
+      "game",
+      640,
+      170
+     ]
+    ]
+   },
+   {
+    "label": "variant: stick ↓ at 40% tilt, tap",
+    "input": {
+     "stickBack": 0.4,
+     "stickSeen": [
+      0,
+      -0.49
+     ],
+     "tapWhileBack": true,
+     "framesAfterRelease": null,
+     "msAfterRelease_game": null,
+     "tapRealMs": 133
+    },
+    "fired": {},
+    "ok": false,
+    "hudAfter": "날개 접기염시 · 내 동방 · 고유 동작",
+    "cueAfter": "lianchi|날개 접기 (염시)|13.433",
+    "tapState": true,
+    "d": 1.228,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      10,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      11,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      11,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      10,
+      "moveStick",
+      86,
+      328
+     ]
+    ]
+   },
+   {
+    "label": "timing: tap 0.5 s after release",
+    "input": {
+     "stickBack": 1,
+     "stickSeen": [
+      0,
+      -1
+     ],
+     "tapWhileBack": false,
+     "framesAfterRelease": 30,
+     "msAfterRelease_game": 510,
+     "tapRealMs": 129
+    },
+    "fired": {
+     "lianchi": 1
+    },
+    "ok": true,
+    "hudAfter": "날개 접기염시 · 내 동방 · 고유 동작",
+    "cueAfter": "lianchi|날개 접기 (염시)|22.592",
+    "tapState": false,
+    "d": 1.361,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      12,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      12,
+      "moveStick",
+      86,
+      363
+     ],
+     [
+      "pointerdown",
+      13,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      13,
+      "game",
+      640,
+      170
+     ]
+    ]
+   },
+   {
+    "label": "timing: tap 0.7 s after release",
+    "input": {
+     "stickBack": 1,
+     "stickSeen": [
+      0,
+      -1
+     ],
+     "tapWhileBack": false,
+     "framesAfterRelease": 42,
+     "msAfterRelease_game": 714,
+     "tapRealMs": 138
+    },
+    "fired": {},
+    "ok": false,
+    "hudAfter": "",
+    "cueAfter": null,
+    "tapState": true,
+    "d": 4.642,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      363
+     ],
+     [
+      "pointerdown",
+      5,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      5,
+      "game",
+      640,
+      170
+     ]
+    ],
+    "setupRetries": [
+     {
+      "setup": "foe too close (d=0.491), pommel rule would take the tap"
+     }
+    ]
+   }
+  ]
+ },
+ "J6": {
+  "school": "japanese",
+  "weapon": "uchigatana",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: stick → + ↘ from left high",
+    "input": {
+     "stick": [
+      1,
+      0
+     ],
+     "startPad": [
+      -0.4,
+      0.42
+     ],
+     "handAtStart": [
+      -0.417,
+      0.442
+     ],
+     "swipeScreenDir": "↘",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     1,
+     0
+    ],
+    "classified": {
+     "tech": "zornhauL",
+     "pad": "tagL",
+     "kind": "cut",
+     "unique": "hirakiGiri",
+     "dir": [
+      0.6,
+      -0.8
+     ],
+     "start": [
+      -0.42,
+      0.44
+     ],
+     "t0": 31.925
+    },
+    "fired": {
+     "hirakiGiri": 1
+    },
+    "ok": true,
+    "hudBefore": "제비 베기츠바메가에시 · 내 일본 · 고유 동작",
+    "hudAfter": "비껴 베기히라키기리 · 내 일본 · 고유 동작",
+    "cueAfter": "hirakiGiri|비껴 베기 (히라키기리)|31.925",
+    "d": 1.717,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      11,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      12,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      12,
+      "game",
+      624,
+      214
+     ],
+     [
+      "pointerup",
+      11,
+      "moveStick",
+      145,
+      304
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   },
+   {
+    "label": "canon 2: stick ← + ↘ from left high",
+    "input": {
+     "stick": [
+      -1,
+      0
+     ],
+     "startPad": [
+      -0.4,
+      0.42
+     ],
+     "handAtStart": [
+      -0.064,
+      -0.058
+     ],
+     "swipeScreenDir": "↘",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     -1,
+     0
+    ],
+    "classified": {
+     "tech": null,
+     "pad": null,
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      -0.41,
+      0.91
+     ],
+     "start": [
+      0.04,
+      -0.17
+     ],
+     "t0": 40.483
+    },
+    "fired": {},
+    "ok": false,
+    "hudBefore": "고노센내 일본 · 비기",
+    "hudAfter": "고노센내 일본 · 비기",
+    "cueAfter": "hirakiGiri|비껴 베기 (히라키기리)|31.925",
+    "d": 1.009,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      15,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      16,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      16,
+      "game",
+      563,
+      128
+     ],
+     [
+      "pointerup",
+      15,
+      "titleNotice",
+      27,
+      304
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 1
+   },
+   {
+    "label": "canon 3: stick → (slightly fwd) + ↘",
+    "input": {
+     "stick": [
+      1,
+      0.2
+     ],
+     "startPad": [
+      -0.36,
+      0.4
+     ],
+     "handAtStart": [
+      -0.357,
+      0.398
+     ],
+     "swipeScreenDir": "↘",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     0.98,
+     0.2
+    ],
+    "classified": {
+     "tech": "zornhauL",
+     "pad": "tagL",
+     "kind": "cut",
+     "unique": "hirakiGiri",
+     "dir": [
+      0.58,
+      -0.81
+     ],
+     "start": [
+      -0.36,
+      0.4
+     ],
+     "t0": 5.158
+    },
+    "fired": {
+     "hirakiGiri": 1
+    },
+    "ok": true,
+    "hudBefore": "",
+    "hudAfter": "비껴 베기히라키기리 · 내 일본 · 고유 동작",
+    "cueAfter": "hirakiGiri|비껴 베기 (히라키기리)|5.158",
+    "d": 4.197,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      5,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      5,
+      "game",
+      612,
+      214
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      145,
+      292
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   },
+   {
+    "label": "variant: stick → + ↘ from the middle",
+    "input": {
+     "stick": [
+      1,
+      0
+     ],
+     "startPad": [
+      0,
+      0.3
+     ],
+     "handAtStart": [
+      0.008,
+      0.283
+     ],
+     "swipeScreenDir": "↘",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     1,
+     0
+    ],
+    "classified": {
+     "tech": null,
+     "pad": null,
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      0.6,
+      -0.8
+     ],
+     "start": [
+      0.01,
+      0.28
+     ],
+     "t0": 4.667
+    },
+    "fired": {},
+    "ok": false,
+    "hudBefore": "",
+    "hudAfter": "",
+    "cueAfter": null,
+    "d": 4.714,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      5,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      5,
+      "game",
+      667,
+      226
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      145,
+      304
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 1
+   },
+   {
+    "label": "variant: mirrored stick → + ↙ from right high",
+    "input": {
+     "stick": [
+      1,
+      0
+     ],
+     "startPad": [
+      0.42,
+      0.42
+     ],
+     "handAtStart": [
+      0.41,
+      0.412
+     ],
+     "swipeScreenDir": "↙",
+     "steps": 4,
+     "pxPerFrame": 24
+    },
+    "stickSeen": [
+     1,
+     0
+    ],
+    "classified": {
+     "tech": "zornhau",
+     "pad": "tagR",
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      -0.59,
+      -0.81
+     ],
+     "start": [
+      0.41,
+      0.41
+     ],
+     "t0": 10.192
+    },
+    "fired": {},
+    "ok": false,
+    "hudBefore": "고노센 준비내 일본 · 비기",
+    "hudAfter": "고노센 준비내 일본 · 비기",
+    "cueAfter": null,
+    "d": 1.5,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      6,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      7,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      7,
+      "game",
+      676,
+      180
+     ],
+     [
+      "pointerup",
+      6,
+      "moveStick",
+      145,
+      304
+     ]
+    ],
+    "attemptsWithoutStrokeRegistered": 0
+   }
+  ]
+ },
+ "J9": {
+  "school": "japanese",
+  "weapon": "uchigatana",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: ↙ cut (miss) then ↑ at once",
+    "input": {
+     "firstPad": "tagR",
+     "firstDir": "↙",
+     "holdFramesBetween": 0,
+     "upDir": "↑"
+    },
+    "firstStroke": {
+     "tech": "zornhau",
+     "pad": "tagR",
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      -0.6,
+      -0.8
+     ],
+     "start": [
+      0.42,
+      0.42
+     ],
+     "t0": 4.792
+    },
+    "firstLanded": false,
+    "secondStroke": {
+     "tech": null,
+     "pad": null,
+     "kind": "cut",
+     "unique": "tsubameGaeshi",
+     "dir": [
+      -0.29,
+      0.96
+     ],
+     "start": [
+      -0.03,
+      0.24
+     ],
+     "t0": 4.9
+    },
+    "gapAfterFirstEnd_s": 0,
+    "fired": {
+     "tsubameGaeshi": 1
+    },
+    "ok": true,
+    "hudAfter": "제비 베기츠바메가에시 · 내 일본 · 고유 동작",
+    "cueAfter": "tsubameGaeshi|제비 베기 (츠바메가에시)|4.900",
+    "d": 4.664,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      4,
+      "game",
+      593,
+      115
+     ]
+    ]
+   },
+   {
+    "label": "canon 2: ↙ cut then ↑ after 6 frames still",
+    "input": {
+     "firstPad": "tagR",
+     "firstDir": "↙",
+     "holdFramesBetween": 6,
+     "upDir": "↑"
+    },
+    "firstStroke": null,
+    "firstLanded": null,
+    "secondStroke": null,
+    "gapAfterFirstEnd_s": null,
+    "fired": {},
+    "ok": false,
+    "hudAfter": "제비 베기츠바메가에시 · 내 일본 · 고유 동작",
+    "cueAfter": "tsubameGaeshi|제비 베기 (츠바메가에시)|4.900",
+    "d": 1.327,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      5,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      5,
+      "moveStick",
+      86,
+      363
+     ],
+     [
+      "pointerdown",
+      6,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      6,
+      "game",
+      704,
+      66
+     ]
+    ]
+   },
+   {
+    "label": "canon 3: ↓ from top then ↑ after 12 frames",
+    "input": {
+     "firstPad": "tag",
+     "firstDir": "↓",
+     "holdFramesBetween": 12,
+     "upDir": "↑"
+    },
+    "firstStroke": {
+     "tech": "oberhau",
+     "pad": "tag",
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      -0.01,
+      -1
+     ],
+     "start": [
+      0.02,
+      0.51
+     ],
+     "t0": 4.775
+    },
+    "firstLanded": false,
+    "secondStroke": {
+     "tech": "stichAlber",
+     "pad": "alber",
+     "kind": "cut",
+     "unique": "tsubameGaeshi",
+     "dir": [
+      0,
+      1
+     ],
+     "start": [
+      0.02,
+      -0.35
+     ],
+     "t0": 5.092
+    },
+    "gapAfterFirstEnd_s": 0.175,
+    "fired": {
+     "tsubameGaeshi": 1
+    },
+    "ok": true,
+    "hudAfter": "제비 베기츠바메가에시 · 내 일본 · 고유 동작",
+    "cueAfter": "tsubameGaeshi|제비 베기 (츠바메가에시)|5.092",
+    "d": 4.595,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      4,
+      "game",
+      601,
+      133
+     ]
+    ]
+   },
+   {
+    "label": "timing: ↙ then ↑ after 30 frames",
+    "input": {
+     "firstPad": "tagR",
+     "firstDir": "↙",
+     "holdFramesBetween": 30,
+     "upDir": "↑"
+    },
+    "firstStroke": {
+     "tech": "zornhau",
+     "pad": "tagR",
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      -0.57,
+      -0.82
+     ],
+     "start": [
+      0.4,
+      0.41
+     ],
+     "t0": 12.342
+    },
+    "firstLanded": false,
+    "secondStroke": {
+     "tech": null,
+     "pad": null,
+     "kind": "cut",
+     "unique": "tsubameGaeshi",
+     "dir": [
+      0,
+      1
+     ],
+     "start": [
+      -0.04,
+      -0.19
+     ],
+     "t0": 13.008
+    },
+    "gapAfterFirstEnd_s": 0.516,
+    "fired": {
+     "tsubameGaeshi": 1
+    },
+    "ok": true,
+    "hudAfter": "제비 베기츠바메가에시 · 내 일본 · 고유 동작",
+    "cueAfter": "tsubameGaeshi|제비 베기 (츠바메가에시)|13.008",
+    "d": 1.766,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      5,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      5,
+      "moveStick",
+      86,
+      363
+     ],
+     [
+      "pointerdown",
+      6,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      6,
+      "game",
+      674,
+      85
+     ]
+    ]
+   },
+   {
+    "label": "timing: ↙ then ↑ after 45 frames",
+    "input": {
+     "firstPad": "tagR",
+     "firstDir": "↙",
+     "holdFramesBetween": 45,
+     "upDir": "↑"
+    },
+    "firstStroke": {
+     "tech": "zornhau",
+     "pad": "tagR",
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      -0.58,
+      -0.81
+     ],
+     "start": [
+      0.4,
+      0.39
+     ],
+     "t0": 19.508
+    },
+    "firstLanded": true,
+    "secondStroke": {
+     "tech": null,
+     "pad": null,
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      -0.08,
+      1
+     ],
+     "start": [
+      -0.04,
+      -0.21
+     ],
+     "t0": 20.417
+    },
+    "gapAfterFirstEnd_s": 0.759,
+    "fired": {},
+    "ok": false,
+    "hudAfter": "제비 베기츠바메가에시 · 내 일본 · 고유 동작",
+    "cueAfter": "tsubameGaeshi|제비 베기 (츠바메가에시)|13.008",
+    "d": 1.254,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      7,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      7,
+      "moveStick",
+      86,
+      363
+     ],
+     [
+      "pointerdown",
+      8,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      8,
+      "game",
+      611,
+      121
+     ]
+    ]
+   },
+   {
+    "label": "variant: ↙ then ↗ (up-right) at once",
+    "input": {
+     "firstPad": "tagR",
+     "firstDir": "↙",
+     "holdFramesBetween": 0,
+     "upDir": [
+      0.9,
+      -1
+     ]
+    },
+    "firstStroke": {
+     "tech": "zornhau",
+     "pad": "tagR",
+     "kind": "cut",
+     "unique": null,
+     "dir": [
+      -0.65,
+      -0.76
+     ],
+     "start": [
+      0.41,
+      0.44
+     ],
+     "t0": 26.983
+    },
+    "firstLanded": false,
+    "secondStroke": {
+     "tech": null,
+     "pad": "langort",
+     "kind": "cut",
+     "unique": "tsubameGaeshi",
+     "dir": [
+      0.48,
+      0.88
+     ],
+     "start": [
+      0.04,
+      -0.01
+     ],
+     "t0": 27.083
+    },
+    "gapAfterFirstEnd_s": 0,
+    "fired": {
+     "tsubameGaeshi": 1
+    },
+    "ok": true,
+    "hudAfter": "제비 베기츠바메가에시 · 내 일본 · 고유 동작",
+    "cueAfter": "tsubameGaeshi|제비 베기 (츠바메가에시)|27.083",
+    "d": 1.54,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      9,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      9,
+      "moveStick",
+      86,
+      363
+     ],
+     [
+      "pointerdown",
+      10,
+      "game",
+      620,
+      190
+     ],
+     [
+      "pointerup",
+      10,
+      "game",
+      676,
+      143
+     ]
+    ]
+   }
+  ]
+ },
+ "J5": {
+  "school": "japanese",
+  "weapon": "uchigatana",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: no input, wait",
+    "input": {
+     "noTouchUntilWindow": true,
+     "stickNudgeAt_s": null
+    },
+    "armedAfter_s": 5.74,
+    "hudWhenArmed": "고노센 준비내 일본 · 비기",
+    "windowAfter_s": 10.03,
+    "dAtWindow": 1.842,
+    "foeAtkAtWindow": "follow",
+    "tapRealMs": 164,
+    "windowOpen": true,
+    "secretRan": true,
+    "secStages": [
+     "instant",
+     "stiff"
+    ],
+    "hudAfter": "고노센내 일본 · 비기",
+    "ok": true,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      4,
+      "game",
+      640,
+      170
+     ]
+    ]
+   },
+   {
+    "label": "canon 2: no input, wait",
+    "input": {
+     "noTouchUntilWindow": true,
+     "stickNudgeAt_s": null
+    },
+    "armedAfter_s": 5.6,
+    "hudWhenArmed": "고노센 준비내 일본 · 비기",
+    "windowAfter_s": 9.19,
+    "dAtWindow": 1.822,
+    "foeAtkAtWindow": "follow",
+    "tapRealMs": 267,
+    "windowOpen": true,
+    "secretRan": true,
+    "secStages": [
+     "instant",
+     "stiff"
+    ],
+    "hudAfter": "고노센내 일본 · 비기",
+    "ok": true,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      4,
+      "game",
+      640,
+      170
+     ]
+    ]
+   },
+   {
+    "label": "canon 3: no input, wait",
+    "input": {
+     "noTouchUntilWindow": true,
+     "stickNudgeAt_s": null
+    },
+    "armedAfter_s": 5.6,
+    "hudWhenArmed": "고노센 준비내 일본 · 비기",
+    "windowAfter_s": 9.97,
+    "dAtWindow": 1.856,
+    "foeAtkAtWindow": "follow",
+    "tapRealMs": 156,
+    "windowOpen": true,
+    "secretRan": true,
+    "secStages": [
+     "instant"
+    ],
+    "hudAfter": "고노센내 일본 · 비기",
+    "ok": true,
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "game",
+      640,
+      170
+     ],
+     [
+      "pointerup",
+      4,
+      "game",
+      640,
+      170
+     ]
+    ]
+   },
+   {
+    "label": "variant: brief stick nudge at 1.5 s",
+    "input": {
+     "noTouchUntilWindow": true,
+     "stickNudgeAt_s": 1.77
+    },
+    "armedAfter_s": 5.74,
+    "hudWhenArmed": "고노센 준비내 일본 · 비기",
+    "windowAfter_s": null,
+    "dAtWindow": 1.514,
+    "foeAtkAtWindow": "follow",
+    "ok": false,
+    "setup": "armed but window never opened",
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      274
+     ]
+    ]
+   }
+  ]
+ },
+ "C9": {
+  "school": "chinese",
+  "weapon": "qinggang",
+  "foe": "하인리히 도른",
+  "foeWeapon": "excalibur_replica",
+  "runs": [
+   {
+    "label": "canon 1: stick ↑ + new guard press 1 frame after foe attack seen",
+    "input": {
+     "stickFwd": 1,
+     "framesFromThreatToPress": 1,
+     "guardHeldFrames": 50,
+     "guardRealMs": 877
+    },
+    "threatNoThreat": 0,
+    "d": 1.757,
+    "gkCountersDelta": {},
+    "windowOpened": 0,
+    "secretRanFrame": -1,
+    "ok": false,
+    "hudAfter": "",
+    "stickSeen": [
+     0,
+     0
+    ],
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      245
+     ],
+     [
+      "pointerdown",
+      5,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      6,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      6,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      5,
+      "moveStick",
+      86,
+      245
+     ]
+    ]
+   },
+   {
+    "label": "canon 2: stick ↑ + new guard press 1 frame after foe attack seen",
+    "input": {
+     "stickFwd": 1,
+     "framesFromThreatToPress": 1,
+     "guardHeldFrames": 50,
+     "guardRealMs": 6528
+    },
+    "threatNoThreat": 0,
+    "d": 2.035,
+    "gkCountersDelta": {
+     "edges": 2,
+     "pend": 1,
+     "open": 1,
+     "auto": 1,
+     "busy": 1
+    },
+    "windowOpened": 1,
+    "secretRanFrame": 31,
+    "ok": true,
+    "hudAfter": "격살내 동방 · 비기",
+    "stickSeen": [
+     0,
+     0
+    ],
+    "pointerEvents": [
+     [
+      "pointerdown",
+      4,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerup",
+      4,
+      "moveStick",
+      86,
+      245
+     ],
+     [
+      "pointerdown",
+      5,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      6,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      6,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      5,
+      "moveStick",
+      86,
+      245
+     ]
+    ]
+   },
+   {
+    "label": "canon 3: stick ↑ + new guard press 6 frames after foe attack seen",
+    "input": {
+     "stickFwd": 1,
+     "framesFromThreatToPress": 7,
+     "guardHeldFrames": 50,
+     "guardRealMs": 945
+    },
+    "threatNoThreat": 0,
+    "d": 0.817,
+    "gkCountersDelta": {},
+    "windowOpened": 0,
+    "secretRanFrame": -1,
+    "ok": false,
+    "hudAfter": "격살내 동방 · 비기",
+    "stickSeen": [
+     0,
+     1
+    ],
+    "pointerEvents": [
+     [
+      "pointerdown",
+      7,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      8,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      8,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      7,
+      "moveStick",
+      86,
+      245
+     ]
+    ]
+   },
+   {
+    "label": "canon 4: stick ↑ + new guard press 1 frame after foe attack seen",
+    "input": {
+     "stickFwd": 1,
+     "framesFromThreatToPress": 1,
+     "guardHeldFrames": 50,
+     "guardRealMs": 1009
+    },
+    "threatNoThreat": 0,
+    "d": 1.673,
+    "gkCountersDelta": {},
+    "windowOpened": 0,
+    "secretRanFrame": -1,
+    "ok": false,
+    "hudAfter": "격살내 동방 · 비기",
+    "stickSeen": [
+     0,
+     0
+    ],
+    "pointerEvents": [
+     [
+      "pointerdown",
+      9,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      10,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      10,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      9,
+      "moveStick",
+      86,
+      245
+     ]
+    ]
+   },
+   {
+    "label": "canon 5: stick ↑ + new guard press 1 frame after foe attack seen",
+    "input": {
+     "stickFwd": 1,
+     "framesFromThreatToPress": 1,
+     "guardHeldFrames": 50,
+     "guardRealMs": 1090
+    },
+    "threatNoThreat": 0,
+    "d": 0.971,
+    "gkCountersDelta": {
+     "edges": 1,
+     "pend": 1,
+     "open": 1,
+     "auto": 1
+    },
+    "windowOpened": 1,
+    "secretRanFrame": 7,
+    "ok": true,
+    "hudAfter": "격살내 동방 · 비기",
+    "stickSeen": [
+     0,
+     0
+    ],
+    "pointerEvents": [
+     [
+      "pointerdown",
+      11,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      12,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      12,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      11,
+      "moveStick",
+      86,
+      245
+     ]
+    ]
+   },
+   {
+    "label": "canon 6: stick ↑ + new guard press 6 frames after foe attack seen",
+    "input": {
+     "stickFwd": 1,
+     "framesFromThreatToPress": 7,
+     "guardHeldFrames": 50,
+     "guardRealMs": 755
+    },
+    "threatNoThreat": 0,
+    "d": 1.15,
+    "gkCountersDelta": {
+     "edges": 2,
+     "pend": 1,
+     "open": 1,
+     "auto": 1,
+     "busy": 1
+    },
+    "windowOpened": 1,
+    "secretRanFrame": 36,
+    "ok": true,
+    "hudAfter": "격살내 동방 · 비기",
+    "stickSeen": [
+     0,
+     1
+    ],
+    "pointerEvents": [
+     [
+      "pointerdown",
+      13,
+      "moveStick",
+      86,
+      304
+     ],
+     [
+      "pointerdown",
+      14,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      14,
+      "btnParry",
+      782,
+      328
+     ],
+     [
+      "pointerup",
+      13,
+      "moveStick",
+      86,
+      245
+     ]
+    ]
+   },
+   {
+    "label": "variant: no stick, new guard press 1 frame after foe attack seen",
+    "setup": "no foe attack seen",
+    "waitedFrames": 180,
+    "ok": null,
+    "pointerEvents": []
+   }
+  ]
+ }
+}
