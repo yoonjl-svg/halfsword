@@ -3,6 +3,9 @@
 //  "무기가 너무 가볍다", "적이 너무 세다" 같은 느낌은
 //  코드를 뜯지 말고 이 파일의 숫자부터 바꿔보면 된다.
 //  단위: 미터(m), 킬로그램(kg), 초(s), 뉴턴(N)
+//  [사장님 M/D] = 사장님이 이 값을 정함
+//  [사장님 M/D · 값 감독] = 기능은 사장님이 시킴 · 숫자는 감독
+//  표시 없음 또는 [확인 전] = 감독 값(사장님 확인 전)
 // ─────────────────────────────────────────────────────────────
 
 // ── 표준 시간: 게임은 템포 1.1 로 빨리 돈다 — 사람이 느끼는 규칙 시간 · 빠르기 문턱은 실제 값으로 적고 realS · realV · realRate 로 바꿈(물리 · 서보 · 걸음 기계 · 동작 대본 · 잰 값은 안 감쌈) [사장님 10/25]
@@ -22,33 +25,33 @@ export const PHYSICS = {
 
 // 기력(스태미너) — 계산 src/stamina.js(사람 · AI 같은 장부) · 막대 src/stamina_hud.js · 100 … 0 아래 지침 … −35 아래 심한 지침 … −70 탈진 · 설계 docs/design/stamina_2026-10-15.md [사장님 10/17]
 export const STAMINA = {
-  // 단계 문턱: 0 아래 지침 · severeAt 아래 심한 지침 · floor 탈진 · stageBack = 한 단계 위로 돌아오려면 문턱보다 더 채울 몫 [사장님 10/17]
+  // 단계 문턱: 0 아래 지침 · severeAt 아래 심한 지침 · floor 탈진 [사장님 10/17] · stageBack = 한 단계 위로 돌아오려면 문턱보다 더 채울 몫 [확인 전]
   max: 100, floor: -70, severeAt: -35, stageBack: 15,
   // 지친 이동 배율(지침 · 심한 지침) — 공격 쪽은 아래 tempo* 가 첫 실제 접촉까지 시간을 1.25 · 1.667 배로 맞춤 [사장님 10/17]
   moveTired: 0.7, moveSevere: 0.4,
-  // 기력 비용: 베기 12 · 찌르기 10 · 막아 받기 3 (× 무게) · 비기 35 · 첫 걸음 박차기 12 (무게 없음) · 권총 한 발 2 × 무게 [사장님 10/24 · shotCost 11/21 권고대로]
+  // 기력 비용: 베기 12 · 찌르기 10 · 막아 받기 3 (× 무게) · 비기 35 · 첫 걸음 박차기 12 (무게 없음) · 권총 한 발 2 × 무게 — thrustCost [사장님 10/24] · secretCost [사장님 10/15] · shotCost [사장님 11/21 권고대로] · cutCost · blockCost · pushCost [확인 전]
   cutCost: 12, thrustCost: 10, blockCost: 3, secretCost: 35, pushCost: 12, shotCost: 2,
   clinchPerSecond: realRate(10), // 붙어 밀고 버티는 동안(밀치기 누르기 + 팔·칼 닿음) 두 몸 각각 초당 10 · 회복 멈춤(샛별 저장소 ba14a6f8) [사장님 11/21 권고대로]
-  // 사람 긋기 청구(샛별 저장소 f933bc07): 끊김 0.12 s 넘으면 새 긋기(설계안은 고유 동작의 onsetQuiet 0.06) · 손이 0.06 m 넘게 움직여야 · 겨눔 가운데 0.22 m 를 가르는 긋기는 바로 확정 [사장님 11/21 권고대로]
+  // 사람 긋기 청구(샛별 저장소 f933bc07): 끊김 0.12 s 넘으면 새 긋기(설계안은 고유 동작의 onsetQuiet 0.06) · 손이 0.06 m 넘게 움직여야 · 겨눔 가운데 0.22 m 를 가르는 긋기는 바로 확정 — strokeQuiet [사장님 11/21 권고대로] · strokeTravel · strokeCenter [확인 전]
   strokeQuiet: realS(0.12), strokeTravel: 0.06, strokeCenter: 0.22,
   // 사람 손가락 긋기를 베기로 청구하는 손 목표 이동 바닥(패드 m) — 가벼운 손끝 · 미끄러짐은 청구 안 함 · 칼이 닿으면 짧아도 청구 · AI · 시뮬 몸은 strokeTravel [사장님 10/31]
   humanStrokeMin: 0.15,
   weaponReferenceMass: 1.6, // 무게 = √(처음 쥔 칼 질량 ÷ 1.6 kg) 0.75 ~ 1.5 — 칼이 부러져도 처음 질량(사장님 결정)
-  // 걷기 기력: 골반 0.6 m 마다 보통 4 · 동방 2 · 일본 6 · 뒷걸음은 × 1.5 · 한 스텝 거리 상한 3 m/s(튐 막기) [사장님 10/31]
+  // 걷기 기력: 골반 0.6 m 마다 보통 4 · 동방 2 · 일본 6 · 뒷걸음은 × 1.5 [사장님 10/31] · 한 스텝 거리 상한 3 m/s(튐 막기 — maxWalkSpeed 는 감독 값)
   stepDistance: 0.6, stepCosts: { default: 4, chinese: 2, japanese: 6 }, backStepCostMul: 1.5, maxWalkSpeed: 3,
   // 회복: 0.6 s 동안 공격 · 막아 받기 · 박차기 · 비기 · 클린치를 안 쓰면 AI 초당 15 · 시뮬 대본 몸 21 · 막기 유지 중엔 멈춤 [21 은 확인 전 — 사람 입력 몸 25 는 사장님 10/29]
   recoverPerSecond: realRate(15), playerRecoverPerSecond: realRate(21), recoverDelay: realS(0.6), // 표준 시간: 실제 초당 · 실제 초 (10/25)
   // 사람 입력이 모는 몸만 초당 회복 25 (AI 15 · 시뮬 대본 몸 21 그대로) [사장님 10/29]
   humanRecoverPerSecond: realRate(25), // [사장님 10/29 17:5x 결정]
-  // 탈진: 바닥(−70)에서 이동 · 공격 불가 · 자연 회복 빠르기로 차서 −35 에서 풀림 · tempoPower* 공격 중 지친 팔 · 손목 힘 · tempoRate* 베기 · 비기 시계 · tempoThrust* 찌르기 · tempoPommel* 손잡이 찍기 [사장님 10/18 · 값 11/21 권고대로]
-  tempoPowerTired: 0.64, tempoPowerSevere: 0.36,
-  tempoRateTired: 0.8, tempoRateSevere: 0.6,
-  tempoThrustTired: 0.75, tempoThrustSevere: 0.55, tempoHeavyMass: 2.5,
-  tempoPommelTired: 0.72, tempoPommelSevere: 0.50,
+  // 탈진: 바닥(−70)에서 이동 · 공격 불가 · 자연 회복 빠르기로 차서 −35 에서 풀림 · tempoPower* 공격 중 지친 팔 · 손목 힘 · tempoRate* 베기 · 비기 시계 · tempoThrust* 찌르기 · tempoPommel* 손잡이 찍기 — 탈진 [사장님 10/18] · tempo* 값은 줄마다
+  tempoPowerTired: 0.64, tempoPowerSevere: 0.36, // [사장님 11/21 권고대로]
+  tempoRateTired: 0.8, tempoRateSevere: 0.6, // [사장님 10/17 · 값 감독]
+  tempoThrustTired: 0.75, tempoThrustSevere: 0.55, tempoHeavyMass: 2.5, // tempoThrust* [사장님 11/21 권고대로] · tempoHeavyMass [사장님 10/17 · 값 감독]
+  tempoPommelTired: 0.72, tempoPommelSevere: 0.50, // [사장님 10/17 · 값 감독]
   tiredPower: 0.64, severePower: 0.36, // 지침·심한 지침의 팔·손목 힘 배율 — 막는 동안만(공격 중엔 tempoPower* — 같은 값) [사장님 11/21 권고대로 — 전 0.49 · 0.25 = 10/17 전 배율 0.7 · 0.5 의 제곱이 남은 시작값 · 감사 N-001 ⑤]
-  aiRestAt: 20, aiAggressiveRestAt: -10, aiResumeAt: 35, // AI: 20 아래(공격적 기질 −10 아래) 새 공격 멈추고 물러남 · 35 에서 다시(되돌림 35 는 샛별 저장소 값) [사장님 11/21 권고대로]
+  aiRestAt: 20, aiAggressiveRestAt: -10, aiResumeAt: 35, // AI: 20 아래(공격적 기질 −10 아래) 새 공격 멈추고 물러남 · 35 에서 다시(되돌림 35 는 샛별 저장소 값) — aiRestAt · aiResumeAt [사장님 11/21 권고대로] · aiAggressiveRestAt [확인 전]
 };
-// 무기 특수 능력 값(능력은 weapons.js 무기 스펙 · 값만 여기 · 늘 켜짐) — aweStart: 티소나 '위세' 상대가 그 판을 최대 기력 − 15 로 시작 [사장님 10/24]
+// 무기 특수 능력 값(능력은 weapons.js 무기 스펙 · 값만 여기 · 늘 켜짐) — aweStart: 티소나 '위세' 상대가 그 판을 최대 기력 − 15 로 시작 [사장님 10/24 · 값 감독]
 export const WEAPON_ABILITY = { aweStart: 15 };
 // 달타냥 '총사의 결투': 칼 주인이 한손검을 쥔 상대를 치면 그 칼 공격력(판정 에너지 배율) × duelOneHand (1 = 끔 · 물리는 그대로) [사장님 10/25]
 WEAPON_ABILITY.duelOneHand = 1.15; // 사장님 10/25 결정
@@ -90,7 +93,7 @@ export const TEAM_FIGHT = {
   deadSettle: { t: realS(1.5), v: 0.05 }, // 죽은 지 t 넘게 · 몸 부위가 모두 v m/s 밑이면 그 몸은 스텝 · 조종 · 칼 잔상 · 바람 소리를 쉼 (셋 이상 판만 — 2876)
   // 적 화면 색 = 피 색의 OKLCH 채도 × foeChromaK [사장님 10/30 · 0.7 확인 전]
   hudColor: { foeChromaK: 0.7 },
-  // 체력 칸: cells 칸 수 · tones [문턱, 색] (80 · 50 · 20 %) · bleedAt 점멸 출혈 문턱 · h 칸 높이 · gap 틈(px) [사장님 11/18]
+  // 체력 칸: cells 칸 수 · tones [문턱, 색] (80 · 50 · 20 %) [사장님 11/18] · bleedAt 점멸 출혈 문턱 · h 칸 높이 · gap 틈(px) [사장님 11/18 · 값 감독]
   hpStrip: { cells: 10, tones: [[0.8, 'green'], [0.5, 'yellow'], [0.2, 'orange']], low: 'red', bleedAt: 0.002, h: 3, gap: 2 },
   // 2:1 숙련도 몫(셋 이상 판의 AI 만): sk = (p − prof[0]) ÷ (prof[1] − prof[0]) 를 0 ~ 1 로 — 줄 세우기 · 위협 읽기 [사장님 11/21 권고대로]
   lever: {
@@ -142,7 +145,7 @@ export const TEAM_SUPPORT = {
   laneW: 0.6, // 동료 칼길 = 동료 → 그 상대 선분에서 이 m 안
   de: { laneK: 0.8, inGap: 0.3, inK: 0.6, shove: 100, reach: 0.6, pinR: 3.0, follow: 1.2, focus: 1.0 }, // 독일: laneK 칼길에서 벗어나는 옆 스틱 · inGap · inK 함께 침 · shove 밀기 각(°) · reach 밀린 적 + 동료 칼끝(m) · pinR 묶기 거리 · follow 빈틈 점수 · focus 겨눔 덧셈(m)
   cn: { laneK: 0.8, inGap: 0.3, inK: 0.6, focus: 1.0, hit: 0.6, ambush: 1.5, run: 0.5, press: 0.5 }, // 동방: laneK · inGap · inK 함께 침 · focus · hit 동료와 붙은 적 겨눔 덧셈 · ambush 앞 밖 빈틈 점수 · run 친 뒤 이어 치기 거둠 · press 이어 치기 더함
-  ib: { sepX: 2, calm: 0.25, sweep: 2.0, sweepDx: 0.8 }, // 이베리아: sepX 넓은 원(같은 편 비킴 거리 곱) · calm 마구잡이 버릇 덜기 · sweep · sweepDx 휩쓰는 베기 더 고름 [사장님 11/20]
+  ib: { sepX: 2, calm: 0.25, sweep: 2.0, sweepDx: 0.8 }, // 이베리아: sepX 넓은 원(같은 편 비킴 거리 곱) · calm 마구잡이 버릇 덜기 · sweep · sweepDx 휩쓰는 베기 더 고름 [사장님 11/20 · 값 감독]
 };
 
 export const CAMERA = {
@@ -211,7 +214,7 @@ export const BODY = {
 //  넘어짐은 상대 균형이 정한다 (상대 쪽 한도·쿨다운 없음).
 //  on=false 면 오늘 그대로 (closeStep 안 부름 → lift 0 → 접기 줄 그대로, 누르기 없음 → 다리 밀기 없음, AI closeQuarters 첫 줄 return)
 export const CLOSE = {
-  // 밀치기 걸쇠 없음 — 닿는 거리 안에서 상대 쪽으로 밀면 곧장 밀치기 · legDrive: 누르기 동안 딛은 발로 골반을 상대 가슴 쪽으로 미는 땅 반작용(N · × 근육 · 힘) [사장님 10/25 · 10/1]
+  // 밀치기 걸쇠 없음 — 닿는 거리 안에서 상대 쪽으로 밀면 곧장 밀치기 [사장님 10/25] · legDrive: 누르기 동안 딛은 발로 골반을 상대 가슴 쪽으로 미는 땅 반작용(N · × 근육 · 힘) [사장님 10/1 · 값 감독]
   legDrive: 400,
   // 닿는 거리(가슴~가슴, m, 기하): 팔이 가운데로 앞으로 닿는 거리 √(0.565²−0.2²) ≈ 0.53 (armIK 위팔 0.3 + 아래팔 0.27 − 0.005,
   //  어깨 옆 0.2, fighter.js armIK) + 상대 가슴 반두께 0.11 (fighter.js partDefs chest) + 칼자루 hiltLength (weapons.js). 롱소드 ≈ 0.77.
@@ -239,7 +242,7 @@ export const GAIT = {
   // 유파 걸음은 schools.js TRADITIONS[t].gait 가 덮음 — 보폭 규칙(strideK) · 이탈리아 고른 걸음 · 일본 느린 걸음 · 독일 보법 II 파고들기: 사람 독일(G2)이 거의 서서 앞으로 밀면 앞 digSteps 걸음을 박찬 걸음으로 · 기력 12 한 번 [사장님 10/15 · 10/29 · 11/14]
   digSteps: 2, // 박찬 앞 걸음 수 [사장님 11/14 결정 '두 걸음']
   digV: 2.5, // 앞 박찬 걸음 몸 목표 빠르기(m/s — 뒤 박차기 burstBackV 와 같은 절대 목표 · 앞 걷는 빠르기 1.82 의 1.375 배) [감독 안 · 사장님 확인 전]
-  // 독일 간격 잡기 · 동방 가벼운 발(가속 × light) · 동방 AI 걸음 박자 · 첫 걸음 박차기: 서 있던 몸이 뒤 · 옆으로 떼는 첫 걸음만 빠름(아래 burst* — 절대 목표 m/s) [사장님 10/15 · burstFwdMax 11/21 권고대로 · 그 밖 자리 확인 전]
+  // 독일 간격 잡기 · 동방 가벼운 발(가속 × light) · 동방 AI 걸음 박자 · 첫 걸음 박차기: 서 있던 몸이 뒤 · 옆으로 떼는 첫 걸음만 빠름(아래 burst* — 절대 목표 m/s) [사장님 10/15 · 값 감독] · burstFwdMax [사장님 11/21 권고대로] · 그 밖 자리 확인 전
   burstStandV: 0.3, // '서 있다' = 걷기 시작하는 순간 골반 수평 빠르기(걸러진 값)가 이보다 느림(m/s) — 걷다가 멈추며 몸이 아직 흐르는 동안엔 박차지 않는다
   burstStick: 0.6, // 스틱을 이만큼(0~1) 넘게 밀어야 박찬다 — 자리 맞추기 살짝 밀기는 보통 걸음
   burstFwdMax: 0.3, // 스틱 방향의 앞 몫(앞 = 1, 옆 = 0, 뒤 = −1)이 이보다 작아야(뒤·옆·비스듬히 뒤) 박찬다 — 앞 첫 걸음은 그대로 [사장님 11/21 권고대로]
@@ -370,13 +373,13 @@ export const GAIT = {
   turnAhead: 0.8, // 돌아서는 중엔 바라볼 방향을 이만큼(라디안)까지 미리 보고 발을 돌려 딛는다. 0 = 끔
 };
 
-// 뛰기(src/run.js — 사람 · 셋 이상 판 AI 같은 몸): 스틱 끝까지 hold 버티면 시작 · 기력 startAt 이상 · stopAt 까지 · 뛰는 동안 회복 없음 · 열쇠마다 뜻은 아래 [사장님 11/18 · 11/20 · 11/21]
+// 뛰기(src/run.js — 사람 · 셋 이상 판 AI 같은 몸): 스틱 끝까지 hold 버티면 시작 · 기력 startAt 이상 · stopAt 까지 · 뛰는 동안 회복 없음 · 열쇠마다 뜻은 아래 — hold · startAt · stopAt · cost · mul · 회복 없음 [사장님 11/18 · 11/20 · 11/21] · 나머지 열쇠는 줄의 표시대로(표시 없음 = 감독 값)
 export const RUN = {
-  stickIn: 0.95, // 손잡이 길의 이 몫 넘게 밀면(가장자리) 뛰기 버팀 시작 · PC Shift + 방향
-  stickOut: 0.85, // 뛰는 중 이 몫 안으로 돌아오면 걷기(사이 띠)
+  stickIn: 0.95, // 손잡이 길의 이 몫 넘게 밀면(가장자리) 뛰기 버팀 시작 · PC Shift + 방향 [사장님 11/18 · 값 감독]
+  stickOut: 0.85, // 뛰는 중 이 몫 안으로 돌아오면 걷기(사이 띠) [확인 전]
   walkFull: 0.85, // 걷는 빠르기가 다 차는 손잡이 길 몫
   hold: realS(2.0), // 끝까지 민 채 이 시간 넘게 버텨야 뛰기 시작 [사장님 11/21]
-  holdTurn: 1.05, // 버티는 동안 처음 방향에서 이 각(rad) 넘게 돌면 셈을 처음부터
+  holdTurn: 1.05, // 버티는 동안 처음 방향에서 이 각(rad) 넘게 돌면 셈을 처음부터 [확인 전]
   startAt: 50, // 기력이 이만큼 이상일 때만 뛰기 시작 [사장님 11/18]
   stopAt: 0, // 뛰다 기력이 여기까지 닳으면 걷기 [사장님 11/18]
   cost: 2, // 초당 기력 = 걷는 끝 빠르기로 걸을 때 초당 걸음 기력 × cost [사장님 11/20]
@@ -384,7 +387,7 @@ export const RUN = {
   accel: 4, // 뛰는 동안 · 멈추는 동안 가속 한도(m/s²) [사장님 11/21 권고대로]
   lead: 0.5, // 가려는 앞 빠르기가 실제보다 이만큼(m/s) 넘게 앞서지 않음 [사장님 11/21 권고대로]
   blend: 0.3, // 걷는 걸음 꼴 ↔ 뛰는 걸음 꼴 옮겨 가는 시간(s)
-  alignMax: 0.4, // 몸 앞과 뛰는 쪽 사이 각이 이만큼(rad) 넘으면 덧 빠르기 0(돌아서는 동안 걷기)
+  alignMax: 0.4, // 몸 앞과 뛰는 쪽 사이 각이 이만큼(rad) 넘으면 덧 빠르기 0(돌아서는 동안 걷기) [확인 전]
   turnMove: 0.2, // 그렇게 돌아서는 동안 걷는 몫(스틱 크기 × 이 값)
   faceTol: 0.15, // 뛰기가 끝난 뒤 몸이 상대 쪽을 이 각(rad) 안으로 볼 때까지 스틱을 상대 틀로
   stride: 0.7, // 뛰는 걸음 한 걸음 최대 길이(m)
@@ -406,7 +409,7 @@ export const RUN = {
   flyAhead: 0.25, // 디딤 길의 이 몫을 엉덩이 앞에 딛음
   flyPush: 2, // 날며 뛰는 동안 디딤 가속 한도 = accel × 이 값
   flyOver: 2, // 날며 뛰는 동안 균형 셈에서 앞으로 빠른 몫 이만큼(m/s)까지 안 셈
-  curveFrom: 1.2, // 몸 빠르기가 걷는 끝 × 이 값 넘으면 내달리며 꺾기 한도
+  curveFrom: 1.2, // 몸 빠르기가 걷는 끝 × 이 값 넘으면 내달리며 꺾기 한도 [확인 전]
   curve: 4, // 뛰는 쪽은 초당 curve ÷ 빠르기(rad)까지만 돎 [사장님 11/21 권고대로]
   curveMax: 1.75, // 이보다 크게(rad) 돌린 스틱은 먼저 줄인 뒤 돌아섬 [사장님 11/21 권고대로]
   faceSlow: 0.5, // 뛰기가 끝난 뒤 걷는 끝 × 이 몫 넘게 가는 동안은 가는 쪽을 봄
@@ -415,10 +418,10 @@ export const RUN = {
   flyReach: 0.3, // 엉덩이 앞 이 거리(m)까지만 딛음
 };
 
-// 혼자 싸움 판단(셋 이상 판 · 동료와 붙지 않은 적 둘 이상이 range m 안 = 수가 밀림 · src/ai_lone.js) — out · outK 둘째 적 칼끝 + out 안이면 멀어지는 스틱 outK × 숙련 몫 · many.out 유파만(일본) [사장님 11/19]
+// 혼자 싸움 판단(셋 이상 판 · 동료와 붙지 않은 적 둘 이상이 range m 안 = 수가 밀림 · src/ai_lone.js) — out · outK 둘째 적 칼끝 + out 안이면 멀어지는 스틱 outK × 숙련 몫 · many.out 유파만(일본) [사장님 11/19 · 값 감독]
 export const LONE = { range: 6, out: 0.6, outK: 0.8 };
 
-// AI 뛰기(셋 이상 판 · src/ai_run.js — 뛰는 몸은 RUN 그대로): gap 간 보는 거리 밖 남은 길 · keep 닿을 때 남길 기력 · near 다른 적 가까우면 안 뜀 · lat 뛰는 쪽 폭 · flee 멀어지는 상대 쫓기 · holdGap 버티는 동안 gap [사장님 11/19]
+// AI 뛰기(셋 이상 판 · src/ai_run.js — 뛰는 몸은 RUN 그대로): gap 간 보는 거리 밖 남은 길 · keep 닿을 때 남길 기력 · near 다른 적 가까우면 안 뜀 · lat 뛰는 쪽 폭 · flee 멀어지는 상대 쫓기 · holdGap 버티는 동안 gap [사장님 11/19 · 값 감독]
 export const AI_RUN = { gap: 3, keep: 50, near: 1, lat: 0.3, flee: 0.5, holdGap: 1.5 };
 
 // 칼 든 팔의 길이와 어깨 자리 (fighter.js armIK·shoulderOn, 보정 v2 날것 매핑 반지름 fighter.corrScale 이 같은 값을 읽는다 — 둘째 사본 없음).
@@ -485,7 +488,7 @@ export const STRIKE = {
 
 // ── 반작용(반발 계수 e: 0 찰흙 · 1 고무공 — 쇠칼끼리 0.1 ~ 0.3) · 우케나가시 흘려 받기: 일본 막기 칸을 가진 쪽이 위에서 오는 칼을 지붕으로 처음 받으면 slideK 로 미끄러뜨리고 받는 충격을 joltCut 만큼 덜 [사장님 10/17 · 값 확인 전]
 export const NAGASHI = { slideK: 0.8, joltCut: 0.5 };
-// 우케나가시 판정 개편(src/nagashi_redesign.js): 칼끼리 실제 접촉 · 들어오는 칼 기하 · window 안에 몸 바깥으로 빠지면 흘림 · penalty 흘림당한 쪽 기력 · flowDmgCut 흘린 공격 피해 감소 [사장님 10/18 · 10/31 · 11/15 · 기하 값 11/21 권고대로]
+// 우케나가시 판정 개편(src/nagashi_redesign.js): 칼끼리 실제 접촉 · 들어오는 칼 기하 · window 안에 몸 바깥으로 빠지면 흘림 · penalty 흘림당한 쪽 기력 · flowDmgCut 흘린 공격 피해 감소 [사장님 10/18 · 10/31 · 11/15] · 기하 값(exitDistance 빼고) [사장님 11/21 권고대로] · exitDistance [사장님 10/18 · 값 감독]
 export const FLOW_REDESIGN = {
   window: realS(0.2), /* 10/21 14:3x 사장님 '시간 통일 제안대로 해' · '흘림 접촉도 그냥 0.2로 통일' — 0.12 → 0.2 (반응 칸) */ penalty: 60, /* 10/31 09:xx 사장님 결정 '일본 흘림의 상대 기력 소모는 60으로 증가' — 40 → 60 (흘림 = 일본 막기 칸 우케나가시만 · TRADITIONS.japanese.parryCover.highC nagashi) */  flowDmgCut: 0.7, /* [사장님 11/15 결정 '흘린 칼 감소는 70%로 해. 들어오는 피해가 0.3이 되는 셈.' — 전 0.8] */
   minSpeed: 2.5, minApproach: 0.5, minSweep: 1.5, minSweepRatio: 0.4,
@@ -498,7 +501,7 @@ export const FLOW_RECOVERY = { seconds: realS(0.4), /* 10/21 14:3x 사장님 '�
 export const IB_PARRY_BEAT = { k: 1.6 };
 // 이베리아 이어 긋기 흐름: 진짜 이어 그을 때 손목 제동을 (1 − brake) 몫에서 늦게 · B6 이은 칼 n 만큼 위력 1 + (power − 1) × n(상한 없음) · freeEvery 칼마다 기력 0 · endSteps · cutSpeed 이어짐 문턱 [사장님 10/21 · 10/28 · 10/29 · 10/31]
 export const IB_FLOW = { brake: 0.8, power: 1.2, endSteps: 2, cutSpeed: 5, freeEvery: 3 };
-// 이베리아 B7 이어 돌리기(src/iberian_link.js): 이어짐 창 안 다음 큰 칼을 그으면 넘기기(가장 짧은 길 · time 위 · bridgeMin 아래 한도)로 시작 자리로 · arriveDeg · arriveT 닿기 문 · tradeT 맞바꿈 창(B12) · chainSpeed 이을 때마다 +10 % 상한 1.3 [사장님 11/14 · 11/15 · 11/16]
+// 이베리아 B7 이어 돌리기(src/iberian_link.js): 이어짐 창 안 다음 큰 칼을 그으면 넘기기(가장 짧은 길 · time 위 · bridgeMin 아래 한도)로 시작 자리로 · arriveDeg · arriveT 닿기 문 · tradeT 맞바꿈 창(B12) · chainSpeed 이을 때마다 +10 % 상한 1.3 [사장님 11/14 · 11/15 · 11/16] · handR 두 손 따라감 [확인 전]
 export const IB_LINK = { time: realS(0.4), bridgeMin: realS(0.2), tradeT: realS(0.4), handR: 0.25, arriveDeg: 20, arriveT: realS(0.4), chainSpeed: {
   p: 0.1, cap: 1.3,
   drive: { zweihander: [1.37, 1.69, 3.8, 9.5], flamberge: [1.54, 1.62, 4.3, 7.2], tizona: [1.4, 1.69, 3.1, 8.3], durandal: [1.37, 1.69, 3.8, 6.5], def: [1.37, 1.69, 3.8, 9.5] },
@@ -650,9 +653,9 @@ export const ARMOR = {
     //   ('horn' = 맞은 쪽 뿔, 이미 없으면 남은 뿔). 남은 조각(사발·목가리개·첨탑·깃털 술)은 완전 파손 때. [] 이면 완전 파손 때 한꺼번에
     //   (제대로 된 타격 한 번이나 가벼운 타격 몇 번이면 0.9 아래, 제대로 된 타격 두 번이면 0.45 아래로 내려간다)
     horned: { cut: 80, stab: 50, blunt: 0.5, guardMin: 0.25, fullUntil: 0.5, wear: 700, perHit: 0.26, knockBlunt: 200, shed: [[0.9, ['horn']], [0.45, ['horn', 'crest']]] },
-    // 김씨 삿갓: 맨머리보다 조금 나은 문턱 · 맞음으로 친 타격 한 번에 부서짐(wear = STRIKE.minEnergy) [사장님 10/10]
+    // 김씨 삿갓: 맨머리보다 조금 나은 문턱 · 맞음으로 친 타격 한 번에 부서짐(wear = STRIKE.minEnergy) [사장님 10/10 · 값 감독]
     kasa: { cut: 40, stab: 25, blunt: 0.9, guardMin: 0, wear: 6, perHit: 1, knockBlunt: 80, shed: [] },
-    // 롤랑 닫힌 면갑 · 백린 뿔 가면 투구: 막는 숫자는 마르그레테 뿔 투구와 같음 · 파손 조각만 다름(얼굴 아래는 맨머리로 맞음) [10/23]
+    // 롤랑 닫힌 면갑 · 백린 뿔 가면 투구: 막는 숫자는 마르그레테 뿔 투구와 같음 · 파손 조각만 다름(얼굴 아래는 맨머리로 맞음 · 얼굴 덮음은 사장님 결정 뒤) [10/23] [확인 전]
     royal_close: { cut: 80, stab: 50, blunt: 0.5, guardMin: 0.25, fullUntil: 0.5, wear: 700, perHit: 0.26, knockBlunt: 200, shed: [[0.45, ['crest']]] },
     kabuto_masked: { cut: 80, stab: 50, blunt: 0.5, guardMin: 0.25, fullUntil: 0.5, wear: 700, perHit: 0.26, knockBlunt: 200, shed: [[0.9, ['horn']], [0.45, ['horn', 'crest']]] },
   },
@@ -737,7 +740,7 @@ export const SKILL = {
   homeGuard: [0.18, -0.28], // 베고 나서 돌아갈 기본 자세의 패드 위치 (쟁기 Pflug: 칼끝이 상대 얼굴을 겨눈다)
   recoverDelay: realS(0.25), // 손가락을 떼고(또는 멈추고) 이만큼 지나면 자세로 돌아간다 (초)
   recoverSpeed: 1.2, // 자세로 돌아가는 손 빠르기 (m/s, 휘두르기 기준 swingSpeed보다 느리게)
-  // 늘 켬 — 얹은 손가락 · 날것 매핑 잣대 표 · 두 팔 엇갈림 막기: gap 두 팔 겉 틈 · near · hold 켜는 틈 · 시간 · yield 빈손 비킴 · front 칼자루 끝 앞 · grip 빈손 목표 틈 · frontIn 앞 바닥 들이는 시간 [사장님 11/12 · 11/17]
+  // 늘 켬 — 얹은 손가락 · 날것 매핑 잣대 표 · 두 팔 엇갈림 막기: gap 두 팔 겉 틈 · near · hold 켜는 틈 · 시간 · yield 빈손 비킴 · front 칼자루 끝 앞 · grip 빈손 목표 틈 · frontIn 앞 바닥 들이는 시간 [사장님 11/12 · 11/17 · 값 감독]
   armClear: { gap: 0.01, near: 0.03, hold: realS(0.4), yield: 0.3, front: 0.24, grip: 0.13, frontIn: 0.1 },
   // ── 검술 보정 방식: 'v2' 휘두르는 동안 자세 당김 없음 + 날 맞춤 · 되돌아옴 · 사람 관절 한도 · 몸통 돌기 결합 · 'old' 옛 보정 · AI 는 늘 옛 보정 [사장님 10/1 위임 · 9/30]
   corr: 'v2', // 플레이어의 유일한 보정 (main.js 가 player.skill.corr 에 그대로 준다). 'old' 는 시뮬 대조용으로만 남는다 (with_config.mjs SKILL.corr=old)
@@ -776,10 +779,10 @@ export const SKILL = {
 // ── 스킬트리 편지: 편지를 가진 유파의 뽑기 칸 무게 × mult (칸마다 무게 = 등급 TIER_DRAW ÷ 칸 수) [사장님 10/21]
 export const LETTER = { mult: 2 };
 
-// ── 유파 비기: 조건이 차면 대표 동작을 완벽 실행(반응 0 · 정확도 1 · 손 빠르기 최대 · 서보 힘 창) · 끝나면 경직 · 횟수 제한 없음 [사장님 10/9] · 뒤 박차기 헛침 경직: 뒤 박차기로 헛친 상대는 stiff 동안 끌려갔다(drag · over · lean · turn · drop · step) 되찾음 [사장님 11/19]
+// ── 유파 비기: 조건이 차면 대표 동작을 완벽 실행(반응 0 · 정확도 1 · 손 빠르기 최대 · 서보 힘 창) · 끝나면 경직 · 횟수 제한 없음 — 설계 · 횟수 제한 없음 [사장님 10/9] · 비기 수는 SECRET 줄마다 · 뒤 박차기 헛침 경직: 뒤 박차기로 헛친 상대는 stiff 동안 끌려갔다(drag · over · lean · turn · drop · step) 되찾음 — 경직 · 끌려감 꼴 · stiff · drag [사장님 11/19]
 export const BURST_WHIFF = {
   stiff: realS(1.2), // 굳음 [사장님 11/19 승인 — 1.2 s · 시간 사다리 1.2] (전 0.6)
-  drag: realS(0.6), // 그 가운데 앞 몫 = 끌려감 (시간 사다리 0.6) — 나머지가 되찾음
+  drag: realS(0.6), // 그 가운데 앞 몫 = 끌려감 (시간 사다리 0.6) — 나머지가 되찾음 [사장님 11/19]
   over: 0.3, // 끌려감: 휘두름 길 끝 너머로 손 목표가 더 가는 패드 거리 (휘두른 쪽으로 · 패드 끝 WEAPON.reach 안) [감독 안]
   lean: 0.26, // 끌려감: 몸 숙임 rad (15°) [감독 안]
   turn: 0.35, // 끌려감: 칼 간 쪽으로 가슴 돌림 rad × 휘두름의 옆 몫 (오코리 OKORI.turn 과 같은 크기) [감독 안]
@@ -815,7 +818,7 @@ export const SECRET = {
     guard: realS(0.6), // [사장님 11/16 결정]
   },
   power: 1.3, // 서보 힘 창: 비기 베기 동안 칼을 미는 손목 힘 배율 (fighter.js driveSword 의 str 에 곱함)
-  handSpeed: 1.5, // 비기 준비 · 베기 손 빠르기 배율(1.5 에서 서보 포화) [사장님 10/9]
+  handSpeed: 1.5, // 비기 준비 · 베기 손 빠르기 배율(1.5 에서 서보 포화) [사장님 10/9 · 값 감독]
   stepPush: 2.0, // 10/9 4차 1.8 → 2.0 (일본·이탈리아 비기 걸음). 일본 後の先 내딛는 걸음의 몸 따라감 배율 (gait.js 기술 걸음 몸 목표 — '앞발을 강하게'). 10/9 후속: 1.3 → 1.8
   stiff: { german: realS(0.6), italian: realS(0.6), iberian: realS(0.6), japanese: realS(0.6), chinese: realS(0.6) }, // 비기 직후 경직(초) — 모든 유파 0.6 [사장님 11/14]
   // 독일 Versetzen 치명 판정: 칼끝 위치 · 속도로 내다본 길이 머리 · 목 곁을 지나면(경직 = 칼이 멈추고 조작이 안 들음) [사장님 10/10 · 값 확인 전]
@@ -1031,13 +1034,13 @@ export const UNIQUE_ASSIST = {
   blend: 0.5, // 지금 손 자리와 길의 어긋남을 남은 길의 이 몫에 걸쳐 0 으로 (앞부분은 플레이어가 그은 쪽, 뒷부분이 고유 동작 길)
   fingerTau: 0.03, // 손가락 빠르기를 고르는 시간(s)
   chainWait: realS(0.15), // 두 번 잇는 동작: 뒷부분이 시작되는 자리에서 손가락이 그쪽으로 긋기 시작하기를 이만큼(s)까지 기다림 (손가락이 꺾이는 동안 잠깐 느려지는 것). 10/14 강화 판: 앞 긋기가 끝나고 이 안에 플레이어가 다시 그어야 뒷몫 강화
-  // ── 10/14 강화 방식: 궤적은 끝까지 손가락 · 고유 동작은 손가락으로 못 하는 몫만 더함 · 몸 꼴 값은 PLAYER_UNIQUE body · body2 [사장님 10/14 · 수 확인 전 — 끝 힘은 11/21 권고대로]
+  // ── 10/14 강화 방식: 궤적은 끝까지 손가락 · 고유 동작은 손가락으로 못 하는 몫만 더함 · 몸 꼴 값은 PLAYER_UNIQUE body · body2 [사장님 10/14 · 수 확인 전 — 끝 힘은 powerMax 만 11/21 권고대로]
   enhance: 1, // 강화 세기 손잡이 하나: 몸 덧씌우기 × enhance · 끝 힘 1 + (endPower − 1) × enhance · 걸음 크기 × min(1, enhance). 0 = 기술 이름 알림만
   bodyIn: 0.1, // 몸 꼴을 얹는 시간 상수(s) — 긋기가 고유 동작으로 읽힌 순간부터
   bodyOut: 0.25, // 긋기가 끝난 뒤 몸 꼴을 걷는 시간 상수(s)
-  powerAt: 0.4, // 끝 힘이 들어가는 자리: 손 목표가 그 몫(앞 긋기 = 길 처음 ~ 잇는 자리 · 뒷몫 = 잇는 자리 ~ 끝) 길이의 이 비율 넘게 간 뒤 [사장님 11/21 권고대로]
+  powerAt: 0.4, // 끝 힘이 들어가는 자리: 손 목표가 그 몫(앞 긋기 = 길 처음 ~ 잇는 자리 · 뒷몫 = 잇는 자리 ~ 끝) 길이의 이 비율 넘게 간 뒤 [확인 전]
   powerMax: realS(0.6), // 끝 힘은 강화가 시작되고 이 초까지만 (긋기가 길게 이어져도) [사장님 11/21 권고대로]
-  endPower: 1.12, // 끝 힘 배율 (팔 서보 힘 f.powerMul — 비기 힘 창 SECRET.power 1.3 과 같은 칸, 작게) [사장님 11/21 권고대로]
+  endPower: 1.12, // 끝 힘 배율 (팔 서보 힘 f.powerMul — 비기 힘 창 SECRET.power 1.3 과 같은 칸, 작게) [확인 전]
   enhPower: 1.25, // 강화동작의 끝 힘 배율 (10/21 사장님 '강화동작' — 기본 동작 하나를 늘 이것으로 · 명령 동작은 endPower 그대로). 감독 값 — 사장님 확인 전
   // 곁눈 베기 무릎 꺾기: 칼날이 들어간 베기가 머리 · 가슴 · 위팔(parts)에 맞으면 p 로 kneel 동안 꿇음 · cool 동안 다시 안 걸림 · AI 도 같음 [사장님 10/21 · 11/14 · parts · cool 확인 전]
   buckle: { p: 0.5, kneel: realS(0.6) /* [사장님 11/14 결정] '무릎 꺾기 0.6초로 하자' — 0.4 → 0.6 · 확인표 3861 */, cool: realS(0), /* 10/21 14:0x 사장님 '다시 무릎 안 꿇음 제한은 아예 없애자' — 5 → 0(없음) */ parts: ['head', 'chest', 'uarmS', 'uarmO'] },
@@ -1045,7 +1048,7 @@ export const UNIQUE_ASSIST = {
   planRelease: 0.2,
   // 위에서 내려 찌르기(이탈리아) — 옷 · 갑옷 틈 파고드는 값(THRUST_STYLE gap 자리)을 이 찌르기만 이 값으로 [사장님 11/14]
   imbroccataGap: 0.9, // 내려 찌르기 칸 I7 을 익힌 몸이 받음(사람 · AI — AI 는 숙련도 2 부터) [사장님 11/16]
-  // 아래로 가는 긋기 = 손가락 첫 방향이 곧장 아래에서 이 각(°) 안 · 0 = 끔 [사장님 10/31]
+  // 아래로 가는 긋기 = 손가락 첫 방향이 곧장 아래에서 이 각(°) 안 · 0 = 끔 [사장님 10/31 · 값 감독]
   imbroDown: 67.5,
   // 사람 칼끝 돌려 빼기: 막아찌르기 · 칼 닿음 뒤 cavFrom ~ cavTo 사이의 탭 = 칼끝 돌려 빼기 · 이른 탭은 기회를 없앰 [사장님 10/28 · 10/29]
   cavFrom: realS(0.2), // 막아찌르기가 끝난 때부터 이 초가 지나야 (시간 사다리 0.2) — 10/28 01:0x · 01:2x 0.6 → [사장님 10/29 20:0x 결정 '둘 중 하나를 완화' · 값 0.2 는 감독(잰 것) — 확인 전]
@@ -1105,7 +1108,7 @@ export const UNIQUE_ASSIST = {
   koteDrop: { p: 0.5, parts: ['farmS', 'farmO'], swordHalf: 0.5, easeE: 2, easeAfter: 0.4, easeVn: 1.5 },
 };
 
-// 떨어진 칼 줍기(src/pickup.js — 제 칼만): 사람은 near 안이면 저절로 걸어가 줍고 AI 도 같은 길 · reach 쥐는 거리 · bend · lift 동작 시간 · grab · settle · settleMax · step · stepFrom · stepWait [사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]
+// 떨어진 칼 줍기(src/pickup.js — 제 칼만): 사람은 near 안이면 저절로 걸어가 줍고 AI 도 같은 길 · reach 쥐는 거리 · bend · lift 동작 시간 · grab · settle · settleMax · step · stepFrom · stepWait — reach · step · stepFrom · stepWait [사장님 11/05 · 11/16 · 11/18] · grab · settle · settleMax [사장님 11/05 · 값 감독] · bend · lift · near [확인 전]
 export const PICKUP = { reach: 0.9, bend: 0.4, lift: 0.2, grab: 0.3, settle: 1.5, settleMax: 0.4, step: 0.3, stepFrom: 0.6, stepWait: 0.2, near: 1.5 };
 
 // 몸이 자세를 따라가는 빠르기(rad/s). 골반이 가장 빠르고 → 가슴 → 손(SKILL.aimFilter) 순서라
@@ -1122,8 +1125,8 @@ export const AI_LEVELS = {
   easy: { reaction: realS(0.38), windup: 1.2, chamberSpeed: 2.2, strikeSpeed: 8, parrySpeed: 3.5, guardChance: 0.4, predict: 0.4, counter: 0, feint: 0, followUp: 0.25, read: 0.35, discipline: 0.6, aggression: 0.6, skill: 0.4 }, // 쉬움 — 칼 빠르기 · 막을 확률 [사장님 11/16]
   normal: { reaction: realS(0.26), windup: 0.6, chamberSpeed: 3, strikeSpeed: 11, parrySpeed: 4.5, guardChance: 0.6, predict: 0.75, counter: 0.2, feint: 0.15, followUp: 0.5, read: 0.65, discipline: 0.85, aggression: 0.9, skill: 0.7 }, // 힘 1.0 은 11/17 부터 PROF_BODY.strength(숙련도 2 · 3 칸)
   hard: { reaction: realS(0.17), windup: 0.4, chamberSpeed: 3.8, strikeSpeed: 13, parrySpeed: 5.5, guardChance: 0.8, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, aggression: 1.0, skill: 0.85 }, // [사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85] · 힘 1.1 은 11/17 부터 PROF_BODY.strength(숙련도 4 · 5 칸)
-  // 최고(숙련도 6 만) — 칼 빠르기 14 · 나머지는 높음 그대로 [사장님 11/16]
-  expert: { reaction: realS(0.17), windup: 0.3, chamberSpeed: 3.8, strikeSpeed: 14, parrySpeed: 5.5, guardChance: 0.9, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, aggression: 1.0, skill: 0.85 }, // [사장님 11/16 결정] · 힘 1.1 은 11/17 부터 PROF_BODY.strength(숙련도 6 칸)
+  // 최고(숙련도 6 만) — 칼 빠르기 14 · 준비 0.3 · 막을 확률 0.9 [사장님 11/16] · 나머지는 높음 그대로 [사장님 11/16 · 값 감독]
+  expert: { reaction: realS(0.17), windup: 0.3, chamberSpeed: 3.8, strikeSpeed: 14, parrySpeed: 5.5, guardChance: 0.9, predict: 1, counter: 0.35, feint: 0.3, followUp: 0.75, read: 0.9, discipline: 1.0, aggression: 1.0, skill: 0.85 }, // strikeSpeed · windup · guardChance [사장님 11/16 결정] · 나머지 열쇠 [사장님 11/16 · 값 감독] · 힘 1.1 은 11/17 부터 PROF_BODY.strength(숙련도 6 칸)
 };
 
 // AI 숙련도(0 ~ 6): levels 실력 이름 · 고유 동작은 단계 ≤ 숙련도 · secretAt 이상이면 비기 · ofLevel 이름만 받은 AI · schoolK 유파 특성 적극성 · flowReady 일본 흘려 받기 자세 [사장님 10/13 · 10/18 · 10/24 · 11/16 · 매핑 · 수 확인 전]
@@ -1255,14 +1258,14 @@ export const AI_PLAN_FREE = {
   back: 0.5, // 주고받은 뒤 물러나는 시간 × (1 − planK × 칸 × back)
 };
 
-// 동방 보법 회피 '편섬'(src/cn_step.js — 사람 C1 · AI 동방 같음): 걷는 방향을 turnT 안에 turn 넘게 꺾으면 keepT 동안 칼날 상처 × (1 − cut) · rearm 안에는 다시 안 걸림 [사장님 11/15 · 11/16]
+// 동방 보법 회피 '편섬'(src/cn_step.js — 사람 C1 · AI 동방 같음): 걷는 방향을 turnT 안에 turn 넘게 꺾으면 keepT 동안 칼날 상처 × (1 − cut) · rearm 안에는 다시 안 걸림 — turn · keepT · cut · rearm [사장님 11/15 · 11/16]
 export const CN_STEP = {
   turn: Math.PI / 4, // [사장님 11/16 결정 — 45°]
-  turnT: realS(0.2), // 꺾음을 보는 시간(천천히 도는 것은 꺾음 아님)
+  turnT: realS(0.2), // 꺾음을 보는 시간(천천히 도는 것은 꺾음 아님) [확인 전]
   keepT: realS(0.6), // [사장님 11/16 결정 '보법을 0.4초 말고 0.6초' · '0.6으로 재지 말고 바로 본판 올려' — 전 0.4 (11/15)] · 지그재그 천장 0.6 ÷ 1.2 = ½
   cut: 0.5, // 줄임 몫 [사장님 11/15]
   rearm: realS(1.2), // [사장님 11/16 결정 '그럼 1.2초로 해'] (시간 사다리 1.2)
-  straight: 0, // 꺾기 전 이만큼 곧게 걸어야 꺾음(견줌 — 0 = 안 씀)
+  straight: 0, // 꺾기 전 이만큼 곧게 걸어야 꺾음(견줌 — 0 = 안 씀) [확인 전]
   aiT: realS(0.2), // AI 偏閃奏進 꺾는 스틱 시간(AI_PLAN.cn.dive)
 };
 
@@ -1417,9 +1420,9 @@ export const THRUST = {
   body: { pelvisYaw: -20, chestYaw: -20, pitch: 8, drop: 0.07 }, // 찌를 때 몸 (긴 자세처럼 칼 든 어깨를 앞으로, 도·m)
   // 이탈리아 찌르기 — 팔 → 몸 → 발(이탈리아 보통 탭 찌르기 · AI 찌르기만): 과녁 몸통 · 팔을 먼저(당기지 않음) · 남는 거리만 런지 · 닿거나 몸이 다 실릴 때까지 뻗은 채 [사장님 10/25 · 확인 전]
 
-  // 사람 탭 찌르기 몸 싣기(모든 유파 · AI 탭 찌르기도): 당김 driveChamber · 런지 걸음 driveStep · 몸이 앞발을 따라 실림 [사장님 11/15 · 11/16]
-  driveChamber: 0.3, // 당김 (m — 걸음 사다리 0.3 칸 · 지금 보통 0.22 · 이탈리아 0)
-  driveStep: 0.45, // 런지 걸음 (m — 걸음 사다리 0.45 칸 · 지금 보통 0.3)
+  // 사람 탭 찌르기 몸 싣기(모든 유파 · AI 탭 찌르기도): 당김 driveChamber · 런지 걸음 driveStep · 몸이 앞발을 따라 실림 — 켬(둘 다) [사장님 11/15 · 11/16] · 수는 줄마다
+  driveChamber: 0.3, // 당김 (m — 걸음 사다리 0.3 칸 · 지금 보통 0.22 · 이탈리아 0) [사장님 11/16 · 값 감독]
+  driveStep: 0.45, // 런지 걸음 (m — 걸음 사다리 0.45 칸 · 지금 보통 0.3) [사장님 11/16 · 값 감독]
 };
 
 // 플랑베르주 간격 줄: 'off' = 지금 줄 · 그 밖은 weapon_measured.js FLAMBERGE_ROWS 같은 이름 줄 [사장님 10/29]
@@ -1583,7 +1586,7 @@ export const JOINTS = {
   oneTipFold: -14, // 가르는 올림각 (°): 이 위면 위로, 아래면 아래로 접는다 (±5° 는 섞음 — 패드 y −0.12 쯤)
   oneTipUp: 55, // 위로 접을 때 올림각 하한 (°) — 마이어 1570 두삭 Wacht·Entrüst 처럼 칼끝이 분명히 위
   oneTipDown: -45, // 아래로 접을 때 올림각 상한 (°) — 두삭 Eber·Nebenhut 처럼 칼끝이 분명히 아래
-  // 플레이어 칼 날 세우기(사람 손가락 칼만): 거른 손 목표가 따라갈 몫을 날 방향에 더함 [사장님 10/10]
+  // 플레이어 칼 날 세우기(사람 손가락 칼만): 거른 손 목표가 따라갈 몫을 날 방향에 더함 [사장님 10/10 · 값 감독]
   playerEdgeLead: 1, // 입력 미리 돌리기 무게: 예측한 칼날 70 % 지점 속도 × 이 값을 지금 속도에 더한다
 };
 
@@ -1710,7 +1713,7 @@ export const SAENGSA = {
     main: [0, 2],
     sub: [0, 2],
     other: [0, 0],
-    cloth: [
+    cloth: [ // 옷 색 줄(씨앗 — 한 팀 안에서는 서로 다르게) [확인 전]
       { hue: 350, sat: 0.45, light: 1 }, // 붉은 옷
       { hue: 85, sat: 0.3, light: 1.05 }, // 쑥색 옷
       { hue: 38, sat: 0.5, light: 1.1 }, // 황토색 옷
