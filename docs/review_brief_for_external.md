@@ -19,7 +19,7 @@
 | 검술 보정 v2 설계·측정 | `docs/strike/correction_v2_design_2026-10-01.md`, `corr_v2_measure.md`(feat-corr 가지) |
 | 근접 밀치기 설계·구현 기록 | `docs/strike/shove_design_2026-09-30.md`, `shove_impl_record_2026-09-30.md` |
 | 사람 움직임 봉투(관절 범위·각속도) | `docs/motion/human_envelope_2026-09-30.md`, `tools/motion/human_envelope.json` |
-| 시뮬·관문 도구와 기준 sha | `tools/sim/README.md` |
+| 시뮬·관문 도구와 기준 sha | `tools/sim/README.md` · 기준 sha 내력 `docs/strike/gate_history.md` |
 | 브라우저 도구(스모크·스크린샷) | `tools/browser/` |
 | 디렉터 인수인계(현재 상태) | `docs/handoff/director_state.md` |
 
@@ -34,7 +34,7 @@
 ```
 npm ci
 npm run dev            # http://localhost:5173
-node tools/sim/fights12.mjs      # AI 12판, 바이트 동일 관문 (기준 sha: tools/sim/README.md)
+node tools/sim/fights12.mjs      # AI 12판, 바이트 동일 관문 (기준 sha 내력: docs/strike/gate_history.md)
 node tools/sim/live_battery.mjs  # 칼 조작 수락 시험
 node tools/browser/smoke.mjs     # 개발 서버 필요, 콘솔 오류 0
 ```
