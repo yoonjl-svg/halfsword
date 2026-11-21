@@ -15,6 +15,7 @@
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { SWORD_TRAIL, SECRET } from './config.js';
+import { viewNow } from './view_clock.js'; // 보는 시계 — 싸움 중 멈춤 동안 흐르지 않음 (11/21 감사 N-011)
 
 const TONES = {
   normal: null, // 칼날 재질 색 × dim
@@ -164,13 +165,13 @@ export function createSwordTrails(scene) {
         arcs[k].width = A.width ?? 1; // 잔상 굵기 몫 (격살 시험 스위치 SECRET.gyeoksal.trailWidth — 칼끝에서 칼날 쪽으로 덮는 몫 · 기본 1 = 칼날 전부, 그대로)
         const L = lunges[k];
         L.A = A.lunge ? A : null; // 런지 빛줄기 (10/25 — 위)
-        if (L.A) Object.assign(L, { S: A.lunge, E: null, d: -1, n: 0, t0: performance.now(), tf: performance.now(), share: arcs[k].share });
+        if (L.A) Object.assign(L, { S: A.lunge, E: null, d: -1, n: 0, t0: viewNow(), tf: viewNow(), share: arcs[k].share });
         arcs[k].face = (!L.A && A.face) || null; // 마주 보는 띠 'path' | 'line' (10/23 — 위 머리말) · 빛줄기를 그리는 런지는 빼고
-        arcs[k].t0 = arcs[k].tf = performance.now();
+        arcs[k].t0 = arcs[k].tf = viewNow();
         arcs[k].n = A.pts.length;
       } else if (A && A.kind === 'combo' && arcs[k].pts === A.pts && A.pts.length !== arcs[k].n) {
         // 중국 빠른 연환: 두 수 길이(0.3~0.4 s)가 남는 시간(instantArcLife)에 가까워 — 그리는 동안은 옅어지지 않고 다 그린 때부터 같은 시간에 옅어진다 (섬광은 처음 그대로)
-        arcs[k].t0 = performance.now();
+        arcs[k].t0 = viewNow();
         arcs[k].n = A.pts.length;
         arcs[k].share = Math.max(A.share ?? arcs[k].share, A.min ?? 0); // 고유 동작 잔상은 그리는 동안 세기(빠르기 몫)가 바뀐다 (10/21 — secret_instant.js artTrailTick)
       }
@@ -252,7 +253,7 @@ export function createSwordTrails(scene) {
     // 비기 순간 베기 호
     let an = 0;
     const arcLife = (SECRET.instantArcLife ?? 0.5) * 1000;
-    const nowMs = performance.now();
+    const nowMs = viewNow();
     let fn = 0;
     let ac = null; // 이 호의 색 = 그 칼의 보통 띠 색
     const aput = (x, y, z, a) => {

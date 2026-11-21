@@ -16,6 +16,7 @@ import { backThreat } from './team_sense.js'; // 등 뒤 알림 (11/18 — 무�
 import { BLOOD_RED } from './blood_palette.js';
 import { hexToOklch, oklchToCss } from './oklch.js';
 import { hpLift } from './hp_strip.js';
+import { viewNow } from './view_clock.js'; // 보는 시계 — 싸움 중 멈춤 동안 흐르지 않음 (11/21 감사 N-011)
 
 /** 적 색 (사장님 10/30 02:0x '적군 체력바 색과 적군 머리 위 기호 색을 현재 전투에서 쓰고 있는 피 색으로 바꾸자. 저기서 채도만 낮춰서.'):
  *  피 색 BLOOD_RED.splash #8a0000 = OKLCH(0.398 0.163 29°) → 채도만 × TEAM_FIGHT.hudColor.foeChromaK(0.7) = #792820 */
@@ -82,7 +83,7 @@ export function createTeamHud(doc = document) {
   }
 
   /** 프레임마다: 화살표 · 편 표시 (visible 거짓이면 모두 숨김 — 메뉴 · 판 끝). me = 사람 몸 (지켜보기면 null) · now = 등 뒤 알림 깜빡임 시계 */
-  function update(camera, focus, visible, me = null, width = window.innerWidth, height = window.innerHeight, now = performance.now()) {
+  function update(camera, focus, visible, me = null, width = window.innerWidth, height = window.innerHeight, now = viewNow()) {
     const m = 22; // 가장자리 여백 (px)
     for (const { f, a } of marks) {
       if (!visible || !f.alive || (f === focus && f === me)) {
