@@ -173,7 +173,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
     const tag = pick ? 'button' : 'div';
     const wname = f.weapon ? weaponName(f.weapon) : T.noWeapon; // 내 팀 첫 경기 무기 배정 전 (11/18)
     const label = `${fighterName(f)} · 체력 ${hp} · ${injLine} · ${wname}${f.broken ? ` ${T.broken}` : ''}${dead ? ` · ${T.dead}` : out ? ` · ${T.out}` : coma ? ` · ${T.downed}` : ''}${restLine ? ` · ${restLine}` : ''}`;
-    return `<${tag} ${pick ? 'type="button" ' : ''}class="sg-card" data-key="${f.key}"${pick ? ` aria-pressed="${picked}"` : ''}${dead ? ' data-dead' : ''}${out ? ' data-out' : ''}${coma ? ' data-coma' : ''}${entrant ? ' data-entrant' : ''}${mine ? ' data-mine' : ''}${pick && (dead || out) ? ' disabled' : ''} aria-label="${esc(label)}">
+    return `<${tag} ${pick ? 'type="button" ' : ''}class="sg-card" data-key="${f.key}"${pick ? ` aria-pressed="${picked}"` : ''}${dead ? ' data-dead' : ''}${out ? ' data-out' : ''}${coma && !out ? ' data-coma' : ''}${entrant ? ' data-entrant' : ''}${mine ? ' data-mine' : ''}${pick && (dead || out) ? ' disabled' : ''} aria-label="${esc(label)}">
       <img class="sg-face" src="${esc(portraitOf(f.id, f.cloth))}" alt="" draggable="false">
       <span class="sg-card-body"><b class="sg-name">${esc(fighterName(f))}</b>
         <span class="sg-hp"><span class="sg-hp-bar"><i style="width:${hpPct}%"></i></span>${rs?.gain > 0 ? `<span class="sg-gain">+${rs.gain}</span>` : ''}<span class="sg-hp-num">${hp}</span></span>
