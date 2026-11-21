@@ -446,6 +446,22 @@ function armGap(S, E, W, o) {
     segSegDist(E, wc, o.eo, o.wc) - ARM_R.f - ARM_R.f,
   );
 }
+/**
+ * armGap(S, E, W, o) ≥ gap 인가 (11/21 감사 N-010 (e) — 칼 팔꿈치 돌림 후보마다 부름): 같은 네 틈을 armGap 과 같은 식으로 재되, 하나라도 gap 밑이면
+ *  나머지는 재지 않는다. min(네 틈) ≥ gap ⇔ 네 틈이 모두 ≥ gap (NaN 이 끼면 둘 다 거짓)이라 답이 armGap(…) ≥ gap 과 늘 같다.
+ *  차례는 가장 자주 모자라는 틈 먼저 — 두손 칼은 두 손이 칼자루에서 붙어 아래팔 ↔ 아래팔이 모자라는 것이 84 % (fights12 잰 값)
+ */
+function armGapAtLeast(S, E, W, o, gap) {
+  const uo = _acO.copy(S).lerp(E, 1 / 3);
+  const L = E.distanceTo(W);
+  const wc = _acC.copy(W).lerp(E, Math.min(1, WRIST_CUT / Math.max(1e-6, L)));
+  return (
+    segSegDist(E, wc, o.eo, o.wc) - ARM_R.f - ARM_R.f >= gap &&
+    segSegDist(uo, E, o.eo, o.wc) - ARM_R.u - ARM_R.f >= gap &&
+    segSegDist(uo, E, o.so, o.eo) - ARM_R.u - ARM_R.u >= gap &&
+    segSegDist(E, wc, o.so, o.eo) - ARM_R.f - ARM_R.u >= gap
+  );
+}
 /** 빈팔 몸(지금 자리) → 가슴 틀 선분 (팔 뻗음 점검 armPts 와 같은 끝점 — 빈팔 몸은 −y 를 따라 눕힘) */
 const _aoQ = new THREE.Quaternion(), _aoA = new THREE.Vector3();
 function offArmSegs(f, qInv, c, out) {
@@ -4573,16 +4589,18 @@ function elbowSwivel(pDir, Dn, S, d, alpha, D, a, th0 = 0, k = 1, align = 0, sid
     bp.normalize();
     bq = _swC6.crossVectors(bD, bp);
   }
-  const gapAt = (th) => {
+  //  틈 ≥ cx.gap 인가만 본다 (11/21 감사 N-010 (e)): 목표 자세 틈이 모자라면 지금 몸 손목 틈은 재지 않고 · 틈마다 모자라는 첫 것에서 멈춤 (armGapAtLeast) —
+  //   min(목표 틈, 지금 몸 틈) ≥ gap ⇔ 둘 다 ≥ gap 이라 예전 gapAt(th) ≥ cx.gap 과 답이 같다 (같은 식 · 같은 차례의 수 — 재지 않은 틈만 빠짐)
+  const gapOk = (th) => {
     const p = _swC1.copy(pDir).multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th));
     const E = _swC2.copy(S).addScaledVector(Dn, a * ca).addScaledVector(p, a * sa);
-    const g = armGap(S, E, _swC3.copy(S).addScaledVector(Dn, d), cx.o);
-    if (!bD) return g;
+    if (!armGapAtLeast(S, E, _swC3.copy(S).addScaledVector(Dn, d), cx.o, cx.gap)) return false;
+    if (!bD) return true;
     const p2 = _swC1.copy(bp).multiplyScalar(Math.cos(th)).addScaledVector(bq, Math.sin(th));
     const E2 = _swC2.copy(S).addScaledVector(bD, a * bca).addScaledVector(p2, a * bsa);
-    return Math.min(g, armGap(S, E2, cx.wb, cx.o));
+    return armGapAtLeast(S, E2, cx.wb, cx.o, cx.gap);
   };
-  const clrGap = cx ? (th) => gapAt(th) >= cx.gap : null;
+  const clrGap = cx ? gapOk : null;
   const lim = -HUMAN.ulnarDev * HD;
   // 사람 팔 범위 (JOINTS.swivelHuman — 사장님 10/25 01:2x '팔 관절이 비틀린 게 많아'): 돌린 팔이 ① 팔꿈치를 어깨 → 손 줄보다 위로 올리거나(가슴 틀 위 몫 > 0 — 기본 겨냥은 늘 아래)
   //  ② 칼 면을 굴림 목표에 세우려면 아래팔 굴림이 HUMAN.forearmRoll(80) 밖이거나 ③ 위팔 돌림이 AAOS 한도(JOINTS.twist 안쪽 70 · 바깥 90 — anatSoft 와 같은 정의, 들림 120° 아래만) 밖이면
@@ -4676,7 +4694,7 @@ function elbowSwivel(pDir, Dn, S, d, alpha, D, a, th0 = 0, k = 1, align = 0, sid
         for (const s of n ? [1, -1] : [1]) {
           const th = s * n * STEP;
           if (!armOk(th)) continue;
-          if (gapAt(th) >= cx.gap) {
+          if (gapOk(th)) {
             want = th;
             break;
           }
