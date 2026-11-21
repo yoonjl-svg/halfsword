@@ -1,0 +1,34 @@
+STAMINA.recoverPerSecond	realRate(15)	PROV	회복: 0.6 s 동안 공격 · 막아 받기 · 박차기 · 비기 · 클린치를 안 쓰면 AI 초당 15 · 시뮬 대본 몸 21 · 막기 유지 중엔 멈춤 [21 은 확인 전 — 사람 입력 몸 25 는 사장님 10/29] 표준 시간: 실제 초당 · 실제 초 (10/25)
+STAMINA.playerRecoverPerSecond	realRate(21)	PROV	회복: 0.6 s 동안 공격 · 막아 받기 · 박차기 · 비기 · 클린치를 안 쓰면 AI 초당 15 · 시뮬 대본 몸 21 · 막기 유지 중엔 멈춤 [21 은 확인 전 — 사람 입력 몸 25 는 사장님 10/29] 표준 시간: 실제 초당 · 실제 초 (10/25)
+STAMINA.recoverDelay	realS(0.6)	PROV	회복: 0.6 s 동안 공격 · 막아 받기 · 박차기 · 비기 · 클린치를 안 쓰면 AI 초당 15 · 시뮬 대본 몸 21 · 막기 유지 중엔 멈춤 [21 은 확인 전 — 사람 입력 몸 25 는 사장님 10/29] 표준 시간: 실제 초당 · 실제 초 (10/25)
+WHIP_KNEEL.p	0.5	MIXED	드루이드의 채찍 무릎 꿇리기: 사람 채찍 한 획의 첫 맞음에서 확률 p(× 맞는 쪽 버티기)로 kneel 초 꿇림 — 곁눈 베기 무릎 꺾기와 같은 틀 [사장님 10/23 · 값 확인 전] kneel 0.4 → 0.6 [사장님 11/14 결정 '채찍도 같이 0.6초로 해' — 확인표 3861]
+WHIP_KNEEL.kneel	realS(0.6)	MIXED	드루이드의 채찍 무릎 꿇리기: 사람 채찍 한 획의 첫 맞음에서 확률 p(× 맞는 쪽 버티기)로 kneel 초 꿇림 — 곁눈 베기 무릎 꺾기와 같은 틀 [사장님 10/23 · 값 확인 전] kneel 0.4 → 0.6 [사장님 11/14 결정 '채찍도 같이 0.6초로 해' — 확인표 3861]
+TEAM_FIGHT.target.human.allyAdd	0	MIXED	사람 몸(AI 조종 없는 몸)이 보는 적: 가장 가까운 적 · 바꾸려면 margin m 더 가까운 채 hold 초 [사장님 11/21 · 값 확인 전]
+TEAM_FIGHT.target.human.margin	0.5	MIXED	사람 몸(AI 조종 없는 몸)이 보는 적: 가장 가까운 적 · 바꾸려면 margin m 더 가까운 채 hold 초 [사장님 11/21 · 값 확인 전]
+TEAM_FIGHT.target.human.hold	realS(0.4)	MIXED	사람 몸(AI 조종 없는 몸)이 보는 적: 가장 가까운 적 · 바꾸려면 margin m 더 가까운 채 hold 초 [사장님 11/21 · 값 확인 전]
+CLOSE.holdDrain	2	MIXED	묶인 동안: 맞밀기(상대도 legDrive 로 밂 — 감독 해석 · 확인 전) · 어떤 공격 입력도 안 나감 · 기력 × holdDrain [사장님 11/14] 묶인 동안 붙어 버티기 기력 빠짐 배율(STAMINA.clinchPerSecond 초당 10 → 20 · 두 몸 모두 · 묶인 동안은 스틱 · 닿음과 상관없이 버팀으로 셈 — stamina.js) [사장님 11/14 결정 '기력이 2
+SKILL.cutStepIn.fwd	0.3	MIXED	베며 내딛기: 사람이 새로 휘두를 때 상대가 칼 맞는 거리 밖 · 한 걸음 안이면 앞발 fwd m 내딛음 — schools · frames 받는 유파 · 몸 틀(독일 두손 칼만) [11/05 · 확인 전] 11/05 사장님 '독일 반걸음 넣고' (확인표 3364 · 전 fwd 0)
+SKILL.cutStepIn.schools	['german']	MIXED	베며 내딛기: 사람이 새로 휘두를 때 상대가 칼 맞는 거리 밖 · 한 걸음 안이면 앞발 fwd m 내딛음 — schools · frames 받는 유파 · 몸 틀(독일 두손 칼만) [11/05 · 확인 전] 11/05 사장님 '독일 반걸음 넣고' (확인표 3364 · 전 fwd 0)
+SKILL.cutStepIn.frames	['two']	MIXED	베며 내딛기: 사람이 새로 휘두를 때 상대가 칼 맞는 거리 밖 · 한 걸음 안이면 앞발 fwd m 내딛음 — schools · frames 받는 유파 · 몸 틀(독일 두손 칼만) [11/05 · 확인 전] 11/05 사장님 '독일 반걸음 넣고' (확인표 3364 · 전 fwd 0)
+SKILL.cnParrySpeedK	1	MIXED	막기 단추 따라가기 늘 켬 · 동방 막기 단추 손 빠르기 배율(1 = 끔) [사장님 10/16 · 10/17 · 확인 전]
+BURST_WHIFF.over	0.3	PROV	끌려감: 휘두름 길 끝 너머로 손 목표가 더 가는 패드 거리 (휘두른 쪽으로 · 패드 끝 WEAPON.reach 안) [감독 안]
+BURST_WHIFF.stepT	realS(0.4)	PROV	비틀 걸음: 그 스틱을 미는 시간 (시간 사다리 0.4 — 걸음 하나가 떼어지고 그 걸음은 끝까지 감 · 골반 0.2 m 안팎) [감독 안]
+SECRET.secretArcMin	0.6	PROV	결정타 잔상 바닥: 사람 비기 결정타 잔상 밝기 = max(칼끝 빠르기 몫, 이 값) · 0 = 빠르기 몫 그대로 [10/23 · 확인 전]
+SECRET.italianCommit	4.5	PROV	이탈리아: 상대가 칼을 드는 사건은 손(패드)이 이 빠르기(m/s) 이상일 때만 — 결심한 공격(들어 올림 사건 문턱 hvy 1.6 위). 달려듦은 그대로. 48 판 레이피어 2.5 → 84 번 · 3.5 → 64 · 4.5 → 56(판마다 1.17) [확인 전]
+SECRET.hitMul	1.3	MIXED	결정타 (10/9 23:5x 사장님 '사실성을 다소 저해하더라도 모션 연출이나 판정에 약간의 어드밴티지 — 모든 비기'): AI·플레이어 공통. 물리(속도·힘)는 그대로, 상처 판정·화면만 판정 어드밴티지: 비기 베기(베기 길·따라 지나감 동안)가 낸 상처 에너지 배율 (combat.js analyze — 공격자 fighter.secretHit) [확인 전]
+SECRET.playerWindow	realS(0.6)	MIXED	플레이어 비기 (secret.js playerSecretOf — 늘 켬) 10/21 14:3x 사장님 '시간 통일 제안대로 해' — 0.5 → 0.6 (이어짐 · 입력 칸) · 조건이 찬 뒤 공격 입력을 받는 창 (s) [확인 전]
+UNIQUE_ASSIST.stepPost	realS(0.2)	PROV	긋기 시작 뒤 이 초 안에 스틱이 그 쪽이 되면(같은 긋기가 이어지는 동안) 그 긋기를 걸음 공격으로 바꿈 — 강화동작이 덧씌워졌으면 걸음 공격이 먼저(순위 그대로) (시간 사다리 0.2 실제 초 · 0 = 안 기다림) [사장님 확인 전]
+UNIQUE_ASSIST.enhance	1	MIXED	── 10/14 강화 방식: 궤적은 끝까지 손가락 · 고유 동작은 손가락으로 못 하는 몫만 더함 · 몸 꼴 값은 PLAYER_UNIQUE body · body2 [사장님 10/14 · 수 확인 전 — 끝 힘은 11/21 권고대로] 강화 세기 손잡이 하나: 몸 덧씌우기 × enhance · 끝 힘 1 + (endPower − 1) × enhance · 걸음 크기 × min(1, enhance)
+UNIQUE_ASSIST.cavFrom	realS(0.2)	MIXED	사람 칼끝 돌려 빼기: 막아찌르기 · 칼 닿음 뒤 cavFrom ~ cavTo 사이의 탭 = 칼끝 돌려 빼기 · 이른 탭은 기회를 없앰 [사장님 10/28 · 10/29] 막아찌르기가 끝난 때부터 이 초가 지나야 (시간 사다리 0.2) — 10/28 01:0x · 01:2x 0.6 → [사장님 10/29 20:0x 결정 '둘 중 하나를 완화' · 값 0.2 는 감독(잰 것) — 확인 전]
+UNIQUE_ASSIST.dupStackS	realS(0.4)	MIXED	겹치기 자동 'bind': 칼끼리 닿아 있고 가슴 사이가 띠 안인 동안 쌓임이 차면 나감 · 막기 단추 맞댐도 셈 · 자세 칸 알림 없음 [사장님 10/31] 'bind' 쌓임(실제 초) [사장님 11/14 · 0.4 는 감독]
+PICKUP.reach	0.9	MIXED	떨어진 칼 줍기(src/pickup.js — 제 칼만): 사람은 near 안이면 저절로 걸어가 줍고 AI 도 같은 길 · reach 쥐는 거리 · bend · lift 동작 시간 · grab · settle · settleMax · step · stepFrom · stepWait [사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]
+PICKUP.bend	0.4	MIXED	떨어진 칼 줍기(src/pickup.js — 제 칼만): 사람은 near 안이면 저절로 걸어가 줍고 AI 도 같은 길 · reach 쥐는 거리 · bend · lift 동작 시간 · grab · settle · settleMax · step · stepFrom · stepWait [사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]
+PICKUP.lift	0.2	MIXED	떨어진 칼 줍기(src/pickup.js — 제 칼만): 사람은 near 안이면 저절로 걸어가 줍고 AI 도 같은 길 · reach 쥐는 거리 · bend · lift 동작 시간 · grab · settle · settleMax · step · stepFrom · stepWait [사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]
+PICKUP.grab	0.3	MIXED	떨어진 칼 줍기(src/pickup.js — 제 칼만): 사람은 near 안이면 저절로 걸어가 줍고 AI 도 같은 길 · reach 쥐는 거리 · bend · lift 동작 시간 · grab · settle · settleMax · step · stepFrom · stepWait [사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]
+PICKUP.settle	1.5	MIXED	떨어진 칼 줍기(src/pickup.js — 제 칼만): 사람은 near 안이면 저절로 걸어가 줍고 AI 도 같은 길 · reach 쥐는 거리 · bend · lift 동작 시간 · grab · settle · settleMax · step · stepFrom · stepWait [사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]
+PICKUP.settleMax	0.4	MIXED	떨어진 칼 줍기(src/pickup.js — 제 칼만): 사람은 near 안이면 저절로 걸어가 줍고 AI 도 같은 길 · reach 쥐는 거리 · bend · lift 동작 시간 · grab · settle · settleMax · step · stepFrom · stepWait [사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]
+PICKUP.step	0.3	MIXED	떨어진 칼 줍기(src/pickup.js — 제 칼만): 사람은 near 안이면 저절로 걸어가 줍고 AI 도 같은 길 · reach 쥐는 거리 · bend · lift 동작 시간 · grab · settle · settleMax · step · stepFrom · stepWait [사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]
+PICKUP.stepFrom	0.6	MIXED	떨어진 칼 줍기(src/pickup.js — 제 칼만): 사람은 near 안이면 저절로 걸어가 줍고 AI 도 같은 길 · reach 쥐는 거리 · bend · lift 동작 시간 · grab · settle · settleMax · step · stepFrom · stepWait [사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]
+PICKUP.stepWait	0.2	MIXED	떨어진 칼 줍기(src/pickup.js — 제 칼만): 사람은 near 안이면 저절로 걸어가 줍고 AI 도 같은 길 · reach 쥐는 거리 · bend · lift 동작 시간 · grab · settle · settleMax · step · stepFrom · stepWait [사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]
+PICKUP.near	1.5	MIXED	떨어진 칼 줍기(src/pickup.js — 제 칼만): 사람은 near 안이면 저절로 걸어가 줍고 AI 도 같은 길 · reach 쥐는 거리 · bend · lift 동작 시간 · grab · settle · settleMax · step · stepFrom · stepWait [사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]
+INPUT.stickGuardPx	15	MIXED	이동 스틱 둘레: 스틱 원 바깥 이 px 안에 닿은 손가락은 칼 입력이 아님 · stickGuardGrab 1 이면 그 손가락이 스틱을 쥠 [사장님 10/31] [사장님 10/31 08:xx 결정 — 10 ~ 20 px · 값 15 는 사장님 확인 전 · 확인표 3096]

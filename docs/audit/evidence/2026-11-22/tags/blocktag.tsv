@@ -1,0 +1,316 @@
+class	path	value	newStatus	newTag	oldBlockKeys
+BLOCK-TAG	TIME.tempo	1.1	OWNER	[사장님 10/25]	3
+BLOCK-TAG	STAMINA.max	100	OWNER	[사장님 10/17]	4
+BLOCK-TAG	STAMINA.stageBack	15	OWNER	[사장님 10/17]	4
+BLOCK-TAG	STAMINA.moveTired	0.7	OWNER	[사장님 10/17]	2
+BLOCK-TAG	STAMINA.moveSevere	0.4	OWNER	[사장님 10/17]	2
+BLOCK-TAG	STAMINA.cutCost	12	OWNER	[사장님 10/24 · shotCost 11/21 권고대로]	6
+BLOCK-TAG	STAMINA.thrustCost	10	OWNER	[사장님 10/24 · shotCost 11/21 권고대로]	6
+BLOCK-TAG	STAMINA.blockCost	3	OWNER	[사장님 10/24 · shotCost 11/21 권고대로]	6
+BLOCK-TAG	STAMINA.secretCost	35	OWNER	[사장님 10/24 · shotCost 11/21 권고대로]	6
+BLOCK-TAG	STAMINA.pushCost	12	OWNER	[사장님 10/24 · shotCost 11/21 권고대로]	6
+NEW-TAG(no owner text in OLD)	STAMINA.strokeQuiet	realS(0.12)	MIXED	[사장님 11/21 권고대로]	3
+NEW-TAG(no owner text in OLD)	STAMINA.strokeTravel	0.06	MIXED	[사장님 11/21 권고대로]	3
+NEW-TAG(no owner text in OLD)	STAMINA.strokeCenter	0.22	MIXED	[사장님 11/21 권고대로]	3
+NEW-TAG(no owner text in OLD)	STAMINA.humanStrokeMin	0.15	OWNER	[사장님 10/31]	1
+BLOCK-TAG	STAMINA.stepDistance	0.6	OWNER	[사장님 10/31]	7
+BLOCK-TAG	STAMINA.stepCosts.default	4	OWNER	[사장님 10/31]	7
+BLOCK-TAG	STAMINA.stepCosts.chinese	2	OWNER	[사장님 10/31]	7
+BLOCK-TAG	STAMINA.stepCosts.japanese	6	OWNER	[사장님 10/31]	7
+BLOCK-TAG	STAMINA.maxWalkSpeed	3	OWNER	[사장님 10/31]	7
+BLOCK-TAG	STAMINA.tempoPowerTired	0.64	OWNER	[사장님 10/18 · 값 11/21 권고대로]	2
+BLOCK-TAG	STAMINA.tempoPowerSevere	0.36	OWNER	[사장님 10/18 · 값 11/21 권고대로]	2
+BLOCK-TAG	STAMINA.tiredPower	0.64	MIXED	[사장님 11/21 권고대로 — 전 0.49 · 0.25 = 10/17 전 배율 0.7 · 0.5 의 제곱이 남은 시작값 · 감사 N-001 ⑤]	2
+BLOCK-TAG	STAMINA.severePower	0.36	MIXED	[사장님 11/21 권고대로 — 전 0.49 · 0.25 = 10/17 전 배율 0.7 · 0.5 의 제곱이 남은 시작값 · 감사 N-001 ⑤]	2
+BLOCK-TAG	STAMINA.aiRestAt	20	MIXED	[사장님 11/21 권고대로]	3
+BLOCK-TAG	STAMINA.aiAggressiveRestAt	-10	MIXED	[사장님 11/21 권고대로]	3
+BLOCK-TAG	STAMINA.aiResumeAt	35	MIXED	[사장님 11/21 권고대로]	3
+NEW-TAG(no owner text in OLD)	WEAPON_ABILITY		OWNER	[사장님 10/24]	2
+NEW-TAG(no owner text in OLD)	WEAPON_ABILITY.aweStart	15	OWNER	[사장님 10/24]	2
+BLOCK-TAG	TEAM_FIGHT.target.human.margin	0.5	MIXED	[사장님 11/21 · 값 확인 전]	4
+BLOCK-TAG	TEAM_FIGHT.target.human.hold	realS(0.4)	MIXED	[사장님 11/21 · 값 확인 전]	4
+BLOCK-TAG	TEAM_FIGHT.hpStrip.bleedAt	0.002	OWNER	[사장님 11/18]	7
+BLOCK-TAG	TEAM_FIGHT.hpStrip.h	3	OWNER	[사장님 11/18]	7
+BLOCK-TAG	TEAM_FIGHT.hpStrip.gap	2	OWNER	[사장님 11/18]	7
+BLOCK-TAG	TEAM_SENSE.eye.top.ahead	realS(1.2)	OWNER	[사장님 11/18 결정 1 '발소리로 듣는 셈']	11
+NEW-TAG(no owner text in OLD)	TEAM_SUPPORT.ib		OWNER	[사장님 11/20]	353
+NEW-TAG(no owner text in OLD)	TEAM_SUPPORT.ib.sepX	2	OWNER	[사장님 11/20]	353
+NEW-TAG(no owner text in OLD)	TEAM_SUPPORT.ib.calm	0.25	OWNER	[사장님 11/20]	353
+NEW-TAG(no owner text in OLD)	TEAM_SUPPORT.ib.sweep	2.0	OWNER	[사장님 11/20]	353
+NEW-TAG(no owner text in OLD)	TEAM_SUPPORT.ib.sweepDx	0.8	OWNER	[사장님 11/20]	353
+BLOCK-TAG	CAMERA.run.yawMax	0.7	MIXED	[사장님 11/21 · 값 확인 전]	13
+BLOCK-TAG	CAMERA.run.yawAfter	0.7	MIXED	[사장님 11/21 · 값 확인 전]	13
+BLOCK-TAG	CAMERA.run.yawAcc	1.5	MIXED	[사장님 11/21 · 값 확인 전]	13
+BLOCK-TAG	CAMERA.run.ndcFree	0.5	MIXED	[사장님 11/21 · 값 확인 전]	13
+BLOCK-TAG	CAMERA.run.edgeK	4	MIXED	[사장님 11/21 · 값 확인 전]	13
+BLOCK-TAG	CAMERA.run.lagFree	1.2	MIXED	[사장님 11/21 · 값 확인 전]	13
+BLOCK-TAG	CAMERA.run.lagK	2	MIXED	[사장님 11/21 · 값 확인 전]	13
+BLOCK-TAG	CAMERA.run.done	0.05	MIXED	[사장님 11/21 · 값 확인 전]	13
+BLOCK-TAG	CAMERA.run.near	2.5	MIXED	[사장님 11/21 · 값 확인 전]	13
+BLOCK-TAG	CAMERA.run.back	2.0	MIXED	[사장님 11/21 · 값 확인 전]	13
+BLOCK-TAG	CAMERA.run.up	1.0	MIXED	[사장님 11/21 · 값 확인 전]	13
+BLOCK-TAG	CAMERA.run.tau	0.35	MIXED	[사장님 11/21 · 값 확인 전]	13
+NEW-TAG(no owner text in OLD)	CAMERA.open		OWNER	[사장님 10/15]	1
+NEW-TAG(no owner text in OLD)	CAMERA.open.sweepSec	3.0	OWNER		1
+NEW-TAG(no owner text in OLD)	GAIT.burstFwdMax	0.3	OWNER	[사장님 11/21 권고대로]	1
+NEW-TAG(no owner text in OLD)	GAIT.sideFactor	0.4	OWNER		1
+NEW-TAG(no owner text in OLD)	GAIT.backFactor	0.7	OWNER	[사장님 10/15]	1
+NEW-TAG(no owner text in OLD)	GAIT.catchHurry	1	OWNER		1
+NEW-TAG(no owner text in OLD)	RUN.hold	realS(2.0)	OWNER	[사장님 11/21]	353
+NEW-TAG(no owner text in OLD)	RUN.startAt	50	OWNER	[사장님 11/18]	353
+NEW-TAG(no owner text in OLD)	RUN.stopAt	0	OWNER	[사장님 11/18]	353
+NEW-TAG(no owner text in OLD)	RUN.cost	2	OWNER	[사장님 11/20]	353
+NEW-TAG(no owner text in OLD)	RUN.mul	2.5	OWNER	[사장님 11/21]	353
+NEW-TAG(no owner text in OLD)	RUN.accel	4	OWNER	[사장님 11/21 권고대로]	353
+NEW-TAG(no owner text in OLD)	RUN.lead	0.5	OWNER	[사장님 11/21 권고대로]	353
+NEW-TAG(no owner text in OLD)	RUN.curve	4	OWNER	[사장님 11/21 권고대로]	353
+NEW-TAG(no owner text in OLD)	RUN.curveMax	1.75	OWNER	[사장님 11/21 권고대로]	353
+NEW-TAG(no owner text in OLD)	LONE		OWNER	[사장님 11/19]	4
+NEW-TAG(no owner text in OLD)	LONE.range	6	OWNER	[사장님 11/19]	4
+NEW-TAG(no owner text in OLD)	LONE.out	0.6	OWNER	[사장님 11/19]	4
+NEW-TAG(no owner text in OLD)	LONE.outK	0.8	OWNER	[사장님 11/19]	4
+NEW-TAG(no owner text in OLD)	AI_RUN		OWNER	[사장님 11/19]	7
+NEW-TAG(no owner text in OLD)	AI_RUN.gap	3	OWNER	[사장님 11/19]	7
+NEW-TAG(no owner text in OLD)	AI_RUN.keep	50	OWNER	[사장님 11/19]	7
+NEW-TAG(no owner text in OLD)	AI_RUN.near	1	OWNER	[사장님 11/19]	7
+NEW-TAG(no owner text in OLD)	AI_RUN.lat	0.3	OWNER	[사장님 11/19]	7
+NEW-TAG(no owner text in OLD)	AI_RUN.flee	0.5	OWNER	[사장님 11/19]	7
+NEW-TAG(no owner text in OLD)	AI_RUN.holdGap	1.5	OWNER	[사장님 11/19]	7
+NEW-TAG(no owner text in OLD)	STRIKE.speedMax	60	OWNER	[사장님 10/23]	1
+BLOCK-TAG	FLOW_REDESIGN.window	realS(0.2)	OWNER	[사장님 11/15 결정 '흘린 칼 감소는 70%로 해. 들어오는 피해가 0.3이 되는 셈.' — 전 0.8]	3
+BLOCK-TAG	FLOW_REDESIGN.penalty	60	OWNER	[사장님 11/15 결정 '흘린 칼 감소는 70%로 해. 들어오는 피해가 0.3이 되는 셈.' — 전 0.8]	3
+BLOCK-TAG	FLOW_REDESIGN.flowDmgCut	0.7	OWNER	[사장님 11/15 결정 '흘린 칼 감소는 70%로 해. 들어오는 피해가 0.3이 되는 셈.' — 전 0.8]	3
+BLOCK-TAG	IB_PARRY_BEAT.k	1.6	OWNER	[사장님 10/20]	2
+BLOCK-TAG	IB_FLOW.brake	0.8	OWNER	[사장님 10/21 · 10/28 · 10/29 · 10/31]	6
+BLOCK-TAG	IB_FLOW.endSteps	2	OWNER	[사장님 10/21 · 10/28 · 10/29 · 10/31]	6
+BLOCK-TAG	IB_FLOW.cutSpeed	5	OWNER	[사장님 10/21 · 10/28 · 10/29 · 10/31]	6
+BLOCK-TAG	IB_FLOW.freeEvery	3	OWNER	[사장님 10/21 · 10/28 · 10/29 · 10/31]	6
+BLOCK-TAG	IB_LINK.arriveDeg	20	OWNER	[사장님 11/14 · 11/15 · 11/16]	8
+BLOCK-TAG	IB_LINK.arriveT	realS(0.4)	OWNER	[사장님 11/14 · 11/15 · 11/16]	8
+BLOCK-TAG	SCHOOL_PASSIVE.italian.tipMax	12	OWNER		4
+BLOCK-TAG	SCHOOL_PASSIVE.italian.tipRate	realRate(60)	OWNER		4
+BLOCK-TAG	SCHOOL_PASSIVE.italian.aiK	0.5	OWNER		4
+BLOCK-TAG	SCHOOL_PASSIVE.japanese.gain	0.3	OWNER	[사장님 10/28]	3
+BLOCK-TAG	SCHOOL_PASSIVE.german.gain	0.3	MIXED	[사장님 10/21 · 10/28]	3
+BLOCK-TAG	SCHOOL_PASSIVE.chinese.clot	2	OWNER		2
+BLOCK-TAG	AI_REACT.on	true	MIXED	[사장님 10/21 · 0.2 s 확인 전]	3
+BLOCK-TAG	AI_REACT.face	realS(0.2)	MIXED	[사장님 10/21 · 0.2 s 확인 전]	3
+BLOCK-TAG	BIND.will.aggr0	0.9	MIXED	[사장님 10/31 · 셈 · 수 확인 전]	8
+BLOCK-TAG	BIND.will.aggrK	1.5	MIXED	[사장님 10/31 · 셈 · 수 확인 전]	8
+BLOCK-TAG	BIND.will.vor0	0.4	MIXED	[사장님 10/31 · 셈 · 수 확인 전]	8
+BLOCK-TAG	BIND.will.vorK	0.5	MIXED	[사장님 10/31 · 셈 · 수 확인 전]	8
+BLOCK-TAG	BIND.will.emoK	0.5	MIXED	[사장님 10/31 · 셈 · 수 확인 전]	8
+BLOCK-TAG	BIND.will.lo	0.5	MIXED	[사장님 10/31 · 셈 · 수 확인 전]	8
+BLOCK-TAG	BIND.will.hi	1.5	MIXED	[사장님 10/31 · 셈 · 수 확인 전]	8
+BLOCK-TAG	ARMOR.helmets.kasa.cut	40	OWNER	[사장님 10/10]	9
+BLOCK-TAG	ARMOR.helmets.kasa.stab	25	OWNER	[사장님 10/10]	9
+BLOCK-TAG	ARMOR.helmets.kasa.blunt	0.9	OWNER	[사장님 10/10]	9
+BLOCK-TAG	ARMOR.helmets.kasa.guardMin	0	OWNER	[사장님 10/10]	9
+BLOCK-TAG	ARMOR.helmets.kasa.wear	6	OWNER	[사장님 10/10]	9
+BLOCK-TAG	ARMOR.helmets.kasa.perHit	1	OWNER	[사장님 10/10]	9
+BLOCK-TAG	ARMOR.helmets.kasa.knockBlunt	80	OWNER	[사장님 10/10]	9
+BLOCK-TAG	ARMOR.helmets.kasa.shed	[]	OWNER	[사장님 10/10]	9
+BLOCK-TAG	SKILL.cutStepIn.fwd	0.3	MIXED		4
+BLOCK-TAG	SKILL.cutStepIn.schools	['german']	MIXED		4
+BLOCK-TAG	SKILL.cutStepIn.frames	['two']	MIXED		4
+NEW-TAG(no owner text in OLD)	SKILL.fingerCut		OWNER	[사장님 11/06 · 11/11] [사장님 11/11]	4
+NEW-TAG(no owner text in OLD)	SKILL.fingerCut.arm	1	OWNER	[사장님 11/06 · 11/11] [사장님 11/11]	4
+NEW-TAG(no owner text in OLD)	SKILL.fingerCut.gain	1	OWNER	[사장님 11/06 · 11/11] [사장님 11/11]	4
+NEW-TAG(no owner text in OLD)	SKILL.fingerCut.hit	2	OWNER	[사장님 11/06 · 11/11] [사장님 11/11]	4
+BLOCK-TAG	SKILL.armClear.gap	0.01	OWNER	[사장님 11/12 · 11/17]	8
+BLOCK-TAG	SKILL.armClear.near	0.03	OWNER	[사장님 11/12 · 11/17]	8
+BLOCK-TAG	SKILL.armClear.hold	realS(0.4)	OWNER	[사장님 11/12 · 11/17]	8
+BLOCK-TAG	SKILL.armClear.yield	0.3	OWNER	[사장님 11/12 · 11/17]	8
+BLOCK-TAG	SKILL.armClear.front	0.24	OWNER	[사장님 11/12 · 11/17]	8
+BLOCK-TAG	SKILL.armClear.grip	0.13	OWNER	[사장님 11/12 · 11/17]	8
+BLOCK-TAG	SKILL.armClear.frontIn	0.1	OWNER	[사장님 11/12 · 11/17]	8
+BLOCK-TAG	SKILL.itOppositionVals.shield	realS(.6)	OWNER	[사장님 10/21]	14
+BLOCK-TAG	SKILL.itOppositionVals.shieldCut	.5	OWNER	[사장님 10/21]	14
+BLOCK-TAG	SKILL.itOppositionVals.dealt	.6	OWNER	[사장님 10/21]	14
+BLOCK-TAG	SKILL.itOppositionVals.aim	.10	OWNER	[사장님 10/21]	14
+BLOCK-TAG	SKILL.itOppositionVals.extend	.28	OWNER	[사장님 10/21]	14
+BLOCK-TAG	SKILL.itOppositionVals.hold	.12	OWNER	[사장님 10/21]	14
+BLOCK-TAG	SKILL.itOppositionVals.recover	.16	OWNER	[사장님 10/21]	14
+BLOCK-TAG	SKILL.itOppositionVals.pull	.10	OWNER	[사장님 10/21]	14
+BLOCK-TAG	SKILL.itOppositionVals.reach	.42	OWNER	[사장님 10/21]	14
+BLOCK-TAG	SKILL.itOppositionVals.turn	.65	OWNER	[사장님 10/21]	14
+BLOCK-TAG	SKILL.itOppositionVals.side	.04	OWNER	[사장님 10/21]	14
+BLOCK-TAG	SKILL.itOppositionVals.lead	.15	OWNER	[사장님 10/21]	14
+BLOCK-TAG	SKILL.itOppositionVals.leadMax	.2	OWNER	[사장님 10/21]	14
+NEW-TAG(no owner text in OLD)	SECRET.openSchools	['japanese', 'german', 'italian', 'iberian', 'chinese']	OWNER	[사장님 10/21 · 10/22]	1
+NEW-TAG(no owner text in OLD)	SECRET.aiOpenSchools	['japanese', 'iberian', 'german', 'italian', 'chinese']	OWNER	[사장님 10/22] [사장님 10/24 · 11/14]	1
+NEW-TAG(no owner text in OLD)	SECRET.handSpeed	1.5	OWNER	[사장님 10/9]	1
+BLOCK-TAG	SECRET.stiff.german	realS(0.6)	OWNER	[사장님 11/14]	6
+BLOCK-TAG	SECRET.stiff.italian	realS(0.6)	OWNER	[사장님 11/14]	6
+BLOCK-TAG	SECRET.stiff.japanese	realS(0.6)	OWNER	[사장님 11/14]	6
+BLOCK-TAG	SECRET.stiff.chinese	realS(0.6)	OWNER	[사장님 11/14]	6
+BLOCK-TAG	SECRET.altib.fullBy.durandal	0.45	OWNER	[사장님 11/16 결정 '뒤랑달은 5% 보너스 줘 상한에. 45%']	2
+BLOCK-TAG	SECRET.altib.floorTip.zweihander	15.4	MIXED	[사장님 11/16 · 바닥 잰 값 확인 전]	5
+BLOCK-TAG	SECRET.altib.floorTip.flamberge	13.1	MIXED	[사장님 11/16 · 바닥 잰 값 확인 전]	5
+BLOCK-TAG	SECRET.altib.floorTip.tizona	14.9	MIXED	[사장님 11/16 · 바닥 잰 값 확인 전]	5
+BLOCK-TAG	SECRET.altib.floorTip.durandal	18.2	MIXED	[사장님 11/16 · 바닥 잰 값 확인 전]	5
+NEW-TAG(no owner text in OLD)	SECRET.iberianShove	50	OWNER		1
+NEW-TAG(no owner text in OLD)	SECRET.iberianSweepPath		OWNER	[사장님 10/10]	1
+NEW-TAG(no owner text in OLD)	SECRET.iaiObiSayaMouth	[0.16, 0.085, 0.17]	MIXED	[사장님 11/14]	1
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay		MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.yaw	-100	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.el	-12	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.pull	[0.08, 0.02, -0.03]	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.belt	0.25	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.twist		MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.twist.pelvis	0	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.twist.chest	30	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.twist.pitch	10	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.gap	0.05	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.at	[0.55, 0.65, 0.85]	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.ease	[0.4, 0.3]	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.lead	realS(0.055)	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.hand	0.5	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.mouth	0.5	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.turn	0.25	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.base	0.3	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.bulge	0.08	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iaiSheatheWay.seat	0.9	MIXED	[사장님 11/14 · 값 추정]	19
+NEW-TAG(no owner text in OLD)	SECRET.iberianInside	0.7	MIXED	[사장님 10/10 · 확인 전]	1
+NEW-TAG(no owner text in OLD)	SECRET.hitMul	1.3	MIXED		1
+NEW-TAG(no owner text in OLD)	SECRET.playerWindow	realS(0.6)	MIXED		1
+NEW-TAG(no owner text in OLD)	SECRET.risolutoShare	0.7	OWNER	[사장님 11/11]	1
+BLOCK-TAG	SECRET.risolutoStep.slide	'risolutoSlide'	MIXED	[사장님 10/24 · room 확인 전]	9
+BLOCK-TAG	SECRET.risolutoStep.foot	'italianStep'	MIXED	[사장님 10/24 · room 확인 전]	9
+NEW-TAG(no owner text in OLD)	SECRET.gyeoksal		OWNER	[사장님 10/22]	1
+NEW-TAG(no owner text in OLD)	SECRET.mordHitMul	1	OWNER	[사장님 11/11]	1
+NEW-TAG(no owner text in OLD)	UNIQUE_ASSIST.powerAt	0.4	OWNER	[사장님 11/21 권고대로]	1
+NEW-TAG(no owner text in OLD)	UNIQUE_ASSIST.powerMax	realS(0.6)	OWNER	[사장님 11/21 권고대로]	1
+NEW-TAG(no owner text in OLD)	UNIQUE_ASSIST.endPower	1.12	OWNER	[사장님 11/21 권고대로]	1
+NEW-TAG(no owner text in OLD)	UNIQUE_ASSIST.imbroDown	67.5	OWNER	[사장님 10/31]	1
+NEW-TAG(no owner text in OLD)	UNIQUE_ASSIST.inqThreat	realS(0.25)	OWNER		1
+BLOCK-TAG	UNIQUE_ASSIST.secretUses.default	1	OWNER	[사장님 10/29 · 11/14] [사장님 10/29 19:5x 결정 · 20:5x 확인 — 실제로 나간 때만 셈 · 다 썼다는 화면 표시는 두지 않음] [사장님 11/14 결정 — 동방 1]	3
+BLOCK-TAG	UNIQUE_ASSIST.secretUses.chinese	1	OWNER	[사장님 10/29 · 11/14] [사장님 10/29 19:5x 결정 · 20:5x 확인 — 실제로 나간 때만 셈 · 다 썼다는 화면 표시는 두지 않음] [사장님 11/14 결정 — 동방 1]	3
+BLOCK-TAG	UNIQUE_ASSIST.specialShare.tsubameGaeshi	0.6	MIXED	[사장님 10/29 · 비껴서며 찌르기 0.3 은 감독] [사장님 10/29 02:0x · 12:3x 결정 · inquartata 10/31 16:xx 감독 판단(사장님 위임)]	8
+BLOCK-TAG	UNIQUE_ASSIST.specialShare.cavazione	0.3	MIXED	[사장님 10/29 · 비껴서며 찌르기 0.3 은 감독] [사장님 10/29 02:0x · 12:3x 결정 · inquartata 10/31 16:xx 감독 판단(사장님 위임)]	8
+BLOCK-TAG	UNIQUE_ASSIST.specialShare.lianchi	0.6	MIXED	[사장님 10/29 · 비껴서며 찌르기 0.3 은 감독] [사장님 10/29 02:0x · 12:3x 결정 · inquartata 10/31 16:xx 감독 판단(사장님 위임)]	8
+BLOCK-TAG	UNIQUE_ASSIST.specialShare.duplieren	0.3	MIXED	[사장님 10/29 · 비껴서며 찌르기 0.3 은 감독] [사장님 10/29 02:0x · 12:3x 결정 · inquartata 10/31 16:xx 감독 판단(사장님 위임)]	8
+BLOCK-TAG	UNIQUE_ASSIST.specialShare.redondo	0.25	MIXED	[사장님 10/29 · 비껴서며 찌르기 0.3 은 감독] [사장님 10/29 02:0x · 12:3x 결정 · inquartata 10/31 16:xx 감독 판단(사장님 위임)]	8
+BLOCK-TAG	UNIQUE_ASSIST.specialShare.cingir	0.3	MIXED	[사장님 10/29 · 비껴서며 찌르기 0.3 은 감독] [사장님 10/29 02:0x · 12:3x 결정 · inquartata 10/31 16:xx 감독 판단(사장님 위임)]	8
+BLOCK-TAG	UNIQUE_ASSIST.rdLoad.hand	[0.11, 0.24, 0.27]	MIXED	[사장님 10/31 · 확인 전]	13
+BLOCK-TAG	UNIQUE_ASSIST.rdLoad.blade	[-24, 190]	MIXED	[사장님 10/31 · 확인 전]	13
+BLOCK-TAG	UNIQUE_ASSIST.rdLoad.body.chestYaw	20	MIXED	[사장님 10/31 · 확인 전]	13
+BLOCK-TAG	UNIQUE_ASSIST.rdLoad.body.pelvisYaw	8	MIXED	[사장님 10/31 · 확인 전]	13
+BLOCK-TAG	UNIQUE_ASSIST.rdLoad.body.pitch	0	MIXED	[사장님 10/31 · 확인 전]	13
+BLOCK-TAG	UNIQUE_ASSIST.rdLoad.body.drop	0.04	MIXED	[사장님 10/31 · 확인 전]	13
+BLOCK-TAG	UNIQUE_ASSIST.rdLoad.via.hand	[0.14, 0.34, 0.16]	MIXED	[사장님 10/31 · 확인 전]	13
+BLOCK-TAG	UNIQUE_ASSIST.rdLoad.via.blade	[75, 175]	MIXED	[사장님 10/31 · 확인 전]	13
+BLOCK-TAG	UNIQUE_ASSIST.rdLoad.windIn	realS(0.6)	MIXED	[사장님 10/31 · 확인 전]	13
+BLOCK-TAG	UNIQUE_ASSIST.rdLoad.woundT	realS(0.6)	MIXED	[사장님 10/31 · 확인 전]	13
+BLOCK-TAG	UNIQUE_ASSIST.rdTajo.from	110	MIXED	[사장님 10/31 — angle 60 · liftK 1 · target · body 는 감독]	10
+BLOCK-TAG	UNIQUE_ASSIST.rdTajo.to	-45	MIXED	[사장님 10/31 — angle 60 · liftK 1 · target · body 는 감독]	10
+BLOCK-TAG	UNIQUE_ASSIST.rdTajo.at	0.7	MIXED	[사장님 10/31 — angle 60 · liftK 1 · target · body 는 감독]	10
+BLOCK-TAG	UNIQUE_ASSIST.rdTajo.pull	0	MIXED	[사장님 10/31 — angle 60 · liftK 1 · target · body 는 감독]	10
+BLOCK-TAG	UNIQUE_ASSIST.rdTajo.lowY	0.35	MIXED	[사장님 10/31 — angle 60 · liftK 1 · target · body 는 감독]	10
+BLOCK-TAG	UNIQUE_ASSIST.yaojiBleed.zones	['chest', 'abdomen', 'pelvis']	OWNER	[사장님 10/21 · 10/28] [사장님 11/16 결정 '요격은 출혈량 2배로 강화하고']	4
+BLOCK-TAG	UNIQUE_ASSIST.cnHunt.max	5	OWNER	[사장님 11/14 · 11/16] [사장님 11/16]	4
+BLOCK-TAG	UNIQUE_ASSIST.cnHunt.regen	0.1	OWNER	[사장님 11/14 · 11/16] [사장님 11/16]	4
+BLOCK-TAG	UNIQUE_ASSIST.koteDrop.parts	['farmS', 'farmO']	MIXED	[사장님 10/24 · 11/04 · 부위 · 완화 값 확인 전]	7
+BLOCK-TAG	UNIQUE_ASSIST.koteDrop.swordHalf	0.5	MIXED	[사장님 10/24 · 11/04 · 부위 · 완화 값 확인 전]	7
+BLOCK-TAG	UNIQUE_ASSIST.koteDrop.easeE	2	MIXED	[사장님 10/24 · 11/04 · 부위 · 완화 값 확인 전]	7
+BLOCK-TAG	UNIQUE_ASSIST.koteDrop.easeAfter	0.4	MIXED	[사장님 10/24 · 11/04 · 부위 · 완화 값 확인 전]	7
+BLOCK-TAG	UNIQUE_ASSIST.koteDrop.easeVn	1.5	MIXED	[사장님 10/24 · 11/04 · 부위 · 완화 값 확인 전]	7
+BLOCK-TAG	PICKUP.grab	0.3	MIXED	[사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]	11
+BLOCK-TAG	PICKUP.settle	1.5	MIXED	[사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]	11
+BLOCK-TAG	PICKUP.settleMax	0.4	MIXED	[사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]	11
+BLOCK-TAG	PICKUP.near	1.5	MIXED	[사장님 11/05 · 11/16 · 11/18 · bend · lift · near 확인 전]	11
+BLOCK-TAG	AI_LEVELS.easy.reaction	realS(0.38)	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.easy.windup	1.2	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.easy.chamberSpeed	2.2	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.easy.parrySpeed	3.5	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.easy.guardChance	0.4	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.easy.predict	0.4	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.easy.counter	0	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.easy.feint	0	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.easy.followUp	0.25	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.easy.read	0.35	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.easy.discipline	0.6	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.easy.aggression	0.6	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.easy.skill	0.4	OWNER	[사장님 11/16]	15
+BLOCK-TAG	AI_LEVELS.hard.reaction	realS(0.17)	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.windup	0.4	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.chamberSpeed	3.8	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.strikeSpeed	13	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.parrySpeed	5.5	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.guardChance	0.8	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.predict	1	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.counter	0.35	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.feint	0.3	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.followUp	0.75	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.read	0.9	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.discipline	1.0	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.aggression	1.0	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.hard.skill	0.85	OWNER	[사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85]	15
+BLOCK-TAG	AI_LEVELS.expert.reaction	realS(0.17)	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.windup	0.3	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.chamberSpeed	3.8	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.strikeSpeed	14	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.parrySpeed	5.5	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.guardChance	0.9	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.predict	1	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.counter	0.35	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.feint	0.3	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.followUp	0.75	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.read	0.9	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.discipline	1.0	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.aggression	1.0	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	AI_LEVELS.expert.skill	0.85	OWNER	[사장님 11/16] [사장님 11/16 결정]	15
+BLOCK-TAG	DE_VITALITY.k	[1, 1.05, 1.05, 1.15, 1.15, 1.25, 1.25]	OWNER	[사장님 11/20]	2
+NEW-TAG(no owner text in OLD)	AI_PLAN.bands	[0, 1, 1, 2, 2, 3, 3]	OWNER	[사장님 11/14]	353
+BLOCK-TAG	AI_PLAN.it.inq	0.6	MIXED	[사장님 11/15 · 값 확인 전]	2
+NEW-TAG(no owner text in OLD)	AI_PLAN.luck	[1, 2 / 3, 1 / 3, 0]	OWNER	[사장님 11/14]	353
+BLOCK-TAG	AI_PLAN.cn.close	0.5	OWNER	[사장님 11/16 결정 '동방 보법 개편도 켜']	10
+BLOCK-TAG	AI_PLAN.cn.circle	0.5	OWNER	[사장님 11/16 결정 '동방 보법 개편도 켜']	10
+BLOCK-TAG	AI_PLAN.cn.waist	0.5	OWNER	[사장님 11/16 결정 '동방 보법 개편도 켜']	10
+BLOCK-TAG	AI_PLAN.cn.wear	0.08	OWNER	[사장님 11/16 결정 '동방 보법 개편도 켜']	10
+BLOCK-TAG	AI_PLAN.cn.wearNext	0.5	OWNER	[사장님 11/16 결정 '동방 보법 개편도 켜']	10
+BLOCK-TAG	AI_PLAN.cn.lureHold	realS(2.0)	OWNER	[사장님 11/16 결정 '동방 보법 개편도 켜']	10
+BLOCK-TAG	AI_PLAN.cn.lureNeed	0.5	OWNER	[사장님 11/16 결정 '동방 보법 개편도 켜']	10
+BLOCK-TAG	AI_PLAN.cn.meetFresh	0.5	OWNER	[사장님 11/16 결정 '동방 보법 개편도 켜']	10
+BLOCK-TAG	AI_PLAN.cn.will0	0.2	OWNER	[사장님 11/16 결정 '동방 보법 개편도 켜']	10
+NEW-TAG(no owner text in OLD)	DIG_PROTO.reach	1	OWNER		1
+NEW-TAG(no owner text in OLD)	CN_STEP.cut	0.5	OWNER	[사장님 11/15]	353
+NEW-TAG(no owner text in OLD)	MEASURE.debana	1	OWNER	[사장님 11/17]	353
+NEW-TAG(no owner text in OLD)	MINDSET.profF	[0, 0, 0, 0.4375, 0.75, 0.9375, 1]	OWNER	[사장님 11/19]	353
+NEW-TAG(no owner text in OLD)	MINDSET.band	0.5	OWNER	[사장님 11/18]	353
+NEW-TAG(no owner text in OLD)	MINDSET.react		OWNER	[사장님 11/18 · 11/19]	353
+NEW-TAG(no owner text in OLD)	INPUT.holdPx	24	OWNER	[사장님 10/31]	1
+BLOCK-TAG	SOUND.secretSfxTrimDb.secret/g1-clank	0	MIXED	[사장님 10/25 · 3.3 확인 전]	3
+BLOCK-TAG	SOUND.secretSfxTrimDb.secret/g2-dry	3.3	MIXED	[사장님 10/25 · 3.3 확인 전]	3
+BLOCK-TAG	SOUND.secretSfxFiles.japanese	'secret/g1-clank'	OWNER		6
+BLOCK-TAG	SOUND.secretSfxFiles.italian	'secret/g1-clank'	OWNER		6
+BLOCK-TAG	SOUND.secretSfxFiles.chinese	'secret/g1-clank'	OWNER		6
+BLOCK-TAG	SOUND.secretSfxFiles.iberian	'secret/g2-dry'	OWNER		6
+BLOCK-TAG	SOUND.secretSfxFiles.german	'secret/g2-dry'	OWNER		6
+NEW-TAG(no owner text in OLD)	JOINTS.playerEdgeLead	1	OWNER	[사장님 10/10]	1
+NEW-TAG(no owner text in OLD)	SHOP		OWNER	[사장님 10/30 · 10/31 · 나머지 감독 기본]	353
+BLOCK-TAG	SHOP.tierWeights.common	60	OWNER		5
+BLOCK-TAG	SHOP.tierWeights.rare	25	OWNER		5
+BLOCK-TAG	SHOP.tierWeights.epic	10	OWNER		5
+BLOCK-TAG	SHOP.tierWeights.legend	5	OWNER		5
+BLOCK-TAG	SHOP.slotTzHours	9	OWNER		2
+BLOCK-TAG	SHOP.slotStartHour	0	OWNER		2
+BLOCK-TAG	SHOP.alterPrice.heads	3	OWNER		2
+BLOCK-TAG	SAENGSA.entry.title	'conqueror'	OWNER		3
+BLOCK-TAG	SAENGSA.entry.weapons	5	OWNER		3
+BLOCK-TAG	SAENGSA.signature.minami	'kusanagi'	MIXED	[사장님 10/29 · 11/18 · 쥘리아 달타냥 확인 전]	8
+BLOCK-TAG	SAENGSA.signature.silver_wanderer_mad	'monohoshizao'	MIXED	[사장님 10/29 · 11/18 · 쥘리아 달타냥 확인 전]	8
+BLOCK-TAG	SAENGSA.signature.roland	'durandal'	MIXED	[사장님 10/29 · 11/18 · 쥘리아 달타냥 확인 전]	8
+BLOCK-TAG	SAENGSA.signature.bernardo	'tizona'	MIXED	[사장님 10/29 · 11/18 · 쥘리아 달타냥 확인 전]	8
+BLOCK-TAG	SAENGSA.signature.artoria	'excalibur'	MIXED	[사장님 10/29 · 11/18 · 쥘리아 달타냥 확인 전]	8
+BLOCK-TAG	SAENGSA.signature.liao	'qinggang'	MIXED	[사장님 10/29 · 11/18 · 쥘리아 달타냥 확인 전]	8
+BLOCK-TAG	SAENGSA.items.boxStock	9	OWNER	[사장님 11/21]	2
+NEW-TAG(no owner text in OLD)	SAENGSA.quick.countK	[1, 0.85, 0.78]	OWNER	[사장님 11/21]	1
+BLOCK-TAG	SAENGSA.chests.champion	3	OWNER		3
+BLOCK-TAG	SAENGSA.chests.final	1	OWNER		3
+BLOCK-TAG	SAENGSA.hire.extra.6.horns	[1, 1]	OWNER	[사장님 10/29 · 11/19]	8
+BLOCK-TAG	SAENGSA.hire.extra.5.heads	[1, 3]	OWNER	[사장님 10/29 · 11/19]	8
+BLOCK-TAG	SAENGSA.playerProf.at2	5	OWNER	[사장님 11/16]	5
+BLOCK-TAG	SAENGSA.playerProf.at3	7	OWNER	[사장님 11/16]	5
+BLOCK-TAG	SAENGSA.playerProf.at4	9	OWNER	[사장님 11/16]	5
+BLOCK-TAG	SAENGSA.playerProf.at5	11	OWNER	[사장님 11/16]	5

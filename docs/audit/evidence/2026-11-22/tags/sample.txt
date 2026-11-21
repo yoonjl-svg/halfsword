@@ -1,0 +1,41 @@
+pool 319 seed 20261121
+JOINTS.playerEdgeLead | 1 | [사장님 10/10] | NOT-FOUND-by-key | 
+SECRET.risolutoSlide | 0.45 | [사장님 11/11] | NOT-FOUND-by-key | 
+AI_PLAN.cn.circle | 0.5 | [사장님 11/16 결정 '동방 보법 개편도 켜'] | DATE-MISMATCH?(key named, other date) | decisions_2026-10:704 - 1] 디렉터 답: **없다.** 걸음(gait.js 보폭·박자·속도)·간 보기 거리(홀드 간격)·자세 높낮이(틀 표의 drop)는 전부 틀·공용 값이고 유파는 걸음을 갖지 않는다. 유파마다 다른 것은 물러남 자세·간 보는 자세 목록·(켠) 걸음 기술뿐. 후보: `TRADITIONS[
+SECRET.mordHitMul | 1 | [사장님 11/11] | NOT-FOUND-by-key | 
+TEAM_FIGHT.hpStrip.tones | [[0.8, 'green'], [0.5, 'yellow'], [0.2, 'orange']] | [사장님 11/18] | NOT-FOUND-by-key | 
+ARMOR.moveMul | 0.8 | [사장님 9/30] | DATE-MISMATCH?(key named, other date) | decisions_2026-10:954 - 10/15 15:1x 사장님: "1] 이탈리아는 2+2로 하자. 대신 가속을 50%에서 30%로 조정. 몸이 빨라지는 게 궁극적 이점이라기보다는 리듬감을 살려서 플레이하게 만드는 게 목적. 2] 뒤로 걷기 속도는 앞면 걷기의 70%로 하자. 치고 빠지는 플레이가 너무 안 나와. 3]
+SECRET.stiff.japanese | realS(0.6) | [사장님 11/14] | DATE-MISMATCH?(key named, other date) | decisions_2026-10:1731 - 병합: 리솔루토 조건 셋 · 비기 창 0.6 s 지킴(c627972) · 제비 베기 세 해법 0.6(f1a117f) · 쿠사나기 곧은 츠루기(97127cb) · 켄타이 1.5 → 2.0 s(사장님 23:1x — `SCHOOL_PASSIVE.japanese.full`).
+STRIKE.hitCooldown | 0.25 | [사장님 11/15 · 11/16] | NOT-FOUND-by-key | 
+SECRET.iaiArmTime | realS(2.0) | [사장님 10/25] | DATE-MISMATCH?(key named, other date) | decisions_2026-10:1855  - 한 것: ① 고노센 준비 `SECRET.gnsReady` 'idle'(거리와 상관없이 이동 입력 · 공격 · 막기 · 맞음 · 비기 없이 `iaiArmTime` 1.5 → **2.0** s · 준비된 뒤엔 걸어도 유지 · 공격 · 막기 · 맞음 · 비기면 곧장 풀림 · `?gns
+SECRET.risolutoBack | realS(0.6) | [사장님 11/16 결정] | CONFIRMED?(key named on date) | decisions_2026-11:317 - 사장님(독일 · 이탈리아): "맞든 빗나가든 항상 0.6초 무방비. 리솔루토와 죽음의 일격 모두 적용. 리솔루토는 기력 50 죽음의 일격은 기력 35 소모." — [사장님 11/16 결정] 죽음의 일격 · 리솔루토 판당 쓸 수 끝없음(`SECRET.mord.free` · `SECRE
+SAENGSA.quick.countK | [1, 0.85, 0.78] | [사장님 11/21] | NOT-FOUND-by-key | 
+GAIT.assist | 0.2 | [사장님 10/1] | CONFIRMED?(key named on date) | decisions_2026-10:53 - 진단 docs/strike/r2_live_diagnosis_2026-09-30.md(main d2a062d): 잣대 30점 중 R0/R1만 16 = 본판 16, R2 출시 9, 고침 F1 9, F1+O1 12. 확인 원인: O1 몸통 yaw 운동학 강제(가슴 3,516°/s, 사람 
+SECRET.stiff.italian | realS(0.6) | [사장님 11/14] | DATE-MISMATCH?(key named, other date) | decisions_2026-10:1776 - **"파펜하이머 들어오면 광기의 하인리히가 파펜하이머를 들고 이탈리아 유파로 싸우게 해."** → 광기의 하인리히(`heinrich_mad`) 시트 무기 `pappenheimer` · AI 꾸러미 `persona.school` 'pappenheimer'(무기 id 꾸러미 — 이탈리아
+AI_LEVELS.easy.windup | 1.2 | [사장님 11/16] | NOT-FOUND-by-key | 
+UNIQUE_ASSIST.dupBandMax | 1.6 | [사장님 10/31 18:xx 결정 '0.8~1.6'] | NOT-FOUND-by-key | 
+IT_OUTBOX.stop | 0.3 | [사장님 11/14] | NOT-FOUND-by-key | 
+UNIQUE_ASSIST.cnHunt.life | realS(8.0) | [사장님 11/14 · 11/16] | CONFIRMED?(key named on date) | decisions_2026-11:308 - 사장님(11/16): "근데 말야. 동방이 쌓는 스택이 시간이 지나면 줄어드는 게 맞는 거 같애." … "10초 사다리를 없애고 8초를 신설한다. 10초 쓰던 거 다 8초로 바꾸고 스탯 없어지는 것도 생기고 8초 지난 스탯이 사라지는 걸로 해. 대신 스탯 하나당 추가 합산은 +10%
+IT_OUTBOX.edge | realS(2.0) | [사장님 11/14] | DATE-MISMATCH?(key named, other date) | decisions_2026-10:772 - 사장님 04:4x '비싼 변화도 오늘 밤에' → 유파 걸음 1 단계(재기·세 묶음 설계, src 무변경) 2f47854 → 2 단계 구현 …/school-gait2-2q36ha(05:47~, 목표 11:45). 05:1x '플레이어도 유파 영향 받게 해'(2 단계에 포함) · **기
+SECRET.risolutoCover | 0.15 | [사장님 10/25] | CONFIRMED?(key named on date) | decisions_2026-10:1830 - 넣음(기본): 스틱 앞이나 뒤 `SECRET.risolutoStick` 'both'(`?risoStick=fwd`) · 공격이면 탭 · 끌기 모두 `risolutoTap` 0(`?risoTap=1`) · 덮음 0.07 → 0.15 m `risolutoCover`(리솔루토만 — `?r
+STRIKE.bladeW0 | 0.5 | [사장님 11/17] | NOT-FOUND-by-key | 
+STAMINA.stageBack | 15 | [사장님 10/17] | CONFIRMED?(key named on date) | decisions_2026-10:984 - 10/16 00:4x~00:5x 사장님(지친 공격 빠르기): "이것도 샛별이 시키게 설계안만 md로 줘." → 설계안 `docs/design/stamina_tempo_2026-10-16.md`(b32e4c1) · "칼끝 최고 빠르기로 보려고 한 건데... 뭐가 더 큰 패널티야?" →
+SECRET.gkFree.cost | 20 | [사장님 11/16] | CONFIRMED?(key named on date) | decisions_2026-11:317 - 사장님(독일 · 이탈리아): "맞든 빗나가든 항상 0.6초 무방비. 리솔루토와 죽음의 일격 모두 적용. 리솔루토는 기력 50 죽음의 일격은 기력 35 소모." — [사장님 11/16 결정] 죽음의 일격 · 리솔루토 판당 쓸 수 끝없음(`SECRET.mord.free` · `SECRE
+STAMINA.tempoPowerTired | 0.64 | [사장님 10/18 · 값 11/21 권고대로] | NOT-FOUND-by-key | 
+AI_PROFICIENCY.reaction | [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2].map(realS) | [사장님 11/16] | NOT-FOUND-by-key | 
+LONE.out | 0.6 | [사장님 11/19] | NOT-FOUND-by-key | 
+TEAM_SENSE.eye.top.fov | 360 | [사장님 11/18 결정 1 '발소리로 듣는 셈'] | NOT-FOUND-by-key | 
+AI_LEVELS.hard.aggression | 1.0 | [사장님 11/16 결정 '높음의 힘 1.1 막을 확률 0.8.' — 전 1.15 · 0.85] | DATE-MISMATCH?(key named, other date) | decisions_2026-10:2785 - (c) `UNIQUE_ASSIST.rdAiThrift` 1 — 아낌 = 공격적 기질(공격 성향 × aggression > 1.15 — AI 기력 쉼 문턱과 같은 셈) 0 · 아니면 규율 × (1 − 지금 분노) × (1 − 지금 집념) · 기력 < 아낌 × (쉼 기력 20 + 감기 
+SAENGSA.outLimbs | ['armS', 'legF', 'legB'] | [사장님 11/21] | NOT-FOUND-by-key | 
+TEAM_SENSE.eye.base.lag | realS(0.6) | [사장님 11/18 결정 1 '발소리로 듣는 셈'] | DATE-MISMATCH?(key named, other date) | decisions_2026-10:580 - 권고: 1 을 기본으로, lag 0.4~0.6 은 사장님 눈으로. 큰 길(진짜 한쪽 무릎 접촉 + 다리 힘 기립)은 보류 권고(샛별 R0 실패 자리, 10/1 '넘겨받기 그대로' 결론). 기록 `docs/strike/getup_lead_2026-10-08.md`.
+STAMINA.pushCost | 12 | [사장님 10/24 · shotCost 11/21 권고대로] | NOT-FOUND-by-key | 
+LETTER.mult | 2 | [사장님 10/21] | NOT-FOUND-by-key | 
+CN_STEP.turn | Math.PI / 4 | [사장님 11/16 결정 — 45°] | CONFIRMED?(key named on date) | decisions_2026-11:306 - 사장님(11/16): "A안으로 해. 동방 보법 개편도 켜. 45도 기준. 1초 쿨타임으로 하자." — 격살 풀기 안 A 기본(`SECRET.gkFree` — 끝없음 · 칼끝 몫 0.35 + 0.08 × 겹 더함 · 몸이 자유로운 때부터 식힘 3.0 s) · 동방 편섬 꺾음 기본(`
+SKILL.itOppositionVals.aim | .10 | [사장님 10/21] | CONFIRMED?(key named on date) | decisions_2026-10:1187 - 10/22 밤 감독 — 죽음의 일격 '가볍고 느림'을 고칠 안 셋을 **스위치로만**(기본 끔 · 판 그대로): ① 운동학 길 `SECRET.mord.kin`(연환 틀 · 칼자루 끝 = 고노센 칼끝 빠르기 몫) ② 머리 겨눔 `SECRET.mord.aim` 'pull'(`at` 0.
+JP_TANK.per | realS(1.0) | [사장님 11/14 '1초당 1스택' — 3771] | NOT-FOUND-by-key | 
+SKILL.armClear.hold | realS(0.4) | [사장님 11/12 · 11/17] | DATE-MISMATCH?(key named, other date) | decisions_2026-10:388 - 계획: WA1 손목 hold+release(10/8) → WA2 몸의 호(골반 = 발 힘쌍 A, 10/9~10) → WA3 채찍 타이밍 → WA4 탐색판·관문·사장님 플레이(10/11). 관문 G-A1~A5(문서 §3). 가지 `ARM.swing 'servo'|'arc'`, 기본 s
+AI_PROFICIENCY.levels | ['easy', 'easy', 'normal', 'hard', 'hard', 'hard', 'expert'] | [사장님 11/16 결정 '단 실력 등급은 높음을 4~5, 최고를 6으로'] | NOT-FOUND-by-key | 
+TEAM_SUPPORT.ib.calm | 0.25 | [사장님 11/20] | DATE-MISMATCH?(key named, other date) | decisions_2026-10:691 - 넣은 것(확인표 247, 사장님 확인 전): `CHINESE_TECHK` 腰擊 ×2 → **×3** · 간 보는 자세에 **腰擊勢 sideR**(threat 0.2·high 0.4·low 0.2) · 몰릴 때 물러남 `pressed: sideR`(斂翅 「倒退進步腰擊」). 96 판: 
+SKILL.fingerCut.gain | 1 | [사장님 11/06 · 11/11] | DATE-MISMATCH?(key named, other date) | decisions_2026-10:290 - **1] 그대로 가져옴(첫 건, 21:05)**: 사용자(사장님) 선택 피격음 — A2 단축 약베기 .26 s / B2 단축 강베기 .35 s, 112 J 경계, 찌르기 samsho 유지, '전체 15 % 크게'(10/3), 저체력 숨소리 '추가 15 % 감소'(10/3). 우리 코
+SKILL.itOppositionVals.extend | .28 | [사장님 10/21] | NOT-FOUND-by-key | 
+MEASURE.debana | 1 | [사장님 11/17] | CONFIRMED?(key named on date) | decisions_2026-11:343 - 사장님(11/17 · 간격과 박자 · 오코리 · 막기 2.0 읽기 묶음 · 물리): "A~E 기본으로 옮기고" — [사장님 11/17 결정] A 간격과 박자 · 오코리 · 읽기(`MEASURE` · `OKORI`) · B 막기 2.0 읽기 묶음(가로막기 · 덮는 맞받기 · 공격 절제
