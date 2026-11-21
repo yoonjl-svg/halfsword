@@ -1780,7 +1780,7 @@ export class Fighter {
 
     // 상태에 따른 근육 힘 목표치
     let targetMuscle = 1;
-    if (this.state === 'down') targetMuscle = this.missingLeg ? 0.35 : 0.1; // 다리를 잃고 누운 몸: 팔·손목은 산다(절단 설계 §3-6 '누운 채 벤다' — driveSword 문턱 0.12 위, 10/8 검토 2)
+    if (this.state === 'down') targetMuscle = this.missingLeg ? 0.35 : 0.1; // 다리를 잃고 누운 몸: 팔·손목은 산다(절단 설계 §3-6 '누운 채 벤다' — driveSword 문턱 BODY.wristMuscle 0.12 위, 10/8 검토 2)
     else if (this.state === 'dead') targetMuscle = 0.02;
     else if (this.state === 'getup') targetMuscle = Math.min(1, 0.35 + this.stateTime / this.kneelTime);
     if (this.state !== 'dead') targetMuscle *= this.vigor;
@@ -3317,7 +3317,7 @@ export class Fighter {
 
   /** 팔꿈치 중력 보상: 아래팔과 칼의 무게를 팔꿈치 근육이 미리 버틴다 (엔진 모터는 목표 각도만 쫓으므로 따로 건다) */
   elbowGravity() {
-    if (this.muscle < 0.12 || this.state === 'dead' || this.detachedParts?.has('farmS')) return; // 팔꿈치가 잘렸으면 보상 토크 없음 (잔해에 힘 0)
+    if (this.muscle < BODY.wristMuscle || this.state === 'dead' || this.detachedParts?.has('farmS')) return; // 팔꿈치가 잘렸으면 보상 토크 없음 (잔해에 힘 0)
     const up = this.bodies.uarmS;
     this.gravityTorque([this.bodies.farmS, this.armed ? this.sword : null], up, 0.15, _mG);
     rot(up, _qg);
@@ -3528,7 +3528,7 @@ export class Fighter {
     const clr = armClearOn(this);
     this._clrOn = clr && this.weaponCfg.twoHand && armClearNear(this, rot(chest, _acQ).invert(), chest.translation());
     if (!clr) this.armClrT = 0;
-    if (mus >= 0.12 && this.state !== 'dead') {
+    if (mus >= BODY.wristMuscle && this.state !== 'dead') {
       this._ikMain = true;
       this.armIK(target);
       this._ikMain = false;
@@ -3541,7 +3541,7 @@ export class Fighter {
       }
     } else this.armFull = false;
     this.rollTgtOk = false; // 굴림 목표는 armIK 가 지난 스텝 것을 읽은 뒤 아래에서 새로 남김 (이 스텝 거기까지 못 가면 다음 스텝 돌림은 굴림 어림 없이)
-    if (mus < 0.12 || !this.armed) {
+    if (mus < BODY.wristMuscle || !this.armed) {
       this.aimLagBehind = 0;
       this.aimLagMap = 0; // follow-through 의 뒤처짐도 0 (쓰러짐·무장 해제 동안 낡은 값으로 몸을 더 틀지 않게 — 검토 2-5)
       // (손목 hold 상태 리셋은 10/8 17:20 hold 삭제와 함께 지움)
