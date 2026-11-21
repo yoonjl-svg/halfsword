@@ -1,0 +1,262 @@
+using deprecated parameters for the initialization function; pass a single object instead
+마무리 찌르기 (쓰러진 상대에게 탭) · longsword · 칸마다 1판 · 자세 쟁기,황소,지붕,바보 · 거리 0.5,0.8,1.1,1.4,1.6 · 방향 toward,away,left,right · 재는 시간 3s
+── 맨몸 (기본 적 겉모습) ──
+쟁기           n= 20 닿음  65% 몸통  35% 상처  35% (찌르기 25%) 즉사  10% 깊이 1.68 | 몸통 E 53J 탭→몸통 1.35s 탭→뻗기 1.17s 손 35°/72° 칼 -78° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.35s 골반 0.58m | 겨눔 100% d0 1.07
+황소           n= 20 닿음  95% 몸통  80% 상처  90% (찌르기 90%) 즉사   0% 깊이 2.64 | 몸통 E 74J 탭→몸통 1.50s 탭→뻗기 1.30s 손 34°/75° 칼 -78° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.33s 골반 0.56m | 겨눔 100% d0 1.09
+지붕           n= 20 닿음  70% 몸통  55% 상처  65% (찌르기 60%) 즉사  15% 깊이 3.23 | 몸통 E 97J 탭→몸통 1.48s 탭→뻗기 1.43s 손 30°/75° 칼 -77° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.35s 골반 0.58m | 겨눔 100% d0 1.13
+바보           n= 20 닿음  75% 몸통  50% 상처  55% (찌르기 45%) 즉사   0% 깊이 1.37 | 몸통 E 36J 탭→몸통 1.39s 탭→뻗기 1.74s 손 -6°/74° 칼 -68° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.38s 골반 0.55m | 겨눔 100% d0 1.08
+0.5m         n= 16 닿음  88% 몸통  50% 상처  56% (찌르기 50%) 즉사   0% 깊이 2.11 | 몸통 E 68J 탭→몸통 1.55s 탭→뻗기 1.33s 손 55°/74° 칼 -77° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.77s 골반 0.02m | 겨눔 100% d0 0.55
+0.8m         n= 16 닿음  81% 몸통  56% 상처  69% (찌르기 63%) 즉사  13% 깊이 2.49 | 몸통 E 71J 탭→몸통 1.30s 탭→뻗기 1.23s 손 34°/73° 칼 -76° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.32s 골반 0.32m | 겨눔 100% d0 0.90
+1.1m         n= 16 닿음  88% 몸통  69% 상처  69% (찌르기 69%) 즉사  13% 깊이 2.89 | 몸통 E 69J 탭→몸통 0.99s 탭→뻗기 1.35s 손 9°/75° 칼 -72° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.33s 골반 0.57m | 겨눔 100% d0 1.10
+1.4m         n= 16 닿음  81% 몸통  69% 상처  75% (찌르기 56%) 즉사   6% 깊이 1.76 | 몸통 E 56J 탭→몸통 1.70s 탭→뻗기 1.46s 손 16°/76° 칼 -78° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.35s 골반 0.83m | 겨눔 100% d0 1.35
+1.6m         n= 16 닿음  44% 몸통  31% 상처  38% (찌르기 38%) 즉사   0% 깊이 2.85 | 몸통 E 83J 탭→몸통 1.98s 탭→뻗기 1.77s 손 7°/72° 칼 -77° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.36s 골반 1.09m | 겨눔 100% d0 1.54
+toward       n= 20 닿음  55% 몸통  45% 상처  40% (찌르기 30%) 즉사   0% 깊이 2.28 | 몸통 E 54J 탭→몸통 1.55s 탭→뻗기 1.51s 손 8°/75° 칼 -74° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.38s 골반 0.53m | 겨눔 100% d0 1.11
+away         n= 20 닿음  80% 몸통  45% 상처  70% (찌르기 70%) 즉사   5% 깊이 2.08 | 몸통 E 73J 탭→몸통 1.22s 탭→뻗기 1.40s 손 50°/76° 칼 -77° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.38s 골반 0.56m | 겨눔 100% d0 1.09
+left         n= 20 닿음  75% 몸통  60% 상처  45% (찌르기 40%) 즉사   5% 깊이 2.53 | 몸통 E 55J 탭→몸통 1.47s 탭→뻗기 1.40s 손 20°/73° 칼 -75° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.29s 골반 0.59m | 겨눔 100% d0 1.13
+right        n= 20 닿음  95% 몸통  70% 상처  90% (찌르기 80%) 즉사  15% 깊이 2.57 | 몸통 E 84J 탭→몸통 1.49s 탭→뻗기 1.31s 손 21°/74° 칼 -77° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.36s 골반 0.58m | 겨눔 100% d0 1.04
+전체           n= 80 닿음  76% 몸통  55% 상처  61% (찌르기 55%) 즉사   6% 깊이 2.38 | 몸통 E 68J 탭→몸통 1.44s 탭→뻗기 1.40s 손 24°/74° 칼 -76° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.35s 골반 0.57m | 겨눔 100% d0 1.09
+칸 (상처% / 닿음%): 자세          0.5m       0.8m       1.1m       1.4m       1.6m
+                   쟁기      25%/100%   75%/100%    50%/75%    25%/50%      0%/0%
+                   황소     100%/100%   75%/100%  100%/100%  100%/100%    75%/75%
+                   지붕       50%/75%    75%/75%    75%/75%  100%/100%    25%/25%
+                   바보       50%/75%    50%/50%   50%/100%    75%/75%    50%/75%
+몸통 첫 접촉 판정 {"blunt":13,"cut":4,"stab":27} · 뻗는 중(thrustPush) 93% · 판금 위 0
+상처 없음 31: 쟁기0.5t:uarmO 쟁기0.5a:blunt24/40J 쟁기0.5l:blunt37/45J 쟁기0.8r:thighF 쟁기1.1t:안닿음 쟁기1.1l:blunt15/-J 쟁기1.4t:uarmO 쟁기1.4a:안닿음 쟁기1.4l:안닿음 쟁기1.6t:안닿음 쟁기1.6a:안닿음 쟁기1.6l:안닿음 쟁기1.6r:안닿음 황소0.8l:blunt11/40J 황소1.6t:안닿음 지붕0.5t:안닿음 지붕0.5l:shinB 지붕0.8l:안닿음 지붕1.1t:안닿음 지붕1.6t:안닿음 지붕1.6a:안닿음 지붕1.6l:안닿음 바보0.5t:안닿음 바보0.5l:shinB 바보0.8t:안닿음 바보0.8l:안닿음 바보1.1t:blunt7/-J 바보1.1a:blunt5/40J 바보1.4a:안닿음 바보1.6t:안닿음 바보1.6l:blunt18/45J
+즉사 5/80 (6%) · 원인 {"목":1,"출혈":4} · 탭→죽음 평균/최대 2.39/2.97s · 쿨다운에 가린 찍기 찌르기 4 (판 4) · minEnergy 아래 0 (판 0) · 즉사 조건 위반 0 (0이어야) · 탭 마무리 80/80 · go 없음 10 · 탭 안 끝남 13
+못 죽인 까닭 {"몸통못닿음":17,"찌르기아님":16,"안닿음":19,"찌르기인데즉사아님":23}
+겨눔 전체   go 70/80 · 손 높이 명령 0.45 → 도달 0.45/0.34m (평균/최소, 머리 꼭대기 0.38) · 앞 0.35m 옆 0.08m · 칼 수평 아래 64/33° · 칼 축↔몸 점 선 26.2/63.3° · miss 0.66/1.43m (> top 66) · 탭→go 1.40/2.66s · 칼끝 최고 7.3m/s
+겨눔 쟁기   go 16/20 · 손 높이 명령 0.45 → 도달 0.46/0.42m (평균/최소, 머리 꼭대기 0.38) · 앞 0.35m 옆 0.10m · 칼 수평 아래 61/40° · 칼 축↔몸 점 선 33.9/61.0° · miss 0.85/1.41m (> top 16) · 탭→go 1.17/1.87s · 칼끝 최고 8.6m/s
+겨눔 황소   go 20/20 · 손 높이 명령 0.45 → 도달 0.46/0.34m (평균/최소, 머리 꼭대기 0.38) · 앞 0.40m 옆 0.05m · 칼 수평 아래 67/49° · 칼 축↔몸 점 선 20.1/44.3° · miss 0.53/1.08m (> top 20) · 탭→go 1.30/2.28s · 칼끝 최고 6.1m/s
+겨눔 지붕   go 18/20 · 손 높이 명령 0.45 → 도달 0.44/0.39m (평균/최소, 머리 꼭대기 0.38) · 앞 0.33m 옆 0.09m · 칼 수평 아래 66/33° · 칼 축↔몸 점 선 23.1/63.3° · miss 0.58/1.43m (> top 14) · 탭→go 1.43/2.40s · 칼끝 최고 7.4m/s
+겨눔 바보   go 16/20 · 손 높이 명령 0.45 → 도달 0.44/0.38m (평균/최소, 머리 꼭대기 0.38) · 앞 0.32m 옆 0.08m · 칼 수평 아래 59/37° · 칼 축↔몸 점 선 29.7/59.9° · miss 0.74/1.39m (> top 16) · 탭→go 1.74/2.66s · 칼끝 최고 7.3m/s
+겨눔 도착 up {"head":70} line {"floor":60,"tol":10} · 걷기 끝 {"없음":14,"inside":56} · 걸음 56 · 디딤 평균 1.1 · 닿는 곳 밖 go 0 · short 평균 0.00m
+즉사 칸 (k/n): 자세 거리       toward    away    left   right
+               쟁기 0.5m        0/1     0/1     0/1     0/1
+               쟁기 0.8m        0/1     0/1     1/1     0/1
+               쟁기 1.1m        0/1     0/1     0/1     1/1
+               쟁기 1.4m        0/1     0/1     0/1     0/1
+               쟁기 1.6m        0/1     0/1     0/1     0/1
+               황소 0.5m        0/1     0/1     0/1     0/1
+               황소 0.8m        0/1     0/1     0/1     0/1
+               황소 1.1m        0/1     0/1     0/1     0/1
+               황소 1.4m        0/1     0/1     0/1     0/1
+               황소 1.6m        0/1     0/1     0/1     0/1
+               지붕 0.5m        0/1     0/1     0/1     0/1
+               지붕 0.8m        0/1     1/1     0/1     0/1
+               지붕 1.1m        0/1     0/1     0/1     1/1
+               지붕 1.4m        0/1     0/1     0/1     1/1
+               지붕 1.6m        0/1     0/1     0/1     0/1
+               바보 0.5m        0/1     0/1     0/1     0/1
+               바보 0.8m        0/1     0/1     0/1     0/1
+               바보 1.1m        0/1     0/1     0/1     0/1
+               바보 1.4m        0/1     0/1     0/1     0/1
+               바보 1.6m        0/1     0/1     0/1     0/1
+80% 아래 칸 75:
+  쟁기 0.5m toward 0/1: s567[몸통못닿음 uarmO/blunt line 38.9° miss 1.00 achY 0.47 walk -]
+  쟁기 0.5m away 0/1: s1567[찌르기아님 pelvis/cut→blunt/0.58/32J line 48.0° miss 1.19 achY 0.45 walk - cool:pelvis:98J]
+  쟁기 0.5m left 0/1: s2567[찌르기아님 chest/cut→blunt/0.43/43J line 47.9° miss 1.13 achY 0.44 walk -]
+  쟁기 0.5m right 0/1: s3567[몸통못닿음 thighF/cut line 48.4° miss 1.14 achY 0.44 walk -]
+  쟁기 0.8m toward 0/1: s597[찌르기아님 chest/cut→blunt/0.52/37J line 46.4° miss 1.15 achY 0.43 walk inside]
+  쟁기 0.8m away 0/1: s1597[몸통못닿음 farmO/stab line 22.6° miss 0.64 achY 0.47 walk inside]
+  쟁기 0.8m right 0/1: s3597[몸통못닿음 thighF/blunt line 43.5° miss 1.08 achY 0.45 walk inside]
+  쟁기 1.1m toward 0/1: s627[안닿음 - line 21.1° miss 0.59 achY 0.47 walk inside]
+  쟁기 1.1m away 0/1: s1627[몸통못닿음 farmO/stab line 21.9° miss 0.60 achY 0.44 walk inside]
+  쟁기 1.1m left 0/1: s2627[찌르기아님 chest/blunt/0.81/15J line 16.8° miss 0.47 achY 0.48 walk inside]
+  쟁기 1.4m toward 0/1: s657[몸통못닿음 uarmO/blunt line 29.8° miss 0.77 achY 0.42 walk inside]
+  쟁기 1.4m away 0/1: s1657[안닿음 - line 15.7° miss 0.45 achY 0.47 walk inside]
+  쟁기 1.4m left 0/1: s2657[안닿음 - line 61.0° miss 1.41 achY 0.47 walk inside]
+  쟁기 1.4m right 0/1: s3657[찌르기아님 pelvis/cut/0.44/56J line 24.4° miss 0.68 achY 0.46 walk inside]
+  쟁기 1.6m toward 0/1: s677[안닿음 - line -° miss - achY - walk -]
+  쟁기 1.6m away 0/1: s1677[안닿음 - line -° miss - achY - walk -]
+  쟁기 1.6m left 0/1: s2677[안닿음 - line -° miss - achY - walk -]
+  쟁기 1.6m right 0/1: s3677[안닿음 - line -° miss - achY - walk -]
+  황소 0.5m toward 0/1: s567[찌르기인데즉사아님 chest/stab/0.86/84J line 14.0° miss 0.40 achY 0.52 walk -]
+  황소 0.5m away 0/1: s1567[몸통못닿음 farmO/stab line 14.6° miss 0.42 achY 0.51 walk -]
+  황소 0.5m left 0/1: s2567[찌르기인데즉사아님 pelvis/stab/0.94/112J line 15.0° miss 0.41 achY 0.51 walk -]
+  황소 0.5m right 0/1: s3567[찌르기인데즉사아님 pelvis/stab/0.87/79J line 15.1° miss 0.41 achY 0.51 walk -]
+  황소 0.8m toward 0/1: s597[찌르기인데즉사아님 chest/stab/0.85/68J line 13.9° miss 0.39 achY 0.51 walk inside]
+  황소 0.8m away 0/1: s1597[찌르기인데즉사아님 pelvis/stab/0.87/80J line 13.3° miss 0.38 achY 0.48 walk inside]
+  황소 0.8m left 0/1: s2597[찌르기아님 abdomen/cut→blunt/0.29/12J line 32.0° miss 0.79 achY 0.34 walk inside]
+  황소 0.8m right 0/1: s3597[찌르기인데즉사아님 pelvis/stab/0.89/95J line 14.2° miss 0.42 achY 0.51 walk inside]
+  황소 1.1m toward 0/1: s627[찌르기인데즉사아님 chest/stab/0.83/89J line 14.2° miss 0.39 achY 0.46 walk inside]
+  황소 1.1m away 0/1: s1627[찌르기인데즉사아님 abdomen/stab/0.88/75J line 13.0° miss 0.37 achY 0.45 walk inside]
+  황소 1.1m left 0/1: s2627[찌르기아님 chest/cut/0.29/59J line 42.8° miss 1.08 achY 0.43 walk inside]
+  황소 1.1m right 0/1: s3627[몸통못닿음 thighF/stab line 18.4° miss 0.50 achY 0.43 walk inside]
+  황소 1.4m toward 0/1: s657[찌르기인데즉사아님 chest/stab/0.88/92J line 22.3° miss 0.58 achY 0.39 walk inside]
+  황소 1.4m away 0/1: s1657[찌르기인데즉사아님 pelvis/stab/0.83/43J line 19.0° miss 0.51 achY 0.41 walk inside]
+  황소 1.4m left 0/1: s2657[찌르기인데즉사아님 pelvis/stab/0.89/63J line 33.5° miss 0.83 achY 0.39 walk inside]
+  황소 1.4m right 0/1: s3657[찌르기인데즉사아님 pelvis/stab/1.00/24J line 12.7° miss 0.36 achY 0.48 walk inside]
+  황소 1.6m toward 0/1: s677[안닿음 - line 25.2° miss 0.67 achY 0.40 walk inside]
+  황소 1.6m away 0/1: s1677[찌르기인데즉사아님 abdomen/stab/0.96/105J line 44.3° miss 1.07 achY 0.40 walk inside]
+  황소 1.6m left 0/1: s2677[찌르기인데즉사아님 abdomen/stab/0.85/101J line 13.6° miss 0.38 achY 0.49 walk inside]
+  황소 1.6m right 0/1: s3677[몸통못닿음 thighF/stab line 11.5° miss 0.32 achY 0.49 walk inside]
+  지붕 0.5m toward 0/1: s567[안닿음 - line 42.4° miss 1.05 achY 0.43 walk -]
+  지붕 0.5m away 0/1: s1567[찌르기인데즉사아님 chest/stab/0.97/98J line 2.3° miss 0.06 achY 0.46 walk -]
+  지붕 0.5m left 0/1: s2567[몸통못닿음 shinB/blunt line 13.0° miss 0.34 achY 0.45 walk -]
+  지붕 0.5m right 0/1: s3567[찌르기인데즉사아님 chest/stab/0.97/84J line 8.4° miss 0.22 achY 0.45 walk -]
+  지붕 0.8m toward 0/1: s597[찌르기아님 chest/cut→blunt/0.72/25J line 49.4° miss 1.17 achY 0.44 walk inside cool:chest:72J]
+  지붕 0.8m left 0/1: s2597[안닿음 - line -° miss - achY - walk -]
+  지붕 0.8m right 0/1: s3597[찌르기인데즉사아님 abdomen/stab/0.94/104J line 4.1° miss 0.12 achY 0.44 walk inside]
+  지붕 1.1m toward 0/1: s627[안닿음 - line 29.3° miss 0.78 achY 0.45 walk inside]
+  지붕 1.1m away 0/1: s1627[몸통못닿음 uarmS/stab line 38.4° miss 0.98 achY 0.43 walk inside]
+  지붕 1.1m left 0/1: s2627[찌르기인데즉사아님 pelvis/stab/0.99/134J line 5.7° miss 0.16 achY 0.46 walk inside]
+  지붕 1.4m toward 0/1: s657[찌르기인데즉사아님 abdomen/stab/0.93/59J line 11.4° miss 0.31 achY 0.45 walk inside]
+  지붕 1.4m away 0/1: s1657[찌르기아님 pelvis/cut/0.47/51J line 54.0° miss 1.35 achY 0.48 walk inside]
+  지붕 1.4m left 0/1: s2657[몸통못닿음 thighB/stab line 2.4° miss 0.07 achY 0.42 walk inside]
+  지붕 1.6m toward 0/1: s677[안닿음 - line 51.8° miss 1.20 achY 0.39 walk inside]
+  지붕 1.6m away 0/1: s1677[안닿음 - line 63.3° miss 1.43 achY 0.44 walk inside]
+  지붕 1.6m left 0/1: s2677[안닿음 - line -° miss - achY - walk -]
+  지붕 1.6m right 0/1: s3677[찌르기인데즉사아님 chest/stab/0.99/107J line 9.9° miss 0.27 achY 0.44 walk inside]
+  바보 0.5m toward 0/1: s567[안닿음 - line 34.5° miss 0.87 achY 0.42 walk inside]
+  바보 0.5m away 0/1: s1567[몸통못닿음 uarmS/stab line 11.5° miss 0.32 achY 0.44 walk inside]
+  바보 0.5m left 0/1: s2567[몸통못닿음 shinB/blunt line 38.2° miss 0.93 achY 0.43 walk -]
+  바보 0.5m right 0/1: s3567[찌르기아님 chest/cut→blunt/0.95/10J line 41.1° miss 0.99 achY 0.43 walk -]
+  바보 0.8m toward 0/1: s597[안닿음 - line 59.9° miss 1.39 achY 0.43 walk inside]
+  바보 0.8m away 0/1: s1597[몸통못닿음 uarmS/stab line 19.4° miss 0.54 achY 0.43 walk inside]
+  바보 0.8m left 0/1: s2597[안닿음 - line -° miss - achY - walk -]
+  바보 0.8m right 0/1: s3597[몸통못닿음 uarmS/stab line 17.4° miss 0.49 achY 0.45 walk inside]
+  바보 1.1m toward 0/1: s627[찌르기아님 abdomen/blunt/-0.02/7J line 18.0° miss 0.47 achY 0.43 walk inside]
+  바보 1.1m away 0/1: s1627[찌르기아님 pelvis/cut→blunt/-0.00/9J line -° miss - achY - walk -]
+  바보 1.1m left 0/1: s2627[찌르기아님 pelvis/cut/0.41/55J line 55.1° miss 1.32 achY 0.48 walk inside]
+  바보 1.1m right 0/1: s3627[찌르기인데즉사아님 chest/stab/0.95/96J line 4.4° miss 0.12 achY 0.38 walk inside]
+  바보 1.4m toward 0/1: s657[찌르기아님 chest/cut→blunt/0.70/27J line 50.6° miss 1.20 achY 0.44 walk inside cool:chest:76J]
+  바보 1.4m away 0/1: s1657[안닿음 - line -° miss - achY - walk -]
+  바보 1.4m left 0/1: s2657[찌르기아님 head/cut/0.15/98J line 53.6° miss 1.29 achY 0.49 walk inside]
+  바보 1.4m right 0/1: s3657[찌르기인데즉사아님 pelvis/stab/0.87/60J line 19.0° miss 0.51 achY 0.44 walk inside]
+  바보 1.6m toward 0/1: s677[안닿음 - line -° miss - achY - walk -]
+  바보 1.6m away 0/1: s1677[몸통못닿음 uarmS/stab line 12.9° miss 0.35 achY 0.46 walk inside]
+  바보 1.6m left 0/1: s2677[찌르기아님 chest/cut→blunt/0.70/18J line 28.2° miss 0.72 achY 0.43 walk inside]
+  바보 1.6m right 0/1: s3677[찌르기인데즉사아님 chest/stab/0.98/85J line 12.2° miss 0.32 achY 0.46 walk inside]
+즉사 자세별 쟁기 10% · 황소 0% · 지붕 15% · 바보 0% | 거리별 0.5m 0% · 0.8m 13% · 1.1m 13% · 1.4m 6% · 1.6m 0% | 방향별 toward 0% · away 5% · left 5% · right 15%
+── 판금 (하인리히 겉모습) ──
+쟁기           n= 20 닿음  55% 몸통  40% 상처  30% (찌르기 25%) 즉사   0% 깊이 0.82 | 몸통 E 44J 탭→몸통 1.36s 탭→뻗기 1.43s 손 33°/74° 칼 -82° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.40s 골반 0.55m | 겨눔 100% d0 1.03
+황소           n= 20 닿음  85% 몸통  75% 상처  85% (찌르기 85%) 즉사   5% 깊이 2.19 | 몸통 E 75J 탭→몸통 1.33s 탭→뻗기 1.31s 손 35°/73° 칼 -78° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.37s 골반 0.52m | 겨눔 100% d0 1.05
+지붕           n= 20 닿음  70% 몸통  45% 상처  45% (찌르기 45%) 즉사  15% 깊이 2.80 | 몸통 E 83J 탭→몸통 1.59s 탭→뻗기 1.51s 손 27°/76° 칼 -72° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.36s 골반 0.49m | 겨눔 100% d0 1.08
+바보           n= 20 닿음  60% 몸통  35% 상처  40% (찌르기 30%) 즉사   5% 깊이 0.95 | 몸통 E 40J 탭→몸통 1.13s 탭→뻗기 1.51s 손 13°/72° 칼 -62° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.51s 골반 0.52m | 겨눔 100% d0 1.05
+0.5m         n= 16 닿음  75% 몸통  56% 상처  44% (찌르기 44%) 즉사  13% 깊이 1.91 | 몸통 E 53J 탭→몸통 1.18s 탭→뻗기 1.36s 손 54°/74° 칼 -75° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.98s 골반 0.04m | 겨눔 100% d0 0.53
+0.8m         n= 16 닿음  75% 몸통  44% 상처  50% (찌르기 50%) 즉사   0% 깊이 2.18 | 몸통 E 76J 탭→몸통 1.40s 탭→뻗기 1.41s 손 38°/75° 칼 -76° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.40s 골반 0.28m | 겨눔 100% d0 0.83
+1.1m         n= 16 닿음  69% 몸통  50% 상처  69% (찌르기 63%) 즉사  19% 깊이 1.69 | 몸통 E 74J 탭→몸통 1.14s 탭→뻗기 1.31s 손 24°/75° 칼 -79° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.35s 골반 0.54m | 겨눔 100% d0 1.12
+1.4m         n= 16 닿음  75% 몸통  50% 상처  50% (찌르기 38%) 즉사   0% 깊이 1.71 | 몸통 E 69J 탭→몸통 1.51s 탭→뻗기 1.56s 손 36°/69° 칼 -72° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.36s 골반 0.77m | 겨눔 100% d0 1.32
+1.6m         n= 16 닿음  44% 몸통  44% 상처  38% (찌르기 38%) 즉사   0% 깊이 1.99 | 몸통 E 50J 탭→몸통 1.63s 탭→뻗기 1.60s 손 -14°/78° 칼 -70° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.32s 골반 0.97m | 겨눔 100% d0 1.47
+toward       n= 20 닿음  65% 몸통  60% 상처  60% (찌르기 55%) 즉사  10% 깊이 1.83 | 몸통 E 68J 탭→몸통 1.43s 탭→뻗기 1.53s 손 20°/73° 칼 -73° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.52s 골반 0.55m | 겨눔 100% d0 1.10
+away         n= 20 닿음  70% 몸통  50% 상처  40% (찌르기 35%) 즉사   0% 깊이 2.05 | 몸통 E 62J 탭→몸통 1.51s 탭→뻗기 1.31s 손 41°/74° 칼 -77° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.39s 골반 0.53m | 겨눔 100% d0 1.06
+left         n= 20 닿음  55% 몸통  35% 상처  35% (찌르기 35%) 즉사   0% 깊이 1.52 | 몸통 E 50J 탭→몸통 1.38s 탭→뻗기 1.70s 손 49°/76° 칼 -75° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.36s 골반 0.55m | 겨눔 100% d0 1.07
+right        n= 20 닿음  80% 몸통  50% 상처  65% (찌르기 60%) 즉사  15% 깊이 2.00 | 몸통 E 72J 탭→몸통 1.12s 탭→뻗기 1.21s 손 14°/74° 칼 -74° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.35s 골반 0.47m | 겨눔 100% d0 0.99
+전체           n= 80 닿음  68% 몸통  49% 상처  50% (찌르기 46%) 즉사   6% 깊이 1.88 | 몸통 E 64J 탭→몸통 1.36s 탭→뻗기 1.43s 손 29°/74° 칼 -75° | 걸음 부탁 0% 거절 0 디딤 0/0 길이 -m 탭→디딤 -s 탭→첫 디딤 0.41s 골반 0.52m | 겨눔 100% d0 1.05
+칸 (상처% / 닿음%): 자세          0.5m       0.8m       1.1m       1.4m       1.6m
+                   쟁기        0%/75%    50%/75%  100%/100%     0%/25%      0%/0%
+                   황소       75%/75%  100%/100%  100%/100%    75%/75%    75%/75%
+                   지붕       25%/75%    50%/75%    50%/50%   75%/100%    25%/50%
+                   바보       75%/75%     0%/50%    25%/25%   50%/100%    50%/50%
+몸통 첫 접촉 판정 {"blunt":10,"stab":28,"cut":1} · 뻗는 중(thrustPush) 90% · 판금 위 33
+판금 위 몸통 접촉 31: eff 162J 문턱 51J · 문턱 넘음 26
+상처 없음 40: 쟁기0.5t:안닿음 쟁기0.5a:blunt24/70J 쟁기0.5l:blunt38/70J 쟁기0.5r:thighF 쟁기0.8a:안닿음 쟁기0.8r:thighF 쟁기1.4t:안닿음 쟁기1.4a:blunt32/70J 쟁기1.4l:안닿음 쟁기1.4r:안닿음 쟁기1.6t:안닿음 쟁기1.6a:안닿음 쟁기1.6l:안닿음 쟁기1.6r:안닿음 황소0.5l:안닿음 황소1.4l:안닿음 황소1.6r:안닿음 지붕0.5t:안닿음 지붕0.5a:uarmS 지붕0.5l:thighB 지붕0.8a:안닿음 지붕0.8l:shinF 지붕1.1a:안닿음 지붕1.1l:안닿음 지붕1.4a:uarmS 지붕1.6t:안닿음 지붕1.6a:blunt7/24J 지붕1.6l:안닿음 바보0.5l:안닿음 바보0.8t:uarmS 바보0.8a:안닿음 바보0.8l:안닿음 바보0.8r:head 바보1.1t:안닿음 바보1.1a:안닿음 바보1.1r:안닿음 바보1.4a:farmO 바보1.4l:blunt7/-J 바보1.6t:안닿음 바보1.6l:안닿음
+즉사 5/80 (6%) · 원인 {"출혈":4,"목":1} · 탭→죽음 평균/최대 2.39/2.97s · 쿨다운에 가린 찍기 찌르기 5 (판 4) · minEnergy 아래 0 (판 0) · 즉사 조건 위반 0 (0이어야) · 탭 마무리 80/80 · go 없음 10 · 탭 안 끝남 14
+못 죽인 까닭 {"안닿음":26,"판에미끄러짐":7,"쿨다운":1,"몸통못닿음":14,"찌르기인데즉사아님":23,"찌르기아님":4}
+겨눔 전체   go 70/80 · 손 높이 명령 0.45 → 도달 0.45/0.36m (평균/최소, 머리 꼭대기 0.38) · 앞 0.36m 옆 0.08m · 칼 수평 아래 63/34° · 칼 축↔몸 점 선 24.6/71.6° · miss 0.62/1.51m (> top 60) · 탭→go 1.43/2.98s · 칼끝 최고 6.7m/s
+겨눔 쟁기   go 15/20 · 손 높이 명령 0.45 → 도달 0.45/0.39m (평균/최소, 머리 꼭대기 0.38) · 앞 0.39m 옆 0.09m · 칼 수평 아래 54/43° · 칼 축↔몸 점 선 37.1/50.8° · miss 0.93/1.23m (> top 15) · 탭→go 1.43/2.95s · 칼끝 최고 8.1m/s
+겨눔 황소   go 20/20 · 손 높이 명령 0.45 → 도달 0.47/0.36m (평균/최소, 머리 꼭대기 0.38) · 앞 0.38m 옆 0.06m · 칼 수평 아래 68/53° · 칼 축↔몸 점 선 16.5/41.7° · miss 0.45/0.99m (> top 19) · 탭→go 1.31/2.82s · 칼끝 최고 5.5m/s
+겨눔 지붕   go 19/20 · 손 높이 명령 0.45 → 도달 0.44/0.39m (평균/최소, 머리 꼭대기 0.38) · 앞 0.36m 옆 0.09m · 칼 수평 아래 69/42° · 칼 축↔몸 점 선 17.3/55.9° · miss 0.44/1.29m (> top 11) · 탭→go 1.51/2.98s · 칼끝 최고 5.3m/s
+겨눔 바보   go 16/20 · 손 높이 명령 0.45 → 도달 0.43/0.39m (평균/최소, 머리 꼭대기 0.38) · 앞 0.32m 옆 0.07m · 칼 수평 아래 59/34° · 칼 축↔몸 점 선 32.0/71.6° · miss 0.78/1.51m (> top 15) · 탭→go 1.51/2.66s · 칼끝 최고 8.6m/s
+겨눔 도착 up {"head":70} line {"floor":59,"tol":11} · 걷기 끝 {"없음":14,"inside":56} · 걸음 56 · 디딤 평균 1.1 · 닿는 곳 밖 go 0 · short 평균 0.00m
+즉사 칸 (k/n): 자세 거리       toward    away    left   right
+               쟁기 0.5m        0/1     0/1     0/1     0/1
+               쟁기 0.8m        0/1     0/1     0/1     0/1
+               쟁기 1.1m        0/1     0/1     0/1     0/1
+               쟁기 1.4m        0/1     0/1     0/1     0/1
+               쟁기 1.6m        0/1     0/1     0/1     0/1
+               황소 0.5m        0/1     0/1     0/1     0/1
+               황소 0.8m        0/1     0/1     0/1     0/1
+               황소 1.1m        1/1     0/1     0/1     0/1
+               황소 1.4m        0/1     0/1     0/1     0/1
+               황소 1.6m        0/1     0/1     0/1     0/1
+               지붕 0.5m        0/1     0/1     0/1     1/1
+               지붕 0.8m        0/1     0/1     0/1     0/1
+               지붕 1.1m        1/1     0/1     0/1     1/1
+               지붕 1.4m        0/1     0/1     0/1     0/1
+               지붕 1.6m        0/1     0/1     0/1     0/1
+               바보 0.5m        0/1     0/1     0/1     1/1
+               바보 0.8m        0/1     0/1     0/1     0/1
+               바보 1.1m        0/1     0/1     0/1     0/1
+               바보 1.4m        0/1     0/1     0/1     0/1
+               바보 1.6m        0/1     0/1     0/1     0/1
+80% 아래 칸 75:
+  쟁기 0.5m toward 0/1: s567[안닿음 - line 39.2° miss 0.95 achY 0.44 walk -]
+  쟁기 0.5m away 0/1: s1567[판에미끄러짐 pelvis/cut→blunt/0.58/32J line 47.8° miss 1.19 achY 0.45 walk - cool:pelvis:96J]
+  쟁기 0.5m left 0/1: s2567[쿨다운 chest/cut→blunt/0.42/43J line 48.1° miss 1.13 achY 0.44 walk - cool:abdomen:94J]
+  쟁기 0.5m right 0/1: s3567[몸통못닿음 thighF/blunt line 48.2° miss 1.18 achY 0.45 walk -]
+  쟁기 0.8m toward 0/1: s597[찌르기인데즉사아님 abdomen/stab/0.99/53J line 20.6° miss 0.55 achY 0.46 walk inside]
+  쟁기 0.8m away 0/1: s1597[안닿음 - line 39.9° miss 1.07 achY 0.46 walk inside]
+  쟁기 0.8m left 0/1: s2597[찌르기인데즉사아님 abdomen/stab/0.85/61J line 17.6° miss 0.47 achY 0.46 walk inside]
+  쟁기 0.8m right 0/1: s3597[몸통못닿음 thighF/blunt line 38.8° miss 0.98 achY 0.47 walk inside]
+  쟁기 1.1m toward 0/1: s627[판에미끄러짐 chest/cut→blunt/0.44/28J line 43.8° miss 1.07 achY 0.40 walk inside cool:abdomen:63J,cool:chest:3J]
+  쟁기 1.1m away 0/1: s1627[판에미끄러짐 pelvis/cut→blunt/0.36/64J line 50.8° miss 1.23 achY 0.39 walk inside]
+  쟁기 1.1m left 0/1: s2627[몸통못닿음 thighF/cut line 30.1° miss 0.79 achY 0.47 walk inside]
+  쟁기 1.1m right 0/1: s3627[찌르기아님 pelvis/cut→blunt/0.27/34J line 47.9° miss 1.13 achY 0.43 walk inside cool:abdomen:38J]
+  쟁기 1.4m toward 0/1: s657[안닿음 - line -° miss - achY - walk -]
+  쟁기 1.4m away 0/1: s1657[판에미끄러짐 pelvis/cut→blunt/0.43/34J line 41.1° miss 1.05 achY 0.43 walk inside]
+  쟁기 1.4m left 0/1: s2657[안닿음 - line 12.6° miss 0.34 achY 0.48 walk inside]
+  쟁기 1.4m right 0/1: s3657[안닿음 - line 29.4° miss 0.81 achY 0.48 walk inside]
+  쟁기 1.6m toward 0/1: s677[안닿음 - line -° miss - achY - walk -]
+  쟁기 1.6m away 0/1: s1677[안닿음 - line -° miss - achY - walk -]
+  쟁기 1.6m left 0/1: s2677[안닿음 - line -° miss - achY - walk -]
+  쟁기 1.6m right 0/1: s3677[안닿음 - line -° miss - achY - walk -]
+  황소 0.5m toward 0/1: s567[찌르기인데즉사아님 chest/stab/0.90/90J line 13.4° miss 0.36 achY 0.51 walk -]
+  황소 0.5m away 0/1: s1567[찌르기인데즉사아님 abdomen/stab/0.95/53J line 14.1° miss 0.40 achY 0.50 walk -]
+  황소 0.5m left 0/1: s2567[안닿음 - line 15.0° miss 0.41 achY 0.52 walk -]
+  황소 0.5m right 0/1: s3567[찌르기인데즉사아님 pelvis/stab/0.88/85J line 15.1° miss 0.43 achY 0.51 walk -]
+  황소 0.8m toward 0/1: s597[찌르기인데즉사아님 chest/stab/0.87/75J line 12.9° miss 0.37 achY 0.47 walk inside]
+  황소 0.8m away 0/1: s1597[찌르기인데즉사아님 abdomen/stab/0.87/87J line 14.7° miss 0.43 achY 0.51 walk inside]
+  황소 0.8m left 0/1: s2597[찌르기인데즉사아님 abdomen/stab/0.85/66J line 13.0° miss 0.37 achY 0.48 walk inside]
+  황소 0.8m right 0/1: s3597[찌르기인데즉사아님 pelvis/stab/0.89/88J line 13.8° miss 0.40 achY 0.52 walk inside]
+  황소 1.1m away 0/1: s1627[몸통못닿음 farmO/stab line 19.0° miss 0.53 achY 0.43 walk inside]
+  황소 1.1m left 0/1: s2627[찌르기인데즉사아님 abdomen/stab/0.90/88J line 25.2° miss 0.65 achY 0.42 walk inside]
+  황소 1.1m right 0/1: s3627[찌르기인데즉사아님 pelvis/stab/0.87/58J line 12.9° miss 0.35 achY 0.46 walk inside]
+  황소 1.4m toward 0/1: s657[찌르기인데즉사아님 chest/stab/0.84/40J line 11.8° miss 0.32 achY 0.46 walk inside]
+  황소 1.4m away 0/1: s1657[찌르기인데즉사아님 pelvis/stab/0.98/166J line 0.3° miss 0.01 achY 0.49 walk inside]
+  황소 1.4m left 0/1: s2657[안닿음 - line 16.8° miss 0.46 achY 0.47 walk inside]
+  황소 1.4m right 0/1: s3657[몸통못닿음 thighF/stab line 13.5° miss 0.37 achY 0.47 walk inside]
+  황소 1.6m toward 0/1: s677[찌르기인데즉사아님 abdomen/stab/1.00/35J line 13.5° miss 0.38 achY 0.48 walk inside]
+  황소 1.6m away 0/1: s1677[찌르기인데즉사아님 chest/stab/0.81/76J line 14.5° miss 0.41 achY 0.45 walk inside]
+  황소 1.6m left 0/1: s2677[찌르기인데즉사아님 pelvis/stab/0.97/25J line 41.7° miss 0.99 achY 0.36 walk inside]
+  황소 1.6m right 0/1: s3677[안닿음 - line 35.0° miss 0.89 achY 0.39 walk inside]
+  지붕 0.5m toward 0/1: s567[안닿음 - line 37.2° miss 0.90 achY 0.44 walk -]
+  지붕 0.5m away 0/1: s1567[몸통못닿음 uarmS/blunt line 17.3° miss 0.48 achY 0.45 walk inside]
+  지붕 0.5m left 0/1: s2567[몸통못닿음 thighB/blunt line 4.2° miss 0.11 achY 0.46 walk -]
+  지붕 0.8m toward 0/1: s597[찌르기인데즉사아님 chest/stab/0.94/101J line 11.0° miss 0.30 achY 0.42 walk inside]
+  지붕 0.8m away 0/1: s1597[안닿음 - line 1.0° miss 0.03 achY 0.45 walk inside]
+  지붕 0.8m left 0/1: s2597[몸통못닿음 shinF/blunt line 4.2° miss 0.11 achY 0.44 walk inside]
+  지붕 0.8m right 0/1: s3597[몸통못닿음 thighF/stab line 35.2° miss 0.86 achY 0.44 walk inside]
+  지붕 1.1m away 0/1: s1627[안닿음 - line 4.0° miss 0.11 achY 0.39 walk inside]
+  지붕 1.1m left 0/1: s2627[안닿음 - line 10.6° miss 0.29 achY 0.46 walk inside]
+  지붕 1.4m toward 0/1: s657[찌르기인데즉사아님 chest/stab/0.98/28J line 6.9° miss 0.18 achY 0.45 walk inside]
+  지붕 1.4m away 0/1: s1657[몸통못닿음 uarmS/blunt line 36.5° miss 0.92 achY 0.42 walk inside]
+  지붕 1.4m left 0/1: s2657[찌르기인데즉사아님 chest/stab/0.85/60J line 26.6° miss 0.70 achY 0.45 walk inside]
+  지붕 1.4m right 0/1: s3657[찌르기인데즉사아님 chest/stab/0.92/78J line 3.8° miss 0.10 achY 0.41 walk inside]
+  지붕 1.6m toward 0/1: s677[안닿음 - line 55.9° miss 1.29 achY 0.40 walk inside]
+  지붕 1.6m away 0/1: s1677[찌르기아님 chest/cut→blunt/0.00/6J line 46.8° miss 1.17 achY 0.43 walk inside]
+  지붕 1.6m left 0/1: s2677[안닿음 - line -° miss - achY - walk -]
+  지붕 1.6m right 0/1: s3677[찌르기인데즉사아님 abdomen/stab/0.96/144J line 1.3° miss 0.04 achY 0.45 walk inside]
+  바보 0.5m toward 0/1: s567[판에미끄러짐 chest/blunt/-0.56/7J line 38.0° miss 0.92 achY 0.43 walk -]
+  바보 0.5m away 0/1: s1567[찌르기인데즉사아님 chest/stab/0.82/44J line 14.7° miss 0.38 achY 0.40 walk inside]
+  바보 0.5m left 0/1: s2567[안닿음 - line 40.3° miss 0.97 achY 0.43 walk -]
+  바보 0.8m toward 0/1: s597[몸통못닿음 uarmS/blunt line 36.3° miss 0.89 achY 0.42 walk inside]
+  바보 0.8m away 0/1: s1597[안닿음 - line 36.6° miss 0.97 achY 0.42 walk inside]
+  바보 0.8m left 0/1: s2597[안닿음 - line 9.7° miss 0.27 achY 0.43 walk inside]
+  바보 0.8m right 0/1: s3597[찌르기아님 head/blunt/-0.33/14J line 35.2° miss 0.93 achY 0.44 walk inside]
+  바보 1.1m toward 0/1: s627[안닿음 - line 29.4° miss 0.78 achY 0.46 walk inside]
+  바보 1.1m away 0/1: s1627[안닿음 - line -° miss - achY - walk -]
+  바보 1.1m left 0/1: s2627[몸통못닿음 thighB/stab line 2.5° miss 0.06 achY 0.40 walk inside]
+  바보 1.1m right 0/1: s3627[안닿음 - line -° miss - achY - walk -]
+  바보 1.4m toward 0/1: s657[판에미끄러짐 pelvis/cut/-0.04/136J line 71.6° miss 1.51 achY 0.47 walk inside]
+  바보 1.4m away 0/1: s1657[몸통못닿음 farmO/blunt line 20.5° miss 0.57 achY 0.45 walk inside]
+  바보 1.4m left 0/1: s2657[판에미끄러짐 chest/blunt/0.03/7J line 65.6° miss 1.44 achY 0.48 walk inside]
+  바보 1.4m right 0/1: s3657[몸통못닿음 footF/cut line 52.0° miss 1.19 achY 0.39 walk inside]
+  바보 1.6m toward 0/1: s677[안닿음 - line -° miss - achY - walk -]
+  바보 1.6m away 0/1: s1677[찌르기인데즉사아님 abdomen/stab/0.89/55J line 11.8° miss 0.33 achY 0.46 walk inside]
+  바보 1.6m left 0/1: s2677[안닿음 - line -° miss - achY - walk -]
+  바보 1.6m right 0/1: s3677[찌르기아님 pelvis/blunt/-0.09/6J line 10.2° miss 0.28 achY 0.44 walk inside]
+즉사 자세별 쟁기 0% · 황소 5% · 지붕 15% · 바보 5% | 거리별 0.5m 13% · 0.8m 0% · 1.1m 19% · 1.4m 0% · 1.6m 0% | 방향별 toward 10% · away 0% · left 0% · right 15%
+판금: 즉사 5/80 · 찍기 몸통 접촉 판금 위 31: 찌르기 25 eff 평균 189J / 문턱 평균 47J · eff>thr 25 · 판이 칼을 막고도(pass false) 죽음 0 · 판을 뚫고(pass) 죽음 4 · 판에 미끄러져 찌르기 아님(베기·둔기) 6 · 몸통 못 닿음 40
+찍기 첫 접촉 구역별 즉사/접촉: pelvis(판) 0/7 · chest(판) 2/13 · abdomen(판) 2/11 · pelvis 0/3 · head 1/1 · 판에 막힘 0
+즉사를 낸 접촉 구역별:  · 즉사인데 finish 접촉 없음 5

@@ -1,0 +1,175 @@
+    src/ai.js:4457 IN-FN else if (!this.chasing && digProtoOn() && d > want) fwd = digFeet(this, fwd, d - want); // 파고들기 A2 (기본 켬) · 시제
+    src/ai.js:4468 IN-FN if (!this.chasing && digProtoOn()) fwd = digFeet(this, fwd, gap); // 파고들기 A2 (기본 켬): 헛친 틈은 스틱 끝으로 건넘 · 시제품 B ·
+    src/ai_block_cut.js:15 IN-FN return { chinese: SKILL.cnParryDmgCut, japanese: SKILL.jpParryDmgCut, iberian: SKILL.ibParryDmgCut }[tradition
+    src/ai_plan.js:17 top export const PHASE_KO = Object.freeze({ tired: '지쳤을 때', behind: '불리할 때', finish: '끝내기', ahead: '우위를 쥔 뒤', comm
+    src/ai_techniques.js:92 top export const HIGH_GUARDS = WATCH_GUARDS.filter((g) => g.high >= 0.6);
+    src/character_temperament.js:15 top export const STATUS = '사장님 확인 전'; // 이 파일의 모든 새 값 (기본 유파 숙련도만 사장님 결정 — 아래 PROFICIENCY 머리말)
+    src/combat.js:499 IN-FN bleedPerSev: (ANATOMY[zone] || ANATOMY.chest).bleed * (att.weapon?.bleedMult ?? 1) * (UA.yaojiBleed?.k > 0 && 
+    src/config.js:16 top export const TIME = { tempo: 1.1, std: 1.1, k: 1.1 }; // k = 실제 초 → 게임 초 배율 · 템포 1.1 (사장님 10/10 05:1x '기본 템포 1
+    src/config.js:40 top moveTired: 0.7, moveSevere: 0.4, attackTired: 0.8, attackSevere: 0.6,
+    src/config.js:262 top footReaction: 0, // 체중·추진력의 반작용을 발에 싣는 비율 (실험 중: 1이면 걷다 넘어진다)
+    src/config.js:264 top accelLean: 0, // 가속할 때 몸 전체를 앞으로 숙이는 정도 (허리 근육이 대신 버틴다)
+    src/config.js:882 top anchorRelax: false,
+    src/config.js:883 top anchorYaw: 0.15, // 그동안 몸통 비틀기(yaw)를 붙잡는 힘의 비율
+    src/config.js:884 top anchorPitch: 0.4, // 앞뒤로 숙이기(pitch)
+    src/config.js:1125 top jpParryDmgCut: 0, // [사장님 11/15 결정 '일본은 바위 몸도 생겼으니 막을 때 피해 감소 20%는 없애' — 전 0.2] (J2 몫 열쇠에서 parryCut 도 뺌 · 흘린 칼
+    src/config.js:1126 top ibParryDmgCut: 0, // [사장님 11/15 결정 '이베리아도 막기 20% 감소 없애' — 전 0.2] (B9 몫은 아래 막아 내면 기력 되찾음으로)
+    src/config.js:1225 top lethalJ: 247, // (10/10 조건에서 뺌 — 옛 값 기록용. 10/9 23:5x 136 → 247 = 맞은 칼 칼끝 추정 ½·m·v² 분포 90 %)
+    src/config.js:1227 top iberianLat: 0.4, // 이베리아 옆걸음 (m, 방향 = 성격의 즐겨 도는 쪽 circleDir)
+    src/config.js:1230 top japaneseDist: [0, 0.8], // (10/9 첫 꼴의 헛침 거리 창 — 지금은 쓰지 않음, japaneseFoeMargin·japaneseFar 창으로 바꿈)
+    src/config.js:1239 top iberianPower: 1.6, // 이베리아 마지막 내려치기 서보 힘 창. 10/9 후속 1.3 → 1.6
+    src/config.js:1240 top iberianLoopHand: 1.5, // 10/9 4차: 고리도 빠르게(공통 사다리) — 1.5 에서 포화. 이베리아 고리 구간 손 속도 배율 (고리는 준비(windup)로 돈다 — 베기 빠르기
+    src/config.js:1241 top iberianStrength: 1.5, // 이베리아 내려치기 구간 보조 힘(몸의 힘 배율 — 손목 힘·손목 빠르기 한계 √·팔 힘)
+    src/config.js:1242 top iberianBack: -0.3, // 이베리아 옆걸음의 앞뒤 (m, 음수 = 뒷발을 비껴 뒤로 'retreat' — 붙은 거리에서 휘돌릴 틈을 만든다)
+    src/config.js:1244 top chineseLoopHand: 0.6, // 중국 連環三擊 이음새 고리(머리 위 한 바퀴 — 10/10 04:4x 사장님 '현란한 고리는 연환삼격으로, 검무처럼') 손 빠르기 = 베기 빠르기 × 이
+    src/config.js:1390 top chineseRest: realS(0.5), // 중국 연환삼격: 내 공격 없이 이 초 이상 지난 뒤 들어가며 친 첫 칼이 맞으면. 48 판 청강검: 0.5 → 31 번(판마다 0.65) · 0.7
+    src/config.js:1423 top risolutoReachKeep: realS(0.4), // ① 칼이 떨어진 뒤 창이 이어지는 시간 (s — 시간 사다리 0.2 · 0.4 · 0.6 · 1.2 를 잼 실제 초) — 공격 시간 상한
+    src/config.js:1492 top joinMax: 0.25, // 조건으로 여는 고유 동작(앞 긋기 뒤): 지금 손에서 이어 들어갈 길까지 이 거리(패드 m) 안일 때만 — 자세로 연 동작은 시작 자리를 이미 봤으므로 안 씀
+    src/config.js:1501 top vMin: 2, // 손 빠르기 바닥(패드 m/s) — 휘두르기 문턱 1.5 위 (멈칫하지 않게)
+    src/config.js:1505 top idleRelease: 0.1,
+    src/config.js:1506 top oppositeDeg: 120,
+    src/config.js:2057 top step: 0,
+    src/config.js:2058 top stepN: 1,
+    src/config.js:2059 top dashGap: 0.45,
+    src/config.js:2060 top dashWait: realS(0.2),
+    src/config.js:2061 top run: 0,
+    src/config.js:2062 top runAt: 50,
+    src/config.js:2063 top runStick: 0.9,
+    src/config.js:2064 top runV: 2.5,
+    src/config.js:2065 top runCost: 1.5,
+    src/config.js:2066 top runGap: 0.3,
+    src/config.js:2569 top wristSwing: 0,
+    src/config.js:2570 top wristRope: 0,
+    src/dig_proto.js:11 top import { DIG_PROTO as D, GAIT, STAMINA, SECRET, PHYSICS, AI_PLAN } from './config.js';
+    src/dig_proto.js:16 top export const digProtoOn = () => !!(D.ai || D.step || D.run);
+    src/dig_proto.js:18 top const statsOf = (ai) => (ai.stats.digP ??= { dash: 0, runT: 0, stepIn: 0, cross: 0, keep: 0, wall: 0 });
+    src/dig_proto.js:109 top export function aiFrontDash(ai) {
+    src/dig_proto.js:110 IN-FN const f = ai.me;
+    src/dig_proto.js:111 IN-FN const g = f.gait;
+    src/dig_proto.js:112 IN-FN if (!g?.active || g.burst || g.burstBrake || g.fastK > 1 || f.feetHeld || f.finish?.amt > 0.5 || f.state !== '
+    src/dig_proto.js:113 IN-FN if (Math.hypot(g.vf.x, g.vf.z) >= GAIT.burstStandV || !(g.legs.F.stance && g.legs.B.stance)) return false;
+    src/dig_proto.js:114 IN-FN const n = ai.art?.tradition === 'german' ? GAIT.digSteps : D.stepN;
+    src/dig_proto.js:115 IN-FN g.burst = { fore: 1, side: 0, lat: 0, foreOnly: false, dig: n };
+    src/dig_proto.js:116 IN-FN statsOf(ai).dash++;
+    src/dig_proto.js:117 IN-FN return true;
+    src/dig_proto.js:118 IN-FN }
+    src/dig_proto.js:127 IN-FN const g = ai.me.gait;
+    src/dig_proto.js:128 IN-FN if (D.step && gap >= D.dashGap && ai.digDashSeq !== ai.atkSeq) {
+    src/dig_proto.js:130 IN-FN if (ai.digWaitSeq !== ai.atkSeq) (ai.digWaitSeq = ai.atkSeq), (ai.digWait = 0);
+    src/dig_proto.js:131 IN-FN if (aiFrontDash(ai)) ai.digDashSeq = ai.atkSeq;
+    src/dig_proto.js:132 IN-FN else if (ai.digWait < D.dashWait) {
+    src/dig_proto.js:133 IN-FN ai.digWait += PHYSICS.timestep; // 물리 한 스텝 (굴림 없음)
+    src/dig_proto.js:134 IN-FN return 0;
+    src/dig_proto.js:135 IN-FN } else ai.digDashSeq = ai.atkSeq;
+    src/dig_proto.js:136 IN-FN }
+    src/dig_proto.js:137 IN-FN if (D.step && g && ((g.burst && g.burst.dig) || g.digStep)) fwd = 1;
+    src/dig_proto.js:138 IN-FN if (D.run && gap >= D.runGap && (ai.me.stamina?.value ?? 0) >= D.runAt) fwd = 1;
+    src/dig_proto.js:156 top export function runTick(f, dt, want, fwd, mv) {
+    src/dig_proto.js:157 IN-FN const S = f.stamina;
+    src/dig_proto.js:158 IN-FN const run = !!S && !S.exhausted && S.value >= D.runAt && mv && mv.y >= D.runStick && !f.feetHeld && !f.skill?.
+    src/dig_proto.js:159 IN-FN f.running = run;
+    src/dig_proto.js:160 IN-FN if (!run) return;
+    src/dig_proto.js:161 IN-FN const wf = want.x * fwd.x + want.z * fwd.z;
+    src/dig_proto.js:162 IN-FN if (!(wf > 0)) return;
+    src/dig_proto.js:163 IN-FN const k = D.runV / GAIT.moveSpeed;
+    src/dig_proto.js:164 IN-FN if (k > 1) want.addScaledVector(fwd, wf * (k - 1));
+    src/dig_proto.js:165 IN-FN const v = f.bodies.pelvis.linvel();
+    src/dig_proto.js:166 IN-FN const along = Math.max(0, v.x * fwd.x + v.z * fwd.z);
+    src/dig_proto.js:167 IN-FN const cost = STAMINA.stepCosts?.[f.swordArt?.tradition] ?? STAMINA.stepCosts?.default ?? 0;
+    src/dig_proto.js:168 IN-FN if (D.runCost > 1 && cost > 0 && along > 0) S.spend('move', ((D.runCost - 1) * cost * Math.min(along, STAMINA.
+    src/dig_proto.js:169 IN-FN if (f.aiCtl) statsOf(f.aiCtl).runT += dt;
+    src/dig_proto.js:170 IN-FN }
+    src/field.js:270 top export const inLane = (F, x, z) => !!F.geo?.lanes.some((L) => inBox(L, x, z));
+    src/fighter.js:15 top import { runTick } from './dig_proto.js'; // 시제품 C 달림 (11/14 — config DIG_PROTO.run · 기본 끔)
+    src/fighter.js:2609 IN-FN this.gripDev = null;
+    src/fighter.js:2610 IN-FN if (JOINTS.wristGuard && JOINTS.wristRope) this.gripDevOn();
+    src/fighter.js:2611 IN-FN }
+    src/fighter.js:2619 top gripDevOn() {
+    src/fighter.js:2620 IN-FN if (this.gripDev || !this.gripCone) return;
+    src/fighter.js:2621 IN-FN const L = ROPE_L;
+    src/fighter.js:2622 IN-FN const K = ROPE_K;
+    src/fighter.js:2623 IN-FN const len = Math.sqrt(L * L + K * K); // 90°
+    src/fighter.js:2624 IN-FN const phis = [HUMAN.ulnarDev, 180 - HUMAN.wristThumb]; // 척측 (dev ≥ −30) · 엄지 쪽 (dev ≤ 135)
+    src/fighter.js:2625 IN-FN this.gripDev = phis.map((p) => this.world.createImpulseJoint(this.R.JointData.rope(len, { x: 0.13 + K, y: 0, z
+    src/fighter.js:2626 IN-FN this.gripCone.push(...this.gripDev);
+    src/fighter.js:2850 top uprightRelax(ax) {
+    src/fighter.js:2851 IN-FN if (!RECOIL.anchorRelax || ax === MOTOR_AXES[0] || this.state !== 'stand') return 1;
+    src/fighter.js:2860 IN-FN const min = ax === MOTOR_AXES[2] ? RECOIL.anchorYaw : RECOIL.anchorPitch;
+    src/fighter.js:2861 IN-FN return 1 - (1 - min) * effort;
+    src/fighter.js:2862 IN-FN }
+    src/fighter.js:2925 IN-FN if (DIG_PROTO.run && hybrid) runTick(this, dt, want, fwd, mvIn); // 시제품 C (11/14 — 기본 끔 · src/dig_proto.js): 기
+    src/fighter.js:2956 IN-FN if (loadSum < 1e-3 || BODY.footReaction === 0) return;
+    src/fighter.js:3007 IN-FN const fh = Math.hypot(fx, fz);
+    src/fighter.js:3008 IN-FN this.accelLean = this.accelLean || new THREE.Vector3();
+    src/fighter.js:3009 IN-FN this.accelLean.lerp(_v5.set(fx, 0, fz), Math.min(1, dt * 10));
+    src/fighter.js:3010 IN-FN const al = this.accelLean.length();
+    src/fighter.js:3014 IN-FN if (al > 1) {
+    src/fighter.js:3015 IN-FN const ang = Math.atan(al / (M * g)) * BODY.accelLean;
+    src/fighter.js:3016 IN-FN _axis2.set(this.accelLean.z / al, 0, -this.accelLean.x / al);
+    src/fighter.js:3017 IN-FN anchorQ = _qt5.setFromAxisAngle(_axis2, ang).multiply(anchorQ);
+    src/fighter.js:3018 IN-FN }
+    src/fighter.js:3025 IN-FN const r = this.uprightRelax(ax); // 휘두르거나 부딪히는 동안 덜 붙잡기 (실험, 기본 1)
+    src/fighter.js:3026 IN-FN let kk = BODY.uprightStiffness * assist * r, dd = BODY.uprightDamping * assist * r;
+    src/fighter.js:4781 IN-FN const sw = JOINTS.wristSwing && cutSwing(f); // 시험 (기본 0 — 지금대로): 베는 토막
+    src/fighter.js:4782 IN-FN if (sw && JOINTS.wristSwing === 2) return 0; // 베는 동안 교정 안 함
+    src/fighter.js:4788 IN-FN if (!sw && JOINTS.wristPronate && !f.weaponCfg.twoHand && f.armed && !cutSwing(f) && (!JOINTS.cutPronate || pr
+    src/fighter.js:4837 IN-FN const z = sw ? _wgZ.set(0, 0, 1).applyQuaternion(rot(f.sword, _wgQ)) : _wgZ.set(0, 0, 1).applyQuaternion(_wgQ)
+    src/fighter.js:4838 IN-FN return wristClamp(fx, aim, z);
+    src/frames.js:154 top export const POLE_HAND_GAP = { englishStaff: 0.35, naginata: 0.4, meyerStaff: 0.6, spear: [0.6, 0.9] };
+    src/frames.js:158 top export const POLE_KREUTZHAUW = ['Nebenhut', 'Steurhut', 'Oberhut(R)', 'Wechselhut', 'Unterhut', 'Mittelhut', '
+    src/frames.js:160 top export const POLE_THRUST = { meyer: 'ruck', english: 'release' };
+    src/gait.js:24 top import { BODY, GAIT, DIG_PROTO, RUN } from './config.js';
+    src/gait.js:867 IN-FN if (DIG_PROTO.step && walkNow && !this.walking && f.humanInput && mv && !this.burst && !this.burstBrake && !f.
+    src/gait.js:868 IN-FN const m = mv.length();
+    src/gait.js:869 IN-FN if (m >= GAIT.burstStick && mv.y > 0 && mv.y >= Math.abs(mv.x) && Math.hypot(this.vf.x, this.vf.z) < GAIT.burs
+    src/gait.js:870 IN-FN }
+    src/guards.js:179 top export const GUARD_BASE_ONE_VERSATILE = BASE_ONE_VERSATILE;
+    src/guards.js:186 top export const GUARD_BASE_TWO_THRUST = BASE_TWO_THRUST;
+    src/historical_weapon_details.js:117 top export function hwandoScabbard(bladeLength=HISTORICAL_WEAPON.hwando.blade){
+    src/italian_risoluto.js:32 top import { SECRET, SCHOOL_PASSIVE } from './config.js';
+    src/italian_risoluto.js:41 top const _c = new THREE.Vector3();
+    src/italian_risoluto.js:42 top const _u = new THREE.Vector3();
+    src/italian_risoluto.js:43 top const D2R = Math.PI / 180;
+    src/italian_risoluto.js:75 top export function lineCover(me, foe) {
+    src/lobby_progress.js:130 top export function owns(receipt) {
+    src/looks.js:930 top export function lookVersionsOf(id) {
+    src/parry_button.js:251 IN-FN const cut = { chinese: SKILL.cnParryDmgCut, japanese: SKILL.jpParryDmgCut, iberian: SKILL.ibParryDmgCut }[me.s
+    src/saengsa_nameless.js:12 top export const NAMELESS_ID = 'nameless';
+    src/saengsa_nameless.js:54 top export const namelessLookVersion = (i) => `${CHARACTERS_BY_ID[NAMELESS_BASE].lookVersion}-nameless${i}`;
+    src/secret.js:790 IN-FN if ((this.open.t -= dt) <= 0 && !this.holding() && !this.reachHolding()) this.open = null; // 창 끝 (secretHold:
+    src/skill_tree_data.js:246 top export function schoolOfNode(id) {
+    src/weapon_class.js:100 top export const WEAPON_LAYER = {
+    src/weapon_class.js:101 top T0_REF: { two: 0.3, heavy: 0.3, pole: 0.3, one: 0.24 },
+    src/weapon_class.js:102 top I_REF: { two: 0.272, heavy: 0.272, pole: 0.272, one: 0.179 }, // 롱소드·세이버 weaponPhysics().I
+    src/weapon_class.js:103 top K_BODY: 0.547,
+    src/weapon_class.js:106 top FAMILY: { two: 'longsword', heavy: 'longsword', one: 'sabre', pole: 'pole', gun: null },
+    src/weapon_class.js:107 top WIND: { two: 1, heavy: 1.25, one: 0.85, pole: 1, gun: 0 }, // 감기 시간 배율 [제안]
+    src/weapon_class.js:108 top FOLLOW: { two: 1, heavy: 1.25, one: 0.85, pole: 0.8, gun: 0 }, // 지나가기 시간 배율 [제안]
+    src/weapon_class.js:109 top TRUNK: { two: 0.4, heavy: 0.5, one: 0.25, pole: 0.4, gun: 0 }, // 몸통 몫 힌트(재설계 trunkCarry 0.4 가 두손 기준) [제안]
+    src/weapon_class.js:110 top };
+    src/weapon_class.js:113 top export function weaponLayer(spec) {
+    src/weapons.js:54 top export const TIERS = ['trash', 'common', 'rare', 'epic', 'legend', 'mystery'];
+removed lines 395, of which code 246; executed on parent tree: A 103, B 103, C 151
+  src/ai.js: 2/2 removed code lines executed in C (lines 4457,4468)
+  src/ai_block_cut.js: 1/1 removed code lines executed in C (lines 15)
+  src/ai_plan.js: 1/1 removed code lines executed in C (lines 17)
+  src/ai_techniques.js: 1/1 removed code lines executed in C (lines 92)
+  src/character_temperament.js: 1/1 removed code lines executed in C (lines 15)
+  src/combat.js: 1/1 removed code lines executed in C (lines 499)
+  src/config.js: 35/35 removed code lines executed in C (lines 16,40,262,264,882,883,884,1125,1126,1225,1227,1230,...)
+  src/dig_proto.js: 39/39 removed code lines executed in C (lines 11,16,18,109,110,111,112,113,114,115,116,117,...)
+  src/field.js: 1/1 removed code lines executed in C (lines 270)
+  src/fighter.js: 35/59 removed code lines executed in C (lines 15,2609,2610,2611,2619,2620,2621,2622,2623,2624,2625,2626,...)
+  src/frames.js: 3/3 removed code lines executed in C (lines 154,158,160)
+  src/gait.js: 5/5 removed code lines executed in C (lines 24,867,868,869,870)
+  src/guards.js: 2/2 removed code lines executed in C (lines 179,186)
+  src/historical_weapon_details.js: 1/15 removed code lines executed in C (lines 117)
+  src/italian_risoluto.js: 5/18 removed code lines executed in C (lines 32,41,42,43,75)
+  src/lobby_progress.js: 1/3 removed code lines executed in C (lines 130)
+  src/looks.js: 1/4 removed code lines executed in C (lines 930)
+  src/parry_button.js: 1/1 removed code lines executed in C (lines 251)
+  src/saengsa_nameless.js: 2/2 removed code lines executed in C (lines 12,54)
+  src/secret.js: 1/4 removed code lines executed in C (lines 790)
+  src/skill_tree_data.js: 1/4 removed code lines executed in C (lines 246)
+  src/weapon_class.js: 10/29 removed code lines executed in C (lines 100,101,102,103,106,107,108,109,110,113)
+  src/weapons.js: 1/1 removed code lines executed in C (lines 54)

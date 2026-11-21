@@ -1,0 +1,32 @@
+00 entry: main playerInputFrame tap->thrust	src/main.js:3165	NOTHING
+01 secret window: main fire	src/main.js:3106	NOTHING
+01b secret: secret.js fire() body	src/secret.js:1166	T:gk_ghost.test.mjs,gonosen_risk.test.mjs,gyeoksal.test.mjs,motion_regress.test.mjs,riso_reach.test.mjs,secret_stamina.test.mjs,secret_uses.test.mjs
+02 sheathed draw: main	src/main.js:3119	NOTHING
+02b draw: iai drawInput start-on-tap	src/iai_obi.js:341	T:secret_free.test.mjs
+02c draw: iai drawTapTake give tap	src/iai_obi.js:348	T:secret_free.test.mjs
+03 clinch lock: close_hold lock eats tap	src/close_hold.js:96	T:de_dirty.test.mjs,jp_de_basics.test.mjs,rapier_defence.test.mjs
+04 pommel at hilt: close_hold near->pommel	src/close_hold.js:105	T:de_dirty.test.mjs,jp_de_basics.test.mjs,jp_tank.test.mjs,rapier_defence.test.mjs
+04b pommel: skill.pommel body	src/skill.js:531	A:fights12.mjs | Bx:corr_s0.mjs,team_fights.mjs,match_twin.mjs | T:blade_step.test.mjs,de_band3.test.mjs,gonosen_risk.test.mjs,guard_line.test.mjs,hero_tear.test.mjs,ib_block_regen.test.mjs,jp_de_basics.test.mjs,jp_tank.test.mjs,many_fighters.test.mjs,measure_okori.test.mjs,rapier_defence.test.mjs,saengsa_maps.test.mjs,stamina_integration.test.mjs,ai_dig.test.mjs,ai_intercept.test.mjs,ai_plan_cn.test.mjs
+05 cn buffer: main	src/main.js:3128	NOTHING
+05b cn buffer: secret.buffer body	src/secret.js:1092	T:gyeoksal.test.mjs
+06 guard release: main G.broken=true	src/main.js:3139	NOTHING
+07 school tap gate: skill uniq.tapChain	src/skill.js:239	T:cavazione_tap.test.mjs,lianchi_tap.test.mjs,motion_regress.test.mjs,rapier_defence.test.mjs,special_cooldown.test.mjs
+07b tapChain body	src/unique_assist.js:603	T:cavazione_tap.test.mjs,duplieren_auto.test.mjs,ib_link.test.mjs,jp_de_basics.test.mjs,jp_strength.test.mjs,jp_tank.test.mjs,lianchi_tap.test.mjs,motion_regress.test.mjs,rapier_defence.test.mjs,special_cooldown.test.mjs
+08 school tap: cavazione (it)	src/unique_assist.js:646	T:cavazione_tap.test.mjs,rapier_defence.test.mjs,special_cooldown.test.mjs
+09 school tap: inquartata void (it)	src/unique_assist.js:651	T:cavazione_tap.test.mjs,motion_regress.test.mjs,special_cooldown.test.mjs
+10 school tap: lian fold (cn)	src/unique_assist.js:661	T:lianchi_tap.test.mjs,motion_regress.test.mjs,special_cooldown.test.mjs
+10b school tap fallback to thrust	src/unique_assist.js:672	NOTHING
+11 gun fire	src/skill.js:242	Bx:weapon_smoke.mjs
+12 cleave finish	src/skill.js:305	NOTHING
+13 plunge finish (down)	src/skill.js:310	NOTHING
+13b plunge walk-in	src/skill.js:312	NOTHING
+14 whip flick	src/skill.js:256	T:druid_whip.test.mjs
+15 vital thrust (target chosen)	src/skill.js:297	Bx:team_fights.mjs | T:blade_step.test.mjs,measure_okori.test.mjs,saengsa_match.test.mjs,ai_dig.test.mjs,ai_intercept.test.mjs
+15b vital: player pick (vital undefined)	src/skill.js:270	A:finish_thrust.mjs | T:cavazione_tap.test.mjs,duplieren_auto.test.mjs,ib_link.test.mjs,italian_measure.test.mjs,italian_opposition.test.mjs,jp_de_basics.test.mjs,jp_strength.test.mjs,jp_tank.test.mjs,lianchi_tap.test.mjs,motion_regress.test.mjs,onehand_arm.test.mjs,rapier_defence.test.mjs,school_passive.test.mjs,special_cooldown.test.mjs,stamina_integration.test.mjs,stamina_preparation.test.mjs,thrust_stuck.test.mjs,wrist_audit.test.mjs
+15c vital: walk-to-range first	src/skill.js:275	NOTHING
+16 italian lunge	src/skill.js:294	Bx:weapon_smoke.mjs,team_fights.mjs | T:cavazione_tap.test.mjs,italian_measure.test.mjs,italian_opposition.test.mjs,many_fighters.test.mjs,motion_regress.test.mjs,onehand_arm.test.mjs,rapier_defence.test.mjs,school_passive.test.mjs,special_cooldown.test.mjs,stamina_integration.test.mjs,tap_art_ai.test.mjs,thrust_stuck.test.mjs,wrist_audit.test.mjs
+16b italian lunge step	src/skill.js:323	T:cavazione_tap.test.mjs,motion_regress.test.mjs,onehand_arm.test.mjs,rapier_defence.test.mjs,special_cooldown.test.mjs,thrust_stuck.test.mjs,wrist_audit.test.mjs
+17 head thrust (target head)	src/skill.js:426	A:finish_thrust.mjs | T:onehand_arm.test.mjs,wrist_audit.test.mjs
+18 plain thrust lunge step	src/skill.js:322	NOTHING
+18b thrust drive step (human)	src/skill.js:320	A:finish_thrust.mjs | T:duplieren_auto.test.mjs,ib_link.test.mjs,jp_de_basics.test.mjs,jp_strength.test.mjs,jp_tank.test.mjs,lianchi_tap.test.mjs,onehand_arm.test.mjs,special_cooldown.test.mjs,stamina_integration.test.mjs,stamina_preparation.test.mjs,thrust_stuck.test.mjs,wrist_audit.test.mjs
+18c human stamina charge	src/skill.js:285	A:finish_thrust.mjs | T:cavazione_tap.test.mjs,duplieren_auto.test.mjs,ib_link.test.mjs,italian_measure.test.mjs,italian_opposition.test.mjs,jp_de_basics.test.mjs,jp_strength.test.mjs,jp_tank.test.mjs,lianchi_tap.test.mjs,motion_regress.test.mjs,onehand_arm.test.mjs,rapier_defence.test.mjs,school_passive.test.mjs,special_cooldown.test.mjs,stamina_integration.test.mjs,stamina_preparation.test.mjs,thrust_stuck.test.mjs,wrist_audit.test.mjs

@@ -1,0 +1,60 @@
+files never loaded or <10% lines in C: 79 (25652 lines)
+(i) not statically reachable from any tools/sim/*.mjs: 29 files
+| family | files | code lines | members (name<-importer; * = loaded by something) |
+|---|---|---|---|
+| (i) browser-only / other | 14 | 4307 | config<-title_account, game_entry<-none, hands<-main, mad_eyes<-main, main<-game_entry, perfmeter<-main, pwa<-none, screen_tint<-main, start_screen<-game_entry, test_pick<-none, test_route<-main, test_storage<-game_entry, update_notes<-start_screen, voicelab<-none |
+| (i) browser-only / ui/lobby/saengsa/hud | 8 | 1363 | title_account<-game_entry+start_screen, capture_hud<-main, lobby<-game_entry, saengsa_page<-game_entry, saengsa_panel<-lobby, shop_panel<-lobby, stamina_hud<-main, title_notice<-main |
+| (i) browser-only / effects | 4 | 1020 | fighter_light<-main, gun_fx<-main, revive_fx<-main, trail<-main |
+| (i) browser-only / sound | 2 | 512 | soundgen<-none, soundlab<-none |
+| (i) browser-only / stage | 1 | 185 | pixel_grove<-lobby+saengsa_page |
+| (i') other Node tools only / other | 2 | 95 | render_cap<-main, whiff_drill<-main |
+(ii) loaded by gates/tests (static import graph) but <10% lines run: 48
+  arena.js (1245 lines, 1.7%)
+  outfit_alter_daraishi.js (33 lines, 9.1%)
+  outfit_alter_fourth.js (101 lines, 5.9%)
+  outfit_alter_terracotta.js (42 lines, 7.1%)
+  outfit_chanda.js (211 lines, 6.2%)
+  outfit_guild_badge.js (64 lines, 3.1%)
+  outfit_julia_alter.js (179 lines, 7.3%)
+  outfit_ratna.js (351 lines, 6.0%)
+  outfit_renji.js (223 lines, 6.3%)
+  outfit_renji_head.js (126 lines, 7.1%)
+  outfit_roland.js (463 lines, 5.4%)
+  outfit_terracotta.js (197 lines, 7.1%)
+  outfit_tuyana.js (347 lines, 8.4%)
+  outfit_white_scale.js (494 lines, 7.7%)
+  outfit_yue_cloak.js (40 lines, 5.0%)
+  revolver_reload_audio.js (83 lines, 7.2%)
+  stage_castle.js (666 lines, 3.2%)
+  stage_cathedral.js (935 lines, 1.9%)
+  stage_clearing.js (754 lines, 6.6%)
+  stage_clearing_b.js (350 lines, 3.4%)
+  stage_corsair.js (1150 lines, 1.6%)
+  stage_courtyard.js (619 lines, 4.8%)
+  stage_courtyard_damaged_cover.js (113 lines, 4.4%)
+  stage_courtyard_night.js (435 lines, 6.7%)
+  stage_courtyard_ruins_detail.js (171 lines, 7.6%)
+  stage_darkhall.js (695 lines, 2.4%)
+  stage_dayr.js (467 lines, 4.7%)
+  stage_dayr_blood.js (91 lines, 5.5%)
+  stage_dayr_caravan.js (152 lines, 3.9%)
+  stage_detail_sound.js (445 lines, 7.9%)
+  stage_dunhuang.js (601 lines, 2.3%)
+  stage_etna.js (397 lines, 2.5%)
+  stage_frozen_bay.js (356 lines, 2.0%)
+  stage_frozen_bay_shore.js (260 lines, 6.5%)
+  stage_loggia.js (727 lines, 3.7%)
+  stage_night_fifth.js (167 lines, 6.6%)
+  stage_night_lamps.js (47 lines, 6.4%)
+  stage_night_third.js (111 lines, 9.0%)
+  stage_night_variants.js (112 lines, 8.0%)
+  stage_poseidon_night.js (438 lines, 3.0%)
+  stage_qinglan.js (354 lines, 6.8%)
+  stage_qinglan_vista.js (371 lines, 5.7%)
+  stage_sacred_grove.js (700 lines, 3.7%)
+  stage_saengsa_maps.js (297 lines, 6.1%)
+  stage_sluice.js (863 lines, 3.5%)
+  stage_temple.js (932 lines, 2.9%)
+  stage_yue_apparitions.js (161 lines, 4.3%)
+  wetland_storm.js (34 lines, 2.9%)
+src files statically reachable from any tools/sim script: 243/272; from gates+tests: 241

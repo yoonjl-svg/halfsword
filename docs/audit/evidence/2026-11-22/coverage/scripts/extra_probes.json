@@ -1,0 +1,4 @@
+[{"id":"13c down: tap.foe set","file":"src/skill.js","line":304,"sub":"this.tap.foe = f.foe"},
+ {"id":"13d down computed (cleaveFinish call)","file":"src/skill.js","line":250,"sub":"cleaveFinish(f)"},
+ {"id":"18d plain lunge w/o gait","file":"src/skill.js","line":324,"sub":"this.lunge = SKILL.lungeTime"},
+ {"id":"18e thrust past gate (not refused)","file":"src/skill.js","line":246,"sub":"const g"}]
