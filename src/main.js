@@ -2246,6 +2246,7 @@ window.addEventListener('keyup', (e) => {
 window.addEventListener('blur', () => {
   parryHold.key = false;
   parryHold.btn = null;
+  $('btnParry').classList.remove('on'); // 켜짐 표시도 함께 끈다 (감사 가지 N-034 ② — 안 끄면 뒤에 오는 뗌은 누른 포인터가 지워져 아래 up 이 그냥 돌아가 단추가 켜진 채 남음)
 });
 {
   const b = $('btnParry');
