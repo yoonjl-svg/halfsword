@@ -5,11 +5,13 @@
 //   모두 이 표에서 mapGeo(줄) 로 셈한 몫을 읽는다 — 값을 고치면 맵이 따라 바뀐다 (설계 §5 '사장님이 고칠 값').
 //  좌표: 판 가운데 (0, 0) · 0 편(내 편)은 −x 끝에서 +x 를 본다 · 길목(다리 · 문)은 z ∓ 로 둘. 길이는 m.
 //  이기는 조건은 (가) 전멸만 — 지금 그대로 (사장님 11/21). 거점(point) · 길목 점(chokes)은 (나) 두 거점 쥐기를 위해 표에 미리 적어 두기만 한다(지금 규칙은 읽지 않음).
-//  생사전 판은 늘 전용 맵(낮 하나) — 경기마다 대회 씨앗(경기 씨앗 = hash32(대회 씨앗, 경기 id))으로 둘 가운데 하나 (pickSaengsaMap — 다시보기 · 이어받기 같음).
+//  생사전 판의 맵은 회차로 (사장님 11/21 '16강전은 열린 원, 8강전은 두 다리, 4강전과 결승은 성벽 안뜰로 하자.' — saengsaMapOf · 다시보기 · 이어받기 · 고르기 화면 같음):
+//   결승에서 센 거리 — 결승 · 4강 = 성벽 안뜰 · 8강 = 두 다리 개울 · 그 앞(16강 …) = 열린 원(전용 맵 없음 — 지금 무대 그대로). 전 '경기 씨앗으로 둘 가운데 하나'(11/21 맵 첫 판).
 //   상대 AI 팀끼리 빠른 셈은 맵을 모르니 그대로.
 // ─────────────────────────────────────────────────────────────
 import { CIRCLE_FIELD, rectField } from './field.js';
-import { hash32 } from './saengsa_rules.js';
+import { SAENGSA } from './config.js';
+import { bracketTeams, roundsOf } from './saengsa_rules.js';
 
 export const SAENGSA_MAPS = Object.freeze([
   // 안 1 · 강가 두 다리 (설계 §3-1 · §5-1): 개울(못 건넘)을 건너는 다리 둘 — 난간 · 둔덕이 낮아 카메라 · 시야가 지금 그대로
@@ -47,13 +49,22 @@ export const SAENGSA_MAP_BY_ID = Object.freeze(Object.fromEntries(SAENGSA_MAPS.m
 export const SAENGSA_MAP_BY_STAGE = Object.freeze(Object.fromEntries(SAENGSA_MAPS.map((m) => [m.stage, m])));
 export const isSaengsaStage = (stageId) => !!SAENGSA_MAP_BY_STAGE[stageId];
 
-/** 경기 씨앗(matchSetup 의 seed = hash32(대회 씨앗, 경기 id)) → 이 경기의 맵 줄 (다시보기 · 이어받기 · 고르기 화면이 같은 값) */
-export function pickSaengsaMap(seed) {
-  return SAENGSA_MAPS[hash32(seed >>> 0, 'map') % SAENGSA_MAPS.length];
-}
+/** 회차 → 맵 (사장님 11/21 '16강전은 열린 원, 8강전은 두 다리, 4강전과 결승은 성벽 안뜰로 하자.'): 결승에서 센 거리 0 · 1 · 2 → 맵 id · 그 앞은 열린 원(지금 무대) */
+export const SAENGSA_ROUND_MAPS = Object.freeze(['court', 'court', 'bridges']);
 
-/** 대회 t 의 경기 m 의 맵 줄 (고르기 화면 — matchSetup 의 seed 와 같은 hash32(대회 씨앗, 경기 id)) */
-export const mapOfMatch = (t, m) => pickSaengsaMap(hash32(t.seed, m.id));
+/**
+ * 경기 → 맵 줄 — 하나뿐인 셈 (다시보기 · 이어받기 · 고르기 화면 · 싸움 판이 모두 이것을 읽는다): round = 그 경기 회차(0 = 첫 회차) · rounds = 대회 회차 수(roundsOf(팀 수)).
+ *  결승에서 센 거리(rounds − 1 − round)로 — 16 팀이 아닌 대진표(시험 · bracketTeams)도 결승 · 4강 = 성벽 안뜰 · 8강 = 두 다리 · 그 앞 = 열린 원.
+ *  돌려줌: 맵 줄 | null (열린 원 — 전용 맵 없이 지금 무대 그대로 · 1:1 과 같은 원 판)
+ */
+export function saengsaMapOf(round, rounds = roundsOf(bracketTeams(SAENGSA))) {
+  const id = SAENGSA_ROUND_MAPS[Math.max(0, (rounds | 0) - 1 - (round | 0))];
+  return id ? SAENGSA_MAP_BY_ID[id] : null;
+}
+/** 대회 t 의 경기 m 의 맵 줄 | null (고르기 화면 · 다시보기 — saengsaMapOf) */
+export const mapOfMatch = (t, m) => saengsaMapOf(m.round, roundsOf(t.teams.length));
+/** 경기 판(matchSetup 꼴 · 그 판에서 만든 spec — round · rounds)의 맵 줄 | null (싸움 판 · 이어받기 — saengsaMapOf). rounds 가 없는 옛 판은 지금 대진표 크기로 */
+export const mapOfSetup = (setup) => saengsaMapOf(setup?.round ?? 0, setup?.rounds ?? undefined);
 
 /** 표 한 줄 → 셈한 몫 (막이 상자 · 길목 · 충돌체 · 거점 · 시작 자리 · 카메라 테두리) — 그림 · 물리 · AI · 작은 그림이 같이 읽는다 */
 export function mapGeo(m) {
@@ -152,6 +163,15 @@ export function fieldForStage(stageId) {
 }
 /** 맵 id → 지도 꼴 (시뮬 · 시험) */
 export const fieldOfMap = (id) => fieldForStage(SAENGSA_MAP_BY_ID[id]?.stage);
+
+/** 열린 원 회차의 고르기 화면 작은 그림 (11/21 G — 전용 맵 그림과 같은 꼴 · 같은 높이: 바깥 = 둔덕 빛 · 원 = 땅과 울타리 · 두 편 시작 점) */
+export function circleThumbSvg({ w = 132 } = {}) {
+  const R = 9.19, pad = 1.2, H = (R + pad) * 2, W = H * 1.45; // 울타리 반지름 9.19 m (CIRCLE_FIELD) · 가로 몫은 전용 맵 그림(약 1.45)과 같게
+  const h = Math.round((w * H) / W), cx = W / 2, cy = H / 2;
+  const parts = [`<rect x="0" y="0" width="${W.toFixed(2)}" height="${H.toFixed(2)}" fill="#857a62"/>`, `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${R}" fill="#c8b48f" stroke="#5a4b3d" stroke-width="0.6"/>`];
+  for (const t of [0, 1]) for (const z of [-2.5, 0, 2.5]) parts.push(`<circle cx="${(cx + (t ? 4 : -4)).toFixed(2)}" cy="${(cy + z).toFixed(2)}" r="0.9" fill="${t ? '#a33a2c' : '#d9a441'}" stroke="#2b241d" stroke-width="0.25"/>`);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}" width="${w}" height="${h}" aria-hidden="true">${parts.join('')}</svg>`;
+}
 
 /** 고르기 화면 작은 그림 (위에서 본 꼴 — 표에서 바로 그린 SVG 글): 땅 · 물 · 벽 · 길목 · 두 편 시작 점 (거점은 (나) 규칙이 들어올 때까지 그리지 않음) */
 export function mapThumbSvg(m, { w = 132 } = {}) {

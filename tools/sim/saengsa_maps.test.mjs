@@ -1,15 +1,15 @@
 // 생사전 전용 맵 (사장님 11/21 '생사전 맵 1과 3으로 두 개 만들어.' — src/field.js 지도 꼴 · src/saengsa_maps.js 무대 표 · src/field_route.js AI 길목 길 ·
 //  설계 docs/design/saengsa_3v3_2026-11-21.md §3-1 · §3-3 · §5 · 기록 docs/strike/saengsa_maps_2026-11-21.md)
-//  ① 원 무대 지도 꼴은 옛 식과 바이트까지 같음 (1:1 관문 그대로) ② 표 → 막이 · 길목 · 시작 자리 · 거점 ③ 맵 뽑기 = 경기 씨앗 ④ AI 가 다리로 건넘
+//  ① 원 무대 지도 꼴은 옛 식과 바이트까지 같음 (1:1 관문 그대로) ② 표 → 막이 · 길목 · 시작 자리 · 거점 ③ 맵 = 회차 (11/21 G — 전 경기 씨앗) ④ AI 가 다리로 건넘
 //  node --test tools/sim/saengsa_maps.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RAPIER, THREE, CONFIG, newMatch, DT } from './jelly_harness.mjs';
 import { CIRCLE_FIELD, fieldOf } from '../../src/field.js';
-import { SAENGSA_MAPS, SAENGSA_MAP_BY_ID, mapGeo, mapSpawnSpots, fieldForStage, fieldOfMap, pickSaengsaMap, mapOfMatch, isSaengsaStage, mapThumbSvg } from '../../src/saengsa_maps.js';
+import { SAENGSA_MAPS, SAENGSA_MAP_BY_ID, SAENGSA_ROUND_MAPS, mapGeo, mapSpawnSpots, fieldForStage, fieldOfMap, saengsaMapOf, mapOfMatch, mapOfSetup, isSaengsaStage, mapThumbSvg, circleThumbSvg } from '../../src/saengsa_maps.js';
 import { sweepParams } from '../../src/camera_rig.js';
 import { STAGE_NAME_KO, STAGE_ORDER } from '../../src/stages.js';
-import { hash32 } from '../../src/saengsa_rules.js';
+import { roundsOf } from '../../src/saengsa_rules.js';
 
 const { ARENA } = CONFIG;
 const realRandom = Math.random;
@@ -115,13 +115,31 @@ test('무대 표 → 성벽 안뜰: 34 × 22 · 가운데 성벽 3 m · 문 z �
   assert.ok(v.x < 17 && v.x > 16, '카메라는 바깥 성벽 안');
 });
 
-test('맵 뽑기 = 경기 씨앗 (다시보기 · 이어받기 · 고르기 화면 같음) · 둘 다 나옴 · 이름 · 여정 차례 밖', () => {
-  const t = { seed: 123456 }, m = { id: 'r1-m3' };
-  assert.equal(mapOfMatch(t, m), pickSaengsaMap(hash32(t.seed, m.id)));
-  assert.equal(pickSaengsaMap(99), pickSaengsaMap(99));
-  const n = { bridges: 0, court: 0 };
-  for (let i = 0; i < 400; i++) n[pickSaengsaMap(hash32(i, 'x')).id]++;
-  assert.ok(n.bridges > 150 && n.court > 150, JSON.stringify(n));
+test('맵 = 회차 (사장님 11/21 \'16강전은 열린 원, 8강전은 두 다리, 4강전과 결승은 성벽 안뜰로 하자.\'): 16 팀 · 다른 크기는 결승에서 센 거리 · 씨앗과 무관 · 이름 · 여정 차례 밖', () => {
+  const id = (m) => m?.id ?? 'circle';
+  // 16 팀 (본판): 16강 원 · 8강 두 다리 · 4강 · 결승 성벽 안뜰
+  assert.equal(roundsOf(16), 4);
+  assert.deepEqual([0, 1, 2, 3].map((r) => id(saengsaMapOf(r, 4))), ['circle', 'bridges', 'court', 'court']);
+  assert.deepEqual([0, 1, 2, 3].map((r) => id(saengsaMapOf(r))), ['circle', 'bridges', 'court', 'court'], 'rounds 가 없으면 본판 대진표 크기');
+  // 다른 크기 (시험 · bracketTeams): 결승 · 4강 = 성벽 안뜰 · 8강 = 두 다리 · 그 앞 = 원
+  const by = (teams) => Array.from({ length: roundsOf(teams) }, (_, r) => id(saengsaMapOf(r, roundsOf(teams))));
+  assert.deepEqual(by(2), ['court']);
+  assert.deepEqual(by(4), ['court', 'court']);
+  assert.deepEqual(by(8), ['bridges', 'court', 'court']);
+  assert.deepEqual(by(32), ['circle', 'circle', 'bridges', 'court', 'court']);
+  assert.deepEqual(SAENGSA_ROUND_MAPS, ['court', 'court', 'bridges']);
+  // 경기 · 판 꼴: 대회 씨앗 · 경기 id 와 무관 — 같은 회차는 같은 맵 (다시보기 · 이어받기 · 고르기 화면 같은 셈)
+  const t16 = { teams: Array(16) };
+  for (const seed of [1, 77, 123456]) {
+    assert.deepEqual([0, 1, 2, 3].map((round) => id(mapOfMatch({ ...t16, seed }, { id: `r${round}m0`, round }))), ['circle', 'bridges', 'court', 'court']);
+  }
+  assert.equal(mapOfMatch({ teams: Array(8) }, { id: 'r0m2', round: 0 }), SAENGSA_MAP_BY_ID.bridges);
+  assert.equal(mapOfSetup({ round: 1, rounds: 4, seed: 9 }), SAENGSA_MAP_BY_ID.bridges);
+  assert.equal(mapOfSetup({ round: 0, rounds: 4 }), null, '16강 = 열린 원 (전용 맵 없음)');
+  assert.equal(mapOfSetup({ round: 2, rounds: null }), SAENGSA_MAP_BY_ID.court, '옛 판(rounds 없음) = 본판 크기');
+  assert.equal(mapOfSetup({}), null, '빈 판도 깨지지 않음');
+  assert.equal(mapOfSetup(null), null);
+  assert.match(circleThumbSvg({ w: 50 }), /^<svg [^>]*viewBox="0 0 [\d.]+ [\d.]+" width="50" height="(3[2-6])"/, '원 그림 = 전용 맵 그림과 같은 높이 몫');
   for (const map of SAENGSA_MAPS) {
     assert.ok(isSaengsaStage(map.stage));
     assert.equal(STAGE_NAME_KO[map.stage], map.name);
