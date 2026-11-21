@@ -78,7 +78,7 @@
 - `node tools/text/name_policy.mjs` → 위반 0. 화면 글을 모아 본다(`tools/text/texts.mjs` — `orig` 는 읽지 않음). 동방 옛 꼴 '독음 (漢字)' · 2차 꼴 '(漢字 독음)' 도 통과하지만, 화면 글에는 한자를 쓰지 않는다.
 - `node --test tools/sim/*.test.mjs` → 모두 통과(`tools/sim/skill_tree.test.mjs` 가 스킬트리 칸 · 알림 글을 본다).
 - main 은 관문 `run_expect.sh` 로만 올린다. 글만 바꿨으면 시뮬 해시는 그대로여야 한다.
-- 바꾼 글은 전 → 후 표로 남긴다(`docs/text/` · git diff 에서 뽑기). `docs/decisions.md` 에 사장님 원문과 함께 한 줄.
+- 바꾼 글은 전 → 후 표로 남긴다(`docs/text/` · git diff 에서 뽑기). 그 달 결정 기록 `docs/decisions/YYYY-MM.md` 끝에 사장님 원문과 함께 한 줄(색인 `docs/decisions.md`).
 
 ## 6. 아직 옛 글인 곳 (다음 차례)
 
