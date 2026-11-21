@@ -8,6 +8,8 @@
 //  원 무대(1:1 · 여정 · 다른 판)는 막이가 없어 곧장 돌아간다 (관문 바이트 같음).
 // ─────────────────────────────────────────────────────────────
 import { fieldOf, inLaneBox, segThroughLane } from './field.js';
+import { pointBody, inPoint } from './capture.js'; // 거점전 두 거점 쥐기 (11/21)
+import { captureGoal, CAPTURE_AI } from './capture_ai.js';
 
 export const FIELD_ROUTE = Object.freeze({
   walk: 0.85, // 길목으로 가는 걷는 세기 (스틱 끝 1 의 몫 — 지금 세기가 이보다 작으면 이만큼) [사장님 확인 전]
@@ -54,6 +56,117 @@ function laneBias(F, f, p) {
   return { busy, bias };
 }
 
+/** 스틱을 갈 점 w 쪽으로 (세기 = 지금 세기 · 적어도 걷기) — 휘두르는 중은 그대로 */
+function steerToward(ai, w) {
+  const f = ai.me;
+  if (ai.mode === 'attack' && (ai.phase === 'strike' || ai.phase === 'follow')) return;
+  const p = f.bodies.pelvis.translation();
+  const c = Math.cos(f.heading);
+  const s = Math.sin(f.heading);
+  const k = Math.max(Math.hypot(f.move.x, f.move.y), FIELD_ROUTE.walk);
+  const dx = w.x - p.x, dz = w.z - p.z, L = Math.hypot(dx, dz);
+  if (L < 1e-6) return;
+  const x = dx / L, z = dz / L;
+  f.move.set((x * s + z * c) * k, (x * c - z * s) * k);
+  f.stickX = f.move.x;
+  f.stickY = f.move.y;
+}
+/** 서서 기다림 (스틱 0) — 휘두르는 중은 그대로 */
+function stand(ai) {
+  const f = ai.me;
+  if (ai.mode === 'attack' && (ai.phase === 'strike' || ai.phase === 'follow')) return;
+  f.move.set(0, 0);
+  f.stickX = f.stickY = 0;
+}
+/** 싸우는 중인가 (거점 쥐기): 서 있는 상대가 칼끝 + engage(나를 겨누면 threat) 안 · 쓰러진 상대는 칼끝 + downed 안 — 벽 너머(성벽 안뜰)는 아님 */
+function engaged(F, f) {
+  const a = f.bodies.chest.translation(), reach = reachOf(f);
+  for (const g of f.foes ?? []) {
+    if (!g.alive || g.revival) continue;
+    const b = g.bodies.chest.translation();
+    const d = Math.hypot(b.x - a.x, b.z - a.z);
+    const lim = reach + (g.state === 'down' ? CAPTURE_AI.downed : g.foe === f ? CAPTURE_AI.threat : CAPTURE_AI.engage);
+    if (d > lim) continue;
+    if (F.hasSight && F.sightBlocked(a, b)) continue;
+    return true;
+  }
+  return false;
+}
+/**
+ * 거점전 (11/21 — 사람 편 AI · 상대 AI 같은 규칙): 편 자리 나눔(capture_ai.js captureGoal)이 맡긴 거점으로 가서 원 안에 섬.
+ *  싸우는 중(engaged)이면 싸움에 맡김 — 거점에 서려고 베이는 채 등을 보이지 않게. 다만 그 원이 우리 것이 아니거나 상대가 두 거점을 다 쥐었고 원이 CAPTURE_AI.press 안이면
+ *  상대를 본 채 원으로 밀고 들어감(원 밖에서 간만 보다 시계를 내주지 않게 — 치기는 AI 그대로). 동료가 이미 그 원 안에 서 있으면 길목에 줄 서지 않고 내 쪽 머리 점 뒤에서 기다림(길목 나눠 쓰기와 같은 뜻).
+ *  돌려줌: 스틱을 맡았나 (참이면 상대 쪽 길목 길은 건너뜀)
+ */
+function captureSteer(ai, F) {
+  const f = ai.me, C = f.capture;
+  if (C.winner != null) return false;
+  const goal = captureGoal(C, F, f);
+  if (goal < 0) return false;
+  const P = C.points[goal];
+  const p = f.bodies.pelvis.translation();
+  const L = F.geo.lanes.find((l) => inLaneBox(l, P.x, P.z)) ?? null;
+  const nearFoe = () => {
+    const a = f.bodies.chest.translation();
+    let best = null, bd = Infinity;
+    for (const g of f.foes ?? []) {
+      if (!pointBody(g)) continue;
+      const b = g.bodies.chest.translation();
+      if (F.hasSight && F.sightBlocked(a, b)) continue;
+      const d = Math.hypot(b.x - a.x, b.z - a.z);
+      if (d < bd) (bd = d), (best = b);
+    }
+    return best;
+  };
+  const watch = () => nearFoe() ?? { x: P.x + (f.team === 0 ? 4 : -4), y: p.y, z: P.z }; // 서 있을 때 바라볼 곳: 보이는 가장 가까운 적 · 없으면 상대 편 쪽
+  const dP = Math.hypot(P.x - p.x, P.z - p.z);
+  if (engaged(F, f)) {
+    // 싸우는 중: 싸움에 맡김 — 다만 맡은 원이 우리 것이 아니거나 상대가 두 거점을 다 쥐었고 원이 가까우면, 상대를 본 채 원으로 밀고 들어감(치기는 AI 그대로)
+    const urgent = C.holder === 1 - f.team || P.owner !== f.team;
+    if (!urgent || dP <= P.r - CAPTURE_AI.inside || dP > CAPTURE_AI.press || F.segBlocked(p, P)) return false;
+    const w = watch();
+    f.fieldFace = { x: w.x, y: p.y, z: w.z };
+    steerToward(ai, P);
+    return true;
+  }
+  if (dP <= P.r - CAPTURE_AI.inside) { // 원 안: 섬
+    const w = watch();
+    f.fieldFace = { x: w.x, y: p.y, z: w.z };
+    stand(ai);
+    return true;
+  }
+  if (L && !inLaneBox(L, p.x, p.z) && (f.mates ?? []).some((m) => pointBody(m) && inPoint(P, m))) { // 동료가 이미 원 안: 길목 머리 뒤에서 기다림
+    const [E0, E1] = L.ends;
+    const A = Math.hypot(E0.x - p.x, E0.z - p.z) <= Math.hypot(E1.x - p.x, E1.z - p.z) ? E0 : E1;
+    const cx = (L.x0 + L.x1) / 2, cz = (L.z0 + L.z1) / 2, d = Math.hypot(A.x - cx, A.z - cz) || 1;
+    const h = { x: A.x + ((A.x - cx) / d) * FIELD_ROUTE.back, z: A.z + ((A.z - cz) / d) * FIELD_ROUTE.back };
+    if (!F.segBlocked(p, h)) {
+      const w = watch();
+      if (Math.hypot(h.x - p.x, h.z - p.z) < FIELD_ROUTE.stop) { f.fieldFace = { x: w.x, y: p.y, z: w.z }; stand(ai); return true; }
+      f.fieldFace = { x: h.x, y: p.y, z: h.z };
+      steerToward(ai, h);
+      return true;
+    }
+  }
+  // 원으로 감: 곧은 길이 막혔으면 길목 길 (FIELD_ROUTE.every 초마다 다시 셈)
+  const q = { x: P.x, z: P.z };
+  let way = q;
+  if (F.segBlocked(p, q)) {
+    const now = f.fightT ?? 0;
+    let r = ai.captureRoute;
+    if (!r || r.goal !== goal || now - r.t > FIELD_ROUTE.every || Math.hypot(r.way.x - p.x, r.way.z - p.z) < FIELD_ROUTE.reach) {
+      r = { ...F.route(p, q, ai.fieldLane ?? -1, FIELD_ROUTE.slack), goal, t: now };
+      if (Math.hypot(r.way.x - p.x, r.way.z - p.z) < FIELD_ROUTE.reach) r = { ...F.route(r.way, q, r.lane, FIELD_ROUTE.slack), goal, t: now };
+      ai.captureRoute = r;
+      ai.fieldLane = r.lane;
+    }
+    way = r.way;
+  }
+  f.fieldFace = { x: way.x, y: p.y, z: way.z };
+  steerToward(ai, way);
+  return true;
+}
+
 /** 막이 너머 상대면 길목 길로 스틱 방향 (AI.update — 석상 돌아가기 뒤 · 마른 길 앞) */
 export function routeThroughField(ai) {
   const f = ai.me;
@@ -62,6 +175,7 @@ export function routeThroughField(ai) {
   const foe = ai.foe;
   f.fieldFace = null;
   if (!f.alive || !foe?.alive || f.state !== 'stand' || f.feetHeld || f.revival || !f.armed || f.pickup) return; // 칼을 놓쳤으면 제 칼 줍기(pickup.js aiPickup)가 먼저
+  if (f.capture && captureSteer(ai, F)) return; // 거점전 (11/21): 맡은 거점으로 · 싸우는 중이면 아래 상대 쪽 길로
   const p = f.bodies.pelvis.translation();
   let q = foe.bodies.pelvis.translation();
   // 성벽 안뜰 (11/21 — targeting.js sightTick): 벽 너머 상대는 마지막으로 본 자리로 간다. 그 자리에 닿고도 안 보이면 지금 자리로(발소리 — 멈춰 서지 않게)

@@ -99,6 +99,15 @@ const MAP_PICKS = [
   { id: 'saengsa_bridges', name: '두 다리 개울', sub: '생사전 전용 맵 — 개울을 건너는 다리 둘 · 36 × 24 m' },
   { id: 'saengsa_court', name: '성벽 안뜰', sub: '생사전 전용 맵 — 가운데 성벽을 지나는 문 둘 · 34 × 22 m' },
 ];
+// 거점전 (사장님 11/21 '생사전은 전멸을 목표로 해야 생사전이야. 거점전은 따로 만들자.' — src/capture.js): 생사전 전용 맵 둘의 거점 원 둘 · 3 초 쥐면 그 편 것 · 둘을 20 초 쥐면 이김 · 전멸도 이김.
+//  시작 주소의 team 으로 (main.js CAPTURE_TEST — 동시 대전과 같은 칸 · 함께 고를 수 없음) · 맵은 위 '생사전 맵'(안 고르면 두 다리 개울). 기억하지 않는다
+const CAPTURE_PICKS = [
+  { id: 'off', name: '끔', sub: '거점전 아님 (위 동시 대전대로)' },
+  { id: 'cap2v2', name: '2:2', sub: '나 + 동료 하나 대 둘' },
+  { id: 'cap2v3', name: '2:3', sub: '나 + 동료 하나 대 셋' },
+  { id: 'cap3v3', name: '3:3', sub: '나 + 동료 둘 대 셋' },
+];
+const isCap = (id) => CAPTURE_PICKS.some((x) => x.id === id && id !== 'off');
 const saved = loadPick();
 const pick = {
   weapon: weapons.some((w) => w.id === saved.weapon) ? saved.weapon : NEW_WEAPONS[0],
@@ -190,8 +199,17 @@ function optionButton(x, kind) {
 }
 
 function select(kind, id) {
+  if (kind === 'cap') { // 거점전은 동시 대전과 같은 칸(pick.team)을 쓴다 — 끄면 1:1 · 맵은 안 골랐으면 두 다리 개울
+    pick.team = id;
+    if (id !== 'off' && pick.map === 'off') pick.map = 'saengsa_bridges';
+    if (id === 'off') pick.map = 'off';
+    savePick(pick);
+    render();
+    return;
+  }
   pick[kind] = id;
   if (kind === 'map' && id !== 'off' && pick.team === 'off') pick.team = '3v3'; // 맵은 동시 대전 판에서만 (1:1 은 원 무대)
+  if (kind === 'map' && id === 'off' && isCap(pick.team)) pick.team = 'off'; // 거점전은 맵이 있어야
   if (kind === 'team' && id === 'off') pick.map = 'off';
   savePick(pick);
   render();
@@ -205,6 +223,7 @@ function render() {
   for (const el of document.querySelectorAll('#whiffPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.whiff));
   for (const el of document.querySelectorAll('#teamPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.team));
   for (const el of document.querySelectorAll('#mapPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === pick.map));
+  for (const el of document.querySelectorAll('#capPick .pick')) el.setAttribute('aria-pressed', String(el.dataset.id === (isCap(pick.team) ? pick.team : 'off')));
   const w = weapons.find((x) => x.id === pick.weapon);
   const h = heroes.find((x) => x.id === pick.hero);
   const s = $('summary');
@@ -217,7 +236,7 @@ function render() {
   const f = foes.find((x) => x.id === pick.foe);
   const foeTxt = f && f.id !== 'random' ? `상대 ${f.name}` : '';
   const stageTxt = pick.stage !== 'random' && st ? `무대 ${st.name}` : '';
-  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${pick.team !== 'off' ? ` · 동시 대전 ${TEAM_PICKS.find((x) => x.id === pick.team)?.name ?? ''}` : ''}${pick.map !== 'off' ? ` · 맵 ${MAP_PICKS.find((x) => x.id === pick.map)?.name ?? ''}` : ''}`);
+  s.append(bw, ' · ', bh, document.createElement('br'), `${foeTxt || stageTxt ? `${foeTxt || '상대 무작위'} · ${stageTxt || '무대 무작위'}` : '상대·무대 무작위'}${pick.whiff === 'on' ? ' · 상대 헛스윙' : ''}${isCap(pick.team) ? ` · 거점전 ${CAPTURE_PICKS.find((x) => x.id === pick.team)?.name ?? ''}` : pick.team !== 'off' ? ` · 동시 대전 ${TEAM_PICKS.find((x) => x.id === pick.team)?.name ?? ''}` : ''}${pick.map !== 'off' ? ` · 맵 ${MAP_PICKS.find((x) => x.id === pick.map)?.name ?? ''}` : ''}`);
 }
 
 function startUrl() {
@@ -239,6 +258,7 @@ for (const x of STAGE_PICKS) $('stagePick').append(optionButton(x, 'stage'));
 for (const x of WHIFF_PICKS) $('whiffPick').append(optionButton(x, 'whiff'));
 for (const x of TEAM_PICKS) $('teamPick').append(optionButton(x, 'team'));
 for (const x of MAP_PICKS) $('mapPick').append(optionButton(x, 'map'));
+for (const x of CAPTURE_PICKS) $('capPick').append(optionButton(x, 'cap'));
 $('weaponCount').textContent = `${weapons.length}종`;
 $('heroNote').textContent =
   '고른 캐릭터는 겉모습과 이름만 가져옵니다. 투구·판금은 겉모습에 딸려 있어 실제로 막아 줍니다(기본 주인공은 투구). ' +

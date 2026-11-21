@@ -7,7 +7,7 @@
 //   ① 상대 · 바라볼 곳   f.foe = foeOf(f) · f.faceTarget = 상대 골반 · AI 의 겨눈 상대(ai.setFoe — 1:1 은 늘 같아 아무 일 없음)
 //   ② 조종               1 편 → 0 편, 편 안에서 자리 차례, 사람 몸(human)의 조종은 맨 뒤 (orderControllers)
 //   ③ 몸                 자리 차례로 f.step → (hooks.afterFighters) → 자리 차례로 f.cacheState
-//   ④ 물리 · 전투        world.step → combat.afterStep → (hooks.afterWorld) → 판 끝 보기(한 편에 산 싸움꾼 0 — M.over · M.winner)
+//   ④ 물리 · 전투        world.step → combat.afterStep → (hooks.afterWorld) → 판 끝 보기(한 편에 산 싸움꾼 0 — M.over · M.winner · 거점전은 두 거점 쥐기도 — capture.js)
 //  1:1 의 상대 고르기 = 다른 하나 (산 · 죽음 상관없이 — 예전 그대로). 셋 이상은 src/targeting.js chooseTarget (2단계) —
 //  그때만 싸움꾼에 f.foes · f.mates(상대 편 · 같은 편 목록) · f.teamSense(무리 싸움 판단 판 사본 M.sense — 11/18 src/team_sense.js)를 달고 AI 에 상대마다 눈을 둔다(addFoe).
 //  1:1 은 셋 다 없어 예전 길 그대로
@@ -16,9 +16,10 @@ import { sameSide, teamOfIndex } from './team.js';
 import { chooseTarget } from './targeting.js';
 import { TEAM_FIGHT } from './config.js';
 import { createSense, recordSense } from './team_sense.js'; // 무리 싸움 판단 (11/18 — 셋 이상 판만 판 사본 M.sense)
+import { createCapture, stepCapture } from './capture.js'; // 거점전 두 거점 쥐기 (11/21 — createMatch({ capture: true }) · 거점이 둘 있는 맵만)
 
 /**
- * 판 하나를 묶는다. o = { world, eventQueue, combat, fighters(자리 차례 — fighters[i].index === i), controllers([{ me, update(dt), setFoe?(f) }] — AI 들), foeOf?(f, M) }
+ * 판 하나를 묶는다. o = { world, eventQueue, combat, fighters(자리 차례 — fighters[i].index === i), controllers([{ me, update(dt), setFoe?(f) }] — AI 들), foeOf?(f, M), capture?(거점전 — 참이면 두 거점 쥐기) }
  *  돌려줌 M = { ...o, order(조종 부르는 차례), t }. 판 도중에 조종을 바꾸면 M.order = orderControllers(M.controllers)
  */
 export function createMatch(o) {
@@ -40,6 +41,13 @@ export function createMatch(o) {
   M.over = false; // 한 편에 산 싸움꾼이 없으면 true (stepMatch)
   M.winner = null; // 이긴 편 0 · 1 (둘 다 0 이면 null)
   M.endT = null;
+  // 거점전 두 거점 쥐기 (사장님 11/21 — src/capture.js): o.capture 를 준 판(거점전)이고 지도 꼴에 거점이 둘 있을 때만 · 생사전 · 1:1 · 여정 · 다른 동시 대전은 없음(전멸만 — 예전 그대로)
+  const points = M.fighters[0]?.field?.geo?.points;
+  if (o.capture && points?.length >= 2) {
+    M.capture = createCapture(points);
+    M.endBy = null; // 'wipe' 전멸 · 'capture' 쥐기
+    for (const f of M.fighters) f.capture = M.capture; // AI 가 읽음 (capture_ai.js — 사람에게 보이는 것과 같은 정보)
+  } else delete M.capture; // 거점전이 아닌 판 (o.capture 가 거짓으로 왔어도 판엔 남기지 않음)
   return M;
 }
 
@@ -52,6 +60,7 @@ export function matchResult(M) {
     over: M.over,
     winner: M.winner,
     t: M.endT ?? M.t,
+    ...(M.capture ? { by: M.endBy } : {}), // 거점전 판: 'wipe' 전멸 · 'capture' 쥐기
     fighters: M.fighters.map((f) => ({
       index: f.index,
       team: f.team,
@@ -189,5 +198,10 @@ export function stepMatch(M, dt, hooks = {}) {
   if (!M.over) {
     const n = standing(M);
     if (n[0] === 0 || n[1] === 0) (M.over = true), (M.endT = M.t), (M.winner = n[0] ? 0 : n[1] ? 1 : null);
+    // 거점전 (11/21): 전멸이 먼저 · 아니면 거점 셈 — 한 편이 두 거점을 다 가진 채 CAPTURE.hold 초면 그 편 이김
+    if (M.capture) {
+      if (M.over) M.endBy = 'wipe';
+      else if (stepCapture(M.capture, F, dt) != null) (M.over = true), (M.endT = M.t), (M.winner = M.capture.winner), (M.endBy = 'capture');
+    }
   }
 }

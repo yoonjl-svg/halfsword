@@ -133,7 +133,7 @@ export function newMatch(opts = {}) {
   }
   const hits = [];
   const combat = new Combat(colliderInfo, { onWound: (att, vic, r) => hits.push(`${att.name}->${r.zone}:${r.type} ${r.energy.toFixed(0)}J`), onClash: () => {} });
-  const G = createMatch({ world, eventQueue, combat, fighters, controllers: order.map((i) => ais[i]), foeOf: opts.foeOf ?? null });
+  const G = createMatch({ world, eventQueue, combat, fighters, controllers: order.map((i) => ais[i]), foeOf: opts.foeOf ?? null, capture: !!opts.capture }); // opts.capture: 거점전 (11/21 — opts.map 과 함께)
   Object.assign(G, { player, enemy, ai: ais[1] ?? null, ai2: ais[0] ?? null, ais, hits });
   const hooks = { afterControl: () => G.before?.(G.t) };
   G.step = () => stepMatch(G, DT, hooks);
