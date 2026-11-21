@@ -1,0 +1,100 @@
+diff -ruN wa/src/body_read.js wf/src/body_read.js
+--- wa/src/body_read.js	1970-01-01 00:00:00.000000000 +0000
++++ wf/src/body_read.js	2026-11-21 13:31:42.302852990 +0000
+@@ -0,0 +1,77 @@
++// 몸 읽기 저장 — 한 물리 스텝 안에서 같은 몸의 자리·돌림·속도를 엔진에서 거듭 읽지 않는다.
++//  값이 바뀔 수 있는 때에 버린다: world.step 과 몸 수 · 충돌체 수를 바꾸는 부름은 모두(전체), 그 몸 자신의 바꾸는 부름은 그 몸만.
++//  힘 더하기(addForce · addTorque · addForceAtPoint · resetForces · resetTorques) · wakeUp · 관절 모터는 스텝 전엔 몸 값을 바꾸지 않아 버리지 않는다.
++//  돌려주는 값은 늘 새 객체 (부른 쪽이 고쳐 써도 저장 값은 그대로). 스텝 안(충돌 훅)에서는 저장을 쓰지 않는다.
++const K = Symbol('bodyRead');
++let gen = 1; // 전체 세대 — 올리면 모든 몸의 저장이 낡는다
++let busy = 0; // 엔진 안(스텝 · 몸 만들기/없애기)이면 저장을 쓰지 않는다
++
++const RB_PURE = new Set(('isValid dominanceGroup additionalSolverIterations softCcdPrediction nextTranslation nextRotation gravityScale ' +
++  'velocityAtPoint mass effectiveInvMass invMass localCom invPrincipalInertia principalInertia principalInertiaLocalFrame ' +
++  'effectiveWorldInvInertia effectiveAngularInertia isCcdEnabled numColliders collider isEnabled bodyType isSleeping isMoving ' +
++  'isFixed isKinematic isDynamic linearDamping angularDamping userForce userTorque ' +
++  'addForce addTorque addForceAtPoint resetForces resetTorques wakeUp').split(' '));
++const WORLD_PURE = new Set(('timestep lengthUnit numSolverIterations numInternalPgsIterations maxCcdSubsteps getRigidBody getCollider ' +
++  'getImpulseJoint getMultibodyJoint forEachCollider forEachRigidBody forEachActiveRigidBody castRay castRayAndGetNormal ' +
++  'intersectionsWithRay intersectionWithShape projectPoint projectPointAndGetFeature intersectionsWithPoint castShape ' +
++  'intersectionsWithShape collidersWithAabbIntersectingAabb contactPairsWith intersectionPairsWith contactPair intersectionPair ' +
++  'len contains get forEach getAll forEachJointHandleAttachedToRigidBody castClosure').split(' '));
++const COL_PURE = new Set(('isValid translation translationWrtParent rotation rotationWrtParent isSensor isEnabled frictionCombineRule ' +
++  'restitutionCombineRule contactSkin activeHooks activeEvents activeCollisionTypes contactForceEventThreshold shapeType halfExtents ' +
++  'radius roundRadius halfHeight parent friction restitution density mass volume collisionGroups solverGroups containsPoint ' +
++  'projectPoint intersectsRay castShape castCollider intersectsShape contactShape contactCollider castRay castRayAndGetNormal').split(' '));
++
++const methods = (P) => Object.getOwnPropertyNames(P).filter((m) => m !== 'constructor' && typeof Object.getOwnPropertyDescriptor(P, m).value === 'function');
++
++export function installBodyRead(R) {
++  const P = R.RigidBody.prototype;
++  if (P[K]) return;
++  P[K] = null;
++  const V = R.Vector3, Q = R.Quaternion;
++  const slot = (b) => {
++    let c = b[K];
++    if (c === null || c === undefined || c.g !== gen) c = b[K] = { g: gen, t: null, r: null, l: null, a: null, m: null };
++    return c;
++  };
++  const vec = (key, o) => function () {
++    if (busy) return o.call(this);
++    const c = slot(this), s = c[key];
++    if (s !== null) return new V(s[0], s[1], s[2]);
++    const v = o.call(this);
++    c[key] = [v.x, v.y, v.z];
++    return v;
++  };
++  const oRot = P.rotation;
++  P.rotation = function () {
++    if (busy) return oRot.call(this);
++    const c = slot(this), s = c.r;
++    if (s !== null) return new Q(s[0], s[1], s[2], s[3]);
++    const q = oRot.call(this);
++    c.r = [q.x, q.y, q.z, q.w];
++    return q;
++  };
++  P.translation = vec('t', P.translation);
++  P.linvel = vec('l', P.linvel);
++  P.angvel = vec('a', P.angvel);
++  P.worldCom = vec('m', P.worldCom);
++  // 그 밖의 몸 부름: 바꿀 수 있으니 그 몸 저장만 버린다
++  for (const m of methods(P)) {
++    if (RB_PURE.has(m) || m === 'translation' || m === 'rotation' || m === 'linvel' || m === 'angvel' || m === 'worldCom') continue;
++    const o = P[m];
++    P[m] = function (...a) { this[K] = null; return o.apply(this, a); };
++  }
++  // 엔진 전체를 바꿀 수 있는 부름: 앞뒤로 세대를 올리고 그동안 저장을 쓰지 않는다
++  const wide = (Proto, pure) => {
++    for (const m of methods(Proto)) {
++      if (pure.has(m)) continue;
++      const o = Proto[m];
++      Proto[m] = function (...a) {
++        gen++; busy++;
++        try { return o.apply(this, a); } finally { busy--; gen++; }
++      };
++    }
++  };
++  wide(R.World.prototype, WORLD_PURE);
++  for (const s of ['RigidBodySet', 'ColliderSet', 'ImpulseJointSet', 'MultibodyJointSet']) if (R[s]) wide(R[s].prototype, WORLD_PURE);
++  wide(R.Collider.prototype, COL_PURE);
++}
+diff -ruN wa/src/fighter.js wf/src/fighter.js
+--- wa/src/fighter.js	2026-11-21 13:27:18.098772746 +0000
++++ wf/src/fighter.js	2026-11-21 13:31:52.023108284 +0000
+@@ -44,6 +44,7 @@
+ import { closeStartD, closeHoldT, bargeHeld, closeLog, holdPushBack } from './close_hold.js'; // 밀치기 시작 거리 1.0 m · 최소 유지 · 맞밀기 (11/14 사장님 — config CLOSE.startD · holdMin)
+ import { ringCheck, ringStep } from './de_dirty.js'; // 독일 칼 씨름 1] (11/14 — config DE_DIRTY · 기본 켬)
+ import { bwTick } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 — 굳음 시간 · config BURST_WHIFF)
++import { installBodyRead } from './body_read.js'; // 한 스텝 안 몸 읽기 저장
+ 
+ const KNEEL_T = realS(1.1); // 넘어졌다 일어날 때 무릎 꿇은 채 기다림 (실제 초 — 표준 시간 10/25 · 곁눈 베기 꿇음은 UNIQUE_ASSIST.buckle.kneel)
+ // 롱소드의 칼날 축(비트는 축) 관성 실측값 (칼자루+폼멜+코등이+칼날 합, kg·m²). fighter.js
+@@ -578,6 +579,7 @@
+    * @param {boolean} [o.human] true = 사람 손(입력)이 모는 몸(main.js 플레이어) → humanInput. 안 주면 속성도 없다 — 시뮬 도구의 자리 0(AI 가 모는 몸 · 대본 몸)은 아님 (10/29 17:5x)
+    */
+   constructor(RAPIER, world, scene, colliderInfo, o) {
++    installBodyRead(RAPIER); // 몸 읽기 저장 (한 번만 깔림)
+     this.R = RAPIER;
+     this.world = world;
+     this.colliderInfo = colliderInfo; // 절단(sever) 이 떨어진 부위의 collider 에 detached 표시를 적는다 (combat.js 가 상처를 건너뜀)
