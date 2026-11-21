@@ -1,3 +1,5 @@
+> **보관 — director_handoff.md 를 보십시오** (11/21 · 감사 N-008: 상태 문서는 `docs/director_handoff.md` 하나 · 이 파일은 10/8 까지의 기록으로 둠)
+
 # 디렉터 상태 파일 (후임 디렉터가 가장 먼저 읽는다)
 
 - 갱신: 2026-10-08 01:55 KST (앞 갱신 10/7 18:10·10/6 22:20). 디렉터 세션 session_014nJCzE4hyxiYc9innhSUng (디렉터 모델, ultracode, auto — 모델은 앱의 세션 정보에서 본다).

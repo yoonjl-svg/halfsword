@@ -21,7 +21,7 @@
 | 사람 움직임 봉투(관절 범위·각속도) | `docs/motion/human_envelope_2026-09-30.md`, `tools/motion/human_envelope.json` |
 | 시뮬·관문 도구와 기준 sha | `tools/sim/README.md` · 기준 sha 내력 `docs/strike/gate_history.md` |
 | 브라우저 도구(스모크·스크린샷) | `tools/browser/` |
-| 디렉터 인수인계(현재 상태) | `docs/handoff/director_state.md` |
+| 디렉터 인수인계(현재 상태) | `docs/director_handoff.md` (옛 `docs/handoff/director_state.md` 는 11/21 보관) |
 
 ## 3. 가지(branch)
 - `main`: 본판. 배포는 main 푸시 때 자동(GitHub Pages).
