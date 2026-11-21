@@ -161,6 +161,11 @@ button.sg-slot:not(:disabled):hover { border-color: var(--c-sub); }
 .sg-row[data-team="mine"] .sg-row-label { color: var(--c-accent); }
 .sg-row[data-team="foe"] { background: rgba(0, 0, 0, .28); }
 .sg-row[data-team="foe"] + .sg-row, .sg-row[data-team="mine"] + .sg-row { margin-top: 4px; }
+@media (max-height: 380px) { /* 낮은 화면(667 × 375 · 740 × 360): 줄 바탕의 위아래 틈을 이름표 밑 틈에서 덜어 높이가 늘지 않게 */
+  .sg-row[data-team] { padding: 1px 6px; }
+  .sg-row[data-team] .sg-row-label { margin-bottom: 1px; }
+  .sg-row[data-team] + .sg-row { margin-top: 0; }
+}
 .sg-row-pool i { font-style: normal; opacity: .6; } /* 상대 팀 무기 다섯 — 지금 든 무기만 밝게 */
 .sg-row-pool i[data-on] { opacity: 1; color: var(--c-text); }
 .sg-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
