@@ -56,6 +56,7 @@ import { createDecapFx } from './decap_fx.js';
 import { createLimbFx } from './limb_fx.js';
 import { attachHands } from './hands.js';
 import { PerfMeter } from './perfmeter.js';
+import { viewNow, holdView, viewHeld } from './view_clock.js'; // 보는 시계 — 싸움 중 멈춤 동안 흐르지 않음 (11/21 감사 N-011)
 import { createRenderCap } from './render_cap.js';
 import { createFighterLight } from './fighter_light.js';
 import { updateCapeSway } from './cape_sway.js'; // 긴 망토 흔들림 (10/24 — 롤랑 · 베르나르도 · 아르토리아, 겉모습만)
@@ -360,7 +361,9 @@ export const saengsaCircleStageName = () => {
 // ── 화면 크기 / 픽셀 모드 ──
 //  크기는 캔버스의 실제 CSS 상자(#game, 화면 가득)에서 읽는다 — innerWidth/innerHeight 가 아니라. 홈 화면 앱(아이폰 standalone)은 처음 열 때·돌릴 때
 //  innerHeight 와 resize 이벤트가 늦거나 빠질 수 있다고 알려져 있어, 상자가 실제로 바뀌면 ResizeObserver 가 한 번 더 잰다 (docs/ui/app_layout_2026-10-14.md)
+let frozenDrawn = false; // 싸움 중 멈춤(아래 frame)에 들어서 한 장 그렸나 — 화면 크기가 바뀌면(캔버스가 지워짐) · 멈춤 창 설정을 바꾸면 거짓으로(멈춘 그 장면을 한 번 더)
 function resize() {
+  frozenDrawn = false;
   const w = canvas.clientWidth || window.innerWidth;
   const h = canvas.clientHeight || window.innerHeight;
   if (!w || !h) return;
@@ -3062,8 +3065,9 @@ function updateTechCue(dt) {
 }
 
 // ── 게임 루프 ──
-// 성능 측정 표시: 주소에 ?fps=1 을 붙이면 왼쪽 위에 초당 프레임·물리·그리기 시간·게임 속도가 나온다
-const perf = params.get('fps') ? new PerfMeter(renderer, () => `배경 ${stages.id}  짓기 ${stages.buildMs.toFixed(0)}ms${stages.warmMs ? ` + GPU 준비 ${stages.warmMs.toFixed(0)}ms` : ''}`) : null;
+// 성능 측정 표시: 주소에 ?fps=1 을 붙이면 왼쪽 위에 초당 프레임·물리·그리기 시간·게임 속도가 나온다.
+//  시험 화면(test.html → test=1 시험 경로)에서는 늘 (11/21 — 사장님은 설치한 앱에서만 시험하고 주소 인자를 못 붙인다 · 본판 · 여정 · 방랑 · 생사전은 그대로 없음)
+const perf = params.get('fps') || testRoute.active ? new PerfMeter(renderer, () => `배경 ${stages.id}  짓기 ${stages.buildMs.toFixed(0)}ms${stages.warmMs ? ` + GPU 준비 ${stages.warmMs.toFixed(0)}ms` : ''}`) : null;
 let last = performance.now();
 let acc = 0;
 // 화면 갱신 상한 (CONFIG.RENDER.fpsCap, 사장님 9/30): 90/120 Hz 화면에서 그리기만 60 fps 로 거른다.
@@ -3196,16 +3200,40 @@ function updateParryLabel() {
   b.classList.toggle('pick', want === '줍기');
 }
 
+let stageT = 0; // 무대 움직임에 흐른 시간 합 (s — arena.update 에 준 dt · 멈춤 확인 도구 game.stageT 가 읽는다)
+/** 무대 움직임 한 화면 (눈 · 깃발 · 물 · 먼지 — 화면 dt 로만 흐른다) */
+function stageTick(dt) {
+  stageT += dt;
+  arena.update(dt);
+}
+
 function frame(now) {
   requestAnimationFrame(frame);
   // 첫 화면·대기실이 앞에 있는 동안(game_entry.js — html[data-start-open])에는 뒤의 3D 그리기·물리 시간을 멈춘다 (화면이 가려져 있다)
   if (document.documentElement.hasAttribute('data-start-open')) { last = now; acc = 0; return; }
   sound.setPaused(state !== 'fight' && state !== 'draw' && state !== 'encounter'); // 샛별 저장소 무대 셋의 배경음·세부음만 메뉴·일시정지 동안 줄인다 (stage_detail_sound.js)
+  // 싸움 중 멈춤 (11/21 감사 N-011 · 사장님 11/21 '멈춤 동안 멈춰.'): 일시정지 창(pause — 싸움 · 무기 뽑기 중에 연 창, 화면을 떠나 저절로 멈춘 때도)이 떠 있는 동안
+  //  들어선 첫 화면 한 장만 시간 0(dt 0 — 카메라 · 화면 빛 · 무대 · 몸 그대로)으로 그려 싸움 글자를 숨기고, 그 뒤로는 셈도 그리기도 하지 않는다.
+  //  보는 시계(view_clock.js — 기운 · 비기 잔상 · 장식 진자)도 멈추고 무대 움직임(arena.update)은 원래 부르지 않아, 풀면 멈춘 그 장면에서 이어 간다.
+  //  판 끝 결과 창(pauseOpen 아님 — 흩어지던 조각이 마저 떨어짐) · 첫 화면 · 대기실(위)은 예전 그대로
+  const frozen = state === 'paused' && pauseOpen;
+  if (frozen) {
+    holdView(true);
+    if (frozenDrawn) {
+      last = now;
+      return;
+    }
+    frozenDrawn = true;
+  } else if (frozenDrawn || viewHeld()) {
+    frozenDrawn = false;
+    holdView(false);
+    perf?.reset(now); // 멈춘 동안을 초당 프레임 셈에 넣지 않게
+  }
   const frameMs = now - last;
-  let dt = Math.min(0.1, frameMs / 1000);
+  let dt = frozen ? 0 : Math.min(0.1, frameMs / 1000);
   last = now;
   let physMs = 0, physSteps = 0, capped = false, simWant = 0, simGot = 0; // 성능 측정 표시(?fps=1)용
-  const paint = renderCap.tick(dt, settings.fpsCap ? CONFIG.RENDER.fpsCap : 0); // 이번 프레임을 그리나
+  const paint = frozen || renderCap.tick(dt, settings.fpsCap ? CONFIG.RENDER.fpsCap : 0); // 이번 프레임을 그리나 (멈춤에 든 한 장은 늘)
 
   if (state === 'fight' && player) {
     if (teamRun) teamFocus(); // 동시 대전: 보는 몸 · 그 상대 (enemy) 를 이 프레임 것으로
@@ -3288,10 +3316,10 @@ function frame(now) {
     particles.update(dt * scale);
     if (paint) {
       // 겉모습만 (시계로 도는 빛·안광, 칼 잔상 꼭짓점): 그리는 프레임에만
-      for (const a of auras) a.update(now / 1000);
+      for (const a of auras) a.update(viewNow() / 1000); // 보는 시계 — 싸움 중 멈춤 동안 흐르지 않음 (view_clock.js)
       swordTrails.update(); // 칼 잔상 띠
     }
-    arena.update(dt);
+    stageTick(dt);
     updateHud();
     if (teamRun) checkTeamEnd(dt); // 동시 대전: 한 편 전멸 = 판 끝 (match.js M.over)
     else checkRoundEnd(dt);
@@ -3303,8 +3331,8 @@ function frame(now) {
     // 무기 뽑기: 싸움(물리·AI)은 멈춘 채 카드 순서만 흐른다. 바다·먼지는 그대로 움직인다
     if (state === 'draw') {
       updateDraw(dt);
-      arena.update(dt);
-    } else if (state === 'encounter') arena.update(dt); // 방랑 전용 상대 알림 창 (10/24): 판은 멈춘 채 바다 · 먼지만
+      stageTick(dt);
+    } else if (state === 'encounter') stageTick(dt); // 방랑 전용 상대 알림 창 (10/24): 판은 멈춘 채 바다 · 먼지만
     // 판이 끝나 메뉴가 뜬 뒤에도 흩어지던 칼·투구·판금 조각은 마저 날아 사라진다 (판 끝 슬로모션 0.5배 그대로. 싸움 중 일시정지면 멈춘 채)
     if (roundOver) tickDebris(dt * 0.5);
   }
@@ -3420,6 +3448,8 @@ window.game = {
   freeCam: false,
   auraView: AURA_VIEW, // 레전드 기운 보기 손잡이 (on · t · tune — aura.js · tools/browser/legend_glow_measure.mjs 가 켬 · 끔을 견준다)
   stageSee: () => arena?.seeThrough?.alpha ?? null, // 성벽 안뜰 벽 비침 불투명도 (1 = 안 비침 — 시험 도구가 읽는다 · 11/21)
+  viewNow, // 보는 시계 ms (view_clock.js — 싸움 중 멈춤 동안 그대로 · tools/sim/pause_freeze.test.mjs · tools/browser/pause_freeze.mjs)
+  stageT: () => stageT, // 무대 움직임에 흐른 시간 합 s (멈춤 동안 그대로)
   renderInfo: () => ({ frame: renderer.info.render.frame, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, ...renderer.info.memory, programs: renderer.info.programs?.length }),
   renderCap, // 화면 갱신 상한: game.renderCap.interval = 잰 화면 간격(초). 끄기는 설정 '화면 60 fps 제한' (game.settings.fpsCap)
   screenTint,

@@ -12,6 +12,7 @@
 //   남은 고리(약 27 cm, 매듭 지름 1.3 cm · 십자가 4.5 × 2.6 cm · 술 4 cm)를 아래로 늘어뜨린다. 두 마디 진자(겉모습만 — 물리 몸·충돌체 없음, 난수 없음):
 //   그릴 때마다(onBeforeRender, 한 번 그리는 동안 한 번만) 손목 자리를 따라가며 무게로 늦게 흔들린다. 게임 판정·시뮬과 무관(그리기 전용).
 //  v5 (opts.thick, 사장님 10/11 01:4x '투야나 매듭 굵기 키워'): v4 그대로 + 매듭 지름 1.3 → 2.0 cm · 줄 3.8 → 5.6 mm · 십자가 4.5 × 2.6 → 5.5 × 3.2 cm · 술 4 → 5 cm (진자 그대로)
+import { viewNow, viewHeld } from './view_clock.js'; // 보는 시계 — 싸움 중 멈춤 동안 흐르지 않음 (11/21 감사 N-011)
 export function createTuyanaOutfit(h, opts = {}) {
   const TK = !!opts.thick;
   const { THREE, bake, box, cyl, ball, addMerged, CLOTH, isoldeLock, artoriaCloth, sleeveVolume, taperedTube, reshapeMain, hangingClothShading } = h;
@@ -353,7 +354,8 @@ export function createTuyanaOutfit(h, opts = {}) {
       const frame = renderer.info.render.frame;
       if (frame === lastFrame) return;
       lastFrame = frame;
-      const now = performance.now() / 1000, dt = ready ? Math.min(1 / 20, Math.max(1 / 240, now - lastT)) : 1 / 60;
+      if (ready && viewHeld()) return; // 싸움 중 멈춤: 진자도 그 자리 (멈춘 장면을 다시 그려도 흐르지 않음)
+      const now = viewNow() / 1000, dt = ready ? Math.min(1 / 20, Math.max(1 / 240, now - lastT)) : 1 / 60;
       lastT = now;
       anchor.copy(pivotA.position).applyMatrix4(pivotA.parent.matrixWorld);
       if (!ready) { p1.copy(anchor).y -= L1; p2.copy(p1).y -= L2; p1o.copy(p1); p2o.copy(p2); ready = true; }

@@ -17,6 +17,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { resolveSwordArt } from './sword_art.js';
+import { viewNow } from './view_clock.js'; // 보는 시계 — 싸움 중 멈춤 동안 흐르지 않음 (11/21 감사 N-011)
 
 // 레이피어 자세별 손 돌림 α (동작 PM 쥠 규칙 ① 끝 줄, 10/8 디렉터): 프리마(지붕) +180 · 세콘다(어깨 지붕·황소) +90 · 테르차(쟁기·긴 자세·옆·…) 0 · 콰르타(왼쪽 자세) −90.
 //  자세는 fighter.guardPose.nearest(guards.js guardAt 이 매 스텝 고른 가장 가까운 자세 번호, 표 순서 = GUARDS 순서)로 읽고, 표 이름에 교본 이름(Prima·Seconda·Terza·Quarta)이 있으면 그것이 우선.
@@ -146,7 +147,7 @@ export function attachHands(f) {
       fistS.visible = armed;
       openS.visible = !armed;
       if (rapier && armed) {
-        const now = typeof performance !== 'undefined' ? performance.now() : 0;
+        const now = viewNow();
         const dt = tPrev ? Math.min(0.1, (now - tPrev) / 1000) : 0;
         tPrev = now;
         const want = G.a + rapierPostureA(f);
