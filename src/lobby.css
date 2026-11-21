@@ -171,10 +171,11 @@ input:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .coin-balance { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
 .coin-icon { display: block; flex-shrink: 0; width: 20px; height: 20px; } /* 금화 · 주머니 그림 — 매끈하게 줄임 (픽셀 확대 끔 — 그림은 다른 작업자가 매끈한 그림으로 바꾼다) */
 .wallet .pouch-icon { margin-left: 6px; }
+/* 메뉴 2 열 (열 수 = lobby.js TAB_COLS) — 11/21 다섯째 탭 '거점전'은 셋째 줄 왼쪽, 오른쪽은 빈 칸 (탭 크기 그대로 · 3 열은 740 × 360 에서 탭 폭 약 30 px 라 안 씀) */
 .lobby-tabs { margin-top: 0; padding-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .lobby-tabs [role="tab"] { padding: 7px 4px; }
 
-/* ── ③ 아이템 · 상점 · 스킬북 · 이벤트 (사장님 10/18 04:1x — 상점 · 이벤트는 아직 비공개라 빈 안내 한 줄) ── */
+/* ── ③ 아이템 · 상점 · 스킬북 · 이벤트 (사장님 10/18 04:1x — 상점 · 이벤트는 아직 비공개라 빈 안내 한 줄) · 거점전 (11/21 — 같은 빈 안내 한 줄 '준비 중입니다.') ── */
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: var(--title-h); margin: 0 0 var(--title-gap); }
 .panel-heading h2 { margin: 0; font-size: var(--fs-m); line-height: var(--title-h); }
 .panel-heading > span { font-size: var(--fs-s); }
