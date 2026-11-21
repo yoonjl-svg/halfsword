@@ -1,4 +1,4 @@
-import { chromium } from '/home/user/halfsword/node_modules/playwright/index.mjs';
+import { chromium } from 'playwright';
 const out = process.argv[2];
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
 const page = await browser.newPage({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });

@@ -4,7 +4,7 @@
 //  시간은 playwright 가짜 시계로 한 프레임(1/60 s)씩 (mordschlag_shots.mjs 와 같은 틀). 찍는 것: 이름 붙은 순간의 게임 카메라 · 옆 카메라 PNG + 순간마다 JSON · 콘솔 오류 수.
 //  실행: npx vite build --outDir <임시>/dist && npx vite preview --outDir <임시>/dist --port 5503 --strictPort &   (끝나면 그 PID 만 끈다)
 //        node tools/browser/mordschlag_ai_shots.mjs http://127.0.0.1:5503 docs/handoff/mordschlag_ai [무대=castle]
-//  playwright 는 저장소 의존성에 없다(/home/user/halfsword/node_modules 에 있음). 크롬 경로 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
+//  playwright 는 저장소 의존성에 없다(전역 — NODE_PATH). 크롬 경로 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';

@@ -23,7 +23,7 @@
 //        [--rounds=2] [--seed=7] [--out=폴더] [--render-skip] [--png] [--quick] [--full] [--max-s=60] [--tree=이름] [--serial] [--pad0-ms=0]
 //   node tools/browser/live_diag.mjs --table --out=폴더     (폴더의 <칸>__<빠르기>.json → table.md)
 //  칸: k<0|0.4|0.7|1> (본판 그대로, 검술 보정 세기만; --url 이 그 트리·그 주소 인자) · all = k0,k0.4,k1
-//  playwright 는 /home/user/halfsword/package.json 기준으로 찾는다 (det.mjs 와 같이). 크롬 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
+//  playwright 는 이 파일 자리에서 찾는다(저장소 의존성에 없음 — 전역 NODE_PATH). 크롬 PW_CHROMIUM (기본 /opt/pw-browsers/chromium)
 // ─────────────────────────────────────────────────────────────
 import fs from 'node:fs';
 import path from 'node:path';
@@ -34,7 +34,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import * as L from '../sim/live_common.mjs';
 
-const require = createRequire('/home/user/halfsword/package.json');
+const require = createRequire(import.meta.url);
 const SELF = fileURLToPath(import.meta.url);
 const COMMON = path.join(path.dirname(SELF), '../sim/live_common.mjs');
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
