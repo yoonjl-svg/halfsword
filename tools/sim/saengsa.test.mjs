@@ -766,3 +766,45 @@ test('본판 임시 상시 열림 (사장님 11/21 \'생사전은 일시적으�
   }
 });
 
+test('3:3 (사장님 11/20 \'생사전에서 3:3 쓸게.\'): 나서는 사람 셋까지 · 상대는 문턱 위가 셋이면 셋 · 둘이면 둘 · 아니면 하나 · 빠른 셈 3:3', () => {
+  assert.equal(SAENGSA.entrantsMax, 3);
+  assert.equal(SAENGSA.teamSize, 3);
+  // 상대 고르기 (aiPick): 체력 aiPairHp 이상이 셋 → 셋 · 둘 → 그 둘(센 차례) · 하나 이하 → 가장 센 하나 · 죽은 사람은 빼고
+  const f = (key, hp, tier = 'common', dead = false) => ({ key, id: key, weapon: 'w', school: 'german', tier, prof: { ...PROF }, hp, injuries: [], dead });
+  const H = SAENGSA.aiPairHp;
+  assert.deepEqual(R.aiPick([f('1-0', 100), f('1-1', 80), f('1-2', H)]), ['1-0', '1-1', '1-2']);
+  assert.deepEqual(R.aiPick([f('1-0', 100), f('1-1', H - 1), f('1-2', 90, 'legend')]), ['1-2', '1-0']); // 문턱 밑 사람은 셋째로 안 나감
+  assert.deepEqual(R.aiPick([f('1-0', H - 1), f('1-1', 100), f('1-2', 20)]), ['1-1']);
+  assert.deepEqual(R.aiPick([f('1-0', 100), f('1-1', 100, 'common', true), f('1-2', 90)]), ['1-0', '1-2']);
+  assert.deepEqual(R.aiPick([f('1-0', 10), f('1-1', 5)]), ['1-0']);
+  // 2 일 때는 예전과 같은 고름 (같은 뜻을 늘림)
+  const TWO = { ...SAENGSA, entrantsMax: 2 };
+  assert.deepEqual(R.aiPick([f('1-0', 100), f('1-1', 80), f('1-2', H)], TWO), ['1-0', '1-1']);
+  // 내 고름: 한 명 ~ 세 명 · 넷 · 겹침은 안 됨 → 엔진 판 setup 이 셋 대 셋
+  const t = make(7);
+  R.advance(t, at(30, 10));
+  const m = R.myMatch(t);
+  assert.equal(R.validPicks(t, ['0-0', '0-1', '0-2']), true);
+  assert.equal(R.validPicks(t, ['0-0', '0-1', '0-2', '0-0']), false);
+  assert.equal(R.validPicks(t, ['0-0', '0-1', '0-1']), false);
+  assert.equal(R.validPicks(t, ['0-0', '0-1', '0-2'], TWO), false);
+  const setup = R.matchSetup(t, m, ['0-2', '0-0', '0-1'], at(30, 10));
+  assert.equal(setup.control, 'player');
+  assert.deepEqual(setup.entrants[setup.mineSide], ['0-2', '0-0', '0-1']);
+  const foeSide = setup.mineSide === 'a' ? 'b' : 'a';
+  assert.equal(setup.entrants[foeSide].length, 3, '첫 경기 상대는 모두 체력 100 — 셋');
+  assert.equal(setup.sides[foeSide].length, 3);
+  // 빠른 셈 3:3: 같은 씨앗 같은 결과 · 여섯 모두 적힘 · 이긴 쪽에 산 사람 · 셋은 같은 넷보다 셈 힘이 큼(합 × pairK)
+  const sides = { a: [f('0-0', 100), f('0-1', 70), f('0-2', 50)], b: [f('1-0', 100), f('1-1', 100), f('1-2', 100)] };
+  for (let s = 0; s < 50; s++) {
+    const r = R.quickResolve(sides, s);
+    assert.deepEqual(r, R.quickResolve(structuredClone(sides), s));
+    assert.equal(Object.keys(r.fighters).length, 6);
+    assert.ok(sides[r.winner].some((x) => r.fighters[x.key].alive), `씨앗 ${s}`);
+  }
+  assert.ok(R.sidePower(sides.b) > R.sidePower(sides.b.slice(0, 2)));
+  // 상대끼리 경기(빠른 셈)도 셋씩 나감: 신청 직후 끝난 16 강 경기 결과의 나선 사람 수
+  const done = t.matches.filter((x) => x.result && x.result.by === 'quick');
+  assert.ok(done.length >= 7);
+  assert.ok(done.every((x) => x.result.entrants.a.length === 3 && x.result.entrants.b.length === 3), '첫 대진은 모두 체력 100 — 셋 대 셋');
+});

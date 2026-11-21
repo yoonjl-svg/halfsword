@@ -15,7 +15,7 @@
 //   팀 0 = 내 팀(자리 0 = 나) · 대진표 자리는 씨앗으로 섞는다 · 첫 대진 경기만 a · b(팀 번호)를 적고, 다음 대진은 앞 두 경기의 이긴 팀(sidesOf).
 //  경기 = { id 'r<대진>m<번호>', round, index, a, b, result } · 결과 = { at(저장 시각), winner 'a' | 'b', entrants { a: [key], b: [key] }, fighters { key: { hp, injuries, alive } },
 //   by 'quick' | 'engine' | 'forfeit', seed, ver, pre { a: [사람], b: [사람] } } — seed · entrants · pre(경기 전 두 팀) · ver 는 2단계 다시보기 몫(사장님 10/29 14:5x — 같은 씨앗 · 같은 판으로 다시 셈).
-//   2단계 엔진(실제 2:2 싸움)도 같은 꼴을 돌려준다(matchSetup → 엔진 → finishMine · 설계 §8).
+//   2단계 엔진(실제 싸움 — 2:2 · 11/20 부터 3:3 까지)도 같은 꼴을 돌려준다(matchSetup → 엔진 → finishMine · 설계 §8).
 import { SAENGSA } from './config.js';
 import { roundAt, restUntil, startAt, signupWindow, windowOf, shiftDay, openAlways } from './saengsa_clock.js';
 import { NAMELESS_NAMES } from './saengsa_names.js';
@@ -406,7 +406,10 @@ export function quickResolve(sides, seed, cfg = SAENGSA) {
   }
   return { winner, fighters };
 }
-/** 상대 팀이 내보낼 사람 (가린 채 고름 — 내 고름을 보지 않는다 · 사장님 10/29 14:5x): 체력 aiPairHp 이상이 둘 이상이면 가장 센 둘 · 아니면 가장 센 하나 */
+/**
+ * 상대 팀이 내보낼 사람 (가린 채 고름 — 내 고름을 보지 않는다 · 사장님 10/29 14:5x): 체력 aiPairHp 이상인 사람이 둘 이상이면 그 가운데 센 차례로 entrantsMax 까지
+ *  (11/20 3:3 — 사장님 '생사전에서 3:3 쓸게.': 문턱 위가 셋이면 셋 · 둘이면 둘) · 아니면 가장 센 하나 (문턱 밑 사람은 둘째 · 셋째로 내보내지 않는다 — 다친 사람을 아낌)
+ */
 export function aiPick(members, cfg = SAENGSA) {
   const alive = members.filter((f) => !f.dead).sort((x, y) => power(y, cfg) - power(x, cfg) || (x.key < y.key ? -1 : 1));
   const fit = alive.filter((f) => f.hp >= cfg.aiPairHp);

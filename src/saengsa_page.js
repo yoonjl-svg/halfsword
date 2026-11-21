@@ -3,10 +3,10 @@
 //  ① 대진표: 대진마다 한 줄(16강 · 8강 · 4강 · 결승 · 우승) — 경기 칸 = 시각 · 남은 시간이나 한 줄 결과 · 두 팀(얼굴 셋 + 이름). 내 길은 금색 줄 · 지금 할 수 있는 내 경기는 금색 칸 '입장 가능'.
 //     칸이 많아(16 팀) 틀 안에서 위아래로 내려 본다 — 열면 내 경기 자리로. 30 초마다 다시 셈(상대끼리 경기는 시각이 지나면 저절로 끝남 — saengsa_store.js syncSaengsa).
 //  ② 경기 화면(경기 칸을 누름 — 화면 전체를 덮는 층): 상대 팀 카드 셋 · 내 팀 카드 셋(얼굴 · 이름 · 체력 막대 · 부상 · 무기 · 다섯 유파 숙련도 · 죽은 사람은 흐림).
-//     내 경기면 내 카드를 한두 장 골라 '전투 입장' — 상대는 가린 채 함께 고르고 입장 때 함께 보인다(사장님 10/29 14:5x). 결과는 카드 위에 그대로(경기 뒤 체력 · 부상 · 죽음 · 출전 표시).
+//     내 경기면 내 카드를 한 장에서 세 장까지(SAENGSA.entrantsMax — 11/20 3:3) 골라 '전투 입장' — 상대는 가린 채 함께 고르고 입장 때 함께 보인다(사장님 10/29 14:5x). 결과는 카드 위에 그대로(경기 뒤 체력 · 부상 · 죽음 · 출전 표시).
 //     '무기 배정'(사장님 10/29 18:2x 경기마다 내가 배정): 살아 있는 내 팀 세 사람마다 가진 무기 한 자루 — 카드에 바로 보이고 '전투 입장' 때 저장.
 //      11/18 신청 때 배정을 걷음(사장님 '캐릭터 선택 ui에는 무기까지 배정할 필요가 없어') — 내 팀은 무기 없이 대회에 들어 첫 경기 화면에서 처음 배정(카드 '무기 없음' · 배정 전엔 '전투 입장' 꺼짐)
-//     내 경기는 실제 2:2 싸움(saengsa_engine.js — game.launchSaengsa · 나섬 = 내 몸 · 동료만 = 지켜봄) · 엔진이 없으면 빠른 셈 · 상대끼리 경기는 빠른 셈.
+//     내 경기는 실제 싸움(2:2 · 3:3 — saengsa_engine.js — game.launchSaengsa · 나섬 = 내 몸 · 동료만 = 지켜봄) · 엔진이 없으면 빠른 셈 · 상대끼리 경기는 빠른 셈.
 //  바로 시작 (사장님 11/12 '참여하면 바로 시작'): 막 신청하고 열면(openMine) 내 첫 경기 화면을 곧바로 · 결과 뒤 내 다음 경기가 열려 있으면 '다음 경기'(곧장 그 경기 화면) · '확인'은 대진표로(쉬었다 이어 함) ·
 //     경기 사이 기다림이 없어 대진표 · 경기 화면에 시각을 보이지 않는다(시험판과 같음 — saengsa_rules.js noWait).
 import uiStyle from './entrance_ui.css?inline';
@@ -250,7 +250,7 @@ export function mountSaengsa({ root, game, onBack, now = clockFrom(), openMine =
     if (!c || c.disabled || !open || open.result) return;
     const k = c.dataset.key, i = open.picks.indexOf(k);
     if (i >= 0) open.picks.splice(i, 1);
-    else { open.picks.push(k); if (open.picks.length > SAENGSA.entrantsMax) open.picks.shift(); } // 셋째를 누르면 먼저 고른 사람을 뺀다
+    else { open.picks.push(k); if (open.picks.length > SAENGSA.entrantsMax) open.picks.shift(); } // entrantsMax 를 넘게 누르면 먼저 고른 사람을 뺀다 (11/20 3:3 — 팀이 셋이라 넘을 일이 없음 · 전 2 일 때 셋째)
     renderMatch();
     root.querySelector(`button.sg-card[data-key="${k}"]`)?.focus({ preventScroll: true });
   });
