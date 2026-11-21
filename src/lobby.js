@@ -21,6 +21,9 @@
 //   뿔피리는 상점 칸 제목 줄 지갑에(내 정보 칸은 좁아 금화 · 머리만 그대로) · 아이템 칸 무기 = 가진 무기 모두(시작 무기 + 산 무기 — owned_weapons.js · 산 무기도 장착) · 시험판은 상점 칸으로 바로 열림(tab)
 //  10/29 생사전 (사장님 14:1x 요지 — 탭 '이벤트'를 '생사전'으로 · docs/design/saengsa_2026-10-29.md): 넷째 탭 '이벤트' → '생사전'(열쇠 tabEvent · panelEvent · 차례 그대로) ·
 //   ③ 칸 = 부제 '3인의 맹약' · 일정 알약 · saengsa_panel.js 판(설명 · 내 팀 · 안내 · '생사전 입장') · 입장 → onSaengsa(game_entry.js showSaengsa)
+//  11/21 거점전 자리 (사장님 '거점전도 임시 단추로 만들어놔.(누르면 아직은 준비중이라고 뜸)' → '아니야 거점전은 생사전과 같은 위계로 버튼 만들어. 방랑 밑이 아니라'):
+//   다섯째 탭 '거점전'(tabCapture · panelCapture) — 메뉴 2 열 그대로 셋째 줄 왼쪽([아이템][상점] / [스킬][생사전] / [거점전]) · ③ 칸 = 제목 + 빈 안내 한 줄 '준비 중입니다.'(옛 이벤트 칸과 같은 꼴) ·
+//   거점전 모드는 따로 만드는 중(docs/decisions.md 11/21) — 들어오면 이 칸에 판을 단다. ↑ ↓ 는 같은 열 안에서 돎(빈 칸 건너뜀)
 import style from './lobby.css?inline';
 import uiStyle from './entrance_ui.css?inline';
 import typeStyle from './entrance_type.css?inline';
@@ -86,6 +89,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, onS
           <button role="tab" id="tabShop" aria-controls="panelShop" aria-selected="false" tabindex="-1" data-panel="Shop">상점</button>
           <button role="tab" id="tabSkills" aria-controls="panelSkills" aria-selected="false" tabindex="-1" data-panel="Skills">스킬</button>
           <button role="tab" id="tabEvent" aria-controls="panelEvent" aria-selected="false" tabindex="-1" data-panel="Event">${SAENGSA_TEXT.title}</button>
+          <button role="tab" id="tabCapture" aria-controls="panelCapture" aria-selected="false" tabindex="-1" data-panel="Capture">거점전</button>
         </nav>
       </section>
       <section class="contents-panel" aria-label="대기실 상세">
@@ -98,6 +102,7 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, onS
         <div role="tabpanel" id="panelShop" aria-labelledby="tabShop" hidden><div class="panel-heading"><h2>${SHOP_TEXT.title}</h2><span class="wallet panel-wallet">${COIN_ICON}<b id="shopCoins"></b>${POUCH_ICON}<b id="shopHeads"></b>${HORN_ICON}<b id="shopHorns"></b></span></div><div id="shopHost" class="shop-host"></div></div>
         <div role="tabpanel" id="panelSkills" aria-labelledby="tabSkills" hidden><div class="panel-heading"><h2>스킬</h2><span class="wallet panel-wallet">${COIN_ICON}<b id="skillCoins"></b>${POUCH_ICON}<b id="skillHeads"></b></span></div><div id="skillTreeHost" class="skill-tree-host"></div><p id="skillStatus" class="sr-only" role="status"></p></div>
         <div role="tabpanel" id="panelEvent" aria-labelledby="tabEvent" hidden><div class="panel-heading"><h2>${SAENGSA_TEXT.title}<span class="sg-sub">${SAENGSA_TEXT.subtitle}</span></h2><span class="sg-state" id="saengsaState"></span></div><div id="saengsaHost" class="saengsa-host"></div></div>
+        <div role="tabpanel" id="panelCapture" aria-labelledby="tabCapture" hidden><div class="panel-heading"><h2>거점전</h2></div><p class="empty-panel">준비 중입니다.</p></div>
       </section>
     </div>
   </main><dialog class="name-dialog" id="nameDialog" aria-labelledby="nameHeading"><form id="nameForm"><h2 id="nameHeading">이름 수정</h2><label for="playerNameInput">이름 · 최대 16자</label><input id="playerNameInput" name="playerName" autocomplete="off" required maxlength="32"><p class="name-error" id="nameError" role="status"></p><div class="dialog-actions"><button type="button" id="cancelName" class="secondary">취소</button><button type="submit" class="primary">저장</button></div></form></dialog>
@@ -217,7 +222,8 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, onS
   const shop = mountShopPanel($('shopHost'), { status: (text, tone) => status(text, tone), onWallet: () => { renderWallet(); showTitleNotice(); } });
   // 생사전 칸 (10/29): 입장 → 생사전 화면(onSaengsa) · 신청하면 금화가 줄어 내 정보 칸을 다시 그림
   const saengsa = mountSaengsaPanel($('saengsaHost'), { chip: $('saengsaState'), status: (text, tone) => status(text, tone), onWallet: () => renderWallet(), onEnter: (opts) => { if (onSaengsa && !departing) onSaengsa(opts); } }); // opts.fresh = 막 신청함 → 내 첫 경기 화면 (사장님 11/12 바로 시작)
-  const tabs = [...root.querySelectorAll('.lobby-tabs [role=tab]')]; // 차례 = 2 × 2 칸 차례(윗줄 아이템 · 상점 · 아랫줄 스킬북 · 이벤트) — ↑ ↓ 는 같은 칸 줄, ← → 는 다음 · 앞
+  const tabs = [...root.querySelectorAll('.lobby-tabs [role=tab]')]; // 차례 = 2 열 칸 차례(아이템 · 상점 / 스킬 · 생사전 / 거점전 — 11/21) — ↑ ↓ 는 같은 열, ← → 는 다음 · 앞
+  const TAB_COLS = 2; // 메뉴 열 수 (lobby.css .lobby-tabs 와 같게)
   function selectTab(tab) {
     for (const item of tabs) {
       const selected = item === tab; item.setAttribute('aria-selected', String(selected)); item.tabIndex = selected ? 0 : -1;
@@ -234,9 +240,14 @@ export function mountLobby({ root, game, choice, onDepart, onWander, onBack, onS
     listen(tab, 'click', () => selectTab(tab));
     listen(tab, 'keydown', e => {
       if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
-      e.preventDefault(); const index = tabs.indexOf(tab);
-      const offset = { ArrowUp: -2, ArrowDown: 2, ArrowLeft: -1, ArrowRight: 1 }[e.key];
-      const next = tabs[e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (index + offset + tabs.length) % tabs.length];
+      e.preventDefault(); const index = tabs.indexOf(tab), n = tabs.length;
+      // ↑ ↓ = 같은 열 안에서 · 끝에서는 그 열의 반대 끝으로 (탭 넷일 때는 전과 같음 · 다섯이면 셋째 줄 빈 칸을 건너뜀 — 11/21 거점전)
+      const col = index % TAB_COLS, colLast = n - 1 - ((n - 1 - col) % TAB_COLS);
+      const to = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1
+        : e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? (index + (e.key === 'ArrowRight' ? 1 : -1) + n) % n
+        : e.key === 'ArrowDown' ? (index + TAB_COLS <= colLast ? index + TAB_COLS : col)
+        : (index - TAB_COLS >= 0 ? index - TAB_COLS : colLast);
+      const next = tabs[to];
       selectTab(next); next.focus();
     });
   }
