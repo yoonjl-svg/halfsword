@@ -3,13 +3,15 @@
 //  스틱(키보드 W·D 누름)·칼 쪽 끌기(손가락 pointermove)·톡을 넣는다. 경직 동안 걸러진 손 목표(skill.aim)·손 목표(handOffset)가 경직이 시작된 자리에서
 //  움직였는지, 스틱이 몸에 들어갔는지(player.move) 잰다. 경직이 끝난 뒤 같은 입력을 다시 넣어 조작이 다시 듣는지(대조)도 잰다.
 //  실행: npx vite build && npx vite preview --port 4173 --strictPort &
-//        node tools/browser/player_stiff_freeze.mjs http://127.0.0.1:4173 <PNG 폴더> [무기 id (기본 longsword)]
+//        node tools/browser/player_stiff_freeze.mjs http://127.0.0.1:4173 <PNG 폴더> [무기 id (기본 uchigatana)]
+//  11/21 (감사 가지): 기본 무기 longsword → uchigatana. 11/16 부터 독일 죽음의 일격 · 이탈리아 리솔루토는 굳음 대신 겨눔 되돌림(SECRET.mord.guard · risolutoBack —
+//   skill.js stiffT = guardT > 0 ? 0) 이라 롱소드 · 레이피어에는 이 점검이 볼 경직이 없다. 일본 · 동방 · 이베리아는 SECRET.stiff 그대로
 //  소프트웨어 GL 은 느리다(벽 10 s ≈ 게임 1~2 s). 끝 코드 0 = 경직 동안 손 목표·스틱 모두 안 움직임 + 경직 뒤 조작이 다시 들음
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 const base = process.argv[2] || 'http://127.0.0.1:4173';
 const shotDir = process.argv[3] || '.';
-const weapon = process.argv[4] || 'longsword';
+const weapon = process.argv[4] || 'uchigatana';
 fs.mkdirSync(shotDir, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--no-sandbox'] });
 const ctx = await browser.newContext({ viewport: { width: 844, height: 420 }, hasTouch: true });
@@ -19,7 +21,9 @@ page.on('pageerror', (e) => errors.push('pageerror ' + e));
 page.on('console', (m) => {
   if (m.type() === 'error') errors.push(m.text());
 });
-await page.goto(`${base}/?weapon=${weapon}&foeWeapon=longsword`, { waitUntil: 'networkidle' });
+// skillNodes=all (개발 인자 — 손에 든 무기 유파의 스킬트리 칸 모두): 10/13 뒤로 비기는 익힌 칸에서만 열린다(main.js PlayerSecretWatch locked: !kit?.secret).
+//  새 기기 · 주소 판은 익힌 칸이 없어 비기가 없다(사람 여정도 같음) — 11/21 감사 가지에서 'secret null' 로 멈춘 까닭
+await page.goto(`${base}/?weapon=${weapon}&foeWeapon=longsword&skillNodes=all`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.game?.player?.sword, null, { timeout: 60000 });
 await page.getByText('여정 시작').click();
 await page.waitForFunction(() => window.game.state === 'fight' && window.game.playerSecret, null, { timeout: 60000 });
