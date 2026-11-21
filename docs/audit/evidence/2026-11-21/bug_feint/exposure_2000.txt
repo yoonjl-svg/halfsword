@@ -1,0 +1,8 @@
+roster 37 has bran true bran_mad true renji true
+seeds 2000
+foe members at sign-up holding affected combo: 1589/90000 = 1.77%
+PLAYER matches (engine fights): foe AI appearances affected 139/8499 = 1.64% | matches with >=1 affected foe 138/3157 = 4.37% | tournaments with such a match 137/2000 = 6.85%
+AI-vs-AI quick matches (no engine): appearances affected 2130/139084 = 1.53% | matches 2118/26720 = 7.93%
+tournaments with an affected fighter anywhere (player path or bracket): 1475/2000 = 73.75%
+top pairs, player matches: bran x tizona 20; bran x chixiao 20; bran x goujian 17; bran x qinggang 14; bran x monohoshizao 14; bran x dartagnan 12; bran x durandal 9; bran x balisarda 9; bran x sain 5; bran x flamberge 5
+top pairs, AI-vs-AI: bran x qinggang 252; bran x tizona 242; bran x monohoshizao 238; bran x goujian 217; bran x dartagnan 213; bran x balisarda 188; bran x chixiao 179; bran x durandal 137; bran x sain 84; bran x pappenheimer 76
