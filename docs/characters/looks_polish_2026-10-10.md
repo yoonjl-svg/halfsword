@@ -45,11 +45,11 @@
 `node tools/browser/char_polish_shots.mjs <주소> <id:판> <접두어>` — 앞·비스듬(40°)·옆·뒤(2.2 m, 물리 멈춤) + 싸움(2.6 m). 전 = 본판 판(1차 캡처 `looks_review_*`, 같은 도구·같은 무대), 후 = 이번 판.
 | 인물 | 전/후 한 장 비교 (위 = 전, 아래 = 후) | 후 방향별 |
 |---|---|---|
-| 사미라 v2 → v3 | `looks_polish_samira_v2_v3.png` | `looks_polish_samira_v3_{front,threeq,side,back,fight}.png` |
-| 투야나 v2 → v3 | `looks_polish_eira_v2_v3.png` | `looks_polish_eira_v3_*.png` |
-| 김씨 v1 → v2 | `looks_polish_renji_v1_v2.png` | `looks_polish_renji_v2_*.png` |
-| 아르토리아 v1 → v2 | `looks_polish_artoria_v1_v2.png` | `looks_polish_artoria_v2_*.png` |
-| 김씨 폰 화면(게임 카메라 그대로, 가로 844×390, 싸운 지 8 초) | `looks_polish_renji_v1_phone.png` / `looks_polish_renji_v2_phone.png` | `node tools/browser/looks_phone_shot.mjs <주소> renji:v2 <출력>` (새 도구) |
+| 사미라 v2 → v3 | `looks_polish_samira_v2_v3.png (지움 · 108a0ca5)` | `looks_polish_samira_v3_{front,threeq,side,back,fight}.png` |
+| 투야나 v2 → v3 | `looks_polish_eira_v2_v3.png (지움 · 108a0ca5)` | `looks_polish_eira_v3_*.png` |
+| 김씨 v1 → v2 | `looks_polish_renji_v1_v2.png (지움 · 108a0ca5)` | `looks_polish_renji_v2_*.png` |
+| 아르토리아 v1 → v2 | `looks_polish_artoria_v1_v2.png (지움 · 108a0ca5)` | `looks_polish_artoria_v2_*.png` |
+| 김씨 폰 화면(게임 카메라 그대로, 가로 844×390, 싸운 지 8 초) | `looks_polish_renji_v1_phone.png (지움 · 108a0ca5)` / `looks_polish_renji_v2_phone.png (지움 · 108a0ca5)` | `node tools/browser/looks_phone_shot.mjs <주소> renji:v2 <출력>` (새 도구) |
 
 - 김씨 폰 화면: 싸운 지 8 초, 게임 카메라에서 김씨까지 5.3 m(두 사람 사이 약 2 m). v1 은 몸 아래 절반이 먹빛 하카마 덩어리, v2 는 짙은 쪽빛 바지 + 밝은 행전으로 다리 두 개와 걸음이 읽힌다. 웃옷 먹빛은 한 단계만 밝혀 이 거리에선 차이가 작다(사장님 '아주 조금만').
 

@@ -48,7 +48,7 @@
 | 미나미 | `docs/handoff/minami_before_{front,threeq,side,back,fight}.png` | `docs/handoff/minami_after_{front,threeq,side,back,fight}.png` |
 | 오마리 | `docs/handoff/omari_before_{front,threeq,side,back,fight}.png` | `docs/handoff/omari_after_{front,threeq,side,back,fight}.png` |
 | 미나미 v5 (전 = v4) | `docs/handoff/minami_v5_before_{front,threeq,side,back,fight}.png` | `docs/handoff/minami_v5_after_{front,threeq,side,back,fight}.png` |
-| 토메 비달(안 바뀜 확인) | `docs/handoff/tome_check_before_threeq.png` | `docs/handoff/tome_check_after_threeq.png` |
+| 토메 비달(안 바뀜 확인) | `docs/handoff/tome_check_before_threeq.png (지움 · b6028d36)` | `docs/handoff/tome_check_after_threeq.png (지움 · b6028d36)` |
 
 다듬은 차례(PNG 를 보며 4 번): ① 퍼지는 하카마·네모 소매·다스키 첫 판 → 주름이 안 읽히고 골반 윗단 앞이 계단처럼 튐 → ② 주름 깊이 12%·면마다 칠하기·하카마 앞뒤 폭 키움, 소매 자락 주머니 → 주머니가 어깨 받침처럼 떨어져 보이고 무릎 띠 남음, 오마리 무릎이 구슬처럼 잘록 → ③ 소매를 한 통(옆에서 사다리꼴)으로, 늘어진 천 음영, 오마리 끝 반구 늘임·발 깎기 → ④ 무릎 겹침 자리 주름 얕게.
 v5 다듬은 차례(3 번): ① 흰 다스키·낮게 묶은 머리·소매 끝 끈 첫 판 → 뒤통수 가닥 사이로 살이 비치고 옆머리 가닥이 뿔처럼 튀며 소매 끈 끝이 옆으로 10 cm 뻗음 → ② 뒤통수~목덜미 머리 덩어리(아래로 좁아짐)·끈 끝을 5 cm 로 짧게 아래로 → ③ 옆머리 가닥을 머리 겉에 바짝 붙임.

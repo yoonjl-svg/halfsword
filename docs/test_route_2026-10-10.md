@@ -58,9 +58,9 @@ main.js 에서 바뀐 줄: import 1 · `createTestRoute(params)` 1 · pickFoe 2 
 
 - `node tools/browser/test_route_shots.mjs http://127.0.0.1:4297 docs/handoff` (빌드 + `vite preview --port 4297`): 검사 전부 통과, 콘솔 에러 0.
   - test.html 세로·가로: `docs/handoff/test_route_picker_{portrait,landscape}{,_full}.png`
-  - 츠바이핸더 + 토메 세 판(이김 → 짐 → 판 넘김): `test_route_z_menu.png` · `z_round1.png` · `z_round1_hero_front.png`(앞에서 본 플레이어) · `z_round1_result_win.png` · `z_round2.png` · `z_round2_result_lose.png` · `z_round3.png` · `z_pause_menu.png`
+  - 츠바이핸더 + 토메 세 판(이김 → 짐 → 판 넘김): `test_route_z_menu.png (지움 · f0b8739c)` · `z_round1.png` · `z_round1_hero_front.png`(앞에서 본 플레이어) · `z_round1_result_win.png` · `z_round2.png` · `z_round2_result_lose.png` · `z_round3.png` · `z_pause_menu.png`
     - 한 번 돌린 예: 무대 화전 터 → 포세이돈 → 화전 터, 상대 오마리(츠바이핸더 — 자기 무기) → 이졸데(롱소드) → 브란(나뭇가지)
   - 일시정지 '테스트 고르기로' → test.html 이 마지막 고름(츠바이핸더 · 토메)을 기억
-  - 우치가타나 + 마르그레테: `test_route_picker_uchigatana_selected.png` · `test_route_u_round1.png` (뿔 투구 · 판금 5곳)
+  - 우치가타나 + 마르그레테: `test_route_picker_uchigatana_selected.png (지움 · f0b8739c)` · `test_route_u_round1.png (지움 · f0b8739c)` (뿔 투구 · 판금 5곳)
   - 인자 없는 본판: 포세이돈 · '나'(케틀햇) · 하인리히 · 테스트 단추 없음
 - 본판 관문: fights12 `5480fbd3` · live_battery `e7ee3d96` · finish_thrust 1 --stand `433ac984` · corr_s0 IDENTICAL 12/12 · weapon_smoke OK 17/17 · vite build 성공 · name_policy 위반 0.

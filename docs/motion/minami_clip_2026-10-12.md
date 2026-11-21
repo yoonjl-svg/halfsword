@@ -27,12 +27,12 @@
 
 ## 다른 일본 칼
 - 우치가타나도 전엔 허벅지에 걸려 칼끝이 +50~60° 로 튀었다(뚫어 보이진 않음).
-- 후엔 정한 꼴대로 칼끝 −12~−16° 아래로 선다. 꼴이 바뀐다(그림 uchigatana_back_after.png).
+- 후엔 정한 꼴대로 칼끝 −12~−16° 아래로 선다. 꼴이 바뀐다(그림 uchigatana_back_after.png (지움 · 05ddca9c)).
 
 ## 관문 (전과 같음 — 머리 없는 시뮬은 이 대기 자세를 안 지난다)
 - fights12 d48f5ffb · live_battery e7ee3d96 · finish_thrust 433ac984
 - corr_s0 IDENTICAL 12/12 · weapon_smoke OK 21 · vite build rc 0 · name_policy rc 0
 
 ## 그림
-- `docs/handoff/minami_clip/side_before_after.png` · `back_before_after.png` (왼쪽 전 · 오른쪽 후)
-- `docs/handoff/minami_clip/uchigatana_back_after.png`
+- `docs/handoff/minami_clip/side_before_after.png (지움 · 05ddca9c)` · `back_before_after.png (지움 · 05ddca9c)` (왼쪽 전 · 오른쪽 후)
+- `docs/handoff/minami_clip/uchigatana_back_after.png (지움 · 05ddca9c)`

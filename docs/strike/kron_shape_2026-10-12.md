@@ -50,7 +50,7 @@
   - 플레이어 막기 버튼 highC (막을 때 + 기다림에 highC 를 가릴 때)
   - 감아 들기 정한 자세 'kron' → 뛰어들기: 판정은 패드로 하므로 그대로. 뛰어들기를 내면 덧씌우기는 0.15 s 에 걷힌다(MOTION.coverOut).
 - **무기**: 독일 전통 무기 모두(롱소드·엑스칼리버·라이트세이버·에스톡·세이버·팔쉬온). 무유파(둔기)는 독일 막기 패드를 같이 쓰지만 이 덧씌우기는 받지 않는다(유파 칸이 따로 — 바이트 그대로).
-- **한손 무기**: 세이버·팔쉬온도 꼴이 선다(손 0.59 · 칼 80° · 칼 면 0.99). 한 손으로 칼자루를 든 채 빈손은 옆에 내려 있다 — 꼴이 깨지지 않아 따로 규칙을 만들지 않았다(그림 `sabre_ai.png`).
+- **한손 무기**: 세이버·팔쉬온도 꼴이 선다(손 0.59 · 칼 80° · 칼 면 0.99). 한 손으로 칼자루를 든 채 빈손은 옆에 내려 있다 — 꼴이 깨지지 않아 따로 규칙을 만들지 않았다(그림 `sabre_ai.png (지움 · a2a8c0fc)`).
 - **빠르기**: 손 목표 빠르기는 parrySpeed 그대로, 덮는 시간 0.08 s·걷는 시간 0.15 s 는 중국과 같은 MOTION 값. 새 상한·문턱·쿨타임 없음.
 
 ## 4. 스위치
@@ -99,9 +99,9 @@
 - 감아 들기 판(`SECRET.deSecret=parry`, 16 판 짧게): 두 꼴 모두 창 0 — 칼이 0.3 s 넘게 붙지 않는 지금 물리 그대로(10/11 기록과 같음). 뛰어들기는 이번에도 열리지 않는다.
 
 ## 6. 그림 (`docs/handoff/kron_shape/`, 왼쪽 = 새 꼴 · 오른쪽 = pad)
-- `player_front.png` · `player_side.png` — 플레이어(독일 롱소드)가 화면의 막기 단추를 누른 채, 롱소드 AI 의 정수리 베기를 받는 순간(막기 버튼이 highC 로 읽고 손이 자리에 닿은 뒤 첫 칼 맞닿음 · pad 쪽은 맞닿지 않아 상대가 따라 베기에 든 때). 도구 `tools/browser/kron_shape_shots.mjs`.
-- `ai_front.png` · `ai_side.png` — AI 독일 롱소드가 highC 를 막는 자세(도구 `tools/browser/school_parry_shots.mjs`, `QUERY=&kronShape=pad` 로 pad 쪽).
-- `sabre_ai.png` — 세이버(한손, 독일)의 새 꼴 앞·옆.
+- `player_front.png (지움 · a2a8c0fc)` · `player_side.png (지움 · a2a8c0fc)` — 플레이어(독일 롱소드)가 화면의 막기 단추를 누른 채, 롱소드 AI 의 정수리 베기를 받는 순간(막기 버튼이 highC 로 읽고 손이 자리에 닿은 뒤 첫 칼 맞닿음 · pad 쪽은 맞닿지 않아 상대가 따라 베기에 든 때). 도구 `tools/browser/kron_shape_shots.mjs`.
+- `ai_front.png (지움 · a2a8c0fc)` · `ai_side.png (지움 · a2a8c0fc)` — AI 독일 롱소드가 highC 를 막는 자세(도구 `tools/browser/school_parry_shots.mjs`, `QUERY=&kronShape=pad` 로 pad 쪽).
+- `sabre_ai.png (지움 · a2a8c0fc)` — 세이버(한손, 독일)의 새 꼴 앞·옆.
 - 앞 그림에서 새 꼴은 코등이가 머리 위에 가로로 걸리고, pad 는 몸이 돌아간 채 칼이 옆으로 선다(코등이 앞뒤).
 
 ## 7. 관문 (출력에서 'deprecated parameters' 줄을 뺀 sha256 앞 8)

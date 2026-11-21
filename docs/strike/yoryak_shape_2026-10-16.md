@@ -33,8 +33,8 @@
 
 ## 4. 그림 (`docs/handoff/yoryak_shape/`)
 
-- `before_front.png` · `before_side.png` — 옛 요략세(허리 왼쪽에 칼을 옆으로 눕힘)
-- `after_front.png` · `after_side.png` — 새 요략세(칼끝을 왼 앞 아래로 드리움)
+- `before_front.png (지움 · d4fa7341)` · `before_side.png (지움 · d4fa7341)` — 옛 요략세(허리 왼쪽에 칼을 옆으로 눕힘)
+- `after_front.png (지움 · d4fa7341)` · `after_side.png (지움 · d4fa7341)` — 새 요략세(칼끝을 왼 앞 아래로 드리움)
 
 ## 5. 남은 것
 

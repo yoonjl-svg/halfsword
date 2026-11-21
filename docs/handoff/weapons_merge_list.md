@@ -47,7 +47,7 @@
 ## 4. ⚠ 게임에 닿는 것 — 따로 결정
 | 경로 | 바뀜 | 잰 값 | 상태 |
 |---|---|---|---|
-| `src/weapons.js` 라이트세이버 `grip: 'one-hand' → 'two-hand'` (+ 주석 3줄) | 라이트세이버를 두 손으로 쥔다(한손 자세표 대신 두손 표). 겉모습 `docs/handoff/lightsaber_two_hand.jpg` | ability_test 48판 롱소드 상대 63% → 65% (95% 48~75 / 50~77) | 사장님이 "찾아보고 정해"로 맡기신 결정(무기 PM 결정). main 에 올리면 라이트세이버 판만 달라진다 |
+| `src/weapons.js` 라이트세이버 `grip: 'one-hand' → 'two-hand'` (+ 주석 3줄) | 라이트세이버를 두 손으로 쥔다(한손 자세표 대신 두손 표). 겉모습 `docs/handoff/lightsaber_two_hand.jpg (지움 · 8990e7ad)` | ability_test 48판 롱소드 상대 63% → 65% (95% 48~75 / 50~77) | 사장님이 "찾아보고 정해"로 맡기신 결정(무기 PM 결정). main 에 올리면 라이트세이버 판만 달라진다 |
 | (적용 안 함) 밸런스 수치 3개 + 청강검 선택안 | — | `docs/weapon_motions.md` §6-2 | 사장님 결정 대기 |
 
 - 라이트세이버 한 줄만 빼고 올리려면: `weapons.js` 는 위 2절 두 부분(분류·motionSkip)만 손으로 옮긴다.

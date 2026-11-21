@@ -147,7 +147,7 @@
 
 ## 5. 그림
 
-- `docs/handoff/italian_forte/sheet_q34.png` — 위 세 줄 전 · 후(플레이어 레이피어 · 막기 단추로 그 줄을 1.4 s 붙잡음 · q34). 칸 밑에 잰 코등이 자리 · 칼끝 각.
+- `docs/handoff/italian_forte/sheet_q34.png (지움 · be3c0b5c)` — 위 세 줄 전 · 후(플레이어 레이피어 · 막기 단추로 그 줄을 1.4 s 붙잡음 · q34). 칸 밑에 잰 코등이 자리 · 칼끝 각.
   - 왼쪽 위: 같음(후보에서도 그대로) · 오른쪽 위: 칼끝을 26° 든 굽은 팔 → 팔을 뻗고 칼끝을 곧게(뻗은 2번) · 머리 위: 왼쪽에 당긴 손 → 팔을 곧게 뻗은 3번.
 - 찍은 판: `npm run build` → `vite preview` → `tools/browser/school_parry_shots.mjs PLAYER=1 SHOTS=highL,highR,highC WEAPON=rapier VIEWS=q34,side CAM_R=1.6`(후 = `QUERY=&itForte=2`). **PLAYER=1 은 이번에 더한 도구 칸** — 전엔 AI 만 찍었는데, AI 는 이미 원전 꼴로 서서 전 · 후가 같게 나온다(AI 판 사진도 찍어 확인 — 오른쪽 위 코등이 [0.66 · 0.11 · 0.12] 전 · 후 같음). 콘솔 오류 0.
 

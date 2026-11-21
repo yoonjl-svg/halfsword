@@ -107,7 +107,7 @@
   - 까닭: 같은 길이·시간에서 '옅다'가 '덜 빠르다'로 바로 읽힌다. 남는 시간까지 줄이면 두 수 길이(0.4 s)보다 짧아져 첫 수 잔상이 둘째 수 전에 사라진다.
 - 두 수가 0.4 s 라 남는 시간에 가깝다. 그래서 연환 잔상만 **그리는 동안은 옅어지지 않고 다 그린 때부터** 0.5 s 에 옅어진다. 섬광은 처음 0.08 s 그대로.
 - 화면 번쩍임(발도만)은 넣지 않았다.
-- 그림 (왼쪽 고노센 ×1.0 · 오른쪽 연환 ×0.5, 옆 카메라, 사진만 잔상 시간을 늘림): `docs/handoff/cn_combo2/arc_iai_vs_combo.png`
+- 그림 (왼쪽 고노센 ×1.0 · 오른쪽 연환 ×0.5, 옆 카메라, 사진만 잔상 시간을 늘림): `docs/handoff/cn_combo2/arc_iai_vs_combo.png (지움 · 3bbe4917)`
 
 ## 6. 사람에 가까운 확인 (브라우저)
 - 도구: `node tools/browser/cn_combo_probe.mjs <주소> <폴더> early 40` (vite preview 4231).
@@ -203,7 +203,7 @@
 | 끝 | 패드 길 끝 | 호 끝(칼은 상대 몸 옆 밖). 찌름으로 끝나면(거정세) 온 길로 뽑음 |
 | 반걸음 | 수 시간의 앞 절반 | 수 시간 내내. 칼끝이 땅에 대해 지나는 길(몸 틀 길 + 반걸음)로 시간을 잡아 칼끝 빠르기를 같은 값에 둔다 |
 
-- 그림 (왼쪽 두 칸 전 · 오른쪽 두 칸 후, 각 옆·앞. 빨강 칼끝 길 · 파랑 칼 팔 · 초록 빈팔 · 회색 상대 몸통): `docs/handoff/cn_combo3/path_geojeong.png` · `path_pyodu.png` · `path_bongdu.png`.
+- 그림 (왼쪽 두 칸 전 · 오른쪽 두 칸 후, 각 옆·앞. 빨강 칼끝 길 · 파랑 칼 팔 · 초록 빈팔 · 회색 상대 몸통): `docs/handoff/cn_combo3/path_geojeong.png (지움 · 8f2e03b1)` · `path_pyodu.png (지움 · 8f2e03b1)` · `path_bongdu.png (지움 · e48b4ea5)`.
 - 스위치: `?cnPath=0` = 전 패드 길 · `?cnGeojeongOrder=thrustFirst` = 거정세도 찌름 → 벰.
 - 곳: `src/secret_instant.js` comboPlanDyn · comboNext (수마다 그 순간 자리에서 길을 짬 — 막히면 다음 수도 그 자리에서) · `src/schools.js` 수마다 `dyn`.
 - 고친 결함 둘 (48 판에서 찾음):
@@ -240,7 +240,7 @@
 - 한 손: 발도 동안 칼 쪽 손만 쥐고, 빈손은 칼을 놓고 왼 허리 뒤(`iaiSayaHand` [앞 −0.12, 위 −0.32, 바깥 0.14] m — 칼집을 뒤로 당김 鞘引き **[추정]**)로. 칼집 물체는 없어 손 자리만. 발도가 끝나면(경직 붙잡기) 빈손이 다시 쥔다.
 - 큰 칼: 무기 표의 틀이 'heavy'(모노호시자오 — 칼날 0.90 m 노다치)면 두 손 그대로. 새 규칙 없이 이미 있는 틀 값을 읽음. 打刀(틀 'two')는 한 손.
 - 연환 빠르기 기준(발도 빠르기)은 가로 길 그대로 — 고노센 길을 바꿔도 연환 빠르기는 안 바뀐다.
-- 그림: `docs/handoff/cn_combo3/path_iai.png` (전 가로 휩쓸기·두 손 · 후 올려베기·한 손, 옆·앞).
+- 그림: `docs/handoff/cn_combo3/path_iai.png (지움 · 8f2e03b1)` (전 가로 휩쓸기·두 손 · 후 올려베기·한 손, 옆·앞).
 
 ### 11.6 측정
 - 연환 맞힘 (서 있는 몸, 8 씨앗 — `cn_combo_speed.mjs`, 칼끝 평균 8.2~9.2 m/s 그대로):
@@ -333,7 +333,7 @@
 - 칼끝 평균 빠르기·잔상 세기는 그대로(고노센의 0.3).
 
 ### 12.4 궤적 그림 (`docs/handoff/cn_combo4/`)
-- `path_geojeong.png` · `path_pyodu.png` · `path_bongdu.png` — 왼쪽 두 칸 = 전 두 수(옆·앞), 오른쪽 두 칸 = 새 세 수(옆·앞).
+- `path_geojeong.png (지움 · 8f2e03b1)` · `path_pyodu.png (지움 · 8f2e03b1)` · `path_bongdu.png (지움 · e48b4ea5)` — 왼쪽 두 칸 = 전 두 수(옆·앞), 오른쪽 두 칸 = 새 세 수(옆·앞).
 - 회색 = 상대 몸, 엷은 파랑 = 나(처음·끝). 칼끝 길: 수 1 빨강 · 2 주황 · 3 보라. 굵은 선 = 맞힘 토막, 가는 선 = 굴림. 동그라미 숫자 = 그 수가 시작하는 자리. 초록 화살 = 마지막 수 동안 내 가슴이 움직인 길(아래 글자 'chest fwd −18 cm' = 18 cm 물러남).
 - 도구: `node tools/sim/secret_trace.mjs <json>` (전: `with_config.mjs SECRET.cnCombo=2 secret_trace.mjs <json>`) → `python3 tools/sim/cn_combo_trace_draw.py <전> <후> <자세> <png>`.
 
@@ -359,5 +359,5 @@
   4. 그 뒤에 왼손이 다시 쥔다.
 - 잰 흐름(打刀, 서 있는 몸): 경직 0.17~1.85 s 동안 칼 손목이 오른쪽 0.38~0.42 m 에 뻗어 있고 왼손은 놓음 → 1.9~2.0 s 칼 손목이 가운데(0.03~0.08 m)로 → **2.1 s 에 왼손이 다시 쥠**.
 - 打刀 등 한 손 발도 칼만이다. 모노호시자오(틀 'heavy')는 두 손 그대로. `?iaiRise=0` 이면 전처럼(두 손).
-- 그림: `docs/handoff/cn_combo4/iai_hold_stiff.png` (경직 중 — 칼 팔 파랑이 오른 위로 뻗고 왼팔 초록은 허리) · `iai_hold_regrip.png` (다시 쥔 뒤 — 칼이 가운데, 왼손이 칼자루). 도구 `TRACE_STIFF=2.4 node tools/sim/secret_trace.mjs <json>` → `python3 tools/sim/iai_hold_draw.py <json> <초> <png>`.
+- 그림: `docs/handoff/cn_combo4/iai_hold_stiff.png (지움 · e48b4ea5)` (경직 중 — 칼 팔 파랑이 오른 위로 뻗고 왼팔 초록은 허리) · `iai_hold_regrip.png (지움 · e48b4ea5)` (다시 쥔 뒤 — 칼이 가운데, 왼손이 칼자루). 도구 `TRACE_STIFF=2.4 node tools/sim/secret_trace.mjs <json>` → `python3 tools/sim/iai_hold_draw.py <json> <초> <png>`.
 - 곳: `src/secret_instant.js` endIai·holdIai(`f.iaiOneHold`) · `src/fighter.js` applyPose·offHand. 새 시간 값 없음(경직·풀기 시간 그대로).

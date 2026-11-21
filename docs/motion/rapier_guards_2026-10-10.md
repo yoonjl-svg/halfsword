@@ -109,10 +109,10 @@ AI 가 간 볼 때(2 s 뒤) 머문 비율 — 96 판 합 (고른 자세 · 괄�
 
 `tools/browser/rapier_guard_shots.mjs <미리보기 주소> <폴더>` — AI 의 `pickGuard` 를 한 자세로 고정하고 공격을 막아(시험만) 간 보기 4 s 째를 빈손 쪽 옆·앞(상대 쪽 35°)·3/4 에서. 전은 0e31368 빌드에서 `GUARDS=tag,tagR,ochsR,pflugR,langort PREFIX=rapier_guard_before`. 콘솔 에러 0.
 
-- `docs/handoff/rapier_guard_compare.png` — 위 = 전 지붕(사장님이 본 자세), 아래 = 후 3번 자세(주 자세)
-- `docs/handoff/rapier_guard_before.png` — 전 AI 간 보는 자세 다섯(머문 비율 순)
-- `docs/handoff/rapier_guard_after.png` — 후 AI 간 보는 자세 다섯
-- `docs/handoff/rapier_guard_player_vs_terza.png` — 플레이어 쉼 대 AI 3번 자세
+- `docs/handoff/rapier_guard_compare.png (지움 · fb9fa1a5)` — 위 = 전 지붕(사장님이 본 자세), 아래 = 후 3번 자세(주 자세)
+- `docs/handoff/rapier_guard_before.png (지움 · fb9fa1a5)` — 전 AI 간 보는 자세 다섯(머문 비율 순)
+- `docs/handoff/rapier_guard_after.png (지움 · fb9fa1a5)` — 후 AI 간 보는 자세 다섯
+- `docs/handoff/rapier_guard_player_vs_terza.png (지움 · 1e171c25)` — 플레이어 쉼 대 AI 3번 자세
 
 캡처 때 잰 값 (몸 기준: 앞 = 바라보는 쪽, 위 = 가슴 중심에서, 옆 = 칼 든 쪽 + · 코등이 자리 m · 땅에서 높이 m · 칼끝 올림/옆 ° · 칼 팔꿈치 굽힘 °):
 

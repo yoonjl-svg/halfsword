@@ -346,11 +346,11 @@
 | vite build · name_policy · 금지 이름 | 통과 · 0 · 0 | 통과 · 0 · 0 |
 
 ### 10-4. 캡처 (`tools/browser/iberchina_shots.mjs`, 콘솔 에러 0)
-- `docs/handoff/iberian_side_before_player.png`·`_after_player.png` — 츠바이핸더 플레이어 오른쪽 옆걸음, 뒤에서. 후: 가는 쪽 발이 넓게 나가 두 발이 크게 벌어짐(걸음당 0.55 m), 엇갈림 없음
-- `docs/handoff/iberian_side_before_ai.png`·`_after_ai.png` — 츠바이핸더 AI 가 간 보며 옆으로 돌 때, 뒤에서
-- `docs/handoff/chinese_bow_before_player.png`·`_after_player.png` — 청강검 플레이어 베기 걸음(lunge 0.5 + 끌어붙임) 디딘 뒤 0.08~0.2 s, 옆에서. 골반 0.859 → **0.783 m**, 앞무릎 굽힘·뒷다리 뻗음
-- `docs/handoff/chinese_bow_before_ai.png`·`_after_ai.png` — 청강검 AI 베기 걸음(전 腰擊 · 후 과좌격 zornhauL) 디딘 뒤. 골반 0.90 → **0.805 m**
-- **`docs/handoff/chinese_bow_pyodu_before_ai.png`·`_after_ai.png` — 표두격(oberhau) 내려치기**(시험만 AI 기술 선호를 표두격으로 몰아줌), 디딘 뒤 0.12~0.3 s. 골반 0.91 → **0.733 m**, 두 발 사이 0.88 → **1.16 m** — 앞무릎 깊이, 뒷다리 곧게, 몸통 곧추섬이 분명히 보임
+- `docs/handoff/iberian_side_before_player.png (지움 · 4b603588)`·`_after_player.png` — 츠바이핸더 플레이어 오른쪽 옆걸음, 뒤에서. 후: 가는 쪽 발이 넓게 나가 두 발이 크게 벌어짐(걸음당 0.55 m), 엇갈림 없음
+- `docs/handoff/iberian_side_before_ai.png (지움 · 4b603588)`·`_after_ai.png` — 츠바이핸더 AI 가 간 보며 옆으로 돌 때, 뒤에서
+- `docs/handoff/chinese_bow_before_player.png (지움 · 4b603588)`·`_after_player.png` — 청강검 플레이어 베기 걸음(lunge 0.5 + 끌어붙임) 디딘 뒤 0.08~0.2 s, 옆에서. 골반 0.859 → **0.783 m**, 앞무릎 굽힘·뒷다리 뻗음
+- `docs/handoff/chinese_bow_before_ai.png (지움 · 4b603588)`·`_after_ai.png` — 청강검 AI 베기 걸음(전 腰擊 · 후 과좌격 zornhauL) 디딘 뒤. 골반 0.90 → **0.805 m**
+- **`docs/handoff/chinese_bow_pyodu_before_ai.png (지움 · 4b603588)`·`_after_ai.png` — 표두격(oberhau) 내려치기**(시험만 AI 기술 선호를 표두격으로 몰아줌), 디딘 뒤 0.12~0.3 s. 골반 0.91 → **0.733 m**, 두 발 사이 0.88 → **1.16 m** — 앞무릎 깊이, 뒷다리 곧게, 몸통 곧추섬이 분명히 보임
 
 ### 10-5. 남은 것
 1. 활 자세 깊이(허벅지 수평)·뒷다리 펴짐은 상한 안에선 여기까지 — 더 깊게는 비기 자세 통로(상한 밖) 또는 상한 올림(사장님).

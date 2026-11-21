@@ -8,10 +8,10 @@
 - 역할 분담안(main `docs/pm_roles_charter.md` 부록 B): 에너지 눈금(150 J과 500 J이 다르게), 디딤 소리(동작 PM의 딛는 시각 φc·gait onTouchdown 'strike'), 센 타격·딛기가 소리에 맞는지 확인, 라운드 판정에 소리 의견.
 
 ## 진행 중 / 끝남
-- [끝남] 32차(9/30): 참수 소리 — 절단감 `decapitate`(목소리 없음) + 떨어진 머리 `headLand`(맨머리/투구). BodySounds 로 연결, main.js 변경 없음. 그림 `decap_sound_before_after.png`.
+- [끝남] 32차(9/30): 참수 소리 — 절단감 `decapitate`(목소리 없음) + 떨어진 머리 `headLand`(맨머리/투구). BodySounds 로 연결, main.js 변경 없음. 그림 `decap_sound_before_after.png (지움 · ff20cdba)`.
 - [진행 중] 31→33→34차(9/30): 칼→몸 소리 후보. 31차 "둔기·죽도" → 33차 날 선 칼("애매") → 34차 사무라이 쇼다운식(`samsho`) → 35차 "하오마루·갠주로·한조의 강베기처럼": 두꺼운 "쩌억" + 강베기 판 + 긴 피. 사장님 선택 대기.
 - [끝남] 30차: 큰 타격 배경 소리 간격 `SOUND.stageHitGap` = 10초(`_spaced`; 종·불길·천·돌·새·박쥐·나뭇잎·풍경·까마귀). 타격음은 그대로.
-- [끝남] 30차: 리볼버 총성 `sound.gunshot` (.357/.44급, 무대 방 울림 + 바깥 메아리 꼬리). gun.js `gunshotSound` 첫 줄이 넘긴다. 전후 그림 `gunshot_before_after.png`. 사장님 내일 시험.
+- [끝남] 30차: 리볼버 총성 `sound.gunshot` (.357/.44급, 무대 방 울림 + 바깥 메아리 꼬리). gun.js `gunshotSound` 첫 줄이 넘긴다. 전후 그림 `gunshot_before_after.png (지움 · 613c0c7d)`. 사장님 내일 시험.
 - [끝남] 세기 눈금 준비: `sound.hitWeight(energy, e0)` — 베기·찌르기·강철 충돌 공통. `SOUND.hitScale`('legacy' 기본 = 지금 소리, 'log' = 200 J 위로 로그 무게). `sounds.html` "세기 눈금 A/B" 3행(150/300/500 J). 게임 호출은 안 바꿈.
 - [끝남] 디딤 훅: `sound.footStrike(strength 0~1, pos)`. 아직 부르는 곳 없음(디렉터 R2/R4). `sounds.html` "디딤" 행.
 - [안 함] 총성 후보: 디렉터 보류(사장님이 원하실 때).

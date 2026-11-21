@@ -432,7 +432,7 @@
 fights12 **`5480fbd3`** (dead 7/12 · downs 1.4 · opened 9.1) — 새 기준(독일 AI 궤적 조건) · live `e7ee3d96` · ft `433ac984` 그대로 · corr IDENTICAL 12/12 · weapon_smoke OK 17/17 · vite build 됨.
 
 ### 13-5. 브라우저 (`tools/browser/secret_instant_shots.mjs`, 콘솔 에러 0)
-`docs/handoff/secret_instant_player.png`(내 모노호시자오 순간 베기 잔상 — 옆에서, 0.6 m 내딛음, 이번엔 헛침) · `secret_instant_foe.png`(상대 打刀 순간 베기 잔상 — 내 목을 벰 195 J) · `secret_instant_stiff.png`(경직: 칼끝을 떨어뜨린 자세 + '경직' — 같은 도구의 앞 실행, instantJ 260 일 때 찍음; 경직 자세·알림은 지금 코드와 같다. 마지막 실행은 경직 0.5 s 전에 내가 맞아 넘어져 경직 사진이 없었다). 소프트웨어 GL 은 화면이 느려 시험에서만 잔상 시간을 8 s 로 늘렸고, 상대 비기가 150 s(벽시계) 안에 저절로 안 나오면 직접 냈다. 真向 순간 베기는 뒤 카메라에서는 쓸린 면이 모로 서 선으로만 보여 사진만 옆에서 찍었다(게임 카메라는 그대로) — 결정 후보 4.
+`docs/handoff/secret_instant_player.png (지움 · 68a5b86b)`(내 모노호시자오 순간 베기 잔상 — 옆에서, 0.6 m 내딛음, 이번엔 헛침) · `secret_instant_foe.png (지움 · 68a5b86b)`(상대 打刀 순간 베기 잔상 — 내 목을 벰 195 J) · `secret_instant_stiff.png (지움 · 68a5b86b)`(경직: 칼끝을 떨어뜨린 자세 + '경직' — 같은 도구의 앞 실행, instantJ 260 일 때 찍음; 경직 자세·알림은 지금 코드와 같다. 마지막 실행은 경직 0.5 s 전에 내가 맞아 넘어져 경직 사진이 없었다). 소프트웨어 GL 은 화면이 느려 시험에서만 잔상 시간을 8 s 로 늘렸고, 상대 비기가 150 s(벽시계) 안에 저절로 안 나오면 직접 냈다. 真向 순간 베기는 뒤 카메라에서는 쓸린 면이 모로 서 선으로만 보여 사진만 옆에서 찍었다(게임 카메라는 그대로) — 결정 후보 4.
 
 ### 13-6. 해석이 들어간 곳
 - 목 = 가슴 → 머리 0.6 지점(목 관절 1.5 m 근처), 반지름 0.06 m. 머리는 콜라이더 공(r 0.1) 그대로.
@@ -509,13 +509,13 @@ main.js 프레임 누적 시간에 곱함(`acc += dt × scale × TEMPO`, 0.5~2 �
 fights12 `5480fbd3`(그대로 — fights12 판에 일본·이베리아 비기가 없다) · live `e7ee3d96` · ft `433ac984` · corr IDENTICAL 12/12 · weapon_smoke OK 17/17 · vite build 됨.
 
 ### 14-8. 브라우저 (`tools/browser/iai_shots.mjs`, 콘솔 에러 0)
-- `docs/handoff/iai_rear_1.png` — 내 모노호시자오 발도, **뒤쪽 게임 카메라**에서 가로 초승달 잔상(넓게 보임).
-- `docs/handoff/iai_rear_2.png` — 상대 모노호시자오 발도(뒤쪽 카메라, 내 위팔 벰 193 J). 대기 자세의 상대에게 W 로 걸어 들어갔고, 이번 실행은 상대가 칼을 들기 전이라 직접 냈다(앞 실행에선 저절로 나와 190 J).
-- `docs/handoff/iai_side.png` — 같은 발도를 옆에서.
-- `docs/handoff/iai_ready.png` — 상대의 발도 대기(간격 밖 1.5 s, 웅크림·두 손 왼 허리·칼끝 뒤 아래), 옆에서.
-- `docs/handoff/iai_stiff.png` — 발도 뒤 경직(따라 베기 끝에서 앞으로 뻗은 채) + '경직 · 상대 일본 · 비기 뒤'.
-- `docs/handoff/iberian_sweep_cam.png` — 내 츠바이핸더 휩쓸기 중 카메라가 사이드스텝 쪽으로 돈 장면(머리 위 고리 잔상).
-- `docs/handoff/iberian_sweep_trail.png` — 휩쓸기 잔상과 같은 칼의 보통 잔상(칼 아래 옅은 띠)이 같은 색. 느린 화면이라 시험에서만 보통 잔상 문턱을 낮추고 손가락 흔적 선(화면 UI, 주황)은 껐다.
+- `docs/handoff/iai_rear_1.png (지움 · 6e62a2ee)` — 내 모노호시자오 발도, **뒤쪽 게임 카메라**에서 가로 초승달 잔상(넓게 보임).
+- `docs/handoff/iai_rear_2.png (지움 · 6e62a2ee)` — 상대 모노호시자오 발도(뒤쪽 카메라, 내 위팔 벰 193 J). 대기 자세의 상대에게 W 로 걸어 들어갔고, 이번 실행은 상대가 칼을 들기 전이라 직접 냈다(앞 실행에선 저절로 나와 190 J).
+- `docs/handoff/iai_side.png (지움 · 6e62a2ee)` — 같은 발도를 옆에서.
+- `docs/handoff/iai_ready.png (지움 · 6e62a2ee)` — 상대의 발도 대기(간격 밖 1.5 s, 웅크림·두 손 왼 허리·칼끝 뒤 아래), 옆에서.
+- `docs/handoff/iai_stiff.png (지움 · 6e62a2ee)` — 발도 뒤 경직(따라 베기 끝에서 앞으로 뻗은 채) + '경직 · 상대 일본 · 비기 뒤'.
+- `docs/handoff/iberian_sweep_cam.png (지움 · 6e62a2ee)` — 내 츠바이핸더 휩쓸기 중 카메라가 사이드스텝 쪽으로 돈 장면(머리 위 고리 잔상).
+- `docs/handoff/iberian_sweep_trail.png (지움 · 6e62a2ee)` — 휩쓸기 잔상과 같은 칼의 보통 잔상(칼 아래 옅은 띠)이 같은 색. 느린 화면이라 시험에서만 보통 잔상 문턱을 낮추고 손가락 흔적 선(화면 UI, 주황)은 껐다.
 - 시험에서만: 잔상 8 s · 창 5 s · 직접 냄(위). 콘솔 에러 0.
 
 ### 14-9. 사장님 결정 후보
@@ -575,9 +575,9 @@ main e7564b7 위. 시계: 시작 10/10 04:28 KST → 끝은 보고서에. '전' 
 fights12 `5480fbd3` · live `e7ee3d96` · ft `433ac984` · corr IDENTICAL 12/12 · weapon_smoke OK 17/17 · vite build 됨 · 이름 방침 위반 0 (모두 e7564b7 그대로 — fights12 판에 이 비기들이 없다).
 
 ### 15-7. 브라우저 (콘솔 에러 0)
-- `docs/handoff/stance_iai_ready.png` · `stance_iai_draw.png`(발도 길 75 % 스텝에서 멈춤) · `stance_iai_stiff.png` · `stance_lunge.png` — 옆에서 (`tools/browser/stance_shots.mjs`).
-- `docs/handoff/iberian_inside_sweep.png` — 가로 길 60 % 넘은 스텝에서 멈춤, 오른 어깨 뒤 → 왼쪽으로 쓰는 큰 초승달 잔상 · `iberian_inside_shove.png` — 막혀 0.25 s 뒤(칼이 내 칼에서 멈춤, 내가 밀림).
-- `docs/handoff/lianhuan_loops.png` — 둘째 이음새 고리가 끝난 스텝(坦腹刺 베기 길 시작)에서 멈춤, 머리 위 고리 자취.
+- `docs/handoff/stance_iai_ready.png (지움 · 4d04a095)` · `stance_iai_draw.png (지움 · 4d04a095)`(발도 길 75 % 스텝에서 멈춤) · `stance_iai_stiff.png (지움 · 4d04a095)` · `stance_lunge.png (지움 · 4d04a095)` — 옆에서 (`tools/browser/stance_shots.mjs`).
+- `docs/handoff/iberian_inside_sweep.png (지움 · 4d04a095)` — 가로 길 60 % 넘은 스텝에서 멈춤, 오른 어깨 뒤 → 왼쪽으로 쓰는 큰 초승달 잔상 · `iberian_inside_shove.png (지움 · 4d04a095)` — 막혀 0.25 s 뒤(칼이 내 칼에서 멈춤, 내가 밀림).
+- `docs/handoff/lianhuan_loops.png (지움 · 4d04a095)` — 둘째 이음새 고리가 끝난 스텝(坦腹刺 베기 길 시작)에서 멈춤, 머리 위 고리 자취.
 - 노란 선 = 시험만 덧그린 상대 칼끝 자취(물리 스텝마다). 시험에서만: 기술 이름 알림 가림 · 일시정지로 멈춰 찍음(메뉴 가림) · 이베리아·연환·런지 장면에선 내 상처 끔 · 오래 안 나오면 직접 냄 (`tools/browser/iberian_lianhuan_shots.mjs`).
 
 ### 15-8. 사장님 결정 후보
