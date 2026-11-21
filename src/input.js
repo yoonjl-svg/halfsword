@@ -21,6 +21,14 @@ export class Input {
     this.mobileIntent = { verticalGain }; // 폰 touch 세로 배율 1.35 (시뮬 도구는 1 을 넘겨 10/7 전 기준선을 지킨다)
     this.handDX = 0; // 누적된 손 이동량(m). +x = 화면 오른쪽
     this.handDY = 0; // +y = 위
+    // 손가락 빠르기 재기 (감사 가지 N-032 — main.js 가 '이동 ÷ 그 이동이 실제로 걸린 시간'으로 긋기를 판단 · 아래 handSpanMs):
+    //  handMoves = 지난 consumeHandDelta 뒤 손을 움직인 사건 수 · moveT0 · moveT1 = 그 첫 · 마지막 사건 시각(e.timeStamp ms) ·
+    //  moveBefore = 그 첫 사건 앞 손 사건(움직임 · 누름) 시각 · handT = 마지막 손 사건 시각 (없으면 null)
+    this.handMoves = 0;
+    this.moveT0 = 0;
+    this.moveT1 = 0;
+    this.moveBefore = null;
+    this.handT = null;
     this.keys = new Set();
     this.stickMove = { x: 0, y: 0 }; // 화면 조이스틱 (터치 이동)
     this.stickReach = 0; // 이동 스틱 손잡이가 길(MOVE_STICK_R)의 몇 몫까지 나갔나 0 ~ 1 (데드존 · 걷기 몫 바꾸기 전 — 뛰기 runReach)
@@ -58,6 +66,8 @@ export class Input {
   resetHand() {
     this.handDX = 0;
     this.handDY = 0;
+    this.handMoves = 0;
+    this.handT = null;
     this.taps = 0;
     this.press = null;
     this.activeTouch = null;
@@ -106,6 +116,7 @@ export class Input {
     // 시간은 이벤트가 생긴 시각(e.timeStamp)으로 잰다: 한 프레임이 길면 핸들러가 늦게 돌아 누른 시간이 부풀려진다
     // 마우스는 왼쪽(주) 버튼 클릭만 찌르기 (오른쪽·가운데 버튼은 아니다)
     this.press = { id: e.pointerId, t: e.timeStamp || performance.now(), x: e.clientX, y: e.clientY, moved: 0, mouse, ok: !this.tapOnDown && (!mouse || (lockedBefore && e.button === 0)) }; // 권총은 이미 셌다
+    this.handT = this.press.t; // 첫 움직임은 닿은 자리 · 때부터 (handSpanMs)
     if (!mouse) this.trail?.addTouch(e.clientX, e.clientY, performance.now() / 1000);
   }
 
@@ -116,6 +127,7 @@ export class Input {
       if (Math.abs(e.movementX) > 250 || Math.abs(e.movementY) > 250) return;
       this.handDX += e.movementX * INPUT.mouseSensitivity;
       this.handDY -= e.movementY * INPUT.mouseSensitivity;
+      this.noteHandMove(e);
       if (this.press?.mouse) this.press.moved += Math.hypot(e.movementX, e.movementY);
       return;
     }
@@ -125,9 +137,22 @@ export class Input {
     const delta = mapMobileHandDelta({ dx: e.clientX - this.lastX, dy: e.clientY - this.lastY, height: window.innerHeight, sensitivity: INPUT.touchSensitivity, pointerType: e.pointerType, verticalGain: this.mobileIntent.verticalGain });
     this.handDX += delta.x;
     this.handDY += delta.y;
+    this.noteHandMove(e);
     this.lastX = e.clientX;
     this.lastY = e.clientY;
     this.trail?.addTouch(e.clientX, e.clientY, performance.now() / 1000);
+  }
+
+  /** 손을 움직인 사건 하나 (handSpanMs 가 읽는 수 · 시각) */
+  noteHandMove(e) {
+    const t = e.timeStamp || performance.now();
+    if (this.handMoves === 0) {
+      this.moveT0 = t;
+      this.moveBefore = this.handT;
+    }
+    this.moveT1 = t;
+    this.handT = t;
+    this.handMoves++;
   }
 
   onUp(e) {
@@ -165,10 +190,13 @@ export class Input {
     return n;
   }
 
+  /** 지난번 이후 손 이동량 x · y (m) · 그 이동을 낸 사건 수 n · 첫 사건부터 마지막 사건까지 spreadMs · 앞 손 사건부터 마지막 사건까지 sinceMs (모르면 Infinity) — handSpanMs 가 읽음 */
   consumeHandDelta() {
-    const d = { x: this.handDX, y: this.handDY };
+    const n = this.handMoves;
+    const d = { x: this.handDX, y: this.handDY, n, spreadMs: n > 1 ? this.moveT1 - this.moveT0 : 0, sinceMs: n > 0 && this.moveBefore != null ? this.moveT1 - this.moveBefore : Infinity };
     this.handDX = 0;
     this.handDY = 0;
+    this.handMoves = 0;
     return d;
   }
 
@@ -202,6 +230,21 @@ export class Input {
     if (dirKey && (k.has('ShiftLeft') || k.has('ShiftRight'))) return 1;
     return this.stickReach;
   }
+}
+
+/**
+ * 이번 프레임 손 이동이 실제로 걸린 시간 (ms — 감사 가지 N-032 · main.js 의 긋기 판단과 고유 동작 손가락 빠르기가 '이동 ÷ 이 시간'):
+ *  사건이 하나 이하면 이 프레임 시간 그대로 — 0.1 s 로 자른 dt 가 아니라 자르지 않은 값이라 긴 프레임 한 장에 쌓인 느린 손놀림이 부풀지 않는다.
+ *  둘 이상이 한 프레임에 들었으면(늦게 닿은 사건이 다음 프레임에 겹침 등) 사건마다 표본 간격 하나: 간격은 그 사건들의 시각 차로 잰다 —
+ *  시각이 모두 같아 간격을 모르면 한 프레임으로 본다(브라우저는 보통 프레임마다 움직임 하나 · 사건 하나일 때의 옛 가정과 같음).
+ *  앞 손 사건(움직임 · 누름) 뒤 실제로 지난 시간보다 길게 잡지 않고, 이 프레임 시간보다 짧게도 잡지 않는다 — 고른 프레임의 판단은 전과 같다
+ * @param {{ n: number, spreadMs: number, sinceMs: number }} d consumeHandDelta 가 준 것
+ * @param {number} frameMs 이 프레임 시간 (자르지 않은 ms)
+ */
+export function handSpanMs(d, frameMs) {
+  if (!(d.n >= 2)) return frameMs;
+  const step = d.spreadMs > 0 ? d.spreadMs / (d.n - 1) : frameMs;
+  return Math.max(frameMs, Math.min(d.n * step, d.sinceMs));
 }
 
 /**

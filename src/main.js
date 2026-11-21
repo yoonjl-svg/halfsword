@@ -31,7 +31,7 @@ import { profBody, teamBodyProficiency, deVitalityK } from './prof_body.js'; // 
 import { letterMul } from './skill_tree_data.js'; // 편지 — 카드 뽑기 유파 무게 (10/21)
 import { convertSeals } from './seal_coins.js'; // 이미 받은 인장 → 금화 한 번 — 판을 처음 연 때 어느 길이든 (아래 testRoute 다음 · 10/16 08:1x 인장 없앰)
 import { InputTrail } from './trail.js';
-import { Input, attachStick, attachAtkStick, useAtkStick } from './input.js';
+import { Input, attachStick, attachAtkStick, useAtkStick, handSpanMs } from './input.js';
 import { atkStickStep } from './atk_stick.js'; // 공격 조이스틱 (11/17 — 설정 '공격 조이스틱')
 import { LOOKS, getLook } from './looks.js';
 import { AI } from './ai.js';
@@ -3079,7 +3079,7 @@ const renderCap = createRenderCap();
 let moveStickRun = false; // 이동 스틱 뛰기 표시(#moveStick.run)가 켜져 있나 — 바뀔 때만 DOM 을 고친다
 let moveStickHold = 0; // 이동 스틱 테두리가 차오른 몫(--runHold — 끝까지 민 채 버틴 시간 ÷ RUN.hold · 1/40 걸음) — 바뀔 때만 DOM 을 고친다
 /** 프레임마다 사람 몸의 입력 (손 · 탭 · 비기 창 · 막기 단추 · 고유 동작 · 감정 · 걸음) — 게임 루프에서 옮김 (줄 그대로) */
-function playerInputFrame(dt, now) {
+function playerInputFrame(dt, now, frameMs = dt * 1000) {
   // 손 목표 갱신 (입력 → 플레이어)
   const d = input.consumeHandDelta();
   // 공격 조이스틱 (11/17 — src/atk_stick.js): 손잡이 자리가 정한 손 목표 몫을 손가락 끌기 몫에 더함 — 아래 긋기 · 비기 · 원 · 고유 동작 · 막기 · 기력 판정이 손가락과 같은 길로 읽는다
@@ -3098,7 +3098,10 @@ function playerInputFrame(dt, now) {
   const tapsIn = taps; // 뛰기 끊기 (11/18 — 아래 runBreak): 이 프레임에 들어온 공격 입력 (뒤 길에서 0 으로 바뀌기 전)
   // 플레이어 비기 (10/9 23:5x): 창이 열려 있을 때 공격 입력(톡 = 찌르기, 휘두르기만큼 빠른 끌기 = 베기)이 오면 그 입력 대신 비기 완벽 실행.
   //  실행·경직 동안은 칼 입력(끌기·톡)을 무시한다 — 발(스틱)은 실행 동안 내 것, 경직 동안은 안 듣는다 (사장님 10/10 20:5x '잠깐 아예 못 움직이게' — 칼은 skill.js holdStiff 가 멈춰 둔다)
-  const swipe = Math.hypot(d.x, d.y) / Math.max(dt, 1e-3) >= CONFIG.SKILL.swingSpeed;
+  // 손가락 빠르기 (감사 가지 N-032): 이번 프레임 이동 ÷ 그 이동이 실제로 걸린 시간 (input.js handSpanMs) — 0.1 s 로 자른 dt 가 아니라 자르지 않은 프레임 시간이라
+  //  긴 프레임 한 장에 쌓인 느린 손놀림이 부풀지 않고, 한 프레임에 몰린 사건 둘은 표본 간격 둘로 나눈다. 고른 프레임에선 dt 와 같은 값 — 문턱 · 손맛 그대로
+  const spanS = handSpanMs(d, frameMs) / 1000;
+  const swipe = Math.hypot(d.x, d.y) / Math.max(spanS, 1e-3) >= CONFIG.SKILL.swingSpeed;
   const closeGate = closeInputGate(player, playerSecret); // 붙은 거리 규칙 (11/14 — 묶임 lock · 칼자루만 near · close_hold.js)
   let secBusy = exhausted || !!player.skill.secretPhase || closeGate.lock;
   const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly; // tapOnly(이탈리아 안다레 리솔루토 전 판)면 찌르기 입력(톡)만 · 10/25 21:0x 사장님 '공격하면 발동' 뒤 기본은 끌기도 비기 (schools.js tapOnly = SECRET.risolutoTap)
@@ -3146,7 +3149,8 @@ function playerInputFrame(dt, now) {
   // 고유 동작 강화 (10/14 — 10/13 이어 주기를 다시 만듦): 손가락 움직임을 알린다(긋기 읽기 · 다른 동작이 손을 쥐는지). 손 목표는 쥐지 않는다 — 손가락은 늘 그대로 더한다
   //  (사장님 결정 10/14 01:5x '궤적은 끝까지 내 손가락, 고유 동작은 손가락으로는 못 하는 몫만 더한다')
   //  둘째 값 = 손이 정말 쥐여 있나(막기가 손을 쥠 · 미리 받기) — 막기 단추를 쥔 채 친 탭은 막기가 놓아 주는 공격(위 G.broken)이라 칼끝 돌려 빼기 탭은 이것만 봄 (10/30 — UNIQUE_ASSIST.cavHeld)
-  player.skill.uniq?.feed(d.x, d.y, dt, guardHold || bufHold || !!playerGuard?.held, guardHold || bufHold);
+  //  시간은 위 긋기 판단과 같은 spanS (감사 가지 N-032 — 손가락 빠르기 fSpeed 도 휘두르기 문턱과 견줌 · 고른 프레임에선 dt 와 같은 값)
+  player.skill.uniq?.feed(d.x, d.y, spanS, guardHold || bufHold || !!playerGuard?.held, guardHold || bufHold);
   // 풍차 베기 (이베리아 B4 — 10/29 · unique_assist.js holdTick): 탭 입력을 끌지 않고 길게 누르면 감기 · 떼면 내려침 — 누름 상태를 알린다(비기 창이 열려 있으면 감지 않음 — 싱지르가 먼저).
   //  감는 동안은 손가락 움직임을 손 목표에 더하지 않는다(손은 감기가 쥔다)
   if (player.skill.uniq?.holdE) {
@@ -3240,7 +3244,7 @@ function frame(now) {
 
   if (state === 'fight' && player) {
     if (teamRun) teamFocus(); // 동시 대전: 보는 몸 · 그 상대 (enemy) 를 이 프레임 것으로
-    if (!teamRun || teamRun.human) playerInputFrame(dt, now); // 사람 몸의 입력 (1:1 은 늘 — 예전 그대로 · 동시 대전 지켜보기는 입력을 버린다)
+    if (!teamRun || teamRun.human) playerInputFrame(dt, now, frameMs); // 사람 몸의 입력 (1:1 은 늘 — 예전 그대로 · 동시 대전 지켜보기는 입력을 버린다)
     else input.consumeHandDelta(), input.consumeTaps();
 
     // 타격 순간 살짝 멈칫 + 판이 끝나면 슬로모션
