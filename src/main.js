@@ -3126,7 +3126,9 @@ function playerInputFrame(dt, now, frameMs = dt * 1000) {
   const spanS = handSpanMs(d, frameMs) / 1000;
   const swipe = Math.hypot(d.x, d.y) / Math.max(spanS, 1e-3) >= CONFIG.SKILL.swingSpeed;
   const closeGate = closeInputGate(player, playerSecret); // 붙은 거리 규칙 (11/14 — 묶임 lock · 칼자루만 near · close_hold.js)
-  let secBusy = exhausted || !!player.skill.secretPhase || closeGate.lock;
+  // 묶임(lock)은 비기 실행 중처럼 secBusy — 단 모르트슐라크 창이 열려 있으면(closeGate.mordThru — 사장님 11/22 '비기가 우선') 아래 비기 차례만 지나가고 그 뒤 차례는 그대로 막힘
+  let secBusy = exhausted || !!player.skill.secretPhase || (closeGate.lock && !closeGate.mordThru);
+  let secFired = false; // 이 프레임 공격 입력을 비기가 씀 (묶임 셈 closeInputApply spent)
   const secSwipe = swipe && !playerSecret?.S?.do?.tapOnly; // tapOnly(이탈리아 안다레 리솔루토 전 판)면 찌르기 입력(톡)만 · 10/25 21:0x 사장님 '공격하면 발동' 뒤 기본은 끌기도 비기 (schools.js tapOnly = SECRET.risolutoTap)
   // 11/11 알티바슈 포르트 비기: 무장 창은 톡 · 끌기로 나가지 않고(holdOwns — 보통 공격) 길게 눌러 메기로만(아래 holdInput armed) ·
   const atkWin = !!playerSecret?.open && !playerSecret.holdOwns();
@@ -3137,9 +3139,11 @@ function playerInputFrame(dt, now, frameMs = dt * 1000) {
     if (o) o.dir = [d.x, d.y]; // 비기를 낸 끌기의 방향 — 이베리아 흐름(10/11)이 이 칼의 흐름을 이어받는다 (톡이면 0 → 걸러진 손 목표 속도)
     if (player.skill.secret(o)) {
       secBusy = true;
+      secFired = true;
       showPlayerCue(o.S, 'secret');
     }
   }
+  if (closeGate.lock) secBusy = true; // 묶임: 비기 차례 뒤로는 손 · 공격 · 뽑기 · 막기 모두 안 남 (11/14 그대로)
   // 11/16 뽑기 (사장님 11/16 '고노센을 쓰지 않고 칼을 뺄 때도 시간이 강제로 들게 하자. 그 시간엔 당연히 공격이나 막기 불가.' — SECRET.gnsDraw · iai_obi.js drawInput):
   //  칼이 칼집에 든 채(고노센 준비) 고노센 아닌 탭 · 칼을 쥠(손가락이 길게 누름 한도를 넘게 끎 · 마우스는 움직임) · 막기 단추면 뽑기 — 뽑는 동안 손가락 움직임 · 탭 · 막기를 버림(비기 실행 중과 같은 secBusy) ·
   //  뽑는 동안 든 탭 하나는 끝난 뒤 이 차례에서 냄 (몸이 칼을 낼 수 없으면 아래 길이 버림)
@@ -3151,8 +3155,8 @@ function playerInputFrame(dt, now, frameMs = dt * 1000) {
     d.y = 0;
   } else if (drawTapTake(player) && !secBusy) taps++; // 쥔 탭은 한 번만 — 몸이 못 내는 프레임이면 버림
   // 붙은 거리 규칙 (11/14 사장님 '묶인 1.2초 동안은 아무 공격도 못하고' · '1m 이내에서는 손잡이 찍기만' — close_hold.js — 모든 유파 사람):
-  //  묶임 = 위에서 비기 실행 중처럼(secBusy — 손 · 공격 · 비기 모두 안 남) · 칼자루만 거리 = 공격 입력(탭 · 빠른 끌기)은 손잡이 찍기(모르트슐라크 창은 위 비기 차례가 먼저 — closeGate.secretOk)
-  if (player.alive && (closeGate.lock || !secBusy) && closeInputApply(player, closeGate, d, taps, swipe, dt)) taps = 0;
+  //  묶임 = 위에서 비기 실행 중처럼(secBusy — 손 · 공격 · 비기 모두 안 남 · 모르트슐라크 창만 위 비기 차례가 먼저 — closeGate.mordThru 11/22) · 칼자루만 거리 = 공격 입력(탭 · 빠른 끌기)은 손잡이 찍기(모르트슐라크 창은 위 비기 차례가 먼저 — closeGate.secretOk)
+  if (player.alive && (closeGate.lock || !secBusy) && closeInputApply(player, closeGate, d, taps, swipe, dt, secFired)) taps = 0;
   // 중국 막기 연환 미리 받기 (10/12 — SECRET.cnBuffer, secret.js canBuffer): 정한 자세로 막아 칼이 맞닿은 동안 온 공격 입력을 받아 두고(칼이 떨어지는 스텝에 곧장 연환),
   //  받아 둔 동안은 칼 입력(끌기·톡)을 삼킨다 — 보통 공격·막기 풀림으로 새지 않게 (한 번 끈 손가락의 남은 움직임까지)
   if (!secBusy && player.alive && (taps > 0 || swipe) && playerSecret?.canBuffer()) playerSecret.buffer([d.x, d.y]);

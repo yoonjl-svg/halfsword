@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Vector2 } from 'three';
-import { newRound, CONFIG } from './harness_m.mjs';
+import { newRound, CONFIG, AI, DT } from './harness_m.mjs';
 import { digRun } from './de_dig_feel.mjs';
 import { allNodeIds, kitFromNodes } from '../../src/skill_tree_data.js';
 import { Stamina } from '../../src/stamina.js';
@@ -159,18 +159,25 @@ test('실제 몸 — 1.0 m 안에서 밀면 밀치기가 남(옛 판 reach 0.77 
   });
 });
 
-test('입력 문: 묶인 동안 lock(비기 창도 안 씀) · 묶임 밖 1.0 m 안 = 칼자루만(공격 → 손잡이 찍기 · 모르트슐라크 창만 비기 허용) · 넘어진 상대 곁 · 총 · AI 는 아님', () => {
+test('입력 문: 묶인 동안 lock(모르트슐라크 창이 열려 있으면 그 비기만 지나감 — mordThru 11/22) · 묶임 밖 1.0 m 안 = 칼자루만(공격 → 손잡이 찍기 · 모르트슐라크 창만 비기 허용) · 넘어진 상대 곁 · 총 · AI 는 아님', () => {
   const mk = (d, o = {}) => ({ humanInput: true, alive: true, state: 'stand', armed: true, weapon: { hiltLength: 0.13 }, foeDistance: () => d, foe: { alive: true, state: 'stand' }, barge: null, skill: { pommel() { this.n = (this.n ?? 0) + 1; return true; } }, ...o });
   const heldBarge = { phase: 'press', hold: 1, holdT: 0.5 };
   let g = closeInputGate(mk(0.9, { barge: heldBarge }), { S: { name: 'mordschlag' } });
-  assert.deepEqual(g, { lock: true, near: false, secretOk: true });
+  assert.deepEqual(g, { lock: true, near: false, secretOk: true, mordThru: false }, '창이 닫혀 있으면 묶임 그대로');
+  g = closeInputGate(mk(0.9, { barge: heldBarge }), { S: { name: 'mordschlag' }, open: { t: 0.6 } });
+  assert.deepEqual(g, { lock: true, near: false, secretOk: true, mordThru: true }, '사장님 11/22 \'비기가 우선\' — 열린 모르트슐라크 창은 묶임을 지나감');
+  g = closeInputGate(mk(0.9, { foe: { alive: true, state: 'stand', barge: heldBarge } }), { S: { name: 'mordschlag' }, open: { t: 0.6 } });
+  assert.deepEqual(g, { lock: true, near: false, secretOk: true, mordThru: true }, '상대가 나를 묶어도 같음');
+  g = closeInputGate(mk(0.9, { barge: heldBarge }), { S: { name: 'goNoSen' }, open: { t: 0.6 } });
+  assert.deepEqual(g, { lock: true, near: false, secretOk: false, mordThru: false }, '다른 비기 창은 묶임에 막힘');
   g = closeInputGate(mk(0.9), { S: { name: 'goNoSen' } });
-  assert.deepEqual(g, { lock: false, near: true, secretOk: false });
+  assert.deepEqual(g, { lock: false, near: true, secretOk: false, mordThru: false });
+  assert.equal(closeInputGate(mk(0.9), { S: { name: 'mordschlag' }, open: { t: 0.6 } }).mordThru, false, '묶임 밖은 mordThru 없음(칼자루만 거리는 secretOk)');
   assert.equal(closeInputGate(mk(0.9), { S: { name: 'mordschlag' } }).secretOk, true);
   assert.equal(closeInputGate(mk(1.1), null).near, false);
   assert.equal(closeInputGate(mk(0.9, { foe: { alive: true, state: 'down' } }), null).near, false, '넘어진 상대 — 마무리는 그대로');
   assert.equal(closeInputGate(mk(0.9, { weapon: { gun: true } }), null).near, false);
-  assert.deepEqual(closeInputGate(mk(0.9, { humanInput: undefined, aiControlled: true }), null), { lock: false, near: false, secretOk: true });
+  assert.deepEqual(closeInputGate(mk(0.9, { humanInput: undefined, aiControlled: true }), null), { lock: false, near: false, secretOk: true, mordThru: false });
   // 바꿈: 칼자루만 — 공격 입력이면 찍기 · 손가락 버림 / 느린 끌기는 그대로 / 묶임 — 다 버림
   const f = mk(0.9);
   const d = { x: 0.1, y: 0.2 };
@@ -185,6 +192,36 @@ test('입력 문: 묶인 동안 lock(비기 창도 안 씀) · 묶임 밖 1.0 m 
   assert.equal(f.skill.n, 1, '묶인 동안 찍기도 안 남');
   assert.deepEqual(d3, { x: 0, y: 0 });
   assert.ok(f.closeLog.lockAtk === 1 && f.closeLog.nearAtk === 1);
+  // 묶임 중 모르트슐라크가 쓴 입력(spent — 11/22)은 버린 입력으로 안 셈 · 같은 끌기의 다음 프레임도 · 끌기가 끝난 뒤 새 입력은 다시 셈
+  const g2 = { lock: true, near: false, mordThru: true };
+  closeInputApply(f, g2, { x: 0, y: 0 }, 0, false, 1 / 60);
+  assert.equal(closeInputApply(f, g2, { x: 0.3, y: 0 }, 0, true, 1 / 60, true), true);
+  closeInputApply(f, g2, { x: 0.3, y: 0 }, 0, true, 1 / 60);
+  assert.ok(f.closeLog.lockAtk === 1 && f.closeLog.lockSecret === 1, JSON.stringify(f.closeLog));
+  closeInputApply(f, g2, { x: 0, y: 0 }, 0, false, 1 / 60);
+  closeInputApply(f, g2, { x: 0, y: 0 }, 1, false, 1 / 60);
+  assert.equal(f.closeLog.lockAtk, 2, '비기가 안 쓴 탭은 묶임이 버림');
+});
+
+test('묶임 중 모르트슐라크 (사장님 11/22 \'비기가 우선\'): AI — 묶인 채(bargeHeld) 누르기 창이 열리면 mordTick → mordGo 로 나감 (사람 mordThru 와 같은 규칙)', () => {
+  const g = newRound({ weapon: 'longsword', weapon2: 'longsword', gap: 0.7, seed: 7, walls: false, AIClass: AI, persona: { proficiency: { german: 5 }, planOff: true } });
+  const E = g.enemy, ai = g.ai;
+  try {
+    assert.equal(ai.secret?.name, 'mordschlag');
+    ai.watch = () => {};
+    ai.moveFeet = function () { this.me.move.set(0, 0); this.me.stickX = 0; this.me.stickY = 0; };
+    for (let i = 0; i < Math.round(0.3 / DT); i++) g.step();
+    E.barge = { phase: 'press', hold: 100, holdT: 0, bent: false }; // 묶임 안 (closeStep 은 몸 상태로만 끝냄)
+    let fired = null, heldAtFire = null;
+    for (let i = 0; i < Math.round((SECRET.mordPress + 1.5) / DT) && fired == null; i++) {
+      g.step();
+      if (ai.secretRun?.stage === 'mord') (fired = g.t), (heldAtFire = bargeHeld(E.barge));
+    }
+    assert.ok(fired != null, `창 ${ai.press?.wins} · 낸 수 ${fired}`);
+    assert.equal(heldAtFire, true, '묶임 중에 나감');
+  } finally {
+    g.world.free();
+  }
 });
 
 function pair(german = [false, false]) {

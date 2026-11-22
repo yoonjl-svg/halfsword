@@ -130,15 +130,17 @@ function makeRig({ school, weapon, gap = 3.2, seed = 3, foeWeapon = 'longsword' 
     if (exhausted) taps = 0;
     const swipe = Math.hypot(d.x, d.y) / Math.max(dt, 1e-3) >= CONFIG.SKILL.swingSpeed;
     const closeGate = closeInputGate(player, sec);
-    let secBusy = exhausted || !!player.skill.secretPhase || closeGate.lock;
+    let secBusy = exhausted || !!player.skill.secretPhase || (closeGate.lock && !closeGate.mordThru); // 묶임 중 모르트슐라크 창은 비기 차례만 지나감 (11/22 — main.js 와 같은 차례)
+    let secFired = false;
     const secSwipe = swipe && !sec?.S?.do?.tapOnly;
     const atkWin = !!sec?.open && !(sec.stickOwns?.() ?? false) && !(sec.circleOwns?.() ?? false) && !sec.holdOwns();
     const secArm = !((CONFIG.SECRET.secretHold ?? 1) && (player.skill.tap || player.skill.pom));
     if (atkWin && (taps > 0 || secSwipe) && !secBusy && player.alive && secArm && closeGate.secretOk) {
       const o = sec.fire();
       if (o) o.dir = [d.x, d.y];
-      if (player.skill.secret(o)) { secBusy = true; R.secretFired.push({ t: G.t, name: o?.S?.name ?? null, ev: o?.ctx?.ev ?? null }); }
+      if (player.skill.secret(o)) { secBusy = secFired = true; R.secretFired.push({ t: G.t, name: o?.S?.name ?? null, ev: o?.ctx?.ev ?? null }); }
     }
+    if (closeGate.lock) secBusy = true;
     const prD = input.press;
     const parryDown = R.guardHeld;
     if (player.alive && drawInput(player, { taps, grip: prD && !prD.mouse ? prD.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx) : Math.abs(d.x) + Math.abs(d.y) > 1e-5, guard: parryDown }, secBusy)) {
@@ -146,7 +148,7 @@ function makeRig({ school, weapon, gap = 3.2, seed = 3, foeWeapon = 'longsword' 
       d.x = 0;
       d.y = 0;
     } else if (drawTapTake(player) && !secBusy) taps++;
-    if (player.alive && (closeGate.lock || !secBusy) && closeInputApply(player, closeGate, d, taps, swipe, dt)) taps = 0;
+    if (player.alive && (closeGate.lock || !secBusy) && closeInputApply(player, closeGate, d, taps, swipe, dt, secFired)) taps = 0;
     if (!secBusy && player.alive && (taps > 0 || swipe) && sec?.canBuffer()) sec.buffer([d.x, d.y]);
     const bufHold = !secBusy && !!sec?.bufferHold;
     if (secBusy || bufHold) taps = 0;

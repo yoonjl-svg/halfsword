@@ -471,7 +471,8 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     let taps = input.consumeTaps();
     if (P.stamina.exhausted || autoPick) (d.x = 0), (d.y = 0), (taps = 0);
     const closeGate = closeInputGate(P, W); // 붙은 거리 규칙 (11/14 — main.js 와 같은 차례)
-    let secBusy = busy || closeGate.lock;
+    let secBusy = busy || (closeGate.lock && !closeGate.mordThru); // 묶임 중 모르트슐라크 창은 비기 차례만 지나감 (11/22 — main.js 와 같은 차례)
+    let secFired = false;
     const swipe = Math.hypot(d.x, d.y) / FR >= CONFIG.SKILL.swingSpeed;
     input.stickMove = { x: sx, y: sy };
     const atkWin = !!W.open && !W.holdOwns();
@@ -479,8 +480,9 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
     if (((atkWin && (taps > 0 || (swipe && !W.S?.do?.tapOnly)))) && !secBusy && P.alive && secArm && closeGate.secretOk) {
       const o = W.fire();
       if (o) o.dir = [d.x, d.y];
-      if (P.skill.secret(o)) secBusy = true;
+      if (P.skill.secret(o)) secBusy = secFired = true;
     }
+    if (closeGate.lock) secBusy = true;
     // 11/16 뽑기 (main.js playerInputFrame 과 같은 차례 — iai_obi.js drawInput · SECRET.gnsDraw)
     const prD = input.press;
     if (P.alive && drawInput(P, { taps, grip: prD ? prD.moved >= (CONFIG.INPUT.holdPx ?? CONFIG.INPUT.tapPx) : Math.abs(d.x) + Math.abs(d.y) > 1e-5, guard: guardPress }, secBusy)) {
@@ -488,7 +490,7 @@ export function fightOne({ school, weapon, opp, seed, dur = 30, tech = 0.35, sji
       d.x = 0;
       d.y = 0;
     } else if (drawTapTake(P) && !secBusy) taps++; // 쥔 탭은 한 번만 — 몸이 못 내는 프레임이면 버림
-    if (P.alive && (closeGate.lock || !secBusy) && closeInputApply(P, closeGate, d, taps, swipe, FR)) taps = 0; // 붙은 거리 규칙 (11/14 — 묶임 · 칼자루만)
+    if (P.alive && (closeGate.lock || !secBusy) && closeInputApply(P, closeGate, d, taps, swipe, FR, secFired)) taps = 0; // 붙은 거리 규칙 (11/14 — 묶임 · 칼자루만)
     if (!secBusy && P.alive && (taps > 0 || swipe) && W.canBuffer()) W.buffer([d.x, d.y]);
     const bufHold = !secBusy && !!W.bufferHold;
     if (secBusy || bufHold) taps = 0;

@@ -5,7 +5,10 @@
 //     밀치기가 발동돼서 1.2초간 묶인 후에는 그게 풀린 후 2초간 다시 강제로 묶이지 않아. 쿨타임인 셈."
 //   · 시작 거리: 사람 밀치기는 가슴 사이 startD(1.0 m — 모든 유파 · 무기 한 값) 안에서 상대 쪽으로 밀면 나감(fighter.js closeStep)
 //   · 묶임: 누르기에 든 뒤 holdMin(실제 1.2 s) 동안은 떨어짐 · 스틱 놓음 · 팔 다 펴짐 · 긋기 · 찌르기로 안 끝남(몸 상태 — 나 · 상대 넘어짐 · 쓰러짐 · 걸음 꺼짐 · 탈진만 끝냄) ·
-//     그동안 맞밀기(holdPushBack — 상대 몸이 제 스텝에 제 골반을 나 쪽으로) · 어떤 공격 입력도 안 나감(손잡이 찍기 · 비기 포함 — closeInputGate lock) ·
+//     그동안 맞밀기(holdPushBack — 상대 몸이 제 스텝에 제 골반을 나 쪽으로) · 어떤 공격 입력도 안 나감(긋기 · 찌르기 · 손잡이 찍기 · 비기 — closeInputGate lock) ·
+//     예외 하나 — 사장님 11/22 결정 "그러면 비기가 우선하는 게 맞지"(감사 주간 N-038 · docs/decisions/2026-11.md): 독일 모르트슐라크 창이 열려 있으면 그 비기 입력은 묶임 중에도 나감
+//      (closeInputGate mordThru — 부른 쪽은 비기 차례에서만 lock 을 secBusy 에 안 넣음 · 나간 비기는 묶임 밖과 같음 · 묶임은 그대로 이어짐) · 그 밖 공격(긋기 · 찌르기 · 손잡이 찍기 · 다른 비기)은 그대로 막힘 ·
+//      AI 도 같음 — 모르트슐라크는 ai.js mordTick → mordGo 로 창(press.win) 안에서만 나가고 atkGate 의 묶임 문을 안 거침(다른 공격 · 비기는 atkGate 가 막음) ·
 //     붙어 버티기 기력 빠짐 × holdDrain(2 — stamina.js stepClinch · 두 몸 모두 · 스틱 · 닿음과 상관없이 묶인 동안은 버팀)
 //   · 쿨타임: 묶임이 풀린 뒤 holdCool(실제 2.0 s) 동안 새 밀치기는 걸음 · 밂은 되지만 묶임이 안 걸림(holdCoolLeft)
 //   · 칼자루만: 묶여 있지 않고 가슴 사이 startD 안(밀치기가 나는 거리 — 나 · 상대 서 있음)이면 공격 입력(탭 · 빠른 끌기)은 손잡이 찍기(skill.pommel — 시제품 POMMEL)만 ·
@@ -35,7 +38,7 @@ export const bargeHeld = (b) => !!b && b.phase === 'press' && b.hold > 0 && b.ho
 
 /** 재기 셈 */
 export function closeLog(f) {
-  return (f.closeLog ??= { holds: 0, holdT: 0, trap: { apart: 0, release: 0, armFull: 0, atk: 0 }, lockT: 0, lockAtk: 0, nearT: 0, nearAtk: 0, pommel: 0, nearSecret: 0, ends: {}, landed: 0, push: 0, cooled: 0 });
+  return (f.closeLog ??= { holds: 0, holdT: 0, trap: { apart: 0, release: 0, armFull: 0, atk: 0 }, lockT: 0, lockAtk: 0, lockSecret: 0, nearT: 0, nearAtk: 0, pommel: 0, nearSecret: 0, ends: {}, landed: 0, push: 0, cooled: 0 });
 }
 
 /**
@@ -72,21 +75,25 @@ export function nearHilt(f) {
 }
 
 /**
- * 사람 입력 문 (main.js playerInputFrame · 재기 손가락 봇 — 비기 차례 앞에 부름): { lock, near, secretOk }
- *  lock = 묶임 안(holdLock) — 어떤 공격도 안 나감(부른 쪽이 비기 실행 중처럼 secBusy) · near = 칼자루만 거리 · secretOk = 비기 창을 써도 되나(near 면 모르트슐라크 창만)
+ * 사람 입력 문 (main.js playerInputFrame · 재기 손가락 봇 — 비기 차례 앞에 부름): { lock, near, secretOk, mordThru }
+ *  lock = 묶임 안(holdLock) — 공격이 안 나감(부른 쪽이 비기 실행 중처럼 secBusy) · near = 칼자루만 거리 · secretOk = 비기 창을 써도 되나(lock · near 면 모르트슐라크 창만) ·
+ *  mordThru = 묶임 안인데 모르트슐라크 창이 열려 있음(11/22 사장님 '비기가 우선') — 부른 쪽은 비기 차례에서만 lock 을 secBusy 에 안 넣고, 그 차례 뒤엔 lock 그대로(secBusy) ·
+ *   그 프레임 공격 입력을 비기가 썼으면 closeInputApply 에 spent 로 알림(묶임이 버린 입력 셈 lockAtk 에 안 듦)
  */
 export function closeInputGate(f, watch) {
-  if (!f.humanInput) return { lock: false, near: false, secretOk: true };
+  if (!f.humanInput) return { lock: false, near: false, secretOk: true, mordThru: false };
   const lock = !!(bargeHeld(f.barge) || bargeHeld(f.foe?.barge)); // 내 밀치기든 상대가 나를 민 밀치기든(AI 견줌 startAI 를 켰을 때만 AI 밀치기에 묶임이 걸림) — 맞밀기로 둘 다 묶임
   const near = !lock && nearHilt(f);
-  return { lock, near, secretOk: !near || watch?.S?.name === 'mordschlag' };
+  const mord = watch?.S?.name === 'mordschlag';
+  return { lock, near, secretOk: !(lock || near) || mord, mordThru: lock && mord && !!watch?.open };
 }
 
 /**
  * 사람 입력 바꿈 (closeInputGate 뒤 · 비기 차례 뒤 — 부른 쪽은 true 면 taps 를 0 으로): lock = 손가락 움직임 · 공격 입력을 버림(재기 셈) ·
- *  near = 공격 입력(탭 · 빠른 끌기)이면 손잡이 찍기를 내고(이미 찍는 중이면 안 남) 그 프레임 손가락 움직임은 버림 — 느린 끌기(자세 옮김)는 그대로. 아니면 false
+ *  near = 공격 입력(탭 · 빠른 끌기)이면 손잡이 찍기를 내고(이미 찍는 중이면 안 남) 그 프레임 손가락 움직임은 버림 — 느린 끌기(자세 옮김)는 그대로. 아니면 false ·
+ *  spent = 이 프레임 공격 입력을 묶임 중 모르트슐라크가 썼음(closeInputGate mordThru · 11/22) — 버린 입력으로 안 셈(같은 끌기의 다음 프레임도 처음이 아님)
  */
-export function closeInputApply(f, gate, d, taps, swipe, dt = 0) {
+export function closeInputApply(f, gate, d, taps, swipe, dt = 0, spent = false) {
   if (!gate.lock && !gate.near) return false;
   const L = closeLog(f);
   const atk = taps > 0 || !!swipe;
@@ -94,7 +101,8 @@ export function closeInputApply(f, gate, d, taps, swipe, dt = 0) {
   f.holdAtkPrev = atk;
   if (gate.lock) {
     L.lockT += dt;
-    if (first) L.lockAtk++;
+    if (first && !spent) L.lockAtk++;
+    else if (first) L.lockSecret++; // 묶임 중 나간 모르트슐라크 (11/22 — 재기만)
     d.x = 0;
     d.y = 0;
     return true;
