@@ -180,7 +180,7 @@ function atkGate(ai, why, opt = {}) {
   if (ai.me.foes && ai.me.teamSense && !opt.chain && !opt.secret && !opt.passive && !opt.drill && !LANE_FREE.has(why) && !laneFree(ai) && laneHold(ai)) return true; // 무리 싸움 판단 칼길 비우기 (11/18 — 셋 이상 판만): 동료가 내 칼 부채꼴 · 나 → 상대 사이면 새 공격을 미룸 (막기 · 맞받기 · 되받기는 그대로)
   if (ai.planDe && ai.deDig.t > 0 && !opt.secret) return true; // 독일 파고들기 (3 단계 11/14): 건 동안(digT)은 새 공격을 미룸 — 박찬 두 걸음이 공격 걸음에 덮여 버려지지 않게 · 끝나면 그 자리에서 밀치기 · 공격 고르기 그대로
   // 붙은 거리 규칙 AI (11/14 — CLOSE.startAI · close_hold.js): 묶인 동안(내 밀치기든 상대가 나를 민 밀치기든 — 맞밀기로 둘 다 묶임) 공격 안 함 ·
-  //  칼자루만 거리(가슴 사이 ≤ startAI)에선 공격 대신 손잡이 찍기
+  //  칼자루만 거리(가슴 사이 ≤ startAI)에선 공격 대신 손잡이 찍기 · 모르트슐라크는 이 문을 안 거침(mordTick → mordGo — 창 press.win 안에서만 · 사장님 11/22 '비기가 우선' — 사람 closeInputGate mordThru 와 같음)
   if (ai.me.ringHit) return true; // 칼 씨름에 무너진 동안(11/14 — de_dirty.js ringStep · 0.6 s) 공격을 시작하지 않음 (기본 끔이면 ringHit 이 없음)
   const held = bargeHeld(ai.me.barge) || bargeHeld(ai.foe?.barge);
   if (held || nearHilt(ai.me)) {
