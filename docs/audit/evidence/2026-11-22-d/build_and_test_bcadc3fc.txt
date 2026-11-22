@@ -1,0 +1,21 @@
+# 본판 bcadc3fc — npm run build · npm test (감사가 따로 받은 나무에서)
+
+## 빌드 마지막 줄 (tools/pwa/build.mjs)
+{"pwa":true,"version":"f99b8ef5dd86c29a2fb759e4","files":494,"totalBytes":10606871,"legacyFiles":6,"legacyBytes":1511195}
+exit 0
+
+## dist
+파일 502 · 12,191,619 B
+미리 받기(sw.js 목록): 494 파일 · 10,606,871 B (10.12 MiB) — 주간(7c34b645) 500 파일 · 12,117,923 B (11.56 MiB)
+옛 주소 아이콘 여섯: dist 에 있음 · sw.js 목록에 없음 (1,511,195 B)
+sw.js 목록의 아이콘: tree-sword-orig-20261020-{apple-touch-icon,favicon-32,favicon-64,icon-192,icon-maskable-512}.png 다섯
+두 매니페스트: 같은 바이트 · 아이콘 192 any / 512 any / 512 maskable — 512 두 줄은 같은 주소(…icon-maskable-512.png)
+…icon-512.png 과 …icon-maskable-512.png 의 sha256 앞 12자: f870a5b8980c (같은 그림)
+
+## npm test
+# tests 982
+# pass 982
+# fail 0
+# duration_ms 305823.93405
+exit 0
+(주간 7c34b645: 981)

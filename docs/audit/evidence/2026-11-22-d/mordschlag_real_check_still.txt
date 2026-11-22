@@ -1,0 +1,5 @@
+08:16:26 게임 뜸
+{"startedTitle":true,"info":{"state":"fight","weapon":"longsword","tradition":"german","secret":"mordschlag","closeN":0.8,"press":1.6500000000000001,"foe":"하인리히 도른","url":"http://127.0.0.1:4188/"}}
+{"tag":"still","verdict":{"pass":true,"reason":null,"secretRan":true,"ended":null,"atOpen":{"t":10.63,"bound":true,"boundBy":"me","bindLeft":0.69,"d":0.462},"atSwipe":{"t":10.63,"open":true,"bound":true,"boundBy":"me","bindLeft":0.69,"lockAtk":0,"used":0},"swallowedBy":null,"lockAtkDuringSwipe":1,"boundDuringSwipe":true,"windowOpenFramesAfterSwipe":1,"usedBefore":0,"usedAfter":1},"info":{"state":"fight","weapon":"longsword","tradition":"german","secret":"mordschlag","closeN":0.8,"press":1.6500000000000001,"foe":"하인리히 도른","url":"http://127.0.0.1:4188/"},"swipeSent":true,"opened":true,"firstOpenT":10.63,"stages":["instant"],"hits":[{"zone":"head","part":"hilt","E":386.7},{"zone":"arm","part":"hilt","E":19.7}],"R":null,"rev":false,"front":0.267,"fell":false,"minD":0.417,"closeFrac":0.17,"pressMax":1.65,"stamina":{"min":130,"notReady":0},"frames":566,"errors":[]}
+PASS 비기가 나감 — 단계 instant · 판당 쓴 수 0 → 1 · 창이 열린 순간 묶임 중(내 밀치기 · 풀리기까지 0.69 게임 초)
+exit 0

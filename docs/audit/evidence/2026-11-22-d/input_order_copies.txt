@@ -1,0 +1,56 @@
+# 사람 입력 차례(main.js playerInputFrame)를 손으로 옮겨 적은 도구 — 본판 bcadc3fc
+
+## Input 을 읽는 도구 (consumeHandDelta | consumeTaps) — 10
+tools/sim/arm_reach_audit.mjs
+tools/sim/atk_stick.test.mjs
+tools/sim/corr_lib.mjs
+tools/sim/hand_span.test.mjs
+tools/sim/live_twin.mjs
+tools/sim/longpress_touch.test.mjs
+tools/sim/motion_regress.mjs
+tools/sim/school_balance.mjs
+tools/sim/step_input_measure.mjs
+tools/sim/stick_ring.test.mjs
+
+## 그 가운데 비기 차례(skill.secret)까지 옮긴 것 — 3
+tools/sim/arm_reach_audit.mjs
+tools/sim/motion_regress.mjs
+tools/sim/school_balance.mjs
+
+## 그 가운데 붙은 거리 규칙(closeInputGate)을 옮긴 것 — 2 (오늘 ccafa55c 가 main.js 와 함께 고친 둘)
+tools/sim/motion_regress.mjs
+tools/sim/school_balance.mjs
+
+## 이미 벌어진 차이 (본판 bcadc3fc 에서 읽음)
+- motion_regress.mjs:136 은 sec.stickOwns · sec.circleOwns 를 묻는다 — src 에는 두 이름이 0 번 나온다(지워진 조건).
+- 두 봇은 손가락 빠르기를 '이동 ÷ 프레임 시간'으로 센다. 게임은 11/22 부터 handSpanMs(input.js — N-032 고침)를 쓴다. 고른 프레임에선 같은 값이지만, 긴 프레임 · 한 프레임 두 사건은 봇이 못 본다.
+- motion_regress.mjs 에는 저절로 줍기(autoPick) · 공격 조이스틱(atkStickStep) 차례가 없다. school_balance.mjs 에는 autoPick 은 있고 공격 조이스틱은 없다.
+- arm_reach_audit.mjs:335 는 비기 차례를 옮겼지만 붙은 거리 규칙은 없다.
+
+## 오늘 고침이 세 곳에 같은 꼴로 들어간 줄 (git show ccafa55c)
+-  let secBusy = exhausted || !!player.skill.secretPhase || closeGate.lock;
++  // 묶임(lock)은 비기 실행 중처럼 secBusy — 단 모르트슐라크 창이 열려 있으면(closeGate.mordThru — 사장님 11/22 '비기가 우선') 아래 비기 차례만 지나가고
++  let secBusy = exhausted || !!player.skill.secretPhase || (closeGate.lock && !closeGate.mordThru);
++  let secFired = false; // 이 프레임 공격 입력을 비기가 씀 (묶임 셈 closeInputApply spent)
++      secFired = true;
++  if (closeGate.lock) secBusy = true; // 묶임: 비기 차례 뒤로는 손 · 공격 · 뽑기 · 막기 모두 안 남 (11/14 그대로)
+-  //  묶임 = 위에서 비기 실행 중처럼(secBusy — 손 · 공격 · 비기 모두 안 남) · 칼자루만 거리 = 공격 입력(탭 · 빠른 끌기)은 손잡이 찍기(모르트슐라�
+-  if (player.alive && (closeGate.lock || !secBusy) && closeInputApply(player, closeGate, d, taps, swipe, dt)) taps = 0;
++  //  묶임 = 위에서 비기 실행 중처럼(secBusy — 손 · 공격 · 비기 모두 안 남 · 모르트슐라크 창만 위 비기 차례가 먼저 — closeGate.mordThru 11/22) · 칼자루
++  if (player.alive && (closeGate.lock || !secBusy) && closeInputApply(player, closeGate, d, taps, swipe, dt, secFired)) taps = 0;
+-    let secBusy = exhausted || !!player.skill.secretPhase || closeGate.lock;
++    let secBusy = exhausted || !!player.skill.secretPhase || (closeGate.lock && !closeGate.mordThru); // 묶임 중 모르트슐라크 창은 비기 차례만 지나감 (11/22 — main.js 와 같은 
++    let secFired = false;
+-      if (player.skill.secret(o)) { secBusy = true; R.secretFired.push({ t: G.t, name: o?.S?.name ?? null, ev: o?.ctx?.ev ?? null }); }
++      if (player.skill.secret(o)) { secBusy = secFired = true; R.secretFired.push({ t: G.t, name: o?.S?.name ?? null, ev: o?.ctx?.ev ?? null }); }
++    if (closeGate.lock) secBusy = true;
+-    if (player.alive && (closeGate.lock || !secBusy) && closeInputApply(player, closeGate, d, taps, swipe, dt)) taps = 0;
++    if (player.alive && (closeGate.lock || !secBusy) && closeInputApply(player, closeGate, d, taps, swipe, dt, secFired)) taps = 0;
+-    let secBusy = busy || closeGate.lock;
++    let secBusy = busy || (closeGate.lock && !closeGate.mordThru); // 묶임 중 모르트슐라크 창은 비기 차례만 지나감 (11/22 — main.js 와 같은 차례)
++    let secFired = false;
+-      if (P.skill.secret(o)) secBusy = true;
++      if (P.skill.secret(o)) secBusy = secFired = true;
++    if (closeGate.lock) secBusy = true;
+-    if (P.alive && (closeGate.lock || !secBusy) && closeInputApply(P, closeGate, d, taps, swipe, FR)) taps = 0; // 붙은 거리 규칙 (11/14 — 묶임 · 칼자루만)
++    if (P.alive && (closeGate.lock || !secBusy) && closeInputApply(P, closeGate, d, taps, swipe, FR, secFired)) taps = 0; // 붙은 거리 규칙 (11/14 — 묶임 · 칼자루만)
