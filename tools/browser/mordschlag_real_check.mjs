@@ -2,8 +2,12 @@
 //  빌드한 판(npm run build → vite preview)을 주소 인자 없이(설치한 앱처럼 '/') 844 × 390 · 터치 기기로 연다. 저장(localStorage)을 미리 채움:
 //   독일 스킬트리 칸 모두(G10 모르트슐라크 포함 — 'skill:german:Gn') · 롱소드를 가짐('weapon:longsword') · 장착(stillness.lobby.weapon.v1).
 //  첫 화면 'Stage 1' → 싸움 → CDP 터치로만: 왼쪽 이동 스틱을 앞으로 쥔 채 붙음(가슴 사이 ≤ 0.8 m 2 s — 'close' 규칙) → 금빛 '!'(비기 창) → 오른쪽 화면을 빠르게 긋기 → 비기.
-//  FOE=still(기본 — 상대 꼭두각시: 가만히 섬) | ai(상대 그대로 — 진짜 AI 앞에서 창이 열리나만 봄) · 시간은 playwright 가짜 시계로 한 프레임(1/60 s)씩
-//  찍는 것: 창 · 낸 비기 · 쥠(거꾸로였나) · 맞은 곳 · 두 손이 내 머리 앞인지 · 넘어짐 · 기력 · 가슴 사이 — JSON + 게임 카메라 그림 몇 장
+//  FOE=still(기본 — 상대 꼭두각시: 가만히 섬) | ai(상대 그대로 — 진짜 AI 앞 · AI 굴림이라 판마다 다름 · 같은 판정) · 시간은 playwright 가짜 시계로 한 프레임(1/60 s)씩
+//  찍는 것: 창 · 낸 비기 · 쥠(거꾸로였나) · 맞은 곳 · 두 손이 내 머리 앞인지 · 넘어짐 · 기력 · 가슴 사이 · 묶임(밀치기 1.2 s — close_hold.js bargeHeld) — JSON + 게임 카메라 그림 몇 장
+//  판정 (감사 가지 N-038 — 전엔 결과만 적고 늘 0 으로 끝남): 통과 = 긋기 뒤 비기가 실제로 나감(skill.sec 단계가 하나라도 · 판당 쓴 수 secretUsed 가 늚). 아니면 종료 코드 1 과 까닭:
+//   window_never_opened — 창이 안 열림 · window_opened_during_bind — 창이 열린 순간 묶임 중(묶임이 끝나기 전 긋기는 closeInputGate lock 으로 버려짐 — 사장님이 정할 규칙 충돌) ·
+//   swipe_swallowed — 창은 열렸고 긋기도 보냈는데 비기가 안 나감(swallowedBy: bind = 묶임이 그 입력을 버림(closeLog.lockAtk) · pommel = 손잡이 찍기로 나감 · windowClosed = 긋기 전에 창이 닫힘 · unknown)
+//   마지막 줄 'PASS …' 또는 'FAIL <까닭> …'. 싸움에 못 들어가면 'FAIL no_fight'. 요약의 swipeSent(전 fired)는 긋기를 보냈다는 것뿐 — 비기가 나갔는지는 verdict.secretRan
 //  실행: node node_modules/vite/bin/vite.js build --outDir .tmp/dist && node node_modules/vite/bin/vite.js preview --outDir .tmp/dist --port 4187 &
 //        node tools/browser/mordschlag_real_check.mjs http://127.0.0.1:4187 .tmp/mord_real [still|ai] [최대 싸움 초 = 30]
 import fs from 'node:fs';
@@ -56,13 +60,18 @@ const info = await page.evaluate(() => {
   return { state: g.state, weapon: p.weapon?.id, tradition: p.swordArt?.tradition, secret: g.playerSecret?.S?.name ?? null, pommel: M.pommel, noSelfClip: M.noSelfClip, regrip: M.regrip, rule: g.config.SECRET.mordRule, closeN: g.config.SECRET.mordCloseN, press: g.config.SECRET.mordPress, foe: g.enemy?.name, url: location.href };
 });
 console.log(JSON.stringify({ startedTitle, info }));
-if (info.state !== 'fight') { console.log('싸움에 못 들어감'); await page.screenshot({ path: `${out}/${tag}_nofight.png` }); await browser.close(); process.exit(1); }
+if (info.state !== 'fight') { console.log('FAIL no_fight — 싸움에 못 들어감'); await page.screenshot({ path: `${out}/${tag}_nofight.png` }); await browser.close(); process.exit(1); }
 await page.evaluate((still) => {
   const g = window.game, p = g.player, e = g.enemy, T = g.THREE;
   if (still) g.ai.update = () => e.move.set(0, 0);
   const V = (q) => new T.Vector3(q.x, q.y, q.z), Q = (r) => new T.Quaternion(r.x, r.y, r.z, r.w);
   window.__mc = { hits: [], front: Infinity, fell: false, rev: false, opened: 0, fired: 0, stages: [] };
   const H = g.config; void H;
+  const held = (b) => !!b && b.phase === 'press' && b.hold > 0 && b.holdT < b.hold; // close_hold.js bargeHeld 와 같은 식 (묶임 = closeInputGate lock)
+  const bindOf = () => {
+    const mine = held(p.barge), foe = held(e.barge), b = mine ? p.barge : foe ? e.barge : null;
+    return { bound: mine || foe, by: mine ? 'me' : foe ? 'foe' : null, left: b ? +(b.hold - b.holdT).toFixed(2) : 0 }; // left = 묶임이 풀릴 때까지 게임 초
+  };
   window.__rec = () => {
     const W = g.playerSecret, I = p.iai, mc = window.__mc;
     if (W?.open) mc.opened = Math.max(mc.opened, W.opened ?? 1);
@@ -75,7 +84,8 @@ await page.evaluate((still) => {
     }
     const st = p.skill.sec?.stage ?? null;
     if (st && mc.stages.at(-1) !== st) mc.stages.push(st);
-    return { t: +p.fightT.toFixed(2), d: +p.foeDistance().toFixed(3), open: !!W?.open, pressT: +(W?.pressT ?? 0).toFixed(2), sec: st, st: +p.stamina.value.toFixed(1), ready: !!p.stamina.secretReady, stand: p.state, foe: e.state, R: p.instantResult?.mord ? { hit: p.instantResult.hit, part: p.instantResult.part, wPart: p.instantResult.wPart, E: +(p.instantResult.energy ?? 0).toFixed(1) } : null };
+    const B = bindOf();
+    return { t: +p.fightT.toFixed(2), state: g.state, alive: p.alive, d: +p.foeDistance().toFixed(3), open: !!W?.open, pressT: +(W?.pressT ?? 0).toFixed(2), sec: st, used: p.secretUsed ?? 0, bound: B.bound, boundBy: B.by, bindLeft: B.left, lockAtk: p.closeLog?.lockAtk ?? 0, pom: !!p.skill.pom, st: +p.stamina.value.toFixed(1), ready: !!p.stamina.secretReady, stand: p.state, foe: e.state, R: p.instantResult?.mord ? { hit: p.instantResult.hit, part: p.instantResult.part, wPart: p.instantResult.wPart, E: +(p.instantResult.energy ?? 0).toFixed(1) } : null };
   };
   g.combat.hooks.onWound = ((prev) => (att, vic, r, pt, pr) => { if (att === p && p.skill.sec) window.__mc.hits.push({ zone: r.zone, part: pr?.w?.part, E: +r.energy.toFixed(1) }); prev?.(att, vic, r, pt, pr); })(g.combat.hooks.onWound);
 }, FOE === 'still');
@@ -88,31 +98,60 @@ await touch('touchStart', [{ ...S, id: 1 }]);
 await run(17);
 await touch('touchMove', [stickPt]);
 const frames = [];
-let r = null, fired = false, shots = 0;
+let r = null, swipeSent = false, shots = 0, atOpen = null, atSwipe = null, swipeF = null, ended = null;
+const rec = async () => { const x = await page.evaluate(() => window.__rec()); frames.push(x); return x; };
+const OBSERVE = 90; // 긋기 뒤 비기가 시작하길 기다리는 프레임 (1.5 s — 창 0.6 s · 묶임 1.2 s 보다 김). 시작하면 끝날 때까지 봄
 const shot = async (name) => { shots++; await page.evaluate(() => { window.__paint = true; }); await run(17); await page.screenshot({ path: `${out}/${tag}_${String(shots).padStart(2, '0')}_${name}.png` }); await page.evaluate(() => { window.__paint = false; }); };
 for (let f = 0; f < MAXS * 60; f++) {
   await run(17);
-  r = await page.evaluate(() => window.__rec());
-  frames.push(r);
+  r = await rec();
   if (f % 120 === 0) log(JSON.stringify(r));
-  if (r.open && !fired) {
+  if (!swipeSent && (r.state !== 'fight' || !r.alive || r.foe === 'dead')) { ended = { t: r.t, state: r.state, meAlive: r.alive, foe: r.foe }; break; } // 창 전에 싸움이 끝남
+  if (r.open && !atOpen) atOpen = { t: r.t, bound: r.bound, boundBy: r.boundBy, bindLeft: r.bindLeft, d: r.d };
+  if (r.open && !swipeSent) {
     await shot('window');
+    atSwipe = { t: r.t, open: r.open, bound: r.bound, boundBy: r.boundBy, bindLeft: r.bindLeft, lockAtk: r.lockAtk, used: r.used };
     // 오른쪽 화면 빠르게 긋기 (스틱 손가락은 쥔 채 — 두 손가락)
     const A = { x: 640, y: 150, id: 2 };
     await touch('touchStart', [stickPt, A]);
     await run(17);
+    await rec();
     let B = A;
-    for (let k = 1; k <= 3; k++) { B = { x: A.x - 35 * k, y: A.y + 30 * k, id: 2 }; await touch('touchMove', [stickPt, B]); await run(17); }
+    for (let k = 1; k <= 3; k++) { B = { x: A.x - 35 * k, y: A.y + 30 * k, id: 2 }; await touch('touchMove', [stickPt, B]); await run(17); await rec(); }
     await touch('touchEnd', [B]); // CDP touchEnd 에는 떼는 손가락을 적는다 (남을 손가락을 적으면 그 손가락이 떼임 — 감사 가지 N-035 ①) · 스틱 엄지는 쥔 채
-    fired = true;
+    swipeSent = true;
+    swipeF = frames.length;
   }
-  if (fired && r.sec === 'instant' && !frames.some((x) => x.shotStrike)) { r.shotStrike = true; await shot('strike'); }
-  if (fired && !r.sec && frames.filter((x) => x.sec).length > 0) { await run(400); await shot('after'); break; }
+  if (swipeSent && r.sec === 'instant' && !frames.some((x) => x.shotStrike)) { r.shotStrike = true; await shot('strike'); }
+  if (swipeSent && !r.sec && frames.filter((x) => x.sec).length > 0) { await run(400); await shot('after'); break; }
+  if (swipeSent && !frames.slice(swipeF - 4).some((x) => x.sec || x.used > atSwipe.used) && frames.length - swipeF >= OBSERVE) { await shot('after'); break; } // 1.5 s 가 지나도 안 나감
 }
 await touch('touchEnd', []);
 const mc = await page.evaluate(() => window.__mc);
 const dists = frames.map((x) => x.d);
-const summary = { tag, info, fired, opened: frames.some((x) => x.open), firstOpenT: frames.find((x) => x.open)?.t ?? null, stages: mc.stages, hits: mc.hits, R: frames.findLast((x) => x.R)?.R ?? null, rev: mc.rev, front: Number.isFinite(mc.front) ? +mc.front.toFixed(3) : null, fell: mc.fell, minD: Math.min(...dists), closeFrac: +(dists.filter((d) => d <= info.closeN).length / Math.max(1, dists.length)).toFixed(2), pressMax: Math.max(...frames.map((x) => x.pressT)), stamina: { min: Math.min(...frames.map((x) => x.st)), notReady: frames.filter((x) => !x.ready).length }, frames: frames.length, errors };
+// 판정: 비기가 실제로 나갔나 (긋기 뒤 skill.sec 단계 · 판당 쓴 수)
+const after = swipeSent ? frames.slice(swipeF - 4) : []; // 긋기 첫 프레임부터 (touchStart · touchMove 셋 · touchEnd 뒤)
+const usedAfter = Math.max(atSwipe?.used ?? 0, ...after.map((x) => x.used));
+const secretRan = swipeSent && (after.some((x) => x.sec) || usedAfter > atSwipe.used); // 긋기 뒤 skill.sec 단계가 보였거나 판당 쓴 수가 늚
+const lockAtkDuringSwipe = swipeSent ? Math.max(...after.map((x) => x.lockAtk)) - atSwipe.lockAtk : 0; // 묶임이 버린 공격 입력 수 (close_hold.js closeInputApply)
+const boundDuringSwipe = after.slice(0, 5).some((x) => x.bound);
+const windowOpenAfterSwipe = after.filter((x) => x.open).length; // 긋기 뒤에도 창이 열려 있던 프레임 (안 쓰인 창)
+let reason = null, swallowedBy = null;
+if (!atOpen) reason = 'window_never_opened';
+else if (!secretRan) {
+  swallowedBy = lockAtkDuringSwipe > 0 || boundDuringSwipe ? 'bind' : after.some((x) => x.pom) ? 'pommel' : !atSwipe.open ? 'windowClosed' : 'unknown';
+  reason = atOpen.bound ? 'window_opened_during_bind' : 'swipe_swallowed';
+}
+const verdict = { pass: !reason, reason, secretRan, ended, atOpen, atSwipe, swallowedBy, lockAtkDuringSwipe, boundDuringSwipe, windowOpenFramesAfterSwipe: windowOpenAfterSwipe, usedBefore: atSwipe?.used ?? null, usedAfter: swipeSent ? usedAfter : null };
+const summary = { tag, verdict, info, swipeSent, opened: frames.some((x) => x.open), firstOpenT: frames.find((x) => x.open)?.t ?? null, stages: mc.stages, hits: mc.hits, R: frames.findLast((x) => x.R)?.R ?? null, rev: mc.rev, front: Number.isFinite(mc.front) ? +mc.front.toFixed(3) : null, fell: mc.fell, minD: Math.min(...dists), closeFrac: +(dists.filter((d) => d <= info.closeN).length / Math.max(1, dists.length)).toFixed(2), pressMax: Math.max(...frames.map((x) => x.pressT)), stamina: { min: Math.min(...frames.map((x) => x.st)), notReady: frames.filter((x) => !x.ready).length }, frames: frames.length, errors };
 fs.writeFileSync(`${out}/${tag}_check.json`, JSON.stringify({ summary, frames }, null, 1));
 console.log(JSON.stringify(summary));
 await browser.close();
+const bindTxt = (b) => (b?.bound ? `묶임 중(${b.boundBy === 'me' ? '내 밀치기' : '상대 밀치기'} · 풀리기까지 ${b.bindLeft} 게임 초)` : '묶임 아님');
+if (!reason) console.log(`PASS 비기가 나감 — 단계 ${mc.stages.join(' → ') || '(못 봄)'} · 판당 쓴 수 ${verdict.usedBefore} → ${verdict.usedAfter} · 창이 열린 순간 ${bindTxt(atOpen)}`);
+else if (reason === 'window_never_opened') console.log(`FAIL window_never_opened — ${ended ? `창이 열리기 전에 싸움이 끝남(싸움 ${ended.t} s · ${!ended.meAlive ? '내가 죽음' : ended.foe === 'dead' ? '상대 죽음' : ended.state})` : `${MAXS} s 안에 창이 안 열림`} (가장 가까운 가슴 사이 ${summary.minD} m · ${info.closeN} m 안 몫 ${summary.closeFrac} · 누르기 셈 최대 ${summary.pressMax} s / ${info.press} s)`);
+else {
+  const by = { bind: `묶임이 긋기를 버림(버려진 공격 입력 ${lockAtkDuringSwipe} · 긋는 동안 묶임 ${boundDuringSwipe ? '예' : '아니오'})`, pommel: '손잡이 찍기로 나감', windowClosed: '긋기 전에 창이 닫힘', unknown: '까닭 못 찾음' }[swallowedBy];
+  console.log(`FAIL ${reason} — 창이 열린 순간(싸움 ${atOpen.t} s) ${bindTxt(atOpen)} · 긋기(${atSwipe.t} s) 때 ${bindTxt(atSwipe)} · 비기 안 나감: ${by} · 긋기 뒤 창이 더 열려 있던 프레임 ${windowOpenAfterSwipe}${reason === 'window_opened_during_bind' ? ' — 게임 규칙 충돌(G10 창 · 묶임 1.2 s, 감사 가지 N-038 — 사장님이 정할 것)' : ''}`);
+}
+process.exit(reason ? 1 : 0);
