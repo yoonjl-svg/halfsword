@@ -1,0 +1,31 @@
+{
+ "tag": "still",
+ "info": {
+  "state": "fight",
+  "weapon": "longsword",
+  "tradition": "german",
+  "secret": "mordschlag",
+  "closeN": 0.8,
+  "press": 1.6500000000000001,
+  "foe": "하인리히 도른",
+  "url": "http://127.0.0.1:4187/"
+ },
+ "fired": true,
+ "opened": true,
+ "firstOpenT": 10.63,
+ "stages": [],
+ "hits": [],
+ "R": null,
+ "rev": false,
+ "front": null,
+ "fell": false,
+ "minD": 0.35,
+ "closeFrac": 0.74,
+ "pressMax": 1.65,
+ "stamina": {
+  "min": 130,
+  "notReady": 0
+ },
+ "frames": 1800,
+ "errors": []
+}

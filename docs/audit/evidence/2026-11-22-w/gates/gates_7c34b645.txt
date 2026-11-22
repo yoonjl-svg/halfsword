@@ -1,0 +1,12 @@
+# 본판 7c34b645 의 관문 출력(stdout 만, corr_s0 는 끝의 시간만 뺌) sha256 앞 8자 · 줄 수 · 끝 코드
+fights12 exit 0 sha 97bf8ba8 lines 2
+live_battery exit 0 sha 1c110583 lines 49
+finish_thrust_stand exit 0 sha c0e8c0fc lines 13
+finish_thrust_down exit 0 sha 707da1af lines 261
+corr_s0 exit 0 sha e01a42ef lines 14
+weapon_smoke exit 0 sha 82583ac6 lines 34
+match_twin exit 0 sha 97bf8ba8 lines 2
+team_fights exit 0 sha 3f9bd0e1 lines 5
+
+# db5dcb05 (11/22 03:33 뒤따라 재기 2) 와 견줌
+fights12 97bf8ba8 · live_battery 1c110583 · finish_thrust_stand c0e8c0fc · finish_thrust_down 707da1af · corr_s0 e01a42ef · weapon_smoke 82583ac6 · match_twin 97bf8ba8 · team_fights 3f9bd0e1

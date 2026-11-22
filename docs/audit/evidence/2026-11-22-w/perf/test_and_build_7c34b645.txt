@@ -1,0 +1,13 @@
+# npm test (본판 7c34b645)
+# tests 981
+# pass 981
+# fail 0
+# cancelled 0
+# skipped 0
+
+# npm run build (본판 7c34b645)
+{"pwa":true,"version":"7e9df00c60a3e2c3b1008045","files":500,"totalBytes":12117923}
+dist: 502 files, 12192196 bytes
+3699029 main-BHqAOS2V.js
+641615 shop_text-A0m0mDjx.js
+513360 weapons-DxVduSdg.js

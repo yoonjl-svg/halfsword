@@ -1,0 +1,6 @@
+firstStart  poseidon->poseidon A(start->cards) 167ms  B(card->fight) 117ms  build 177.7 warm 0 prog 31->31->31
+stageChange poseidon->clearing A(start->cards) 683ms  B(card->fight) 300ms  build 64.4 warm 32.6 prog 43->40->42
+stageChange clearing->castle A(start->cards) 517ms  B(card->fight) 67ms  build 130 warm 8.3 prog 44->63->63
+stageChange castle->loggia A(start->cards) 400ms  B(card->fight) 100ms  build 259.8 warm 45.7 prog 63->52->52
+stageChange loggia->cathedral A(start->cards) 850ms  B(card->fight) 217ms  build 173.6 warm 17.4 prog 60->59->59
+sameStage   cathedral->cathedral A(start->cards) 34ms  B(card->fight) 50ms  build 173.6 warm 17.4 prog 59->59->59

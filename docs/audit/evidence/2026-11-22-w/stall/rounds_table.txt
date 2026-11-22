@@ -1,0 +1,107 @@
+| rnd | stage | heapMB | geo | tex | prog | sObj | sMesh | sMat | bod | col | wasmKB | domN | domL | Fighter | AI | BufGeo | Material | Texture | Object3D | Mesh | RenderTarget | RWorld | RRigidBody | RCollider | AudioNode | ABSN | AudioBuffer |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | poseidon | 58.32 | 144 | 15 | 31 | 238 | 181 | 166 | 33 | 69 | 1344 | 363 | 94 | 2 | 2 | 429 | 230 | 26 | 267 | 196 | 3 | 1 | 34 | 69 | 21 | 6 | 235 |
+| 2 | clearing | 60.22 | 161 | 17 | 38 | 235 | 170 | 154 | 33 | 69 | 1408 | 361 | 94 | 2 | 2 | 189 | 218 | 28 | 264 | 185 | 3 | 1 | 34 | 69 | 29 | 12 | 235 |
+| 3 | castle | 60.69 | 131 | 16 | 62 | 204 | 146 | 132 | 33 | 69 | 1408 | 360 | 94 | 2 | 2 | 163 | 196 | 27 | 233 | 161 | 3 | 1 | 34 | 69 | 31 | 11 | 236 |
+| 4 | loggia | 61.58 | 151 | 19 | 51 | 219 | 162 | 148 | 33 | 69 | 1408 | 362 | 99 | 2 | 2 | 179 | 212 | 29 | 248 | 177 | 3 | 1 | 34 | 69 | 39 | 10 | 236 |
+| 5 | cathedral | 62.25 | 150 | 19 | 58 | 247 | 182 | 169 | 33 | 69 | 1408 | 363 | 94 | 2 | 2 | 234 | 233 | 29 | 276 | 197 | 3 | 1 | 34 | 69 | 28 | 10 | 235 |
+| 6 | poseidon_night | 65.15 | 160 | 30 | 60 | 269 | 191 | 197 | 33 | 69 | 1408 | 373 | 94 | 2 | 2 | 588 | 389 | 39 | 490 | 349 | 3 | 1 | 34 | 69 | 30 | 12 | 235 |
+| 7 | clearing_night | 63.13 | 168 | 23 | 60 | 262 | 177 | 176 | 33 | 69 | 1408 | 365 | 94 | 2 | 2 | 196 | 240 | 32 | 293 | 192 | 3 | 1 | 34 | 69 | 29 | 12 | 235 |
+| 8 | castle_night | 63.34 | 138 | 23 | 70 | 231 | 151 | 156 | 33 | 69 | 1408 | 366 | 94 | 2 | 2 | 170 | 220 | 32 | 260 | 166 | 3 | 1 | 34 | 69 | 33 | 12 | 236 |
+| 9 | castle_night | 62.54 | 138 | 23 | 70 | 231 | 151 | 156 | 33 | 69 | 1408 | 366 | 94 | 2 | 2 | 170 | 220 | 32 | 260 | 166 | 3 | 1 | 34 | 69 | 33 | 12 | 236 |
+| 10 | loggia_night | 63.46 | 175 | 25 | 55 | 261 | 182 | 170 | 33 | 69 | 1408 | 366 | 99 | 2 | 2 | 200 | 234 | 33 | 290 | 197 | 3 | 1 | 34 | 69 | 39 | 10 | 236 |
+| end | loggia_night | 63.7 | 202 | 30 | 63 | 268 | 189 | 177 | 33 | 69 | 1408 | 373 | 98 | 2 | 2 | 265 | 264 | 38 | 322 | 225 | 3 | 1 | 34 | 69 | 43 | 14 | 236 |
+
+fight ends: {"p":true,"e":true,"simTime":13.1} 다음 여정
+{"p":true,"e":true,"simTime":26.6} 다음 여정
+{"p":true,"e":false,"simTime":37.6} 다음 여정
+{"p":true,"e":false,"simTime":50} 다음 여정
+{"p":true,"e":false,"simTime":61.6} 다음 여정
+{"p":true,"e":true,"simTime":75.4} 다음 여정
+{"p":true,"e":true,"simTime":87.4} 다음 여정
+{"p":false,"e":true,"simTime":101.5} 재대결
+{"p":true,"e":true,"simTime":115.3} 다음 여정
+{"p":true,"e":true,"simTime":130.7} 다음 여정
+
+histogram diff row 2 (3,castle) -> row 9 (10,loggia_night); per-round = /7
+
+## BufferGeometry: 163 -> 200
+  +17  PlaneGeometry||v16|attrs:position,normal,uv
+  -13  BoxGeometry||v24|attrs:position,normal,uv
+  +5  BufferGeometry||v48|attrs:position,normal,uv
+  +3  BufferGeometry||v26|attrs:position,normal,uv
+  +3  BufferGeometry||v18|attrs:position,uv,normal
+  -2  BufferGeometry||v723|attrs:position,color
+  +2  BufferGeometry||v30|attrs:position,uv,normal
+  +2  BufferGeometry||v247|attrs:position,normal,uv
+  +2  BufferGeometry||v174|attrs:position,uv,normal
+  -1  CylinderGeometry||v30|attrs:position,normal,uv
+  -1  CylinderGeometry||v76|attrs:position,normal,uv
+  -1  BufferGeometry||v24|attrs:position,normal,uv
+  -1  BufferGeometry||v72|attrs:position,normal,uv
+  -1  SphereGeometry||v187|attrs:position,normal,uv
+  -1  SphereGeometry||v63|attrs:position,normal,uv
+  -1  BufferGeometry||v144|attrs:position,normal,uv,color
+  -1  BufferGeometry||v5280|attrs:position,normal,uv,color
+  -1  BufferGeometry||v945|attrs:position,normal,uv,color
+  -1  LatheGeometry||v175|attrs:position,uv,normal
+  -1  BufferGeometry||v156|attrs:position,normal,uv,color
+  -1  ConeGeometry||v31|attrs:position,normal,uv
+  -1  SphereGeometry||v1225|attrs:position,normal,uv
+  -1  BufferGeometry||v1308|attrs:position,normal,uv,color
+  -1  BufferGeometry||v12204|attrs:position,normal,uv,color
+  -1  BufferGeometry||v36|attrs:position,normal,uv,color
+
+## Material: 196 -> 234
+  +22  MeshStandardMaterial||
+  +17  SpriteMaterial||map
+  -5  MeshBasicMaterial||
+  +2  MeshStandardMaterial||map
+  +1  MeshBasicMaterial||map
+  +1  PointsMaterial||
+
+## Texture: 27 -> 33
+  +2  CanvasTexture||64x64
+  +2  CanvasTexture||128x128
+  -1  CanvasTexture||32x32
+  -1  CanvasTexture||512x512
+  -1  CanvasTexture||256x256
+  +1  CanvasTexture||384x384
+  +1  CanvasTexture||128x192
+  +1  CanvasTexture||8x256
+  +1  CanvasTexture||16x16
+  +1  CanvasTexture||1024x1024
+
+## Object3D: 233 -> 290
+  +17  inScene|Sprite|
+  +16  inScene|Mesh|
+  +2  inScene|Points|
+  +1  inScene|Group|
+  -1  inScene|Points|castle-snowfall
+  +1  inScene|Mesh|loggia-stone
+  +1  inScene|Mesh|loggia-hills
+  +1  inScene|Mesh|loggia-trim
+  +1  inScene|Mesh|midnight-sky
+  +1  inScene|Mesh|loggia-distantDark
+  +1  inScene|Mesh|loggia-town
+  +1  inScene|Group|archive-loose-pages
+  +1  inScene|Mesh|unsealed-archive-door-1
+  +1  inScene|Mesh|archive-stone-frame
+  +1  inScene|Mesh|alter-two-gold-keys
+  +1  inScene|Mesh|alter-monocle
+  +1  inScene|Mesh|loggia-leaves
+  +1  inScene|Mesh|loggia-flowers
+  +1  inScene|Mesh|loggia-cloth
+  +1  inScene|Mesh|loggia-balustrade
+  +1  inScene|Group|loggia_night-story
+  +1  inScene|Mesh|loggia-inlay
+  +1  inScene|Mesh|loggia-recess
+  +1  inScene|Mesh|loggia-roof
+  +1  inScene|Mesh|loggia-ground
+
+## AudioNode: 41 -> 49
+  +4  BiquadFilterNode
+  +4  GainNode
+  +2  StereoPannerNode
+  -1  AudioBufferSourceNode
+  -1  OscillatorNode

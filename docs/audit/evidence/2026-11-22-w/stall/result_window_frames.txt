@@ -1,0 +1,3 @@
+{"label":"fight","state":"fight","framesPerSec":25.5,"simAdvance":4.11}
+{"label":"result-panel","state":"paused","framesPerSec":0,"simAdvance":0}
+{"label":"result-panel-later","state":"paused","framesPerSec":0,"simAdvance":0}
