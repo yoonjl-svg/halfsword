@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  honesty.mjs — 물리 정직성 지표 H1 (물리 2.0 · 0 단계 · docs/strike/physics2_plan_2026-11-23.md §4 · §8). 재기만 한다 — 몸에 아무것도 걸지 않는다.
 //
-//   node tools/sim/honesty.mjs [--scene=stand|walk|stroke|fight|all] [--weapon=longsword] [--seed=7] [--secs=30] [--fam=diagR] [--json=<파일>] [--root=<트리>] [--selftest]
+//   node tools/sim/honesty.mjs [--scene=stand|walk|stroke|fight|school|all] [--cells=유파:무기:상대,…] [--weapon=longsword] [--seed=7] [--secs=30] [--fam=diagR] [--json=<파일>] [--root=<트리>] [--selftest]
 //
 //  H1 = 몸(14 강체 + 칼)이 받는 힘 가운데 '몸 밖'에서 온 몫. 힘 몫과 일 몫을 따로 적는다 (감사 11/24: 선 몸은 받침이 한 일이 0 이라 일만으로는 안 보인다).
 //   밖 = 받침(support) · 걷기 밀기(push) · 닻 모터 토크(anchor) · 엔진 감쇠(damp) · 속도 직접 쓰기(write) · 질량 바뀜(mass) · 그 밖 짝 없는 선언 힘(unpaired)
@@ -51,13 +51,18 @@ export function attach(world, named, opts = {}) {
   const g = world.gravity.y;
   const bodies = named.map(([, b]) => b), names = named.map(([n]) => n);
   const f = opts.fighter ?? null;
-  const L = { names, rows: 0, T: 0, acc: {}, chk: { resMax: 0, pairMax: 0 }, fighter: f };
+  const L = { names, rows: 0, T: 0, acc: {}, chk: { resMax: 0, pairMax: 0 }, fighter: f, place: { steps: 0, swordSteps: 0, calls: 0, kgm: 0 }, wounds: [], foe: null, swordPlacedAt: -9 };
+  let placedNow = false, swordNow = false;
+  const iSword = f?.sword ? named.findIndex(([, b]) => b.handle === f.sword.handle) : -1;
   const A = (k) => (L.acc[k] ||= { Fimp: 0, Fy: 0, Timp: 0, Wabs: 0, Wpos: 0, Wneg: 0, n: 0 });
   let decl = [];
   const mine = new Map(bodies.map((b, i) => [b.handle, i]));
   bodies.forEach((rb, bi) => {
     const o = {};
-    for (const k of ['addForce', 'addForceAtPoint', 'addTorque', 'applyImpulse', 'applyImpulseAtPoint', 'applyTorqueImpulse', 'setLinvel', 'setAngvel']) o[k] = rb[k];
+    for (const k of ['addForce', 'addForceAtPoint', 'addTorque', 'applyImpulse', 'applyImpulseAtPoint', 'applyTorqueImpulse', 'setLinvel', 'setAngvel', 'setTranslation', 'setRotation']) o[k] = rb[k];
+    // 자리 직접 놓기 (운동학 칼 · 순간 이동): 힘이 아니라 자리를 쓴다 → 스텝 수 · 옮긴 질량 × 거리로 따로 센다
+    rb.setTranslation = function (t, w) { const t0 = this.translation(); L.place.calls++; L.place.kgm += this.mass() * Math.hypot(t.x - t0.x, t.y - t0.y, t.z - t0.z); placedNow = true; if (bi === iSword) swordNow = true; return o.setTranslation.call(this, t, w); };
+    rb.setRotation = function (q, w) { L.place.calls++; placedNow = true; if (bi === iSword) swordNow = true; return o.setRotation.call(this, q, w); };
     const com = () => cv(rb.worldCom());
     rb.addForce = function (F, w) { decl.push({ bi, r: V3(), p: com(), F: cv(F), T: null, kind: SHARED.phase }); return o.addForce.call(this, F, w); };
     rb.addForceAtPoint = function (F, P, w) { decl.push({ bi, r: sub(cv(P), com()), p: cv(P), F: cv(F), T: null, kind: SHARED.phase }); return o.addForceAtPoint.call(this, F, P, w); };
@@ -87,6 +92,14 @@ export function attach(world, named, opts = {}) {
       rs.jointConfigureMotorPosition = function (h, ax, t, k, d) { let m = cap.get(h); if (!m) cap.set(h, (m = {})); m[ax] = { t, k, d }; return o1.call(this, h, ax, t, k, d); };
     }
     capUp = () => rs.__honestyCap.get(f.uprightJoint.handle);
+    // H3: 받은 상처마다 물리 에너지 대 판정 에너지 (applyWound 인자 그대로 넘김). 친 쪽 칼이 이 스텝 · 앞 두 스텝에 '놓인' 칼이면 운동학 칼 상처
+    const aw = f.applyWound;
+    f.applyWound = function (h, ...rest) {
+      const kin = false; // 스텝 끝 · 요약에서 정함 (같은 스텝에서 상처가 놓기보다 먼저일 수 있다)
+      const E0 = h.mFree != null && h.speed != null ? 0.5 * h.mFree * h.speed * h.speed : null;
+      L.wounds.push({ type: h.type, zone: h.zone, sev: h.severity ?? 0, energy: h.energy ?? null, eff: h.eff ?? null, ephys: h.ephys ?? null, E0, speed: h.speed ?? null, mFree: h.mFree ?? null, mEff: h.mEff ?? null, finish: h.finishPower ?? null, kin, row: L.rows });
+      return aw.call(this, h, ...rest);
+    };
   }
   const sample = () => {
     const s = { p: [], v: [], w: [], m: [], P: V3(), E: 0, M: 0, c: V3() };
@@ -100,6 +113,7 @@ export function attach(world, named, opts = {}) {
     if (f) { s.qA = cq(f.anchor.rotation()); s.qP = cq(f.bodies.pelvis.rotation()); }
     return s;
   };
+  L.swordNowQ = () => swordNow;
   let prev = null, mid = null;
   L.pre = () => { if (!prev) prev = sample(); decl = []; };
   L.mid = () => { // world.step 바로 뒤: 감쇠 충격량 (v_뒤 로)
@@ -172,10 +186,12 @@ export function attach(world, named, opts = {}) {
     // 안쪽 일률 = dE/dt − 밖 일률
     const Pin = (cur.E - prev.E) / DT - Pout;
     { const a = A('inside'); a.Wabs += Math.abs(Pin) * DT; if (Pin > 0) a.Wpos += Pin * DT; else a.Wneg += Pin * DT; }
+    if (placedNow) L.place.steps++; if (swordNow) { L.place.swordSteps++; L.swordPlacedAt = L.rows; (L.swordRows ||= new Set()).add(L.rows); } placedNow = swordNow = false;
     L.rows++; L.T += DT; L.Mg = -cur.M * g; L.lastRes = res;
     prev = cur; decl = []; mid = null;
   };
   L.summary = () => {
+    for (const w of L.wounds) { const R = L.foe?.swordRows; w.kin = !!R && [-3, -2, -1, 0, 1].some((d) => R.has(w.row + d)); } // 친 쪽 칼이 그 스텝 언저리에 '놓인' 칼이었나
     const a = L.acc, v = (k, q) => a[k]?.[q] ?? 0;
     const Fout = OUT.reduce((s, k) => s + v(k, 'Fimp'), 0) + v('other', 'Fimp');
     const Fin = v('res', 'Fimp') + v('pin', 'Fimp');
@@ -188,6 +204,8 @@ export function attach(world, named, opts = {}) {
       workShare: Wout / Math.max(1e-9, Wout + Win),
       anchorYawNms: v('anchorYaw', 'Timp'), anchorTiltNms: v('anchorTilt', 'Timp'),
       pairResidualMaxN: L.chk.pairMax, coupleBy: L.chk.coupleBy ?? {},
+      place: { stepShare: L.place.steps / Math.max(1, L.rows), swordStepShare: L.place.swordSteps / Math.max(1, L.rows), calls: L.place.calls, kgm: +L.place.kgm.toFixed(2) },
+      woundsTaken: L.wounds,
       cats: Object.fromEntries(Object.entries(a).map(([k, x]) => [k, { Fimp: +x.Fimp.toFixed(3), Fy: +x.Fy.toFixed(3), Timp: +x.Timp.toFixed(3), Wabs: +x.Wabs.toFixed(3), Wpos: +x.Wpos.toFixed(3), Wneg: +x.Wneg.toFixed(3) }])),
     };
   };
@@ -210,6 +228,8 @@ const pct = (x) => (100 * x).toFixed(1).padStart(5) + ' %';
 const n1 = (x, w = 9) => (+x).toFixed(1).padStart(w);
 export function report(title, S) {
   const lines = [`■ ${title}  (${S.T} s)`, `  힘 몫(밖) ${pct(S.forceShare)} · 수직 받침 몫 ${pct(S.supportShare)} · 일 몫(밖) ${pct(S.workShare)} · 닻 yaw ${n1(S.anchorYawNms, 0)} N·m·s · 닻 기울기 ${n1(S.anchorTiltNms, 0)} N·m·s · 근육 쌍 어긋남 최고 ${S.pairResidualMaxN.toFixed(3)} N${Object.keys(S.coupleBy).length ? ' · 짝 없는 토크 ' + Object.entries(S.coupleBy).map(([k, x]) => `${k} ${x.toFixed(1)}`).join(' · ') + ' N·m·s' : ''}`];
+  if (S.place.calls) lines.push(`  자리 직접 놓기: 스텝의 ${pct(S.place.stepShare)} (칼 ${pct(S.place.swordStepShare)}) · 옮긴 질량 × 거리 ${S.place.kgm} kg·m`);
+  if (S.woundsTaken.length) { const W = S.woundsTaken, kin = W.filter((x) => x.kin), sv = (a) => a.reduce((t, x) => t + x.sev, 0); const rs = W.filter((x) => !x.kin && x.E0 > 0).map((x) => (x.type === 'blunt' ? x.energy : x.eff ?? x.energy) / x.E0).sort((a, b) => a - b); lines.push(`  받은 상처 ${W.length} (운동학 칼 ${kin.length} · 심각도 몫 ${pct(sv(kin) / Math.max(1e-9, sv(W)))}) · 판정 ÷ 칼만의 물리 에너지 가운데값 ${rs.length ? rs[rs.length >> 1].toFixed(2) : '-'} 배 (최고 ${rs.length ? rs[rs.length - 1].toFixed(1) : '-'})`); }
   lines.push('   갈래          ∫|F|dt N·s   그중 수직    ∫|τ|dt N·m·s    ∫|P|dt J     더한 일 J     뺀 일 J');
   const order = ['support', 'push', 'anchor', 'damp', 'write', 'mass', 'unpaired', 'other', 'shove', 'combat', 'pin', 'res', 'musclePair', 'inside'];
   const lab = { support: '받침(밖)', push: '걷기 밀기(밖)', anchor: '닻(밖)', damp: '엔진 감쇠(밖)', write: '속도 쓰기(밖)', mass: '질량 바뀜(밖)', unpaired: '짝 없는 힘(밖)', other: '그 밖 선언(밖)', shove: '밀쳐내기(따로)', combat: '판정 뒤 충격(따로)', pin: '발 핀(안)', res: '땅 · 접촉(안)', musclePair: '근육 쌍(안)', inside: '안쪽 일(합)' };
@@ -256,11 +276,25 @@ async function sceneFight(Gm, o) {
   const { H, DT } = Gm;
   const G = H.newRound({ walls: true, seed: o.seed, weapon: o.weapon, weapon2: o.weapon2 ?? o.weapon, AI2Class: H.AI });
   const LP = attach(G.world, bodiesOf(G.player), { fighter: G.player }), LE = attach(G.world, bodiesOf(G.enemy), { fighter: G.enemy });
+  LP.foe = LE; LE.foe = LP;
   hook(G, [LP, LE]);
   let tDead = null;
   const n = Math.round(o.secs / DT);
   for (let i = 0; i < n; i++) { G.step(); if (tDead == null && (G.player.state === 'dead' || G.enemy.state === 'dead')) tDead = G.t; if (tDead != null && G.t > tDead + 1) break; }
   return [[`fight P · ${o.weapon} · seed ${o.seed} (${G.player.state}/${G.enemy.state})`, LP.summary()], [`fight E · seed ${o.seed}`, LE.summary()]];
+}
+
+/** 유파 판 (school_balance.mjs fightOne — 유파 책을 다 익힌 사람 봇 대 숙련 3 AI · 게임처럼 고유 공격 · 비기 · 막기 손이 붙는다). 싸움꾼 둘 다 잰다 */
+async function sceneSchool(Gm, o) {
+  const SB = await import(u('tools/sim/school_balance.mjs'));
+  const out = [];
+  for (const cell of o.cells) {
+    const [school, weapon, opp] = cell.split(':');
+    let LP, LE, GG;
+    SB.fightOne({ school, weapon, opp, seed: o.seed, dur: o.secs, onRound: ({ G }) => { GG = G; LP = attach(G.world, bodiesOf(G.player), { fighter: G.player }); LE = attach(G.world, bodiesOf(G.enemy), { fighter: G.enemy }); LP.foe = LE; LE.foe = LP; hook(G, [LP, LE]); } });
+    out.push([`school P(사람 봇) · ${cell} · seed ${o.seed} (${GG.player.state}/${GG.enemy.state})`, LP.summary()], [`school E(AI) · ${cell} · seed ${o.seed}`, LE.summary()]);
+  }
+  return out;
 }
 
 // ───────── 자가 시험: 지표가 0 / 1 로 나와야 하는 경우 ─────────
@@ -324,7 +358,8 @@ async function main() {
   const which = String(args.scene ?? 'all');
   const scenes = which === 'all' ? ['stand', 'walk', 'stroke', 'fight'] : which.split(',');
   const all = [];
-  for (const s of scenes) all.push(...(s === 'fight' ? await sceneFight(Gm, o) : await sceneSolo(Gm, o, s)));
+  o.cells = String(args.cells ?? 'german:longsword:longsword,italian:rapier:longsword,iberian:zweihander:longsword,japanese:uchigatana:longsword,chinese:hwando:longsword').split(',');
+  for (const s of scenes) all.push(...(s === 'fight' ? await sceneFight(Gm, o) : s === 'school' ? await sceneSchool(Gm, o) : await sceneSolo(Gm, o, s)));
   for (const [t, S] of all) console.log(report(t, S) + '\n');
   if (args.json) writeFileSync(String(args.json), JSON.stringify(all.map(([title, S]) => ({ title, ...S })), null, 1));
 }
