@@ -1,0 +1,7 @@
+build seeds | all n med | per type n med | share of bruises
+0930 1-8 | n 93 med 9.2 | blunt n 43 med 5.4 · cut n 50 med 11.4 | bruise share 0.46
+1101 1-8 | n 158 med 7.6 | blunt n 85 med 5.8 · cut n 72 med 10.6 · stab n 1 med 2.3 | bruise share 0.54
+now 1-8 | n 133 med 5.9 | blunt n 86 med 4.8 · cut n 46 med 8.7 · stab n 1 med 6.2 | bruise share 0.65
+0930 11-18 | n 134 med 7.8 | blunt n 72 med 5.0 · cut n 62 med 11.3 | bruise share 0.54
+1101 11-18 | n 164 med 7.1 | blunt n 99 med 5.6 · cut n 65 med 12.4 | bruise share 0.6
+now 11-18 | n 118 med 5.6 | blunt n 78 med 4.5 · cut n 39 med 9.0 · stab n 1 med 4.5 | bruise share 0.66
