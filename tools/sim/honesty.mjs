@@ -82,7 +82,7 @@ export function attach(world, named, opts = {}) {
   let capUp = null;
   if (f) {
     const wrap = (obj, name, tag) => { const orig = obj?.[name]; if (typeof orig !== 'function') return; obj[name] = function (...a) { const prev = SHARED.phase; SHARED.phase = tag; try { return orig.apply(this, a); } finally { SHARED.phase = prev; } }; };
-    for (const [n, t] of [['driveBalance', 'balance'], ['shove', 'shove'], ['closeStep', 'shove'], ['driveSword', 'sword'], ['offHand', 'offhand'], ['driveJoints', 'muscle'], ['elbowGravity', 'elbowG'], ['anatSoft', 'anat'], ['trackBlade', 'track']]) wrap(f, n, t);
+    for (const [n, t] of [['driveBalance', 'balance'], ['shove', 'shove'], ['closeStep', 'closePush'], ['driveSword', 'sword'], ['offHand', 'offhand'], ['driveJoints', 'muscle'], ['elbowGravity', 'elbowG'], ['anatSoft', 'anat'], ['trackBlade', 'track']]) wrap(f, n, t);
     wrap(f.gait, 'pinFeet', 'pin');
     wrap(f.gait, 'swingPull', 'swing'); // 내딛는 발 ↔ 골반 당김 (쌍 — 힘은 맞지만 작용선이 달라 짝힘 토크가 남을 수 있음)
     const rs = f.uprightJoint.rawSet;
@@ -139,6 +139,7 @@ export function attach(world, named, opts = {}) {
     for (const d of decl) {
       let kind = d.kind;
       if (kind === 'balance') kind = d.F && Math.abs(d.F.x) + Math.abs(d.F.z) < 1e-9 ? 'support' : 'push';
+      if (kind === 'closePush') kind = 'push'; // 붙어 밀 때의 다리 밀기 · 맞밀기: 내 골반에만 거는 짝 없는 힘 = 걷기 밀기와 같은 갈래 (감사 11/24 대조 1)
       const k = (by[kind] ||= { F: V3(), T: V3(), gross: 0, P: 0 });
       const i = d.bi, vb = scl(add(prev.v[i], cur.v[i]), 0.5), wb = scl(add(prev.w[i], cur.w[i]), 0.5);
       if (d.F) {
@@ -162,7 +163,7 @@ export function attach(world, named, opts = {}) {
       }
     }
     // 감쇠
-    { const a = A('damp'); a.Fimp += mid ? mid.Jabs : 0; a.Timp += mid ? mid.Tabs : 0; a.Wabs += mid ? -mid.W : 0; a.Wneg += mid ? mid.W : 0; a.n++; Pout += mid ? mid.W / DT : 0; }
+    { const a = A('damp'); a.Fimp += mid ? len(mid.J) : 0; a.Timp += mid ? mid.Tabs : 0; a.Wabs += mid ? -mid.W : 0; a.Wneg += mid ? mid.W : 0; a.n++; Pout += mid ? mid.W / DT : 0; }
     if (massAbs > 0) { const a = A('mass'); a.Fimp += massAbs * DT; }
     // 닻 τ̂
     if (f) {
@@ -227,7 +228,7 @@ const bodiesOf = (f) => { const seen = new Set(), out = []; for (const [n, b] of
 const pct = (x) => (100 * x).toFixed(1).padStart(5) + ' %';
 const n1 = (x, w = 9) => (+x).toFixed(1).padStart(w);
 export function report(title, S) {
-  const lines = [`■ ${title}  (${S.T} s)`, `  힘 몫(밖) ${pct(S.forceShare)} · 수직 받침 몫 ${pct(S.supportShare)} · 일 몫(밖) ${pct(S.workShare)} · 닻 yaw ${n1(S.anchorYawNms, 0)} N·m·s · 닻 기울기 ${n1(S.anchorTiltNms, 0)} N·m·s · 근육 쌍 어긋남 최고 ${S.pairResidualMaxN.toFixed(3)} N${Object.keys(S.coupleBy).length ? ' · 짝 없는 토크 ' + Object.entries(S.coupleBy).map(([k, x]) => `${k} ${x.toFixed(1)}`).join(' · ') + ' N·m·s' : ''}`];
+  const lines = [`■ ${title}  (${S.T} s)`, `  선 힘 몫(밖 · 닻 토크는 안 들어감) ${pct(S.forceShare)} · 수직 받침 몫 ${pct(S.supportShare)} · 일 몫(밖) ${pct(S.workShare)} · 닻 yaw ${n1(S.anchorYawNms, 0)} N·m·s · 닻 기울기 ${n1(S.anchorTiltNms, 0)} N·m·s · 근육 쌍 어긋남 최고 ${S.pairResidualMaxN.toFixed(3)} N${Object.keys(S.coupleBy).length ? ' · 짝 없는 토크 ' + Object.entries(S.coupleBy).map(([k, x]) => `${k} ${x.toFixed(1)}`).join(' · ') + ' N·m·s' : ''}`];
   if (S.place.calls) lines.push(`  자리 직접 놓기: 스텝의 ${pct(S.place.stepShare)} (칼 ${pct(S.place.swordStepShare)}) · 옮긴 질량 × 거리 ${S.place.kgm} kg·m`);
   if (S.woundsTaken.length) { const W = S.woundsTaken, kin = W.filter((x) => x.kin), sv = (a) => a.reduce((t, x) => t + x.sev, 0); const rs = W.filter((x) => !x.kin && x.E0 > 0).map((x) => (x.type === 'blunt' ? x.energy : x.eff ?? x.energy) / x.E0).sort((a, b) => a - b); lines.push(`  받은 상처 ${W.length} (운동학 칼 ${kin.length} · 심각도 몫 ${pct(sv(kin) / Math.max(1e-9, sv(W)))}) · 판정 ÷ 칼만의 물리 에너지 가운데값 ${rs.length ? rs[rs.length >> 1].toFixed(2) : '-'} 배 (최고 ${rs.length ? rs[rs.length - 1].toFixed(1) : '-'})`); }
   lines.push('   갈래          ∫|F|dt N·s   그중 수직    ∫|τ|dt N·m·s    ∫|P|dt J     더한 일 J     뺀 일 J');
