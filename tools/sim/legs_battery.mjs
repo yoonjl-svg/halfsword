@@ -20,6 +20,9 @@
 //   aistroke_diagR — 걸은 길이 아니라 조종 따르기: 대본이 건 조종 쪽으로 골반이 실제로 간 거리 합 1.0 m 넘게 (제자리에서 베기만 하는 몸은 0 언저리). --stick0 = 조종을 0 으로 묶어 이 판정이 실패하는지 보는 검증용.
 //   slowwalk · slowback — 시킨 쪽 빠르기 0.38 ~ 1.2 · 0.25 ~ 0.85 m/s (지금 게임 값의 절반 ~ 1.5 배 · 예전 바닥 0.15 · 0.1 · 천장 없음).
 //  싸움: AI 대 AI. '스스로 넘어짐' = 넘어지기 앞 1.5 s 안에 받은 상처가 없는 넘어짐. 일어섬 = 넘어진 뒤 stand 로 돌아와 2 s 버팀.
+//   덧셈 줄 (11/24 검토 — 윗줄의 값 · 뜻 · 글자는 그대로): ① 선언된 도움이 걸린 스텝(getup · kneel · 그 뒤 선 지 AID.after s 안 — config AID 가 없는 나무는 뺄 것 없음)을 뺀 '몸으로 본 서 있던 몫'
+//    ② 버팀을 2 s + AID.after 로 센 다시 일어섬 ③ 선 몸이 곧장 무릎 꿇음(stand → kneel)도 넘어짐으로 센 넘어짐 · 스스로 넘어짐 · 다시 일어섬 · 한 번도 안 넘어진 몸
+//    ④ 안 넘어진 몸 가운데 선 채 죽은 몸 · 스스로는 한 번도 안 넘어진 몸 ⑤ 스스로 넘어짐 ÷ 본 시간(살아 있던 몸 시간 · 그 가운데 서 있던 시간 — 죽음으로 일찍 끝나는 판이 많은 나무와 견줄 때).
 //  이 도구는 몸에 시험 충격(가슴 치기)만 건다. Fighter 의 공개 칸(move · handOffset · state · faceTarget)만 쓰므로 어느 트리에도 --root 로 돌 수 있다.
 // ─────────────────────────────────────────────────────────────
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -493,10 +496,12 @@ for (const w of WEAPONS) {
 }
 // ── 싸움 ──
 if ((!ONLY || ONLY.has('fight')) && FIGHTS > 0) {
-  const F = { fights: FIGHTS, secs: FSECS, falls: 0, selfFalls: 0, sits: 0, rose: 0, dead: 0, wounds: 0, opened: 0, standShare: 0, upShare: 0, neverFell: 0, firstSelf: [], minutes: 0 };
+  const F = { fights: FIGHTS, secs: FSECS, falls: 0, selfFalls: 0, sits: 0, rose: 0, dead: 0, wounds: 0, opened: 0, standShare: 0, upShare: 0, neverFell: 0, firstSelf: [], minutes: 0,
+    // ↓ 11/24 검토에서 더한 셈 (위 칸들은 이름 · 뜻 그대로 — 옛 기록과 견줄 수 있게)
+    holdSecs: 2 + AID_AFTER, roseHeld: 0, upShareUnaided: 0, aidedStepShare: 0, standMinutes: 0, fallsK: 0, kneelFalls: 0, selfFallsK: 0, roseK: 0, neverFellK: 0, neverFellDead: 0, neverFellKDead: 0, neverSelfFell: 0, neverSelfFellOld: 0 };
   for (let seed = 1; seed <= FIGHTS; seed++) {
     const G = H.newRound({ walls: true, seed: seed + OFFSET, weapon: FW[(seed - 1) % FW.length], weapon2: FW[seed % FW.length], AI2Class: H.AI });
-    const fs = [G.player, G.enemy].map((x) => ({ f: x, prev: 'stand', lastWound: -9, lowFor: 0, downAt: null, upFor: 0, standSteps: 0, upSteps: 0, steps: 0, firstSelf: null, firstFall: null, sat: false }));
+    const fs = [G.player, G.enemy].map((x) => ({ f: x, prev: 'stand', lastWound: -9, lowFor: 0, downAt: null, upFor: 0, standSteps: 0, upSteps: 0, steps: 0, firstSelf: null, firstFall: null, sat: false, stT: 0, aft: false, aidSteps: 0, upAided: 0, downAtH: null, upForH: 0, downAtK: null, upForK: 0, firstFallK: null, selfK: 0 }));
     G.onWound = (att, vic) => { const e = fs.find((x) => x.f === vic); if (e) e.lastWound = G.t; };
     let nW0 = 0;
     const n = Math.round(FSECS / DT);
@@ -506,21 +511,40 @@ if ((!ONLY || ONLY.has('fight')) && FIGHTS > 0) {
         const st = e.f.state; if (st === 'dead') continue;
         e.steps++; if (st === 'stand') e.standSteps++;
         const y = e.f.bodies.pelvis.translation().y; e.lowFor = y < 0.5 ? e.lowFor + DT : 0;
-        if (y > 0.7 && e.f.tiltDeg() < 45) e.upSteps++; // 몸으로 본 '서 있음'(상태 이름과 무관 · 골반 0.7 m 위 · 가슴 기울기 45° 안)
+        // 선언된 드는 힘 · 세우는 토크가 걸리는 스텝인가: Fighter.driveAid 의 창(getup · kneel · 그 뒤 선 지 AID.after s 안)을 상태만 보고 따라 센다 (e.stT = 그 상태가 된 뒤 시간 — 바뀐 스텝이 0). config AID 가 없는 나무는 늘 아님
+        e.stT = st === e.prev ? e.stT + DT : 0;
+        if (st === 'getup' || st === 'kneel') e.aft = true; else if (st !== 'stand' || e.stT >= AID_AFTER) e.aft = false;
+        const aided = !!AID && (st === 'getup' || st === 'kneel' || (st === 'stand' && e.aft));
+        if (aided) e.aidSteps++;
+        if (y > 0.7 && e.f.tiltDeg() < 45) { e.upSteps++; if (aided) e.upAided++; } // 몸으로 본 '서 있음'(상태 이름과 무관 · 골반 0.7 m 위 · 가슴 기울기 45° 안)
         const fallNow = (e.prev === 'stand' && (st === 'down' || st === 'getup')) || (st === 'stand' && e.lowFor > 0.25 && !e.sat);
         if (st === 'stand' && e.lowFor > 0.25) { if (!e.sat) F.sits++; e.sat = true; } else if (y > 0.6) e.sat = false;
-        if (fallNow) { F.falls++; const self = G.t - e.lastWound > 1.5; e.firstFall ??= +G.t.toFixed(1); if (self) { F.selfFalls++; e.firstSelf ??= +G.t.toFixed(1); } e.downAt = G.t; e.upFor = 0; }
+        const self = G.t - e.lastWound > 1.5, kneelNow = e.prev === 'stand' && st === 'kneel'; // kneelNow = 선 몸이 곧장 무릎 꿇음 (옛 셈은 넘어짐으로 안 셈 — 덧셈 쪽 K 칸만 셈)
+        if (fallNow) { F.falls++; e.firstFall ??= +G.t.toFixed(1); if (self) { F.selfFalls++; e.firstSelf ??= +G.t.toFixed(1); } e.downAt = G.t; e.upFor = 0; e.downAtH = G.t; e.upForH = 0; }
+        if (fallNow || kneelNow) { F.fallsK++; if (!fallNow) F.kneelFalls++; e.firstFallK ??= +G.t.toFixed(1); if (self) { F.selfFallsK++; e.selfK++; } e.downAtK = G.t; e.upForK = 0; }
         if (e.downAt != null) { if (st === 'stand' && y > 0.6) { e.upFor += DT; if (e.upFor > 2) { F.rose++; e.downAt = null; } } else e.upFor = 0; }
+        if (e.downAtH != null) { if (st === 'stand' && y > 0.6) { e.upForH += DT; if (e.upForH > 2 + AID_AFTER) { F.roseHeld++; e.downAtH = null; } } else e.upForH = 0; } // 같은 넘어짐 · 버팀만 2 s + AID.after (도움이 끝난 뒤 2 s 까지)
+        if (e.downAtK != null) { if (st === 'stand' && y > 0.6) { e.upForK += DT; if (e.upForK > 2 + AID_AFTER) { F.roseK++; e.downAtK = null; } } else e.upForK = 0; }
         e.prev = st;
       }
       if (G.player.state === 'dead' || G.enemy.state === 'dead') { F.dead++; break; }
     }
     for (const e of fs) { F.upShare += e.upSteps / Math.max(1, e.steps) / (2 * FIGHTS); if (e.firstFall == null) F.neverFell++; F.standShare += e.standSteps / Math.max(1, e.steps) / (2 * FIGHTS); F.minutes += (e.steps * DT) / 60; if (e.firstSelf != null) F.firstSelf.push(e.firstSelf); }
+    for (const e of fs) { // 덧셈 (11/24 검토)
+      const deadEnd = e.f.state === 'dead';
+      if (e.firstFall == null && deadEnd) F.neverFellDead++;
+      if (e.firstFallK == null) { F.neverFellK++; if (deadEnd) F.neverFellKDead++; }
+      if (e.selfK === 0) F.neverSelfFell++; if (e.firstSelf == null) F.neverSelfFellOld++;
+      F.upShareUnaided += (e.upSteps - e.upAided) / Math.max(1, e.steps) / (2 * FIGHTS); F.aidedStepShare += e.aidSteps / Math.max(1, e.steps) / (2 * FIGHTS); F.standMinutes += (e.standSteps * DT) / 60;
+    }
     F.wounds += G.wounds.length; F.opened += G.wounds.filter((x) => x.type !== 'blunt' && x.severity > 0).length; nW0 += 0;
     try { G.world.free(); } catch { /* */ }
   }
-  report.fight = { ...F, selfFallsPerMin: +(F.selfFalls / Math.max(1e-9, F.minutes)).toFixed(2), fallsPerMin: +(F.falls / Math.max(1e-9, F.minutes)).toFixed(2), standShare: +F.standShare.toFixed(3), upShare: +F.upShare.toFixed(3), firstSelfMed: med(F.firstSelf) };
+  report.fight = { ...F, selfFallsPerMin: +(F.selfFalls / Math.max(1e-9, F.minutes)).toFixed(2), fallsPerMin: +(F.falls / Math.max(1e-9, F.minutes)).toFixed(2), standShare: +F.standShare.toFixed(3), upShare: +F.upShare.toFixed(3), firstSelfMed: med(F.firstSelf),
+    upShareUnaided: +F.upShareUnaided.toFixed(3), aidedStepShare: +F.aidedStepShare.toFixed(3), fallsKPerMin: +(F.fallsK / Math.max(1e-9, F.minutes)).toFixed(2), selfFallsKPerMin: +(F.selfFallsK / Math.max(1e-9, F.minutes)).toFixed(2), selfFallsKPerStandMin: +(F.selfFallsK / Math.max(1e-9, F.standMinutes)).toFixed(2), selfFallsPerStandMin: +(F.selfFalls / Math.max(1e-9, F.standMinutes)).toFixed(2) };
   const X = report.fight;
   console.log(`  싸움 ${FIGHTS} 판 × ${FSECS} s (${FW.join(' · ')} · AI 대 AI · 씨앗 ${1 + OFFSET} ~): 넘어짐 ${F.falls} (분당 ${X.fallsPerMin}) · 그중 스스로 ${F.selfFalls} (분당 ${X.selfFallsPerMin} · 처음 때 가운데값 ${f(X.firstSelfMed, 1)} s) · 서 있음인 채 주저앉음 ${F.sits} · 다시 일어섬 ${F.rose}/${F.falls} · 서 있던 몫 ${(100 * X.standShare).toFixed(1)} % (몸으로 본 몫 ${(100 * X.upShare).toFixed(1)} % · 한 번도 안 넘어진 몸 ${F.neverFell}/${2 * FIGHTS}) · 죽음 ${F.dead}/${FIGHTS} · 상처 ${F.wounds} (살을 가른 것 ${F.opened})`);
+  // 덧셈 줄 (11/24 검토 — 윗줄은 글자 하나 안 바꿈): ① 선언된 도움이 걸린 스텝을 뺀 몸으로 본 몫 ② 버팀 2 s + AID.after 로 센 다시 일어섬 ③ 무릎 꿇음도 넘어짐으로 센 값들 ④ 안 넘어진 몸을 갈라 봄 ⑤ 본 시간으로 나눈 스스로 넘어짐
+  console.log(`  싸움 덧셈 (윗줄은 옛 뜻 그대로): 선언된 도움(일어서는 동안 · 무릎 꿇음 · 선 뒤 ${AID_AFTER} s)이 걸린 스텝을 뺀 몸으로 본 몫 ${(100 * X.upShareUnaided).toFixed(1)} % (도움 스텝 ${(100 * X.aidedStepShare).toFixed(1)} %${AID ? '' : ' — 이 나무는 config AID 없음: 뺄 것 없음'}) · 버팀을 2 s + AID.after = ${f(F.holdSecs, 1)} s 로 센 다시 일어섬 ${F.roseHeld}/${F.falls} · 무릎 꿇음(stand → kneel)도 넘어짐으로 세면: 넘어짐 ${F.fallsK} (그중 곧장 무릎 꿇음 ${F.kneelFalls}) · 스스로 ${F.selfFallsK} · 다시 일어섬 ${F.roseK}/${F.fallsK} · 한 번도 안 넘어진 몸 ${F.neverFellK}/${2 * FIGHTS} (그 가운데 선 채 죽은 몸 ${F.neverFellKDead} · 윗줄 뜻으로는 ${F.neverFell} 가운데 ${F.neverFellDead}) · 스스로는 한 번도 안 넘어진 몸 ${F.neverSelfFell}/${2 * FIGHTS} · 스스로 넘어짐 ÷ 본 시간: 살아 있던 몸 시간 ${F.minutes.toFixed(2)} 분 기준 분당 ${X.selfFallsKPerMin} · 그 가운데 서 있던 시간 ${F.standMinutes.toFixed(2)} 분 기준 분당 ${X.selfFallsKPerStandMin}`);
 }
 if (args.json) writeFileSync(String(args.json), JSON.stringify(report, null, 1));
