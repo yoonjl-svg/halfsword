@@ -1,0 +1,21 @@
+다리 시험 묶음 · p2 · 장면마다 8 번 (안 넘어진 몫 · 넘어진 때 가운데값 s · 빠르기 가운데값 m/s · 기울기 최고 가운데값 ° · 칼끝 최고 가운데값 m/s)
+  longsword   stand               8/8  넘어진 때     - · 빠르기  0.00 · 기울기  16° · 칼끝   0.3
+  longsword   walk                8/8  넘어진 때     - · 빠르기  1.82 · 기울기  26° · 칼끝   2.2
+  longsword   back                8/8  넘어진 때     - · 빠르기  1.15 · 기울기  17° · 칼끝   1.7
+  longsword   strafeR             8/8  넘어진 때     - · 빠르기  0.72 · 기울기  16° · 칼끝   1.2
+  longsword   strafeL             8/8  넘어진 때     - · 빠르기  0.75 · 기울기  16° · 칼끝   1.3
+  longsword   stopgo              8/8  넘어진 때     - · 빠르기  0.12 · 기울기  27° · 칼끝   2.6
+  longsword   wander              8/8  넘어진 때     - · 빠르기  0.22 · 기울기  27° · 칼끝   2.1
+  longsword   turn                8/8  넘어진 때     - · 빠르기  0.12 · 기울기  24° · 칼끝   5.4
+  longsword   circle              8/8  넘어진 때     - · 빠르기  0.67 · 기울기  23° · 칼끝   2.4
+  longsword   kick40              8/8  넘어진 때     - · 빠르기  0.01 · 기울기  16° · 칼끝   0.8
+  longsword   kick80              8/8  넘어진 때     - · 빠르기  0.01 · 기울기  18° · 칼끝   1.5
+  longsword   walkkick            8/8  넘어진 때     - · 빠르기  1.81 · 기울기  27° · 칼끝   2.2
+  longsword   stroke_diagR        8/8  넘어진 때     - · 빠르기  0.00 · 기울기  24° · 칼끝  18.3
+  longsword   walkstroke_diagR    8/8  넘어진 때     - · 빠르기  0.15 · 기울기  29° · 칼끝  19.1
+  longsword   stroke_vert         8/8  넘어진 때     - · 빠르기  0.01 · 기울기  24° · 칼끝  17.4
+  longsword   walkstroke_vert     8/8  넘어진 때     - · 빠르기  0.20 · 기울기  29° · 칼끝  18.5
+  longsword   stroke_horizR       8/8  넘어진 때     - · 빠르기  0.00 · 기울기  15° · 칼끝  23.4
+  longsword   walkstroke_horizR   8/8  넘어진 때     - · 빠르기  0.16 · 기울기  19° · 칼끝  23.3
+  longsword   getup               8/8  넘어진 때  0.00 · 빠르기     - · 기울기   0° · 칼끝     - · 일어선 때 6.54
+  싸움 8 판 × 30 s (longsword · AI 대 AI): 넘어짐 5 (분당 0.75) · 그중 스스로 0 (분당 0 · 처음 때 가운데값 - s) · 서 있음인 채 주저앉음 0 · 다시 일어섬 3/5 · 서 있던 몫 95.6 % · 죽음 5/8 · 상처 215 (살을 가른 것 47)

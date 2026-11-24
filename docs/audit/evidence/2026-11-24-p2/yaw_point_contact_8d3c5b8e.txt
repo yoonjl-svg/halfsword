@@ -1,0 +1,122 @@
+=== engine as in the game now
+weight over one corner of the foot, internal torque 10 N·m
+   foot turned -0.00 deg in 2 s · wheel spin 13.9 rad/s (expected 13.9 if the foot holds)
+   tool: contact points 3.9 · ground normal 736 N · friction-couple limit it computed 29.5 N·m · yaw torque it found 10.0 N·m (true friction couple = 10) · "beyond the limit" 0.0 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 30 N·m
+   foot turned -0.00 deg in 2 s · wheel spin 41.8 rad/s (expected 41.8 if the foot holds)
+   tool: contact points 3.9 · ground normal 736 N · friction-couple limit it computed 29.4 N·m · yaw torque it found 30.0 N·m (true friction couple = 30) · "beyond the limit" 0.6 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 45 N·m
+   foot turned -0.00 deg in 2 s · wheel spin 62.8 rad/s (expected 62.8 if the foot holds)
+   tool: contact points 3.9 · ground normal 736 N · friction-couple limit it computed 29.4 N·m · yaw torque it found 45.0 N·m (true friction couple = 45) · "beyond the limit" 15.6 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 60 N·m
+   foot turned -0.00 deg in 2 s · wheel spin 83.7 rad/s (expected 83.7 if the foot holds)
+   tool: contact points 3.9 · ground normal 736 N · friction-couple limit it computed 29.3 N·m · yaw torque it found 60.0 N·m (true friction couple = 60) · "beyond the limit" 30.7 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 70 N·m
+   foot turned -0.00 deg in 2 s · wheel spin 97.6 rad/s (expected 97.6 if the foot holds)
+   tool: contact points 3.9 · ground normal 736 N · friction-couple limit it computed 29.3 N·m · yaw torque it found 70.0 N·m (true friction couple = 70) · "beyond the limit" 40.7 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 80 N·m
+   foot turned -0.03 deg in 2 s · wheel spin 111.6 rad/s (expected 111.6 if the foot holds)
+   tool: contact points 3.9 · ground normal 736 N · friction-couple limit it computed 29.2 N·m · yaw torque it found 80.0 N·m (true friction couple = 80) · "beyond the limit" 50.8 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 85 N·m
+   foot turned -0.17 deg in 2 s · wheel spin 118.5 rad/s (expected 118.5 if the foot holds)
+   tool: contact points 3.9 · ground normal 736 N · friction-couple limit it computed 29.2 N·m · yaw torque it found 85.0 N·m (true friction couple = 85) · "beyond the limit" 55.8 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 90 N·m
+   foot turned -286.73 deg in 2 s · wheel spin -17.3 rad/s (expected 125.5 if the foot holds)
+   tool: contact points 1.1 · ground normal 754 N · friction-couple limit it computed 21.9 N·m · yaw torque it found 112.1 N·m (true friction couple = 90) · "beyond the limit" 93.0 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 100 N·m
+   foot turned -340.17 deg in 2 s · wheel spin 20.5 rad/s (expected 139.5 if the foot holds)
+   tool: contact points 0.6 · ground normal 692 N · friction-couple limit it computed 14.2 N·m · yaw torque it found 104.4 N·m (true friction couple = 100) · "beyond the limit" 96.8 N·m · outside force share 0.0 % · joints to outside 0
+
+weight centred on the foot, internal torque 30 N·m
+   foot turned -0.00 deg in 2 s · wheel spin 41.8 rad/s (expected 41.8 if the foot holds)
+   tool: contact points 4.0 · ground normal 736 N · friction-couple limit it computed 86.1 N·m · yaw torque it found 30.0 N·m (true friction couple = 30) · "beyond the limit" 0.0 N·m · outside force share 0.0 % · joints to outside 0
+
+weight centred on the foot, internal torque 60 N·m
+   foot turned -0.00 deg in 2 s · wheel spin 83.7 rad/s (expected 83.7 if the foot holds)
+   tool: contact points 4.0 · ground normal 736 N · friction-couple limit it computed 86.1 N·m · yaw torque it found 60.0 N·m (true friction couple = 60) · "beyond the limit" 0.0 N·m · outside force share 0.0 % · joints to outside 0
+
+weight centred on the foot, internal torque 80 N·m
+   foot turned -0.00 deg in 2 s · wheel spin 111.6 rad/s (expected 111.6 if the foot holds)
+   tool: contact points 4.0 · ground normal 736 N · friction-couple limit it computed 86.1 N·m · yaw torque it found 80.0 N·m (true friction couple = 80) · "beyond the limit" 0.0 N·m · outside force share 0.0 % · joints to outside 0
+
+weight centred on the foot, internal torque 85 N·m
+   foot turned -0.00 deg in 2 s · wheel spin 118.6 rad/s (expected 118.5 if the foot holds)
+   tool: contact points 4.0 · ground normal 736 N · friction-couple limit it computed 86.1 N·m · yaw torque it found 85.0 N·m (true friction couple = 85) · "beyond the limit" 0.0 N·m · outside force share 0.0 % · joints to outside 0
+
+weight centred on the foot, internal torque 90 N·m
+   foot turned -176.66 deg in 2 s · wheel spin -68.3 rad/s (expected 125.5 if the foot holds)
+   tool: contact points 1.9 · ground normal 683 N · friction-couple limit it computed 45.9 N·m · yaw torque it found 112.3 N·m (true friction couple = 90) · "beyond the limit" 72.7 N·m · outside force share 0.0 % · joints to outside 0
+
+weight centred on the foot, internal torque 100 N·m
+   foot turned 23.43 deg in 2 s · wheel spin -48.7 rad/s (expected 139.5 if the foot holds)
+   tool: contact points 1.3 · ground normal 821 N · friction-couple limit it computed 31.9 N·m · yaw torque it found 120.9 N·m (true friction couple = 100) · "beyond the limit" 91.1 N·m · outside force share 0.0 % · joints to outside 0
+
+=== engine as in prototypes A/B (inner iterations 4, contact 120 Hz)
+weight over one corner of the foot, internal torque 10 N·m
+   foot turned 0.00 deg in 2 s · wheel spin 13.9 rad/s (expected 13.9 if the foot holds)
+   tool: contact points 3.4 · ground normal 736 N · friction-couple limit it computed 26.5 N·m · yaw torque it found 10.0 N·m (true friction couple = 10) · "beyond the limit" 0.0 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 30 N·m
+   foot turned 0.00 deg in 2 s · wheel spin 41.8 rad/s (expected 41.8 if the foot holds)
+   tool: contact points 3.4 · ground normal 736 N · friction-couple limit it computed 26.3 N·m · yaw torque it found 30.0 N·m (true friction couple = 30) · "beyond the limit" 3.7 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 45 N·m
+   foot turned 0.00 deg in 2 s · wheel spin 62.8 rad/s (expected 62.8 if the foot holds)
+   tool: contact points 3.4 · ground normal 736 N · friction-couple limit it computed 26.1 N·m · yaw torque it found 45.0 N·m (true friction couple = 45) · "beyond the limit" 18.9 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 60 N·m
+   foot turned 0.00 deg in 2 s · wheel spin 83.7 rad/s (expected 83.7 if the foot holds)
+   tool: contact points 3.3 · ground normal 736 N · friction-couple limit it computed 26.0 N·m · yaw torque it found 60.0 N·m (true friction couple = 60) · "beyond the limit" 34.0 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 70 N·m
+   foot turned 0.00 deg in 2 s · wheel spin 97.6 rad/s (expected 97.6 if the foot holds)
+   tool: contact points 3.3 · ground normal 736 N · friction-couple limit it computed 25.8 N·m · yaw torque it found 70.0 N·m (true friction couple = 70) · "beyond the limit" 44.2 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 80 N·m
+   foot turned 0.00 deg in 2 s · wheel spin 111.6 rad/s (expected 111.6 if the foot holds)
+   tool: contact points 3.3 · ground normal 736 N · friction-couple limit it computed 25.7 N·m · yaw torque it found 80.0 N·m (true friction couple = 80) · "beyond the limit" 54.3 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 85 N·m
+   foot turned -0.01 deg in 2 s · wheel spin 118.5 rad/s (expected 118.5 if the foot holds)
+   tool: contact points 3.3 · ground normal 736 N · friction-couple limit it computed 25.7 N·m · yaw torque it found 85.0 N·m (true friction couple = 85) · "beyond the limit" 59.3 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 90 N·m
+   foot turned 359.54 deg in 2 s · wheel spin -21.8 rad/s (expected 125.5 if the foot holds)
+   tool: contact points 0.9 · ground normal 735 N · friction-couple limit it computed 16.0 N·m · yaw torque it found 255.9 N·m (true friction couple = 90) · "beyond the limit" 240.6 N·m · outside force share 0.0 % · joints to outside 0
+
+weight over one corner of the foot, internal torque 100 N·m
+   foot turned 7.29 deg in 2 s · wheel spin -11.9 rad/s (expected 139.5 if the foot holds)
+   tool: contact points 0.5 · ground normal 771 N · friction-couple limit it computed 6.3 N·m · yaw torque it found 366.3 N·m (true friction couple = 100) · "beyond the limit" 360.5 N·m · outside force share 0.0 % · joints to outside 0
+
+weight centred on the foot, internal torque 30 N·m
+   foot turned -0.00 deg in 2 s · wheel spin 41.8 rad/s (expected 41.8 if the foot holds)
+   tool: contact points 4.0 · ground normal 736 N · friction-couple limit it computed 86.1 N·m · yaw torque it found 30.0 N·m (true friction couple = 30) · "beyond the limit" 0.0 N·m · outside force share 0.0 % · joints to outside 0
+
+weight centred on the foot, internal torque 60 N·m
+   foot turned -0.00 deg in 2 s · wheel spin 83.7 rad/s (expected 83.7 if the foot holds)
+   tool: contact points 4.0 · ground normal 736 N · friction-couple limit it computed 86.1 N·m · yaw torque it found 60.0 N·m (true friction couple = 60) · "beyond the limit" 0.0 N·m · outside force share 0.0 % · joints to outside 0
+
+weight centred on the foot, internal torque 80 N·m
+   foot turned -0.00 deg in 2 s · wheel spin 111.6 rad/s (expected 111.6 if the foot holds)
+   tool: contact points 4.0 · ground normal 736 N · friction-couple limit it computed 86.1 N·m · yaw torque it found 80.0 N·m (true friction couple = 80) · "beyond the limit" 0.0 N·m · outside force share 0.0 % · joints to outside 0
+
+weight centred on the foot, internal torque 85 N·m
+   foot turned -0.88 deg in 2 s · wheel spin 118.6 rad/s (expected 118.5 if the foot holds)
+   tool: contact points 4.0 · ground normal 736 N · friction-couple limit it computed 86.1 N·m · yaw torque it found 85.0 N·m (true friction couple = 85) · "beyond the limit" 0.0 N·m · outside force share 0.0 % · joints to outside 0
+
+weight centred on the foot, internal torque 90 N·m
+   foot turned -211.65 deg in 2 s · wheel spin -49.1 rad/s (expected 125.5 if the foot holds)
+   tool: contact points 2.2 · ground normal 604 N · friction-couple limit it computed 44.3 N·m · yaw torque it found 105.1 N·m (true friction couple = 90) · "beyond the limit" 60.8 N·m · outside force share 0.0 % · joints to outside 0
+
+weight centred on the foot, internal torque 100 N·m
+   foot turned 105.02 deg in 2 s · wheel spin -65.4 rad/s (expected 139.5 if the foot holds)
+   tool: contact points 0.7 · ground normal 610 N · friction-couple limit it computed 13.1 N·m · yaw torque it found 119.6 N·m (true friction couple = 100) · "beyond the limit" 110.0 N·m · outside force share 0.0 % · joints to outside 0
+
