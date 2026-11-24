@@ -86,7 +86,7 @@ export function attach(world, named, opts = {}) {
     for (const [n, t] of [['driveBalance', 'balance'], ['shove', 'shove'], ['closeStep', 'closePush'], ['driveSword', 'sword'], ['offHand', 'offhand'], ['driveJoints', 'muscle'], ['elbowGravity', 'elbowG'], ['anatSoft', 'anat'], ['trackBlade', 'track']]) wrap(f, n, t);
     wrap(f.gait, 'pinFeet', 'pin');
     wrap(f.gait, 'swingPull', 'swing'); // 내딛는 발 ↔ 골반 당김 (쌍 — 힘은 맞지만 작용선이 달라 짝힘 토크가 남을 수 있음)
-    const rs = f.uprightJoint?.rawSet;
+    const rs = (f.uprightJoint ?? f.joints?.find((j) => j.joint)?.joint ?? f.gripJoint)?.rawSet; // 닻이 없는 몸에서도 모터 매개변수를 잡는다 (관절 묶음은 세계에 하나)
     if (rs && !rs.__honestyCap) {
       const cap = (rs.__honestyCap = new Map());
       const o1 = rs.jointConfigureMotorPosition;
@@ -306,7 +306,7 @@ export function attach(world, named, opts = {}) {
     }
     // 관절 토크 (H5): 엔진 모터가 낸 토크를 넘어간 k · d 로 다시 세고(τ̂ = k(t − e) + d(tv − ω_rel) · 묵시 풀이라 ± 20 % 쯤), 몸 안 쌍으로 건 선언 힘 · 토크를 관절 등가 토크(먼 쪽 토막들에 걸린 것의 합 = 야코비 전치)로 더한다
     if (f && L.jdefs) {
-      const capAll = f.joints?.[0]?.joint?.rawSet?.__honestyCap;
+      const capAll = (f.joints?.find((j) => j.joint)?.joint ?? f.uprightJoint)?.rawSet?.__honestyCap;
       for (const J of L.jdefs) {
         let tm = V3();
         const m = capAll?.get(J.handle);
@@ -538,9 +538,11 @@ async function sceneSchool(Gm, o) {
   const out = [];
   for (const cell of o.cells) {
     const [school, weapon, opp] = cell.split(':');
-    let LP, LE, GG;
-    SB.fightOne({ school, weapon, opp, seed: o.seed, dur: o.secs, onRound: ({ G }) => { GG = G; LP = attach(G.world, bodiesOf(G.player), { fighter: G.player }); LE = attach(G.world, bodiesOf(G.enemy), { fighter: G.enemy }); LP.foe = LE; LE.foe = LP; hook(G, [LP, LE]); } });
-    out.push([`school P(사람 봇) · ${cell} · seed ${o.seed} (${GG.player.state}/${GG.enemy.state})`, LP.summary()], [`school E(AI) · ${cell} · seed ${o.seed}`, LE.summary()]);
+    let LP, LE, GG, SP, SE, st;
+    // fightOne 은 끝에서 world.free() 를 부른다 — 요약(지문 · 몸 밖 관절)은 세계가 살아 있을 때 떠야 한다
+    SB.fightOne({ school, weapon, opp, seed: o.seed, dur: o.secs, onRound: ({ G }) => { GG = G; LP = attach(G.world, bodiesOf(G.player), { fighter: G.player }); LE = attach(G.world, bodiesOf(G.enemy), { fighter: G.enemy }); LP.foe = LE; LE.foe = LP; hook(G, [LP, LE]); const fr = G.world.free; G.world.free = function (...a) { st = `${G.player.state}/${G.enemy.state}`; SP = LP.summary(); SE = LE.summary(); return fr.apply(this, a); }; } });
+    SP ??= LP.summary(); SE ??= LE.summary(); st ??= `${GG.player.state}/${GG.enemy.state}`;
+    out.push([`school P(사람 봇) · ${cell} · seed ${o.seed} (${st})`, SP], [`school E(AI) · ${cell} · seed ${o.seed}`, SE]);
   }
   return out;
 }
