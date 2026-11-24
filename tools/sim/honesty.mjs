@@ -13,6 +13,10 @@
 //   엔진 감쇠: Rapier 는 풀이 뒤 v ← v/(1 + c·dt) → 충격량 = −m·v_뒤·c·dt (회전도 같은 꼴). world.step 바로 뒤 속도로 셈.
 //  일: 선언 힘 F·v̄ (v̄ = 스텝 앞뒤 평균 · 작용점 속도) · 닻 τ̂·ω_골반 · 감쇠 −c(m v² + ω·Iω). 안쪽 일률 = dE/dt − 밖 일률 (근육 + 접촉 + 관절이 한 일의 합 — 스텝 안 상쇄는 못 가름).
 //  지표: 힘 몫 = ∫|F_밖|dt ÷ (∫|F_밖|dt + ∫|F_안|dt) · 수직 받침 몫 = ∫받침_y dt ÷ (M g T) · 일 몫 = ∫|P_밖|dt ÷ (∫|P_밖|dt + ∫|P_안|dt).
+//  선언된 밖 도움 (갈래 aid = Fighter.driveAid 안에서 건 것 · 11/24 검토에서 고침): 네 값으로 갈라 평균(잰 시간 전체로 나눔) · 스텝 최고를 적는다 —
+//   돌리는 토크 yaw(수직축) · 기울기 토크(수평 두 축) · 드는 힘(수직 알짜 · ÷ 맨몸 체중) · 수평 힘(수평 알짜). 토크는 그 스텝에 도움 이름으로 건 것 모두(addTorque + 힘 × 팔)의 계 질량중심 둘레 알짜,
+//   힘은 크기 합도 같이(짝힘으로 건 도움은 알짜 힘 0 · 예전 셈으로는 토크도 0 으로 읽혀 보고 줄이 사라졌다). 맨몸 체중 = bareWeight(싸움꾼 자기 토막 충돌 모양 질량 합 × g — 칼 · 발 덧질량 빼고).
+//   --selftest 가 순수 토크 · 드는 힘 · 짝힘(두 축) · 수평 힘 · 절반 시간을 상자로 확인한다. 옛 칸 이름은 그대로(뜻이 바뀐 것 · 옛 셈을 남긴 칸은 summary 의 aid 주석).
 // ─────────────────────────────────────────────────────────────
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
@@ -42,6 +46,14 @@ const PAIRED = new Set(['sword', 'offhand', 'muscle', 'elbowG', 'track', 'anat',
 const OUT = ['support', 'push', 'anchor', 'damp', 'write', 'mass', 'unpaired', 'aid'];
 const SHARED = { phase: 'other', sets: [] }; // 단계 이름표는 한 번에 하나 (모든 장부가 같이 봄)
 
+/** 맨몸 체중 (N) — 도움 · 받침을 '÷ 체중' 으로 적을 때 쓰는 하나뿐인 분모. 싸움꾼 자기 토막들의 충돌 모양 질량 합 × 중력.
+ *  칼은 안 넣고, 강체에 덧댄 질량(디딘 발 덧질량 setAdditionalMass — 재는 동안 바뀜)도 안 넣는다. 세 무기 · 두 나무 모두 736.7 N (config AID.liftMax 가 곱하는 체중과 같은 값). */
+export function bareWeight(f, g = 9.81) {
+  let m = 0; const seen = new Set();
+  for (const b of Object.values(f?.bodies ?? {})) { if (!b || seen.has(b.handle) || (f.sword && b.handle === f.sword.handle)) continue; seen.add(b.handle); for (let i = 0, n = b.numColliders(); i < n; i++) m += b.collider(i).mass(); }
+  return m * Math.abs(g);
+}
+
 /**
  * attach(world, bodies, opts) → 장부. bodies = [[이름, 강체]…]. opts.fighter 가 있으면 단계 감싸기 · 닻 재계산을 한다.
  * pre() = 스텝 앞(힘 넣기 전) · mid() = world.step 바로 뒤 · post() = 스텝 끝. 장면 쪽이 차례대로 부른다 (hook(G, [장부…]) 가 G.step 에 건다).
@@ -55,6 +67,7 @@ export function attach(world, named, opts = {}) {
   let placedNow = false, swordNow = false;
   const iSword = f?.sword ? named.findIndex(([, b]) => b.handle === f.sword.handle) : -1;
   L.virt = {}; L.joint = {}; L.dyn = [];
+  L.bareMg = f ? bareWeight(f, g) : null; // 맨몸 체중 (칼 · 덧질량 빼고) — 붙일 때 한 번
   const A = (k) => (L.acc[k] ||= { Fimp: 0, Fy: 0, Timp: 0, Wabs: 0, Wpos: 0, Wneg: 0, n: 0 });
   let decl = [];
   const mine = new Map(bodies.map((b, i) => [b.handle, i]));
@@ -253,7 +266,18 @@ export function attach(world, named, opts = {}) {
       } else {
         put(kind, k.F, len(k.T), k.P, k.F.y);
         if (kind === 'support' || kind === 'push' || kind === 'write' || kind === 'other' || kind === 'unpaired' || kind === 'aid') Pout += k.P;
-        if (kind === 'aid') { let T = V3(); for (const d of k.items) if (d.T) T = add(T, d.T); const q = (L.aid ||= { peakN: 0, peakNm: 0, Tnms: 0, steps: 0 }); q.peakN = Math.max(q.peakN, len(k.F)); q.peakNm = Math.max(q.peakNm, len(T)); q.Tnms += len(T) * DT; q.steps++; } // 선언된 밖 도움: 스텝 최고값(상한을 지키는지) · 순수 토크 몫
+        if (kind === 'aid') {
+          // 선언된 밖 도움 (11/24 고침): 토크 = 이 스텝에 도움 이름으로 건 것 모두(addTorque + 힘 × 팔)의 계 질량중심 둘레 알짜(k.T) — 짝힘으로 건 도움도 토크로 읽힌다. 힘 = 크기 합(k.gross — 알짜가 0 인 짝힘도 보임).
+          //  네 갈래: yaw(수직축 토크) · 기울기(수평 두 축 토크) · 드는 힘(수직 알짜) · 수평 힘(수평 알짜). 옛 셈(addTorque 만 · 알짜 힘)은 pure* · netPeakN 으로 남김.
+          let Tp = V3(); for (const d of k.items) if (d.T) Tp = add(Tp, d.T);
+          const q = (L.aid ||= { peakN: 0, peakNm: 0, Tnms: 0, steps: 0, grossNs: 0, yawNms: 0, yawPk: 0, tiltNms: 0, tiltPk: 0, liftNs: 0, liftPk: 0, pushNs: 0, pushPk: 0, pureTnms: 0, purePeakNm: 0, netPeakN: 0 });
+          const yaw = Math.abs(k.T.y), tilt = Math.hypot(k.T.x, k.T.z), lift = k.F.y, push = Math.hypot(k.F.x, k.F.z), tAll = len(k.T);
+          q.peakN = Math.max(q.peakN, k.gross); q.grossNs += k.gross * DT; q.peakNm = Math.max(q.peakNm, tAll); q.Tnms += tAll * DT;
+          q.yawNms += yaw * DT; q.yawPk = Math.max(q.yawPk, yaw); q.tiltNms += tilt * DT; q.tiltPk = Math.max(q.tiltPk, tilt);
+          q.liftNs += lift * DT; q.liftPk = Math.max(q.liftPk, Math.abs(lift)); q.pushNs += push * DT; q.pushPk = Math.max(q.pushPk, push);
+          q.pureTnms += len(Tp) * DT; q.purePeakNm = Math.max(q.purePeakNm, len(Tp)); q.netPeakN = Math.max(q.netPeakN, len(k.F));
+          q.steps++;
+        }
       }
     }
     // 감쇠
@@ -396,7 +420,20 @@ export function attach(world, named, opts = {}) {
       T: +L.T.toFixed(3),
       forceShare: Fout / Math.max(1e-9, Fout + Fin),
       supportShare: v('support', 'Fy') / Math.max(1e-9, L.Mg * L.T),
-      aid: { liftShare: v('aid', 'Fy') / Math.max(1e-9, L.Mg * L.T), forceNs: v('aid', 'Fimp'), torqueRate: (L.aid?.Tnms ?? 0) / Math.max(1e-9, L.T), peakN: L.aid?.peakN ?? 0, peakNm: L.aid?.peakNm ?? 0, stepShare: (L.aid?.steps ?? 0) / Math.max(1, L.rows) },
+      bareMg: L.bareMg, Mg: L.Mg ?? null, // 맨몸 체중(칼 · 덧질량 빼고 — '÷ 체중' 의 분모) · 재는 끝의 온 질량 × g (칼 · 덧질량 포함 — 받침 몫 · liftShare 의 옛 분모)
+      // 선언된 밖 도움. 옛 칸(liftShare · forceNs · torqueRate · peakN · peakNm · stepShare)은 이름 그대로 — 다만 torqueRate · peakNm 은 이제 계 질량중심 둘레 알짜 토크(짝힘 포함), peakN 은 힘 크기 합(옛 셈은 pureTorqueRate · pureTorquePeak · netForcePeak).
+      //  새 칸: yaw · tilt (N·m 평균 · 스텝 최고) · lift (수직 알짜 N — 평균 · 최고 · ÷ 맨몸 체중) · push (수평 알짜 N) · grossNs · grossRate (힘 크기 합) · torqueNms. 평균은 잰 시간 전체로 나눈 값(안 걸린 스텝은 0).
+      aid: (() => {
+        const q = L.aid ?? {}, T = Math.max(1e-9, L.T), n = (x) => x ?? 0, bare = L.bareMg > 0 ? L.bareMg : null;
+        return {
+          liftShare: v('aid', 'Fy') / Math.max(1e-9, L.Mg * L.T), forceNs: v('aid', 'Fimp'), torqueRate: n(q.Tnms) / T, peakN: n(q.peakN), peakNm: n(q.peakNm), stepShare: n(q.steps) / Math.max(1, L.rows),
+          torqueNms: n(q.Tnms), grossNs: n(q.grossNs), grossRate: n(q.grossNs) / T,
+          yaw: { avg: n(q.yawNms) / T, peak: n(q.yawPk) }, tilt: { avg: n(q.tiltNms) / T, peak: n(q.tiltPk) },
+          lift: { avgN: n(q.liftNs) / T, peakN: n(q.liftPk), share: bare ? n(q.liftNs) / (bare * T) : null, peakShare: bare ? n(q.liftPk) / bare : null },
+          push: { avgN: n(q.pushNs) / T, peakN: n(q.pushPk) },
+          pureTorqueRate: n(q.pureTnms) / T, pureTorquePeak: n(q.purePeakNm), netForcePeak: n(q.netPeakN),
+        };
+      })(),
       workShare: Wout / Math.max(1e-9, Wout + Win),
       anchorYawNms: v('anchorYaw', 'Timp'), anchorTiltNms: v('anchorTilt', 'Timp'),
       pairResidualMaxN: L.chk.pairMax, coupleBy: L.chk.coupleBy ?? {},
@@ -443,9 +480,16 @@ const bodiesOf = (f) => { const seen = new Set(), out = []; for (const [n, b] of
 // ───────── 보고 ─────────
 const pct = (x) => (100 * x).toFixed(1).padStart(5) + ' %';
 const n1 = (x, w = 9) => (+x).toFixed(1).padStart(w);
+/** 선언된 밖 도움이 한 번이라도 걸렸나 (힘 알짜 · 힘 크기 합 · 토크 충격량 가운데 하나라도 0 이 아니면 — 짝힘처럼 알짜 힘이 0 인 도움도 줄이 찍히게) */
+export const aidOn = (a) => !!a && (a.forceNs > 0 || a.torqueRate > 0 || (a.grossNs ?? 0) > 0 || (a.torqueNms ?? 0) > 0);
+/** 선언된 밖 도움 한 줄: 네 갈래(돌리는 토크 yaw · 기울기 토크 · 드는 힘 · 수평 힘)마다 평균 · 스텝 최고. '÷ 체중' 은 맨몸 체중(bareWeight) */
+export function aidLine(a) {
+  const sh = (x) => (x == null ? '-' : (100 * x).toFixed(1) + ' %');
+  return `선언된 밖 도움: 돌리는 토크(yaw · 수직축) 평균 ${a.yaw.avg.toFixed(1)} N·m (스텝 최고 ${a.yaw.peak.toFixed(1)}) · 기울기 토크(수평 두 축) 평균 ${a.tilt.avg.toFixed(1)} N·m (스텝 최고 ${a.tilt.peak.toFixed(1)}) · 드는 힘(수직) 평균 ${a.lift.avgN.toFixed(0)} N = 맨몸 체중의 ${sh(a.lift.share)} (스텝 최고 ${a.lift.peakN.toFixed(0)} N = ${sh(a.lift.peakShare)}) · 수평 힘 평균 ${a.push.avgN.toFixed(1)} N (스텝 최고 ${a.push.peakN.toFixed(1)}) · 힘 크기 합 평균 ${a.grossRate.toFixed(1)} N (스텝 최고 ${a.peakN.toFixed(0)}) · 토크 합 크기 평균 ${a.torqueRate.toFixed(1)} N·m (스텝 최고 ${a.peakNm.toFixed(1)}) · 걸린 스텝 ${pct(a.stepShare)}`;
+}
 export function report(title, S) {
   const lines = [`■ ${title}  (${S.T} s)`, `  선 힘 몫(밖 · 닻 토크는 안 들어감) ${pct(S.forceShare)} · 수직 받침 몫 ${pct(S.supportShare)} · 일 몫(밖) ${pct(S.workShare)} · 닻 yaw ${n1(S.anchorYawNms, 0)} N·m·s · 닻 기울기 ${n1(S.anchorTiltNms, 0)} N·m·s · 근육 쌍 어긋남 최고 ${S.pairResidualMaxN.toFixed(3)} N${Object.keys(S.coupleBy).length ? ' · 짝 없는 토크 ' + Object.entries(S.coupleBy).map(([k, x]) => `${k} ${x.toFixed(1)}`).join(' · ') + ' N·m·s' : ''}`];
-  if (S.aid && (S.aid.forceNs > 0 || S.aid.torqueRate > 0)) lines.push(`  선언된 밖 도움: 드는 힘 ÷ 체중 ${pct(S.aid.liftShare)} (스텝 최고 ${n1(S.aid.peakN, 0)} N) · 세우는 토크 평균 ${S.aid.torqueRate.toFixed(1)} N·m (스텝 최고 ${S.aid.peakNm.toFixed(1)} N·m) · 걸린 스텝 ${pct(S.aid.stepShare)}`);
+  if (aidOn(S.aid)) lines.push(`  ${aidLine(S.aid)}`);
   if (S.stab) lines.push(`  몸: ${S.stab.fellAt != null ? '넘어짐 ' + S.stab.fellAt + ' s' : '안 넘어짐'} · 골반 높이 평균 ${S.stab.pelvisYMean} (최저 ${S.stab.pelvisYMin}) m · 가슴 기울기 최고 ${S.stab.tiltMaxDeg}° · 옮긴 거리 ${S.stab.netMove} m (길 ${S.stab.pathMove} m · 평균 ${S.stab.meanSpeed} m/s) · 칼끝 최고 ${S.stab.tipSpeedMax} m/s · 상태 ${Object.entries(S.stab.states).map(([k, n]) => k + ' ' + n).join(' ')}`);
   lines.push(`  검산: 땅 법선 ÷ 체중 ${pct(S.check.groundNShare)} · 법선으로 설명 안 되는 수직 힘 ${n1(S.check.hiddenYNs, 0)} N·s (알짜 ${n1(S.check.hiddenYNet, 0)}) · 수평 마찰(핀 포함) ${n1(S.check.frictionHNs, 0)} N·s 가운데 μN 넘는 몫 ${n1(S.check.frictionExcessNs, 0)} N·s · 발 아닌 곳이 땅을 누름 ${n1(S.check.nonFootGroundNs, 0)} N·s · 땅 아닌 것과 닿음 ${n1(S.check.foreignNs, 0)} N·s (그중 운동학 물체 ${n1(S.check.foreignKinNs, 0)}) · 몸 밖에 묶인 관절 ${S.externalJoints.length} (${S.externalJoints.join(',') || '없음'})`);
   if (S.torque) lines.push(`  돌리는 쪽: 숨은 기울기 토크 평균 ${S.torque.tiltResRate.toFixed(2)} N·m (닻 재계산값을 뺀 나머지 ${S.torque.tiltFloorRate.toFixed(2)}) · yaw 엔진 마찰 한도 넘는 몫 평균 ${S.torque.yawExcessRate.toFixed(2)} N·m (쿨롱 한도는 넘고 엔진 한도 안 — 엔진이 봐준 비틀림 마찰 ${(S.torque.yawOverCoulombRate ?? 0).toFixed(2)} N·m) · 토크 몫(밖) ${pct(S.torque.share)} = 밖 ${n1(S.torque.outNms, 0)} ÷ (밖 + 땅 ${n1(S.torque.groundNms, 0)}) N·m·s · 기울기 잔차 ${n1(S.torque.tiltResNms, 0)} · yaw 잔차 ${n1(S.torque.yawResNms, 0)} (마찰 짝힘 한도 넘는 몫 ${n1(S.torque.yawExcessNms, 0)}) · 회전 감쇠 ${n1(S.torque.dampNms, 0)}`);
@@ -662,6 +706,39 @@ async function selftest() {
     const c1 = foot(0, 0, 60), c2 = foot(0.10, 0.04, 60);
     all &= ok('발 비틀기 · 체중 한가운데 60 N·m', c1.turned < 1 && c1.S.torque.yawExcessRate < 1 && c1.S.torque.yawOverCoulombRate < 1, `발 ${c1.turned.toFixed(2)}° · 엔진 한도 넘는 몫 ${c1.S.torque.yawExcessRate.toFixed(2)} · 엔진이 봐준 몫 ${c1.S.torque.yawOverCoulombRate.toFixed(2)} N·m`);
     all &= ok('발 비틀기 · 체중 귀퉁이 60 N·m', c2.turned < 1 && c2.S.torque.yawExcessRate < 1 && c2.S.torque.yawOverCoulombRate > 20, `발 ${c2.turned.toFixed(2)}° · 엔진 한도 넘는 몫 ${c2.S.torque.yawExcessRate.toFixed(2)} · 엔진이 봐준 몫 ${c2.S.torque.yawOverCoulombRate.toFixed(2)} N·m (쿨롱 한도 29 쯤)`);
+  }
+  { // 18 ~ 23 선언된 밖 도움(갈래 aid — 11/24 검토): 가짜 싸움꾼의 driveAid 가 건 것이 네 갈래(yaw · 기울기 · 드는 힘 · 수평 힘)로 맞게 읽히는가. 짝힘으로 건 도움이 0 으로 읽히던 구멍을 막았는지 본다
+    const fake = (b, driveAid) => ({ bodies: { pelvis: b, chest: b }, state: 'stand', driveAid });
+    const runAid = (w, b, secs, fn) => { const fz = fake(b, fn), L = attach(w, [['box', b]], { fighter: fz }); const S = drive(w, L, secs, () => { b.resetForces(true); b.resetTorques(true); fz.driveAid(); }); return { S, line: report('t', S).split('\n').find((l) => l.includes('선언된 밖 도움')) ?? null }; };
+    const near = (x, y, tol = 0.01) => Math.abs(x - y) <= tol * Math.max(1, Math.abs(y));
+    const A4 = (a) => `yaw ${a.yaw.avg.toFixed(2)}/${a.yaw.peak.toFixed(2)} · 기울기 ${a.tilt.avg.toFixed(2)}/${a.tilt.peak.toFixed(2)} N·m · 드는 힘 ${a.lift.avgN.toFixed(2)}/${a.lift.peakN.toFixed(2)} N (÷ 맨몸 체중 ${a.lift.share == null ? '-' : (100 * a.lift.share).toFixed(1) + ' %'}) · 수평 힘 ${a.push.avgN.toFixed(2)}/${a.push.peakN.toFixed(2)} N · 힘 크기 합 최고 ${a.peakN.toFixed(1)} N (평균/최고)`;
+    { // 순수 토크: 무중력 상자에 수평축 5 + 수직축 3 N·m → 기울기 5 · yaw 3 · 힘 0 · 일 = 얻은 에너지
+      const w = mk(0), b = box(w, 2); const { S, line } = runAid(w, b, 1, () => b.addTorque({ x: 5, y: 3, z: 0 }, true)); const a = S.aid;
+      all &= ok('도움: 순수 토크', near(a.tilt.avg, 5) && near(a.tilt.peak, 5) && near(a.yaw.avg, 3) && near(a.yaw.peak, 3) && a.lift.peakN === 0 && a.push.peakN === 0 && a.peakN === 0 && near(a.peakNm, Math.hypot(5, 3)) && near(a.pureTorquePeak, Math.hypot(5, 3)) && a.stepShare === 1 && !!line && S.forceShare === 0 && S.torque.share > 0.99, `${A4(a)} · 보고 줄 ${line ? '있음' : '없음'} · 토크 몫(밖) ${pct(S.torque.share)}`);
+    }
+    { // 드는 힘: 땅 위 상자를 체중의 절반으로 → 드는 힘 ÷ 맨몸 체중 0.5 · 땅 법선 0.5 · 토크 0 · 수평 힘 0
+      const w = mk(); ground(w); const b = box(w, 0.2); for (let i = 0; i < 120; i++) w.step(); const Mg = b.mass() * 9.81;
+      const { S, line } = runAid(w, b, 2, () => b.addForce({ x: 0, y: 0.5 * Mg, z: 0 }, true)); const a = S.aid;
+      all &= ok('도움: 드는 힘', near(S.bareMg, Mg, 1e-6) && near(a.lift.share, 0.5) && near(a.lift.peakShare, 0.5) && near(a.lift.avgN, 0.5 * Mg) && near(a.liftShare, 0.5) && a.push.peakN < 1e-9 && a.tilt.peak < 1e-6 * Mg && a.yaw.peak < 1e-6 * Mg && Math.abs(S.check.groundNShare - 0.5) < 0.02 && !S.cats.support && !!line, `${A4(a)} · 맨몸 체중 ${S.bareMg.toFixed(2)} N (상자 ${Mg.toFixed(2)}) · 땅 법선 ÷ 체중 ${pct(S.check.groundNShare)} · 보고 줄 ${line ? '있음' : '없음'}`);
+    }
+    { // 짝힘: 한 토막의 위 · 아래 0.4 m 에 ± 200 N (= 80 N·m 순수 토크와 같은 일) → 기울기 80 · 알짜 힘 0 · 힘 크기 합 400 · 보고 줄이 찍힘. 옛 셈(addTorque 만)은 0
+      const w = mk(0), b = box(w, 2);
+      const { S, line } = runAid(w, b, 0.05, () => { const c = b.worldCom(); b.addForceAtPoint({ x: 200, y: 0, z: 0 }, { x: c.x, y: c.y + 0.2, z: c.z }, true); b.addForceAtPoint({ x: -200, y: 0, z: 0 }, { x: c.x, y: c.y - 0.2, z: c.z }, true); }); const a = S.aid;
+      all &= ok('도움: 짝힘(기울기 축)', a.tilt.peak > 79 && a.tilt.peak < 81 && a.tilt.avg > 79 && a.yaw.peak < 0.5 && near(a.peakN, 400) && near(a.grossNs, 400 * S.T) && a.forceNs < 1e-6 && a.lift.peakN < 1e-9 && a.push.peakN < 1e-6 && a.peakNm > 79 && a.torqueRate > 79 && a.pureTorquePeak === 0 && near(a.torqueNms, S.cats.aid.Timp, 1e-3) && !!line, `${A4(a)} · ∫|알짜 F| ${a.forceNs.toFixed(4)} N·s · ∫Σ|F| ${a.grossNs.toFixed(2)} N·s · 옛 셈(addTorque 만) 최고 ${a.pureTorquePeak} N·m · 보고 줄 ${line ? '있음' : '없음'}`);
+    }
+    { // 짝힘(수직축): 앞 · 뒤 0.4 m 에 ± 200 N → yaw 80 · 기울기 0
+      const w = mk(0), b = box(w, 2);
+      const { S, line } = runAid(w, b, 0.05, () => { const c = b.worldCom(); b.addForceAtPoint({ x: 200, y: 0, z: 0 }, { x: c.x, y: c.y, z: c.z + 0.2 }, true); b.addForceAtPoint({ x: -200, y: 0, z: 0 }, { x: c.x, y: c.y, z: c.z - 0.2 }, true); }); const a = S.aid;
+      all &= ok('도움: 짝힘(수직축)', a.yaw.peak > 79 && a.yaw.peak < 81 && a.yaw.avg > 79 && a.tilt.peak < 0.5 && near(a.peakN, 400) && a.lift.peakN < 1e-9 && a.push.peakN < 1e-6 && !!line, `${A4(a)} · 보고 줄 ${line ? '있음' : '없음'}`);
+    }
+    { // 수평 힘: 무중력 상자를 도움 이름으로 20 N 밂 → 수평 힘 20 · 드는 힘 0 · 토크 0 · 밀기(push) 갈래가 아니라 aid 갈래 · 힘 몫 1
+      const w = mk(0), b = box(w, 2); const { S, line } = runAid(w, b, 1, () => b.addForce({ x: 12, y: 0, z: 16 }, true)); const a = S.aid;
+      all &= ok('도움: 수평 힘', near(a.push.avgN, 20) && near(a.push.peakN, 20) && a.lift.peakN === 0 && a.liftShare === 0 && a.tilt.peak < 1e-6 && a.yaw.peak < 1e-6 && near(a.peakN, 20) && !S.cats.push && S.forceShare > 0.99 && !!line, `${A4(a)} · 밀기 갈래 ${S.cats.push ? S.cats.push.Fimp : '없음'} · 힘 몫 ${pct(S.forceShare)} · 보고 줄 ${line ? '있음' : '없음'}`);
+    }
+    { // 절반의 시간만(앞 1 s) 토크 8 + 드는 힘 30: 평균은 잰 시간 전체로 나눈 값(걸린 동안 값의 절반) · 걸린 스텝 0.5 · 최고는 걸린 동안 값
+      const w = mk(0), b = box(w, 2); let i = 0; const { S } = runAid(w, b, 2, () => { if (i++ < 120) { b.addTorque({ x: 0, y: 0, z: 8 }, true); b.addForce({ x: 0, y: 30, z: 0 }, true); } }); const a = S.aid;
+      all &= ok('도움: 절반 시간', near(a.stepShare, 0.5, 1e-9) && near(a.tilt.avg, 4) && near(a.tilt.peak, 8) && near(a.lift.avgN, 15) && near(a.lift.peakN, 30) && near(a.grossRate, 15), `${A4(a)} · 걸린 스텝 ${pct(a.stepShare)}`);
+    }
   }
   console.log(`honesty.mjs 자가 시험 (Rapier ${RAPIER.version?.() ?? ''})\n${out.join('\n')}\n${all ? '모두 통과' : '실패 있음'}`);
   process.exit(all ? 0 : 1);
