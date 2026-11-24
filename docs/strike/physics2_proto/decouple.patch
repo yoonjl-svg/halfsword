@@ -1,0 +1,26 @@
+diff --git a/src/gait.js b/src/gait.js
+index bca25f2f..d5a9324d 100644
+--- a/src/gait.js
++++ b/src/gait.js
+@@ -362,7 +362,7 @@ export class Gait {
+    */
+   legV() {
+     const f = this.f;
+-    const k = (f.strength ?? 1) * (0.6 + 0.4 * (f.legHealth ?? 1)) * (0.4 + 0.6 * Math.min(f.limbs?.legF ?? 1, f.limbs?.legB ?? 1));
++    const k = (0.6 + 0.4 * (f.legHealth ?? 1)) * (0.4 + 0.6 * Math.min(f.limbs?.legF ?? 1, f.limbs?.legB ?? 1)); // 인물 힘 몫은 안 곱함 (legs_vmc.js strengthOf 와 같은 까닭)
+     return GAIT.legVmax * Math.min(1, k);
+   }
+ 
+diff --git a/src/legs_vmc.js b/src/legs_vmc.js
+index 9c8183e8..815b578b 100644
+--- a/src/legs_vmc.js
++++ b/src/legs_vmc.js
+@@ -346,7 +346,7 @@ export class LegDrive {
+   /** 다리 근력 몫 (driveJoints 의 다리 근육과 같은 꼴 — 근육 세기 · 다리 건강 · 그 다리 기능 · 인물 힘) */
+   strengthOf(k) {
+     const f = this.f;
+-    return f.muscle * (0.6 + 0.4 * f.legHealth) * (0.4 + 0.6 * f.limbs['leg' + k]) * (f.strength ?? 1);
++    return f.muscle * (0.6 + 0.4 * f.legHealth) * (0.4 + 0.6 * f.limbs['leg' + k]); // 인물 힘 몫(PROF_BODY.strength — 숙련도 칸)은 다리 받치는 힘에 곱하지 않는다: 옛 판에서도 서기 · 걷기는 숙련도와 무관했다(밖 받침이 했다). 칼 · 밀치기 힘에는 그대로 곱한다
+   }
+ 
+   /** 윗몸(골반 · 배 · 가슴 · 머리 · 두 팔 · 칼)의 질량중심 → this.xT (몸통 토크의 기준 점 — 딛은 다리의 땅 반력이 이 점을 지나면 윗몸이 돌지 않는다) · 그 속도 → this.vT */
