@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  legs_battery.mjs — 다리 시험 묶음 (물리 2.0 · docs/strike/physics2_proto_round1_2026-11-24.md §6-1). 재기만 한다.
 //
-//   node tools/sim/legs_battery.mjs [--root=<트리>] [--n=8] [--offset=0] [--weapons=longsword,rapier,zweihander] [--only=stand,walk,…] [--more] [--holes] [--fights=8] [--fightWeapons=a,b,…] [--secs=30] [--json=<파일>] [--quiet] [--runs] [--nohonesty]
+//   node tools/sim/legs_battery.mjs [--root=<트리>] [--n=8] [--offset=0] [--weapons=longsword,rapier,zweihander] [--only=stand,walk,…] [--more] [--holes] [--fights=8] [--fightWeapons=a,b,…] [--secs=30] [--json=<파일>] [--quiet] [--runs] [--nohonesty] [--stick0]
 //   --more = 부를 때만 도는 장면(MORE) 전부 · --holes = 그 가운데 구멍 메우기 장면(HOLES — 11/24 저녁 · 기록 docs/strike/physics2_notes/s7_battery_holes.md)만. 기본 묶음(19 장면 · 합계 432)은 그대로.
 //   --runs = 판마다 한 줄(통과 · 넘어진 때 · 셈 — 왜 실패했나 볼 때). 구멍 메우기 장면은 줄 끝에 그 장면의 확인 셈(그 일이 일어난 판 수)이 붙는다.
 //
@@ -11,6 +11,10 @@
 //  통과: 안 넘어짐 + 시킨 일을 함 — 걷기류는 시킨 쪽으로 평균 빠르기 바닥(걷기 0.6 · 뒷걸음 0.4 · 옆걸음 0.25 m/s — 목표의 절반), 가다 서다 · 떠돌기 · 돌며 걷기는 걸은 길이 바닥, 돌기는 바라볼 쪽 오차 30° 안.
 //  정직 먼저 (감사 11/24 대조 4): 이 도구는 구실만 잰다 — 숨은 받침을 다시 넣은 몸도 통과한다. 그래서 맨 앞에 같은 나무를 honesty.mjs 장부로 한 번 재서(서기 · 걷기) 몸 밖 관절 · 받침 · 밀기 · 쓰기 · 지문을 찍는다.
 //  관문 판정은 짓는 동안 안 쓴 흔듦 묶음으로: --offset=100 --n=24 (기본 0 · 8 은 짓는 쪽 용).
+//  다시 판정한 부를 때만 장면 (11/24 검토 · 줄 끝에 그 셈이 붙는다):
+//   reqpass · reqlunge · lungecut · passcut — 받은 부탁(requestStep 이 true)이 아니라 실제로 뜬 걸음: 받은 뒤 1 s 안에 kind 'req' 걸음이 뜬 부탁 3 번 넘게. 런지 둘(reqlunge · lungecut)은 그 절반 넘게를 앞발이 디뎌야 한다. 줄 끝 = 받은 부탁 · 뜬 걸음(앞발 · 뒷발) · 그 발이 앞으로 간 거리 가운데값.
+//   aistroke_diagR — 걸은 길이 아니라 조종 따르기: 대본이 건 조종 쪽으로 골반이 실제로 간 거리 합 1.0 m 넘게 (제자리에서 베기만 하는 몸은 0 언저리). --stick0 = 조종을 0 으로 묶어 이 판정이 실패하는지 보는 검증용.
+//   slowwalk · slowback — 시킨 쪽 빠르기 0.38 ~ 1.2 · 0.25 ~ 0.85 m/s (지금 게임 값의 절반 ~ 1.5 배 · 예전 바닥 0.15 · 0.1 · 천장 없음).
 //  싸움: AI 대 AI. '스스로 넘어짐' = 넘어지기 앞 1.5 s 안에 받은 상처가 없는 넘어짐. 일어섬 = 넘어진 뒤 stand 로 돌아와 2 s 버팀.
 //  이 도구는 몸에 시험 충격(가슴 치기)만 건다. Fighter 의 공개 칸(move · handOffset · state · faceTarget)만 쓰므로 어느 트리에도 --root 로 돌 수 있다.
 // ─────────────────────────────────────────────────────────────
@@ -133,24 +137,67 @@ for (const fam of ['diagR', 'vert', 'horizR']) {
 const aiStick = (ctx, t) => { // AI 간격 잡기 꼴 조종: 0.2 ~ 0.7 s 마다 크기 · 쪽을 바꿈 (앞뒤가 옆보다 잦음) · 바라보는 쪽은 천천히 흔들림
   const s = ctx.state;
   if (s.until == null || t >= s.until) { s.until = t + 0.2 + 0.5 * ctx.R(); const m = [0, 0.21, 0.45, 0.45, 0.75, 1][Math.floor(ctx.R() * 6)]; const d = [[0, 1], [0, 1], [0, -1], [0, -1], [1, 0], [-1, 0], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]][Math.floor(ctx.R() * 10)]; s.mv = [d[0] * m, d[1] * m]; }
-  ctx.P.move.set(s.mv[0], s.mv[1]);
+  if (STICK0) ctx.P.move.set(0, 0); else ctx.P.move.set(s.mv[0], s.mv[1]);
   faceAround(ctx, 0.5 * Math.sin(0.7 * t));
+};
+const footXZ = (P, k) => { const p = P.bodies['foot' + k].translation(); return { x: p.x, z: p.z }; };
+/** 부탁 걸음 따라가기 (스텝마다 부름 — 재기만): 받은 부탁마다 ① 1 s 안에 kind 'req' 걸음이 실제로 떴나 ② 뜬 발이 앞발인가(뜨기 바로 앞 스텝의 두 발 자리를 몸 앞쪽으로 견줌 — 다리 이름표 F · B 가 아니라 자리) ③ 그 발이 디딜 때까지 몸 앞쪽(뜰 때의 골반 앞)으로 간 거리.
+ *  state.rq = { open: 아직 안 뜬 부탁을 받은 때, n: 뜬 수, front · rear: 앞발 · 뒷발 수, tr: 간 거리들 } — 받은 수(requestStep 이 true 를 돌려준 수)는 예전 그대로 state.extra */
+const reqTrack = (c, t) => {
+  const g = c.P.gait, q = (c.state.rq ??= { open: null, pk: {}, fp: null, sw: {}, n: 0, front: 0, rear: 0, tr: [] });
+  if (!g?.legs) return q;
+  const pos = { F: footXZ(c.P, 'F'), B: footXZ(c.P, 'B') }, f = fwdOf(c.P);
+  for (const k of ['F', 'B']) {
+    const l = g.legs[k], cur = l.stance ? null : l.kind;
+    if (cur === 'req' && q.pk[k] !== 'req' && q.open != null && t - q.open <= 1 + 1e-9) { // 이 발이 부탁 걸음으로 막 떴다
+      const o = k === 'F' ? 'B' : 'F', a = q.fp ?? pos, front = (a[k].x - a[o].x) * f.x + (a[k].z - a[o].z) * f.z >= 0;
+      q.n++; if (front) q.front++; else q.rear++;
+      q.sw[k] = { p0: a[k], f }; q.open = null;
+    }
+    if (cur == null && q.sw[k]) { const w = q.sw[k]; q.tr.push(+((pos[k].x - w.p0.x) * w.f.x + (pos[k].z - w.p0.z) * w.f.z).toFixed(3)); q.sw[k] = null; }
+    q.pk[k] = cur;
+  }
+  if (q.open != null && t - q.open > 1) q.open = null; // 1 s 안에 안 뜬 부탁은 버림 (받는 척만 한 부탁)
+  q.fp = pos;
+  return q;
 };
 const reqEvery = (kind, o) => (i, t, c) => { // 1.6 s 마다 기술 걸음을 부탁 (걷는 조종 0.45 앞 · 부탁 앞뒤 0.3 s 는 조종 1 — AI 가 베며 내딛는 꼴)
   const s = c.state; s.ph ??= 0.4 + 0.8 * c.R(); const k = (t - s.ph) / 1.6, near = Math.abs(k - Math.round(k)) * 1.6 < 0.3 && t > s.ph - 0.3;
   c.P.move.set(0, near ? 1 : 0.45);
-  if (t >= s.ph && Math.floor((t - s.ph) / 1.6) !== s.n) { s.n = Math.floor((t - s.ph) / 1.6); const ok = c.P.gait?.requestStep?.({ kind, ...o }); s.extra = (s.extra ?? 0) + (ok ? 1 : 0); }
+  const q = reqTrack(c, t);
+  if (t >= s.ph && Math.floor((t - s.ph) / 1.6) !== s.n) { s.n = Math.floor((t - s.ph) / 1.6); const ok = c.P.gait?.requestStep?.({ kind, ...o }); s.extra = (s.extra ?? 0) + (ok ? 1 : 0); if (ok) q.open = t; }
+  s.aux = q.n; s.chk = { front: q.front, rear: q.rear, tr: q.tr };
 };
+/** 부탁 걸음 장면의 통과 (11/24 검토 — 예전에는 requestStep 이 true 를 돌려준 수만 셌다: 받는 척만 하고 안 딛는 몸도 통과): 안 넘어짐 + 받은 부탁 가운데 실제로 뜬 걸음 3 번 넘게.
+ *  런지 장면(lunge)은 뜬 걸음의 절반 넘게를 앞발이 디뎌야 한다 (지금 게임의 런지 = 앞발이 0.6 m 쯤 나감 · 뒷발이 지나 딛으면 pass 다) */
+const reqDid = (lunge) => (r) => !r.fell && (r.aux ?? 0) >= 3 && (!lunge || 2 * (r.chk?.front ?? 0) >= (r.aux ?? 0));
+const sum = (a) => a.reduce((x, y) => x + y, 0);
+const REQJ = { // 줄 끝 · JSON 에 붙는 셈: 받은 부탁 · 실제로 뜬 걸음(앞발 · 뒷발) · 그 발이 앞으로 간 거리 가운데값
+  more: (rs) => ({ reqAccepted: sum(rs.map((r) => r.extra ?? 0)), reqStepped: sum(rs.map((r) => r.aux ?? 0)), reqFront: sum(rs.map((r) => r.chk?.front ?? 0)), reqRear: sum(rs.map((r) => r.chk?.rear ?? 0)), reqTravel: med(rs.flatMap((r) => r.chk?.tr ?? [])) }),
+  tail: (x) => ` · 받은 부탁 ${x.reqAccepted} · 실제로 뜬 부탁 걸음 ${x.reqStepped} (앞발 ${x.reqFront} · 뒷발 ${x.reqRear}) · 그 발이 앞으로 간 거리 가운데값 ${f(x.reqTravel)} m`,
+};
+const STICK0 = !!args.stick0; // 판정 검증용: aistick · aistroke 장면의 조종을 0 으로 묶는다(조종을 무시하는 몸 흉내 — 판정은 대본의 조종으로 그대로 함)
+/** 조종 따르기 (스텝마다 조종을 정하기 앞에 부름 — 재기만): 앞 스텝에 대본이 건 조종 쪽(그때의 골반 앞 · 오른쪽 기준)으로 골반이 실제로 간 거리를 더한다.
+ *  state.fol = { d: 조종 쪽으로 간 거리 합 m, on: 조종이 0 이 아니던 시간 s } — 제자리에서 베며 흔들리는 몸은 d 가 0 언저리, 조종을 따라 걷는 몸만 쌓인다. 조종을 정한 뒤 followSet 으로 그 스텝의 조종을 적어 둔다 */
+const stickFollow = (c) => {
+  const p = pelOf(c.P), F = (c.state.fol ??= { d: 0, on: 0, p: null, f: null, mv: null });
+  if (F.p && F.mv) { const m = Math.hypot(F.mv[0], F.mv[1]); if (m > 0) { F.d += ((p.x - F.p.x) * (F.f.x * F.mv[1] - F.f.z * F.mv[0]) + (p.z - F.p.z) * (F.f.z * F.mv[1] + F.f.x * F.mv[0])) / m; F.on += DT; } }
+  F.p = { x: p.x, z: p.z }; F.f = fwdOf(c.P); F.mv = null;
+  return F;
+};
+const FOLLOW_MIN = 1.0; // 조종 쪽으로 간 거리 바닥(m · 14 s). 잰 값(흔듦 0 ~ 7 · 세 무기 24 판): 지금 게임 1.65 ~ 5.69 m (무기별 가운데값 2.9 ~ 3.8) · 조종을 0 으로 묶은 같은 몸 −0.28 ~ 0.39 m (걸은 길은 1.3 ~ 2.8 m — 옛 판정은 24 판 가운데 7 판을 통과시킴)
 const MORE = {
-  slowwalk: { secs: 6, drive: (i, t, c) => c.P.move.set(0, 0.45), ok: (r) => !r.fell && r.alongF >= 0.15, speed: true },
-  slowback: { secs: 6, drive: (i, t, c) => c.P.move.set(0, -0.45), ok: (r) => !r.fell && -r.alongF >= 0.1, speed: true },
+  // 느린 걷기 · 뒷걸음 (조종 0.45): 바닥 = 지금 게임 값(0.73 ~ 0.84 · 0.48 ~ 0.56 m/s)의 절반쯤 · 천장 = 1.5 배쯤 — 너무 느린 몸도, 조종보다 훨씬 빨리 미끄러지는 몸도 통과가 아니다 (11/24 검토: 예전 바닥 0.15 · 0.1 은 게임 값의 1/5 · 천장 없음)
+  slowwalk: { secs: 6, drive: (i, t, c) => c.P.move.set(0, 0.45), ok: (r) => !r.fell && r.alongF >= 0.38 && r.alongF <= 1.2, speed: true },
+  slowback: { secs: 6, drive: (i, t, c) => c.P.move.set(0, -0.45), ok: (r) => !r.fell && -r.alongF >= 0.25 && -r.alongF <= 0.85, speed: true },
   aistick: { secs: 14, drive: (i, t, c) => aiStick(c, t), ok: (r) => !r.fell && r.path >= 2 },
-  reqpass: { secs: 10, drive: reqEvery('pass', { fwd: 0.6, duration: 0.4 }), ok: (r) => !r.fell && (r.extra ?? 0) >= 3 },
-  reqlunge: { secs: 10, drive: reqEvery('lunge', { fwd: 0.6, duration: 0.4, accel: true }), ok: (r) => !r.fell && (r.extra ?? 0) >= 3 },
+  reqpass: { secs: 10, drive: reqEvery('pass', { fwd: 0.6, duration: 0.4 }), ok: reqDid(false), ...REQJ },
+  reqlunge: { secs: 10, drive: reqEvery('lunge', { fwd: 0.6, duration: 0.4, accel: true }), ok: reqDid(true), ...REQJ },
 };
-for (const fam of ['diagR']) { const S = stroke(fam); MORE['aistroke_' + fam] = { secs: 14, pre: S.pre, drive: (i, t, c) => { aiStick(c, t); S.step(c); }, ok: (r) => !r.fell && r.path >= 2, tip: true }; }
+// 베며 AI 조종 따르기: 통과 = 안 넘어짐 + 조종 쪽으로 실제로 간 거리 FOLLOW_MIN 넘게 (11/24 검토 — 예전 '걸은 길 2 m' 는 제자리에서 베기만 해도 골반 흔들림으로 채워졌다)
+for (const fam of ['diagR']) { const S = stroke(fam); MORE['aistroke_' + fam] = { secs: 14, pre: S.pre, drive: (i, t, c) => { const F = stickFollow(c); aiStick(c, t); F.mv = [c.state.mv[0], c.state.mv[1]]; c.state.aux = +F.d.toFixed(3); S.step(c); }, ok: (r) => !r.fell && (r.aux ?? 0) >= FOLLOW_MIN, tip: true, more: (rs) => ({ follow: med(rs.map((r) => r.aux ?? 0)), followMin: Math.min(...rs.map((r) => r.aux ?? 0)) }), tail: (x) => ` · 조종 쪽으로 간 거리 가운데값 ${f(x.follow)} m (가장 작은 판 ${f(x.followMin)} · 바닥 ${FOLLOW_MIN})${STICK0 ? ' · 조종 0 으로 묶음(--stick0)' : ''}` }; }
 // 베며 내딛기 (AI 의 공격 들어가기 꼴 — 부탁 걸음과 베기가 겹침): 남은 첫 넘어짐 16 가운데 11 이 lunge · pass 부탁 + 다가가는 중, 끝에서 가슴이 골반보다 15 ~ 30° 더 숙어 있었음
-for (const [nm, kind] of [['lungecut', 'lunge'], ['passcut', 'pass']]) { const S = stroke('diagR'), Rq = reqEvery(kind, { fwd: 0.6, duration: 0.4, accel: kind === 'lunge' }); MORE[nm] = { secs: 10, pre: S.pre, drive: (i, t, c) => { Rq(i, t, c); S.step(c); }, ok: (r) => !r.fell && (r.extra ?? 0) >= 3, tip: true }; }
+for (const [nm, kind] of [['lungecut', 'lunge'], ['passcut', 'pass']]) { const S = stroke('diagR'), Rq = reqEvery(kind, { fwd: 0.6, duration: 0.4, accel: kind === 'lunge' }); MORE[nm] = { secs: 10, pre: S.pre, drive: (i, t, c) => { Rq(i, t, c); S.step(c); }, ok: reqDid(kind === 'lunge'), tip: true, ...REQJ }; }
 // ── 구멍 메우기 장면 (11/24 저녁 — docs/strike/physics2_notes/s7_battery_holes.md): 세 사람이 읽어 낸 '몸을 움직이는데 장면이 없던 것'. 모두 MORE(부를 때만) · --holes 면 이 묶음만.
 //    원칙 ① 게임이 쓰는 그 들머리를 그대로 부른다(gait.requestStep · takeStep · deDigAi · skill.thrust · stickY(밀치기) · runReach(뛰기) · applyWound · sever · knockDown · die · pickupPress · ringThrow · requestInstant …).
 //         ② 그 일이 실제로 일어났는지 센다(extra = 첫째 셈 · aux = 둘째 셈 · chk = 그 밖의 표시) — 가만히 서 있거나 거절된 부탁은 통과가 아님.
@@ -404,11 +451,12 @@ for (const w of WEAPONS) {
     const S = SCENES[k], rs = [];
     for (let i = 0; i < N; i++) rs.push(solo(w, i, S.secs, S.drive, { pre: S.pre, keepGoing: S.keepGoing, ...S.opt }));
     const ok = rs.filter((r) => S.ok(r)).length;
-    const row = { ok, n: N, notFell: rs.filter((r) => !r.fell).length, along: med(rs.filter((r) => !r.fell).map((r) => (k === 'back' ? -r.alongF : /^strafe/.test(k) ? Math.abs(r.alongR) : r.alongF))), path: med(rs.filter((r) => !r.fell).map((r) => r.path)), headErr: med(rs.filter((r) => r.headErr != null).map((r) => r.headErr)), tFall: med(rs.filter((r) => r.fell).map((r) => r.tFall)), sat: rs.filter((r) => r.fell && r.sat).length, speed: med(rs.filter((r) => !r.fell).map((r) => r.speed)), tilt: med(rs.map((r) => r.tiltMax)), tip: med(rs.filter((r) => !r.fell).map((r) => r.tipMax)), net: med(rs.map((r) => r.net)), extra: med(rs.filter((r) => r.extra != null).map((r) => r.extra)) };
+    const row = { ok, n: N, notFell: rs.filter((r) => !r.fell).length, along: med(rs.filter((r) => !r.fell).map((r) => (k === 'back' || k === 'slowback' ? -r.alongF : /^strafe/.test(k) ? Math.abs(r.alongR) : r.alongF))), path: med(rs.filter((r) => !r.fell).map((r) => r.path)), headErr: med(rs.filter((r) => r.headErr != null).map((r) => r.headErr)), tFall: med(rs.filter((r) => r.fell).map((r) => r.tFall)), sat: rs.filter((r) => r.fell && r.sat).length, speed: med(rs.filter((r) => !r.fell).map((r) => r.speed)), tilt: med(rs.map((r) => r.tiltMax)), tip: med(rs.filter((r) => !r.fell).map((r) => r.tipMax)), net: med(rs.map((r) => r.net)), extra: med(rs.filter((r) => r.extra != null).map((r) => r.extra)) };
     if (S.cnt) { row.did = rs.filter((r) => r.extra != null && r.extra !== 0).length; row.aux = med(rs.filter((r) => r.aux != null).map((r) => r.aux)); row.oks = rs.map((r) => (S.ok(r) ? 1 : 0)).join(''); } // 구멍 메우기 장면: 그 일이 일어난 판 수 · 둘째 셈 · 판마다 통과
+    if (S.more) { Object.assign(row, S.more(rs)); row.oks ??= rs.map((r) => (S.ok(r) ? 1 : 0)).join(''); } // 다시 판정한 장면(11/24 검토): 그 장면의 확인 셈을 줄 끝 · JSON 에 붙임 (옛 칸 이름은 그대로)
     (report.solo[w] ||= {})[k] = row;
     if (args.runs) for (const [i, r] of rs.entries()) console.log(`      #${i + OFFSET} ${S.ok(r) ? '통과' : '실패'} ${JSON.stringify({ fell: r.fell, tFall: r.tFall, alongF: r.alongF, path: r.path, yMin: r.yMin, tilt: r.tiltMax, extra: r.extra, aux: r.aux, chk: r.chk, headErr: r.headErr })}`); // --runs: 판마다 한 줄 (왜 실패했나 볼 때)
-    if (!args.quiet) console.log(`  ${w.padEnd(11)} ${k.padEnd(18)} ${String(ok).padStart(2)}/${N} (안 넘어짐 ${row.notFell})  넘어진 때 ${f(row.tFall).padStart(5)}${row.sat ? ` (주저앉음 ${row.sat})` : ''} · 빠르기 ${f(row.speed).padStart(5)} · 시킨 쪽 ${f(row.along).padStart(5)} · 길 ${f(row.path, 1).padStart(5)} m · 기울기 ${f(row.tilt, 0).padStart(3)}° · 칼끝 ${f(row.tip, 1).padStart(5)}${k === 'turn' ? ` · 바라봄 오차 ${f(row.headErr, 0)}°` : ''}${k === 'getup' ? ` · 일어선 때 ${f(row.extra)}` : ''}${S.cnt ? ` · ${S.cnt} ${f(row.extra)} (${row.did}/${N} 판)${S.auxName ? ` · ${S.auxName} ${f(row.aux)}` : ''}` : ''}`);
+    if (!args.quiet) console.log(`  ${w.padEnd(11)} ${k.padEnd(18)} ${String(ok).padStart(2)}/${N} (안 넘어짐 ${row.notFell})  넘어진 때 ${f(row.tFall).padStart(5)}${row.sat ? ` (주저앉음 ${row.sat})` : ''} · 빠르기 ${f(row.speed).padStart(5)} · 시킨 쪽 ${f(row.along).padStart(5)} · 길 ${f(row.path, 1).padStart(5)} m · 기울기 ${f(row.tilt, 0).padStart(3)}° · 칼끝 ${f(row.tip, 1).padStart(5)}${k === 'turn' ? ` · 바라봄 오차 ${f(row.headErr, 0)}°` : ''}${k === 'getup' ? ` · 일어선 때 ${f(row.extra)}` : ''}${S.cnt ? ` · ${S.cnt} ${f(row.extra)} (${row.did}/${N} 판)${S.auxName ? ` · ${S.auxName} ${f(row.aux)}` : ''}` : ''}${S.tail ? S.tail(row) : ''}`);
   }
 }
 // ── 싸움 ──
