@@ -1,4 +1,4 @@
-# 감사 확인 — physics-2 479a9c9a (2026-11-24 13:5x KST)
+# 감사 확인 — physics-2 479a9c9a (2026-11-24 13:47 KST)
 # 1) 게임 파일 차이 (origin/main 대 479a9c9a, src · public): 0 줄
 # 2) node tools/sim/honesty.mjs --selftest
 honesty.mjs 자가 시험 (Rapier 0.19.3)
