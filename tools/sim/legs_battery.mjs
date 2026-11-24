@@ -49,11 +49,12 @@ const fwdOf = (P) => { const q = P.bodies.pelvis.rotation(); const fx = 1 - 2 * 
 /** 대본 상대 (두 몸 장면): AI 없이 가만히 선 몸 — 장면이 E.scriptMove = [옆, 앞] 을 두면 그 스틱으로 걷는다(move · stickX · stickY 를 AI 처럼 같이 둠) */
 class Dummy { constructor(me) { this.me = me; this.stats = {}; } update() { const m = this.me.scriptMove; this.me.move.set(m ? m[0] : 0, m ? m[1] : 0); this.me.stickX = m ? m[0] : 0; this.me.stickY = m ? m[1] : 0; } }
 /** 혼자 장면 한 번. drive(i, t, ctx) 가 스텝마다 입력을 건다. 돌려줌: { fell, tFall, sat, speed, net, tiltMax, tipMax, yMin, extra }
- *  opt (없으면 예전 그대로): duo = 두 몸 판의 처음 간격 m (상대 = Dummy · 멀리 치우지 않음 · ctx.E) · round = newRound 인자 덧붙임 · settle = 자리 잡는 시간 s (기본 2.0) ·
- *   low = 주저앉음으로 보는 골반 높이 m (기본 0.5) · tilt = 넘어짐으로 보는 가슴 기울기 ° (기본 60) — 일부러 웅크리는 장면(줍기 · 런지 자세)만 바꿈 */
+ *  opt (없으면 예전 그대로): duo = 두 몸 판의 처음 간격 m 또는 (무기) => m (상대 = Dummy · 멀리 치우지 않음 · ctx.E) · round = newRound 인자 덧붙임 · settle = 자리 잡는 시간 s (기본 2.0) ·
+ *   low = 주저앉음으로 보는 골반 높이 m (기본 0.5) · tilt = 넘어짐으로 보는 가슴 기울기 ° (기본 60) — 일부러 웅크리는 장면(줍기 · 런지 자세)만 바꿈 ·
+ *   terrain = (variant) => { x, z, heading } 지형 무대(화산섬 비탈) 판의 시작 자리 — 골반 높이는 그 자리 땅 위로 잰다 */
 function solo(weapon, variant0, secs, drive, opt = {}) {
   const variant = variant0 + OFFSET;
-  const G = H.newRound({ walls: false, weapon, seed: 100 + variant, ...(opt.duo ? { AIClass: Dummy, gap: opt.duo } : {}), ...(opt.round || {}) });
+  const G = opt.terrain ? terrainRound({ weapon, seed: 100 + variant, ...opt.terrain(variant) }) : H.newRound({ walls: false, weapon, seed: 100 + variant, ...(opt.duo ? { AIClass: Dummy, gap: typeof opt.duo === 'function' ? opt.duo(weapon) : opt.duo } : {}), ...(opt.round || {}) });
   if (!opt.duo) G.park();
   const P = G.player;
   const R = rng(1000 + variant * 7919);
@@ -71,8 +72,9 @@ function solo(weapon, variant0, secs, drive, opt = {}) {
     const c = comOf(P);
     path += Math.hypot(c.x - cp.x, c.z - cp.z); cp = c;
     if (i === (n >> 1)) half = { c, path };
-    yMin = Math.min(yMin, c.y);
-    lowFor = c.y < LOW ? lowFor + DT : 0;
+    const gy = P.terrain ? P.terrain.heightAt(c.x, c.z) : 0; // 지형 무대: 그 자리 땅 위 높이로 (평지는 0)
+    yMin = Math.min(yMin, c.y - gy);
+    lowFor = c.y - gy < LOW ? lowFor + DT : 0;
     const st = P.state;
     const tl = P.tiltDeg(); tiltFor = tl > TILT ? tiltFor + DT : 0;
     if (!fell && (st === 'down' || st === 'getup' || st === 'dead' || st === 'kneel' || lowFor > 0.25 || tiltFor > 0.25)) { fell = true; tFall = +(i * DT).toFixed(2); sat = st === 'stand'; }
@@ -156,6 +158,27 @@ const opt_ = async (p) => { try { return await import(u(p)); } catch { return {}
 const SI = await opt_('src/secret_instant.js'), DD = await opt_('src/de_dirty.js');
 const PUSH = CFG.SECRET?.stepPush ?? 2, V3 = (x = 0, y = 0, z = 0) => new H.THREE.Vector3(x, y, z);
 const pelOf = (P) => P.bodies.pelvis.translation();
+/** 골반의 땅 위 높이 (지형 무대는 그 자리 땅 높이를 뺌) */
+const hOf = (P) => { const p = P.bodies.pelvis.translation(); return p.y - (P.terrain ? P.terrain.heightAt(p.x, p.z) : 0); };
+const FM = await opt_('src/fighter.js'), CM = await opt_('src/combat.js'), LK = await opt_('src/looks.js'), TG = await opt_('src/etna_ground.js'), GM = await opt_('src/gait.js');
+/** 지형 무대(화산섬 비탈 — 평균 10° · 굴곡 · src/etna_ground.js) 판: harness_m.newRound 와 같은 차례로 세우되 바닥 = createTerrainGround · 몸에 terrain 을 넘김 (main.js newRound 의 지형 갈래 · tools/sim/jelly_harness.mjs 와 같음).
+ *  상대는 멀리(z −25) 세워 두고 AI 없음 · 용암 화상은 걸지 않음(땅만 봄) · 바라볼 곳 = 시작 방향 앞 100 m */
+function terrainRound(o) {
+  H.seedRandom(o.seed);
+  const RAPIER = H.RAPIER, T = TG.ETNA_TERRAIN, world = new RAPIER.World({ x: 0, y: CFG.PHYSICS.gravity, z: 0 });
+  world.timestep = DT; world.integrationParameters.numSolverIterations = 6;
+  const eventQueue = new RAPIER.EventQueue(true), colliderInfo = new Map(), scene = new H.THREE.Scene();
+  const env = TG.createTerrainGround(RAPIER, world, FM.GROUND_GROUPS, T, { radius: CFG.ARENA.radius, walls: false });
+  GM.setSupportFloor(world, env.floor);
+  const player = new FM.Fighter(RAPIER, world, scene, colliderInfo, { index: 0, name: 'P', x: o.x, z: o.z, heading: o.heading, terrain: T, look: LK.LOOKS.player, weapon: o.weapon, breakSeed: o.seed });
+  const enemy = new FM.Fighter(RAPIER, world, scene, colliderInfo, { index: 1, name: 'E', x: 0, z: -25, heading: Math.PI, terrain: T, look: LK.LOOKS.enemy, weapon: o.weapon, breakSeed: o.seed });
+  player.skill.level = 0.7;
+  const combat = new CM.Combat(colliderInfo, { onWound: () => {}, onClash: () => {} });
+  const G = { world, eventQueue, player, enemy, combat, t: 0, parkEnemy: true, clashes: 0, wounds: [], faceP: { x: o.x + 100 * Math.cos(o.heading), y: 1, z: o.z - 100 * Math.sin(o.heading) } };
+  G.step = () => { player.foe = null; enemy.foe = null; player.faceTarget = G.faceP; enemy.faceTarget = player.bodies.pelvis.translation(); enemy.move.set(0, 0); if (G.before) G.before(G.t); player.step(DT); enemy.step(DT); player.cacheState(); enemy.cacheState(); world.step(eventQueue, combat.physicsHooks); combat.afterStep(world, eventQueue); G.t += DT; };
+  G.park = () => {};
+  return G;
+}
 const stickTo = (P, x, y) => { P.move.set(x, y); P.stickX = x; P.stickY = y; }; // AI · 사람 길이 같이 두는 두 칸 (move = 걷기 · stickX/Y = 밀치기 · 뛰기가 읽는 스틱)
 /** 뗀 걸음을 kind 별로 센다 (스텝마다 부름 — gait.legs[k].stance · kind 는 옛 · 새 나무 모두 있는 칸): state.sw = { walk, req, draw, catch, settle } */
 const countSteps = (c) => { const g = c.P.gait, s = c.state; if (!g?.legs) return; s.sw ??= {}; s.pk ??= {}; for (const k of ['F', 'B']) { const l = g.legs[k], cur = l.stance ? null : l.kind; if (cur && cur !== s.pk[k]) s.sw[cur] = (s.sw[cur] ?? 0) + 1; s.pk[k] = cur; } };
@@ -190,8 +213,8 @@ HOLES.biglunge = { secs: 10, ...REQ, opt: { low: 0.4 }, drive: (i, t, c) => { co
 HOLES.sidereq = { secs: 10, ...REQ, drive: (i, t, c) => { const s = c.state, P = c.P; s.ph ??= 0.5 + 0.6 * c.R(); const v = t - s.ph, k = Math.floor(v / 2.2), w = v - k * 2.2, sg = k % 2 ? -1 : 1; if (v >= 0 && w < 0.4) P.move.set(sg, 0.3); else if (v >= 0 && w < 0.9) P.move.set(0, -0.21); else P.move.set(0, 0.3); countSteps(c); every(c, t, 2.2, s.ph, (kk) => { const lat = kk % 2 ? -0.45 : 0.45, g = P.gait, lead = Math.sign(g.legs[g.frontLeg(P.forward(V3()))].side) === Math.sign(lat); ask(c, { kind: lead ? 'lunge' : 'pass', fwd: 0.45, side: lat, duration: 0.35 }); }); s.aux = s.sw?.req ?? 0; }, ok: reqOk(3) };
 // 그 밖의 꼴: 뒤로 딛기(retreat — AI 後の先) · 옆 몸 빼기 · 비스듬한 런지(push 2) · 런지 되돌아오기(lunge fwd 음수 · accel — skill.js:1012) — 선 채 2 s 마다 차례로
 HOLES.reqmix = { secs: 10, ...REQ, drive: (i, t, c) => { const s = c.state; c.P.move.set(0, 0); countSteps(c); s.ph ??= 0.3 + 0.5 * c.R(); const Q = [{ kind: 'retreat', fwd: -0.45, side: 0, duration: 0.3 }, { kind: 'retreat', fwd: 0, side: 0.3, duration: 0.35 }, { kind: 'lunge', fwd: 0.3, side: -0.3, duration: 0.3, push: PUSH }, { kind: 'lunge', fwd: -0.4, side: 0, duration: 0.4, push: PUSH, accel: true }]; every(c, t, 2, s.ph, (k) => ask(c, { ...Q[k % 4] })); s.aux = s.sw?.req ?? 0; }, ok: reqOk(4) };
-// 뒷발 끌어붙임(draw) · follow 안 pass → lunge 바꿈(passAs) — AI 베기 걸음 cutStep(ai.js:4683-4688). 두 몸(상대 3 m): 앞 0.35 ↔ 뒤 0.35 로 느리게, 앞 구간 0.3 s 째에 lunge·draw 와 pass 를 번갈아
-HOLES.drawstep = { secs: 12, ...REQ, auxName: '끌어붙인 걸음', opt: { duo: 3.0 }, drive: (i, t, c) => { const s = c.state, v = t % 2; c.P.move.set(0, v < 1 ? 0.35 : -0.35); countSteps(c); every(c, t, 2, 0.3, (k) => { const pass = k % 2 === 1; if (ask(c, pass ? { kind: 'pass', fwd: 0.6, hold: 0.3 } : { kind: 'lunge', fwd: 0.45, hold: 0.3, draw: true }) && pass && c.P.gait.follow && c.P.gait.req?.kind === 'lunge') (s.chk ??= {}).passAs = (s.chk.passAs ?? 0) + 1; }); if (c.P.gait?.follow) (s.chk ??= {}).follow = (s.chk.follow ?? 0) + 1; s.aux = s.sw?.draw ?? 0; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 4 && (r.aux ?? 0) >= 2 };
+// 뒷발 끌어붙임(draw) · follow 안 pass → lunge 바꿈(passAs) — AI 베기 걸음 cutStep(ai.js:4683-4688). 두 몸(상대 3 m): 앞 0.35 ↔ 뒤 0.35 로 느리게, 앞 구간 0.3 s 째에 lunge·draw 와 pass 를 번갈아. 끌어붙임 · passAs 셈은 그 칸이 있는 유파(세 무기 가운데 레이피어)만 통과에 넣음
+HOLES.drawstep = { secs: 12, ...REQ, auxName: '끌어붙인 걸음', opt: { duo: 3.0 }, drive: (i, t, c) => { const s = c.state, v = t % 2, g = c.P.gait, K = (s.chk ??= {}); K.dr = !!(g?.P?.cutStep?.draw || g?.P?.passAs?.draw); c.P.move.set(0, v < 1 ? 0.35 : -0.35); countSteps(c); every(c, t, 2, 0.3, (k) => { const pass = k % 2 === 1; if (ask(c, pass ? { kind: 'pass', fwd: 0.6, hold: 0.3 } : { kind: 'lunge', fwd: 0.45, hold: 0.3, draw: true }) && pass && g.follow && g.req?.kind === 'lunge') K.passAs = (K.passAs ?? 0) + 1; }); if (g?.follow) K.follow = (K.follow ?? 0) + 1; s.aux = s.sw?.draw ?? 0; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 4 && (!r.chk?.dr || ((r.aux ?? 0) >= 3 && (r.chk.passAs ?? 0) >= 1)) };
 // 뜬 발 이어받기 (takeStep — 겹치기 앞 박차기 secret_instant.js dupBurstStart): 걷는 중 발이 뜬 스텝에 그 걸음을 0.22 s 런지로 바꿈 (force · minT) — 몸 미끄러짐은 없이 발 쪽만
 HOLES.takestep = { secs: 10, ...REQ, auxName: '이어받은 걸음', drive: (i, t, c) => { const s = c.state, P = c.P, g = P.gait; P.move.set(0, 0.45); s.ph ??= 1 + 0.5 * c.R(); const k = Math.floor((t - s.ph) / 2); if (t >= s.ph && k !== s.k && g?.legs) { const sw = !g.legs.F.stance ? g.legs.F : !g.legs.B.stance ? g.legs.B : null; if (sw && sw.kind === 'walk' && sw.t < 0.5 * sw.T) { s.k = k; if (ask(c, { kind: 'lunge', fwd: 0.4, duration: 0.22, minT: 0.22, accel: true, force: true }, true) && sw.kind === 'req') s.aux = (s.aux ?? 0) + 1; } } }, ok: (r) => !r.fell && (r.extra ?? 0) >= 3 && (r.aux ?? 0) >= 3 };
 // AI 가 베며 들어가는 진짜 스틱 꼴 (ai.js:4486-4536): −0.21 로 서다 → 벨 때 0.3 s 동안 앞 1 + pass 0.6 부탁 → 발이 뜬 채 −0.5 → −0.21
@@ -206,8 +229,8 @@ HOLES.walkturn = { secs: 12, cnt: '빨리 돈 스텝', drive: (i, t, c) => { con
 HOLES.quietstart = { secs: 4, speed: true, opt: { settle: 5 }, drive: (i, t, c) => c.P.move.set(0, 1), ok: (r) => !r.fell && r.alongF >= 0.5 };
 // 스틱 비스듬히 끝까지 (1, 1) — 크기 1.41 (싸움의 비스듬한 조종) · 3 s 마다 반대쪽
 HOLES.diagstick = { secs: 9, drive: (i, t, c) => { const k = Math.floor(t / 3) % 3, d = [[1, 1], [-1, -1], [-1, 1]][k]; c.P.move.set(d[0], d[1]); }, ok: (r) => !r.fell && r.path >= 4 };
-// 벽으로 걸어 들어감 (walls — 벽에 닿은 채 4 s 넘게 밀기)
-HOLES.wallwalk = { secs: 10, cnt: '벽 곁 스텝', opt: { round: { walls: true } }, drive: (i, t, c) => { c.P.move.set(0, 1); const p = pelOf(c.P); if (Math.hypot(p.x, p.z) > (CFG.ARENA?.radius ?? 6.5) - 0.6) c.state.extra = (c.state.extra ?? 0) + 1; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 240 };
+// 벽으로 걸어 들어감 (walls — 12 m 앞 벽에 닿은 채 2 s 넘게 밀기)
+HOLES.wallwalk = { secs: 14, cnt: '벽 곁 스텝', opt: { round: { walls: true } }, drive: (i, t, c) => { c.P.move.set(0, 1); const p = pelOf(c.P); if (Math.hypot(p.x, p.z) > (CFG.ARENA?.radius ?? 6.5) - 0.6) c.state.extra = (c.state.extra ?? 0) + 1; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 240 };
 // 판 시작 정지(발 묶임 — feetHeld) 동안 가슴을 40 N·s 로 맞음: 걸음 없이(균형 걸음만) 버티는가
 HOLES.holdkick = { secs: 4, cnt: '묶인 채 맞음', opt: { settle: 0.3 }, pre: (c) => { c.state.ph = c.R(); c.state.ang = c.R() * Math.PI * 2; }, drive: (i, t, c) => { c.P.move.set(0, 0); if (i === Math.round((0.2 + 0.6 * c.state.ph) / DT)) { if (c.P.feetHeld) c.state.extra = 1; hitChest(c.P, 40, c.state.ang); } }, ok: (r) => !r.fell && r.extra === 1 };
 // 선 채 가슴을 40 N·s 로 0.4 s 사이 두 번 (같은 쪽 — 받아 딛는 발이 뜬 동안 또 밀림)
@@ -253,12 +276,12 @@ HOLES.walkleghit = { secs: 8, speed: true, cnt: '친 수', pre: (c) => { c.state
 HOLES.sweepblock = { secs: 5, pre: (c) => { c.state.ph = c.R(); c.state.ang = c.R() * Math.PI * 2; }, drive: (i, t, c) => { c.P.move.set(0, 0); if (i === Math.round((0.3 + 0.7 * c.state.ph) / DT)) { hitPart(c.P, 'chest', 30, c.state.ang); hitPart(c.P, 'pelvis', 20, c.state.ang); } }, ok: (r) => !r.fell };
 // 떨어진 상대 칼을 내 발 길에 눕혀 놓고 밟고 지나감 (발은 남의 칼과 부딪힘 — self_contact.js · 제 칼은 지나감): 앞으로 2 s · 뒤로 2 s. 발 ↔ 칼 닿은 스텝이 있어야 통과
 HOLES.swordstep = { secs: 7, cnt: '칼 밟은 스텝', opt: { duo: 5.2 }, drive: (i, t, c) => { const P = c.P, E = c.E, s = c.state; if (i === 0) E.dropSword(); P.move.set(0, t < 1.5 ? 0 : t < 3.5 ? 1 : t < 4 ? 0 : t < 6 ? -1 : 0); if (i === Math.round(1.4 / DT)) { const ft = P.bodies.footF.translation(), f = fwdOf(P), q = new H.THREE.Quaternion().setFromUnitVectors(V3(0, 1, 0), V3(f.x, 0, f.z)); E.sword.setTranslation({ x: ft.x + f.x * 0.25, y: 0.03, z: ft.z + f.z * 0.25 }, true); E.sword.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }, true); E.sword.setLinvel({ x: 0, y: 0, z: 0 }, true); E.sword.setAngvel({ x: 0, y: 0, z: 0 }, true); } if (t > 1.5) { let hit = false; for (const fk of ['footF', 'footB']) for (const sc of E.swordColliders ?? []) c.G.world.contactPair(P.bodies[fk].collider(0), sc, (m) => { if (m.numContacts() > 0) hit = true; }); if (hit) s.extra = (s.extra ?? 0) + 1; } }, ok: (r) => !r.fell && (r.extra ?? 0) >= 3 && r.path >= 3 };
-// 떨어진 칼 줍기 (pickup.js — 웅크려 골반 0.4 m 낮춤 · 몸통 60° 숙임 · 멀면 반걸음): 내내 선 상태 + 다시 쥠 + 쥔 뒤 2 s 버팀
-HOLES.pickup = { secs: 9, cnt: '쥔 뒤 버틴 시간', opt: { low: 0.3, tilt: 100 }, drive: (i, t, c) => { const P = c.P, s = c.state; if (i === 0) P.dropSword(); P.move.set(0, 0); if (!s.got) P.pickupPress = true; if (!s.got && P.armed && P.pickupLog?.[0]?.ok) s.got = t; if (s.got != null && s.got !== false && P.state === 'stand' && pelOf(P).y > 0.6) s.extra = +((s.extra ?? 0) + DT).toFixed(4); }, ok: (r) => !r.fell && (r.extra ?? 0) >= 2 };
+// 떨어진 칼 줍기 (pickup.js — 사람 저절로 줍기 humanPickup: 칼 곁 1.5 m 안이면 걸어가 웅크려(골반 0.4 m 낮춤 · 몸통 60° 숙임 · 멀면 반걸음) 쥠. 칼이 더 멀리 굴렀으면 장면이 1.2 m 안까지 걸어감): 내내 선 상태 + 다시 쥠 + 쥔 뒤 2 s 버팀
+HOLES.pickup = { secs: 10, cnt: '쥔 뒤 버틴 시간', opt: { low: 0.3, tilt: 100 }, pre: (c) => { c.P.humanInput = true; }, drive: (i, t, c) => { const P = c.P, s = c.state; if (i === 0) P.dropSword(); P.move.set(0, 0); if (!P.armed && !P.pickup && !P.autoPick && t > 0.5) { const p = pelOf(P), g = P.sword.translation(), dx = g.x - p.x, dz = g.z - p.z, d = Math.hypot(dx, dz), F = P.forward(V3()), R = P.right(V3()); if (d > 1.2) P.move.set(((dx * R.x + dz * R.z) / d) * 0.6, ((dx * F.x + dz * F.z) / d) * 0.6); } if (!s.got && P.armed && P.pickupLog?.[0]?.ok) s.got = true; if (s.got && P.state === 'stand' && pelOf(P).y > 0.6) s.extra = +((s.extra ?? 0) + DT).toFixed(4); }, ok: (r) => !r.fell && (r.extra ?? 0) >= 2 };
 
 // ─ 넘어진 뒤 · 일어서기의 빠진 꼴 ─
 /** 일어섬 따라가기 (getup 장면과 같은 잣대 + 골반 0.6 m 위): 선 채 밖 도움이 끝난 뒤 2 s 를 버틴 때 = extra · 그 앞에 섰다가 다시 무너진 수 = aux */
-const riseTrack = (c, t) => { const s = c.state, P = c.P; if (P.state === 'stand' && pelOf(P).y > 0.6) { s.up = (s.up ?? 0) + DT; if (s.up > 2 + AID_AFTER && s.extra == null) s.extra = +(t - 2 - AID_AFTER).toFixed(2); } else { if (s.extra == null && (s.up ?? 0) > 0.1) s.aux = (s.aux ?? 0) + 1; s.up = 0; } };
+const riseTrack = (c, t) => { const s = c.state, P = c.P; if (P.state === 'stand' && hOf(P) > 0.6) { s.up = (s.up ?? 0) + DT; if (s.up > 2 + AID_AFTER && s.extra == null) s.extra = +(t - 2 - AID_AFTER).toFixed(2); } else { if (s.extra == null && (s.up ?? 0) > 0.1) s.aux = (s.aux ?? 0) + 1; s.up = 0; } };
 const roseOnce = (r) => r.extra != null && !(r.aux > 0);
 const RISE = { keepGoing: true, cnt: '일어선 때', auxName: '다시 무너짐' };
 // 쓰러진 동안 상대가 돌아가 있음: 일어선 순간 바라볼 쪽이 몸과 137° 다름 + 곧장 걷기(0.45)
@@ -269,33 +292,49 @@ HOLES.buckle = { secs: 10, ...RISE, drive: (i, t, c) => { const P = c.P, s = c.s
 HOLES.revive = { secs: 14, ...RISE, opt: { round: { revive2: { count: 1 } } }, drive: (i, t, c) => { const P = c.P, s = c.state; if (i === 0) { P.limbs.legF = P.limbs.legB = 0.3; P.blood = 0.5; P.die('출혈'); (s.chk ??= {}).rev = !!P.revival; } P.move.set(0, 0); if (s.chk?.rev) riseTrack(c, t); }, ok: (r) => !!r.chk?.rev && roseOnce(r) };
 
 // ─ 두 몸 장면 (상대 = 대본 몸) ─
+/** 붙는 장면: 두 몸 모두 칼을 머리 위(지붕 자세 패드)로 들어 칼끝에 서로 막히지 않게 (칼끝이 가슴에 걸려 못 붙는 판을 없앰 — 재는 것은 붙은 뒤의 다리) */
+const highGuard = (c) => { c.P.handOffset.set(0.02, 0.52); c.E.handOffset.set(0.02, 0.52); };
 // 유파 걸음 follow (이탈리아 = 레이피어 — 상대 2.8 m 안에서 느리게: 앞발 먼저 · 뒷발 따라붙음 · 짝걸음). 다른 무기는 '상대 곁 느린 앞뒤 걸음'
 HOLES.followfb = { secs: 10, cnt: 'follow 스텝', opt: { duo: 2.4 }, drive: (i, t, c) => { const v = t % 2.5, g = c.P.gait; c.P.move.set(0, v < 0.9 ? 0.4 : v < 1.25 ? 0 : v < 2.15 ? -0.4 : 0); if (g?.follow) c.state.extra = (c.state.extra ?? 0) + 1; (c.state.chk ??= {}).fw = g?.P?.footwork === 'follow'; }, ok: (r) => !r.fell && r.path >= 1.2 && (!r.chk?.fw || (r.extra ?? 0) >= 300) };
 HOLES.followside = { secs: 10, cnt: 'follow 스텝', opt: { duo: 2.4 }, drive: (i, t, c) => { const v = t % 2.5, g = c.P.gait; c.P.move.set(v < 0.9 ? 0.45 : v < 1.25 ? 0 : v < 2.15 ? -0.45 : 0, 0.1); if (g?.follow) c.state.extra = (c.state.extra ?? 0) + 1; (c.state.chk ??= {}).fw = g?.P?.footwork === 'follow'; }, ok: (r) => !r.fell && r.path >= 1.2 && (!r.chk?.fw || (r.extra ?? 0) >= 300) };
 // 사람 탭 찌르기 (skill.thrust — 선 채 런지 + 몸 싣기 push 2 + 스틱 앞 0.63 덮음): 탭 → 0.9 s 뒤 1 s 동안 뒤 0.45 로 물러남(간격 되돌림) → 다시
 HOLES.tapthrust = { secs: 10, cnt: '나간 탭', auxName: '뜬 부탁 걸음', opt: { duo: 3.0 }, pre: (c) => { c.P.humanInput = true; }, drive: (i, t, c) => { const s = c.state, P = c.P; s.ph ??= 0.3 + 0.4 * c.R(); const v = t - s.ph, w = v % 2.4; P.move.set(0, v >= 0 && w >= 0.9 && w < 1.9 ? -0.45 : 0); countSteps(c); every(c, t, 2.4, s.ph, () => { if (P.skill.thrust()) s.extra = (s.extra ?? 0) + 1; }); s.aux = s.sw?.req ?? 0; }, ok: reqOk(3) };
 // 근접 밀치기 (closeStep — 닿는 거리에서 스틱 앞: 딛기 걸음 → 누르기 동안 다리로 400 N) · 상대는 서 있는 대본 몸
-HOLES.barge = { secs: 9, cnt: '누른 시간', auxName: '밀치기 수', opt: { duo: 1.7 }, pre: (c) => { c.P.canShove = true; }, drive: (i, t, c) => { const P = c.P, s = c.state, v = t % 4.5; stickTo(P, 0, v < 3.2 ? 1 : 0); if (P.barge?.phase === 'press') s.extra = +((s.extra ?? 0) + DT).toFixed(4); s.aux = P.shoves ?? 0; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 0.3 && (r.aux ?? 0) >= 1 };
+HOLES.barge = { secs: 9, cnt: '누른 시간', auxName: '밀치기 수', opt: { duo: 1.7 }, pre: (c) => { highGuard(c); c.P.canShove = true; }, drive: (i, t, c) => { const P = c.P, s = c.state, v = t % 4.5; stickTo(P, 0, v < 3.2 ? 1 : 0); if (P.barge?.phase === 'press') s.extra = +((s.extra ?? 0) + DT).toFixed(4); s.aux = P.shoves ?? 0; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 0.3 && (r.aux ?? 0) >= 1 };
 // 같은 밀치기 — 사람 몸(humanInput: 시작 거리 1 m · 묶임 1.2 s → 상대가 맞밂 holdPushBack)
-HOLES.bargeheld = { secs: 9, cnt: '누른 시간', auxName: '밀치기 수', opt: { duo: 1.7 }, pre: (c) => { c.P.canShove = true; c.P.humanInput = true; }, drive: (i, t, c) => { const P = c.P, s = c.state, v = t % 4.5; stickTo(P, 0, v < 3.2 ? 1 : 0); if (P.barge?.phase === 'press') s.extra = +((s.extra ?? 0) + DT).toFixed(4); if (P.barge?.hold > 0) (s.chk ??= {}).hold = 1; s.aux = P.shoves ?? 0; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 0.3 && (r.aux ?? 0) >= 1 && !!r.chk?.hold };
+HOLES.bargeheld = { secs: 9, cnt: '누른 시간', auxName: '밀치기 수', opt: { duo: 1.7 }, pre: (c) => { highGuard(c); c.P.canShove = true; c.P.humanInput = true; }, drive: (i, t, c) => { const P = c.P, s = c.state, v = t % 4.5; stickTo(P, 0, v < 3.2 ? 1 : 0); if (P.barge?.phase === 'press') s.extra = +((s.extra ?? 0) + DT).toFixed(4); if (P.barge?.hold > 0) (s.chk ??= {}).hold = 1; s.aux = P.shoves ?? 0; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 0.3 && (r.aux ?? 0) >= 1 && !!r.chk?.hold };
 // 밀치기를 당함: 상대(대본 몸 — 사람 표시 · canShove)가 걸어와 나를 누름 · 나는 서서 버팀(묶인 동안 내 몸도 맞밂)
-HOLES.barged = { secs: 9, cnt: '눌린 시간', auxName: '상대 밀치기 수', opt: { duo: 1.7 }, pre: (c) => { c.E.canShove = true; c.E.humanInput = true; }, drive: (i, t, c) => { const P = c.P, E = c.E, s = c.state, v = t % 4.5; P.move.set(0, 0); E.scriptMove = v < 3.2 ? [0, 1] : null; if (E.barge?.phase === 'press') s.extra = +((s.extra ?? 0) + DT).toFixed(4); s.aux = E.shoves ?? 0; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 0.3 && (r.aux ?? 0) >= 1 };
+HOLES.barged = { secs: 9, cnt: '눌린 시간', auxName: '상대 밀치기 수', opt: { duo: 1.7 }, pre: (c) => { highGuard(c); c.E.canShove = true; c.E.humanInput = true; }, drive: (i, t, c) => { const P = c.P, E = c.E, s = c.state, v = t % 4.5; P.move.set(0, 0); E.scriptMove = v < 3.2 ? [0, 1] : null; if (E.barge?.phase === 'press') s.extra = +((s.extra ?? 0) + DT).toFixed(4); s.aux = E.shoves ?? 0; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 0.3 && (r.aux ?? 0) >= 1 };
 // 밀쳐내기 (shove — 가슴 사이 0.75 m 안에서 스틱 뒤: 두 가슴에 320 N 힘 쌍): 다가가 붙은 뒤 물러남을 되풀이
-HOLES.shove = { secs: 10, cnt: '밀쳐낸 스텝', opt: { duo: 1.6 }, drive: (i, t, c) => { const P = c.P, s = c.state, d = P.foeDistance(); s.mode ??= 0; if (s.mode === 0) { P.move.set(0, 0.6); if (d < 0.62) s.mode = 1; } else { P.move.set(0, -1); if (d > 1.0) s.mode = 0; } if (P.state === 'stand' && d <= 0.75 && P.move.y < 0 && P.muscle >= 0.5) s.extra = (s.extra ?? 0) + 1; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 20 };
+HOLES.shove = { secs: 10, cnt: '밀쳐낸 스텝', opt: { duo: 1.6 }, pre: highGuard, drive: (i, t, c) => { const P = c.P, s = c.state, d = P.foeDistance(); s.mode ??= 0; if (s.mode === 0) { P.move.set(0, 0.6); if (d < 0.62) s.mode = 1; } else { P.move.set(0, -1); if (d > 1.0) s.mode = 0; } if (P.state === 'stand' && d <= 0.75 && P.move.y < 0 && P.muscle >= 0.5) s.extra = (s.extra ?? 0) + 1; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 20 };
+// 밀쳐내기를 당함: 상대(대본 몸)가 다가와 붙은 뒤 물러나며 밀쳐냄 — 상대 스텝이 내 가슴에 건 320 N 이 그대로 남음(내 스텝의 힘 지우기 뒤). 나는 서 있음
+HOLES.shoved = { secs: 10, cnt: '밀쳐진 스텝', opt: { duo: 1.6 }, pre: highGuard, drive: (i, t, c) => { const P = c.P, E = c.E, s = c.state, d = P.foeDistance(); P.move.set(0, 0); s.mode ??= 0; if (s.mode === 0) { E.scriptMove = [0, 0.6]; if (d < 0.62) s.mode = 1; } else { E.scriptMove = [0, -1]; if (d > 1.0) s.mode = 0; } if (E.state === 'stand' && d <= 0.75 && s.mode === 1 && E.muscle >= 0.5) s.extra = (s.extra ?? 0) + 1; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 20 };
 // 두 몸이 마주 걸어와 부딪힘 (팔 · 몸끼리 닿음 + 붙으면 shove 의 닿음 몫) — 2.5 s 걷고 1.5 s 섬. 둘 다 칼을 머리 위(지붕 자세)로 들어 칼끝에 서로 막히지 않게. 가슴 사이 1 m 안에 든 스텝이 있어야 통과
 HOLES.bump = { secs: 9, cnt: '붙은 스텝', auxName: '가장 가까운 거리', opt: { duo: 2.0 }, pre: (c) => { c.P.handOffset.set(0.02, 0.52); c.E.handOffset.set(0.02, 0.52); }, drive: (i, t, c) => { const go = t % 4 < 2.5 ? 0.6 : 0, d = c.P.foeDistance(), s = c.state; c.P.move.set(0, go); c.E.scriptMove = go ? [0, go] : null; if (d < 1.0) s.extra = (s.extra ?? 0) + 1; s.aux = Math.min(s.aux ?? 9, +d.toFixed(2)); }, ok: (r) => !r.fell && (r.extra ?? 0) >= 120 };
 // 칼 씨름 밀침 (de_dirty.js ringThrow — 온몸 빠르기에 1.96 m/s 를 더함 · 1.2 s 동안 스틱 0): 밀린 몸을 받아 딛어 세움
 HOLES.ringthrow = { secs: 6, cnt: '밀린 스텝', opt: { duo: 1.2 }, pre: (c) => { c.state.ph = c.R(); }, drive: (i, t, c) => { const P = c.P, s = c.state; P.move.set(0, 0); if (i === Math.round((0.3 + 0.7 * s.ph) / DT)) DD.ringThrow?.(c.E, P); if (P.ringHit) s.extra = (s.extra ?? 0) + 1; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 30 };
 // 비기 순간 내딛음 (secret_instant.js requestInstant → shiftFighter: 온몸 · 칼 · 걸음 자리를 상대 쪽으로 0.6 m 까지 평행 이동): 옮겨진 뒤 버팀
 HOLES.instant = { secs: 8, cnt: '미끄러진 수', auxName: '미끄러진 길', opt: { duo: 3.2 }, drive: (i, t, c) => { const P = c.P, s = c.state; P.move.set(0, 0); s.ph ??= 0.3 + 0.5 * c.R(); every(c, t, 2.5, s.ph, () => { SI.requestInstant?.(P); s.pend = true; }); if (s.pend && P.instantResult) { s.pend = false; if (P.instantResult.ok && P.instantResult.step > 0.05) { s.extra = (s.extra ?? 0) + 1; s.aux = +((s.aux ?? 0) + P.instantResult.step).toFixed(3); } } }, ok: (r) => !r.fell && (r.extra ?? 0) >= 2 && (r.aux ?? 0) >= 0.6 };
+// (뺌 — 진짜 베기를 맞는 두 몸 장면 'takecut': 상대 대본 몸이 닿는 거리에서 가로 베기를 하면 한 번에 250 ~ 900 J 가 들어가 게임 규칙(휘청임 게이지 0 · 머리 둔타 · 죽음)이 지금 게임도 1.4 ~ 2.7 s 에 넘어뜨림 — 롱소드 0/4 · 츠바이핸더는 안 닿는 판이 절반. 다리가 아니라 규칙을 재는 장면이라 공정하지 않음. 토막 충격량 몫은 leghit · walkleghit · sweepblock 이 잼)
 /** 상대를 쓰러뜨려 눕혀 둔다 (게임 규칙의 쓰러짐 · 일어나지 않게) */
 const layDown = (E) => { E.knockDown(true); E.downTime = 1e9; };
 // 쓰러진 상대 앞 마무리 자세 (finish.js — 숙임 · 낮춤 · 발 묶임) + 내려베기 되풀이
 { const S = stroke('vert'); HOLES.finishpose = { secs: 9, cnt: '마무리 자세 스텝', tip: true, opt: { duo: 1.3 }, pre: S.pre, drive: (i, t, c) => { const P = c.P; if (i === 0) layDown(c.E); P.move.set(0, 0); if (t > 1.2) S.step(c); if ((P.finish?.amt ?? 0) > 0.99) c.state.extra = (c.state.extra ?? 0) + 1; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 120 }; }
-// 쓰러진 상대에게 걸어 들어가 마무리 탭 (사람 — skill.thrust: 누운 몸이 닿는 곳 밖이면 스틱 앞 0.63 을 덮어 걸어 들어가 내려찍음)
-HOLES.finishwalk = { secs: 9, cnt: '마무리 탭', auxName: '걸어 들어간 스텝', opt: { duo: 2.4 }, pre: (c) => { c.P.humanInput = true; }, drive: (i, t, c) => { const P = c.P, s = c.state; if (i === 0) layDown(c.E); P.move.set(0, 0); if (t > 2 && pelOf(c.E).y < 0.35 && !P.skill.tap && i % 60 === 0 && (s.extra ?? 0) < 4 && P.skill.thrust() && P.skill.tap?.down) s.extra = (s.extra ?? 0) + 1; if (P.skill.tap?.walking) s.aux = (s.aux ?? 0) + 1; if ((P.finish?.amt ?? 0) > 0.99) (s.chk ??= {}).fin = 1; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 1 && (r.aux ?? 0) >= 10 && !!r.chk?.fin };
+// 쓰러진 상대에게 걸어 들어가 마무리 탭 (사람 — skill.thrust: 누운 몸이 닿는 곳 밖이면 스틱 앞 0.63 을 덮어 걸어 들어가 내려찍음) · 간격 2.4 m (대검 츠바이핸더는 쪼개 내려치기가 멀리 닿아 3.2 m — 2.4 면 걷지 않고 닿음)
+HOLES.finishwalk = { secs: 9, cnt: '마무리 탭', auxName: '걸어 들어간 스텝', opt: { duo: (w) => ({ zweihander: 3.2 }[w] ?? 2.4) }, pre: (c) => { c.P.humanInput = true; }, drive: (i, t, c) => { const P = c.P, s = c.state; if (i === 0) layDown(c.E); P.move.set(0, 0); if (t > 2 && pelOf(c.E).y < 0.35 && !P.skill.tap && i % 60 === 0 && (s.extra ?? 0) < 4 && P.skill.thrust() && P.skill.tap?.down) s.extra = (s.extra ?? 0) + 1; if (P.skill.tap?.walking) s.aux = (s.aux ?? 0) + 1; if ((P.finish?.amt ?? 0) > 0.99) (s.chk ??= {}).fin = 1; }, ok: (r) => !r.fell && (r.extra ?? 0) >= 1 && (r.aux ?? 0) >= 10 && !!r.chk?.fin };
 // 누운 몸 위로 걸어 지나감 (정강이 · 허벅지는 남의 몸과 부딪힘): 상대 자리를 0.5 m 넘어가야 통과
 HOLES.walkover = { secs: 7, cnt: '넘어간 거리', opt: { duo: 2.2 }, drive: (i, t, c) => { const P = c.P, s = c.state; if (i === 0) { layDown(c.E); s.x0 = pelOf(P).x; s.f = fwdOf(P); } c.G.faceP = { x: s.x0 + 100 * s.f.x, y: 1, z: 100 * s.f.z }; P.move.set(0, t < 1 ? 0 : 0.6); const e = pelOf(c.E), p = pelOf(P); s.extra = +(((p.x - e.x) * s.f.x + (p.z - e.z) * s.f.z)).toFixed(2); }, ok: (r) => !r.fell && (r.extra ?? -9) >= 0.5 };
+
+// ─ 지형 무대 (화산섬 비탈 — 발 높이 · 비탈 면 다루기): 평지 장면의 꼴을 비탈 위에서. 판마다 오르막 · 내리막 · 가로(두 쪽)를 돌아가며 ─
+const SLOPE = (v) => [{ x: v & 4 ? 1.5 : -1.5, z: 2.5, heading: Math.PI / 2 }, { x: v & 4 ? -1.5 : 1.5, z: -3, heading: -Math.PI / 2 }, { x: -3, z: v & 4 ? 1 : -1, heading: 0 }, { x: 3, z: v & 4 ? -2 : 0.5, heading: Math.PI }][v % 4];
+const onSlope = (c) => { const p = pelOf(c.P), K = (c.state.chk ??= { terr: !!c.P.terrain, g0: c.P.terrain?.heightAt(p.x, p.z) ?? 0 }); K.dy = +(((c.P.terrain?.heightAt(p.x, p.z) ?? 0) - K.g0)).toFixed(2); };
+const TERR = { opt: { terrain: SLOPE } };
+HOLES.slopestand = { secs: 8, ...TERR, drive: (i, t, c) => { c.P.move.set(0, 0); onSlope(c); }, ok: (r) => !r.fell && !!r.chk?.terr && r.net < 0.3 };
+HOLES.slopewalk = { secs: 5, speed: true, cnt: '땅 높이 바뀜(크기 m)', ...TERR, drive: (i, t, c) => { c.P.move.set(0, 1); onSlope(c); c.state.extra = Math.abs(c.state.chk.dy); }, ok: (r) => !r.fell && !!r.chk?.terr && r.alongF >= 0.5 };
+HOLES.slopestopgo = { secs: 16, ...TERR, drive: (i, t, c) => { const k = Math.floor(t / 2) % 4, go = t % 2 < 1.2, d = [[0, 1], [0, -1], [1, 0], [-1, 0]][k]; c.P.move.set(go ? d[0] : 0, go ? d[1] : 0); onSlope(c); }, ok: (r) => !r.fell && !!r.chk?.terr && r.path >= 3 };
+HOLES.slopeturn = { secs: 12, ...TERR, drive: (i, t, c) => { const s = c.state; c.P.move.set(0, 0); onSlope(c); s.base ??= (() => { const f0 = fwdOf(c.P); return Math.atan2(f0.z, f0.x); })(); const k = Math.floor(t / 2), ang = s.base + (k % 2 ? 1 : 0) * (Math.PI / 2) * (k % 4 < 2 ? 1 : -1); faceAround(c, ang); if (t % 2 > 2 - 1.5 * DT) { const f0 = fwdOf(c.P), a = Math.atan2(f0.z, f0.x), e = Math.abs(Math.atan2(Math.sin(a - ang), Math.cos(a - ang))) * 180 / Math.PI; s.headErr = Math.max(s.headErr ?? 0, e); } }, ok: (r) => !r.fell && !!r.chk?.terr && r.headErr != null && r.headErr <= 30 };
+HOLES.slopekick = { secs: 5, ...TERR, pre: (c) => { c.state.ph = c.R(); c.state.ang = c.R() * Math.PI * 2; }, drive: (i, t, c) => { c.P.move.set(0, 0); onSlope(c); if (i === Math.round((0.3 + 0.7 * c.state.ph) / DT)) hitChest(c.P, 40, c.state.ang); }, ok: (r) => !r.fell && !!r.chk?.terr };
+HOLES.slopegetup = { secs: 14, ...RISE, ...TERR, drive: (i, t, c) => { c.P.move.set(0, 0); onSlope(c); if (i === 0) c.P.knockDown(true); riseTrack(c, t); }, ok: (r) => !!r.chk?.terr && roseOnce(r) };
 for (const [k, v] of Object.entries(HOLES)) MORE[k] = v;
 // 일어서기: 서 있는 몸을 쓰러뜨리고(knockDown — 게임 규칙의 쓰러짐) 14 s 안에 stand 로 돌아와, 밖 도움이 끝난 뒤 2 s 를 버티는가
 let AID_AFTER = 0; try { AID_AFTER = (await import(u('src/config.js'))).AID?.after ?? 0; } catch { /* 옛 나무 */ } // 선언된 밖 도움이 선 뒤에도 이어지는 시간(있으면) — 버팀은 도움이 끝난 뒤부터 센다
