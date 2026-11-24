@@ -899,7 +899,8 @@ export class Combat {
         //  칼끼리 한 번 닿은 뒤로 칼 값으로 바뀌었다. 보통 칼 부품은 반발 = 무기 재질 값 · 마찰 0.4(fighter.js) 그대로라 10/11 판과 같음)
         let B = this.natBase.get(c.handle);
         if (!B) this.natBase.set(c.handle, (B = armed ? { e: c.restitution(), mu: c.friction() } : { e: mat, mu: 0.4 }));
-        c.setRestitution(armed ? Math.min(B.e, BIND.restitution) : 0);
+        // 칼끼리 쌍 반발 = 두 칼 콜라이더 값의 곱(Multiply 규칙) — 쌍이 BIND.restitution 이 되게 칼마다 그 제곱근 (11/25 사장님 '튕김을 실제 0.2로' — 전엔 칼마다 0.2 라 쌍 0.04)
+        c.setRestitution(armed ? Math.min(B.e, Math.sqrt(BIND.restitution)) : 0);
         c.setFriction(armed ? B.mu : BIND.friction); // 붙어 있는 동안만 칼끼리 더 문다
       }
     }

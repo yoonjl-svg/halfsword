@@ -47,14 +47,14 @@ test('미는 뜻 w (pressWill): 가운데 1 · 공격 성향 · 맞받기 성향
   G.world.free();
 });
 
-test('칼 면 (combat.js armSteel): 떨어져 있으면 반발 min(제 값, 0.2) · 제 마찰 / 맞닿은 동안 반발 0 · 마찰 1.2 — 덩굴 채찍 마디는 제 값(0.08 · 0.65) 그대로', () => {
+test('칼 면 (combat.js armSteel): 떨어져 있으면 반발 min(제 값, √0.2 — 쌍 0.2) · 제 마찰 / 맞닿은 동안 반발 0 · 마찰 1.2 — 덩굴 채찍 마디는 제 값(0.08 · 0.65) 그대로', () => {
   const look = (G, f) => f.swordColliders.map((c) => [+c.restitution().toFixed(3), +c.friction().toFixed(3)]);
   for (const weapon of ['longsword', 'druid_whip']) {
     const G = newRound({ walls: true, seed: 3, weapon, weapon2: 'longsword' });
     G.step();
     const C = G.combat;
     const base = weapon === 'druid_whip' ? (i) => (i >= 2 ? [0.08, 0.65] : [0.35, 0.4]) : () => [0.7, 0.4];
-    const apart = () => look(G, G.player).forEach(([e, mu], i) => { const [e0, mu0] = base(i); near(e, Math.min(e0, BIND.restitution), 1e-6); near(mu, mu0, 1e-6); });
+    const apart = () => look(G, G.player).forEach(([e, mu], i) => { const [e0, mu0] = base(i); near(e, Math.min(e0, Math.sqrt(BIND.restitution)), 1e-3); near(mu, mu0, 1e-6); });
     apart();
     C.bladeLast = C.stepNo; // 칼끼리 맞닿음 (이번 스텝)
     for (const f of C.fighters) C.bladeLastOf.set(f, C.stepNo); // 동시 대전 병합: 실제 칼 접촉은 싸움꾼마다 시각을 적는다(combat.js clashGroup)
@@ -79,13 +79,13 @@ test('2:2 자연 바인드: 맞닿은 두 칼만 반발을 끄고, 나머지 두
     for (const f of G.fighters.slice(0, 2)) C.bladeLastOf.set(f, C.stepNo);
     C.armSteel();
     G.fighters.forEach((f, i) => f.swordColliders.forEach((c, j) => {
-      near(c.restitution(), i < 2 ? 0 : Math.min(base[i][j].e, BIND.restitution), 1e-6);
+      near(c.restitution(), i < 2 ? 0 : Math.min(base[i][j].e, Math.sqrt(BIND.restitution)), 1e-6);
       near(c.friction(), i < 2 ? BIND.friction : base[i][j].mu, 1e-6);
     }));
     C.stepNo += CONFIG.STEEL.rearmSteps + 1;
     C.armSteel();
     G.fighters.forEach((f, i) => f.swordColliders.forEach((c, j) => {
-      near(c.restitution(), Math.min(base[i][j].e, BIND.restitution), 1e-6);
+      near(c.restitution(), Math.min(base[i][j].e, Math.sqrt(BIND.restitution)), 1e-6);
       near(c.friction(), base[i][j].mu, 1e-6);
     }));
   } finally { G.world.free(); }
