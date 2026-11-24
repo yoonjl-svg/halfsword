@@ -10,6 +10,8 @@
 //  넘어짐: 상태가 down · getup · dead · kneel 이 되거나, 골반이 0.5 m 아래로 0.25 s 넘게 내려가거나(서 있음인 채 주저앉음), 가슴이 60° 넘게 0.25 s 기울어짐(넘어짐 규칙을 지워도 잡히게).
 //  통과: 안 넘어짐 + 시킨 일을 함 — 걷기류는 시킨 쪽으로 평균 빠르기 바닥(걷기 0.6 · 뒷걸음 0.4 · 옆걸음 0.25 m/s — 목표의 절반), 가다 서다 · 떠돌기 · 돌며 걷기는 걸은 길이 바닥, 돌기는 바라볼 쪽 오차 30° 안.
 //  정직 먼저 (감사 11/24 대조 4): 이 도구는 구실만 잰다 — 숨은 받침을 다시 넣은 몸도 통과한다. 그래서 맨 앞에 같은 나무를 honesty.mjs 장부로 한 번 재서(서기 · 걷기) 몸 밖 관절 · 받침 · 밀기 · 쓰기 · 지문을 찍는다.
+//   11/24 검토에서 더한 불합격 규칙: ① 재는 내내 선 상태(stand)가 아님 ② 서기 · 걷기에서 선언된 도움(갈래 aid)이 힘을 걸었음(드는 힘 · 수평 힘 · 짝힘 — 힘 크기 합 > 0)
+//    ③ 선언된 도움의 토크가 나무가 스스로 적은 상한(config AID.yawMax = 수직축 · AID.tiltMax = 수평 두 축)을 넘음 — AID 가 없는 나무는 0 이어야 한다. 줄 끝에 도움의 yaw · 기울기 평균 · 최고와 힘 크기 합을 늘 찍는다.
 //  관문 판정은 짓는 동안 안 쓴 흔듦 묶음으로: --offset=100 --n=24 (기본 0 · 8 은 짓는 쪽 용).
 //  일어서기(getup): 통과 = 정말 쓰러졌다(선 상태를 떠남) + 쓰러진 뒤 stand 로 돌아와 버틴 창(2 s + AID.after — 선언된 도움이 끝난 뒤 2 s 까지) 내내 선 상태 · 골반이 쓰러지기 앞 선 높이의 65 % 위 · 가슴 기울기 45° 안.
 //   '일어선 때' = 쓰러진 뒤 상태가 stand 가 된 때(s — 그 선 상태로 버틴 창을 채운 판만). 줄 끝: 쓰러진 판 수 · 버틴 창이 시작된 때(서자마자 몸이 낮거나 기울어 있으면 일어선 때보다 늦다) · 그 창의 골반 최저 · 기울기 최고.
@@ -428,7 +430,7 @@ const med = (a) => { if (!a.length) return null; const b = [...a].sort((x, y) =>
 async function honestyFirst() {
   const Hn = await import(pathToFileURL(join(HERE, 'honesty.mjs')).href);
   let base = null; try { base = JSON.parse(readFileSync(join(HERE, '../../docs/strike/physics2_baseline/solo_2026-11-24.json'), 'utf8')); } catch { /* 기준 없음 */ }
-  const lines = []; let ok = true;
+  const lines = [], aid = {}, states = {}; let ok = true;
   for (const [kind, mv] of [['stand', [0, 0]], ['walk', [0, 1]]]) {
     const G = H.newRound({ walls: false, weapon: WEAPONS[0], seed: 7 });
     G.park();
@@ -453,13 +455,22 @@ async function honestyFirst() {
     if (S.torque.tiltResRate > (kind === 'stand' ? 12 : 24)) bad.push(`숨은 기울기 토크 ${S.torque.tiltResRate.toFixed(1)} N·m`);
     const virt = Object.keys(S.virtualActuators || {}).filter((k) => k !== 'offhand');
     if (virt.length) bad.push(`관절을 건너뛰는 힘 쌍 ${virt.join(',')}`);
+    // 11/24 검토에서 더한 규칙 셋: ① 재는 내내 선 상태(stand)여야 한다 — 쓰러져 일어서는 몸(일어서기 도움이 켜진 몸)을 서기 · 걷기로 재지 않게
+    //  ② 서기 · 걷기에서 선언된 도움의 힘(드는 힘 · 수평 힘 · 짝힘 — 힘 크기 합)은 0 이어야 한다  ③ 선언된 도움의 토크는 나무가 스스로 적은 상한 안(config AID.yawMax · AID.tiltMax — AID 가 없는 나무는 0)
+    const notStand = Object.entries(S.stab?.states ?? {}).filter(([st]) => st !== 'stand');
+    if (notStand.length) bad.push(`재는 동안 선 상태가 아님 (${notStand.map(([st, n]) => `${st} ${n} 스텝`).join(' · ')})`);
+    const A = S.aid, capY = AID?.yawMax ?? 0, capT = AID?.tiltMax ?? 0, over = (x, cap) => x > cap * (1 + 1e-9) + 1e-6;
+    if (A.grossNs > 1e-6) bad.push(`선언된 도움의 힘 ${A.grossNs.toFixed(1)} N·s (드는 힘 최고 ${A.lift.peakN.toFixed(0)} N · 수평 힘 최고 ${A.push.peakN.toFixed(0)} N · 힘 크기 합 최고 ${A.peakN.toFixed(0)} N — 서기 · 걷기에서는 0 이어야)`);
+    if (over(A.yaw.peak, capY)) bad.push(`선언된 도움 yaw 토크 최고 ${A.yaw.peak.toFixed(1)} N·m 가 상한 ${capY} 을 넘음`);
+    if (over(A.tilt.peak, capT)) bad.push(`선언된 도움 기울기 토크 최고 ${A.tilt.peak.toFixed(1)} N·m 가 상한 ${capT} 을 넘음`);
     const b0 = base?.find((x) => x.title.split(' ')[0] === kind), fp = b0 ? Hn.diffFingerprint(b0, S) : null;
     if (bad.length) ok = false;
-    lines.push(`  정직 ${kind}: ${bad.length ? '불합격 — ' + bad.join(' · ') : '통과'} (받침 ${(100 * S.supportShare).toFixed(1)} % · 땅 법선 ${(100 * S.check.groundNShare).toFixed(1)} % · 숨은 기울기 ${S.torque.tiltResRate.toFixed(1)} N·m · 엔진이 봐준 비틀림 ${(S.torque.yawOverCoulombRate ?? 0).toFixed(1)} N·m)${S.aid && (S.aid.forceNs > 0 || S.aid.torqueRate > 0) ? ` · 선언된 밖 도움: 세우는 토크 평균 ${S.aid.torqueRate.toFixed(1)} (최고 ${S.aid.peakNm.toFixed(0)}) N·m · 드는 힘 ÷ 체중 ${(100 * S.aid.liftShare).toFixed(1)} %` : ''}${fp ? ` · 기준 판과 지문 차이 ${fp.length} 줄` : ''}`);
+    lines.push(`  정직 ${kind}: ${bad.length ? '불합격 — ' + bad.join(' · ') : '통과'} (받침 ${(100 * S.supportShare).toFixed(1)} % · 땅 법선 ${(100 * S.check.groundNShare).toFixed(1)} % · 숨은 기울기 ${S.torque.tiltResRate.toFixed(1)} N·m · 엔진이 봐준 비틀림 ${(S.torque.yawOverCoulombRate ?? 0).toFixed(1)} N·m) · 선언된 밖 도움${AID ? '' : '(이 나무는 config AID 없음 — 0 이어야)'}: yaw 토크 평균 ${A.yaw.avg.toFixed(1)} (최고 ${A.yaw.peak.toFixed(1)}${AID ? ` · 상한 ${capY}` : ''}) N·m · 기울기 토크 평균 ${A.tilt.avg.toFixed(1)} (최고 ${A.tilt.peak.toFixed(1)}${AID ? ` · 상한 ${capT}` : ''}) N·m · 힘 크기 합 평균 ${A.grossRate.toFixed(1)} (최고 ${A.peakN.toFixed(0)}) N · 걸린 스텝 ${(100 * A.stepShare).toFixed(1)} %${fp ? ` · 기준 판과 지문 차이 ${fp.length} 줄` : ''}`);
     if (fp && kind === 'stand') for (const d of fp.slice(0, 30)) lines.push(`      ${d.slice(0, 150)}`);
+    aid[kind] = A; states[kind] = S.stab?.states ?? null;
     try { G.world.free(); } catch { /* */ }
   }
-  return { ok, lines };
+  return { ok, lines, aid, states, caps: AID ? { yawMax: AID.yawMax ?? 0, tiltMax: AID.tiltMax ?? 0 } : null };
 }
 const f = (x, d = 2) => (x == null ? '-' : (+x).toFixed(d));
 const report = { root: ROOT, n: N, offset: OFFSET, solo: {}, fight: null, honesty: null };
