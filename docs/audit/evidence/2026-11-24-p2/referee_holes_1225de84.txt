@@ -1,0 +1,36 @@
+0 control — leaning pole, nothing done
+   body: lean after 3 s 90 deg
+   tool: outside force share 0.0 % · support share 0.0 % · ground normal / weight 98.4 % · unexplained vertical 6.4 N·s · friction over limit 0.0 N·s · joints to outside 0 · foreign contact 0.0 N·s · damping torque 0.0 N·m·s · placed steps 0
+
+1 rotation lock — rb.lockRotations(true)
+   body: lean after 3 s 12 deg
+   tool: outside force share 0.0 % · support share 0.0 % · ground normal / weight 99.4 % · unexplained vertical 1.8 N·s · friction over limit 0.0 N·s · joints to outside 0 · foreign contact 0.0 N·s · damping torque 0.0 N·m·s · placed steps 0
+
+2 added rotational inertia 5000 kg·m² (set once, before measuring)
+   body: lean after 3 s 12.1 deg
+   tool: outside force share 0.0 % · support share 0.0 % · ground normal / weight 99.4 % · unexplained vertical 1.8 N·s · friction over limit 0.0 N·s · joints to outside 0 · foreign contact 0.0 N·s · damping torque 0.0 N·m·s · placed steps 0
+
+3 angular damping 200
+   body: lean after 3 s 32.9 deg
+   tool: outside force share 0.0 % · support share 0.0 % · ground normal / weight 97.7 % · unexplained vertical 6.8 N·s · friction over limit 0.8 N·s · joints to outside 0 · foreign contact 0.0 N·s · damping torque 24.5 N·m·s · placed steps 0
+
+4 invisible kinematic platform under the body (1 m above the ground)
+   body: height 1.25 m (held in the air)
+   tool: outside force share 0.0 % · support share 0.0 % · ground normal / weight 0.0 % · unexplained vertical 0.0 N·s · friction over limit 0.0 N·s · joints to outside 0 · foreign contact 157.0 N·s · damping torque 0.0 N·m·s · placed steps 0
+
+5 world gravity halved (-4.905)
+   body: resting on the ground under half gravity
+   tool: outside force share 0.0 % · support share 0.0 % · ground normal / weight 100.0 % · unexplained vertical 0.0 N·s · friction over limit 0.0 N·s · joints to outside 0 · foreign contact 0.0 N·s · damping torque 0.0 N·m·s · placed steps 0
+
+6 flat slab pushed sideways with 2 x its weight — friction coefficient 0.9 on slab and ground
+   body: moved 21.597 m in 2 s
+   tool: outside force share 59.8 % · support share 0.0 % · ground normal / weight 100.0 % · unexplained vertical 0.0 N·s · friction over limit 0.0 N·s · joints to outside 0 · foreign contact 0.0 N·s · damping torque 0.0 N·m·s · placed steps 0 · (the sideways push itself counts as an outside force — look at "friction over limit")
+
+6 flat slab pushed sideways with 2 x its weight — friction coefficient 5 on slab and ground
+   body: moved 0.000 m in 2 s
+   tool: outside force share 47.2 % · support share 0.0 % · ground normal / weight 100.0 % · unexplained vertical 0.0 N·s · friction over limit 0.0 N·s · joints to outside 0 · foreign contact 0.0 N·s · damping torque 0.0 N·m·s · placed steps 0 · (the sideways push itself counts as an outside force — look at "friction over limit")
+
+7 the body itself switched to kinematic, hanging 2 m up
+   body: height 2.00 m · mass() 8.0
+   tool: outside force share 0.0 % · support share 0.0 % · ground normal / weight 0.0 % · unexplained vertical 157.0 N·s · friction over limit 0.0 N·s · joints to outside 0 · foreign contact 0.0 N·s · damping torque 0.0 N·m·s · placed steps 0
+
