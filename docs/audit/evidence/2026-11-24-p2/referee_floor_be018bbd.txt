@@ -1,0 +1,12 @@
+A passive three-link chain, leaning, left to fall and settle (4 s)
+   outside torque share 8.3 % · outside 2.1 N·m·s · ground 23.8 N·m·s · tilt residual 2.1 · outside force share 0.0 %
+
+B same chain, with honest internal "muscle" torque pairs wriggling it (4 s)
+   outside torque share 10.6 % · outside 3.3 N·m·s · ground 27.7 N·m·s · tilt residual 3.2 · outside force share 0.0 %
+
+C a box thrown with spin, tumbling to rest (4 s)
+   outside torque share 24.6 % · outside 2.1 N·m·s · ground 6.4 N·m·s · tilt residual 0.7 · outside force share 0.0 %
+
+D a box simply resting on the ground (30 s)
+   outside torque share 50.0 % · outside 0.0 N·m·s · ground 0.0 N·m·s · tilt residual 0.0 · outside force share 0.0 %
+
