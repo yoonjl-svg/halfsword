@@ -23,6 +23,7 @@ const u = (p) => pathToFileURL(join(ROOT, p)).href;
 const N = +(args.n ?? 8);
 const WEAPONS = String(args.weapons ?? 'longsword,rapier,zweihander').split(',');
 const ONLY = args.only ? new Set(String(args.only).split(',')) : null;
+const STRENGTH = args.strength != null ? +args.strength : null; // --strength=0.65: 혼자 장면을 그 인물 힘 몫으로 (싸움 장면에는 안 걸림 — 싸움은 게임이 정한 값 그대로)
 const FIGHTS = +(args.fights ?? 8), FSECS = +(args.secs ?? 30), OFFSET = +(args.offset ?? 0);
 const FW = String(args.fightWeapons ?? WEAPONS[0]).split(',');
 
@@ -51,6 +52,7 @@ function solo(weapon, variant0, secs, drive, opt = {}) {
   const G = H.newRound({ walls: false, weapon, seed: 100 + variant });
   G.park();
   const P = G.player;
+  if (STRENGTH != null) P.strength = STRENGTH; // 인물 힘 몫(숙련도 칸 — 싸움의 AI '보통' 몸은 0.65 · 혼자 장면 기본은 1)
   const R = rng(1000 + variant * 7919);
   const settle = Math.round((2.0 + 0.11 * variant) / DT), nudgeAt = settle - Math.round(0.5 / DT);
   const ctx = { G, P, R, state: {}, FAM };
@@ -212,7 +214,8 @@ if ((!ONLY || ONLY.has('fight')) && FIGHTS > 0) {
       for (const e of fs) {
         const st = e.f.state; if (st === 'dead') continue;
         e.steps++; if (st === 'stand') e.standSteps++;
-        const y = e.f.bodies.pelvis.translation().y; if (y > 0.7 && e.f.tiltDeg() < 45) e.upSteps++; // 몸으로 본 '서 있음'(상태 이름과 무관 · 골반 0.7 m 위 · 가슴 기울기 45° 안) e.lowFor = y < 0.5 ? e.lowFor + DT : 0;
+        const y = e.f.bodies.pelvis.translation().y; e.lowFor = y < 0.5 ? e.lowFor + DT : 0;
+        if (y > 0.7 && e.f.tiltDeg() < 45) e.upSteps++; // 몸으로 본 '서 있음'(상태 이름과 무관 · 골반 0.7 m 위 · 가슴 기울기 45° 안)
         const fallNow = (e.prev === 'stand' && (st === 'down' || st === 'getup')) || (st === 'stand' && e.lowFor > 0.25 && !e.sat);
         if (st === 'stand' && e.lowFor > 0.25) { if (!e.sat) F.sits++; e.sat = true; } else if (y > 0.6) e.sat = false;
         if (fallNow) { F.falls++; const self = G.t - e.lastWound > 1.5; e.firstFall ??= +G.t.toFixed(1); if (self) { F.selfFalls++; e.firstSelf ??= +G.t.toFixed(1); } e.downAt = G.t; e.upFor = 0; }
