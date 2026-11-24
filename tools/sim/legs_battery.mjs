@@ -1,8 +1,9 @@
 // ─────────────────────────────────────────────────────────────
 //  legs_battery.mjs — 다리 시험 묶음 (물리 2.0 · docs/strike/physics2_proto_round1_2026-11-24.md §6-1). 재기만 한다.
 //
-//   node tools/sim/legs_battery.mjs [--root=<트리>] [--n=8] [--offset=0] [--weapons=longsword,rapier,zweihander] [--only=stand,walk,…] [--more] [--holes] [--fights=8] [--fightWeapons=a,b,…] [--secs=30] [--json=<파일>] [--quiet] [--nohonesty]
+//   node tools/sim/legs_battery.mjs [--root=<트리>] [--n=8] [--offset=0] [--weapons=longsword,rapier,zweihander] [--only=stand,walk,…] [--more] [--holes] [--fights=8] [--fightWeapons=a,b,…] [--secs=30] [--json=<파일>] [--quiet] [--runs] [--nohonesty]
 //   --more = 부를 때만 도는 장면(MORE) 전부 · --holes = 그 가운데 구멍 메우기 장면(HOLES — 11/24 저녁 · 기록 docs/strike/physics2_notes/s7_battery_holes.md)만. 기본 묶음(19 장면 · 합계 432)은 그대로.
+//   --runs = 판마다 한 줄(통과 · 넘어진 때 · 셈 — 왜 실패했나 볼 때). 구멍 메우기 장면은 줄 끝에 그 장면의 확인 셈(그 일이 일어난 판 수)이 붙는다.
 //
 //  왜: 혼자 장면 한 번의 통과 · 넘어짐은 작은 차이로 뒤집힌다(시제품 셋 모두의 보고). 장면마다 시작 흔들림과 때를 바꿔 n 번 돌려 '안 넘어진 몫'으로 본다.
 //  흔들림: 판 씨앗 · 자리 잡는 시간(2.0 s + 0.11 s × i) · 재기 0.5 s 앞에 가슴을 6 N·s 로 한 번 침(방향 137.5° × i). 모두 결정적 — 같은 인자면 같은 값.
