@@ -39,7 +39,7 @@ const cq = (q) => ({ x: q.x, y: q.y, z: q.z, w: q.w });
 
 const AXG = { x: 3, z: 4, y: 5 }; // 닻 generic 관절의 raw 축 (chain_ledger.mjs · 측정 10/7)
 const PAIRED = new Set(['sword', 'offhand', 'muscle', 'elbowG', 'track', 'anat', 'swing']); // 한 몸 안에서 짝이 맞아야 하는 단계 — 안 맞는 몫은 unpaired 로
-const OUT = ['support', 'push', 'anchor', 'damp', 'write', 'mass', 'unpaired'];
+const OUT = ['support', 'push', 'anchor', 'damp', 'write', 'mass', 'unpaired', 'aid'];
 const SHARED = { phase: 'other', sets: [] }; // 단계 이름표는 한 번에 하나 (모든 장부가 같이 봄)
 
 /**
@@ -83,7 +83,7 @@ export function attach(world, named, opts = {}) {
   let capUp = null;
   if (f) {
     const wrap = (obj, name, tag) => { const orig = obj?.[name]; if (typeof orig !== 'function') return; obj[name] = function (...a) { const prev = SHARED.phase; SHARED.phase = tag; try { return orig.apply(this, a); } finally { SHARED.phase = prev; } }; };
-    for (const [n, t] of [['driveBalance', 'balance'], ['shove', 'shove'], ['closeStep', 'closePush'], ['driveSword', 'sword'], ['offHand', 'offhand'], ['driveJoints', 'muscle'], ['elbowGravity', 'elbowG'], ['anatSoft', 'anat'], ['trackBlade', 'track']]) wrap(f, n, t);
+    for (const [n, t] of [['driveBalance', 'balance'], ['shove', 'shove'], ['closeStep', 'closePush'], ['driveSword', 'sword'], ['offHand', 'offhand'], ['driveJoints', 'muscle'], ['elbowGravity', 'elbowG'], ['anatSoft', 'anat'], ['trackBlade', 'track'], ['driveAid', 'aid']]) wrap(f, n, t); // aid = 선언된 밖 도움(세우는 토크 · 일으키는 힘 — 크기를 못박아 따로 적는 갈래)
     wrap(f.gait, 'pinFeet', 'pin');
     wrap(f.gait, 'swingPull', 'swing'); // 내딛는 발 ↔ 골반 당김 (쌍 — 힘은 맞지만 작용선이 달라 짝힘 토크가 남을 수 있음)
     const rs = (f.uprightJoint ?? f.joints?.find((j) => j.joint)?.joint ?? f.gripJoint)?.rawSet; // 닻이 없는 몸에서도 모터 매개변수를 잡는다 (관절 묶음은 세계에 하나)
@@ -252,7 +252,8 @@ export function attach(world, named, opts = {}) {
         if (!paired) { put('unpaired', k.F, len(k.T), 0, k.F.y); L.chk.pairMax = Math.max(L.chk.pairMax, len(k.F)); L.chk.coupleMax = Math.max(L.chk.coupleMax || 0, len(k.T)); (L.chk.coupleBy ||= {})[kind] = (L.chk.coupleBy[kind] || 0) + len(k.T) * DT; }
       } else {
         put(kind, k.F, len(k.T), k.P, k.F.y);
-        if (kind === 'support' || kind === 'push' || kind === 'write' || kind === 'other' || kind === 'unpaired') Pout += k.P;
+        if (kind === 'support' || kind === 'push' || kind === 'write' || kind === 'other' || kind === 'unpaired' || kind === 'aid') Pout += k.P;
+        if (kind === 'aid') { let T = V3(); for (const d of k.items) if (d.T) T = add(T, d.T); const q = (L.aid ||= { peakN: 0, peakNm: 0, Tnms: 0, steps: 0 }); q.peakN = Math.max(q.peakN, len(k.F)); q.peakNm = Math.max(q.peakNm, len(T)); q.Tnms += len(T) * DT; q.steps++; } // 선언된 밖 도움: 스텝 최고값(상한을 지키는지) · 순수 토크 몫
       }
     }
     // 감쇠
@@ -395,6 +396,7 @@ export function attach(world, named, opts = {}) {
       T: +L.T.toFixed(3),
       forceShare: Fout / Math.max(1e-9, Fout + Fin),
       supportShare: v('support', 'Fy') / Math.max(1e-9, L.Mg * L.T),
+      aid: { liftShare: v('aid', 'Fy') / Math.max(1e-9, L.Mg * L.T), forceNs: v('aid', 'Fimp'), torqueRate: (L.aid?.Tnms ?? 0) / Math.max(1e-9, L.T), peakN: L.aid?.peakN ?? 0, peakNm: L.aid?.peakNm ?? 0, stepShare: (L.aid?.steps ?? 0) / Math.max(1, L.rows) },
       workShare: Wout / Math.max(1e-9, Wout + Win),
       anchorYawNms: v('anchorYaw', 'Timp'), anchorTiltNms: v('anchorTilt', 'Timp'),
       pairResidualMaxN: L.chk.pairMax, coupleBy: L.chk.coupleBy ?? {},
@@ -404,7 +406,7 @@ export function attach(world, named, opts = {}) {
       pair: L.pair ? { grossNs: +L.pair.gross.toFixed(2), netFNs: +L.pair.netF.toFixed(2), netTNms: +L.pair.netT.toFixed(2), steps: L.pair.steps, worstNs: +L.pair.worst.toFixed(2), by: Object.fromEntries(Object.entries(L.pair.by).map(([k, v]) => [k, +v.toFixed(2)])) } : null,
       fingerprint: fp0, fingerprintEnd: L.fingerprint(),
       dyn: Object.fromEntries(L.dyn.map((d, i) => [names[i], { ld: d.ld.map(r4), ad: d.ad.map(r4), gs: d.gs.map(r4), m: d.m.map(r4), I: d.I.map(r4), types: [...d.type] }])),
-      torque: (() => { const out = v('angResTilt', 'Timp') + v('angResYawExcess', 'Timp') + v('damp', 'Timp') + ['support', 'push', 'unpaired', 'other', 'write'].reduce((t, k) => t + v(k, 'Timp'), 0); const inn = v('groundTorque', 'Timp'); return { share: out + inn < 1e-6 ? 0 : out / (out + inn), tiltResRate: v('angResTilt', 'Timp') / Math.max(1e-9, L.T), tiltFloorRate: v('angResTiltFloor', 'Timp') / Math.max(1e-9, L.T), yawExcessRate: v('angResYawExcess', 'Timp') / Math.max(1e-9, L.T), yawOverCoulombRate: v('angResYawOverCoulomb', 'Timp') / Math.max(1e-9, L.T), outNms: out, groundNms: inn, tiltResNms: v('angResTilt', 'Timp'), yawResNms: v('angResYaw', 'Timp'), yawExcessNms: v('angResYawExcess', 'Timp'), dampNms: v('damp', 'Timp') }; })(),
+      torque: (() => { const out = v('angResTilt', 'Timp') + v('angResYawExcess', 'Timp') + v('damp', 'Timp') + ['support', 'push', 'unpaired', 'other', 'write', 'aid'].reduce((t, k) => t + v(k, 'Timp'), 0); const inn = v('groundTorque', 'Timp'); return { share: out + inn < 1e-6 ? 0 : out / (out + inn), tiltResRate: v('angResTilt', 'Timp') / Math.max(1e-9, L.T), tiltFloorRate: v('angResTiltFloor', 'Timp') / Math.max(1e-9, L.T), yawExcessRate: v('angResYawExcess', 'Timp') / Math.max(1e-9, L.T), yawOverCoulombRate: v('angResYawOverCoulomb', 'Timp') / Math.max(1e-9, L.T), outNms: out, groundNms: inn, tiltResNms: v('angResTilt', 'Timp'), yawResNms: v('angResYaw', 'Timp'), yawExcessNms: v('angResYawExcess', 'Timp'), dampNms: v('damp', 'Timp') }; })(),
       joints: Object.fromEntries(Object.entries(L.joint).map(([k, x]) => { const h = Float64Array.from(x.hist).sort(); const mh = Float64Array.from(x.mHist).sort(); return [k, { limit: x.limit, mean: +(x.sum / Math.max(1, x.n)).toFixed(1), p95: +(h[Math.floor(0.95 * (h.length - 1))] ?? 0).toFixed(1), peak: +x.peak.toFixed(1), overShare: +(x.over / Math.max(1, x.n)).toFixed(4), motorPeak: +x.motorPeak.toFixed(1), explPeak: +x.explPeak.toFixed(1), measCover: +(x.mN / Math.max(1, x.n)).toFixed(3), measP95: +(mh[Math.floor(0.95 * (mh.length - 1))] ?? 0).toFixed(1), measPeak: +x.mPeak.toFixed(1), measOverShare: +(x.mOver / Math.max(1, x.mN)).toFixed(4), measVsReq: x.sxx > 0 ? +(x.sxy / x.sxx).toFixed(3) : null, engineVsMotorReq: x.sxxM > 1e-9 ? +(x.sxyM / x.sxxM).toFixed(3) : null, measCorr: x.sxx > 0 && x.syy > 0 ? +(x.sxy / Math.sqrt(x.sxx * x.syy)).toFixed(3) : null }]; })),
       virtualActuators: Object.fromEntries(Object.entries(L.virt).map(([k, x]) => [k, { Ns: +x.Ns.toFixed(1), peakN: +x.peakN.toFixed(1) }])),
       check: { foreignNs: v('foreignN', 'Fimp'), foreignKinNs: v('foreignKin', 'Fimp'), groundNShare: v('groundN', 'Fy') / Math.max(1e-9, L.Mg * L.T), hiddenYNs: v('hiddenY', 'Fimp'), hiddenYNet: v('hiddenY', 'Fy'), frictionHNs: v('frictionH', 'Fimp'), frictionExcessNs: v('frictionExcess', 'Fimp'), nonFootGroundNs: v('nonFootGround', 'Fimp') },
@@ -443,6 +445,7 @@ const pct = (x) => (100 * x).toFixed(1).padStart(5) + ' %';
 const n1 = (x, w = 9) => (+x).toFixed(1).padStart(w);
 export function report(title, S) {
   const lines = [`■ ${title}  (${S.T} s)`, `  선 힘 몫(밖 · 닻 토크는 안 들어감) ${pct(S.forceShare)} · 수직 받침 몫 ${pct(S.supportShare)} · 일 몫(밖) ${pct(S.workShare)} · 닻 yaw ${n1(S.anchorYawNms, 0)} N·m·s · 닻 기울기 ${n1(S.anchorTiltNms, 0)} N·m·s · 근육 쌍 어긋남 최고 ${S.pairResidualMaxN.toFixed(3)} N${Object.keys(S.coupleBy).length ? ' · 짝 없는 토크 ' + Object.entries(S.coupleBy).map(([k, x]) => `${k} ${x.toFixed(1)}`).join(' · ') + ' N·m·s' : ''}`];
+  if (S.aid && (S.aid.forceNs > 0 || S.aid.torqueRate > 0)) lines.push(`  선언된 밖 도움: 드는 힘 ÷ 체중 ${pct(S.aid.liftShare)} (스텝 최고 ${n1(S.aid.peakN, 0)} N) · 세우는 토크 평균 ${S.aid.torqueRate.toFixed(1)} N·m (스텝 최고 ${S.aid.peakNm.toFixed(1)} N·m) · 걸린 스텝 ${pct(S.aid.stepShare)}`);
   if (S.stab) lines.push(`  몸: ${S.stab.fellAt != null ? '넘어짐 ' + S.stab.fellAt + ' s' : '안 넘어짐'} · 골반 높이 평균 ${S.stab.pelvisYMean} (최저 ${S.stab.pelvisYMin}) m · 가슴 기울기 최고 ${S.stab.tiltMaxDeg}° · 옮긴 거리 ${S.stab.netMove} m (길 ${S.stab.pathMove} m · 평균 ${S.stab.meanSpeed} m/s) · 칼끝 최고 ${S.stab.tipSpeedMax} m/s · 상태 ${Object.entries(S.stab.states).map(([k, n]) => k + ' ' + n).join(' ')}`);
   lines.push(`  검산: 땅 법선 ÷ 체중 ${pct(S.check.groundNShare)} · 법선으로 설명 안 되는 수직 힘 ${n1(S.check.hiddenYNs, 0)} N·s (알짜 ${n1(S.check.hiddenYNet, 0)}) · 수평 마찰(핀 포함) ${n1(S.check.frictionHNs, 0)} N·s 가운데 μN 넘는 몫 ${n1(S.check.frictionExcessNs, 0)} N·s · 발 아닌 곳이 땅을 누름 ${n1(S.check.nonFootGroundNs, 0)} N·s · 땅 아닌 것과 닿음 ${n1(S.check.foreignNs, 0)} N·s (그중 운동학 물체 ${n1(S.check.foreignKinNs, 0)}) · 몸 밖에 묶인 관절 ${S.externalJoints.length} (${S.externalJoints.join(',') || '없음'})`);
   if (S.torque) lines.push(`  돌리는 쪽: 숨은 기울기 토크 평균 ${S.torque.tiltResRate.toFixed(2)} N·m (닻 재계산값을 뺀 나머지 ${S.torque.tiltFloorRate.toFixed(2)}) · yaw 엔진 마찰 한도 넘는 몫 평균 ${S.torque.yawExcessRate.toFixed(2)} N·m (쿨롱 한도는 넘고 엔진 한도 안 — 엔진이 봐준 비틀림 마찰 ${(S.torque.yawOverCoulombRate ?? 0).toFixed(2)} N·m) · 토크 몫(밖) ${pct(S.torque.share)} = 밖 ${n1(S.torque.outNms, 0)} ÷ (밖 + 땅 ${n1(S.torque.groundNms, 0)}) N·m·s · 기울기 잔차 ${n1(S.torque.tiltResNms, 0)} · yaw 잔차 ${n1(S.torque.yawResNms, 0)} (마찰 짝힘 한도 넘는 몫 ${n1(S.torque.yawExcessNms, 0)}) · 회전 감쇠 ${n1(S.torque.dampNms, 0)}`);
@@ -453,8 +456,8 @@ export function report(title, S) {
   if (S.place.calls) lines.push(`  자리 직접 놓기: 스텝의 ${pct(S.place.stepShare)} (칼 ${pct(S.place.swordStepShare)}) · 옮긴 질량 × 거리 ${S.place.kgm} kg·m`);
   if (S.woundsTaken.length) { const W = S.woundsTaken, kin = W.filter((x) => x.kin), sv = (a) => a.reduce((t, x) => t + x.sev, 0); const rs = W.filter((x) => !x.kin && x.E0 > 0).map((x) => (x.type === 'blunt' ? x.energy : x.eff ?? x.energy) / x.E0).sort((a, b) => a - b); lines.push(`  받은 상처 ${W.length} (운동학 칼 ${kin.length} · 심각도 몫 ${pct(sv(kin) / Math.max(1e-9, sv(W)))}) · 판정 ÷ 칼만의 물리 에너지 가운데값 ${rs.length ? rs[rs.length >> 1].toFixed(2) : '-'} 배 (최고 ${rs.length ? rs[rs.length - 1].toFixed(1) : '-'})`); }
   lines.push('   갈래          ∫|F|dt N·s   그중 수직    ∫|τ|dt N·m·s    ∫|P|dt J     더한 일 J     뺀 일 J');
-  const order = ['support', 'push', 'anchor', 'damp', 'write', 'mass', 'unpaired', 'other', 'shove', 'combat', 'pin', 'res', 'musclePair', 'inside'];
-  const lab = { support: '받침(밖)', push: '걷기 밀기(밖)', anchor: '닻(밖)', damp: '엔진 감쇠(밖)', write: '속도 쓰기(밖)', mass: '질량 바뀜(밖)', unpaired: '짝 없는 힘(밖)', other: '그 밖 선언(밖)', shove: '밀쳐내기(따로)', combat: '판정 뒤 충격(따로)', pin: '발 핀(안)', res: '땅 · 접촉(안)', musclePair: '근육 쌍(안)', inside: '안쪽 일(합)' };
+  const order = ['support', 'push', 'aid', 'anchor', 'damp', 'write', 'mass', 'unpaired', 'other', 'shove', 'combat', 'pin', 'res', 'musclePair', 'inside'];
+  const lab = { aid: '선언된 도움(밖)', support: '받침(밖)', push: '걷기 밀기(밖)', anchor: '닻(밖)', damp: '엔진 감쇠(밖)', write: '속도 쓰기(밖)', mass: '질량 바뀜(밖)', unpaired: '짝 없는 힘(밖)', other: '그 밖 선언(밖)', shove: '밀쳐내기(따로)', combat: '판정 뒤 충격(따로)', pin: '발 핀(안)', res: '땅 · 접촉(안)', musclePair: '근육 쌍(안)', inside: '안쪽 일(합)' };
   for (const k of order) { const c = S.cats[k]; if (!c) continue; lines.push(`   ${lab[k].padEnd(14)}${n1(c.Fimp, 10)} ${n1(c.Fy, 10)} ${n1(c.Timp, 13)} ${n1(c.Wabs, 13)} ${n1(c.Wpos, 12)} ${n1(c.Wneg, 12)}`); }
   return lines.join('\n');
 }

@@ -117,6 +117,27 @@ for (const fam of ['diagR', 'vert', 'horizR']) {
   SCENES['stroke_' + fam] = { secs: 9, pre: S.pre, drive: (i, t, c) => { c.P.move.set(0, 0); S.step(c); }, ok: (r) => !r.fell, tip: true };
   SCENES['walkstroke_' + fam] = { secs: 12, pre: S.pre, drive: (i, t, c) => { wander(c, t); S.step(c); }, ok: (r) => !r.fell && r.path >= 2, tip: true };
 }
+// ── 싸움 꼴 장면 (11/24 — 싸움에서 16 몸 모두 6 ~ 13 s 에 처음 넘어짐: 그 앞 1.4 s 에 있던 것 = AI 간격 잡기 조종(크기 0 · 0.21 · 0.45 · 1 이 0.2 ~ 0.7 s 마다 바뀜) · 기술이 부탁한 걸음(pass · lunge 0.3 ~ 0.6 m))
+//    기본 묶음에는 안 든다(앞 판과 합계를 견줄 수 있게) — --more 를 주거나 --only 에 이름을 적으면 돈다.
+const aiStick = (ctx, t) => { // AI 간격 잡기 꼴 조종: 0.2 ~ 0.7 s 마다 크기 · 쪽을 바꿈 (앞뒤가 옆보다 잦음) · 바라보는 쪽은 천천히 흔들림
+  const s = ctx.state;
+  if (s.until == null || t >= s.until) { s.until = t + 0.2 + 0.5 * ctx.R(); const m = [0, 0.21, 0.45, 0.45, 0.75, 1][Math.floor(ctx.R() * 6)]; const d = [[0, 1], [0, 1], [0, -1], [0, -1], [1, 0], [-1, 0], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]][Math.floor(ctx.R() * 10)]; s.mv = [d[0] * m, d[1] * m]; }
+  ctx.P.move.set(s.mv[0], s.mv[1]);
+  faceAround(ctx, 0.5 * Math.sin(0.7 * t));
+};
+const reqEvery = (kind, o) => (i, t, c) => { // 1.6 s 마다 기술 걸음을 부탁 (걷는 조종 0.45 앞 · 부탁 앞뒤 0.3 s 는 조종 1 — AI 가 베며 내딛는 꼴)
+  const s = c.state; s.ph ??= 0.4 + 0.8 * c.R(); const k = (t - s.ph) / 1.6, near = Math.abs(k - Math.round(k)) * 1.6 < 0.3 && t > s.ph - 0.3;
+  c.P.move.set(0, near ? 1 : 0.45);
+  if (t >= s.ph && Math.floor((t - s.ph) / 1.6) !== s.n) { s.n = Math.floor((t - s.ph) / 1.6); const ok = c.P.gait?.requestStep?.({ kind, ...o }); s.extra = (s.extra ?? 0) + (ok ? 1 : 0); }
+};
+const MORE = {
+  slowwalk: { secs: 6, drive: (i, t, c) => c.P.move.set(0, 0.45), ok: (r) => !r.fell && r.alongF >= 0.15, speed: true },
+  slowback: { secs: 6, drive: (i, t, c) => c.P.move.set(0, -0.45), ok: (r) => !r.fell && -r.alongF >= 0.1, speed: true },
+  aistick: { secs: 14, drive: (i, t, c) => aiStick(c, t), ok: (r) => !r.fell && r.path >= 2 },
+  reqpass: { secs: 10, drive: reqEvery('pass', { fwd: 0.6, duration: 0.4 }), ok: (r) => !r.fell && (r.extra ?? 0) >= 3 },
+  reqlunge: { secs: 10, drive: reqEvery('lunge', { fwd: 0.6, duration: 0.4, accel: true }), ok: (r) => !r.fell && (r.extra ?? 0) >= 3 },
+};
+for (const fam of ['diagR']) { const S = stroke(fam); MORE['aistroke_' + fam] = { secs: 14, pre: S.pre, drive: (i, t, c) => { aiStick(c, t); S.step(c); }, ok: (r) => !r.fell && r.path >= 2, tip: true }; }
 // 일어서기: 서 있는 몸을 쓰러뜨리고(knockDown — 게임 규칙의 쓰러짐) 12 s 안에 stand 로 돌아와 2 s 버티는가
 SCENES.getup = { secs: 14, keepGoing: true, drive: (i, t, c) => { c.P.move.set(0, 0); const s = c.state; if (i === 0) c.P.knockDown(true); if (c.P.state === 'stand') { s.up = (s.up ?? 0) + DT; if (s.up > 2 && s.extra == null) s.extra = +t.toFixed(2); } else s.up = 0; }, ok: (r) => r.extra != null };
 
@@ -152,7 +173,7 @@ async function honestyFirst() {
     if (virt.length) bad.push(`관절을 건너뛰는 힘 쌍 ${virt.join(',')}`);
     const b0 = base?.find((x) => x.title.split(' ')[0] === kind), fp = b0 ? Hn.diffFingerprint(b0, S) : null;
     if (bad.length) ok = false;
-    lines.push(`  정직 ${kind}: ${bad.length ? '불합격 — ' + bad.join(' · ') : '통과'} (받침 ${(100 * S.supportShare).toFixed(1)} % · 땅 법선 ${(100 * S.check.groundNShare).toFixed(1)} % · 숨은 기울기 ${S.torque.tiltResRate.toFixed(1)} N·m · 엔진이 봐준 비틀림 ${(S.torque.yawOverCoulombRate ?? 0).toFixed(1)} N·m)${fp ? ` · 기준 판과 지문 차이 ${fp.length} 줄` : ''}`);
+    lines.push(`  정직 ${kind}: ${bad.length ? '불합격 — ' + bad.join(' · ') : '통과'} (받침 ${(100 * S.supportShare).toFixed(1)} % · 땅 법선 ${(100 * S.check.groundNShare).toFixed(1)} % · 숨은 기울기 ${S.torque.tiltResRate.toFixed(1)} N·m · 엔진이 봐준 비틀림 ${(S.torque.yawOverCoulombRate ?? 0).toFixed(1)} N·m)${S.aid && (S.aid.forceNs > 0 || S.aid.torqueRate > 0) ? ` · 선언된 밖 도움: 세우는 토크 평균 ${S.aid.torqueRate.toFixed(1)} (최고 ${S.aid.peakNm.toFixed(0)}) N·m · 드는 힘 ÷ 체중 ${(100 * S.aid.liftShare).toFixed(1)} %` : ''}${fp ? ` · 기준 판과 지문 차이 ${fp.length} 줄` : ''}`);
     if (fp && kind === 'stand') for (const d of fp.slice(0, 30)) lines.push(`      ${d.slice(0, 150)}`);
     try { G.world.free(); } catch { /* */ }
   }
@@ -161,7 +182,8 @@ async function honestyFirst() {
 const f = (x, d = 2) => (x == null ? '-' : (+x).toFixed(d));
 const report = { root: ROOT, n: N, offset: OFFSET, solo: {}, fight: null, honesty: null };
 if (!args.nohonesty) { const hf = await honestyFirst(); report.honesty = hf; console.log(`정직 먼저 (honesty.mjs · ${WEAPONS[0]}): ${hf.ok ? '통과' : '불합격 — 아래 통과 몫은 정직한 몸의 것이 아니다'}`); for (const l of hf.lines) console.log(l); }
-const names = Object.keys(SCENES).filter((k) => !ONLY || ONLY.has(k));
+for (const [k, v] of Object.entries(MORE)) if (args.more || ONLY?.has(k)) SCENES[k] = v; // 싸움 꼴 장면은 부를 때만
+const names = Object.keys(SCENES).filter((k) => !ONLY || ONLY.has(k) || (args.more && k in MORE));
 if (names.length) console.log(`다리 시험 묶음 · ${ROOT} · 장면마다 ${N} 번 · 흔듦 묶음 ${OFFSET} ~ ${OFFSET + N - 1} (통과 = 안 넘어짐 + 시킨 일을 함 · 가운데값: 넘어진 때 s · 빠르기 m/s · 시킨 쪽 빠르기 m/s · 걸은 길 m · 기울기 최고 ° · 칼끝 최고 m/s)`);
 for (const w of WEAPONS) {
   for (const k of names) {
@@ -175,10 +197,10 @@ for (const w of WEAPONS) {
 }
 // ── 싸움 ──
 if ((!ONLY || ONLY.has('fight')) && FIGHTS > 0) {
-  const F = { fights: FIGHTS, secs: FSECS, falls: 0, selfFalls: 0, sits: 0, rose: 0, dead: 0, wounds: 0, opened: 0, standShare: 0, firstSelf: [], minutes: 0 };
+  const F = { fights: FIGHTS, secs: FSECS, falls: 0, selfFalls: 0, sits: 0, rose: 0, dead: 0, wounds: 0, opened: 0, standShare: 0, upShare: 0, neverFell: 0, firstSelf: [], minutes: 0 };
   for (let seed = 1; seed <= FIGHTS; seed++) {
     const G = H.newRound({ walls: true, seed: seed + OFFSET, weapon: FW[(seed - 1) % FW.length], weapon2: FW[seed % FW.length], AI2Class: H.AI });
-    const fs = [G.player, G.enemy].map((x) => ({ f: x, prev: 'stand', lastWound: -9, lowFor: 0, downAt: null, upFor: 0, standSteps: 0, steps: 0, firstSelf: null, sat: false }));
+    const fs = [G.player, G.enemy].map((x) => ({ f: x, prev: 'stand', lastWound: -9, lowFor: 0, downAt: null, upFor: 0, standSteps: 0, upSteps: 0, steps: 0, firstSelf: null, firstFall: null, sat: false }));
     G.onWound = (att, vic) => { const e = fs.find((x) => x.f === vic); if (e) e.lastWound = G.t; };
     let nW0 = 0;
     const n = Math.round(FSECS / DT);
@@ -187,21 +209,21 @@ if ((!ONLY || ONLY.has('fight')) && FIGHTS > 0) {
       for (const e of fs) {
         const st = e.f.state; if (st === 'dead') continue;
         e.steps++; if (st === 'stand') e.standSteps++;
-        const y = e.f.bodies.pelvis.translation().y; e.lowFor = y < 0.5 ? e.lowFor + DT : 0;
+        const y = e.f.bodies.pelvis.translation().y; if (y > 0.7 && e.f.tiltDeg() < 45) e.upSteps++; // 몸으로 본 '서 있음'(상태 이름과 무관 · 골반 0.7 m 위 · 가슴 기울기 45° 안) e.lowFor = y < 0.5 ? e.lowFor + DT : 0;
         const fallNow = (e.prev === 'stand' && (st === 'down' || st === 'getup')) || (st === 'stand' && e.lowFor > 0.25 && !e.sat);
         if (st === 'stand' && e.lowFor > 0.25) { if (!e.sat) F.sits++; e.sat = true; } else if (y > 0.6) e.sat = false;
-        if (fallNow) { F.falls++; const self = G.t - e.lastWound > 1.5; if (self) { F.selfFalls++; e.firstSelf ??= +G.t.toFixed(1); } e.downAt = G.t; e.upFor = 0; }
+        if (fallNow) { F.falls++; const self = G.t - e.lastWound > 1.5; e.firstFall ??= +G.t.toFixed(1); if (self) { F.selfFalls++; e.firstSelf ??= +G.t.toFixed(1); } e.downAt = G.t; e.upFor = 0; }
         if (e.downAt != null) { if (st === 'stand' && y > 0.6) { e.upFor += DT; if (e.upFor > 2) { F.rose++; e.downAt = null; } } else e.upFor = 0; }
         e.prev = st;
       }
       if (G.player.state === 'dead' || G.enemy.state === 'dead') { F.dead++; break; }
     }
-    for (const e of fs) { F.standShare += e.standSteps / Math.max(1, e.steps) / (2 * FIGHTS); F.minutes += (e.steps * DT) / 60; if (e.firstSelf != null) F.firstSelf.push(e.firstSelf); }
+    for (const e of fs) { F.upShare += e.upSteps / Math.max(1, e.steps) / (2 * FIGHTS); if (e.firstFall == null) F.neverFell++; F.standShare += e.standSteps / Math.max(1, e.steps) / (2 * FIGHTS); F.minutes += (e.steps * DT) / 60; if (e.firstSelf != null) F.firstSelf.push(e.firstSelf); }
     F.wounds += G.wounds.length; F.opened += G.wounds.filter((x) => x.type !== 'blunt' && x.severity > 0).length; nW0 += 0;
     try { G.world.free(); } catch { /* */ }
   }
-  report.fight = { ...F, selfFallsPerMin: +(F.selfFalls / Math.max(1e-9, F.minutes)).toFixed(2), fallsPerMin: +(F.falls / Math.max(1e-9, F.minutes)).toFixed(2), standShare: +F.standShare.toFixed(3), firstSelfMed: med(F.firstSelf) };
+  report.fight = { ...F, selfFallsPerMin: +(F.selfFalls / Math.max(1e-9, F.minutes)).toFixed(2), fallsPerMin: +(F.falls / Math.max(1e-9, F.minutes)).toFixed(2), standShare: +F.standShare.toFixed(3), upShare: +F.upShare.toFixed(3), firstSelfMed: med(F.firstSelf) };
   const X = report.fight;
-  console.log(`  싸움 ${FIGHTS} 판 × ${FSECS} s (${FW.join(' · ')} · AI 대 AI · 씨앗 ${1 + OFFSET} ~): 넘어짐 ${F.falls} (분당 ${X.fallsPerMin}) · 그중 스스로 ${F.selfFalls} (분당 ${X.selfFallsPerMin} · 처음 때 가운데값 ${f(X.firstSelfMed, 1)} s) · 서 있음인 채 주저앉음 ${F.sits} · 다시 일어섬 ${F.rose}/${F.falls} · 서 있던 몫 ${(100 * X.standShare).toFixed(1)} % · 죽음 ${F.dead}/${FIGHTS} · 상처 ${F.wounds} (살을 가른 것 ${F.opened})`);
+  console.log(`  싸움 ${FIGHTS} 판 × ${FSECS} s (${FW.join(' · ')} · AI 대 AI · 씨앗 ${1 + OFFSET} ~): 넘어짐 ${F.falls} (분당 ${X.fallsPerMin}) · 그중 스스로 ${F.selfFalls} (분당 ${X.selfFallsPerMin} · 처음 때 가운데값 ${f(X.firstSelfMed, 1)} s) · 서 있음인 채 주저앉음 ${F.sits} · 다시 일어섬 ${F.rose}/${F.falls} · 서 있던 몫 ${(100 * X.standShare).toFixed(1)} % (몸으로 본 몫 ${(100 * X.upShare).toFixed(1)} % · 한 번도 안 넘어진 몸 ${F.neverFell}/${2 * FIGHTS}) · 죽음 ${F.dead}/${FIGHTS} · 상처 ${F.wounds} (살을 가른 것 ${F.opened})`);
 }
 if (args.json) writeFileSync(String(args.json), JSON.stringify(report, null, 1));
