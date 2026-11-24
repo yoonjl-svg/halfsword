@@ -230,6 +230,11 @@ export function attach(world, named, opts = {}) {
       if (d.F) tauDeclO = add(tauDeclO, cross(d.p, d.F));
       (k.items ||= []).push(d);
     }
+    { // H2 (접촉 쌍 보존): 엔진 접촉이 아닌 '규칙 충격'(판정 뒤 충격 · 밀쳐내기 · 속도 쓰기)의 이 스텝 합 — 두 싸움꾼 것을 hook 이 더해 짝이 맞는지 본다
+      const X = { F: V3(), tauO: V3(), gross: 0, by: {} };
+      for (const kind of ['combat', 'shove', 'write']) { const k = by[kind]; if (!k) continue; for (const d of k.items) { if (d.F) { X.F = add(X.F, d.F); X.tauO = add(X.tauO, cross(d.p, d.F)); X.gross += len(d.F); X.by[kind] = (X.by[kind] || 0) + len(d.F); } if (d.T) X.tauO = add(X.tauO, d.T); } }
+      L.stepCross = X; L.stepCom = cur.c;
+    }
     const put = (name, Fnet, tauAbs, P, Fy = 0) => { const a = A(name); a.Fimp += len(Fnet) * DT; a.Fy += Fy * DT; a.Timp += tauAbs * DT; a.Wabs += Math.abs(P) * DT; if (P > 0) a.Wpos += P * DT; else a.Wneg += P * DT; a.n++; };
     let Pout = 0, pairP = 0;
     for (const [kind, k] of Object.entries(by)) {
@@ -386,6 +391,7 @@ export function attach(world, named, opts = {}) {
       place: { stepShare: L.place.steps / Math.max(1, L.rows), swordStepShare: L.place.swordSteps / Math.max(1, L.rows), calls: L.place.calls, kgm: +L.place.kgm.toFixed(2) },
       woundsTaken: L.wounds,
       externalJoints: externalJoints(),
+      pair: L.pair ? { grossNs: +L.pair.gross.toFixed(2), netFNs: +L.pair.netF.toFixed(2), netTNms: +L.pair.netT.toFixed(2), steps: L.pair.steps, worstNs: +L.pair.worst.toFixed(2), by: Object.fromEntries(Object.entries(L.pair.by).map(([k, v]) => [k, +v.toFixed(2)])) } : null,
       fingerprint: fp0, fingerprintEnd: L.fingerprint(),
       dyn: Object.fromEntries(L.dyn.map((d, i) => [names[i], { ld: d.ld.map(r4), ad: d.ad.map(r4), gs: d.gs.map(r4), m: d.m.map(r4), I: d.I.map(r4), types: [...d.type] }])),
       torque: (() => { const out = v('angResTilt', 'Timp') + v('angResYawExcess', 'Timp') + v('damp', 'Timp') + ['support', 'push', 'unpaired', 'other', 'write'].reduce((t, k) => t + v(k, 'Timp'), 0); const inn = v('groundTorque', 'Timp'); return { share: out + inn < 1e-6 ? 0 : out / (out + inn), tiltResRate: v('angResTilt', 'Timp') / Math.max(1e-9, L.T), tiltFloorRate: v('angResTiltFloor', 'Timp') / Math.max(1e-9, L.T), yawExcessRate: v('angResYawExcess', 'Timp') / Math.max(1e-9, L.T), outNms: out, groundNms: inn, tiltResNms: v('angResTilt', 'Timp'), yawResNms: v('angResYaw', 'Timp'), yawExcessNms: v('angResYawExcess', 'Timp'), dampNms: v('damp', 'Timp') }; })(),
@@ -402,11 +408,23 @@ export function attach(world, named, opts = {}) {
 
 /** G.step 에 장부들을 건다: 앞 → (world.step 뒤) → 끝. combat.afterStep 은 'combat' 단계. */
 export function hook(G, ledgers) {
-  const w = G.world, ws = w.step;
+  const w = G.world, ws = w.step, DT0 = w.timestep;
   w.step = function (...a) { const r = ws.apply(this, a); for (const l of ledgers) l.mid(); return r; };
   if (G.combat?.afterStep) { const o = G.combat.afterStep; G.combat.afterStep = function (...a) { const prev = SHARED.phase; SHARED.phase = 'combat'; try { return o.apply(this, a); } finally { SHARED.phase = prev; } }; }
   const s0 = G.step;
-  G.step = () => { for (const l of ledgers) l.pre(); s0(); for (const l of ledgers) l.post(); };
+  const H2 = { gross: 0, netF: 0, netT: 0, by: {}, steps: 0, worst: 0 }; // ∫ Σ|F| dt · ∫ |ΣF| dt · ∫ |Στ| dt (두 몸 질량중심의 가운데 둘레) — 규칙 충격이 두 몸 사이에서 짝이 맞으면 뒤 둘이 0
+  for (const l of ledgers) l.pair = H2;
+  G.step = () => {
+    for (const l of ledgers) l.pre(); s0(); for (const l of ledgers) l.post();
+    if (ledgers.length === 2) {
+      const [a, b] = ledgers, A1 = a.stepCross, B1 = b.stepCross;
+      if (A1 && B1 && A1.gross + B1.gross > 0) {
+        const F = add(A1.F, B1.F), ref = scl(add(a.stepCom, b.stepCom), 0.5), T = sub(add(A1.tauO, B1.tauO), cross(ref, F));
+        H2.gross += (A1.gross + B1.gross) * DT0; H2.netF += len(F) * DT0; H2.netT += len(T) * DT0; H2.steps++; H2.worst = Math.max(H2.worst, len(F) * DT0);
+        for (const X of [A1, B1]) for (const [k, v] of Object.entries(X.by)) H2.by[k] = (H2.by[k] || 0) + v * DT0;
+      }
+    }
+  };
 }
 const bodiesOf = (f) => { const seen = new Set(), out = []; for (const [n, b] of [...Object.entries(f.bodies), ['sword', f.sword]]) if (b && !seen.has(b.handle)) { seen.add(b.handle); out.push([n, b]); } return out; };
 
@@ -421,6 +439,7 @@ export function report(title, S) {
   if (S.joints && Object.keys(S.joints).length) lines.push('  관절 토크 — 요구(다시 센 값) 95 % / 한도(넘은 몫): ' + Object.entries(S.joints).map(([k, j]) => `${k} ${j.p95.toFixed(0)}/${j.limit}(${(100 * j.overShare).toFixed(1)}%)`).join(' · '));
   if (S.joints && Object.keys(S.joints).length) lines.push('  관절 토크 — 전달(운동량으로 잰 값) 95 % · 최고 (넘은 몫 · 잴 수 있던 스텝 몫 · 엔진 모터의 전달 ÷ 요구): ' + Object.entries(S.joints).map(([k, j]) => `${k} ${j.measP95.toFixed(0)}·${j.measPeak.toFixed(0)}(${(100 * j.measOverShare).toFixed(1)}%·${(100 * j.measCover).toFixed(0)}%·${j.engineVsMotorReq ?? '-'})`).join(' · '));
   if (S.virtualActuators && Object.keys(S.virtualActuators).length) lines.push('  가상 구동기(관절을 거치지 않는 힘 쌍): ' + Object.entries(S.virtualActuators).map(([k, x]) => `${k} ${x.Ns} N·s (최고 ${x.peakN} N)`).join(' · '));
+  if (S.pair && S.pair.grossNs > 0) lines.push(`  H2 규칙 충격(두 몸 합 · 엔진 접촉 아님): 건 것 ${S.pair.grossNs} N·s (${Object.entries(S.pair.by).map(([k, v]) => `${{ combat: '판정 뒤 충격', shove: '밀쳐내기', write: '속도 쓰기' }[k] ?? k} ${v}`).join(' · ')}) 가운데 짝이 안 맞는 몫 ${S.pair.netFNs} N·s (${(100 * S.pair.netFNs / Math.max(1e-9, S.pair.grossNs)).toFixed(1)} % · 한 스텝 최고 ${S.pair.worstNs} N·s) · 짝 안 맞는 토크 ${S.pair.netTNms} N·m·s · 스텝 ${S.pair.steps}`);
   if (S.place.calls) lines.push(`  자리 직접 놓기: 스텝의 ${pct(S.place.stepShare)} (칼 ${pct(S.place.swordStepShare)}) · 옮긴 질량 × 거리 ${S.place.kgm} kg·m`);
   if (S.woundsTaken.length) { const W = S.woundsTaken, kin = W.filter((x) => x.kin), sv = (a) => a.reduce((t, x) => t + x.sev, 0); const rs = W.filter((x) => !x.kin && x.E0 > 0).map((x) => (x.type === 'blunt' ? x.energy : x.eff ?? x.energy) / x.E0).sort((a, b) => a - b); lines.push(`  받은 상처 ${W.length} (운동학 칼 ${kin.length} · 심각도 몫 ${pct(sv(kin) / Math.max(1e-9, sv(W)))}) · 판정 ÷ 칼만의 물리 에너지 가운데값 ${rs.length ? rs[rs.length >> 1].toFixed(2) : '-'} 배 (최고 ${rs.length ? rs[rs.length - 1].toFixed(1) : '-'})`); }
   lines.push('   갈래          ∫|F|dt N·s   그중 수직    ∫|τ|dt N·m·s    ∫|P|dt J     더한 일 J     뺀 일 J');
