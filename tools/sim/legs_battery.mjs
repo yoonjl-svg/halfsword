@@ -138,6 +138,8 @@ const MORE = {
   reqlunge: { secs: 10, drive: reqEvery('lunge', { fwd: 0.6, duration: 0.4, accel: true }), ok: (r) => !r.fell && (r.extra ?? 0) >= 3 },
 };
 for (const fam of ['diagR']) { const S = stroke(fam); MORE['aistroke_' + fam] = { secs: 14, pre: S.pre, drive: (i, t, c) => { aiStick(c, t); S.step(c); }, ok: (r) => !r.fell && r.path >= 2, tip: true }; }
+// 베며 내딛기 (AI 의 공격 들어가기 꼴 — 부탁 걸음과 베기가 겹침): 남은 첫 넘어짐 16 가운데 11 이 lunge · pass 부탁 + 다가가는 중, 끝에서 가슴이 골반보다 15 ~ 30° 더 숙어 있었음
+for (const [nm, kind] of [['lungecut', 'lunge'], ['passcut', 'pass']]) { const S = stroke('diagR'), Rq = reqEvery(kind, { fwd: 0.6, duration: 0.4, accel: kind === 'lunge' }); MORE[nm] = { secs: 10, pre: S.pre, drive: (i, t, c) => { Rq(i, t, c); S.step(c); }, ok: (r) => !r.fell && (r.extra ?? 0) >= 3, tip: true }; }
 // 일어서기: 서 있는 몸을 쓰러뜨리고(knockDown — 게임 규칙의 쓰러짐) 14 s 안에 stand 로 돌아와, 밖 도움이 끝난 뒤 2 s 를 버티는가
 let AID_AFTER = 0; try { AID_AFTER = (await import(u('src/config.js'))).AID?.after ?? 0; } catch { /* 옛 나무 */ } // 선언된 밖 도움이 선 뒤에도 이어지는 시간(있으면) — 버팀은 도움이 끝난 뒤부터 센다
 SCENES.getup = { secs: 14, keepGoing: true, drive: (i, t, c) => { c.P.move.set(0, 0); const s = c.state; if (i === 0) c.P.knockDown(true); if (c.P.state === 'stand') { s.up = (s.up ?? 0) + DT; if (s.up > 2 + AID_AFTER && s.extra == null) s.extra = +(t - 2 - AID_AFTER).toFixed(2); } else s.up = 0; }, ok: (r) => r.extra != null }; // 일어선 때 = 선 상태가 된 때(도움이 끝난 뒤 2 s 를 버틴 판만)
