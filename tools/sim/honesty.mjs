@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  honesty.mjs — 물리 정직성 지표 H1 (물리 2.0 · 0 단계 · docs/strike/physics2_plan_2026-11-23.md §4 · §8). 재기만 한다 — 몸에 아무것도 걸지 않는다.
 //
-//   node tools/sim/honesty.mjs [--scene=stand|walk|stroke|fight|school|all] [--cells=유파:무기:상대,…] [--weapon=longsword] [--seed=7] [--secs=30] [--fam=diagR] [--json=<파일>] [--root=<트리>] [--selftest]
+//   node tools/sim/honesty.mjs [--scene=stand|stand30|walk|walkstop|strafe|back|kick|stroke|fight|school|all] [--kick=40 (N·s)] [--cells=유파:무기:상대,…] [--weapon=longsword] [--seed=7] [--secs=30] [--fam=diagR] [--json=<파일>] [--root=<트리>] [--selftest]
 //
 //  H1 = 몸(14 강체 + 칼)이 받는 힘 가운데 '몸 밖'에서 온 몫. 힘 몫과 일 몫을 따로 적는다 (감사 11/24: 선 몸은 받침이 한 일이 0 이라 일만으로는 안 보인다).
 //   밖 = 받침(support) · 걷기 밀기(push) · 닻 모터 토크(anchor) · 엔진 감쇠(damp) · 속도 직접 쓰기(write) · 질량 바뀜(mass) · 그 밖 짝 없는 선언 힘(unpaired)
@@ -85,13 +85,13 @@ export function attach(world, named, opts = {}) {
     for (const [n, t] of [['driveBalance', 'balance'], ['shove', 'shove'], ['closeStep', 'closePush'], ['driveSword', 'sword'], ['offHand', 'offhand'], ['driveJoints', 'muscle'], ['elbowGravity', 'elbowG'], ['anatSoft', 'anat'], ['trackBlade', 'track']]) wrap(f, n, t);
     wrap(f.gait, 'pinFeet', 'pin');
     wrap(f.gait, 'swingPull', 'swing'); // 내딛는 발 ↔ 골반 당김 (쌍 — 힘은 맞지만 작용선이 달라 짝힘 토크가 남을 수 있음)
-    const rs = f.uprightJoint.rawSet;
-    if (!rs.__honestyCap) {
+    const rs = f.uprightJoint?.rawSet;
+    if (rs && !rs.__honestyCap) {
       const cap = (rs.__honestyCap = new Map());
       const o1 = rs.jointConfigureMotorPosition;
       rs.jointConfigureMotorPosition = function (h, ax, t, k, d) { let m = cap.get(h); if (!m) cap.set(h, (m = {})); m[ax] = { t, k, d }; return o1.call(this, h, ax, t, k, d); };
     }
-    capUp = () => rs.__honestyCap.get(f.uprightJoint.handle);
+    capUp = () => (rs && f.uprightJoint ? rs.__honestyCap.get(f.uprightJoint.handle) : null);
     // H3: 받은 상처마다 물리 에너지 대 판정 에너지 (applyWound 인자 그대로 넘김). 친 쪽 칼이 이 스텝 · 앞 두 스텝에 '놓인' 칼이면 운동학 칼 상처
     const aw = f.applyWound;
     f.applyWound = function (h, ...rest) {
@@ -110,10 +110,46 @@ export function attach(world, named, opts = {}) {
       s.E += 0.5 * m * dot(v, v) + 0.5 * dot(w, Iw(i, w)) - m * g * p.y;
     }
     s.c = scl(s.c, 1 / s.M);
-    if (f) { s.qA = cq(f.anchor.rotation()); s.qP = cq(f.bodies.pelvis.rotation()); }
+    if (f?.anchor) { s.qA = cq(f.anchor.rotation()); s.qP = cq(f.bodies.pelvis.rotation()); }
     return s;
   };
   L.swordNowQ = () => swordNow;
+  // ── 땅 접촉 읽기 (법선 충격량만 — Rapier 0.19.3 은 접선을 내주지 않는다 · chain_ledger.mjs 와 같은 식 · (n+1)/n 과대 보고 교정) ──
+  const nIter = world.integrationParameters?.numSolverIterations ?? 4, KC = nIter / (nIter + 1);
+  const iFeet = new Set(names.map((n, i) => (/^foot/.test(n) ? i : -1)).filter((i) => i >= 0));
+  const muOf = (a, b) => { const fa = a.friction(), fb = b.friction(), r = Math.max(a.frictionCombineRule?.() ?? 0, b.frictionCombineRule?.() ?? 0); return r === 0 ? (fa + fb) / 2 : r === 1 ? Math.min(fa, fb) : r === 2 ? fa * fb : Math.max(fa, fb); };
+  const readContacts = () => {
+    const out = { FN: V3(), Nabs: 0, muN: 0, foreign: V3(), foreignAbs: 0, nonFoot: 0 };
+    for (let bi = 0; bi < bodies.length; bi++) {
+      const rb = bodies[bi];
+      for (let ci = 0, nc = rb.numColliders(); ci < nc; ci++) {
+        const col = rb.collider(ci);
+        world.contactPairsWith(col, (other) => {
+          const ob = other.parent();
+          if (!ob || mine.has(ob.handle)) return; // 몸 안 쌍은 상쇄
+          const fixed = ob.isFixed();
+          world.contactPair(col, other, (m, flipped) => {
+            const n = m.normal(), sg = flipped ? 1 : -1;
+            for (let k = 0, nk = m.numContacts(); k < nk; k++) {
+              const Jn = m.contactImpulse(k) * KC;
+              if (Jn === 0) continue;
+              const F = V3((sg * n.x * Jn) / DT, (sg * n.y * Jn) / DT, (sg * n.z * Jn) / DT);
+              if (fixed) { out.FN = add(out.FN, F); out.Nabs += len(F); out.muN += muOf(col, other) * len(F); if (!iFeet.has(bi)) out.nonFoot += len(F); }
+              else { out.foreign = add(out.foreign, F); out.foreignAbs += len(F); }
+            }
+          });
+        });
+      }
+    }
+    return out;
+  };
+  // ── 몸 밖 물체에 묶인 관절 (닻 같은 것) — 요약 때 센다 ──
+  const externalJoints = () => {
+    const out = [];
+    try { world.impulseJoints.forEach((j) => { const a = j.body1(), b = j.body2(); const ia = a && mine.has(a.handle), ib = b && mine.has(b.handle); if (ia === ib) return; const o = ia ? b : a; out.push(o.isFixed() ? 'fixed' : o.isKinematic() ? 'kinematic' : 'dynamic'); }); } catch { /* 옛 엔진 */ }
+    return out;
+  };
+  const stab = { yMin: Infinity, ySum: 0, tiltMax: 0, states: {}, fellAt: null, c0: null, c1: null, tipMax: 0, path: 0 };
   let prev = null, mid = null;
   L.pre = () => { if (!prev) prev = sample(); decl = []; };
   L.mid = () => { // world.step 바로 뒤: 감쇠 충격량 (v_뒤 로)
@@ -126,6 +162,7 @@ export function attach(world, named, opts = {}) {
       mid.J = add(mid.J, j); mid.Jabs += len(j); mid.Tabs += len(lw) * ca * DT;
       mid.W += -(cl * m * dot(v, v) + ca * dot(w, lw)) * DT;
     }
+    try { mid.C = readContacts(); } catch { mid.C = null; }
   };
   L.post = () => {
     const cur = sample();
@@ -140,23 +177,25 @@ export function attach(world, named, opts = {}) {
       let kind = d.kind;
       if (kind === 'balance') kind = d.F && Math.abs(d.F.x) + Math.abs(d.F.z) < 1e-9 ? 'support' : 'push';
       if (kind === 'closePush') kind = 'push'; // 붙어 밀 때의 다리 밀기 · 맞밀기: 내 골반에만 거는 짝 없는 힘 = 걷기 밀기와 같은 갈래 (감사 11/24 대조 1)
-      const k = (by[kind] ||= { F: V3(), T: V3(), gross: 0, P: 0 });
+      const k = (by[kind] ||= { F: V3(), T: V3(), gross: 0, tGross: 0, P: 0 });
       const i = d.bi, vb = scl(add(prev.v[i], cur.v[i]), 0.5), wb = scl(add(prev.w[i], cur.w[i]), 0.5);
       if (d.F) {
         k.F = add(k.F, d.F); k.gross += len(d.F); Fdecl = add(Fdecl, d.F);
         k.P += dot(d.F, d.r ? add(vb, cross(wb, d.r)) : vb);
-        k.T = add(k.T, cross(sub(d.p, prev.c), d.F)); // 계 질량중심 둘레
+        { const t = cross(sub(d.p, prev.c), d.F); k.T = add(k.T, t); k.tGross += len(t); } // 계 질량중심 둘레
       }
-      if (d.T) { k.T = add(k.T, d.T); k.P += dot(d.T, wb); }
+      if (d.T) { k.T = add(k.T, d.T); k.tGross += len(d.T); k.P += dot(d.T, wb); }
     }
     const put = (name, Fnet, tauAbs, P, Fy = 0) => { const a = A(name); a.Fimp += len(Fnet) * DT; a.Fy += Fy * DT; a.Timp += tauAbs * DT; a.Wabs += Math.abs(P) * DT; if (P > 0) a.Wpos += P * DT; else a.Wneg += P * DT; a.n++; };
     let Pout = 0, pairP = 0;
     for (const [kind, k] of Object.entries(by)) {
-      if (PAIRED.has(kind)) {
-        // 짝이 맞는 몫은 안(근육) · 안 맞는 합력만 밖
-        const a = A('musclePair'); a.Wabs += Math.abs(k.P) * DT; if (k.P > 0) a.Wpos += k.P * DT; else a.Wneg += k.P * DT; a.Fimp += k.gross * DT; a.n++;
+      // 짝 판정은 이름이 아니라 합으로: 한 갈래의 힘 합 · 계 질량중심 둘레 토크 합이 0 이면 몸 안의 쌍(근육) — 어느 단계에서 걸었든 안. 아니면 그 갈래 전체가 밖.
+      const paired = len(k.F) <= 1e-6 * Math.max(1, k.gross) && len(k.T) <= 1e-6 * Math.max(1, k.tGross);
+      if (kind === 'test') { put('test', k.F, len(k.T), k.P, k.F.y); continue; }
+      if (PAIRED.has(kind) || (paired && kind !== 'write' && kind !== 'pin' && kind !== 'shove' && kind !== 'combat')) {
+        const a = A('musclePair'); a.Wabs += Math.abs(k.P) * DT; if (k.P > 0) a.Wpos += k.P * DT; else a.Wneg += k.P * DT; a.Fimp += k.gross * DT; a.Timp += k.tGross * DT; a.n++;
         pairP += k.P;
-        if (len(k.F) > 1e-6 || len(k.T) > 1e-6) { put('unpaired', k.F, len(k.T), 0, k.F.y); L.chk.pairMax = Math.max(L.chk.pairMax, len(k.F)); L.chk.coupleMax = Math.max(L.chk.coupleMax || 0, len(k.T)); (L.chk.coupleBy ||= {})[kind] = (L.chk.coupleBy[kind] || 0) + len(k.T) * DT; }
+        if (!paired) { put('unpaired', k.F, len(k.T), 0, k.F.y); L.chk.pairMax = Math.max(L.chk.pairMax, len(k.F)); L.chk.coupleMax = Math.max(L.chk.coupleMax || 0, len(k.T)); (L.chk.coupleBy ||= {})[kind] = (L.chk.coupleBy[kind] || 0) + len(k.T) * DT; }
       } else {
         put(kind, k.F, len(k.T), k.P, k.F.y);
         if (kind === 'support' || kind === 'push' || kind === 'write' || kind === 'other' || kind === 'unpaired') Pout += k.P;
@@ -168,7 +207,7 @@ export function attach(world, named, opts = {}) {
     // 닻 τ̂
     if (f) {
       const m = capUp?.();
-      if (m) {
+      if (m && cur.qA && prev.qA) {
         const dqA = qmul(cur.qA, qconj(prev.qA)), wA = scl(rotvec(dqA), 1 / DT);
         const iPel = mine.get(f.bodies.pelvis.handle);
         const e = rotvec(qmul(qconj(prev.qA), prev.qP)), wr = qrot(qconj(prev.qA), sub(cur.w[iPel], wA));
@@ -184,6 +223,30 @@ export function attach(world, named, opts = {}) {
     const Fdamp = mid ? scl(mid.J, 1 / DT) : V3();
     const res = sub(sub(sub(sub(dP, V3(0, cur.M * g, 0)), Fdecl), Fdamp), Fmass);
     { const a = A('res'); a.Fimp += len(res) * DT; a.Fy += res.y * DT; a.n++; }
+    // 검산: 접촉 법선으로 설명되는가 · 마찰 한계 안인가 (감사 11/24: 발 핀 + 엔진 마찰이 μ·N 을 넘는 몫은 밖)
+    if (mid?.C) {
+      const C = mid.C;
+      { const a = A('groundN'); a.Fimp += C.Nabs * DT; a.Fy += C.FN.y * DT; }
+      if (C.nonFoot > 0) { const a = A('nonFootGround'); a.Fimp += C.nonFoot * DT; a.n++; }
+      if (C.foreignAbs > 0) { const a = A('foreignN'); a.Fimp += C.foreignAbs * DT; a.n++; }
+      const hidY = res.y - C.FN.y - C.foreign.y;
+      { const a = A('hiddenY'); a.Fimp += Math.abs(hidY) * DT; a.Fy += hidY * DT; }
+      const pin = by.pin?.F ?? V3();
+      const fx = res.x - C.FN.x - C.foreign.x + pin.x, fz = res.z - C.FN.z - C.foreign.z + pin.z, fh = Math.hypot(fx, fz);
+      { const a = A('frictionH'); a.Fimp += fh * DT; }
+      if (C.foreignAbs < 1) { const ex = Math.max(0, fh - C.muN); if (ex > 0) { const a = A('frictionExcess'); a.Fimp += ex * DT; a.n++; } }
+    }
+    // 서 있기 · 움직임 (싸움꾼만)
+    if (f) {
+      const py = f.bodies.pelvis.translation().y, up = qrot(cq(f.bodies.chest.rotation()), V3(0, 1, 0));
+      stab.yMin = Math.min(stab.yMin, py); stab.ySum += py;
+      stab.tiltMax = Math.max(stab.tiltMax, (Math.acos(Math.max(-1, Math.min(1, up.y))) * 180) / Math.PI);
+      stab.states[f.state] = (stab.states[f.state] || 0) + 1;
+      if (stab.fellAt == null && ((f.state !== 'stand' && f.state !== 'kneel') || py < 0.5)) stab.fellAt = +(L.T + DT).toFixed(3);
+      if (!stab.c0) stab.c0 = cur.c; else stab.path += Math.hypot(cur.c.x - stab.c1.x, cur.c.z - stab.c1.z);
+      stab.c1 = cur.c;
+      const tv = f.tipVel; if (tv) stab.tipMax = Math.max(stab.tipMax, Math.hypot(tv.x, tv.y, tv.z));
+    }
     // 안쪽 일률 = dE/dt − 밖 일률
     const Pin = (cur.E - prev.E) / DT - Pout;
     { const a = A('inside'); a.Wabs += Math.abs(Pin) * DT; if (Pin > 0) a.Wpos += Pin * DT; else a.Wneg += Pin * DT; }
@@ -207,6 +270,9 @@ export function attach(world, named, opts = {}) {
       pairResidualMaxN: L.chk.pairMax, coupleBy: L.chk.coupleBy ?? {},
       place: { stepShare: L.place.steps / Math.max(1, L.rows), swordStepShare: L.place.swordSteps / Math.max(1, L.rows), calls: L.place.calls, kgm: +L.place.kgm.toFixed(2) },
       woundsTaken: L.wounds,
+      externalJoints: externalJoints(),
+      check: { groundNShare: v('groundN', 'Fy') / Math.max(1e-9, L.Mg * L.T), hiddenYNs: v('hiddenY', 'Fimp'), hiddenYNet: v('hiddenY', 'Fy'), frictionHNs: v('frictionH', 'Fimp'), frictionExcessNs: v('frictionExcess', 'Fimp'), nonFootGroundNs: v('nonFootGround', 'Fimp') },
+      stab: f ? { fellAt: stab.fellAt, pelvisYMean: +(stab.ySum / Math.max(1, L.rows)).toFixed(3), pelvisYMin: +stab.yMin.toFixed(3), tiltMaxDeg: +stab.tiltMax.toFixed(1), states: stab.states, netMove: stab.c0 ? +Math.hypot(stab.c1.x - stab.c0.x, stab.c1.z - stab.c0.z).toFixed(3) : 0, pathMove: +stab.path.toFixed(3), meanSpeed: +(stab.path / Math.max(1e-9, L.T)).toFixed(3), tipSpeedMax: +stab.tipMax.toFixed(2) } : null,
       cats: Object.fromEntries(Object.entries(a).map(([k, x]) => [k, { Fimp: +x.Fimp.toFixed(3), Fy: +x.Fy.toFixed(3), Timp: +x.Timp.toFixed(3), Wabs: +x.Wabs.toFixed(3), Wpos: +x.Wpos.toFixed(3), Wneg: +x.Wneg.toFixed(3) }])),
     };
   };
@@ -229,6 +295,8 @@ const pct = (x) => (100 * x).toFixed(1).padStart(5) + ' %';
 const n1 = (x, w = 9) => (+x).toFixed(1).padStart(w);
 export function report(title, S) {
   const lines = [`■ ${title}  (${S.T} s)`, `  선 힘 몫(밖 · 닻 토크는 안 들어감) ${pct(S.forceShare)} · 수직 받침 몫 ${pct(S.supportShare)} · 일 몫(밖) ${pct(S.workShare)} · 닻 yaw ${n1(S.anchorYawNms, 0)} N·m·s · 닻 기울기 ${n1(S.anchorTiltNms, 0)} N·m·s · 근육 쌍 어긋남 최고 ${S.pairResidualMaxN.toFixed(3)} N${Object.keys(S.coupleBy).length ? ' · 짝 없는 토크 ' + Object.entries(S.coupleBy).map(([k, x]) => `${k} ${x.toFixed(1)}`).join(' · ') + ' N·m·s' : ''}`];
+  if (S.stab) lines.push(`  몸: ${S.stab.fellAt != null ? '넘어짐 ' + S.stab.fellAt + ' s' : '안 넘어짐'} · 골반 높이 평균 ${S.stab.pelvisYMean} (최저 ${S.stab.pelvisYMin}) m · 가슴 기울기 최고 ${S.stab.tiltMaxDeg}° · 옮긴 거리 ${S.stab.netMove} m (길 ${S.stab.pathMove} m · 평균 ${S.stab.meanSpeed} m/s) · 칼끝 최고 ${S.stab.tipSpeedMax} m/s · 상태 ${Object.entries(S.stab.states).map(([k, n]) => k + ' ' + n).join(' ')}`);
+  lines.push(`  검산: 땅 법선 ÷ 체중 ${pct(S.check.groundNShare)} · 법선으로 설명 안 되는 수직 힘 ${n1(S.check.hiddenYNs, 0)} N·s (알짜 ${n1(S.check.hiddenYNet, 0)}) · 수평 마찰(핀 포함) ${n1(S.check.frictionHNs, 0)} N·s 가운데 μN 넘는 몫 ${n1(S.check.frictionExcessNs, 0)} N·s · 발 아닌 곳이 땅을 누름 ${n1(S.check.nonFootGroundNs, 0)} N·s · 몸 밖에 묶인 관절 ${S.externalJoints.length} (${S.externalJoints.join(',') || '없음'})`);
   if (S.place.calls) lines.push(`  자리 직접 놓기: 스텝의 ${pct(S.place.stepShare)} (칼 ${pct(S.place.swordStepShare)}) · 옮긴 질량 × 거리 ${S.place.kgm} kg·m`);
   if (S.woundsTaken.length) { const W = S.woundsTaken, kin = W.filter((x) => x.kin), sv = (a) => a.reduce((t, x) => t + x.sev, 0); const rs = W.filter((x) => !x.kin && x.E0 > 0).map((x) => (x.type === 'blunt' ? x.energy : x.eff ?? x.energy) / x.E0).sort((a, b) => a - b); lines.push(`  받은 상처 ${W.length} (운동학 칼 ${kin.length} · 심각도 몫 ${pct(sv(kin) / Math.max(1e-9, sv(W)))}) · 판정 ÷ 칼만의 물리 에너지 가운데값 ${rs.length ? rs[rs.length >> 1].toFixed(2) : '-'} 배 (최고 ${rs.length ? rs[rs.length - 1].toFixed(1) : '-'})`); }
   lines.push('   갈래          ∫|F|dt N·s   그중 수직    ∫|τ|dt N·m·s    ∫|P|dt J     더한 일 J     뺀 일 J');
@@ -258,6 +326,18 @@ async function sceneSolo(Gm, o, kind) {
   const L = attach(G.world, bodiesOf(P), { fighter: P });
   hook(G, [L]);
   if (kind === 'stand') run(G, 4, DT, () => P.move.set(0, 0));
+  if (kind === 'stand30') run(G, 30, DT, () => P.move.set(0, 0));
+  if (kind === 'walkstop') { run(G, 2.5, DT, () => P.move.set(0, 1)); run(G, 2.5, DT, () => P.move.set(0, 0)); }
+  if (kind === 'strafe') run(G, 4, DT, () => P.move.set(1, 0));
+  if (kind === 'back') run(G, 4, DT, () => P.move.set(0, -1));
+  if (kind === 'kick') { // 서 있는 몸의 가슴을 앞에서 뒤로 o.kick N·s 로 한 번 친다 (시험이 넣는 힘 — 'test' 갈래 · 몫에서 뺌)
+    run(G, 1, DT, () => P.move.set(0, 0));
+    const prev = SHARED.phase; SHARED.phase = 'test';
+    const fw = qrot(cq(P.bodies.pelvis.rotation()), V3(1, 0, 0)); // 몸 앞 = 골반 +x
+    P.bodies.chest.applyImpulse({ x: -fw.x * o.kick, y: 0, z: -fw.z * o.kick }, true);
+    SHARED.phase = prev;
+    run(G, 4, DT, () => P.move.set(0, 0));
+  }
   if (kind === 'walk') run(G, 4, DT, () => P.move.set(0, 1));
   if (kind === 'stroke') {
     let tgt = F.end;
@@ -312,6 +392,7 @@ async function selftest() {
   { // 1 땅 위에 쉬는 상자: 밖 0 · 땅이 체중을 다 받침
     const w = mk(); ground(w); const b = box(w, 0.2); for (let i = 0; i < 120; i++) w.step();
     const S = drive(w, attach(w, [['box', b]]), 2);
+    all &= ok('쉬는 상자 접촉 법선', Math.abs(S.check.groundNShare - 1) < 0.02 && S.check.hiddenYNs / (b.mass() * 9.81 * S.T) < 0.02 && S.externalJoints.length === 0, `접촉 법선 ÷ 체중 ${S.check.groundNShare.toFixed(4)} · 설명 안 되는 수직 ${S.check.hiddenYNs.toFixed(3)} N·s`);
     all &= ok('쉬는 상자', S.forceShare < 0.01 && Math.abs(S.cats.res.Fy / (b.mass() * 9.81 * S.T) - 1) < 0.01, `힘 몫 ${pct(S.forceShare)} · 땅 수직 ÷ 체중 ${(S.cats.res.Fy / (b.mass() * 9.81 * S.T)).toFixed(4)}`);
   }
   { // 2 공중에서 받침 힘(= 체중)으로 뜬 상자: 밖 1 · 받침 몫 1 · 일 0 (안 움직임)
@@ -355,7 +436,7 @@ async function selftest() {
 async function main() {
   if (args.selftest) return selftest();
   const Gm = await load();
-  const o = { weapon: String(args.weapon ?? 'longsword'), seed: +(args.seed ?? 7), secs: +(args.secs ?? 30), fam: String(args.fam ?? 'diagR') };
+  const o = { weapon: String(args.weapon ?? 'longsword'), seed: +(args.seed ?? 7), secs: +(args.secs ?? 30), fam: String(args.fam ?? 'diagR'), kick: +(args.kick ?? 40) };
   const which = String(args.scene ?? 'all');
   const scenes = which === 'all' ? ['stand', 'walk', 'stroke', 'fight'] : which.split(',');
   const all = [];
