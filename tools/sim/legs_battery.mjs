@@ -192,6 +192,8 @@ const REQ = { cnt: '받은 부탁', auxName: '뜬 부탁 걸음' };
 const wound = (P, part, zone, severity, energy = 40, bleed = CFG.ANATOMY?.[zone]?.bleed ?? 0.015) => P.applyWound({ part, zone, type: 'cut', severity, energy, local: V3(), bleedPerSev: bleed, dir: V3(1, 0, 0) });
 /** 토막을 J N·s 로 한 번 침 (몸 앞 기준 각 ang) */
 const hitPart = (P, part, J, ang) => { const f = fwdOf(P), c = Math.cos(ang), s = Math.sin(ang); P.bodies[part].applyImpulse({ x: (f.x * c - f.z * s) * J, y: 0, z: (f.z * c + f.x * s) * J }, true); };
+/** 골반의 몸 앞쪽 빠르기 (m/s — 뒤로 가면 음수) */
+const vFwd = (P) => { const v = P.bodies.pelvis.linvel(), f = fwdOf(P); return v.x * f.x + v.z * f.z; };
 const HOLES = {};
 
 // ─ 기술 걸음의 빠진 꼴 ─
@@ -241,12 +243,13 @@ HOLES.kick2 = { secs: 5, pre: (c) => { c.state.ph = c.R(); c.state.ang = c.R() *
 HOLES.run = { secs: 9, speed: true, cnt: '뛴 시간', auxName: '최고 빠르기', drive: (i, t, c) => { const P = c.P, s = c.state; P.runReach = 1; stickTo(P, 0, 1); if (P.run?.on) s.extra = +((s.extra ?? 0) + DT).toFixed(4); const v = P.bodies.pelvis.linvel(); s.aux = Math.max(s.aux ?? 0, +Math.hypot(v.x, v.z).toFixed(2)); }, ok: (r) => !r.fell && (r.extra ?? 0) >= 3 && r.alongF >= 1.9 };
 // 뛰다 끊고(공격 입력 runBreak) 스틱을 뒤로 꺾음 — 줄며 돌아섬
 HOLES.runbreak = { secs: 9, cnt: '뛴 시간', auxName: '최고 빠르기', drive: (i, t, c) => { const P = c.P, s = c.state; if (!s.broke) { P.runReach = 1; stickTo(P, 0, 1); if (P.run?.on) { s.extra = +((s.extra ?? 0) + DT).toFixed(4); if (s.extra >= 1.5) { P.runBreak = true; s.broke = t; } } } else { P.runReach = 0; stickTo(P, 0, t - s.broke < 1.5 ? -1 : 0); } const v = P.bodies.pelvis.linvel(); s.aux = Math.max(s.aux ?? 0, +Math.hypot(v.x, v.z).toFixed(2)); }, ok: (r) => !r.fell && (r.extra ?? 0) >= 1.5 && (r.aux ?? 0) >= 2.5 };
-// 독일 파고들기 — 사람 길 (humanInput · 가라앉아 선 몸이 스틱 앞 끝 → 앞 두 걸음 박참). 독일 무기만 dig 가 걸림(다른 무기는 '사람 표시 몸의 서다 걷기')
-HOLES.dighuman = { secs: 10, cnt: '파고든 수', opt: { settle: 3.5 }, pre: (c) => { c.P.humanInput = true; }, drive: (i, t, c) => { c.P.move.set(0, t % 3.3 < 1.3 ? 1 : 0); c.state.extra = c.P.gait?.digs ?? 0; (c.state.chk ??= {}).de = c.P.swordArt?.tradition === 'german'; }, ok: (r) => !r.fell && r.path >= 2 && (!r.chk?.de || (r.extra ?? 0) >= 2) };
+const DIGV = 1.9; // 파고들기 구실 바닥(m/s): 박찬 걸음의 몸 빠르기 GAIT.burstSpeed 2.5 의 3/4 쯤 — 보통 걷기 끝 빠르기(롱소드 1.8)보다 빨라야 '박찼다'
+// 독일 파고들기 — 사람 길 (humanInput · 가라앉아 선 몸이 스틱 앞 끝 → 앞 두 걸음 박참). 독일 무기만 dig 가 걸림(다른 무기는 '사람 표시 몸의 서다 걷기') · 구실 확인: 앞 빠르기 최고가 박찬 빠르기 2.5 m/s 의 DIGV 넘음
+HOLES.dighuman = { secs: 10, cnt: '파고든 수', auxName: '앞 빠르기 최고', opt: { settle: 3.5 }, pre: (c) => { c.P.humanInput = true; }, drive: (i, t, c) => { const s = c.state; c.P.move.set(0, t % 3.3 < 1.3 ? 1 : 0); s.extra = c.P.gait?.digs ?? 0; (s.chk ??= {}).de = c.P.swordArt?.tradition === 'german'; s.aux = Math.max(s.aux ?? 0, +vFwd(c.P).toFixed(2)); }, ok: (r) => !r.fell && r.path >= 2 && (!r.chk?.de || ((r.extra ?? 0) >= 2 && (r.aux ?? 0) >= DIGV)) };
 // 독일 파고들기 — AI 길 (걷는 중 gait.deDigAi() — ai_plan_de.js · ai_plan_cn.js): 앞 0.45 ↔ 1 로 걸으며 2 s 마다. 독일 무기만 걸림
-HOLES.digai = { secs: 10, cnt: '받은 명령', auxName: '박찬 걸음', pre: (c) => { c.P.aiControlled = true; }, drive: (i, t, c) => { const s = c.state, g = c.P.gait; (s.chk ??= {}).de = c.P.swordArt?.tradition === 'german'; c.P.move.set(0, t % 2 > 1 ? 1 : 0.45); every(c, t, 2, 1, () => { if (g?.deDigAi?.()) s.extra = (s.extra ?? 0) + 1; }); s.aux = g?.digSteps ?? 0; }, ok: (r) => !r.fell && r.path >= 3 && (!r.chk?.de || ((r.extra ?? 0) >= 3 && (r.aux ?? 0) >= 3)) };
-// 뒤 박차기 — AI 길 (앞으로 걷다 gait.backBurstAi() + 스틱 뒤 끝 — ai_plan_de.js:311 · 328 · 348). 독일 무기만 걸림
-HOLES.backburstai = { secs: 10, cnt: '받은 명령', auxName: '빠른 걸음 스텝', pre: (c) => { c.P.aiControlled = true; }, drive: (i, t, c) => { const s = c.state, g = c.P.gait, v = t % 2; (s.chk ??= {}).de = c.P.swordArt?.tradition === 'german'; c.P.move.set(0, v < 1 ? 0.75 : -1); every(c, t, 2, 1, () => { if (g?.backBurstAi?.()) s.extra = (s.extra ?? 0) + 1; }); if (g?.fastK > 1) s.aux = (s.aux ?? 0) + 1; }, ok: (r) => !r.fell && r.path >= 3 && (!r.chk?.de || ((r.extra ?? 0) >= 3 && (r.aux ?? 0) >= 30)) };
+HOLES.digai = { secs: 10, cnt: '받은 명령', auxName: '앞 빠르기 최고', pre: (c) => { c.P.aiControlled = true; }, drive: (i, t, c) => { const s = c.state, g = c.P.gait, K = (s.chk ??= {}); K.de = c.P.swordArt?.tradition === 'german'; c.P.move.set(0, t % 2 > 1 ? 1 : 0.45); every(c, t, 2, 1, () => { if (g?.deDigAi?.()) s.extra = (s.extra ?? 0) + 1; }); K.digSteps = g?.digSteps ?? 0; s.aux = Math.max(s.aux ?? 0, +vFwd(c.P).toFixed(2)); }, ok: (r) => !r.fell && r.path >= 3 && (!r.chk?.de || ((r.extra ?? 0) >= 3 && r.chk.digSteps >= 3 && (r.aux ?? 0) >= DIGV)) };
+// 뒤 박차기 — AI 길 (앞으로 걷다 gait.backBurstAi() + 스틱 뒤 끝 — ai_plan_de.js:311 · 328 · 348). 독일 무기만 걸림 · 구실 확인: 명령 뒤 0.7 s 안에 몸이 실제로 0.5 m/s 넘게 물러남
+HOLES.backburstai = { secs: 10, cnt: '받은 명령', auxName: '물러난 박차기', pre: (c) => { c.P.aiControlled = true; }, drive: (i, t, c) => { const s = c.state, g = c.P.gait, v = t % 2; (s.chk ??= {}).de = c.P.swordArt?.tradition === 'german'; c.P.move.set(0, v < 1 ? 0.75 : -1); every(c, t, 2, 1, () => { if (g?.backBurstAi?.()) { s.extra = (s.extra ?? 0) + 1; s.t0 = t; } }); if (s.t0 != null && t - s.t0 <= 0.7 && vFwd(c.P) <= -0.5) { s.aux = (s.aux ?? 0) + 1; s.t0 = null; } }, ok: (r) => !r.fell && r.path >= 3 && (!r.chk?.de || ((r.extra ?? 0) >= 3 && (r.aux ?? 0) >= 3)) };
 
 // ─ 다친 몸 · 몸 상태 ─
 /** 상처를 입은 채 2 s 서고 6 s 걷기. 통과 = 안 넘어짐 + 시킨 쪽 빠르기 바닥 + 그 상태가 실제로 걸림(chk.on) */
