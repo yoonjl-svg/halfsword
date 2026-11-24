@@ -55,12 +55,12 @@ test('진행 중 발도는 탈진 때 끝나고 팔·칼의 동적 물리와 양
   for(let i=0;i<60;i++)g.step();assert.ok(Number.isFinite(p.bodies.pelvis.translation().y));
  },'uchigatana');
 });
-// 씨앗 7 → 1 (11/19 보정 v2 묶음 — AI v2 · 판정 × 2: 씨앗 7 은 막기 단추를 누른 채 첫 AI 칼에 8.2 s 에 쓰러져 칼 충돌 0 · 씨앗 1 은 20 s 동안 막음 74 충돌)
+// 씨앗 1 → 3 (11/25 칼끼리 튕김 실제 0.2 — 씨앗 1 은 충돌 50 인데 막음으로 센 것 0 · 씨앗 3 은 충돌 431 · 막음 5) · 씨앗 7 → 1 (11/19 보정 v2 묶음 — AI v2 · 판정 × 2: 씨앗 7 은 막기 단추를 누른 채 첫 AI 칼에 8.2 s 에 쓰러져 칼 충돌 0 · 씨앗 1 은 20 s 동안 막음 74 충돌)
 test('실제 칼 충돌을 상대 공격당 한 번의 막기 비용으로 셈',()=>game(g=>{
  const guard=new PlayerParryGuard(g.player,g.enemy);g.player.stamina.controller=guard;guard.held=true;g.before=()=>guard.step(DT);
  for(let i=0;i<2400&&g.player.alive;i++)g.step();
  assert.ok(g.clashes>0);assert.ok(g.player.stamina.counts.block>0);near(g.player.stamina.spent.block,g.player.stamina.counts.block*3);near(g.player.stamina.spent.attack,0);
-},'longsword',1));
+},'longsword',3));
 test('실제 플레이어 비기의 구성 찌르기는35에 포함',()=>game(g=>{
  g.ai.update=()=>{};g.step();const p=g.player;assert.ok(p.skill.secret({S:TRADITIONS.italian.secret}));
  for(let i=0;i<120;i++)g.step();near(p.stamina.spent.secret,35);near(p.stamina.spent.attack,0);near(p.stamina.spent.move,0);
