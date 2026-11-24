@@ -1,0 +1,292 @@
+{
+ "longsword": {
+  "id": "longsword",
+  "grip": "two-hand",
+  "twoHand": true,
+  "oneHandStance": false,
+  "bladeLength": 1.05,
+  "hiltLength": 0.13,
+  "gripAlong": -0.14,
+  "maxAimTorque": 26,
+  "controlOverrides": {
+   "maxAimTorque": 26
+  },
+  "parts": [
+   {
+    "shape": [
+     "box",
+     0.018,
+     0.1,
+     0.018
+    ],
+    "y": 0,
+    "m": 0.16,
+    "c": 0,
+    "Ie": 0.0005506133333333334,
+    "It": 0.000034559999999999994,
+    "isBlade": false,
+    "pose": null
+   },
+   {
+    "shape": [
+     "ball",
+     0.03
+    ],
+    "y": -0.12,
+    "m": 0.418,
+    "c": 0,
+    "Ie": 0.00015048,
+    "It": 0.00015048,
+    "isBlade": false,
+    "pose": null
+   },
+   {
+    "shape": [
+     "box",
+     0.11,
+     0.015,
+     0.022
+    ],
+    "y": 0.115,
+    "m": 0.18,
+    "c": 0,
+    "Ie": 0.0007394999999999998,
+    "It": 0.0007550399999999999,
+    "isBlade": false,
+    "pose": null
+   },
+   {
+    "shape": [
+     "box",
+     0.024,
+     0.525,
+     0.008
+    ],
+    "y": 0.655,
+    "m": 0.842,
+    "c": -0.16380000000000003,
+    "Ie": 0.05941987474499999,
+    "It": 0.0000736,
+    "isBlade": true,
+    "pose": null
+   }
+  ]
+ },
+ "zweihander": {
+  "id": "zweihander",
+  "grip": "two-hand",
+  "twoHand": true,
+  "oneHandStance": false,
+  "bladeLength": 1.19,
+  "hiltLength": 0.145,
+  "gripAlong": -0.24,
+  "maxAimTorque": 26,
+  "controlOverrides": {
+   "maxAimTorque": 26
+  },
+  "parts": [
+   {
+    "shape": [
+     "box",
+     0.02,
+     0.1825,
+     0.02
+    ],
+    "y": -0.0675,
+    "m": 0.26,
+    "c": 0,
+    "Ie": 0.002921208333333333,
+    "It": 0.00006933333333333334,
+    "isBlade": false,
+    "pose": null
+   },
+   {
+    "shape": [
+     "ball",
+     0.038
+    ],
+    "y": -0.25,
+    "m": 0.62,
+    "c": 0,
+    "Ie": 0.000358112,
+    "It": 0.000358112,
+    "isBlade": false,
+    "pose": null
+   },
+   {
+    "shape": [
+     "box",
+     0.14,
+     0.02,
+     0.026
+    ],
+    "y": 0.13,
+    "m": 0.32,
+    "c": 0,
+    "Ie": 0.002133333333333334,
+    "It": 0.0021627733333333334,
+    "isBlade": false,
+    "pose": null
+   },
+   {
+    "shape": [
+     "box",
+     0.028,
+     0.595,
+     0.009
+    ],
+    "y": 0.74,
+    "m": 1.665,
+    "c": -0.16069999999999998,
+    "Ie": 0.139722469709625,
+    "It": 0.00019102019002375297,
+    "isBlade": true,
+    "pose": null
+   }
+  ]
+ },
+ "rapier": {
+  "id": "rapier",
+  "grip": "one-hand",
+  "twoHand": false,
+  "oneHandStance": true,
+  "bladeLength": 0.95,
+  "hiltLength": 0.1,
+  "gripAlong": -0.14,
+  "maxAimTorque": 22,
+  "controlOverrides": {
+   "maxAimTorque": 22
+  },
+  "parts": [
+   {
+    "shape": [
+     "box",
+     0.014,
+     0.055,
+     0.014
+    ],
+    "y": 0,
+    "m": 0.08,
+    "c": 0,
+    "Ie": 0.00008589333333333333,
+    "It": 0.000010453333333333335,
+    "isBlade": false,
+    "pose": null
+   },
+   {
+    "shape": [
+     "ball",
+     0.018
+    ],
+    "y": -0.07,
+    "m": 0.09,
+    "c": 0,
+    "Ie": 0.000011663999999999997,
+    "It": 0.000011663999999999997,
+    "isBlade": false,
+    "pose": null
+   },
+   {
+    "shape": [
+     "ball",
+     0.05
+    ],
+    "y": 0.06,
+    "m": 0.55,
+    "c": 0,
+    "Ie": 0.0005500000000000001,
+    "It": 0.0005500000000000001,
+    "isBlade": false,
+    "pose": null
+   },
+   {
+    "shape": [
+     "box",
+     0.009,
+     0.475,
+     0.006
+    ],
+    "y": 0.575,
+    "m": 0.38,
+    "c": -0.19,
+    "Ie": 0.019753919999999994,
+    "It": 0.00001494726840855107,
+    "isBlade": true,
+    "pose": null
+   }
+  ]
+ },
+ "uchigatana": {
+  "id": "uchigatana",
+  "grip": "two-hand",
+  "twoHand": true,
+  "oneHandStance": false,
+  "bladeLength": 0.71,
+  "hiltLength": 0.075,
+  "gripAlong": -0.2,
+  "maxAimTorque": 26,
+  "controlOverrides": {
+   "maxAimTorque": 26
+  },
+  "parts": [
+   {
+    "shape": [
+     "box",
+     0.014,
+     0.15,
+     0.017
+    ],
+    "y": -0.085,
+    "m": 0.26,
+    "c": 0,
+    "Ie": 0.0019669866666666667,
+    "It": 0.00004203333333333334,
+    "isBlade": false,
+    "pose": null
+   },
+   {
+    "shape": [
+     "ball",
+     0.014
+    ],
+    "y": -0.245,
+    "m": 0.06,
+    "c": 0,
+    "Ie": 0.000004704,
+    "It": 0.000004704,
+    "isBlade": false,
+    "pose": null
+   },
+   {
+    "shape": [
+     "box",
+     0.04,
+     0.005,
+     0.04
+    ],
+    "y": 0.07,
+    "m": 0.12,
+    "c": 0,
+    "Ie": 0.000065,
+    "It": 0.000128,
+    "isBlade": false,
+    "pose": null
+   },
+   {
+    "shape": [
+     "box",
+     0.015,
+     0.355,
+     0.0035
+    ],
+    "y": 0.43,
+    "m": 0.66,
+    "c": -0.07099999999999998,
+    "Ie": 0.0224909256,
+    "It": 0.00002596104513064133,
+    "isBlade": true,
+    "pose": null
+   }
+  ]
+ }
+}
