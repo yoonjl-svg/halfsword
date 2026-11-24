@@ -11,6 +11,8 @@
 //  통과: 안 넘어짐 + 시킨 일을 함 — 걷기류는 시킨 쪽으로 평균 빠르기 바닥(걷기 0.6 · 뒷걸음 0.4 · 옆걸음 0.25 m/s — 목표의 절반), 가다 서다 · 떠돌기 · 돌며 걷기는 걸은 길이 바닥, 돌기는 바라볼 쪽 오차 30° 안.
 //  정직 먼저 (감사 11/24 대조 4): 이 도구는 구실만 잰다 — 숨은 받침을 다시 넣은 몸도 통과한다. 그래서 맨 앞에 같은 나무를 honesty.mjs 장부로 한 번 재서(서기 · 걷기) 몸 밖 관절 · 받침 · 밀기 · 쓰기 · 지문을 찍는다.
 //  관문 판정은 짓는 동안 안 쓴 흔듦 묶음으로: --offset=100 --n=24 (기본 0 · 8 은 짓는 쪽 용).
+//  일어서기(getup): 통과 = 정말 쓰러졌다(선 상태를 떠남) + 쓰러진 뒤 stand 로 돌아와 버틴 창(2 s + AID.after — 선언된 도움이 끝난 뒤 2 s 까지) 내내 선 상태 · 골반이 쓰러지기 앞 선 높이의 65 % 위 · 가슴 기울기 45° 안.
+//   '일어선 때' = 쓰러진 뒤 상태가 stand 가 된 때(s — 그 선 상태로 버틴 창을 채운 판만). 줄 끝: 쓰러진 판 수 · 버틴 창이 시작된 때(서자마자 몸이 낮거나 기울어 있으면 일어선 때보다 늦다) · 그 창의 골반 최저 · 기울기 최고.
 //  다시 판정한 부를 때만 장면 (11/24 검토 · 줄 끝에 그 셈이 붙는다):
 //   reqpass · reqlunge · lungecut · passcut — 받은 부탁(requestStep 이 true)이 아니라 실제로 뜬 걸음: 받은 뒤 1 s 안에 kind 'req' 걸음이 뜬 부탁 3 번 넘게. 런지 둘(reqlunge · lungecut)은 그 절반 넘게를 앞발이 디뎌야 한다. 줄 끝 = 받은 부탁 · 뜬 걸음(앞발 · 뒷발) · 그 발이 앞으로 간 거리 가운데값.
 //   aistroke_diagR — 걸은 길이 아니라 조종 따르기: 대본이 건 조종 쪽으로 골반이 실제로 간 거리 합 1.0 m 넘게 (제자리에서 베기만 하는 몸은 0 언저리). --stick0 = 조종을 0 으로 묶어 이 판정이 실패하는지 보는 검증용.
@@ -398,9 +400,28 @@ HOLES.slopeturn = { secs: 12, ...TERR, drive: (i, t, c) => { const s = c.state; 
 HOLES.slopekick = { secs: 5, ...TERR, pre: (c) => { c.state.ph = c.R(); c.state.ang = c.R() * Math.PI * 2; }, drive: (i, t, c) => { c.P.move.set(0, 0); onSlope(c); if (i === Math.round((0.3 + 0.7 * c.state.ph) / DT)) hitChest(c.P, 40, c.state.ang); }, ok: (r) => !r.fell && !!r.chk?.terr };
 HOLES.slopegetup = { secs: 14, ...RISE, ...TERR, drive: (i, t, c) => { c.P.move.set(0, 0); onSlope(c); if (i === 0) c.P.knockDown(true); riseTrack(c, t); }, ok: (r) => !!r.chk?.terr && roseOnce(r) };
 for (const [k, v] of Object.entries(HOLES)) MORE[k] = v;
-// 일어서기: 서 있는 몸을 쓰러뜨리고(knockDown — 게임 규칙의 쓰러짐) 14 s 안에 stand 로 돌아와, 밖 도움이 끝난 뒤 2 s 를 버티는가
-let AID_AFTER = 0; try { AID_AFTER = (await import(u('src/config.js'))).AID?.after ?? 0; } catch { /* 옛 나무 */ } // 선언된 밖 도움이 선 뒤에도 이어지는 시간(있으면) — 버팀은 도움이 끝난 뒤부터 센다
-SCENES.getup = { secs: 14, keepGoing: true, drive: (i, t, c) => { c.P.move.set(0, 0); const s = c.state; if (i === 0) c.P.knockDown(true); if (c.P.state === 'stand') { s.up = (s.up ?? 0) + DT; if (s.up > 2 + AID_AFTER && s.extra == null) s.extra = +(t - 2 - AID_AFTER).toFixed(2); } else s.up = 0; }, ok: (r) => r.extra != null }; // 일어선 때 = 선 상태가 된 때(도움이 끝난 뒤 2 s 를 버틴 판만)
+// 일어서기: 서 있는 몸을 쓰러뜨리고(knockDown — 게임 규칙의 쓰러짐) 14 s 안에 stand 로 돌아와, 버틴 창(2 s + AID.after — 선언된 밖 도움이 끝난 뒤 2 s 까지)을 버티는가.
+//  통과 (11/24 검토): ① 몸이 정말 쓰러졌다(선 상태를 떠난 적이 있다 — knockDown 을 무시한 몸은 통과가 아님) ② 버틴 창 내내 선 상태 + 골반이 쓰러지기 앞 선 높이의 GETUP_H 배 위 + 가슴 기울기 GETUP_TILT° 안.
+//  일어선 때 = 쓰러진 뒤 상태가 stand 가 된 때 (그 선 상태가 끊기지 않고 버틴 창을 채운 판만). 버틴 창이 시작된 때 = 그 선 상태 안에서 ② 가 끊기지 않고 이어지기 시작한 때
+//   — 서자마자 ② 가 맞으면 일어선 때와 같고, 선 상태가 됐는데 아직 몸이 낮거나 기울어 있으면(또는 창 안에서 ② 가 깨지면) 그만큼 늦다. 선 상태를 떠나면 둘 다 처음부터.
+const AID = CFG.AID ?? null; // 나무가 선언한 밖 도움의 상한(config AID — 없는 나무는 null)
+const AID_AFTER = AID?.after ?? 0; // 선언된 밖 도움이 선 뒤에도 이어지는 시간(있으면) — 버팀은 도움이 끝난 뒤 2 s 까지 센다
+const GETUP_H = 0.65, GETUP_TILT = 45;
+SCENES.getup = { secs: 14, keepGoing: true, drive: (i, t, c) => {
+  c.P.move.set(0, 0); const s = c.state, P = c.P, K = (s.chk ??= { went: 0, h0: null, win: null, hMin: null, tiltMax: null, broke: 0 });
+  if (i === 0) { K.h0 = +hOf(P).toFixed(3); P.knockDown(true); }
+  if (P.state !== 'stand') { K.went = 1; s.up = 0; s.t0 = null; return; }
+  if (!K.went) return; // 아직 쓰러진 적이 없다 — 서 있기만 한 시간은 버틴 것으로 안 센다
+  s.t0 ??= t; // 이번에 선 상태가 된 때
+  const h = hOf(P), tl = P.tiltDeg();
+  if (h > GETUP_H * K.h0 && tl < GETUP_TILT) {
+    if (!s.up) { s.w0 = t; s.hMin = h; s.tMax = tl; } else { s.hMin = Math.min(s.hMin, h); s.tMax = Math.max(s.tMax, tl); }
+    s.up = (s.up ?? 0) + DT;
+    if (s.up > 2 + AID_AFTER && s.extra == null) { const w = t - 2 - AID_AFTER; s.extra = +(w - (s.w0 - s.t0)).toFixed(2); K.win = +w.toFixed(2); K.hMin = +s.hMin.toFixed(3); K.tiltMax = +s.tMax.toFixed(1); } // 버틴 창이 선 때부터 끊기지 않았으면 예전 값 그대로(t − 버팀)
+  } else { if (s.extra == null && (s.up ?? 0) > 0) K.broke++; s.up = 0; }
+}, ok: (r) => r.extra != null && !!r.chk?.went,
+  more: (rs) => ({ wentDown: rs.filter((r) => r.chk?.went).length, holdSecs: 2 + AID_AFTER, holdStart: med(rs.filter((r) => r.chk?.win != null).map((r) => r.chk.win)), holdPelvisMin: med(rs.filter((r) => r.chk?.hMin != null).map((r) => r.chk.hMin)), holdPelvisShare: med(rs.filter((r) => r.chk?.hMin != null).map((r) => r.chk.hMin / r.chk.h0)), holdTiltMax: med(rs.filter((r) => r.chk?.tiltMax != null).map((r) => r.chk.tiltMax)), holdBroke: sum(rs.map((r) => r.chk?.broke ?? 0)) }),
+  tail: (x) => ` · 쓰러진 판 ${x.wentDown}/${N} · 버틴 창 ${f(x.holdSecs, 1)} s 이 시작된 때 ${f(x.holdStart)} · 그 창의 골반 최저 ${f(x.holdPelvisMin)} m (쓰러지기 앞 높이의 ${x.holdPelvisShare == null ? '-' : (100 * x.holdPelvisShare).toFixed(0) + ' %'} — 바닥 ${100 * GETUP_H} %) · 기울기 최고 ${f(x.holdTiltMax, 0)}° (천장 ${GETUP_TILT}°)${x.holdBroke ? ` · 창이 깨져 다시 센 수 ${x.holdBroke}` : ''}` };
 
 const med = (a) => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); return b[b.length >> 1]; };
 /** 정직 먼저: 같은 나무를 honesty.mjs 장부(이 저장소 판 — 재는 쪽이 고른 도구)로 서기 4 s · 걷기 4 s 재서 찍는다. 돌려줌: { ok, lines } */
