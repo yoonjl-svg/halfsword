@@ -138,8 +138,9 @@ const MORE = {
   reqlunge: { secs: 10, drive: reqEvery('lunge', { fwd: 0.6, duration: 0.4, accel: true }), ok: (r) => !r.fell && (r.extra ?? 0) >= 3 },
 };
 for (const fam of ['diagR']) { const S = stroke(fam); MORE['aistroke_' + fam] = { secs: 14, pre: S.pre, drive: (i, t, c) => { aiStick(c, t); S.step(c); }, ok: (r) => !r.fell && r.path >= 2, tip: true }; }
-// 일어서기: 서 있는 몸을 쓰러뜨리고(knockDown — 게임 규칙의 쓰러짐) 12 s 안에 stand 로 돌아와 2 s 버티는가
-SCENES.getup = { secs: 14, keepGoing: true, drive: (i, t, c) => { c.P.move.set(0, 0); const s = c.state; if (i === 0) c.P.knockDown(true); if (c.P.state === 'stand') { s.up = (s.up ?? 0) + DT; if (s.up > 2 && s.extra == null) s.extra = +t.toFixed(2); } else s.up = 0; }, ok: (r) => r.extra != null };
+// 일어서기: 서 있는 몸을 쓰러뜨리고(knockDown — 게임 규칙의 쓰러짐) 14 s 안에 stand 로 돌아와, 밖 도움이 끝난 뒤 2 s 를 버티는가
+let AID_AFTER = 0; try { AID_AFTER = (await import(u('src/config.js'))).AID?.after ?? 0; } catch { /* 옛 나무 */ } // 선언된 밖 도움이 선 뒤에도 이어지는 시간(있으면) — 버팀은 도움이 끝난 뒤부터 센다
+SCENES.getup = { secs: 14, keepGoing: true, drive: (i, t, c) => { c.P.move.set(0, 0); const s = c.state; if (i === 0) c.P.knockDown(true); if (c.P.state === 'stand') { s.up = (s.up ?? 0) + DT; if (s.up > 2 + AID_AFTER && s.extra == null) s.extra = +(t - 2 - AID_AFTER).toFixed(2); } else s.up = 0; }, ok: (r) => r.extra != null }; // 일어선 때 = 선 상태가 된 때(도움이 끝난 뒤 2 s 를 버틴 판만)
 
 const med = (a) => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); return b[b.length >> 1]; };
 /** 정직 먼저: 같은 나무를 honesty.mjs 장부(이 저장소 판 — 재는 쪽이 고른 도구)로 서기 4 s · 걷기 4 s 재서 찍는다. 돌려줌: { ok, lines } */

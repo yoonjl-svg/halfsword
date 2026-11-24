@@ -1,0 +1,78 @@
+diff --git a/src/config.js b/src/config.js
+index f68fbccb..3cca7797 100644
+--- a/src/config.js
++++ b/src/config.js
+@@ -749,6 +749,19 @@ export const COMBAT = {
+ 
+ // 진짜 균형: 무게중심이 향하는 곳(캡처 포인트)이 발 밖으로 나가면 비틀거리며 발을 딛고,
+ // 너무 멀리 나가면 넘어진다.
++// 선언된 밖 도움 (물리 2.0 · 11/24 — 사장님 확인 전: docs/strike/owner_open_questions.md 9 번).
++//  서기 · 걷기 · 싸움은 다리만으로 한다(밖 힘 0). 쓰러졌다 일어서는 동안(getup) · 무릎 꿇고 버티는 동안(kneel) · 선 뒤 after s 만 골반을 밖에서 돕는다.
++//  크기를 못박고(아래 두 상한) 심판 장부(tools/sim/honesty.mjs 갈래 aid)에 한 줄로 찍힌다. 진짜 일어서기(관절 토크만)가 되면 이 묶음을 지운다.
++//  잰 값(docs/strike/physics2_round2_2026-11-24.md §5): 이 상한에서 세 무기 24/24 · 드는 힘 평균 체중의 53 % · 세우는 토크 평균 236 ~ 253 N·m. 상한을 낮추면 못 선다(× 0.5 → 15/24 · 160 N·m → 1/24).
++export const AID = {
++  liftMax: 0.7, // 골반을 위로 드는 힘의 상한 (체중의 몫) — 옛 판은 평균 0.66 ~ 0.71 을 상한 없이 썼다
++  torqueMax: 320, // 골반을 세우는 토크의 상한 (N·m · 기울기 축만 · yaw 는 안 건드림) — 옛 닻은 평균 186 ~ 211 을 상한 없이 썼다
++  after: 1.5, // 선 뒤 도움을 잇는 시간 (s) — 도움이 끝난 뒤 2 s 버틴 판: 0.6 이면 19/24 · 1.2 이면 22/24 · 1.5 이면 23/24 · 3 이면 22/24
++  kneelDrop: 0.42, // 무릎 꿇은 높이 = 선 높이 × (1 − 이 값) (0.95 → 0.55 m)
++  kLift: 4000, dLift: 400, // 드는 힘 스프링 (N/m · N·s/m) — 목표 높이까지만 민다(위로 당기지 않음)
++  kTilt: 600, dTilt: 40, // 세우는 토크 스프링 (N·m/rad · N·m·s/rad)
++};
++
+ export const BALANCE = {
+   footMargin: 0.14, // 발 주위로 이만큼(m)은 버틸 수 있다
+   fallRange: 0.5, // 발 밖으로 이만큼 벗어나 잠깐이라도 버티지 못하면 넘어진다
+diff --git a/src/fighter.js b/src/fighter.js
+index 2f1345a1..33394946 100644
+--- a/src/fighter.js
++++ b/src/fighter.js
+@@ -15,7 +15,7 @@ import * as THREE from 'three';
+ import { flowRecoveryScale } from './nagashi_recovery.js';
+ import { runStep, runFace, runWant } from './run.js'; // 뛰기 (11/18 사장님 · config RUN — 사람 · 11/19 셋 이상 판 AI 같은 셈)
+ import { cnStepTick } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 · 11/16 사장님 결정 켬)
+-import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, LEGS, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, RUN, realS } from './config.js';
++import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, LEGS, AID, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, RUN, realS } from './config.js';
+ import { COMBAT_HOOKS } from './combat.js';
+ import { teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
+ import { BIT, GROUND_GROUPS, BODY_GROUPS, FOOT_GROUPS, WEAPON_GROUPS, HELMET_GROUPS, SELF } from './self_contact.js'; // 충돌 부류 · 제 몸 닿음 (11/20 — 자리 수 제한 없음)
+@@ -1806,6 +1806,7 @@ export class Fighter {
+     this.driveSword(); // 팔 목표(IK)를 정한 뒤
+     this.offHand(); // 빈손으로 칼자루 끝을 잡는다
+     this.driveJoints(); // 모든 관절 근육을 움직인다
++    this.driveAid(); // 선언된 밖 도움: 일어서는 동안만 (config AID)
+     this.elbowGravity();
+     this.anatSoft(); // 관절 가동 범위 교정 ⓑ 범위 끝 되돌림 (JOINTS)
+     this.flexWeapon?.step(dt); // 휘는 마디 무기의 굽힘 복원 (druid_whip.js — 없으면 아무 일 없음)
+@@ -2836,6 +2837,32 @@ export class Fighter {
+   }
+ 
+   /** 몸통이 "의도한 자세"(가속할 때 숙인 것 포함)에서 벗어난 각도 */
++  /**
++   * 선언된 밖 도움 (config AID · 물리 2.0): 일어서는 동안(getup) · 무릎 꿇고 버티는 동안(kneel) · 선 뒤 AID.after s 만 골반을 밖에서 돕는다.
++   *  ① 위로 드는 힘 — 목표 높이(무릎 꿇음 ~ 선 높이)까지만 · 상한 AID.liftMax × 체중  ② 세우는 토크 — 기울기 축만 · 상한 AID.torqueMax.
++   *  서 있는 동안 · 누운 동안 · 죽은 몸에는 걸지 않는다. 심판 장부가 이 함수 안의 힘을 갈래 aid 로 따로 센다.
++   */
++  driveAid() {
++    const st = this.state;
++    if (st === 'getup' || st === 'kneel') this.aidAfter = true;
++    else if (st !== 'stand' || this.stateTime >= AID.after) this.aidAfter = false;
++    if (!(st === 'getup' || st === 'kneel' || (st === 'stand' && this.aidAfter))) return;
++    const pel = this.bodies.pelvis, p = pel.translation();
++    rot(pel, _q1);
++    const up = _tiltUp.set(0, 1, 0).applyQuaternion(_q1);
++    const h = Math.hypot(up.x, up.z);
++    if (h > 1e-6) {
++      // 세우는 축 = 골반 위 × 세계 위 (수평) · 세우는 쪽 각속도가 +
++      const ax = -up.z / h, az = up.x / h, w = pel.angvel();
++      const m = Math.min(AID.torqueMax, AID.kTilt * Math.acos(THREE.MathUtils.clamp(up.y, -1, 1)) - AID.dTilt * (w.x * ax + w.z * az));
++      if (m > 0) pel.addTorque({ x: ax * m, y: 0, z: az * m }, true);
++    }
++    if (this.aidMg == null) { let m = 0; const seen = new Set(); for (const b of Object.values(this.bodies)) if (b && !seen.has(b.handle)) { seen.add(b.handle); m += b.mass(); } this.aidMg = m * 9.81; }
++    const want = this.groundHeightAt(p.x, p.z) + BODY.standHeight * (1 - AID.kneelDrop * (st === 'stand' ? 0 : this.kneelAmount));
++    const F = Math.min(AID.liftMax * this.aidMg, AID.kLift * (want - p.y) - AID.dLift * pel.linvel().y);
++    if (F > 0) pel.addForce({ x: 0, y: F, z: 0 }, true);
++  }
++
+   tiltDeg() {
+     rot(this.bodies.chest, _q1);
+     // Gait.update 가 driveBalance 의 앞 방향 축(_v1)을 든 채로 이 함수를 부른다 — 같은 임시 벡터를 쓰면 앞 축이 덮여 걸음 균형이 틀어진다
