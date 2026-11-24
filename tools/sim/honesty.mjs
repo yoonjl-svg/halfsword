@@ -153,7 +153,7 @@ export function attach(world, named, opts = {}) {
   const iFeet = new Set(names.map((n, i) => (/^foot/.test(n) ? i : -1)).filter((i) => i >= 0));
   const muOf = (a, b) => { const fa = a.friction(), fb = b.friction(), r = Math.max(a.frictionCombineRule?.() ?? 0, b.frictionCombineRule?.() ?? 0); return r === 0 ? (fa + fb) / 2 : r === 1 ? Math.min(fa, fb) : r === 2 ? fa * fb : Math.max(fa, fb); };
   const readContacts = () => {
-    const out = { FN: V3(), Nabs: 0, muN: 0, foreign: V3(), foreignAbs: 0, foreignKin: 0, nonFoot: 0, tauNo: V3(), tauFo: V3(), pts: [], touch: new Set() };
+    const out = { FN: V3(), Nabs: 0, muN: 0, foreign: V3(), foreignAbs: 0, foreignKin: 0, nonFoot: 0, tauNo: V3(), tauFo: V3(), pts: [], mans: [], touch: new Set() };
     for (let bi = 0; bi < bodies.length; bi++) {
       const rb = bodies[bi];
       for (let ci = 0, nc = rb.numColliders(); ci < nc; ci++) {
@@ -165,8 +165,11 @@ export function attach(world, named, opts = {}) {
           const ct = col.translation(), cqq = cq(col.rotation());
           world.contactPair(col, other, (m, flipped) => {
             const n = m.normal(), sg = flipped ? 1 : -1;
+            const man = fixed ? { all: [], N: 0, mu: muOf(col, other) } : null; // 엔진 마찰 모형용 (감사 11/24 대조 4): 묶음마다 한 덩어리
+            if (man) out.mans.push(man);
             for (let k = 0, nk = m.numContacts(); k < nk; k++) {
               const Jn = m.contactImpulse(k) * KC;
+              if (man) { const lp0 = flipped ? m.localContactPoint2(k) : m.localContactPoint1(k); man.all.push(lp0 ? add(cv(ct), qrot(cqq, cv(lp0))) : cv(ct)); man.N += Math.abs(Jn) / DT; }
               if (Jn === 0) continue;
               out.touch.add(bi);
               const F = V3((sg * n.x * Jn) / DT, (sg * n.y * Jn) / DT, (sg * n.z * Jn) / DT);
@@ -303,9 +306,16 @@ export function attach(world, named, opts = {}) {
       if (Ns > 0) { pbar = scl(pbar, 1 / Ns); tauFr = cross(sub(pbar, cb), Ffric); for (const q of C.pts) budget += q.mu * q.N * Math.hypot(q.P.x - pbar.x, q.P.z - pbar.z); }
       const tauDecl = about(tauDeclO, Fdecl), tauDamp = about(mid ? mid.tauDo : V3(), Fdamp);
       const r = sub(sub(sub(sub(sub(sub(dL, tauN), tauF), tauFr), tauDecl), tauDamp), prev.Gy);
-      const rH = Math.hypot(r.x, r.z), rVex = Math.max(0, Math.abs(r.y) - budget);
+      // yaw 한도 둘 (감사 11/24 대조 4 — 한 발 상자 시험으로 확인): budget = 쿨롱(접촉점마다 μ·N_q·팔). Rapier 0.19.3 은 접촉 묶음마다 한 덩어리로 마찰을 건다 —
+      //  체중이 발 귀퉁이에 몰려도 고르게 디딘 것과 같은 비틀림 마찰(μ·N·평균 팔)을 준다. budgetEng = Σ_묶음 μ·N_m·(|c_m − pbar| + r̄_m). 이 한도를 넘는 몫만 '숨은 yaw 토크',
+      //  쿨롱은 넘고 엔진 한도 안인 몫은 '엔진이 쿨롱 한도 넘게 준 비틀림 마찰'(숨은 힘이 아니라 엔진의 사실성 구멍 — 몸이 거기에 기대는 만큼) 로 따로 적는다.
+      let budgetEng = 0;
+      if (Ns > 0) for (const mn of C.mans ?? []) { if (!(mn.N > 0) || !mn.all.length) continue; let c = V3(); for (const q of mn.all) c = add(c, q); c = scl(c, 1 / mn.all.length); let rb = 0; for (const q of mn.all) rb += Math.hypot(q.x - c.x, q.z - c.z); rb /= mn.all.length; budgetEng += mn.mu * mn.N * (Math.hypot(c.x - pbar.x, c.z - pbar.z) + rb); }
+      budgetEng = Math.max(budgetEng, budget);
+      const rH = Math.hypot(r.x, r.z), rVex = Math.max(0, Math.abs(r.y) - budgetEng), rVcoul = Math.max(0, Math.min(Math.abs(r.y), budgetEng) - budget);
+      { const a = A('angResYawOverCoulomb'); a.Timp += rVcoul * DT; }
       { const q = L.anchorW ? sub(r, L.anchorW) : r; const a = A('angResTiltFloor'); a.Timp += Math.hypot(q.x, q.z) * DT; L.anchorW = null; } // 닻 재계산값을 뺀 나머지 = 이 방법의 바닥 (닻이 없으면 잔차 그대로)
-      globalThis.__honestyDbg?.push({ t: L.T, dL, tauN, tauF, tauFr, tauDecl, tauDamp, gy: prev.Gy, r, budget, Ns, res, FN: C.FN, npts: C.pts.length });
+      globalThis.__honestyDbg?.push({ t: L.T, dL, tauN, tauF, tauFr, tauDecl, tauDamp, gy: prev.Gy, r, budget, budgetEng, Ns, res, FN: C.FN, npts: C.pts.length });
       { const a = A('angResTilt'); a.Timp += rH * DT; } { const a = A('angResYaw'); a.Timp += Math.abs(r.y) * DT; } { const a = A('angResYawExcess'); a.Timp += rVex * DT; }
       { const a = A('groundTorque'); a.Timp += len(add(tauN, tauFr)) * DT; }
     }
@@ -394,7 +404,7 @@ export function attach(world, named, opts = {}) {
       pair: L.pair ? { grossNs: +L.pair.gross.toFixed(2), netFNs: +L.pair.netF.toFixed(2), netTNms: +L.pair.netT.toFixed(2), steps: L.pair.steps, worstNs: +L.pair.worst.toFixed(2), by: Object.fromEntries(Object.entries(L.pair.by).map(([k, v]) => [k, +v.toFixed(2)])) } : null,
       fingerprint: fp0, fingerprintEnd: L.fingerprint(),
       dyn: Object.fromEntries(L.dyn.map((d, i) => [names[i], { ld: d.ld.map(r4), ad: d.ad.map(r4), gs: d.gs.map(r4), m: d.m.map(r4), I: d.I.map(r4), types: [...d.type] }])),
-      torque: (() => { const out = v('angResTilt', 'Timp') + v('angResYawExcess', 'Timp') + v('damp', 'Timp') + ['support', 'push', 'unpaired', 'other', 'write'].reduce((t, k) => t + v(k, 'Timp'), 0); const inn = v('groundTorque', 'Timp'); return { share: out + inn < 1e-6 ? 0 : out / (out + inn), tiltResRate: v('angResTilt', 'Timp') / Math.max(1e-9, L.T), tiltFloorRate: v('angResTiltFloor', 'Timp') / Math.max(1e-9, L.T), yawExcessRate: v('angResYawExcess', 'Timp') / Math.max(1e-9, L.T), outNms: out, groundNms: inn, tiltResNms: v('angResTilt', 'Timp'), yawResNms: v('angResYaw', 'Timp'), yawExcessNms: v('angResYawExcess', 'Timp'), dampNms: v('damp', 'Timp') }; })(),
+      torque: (() => { const out = v('angResTilt', 'Timp') + v('angResYawExcess', 'Timp') + v('damp', 'Timp') + ['support', 'push', 'unpaired', 'other', 'write'].reduce((t, k) => t + v(k, 'Timp'), 0); const inn = v('groundTorque', 'Timp'); return { share: out + inn < 1e-6 ? 0 : out / (out + inn), tiltResRate: v('angResTilt', 'Timp') / Math.max(1e-9, L.T), tiltFloorRate: v('angResTiltFloor', 'Timp') / Math.max(1e-9, L.T), yawExcessRate: v('angResYawExcess', 'Timp') / Math.max(1e-9, L.T), yawOverCoulombRate: v('angResYawOverCoulomb', 'Timp') / Math.max(1e-9, L.T), outNms: out, groundNms: inn, tiltResNms: v('angResTilt', 'Timp'), yawResNms: v('angResYaw', 'Timp'), yawExcessNms: v('angResYawExcess', 'Timp'), dampNms: v('damp', 'Timp') }; })(),
       joints: Object.fromEntries(Object.entries(L.joint).map(([k, x]) => { const h = Float64Array.from(x.hist).sort(); const mh = Float64Array.from(x.mHist).sort(); return [k, { limit: x.limit, mean: +(x.sum / Math.max(1, x.n)).toFixed(1), p95: +(h[Math.floor(0.95 * (h.length - 1))] ?? 0).toFixed(1), peak: +x.peak.toFixed(1), overShare: +(x.over / Math.max(1, x.n)).toFixed(4), motorPeak: +x.motorPeak.toFixed(1), explPeak: +x.explPeak.toFixed(1), measCover: +(x.mN / Math.max(1, x.n)).toFixed(3), measP95: +(mh[Math.floor(0.95 * (mh.length - 1))] ?? 0).toFixed(1), measPeak: +x.mPeak.toFixed(1), measOverShare: +(x.mOver / Math.max(1, x.mN)).toFixed(4), measVsReq: x.sxx > 0 ? +(x.sxy / x.sxx).toFixed(3) : null, engineVsMotorReq: x.sxxM > 1e-9 ? +(x.sxyM / x.sxxM).toFixed(3) : null, measCorr: x.sxx > 0 && x.syy > 0 ? +(x.sxy / Math.sqrt(x.sxx * x.syy)).toFixed(3) : null }]; })),
       virtualActuators: Object.fromEntries(Object.entries(L.virt).map(([k, x]) => [k, { Ns: +x.Ns.toFixed(1), peakN: +x.peakN.toFixed(1) }])),
       check: { foreignNs: v('foreignN', 'Fimp'), foreignKinNs: v('foreignKin', 'Fimp'), groundNShare: v('groundN', 'Fy') / Math.max(1e-9, L.Mg * L.T), hiddenYNs: v('hiddenY', 'Fimp'), hiddenYNet: v('hiddenY', 'Fy'), frictionHNs: v('frictionH', 'Fimp'), frictionExcessNs: v('frictionExcess', 'Fimp'), nonFootGroundNs: v('nonFootGround', 'Fimp') },
@@ -435,7 +445,7 @@ export function report(title, S) {
   const lines = [`■ ${title}  (${S.T} s)`, `  선 힘 몫(밖 · 닻 토크는 안 들어감) ${pct(S.forceShare)} · 수직 받침 몫 ${pct(S.supportShare)} · 일 몫(밖) ${pct(S.workShare)} · 닻 yaw ${n1(S.anchorYawNms, 0)} N·m·s · 닻 기울기 ${n1(S.anchorTiltNms, 0)} N·m·s · 근육 쌍 어긋남 최고 ${S.pairResidualMaxN.toFixed(3)} N${Object.keys(S.coupleBy).length ? ' · 짝 없는 토크 ' + Object.entries(S.coupleBy).map(([k, x]) => `${k} ${x.toFixed(1)}`).join(' · ') + ' N·m·s' : ''}`];
   if (S.stab) lines.push(`  몸: ${S.stab.fellAt != null ? '넘어짐 ' + S.stab.fellAt + ' s' : '안 넘어짐'} · 골반 높이 평균 ${S.stab.pelvisYMean} (최저 ${S.stab.pelvisYMin}) m · 가슴 기울기 최고 ${S.stab.tiltMaxDeg}° · 옮긴 거리 ${S.stab.netMove} m (길 ${S.stab.pathMove} m · 평균 ${S.stab.meanSpeed} m/s) · 칼끝 최고 ${S.stab.tipSpeedMax} m/s · 상태 ${Object.entries(S.stab.states).map(([k, n]) => k + ' ' + n).join(' ')}`);
   lines.push(`  검산: 땅 법선 ÷ 체중 ${pct(S.check.groundNShare)} · 법선으로 설명 안 되는 수직 힘 ${n1(S.check.hiddenYNs, 0)} N·s (알짜 ${n1(S.check.hiddenYNet, 0)}) · 수평 마찰(핀 포함) ${n1(S.check.frictionHNs, 0)} N·s 가운데 μN 넘는 몫 ${n1(S.check.frictionExcessNs, 0)} N·s · 발 아닌 곳이 땅을 누름 ${n1(S.check.nonFootGroundNs, 0)} N·s · 땅 아닌 것과 닿음 ${n1(S.check.foreignNs, 0)} N·s (그중 운동학 물체 ${n1(S.check.foreignKinNs, 0)}) · 몸 밖에 묶인 관절 ${S.externalJoints.length} (${S.externalJoints.join(',') || '없음'})`);
-  if (S.torque) lines.push(`  돌리는 쪽: 숨은 기울기 토크 평균 ${S.torque.tiltResRate.toFixed(2)} N·m (닻 재계산값을 뺀 나머지 ${S.torque.tiltFloorRate.toFixed(2)}) · yaw 한도 넘는 몫 평균 ${S.torque.yawExcessRate.toFixed(2)} N·m · 토크 몫(밖) ${pct(S.torque.share)} = 밖 ${n1(S.torque.outNms, 0)} ÷ (밖 + 땅 ${n1(S.torque.groundNms, 0)}) N·m·s · 기울기 잔차 ${n1(S.torque.tiltResNms, 0)} · yaw 잔차 ${n1(S.torque.yawResNms, 0)} (마찰 짝힘 한도 넘는 몫 ${n1(S.torque.yawExcessNms, 0)}) · 회전 감쇠 ${n1(S.torque.dampNms, 0)}`);
+  if (S.torque) lines.push(`  돌리는 쪽: 숨은 기울기 토크 평균 ${S.torque.tiltResRate.toFixed(2)} N·m (닻 재계산값을 뺀 나머지 ${S.torque.tiltFloorRate.toFixed(2)}) · yaw 엔진 마찰 한도 넘는 몫 평균 ${S.torque.yawExcessRate.toFixed(2)} N·m (쿨롱 한도는 넘고 엔진 한도 안 — 엔진이 봐준 비틀림 마찰 ${(S.torque.yawOverCoulombRate ?? 0).toFixed(2)} N·m) · 토크 몫(밖) ${pct(S.torque.share)} = 밖 ${n1(S.torque.outNms, 0)} ÷ (밖 + 땅 ${n1(S.torque.groundNms, 0)}) N·m·s · 기울기 잔차 ${n1(S.torque.tiltResNms, 0)} · yaw 잔차 ${n1(S.torque.yawResNms, 0)} (마찰 짝힘 한도 넘는 몫 ${n1(S.torque.yawExcessNms, 0)}) · 회전 감쇠 ${n1(S.torque.dampNms, 0)}`);
   if (S.joints && Object.keys(S.joints).length) lines.push('  관절 토크 — 요구(다시 센 값) 95 % / 한도(넘은 몫): ' + Object.entries(S.joints).map(([k, j]) => `${k} ${j.p95.toFixed(0)}/${j.limit}(${(100 * j.overShare).toFixed(1)}%)`).join(' · '));
   if (S.joints && Object.keys(S.joints).length) lines.push('  관절 토크 — 전달(운동량으로 잰 값) 95 % · 최고 (넘은 몫 · 잴 수 있던 스텝 몫 · 엔진 모터의 전달 ÷ 요구): ' + Object.entries(S.joints).map(([k, j]) => `${k} ${j.measP95.toFixed(0)}·${j.measPeak.toFixed(0)}(${(100 * j.measOverShare).toFixed(1)}%·${(100 * j.measCover).toFixed(0)}%·${j.engineVsMotorReq ?? '-'})`).join(' · '));
   if (S.virtualActuators && Object.keys(S.virtualActuators).length) lines.push('  가상 구동기(관절을 거치지 않는 힘 쌍): ' + Object.entries(S.virtualActuators).map(([k, x]) => `${k} ${x.Ns} N·s (최고 ${x.peakN} N)`).join(' · '));
@@ -631,6 +641,24 @@ async function selftest() {
     hole('중력 절반', runCase(null, -4.905));
     hole('마찰 계수 5', runCase({ o: { mu: 5 } }));
     { const c = runCase({ fn: (w) => { const pr = w.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0.3, 0.3, 0)); w.createCollider(RAPIER.ColliderDesc.cuboid(0.2, 0.3, 0.2).setFriction(0.9), pr); } }); hole('보이지 않는 운동학 받침대', c, c.S.check.foreignKinNs > 1); }
+  }
+  { // 15 ~ 17 yaw 한도 (감사 11/24 대조 4 yaw_point_contact): 숨은 힘이 없는 한 발 상자(75 kg) 안의 바퀴를 몸 안 토크 쌍으로 돌려 발을 비튼다 — 엔진 한도 넘는 몫은 0 이어야 하고, 체중이 귀퉁이에 몰리면 '엔진이 봐준 몫'이 잡혀야 한다
+    const foot = (cx, cz, T, hidden) => {
+      const w = mk(); ground(w);
+      const A1 = w.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 0, 0));
+      w.createCollider(RAPIER.ColliderDesc.cuboid(0.12, 0.035, 0.05).setTranslation(0, 0.035, 0).setMass(1.1).setFriction(0.9), A1);
+      w.createCollider(RAPIER.ColliderDesc.ball(0.05).setTranslation(cx, 0.9, cz).setMass(50).setSensor(true), A1);
+      const B1 = w.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(cx, 0.9, cz));
+      w.createCollider(RAPIER.ColliderDesc.cuboid(0.3, 0.02, 0.3).setMass(23.9).setSensor(true), B1);
+      w.createImpulseJoint(RAPIER.JointData.revolute({ x: cx, y: 0.9, z: cz }, { x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }), A1, B1, true);
+      for (let i = 0; i < 120; i++) w.step();
+      const yaw = () => { const q = A1.rotation(); return (2 * Math.atan2(q.y, q.w) * 180) / Math.PI; }, y0 = yaw();
+      const S = drive(w, attach(w, [['footA', A1], ['wheel', B1]]), 2, () => { A1.resetTorques(true); B1.resetTorques(true); SHARED.phase = 'muscle'; B1.addTorque({ x: 0, y: T, z: 0 }, true); A1.addTorque({ x: 0, y: -T + (hidden || 0), z: 0 }, true); SHARED.phase = 'other'; });
+      return { S, turned: Math.abs(yaw() - y0) };
+    };
+    const c1 = foot(0, 0, 60), c2 = foot(0.10, 0.04, 60);
+    all &= ok('발 비틀기 · 체중 한가운데 60 N·m', c1.turned < 1 && c1.S.torque.yawExcessRate < 1 && c1.S.torque.yawOverCoulombRate < 1, `발 ${c1.turned.toFixed(2)}° · 엔진 한도 넘는 몫 ${c1.S.torque.yawExcessRate.toFixed(2)} · 엔진이 봐준 몫 ${c1.S.torque.yawOverCoulombRate.toFixed(2)} N·m`);
+    all &= ok('발 비틀기 · 체중 귀퉁이 60 N·m', c2.turned < 1 && c2.S.torque.yawExcessRate < 1 && c2.S.torque.yawOverCoulombRate > 20, `발 ${c2.turned.toFixed(2)}° · 엔진 한도 넘는 몫 ${c2.S.torque.yawExcessRate.toFixed(2)} · 엔진이 봐준 몫 ${c2.S.torque.yawOverCoulombRate.toFixed(2)} N·m (쿨롱 한도 29 쯤)`);
   }
   console.log(`honesty.mjs 자가 시험 (Rapier ${RAPIER.version?.() ?? ''})\n${out.join('\n')}\n${all ? '모두 통과' : '실패 있음'}`);
   process.exit(all ? 0 : 1);
