@@ -1,0 +1,18 @@
+# node docs/audit/evidence/2026-11-25/guard_hold.mjs <본판 8864f7c0 나무>  (감사 2026-11-25 03:1x KST · 롱소드 · 막기 단추를 누른 채 게임 20초)
+seed  1: clashes   54 · AI attacks  5 · charged as block  1 · wounds taken  9 (severity 0.0) · alive 20.0 s
+seed  2: clashes   43 · AI attacks  8 · charged as block  0 · wounds taken  5 (severity 1.4) · alive 20.0 s
+seed  3: clashes  535 · AI attacks  5 · charged as block  3 · wounds taken  9 (severity 0.0) · alive 20.0 s
+seed  4: clashes   82 · AI attacks  2 · charged as block  1 · wounds taken  3 (severity 1.4) · alive 20.0 s
+seed  5: clashes  765 · AI attacks  2 · charged as block  2 · wounds taken  0 (severity 0.0) · alive 20.0 s
+seed  6: clashes  212 · AI attacks  6 · charged as block  2 · wounds taken  5 (severity 1.7) · alive 20.0 s
+seed  7: clashes  645 · AI attacks  5 · charged as block  3 · wounds taken 12 (severity 0.1) · alive 20.0 s
+seed  8: clashes  148 · AI attacks  7 · charged as block  4 · wounds taken 11 (severity 0.7) · alive 20.0 s
+seed  9: clashes  398 · AI attacks  7 · charged as block  2 · wounds taken  6 (severity 0.6) · alive 20.0 s
+seed 10: clashes  583 · AI attacks  4 · charged as block  1 · wounds taken  4 (severity 0.0) · alive 20.0 s
+seed 11: clashes  193 · AI attacks  6 · charged as block  3 · wounds taken  9 (severity 1.0) · alive 20.0 s
+seed 12: clashes   67 · AI attacks  5 · charged as block  0 · wounds taken  7 (severity 0.7) · alive 20.0 s
+seed 13: clashes   30 · AI attacks  9 · charged as block  0 · wounds taken 12 (severity 4.0) · alive 20.0 s
+seed 14: clashes    0 · AI attacks  1 · charged as block  0 · wounds taken  1 (severity 0.9) · down at 7.7 s
+seed 15: clashes  705 · AI attacks  5 · charged as block  5 · wounds taken  3 (severity 0.5) · alive 20.0 s
+seed 16: clashes  687 · AI attacks  4 · charged as block  2 · wounds taken  7 (severity 0.0) · alive 20.0 s
+TOTAL 16 seeds: clashes 5147 · AI attacks 81 · charged as block 29 (36 % of attacks) · wounds taken 103 (severity 13.0) · player down in 1

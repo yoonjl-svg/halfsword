@@ -1,4 +1,4 @@
-# node docs/audit/evidence/2026-11-25/pair_restitution.mjs <본판 d6ea393c 나무>  (감사 2026-11-25 03:2x KST)
+# node docs/audit/evidence/2026-11-25/pair_restitution.mjs <본판 d6ea393c 나무>  (감사 2026-11-25 03:1x KST)
 BIND.restitution 0.2 · sqrt 0.447
 longsword        blade parts [0.447] · rule 2 · vs longsword blade (0.447) pair [0.2]
 zweihander       blade parts [0.447] · rule 2 · vs longsword blade (0.447) pair [0.2]

@@ -1,0 +1,39 @@
+# 감사 재현 — 본판 d6ea393c 관문 값 (2026-11-25 03:1x KST · 도구 docs/audit/evidence/2026-11-22-w/tools/gates.sh · stdout sha256 앞 8자)
+# 앞 값은 bcadc3fc ~ 8864f7c0 (11/22 일일 기록과 같음 · fights12 · corr_s0 는 8864f7c0 에서 다시 돌려 확인)
+관문               앞        뒤        디렉터가 적은 새 기준
+fights12             97bf8ba8   9a2ec131   9a2ec131 (같음)
+live_battery         1c110583   1c110583   1c110583 (같음)
+finish_thrust_stand  c0e8c0fc   8b23b558   8b23b558 (같음)
+finish_thrust_down   707da1af   31d905db   31d905db (같음)
+corr_s0              e01a42ef   45939d96   'corr 12' — 열두 줄 모두 IDENTICAL 그대로 · 장면 b 여섯 줄의 휘두름 · 상처 수가 달라짐
+weapon_smoke         82583ac6   82583ac6   'smoke 34' 그대로
+match_twin           97bf8ba8   9a2ec131   (감사 관문 — fights12 와 같아야 함 · 같음)
+team_fights          3f9bd0e1   1c86f26b   (감사 관문 — NaN · 예외 0 · OK)
+
+# npm test (d6ea393c)
+# tests 982
+# suites 0
+# pass 982
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 273730.664092
+
+# fights12 요약 줄
+앞 8864f7c0: energyScale 2: dead 6/12, downs/fight 0.8, opened/fight 6.4
+뒤 d6ea393c: energyScale 2: dead 7/12, downs/fight 0.8, opened/fight 5.6
+
+# corr_s0 달라진 줄 (앞 → 뒤)
+< 장면 b 시드 1 한도 true s 0 (old 대 v2): IDENTICAL (스텝 2400, 휘두름 27, 상처 16, Math.random 725/725번)
+< 장면 b 시드 2 한도 true s 0 (old 대 v2): IDENTICAL (스텝 2400, 휘두름 26, 상처 9, Math.random 776/776번)
+< 장면 b 시드 3 한도 true s 0 (old 대 v2): IDENTICAL (스텝 2400, 휘두름 33, 상처 28, Math.random 741/741번)
+> 장면 b 시드 1 한도 true s 0 (old 대 v2): IDENTICAL (스텝 2400, 휘두름 21, 상처 9, Math.random 692/692번)
+> 장면 b 시드 2 한도 true s 0 (old 대 v2): IDENTICAL (스텝 2400, 휘두름 35, 상처 17, Math.random 731/731번)
+> 장면 b 시드 3 한도 true s 0 (old 대 v2): IDENTICAL (스텝 2400, 휘두름 23, 상처 21, Math.random 676/676번)
+< 장면 b 시드 1 한도 false s 0 (old 대 v2): IDENTICAL (스텝 2400, 휘두름 27, 상처 16, Math.random 725/725번)
+< 장면 b 시드 2 한도 false s 0 (old 대 v2): IDENTICAL (스텝 2400, 휘두름 26, 상처 9, Math.random 776/776번)
+< 장면 b 시드 3 한도 false s 0 (old 대 v2): IDENTICAL (스텝 2400, 휘두름 33, 상처 28, Math.random 741/741번)
+> 장면 b 시드 1 한도 false s 0 (old 대 v2): IDENTICAL (스텝 2400, 휘두름 21, 상처 9, Math.random 692/692번)
+> 장면 b 시드 2 한도 false s 0 (old 대 v2): IDENTICAL (스텝 2400, 휘두름 35, 상처 17, Math.random 731/731번)
+> 장면 b 시드 3 한도 false s 0 (old 대 v2): IDENTICAL (스텝 2400, 휘두름 23, 상처 21, Math.random 676/676번)

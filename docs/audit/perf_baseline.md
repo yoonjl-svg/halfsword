@@ -165,3 +165,14 @@ CPU 프로파일(밤의 포세이돈, CPU 4배 느림):
 
 물리 한 스텝 시간은 오늘 다시 재지 않았다(물리 스텝을 건드린 줄이 없음).
 
+
+## 2026-11-25, main d6ea393c (칼끼리 튕김을 실제 0.2로)
+
+재현: `docs/audit/evidence/2026-11-25/gates_d6ea393c.txt`.
+
+| | 11/22 일일 (`bcadc3fc`) | 11/25 (`d6ea393c`) |
+|---|---|---|
+| 관문 여덟 | fights12 `97bf8ba8` · live `1c110583` · ft `c0e8c0fc` · ftd `707da1af` · corr_s0 `e01a42ef` · smoke `82583ac6` · twin `97bf8ba8` · team `3f9bd0e1` | fights12 `9a2ec131` · live `1c110583` · ft `8b23b558` · ftd `31d905db` · corr_s0 `45939d96` · smoke `82583ac6` · twin `9a2ec131` · team `1c86f26b` |
+| 시험 | 982 | 982 |
+
+물리 한 스텝 시간과 용량은 다시 재지 않았다(바뀐 게임 코드가 한 줄).
