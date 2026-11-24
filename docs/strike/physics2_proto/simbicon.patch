@@ -1,0 +1,1648 @@
+diff --git a/docs/strike/physics2_proto_simbicon_2026-11-24.md b/docs/strike/physics2_proto_simbicon_2026-11-24.md
+new file mode 100644
+index 00000000..dc989f48
+--- /dev/null
++++ b/docs/strike/physics2_proto_simbicon_2026-11-24.md
+@@ -0,0 +1,115 @@
++# 물리 2.0 시제품 — 자세 제어(SIMBICON 꼴): 몸 밖 힘 없이 서고 걷기 (2026-11-24)
++
++- 가지 `p2-proto-simbicon` (바탕 `physics-2` `4bd9eea6`). 다른 가지(같은 날 나란히 만드는 다른 방식의 시제품)와 견주기 위한 **시제품**이다. 본판에 넣자는 글이 아니다.
++- 심판: `node tools/sim/honesty.mjs` (고치지 않음). 기준 값: `docs/strike/physics2_baseline/solo_2026-11-24.json` · 작업 공간 `p2/baseline.json`.
++- 한 줄: **가만히 서기 · 제자리에서 고쳐 딛기 · 느린 걷기(앞 · 옆 · 뒤) · 걷다 서기 · 세로 베기는 몸 밖 힘 0 으로 된다. 빗겨 · 가로 베기 · 가슴 밀기 40 N·s(심판 장면의 때맞춤) · AI 싸움에서는 넘어지고, 넘어지면 다시 못 일어난다.** 걷는 빠르기는 목표(1.2 m/s)의 절반에 못 미친다(0.50 m/s).
++
++## 1. 걷어 낸 것 (0 으로 둔 것이 아니라 코드에서 지움)
++
++| 무엇 | 옛 자리 | 지금 |
++|---|---|---|
++| (a) 골반 수직 받침 힘 (서기 20 % · 일어서기 · 무릎 100 % · 날며 뛰기 100 %) | `fighter.driveBalance` 1) | 없음 — 갈래 넷 모두 지움 |
++| (b) 골반 · 가슴 수평 걷기 밀기 | `fighter.driveBalance` 2) · `push()` | 없음 |
++| (b′) 붙어 밀기 · 맞밀기의 골반 400 N | `fighter.closeStep` · `close_hold.js` | 힘 대신 상대 쪽으로 가려는 속도(`CLOSE.legDriveV` 0.8 m/s) |
++| (c) 닻(운동학 몸체) + 골반 회전 모터 관절 | `fighter` 생성자 · `driveBalance` 3) | 몸체 · 관절을 만들지 않음 (`externalJoints` 0) |
++| (d) 내딛는 발 당김의 짝 없는 짝힘 | `gait.swingPull` (발목 +F · 골반 엉덩이 점 −F) | 엉덩이 · 무릎 토크 쌍(야코비 전치 · `simbicon.swingTorque`) |
++| (e) 디딘 발 + 2 kg | `gait.footMass` | 없음 (접촉 진동수 120 Hz + 풀이 안쪽 반복 4 로 대신) |
++| 발 핀 (발바닥을 디딘 자리에 붙잡는 수평 힘 · yaw 토크) | `gait.pinFeet` · `pinTerrainFoot` | 없음 — 발은 엔진 접촉 마찰만. 접촉 힘 읽기만 남김(`gait.footLoads`) |
++| 보조 힘 넘겨받기 · 붙잡기 반사 (`lev · levH · levC`) | `gait.update` · `supportShare` | 없음 |
++
++## 2. 대신 들어간 것 (`src/simbicon.js` + `gait.js` + `fighter.js` · 값 `config.js POSE`)
++
++1. **풀이 값**: 안쪽 반복 4 · 접촉 진동수 120 Hz (`tuneWorld` — 세계마다 한 번). 스텝 값은 약 1.56 배(엔진 시험 s5 값 · 이 가지에서는 다시 안 쟀다).
++2. **골반 자세는 디딘 엉덩이가**: 디딘 다리의 엉덩이 목표를 '실제 골반' 대신 '바라는 골반 자세'(수직 + heading + 자세 돌림) 기준으로 준다(`gait.legIK` world). 골반이 기울거나 돌아간 만큼이 엉덩이 모터의 오차가 되고 반작용은 다리 → 발 → 땅으로 간다. 내딛는 엉덩이는 전처럼 세계 틀 목표.
++3. **디딘 다리 중력 보상 앞먹임**(`stanceFF`): 발마다 압력 중심 P 에서 무게중심을 향하는 땅 반력 G(수직 몫 = 하중 몫 × 몸무게)를 내는 발목 · 무릎 · 엉덩이 토크를 명시 쌍으로 건다 — `−(P − 관절) × G`. 토크 쌍뿐이라 몸 전체 힘 · 토크 합 0.
++4. **균형의 작은 고침 = 압력 중심**: 바라는 무게중심 가속 a(서 있을 땐 자리 5 /s² + 속도 4.5 /s · 걸을 땐 속도 0.8 /s) → P* = 무게중심 − a ÷ ω0². 두 발이면 P* 를 발 사이 선에 내려 하중 몫을, 남는 몫은 발바닥 안(앞뒤 ± 9 cm · 좌우 ± 3 cm)에서. 받침 밖이면 **방향은 지키고 크기만** 줄인다.
++   - 디딘 발목 모터는 압력 중심 두 축만 0.15 배로 약하게(비틀기 축은 그대로): 발목 모터가 세면 실제 압력 중심이 바란 자리보다 5 ~ 6 cm 뒤에 놓였다(잰 값 — 다리 길이를 고치는 PD 가 발목에 토크를 실음).
++   - 두 발 하중 몫은 다리 길이 목표를 적분으로 고쳐 맞춘다(관절 PD 는 닫힌 사슬에서 '자리'를 잡아 하중 나눔을 제멋대로 정한다).
++5. **큰 고침 = 발 놓기**: 디딜 자리 = 무게중심이 디딜 때 있을 곳 + 실제 속도 × 0.165 s + 되먹임(느릴 때 0.14 s × 모자란 속도(0.4 m/s 까지) · 빠를 때 · 옆 0.17 s × 넘친 속도). 균형 걸음(stumble)은 걸음을 떼게만 하고 몸을 그쪽으로 밀지 않는다.
++6. **발을 떼기 앞에 무게를 옮긴다**: 걷는 첫 걸음은 캡처 점이 남을 발에 다가온 뒤에, 제자리 고쳐 딛기는 캡처 점이 남을 발바닥 안에 오고 몸이 0.15 m/s 보다 느릴 때 뗀다(안 되면 2 s 뒤 그만둠).
++7. **사람 토크 한도**(`POSE.torque` · N·m): 엉덩이 벌림 150 · 돌림 70 · 굽힘/폄 200 / 무릎 250 / 발목 번짐 60 · 돌림 80 · 굽힘 180 / 허리 옆 200 · 돌림 120 · 폄 300. 명시 토크는 축마다 정확히 자르고, 엔진 모터는 남은 예산 안에서 스프링 몫은 목표 오차 자르기 · 스프링 + 감쇠 합은 강성 · 감쇠를 같이 낮춰 묶는다(엔진에 모터 최대 힘이 없다). 포화는 `fighter.torqueReport()` 에 센다.
++   - 발목 돌림 80 은 근육 값이 아니다(인대 · 뼈 맞물림이 받는 축으로 봄 — 발 마찰 한계 μ·N·0.13 m ≈ 77 과 같은 크기). 40 으로 두면 걷는 동안 골반 yaw 가 ± 0.5 rad 흔들렸다.
++
++## 3. 잰 값 (롱소드 · 시드 7 · 대본 장면 · 한 궤적)
++
++| 장면 | 넘어짐 | 받침 몫 | 밀기 N·s | 몸 밖 관절 | 땅 법선 ÷ 체중 | μN 넘는 몫 N·s | 평균 빠르기 m/s | 옮긴 거리 m | 기울기 최고 ° | 칼끝 최고 m/s | 기준(옛) |
++|---|---|---|---|---|---|---|---|---|---|---|---|
++| stand 4 s | 없음 | 0.0 % | 0 | 0 | 100.0 % | 0.0 | 0.06 | 0.19 | 10.7 | 0.39 | 받침 19.3 % · 밀기 307 |
++| stand30 | 없음 | 0.0 % | 0 | 0 | 100.1 % | 0.0 | 0.009 | 0.20 | 10.7 | 0.39 | 옮김 0.10 |
++| walk 4 s | 없음 | 0.0 % | 0 | 0 | 100.4 % | 0.1 | **0.50** | 1.89 | 16.2 | 1.75 | 1.57 m/s · μN 넘는 몫 55.5 |
++| walkstop | 없음 | 0.0 % | 0 | 0 | 100.1 % | 0.1 | 0.36 | 1.65 | 16.2 | 1.75 | 0.86 |
++| strafe | 없음 | 0.0 % | 0 | 0 | 100.3 % | 0.1 | 0.45 | 1.79 | 14.1 | 2.15 | 0.71 |
++| back | 없음 | 0.0 % | 0 | 0 | 99.0 % | 0.0 | 0.33 | 0.57 | 12.5 | 2.19 | 1.21 |
++| kick 40 N·s | **3.88 s 에 넘어짐**(친 뒤 1.9 s) | 0.0 % | 0 | 0 | 99.0 % | 38.3 | — | 1.33 | 118.6 | — | 안 넘어짐 · 0.105 m |
++| kick 80 | 넘어짐(친 뒤 2.7 s) | 0.0 % | 0 | 0 | 99.5 % | 80.1 | — | 1.08 | — | — | — |
++| kick 120 | 넘어짐(친 뒤 2.1 s) | 0.0 % | 0 | 0 | 100.6 % | 124.3 | — | 3.38 | — | — | 안 넘어짐 · 0.23 m |
++| stroke 빗겨(diagR) | **2.7 s 에 넘어짐** | 0.0 % | 0 | 0 | 99.4 % | 5.6 | — | 1.45 | — | 17.99 | 18.31 · 안 넘어짐 |
++| stroke 세로(vert) | 없음 | 0.0 % | 0 | 0 | 100.2 % | 0.0 | 0.10 | 0.24 | 16.2 | 18.50 | — |
++| stroke 가로(horizR) | 4.06 s 에 넘어짐 | 0.0 % | 0 | 0 | 96.1 % | 0.9 | — | 0.88 | — | 23.57 | — |
++| 츠바이핸더 stand | 없음(1.0 m 흘러감 · 기울기 25.8°) | 0.0 % | 0 | 0 | 100.1 % | 0.0 | 0.27 | 1.01 | 25.8 | — | — |
++| 츠바이핸더 walk | 3.9 s 에 넘어짐 | 0.0 % | 0 | 0 | 98.1 % | 1.0 | 1.38 | 5.42 | 64.7 | — | — |
++| 츠바이핸더 stroke | 재기 시작 전에 이미 넘어짐 | 0.0 % | 0 | 0 | — | — | — | — | — | 12.26 | — |
++| 레이피어 stand · walk · stroke | 없음 · 없음 · 없음 | 0.0 % | 0 | 0 | 100.1 ~ 100.2 % | 0.0 ~ 0.1 | 걷기 0.78 | — | 26.2 | 17.99 | — |
++
++- '그 밖 선언(밖)' 0 · '질량 바뀜' 0 · '닻' 0 (모든 장면). '짝 없는 토크'는 `offhand` 0.5 ~ 14 N·m·s 가 남는다 — 빈손이 칼자루 끝을 잡는 힘 쌍(이 시제품이 건드리지 않은 옛 것 · 기준에도 0.8 ~ 6.5).
++- 엔진 감쇠(선 0.05 · 회전 0.4)는 그대로 둠: 서기 1.0 N·s · 걷기 7.7 N·s.
++- 같은 가슴 밀기를 자세를 다 잡은 뒤(7.5 s)에 넣으면 40 · 80 N·s 는 안 넘어지고(0.66 · 0.87 m 물러남) 120 은 1.9 s 에 넘어진다(시제품 안에서 따로 잰 값 · 심판 장면이 아님). 심판 장면은 제자리 고쳐 딛기(무게를 한 발로 옮기는 중)와 밀기가 겹친다.
++
++### 관절 토크
++
++| | 엉덩이 | 무릎 | 발목 | 배 | 가슴 |
++|---|---|---|---|---|---|
++| 서기 — 전달(운동량으로 잰 값) 95 % / 최고 N·m | 137 / 144 | 59 / 60 | 99 / 100 | 49 / 94 | 51 / 74 |
++| 걷기 — 전달 95 % / 최고 | 183 / 242 | 75 / 147 | 106 / 114 | 113 / 169 | 80 / 97 |
++| 옆걸음 — 전달 95 % / 최고 | 169 / 202 | 108 / 148 | 75 / 79 | 128 / 184 | 90 / 129 |
++| 심판 한도(가늠) | 250 | 250 | 180 | 300 | 300 |
++| 걷기 — 한도에 묶인 스텝 몫(스프링 자름 또는 합 줄임 · `torqueReport`) | 45 ~ 51 % | 13.5 % | 11 ~ 13 % | 0.6 % | 0.4 % |
++| 서기 — 같은 몫 | 2 ~ 9 % | 0.5 % | — | 0 % | 0 % |
++| 명시 앞먹임이 한도에 닿은 몫 | 0 ~ 0.1 % | 0 % | 0 % | — | — |
++
++- 걷기 · 서기 · 옆걸음에서 심판 한도를 넘은 전달 토크 0 %. 빗겨 베기(넘어진 판)는 앞 엉덩이 95 % 324 · 최고 543 N·m(넘은 몫 6.1 % — 넘어지며 부딪친 스텝 포함).
++- 엉덩이 모터는 걷는 스텝의 절반에서 예산에 묶여 있다 = 사람 한도 안에서는 이 PD 값(k 1800 × 2 · d 160 × 2)이 늘 포화한다. 옛 판은 감쇠 몫에 상한이 없었다.
++
++### 싸움
++
++| | 기준(본판 src) | 시제품 |
++|---|---|---|
++| `fights12.mjs` 죽음 | 6 / 12 | **0 / 12** |
++| 넘어짐 / 판 | 0.8 | **10.5** |
++| 벌어진 상처 / 판 | 6.4 | 0.5 |
++| 멈춤(crash) | 없음 | 없음 |
++
++- `honesty --scene=fight --secs=30 --seed=1..4`: 여덟 몸 모두 4.6 ~ 20.4 s 에 넘어짐. 받침 0.0 % · 밀기 0 · 몸 밖 관절 0 · 땅 법선 98.9 ~ 100.2 %. 넘어진 뒤 발 아닌 곳이 땅을 누른 몫 6 000 ~ 17 600 N·s(누워 있음).
++- 뜻: AI 가 걷고 돌고 베는 순간 균형을 잃고, **일어서기가 없어서**(아래) 판이 '둘 다 누움'으로 끝난다.
++
++## 4. 못 한 것과 그 까닭
++
++1. **걷는 빠르기 0.50 m/s (목표 ≥ 1.2).** 한 발로 선 동안 낼 수 있는 가속은 압력 중심 ± 9 cm → ± 1 m/s² 뿐이고, 나머지는 발 놓기로 내야 한다. 발 놓기 되먹임을 키우면(0.2 s × 0.8 m/s) 평균 0.9 m/s 까지 가지만 옆걸음 · 뒷걸음이 3.4 s 에 넘어졌다. 거꾸로 선 진자는 한 걸음에 캡처 점 어긋남을 e^(ω0·T) ≈ 4 배로 키우는데, 내딛는 발이 목표에 4 ~ 12 cm 못 미치거나 지나쳐 디딘다(사람 토크 한도 안에서 다리를 0.3 s 에 휘두르는 가속이 모자람 + 골반 yaw 흔들림).
++2. **빗겨 · 가로 베기에서 넘어짐.** 세로 베기는 선다(칼끝 18.5 m/s). 가로로 도는 획은 골반 돌림 목표(자세 지도)가 디딘 엉덩이 돌림근 70 N·m × 2 로 실행되는데, 칼 · 팔의 각운동량 반작용을 두 발 마찰(짝힘)로 받지 못하고 무게중심이 옆으로 밀린다 → 균형 걸음 → 걸음 중 넘어짐. R2′ 때의 결론(엉덩이 비틀기 길은 땅 yaw 용량이 천장)과 같은 자리.
++3. **가슴 밀기.** 두 발로 선 채 받는 40 ~ 80 N·s 는 하중 몫 옮기기로 0.5 s 에 멈춘다. 균형 걸음이 시작되면(한 발 디딤) 회복하지 못하는 일이 많다 — 1 번과 같은 발 놓기 정밀도 문제.
++4. **일어서기 · 무릎 버팀.** 받침 · 닻이 없으니 옛 무릎 꿇기 자세 목표만으로는 누운 몸이 서지 못한다(상태는 down ↔ getup 을 되풀이). 손 · 무릎으로 짚는 진짜 일어서기는 만들지 않았다.
++5. **츠바이핸더.** 무거운 칼(무게중심이 앞으로 더 나감)에서 서 있는 동안 1 m 흘러가고 걷기 · 베기에서 넘어진다 — 자리 되먹임에 적분이 없어 치우침이 남는다.
++
++## 5. 낮춰 둔 것 · 딸린 변화 (멈추지는 않음)
++
++- 날며 뛰기(두 발 뜬 동안의 받침 100 %) 지움 → 탄도. 뛰기는 안 쟀다.
++- 박찬 걸음 · 파고들기 · 세게 멈춤 · 런지 걸음의 '가속 한도 × 4'는 밀기 힘의 자름이었으므로 뜻이 없어졌다(가려는 속도만 남음). 기술 걸음의 몸 따라 나감도 속도 명령일 뿐이다.
++- 지형 무대: 발 핀 지형 갈래 지움 · 안 쟀다.
++- 넘어짐 판정에 '주저앉음'을 더함: 서 있는 상태에서 골반이 땅 위 0.5 m 밑으로 0.25 s 넘게 있으면 넘어짐(받침이 없어 주저앉음이 진짜로 생긴다) [판정 규칙 — 사장님 확인 전].
++- 걸음 값 바뀜(`GAIT`): 보폭 상한 0.62 → 0.8 · 박자 기울기 0.5 → 0.3(발 뜬 시간 0.29 → 0.37 s — 사람 토크로 다리를 휘두를 시간) · 발 들기 0.07 → 0.10 · 디딜 자리 고치기 0.6 → 0.85 · 고쳐 딛기 4 → 2 번 · 발 방향 문턱 0.35 → 0.6 rad.
++- 읽지 않게 된 설정 값이 `config.js` 에 남아 있다(`GAIT.assist · footExtra · pin* · handover* · catch* · sway · holdGain · kv · maxAccel · burstAccel` · `BODY.support* · upright* · anchorYawMax · moveAccel · maxAccel · upperShare` · `RUN.flyDamp`) — 코드는 지웠고 값 줄만 남음. 다음에 걷을 것.
++- `tools/sim/harness_m.mjs · jelly_harness.mjs` 의 `park()` 은 닻 옮김 대신 걸음 자리 버림으로 바꿨다. `f.anchor · f.uprightJoint` 를 읽는 다른 도구(chain_ledger · support_measure 등)는 고치지 않았다.
++- 대본 장면의 '치운 상대'는 땅(± 30 m) 밖 40 m 자리라 옛 판에서는 받침 힘이 허공에 띄워 두었다. 이제는 떨어진다(재는 몸과 무관).
++
++## 6. 심판 도구에 대해 (고치지 않음)
++
++- `honesty.mjs` 는 엔진 모터 값을 `f.uprightJoint?.rawSet` 에 건 갈고리로 받는다. 닻 관절이 없으면 그 갈고리가 안 걸려 **'요구(다시 센 값)' 칸에 엔진 모터 몫이 빠진다**(명시 토크만 셈 · `engineVsMotorReq` 는 '-'). '전달(운동량으로 잰 값)' 칸은 그대로 맞다. 고치려면 갈고리를 `f.joints[0].joint.rawSet` 에 걸면 된다.
++- 그 밖에는 이 시제품의 값과 어긋나는 점을 못 찾았다(받침 0 · 밀기 0 · 몸 밖 관절 0 · 땅 법선 99 ~ 100.6 % 가 서로 맞는다).
++
++## 7. 다음에 할 것
++
++1. 일어서기(손 · 무릎 접촉) — 없으면 싸움 판정이 성립하지 않는다.
++2. 내딛는 다리: 무릎을 더 접어 관성을 줄이고, 디딜 자리 오차를 4 cm 안으로. 그 뒤 발 놓기 되먹임을 다시 키워 빠르기를 잰다.
++3. 가로 획의 각운동량: 두 발 수평 힘쌍(넓은 자세)과 획 반대 발 걸음. 손 목표 틀을 실제 가슴으로.
++4. 자리 되먹임에 적분(무거운 칼의 치우침).
++5. 읽지 않는 설정 값 · 닻을 읽는 도구 정리.
+diff --git a/src/close_hold.js b/src/close_hold.js
+index 1efb2b25..49616874 100644
+--- a/src/close_hold.js
++++ b/src/close_hold.js
+@@ -55,8 +55,7 @@ export function holdPushBack(f) {
+   const dz = c.z - a.z;
+   const n = Math.hypot(dx, dz);
+   if (!(n > 1e-6)) return;
+-  const k = (CLOSE.legDrive * f.muscle * f.strength) / n;
+-  f.bodies.pelvis.addForce({ x: dx * k, y: 0, z: dz * k }, true);
++  f.pressDir = { x: dx / n, z: dz / n }; // 물리 2.0 시제품: 골반에 거는 힘 대신 상대 쪽으로 가려는 속도 (fighter.driveBalance 가 다음 스텝에 CLOSE.legDriveV 로 더함)
+   if (!o.aiControlled) closeLog(o).push += f.lastDt ?? 0;
+ }
+ 
+diff --git a/src/config.js b/src/config.js
+index 32628df5..73d3f7af 100644
+--- a/src/config.js
++++ b/src/config.js
+@@ -218,7 +218,7 @@ export const BODY = {
+ //  on=false 면 오늘 그대로 (closeStep 안 부름 → lift 0 → 접기 줄 그대로, 누르기 없음 → 다리 밀기 없음, AI closeQuarters 첫 줄 return)
+ export const CLOSE = {
+   // 밀치기 걸쇠 없음 — 닿는 거리 안에서 상대 쪽으로 밀면 곧장 밀치기 [사장님 10/25] · legDrive: 누르기 동안 딛은 발로 골반을 상대 가슴 쪽으로 미는 땅 반작용(N · × 근육 · 힘) [사장님 10/1 · 값 감독]
+-  legDrive: 400,
++  legDriveV: 0.8, // 누르기 · 맞밀기 동안 상대 쪽으로 가려는 속도(m/s — 물리 2.0 시제품: 옛 legDrive 400 N 은 골반에 거는 짝 없는 힘이었다. 이제 다리가 땅을 밀어 낸다) [확인 전]
+   // 닿는 거리(가슴~가슴, m, 기하): 팔이 가운데로 앞으로 닿는 거리 √(0.565²−0.2²) ≈ 0.53 (armIK 위팔 0.3 + 아래팔 0.27 − 0.005,
+   //  어깨 옆 0.2, fighter.js armIK) + 상대 가슴 반두께 0.11 (fighter.js partDefs chest) + 칼자루 hiltLength (weapons.js). 롱소드 ≈ 0.77.
+   //  빈손이면 null 을 넘겨 칼자루 0 (몸만). shove() 의 0.75 (fighter.js) 의 무기별판
+@@ -239,6 +239,56 @@ export const CLOSE = {
+   // 칼자루만: 묶이지 않고 가슴 사이 startD 안이면 공격 입력은 손잡이 찍기만(모르트슐라크 창은 나감 — 감독 해석) [사장님 11/14]
+ };
+ 
++// 물리 2.0 시제품 — 자세 제어 (SIMBICON 꼴 · src/simbicon.js): 몸 밖 힘 없이 관절 토크 + 땅 반력만으로 서고 · 걷고 · 돈다.
++//  받침 힘 · 걷기 밀기 · 닻(기준 막대) · 디딘 발 덧질량 · 발 핀은 없다. 값은 모두 시제품 값 [사장님 확인 전]
++export const POSE = {
++  pgs: 4, // 풀이 안쪽 반복(numInternalPgsIterations) — 엔진 시험 s5: 6 × 1 에서는 암시 모터가 명시 앞먹임을 먹는다 · 6 × 4 가 가장 싼 굳기(스텝 값 × 1.56)
++  contactHz: 120, // 접촉 고유 진동수(Hz · 엔진 기본 30) — 가벼운 발(1.1 kg) 위에 몸을 세우면 발이 15 mm 가라앉고 옆으로 구른다 · 디딘 발 + 2 kg 을 대신함
++  // 사람 관절 토크 한도 (센 어른 · N·m · 축 x 벌림 · 옆 굽힘 / y 비틀기 / z 굽힘 · 폄). 근육 몫(다침 · 기력)을 곱해 쓴다. 명시 앞먹임 + 암시 모터 요구 토크의 합이 이 안
++  torque: {
++    thigh: { x: 150, y: 70, z: 200 }, // 엉덩이: 벌림 · 모음 150 / 돌림 70 / 굽힘 · 폄 200
++    shin: { z: 250 }, // 무릎 폄
++    foot: { x: 60, y: 80, z: 180 }, // 발목: 안 · 바깥 번짐 60 / 돌림 80(근육이 아니라 인대 · 뼈 맞물림이 받는 축 — 발 마찰 한계 μ·N·0.13 m ≈ 77 과 같은 크기) / 발바닥 굽힘 180
++    abdomen: { x: 200, y: 120, z: 300 }, // 허리: 옆 굽힘 200 / 돌림 120 / 폄 300
++    chest: { x: 200, y: 120, z: 300 },
++  },
++  ffRate: 40, // 디딘 다리 하중 몫을 따라가는 빠르기(1/s) — 디딤 · 뗌 때 앞먹임 토크가 한 스텝에 튀지 않게
++  ffLoadOn: 0.08, // 디딘 발이 몸무게의 이 몫만큼 땅을 누르면 앞먹임을 다 건다 (공중에 뜬 '디딘' 다리를 뻗지 않게)
++  ffLeanMax: 0.6, // 앞먹임 땅 반력의 수평 ÷ 수직 상한 (마찰 0.9 안)
++  // 균형의 작은 고침 = 압력 중심 옮기기 (발목 토크 · 두 발 하중 몫): 바라는 무게중심 가속 a → 압력 중심 = 무게중심 − a ÷ ω0² (ω0² = g ÷ 무게중심 높이)
++  holdKp: 5, // 가만히 설 때 자리 되돌림 (1/s²)
++  holdKd: 4.5, // 가만히 설 때 속도 감쇠 (1/s)
++  shiftCalm: 0.08, // 제자리 걸음의 무게 옮기기는 무게중심이 이보다 느리고(m/s)
++  shiftRest: 0.6, //  앞 디딤 뒤 이만큼(s) 지난 뒤에 시작한다
++  shiftLiftV: 0.15, // 발을 떼는 순간 무게중심 빠르기 상한(m/s)
++  shiftIn: 0.02, // 무게를 옮기는 목표 = 남는 발의 발바닥 가운데에서 다른 발 쪽으로 이만큼(m) 안쪽
++  shiftKp: 5, // 제자리 걸음 앞 · 동안 무게중심을 남는 발 위로 옮기는 자리 되먹임 (1/s²)
++  shiftKd: 6, // 그 속도 감쇠 (1/s)
++  velKd: 0.8, // 걷는 동안 (가려는 속도 − 무게중심 속도) 되먹임 (1/s)
++  stanceAnkle: 0.15, // 땅을 누르는 디딘 발의 발목 모터 배율 — 발목은 앞먹임 토크(압력 중심)가 맡고 모터는 조금의 감쇠만
++  loadKi: 0.3, // 두 발 하중 몫 맞추기: (바라는 몫 − 실제 몫) 1 마다 다리 길이 목표를 초당 이만큼(m) 고침
++  loadMax: 0.03,
++  touchN: 0.04, // 디딘 발이 몸무게의 이 몫 넘게 눌러야 '땅을 디뎠다'고 본다 (그 밑이면 다리를 늘여 닿게 하고, 디딘 자리는 실제 발을 따라가지 않는다)
++  reachRate: 0.1, // 그때 다리 길이 목표를 늘이는 빠르기(m/s) // 그 고침의 상한(m)
++  copX: 0.09, // 한 발의 압력 중심이 발바닥 가운데에서 앞뒤로 움직일 수 있는 폭(m · 발 반길이 0.12)
++  copZ: 0.03, // 좌우 폭(m · 발 반폭 0.05)
++  placeToe: 0.05, // 발바닥 가운데는 발목보다 이만큼(m) 앞
++  placeV: 0.33, // 디딜 자리: 몸이 디딜 때 있을 곳 + 실제 속도 × 딛는 시간 × 이 값 (가려는 속도가 아니라 실제 속도 — 밀기 힘이 없으니 발 놓기가 빠르기를 정한다)
++  placeDv: 0.4, // 그 속도 차이는 이만큼(m/s)까지만 센다
++  placeKv: 0.14,
++  placeKb: 0.17, // 넘치는 속도 · 옆 속도 되먹임(s): 딛는 시간 몫(placeV × 딛는 시간 ≈ 0.17)과 더해 캡처 점(속도 ÷ ω0 ≈ 0.3 s)보다 조금 멀리 // 디딜 자리 속도 되먹임: + (실제 속도 − 가려는 속도) × 이 값(s) — 느리면 덜 내딛어 몸이 앞으로 쓰러지며 빨라지고, 빠르면 더 멀리 딛어 받는다
++  liftCp: 0.05, // 걷는 걸음은 캡처 점(무게중심 + 속도 ÷ ω0)이 디딘 채 남을 발에 이만큼(m) 안으로 다가온 뒤에 뗀다 (몸이 그 발 위로 넘어갈 수 있을 때)
++  liftLat: 0.1, // 옆으로는 캡처 점이 남을 발에서 이만큼(m) 안일 때
++  liftLatV: 0.4, // 그 옆 조건은 무게중심이 이보다 느릴 때만(m/s — 거의 서 있다가 걷기 시작할 때)
++  liftWaitMax: 0.6, // 그 기다림의 상한(s)
++  shiftTol: 0.03, // (좌우 — 발 반폭 0.05 안)
++  shiftTolX: 0.07, // 앞뒤로는 이만큼(m — 발 반길이 0.12 안) // 제자리 걸음(자세 고치기)은 캡처 점이 남을 발의 발바닥 가운데에서 이만큼(m) 안에 온 뒤에 뗀다
++  shiftMax: 2.0, // 그 기다림의 상한(s)
++  plantFollow: 10, // 디딘 자리(다리 IK 의 발목 목표)가 실제 발을 따라가는 빠르기(1/s)
++  sitY: 0.5, // 서 있는 상태에서 골반이 땅 위 이 높이 밑으로 sitT 초 넘게 주저앉으면 넘어짐으로 본다 (받침 힘이 없으니 주저앉음이 진짜로 생긴다)
++  sitT: 0.25,
++};
++
+ // 다리가 체중을 싣는 걸음 (gait.js)
+ export const GAIT = {
+   lowMax: 0.16, // 유파 걸음이 있는 몸만: 유파 바탕 낮춤 + 자세표·덧씌우기 낮춤의 합계 상한(m, 전역 기본 높이 기준). 비기 자세(secretStance) 동안은 상한 밖 (확인표 507)
+@@ -271,8 +321,8 @@ export const GAIT = {
+   swingD: 90,
+   swingFmax: 300,
+   cadence0: 2.05, // 걸음 박자(초당 걸음 수) 기준: 1 m/s일 때
+-  cadenceK: 0.5, // 1 m/s보다 1 m/s 빠를 때마다 늘어나는 박자
+-  maxStride: 0.62, // 한 걸음(한 발 → 다른 발) 최대 길이(m). 이보다 길어야 할 만큼 빠르면 박자가 빨라진다
++  cadenceK: 0.3, // 1 m/s보다 1 m/s 빠를 때마다 늘어나는 박자
++  maxStride: 0.8, // 한 걸음(한 발 → 다른 발) 최대 길이(m). 이보다 길어야 할 만큼 빠르면 박자가 빨라진다
+   dsFrac: 0.15, // 한 걸음 중 두 발로 딛고 있는 시간 비율
+   liftLoad: 0.35, // 다른 발에 몸무게의 이만큼이 실린 뒤에 발을 뗀다 (liftWait초까지 기다린다). 0 = 끔
+   liftWait: 0.1,
+@@ -280,9 +330,9 @@ export const GAIT = {
+   turnStepT: 0.3, // 몸을 돌리느라 발을 돌려 딛는 걸음의 발 드는 시간(초)
+   settleT: 0.36, // 자세를 고쳐 딛는 걸음의 발 드는 시간(초)
+   settleDelay: 0.15, // 멈추고 이만큼 지나면 펜싱 자세로 발을 고쳐 딛는다(초)
+-  settleMax: 4, // 멈춘 뒤 고쳐 딛는 최대 걸음 수 (끝없이 발을 꼼지락거리지 않게)
++  settleMax: 2, // 멈춘 뒤 고쳐 딛는 최대 걸음 수 (끝없이 발을 꼼지락거리지 않게)
+   settleTol: 0.08, // 자세 자리에서 이만큼(m) 벗어나면 고쳐 딛는다
+-  yawTol: 0.35, // 발 방향이 이만큼(라디안) 틀어지면 고쳐 딛는다 (몸을 돌렸을 때)
++  yawTol: 0.6, // 발 방향이 이만큼(라디안) 틀어지면 고쳐 딛는다 (몸을 돌렸을 때)
+   guardLength: 0.55, // 펜싱 자세: 앞발(칼 든 쪽)과 뒷발 앞뒤 거리(m)
+   guardWidth: 0.22, // 좌우 거리(m)
+   weightFront: 0.55, // 무게중심을 앞발 쪽에 두는 비율
+@@ -335,11 +385,11 @@ export const GAIT = {
+   reachMax: 0.55, // 딛은 발이 엉덩이에서 이보다 멀어지면 먼저 옮겨 딛는다(m)
+   hFrac: 0.8, // 발을 든 시간 중 이 비율 안에 딛을 자리까지 옮긴다 (나머지는 내려 딛기)
+   hFracCatch: 0.7, // 다리가 닿지 않아 옮기는 발일 때
+-  retarget: 0.6, // 발을 든 시간 중 이 비율까지는 딛을 자리를 계속 고친다
++  retarget: 0.85, // 발을 든 시간 중 이 비율까지는 딛을 자리를 계속 고친다
+   earlyTD: 0.3, // 발을 든 시간 중 이 비율이 지난 뒤 발에 몸무게의 earlyLoad배 넘게 실리면 바로 딛는다
+   earlyLoad: 0.25,
+   lateMax: 0.03, // 발이 땅에 늦게 닿으면 이만큼(초) 더 내린다
+-  lift: 0.07, // 걸을 때 발을 드는 높이(m)
++  lift: 0.1, // 걸을 때 발을 드는 높이(m)
+   liftCarry: 0.7, // 발을 뗄 때 몸 속도의 이 비율로 발이 출발한다 (뒤에 끌리지 않게)
+   toeUp: 0.2,
+   swingVmax: 6, // 내딛는 발목이 엉덩이에 대해 움직이는 최고 속도(m/s) // 발을 든 동안 발끝을 드는 각도(라디안)
+diff --git a/src/fighter.js b/src/fighter.js
+index 85692e67..2ff38e06 100644
+--- a/src/fighter.js
++++ b/src/fighter.js
+@@ -15,7 +15,7 @@ import * as THREE from 'three';
+ import { flowRecoveryScale } from './nagashi_recovery.js';
+ import { runStep, runFace, runWant } from './run.js'; // 뛰기 (11/18 사장님 · config RUN — 사람 · 11/19 셋 이상 판 AI 같은 셈)
+ import { cnStepTick } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 · 11/16 사장님 결정 켬)
+-import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, RUN, realS } from './config.js';
++import { POSE, STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, RUN, realS } from './config.js';
+ import { COMBAT_HOOKS } from './combat.js';
+ import { teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
+ import { BIT, GROUND_GROUPS, BODY_GROUPS, FOOT_GROUPS, WEAPON_GROUPS, HELMET_GROUPS, SELF } from './self_contact.js'; // 충돌 부류 · 제 몸 닿음 (11/20 — 자리 수 제한 없음)
+@@ -23,6 +23,7 @@ import { Skill, aiFingerHeld } from './skill.js';
+ import { GUN, gunFiring } from './gun.js'; // 쏘는 동안 발 묶음 (fireHold — AI 권총)
+ import { Stamina } from './stamina.js';
+ import { Gait, hybridJointDefs } from './gait.js';
++import { tuneWorld, torqueLimit, beginTorques, stanceFF, motorScale, logTorque, torqueSummary } from './simbicon.js'; // 물리 2.0 시제품 — 자세 제어 (몸 밖 힘 없이 관절 토크 + 땅 반력)
+ import { guardAt, finishAt } from './guards.js';
+ import { resolveSwordArt, applySwordArt } from './sword_art.js'; // 검술 풀이: 자세표·동작 라이브러리·덧씌우기·쥠·HUD 이름을 한 곳에서 (10/8 ① 구조)
+ import { corrStep } from './corr.js';
+@@ -863,28 +864,18 @@ export class Fighter {
+           raw.jointConfigureMotorModel(joint.handle, MOTOR_AXES[i], 1);
+         });
+       }
+-      this.joints.push({ joint, name: jd.c, parent: this.bodies[jd.p], child: this.bodies[jd.c], type: jd.type, manual: !!jd.manual, restInv: rest.clone().invert(), k: jd.k, d: jd.d, max: jd.max, target: new THREE.Quaternion() });
++      // tlim: 사람 관절 토크 한도(축마다 — config POSE.torque · 다리 · 허리만) · ff: 이번 스텝 명시 토크가 쓴 몫 (simbicon.js)
++      this.joints.push({ joint, name: jd.c, parent: this.bodies[jd.p], child: this.bodies[jd.c], type: jd.type, manual: !!jd.manual, restInv: rest.clone().invert(), k: jd.k, d: jd.d, max: jd.max, target: new THREE.Quaternion(), tlim: jd.manual ? null : torqueLimit(jd.c), ff: { x: 0, y: 0, z: 0 }, ffHit: false });
+     }
+     this.jointByName = Object.fromEntries(this.joints.map((j) => [j.name, j]));
+     // 자기 몸 충돌: 어깨에서 이어진 가슴 ↔ 위팔은 원래 겹쳐 있어 닿음을 끈다 (관절로 이어진 쌍)
+     this.jointByName.uarmS.joint.setContactsEnabled(false);
+     this.shoulderOn();
+ 
+-    // ── 똑바로 서기: 보이지 않는 "기준 막대"(운동학 물체)에 골반을 회전 모터로 묶는다 ──
+-    //  위치는 자유(골반을 끌고 다니지 않음), 회전만 모터로 맞춘다. 엔진이 한꺼번에 풀어서 떨리지 않는다.
+-    const pp = this.bodies.pelvis.translation();
+-    this.anchor = world.createRigidBody(
+-      RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(pp.x, pp.y, pp.z).setRotation(vecQ(yaw)),
+-    );
+-    this.uprightJoint = world.createImpulseJoint(
+-      RAPIER.JointData.generic({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 0),
+-      this.anchor,
+-      this.bodies.pelvis,
+-      true,
+-    );
+-    // 축 번호(측정 10/7, 디렉터 작업 공간 a021/axis_map_test): generic(축 (1,0,0)) 관절은 raw 3 = 닻 x, raw 4 = 닻 z(앞뒤 숙임), raw 5 = 닻 y(연직 = yaw). spherical(3·4·5 = x·y·z)과 다르다.
+-    for (const ax of MOTOR_AXES) this.uprightJoint.rawSet.jointConfigureMotorModel(this.uprightJoint.handle, ax, 1); // 1 = 힘(N·m) 기준
+-
++    // ── 똑바로 서기 (물리 2.0 시제품): 기준 막대(운동학 몸체 + 골반 회전 모터)는 없다. 골반 자세는 디딘 다리의 엉덩이 관절이 세계 틀 목표로 잡고
++    //  그 반작용은 다리 → 발 → 땅으로 간다 (simbicon.js · gait.legIK). pelvisWant = 바라는 골반 자세(세계 · 수직 + yaw) ──
++    this.pelvisWant = yaw.clone();
++    tuneWorld(world);
+ 
+     // ── 무기: 데이터 중심 무기고(weapons.js)에서 무기 하나를 골라 만든다 ──
+     //  기본값(o.weapon 없음)은 그대로 롱소드라서 기존 시뮬 결과가 바뀌지 않는다.
+@@ -1064,6 +1055,11 @@ export class Fighter {
+     return this.state !== 'dead';
+   }
+ 
++  /** 관절 토크 기록 요약 (물리 2.0 시제품 — 다리 · 허리: 요구 토크 평균 · 95 % · 최고 · 포화 몫. simbicon.js) */
++  torqueReport() {
++    return torqueSummary(this);
++  }
++
+   /** 다리 기능 (두 다리 평균) */
+   get legHealth() {
+     return (this.limbs.legF + this.limbs.legB) / 2;
+@@ -1709,7 +1705,7 @@ export class Fighter {
+       }
+     }
+     // 다리 밀기 (config.js CLOSE.legDrive, 사장님 10/1 02:05): 누르기 동안만, 내 발 하나라도 땅을 딛고 있으면 (gait.pinFeet 가 이 스텝에
+-    //  잰 발의 땅 접촉 힘 l.N, 걸음·발 떼기 판단과 같은 값) 골반을 상대 가슴 쪽으로 수평으로 민다. 땅 반작용이라 반대 힘은 땅이 받는다.
++    //  잰 발의 땅 접촉 힘 l.N, 걸음·발 떼기 판단과 같은 값) 상대 가슴 쪽으로 가려는 속도(CLOSE.legDriveV)를 더한다 — 다리가 땅을 밀어 나아가고 반작용은 땅 마찰이 받는다.
+     //  상대는 닿은 몸·칼로 받고, 넘어짐은 상대 균형이 정한다. 가슴 숙이기는 새 자세 값 없이 기존 걷는 방향 숙이기(driveBalance lean,
+     //  골반 앞 속도)가 맡는다
+     if (b?.phase === 'press' && ((g.legs.F.N || 0) > 0 || (g.legs.B.N || 0) > 0)) {
+@@ -1718,10 +1714,7 @@ export class Fighter {
+       const dx = c.x - a.x;
+       const dz = c.z - a.z;
+       const n = Math.hypot(dx, dz);
+-      if (n > 1e-6) {
+-        const k = (CLOSE.legDrive * this.muscle * this.strength) / n;
+-        this.bodies.pelvis.addForce({ x: dx * k, y: 0, z: dz * k }, true);
+-      }
++      if (n > 1e-6) this.pressDir = { x: dx / n, z: dz / n }; // 다음 스텝 driveBalance 가 가려는 속도에 더한다 (물리 2.0 시제품 — 골반에 거는 힘 없음)
+     }
+     if (b?.phase === 'press') {
+       // 최소 유지 시계 (누르기에 든 뒤 · 이 스텝까지) · 재기 셈(사람만 — 읽기만)
+@@ -1787,6 +1780,7 @@ export class Fighter {
+     this.muscle += (targetMuscle - this.muscle) * Math.min(1, dt * (targetMuscle > this.muscle ? 4 : 12));
+ 
+     for (const { rb } of this.meshes) rb.resetForces(true), rb.resetTorques(true);
++    beginTorques(this); // 명시 관절 토크가 쓴 몫을 지움 (simbicon.js — driveJoints 가 남은 예산을 읽는다)
+     this.jolt = Math.max(0, this.jolt - dt / RECOIL.joltTime);
+ 
+     if ((this.humanInput && !this.aiControlled) || this.run || this.runReach > 0) runStep(this, dt); // 뛰기 (11/18 — src/run.js: 들어감 · 나감 · 뛰는 쪽 · 조종 입력을 몸 틀로) — 사람 몸은 늘(예전 그대로) · 다른 몸은 스틱 길 몫(runReach)을 둔 때부터(11/19 셋 이상 판 AI — ai_run.js) · 1:1 AI · 시뮬 대본 몸은 두지 않아 안 부름
+@@ -1806,8 +1800,9 @@ export class Fighter {
+     this.flowArmScale = flowRecoveryScale(this); // 흘림당한 뒤 팔 늦춤 (nagashi_recovery.js — 사장님 10/18 22:1x 0.36 s → 10/21 시간 통일 0.4 s · 11/15 '0.4초' · 없으면 1)
+     this.updateBodyPose(dt);
+     this.driveBalance(dt);
+-    if (this.gait?.active) this.gait.pinFeet();
++    if (this.gait?.active) this.gait.footLoads(); // 디딘 발이 땅을 누르는 힘 읽기 (재기만 — 발 핀 힘은 없다)
+     this.applyPose(dt);
++    stanceFF(this, dt); // 디딘 다리 중력 보상 앞먹임 (명시 토크 쌍 — simbicon.js)
+     if (this.canShove) this.closeStep(); // 근접 밀치기: 누르기 동안 다리 밀기만 더한다 (shove() 의 힘 순서 그대로)
+     holdPushBack(this); // 맞밀기 (11/14 — 상대가 나를 밀치는 최소 유지 안이면 내 골반도 상대 쪽으로 · close_hold.js — 아니면 아무것도 안 함)
+     this.shove();
+@@ -1866,6 +1861,13 @@ export class Fighter {
+       const fallTilt = tilt - THREE.MathUtils.radToDeg(this.hunch);
+       if (fallTilt > BODY.fallTiltDeg || this.balance <= 0 || lostFooting) this.knockDown(fallTilt > BODY.fallTiltDeg + 15);
+       else if (this.legsCannotSupport) this.knockDown(false); // 다리가 버티지 못해 주저앉는다 (용암에 탄 다리 하나도 — legsCannotSupport)
++      else {
++        // 주저앉음 (물리 2.0 시제품 — 받침 힘이 없어 다리가 무너지면 골반이 실제로 내려앉는다): 골반이 땅 위 POSE.sitY 밑에 POSE.sitT 초 넘게 있으면 넘어짐
++        const pp = this.bodies.pelvis.translation();
++        const low = pp.y - this.groundHeightAt(pp.x, pp.z) < POSE.sitY;
++        this.sitTime = low ? (this.sitTime || 0) + dt : 0;
++        if (this.sitTime > POSE.sitT) this.knockDown(true);
++      }
+     } else if (this.state === 'down') {
+       if (this.stateTime > this.downTime && this.consciousness > 0.3 && !this.missingLeg) this.setState('getup'); // 다리를 잃었으면 서지 않는다 (절단 설계 §3-6)
+     } else if (this.state === 'getup') {
+@@ -2850,8 +2852,7 @@ export class Fighter {
+     // Gait.update 가 driveBalance 의 앞 방향 축(_v1)을 든 채로 이 함수를 부른다 — 같은 임시 벡터를 쓰면 앞 축이 덮여 걸음 균형이 틀어진다
+     //  (샛별 팀 A-001 7da5f3f 발견, 사장님 10/2 01:10 "복사해와"; 회귀 검사 tools/sim/balance_axes.test.mjs)
+     const up = _tiltUp.set(0, 1, 0).applyQuaternion(_q1);
+-    const ref = this.anchorUp || UP;
+-    return THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(up.dot(ref), -1, 1)));
++    return THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(up.dot(UP), -1, 1))); // 기준 = 세계 수직 (닻이 없다 — 물리 2.0 시제품)
+   }
+ 
+   /** 이 자리의 땅 높이 (지형 무대만 — 평지 무대는 늘 0. 걸음·효과·소리가 같이 쓴다) */
+@@ -2904,111 +2905,34 @@ export class Fighter {
+     const along = mv.y * speed * (mv.y < 0 ? (hybrid ? GAIT.backFactor : 0.75) : 1);
+     const side = mv.x * speed * (hybrid ? GAIT.sideFactor : 0.8);
+     const want = _v4.set(fwd.x * along + rgt.x * side, 0, fwd.z * along + rgt.z * side);
++    // 균형 걸음 몫 (물리 2.0 시제품): 가려는 속도 가운데 '캡처 점 쪽으로 딛어라'(stumble)에서 온 몫을 걸음 장치에 따로 알린다 — 걸음을 떼게는 하되(걷기 판단 · 발 고르기),
++    //  몸을 그쪽으로 밀거나(압력 중심) 발을 덜 내딛는 데는 쓰지 않는다. 옛 방식은 밀기 힘이 몸을 캡처 점 쪽으로 같이 밀었지만, 밀기 힘 없이 그렇게 하면 캡처 점이 달아난다
++    if (G) {
++      const sa = st.y * speed * (st.y < 0 ? (hybrid ? GAIT.backFactor : 0.75) : 1);
++      const ss = st.x * speed * (hybrid ? GAIT.sideFactor : 0.8);
++      G.stv.set(fwd.x * sa + rgt.x * ss, 0, fwd.z * sa + rgt.z * ss);
++    }
+     if (this.run && hybrid) runWant(this, want, fwd, dt); // 뛰기 (11/18 — src/run.js): 몸 앞 몫 × RUN.mul (뛰는 쪽을 볼수록 · 명령은 RUN.accel 로만 오르내림)
++    // 붙어 밀기의 다리 밀기 · 맞밀기 (closeStep · close_hold.js 가 지난 스텝에 적은 상대 쪽 단위 벡터): 골반에 거는 힘 대신 상대 쪽으로 가려는 속도 — 다리가 땅을 밀어 낸다
++    if (this.pressDir) {
++      if (this.state === 'stand') want.addScaledVector(_v5.set(this.pressDir.x, 0, this.pressDir.z), CLOSE.legDriveV * mus * this.strength);
++      this.pressDir = null;
++    }
+     this.updateFooting(dt, fwd, rgt, want);
+     if (hybrid) G.update(dt, want, fwd, rgt);
+     else if (G?.active) G.exit();
+-    // 두 발이 체중을 얼마나 받는지 (땅에 닿고 몸 아래에 있을수록 1).
+-    // 걷는 중엔 들어 올리는 발(스윙)에는 체중을 싣지 않는다 → 발을 뗄 수 있다
+-    const stanceOf = (thigh) => {
+-      if (hybrid) return G.legs[thigh === 'thighF' ? 'F' : 'B'].stance ? 1 : 0.05;
+-      if (this.gaitWeight < 0.3) return 1;
+-      const u = this.prevU[thigh] ?? 0;
+-      return u < 0.6 ? 1 : 0.05;
+-    };
+-    const load = { F: this.footLoad.F * stanceOf('thighF'), B: this.footLoad.B * stanceOf('thighB') };
+-    // 무릎 꿇기/일어나는 중엔 무릎과 손으로 땅을 짚으니 받칠 수 있다
++    // 무릎 꿇기/일어나는 중의 웅크림 (자세 값)
+     const kn = this.kneelAmount;
+-    if (kn > 0) {
+-      load.F = Math.max(load.F, 0.6);
+-      load.B = Math.max(load.B, 0.6);
+-    }
+     this.crouch = kn * 0.43;
+-    const loadSum = load.F + load.B;
+-
+-    // 다리 근육이 "골반은 위로, 발은 아래로" 민다. 발이 땅을 딛고 있으면 땅이 되받아쳐서 몸이 선다.
+-    // 발이 공중이면 아무것도 받쳐주지 않으니 그대로 주저앉는다. (보이지 않는 줄에 매달려 있지 않다)
+-    // 몸 전체가 함께 가속되도록 힘을 골반과 상체에 무게 비율대로 나눈다
+-    // (골반만 밀면 막대 아래만 잡아당긴 것처럼 상체가 뒤로 젖혀진다)
+-    const chest = this.bodies.chest;
+-    const push = (fx, fy, fz) => {
+-      const up = BODY.upperShare; // 가슴(+머리·팔)이 몸무게에서 차지하는 비율
+-      pelvis.addForce({ x: fx * (1 - up), y: fy, z: fz * (1 - up) }, true);
+-      chest.addForce({ x: fx * up, y: 0, z: fz * up }, true);
+-    };
+-
+-    // 1) 체중 받치기 (다리를 펴는 힘)
+-    //  날며 뛰기 (11/20 — 뛰는 몸만 · gait.flyAir): 두 발 모두 뜬 동안(한 걸음의 짧은 몫)은 골반 높이를 보조 힘이 다 받친다 — 발 반작용 없음 · 앞으로 미는 힘은 아래 grip 그대로(땅을 못 밂)
+-    if (mus > 0.1 && hybrid && G.flyAir) {
+-      const vy = this.terrain ? v.y - this.groundVelocityAt(p.x, p.z, v) : v.y;
+-      pelvis.addForce({ x: 0, y: THREE.MathUtils.clamp((M * g + BODY.supportStiffness * (G.h - p.y) - RUN.flyDamp * vy) * mus, 0, M * g * 2.5), z: 0 }, true);
+-    } else if (mus > 0.1 && loadSum > 0) {
+-      // 지형 무대: 서는 높이는 골반 밑 땅 위로, 수직 속도는 비탈을 따라 오르내리는 몫을 뺀 값 (평지 무대는 아래 원래 식 그대로)
+-      const h = hybrid ? G.h : this.terrain ? this.terrain.heightAt(p.x, p.z) + BODY.standHeight - (1 - this.legHealth) * 0.1 - this.stanceDrop - this.crouch : BODY.standHeight - (1 - this.legHealth) * 0.1 - this.stanceDrop - this.crouch;
+-      const vy = this.terrain ? v.y - this.groundVelocityAt(p.x, p.z, v) : v.y;
+-      // hybrid: 보조 힘은 몸무게의 GAIT.assist만 (일어선 직후엔 100%에서 천천히 줄인다). 나머지는 다리 관절이 받친다
+-      const share = hybrid ? G.supportShare(M * g) : BODY.support;
+-      let fy = M * g * share + BODY.supportStiffness * (h - p.y) - BODY.supportDamping * vy;
+-      // 다친 다리는 힘을 못 쓴다 → 체중을 버틸 수 있는 한계
+-      const legPower = (load.F * this.limbs.legF + load.B * this.limbs.legB) / loadSum;
+-      fy = THREE.MathUtils.clamp(fy * mus, 0, M * g * (1.2 + 1.3 * legPower) * Math.min(1, loadSum * 1.5));
+-      if (p.y > h + 0.25) fy = 0;
+-      push(0, fy, 0);
+-    }
+ 
+-    // 2) 걷기: 딛고 있는 발로 땅을 밀어서 나아간다 (발이 떠 있으면 못 민다, 미끄러우면 미끄러진다)
+-    const dvx = want.x - v.x;
+-    const dvz = want.z - v.z;
+-    const grip = Math.min(1, loadSum * 1.5);
+-    // 빠른 걸음(10/15 — gait.js fastBegin)이 가속 한도 배율을 두면(독일 간격 잡기 빠른 디딤 chase.accel — 헛침 뒤 박차고 들어감) 그 걸음 동안만 곱한다. 보통 걸음·이탈리아 박자 걸음은 × 1 (같은 수)
+-    //  첫 걸음 박차기(10/15)는 박찬 걸음 뒤에도 몸이 박찬 빠르기를 다 줄일 때까지(gait.burstBrake) 같은 배율 — 세게 멈춤. 간격 잡기의 잡기(gait.holdBrake)도
+-    //  잡기를 건 뒤 몸이 설 때까지 같은 배율(같은 값 — 새 값 없음). 둘 다 플레이어만이라 AI 는 늘 같은 수
+-    //  동방 보법 '가벼운 발'(10/15 — 유파 걸음 칸 light, 동방 1.5 · docs/strike/cn_light_feet_2026-10-15.md): 위 셋이 아닌 보통 걸음 몫(× 1)만 곱한다 —
+-    //  걷기 시작·멈춤·방향 바꿈이 같은 한도라 함께 빨라지고 최고 빠르기(speed)는 그대로. 몸의 일이라 사람·AI 같이. 칸 없는 유파·끔(0)은 × 1 그대로(바이트 같음)
+-    //  동방 AI 걸음 박자(10/15 — ai.js update 의 aiLightHold): 가벼운 발 몸의 AI 가 공격 꼴이 아닐 때(간 보기·막기·물러남)는 보통 걸음 몫 × 1(옛 가속) — 사람·끔은 그대로
+-    let aLim = hybrid ? GAIT.maxAccel * (G.fastK > 1 ? G.fastAcc : G.burstBrake || G.holdBrake || G.lungeBrake ? GAIT.burstAccel : !this.aiLightHold ? (G.P.light ?? 1) : 1) : BODY.maxAccel; // 사람이 발로 낼 수 있는 가속에는 한계가 있다 (다리로 서면 몸이 무거워 조금 더 느리게)
+-    if (this.run?.fast && hybrid) aLim = Math.max(aLim, RUN.accel * (G.fly && this.run.on && !this.run.brake ? RUN.flyPush : 1)); // 뛰기 (11/18): 뛰는 동안 · 뛰다 멈춰 걷는 빠르기로 줄 때까지 가속 한도 RUN.accel · 날며 뛰기(11/20)는 뛰는 동안 땅을 딛는 짧은 동안 × RUN.flyPush (한 걸음 평균이 RUN.accel 쯤 — 뛰기가 끝나 줄어들 때 · 거꾸로 꺾어 줄일 때는 그대로)
+-    const lim = M * aLim * grip;
+-    const fx = THREE.MathUtils.clamp(M * BODY.moveAccel * dvx, -lim, lim) * mus;
+-    const fz = THREE.MathUtils.clamp(M * BODY.moveAccel * dvz, -lim, lim) * mus;
+-    push(fx, 0, fz);
+-
+-    // 3) 똑바로 서기: 주로 딛고 있는 다리의 엉덩이 관절이 골반을 세운다 (applyPose 참고).
+-    //    여기 "기준 막대"는 평형감각 정도의 약한 보조일 뿐이다.
++    // (물리 2.0 시제품) 여기서 몸에 거는 힘은 없다 — 옛 1) 체중 받치기(골반을 위로 미는 힘 · 날며 뛰기 몫 포함) · 2) 걷기 밀기(골반 · 가슴 수평 힘) ·
++    //  3) 기준 막대(운동학 몸체에 묶은 골반 회전 모터)를 걷어 냈다. 몸무게 · 나아감 · 세움 · 돌림은 모두 다리 관절 토크와 땅 반력이 한다:
++    //   가려는 속도 want → 걸음 장치(gait.update: 발 놓기 되먹임 + 디딘 다리 IK 의 엉덩이 목표 옮김) · 골반 자세 → 디딘 엉덩이 모터(gait.legIK 가 pelvisWant 를 읽음) ·
++    //   몸무게 → 디딘 다리 중력 보상 앞먹임(simbicon.js stanceFF) + 관절 모터.
+     const vFwd = v.x * fwd.x + v.z * fwd.z;
+     this.localVel.set(vFwd, v.x * rgt.x + v.z * rgt.z);
+-    this.anchor.setNextKinematicTranslation({ x: p.x, y: p.y, z: p.z });
+-    // 자세에 따라 골반을 튼다 (서 있을 때만)
+-    let anchorQ = this.yaw;
+-    if (this.state === 'stand' && this.pelvisYawOffset) anchorQ = _qt.setFromAxisAngle(UP, this.heading + this.pelvisYawOffset);
+-    this.anchor.setNextKinematicRotation(vecQ(anchorQ));
+-    this.anchorUp = (this.anchorUp || new THREE.Vector3()).set(0, 1, 0).applyQuaternion(anchorQ);
+-    const hold = THREE.MathUtils.clamp(1 - this.offBalance / BALANCE.fallRange, 0.15, 1);
+-    const assist = BODY.uprightAssist * mus * hold * (0.3 + 0.7 * Math.min(1, hybrid && G.flyAir ? 1 : loadSum)); // 날며 뛰기 (11/20): 두 발 모두 뜬 짧은 동안도 딛은 때처럼
+-    const raw = this.uprightJoint.rawSet;
+-    for (const ax of MOTOR_AXES) {
+-      let kk = BODY.uprightStiffness * assist, dd = BODY.uprightDamping * assist;
+-      if (ax === MOTOR_AXES[2] && BODY.anchorYawMax > 0 && this.state === 'stand') {
+-        // R2′ 닻 yaw 토크 상한(실험, 사장님 10/8 15:10; config BODY.anchorYawMax): 모터엔 상한 API 가 없어 이번 스텝의 요구 토크(k·e − d·ω, 아래 chainDbg.anchorTau 와 같은 식)가
+-        //  상한을 넘으면 그 비율만큼 강성·감쇠를 함께 낮춘다 → 이 스텝의 모터 토크 ≈ 상한(한 스텝 뒤처진 근사, 묵시 풀이라 안정). 0 = 오늘(무한)
+-        const ap = _cv1.set(1, 0, 0).applyQuaternion(rot(pelvis, _cq1));
+-        const psi = Math.hypot(ap.x, ap.z) > 0.3 ? Math.atan2(-ap.z, ap.x) : this.heading;
+-        const psiStar = this.pelvisYawOffset ? this.heading + this.pelvisYawOffset : this.heading;
+-        const e = Math.atan2(Math.sin(psiStar - psi), Math.cos(psiStar - psi));
+-        // 감쇠는 닻에 대한 **상대** 각속도에 걸린다 — 닻(운동학 몸체)도 목표 yaw 를 따라 도니 ω_pelvis 만 쓰면 요구 토크를 10 배 넘게 부풀린다(10/8 15:25 디버그: 세계 ω 4 rad/s × 330 = 1300 N·m 로 읽힘, 장부 실측 최고 233)
+-        const wA = this.anchorYawPsiPrev == null ? 0 : Math.atan2(Math.sin(psiStar - this.anchorYawPsiPrev), Math.cos(psiStar - this.anchorYawPsiPrev)) / dt;
+-        this.anchorYawPsiPrev = psiStar;
+-        const tau = kk * e - dd * (pelvis.angvel().y - wA); // 요구 토크(상대 각속도 감쇠) — 잔차 장부 r_V 와 상관 0.99·비 1.2(chain_ledger τ̂ 와 같은 식). 묵시 모터라 한 스텝 뒤처진 근사: 실측 최고는 상한의 1.3~2 배까지 샌다(10/8 15:30 보정표)
+-        const sc = Math.min(1, BODY.anchorYawMax / Math.max(1e-6, Math.abs(tau)));
+-        kk *= sc;
+-        dd *= sc;
+-        this.anchorYawTau = tau; // 측정용: 요구 토크(상한 전)
+-        this.anchorYawPeak = Math.max(this.anchorYawPeak || 0, Math.abs(tau));
+-        this.anchorYawN = (this.anchorYawN || 0) + 1;
+-        if (sc < 1) this.anchorYawSat = (this.anchorYawSat || 0) + 1;
+-      }
+-      raw.jointConfigureMotorPosition(this.uprightJoint.handle, ax, 0, kk, dd);
+-    }
++    // 바라는 골반 자세 (세계 틀): 수직 + heading (서 있을 때는 자세에 따른 골반 돌림을 더함)
++    this.pelvisWant.setFromAxisAngle(UP, this.state === 'stand' && this.pelvisYawOffset ? this.heading + this.pelvisYawOffset : this.heading);
+     // 걷는 방향으로 상체를 살짝 숙인다 (골반-가슴 관절 목표)
+     this.lean = this.state === 'stand' ? THREE.MathUtils.clamp(-vFwd * 0.05, -0.12, 0.12) : 0;
+   }
+@@ -3020,12 +2944,10 @@ export class Fighter {
+     let M = 0;
+     const com = _c1.set(0, 0, 0);
+     const vel = _c2.set(0, 0, 0);
+-    // hybrid: 딛은 발에 더한 무게(GAIT.footExtra)는 땅이 바로 받치는 몫이라 무게중심 계산에서 뺀다
+-    //  (발을 들고 디딜 때마다 무게중심이 튀지 않게). 발 몸체의 무게 = 발 콜라이더 무게
+     const G = this.gait;
+     for (const name in this.bodies) {
+       const b = this.bodies[name];
+-      const m = G && (name === 'footF' || name === 'footB') ? b.collider(0).mass() : b.mass();
++      const m = b.mass();
+       const c = b.worldCom();
+       const v = b.linvel();
+       com.x += c.x * m;
+@@ -3039,6 +2961,7 @@ export class Fighter {
+     vel.multiplyScalar(1 / M);
+     this.com = this.com || new THREE.Vector3();
+     this.com.copy(com);
++    (this.comVel ??= new THREE.Vector3()).copy(vel); // 무게중심 수평 속도 (걸음 장치의 발 놓기 · 디딘 다리 밀기가 읽는다)
+     const w0 = Math.sqrt(9.81 / Math.max(0.5, this.terrain ? com.y - this.terrain.heightAt(com.x, com.z) : com.y)); // 지형 무대: 무게중심 높이는 그 밑 땅 위로
+     const cpx = com.x + vel.x / w0;
+     const cpz = com.z + vel.z / w0;
+@@ -3269,6 +3192,36 @@ export class Fighter {
+       // 목표가 움직이는 속도 (걸음처럼 계속 움직이는 목표를 뒤처지지 않게)
+       const prev = j.prevRV || (j.prevRV = _rv.clone());
+       const raw = j.joint.rawSet;
++      if (j.tlim) {
++        // 다리 · 허리 (물리 2.0 시제품 — 사람 관절 토크 한도 POSE.torque): 축마다 한도 × 근육 몫에서 명시 토크가 쓴 몫(j.ff)을 뺀 것이 엔진 모터의 예산.
++        //  스프링 몫은 목표 오차 자르기로, 스프링 + 감쇠 몫의 크기 합은 강성 · 감쇠를 같은 비율로 낮춰 예산 안으로 (엔진에 모터 최대 힘이 없다 — simbicon.js motorScale)
++        rot(j.parent, _qpi).invert();
++        const wc = j.child.angvel();
++        const wp = j.parent.angvel();
++        _wr.set(wc.x - wp.x, wc.y - wp.y, wc.z - wp.z).applyQuaternion(_qpi); // 부모 틀에서 본 상대 각속도
++        let req2 = 0;
++        let sat = false;
++        for (const [i, ax] of j.type === 'hinge' ? AX_HINGE : AX_BALL) {
++          const budget = Math.max(0, j.tlim[ax] * mus - j.ff[ax]);
++          const ga = j.axGain ? j.axGain[ax] : 1; // 축마다 모터 배율 (디딘 발목의 압력 중심 축 — gait.js)
++          const ka = k * ga;
++          const da = d * ga;
++          const mErr = budget / Math.max(1, ka);
++          const e = _rv[ax] - _cur[ax];
++          const t = _cur[ax] + THREE.MathUtils.clamp(e, -mErr, mErr);
++          const v = THREE.MathUtils.clamp((_rv[ax] - prev[ax]) * inv, -15, 15);
++          const sp = ka * (t - _cur[ax]);
++          const dm = da * (v - _wr[ax]);
++          const sc = motorScale(sp, dm, budget);
++          if (sc < 1 || Math.abs(e) > mErr) sat = true;
++          raw.jointConfigureMotor(j.joint.handle, j.type === 'hinge' ? HINGE_AXIS : MOTOR_AXES[i], t, v, ka * sc, da * sc);
++          const tot = j.ff[ax] + (Math.abs(sp) + Math.abs(dm)) * sc;
++          req2 += tot * tot;
++        }
++        logTorque(this, j, Math.sqrt(req2), sat);
++        prev.copy(_rv);
++        continue;
++      }
+       if (j.type === 'hinge') {
+         let mErr = maxErr;
+         if (n === 'farmS') {
+@@ -4909,6 +4862,10 @@ function sayaGuard(f) {
+   return _sgG;
+ }
+ const _qp = new THREE.Quaternion();
++const _qpi = new THREE.Quaternion();
++const _wr = new THREE.Vector3();
++const AX_BALL = [[0, 'x'], [1, 'y'], [2, 'z']];
++const AX_HINGE = [[2, 'z']];
+ const _qc = new THREE.Quaternion();
+ const _qt2 = new THREE.Quaternion();
+ const _mE = new THREE.Vector3();
+diff --git a/src/gait.js b/src/gait.js
+index 7e3727fb..98bf8114 100644
+--- a/src/gait.js
++++ b/src/gait.js
+@@ -21,7 +21,8 @@
+ // ─────────────────────────────────────────────────────────────
+ import { guarded, rethrowRapier } from './rapier_guard.js'; // 11/17 Rapier 콜백 예외 드러내기
+ import * as THREE from 'three';
+-import { BODY, GAIT, RUN } from './config.js';
++import { BODY, GAIT, RUN, POSE } from './config.js';
++import { swingTorque } from './simbicon.js'; // 물리 2.0 시제품 — 내딛는 발 이끌기를 엉덩이 · 무릎 토크 쌍으로
+ import { TRADITIONS, FAST_ACCENT, footworkTradition } from './schools.js';
+ import { runFace } from './run.js'; // 뛰는 동안 바라볼 쪽 (11/18 뛰기 · 11/20 멈추는 동안)
+ import { kitOff } from './skill_kit.js'; // 플레이어 스킬트리 몫 (10/21 — 이탈리아 물러서기 I3 · 이베리아 옆 박차기 B2 · 독일 간격 잡기 G2)
+@@ -180,10 +181,8 @@ export class Gait {
+     const s = fighter.side;
+     this.legs = { F: mkLeg('F', s), B: mkLeg('B', -s) };
+     this.active = false;
+-    this.lev = 0; // 넘겨받는 중 더하는 보조 힘 비율 (1 = 예전 방식 그대로, 0 = 다리가 GAIT.assist 몫 빼고 전부)
+-    this.levH = 0; // 그중 일어선 직후 넘겨받기 몫 (골반 높이는 다리가 닿는 만큼만)
+-    this.levC = 0; // 그중 붙잡기 반사 몫 (다리가 닿지 않아도 골반을 제 높이에 둔다)
+-    this.handU = 1; // 넘겨받기 진행 (0 → 1)
++    this.stv = new THREE.Vector3(); // 가려는 속도 가운데 균형 걸음(stumble) 몫 (fighter.driveBalance 가 적음 — 압력 중심 · 발 놓기 되먹임에서는 뺀다)
++    this.acc = new THREE.Vector3(); // 바라는 무게중심 수평 가속 (물리 2.0 시제품 — update 가 정하고 simbicon.js stanceFF 가 압력 중심 자리로 바꿔 씀)
+     this.h = BODY.standHeight; // 골반 높이 목표
+     this.hNom = BODY.standHeight;
+     this.hv = 0;
+@@ -243,30 +242,28 @@ export class Gait {
+       L.stance = true;
+       L.Nf = 0; // 새 서기: 지난 서기의 걸러진 하중 기록을 버린다 — 안 버리면 넘어짐→기립 뒤 첫 서기에서 묵은 Nf(수백 N)가 핀 마찰 한도로 쓰여 미끄러진다 (10/7; 샛별 10차 '새 서기 Nf 초기화' 와 같은 결함, 공통 조상 코드)
+       this.plantAt(L);
+-      this.footMass(L, true);
+       L.tLand = 1;
++      L.w = 0;
+     }
+-    // 라운드 시작: 이미 두 발로 서 있으니 바로 다리가 받친다. 일어선 직후: 보조 힘 100%에서 천천히 넘겨받는다
+-    this.levH = this.started ? 1 : 0;
+-    this.handU = this.started ? 0 : 1;
+-    this.levC = 0;
+-    this.lev = this.levH;
++    // 라운드 시작이든 일어선 직후든 다리가 바로 받친다 (보조 힘 넘겨받기는 없다 — 물리 2.0 시제품). re = 일어선 직후(높이 목표를 지금 높이에서 출발)
++    const re = !!this.started;
+     this.started = true;
++    this.acc.set(0, 0, 0);
+     this.sinceEnter = 0;
+     const p = this.f.bodies.pelvis.translation();
+     // 일어선 직후: 골반 높이 목표는 지금 높이에서 출발해 천천히 자세 높이로 간다 (한 번에 바꾸면 솟았다가 주저앉는다)
+     if (this.f.terrain) {
+       // 지형 무대(화산섬)만: 높이 목표 h·hNom 은 월드 높이, 거르는 자세 높이 hNomF 와 hv 는 골반 밑 땅 위로 (샛별 0116047c 그대로)
+       this.groundY = this.f.terrain.heightAt(p.x, p.z);
+-      this.hNomF = this.levH ? clamp(p.y - this.groundY, this.P.guardHeight - 0.03, this.P.walkHeight) : undefined;
++      this.hNomF = re ? clamp(p.y - this.groundY, this.P.guardHeight - 0.03, this.P.walkHeight) : undefined;
+       this.hNom = this.groundY + BODY.standHeight;
+       this.h = p.y;
+       const v = this.f.bodies.pelvis.linvel();
+-      this.hv = this.levH ? clamp(v.y - this.f.groundVelocityAt(p.x, p.z, v), -0.3, 0.3) : 0;
++      this.hv = re ? clamp(v.y - this.f.groundVelocityAt(p.x, p.z, v), -0.3, 0.3) : 0;
+     } else {
+-      this.hNomF = this.levH ? clamp(p.y, this.P.guardHeight - 0.03, this.P.walkHeight) : undefined;
++      this.hNomF = re ? clamp(p.y, this.P.guardHeight - 0.03, this.P.walkHeight) : undefined;
+       this.h = p.y;
+-      this.hv = this.levH ? clamp(this.f.bodies.pelvis.linvel().y, -0.3, 0.3) : 0;
++      this.hv = re ? clamp(this.f.bodies.pelvis.linvel().y, -0.3, 0.3) : 0;
+     }
+     this.sinceTD = 0;
+     this.walking = false;
+@@ -309,7 +306,8 @@ export class Gait {
+     for (const k of ['F', 'B']) {
+       const l = this.legs[k];
+       J[l.thigh].gain = J[l.shin].gain = J[l.foot].gain = 1;
+-      this.footMass(l, false);
++      J[l.foot].axGain = null;
++      l.w = 0;
+     }
+     this.req = null;
+   }
+@@ -781,41 +779,13 @@ export class Gait {
+       this.hNom += dy;
+       this.groundY = gy;
+     }
+-    // 넘겨받기: 일어선 직후엔 발을 펜싱 자세로 고쳐 딛을 때까지 보조 힘을 유지한다
+-    //  (무릎 꿇었던 자리 그대로 한 발로 서면 골반이 주저앉는다)
++    // (물리 2.0 시제품) 일어선 직후의 보조 힘 넘겨받기 · 붙잡기 반사(주저앉거나 기울면 받침 힘을 되살림)는 없다 — 받침 힘 자체가 없다.
++    //  크게 밀리면 걸음 서두르기(아래 hurry)와 균형 걸음(fighter.updateFooting stumble)이 발을 캡처 점 쪽에 놓는다
+     this.sinceEnter += dt;
+-    const settled = !this.walking && this.legs.F.stance && this.legs.B.stance && this.sinceTD > 0.15 && !this.settleLeg(true);
+-    const walkedIn = this.walking && this.walkT > 0.8;
+-    if (this.sinceEnter > GAIT.handoverMax || settled || walkedIn) {
+-      // 넘겨받기는 부드럽게 (처음과 끝이 느리게: 끝에서 한 번에 다리로 넘기면 골반이 처진다)
+-      this.handU = Math.min(1, this.handU + dt / GAIT.handover);
+-      this.levH = 1 - minJerk(this.handU);
+-      this.levC = Math.max(0, this.levC - dt / GAIT.handover);
+-    }
+-    // 붙잡기 반사: 골반이 크게 주저앉거나 몸이 많이 기울면(세게 맞음) 보조 힘을 되살린다 → 예전 방식처럼 버틴다.
+-    //  보조가 커지면 딛은 발의 정지 마찰(pinFeet)도 약해져서 발이 끌려가며 버틴다
+-    {
+-      const sag = Math.max(this.h, this.hNom - 0.04) - f.bodies.pelvis.translation().y;
+-      const need = Math.max(
+-        clamp((sag - GAIT.catchSag) / 0.08, 0, 1),
+-        clamp((f.tiltDeg() - GAIT.catchTilt) / 20, 0, 1),
+-        clamp((f.offBalance - GAIT.catchOff) / 0.25, 0, 1),
+-      );
+-      if (need > this.levC) this.levC += (need - this.levC) * Math.min(1, dt * 30);
+-      this.lev = Math.max(this.levH, this.levC);
+-    }
+-    // 다리가 실제로 땅을 누르는 힘 (지난 스텝, 걸러서): 넘겨받는 동안 보조 힘을 그만큼 덜 쓴다
+     this.Mg = this.Mg || f.totalMass * 9.81;
+-    //  (딛은 발에 더한 무게(footExtra)는 땅이 바로 받치는 몫이라 뺀다)
+-    const Nn = Math.max(0, (this.legs.F.N || 0) + (this.legs.B.N || 0) - 9.81 * ((this.legs.F.N > 0 ? this.legs.F.extra || 0 : 0) + (this.legs.B.N > 0 ? this.legs.B.extra || 0 : 0)));
+-    this.Nsum = (this.Nsum ?? Nn) + (Nn - (this.Nsum ?? Nn)) * Math.min(1, dt * 20);
+     const dHead = wrap(f.heading - this.prevHead);
+     this.prevHead = f.heading;
+     this.headRate += (dHead / dt - this.headRate) * Math.min(1, dt * 10);
+-    // 일어선 직후(보조 힘을 넘겨받는 중)엔 천천히 걷는다
+-    //  (보조가 다 빠진 뒤에도 조금 더 천천히 빨라진다: 한 번에 빨라지면 첫 걸음에 골반이 처진다)
+-    this.slow = Math.max(this.lev, (this.slow || 0) - dt / GAIT.handoverRamp);
+-    if (this.slow > 0) want.multiplyScalar(1 - GAIT.handoverSlow * minJerk(this.slow));
+     // 돌면서 걸을 땐 (속도 × 도는 빠르기 = 방향을 트는 가속)이 발로 낼 수 있는 만큼만 빨리 간다
+     //  (빠르게 걸으며 휙 돌면 몸이 옆으로 흘러 뒤에 남은 발이 닿지 않고 끌린다)
+     if (GAIT.turnAccel > 0) {
+@@ -1053,7 +1023,7 @@ export class Gait {
+         const hz = l.hip.z - l.plant.z;
+         //  (일어선 직후처럼 "딛은" 발이 실제로는 떠 있으면 그 발부터 딛는다: 다른 발을 들면 두 발 다 떠 버린다)
+         //  (서 있는 중에도 딛은 발이 발끝까지 땅에서 떠 무게가 없으면 (골반이 들려 다리가 닿지 않음) 그 발을 다시 딛는다: 공중에 뜬 채 끌려가지 않게)
+-        const air = l.soleY > GAIT.airFoot && (this.levH > 0 || (l.toeY > GAIT.airFoot * 0.75 && (l.N || 0) < 0.05 * this.Mg));
++        const air = l.soleY > GAIT.airFoot && l.toeY > GAIT.airFoot * 0.75 && (l.N || 0) < 0.05 * this.Mg;
+         const rm = f.secretStance?.reach ?? this.P.reachMax; // 비기 자세(런지·발도)는 넓게 벌린 발을 그대로 둔다 (secretStance.reach). 유파 칸 reachMax(10/10 일본 낮은 자세 — 골반이 낮으면 다리가 옆으로 더 닿는다), 없으면 GAIT 그대로
+         if (hx * hx + hz * hz > rm * rm || air) next = next || k;
+       }
+@@ -1122,7 +1092,9 @@ export class Gait {
+       } else if (this.idleT > GAIT.settleDelay && !f.feetHeld && !f.fireHold) {
+         // (판 시작 정지 · AI 가 쏘는 동안(fireHold) 엔 자세 고쳐 딛기도 미룬다. 닿지 않는 발·균형 잡는 걸음은 그대로)
+         // 자리 고치기는 settleMax번까지, 몸을 돌려 발이 틀어진 것은 언제든 (발을 돌려 딛는다)
+-        next = this.settleLeg(this.settles < GAIT.settleMax);
++        //  (무게를 옮기며 기다리는 중인 고쳐 딛기(shiftPend — 아래 무게 옮기기)는 그대로 잇는다: 자세 자리가 무게중심 기준이라, 무게를 옮기는 동안 '고칠 발'이 깜빡이면
++        //   옮기다 말고 되돌아가기를 0.5 s 마다 되풀이한다)
++        next = this.shiftPend ?? this.settleLeg(this.settles < GAIT.settleMax);
+         if (next) {
+           kind = 'settle';
+           this.settles++;
+@@ -1137,11 +1109,62 @@ export class Gait {
+       //   몸이 앞서 나가 다음 따라붙는 발이 옮겨 딛기(catch)가 됐다(가까이 뒤 반 3 s catch 3 · gait_even_feel NI). 짝 발 뜬 시간이 짧아(0.13 s) 끌며 들어도 일찍 디딤·catch 가 늘지 않음)
+       if (next && kind === 'walk' && !PR?.even && !this.fly && GAIT.liftLoad > 0 && vLat < 0.6 * speed && this.sinceTD < (pairTrail ? gate : Tds) + GAIT.liftWait) {
+         const o = L[next === 'F' ? 'B' : 'F'];
+-        //  (보조 힘이 많이 받칠 땐(일어선 직후 등) 다리에 실리는 무게도 그만큼 적다)
+         //  (뗄 발에 이미 무게가 거의 없으면(뒤로 빠져 떠 있음) 기다리지 않는다: 뛰듯 갈 땐 기다리는 동안 딛은 발이 끌린다)
+-        const need = GAIT.liftLoad * this.Mg * (1 - this.lev);
++        const need = GAIT.liftLoad * this.Mg;
+         if ((L[next].N || 0) > GAIT.liftOwn * need && (!o.stance || (o.N || 0) < need)) next = null;
+       }
++      // 캡처 점 규칙 (물리 2.0 시제품 — 밀어 주는 힘이 없다): 걷는 걸음은 캡처 점(무게중심 + 속도 ÷ ω0)이 디딘 채 남을 발에 POSE.liftCp 안으로 다가온 뒤에 뗀다.
++      //  그 전에 떼면 몸이 남은 발 위로 넘어가지 못하고 되돌아 떨어진다(거꾸로 선 진자). 두 발로 딛고 있는 동안 디딘 다리가 골반을 그쪽으로 민다(아래 ④). POSE.liftWaitMax 뒤에는 그냥 뗀다
++      //  옆으로도: 캡처 점이 남을 발에서 옆으로 POSE.liftLat 넘게 떨어져 있으면(두 발을 옆으로 넓게 벌린 채 걷기 시작) 그 발 쪽으로 무게를 옮긴 뒤에 뗀다(아래 ④ shiftWalk)
++      this.shiftLeg = null;
++      this.shiftWalk = false;
++      if (next && kind === 'walk' && !this.fly && f.com && f.comVel && (this.liftT || 0) < POSE.liftWaitMax) {
++        const o = L[next === 'F' ? 'B' : 'F'];
++        const sp = Math.hypot(want.x, want.z);
++        if (o.stance && o.sole && sp > 1e-3) {
++          const w0 = Math.sqrt(9.81 / Math.max(0.5, f.com.y - o.sole.y));
++          const ex = f.com.x + f.comVel.x / w0 - o.sole.x;
++          const ez = f.com.z + f.comVel.z / w0 - o.sole.z;
++          const along = (ex * want.x + ez * want.z) / sp;
++          const lat = (ez * want.x - ex * want.z) / sp;
++          //  (옆 조건은 거의 서 있을 때만 — 이미 걷는 몸이 옆으로 흐를 땐 기다리지 않고 곧 그쪽에 딛어 받아야 한다)
++          if (along < -POSE.liftCp || (Math.abs(lat) > POSE.liftLat && Math.hypot(f.comVel.x, f.comVel.z) < POSE.liftLatV)) {
++            next = null;
++            this.shiftLeg = o;
++            this.shiftWalk = true;
++            this.liftT = (this.liftT || 0) + dt;
++          }
++        }
++      }
++      if (!this.shiftWalk) this.liftT = 0;
++      // 무게 옮기기 (물리 2.0 시제품): 제자리에서 자세를 고쳐 딛는 걸음은 캡처 점이 남을 발 위(발바닥 가운데에서 POSE.shiftTol 안)에 온 뒤에 뗀다 — 사람이 발을 떼기 전에
++      //  몸무게를 다른 발로 옮기는 것. 그 전에 떼면 몸이 뗀 발 쪽으로 쓰러진다(옛 방식은 밀기 힘과 닻이 붙잡아 줬다). 기다리는 동안 아래 ④ 가 무게중심을 그 발 위로 민다.
++      //  POSE.shiftMax 초 뒤에는 그냥 뗀다
++      if (kind !== 'settle') this.shiftPend = null;
++      if (next && kind === 'settle' && !this.pairStop && f.com && f.comVel) {
++        const o = L[next === 'F' ? 'B' : 'F'];
++        if (o.stance && o.sole) {
++          const w0 = Math.sqrt(9.81 / Math.max(0.5, f.com.y - o.sole.y));
++          const vc = Math.hypot(f.comVel.x, f.comVel.z);
++          if (!this.shiftPend && (vc > POSE.shiftCalm || this.sinceTD < POSE.shiftRest)) {
++            // 몸이 아직 움직이는 중(앞 걸음을 디딘 직후)엔 다음 고쳐 딛기를 시작하지 않는다 — 움직이는 몸으로 무게를 옮기면 지나쳐서 한 발 위에서 옆으로 쓰러진다
++            this.settles--;
++            next = null;
++          } else if (this.offFoot(o, f.com.x + f.comVel.x / w0, f.com.z + f.comVel.z / w0) > 1 || vc > POSE.shiftLiftV) {
++            // 아직 무게가 안 옮겨졌다: 기다린다. POSE.shiftMax 초가 지나도 안 되면 이 고쳐 딛기는 그만둔다(무게가 실린 발을 억지로 떼면 몸이 그쪽으로 쓰러진다 — 고쳐 딛기 한 번을 쓴 것으로 셈)
++            if ((this.shiftT = (this.shiftT || 0) + dt) < POSE.shiftMax) {
++              this.shiftLeg = o;
++              this.shiftPend = next;
++              this.settles--;
++            } else {
++              this.shiftT = 0;
++              this.shiftPend = null;
++            }
++            next = null;
++          } else this.shiftPend = null;
++        }
++      }
++      if (!this.shiftLeg) this.shiftT = 0;
+       if (next) {
+         const l = L[next];
+         // 빠른 걸음: 이 걸음을 세고(박자 걸음) 받을 창을 쓰고(간격 잡기) 박차기를 쓰고(첫 걸음) 빠른 걸음인지 정한다 (앞뒤 가름은 위 짝걸음 PR 과 같은 셈). 빠른 걸음 중이면 끝내는 것도 여기
+@@ -1178,10 +1201,7 @@ export class Gait {
+         swing = l;
+       }
+     }
+-    // 발을 뗀 뒤 땅에서 떨어지면 원래 무게로 (땅에 닿은 채 가벼워지면 다리 힘에 발이 휙 끌려 땅을 긁는다)
+-    if (swing && swing.extra && (swing.soleY > 0.015 || swing.t > 0.12)) this.footMass(swing, false);
+-    if (swing2 && swing2.extra && (swing2.soleY > 0.015 || swing2.t > 0.12)) this.footMass(swing2, false); // 날며 뛰기 (11/20)
+-    this.flyAir = !!swing2; // 두 발 모두 뜸 (fighter.driveBalance — 그동안 골반 높이는 보조 힘이 받침 · updateFooting)
++    this.flyAir = !!swing2; // 두 발 모두 뜸 (그동안 몸은 탄도로 간다 — 받침 힘 없음 · 물리 2.0 시제품)
+     // 박자 걸음 셈 끊기(P.rhythm): 걸음(자세 고치기 빼고)이 끝난 뒤 RH.idle s 안에 새 걸음을 떼지 않으면 처음부터 — 발이 떠 있는 동안은 재지 않는다.
+     //  옆 걸음·기술 걸음도 걸음이라 시계를 되돌린다(세지도 끊지도 않음). 칸 없으면 셈하지 않는다
+     //  막는 동안도 걸음 중과 같게 시계가 0 에 머문다(사장님 결정 10/17 14:5x '막기 중엔 셈을 지우지 않게 함' — parrying): 막기를 놓은 뒤 RH.idle s 안에 걸으면 셈이 이어진다
+@@ -1261,33 +1281,46 @@ export class Gait {
+       const lb = this.lungeBrake;
+       if (this.vf.x * lb.x + this.vf.z * lb.z <= Math.max(0, want.x * lb.x + want.z * lb.z) + BRAKE_TOL) this.lungeBrake = null;
+     }
+-    // ④ 좌우 무게 옮기기: 한 발로 서는 동안 무게중심을 딛은 발 쪽으로 (want에 속도로 더한다)
++    // ④ ⑤ (물리 2.0 시제품) 바라는 무게중심 가속 — 옛 '좌우 무게 옮기기 · 자리 지키기'는 가려는 속도에 더해 밀기 힘이 실행했다. 밀기 힘이 없으니
++    //  디딘 발의 압력 중심(발목 토크)과 두 발의 하중 몫으로 실행한다(simbicon.js stanceFF): 압력 중심 = 무게중심 − 가속 ÷ ω0² (거꾸로 선 진자).
++    //  가만히 설 땐 무게중심을 두 발 사이(앞발 쪽으로 조금)로 되돌리고(자리 + 속도), 걷는 동안은 (가려는 속도 − 무게중심 속도) 몫만 —
++    //  한 발로 선 동안은 압력 중심이 그 발바닥 안에서만 움직이므로 작은 고침이고, 큰 몫은 발 놓기(target)가 한다.
++    //  (활 자세(P.bow) 버팀 동안은 걷는 중이어도 무게를 앞발 쪽 P.bow.front 로 옮긴다 — 칸 없으면 전과 같다)
+     this.sway.set(0, 0, 0);
+-    if (swing && !swing2 && swing.kind !== 'catch') {
+-      const u = clamp(swing.t / swing.T, 0, 1);
+-      const st = swing === L.F ? L.B : L.F;
+-      const amp = this.P.sway * (walkNow ? 1 : 0.5) * (1 - this.lev);
+-      const vs = ((amp * Math.PI) / swing.T) * Math.cos(Math.PI * u) * st.side;
+-      this.sway.set(rgt.x * vs, 0, rgt.z * vs);
+-      want.add(this.sway);
+-    }
+-    // ⑤ 가만히 서 있을 땐 무게중심을 두 발 사이(앞발 쪽으로 조금)에 둔다 → 서서 미끄러지지 않는다
+-    //  (활 자세(P.bow) 버팀 동안은 걷는 중이어도 무게를 앞발 쪽 P.bow.front 로 옮긴다 — 엉덩이가 앞발 위로 가 뒷다리가 펴진다. 칸 없으면 전과 같다)
+-    const bowHold = this.P.bow?.front != null && this.bowW > 0 && !swing;
+-    if ((!walkNow && !swing) || bowHold) {
++    {
+       const c = f.com;
+-      if (c) {
+-        let w = bowHold ? this.P.weightFront + (this.P.bow.front - this.P.weightFront) * this.bowW : this.P.weightFront;
+-        if (f.okoriFront) w += f.okoriFront; // 오코리 (11/17 — AI 몸 · 사람 몸은 0): 무게를 앞발 쪽으로
+-        const front = this.frontLeg(fwd);
+-        const a = L[front].plant;
+-        const b = L[front === 'F' ? 'B' : 'F'].plant;
+-        const tx = b.x + (a.x - b.x) * w;
+-        const tz = b.z + (a.z - b.z) * w;
+-        const g = GAIT.holdGain * (1 - this.lev);
+-        _s1.set((tx - c.x) * g, 0, (tz - c.z) * g);
+-        if (_s1.length() > 0.3) _s1.setLength(0.3);
+-        want.add(_s1);
++      const cv = f.comVel;
++      const bowHold = this.P.bow?.front != null && this.bowW > 0 && !swing;
++      this.acc.set(0, 0, 0);
++      if (c && cv) {
++        // 제자리 걸음 앞(shiftLeg — 위 ③) · 제자리 걸음 동안(자세 고치기 · 끌어붙임): 무게중심을 딛고 남는 발 위로
++        const st1 = swing && !swing2 && !walkNow && (swing.kind === 'settle' || swing.kind === 'draw') ? (swing === L.F ? L.B : L.F) : !swing ? this.shiftLeg : null;
++        if (st1?.sole && this.shiftWalk && !swing) {
++          // 걷는 걸음을 떼기 앞: 속도 되먹임 + 남을 발 쪽으로 옆 자리 되먹임 (가는 쪽에 수직인 몫만)
++          const sp = Math.hypot(want.x, want.z) || 1;
++          const nx = -want.z / sp;
++          const nz = want.x / sp;
++          const e = (st1.sole.x - c.x) * nx + (st1.sole.z - c.z) * nz;
++          this.acc.set(POSE.velKd * (want.x - this.stv.x - cv.x) + POSE.holdKp * e * nx, 0, POSE.velKd * (want.z - this.stv.z - cv.z) + POSE.holdKp * e * nz);
++        } else if (st1?.sole) {
++          // 목표는 발바닥 가운데에서 다른 발 쪽으로 POSE.shiftIn 만큼 안쪽 — 한 발의 좌우 압력 중심 폭은 ± 3 cm 뿐이라, 바깥 가장자리를 넘으면 되돌릴 길이 없다(안쪽으로 모자라면 두 발 디딤으로 돌아갈 뿐)
++          const ot = st1 === L.F ? L.B : L.F;
++          const ix = ot.sole ? ot.sole.x - st1.sole.x : 0;
++          const iz = ot.sole ? ot.sole.z - st1.sole.z : 0;
++          const il = Math.hypot(ix, iz) || 1;
++          const tx = st1.sole.x + (ix / il) * POSE.shiftIn;
++          const tz = st1.sole.z + (iz / il) * POSE.shiftIn;
++          this.acc.set(POSE.shiftKp * (tx - c.x) + POSE.shiftKd * (want.x - cv.x), 0, POSE.shiftKp * (tz - c.z) + POSE.shiftKd * (want.z - cv.z));
++        } else if ((!walkNow && !swing) || bowHold) {
++          let w = bowHold ? this.P.weightFront + (this.P.bow.front - this.P.weightFront) * this.bowW : this.P.weightFront;
++          if (f.okoriFront) w += f.okoriFront; // 오코리 (11/17 — AI 몸 · 사람 몸은 0): 무게를 앞발 쪽으로
++          const front = this.frontLeg(fwd);
++          const a = L[front].sole ?? L[front].plant;
++          const b = L[front === 'F' ? 'B' : 'F'].sole ?? L[front === 'F' ? 'B' : 'F'].plant;
++          const tx = b.x + (a.x - b.x) * w;
++          const tz = b.z + (a.z - b.z) * w;
++          this.acc.set(POSE.holdKp * (tx - c.x) + POSE.holdKd * (want.x - cv.x), 0, POSE.holdKp * (tz - c.z) + POSE.holdKd * (want.z - cv.z));
++        } else this.acc.set(POSE.velKd * (want.x - this.stv.x - cv.x), 0, POSE.velKd * (want.z - this.stv.z - cv.z));
+       }
+     }
+ 
+@@ -1389,11 +1422,7 @@ export class Gait {
+       hGeo -= (hGeo - hLow) * this.P.dsLow * fore * easeIn * Math.max(GAIT.dsLowFast, clamp((GAIT.bobUntil - speed) / 0.5, 0, 1));
+     }
+     this.hNom = hNom;
+-    // 보조 힘이 많이 받칠 땐(넘겨받는 중·붙잡기 반사) 다리가 닿지 않아도 골반을 제 높이에 둔다
+-    //  (일어선 직후 넘겨받는 몫은 다리가 닿는 높이를 지킨다: 보조가 빠질 때 골반이 내려앉지 않게)
+-    //  넘겨받는 동안엔 그 몫의 일부(handH)만큼은 자세 높이 쪽으로 (발이 아직 제자리에 없어도 골반이 주저앉지 않게)
+-    const levT = Math.max(this.levC, this.levH * GAIT.handH);
+-    let hT = THREE.MathUtils.lerp(clamp(Math.min(hNom, hGeo), hNom - GAIT.maxDip, hNom), hNom, levT);
++    let hT = clamp(Math.min(hNom, hGeo), hNom - GAIT.maxDip, hNom);
+     // 천천히 걸을 땐 보폭이 짧아 골반이 거의 출렁이지 않는다 → 두 발로 딛는 동안 살짝 내려앉았다가 한 발로 설 때 올라온다
+     if (walkNow && this.P.bobAdd > 0) {
+       const up = swing && swing.kind !== 'settle' ? Math.sin(Math.PI * clamp(swing.t / swing.T, 0, 1)) : 0;
+@@ -1420,25 +1449,13 @@ export class Gait {
+     this.h += this.hv * dt;
+     // 다리가 닿는 높이보다 높으면 내린다. 한 번에 내리지 않고 capRate(m/s)로 (디딘 발이 엉덩이 옆을 지날 때처럼 닿는 높이가
+     //  갑자기 줄면, 한 스텝에 골반 목표를 몇 cm 떨어뜨려 두 발이 다 들렸다가 다음 발이 몸무게의 두 배 가까이 받으며 미끄러진다)
+-    const cap = Math.max(hGeo + 0.01 + levT, hNom - GAIT.maxDip);
++    const cap = Math.max(hGeo + 0.01, hNom - GAIT.maxDip);
+     if (this.h > cap) {
+       this.h = Math.max(cap, this.h - GAIT.capRate * dt);
+       this.hv = Math.min(this.hv, 0);
+     }
+   }
+ 
+-  /**
+-   * 몸무게를 받치는 보조 힘의 비율 (driveBalance가 쓴다). 넘겨받는 중엔 다리가 이미 받치는 만큼 덜 받친다
+-   * (보조 힘 100% + 다리가 미는 힘이 겹치면 골반이 솟았다가, 보조가 빠질 때 주저앉는다)
+-   */
+-  supportShare(Mg) {
+-    const share = GAIT.assist + (1 - GAIT.assist) * this.lev;
+-    if (!(this.levH > 0) || this.levC >= this.levH) return share;
+-    const legs = clamp((this.Nsum || 0) / Mg, 0, 1); // 다리가 받치는 몫 (실측)
+-    const over = Math.max(0, share + legs - 1); // 넘치는 몫
+-    return Math.max(GAIT.assist, share - over * this.levH);
+-  }
+-
+   /** 멈춘 뒤 펜싱 자세에서 가장 벗어난 발 (고쳐 딛을 발). 괜찮으면 null */
+   settleLeg(posOk) {
+     const c = this.f.com;
+@@ -1578,14 +1595,16 @@ export class Gait {
+       //  (첫 걸음 박차기 발이면 몸 빠르기·디딜 때 자리를 박찬 가속으로 내다본다 — burstAhead)
+       //  고른 짝걸음(P.pair.even)은 뗄 때의 꼴(l.fol · l.pairOn)로 끝까지 — 걸음 가운데 빠르기가 followVmax 를 넘나들어 follow ↔ 지나 딛기가 바뀌면 디딜 자리가 펜싱 자세 몫(±0.2 m)만큼
+       //  한 번에 당겨져 앞발이 몸 밑에 떨어지고(몸이 앞발을 지나침) 붙잡기 반사가 켜진다(가까이 앞으로 짧게 톡 — gait_even_feel NT)
+-      const v = l === this.burstLeg ? this.burstAhead(p, want, remain, fwd) : this.vf;
++      const v = l === this.burstLeg ? this.burstAhead(p, want, remain, fwd) : (f.comVel ?? this.vf); // (물리 2.0 시제품) 무게중심 속도
+       const pon = this.P.pair?.even ? l.pairOn : this.pairOn;
+       //  (짝걸음(P.pair)이면 한 발이 딛고 있는 시간이 한 짝(걸음 두 개) − 제 발 든 시간 — 몸이 그 가운데쯤 발 위를 지나게 그만큼 앞에 딛는다)
+       const Tst = pon ? 2 * this.sT - l.T : this.sT * (1 + (this.rk > 0 ? this.dsF : this.P.dsFrac));
+-      const px = l === this.burstLeg ? v.px : p.x + v.x * remain;
+-      const pz = l === this.burstLeg ? v.pz : p.z + v.z * remain;
+-      const cx = px + want.x * Tst * 0.5 + GAIT.kv * (v.x - want.x);
+-      const cz = pz + want.z * Tst * 0.5 + GAIT.kv * (v.z - want.z);
++      const px = l === this.burstLeg ? v.px : (f.com ?? p).x + v.x * remain - (f.com ? POSE.placeToe * fwd.x : 0); // 무게중심이 디딜 때 있을 곳 (발목 = 발바닥 가운데 − placeToe)
++      const pz = l === this.burstLeg ? v.pz : (f.com ?? p).z + v.z * remain - (f.com ? POSE.placeToe * fwd.z : 0);
++      // (물리 2.0 시제품) 실제 속도 몫 + 속도 되먹임 — 아래 걷는 가지와 같은 식 (placeFeedback)
++      this.placeFeedback(v, _wp.set(want.x - this.stv.x, 0, want.z - this.stv.z), _pf);
++      const cx = px + v.x * Tst * POSE.placeV + _pf.x;
++      const cz = pz + v.z * Tst * POSE.placeV + _pf.z;
+       const h = this.headAhead();
+       const fx = Math.cos(h);
+       const fz = -Math.sin(h);
+@@ -1603,15 +1622,19 @@ export class Gait {
+         out.z = pz + (dz / d) * this.P.maxReach;
+       }
+     } else {
+-      // 몸이 닿을 때 있을 곳 + 속도 × (딛는 시간의 절반) (Raibert). 속도가 원하는 것보다 빠르면 더 멀리 딛어 받는다
++      // 몸이 닿을 때 있을 곳 + 실제 속도 × 딛는 시간 × POSE.placeV + (실제 − 가려는 속도) × POSE.placeKv (Raibert · SIMBICON 의 발 놓기 되먹임 — 물리 2.0 시제품).
++      //  옛 식은 '가려는 속도' × 딛는 시간의 절반이었다(밀기 힘이 몸을 그 빠르기로 끌어 줌). 밀기 힘이 없으니 발 놓기가 빠르기를 정한다:
++      //  몸이 느리면 발을 덜 내딛어(몸 가까이 · 뒤에) 몸이 그 발 위로 넘어가며 빨라지고, 빠르면 더 멀리 딛어 받는다. 좌우도 같은 식(옆으로 흐르면 그쪽에 딛음)
+       //  (첫 걸음 박차기 발이면 몸 빠르기·디딜 때 자리를 박찬 가속으로 내다본다 — burstAhead)
+-      const v = l === this.burstLeg ? this.burstAhead(p, want, remain, fwd) : this.vf;
++      const v = l === this.burstLeg ? this.burstAhead(p, want, remain, fwd) : (f.comVel ?? this.vf); // (물리 2.0 시제품) 무게중심 속도
+       const Tst = this.fly ? this.flyTc : this.sT * (1 + (this.rk > 0 ? this.dsF : this.P.dsFrac)); // 뛰는 걸음은 두 발 디딤 몫 RUN.dsFrac 섞음 (11/18) · 날며 뛰기는 한 발 디딤 Tc (11/20)
+-      const px = l === this.burstLeg ? v.px : p.x + v.x * remain;
+-      const pz = l === this.burstLeg ? v.pz : p.z + v.z * remain;
++      const px = l === this.burstLeg ? v.px : (f.com ?? p).x + v.x * remain - (f.com ? POSE.placeToe * fwd.x : 0); // 무게중심이 디딜 때 있을 곳 (발목 = 발바닥 가운데 − placeToe)
++      const pz = l === this.burstLeg ? v.pz : (f.com ?? p).z + v.z * remain - (f.com ? POSE.placeToe * fwd.z : 0);
+       const ah = this.fly ? RUN.flyAhead : 0.5; // 날며 뛰기 (11/20): 디딤 길의 RUN.flyAhead 몫만 몸 앞에 딛는다 — 무릎을 굽힌 채 닿게(다 편 다리로 닿으면 몸이 장대처럼 솟으며 선다)
+-      let ox = want.x * Tst * ah + GAIT.kv * (v.x - want.x);
+-      let oz = want.z * Tst * ah + GAIT.kv * (v.z - want.z);
++      const nv = this.fly ? ah : POSE.placeV;
++      this.placeFeedback(v, _wp.set(want.x - this.stv.x, 0, want.z - this.stv.z), _pf);
++      let ox = v.x * Tst * nv + _pf.x;
++      let oz = v.z * Tst * nv + _pf.z;
+       if (this.fly) {
+         // (골반이 자세대로 틀어져 있어 뒷다리 엉덩이는 골반 가운데보다 뒤에 있다 — 그 발 엉덩이 기준으로 딛는다: 골반 가운데 기준이면 뒷발이 다리가 닿지 않을 만큼 앞에 떨어져 몸이 솟으며 선다)
+         //  (줄이는 동안(가려는 속도 < 몸 빠르기)도 엉덩이 앞 RUN.flyReach 까지만 — 더 멀리 딛으면 같은 까닭으로 솟음)
+@@ -1667,6 +1690,38 @@ export class Gait {
+     if (f.terrain) out.y = this.ankleHeight(out.x, out.z); // 지형 무대: 어느 갈래로 정했든 디딜 자리의 땅 위 발목 높이
+   }
+ 
++  /** 점 (x, z) 이 발 l 의 발바닥 가운데에서 얼마나 벗어났나 — 발 틀에서 앞뒤 POSE.shiftTolX · 좌우 POSE.shiftTol 을 1 로 본 타원 거리 (1 안 = 그 발이 압력 중심으로 붙잡을 수 있는 곳) */
++  offFoot(l, x, z) {
++    const fx = Math.cos(l.footYaw);
++    const fz = -Math.sin(l.footYaw);
++    const dx = x - l.sole.x;
++    const dz = z - l.sole.z;
++    return Math.hypot((dx * fx + dz * fz) / POSE.shiftTolX, (-dx * fz + dz * fx) / POSE.shiftTol);
++  }
++
++  /**
++   * 디딜 자리의 속도 되먹임 (물리 2.0 시제품): (실제 − 가려는 속도) × POSE.placeKv. 가려는 쪽 몫과 그 옆 몫을 나눠 센다 —
++   *  느릴 때(가려는 쪽으로 모자람)는 POSE.placeDv 까지만 덜 내딛는다: 거꾸로 선 진자는 한 걸음에 캡처 점 어긋남을 e^(ω0·T) ≈ 4 배로 키운다 — 한꺼번에 많이 덜 내딛으면 몸이 발을 두고 앞으로 쏟아진다.
++   *  빠를 때(넘침 · 멈추려 할 때)와 옆 몫은 자르지 않고 POSE.placeKb 로 — 발을 캡처 점 쪽으로 멀리 딛어 받는다. out 에 (x, z)
++   */
++  placeFeedback(v, want, out) {
++    const ws = Math.hypot(want.x, want.z);
++    if (ws < 1e-3) {
++      out.x = POSE.placeKb * v.x;
++      out.z = POSE.placeKb * v.z;
++      return out;
++    }
++    const ux = want.x / ws;
++    const uz = want.z / ws;
++    const s = v.x * ux + v.z * uz - ws; // 가려는 쪽 넘침(+) · 모자람(−)
++    const lx = v.x - (s + ws) * ux; // 옆 몫
++    const lz = v.z - (s + ws) * uz;
++    const a = s < 0 ? POSE.placeKv * Math.max(s, -POSE.placeDv) : POSE.placeKb * s;
++    out.x = a * ux + POSE.placeKb * lx;
++    out.z = a * uz + POSE.placeKb * lz;
++    return out;
++  }
++
+   touchdown(l, speed) {
+     l.stance = true;
+     if (this.fly) l.flyTc = this.flyTc; // 날며 뛰기 (11/20): 이 발이 딛는 시간은 디딜 때의 빠르기로 정함 (줄어드는 동안 Tc 가 늘어 발을 못 떼지 않게)
+@@ -1678,7 +1733,6 @@ export class Gait {
+     _s3.set(0, 1, 0).applyQuaternion(_qT.set(bs.x, bs.y, bs.z, bs.w));
+     l.phiTD = Math.acos(clamp(_s2.dot(_s3), -1, 1));
+     this.plantAt(l);
+-    this.footMass(l, true);
+     l.tLand = 0;
+     this.sinceTD = 0;
+     this.lastTD = l.k;
+@@ -1698,20 +1752,6 @@ export class Gait {
+     l.tdN = (l.tdN || 0) + 1; // 디딤 셈 (sound.js BodySounds — 이탈리아 고른 짝걸음 발소리가 읽음. 몸·물리에는 안 씀)
+   }
+ 
+-  /**
+-   * 딛은 발만 조금 무겁게 한다 (신발·쇠 발싸개 몫, GAIT.footExtra kg).
+-   *  몸무게 대부분이 1kg 남짓한 발 하나에 실리면 물리 엔진의 반복 계산이 다 수렴하지 못해, 가만히 딛은 발이
+-   *  제자리에서 조금씩 움직이는 것처럼 계산된다 (발에 걸린 계산 오차가 발 무게에 반비례한다).
+-   *  내딛는 발은 땅에서 떨어지면 원래 무게로 (무거운 발을 휘두르면 그 반동에 몸이 흔들려 잘 넘어진다).
+-   *  발을 떼고 디디는 순간엔 발이 거의 멈춰 있어서 무게를 바꿔도 몸의 움직임은 거의 바뀌지 않는다
+-   */
+-  footMass(l, on) {
+-    const m = on ? GAIT.footExtra : 0;
+-    if (l.extra === m) return;
+-    l.extra = m;
+-    this.f.bodies[l.foot].setAdditionalMass(m, true);
+-  }
+-
+   /** 지금 발 자리를 딛은 자리로 기억한다 (발바닥 가운데·발끝이 땅에 붙은 곳도) */
+   plantAt(l) {
+     l.plant.set(l.ankle.x, ANKLE_H, l.ankle.z);
+@@ -1753,21 +1793,39 @@ export class Gait {
+     const J = f.jointByName;
+     for (const k of ['F', 'B']) {
+       const l = this.legs[k];
+-      const g = l.stance ? 1 + (GAIT.stanceGain - 1) * (1 - this.lev) : GAIT.swingGain;
++      const g = l.stance ? GAIT.stanceGain : GAIT.swingGain;
+       J[l.thigh].gain = g;
+       J[l.shin].gain = g;
++      // 디딘 발목은 토크로 다룬다 (물리 2.0 시제품): 압력 중심 = 발목 토크 ÷ 실린 무게라, 발목 모터가 세면 다리 길이를 고치는 PD 가 발목에 토크를 실어
++      //  압력 중심을 제멋대로 옮긴다(잰 값: 바란 자리보다 5 ~ 6 cm 뒤 → 몸이 앞으로 쓰러짐). 땅을 누르는 발은 땅이 평평하게 잡아 주므로 모터는 약하게(POSE.stanceAnkle)
++      //  발목 비틀기(y)는 압력 중심과 상관없다 — 그 축은 디딘 다리 굳기 그대로(골반을 돌리는 엉덩이 토크가 정강이 → 발목 → 발 마찰로 땅에 닿는 길. 무르면 골반 yaw 가 ± 0.5 rad 흔들림)
+       J[l.foot].gain = g;
++      J[l.foot].axGain = l.stance && l.w > 0.05 ? STANCE_ANKLE : null;
+     }
+     const p = f.bodies.pelvis.translation();
+     // 딛은 다리는 골반을 목표 높이로 밀어 올린다. 골반이 목표보다 높을 때 다리를 오므리면 (몸을 끌어내리지 못하고)
+     // 발만 들리므로 조금만 오므린다
+     const dh = clamp(this.h - p.y, -GAIT.dhDown, 0.05);
++    // 두 발 하중 몫 맞추기 (물리 2.0 시제품): 관절 PD 는 닫힌 사슬(두 다리 + 땅)에서 '자리'를 잡으므로 어느 다리가 얼마나 지는지는 PD 굳기가 정해 버린다 —
++    //  앞먹임이 바라는 몫(l.wGeo — simbicon.js stanceFF: 압력 중심이 두 발 사이 어디에 있어야 하나)과 실제 몫(접촉 힘 l.N)의 차를 다리 길이 목표로 천천히 메운다:
++    //  더 져야 할 다리는 조금 길게, 덜 져야 할 다리는 조금 짧게 (적분 · ± POSE.loadMax)
++    {
++      const a = this.legs.F;
++      const b = this.legs.B;
++      const Ns = (a.N || 0) + (b.N || 0);
++      const both = a.stance && b.stance && Ns > 0.3 * (this.Mg || 1e9);
++      for (const l of [a, b]) {
++        if (l.stance && (l.N || 0) < POSE.touchN * (this.Mg || 1e9) && l.soleY > 0.003) l.dhW = Math.min(POSE.loadMax, (l.dhW || 0) + POSE.reachRate * (f.lastDt || 1 / 120)); // '디딘' 발이 아직 땅을 누르지 않는다(몇 mm 떠 있음): 닿을 때까지 다리를 조금씩 늘인다 — 안 그러면 그 발은 받치지도 못하고 제자리도 못 지킨다
++        else if (both) l.dhW = clamp((l.dhW || 0) + POSE.loadKi * ((l.wGeo ?? l.w ?? 0) - (l.N || 0) / Ns) * (f.lastDt || 1 / 120), -POSE.loadMax, POSE.loadMax);
++        else l.dhW = (l.dhW || 0) * Math.max(0, 1 - (f.lastDt || 1 / 120) * 8);
++      }
++    }
+     for (const k of ['F', 'B']) {
+       const l = this.legs[k];
+       if (l.stance) {
+         // 딛은 발: 골반이 목표 높이에 있다고 보고 그 자리까지 다리를 뻗는다 → 관절이 체중을 받쳐 골반을 그 높이로 민다
+         _h.copy(l.hip);
+-        _h.y += dh;
++        _h.y += dh + (l.dhW || 0);
+         _a.copy(l.plant);
+         // 다리가 닿지 않으면 발끝을 축으로 뒤꿈치를 든다 (뒤로 빠진 발이 땅을 끌지 않게)
+         //  (조금만 모자랄 땐 들지 않는다: 들락날락하면 발이 떨린다)
+@@ -1778,7 +1836,7 @@ export class Gait {
+         //  (걷는 중 디딘 직후(무게를 받는 동안)만: 서 있을 땐 자세대로 무릎을 굽힌다)
+         const capK = GAIT.stanceKneeMax > 0 && this.walking && l.kind !== 'settle' && l.tLand < GAIT.loadTime * 1.5;
+         //  (뛰듯 빨리 갈 땐 발을 디딜 때 부딪는 힘이 커서 무릎이 목표보다 더 꺾이므로 덜 굽히게 한다)
+-        this.legIK(l, _h, _a, l.yaw, -l.heel, capK ? legLen(Math.max(l.phi, l.phiTD) + GAIT.stanceKneeMax * (1 - GAIT.runKneeCut * this.runW)) : 0);
++        this.legIK(l, _h, _a, l.yaw, -l.heel, capK ? legLen(Math.max(l.phi, l.phiTD) + GAIT.stanceKneeMax * (1 - GAIT.runKneeCut * this.runW)) : 0, true);
+       } else {
+         const u = clamp(l.t / l.T, 0, 1);
+         // 앞뒤·옆으로는 발을 든 시간의 앞쪽 hFrac 동안 옮기고, 나머지 동안 거의 제자리에서 내려 딛는다
+@@ -1816,7 +1874,11 @@ export class Gait {
+     }
+   }
+ 
+-  /** 내딛는 발목을 목표(a)로 당기는 힘 (발 ↔ 골반, 서로 반대) */
++  /**
++   * 내딛는 발목을 목표(a)로 이끄는 엉덩이 · 무릎 근육 (물리 2.0 시제품): 발목에 걸고 싶은 힘 F = 스프링 + 감쇠(상한 swingFmax)를
++   *  엉덩이(골반 ↔ 허벅지) · 무릎(허벅지 ↔ 정강이) 토크 쌍으로 바꿔 건다 (simbicon.js swingTorque — 야코비 전치 · 사람 토크 한도 안).
++   *  옛 식은 발목에 +F · 골반의 엉덩이 점에 −F 를 걸어 작용선이 달랐다 → 몸에 짝 없는 짝힘 (발목 − 엉덩이) × F 가 남았다(걷기 4 s 에 326 N·m·s).
++   */
+   swingPull(l, a) {
+     const f = this.f;
+     const dt = f.lastDt || 1 / 120;
+@@ -1830,20 +1892,7 @@ export class Gait {
+     _c.set(K * (a.x - l.ankle.x) + D * (l.desV.x - v.x), K * (a.y - l.ankle.y) + D * (l.desV.y - v.y), K * (a.z - l.ankle.z) + D * (l.desV.z - v.z));
+     const m = _c.length();
+     if (m > GAIT.swingFmax) _c.multiplyScalar(GAIT.swingFmax / m);
+-    _f.x = _c.x;
+-    _f.y = _c.y;
+-    _f.z = _c.z;
+-    _p.x = l.ankle.x;
+-    _p.y = l.ankle.y;
+-    _p.z = l.ankle.z;
+-    fb.addForceAtPoint(_f, _p, true);
+-    _f.x = -_c.x;
+-    _f.y = -_c.y;
+-    _f.z = -_c.z;
+-    _p.x = l.hip.x;
+-    _p.y = l.hip.y;
+-    _p.z = l.hip.z;
+-    f.bodies.pelvis.addForceAtPoint(_f, _p, true);
++    swingTorque(f, l, _c);
+   }
+ 
+   /** 딛은 발 발목이 엉덩이에서 Ls보다 멀면, 발끝을 축으로 뒤꿈치를 몇 라디안 들어야 닿는지 */
+@@ -1889,7 +1938,7 @@ export class Gait {
+    * 다리 역운동학: 엉덩이(hip) → 발목(ankle)까지 다리를 뻗고, 발은 yaw 방향을 보며 땅과 나란하게.
+    * 무릎은 경첩, 발목은 공 관절이라 다리가 옆으로 기울어도 발바닥은 평평하다.
+    */
+-  legIK(l, hip, ankle, yaw, pitch, minLen = 0) {
++  legIK(l, hip, ankle, yaw, pitch, minLen = 0, world = false) {
+     const f = this.f;
+     const J = f.jointByName;
+     const d = _d.subVectors(ankle, hip);
+@@ -1915,8 +1964,14 @@ export class Gait {
+     _x.crossVectors(_y, kx);
+     _M.makeBasis(_x, _y, kx);
+     _qT.setFromRotationMatrix(_M);
+-    const pr = f.bodies.pelvis.rotation();
+-    _qP.set(pr.x, pr.y, pr.z, pr.w);
++    // 엉덩이 목표 = (골반 자세)⁻¹ × (세계 틀 허벅지 자세). 내딛는 다리는 실제 골반 자세로 푼다(허벅지를 세계 틀 목표로 보냄).
++    //  디딘 다리(world)는 '바라는 골반 자세'(fighter.pelvisWant — 수직 + yaw)로 푼다 (물리 2.0 시제품 · SIMBICON): 발이 땅에 붙어 있으니 골반이 기울거나 돌아간 만큼이
++    //  엉덩이 모터의 오차가 되어 골반을 세우고 돌리며, 반작용은 다리 → 발 → 땅으로 간다. (옛 식은 늘 실제 골반이라 엉덩이에 골반 자세 되먹임이 없었고 닻이 그 일을 했다)
++    if (world) _qP.copy(f.pelvisWant);
++    else {
++      const pr = f.bodies.pelvis.rotation();
++      _qP.set(pr.x, pr.y, pr.z, pr.w);
++    }
+     _qP.invert();
+     J[l.thigh].target.copy(_qP).multiply(_qT);
+     J[l.shin].target.setFromAxisAngle(Z_AXIS, -phi);
+@@ -1949,89 +2004,24 @@ export class Gait {
+   }
+ 
+   /**
+-   * 발바닥 정지 마찰: 딛은 발을 디딘 자리에 붙잡는다.
+-   * 한계 = 마찰계수 × 그 발이 실제로 땅을 누르는 힘 (물리 엔진 접촉에서 잰다) → 발에 무게가 없으면 붙잡지 못한다.
+-   * 한계를 넘으면 발이 미끄러지고, 붙잡는 자리도 발과 함께 옮겨 간다 (쿨롱 마찰: 미끄러진 발을 원래 자리로 끌어오지 않는다).
++   * 디딘 발이 지난 스텝에 땅을 누른 힘 l.N (재기만 — 물리 2.0 시제품: 옛 발 핀(발바닥을 디딘 자리에 붙잡는 수평 힘 · yaw 토크)은 없다. 발은 엔진 접촉 마찰만으로 버틴다).
++   *  엔진이 접촉 법선 충격량을 (n + 1) ÷ n 배로 보고하므로(n = 풀이 반복 수 — 엔진 시험 s5) 되돌려 쓴다
+    */
+-  pinFeet() {
++  footLoads() {
+     const f = this.f;
+-    if (!GAIT.pinK) return;
++    const n = f.world.integrationParameters.numSolverIterations || 1;
++    const kc = n / (n + 1);
+     for (const k of ['F', 'B']) {
+       const l = this.legs[k];
+-      l.N = 0;
+-      if (!l.stance) {
+-        l.Nf = 0;
+-        continue;
+-      }
+-      // 붙잡는 곳: 발바닥 가운데 (뒤꿈치를 들었으면 발끝)
+-      const toe = l.heel > 0.05;
+-      const pin = toe ? l.pinT : l.pinC;
+-      const pt = _s1.copy(toe ? SOLE_T : SOLE_C).applyQuaternion(l.fq).add(l.fp);
+-      if ((f.terrain ? pt.y - f.terrain.heightAt(pt.x, pt.z) : pt.y) > 0.03) continue; // 지형 무대: 발바닥 높이는 땅 위로
+-      const N = this.groundForce(l) * f.muscle;
+-      l.N = N;
+-      const fb = f.bodies[l.foot];
+-      const v = fb.linvel();
+-      const w = fb.angvel();
+-      const c = fb.worldCom();
+-      const rx = pt.x - c.x;
+-      const ry = pt.y - c.y;
+-      const rz = pt.z - c.z;
+-      if (f.terrain) {
+-        // 지형 무대: 같은 하중 한계의 정지 마찰을 비탈 면 안에서 (아래 평지 식은 수평면 안)
+-        this.pinTerrainFoot(l, pin, pt, N, fb, v, w, rx, ry, rz);
+-        continue;
++      l.N = l.stance ? this.groundForce(l) * kc : 0;
++      // 디딘 자리(다리 IK 의 발목 목표)는 실제 발을 천천히 따라간다: 발이 어디 있는지는 땅 마찰이 정한다. 따라가지 않으면 조금 밀린 발을 두 다리가
++      //  서로 반대로 끌어당겨(닫힌 사슬 안의 맞힘) 관절 토크 예산을 헛되이 쓴다. 뒤꿈치를 든 동안은 발끝 축 셈(toePivot)이 따로 한다
++      if (l.stance && l.N > POSE.touchN * (this.Mg || 1e9) && !(l.heel > 0.01)) {
++        const kp = Math.min(1, (f.lastDt || 1 / 120) * POSE.plantFollow);
++        l.plant.x += (l.ankle.x - l.plant.x) * kp;
++        l.plant.z += (l.ankle.z - l.plant.z) * kp;
++        l.yaw += wrap(l.footYaw - l.yaw) * kp;
+       }
+-      // 그 점의 속도 = v + ω × r
+-      const vx = v.x + w.y * rz - w.z * ry;
+-      const vz = v.z + w.x * ry - w.y * rx;
+-      // 한계는 걸러진 무게로 (접촉 힘은 스텝마다 들쭉날쭉해서, 순간적으로 작게 잡히면 붙잡는 자리가 조금씩 끌려간다)
+-      l.Nf = Math.max(N, (l.Nf || 0) * (1 - GAIT.pinHold * (f.lastDt || 1 / 120)));
+-      const lim = GAIT.pinMu * l.Nf;
+-      // 붙잡는 자리가 한계보다 멀면 (미끄러짐) 자리를 발 쪽으로 옮긴다. 딛은 자리(다리 IK 목표)도 같이
+-      const ex = pin.x - pt.x;
+-      const ez = pin.z - pt.z;
+-      const e = Math.hypot(ex, ez);
+-      const eMax = lim / GAIT.pinK;
+-      if (e > eMax) {
+-        const s = 1 - eMax / e;
+-        const mx = ex * s;
+-        const mz = ez * s;
+-        l.pinC.x -= mx;
+-        l.pinC.z -= mz;
+-        l.pinT.x -= mx;
+-        l.pinT.z -= mz;
+-        l.plant.x -= mx;
+-        l.plant.z -= mz;
+-      }
+-      let fx = GAIT.pinK * (pin.x - pt.x) - GAIT.pinD * vx;
+-      let fz = GAIT.pinK * (pin.z - pt.z) - GAIT.pinD * vz;
+-      const fl = Math.hypot(fx, fz);
+-      l.pinF = fl;
+-      l.pinLim = lim;
+-      if (fl > lim) {
+-        fx *= lim / (fl + 1e-9);
+-        fz *= lim / (fl + 1e-9);
+-      }
+-      _f.x = fx;
+-      _f.y = 0;
+-      _f.z = fz;
+-      _p.x = pt.x;
+-      _p.y = pt.y;
+-      _p.z = pt.z;
+-      fb.addForceAtPoint(_f, _p, true);
+-      // 발이 땅 위에서 도는 것도 마찰이 붙잡는다 (한계 = 마찰 × 무게 × 발바닥 크기). 넘으면 딛은 방향도 따라 돈다
+-      const lt = GAIT.pinMu * l.Nf * 0.05;
+-      let ye = wrap(l.yaw - l.footYaw);
+-      const yMax = lt / GAIT.pinYawK;
+-      if (Math.abs(ye) > yMax) {
+-        l.yaw = l.footYaw + Math.sign(ye) * yMax;
+-        ye = Math.sign(ye) * yMax;
+-      }
+-      _f.x = 0;
+-      _f.y = clamp(GAIT.pinYawK * ye - GAIT.pinYawD * w.y, -lt, lt);
+-      _f.z = 0;
+-      fb.addTorque(_f, true);
+     }
+   }
+ 
+@@ -2053,60 +2043,6 @@ export class Gait {
+     return _floorQuat.setFromRotationMatrix(_floorMatrix);
+   }
+ 
+-  /**
+-   * 지형 무대의 발바닥 정지 마찰 (pinFeet 평지 식과 같은 하중 한계 · 같은 스프링 — 비탈 면 안에서, 샛별 0116047c 그대로):
+-   *  groundForce 는 위 방향(수직) 받침을 재므로 쿨롱 한계는 법선 하중 = N / 법선 y. l.N·l.Nf 는 넘겨받기 셈을 위해 수직 받침 그대로 둔다
+-   */
+-  pinTerrainFoot(l, pin, pt, N, fb, v, w, rx, ry, rz) {
+-    const f = this.f;
+-    const n = f.terrain.normalAt(pt.x, pt.z);
+-    _floorNormal.set(n.x, n.y, n.z);
+-    _pinVelocity.set(v.x + w.y * rz - w.z * ry, v.y + w.z * rx - w.x * rz, v.z + w.x * ry - w.y * rx);
+-    _pinVelocity.addScaledVector(_floorNormal, -_pinVelocity.dot(_floorNormal));
+-    l.Nf = Math.max(N, (l.Nf || 0) * (1 - GAIT.pinHold * (f.lastDt || 1 / 120)));
+-    const lim = (GAIT.pinMu * l.Nf) / n.y;
+-    _pinError.subVectors(pin, pt);
+-    _pinError.addScaledVector(_floorNormal, -_pinError.dot(_floorNormal));
+-    const e = _pinError.length();
+-    const eMax = lim / GAIT.pinK;
+-    if (e > eMax) {
+-      // 미끄러짐: 붙잡는 자리·딛은 자리를 발 쪽으로 옮기고 땅 위(발목은 땅 위 발목 높이)로 다시 붙인다
+-      _pinError.multiplyScalar(1 - eMax / e);
+-      for (const q of [l.pinC, l.pinT, l.plant]) {
+-        q.sub(_pinError);
+-        q.y = q === l.plant ? this.ankleHeight(q.x, q.z) : f.terrain.heightAt(q.x, q.z);
+-      }
+-    }
+-    _pinError.subVectors(pin, pt);
+-    _pinError.addScaledVector(_floorNormal, -_pinError.dot(_floorNormal));
+-    _pinForce.copy(_pinError).multiplyScalar(GAIT.pinK).addScaledVector(_pinVelocity, -GAIT.pinD);
+-    const fl = _pinForce.length();
+-    l.pinF = fl;
+-    l.pinLim = lim;
+-    if (fl > lim) _pinForce.multiplyScalar(lim / (fl + 1e-9));
+-    _f.x = _pinForce.x;
+-    _f.y = _pinForce.y;
+-    _f.z = _pinForce.z;
+-    _p.x = pt.x;
+-    _p.y = pt.y;
+-    _p.z = pt.z;
+-    fb.addForceAtPoint(_f, _p, true);
+-    // 발이 땅 위에서 도는 것: 땅 법선 축으로 (평지 식은 월드 y 축)
+-    const lt = lim * 0.05;
+-    let ye = wrap(l.yaw - l.footYaw);
+-    const yMax = lt / GAIT.pinYawK;
+-    if (Math.abs(ye) > yMax) {
+-      l.yaw = l.footYaw + Math.sign(ye) * yMax;
+-      ye = Math.sign(ye) * yMax;
+-    }
+-    const spin = w.x * n.x + w.y * n.y + w.z * n.z;
+-    const tq = clamp(GAIT.pinYawK * ye - GAIT.pinYawD * spin, -lt, lt);
+-    _f.x = n.x * tq;
+-    _f.y = n.y * tq;
+-    _f.z = n.z * tq;
+-    fb.addTorque(_f, true);
+-  }
+-
+   /** 관절 목표 속도 기록(driveJoints의 prevRV)을 지운다 → 목표가 한 번에 바뀌어도 모터가 튀지 않는다 */
+   resetRates() {
+     const J = this.f.jointByName;
+@@ -2139,6 +2075,9 @@ const _qS = new THREE.Quaternion();
+ const _qK = new THREE.Quaternion();
+ const _qW = new THREE.Quaternion();
+ const _f = { x: 0, y: 0, z: 0 };
++const _pf = { x: 0, z: 0 };
++const _wp = new THREE.Vector3();
++const STANCE_ANKLE = { get x() { return POSE.stanceAnkle / GAIT.stanceGain; }, y: 1, get z() { return POSE.stanceAnkle / GAIT.stanceGain; } }; // 땅을 누르는 디딘 발목의 축마다 모터 배율 (x · z = 압력 중심 축은 약하게)
+ // groundForce용 (매 스텝 함수를 새로 만들지 않게)
+ const _gf = { imp: 0, col: null, w: null, floor: -1, sum: null };
+ const _gfSum = (m) => {
+@@ -2178,6 +2117,4 @@ const _floorFwd = new THREE.Vector3();
+ const _floorRight = new THREE.Vector3();
+ const _floorMatrix = new THREE.Matrix4();
+ const _floorQuat = new THREE.Quaternion();
+-const _pinVelocity = new THREE.Vector3();
+-const _pinError = new THREE.Vector3();
+-const _pinForce = new THREE.Vector3();
++
+diff --git a/src/secret_instant.js b/src/secret_instant.js
+index a202cb0e..aba720e0 100644
+--- a/src/secret_instant.js
++++ b/src/secret_instant.js
+@@ -88,10 +88,6 @@ function shiftFighter(f, dx, dz) {
+     const t = b.translation();
+     b.setTranslation({ x: t.x + dx, y: t.y, z: t.z + dz }, true);
+   }
+-  if (f.anchor) {
+-    const t = f.anchor.translation();
+-    f.anchor.setTranslation({ x: t.x + dx, y: t.y, z: t.z + dz }, true);
+-  }
+   const g = f.gait;
+   if (g?.legs) {
+     for (const l of Object.values(g.legs)) {
+diff --git a/src/simbicon.js b/src/simbicon.js
+new file mode 100644
+index 00000000..a4f07351
+--- /dev/null
++++ b/src/simbicon.js
+@@ -0,0 +1,287 @@
++// ─────────────────────────────────────────────────────────────
++//  자세 제어 (물리 2.0 시제품 — SIMBICON 꼴: Yin · Loken · van de Panne 2007 "SIMBICON: Simple Biped Locomotion Control")
++//
++//  몸은 관절 토크(제 토막끼리 주고받는 쌍)와 땅 접촉 · 마찰만으로 서고 · 걷고 · 돈다. 몸 밖에서 거는 힘은 없다
++//  (받침 힘 · 걷기 밀기 · 닻 · 발 핀 · 디딘 발 덧질량을 걷어 냄 — docs/strike/physics2_proto_simbicon_2026-11-24.md).
++//
++//   근육 = 엔진 관절 모터(관절 공간 PD · fighter.driveJoints) + 여기서 거는 명시 토크 쌍.
++//   ① 골반 자세(기울기 · yaw)는 세계 틀에서 잡는다: 디딘 다리의 엉덩이 목표를 '실제 골반'이 아니라 '바라는 골반 자세' 기준으로 준다(gait.legIK).
++//      그러면 골반이 기울거나 돌아간 만큼이 디딘 엉덩이 모터의 오차가 되고, 그 반작용은 디딘 다리 → 발 → 땅으로 간다(τ_디딘 엉덩이 = −τ_몸통).
++//      내딛는 다리의 엉덩이는 전처럼 세계 틀 목표(실제 골반 기준으로 풀어 줌).
++//   ② 빠르기 · 균형은 발 놓기 되먹임으로: 디딜 자리 = 몸이 디딜 때 있을 곳 + 실제 속도 몫 + (실제 − 가려는 속도) 몫 (gait.target).
++//   ③ 작은 고침은 압력 중심으로: 바라는 무게중심 가속(gait.update) → 압력 중심 자리 = 발목 토크 + 두 발 하중 몫 (이 파일 stanceFF). 발바닥 밖으로는 못 나간다.
++//   ④ 디딘 다리 중력 보상 앞먹임(stanceFF): 그 압력 중심에서 무게중심 쪽으로 향하는 땅 반력(크기 = 그 다리 하중 몫 × 몸무게)을
++//      내려면 필요한 발목 · 무릎 · 엉덩이 토크를 명시 쌍으로 건다 — PD 가 처지지 않게.
++//   ⑤ 내딛는 발 이끌기(swingTorque): 옛 swingPull(발과 골반에 작용선이 다른 힘 → 짝 없는 짝힘)을 엉덩이 · 무릎 토크 쌍(야코비 전치)으로.
++//   모든 명시 토크는 사람 한도(config POSE.torque × 근육 몫) 안으로 자르고, 암시 모터는 남은 예산 안에서 '크기 합 줄이기'로 묶는다. 포화는 fighter.torqueLog 에 센다.
++// ─────────────────────────────────────────────────────────────
++import * as THREE from 'three';
++import { POSE } from './config.js';
++
++const clamp = THREE.MathUtils.clamp;
++const AXES = ['x', 'y', 'z'];
++const LEG_PARTS = ['thighF', 'shinF', 'footF', 'thighB', 'shinB', 'footB'];
++const KNEE_LOCAL = new THREE.Vector3(0, -0.215, 0); // 허벅지 몸체 기준 무릎 관절 자리
++const SOLE_LOCAL = new THREE.Vector3(0, -0.035, 0); // 발 몸체 기준 발바닥 가운데
++
++/** 세계 풀이 값 (세계마다 한 번 — 싸움꾼이 만들어질 때 부른다. 사람 · AI 가 같은 세계 · 같은 몸 물리) */
++const TUNED = new WeakSet();
++export function tuneWorld(world) {
++  if (TUNED.has(world)) return;
++  TUNED.add(world);
++  const ip = world.integrationParameters;
++  ip.numInternalPgsIterations = POSE.pgs;
++  ip.contact_natural_frequency = POSE.contactHz;
++}
++
++/** 관절 이름 → 사람 토크 한도 표 (없으면 null — 팔 · 목 · 칼은 fighter 의 옛 표 그대로) */
++export function torqueLimit(name) {
++  const T = POSE.torque;
++  if (name.startsWith('thigh')) return T.thigh;
++  if (name.startsWith('shin')) return T.shin;
++  if (name.startsWith('foot')) return T.foot;
++  return T[name] ?? null;
++}
++
++/** 다리 근육 몫 (fighter.driveJoints 의 다리 식과 같은 값): 근육 세기 × 다리 기능 */
++export function legMuscle(f, k) {
++  return Math.max(0.15, f.muscle) * (0.6 + 0.4 * f.legHealth) * (0.4 + 0.6 * f.limbs['leg' + k]);
++}
++
++/** 관절 토크 기록 칸 (관절마다 — 포화 셈 · 최고 · 크기 분포 5 N·m 칸) */
++function logOf(f, name) {
++  const L = (f.torqueLog ??= {});
++  return (L[name] ??= { n: 0, ffSat: 0, pdSat: 0, peak: 0, sum: 0, hist: new Uint32Array(100) });
++}
++
++/** 스텝 처음: 명시 토크가 쓴 몫을 지운다 (driveJoints 가 남은 예산을 읽는다) */
++export function beginTorques(f) {
++  for (const j of f.joints) {
++    if (!j.tlim) continue;
++    j.ff.x = j.ff.y = j.ff.z = 0;
++    j.ffHit = false;
++  }
++}
++
++/**
++ * 관절 j 에 명시 토크 쌍을 건다: 자식 토막에 +τ · 부모 토막에 −τ (세계 틀 τ). 부모 틀 축마다 사람 한도 × 근육 몫 안으로 자른다(경첩은 z 축 몫만).
++ *  j.ff 에 쓴 몫(절댓값)을 쌓는다 — 암시 모터의 예산에서 뺀다.
++ */
++export function torquePair(j, tau, mus) {
++  const lim = j.tlim;
++  const r = j.parent.rotation();
++  _qp.set(r.x, r.y, r.z, r.w);
++  _tl.copy(tau).applyQuaternion(_qi.copy(_qp).invert());
++  for (const ax of AXES) {
++    const m = lim[ax] == null ? 0 : Math.max(0, lim[ax] * mus - j.ff[ax]);
++    if (Math.abs(_tl[ax]) > m) {
++      if (lim[ax] != null) j.ffHit = true;
++      _tl[ax] = clamp(_tl[ax], -m, m);
++    }
++    j.ff[ax] += Math.abs(_tl[ax]);
++  }
++  _tl.applyQuaternion(_qp);
++  _t.x = _tl.x; _t.y = _tl.y; _t.z = _tl.z;
++  j.child.addTorque(_t, true);
++  _t.x = -_tl.x; _t.y = -_tl.y; _t.z = -_tl.z;
++  j.parent.addTorque(_t, true);
++}
++
++/**
++ * ④ 디딘 다리 중력 보상 앞먹임 + 압력 중심(발목 토크 · 두 발 하중 몫)으로 하는 균형의 작은 고침.
++ *  바라는 무게중심 수평 가속 a(gait.acc)에서 바라는 압력 중심 P* = 무게중심 − a ÷ ω0² 를 구한다(거꾸로 선 진자: 가속 = ω0² × (무게중심 − 압력 중심)).
++ *  두 발 디딤이면 P* 를 두 발바닥 가운데를 잇는 선에 내려 하중 몫 w 를 정하고(선 위 자리), 남는 몫은 발마다 발바닥 안(POSE.copX · copZ)에서 압력 중심을 옮긴다.
++ *  한 발 디딤이면 그 발바닥 안에서만. 발마다 압력 중심 P 에서 무게중심 쪽을 향하는 땅 반력 G = w · M·g · 근육 몫 · (수평 ÷ 높이, 1) 을 내는 관절 토크를 건다:
++ *   관절 J 에서 먼 쪽 토막에 거는 근육 토크 = −(P − J) × G (땅이 주는 모멘트와 맞비김), 가까운 쪽 토막에 그 반대.
++ *  반력이 무게중심을 향하므로 몸에 모멘트를 주지 않고, 수평 몫이 곧 진자의 가속이다(마찰이 실제로 받는다 — 못 받으면 미끄러진다).
++ *  P* 가 발 밖이면 발 가장자리에서 잘린다 = 발목 · 하중 몫으로는 못 버틴다 → 발 놓기(gait.target · 균형 걸음)가 맡는다.
++ */
++export function stanceFF(f, dt) {
++  const G = f.gait;
++  if (!G?.active || f.state !== 'stand' || !f.com) {
++    if (G) G.legs.F.w = G.legs.B.w = 0;
++    return;
++  }
++  const J = f.jointByName;
++  const Mg = f.totalMass * 9.81;
++  const c = f.com;
++  const a = G.legs.F;
++  const b = G.legs.B;
++  // 발바닥 가운데 (땅 위) · 발 앞 방향
++  for (const l of [a, b]) {
++    (l.sole ??= new THREE.Vector3()).copy(SOLE_LOCAL).applyQuaternion(l.fq).add(l.fp);
++    l.sole.y = f.terrain ? f.terrain.heightAt(l.sole.x, l.sole.z) : 0;
++    (l.cop ??= new THREE.Vector3()).copy(l.sole);
++  }
++  const gy = f.terrain ? f.terrain.heightAt(c.x, c.z) : 0;
++  const w02 = 9.81 / Math.max(0.5, c.y - gy);
++  // 바라는 압력 중심 = 무게중심 − s · 가속 ÷ ω0². 받침 꼴(두 발바닥) 안에 들어오는 가장 큰 s (0 ~ 1)를 쓴다 — 받침 밖의 점을 가까운 가장자리로 그냥 당기면
++  //  가속 방향이 틀어진다(잰 것: 앞에서 맞아 뒷발로 버티는 동안 압력 중심이 무게중심 옆으로 3 cm 어긋나 몸이 옆으로 0.5 m/s 까지 밀려 넘어짐). 방향은 지키고 크기만 줄인다
++  const fits = (qx, qz) => {
++    let ua = a.stance ? 1 : 0;
++    let ub = b.stance ? 1 : 0;
++    if (a.stance && b.stance) {
++      const ex = a.sole.x - b.sole.x;
++      const ez = a.sole.z - b.sole.z;
++      const e2 = ex * ex + ez * ez;
++      ua = e2 > 1e-6 ? clamp(((qx - b.sole.x) * ex + (qz - b.sole.z) * ez) / e2, 0, 1) : 0.5;
++      ub = 1 - ua;
++    }
++    if (ua + ub < 1e-6) return true;
++    const ox = qx - (ua * a.sole.x + ub * b.sole.x);
++    const oz = qz - (ua * a.sole.z + ub * b.sole.z);
++    for (const l of [a, b]) {
++      if (!l.stance || (l === a ? ua : ub) < 0.02) continue;
++      const cy = Math.cos(l.footYaw);
++      const sy = -Math.sin(l.footYaw);
++      if (Math.abs(ox * cy + oz * sy) > POSE.copX + 1e-4 || Math.abs(-ox * sy + oz * cy) > POSE.copZ + 1e-4) return false;
++    }
++    return true;
++  };
++  const A_ = G.acc;
++  let sc = 1;
++  if (!fits(c.x - A_.x / w02, c.z - A_.z / w02)) {
++    let lo = 0;
++    let hi = 1;
++    for (let i = 0; i < 6; i++) {
++      const mid = (lo + hi) * 0.5;
++      if (fits(c.x - (mid * A_.x) / w02, c.z - (mid * A_.z) / w02)) lo = mid;
++      else hi = mid;
++    }
++    sc = lo;
++  }
++  G.accFit = sc; // (재기용: 바란 가속 가운데 받침이 낼 수 있던 몫)
++  const px = c.x - (sc * A_.x) / w02;
++  const pz = c.z - (sc * A_.z) / w02;
++  // 하중 몫: P* 의 두 발 사이 자리
++  let wa = a.stance ? 1 : 0;
++  let wb = b.stance ? 1 : 0;
++  if (a.stance && b.stance) {
++    const ex = a.sole.x - b.sole.x;
++    const ez = a.sole.z - b.sole.z;
++    const e2 = ex * ex + ez * ez;
++    wa = e2 > 1e-6 ? clamp(((px - b.sole.x) * ex + (pz - b.sole.z) * ez) / e2, 0, 1) : 0.5;
++    wb = 1 - wa;
++  }
++  a.wGeo = wa; // 바라는 몫 (접촉 여부를 보기 앞 — gait.poseLegs 의 하중 몫 맞추기가 읽는다: 아직 안 닿은 '디딘' 발은 닿을 때까지 다리를 늘인다)
++  b.wGeo = wb;
++  // 실제로 땅을 누르는 발만 (지난 스텝 접촉 힘): 뜬 발 몫은 다른 발로
++  const on = (l) => (l.stance ? clamp((l.N || 0) / (POSE.ffLoadOn * Mg), 0, 1) : 0);
++  const ca = on(a);
++  const cb = on(b);
++  const ta = ca * (wa + wb * (1 - cb));
++  const tb = cb * (wb + wa * (1 - ca));
++  const kf = Math.min(1, dt * POSE.ffRate);
++  a.w = (a.w || 0) + (ta - (a.w || 0)) * kf;
++  b.w = (b.w || 0) + (tb - (b.w || 0)) * kf;
++  if (!a.stance) a.w = 0;
++  if (!b.stance) b.w = 0;
++  // 남는 몫: P* − (하중 몫으로 정해진 자리) → 발마다 발바닥 안에서 압력 중심을 옮김
++  const ws = a.w + b.w;
++  const rx = ws > 1e-3 ? px - (a.w * a.sole.x + b.w * b.sole.x) / ws : 0;
++  const rz = ws > 1e-3 ? pz - (a.w * a.sole.z + b.w * b.sole.z) / ws : 0;
++  for (const l of [a, b]) {
++    if (!l.stance || !(l.w > 1e-3)) continue;
++    // 발 틀 (앞 · 옆)에서 자름
++    _v.set(1, 0, 0).applyQuaternion(l.fq);
++    const fl = Math.hypot(_v.x, _v.z) || 1;
++    const fx = _v.x / fl;
++    const fz = _v.z / fl;
++    const along = clamp(rx * fx + rz * fz, -POSE.copX, POSE.copX);
++    const side = clamp(-rx * fz + rz * fx, -POSE.copZ, POSE.copZ);
++    l.cop.x = l.sole.x + fx * along - fz * side;
++    l.cop.z = l.sole.z + fz * along + fx * side;
++    const mus = legMuscle(f, l.k);
++    const h = Math.max(0.4, c.y - l.cop.y);
++    let gx = (c.x - l.cop.x) / h;
++    let gz = (c.z - l.cop.z) / h;
++    const rr = Math.hypot(gx, gz);
++    if (rr > POSE.ffLeanMax) {
++      gx *= POSE.ffLeanMax / rr;
++      gz *= POSE.ffLeanMax / rr;
++    }
++    const N = l.w * Mg * Math.min(1, mus);
++    _G.set(gx * N, N, gz * N);
++    l.ffN = N;
++    // 발목
++    _m.subVectors(l.cop, l.ankle).cross(_G).negate();
++    torquePair(J[l.foot], _m, mus);
++    // 무릎 (경첩: 축 몫만 — torquePair 가 부모(허벅지) 틀 z 만 남긴다)
++    const tb2 = f.bodies[l.thigh];
++    const tr = tb2.rotation();
++    const tt = tb2.translation();
++    _k.copy(KNEE_LOCAL).applyQuaternion(_qk.set(tr.x, tr.y, tr.z, tr.w)).add(_v.set(tt.x, tt.y, tt.z));
++    _m.subVectors(l.cop, _k).cross(_G).negate();
++    torquePair(J[l.shin], _m, mus);
++    // 엉덩이
++    _m.subVectors(l.cop, l.hip).cross(_G).negate();
++    torquePair(J[l.thigh], _m, mus);
++  }
++}
++
++/**
++ * ⑤ 내딛는 발목에 힘 F 를 건 것과 같은 일을 하는 엉덩이 · 무릎 토크 쌍 (야코비 전치): 엉덩이(골반 ↔ 허벅지) τ = (발목 − 엉덩이) × F,
++ *  무릎(허벅지 ↔ 정강이) τ = ((발목 − 무릎) × F) 의 경첩 축 몫. 몸 전체로는 힘도 토크도 0 (토크 쌍뿐).
++ */
++export function swingTorque(f, l, F) {
++  const J = f.jointByName;
++  const mus = legMuscle(f, l.k);
++  const tb = f.bodies[l.thigh];
++  const tr = tb.rotation();
++  const tt = tb.translation();
++  _k.copy(KNEE_LOCAL).applyQuaternion(_qk.set(tr.x, tr.y, tr.z, tr.w)).add(_v.set(tt.x, tt.y, tt.z));
++  _m.subVectors(l.ankle, _k).cross(F);
++  torquePair(J[l.shin], _m, mus);
++  _m.subVectors(l.ankle, l.hip).cross(F);
++  // 수직축(yaw) 몫은 뺀다: 뻗은 다리의 발을 옆으로 미는 힘은 엉덩이에서 골반을 돌리는 반작용(잰 값: 한도 70 N·m 에 닿음)이 되는데, 한 발로 선 몸은 디딘 엉덩이 돌림근 하나(같은 70)로
++  //  그것을 못 버틴다(걷는 동안 골반 yaw 가 ± 0.5 rad 흔들림). 발의 옆 자리는 엉덩이 벌림 · 모음과 엔진 모터가 맡는다
++  _m.y = 0;
++  torquePair(J[l.thigh], _m, mus);
++}
++
++/** 암시 모터 한 축을 남은 예산 안으로: 스프링 몫 + 감쇠 몫의 크기 합이 예산을 넘으면 강성 · 감쇠를 같은 비율로 낮춘다 (엔진 시험 s5 (g) — 최고 1.02 ~ 1.38 배). 돌려주는 값 = 비율 */
++export function motorScale(spring, damp, budget) {
++  const need = Math.abs(spring) + Math.abs(damp);
++  return need > budget ? Math.max(1e-6, budget / need) : 1; // 0 은 축을 잠근다 (모터 k = d = 0 = 상대 각속도 0 구속) → 아주 작은 값
++}
++
++/** 스텝 끝(driveJoints 뒤): 관절마다 이번 스텝 요구 토크(명시 + 암시) 크기를 적는다 */
++export function logTorque(f, j, req, pdSat) {
++  const g = logOf(f, j.name);
++  g.n++;
++  if (j.ffHit) g.ffSat++;
++  if (pdSat) g.pdSat++;
++  g.sum += req;
++  if (req > g.peak) g.peak = req;
++  g.hist[Math.min(99, Math.floor(req / 5))]++;
++}
++
++/** 관절 토크 기록 요약: 이름 → { 평균, 95 %, 최고 (N·m), 앞먹임 포화 몫, 모터 포화 몫 } */
++export function torqueSummary(f) {
++  const out = {};
++  for (const [name, g] of Object.entries(f.torqueLog ?? {})) {
++    let acc = 0;
++    let p95 = 0;
++    for (let i = 0; i < 100; i++) {
++      acc += g.hist[i];
++      if (acc >= 0.95 * g.n) {
++        p95 = (i + 1) * 5;
++        break;
++      }
++    }
++    out[name] = { n: g.n, mean: +(g.sum / Math.max(1, g.n)).toFixed(1), p95, peak: +g.peak.toFixed(1), ffSat: +(g.ffSat / Math.max(1, g.n)).toFixed(4), pdSat: +(g.pdSat / Math.max(1, g.n)).toFixed(4) };
++  }
++  return out;
++}
++
++export { LEG_PARTS };
++
++const _qp = new THREE.Quaternion();
++const _qi = new THREE.Quaternion();
++const _qk = new THREE.Quaternion();
++const _tl = new THREE.Vector3();
++const _G = new THREE.Vector3();
++const _m = new THREE.Vector3();
++const _k = new THREE.Vector3();
++const _v = new THREE.Vector3();
++const _t = { x: 0, y: 0, z: 0 };
+diff --git a/tools/sim/harness_m.mjs b/tools/sim/harness_m.mjs
+index beaf88f8..991613a9 100644
+--- a/tools/sim/harness_m.mjs
++++ b/tools/sim/harness_m.mjs
+@@ -88,7 +88,7 @@ export function newRound(opts = {}) {
+       const t = rb.translation();
+       rb.setTranslation({ x: t.x + 40, y: t.y, z: t.z + 40 }, true);
+     }
+-    enemy.anchor.setTranslation({ x: enemy.anchor.translation().x + 40, y: enemy.anchor.translation().y, z: enemy.anchor.translation().z + 40 }, true);
++    if (enemy.gait?.active) enemy.gait.exit(); // 디딘 자리 기억을 버림 (다음 스텝에 옮긴 자리에서 다시 딛는다 — 물리 2.0 시제품: 닻 몸체는 없다)
+     G.parkEnemy = true;
+     G.faceP = { x: 100, y: 1, z: 0 };
+   };
+diff --git a/tools/sim/jelly_harness.mjs b/tools/sim/jelly_harness.mjs
+index 611f482c..b3f43a50 100644
+--- a/tools/sim/jelly_harness.mjs
++++ b/tools/sim/jelly_harness.mjs
+@@ -82,7 +82,7 @@ export function newRound(opts = {}) {
+       const t = rb.translation();
+       rb.setTranslation({ x: t.x + 40, y: t.y, z: t.z + 40 }, true);
+     }
+-    enemy.anchor.setTranslation({ x: enemy.anchor.translation().x + 40, y: enemy.anchor.translation().y, z: enemy.anchor.translation().z + 40 }, true);
++    if (enemy.gait?.active) enemy.gait.exit(); // 디딘 자리 기억을 버림 (다음 스텝에 옮긴 자리에서 다시 딛는다 — 물리 2.0 시제품: 닻 몸체는 없다)
+     G.parkEnemy = true;
+     G.faceP = { x: 100, y: 1, z: 0 };
+   };
