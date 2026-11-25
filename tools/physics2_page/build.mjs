@@ -1,7 +1,7 @@
 // 물리 2.0 시험 페이지 빌드 (사장님 11/25 '아까 말한 1번도 동시에 수행해' — 새 다리를 본판에 넣기 전에 사장님이 해 보는 하위 경로 /physics2/ · docs/strike/physics2_trial_page_2026-11-25.md)
 //  node tools/physics2_page/build.mjs <빈 폴더(outDir)>
 //   1) 이 저장소의 게임(src · index.html · test.html · sounds.html · voices.html · public 가운데 게임이 쓰는 것)을 .tmp/physics2_src 에 베낀다
-//   2) 새 다리 패치(docs/strike/physics2_proto/legs_b4.patch)의 src 몫만 그 사본에 붙인다 — 이 가지의 src 는 건드리지 않는다
+//   2) 새 다리 패치(docs/strike/physics2_proto/legs_b5.patch)의 src 몫만 그 사본에 붙인다 — 이 가지의 src 는 건드리지 않는다
 //   3) 그 사본을 vite 로 빌드해 outDir 에 낸다
 //  본판 빌드(vite.config.js)와 다른 점 — 모두 이 파일 안에서 빌드 때만 한다(게임 코드에 켬/끔이 생기지 않는다):
 //   - 저장 가르기: 페이지 머리에 trial_storage.js 를 그대로 넣는다 → 같은 출처의 본 게임 저장(localStorage)을 읽지도 고치지도 않는다.
@@ -25,7 +25,7 @@ if (!outArg) { console.error('쓰는 법: node tools/physics2_page/build.mjs <�
 const outDir = path.resolve(process.cwd(), outArg);
 if (fs.existsSync(outDir) && fs.readdirSync(outDir).length) { console.error('시험 페이지: 낼 폴더가 비어 있지 않다 — ' + outDir); process.exit(2); }
 
-const PATCH = 'docs/strike/physics2_proto/legs_b4.patch';
+const PATCH = 'docs/strike/physics2_proto/legs_b5.patch';
 const LABEL = '물리 2.0 시험판';
 const PREFIX = 'stillness.p2trial.';
 const PAGES = ['index.html', 'test.html', 'sounds.html', 'voices.html'];
