@@ -1,0 +1,41 @@
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 3e2e7764..2ad106b5 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -29,23 +29,32 @@ jobs:
+       # 생사전 시험판 /saengsa/ — 커밋하지 않고 여기서 빌드한다 (11/21 감사 N-005). 아래 npm run build 가 public/ 을 dist 로 옮길 때 함께 들어간다
+       - run: npx vite build --config tools/saengsa_page/vite.config.mjs --base=./ --outDir public/saengsa --emptyOutDir
+       # 물리 2.0 시험판 /physics2/ — 새 다리를 본판에 넣기 전에 사장님이 해 보는 하위 경로 (11/25 사장님 '1번도 수행해').
+-      #  본판 코드는 그대로다: physics-2 가지를 따로 받아, 그 가지의 도구(tools/physics2_page/build.mjs)가 새 다리 패치를 붙인 사본을 빌드한다.
++      #  본판 코드는 그대로다: physics-2 가지의 정해 둔 커밋을 따로 받아, 그 커밋의 도구(tools/physics2_page/build.mjs)가 새 다리 패치를 붙인 사본을 빌드한다.
++      #  커밋 해시로 고정한다 — 시험 페이지는 본 게임과 같은 출처라, 검토한 판만 나가게 한다. 새 판을 낼 때 아래 ref 를 올린다.
+       #  커밋하지 않는다(public/physics2/ 는 .gitignore) · 본 게임 오프라인 저장에서 뺀다(tools/pwa/build.mjs EXCLUDED_DIRS).
+-      #  이 두 걸음은 실패해도 본판 배포를 막지 않는다(continue-on-error) — 실패하면 시험 페이지만 빠진다. 빈 폴더에 다 지은 뒤에야 public 으로 옮긴다.
+-      - uses: actions/checkout@v4
++      #  이 두 걸음은 실패하거나 오래 걸려도 본판 배포를 막지 않는다(continue-on-error · timeout-minutes) — 그때는 시험 페이지만 빠지고 맨 아래 걸음이 경고를 찍는다.
++      - id: p2
++        uses: actions/checkout@v4
+         continue-on-error: true
++        timeout-minutes: 5
+         with:
+-          ref: physics-2
++          ref: 95f435c0c5cebcfcf6c0eac846838ae949a05759
+           path: .p2
+       - name: physics2 trial page
++        if: steps.p2.outcome == 'success'
+         continue-on-error: true
++        timeout-minutes: 10
+         run: |
++          test -f .p2/package.json
++          test -f .p2/tools/physics2_page/build.mjs
+           cd .p2
+           npm ci
+           node tools/physics2_page/build.mjs "$RUNNER_TEMP/physics2"
+           rm -rf ../public/physics2
+           cp -r "$RUNNER_TEMP/physics2" ../public/physics2
+       - run: npm run build
++      - name: physics2 trial page present?
++        run: test -f dist/physics2/index.html || echo "::warning::물리 2.0 시험 페이지(dist/physics2)가 이번 배포에서 빠졌다 — 위 'physics2 trial page' 걸음의 기록을 볼 것"
+       - uses: actions/upload-pages-artifact@v3
+         with:
+           path: dist
