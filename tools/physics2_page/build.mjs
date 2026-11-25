@@ -125,7 +125,14 @@ const trialPage = () => ({
   },
   // 서비스 워커 등록을 막는다: pwa.js 가 생사전 시험판에 쓰는 '등록 안 함' 갈래를 이 빌드에서 늘 타게 한다(그 줄이 없어지면 빌드를 멈춘다)
   transform(code, id) {
-    if (!id.split('?')[0].replace(/\\/g, '/').endsWith('/src/pwa.js')) return null;
+    const file = id.split('?')[0].replace(/\\/g, '/');
+    // 스킬 다 배운 판 (11/26 사장님 '스킬을 다 배워놨어야 테스트를 하지'): 시험 페이지는 어느 길(첫 화면 여정 · 시험 화면)로 들어가도 모든 유파의 스킬트리 칸을 배운 것으로 읽는다
+    if (file.endsWith('/src/skill_tree_store.js')) {
+      const head = 'export function readLearned(progress = readProgress()) {';
+      if (!code.includes(head)) throw new Error('시험 페이지: src/skill_tree_store.js 에서 readLearned 머리를 못 찾음');
+      return { code: code.replace(head, head + '\n  return Object.fromEntries(TREE_SCHOOLS.map((s) => [s, new Set(allNodeIds(s))])); // 물리 2.0 시험판 — 스킬 다 배운 판'), map: null };
+    }
+    if (!file.endsWith('/src/pwa.js')) return null;
     const mark = "import.meta.env.VITE_SAENGSA_TEST === '1'";
     if (!code.includes(mark)) throw new Error('시험 페이지: src/pwa.js 에서 서비스 워커 등록을 막을 줄을 못 찾음');
     return { code: code.replace(mark, 'true'), map: null };
