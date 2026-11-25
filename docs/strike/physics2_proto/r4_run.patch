@@ -1,0 +1,347 @@
+diff --git a/src/config.js b/src/config.js
+index 6a9817a6..6c83537d 100644
+--- a/src/config.js
++++ b/src/config.js
+@@ -347,6 +347,7 @@ export const GAIT = {
+   minWidthMax: 0.12, // 걷는 걸음 · 받아 딛기의 두 발 사이 최소 좌우 간격 상한(m): 유파 칸(이베리아 0.16)도 이 값까지
+   capWidth: 0.01, // 걷는 걸음 좌우 디딤에 더하는 여유(m) — 0.02 → 0.01 (걸음 너비와 함께 좁힘)
+   capDv: 0.5, // 한 걸음의 디딤 자리로 올리고 내리려는 몸 빠르기 몫(m/s)
++  kickDv: 0.6, // 독일 박찬 걸음(파고들기 · 뒤 박차기) 한 걸음의 디딤 자리로 올리려는 몸 빠르기 몫(m/s) — 걸음 사다리 0.6 (보통 걸음 capDv 0.5). 플레이어가 느끼는 것: 올리면 박찬 발을 몸에 더 가까이 딛어 몸이 그 발 위로 더 빨리 넘어간다 — 0.9 면 선 채 파고들기 앞 빠르기 최고가 1.7 → 2.0 m/s 로 오르지만 넘어지는 판이 생기고(8 판에 1) 뒤 박차기가 −1.7 m/s 로 한도를 넘는다 (r4_run.md §3)
+   legVmax: 1.1, // 다리가 따라갈 수 있는 걷는 빠르기 한도(m/s) — 내딛는 발 빠르기 한도(swingVmax 6 m/s)에서 나옴. 가려는 속도(moveSpeed 1.82 · 박차기 2.5 · 뛰기)를 이 값으로 자른다 [시제품 — 사장님 값 moveSpeed 는 그대로 두고 다리 쪽에서 자름]
+   goAccel: 1.5, // 조종 속도가 빨라지거나 방향을 바꿀 때의 한도(m/s²) — 한 걸음(0.45 s)에 0.7 m/s 쯤: 디딜 자리로 올릴 수 있는 빠르기 몫(capDv)과 같은 크기
+   stopDecel: 2, // 조종 속도가 줄어들 때의 한도(m/s²) — 걷다 멈출 때 걸음을 줄여 가며 선다(몸을 세워 줄 밖 힘이 없다)
+@@ -468,6 +469,7 @@ export const RUN = {
+   arc: 1.62,
+   arcOut: 0.1,
+   flyReach: 0.3, // 엉덩이 앞 이 거리(m)까지만 딛음
++  legVmax: 1.7, // 뛰는 걸음에서 다리가 따라갈 수 있는 빠르기 한도(m/s · 물리 2.0 넷째 판 — gait.js runCapTick · 걷는 한도 GAIT.legVmax 1.1 의 1.55 배). 플레이어가 느끼는 것: 올리면 뛰는 끝 빠르기가 오르지만 넘어진다. 잰 값(뛰기 장면 · 넘어지지 않은 판): 1.7 은 세 무기 8 / 8 · 안 본 흔듦 24 / 24 (무게중심 1.75 · 골반 최고 2.2 ~ 2.4 m/s) · 1.9 는 롱소드 5 / 8 · 2.1 은 4 / 8 · 2.4 는 0 / 8 · 4.6(걷는 끝 1.82 × mul 2.5 가 안 잘리는 값)도 0 / 8. 묶는 것은 디딘 엉덩이 토크 한도 200 N·m (내딛는 다리 반작용 180 ~ 230 + 기울기 되먹임 → 280 ~ 480 을 바람 — docs/strike/physics2_notes/r4_run.md §1)
+ };
+ 
+ // 혼자 싸움 판단(셋 이상 판 · 동료와 붙지 않은 적 둘 이상이 range m 안 = 수가 밀림 · src/ai_lone.js) — out · outK 둘째 적 칼끝 + out 안이면 멀어지는 스틱 outK × 숙련 몫 · many.out 유파만(일본) [사장님 11/19 · 값 감독]
+diff --git a/src/fighter.js b/src/fighter.js
+index b917f707..6249a7d3 100644
+--- a/src/fighter.js
++++ b/src/fighter.js
+@@ -2954,7 +2954,7 @@ export class Fighter {
+         const dx = tx - c.x;
+         const dz = tz - c.z;
+         const d = Math.hypot(dx, dz);
+-        const lim = (t2 < c2 ? GAIT.stopDecel : GAIT.goAccel) * dt;
++        const lim = G.kickNow() ? Infinity : (t2 < c2 ? GAIT.stopDecel : GAIT.goAccel) * dt; // 독일 박찬 걸음(파고들기 · 뒤 박차기)이 걸린 동안은 조종 속도가 곧바로 바뀐다 (gait.js kickNow — 천천히 바뀌면 '스틱이 거꾸로면 박차기 끝' 규칙이 박찬 걸음을 지운다)
+         this.cmdGoalK = c2 > 1e-8 ? Math.sqrt(t2 / c2) : t2 > 1e-8 ? Infinity : 1; // 조종 속도가 가고 있는 값 ÷ 지금 값 (걸음이 디딜 때의 속도를 내다볼 때 읽는다)
+         if (d > lim) {
+           c.x += (dx / d) * lim;
+diff --git a/src/gait.js b/src/gait.js
+index d5a9324d..e1001d94 100644
+--- a/src/gait.js
++++ b/src/gait.js
+@@ -366,6 +366,36 @@ export class Gait {
+     return GAIT.legVmax * Math.min(1, k);
+   }
+ 
++  /**
++   * 독일 박찬 걸음(파고들기 · 뒤 박차기)이 걸려 있거나 그 걸음 중인가 — 옆 박차기(이베리아) · 박자 걸음 빠른 디딤은 아니다 (물리 2.0 넷째 판).
++   *  그동안 조종 속도는 곧바로 바뀌고(fighter.js driveBalance) 박찬 걸음의 빠르기 한도는 걷는 한도 × 박찬 배율이며(update 의 한도 자르기) 박찬 발은 캡처 점으로 딛는다(target) —
++   *  몸을 미는 밖 힘이 없으니 박찬 걸음도 발이 낼 수 있는 만큼만 빨라진다.
++   */
++  kickNow() {
++    const B = this.burst;
++    return B ? !B.side : this.fastK > 1 && !!this.kickStep; // (걸린 박차기 · 박찬 걸음 중 — kickStep 은 fastBegin 이 걸음마다 정함)
++  }
++
++  /**
++   * 뛰는 걸음까지 넣은 빠르기 한도(m/s · 물리 2.0 넷째 판): 걷는 걸음은 legV() 그대로, 뛰는 동안은 runCapTick 이 스텝마다 고친 값(this.runV).
++   *  가려는 속도 자르기(update) · 뛰는 걸음의 박자(update) · 뛰는 걸음의 디딜 자리(target)가 같은 값을 읽는다 — 셋이 다른 빠르기를 보면 몸은 1.6 m/s 로 가는데 발은 2.1 m/s 의 박자로 놀고 디딤 자리는 걸음마다 더 빨라지려 든다.
++   */
++  legVRun() {
++    return this.runV ?? this.legV();
++  }
++
++  /**
++   * 뛰는 걸음의 빠르기 한도를 스텝마다 한 번 고친다(update 가 부름) → this.runV. 걷는 한도 legV() 에서 뛰는 걸음 한도(RUN.legVmax × 같은 다리 힘 몫)로 뛰기 섞임 rk 만큼 옮겨 가되,
++   *  오르는 빠르기는 GAIT.goAccel 까지 — RUN.blend(0.3 s) 만에 다 올리면 가려는 속도가 한 번에 뛰어(2.4 m/s²) 뛰기 시작한 0.3 ~ 0.9 s 에 넘어진다(잰 값 · 레이피어 한도 1.9: 8 판에 5 판 → 고친 뒤 1 판). 내리는 쪽은 섞임 그대로.
++   *  걷는 걸음(rk 0)은 legV() 와 같은 값이다.
++   */
++  runCapTick(rk, dt) {
++    const v = this.legV();
++    if (!(rk > 0)) return void (this.runV = v);
++    const t = v + (RUN.legVmax * (v / GAIT.legVmax) - v) * rk;
++    this.runV = t;
++  }
++
+   /**
+    * 기술이 걸음을 부탁한다 (AI의 베며 내딛기). kind: 'pass'(뒷발이 앞으로 나간다) | 'lunge'(앞발을 내딛는다)
+    * fwd: 몸 기준 앞으로(m), side: 오른쪽으로(m), duration: 발이 떠 있는 시간(초)
+@@ -484,6 +514,7 @@ export class Gait {
+     this.fastFore = false; // 첫 걸음 박차기의 '앞뒤 몫만 빠르게'(이베리아 아닌 유파 비스듬히 뒤) — 아래 박차기 가지만 켬
+     this.chaseStep = false; // 이 걸음이 간격 잡기 빠른 디딤인가 — 아래 C 가지만 켬 (잡기 걸기 holdTick 이 읽음)
+     this.digStep = false; // 이 걸음이 파고들기 박찬 앞 걸음인가 — 아래 박차기 가지의 dig 만 켬 (11/14)
++    this.kickStep = false; // 이 걸음이 독일 박찬 걸음(파고들기 · 뒤 박차기)인가 — 아래 박차기 가지가 켬 (kickNow)
+     const foot = !!RH; // 박자 걸음 디딤 셈 — 짝걸음 따라붙는 발·catch 도 센다
+     this.fastTimeOnly = false; // 박자 걸음 보폭 박자(10/15 22:1x · 22:5x 이탈리아): 빠른 몫은 발 박자 ×mul · 몸 빠르기 ×speedMul
+     if (Math.abs(wf) > vLat && (PR && !foot ? kind === 'walk' && this.pairStep === 'lead' : kind === 'walk' || (kind === 'catch' && this.walking))) {
+@@ -553,6 +584,7 @@ export class Gait {
+           this.rhyTrail = !!PR;
+           this.burstStep = true;
+           this.digStep = true;
++          this.kickStep = true;
+           this.digSteps++;
+           if (!B.free) {
+             this.digs++;
+@@ -572,6 +604,7 @@ export class Gait {
+         this.fastSide = B.side;
+         this.rhyTrail = !!PR;
+         this.burstStep = true; // 부른 쪽(update ③)이 이 걸음의 발을 burstLeg 로 적는다
++        this.kickStep = !B.side; // 뒤 박차기 (옆 박차기는 아님)
+         if (B.fore < 0 && !B.side) bwBurst(this.f, B.bw); // 뒤 박차기 헛침 경직 (11/19 [사장님 결정] — burst_whiff.js): 뒤 박찬 걸음을 뗀 순간 — 걸 때 · 뗄 때 나를 겨눠 나가는 칼이 아직 안 끝났으면 표시 (옆 박차기 · 파고들기는 아님)
+         if (!B.free) this.f.stamina?.burst(); // 기력: 박찬 걸음을 뗄 때 한 번 12 (STAMINA.pushCost — 설계안 §1 · docs/strike/stamina_import_2026-10-15.md). 기력 끔이면 아무 일도 없다 · free = 죽음의 일격 강제 뒤 박차기(10/31 시제품 SECRET.mord.burstFree — 비기 값에 든 것으로)
+         // 발 뜬 시간은 절대값 burstT(그 걸음 제 시간보다 길게는 안 함) — 몸 빠르기 배율로 나누면(÷ fastK) 걸음이 너무 짧아(0.15 s) 몸이 박찬 빠르기에 닿기 전에 걸음이 끝난다
+@@ -757,6 +790,7 @@ export class Gait {
+     // 뛰는 걸음 꼴 (11/18 뛰기 — src/run.js 가 스틱 길 몫을 둔 몸(사람 · 셋 이상 판 AI)에만 f.run 을 둠): 0 이면 아래 섞기는 모두 걷는 값 그대로
+     const rk = f.run ? f.run.k : 0;
+     this.rk = rk;
++    this.runCapTick(rk, dt); // 뛰는 걸음의 빠르기 한도 (rk 0 이면 걷는 한도 그대로)
+     // 유파 옆 빠르기(P.sideMul — 10/10 이베리아 데스트레사 둥근 걸음, 사장님 '사이드스텝 이동량 증가' · 확인표 623): 조종 스틱에 옆 몫이 있을 때 가려는 속도의 옆 몫을 배율만큼.
+     //  몸의 일이라 플레이어·AI 같이(기질 circleRate 는 그대로 — 두 번 곱하지 않음). 칸 없으면 셈하지 않는다(바이트 같음)
+     if (this.P.sideMul && !f.feetHeld && f.move.x) {
+@@ -883,7 +917,10 @@ export class Gait {
+     const vLat = Math.abs(want.x * rgt.x + want.z * rgt.z);
+     //  (비스듬히 물러날 땐 옆으로 옮기는 보폭을 줄인다: 뒤에 남는 발이 옆으로 멀어져 다리가 벌어진 채 골반이 주저앉는다)
+     const sideStride = this.P.sideStride * (1 - GAIT.backSideCut * backness);
+-    let cad = Math.max(this.P.cadence0 + this.P.cadenceK * Math.max(0, speed - 1), speed / runMix(this.P.maxStride, RUN.stride, rk), (2 * vLat) / sideStride, this.P.cadence0 * 0.9); // 뛰는 걸음: 보폭 상한 RUN.stride (11/18)
++    //  (뛰는 걸음의 박자는 다리 빠르기 한도로 자른 빠르기로 센다 — 가려는 속도는 몸보다 RUN.lead 앞서 있어, 그대로 세면 1.6 m/s 로 가는 몸이 2.1 m/s 의 박자(초당 3 걸음 · 걸음 0.53 m)로 발을 놀린다:
++    //   내딛는 발의 가속은 빠르기 × 박자에 비례하고 그 반작용을 디딘 엉덩이(한도 200 N·m)가 받는다. 걷는 걸음(rk 0)은 그대로)
++    const speedC = rk > 0 ? Math.min(speed, this.legVRun()) : speed;
++    let cad = Math.max(this.P.cadence0 + this.P.cadenceK * Math.max(0, speedC - 1), speedC / runMix(this.P.maxStride, RUN.stride, rk), (2 * vLat) / sideStride, this.P.cadence0 * 0.9); // 뛰는 걸음: 보폭 상한 RUN.stride (11/18)
+     // 짝걸음(P.pair — 10/10 레이피어 리듬): 한 짝(두 발 한 번씩) 동안 한 발이 옮기는 거리(빠르기 × 두 걸음 시간)가 pair.stride 를 넘지 않게 박자를 올린다. 칸 없으면 셈하지 않는다
+     //  (앞뒤로 갈 때만 — 옆 몫이 앞뒤 몫보다 크면 전 follow 그대로. 걷기 시작 발 고르기(아래 ③)와 같은 가름)
+     const PR = this.follow && this.P.pair && Math.abs(want.x * fwd.x + want.z * fwd.z) > vLat ? this.P.pair : null;
+@@ -901,7 +938,10 @@ export class Gait {
+     if (rk > 0) {
+       const vfw = this.vf.x * fwd.x + this.vf.z * fwd.z;
+       const vh = Math.hypot(this.vf.x, this.vf.z);
+-      this.fly = (this.fly || (!!f.run?.on && rk >= RUN.flyK)) && walkNow && !f.feetHeld && f.state === 'stand' && vfw > RUN.flyFrom * (this.fly ? RUN.flyOut : 1) && vfw > RUN.flyFore * vh; // (뛰기가 끝나도 몸이 RUN.flyFrom × flyOut 밑으로 줄 때까지 — 줄어드는 동안도 이 걸음)
++      // (날기 문턱은 무게중심 앞 빠르기로 잰다 — 밖에서 밀지 않는 몸의 골반은 걸음마다 무게중심보다 ± 0.5 m/s 출렁여, 골반으로 재면 2.0 m/s 로 가는 몸이 걸음 안의 꼭대기(2.4 ~ 2.8)에서 날기로 넘어간다:
++      //   새 다리는 아직 날며 뛰지 못한다(두 발이 뜬 동안 골반이 0.13 ~ 0.2 m 내려앉고 디딜 때 무릎 한도 250 N·m 를 넘음 — docs/strike/physics2_notes/r4_run.md). 그 밖의 셈(flyV · flyFore)은 그대로 골반 빠르기)
++      const vcw = f.comVel ? f.comVel.x * fwd.x + f.comVel.z * fwd.z : vfw;
++      this.fly = (this.fly || (!!f.run?.on && rk >= RUN.flyK)) && walkNow && !f.feetHeld && f.state === 'stand' && vcw > RUN.flyFrom * (this.fly ? RUN.flyOut : 1) && vfw > RUN.flyFore * vh; // (뛰기가 끝나도 몸이 RUN.flyFrom × flyOut 밑으로 줄 때까지 — 줄어드는 동안도 이 걸음)
+       if (this.fly) cad = RUN.flyCad[0] + RUN.flyCad[1] * vfw;
+       this.flyV = vfw;
+     } else this.fly = false;
+@@ -1309,7 +1349,7 @@ export class Gait {
+     //  몸을 미는 밖 힘이 없으므로 '가려는 속도'를 다리가 따라갈 수 있는 값으로 자른다(박차기 · 런지 · 뛰기 몫도 여기서 잘린다 — 그 걸음들은 이 시제품에서 다시 맞추지 않음)
+     {
+       const sp = Math.hypot(want.x, want.z);
+-      const vmax = this.legV();
++      const vmax = Math.max(this.legVRun(), this.fastK > 1 && this.kickNow() ? this.legV() * (GAIT.digV / GAIT.moveSpeed) : 0); // 뛰는 걸음은 그 걸음의 한도까지 · 독일 박찬 걸음은 걷는 한도 × 박찬 배율(파고들기 digV ÷ 걷는 끝 = 1.375 — 지금 게임과 같은 비) · 둘 다 아니면 legV 그대로
+       if (sp > vmax) want.multiplyScalar(vmax / sp);
+     }
+     // ④ (좌우 무게 옮기기 — 한 발로 서는 동안 '속도'로 무게를 딛은 발 쪽에 밀던 몫 — 는 없다: 발을 떼기 앞서 무게를 옮기고(아래 ⑤ · liftOk), 한 발로 선 동안은 그 발 위에 붙든다)
+@@ -1562,14 +1602,14 @@ export class Gait {
+    * 다음 걸음에 낼 몸 빠르기 → _sv: 지금 무게중심 빠르기에서 조종이 가려는 속도(균형 걸음 몫은 뺌) 쪽으로 한 걸음에 GAIT.capDv 까지.
+    *  (가려는 속도를 바로 쓰면 서 있던 몸은 발을 뒤에 딛어 앞으로 넘어지며 출발하려 든다 — 빠르기는 두 발 디딤 동안의 땅 밀기와 걸음마다의 디딤 자리로 조금씩 올리고 내린다)
+    */
+-  stepVel(want) {
++  stepVel(want, dv = GAIT.capDv) {
+     const v = this.f.comVel;
+     let ex = want.x - v.x;
+     let ez = want.z - v.z;
+     const e = Math.hypot(ex, ez);
+-    if (e > GAIT.capDv) {
+-      ex *= GAIT.capDv / e;
+-      ez *= GAIT.capDv / e;
++    if (e > dv) {
++      ex *= dv / e;
++      ez *= dv / e;
+     }
+     return _sv.set(v.x + ex, 0, v.z + ez);
+   }
+@@ -1790,6 +1830,12 @@ export class Gait {
+   /** 내딛을 자리 정하기 (remain: 발이 땅에 닿기까지 남은 시간) */
+   target(l, want, fwd, rgt, remain) {
+     const f = this.f;
++    if (this.rk > 0) {
++      // 뛰는 걸음: 디딜 자리도 다리 빠르기 한도로 자른 속도로 센다 — 가려는 속도는 몸보다 늘 RUN.lead 앞서 있어, 그대로 쓰면 디딤 자리가 걸음마다 몸을 더 빠르게 하려 들어(stepVel) 한도를 넘어 달아난다
++      //  (잰 값 · 한도 1.9: 무게중심 2.8 m/s 까지 달아나 8 판에 4 판 넘어짐). 걷는 걸음(rk 0)은 그대로
++      const sp = Math.hypot(want.x, want.z), vm = this.legVRun();
++      if (sp > vm) want = _wc.set((want.x * vm) / sp, 0, (want.z * vm) / sp);
++    }
+     l.capIdeal = false;
+     const other = l === this.legs.F ? this.legs.B : this.legs.F;
+     const p = f.bodies.pelvis.translation();
+@@ -1867,10 +1913,11 @@ export class Gait {
+     } else {
+       // 몸이 닿을 때 있을 곳 + 속도 × (딛는 시간의 절반) (Raibert). 속도가 원하는 것보다 빠르면 더 멀리 딛어 받는다
+       //  (첫 걸음 박차기 발이면 몸 빠르기·디딜 때 자리를 박찬 가속으로 내다본다 — burstAhead)
+-      const v = l === this.burstLeg ? this.burstAhead(p, want, remain, fwd) : this.vf;
++      const bl = l === this.burstLeg && !this.kickNow(); // 옛 식(박찬 가속으로 내다봄)으로 딛는 박찬 발 — 독일 박찬 걸음(파고들기 · 뒤 박차기)은 아니다: 몸을 미는 밖 힘이 없어 12.8 m/s² 로 내다본 자리는 몸보다 멀리 앞이라 몸이 그 발에 걸려 선다(잰 값: 파고들기 두 걸음 뒤 0.27 m/s). 캡처 점 디딤으로 걸음마다 빨라진다
++      const v = bl ? this.burstAhead(p, want, remain, fwd) : this.vf;
+       const Tst = this.fly ? this.flyTc : this.sT * (1 + (this.rk > 0 ? this.dsF : this.P.dsFrac)); // 뛰는 걸음은 두 발 디딤 몫 RUN.dsFrac 섞음 (11/18) · 날며 뛰기는 한 발 디딤 Tc (11/20)
+-      let px = l === this.burstLeg ? v.px : p.x + v.x * remain;
+-      let pz = l === this.burstLeg ? v.pz : p.z + v.z * remain;
++      let px = bl ? v.px : p.x + v.x * remain;
++      let pz = bl ? v.pz : p.z + v.z * remain;
+       const ah = this.fly ? RUN.flyAhead : 0.5; // 날며 뛰기 (11/20): 디딤 길의 RUN.flyAhead 몫만 몸 앞에 딛는다 — 무릎을 굽힌 채 닿게(다 편 다리로 닿으면 몸이 장대처럼 솟으며 선다)
+       let ox = want.x * Tst * ah + GAIT.kv * (v.x - want.x);
+       let oz = want.z * Tst * ah + GAIT.kv * (v.z - want.z);
+@@ -1881,9 +1928,9 @@ export class Gait {
+       //   그래서 '못 미치는 몫'의 좌우 성분이 이 발 쪽을 향하면(옆으로 갈 때 가는 쪽 발) 그 성분은 버린다 — 가는 쪽 발은 캡처 점 바로 바깥에 딛고, 따라오는 발이 간격을 좁힌다.
+       //  날며 뛰기 · 첫 걸음 박차기 발은 위 옛 식 그대로(그 걸음들은 다시 맞추지 않음)
+       let sole = false; // 아래 자리가 발바닥 가운데 기준인가 (캡처 점 디딤) — 발목 자리로 옮김
+-      if (!this.fly && l !== this.burstLeg && this.capAt(other.stance ? other : null, remain, want)) {
++      if (!this.fly && !bl && this.capAt(other.stance ? other : null, remain, want)) {
+         const E = Math.exp(this.capW * Math.max(0.2, this.sT));
+-        this.stepVel(want);
++        this.stepVel(want, l === this.burstLeg ? GAIT.kickDv : GAIT.capDv); // 독일 박찬 발은 한 걸음에 더 크게 빨라진다 (GAIT.kickDv)
+         px = _capC.x;
+         pz = _capC.z;
+         l.capX = _cap.x; // 내다본 디딜 때의 캡처 점 · 무게중심 · 속도 (재는 도구가 실제와 견준다)
+@@ -2399,6 +2446,7 @@ export function setSupportFloor(world, collider) {
+ const _p = { x: 0, y: 0, z: 0 };
+ const _ba = { x: 0, z: 0, px: 0, pz: 0 }; // 첫 걸음 박차기 발 디딜 자리 셈(burstAhead) — 디딘 때 몸 빠르기·자리
+ const _sv = new THREE.Vector3(); // stepVel
++const _wc = new THREE.Vector3(); // target: 뛰는 걸음의 자른 가려는 속도
+ const _pv = { x: 0, z: 0, ideal: false, miss: 0 }; // preview
+ const _cap = new THREE.Vector3(); // capAt: 디딜 때의 캡처 점
+ const _capC = new THREE.Vector3(); // capAt: 디딜 때의 무게중심
+diff --git a/tools/sim/run_probe.mjs b/tools/sim/run_probe.mjs
+new file mode 100644
+index 00000000..d69b36a1
+--- /dev/null
++++ b/tools/sim/run_probe.mjs
+@@ -0,0 +1,135 @@
++// ─────────────────────────────────────────────────────────────
++//  run_probe.mjs — 뛰기 · 파고들기 · 뒤 박차기 탐침 (물리 2.0 넷째 판 · docs/strike/physics2_notes/r4_run.md). 재기만 한다.
++//
++//   node tools/sim/run_probe.mjs --scene=run [--root=<나무>] [--weapon=longsword] [--variant=0 | --variants=0-7] [--cfg=GAIT.legVmax:9,…] [--win=0.5] [--rows] [--every=6] [--from=0] [--to=99]
++//   장면: run · runbreak · dighuman · digai · backburstai · walk · back (조종은 legs_battery.mjs 의 같은 이름 장면과 글자 그대로 같다 — 그 도구는 고치지 않는다)
++//
++//  묻는 것: 빠르기가 어디서 막히나. 창(--win s)마다 평균을 찍는다 —
++//   시킨 빠르기(다리 구동에 넘어간 가려는 속도 · 앞 몫) · 무게중심 앞 빠르기 · 가속 한도 · 바란 수평 힘(앞 몫) ÷ 마찰 한도(μ N) · 딛은 발 수(0 · 1 · 2 인 스텝 몫) ·
++//   압력 중심이 잘린 스텝 몫 · 마찰 원뿔에 잘린 스텝 몫 · 관절 한도에 닿은 스텝 몫(엉덩이 · 무릎 · 발목 — 딛은 다리 쪽이 큼) · 내딛는 발 어긋남(목표 − 발목) ·
++//   디딤 수(박자) · 한 걸음 길이 · 날기(fly) 스텝 몫 · 두 발 모두 뜬 스텝 몫 · 골반 높이 · 가슴 기울기 · 뛰는 동안 건 선언된 밀기(Fighter.runAid — 있으면).
++//  판마다 한 줄 요약: 넘어짐 · 골반 최고 빠르기(vTop) · 무게중심 앞 최고(vfTop) · 뒤 최고(vbTop) · 뛴 시간 · 날기 시간(flyT) · 두 발 모두 뜬 시간(airT) · 날며 디딘 걸음 수(flySteps) · 골반 빠르기가 1.9 · 2.5 · 4 · 5 m/s 를 넘은 시간(above).
++//  넘어짐 규칙은 legs_battery.mjs 와 같다(상태가 stand 아님 · 골반 0.5 m 밑 0.25 s · 가슴 60° 넘게 0.25 s).
++// ─────────────────────────────────────────────────────────────
++import { fileURLToPath, pathToFileURL } from 'node:url';
++import { dirname, join, resolve } from 'node:path';
++
++const HERE = dirname(fileURLToPath(import.meta.url));
++const args = Object.fromEntries(process.argv.slice(2).map((a) => { const m = a.match(/^--([^=]+)(?:=(.*))?$/); return m ? [m[1], m[2] ?? true] : [a, true]; }));
++const ROOT = args.root ? resolve(String(args.root)) : resolve(HERE, '../..');
++const u = (p) => pathToFileURL(join(ROOT, p)).href;
++if (args.cfg) { const { applyCfg } = await import(u('tools/sim/cfg_override.mjs')); console.log('덮어씀(재기 전용):', JSON.stringify(applyCfg(String(args.cfg)))); }
++const H = await import(u('tools/sim/harness_m.mjs'));
++const DT = H.DT;
++const { LEGS } = H.CONFIG;
++const rng = (seed) => { let a = (seed * 2654435761) >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
++function hitChest(P, J, ang) {
++  const q = P.bodies.pelvis.rotation();
++  const fx = 1 - 2 * (q.y * q.y + q.z * q.z), fz = 2 * (q.x * q.z - q.w * q.y);
++  const l = Math.hypot(fx, fz) || 1, ax = fx / l, az = fz / l, c = Math.cos(ang), s = Math.sin(ang);
++  P.bodies.chest.applyImpulse({ x: (ax * c - az * s) * J, y: 0, z: (az * c + ax * s) * J }, true);
++}
++const fwdOf = (P) => { const q = P.bodies.pelvis.rotation(); const fx = 1 - 2 * (q.y * q.y + q.z * q.z), fz = 2 * (q.x * q.z - q.w * q.y), l = Math.hypot(fx, fz) || 1; return { x: fx / l, z: fz / l }; };
++const vFwd = (P) => { const v = P.bodies.pelvis.linvel(), f = fwdOf(P); return v.x * f.x + v.z * f.z; };
++const pelPitch = (P) => { const q = P.bodies.pelvis.rotation(); const ux = 2 * (q.x * q.y - q.w * q.z), uz = 2 * (q.y * q.z + q.w * q.x), f = fwdOf(P); return (Math.asin(Math.max(-1, Math.min(1, ux * f.x + uz * f.z))) * 180) / Math.PI; }; // 골반 위 축이 앞으로 기운 각(°)
++const stickTo = (P, x, y) => { P.move.set(x, y); P.stickX = x; P.stickY = y; };
++const every = (c, t, period, t0, fn, key = 'k') => { const k = Math.floor((t - t0) / period); if (t >= t0 && k !== c.state[key]) { c.state[key] = k; fn(k); } };
++// ── 아래 조종은 legs_battery.mjs 의 같은 이름 장면과 같다 ──
++const SCENES = {
++  walk: { secs: 6, drive: (i, t, c) => c.P.move.set(0, 1) },
++  back: { secs: 6, drive: (i, t, c) => c.P.move.set(0, -1) },
++  run: { secs: 9, drive: (i, t, c) => { const P = c.P, s = c.state; P.runReach = 1; stickTo(P, 0, 1); if (P.run?.on) s.extra = +((s.extra ?? 0) + DT).toFixed(4); } },
++  runbreak: { secs: 9, drive: (i, t, c) => { const P = c.P, s = c.state; if (!s.broke) { P.runReach = 1; stickTo(P, 0, 1); if (P.run?.on) { s.extra = +((s.extra ?? 0) + DT).toFixed(4); if (s.extra >= 1.5) { P.runBreak = true; s.broke = t; } } } else { P.runReach = 0; stickTo(P, 0, t - s.broke < 1.5 ? -1 : 0); } } },
++  dighuman: { secs: 10, settle: 3.5, pre: (c) => { c.P.humanInput = true; }, drive: (i, t, c) => { const s = c.state; c.P.move.set(0, t % 3.3 < 1.3 ? 1 : 0); s.extra = c.P.gait?.digs ?? 0; } },
++  digai: { secs: 10, pre: (c) => { c.P.aiControlled = true; }, drive: (i, t, c) => { const s = c.state, g = c.P.gait; c.P.move.set(0, t % 2 > 1 ? 1 : 0.45); every(c, t, 2, 1, () => { if (g?.deDigAi?.()) s.extra = (s.extra ?? 0) + 1; }); s.digSteps = g?.digSteps ?? 0; } },
++  backburstai: { secs: 10, pre: (c) => { c.P.aiControlled = true; }, drive: (i, t, c) => { const s = c.state, g = c.P.gait, v = t % 2; c.P.move.set(0, v < 1 ? 0.75 : -1); every(c, t, 2, 1, () => { if (g?.backBurstAi?.()) { s.extra = (s.extra ?? 0) + 1; s.t0 = t; } }); if (s.t0 != null && t - s.t0 <= 0.7 && vFwd(c.P) <= -0.5) { s.hit = (s.hit ?? 0) + 1; s.t0 = null; } } },
++};
++const scene = String(args.scene ?? 'run');
++const S = SCENES[scene];
++if (!S) { console.error('장면: ' + Object.keys(SCENES).join(' · ')); process.exit(1); }
++const weapon = String(args.weapon ?? 'longsword');
++const WIN = +(args.win ?? 0.5), EVERY = +(args.every ?? 6), FROM = +(args.from ?? 0), TO = +(args.to ?? 99);
++const secs = +(args.secs ?? S.secs);
++const vr = args.variants ? String(args.variants).split('-').map(Number) : [+(args.variant ?? 0), +(args.variant ?? 0)];
++const f = (x, d = 2) => (x == null || Number.isNaN(x) ? '-' : (+x).toFixed(d));
++
++function one(variant) {
++  const G = H.newRound({ walls: false, weapon, seed: 100 + variant });
++  G.park();
++  const P = G.player;
++  const ctx = { G, P, R: rng(1000 + variant * 7919), state: {} };
++  const settle = Math.round(((S.settle ?? 2.0) + 0.11 * variant) / DT), nudgeAt = settle - Math.round(0.5 / DT);
++  if (S.pre) S.pre(ctx);
++  for (let i = 0; i < settle; i++) { P.move.set(0, 0); if (i === nudgeAt) hitChest(P, 6, variant * 2.39996); G.step(); }
++  const n = Math.round(secs / DT);
++  let fell = false, tFall = null, why = '', lowFor = 0, tiltFor = 0, vTop = 0, vfTop = 0, vbTop = 0, runT = 0, flyT = 0, airT = 0, flySteps = 0;
++  const above = { 1.9: 0, 2.5: 0, 4: 0, 5: 0 }; // 골반 수평 빠르기가 그 값을 넘은 시간(s)
++  const M = P.totalMass + (P.armed && P.sword ? P.sword.mass() : 0), Mg = M * 9.81;
++  const mkW = () => ({ n: 0, want: 0, v: 0, aLim: 0, Fx: 0, Fcap: 0, N: 0, on0: 0, on1: 0, on2: 0, clip: 0, slip: 0, fly: 0, air: 0, y: 0, tilt: 0, err: 0, errMax: 0, td: 0, strideSum: 0, strideN: 0, aid: 0, run: 0, stand: 0 });
++  let W = mkW(), lastPlant = null;
++  const prevSt = { F: true, B: true };
++  const rows = [];
++  let clip0 = 0, slip0 = 0;
++  P.legDrive?.resetStats?.();
++  const flush = (t) => {
++    if (!W.n) return;
++    const sm = P.legDrive?.summary?.() ?? {};
++    const sat = (j) => f(100 * Math.max(sm[j + 'F']?.satShare ?? 0, sm[j + 'B']?.satShare ?? 0), 0);
++    const k = 1 / W.n, ks = 1 / Math.max(1, W.stand);
++    rows.push(`${f(t - W.n * DT, 1).padStart(5)}~${f(t, 1).padEnd(4)} ${f(W.run * k, 1)} | 시킴 ${f(W.want * ks).padStart(5)} 몸 ${f(W.v * k).padStart(5)} 가속한도 ${f(W.aLim * ks, 1).padStart(4)} | 바란 앞 힘 ${f(W.Fx * ks, 0).padStart(5)} N (마찰 한도 ${f(W.Fcap * ks, 0)}) N ${f((W.N * ks) / Mg, 2)}Mg | 발 0·1·2: ${f(100 * W.on0 * ks, 0)}·${f(100 * W.on1 * ks, 0)}·${f(100 * W.on2 * ks, 0)} % | 잘림 압력중심 ${f(100 * W.clip * ks, 0)} 마찰 ${f(100 * W.slip * ks, 0)} % | 한도 엉·무·발 ${sat('hip')}·${sat('knee')}·${sat('ankle')} % | 발 어긋남 ${f((W.err / Math.max(1, W.n)) * 100, 1)} (최고 ${f(W.errMax * 100, 1)}) cm | 디딤 ${W.td} (${f(W.td / (W.n * DT), 1)}/s) 걸음 ${f(W.strideN ? W.strideSum / W.strideN : NaN)} m | 날기 ${f(100 * W.fly * k, 0)} 공중 ${f(100 * W.air * k, 0)} % | 골반 ${f(W.y * k)} 기울기 ${f(W.tilt * k, 0)}° | 밀기 ${f(W.aid * k, 0)} N`);
++    W = mkW();
++    P.legDrive?.resetStats?.(); clip0 = slip0 = 0;
++  };
++  const per = [];
++  for (let i = 0; i < n; i++) {
++    const t = i * DT;
++    S.drive(i, t, ctx);
++    G.step();
++    const g = P.gait, D = P.legDrive ?? { rem: { x: 0, y: 0, z: 0 } }, d = D.dbg ?? { N: 0, Fx: 0, Fz: 0, on: -1, clipN: 0, slipN: 0, clipped: 0 }, it = P.legIntent, fw = fwdOf(P);
++    const pv = P.bodies.pelvis.linvel(), pp = P.bodies.pelvis.translation();
++    const cv = P.comVel ?? pv;
++    const vh = Math.hypot(pv.x, pv.z), vf = cv.x * fw.x + cv.z * fw.z;
++    vTop = Math.max(vTop, vh); vfTop = Math.max(vfTop, vf); vbTop = Math.min(vbTop, vf);
++    for (const k in above) if (vh > +k) above[k] += DT;
++    const stand = P.state === 'stand';
++    W.n++;
++    if (P.run?.on) { W.run++; runT += DT; }
++    W.v += vf; W.y += pp.y; const tl = P.tiltDeg(); W.tilt += tl;
++    if (g?.fly) { W.fly++; flyT += DT; }
++    if (g?.flyAir) { W.air++; airT += DT; }
++    W.aid += P.runAid ?? 0;
++    if (stand && it) {
++      W.stand++;
++      W.want += it.want.x * fw.x + it.want.z * fw.z; W.aLim += it.aLim;
++      W.Fx += d.Fx * fw.x + d.Fz * fw.z; W.N += d.N; W.Fcap += LEGS.mu * d.N;
++      if (d.on === 0) W.on0++; else if (d.on === 1) W.on1++; else W.on2++;
++      W.clip += d.clipN - clip0; W.slip += d.slipN - slip0; clip0 = d.clipN; slip0 = d.slipN;
++    }
++    for (const k of ['F', 'B']) {
++      const l = g?.legs?.[k]; if (!l) continue;
++      if (!l.stance && l.des && l.relOk) { const e = Math.hypot(l.des.x - l.ankle.x, l.des.y - l.ankle.y, l.des.z - l.ankle.z); W.err += e; W.errMax = Math.max(W.errMax, e); }
++      if (l.stance && !prevSt[k]) { W.td++; if (g.fly) flySteps++; if (lastPlant) { W.strideSum += Math.abs((l.plant.x - lastPlant.x) * fw.x + (l.plant.z - lastPlant.z) * fw.z); W.strideN++; } lastPlant = { x: l.plant.x, z: l.plant.z }; }
++      prevSt[k] = l.stance;
++    }
++    lowFor = pp.y < 0.5 ? lowFor + DT : 0; tiltFor = tl > 60 ? tiltFor + DT : 0;
++    if (!fell && (!stand || lowFor > 0.25 || tiltFor > 0.25)) { fell = true; tFall = +t.toFixed(2); why = !stand ? P.state : lowFor > 0.25 ? '주저앉음' : '가슴 60°'; }
++    const pit = (x, z) => -x * fw.z + z * fw.x; // 오른쪽 축(= 앞 × 위 … (−fz, 0, fx)) 둘레 몫: + = 윗몸을 뒤로 젖히는 쪽? (부호는 견줌용)
++    if (args.rows && i % EVERY === 0 && t >= FROM && t <= TO) {
++      const L = (k) => { const l = g.legs[k]; return l.stance ? 'S' + f(l.tLand, 2) : l.kind[0] + f(l.t / l.T, 2); };
++      per.push(`${f(t, 3)} ${P.run?.on ? 'R' : '-'}${g.fly ? 'F' : '-'}${g.flyAir ? 'A' : '-'} F:${L('F')} B:${L('B')} 시킴 ${f(it ? it.want.x * fw.x + it.want.z * fw.z : 0)} 몸 ${f(vf)} 골반 ${f(pp.y)}/${f(g.h)} 기울기 ${f(tl, 0)} on${d.on} N ${f(d.N / Mg)} Fx ${f(d.Fx * fw.x + d.Fz * fw.z, 0)} 잘림 ${f(d.clipped)} rem ${f(Math.hypot(D.rem.x, D.rem.z), 0)}/${f(D.rem.y, 0)} 밀기 ${f(P.runAid ?? 0, 0)} cad ${f(1 / g.stepT, 1)} fastK ${f(g.fastK, 1)} | 숙임쪽 토크: 바람 ${f(pit(d.Mx, d.Mz), 0)} 다리반작용 ${f(D.swM ? pit(D.swM.x, D.swM.z) : 0, 0)} 팔 ${f(D.armM ? pit(D.armM.x, D.armM.z) : 0, 0)} 잘린엉덩이 ${f(D.lostHip ? pit(D.lostHip.x, D.lostHip.z) : 0, 0)} 엉덩이raw F ${f(D.legs?.F.raw.hz, 0)} B ${f(D.legs?.B.raw.hz, 0)} 무릎raw F ${f(D.legs?.F.raw.k, 0)} B ${f(D.legs?.B.raw.k, 0)} 당김 ${f(d.pull, 0)} 골반숙임 ${f(pelPitch(P), 0)}°`);
++    }
++    if ((i + 1) % Math.round(WIN / DT) === 0) flush((i + 1) * DT);
++    if (fell && !args.keep) { flush((i + 1) * DT); break; }
++  }
++  flush(n * DT);
++  const out = { variant, fell, tFall, why, vTop: +vTop.toFixed(2), vfTop: +vfTop.toFixed(2), vbTop: +vbTop.toFixed(2), runT: +runT.toFixed(2), flyT: +flyT.toFixed(2), airT: +airT.toFixed(2), flySteps, above: Object.fromEntries(Object.entries(above).map(([k, v]) => [k, +v.toFixed(2)])), extra: ctx.state.extra ?? null, hit: ctx.state.hit ?? null, digSteps: ctx.state.digSteps ?? null };
++  try { G.world.free(); } catch { /* */ }
++  return { out, rows, per };
++}
++console.log(`뛰기 탐침 · ${ROOT} · ${scene} · ${weapon}`);
++for (let v = vr[0]; v <= vr[1]; v++) {
++  const r = one(v);
++  console.log(`#${v} ${JSON.stringify(r.out)}`);
++  if (!args.quiet) { console.log('   때(s)      뛰는몫 | …'); for (const l of r.rows) console.log('  ' + l); }
++  if (args.rows) for (const l of r.per) console.log('    ' + l);
++}

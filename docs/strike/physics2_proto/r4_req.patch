@@ -1,0 +1,236 @@
+diff --git a/src/gait.js b/src/gait.js
+index d5a9324d..784e68a7 100644
+--- a/src/gait.js
++++ b/src/gait.js
+@@ -828,7 +828,10 @@ export class Gait {
+     // 걷기 시작·멈추기 판단은 걸러진 속도로, 조금 여유를 두고 (균형 잡는 발걸음(stumble)이 매 스텝 들쭉날쭉해서
+     //  걷기 ↔ 서기가 번갈아 바뀌면 발이 헛디딘다)
+     this.speedF += (speed - this.speedF) * Math.min(1, dt * GAIT.walkFilter);
+-    const walkNow = this.walking ? this.speedF > GAIT.walkMin * 0.6 : this.speedF > GAIT.walkMin || speed > GAIT.walkMin * 2;
++    // 부탁 걸음을 디딘 뒤 조종을 놓고 있으면 곧 '서 있음'으로 본다 — 걸러진 속도(speedF)의 여운으로 걷는 걸음을 하나 더 떼면 그 발은 걷는 박자(0.38 s)로 가서 런지로 실린 몸을 못 받는다
++    //  (잰 값 · 선 채 탭 찌르기: 앞발을 디딘 0.08 s 뒤 뒷발이 걷는 걸음으로 떠 0.6 m 뒤에 닿고 몸은 1.2 m/s 로 넘어감 — 선 몸이면 받아 딛기(0.26 s · 캡처 점)가 그 발을 앞발 곁에 딛는다)
++    const reqHalt = this.lastTDKind === 'req' && !(mv && mv.lengthSq() > 1e-6);
++    const walkNow = !reqHalt && (this.walking ? this.speedF > GAIT.walkMin * 0.6 : this.speedF > GAIT.walkMin || speed > GAIT.walkMin * 2);
+     // 첫 걸음 박차기 (10/15 — docs/strike/step_burst_2026-10-15.md): 서 있던 몸(걷지 않았고 골반이 burstStandV 보다 느림)이 지금 걷기 시작하고
+     //  스틱을 burstStick 넘게 뒤·옆(앞 몫 < burstFwdMax)으로 밀었으면 건다 → 첫 걸음을 뗄 때 fastBegin 이 쓴다. 지금은 플레이어만(AI 가 몰면 aiControlled) ·
+     //  유파 걸음 칸 burst: false(이탈리아 — 박자 걸음 첫 디딤과 겹침)는 받지 않음 · 박찬 몸이 아직 박찬 빠르기를 다 줄이기 전(burstBrake)엔 다시 걸지 않음 ·
+@@ -1089,8 +1092,11 @@ export class Gait {
+           if (this.capAt(o1, this.req.duration, want)) {
+             const s1 = Math.hypot(_cap.x - o1.pinC.x, _cap.z - o1.pinC.z);
+             if (s1 > GAIT.reqSpan && this.capAt(L[next], this.req.duration, want) && Math.hypot(_cap.x - L[next].pinC.x, _cap.z - L[next].pinC.z) < s1 - 0.1) {
+-              next = next === 'F' ? 'B' : 'F';
+-              this.req.swap = true;
++              // 앞발 런지는 제 디딜 자리가 캡처 점을 받으면 앞발 그대로 (lungeFit) — 못 받을 때만 발을 바꾼다
++              if (!(this.req.kind === 'lunge' && this.req.fwd > 0 && this.lungeFit(L[next], o1, want, fwd, rgt))) {
++                next = next === 'F' ? 'B' : 'F';
++                this.req.swap = true;
++              }
+             }
+           }
+         }
+@@ -1146,14 +1152,14 @@ export class Gait {
+         }
+       } else if (next) kind = 'catch';
+       if (urgent) kind = 'catch';
+-      else if (this.P.pair?.stop && this.pairOpen && !walkNow && !f.feetHeld && !f.fireHold && this.sinceTD >= Tds) {
++      else if (!next && this.P.pair?.stop && this.pairOpen && !walkNow && !f.feetHeld && !f.fireHold && this.sinceTD >= Tds) {
+         // 짝걸음 멈춤(pair.stop): 이끄는 발만 딛고 멈췄으면 기다리지 않고(settleDelay 없이) 따라붙는 발을 곧 펜싱 자세 자리로 짧게 딛는다 — '착' 하고 선다
+         next = this.pairOpen === 'F' ? 'B' : 'F';
+         kind = 'settle';
+         this.settles++;
+         this.pairStop = true;
+         this.pairOpen = null;
+-      } else if (this.idleT > GAIT.settleDelay && !f.feetHeld && !f.fireHold) {
++      } else if (!next && this.idleT > GAIT.settleDelay && !f.feetHeld && !f.fireHold) {
+         // (판 시작 정지 · AI 가 쏘는 동안(fireHold) 엔 자세 고쳐 딛기도 미룬다. 닿지 않는 발·균형 잡는 걸음은 그대로)
+         // 자리 고치기는 settleMax번까지, 몸을 돌려 발이 틀어진 것은 언제든 (발을 돌려 딛는다)
+         next = this.settleLeg(this.settles < GAIT.settleMax);
+@@ -1695,6 +1701,21 @@ export class Gait {
+     return best;
+   }
+ 
++  /**
++   * 앞발 런지를 앞발 그대로 받을 수 있는가 (l = 내딛을 앞발 · o = 남을 뒷발 · update ③ 의 발 바꾸기 앞에서 물음).
++   *  런지는 제 디딜 자리(뗀 자리 + fwd · side)가 뒷발에서 멀다(자세 길이 + 런지 길이 — 선 자세 0.55 + 0.6 = 1.15 m). 뒷발 하나 위에서 걸음 시간 동안 넘어간 몸의 캡처 점이
++   *  '뒷발 → 디딜 자리' 쪽으로 그 자리를 발 반 길이(SOLE_A) 넘게 지나치지만 않으면 새 발이 받는다(캡처 점이 두 발 사이) — 캡처 점이 뒷발에서 GAIT.reqSpan 넘게 갔다는 것만으로 발을 바꾸지 않는다.
++   *  지나치면(걷다가 받은 런지 — 캡처 점이 2 m 넘게 달아남) 거짓: 뒷발이 지나 딛는다.
++   */
++  lungeFit(l, o, want, fwd, rgt) {
++    const r = this.req;
++    const tx = l.pinC.x + fwd.x * r.fwd + rgt.x * r.side - o.pinC.x;
++    const tz = l.pinC.z + fwd.z * r.fwd + rgt.z * r.side - o.pinC.z;
++    const D = Math.hypot(tx, tz);
++    if (D < 1e-3 || !this.capAt(o, r.duration, want)) return false;
++    return ((_cap.x - o.pinC.x) * tx + (_cap.z - o.pinC.z) * tz) / D <= D + SOLE_A;
++  }
++
+   /**
+    * 자세 고쳐 딛는 발을 지금 떼도 되는가 (o = 남을 발): 캡처 점이 남을 발바닥 안(한 발로 선 채 발목으로 붙들 수 있다)이어야 한다.
+    *  걷는 걸음 · 받아 딛기 · 기술 걸음은 이 물음 없이 제 박자에 뗀다(디딜 자리를 캡처 점으로 스텝마다 고쳐 받는다) — 급하지 않은 고쳐 딛기만 무게를 먼저 옮긴다.
+diff --git a/tools/sim/req_probe.mjs b/tools/sim/req_probe.mjs
+new file mode 100644
+index 00000000..e1562749
+--- /dev/null
++++ b/tools/sim/req_probe.mjs
+@@ -0,0 +1,161 @@
++// ─────────────────────────────────────────────────────────────
++//  req_probe.mjs — 기술이 부탁한 걸음(gait.requestStep) 하나하나를 따라가며 잰다 (물리 2.0 넷째 판 · docs/strike/physics2_notes/r4_req.md). 재기만 한다.
++//
++//   node tools/sim/req_probe.mjs [--root=<나무>] [--weapons=longsword,rapier,zweihander] [--n=8] [--offset=0] [--only=<꼴 이름,…>] [--json=<파일>] [--rows]
++//   node tools/sim/req_probe.mjs --compare=<기준.json>,<견줄.json>      (두 나무를 같은 씨앗으로 잰 --json 둘을 견줌)
++//
++//  왜: 묶음(legs_battery.mjs)의 reqpass · reqlunge · lungecut · passcut 은 requestStep() 이 true 를 돌려준 수만 센다 — 발이 실제로 떴는지 · 어느 발이 얼마나 갔는지는 안 본다.
++//  재는 것(부탁마다): 받았나 · 1 s 안에 'req' 걸음이 떴나 · 뜬 발이 그때 앞발인가 뒷발인가(골반 앞쪽으로 더 나가 있는 발 = 앞발) · 뗀 자리 → 디딘 자리의 수평 거리와 앞 · 옆 몫(뗄 때의 몸 틀) ·
++//   부탁 → 뗌 시간 · 발 뜬 시간 · 부탁 뒤 1 s 동안 골반이 앞으로 간 거리(몸이 실렸나) · 그 뒤 다음 부탁까지 안 넘어졌나.
++//  판 세우기 · 흔듦 · 넘어짐 규칙은 legs_battery.mjs 와 같은 식(판 씨앗 100 + i · 자리 잡는 시간 2.0 + 0.11 i s · 재기 0.5 s 앞 가슴 6 N·s · 골반 0.5 m 밑 0.25 s · 가슴 60° 0.25 s).
++//  Fighter 의 공개 칸(move · gait.requestStep · gait.legs[k].stance · kind · bodies)만 쓰므로 --root 로 어느 나무(지금 게임 · 새 다리)에도 돈다.
++//  견줌(--compare): 꼴 × 무기마다 기준 나무의 '많이 나온 발'과 그 발 걸음 길이의 가운데값을 과녁으로 — 견줄 나무의 부탁 가운데 (1 s 안에 뜸 + 같은 발 + 길이가 과녁의 ± 30 % 안)인 몫.
++//   기준 나무 스스로의 그 몫(천장)도 같이 찍는다 — 걷는 중에는 기준 나무도 발 고르기가 갈린다.
++// ─────────────────────────────────────────────────────────────
++import { fileURLToPath, pathToFileURL } from 'node:url';
++import { dirname, join, resolve } from 'node:path';
++import { writeFileSync, readFileSync } from 'node:fs';
++
++const HERE = dirname(fileURLToPath(import.meta.url));
++const args = Object.fromEntries(process.argv.slice(2).map((a) => { const m = a.match(/^--([^=]+)(?:=(.*))?$/); return m ? [m[1], m[2] ?? true] : [a, true]; }));
++const med = (a) => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); return b[b.length >> 1]; };
++const f2 = (x) => (x == null ? '   -' : (+x).toFixed(2));
++
++if (args.compare) { compare(...String(args.compare).split(',')); process.exit(0); }
++
++const ROOT = args.root ? resolve(String(args.root)) : resolve(HERE, '../..');
++const u = (p) => pathToFileURL(join(ROOT, p)).href;
++const N = +(args.n ?? 8), OFFSET = +(args.offset ?? 0);
++const WEAPONS = String(args.weapons ?? 'longsword,rapier,zweihander').split(',');
++const ONLY = args.only ? new Set(String(args.only).split(',')) : null;
++const H = await import(u('tools/sim/harness_m.mjs'));
++let CFG = {}; try { CFG = await import(u('src/config.js')); } catch { /* */ }
++const DT = H.DT, PUSH = CFG.SECRET?.stepPush ?? 2, BIG = CFG.SECRET?.italianStep ?? 0.9;
++const rng = (seed) => { let a = (seed * 2654435761) >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
++const fwdOf = (P) => { const q = P.bodies.pelvis.rotation(); const fx = 1 - 2 * (q.y * q.y + q.z * q.z), fz = 2 * (q.x * q.z - q.w * q.y), l = Math.hypot(fx, fz) || 1; return { x: fx / l, z: fz / l }; };
++function hitChest(P, J, ang) { const f = fwdOf(P), c = Math.cos(ang), s = Math.sin(ang); P.bodies.chest.applyImpulse({ x: (f.x * c - f.z * s) * J, y: 0, z: (f.z * c + f.x * s) * J }, true); }
++const footXZ = (P, k) => { const t = P.bodies['foot' + k].translation(); return { x: t.x, z: t.z }; };
++const pelXZ = (P) => { const t = P.bodies.pelvis.translation(); return { x: t.x, z: t.z }; };
++/** 골반 앞쪽으로 더 나가 있는 발 */
++const frontKey = (P) => { const f = fwdOf(P), a = footXZ(P, 'F'), b = footXZ(P, 'B'); return (a.x - b.x) * f.x + (a.z - b.z) * f.z >= 0 ? 'F' : 'B'; };
++
++// ── 꼴: stick(t, ph, k) = 조종 [옆, 앞] · period = 부탁 사이(s) · reqs(P) = 한 주기 안의 부탁들 [{ at: 주기 시작 뒤 s, o: requestStep 인자 }] ──
++const pulse = (t, ph, period) => { const k = (t - ph) / period; return Math.abs(k - Math.round(k)) * period < 0.3 && t > ph - 0.3; }; // 묶음 reqEvery 와 같은 꼴: 부탁 앞뒤 0.3 s 는 조종 끝까지
++/** 옆 몫이 있는 기술 걸음의 발 고르기 — ai.js techStepRequest 와 같은 셈(비껴 가는 쪽 발이 앞발이면 lunge 아니면 pass) */
++const sideKind = (P, lat) => { const fk = frontKey(P), g = P.gait; return Math.sign(g.legs[fk].side) === Math.sign(lat) ? 'lunge' : 'pass'; };
++const CASES = {
++  // 선 채(조종 0) — 사람 탭 찌르기 · 폼멜 걸음 · 줍기 반걸음 · AI 後の先 · 런지 되돌아오기
++  i_lunge6: { period: 2.4, stick: () => [0, 0], reqs: () => [{ at: 0, o: { kind: 'lunge', fwd: 0.6 } }] },
++  i_pass6: { period: 2.4, stick: () => [0, 0], reqs: () => [{ at: 0, o: { kind: 'pass', fwd: 0.6 } }] },
++  i_tap: { period: 2.4, stick: () => [0, 0], reqs: () => [{ at: 0, o: { kind: 'lunge', fwd: 0.45, duration: 0.3, push: PUSH } }] }, // 선 몸의 탭 찌르기 (skill.js:319 — 걸음 사다리 0.45 · 0.3 s · push 2)
++  i_step3: { period: 2.4, stick: () => [0, 0], reqs: () => [{ at: 0, o: { kind: 'lunge', fwd: 0.3, duration: 0.3 } }] }, // 폼멜 걸음 · 찌르기 걸음 0.3 (skill.js:321 · 544)
++  i_retreat: { period: 2.4, stick: () => [0, 0], reqs: () => [{ at: 0, o: { kind: 'retreat', fwd: -0.45, side: 0, duration: 0.3 } }] }, // AI 後の先 백스텝 (ai.js:4106)
++  i_sideret: { period: 2.4, stick: () => [0, 0], reqs: () => [{ at: 0, o: { kind: 'retreat', fwd: 0, side: 0.3, duration: 0.35 } }] }, // 몸 빼기 (secret_instant.js:2446)
++  i_diag: { period: 2.4, stick: () => [0, 0], reqs: () => [{ at: 0, o: { kind: 'lunge', fwd: 0.3, side: -0.3, duration: 0.3, push: PUSH } }] }, // 줍기 반걸음 꼴 (pickup.js:153)
++  i_riso: { period: 3, stick: () => [0, 0], reqs: () => [{ at: 0, o: { kind: 'lunge', fwd: BIG, side: 0, duration: 0.35, push: PUSH, accel: true } }, { at: 0.7, o: { kind: 'lunge', fwd: -0.5, side: 0, duration: 0.4, push: PUSH, accel: true } }] }, // 리솔루토 런지 + 앞발 되돌림 (skill.js:1012)
++  i_two: { period: 3, stick: () => [0, 0], reqs: () => [{ at: 0, o: { kind: 'pass', fwd: 0.3, duration: 0.3 } }, { at: 0.4, o: { kind: 'lunge', fwd: 0.6, duration: 0.4 } }] }, // 0.4 s 사이 부탁 둘 (박자 걸음 → 베기 걸음 · 기다리던 부탁이 덮이는 꼴)
++  b_small: { period: 1.6, stick: () => [0, -0.3], reqs: () => [{ at: 0, o: { kind: 'retreat', fwd: -0.15, side: 0, duration: 0.3 } }] }, // 뒤 스틱 −0.3 과 함께 준 작은 백스텝
++  // 걷는 중(앞 0.45 · 부탁 앞뒤 0.3 s 는 1 — AI 가 베며 내딛는 꼴)
++  w_lunge6: { period: 1.6, stick: (t, ph) => [0, pulse(t, ph, 1.6) ? 1 : 0.45], reqs: () => [{ at: 0, o: { kind: 'lunge', fwd: 0.6, duration: 0.4, accel: true } }] }, // 묶음 reqlunge 와 같은 부탁
++  w_pass6: { period: 1.6, stick: (t, ph) => [0, pulse(t, ph, 1.6) ? 1 : 0.45], reqs: () => [{ at: 0, o: { kind: 'pass', fwd: 0.6, duration: 0.4 } }] }, // 묶음 reqpass
++  w_lunge45: { period: 1.6, stick: (t, ph) => [0, pulse(t, ph, 1.6) ? 1 : 0.45], reqs: () => [{ at: 0, o: { kind: 'lunge', fwd: 0.45, duration: 0.3 } }] }, // AI 찌르기 걸음 (ai.js:4692 — 걷는 중이면 push 없음)
++  w_pass3: { period: 1.6, stick: (t, ph) => [0, pulse(t, ph, 1.6) ? 1 : 0.45], reqs: () => [{ at: 0, o: { kind: 'pass', fwd: 0.3, duration: 0.3 } }] }, // 사람 베기 걸음 (skill.js:1455)
++  w_retreat: { period: 1.6, stick: () => [0, 0.45], reqs: () => [{ at: 0, o: { kind: 'retreat', fwd: -0.5, side: 0, duration: 0.3 } }] }, // 다가가다 백스텝
++  b_retreat: { period: 1.6, stick: () => [0, -0.45], reqs: () => [{ at: 0, o: { kind: 'retreat', fwd: -0.45, side: 0, duration: 0.3 } }] }, // 물러나며 백스텝
++  w_sideR: { period: 1.6, stick: () => [0, 0.45], reqs: (P) => [{ at: 0, o: { kind: sideKind(P, 0.45), fwd: 0.3, side: 0.45, duration: 0.35 } }] }, // 비껴 딛기 오른쪽 (ai.js:4715)
++  w_sideL: { period: 1.6, stick: () => [0, 0.45], reqs: (P) => [{ at: 0, o: { kind: sideKind(P, -0.45), fwd: 0.3, side: -0.45, duration: 0.35 } }] },
++  d_lunge6: { period: 1.6, stick: () => [0.7, 0.45], reqs: () => [{ at: 0, o: { kind: 'lunge', fwd: 0.6, duration: 0.4 } }] }, // 비스듬히 걷는 중
++  d_pass6: { period: 1.6, stick: () => [0.7, 0.45], reqs: () => [{ at: 0, o: { kind: 'pass', fwd: 0.6, duration: 0.4 } }] },
++};
++
++/** 한 판. 돌려줌: { fell, tFall, reqs: [{ t, kind, ok, lifted, dtLift, leg, role, roleAsk, dist, dF, dR, T, up }] } */
++function run(weapon, variant0, C) {
++  const variant = variant0 + OFFSET, secs = 10;
++  const G = H.newRound({ walls: false, weapon, seed: 100 + variant });
++  G.park();
++  const P = G.player, R = rng(1000 + variant * 7919);
++  const settle = Math.round((2.0 + 0.11 * variant) / DT), nudgeAt = settle - Math.round(0.5 / DT);
++  for (let i = 0; i < settle; i++) { P.move.set(0, 0); if (i === nudgeAt) hitChest(P, 6, variant * 2.39996); G.step(); }
++  const ph = 0.3 + 0.6 * R(), n = Math.round(secs / DT), out = [], done = new Set();
++  let fell = false, tFall = null, lowFor = 0, tiltFor = 0, cur = null; // cur = 걸음을 기다리거나 따라가는 부탁
++  const prev = { F: null, B: null };
++  for (let i = 0; i < n && !fell; i++) {
++    const t = i * DT, mv = C.stick(t, ph);
++    P.move.set(mv[0], mv[1]);
++    if (t >= ph) {
++      const k = Math.floor((t - ph) / C.period), t0 = ph + k * C.period;
++      for (const [j, q] of C.reqs(P).entries()) {
++        const key = k + ':' + j;
++        if (t >= t0 + q.at && !done.has(key)) {
++          done.add(key);
++          const o = typeof q.o === 'function' ? q.o(P) : { ...q.o };
++          const ok = !!P.gait?.requestStep?.(o);
++          cur = { t: +t.toFixed(3), kind: o.kind, fwd: o.fwd, side: o.side ?? 0, ok, lifted: false, dtLift: null, leg: null, role: null, roleAsk: null, _fa: frontKey(P), dist: null, dF: null, dR: null, T: null, body: null, up: true, _open: ok, _b0: pelXZ(P), _bf: fwdOf(P) };
++          out.push(cur);
++        }
++      }
++    }
++    G.step();
++    // 걸음 뜸 · 디딤 (스텝 뒤의 걸음 상태로)
++    const g = P.gait;
++    for (const k of ['F', 'B']) {
++      const l = g.legs[k], now = l.stance ? null : l.kind;
++      if (now === 'req' && prev[k] !== 'req' && cur && cur._open && !cur.lifted && t - cur.t <= 1) {
++        const fr = frontKey(P);
++        cur.lifted = true; cur.dtLift = +(t - cur.t).toFixed(3); cur.leg = k; cur.role = k === fr ? 'front' : 'rear'; cur.roleAsk = k === cur._fa ? 'front' : 'rear';
++        cur._p0 = footXZ(P, k); cur._f = fwdOf(P); cur._tl = t; cur._k = k;
++      }
++      if (prev[k] === 'req' && now !== 'req' && cur && cur.lifted && cur._k === k && cur.dist == null) {
++        const p1 = footXZ(P, k), dx = p1.x - cur._p0.x, dz = p1.z - cur._p0.z;
++        cur.dist = +Math.hypot(dx, dz).toFixed(3); cur.dF = +(dx * cur._f.x + dz * cur._f.z).toFixed(3); cur.dR = +(dx * -cur._f.z + dz * cur._f.x).toFixed(3); cur.T = +(t - cur._tl).toFixed(3);
++      }
++      prev[k] = now;
++    }
++    for (const r of out) if (r._b0 && t - r.t >= 1) { const p = pelXZ(P); r.body = +((p.x - r._b0.x) * r._bf.x + (p.z - r._b0.z) * r._bf.z).toFixed(3); r._b0 = null; } // 부탁 뒤 1 s 동안 골반이 (부탁 때의) 앞으로 간 거리
++    const y = P.bodies.pelvis.translation().y, st = P.state;
++    lowFor = y < 0.5 ? lowFor + DT : 0; tiltFor = P.tiltDeg() > 60 ? tiltFor + DT : 0;
++    if (st === 'down' || st === 'getup' || st === 'dead' || st === 'kneel' || lowFor > 0.25 || tiltFor > 0.25) { fell = true; tFall = +t.toFixed(2); if (cur) cur.up = false; }
++  }
++  for (const r of out) for (const k of Object.keys(r)) if (k[0] === '_') delete r[k];
++  try { G.world.free(); } catch { /* */ }
++  return { fell, tFall, reqs: out };
++}
++
++const report = { root: ROOT, n: N, offset: OFFSET, cases: {} };
++console.log(`부탁 걸음 탐침 · ${ROOT} · 꼴마다 ${N} 판 · 흔듦 묶음 ${OFFSET} ~ ${OFFSET + N - 1}`);
++console.log('  무기         꼴          부탁  받음  뜸(1 s 안)  앞발/뒷발   길이 가운데 [최소 ~ 최대] m   앞 몫   옆 몫   뗌까지 s  몸 앞 1 s  넘어진 판');
++for (const w of WEAPONS) for (const [name, C] of Object.entries(CASES)) {
++  if (ONLY && !ONLY.has(name)) continue;
++  const runs = []; for (let i = 0; i < N; i++) runs.push(run(w, i, C));
++  const rq = runs.flatMap((r, i) => r.reqs.map((q, j) => ({ ...q, run: i + OFFSET, idx: j })));
++  const lifted = rq.filter((q) => q.lifted), d = lifted.filter((q) => q.dist != null);
++  (report.cases[name] ||= {})[w] = { fellRuns: runs.filter((r) => r.fell).length, tFall: runs.map((r) => r.tFall), reqs: rq };
++  console.log(`  ${w.padEnd(11)}  ${name.padEnd(10)}  ${String(rq.length).padStart(3)}   ${String(rq.filter((q) => q.ok).length).padStart(3)}   ${String(lifted.length).padStart(3)}         ${String(lifted.filter((q) => q.role === 'front').length).padStart(2)}/${String(lifted.filter((q) => q.role === 'rear').length).padEnd(2)}      ${f2(med(d.map((q) => q.dist)))} [${d.length ? f2(Math.min(...d.map((q) => q.dist))) : "   -"} ~ ${d.length ? f2(Math.max(...d.map((q) => q.dist))) : "   -"}]        ${f2(med(d.map((q) => q.dF)))}   ${f2(med(d.map((q) => q.dR)))}   ${f2(med(lifted.map((q) => q.dtLift)))}      ${f2(med(rq.filter((q) => q.body != null).map((q) => q.body)))}     ${runs.filter((r) => r.fell).length}/${N}`);
++  if (args.rows) for (const q of rq) console.log(`      #${q.run}.${q.idx} t ${q.t} ${q.kind} ${q.ok ? '받음' : '거절'} ${q.lifted ? `뜸 +${q.dtLift} s ${q.leg}(${q.role}) 길이 ${q.dist} 앞 ${q.dF} 옆 ${q.dR} T ${q.T}` : '안 뜸'}${q.up ? '' : ' · 넘어짐'}`);
++}
++if (args.json) writeFileSync(String(args.json), JSON.stringify(report));
++
++/** 두 나무의 --json 을 견줌: 꼴 × 무기마다 기준의 많이 나온 발 · 그 발 걸음 길이 가운데값 → 견줄 나무의 맞는 몫 */
++function compare(fa, fb) {
++  const A = JSON.parse(readFileSync(fa, 'utf8')), B = JSON.parse(readFileSync(fb, 'utf8'));
++  const lo = Math.max(A.offset, B.offset), hi = Math.min(A.offset + A.n, B.offset + B.n);
++  console.log(`부탁 걸음 견줌 · 기준 ${A.root} · 견줄 ${B.root} · 같이 잰 흔듦 묶음 ${lo} ~ ${hi - 1}`);
++  console.log('  (맞음 = 1 s 안에 뜸 + 기준의 많이 나온 발 + 길이가 기준 가운데값의 ± 30 % 안 · 부탁 수는 기준이 받은 부탁)');
++  console.log('  꼴          무기         기준: 뜸  앞/뒤  길이    스스로 맞음 | 견줄: 받음  뜸  앞/뒤  길이    같은 발   맞음        넘어진 판(기준 → 견줄)   몸 앞 1 s m(기준 → 견줄)');
++  const tot = { n: 0, hit: 0, foot: 0, lift: 0, self: 0 }, byCase = {};
++  for (const name of Object.keys(A.cases)) for (const w of Object.keys(A.cases[name])) {
++    const a0 = A.cases[name][w], b = B.cases[name]?.[w]; if (!b) continue;
++    const a = { ...a0, reqs: a0.reqs.filter((q) => q.run >= lo && q.run < hi), fellRuns: a0.tFall.slice(lo - A.offset, hi - A.offset).filter((x) => x != null).length }; // 두 나무가 같이 잰 판(같은 씨앗)만
++    const la = a.reqs.filter((q) => q.lifted), nf = la.filter((q) => q.role === 'front').length, role = nf * 2 >= la.length ? 'front' : 'rear';
++    const ref = med(la.filter((q) => q.role === role && q.dist != null).map((q) => q.dist));
++    const hit = (q) => q.lifted && q.role === role && q.dist != null && ref != null && Math.abs(q.dist - ref) <= 0.3 * ref;
++    const n = a.reqs.filter((q) => q.ok).length, lb = b.reqs.filter((q) => q.lifted);
++    const sa = a.reqs.filter(hit).length, sb = b.reqs.filter(hit).length, fb2 = lb.filter((q) => q.role === role).length;
++    tot.n += n; tot.hit += sb; tot.foot += fb2; tot.lift += lb.length; tot.self += sa;
++    const c = (byCase[name] ||= { n: 0, hit: 0, self: 0 }); c.n += n; c.hit += sb; c.self += sa;
++    console.log(`  ${name.padEnd(10)}  ${w.padEnd(11)}  ${String(la.length).padStart(3)}/${String(n).padEnd(3)} ${String(nf).padStart(2)}/${String(la.length - nf).padEnd(2)}  ${f2(ref)}    ${String(sa).padStart(3)}/${String(n).padEnd(3)}   |      ${String(b.reqs.filter((q) => q.ok).length).padStart(3)}  ${String(lb.length).padStart(3)}  ${String(lb.filter((q) => q.role === 'front').length).padStart(2)}/${String(lb.filter((q) => q.role === 'rear').length).padEnd(2)}  ${f2(med(lb.filter((q) => q.role === role && q.dist != null).map((q) => q.dist)))}    ${String(fb2).padStart(3)}/${String(n).padEnd(3)}  ${String(sb).padStart(3)}/${String(n).padEnd(3)} ${(100 * sb / Math.max(1, n)).toFixed(0).padStart(3)} %   ${a.fellRuns} → ${b.fellRuns}   ${f2(med(a.reqs.filter((q) => q.body != null).map((q) => q.body)))} → ${f2(med(b.reqs.filter((q) => q.body != null).map((q) => q.body)))}`);
++  }
++  console.log('  ── 꼴마다 (세 무기 합): 맞음 견줄 / 기준 스스로 / 부탁');
++  for (const [k, c] of Object.entries(byCase)) console.log(`  ${k.padEnd(10)}  ${String(c.hit).padStart(3)} / ${String(c.self).padStart(3)} / ${String(c.n).padEnd(3)}  ${(100 * c.hit / Math.max(1, c.n)).toFixed(0).padStart(3)} %  (기준 스스로 ${(100 * c.self / Math.max(1, c.n)).toFixed(0)} %)`);
++  console.log(`  합계: 부탁 ${tot.n} · 견줄 나무 뜸 ${tot.lift} (${(100 * tot.lift / tot.n).toFixed(1)} %) · 같은 발 ${tot.foot} (${(100 * tot.foot / tot.n).toFixed(1)} %) · 맞음 ${tot.hit} (${(100 * tot.hit / tot.n).toFixed(1)} %) · 기준 스스로 맞음 ${tot.self} (${(100 * tot.self / tot.n).toFixed(1)} %)`);
++}
