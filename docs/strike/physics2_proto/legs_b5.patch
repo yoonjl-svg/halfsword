@@ -13,7 +13,7 @@ index 1efb2b25..9b0947d5 100644
  }
  
 diff --git a/src/config.js b/src/config.js
-index 32628df5..843b609c 100644
+index e5ec1fb7..21d09e1e 100644
 --- a/src/config.js
 +++ b/src/config.js
 @@ -184,21 +184,12 @@ export const RENDER = {
@@ -267,7 +267,7 @@ index 32628df5..843b609c 100644
 +
  // 뛰기(src/run.js — 사람 · 셋 이상 판 AI 같은 몸): 스틱 끝까지 hold 버티면 시작 · 기력 startAt 이상 · stopAt 까지 · 뛰는 동안 회복 없음 · 열쇠마다 뜻은 아래 — hold · startAt · stopAt · cost · mul · 회복 없음 [사장님 11/18 · 11/20 · 11/21] · 나머지 열쇠는 줄의 표시대로(표시 없음 = 감독 값)
  export const RUN = {
-   stickIn: 0.95, // 손잡이 길의 이 몫 넘게 밀면(가장자리) 뛰기 버팀 시작 · PC Shift + 방향 [사장님 11/18 · 값 감독]
+   stickIn: 0.95, // 손잡이 길의 이 몫 넘게 밀면(가장자리) 뛰기 버팀 시작 · PC Shift + 방향 [사장님 11/18 · 값 11/26 권고대로]
 @@ -419,6 +479,7 @@ export const RUN = {
    arc: 1.62,
    arcOut: 0.1,
