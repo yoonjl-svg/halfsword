@@ -1,0 +1,52 @@
+# 감사 확인 — 물리 2.0 시험 페이지 /physics2/ (본판 c879fe8f · 고정 커밋 acb5a85d · 2026-11-26 02:4x KST)
+# 배포와 같은 차례로 지음: acb5a85d 에서 node tools/physics2_page/build.mjs → 본판 public/physics2 → npm run build
+
+## 1. 빌드 숫자
+시험 페이지: 490 파일 · 10,110,571 B
+본판 dist 전체: 992 파일 · 22,302,217 B (그 가운데 physics2 490 파일 · 10,110,571 B)
+pwa-build.json: {"version":"b95c5e98e0f645b28fc7016a","files":494,"totalBytes":10606882,"excludedDirectories":["saengsa","physics2"],"legacyFiles":6,"legacyBytes":1511195,"commit":null}
+sw.js 안 'physics2' 나온 횟수: 0
+
+## 2. 살아 있는 사이트와 견줌 (yoonjl-svg.github.io/halfsword)
+pwa-build.json: version b95c5e98e0f645b28fc7016a · files 494 · totalBytes 10606882 · commit c879fe8f — 내 빌드와 같음
+physics2/test.html sha256 앞 16자: 사이트 df28d717dbd894bf · 내 빌드 df28d717dbd894bf
+
+## 3. 그 세션의 점검 도구를 내 빌드에 돌림 (tools/physics2_page/isolation_check.mjs)
+  "badgeVisibility": "visible"
+ },
+ "mainKeysChangedByTrial": [],
+ "trialKeysLeftAfterClear": [],
+ "trialResponses": 453,
+ "trialFromServiceWorker": 0,
+ "mainAfterReload": {
+  "title": "Stillness",
+  "newLegs": false,
+  "probe": "main-value-1",
+  "badge": false
+ },
+ "swAtEnd": {
+  "regs": [
+   "http://127.0.0.1:4188/halfsword/"
+  ],
+  "controlled": true
+ },
+ "errors": []
+}
+PASS
+exit 0
+
+## 4. 감사의 따로 만든 점검 (trial_page_check.mjs)
+1 main: {"title":"Stillness","controlled":true,"manifest":true,"flag":null,"responses":157,"fromSw":0}
+  before trial: storage keys 4 · service workers 1 · caches 495 files
+  main keys: audit.marker | stillness.lobby.progress.v1 | stillness.lobby.sealCoins.v1 | stillness.lobby.tree.v1
+2 trial test.html: {"title":"Stillness 테스트 · 물리 2.0 시험판","controlled":true,"manifest":false,"flag":"on","responses":40,"fromSw":0}
+2 trial index: {"title":"Stillness · 물리 2.0 시험판","controlled":true,"manifest":false,"flag":"on","responses":157,"fromSw":0}
+  after trial: storage keys 8 · service workers 1 · caches 495 files
+  main keys changed or removed by the trial page: 0
+  keys added: 4 · without the trial prefix: 0
+3 trial test.html?nosw=1: {"title":"Stillness 테스트 · 물리 2.0 시험판","controlled":true,"manifest":false,"flag":"on","responses":40,"fromSw":1}
+  after ?nosw=1 on the trial address: storage keys 8 · service workers 0 · caches none
+  main keys changed or removed: 0
+4 main again: {"title":"Stillness","controlled":true,"manifest":true,"flag":null,"responses":157,"fromSw":0}
+  after reopening the main game: storage keys 8 · service workers 1 · caches 495 files
+exit 0
