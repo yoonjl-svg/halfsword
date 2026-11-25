@@ -1,0 +1,62 @@
+diff --git a/src/config.js b/src/config.js
+--- a/src/config.js
++++ b/src/config.js
+@@ -351,6 +351,7 @@
+   goAccel: 1.5, // 조종 속도가 빨라지거나 방향을 바꿀 때의 한도(m/s²) — 한 걸음(0.45 s)에 0.7 m/s 쯤: 디딜 자리로 올릴 수 있는 빠르기 몫(capDv)과 같은 크기
+   stopDecel: 2, // 조종 속도가 줄어들 때의 한도(m/s²) — 걷다 멈출 때 걸음을 줄여 가며 선다(몸을 세워 줄 밖 힘이 없다)
+   reqSpan: 0.95, // 기술 걸음: 고른 발을 뗀 채 걸음 시간을 버틴 뒤의 캡처 점이 남은 발에서 이만큼(m) 넘게 달아나면 다른 발로 바꿔 딛는다 (엉덩이 뒤로 닿는 0.45 + 앞으로 닿는 0.5)
++  reqQuickT: 0.2, // 앞발 런지: 부탁한 발 뜬 시간으로는 못 받을 때 이 시간(s)까지 발을 빨리 딛어 앞발 그대로 받는다 — 줄이면 걷다 내딛는 런지가 더 자주 앞발로 나가되 발이 채찍처럼 빨라지고, 늘리면 뒷발 지나 딛기로 더 자주 바뀐다 (걸음 사다리의 가장 짧은 시간 0.2 · 뜬 발 이어받기 0.22 s 와 같은 결)
+   capGuard: 0.05, // 캡처 점 지킴: 정해진 자리에 딛는 걸음도 디딘 뒤 캡처 점이 두 발을 잇는 줄에서 이만큼(m) 넘게 벗어나면 새 발을 캡처 점 쪽으로 옮긴다 (발 반 너비)
+   catchOut: 0.03, // 받아 딛기: 캡처 점이 받침 다각형 밖으로 이만큼(m) 넘게 나가면 바로 한 발을 옮겨 딛는다
+   catchT: 0.26, // 받아 딛는 발 뜬 시간(s)
+diff --git a/src/gait.js b/src/gait.js
+--- a/src/gait.js
++++ b/src/gait.js
+@@ -1089,13 +1089,18 @@
+           if (this.capAt(o1, this.req.duration, want)) {
+             const s1 = Math.hypot(_cap.x - o1.pinC.x, _cap.z - o1.pinC.z);
+             if (s1 > GAIT.reqSpan && this.capAt(L[next], this.req.duration, want) && Math.hypot(_cap.x - L[next].pinC.x, _cap.z - L[next].pinC.z) < s1 - 0.1) {
+-              next = next === 'F' ? 'B' : 'F';
+-              this.req.swap = true;
++              // 앞발 런지는 먼저 앞발로 받을 길을 찾는다(lungeFit — 제 디딜 자리가 캡처 점을 받는 발 뜬 시간) · 없을 때만 발을 바꾼다
++              const Tq = this.req.kind === 'lunge' && this.req.fwd > 0 ? this.lungeFit(L[next], o1, want, fwd, rgt) : 0;
++              if (Tq > 0) this.req.quick = Tq;
++              else {
++                next = next === 'F' ? 'B' : 'F';
++                this.req.swap = true;
++              }
+             }
+           }
+         }
+         kind = 'req';
+-        Tstep = this.req.duration;
++        Tstep = this.req.quick ?? this.req.duration;
+         // 활 자세(P.bow — 10/10 중국): 앞으로 내딛는 기술 걸음(進步 — AI 베기 걸음·플레이어 베기 걸음·連環三擊 반걸음)이면 디딜 때 골반을 낮춰 앞무릎을 굽힌다
+         this.bowReq = !!this.P.bow && this.req.fwd > 0 && (this.req.kind === 'lunge' || this.req.kind === 'pass');
+       } else if (this.drawPending && !next && this.P.bow && this.bowAfter > 0) {
+@@ -1696,6 +1701,25 @@
+   }
+ 
+   /**
++   * 앞발 런지를 앞발 그대로 받을 수 있는 발 뜬 시간 (l = 내딛을 앞발 · o = 남을 뒷발). 없으면 0.
++   *  런지는 제 디딜 자리(뗀 자리 + fwd · side)가 뒷발에서 멀다(자세 길이 + 런지 길이) — 뒷발 하나 위에서 넘어가는 몸의 캡처 점이 디딜 때 그 자리를 발 반 길이(SOLE_A) 넘게 지나치지만 않으면
++   *  새 발이 받는다(캡처 점이 두 발 사이). 부탁한 시간으로 지나치면 발을 더 빨리(GAIT.reqQuickT 까지 0.05 s 씩 줄여) 딛는다 — 걷다가 내딛는 런지는 느린 발이 아니라 빠른 발이다.
++   *  그래도 못 받으면 0 (update ③ 이 뒷발 지나 딛기로 바꾼다).
++   */
++  lungeFit(l, o, want, fwd, rgt) {
++    const r = this.req;
++    const tx = l.pinC.x + fwd.x * r.fwd + rgt.x * r.side - o.pinC.x;
++    const tz = l.pinC.z + fwd.z * r.fwd + rgt.z * r.side - o.pinC.z;
++    const D = Math.hypot(tx, tz);
++    if (D < 1e-3) return 0;
++    for (let T = r.duration; T > GAIT.reqQuickT - 1e-6; T -= 0.05) {
++      if (!this.capAt(o, T, want)) return 0;
++      if (((_cap.x - o.pinC.x) * tx + (_cap.z - o.pinC.z) * tz) / D <= D + SOLE_A) return T;
++    }
++    return 0;
++  }
++
++  /**
+    * 자세 고쳐 딛는 발을 지금 떼도 되는가 (o = 남을 발): 캡처 점이 남을 발바닥 안(한 발로 선 채 발목으로 붙들 수 있다)이어야 한다.
+    *  걷는 걸음 · 받아 딛기 · 기술 걸음은 이 물음 없이 제 박자에 뗀다(디딜 자리를 캡처 점으로 스텝마다 고쳐 받는다) — 급하지 않은 고쳐 딛기만 무게를 먼저 옮긴다.
+    */
