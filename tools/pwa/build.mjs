@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const dist = path.resolve(root, process.argv[2] || 'dist');
 // 옛 실험판(corr · r2p · support · wb) · 상점 시험판(shop) · 검토용 사진(encounters)은 11/21 public/ 에서 지움 (감사 N-005)
-const EXCLUDED_DIRS = new Set(['saengsa']); // saengsa = 생사전 시험판 (10/29 — 본 게임 오프라인 저장에서 뺌 · 11/21 부터 커밋하지 않고 배포 때 빌드 — .github/workflows/deploy.yml · 없어도 빌드는 그대로)
+const EXCLUDED_DIRS = new Set(['saengsa', 'physics2']); // physics2 = 물리 2.0 시험판 (11/25 — 배포 때 physics-2 가지에서 빌드 · 본 게임 오프라인 저장에서 뺌) · saengsa = 생사전 시험판 (10/29 — 본 게임 오프라인 저장에서 뺌 · 11/21 부터 커밋하지 않고 배포 때 빌드 — .github/workflows/deploy.yml · 없어도 빌드는 그대로)
 const GENERATED = new Set(['sw.js', 'pwa-build.json']);
 const BUDGET_BYTES = 30 * 1024 * 1024; // 넘으면 담을 목록을 다시 보라고 멈춘다
 const NAV_TIMEOUT_MS = 10000; // 화면 요청이 이보다 늦으면 깔린 판으로 연다 (깔린 판이 있을 때만) — 사장님 확인 전
