@@ -1412,10 +1412,10 @@ export class PlayerUniqueAssist {
     if (fe.normal && fe.normal.lengthSq() > 1e-8) C.n = (C.n ?? new THREE.Vector3()).copy(fe.normal).negate();
   }
 
-  /** 물러남 (날개 접기 — 10/28 01:2x): 스틱 뒤 몫 ≥ 0.5 이고 옆 몫보다 큼 (stickOk 'fwd' 의 거울) */
+  /** 물러남 (날개 접기 — 10/28 01:2x): 스틱 뒤 몫 ≥ UA.stepStick(0.3 — 옆 · 앞 걸음 명령과 같은 문턱 · 전 0.5 · 사장님 11/26 권고대로) 이고 옆 몫보다 큼 (stickOk 'fwd' 의 거울) */
   backNow() {
     const x = this.f.stickX ?? 0, y = this.f.stickY ?? 0;
-    return -y >= 0.5 && -y > Math.abs(x);
+    return -y >= UA.stepStick && -y > Math.abs(x);
   }
 
   /**
