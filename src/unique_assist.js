@@ -356,7 +356,7 @@ const TAP_TRIG = {
     if (uq.inqSeen === G.threatId) return null;
     return { spend: () => (uq.inqSeen = G.threatId) };
   },
-  // 날개 접기 (10/28 01:2x): 물러남 = 스틱 뒤(뒤 몫 ≥ 0.5 · 옆 몫보다 큼 — 걸음 명령 stickOk 'fwd' 의 거울) — 물러나는 동안의 탭 · 스틱을 놓고(뒤가 풀리고) lianWindow 안의 탭 (상대 칼 닿음 없이 내 명령만)
+  // 날개 접기 (10/28 01:2x): 물러남 = 스틱 뒤(뒤 몫 ≥ UA.stepStick 0.3 — 사장님 11/26 · 전 0.5 · 옆 몫보다 큼 — 걸음 명령 stickOk 'fwd' 의 거울) — 물러나는 동안의 탭 · 스틱을 놓고(뒤가 풀리고) lianWindow 안의 탭 (상대 칼 닿음 없이 내 명령만)
   lian(uq, now) {
     if (uq.backNow() || (uq.backOff != null && now - uq.backOff <= UA.lianWindow)) return { spend: () => {} };
     return null;
