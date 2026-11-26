@@ -432,8 +432,9 @@ export const LEGS = {
   contactGap: 0.012, // 발바닥 가장 낮은 모서리가 땅 위 이만큼(m) 안이면 닿은 발
   twistArm: 0.05, // 발바닥 비틀기 한도 = 마찰 × 하중 × 이 팔 길이(m) — 사람 발바닥(고르게 눌림) 0.066 밑
   brace: 0.8, // 두 발이 서로 버티는 몫(0 ~ 1): 땅 반력이 엉덩이 관절 쪽을 지나게 해 엉덩이 · 무릎 토크를 줄임
-  // 관절 토크 한도 (센 어른 · N·m — × 근육 세기 × 다리 건강 × 인물 힘). 닿으면 자르고 닿은 몫을 적는다(LegDrive.summary)
-  limit: { hipFlex: 200, hipAbd: 150, hipRot: 70, kneeExt: 250, kneeFlex: 130, anklePlantar: 180, ankleDorsi: 60, ankleInv: 50, ankleRot: 40 },
+  // 관절 토크 한도 (센 어른 · N·m — × 근육 세기 × 다리 건강). 닿으면 자르고 닿은 몫을 적는다(LegDrive.summary)
+  //  발목(발바닥 쪽으로 미는 힘) 250 [사장님 11/26 '발목 한도 250으로 해' — 걸음 구분 없이 하나: 사람 발목은 뛸 때 몸무게 1 kg 당 3 ~ 3.5 N·m 를 전달한다(75 kg 몸 225 ~ 260). 전 값 180 은 출처 없이 잡은 '가만히 힘줄 때' 가늠값]
+  limit: { hipFlex: 200, hipAbd: 150, hipRot: 70, kneeExt: 250, kneeFlex: 130, anklePlantar: 250, ankleDorsi: 60, ankleInv: 50, ankleRot: 40 },
 };
 
 // 뛰기(src/run.js — 사람 · 셋 이상 판 AI 같은 몸): 스틱 끝까지 hold 버티면 시작 · 기력 startAt 이상 · stopAt 까지 · 뛰는 동안 회복 없음 · 열쇠마다 뜻은 아래 — hold · startAt · stopAt · cost · mul · 회복 없음 [사장님 11/18 · 11/20 · 11/21] · 나머지 열쇠는 줄의 표시대로(표시 없음 = 감독 값)

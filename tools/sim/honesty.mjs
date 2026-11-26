@@ -117,8 +117,8 @@ export function attach(world, named, opts = {}) {
       return aw.call(this, h, ...rest);
     };
   }
-  // ── 관절 표 (싸움꾼): 관절마다 먼 쪽 토막 묶음 · 닻 자리 · 사람 한도(가늠 · 센 어른 · N·m — 엉덩이 250 · 무릎 250 · 발목 180 · 허리 300 · 목 60 · 어깨 100 · 팔꿈치 80 · 손목 25) ──
-  const HUMAN = [[/^thigh/, 250], [/^shin/, 250], [/^foot/, 180], [/^abdomen|^chest/, 300], [/^head/, 60], [/^uarm/, 100], [/^farm/, 80], [/^sword/, 25]];
+  // ── 관절 표 (싸움꾼): 관절마다 먼 쪽 토막 묶음 · 닻 자리 · 사람 한도(가늠 · 센 어른 · N·m — 엉덩이 250 · 무릎 250 · 발목 250 · 허리 300 · 목 60 · 어깨 100 · 팔꿈치 80 · 손목 25) ──
+  const HUMAN = [[/^thigh/, 250], [/^shin/, 250], [/^foot/, 250], [/^abdomen|^chest/, 300], [/^head/, 60], [/^uarm/, 100], [/^farm/, 80], [/^sword/, 25]];
   if (f?.joints) {
     const edges = f.joints.filter((j) => j.joint && j.parent && j.child).map((j) => ({ name: j.name, handle: j.joint.handle, ip: mine.get(j.parent.handle), ic: mine.get(j.child.handle), parent: j.parent, manual: !!j.manual, hinge: j.type === 'hinge', restInv: j.restInv ? cq(j.restInv) : { x: 0, y: 0, z: 0, w: 1 }, a1: (() => { try { return cv(j.joint.anchor1()); } catch { return V3(); } })() }));
     if (f.sword && f.bodies.farmS && f.gripJoint) edges.push({ name: 'sword', handle: f.gripJoint.handle, ip: mine.get(f.bodies.farmS.handle), ic: mine.get(f.sword.handle), parent: f.bodies.farmS, manual: true, hinge: false, restInv: { x: 0, y: 0, z: 0, w: 1 }, a1: (() => { try { return cv(f.gripJoint.anchor1()); } catch { return V3(); } })() });
