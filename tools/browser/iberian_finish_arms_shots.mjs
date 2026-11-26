@@ -138,8 +138,7 @@ if (MOVE === 'spin') {
     const fw = p.forward();
     const dx = pc.x + fw.x * want - ec.x, dz = pc.z + fw.z * want - ec.z;
     for (const { rb } of e.meshes) { const t = rb.translation(); rb.setTranslation({ x: t.x + dx, y: t.y, z: t.z + dz }, true); }
-    const at = e.anchor.translation();
-    e.anchor.setTranslation({ x: at.x + dx, y: at.y, z: at.z + dz }, true);
+
     if (e.gait) for (const k of ['F', 'B']) { const l = e.gait.legs[k]; for (const key of ['plant', 'hip', 'ankle', 'p0', 'p1', 'des', 'fp', 'pinC', 'pinT']) if (l[key]) { l[key].x += dx; l[key].z += dz; } }
   });
   for (let t = 0; t < 600; t += 17) {

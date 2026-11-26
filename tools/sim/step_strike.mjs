@@ -16,7 +16,7 @@ function placeEnemy(G, dist) { // 상대를 주인공 정면 dist 로 (몸 전�
   const P = G.player, E = G.enemy; const pp = P.pelvisPos, ep = E.pelvisPos;
   const dx = pp.x + dist - ep.x; // 주인공은 x− 쪽에서 x+ 를 본다(harness_m: player x = −gap/2, heading 0)
   for (const { rb } of E.meshes) { const t = rb.translation(); rb.setTranslation({ x: t.x + dx, y: t.y, z: t.z }, true); }
-  const a = E.anchor.translation(); E.anchor.setTranslation({ x: a.x + dx, y: a.y, z: a.z }, true);
+
 }
 const gap = (G) => G.enemy.pelvisPos.x - G.player.pelvisPos.x;
 function runCase(fam, move) {

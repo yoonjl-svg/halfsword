@@ -82,7 +82,6 @@ export function newRound(opts = {}) {
       const t = rb.translation();
       rb.setTranslation({ x: t.x + 40, y: t.y, z: t.z + 40 }, true);
     }
-    enemy.anchor.setTranslation({ x: enemy.anchor.translation().x + 40, y: enemy.anchor.translation().y, z: enemy.anchor.translation().z + 40 }, true);
     G.parkEnemy = true;
     G.faceP = { x: 100, y: 1, z: 0 };
   };

@@ -88,10 +88,6 @@ function shiftFighter(f, dx, dz) {
     const t = b.translation();
     b.setTranslation({ x: t.x + dx, y: t.y, z: t.z + dz }, true);
   }
-  if (f.anchor) {
-    const t = f.anchor.translation();
-    f.anchor.setTranslation({ x: t.x + dx, y: t.y, z: t.z + dz }, true);
-  }
   const g = f.gait;
   if (g?.legs) {
     for (const l of Object.values(g.legs)) {

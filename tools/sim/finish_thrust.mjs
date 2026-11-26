@@ -165,6 +165,16 @@ export function finishTrial({ guard, dist, fall, seed, weapon = 'longsword', pla
   const tp = P.skill.tap; // 이 탭 (끝나서 skill.tap 이 비어도 읽는다)
   const down = !!tp?.down;
   let pelMax = 0;
+  const X = {};
+  {
+    const ec = V(E.bodies.chest.translation()), ep = V(E.bodies.pelvis.translation()), eh = V(E.bodies.head.translation());
+    X.eChestY = ec.y; X.ePelY = ep.y; X.eHeadY = eh.y; X.eState = E.state;
+    const tl = ec.clone().sub(ep); X.eTorsoLen = Math.hypot(tl.x, tl.z); tl.y = 0; tl.normalize();
+    X.eAng = Math.acos(Math.max(-1, Math.min(1, Math.abs(tl.dot(fwd))))) * R2D; // 몸통 선 ↔ 내 앞 (0 = 나란히 · 90 = 가로)
+    const ev = E.bodies.chest.linvel(); X.eV = Math.hypot(ev.x, ev.y, ev.z);
+    const pv0 = P.bodies.pelvis.linvel(); X.pV0 = Math.hypot(pv0.x, pv0.z); X.pState = P.state;
+    let hi = 0; for (const k of Object.keys(E.bodies)) hi = Math.max(hi, E.bodies[k].translation().y); X.eTop = hi;
+  }
   let tDeath = null;
   let arm = null; // 찍기 시작 때 겨눔
   let tipPrev = null;
@@ -175,7 +185,34 @@ export function finishTrial({ guard, dist, fall, seed, weapon = 'longsword', pla
     if (W.st.push == null && P.skill.thrustPush) (W.st.push = G.t), (W.st.pushGrip = V(P.sword.translation()));
     pelMax = Math.max(pelMax, V(P.bodies.pelvis.translation()).sub(pel0).dot(fwd));
     if (tDeath == null && (E.state === 'dead' || E.revival)) tDeath = G.t - t0;
-    if (!arm && tp?.down && tp.go) arm = armAtGo(P, tp, G.t - t0);
+    if (!arm && tp?.down && tp.go) {
+      arm = armAtGo(P, tp, G.t - t0);
+      const pv = P.bodies.pelvis.linvel();
+      X.vGo = pv.x * fwd.x + pv.z * fwd.z;
+      X.pelGo = V(P.bodies.pelvis.translation()).sub(pel0).dot(fwd);
+      X.dGo = torsoDist(P, E);
+      X.iGo = i;
+      X.cmdGo = P.cmdVel ? Math.hypot(P.cmdVel.x, P.cmdVel.z) : null;
+      X.moveGo = P.move.y;
+      {
+        const plG = P.finish.plunge; const TaG = plG?.T ?? P.finish.target;
+        X.Tz = TaG[2];
+        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(Q(P.bodies.chest.rotation()));
+        X.lean = Math.acos(Math.max(-1, Math.min(1, up.y))) * R2D; // 가슴 기울기 (도)
+        X.leanFwd = Math.asin(Math.max(-1, Math.min(1, up.dot(fwd)))) * R2D; // 앞으로 숙임 (도)
+        X.pelY = P.bodies.pelvis.translation().y;
+        X.chestY = P.bodies.chest.translation().y;
+        // 몸이 보는 쪽(yaw 앞) ↔ 상대 가슴 쪽 각
+        const fw = new THREE.Vector3(1, 0, 0).applyQuaternion(P.yaw); fw.y = 0; fw.normalize();
+        const ec = V(E.bodies.abdomen?.translation?.() ?? E.bodies.chest.translation()).sub(V(P.bodies.chest.translation())); ec.y = 0; ec.normalize();
+        X.face = Math.acos(Math.max(-1, Math.min(1, fw.dot(ec)))) * R2D;
+        X.gripSide = arm.z; X.finAmt = P.finish.amt;
+      }
+    }
+    if (X.iGo != null && i === X.iGo + Math.round(0.25 / DT)) { X.pelGo25 = V(P.bodies.pelvis.translation()).sub(pel0).dot(fwd); X.dGo25 = torsoDist(P, E); const pl2 = P.finish.plunge; const Ta2 = pl2?.T ?? P.finish.target; X.Tx25 = Ta2 ? Ta2[0] : null; }
+    if (P.state !== 'stand') X.fellP = true;
+    X.dMin = Math.min(X.dMin ?? 9, torsoDist(P, E));
+    if (X.iGo != null && tp?.go) { const up2 = new THREE.Vector3(0, 1, 0).applyQuaternion(Q(P.bodies.chest.rotation())); X.leanMax = Math.max(X.leanMax ?? 0, Math.asin(Math.max(-1, Math.min(1, up2.dot(fwd)))) * R2D); X.pelYmin = Math.min(X.pelYmin ?? 9, P.bodies.pelvis.translation().y); X.tipYmin = Math.min(X.tipYmin ?? 9, V(P.sword.translation()).addScaledVector(new THREE.Vector3(0, 1, 0).applyQuaternion(Q(P.sword.rotation())), L).y); }
     // 찍는 동안 칼끝 속도 (칼끝 위치의 한 스텝 차이)
     const tip = V(P.sword.translation()).addScaledVector(new THREE.Vector3(0, 1, 0).applyQuaternion(Q(P.sword.rotation())), L);
     if (tp?.down && tp.go && P.skill.thrustPush && P.skill.tap === tp) {
@@ -223,7 +260,7 @@ export function finishTrial({ guard, dist, fall, seed, weapon = 'longsword', pla
     shadow: W.st.shadow, lowE: W.st.lowE, viol: W.st.viol, drops: W.st.drops,
     go: !!tp?.go, tapLeft: !!P.skill.tap, ended: tp?.ended ?? null, tEnd: tp?.tEnd ?? null,
     tTD: W.st.td != null ? W.st.td - t0 : null, tipV: tp?.go ? tipV : null,
-    arm,
+    arm, X,
   };
 }
 

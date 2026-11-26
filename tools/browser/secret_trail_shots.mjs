@@ -94,8 +94,7 @@ for (const key of only) {
         const t = rb.translation();
         rb.setTranslation({ x: t.x + dx, y: t.y, z: t.z + dz }, true);
       }
-      const at = e.anchor.translation();
-      e.anchor.setTranslation({ x: at.x + dx, y: at.y, z: at.z + dz }, true);
+
       if (e.gait) for (const k of ['F', 'B']) { const l = e.gait.legs[k]; for (const q of ['plant', 'hip', 'ankle', 'p0', 'p1', 'des', 'fp', 'pinC', 'pinT']) if (l[q]) { l[q].x += dx; l[q].z += dz; } }
       return { S: g.playerSecret.S?.name, nameKo: g.playerSecret.S?.nameKo, want, contact: M.contact, reach: M.reach, stage: g.stage.id };
     },
