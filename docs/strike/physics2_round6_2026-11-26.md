@@ -14,7 +14,7 @@
 | 3 | 검토가 확인한 결함 셋 + 재서 확인한 하나를 고침 → `C2b` | 같은 설계 일꾼 | 27 만 토큰 · 27 분 (어림 15 만을 넘김) |
 | 4 | 두 판을 세 나무에서 대본으로 확인 (안 본 씨앗 · 다른 무기 · 막기 표본 늘림 · 시험 982 개) | 일꾼 없음 | 기계 시간 약 2 시간 (컨테이너가 한 번 다시 떠서 끊긴 곳부터 다시 돌림) |
 
-기록: `physics2_notes/r6_arm.md` (원인 · 후보 · 관절 하나하나 · 뜀 재기). 패치: `physics2_proto/arm_rope.patch` (팔 고침만 — 본판 src 에 붙음) · `physics2_proto/legs_b5_arm.patch` (다섯째 판 다리 + 팔 고침 — 시험 페이지가 붙임).
+기록: `physics2_notes/r6_arm.md` (원인 · 후보 · 관절 하나하나 · 뜀 재기). 패치: `physics2_proto/r7/arm_c2b_end_clamp.patch` (이 판의 팔 고침 C2b — 일곱째 판에서 본판에 넣지 않기로 함 · 본판에 넣을 판은 `physics2_proto/arm_rope_main.patch` · `physics2_round7_2026-11-26.md`) · `physics2_proto/legs_b5_arm.patch` (다섯째 판 다리 + 팔 고침 — 시험 페이지가 붙임).
 
 ## 2. 원인
 
