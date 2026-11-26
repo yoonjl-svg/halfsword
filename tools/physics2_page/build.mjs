@@ -25,7 +25,7 @@ if (!outArg) { console.error('쓰는 법: node tools/physics2_page/build.mjs <�
 const outDir = path.resolve(process.cwd(), outArg);
 if (fs.existsSync(outDir) && fs.readdirSync(outDir).length) { console.error('시험 페이지: 낼 폴더가 비어 있지 않다 — ' + outDir); process.exit(2); }
 
-const PATCH = 'docs/strike/physics2_proto/legs_b5.patch';
+const PATCH = 'docs/strike/physics2_proto/legs_b5_arm.patch';
 const LABEL = '물리 2.0 시험판';
 const PREFIX = 'stillness.p2trial.';
 const PAGES = ['index.html', 'test.html', 'sounds.html', 'voices.html'];
