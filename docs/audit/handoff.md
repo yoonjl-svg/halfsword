@@ -84,3 +84,9 @@
 - `YYYY-MM-DD.md` — 날짜별 보고. 물리 2.0 대조는 `2026-11-24-physics2-*.md`.
 - 재는 도구: `evidence/2026-11-22-3/harness/hlib.mjs`(브라우저) · `evidence/2026-11-22-w/tools/gates.sh`(관문) · `evidence/2026-11-25/guard_hold.mjs` · `pair_restitution.mjs` · `evidence/2026-11-26/trial_page_check.mjs` · `evidence/2026-11-24-p2/*.mjs`.
 - 물리 2.0 가지의 도구: `tools/sim/honesty.mjs` · `legs_battery.mjs` · `chain_probe.mjs` · `getup_ledger.mjs` · `tools/physics2_page/`.
+
+## 덧붙임 (11/26 21:15)
+
+- 일요일(11/29) 주간 감사에 더할 것: 팔 고침의 가장 작은 판(fighter.js +28 −15 · 물리 2.0이 디렉터에게 넘김 · 기록 physics-2 76c11f52 `docs/strike/physics2_round7_2026-11-26.md`)이 본판에 들어왔으면 차이를 읽고 기준값(관문 여덟 · 시험 수)과 견준다. "시험 982/982"는 그 세션의 말이고 감사는 재지 않았다.
+- 물리 2.0에 더 내린 지시(11/26): 17:28 덜 쓰는 길 셋 · 21:13 띄우기 전 알림 뒤 10분 기다리기. 자세한 것은 `token_watch.md`의 "지시의 결과" 표.
+- 그 세션이 옮긴 사장님 말씀(거쳐서 들음 · 11/26): "팔 고침 본판에 먼저 넣어. 토큰은 절감보다 정확성이 우선. 다만 감사의 역할은 같은 목표라는 전제 하에 비효율을 줄이는 것임."
