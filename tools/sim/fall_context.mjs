@@ -41,7 +41,7 @@ const strokeOf = (ai) => {
 const rel = (f, n, fw) => { const p = f.bodies[n].translation(), c = f.com ?? p; const dx = p.x - c.x, dz = p.z - c.z; return [+(dx * fw.x + dz * fw.z).toFixed(2), +(dx * -fw.z + dz * fw.x).toFixed(2), +p.y.toFixed(2)]; };
 const TRACE = args.trace ? String(args.trace).split(',').map((x) => { const [sd, who, t] = x.split(':'); return { seed: +sd, who, t: +t }; }) : [];
 const falls = [];
-let nFalls = 0, nSelf = 0;
+let nFalls = 0, nSelf = 0, nFallsD = 0, nSelfD = 0; // …D = 따로 일어난 넘어짐 (앞 넘어짐 뒤 몸이 0.25 s 넘게 서 있은 다음의 것만 — legs_battery.mjs 의 fallsD 와 같은 셈)
 const bodyMin = { all: 0, stand: 0 };
 
 for (let seed = 1; seed <= FIGHTS; seed++) {
@@ -100,11 +100,14 @@ for (let seed = 1; seed <= FIGHTS; seed++) {
       e.jolt = 0;
       e.ring.push(s); if (e.ring.length > RING) e.ring.shift();
       if (st !== 'stand') e.everDown = true;
+      e.upRun = y > 0.7 && e.f.tiltDeg() < 45 ? (e.upRun ?? 0) + DT : 0; if (e.upRun > 0.25) e.fresh = true;
       const fallNow = (e.prev === 'stand' && (st === 'down' || st === 'getup')) || (st === 'stand' && e.lowFor > 0.25 && !e.sat);
       if (st === 'stand' && e.lowFor > 0.25) e.sat = true; else if (y > 0.6) e.sat = false;
       const self = G.t - e.lastWound > 1.5;
       if (fallNow) {
         nFalls++; if (self) nSelf++;
+        const dup = e.fresh === false; e.fresh = false;
+        if (!dup) { nFallsD++; if (self) nSelfD++; }
         const R = e.ring.slice(0, -1).filter((x) => x.st === 'stand'); // 넘어진 스텝은 뺀 고리 (서 있던 스텝만 · 3 s 까지)
         const N = R.length;
         // 시작: 뒤에서부터 '발 밖으로 벗어남(offBalance > 0) 또는 가슴 기울기 30° 넘음'이 이어진 첫 스텝
@@ -139,7 +142,7 @@ for (let seed = 1; seed <= FIGHTS; seed++) {
 
         const rec = {
           root, pushSum: +pushSum.toFixed(1), afterGetup, sinceStand: +last.sinceStand.toFixed(1),
-          seed: seed + OFFSET, who: e.f.name, weapon: e.weapon, t: +G.t.toFixed(2), self, why: e.why ?? (st === 'stand' ? 'low' : 'other'), heavy: st === 'down',
+          seed: seed + OFFSET, who: e.f.name, weapon: e.weapon, t: +G.t.toFixed(2), self, dup, why: e.why ?? (st === 'stand' ? 'low' : 'other'), heavy: st === 'down',
           onsetBefore: +((N - on) * DT).toFixed(2), strokeOnset: O.stroke, strokeFall: last.stroke, strokeSeen: seenStroke, stroke1s: [...new Set(lastWin.map((x) => x.stroke))], kinds1s: [...new Set(lastWin.flatMap((x) => [x.F, x.B]).filter(Boolean))], hit1s: lastWin.some((x) => x.touch > 0), bind1s: lastWin.some((x) => x.bind > 0 || x.jolt > 0), bindSteps, bindImp: +bindImp.toFixed(1), hitBefore, bindBefore, vOn: +Math.hypot(O.vf, O.vr).toFixed(2), vfOn: +O.vf.toFixed(2), vrOn: +O.vr.toFixed(2), stamOn: O.stam != null ? +O.stam.toFixed(0) : null, tech: O.tech, swingSeen: wholeWin.some((x) => x.swing),
           swingAt, swingLeg, lift, steps, kinds, onAtOnset: O.on, walking: O.walking, mv: +O.mv.toFixed(2),
           joltMax: +joltMax.toFixed(1), touchSteps, impMax: +impMax.toFixed(1), blade, distMin: +Math.min(...wholeWin.map((x) => x.dist)).toFixed(2), distFall: +last.dist.toFixed(2),
@@ -169,7 +172,7 @@ const footOf = (r) => (r.swingAt ? r.swingAt : r.lift ? 'lift:' + r.lift : 'both
 const cnt = (rows, key) => { const m = new Map(); for (const r of rows) { const k = key(r); m.set(k, (m.get(k) ?? 0) + 1); } return [...m.entries()].sort((a, b) => b[1] - a[1]); };
 const show = (title, rows, key) => console.log(`  ${title}: ` + cnt(rows, key).map(([k, v]) => `${k} ${v}`).join(' · '));
 const S = falls.filter((r) => r.self);
-console.log(`■ 넘어짐 ${nFalls} · 그중 스스로 ${nSelf} (씨앗 ${1 + OFFSET} ~ ${FIGHTS + OFFSET} · ${FW.join(' · ')}) · 살아 있던 몸 시간 ${bodyMin.all.toFixed(2)} 분 · 서 있던 ${bodyMin.stand.toFixed(2)} 분`);
+console.log(`■ 넘어짐 ${nFalls} · 그중 스스로 ${nSelf} — 따로 일어난 것만 ${nFallsD} · 스스로 ${nSelfD} (씨앗 ${1 + OFFSET} ~ ${FIGHTS + OFFSET} · ${FW.join(' · ')}) · 살아 있던 몸 시간 ${bodyMin.all.toFixed(2)} 분 · 서 있던 ${bodyMin.stand.toFixed(2)} 분`);
 if (args.rows) for (const r of (args.all ? falls : S)) console.log(`   씨앗 ${r.seed} ${r.who} ${r.weapon.padEnd(10)} t ${String(r.t).padStart(5)} ${r.self ? '스스로' : '맞고  '} 까닭 ${r.why.padEnd(8)} 시작 −${r.onsetBefore} s · 칼 ${r.strokeOnset}→${r.strokeFall} (창 ${r.strokeSeen.join('/')}${r.tech ? ' · ' + r.tech : ''}) · 발 ${footOf(r)} (걸음 ${r.steps} · ${r.kinds.join('/') || '-'} · 누른 발 ${r.onAtOnset}) · 맞음 ${hitOf(r)} (부딪힘 ${r.joltMax} · 닿음 ${r.touchSteps} 스텝 · 충격 ${r.impMax} · 칼 맞댐 ${r.bindSteps} 스텝 ${r.bindImp} · 시작 앞 0.5 s: ${hitFirst(r)} · 거리 ${r.distMin}) · 돌기 ${r.headMax} · 기력 ${r.stam}${r.exh ? ' 바닥' : ''} · 조종 ${r.mv} · 몸 빠르기 시작 때 앞 ${r.vfOn} 옆 ${r.vrOn} → 끝 앞 ${r.vf} 옆 ${r.vr} · 못 낸 나머지 평균 기울기 ${r.remT} yaw ${r.remY} · 팔 반작용 최고 ${r.armMax}`);
 console.log(`  스스로 넘어짐 ${S.length} 의 가름 (시작 = 발 밖으로 벗어나거나 가슴이 30° 넘게 기울어 다시 안 돌아온 때):`);
 show('까닭', S, (r) => r.why);
@@ -195,4 +198,4 @@ show('뿌리 × 뗀 걸음 꼴', S, (r) => `${rootOf(r)}|${r.root?.kind ?? '-'}`
 show('뿌리 × 무기', S, (r) => `${rootOf(r)}|${r.weapon}`);
 show('뿌리 × 제 칼(시작 때)', S, (r) => `${rootOf(r)}|${r.strokeOnset}`);
 if (args.rows) for (const r of S) console.log(`   뿌리 씨앗 ${r.seed} ${r.who} ${r.weapon.padEnd(10)} t ${String(r.t).padStart(5)} ${rootOf(r).padEnd(8)} 칼 ${r.strokeOnset.padEnd(8)} · ` + (r.root ? `넘어지기 ${r.root.before} s 앞에 ${r.root.kind} 발 ${r.root.leg} 뗌 · 남을 발 ~ 캡처 점 ${r.root.d} m (앞뒤 ${r.root.dSag} · 옆 ${r.root.dLat}) · 자세 옆 ${r.root.wide} 앞뒤 ${r.root.long} · 골반 ${r.root.y} · 기울기 ${r.root.tilt}° · 몸 ${r.root.v} m/s${r.root.rev ? ' · 거꾸로' : ''}${r.root.sameSide ? ' · 한쪽' : ''}` : '뗀 발 없음') + ` · 밀림 합 ${r.pushSum} N·s · 선 지 ${r.sinceStand} s`);
-if (args.json) writeFileSync(String(args.json), JSON.stringify({ fights: FIGHTS, offset: OFFSET, nFalls, nSelf, bodyMin, falls }, null, 1));
+if (args.json) writeFileSync(String(args.json), JSON.stringify({ fights: FIGHTS, offset: OFFSET, nFalls, nSelf, nFallsD, nSelfD, bodyMin, falls }, null, 1));
