@@ -22,6 +22,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const m = a.match(/^--([^=]+)(?:=(.*))?$/); return m ? [m[1], m[2] ?? true] : [a, true]; }));
 const ROOT = args.root ? resolve(String(args.root)) : resolve(HERE, '../..');
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
+if (args.cfg) { const { applyCfg } = await import(u('tools/sim/cfg_override.mjs')); console.log('덮어씀(재기 전용):', JSON.stringify(applyCfg(String(args.cfg)))); }
 const H = await import(u('tools/sim/harness_m.mjs'));
 const CFG = await import(u('src/config.js'));
 const DT = H.DT, FIGHTS = +(args.fights ?? 24), OFFSET = +(args.offset ?? 0), FSECS = +(args.secs ?? 30);
@@ -48,7 +49,7 @@ for (let seed = 1; seed <= FIGHTS; seed++) {
   const G = H.newRound({ walls: true, seed: seed + OFFSET, weapon: FW[(seed - 1) % FW.length], weapon2: FW[seed % FW.length], AI2Class: H.AI });
   const info = G.combat.info;
   const fs = [G.player, G.enemy].map((x, i) => ({ f: x, ai: i === 0 ? G.ai2 : G.ai, foe: i === 0 ? G.enemy : G.player, prev: 'stand', lastWound: -9, lowFor: 0, sat: false, ring: [], jolt: 0, why: null, weapon: i === 0 ? FW[(seed - 1) % FW.length] : FW[seed % FW.length] }));
-  G.onWound = (att, vic) => { const e = fs.find((x) => x.f === vic); if (e) e.lastWound = G.t; };
+  G.onWound = (att, vic, r) => { const e = fs.find((x) => x.f === vic); if (e) { e.lastWound = G.t; (e.wl ||= []).push({ t: G.t, zone: r?.zone ?? '-', type: r?.type ?? '-', energy: r?.energy ?? 0, sev: r?.severity ?? 0 }); } };
   for (const e of fs) {
     const f = e.f, oJ = f.takeJolt, oK = f.knockDown;
     f.takeJolt = function (J) { e.jolt = Math.max(e.jolt, J); return oJ.call(this, J); };
@@ -101,6 +102,7 @@ for (let seed = 1; seed <= FIGHTS; seed++) {
       e.ring.push(s); if (e.ring.length > RING) e.ring.shift();
       if (st !== 'stand') e.everDown = true;
       e.upRun = y > 0.7 && e.f.tiltDeg() < 45 ? (e.upRun ?? 0) + DT : 0; if (e.upRun > 0.25) e.fresh = true;
+      if (e.lastFall) { if (st !== 'stand') e.lastFall.leftStand = true; if (e.upRun > 0.25) { e.lastFall.backUp = +(G.t - e.lastFall.t).toFixed(2); e.lastFall = null; } }
       const fallNow = (e.prev === 'stand' && (st === 'down' || st === 'getup')) || (st === 'stand' && e.lowFor > 0.25 && !e.sat);
       if (st === 'stand' && e.lowFor > 0.25) e.sat = true; else if (y > 0.6) e.sat = false;
       const self = G.t - e.lastWound > 1.5;
@@ -149,6 +151,8 @@ for (let seed = 1; seed <= FIGHTS; seed++) {
           headMax: +Math.max(0, ...wholeWin.map((x) => x.head)).toFixed(2), stam: last.stam != null ? +last.stam.toFixed(0) : null, lvl: last.lvl, exh: last.exh,
           vf: +last.vf.toFixed(2), vr: +last.vr.toFixed(2), tilt: +last.tilt.toFixed(0), y: +last.y.toFixed(2), remT: +(wholeWin.reduce((a, x) => a + x.remT, 0) / Math.max(1, N)).toFixed(1), remY: +(wholeWin.reduce((a, x) => a + x.remY, 0) / Math.max(1, N)).toFixed(1), armMax: +Math.max(0, ...wholeWin.map((x) => x.armM)).toFixed(0),
         };
+        { const W = (e.wl ?? []).filter((w) => G.t - w.t <= 1.5); const w = W.sort((x, y) => y.energy - x.energy)[0]; rec.wound = w ? { zone: w.zone, type: w.type, energy: +w.energy.toFixed(0), sev: +w.sev.toFixed(2), ago: +(G.t - w.t).toFixed(2), n: W.length } : null; rec.legs = +(e.f.legHealth ?? 1).toFixed(2); rec.bal = +(e.f.balance ?? 0).toFixed(0); }
+        if (!dup) { rec.leftStand = st !== 'stand'; e.lastFall = rec; }
         falls.push(rec);
         if (TRACE.some((q) => q.seed === seed + OFFSET && q.who === e.f.name && Math.abs(q.t - G.t) < 0.05)) {
           console.log(`── 자취 씨앗 ${seed + OFFSET} ${e.f.name} ${e.weapon} 넘어짐 t ${G.t.toFixed(2)} 까닭 ${rec.why} (몸 틀: 앞 · 오른쪽 · 발 = 무게중심에 대한 발목 자리) ──`);
@@ -173,6 +177,14 @@ const cnt = (rows, key) => { const m = new Map(); for (const r of rows) { const 
 const show = (title, rows, key) => console.log(`  ${title}: ` + cnt(rows, key).map(([k, v]) => `${k} ${v}`).join(' · '));
 const S = falls.filter((r) => r.self);
 console.log(`■ 넘어짐 ${nFalls} · 그중 스스로 ${nSelf} — 따로 일어난 것만 ${nFallsD} · 스스로 ${nSelfD} (씨앗 ${1 + OFFSET} ~ ${FIGHTS + OFFSET} · ${FW.join(' · ')}) · 살아 있던 몸 시간 ${bodyMin.all.toFixed(2)} 분 · 서 있던 ${bodyMin.stand.toFixed(2)} 분`);
+{ // 11/26: 규칙이 선언한 넘어짐과 몸이 실제로 쓰러진 것 · 상처 자리와 세기 (훈련된 검술 숙련자 기준으로 읽기 위한 표)
+  const D = falls.filter((r) => !r.dup);
+  const by = (L, k) => cnt(L, k).map(([a, n]) => `${a} ${n}`).join(' · ');
+  console.log(`  까닭(전체 · 겹침 뺌 ${D.length}): ${by(D, (r) => r.why)} — tilt = 몸이 실제로 55° 넘게 기욺 · balance0 = 상처 에너지로 균형 게이지가 0 (규칙) · footing = 발 밖에 0.25 s (규칙) · sit = 골반이 0.2 s 낮음 (규칙) · low = 서 있음인 채 골반이 0.25 s 낮음 (도구)`);
+  console.log(`  서 있음인 채 제 다리로 다시 선 것(상태가 stand 를 안 떠남): ${D.filter((r) => r.backUp != null && !r.leftStand).length} · 걸린 시간 ${D.filter((r) => r.backUp != null && !r.leftStand).map((r) => r.backUp).sort((a, b) => a - b).join(' ')} s`);
+  const Wd = D.filter((r) => !r.self);
+  console.log(`  상처 뒤 넘어짐 ${Wd.length}: 자리 ${by(Wd, (r) => r.wound?.zone ?? '-')} | 세기(J) ${by(Wd, (r) => { const e = r.wound?.energy ?? 0; return e < 50 ? '<50' : e < 100 ? '50~100' : e < 200 ? '100~200' : '200+'; })} | 까닭 × 세기: ${by(Wd, (r) => `${r.why}|${(r.wound?.energy ?? 0) < 100 ? '<100J' : '100J+'}`)} | 다리 성함 ${by(Wd, (r) => (r.legs < 0.5 ? '<0.5' : r.legs < 0.9 ? '0.5~0.9' : '성함'))}`);
+}
 if (args.rows) for (const r of (args.all ? falls : S)) console.log(`   씨앗 ${r.seed} ${r.who} ${r.weapon.padEnd(10)} t ${String(r.t).padStart(5)} ${r.self ? '스스로' : '맞고  '} 까닭 ${r.why.padEnd(8)} 시작 −${r.onsetBefore} s · 칼 ${r.strokeOnset}→${r.strokeFall} (창 ${r.strokeSeen.join('/')}${r.tech ? ' · ' + r.tech : ''}) · 발 ${footOf(r)} (걸음 ${r.steps} · ${r.kinds.join('/') || '-'} · 누른 발 ${r.onAtOnset}) · 맞음 ${hitOf(r)} (부딪힘 ${r.joltMax} · 닿음 ${r.touchSteps} 스텝 · 충격 ${r.impMax} · 칼 맞댐 ${r.bindSteps} 스텝 ${r.bindImp} · 시작 앞 0.5 s: ${hitFirst(r)} · 거리 ${r.distMin}) · 돌기 ${r.headMax} · 기력 ${r.stam}${r.exh ? ' 바닥' : ''} · 조종 ${r.mv} · 몸 빠르기 시작 때 앞 ${r.vfOn} 옆 ${r.vrOn} → 끝 앞 ${r.vf} 옆 ${r.vr} · 못 낸 나머지 평균 기울기 ${r.remT} yaw ${r.remY} · 팔 반작용 최고 ${r.armMax}`);
 console.log(`  스스로 넘어짐 ${S.length} 의 가름 (시작 = 발 밖으로 벗어나거나 가슴이 30° 넘게 기울어 다시 안 돌아온 때):`);
 show('까닭', S, (r) => r.why);
