@@ -1,0 +1,19 @@
+diff --git a/tools/sim/motion_regress.test.mjs b/tools/sim/motion_regress.test.mjs
+index 19078a16..cec35a58 100644
+--- a/tools/sim/motion_regress.test.mjs
++++ b/tools/sim/motion_regress.test.mjs
+@@ -26,10 +26,12 @@ const PIN = {
+   talhoRodeado: [1.425, 8.541, 14.08, ['talhoRodeado']],
+   cingir: [1.917, 14.335, 18.05, ['cingir×1']],
+   altib: [0.333, 4.464, 13.66, []],
+-  kote: [0.842, 1.566, 3.69, ['kote']],
++  // kote vmax 3.69 → 3.48 (−5.7 % · dur · path 그대로) · chebuYaoji path 6.096 → 5.785 (−5.1 % · dur · vmax 그대로) — 11/26 팔 고침(fighter.js elbowSwivel 이 어깨 밧줄 밖 팔꿈치 돌림을 고르지 않음):
++  //  치는 구간은 같고, 되돌림 · 친 뒤 따라가는 길에서 몸이 못 가던(밧줄 밖) 자리를 더는 시키지 않아 달라진 몫 (사람 수가 바뀐 것이 아님 — physics-2 가지 기록 docs/strike/physics2_round7_2026-11-26.md §3 · §6)
++  kote: [0.842, 1.566, 3.48, ['kote']],
+   tsubameGaeshi: [0.467, 2.207, 16.62, ['tsubameGaeshi']],
+   gonosen: [0.15, 4.879, 69.08, ['goNoSen']],
+-  chebuYaoji: [1.217, 6.096, 12.34, ['chebuYaoji']],
++  chebuYaoji: [1.217, 5.785, 12.34, ['chebuYaoji']],
+   lianchi: [0.383, 3.19, 17.27, ['lianchi']],
+   gyeoksal: [0.217, 2.325, 11.8, ['gyeoksal']],
+   mordschlag: [0.75, 6.546, 62.15, ['mordschlag']],

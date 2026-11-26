@@ -106,4 +106,5 @@ node .p2/tools/physics2_page/isolation_check.mjs http://127.0.0.1:4188/halfsword
 
 - `legs_b5_arm.patch` 의 팔 몫을 §8 의 판(C2b — 끝에서 옮기기)에서 **본판에 넣을 판**(팔꿈치 자리를 고를 때만 어깨 밧줄을 봄 · `physics2_proto/arm_rope_main.patch` 와 같은 고침)으로 바꿨다. 다리 몫은 다섯째 판 그대로다. 까닭과 견줌은 `physics2_round7_2026-11-26.md`.
 - 점검: 빌드 안 검사 통과 · 같은 출처 점검 **PASS** · 붙인 나무의 `fighter.js` 가 잰 칸(`bf_4_120`)과 바이트 같음.
-- main 에서 할 일: 세 나무 확인이 끝나 이 문서와 `physics2_round7` §5 가 채워진 커밋을 알리면, `deploy.yml` 의 정해 둔 커밋을 그 커밋으로 바꾼다(다른 것은 그대로).
+- 세 나무 확인 끝(`physics2_round7_2026-11-26.md` §5): 새 다리 + 이 팔 고침 — 기본 19 152/152 · 싸움 꼴 8 59/64 · 안 본 씨앗 마무리 찌르기 상처 37 → 62/160 · 깨진 시험 36 → 35.
+- main 에서 할 일: `deploy.yml` 의 정해 둔 커밋을 이 절이 든 커밋으로 바꾼다(다른 것은 그대로).
