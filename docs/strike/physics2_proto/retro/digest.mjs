@@ -21,7 +21,7 @@ for (const ln of lines) {
       t = t.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trim();
       if (!t) continue;
       if (/^\[SYSTEM NOTIFICATION|^<task-notification|^This session is being continued|^Caveat:|^\[Request interrupted|^<command-message>|^Base directory for this skill|^# Workflow authoring|^This session's worker process|^Stop hook feedback|^<local-command|^# \S+ skill/.test(t)) continue;
-      if (/^Another Claude session sent a message/.test(t)) { out.push(`### ${ts} · 일꾼 보고(요약)\n${clip(t.replace(/^[\s\S]*?The report follows:\s*/, ''), 900)}\n`); continue; }
+      if (/^Another \S+ session sent a message/.test(t)) { out.push(`### ${ts} · 일꾼 보고(요약)\n${clip(t.replace(/^[\s\S]*?The report follows:\s*/, ''), 900)}\n`); continue; }
       out.push(`### ${ts} · **사장님**\n${clip(t, 2500)}\n`);
     }
   } else if (j.type === 'assistant') {
