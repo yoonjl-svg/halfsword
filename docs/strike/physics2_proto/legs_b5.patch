@@ -318,7 +318,7 @@ index e5ec1fb7..21d09e1e 100644
  
  
 diff --git a/src/fighter.js b/src/fighter.js
-index 85692e67..d923de62 100644
+index 9056f13e..799accbf 100644
 --- a/src/fighter.js
 +++ b/src/fighter.js
 @@ -15,7 +15,7 @@ import * as THREE from 'three';
