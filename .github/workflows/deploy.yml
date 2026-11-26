@@ -38,7 +38,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 5
         with:
-          ref: 8d070036a3296d45f276d40b8c8cadc019304fe3
+          ref: 8a9956cc6f44656a429cbbf4bd7da06989074549
           path: .p2
       - name: physics2 trial page
         if: steps.p2.outcome == 'success'
