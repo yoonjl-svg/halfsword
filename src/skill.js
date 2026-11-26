@@ -26,7 +26,7 @@ import { fingerCutK } from './finger_cut.js'; // 손가락 긋기 감도 (11/06 
 //  level: 0 = 보정 없음(날것 그대로의 물리 조작), 1 = 숙련된 검사
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { SKILL, WEAPON, THRUST, POMMEL, SECRET, AI_LEVELS, ARM, UNIQUE_ASSIST, realS, BURST_WHIFF, BODY } from './config.js';
+import { SKILL, WEAPON, THRUST, POMMEL, SECRET, AI_LEVELS, ARM, UNIQUE_ASSIST, realS, BURST_WHIFF, BODY, GAIT } from './config.js';
 import { scriptLevel } from './prof_body.js'; // 비기 대본 손 빠르기 = 숙련도의 실력 숫자 (11/19 — 사람 · AI 같게)
 import { gunCanFire, gunPose, headOff } from './gun.js';
 import { startFlick, flickDrive } from './druid_whip.js'; // 휘는 무기(드루이드의 채찍)의 톡 = 손목 튕기기 (10/23)
@@ -442,6 +442,21 @@ export class Skill {
     const K = tp?.K; // 이번 찌르기의 시간·뻗는 거리 (무기의 찌르기 장점 반영)
     if (tp) {
       tp.t += dt * f.stamina.attackSpeed;
+      // 칼과 발 (다섯째 판 E2 · docs/strike/physics2_notes/r5_e2.md): 겨누는 동안 앞으로 내딛는 런지 부탁이 나오면(사람 탭 · AI 찌르기 기술 · 유파 찌르기 — 누가 냈든 같은 길) 그 런지에 맞춘다:
+      //  런지 발이 뜨기 전(채비 · 모아 딛기 — gait.js)이나 뜬 발이 디딜 때까지 남은 시간이 뻗는 시간(K.extend)보다 길면 겨눈 채(K.aim 끝) 머문다 → 뻗기가 런지 발 디딤과 함께 끝난다.
+      //  겨눈 채 머무는 것은 숨기지 않는다 — 상대가 읽을 수 있는 채비다
+      const g = f.gait;
+      if (!tp.down && !tp.lungeOff) {
+        if (!tp.lungeReq && tp.t <= K.aim && g?.req?.kind === 'lunge' && g.req.fwd > 0) tp.lungeReq = g.req;
+        if (tp.lungeReq && tp.t > K.aim) {
+          if (g?.req !== tp.lungeReq) tp.lungeOff = true; // 디뎠거나 버려진 부탁 — 더 머물지 않음
+          else {
+            const sw = !g.legs.F.stance && g.legs.F.kind === 'req' ? g.legs.F : !g.legs.B.stance && g.legs.B.kind === 'req' ? g.legs.B : null;
+            if (!sw || sw.T - sw.t > K.extend / (f.stamina.attackSpeed || 1)) tp.t = K.aim; // (뻗는 실제 시간 = K.extend ÷ 공격 빠르기)
+            else tp.lungeOff = true; // 뻗기 시작 — 이 뒤로는 시간대로
+          }
+        }
+      }
       // 이탈리아 찌르기 ④: 뻗고 버티기가 끝나도 런지가 안 끝났으면(걷던 발이 디디기를 기다리는 런지 부탁 · 몸 가속 lungeBrake — gait.js) 뻗은 채 머문다 — 몸이 따라잡거나 칼이 상대 몸에 닿으면(landed — combat.js strike) 자세로
       if (tp.it && !tp.it.landed && tp.t >= K.aim + K.extend + K.hold && itLungeOn(f)) {
         tp.t = K.aim + K.extend + K.hold - 1e-6;
@@ -1075,7 +1090,16 @@ export class Skill {
         }
         tp.plantShort = short;
       }
-      if (tp.walking && !tp.crossed) f.move.y = Math.max(f.move.y, LOW_FINISH.approach);
+      // 다가가기 (물리 2.0 다섯째 판 E3): 멈출 곳을 미리 셈한다 — 몸은 조종 속도를 한 걸음 늦게 따라가므로 지금 골반 빠르기 v 로
+      //  캡처 점 앞섬 v·√(h/g) (h = 골반 높이) 만큼은 이미 가 있는 것으로 본다. 남은 거리 rem = short − 앞섬 안에서 조종 속도가
+      //  GAIT.stopDecel 로 줄어 0 이 되는 빠르기 √(2·a·rem) 까지만 민다. 마지막 걸음들이 저절로 짧아지고 닿는 곳에 거의 선 채로 들어온다
+      //  (밖 힘 없음 — 미는 조종 입력만 줄임)
+      if (tp.walking && !tp.crossed) {
+        const pv = f.bodies.pelvis.linvel();
+        const lead = Math.hypot(pv.x, pv.z) * Math.sqrt(Math.max(0.3, f.bodies.pelvis.translation().y) / 9.81);
+        const vStop = Math.sqrt(2 * GAIT.goAccel * Math.max(0, short - lead)); // 몸이 걸음으로 바꿀 수 있는 빠르기 (GAIT.goAccel — 한 걸음에 0.7 m/s)
+        f.move.y = Math.max(f.move.y, Math.min(LOW_FINISH.approach, vStop / Math.max(1e-6, f.walkTop ?? GAIT.moveSpeed)));
+      }
     }
   }
 
@@ -1163,7 +1187,7 @@ export class Skill {
         tp.la = la;
         // 걸었으면 골반이 멈추거나 더 느려지지 않을 때 (낮은 상대 진입: 두 발이 다 디뎠을 때만)
         const planted = !f.gait?.active || (f.gait.legs.F.stance && f.gait.legs.B.stance);
-        const settled = !tp.walked || (planted && ((tp.pvPrev != null && tp.pv >= tp.pvPrev) || tp.pv <= 0));
+        const settled = !tp.walked || arrived(f, tp, planted);
         if (tp.t >= K.aim && tp.upDone && tp.lineDone && !tp.walking && settled) {
           tp.go = true;
           tp.tGo = tp.t;
@@ -1323,7 +1347,7 @@ export class Skill {
       tp.y = y;
       // 걸었으면 골반이 멈추거나 더 느려지지 않을 때 (낮은 상대 진입: 두 발이 다 디뎠을 때만) — 찍기와 같다
       const planted = !f.gait?.active || (f.gait.legs.F.stance && f.gait.legs.B.stance);
-      const settled = !tp.walked || (planted && ((tp.pvPrev != null && tp.pv >= tp.pvPrev) || tp.pv <= 0));
+      const settled = !tp.walked || arrived(f, tp, planted);
       if (tp.t >= K.aim && tp.upDone && tp.t - tp.tUp >= FINISH.cleave.charge && !tp.walking && settled) {
         tp.go = true;
         tp.tGo = tp.t;
@@ -1856,4 +1880,14 @@ export class Skill {
     } else if (this.f.weapon?.gun) this.thrustPose.w = gunPose(this.f, this.thrustPose); // 권총: 한 손 사격 자세를 덧씌운다 (gun.js)
     f.parryGuard?.opposition?.update(dt);
   }
+}
+
+/**
+ * 섬(arrive — 물리 2.0 다섯째 판 E3): 걸어 들어간 몸이 찍기 전에 선 상태. 두 발이 다 디뎠고 골반 수평 빠르기가 GAIT.walkMin
+ *  (다리가 '걷는다'고 보는 문턱) 아래. 전에는 '골반이 더 느려지지 않음'이라 0.8 m/s 로 흐르는 몸도 찍기 시작했다(atkdef_diag §8)
+ */
+function arrived(f, tp, planted) {
+  if (!planted) return false;
+  const v = f.bodies.pelvis.linvel();
+  return Math.hypot(v.x, v.z) <= GAIT.walkMin;
 }

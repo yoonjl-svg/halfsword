@@ -59,8 +59,7 @@ for (const mode of modes) {
     const gap = p.swordArt.measure.reach + want;
     const dx = pc.x + fw.x * gap - ec.x, dz = pc.z + fw.z * gap - ec.z;
     for (const { rb } of e.meshes) { const t = rb.translation(); rb.setTranslation({ x: t.x + dx, y: t.y, z: t.z + dz }, true); }
-    const at = e.anchor.translation();
-    e.anchor.setTranslation({ x: at.x + dx, y: at.y, z: at.z + dz }, true);
+
     if (e.gait) for (const k of ['F', 'B']) { const l = e.gait.legs[k]; for (const key of ['plant', 'hip', 'ankle', 'p0', 'p1', 'des', 'fp', 'pinC', 'pinT']) if (l[key]) { l[key].x += dx; l[key].z += dz; } }
     // 재기: 물리 스텝마다 (읽기만)
     const rec = (window.__rec = []);

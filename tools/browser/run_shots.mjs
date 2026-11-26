@@ -144,8 +144,7 @@ await page.evaluate(() => {
   const P = game.player, E = game.enemy, p = P.bodies.pelvis.translation(), e = E.bodies.pelvis.translation();
   const h = P.heading, tx = p.x + Math.cos(h) * 25 - e.x, tz = p.z - Math.sin(h) * 25 - e.z;
   for (const { rb } of E.meshes) { const t = rb.translation(); rb.setTranslation({ x: t.x + tx, y: t.y, z: t.z + tz }, true); }
-  const a = E.anchor.translation();
-  E.anchor.setTranslation({ x: a.x + tx, y: a.y, z: a.z + tz }, true);
+
 });
 await waitSim(1.2);
 await refill();

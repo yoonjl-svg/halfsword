@@ -38,7 +38,7 @@ for (const preset of presets) {
       const pc = p.bodies.chest.translation(), ec = e.bodies.chest.translation(), fw0 = p.forward();
       const dx = pc.x + fw0.x * window.__gap - ec.x, dz = pc.z + fw0.z * window.__gap - ec.z;
       for (const { rb } of e.meshes) { const t = rb.translation(); rb.setTranslation({ x: t.x + dx, y: t.y, z: t.z + dz }, true); }
-      const at = e.anchor.translation(); e.anchor.setTranslation({ x: at.x + dx, y: at.y, z: at.z + dz }, true);
+
       if (e.gait) for (const k of ['F', 'B']) { const l = e.gait.legs[k]; for (const key of ['plant', 'hip', 'ankle', 'p0', 'p1', 'des', 'fp', 'pinC', 'pinT']) if (l[key]) { l[key].x += dx; l[key].z += dz; } }
       const s = g.sound, calls = (window.__whipCalls = { swish: 0, crack: 0, hit: 0, armor: 0, clash: 0 });
       const w0 = s.whip.bind(s);
@@ -128,8 +128,7 @@ for (const preset of presets) {
     const pc = p.bodies.chest.translation(), ec = e.bodies.chest.translation(), fw0 = p.forward();
     const dx = pc.x + fw0.x * window.__gap - ec.x, dz = pc.z + fw0.z * window.__gap - ec.z;
     for (const { rb } of e.meshes) { const t = rb.translation(); rb.setTranslation({ x: t.x + dx, y: t.y, z: t.z + dz }, true); }
-    const at = e.anchor.translation();
-    e.anchor.setTranslation({ x: at.x + dx, y: at.y, z: at.z + dz }, true);
+
     if (e.gait) for (const k of ['F', 'B']) { const l = e.gait.legs[k]; for (const key of ['plant', 'hip', 'ankle', 'p0', 'p1', 'des', 'fp', 'pinC', 'pinT']) if (l[key]) { l[key].x += dx; l[key].z += dz; } }
     // 옆 카메라 (고정): 칼 든 쪽 옆 · 조금 앞 · 가슴보다 조금 위에서 나와 상대 사이를 본다
     const rg = p.right();

@@ -56,7 +56,8 @@ export function holdPushBack(f) {
   const n = Math.hypot(dx, dz);
   if (!(n > 1e-6)) return;
   const k = (CLOSE.legDrive * f.muscle * f.strength) / n;
-  f.bodies.pelvis.addForce({ x: dx * k, y: 0, z: dz * k }, true);
+  f.legDrive.push.x += dx * k; // 다리가 땅을 밀어 내는 힘 (src/legs_vmc.js — 골반에 바로 거는 힘이 아님)
+  f.legDrive.push.z += dz * k;
   if (!o.aiControlled) closeLog(o).push += f.lastDt ?? 0;
 }
 
