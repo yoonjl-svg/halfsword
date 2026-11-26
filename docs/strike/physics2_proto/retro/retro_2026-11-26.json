@@ -1,0 +1,659 @@
+{
+ "reads": [
+  {
+   "period": "11/23 18:24 – 11/24 23:59 UTC (plan, stage-0 measurements H1–H3, referee criteria, human data and gap map, prototype round 1, legs rounds 2 and 3, study notes s1–s7, legs work notes B2/B3). Records read: transcript_digest.md lines 1–676; docs/strike/physics2_plan_2026-11-23.md, physics2_referee_criteria_2026-11-24.md, physics2_h1/h2/h3_first, physics2_gap_map, physics2_human_data (lunge/run rows), physics2_proto_round1, physics2_round2, physics2_round3, physics2_legs_notes.md, physics2_notes/s1 §0 and §5, s5 §0/§4/§5/addendum, s7 §0–§2. r2_design_physics.md is a 9/29 document and records no decision from this period.",
+   "moments": [
+    {
+     "when": "11/23 18:56 – 11/24 01:23 (first stage-0 reports to owner/audit)",
+     "decision": "Report to the owner the first diagnoses: 'the sword brings very little energy; what is lacking is speed, not mass' (5 m/s, 4 J, judgement ×5), 'blade speed fell across three versions', and 'muscles exceed human strength by several to ten times'.",
+     "rested_on": "Fight medians from honesty.mjs: school 80 bouts median 5.0 m/s, E0 4.3 J, judgement/E0 5.09 (physics2_h3_first §1); AI-vs-AI 8 bouts per batch 9.2/7.8 → 5.9/5.6 m/s (§2); joint torque recomputed from k·e−d·ω (hip 3325 N·m, digest 01:10).",
+     "opened": "Not at first. All three were opened and corrected within hours, mostly by the audit: the median mixed 60% bruises with cuts (cuts 7 m/s, 51–57 J, ×7–9; thrusts ×20); the speed decline was a bruise-share shift from 9/30 to 11/1, and only from 11/1 to now did cut speed really drop; the torques were 'requested' values, and delivered torque was 1/2–1/5 of that (hip 95% 416, peak 728).",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "Nothing was decided on the uncorrected numbers. The '×10 muscles' claim was withdrawn, and the referee switched to delivered torque.",
+     "verdict": "SAME_ERROR",
+     "error_class": "A (denominator/classifier mix: median over all wound types; a 'requested' torque quantity read as delivered)",
+     "evidence_quote": "h3 §3-2: \"§1 표의 '5 m/s · 4 J · 5 배'는 멍이 60 % 인 전체 가운데값이다.\" / digest 01:23: \"앞 보고의 \"근육이 사람 힘의 몇 배에서 열 배를 낸다\"는 거둡니다. 그 숫자는 근육 법칙이 요구한 값이었고, 실제로 관절에 전달된 값은 그 1/2 ~ 1/5 입니다.\"",
+     "consequence": "low"
+    },
+    {
+     "when": "11/24 01:10 – 01:28 (referee criteria v1 → v2 → three bands, written before any prototype result)",
+     "decision": "Fix the pass criteria for 'legs only' before seeing results. Hidden tilt torque is judged by magnitude rather than share. Three bands are set around the method's own noise floor. Joint torque is the delivered value. Three weapons and four push directions are used. The stated yardstick is 'physically honest', not 'same as now'.",
+     "rested_on": "Noise floor measured on a dead body with the anchor removed: 6.1 N·m (11.4 while falling). Current body: standing 12.3, walking 115.2. A 'share < 5%' line that 'even an honest body cannot pass' (honest chain 8–11%, resting box 50%).",
+     "opened": "Yes. This is the opposite of the error class: the line was moved off the noise floor ('pass and fail would be decided by noise'), and the share metric was dropped because its denominator misbehaves.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "The v1 'torque share 5%' line was dropped. Residual old-body anchors remain: criterion 14 'tip peak speed not below the baseline (18.3 m/s)', where the baseline speed comes from a wrist servo at its limit in 92–100% of steps (gap map row 7). Criterion 15 originally said fight falls are 'not to be read as good/bad — a different body'.",
+     "verdict": "SOUND",
+     "error_class": "",
+     "evidence_quote": "criteria head: \"그래서 아래 값들은 '지금 판과 같음'이 아니라 '물리로 정직함'을 기준으로 삼는다.\" / 가-6: \"선이 바닥값과 붙어 있으면 합격과 불합격이 잡음으로 갈린다\"",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/24 04:40 (round-1 scoring, yaw verdict)",
+     "decision": "Reverse the round-1 'yaw fail' for all three prototypes: the excess was the engine's friction model, not hidden torque. The pass line is moved to the engine limit, and the 'engine-forgiven twist' is reported in its own column.",
+     "rested_on": "One-foot box test with no hidden force (audit yaw_point_contact.mjs): the foot holds up to 85 N·m whether loaded centrally or at a corner, against a Coulomb value of about 29. After the tool fix, prototypes read 0.00–0.51 N·m and the current anchor 10.8.",
+     "opened": "Yes. The threshold was traced to a mechanism and checked with a control case.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "Nothing. The engine-forgiven part was kept visible instead of being hidden.",
+     "verdict": "SOUND",
+     "error_class": "",
+     "evidence_quote": "proto_round1 §3: \"위 줄의 '선을 넘음'은 숨은 토크도 재는 오차도 아니고 **엔진의 마찰 모형**이었다.\"",
+     "consequence": "low"
+    },
+    {
+     "when": "11/24 04:28 – 04:53 (round 1: choice of leg controller among VMC / SIMBICON-like / force-pair)",
+     "decision": "Choose prototype '가' (virtual model control) as the base for round 2, and carry over from '나' the human-limit budget on engine motors.",
+     "rested_on": "Single-run solo scenes, 35/41 against 20 and 25 (proto_round1 §3 다). The builders themselves wrote that small code changes flip pass and fall. The later shaken battery gave 184/432 against 128 and 145 (§8). On the human-body column (나-8) '나' was clearly best: legs under the limit in 26/30 scenes, walking hip 95%/peak 183/242 N·m, against '가' at 9/22 and 217/448. '가' did not clip its engine motors.",
+     "opened": "Partly. The single-run count was replaced by the 432-run shaken battery, which kept the same ranking. The step the criteria required, re-running the chosen prototype with joint limits really applied, is not recorded in any document of the period.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "'나' (the only design that budgeted engine motors to human limits) was not chosen as the base. Only that one feature was transplanted.",
+     "verdict": "SUSPECT",
+     "error_class": "A (single-run selection) and D risk (function counts preferred while the human-limit column favoured the other design)",
+     "evidence_quote": "criteria 고르는 법: \"한도 없는 관절에 가장 기댄 것이 뽑히지 않게 ... 고른 시제품은 관절 한도를 실제로 건 채 ... 서기 · 걷기를 한 번 더 돌려 무너지는지 본다.\" / proto_round1: \"'가'는 명시 토크 쌍만 사람 한도로 자르고 엔진 모터(내딛는 다리 · 몸통)는 자르지 않았다. '나'만 엔진 모터에도 예산을 걸었다 — 이 칸은 '나'가 가장 낫다.\"",
+     "consequence": "medium",
+     "remeasure": "Apply docs/strike/physics2_proto/vmc.patch and simbicon.patch on 4bd9eea6. For each, run honesty.mjs walk/strafe/back on three weapons and read 나-8: delivered hip/knee torque 95% and peak, % of steps over limit, engine-motor share included. Then run legs_battery.mjs --offset=100 --n=24 on each with joint limits enforced on all motors, as the criteria prescribe, and compare the pass totals."
+    },
+    {
+     "when": "11/24 04:53 → 16:56 (gap map reported to owner, then retracted)",
+     "decision": "Tell the owner that 'the sword is not slow' (human longsword 9–14 m/s against the game's 17–18 m/s), drop the '1.3–1.5× faster with a chain' estimate, and redirect the fix away from speed.",
+     "rested_on": "Game peak tip speed of a full scripted swing compared with human paired-drill tip speed (heavier sword, body motion removed), physics2_gap_map row 8.",
+     "opened": "Not at first. The two quantities were different kinds. At 16:56 the lead noted that by blade angular velocity the game (700–770 °/s) is slower than the single human source (1000–2000 °/s), and retracted the claim to 'cannot be decided from human data'.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "Briefly shrank the case for faster strikes. Restored by the retraction; the doc was corrected (d0b3686b).",
+     "verdict": "SAME_ERROR",
+     "error_class": "A (non-comparable numbers taken at face value)",
+     "evidence_quote": "digest 16:56: \"견준 것이 서로 달랐습니다. 게임 쪽은 힘껏 휘두른 최고값, 사람 쪽은 짝 연습의 값이었습니다. ... 정확한 말은 \"사람 자료로는 가릴 수 없다\"입니다.\"",
+     "consequence": "low"
+    },
+    {
+     "when": "11/24 16:38 – 16:56 (round 2: gait branch A 'pre-planned footsteps' vs B 'feedback stepping')",
+     "decision": "Continue only branch B, and report to the owner that 'B stands 8/8, walks 6/8, backs 8/8'.",
+     "rested_on": "Longsword only, unseen shaken set, 144 runs: B 103, A 85, round-1 base 50, current game 144 (digest 16:38 table).",
+     "opened": "No. Sixteen minutes later B measured on three weapons gave 254/432, with rapier and zweihander forward walking at 0/8, 'worse than round 1'. Branch A was never re-measured on three weapons in any record of the period.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "Branch A (feed-forward footstep planning) was dropped on a single-weapon sample.",
+     "verdict": "SUSPECT",
+     "error_class": "A (single-condition sample; the criteria's own rule 17 required three weapons)",
+     "evidence_quote": "digest 16:56: \"갈래 B 를 세 무기로 처음 쟀더니 432 번 중 254 번 통과였고, **롱소드에만 맞춰져 있었습니다.** ... 제가 앞서 드린 \"144 번 중 103\"은 롱소드만의 숫자였습니다.\"",
+     "consequence": "medium",
+     "remeasure": "Run legs_battery.mjs --offset=100 --n=24 --weapons=longsword,rapier,zweihander on the branch-A tree from the 04:28 workflow and on B's start commit (p2-r2b-start 1b22d9da). Compare the three-weapon totals and the per-weapon walk/back/turn rows."
+    },
+    {
+     "when": "11/24 18:22 (round 2 verdict on the external righting torque) → reversed 19:56",
+     "decision": "Declare to the owner that the fall-back the lead had promised (a capped external righting torque) 'is not the answer' for staying upright in fights.",
+     "rested_on": "Fight 8 bouts on B2 8bc1bf4a with a tilt-axis-only pelvic torque of 40–1000 N·m: never-fell bodies 0–1/16 (round2 §3 table).",
+     "opened": "No. The test covered only the tilt axis while yaw was the dominant failure, and it ran on a tree whose requested steps were broken. At 19:56, on the fixed tree, yaw 100 + tilt 80 gave 10/16.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "The capped-aid option was briefly rejected. It was revived 1.5 h later.",
+     "verdict": "SAME_ERROR",
+     "error_class": "A (a verdict generalised from a narrow test: one axis, one broken tree)",
+     "evidence_quote": "round2 §8-4: \"§3 에서 '밖 세움 토크는 서 있기에는 답이 아니다'라고 적었다. 그것은 부탁 걸음이 깨져 있던 판(`8bc1bf4a`)에서 기울기 토크만 준 값이다.\"",
+     "consequence": "low"
+    },
+    {
+     "when": "11/24 18:22 – 18:41 (get-up)",
+     "decision": "Stop work on the honest get-up (p2-getup: roll → prone → all fours → step, using joint torque and ground contact only). Propose to keep the OLD get-up motion with a capped, ledgered external lift (≤0.7 bodyweight, ≤320 N·m, aid for 1.5 s after standing) as owner question 9, recommended 'keep'.",
+     "rested_on": "Honest get-up 0/24, falling sideways every time once it reaches one foot (trace described). Even with external help the best cell was 4/8. The proposal first reported 24/24, which was wrong (torque stayed on after standing, and the pass window counted aided time); the correct values were 19–23/24 on the tuning set, 64/72 unseen for the old legs, and 72/72 unseen for B3.",
+     "opened": "The failure was opened at motion level: it reaches one foot and falls sideways. The 24/24 count was not opened at first and was corrected at 18:41.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "The honest get-up was shelved. The old get-up motion and timing (4.53 s, against a human 2.6–3.7 s with hands and knees in gap map row 11) were retained and presented as 'same as now'.",
+     "verdict": "SOUND",
+     "error_class": "",
+     "evidence_quote": "digest 18:22: \"밖에서 큰 힘을 줘 봐도 8 번 중 최고 4 번이라, 힘 부족이 아니라 차례 제어가 덜 된 것입니다. 이 방식에는 더 태우지 않겠습니다.\" / \"이 안에서 **일어서기 자체는 지금보다 사실적이지 않습니다.**\"",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/24 19:56 – 22:51 (owner question 10: should character strength scale leg strength?)",
+     "decision": "Recommend 'do not multiply' and build on it (decouple.patch in B3). This replaced the builder's earlier fix (walk-speed limit × leg strength share, so a 0.65 body walks at about 0.7 m/s).",
+     "rested_on": "The old game's meaning: standing and walking were independent of proficiency. Battery at strength 0.65: 196 → 296/432. Fight 8 bouts: multiply 4.88/min, 2/16, 78.7%; decouple 2.78/min, 1/16, 82.6% (round2 §8-3).",
+     "opened": "The fight numbers are mixed and at noise level (2/16 against 1/16). The deciding argument was parity with the old body's semantics, which the record itself says came from the hidden support.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "The physically consistent variant (weaker legs, slower walk; legs_notes §2-8: 0.75–0.85 limit gives 8/8 walking) was replaced. The weaker body's slower walk was framed as the cost.",
+     "verdict": "SAME_ERROR",
+     "error_class": "B (the old body's behaviour, produced by hidden support, used as the yardstick)",
+     "evidence_quote": "round2 §8-3: \"옛 판에서는 서기 · 걷기가 숙련도와 무관했다(밖 받침이 했다). 그 뜻을 지키려면 다리 받치는 힘에는 곱하지 않아야 한다\" / digest 19:56: \"권고: 안 곱함(현재 게임과 같은 뜻). 곱하면 힘 0.65 인 몸은 걷기가 초속 1.1 → 0.7 m 로 느려집니다.\"",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/24 19:56 – 22:51 (adopting the standing aid: 'unmet remainder' yaw 100 / tilt 80 N·m, owner question 11)",
+     "decision": "Keep a declared external pelvic torque while standing, covering what the feet cannot produce. For tilt, choose definition ② ('sword-arm reaction the CoP cannot produce') over ① 'strict' (only truly lost moments). Set caps at yaw 100 / tilt 80. The fight target becomes 'never-fell bodies near the current game'.",
+     "rested_on": "Fight 8-bout cells (round2 §8-4: 1/16 → 10/16). B3 cap sweep over 8 and 24 bouts (legs_notes §6-5; best 23/48, neighbours 20–22, the doc giving ±3.4). Definition table over 48 bouts: ① 33/96, ② 45/96, ③ 46/96 (§6-3), marked 'unverified' because the temporary switch was deleted. Fall causes: 22 lostFooting (12 after a hit), 8 balance 0 from hits, 10 other (§6-8).",
+     "opened": "Partly. The lead traced the yaw mechanism (one-foot twist about 26 N·m against about 100 N·m reaction), and the verifier found that 70–76% of the yaw aid is not sword reaction. However, the target 'never-fell bodies vs current game 12/16 or 36/48' counts hit-induced falls against an anchored old body that moves only 0.23 m at 120 N·s. The criteria (rule 13 and the gap map) say an honest body should be pushed more and should step at more than 10 N·s. Rule 15 had said not to read fight falls as better or worse.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "Strict definition ① and the zero-aid honest stance were not adopted. The sword-arm reaction, itself a product of the old wrist-servo drive, is covered externally rather than removed.",
+     "verdict": "SUSPECT",
+     "error_class": "B (parity with an externally held old body on a metric that includes hit-induced falls) plus A (definition chosen on an unverified table)",
+     "evidence_quote": "round2 §7: \"싸움 '한 번도 안 넘어진 몸'이 지금 게임(12 / 16)에 가까워질 것\" / criteria 15: \"(좋다 / 나쁘다로 읽지 않음 — 다른 몸이다)\" / round3 §1: \"다만 이 표는 임시 칸이 지워져 검증이 다시 재지 못했다 — **확인 안 된 값**으로 적어 둔다.\"",
+     "consequence": "high",
+     "remeasure": "With the fixed tool (round3 §8 T4: 'never fell by itself' normalised by observed time), run legs_battery.mjs --only=fight --offset=100 --fights=24 on p2-legs-b3 (legs_b3.patch) with AID 0/0, with definition ①, and with ② (re-add the switch). Split falls into spontaneous and hit-induced. For each hit-induced fall, compare the impulse received (honesty.mjs fight ledger) with the human step and fall thresholds in physics2_human_data. aid_ledger.mjs gives the external torque used in each case."
+    },
+    {
+     "when": "11/24 (legs B2/B3 work notes, §2-4 and §6-9: designs tried and dropped)",
+     "decision": "Drop (a) matching the desired ground reaction to what the joint limits can produce, and (b) deferring walking steps while cutting so the body stays in double support. Also drop (c) shortening requested steps by leg strength.",
+     "rested_on": "(a) Basic battery n=8 383 → 359, rapier walk 8 → 3. (b) Walking cuts +1/+2/−1/−1, 'within noise'. (c) Solo +7, but fight 16 bouts never-fell 4 → 2. The same notes say an n=8 cell swings about ±3 and an 8-bout fight cell about ±2 bodies.",
+     "opened": "No. All three rest on battery pass counts at or near the stated noise, with no motion-level trace of why the more consistent design fell more. The notes themselves later name (b) as the physically right path ('베는 동안은 두 발을 딛고 서게 하는 것이 물리로 맞다', §4-2).",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "(a) was the design that is consistent by construction, keeping legs within human torque. It lost to 'separately clipped torque holds better'. (b) The physically right fix for one-foot yaw during cuts was dropped before the external yaw aid was added.",
+     "verdict": "SUSPECT",
+     "error_class": "A (small-sample pass counts) / C (more correct design shrunk in favour of the scoring one)",
+     "evidence_quote": "legs_notes §2-4: \"힘 몫 1 기본 묶음 383 → 359 ... 토크가 모자란 것은 맞춰도 모자라다 — 따로 잘린 토크가 오히려 더 버틴다. 버림.\" / \"베는 동안 걷는 걸음 미루기 ... 흔들림 안. 버림.\"",
+     "consequence": "medium",
+     "remeasure": "Rebuild (a) and (b) on p2-legs-b3. For each, run legs_battery.mjs --offset=100 --n=24 --more (unseen set) and --only=fight --offset=100 --fights=24, and honesty.mjs walk/stroke for 나-8 delivered torque. Trace the falls with legs_trace.mjs (walkstroke_horizR, kick80) to see whether the consistent design falls because it refuses superhuman torque."
+    },
+    {
+     "when": "11/24 16:38 – 22:51 (progress reports from the leg battery)",
+     "decision": "Report gait progress to the owner as battery totals: 254 → 382/432, 'basic set 89%', then '97%', 'reqlunge 8/8/8', and 'fight-shaped scenes 571/576'.",
+     "rested_on": "legs_battery.mjs pass counts. The reqlunge pass counted requestStep()==true. The builder's 'foot switch' (legs_notes §2-7) turned a walking lunge into a 1.1 m passing step with the back foot, which raised reqlunge from 0 to 8.",
+     "opened": "No until later. The records show that fights did not improve while the score rose. The 97% covered only stand/walk/cut/push, against 71% of the 67 moves the game actually uses. After the tool fix, reqlunge fell to 0/0/0 and lungecut to 0/0/0.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "Nothing was shipped. A round was spent tuning against the proxy.",
+     "verdict": "SAME_ERROR",
+     "error_class": "D (progress claimed from a proxy battery while the real thing, fights and the actual move set, did not work) and A (a classifier that passed a different motion)",
+     "evidence_quote": "round2 §3: \"기본 묶음에 부탁 걸음 장면이 없어서 걸음 점수가 254 → 382 로 오르는 동안 싸움은 그대로였다 — 시험 묶음의 구멍이다(내 잘못).\" / round3 §5: \"기본 묶음의 `reqlunge` 통과는 런지를 딛는다는 뜻이 아니었다.\"",
+     "consequence": "high"
+    },
+    {
+     "when": "11/24 22:51 – 22:55 (the gate for putting legs into the game, set by the lead)",
+     "decision": "Gate: every one of the 67 'hole' scenes at least 7/8 per weapon, basic set above 97%, spontaneous falls below 0.2/min, never-fell bodies within noise of the current game, running at 5 m/s.",
+     "rested_on": "s7 battery. Scenes were kept or edited only if the current game passes 7/8 ('fairness'), and 'takecut' was removed. Thresholds were re-set from current-game values (risoluto/aipulsecut; slowwalk floor = half the current game, ceiling 1.5×; dig peak speed 1.9 m/s, current game 2.9–3.3). The run gate of 5 m/s is the current game's 5.1.",
+     "opened": "Partly. Classifiers were audited (round3 §8–§9). But scene admission and several speed thresholds are defined by what the old, externally pushed body does, not by human data. The human data contains lunge CoM 1.7–2.3 m/s and advance-lunge 2.6 m/s, and has no row for running with a sword.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "Any behaviour the old body cannot do is outside the gate. Any old behaviour the honest body cannot reproduce at old speeds counts as failure, including the front-foot lunge from a walk, which legs_notes §2-7 argues is not physically receivable ('받을 수 없는 걸음').",
+     "verdict": "SUSPECT",
+     "error_class": "B (parity with the shipped body as the gate)",
+     "evidence_quote": "s7 §2 heading: \"공정함 (지금 게임이 무기마다 7/8 을 넘어야 남김)\" / round3 §9: \"문턱을 지금 게임 값에서 다시 잡음\" / round3 §6: \"뛰기 5 m/s\"",
+     "consequence": "high",
+     "remeasure": "For each speed or distance threshold in legs_battery.mjs --holes (run, runbreak, dighuman/digai, backburstai, reqlunge/lungecut front-foot rule, slowwalk/slowback), set the old-game value from holes_now_2026-11-24.json beside the human row in physics2_human_data (B11 lunge and bout velocities, gait speeds). For reqlunge during a walk, run legs_trace.mjs --scene=reqlunge on p2-legs-b3 and on the current game, and record the capture point relative to the support foot at the request (§2-7 method), to decide whether the old front-foot lunge is a physical requirement or an artefact of walk-push and anchor."
+    },
+    {
+     "when": "11/24 (rounds 2–3, the human-body criterion 나-8 is no longer reported)",
+     "decision": "Report rounds 2 and 3 as passing 'honesty first' (support 0%, hidden tilt 2.1–2.7 N·m) and rising battery scores, without reporting the human-body criterion 나-8 (delivered leg/hip torque 95% and peak under the limit, under 5% of steps over).",
+     "rested_on": "honesty.mjs honesty rows only. The one recorded human-body number for the chosen branch is at B's start: the engine-motor share is outside the ledger, and walking hip delivered peak is 690–746 N·m, about 2.8–3× the 250 limit and no better than the old game's 728.",
+     "opened": "No. Explicit torque pairs are clipped to human limits, but engine motors are not, and the notes list an 'engine motor share ledger' as unfinished work (§4 item 6). legs_notes §6-8 also shows hip-limit clipping of 100–280 N·m demanded before forward-lean falls.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "Nothing was explicitly rejected, but the 'legs really carry the body within human muscle' half of the goal is unverified while progress is reported.",
+     "verdict": "SUSPECT",
+     "error_class": "D (progress from pass-rate proxies while a defining property, human-limited muscles, is unmeasured or failing)",
+     "evidence_quote": "legs_notes §0 item 6: \"엔진 모터 몫이 장부 밖(걷기 엉덩이 전달 토크 최고 690 ~ 746 N·m)\"",
+     "consequence": "high",
+     "remeasure": "On p2-legs-b3 (docs/strike/physics2_proto/legs_b3.patch), run honesty.mjs --scene=walk, strafe, back and stroke --weapon=longsword,rapier,zweihander. Report 나-8 as in physics2_proto_round1 §3 나: delivered hip/knee/ankle/waist torque 95% and peak, % of steps over the limits in the gap map §3 per-axis table, and the engine-motor contribution. Compare with the current game's 416/728 and with prototype '나' (183/242)."
+    }
+   ],
+   "abandoned_worth_revisiting": "1. Prototype '나' (SIMBICON-like: hip rights the pelvis, foot placement, human torque budget on engine motors too). It was best on the human-limit column (26/30 scenes under the limit, walking hip 183/242 N·m) but lost the base choice on a single-run function count of 35 vs 20 (physics2_proto_round1 §3; patch docs/strike/physics2_proto/simbicon.patch).\n2. Gait branch A (pre-planned footsteps). It was dropped on a longsword-only 85 vs 103 of 144. B turned out to be longsword-tuned (254/432, rapier and zweihander walking 0/8), and A was never measured on three weapons (digest 16:38 and 16:56).\n3. Honest get-up (p2-getup 7167626a, src/getup.js). It reaches all fours and one foot using contacts only, then falls sideways (0/24). It was shelved for the old get-up plus up to 0.7 BW and 320 N·m of aid. The lead's own diagnosis was 'sequencing control, not force' (round2 §4, digest 18:22).\n4. Ground reaction feasible under the joint limits (legs_notes §2-4). This is the design consistent by construction. It was dropped on 383 → 359 at n=8 because 'separately clipped torque holds better', with no trace of why.\n5. Deferring steps while cutting, so the body stays in double support during the cut (legs_notes §2-4). It was dropped as 'within noise', then named in §4-2 as 'the physically right' fix for one-foot yaw. The external yaw aid of 100 N·m took its place.\n6. Strict tilt-aid definition ① (only truly lost moments, 1.5 N·m when walking). It lost to ② on a 48-bout table that 'could not be re-measured', 33 vs 45 of 96 (physics2_round3 §1, legs_notes §6-3).\n7. The leg-strength-consistent walk (legVmax × leg strength share, so a weaker body walks slower; legs_notes §2-8). It was replaced by decouple.patch on the grounds of 'the old game's meaning'.\n8. A per-axis, force–velocity human limit in the referee. It was deferred because 'changing it now would change the builders' yardstick' (physics2_gap_map §2-2 and §3), so the leg rounds were scored against a single constant limit that the gap map itself says becomes false in fast motions.\n9. Rapier 0.20+/0.21.0, whose motor max force is exact (1.00×) and which has the gyroscopic term. It was not recommended because of the 6×1 softness, the dead contact-frequency setter and foot rotation (s5 §0-8). That makes it the only path to real torque caps on engine motors, which is the gap named in the human-body moment above.",
+   "patterns": "The measuring tool was handled well. Criteria were written before results, the noise floor was measured and banded, share metrics were dropped when their denominator misbehaved, the yaw threshold was traced to an engine friction mechanism, and requested torque was replaced by delivered torque. Most of this came through audit cross-checks.\n\nThe errors gathered in the fast loop of build rounds and in what was reported to the owner:\n(a) Small or single-condition samples decided choices: single-run 35/41, longsword-only 103/144, 8-bout fight cells of ±2 bodies, and an unverified definition table.\n(b) Battery classifiers passed a different motion (reqlunge counted a passing step). Rising pass totals were reported as progress while fights and the real move set lagged (D, acknowledged twice in the records).\n(c) Old-body parity crept back in after the criteria disowned it. Rule 15 said fight falls are 'a different body', but later gates require never-fell bodies near the anchored current game. Battery scenes and thresholds are admitted or set by what the current game does (run 5 m/s, a front-foot lunge from a walk). Leg strength was decoupled to keep 'the old game's meaning', which the record says came from the hidden support.\n(d) The human-muscle half of the goal (나-8) stopped being reported once the honesty rows passed. The one number on record, walking hip peak 690–746 N·m, is about 3× the limit.\n(e) Designs consistent by construction (GRF within joint limits, double support while cutting, strict aid definition, honest get-up, the human-budgeted '나') were dropped on pass counts near noise or under time pressure after the owner's 16:43 remark, while external aid sized like the old anchor (yaw 100) was added to approach old-game fight numbers.\n\nMost of the lead's verdicts that went wrong were self-corrected within hours. The uncorrected ones are the yardstick choices (c) and the unreported human-limit check (d)."
+  },
+  {
+   "period": "11/25 (UTC): round 4 merge and verification (balance, requested steps, hurt/slope, run), tool fix 1 and fix 2, first attack/defence measurement and its diagnosis, the /physics2/ trial page and the owner's hands-on test, the \"prepared motion\" and \"borrowed methods\" talks, the round 5 targets, the round 5 verdict (21:36), and the solver-iteration diagnosis with its 8-cell table (21:47 to 23:23). The 11/26 00:55 arm-fix target in round5 §6-4 is noted only as the boundary where this period's framing ends.",
+   "moments": [
+    {
+     "when": "11/25 00:06 (digest); tool fix 1 merged at 61e57074; round3 §10",
+     "decision": "Adopted tool fix 1 and re-scored the round-3 legs under it. The walking lunge went from 8/8/8 to 0/0/0, steered cuts from 8/8/6 to 4/5/3, and the stood share from 91.3 to 86.4 %.",
+     "rested_on": "Two things. First, a foot-level check on the lunge: 'the rear foot passes more than 1 m' against the game's front foot at 0.5 to 0.6 m. Second, a steered-cut rule: '조종한 쪽으로 간 거리가 현재 게임의 절반이 안 됩니다'. The lead also corrected his own label-based count of the game's lunges (37/11) to a foot-position count (45 to 48 of 48 front foot).",
+     "opened": "Lunge: yes, traced at foot position, which caught the old tool passing rear-foot pass-steps. Steered cut: no. The threshold is a fraction of the shipped game's distance.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "Nothing was abandoned. Round 3's scores were lowered.",
+     "verdict": "SUSPECT",
+     "error_class": "B (steered-cut threshold only). The lunge fix is SOUND: it made the tool count what the motion really was.",
+     "evidence_quote": "\"조종하며 베기: 4 / 5 / 3 (전 8 / 8 / 6). 조종한 쪽으로 간 거리가 현재 게임의 절반이 안 됩니다.\" Elsewhere (05:00) the shipped game's forward push is 9,560 N·s, against 0 for the new legs.",
+     "remeasure": "In legs_battery.mjs scenes aistroke_diagR and walkstroke_*, report the distance actually travelled in metres for b4/b5 next to the honest bound: the GAIT.legVmax 1.1 m/s walking cap times the steer window. Then check whether the 'half of game' threshold is reachable at all without the 9,564 N·s push that aid_ledger/round4 §3 attributes to the game.",
+     "consequence": "low"
+    },
+    {
+     "when": "11/25 early, r4_req worker (r4_req.md §5-1), carried into the merge (r4_merge §0.5, §7)",
+     "decision": "Rejected the 'fast lunge' (r4_req_lungefit.patch). It shortens foot-off time so that a walking body lunges with the FRONT foot. Only the foot-choice part (lungeFit) was kept.",
+     "rested_on": "The probe showed w_lunge6 front foot going from 0 to 6–8 of 14–20, with length 0.63–0.66 m (game 0.58), but 1 fall in 4 runs, w_lunge45 at 0/24, and d_lunge6 falling in 2 of 4. The recorded reason for removal was the battery gate: lungecut 8/7 → 6/6 and reqlunge 8/8 → 8/7 at n=8, breaking the rule 'lungecut must not fall below the previous board'.",
+     "opened": "Partly. The worker traced the physics (a 1.2 m deep stance with nothing to receive it). But the gate number that decided the rejection was not opened. The same note says those scenes do not check which foot steps, and that the previous board's passes included rear-foot pass-steps.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "Real front-foot walking lunges were shrunk back to rear-foot pass-steps for this round. The deep-lunge recovery stayed unbuilt.",
+     "verdict": "SAME_ERROR",
+     "error_class": "A + B: an n=8 pass count, from a scene that did not check the foot, compared against a previous-board value inflated by the wrong motion.",
+     "evidence_quote": "r4_req §5-1: \"`lungecut` 8/7 → 6/6 · `reqlunge` 8/8 → 8/7. '`lungecut` 이 앞 판 밑으로 내려가면 안 됨'에 걸려 뺐다.\" §6: \"`standlunge` · `thrustlunge` · `biglunge` 의 앞 판 통과는 런지가 아니라 뒷발 지나 딛기로 통과한 것이 섞여 있다 … 이 장면들은 뜬 발이 앞발인지 세지 않는다.\" §3's 'correct' metric is also defined against the old body: \"'맞음' = … 지금 게임에서 많이 나온 발 + 길이가 지금 게임 가운데값의 ± 30 % 안\" (41.6 % vs target 90 %).",
+     "remeasure": "Apply r4_req_lungefit.patch on the b5 tree. Run req_probe.mjs --only=w_lunge6,w_lunge45,d_lunge6 --n=24 for front-foot share, falls and request-to-foot time. Run lungecut/reqlunge with the foot-counting tool (fix 1 or later), not the old count.",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/24–25 lead decisions recorded in r4_merge §2–§4 and r4_balance §3",
+     "decision": "Kept the balance branch's defect fixes (b: no leakage of the controller's caution into declared aid; d: post-standup aid fades to 0) even though self-falls rose 40 → 53. Kept the true biglunge (front foot, 1.45 m) even though it dropped 8/8/8 → 6/8/4.",
+     "rested_on": "Construction: removing hidden aid leakage is correct. A lunge must be a lunge. Fight counts were read with explicit noise (√40 ≈ 6, ±9 for a difference).",
+     "opened": "Yes. Revert-one-branch trees (snap_x*) isolated each drop to a specific change.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "Nothing correct was abandoned. Numbers were allowed to fall.",
+     "verdict": "SOUND",
+     "error_class": "none: a counter-example to classes B and C",
+     "evidence_quote": "r4_balance §3: \"결함 고침 … 이 밖 도움을 줄인 만큼 넘어짐이 느는 것이 맞는 방향이고\". r4_req §5-3: \"'런지는 런지여야 한다'를 따랐고, 통과를 되찾으려고 큰 런지만 다시 지나 딛기로 돌리지는 않았다.\" r4_merge: \"`biglunge` 8/8/8 → 6/8/4 (런지를 앞발로 — 선임 결정대로 둠)\"",
+     "consequence": "low"
+    },
+    {
+     "when": "11/25 04:49 and 09:26 (digest); round4 §5, §7",
+     "decision": "Declared walking lunge and running 'a wall that leg work does not pass'. Stopped digging into leg control. Told the owner he must first decide how much 'capped, declared external aid' to use, and advised against continuing the same way.",
+     "rested_on": "Walking lunge front foot 2–15/144 against the game's request-to-foot time of 0.1–0.25 s. Run top speed 2.2–2.4 against the game's 5.1 m/s. Fight self-falls 46 against the game's 1.",
+     "opened": "Run: yes. The hip torque limit, swing-foot lag and absent flight phase were traced, and the external-push sweep (50–200 N) showed push does not help. Lunge: the physics was opened (capture point 2 m beyond reach), but the 'wall' was defined by matching the old game's timing, which the record itself says comes from hidden support and push. The gathered-step route (0.4–0.5 s, the real fencing order) was already written down and was presented as a cost needing an owner decision, not as the correct design.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "The honest-leg line was halted for lunge and run. The correct-by-construction gathered-step lunge was deferred behind an external-aid question. Round 5 then reached about 90 % front-foot walking lunges with zero added external force.",
+     "verdict": "SAME_ERROR",
+     "error_class": "B for the lunge: parity with a propped body's timing was used as the yardstick. Run is SOUND, because 5 m/s is a human target and the push sweep opened it.",
+     "evidence_quote": "04:49: \"현재 게임의 걷는 런지(0.4 초)와 뛰기(초속 5 m)는 숨은 받침과 밀기가 버텨 줘서 나오는 동작입니다. 밖 힘 없이 같은 박자와 빠르기를 내는 길은 이번에 찾지 못했습니다.\" r4_req §5-2: \"길은 '모아 딛고 런지'로 보인다 … 같은 발 · 같은 길이 · 같은 때를 밖 힘 없이 다 맞추는 길은 찾지 못했다.\" 09:26: \"이어 가신다면 '상한을 못박아 선언한 밖 도움'을 어디까지 쓸지 사장님이 먼저 정하셔야 합니다.\"",
+     "consequence": "high"
+    },
+    {
+     "when": "11/25 07:05 and 09:26 owner reports; round4 §0, §2",
+     "decision": "Reported round 4 by its battery score (67 scenes 1134 → 1347 / 1608, game 1606) and fight self-falls. Stated 'fights got worse than round 3 (40 → 46)' and 'this leg cannot go into the game'.",
+     "rested_on": "The 67-scene battery, whose fairness rule and thresholds are set from the shipped game (tools_fix2: '공정 = 지금 게임이 무기마다 7/8 이상'). kick2 was raised to 100 N·s because the game's hidden support kept its foot down at 40 N·s. The pickup threshold was reset from the game's 0.538 m / 77.7°. Fights: 24 games × 2 seed sets.",
+     "opened": "The battery total was not opened, and round4 §2 itself warns that single cells flip with the seed set. On fights, the verifier read 40 → 46 as a tuned-seed effect, inside noise on unseen seeds, but the 07:05 owner report gave 'worse' without that caveat.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "The leg was judged unusable. Hours later the owner played it and found it more realistic than the current version.",
+     "verdict": "SUSPECT",
+     "error_class": "B (progress measured as resemblance to the old game, on a battery tuned so the old game passes) + A (40 → 46 reported at face value)",
+     "evidence_quote": "tools_fix2 §2: \"`kick2`: 지금 게임은 40 N·s 첫 치기에 발을 안 뗀다(… 숨은 받침 · 닻). 첫 치기 100 N·s …\". round4 §2: \"넷째 판이 나빠진 것은 셋째 판이 값을 맞춘 묶음(1 ~ 24)에서고, 안 본 묶음(101 ~ 124)에서는 둘이 흔들림 안이다.\" 07:05: \"싸움: 셋째 판보다 나빠졌습니다. 몸 96 에서 스스로 넘어짐이 40 → 46 번\". Owner 16:17: \"현재 버전보다 사실적이야\".",
+     "remeasure": "From legs_battery.mjs --holes JSON per scene, split the 67 scenes into (a) those whose pass rule is a physical outcome (stays up, foot lands, does not fall) and (b) those whose threshold was copied from the game's numbers (tools_fix2 §2: pickup 0.4 m/90°, risoluto/aipulsecut counts, run 1.9 m/s floor, kick2 impulse, steered distance). Report b3/b4/b5 against the game on each part separately. Re-read fights on unseen seeds only (301+).",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/25 15:26 owner report ('다리 외에 공격과 방어 동작은 어때?'); round4 §10 and §0 item 6",
+     "decision": "Reported to the owner that step-mixed attacks had worsened. 'Ten unique techniques' (곁눈 베기, 임브로카타, 인콰르타타, 고테, 모르트슐라크, 리솔루토 …) were listed under 나빠진 것, alongside 34 failing repository tests.",
+     "rested_on": "motion_regress.mjs ±5 % snapshot of the 11/16 recorded values. kote: dur 0.842 → 0.808, path 1.566 → 1.6, vmax 3.69 → 3.94. Plus the npm test count, 34 of 982.",
+     "opened": "No. The same message admits the failures were not separated into tests pinned to old legs versus real breakage. Opened 45 minutes later by atkdef_diag: 21 of 34 were fixed values, and kote, cingir, schielhau and others were classed 고정값. Even so, the round4 §0 conclusion still lists the ten techniques as worsened.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "Nothing was rejected that day. The 'attack/defence regressed under the new legs' framing persisted into round 5 and the arm work.",
+     "verdict": "SAME_ERROR",
+     "error_class": "B + A: old-body snapshot tests (±5 %) were reported as motion regressions without a trace. This is the same instrument and the same technique (kote) as the 11/26 case.",
+     "evidence_quote": "15:26: \"고유 기술 열 가지: 허공 동작이 기록해 둔 값의 ±5 % 를 벗어납니다. 곁눈 베기, 임브로카타, 인콰르타타, 고테 …\" under '나빠진 것'. atkdef_diag §7: \"motion_regress cingir · kote | 고정값 | … vmax 3.69 → 3.94 (+6.8 %) | 한도 ± 5 % 를 조금 넘음\". round4 §0.6 still reads \"걸음이 섞인 동작(마무리 찌르기 · 고유 기술 열 가지 · 독일 붙어 싸우기)이 나빠졌고\".",
+     "remeasure": "For each motion_regress technique, trace the tip path on both trees (motion_regress.mjs outputs mr_game.txt / mr_b4.txt): strike, lowest point, time back to guard. Also check whether the dur/path window closes on a tip-speed threshold, as in the 11/26 kote case. The four 'unknown' ones (imbroccata, inquartata, altib, schielhau+duplieren) are still untraced.",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/25 16:10 (digest); atkdef_diag.md; round4 §11",
+     "decision": "Classified the 34 failures as 21 fixed-value, 4 real, 5 unbuilt and 4 unknown. Named real regressions (rear burst, bind push 1.39 m with a fall, iai AI, uchigatana stance 0.445 → 0.071 m). Attributed the finishing-thrust drop to the walking-in body not stopping.",
+     "rested_on": "Per-test reruns with motion-level probes (dbg_*.mjs: first-step delay 0.023 → 0.242 s, drift, press distance 0.84 m). For the finishing thrust: overshoot 56/80, pelvis speed at go 0.78 m/s, blade contact point.",
+     "opened": "Yes for the classification. For the finishing thrust, the copy experiment removed overshoot but restored wound only to 30 %, and the remaining lead (hilt 0.15 m vs 0.08 at go) was recorded but not followed.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "F1 (start walking on stick intent) was dropped because it newly broke two tests (see abandoned).",
+     "verdict": "SOUND",
+     "error_class": "none for the classification. A loose end on the finishing-thrust cause.",
+     "evidence_quote": "atkdef_diag §8: \"지나침은 없어졌는데 상처는 절반 — 남은 차이(go 때 칼자루가 칼 쪽으로 0.15 m (GAME 0.08) · 선 각 33° (26°))의 까닭은 못 찾음.\"",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/25 15:07–16:44; physics2_trial_page §1–§5",
+     "decision": "Built and shipped the isolated /physics2/ trial page so the owner could play the new legs.",
+     "rested_on": "An isolation check (storage prefix, service worker, a deliberately broken guard) and an independent review.",
+     "opened": "Yes. It turned the scores into an outcome the player feels. The owner's verdict ('more realistic than the current version') ran against the battery-based 'cannot ship'.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "none",
+     "verdict": "SOUND",
+     "error_class": "none: the corrective to class D/B",
+     "evidence_quote": "16:17 owner: \"지금 테스트 해봤는데 현재 버전보다 사실적이야. 이걸 보완해서 아주 약간 '보정'하면 쓸 수 있는 수준이 될 거 같은데.\"",
+     "consequence": "low"
+    },
+    {
+     "when": "11/25 16:19, 17:25, 17:27, 17:30 (digest)",
+     "decision": "Diagnosed the gap as missing anticipation ('prepared motion'). Chose to build a 'whole-body script' layer on the current engine with a SIMBICON-style state structure and learned feed-forward, and no added external force. Did not recommend an engine swap (Jolt/MuJoCo), motion capture or neural control for now.",
+     "rested_on": "Literature (APA about 100 ms, weight shift 300–500 ms), the round-4 symptoms, and an engine-cost argument.",
+     "opened": "The anticipation diagnosis was framed honestly as judgement ('다섯 가지가 넘어짐의 얼마씩을 차지하는지는 아직 재지 않았습니다'). One of the two stated reasons against the engine swap is protecting old tests and gate values.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "Engine swap (MuJoCo with tendon-like elasticity was named as possibly better for running), motion-capture targets and neural controllers were all deferred.",
+     "verdict": "SUSPECT",
+     "error_class": "C: the engine was kept partly because '시험 982 개와 관문 값이 모두 지금 엔진의 결과에 묶여 있습니다'",
+     "evidence_quote": "17:27: \"다만 엔진을 바꾸면 사실상 다시 짓게 됩니다. 칼 충돌, 상처 판정, 시험 982 개와 관문 값이 모두 지금 엔진의 결과에 묶여 있습니다.\" The 22:56 table then shows the new legs stand only with a tighter solver, and the arm aims right only with the loosest one.",
+     "remeasure": "Use the leg-only side-by-side the lead himself proposed ('다리만 떼어 작은 실험으로 견줘'). Compare standing/walking with the same controller at solver inner iterations 1/2/4 versus a stiffer solver engine, measuring hand-to-target error (r5_aim_diag method: wrist − target 0.2 s before go) and pelvis stand success. The point is whether the arm/leg conflict seen in round5 §6 is an engine-solver artefact.",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/25 17:39 (digest); round5 §1 (targets fixed before results)",
+     "decision": "Set the round 5 targets. ① self-falls 46 → ≤23 (seeds 1–24/101–124) with no rise in aid. ② front-foot walking lunge ≥80 %, request-to-foot ≤0.5 s, sword-foot sync ≤0.1 s, plus 'tapthrust 8/8/8 unchanged, biglunge not worse than 6/8/4'. ③ finishing-thrust wound ≥45 % (game 61 %), overshoot ≤8/80.",
+     "rested_on": "Round-4 numbers, the game's 61 %, and the atkdef diagnosis that the finishing-thrust drop came from not stopping.",
+     "opened": "② is SOUND: realism-derived timing, set before results. ① halves a count that round4 §2 says is inflated on tuned seeds, but unseen seeds 301–324 were added to scoring. ③ was not opened: atkdef_diag §8 had already recorded that removing overshoot restored only 30 % and that the remaining hilt offset was unexplained. The 45 % target therefore rested on the old game's 61 % plus an assumed cause.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "Not at the time. ③ was later judged 'not reached' (26 %). The real cause, solver iterations, sat outside the experiment.",
+     "verdict": "SAME_ERROR",
+     "error_class": "A/B (experiment ③ only): a target taken from the old body's outcome, with a recorded contrary number left unopened",
+     "evidence_quote": "round5 §1 ③: \"상처 45 % 이상 · 지나침 8 이하 …\". atkdef_diag §8 (same day, earlier): \"A + B … 상처 30 % … 지나침은 없어졌는데 상처는 절반 — 남은 차이 … 까닭은 못 찾음\". 21:47 worker: \"이 모자람이 두 몸에 똑같이 있는 어깨 모자람(옆 +0.08 m)을 마침 지워서, GAME 손이 목표에 온다.\"",
+     "remeasure": "Settled by r5_aim_diag and round5 §6: the wound rate follows solver inner iterations (game iter 4: 21–26 %). The quantity that should have set ③'s target is wrist − hand-target error at go (r5_aim_diag), not the game's wound %.",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/25 17:50–17:54 (digest); round5 §2",
+     "decision": "Cost cuts. Workers downgraded, the independent verifier replaced by a script, and every worker given a stop rule: 'if the first two fix-and-measure attempts do not move toward the target, stop'.",
+     "rested_on": "The cost mandate. The argument that a deterministic tool makes re-measurement redundant.",
+     "opened": "The lead noted the loss: code-reading review had found the two healthy-body defects in round 4. The stop rule is applied to n=8 scene cells and fight counts that the records describe as ±1–2 per cell and ±5 bodies per 48.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "Any design that does not show gain within two noisy measurements is to be dropped. Human code review was dropped.",
+     "verdict": "SUSPECT",
+     "error_class": "A: an abandonment rule keyed to small-sample metrics",
+     "evidence_quote": "17:54: \"처음 두 번 고쳐 재서 목표 쪽으로 안 움직이면 멈추고 다섯 줄로 보고합니다.\" r4_balance §7.5: \"싸움은 48 판(몸 96)으로도 ± 5 몸이 흔들린다 — 고침 하나의 값을 가르려면 96 판은 돌려야 한다\".",
+     "remeasure": "List which round-5 attempts were stopped under this rule (r5_e1/e2/e3 notes). For each, re-run the deciding metric at n=24 per cell (legs_battery --offset=100 --n=24) or 96 fights before treating it as 'no progress'.",
+     "consequence": "low"
+    },
+    {
+     "when": "11/25 21:36 (digest); round5 §3",
+     "decision": "Verdict: ② lunge reached, ③ only stopping reached, ① not distinguishable from chance. Full expansion held. Recommended an honest torso hold next.",
+     "rested_on": "Seen versus unseen seeds for ① (46 → 24 seen; 39 → 32 unseen; all falls 95 → 96). The ③ wound at 26 %. Probe counts for ②.",
+     "opened": "Yes for ①: it refused to claim the tuned-seed gain. The torso recommendation was an untested guess, retracted 16 minutes later after a measured diagnosis.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "Expansion was held (reasonable). Re-running ③ with a stronger worker was skipped because the cause looked physical, not model-related (reasonable).",
+     "verdict": "SOUND",
+     "error_class": "none (the guess was caught by measurement)",
+     "evidence_quote": "21:36: \"46 → 24는 지을 때 쓴 대전에 맞춰진 숫자입니다.\" 21:52: \"정정: 앞 보고의 '다음은 몸통' 권고는 틀렸습니다.\"",
+     "consequence": "low"
+    },
+    {
+     "when": "11/25 21:47–23:23 (digest); round5 §4, §6-1, §6-2",
+     "decision": "Confirmed that solver inner iterations 1 → 4 cause the hilt offset and the wound drop, and ruled out a compromise setting (00:55). The decision rule was set beforehand: if the b5 legs stand at iteration 1, 'the fix ends with not changing the setting'. Broken tests were split into '15 due to the setting / 21 due to the legs'.",
+     "rested_on": "The 8-cell table (hilt offset 0.08 vs 0.16 m; wound 54 % vs 26–32 % over 160 runs; the noise of ±4 %p stated). Diagnosis of elbow 13–16° short in the game cancelling a 0.08 m shoulder deficit. Old repository test counts (0/17/13/18/36).",
+     "opened": "The diagnosis: yes, at the joint level, on two seed sets. The framing then treated the old body's accidentally aimed hand as 'correct' ('공격은 반복 1이어야 맞습니다') and counted old snapshot tests as damage.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "Nothing was rejected yet. The stated easy path was to keep the sloppy solver whose cancelling errors put the hand on target. The test-count framing set up the 11/26 arm-fix target in round5 §6-4.5: '상처 26 % → 지금 게임의 54 % 근처 · 칼자루 옆 0.16 → 0.08 · 깨진 시험 17 → 0'.",
+     "verdict": "SAME_ERROR",
+     "error_class": "B: after diagnosing the cancelling errors, the decision rule and targets still used the old body's results and old tests as the yardstick. The diagnosis itself is SOUND.",
+     "evidence_quote": "21:47: \"이 모자람이 … 마침 지워서, GAME 손이 목표에 온다.\" 22:00: \"다섯째 판 다리가 반복 1에서도 서고 공격이 돌아오면, 고칠 것은 '설정을 바꾸지 않는다' 하나로 끝납니다.\" 22:56: \"다리는 반복 4여야 서고, 공격은 반복 1이어야 맞습니다.\" 23:23: \"15개는 다리가 아니라 설정 탓입니다.\"",
+     "remeasure": "Take as the arm target the hand-to-target error with elbow AND shoulder tracking at inner iterations 4 (r5_aim_diag: GAME iter 1 wrist − target 0.018 m with elbow 13–16° short). Do not use wound % parity with iter 1 or tests 17 → 0. For the 17 tests broken by iter 4 alone, trace each motion (tip path, strike, return) before counting it as damage.",
+     "consequence": "high"
+    }
+   ],
+   "abandoned_worth_revisiting": "1. Fast front-foot walking lunge (physics2_proto/r4_req_lungefit.patch; r4_req.md §5-1). It produced real front-foot lunges (w_lunge6: 0 → 6–8 of 14–20, length 0.63–0.66 m) and was removed because lungecut on an n=8 gate fell 8/7 → 6/6 against a previous board that, per §6, counted rear-foot pass-steps as passes. Its missing piece, receiving the deep lunge stance, is also what limits biglunge and risoluto (r4_merge §6). With round 5's gathered step it might give a faster honest lunge for a ready stance.\n2. F1, start walking on stick intent (atkdef_diag §9; round4 §11). It fixed the rear burst (fires at step 0, steps at step 7) and doubled the dig distance at 0.6 s (0.219 → 0.427 m). It was dropped because normal-walk 1 m time went 1.55 → 1.75 s and it 'newly broke' burst_whiff ⑧ (second half) and de_dirty 18, both old recorded tests. Those breakages were not traced.\n3. Pre-bracing for the sword's reaction torque (16:19 item 1 and 17:30 '미리 익혀 넣기'). It was not built in round 5 because a classifier said only 1 of 46 falls 'started at the cutting moment' and 42 'after lifting a foot' (round5 §3-1). That classifier depends on the window that defines a fall's start. Re-check by measuring trunk angular momentum and foot-off timing around each cut, not by the start label.\n4. Balance-first (drop the torso-righting push while the capture point is outside support; r4_balance §4-2 and §5). It was abandoned after two tries on one scene: rapier kick80, unseen 24, 19 → 14/18, with failure moving to chest tilt above 55°. The physics it addressed (the stance leg pushing the body 140–360 N toward the fall) is still listed as a main cause of fight falls.\n5. 'Supporting foot not lifted if unloaded' (r4_balance §4-4, 22 → 16). It was dropped because just-landed feet also read zero load. The note says the right filter (unloaded for more than 0.1 s) was never tried.\n6. A dedicated run controller with a flight phase (r4_run §3: the hopLoad vertical-force law was removed). Owner-facing reports framed running as 'not started' after the push sweep. Also MuJoCo (tendon-like elasticity) for running, and motion-capture targets (17:27), both deferred. The engine deferral partly cited protecting the 982 tests and gate values.\n7. Independent code-reading verification, dropped at 17:54 for cost. In round 4 it found the two healthy-body defects (zweihander stance ratio 0.9985; kneeUse 0.8 catching the Japanese low stance), which remain unfixed 'to keep the comparison with round 4 clean' (round5 §2).\n8. Tool fix 2 (tools_fix2.patch) was left unmerged over 1 error and 11 gaps. All round-4/5 scores therefore still use fix 1, including a run floor, pickup thresholds and steered-distance rules copied from the game. Its new scenes (standcatch, wretreat, humancut) are closer to physical outcomes and are worth adopting.",
+   "patterns": "1. Old-body parity was used as the target whenever a timing or rate existed in the shipped game. Examples: the walking lunge's 0.1–0.25 s, 'steered distance at least half the game's', the finishing-thrust 61 %, and battery thresholds re-tuned until the propped game passes (kick2 raised to 100 N·s because the anchor kept the game's foot down). Where the target was physical (the 5 m/s run, gathered-step timing from fencing), the work was opened and the conclusions held up.\n2. Old snapshot tests were read as motion damage: the ±5 % motion_regress (kote included) and 'N of 982 broken'. This was reported to the owner first and classified later. Even after atkdef_diag showed 21 of 34 were fixed values, the round4 §0 conclusion was not amended, and the 23:23 '15 due to the setting' count again used old tests as the damage measure. This leads straight into the 11/26 'fewest old tests changed' arm choice.\n3. n=8 gate cells decided rejections (fast lunge), and a 'two attempts and stop' rule was added. The records themselves say single cells flip by ±1–2 and fights need 96 games. Owner reports sometimes carried face-value deltas (40 → 46 'worse') while the verifier called them noise.\n4. Counter-pattern, done well: the lead and workers repeatedly chose correct-by-construction over numbers (defect fixes kept despite 40 → 53 falls; biglunge kept as a true lunge; no running push), separated seen from unseen seeds in the round-5 verdict, retracted a guessed cause within minutes, and put the legs in the owner's hands. The owner's hands-on 'more realistic' and the score-based 'cannot ship / wall' disagreed. That disagreement is the clearest sign in this period that the yardstick, not the physics, was what fell short.\n5. The solver-iteration finding is an example of the forest: the old game aims correctly only because two errors cancel. In this period it was still framed as 'attack must be at iteration 1 to be right', with parity targets (54 %, 0.08 m, 17 → 0 tests) carried into 11/26."
+  },
+  {
+   "period": "2026-11-26 (UTC): reading of round 5's results, the aim-offset diagnosis (first the trunk, then the solver), the 8-cell and 10-cell solver tables, round 6 (arm C1/C2/C3, then C2b after review), round 7 (C2c/B2/S2, S2 chosen and shipped to main c1aada72, the kote correction), the self-assessment at 12:09, and the owner's rebuke at 15:39. Also includes the 11/25 22:00–23:23 digest entries for context on how the solver question was framed.",
+   "moments": [
+    {
+     "when": "11/26, round 5 §3-1 (r5_e1 §1, merged in physics2_round5 §3-1)",
+     "decision": "Chose which 'prepared body' mechanisms to build for experiment ① (self-falls). Candidate (a), 'give the sword-arm reaction ahead of time', was dropped without building it, and candidate (c), 'time both feet planted to the top of the cut', was also not built.",
+     "rested_on": "fall_context.mjs onset classifier. r5_e1 §1 table: own sword phase 'at onset': 베기 1 of 46. Onset is defined as 'the first step of an unbroken run outside the foot or chest past 30°'. The same table shows '앞 1 s 안에 베기가 있었나: 있음 16 · 감기만 17'. round5 §3-1: '베는 순간에 시작한 것은 1 번뿐이고 42 번이 발을 뗀 뒤였다. 그래서 칼 반작용 미리 주기는 짓지 않았다.' r5_e1 §6: '(c) ... 베기 단계 넘어짐이 1 번이라 과녁이 없다.'",
+     "opened": "Partly. Falls were split by onset phase and the root step. Whether the cut in the preceding second (16/46) set up the later loss of balance was not traced. The residual-torque median (6.7 / 9.4 N·m) is an average over the window.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "Mechanisms (a) and (c). r5_e1 itself says 'measured nothing, so it is not \"does not work\" but \"no evidence\"'.",
+     "verdict": "SUSPECT",
+     "remeasure": "Use tools/sim/fall_context.mjs on the current new-leg tree (bf_4_120 / legs_b5.patch), seeds 1–24 and 301–324. For falls with a cut in the preceding 1 s, compare the arm+sword angular-momentum rate and the unmet residual leg torque in that second against matched non-fall windows that also contain a cut. If the cut-then-fall group shows a clearly higher unmet residual, (a) and (c) had a target after all.",
+     "error_class": "A — a single-instant phase classifier (phase at onset) decided which mechanism had a target",
+     "evidence_quote": "r5_e1 §1: '제 칼 (시작 때) … 베기 1' alongside '앞 1 s 안에 베기가 있었나 | 있음 16'",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/26, round 5 targets and verdicts for ① (round5 §1, §3; r5_merge §2, §5); carried into the self-assessment",
+     "decision": "Defined 'self-fall' and set the fall target against the shipped game (46→23; the game's value is 0–1). The new legs were judged as not yet standing up in a fight.",
+     "rested_on": "legs_battery fight: a 'self-fall' is a fall with no wound. r5_e1 §1: '먼저 닿은 것이 28 (61 %). 상처 없이(그래서 스스로로 세어짐) 상대 몸 · 칼에 닿거나 칼끼리 부딪힌 뒤 0.5 s 안에 시작.' Baseline in round5 §1: '지금 게임 1 번'. Self-assessment: '실제 싸움에서 안 넘어지기 | 안 됨 | 스스로 넘어짐이 48판에 14~18번 (본판 0~3)'.",
+     "opened": "Partly. The classification was run on round 4's 46 falls. Contacts and blade clashes before the fall were counted, but no one judged whether the contact was big enough that a real body would be knocked down. The 'seen seeds vs unseen seeds' reading was opened honestly (18 %, within the scatter).",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "Nothing was rejected outright. The count framed the new legs as 'not done' against a game whose hidden vertical support and upright torque make contact-induced falls nearly impossible.",
+     "verdict": "SUSPECT",
+     "remeasure": "Use fall_context.mjs on bf_4_120, seeds 1–24 and 301–324. Split the 'self-falls' into (i) falls that began within 0.5 s of body or blade contact, with that contact's impulse or energy, and (ii) no-contact falls. Only (ii), plus (i) cases with trivial contact energy, are clear defects. Compare those against the game, rather than comparing the raw 14–18 against 0–3.",
+     "error_class": "A+B — a no-wound classifier counts contact-driven falls as 'self', and the yardstick is a body held up by hidden help",
+     "evidence_quote": "r5_e1 §1: '먼저 닿은 것이 28 (61 %). 상처 없이(그래서 스스로로 세어짐)…'",
+     "consequence": "high"
+    },
+    {
+     "when": "11/26 early, round 5 §3-2 → §4 (r5_aim_diag)",
+     "decision": "Diagnosed why the finish thrust did not recover on the new legs. The first reading was 'nobody holds the trunk'. It was then replaced by 'the solver inner iterations 1→4'.",
+     "rested_on": "r5_aim_diag: a joint-by-joint split of the 0.068 m hand error. Elbow contribution 0.069, shoulder 0.005, trunk ≤0.01 by a trunk-hold experiment (holding cost 101 N·m and did not restore). GAME + pgs 4 alone gives wound 61→21 %.",
+     "opened": "Yes. Opened at joint level with a causal experiment (hold the trunk, swap the solver). The same note also flagged that GAME's accuracy came from error cancellation: '이 겨눔 · 손 목표는 풀이 1 의 팔 … 에 맞춰진 값으로 보인다'.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "The trunk hypothesis was dropped, correctly, on a causal test.",
+     "verdict": "SOUND",
+     "remeasure": "",
+     "error_class": "",
+     "evidence_quote": "r5_aim_diag §4: '가슴 붙듦 … 오차도 상처도 GAME 으로 안 돌아온다 → (a) 몸통은 원인 아님.'",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/25 22:00 – 11/26 00:55 (round5 §6, digest 22:56 / 23:23 / 00:55)",
+     "decision": "Framed the solver question as 'is there a setting where the legs stand AND attacks land as in the game?'. Declared 'no compromise value; fix the arm'. Set the arm-design targets: wound ≥47 %, hilt offset ≤0.10 m, and 'broken tests 17 → 0'.",
+     "rested_on": "8-cell and 10-cell tables, scored by finish-thrust wound % against the shipped game's 54 % and by the count of broken repo tests (17 in GAME + inner 4). Parry rose under the tighter solver (outer 24: 93/95/91 %) but did not enter the framing. aim_diag had already shown that the 54 % rests on the loose solver masking an arm error.",
+     "opened": "The arm cause was opened (see the previous moment). The 17 'broken tests' were not opened before being set as a target: round5 §6-5 says '깨진 시험 17 개 … 모두 팔 겨눔 탓인지는 안 갈랐다'. r6_arm §2 later found 7 of the 18 compare arm speeds to numbers pinned on 11/16.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "Tighter-solver settings were treated as degrading attacks rather than as exposing an error. The decision to fix the arm instead of the solver was right and led to the real cause.",
+     "verdict": "SUSPECT",
+     "remeasure": "Classify the 17 failures in scratchpad p2/r6/mx/g_4_120/tests.txt: (a) outcome tests (hits, rules) vs (b) pinned old-body numbers (motion_regress PIN 11/16, posture lengths). Only (a) should have been a design target. r6_arm §2 already shows 7 are motion_regress pins.",
+     "error_class": "B — 'GAME's 54 %' and 'old tests back to 0' used as the target",
+     "evidence_quote": "round5 §6-4 #5: '과녁은 그 칸의 상처 26 % → 지금 게임의 54 % 근처 · 칼자루 옆 0.16 → 0.08 · 깨진 시험 17 → 0 쪽.'",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/26 01:28, round 6 design (r6_arm §1)",
+     "decision": "Chose C2 over C3 (C3 was reverted), and C2 over C1.",
+     "rested_on": "Wound 122 vs 120/160 (equal). Tie broken by 'one fewer failing test (제비 베기 견줌 passes)' AND the by-construction guarantee that armIK paths not using the elbow swivel also never command an out-of-rope upper arm. C1 was rejected on an opened trace (plough stance 0/40, blade line never rises).",
+     "opened": "Yes for C1 (traced). For C2/C3 the test count was one of two reasons. The construction reason stands on its own.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "C3, a near-equal variant, was reverted.",
+     "verdict": "SOUND",
+     "remeasure": "",
+     "error_class": "",
+     "evidence_quote": "r6_arm §1: '2 를 고른 까닭: 실패 시험이 하나 적고 …, 팔꿈치 돌림을 타지 않는 armIK … 에서도 밧줄 밖 위팔을 시키지 않는다는 보장이 남는다.'",
+     "consequence": "low"
+    },
+    {
+     "when": "11/26 01:31–03:36 (digest; round6 §4-3, r7 §3)",
+     "decision": "Repeatedly reported 'Zweihander parry 81 → 72 → 67 → 76 %' as the main thing that got worse. It was then used as a cost against the more-corrected variants (C2b, B2) in the 10:51 table and in the 15:35 rebuttal.",
+     "rested_on": "Parry success counts of 25–55 bouts (01:31, 02:07), then ~320, then 640 bouts. The 640 count includes 'parries' of attacks that would not have reached the body. r7 §3: '줄어든 막음 42 판 가운데 31 판은 어차피 몸에 안 닿을 공격이 전에는 칼에 스쳤고 이제는 안 스친 것이다. 상처 +10 은 이 판 수의 흔들림(±12) 안이다.'",
+     "opened": "Eventually yes for C2b (r7 §3). Yet the 10:51 comparison table and the 15:35 'remaining rebuttal' still listed 'parry / wounds 291/71 … 248/86' and 'wounds 71 → 86 (못 가름)' as reasons against B2. B2's lost parries were not opened the same way.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "B2 and C2b were not shipped. This was one of the listed side-effects.",
+     "verdict": "SAME_ERROR",
+     "remeasure": "For confirmation on B2: run parry_x.sh on gb_1_30 (640 bouts) with the 'would have hit the body' split that r7 §3 used for C2b. Count only wounds received, and enlarge the sample until ±12 separates 71 from 86, or state that it does not.",
+     "error_class": "A — a success count whose denominator includes non-threats, read at face value and within noise",
+     "evidence_quote": "r7 §3: '줄어든 막음 42 판 가운데 31 판은 … 어차피 몸에 안 닿을 공격' vs 10:51 table row '츠바이핸더 막기: 막음 / 입은 상처 (640판) | 291 / 71 | 274 / 76 | 249 / 81 | 248 / 86'",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/26 01:40–02:07, round 6 C2b vs C2 (r6 §3, §5.2)",
+     "decision": "Adopted C2b (the review fixes plus writing the rope swivel back into the elbow angle) over C2.",
+     "rested_on": "Score equal (117 vs 122, within ±6). Elbow-command jumps >20° in 12 fights: 28 → 3. Confirmed defects closed. Cost: two more broken tests (3 → 5).",
+     "opened": "Yes. The jump metric was later tied to visible motion: r7_d3 shows C2's jumps (28.8°/39.9°) re-whipped the kote tip at 5–6 m/s and stretched its duration to 1.05 s. Fix ④ removed this.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "C2.",
+     "verdict": "SOUND",
+     "remeasure": "",
+     "error_class": "",
+     "evidence_quote": "r7_d3 (b): 'C2 … 명령이 밧줄 한 끝에서 다른 끝으로 한 스텝에 28.8° · 39.9° 튐 … → 칼끝 5 ~ 6 m/s 다시 휘청'",
+     "consequence": "low"
+    },
+    {
+     "when": "11/26 08:31–09:46 (r7_d1, r7_d3)",
+     "decision": "Judged the five tests C2b broke on main: onehand tap = a real trade-off in the end-shift piece; druid_whip = a sensitive-scene flip; kote/chebuYaoji/talhoRodeado = 'legitimate new arm path'.",
+     "rested_on": "Motion-level traces. A per-step swivel scan for the onehand tap (no elbow placement satisfies all three limits). A gap sweep of 41 bouts for druid_whip (main itself falls 5/41). Act vs tail tip-path split for the motion pins.",
+     "opened": "Yes, thoroughly.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "Nothing at this point. The verdicts favoured the new arm.",
+     "verdict": "SOUND",
+     "remeasure": "",
+     "error_class": "",
+     "evidence_quote": "r7_d3: '다시 적는다면 새 팔 길을 적는 것이지 퇴보를 가리는 것은 아님'",
+     "consequence": "medium"
+    },
+    {
+     "when": "11/26 10:51 → 12:09, round 7 §2: choosing S2 (minimal) over C2b/C2c/B2 for main",
+     "decision": "Shipped the minimal S2. Rope-out commands (S2 7.5 % vs B2 0.01 %) and command jumps were labelled '명령 지표' (command metrics) and set aside against 'side-effects on real motion'.",
+     "rested_on": "(1) Broken-test count 2 vs 5/4/4, although d1/d3 had already judged C2b's extra failures to be legitimate new paths or flips. (2) 'kote half as long' (−46 % / −55 %): a window artifact, see the 15:35 correction. (3) talhoRodeado +9 % and ai_intercept: not opened ('안 풀어 봄'). (4) Two-hand upper-arm twist outside human range in parry 0.67 / 1.37 / 3.33 / 4.18 %. The baseline 0.67 is low only because the old arm commanded out-of-rope poses, so the body stopped on the rope and the hand missed (r7_b2 §4). The metric also rests on the 10/24 exemption kept for the bull tap thrust. (5) Zweihander parry (see that moment). Meanwhile body-level gains of B2 (elbow >30° above line 7.60 → 1.28 %) and the r6 finding that out-of-rope commands are muscles pushing a rope were treated as proxies.",
+     "opened": "No for (2) and (3) before deciding. (1) and (4) were opened in d1/d3/b2 notes but not applied as such.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "B2 (rope-arc design, ordered limits) and C2b/C2c. They were kept in physics-2 'to refine', with the target 'reduce rope-out commands only without hurting S2's body metrics and tests'.",
+     "verdict": "SAME_ERROR",
+     "remeasure": "Already acknowledged for (1) and (2). Still open: run physics2_proto/r7/kote_long.mjs-style out-of-window traces for talhoRodeado on gb_1_30, and investigate ai_intercept's counter-roll 0 on seeds 1/2/3/8.",
+     "error_class": "A (kote window, talho/ai_intercept unopened) + B (fewest old tests; a twist baseline that was low because of the old error) + C (protecting the 10/24 bull-tap exemption)",
+     "evidence_quote": "r7_b2 §4: '본판은 같은 자리에서 밧줄 밖을 명령해 몸이 밧줄에 서서(그 대가로 손이 목표에서 비킴 — r6_arm) 돌림 밖이 적었다'; r7 §1 headline: '달라지는 다른 동작이 가장 적다(시험 982 개 가운데 찍어 둔 수 둘만 5 ~ 6 % 움직임)'",
+     "consequence": "high"
+    },
+    {
+     "when": "11/26 12:09 — self-assessment to the owner",
+     "decision": "Reported about 4 of 10 toward the goal. Listed progress and costs.",
+     "rested_on": "Rows: '실제 싸움에서 안 넘어지기 — 안 됨 — 14~18 / 48 (본판 0~3)' (old-body yardstick, classifier — see that moment). '시험·검토 — 안 됨 — 새 다리에서 시험 35개가 깨진 채', although main_entry §3 later notes these are numbers and scenes pinned on the hidden-support, loose-solver body. '공격이 겨눈 곳에 가기 — 원인 찾아 고침 49 → 73 %', although the shipped S2 still commands out-of-range poses in 7.5 % of steps. Cost side: '가장 많이 든 다시 짓기(61만)는 본판에 들어가지 않았습니다. 조각별 대본 견줌을 먼저 했다면 아낄 수 있었습니다' and going for more fixes first was called a judgement error.",
+     "opened": "No. Counts were taken as given.",
+     "old_body_yardstick": true,
+     "rejected_or_shrunk": "The more correct rebuild was booked as waste and a mistake. The new legs were booked against old tests.",
+     "verdict": "SAME_ERROR",
+     "remeasure": "",
+     "error_class": "B (35 old tests and the game's 0–3 falls as the yardstick), C (the more correct design counted as cost), D (aim declared fixed by a wound % while 7.5 % out-of-range commands remain)",
+     "evidence_quote": "12:09: '| 시험·검토 | 안 됨 | 새 다리에서 시험 35개가 깨진 채 …|' vs main_entry §3: '이 시험들은 숨은 받침이 있던 몸과 헐거운 풀이에서 찍은 수 · 장면이다. 새 몸에서 움직이는 것이 곧 흠은 아니다'",
+     "consequence": "high"
+    },
+    {
+     "when": "11/26 15:35 — the kote correction",
+     "decision": "Opened the kote number in response to the owner's question. Retracted 'half as long'. Called B2 likely more correct.",
+     "rested_on": "An out-of-window trace of tip height: strike 0.142 s / 0.174 m, lowest point 0.57–0.59 m, return 0.63 vs 0.67 s.",
+     "opened": "Yes.",
+     "old_body_yardstick": false,
+     "rejected_or_shrunk": "Nothing. This reversed the earlier rejection.",
+     "verdict": "SOUND",
+     "remeasure": "",
+     "error_class": "",
+     "evidence_quote": "r7 §2-1: '이 시험의 창(문턱 1.5 m/s · 0.1 s)은 … 작은 차이로 값이 크게 뛴다'",
+     "consequence": "medium"
+    }
+   ],
+   "abandoned_worth_revisiting": "1) B2 arm (rope-arc selection and tracking, explicit limit order) and C2b/C2c. Kept out of main by r7 §2: test count, the kote window artifact, unopened talho/ai_intercept, a two-hand twist baseline that was low because of the old error, and a parry count containing non-threats. Already being resumed after 15:41. Its remaining genuine issues are in r7_b2 §4 and the read-out 'path to default slot behind a blocked arc' (not yet measured in fights).\n2) Two-hand arms obeying the upper-arm twist limit. Refused because of the 10/24 exemption kept for the longsword bull tap thrust (owner_open_questions row 15; r7_b2 §4 ②). This is old content protecting a physics exception.\n3) Round 5 candidates (a) 'sword reaction prepared ahead' and (c) 'feet planted at the top of the cut'. Dropped on an onset-phase classifier (1 of 46 'at onset'), while 16 of 46 falls had a cut within the prior second (r5_e1 §1, §6).\n4) Trunk uprighting by the stance hip (r5_e1 §7 item 4). Not tried 'because the basic battery might wobble', although 10 of 27 remaining falls were chest-tilt falls.\n5) Engine-default contact 30 Hz on the new legs. In the 8-cell table it cut self-falls 33 → 21 and restored fight wounds to 5.7. It was passed over mainly because the 'stand still' scene went 0/8 (a stay-in-place drift criterion) (digest 22:56; round5 §6-1, §6-4 #3). Re-measure drift magnitude and falls with legs_battery / fall_context on 다섯째 판·4·30 before treating 120 Hz as settled.",
+   "patterns": "Beyond the two cases already acknowledged (kote, fewest-tests), the same habit shows up in three more ways this period.\n- Counts of old repo tests were used as targets and costs from the start: '깨진 시험 17 → 0' was a design target, '35 깨진 채' was counted against the new legs in the self-assessment, and the 5-vs-2 test count decided the S2 choice. This happened even when the lead's own worker notes (r6_arm §2, r7_d1, r7_d3) had already opened those failures as pinned 11/16 numbers or legitimate new arm paths.\n- Baselines from the shipped body were taken as ground truth: GAME's 54–61 % finish wound, which aim_diag showed comes from error cancellation; 0–3 self-falls under hidden support; and 0.67 % two-hand twist, low only because the hand missed its target.\n- Raw success counts were read without opening the denominator or noise: Zweihander parries that include non-threats; 'self-falls' that include contact-driven falls; a single-instant onset-phase classifier.\nThe causal diagnoses themselves (trunk ruled out, solver identified, rope cause found) were done well, by opening joints and running causal experiments. The error came at the verdict and selection step, where opened evidence was then outweighed by unopened counts measured against the old body."
+  }
+ ],
+ "challenge": {
+  "confirmed": [
+   {
+    "when": "11/25 22:00 – 11/26 15:41 (solver diagnosis → arm targets → S2 shipped to main c1aada72)",
+    "decision": "Set the arm-fix targets as the old game's numbers: wound 26 % → about 54 %, hilt offset 0.16 → 0.08 m, broken tests 17 → 0 (round5 §6-4 #5). Then shipped the minimal S2 over B2/C2b/C2c, mainly because S2 changed the fewest old tests (2 against 5/4/4) and because of the kote '−46 %/−55 %' side-effect.",
+    "error_class": "B + C, with A in the kote window: the old body's outcomes and pinned tests were used as the target and the cost. The lead had already shown the 54 % comes from two errors cancelling each other (21:47: '마침 지워서, GAME 손이 목표에 온다').",
+    "why_it_stands": "Every quote checks out. round5 §6-4 #5 sets '깨진 시험 17 → 0' as a target, and §6-5 admits the 17 were never split by cause. The r7 §1 headline justifies S2 by '찍어 둔 수 둘만 5 ~ 6 % 움직임'. The kote half-length was a window artifact (15:35). talhoRodeado +9 % was '안 풀어 봄'. r7_b2 §4 shows the S2 twist baseline was low only because the old arm ran into the rope and missed its target. The lead conceded all of this at 15:41. This is the case the owner rebuked, and it reaches back to the 11/25 framing ('공격은 반복 1이어야 맞습니다', '15개는 설정 탓').",
+    "consequence": "high",
+    "what_to_do": "Finish the B2 base as stated at 15:41 and put it on main, as the owner ordered at 15:45. Close its three defects: the elbow taking the long way round when the default slot sits behind a blocked arc (measure how often this happens in fights with a script before fixing), the arm after the weapon is released, and two-hand upper-arm twist under a real limit. Set targets in physical terms only: out-of-rope commands (0.01 %), elbow above line, wrist-to-hand-target error at go under the tight solver (r5_aim_diag method), and wounds and parries counted on attacks that would have reached the body. For each motion_regress test that moves, trace the tip path beyond the measuring window (as at 15:35) and re-pin the number if the physics is right."
+   },
+   {
+    "when": "11/24 04:53 (prototype choice) → rounds 2–5: human-limit check 나-8 dropped from reporting",
+    "decision": "Chose prototype '가' as the base on function counts, although '나' was best on the human-muscle column. Only the engine-motor budget was to be carried over from '나'. Rounds 2–5 were then reported on honesty rows and pass rates, with no 나-8 numbers.",
+    "error_class": "D (progress reported while a defining property, legs within human muscle, goes unmeasured) plus a skipped step of the selection rule",
+    "why_it_stands": "criteria '고르는 법' requires 나-8 to be read alongside, and the chosen prototype to be re-run with joint limits actually enforced. No record shows that re-run. A grep of round2–round5, r4_*/r5_* and main_entry finds no 나-8, delivered-torque or engine-motor-share report. The only number on record (legs_notes §0 item 6) is a walking hip delivered peak of 690–746 N·m, about 3× the 250 limit and no better than the old game's 728. legs_notes line 325 shows hip clipping of 100–280 N·m being demanded before forward-lean falls. The 432-run battery margin (184 against 128/145) does justify '가' on function, so the error is the measurement that was dropped, not the choice itself.",
+    "consequence": "high",
+    "what_to_do": "On the current new-leg tree (legs_b5 / bf_4_120), run honesty.mjs on walk, strafe, back and stroke, on longsword, rapier and zweihander. Report 나-8 as physics2_proto_round1 §3 나 does: delivered hip/knee/ankle/waist torque at 95 % and peak, % of steps over the per-axis limits in the gap map §3, with the engine-motor share included. Compare with the old game (416/728) and with '나' (183/242). If the engine motors exceed the limit, revive '나''s engine-motor budget (simbicon.patch) or s5's exact-force Rapier path."
+   },
+   {
+    "when": "11/24 22:51 (leg gate) → 11/25–26 fall targets (46 → 23; 'game 0–3') → 12:09 self-assessment",
+    "decision": "The legs' main unfinished item, 'not falling in a real fight', is scored as no-wound falls against the shipped game (the gate: never-fell bodies within noise of the current game). Hole scenes are admitted only if the current game passes ('fairness'), and several thresholds were re-set from the game's values.",
+    "error_class": "B (parity with a body held up by an anchor and hidden support) + A (the 'self-fall' classifier counts falls that follow contact)",
+    "why_it_stands": "criteria rule 15 says fight falls are not to be read as better or worse ('다른 몸이다'). Yet round2 §7 and the round3 §6 gate require parity with the game (12/16). r5_e1 §1: 28 of 46 'self' falls (61 %) began within 0.5 s of contact or a blade clash, and no one measured the size of that contact. tools_fix2 raised kick2 to 100 N·s because the game's anchor kept its foot down at 40 N·s, and set fairness as 'the current game passes 7/8'. The 12:09 table still scores 14–18 against 'main 0–3'.",
+    "consequence": "high",
+    "what_to_do": "Run tools/sim/fall_context.mjs on bf_4_120 with seeds 1–24 and 301–324. Split the falls into (i) falls with no contact and (ii) falls after contact, recording the contact impulse from the honesty.mjs fight ledger. Compare (ii) with the human step and fall thresholds in physics2_human_data (step above about 10 N·s). Make (i), plus any (ii) falls after trivial contact, the target. Report the old game only as a reference column."
+   },
+   {
+    "when": "11/24 22:51 – 11/25 (scene thresholds of the leg gate; tool fix 1 and fix 2)",
+    "decision": "The 67-scene gate and its thresholds were built so the shipped game passes: run 5 m/s, a front-foot lunge from a walk within 0.1–0.25 s, steered distance at least half the game's, risoluto/aipulsecut, pickup 0.538 m/77.7°, slowwalk band and dig speed taken from the game. Round 4 was then judged 'cannot go into the game, a wall'.",
+    "error_class": "B (the shipped body as the gate)",
+    "why_it_stands": "round3 line 97 and line 146 ('문턱을 지금 게임 값에서 다시 잡음'), tools_fix2 line 4 ('공정 = 지금 게임이 무기마다 7/8 이상') and the kick2 and pickup rows all confirm it. 04:49 itself says the game's lunge timing and run are 'produced by hidden support and push', yet 09:26 declared a wall and stopped leg work until the owner had decided on external aid. Round 5 then reached about 90 % front-foot lunges with the gathered step (r4_req §5-2), with no added force. The run target (5 m/s) is a human one, and that part is sound.",
+    "consequence": "high",
+    "what_to_do": "Using the legs_battery.mjs --holes JSON, sort each scene's pass rule into physical outcome (stays up, foot lands, contact made) or a number copied from the game (holes_now_2026-11-24.json). For each copied number, put the human row from physics2_human_data beside it (lunge CoM 1.7–2.3 m/s, advance-lunge 2.6 m/s, gait speeds). Re-derive the copied ones from human data or drop them, then report b3/b4/b5 and the game separately on the two parts."
+   },
+   {
+    "when": "11/24 19:56 – 22:51 (standing aid: yaw 100 / tilt 80 N·m, definition ②)",
+    "decision": "Kept a declared external pelvic torque while standing, with yaw capped at 100 N·m. Chose tilt definition ② over strict ①. The external yaw aid took the place of 'defer the step while cutting so the body stays in double support', which the same notes later call the physically right fix (legs_notes line 160).",
+    "error_class": "C (a correct-by-construction design dropped on a 'within noise' count while external aid the size of the old anchor was added) + B (cap tuned toward the old game's fight count)",
+    "why_it_stands": "legs_notes line 142 drops deferral as 'within noise' (+1/+2/−1/−1). Line 160 later says '베는 동안은 두 발을 딛고 서게(걸음을 미룸) 하는 것이 물리로 맞다'. The yaw cap equals the old anchor's yaw cap of 100 (round2 table line 183). One part is refuted: the definition table was not wholly unverified. ② was re-run on the final code at 45/96 (line 235), and only ①'s 33/96 is unconfirmed.",
+    "consequence": "medium",
+    "what_to_do": "Rebuild the cut-time step deferral on the current tree. Measure it with legs_battery.mjs --offset=100 --n=24 --more and --only=fight --fights=24 at yaw aid 100, 50 and 0, logging the aid used with aid_ledger.mjs. The aim is to see whether double support during the cut replaces the yaw aid. Re-run ① with the switch restored, on the same unseen seeds."
+   },
+   {
+    "when": "11/25 15:26 owner report; round4 §0.6 and §10",
+    "decision": "Reported to the owner that ten unique techniques (kote among them) and step-mixed attacks had worsened, using motion_regress ±5 % against values pinned on 11/16, plus '34 of 982 tests'.",
+    "error_class": "B + A: old snapshot tests reported as motion damage without a trace. It is the same instrument and the same technique as the 11/26 kote case.",
+    "why_it_stands": "The 15:26 line 856 lists them under 나빠진 것. atkdef_diag §7 classed 21 of 34 as 고정값 (fixed values), including motion_regress schielhau/talhoRodeado/chebuYaoji and kote. round4 §0.6 and line 161 were not amended. main_entry §3's correction (16:0x) shows the mix is real both ways: some failures are pinned numbers, others are real gaps (run 1.7 m/s, Japanese stance 0.071 m, clinch).",
+    "consequence": "medium",
+    "what_to_do": "For each motion_regress technique, run motion_regress.mjs on the game tree and the new tree, then follow the tip path past the measuring window, as in the 15:35 kote trace (strike, lowest point, return to guard). Check whether the window closes on the 1.5 m/s tip-speed threshold. Amend round4 §0.6 with the result."
+   },
+   {
+    "when": "11/24 16:38 → 16:56 (gait branches)",
+    "decision": "Kept only branch B (feedback stepping) and dropped branch A (pre-planned footsteps) on a longsword-only count of 103 against 85 out of 144.",
+    "error_class": "A (single-condition sample, against the criteria's three-weapon rule)",
+    "why_it_stands": "Digest line 418 is the only record of branch A. A grep of the docs finds no other mention, so A was never measured on three weapons. Sixteen minutes later B measured on three weapons gave 254/432, with rapier and zweihander walking at 0/8.",
+    "consequence": "medium",
+    "what_to_do": "Run legs_battery.mjs --offset=100 --n=24 on longsword, rapier and zweihander for the branch-A tree from the 04:28 workflow and for B's start (p2-r2b-start 1b22d9da). Compare the totals and the walk/back/turn rows per weapon. If A is close, try its pre-planned footstep logic for requested steps and gathered-step lunges."
+   },
+   {
+    "when": "11/24 16:38 – 22:51 (leg battery progress reports)",
+    "decision": "Reported gait progress as battery totals (254 → 382/432, 97 %, reqlunge 8/8/8) while fights did not move. reqlunge was passing on a 1.1 m rear-foot pass-step.",
+    "error_class": "D (proxy progress) + A (a classifier that passed a different motion)",
+    "why_it_stands": "round2 §3 ('시험 묶음의 구멍이다(내 잘못)') and round3 lines 88 and 161 (reqlunge 8/8/8 → 0/0/0 after the tool fix) confirm it. The tool was fixed (fix 1), but the habit came back later in the kote case.",
+    "consequence": "medium",
+    "what_to_do": "No re-run is needed for this one. Rule for the future: any pass rule that names a motion (lunge, step, recovery) must check the foot and the timing of that motion, as the fix-1 lunge check does, before its count is reported to the owner."
+   },
+   {
+    "when": "11/26 01:31 – 15:35 (Zweihander parry used as a cost against B2/C2b)",
+    "decision": "Listed 'zweihander parry 291/71 → 248/86' as a side effect against the more-corrected arms.",
+    "error_class": "A (a parry count whose denominator includes attacks that would not have reached the body, read within noise)",
+    "why_it_stands": "r7 §3 shows that 31 of C2b's 42 lost parries were non-threats, and that +10 wounds is within ±12. The 10:51 table (line 1819) still uses the raw counts, and the 15:35 rebuttal still says '막기는 … 조금 낮습니다'. B2's lost parries were never split this way.",
+    "consequence": "medium",
+    "what_to_do": "Run parry_x.sh on gb_1_30 (640 bouts) with the r7 §3 'would have hit the body' split. Count only wounds received, and enlarge the sample until ±12 separates 71 from 86, or state that it does not."
+   },
+   {
+    "when": "11/26 round 5 §3-1 (r5_e1 §1, §6)",
+    "decision": "Did not build candidate (c), 'time both feet planted to the top of the cut', because only 1 of 46 falls had the sword in the cut phase at onset.",
+    "error_class": "A (a classifier reading the phase at one instant)",
+    "why_it_stands": "r5_e1 line 170 drops (c) on '베기 단계 넘어짐이 1 번이라 과녁이 없다', while line 15 of the same table shows 16 of 46 falls with a cut in the preceding 1 s. Candidate (a) is only partly covered by this point, because reactFF already counters the reaction within the same step and the median unmet residual was small (6.7/9.4 N·m).",
+    "consequence": "medium",
+    "what_to_do": "Run fall_context.mjs on bf_4_120 with seeds 1–24 and 301–324. Compare foot-off timing, trunk angular momentum and the unmet residual in the 1 s after a cut, for falls against matched non-fall windows that also contain a cut. Build (c) if the cut-then-fall group differs."
+   },
+   {
+    "when": "11/25 07:05 owner report (round 4 fights)",
+    "decision": "Told the owner that fights 'got worse than round 3 (40 → 46)'.",
+    "error_class": "A (a delta on tuned seeds reported at face value)",
+    "why_it_stands": "round4 §2 line 55: the drop shows only on round 3's tuned seeds, and on unseen seeds 101–124 the two are within noise. The owner report (line 751) gave no caveat. The owner's hands-on 'more realistic' (16:17) went the other way.",
+    "consequence": "low",
+    "what_to_do": "Report fight deltas only on unseen seeds (301+), with the ±5 bodies per 48 band from r4_balance §7.5 alongside."
+   },
+   {
+    "when": "11/25 17:39 – 17:54 (round 5 target ③ and the two-attempt stop rule)",
+    "decision": "Set the finishing-thrust target at 'wound ≥45 %' from the game's 61 %, although atkdef_diag §8 had left half the gap unexplained. Gave every worker the rule 'stop if the first two fix-and-measure attempts do not move toward the target'.",
+    "error_class": "A/B (target taken from the old body's outcome; an abandonment rule keyed to n=8 cells)",
+    "why_it_stands": "atkdef_diag line 104 ('까닭은 못 찾음'), round5 line 20 and digest line 1303 confirm it. Its effect was limited: the solver cause was found the same evening.",
+    "consequence": "low",
+    "what_to_do": "List the round-5 attempts stopped under the rule (r5_e1/e2/e3 notes). Re-run each deciding metric at --n=24 per cell, or 96 fights, before booking it as 'no progress'."
+   },
+   {
+    "when": "11/25 early (tool fix 1, steered-cut rule)",
+    "decision": "The steered-cut pass rule is 'distance travelled at least half of the current game's'.",
+    "error_class": "B (threshold copied from a pushed body)",
+    "why_it_stands": "Quoted in the tool fix 1 report. Round 4 attributes about 9,560 N·s of forward push to the game, against 0 for the new legs.",
+    "consequence": "low",
+    "what_to_do": "Report the metres travelled in aistroke_diagR and walkstroke_* next to an honest bound (GAIT.legVmax 1.1 m/s × the steer window), and replace the 'half of game' rule with it."
+   }
+  ],
+  "to_remeasure": [
+   {
+    "what": "Human-muscle check 나-8 on the current new legs",
+    "how": "Run honesty.mjs --scene=walk,strafe,back,stroke --weapon=longsword,rapier,zweihander on legs_b5 / bf_4_120. Report delivered hip/knee/ankle/waist torque (95 % and peak), % of steps over the gap-map §3 per-axis limits, and the engine-motor share. Compare with the game (416/728) and with prototype '나' (183/242).",
+    "why_it_matters": "Half of the goal is 'legs carry the body within human muscle'. The only number on record (690–746 N·m walking hip peak) is about 3× the limit, and the check has not been reported since 11/24."
+   },
+   {
+    "what": "Fight falls split by cause",
+    "how": "Run fall_context.mjs on bf_4_120 with seeds 1–24 and 301–324. Split the falls into (i) no contact and (ii) within 0.5 s of contact, with the contact impulse taken from the honesty.mjs fight ledger. Compare (ii) with the human step and fall thresholds in physics2_human_data.",
+    "why_it_matters": "'Not falling in fights' is the item scored 'not done'. 61 % of the counted 'self' falls followed contact, and the yardstick is a body held up by an anchor."
+   },
+   {
+    "what": "Gate thresholds copied from the game",
+    "how": "Using legs_battery.mjs --holes output and holes_now_2026-11-24.json, sort each of the 67 scenes into physical outcome or copied number. Re-derive the copied ones from physics2_human_data (lunge CoM 1.7–2.3 m/s, advance-lunge 2.6 m/s, gait speeds), then re-score b3/b4/b5 and the game on each part.",
+    "why_it_matters": "The gate decides whether the legs ship. Parity with the propped body is what stalled the honest-leg line on 11/25."
+   },
+   {
+    "what": "motion_regress techniques beyond the measuring window",
+    "how": "Run motion_regress.mjs on the game tree and the new tree (mr_game.txt / mr_b4.txt), then follow each tip path past the window close (strike, lowest point, return), as in the 15:35 kote trace. Untraced so far: imbroccata, inquartata, altib, schielhau+duplieren, talhoRodeado.",
+    "why_it_matters": "These snapshot failures were reported as 'worsened techniques' twice. One of them (kote) proved to be a window artifact and wrongly decided the arm base."
+   },
+   {
+    "what": "Zweihander parries on B2, counting threats only",
+    "how": "Run parry_x.sh on gb_1_30 (640 bouts) with the r7 §3 'would have hit the body' split, counting wounds received. Enlarge the sample until ±12 separates 71 from 86.",
+    "why_it_matters": "This is the last listed 'cost' against B2, which is now meant to become the main arm."
+   },
+   {
+    "what": "Cut-time step deferral against the external yaw aid",
+    "how": "Rebuild the deferral on the current tree. Run legs_battery.mjs --offset=100 --n=24 --more and --only=fight --fights=24 with yaw aid 100, 50 and 0, logging the external torque with aid_ledger.mjs.",
+    "why_it_matters": "It could replace the 100 N·m declared external yaw aid with physics, which is the hidden-help question at the heart of Physics 2.0."
+   },
+   {
+    "what": "Branch A gait on three weapons",
+    "how": "Run legs_battery.mjs --offset=100 --n=24 on longsword, rapier and zweihander for the branch-A tree and for p2-r2b-start 1b22d9da.",
+    "why_it_matters": "A was dropped on a longsword-only count. Its pre-planned footsteps match the gathered-step lunge that later worked."
+   },
+   {
+    "what": "Cut-then-fall windows for candidate (c)",
+    "how": "Run fall_context.mjs on bf_4_120 and compare the 1 s after a cut in fall windows against matched non-fall windows: foot-off timing, trunk angular momentum, unmet residual torque.",
+    "why_it_matters": "Decides whether 'both feet planted at the top of the cut' had a target after all."
+   }
+  ],
+  "refuted": "1) Stage-0 numbers (5 m/s median, 'muscles ×10'), 2) the gap-map 'sword is not slow', 3) the round-2 'external righting torque is not the answer': each was a real slip, but the records show it was corrected within hours (h3 §3-2, digest 01:23 and 16:56, round2 §8-4), and no lasting decision rested on it. They are history, not live errors.\n4) Decoupling leg strength from proficiency (q10): the stated reason was old-game parity, but the alternative was not more correct. A real adult at 65 % strength still walks well above 0.7 m/s, so the slowdown under 'multiply' is a weakness of the controller, not physics. The fight numbers (4.88 vs 2.78 self-falls/min) also favour decoupling.\n5) Legs-notes design (a), GRF matched to joint limits: both variants keep torque within human limits, so (a) is not more physically correct. Its loss was also beyond noise (rapier walk 8 → 3; −97 on the 0.65 set). Design (c), shortening requested steps, was not clearly more correct either. Design (b), deferral, stands (see above).\n6) Rejecting the fast front-foot lunge (r4_req §5-1): the gate count was flawed, but the rejection also rested on real falls (1 in 4 runs, w_lunge45 0/24, d_lunge6 2 of 4). Reviving it would chase the old game's timing, which is the very error flagged in the 'wall' item. The gathered-step lunge is the correct route and it worked in round 5.\n7) Engine kept (17:27): the main reason was the cost of a rebuild. The arm/leg solver conflict the reviewers wanted re-tested was later shown to be an arm-calculation bug (aim at the tight solver 77 %), not an engine artifact.\n8) The 12:09 self-assessment as a separate error: its counter-quote from main_entry §3 was itself retracted at 16:0x. Opened up, the 35 broken tests include real gaps (run 1.7 m/s, Japanese stance 0.071 m, clinch, pommel strike), so counting them was not purely an old-body yardstick. The 7.5 % out-of-range figure was reported in the same message (line 1845). The parts that hold (fall row, rebuild booked as waste) are covered by the fall-classifier and S2 items.\n9) Round 5 candidate (a), pre-bracing for the sword reaction: reactFF already counters the reaction within the same step, and the unmet residual was small, so the decision did not rest on the onset classifier alone. Only (c) stands.\n10) The aid-definition table being 'unverified': ② was re-run on the final code at 45/96 (legs_notes line 235). Only ① is unconfirmed.",
+  "revive": "In order of value to the goal:\n(1) B2 rope-arc arm as the arm base (already ordered at 15:41/15:45), with two-hand arms under the upper-arm twist limit: lift the 10/24 bull-tap exemption and re-author that thrust instead.\n(2) Prototype '나''s engine-motor human-torque budget (docs/strike/physics2_proto/simbicon.patch), or s5's exact-force Rapier 0.21 path. This is the only route recorded so far to legs that are within human muscle by construction.\n(3) Cut-time step deferral (double support during the cut, legs_notes §2-4 and §4-2), as the physical replacement for the 100 N·m yaw aid.\n(4) Tool fix 2's physical-outcome scenes (standcatch, wretreat, humancut), and drop the copied-from-game thresholds.\n(5) Gait branch A, measured on three weapons.\n(6) Cheap leftovers: balance-first (r4_balance §4-2), the unloaded-foot filter with the never-tried >0.1 s rule (§4-4), F1 'start walking on stick intent' (atkdef_diag §9; its two broken tests were pinned values and were never traced), and the honest get-up (src/getup.js, diagnosed as 'sequencing, not force').\nDo not revive the fast front-foot lunge.",
+  "pattern": "The measuring tools themselves were usually built well, and the causes, once opened, were found correctly: delivered torque, the yaw friction mechanism, the solver, the rope. The error that keeps coming back sits at the verdict and selection step. Whenever the shipped game had a number for something (a fall count, a wound %, a lunge timing, a scene pass, a pinned test value), that number became the target or the cost. This happened even though the records themselves said the number came from the hidden support, the anchor or two errors cancelling. The gap was then reported to the owner before anyone opened it ('worsened', 'wall', 'cannot ship', 'kote half as long'). Separately, the property that defines the project, legs within human muscle (나-8), quietly stopped being measured once the pass rates began to rise. In short, the team measured how closely the new body copies the old one, when the goal was a body that obeys physics. The legs that the scores called 'not shippable' were the ones the owner, playing them, found more realistic."
+ }
+}
