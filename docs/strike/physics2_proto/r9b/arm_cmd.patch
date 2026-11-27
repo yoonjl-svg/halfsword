@@ -1,0 +1,398 @@
+diff -ru bw_250/src/fighter.js bx_250/src/fighter.js
+--- a/src/fighter.js	2026-11-26 18:43:54.599812204 +0000
++++ b/src/fighter.js	2026-11-26 18:11:01.000000000 +0000
+@@ -557,11 +557,11 @@
+ 
+ const _gcA = new THREE.Vector3(), _gcB = new THREE.Vector3(), _gcQ = new THREE.Quaternion(), _gcX = new THREE.Vector3();
+ /**
+- * 빈손 비킴 (11/12 둘째 SKILL.armClear.grip — docs/strike/arm_clear2_2026-11-12.md §2): 두손 칼 두 팔이 겉 틈 gap 안으로 닿은 동안(지금 몸) 빈손 목표(칼자루 끝 gripAim)를
+- *  칼 아래팔(지금 몸 — 팔꿈치 → 손목 선분)에서 c m 밖으로 민다. 빠르게 긋는 동안 칼이 아래팔 줄에 눕으면(아래팔-칼 5 ~ 15°) 칼자루 끝이 칼 아래팔 위에 와
++ * 빈손 비킴 (11/12 둘째 SKILL.armClear.grip — docs/strike/arm_clear2_2026-11-12.md §2): 두손 칼 두 팔이 붙은 동안(지금 몸) 빈손 목표(칼자루 끝 gripAim)를
++ *  칼 아래팔(지금 몸 — 팔꿈치 → 손목 선분)에서 멀어지는 쪽으로 d m 민다 — 그 선분에서 c m 밖까지만 (d = 두 팔 겉 틈이 near 에서 모자란 몫 · c = grip — offHand). 빠르게 긋는 동안 칼이 아래팔 줄에 눕으면(아래팔-칼 5 ~ 15°) 칼자루 끝이 칼 아래팔 위에 와
+  *  빈 아래팔이 칼 아래팔을 뚫는다 — 빈손이 칼자루 끝을 아래팔 밖으로 밀어(쥠 용수철) 손목이 사람 쥠 꼴로 돌아옴. 아래팔 선분에 붙은 점이면 아래로
+  */
+-function gripClear(f, P, c) {
++function gripClear(f, P, c, d) {
+   const fa = f.bodies.farmS;
+   const t = fa.translation();
+   const ax = _gcX.set(1, 0, 0).applyQuaternion(rot(fa, _gcQ));
+@@ -576,7 +576,7 @@
+   if (dist >= c) return;
+   if (dist < 1e-6) n.set(0, -1, 0);
+   else n.multiplyScalar(1 / dist);
+-  P.addScaledVector(n, c - dist);
++  P.addScaledVector(n, Math.min(d, c - dist));
+ }
+ 
+ /** 몸 하나의 스텝 전 상태 { p, q, com, v, w } 를 o 에 담는다 (cacheState · 휘는 마디 무기 flexWeapon.cache — 객체는 처음 한 번만 만든다) */
+@@ -4066,7 +4066,19 @@
+       const cx = clrOn ? ((_acX.gap = SKILL.armClear.gap), _acX) : null;
+       this.swivelTh = elbowSwivel(pDir, Dn, S, d, alpha, _ik8.copy(this.aimRawW ?? this.aimDirW).applyQuaternion(_q2), a, tau > 0 ? this.swivelTh || 0 : 0, k, th ? (th.swAlign ? 2 : 1) : 0, this.side, human, nF, !JOINTS.cutPronate || pronateRest(this), cx, !!this.shoulderRopes?.length);
+       if (th && _swAligned) th.swAlign = true; // 한 번 맞추기 시작하면 이 찌르기 끝까지 (뻗어 한도 안이 되어도 0 으로 튀지 않게)
++    } else if (JOINTS.elbowSwivel) {
++      // 칼 없는 팔 (맨손 · 칼 줍는 손): 돌림 각을 칼 든 길처럼 이어 감 — 손목 규칙 없이 기본 겨냥(ropeHome)으로, 밧줄 안 호를 따라 JOINTS.swivelTau 로 (아래 swivelRest).
++      //  돌림 각을 0 으로 놓고 밧줄 끝으로 옮기면(ropeSwivel) 기본 팔꿈치가 밧줄 안으로 돌아오는 스텝 · 칼을 놓친 스텝 · 집는 스텝에 명령이 한 스텝에 뜀
++      const tau = JOINTS.swivelTau;
++      this.swivelTh = swivelRest(pDir, Dn, alpha, tau > 0 ? this.swivelTh || 0 : 0, tau > 0 ? 1 - Math.exp(-(this.lastDt || 1 / 120) / tau) : 1, this.side, !!this.shoulderRopes?.length);
+     } else this.swivelTh = 0;
++    if (this.shoulderRopes?.length) {
++      // 어깨 들림 면 밧줄 안으로 팔꿈치를 돌림 (아래 ropeSwivel — 손 자리 그대로). 돌림 각을 잇는 길(elbowSwivel · 칼 없는 팔 swivelRest)은 이미 밧줄 안 돌림만 고르고
++      //  밧줄 안 호로만 따라가므로 여기서 돌리는 것은 밧줄 안 돌림이 없는 자세(덜 넘는 쪽)와 SW_STEP 보다 좁은 호뿐 — 그 몫을 돌림 각에 더해 둬, 다음 스텝이 명령한 팔꿈치 자리에서 이어 가게.
++      //  돌림 각이 없는 길(alignDir · JOINTS.elbowSwivel 끔)은 지난 스텝 위팔 명령(uarmS.target — 아래에서 이 스텝 것으로 바뀜)에 가장 가까운 밧줄 끝으로 잇는다
++      const dr = ropeSwivel(pDir, Dn, alpha, this.side, J.uarmS.target);
++      if (dr !== 0 && !alignDir && JOINTS.elbowSwivel) this.swivelTh = Math.atan2(Math.sin(this.swivelTh + dr), Math.cos(this.swivelTh + dr));
++    }
+     const u = _ik4.copy(Dn).multiplyScalar(Math.cos(alpha)).addScaledVector(pDir, Math.sin(alpha)); // 위팔 방향
+     const flex = Math.PI - Math.acos(THREE.MathUtils.clamp((a * a + b * b - d * d) / (2 * a * b), -1, 1));
+     // 위팔 몸체 좌표축: x = 위팔 방향(어깨→팔꿈치), y = 아래팔이 접히는 쪽, z = x × y (팔꿈치 경첩 축)
+@@ -4175,8 +4187,11 @@
+     }
+     if (nOn) (this._notoAim ??= new THREE.Vector3()).copy(gripAim);
+     else if (this._notoAim) this._notoAim = null;
+-    // 두 팔 엇갈림 막기 — 빈손 비킴 (SKILL.armClear.grip — gripClear 머리말): 두 팔이 붙은 동안(① 켜짐) 지금 몸 겉 틈이 gap 안이면
+-    if (this._clrOn && !this.armsPlaced() && SKILL.armClear.grip > 0 && this.armClrGap < SKILL.armClear.gap) gripClear(this, gripAim, SKILL.armClear.grip);
++    // 두 팔 엇갈림 막기 — 빈손 비킴 (SKILL.armClear.grip — gripClear 머리말): 두 팔이 붙은 동안(① 켜짐) 지금 몸 겉 틈이 near(① 이 서는 틈)에서 모자란 만큼 민다 —
++    //  목표를 x 밀면 빈 손목이 x 가고 틈은 많아야 x 열리므로(기하) 모자란 몫 그대로. 틈 gap 하나로 켜고 끄며 grip 까지 다 밀면 민 몫(7 ~ 10 cm)이 한 스텝에 틈을 1 cm 남짓 열어
++    //  꺼지고 다음 스텝에 다시 닫혀, 틈이 gap 에 걸터앉아 빈손 목표가 스텝마다 두 자리를 오갔다 (빈 위팔 명령 8° 넘는 뜀의 437 / 445 — 기록 physics2_notes/r9b_arm.md)
++    const clrD = SKILL.armClear.near - this.armClrGap;
++    if (this._clrOn && !this.armsPlaced() && SKILL.armClear.grip > 0 && clrD > 0) gripClear(this, gripAim, SKILL.armClear.grip, clrD);
+     if (rgK < 1) {
+       // 다시 쥐기 (위 rgK): 칼집 손 자리(한 손 발도 동안 빈손 목표와 같은 점) → 칼자루 끝
+       //  11/14 ③ (SECRET.iaiSayaModoshi — startRegrip iaiRegripVia): 원전 鞘戻し — 칼집 입을 배꼽 앞(SECRET.iaiSayaMouth · 골반 틀)으로 돌려 놓고 칼자루로:
+@@ -4563,14 +4578,153 @@
+ const _sw3 = new THREE.Vector3();
+ const _sw4 = new THREE.Vector3();
+ const _sw5 = new THREE.Vector3();
+-// 어깨 밧줄 두 면의 수평 법선 (가슴 틀 [앞 x, 바깥 z ÷ side] — shoulderOn rope(c) 와 같은 c = 면 끝 − 90 · 시작 + 90) · ropeOk 가 읽음
++// 어깨 밧줄 두 면의 수평 법선 (가슴 틀 [앞 x, 바깥 z ÷ side] — shoulderOn rope(c) 와 같은 c = 면 끝 − 90 · 시작 + 90) · ropeIn · ropeSwivel 이 읽음
+ const ROPE_N = [HUMAN.shoulderPlane[1] - 90, HUMAN.shoulderPlane[0] + 90].map((c) => ({ x: Math.sin(c * HD), z: Math.cos(c * HD) }));
+ const ropeIn = (u, side) => ROPE_N[0].x * u.x + side * ROPE_N[0].z * u.z >= 0 && ROPE_N[1].x * u.x + side * ROPE_N[1].z * u.z >= 0;
++const _rs2 = new THREE.Vector3();
++const _rs3 = new THREE.Vector3();
++const _rsT = [0, 0, 0, 0, 0, 0, 0, 0];
++const _rsC = [0, 0, 0, 0, 0, 0]; // 면마다 a_i · b_i · c_i (ropeSwivel — 스텝마다 새 배열 없게)
++/** 두 면 가운데 덜 되는 면의 u·n (ropeSwivel 의 _rsC · sa) */
++function ropeMin(th, sa) {
++  const c = Math.cos(th), s = Math.sin(th);
++  return Math.min(_rsC[2] + sa * (_rsC[0] * c + _rsC[1] * s), _rsC[5] + sa * (_rsC[3] * c + _rsC[4] * s));
++}
++/**
++ * 어깨 들림 면 밧줄 안으로 팔꿈치 돌림 (armIK): 몸의 어깨 밧줄(shoulderOn — 반공간 u·n ≥ 0, n = ROPE_N)이
++ *  막는 위팔 방향을 목표로 주면 어깨 근육이 상한까지 밧줄을 밀고(포화) 위팔은 밧줄에 멈춰 손이 목표에서 비킨다(마무리 겨눔 칼 쪽 ≈ 0.07 m — r6_arm 기록).
++ *  팔꿈치만 어깨 → 손 축(Dn) 둘레로 돌리면 손 자리 · 팔꿈치 굽힘은 그대로이므로, 위팔이 두 밧줄 안에 드는 가장 작은 돌림 θ 를 고른다 (이미 안이면 0).
++ *  두 면을 함께 푼다: 면마다 u·n_i = ca·(Dn·n_i) + sa·(a_i cosθ + b_i sinθ) (a · b = 지금 pDir · e2 = Dn × pDir 몫) 이 0 이상인 호의 겹침.
++ *  후보는 면마다 호의 두 끝 · 꼭대기 phi_i · 두 면 u·n 이 같은 곳 (많아야 8). 두 면 다 되는 후보 가운데 지난 명령 팔꿈치 자리 θr 에 가장 가까운 것
++ *  (θr = qT — 지난 스텝 위팔 관절 목표 — 의 위팔 방향을 이 스텝 돌림 원에 놓은 각, 짧은 쪽 |θ − θr|). θ = 0 은 밖이므로 고른 것은 겹침의 경계, 곧 어느 한 호의 끝이다
++ *  (꼭대기 · 같은 곳은 안쪽이라 θr 쪽 끝보다 멀다 — θr 가 겹침 안 깊이 있을 때만 이김). 스텝마다 0 에 가까운 끝을 새로 고르면 0 이 막힌 호 가운데를 지날 때
++ *  한 스텝에 반대 끝으로 뒤집혔다(돌림 각을 잇지 않는 길 — alignDir · JOINTS.elbowSwivel 끔. 칼 없는 팔은 돌림 각을 잇는다 — swivelRest). 겹침이 비면 덜 넘는 쪽(min u·n_i)이 가장 큰 θ
++ *  (그 꼭대기는 한 면의 꼭대기 phi_i 이거나 두 면이 같은 곳). 새 수 없음. pDir 를 바꿔 쓰고 돌린 각 θ 를 돌려준다.
++ *  팔꿈치 돌림 길(elbowSwivel)은 밧줄 안 돌림만 SW_STEP 씩 보아 고르고 밧줄 안으로만 따라가므로, 그 길에서 이것이 돌리는 것은 밧줄 안 돌림이 하나도 없는 자세(덜 넘는 쪽)와
++ *  밧줄 안 호 · 막힌 조각이 SW_STEP 보다 좁아 그 찾기가 못 본 자세뿐이다.
++ *  위팔 돌림 · 팔꿈치 높이는 보지 않는다 — 사람 팔 범위는 elbowSwivel 이 고를 때 본다
++ */
++function ropeSwivel(pDir, Dn, alpha, side, qT) {
++  const ca = Math.cos(alpha);
++  const sa = Math.sin(alpha);
++  if (sa < 1e-6) return 0;
++  const e2 = _rs2.crossVectors(Dn, pDir);
++  for (let i = 0; i < 2; i++) {
++    const N = ROPE_N[i];
++    _rsC[3 * i] = N.x * pDir.x + side * N.z * pDir.z;
++    _rsC[3 * i + 1] = N.x * e2.x + side * N.z * e2.z;
++    _rsC[3 * i + 2] = ca * (N.x * Dn.x + side * N.z * Dn.z);
++  }
++  if (ropeMin(0, sa) >= -1e-9) return 0; // 아래 끝과 같은 반올림 몫 (elbowSwivel 이 고른 밧줄 끝 자리는 그대로)
++  const ur = _rs3.set(1, 0, 0).applyQuaternion(qT); // 지난 명령 위팔 방향 — 돌림 원 위 각 (Dn 에 나란하면 0)
++  const thR = Math.atan2(ur.dot(e2), ur.dot(pDir));
++  // 후보: 면마다 호의 두 끝(u·n_i = 0) · 꼭대기 phi_i · 두 면 u·n 이 같은 곳
++  let k = 0;
++  for (let i = 0; i < 2; i++) {
++    const a = _rsC[3 * i], b = _rsC[3 * i + 1], c = _rsC[3 * i + 2];
++    const R = sa * Math.hypot(a, b);
++    if (R < 1e-12) continue;
++    const phi = Math.atan2(b, a);
++    _rsT[k++] = phi;
++    if (-c <= R && -c >= -R) {
++      const w = Math.acos(-c / R);
++      _rsT[k++] = phi - w;
++      _rsT[k++] = phi + w;
++    }
++  }
++  { // c0 + sa(a0 cos + b0 sin) = c1 + sa(a1 cos + b1 sin) → (a0 − a1) cos + (b0 − b1) sin = (c1 − c0) / sa
++    const A = _rsC[0] - _rsC[3], B = _rsC[1] - _rsC[4], C = (_rsC[5] - _rsC[2]) / sa, R = Math.hypot(A, B);
++    if (R > 1e-12 && Math.abs(C) <= R) {
++      const phi = Math.atan2(B, A), w = Math.acos(C / R);
++      _rsT[k++] = phi - w;
++      _rsT[k++] = phi + w;
++    }
++  }
++  let best = 0, bestM = -Infinity, bestOk = false;
++  for (let i = 0; i < k; i++) {
++    const th = Math.atan2(Math.sin(_rsT[i]), Math.cos(_rsT[i]));
++    const v = ropeMin(th, sa);
++    const ok = v >= -1e-9; // 끝은 acos 로 구해 반올림 몫만 봐줌
++    if (ok ? !bestOk || Math.abs(Math.atan2(Math.sin(th - thR), Math.cos(th - thR))) < Math.abs(Math.atan2(Math.sin(best - thR), Math.cos(best - thR))) : !bestOk && v > bestM) {
++      best = th;
++      bestM = v;
++      bestOk = ok;
++    }
++  }
++  if (best !== 0) pDir.multiplyScalar(Math.cos(best)).addScaledVector(e2, Math.sin(best)).normalize();
++  return best;
++}
++// 팔꿈치 돌림 길의 밧줄 (elbowSwivel — 스텝마다 새 함수 없게 이 부름의 값을 모듈 자리에): 돌림 원을 elbowSwivel 찾기와 같은 SW_STEP 씩 보아
++//  지금 돌림 th0 에서 위팔이 밧줄 안(ropeIn)인 채로 갈 수 있는 몫 [th0 − lo, th0 + hi] (막힌 호는 벽 — 넘지 않는다. lo · hi 는 저마다 180° 까지라
++//  한 스텝의 몫은 짧은 쪽이다. 여러 스텝에 걸쳐 한쪽으로 180° 넘게 가지 않게 하는 것은 기본 겨냥 ropeHome — 막힌 호 건너편으로는 겨누지 않음).
++//  _roMode 0 = 밧줄 없음(어디든 짧은 쪽으로 — 본판 그대로) · 1 = 갈 수 있는 호 · 2 = 밧줄 안 돌림이 없음(어디도 못 감 — armIK ropeSwivel 이 덜 넘는 쪽으로)
++const SW_STEP = 2 * HD; // elbowSwivel 풀이 해상도 (기하 — 찾기 넷이 같이 씀)
++let _roMode = 0, _roLo = Math.PI, _roHi = Math.PI;
++const _roP = new THREE.Vector3(), _roU = new THREE.Vector3();
++function ropeInAt(pDir, q, Dn, ca, sa, side, th) {
++  const p = _roP.copy(pDir).multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th));
++  return ropeIn(_roU.copy(Dn).multiplyScalar(ca).addScaledVector(p, sa), side);
++}
++/** 밧줄 호를 둔다. th0 가 밧줄 밖이면(손이 움직여 호가 옮겨 옴) 가장 가까운 밧줄 안 돌림을 돌려준다 — 그 자리에서 호를 잰다 */
++function ropeArc(pDir, q, Dn, ca, sa, side, th0, rope) {
++  _roMode = 0;
++  _roLo = _roHi = Math.PI;
++  if (!rope) return th0;
++  let t = null;
++  for (let n = 0; n * SW_STEP <= Math.PI && t === null; n++) {
++    if (ropeInAt(pDir, q, Dn, ca, sa, side, th0 + n * SW_STEP)) t = th0 + n * SW_STEP;
++    else if (n && ropeInAt(pDir, q, Dn, ca, sa, side, th0 - n * SW_STEP)) t = th0 - n * SW_STEP;
++  }
++  if (t === null) {
++    _roMode = 2;
++    return th0;
++  }
++  _roMode = 1;
++  t = Math.atan2(Math.sin(t), Math.cos(t));
++  let n = 1;
++  while (n * SW_STEP <= Math.PI && ropeInAt(pDir, q, Dn, ca, sa, side, t + n * SW_STEP)) n++;
++  _roHi = (n - 1) * SW_STEP;
++  n = 1;
++  while (n * SW_STEP <= Math.PI && ropeInAt(pDir, q, Dn, ca, sa, side, t - n * SW_STEP)) n++;
++  _roLo = (n - 1) * SW_STEP;
++  return t;
++}
++/** th0 → th 를 밧줄 안으로만 가는 돌림 몫 (부호 = 방향). 못 가면 NaN. 밧줄이 없으면 짧은 쪽 (본판 따라감과 같음) */
++function ropeOff(th, th0) {
++  if (_roMode === 2) return NaN;
++  const dd = Math.atan2(Math.sin(th - th0), Math.cos(th - th0));
++  if (_roMode === 0) return dd;
++  return (dd >= 0 ? dd <= _roHi + 1e-9 : -dd <= _roLo + 1e-9) ? dd : NaN;
++}
++const ropeGo = (th, th0) => !Number.isNaN(ropeOff(th, th0));
++/** 기본 겨냥 자리 (elbowSwivel): th0 에서 0(팔꿈치 겨냥 IK_POLE 그대로)으로 가는 짧은 쪽 몫을 밧줄 호 [−lo, hi] 로 자른 자리 — 0 으로 갈 수 있으면 0.
++ *  짧은 쪽에 막힌 호가 있으면(0 이 밧줄 밖이든 막힌 호 건너편이든) th0 쪽 벽 — 팔꿈치는 막힌 호를 돌아 180° 넘게 가지 않고 벽에서 선다
++ *  (0 이 밧줄 밖이면 그 벽이 ropeSwivel 이 0 을 옮기는 끝, 본판에서 몸이 밧줄에 막혀 서던 자리). 갈 수 있는 돌림이 없으면 th0 */
++function ropeHome(th0) {
++  if (ropeGo(0, th0)) return 0;
++  if (_roMode === 2) return th0;
++  const dd = Math.atan2(Math.sin(-th0), Math.cos(-th0));
++  const th = th0 + (dd >= 0 ? Math.min(dd, _roHi) : -Math.min(-dd, _roLo));
++  return Math.atan2(Math.sin(th), Math.cos(th));
++}
++/** 손목 규칙 없는 팔꿈치 돌림 (armIK — 칼 없는 팔): 지난 돌림 th0 에서 기본 겨냥(ropeHome)으로, 밧줄 안 호를 따라 남은 돌림의 k 몫 — elbowSwivel 의 따라감과 같은 셈
++ *  (th0 가 밧줄 밖이면 먼저 가장 가까운 밧줄 안 돌림으로 — ropeArc). pDir 를 바꿔 쓰고 돌림 각을 돌려준다 */
++function swivelRest(pDir, Dn, alpha, th0, k, side, rope) {
++  if (alpha < 1e-3) return th0; // 팔이 곧으면 돌려도 같다
++  const q = _sw1.crossVectors(Dn, pDir);
++  th0 = ropeArc(pDir, q, Dn, Math.cos(alpha), Math.sin(alpha), side, th0, rope);
++  const dth = ropeOff(ropeHome(th0), th0) || 0;
++  let th = th0 + dth * k;
++  th = Math.atan2(Math.sin(th), Math.cos(th));
++  if (th !== 0) pDir.multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th)).normalize();
++  return th;
++}
+ /**
+  * 팔꿈치 돌림 (JOINTS.elbowSwivel — 기본 켬 사장님 10/24 17:2x · 10/24 15:5x 손목 검사 docs/strike/wrist_audit_2026-10-24.md): 팔꿈치 겨냥(IK_POLE — 늘 아래 · 뒤 · 바깥)으로 손이 머리 곁 · 몸 가까이 있고
+  *  칼이 앞 · 아래를 겨누면 아래팔이 서고 칼이 아래팔의 새끼 쪽으로 꺾인다(황소 · 프리마 · 세콘다 — 거꾸로 쥔 꼴). 같은 손 자리 · 같은 칼 방향에서 팔꿈치만 어깨 → 손 축 둘레로 돌려
+- *  (위팔 · 아래팔 길이 · 손 자리 그대로 — 1 자유도) 칼이 아래팔 줄에서 새끼 쪽으로 사람 척측 편위 한도(HUMAN.ulnarDev 30 — AAOS) 안에 들게 하는 가장 작은 돌림을 고른다.
+- *  이미 한도 안이고 기본 겨냥이 어깨 밧줄 안이면 아무것도 바꾸지 않는다(지금 팔과 같은 자세 — 기본 겨냥이 밧줄 밖이면 손목이 괜찮아도 밧줄 안 돌림을 찾는다). 한도 안이 없으면 가장 덜 꺾이는 자리. 손목 굴림(엎침 · 뒤침)은 0 으로 어림(아래팔 경첩 면 — joint_range wristDev).
++ *  (위팔 · 아래팔 길이 · 손 자리 그대로 — 1 자유도) 칼이 아래팔 줄에서 새끼 쪽으로 사람 척측 편위 한도(HUMAN.ulnarDev 30 — AAOS) 안에 들게 한다.
++ *  한도의 차례: 어깨 밧줄(갈 수 있는 호 — ropeArc) → 사람 팔 범위(armOk — 위팔 돌림 · 팔꿈치 줄 아래 · 아래팔 굴림) → 손목 한도. 기본 겨냥 z0(ropeHome)가 앞 둘을 지키고
++ *  손목도 한도 안이면 z0, 아니면 지금 돌림에서 가장 가까운 셋 다 지키는 돌림, 손목을 못 지키면 z0 · 손목이 가장 덜 꺾이는 armOk 돌림. 손목 굴림(엎침 · 뒤침)은 0 으로 어림(아래팔 경첩 면 — joint_range wristDev).
+  *  (지금 굴림을 넣은 어림 · 지금 칼 면 어림도 재 봤다 — 지금 자세가 돌림을 따라 되먹어 떨림이 늘고 범위 밖도 안 줄었으며, 굴림 어림은 탭 찌르기 황소를 다시 무너뜨려 버림 · 기록 §9-9)
+  *  pDir(가슴 틀 · Dn 에 수직 단위)을 바꿔 쓴다. D = 바랄 칼 방향(가슴 틀 — 지난 스텝 aimRawW: 손목 교정 wristClamp 전 겨눔)
+  */
+@@ -4585,10 +4739,39 @@
+ /** 위팔 돌림이 사람 범위 안인가 (elbowSwivel armOk ③ — AAOS JOINTS.twist 안쪽 70 · 바깥 90, anatSoft 와 같은 정의): u = 위팔 방향 · z = 팔꿈치 경첩 축(아래팔 z) — 가슴 틀 단위 */
+ function armTwistOk(u, z, side) {
+   if (u.y > 0.5) return true; // 들림 120° 위 — 돌림 기준이 방위에 따라 크게 돎(코드먼 역설 · joint_range ROT_ELEV)
++  return armTwistIn(u, z, side);
++}
++/** 위팔 돌림 수(°)가 JOINTS.twist 안인가 — 들림 지름길 없이 (armTwistOk 의 셈 · elbowSwivel 이 사람 팔 범위 안 돌림이 없을 때 고르는 잣대) */
++function armTwistIn(u, z, side) {
+   const r = _sw8.set(0, 0, side).applyQuaternion(_swQ.setFromUnitVectors(_swDown, u));
+   const tw = (side * Math.atan2(_sw9.crossVectors(r, z).dot(u), r.dot(z))) / HD;
+   return tw >= JOINTS.twist[0] && tw <= JOINTS.twist[1];
+ }
++/**
++ * 사람 팔 범위(armOk) 안 돌림을 밧줄 안에서 못 찾을 때 (elbowSwivel — human): 밧줄 안으로 갈 수 있는 돌림 가운데 th0 에서 가장 가까운 (SW_STEP 씩 양쪽)
++ *  ① 위팔 돌림 수가 한도 안(armTwistIn — 들림 지름길 없이) · 팔꿈치 줄 아래 ② 위팔 돌림 한도 안 ③ 팔꿈치 줄 아래 — 없으면 th0.
++ *  한도의 차례: 밧줄(몸의 단단한 묶음) → 위팔 돌림(사람 관절이 못 감 — anatSoft 는 무른 되돌림이라 어깨 서보가 이겨 몸이 따라감 · 기록 r7_d1) → 팔꿈치 높이(사람이 들 수는 있음)
++ */
++function swivelHumanRope(pDir, q, Dn, ca, sa, a, d, side, th0) {
++  let tw = null, lo = null;
++  for (let n = 0; n * SW_STEP <= Math.PI; n++) {
++    for (let s = 1; s >= -1; s -= 2) {
++      if (!n && s < 0) break;
++      const th = th0 + s * n * SW_STEP;
++      if (!ropeGo(th, th0)) continue;
++      const p = _sw6.copy(pDir).multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th));
++      const below = p.y <= 0;
++      const u = _sw7.copy(Dn).multiplyScalar(ca).addScaledVector(p, sa);
++      const y = _sw5.copy(Dn).multiplyScalar(d).addScaledVector(u, -a);
++      y.addScaledVector(u, -y.dot(u));
++      const tin = y.lengthSq() < 1e-9 || armTwistIn(u, _sw6.crossVectors(u, y.normalize()).normalize(), side); // 경첩 축을 못 정하면 armOk 처럼 됨
++      if (tin && below) return th;
++      if (tin && tw === null) tw = th;
++      if (below && lo === null) lo = th;
++    }
++  }
++  return tw ?? lo ?? th0;
++}
+ function elbowSwivel(pDir, Dn, S, d, alpha, D, a, th0 = 0, k = 1, align = 0, side = 1, human = false, nF = null, pronOk = true, cx = null, rope = false) {
+   // human: 사람 팔 범위를 봄(false = 10/24 17:2x 뒤 판). nF = 굴림 목표 칼 면 법선(가슴 틀 단위 · 없으면 null) · pronOk: 엎친 손 길을 셈에 넣나(손이 자세에 쉬는 동안만 — pronateRest · JOINTS.cutPronate)
+   // cx: 두 팔 엇갈림 막기 ① (SKILL.armClear — armGap 머리말) — 빈팔 몸 선분(가슴 틀) · 겉 틈. null = 전 판 그대로
+@@ -4596,6 +4779,11 @@
+   const q = _sw1.crossVectors(Dn, pDir); // pDir 를 Dn 둘레로 90° 돌린 것
+   const ca = Math.cos(alpha);
+   const sa = Math.sin(alpha);
++  // 어깨 들림 면 밧줄 (rope — shoulderOn · ropeSwivel 과 같은 반공간 u·n ≥ 0, ROPE_N): 위팔이 밧줄 밖인 돌림은 몸이 못 가는 자세라 무기 · 사람 팔 범위와 상관없이 고르지 않고,
++  //  막힌 호를 지나서도 가지 않는다(벽 — 따라감도 밧줄 안 호를 따라: ropeOff). 지금 돌림이 밧줄 밖이면(호가 옮겨 옴) 먼저 가장 가까운 밧줄 안 돌림으로 — 그 자리가 이 스텝의 th0
++  th0 = ropeArc(pDir, q, Dn, ca, sa, side, th0, rope);
++  //  아래 '기본 겨냥' 은 모두 z0 — th0 에서 0 으로 짧은 쪽으로 갈 수 있으면 0 (본판 그대로) · 아니면 그 쪽 밧줄 벽 (ropeHome)
++  const z0 = ropeHome(th0);
+   // 그 돌림의 칼 팔과 빈팔 겉 틈 (m — 손 자리 · 팔 길이 그대로, 팔꿈치만) · 틈이 cx.gap 이상인가
+   // 지금 몸 손목에서도 (11/12 둘째): 같은 돌림 각의 팔을 칼 손목 지금 몸(cx.wb — 가슴 틀)에 둔 꼴 (어깨 → 그 손목 축 둘레 · 팔꿈치 겨냥 같은 식)과도 틈을 본다.
+   //  손 목표와 몸이 15 ~ 20 cm 떨어진 동안(빈손에 끌린 칼 손 · 빠르게 긋는 동안 늦은 팔)은 목표 자세만 보면 틈 있는 돌림이 몸에서는 뚫음 (기록 §2)
+@@ -4629,16 +4817,11 @@
+   const lim = -HUMAN.ulnarDev * HD;
+   // 사람 팔 범위 (JOINTS.swivelHuman — 사장님 10/25 01:2x '팔 관절이 비틀린 게 많아'): 돌린 팔이 ① 팔꿈치를 어깨 → 손 줄보다 위로 올리거나(가슴 틀 위 몫 > 0 — 기본 겨냥은 늘 아래)
+   //  ② 칼 면을 굴림 목표에 세우려면 아래팔 굴림이 HUMAN.forearmRoll(80) 밖이거나 ③ 위팔 돌림이 AAOS 한도(JOINTS.twist 안쪽 70 · 바깥 90 — anatSoft 와 같은 정의, 들림 120° 아래만) 밖이면
+-  //  그 돌림은 쓰지 않는다. 돌림 0(기본 겨냥)은 사람 범위로는 늘 됨(어깨 밧줄 밖이면 아래 ropeOk 가 뺀다) — 손목을 범위 끝까지만 두는 쪽(wristGuard)이 팔 비틀림보다 낫다 (기록 wrist_audit §10)
+-  // 어깨 들림 면 밧줄 (rope — shoulderOn 과 같은 반공간 u·n ≥ 0, ROPE_N): 위팔이 밧줄 밖인 돌림은 몸이 못 가는 자세라 무기 · 사람 팔 범위와 상관없이 고르지 않는다
+-  const ropeOk = (th) => {
+-    if (!rope) return true;
+-    const p = _sw6.copy(pDir).multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th));
+-    const u = _sw7.copy(Dn).multiplyScalar(ca).addScaledVector(p, sa);
+-    return ropeIn(u, side);
+-  };
++  //  그 돌림은 쓰지 않는다. 돌림 0(IK_POLE — 팔꿈치 아래 · 뒤 · 바깥)은 밧줄 안으로 갈 수 있으면 늘 됨 — 손목을 범위 끝까지만 두는 쪽(wristGuard)이 팔 비틀림보다 낫다 (기록 wrist_audit §10).
++  //  벽으로 옮긴 기본 겨냥(z0 ≠ 0)은 이 셋을 본다
++  //  밧줄 안으로 갈 수 있는 돌림(ropeGo — 위 ropeArc 의 호) 밖은 무기 · 사람 팔 범위와 상관없이 안 됨
+   const armOk = (th) => {
+-    if (!ropeOk(th)) return false;
++    if (!ropeGo(th, th0)) return false;
+     if (!human || th === 0) return true;
+     const p = _sw6.copy(pDir).multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th)); // 팔꿈치가 줄에서 비킨 방향
+     if (p.y > 0) return false;
+@@ -4672,21 +4855,21 @@
+   // 찌르는 동안(align — 탭 찌르기 겨눔 · 뻗음 · 머묾) 기본 팔꿈치가 한도 밖이면: 한도 안 가장 가까운 자리 대신 칼이 아래팔의 연장에 가장 가까운 돌림
+   //  (아래팔 · 칼 방향 내적이 가장 큰 자리 — 2° 씩 한 바퀴, 같으면 지금 돌림에 가까운 쪽). 한도 안이면 아래 보통 길(0 으로) — 쟁기처럼 손목이 괜찮은 찌르기는 그대로
+   const pron = human && JOINTS.wristPronate && pronOk; // 엎친 손으로 되면 안 돌림 — 손이 자세에 쉬는 동안만(움직이는 동안 손 면을 쥐면 칼이 명령을 0.15 ~ 0.2 s 늦게 따라감 — 기록 wrist_audit §15)
+-  if (!pron && (align === 2 || (align === 1 && dev(0) < lim))) { // 엎친 손 길이면 맞춤 안 함 — 팔꿈치는 사람 범위 그대로 두고 손을 엎친 채 뻗음(맞춤 돌림은 빠른 뻗음에서 팔꿈치를 60 ~ 80° 씩 오가게 했다)
++  if (!pron && (align === 2 || (align === 1 && dev(z0) < lim))) { // 엎친 손 길이면 맞춤 안 함 — 팔꿈치는 사람 범위 그대로 두고 손을 엎친 채 뻗음(맞춤 돌림은 빠른 뻗음에서 팔꿈치를 60 ~ 80° 씩 오가게 했다)
+     _swAligned = true;
+     const fd = (th) => {
+       const p = _sw2.copy(pDir).multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th));
+       const u = _sw3.copy(Dn).multiplyScalar(ca).addScaledVector(p, sa);
+       return _sw4.copy(Dn).multiplyScalar(d).addScaledVector(u, -a).normalize().dot(D);
+     };
+-    // 지금 돌림이 사람 범위 · 밧줄 밖이면 기본 겨냥에서 — 기본 겨냥(0)도 밧줄 밖이면 시작 자리 없음(아래 찾기에서 밧줄 안 돌림만 · 하나도 없으면 지금 돌림 그대로)
+-    const base = armOk(th0) ? th0 : armOk(0) ? 0 : null;
++    // 지금 돌림이 사람 범위 밖이면 기본 겨냥(z0)에서 — 그것도 사람 범위 밖이면 시작 자리 없음(아래 찾기에서 armOk 돌림만 · 하나도 없으면 아래 swivelHumanRope)
++    const base = armOk(th0) ? th0 : armOk(z0) ? z0 : null;
+     let want = base ?? th0;
+     // 두 팔 엇갈림 막기 ① — 빈팔을 뚫는 돌림은 고르지 않음 (그런 돌림뿐이면 전 판 그대로)
+-    const clrW = base === null ? null : clrGap && !clrGap(base) ? (clrGap(th0) && armOk(th0) ? th0 : clrGap(0) && armOk(0) ? 0 : null) : base;
++    const clrW = base === null ? null : clrGap && !clrGap(base) ? (clrGap(th0) && armOk(th0) ? th0 : clrGap(z0) && armOk(z0) ? z0 : null) : base;
+     let best = clrW === null ? -Infinity : fd(clrW) + 1e-6; // 같으면 지금 자리
+     if (clrW !== null) want = clrW;
+-    const STEP = 2 * HD;
++    const STEP = SW_STEP;
+     for (let n = 1; n * STEP <= Math.PI; n++) {
+       for (const s of [1, -1]) {
+         const th = th0 + s * n * STEP;
+@@ -4699,23 +4882,25 @@
+         }
+       }
+     }
+-    const dth = Math.atan2(Math.sin(want - th0), Math.cos(want - th0));
++    if (human && !armOk(want)) want = swivelHumanRope(pDir, q, Dn, ca, sa, a, d, side, th0); // want 가 armOk 가 아닌 것은 위 찾기가 armOk 돌림을 하나도 못 본 때뿐
++    const dth = ropeOff(want, th0) || 0; // 밧줄 안 호를 따라 (밧줄 안 돌림이 없으면 want = th0 · 0)
+     let th = th0 + dth * k;
+     th = Math.atan2(Math.sin(th), Math.cos(th));
+     if (th !== 0) pDir.multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th)).normalize();
+     return th;
+   }
+-  // 바랄 돌림: 기본 팔꿈치(0)가 한도 안이고 어깨 밧줄 안이면 0. 아니면 지금 돌림 th0 에서 가장 가까운 한도 안 자리(양쪽으로 2° 씩) — 갈래를 건너뛰지 않게. 한도 안이 없으면 가장 덜 꺾이는 자리
+-  //  (사람 팔 범위를 볼 때는 사람 팔 범위 안 돌림만 · 한도 안이 없으면 0 · 0 이 어깨 밧줄 밖이면 그 가운데 손목이 가장 덜 꺾이는 돌림 — 반쯤 돌린 팔꿈치는 손목도 못 고치고 팔만 비튼다: 팔꿈치가 옆으로 누워 아래팔 굴림이 80° 끝)
+-  let want = 0;
++  // 바랄 돌림: 기본 겨냥 z0 가 armOk(밧줄 · 사람 팔 범위)이고 손목 한도 안이면 z0. 아니면 지금 돌림 th0 에서 가장 가까운 armOk · 손목 한도 안 자리(양쪽으로 SW_STEP 씩) —
++  //  갈래를 건너뛰지 않게. 그런 자리가 없으면 armOk 인 z0 · 아니면 armOk 가운데 손목이 가장 덜 꺾이는 자리 (반쯤 돌린 팔꿈치는 손목도 못 고치고 팔만 비튼다:
++  //  팔꿈치가 옆으로 누워 아래팔 굴림이 80° 끝). armOk 돌림이 하나도 없을 때만 swivelHumanRope
++  let want = z0;
+   if (clrGap) {
+     // 두 팔 엇갈림 막기 ① (cx 있을 때만 — 없으면 아래 전 판 그대로): 빈팔과 틈 있는 돌림만 고른다 (사람 팔 범위 armOk 그대로).
+-    //  기본 팔꿈치(0)가 손목 한도 안이고 틈 있고 어깨 밧줄 안이면 0 · 아니면 지금 돌림에서 가장 가까운, 틈 있고 손목 한도 안인 돌림 ·
+-    //  없으면 0 에서 가장 가까운 틈 있는 돌림(0 먼저 — 손목은 교정 wristGuard 가 범위 끝까지)
++    //  기본 겨냥 z0 가 armOk 이고 손목 한도 안이고 틈 있으면 z0 · 아니면 지금 돌림에서 가장 가까운, armOk 이고 틈 있고 손목 한도 안인 돌림 ·
++    //  없으면 z0 에서 가장 가까운 armOk 이고 틈 있는 돌림(z0 먼저 — 손목은 교정 wristGuard 가 범위 끝까지)
+     const wristOk = (th) => dev(th) >= lim || (pron && reach(th));
+-    if (!(clrGap(0) && wristOk(0) && ropeOk(0))) {
++    if (!(clrGap(z0) && wristOk(z0) && armOk(z0))) {
+       want = null;
+-      const STEP = 2 * HD; // 풀이 해상도 (기하)
++      const STEP = SW_STEP; // 풀이 해상도 (기하)
+       for (let n = 0; n * STEP <= Math.PI && want === null; n++) {
+         for (const s of n ? [1, -1] : [1]) {
+           const th = th0 + s * n * STEP;
+@@ -4727,7 +4912,7 @@
+       }
+       for (let n = 0; n * STEP <= Math.PI && want === null; n++) {
+         for (const s of n ? [1, -1] : [1]) {
+-          const th = s * n * STEP;
++          const th = z0 + s * n * STEP;
+           if (!armOk(th)) continue;
+           if (gapOk(th)) {
+             want = th;
+@@ -4737,14 +4922,14 @@
+       }
+     }
+   }
+-  // 틈 있는 돌림이 하나도 없으면 (11/12 둘째): 사람 범위 기본 돌림(아래 전 판 길 그대로 — 기본 돌림이 어깨 밧줄 밖이면 아래 찾기로). 덜 겹치는 돌림은 지금 몸 빈팔에 따라 스텝마다 크게 튀어(0 ↔ 110°)
++  // 틈 있는 돌림이 하나도 없으면 (11/12 둘째): 사람 범위 기본 돌림(아래 전 판 길 그대로). 덜 겹치는 돌림은 지금 몸 빈팔에 따라 스텝마다 크게 튀어(0 ↔ 110°)
+   //  칼 팔꿈치를 빈 아래팔 밑으로 끌어들였다 — 대검 왼쪽 엇갈림 12 → 26 % 의 까닭 (기록 §2)
+-  if (want === null && !(dev(0) < lim && !(pron && reach(0))) && ropeOk(0)) want = 0;
+-  if (want === null || (!clrGap && ((dev(0) < lim && !(pron && reach(0))) || !ropeOk(0)))) {
++  if (want === null && !(dev(z0) < lim && !(pron && reach(z0))) && armOk(z0)) want = z0;
++  if (want === null || (!clrGap && ((dev(z0) < lim && !(pron && reach(z0))) || !armOk(z0)))) {
+     want = null;
+     let best = th0;
+-    let bestDev = armOk(th0) ? dev(th0) : -Infinity; // 지금 돌림이 밧줄 · 사람 범위 밖이면 견줄 자리로 삼지 않음 (밧줄 없는 몸 · 사람 범위 안 보는 팔은 전 판 그대로)
+-    const STEP = 2 * HD; // 풀이 해상도 (기하)
++    let bestDev = armOk(th0) ? dev(th0) : -Infinity; // armOk 가 아닌 th0 는 armOk 돌림이 하나라도 있으면 안 고름 (사람 팔은 z0 가 armOk 이면 아래에서 z0 — best 를 안 씀)
++    const STEP = SW_STEP; // 풀이 해상도 (기하)
+     for (let n = 0; n * STEP <= Math.PI && want === null; n++) {
+       for (const s of n ? [1, -1] : [1]) {
+         const th = th0 + s * n * STEP;
+@@ -4760,10 +4945,14 @@
+         }
+       }
+     }
+-    if (want === null) want = human && ropeOk(0) ? 0 : best; // 기본 겨냥이 밧줄 밖이면 찾은 돌림 가운데 손목이 가장 덜 꺾이는 것 (밧줄 · 사람 범위 안인 돌림이 하나도 없으면 지금 돌림 th0 그대로)
++    // 한도 안이 없으면: 사람 팔은 기본 겨냥(z0 — 0 이면 늘 됨 · 벽으로 옮긴 것은 armOk 일 때) · 아니면 armOk 돌림 가운데 손목이 가장 덜 꺾이는 것 /
++    //  사람 팔 범위를 안 보면(JOINTS.swivelHuman 0) 손목이 가장 덜 꺾이는 갈 수 있는 돌림
++    if (want === null) want = human && armOk(z0) ? z0 : best;
+   }
++  if (human && !armOk(want)) want = swivelHumanRope(pDir, q, Dn, ca, sa, a, d, side, th0); // 위 찾기가 armOk 돌림을 하나도 못 봄 — 위팔 돌림 한도 먼저
+   // 따라감: 한 스텝에 남은 돌림의 k 몫 (k = 1 − e^(−dt/τ) · JOINTS.swivelTau) — 팔꿈치 명령이 한 스텝에 크게 뛰면 팔 서보가 못 따라가 아래팔이 명령과 50 ~ 130° 어긋났다 (탭 찌르기 끌어당김 · 기록 §9)
+-  const dth = Math.atan2(Math.sin(want - th0), Math.cos(want - th0));
++  //  want 는 th0 에서 밧줄 안으로만 닿는 돌림이라 (ropeGo — 호 안 · 한쪽 180° 까지) 가는 길이 늘 밧줄 안 (ropeOff — 밧줄이 없으면 짧은 쪽 그대로). 밧줄 안 돌림이 없으면 0
++  const dth = ropeOff(want, th0) || 0;
+   let th = th0 + dth * k;
+   th = Math.atan2(Math.sin(th), Math.cos(th));
+   if (th !== 0) pDir.multiplyScalar(Math.cos(th)).addScaledVector(q, Math.sin(th)).normalize();
