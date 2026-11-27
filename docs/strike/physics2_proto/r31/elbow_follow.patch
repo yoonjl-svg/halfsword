@@ -1,0 +1,61 @@
+diff --git a/src/config.js b/src/config.js
+index ad3bd901..6b0c6973 100644
+--- a/src/config.js
++++ b/src/config.js
+@@ -510,6 +510,12 @@ export const ARM = {
+   vertLead: 0.05, // 세로 follow-through: 빠르게 아래로 긋는 동안 손목 서보 목표를 v × 값(rad per m/s) 더 아래로(상한 0.5 rad) — R2′ 범위만 · 0 = 끔 [사장님 10/8]
+   servoLead: 0.5, // 손목 서보 목표 각을 (1 + servoLead) 배로 앞세움(한손 무기 · R2′ 범위만) — 제동도 그만큼 늦게 · 0 = 끔 [사장님 10/8]
+   slack: 0.005, // 펴짐 여유 (m): armIK 가 손 목표 거리를 (위팔 + 아래팔 − 이 값)에서 자른다. 근접 밀치기 '팔 다 펴짐'(fighter.armFull)·보정 v2 순서 결합(fighter armU)이 같은 값을 읽는다
++  // 빈팔 팔꿈치 쪽 따라감 (r31 가설 시험 · 도): 빈손 축이 '팔꿈치 쪽이 안 정해지는 방향'(손이 높고 칼 쪽 안 — 두손 칼자루 끝 자리)에서
++  //  offElbowIn 안이면 팔꿈치를 지금 있는 쪽에 그대로 두고, offElbowOut 밖은 오늘 셈 그대로, 사이는 매끈히 넘김.
++  //  안 각을 올리면: 두손 쥠 · 찌르기 끝에서 빈 팔꿈치가 몸이 가던 대로 머묾(튐 줄어듦) — 대신 팔꿈치가 어색한 쪽에 눌러앉을 수 있음. 내리면: 오늘처럼 팔꿈치가 정해진 쪽으로 돌아가고 그 방향 바로 곁에서 튐이 남음.
++  //  바깥 각을 올리면: 넘김이 넓고 부드러워짐 — 대신 오늘 자세가 바뀌는 손 자리가 넓어짐. 내리면(안 각에 가깝게): 넘김 띠가 좁아 그 띠에서 팔꿈치가 빨리 돌 수 있음. 둘 다 0 = 오늘 셈과 같음
++  offElbowIn: 10,
++  offElbowOut: 25,
+ };
+ 
+ export const WEAPON = {
+diff --git a/src/fighter.js b/src/fighter.js
+index f0492c13..7f600ff4 100644
+--- a/src/fighter.js
++++ b/src/fighter.js
+@@ -4233,9 +4233,11 @@ export class Fighter {
+     const d = THREE.MathUtils.clamp(D.length(), 0.08, a + b - 0.005);
+     const Dn = D.normalize();
+     const pole = _ik3.set(-0.25, -1, -this.side * 0.5).normalize(); // 팔꿈치는 아래·뒤·바깥
+-    const pDir = pole.addScaledVector(Dn, -pole.dot(Dn));
++    const pc = pole.dot(Dn); // 손 축과 −pole(손이 높고 칼 쪽 — 팔꿈치 쪽이 안 정해지는 방향) 각의 cos 은 −pc
++    const pDir = pole.addScaledVector(Dn, -pc);
+     if (pDir.lengthSq() < 1e-6) pDir.set(0, -1, 0);
+     pDir.normalize();
++    if (-pc > Math.cos(ARM.offElbowOut * THREE.MathUtils.DEG2RAD)) offElbowFollow(this, _q2, Dn, pDir, -pc); // 바깥 각 밖은 오늘 셈 그대로 (이 줄을 안 탐)
+     const alpha = Math.acos(THREE.MathUtils.clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1));
+     const u = _ik4.copy(Dn).multiplyScalar(Math.cos(alpha)).addScaledVector(pDir, Math.sin(alpha));
+     const flex = Math.PI - Math.acos(THREE.MathUtils.clamp((a * a + b * b - d * d) / (2 * a * b), -1, 1));
+@@ -4560,6 +4562,26 @@ const _ik6 = new THREE.Vector3();
+ const _ik7 = new THREE.Vector3();
+ const _ik8 = new THREE.Vector3();
+ const _ik9 = new THREE.Vector3();
++/**
++ * 빈팔 팔꿈치 쪽 따라감 (r31 가설 시험 — ARM.offElbowIn · offElbowOut): 손 축 Dn 이 −pole 에서 안 각 안이면 팔꿈치 쪽(pDir)을
++ *  지금 팔꿈치가 실제로 있는 쪽(uarmO 몸 −y 축 = 어깨 → 팔꿈치 · 가슴 틀 · Dn 에 곧은 몫)으로 둠. 안 각 ~ 바깥 각은 Dn 둘레로 가장 짧게 돌려 매끈히 넘김.
++ *  팔이 거의 펴져 곧은 몫이 작으면(sin 0.05 ~ 0.15) 오늘 셈으로 매끈히 돌아감. 지금 몸 자리만 읽음 — 스텝 사이 기억 없음. pDir 을 고쳐 씀
++ */
++const _efQ = new THREE.Quaternion(), _efE = new THREE.Vector3(), _efX = new THREE.Vector3();
++function offElbowFollow(f, qInv, Dn, pDir, cth) {
++  const th = Math.acos(Math.min(1, cth)) * THREE.MathUtils.RAD2DEG;
++  const w = 1 - THREE.MathUtils.smoothstep(th, ARM.offElbowIn, ARM.offElbowOut);
++  const e = _efE.set(0, -1, 0).applyQuaternion(rot(f.bodies.uarmO, _efQ)).applyQuaternion(qInv);
++  e.addScaledVector(Dn, -e.dot(Dn));
++  const m = e.length();
++  const k = w * THREE.MathUtils.smoothstep(m, 0.05, 0.15);
++  if (k <= 0) return;
++  e.divideScalar(m);
++  if (k >= 1) { pDir.copy(e); return; }
++  pDir.addScaledVector(Dn, -pDir.dot(Dn)).normalize(); // 오늘 셈의 (0,−1,0) 대신 값도 Dn 에 곧게
++  const phi = Math.atan2(Dn.dot(_efX.crossVectors(pDir, e)), pDir.dot(e)); // pDir → e 가장 짧은 돌림 각 (Dn 둘레)
++  pDir.applyAxisAngle(Dn, k * phi);
++}
+ const _wpT = new THREE.Vector3();
+ const _ikM = new THREE.Matrix4();
+ const _sw1 = new THREE.Vector3();

@@ -1,0 +1,7 @@
+T1 셈 자체 뜀 r31_om 103 (가장 큰 165.1°) → r31_s20 1134 (가장 큰 179.8°) · 빈 팔 > 8° 9677 → 10816 · > 20° 2584 → 2248 · 가장 큰 172.7 → 179.8° → 아님
+T2 안 잼 (FileNotFoundError: tri_arm_real_r31_s20.jsonl')
+T3 안 잼 (막기 묶음 parry_clu 출력 없음)
+T4 칼 팔 > 8° r31_om 292 → r31_s20 251 (차 -41 · 흔들림 2·SE 110.0 · 싸움꾼 48) · > 20° 13 → 12 · 가장 큰 82.6 → 99.6° → 맞음
+T5 안 잼 (FileNotFoundError: fp_r31_s20.json')
+T6 안 잼 (FileNotFoundError: elb_r31_s20_f_longsword.json')
+판정 r31_s20 T1=아님 T4=맞음
