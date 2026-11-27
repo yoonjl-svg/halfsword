@@ -1,6 +1,7 @@
 #!/bin/bash
 # 넘어짐 흔적 · 지킴 재기 줄: q.sh — 끝난 일은 건너뜀(다시 켜도 됨) · 둘까지 나란히
-# 칸: $SCRATCH/p2/r6/mx/cells/fb_{base,bc,b} · 나옴: $SCRATCH/p2/r10f2/out/<칸>/
+# q.sh [칸...] — 칸을 주면 그 칸들의 넘어짐 여섯 묶음만(지킴 없이) · 안 주면 fb_base fb_bc fb_b 와 지킴까지
+# 칸: $SCRATCH/p2/r6/mx/cells/<칸> · 나옴: $SCRATCH/p2/r10f2/out/<칸>/
 J=${SCRATCH:?흩어 놓는 곳}/p2/r10f2; C=$SCRATCH/p2/r6/mx/cells; O=$J/out
 one() { cell=$1; what=$2; T=$C/$cell; D=$O/$cell; mkdir -p $D
   case $what in
@@ -12,6 +13,7 @@ one() { cell=$1; what=$2; T=$C/$cell; D=$O/$cell; mkdir -p $D
       ( cd $T && node --test --test-concurrency=1 tools/sim/thrust_stuck.test.mjs tools/sim/wrist_audit.test.mjs tools/sim/cavazione_tap.test.mjs tools/sim/stamina_clinch.test.mjs > $D/test.txt.tmp 2>&1; true ) && mv $D/test.txt.tmp $D/test.txt ;;
   esac; }
 export -f one; export J C O
-{ for off in 600 624 648 672 0 300; do for c in fb_base fb_bc fb_b; do echo "$c fall_$off"; done; done
-  for c in fb_base fb_bc fb_b; do echo "$c bat"; echo "$c test"; done; } | xargs -P2 -L1 bash -c 'one $0 $1'
-date -u +%T > $O/DONE
+CELLS=${*:-fb_base fb_bc fb_b}; MARK=$O/DONE; [ $# -gt 0 ] && MARK=$O/DONE_$(echo $CELLS | tr ' ' _)
+{ for off in 600 624 648 672 0 300; do for c in $CELLS; do echo "$c fall_$off"; done; done
+  [ $# -eq 0 ] && for c in $CELLS; do echo "$c bat"; echo "$c test"; done; } | xargs -P2 -L1 bash -c 'one $0 $1'
+date -u +%T > $MARK
