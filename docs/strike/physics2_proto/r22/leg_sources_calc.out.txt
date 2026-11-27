@@ -1,0 +1,93 @@
+## 1. N·m/kg x 75 kg
+run 4.1 m/s ankle PF (sprinters): 4.17 N·m/kg -> 312.8 N·m
+run 4.1 m/s knee ext: 3.35 N·m/kg -> 251.3 N·m
+run 4.1 m/s hip ext: 1.85 N·m/kg -> 138.8 N·m
+sprint 9.3 m/s ankle PF: 4.69 N·m/kg -> 351.8 N·m
+sprint knee ext: 3.59 N·m/kg -> 269.3 N·m
+sprint hip ext: 3.44 N·m/kg -> 258.0 N·m
+sprint hip flex: 3.36 N·m/kg -> 252.0 N·m
+run 3.5 m/s ankle PF (10 Hz filter): 2.23 N·m/kg -> 167.3 N·m
+run 3.5 m/s knee ext (10 Hz): 3.18 N·m/kg -> 238.5 N·m
+run 4.5 m/s ankle PF (10 Hz): 2.34 N·m/kg -> 175.5 N·m
+run 4.5 m/s knee ext (10 Hz): 3.41 N·m/kg -> 255.8 N·m
+run 4.0 m/s knee ext 1st peak (sim): 2.402 N·m/kg -> 180.2 N·m
+run 5.0 m/s knee ext 1st peak (sim): 2.43 N·m/kg -> 182.3 N·m
+fencing lunge lead hip (phase II): 3.63 N·m/kg -> 272.3 N·m
+fencing lunge lead knee: 1.71 N·m/kg -> 128.3 N·m
+fencing lunge lead ankle: 1.28 N·m/kg -> 96.0 N·m
+fencing step rear hip (phase I): 2.27 N·m/kg -> 170.3 N·m
+fencing step rear knee: 1.9 N·m/kg -> 142.5 N·m
+fencing step rear ankle: 1.01 N·m/kg -> 75.8 N·m
+cut 45 deg knee ext: 3.53 N·m/kg -> 264.8 N·m
+cut 45 deg hip ext: 3.7 N·m/kg -> 277.5 N·m
+cut 45 deg knee abd: 1.01 N·m/kg -> 75.8 N·m
+cut 45 deg hip abd: 2.07 N·m/kg -> 155.3 N·m
+cut handball knee abd 10-10 Hz: 1.27 N·m/kg -> 95.3 N·m
+cut handball knee abd 10-50 Hz: 1.64 N·m/kg -> 123.0 N·m
+cut handball hip flex 10-10 Hz: 3.64 N·m/kg -> 273.0 N·m
+cut handball hip flex 10-50 Hz: 5.92 N·m/kg -> 444.0 N·m
+drop 44 cm stiff knee flex mom: 2.23 N·m/kg -> 167.3 N·m
+drop 44 cm stiff ankle: 1.16 N·m/kg -> 87.0 N·m
+sprinter group own mass 73.3 kg: ankle run 305.7 · sprint 343.8 · knee run 245.6 · sprint 263.1 N·m
+
+## 2. in-task (75 kg) / dynamometer
+run 4.1 ankle: 312.8 N·m = 1.98 – 2.63 x isometric (158.1–119 N·m)
+sprint ankle: 351.8 N·m = 2.22 – 2.96 x isometric (158.1–119 N·m)
+run 3.5 ankle (10 Hz): 167.3 N·m = 1.06 – 1.41 x isometric (158.1–119 N·m)
+run 4.1 knee: 251.3 N·m = 0.95 – 1.24 x isometric (265–203 N·m)
+sprint knee: 269.3 N·m = 1.02 – 1.33 x isometric (265–203 N·m)
+cut knee: 264.8 N·m = 1.00 – 1.30 x isometric (265–203 N·m)
+sprint hip ext: 258.0 N·m = 1.28 – 1.28 x isometric (201–201 N·m)
+cut hip ext: 277.5 N·m = 1.38 – 1.38 x isometric (201–201 N·m)
+lunge lead hip: 272.3 N·m = 1.35 – 1.35 x isometric (201–201 N·m)
+leg press ankle / isolated plantarflexion (same 18 men): 1.26
+leg press knee 289.5 N·m vs knee-ext isometric refs: 1.09 – 1.43
+
+## 3. contraction-type ratios
+GLMM log-link (18 men, 60 deg/s): ecc/con 1.16 · iso/con 1.29 · iso/ecc 1.12
+120 deg/s knee ext: ecc/con 1.46
+120 deg/s knee flex: ecc/con 1.32
+120 deg/s hip ext: ecc/con 1.32
+120 deg/s hip flex: ecc/con 1.30
+knee ext concentric share of isometric (27 men): 0 deg/s 100 % · 60 deg/s 75 % · 120 deg/s 64 % · 180 deg/s 55 % · 240 deg/s 48 % · 300 deg/s 42 %
+Harbo <30 y knee ext 90 deg/s / isometric: 81 %
+Anderson hip ext: 75 % at 91 deg/s · 50 % at 183 deg/s
+Anderson knee ext: 75 % at 87 deg/s · 50 % at 226 deg/s
+Anderson plantar: 75 % at 57 deg/s · 50 % at 204 deg/s
+
+## 4. ground force
+two-leg hop men 2.21 Hz: 3.46 BW total · 1.73 BW per leg (contact 273 ms)
+fastest hop men 4.13 Hz: 2.66 BW total (contact 187 ms)
+impulse check 2.21 Hz: mean force over contact 1.66 BW · half-sine peak 2.60 BW
+impact rise 200 N -> 90 % peak, 60 kg: barefoot heel 2.9 ms · shod heel 17.6 ms
+impact rise 200 N -> 90 % peak, 70 kg: barefoot heel 3.0 ms · shod heel 18.3 ms
+impact rise 200 N -> 90 % peak, 80 kg: barefoot heel 3.1 ms · shod heel 18.8 ms
+effective mass 75 kg: heel 6.8 % -> 5.1 kg · forefoot 1.7 % -> 1.3 kg
+two-leg drop 30 cm, per foot (Niu 2014): low-rate 2.86 · mid 3.05 · >1200 Hz 4.28 BW
+two-leg drop 60 cm, per foot (Niu 2014): low-rate 3.86 · mid 4.17 · >1200 Hz 5.98 BW
+two-leg drop 22/44 cm (8 Hz filtered GRF): soft 1.30/1.76 · natural 1.85/2.35 · stiff 2.28/2.71 BW
+fencing step-lunge lead leg 0.97 (step) · 1.82 (lunge) BW · rear leg 1.36 BW
+handball cut resultant GRF at peak knee abd: 3.15 – 3.34 BW
+added-mass hop study: leg stiffness 20 kN/m on 65 kg -> 31.4 BW per m
+lone 8 ms pulse of height 1, zero-lag Butterworth: retained peak fraction
+  fc 8 Hz: 0.14
+  fc 10 Hz: 0.18
+  fc 15 Hz: 0.26
+  fc 18 Hz: 0.31
+  fc 20 Hz: 0.34
+  fc 25 Hz: 0.42
+  fc 50 Hz: 0.74
+  fc 100 Hz: 1.04
+  25 ms moving average: 0.32
+half-sine hop (3.46 BW, 273 ms) peak after filter:
+  fc 8 Hz: 3.46 BW
+  fc 10 Hz: 3.46 BW
+  fc 20 Hz: 3.46 BW
+  fc 50 Hz: 3.46 BW
+
+## 5. stiffness
+running k_leg (Patoz 2022, 115 runners) 9/11/13 km/h = 2.50/3.06/3.61 m/s
+
+## 6. one-leg leg press (18 men, seated) in body weights
+  75 kg: 30 deg 4.58 · 40 deg 4.40 · 50 deg 3.73 · 60 deg 3.04 · 70 deg 2.38 · 80 deg 1.88 · 90 deg 1.57 · 100 deg 1.38
+  80 kg: 30 deg 4.29 · 40 deg 4.13 · 50 deg 3.50 · 60 deg 2.85 · 70 deg 2.23 · 80 deg 1.76 · 90 deg 1.47 · 100 deg 1.29

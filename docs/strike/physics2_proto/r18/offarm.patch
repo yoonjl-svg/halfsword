@@ -1,0 +1,147 @@
+diff --git a/src/fighter.js b/src/fighter.js
+index f0492c13..d6cfc5bd 100644
+--- a/src/fighter.js
++++ b/src/fighter.js
+@@ -558,11 +558,11 @@ function offYieldWant(g, P, side, c, out) {
+ 
+ const _gcA = new THREE.Vector3(), _gcB = new THREE.Vector3(), _gcQ = new THREE.Quaternion(), _gcX = new THREE.Vector3();
+ /**
+- * 빈손 비킴 (11/12 둘째 SKILL.armClear.grip — docs/strike/arm_clear2_2026-11-12.md §2): 두손 칼 두 팔이 겉 틈 gap 안으로 닿은 동안(지금 몸) 빈손 목표(칼자루 끝 gripAim)를
+- *  칼 아래팔(지금 몸 — 팔꿈치 → 손목 선분)에서 c m 밖으로 민다. 빠르게 긋는 동안 칼이 아래팔 줄에 눕으면(아래팔-칼 5 ~ 15°) 칼자루 끝이 칼 아래팔 위에 와
++ * 빈손 비킴 (11/12 둘째 SKILL.armClear.grip — docs/strike/arm_clear2_2026-11-12.md §2): 두손 칼 두 팔이 붙은 동안(지금 몸) 빈손 목표(칼자루 끝 gripAim)를
++ *  칼 아래팔(지금 몸 — 팔꿈치 → 손목 선분)에서 멀어지는 쪽으로 d m 민다 — 그 선분에서 c m 밖까지만 (d = 두 팔 겉 틈이 near 에서 모자란 몫 · c = grip — offHand). 빠르게 긋는 동안 칼이 아래팔 줄에 눕으면(아래팔-칼 5 ~ 15°) 칼자루 끝이 칼 아래팔 위에 와
+  *  빈 아래팔이 칼 아래팔을 뚫는다 — 빈손이 칼자루 끝을 아래팔 밖으로 밀어(쥠 용수철) 손목이 사람 쥠 꼴로 돌아옴. 아래팔 선분에 붙은 점이면 아래로
+  */
+-function gripClear(f, P, c) {
++function gripClear(f, P, c, d) {
+   const fa = f.bodies.farmS;
+   const t = fa.translation();
+   const ax = _gcX.set(1, 0, 0).applyQuaternion(rot(fa, _gcQ));
+@@ -577,7 +577,7 @@ function gripClear(f, P, c) {
+   if (dist >= c) return;
+   if (dist < 1e-6) n.set(0, -1, 0);
+   else n.multiplyScalar(1 / dist);
+-  P.addScaledVector(n, c - dist);
++  P.addScaledVector(n, Math.min(d, c - dist));
+ }
+ 
+ /** 몸 하나의 스텝 전 상태 { p, q, com, v, w } 를 o 에 담는다 (cacheState · 휘는 마디 무기 flexWeapon.cache — 객체는 처음 한 번만 만든다) */
+@@ -4176,8 +4176,11 @@ export class Fighter {
+     }
+     if (nOn) (this._notoAim ??= new THREE.Vector3()).copy(gripAim);
+     else if (this._notoAim) this._notoAim = null;
+-    // 두 팔 엇갈림 막기 — 빈손 비킴 (SKILL.armClear.grip — gripClear 머리말): 두 팔이 붙은 동안(① 켜짐) 지금 몸 겉 틈이 gap 안이면
+-    if (this._clrOn && !this.armsPlaced() && SKILL.armClear.grip > 0 && this.armClrGap < SKILL.armClear.gap) gripClear(this, gripAim, SKILL.armClear.grip);
++    // 두 팔 엇갈림 막기 — 빈손 비킴 (SKILL.armClear.grip — gripClear 머리말): 두 팔이 붙은 동안(① 켜짐) 지금 몸 겉 틈이 near(① 이 서는 틈)에서 모자란 만큼 민다 —
++    //  목표를 x 밀면 빈 손목이 x 가고 틈은 많아야 x 열리므로(기하) 모자란 몫 그대로. 틈 gap 하나로 켜고 끄며 grip 까지 다 밀면 민 몫(7 ~ 10 cm)이 한 스텝에 틈을 1 cm 남짓 열어
++    //  꺼지고 다음 스텝에 다시 닫혀, 틈이 gap 에 걸터앉아 빈손 목표가 스텝마다 두 자리를 오갔다 (빈 위팔 명령 8° 넘는 뜀의 437 / 445 — 기록 physics2_notes/r9b_arm.md)
++    const clrD = SKILL.armClear.near - this.armClrGap;
++    if (this._clrOn && !this.armsPlaced() && SKILL.armClear.grip > 0 && clrD > 0) gripClear(this, gripAim, SKILL.armClear.grip, clrD);
+     if (rgK < 1) {
+       // 다시 쥐기 (위 rgK): 칼집 손 자리(한 손 발도 동안 빈손 목표와 같은 점) → 칼자루 끝
+       //  11/14 ③ (SECRET.iaiSayaModoshi — startRegrip iaiRegripVia): 원전 鞘戻し — 칼집 입을 배꼽 앞(SECRET.iaiSayaMouth · 골반 틀)으로 돌려 놓고 칼자루로:
+@@ -4191,12 +4194,12 @@ export class Fighter {
+         // 앞 반(왼 허리 → 鞘戻し 점 — 칼집을 쥔 손이 칼집 입을 배꼽 앞으로 돌려 놓는 몫)은 빈팔을 그 길에 놓음(두 손 발도 빈팔 · 鞘引き 와 같은 놓기 — 근육 뒤처짐으로 점을 질러가지 않게) ·
+         //  뒤 반(→ 칼자루)은 근육 그대로(쥐는 끈 힘이 같은 몫으로 들어옴)
+         if (u <= 0.5 && this.limbs.armO > 0.3 && (this.state === 'stand' || this.state === 'kneel' || this.state === 'getup')) {
+-          this.offArmIK(gripAim);
++          this.offArmIK(gripAim, 2);
+           placeOffArm(this);
+         }
+       } else gripAim.lerpVectors(regripFrom(this, _gr), gripAim, rgK);
+     } else this.iaiRegripVia = false;
+-    this.offArmIK(this.armsPlaced() ? pommel : gripAim); // 대본이 놓은 칼(풍차 베기 감기 — armsPlaced)은 놓인 칼자루 끝으로 (놓은 빈팔과 같은 풀이 — 겨눔 쪽 gripAim 으로 풀면 놓인 팔과 어긋난 근육 힘이 가슴에 남음 · 10/29 20:0x)
++    this.offArmIK(this.armsPlaced() ? pommel : gripAim, 2); // 대본이 놓은 칼(풍차 베기 감기 — armsPlaced)은 놓인 칼자루 끝으로 (놓은 빈팔과 같은 풀이 — 겨눔 쪽 gripAim 으로 풀면 놓인 팔과 어긋난 근육 힘이 가슴에 남음 · 10/29 20:0x)
+     // 빈손 위치 (아래팔 끝)
+     const fo = this.bodies.farmO;
+     rot(fo, _q2);
+@@ -4220,7 +4223,7 @@ export class Fighter {
+   }
+ 
+   /** 빈팔 역운동학 (팔이 아래로 늘어진 몸체 기준: 뼈 방향 −y, 팔꿈치는 앞(+x)으로 접힌다) */
+-  offArmIK(target) {
++  offArmIK(target, path = 0) {
+     const J = this.jointByName;
+     const chest = this.bodies.chest;
+     rot(chest, _q1);
+@@ -4233,9 +4236,7 @@ export class Fighter {
+     const d = THREE.MathUtils.clamp(D.length(), 0.08, a + b - 0.005);
+     const Dn = D.normalize();
+     const pole = _ik3.set(-0.25, -1, -this.side * 0.5).normalize(); // 팔꿈치는 아래·뒤·바깥
+-    const pDir = pole.addScaledVector(Dn, -pole.dot(Dn));
+-    if (pDir.lengthSq() < 1e-6) pDir.set(0, -1, 0);
+-    pDir.normalize();
++    const pDir = offElbowDir(this, pole.addScaledVector(Dn, -pole.dot(Dn)), Dn, _q2, path);
+     const alpha = Math.acos(THREE.MathUtils.clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1));
+     const u = _ik4.copy(Dn).multiplyScalar(Math.cos(alpha)).addScaledVector(pDir, Math.sin(alpha));
+     const flex = Math.PI - Math.acos(THREE.MathUtils.clamp((a * a + b * b - d * d) / (2 * a * b), -1, 1));
+@@ -4276,7 +4277,7 @@ export class Fighter {
+     const chest = this.bodies.chest;
+     const c = chest.translation();
+     P.applyQuaternion(rot(chest, _oaQ)).add(_oaC.set(c.x, c.y, c.z));
+-    this.offArmIK(P);
++    this.offArmIK(P, 1);
+     if (armO < 1) {
+       J.uarmO.target.slerp(_oaI, 1 - armO);
+       J.farmO.target.slerp(_oaI, 1 - armO);
+@@ -4970,6 +4971,60 @@ const _gk = new THREE.Vector3(); // 발도 대기 칼집 입 (offHand — 11/14)
+ const _gk2 = new THREE.Vector3();
+ const _gk3 = new THREE.Vector3();
+ const _gkN = new THREE.Vector3(); // 납도 앞 몫 칼집 입 쥠 자리 (offHand)
++const _oeQ = new THREE.Quaternion(), _oeX = new THREE.Vector3(), _oeP = new THREE.Vector3();
++/** 단위 a 를 축 n(단위 · a 에 곧음) 둘레로 돌려 b(축에 곧은 몫) 쪽으로 가는 각 (부호 있음 · −π ~ π) */
++const turnTo = (a, b, n) => Math.atan2(_oeX.crossVectors(a, b).dot(n), a.dot(b));
++/** 단위 a(축에 곧음)를 축 n 둘레로 th 돌림 */
++const turnBy = (a, n, th) => {
++  const x = _oeX.crossVectors(n, a);
++  return a.multiplyScalar(Math.cos(th)).addScaledVector(x, Math.sin(th)).normalize();
++};
++/**
++ * 빈 팔꿈치 쪽 (offArmIK — 11/27): 어깨 → 손 축 둘레 팔꿈치 방향을 스텝마다 이어서 돌린다 (가슴 틀 · 단위 · 축에 곧음).
++ *  pole 의 축에 곧은 몫 pr(길이 m = |pDir|)이 팔꿈치 면을 정한다. 손 목표가 어깨에서 본 pole 쪽과 거의 나란하면 m → 0 이라 면이 안 정해져
++ *  처음부터 다시 세면 팔꿈치가 손은 그대로인 채 축 둘레로 반 바퀴 돌았다 (빈 팔 명령 130 ~ 179° 뜀 20 / 20 — 기록 physics2_notes/r17_offhand.md §4-2).
++ *  그래서 지난 스텝 팔꿈치 방향 e 를 (1) 새 축에 곧게 옮기고(가장 작은 돌림) (2) pole 쪽이 이 스텝 축 둘레로 돈 각 Δψ 를 다 따라 돌리고
++ *  (3) pole 쪽까지 남은 각의 k 몫(k = 칼 팔꿈치 돌림과 같은 따라감 1 − e^(−dt/JOINTS.swivelTau))만큼 더 돌린다 — (2) + (3) 은 한 스텝 k·π 아래.
++ *  다만 |Δψ| 가 k·π(따라감이 한 스텝에 돌 수 있는 가장 큰 각)를 넘는 스텝은 pole 이 면을 못 정한 것(축 가까이 목표 1 ~ 2 mm 에 pole 쪽이 반 바퀴)이라
++ *  (2) · (3) 을 다 건너뛰고 e 를 그대로 둔다. 보통 움직임(Δψ 가 한 스텝 k·π 아래)에서는 e 가 pole 쪽과 같아 옛 셈(스텝마다 pole 쪽)과 같은 명령 —
++ *  빠른 겨눔 바꿈에 뒤처짐 없음 · 선 자세 그대로 (11/27 읽기 지적: Δψ 를 m 몫만 따르면 m 0.5 에서 90° 바꿈 끝에 27° 뒤처지고,
++ *  min(1, m / 0.488) 몫이면 마무리 찌르기 상처가 40 → 17 / 80 으로 줆 · k 를 m 무게 없이 두면 축 위 잡음에 스텝마다 3.7° 씩 헤맴).
++ *  각으로 돌리므로 반대쪽(180°)에서도 길이 0 을 안 지나고(섞기 아님), (3) 이 늘 있어 목표가 보통 자리로 돌아오면 pole 쪽(사람 팔꿈치 쪽)으로 이어서 돌아감.
++ *  처음 · 무기가 바뀔 때 · 빈팔 길이 바뀌거나(path: 1 유파 빈팔 · 2 두손 쥠 · 0 그 밖) 한 스텝이라도 안 불렸으면 몸의 지금 위팔에서 시작 (첫 스텝이 안 뜀)
++ */
++function offElbowDir(f, pr, Dn, qInv, path) {
++  const e = (f._offElb ||= new THREE.Vector3());
++  const pp = (f._offPr ||= new THREE.Vector3()); // 지난 스텝 pole 쪽 (단위)
++  const tick = f._armTick ?? 0;
++  const m = pr.length();
++  const fresh = !(f._offElbT >= tick - 1) || f._offElbP !== path || f._offElbW !== f.weaponCfg;
++  if (fresh) {
++    const ub = f.bodies.uarmO;
++    if (ub) e.set(0, -1, 0).applyQuaternion(rot(ub, _oeQ).premultiply(qInv)); // 지금 위팔 방향 (가슴 틀 — 뼈 −y · placeOffArm 과 같은 틀)
++    else e.copy(pr);
++  }
++  f._offElbT = tick;
++  f._offElbP = path;
++  f._offElbW = f.weaponCfg;
++  const P = m > 1e-9 ? _oeP.copy(pr).multiplyScalar(1 / m) : null;
++  if (fresh || !P) pp.copy(P ?? e);
++  e.addScaledVector(Dn, -e.dot(Dn));
++  if (e.lengthSq() < 1e-12) e.copy(P ?? _oeX.set(0, -1, 0).addScaledVector(Dn, -Dn.y));
++  e.normalize();
++  if (P) {
++    pp.addScaledVector(Dn, -pp.dot(Dn));
++    const dpsi = pp.lengthSq() > 1e-12 ? turnTo(pp.normalize(), P, Dn) : 0;
++    const tau = JOINTS.swivelTau;
++    const k = tau > 0 ? 1 - Math.exp(-(f.lastDt || 1 / 120) / tau) : 1, L = k * Math.PI;
++    if (Math.abs(dpsi) <= L) {
++      turnBy(e, Dn, dpsi);
++      turnBy(e, Dn, Math.min(L - dpsi, Math.max(-L - dpsi, k * turnTo(e, P, Dn))));
++    }
++    pp.copy(P);
++  }
++  return pr.copy(e);
++}
++
+ /** 빈팔을 지금 근육 목표(uarmO · farmO target — offArmIK 가 막 둔 자세) 자리에 놓음 (11/14 鞘戻し 앞 반 — secret_instant.js placeIai 의 두 손 발도 빈팔 놓기와 같은 셈 · 빠르기 = 가슴) */
+ function placeOffArm(f) {
+   const J = f.jointByName;
