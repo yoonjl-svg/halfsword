@@ -1,0 +1,44 @@
+diff --git a/src/gait.js b/src/gait.js
+index 5e90790f..91faa916 100644
+--- a/src/gait.js
++++ b/src/gait.js
+@@ -1298,10 +1298,15 @@ export class Gait {
+       //  기다림은 벗어남이 줄어드는 동안만 · GAIT.liftWait 까지(지나면 그냥 뗀다). 받아 딛기(급함) · 걷는 중의 번갈아 딛기는 묻지 않는다. 잰 값: 넘어짐으로 이어진 부탁 걸음 6 가운데 5 가 무게 실린 발을 뗀 뒤 옆으로 2 m/s (r5_e1 노트 §1)
+       let ready = true;
+       const going = kind === 'walk' && stepping; // 걷는 중의 번갈아 딛기: 기다리지 않는다(가는 몸을 세워 두면 몸만 달아난다) — 준비 걸음만 묻는다. 뛰기 · 빠른 걸음 · 박차기는 묻지 않음
+-      //  (합친 판 · r5_merge §4) 앞으로 내딛는 런지 부탁은 묻지 않는다 — 위의 발 고르기(lungeFit · 모아 딛기 gather — E2)가 이미 '이 자세로 받을 수 있는가'를 셈했다. 두 번 물으면 받을 수 있다고 본 런지를 기다리게 하거나 준비 걸음으로 바꾼다
+-      if (next && !urgent && ((kind === 'req' && !(this.req.kind === 'lunge' && this.req.fwd > 0)) || kind === 'walk') && !(going && (this.fly || this.burst || this.fastK > 1)) && L.F.stance && L.B.stance && f.com) {
++      //  (합친 판 · r5_merge §4 — 10 번째 판에서 바꿈) 앞으로 내딛는 런지는 벗어남 전체로는 묻지 않는다 — 위의 발 고르기(lungeFit · 모아 딛기 gather — E2)가 이미 줄을 따라 지나치는가를 셈했다. 두 번 물으면 받을 수 있다고 본 런지를 기다리게 하거나 준비 걸음으로 바꾼다
++      //  (10 번째 판 · 넘어짐 흔적 r10_falls) 앞으로 내딛는 런지도 묻되 옆으로 벗어난 몫만 본다 — 발 고르기(lungeFit · 모아 딛기)는 '뒷발 → 디딜 자리' 줄을 따라 지나치는가만 셈했다.
++      //   흔적: 상처 없는 넘어짐의 '디딘 뒤에도 캡처 점이 받침 밖' 8 가운데 4 가 앞발 런지 — 캡처 점이 남을 뒷발 옆(두 발이 다 무게중심 한쪽)에 있는 채 앞발을 떼어 몸이 그 옆으로 1 ~ 1.8 m/s 로 넘어감.
++      //   그 몫이 발 반 길이를 넘으면 위와 같은 길(느린 몸은 무게를 뒷발 위로 옮기며 기다림 · 가는 몸은 다른 발을 먼저 캡처 점에 딛는 준비 걸음)
++      const lungeF = kind === 'req' && this.req.kind === 'lunge' && this.req.fwd > 0;
++      if (next && !urgent && (kind === 'req' || kind === 'walk') && !(going && (this.fly || this.burst || this.fastK > 1)) && L.F.stance && L.B.stance && f.com) {
+         const ok = next === 'F' ? 'B' : 'F';
+-        const miss = this.liftMiss(L[next], L[ok], kind, Tstep, want, fwd, rgt);
++        const miss0 = this.liftMiss(L[next], L[ok], kind, Tstep, want, fwd, rgt);
++        const miss = lungeF ? this.missLat : miss0;
+         if (miss > SOLE_A) {
+           if (!going && Math.hypot(f.comVel.x, f.comVel.z) < GAIT.startV && this.liftHold < GAIT.liftWait && miss <= this.missPrev + GAIT.capGuard) { // 기다림은 느린 몸(GAIT.startV 아래 — 걷기 첫 발의 무게 옮김과 같은 문턱)만: 이미 가는 몸(기술 걸음을 디딘 바로 뒤 · 밀려 가는 몸)은 세워 두면 달아난다
+             this.missPrev = Math.min(this.missPrev, miss); // (가장 작았던 값보다 발 반 너비 넘게 다시 커지면 기다려도 소용없다)
+@@ -1803,13 +1825,18 @@ export class Gait {
+    *  디딜 자리는 실제 걸음과 같은 셈(preview = begin + target — 캡처 점 지킴 · 닿는 거리 · 다리 꼬임 막기까지)으로 본다. 0 에 가까우면 디딘 뒤 설 수 있다.
+    */
+   liftMiss(l, o, kind, T, want, fwd, rgt) {
++    this.missLat = 0;
+     if (!this.capAt(o, T, want)) return 0;
+     this.preview(l, kind, T, want, fwd, rgt); // (target 이 같은 남을 발 · 같은 시간으로 캡처 점을 다시 내다봤으면 _cap 은 그 값)
+     const ex = _pv.x - o.pinC.x;
+     const ez = _pv.z - o.pinC.z;
+     const e2 = ex * ex + ez * ez;
+-    const t = e2 > 1e-6 ? clamp(((_cap.x - o.pinC.x) * ex + (_cap.z - o.pinC.z) * ez) / e2, 0, 1) : 0;
+-    return Math.hypot(_cap.x - (o.pinC.x + ex * t), _cap.z - (o.pinC.z + ez * t));
++    const t0 = e2 > 1e-6 ? ((_cap.x - o.pinC.x) * ex + (_cap.z - o.pinC.z) * ez) / e2 : 0;
++    const t = clamp(t0, 0, 1);
++    const d = Math.hypot(_cap.x - (o.pinC.x + ex * t), _cap.z - (o.pinC.z + ez * t));
++    // 옆으로 벗어난 몫 (this.missLat — 남을 발 앞쪽이면 '남을 발 → 디딜 자리' 줄에서의 수직 거리 · 디딜 자리를 지나친 몫은 뺌): 앞발 런지가 읽음
++    this.missLat = t0 > 0 ? Math.abs((_cap.x - o.pinC.x) * ez - (_cap.z - o.pinC.z) * ex) / Math.sqrt(e2) : d;
++    return d;
+   }
+ 
+   /**

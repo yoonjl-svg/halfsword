@@ -1,0 +1,28 @@
+diff --git a/src/gait.js b/src/gait.js
+index 5e90790f..91faa916 100644
+--- a/src/gait.js
++++ b/src/gait.js
+@@ -1318,6 +1323,23 @@ export class Gait {
+           }
+         }
+       }
++      // 굽은 다리로 발 떼지 않기 (물리 2.0 10 번째 판 · 넘어짐 흔적 r10_falls): 두 발로 선 채 스스로 떼는 걸음(걷는 걸음 · 기술 걸음 · 끌어붙임 · 모아 딛기 — 자세 고쳐 딛기는 빼고: 이미 무게를 남을 발로 옮긴 뒤에 떼며(settleOk), 일본 낮은 자세는 늘 이 굽힘 언저리라 막으면 두 발이 모인 채 선다)은
++      //  남을 다리의 지금 무릎 굽힘이 그 다리 혼자 몸무게를 받칠 수 있는 굽힘(legs_vmc.js kneeBendMax — 무릎 펴는 토크 한도 × 근력 몫)을 넘으면 떼지 않는다 —
++      //  두 발로 먼저 일어선 뒤(골반 높이 목표는 그대로) 뗀다. 캡처 점이 받침 밖이면(받아 딛기 · 걷는 중이라 걷는 걸음으로 받는 때도) 그대로 뗀다 — 발이 받아야 한다.
++      //  예전: 골반이 내려앉아 무릎이 80° 넘게 굽은 다리 하나를 남기고 걷는 걸음을 떼어 그 무릎이 한도의 2 ~ 4 배를 요구받고 꺾였다 — 디딘 새 발도 더 굽은 채 닿아 되풀이
++      if (next && !urgent && kind !== 'catch' && kind !== 'settle' && L.F.stance && L.B.stance && !(f.legDrive.capDist > GAIT.catchOut)) {
++        const o = L[next === 'F' ? 'B' : 'F'];
++        const J = f.legDrive.legs[o.k]; // (지난 스텝에 다리 구동이 읽은 관절 자리)
++        const len = J.ph.distanceTo(J.pa);
++        const phi = Math.PI - Math.acos(clamp((J.lenT * J.lenT + J.lenS * J.lenS - len * len) / (2 * J.lenT * J.lenS), -1, 1));
++        if (phi > f.legDrive.kneeBendMax(o.k, this.Mg)) {
++          next = null;
++          this.settles = keep0;
++          this.pairOpen = keep1;
++          this.drawPending = keep2;
++          this.pairStop = false;
++        }
++      }
+       if (ready) this.missPrev = Infinity;
+       if (next) this.liftHold = 0;
+       if (next) {
