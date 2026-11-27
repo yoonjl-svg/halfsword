@@ -1,0 +1,27 @@
+# 바탕 fb_base 위에 고침 · 아래 diff 는 fb_base 에 대한 것
+diff -ru $S/p2/r6/mx/cells/fb_base/src/config.js $S/p2/r6/mx/cells/sp_h4/src/config.js
+--- $S/p2/r6/mx/cells/fb_base/src/config.js	2026-11-26 18:43:54.614877288 +0000
++++ $S/p2/r6/mx/cells/sp_h4/src/config.js	2026-11-27 07:40:12.069254447 +0000
+@@ -273,8 +273,8 @@
+   hipTwist: 0.9, // 엉덩이 관절 비틀기 한계(라디안, 안쪽·바깥쪽). 사람은 엉덩이 약 0.7~0.8 + 발·무릎 비틀림 몫
+   maxTwist: 0.9, // 딛은 발에 대해 골반을 비틀 수 있는 최대 각도(라디안). 더 돌려면 발을 돌려 딛는다
+   turnLead: 0.35, // 몸을 돌리는 중엔 이만큼(초) 앞질러 돌아갈 방향으로 발을 딛는다 // 뒷발 발끝을 바깥으로 트는 각도(라디안)
+-  guardHeight: 0.9, // 펜싱 자세 골반 높이(m): 무릎을 살짝 굽힌다
+-  walkHeight: 0.978, // 걸을 때 골반 높이 상한(m)
++  guardHeight: 0.94, // 펜싱 자세 골반 높이(m): 무릎을 살짝 굽힌다
++  walkHeight: 1.018, // 걸을 때 골반 높이 상한(m)
+   walkHeightFast: 0.02, // 빨리(1.6 m/s) 걸을 때 이만큼 낮춘다
+   sideLow: 0.03, // 옆걸음일 때 골반을 더 낮추는 높이(m)
+   runDrop: 0.03, // 빨리(runFrom + 0.5 m/s 이상) 갈 때 골반을 더 낮추는 높이(m)
+diff -ru $S/p2/r6/mx/cells/fb_base/src/schools.js $S/p2/r6/mx/cells/sp_h4/src/schools.js
+--- $S/p2/r6/mx/cells/fb_base/src/schools.js	2026-11-26 18:22:17.000000000 +0000
++++ $S/p2/r6/mx/cells/sp_h4/src/schools.js	2026-11-27 07:40:12.077254448 +0000
+@@ -426,7 +426,7 @@
+ //   (아직 뒤로 미끄러지면 그대로 — 잠깐 놓기 · 옆 한 디딤으로 셈만 지우는 꼴 막음) · 걸음이 끝난 뒤 idle s 안에 새 걸음이 없으면(멈춤) 0 으로 —
+ //   idle = 박자 걸음 멈춤 기준 0.6 s(사장님 결정 10/17 14:5x) 그대로 · 기술 걸음 · 자세 고치기는 세지도 끊지도 않음(새 문턱 없음 — 셈 규칙은 사장님 확인 전).
+ const ITALIAN_BACK_CAP = { steps: 4, idle: ITALIAN_RHYTHM.idle };
+-const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.36, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, strideK: 0.85, backMul: 'flat', backCap: ITALIAN_BACK_CAP, even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375
++const ITALIAN_GAIT = { guardHeight: 0.935, walkHeight: 1.005, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.36, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, strideK: 0.85, backMul: 'flat', backCap: ITALIAN_BACK_CAP, even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375
+ //  ⓐ′ 중국 (조선세법): 체보 (掣步) — 앞발 내딛고 뒷발 끌어붙임 [원문 무비지 쪽155·156] · 진보 (進步) 로 들어가며 침 [원문 쪽158] — 수는 [추정]
+ //   10/10 사장님 12:5x~13:0x (docs/strike/school_gait_iberian_chinese_2026-10-10.md):
+ //   간수세 낮춤 guardLow — 바탕 자세표 '옆 지킴'(중국 이름 看守勢 · 자세 虎蹲 '웅크린 범', 무비지 쪽163 · 무도 권2 p039 「左脚右手虎蹲勢」 [원문 이름])에 있을 때 골반 +0.04 m (확인표 628)

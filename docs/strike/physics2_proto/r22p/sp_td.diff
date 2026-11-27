@@ -1,0 +1,49 @@
+# 바탕 fb_base 위에 고침 · 아래 diff 는 fb_base 에 대한 것
+diff -ru $S/p2/r6/mx/cells/fb_base/src/config.js $S/p2/r6/mx/cells/sp_td/src/config.js
+--- $S/p2/r6/mx/cells/fb_base/src/config.js	2026-11-26 18:43:54.614877288 +0000
++++ $S/p2/r6/mx/cells/sp_td/src/config.js	2026-11-27 07:40:12.269254459 +0000
+@@ -282,6 +282,7 @@
+   heightRate: 0.15, // 걷기·서기 골반 높이를 바꾸는 최고 빠르기(m/s)
+   maxDip: 0.12, // 발이 넓게 벌어져도 골반을 이 이상 낮추지 않는다(m)
+   kneeBase: 0.25, // 딛은 다리 무릎 기본 굽힘(라디안)
++  tdKnee: 0.4, // r22p sp_td: 내딛는 다리가 디딜 때 무릎 굽힘(라디안) — 이 굽힘으로 닿을 높이를 골반 목표 바닥으로(gait.js ⑥)
+   sideDip: 0.03, // 옆걸음에서 발을 디딜 때 골반을 살짝 내리는 깊이(m)
+   sideDipFrom: 0.75, // 옆으로 가는 비율(0~1)이 이보다 클 때만 (비스듬히 걸을 땐 내리지 않는다)
+   backDip: 0.015, // 뒷걸음에서 발을 디딜 때 골반을 살짝 내리는 깊이(m) (뒤로 가는 정도만큼)
+diff -ru $S/p2/r6/mx/cells/fb_base/src/gait.js $S/p2/r6/mx/cells/sp_td/src/gait.js
+--- $S/p2/r6/mx/cells/fb_base/src/gait.js	2026-11-26 18:22:17.000000000 +0000
++++ $S/p2/r6/mx/cells/sp_td/src/gait.js	2026-11-27 07:40:12.281254460 +0000
+@@ -1574,12 +1574,16 @@
+     }
+     // 내딛는 다리가 디딜 자리에 닿을 높이: 발이 닿을 때 엉덩이가 있을 곳(지금 엉덩이 + 걸러진 속도 × 남은 시간)에서 디딜 자리까지 다리(무릎 기본 굽힘)가 닿게 골반을 미리 내린다.
+     //  (안 내리면 다 편 다리가 땅 위 3 ~ 5 cm 에 뜬 채 몸이 그 위로 떨어질 때까지 기다린다 — 잰 값: 0.9 m/s 걷기에서 디딤이 정한 때보다 0.02 ~ 0.12 s 늦고 무릎 3° 로 닿음)
++    let tdF = -Infinity, tdW = 0; // r22p sp_td
+     if (swing && !swing2 && hGeo < Infinity && (swing.kind === 'walk' || swing.kind === 'catch' || swing.kind === 'req')) {
+       const rem = Math.max(0, swing.T - swing.t);
+       const hx = swing.hip.x + this.vf.x * rem - swing.p1.x;
+       const hz = swing.hip.z + this.vf.z * rem - swing.p1.z;
+       const Ls = legLen(runMix(GAIT.kneeBase, RUN.knee, rk));
+       const hy = (f.terrain ? swing.p1.y : ANKLE_H) + Math.sqrt(Math.max(0.04, Ls * Ls - hx * hx - hz * hz)) + HIP_DROP;
++      const Lt = legLen(GAIT.tdKnee), hG0 = hGeo; // r22p sp_td: 디딜 다리가 tdKnee 로 닿는 높이 (딛은 다리가 닿는 높이 안)
++      tdF = Math.min(hG0, (f.terrain ? swing.p1.y : ANKLE_H) + Math.sqrt(Math.max(0.04, Lt * Lt - hx * hx - hz * hz)) + HIP_DROP);
++      tdW = THREE.MathUtils.smoothstep(swing.t / swing.T, GAIT.reachFrom, GAIT.reachFull);
+       if (hy < hGeo) hGeo += (hy - hGeo) * THREE.MathUtils.smoothstep(swing.t / swing.T, GAIT.reachFrom, GAIT.reachFull);
+     }
+     this.hNom = hNom;
+@@ -1598,6 +1602,7 @@
+       const back = backness * clamp(speed / 0.9, 0.4, 1); // 천천히 물러날 땐 덜
+       hT -= Math.max(GAIT.sideDip * side, GAIT.backDip * back) * bump;
+     }
++    if (tdW > 0 && tdF > hT) hT += (tdF - hT) * tdW; // r22p sp_td: 디딜 무릎 바닥
+     // 딱 멈추는 2차 필터 (내려갈 땐 빨리: 다리가 닿지 않는 높이로 끌어올리지 않게)
+     const w = hT < this.h ? GAIT.hDown : GAIT.hUp;
+     this.hv += (w * w * (hT - this.h) - 2 * w * this.hv) * dt;
+@@ -1605,7 +1610,7 @@
+     //  걷는 동안은 hUpWalk 까지만: 골반 높이 목표가 걸음마다 '디딜 때 다리가 닿는 높이'로 내려갔다가 '한 발 위를 지날 때의 높이'로 되올라가면(0.89 ↔ 0.97 m) 높이 스프링(고유 진동수 1.7 Hz)이
+     //  걸음 박자(2.1 ~ 3 Hz)를 못 따라가 실제 골반은 거꾸로 움직이고 수직 힘이 걸음마다 0.3 ↔ 1.6 × 몸무게로 출렁인다(잰 값 — 발을 바꿔 딛는 0.1 s 동안 바닥 값에 붙음).
+     //  되올라가는 빠르기를 묶으면 목표가 디딜 때의 높이에 머문다 — 무릎을 굽힌 채 고른 높이로 걷는다(사람 골반 오르내림 ± 2 cm)
+-    const hUp = walkNow ? GAIT.hUpWalk : GAIT.hUpMax;
++    const hUp = walkNow && !(tdW > 0 && tdF > this.h) ? GAIT.hUpWalk : GAIT.hUpMax; // r22p sp_td: 디딜 무릎 바닥 창에선 빨리 올림
+     if (this.hv > hUp) this.hv = hUp;
+     this.h += this.hv * dt;
+     // 다리가 닿는 높이보다 높으면 내린다. 한 번에 내리지 않고 capRate(m/s)로 (디딘 발이 엉덩이 옆을 지날 때처럼 닿는 높이가

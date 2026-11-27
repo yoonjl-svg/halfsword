@@ -1,0 +1,72 @@
+# 바탕 fb_base 위에 고침 · 아래 diff 는 fb_base 에 대한 것
+diff -ru $S/p2/r6/mx/cells/fb_base/src/config.js $S/p2/r6/mx/cells/sp_h_td/src/config.js
+--- $S/p2/r6/mx/cells/fb_base/src/config.js	2026-11-26 18:43:54.614877288 +0000
++++ $S/p2/r6/mx/cells/sp_h_td/src/config.js	2026-11-27 08:03:01.701335862 +0000
+@@ -273,8 +273,8 @@
+   hipTwist: 0.9, // 엉덩이 관절 비틀기 한계(라디안, 안쪽·바깥쪽). 사람은 엉덩이 약 0.7~0.8 + 발·무릎 비틀림 몫
+   maxTwist: 0.9, // 딛은 발에 대해 골반을 비틀 수 있는 최대 각도(라디안). 더 돌려면 발을 돌려 딛는다
+   turnLead: 0.35, // 몸을 돌리는 중엔 이만큼(초) 앞질러 돌아갈 방향으로 발을 딛는다 // 뒷발 발끝을 바깥으로 트는 각도(라디안)
+-  guardHeight: 0.9, // 펜싱 자세 골반 높이(m): 무릎을 살짝 굽힌다
+-  walkHeight: 0.978, // 걸을 때 골반 높이 상한(m)
++  guardHeight: 0.94, // 펜싱 자세 골반 높이(m): 무릎을 살짝 굽힌다
++  walkHeight: 1.018, // 걸을 때 골반 높이 상한(m)
+   walkHeightFast: 0.02, // 빨리(1.6 m/s) 걸을 때 이만큼 낮춘다
+   sideLow: 0.03, // 옆걸음일 때 골반을 더 낮추는 높이(m)
+   runDrop: 0.03, // 빨리(runFrom + 0.5 m/s 이상) 갈 때 골반을 더 낮추는 높이(m)
+@@ -282,6 +282,7 @@
+   heightRate: 0.15, // 걷기·서기 골반 높이를 바꾸는 최고 빠르기(m/s)
+   maxDip: 0.12, // 발이 넓게 벌어져도 골반을 이 이상 낮추지 않는다(m)
+   kneeBase: 0.25, // 딛은 다리 무릎 기본 굽힘(라디안)
++  tdKnee: 0.4, // r22p sp_td: 내딛는 다리가 디딜 때 무릎 굽힘(라디안) — 이 굽힘으로 닿을 높이를 골반 목표 바닥으로(gait.js ⑥)
+   sideDip: 0.03, // 옆걸음에서 발을 디딜 때 골반을 살짝 내리는 깊이(m)
+   sideDipFrom: 0.75, // 옆으로 가는 비율(0~1)이 이보다 클 때만 (비스듬히 걸을 땐 내리지 않는다)
+   backDip: 0.015, // 뒷걸음에서 발을 디딜 때 골반을 살짝 내리는 깊이(m) (뒤로 가는 정도만큼)
+diff -ru $S/p2/r6/mx/cells/fb_base/src/gait.js $S/p2/r6/mx/cells/sp_h_td/src/gait.js
+--- $S/p2/r6/mx/cells/fb_base/src/gait.js	2026-11-26 18:22:17.000000000 +0000
++++ $S/p2/r6/mx/cells/sp_h_td/src/gait.js	2026-11-27 08:03:01.717335863 +0000
+@@ -1574,12 +1574,16 @@
+     }
+     // 내딛는 다리가 디딜 자리에 닿을 높이: 발이 닿을 때 엉덩이가 있을 곳(지금 엉덩이 + 걸러진 속도 × 남은 시간)에서 디딜 자리까지 다리(무릎 기본 굽힘)가 닿게 골반을 미리 내린다.
+     //  (안 내리면 다 편 다리가 땅 위 3 ~ 5 cm 에 뜬 채 몸이 그 위로 떨어질 때까지 기다린다 — 잰 값: 0.9 m/s 걷기에서 디딤이 정한 때보다 0.02 ~ 0.12 s 늦고 무릎 3° 로 닿음)
++    let tdF = -Infinity, tdW = 0; // r22p sp_td
+     if (swing && !swing2 && hGeo < Infinity && (swing.kind === 'walk' || swing.kind === 'catch' || swing.kind === 'req')) {
+       const rem = Math.max(0, swing.T - swing.t);
+       const hx = swing.hip.x + this.vf.x * rem - swing.p1.x;
+       const hz = swing.hip.z + this.vf.z * rem - swing.p1.z;
+       const Ls = legLen(runMix(GAIT.kneeBase, RUN.knee, rk));
+       const hy = (f.terrain ? swing.p1.y : ANKLE_H) + Math.sqrt(Math.max(0.04, Ls * Ls - hx * hx - hz * hz)) + HIP_DROP;
++      const Lt = legLen(GAIT.tdKnee), hG0 = hGeo; // r22p sp_td: 디딜 다리가 tdKnee 로 닿는 높이 (딛은 다리가 닿는 높이 안)
++      tdF = Math.min(hG0, (f.terrain ? swing.p1.y : ANKLE_H) + Math.sqrt(Math.max(0.04, Lt * Lt - hx * hx - hz * hz)) + HIP_DROP);
++      tdW = THREE.MathUtils.smoothstep(swing.t / swing.T, GAIT.reachFrom, GAIT.reachFull);
+       if (hy < hGeo) hGeo += (hy - hGeo) * THREE.MathUtils.smoothstep(swing.t / swing.T, GAIT.reachFrom, GAIT.reachFull);
+     }
+     this.hNom = hNom;
+@@ -1598,6 +1602,7 @@
+       const back = backness * clamp(speed / 0.9, 0.4, 1); // 천천히 물러날 땐 덜
+       hT -= Math.max(GAIT.sideDip * side, GAIT.backDip * back) * bump;
+     }
++    if (tdW > 0 && tdF > hT) hT += (tdF - hT) * tdW; // r22p sp_td: 디딜 무릎 바닥
+     // 딱 멈추는 2차 필터 (내려갈 땐 빨리: 다리가 닿지 않는 높이로 끌어올리지 않게)
+     const w = hT < this.h ? GAIT.hDown : GAIT.hUp;
+     this.hv += (w * w * (hT - this.h) - 2 * w * this.hv) * dt;
+@@ -1605,7 +1610,7 @@
+     //  걷는 동안은 hUpWalk 까지만: 골반 높이 목표가 걸음마다 '디딜 때 다리가 닿는 높이'로 내려갔다가 '한 발 위를 지날 때의 높이'로 되올라가면(0.89 ↔ 0.97 m) 높이 스프링(고유 진동수 1.7 Hz)이
+     //  걸음 박자(2.1 ~ 3 Hz)를 못 따라가 실제 골반은 거꾸로 움직이고 수직 힘이 걸음마다 0.3 ↔ 1.6 × 몸무게로 출렁인다(잰 값 — 발을 바꿔 딛는 0.1 s 동안 바닥 값에 붙음).
+     //  되올라가는 빠르기를 묶으면 목표가 디딜 때의 높이에 머문다 — 무릎을 굽힌 채 고른 높이로 걷는다(사람 골반 오르내림 ± 2 cm)
+-    const hUp = walkNow ? GAIT.hUpWalk : GAIT.hUpMax;
++    const hUp = walkNow && !(tdW > 0 && tdF > this.h) ? GAIT.hUpWalk : GAIT.hUpMax; // r22p sp_td: 디딜 무릎 바닥 창에선 빨리 올림
+     if (this.hv > hUp) this.hv = hUp;
+     this.h += this.hv * dt;
+     // 다리가 닿는 높이보다 높으면 내린다. 한 번에 내리지 않고 capRate(m/s)로 (디딘 발이 엉덩이 옆을 지날 때처럼 닿는 높이가
+diff -ru $S/p2/r6/mx/cells/fb_base/src/schools.js $S/p2/r6/mx/cells/sp_h_td/src/schools.js
+--- $S/p2/r6/mx/cells/fb_base/src/schools.js	2026-11-26 18:22:17.000000000 +0000
++++ $S/p2/r6/mx/cells/sp_h_td/src/schools.js	2026-11-27 08:03:01.685335861 +0000
+@@ -426,7 +426,7 @@
+ //   (아직 뒤로 미끄러지면 그대로 — 잠깐 놓기 · 옆 한 디딤으로 셈만 지우는 꼴 막음) · 걸음이 끝난 뒤 idle s 안에 새 걸음이 없으면(멈춤) 0 으로 —
+ //   idle = 박자 걸음 멈춤 기준 0.6 s(사장님 결정 10/17 14:5x) 그대로 · 기술 걸음 · 자세 고치기는 세지도 끊지도 않음(새 문턱 없음 — 셈 규칙은 사장님 확인 전).
+ const ITALIAN_BACK_CAP = { steps: 4, idle: ITALIAN_RHYTHM.idle };
+-const ITALIAN_GAIT = { guardHeight: 0.895, walkHeight: 0.965, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.36, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, strideK: 0.85, backMul: 'flat', backCap: ITALIAN_BACK_CAP, even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375
++const ITALIAN_GAIT = { guardHeight: 0.935, walkHeight: 1.005, guardLength: 0.58, guardWidth: 0.14, weightFront: 0.5, maxStride: 0.45, cadence0: 2.6, dsFrac: 0.18, width: 0.06, minWidth: 0.1, lift: 0.045, liftSettle: 0.03, toeUp: 0.15, sway: 0.015, footwork: 'follow', followIn: 2.8, followVmax: 0.8, trailReach: 0.36, cutStep: { kind: 'lunge', fwd: 0.45, draw: true }, passAs: { kind: 'lunge', fwdK: 0.85, draw: true }, drawT: 0.3, pair: ITALIAN_PAIR, rhythm: ITALIAN_RHYTHM, burst: false, strideK: 0.85, backMul: 'flat', backCap: ITALIAN_BACK_CAP, even: ITALIAN_EVEN }; // strideK 0.7 → 1.1(10/15 22:1x 보폭 박자 시험 — 긴 디딤 계수, 짧은 디딤은 박자 걸음 ×1.375
+ //  ⓐ′ 중국 (조선세법): 체보 (掣步) — 앞발 내딛고 뒷발 끌어붙임 [원문 무비지 쪽155·156] · 진보 (進步) 로 들어가며 침 [원문 쪽158] — 수는 [추정]
+ //   10/10 사장님 12:5x~13:0x (docs/strike/school_gait_iberian_chinese_2026-10-10.md):
+ //   간수세 낮춤 guardLow — 바탕 자세표 '옆 지킴'(중국 이름 看守勢 · 자세 虎蹲 '웅크린 범', 무비지 쪽163 · 무도 권2 p039 「左脚右手虎蹲勢」 [원문 이름])에 있을 때 골반 +0.04 m (확인표 628)
