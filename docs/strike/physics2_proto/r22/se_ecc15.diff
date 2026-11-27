@@ -1,0 +1,73 @@
+diff -ru $S/p2/r6/mx/cells/fb_base/src/legs_vmc.js $S/p2/r6/mx/cells/se_ecc15/src/legs_vmc.js
+--- $S/p2/r6/mx/cells/fb_base/src/legs_vmc.js	2026-11-26 18:22:17.000000000 +0000
++++ $S/p2/r6/mx/cells/se_ecc15/src/legs_vmc.js	2026-11-27 07:29:00.241214512 +0000
+@@ -33,6 +33,24 @@
+ const FOOT_HY = 0.035; // 반 높이 (발 몸체 중심 → 발바닥)
+ const clamp = THREE.MathUtils.clamp;
+ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
++// r22 칸: 방향 따라 한도 (모드 k · k 0.5)
++const ECC = { mode: 'k', k: 0.5 };
++const SRC = { kneeExt: [1.52, 3.95, 0.10], kneeFlex: [2.01, 5.23, 0.30], hipExt: [1.58, 3.19, 0.24], hipFlex: [2.10, 4.27, 0.22], plantar: [0.99, 3.56, 0.30], dorsi: [0.70, 1.94, 0.83], other: [1.48, 3.69, 0.2] }; // [C4, C5, C6] · other = 표에 없는 축(엉덩이 벌림 · 돌림 · 발목 안팎 · 비틀기): C6 0.2 · C4 C5 는 여섯 값 평균
++const _rw = new THREE.Vector3(), _rq = new THREE.Quaternion();
++let _ON = false;
++function relW(p, c, q, out) { const a = p.angvel(), b = c.angvel(); out.set(a.x - b.x, a.y - b.y, a.z - b.z); if (q) out.applyQuaternion(_rq.copy(q).invert()); return out; }
++function eccS(v, key) {
++  if (ECC.mode === 'k') return v < 0 ? 1 + ECC.k * Math.min(1, -v) : 1;
++  const [c4, c5, c6] = SRC[key] ?? SRC.other;
++  if (v < 0) return 1 + c6 * Math.min(1, -v);
++  return v <= c4 ? 1 - (0.25 * v) / c4 : Math.max(0.25, 0.75 - (0.25 * (v - c4)) / (c5 - c4));
++}
++function clE(t, w, lo, hi, kNeg, kPos, st) {
++  const v = t >= 0 ? w : -w, s = eccS(v, t >= 0 ? kPos : kNeg);
++  const W = globalThis.__eccWin;
++  if (W && _ON) { const R = (globalThis.__ecc ??= {}), o = ((R[W] ??= {})[st] ??= { n: 0, ecc: 0, sumS: 0 }); o.n++; if (v < 0) o.ecc++; o.sumS += s; }
++  return t >= 0 ? Math.min(t, hi * s) : Math.max(t, -lo * s);
++}
+ 
+ const _q = new THREE.Quaternion();
+ const _qi = new THREE.Quaternion();
+@@ -301,6 +319,7 @@
+     const f = this.f;
+     const pel = f.bodies.pelvis, th = f.bodies[L.thighN], sh = f.bodies[L.shinN], ft = f.bodies[L.footN];
+     const lim = LEGS.limit;
++    _ON = ankleOn;
+     const mT = th.mass(), mS = sh.mass(), mF = ft.mass();
+     // 관절 p 둘레: (c − p) × F + (0, ny, 0) + Σ (x_k − p) × (0, −m_k g, 0)
+     const at = (p, out, nS, nT) => {
+@@ -321,9 +340,10 @@
+       _qi.copy(L.qF).invert();
+       _b.copy(_a).applyQuaternion(_qi);
+       L.raw.ax = _b.x; L.raw.ay = _b.y; L.raw.az = _b.z;
+-      const x = clamp(_b.x, -lim.ankleInv * str, lim.ankleInv * str);
+-      const y = clamp(_b.y, -lim.ankleRot * str, lim.ankleRot * str);
+-      const z = clamp(_b.z, -lim.ankleDorsi * str, lim.anklePlantar * str);
++      relW(sh, ft, L.qF, _rw);
++      const x = clE(_b.x, _rw.x, lim.ankleInv * str, lim.ankleInv * str, 'other', 'other', 'ankleX');
++      const y = clE(_b.y, _rw.y, lim.ankleRot * str, lim.ankleRot * str, 'other', 'other', 'ankleY');
++      const z = clE(_b.z, _rw.z, lim.ankleDorsi * str, lim.anklePlantar * str, 'dorsi', 'plantar', 'ankleZ');
+       const sat = x !== _b.x || y !== _b.y || z !== _b.z;
+       _b.set(x, y, z);
+       this.note(L.stat.ankle, _b.length(), sat);
+@@ -344,7 +364,7 @@
+         if (phi < LEGS.kneeFree) s0 += LEGS.kneeFreeK * (LEGS.kneeFree - phi) * str;
+       }
+       L.raw.k = s0;
+-      const s = clamp(s0, -lim.kneeExt * str, lim.kneeFlex * str);
++      const s = clE(s0, relW(th, sh, null, _rw).dot(_b), lim.kneeExt * str, lim.kneeFlex * str, 'kneeExt', 'kneeFlex', 'knee');
+       this.note(L.stat.knee, Math.abs(s), s !== s0);
+       this.pair(th, sh, _b.x * s, _b.y * s, _b.z * s);
+     }
+@@ -354,9 +374,10 @@
+       _qi.copy(L.qT).invert();
+       _b.copy(_a).applyQuaternion(_qi);
+       L.raw.hx = _b.x; L.raw.hy = _b.y; L.raw.hz = _b.z;
+-      const x = clamp(_b.x, -lim.hipAbd * str, lim.hipAbd * str);
+-      const y = clamp(_b.y, -lim.hipRot * str, lim.hipRot * str);
+-      const z = clamp(_b.z, -lim.hipFlex * str, lim.hipFlex * str);
++      relW(pel, th, L.qT, _rw);
++      const x = clE(_b.x, _rw.x, lim.hipAbd * str, lim.hipAbd * str, 'other', 'other', 'hipX');
++      const y = clE(_b.y, _rw.y, lim.hipRot * str, lim.hipRot * str, 'other', 'other', 'hipY');
++      const z = clE(_b.z, _rw.z, lim.hipFlex * str, lim.hipFlex * str, 'hipFlex', 'hipExt', 'hipZ');
+       const sat = x !== _b.x || y !== _b.y || z !== _b.z;
+       if (sat && ankleOn) this.lostHip.add(_c.set(_b.x - x, _b.y - y, _b.z - z).applyQuaternion(L.qT)); // 딛은 다리의 엉덩이 한도에 잘린 몫 (재기만)
+       _b.set(x, y, z);
