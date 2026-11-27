@@ -1,0 +1,91 @@
+diff --git a/src/config.js b/src/config.js
+index ad3bd901..82bc45b2 100644
+--- a/src/config.js
++++ b/src/config.js
+@@ -1525,6 +1525,14 @@ export const THRUST = {
+   // 사람 탭 찌르기 몸 싣기(모든 유파 · AI 탭 찌르기도): 당김 driveChamber · 런지 걸음 driveStep · 몸이 앞발을 따라 실림 — 켬(둘 다) [사장님 11/15 · 11/16] · 수는 줄마다
+   driveChamber: 0.3, // 당김 (m — 걸음 사다리 0.3 칸 · 지금 보통 0.22 · 이탈리아 0) [사장님 11/16 · 값 11/26 권고대로]
+   driveStep: 0.45, // 런지 걸음 (m — 걸음 사다리 0.45 칸 · 지금 보통 0.3) [사장님 11/16 · 값 11/26 권고대로]
++  // 거리에 맞춘 런지 걸음 (r33 — docs/strike/physics2_notes/r33_lunge.md §4): 상대 가슴까지의 거리(fighter.foeDistance)가 이 무기의 팔만으로 닿는 거리(weapon_measured.js MEASURED 의 contact)보다
++  //  beyond 넘게 멀면 그 칸의 걸음(앞발 길이 step · 발이 떠 있는 시간 T)으로 내딛음 — 먼 칸부터 봄. 어느 칸에도 안 들면(팔과 오늘 걸음으로 닿음) 오늘 걸음 그대로.
++  //  까닭: 런지의 몸 빠르기는 뒷발로 선 몸이 앞으로 넘어지는 시간이 정함(0.3 s 로는 빨라질 틈이 없음 — 진단 §3) → 멀수록 길고 오래 뜬 걸음. 몸을 미는 밖 힘은 없음
++  //  값은 모두 사다리 칸 (거리 0.3 · 0.45 m · 걸음 0.6 · 0.9 m · 시간 0.4 · 0.6 s) [확인 전]
++  lungeFar: [
++    { beyond: 0.45, step: 0.9, T: 0.6 }, // [확인 전]
++    { beyond: 0.3, step: 0.6, T: 0.4 }, // [확인 전]
++  ],
+ };
+ 
+ // 플랑베르주 간격 줄: 'off' = 지금 줄 · 그 밖은 weapon_measured.js FLAMBERGE_ROWS 같은 이름 줄 [사장님 10/29]
+diff --git a/src/gait.js b/src/gait.js
+index 5e90790f..216e41da 100644
+--- a/src/gait.js
++++ b/src/gait.js
+@@ -440,6 +440,7 @@ export class Gait {
+     if (this.f.move.y < -0.1 && o.kind !== 'retreat' && !o.force) return false; // force: 겹치기 앞 박차기 (몸은 이미 미끄러져 나감 — 발도 따라 디뎌야 넘어지지 않음)
+     this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, Math.min(0.28, o.minT ?? 0.28), 0.7), age: 0, leg: o.leg ?? null }; // minT: 이보다 짧은 발 뜬 시간도 받음 (겹치기 앞 박차기 — 칼이 끌리는 시간에 맞춤 · 10/31 · 없으면 0.28 그대로) // leg 'left'|'right': 기술이 고른 발(R2′ 채널 B, 확인표 182) — 없으면 아래 규칙(lunge 앞발·pass 뒷발)
+     if (o.push) this.req.push = o.push;
++    if (o.fall) this.req.fall = true; // 넘어지며 나가는 런지 (r33 — 탭 찌르기의 거리에 맞춘 런지 걸음 · skill.js farLunge): 아래 발 고르기에서 모아 딛기 · 발 바꾸기를 안 함
+     if (o.accel) this.req.accel = true; // 안다레 리솔루토 런지 · 되돌아오기 (10/24 14:0x): 이 걸음 동안 · 끝난 뒤 몸이 따라잡을 때까지 가속 한도 × GAIT.burstAccel (lungeBrake — fighter.js driveBalance)
+     if (o.draw) this.req.draw = true;
+     if (o.tech) this.req.tech = o.tech; // 기술 이름 (중국 활 자세 P.bow.tech 가 읽는다 — 다른 유파는 안 읽음) // 유파 걸음(10/10): 디딘 뒤 뒷발 끌어붙임 걸음 하나 (일본 히키츠케·중국 체보)
+@@ -1162,7 +1163,9 @@ export class Gait {
+         //  다른 발로 바꾼다 — 앞발을 내딛는 걸음(lunge)은 뒷발이 지나 딛는 걸음(pass)으로, 거꾸로도 같다(디딜 자리는 target 의 req 가지가 바꾼 꼴로 정한다).
+         //  잰 값(1 m/s 로 걷다 앞발을 막 디딘 때 온 lunge 0.6 m · 0.4 s): 무게중심은 이미 뒷발 앞 0.38 m — 앞발을 떼면 거꾸로 선 진자가 0.4 s 에 2 m/s 까지 넘어가고 골반이 0.92 → 0.72 m 로 떨어진다(세 무기 0/8).
+         this.req.swap = false;
+-        if (!pick && L.F.stance && L.B.stance && (this.req.kind === 'lunge' || this.req.kind === 'pass')) {
++        //  넘어지며 나가는 런지(req.fall — r33): 뒷발을 둔 채 앞으로 넘어지며 뒷다리를 펴 밀고 앞발이 받는 걸음이라 '캡처 점이 남은 발에서 달아남'이 곧 걸음의 뜻 — 묻지 않음.
++        //   모아 딛기(뒷발을 무게중심 밑으로)는 무게를 뒷발 위로 옮겨 밀 거리를 없앰(잰 값: 장검 0.9 m 런지 4/4 판이 모아 디뎌 무게중심 − 뒷발 0.28 ~ 0.37 → 0.17 ~ 0.22 m)
++        if (!pick && !this.req.fall && L.F.stance && L.B.stance && (this.req.kind === 'lunge' || this.req.kind === 'pass')) {
+           const o1 = L[next === 'F' ? 'B' : 'F'];
+           if (this.capAt(o1, this.req.duration, want)) {
+             const s1 = Math.hypot(_cap.x - o1.pinC.x, _cap.z - o1.pinC.z);
+diff --git a/src/skill.js b/src/skill.js
+index 5f6920b0..ab2e8e35 100644
+--- a/src/skill.js
++++ b/src/skill.js
+@@ -41,6 +41,7 @@ import { montanteFlowSeq, flowGate, FLOW_GATE_MAX, bindGain, gnsBlockOf, secretC
+ import { mordTech, mordStart, mordStep, mordEnd, mordReady, mordSwinging, mordHitMul, mordKinOf, mordMode } from './mordschlag.js'; // 독일 비기 죽음의 일격 (10/22 — 사람 먼저)
+ import { risolutoTrail } from './italian_risoluto.js'; // 안다레 리솔루토 잔상 (10/23 — italian_risoluto.js 가 이 파일의 segDist 를 부르는 고리지만 둘 다 함수 안에서만 쓴다)
+ import { bwStiff, bwAtkStart, bwAtkEnd, bwAtkDrop, bwElapsed, bwDragW } from './burst_whiff.js'; // 뒤 박차기 헛침 경직 (11/19 [사장님 결정] — 굳음은 비기 경직과 같은 꼴)
++import { MEASURED } from './weapon_measured.js'; // 무기별 간격 실측 — 거리에 맞춘 런지 걸음(farLunge)의 '팔만으로 닿는 거리' (r33)
+ import { huntStacksFor } from './cn_hunt.js'; // 동방 맹호은림 (11/14): 사냥 겹이 쌓인 상대를 겨눈 격살 칼끝 빠르기 몫 × (1 + share × 겹)
+ 
+ const D2R = Math.PI / 180;
+@@ -146,6 +147,18 @@ export function thrustDrive(f) {
+   return { chamber: THRUST.driveChamber, step: THRUST.driveStep, ride: true, landed: false, passed: false };
+ }
+ 
++/**
++ * 거리에 맞춘 런지 걸음 (r33 — config THRUST.lungeFar): 상대 가슴까지의 거리가 이 무기의 팔만으로 닿는 거리(MEASURED contact — 가슴과 가슴 사이)보다 칸의 beyond 넘게 멀면 그 칸 { step, T }.
++ *  상대가 없거나 · 표에 없는 무기거나 · 걷는 중이면(걷던 몸은 이미 실려 감 — 오늘 그대로) · 어느 칸에도 안 들면 null (오늘 걸음 그대로 — 가까운 찌르기는 안 바뀜). 읽기만 · 몸에 아무것도 안 씀
++ */
++export function farLunge(f) {
++  if (!f.foe || f.gait?.walking) return null;
++  const m = MEASURED[f.weapon?.id];
++  if (!m) return null;
++  const over = f.foeDistance() - m[0];
++  return THRUST.lungeFar.find((c) => over > c.beyond) ?? null;
++}
++
+ /** 이탈리아 찌르기 ④ (THRUST.itLunge): 런지가 아직 안 끝났나 — 몸이 실리는 런지 걸음(accel) 부탁이 딛기를 기다리거나(걷던 발이 아직 떠 있음 — gait.req) 그 몸 가속(gait.lungeBrake — 앞발이 나가는 동안 · 디딘 뒤 몸이 따라잡을 때까지)이 안 끝남 */
+ export function itLungeOn(f) {
+   const g = f.gait;
+@@ -316,7 +329,16 @@ export class Skill {
+       //  겹침 막기 (11/15 사장님 '런지가 이탈리아 보법이나 런지와 겹쳐서 움직임이 이상해지는지 확인 필요' — 기록 §7): 이탈리아 런지(THRUST.itLunge — 거리를 재어 그만큼 · 몸 실림)가 걷는 몸은
+       //  제 걸음 그대로(이탈리아 잰 런지를 0.45 로 바꾸지 않음). 걷던 몸은 몸 실림 없이 걸음 길이만(걷던 몸에 몸 실림 2.0 을 얹으면 한 런지보다 멀리 미끄러짐 — 동방 걷다 탭 골반 0.97 → 1.50 m)
+       const ownLunge = !!il;
+-      if (f.gait?.active && dv?.step != null && !ownLunge) f.gait.requestStep({ kind: 'lunge', fwd: dv.step, duration: 0.3, ...(f.gait.walking ? {} : { push: SECRET.stepPush }) });
++      // 거리에 맞춘 런지 걸음 (r33 — THRUST.lungeFar · farLunge): 팔과 오늘 걸음으로 못 닿는 먼 상대면 걸음을 그 칸(길이 · 뜬 시간)으로 — 뒷발을 둔 채 앞으로 넘어지며 앞발이 받는 걸음.
++      //  팔은 겨눔 끝에서 발을 기다리지 않고 뻗고(lungeOff — updateThrust 의 겨눈 채 머묾을 안 함), 런지 발이 떠 있는 동안 뻗은 칼을 몸이 싣고 감(아래 drive.ride 머묾 그대로).
++      //  몸 실림 배율(push)은 오늘 탭 런지와 같은 SECRET.stepPush · 가려는 속도는 오늘처럼 legVmax 로 잘림 — 빠르기는 넘어지는 시간이 냄. 가까우면(null) 아래 오늘 길 그대로
++      const far = f.gait?.active && (dv || il) ? farLunge(f) : null;
++      if (far) {
++        if (il) il.fwd = far.step;
++        this.tap.far = far;
++        this.tap.lungeOff = true;
++        f.gait.requestStep({ kind: 'lunge', fwd: far.step, duration: far.T, push: SECRET.stepPush, fall: true }); // fall: 발 떼기 앞에 무게를 뒷발 위로 옮기지 않음(모아 딛기 · 발 바꾸기 없음 — gait.js)
++      } else if (f.gait?.active && dv?.step != null && !ownLunge) f.gait.requestStep({ kind: 'lunge', fwd: dv.step, duration: 0.3, ...(f.gait.walking ? {} : { push: SECRET.stepPush }) });
+       else if (f.gait?.active) {
+         if (!il) f.gait.requestStep({ kind: 'lunge', fwd: THRUST.step, duration: 0.3 });
+         else if (il.fwd > 0) f.gait.requestStep({ kind: 'lunge', fwd: il.fwd, duration: 0.3, push: SECRET.stepPush }); // 이탈리아 찌르기 ③: 거리만큼 런지 · 몸이 앞발을 따라 실림 (거리 안이면 걸음 없이 팔만) · THRUST.itAccel 0 = 몸 가속 없음 (스위치)

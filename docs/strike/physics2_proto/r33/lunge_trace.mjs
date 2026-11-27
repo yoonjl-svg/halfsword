@@ -47,7 +47,8 @@ LegDrive.prototype.drive = function (...a) {
         const L = this.legs[k]; if (!L.on) { o.legs[k] = null; continue; }
         const str = this.strengthOf(k); const R = L.raw;
         o.legs[k] = { G: (L.Gx * fw.x + L.Gz * fw.z) / (Mb * g), N: L.Gy / (Mb * g), mu: L.Gy > 1 ? Math.hypot(L.Gx, L.Gz) / L.Gy : 0,
-          hip: ratio(R.hz, L.wH.z, lim.hipFlex, lim.hipFlex, str), abd: ratio(R.hx, L.wH.x, lim.hipAbd, lim.hipAbd, str), knee: ratio(R.k, L.wK, lim.kneeExt, lim.kneeFlex, str), ank: ratio(R.az, L.wA.z, lim.ankleDorsi, lim.anklePlantar, str) };
+          hip: ratio(R.hz, L.wH.z, lim.hipFlex, lim.hipFlex, str), abd: ratio(R.hx, L.wH.x, lim.hipAbd, lim.hipAbd, str), knee: ratio(R.k, L.wK, lim.kneeExt, lim.kneeFlex, str), ank: ratio(R.az, L.wA.z, lim.ankleDorsi, lim.anklePlantar, str),
+          rot: ratio(R.hy, L.wH.y, lim.hipRot, lim.hipRot, str), inv: ratio(R.ax, L.wA.x, lim.ankleInv, lim.ankleInv, str), arot: ratio(R.ay, L.wA.y, lim.ankleRot, lim.ankleRot, str) }; // (짓기 1: 엉덩 돌림 · 발목 젖힘(안팎) · 발목 돌림 더함 — clampLeg 의 일곱 자르기 모두)
       }
     }
     cur.drv = o;
@@ -68,7 +69,7 @@ for (const W of WS) for (const seed of seeds) {
       const pv = P.bodies.pelvis.linvel(); const fp = P.bodies.footF.translation(), bp = P.bodies.footB.translation();
       rows.push({ i, t: (i + 1) * DT, pelF: pv.x * fw.x + pv.z * fw.z, PF: s.Px * fw.x + s.Pz * fw.z, M: s.M, hH: s.hH, tipSp: s.tipSp, onF: s.onF, onB: s.onB, NF: normalN(P, P.bodies.footF) / (s.M * g), NB: normalN(P, P.bodies.footB) / (s.M * g),
         xF: fp.x * fw.x + fp.z * fw.z, xB: bp.x * fw.x + bp.z * fw.z, py: P.bodies.pelvis.translation().y, cx: P.com ? P.com.x * fw.x + P.com.z * fw.z : NaN, cy: P.com?.y ?? NaN,
-        req: req ? { kind: req.kind, fwd: req.fwd, push: req.push ?? 1, accel: !!req.accel } : null, swT: sw?.T ?? null, swt: sw?.t ?? null, reqWant, legV: gt?.legV?.() ?? null,
+        req: req ? { kind: req.kind, fwd: req.fwd, push: req.push ?? 1, accel: !!req.accel } : null, reqLeg: sw ? (sw === gt.legs.F ? 'F' : 'B') : null, swT: sw?.T ?? null, swt: sw?.t ?? null, reqWant, legV: gt?.legV?.() ?? null,
         lb: !!gt?.lungeBrake, st: P.state, tap: P.skill.tap ? +P.skill.tap.t.toFixed(3) : null, push: !!P.skill.thrustPush, drv: cur.drv });
       cur.drv = null;
     } });
@@ -76,18 +77,19 @@ for (const W of WS) for (const seed of seeds) {
   // 실제 수평 땅 반력 ÷ 몸무게 (운동량 ±2 스텝)
   for (let k = 0; k < rows.length; k++) { const a = rows[Math.max(0, k - 2)], b = rows[Math.min(rows.length - 1, k + 2)]; rows[k].Fact = (b.PF - a.PF) / ((b.i - a.i) * DT) / (rows[k].M * g); }
   // 앞발 = 탭 때 더 앞에 있는 발 · 뜸 = 그 발이 3 스텝 내리 떨어진 첫 스텝 · 디딤 = 그 뒤 3 스텝 내리 닿은 첫 스텝
-  const FR = rows[0].xF >= rows[0].xB ? 'F' : 'B', RE = FR === 'F' ? 'B' : 'F'; const onK = 'on' + FR;
+  // (짓기 1 고침: 앞발 = 런지 부탁 걸음으로 뜬 발 — 탭 때 발 몸체 자리로 고르면 고쳐 딛던 발이 떠 있을 때 뒤집힘(레이피어 펜싱 자세 '걸음 실제 −0.00' 의 까닭). 부탁 걸음이 없으면 예전대로)
+  const rq = rows.find((r) => r.reqLeg); const FR = rq ? rq.reqLeg : rows[0].xF >= rows[0].xB ? 'F' : 'B', RE = FR === 'F' ? 'B' : 'F'; const onK = 'on' + FR;
   let lift = null, land = null; for (let k = 1; k + 2 < rows.length && lift == null; k++) if (rows[k - 1][onK] && !rows[k][onK] && !rows[k + 1][onK] && !rows[k + 2][onK]) lift = k;
   if (lift != null) for (let k = lift + 1; k + 2 < rows.length; k++) if (rows[k][onK] && rows[k + 1][onK] && rows[k + 2][onK]) { land = k; break; }
   const x0 = rows[0]['x' + FR];
   const a = lift ?? 0, b = Math.min(rows.length - 1, (land ?? a + 48) + 12);
-  let dRaw = 0, dCap = 0, dCop = 0, nCap = 0, nAll = 0, nClip = 0; let pk = { hip: 0, knee: 0, ank: 0, abd: 0 }, pkF = { hip: 0, knee: 0, ank: 0, abd: 0 }, nSat = 0, muMax = 0, wantMax = 0, reqMax = 0, reqFwd = null;
+  let dRaw = 0, dCap = 0, dCop = 0, nCap = 0, nAll = 0, nClip = 0; let pk = { hip: 0, knee: 0, ank: 0, abd: 0, rot: 0, inv: 0, arot: 0 }, pkF = { hip: 0, knee: 0, ank: 0, abd: 0, rot: 0, inv: 0, arot: 0 }, nSat = 0, muMax = 0, wantMax = 0, reqMax = 0, reqFwd = null;
   for (let k = a; k <= b; k++) { const r = rows[k], d = r.drv; if (!d?.ok) continue; nAll++; dRaw += d.Fraw * g * DT; dCap += d.Fcap * g * DT; dCop += d.Fcop * g * DT; if (d.capHit) nCap++; if (d.clip > 1e-4) nClip++; wantMax = Math.max(wantMax, d.want); if (r.reqWant) reqMax = Math.max(reqMax, r.reqWant); if (r.req) reqFwd = r.req.fwd;
-    const LB = d.legs[RE]; if (LB) { for (const j of ['hip', 'knee', 'ank', 'abd']) pk[j] = Math.max(pk[j], LB[j]); if (Math.max(LB.hip, LB.knee, LB.ank, LB.abd) > 1) nSat++; } const LF = d.legs[FR]; if (LF) for (const j of ['hip', 'knee', 'ank', 'abd']) pkF[j] = Math.max(pkF[j], LF[j]);
+    const LB = d.legs[RE]; if (LB) { for (const j of Object.keys(pk)) pk[j] = Math.max(pk[j], LB[j]); if (Math.max(...Object.keys(pk).map((j) => LB[j])) > 1) nSat++; } const LF = d.legs[FR]; if (LF) for (const j of Object.keys(pkF)) pkF[j] = Math.max(pkF[j], LF[j]);
     if (!r[onK] && r['on' + RE]) { const Fh = Math.abs(r.Fact), Nn = r['N' + RE]; if (Nn > 0.2) muMax = Math.max(muMax, Fh / Nn); } }
   // 받기 (Q3): 앞발 디딘 뒤 0.5 s — 앞다리 관절 바람 ÷ 한도 최고 · 한도 넘는 스텝 · 앞발 미끄러짐(디딘 자리에서 앞뒤로 가장 멀어진 거리) · 앞발 수직 최고 ÷ 몸무게 · 무게중심 앞 빠르기가 0.1 m/s 밑으로 든 때
-  let rcv = null; if (land != null) { const e = Math.min(rows.length - 1, land + Math.round(0.5 / DT)); const pkR = { hip: 0, knee: 0, ank: 0, abd: 0 }; let nS = 0, nA = 0, slip = 0, Nmax = 0, tStop = null;
-    for (let k = land; k <= e; k++) { const r = rows[k], d = r.drv; slip = Math.max(slip, Math.abs(r['x' + FR] - rows[land]['x' + FR])); Nmax = Math.max(Nmax, r['N' + FR]); if (tStop == null && d?.ok && d.cvF < 0.1) tStop = +((k - land) * DT).toFixed(3); const LF = d?.legs?.[FR]; if (!LF) continue; nA++; for (const j of Object.keys(pkR)) pkR[j] = Math.max(pkR[j], LF[j]); if (Math.max(LF.hip, LF.knee, LF.ank, LF.abd) > 1) nS++; }
+  let rcv = null; if (land != null) { const e = Math.min(rows.length - 1, land + Math.round(0.5 / DT)); const pkR = { hip: 0, knee: 0, ank: 0, abd: 0, rot: 0, inv: 0, arot: 0 }; let nS = 0, nA = 0, slip = 0, Nmax = 0, tStop = null;
+    for (let k = land; k <= e; k++) { const r = rows[k], d = r.drv; slip = Math.max(slip, Math.abs(r['x' + FR] - rows[land]['x' + FR])); Nmax = Math.max(Nmax, r['N' + FR]); if (tStop == null && d?.ok && d.cvF < 0.1) tStop = +((k - land) * DT).toFixed(3); const LF = d?.legs?.[FR]; if (!LF) continue; nA++; for (const j of Object.keys(pkR)) pkR[j] = Math.max(pkR[j], LF[j]); if (Math.max(...Object.keys(pkR).map((j) => LF[j])) > 1) nS++; }
     rcv = { peak: Object.fromEntries(Object.entries(pkR).map(([k, v]) => [k, +v.toFixed(2)])), sat: nS, n: nA, slip: +slip.toFixed(3), Nmax: +Nmax.toFixed(2), tStop }; }
   const geo = (k) => { const r = rows[k]; return r ? { d: +(r.cx - r['x' + RE]).toFixed(3), h: +r.cy.toFixed(3), spread: +(r['x' + FR] - r['x' + RE]).toFixed(3) } : null; }; // 무게중심이 뒷발(발 몸체 가운데)보다 앞선 거리 · 무게중심 높이 · 두 발 앞뒤 거리
   const geoTap = geo(0), geoLift = geo(a), geoLand = land != null ? geo(land) : null;
@@ -109,7 +111,7 @@ for (const W of WS) for (const seed of seeds) {
     console.log(`  뒷다리 바람 ÷ 한도 최고 ${JSON.stringify(sum.rearPeak)} · 한도 넘는 스텝 ${sum.satSteps} / ${sum.nWin} · 앞다리 ${JSON.stringify(sum.frontPeak)} · 한 발 밀기 마찰 쓰임 최고 ${sum.muMax} (발 마찰 0.9 · 제어 μ ${LEGS.mu})`);
   }
 }
-console.log('\n씨앗 | 무기 | 골반 | 무게v | 손 | 비 | 밀기 | want최고 | Δv 바람/한도뒤/압중뒤/실제 | 한도걸림 | 뒷다리 최고 ÷한도 (엉덩/무릎/발목) | 마찰 | 걸음 부탁/실제 | 떠있음 | 넘어짐 | 받기: 앞다리 최고(엉덩/무릎/발목) 넘음 미끄러짐 멈춤s');
-for (const { sum: s } of allRuns) console.log(`${s.seed} | ${s.W} | ${s.pelPk} | ${s.cvPk} | ${s.handPk} | ${s.ratio} | ${s.pushPk} | ${s.wantMax} | ${s.dv.raw}/${s.dv.cap}/${s.dv.cop}/${s.dv.act} | ${s.capShare} | ${s.rearPeak.hip}/${s.rearPeak.knee}/${s.rearPeak.ank} | ${s.muMax} | ${s.reqFwd}/${s.stepAct} | ${s.swing} | ${s.fell ? '예' : '-'} | ${s.rcv ? `${s.rcv.peak.hip}/${s.rcv.peak.knee}/${s.rcv.peak.ank} ${s.rcv.sat}/${s.rcv.n} ${s.rcv.slip} ${s.rcv.tStop}` : '-'}`);
+console.log('\n씨앗 | 무기 | 골반 | 무게v | 손 | 비 | 밀기 | want최고 | Δv 바람/한도뒤/압중뒤/실제 | 한도걸림 | 뒷다리 최고 ÷한도 (엉덩/무릎/발목/벌림/돌림/발목안팎) | 마찰 | 걸음 부탁/실제 | 떠있음 | 넘어짐 | 받기: 앞다리 최고(엉덩/무릎/발목/벌림/돌림/발목안팎) 넘음 미끄러짐 멈춤s');
+for (const { sum: s } of allRuns) console.log(`${s.seed} | ${s.W} | ${s.pelPk} | ${s.cvPk} | ${s.handPk} | ${s.ratio} | ${s.pushPk} | ${s.wantMax} | ${s.dv.raw}/${s.dv.cap}/${s.dv.cop}/${s.dv.act} | ${s.capShare} | ${s.rearPeak.hip}/${s.rearPeak.knee}/${s.rearPeak.ank}/${s.rearPeak.abd}/${s.rearPeak.rot}/${s.rearPeak.inv} | ${s.muMax} | ${s.reqFwd}/${s.stepAct} | ${s.swing} | ${s.fell ? '예' : '-'} | ${s.rcv ? `${s.rcv.peak.hip}/${s.rcv.peak.knee}/${s.rcv.peak.ank}/${s.rcv.peak.abd}/${s.rcv.peak.rot}/${s.rcv.peak.inv} ${s.rcv.sat}/${s.rcv.n} ${s.rcv.slip} ${s.rcv.tStop}` : '-'}`);
 console.log(`GAIT.maxAccel ${GAIT.maxAccel} · burstAccel ${GAIT.burstAccel} · legVmax ${GAIT.legVmax} · LEGS.velGain ${LEGS.velGain} · mu ${LEGS.mu}`);
 if (args.json) writeFileSync(String(args.json), JSON.stringify(allRuns));

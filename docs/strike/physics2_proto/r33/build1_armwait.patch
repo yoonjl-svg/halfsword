@@ -1,0 +1,11 @@
+--- a/src/skill.js	2026-11-27 22:02:20.091018508 +0000
++++ b/src/skill.js	2026-11-27 22:04:52.077747450 +0000
+@@ -336,7 +336,7 @@
+       if (far) {
+         if (il) il.fwd = far.step;
+         this.tap.far = far;
+-        this.tap.lungeOff = true;
++        // (재기 칸: 팔이 기다림)
+         f.gait.requestStep({ kind: 'lunge', fwd: far.step, duration: far.T, push: SECRET.stepPush, fall: true }); // fall: 발 떼기 앞에 무게를 뒷발 위로 옮기지 않음(모아 딛기 · 발 바꾸기 없음 — gait.js)
+       } else if (f.gait?.active && dv?.step != null && !ownLunge) f.gait.requestStep({ kind: 'lunge', fwd: dv.step, duration: 0.3, ...(f.gait.walking ? {} : { push: SECRET.stepPush }) });
+       else if (f.gait?.active) {
