@@ -1,0 +1,532 @@
+diff --git a/src/config.js b/src/config.js
+index e2490a58..eaf71813 100644
+--- a/src/config.js
++++ b/src/config.js
+@@ -397,6 +397,9 @@ export const LEGS = {
+   // 엔진 풀이 (Fighter 가 세계에 한 번 둠): 안쪽 반복 4 · 접촉 고유 진동수 — 가벼운 발(1.1 kg) 위에 몸을 세우려면 필요(엔진 시험: 기본 30 Hz 는 한 발 서기 옆 기울기 강성 63 N·m/rad < 넘어지려는 강성 657)
+   pgsIters: 4,
+   contactHz: 120,
++  // 다리 관절 근육(fighter.js legMuscle — 자세 스프링 + 감쇠를 명시 토크로): 지난 스텝에 근육 셈이 못 본 관절 빠르기 바뀜(땅 · 관절 · 다른 근육)을 이번 스텝에도 그만큼 온다고 보는 몫.
++  //  1 = 엔진 모터처럼 감쇠가 스텝 끝 빠르기(모든 힘을 넣은 — 한 스텝 늦게 잰 값으로)를 보고 건다 (두 스텝 이어 같은 쪽으로 온 몫만). 0 · 0.5 · 0.7 · 1 가운데 같은 씨앗 가까움(r24 A0)이 가장 가까운 값
++  muscleLag: 1,
+   // 바라는 땅 반력: 수직 = M g + heightK · (높이 목표 − 골반) − heightD · 수직 속도 , loadMin ~ loadMax × 몸무게 안
+   heightK: 9000,
+   heightD: 900,
+diff --git a/src/fighter.js b/src/fighter.js
+index f0492c13..85986a32 100644
+--- a/src/fighter.js
++++ b/src/fighter.js
+@@ -856,15 +856,18 @@ export class Fighter {
+           : RAPIER.JointData.spherical(vecArg(a1), vecArg(a2));
+       const joint = world.createImpulseJoint(data, this.bodies[jd.p], this.bodies[jd.c], true);
+       const raw = joint.rawSet;
++      // 다리 관절(엉덩이 · 무릎 · 발목)은 각도 제한만 — 근육은 엔진 모터가 아니라 driveJoints → legMuscle 의 명시 토크 쌍이다.
++      //  모터를 아예 켜지 않는다 (Rapier 0.19 는 굳기 0 · 감쇠 0 모터를 '끔'이 아니라 '그 축 굳힘'으로 푼다)
++      const legJ = isLegJoint(jd.c);
+       if (jd.manual) {
+         // 엔진 모터·각도 제한 없음 (driveJoints에서 직접 회전력을 건다)
+       } else if (jd.type === 'hinge') {
+         joint.setLimits(jd.lim[0], jd.lim[1]);
+-        raw.jointConfigureMotorModel(joint.handle, HINGE_AXIS, 1); // 1 = 힘(N·m) 기준
++        if (!legJ) raw.jointConfigureMotorModel(joint.handle, HINGE_AXIS, 1); // 1 = 힘(N·m) 기준
+       } else {
+         ['x', 'y', 'z'].forEach((ax, i) => {
+           raw.jointSetLimits(joint.handle, MOTOR_AXES[i], jd.lim[ax][0], jd.lim[ax][1]);
+-          raw.jointConfigureMotorModel(joint.handle, MOTOR_AXES[i], 1);
++          if (!legJ) raw.jointConfigureMotorModel(joint.handle, MOTOR_AXES[i], 1);
+         });
+       }
+       this.joints.push({ joint, name: jd.c, parent: this.bodies[jd.p], child: this.bodies[jd.c], type: jd.type, manual: !!jd.manual, restInv: rest.clone().invert(), k: jd.k, d: jd.d, max: jd.max, target: new THREE.Quaternion() });
+@@ -3237,9 +3240,10 @@ export class Fighter {
+     const armBoost = (this.armBoost = plungeBoost(this, 'strikeArm')); // 10/13 내려찍기 동작 (finish.js) — 중력 보상(manualMuscle)은 이 배율을 빼고 그대로
+     const fcArm = fingerCutK(this, 'arm') * (this.ibBoostK ?? 1); // 손가락 긋기 팔 힘 (11/06 — 긋는 동안만 칼 팔 근육 × arm · 끔 = 1) · 11/15 사슬 칼 빠르기 시제품 (iberian_link.js linkBoost — 끔이면 1)
+     this.legDrive.drive(); // 딛은 다리로 몸을 받치고 옮기고 돌리는 관절 토크 쌍 · 내딛는 다리 이끌기 (src/legs_vmc.js)
++    legChainK(this); // 다리 근육(legMuscle)이 보는 관절마다의 이동성 — 몸통 · 두 다리를 이은 채 · 디딘 발은 땅에 묶인 채
+     for (const j of this.joints) {
+       const n = j.name;
+-      const isLeg = n.startsWith('thigh') || n.startsWith('shin') || n.startsWith('foot');
++      const isLeg = isLegJoint(n);
+       let mus = isLeg ? legsMus * (0.6 + 0.4 * this.legHealth) : Math.max(0.1, this.muscle);
+       if (n === 'uarmO' || n === 'farmO') mus *= 0.15 + 0.85 * this.limbs.armO; // 다친 팔은 힘이 없다
+       if (n === 'uarmS' || n === 'farmS') mus *= (0.3 + 0.7 * this.limbs.armS) * this.strength * fcArm;
+@@ -3256,6 +3260,11 @@ export class Fighter {
+         this.manualMuscle(j, k, d, j.max * mus);
+         continue;
+       }
++      if (isLeg) {
++        // 다리 관절 근육(자세 스프링 + 감쇠)은 엔진 모터가 아니라 명시 토크 쌍으로 (legMuscle) — 얼마를 걸었는지 안다(j.musW · j.musC)
++        this.legMusclePrep(j, k, d, maxErr, inv);
++        continue;
++      }
+       // 목표와 현재 자세를 "관절 기준 자세"에서 잰 회전으로 바꾼다
+       toRotVec(_qt2.copy(j.restInv).multiply(j.target), _rv);
+       rot(j.parent, _qp);
+@@ -3287,6 +3296,140 @@ export class Fighter {
+       }
+       prev.copy(_rv);
+     }
++    this.legMuscleSolve(); // 다리 관절 여섯의 근육을 한꺼번에 (legMusclePrep 이 센 값으로)
++  }
++
++  /**
++   * 다리 관절 근육 (엉덩이 · 무릎 · 발목 — 두 다리 · 사람 손 · AI 같은 길): 자세 스프링 + 감쇠를 엔진 모터 대신 명시 토크 쌍으로 건다.
++   *  목표 자세 t · 목표 빠르기 tv · 굳기 k · 감쇠 d · 스프링 몫 상한(목표를 지금 자세 ± maxErr 안으로)은 엔진 모터에 넘기던 값 그대로.
++   *  힘 법칙도 엔진 모터(Rapier 0.19 — 재어서 맞춤: docs/strike/physics2_proto/r24/law_probe.mjs · motor_model.mjs · chain_probe.mjs)와 같은 꼴:
++   *   축 = 부모 몸 틀의 축(경첩은 경첩 축) · 자세 차이 e_i = t_i − 2 asin(q_i) (q = 부모⁻¹ · 자식 회전, w ≥ 0) · 관절 빠르기 ω = 부모 틀에서 본 (자식 − 부모) 각속도.
++   *   엔진은 한 스텝을 n 작은 스텝(h = dt / n)으로 나눠 작은 스텝마다 τ = k e + c (tv − ω_끝) · c = d + h k 를 관절 · 접촉과 한 풀이 안에서 건다.
++   *  여기서는 legMusclePrep 이 관절마다 e · tv · ω · a 를 세어 두고, legMuscleSolve 가 다리 관절 여섯(축 14 개)을 한꺼번에 푼다 (r24 읽기 지적 1):
++   *   ω_끝 = ω + h (K τ + a) 의 K 는 축 14 × 14 — 골반 · 두 다리를 관절 묶음으로 이은 채의 이동성(legChainK · 땅 묶음 없음 → K ≥ 참값이라 늘 안정).
++   *   한 관절의 근육 토크는 이웃 관절도 돌리므로(무릎 토크가 엉덩이 · 발목 빠르기를 바꿈) 축 14 개를 한 셈으로 푼다: (I + h diag(c) K) τ = k e + c (tv − ω − h a).
++   *   a = 지난 스텝에 이 셈이 못 본 관절 빠르기 바뀜(땅이 발을 막은 몫 · 다리 구동 · 팔 몫 — 잰 바뀜 − K τ) 가운데 두 스텝 이어 같은 쪽으로 온 몫의 LEGS.muscleLag 배.
++   *   작은 스텝 n 개를 따라 세어 평균을 한 스텝 내내 건다. 감쇠 몫에는 아직 상한이 없다(엔진 모터와 같음).
++   *  건 토크는 j.musW (세계 · 부모 몸에 걸린 쪽 = LegDrive.pair 의 부호) · j.musC (같은 값을 자식 몸 틀로 — 엉덩이 = 허벅지 틀 · 발목 = 발 틀 · 무릎 = z 가 경첩 축)에 남긴다.
++   */
++  legMusclePrep(j, k, d, maxErr, inv) {
++    toRotVec(_qt2.copy(j.restInv).multiply(j.target), _rv);
++    rot(j.parent, _qp);
++    rot(j.child, _qc);
++    const qr = _lmQ.copy(_qp).invert().multiply(_qc);
++    if (qr.w < 0) qr.set(-qr.x, -qr.y, -qr.z, -qr.w);
++    toRotVec(_qt2.copy(j.restInv).multiply(qr), _cur);
++    const prev = j.prevRV || (j.prevRV = _rv.clone());
++    const hinge = j.type === 'hinge';
++    const st = (j.lmSt ||= { w: new THREE.Vector3(), a: new THREE.Vector3(), r: new THREE.Vector3(), ok: false, e0: new THREE.Vector3(), tv: new THREE.Vector3(), w0: new THREE.Vector3(), ax: new THREE.Vector3(), tau: new THREE.Vector3(), qp: new THREE.Quaternion(), k: 0, c: 0, n: 1, h: 0 });
++    // 부모 틀의 자세 차이 · 목표 빠르기
++    const e = st.e0.set(0, 0, 0);
++    const tv = st.tv.set(0, 0, 0);
++    for (const ax of hinge ? AX_Z : AX_XYZ) {
++      const t = _cur[ax] + THREE.MathUtils.clamp(_rv[ax] - _cur[ax], -maxErr, maxErr);
++      e[ax] = t - 2 * Math.asin(THREE.MathUtils.clamp(qr[ax], -1, 1));
++      tv[ax] = THREE.MathUtils.clamp((_rv[ax] - prev[ax]) * inv, -15, 15);
++    }
++    prev.copy(_rv);
++    st.qp.copy(_qp);
++    // 관절 빠르기 (세계 · 부모 틀)
++    const wc = j.child.angvel();
++    const wp = j.parent.angvel();
++    const wW = _lmY.set(wc.x - wp.x, wc.y - wp.y, wc.z - wp.z);
++    const qpi = _lmQ.copy(_qp).invert();
++    const w = st.w0.copy(wW).applyQuaternion(qpi);
++    if (hinge) w.x = w.y = 0;
++    // 지난 스텝에 이 셈이 못 본 관절 빠르기 바뀜 (세계 틀): 잰 바뀜 − 지난 근육 몫(K τ). 첫 스텝은 0
++    const a = _lmX.set(0, 0, 0);
++    if (st.ok) a.copy(wW).sub(st.w).multiplyScalar(1 / this.world.timestep).sub(st.a).applyQuaternion(qpi);
++    if (hinge) a.x = a.y = 0;
++    st.w.copy(wW);
++    // 두 스텝 이어 같은 쪽으로 온 몫만 (축마다 둘 가운데 작은 쪽) — 한 스텝짜리 충격(디딜 때 땅이 발을 멈춘 몫)을 다음 스텝에 또 온다고 보지 않게
++    const r = _lmX4.copy(a);
++    for (const ax of AX_XYZ) a[ax] = r[ax] * st.r[ax] > 0 ? Math.sign(r[ax]) * Math.min(Math.abs(r[ax]), Math.abs(st.r[ax])) : 0;
++    st.r.copy(r);
++    st.ax.copy(a).multiplyScalar(LEGS.muscleLag);
++    const n = Math.max(1, this.world.integrationParameters.numSolverIterations | 0);
++    st.k = k;
++    st.c = d + (this.world.timestep / n) * k;
++    st.n = n;
++    st.h = this.world.timestep / n;
++  }
++
++  /** 다리 관절 여섯을 한꺼번에 (legMusclePrep 뒤 · 위 설명) — 축 i 의 토크 x_i: 작은 스텝마다 (I + h diag(c) K) x = k e + c (tv − ω − h a) */
++  legMuscleSolve() {
++    const L = this.lcJoints;
++    if (!L || !L.length) return;
++    // 축 목록: 관절마다 부모 틀 축(세계로) — 경첩은 z 하나
++    let N = 0;
++    for (const j of L) {
++      const st = j.lmSt;
++      rotM3(st.qp, _lmR3);
++      j.lcAx0 = N;
++      for (let q = j.type === 'hinge' ? 2 : 0; q < 3; q++) {
++        const o = N * 3, el = _lmR3.elements; // 열 우선: q 열 = 부모 틀 q 축의 세계 꼴
++        _lsU[o] = el[q * 3];
++        _lsU[o + 1] = el[q * 3 + 1];
++        _lsU[o + 2] = el[q * 3 + 2];
++        _lsQ[N] = q;
++        _lsOwner[N] = L.indexOf(j);
++        N++;
++      }
++      j.lcAxN = N - j.lcAx0;
++    }
++    this.lcN = N;
++    lcAxisK(this, N); // _lsK (N × N, 행 우선) = 축 u_i 로 본 관절 i 쌍 토크 → 축 j 관절 상대 각가속도
++    // A = I + h diag(c) K  → LU (부분 피벗)
++    for (let i = 0; i < N; i++) {
++      const st = L[_lsOwner[i]].lmSt;
++      _lsC[i] = st.c;
++      _lsKk[i] = st.k;
++      const q = _lsQ[i];
++      _lsE[i] = st.e0.getComponent(q);
++      _lsW[i] = st.w0.getComponent(q);
++      _lsTv[i] = st.tv.getComponent(q);
++      _lsA[i] = st.ax.getComponent(q);
++      _lsSum[i] = 0;
++      for (let jj = 0; jj < N; jj++) _lsM[i * LS_MAX + jj] = (i === jj ? 1 : 0) + st.h * st.c * _lsK[i * LS_MAX + jj];
++    }
++    if (!lsLU(N)) {
++      for (const j of L) j.lmSt.tau.set(0, 0, 0);
++    } else {
++      const n = L[0].lmSt.n, h = L[0].lmSt.h;
++      for (let m = 0; m < n; m++) {
++        for (let i = 0; i < N; i++) _lsX[i] = _lsKk[i] * _lsE[i] + _lsC[i] * (_lsTv[i] - _lsW[i] - h * _lsA[i]);
++        lsSolve(N);
++        for (let i = 0; i < N; i++) _lsSum[i] += _lsX[i];
++        for (let i = 0; i < N; i++) {
++          let s = 0;
++          for (let jj = 0; jj < N; jj++) s += _lsK[i * LS_MAX + jj] * _lsX[jj];
++          _lsW[i] += h * (s + _lsA[i]);
++          _lsE[i] -= h * _lsW[i];
++        }
++      }
++      for (let i = 0; i < N; i++) _lsSum[i] /= n;
++    }
++    // 걸기 · 남기기 (관절마다)
++    for (const j of L) {
++      const st = j.lmSt;
++      st.tau.set(0, 0, 0);
++      const pr = _lmS.set(0, 0, 0); // 이 근육 셈이 내다본 관절 빠르기 바뀜 (부모 틀) — 다음 스텝 a 셈용
++      for (let i = j.lcAx0; i < j.lcAx0 + j.lcAxN; i++) {
++        const q = _lsQ[i];
++        if (Number.isFinite(_lsSum[i])) st.tau.setComponent(q, _lsSum[i]);
++        let s = 0;
++        for (let jj = 0; jj < N; jj++) s += _lsK[i * LS_MAX + jj] * (Number.isFinite(_lsSum[jj]) ? _lsSum[jj] : 0);
++        pr.setComponent(q, s);
++      }
++      st.a.copy(pr).applyQuaternion(st.qp);
++      st.ok = true;
++      const tw = _lmT2.copy(st.tau).applyQuaternion(st.qp); // 세계 · 자식에 걸리는 쪽
++      j.child.addTorque(_lmTq.set(tw.x, tw.y, tw.z), true);
++      j.parent.addTorque(_lmTq.set(-tw.x, -tw.y, -tw.z), true);
++      (j.musW ||= new THREE.Vector3()).set(-tw.x, -tw.y, -tw.z);
++      rot(j.child, _qc);
++      (j.musC ||= new THREE.Vector3()).copy(j.musW).applyQuaternion(_qc.invert());
++    }
+   }
+ 
+   /**
+@@ -5019,6 +5162,327 @@ function sayaGuard(f) {
+ const _qp = new THREE.Quaternion();
+ const _qc = new THREE.Quaternion();
+ const _qt2 = new THREE.Quaternion();
++/**
++ * 다리 관절마다 근육 짝 토크 τ(자식 +τ · 부모 −τ)가 만드는 상대 각가속도의 행렬 K (세계 틀)를 j.lcK 에 둔다 — legMuscle 이 쓴다.
++ *  두 몸만 보지 않고 아랫몸 일곱 몸(골반 · 두 다리의 허벅지 · 정강이 · 발)을
++ *  관절 묶음(관절 점 3 줄 · 경첩이면 축 밖 회전 2 줄 더)으로 이은 채 센다 (땅 묶음은 넣지 않음 — 아래):
++ *   K_i = G_i M⁻¹ G_iᵀ − Y_iᵀ S⁻¹ Y_i · Y_i = C M⁻¹ G_iᵀ · S = C M⁻¹ Cᵀ (C = 묶음 줄 · G_i = 자식 − 부모 각속도)
++ *  두 몸만 보던 첫 셈보다 저쪽 몸(골반 너머 다른 다리 · 이어진 허벅지 · 발)이 무거워져 근육이 엔진 모터 쪽으로 세진다(r24 읽기 지적 1).
++ *  골반 위 몸통(배 · 가슴 · 머리)은 넣지 않는다: 넣은 몸 · 묶음은 모두 실제에 있는 것만이라 K 는 참값보다 늘 크거나 같다(덜 묶이고 덜 무거움) → 명시 셈이 넘치지 않는다.
++ *   (몸통을 한 덩어리로 굳혀 넣어 봄: 일어서는 중 · 근력 낮은 몸에서 엉덩이 K 가 참값보다 작아져 토크가 수천 N·m 로 터짐 — 재 봄.) 다른 다리 근육의 감쇠도 넣지 않는다(지난 스텝 몫 a 가 받음).
++ */
++function legChainK(f) {
++  const B = f.bodies;
++  // 몸 0: 골반 (LC_TRUNK — 무게 · 무게중심 · 관성을 모으는 꼴로 둠)
++  let M = 0;
++  _lcC.set(0, 0, 0);
++  for (const nm of LC_TRUNK) {
++    if (f.detachedParts?.has(nm)) continue;
++    const b = B[nm];
++    const m = b.mass();
++    const c = b.worldCom();
++    M += m;
++    _lcC.x += m * c.x;
++    _lcC.y += m * c.y;
++    _lcC.z += m * c.z;
++  }
++  _lcC.multiplyScalar(1 / M);
++  const It = _lcI.set(0, 0, 0, 0, 0, 0, 0, 0, 0);
++  for (const nm of LC_TRUNK) {
++    if (f.detachedParts?.has(nm)) continue;
++    const b = B[nm];
++    const m = b.mass();
++    const c = b.worldCom();
++    const Ii = b.effectiveWorldInvInertia();
++    _lcT.set(Ii.m11, Ii.m12, Ii.m13, Ii.m12, Ii.m22, Ii.m23, Ii.m13, Ii.m23, Ii.m33).invert();
++    const rx = c.x - _lcC.x, ry = c.y - _lcC.y, rz = c.z - _lcC.z, rr = rx * rx + ry * ry + rz * rz;
++    const e = _lcT.elements, o = It.elements;
++    for (let i = 0; i < 9; i++) o[i] += e[i];
++    o[0] += m * (rr - rx * rx);
++    o[4] += m * (rr - ry * ry);
++    o[8] += m * (rr - rz * rz);
++    o[1] -= m * rx * ry;
++    o[3] -= m * rx * ry;
++    o[2] -= m * rx * rz;
++    o[6] -= m * rx * rz;
++    o[5] -= m * ry * rz;
++    o[7] -= m * ry * rz;
++  }
++  It.invert();
++  if (!finite9(It)) return lcFallback(f);
++  if (f.lcSrc !== f.joints) {
++    f.lcSrc = f.joints; // 팔다리를 잃으면(sever) 관절 목록이 새로 만들어진다
++    f.lcJoints = f.joints.filter((j) => isLegJoint(j.name));
++  }
++  const legs = f.lcJoints;
++  _lcIm[0] = 1 / M;
++  _lcCom[0] = _lcC.x;
++  _lcCom[1] = _lcC.y;
++  _lcCom[2] = _lcC.z;
++  for (let i = 0; i < 9; i++) _lcIv[i] = It.elements[i]; // 대칭이라 행 · 열 우선이 같다
++  for (let bi = 1; bi < 7; bi++) {
++    const b = B[LC_LEG[bi]];
++    const m = b.mass();
++    const c = b.worldCom();
++    const Ii = b.effectiveWorldInvInertia();
++    _lcIm[bi] = m > 0 ? 1 / m : 0;
++    _lcCom[bi * 3] = c.x;
++    _lcCom[bi * 3 + 1] = c.y;
++    _lcCom[bi * 3 + 2] = c.z;
++    const o = bi * 9;
++    _lcIv[o] = Ii.m11; _lcIv[o + 1] = Ii.m12; _lcIv[o + 2] = Ii.m13;
++    _lcIv[o + 3] = Ii.m12; _lcIv[o + 4] = Ii.m22; _lcIv[o + 5] = Ii.m23;
++    _lcIv[o + 6] = Ii.m13; _lcIv[o + 7] = Ii.m23; _lcIv[o + 8] = Ii.m33;
++  }
++  // 묶음 줄
++  let m = 0;
++  for (const j of legs) {
++    const ci = (j.lcI = LC_LEG.indexOf(j.name));
++    const pi = (j.lcP = j.name.startsWith('thigh') ? 0 : ci - 1);
++    const a = j.joint.anchor1();
++    const pt = j.parent.translation();
++    rot(j.parent, _lcQ);
++    _lcA.set(a.x, a.y, a.z).applyQuaternion(_lcQ);
++    const Ax = _lcA.x + pt.x, Ay = _lcA.y + pt.y, Az = _lcA.z + pt.z;
++    const rpx = Ax - _lcCom[pi * 3], rpy = Ay - _lcCom[pi * 3 + 1], rpz = Az - _lcCom[pi * 3 + 2];
++    const rcx = Ax - _lcCom[ci * 3], rcy = Ay - _lcCom[ci * 3 + 1], rcz = Az - _lcCom[ci * 3 + 2];
++    // 관절 점: (v_c + ω_c × r_c) − (v_p + ω_p × r_p) = 0 · e_k · (ω × r) = ω · (r × e_k)
++    lcRow(m++, ci, pi, 1, 0, 0, 0, rcz, -rcy, 0, rpz, -rpy);
++    lcRow(m++, ci, pi, 0, 1, 0, -rcz, 0, rcx, -rpz, 0, rpx);
++    lcRow(m++, ci, pi, 0, 0, 1, rcy, -rcx, 0, rpy, -rpx, 0);
++    if (j.type === 'hinge') {
++      // 축(부모 틀 z) 밖 두 회전은 묶임
++      for (const u of LC_U) {
++        _lcA.copy(u).applyQuaternion(_lcQ);
++        lcAng(m++, ci, pi, _lcA.x, _lcA.y, _lcA.z);
++      }
++    }
++  }
++  // 디딘 발을 땅에 묶지는 않는다: 접촉은 한쪽으로만 받치고(발이 모서리로 구르고 들림) 디딜 때 튄다 — 묶어서 K 를 참값보다 작게 보면 명시 셈이 넘쳐 흔들려 터진다
++  //  (재 봄 kcheck.mjs: 발바닥 점 · 돌림을 묶거나 받은 힘에 맞춰 묶으면 서기 · 걷기 첫 10 ~ 40 스텝에 발목 빠르기 수백 rad/s). 묶음을 빼면 K 는 참값보다 늘 크거나 같다
++  //  (접촉 · 다른 관절 모터는 이동성을 줄이기만 한다) → 이 셈은 늘 안정하고, 디딘 발이 땅에 막히는 몫만 못 본다(지난 스텝 몫 a 가 받음).
++  // W = M⁻¹ (각 줄의 몸마다)
++  for (let r = 0; r < m; r++) {
++    lcMinv(_lcR0, _lcW0, r, _lcB0[r]);
++    if (_lcB1[r] >= 0) lcMinv(_lcR1, _lcW1, r, _lcB1[r]);
++  }
++  // S = C M⁻¹ Cᵀ (+ 아주 작은 대각 — 두 발이 모두 묶여 고리가 될 때 줄이 거의 겹쳐도 풀리게)
++  let dmax = 0;
++  for (let a = 0; a < m; a++) {
++    for (let b = 0; b <= a; b++) {
++      let s = 0;
++      const a0 = _lcB0[a], a1 = _lcB1[a], b0 = _lcB0[b], b1 = _lcB1[b];
++      if (a0 === b0) s += dot6(_lcR0, a, _lcW0, b);
++      if (a1 >= 0 && a1 === b0) s += dot6(_lcR1, a, _lcW0, b);
++      if (b1 >= 0 && a0 === b1) s += dot6(_lcR0, a, _lcW1, b);
++      if (a1 >= 0 && a1 === b1) s += dot6(_lcR1, a, _lcW1, b);
++      _lcS[a * LC_MAXR + b] = s;
++    }
++    dmax = Math.max(dmax, _lcS[a * LC_MAXR + a]);
++  }
++  const eps = 1e-9 * dmax + 1e-12;
++  // 촐레스키 (아래 삼각 · 그 자리에서)
++  for (let a = 0; a < m; a++) {
++    for (let b = 0; b <= a; b++) {
++      let s = _lcS[a * LC_MAXR + b];
++      for (let q = 0; q < b; q++) s -= _lcS[a * LC_MAXR + q] * _lcS[b * LC_MAXR + q];
++      if (a === b) _lcS[a * LC_MAXR + a] = Math.sqrt(Math.max(s + eps, eps));
++      else _lcS[a * LC_MAXR + b] = s / _lcS[b * LC_MAXR + b];
++    }
++  }
++  f.lcM = m;
++}
++/** 셈이 안 될 때(몸통 관성이 유한하지 않음): 묶음 없이 몸마다 역관성만 (lcAxisK 가 저쪽 고침을 빼고 셈) */
++function lcFallback(f) {
++  f.lcSrc = f.joints;
++  f.lcJoints = f.joints.filter((j) => isLegJoint(j.name));
++  for (const j of f.lcJoints) {
++    j.lcI = LC_LEG.indexOf(j.name);
++    j.lcP = j.name.startsWith('thigh') ? 0 : j.lcI - 1;
++  }
++  _lcIm.fill(0);
++  _lcIv.fill(0);
++  for (let bi = 1; bi < 7; bi++) {
++    const Ii = f.bodies[LC_LEG[bi]].effectiveWorldInvInertia(), o = bi * 9;
++    _lcIv[o] = Ii.m11; _lcIv[o + 1] = Ii.m12; _lcIv[o + 2] = Ii.m13;
++    _lcIv[o + 3] = Ii.m12; _lcIv[o + 4] = Ii.m22; _lcIv[o + 5] = Ii.m23;
++    _lcIv[o + 6] = Ii.m13; _lcIv[o + 7] = Ii.m23; _lcIv[o + 8] = Ii.m33;
++  }
++  f.lcM = 0;
++}
++/**
++ * 축 N 개(_lsU · 관절 _lsOwner)로 본 이동성 _lsK (행 우선 · LS_MAX 폭): K_ij = u_iᵀ (G_a M⁻¹ G_bᵀ) u_j − Y_iᵀ S⁻¹ Y_j
++ *  (a · b = 축 i · j 의 관절 · G = 자식 − 부모 각속도 · Y_i = C M⁻¹ G_aᵀ u_i). S 의 촐레스키는 legChainK 가 이 스텝에 만든 것.
++ */
++function lcAxisK(f, N) {
++  const L = f.lcJoints, m = f.lcM;
++  for (let i = 0; i < N; i++) {
++    const j = L[_lsOwner[i]], ci = j.lcI, pi = j.lcP, o = i * 3;
++    const ux = _lsU[o], uy = _lsU[o + 1], uz = _lsU[o + 2];
++    for (let r = 0; r < m; r++) {
++      let y = 0;
++      const p = r * 6 + 3;
++      const b0 = _lcB0[r], b1 = _lcB1[r];
++      const w0 = _lcW0[p] * ux + _lcW0[p + 1] * uy + _lcW0[p + 2] * uz;
++      const w1 = b1 >= 0 ? _lcW1[p] * ux + _lcW1[p + 1] * uy + _lcW1[p + 2] * uz : 0;
++      if (b0 === ci) y += w0;
++      else if (b0 === pi) y -= w0;
++      if (b1 === ci) y += w1;
++      else if (b1 === pi) y -= w1;
++      _lcY[r * LS_MAX + i] = y;
++    }
++    // Z = S⁻¹ Y (앞 · 뒤 대입)
++    for (let r = 0; r < m; r++) {
++      let s = _lcY[r * LS_MAX + i];
++      for (let q = 0; q < r; q++) s -= _lcS[r * LC_MAXR + q] * _lcZ[q * LS_MAX + i];
++      _lcZ[r * LS_MAX + i] = s / _lcS[r * LC_MAXR + r];
++    }
++    for (let r = m - 1; r >= 0; r--) {
++      let s = _lcZ[r * LS_MAX + i];
++      for (let q = r + 1; q < m; q++) s -= _lcS[q * LC_MAXR + r] * _lcZ[q * LS_MAX + i];
++      _lcZ[r * LS_MAX + i] = s / _lcS[r * LC_MAXR + r];
++    }
++  }
++  for (let i = 0; i < N; i++) {
++    const a = L[_lsOwner[i]];
++    for (let jj = 0; jj < N; jj++) {
++      const b = L[_lsOwner[jj]];
++      // 같은 몸을 가진 관절끼리: 부호 (자식 +1 · 부모 −1) 의 곱 × u_iᵀ I⁻¹ u_j
++      const d = lcShare(a.lcI, b, i, jj) - lcShare(a.lcP, b, i, jj);
++      let s = 0;
++      for (let r = 0; r < m; r++) s += _lcY[r * LS_MAX + i] * _lcZ[r * LS_MAX + jj];
++      _lsK[i * LS_MAX + jj] = d - s;
++    }
++  }
++}
++/** 관절 b 가 몸 ba 를 가지면 (자식 +1 · 부모 −1) × u_iᵀ I⁻¹_ba u_j , 아니면 0 */
++function lcShare(ba, b, i, j) {
++  return b.lcI === ba ? lcQuad(ba, i, j) : b.lcP === ba ? -lcQuad(ba, i, j) : 0;
++}
++/** u_iᵀ I⁻¹_b u_j */
++function lcQuad(b, i, j) {
++  const I = b * 9, p = i * 3, q = j * 3;
++  const x = _lsU[q], y = _lsU[q + 1], z = _lsU[q + 2];
++  return _lsU[p] * (_lcIv[I] * x + _lcIv[I + 1] * y + _lcIv[I + 2] * z) + _lsU[p + 1] * (_lcIv[I + 3] * x + _lcIv[I + 4] * y + _lcIv[I + 5] * z) + _lsU[p + 2] * (_lcIv[I + 6] * x + _lcIv[I + 7] * y + _lcIv[I + 8] * z);
++}
++/** _lsM (N × N) 을 그 자리에서 LU (부분 피벗 _lsP). 풀 수 없으면 false */
++function lsLU(N) {
++  for (let i = 0; i < N; i++) _lsP[i] = i;
++  for (let c = 0; c < N; c++) {
++    let pv = c, best = Math.abs(_lsM[c * LS_MAX + c]);
++    for (let r = c + 1; r < N; r++) { const v = Math.abs(_lsM[r * LS_MAX + c]); if (v > best) { best = v; pv = r; } }
++    if (!(best > 1e-12)) return false;
++    if (pv !== c) {
++      for (let q = 0; q < N; q++) { const t = _lsM[c * LS_MAX + q]; _lsM[c * LS_MAX + q] = _lsM[pv * LS_MAX + q]; _lsM[pv * LS_MAX + q] = t; }
++      const t = _lsP[c]; _lsP[c] = _lsP[pv]; _lsP[pv] = t;
++    }
++    const d = _lsM[c * LS_MAX + c];
++    for (let r = c + 1; r < N; r++) {
++      const f = (_lsM[r * LS_MAX + c] /= d);
++      if (f !== 0) for (let q = c + 1; q < N; q++) _lsM[r * LS_MAX + q] -= f * _lsM[c * LS_MAX + q];
++    }
++  }
++  return true;
++}
++/** _lsX ← M⁻¹ _lsX (lsLU 뒤) */
++function lsSolve(N) {
++  for (let i = 0; i < N; i++) _lsT[i] = _lsX[_lsP[i]];
++  for (let i = 0; i < N; i++) { let s = _lsT[i]; for (let q = 0; q < i; q++) s -= _lsM[i * LS_MAX + q] * _lsT[q]; _lsT[i] = s; }
++  for (let i = N - 1; i >= 0; i--) { let s = _lsT[i]; for (let q = i + 1; q < N; q++) s -= _lsM[i * LS_MAX + q] * _lsT[q]; _lsT[i] = s / _lsM[i * LS_MAX + i]; }
++  for (let i = 0; i < N; i++) _lsX[i] = _lsT[i];
++}
++/** 사원수 → 회전 행렬 (Matrix3) */
++function rotM3(q, M) {
++  return M.setFromMatrix4(_lmR.makeRotationFromQuaternion(q));
++}
++/** 재기 도구용 (docs/strike/physics2_proto/r24/kcheck.mjs): 마지막 legMuscleSolve 의 축 · 이동성 — 읽기만 */
++export const LEG_CHAIN = { get K() { return _lsK; }, get U() { return _lsU; }, get owner() { return _lsOwner; }, get q() { return _lsQ; }, get max() { return LS_MAX; } };
++const LS_MAX = 18; // 다리 축 (엉덩이 3 · 무릎 · 발목 3 (경첩이면 1)) × 2 ≤ 18
++const _lsU = new Float64Array(LS_MAX * 3);
++const _lsQ = new Int8Array(LS_MAX);
++const _lsOwner = new Int8Array(LS_MAX);
++const _lsK = new Float64Array(LS_MAX * LS_MAX);
++const _lsM = new Float64Array(LS_MAX * LS_MAX);
++const _lsP = new Int8Array(LS_MAX);
++const _lsC = new Float64Array(LS_MAX);
++const _lsKk = new Float64Array(LS_MAX);
++const _lsE = new Float64Array(LS_MAX);
++const _lsW = new Float64Array(LS_MAX);
++const _lsTv = new Float64Array(LS_MAX);
++const _lsA = new Float64Array(LS_MAX);
++const _lsSum = new Float64Array(LS_MAX);
++const _lsX = new Float64Array(LS_MAX);
++const _lsT = new Float64Array(LS_MAX);
++/** 관절 점 줄: 자식 (선 e · 회전 rc) · 부모 (선 −e · 회전 −rp) */
++function lcRow(r, ci, pi, ex, ey, ez, cx, cy, cz, px, py, pz) {
++  const o = r * 6;
++  _lcR0[o] = ex; _lcR0[o + 1] = ey; _lcR0[o + 2] = ez; _lcR0[o + 3] = cx; _lcR0[o + 4] = cy; _lcR0[o + 5] = cz;
++  _lcR1[o] = -ex; _lcR1[o + 1] = -ey; _lcR1[o + 2] = -ez; _lcR1[o + 3] = -px; _lcR1[o + 4] = -py; _lcR1[o + 5] = -pz;
++  _lcB0[r] = ci;
++  _lcB1[r] = pi;
++}
++/** 회전만 묶는 줄: (ω_c − ω_p) · u = 0 */
++function lcAng(r, ci, pi, ux, uy, uz) {
++  lcRow(r, ci, pi, 0, 0, 0, ux, uy, uz, ux, uy, uz);
++}
++function lcMinv(R, W, r, bi) {
++  const o = r * 6, im = _lcIm[bi], I = bi * 9;
++  W[o] = im * R[o];
++  W[o + 1] = im * R[o + 1];
++  W[o + 2] = im * R[o + 2];
++  const x = R[o + 3], y = R[o + 4], z = R[o + 5];
++  W[o + 3] = _lcIv[I] * x + _lcIv[I + 1] * y + _lcIv[I + 2] * z;
++  W[o + 4] = _lcIv[I + 3] * x + _lcIv[I + 4] * y + _lcIv[I + 5] * z;
++  W[o + 5] = _lcIv[I + 6] * x + _lcIv[I + 7] * y + _lcIv[I + 8] * z;
++}
++function dot6(R, a, W, b) {
++  const p = a * 6, q = b * 6;
++  return R[p] * W[q] + R[p + 1] * W[q + 1] + R[p + 2] * W[q + 2] + R[p + 3] * W[q + 3] + R[p + 4] * W[q + 4] + R[p + 5] * W[q + 5];
++}
++const LC_TRUNK = ['pelvis'];
++const LC_LEG = ['trunk', 'thighF', 'shinF', 'footF', 'thighB', 'shinB', 'footB'];
++const LC_SIDES = ['F', 'B'];
++const LC_U = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0)];
++const LC_MAXR = 26; // 엉덩이 3 · 무릎 · 발목 (경첩 5 · 공 3) 두 다리 ≤ 26
++const _lcIm = new Float64Array(7);
++const _lcCom = new Float64Array(21);
++const _lcIv = new Float64Array(63);
++const _lcR0 = new Float64Array(LC_MAXR * 6);
++const _lcR1 = new Float64Array(LC_MAXR * 6);
++const _lcW0 = new Float64Array(LC_MAXR * 6);
++const _lcW1 = new Float64Array(LC_MAXR * 6);
++const _lcB0 = new Int8Array(LC_MAXR);
++const _lcB1 = new Int8Array(LC_MAXR);
++const _lcS = new Float64Array(LC_MAXR * LC_MAXR);
++const _lcY = new Float64Array(LC_MAXR * 18);
++const _lcZ = new Float64Array(LC_MAXR * 18);
++const _lcC = new THREE.Vector3();
++const _lcA = new THREE.Vector3();
++const _lcQ = new THREE.Quaternion();
++const _lcI = new THREE.Matrix3();
++const _lcT = new THREE.Matrix3();
++const AX_Z = ['z'];
++const AX_XYZ = ['x', 'y', 'z'];
++/** 다리 관절(엉덩이 · 무릎 · 발목 — 자식 몸 이름) */
++function isLegJoint(n) {
++  return n.startsWith('thigh') || n.startsWith('shin') || n.startsWith('foot');
++}
++// legMuscle 셈 자리
++const _lmQ = new THREE.Quaternion();
++const _lmE = new THREE.Vector3();
++const _lmV = new THREE.Vector3();
++const _lmW = new THREE.Vector3();
++const _lmS = new THREE.Vector3();
++const _lmT2 = new THREE.Vector3();
++const _lmK = new THREE.Matrix3();
++const _lmA = new THREE.Matrix3();
++const _lmT = new THREE.Matrix3();
++const _lmR3 = new THREE.Matrix3();
++const _lmR = new THREE.Matrix4();
++const _lmX = new THREE.Vector3();
++const _lmY = new THREE.Vector3();
++const _lmX4 = new THREE.Vector3();
++const _lmTq = new THREE.Vector3();
+ const _mE = new THREE.Vector3();
+ const _mW = new THREE.Vector3();
+ const _mA = new THREE.Vector3();
