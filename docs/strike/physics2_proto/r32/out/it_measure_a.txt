@@ -1,0 +1,1 @@
+$S/p2/r6/mx/cells/r32_a: 지금 팔 1.3391 · 전 팔(swivelHuman 0 · wristPronate 0) 1.3187 · 차 0.0204 m (시험 문턱 0.02)
