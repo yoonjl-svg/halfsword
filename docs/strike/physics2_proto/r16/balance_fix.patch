@@ -1,0 +1,143 @@
+diff --git a/src/config.js b/src/config.js
+index e2490a58..fcd4f50e 100644
+--- a/src/config.js
++++ b/src/config.js
+@@ -380,6 +380,10 @@ export const GAIT = {
+   swingHipDamp: 0.12, // 내딛는 엉덩이 모터 감쇠 배율 (× 160 = 19 N·m·s/rad)
+   swingHipCap: 0.1, // 내딛는 엉덩이 모터 스프링 몫 상한 배율 (× 200 = 20 N·m — 휘두르는 토크는 명시 쌍 몫)
+   catchHurry: 1, // 크게 균형을 잃으면(세게 밀림) 내딛는 발을 최대 (1 + 이 값)배 빨리 옮겨 딛는다. 0 = 끔
++  // 힘에 맞춘 자세 (16 번째 판 · gait.js holdOver): 딛은 다리 하나가 혼자 버틸 수 있는 무릎 굽힘을 넘어 꺼지면 내딛는 발을 최대 (1 + sinkHurry)배 빨리 딛는다 — 넘은 각 sinkRange(rad)에서 다.
++  //  성한 몸은 보통 걸리지 않는다(버틸 굽힘 106°) — 통증 · 피 흘림 · 일어서는 중이면 그 굽힘이 f.muscle 을 따라 내려간다(통증 1: 57°). 플레이어가 느끼는 것: 올리면 다친 · 피 흘린 몸이 짧고 잦은 걸음으로 버팀(너무 크면 발이 덜 가 캡처 점을 못 받음) · 내리면 한 발로 오래 버티다 무릎이 꺼짐
++  sinkHurry: 1,
++  sinkRange: 0.17,
+   hurryFrom: 0.35, // 균형을 이만큼(fighter.offBalance) 넘게 잃을 때부터 서두른다 (+0.2에서 최대)
+   reachHurry: 1, // 딛은 발 뒤꿈치를 heelHurry(라디안) 넘게 들면 내딛는 발을 최대 (1 + 이 값)배 빨리 딛는다. 0 = 끔
+   heelHurry: 0.3,
+diff --git a/src/gait.js b/src/gait.js
+index 5e90790f..93eaabee 100644
+--- a/src/gait.js
++++ b/src/gait.js
+@@ -1069,8 +1069,14 @@ export class Gait {
+       const st = swing === L.F ? L.B : L.F;
+       if (st.stance) hurry = Math.max(hurry, GAIT.reachHurry * clamp((st.heel - GAIT.heelHurry) / 0.12, 0, 1));
+     }
++    // 힘에 맞춘 자세 ④ (16 번째 판 · 장면 C): 딛은 다리 하나가 혼자 버틸 수 있는 굽힘(holdOver — 한도 × 근력 몫 · 몸 길이 · 몸무게)을 넘어 꺼지고 있으면 내딛는 발을 서둘러 딛어 두 발로 나눠 받친다.
++    //  성한 몸은 버틸 굽힘이 106° 라 보통 자세 · 걸음에선 0 — 통증 · 피 흘림 · 일어서는 중(f.muscle 이 낮음)이면 그 굽힘이 내려가 걸릴 수 있다(통증 1: 57°)
++    if (swing && !swing2 && (swing.kind === 'walk' || swing.kind === 'catch')) {
++      const st = swing === L.F ? L.B : L.F;
++      if (st.stance) hurry = Math.max(hurry, GAIT.sinkHurry * clamp(this.holdOver(st.k) / GAIT.sinkRange, 0, 1));
++    }
+     if (swing) {
+-      swing.t += dt * (swing.kind === 'req' || swing.kind === 'gather' ? 1 : 1 + hurry);
++      swing.t += dt * (swing.kind === 'req' || swing.kind === 'gather' ? 1 : Math.max(1, (1 + hurry) / (1 + (swing.hurry0 || 0))));
+       const u = swing.t / swing.T;
+       // (캡처 점으로 정하는 걸음 — 걷는 걸음 · 옮겨 딛기 — 은 닿을 때까지 디딜 자리를 고친다: 캡처 점은 e^(ω·t) 로 달아나므로 일찍 못박은 자리는 닿을 때 이미 틀린다)
+       if (u < GAIT.retarget || swing.kind === 'walk' || swing.kind === 'catch') this.target(swing, want, fwd, rgt, Math.max(0, swing.T - swing.t));
+@@ -1082,7 +1088,7 @@ export class Gait {
+     }
+     // 날며 뛰기 (11/20): 둘째로 뜬 발도 같은 셈 — 첫 발이 딛었으면 그 발이 '떠 있는 발'
+     if (swing2) {
+-      swing2.t += dt * (1 + hurry);
++      swing2.t += dt * Math.max(1, (1 + hurry) / (1 + (swing2.hurry0 || 0)));
+       const u = swing2.t / swing2.T;
+       if (u < GAIT.retarget) this.target(swing2, want, fwd, rgt, Math.max(0, swing2.T - swing2.t));
+       if ((u >= 1 && swing2.soleY < 0.02) || u >= 1 + GAIT.lateMax / swing2.T || (u > 0.8 && swing2.soleY < 0.004) || (u > GAIT.earlyTD && this.groundForce(swing2) > GAIT.earlyLoad * this.Mg)) {
+@@ -1318,6 +1324,22 @@ export class Gait {
+           }
+         }
+       }
++      // 힘에 맞춘 자세 ② 발 떼기 (물리 2.0 16 번째 판 · 장면 C): 두 발로 선 채 스스로 떼는 걸음(걷는 걸음 · 기술 걸음 · 끌어붙임 · 모아 딛기 — 자세 고쳐 딛기와 받아 딛기는 빼고)은
++      //  남을 다리의 지금 무릎 굽힘이 그 다리 혼자 몸무게를 버틸 수 있는 굽힘(holdOk — 무릎 펴는 토크 한도 × 근력 몫 · 몸 길이 · 몸무게에서 나옴, 여유 없이 한도 그대로)을 넘으면 떼지 않는다.
++      //  두 발로 받친 채(한 다리 몫 절반) 골반 높이 목표(strengthFloor)대로 일어선 뒤 뗀다. 캡처 점이 받침 밖이면 떼는 걸음이 받아야 하므로 그대로 뗀다.
++      //  잰 값(장면 C 씨앗 21 · 근력 몫 0.43 · 버틸 수 있는 굽힘 39°): 뒤로 딛은 발이 무릎 55° 로 닿고, 그 무릎이 52° 인 채 다른 발을 떼어 무릎 토크가 한도의 2 ~ 5 배를 요구받고 꺼짐.
++      //  이 굽힘은 근력 몫(f.muscle — vigor 를 곱함)을 따라 내려간다: 성한 몸 106° · 통증 1(vigor 0.6) 57° · 일어서는 중 muscle 0.5 47° (잰 값 · 몸무게 737 N) — 성한 몸도 늘 막지 않는 것은 아니다.
++      //  걷는 중의 번갈아 딛기(going)는 묻지 않는다(위 liftMiss 와 같은 까닭 — 가는 몸을 세워 두면 몸만 발에서 달아나 받는 걸음이 짧아진다) · 기다림은 GAIT.liftWait 까지(liftHold 를 같이 씀 — 지나면 그냥 뗀다:
++      //  힘이 모자라 꺼진 무릎은 기다려도 펴지지 않으므로 끝없이 선 채 걸음 · 부탁을 버리지 않게)
++      //  (해 봤으나 버림: 걷는 걸음에서 버티는 다리를 남기게 발을 바꿔 떼기 — 장면 C 버팀 25 → 20 · 캡처 점 받침 밖이어도 기다리기 — 25 → 23 · cap:short 로 바뀜)
++      if (next && !urgent && kind !== 'catch' && kind !== 'settle' && !going && this.liftHold < GAIT.liftWait && L.F.stance && L.B.stance && !(f.legDrive.capDist > GAIT.catchOut) && !this.holdOk(next === 'F' ? 'B' : 'F')) {
++        this.liftHold += dt;
++        next = null;
++        this.settles = keep0;
++        this.pairOpen = keep1;
++        this.drawPending = keep2;
++        this.pairStop = false;
++      }
+       if (ready) this.missPrev = Infinity;
+       if (next) this.liftHold = 0;
+       if (next) {
+@@ -1327,6 +1349,8 @@ export class Gait {
+         if (this.P.backCap && this.P.backMul === 'flat') this.backStep(kind, this.vf.x * fwd.x + this.vf.z * fwd.z);
+         if (kind === 'walk' || kind === 'catch') Tstep /= 1 + hurry;
+         this.begin(l, kind, Tstep);
++        l.hurry0 = kind === 'walk' || kind === 'catch' ? hurry : 0; // 서두름은 한 번만 (16 번째 판 · 장면 A): 뗄 때 이미 걸음 시간을 (1 + 서두름)으로 나눴으면 뜬 동안은 그 뒤로 더 커진 몫만 더 서두른다.
++        //  예전: 뗄 때 나누고 뜬 동안 시계도 (1 + 서두름)배로 돌려 받아 딛는 발이 catchT ÷ (1 + 서두름)² = 0.26 ÷ 4 = 0.065 s 만 떠 — 발이 디딜 자리의 절반쯤에서 땅에 닿음(잰 값 r15 꼴 A: 날아간 시간 10 % 값 0.06 s · 디딘 ÷ 필요 0.5)
+         // 캡처 점이 받침 밖이라 바로 뗀 받아 딛기(urgent)는 유파 걸음이 아니라 몸의 반사다 — 낮게 끄는 유파 발 들기(이탈리아 0.045)로 옆 · 뒤로 멀리 뻗으면 발이 길의 절반도 못 가 땅에 걸린다: 들기 바닥 GAIT.catchLift.
+         //  (같은 'catch' 꼴이어도 몸을 돌리느라 돌려 딛는 걸음 · 닿지 않는 발 옮기기는 유파 들기 그대로 — 싸움에서 늘 나오는 그 걸음까지 높이 들면 넘어짐이 는다: 잰 값 r4_balance 노트)
+         l.reflex = urgent;
+@@ -1819,13 +1843,16 @@ export class Gait {
+   catchLeg(T, want, fwd, rgt) {
+     let best = null;
+     let bestCost = Infinity;
++    const hold = { F: this.holdOk('F'), B: this.holdOk('B') };
+     for (const k of ['F', 'B']) {
+       const l = this.legs[k];
+       const o = this.legs[k === 'F' ? 'B' : 'F'];
+       if (!this.capAt(o, T, want)) return null;
+       this.preview(l, 'catch', T, want, fwd, rgt);
+       // 값 = 그 발이 옮겨 가야 할 거리 + 잘린 거리 × 3 (짧게 옮겨 받을 수 있는 발이 낫다 — 멀리 휘두르는 다리는 그 반작용으로 몸을 더 흔든다)
+-      const cost = Math.hypot(_pv.x - l.pinC.x, _pv.z - l.pinC.z) + _pv.miss * 3;
++      //  힘에 맞춘 자세 ③ (16 번째 판): 남을 다리가 그 굽힘으로 혼자 버티지 못하면(holdOk) 다른 쪽 — 그 다리를 떼어 받고 버틸 수 있는 다리를 남긴다(둘 다 못 버티면 거리대로)
++      let cost = Math.hypot(_pv.x - l.pinC.x, _pv.z - l.pinC.z) + _pv.miss * 3;
++      if (!hold[o.k] && hold[k]) cost += 1e3;
+       if (cost < bestCost) {
+         bestCost = cost;
+         best = k;
+@@ -1834,6 +1861,24 @@ export class Gait {
+     return best;
+   }
+ 
++  /**
++   * 힘에 맞춘 자세 (물리 2.0 16 번째 판): 이 다리가 지금 무릎 굽힘으로 몸무게 전부를 혼자 버틸 수 있는가 — 무릎 펴는 토크 한도 × 근력 몫(legs_vmc.js kneeBendMax, 쓰는 몫 1 — 여유 없음)과
++   *  허벅지 · 정강이 길이 · 몸무게에서 나온 가장 깊은 굽힘과 견준다(성한 몸 106° · f.muscle 을 따라 내려감 — 통증 1 이면 57°). 발 떼기(update ③)와 받는 발 고르기(catchLeg)가 읽는다
++   */
++  holdOk(k) {
++    return !(this.holdOver(k) > 0);
++  }
++
++  /** 이 다리의 지금 무릎 굽힘이 혼자 버틸 수 있는 굽힘(holdOk)을 넘은 각(rad · 못 넘었으면 0 밑 · 다리 구동이 아직 한 번도 안 돈 때만 −∞) */
++  holdOver(k) {
++    const D = this.f.legDrive;
++    const J = D?.legs?.[k];
++    if (!J?.ph || !J.pa) return -Infinity;
++    const len = J.ph.distanceTo(J.pa); // (지난 스텝에 다리 구동이 읽은 관절 자리)
++    const phi = Math.PI - Math.acos(clamp((J.lenT * J.lenT + J.lenS * J.lenS - len * len) / (2 * J.lenT * J.lenS), -1, 1));
++    return phi - D.kneeBendMax(k, this.Mg, 1);
++  }
++
+   /**
+    * 앞발 런지를 앞발 그대로 받을 수 있는가 (l = 내딛을 앞발 · o = 남을 뒷발 · update ③ 의 발 바꾸기 앞에서 물음).
+    *  런지는 제 디딜 자리(뗀 자리 + fwd · side)가 뒷발에서 멀다(자세 길이 + 런지 길이 — 선 자세 0.55 + 0.6 = 1.15 m). 뒷발 하나 위에서 걸음 시간 동안 넘어간 몸의 캡처 점이
+@@ -1928,6 +1973,7 @@ export class Gait {
+     l.kind = kind;
+     l.t = 0;
+     l.T = T;
++    l.hurry0 = 0; // (뗄 때 걸음 시간에 이미 넣은 서두름 몫 — update ③ 이 뗀 뒤 적는다. 다른 데서 뗀 걸음(날며 뛰기 뗌 등)은 0: 지난 걸음 값을 물려받지 않게)
+     // 뗄 때의 발 놀림(follow·짝걸음) — 고른 짝걸음(P.pair.even)은 이 걸음을 디딜 때까지 이 꼴로 디딜 자리를 고친다(target). 다른 걸음은 읽지 않음
+     l.fol = !!this.follow;
+     l.pairOn = !!this.pairOn;
+diff --git a/src/legs_vmc.js b/src/legs_vmc.js
+index bf8d990e..1e65a020 100644
+--- a/src/legs_vmc.js
++++ b/src/legs_vmc.js
+@@ -378,9 +378,9 @@ export class LegDrive {
+    *  성한 다리(근력 몫 1 · 몸무게 전부): d 0.27 m → 80° — 서기 · 걷기 · 런지 자세의 무릎(37 ~ 80°)을 막지 않는다. 근력 몫 0.5 → 39° · 0.3 → 22°.
+    *  걸음 장치(gait.js ⑥ 골반 높이)가 읽어 그 다리가 버틸 수 있는 높이 밑으로는 골반을 내리지 않는다 — 힘이 빠진 몸은 무릎을 펴고 선다.
+    */
+-  kneeBendMax(k, load) {
++  kneeBendMax(k, load, use = LEGS.kneeUse) {
+     const L = this.legs[k], ab = L.lenT * L.lenS, s2 = L.lenT * L.lenT + L.lenS * L.lenS;
+-    const d = (LEGS.limit.kneeExt * this.strengthOf(k) * LEGS.kneeUse) / Math.max(1, load);
++    const d = (LEGS.limit.kneeExt * this.strengthOf(k) * use) / Math.max(1, load); // (use: 쓰는 한도 몫 — 자세 높이는 LEGS.kneeUse 여유를 두고, 발 떼기 · 받는 발 고르기(gait.js holdOk)는 한도 그대로 1)
+     const dOf = (phi) => (ab * Math.sin(phi)) / Math.sqrt(s2 + 2 * ab * Math.cos(phi));
+     let lo = 0, hi = 1.9; // (d 는 110° 쯤까지 늘어난다 — 그 너머는 '막지 않음')
+     if (dOf(hi) <= d) return Infinity;

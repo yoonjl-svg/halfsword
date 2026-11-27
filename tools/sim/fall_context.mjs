@@ -12,6 +12,7 @@
 //   · 맞음 · 밀림: 창 안에 칼끼리 부딪힘(takeJolt) · 상대 몸이나 칼이 내 몸 토막에 닿음(엔진 접촉 — 닿은 스텝 수 · 가장 큰 접촉 충격량) · 상대 가슴까지 거리.
 //   · 돌기: 창 안의 몸 돌리는 빠르기 최고(gait.headRate) · 기력(stamina.value · 단계 · 바닥남) · 무기 · 조종 스틱 · 넘어진 쪽(몸 틀).
 //   · 뿌리 걸음: 시작 때 떠 있던 발을 뗀 스텝 바로 앞의 꼴(남을 발 ~ 캡처 점 거리 · 자세 너비 · 골반 높이 · 가는 쪽 거꾸로) — 맨 끝 '뿌리' 가름.
+//  --mech --ringOut=<파일> = (10 번째 판) 스텝마다 기계 칸(다리 무릎 굽힘 · 무릎 토크 ÷ 한도 · 엉덩이 · 발목 한도 닿음 · 캡처 점 · 도움 ÷ 상한 · 걸음 상태)을 더 적고 넘어짐마다 앞 3 s 고리를 파일로 — 가름은 tools/sim/fall_mech.mjs
 //  --rows = 넘어짐마다 한 줄 · --all = 스스로가 아닌 넘어짐도 줄로 · --trace=씨앗:P|E:넘어진 때[,…] [--every=6] [--compact] = 그 넘어짐 앞 3 s 의 자취.
 // ─────────────────────────────────────────────────────────────
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -42,6 +43,42 @@ const strokeOf = (ai) => {
 const rel = (f, n, fw) => { const p = f.bodies[n].translation(), c = f.com ?? p; const dx = p.x - c.x, dz = p.z - c.z; return [+(dx * fw.x + dz * fw.z).toFixed(2), +(dx * -fw.z + dz * fw.x).toFixed(2), +p.y.toFixed(2)]; };
 const TRACE = args.trace ? String(args.trace).split(',').map((x) => { const [sd, who, t] = x.split(':'); return { seed: +sd, who, t: +t }; }) : [];
 const falls = [];
+// ── --mech (10 번째 판 · 넘어짐 흔적): 스텝마다 기계 칸을 더 적고, 넘어짐마다 앞 3 s 고리를 --ringOut 파일에 남긴다 (가름은 tools/sim/fall_mech.mjs) ──
+const MECH = !!(args.mech || args.ringOut);
+const { LEGS, AID } = CFG;
+const ringDump = [];
+/** 이 스텝의 기계 칸: 다리마다 딛음 · 무릎 굽힘(rad) · 무릎 펴는 토크 ÷ 한도 · 엉덩이 · 발목이 한도에 닿음 / 무게중심 높이 · 캡처 점(몸 틀) · 선언된 도움 ÷ 상한 · 걸음 상태 */
+function mechOf(f, e, G) {
+  const D = f.legDrive, g = f.gait, lim = LEGS.limit, out = {};
+  const fw = f.forward(new H.THREE.Vector3());
+  for (const k of ['F', 'B']) {
+    const L = D?.legs?.[k];
+    if (!L) { out['k' + k] = null; continue; }
+    const str = D.strengthOf(k), len = L.ph.distanceTo(L.pa);
+    const c = Math.max(-1, Math.min(1, (L.lenT * L.lenT + L.lenS * L.lenS - len * len) / (2 * L.lenT * L.lenS)));
+    const r = L.raw;
+    out['k' + k] = {
+      on: L.on ? 1 : 0, st: g?.legs?.[k]?.stance ? 1 : 0, phi: +(Math.PI - Math.acos(c)).toFixed(3), kr: +(-r.k / Math.max(1e-6, lim.kneeExt * str)).toFixed(3),
+      hs: Math.abs(r.hx) > lim.hipAbd * str || Math.abs(r.hy) > lim.hipRot * str || Math.abs(r.hz) > lim.hipFlex * str ? 1 : 0,
+      as: r.az > lim.anklePlantar * str || r.az < -lim.ankleDorsi * str || Math.abs(r.ax) > lim.ankleInv * str ? 1 : 0,
+      N: +(g?.legs?.[k]?.N ?? 0).toFixed(0), kind: g?.legs?.[k]?.stance ? null : g?.legs?.[k]?.kind ?? null, u: g?.legs?.[k]?.stance ? 0 : +((g?.legs?.[k]?.t ?? 0) / Math.max(1e-3, g?.legs?.[k]?.T ?? 1)).toFixed(2),
+    };
+  }
+  const com = f.com, cv = f.comVel, w0 = D?.w0 || 3.3;
+  if (com && cv) {
+    const p = f.bodies.pelvis.translation();
+    const cx = com.x + cv.x / w0 - p.x, cz = com.z + cv.z / w0 - p.z;
+    out.comY = +com.y.toFixed(3); out.cpF = +(cx * fw.x + cz * fw.z).toFixed(3); out.cpR = +(cx * -fw.z + cz * fw.x).toFixed(3);
+  }
+  out.aidT = D ? +Math.min(1, Math.hypot(D.rem.x, D.rem.z) / AID.tiltMax).toFixed(2) : 0;
+  out.aidY = D ? +Math.min(1, Math.abs(D.rem.y) / AID.yawMax).toFixed(2) : 0;
+  out.aidUp = f.aidAfter ? 1 : 0;
+  out.sit = +(f.sitTime ?? 0).toFixed(2);
+  out.pend = g?.pend ?? null; out.reqK = g?.req?.kind ?? null; out.catches = g?.catches ?? 0;
+  out.hp = +(f.legHealth ?? 1).toFixed(2); out.mus = +(f.muscle ?? 1).toFixed(2); out.bal = +(f.balance ?? 0).toFixed(0);
+  out.ph = e.ai?.phase ?? null; out.mode = e.ai?.mode ?? null;
+  return out;
+}
 let nFalls = 0, nSelf = 0, nFallsD = 0, nSelfD = 0; // …D = 따로 일어난 넘어짐 (앞 넘어짐 뒤 몸이 0.25 s 넘게 서 있은 다음의 것만 — legs_battery.mjs 의 fallsD 와 같은 셈)
 const bodyMin = { all: 0, stand: 0 };
 
@@ -98,6 +135,7 @@ for (let seed = 1; seed <= FIGHTS; seed++) {
         fF: rel(f, 'footF', fw), fB: rel(f, 'footB', fw), cut: !!f.skill?.swinging, tip: f.tipVel ? Math.hypot(f.tipVel.x, f.tipVel.y, f.tipVel.z) : 0, rx: D ? D.rem.x * fw.x + D.rem.z * fw.z : 0, rz: D ? D.rem.x * -fw.z + D.rem.z * fw.x : 0, ry: D ? D.rem.y : 0, ax: D ? D.armM.x * fw.x + D.armM.z * fw.z : 0, az: D ? D.armM.x * -fw.z + D.armM.z * fw.x : 0, ay: D ? D.armM.y : 0, pend: g?.pend ?? null, h: g?.h ?? 0,
         vf: cv.x * fw.x + cv.z * fw.z, vr: cv.x * -fw.z + cv.z * fw.x, remT: D ? Math.hypot(D.rem.x, D.rem.z) : 0, remY: D ? Math.abs(D.rem.y) : 0, armM: D ? D.armM.length() : 0,
       };
+      if (MECH) Object.assign(s, mechOf(f, e, G));
       e.jolt = 0;
       e.ring.push(s); if (e.ring.length > RING) e.ring.shift();
       if (st !== 'stand') e.everDown = true;
@@ -153,6 +191,7 @@ for (let seed = 1; seed <= FIGHTS; seed++) {
         };
         { const W = (e.wl ?? []).filter((w) => G.t - w.t <= 1.5); const w = W.sort((x, y) => y.energy - x.energy)[0]; rec.wound = w ? { zone: w.zone, type: w.type, energy: +w.energy.toFixed(0), sev: +w.sev.toFixed(2), ago: +(G.t - w.t).toFixed(2), n: W.length } : null; rec.legs = +(e.f.legHealth ?? 1).toFixed(2); rec.bal = +(e.f.balance ?? 0).toFixed(0); }
         if (!dup) { rec.leftStand = st !== 'stand'; e.lastFall = rec; }
+        if (args.ringOut) ringDump.push({ key: `${rec.seed}:${rec.who}:${rec.t}`, seed: rec.seed, who: rec.who, t: rec.t, dup, self, onsetBefore: rec.onsetBefore, ring: e.ring.filter((_, k) => k % 2 === (e.ring.length - 1) % 2).map((x) => ({ ...x, fF: x.fF, fB: x.fB })) });
         falls.push(rec);
         if (TRACE.some((q) => q.seed === seed + OFFSET && q.who === e.f.name && Math.abs(q.t - G.t) < 0.05)) {
           console.log(`── 자취 씨앗 ${seed + OFFSET} ${e.f.name} ${e.weapon} 넘어짐 t ${G.t.toFixed(2)} 까닭 ${rec.why} (몸 틀: 앞 · 오른쪽 · 발 = 무게중심에 대한 발목 자리) ──`);
@@ -210,4 +249,5 @@ show('뿌리 × 뗀 걸음 꼴', S, (r) => `${rootOf(r)}|${r.root?.kind ?? '-'}`
 show('뿌리 × 무기', S, (r) => `${rootOf(r)}|${r.weapon}`);
 show('뿌리 × 제 칼(시작 때)', S, (r) => `${rootOf(r)}|${r.strokeOnset}`);
 if (args.rows) for (const r of S) console.log(`   뿌리 씨앗 ${r.seed} ${r.who} ${r.weapon.padEnd(10)} t ${String(r.t).padStart(5)} ${rootOf(r).padEnd(8)} 칼 ${r.strokeOnset.padEnd(8)} · ` + (r.root ? `넘어지기 ${r.root.before} s 앞에 ${r.root.kind} 발 ${r.root.leg} 뗌 · 남을 발 ~ 캡처 점 ${r.root.d} m (앞뒤 ${r.root.dSag} · 옆 ${r.root.dLat}) · 자세 옆 ${r.root.wide} 앞뒤 ${r.root.long} · 골반 ${r.root.y} · 기울기 ${r.root.tilt}° · 몸 ${r.root.v} m/s${r.root.rev ? ' · 거꾸로' : ''}${r.root.sameSide ? ' · 한쪽' : ''}` : '뗀 발 없음') + ` · 밀림 합 ${r.pushSum} N·s · 선 지 ${r.sinceStand} s`);
+if (args.ringOut) writeFileSync(String(args.ringOut), JSON.stringify({ dt: DT * 2, falls: ringDump }));
 if (args.json) writeFileSync(String(args.json), JSON.stringify({ fights: FIGHTS, offset: OFFSET, nFalls, nSelf, nFallsD, nSelfD, bodyMin, falls }, null, 1));

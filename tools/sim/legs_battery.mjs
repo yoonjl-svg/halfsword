@@ -194,6 +194,8 @@ const stickFollow = (c) => {
 };
 const FOLLOW_MIN = 1.0; // 조종 쪽으로 간 거리 바닥(m · 14 s). 잰 값(흔듦 0 ~ 7 · 세 무기 24 판): 지금 게임 1.65 ~ 5.69 m (무기별 가운데값 2.9 ~ 3.8) · 조종을 0 으로 묶은 같은 몸 −0.28 ~ 0.39 m (걸은 길은 1.3 ~ 2.8 m — 옛 판정은 24 판 가운데 7 판을 통과시킴)
 const MORE = {
+  // 걸으며 세게 밀림 (16 번째 판 읽기 지적 — 서두름 한 번만이 성한 몸의 밀린 걸음을 바꾸는가): walkkick 과 같은 꼴 · 가슴 80 N·s (kick80 크기). 기본 묶음 밖
+  walkkick80: { secs: 6, drive: (i, t, c) => { c.P.move.set(0, 1); if (i === Math.round((1.5 + 1.0 * c.state.ph) / DT)) hitChest(c.P, 80, c.state.ang); }, pre: (c) => { c.state.ph = c.R(); c.state.ang = c.R() * Math.PI * 2; }, ok: (r) => !r.fell },
   // 느린 걷기 · 뒷걸음 (조종 0.45): 바닥 = 지금 게임 값(0.73 ~ 0.84 · 0.48 ~ 0.56 m/s)의 절반쯤 · 천장 = 1.5 배쯤 — 너무 느린 몸도, 조종보다 훨씬 빨리 미끄러지는 몸도 통과가 아니다 (11/24 검토: 예전 바닥 0.15 · 0.1 은 게임 값의 1/5 · 천장 없음)
   slowwalk: { secs: 6, drive: (i, t, c) => c.P.move.set(0, 0.45), ok: (r) => !r.fell && r.alongF >= 0.38 && r.alongF <= 1.2, speed: true },
   slowback: { secs: 6, drive: (i, t, c) => c.P.move.set(0, -0.45), ok: (r) => !r.fell && -r.alongF >= 0.25 && -r.alongF <= 0.85, speed: true },

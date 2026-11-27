@@ -77,7 +77,7 @@ export const SCENES = {
   },
   C: {
     name: '한 발 딛음 · 굽은 무릎 꺼짐', cause: 'sink:knee', weapons: ['zweihander', 'rapier', 'longsword'],
-    base: { J: 0, ang: 150, part: 'pelvis', lead: 1.0 }, // 충격 없음 (J 0 = 재기 시작 때만 적음). 맞춘 값: 성한 몸은 골반 · 가슴 30 ~ 80 N·s 에도 sink:knee 0 — 싸움 꼴의 다친 다리 · 빠진 피(몸 상태 표)가 있어야 꺼짐. 골반 30 N·s 를 더하면 같은 원인 57 % 로 떨어짐
+    base: { J: 0, ang: 150, part: 'pelvis', lead: 1.0, back: -0.8 }, // 뒷걸음 조종 −0.8 (16 번째 판에서 다시 맞춤: −0.45 는 씨앗 100 ~ 139 에서 넘어짐 18 % — 바닥 30 % 밑. −0.45 · −0.6 · −0.8 · −1 · 골반 15 N·s 를 두 묶음에서 견줘 −0.8 = 넘어짐 38 % · 33 % · 같은 원인 80 % · 92 %). // 충격 없음 (J 0 = 재기 시작 때만 적음). 맞춘 값: 성한 몸은 골반 · 가슴 30 ~ 80 N·s 에도 sink:knee 0 — 싸움 꼴의 다친 다리 · 빠진 피(몸 상태 표)가 있어야 꺼짐. 골반 30 N·s 를 더하면 같은 원인 57 % 로 떨어짐
     drive(c, t) { c.P.move.set(0, c.s.back ?? -0.45); moveHand(c.P, CH, 12); },
     trigger: (c, t) => oneUp(c.P) != null && t > c.s.lead + c.s.dly,
   },
