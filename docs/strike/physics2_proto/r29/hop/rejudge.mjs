@@ -11,7 +11,7 @@ const sd = (a) => { const m = a.reduce((p, q) => p + q, 0) / a.length; return Ma
 const L = [
   ['0.05 s 넘게 뜬 디딤 몫', (r) => r.flightShare05, 'ge', 0.9, 0],
   ['두 발 모두 뜬 스텝 몫', (r) => r.flyStepShare, 'in', 0.15, 0.40],
-  ['접촉 수직 힘 최고 ÷ 몸무게 (20 Hz 거름)', (r) => r.fyPeakLp20BW, 'le', 0, 2.4, { hi: 3.0, alt: 2.74, why: '금 2.4 → 3.00 (사람 달리기 가장 높은 평균 + 2 표준편차)' }],
+  ['접촉 수직 힘 최고 ÷ 몸무게 (20 Hz 거름)', (r) => r.fyPeakLp20BW, 'le', 0, 2.4, { hi: 2.74, alt: 3.0, why: '금 2.4 → 2.74 (사람의 가장 느린 달리기 2.5 m/s 평균 2.36 + 2 표준편차 0.19 — 제자리 뜀 · 2.5 m/s 단계 · 감사의 의견 11/28 을 받음 · 넓은 금 3.00 은 3.6 m/s 의 값)' }],
   ['받은 ÷ 계획 수직 충격량', (r) => [r.impRatioMin, r.impRatioMax], 'in', 0.9, 1.1],
   ['디딜 때 골반 높이가 5 s 에 내려간 것 cm', (r) => r.tdPelvisDrop5s, 'le', 0, 2],
   ['바란 ÷ 한도 99 % — 디딘 무릎 · 발목', (r) => Math.max(r.share.knee.st99 ?? 0, r.share.ankle.st99 ?? 0), 'le', 0, 0.75],
@@ -48,15 +48,16 @@ for (const [txt, get, kind, lo, hi, fix] of L) {
   let nw;
   if (fix?.drop) nw = '뺌 → 새 줄';
   else if (fix?.merge) nw = oldPass ? '통과' : '구조상 못 넘음 → 새 줄에 합침 (선임의 읽기 · 안 합치면 못 넘음)';
-  else if (fix?.hi != null) { J2 = judge(v, 'le', 0, fix.hi); const J3 = judge(v, 'le', 0, fix.alt); nw = (J2.miss <= 1e-12 ? '통과' : J2.miss < J2.s ? '금 위 (흔들림 안)' : '못 넘음') + ` [새 금 ≤ ${fix.hi}: 넘은 판 ${J2.bad} · 좁은 금 ≤ ${fix.alt}: 넘은 판 ${J3.bad} → ${J3.miss <= 1e-12 ? '통과' : J3.miss < J3.s ? '금 위' : '못 넘음'}]`; }
+  else if (fix?.hi != null) { J2 = judge(v, 'le', 0, fix.hi); const J3 = judge(v, 'le', 0, fix.alt); nw = (J2.miss <= 1e-12 ? '통과' : J2.miss < J2.s ? '금 위 (흔들림 안)' : '못 넘음') + ` [새 금 ≤ ${fix.hi}: 넘은 판 ${J2.bad} · 다른 금 ≤ ${fix.alt}: 넘은 판 ${J3.bad} → ${J3.miss <= 1e-12 ? '통과' : J3.miss < J3.s ? '금 위' : '못 넘음'}]`; }
   else nw = oldPass ? '통과' : J.miss < J.s ? '금 위 (흔들림 안)' : '못 넘음';
   rows.push([`${txt} (${thr})`, J.show, f(J.m), f(J.s), J.bad, oldPass ? 'PASS' : 'FAIL', nw]);
 }
 // 새 줄: 전달 토크가 한도를 넘는 표본 몫 (모든 판 · 모든 축을 표본 수로 무게 주어 합침)
 let o = 0, n = 0; const per = [];
 for (const r of runs) { let a = 0, b = 0; for (const x of Object.values(r.legAxes ?? {})) { a += x.n * x.overShare; b += x.n; } o += a; n += b; per.push(b ? (100 * a) / b : 0); }
-const pool = (100 * o) / n, newPass = pool <= 0.68;
-rows.push(['새 줄: 전달 토크가 한도를 넘는 표본 몫 % — 모두 합쳐 (≤ 0.68)', f(pool), f(med(per)), f(sd(per)), per.filter((v) => v > 0.68).length, '(없던 줄)', (newPass ? '통과' : '못 넘음') + ` [판 하나 가장 큼 ${f(Math.max(...per))} — 읽기만]`]);
+const THR = 0.26; // 새 본판 몸(다리 힘 값이 든 뒤)의 싸움 묶음에서 잰 값 — 모든 스텝(디딤 바뀜 스텝 포함) 0.26 % (r27/analyze.mjs: 나머지 0.21 % · 디딤 바뀜 0.54 %). 앞 금 0.68 % 는 옛 몸의 값이었다(감사의 의견 11/28 을 받아 바꿈).
+const pool = (100 * o) / n, newPass = pool <= THR, nearLine = !newPass && pool - THR < sd(per);
+rows.push([`새 줄: 전달 토크가 한도를 넘는 표본 몫 % — 모두 합쳐 (≤ ${THR})`, f(pool), f(med(per)), f(sd(per)), per.filter((v) => v > THR).length, '(없던 줄)', (newPass ? '통과' : nearLine ? '금 위 (흔들림 안)' : '못 넘음') + ` [판 하나 가장 큼 ${f(Math.max(...per))} · 전달 토크 스텝 최고 ÷ 한도 가장 큼 ${f(Math.max(...runs.map((r) => r.delivPeakMax)))} · 축 99 % 가장 큼 ${f(Math.max(...runs.map((r) => Math.max(...Object.values(r.legAxes ?? {}).map((x) => x.p99)))))} — 읽기만]`]);
 console.log(`## ${NAME} — 판 ${N}\n\n| 줄 (옛 금) | 가장 나쁜 값 | 가운데값 | 판 사이 표준편차 | 금 넘은 판 | 옛 판정 | 새 판정 |\n|---|---|---|---|---|---|---|\n` + rows.map((r) => '| ' + r.join(' | ') + ' |').join('\n'));
 const cnt = (re) => rows.filter((r) => re.test(r[6])).length;
 const oldFail = old.filter((x) => !x).length;
