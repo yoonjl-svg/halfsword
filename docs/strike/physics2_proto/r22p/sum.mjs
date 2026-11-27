@@ -1,4 +1,5 @@
 // r21 표: TREE=<fall_mech 가 있는 트리> node sum.mjs <나온 곳> <바탕 나옴 폴더> <칸...> [--offs=0,300]
+// r22p: 이 복사본은 맨 끝에 '두 배 한도(sb_legs) 가 줄인 몫의 몇 %' 표를 더 찍는다(칸 이름 sb_legs 가 주어졌을 때 · 읽기 규칙용).
 // 줄 정의는 v3base/sum.mjs 와 같음(fall_mech targets · classify). 싸움 쪽 값은 fall_cost.mjs 의 cost.
 // 소음 문턱(미리 정한 잣대 그대로 · 읽기 지적에 따라 고침): 48 판 대 48 판 = 따로 23 · 상처 없는 17, 144 판 대 144 판 = 40 · 30. 차가 문턱 '아래'(|d| < t)면 소음 — 문턱과 같으면 소음 밖.
 //  (옛 식 2 × sd × √(2 × 묶음 수) 는 23.2 · 17.2 · 40.2 · 29.8 이고 |d| ≤ t 로 문턱 값 자체를 소음으로 셌다)
@@ -33,4 +34,11 @@ for (const [name, dir] of [[base, base], ...cells.map((c) => [c, c])]) {
   const v = dir === base ? '—' : same ? `${verdict(dA, th(0, s.n))} / ${verdict(dS, th(1, s.n))}` : `묶음 수 다름 ${s.n}/${B.n}`;
   const cs = c ? `${(c.secs / c.fights).toFixed(1)} | ${c.deaths} (${c.fightsDeath}) | ${c.wounds} | ${c.strokes} | ${(c.walk / c.standMin).toFixed(1)} | ${(10 * s.all / c.standMin).toFixed(2)} · ${(10 * s.self / c.standMin).toFixed(2)}` : '- | - | - | - | - | -';
   console.log(`| ${name} | ${s.n} [${s.per.join(' ')}] | ${s.all} (${dir === base ? '' : (dA > 0 ? '+' : '') + dA}) | ${s.self} (${dir === base ? '' : (dS > 0 ? '+' : '') + dS}) | ${v} | ${K.map((k) => s.cls[k]).join(' · ')} | ${s.wound} | ${cs} |`);
+}
+// r22p: 읽기 규칙 — 두 배 한도(sb_legs)가 줄인 몫(바탕 − sb_legs)에서 각 칸이 닿은 몫
+if (cells.includes('sb_legs')) {
+  const L = cell('sb_legs'), gA = B.all - L.all, gS = B.self - L.self;
+  console.log(`\n두 배 한도가 줄인 몫: 따로 ${B.all} → ${L.all} (${gA}) · 상처 없는 ${B.self} → ${L.self} (${gS})`);
+  console.log('| 칸 | 따로 줄어든 수 · 그 몫 % | 상처 없는 줄어든 수 · 그 몫 % |\n|---|---|---|');
+  for (const c of cells) { if (c === 'sb_legs' || c === base) continue; const s = cell(c); if (s.n !== B.n) continue; const a = B.all - s.all, b = B.self - s.self; console.log(`| ${c} | ${a} · ${(100 * a / gA).toFixed(0)} % | ${b} · ${(100 * b / gS).toFixed(0)} % |`); }
 }

@@ -8,5 +8,10 @@ C144=$(for c in sp_h2 sp_h4 sp_td sp_h_td sp_combo se_ecc13; do ok=1; for o in 0
 TREE=$TREE node $HERE/sum.mjs $O fb_base_r21 fb_base_r22p $C48 sb_legs --offs=0,300 > $R/t48.md
 TREE=$TREE node $HERE/sum.mjs $O fb_base_r21 fb_base_r22p $C144 sb_legs --offs=0,300,600,624,648,672 > $R/t144.md
 node $HERE/pos.mjs $O fb_base_r22p $C48 --offs=0,300 > $R/pos48.md
+node $HERE/pos.mjs $O fb_base_r22p $(echo $C144 | sed "s/se_ecc13//") --offs=0,300,600,624,648,672 > $R/pos144.md
 TREE=$TREE node $HERE/pair.mjs $O fb_base_r22p $C144 --offs=0,300,600,624,648,672 > $R/pair144.md
 echo "48: $C48 / 144: $C144"
+TREE=$TREE node $HERE/sum.mjs $O se_ecc13 sp_combo --offs=0,300,600,624,648,672 > $R/t144_vs_ecc13.md  # 자세를 se_ecc13 위에 더한 값만
+# 읽기 지적 고침(덧붙임): 선 몸 시간 · 줄 가르기 표, 그리고 두 배 한도(sb_legs) 자체를 바탕으로 한 소음 판정(읽기 규칙 적용 단계)
+TREE=$TREE node $HERE/expo.mjs $O fb_base_r21 $C144 sb_legs --offs=0,300,600,624,648,672 > $R/expo144.md
+TREE=$TREE node $HERE/sum.mjs $O sb_legs $C144 --offs=0,300,600,624,648,672 > $R/t144_vs_sblegs.md
