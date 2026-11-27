@@ -1,0 +1,76 @@
+diff --git a/tools/sim/run_gate.mjs b/tools/sim/run_gate.mjs
+index 80ea6cd7..03ebb365 100644
+--- a/tools/sim/run_gate.mjs
++++ b/tools/sim/run_gate.mjs
+@@ -7,7 +7,7 @@
+ //   캐시: <out>/<src · 재는 도구 해시>/<장면>.<무기>.<판>.json — 같은 코드면 다시 돌리지 않는다(끊겨도 이어서 돎). --fresh = 캐시 무시.
+ //
+ //  단계와 줄 (설계 §5 · 처음 판 '숨은 도움 없음' 줄은 §3-8):
+-//   hop      (i)   제자리 뜀
++//   hop      (i)   제자리 뜀 — 수직 힘 최고 줄은 힘판 논문처럼 거른 값(--fyHz · 기본 20 Hz · 4 차 영위상 · lowpass.mjs). 거르지 않은 값은 읽기만 줄로
+ //   run25    (ii)  고른 2.5 m/s
+ //   run30    (iii) 고른 3.0 m/s — 설계의 셋째 관문
+ //   run35    (iii) 꼴을 3.5 m/s 에 — 엉덩이 굽힘폄 한도가 250 이 된 뒤 감독이 고른 셋째 자리. 뜬 · 디딤 시간 · 수직 최고 금은 설계 §2-3 표 나의 3.5 m/s 줄(디딤 0.163 · 뜸 0.200 · 최고 3.13 배)에
+@@ -32,13 +32,17 @@ const WEAPONS = String(args.weapons ?? 'longsword,rapier,zweihander').split(',')
+ const JOBS = Math.min(2, Math.max(1, +(args.jobs ?? 2)));
+ const CFG = await import(pathToFileURL(join(ROOT, 'src/config.js')).href);
+ const LIM = CFG.LEGS.limit;
++const LP = await import(pathToFileURL(join(ROOT, 'tools/sim/lowpass.mjs')).href);
++const FY_HZ = args.fyHz != null ? +args.fyHz : 20; // 제자리 뜀 수직 힘 줄의 거름 차단 (Patoz 외 2022 · 20 Hz · 4 차 영위상 — owner_open_questions)
++/** 판의 거른 수직 힘 최고 (fyBW 줄 · fyWin 창에서 FY_HZ 로 다시 셈 · 줄이 없으면 null = FAIL) */
++const fyLp = (r) => (r.fyBW && r.fyWin?.[0] >= 0 ? LP.peakFiltered(Float64Array.from(r.fyBW), 1 / CFG.PHYSICS.timestep, FY_HZ, r.fyWin[0], r.fyWin[1]) : null);
+ 
+ // ── 캐시 열쇠: src 의 모든 .js + 재는 도구 ──
+ function hashTree() {
+   const h = createHash('sha1');
+   const walk = (d) => { for (const n of readdirSync(d).sort()) { const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (/\.(js|mjs|json)$/.test(n)) { h.update(p.slice(ROOT.length)); h.update(readFileSync(p)); } } };
+   walk(join(ROOT, 'src'));
+-  for (const t of ['run_scenes.mjs', 'honesty.mjs', 'harness_m.mjs']) h.update(readFileSync(join(ROOT, 'tools/sim', t)));
++  for (const t of ['run_scenes.mjs', 'honesty.mjs', 'harness_m.mjs', 'lowpass.mjs']) h.update(readFileSync(join(ROOT, 'tools/sim', t)));
+   return h.digest('hex').slice(0, 12);
+ }
+ const OUT = join(resolve(String(args.out ?? process.env.RUN_GATE_OUT ?? join(tmpdir(), 'run_gate'))), hashTree());
+@@ -133,7 +137,8 @@ if (STAGE === 'hop') {
+   line('재는 창: 온 걸음 수', hop, (r) => r.strides, 'ge', 8, 0, '§5 재는 법', '', 0);
+   line('0.05 s 넘게 뜬 디딤 몫', hop, (r) => r.flightShare05, 'ge', 0.9, 0, '§5 (i)');
+   line('두 발 모두 뜬 스텝 몫', hop, (r) => r.flyStepShare, 'in', 0.15, 0.40, '§5 (i) 계획 0.10 ÷ 0.36 = 28 %', '', 3);
+-  line('접촉 수직 힘 최고 ÷ 몸무게', hop, (r) => r.fyPeakBW, 'le', 0, 2.4, '§5 (i) 계획 1.95');
++  line(`접촉 수직 힘 최고 ÷ 몸무게 (힘판처럼 ${FY_HZ} Hz 4 차 영위상으로 거름)`, hop, fyLp, 'le', 0, 2.4, '§5 (i) 계획 1.95 · 사람 줄 Patoz 외 2022 달리기 2.36 ~ 2.62 (20 Hz) · r27_hop_force.md');
++  note(`읽기만: 거르지 않은 스텝 최고 가장 큼 ${f(Math.max(...vals(hop, (r) => r.fyPeakBW)))} (가운데값 ${f(Float64Array.from(vals(hop, (r) => r.fyPeakBW)).sort()[hop.length >> 1])}) · 25 Hz 로 거르면 가장 큼 ${f(Math.max(...vals(hop, (r) => r.fyPeakLp25BW)))}`);
+   line('받은 ÷ 계획 수직 충격량 (받침마다)', hop, (r) => [r.impRatioMin, r.impRatioMax], 'in', 0.9, 1.1, '§5 (i) · 위험 1', '', 3);
+   line('디딜 때 골반 높이가 5 s 에 내려간 것', hop, (r) => r.tdPelvisDrop5s, 'le', 0, 2, '§5 (i)', ' cm');
+   line('바란 ÷ 한도 99 % — 디딘 무릎 · 발목', hop, (r) => Math.max(r.share.knee.st99 ?? 0, r.share.ankle.st99 ?? 0), 'le', 0, 0.75, '§5 (i) 셈 0.46 ~ 0.60');
+diff --git a/tools/sim/run_scenes.mjs b/tools/sim/run_scenes.mjs
+index 2d43f90f..94e46cca 100644
+--- a/tools/sim/run_scenes.mjs
++++ b/tools/sim/run_scenes.mjs
+@@ -17,6 +17,8 @@
+ //  재는 것 (스텝마다 · 몸에 걸지 않음):
+ //   · 접촉이 준 수직 힘 = honesty.mjs 장부의 운동량 잔차(lastRes.y — 땅 · 접촉이 몸 전체에 준 힘). 발마다의 땅 법선 힘 = 엔진 접촉 충격량(발 충돌 모양 · 고정 물체 · honesty 와 같은 (n+1)/n 교정).
+ //     두 발 모두 뜸 = 두 발 법선 힘이 모두 몸무게의 3 % 밑. 디딤 = 그 발 힘이 3 % 위(발마다). 디딤 시간 · 뜬 시간 · 박자는 이 셈에서 — 걸음 장치의 칸(fly · stance)에 기대지 않는다.
++//   · 거른 수직 힘 최고 fyPeakLpBW: 위 몸 전체 수직 힘 줄을 판 전체로 영위상 버터워스(2 차 앞뒤 = 4 차 · 차단 --fyHz 기본 20 Hz)로 거른 뒤 창 안 최고 (tools/sim/lowpass.mjs).
++//     거르지 않은 fyPeakBW 는 그대로 둔다(읽기만 · 고른 빠르기 관문은 여전히 이것). 20 · 25 Hz 값과 판 전체 줄(fyBW · 창 fyWin)도 적는다.
+ //   · 계획한 수직 충격량: legDrive.plan?.J (뛰는 걸음이 디딤마다 둘 칸 — 있으면) 아니면 그 받침 동안 다리 구동이 시킨 수직 힘 dbg.N 의 적분. 받은 충격량 = 같은 동안 접촉 수직 힘 적분.
+ //   · 바란 관절 토크(자르기 앞 · legs_vmc.js legTorques 의 raw) ÷ 그 축 한도(LEGS.limit × 근력 몫): 디딘 다리(legTorques 를 발목 켜고 부른 스텝)와 든 다리(발목 끄고 — 내딛는 다리 이끌기)를 따로.
+ //     엉덩이 굽힘폄(z) · 벌림(x) · 돌림(y) · 무릎(− 폄 / + 굽힘) · 발목(+ 발바닥 / − 발등). legTorques 를 이 도구에서 감싸 인자 · 돌려줌은 그대로 넘긴다.
+@@ -61,6 +63,8 @@ for (const [path, v] of Object.entries(DEF.cfg)) {
+ const H = await import(u('tools/sim/harness_m.mjs'));
+ const HON = await import(u('tools/sim/honesty.mjs'));
+ const DT = H.DT, G0 = 9.81;
++const LP = await import(u('tools/sim/lowpass.mjs'));
++const FY_HZ = args.fyHz != null ? +args.fyHz : 20; // 거른 수직 힘 최고의 차단 주파수 (Patoz 외 2022 달리기 힘판 20 Hz · 4 차 영위상 · owner_open_questions)
+ const { LEGS } = H.CONFIG;
+ const LIM = LEGS.limit;
+ 
+@@ -248,6 +252,11 @@ function summarize(rec, o) {
+   out.pitchFlightP95 = r3(pct(flights.map((f) => f.dPitch), 0.95) ?? 0);
+   // 수직 힘
+   out.fyPeakBW = r3(W.length ? Math.max(...W.map((x) => x.fy)) / Mg : null);
++  // 거른 수직 힘 최고 (힘판 논문처럼 — 판 전체 줄을 영위상 2 차 버터워스 앞뒤로 거른 뒤 재는 창 안 최고 · lowpass.mjs). fyPeakBW(거르지 않음)는 그대로 두고 읽기만.
++  { const fyAll = Float64Array.from(S, (x) => x.fy / Mg), i0 = W.length ? S.indexOf(W[0]) : -1, i1 = W.length ? S.indexOf(W[W.length - 1]) : -1, fs = 1 / DT;
++    const pk = (fc) => (i0 >= 0 ? r3(LP.peakFiltered(fyAll, fs, fc, i0, i1)) : null);
++    out.fyLpHz = FY_HZ; out.fyPeakLpBW = pk(FY_HZ); out.fyPeakLp20BW = pk(20); out.fyPeakLp25BW = pk(25);
++    out.fyWin = [i0, i1]; out.fyBW = Array.from(fyAll, (v) => +v.toFixed(4)); }
+   out.fyPlanPeakBW = r3(W.length ? Math.max(...W.map((x) => x.plan)) / Mg : null);
+   const ph = phases.filter((p) => p.T >= 0.05);
+   const ratios = ph.map((p) => (p.planJ != null ? p.J / p.planJ : p.Jp > 1 ? p.J / p.Jp : null)).filter((r) => r != null);
