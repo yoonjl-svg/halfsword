@@ -33,6 +33,7 @@ const hb = +(process.env.HBEST ?? 2) / 100;
 const KNOB = {
   sp_h2: ['fb_base', height(0.02)],
   sp_h4: ['fb_base', height(0.04)],
+  sp_h6: ['fb_base', height(0.06)], // 감사의 말(11/27): +2 는 흔들림 안 · +4 는 밖 — 곡선이 어디서 눕는지 (선임이 더함)
   sp_td: ['fb_base', td],
   sp_h_td: ['fb_base', [...height(hb), ...td]],
   sp_combo: ['se_ecc13', [...height(hb), ...(process.env.NOTD ? [] : td)]],
