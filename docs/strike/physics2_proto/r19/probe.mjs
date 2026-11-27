@@ -94,6 +94,8 @@ LegDrive.prototype.pair = function (parent, child, x, y, z) {
 };
 // Q4: 감쇠 0 (그 다리 세 관절 · 그 창 스텝만)
 const STEPNO = new WeakMap(); // world → 지금까지 끝난 스텝 수
+const WID = new WeakMap(); let nWorld = 0; // world → 판 번호 (한 프로세스에서 판을 여럿 돌리는 도구)
+const ABCOND = process.env.R19_ABCOND ?? null; // 'run' = 뛰는 동안(f.run.on)만 A/B
 const oDrive = Fighter.prototype.driveJoints;
 Fighter.prototype.driveJoints = function (...a) {
   if (ZD_STEP != null && !ZD_OFF && isWho(this, true)) {
@@ -113,6 +115,7 @@ function legJoints(f) {
   }
   return out;
 }
+const AXESF3 = [['ankInv', V(1, 0, 0), 'ankleInv', 'ankleInv'], ['ankRot', V(0, 1, 0), 'ankleRot', 'ankleRot'], ['ankle', V(0, 0, 1), 'anklePlantar', 'ankleDorsi']]; // 공 발목(본 게임)
 const AXES = { t: [['abd', V(1, 0, 0), 'hipAbd', 'hipAbd'], ['rot', V(0, 1, 0), 'hipRot', 'hipRot'], ['flex', V(0, 0, 1), 'hipFlex', 'hipFlex']], s: [['knee', V(0, 0, 1), 'kneeFlex', 'kneeExt']], f: [['ankle', V(0, 0, 1), 'anklePlantar', 'ankleDorsi']] };
 
 // ── 발 땅 수직 힘 (엔진 접촉 충격량 · 고정 물체와의 접촉만) ──
@@ -168,25 +171,29 @@ function readY(W, items) {
 let nSampled = 0, tAB = 0;
 W0.step = function (eq, hooks) {
   const s = STEPNO.get(this) ?? 0;
+  if (!WID.has(this)) WID.set(this, nWorld++);
+  const wid = WID.get(this);
   const fs = [...FIGHTERS].filter((f) => f.world === this && isWho(f) && f.state !== 'dead' && f.gait?.legs);
   // 표본 고르기: 고른 스텝(s % EVERY == 0) + 디딘 뒤 TDWIN 스텝
   let regular = !NOAB && EVERY > 0 && s % EVERY === 0;
   let tdForce = false;
   for (const f of fs) { const T = TDS.get(f); if (T) for (const k of ['F', 'B']) if (T[k].since >= 0 && T[k].since < TDWIN) tdForce = true; }
-  const doAB = !NOAB && fs.length && (regular || tdForce);
+  const condOK = ABCOND !== 'run' || fs.some((f) => f.run?.on);
+  const doAB = !NOAB && fs.length && condOK && (regular || tdForce);
   let snap = null, rec = null, pre = null;
   if (doAB) {
     snap = this.takeSnapshot();
     rec = new Map();
-    pre = fs.map((f) => legJoints(f).map((it) => ({ ...it, qp: cq(oRot.call(it.j.parent)), qc: cq(oRot.call(it.j.child)) })));
+    pre = fs.map((f) => legJoints(f).map((it) => ({ ...it, qp: cq(oRot.call(it.j.parent)), qc: cq(oRot.call(it.j.child)), vc0: cv(oLinvel.call(it.j.child)), wc0: cv(oAngvel.call(it.j.child)), cc0: cv(it.j.child.worldCom()), tc0: cv(it.j.child.translation()), pf: cq(it.j.child.principalInertiaLocalFrame()), pi: cv(it.j.child.principalInertia()), m: it.j.child.mass(), a2: cv(it.j.joint.anchor2()), ld: it.j.child.linearDamping(), ad: it.j.child.angularDamping() })));
   }
   const hk = rec && hooks ? {
     filterContactPair: (c1, c2, b1, b2) => { const r = hooks.filterContactPair(c1, c2, b1, b2); rec.set(c1 + ',' + c2, r); return r; },
     filterIntersectionPair: (c1, c2, b1, b2) => { const r = hooks.filterIntersectionPair ? hooks.filterIntersectionPair(c1, c2, b1, b2) : true; rec.set('i' + c1 + ',' + c2, r); return r; },
   } : hooks;
+  const preV = STEPLOG && fs.length ? fs.map((f) => f.meshes.map(({ rb }) => [oLinvel.call(rb).y, rb.mass(), rb.linearDamping()])) : null;
   const preQ = !NOIMP && fs.length ? fs.map((f) => legJoints(f).map((it) => ({ ...it, qp: cq(oRot.call(it.j.parent)), qc: cq(oRot.call(it.j.child)) }))) : null;
   const ret = origStep.call(this, eq, hk);
-  if (preQ) impFighters(this, fs, preQ, s);
+  if (preQ) impFighters(this, fs, preQ, s, preV, wid);
   STEPNO.set(this, s + 1);
   // 발 힘 · 디딤 (스텝마다)
   for (const f of fs) {
@@ -219,7 +226,7 @@ const NOIMP = !!process.env.R19_NOIMP;
 const STEPLOG = process.env.R19_STEPLOG ?? null;
 const f32b = (() => { const F = new Float32Array(1), U = new Uint32Array(F.buffer); return (x) => { F[0] = x; return U[0]; }; })();
 const LASTIMP = new WeakMap(); // fighter → Map(jointName → child torque world (imp 법))
-function impFighters(world, fs, preQ, s) {
+function impFighters(world, fs, preQ, s, preV, wid) {
   const cap = CAP.get(world.impulseJoints.raw); if (!cap) return;
   const sn = world.takeSnapshot();
   const dv = new DataView(sn.buffer, sn.byteOffset, sn.byteLength);
@@ -254,7 +261,9 @@ function impFighters(world, fs, preQ, s) {
     const BW = T?.bw ?? bw(f);
     const fyF = footFy(world, f, 'F') / BW, fyB = footFy(world, f, 'B') / BW;
     const D = f.legDrive?.dbg;
-    appendFileSync(STEPLOG, JSON.stringify({ s, who: f.name ?? f.index, fyF: +fyF.toFixed(3), fyB: +fyB.toFixed(3), N: D && typeof D.N === 'number' ? +(D.N / BW).toFixed(3) : null, J }) + '\n');
+    let fyM = null; // 몸 전체 운동량으로 잰 접촉 수직 힘 (선언 힘은 빼지 않음 — 다리 쪽엔 수직 선언 힘이 없다) ÷ 몸무게
+    if (preV) { let dp = 0, M = 0; f.meshes.forEach(({ rb }, i) => { const [vy0, m, ld] = preV[fi][i]; dp += m * (oLinvel.call(rb).y * (1 + ld * DT) - vy0); M += m; }); fyM = (dp / DT + M * 9.81) / BW; }
+    appendFileSync(STEPLOG, JSON.stringify({ s, wid, who: f.name ?? f.index, state: f.state, run: f.run?.on ? 1 : 0, fyM: fyM == null ? null : +fyM.toFixed(3), fyF: +fyF.toFixed(3), fyB: +fyB.toFixed(3), N: D && typeof D.N === 'number' ? +(D.N / BW).toFixed(3) : null, J }) + '\n');
   });
 }
 let IMPMISS = 0;
@@ -355,17 +364,29 @@ function abFighter(world, f, items, snap, rec, s, regular) {
     const expl = ex.get(it.ch) ?? V();
     const fr = it.kind === 's' ? it.qp : it.qc;
     const impW = LASTIMP.get(f)?.get(it.n) ?? V();
+    // 뜬 발(땅 접촉 0)의 발목: 발 한 몸의 운동량으로 잰 관절 토크(정답) = I(ω' − ω)/dt − 명시 − (닻 − 질량중심) × 관절 힘 · 관절 힘 = m(v' − v)/dt − m g (엔진 감쇠 되돌림)
+    let momW = null;
+    if (it.kind === 'f' && T && T[it.k].fy === 0) {
+      const C = world.getRigidBody(it.ch);
+      const v1 = scl(cv(oLinvel.call(C)), 1 + it.ld * DT), w1 = scl(cv(oAngvel.call(C)), 1 + it.ad * DT);
+      const q = qmul(it.qc, it.pf), dw = qrot(qconj(q), sub(w1, it.wc0));
+      const Idw = qrot(q, V(it.pi.x * dw.x, it.pi.y * dw.y, it.pi.z * dw.z));
+      const FJ = sub(scl(sub(v1, it.vc0), it.m / DT), V(0, -9.81 * it.m, 0));
+      const r = sub(add(it.tc0, qrot(it.qc, it.a2)), it.cc0);
+      const cr = V(r.y * FJ.z - r.z * FJ.y, r.z * FJ.x - r.x * FJ.z, r.x * FJ.y - r.y * FJ.x);
+      momW = sub(sub(scl(Idw, 1 / DT), ex.get(it.ch) ?? V()), cr);
+    }
     const st = !!f.gait.legs[it.k].stance;
     const out = { n: it.n, st, since: T?.[it.k]?.since ?? -1, str: +str[it.k].toFixed(3), ax: {} };
-    for (const [an, vec, pos, neg] of AXES[it.kind]) {
+    for (const [an, vec, pos, neg] of (it.kind === 'f' && !it.hinge ? AXESF3 : AXES[it.kind])) {
       const w = qrot(fr, vec);
       const mR = -dot(real, w), mC = -dot(recW, w), e = -dot(expl, w), tR = mR + e, tC = mC + e;
       const lim = (v) => ((v >= 0 ? LIM[pos] : LIM[neg]) * Math.max(1e-3, str[it.k]));
-      out.ax[an] = [+(-dot(impW, w)).toFixed(2), +mR.toFixed(2), +mC.toFixed(2), +e.toFixed(2), +(Math.abs(tR) / lim(tR)).toFixed(4), +(Math.abs(tC) / lim(tC)).toFixed(4), +(Math.abs(mR) / lim(mR)).toFixed(4), +(Math.abs(mC) / lim(mC)).toFixed(4)];
+      out.ax[an] = [+(-dot(impW, w)).toFixed(2), +mR.toFixed(2), momW ? +(-dot(momW, w)).toFixed(2) : null, +mC.toFixed(2), +e.toFixed(2), +(Math.abs(tR) / lim(tR)).toFixed(4), +(Math.abs(tC) / lim(tC)).toFixed(4), +(Math.abs(mR) / lim(mR)).toFixed(4), +(Math.abs(mC) / lim(mC)).toFixed(4)];
     }
     J.push(out);
   }
-  const line = { s, who: f.name ?? f.index, reg: regular, fyF: T ? +(T.F.fy / T.bw).toFixed(3) : null, fyB: T ? +(T.B.fy / T.bw).toFixed(3) : null, per, resid: +resid.toExponential(2), maxDv: +maxDv.toExponential(2), maxDw: +maxDw.toExponential(2), det, val, J };
+  const line = { s, wid: WID.get(world), who: f.name ?? f.index, state: f.state, run: f.run?.on ? 1 : 0, reg: regular, fyF: T ? +(T.F.fy / T.bw).toFixed(3) : null, fyB: T ? +(T.B.fy / T.bw).toFixed(3) : null, per, resid: +resid.toExponential(2), maxDv: +maxDv.toExponential(2), maxDw: +maxDw.toExponential(2), det, val, J };
   if (OUT) appendFileSync(OUT, JSON.stringify(line) + '\n');
 }
 process.on('exit', () => { process.stderr.write(`r19 probe: ${nSampled} sampled steps · ${(tAB / Math.max(1, nSampled)).toFixed(1)} ms each · imp misses ${IMPMISS}\n`); });
