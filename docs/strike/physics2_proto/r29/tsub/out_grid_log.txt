@@ -1,0 +1,30 @@
+g|1.0|1.00 ll_10_100 e1 m1 t0 null all pass true combos 2 fall - combo1 10.967 touch 11.65 sword>farmO,sword>farmS minD 1.427 hash -465938548
+g|1.0|1.10 ll_10_100 e1 m1.1 t0 null all pass false combos 0 fall 12.892 tilt:aid combo1 null touch - minD 1.793 hash -934963280
+g|1.0|1.20 ll_10_100 e1 m1.2 t0 null all pass false combos 1 fall - combo1 13.192 touch 13.867 sword>farmO,sword>farmS minD 1.329 hash -543693999
+g|1.0|1.25 ll_10_100 e1 m1.25 t0 null all pass false combos 1 fall - combo1 11.125 touch 11.808 sword>sword,sword>farmS minD 1.382 hash -50217503
+g|1.0|1.30 ll_10_100 e1 m1.3 t0 null all pass true combos 2 fall - combo1 11.067 touch 11.667 sword>head minD 0.664 hash -533165265
+g|1.1|1.00 ll_10_100 e1.1 m1 t0 null all pass false combos 0 fall 13.058 cap:short combo1 null touch - minD 1.755 hash -339947903
+g|1.1|1.10 ll_10_100 e1.1 m1.1 t0 null all pass true combos 2 fall - combo1 10.925 touch 11.608 sword>farmO,sword>sword minD 0.801 hash -127401904
+g|1.1|1.20 ll_10_100 e1.1 m1.2 t0 null all pass false combos 0 fall 12.608 cap:short combo1 null touch - minD 1.73 hash -423428374
+g|1.1|1.25 ll_10_100 e1.1 m1.25 t0 null all pass false combos 1 fall 12.058 cap:short combo1 12.033 touch - minD 1.571 hash -401454924
+g|1.1|1.30 ll_10_100 e1.1 m1.3 t0 null all pass true combos 2 fall - combo1 10.933 touch 11.583 sword>chest minD 1.116 hash -412450636
+g|1.17|1.00 ll_10_100 e1.17 m1 t0 null all pass false combos 1 fall - combo1 12.775 touch 13.458 sword>farmO,sword>farmS minD 1.426 hash -777059020
+g|1.17|1.10 ll_10_100 e1.17 m1.1 t0 null all pass false combos 0 fall 13.4 cap:short combo1 null touch - minD 1.731 hash -935506464
+g|1.17|1.20 ll_10_100 e1.17 m1.2 t0 null all pass false combos 1 fall - combo1 11.092 touch 11.775 sword>sword minD 1.553 hash -684199213
+g|1.17|1.25 ll_10_100 e1.17 m1.25 t0 null all pass false combos 0 fall 12.767 cap:short combo1 null touch - minD 1.68 hash -637114861
+g|1.17|1.30 ll_10_100 e1.17 m1.3 t0 null all pass false combos 0 fall - combo1 null touch - minD 1.744 hash -260330470
+g|1.2|1.00 ll_10_100 e1.2 m1 t0 null all pass true combos 2 fall - combo1 11.867 touch 11.1 shinF>sword minD 0.937 hash -939028499
+g|1.2|1.10 ll_10_100 e1.2 m1.1 t0 null all pass false combos 1 fall 12.617 cap:late combo1 11.183 touch 11.867 sword>sword minD 1.579 hash -251165798
+g|1.2|1.20 ll_10_100 e1.2 m1.2 t0 null all pass true combos 2 fall - combo1 12.117 touch 12.767 sword>chest minD 1.141 hash -875899741
+g|1.2|1.25 ll_10_100 e1.2 m1.25 t0 null all pass false combos 1 fall - combo1 12.933 touch 13.592 sword>chest minD 1.115 hash -53173854
+g|1.2|1.30 ll_10_100 e1.2 m1.3 t0 null all pass true combos 3 fall - combo1 10.583 touch 11.275 sword>farmO minD 0.741 hash -213216497
+g|1.3|1.00 ll_10_100 e1.3 m1 t0 null all pass true combos 3 fall - combo1 10.775 touch 11.392 sword>head minD 0.925 hash -929603329
+g|1.3|1.10 ll_10_100 e1.3 m1.1 t0 null all pass false combos 1 fall - combo1 13.475 touch - minD 1.261 hash -232651985
+g|1.3|1.20 ll_10_100 e1.3 m1.2 t0 null all pass true combos 2 fall - combo1 11.05 touch 11.733 sword>sword minD 0.962 hash -811590965
+g|1.3|1.25 ll_10_100 e1.3 m1.25 t0 null all pass false combos 0 fall 12.408 cap:short combo1 null touch - minD 1.744 hash -614235291
+g|1.3|1.30 ll_10_100 e1.3 m1.3 t0 null all pass false combos 0 fall - combo1 null touch - minD 1.678 hash -803290259
+g|1.4|1.00 ll_10_100 e1.4 m1 t0 null all pass false combos 0 fall - combo1 null touch - minD 1.763 hash 456646715
+g|1.4|1.10 ll_10_100 e1.4 m1.1 t0 null all pass false combos 0 fall - combo1 null touch - minD 1.589 hash -88791707
+g|1.4|1.20 ll_10_100 e1.4 m1.2 t0 null all pass false combos 0 fall - combo1 null touch - minD 1.731 hash -921856779
+g|1.4|1.25 ll_10_100 e1.4 m1.25 t0 null all pass false combos 0 fall 12.258 tilt:other combo1 null touch - minD 1.751 hash -556584692
+g|1.4|1.30 ll_10_100 e1.4 m1.3 t0 null all pass false combos 0 fall - combo1 null touch - minD 1.745 hash -178897441

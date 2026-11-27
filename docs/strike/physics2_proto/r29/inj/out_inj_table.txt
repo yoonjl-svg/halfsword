@@ -1,0 +1,50 @@
+injured thighF, bleed 0, stand 2 s then walk forward 10 s, 8 seeds (mean ± sd over seeds; falls = count of 8)
+| cell | str F (measured) | str B | falls | speed along m/s | side drift m/s | pelvis mean m | pelvis min m | cadence steps/s | step length m | stance share F (hurt) | stance share B | F/B touchdowns |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ll_10_100 | 1.000 ± 0.000 | 1.000 ± 0.000 | 0/8 | 1.036 ± 0.010 | 0.105 ± 0.006 | 0.918 ± 0.000 | 0.884 ± 0.004 | 2.30 ± 0.00 | 0.450 ± 0.004 | 0.607 ± 0.004 | 0.578 ± 0.001 | 11.0/12.0 |
+| ll_10_100 | 0.800 ± 0.000 | 0.948 ± 0.000 | 0/8 | 0.866 ± 0.003 | 0.093 ± 0.000 | 0.918 ± 0.000 | 0.873 ± 0.000 | 2.20 ± 0.00 | 0.394 ± 0.001 | 0.598 ± 0.000 | 0.598 ± 0.000 | 11.0/11.0 |
+| ll_10_100 | 0.500 ± 0.000 | 0.860 ± 0.000 | 2/8 | 0.549 ± 0.005 | 0.044 ± 0.003 | 0.906 ± 0.000 | 0.883 ± 0.005 | 2.20 ± 0.00 | 0.250 ± 0.002 | 0.596 ± 0.000 | 0.592 ± 0.000 | 11.0/11.0 |
+| ll_10_125 | 1.000 ± 0.000 | 1.000 ± 0.000 | 0/8 | 1.044 ± 0.010 | 0.108 ± 0.006 | 0.919 ± 0.000 | 0.884 ± 0.003 | 2.30 ± 0.00 | 0.454 ± 0.004 | 0.607 ± 0.004 | 0.578 ± 0.001 | 11.0/12.0 |
+| ll_10_125 | 0.800 ± 0.000 | 0.948 ± 0.000 | 0/8 | 0.871 ± 0.002 | 0.093 ± 0.000 | 0.918 ± 0.000 | 0.873 ± 0.000 | 2.20 ± 0.00 | 0.396 ± 0.001 | 0.599 ± 0.001 | 0.597 ± 0.001 | 11.0/11.0 |
+| ll_10_125 | 0.500 ± 0.000 | 0.860 ± 0.000 | 0/8 | 0.554 ± 0.002 | 0.052 ± 0.001 | 0.907 ± 0.000 | 0.860 ± 0.005 | 2.20 ± 0.00 | 0.252 ± 0.001 | 0.595 ± 0.001 | 0.598 ± 0.000 | 11.0/11.0 |
+| ll_13_100 | 1.000 ± 0.000 | 1.000 ± 0.000 | 0/8 | 1.036 ± 0.010 | 0.106 ± 0.006 | 0.918 ± 0.000 | 0.884 ± 0.004 | 2.30 ± 0.00 | 0.451 ± 0.004 | 0.607 ± 0.004 | 0.578 ± 0.001 | 11.0/12.0 |
+| ll_13_100 | 0.800 ± 0.000 | 0.948 ± 0.000 | 0/8 | 0.865 ± 0.003 | 0.093 ± 0.001 | 0.917 ± 0.000 | 0.873 ± 0.000 | 2.20 ± 0.00 | 0.393 ± 0.001 | 0.597 ± 0.001 | 0.598 ± 0.000 | 11.0/11.0 |
+| ll_13_100 | 0.500 ± 0.000 | 0.860 ± 0.000 | 0/8 | 0.551 ± 0.002 | 0.041 ± 0.006 | 0.909 ± 0.001 | 0.881 ± 0.017 | 2.20 ± 0.00 | 0.251 ± 0.001 | 0.595 ± 0.004 | 0.594 ± 0.003 | 11.0/11.0 |
+| ll_13_125 | 1.000 ± 0.000 | 1.000 ± 0.000 | 0/8 | 1.044 ± 0.010 | 0.108 ± 0.006 | 0.919 ± 0.000 | 0.884 ± 0.003 | 2.30 ± 0.00 | 0.454 ± 0.004 | 0.607 ± 0.004 | 0.578 ± 0.001 | 11.0/12.0 |
+| ll_13_125 | 0.800 ± 0.000 | 0.948 ± 0.000 | 0/8 | 0.871 ± 0.002 | 0.093 ± 0.000 | 0.918 ± 0.000 | 0.873 ± 0.000 | 2.20 ± 0.00 | 0.396 ± 0.001 | 0.599 ± 0.001 | 0.597 ± 0.001 | 11.0/11.0 |
+| ll_13_125 | 0.500 ± 0.000 | 0.860 ± 0.000 | 0/8 | 0.557 ± 0.002 | 0.055 ± 0.001 | 0.907 ± 0.001 | 0.860 ± 0.005 | 2.20 ± 0.00 | 0.253 ± 0.001 | 0.595 ± 0.001 | 0.598 ± 0.000 | 11.0/11.0 |
+
+paired change vs ll_10_100 (same seeds, non-fallen in both): speed m/s · pelvis mean m · step length m — mean [min .. max]
+ll_10_125 str 1: speed 0.008 [0.008 .. 0.009] · pelvis 0.001 [0.000 .. 0.001] · step 0.003 [0.003 .. 0.004] · cadence 0.000 [0.000 .. 0.000]
+ll_10_125 str 0.8: speed 0.005 [0.003 .. 0.007] · pelvis 0.000 [0.000 .. 0.000] · step 0.003 [0.002 .. 0.003] · cadence 0.000 [0.000 .. 0.000]
+ll_10_125 str 0.5: speed 0.006 [0.001 .. 0.012] · pelvis 0.001 [0.001 .. 0.001] · step 0.002 [0.000 .. 0.005] · cadence 0.000 [0.000 .. 0.000]
+ll_13_100 str 1: speed 0.000 [0.000 .. 0.001] · pelvis 0.000 [0.000 .. 0.001] · step 0.000 [0.000 .. 0.001] · cadence 0.000 [0.000 .. 0.000]
+ll_13_100 str 0.8: speed -0.002 [-0.003 .. -0.001] · pelvis -0.001 [-0.001 .. -0.001] · step -0.001 [-0.001 .. 0.000] · cadence 0.000 [0.000 .. 0.000]
+ll_13_100 str 0.5: speed 0.002 [-0.005 .. 0.008] · pelvis 0.003 [0.000 .. 0.004] · step 0.001 [-0.002 .. 0.004] · cadence 0.000 [0.000 .. 0.000]
+ll_13_125 str 1: speed 0.008 [0.008 .. 0.009] · pelvis 0.001 [0.000 .. 0.001] · step 0.003 [0.003 .. 0.004] · cadence 0.000 [0.000 .. 0.000]
+ll_13_125 str 0.8: speed 0.005 [0.003 .. 0.007] · pelvis 0.000 [0.000 .. 0.000] · step 0.003 [0.002 .. 0.003] · cadence 0.000 [0.000 .. 0.000]
+ll_13_125 str 0.5: speed 0.008 [0.004 .. 0.014] · pelvis 0.001 [0.001 .. 0.002] · step 0.003 [0.001 .. 0.006] · cadence 0.000 [0.000 .. 0.000]
+
+falls split: during the 2 s stand right after the wound (first non-stand state, time after the wound) vs during the walk
+ll_10_100 str 1: stand-phase 0/8 [] · walk-phase 0/8 [] · stand-phase pelvis min (mean) 0.878 m
+ll_10_100 str 0.8: stand-phase 0/8 [] · walk-phase 0/8 [] · stand-phase pelvis min (mean) 0.870 m
+ll_10_100 str 0.5: stand-phase 2/8 [seed 6: getup @1.092 s, seed 7: getup @1.833 s] · walk-phase 0/8 [] · stand-phase pelvis min (mean) 0.765 m
+ll_10_125 str 1: stand-phase 0/8 [] · walk-phase 0/8 [] · stand-phase pelvis min (mean) 0.878 m
+ll_10_125 str 0.8: stand-phase 0/8 [] · walk-phase 0/8 [] · stand-phase pelvis min (mean) 0.871 m
+ll_10_125 str 0.5: stand-phase 0/8 [] · walk-phase 0/8 [] · stand-phase pelvis min (mean) 0.864 m
+ll_13_100 str 1: stand-phase 0/8 [] · walk-phase 0/8 [] · stand-phase pelvis min (mean) 0.878 m
+ll_13_100 str 0.8: stand-phase 0/8 [] · walk-phase 0/8 [] · stand-phase pelvis min (mean) 0.870 m
+ll_13_100 str 0.5: stand-phase 0/8 [] · walk-phase 0/8 [] · stand-phase pelvis min (mean) 0.877 m
+ll_13_125 str 1: stand-phase 0/8 [] · walk-phase 0/8 [] · stand-phase pelvis min (mean) 0.878 m
+ll_13_125 str 0.8: stand-phase 0/8 [] · walk-phase 0/8 [] · stand-phase pelvis min (mean) 0.871 m
+ll_13_125 str 0.5: stand-phase 0/8 [] · walk-phase 0/8 [] · stand-phase pelvis min (mean) 0.864 m
+
+limp size per cell = str 1 value minus injured value (speed m/s · pelvis m · step length m)
+ll_10_100 str 0.8: speed loss 0.169 · pelvis drop 0.000 · step shortening 0.057 · stance share F-B 0.000 (healthy 0.028)
+ll_10_100 str 0.5: speed loss 0.486 · pelvis drop 0.012 · step shortening 0.201 · stance share F-B 0.004 (healthy 0.028)
+ll_10_125 str 0.8: speed loss 0.172 · pelvis drop 0.001 · step shortening 0.057 · stance share F-B 0.002 (healthy 0.028)
+ll_10_125 str 0.5: speed loss 0.490 · pelvis drop 0.012 · step shortening 0.202 · stance share F-B -0.003 (healthy 0.028)
+ll_13_100 str 0.8: speed loss 0.171 · pelvis drop 0.001 · step shortening 0.057 · stance share F-B -0.001 (healthy 0.029)
+ll_13_100 str 0.5: speed loss 0.485 · pelvis drop 0.009 · step shortening 0.200 · stance share F-B 0.001 (healthy 0.029)
+ll_13_125 str 0.8: speed loss 0.173 · pelvis drop 0.001 · step shortening 0.057 · stance share F-B 0.003 (healthy 0.028)
+ll_13_125 str 0.5: speed loss 0.487 · pelvis drop 0.012 · step shortening 0.201 · stance share F-B -0.003 (healthy 0.028)

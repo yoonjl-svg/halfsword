@@ -1,0 +1,2 @@
+using deprecated parameters for the initialization function; pass a single object instead
+gap 3.2 seed 1 ecc undefined hipFlex 250: miss sev 0 over -0.878 dEnd 1.174 tipGapMin 0.132 lungeEnd 0.674 | P->A events 1 first t 0.848 blunt 10.342 J blade blade 0.95 m from guard -> chest speed 6.334 | all events P>A@0.848:blunt/chest/10.342

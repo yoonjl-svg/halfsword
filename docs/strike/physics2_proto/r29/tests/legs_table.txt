@@ -1,0 +1,6 @@
+다리 묶음 (기본 19 장면 · 롱소드 · n 8): 합계 151/152 → 151/152
+  stand 8/8 → 8/8 · walk 8/8 → 8/8 · back 8/8 → 8/8 · strafeR 8/8 → 8/8 · strafeL 8/8 → 8/8 · stopgo 8/8 → 8/8 · wander 8/8 → 8/8 · turn 8/8 → 8/8 · circle 8/8 → 8/8 · kick40 8/8 → 8/8 · kick80 7/8 → 7/8 · walkkick 8/8 → 8/8 · stroke_diagR 8/8 → 8/8 · walkstroke_diagR 8/8 → 8/8 · stroke_vert 8/8 → 8/8 · walkstroke_vert 8/8 → 8/8 · stroke_horizR 8/8 → 8/8 · walkstroke_horizR 8/8 → 8/8 · getup 8/8 → 8/8
+  빠르기 walk: speed 1.109 → 1.117 · 시킨 쪽 1.018 → 1.025 m/s
+  빠르기 back: speed 0.946 → 0.943 · 시킨 쪽 0.806 → 0.805 m/s
+  빠르기 strafeL: speed 0.538 → 0.539 · 시킨 쪽 0.489 → 0.488 m/s
+  빠르기 strafeR: speed 0.504 → 0.507 · 시킨 쪽 0.472 → 0.473 m/s

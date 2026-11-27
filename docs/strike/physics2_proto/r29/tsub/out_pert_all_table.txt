@@ -1,0 +1,172 @@
+| 값 짝 | 판 | 통과 | 닿기 앞 넘어짐 | 14 s 안 넘어짐 | 넘어짐 갈래 | 넘어진 때 | 베기 시작 없음 | 가장 가까운 거리 p50 |
+|---|---|---|---|---|---|---|---|---|
+| base | 41 | 26 | 7 | 12 | cap:short 8 · cap:nostep 1 · tilt:aid 1 · tilt:other 1 · sink:knee 1 | 11.8 13.7 13.4 13.3 12.6 13.1 11.9 11.8 13.1 11.6 12.1 13.9 | 9 | 1.07 |
+| e13m125 | 41 | 25 | 3 | 6 | cap:short 4 · cap:late 2 | 12.4 13.9 13.4 13.6 13.1 12.4 | 6 | 1.09 |
+| e117m125 | 41 | 19 | 9 | 10 | cap:short 7 · sink:knee 1 · cap:late 1 · cap:nostep 1 | 12.8 12.4 12.9 13.5 13.9 13.9 13.1 12.9 12.4 12.1 | 15 | 1.15 |
+| e13 | 21 | 11 | 3 | 4 | cap:short 3 · tilt:aid 1 | 12.7 13.0 12.8 11.6 | 6 | 1.19 |
+| m125 | 21 | 6 | 2 | 3 | tilt:aid 1 · cap:short 2 | 13.3 11.6 13.1 | 8 | 1.38 |
+base|none              pass 1 pre 0 fall - combo1 10.967 minD 1.427
+base|dz+0.5            pass 1 pre 0 fall - combo1 10.6 minD 1.109
+base|dz-0.5            pass 0 pre 0 fall - combo1 12.708 minD 1.075
+base|dz+1              pass 1 pre 0 fall - combo1 10.958 minD 0.797
+base|dz-1              pass 1 pre 0 fall - combo1 10.958 minD 1.199
+base|dz+2              pass 1 pre 0 fall - combo1 10.767 minD 1.441
+base|dz-2              pass 1 pre 0 fall - combo1 10.85 minD 0.917
+base|dz+3              pass 1 pre 0 fall - combo1 10.692 minD 1.037
+base|dz-3              pass 1 pre 0 fall - combo1 10.583 minD 0.89
+base|dz+5              pass 0 pre 1 fall 11.85 cap:short combo1 - minD 1.723
+base|dz-5              pass 1 pre 0 fall - combo1 11.117 minD 0.946
+base|dx+1              pass 1 pre 0 fall - combo1 10.792 minD 0.948
+base|dx-1              pass 1 pre 0 fall - combo1 10.95 minD 0.946
+base|dx+2              pass 0 pre 0 fall - combo1 - minD 1.876
+base|dx-2              pass 1 pre 0 fall - combo1 10.567 minD 1.099
+base|mv.44             pass 0 pre 0 fall - combo1 - minD 1.745
+base|mv.445            pass 1 pre 0 fall - combo1 11.358 minD 0.837
+base|mv.455            pass 0 pre 1 fall 13.692 cap:short combo1 - minD 1.6
+base|mv.46             pass 1 pre 0 fall - combo1 10.383 minD 0.708
+base|nud+1             pass 1 pre 0 fall - combo1 10.875 minD 1.043
+base|nud-1             pass 1 pre 0 fall - combo1 10.55 minD 0.757
+e13m125|none           pass 0 pre 1 fall 12.408 cap:short combo1 - minD 1.744
+e13m125|dz+0.5         pass 0 pre 0 fall - combo1 - minD 1.874
+e13m125|dz-0.5         pass 1 pre 0 fall - combo1 11.05 minD 1.09
+e13m125|dz+1           pass 0 pre 0 fall - combo1 13.8 minD 1.422
+e13m125|dz-1           pass 0 pre 0 fall - combo1 12.717 minD 0.948
+e13m125|dz+2           pass 1 pre 0 fall - combo1 10.492 minD 0.992
+e13m125|dz-2           pass 1 pre 0 fall - combo1 10.992 minD 1.003
+e13m125|dz+3           pass 1 pre 0 fall - combo1 10.808 minD 1.094
+e13m125|dz-3           pass 1 pre 0 fall - combo1 11.167 minD 1.016
+e13m125|dz+5           pass 0 pre 0 fall 13.95 cap:late combo1 12.942 minD 1.203
+e13m125|dz-5           pass 0 pre 0 fall - combo1 12.908 minD 1.047
+e13m125|dx+1           pass 0 pre 1 fall 13.358 cap:short combo1 - minD 1.754
+e13m125|dx-1           pass 0 pre 0 fall 13.583 cap:late combo1 12.067 minD 1.159
+e13m125|dx+2           pass 0 pre 1 fall 13.125 cap:short combo1 - minD 1.758
+e13m125|dx-2           pass 1 pre 0 fall - combo1 12.017 minD 1.476
+e13m125|mv.44          pass 1 pre 0 fall - combo1 12.142 minD 1.093
+e13m125|mv.445         pass 1 pre 0 fall - combo1 12.017 minD 0.843
+e13m125|mv.455         pass 1 pre 0 fall - combo1 10.983 minD 1.289
+e13m125|mv.46          pass 1 pre 0 fall - combo1 10.8 minD 0.941
+e13m125|nud+1          pass 1 pre 0 fall - combo1 11.15 minD 0.956
+e13m125|nud-1          pass 1 pre 0 fall - combo1 12.208 minD 1.05
+e117m125|none          pass 0 pre 1 fall 12.767 cap:short combo1 - minD 1.68
+e117m125|dz+0.5        pass 0 pre 0 fall - combo1 12.692 minD 0.856
+e117m125|dz-0.5        pass 0 pre 1 fall 12.392 sink:knee combo1 - minD 1.732
+e117m125|dz+1          pass 0 pre 0 fall - combo1 - minD 1.677
+e117m125|dz-1          pass 1 pre 0 fall - combo1 10.467 minD 1.081
+e117m125|dz+2          pass 1 pre 0 fall - combo1 11.958 minD 1.031
+e117m125|dz-2          pass 0 pre 0 fall - combo1 - minD 1.637
+e117m125|dz+3          pass 1 pre 0 fall - combo1 12.008 minD 0.864
+e117m125|dz-3          pass 1 pre 0 fall - combo1 11.167 minD 0.739
+e117m125|dz+5          pass 0 pre 0 fall - combo1 13.15 minD 1.145
+e117m125|dz-5          pass 0 pre 0 fall - combo1 - minD 1.594
+e117m125|dx+1          pass 0 pre 1 fall 12.942 cap:short combo1 - minD 1.742
+e117m125|dx-1          pass 0 pre 0 fall 13.508 cap:short combo1 10.767 minD 1.551
+e117m125|dx+2          pass 0 pre 0 fall - combo1 - minD 1.644
+e117m125|dx-2          pass 1 pre 0 fall - combo1 10.725 minD 1.024
+e117m125|mv.44         pass 0 pre 0 fall - combo1 - minD 1.82
+e117m125|mv.445        pass 0 pre 0 fall - combo1 13.733 minD 1.489
+e117m125|mv.455        pass 1 pre 0 fall - combo1 10.908 minD 0.935
+e117m125|mv.46         pass 1 pre 0 fall - combo1 10.892 minD 1.032
+e117m125|nud+1         pass 0 pre 0 fall - combo1 13.217 minD 1.203
+e117m125|nud-1         pass 1 pre 0 fall - combo1 12.208 minD 1.055
+e13|none               pass 1 pre 0 fall - combo1 10.775 minD 0.925
+e13|dz+0.5             pass 0 pre 1 fall 12.683 cap:short combo1 - minD 1.85
+e13|dz-0.5             pass 0 pre 1 fall 12.975 cap:short combo1 - minD 1.754
+e13|dz+1               pass 0 pre 1 fall 12.833 tilt:aid combo1 - minD 1.74
+e13|dz-1               pass 1 pre 0 fall - combo1 11.067 minD 1.205
+e13|dz+2               pass 1 pre 0 fall - combo1 10.75 minD 1.185
+e13|dz-2               pass 1 pre 0 fall - combo1 11.025 minD 0.958
+e13|dz+3               pass 1 pre 0 fall - combo1 10.483 minD 1.009
+e13|dz-3               pass 1 pre 0 fall - combo1 12.05 minD 0.911
+e13|dz+5               pass 0 pre 0 fall - combo1 13.4 minD 1.311
+e13|dz-5               pass 0 pre 0 fall - combo1 13.158 minD 1.397
+e13|dx+1               pass 0 pre 0 fall - combo1 - minD 1.655
+e13|dx-1               pass 0 pre 0 fall - combo1 - minD 1.759
+e13|dx+2               pass 0 pre 0 fall - combo1 11.142 minD 1.573
+e13|dx-2               pass 1 pre 0 fall 11.625 cap:short combo1 10.542 minD 1.165
+e13|mv.44              pass 0 pre 0 fall - combo1 13.017 minD 1.054
+e13|mv.445             pass 1 pre 0 fall - combo1 11.933 minD 0.921
+e13|mv.455             pass 1 pre 0 fall - combo1 10.9 minD 0.891
+e13|mv.46              pass 1 pre 0 fall - combo1 10.942 minD 1.076
+e13|nud+1              pass 0 pre 0 fall - combo1 - minD 1.749
+e13|nud-1              pass 1 pre 0 fall - combo1 12.075 minD 1.19
+m125|none              pass 0 pre 0 fall - combo1 11.125 minD 1.382
+m125|dz+0.5            pass 0 pre 0 fall - combo1 - minD 1.692
+m125|dz-0.5            pass 0 pre 0 fall - combo1 - minD 1.603
+m125|dz+1              pass 0 pre 0 fall - combo1 12.075 minD 1.451
+m125|dz-1              pass 1 pre 0 fall - combo1 10.6 minD 1
+m125|dz+2              pass 1 pre 0 fall - combo1 10.792 minD 0.898
+m125|dz-2              pass 0 pre 1 fall 13.283 tilt:aid combo1 - minD 1.769
+m125|dz+3              pass 1 pre 0 fall - combo1 12.175 minD 0.882
+m125|dz-3              pass 0 pre 0 fall - combo1 - minD 1.706
+m125|dz+5              pass 0 pre 0 fall - combo1 - minD 1.742
+m125|dz-5              pass 0 pre 0 fall - combo1 12.95 minD 1.037
+m125|dx+1              pass 1 pre 0 fall - combo1 10.958 minD 0.999
+m125|dx-1              pass 1 pre 0 fall - combo1 11.708 minD 0.929
+m125|dx+2              pass 0 pre 0 fall - combo1 12.575 minD 0.662
+m125|dx-2              pass 0 pre 0 fall - combo1 - minD 1.629
+m125|mv.44             pass 0 pre 0 fall - combo1 12.608 minD 1.073
+m125|mv.445            pass 0 pre 0 fall - combo1 11.133 minD 1.561
+m125|mv.455            pass 0 pre 0 fall 11.55 cap:short combo1 10.475 minD 1.255
+m125|mv.46             pass 1 pre 0 fall - combo1 10.858 minD 1.013
+m125|nud+1             pass 0 pre 1 fall 13.083 cap:short combo1 - minD 1.766
+m125|nud-1             pass 0 pre 0 fall - combo1 - minD 1.705
+base|dz+0.1            pass 0 pre 0 fall 13.383 cap:nostep combo1 12.192 minD 0.967
+base|dz-0.1            pass 1 pre 0 fall - combo1 10.95 minD 1.078
+base|dz+0.2            pass 1 pre 0 fall - combo1 10.867 minD 0.749
+base|dz-0.2            pass 1 pre 0 fall - combo1 11.067 minD 0.958
+base|dz+4              pass 0 pre 1 fall 13.3 tilt:aid combo1 - minD 1.604
+base|dz-4              pass 1 pre 0 fall - combo1 10.942 minD 1.216
+base|dz+7              pass 1 pre 0 fall - combo1 11.35 minD 0.964
+base|dz-7              pass 1 pre 0 fall - combo1 11.042 minD 0.87
+base|dz+10             pass 0 pre 1 fall 12.583 cap:short combo1 - minD 1.593
+base|dz-10             pass 0 pre 0 fall 13.125 cap:short combo1 12.533 minD 1.568
+base|dx+0.5            pass 0 pre 1 fall 11.892 tilt:other combo1 - minD 1.874
+base|dx-0.5            pass 1 pre 0 fall - combo1 11.158 minD 1.01
+base|dx+3              pass 0 pre 0 fall 11.842 sink:knee combo1 10.642 minD 1.22
+base|dx-3              pass 1 pre 0 fall - combo1 10.883 minD 0.958
+base|mv.442            pass 0 pre 1 fall 13.133 cap:short combo1 - minD 1.651
+base|mv.448            pass 0 pre 0 fall 11.633 cap:short combo1 11.442 minD 1.506
+base|mv.452            pass 1 pre 0 fall - combo1 10.867 minD 0.745
+base|mv.458            pass 1 pre 0 fall - combo1 10.775 minD 0.934
+base|nud+0.5           pass 0 pre 1 fall 12.125 cap:short combo1 - minD 1.863
+base|nud-0.5           pass 0 pre 0 fall 13.9 cap:short combo1 10.983 minD 1.494
+e13m125|dz+0.1         pass 0 pre 0 fall - combo1 13.5 minD 1.476
+e13m125|dz-0.1         pass 1 pre 0 fall - combo1 10.983 minD 0.961
+e13m125|dz+0.2         pass 1 pre 0 fall 12.425 cap:short combo1 10.933 minD 1.185
+e13m125|dz-0.2         pass 0 pre 0 fall - combo1 12.492 minD 1.336
+e13m125|dz+4           pass 1 pre 0 fall - combo1 10.95 minD 1.082
+e13m125|dz-4           pass 0 pre 0 fall - combo1 13.983 minD 1.565
+e13m125|dz+7           pass 1 pre 0 fall - combo1 10.283 minD 0.934
+e13m125|dz-7           pass 0 pre 0 fall - combo1 12.817 minD 0.994
+e13m125|dz+10          pass 1 pre 0 fall - combo1 10.25 minD 1.195
+e13m125|dz-10          pass 1 pre 0 fall - combo1 11.108 minD 1.522
+e13m125|dx+0.5         pass 1 pre 0 fall - combo1 10.933 minD 0.901
+e13m125|dx-0.5         pass 0 pre 0 fall - combo1 - minD 1.754
+e13m125|dx+3           pass 0 pre 0 fall - combo1 - minD 1.781
+e13m125|dx-3           pass 1 pre 0 fall - combo1 10.792 minD 0.977
+e13m125|mv.442         pass 0 pre 0 fall - combo1 11.033 minD 1.534
+e13m125|mv.448         pass 1 pre 0 fall - combo1 11.117 minD 1.551
+e13m125|mv.452         pass 1 pre 0 fall - combo1 10.975 minD 1.234
+e13m125|mv.458         pass 1 pre 0 fall - combo1 10.342 minD 0.803
+e13m125|nud+0.5        pass 1 pre 0 fall - combo1 11.008 minD 1.025
+e13m125|nud-0.5        pass 1 pre 0 fall - combo1 10.933 minD 0.812
+e117m125|dz+0.1        pass 1 pre 0 fall - combo1 11.917 minD 0.919
+e117m125|dz-0.1        pass 0 pre 1 fall 13.917 cap:short combo1 - minD 1.632
+e117m125|dz+0.2        pass 0 pre 1 fall 13.917 cap:short combo1 - minD 1.755
+e117m125|dz-0.2        pass 0 pre 1 fall 13.125 cap:late combo1 - minD 1.738
+e117m125|dz+4          pass 0 pre 0 fall - combo1 - minD 1.758
+e117m125|dz-4          pass 1 pre 0 fall - combo1 11.083 minD 1.242
+e117m125|dz+7          pass 1 pre 0 fall - combo1 10.45 minD 1.095
+e117m125|dz-7          pass 1 pre 0 fall - combo1 11.1 minD 0.917
+e117m125|dz+10         pass 1 pre 0 fall - combo1 10.258 minD 1.138
+e117m125|dz-10         pass 0 pre 0 fall - combo1 12.392 minD 0.874
+e117m125|dx+0.5        pass 1 pre 0 fall - combo1 10.975 minD 1.153
+e117m125|dx-0.5        pass 0 pre 1 fall 12.892 cap:nostep combo1 - minD 1.743
+e117m125|dx+3          pass 1 pre 0 fall - combo1 10.95 minD 0.883
+e117m125|dx-3          pass 1 pre 0 fall - combo1 10.7 minD 1.254
+e117m125|mv.442        pass 0 pre 1 fall 12.392 cap:short combo1 - minD 1.772
+e117m125|mv.448        pass 0 pre 0 fall - combo1 12.542 minD 1.094
+e117m125|mv.452        pass 1 pre 0 fall - combo1 10.95 minD 0.995
+e117m125|mv.458        pass 1 pre 0 fall - combo1 11.192 minD 0.852
+e117m125|nud+0.5       pass 0 pre 1 fall 12.075 cap:short combo1 - minD 1.737
+e117m125|nud-0.5       pass 1 pre 0 fall - combo1 10.983 minD 1
