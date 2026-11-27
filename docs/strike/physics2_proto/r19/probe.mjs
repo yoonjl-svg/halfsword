@@ -131,12 +131,13 @@ const TDS = new WeakMap(); // fighter → {F: {on, since}, B: ...}
 function bw(f) { let M = 0; for (const { rb } of f.meshes) M += rb.mass(); return M * 9.81; }
 
 // ── 사본 한 스텝 ──
-function runCopy(snap, rec, items, x, motorsOff) {
+function runCopy(snap, rec, items, x, offIt) {
   const W = RAPIER.World.restoreSnapshot(snap);
   const raw = W.impulseJoints.raw;
   for (const it of items) {
     const P = W.getRigidBody(it.ph), C = W.getRigidBody(it.ch);
-    if (motorsOff) { if (it.hinge) raw.jointConfigureMotor(it.h, 3, 0, 0, 0, 0); else for (const ax of [3, 4, 5]) raw.jointConfigureMotor(it.h, ax, 0, 0, 0, 0); }
+    // 모터 끄기: k = 0 · d = 1e-9 (k = d = 0 을 넣으면 Rapier 0.19 는 관절을 굳힌다 — 확인함: 그 축이 토크에 꿈쩍 않음)
+    if (it === offIt) { if (it.hinge) raw.jointConfigureMotor(it.h, 3, 0, 0, 0, 1e-9); else for (const ax of [3, 4, 5]) raw.jointConfigureMotor(it.h, ax, 0, 0, 0, 1e-9); }
     const T = it.hinge ? scl(it.axis, x[it.o]) : V(x[it.o], x[it.o + 1], x[it.o + 2]);
     if (T.x || T.y || T.z) { oAddTorque.call(C, T, true); oAddTorque.call(P, scl(T, -1), true); }
   }
@@ -148,9 +149,10 @@ function runCopy(snap, rec, items, x, motorsOff) {
   const all = [];
   for (const h of ALLH) { const b = W.getRigidBody(h); all.push([cv(oLinvel.call(b)), cv(oAngvel.call(b))]); }
   W.free();
-  return { y, all };
+  return { y, all, z: zvec(all) };
 }
-let ALLH = [];
+let ALLH = [], WT = []; // 몸 토막 손잡이 · 무게 (√m · √I)
+const zvec = (all) => { const z = []; all.forEach(([lv, av], i) => { const [a, b] = WT[i]; z.push(lv.x * a, lv.y * a, lv.z * a, av.x * b, av.y * b, av.z * b); }); return z; };
 let COPYEQ = null;
 function readY(W, items) {
   const y = [];
@@ -182,7 +184,9 @@ W0.step = function (eq, hooks) {
     filterContactPair: (c1, c2, b1, b2) => { const r = hooks.filterContactPair(c1, c2, b1, b2); rec.set(c1 + ',' + c2, r); return r; },
     filterIntersectionPair: (c1, c2, b1, b2) => { const r = hooks.filterIntersectionPair ? hooks.filterIntersectionPair(c1, c2, b1, b2) : true; rec.set('i' + c1 + ',' + c2, r); return r; },
   } : hooks;
+  const preQ = !NOIMP && fs.length ? fs.map((f) => legJoints(f).map((it) => ({ ...it, qp: cq(oRot.call(it.j.parent)), qc: cq(oRot.call(it.j.child)) }))) : null;
   const ret = origStep.call(this, eq, hk);
+  if (preQ) impFighters(this, fs, preQ, s);
   STEPNO.set(this, s + 1);
   // 발 힘 · 디딤 (스텝마다)
   for (const f of fs) {
@@ -208,8 +212,67 @@ W0.step = function (eq, hooks) {
   return ret;
 };
 
+// ── 모터 충격량 읽기: 스텝 뒤 스냅숏 바이트에서 JointMotor { target_vel, target_pos, stiffness, damping, max_force, impulse, model } 를 찾는다 (bincode · f32 · 정렬 없음).
+//  넘긴 [tv, t, k, d] 네 값(f32)이 이어진 자리 → +20 바이트 = impulse. Rapier 는 마지막 작은 스텝(substep)의 충격량만 남긴다 →
+//  토크 ≈ impulse ÷ (dt / 작은 스텝 수). 자유 두 몸 시험(dbg d4)에서 참값 ÷ 이 값 = 1.11 ~ 1.14 (첫 작은 스텝들이 더 큼) — A/B 로 다시 맞춘다
+const NOIMP = !!process.env.R19_NOIMP;
+const STEPLOG = process.env.R19_STEPLOG ?? null;
+const f32b = (() => { const F = new Float32Array(1), U = new Uint32Array(F.buffer); return (x) => { F[0] = x; return U[0]; }; })();
+const LASTIMP = new WeakMap(); // fighter → Map(jointName → child torque world (imp 법))
+function impFighters(world, fs, preQ, s) {
+  const cap = CAP.get(world.impulseJoints.raw); if (!cap) return;
+  const sn = world.takeSnapshot();
+  const dv = new DataView(sn.buffer, sn.byteOffset, sn.byteLength);
+  const nsub = world.integrationParameters.numSolverIterations || 1;
+  const want = new Map(); const slots = [];
+  fs.forEach((f, fi) => preQ[fi].forEach((it) => { const m = cap.get(it.h); if (!m) return; for (const ax of it.hinge ? [3] : [3, 4, 5]) { const c = m[ax]; if (!c) continue; const pat = [c.tv, c.t, c.k, c.d].map(f32b); const sl = { fi, it, ax, pat, imp: null, hits: 0 }; slots.push(sl); const a = want.get(pat[0]) ?? []; a.push(sl); want.set(pat[0], a); } }));
+  for (let o = 0; o + 24 <= sn.length; o++) {
+    const a = want.get(dv.getUint32(o, true)); if (!a) continue;
+    for (const sl of a) if (dv.getUint32(o + 4, true) === sl.pat[1] && dv.getUint32(o + 8, true) === sl.pat[2] && dv.getUint32(o + 12, true) === sl.pat[3]) { sl.imp = dv.getFloat32(o + 20, true); sl.hits++; }
+  }
+  const per = fs.map(() => new Map());
+  for (const sl of slots) {
+    if (sl.hits !== 1) { IMPMISS++; continue; }
+    const tq = -sl.imp / (DT / nsub);
+    const axL = sl.it.hinge ? V(0, 0, 1) : sl.ax === 3 ? V(1, 0, 0) : sl.ax === 4 ? V(0, 1, 0) : V(0, 0, 1);
+    const w = qrot(sl.it.qp, axL), m = per[sl.fi];
+    m.set(sl.it.n, add(m.get(sl.it.n) ?? V(), scl(w, tq)));
+  }
+  fs.forEach((f, fi) => {
+    LASTIMP.set(f, per[fi]);
+    if (!STEPLOG) return;
+    const T = TDS.get(f), ex = EXPL.get(f) ?? new Map();
+    const str = { F: f.legDrive.strengthOf('F'), B: f.legDrive.strengthOf('B') };
+    const J = preQ[fi].map((it) => {
+      const real = per[fi].get(it.n) ?? V(), expl = ex.get(it.ch) ?? V();
+      const recW = recompute(world, it, cap);
+      const fr = it.kind === 's' ? it.qp : it.qc;
+      const axv = AXES2[it.kind].map(([an, vec]) => { const w = qrot(fr, vec); return [+(-dot(real, w)).toFixed(2), +(-dot(recW, w)).toFixed(2), +(-dot(expl, w)).toFixed(2)]; });
+      return [it.n, f.gait.legs[it.k].stance ? 1 : 0, +str[it.k].toFixed(3), axv];
+    });
+    // 접촉 힘은 다음 스텝 앞에 셈된 TDS 를 쓰면 한 스텝 늦으므로 여기서 다시 잰다
+    const BW = T?.bw ?? bw(f);
+    const fyF = footFy(world, f, 'F') / BW, fyB = footFy(world, f, 'B') / BW;
+    const D = f.legDrive?.dbg;
+    appendFileSync(STEPLOG, JSON.stringify({ s, who: f.name ?? f.index, fyF: +fyF.toFixed(3), fyB: +fyB.toFixed(3), N: D && typeof D.N === 'number' ? +(D.N / BW).toFixed(3) : null, J }) + '\n');
+  });
+}
+let IMPMISS = 0;
+const AXES2 = { t: [['abd', V(1, 0, 0)], ['rot', V(0, 1, 0)], ['flex', V(0, 0, 1)]], s: [['knee', V(0, 0, 1)]], f: [['ankInv', V(1, 0, 0)], ['ankRot', V(0, 1, 0)], ['ankle', V(0, 0, 1)]] };
+function recompute(world, it, cap) {
+  const m = cap?.get(it.h); if (!m) return V();
+  const e = rotvec(qmul(cq(it.j.restInv), qmul(qconj(it.qp), it.qc)));
+  const P = world.getRigidBody(it.ph), C = world.getRigidBody(it.ch);
+  const wr = qrot(qconj(it.qp), sub(cv(oAngvel.call(C)), cv(oAngvel.call(P))));
+  const loc = V();
+  if (it.hinge) { const sl = m[3]; if (sl) loc.z = sl.k * (sl.t - e.z) + sl.d * (sl.tv - wr.z); }
+  else for (const [ax, i] of [['x', 3], ['y', 4], ['z', 5]]) { const sl = m[i]; if (sl) loc[ax] = sl.k * (sl.t - e[ax]) + sl.d * (sl.tv - wr[ax]); }
+  return qrot(it.qp, loc);
+}
+
 function abFighter(world, f, items, snap, rec, s, regular) {
   ALLH = f.meshes.map(({ rb }) => rb.handle);
+  WT = f.meshes.map(({ rb }) => { const I = rb.principalInertia(); return [Math.sqrt(rb.mass()), Math.sqrt((I.x + I.y + I.z) / 3)]; });
   let o = 0;
   for (const it of items) { it.o = o; o += it.hinge ? 1 : 3; it.axis = qrot(it.qp, V(0, 0, 1)); }
   const n = o;
@@ -217,30 +280,57 @@ function abFighter(world, f, items, snap, rec, s, regular) {
   const truthAll = ALLH.map((h) => { const b = world.getRigidBody(h); return [cv(oLinvel.call(b)), cv(oAngvel.call(b))]; });
   const zero = new Array(n).fill(0);
   let det = null;
-  if (VALIDATE || nSampled < 3) { const r = runCopy(snap, rec, items, zero, false); det = Math.max(...r.y.map((v, i) => Math.abs(v - truthY[i]))); }
-  // 알려진 답 검산: 모터 끈 사본 + 알려진 토크 X0 를 '원래'로 놓고 같은 풀이로 X0 를 되찾는가
-  const solve = (target) => {
-    const y0 = runCopy(snap, rec, items, zero, true).y;
-    const h = 20, Jc = [];
-    for (let i = 0; i < n; i++) { const e = zero.slice(); e[i] = h; const yi = runCopy(snap, rec, items, e, true).y; Jc.push(yi.map((v, r) => (v - y0[r]) / h)); }
-    const A = Array.from({ length: n }, (_, r) => Array.from({ length: n }, (_, c) => Jc[c][r]));
-    let x = solveLin(A, target.map((v, i) => v - y0[i]));
+  if (VALIDATE || nSampled < 3) { const r = runCopy(snap, rec, items, zero, null); det = Math.max(...r.y.map((v, i) => Math.abs(v - truthY[i]))); }
+  // 관절 하나씩: 그 관절 모터만 끄고 토크 쌍 x(경첩 1 · 공 3)로 바꿔, 그 관절 상대 각속도가 원래와 같아지는 x (나머지 관절 모터는 그대로).
+  //  (모터 여섯을 한꺼번에 끄고 14 개를 함께 풀면 두 발이 땅에 닿은 닫힌 고리에서 야코비안이 특이 — 고리 안 토크 나눔은 움직임으로 안 갈린다. 확인함)
+  //  맞추는 것 = 그 싸움꾼 모든 몸 토막의 선 · 각속도(√m · √I 무게 — 운동 에너지 틀)를 최소제곱으로. 관절 상대 각속도만 맞추면 디딘 다리(발이 땅에 눌린 닫힌 고리)에서
+  //  토크가 거의 땅 반력으로 빠져 그 관절 각속도로는 안 보인다 — 반작용을 받는 부모 쪽 몸 · 골반의 움직임까지 맞춰야 갈린다(확인함)
+  const solveJ = (targetZ, it) => {
+    const d = it.hinge ? 1 : 3;
+    const mk = (v) => { const x = zero.slice(); for (let i = 0; i < d; i++) x[it.o + i] = v[i]; return x; };
+    const z0 = runCopy(snap, rec, items, zero, it).z;
+    const h = it.kind === 'f' ? 1 : 5, cols = []; // 발목: 발이 가벼워(1.1 kg) 모터 없이 20 N·m 이면 한 스텝에 ±80 rad/s — 관절 끝에 닿아 비선형. 작은 h
+    for (let c = 0; c < d; c++) { const e = new Array(d).fill(0); e[c] = h; const zc = runCopy(snap, rec, items, mk(e), it).z; cols.push(zc.map((q, r) => (q - z0[r]) / h)); }
+    const N = Array.from({ length: d }, (_, r) => Array.from({ length: d }, (_, c) => cols[r].reduce((s2, q, i) => s2 + q * cols[c][i], 0)));
+    const ls = (res) => solveLin(N, cols.map((cl) => cl.reduce((s2, q, i) => s2 + q * res[i], 0)));
+    let v = ls(targetZ.map((t, i) => t - z0[i]));
     let last = null;
-    for (let it = 0; it < 2; it++) { last = runCopy(snap, rec, items, x, true); const r = target.map((v, i) => v - last.y[i]); const dx = solveLin(A, r); x = x.map((v, i) => v + dx[i]); }
-    last = runCopy(snap, rec, items, x, true);
-    const resid = Math.max(...target.map((v, i) => Math.abs(v - last.y[i])));
-    return { x, resid, last };
+    for (let k = 0; k < 4; k++) { last = runCopy(snap, rec, items, mk(v), it); const dv = ls(targetZ.map((t, i) => t - last.z[i])); v = v.map((q, i) => q + dv[i]); }
+    last = runCopy(snap, rec, items, mk(v), it);
+    const nr = Math.hypot(...targetZ.map((t, i) => t - last.z[i])), n0 = Math.hypot(...targetZ.map((t, i) => t - z0[i]));
+    return { v, resid: nr / Math.max(1e-9, n0), last, nr, n0 };
   };
-  const { x, resid, last } = solve(truthY);
-  let maxDv = 0, maxDw = 0;
-  last.all.forEach(([lv, av], i) => { maxDv = Math.max(maxDv, len(sub(lv, truthAll[i][0]))); maxDw = Math.max(maxDw, len(sub(av, truthAll[i][1]))); });
+  const truthZ = zvec(truthAll);
+  if (process.env.R19_LIN && nSampled < 6) for (const it of items.slice(0, 3)) {
+    const out = [];
+    for (const q of [-40, -20, -10, 0, 10, 20, 40]) { const x = zero.slice(); x[it.o] = q; const r = runCopy(snap, rec, items, x, it); out.push(r.y[it.o].toFixed(4) + '|' + r.z[0].toFixed(4)); }
+    process.stderr.write(`lin s=${s} ${it.n} ${out.join(' ')}\n`);
+  }
+  const x = zero.slice();
+  let resid = 0, maxDv = 0, maxDw = 0;
+  const per = [];
+  for (const it of items) {
+    const r = solveJ(truthZ, it);
+    r.v.forEach((q, i) => (x[it.o + i] = q));
+    let dv = 0, dw = 0;
+    r.last.all.forEach(([lv, av], i) => { dv = Math.max(dv, len(sub(lv, truthAll[i][0]))); dw = Math.max(dw, len(sub(av, truthAll[i][1]))); });
+    resid = Math.max(resid, r.resid); maxDv = Math.max(maxDv, dv); maxDw = Math.max(maxDw, dw);
+    per.push([+r.resid.toExponential(2), +dv.toExponential(2), +dw.toExponential(2), +r.nr.toExponential(2), +r.n0.toExponential(2)]);
+  }
   let val = null;
   if (VALIDATE) {
-    const X0 = items.flatMap((it) => (it.hinge ? [40 * Math.sin(s + it.o)] : [30 * Math.sin(s + it.o), 30 * Math.cos(s + it.o), 20 * Math.sin(2 * s + it.o)]));
-    const tgt = runCopy(snap, rec, items, X0, true).y;
-    const r = solve(tgt);
-    let err = 0, ref = 0; r.x.forEach((v, i) => { err = Math.max(err, Math.abs(v - X0[i])); ref = Math.max(ref, Math.abs(X0[i])); });
-    val = { err: +err.toFixed(4), ref: +ref.toFixed(1) };
+    let err = 0, ref = 0; const ej = [];
+    for (const it of items) {
+      let e1 = 0;
+      const A0 = it.kind === 'f' ? 6 : 30;
+      const X0 = it.hinge ? [A0 * Math.sin(s + it.o)] : [A0 * Math.sin(s + it.o), A0 * Math.cos(s + it.o), A0 * 0.7 * Math.sin(2 * s + it.o)];
+      const xx = zero.slice(); X0.forEach((q, i) => (xx[it.o + i] = q));
+      const tgt = runCopy(snap, rec, items, xx, it).z;
+      const r = solveJ(tgt, it);
+      r.v.forEach((q, i) => { e1 = Math.max(e1, Math.abs(q - X0[i]) / A0); ref = Math.max(ref, Math.abs(X0[i]) / A0); });
+      err = Math.max(err, e1); ej.push(+e1.toFixed(3));
+    }
+    val = { err: +err.toFixed(4), ref: +ref.toFixed(1), ej };
   }
   // 관절마다: 실제 모터 · 다시 센 모터 · 명시 (모두 자식이 받은 토크 · 세계 틀) → 축 값
   const cap = CAP.get(world.impulseJoints.raw);
@@ -264,17 +354,18 @@ function abFighter(world, f, items, snap, rec, s, regular) {
     }
     const expl = ex.get(it.ch) ?? V();
     const fr = it.kind === 's' ? it.qp : it.qc;
+    const impW = LASTIMP.get(f)?.get(it.n) ?? V();
     const st = !!f.gait.legs[it.k].stance;
     const out = { n: it.n, st, since: T?.[it.k]?.since ?? -1, str: +str[it.k].toFixed(3), ax: {} };
     for (const [an, vec, pos, neg] of AXES[it.kind]) {
       const w = qrot(fr, vec);
       const mR = -dot(real, w), mC = -dot(recW, w), e = -dot(expl, w), tR = mR + e, tC = mC + e;
       const lim = (v) => ((v >= 0 ? LIM[pos] : LIM[neg]) * Math.max(1e-3, str[it.k]));
-      out.ax[an] = [+mR.toFixed(2), +mC.toFixed(2), +e.toFixed(2), +(Math.abs(tR) / lim(tR)).toFixed(4), +(Math.abs(tC) / lim(tC)).toFixed(4), +(Math.abs(mR) / lim(mR)).toFixed(4), +(Math.abs(mC) / lim(mC)).toFixed(4)];
+      out.ax[an] = [+(-dot(impW, w)).toFixed(2), +mR.toFixed(2), +mC.toFixed(2), +e.toFixed(2), +(Math.abs(tR) / lim(tR)).toFixed(4), +(Math.abs(tC) / lim(tC)).toFixed(4), +(Math.abs(mR) / lim(mR)).toFixed(4), +(Math.abs(mC) / lim(mC)).toFixed(4)];
     }
     J.push(out);
   }
-  const line = { s, who: f.name ?? f.index, reg: regular, fyF: T ? +(T.F.fy / T.bw).toFixed(3) : null, fyB: T ? +(T.B.fy / T.bw).toFixed(3) : null, resid: +resid.toExponential(2), maxDv: +maxDv.toExponential(2), maxDw: +maxDw.toExponential(2), det, val, J };
+  const line = { s, who: f.name ?? f.index, reg: regular, fyF: T ? +(T.F.fy / T.bw).toFixed(3) : null, fyB: T ? +(T.B.fy / T.bw).toFixed(3) : null, per, resid: +resid.toExponential(2), maxDv: +maxDv.toExponential(2), maxDw: +maxDw.toExponential(2), det, val, J };
   if (OUT) appendFileSync(OUT, JSON.stringify(line) + '\n');
 }
-process.on('exit', () => { if (OUT) process.stderr.write(`r19 probe: ${nSampled} sampled steps · ${(tAB / Math.max(1, nSampled)).toFixed(1)} ms each\n`); });
+process.on('exit', () => { process.stderr.write(`r19 probe: ${nSampled} sampled steps · ${(tAB / Math.max(1, nSampled)).toFixed(1)} ms each · imp misses ${IMPMISS}\n`); });
