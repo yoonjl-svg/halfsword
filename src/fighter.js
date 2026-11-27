@@ -517,6 +517,7 @@ function offGap(g, so, eo, w) {
 }
 const _ocO = { so: new THREE.Vector3(), eo: new THREE.Vector3(), wc: new THREE.Vector3() };
 const _acX = { o: { so: new THREE.Vector3(), eo: new THREE.Vector3(), wc: new THREE.Vector3() }, gap: 0, wb: null, wbV: new THREE.Vector3() }; // armClearNear → elbowSwivel (① 빈팔 몸 선분 · 겉 틈 · 칼 손목 지금 몸)
+const _oaT = new THREE.Vector3(); // offArmSchool 빈손 비킴 틈 셈 자리
 const _oyS = new THREE.Vector3(), _oyD = new THREE.Vector3(), _oyP = new THREE.Vector3(), _oyE = new THREE.Vector3(), _oyW = new THREE.Vector3(), _oyT = new THREE.Vector3(), _oaY = new THREE.Vector3();
 /** 빈팔 IK 자세 (offArmIK 와 같은 셈 — 빈 어깨 · 위팔 0.3 · 아래팔 0.275 · 기본 겨냥): 가슴 틀 손 목표 T → 칼 팔과 겉 틈 (m) */
 function offPoseGap(g, T, side) {
@@ -4267,6 +4268,9 @@ export class Fighter {
       const y = (this._offYield ||= new THREE.Vector3());
       const tau = JOINTS.swivelTau;
       y.lerp(want, tau > 0 ? 1 - Math.exp(-(this.lastDt || 1 / 120) / tau) : 1);
+      //  여는 쪽은 곧장: 따라간 옮김이 틈 gap 을 못 열고 바란 옮김은 열면 바란 옮김으로 (돌아오는 쪽만 swivelTau). 칼 팔이 빈팔 쪽으로 0.26 m/s 로 다가오면
+      //  swivelTau 0.2 초 따라감이 바란 옮김(많아야 2 cm 씩 늚)을 3 ~ 5 cm 뒤처져 명령 두 팔이 2 ~ 2.9 cm 겹쳤다 (arm_real D 왼쪽 한손 칼 — 기록 physics2_notes/r17_offhand.md)
+      if (offPoseGap(this._swGeo, _oaT.copy(P).add(y), this.side) < SKILL.armClear.gap && offPoseGap(this._swGeo, _oaT.copy(P).add(want), this.side) >= SKILL.armClear.gap) y.copy(want);
       P.add(y);
     } else if (this._offYield) this._offYield.set(0, 0, 0);
     const chest = this.bodies.chest;
