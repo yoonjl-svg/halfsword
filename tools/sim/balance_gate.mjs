@@ -11,7 +11,7 @@
 //  --json: { scenes: { A: { recovery, … }, … }, total: { recovery, recovered, n }, guard: { changed, rows } } — 찾기 도구는 scenes.<장면>.recovery 하나씩 읽으면 된다.
 // ─────────────────────────────────────────────────────────────
 import { fileURLToPath } from 'node:url';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, basename } from 'node:path';
 import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdtempSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -49,7 +49,8 @@ const line = (m) => {
   const cs = Object.entries(m.causes).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(' · ') || '-';
   return `  ${m.scene} ${m.name.padEnd(16)} 버팀 ${String(m.recovered).padStart(2)}/${m.n} (${fmt(100 * m.recovery, 0)} %) · 넘어짐 원인 ${cs} (같은 원인 ${m.sameCause == null ? '-' : fmt(100 * m.sameCause, 0) + ' %'}) · 자리 잡음 ${fmt(m.tSteady)} s · 걸음 ${fmt(m.nSteps, 0)} · 디딘÷필요 ${fmt(m.stepRatio)} · 날아간 ${fmt(m.flight)} s · 디딜 때 무릎 ${fmt(m.kneeTD, 0)}° · 가장 깊은 무릎 ${fmt(m.kneeDeep, 0)}° · 한도 넘은 몫 무릎 ${fmt(m.kneeOver)} 엉덩이 ${fmt(m.hipOver)} 발목 ${fmt(m.ankleOver)}`;
 };
-const out = { root: ROOT, seeds: SEEDS, scenes: {}, total: null, guard: null, secs: null };
+const out = { root: basename(ROOT), seeds: SEEDS, // 파일에는 나무의 마지막 이름만 (온 길은 적지 않음)
+  scenes: {}, total: null, guard: null, secs: null };
 console.log(`균형 관문 · ${ROOT} · 씨앗 ${SEEDS}`);
 let rec = 0, n = 0;
 for (const k of KEYS) {
@@ -73,10 +74,10 @@ if (!args.noguard) {
     r.changed = bad; if (bad) changed++;
     lines.push(`${k} ${r.ok}/${r.n}${sp ? ` ${fmt(r.along)} m/s` : ''}${q ? (bad ? ` ← 바뀜 (기준 ${q.ok}/${q.n}${sp ? ' ' + fmt(q.along) + ' m/s' : ''})` : '') : ''}`);
   }
-  out.guard = { changed, ref: ref ? REF : null, rows };
+  out.guard = { changed, ref: ref ? basename(REF) : null, rows };
   console.log(`  지킴 줄 (legs_battery 기본 19 · n 8 · longsword${ref ? ' · 기준과 견줌' : ' · 기준 없음'}): ${changed ? `바뀜 ${changed}` : ref ? '모두 같음' : '-'}`);
   for (let i = 0; i < lines.length; i += 5) console.log('    ' + lines.slice(i, i + 5).join(' · '));
-  if (args.writeRef) { writeFileSync(REF, JSON.stringify({ root: ROOT, note: 'legs_battery 기본 19 장면 · --n=8 --fights=0 --weapons=longsword --nohonesty', rows }, null, 1)); console.log(`  기준을 적음: ${REF}`); }
+  if (args.writeRef) { writeFileSync(REF, JSON.stringify({ root: basename(ROOT), note: 'legs_battery 기본 19 장면 · --n=8 --fights=0 --weapons=longsword --nohonesty', rows }, null, 1)); console.log(`  기준을 적음: ${REF}`); }
 }
 out.secs = +((Date.now() - t0) / 1000).toFixed(0);
 console.log(`  걸린 시간 ${out.secs} s (함께 ${JOBS})`);

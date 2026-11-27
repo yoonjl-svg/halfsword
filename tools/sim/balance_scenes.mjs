@@ -19,7 +19,7 @@
 //   E 몸통 기욺 — 앞 · 옆으로 걸으며 베기 · 가슴을 앞 · 옆으로 침 — 되살리지 못함(넘어짐은 나와도 원인이 cap:* · sink:knee — 기록 참조). 관문 기본 묶음에서 빠짐 (--scenes=E 로만)
 // ─────────────────────────────────────────────────────────────
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, basename } from 'node:path';
 import { writeFileSync, existsSync } from 'node:fs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -202,7 +202,7 @@ if (isMain) {
   const keys = String(args.scenes ?? 'A,C').split(',');
   const seeds = parseSeeds(args.seeds ?? '0-39');
   const over = {}; for (const k of ['J', 'ang', 'lead', 'back']) if (args[k] != null) over[k] = +args[k]; if (args.part) over.part = String(args.part); if (args.trace) over.trace = true; if (args.healthy) over.healthy = true;
-  const out = { root: ROOT, seeds: String(args.seeds ?? '0-39'), over, scenes: {} };
+  const out = { root: basename(ROOT), seeds: String(args.seeds ?? '0-39'), over, scenes: {} };
   for (const k of keys) {
     const rs = seeds.map((sd) => runScene(k, sd, over));
     if (args.rows) for (const r of rs) console.log(`    ${k} #${r.seed} ${r.weapon.padEnd(10)} J ${r.J} ang ${r.ang} 침 ${r.hitAt} → ${r.fell ? `넘어짐 ${r.tFall} s ${r.cause} (${r.why})` : `버팀 · 자리 잡음 ${r.tSteady}`} · 걸음 ${r.steps.map((x) => `${x.kind}:${x.leg} ${fmt(x.taken)}/${fmt(x.need)} ${fmt(x.flight)}s 무릎${x.knee}`).join(' | ')} · 깊은 무릎 ${r.kneeDeep} · 한도 무릎 ${r.kneeOver} 엉덩이 ${r.hipOver} 발목 ${r.ankleOver}`);
