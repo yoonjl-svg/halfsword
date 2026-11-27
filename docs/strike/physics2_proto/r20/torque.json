@@ -1,0 +1,169 @@
+{
+ "seeds": "4001-4040",
+ "res": {
+  "rapier": {
+   "trials": 40,
+   "joints": {
+    "farmO": {
+     "limit": 80,
+     "cmdAtLimit": 0,
+     "sentOverLimit": 0,
+     "cmdPeak": 59.5,
+     "sentPeak": 7.5
+    },
+    "farmS": {
+     "limit": 80,
+     "cmdAtLimit": 0.2485,
+     "sentOverLimit": 0.0038,
+     "cmdPeak": 242.8,
+     "sentPeak": 101.1
+    },
+    "footB": {
+     "limit": 250,
+     "cmdAtLimit": 0,
+     "sentOverLimit": 0,
+     "cmdPeak": 121.4,
+     "sentPeak": 74
+    },
+    "footF": {
+     "limit": 250,
+     "cmdAtLimit": 0,
+     "sentOverLimit": 0,
+     "cmdPeak": 182.6,
+     "sentPeak": 146.4
+    },
+    "shinB": {
+     "limit": 250,
+     "cmdAtLimit": 0,
+     "sentOverLimit": 0,
+     "cmdPeak": 141.6,
+     "sentPeak": 181.2
+    },
+    "shinF": {
+     "limit": 250,
+     "cmdAtLimit": 0.0006,
+     "sentOverLimit": 0,
+     "cmdPeak": 443.4,
+     "sentPeak": 240
+    },
+    "sword": {
+     "limit": 25,
+     "cmdAtLimit": 0.0092,
+     "sentOverLimit": 0.0136,
+     "cmdPeak": 39.3,
+     "sentPeak": 45.3
+    },
+    "thighB": {
+     "limit": 250,
+     "cmdAtLimit": 0.0049,
+     "sentOverLimit": 0.0104,
+     "cmdPeak": 289.8,
+     "sentPeak": 260.7
+    },
+    "thighF": {
+     "limit": 250,
+     "cmdAtLimit": 0,
+     "sentOverLimit": 0,
+     "cmdPeak": 242.1,
+     "sentPeak": 223.1
+    },
+    "uarmO": {
+     "limit": 100,
+     "cmdAtLimit": 0,
+     "sentOverLimit": 0,
+     "cmdPeak": 57.3,
+     "sentPeak": 23.5
+    },
+    "uarmS": {
+     "limit": 100,
+     "cmdAtLimit": 0.015,
+     "sentOverLimit": 0.0196,
+     "cmdPeak": 150.9,
+     "sentPeak": 259.5
+    }
+   }
+  },
+  "longsword": {
+   "trials": 40,
+   "joints": {
+    "farmO": {
+     "limit": 80,
+     "cmdAtLimit": 0.0024,
+     "sentOverLimit": 0,
+     "cmdPeak": 86.4,
+     "sentPeak": 57.3
+    },
+    "farmS": {
+     "limit": 80,
+     "cmdAtLimit": 0.1,
+     "sentOverLimit": 0.0033,
+     "cmdPeak": 233.1,
+     "sentPeak": 94.1
+    },
+    "footB": {
+     "limit": 250,
+     "cmdAtLimit": 0,
+     "sentOverLimit": 0,
+     "cmdPeak": 141.1,
+     "sentPeak": 128
+    },
+    "footF": {
+     "limit": 250,
+     "cmdAtLimit": 0,
+     "sentOverLimit": 0,
+     "cmdPeak": 152.8,
+     "sentPeak": 138.7
+    },
+    "shinB": {
+     "limit": 250,
+     "cmdAtLimit": 0,
+     "sentOverLimit": 0,
+     "cmdPeak": 221.5,
+     "sentPeak": 222.7
+    },
+    "shinF": {
+     "limit": 250,
+     "cmdAtLimit": 0,
+     "sentOverLimit": 0,
+     "cmdPeak": 247.5,
+     "sentPeak": 244.7
+    },
+    "sword": {
+     "limit": 25,
+     "cmdAtLimit": 0.0575,
+     "sentOverLimit": 0.0618,
+     "cmdPeak": 49.2,
+     "sentPeak": 51.1
+    },
+    "thighB": {
+     "limit": 250,
+     "cmdAtLimit": 0.0085,
+     "sentOverLimit": 0.022,
+     "cmdPeak": 278.9,
+     "sentPeak": 277.8
+    },
+    "thighF": {
+     "limit": 250,
+     "cmdAtLimit": 0.0018,
+     "sentOverLimit": 0.0045,
+     "cmdPeak": 272.4,
+     "sentPeak": 260.6
+    },
+    "uarmO": {
+     "limit": 100,
+     "cmdAtLimit": 0.0919,
+     "sentOverLimit": 0.0043,
+     "cmdPeak": 235.2,
+     "sentPeak": 182.9
+    },
+    "uarmS": {
+     "limit": 100,
+     "cmdAtLimit": 0.0178,
+     "sentOverLimit": 0.0176,
+     "cmdPeak": 152.4,
+     "sentPeak": 388.8
+    }
+   }
+  }
+ }
+}

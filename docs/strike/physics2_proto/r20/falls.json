@@ -1,0 +1,149 @@
+{
+ "A": [
+  4001,
+  4040
+ ],
+ "B": [
+  4041,
+  4080
+ ],
+ "note": "넘어짐 = 시작 뒤 3 s 안에 stand 를 잃음 · 안 돌아옴 = 안 넘어졌으나 3 s 안에 자세(선 채 두 발 · 탭/휘두르기 끝 · 골반 ≥ 시작의 90 %)로 못 옴",
+ "falls": {
+  "far/rapier/human": {
+   "strokes": 240,
+   "fell": 0,
+   "notBack": 0,
+   "fellPer100": 0,
+   "notBackPer100": 0,
+   "A": {
+    "strokes": 120,
+    "fell": 0,
+    "notBack": 0
+   },
+   "B": {
+    "strokes": 120,
+    "fell": 0,
+    "notBack": 0
+   }
+  },
+  "far/rapier/ai": {
+   "strokes": 114,
+   "fell": 21,
+   "notBack": 0,
+   "fellPer100": 18.42105263157895,
+   "notBackPer100": 0,
+   "A": {
+    "strokes": 56,
+    "fell": 13,
+    "notBack": 0
+   },
+   "B": {
+    "strokes": 58,
+    "fell": 8,
+    "notBack": 0
+   }
+  },
+  "far/longsword/human": {
+   "strokes": 240,
+   "fell": 0,
+   "notBack": 0,
+   "fellPer100": 0,
+   "notBackPer100": 0,
+   "A": {
+    "strokes": 120,
+    "fell": 0,
+    "notBack": 0
+   },
+   "B": {
+    "strokes": 120,
+    "fell": 0,
+    "notBack": 0
+   }
+  },
+  "far/longsword/ai": {
+   "strokes": 30,
+   "fell": 1,
+   "notBack": 0,
+   "fellPer100": 3.3333333333333335,
+   "notBackPer100": 0,
+   "A": {
+    "strokes": 11,
+    "fell": 0,
+    "notBack": 0
+   },
+   "B": {
+    "strokes": 19,
+    "fell": 1,
+    "notBack": 0
+   }
+  },
+  "near/rapier/human": {
+   "strokes": 80,
+   "fell": 0,
+   "notBack": 0,
+   "fellPer100": 0,
+   "notBackPer100": 0,
+   "A": {
+    "strokes": 40,
+    "fell": 0,
+    "notBack": 0
+   },
+   "B": {
+    "strokes": 40,
+    "fell": 0,
+    "notBack": 0
+   }
+  },
+  "near/rapier/ai": {
+   "strokes": 385,
+   "fell": 51,
+   "notBack": 0,
+   "fellPer100": 13.246753246753247,
+   "notBackPer100": 0,
+   "A": {
+    "strokes": 182,
+    "fell": 30,
+    "notBack": 0
+   },
+   "B": {
+    "strokes": 203,
+    "fell": 21,
+    "notBack": 0
+   }
+  },
+  "near/longsword/human": {
+   "strokes": 80,
+   "fell": 0,
+   "notBack": 0,
+   "fellPer100": 0,
+   "notBackPer100": 0,
+   "A": {
+    "strokes": 40,
+    "fell": 0,
+    "notBack": 0
+   },
+   "B": {
+    "strokes": 40,
+    "fell": 0,
+    "notBack": 0
+   }
+  },
+  "near/longsword/ai": {
+   "strokes": 338,
+   "fell": 13,
+   "notBack": 0,
+   "fellPer100": 3.8461538461538463,
+   "notBackPer100": 0,
+   "A": {
+    "strokes": 144,
+    "fell": 2,
+    "notBack": 0
+   },
+   "B": {
+    "strokes": 194,
+    "fell": 11,
+    "notBack": 0
+   }
+  }
+ }
+}

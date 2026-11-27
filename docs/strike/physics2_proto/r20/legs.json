@@ -1,0 +1,401 @@
+{
+ "root": "$S/wt_wb",
+ "n": 8,
+ "offset": 0,
+ "solo": {
+  "longsword": {
+   "stand": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": -0.022,
+    "path": 0.38,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0,
+    "tilt": 11.3,
+    "tip": 0.38,
+    "net": 0.189,
+    "extra": null
+   },
+   "walk": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": 1.018,
+    "path": 6.17,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 1.109,
+    "tilt": 16.5,
+    "tip": 1.42,
+    "net": 6.14,
+    "extra": null
+   },
+   "back": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": 0.806,
+    "path": 5.01,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.946,
+    "tilt": 11.1,
+    "tip": 1.19,
+    "net": 4.86,
+    "extra": null
+   },
+   "strafeR": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": 0.472,
+    "path": 3.07,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.504,
+    "tilt": 15,
+    "tip": 1.49,
+    "net": 2.854,
+    "extra": null
+   },
+   "strafeL": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": 0.489,
+    "path": 3.08,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.538,
+    "tilt": 13.1,
+    "tip": 1.03,
+    "net": 2.991,
+    "extra": null
+   },
+   "stopgo": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": 0.112,
+    "path": 8.61,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.134,
+    "tilt": 16.9,
+    "tip": 1.63,
+    "net": 1.912,
+    "extra": null
+   },
+   "wander": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": 0.233,
+    "path": 12.56,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.227,
+    "tilt": 16.9,
+    "tip": 1.65,
+    "net": 6.069,
+    "extra": null
+   },
+   "turn": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": 0.005,
+    "path": 2.5,
+    "headErr": 9.333048137720038,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.037,
+    "tilt": 17.9,
+    "tip": 5.68,
+    "net": 0.37,
+    "extra": null
+   },
+   "circle": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": -0.087,
+    "path": 9.22,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.622,
+    "tilt": 16.6,
+    "tip": 2.12,
+    "net": 0.912,
+    "extra": null
+   },
+   "kick40": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": -0.029,
+    "path": 0.93,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.039,
+    "tilt": 11.8,
+    "tip": 1.08,
+    "net": 0.293,
+    "extra": null
+   },
+   "kick80": {
+    "ok": 7,
+    "n": 8,
+    "notFell": 7,
+    "along": -0.049,
+    "path": 1.44,
+    "headErr": null,
+    "tFall": 1.77,
+    "sat": 0,
+    "speed": 0.077,
+    "tilt": 19,
+    "tip": 2.03,
+    "net": 1.092,
+    "extra": null
+   },
+   "walkkick": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": 1.017,
+    "path": 6.22,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 1.117,
+    "tilt": 17.1,
+    "tip": 1.65,
+    "net": 6.114,
+    "extra": null
+   },
+   "stroke_diagR": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": -0.015,
+    "path": 2.03,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.038,
+    "tilt": 15.2,
+    "tip": 18.62,
+    "net": 0.354,
+    "extra": null
+   },
+   "walkstroke_diagR": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": 0.091,
+    "path": 6.39,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.173,
+    "tilt": 19.6,
+    "tip": 18.99,
+    "net": 3.176,
+    "extra": null
+   },
+   "stroke_vert": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": -0.016,
+    "path": 0.99,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.003,
+    "tilt": 12.1,
+    "tip": 17.87,
+    "net": 0.194,
+    "extra": null
+   },
+   "walkstroke_vert": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": 0.134,
+    "path": 5.82,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.206,
+    "tilt": 15.4,
+    "tip": 20.41,
+    "net": 3.217,
+    "extra": null
+   },
+   "stroke_horizR": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": -0.015,
+    "path": 1.62,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.012,
+    "tilt": 8.9,
+    "tip": 24.2,
+    "net": 0.222,
+    "extra": null
+   },
+   "walkstroke_horizR": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 8,
+    "along": 0.093,
+    "path": 5.79,
+    "headErr": null,
+    "tFall": null,
+    "sat": 0,
+    "speed": 0.152,
+    "tilt": 15.3,
+    "tip": 25.41,
+    "net": 2.67,
+    "extra": null
+   },
+   "getup": {
+    "ok": 8,
+    "n": 8,
+    "notFell": 0,
+    "along": null,
+    "path": null,
+    "headErr": null,
+    "tFall": 0,
+    "sat": 0,
+    "speed": null,
+    "tilt": 0,
+    "tip": null,
+    "net": 1.393,
+    "extra": 4.54,
+    "wentDown": 8,
+    "holdSecs": 3.5,
+    "holdStart": 4.74,
+    "holdPelvisMin": 0.705,
+    "holdPelvisShare": 0.7939189189189189,
+    "holdTiltMax": 44.3,
+    "holdBroke": 0,
+    "oks": "11111111"
+   }
+  }
+ },
+ "fight": null,
+ "honesty": {
+  "ok": true,
+  "lines": [
+   "  정직 stand: 통과 (받침 0.0 % · 땅 법선 100.2 % · 숨은 기울기 0.4 N·m · 엔진이 봐준 비틀림 0.0 N·m) · 선언된 밖 도움: yaw 토크 평균 0.0 (최고 0.0 · 상한 100) N·m · 기울기 토크 평균 0.1 (최고 6.0 · 상한 80) N·m · 힘 크기 합 평균 0.0 (최고 0) N · 걸린 스텝 6.5 % · 기준 판과 지문 차이 13 줄",
+   "      세계 numInternalPgsIterations: 1 → 4",
+   "      세계 contact_erp: 0.135755 → 0.38587",
+   "      세계 물체 수: {\"fixed\":1,\"kinematic\":2,\"dynamic\":30,\"colliders\":37} → {\"fixed\":1,\"kinematic\":0,\"dynamic\":30,\"colliders\":37}",
+   "      footF.m: 3.1 → 1.1",
+   "      footF.I: [0.00384917,0.0174633,0.0161458] → [0.00136583,0.00619667,0.00572917]",
+   "      footB.m: 3.1 → 1.1",
+   "      footB.I: [0.00384917,0.0174633,0.0161458] → [0.00136583,0.00619667,0.00572917]",
+   "      sword 충돌 모양: [{\"shape\":1,\"he\":[0.018,0.1,0.018],\"mu\":0.4,\"e\":0.2,\"m\":0.16,\"groups\":262215,\"sensor\":false},{\"shape\":0,\"he\":null,\"rad\":0.03,\"mu\":0.4,\"e\"",
+   "      관절 사라짐/바뀜: {\"a\":\"EXT:kinematic\",\"b\":\"pelvis\",\"type\":6,\"lim\":null}",
+   "      footF 재는 동안 m 범위: [3.1,3.1] → [1.1,1.1]",
+   "      footF 재는 동안 I 범위: [0.024093,0.024093] → [0.00854912,0.00854912]",
+   "      footB 재는 동안 m 범위: [3.1,3.1] → [1.1,1.1]",
+   "      footB 재는 동안 I 범위: [0.024093,0.024093] → [0.00854912,0.00854912]",
+   "  정직 walk: 통과 (받침 0.0 % · 땅 법선 99.3 % · 숨은 기울기 2.5 N·m · 엔진이 봐준 비틀림 1.2 N·m) · 선언된 밖 도움: yaw 토크 평균 1.4 (최고 54.2 · 상한 100) N·m · 기울기 토크 평균 2.1 (최고 33.9 · 상한 80) N·m · 힘 크기 합 평균 0.0 (최고 0) N · 걸린 스텝 26.0 % · 기준 판과 지문 차이 13 줄"
+  ],
+  "aid": {
+   "stand": {
+    "liftShare": 0,
+    "forceNs": 0,
+    "torqueRate": 0.0894454537956581,
+    "peakN": 0,
+    "peakNm": 5.971987088277521,
+    "stepShare": 0.06458333333333334,
+    "torqueNms": 0.35778183384240814,
+    "grossNs": 0,
+    "grossRate": 0,
+    "yaw": {
+     "avg": 7.679042586990666e-17,
+     "peak": 3.552713678800501e-15
+    },
+    "tilt": {
+     "avg": 0.0894454537956581,
+     "peak": 5.971987088277521
+    },
+    "lift": {
+     "avgN": 0,
+     "peakN": 0,
+     "share": 0,
+     "peakShare": 0
+    },
+    "push": {
+     "avgN": 0,
+     "peakN": 0
+    },
+    "pureTorqueRate": 0.0894454537956581,
+    "pureTorquePeak": 5.971987088277521,
+    "netForcePeak": 0
+   },
+   "walk": {
+    "liftShare": 0,
+    "forceNs": 0,
+    "torqueRate": 2.8958062245584344,
+    "peakN": 0,
+    "peakNm": 54.362834015974705,
+    "stepShare": 0.2604166666666667,
+    "torqueNms": 11.583225502345993,
+    "grossNs": 0,
+    "grossRate": 0,
+    "yaw": {
+     "avg": 1.4449512627828274,
+     "peak": 54.240118075029734
+    },
+    "tilt": {
+     "avg": 2.059758467153181,
+     "peak": 33.89027717278843
+    },
+    "lift": {
+     "avgN": 0,
+     "peakN": 0,
+     "share": 0,
+     "peakShare": 0
+    },
+    "push": {
+     "avgN": 0,
+     "peakN": 0
+    },
+    "pureTorqueRate": 2.8958062245584344,
+    "pureTorquePeak": 54.362834015974705,
+    "netForcePeak": 0
+   }
+  },
+  "states": {
+   "stand": {
+    "stand": 480
+   },
+   "walk": {
+    "stand": 480
+   }
+  },
+  "caps": {
+   "yawMax": 100,
+   "tiltMax": 80
+  }
+ }
+}
