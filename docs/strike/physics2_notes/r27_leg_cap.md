@@ -131,7 +131,7 @@ h (작은 스텝 길이)는 새 값이 아니라 세계의 dt ÷ numSolverIterat
 
 **표가 있는 곳**: C1 `$S/r27/c1/c1_table_new4.txt` · `first_cut_n100.txt` · C2 · C3 · C4 `$S/r27/c234_new4.txt` (곁줄 `c234_new4_resid005.txt` · `over_new4.txt` · `resid_look.txt` · `noise_look.txt`) · 정직 장부 `$S/r27/honesty_table.txt` · 부호 `$S/r27/sign_check.txt` · 굳음 `$S/r27/lock_check.txt` · 엔진 각 `$S/r27/angle_check.txt` · C5 `$S/r27/legs_table.txt` · `$S/r27/falls_table.txt` · C6 `$S/r27/cost/table.txt`. 다시 만들기: `node docs/strike/physics2_proto/r27/analyze.mjs $S/r27/probe old new4` (C2 · C3 · C4) · `legs_table.mjs $S/r27/legs/old.json $S/r27/legs/new.json` · `honesty_table.mjs $S/r27/probe old new4`. 넘어짐 줄 다시: `TREE=/home/user/halfsword node docs/strike/physics2_proto/r22/sum.mjs $S/p2/r10f2/out r24_om lc_10_100 --offs=0,300`. 이 재기 사슬 전체: `r27/chain.sh` (NEW=new4).
 
-## 선임의 판정 (11/27 13:38 UTC) — 통과 못 함 · '정직한 다리 토크' 줄은 여기서 멈춤
+## 선임의 판정 (11/27 13:37 UTC) — 통과 못 함 · '정직한 다리 토크' 줄은 여기서 멈춤
 
 위쪽은 일꾼이 쓴 그대로다. 패치(`physics2_proto/r27/legcap.patch`)는 기록으로만 둔다. 읽는 일꾼의 대본과 나온 것은 `physics2_proto/r27/read/`.
 

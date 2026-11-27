@@ -1,0 +1,6 @@
+using deprecated parameters for the initialization function; pass a single object instead
+energyScale 2: dead 5/12, downs/fight 0.6, opened/fight 4.3
+1:stand/dead@14 d0 o4 E138  2:stand/stand d0 o3 E63  3:stand/dead@22.4 d2 o9 E209  4:stand/dead@6.9 d0 o3 E120  5:stand/stand d0 o2 E34  6:dead/stand@17.8 d2 o8 E145  7:stand/stand d1 o4 E100  8:stand/dead@12.1 d0 o1 E158  9:stand/stand d2 o6 E201  10:stand/stand d0 o7 E101  11:stand/stand d0 o2 E75  12:stand/stand d0 o3 E82
+뜀 까닭 r26_om A 거리 > 2 cm: > 8° 21 · > 20° 0 · 가장 큰 13.6°
+뜀 까닭 r26_om A 셈 자체: > 8° 82 · > 20° 28 · 가장 큰 165.8°
+뜀 까닭 r26_om A 손 축 돎 > 2°: > 8° 5625 · > 20° 1236 · 가장 큰 156.7°

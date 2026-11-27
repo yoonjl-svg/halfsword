@@ -1,0 +1,4 @@
+막는 레이피어 판 1152 중 두 칸 바이트 같음 1152
+막는 두손 칼 판 2304 중 두 칸 바이트 같음 58 · 결과(why·부위) 같음 1987
+씨앗(간격 벌)마다 빈 팔 벰 A · B: 11: 41 · 45 | 12: 43 · 47 | 13: 42 · 44 | 14: 41 · 45 | 15: 38 · 45 | 16: 37 · 46
+빈 팔 벰 B − A 가 0 아닌 묶음: [(10, 'longsword/longsword/zwerch'), (8, 'longsword/zweihander/왼쪽→오른쪽'), (7, 'rapier/longsword/왼쪽→오른쪽'), (6, 'longsword/longsword/zornhauL'), (3, 'longsword/zweihander/zornhauL'), (2, 'zweihander/longsword/unterhau'), (1, 'zweihander/zweihander/unterhau'), (1, 'rapier/longsword/위→다리'), (1, 'rapier/longsword/stichOchsL'), (1, 'rapier/longsword/oberhau'), (-1, 'zweihander/longsword/stichPflugL'), (-1, 'zweihander/longsword/stichPflug'), (-1, 'rapier/zweihander/왼쪽→오른쪽'), (-1, 'rapier/zweihander/오른쪽→왼쪽'), (-1, 'longsword/longsword/왼쪽→오른쪽'), (-2, 'zweihander/zweihander/zornhauL'), (-3, 'zweihander/zweihander/zwerchL')]

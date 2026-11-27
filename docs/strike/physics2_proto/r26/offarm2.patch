@@ -1,0 +1,53 @@
+diff --git a/src/fighter.js b/src/fighter.js
+index f0492c13..35783ab8 100644
+--- a/src/fighter.js
++++ b/src/fighter.js
+@@ -225,6 +225,24 @@ const ROPE_L = 1;
+ const ROPE_K = 10;
+ // armIK 의 팔꿈치 겨냥(pole, 가슴 틀 (뒤, 아래, 바깥 × side) 방향)과 거리 자르기 (m): armIK 와 보정 v2 순서 결합(corrTrunkTurn)이 같은 값을 읽는다
+ const IK_POLE = [-0.25, -1, 0.5];
++/**
++ * 빈 팔꿈치 쪽 (offArmIK · offPoseGap 이 같이 읽는 한 셈 — 11/27 physics2_notes/r26_offarm2.md): 빈 어깨 → 손 방향 Dn (가슴 틀 단위)에서 팔꿈치가 나갈 쪽(Dn 에 곧은 단위)을 out 에.
++ *  기준 손 방향 r0 에서 팔꿈치 쪽이 e0 이고, 손 방향이 Dn 으로 가면 r0 → Dn 가장 짧은 돌림(축 r0 × Dn)으로 e0 를 옮긴다. 기억 없음. 갈림은 0 으로 나눔 막음 하나뿐: 1 + c ≤ 1e-9 (Dn 이 −r0 에서 약 4.5e-5 rad 안)이면 −e0 쪽을 내 방향 극한과 다르다 — 게임 손은 −r0 에서 39.5° 밖 (r26_offarm2.md §7). D 길이 0 이면 0 벡터 (옛 셈도 거기서 안 정해짐).
++ *  (옛 셈은 고정 pole 을 Dn 에 곧은 면에 내렸는데, Dn 이 pole 과 나란해지는 두 쪽(늘어뜨린 팔 · 손이 높고 안쪽)에서 내린 길이가 0 으로 가 팔꿈치 쪽이 한 스텝에 130 ~ 166° 뒤집혔다 — r18_offarm.md.)
++ *  이 셈이 안 정해지는 곳은 Dn = −r0 한 방향뿐이고, r0 · e0 는 게임 기록(싸움 · 막기 · 마무리 찌르기)에서 그 방향이 손이 가는 모든 곳에서 가장 먼 곳이 되게 · 팔꿈치가 사람 쪽(옛 pole 쪽)에 남게 셈으로 찾음
++ *  (docs/strike/physics2_proto/r26/cap_e0.py). 가슴 틀 빈손 쪽 맞춤 [앞, 위, 바깥] — side 로 거울.
++ */
++const OFF_ELB_R0 = new THREE.Vector3(0.5849, 0.1207, -0.8021).normalize();
++const OFF_ELB_E0 = new THREE.Vector3(0.7648, -0.4117, 0.4957).projectOnPlane(OFF_ELB_R0).normalize();
++function offElbowPlane(Dn, side, out) {
++  const r = OFF_ELB_R0, e = OFF_ELB_E0, s = -side; // s: 가슴 틀 z → 빈손 쪽 바깥 (빈 어깨 z = −side · 0.2)
++  const dx = Dn.x, dy = Dn.y, dz = s * Dn.z;
++  const c = r.x * dx + r.y * dy + r.z * dz;
++  const kx = r.y * dz - r.z * dy, ky = r.z * dx - r.x * dz, kz = r.x * dy - r.y * dx; // k = r0 × Dn
++  const w = 1 + c > 1e-9 ? (kx * e.x + ky * e.y + kz * e.z) / (1 + c) : 0; // 0 으로 나눔 막음 (Dn ≈ −r0 · 손이 안 가는 쪽)
++  out.set(e.x * c + (ky * e.z - kz * e.y) + kx * w, e.y * c + (kz * e.x - kx * e.z) + ky * w, s * (e.z * c + (kx * e.y - ky * e.x) + kz * w));
++  return out.addScaledVector(Dn, -out.dot(Dn)).normalize(); // 셈 끝수 오차만 지움 (식은 이미 Dn 에 곧음)
++}
+ const IK_DMIN = 0.08;
+ const IK_MARGIN = ARM.slack; // 펴짐 여유 0.005 m (config ARM.slack — finish.js 닿는 공·근접 밀치기 armFull 과 한 값)
+ // 보정 v2 순서 결합의 이분법 횟수: 괄호 [0, δ*] 를 2⁻¹⁶ 로 (δ* ≤ π 면 0.003° 아래). 풀이 해상도일 뿐 크기·빠르기를 정하지 않는다 (기하)
+@@ -526,10 +544,7 @@ function offPoseGap(g, T, side) {
+   const a = 0.3, b = 0.275;
+   const d = THREE.MathUtils.clamp(D.length(), 0.08, a + b - 0.005);
+   D.normalize();
+-  const p = _oyP.set(-0.25, -1, -side * 0.5).normalize();
+-  p.addScaledVector(D, -p.dot(D));
+-  if (p.lengthSq() < 1e-6) p.set(0, -1, 0);
+-  p.normalize();
++  const p = offElbowPlane(D, side, _oyP); // offArmIK 와 같은 팔꿈치 쪽 (한 셈)
+   const al = Math.acos(THREE.MathUtils.clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1));
+   const E = _oyE.copy(S).addScaledVector(D, a * Math.cos(al)).addScaledVector(p, a * Math.sin(al));
+   const W = _oyW.copy(S).addScaledVector(D, d);
+@@ -4232,10 +4247,7 @@ export class Fighter {
+     const D = T.sub(S);
+     const d = THREE.MathUtils.clamp(D.length(), 0.08, a + b - 0.005);
+     const Dn = D.normalize();
+-    const pole = _ik3.set(-0.25, -1, -this.side * 0.5).normalize(); // 팔꿈치는 아래·뒤·바깥
+-    const pDir = pole.addScaledVector(Dn, -pole.dot(Dn));
+-    if (pDir.lengthSq() < 1e-6) pDir.set(0, -1, 0);
+-    pDir.normalize();
++    const pDir = offElbowPlane(Dn, this.side, _ik3); // 팔꿈치 쪽 (offElbowPlane — 가장 짧은 돌림으로 옮긴 기준 쪽 · 사람 쪽 아래·바깥)
+     const alpha = Math.acos(THREE.MathUtils.clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1));
+     const u = _ik4.copy(Dn).multiplyScalar(Math.cos(alpha)).addScaledVector(pDir, Math.sin(alpha));
+     const flex = Math.PI - Math.acos(THREE.MathUtils.clamp((a * a + b * b - d * d) / (2 * a * b), -1, 1));

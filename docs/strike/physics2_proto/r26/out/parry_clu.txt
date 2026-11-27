@@ -1,0 +1,13 @@
+r26_om 대 r26_new · 벌 0 a b · 공격 1728 · 치는 longsword,rapier,zweihander
+벰 (첫째): r26_om 183/1728 = 10.6% · r26_new 258/1728 = 14.9% | 묶음 144: r26_new 쪽 많음 51 · 적음 24 · 같음 69 → 부호 p = 0.002 · 순열 p = 0.018
+막음 (휘두름 끝 뒤 닿음 뺌): r26_om 725/1728 = 42.0% · r26_new 680/1728 = 39.4% | 묶음 144: r26_new 쪽 많음 34 · 적음 50 · 같음 60 → 부호 p = 0.101 · 순열 p = 0.178
+휘두름 끝 뒤 닿음(ok · atPh 4): r26_om 418 · r26_new 421
+  치는 longsword · 막는 longsword: 벰 r26_om 18/192 · r26_new 18/192
+  치는 longsword · 막는 rapier: 벰 r26_om 12/192 · r26_new 19/192
+  치는 longsword · 막는 zweihander: 벰 r26_om 20/192 · r26_new 28/192
+  치는 rapier · 막는 longsword: 벰 r26_om 18/192 · r26_new 9/192
+  치는 rapier · 막는 rapier: 벰 r26_om 5/192 · r26_new 4/192
+  치는 rapier · 막는 zweihander: 벰 r26_om 8/192 · r26_new 15/192
+  치는 zweihander · 막는 longsword: 벰 r26_om 35/192 · r26_new 49/192
+  치는 zweihander · 막는 rapier: 벰 r26_om 35/192 · r26_new 61/192
+  치는 zweihander · 막는 zweihander: 벰 r26_om 32/192 · r26_new 55/192

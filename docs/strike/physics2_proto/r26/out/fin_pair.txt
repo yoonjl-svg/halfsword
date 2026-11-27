@@ -1,0 +1,14 @@
+[fin_rows_1.txt fin_rows_2.txt fin_rows_34.txt]
+r26_om 대 r26_new: 판 800 · 상처 363 → 434 | r26_om 만 113 · r26_new 만 184 → 이항 p = 0.0000 | 묶음 120 (0 아님 95) 순열 p = 0.0004
+[fin_rows_1.txt]
+r26_om 대 r26_new: 판 160 · 상처 76 → 101 | r26_om 만 20 · r26_new 만 45 → 이항 p = 0.0026 | 묶음 40 (0 아님 34) 순열 p = 0.0083
+[fin_rows_2.txt]
+r26_om 대 r26_new: 판 320 · 상처 154 → 173 | r26_om 만 48 · r26_new 만 67 → 이항 p = 0.0928 | 묶음 40 (0 아님 30) 순열 p = 0.1585
+[fin_rows_34.txt]
+r26_om 대 r26_new: 판 320 · 상처 133 → 160 | r26_om 만 45 · r26_new 만 72 → 이항 p = 0.0159 | 묶음 40 (0 아님 31) 순열 p = 0.0302
+[fin_rows_rapier.txt fin_rows_zweihander.txt]
+r26_om 대 r26_new: 판 320 · 상처 77 → 87 | r26_om 만 30 · r26_new 만 40 → 이항 p = 0.2820 | 묶음 80 (0 아님 37) 순열 p = 0.1847
+[fin_rows_rapier.txt]
+r26_om 대 r26_new: 판 160 · 상처 8 → 10 | r26_om 만 7 · r26_new 만 9 → 이항 p = 0.8036 | 묶음 40 (0 아님 12) 순열 p = 0.7745
+[fin_rows_zweihander.txt]
+r26_om 대 r26_new: 판 160 · 상처 69 → 77 | r26_om 만 23 · r26_new 만 31 → 이항 p = 0.3409 | 묶음 40 (0 아님 25) 순열 p = 0.2298

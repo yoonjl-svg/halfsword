@@ -1,0 +1,7 @@
+using deprecated parameters for the initialization function; pass a single object instead
+energyScale 2: dead 3/12, downs/fight 1.0, opened/fight 4.7
+1:stand/dead@11 d0 o3 E96  2:stand/stand d0 o1 E45  3:stand/stand d2 o7 E130  4:stand/stand d0 o3 E85  5:stand/stand d3 o5 E132  6:getup/stand d3 o6 E153  7:stand/dead@21.9 d1 o4 E81  8:stand/stand d0 o7 E153  9:stand/stand d0 o6 E78  10:getup/dead@20.2 d1 o7 E85  11:stand/stand d1 o4 E132  12:stand/stand d1 o3 E90
+뜀 까닭 r26_new A 거리 > 2 cm: > 8° 19 · > 20° 0 · 가장 큰 15.5°
+뜀 까닭 r26_new A 셈 자체: > 8° 4 · > 20° 0 · 가장 큰 8.4°
+뜀 까닭 r26_new A 손 축 돎 > 2°: > 8° 1690 · > 20° 107 · 가장 큰 61.7°
+뜀 까닭 r26_new B 이 스텝 다른 길: > 8° 5 · > 20° 5 · 가장 큰 149.8°

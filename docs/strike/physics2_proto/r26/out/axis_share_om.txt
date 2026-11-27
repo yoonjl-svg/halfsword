@@ -1,0 +1,13 @@
+r26_om: +pole 10° 안 0.00 % · −pole 10° 안 18.53 % (부름 1157824)
+r26_om: +pole 20° 안 0.00 % · −pole 20° 안 26.24 % (부름 1157824)
+r26_om: +pole 30° 안 0.00 % · −pole 30° 안 32.55 % (부름 1157824)
+r26_om: +pole 45° 안 0.00 % · −pole 45° 안 39.88 % (부름 1157824)
+rec_r26_om_f_longsword.f32: −pole 10° 안 1.0 % · 30° 안 16.5 %
+rec_r26_om_f_rapier.f32: −pole 10° 안 0.0 % · 30° 안 0.0 %
+rec_r26_om_f_uchigatana.f32: −pole 10° 안 0.1 % · 30° 안 24.3 %
+rec_r26_om_f_zweihander.f32: −pole 10° 안 0.3 % · 30° 안 4.3 %
+rec_r26_om_p_longsword.f32: −pole 10° 안 0.8 % · 30° 안 3.2 %
+rec_r26_om_p_rapier.f32: −pole 10° 안 0.1 % · 30° 안 0.8 %
+rec_r26_om_p_zweihander.f32: −pole 10° 안 0.3 % · 30° 안 2.1 %
+rec_r26_om_t_1.f32: −pole 10° 안 33.0 % · 30° 안 52.5 %
+rec_r26_om_t_2.f32: −pole 10° 안 33.0 % · 30° 안 52.2 %
