@@ -1,0 +1,2 @@
+old: over>1 samples 457 · explicit alone over limit 10 · explicit at limit (>=0.999) 362 · motor pushes same way 457 (median |motor| 6.97 N·m) · motor opposite 0
+new4: over>1 samples 225 · explicit alone over limit 1 · explicit at limit (>=0.999) 191 · motor pushes same way 225 (median |motor| 0.69 N·m) · motor opposite 0
