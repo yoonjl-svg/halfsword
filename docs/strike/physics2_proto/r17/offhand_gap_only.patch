@@ -1,0 +1,42 @@
+diff --git a/src/fighter.js b/src/fighter.js
+index 359519fc..d380b778 100644
+--- a/src/fighter.js
++++ b/src/fighter.js
+@@ -557,11 +557,11 @@ function offYieldWant(g, P, side, c, out) {
+ 
+ const _gcA = new THREE.Vector3(), _gcB = new THREE.Vector3(), _gcQ = new THREE.Quaternion(), _gcX = new THREE.Vector3();
+ /**
+- * 빈손 비킴 (11/12 둘째 SKILL.armClear.grip — docs/strike/arm_clear2_2026-11-12.md §2): 두손 칼 두 팔이 겉 틈 gap 안으로 닿은 동안(지금 몸) 빈손 목표(칼자루 끝 gripAim)를
+- *  칼 아래팔(지금 몸 — 팔꿈치 → 손목 선분)에서 c m 밖으로 민다. 빠르게 긋는 동안 칼이 아래팔 줄에 눕으면(아래팔-칼 5 ~ 15°) 칼자루 끝이 칼 아래팔 위에 와
++ * 빈손 비킴 (11/12 둘째 SKILL.armClear.grip — docs/strike/arm_clear2_2026-11-12.md §2): 두손 칼 두 팔이 붙은 동안(지금 몸) 빈손 목표(칼자루 끝 gripAim)를
++ *  칼 아래팔(지금 몸 — 팔꿈치 → 손목 선분)에서 멀어지는 쪽으로 d m 민다 — 그 선분에서 c m 밖까지만 (d = 두 팔 겉 틈이 near 에서 모자란 몫 · c = grip — offHand). 빠르게 긋는 동안 칼이 아래팔 줄에 눕으면(아래팔-칼 5 ~ 15°) 칼자루 끝이 칼 아래팔 위에 와
+  *  빈 아래팔이 칼 아래팔을 뚫는다 — 빈손이 칼자루 끝을 아래팔 밖으로 밀어(쥠 용수철) 손목이 사람 쥠 꼴로 돌아옴. 아래팔 선분에 붙은 점이면 아래로
+  */
+-function gripClear(f, P, c) {
++function gripClear(f, P, c, d) {
+   const fa = f.bodies.farmS;
+   const t = fa.translation();
+   const ax = _gcX.set(1, 0, 0).applyQuaternion(rot(fa, _gcQ));
+@@ -576,7 +576,7 @@ function gripClear(f, P, c) {
+   if (dist >= c) return;
+   if (dist < 1e-6) n.set(0, -1, 0);
+   else n.multiplyScalar(1 / dist);
+-  P.addScaledVector(n, c - dist);
++  P.addScaledVector(n, Math.min(d, c - dist));
+ }
+ 
+ /** 몸 하나의 스텝 전 상태 { p, q, com, v, w } 를 o 에 담는다 (cacheState · 휘는 마디 무기 flexWeapon.cache — 객체는 처음 한 번만 만든다) */
+@@ -4175,8 +4175,11 @@ export class Fighter {
+     }
+     if (nOn) (this._notoAim ??= new THREE.Vector3()).copy(gripAim);
+     else if (this._notoAim) this._notoAim = null;
+-    // 두 팔 엇갈림 막기 — 빈손 비킴 (SKILL.armClear.grip — gripClear 머리말): 두 팔이 붙은 동안(① 켜짐) 지금 몸 겉 틈이 gap 안이면
+-    if (this._clrOn && !this.armsPlaced() && SKILL.armClear.grip > 0 && this.armClrGap < SKILL.armClear.gap) gripClear(this, gripAim, SKILL.armClear.grip);
++    // 두 팔 엇갈림 막기 — 빈손 비킴 (SKILL.armClear.grip — gripClear 머리말): 두 팔이 붙은 동안(① 켜짐) 지금 몸 겉 틈이 near(① 이 서는 틈)에서 모자란 만큼 민다 —
++    //  목표를 x 밀면 빈 손목이 x 가고 틈은 많아야 x 열리므로(기하) 모자란 몫 그대로. 틈 gap 하나로 켜고 끄며 grip 까지 다 밀면 민 몫(7 ~ 10 cm)이 한 스텝에 틈을 1 cm 남짓 열어
++    //  꺼지고 다음 스텝에 다시 닫혀, 틈이 gap 에 걸터앉아 빈손 목표가 스텝마다 두 자리를 오갔다 (빈 위팔 명령 8° 넘는 뜀의 437 / 445 — 기록 physics2_notes/r9b_arm.md)
++    const clrD = SKILL.armClear.near - this.armClrGap;
++    if (this._clrOn && !this.armsPlaced() && SKILL.armClear.grip > 0 && clrD > 0) gripClear(this, gripAim, SKILL.armClear.grip, clrD);
+     if (rgK < 1) {
+       // 다시 쥐기 (위 rgK): 칼집 손 자리(한 손 발도 동안 빈손 목표와 같은 점) → 칼자루 끝
+       //  11/14 ③ (SECRET.iaiSayaModoshi — startRegrip iaiRegripVia): 원전 鞘戻し — 칼집 입을 배꼽 앞(SECRET.iaiSayaMouth · 골반 틀)으로 돌려 놓고 칼자루로:
