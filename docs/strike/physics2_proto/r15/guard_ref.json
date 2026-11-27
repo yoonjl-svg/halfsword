@@ -1,5 +1,5 @@
 {
- "root": "/tmp/claude-0/-home-user-halfsword/24381ec1-6e1b-52f9-b350-d4b2e091a867/scratchpad/p2/r6/mx/cells/fb_base",
+ "root": "$S/p2/r6/mx/cells/fb_base",
  "note": "legs_battery 기본 19 장면 · --n=8 --fights=0 --weapons=longsword --nohonesty",
  "rows": {
   "stopgo": {
