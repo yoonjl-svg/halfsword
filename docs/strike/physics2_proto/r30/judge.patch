@@ -1,0 +1,98 @@
+diff --git a/tools/sim/honesty.mjs b/tools/sim/honesty.mjs
+index 9ab3102f..efa08024 100644
+--- a/tools/sim/honesty.mjs
++++ b/tools/sim/honesty.mjs
+@@ -41,6 +41,29 @@ const qrot = (q, v) => { const t = cross(q, v); const t2 = scl(t, 2); return add
+ const rotvec = (q) => { const s = q.w < 0 ? -2 : 2; return V3(q.x * s, q.y * s, q.z * s); };
+ const cq = (q) => ({ x: q.x, y: q.y, z: q.z, w: q.w });
+ 
++// ── 다리 세 관절(엉덩이 thigh · 무릎 shin · 발목 foot)의 잣대 — 몸 값(src/config.js LEGS)을 옮겨 적은 수 [사장님 11/28 "심판 잣대도 몸 값에 맞춰"].
++//   잣대는 몸과 따로 서야 하니 config 에서 읽지 않고 못박는다 (몸 값이 바뀌면 여기를 손으로 고침 · 요약 때 legJudgeCheck 가 config 와 견줘 다르면 경고 한 줄).
++//   limit = LEGS.limit 의 hipFlex · kneeExt · anklePlantar (312.5 N·m) · ecc = LEGS.ecc (1.3 — 늘어나며 버티는 근육 한도 배율) · eccW = LEGS.eccW (1 rad/s — 이 빠르기에서 배율이 다 참)
++export const LEG_JUDGE = { limit: 312.5, ecc: 1.3, eccW: 1 };
++/** 다리 관절 한 표본의 한도 배율 (1 ~ ecc): tau = 먼 쪽(자식) 묶음이 관절로 받은 토크 · wRel = 자식 − 부모 각속도 (rad/s · 세계 틀).
++ *  wEcc = −(tau 방향 · wRel) = 토크를 거슬러 도는 빠르기 (근육이 늘어나며 버팀 — 게임 clampLeg 는 부모 쪽 토크 t 와 w 가 같은 부호일 때. 자식이 받는 토크는 −t 라 부호가 뒤집힘).
++ *  배율 = 1 + (ecc − 1) × (wEcc ÷ eccW 를 0 ~ 1 로 자름) — src/legs_vmc.js legLimit 과 같은 꼴 (근력 몫은 안 곱함). 돌려줌: { wEcc, k } */
++export function legAllow(tau, wRel) {
++  const n = len(tau);
++  const wEcc = n > 0 ? -dot(tau, wRel) / n : 0;
++  return { wEcc, k: 1 + (LEG_JUDGE.ecc - 1) * Math.min(1, Math.max(0, wEcc / LEG_JUDGE.eccW)) };
++}
++let CFG = null; // 견줌용(읽기만) — 잣대 셈에는 안 씀
++try { CFG = await import(u('src/config.js')); } catch { /* config 가 없는 나무 */ }
++/** 잣대 다리 값 ↔ 지금 config LEGS 견줌 (읽기만). 돌려줌: { ok, diffs: ['칸 잣대값≠config값', …] } — config 를 못 읽으면 ok false · diffs ['config 못 읽음'] */
++export function legJudgeCheck(C = CFG) {
++  const G = C?.LEGS;
++  if (!G?.limit) return { ok: false, diffs: ['config LEGS 못 읽음'] };
++  const diffs = [];
++  for (const [k, x, y] of [['limit.hipFlex', LEG_JUDGE.limit, G.limit.hipFlex], ['limit.kneeExt', LEG_JUDGE.limit, G.limit.kneeExt], ['limit.anklePlantar', LEG_JUDGE.limit, G.limit.anklePlantar], ['ecc', LEG_JUDGE.ecc, G.ecc], ['eccW', LEG_JUDGE.eccW, G.eccW]]) if (x !== y) diffs.push(`${k} 잣대 ${x} ≠ config ${y}`);
++  return { ok: !diffs.length, diffs };
++}
++
+ const AXG = { x: 3, z: 4, y: 5 }; // 닻 generic 관절의 raw 축 (chain_ledger.mjs · 측정 10/7)
+ const PAIRED = new Set(['sword', 'offhand', 'muscle', 'elbowG', 'track', 'anat', 'swing']); // 한 몸 안에서 짝이 맞아야 하는 단계 — 안 맞는 몫은 unpaired 로
+ const OUT = ['support', 'push', 'anchor', 'damp', 'write', 'mass', 'unpaired', 'aid'];
+@@ -117,13 +140,15 @@ export function attach(world, named, opts = {}) {
+       return aw.call(this, h, ...rest);
+     };
+   }
+-  // ── 관절 표 (싸움꾼): 관절마다 먼 쪽 토막 묶음 · 닻 자리 · 사람 한도(가늠 · 센 어른 · N·m — 엉덩이 250 · 무릎 250 · 발목 250 · 허리 300 · 목 60 · 어깨 100 · 팔꿈치 80 · 손목 25) ──
+-  const HUMAN = [[/^thigh/, 250], [/^shin/, 250], [/^foot/, 250], [/^abdomen|^chest/, 300], [/^head/, 60], [/^uarm/, 100], [/^farm/, 80], [/^sword/, 25]];
++  // ── 관절 표 (싸움꾼): 관절마다 먼 쪽 토막 묶음 · 닻 자리 · 사람 한도(가늠 · 센 어른 · N·m — 엉덩이 · 무릎 · 발목 312.5 (몸 값 · 위 LEG_JUDGE · 옛 250) · 허리 300 · 목 60 · 어깨 100 · 팔꿈치 80 · 손목 25) ──
++  //   다리 세 관절은 표본마다 늘어나며 버티는 몫을 곱한 한도와 견준다 (legAllow). over · mOver = 그 한도를 넘은 수 · overBase · mOverBase = 곱하기 전 312.5 를 넘은 수
++  const HUMAN = [[/^thigh/, LEG_JUDGE.limit], [/^shin/, LEG_JUDGE.limit], [/^foot/, LEG_JUDGE.limit], [/^abdomen|^chest/, 300], [/^head/, 60], [/^uarm/, 100], [/^farm/, 80], [/^sword/, 25]];
++  const LEGJ = /^(thigh|shin|foot)/;
+   if (f?.joints) {
+     const edges = f.joints.filter((j) => j.joint && j.parent && j.child).map((j) => ({ name: j.name, handle: j.joint.handle, ip: mine.get(j.parent.handle), ic: mine.get(j.child.handle), parent: j.parent, manual: !!j.manual, hinge: j.type === 'hinge', restInv: j.restInv ? cq(j.restInv) : { x: 0, y: 0, z: 0, w: 1 }, a1: (() => { try { return cv(j.joint.anchor1()); } catch { return V3(); } })() }));
+     if (f.sword && f.bodies.farmS && f.gripJoint) edges.push({ name: 'sword', handle: f.gripJoint.handle, ip: mine.get(f.bodies.farmS.handle), ic: mine.get(f.sword.handle), parent: f.bodies.farmS, manual: true, hinge: false, restInv: { x: 0, y: 0, z: 0, w: 1 }, a1: (() => { try { return cv(f.gripJoint.anchor1()); } catch { return V3(); } })() });
+     const kids = new Map(); for (const e of edges) if (e.ip != null && e.ic != null) (kids.get(e.ip) ?? kids.set(e.ip, []).get(e.ip)).push(e.ic);
+-    for (const e of edges) { const D = new Set(), st = [e.ic]; while (st.length) { const x = st.pop(); if (x == null || D.has(x)) continue; D.add(x); for (const y of kids.get(x) ?? []) st.push(y); } e.distal = D; e.limit = (HUMAN.find(([re]) => re.test(e.name)) ?? [0, 200])[1]; }
++    for (const e of edges) { const D = new Set(), st = [e.ic]; while (st.length) { const x = st.pop(); if (x == null || D.has(x)) continue; D.add(x); for (const y of kids.get(x) ?? []) st.push(y); } e.distal = D; e.limit = (HUMAN.find(([re]) => re.test(e.name)) ?? [0, 200])[1]; e.leg = LEGJ.test(e.name); }
+     L.jdefs = edges.filter((e) => e.ip != null && e.ic != null);
+     for (const e of L.jdefs) e.near = bodies.map((_, i) => i).filter((i) => !e.distal.has(i));
+   }
+@@ -383,9 +408,13 @@ export function attach(world, named, opts = {}) {
+             meas = tJ;
+           }
+         }
+-        const tot = len(add(tm, te)), st = (L.joint[J.name] ||= { n: 0, sum: 0, peak: 0, over: 0, motorPeak: 0, explPeak: 0, hist: [], limit: J.limit, mN: 0, mOver: 0, mPeak: 0, mHist: [], sxy: 0, sxx: 0, syy: 0 });
+-        if (meas) { const eng = meas; meas = add(meas, te); const mm = len(meas); st.mN++; st.engSum = (st.engSum || 0) + len(eng); st.reqMotorSum = (st.reqMotorSum || 0) + len(tm); st.sxyM = (st.sxyM || 0) + dot(tm, eng); st.sxxM = (st.sxxM || 0) + dot(tm, tm); st.mPeak = Math.max(st.mPeak, mm); if (mm > J.limit) st.mOver++; if (st.mHist.length < 20000) st.mHist.push(mm); const rq = add(tm, te); st.sxy += dot(rq, meas); st.sxx += dot(rq, rq); st.syy += dot(meas, meas); }
+-        st.n++; st.sum += tot; st.peak = Math.max(st.peak, tot); st.motorPeak = Math.max(st.motorPeak, len(tm)); st.explPeak = Math.max(st.explPeak, len(te)); if (tot > J.limit) st.over++;
++        const tq = add(tm, te), tot = len(tq), st = (L.joint[J.name] ||= { n: 0, sum: 0, peak: 0, over: 0, overBase: 0, motorPeak: 0, explPeak: 0, hist: [], limit: J.limit, leg: J.leg, mN: 0, mOver: 0, mOverBase: 0, mPeak: 0, mHist: [], sxy: 0, sxx: 0, syy: 0 });
++        // 다리: 늘어나며 버티는 몫 — 빠르기는 스텝 앞(토크를 정할 때) 자식 − 부모 각속도 · 견주는 토크와 같은 벡터의 방향으로 (경첩의 잰 값은 위에서 축으로 줄인 그대로)
++        const wRel = J.leg ? sub(prev.w[J.ic], prev.w[J.ip]) : null, aT = J.leg ? legAllow(tq, wRel) : null, limT = J.leg ? J.limit * aT.k : J.limit;
++        let aM = null;
++        if (meas) { const eng = meas; meas = add(meas, te); const mm = len(meas); aM = J.leg ? legAllow(meas, wRel) : null; const limM = J.leg ? J.limit * aM.k : J.limit; st.mN++; st.engSum = (st.engSum || 0) + len(eng); st.reqMotorSum = (st.reqMotorSum || 0) + len(tm); st.sxyM = (st.sxyM || 0) + dot(tm, eng); st.sxxM = (st.sxxM || 0) + dot(tm, tm); st.mPeak = Math.max(st.mPeak, mm); if (mm > limM) st.mOver++; if (mm > J.limit) st.mOverBase++; if (st.mHist.length < 20000) st.mHist.push(mm); const rq = add(tm, te); st.sxy += dot(rq, meas); st.sxx += dot(rq, rq); st.syy += dot(meas, meas); }
++        st.n++; st.sum += tot; st.peak = Math.max(st.peak, tot); st.motorPeak = Math.max(st.motorPeak, len(tm)); st.explPeak = Math.max(st.explPeak, len(te)); if (tot > limT) st.over++; if (tot > J.limit) st.overBase++;
++        if (J.leg) globalThis.__honestyLegDbg?.({ L, f, name: J.name, t: L.T, tau: tq, tot, meas, wRel, aT, aM, limit: J.limit }); // 재는 쪽 엿보기 (읽기만 · 값을 바꾸지 않음)
+         if (st.hist.length < 20000) st.hist.push(tot);
+       }
+     }
+@@ -444,11 +473,12 @@ export function attach(world, named, opts = {}) {
+       fingerprint: fp0, fingerprintEnd: L.fingerprint(),
+       dyn: Object.fromEntries(L.dyn.map((d, i) => [names[i], { ld: d.ld.map(r4), ad: d.ad.map(r4), gs: d.gs.map(r4), m: d.m.map(r4), I: d.I.map(r4), types: [...d.type] }])),
+       torque: (() => { const out = v('angResTilt', 'Timp') + v('angResYawExcess', 'Timp') + v('damp', 'Timp') + ['support', 'push', 'unpaired', 'other', 'write', 'aid'].reduce((t, k) => t + v(k, 'Timp'), 0); const inn = v('groundTorque', 'Timp'); return { share: out + inn < 1e-6 ? 0 : out / (out + inn), tiltResRate: v('angResTilt', 'Timp') / Math.max(1e-9, L.T), tiltFloorRate: v('angResTiltFloor', 'Timp') / Math.max(1e-9, L.T), yawExcessRate: v('angResYawExcess', 'Timp') / Math.max(1e-9, L.T), yawOverCoulombRate: v('angResYawOverCoulomb', 'Timp') / Math.max(1e-9, L.T), outNms: out, groundNms: inn, tiltResNms: v('angResTilt', 'Timp'), yawResNms: v('angResYaw', 'Timp'), yawExcessNms: v('angResYawExcess', 'Timp'), dampNms: v('damp', 'Timp') }; })(),
+-      joints: Object.fromEntries(Object.entries(L.joint).map(([k, x]) => { const h = Float64Array.from(x.hist).sort(); const mh = Float64Array.from(x.mHist).sort(); return [k, { limit: x.limit, mean: +(x.sum / Math.max(1, x.n)).toFixed(1), p95: +(h[Math.floor(0.95 * (h.length - 1))] ?? 0).toFixed(1), peak: +x.peak.toFixed(1), overShare: +(x.over / Math.max(1, x.n)).toFixed(4), motorPeak: +x.motorPeak.toFixed(1), explPeak: +x.explPeak.toFixed(1), measCover: +(x.mN / Math.max(1, x.n)).toFixed(3), measP95: +(mh[Math.floor(0.95 * (mh.length - 1))] ?? 0).toFixed(1), measPeak: +x.mPeak.toFixed(1), measOverShare: +(x.mOver / Math.max(1, x.mN)).toFixed(4), measVsReq: x.sxx > 0 ? +(x.sxy / x.sxx).toFixed(3) : null, engineVsMotorReq: x.sxxM > 1e-9 ? +(x.sxyM / x.sxxM).toFixed(3) : null, measCorr: x.sxx > 0 && x.syy > 0 ? +(x.sxy / Math.sqrt(x.sxx * x.syy)).toFixed(3) : null }]; })),
++      joints: Object.fromEntries(Object.entries(L.joint).map(([k, x]) => { const h = Float64Array.from(x.hist).sort(); const mh = Float64Array.from(x.mHist).sort(); return [k, { limit: x.limit, mean: +(x.sum / Math.max(1, x.n)).toFixed(1), p95: +(h[Math.floor(0.95 * (h.length - 1))] ?? 0).toFixed(1), peak: +x.peak.toFixed(1), overShare: +(x.over / Math.max(1, x.n)).toFixed(4), motorPeak: +x.motorPeak.toFixed(1), explPeak: +x.explPeak.toFixed(1), measCover: +(x.mN / Math.max(1, x.n)).toFixed(3), measP95: +(mh[Math.floor(0.95 * (mh.length - 1))] ?? 0).toFixed(1), measPeak: +x.mPeak.toFixed(1), measOverShare: +(x.mOver / Math.max(1, x.mN)).toFixed(4), ...(x.leg ? { overBaseShare: +(x.overBase / Math.max(1, x.n)).toFixed(4), measOverBaseShare: +(x.mOverBase / Math.max(1, x.mN)).toFixed(4) } : {}), measVsReq: x.sxx > 0 ? +(x.sxy / x.sxx).toFixed(3) : null, engineVsMotorReq: x.sxxM > 1e-9 ? +(x.sxyM / x.sxxM).toFixed(3) : null, measCorr: x.sxx > 0 && x.syy > 0 ? +(x.sxy / Math.sqrt(x.sxx * x.syy)).toFixed(3) : null }]; })),
+       virtualActuators: Object.fromEntries(Object.entries(L.virt).map(([k, x]) => [k, { Ns: +x.Ns.toFixed(1), peakN: +x.peakN.toFixed(1) }])),
+       check: { foreignNs: v('foreignN', 'Fimp'), foreignKinNs: v('foreignKin', 'Fimp'), groundNShare: v('groundN', 'Fy') / Math.max(1e-9, L.Mg * L.T), hiddenYNs: v('hiddenY', 'Fimp'), hiddenYNet: v('hiddenY', 'Fy'), frictionHNs: v('frictionH', 'Fimp'), frictionExcessNs: v('frictionExcess', 'Fimp'), nonFootGroundNs: v('nonFootGround', 'Fimp') },
+       stab: f ? { fellAt: stab.fellAt, pelvisYMean: +(stab.ySum / Math.max(1, L.rows)).toFixed(3), pelvisYMin: +stab.yMin.toFixed(3), tiltMaxDeg: +stab.tiltMax.toFixed(1), states: stab.states, netMove: stab.c0 ? +Math.hypot(stab.c1.x - stab.c0.x, stab.c1.z - stab.c0.z).toFixed(3) : 0, pathMove: +stab.path.toFixed(3), meanSpeed: +(stab.path / Math.max(1e-9, L.T)).toFixed(3), tipSpeedMax: +stab.tipMax.toFixed(2) } : null,
+       cats: Object.fromEntries(Object.entries(a).map(([k, x]) => [k, { Fimp: +x.Fimp.toFixed(3), Fy: +x.Fy.toFixed(3), Timp: +x.Timp.toFixed(3), Wabs: +x.Wabs.toFixed(3), Wpos: +x.Wpos.toFixed(3), Wneg: +x.Wneg.toFixed(3) }])),
++      legJudge: f ? { ...LEG_JUDGE, check: legJudgeCheck() } : null, // 다리 잣대 값 · config 와 견줌 (읽기만)
+     };
+   };
+   SHARED.sets.push(L);
+@@ -493,8 +523,11 @@ export function report(title, S) {
+   if (S.stab) lines.push(`  몸: ${S.stab.fellAt != null ? '넘어짐 ' + S.stab.fellAt + ' s' : '안 넘어짐'} · 골반 높이 평균 ${S.stab.pelvisYMean} (최저 ${S.stab.pelvisYMin}) m · 가슴 기울기 최고 ${S.stab.tiltMaxDeg}° · 옮긴 거리 ${S.stab.netMove} m (길 ${S.stab.pathMove} m · 평균 ${S.stab.meanSpeed} m/s) · 칼끝 최고 ${S.stab.tipSpeedMax} m/s · 상태 ${Object.entries(S.stab.states).map(([k, n]) => k + ' ' + n).join(' ')}`);
+   lines.push(`  검산: 땅 법선 ÷ 체중 ${pct(S.check.groundNShare)} · 법선으로 설명 안 되는 수직 힘 ${n1(S.check.hiddenYNs, 0)} N·s (알짜 ${n1(S.check.hiddenYNet, 0)}) · 수평 마찰(핀 포함) ${n1(S.check.frictionHNs, 0)} N·s 가운데 μN 넘는 몫 ${n1(S.check.frictionExcessNs, 0)} N·s · 발 아닌 곳이 땅을 누름 ${n1(S.check.nonFootGroundNs, 0)} N·s · 땅 아닌 것과 닿음 ${n1(S.check.foreignNs, 0)} N·s (그중 운동학 물체 ${n1(S.check.foreignKinNs, 0)}) · 몸 밖에 묶인 관절 ${S.externalJoints.length} (${S.externalJoints.join(',') || '없음'})`);
+   if (S.torque) lines.push(`  돌리는 쪽: 숨은 기울기 토크 평균 ${S.torque.tiltResRate.toFixed(2)} N·m (닻 재계산값을 뺀 나머지 ${S.torque.tiltFloorRate.toFixed(2)}) · yaw 엔진 마찰 한도 넘는 몫 평균 ${S.torque.yawExcessRate.toFixed(2)} N·m (쿨롱 한도는 넘고 엔진 한도 안 — 엔진이 봐준 비틀림 마찰 ${(S.torque.yawOverCoulombRate ?? 0).toFixed(2)} N·m) · 토크 몫(밖) ${pct(S.torque.share)} = 밖 ${n1(S.torque.outNms, 0)} ÷ (밖 + 땅 ${n1(S.torque.groundNms, 0)}) N·m·s · 기울기 잔차 ${n1(S.torque.tiltResNms, 0)} · yaw 잔차 ${n1(S.torque.yawResNms, 0)} (마찰 짝힘 한도 넘는 몫 ${n1(S.torque.yawExcessNms, 0)}) · 회전 감쇠 ${n1(S.torque.dampNms, 0)}`);
+-  if (S.joints && Object.keys(S.joints).length) lines.push('  관절 토크 — 요구(다시 센 값) 95 % / 한도(넘은 몫): ' + Object.entries(S.joints).map(([k, j]) => `${k} ${j.p95.toFixed(0)}/${j.limit}(${(100 * j.overShare).toFixed(1)}%)`).join(' · '));
+-  if (S.joints && Object.keys(S.joints).length) lines.push('  관절 토크 — 전달(운동량으로 잰 값) 95 % · 최고 (넘은 몫 · 잴 수 있던 스텝 몫 · 엔진 모터의 전달 ÷ 요구): ' + Object.entries(S.joints).map(([k, j]) => `${k} ${j.measP95.toFixed(0)}·${j.measPeak.toFixed(0)}(${(100 * j.measOverShare).toFixed(1)}%·${(100 * j.measCover).toFixed(0)}%·${j.engineVsMotorReq ?? '-'})`).join(' · '));
++  // 다리 관절(overBaseShare 가 있는 칸)은 넘은 몫 뒤에 '/ 늘어나며 버티는 몫 없이 312.5 를 넘은 몫' 을 붙인다
++  const ob = (x) => (x != null ? `/${(100 * x).toFixed(1)}%` : '');
++  if (S.joints && Object.keys(S.joints).length) lines.push('  관절 토크 — 요구(다시 센 값) 95 % / 한도(넘은 몫 · 다리는 늘어나며 버티는 몫을 곱한 한도 / 곱하기 전 한도): ' + Object.entries(S.joints).map(([k, j]) => `${k} ${j.p95.toFixed(0)}/${j.limit}(${(100 * j.overShare).toFixed(1)}%${ob(j.overBaseShare)})`).join(' · '));
++  if (S.joints && Object.keys(S.joints).length) lines.push('  관절 토크 — 전달(운동량으로 잰 값) 95 % · 최고 (넘은 몫 · 잴 수 있던 스텝 몫 · 엔진 모터의 전달 ÷ 요구): ' + Object.entries(S.joints).map(([k, j]) => `${k} ${j.measP95.toFixed(0)}·${j.measPeak.toFixed(0)}(${(100 * j.measOverShare).toFixed(1)}%${ob(j.measOverBaseShare)}·${(100 * j.measCover).toFixed(0)}%·${j.engineVsMotorReq ?? '-'})`).join(' · '));
++  if (S.legJudge && !S.legJudge.check.ok) lines.push(`  경고: 심판의 다리 잣대가 몸 값(config LEGS)과 다름 — ${S.legJudge.check.diffs.join(' · ')}`);
+   if (S.virtualActuators && Object.keys(S.virtualActuators).length) lines.push('  가상 구동기(관절을 거치지 않는 힘 쌍): ' + Object.entries(S.virtualActuators).map(([k, x]) => `${k} ${x.Ns} N·s (최고 ${x.peakN} N)`).join(' · '));
+   if (S.pair && S.pair.grossNs > 0) lines.push(`  H2 규칙 충격(두 몸 합 · 엔진 접촉 아님): 건 것 ${S.pair.grossNs} N·s (${Object.entries(S.pair.by).map(([k, v]) => `${{ combat: '판정 뒤 충격', shove: '밀쳐내기', write: '속도 쓰기' }[k] ?? k} ${v}`).join(' · ')}) 가운데 짝이 안 맞는 몫 ${S.pair.netFNs} N·s (${(100 * S.pair.netFNs / Math.max(1e-9, S.pair.grossNs)).toFixed(1)} % · 한 스텝 최고 ${S.pair.worstNs} N·s) · 짝 안 맞는 토크 ${S.pair.netTNms} N·m·s · 스텝 ${S.pair.steps}`);
+   if (S.place.calls) lines.push(`  자리 직접 놓기: 스텝의 ${pct(S.place.stepShare)} (칼 ${pct(S.place.swordStepShare)}) · 옮긴 질량 × 거리 ${S.place.kgm} kg·m`);
