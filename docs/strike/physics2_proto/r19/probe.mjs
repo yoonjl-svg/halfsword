@@ -23,6 +23,7 @@ const ZD_STEP = process.env.R19_ZD_STEP != null ? +process.env.R19_ZD_STEP : nul
 const ZD_LEG = process.env.R19_ZD_LEG ?? 'F';
 const ZD_N = +(process.env.R19_ZD_N ?? 4);
 const ZD_OFF = !!process.env.R19_ZD_OFF;
+const ZD_ALL = !!process.env.R19_ZD_ALL; // 감쇠와 굳기 모두 (그 다리 모터 사실상 끔)
 const STOP = process.env.R19_STOP != null ? +process.env.R19_STOP : null;
 const NOAB = !!process.env.R19_NOAB; // 힘 기록만 (A/B 없음)
 const FORCELOG = process.env.R19_FORCELOG ?? null; // 스텝마다 발 힘 줄 (Q4)
@@ -100,7 +101,7 @@ const oDrive = Fighter.prototype.driveJoints;
 Fighter.prototype.driveJoints = function (...a) {
   if (ZD_STEP != null && !ZD_OFF && isWho(this, true)) {
     const s = STEPNO.get(this.world) ?? 0;
-    if (s >= ZD_STEP && s < ZD_STEP + ZD_N) { const l = this.gait.legs[ZD_LEG]; for (const n of [l.thigh, l.shin, l.foot]) this.jointByName[n].gainD = 0; }
+    if (s >= ZD_STEP && s < ZD_STEP + ZD_N) { const l = this.gait.legs[ZD_LEG]; for (const n of [l.thigh, l.shin, l.foot]) { this.jointByName[n].gainD = ZD_ALL ? 1e-6 : 0; if (ZD_ALL) this.jointByName[n].gain = 1e-6; } } // ZD_ALL: 굳기도 거의 0 (k = d = 0 은 Rapier 가 관절을 굳히므로 1e-6)
   }
   return oDrive.apply(this, a);
 };
@@ -262,8 +263,9 @@ function impFighters(world, fs, preQ, s, preV, wid) {
     const fyF = footFy(world, f, 'F') / BW, fyB = footFy(world, f, 'B') / BW;
     const D = f.legDrive?.dbg;
     let fyM = null; // 몸 전체 운동량으로 잰 접촉 수직 힘 (선언 힘은 빼지 않음 — 다리 쪽엔 수직 선언 힘이 없다) ÷ 몸무게
-    if (preV) { let dp = 0, M = 0; f.meshes.forEach(({ rb }, i) => { const [vy0, m, ld] = preV[fi][i]; dp += m * (oLinvel.call(rb).y * (1 + ld * DT) - vy0); M += m; }); fyM = (dp / DT + M * 9.81) / BW; }
-    appendFileSync(STEPLOG, JSON.stringify({ s, wid, who: f.name ?? f.index, state: f.state, run: f.run?.on ? 1 : 0, fyM: fyM == null ? null : +fyM.toFixed(3), fyF: +fyF.toFixed(3), fyB: +fyB.toFixed(3), N: D && typeof D.N === 'number' ? +(D.N / BW).toFixed(3) : null, J }) + '\n');
+    let vy = null; // 몸 질량중심 수직 속도 (스텝 뒤)
+    if (preV) { let dp = 0, M = 0, P1 = 0; f.meshes.forEach(({ rb }, i) => { const [vy0, m, ld] = preV[fi][i]; const v1 = oLinvel.call(rb).y; dp += m * (v1 * (1 + ld * DT) - vy0); M += m; P1 += m * v1; }); fyM = (dp / DT + M * 9.81) / BW; vy = P1 / M; }
+    appendFileSync(STEPLOG, JSON.stringify({ s, wid, who: f.name ?? f.index, state: f.state, run: f.run?.on ? 1 : 0, fyM: fyM == null ? null : +fyM.toFixed(3), vy: vy == null ? null : +vy.toFixed(3), fyF: +fyF.toFixed(3), fyB: +fyB.toFixed(3), N: D && typeof D.N === 'number' ? +(D.N / BW).toFixed(3) : null, J }) + '\n');
   });
 }
 let IMPMISS = 0;
@@ -375,6 +377,23 @@ function abFighter(world, f, items, snap, rec, s, regular) {
       const r = sub(add(it.tc0, qrot(it.qc, it.a2)), it.cc0);
       const cr = V(r.y * FJ.z - r.z * FJ.y, r.z * FJ.x - r.x * FJ.z, r.x * FJ.y - r.y * FJ.x);
       momW = sub(sub(scl(Idw, 1 / DT), ex.get(it.ch) ?? V()), cr);
+    }
+    // 뜬 다리 무릎: 정강이 + 발 묶음(땅 접촉 0)의 운동량 — 관절 힘 F = ΔP/dt − M g · 묶음 질량중심 둘레 ΔL/dt = τ_무릎 + (닻 − c) × F + 명시(무릎 쌍이 정강이에 건 몫 · 발목 쌍은 안에서 지움)
+    if (it.kind === 's' && T && T[it.k].fy === 0) {
+      const ft = items.find((x) => x.kind === 'f' && x.k === it.k);
+      if (ft) {
+        const set = [it, ft].map((x) => { const C = world.getRigidBody(x.ch); return { x, v1: scl(cv(oLinvel.call(C)), 1 + x.ld * DT), w1: scl(cv(oAngvel.call(C)), 1 + x.ad * DT), c1: cv(C.worldCom()) }; });
+        const M = it.m + ft.m;
+        const c0 = scl(add(scl(it.cc0, it.m), scl(ft.cc0, ft.m)), 1 / M), c1 = scl(add(scl(set[0].c1, it.m), scl(set[1].c1, ft.m)), 1 / M);
+        const crs = (a, b) => V(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+        const Lc = (useNew) => { let Ls = V(); for (const o of set) { const x = o.x, q = qmul(x.qc, x.pf), w = useNew ? o.w1 : x.wc0, wl = qrot(qconj(q), w); const Iw = qrot(q, V(x.pi.x * wl.x, x.pi.y * wl.y, x.pi.z * wl.z)); const r = sub(useNew ? o.c1 : x.cc0, useNew ? c1 : c0); Ls = add(Ls, add(Iw, scl(crs(r, useNew ? o.v1 : x.vc0), x.m))); } return Ls; };
+        const P0 = add(scl(it.vc0, it.m), scl(ft.vc0, ft.m)), P1 = add(scl(set[0].v1, it.m), scl(set[1].v1, ft.m));
+        const FJ = sub(scl(sub(P1, P0), 1 / DT), V(0, -9.81 * M, 0));
+        const pJ = add(it.tc0, qrot(it.qc, it.a2));
+        const cm = scl(add(c0, c1), 0.5);
+        momW = sub(sub(sub(scl(sub(Lc(true), Lc(false)), 1 / DT), ex.get(it.ch) ?? V()), ex.get(ft.ch) ?? V()), crs(sub(pJ, cm), FJ));
+        momW = add(momW, ex.get(ft.ch) ?? V()); // 발목 쌍: 정강이에 건 몫(+)과 발에 건 몫(−)이 묶음 안에서 지워짐 — ex 는 자식(발)이 받은 몫만 적으므로 정강이 쪽 반대 몫을 더해 0 으로
+      }
     }
     const st = !!f.gait.legs[it.k].stance;
     const out = { n: it.n, st, since: T?.[it.k]?.since ?? -1, str: +str[it.k].toFixed(3), ax: {} };

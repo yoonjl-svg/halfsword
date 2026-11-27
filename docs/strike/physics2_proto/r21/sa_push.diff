@@ -1,0 +1,12 @@
+diff -ru $S/p2/r6/mx/cells/fb_base/src/gait.js $S/p2/r6/mx/cells/sa_push/src/gait.js
+--- $S/p2/r6/mx/cells/fb_base/src/gait.js	2026-11-26 18:22:17.000000000 +0000
++++ $S/p2/r6/mx/cells/sa_push/src/gait.js	2026-11-27 06:27:48.104996229 +0000
+@@ -1420,7 +1420,7 @@
+     const launch = !!(swing && swing.kind === 'req' && this.req?.kind === 'lunge' && this.req.fwd > 0);
+     if (launch) want.addScaledVector(rgt, -(want.x * rgt.x + want.z * rgt.z));
+     if (swing && swing.kind === 'req' && this.req) {
+-      want.addScaledVector(fwd, (this.req.fwd * 0.8 * (this.req.push ?? 1)) / (swing.T + 0.15)); // push: 유파 비기의 강한 걸음 (없으면 ×1 — 같은 수)
++      want.addScaledVector(fwd, (this.req.fwd * 0.56 * (this.req.push ?? 1)) / (swing.T + 0.15)); // push: 유파 비기의 강한 걸음 (없으면 ×1 — 같은 수)
+       if (this.req.side) want.addScaledVector(rgt, (this.req.side * 0.8) / (swing.T + 0.15));
+       if (this.req.accel) this.lungeBrake = { x: fwd.x * Math.sign(this.req.fwd), z: fwd.z * Math.sign(this.req.fwd), on: true }; // 런지 걸음 (req.accel): 걸음 동안 가속 한도 × burstAccel
+     } else if (this.lungeBrake?.on) this.lungeBrake.on = false;

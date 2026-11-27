@@ -1,0 +1,12 @@
+diff -ru $S/p2/r6/mx/cells/fb_base/src/config.js $S/p2/r6/mx/cells/sa_arc/src/config.js
+--- $S/p2/r6/mx/cells/fb_base/src/config.js	2026-11-26 18:43:54.614877288 +0000
++++ $S/p2/r6/mx/cells/sa_arc/src/config.js	2026-11-27 06:27:48.244996237 +0000
+@@ -200,7 +200,7 @@
+   r2pAiContact: -0.05, // (c) 10/8 17:00: 묶음을 쓰는 AI 의 유파 간격 contact 보정(m). 'all' 범위에서만 걸림(player 범위의 상대 AI 는 묶음이 없어 0) — 확인표 193, 사장님 확인 전
+   // R2′ 묶음(trunkArc · trunkFollow · servoLead · vertLead)은 사람 · AI 모두 — AI 는 r2pAiContact 로 간격을 당김 [사장님 10/8]
+   trunkFollow: 0.5, // 휘두르는 동안 칼이 겨눔보다 뒤처진 각만큼 몸 돌림을 더 유지(× activity × 0.35 rad) · 0 = 끔 [사장님 10/8]
+-  trunkArc: 2, // 휘두르는 동안 자세 지도 몸 돌림 기울기를 (1 + 값 · activity) 배로 — R2′ 범위(r2pScope) 안에서만 [사장님 10/8]
++  trunkArc: 1.4, // 휘두르는 동안 자세 지도 몸 돌림 기울기를 (1 + 값 · activity) 배로 — R2′ 범위(r2pScope) 안에서만 [사장님 10/8]
+ };
+ 
+ // 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, 사장님 확인 전). 몸이 닿을 만큼 붙어서 스틱을 놓았다가 상대 쪽으로 밀면

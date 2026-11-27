@@ -37,6 +37,7 @@ const replay = (t, off) => {
   const out = `/tmp/r19_td_${process.pid}.jsonl`; if (existsSync(out)) rmSync(out);
   const env = { ...process.env, R19_ROOT: args.root, R19_NOAB: '1', R19_STEPLOG: out, R19_ZD_STEP: String(t.s), R19_ZD_LEG: t.k, R19_ZD_N: '4', R19_STOP: String(t.s + 5) };
   if (off) env.R19_ZD_OFF = '1';
+  if (args.all) env.R19_ZD_ALL = '1';
   spawnSync(process.execPath, ['--import', PROBE, 'tools/sim/run_scenes.mjs', `--scene=${args.scene ?? 'hop'}`, `--variants=${t.wid}`, `--weapon=${args.weapon ?? 'longsword'}`, '--quiet'], { cwd: args.root, env, stdio: ['ignore', 'ignore', 'ignore'] });
   const R = existsSync(out) ? readFileSync(out, 'utf8').trim().split('\n').map(JSON.parse).filter((l) => (l.who ?? 'P') === 'P') : [];
   rmSync(out, { force: true });

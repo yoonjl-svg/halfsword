@@ -1,0 +1,12 @@
+diff -ru $S/p2/r6/mx/cells/fb_base/src/ai.js $S/p2/r6/mx/cells/sa_ret/src/ai.js
+--- $S/p2/r6/mx/cells/fb_base/src/ai.js	2026-11-26 18:22:17.000000000 +0000
++++ $S/p2/r6/mx/cells/sa_ret/src/ai.js	2026-11-27 06:27:48.045271613 +0000
+@@ -4664,7 +4664,7 @@
+     me.stickY = fwd;
+     const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)
+     const lim = Math.max(1, mv);
+-    me.move.set(clamp(side * mv, -lim, lim), clamp(fwd * mv, -lim, lim));
++    me.move.set(clamp(side * mv, -lim, lim), clamp(fwd * mv, -0.5 * lim, lim));
+   }
+ 
+   /** 새 다리(gait.js)가 있으면 베는 걸음을 부탁한다 (없으면 조이스틱 내딛기로 충분) */

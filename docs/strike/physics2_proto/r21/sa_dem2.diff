@@ -1,0 +1,45 @@
+diff -ru $S/p2/r6/mx/cells/fb_base/src/ai.js $S/p2/r6/mx/cells/sa_dem2/src/ai.js
+--- $S/p2/r6/mx/cells/fb_base/src/ai.js	2026-11-26 18:22:17.000000000 +0000
++++ $S/p2/r6/mx/cells/sa_dem2/src/ai.js	2026-11-27 06:06:19.228919615 +0000
+@@ -4664,7 +4664,7 @@
+     me.stickY = fwd;
+     const mv = me.emoMods?.move ?? 1; // 감정 고유 능력: 집념이면 발이 묶이고, 공포면 발이 빨라진다 (1이면 예전 그대로 ±1 안)
+     const lim = Math.max(1, mv);
+-    me.move.set(clamp(side * mv, -lim, lim), clamp(fwd * mv, -lim, lim));
++    me.move.set(clamp(side * mv, -lim, lim), clamp(fwd * mv, -0.5 * lim, lim));
+   }
+ 
+   /** 새 다리(gait.js)가 있으면 베는 걸음을 부탁한다 (없으면 조이스틱 내딛기로 충분) */
+diff -ru $S/p2/r6/mx/cells/fb_base/src/config.js $S/p2/r6/mx/cells/sa_dem2/src/config.js
+--- $S/p2/r6/mx/cells/fb_base/src/config.js	2026-11-26 18:43:54.614877288 +0000
++++ $S/p2/r6/mx/cells/sa_dem2/src/config.js	2026-11-27 06:06:19.232919615 +0000
+@@ -200,7 +200,7 @@
+   r2pAiContact: -0.05, // (c) 10/8 17:00: 묶음을 쓰는 AI 의 유파 간격 contact 보정(m). 'all' 범위에서만 걸림(player 범위의 상대 AI 는 묶음이 없어 0) — 확인표 193, 사장님 확인 전
+   // R2′ 묶음(trunkArc · trunkFollow · servoLead · vertLead)은 사람 · AI 모두 — AI 는 r2pAiContact 로 간격을 당김 [사장님 10/8]
+   trunkFollow: 0.5, // 휘두르는 동안 칼이 겨눔보다 뒤처진 각만큼 몸 돌림을 더 유지(× activity × 0.35 rad) · 0 = 끔 [사장님 10/8]
+-  trunkArc: 2, // 휘두르는 동안 자세 지도 몸 돌림 기울기를 (1 + 값 · activity) 배로 — R2′ 범위(r2pScope) 안에서만 [사장님 10/8]
++  trunkArc: 1.4, // 휘두르는 동안 자세 지도 몸 돌림 기울기를 (1 + 값 · activity) 배로 — R2′ 범위(r2pScope) 안에서만 [사장님 10/8]
+ };
+ 
+ // 근접 밀치기 (docs/strike/shove_design_2026-09-30.md, 사장님 확인 전). 몸이 닿을 만큼 붙어서 스틱을 놓았다가 상대 쪽으로 밀면
+diff -ru $S/p2/r6/mx/cells/fb_base/src/gait.js $S/p2/r6/mx/cells/sa_dem2/src/gait.js
+--- $S/p2/r6/mx/cells/fb_base/src/gait.js	2026-11-26 18:22:17.000000000 +0000
++++ $S/p2/r6/mx/cells/sa_dem2/src/gait.js	2026-11-27 06:06:19.232919615 +0000
+@@ -438,7 +438,7 @@
+     if (this.f.feetHeld || this.f.fireHold) return false; // 판 시작 정지 (ARENA.startHold): 기술 걸음도 받지 않는다 · AI 가 쏘는 동안(fireHold — 10/29)도
+     // 물러나는 중이면 받지 않는다 (몸은 뒤로, 발은 앞으로 가면 넘어진다). 뒤로 딛는 걸음(retreat)은 예외
+     if (this.f.move.y < -0.1 && o.kind !== 'retreat' && !o.force) return false; // force: 겹치기 앞 박차기 (몸은 이미 미끄러져 나감 — 발도 따라 디뎌야 넘어지지 않음)
+-    this.req = { kind: o.kind || 'pass', fwd: o.fwd ?? 0.5, side: o.side ?? 0, duration: clamp(o.duration ?? 0.4, Math.min(0.28, o.minT ?? 0.28), 0.7), age: 0, leg: o.leg ?? null }; // minT: 이보다 짧은 발 뜬 시간도 받음 (겹치기 앞 박차기 — 칼이 끌리는 시간에 맞춤 · 10/31 · 없으면 0.28 그대로) // leg 'left'|'right': 기술이 고른 발(R2′ 채널 B, 확인표 182) — 없으면 아래 규칙(lunge 앞발·pass 뒷발)
++    this.req = { kind: o.kind || 'pass', fwd: (o.fwd ?? 0.5) * 0.5, side: (o.side ?? 0) * 0.5, duration: clamp(o.duration ?? 0.4, Math.min(0.28, o.minT ?? 0.28), 0.7), age: 0, leg: o.leg ?? null }; // minT: 이보다 짧은 발 뜬 시간도 받음 (겹치기 앞 박차기 — 칼이 끌리는 시간에 맞춤 · 10/31 · 없으면 0.28 그대로) // leg 'left'|'right': 기술이 고른 발(R2′ 채널 B, 확인표 182) — 없으면 아래 규칙(lunge 앞발·pass 뒷발)
+     if (o.push) this.req.push = o.push;
+     if (o.accel) this.req.accel = true; // 안다레 리솔루토 런지 · 되돌아오기 (10/24 14:0x): 이 걸음 동안 · 끝난 뒤 몸이 따라잡을 때까지 가속 한도 × GAIT.burstAccel (lungeBrake — fighter.js driveBalance)
+     if (o.draw) this.req.draw = true;
+@@ -1420,7 +1420,7 @@
+     const launch = !!(swing && swing.kind === 'req' && this.req?.kind === 'lunge' && this.req.fwd > 0);
+     if (launch) want.addScaledVector(rgt, -(want.x * rgt.x + want.z * rgt.z));
+     if (swing && swing.kind === 'req' && this.req) {
+-      want.addScaledVector(fwd, (this.req.fwd * 0.8 * (this.req.push ?? 1)) / (swing.T + 0.15)); // push: 유파 비기의 강한 걸음 (없으면 ×1 — 같은 수)
++      want.addScaledVector(fwd, (this.req.fwd * 0.56 * (this.req.push ?? 1)) / (swing.T + 0.15)); // push: 유파 비기의 강한 걸음 (없으면 ×1 — 같은 수)
+       if (this.req.side) want.addScaledVector(rgt, (this.req.side * 0.8) / (swing.T + 0.15));
+       if (this.req.accel) this.lungeBrake = { x: fwd.x * Math.sign(this.req.fwd), z: fwd.z * Math.sign(this.req.fwd), on: true }; // 런지 걸음 (req.accel): 걸음 동안 가속 한도 × burstAccel
+     } else if (this.lungeBrake?.on) this.lungeBrake.on = false;

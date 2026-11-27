@@ -1,0 +1,12 @@
+diff -ru $S/p2/r6/mx/cells/fb_base/src/config.js $S/p2/r6/mx/cells/sb_load/src/config.js
+--- $S/p2/r6/mx/cells/fb_base/src/config.js	2026-11-26 18:43:54.614877288 +0000
++++ $S/p2/r6/mx/cells/sb_load/src/config.js	2026-11-27 06:27:48.399011655 +0000
+@@ -401,7 +401,7 @@
+   heightK: 9000,
+   heightD: 900,
+   loadMin: 0.3,
+-  loadMax: 1.8,
++  loadMax: 3.0,
+   velGain: 11, // 수평 = M · velGain · (가려는 속도 − 무게중심 속도) — 가속 한도(GAIT.maxAccel …) 안 (예전 걷기 밀기와 같은 법칙)
+   // 몸통 토크 (골반 기울기 · 몸통 각속도): 예전 닻 2500 · 330 은 엔진 묵시 모터 값 — 명시 토크는 관성에 묶여 더 무르게
+   tiltK: 1500,

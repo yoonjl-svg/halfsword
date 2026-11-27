@@ -1,0 +1,21 @@
+diff -ru $S/p2/r6/mx/cells/fb_base/src/config.js $S/p2/r6/mx/cells/sb_body/src/config.js
+--- $S/p2/r6/mx/cells/fb_base/src/config.js	2026-11-26 18:43:54.614877288 +0000
++++ $S/p2/r6/mx/cells/sb_body/src/config.js	2026-11-27 06:06:19.280919618 +0000
+@@ -401,7 +401,7 @@
+   heightK: 9000,
+   heightD: 900,
+   loadMin: 0.3,
+-  loadMax: 1.8,
++  loadMax: 3.0,
+   velGain: 11, // 수평 = M · velGain · (가려는 속도 − 무게중심 속도) — 가속 한도(GAIT.maxAccel …) 안 (예전 걷기 밀기와 같은 법칙)
+   // 몸통 토크 (골반 기울기 · 몸통 각속도): 예전 닻 2500 · 330 은 엔진 묵시 모터 값 — 명시 토크는 관성에 묶여 더 무르게
+   tiltK: 1500,
+@@ -436,7 +436,7 @@
+   //  발목(발바닥 쪽으로 미는 힘) 250 [사장님 11/26 '발목 한도 250으로 해' — 걸음 구분 없이 하나: 사람 발목은 뛸 때 몸무게 1 kg 당 3 ~ 3.5 N·m 를 전달한다(75 kg 몸 225 ~ 260). 전 값 180 은 출처 없이 잡은 '가만히 힘줄 때' 가늠값]
+   //  엉덩이(굽힘 · 폄) 250 [사장님 11/26 '엉덩이 한도도 250으로 해' — 심판 잣대(honesty.mjs 의 엉덩이 250)와 같은 값. 전 값 200]
+   //  발목 · 엉덩이 한도는 못박은 값이 아니다 [사장님 11/26 '언제든 고칠 수 있는 것으로, 이는 절대적 명령이 아냐'] — 사람 자료 · 잰 결과가 나오면 다시 여쭙고 고친다
+-  limit: { hipFlex: 250, hipAbd: 150, hipRot: 70, kneeExt: 250, kneeFlex: 130, anklePlantar: 250, ankleDorsi: 60, ankleInv: 50, ankleRot: 40 },
++  limit: { hipFlex: 500, hipAbd: 300, hipRot: 140, kneeExt: 500, kneeFlex: 260, anklePlantar: 500, ankleDorsi: 120, ankleInv: 100, ankleRot: 80 },
+ };
+ 
+ // 뛰기(src/run.js — 사람 · 셋 이상 판 AI 같은 몸): 스틱 끝까지 hold 버티면 시작 · 기력 startAt 이상 · stopAt 까지 · 뛰는 동안 회복 없음 · 열쇠마다 뜻은 아래 — hold · startAt · stopAt · cost · mul · 회복 없음 [사장님 11/18 · 11/20 · 11/21] · 나머지 열쇠는 줄의 표시대로(표시 없음 = 감독 값)
