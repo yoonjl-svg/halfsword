@@ -34,6 +34,17 @@ const FOOT_HY = 0.035; // 반 높이 (발 몸체 중심 → 발바닥)
 const clamp = THREE.MathUtils.clamp;
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
+/**
+ * 다리 관절 한 축 · 한 방향의 토크 한도 (N·m): base = LEGS.limit 의 그 방향 칸 · str = 근력 몫(strengthOf) · wEcc = 그 방향 토크를 거슬러 도는 관절 빠르기(rad/s · 근육이 늘어나며 버틸 때 +).
+ *  늘어나며 버티는 근육은 한도 × (1 + (LEGS.ecc − 1) × (wEcc ÷ LEGS.eccW 를 0 ~ 1 로 자름)) — LEGS.ecc 1 이면 늘 한도 × 근력 그대로(같은 수).
+ */
+export function legLimit(base, str, wEcc) {
+  const W = LEGS.eccW;
+  return base * str * (1 + (LEGS.ecc - 1) * (wEcc > 0 ? (wEcc < W ? wEcc / W : 1) : 0));
+}
+/** 부모 쪽 토크 t 를 [−한도(lo 칸), 한도(hi 칸)] 로 자름 · w = (자식 − 부모) 각속도의 그 축 몫 — 부모 쪽 + 토크는 w > 0 일 때 늘어나며 버틴다 */
+const clampLeg = (t, w, lo, hi, str) => clamp(t, -legLimit(lo, str, -w), legLimit(hi, str, w));
+
 const _q = new THREE.Quaternion();
 const _qi = new THREE.Quaternion();
 const _a = new THREE.Vector3();
@@ -47,6 +58,7 @@ const _L = new THREE.Vector3();
 const _m3 = new THREE.Matrix3();
 const _wr = new THREE.Vector3();
 const _tq = { x: 0, y: 0, z: 0 };
+const _wp = new THREE.Vector3(); // 이번 스텝 골반 각속도 (drive 가 읽어 senseLeg 가 씀)
 
 // ── 볼록 다각형 (수평면 xz) — 받침 다각형 셈 (점 8 개까지 · 임시 배열을 다시 씀) ──
 const _px = new Float64Array(8), _pz = new Float64Array(8); // 넣는 점
@@ -140,6 +152,7 @@ function mkLeg(f, k) {
     pullV: new THREE.Vector3(),
     stat: { hip: mkStat(), knee: mkStat(), ankle: mkStat() },
     raw: { hx: 0, hy: 0, hz: 0, k: 0, ax: 0, ay: 0, az: 0 }, // 자르기 앞 관절 토크 (재는 도구가 읽음 — 엉덩이 · 발목은 그 토막 틀의 축마다 · 무릎은 경첩 축)
+    wH: new THREE.Vector3(), wK: 0, wA: new THREE.Vector3(), // 이번 스텝 앞 관절 빠르기 (자식 − 부모 · 한도 틀: 엉덩이 = 허벅지 틀 · 무릎 = 허벅지 z · 발목 = 발 틀)
   };
 }
 
@@ -245,6 +258,16 @@ export class LegDrive {
     const hl = Math.hypot(L.fx.x, L.fx.z) || 1;
     L.hx = L.fx.x / hl; L.hz = L.fx.z / hl;
     L.lx = -L.hz; L.lz = L.hx;
+    // 관절 빠르기 (자식 − 부모 · 한도 틀) — 한도 셈(clampLeg)이 읽는다
+    let w = th.angvel();
+    const tx = w.x, ty = w.y, tz = w.z;
+    L.wH.set(tx - _wp.x, ty - _wp.y, tz - _wp.z).applyQuaternion(_qi.copy(L.qT).invert());
+    w = sh.angvel();
+    _t.set(0, 0, 1).applyQuaternion(L.qT);
+    L.wK = (w.x - tx) * _t.x + (w.y - ty) * _t.y + (w.z - tz) * _t.z;
+    const sx = w.x, sy = w.y, sz = w.z;
+    w = ft.angvel();
+    L.wA.set(w.x - sx, w.y - sy, w.z - sz).applyQuaternion(_qi.copy(L.qF).invert());
   }
 
   /** 이 발이 땅 반력을 낼 수 있나 — 발바닥 가장 낮은 모서리가 땅에 닿아 있음 (기울어 디딘 발은 닿은 끝만 압력 중심 범위) */
@@ -321,9 +344,9 @@ export class LegDrive {
       _qi.copy(L.qF).invert();
       _b.copy(_a).applyQuaternion(_qi);
       L.raw.ax = _b.x; L.raw.ay = _b.y; L.raw.az = _b.z;
-      const x = clamp(_b.x, -lim.ankleInv * str, lim.ankleInv * str);
-      const y = clamp(_b.y, -lim.ankleRot * str, lim.ankleRot * str);
-      const z = clamp(_b.z, -lim.ankleDorsi * str, lim.anklePlantar * str);
+      const x = clampLeg(_b.x, L.wA.x, lim.ankleInv, lim.ankleInv, str);
+      const y = clampLeg(_b.y, L.wA.y, lim.ankleRot, lim.ankleRot, str);
+      const z = clampLeg(_b.z, L.wA.z, lim.ankleDorsi, lim.anklePlantar, str);
       const sat = x !== _b.x || y !== _b.y || z !== _b.z;
       _b.set(x, y, z);
       this.note(L.stat.ankle, _b.length(), sat);
@@ -344,7 +367,7 @@ export class LegDrive {
         if (phi < LEGS.kneeFree) s0 += LEGS.kneeFreeK * (LEGS.kneeFree - phi) * str;
       }
       L.raw.k = s0;
-      const s = clamp(s0, -lim.kneeExt * str, lim.kneeFlex * str);
+      const s = clampLeg(s0, L.wK, lim.kneeExt, lim.kneeFlex, str);
       this.note(L.stat.knee, Math.abs(s), s !== s0);
       this.pair(th, sh, _b.x * s, _b.y * s, _b.z * s);
     }
@@ -354,9 +377,9 @@ export class LegDrive {
       _qi.copy(L.qT).invert();
       _b.copy(_a).applyQuaternion(_qi);
       L.raw.hx = _b.x; L.raw.hy = _b.y; L.raw.hz = _b.z;
-      const x = clamp(_b.x, -lim.hipAbd * str, lim.hipAbd * str);
-      const y = clamp(_b.y, -lim.hipRot * str, lim.hipRot * str);
-      const z = clamp(_b.z, -lim.hipFlex * str, lim.hipFlex * str);
+      const x = clampLeg(_b.x, L.wH.x, lim.hipAbd, lim.hipAbd, str);
+      const y = clampLeg(_b.y, L.wH.y, lim.hipRot, lim.hipRot, str);
+      const z = clampLeg(_b.z, L.wH.z, lim.hipFlex, lim.hipFlex, str);
       const sat = x !== _b.x || y !== _b.y || z !== _b.z;
       if (sat && ankleOn) this.lostHip.add(_c.set(_b.x - x, _b.y - y, _b.z - z).applyQuaternion(L.qT)); // 딛은 다리의 엉덩이 한도에 잘린 몫 (재기만)
       _b.set(x, y, z);
@@ -458,6 +481,7 @@ export class LegDrive {
     this.lostHip.set(0, 0, 0);
     this.dbg.pull = 0;
     if (f.missingLeg || !f.jointByName.thighF?.joint || !f.jointByName.thighB?.joint) { this.push.set(0, 0, 0); this.armM.set(0, 0, 0); this.armOk = this.armOk2 = false; return; }
+    { const w = f.bodies.pelvis.angvel(); _wp.set(w.x, w.y, w.z); } // 골반 각속도 (관절 빠르기 — senseLeg)
     for (const k of ['F', 'B']) this.senseLeg(this.legs[k]);
     this.senseTrunk();
     const xT = this.xT;
