@@ -1763,6 +1763,7 @@ export class Fighter {
   // ── 매 물리 스텝마다 호출: 근육을 움직인다 ──
   step(dt) {
     this.lastDt = dt;
+    this._armTick = (this._armTick ?? 0) + 1; // 칼 팔 셈 바탕(armDyn)을 스텝마다 한 번만 세게
     this.stateTime += dt;
     bwTick(this, dt); // 뒤 박차기 헛침 경직 (11/19 — burst_whiff.js): 굳음 시간
     this.updateState(dt);
@@ -3346,10 +3347,19 @@ export class Fighter {
       if (wT.length() > 20) wT.setLength(20);
     }
     (j.prevTarget || (j.prevTarget = new THREE.Quaternion())).copy(j.target);
-    // 휘두르는 방향(뼈에 수직)
-    _mT.copy(_mE).addScaledVector(boneAxis, -eTw).multiplyScalar(k);
+    // 스프링 몫(자세 차이 × 강성)은 지금 자세로 센다. 감쇠 몫만 '한 스텝에 빠르기를 뒤집지 못하는' 꼴로 바꾼다 (아래 stableTorque).
+    //  감쇠를 지금 빠르기로 그대로 걸면 관성이 작은 방향(팔꿈치가 어깨–손 축 둘레를 도는 쪽 · 편 팔의 위팔 비틀기)에서 한 스텝의 감쇠가 빠르기를 뒤집어
+    //  스텝마다 떤다 — 근육이 가만히 서서도 제 상한을 다 쓰고 위팔이 겨눈 자리에서 벗어난다 (11/26 재기: 어깨 108 ~ 127 N·m · 3.9 ~ 10.2°)
+    const twR = JOINTS.twistK / 25;
+    const dTw = 0.8 * twR;
     const wErr = _mW.sub(wT);
-    _mT.addScaledVector(wErr.addScaledVector(boneAxis, -wErr.dot(boneAxis)), -d);
+    wErr.addScaledVector(boneAxis, -wErr.dot(boneAxis));
+    const damp = _mD.copy(wErr).multiplyScalar(-d).addScaledVector(boneAxis, -dTw * wTw);
+    this.stableTorque(boneAxis, d, dTw, damp);
+    const dampTw = damp.dot(boneAxis);
+    // 휘두르는 방향(뼈에 수직)
+    _mT.copy(_mE).addScaledVector(boneAxis, -eTw).multiplyScalar(k).add(damp).addScaledVector(boneAxis, -dampTw);
+    const tTw = 25 * twR * eTw + dampTw;
     // 중력 보상: 팔과 칼의 무게를 미리 알고 버틴다 (사람도 무게를 예상하고 힘을 준다 → 처지지 않는다)
     const mus = k / j.k / (this.armBoost ?? 1) / (!this.stamina.guarding ? this.stamina.power : 1); // 10/13: 찍기 근육 배율(armBoost)은 무게를 더 버티는 데 쓰지 않는다 (1 이면 같은 float)
     this.gravityTorque([this.bodies.uarmS, this.bodies.farmS, this.armed ? this.sword : null], j.child, -0.15, _mG).multiplyScalar(-mus);
@@ -3371,10 +3381,96 @@ export class Fighter {
     // 비틀기: 위팔 자체의 비틀림 관성은 ≈0.003kg·m²로 아주 작다 → 안정 한계(강도 ≤10, 감쇠 ≤0.2) 안에서만
     //  (엔진 쪽 회전 감쇠(팔 몸체 1.5)가 함께 잡아줘서 조금 더 세게 걸 수 있다)
     //  관절 가동 범위 교정 (JOINTS twistK, 10/9 2차): 강성 25 → twistK 로 올리면 감쇠 0.8·상한 20 도 같은 배율
-    const twR = JOINTS.twistK / 25;
-    _mT.addScaledVector(boneAxis, THREE.MathUtils.clamp(eTw * 25 * twR - wTw * 0.8 * twR, -20 * twR, 20 * twR) + twistFF);
+    _mT.addScaledVector(boneAxis, THREE.MathUtils.clamp(tTw, -20 * twR, 20 * twR) + twistFF);
     j.child.addTorque(vecArg(_mT), true);
     j.parent.addTorque({ x: -_mT.x, y: -_mT.y, z: -_mT.z }, true);
+  }
+
+  /**
+   * 어깨 감쇠 토크 t (세계 · 지금 빠르기로 센 값 −D w)를 한 스텝에 빠르기를 뒤집지 못하는 꼴로 바꾼다:
+   *   t ← (1 + X)(1 + X + X²)⁻¹ t ,  X = h · D · M⁻¹   (h = 물리 스텝 · D = 감쇠 d 를 뼈에 수직인 쪽 · dAx 를 뼈 방향에 · M = 어깨 둘레로 본 팔의 관성)
+   *  이 토크가 걸린 뒤의 빠르기는 w ← (1 + Z + Z²)⁻¹ w (Z = h M⁻¹ D) — 관성이 큰 방향(Z 작음)은 지금 빠르기로 센 값과 둘째 차수까지 같고(1 − Z),
+   *  관성이 작은 방향(Z 큼)은 0 으로 갈 뿐 부호가 바뀌지 않는다. 스프링 몫 · 가만히 있을 때의 힘은 손대지 않는다.
+   *  M = 위팔 + 아래팔 + 손목 공 관절 너머의 칼이 손에 거는 몫 (armDyn). 팔 · 칼이 물리 몸이 아닌 스텝(대본이 놓는 동안)은 그대로 돌려준다.
+   */
+  stableTorque(a, d, dAx, t) {
+    const D = this.armDyn();
+    if (!D.ok) return t;
+    const h = this.world.timestep;
+    return noFlip(axial(_stS, a, h * d, h * dAx).multiply(D.Minv), t);
+  }
+
+  /**
+   * 손목 겨눔 감쇠 토크 t (칼에 +t — 세계 · 칼의 지금 각속도로 센 값)를 같은 꼴로: X = h · D · Ys , D = 감쇠 d 를 칼날에 수직인 쪽에만.
+   *  Ys = 그 토크 1 이 만드는 **칼의** 각가속도 (감쇠가 읽는 빠르기가 칼의 것이므로):  Ys = I_s⁻¹ + I_s⁻¹ [r] W⁻¹ B
+   *   B = [r] I_s⁻¹ + [R] I_A⁻¹ (1 − f fᵀ) ,  W = 1/m + [r]ᵀ I_s⁻¹ [r] + [R]ᵀ I_A⁻¹ [R]
+   *   (칼 = 손목 공 관절에 달린 몸 · 팔 = 어깨 둘레로 도는 위팔 + 아래팔 · r = 손 − 칼 무게중심 · R = 손 − 어깨 · f = 아래팔 뼈 방향:
+   *    반작용 가운데 아래팔 길이 방향 몫은 가슴으로 가므로(driveSword 끝) 팔이 받는 것은 (1 − f fᵀ) 몫뿐)
+   *  날 세우기 쪽 감쇠(0.12 × twistScale)는 칼날 축 관성에 맞춰 둔 값이라(스텝마다 거의 0 으로 — 뒤집히지 않음) 그대로 지금 빠르기로 센다.
+   */
+  stableWrist(blade, d, f, t) {
+    const D = this.armDyn();
+    if (!D.ok || !D.sword) return t;
+    const rX = skew(_stX, D.r.x, D.r.y, D.r.z);
+    const RX = skew(_stR, D.R.x, D.R.y, D.R.z);
+    // [R] I_A⁻¹ (1 − f fᵀ)
+    const P = _stT.set(1 - f.x * f.x, -f.x * f.y, -f.x * f.z, -f.x * f.y, 1 - f.y * f.y, -f.y * f.z, -f.x * f.z, -f.y * f.z, 1 - f.z * f.z);
+    const B = _stB.copy(RX).multiply(D.IAinv).multiply(P);
+    _stY.copy(rX).multiply(D.Is);
+    for (let i = 0; i < 9; i++) B.elements[i] += _stY.elements[i];
+    // W = (1/m + [r]ᵀ I_s⁻¹ [r]) + [R]ᵀ I_A⁻¹ [R]
+    const W = _stW.copy(D.IAinv).multiply(RX).premultiply(_stT.copy(RX).transpose());
+    for (let i = 0; i < 9; i++) W.elements[i] += D.Ws.elements[i];
+    // Ys = I_s⁻¹ + I_s⁻¹ [r] W⁻¹ B
+    const Ys = _stY.copy(B).premultiply(W.invert()).premultiply(rX).premultiply(D.Is);
+    for (let i = 0; i < 9; i++) Ys.elements[i] += D.Is.elements[i];
+    return noFlip(axial(_stS, blade, this.world.timestep * d, 0).multiply(Ys), t);
+  }
+
+  /**
+   * 이 스텝의 칼 팔 셈 바탕 — driveSword(손목)와 manualMuscle(어깨)이 한 번 세어 함께 쓴다 (step 마다 _armTick 이 오름):
+   *  어깨 점 · 어깨 둘레 팔 관성의 역(IAinv — 위팔 + 아래팔 · 아래팔이 잘렸으면 위팔만) · 칼의 손 점까지 r · R 과 역관성 Is · Ws = 1/m + [r]ᵀ I_s⁻¹ [r] ·
+   *  Minv = (팔 관성 + [R]ᵀ Ws⁻¹ [R])⁻¹ (칼은 손목 공 관절로 달려 힘만 건넨다 — 손에서 본 칼의 관성 Ws⁻¹ 을 어깨 둘레로 옮겨 더함).
+   *  ok = 팔 몸이 물리 몸이고 값이 유한함 · sword = 칼을 쥐었고 칼도 물리 몸.
+   */
+  armDyn() {
+    const D = (this._armDyn ||= { tick: -1, ok: false, sword: false, A: new THREE.Vector3(), r: new THREE.Vector3(), R: new THREE.Vector3(), IAinv: new THREE.Matrix3(), Is: new THREE.Matrix3(), Ws: new THREE.Matrix3(), Minv: new THREE.Matrix3() });
+    if (D.tick === this._armTick) return D;
+    D.tick = this._armTick;
+    D.ok = D.sword = false;
+    const up = this.bodies.uarmS;
+    const fo = this.bodies.farmS;
+    const cut = !!this.detachedParts?.has('farmS'); // 아래팔이 잘려 나갔으면 남은 위팔만
+    if (!up.isDynamic() || (!cut && !fo.isDynamic())) return D;
+    const p = up.translation();
+    const A = D.A.set(-0.15, 0, 0).applyQuaternion(rot(up, _stQ));
+    A.set(A.x + p.x, A.y + p.y, A.z + p.z);
+    const M = _stM.set(0, 0, 0, 0, 0, 0, 0, 0, 0);
+    addInertiaAbout(M, up, A);
+    if (!cut) addInertiaAbout(M, fo, A);
+    D.IAinv.copy(M).invert();
+    const s = this.sword;
+    if (!cut && this.armed && s && this.gripJoint && s.isDynamic() && s.mass() > 0) {
+      const g = s.translation(); // 손목 관절 점 = 칼 몸의 원점 (gripJoint — 여기와 revive.js 둘 다 칼 쪽 닻 (0, 0, 0))
+      const c = s.worldCom();
+      const Ii = s.effectiveWorldInvInertia();
+      D.r.set(g.x - c.x, g.y - c.y, g.z - c.z);
+      D.R.set(g.x - A.x, g.y - A.y, g.z - A.z);
+      D.Is.set(Ii.m11, Ii.m12, Ii.m13, Ii.m12, Ii.m22, Ii.m23, Ii.m13, Ii.m23, Ii.m33);
+      const rX = skew(_stX, D.r.x, D.r.y, D.r.z);
+      const Ws = D.Ws.copy(D.Is).multiply(rX).premultiply(_stT.copy(rX).transpose());
+      const im = 1 / s.mass();
+      Ws.elements[0] += im;
+      Ws.elements[4] += im;
+      Ws.elements[8] += im;
+      const RX = skew(_stX, D.R.x, D.R.y, D.R.z);
+      const L = _stL.copy(Ws).invert().multiply(RX).premultiply(_stT.copy(RX).transpose()); // [R]ᵀ Ws⁻¹ [R]
+      for (let i = 0; i < 9; i++) M.elements[i] += L.elements[i];
+      D.sword = true;
+    }
+    D.Minv.copy(M).invert();
+    D.ok = finite9(D.Minv) && finite9(D.IAinv) && (!D.sword || (finite9(D.Is) && finite9(D.Ws)));
+    return D;
   }
 
   /**
@@ -3800,7 +3896,9 @@ export class Fighter {
       }
     }
     if (!this.stamina.guarding && this.stamina.speed > 0) damp *= this.stamina.motorSpeed;
-    torque.addScaledVector(wSwing.sub(wAim), -damp);
+    // 겨눔 쪽 감쇠는 한 스텝에 칼의 빠르기를 뒤집지 못하는 꼴로 (stableWrist — 어깨 manualMuscle 과 같은 까닭: 가벼운 칼 · 가벼운 방향에서 스텝마다 떨지 않게)
+    rot(forearm, _q2);
+    torque.add(this.stableWrist(blade, damp, _v4.set(1, 0, 0).applyQuaternion(_q2), wSwing.sub(wAim).multiplyScalar(-damp)));
     const placed = this.armsPlaced(); // 풍차 베기 감기 (10/29 20:0x 휘청 고침): 대본이 놓은 칼 — 겨눔 · 감쇠 · 날 비틀기 힘 없음 (칼 무게 버팀만 — 아래 _mG) · armsPlaced
     if (placed) torque.set(0, 0, 0);
     // 칼 무게도 같은 힘 안에서 버틴다 (칼끝이 처지지 않게)
@@ -4922,6 +5020,76 @@ const _mW = new THREE.Vector3();
 const _mA = new THREE.Vector3();
 const _mT = new THREE.Vector3();
 const _mS = new THREE.Vector3();
+const _mD = new THREE.Vector3();
+const _stA = new THREE.Vector3();
+const _stQ = new THREE.Quaternion();
+const _stM = new THREE.Matrix3();
+const _stS = new THREE.Matrix3();
+const _stL = new THREE.Matrix3();
+const _stX = new THREE.Matrix3();
+const _stT = new THREE.Matrix3();
+const _stR = new THREE.Matrix3();
+const _stB = new THREE.Matrix3();
+const _stW = new THREE.Matrix3();
+const _stY = new THREE.Matrix3();
+const _stB2 = new THREE.Matrix3();
+/** 대칭 행렬을 더함 (Matrix3.elements 는 열 우선) */
+function addSym(M, xx, xy, xz, yy, yz, zz) {
+  const e = M.elements;
+  e[0] += xx;
+  e[4] += yy;
+  e[8] += zz;
+  e[1] += xy;
+  e[3] += xy;
+  e[2] += xz;
+  e[6] += xz;
+  e[5] += yz;
+  e[7] += yz;
+}
+/** cPerp·1 + (cAx − cPerp)·a aᵀ — 축 a 방향과 그에 수직인 쪽의 값이 다른 대칭 행렬 */
+function axial(M, a, cPerp, cAx) {
+  const k = cAx - cPerp;
+  return M.set(cPerp + k * a.x * a.x, k * a.x * a.y, k * a.x * a.z, k * a.x * a.y, cPerp + k * a.y * a.y, k * a.y * a.z, k * a.x * a.z, k * a.y * a.z, cPerp + k * a.z * a.z);
+}
+/** t ← (1 + X)(1 + X + X²)⁻¹ t (X 는 건드린다). 값이 유한하지 않으면 t 를 그대로 둔다 */
+function noFlip(X, t) {
+  const B = _stB2.multiplyMatrices(X, X);
+  const xe = X.elements;
+  const be = B.elements;
+  for (let i = 0; i < 9; i++) be[i] += xe[i];
+  be[0] += 1;
+  be[4] += 1;
+  be[8] += 1;
+  xe[0] += 1;
+  xe[4] += 1;
+  xe[8] += 1;
+  const x = t.x;
+  const y = t.y;
+  const z = t.z;
+  t.applyMatrix3(B.invert()).applyMatrix3(X);
+  if (!(Number.isFinite(t.x) && Number.isFinite(t.y) && Number.isFinite(t.z))) t.set(x, y, z);
+  return t;
+}
+/** 몸 b 의 관성을 점 A 둘레로 옮겨 M 에 더함 (세계 틀 · 평행축) */
+function addInertiaAbout(M, b, A) {
+  const I = b.effectiveAngularInertia();
+  const c = b.worldCom();
+  const m = b.mass();
+  const rx = c.x - A.x;
+  const ry = c.y - A.y;
+  const rz = c.z - A.z;
+  const rr = rx * rx + ry * ry + rz * rz;
+  addSym(M, I.m11 + m * (rr - rx * rx), I.m12 - m * rx * ry, I.m13 - m * rx * rz, I.m22 + m * (rr - ry * ry), I.m23 - m * ry * rz, I.m33 + m * (rr - rz * rz));
+}
+function finite9(M) {
+  const e = M.elements;
+  for (let i = 0; i < 9; i++) if (!Number.isFinite(e[i])) return false;
+  return true;
+}
+/** 벡터곱 행렬 [v]× (set 은 행 우선) */
+function skew(M, x, y, z) {
+  return M.set(0, -z, y, z, 0, -x, -y, x, 0);
+}
 const IDENTITY_Q = new THREE.Quaternion();
 const ALONG_X = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2); // 세로(y) 뼈 → 앞(x)으로 눕힘
 // 칼 든 팔 겉모습(dressPart·outfits.js)을 눕히는 회전. 겉모습은 "+y = 어깨 쪽, −y = 손목 쪽, +x = 앞"으로 그려지고,
