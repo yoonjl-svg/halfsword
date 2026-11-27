@@ -1,0 +1,11 @@
+clampLeg 부름 7 _b.x|L.wA.x|ankleInv|ankleInv  _b.y|L.wA.y|ankleRot|ankleRot  _b.z|L.wA.z|ankleDorsi|anklePlantar  s0|L.wK|kneeExt|kneeFlex  _b.x|L.wH.x|hipAbd|hipAbd  _b.y|L.wH.y|hipRot|hipRot  _b.z|L.wH.z|hipFlex|hipFlex
+표본 420000 · 올라간 한도 98897 · 어긋남 0
+hipFlex       base 250 · 0 둘레 뛰기 7.5e-8 · w 0.1 rad/s 흔들림당 7.50 N·m (3.0 %) · 0→1 rad/s 다 75.0 N·m · ×1.25 칸 93.8
+hipAbd        base 150 · 0 둘레 뛰기 4.5e-8 · w 0.1 rad/s 흔들림당 4.50 N·m (3.0 %) · 0→1 rad/s 다 45.0 N·m · ×1.25 칸 56.3
+hipRot        base 70 · 0 둘레 뛰기 2.1e-8 · w 0.1 rad/s 흔들림당 2.10 N·m (3.0 %) · 0→1 rad/s 다 21.0 N·m · ×1.25 칸 26.3
+kneeExt       base 250 · 0 둘레 뛰기 7.5e-8 · w 0.1 rad/s 흔들림당 7.50 N·m (3.0 %) · 0→1 rad/s 다 75.0 N·m · ×1.25 칸 93.8
+kneeFlex      base 130 · 0 둘레 뛰기 3.9e-8 · w 0.1 rad/s 흔들림당 3.90 N·m (3.0 %) · 0→1 rad/s 다 39.0 N·m · ×1.25 칸 48.8
+anklePlantar  base 250 · 0 둘레 뛰기 7.5e-8 · w 0.1 rad/s 흔들림당 7.50 N·m (3.0 %) · 0→1 rad/s 다 75.0 N·m · ×1.25 칸 93.8
+ankleDorsi    base 60 · 0 둘레 뛰기 1.8e-8 · w 0.1 rad/s 흔들림당 1.80 N·m (3.0 %) · 0→1 rad/s 다 18.0 N·m · ×1.25 칸 22.5
+ankleInv      base 50 · 0 둘레 뛰기 1.5e-8 · w 0.1 rad/s 흔들림당 1.50 N·m (3.0 %) · 0→1 rad/s 다 15.0 N·m · ×1.25 칸 18.8
+ankleRot      base 40 · 0 둘레 뛰기 1.2e-8 · w 0.1 rad/s 흔들림당 1.20 N·m (3.0 %) · 0→1 rad/s 다 12.0 N·m · ×1.25 칸 15.0
