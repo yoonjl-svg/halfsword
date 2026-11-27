@@ -41,7 +41,7 @@ function snap(x) {
   return {
     v, ang, away, nDown, dnF: dn.F, dnB: dn.B, fF: x.fF.slice(0, 2), fB: x.fB.slice(0, 2), kneeF: (x.kF?.phi ?? 0) / D2R, kneeB: (x.kB?.phi ?? 0) / D2R,
     krF: x.kF?.kr ?? 0, krB: x.kB?.kr ?? 0, swF: x.F, swB: x.B, reqK: x.reqK ?? null, stroke: x.stroke, sameSideR, sameSideV, y: x.y, tilt: x.tilt, cap: x.cap ?? 0, pend: x.pend,
-    mx: x.mx ?? 0, my: x.my ?? 0, armM: x.armM ?? 0, stanceKnee: nDown === 1 ? (dn.F ? x.kF.phi : x.kB.phi) / D2R : Math.max(x.kF?.phi ?? 0, x.kB?.phi ?? 0) / D2R,
+    hp: x.hp ?? 1, mus: x.mus ?? 1, mx: x.mx ?? 0, my: x.my ?? 0, armM: x.armM ?? 0, stanceKnee: nDown === 1 ? (dn.F ? x.kF.phi : x.kB.phi) / D2R : Math.max(x.kF?.phi ?? 0, x.kB?.phi ?? 0) / D2R,
   };
 }
 
@@ -110,6 +110,9 @@ for (const k of Object.keys(NAMES)) {
     console.log(`           뜬 걸음 ${cnt(s, (x) => [x.swF, x.swB].filter(Boolean).length ? [x.swF, x.swB].filter(Boolean) : ['없음'])} · 부탁 ${cnt(s, (x) => x.reqK ?? '없음')} · 칼 ${cnt(s, (x) => x.stroke)}`);
   }
   const sw = L.map((r) => r.lastSw).filter(Boolean);
+  const hp = L.map((r) => r.S[0.5].hp), mus = L.map((r) => r.S[0.5].mus);
+  console.log(`  몸 상태 (0.5 s 앞): 다리 성함(legHealth) ${rng(hp)} · 1 밑 ${hp.filter((x) => x < 0.99).length}/${L.length} · 근육 힘(muscle = 피 · 아픔의 vigor) ${rng(mus)} · 0.8 밑 ${mus.filter((x) => x < 0.8).length}/${L.length} · 둘 다 성함 ${L.filter((r) => r.S[0.5].hp >= 0.99 && r.S[0.5].mus >= 0.95).length}/${L.length}`);
+  o.body = L.map((r) => [r.S[0.5].hp, r.S[0.5].mus]);
   o.single = q(L.map((r) => r.single), 0.5); o.deep = q(L.map((r) => r.deep), 0.5); o.flight = q(sw.map((x) => x.flight), 0.5);
   console.log(`  끝 0.5 s 한 발 딛음 몫 ${rng(L.map((r) => r.single))} · 가장 깊은 딛은 무릎 ${rng(L.map((r) => r.deep), 0)}° · 마지막 걸음 꼴 ${cnt(sw, (x) => x.kind)} · 날아간 시간 ${rng(sw.map((x) => x.flight))} s · 디딘 뒤 넘어질 때까지 ${rng(sw.map((x) => x.before))} s · 1 s 안 걸음 꼴 ${cnt(L, (r) => r.kinds.length ? r.kinds : ['없음'])}`);
   out.sits[k] = o;

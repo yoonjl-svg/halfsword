@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  balance_scenes.mjs — 싸움에서 상처 없이 넘어지는 꼴을 혼자 장면으로 (물리 2.0 · 15 번째 판). 재기만 한다 — 몸에 거는 것은 장면마다 선언된 충격 한 번뿐.
 //
-//   node tools/sim/balance_scenes.mjs [--root=<트리>] [--scenes=A,B,C,E] [--seeds=0-39] [--rows] [--json=<파일>] [--J=<N·s>] [--ang=<°>] [--part=chest|pelvis] [--lead=<s>]
+//   node tools/sim/balance_scenes.mjs [--root=<트리>] [--scenes=A,C] [--seeds=0-39] [--rows] [--json=<파일>] [--J=<N·s>] [--ang=<°>] [--part=chest|pelvis] [--lead=<s>]
 //
 //  왜: 싸움 판(24 판 묶음 사이 흔들림 ±4 넘어짐)으로는 받아 딛기 값 · 무릎 고침을 가를 수 없다. 싸움의 넘어짐 꼴(docs/strike/physics2_proto/r15/situations.mjs 의 표)을
 //   혼자 몸에 다시 만들고 '일어선 채 버텼나'를 씨앗마다 센다. 씨앗이 같으면 결과가 같다(새 세계 · 같은 차례).
@@ -14,9 +14,9 @@
 //   충격 뒤 딛은 다리의 무릎 · 엉덩이 · 발목 토크가 한도를 넘은 스텝 몫.
 //  장면 (값과 그 근거는 docs/strike/physics2_notes/r15_balance_scenes.md):
 //   A 옆으로 쏠린 받아 딛기 — 앞으로 걸으며 런지 부탁 · 앞발이 뜬 뒤 골반을 옆으로 침
-//   B 뒤로 쏠린 받아 딛기 — 뒷걸음하며 가슴을 뒤로 침
+//   B 뒤로 쏠린 받아 딛기 — 뒷걸음하며 가슴을 뒤로 침 — 되살리지 못함(같은 원인 몫이 2/3 에 못 미침 — 기록 참조). 관문 기본 묶음에서 빠짐
 //   C 한 발 딛음 · 굽은 무릎 꺼짐 — 뒷걸음하며 한 발이 뜬 때 골반을 뒤 · 옆으로 침
-//   E 몸통 기욺 — 앞 · 옆으로 걸으며 베기 · 가슴을 앞 · 옆으로 침
+//   E 몸통 기욺 — 앞 · 옆으로 걸으며 베기 · 가슴을 앞 · 옆으로 침 — 되살리지 못함(넘어짐은 나와도 원인이 cap:* · sink:knee — 기록 참조). 관문 기본 묶음에서 빠짐 (--scenes=E 로만)
 // ─────────────────────────────────────────────────────────────
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
@@ -43,11 +43,24 @@ const moveHand = (P, tgt, v) => { const o = P.handOffset, dx = tgt[0] - o.x, dy 
 // ── 장면 ──
 //  base: 크기 J (N·s) · 쪽 ang (°) · 때리는 토막 · 들어가기 lead (s, 충격 앞 걷는 시간의 바닥) · weapons = 씨앗마다 돌림(싸움 꼴의 무기 섞임)
 //  drive(c, t) = 들어가기 동안 · 충격 뒤 입력 · trigger(c, t) = 충격을 걸 때인가 (lead 가 지난 뒤 처음 참인 스텝 · 1.0 s 안에 안 오면 그때 침)
+// 몸 상태 표 (docs/strike/physics2_proto/r15/situations.mjs — 그 꼴로 넘어진 싸움 몸의 넘어지기 0.5 s 앞 [다리 성함 legHealth, 근육 힘 muscle]). 씨앗마다 하나를 골라
+//  판 시작에 한 번 둔다: 두 다리 limbs.legF · legB = 다리 성함 · 피(blood)는 vigor(= 근육 힘 목표)가 그 근육 힘이 되게. 몸을 약하게만 한다(돕는 쪽 없음) — 싸움에서 그 몸이 앞서 받은 상처 · 흘린 피의 흉내.
+const BODYSTATE = {
+  A: [[1,1],[0.88,0.95],[0.97,1],[1,0.87],[1,1],[1,0.69],[1,1],[1,0.99],[0.66,1],[1,1],[1,1],[1,1],[0.82,0.72],[0.98,1],[1,1],[1,1],[1,0.67]],
+  B: [[1,1],[1,1],[1,0.84],[1,1],[1,0.52],[0.94,1],[1,1],[1,1],[0.58,0.89],[1,0.86]],
+  C: [[1,0.4],[0.57,0.63],[1,0.9],[0.92,0.51],[0.53,0.6],[0.53,1],[0.53,0.98],[0.98,0.43],[0.73,0.84],[0.94,0.49],[0.58,0.92],[0.66,1],[0.5,0.94],[1,0.57],[1,0.95],[1,1],[0.58,1],[0.99,1],[1,1],[0.74,1],[1,0.36],[0.5,0.76],[1,1]],
+  E: [[1,1],[1,0.47],[1,0.87],[1,0.72],[0.65,1],[1,0.49],[0.66,1],[1,0.98],[0.91,1],[1,0.54],[1,1],[1,0.49],[1,1],[0.6,1],[0.6,0.66]],
+};
+function setBody(P, hp, mus) {
+  P.limbs.legF = hp; P.limbs.legB = hp;
+  const m = Math.max(0.4, Math.min(1, mus)), b = (m - 0.35) / 0.65;
+  P.blood = m >= 1 ? 1 : CFG.VITALS.collapseBlood + b * (CFG.VITALS.weakBlood - CFG.VITALS.collapseBlood);
+}
 const oneUp = (P) => { const g = P.gait; if (!g?.legs) return null; const F = !g.legs.F.stance, B = !g.legs.B.stance; return F && !B ? 'F' : B && !F ? 'B' : null; };
 export const SCENES = {
   A: {
     name: '옆으로 쏠린 받아 딛기', cause: 'cap:short', weapons: ['zweihander', 'rapier'],
-    base: { J: 55, ang: 90, part: 'pelvis', lead: 0.6 }, // 충격 뒤 빠르기 ≈ J ÷ 75 kg — 싸움 꼴 0.5 s 앞 옆 빠르기 가운데값 0.96 m/s
+    base: { J: 70, ang: 90, part: 'chest', lead: 0.6 }, // 맞춘 값(r15 · 씨앗 0 ~ 39): 가슴 70 N·s = 넘어짐 45 % · 같은 원인 78 % (가슴 80 = 57 % · 65 % · 골반 110 = 47 % · 79 % · 골반 55 = 0 %) — 몸 75 kg 에 옆 빠르기 ≈ 0.9 m/s (싸움 꼴 0.5 s 앞 0.96 m/s)
     drive(c, t) {
       const { P, s } = c;
       P.move.set(0, s.hitAt == null ? 0.45 : 0);
@@ -58,14 +71,14 @@ export const SCENES = {
   },
   B: {
     name: '뒤로 쏠린 받아 딛기', cause: 'cap:short', weapons: ['rapier', 'rapier', 'zweihander'],
-    base: { J: 50, ang: 180, part: 'chest', lead: 1.0 }, // 싸움 꼴 0.5 s 앞 뒤 빠르기 0.84 m/s · 몸은 이미 뒤로 감
+    base: { J: 70, ang: 180, part: 'chest', lead: 1.0 }, // 되살리지 못함 — 관문 기본 묶음에서 빠짐(--scenes=B 로만). 씨앗 0 ~ 39: 가슴 70 = 넘어짐 55 % · 같은 원인 55 % · 성한 몸 가슴 45 · 50 · 60 = 9 · 62 · 24 % · 성한 몸 골반 70 = 47 %. 씨앗 0 ~ 19: 가슴 40 · 60 은 같은 원인 25 · 60 % · 골반 60 · 80 은 40 · 43 % · 가슴 70 이 넘어짐 45 % · 같은 원인 67 % (싸움 꼴: 뒷걸음 중 0.5 s 앞 뒤 빠르기 0.84 → 0.25 s 앞 1.33 m/s)
     drive(c, t) { c.P.move.set(0, -1); moveHand(c.P, CH, 12); },
     trigger: (c, t) => oneUp(c.P) != null && t > c.s.lead + c.s.dly,
   },
   C: {
     name: '한 발 딛음 · 굽은 무릎 꺼짐', cause: 'sink:knee', weapons: ['zweihander', 'rapier', 'longsword'],
-    base: { J: 45, ang: 150, part: 'pelvis', lead: 1.0 }, // 싸움 꼴 0.5 s 앞 빠르기 0.52 m/s · 쪽 126° · 한 발 딛음 74 %
-    drive(c, t) { c.P.move.set(0, c.s.back ?? -1); moveHand(c.P, CH, 12); },
+    base: { J: 0, ang: 150, part: 'pelvis', lead: 1.0 }, // 충격 없음 (J 0 = 재기 시작 때만 적음). 맞춘 값: 성한 몸은 골반 · 가슴 30 ~ 80 N·s 에도 sink:knee 0 — 싸움 꼴의 다친 다리 · 빠진 피(몸 상태 표)가 있어야 꺼짐. 골반 30 N·s 를 더하면 같은 원인 57 % 로 떨어짐
+    drive(c, t) { c.P.move.set(0, c.s.back ?? -0.45); moveHand(c.P, CH, 12); },
     trigger: (c, t) => oneUp(c.P) != null && t > c.s.lead + c.s.dly,
   },
   E: {
@@ -107,6 +120,7 @@ export function runScene(key, seed, over = {}) {
   const J = B.J * (0.8 + 0.4 * R()), ang0 = B.ang * (key === 'B' ? 1 : s.side) + (R() - 0.5) * 40; // 옆 쪽(±) 은 씨앗마다 · 크기 ±20 % · 쪽 ±20°
   const c = { G, P, s, R };
   P.handOffset.set(CH[0], CH[1]);
+  const bs = over.healthy ? [1, 1] : BODYSTATE[key][seed % BODYSTATE[key].length]; setBody(P, bs[0], bs[1]);
   const settle = Math.round((2.0 + 0.2 * R()) / DT);
   for (let i = 0; i < settle; i++) { P.move.set(0, 0); G.step(); }
   // why: Fighter.knockDown 을 감싸 넘어진 가지를 적음 (fall_context 와 같음)
@@ -119,7 +133,7 @@ export function runScene(key, seed, over = {}) {
   for (let i = 0; i < n; i++) {
     const t = i * DT;
     S.drive(c, t);
-    if (s.hitAt == null && t >= s.lead && (S.trigger(c, t) || t >= s.lead + 1.0)) { hit(P, B.part, J, ang0); s.hitAt = t; }
+    if (s.hitAt == null && t >= s.lead && (S.trigger(c, t) || t >= s.lead + 1.0)) { if (J > 0) hit(P, B.part, J, ang0); s.hitAt = t; }
     G.step();
     const st = P.state, g = P.gait, D = P.legDrive, pp = P.bodies.pelvis.translation();
     const fw = P.forward(new H.THREE.Vector3()), com = P.com ?? pp, cv = P.comVel ?? { x: 0, z: 0 };
@@ -160,7 +174,7 @@ export function runScene(key, seed, over = {}) {
   try { G.world.free(); } catch { /* */ }
   const ratio = steps.filter((x) => x.need > 0.02).map((x) => x.taken / x.need);
   return {
-    scene: key, seed, weapon, J: +J.toFixed(1), ang: +ang0.toFixed(0), hitAt: s.hitAt != null ? +s.hitAt.toFixed(2) : null, fell, tFall, cause, why, tSteady,
+    scene: key, seed, weapon, hp: bs[0], mus: bs[1], J: +J.toFixed(1), ang: +ang0.toFixed(0), hitAt: s.hitAt != null ? +s.hitAt.toFixed(2) : null, fell, tFall, cause, why, tSteady,
     nSteps: steps.length, steps, stepRatio: med(ratio), flight: med(steps.map((x) => x.flight)), kneeTD: med(steps.map((x) => x.knee)), kneeDeep: +deep.toFixed(0),
     kneeOver: +(kOver / Math.max(1, nPost)).toFixed(3), hipOver: +(hOver / Math.max(1, nPost)).toFixed(3), ankleOver: +(aOver / Math.max(1, nPost)).toFixed(3),
   };
@@ -185,9 +199,9 @@ export function line(m) {
 
 const isMain = import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
-  const keys = String(args.scenes ?? 'A,B,C,E').split(',');
+  const keys = String(args.scenes ?? 'A,C').split(',');
   const seeds = parseSeeds(args.seeds ?? '0-39');
-  const over = {}; for (const k of ['J', 'ang', 'lead', 'back']) if (args[k] != null) over[k] = +args[k]; if (args.part) over.part = String(args.part); if (args.trace) over.trace = true;
+  const over = {}; for (const k of ['J', 'ang', 'lead', 'back']) if (args[k] != null) over[k] = +args[k]; if (args.part) over.part = String(args.part); if (args.trace) over.trace = true; if (args.healthy) over.healthy = true;
   const out = { root: ROOT, seeds: String(args.seeds ?? '0-39'), over, scenes: {} };
   for (const k of keys) {
     const rs = seeds.map((sd) => runScene(k, sd, over));

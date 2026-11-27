@@ -1,0 +1,120 @@
+{
+ "root": "/tmp/claude-0/-home-user-halfsword/24381ec1-6e1b-52f9-b350-d4b2e091a867/scratchpad/p2/r6/mx/cells/fb_base",
+ "note": "legs_battery 기본 19 장면 · --n=8 --fights=0 --weapons=longsword --nohonesty",
+ "rows": {
+  "stopgo": {
+   "ok": 8,
+   "n": 8,
+   "along": 0.112,
+   "changed": false
+  },
+  "wander": {
+   "ok": 8,
+   "n": 8,
+   "along": 0.233,
+   "changed": false
+  },
+  "walkstroke_diagR": {
+   "ok": 8,
+   "n": 8,
+   "along": 0.091,
+   "changed": false
+  },
+  "walkstroke_vert": {
+   "ok": 8,
+   "n": 8,
+   "along": 0.134,
+   "changed": false
+  },
+  "walkstroke_horizR": {
+   "ok": 8,
+   "n": 8,
+   "along": 0.093,
+   "changed": false
+  },
+  "getup": {
+   "ok": 8,
+   "n": 8,
+   "along": null,
+   "changed": false
+  },
+  "stand": {
+   "ok": 8,
+   "n": 8,
+   "along": -0.022,
+   "changed": false
+  },
+  "walk": {
+   "ok": 8,
+   "n": 8,
+   "along": 1.018,
+   "changed": false
+  },
+  "back": {
+   "ok": 8,
+   "n": 8,
+   "along": 0.806,
+   "changed": false
+  },
+  "strafeR": {
+   "ok": 8,
+   "n": 8,
+   "along": 0.472,
+   "changed": false
+  },
+  "strafeL": {
+   "ok": 8,
+   "n": 8,
+   "along": 0.489,
+   "changed": false
+  },
+  "turn": {
+   "ok": 8,
+   "n": 8,
+   "along": 0.005,
+   "changed": false
+  },
+  "circle": {
+   "ok": 8,
+   "n": 8,
+   "along": -0.087,
+   "changed": false
+  },
+  "kick40": {
+   "ok": 8,
+   "n": 8,
+   "along": -0.029,
+   "changed": false
+  },
+  "kick80": {
+   "ok": 7,
+   "n": 8,
+   "along": -0.049,
+   "changed": false
+  },
+  "walkkick": {
+   "ok": 8,
+   "n": 8,
+   "along": 1.017,
+   "changed": false
+  },
+  "stroke_diagR": {
+   "ok": 8,
+   "n": 8,
+   "along": -0.015,
+   "changed": false
+  },
+  "stroke_vert": {
+   "ok": 8,
+   "n": 8,
+   "along": -0.016,
+   "changed": false
+  },
+  "stroke_horizR": {
+   "ok": 8,
+   "n": 8,
+   "along": -0.015,
+   "changed": false
+  }
+ }
+}
