@@ -1,0 +1,5 @@
+check base_fp.txt: 스텝 42 · 띠 밖 true · 세 스텝 뜀 합 가장 큼 190° → flip true
+check base_n4003.txt: 스텝 60 · 띠 밖 true · 세 스텝 뜀 합 가장 큼 175° → flip true
+check base_n4043.txt: 스텝 60 · 띠 밖 true · 세 스텝 뜀 합 가장 큼 165° → flip true
+check base_f4003.txt: 스텝 60 · 띠 밖 true · 세 스텝 뜀 합 가장 큼 147° → flip true
+check a_fp.txt: 스텝 60 · 띠 밖 true · 세 스텝 뜀 합 가장 큼 46° → flip false

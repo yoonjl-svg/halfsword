@@ -1,0 +1,86 @@
+P1 PASS 묶음 A near rapier human: tipPk > 8 줄 10/40 → 0/40
+P1 READ 묶음 A near rapier ai: tipPk > 8 줄 41/135 → 43/119
+P1 PASS 묶음 A near longsword human: tipPk > 8 줄 0/40 → 0/40
+P1 READ 묶음 A near longsword ai: tipPk > 8 줄 17/122 → 21/124
+P1 PASS 묶음 A far rapier human: tipPk > 8 줄 30/120 → 0/120
+P1 READ 묶음 A far rapier ai: tipPk > 8 줄 20/37 → 26/56
+P1 PASS 묶음 A far longsword human: tipPk > 8 줄 0/120 → 0/120
+P1 READ 묶음 A far longsword ai: tipPk > 8 줄 2/11 → 2/11
+P1 PASS 묶음 B near rapier human: tipPk > 8 줄 17/40 → 0/40
+P1 READ 묶음 B near rapier ai: tipPk > 8 줄 72/168 → 48/140
+P1 PASS 묶음 B near longsword human: tipPk > 8 줄 0/40 → 0/40
+P1 READ 묶음 B near longsword ai: tipPk > 8 줄 15/161 → 15/160
+P1 PASS 묶음 B far rapier human: tipPk > 8 줄 51/120 → 0/120
+P1 READ 묶음 B far rapier ai: tipPk > 8 줄 23/43 → 29/68
+P1 PASS 묶음 B far longsword human: tipPk > 8 줄 0/120 → 0/120
+P1 READ 묶음 B far longsword ai: tipPk > 8 줄 3/18 → 3/18
+P1 PASS 묶음 6001 near rapier human: tipPk > 8 줄 12/40 → 0/40
+P1 READ 묶음 6001 near rapier ai: tipPk > 8 줄 43/152 → 43/180
+P1 PASS 묶음 6001 near longsword human: tipPk > 8 줄 0/40 → 0/40
+P1 READ 묶음 6001 near longsword ai: tipPk > 8 줄 16/126 → 15/121
+P1 PASS 묶음 6001 far rapier human: tipPk > 8 줄 36/120 → 0/120
+P1 READ 묶음 6001 far rapier ai: tipPk > 8 줄 22/42 → 19/43
+P1 PASS 묶음 6001 far longsword human: tipPk > 8 줄 0/120 → 0/120
+P1 READ 묶음 6001 far longsword ai: tipPk > 8 줄 2/8 → 2/8
+P3 PASS A+B 가까운 사람 레이피어 · 바탕 안 휘둘린 줄: 맞음 15 → 20 / 53 (엇갈림 바탕만 1 · 칸만 6 · 양쪽 p 0.125)
+P3 PASS A+B 가까운 사람 장검 · 모든 줄: 맞음 53 → 53 / 80 (엇갈림 바탕만 7 · 칸만 7 · 양쪽 p 1.000)
+  읽기 A+B 바탕 휘둘린 레이피어 줄 27: 맞음 27 → 8
+P3 PASS 6001 가까운 사람 레이피어 · 바탕 안 휘둘린 줄: 맞음 11 → 11 / 28 (엇갈림 바탕만 1 · 칸만 1 · 양쪽 p 1.000)
+P3 PASS 6001 가까운 사람 장검 · 모든 줄: 맞음 27 → 28 / 40 (엇갈림 바탕만 3 · 칸만 4 · 양쪽 p 1.000)
+  읽기 6001 바탕 휘둘린 레이피어 줄 12: 맞음 12 → 4
+P4 PASS 묶음 A L5 rapier human: -0.150 (FAIL) → 0.058 (PASS · n 91)
+P4 PASS 묶음 A L5 longsword human: -0.150 (FAIL) → 0.058 (PASS · n 117)
+P4 READ 묶음 A L5 rapier ai: -0.158 (READ) → -0.200 (READ · n 41)
+  읽기 C1 AI 묶음 A: 0.262 (FAIL) → 0.255 (FAIL)
+P4 PASS 묶음 B L5 rapier human: -0.150 (FAIL) → 0.058 (PASS · n 105)
+P4 PASS 묶음 B L5 longsword human: -0.150 (FAIL) → 0.058 (PASS · n 117)
+P4 READ 묶음 B L5 rapier ai: -0.242 (READ) → -0.208 (READ · n 48)
+  읽기 C1 AI 묶음 B: 0.214 (FAIL) → 0.224 (FAIL)
+P4 PASS 묶음 6001 L5 rapier human: -0.150 (FAIL) → 0.058 (PASS · n 81)
+P4 PASS 묶음 6001 L5 longsword human: -0.150 (FAIL) → 0.058 (PASS · n 120)
+P4 READ 묶음 6001 L5 rapier ai: -0.242 (READ) → -0.142 (READ · n 28)
+  읽기 C1 AI 묶음 6001: 0.333 (FAIL) → 0.326 (FAIL)
+P5 PASS 묶음 A human rapier far: 넘어짐 /100 0.0 (0/120) [바탕 90 % 위 0.0] → 0.0 (0/120)
+P5 PASS 묶음 A human rapier near: 넘어짐 /100 0.0 (0/40) [바탕 90 % 위 0.0] → 0.0 (0/40)
+P5 PASS 묶음 A human longsword far: 넘어짐 /100 0.0 (0/120) [바탕 90 % 위 0.0] → 0.0 (0/120)
+P5 PASS 묶음 A human longsword near: 넘어짐 /100 0.0 (0/40) [바탕 90 % 위 0.0] → 0.0 (0/40)
+P5 PASS 묶음 A ai rapier far: 넘어짐 /100 22.9 (11/48) [바탕 90 % 위 36.4] → 15.2 (10/66)
+P5 PASS 묶음 A ai rapier near: 넘어짐 /100 15.6 (25/160) [바탕 90 % 위 22.6] → 10.5 (14/133)
+P5 PASS 묶음 A ai longsword far: 넘어짐 /100 0.0 (0/11) [바탕 90 % 위 0.0] → 0.0 (0/11)
+P5 PASS 묶음 A ai longsword near: 넘어짐 /100 1.6 (2/124) [바탕 90 % 위 3.6] → 3.1 (4/128)
+P5 PASS 묶음 B human rapier far: 넘어짐 /100 0.0 (0/120) [바탕 90 % 위 0.0] → 0.0 (0/120)
+P5 PASS 묶음 B human rapier near: 넘어짐 /100 0.0 (0/40) [바탕 90 % 위 0.0] → 0.0 (0/40)
+P5 PASS 묶음 B human longsword far: 넘어짐 /100 0.0 (0/120) [바탕 90 % 위 0.0] → 0.0 (0/120)
+P5 PASS 묶음 B human longsword near: 넘어짐 /100 0.0 (0/40) [바탕 90 % 위 0.0] → 0.0 (0/40)
+P5 PASS 묶음 B ai rapier far: 넘어짐 /100 15.7 (8/51) [바탕 90 % 위 24.1] → 15.0 (12/80)
+P5 PASS 묶음 B ai rapier near: 넘어짐 /100 10.6 (20/188) [바탕 90 % 위 16.6] → 9.1 (14/154)
+P5 PASS 묶음 B ai longsword far: 넘어짐 /100 5.3 (1/19) [바탕 90 % 위 16.7] → 10.0 (2/20)
+P5 PASS 묶음 B ai longsword near: 넘어짐 /100 6.4 (11/172) [바탕 90 % 위 10.6] → 7.0 (12/172)
+P5 PASS 묶음 6001 human rapier far: 넘어짐 /100 0.0 (0/120) [바탕 90 % 위 0.0] → 0.0 (0/120)
+P5 PASS 묶음 6001 human rapier near: 넘어짐 /100 0.0 (0/40) [바탕 90 % 위 0.0] → 0.0 (0/40)
+P5 PASS 묶음 6001 human longsword far: 넘어짐 /100 0.0 (0/120) [바탕 90 % 위 0.0] → 0.0 (0/120)
+P5 PASS 묶음 6001 human longsword near: 넘어짐 /100 0.0 (0/40) [바탕 90 % 위 0.0] → 0.0 (0/40)
+P5 FAIL 묶음 6001 ai rapier far: 넘어짐 /100 10.6 (5/47) [바탕 90 % 위 18.2] → 18.9 (10/53)
+P5 PASS 묶음 6001 ai rapier near: 넘어짐 /100 11.6 (20/173) [바탕 90 % 위 18.8] → 11.8 (24/204)
+P5 PASS 묶음 6001 ai longsword far: 넘어짐 /100 0.0 (0/8) [바탕 90 % 위 0.0] → 0.0 (0/8)
+P5 PASS 묶음 6001 ai longsword near: 넘어짐 /100 5.3 (7/133) [바탕 90 % 위 9.7] → 4.7 (6/127)
+P5 PASS 묶음 합 human rapier far: 넘어짐 /100 0.0 (0/360) [바탕 90 % 위 0.0] → 0.0 (0/360)
+P5 PASS 묶음 합 human rapier near: 넘어짐 /100 0.0 (0/120) [바탕 90 % 위 0.0] → 0.0 (0/120)
+P5 PASS 묶음 합 human longsword far: 넘어짐 /100 0.0 (0/360) [바탕 90 % 위 0.0] → 0.0 (0/360)
+P5 PASS 묶음 합 human longsword near: 넘어짐 /100 0.0 (0/120) [바탕 90 % 위 0.0] → 0.0 (0/120)
+P5 PASS 묶음 합 ai rapier far: 넘어짐 /100 16.4 (24/146) [바탕 90 % 위 22.0] → 16.1 (32/199)
+P5 PASS 묶음 합 ai rapier near: 넘어짐 /100 12.5 (65/521) [바탕 90 % 위 16.0] → 10.6 (52/491)
+P5 PASS 묶음 합 ai longsword far: 넘어짐 /100 2.6 (1/38) [바탕 90 % 위 8.1] → 5.1 (2/39)
+P5 PASS 묶음 합 ai longsword near: 넘어짐 /100 4.7 (20/429) [바탕 90 % 위 7.0] → 5.2 (22/427)
+  읽기 AI 내려베기 휘두름 → 맞음 묶음 A: 가운데 0.367 → 0.362 s · 획이 같은 씨앗 30/34
+  읽기 가까운 탭 → 맞음 rapier 묶음 A: 모든 줄 0.313 → 0.142 s · 바탕 안 휘둘린 줄 0.200 → 0.142 s
+  읽기 가까운 탭 → 맞음 longsword 묶음 A: 모든 줄 0.225 → 0.167 s · 바탕 안 휘둘린 줄 0.225 → 0.167 s
+  읽기 AI 내려베기 휘두름 → 맞음 묶음 B: 가운데 0.483 → 0.475 s · 획이 같은 씨앗 37/39
+  읽기 가까운 탭 → 맞음 rapier 묶음 B: 모든 줄 0.317 → 0.150 s · 바탕 안 휘둘린 줄 0.208 → 0.146 s
+  읽기 가까운 탭 → 맞음 longsword 묶음 B: 모든 줄 0.275 → 0.292 s · 바탕 안 휘둘린 줄 0.275 → 0.292 s
+  읽기 AI 내려베기 휘두름 → 맞음 묶음 6001: 가운데 0.342 → 0.350 s · 획이 같은 씨앗 30/35
+  읽기 가까운 탭 → 맞음 rapier 묶음 6001: 모든 줄 0.317 → 0.133 s · 바탕 안 휘둘린 줄 0.200 → 0.133 s
+  읽기 가까운 탭 → 맞음 longsword 묶음 6001: 모든 줄 0.058 → 0.058 s · 바탕 안 휘둘린 줄 0.058 → 0.058 s
+  읽기 가까운 사람 레이피어 맞음 묶음 A: 18/40 → 15/40 · 맞은 줄 칼끝 가장 빠름 가운데 20.4 → 3.1 m/s
+  읽기 가까운 사람 레이피어 맞음 묶음 B: 24/40 → 13/40 · 맞은 줄 칼끝 가장 빠름 가운데 22.4 → 3.4 m/s
+  읽기 가까운 사람 레이피어 맞음 묶음 6001: 23/40 → 15/40 · 맞은 줄 칼끝 가장 빠름 가운데 21.4 → 3.4 m/s
