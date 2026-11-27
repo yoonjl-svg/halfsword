@@ -1,0 +1,8 @@
+{"tag":"bf_4_120","case":"ai_arc","seed":1,"pass":true,"thr":"arc>0 & gap>0 in 40 s","arc":4,"gap":1,"tArc":6.7,"tGap":9.8,"t":9.8,"meAlive":true,"foeAlive":true,"sec":14}
+{"tag":"bf_4_120","case":"ai_arc","seed":2,"pass":true,"thr":"arc>0 & gap>0 in 40 s","arc":1,"gap":22,"tArc":11.3,"tGap":7.3,"t":11.3,"meAlive":true,"foeAlive":true,"sec":12}
+{"tag":"bf_4_120","case":"ai_arc","seed":3,"pass":true,"thr":"arc>0 & gap>0 in 40 s","arc":1,"gap":8,"tArc":10.7,"tGap":7.9,"t":10.7,"meAlive":true,"foeAlive":true,"sec":10}
+{"tag":"bf_4_120","case":"ai_arc","seed":4,"pass":true,"thr":"arc>0 & gap>0 in 40 s","arc":1,"gap":5,"tArc":10.6,"tGap":7.9,"t":10.6,"meAlive":true,"foeAlive":true,"sec":8}
+{"tag":"bf_4_120","case":"ai_arc","seed":5,"pass":true,"thr":"arc>0 & gap>0 in 40 s","arc":1,"gap":21,"tArc":12.8,"tGap":7.4,"t":12.8,"meAlive":true,"foeAlive":true,"sec":13}
+{"tag":"bf_4_120","case":"ai_arc","seed":6,"pass":false,"thr":"arc>0 & gap>0 in 40 s","arc":79,"gap":0,"tArc":8,"tGap":null,"t":40,"meAlive":true,"foeAlive":true,"sec":33}
+{"tag":"bf_4_120","case":"ai_arc","seed":7,"pass":true,"thr":"arc>0 & gap>0 in 40 s","arc":16,"gap":1,"tArc":6.9,"tGap":8.7,"t":8.7,"meAlive":true,"foeAlive":true,"sec":6}
+{"tag":"bf_4_120","case":"ai_arc","seed":8,"pass":false,"thr":"arc>0 & gap>0 in 40 s","arc":125,"gap":0,"tArc":7.9,"tGap":null,"t":40,"meAlive":false,"foeAlive":true,"sec":27}

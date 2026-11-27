@@ -1,0 +1,8 @@
+{"tag":"bw_250","case":"ib_link","seed":1,"pass":false,"thr":"30 s 안 AI 칼날 상처 ≥ 1","tWound":null,"type":null,"part":null,"bluntOrZero":4,"hitsOnP":4,"eAtt":null,"sec":15}
+{"tag":"bw_250","case":"ib_link","seed":2,"pass":true,"thr":"30 s 안 AI 칼날 상처 ≥ 1","tWound":5.6,"type":"cut","part":"uarmO","bluntOrZero":0,"hitsOnP":1,"eAtt":null,"sec":2}
+{"tag":"bw_250","case":"ib_link","seed":3,"pass":false,"thr":"30 s 안 AI 칼날 상처 ≥ 1","tWound":null,"type":null,"part":null,"bluntOrZero":2,"hitsOnP":2,"eAtt":null,"sec":14}
+{"tag":"bw_250","case":"ib_link","seed":4,"pass":true,"thr":"30 s 안 AI 칼날 상처 ≥ 1","tWound":19.3,"type":"cut","part":"thighB","bluntOrZero":2,"hitsOnP":4,"eAtt":null,"sec":7}
+{"tag":"bw_250","case":"ib_link","seed":5,"pass":true,"thr":"30 s 안 AI 칼날 상처 ≥ 1","tWound":5.8,"type":"cut","part":"chest","bluntOrZero":1,"hitsOnP":2,"eAtt":null,"sec":2}
+{"tag":"bw_250","case":"ib_link","seed":6,"pass":true,"thr":"30 s 안 AI 칼날 상처 ≥ 1","tWound":26.3,"type":"cut","part":"uarmO","bluntOrZero":5,"hitsOnP":6,"eAtt":null,"sec":11}
+{"tag":"bw_250","case":"ib_link","seed":7,"pass":true,"thr":"30 s 안 AI 칼날 상처 ≥ 1","tWound":18.5,"type":"cut","part":"head","bluntOrZero":5,"hitsOnP":6,"eAtt":null,"sec":5}
+{"tag":"bw_250","case":"ib_link","seed":8,"pass":false,"thr":"30 s 안 AI 칼날 상처 ≥ 1","tWound":null,"type":null,"part":null,"bluntOrZero":9,"hitsOnP":9,"eAtt":null,"sec":6}

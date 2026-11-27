@@ -1,0 +1,190 @@
+### ai_arc  (문턱: arc>0 & gap>0 in 40 s)
+  씨앗 1: 본판 PASS {"arc": 4, "gap": 1, "tArc": 6.7, "tGap": 9.8, "t": 9.8, "meAlive": true, "foeAlive": true}
+          합친 PASS {"arc": 1, "gap": 1, "tArc": 6.3, "tGap": 6.3, "t": 6.3, "meAlive": true, "foeAlive": true}
+  씨앗 2: 본판 PASS {"arc": 1, "gap": 22, "tArc": 11.3, "tGap": 7.3, "t": 11.3, "meAlive": true, "foeAlive": true}
+          합친 PASS {"arc": 1, "gap": 27, "tArc": 12.5, "tGap": 7.4, "t": 12.5, "meAlive": false, "foeAlive": true}
+  씨앗 3: 본판 PASS {"arc": 1, "gap": 8, "tArc": 10.7, "tGap": 7.9, "t": 10.7, "meAlive": true, "foeAlive": true}
+          합친 PASS {"arc": 1, "gap": 4, "tArc": 9.6, "tGap": 7.9, "t": 9.6, "meAlive": true, "foeAlive": true}
+  씨앗 4: 본판 PASS {"arc": 1, "gap": 5, "tArc": 10.6, "tGap": 7.9, "t": 10.6, "meAlive": true, "foeAlive": true}
+          합친 PASS {"arc": 64, "gap": 1, "tArc": 6, "tGap": 21.1, "t": 21.1, "meAlive": true, "foeAlive": true}
+  씨앗 5: 본판 PASS {"arc": 1, "gap": 21, "tArc": 12.8, "tGap": 7.4, "t": 12.8, "meAlive": true, "foeAlive": true}
+          합친 PASS {"arc": 1, "gap": 9, "tArc": 8.4, "tGap": 7.6, "t": 8.4, "meAlive": true, "foeAlive": true}
+  씨앗 6: 본판 fail {"arc": 79, "gap": 0, "tArc": 8, "tGap": null, "t": 40, "meAlive": true, "foeAlive": true}
+          합친 fail {"arc": 11, "gap": 0, "tArc": 9, "tGap": null, "t": 40, "meAlive": false, "foeAlive": true}
+  씨앗 7: 본판 PASS {"arc": 16, "gap": 1, "tArc": 6.9, "tGap": 8.7, "t": 8.7, "meAlive": true, "foeAlive": true}
+          합친 PASS {"arc": 141, "gap": 1, "tArc": 7.3, "tGap": 24.6, "t": 24.6, "meAlive": true, "foeAlive": true}
+  씨앗 8: 본판 fail {"arc": 125, "gap": 0, "tArc": 7.9, "tGap": null, "t": 40, "meAlive": false, "foeAlive": true}
+          합친 PASS {"arc": 57, "gap": 1, "tArc": 6.4, "tGap": 16.3, "t": 16.3, "meAlive": true, "foeAlive": true}
+  → 통과 본판 6/8 · 합친 7/8 → seed chaos (본판도 깨짐)
+
+### arm_real  (문턱: arms<0.05)
+  씨앗 1: 본판 PASS {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0", "rapier.left": "0.017"}}
+          합친 fail {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0.051", "rapier.left": "0.051"}}
+  씨앗 2: 본판 PASS {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0", "rapier.left": "0.017"}}
+          합친 fail {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0.051", "rapier.left": "0.051"}}
+  씨앗 3: 본판 PASS {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0", "rapier.left": "0.017"}}
+          합친 fail {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0.051", "rapier.left": "0.051"}}
+  씨앗 4: 본판 PASS {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0", "rapier.left": "0.017"}}
+          합친 fail {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0.051", "rapier.left": "0.051"}}
+  씨앗 5: 본판 PASS {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0", "rapier.left": "0.017"}}
+          합친 fail {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0.051", "rapier.left": "0.051"}}
+  씨앗 6: 본판 PASS {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0", "rapier.left": "0.017"}}
+          합친 fail {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0.051", "rapier.left": "0.051"}}
+  씨앗 7: 본판 PASS {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0", "rapier.left": "0.017"}}
+          합친 fail {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0.051", "rapier.left": "0.051"}}
+  씨앗 8: 본판 PASS {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0", "rapier.left": "0.017"}}
+          합친 fail {"v": {"longsword.up": "0", "longsword.left": "0", "longsword.upLeft": "0", "longsword.right": "0", "balisarda.left": "0.051", "rapier.left": "0.051"}}
+  → 통과 본판 8/8 · 합친 0/8 → behaviour changed
+
+### arm_real_p  (문턱: arms<0.05 (뚫음 = 겉 겹침 2 cm 넘음))
+  씨앗 1: 본판 PASS {"v": {"balisarda.left": {"frac": 0, "pen": 0, "n": 350, "deepCm": -1.9}, "rapier.left": {"frac": 0.017, "pen": 6, "n": 350, "deepCm": -2.3}}}
+          합친 fail {"v": {"balisarda.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.6}, "rapier.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.5}}}
+  씨앗 2: 본판 PASS {"v": {"balisarda.left": {"frac": 0, "pen": 0, "n": 350, "deepCm": -1.9}, "rapier.left": {"frac": 0.017, "pen": 6, "n": 350, "deepCm": -2.3}}}
+          합친 fail {"v": {"balisarda.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.6}, "rapier.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.5}}}
+  씨앗 3: 본판 PASS {"v": {"balisarda.left": {"frac": 0, "pen": 0, "n": 350, "deepCm": -1.9}, "rapier.left": {"frac": 0.017, "pen": 6, "n": 350, "deepCm": -2.3}}}
+          합친 fail {"v": {"balisarda.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.6}, "rapier.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.5}}}
+  씨앗 4: 본판 PASS {"v": {"balisarda.left": {"frac": 0, "pen": 0, "n": 350, "deepCm": -1.9}, "rapier.left": {"frac": 0.017, "pen": 6, "n": 350, "deepCm": -2.3}}}
+          합친 fail {"v": {"balisarda.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.6}, "rapier.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.5}}}
+  씨앗 5: 본판 PASS {"v": {"balisarda.left": {"frac": 0, "pen": 0, "n": 350, "deepCm": -1.9}, "rapier.left": {"frac": 0.017, "pen": 6, "n": 350, "deepCm": -2.3}}}
+          합친 fail {"v": {"balisarda.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.6}, "rapier.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.5}}}
+  씨앗 6: 본판 PASS {"v": {"balisarda.left": {"frac": 0, "pen": 0, "n": 350, "deepCm": -1.9}, "rapier.left": {"frac": 0.017, "pen": 6, "n": 350, "deepCm": -2.3}}}
+          합친 fail {"v": {"balisarda.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.6}, "rapier.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.5}}}
+  씨앗 7: 본판 PASS {"v": {"balisarda.left": {"frac": 0, "pen": 0, "n": 350, "deepCm": -1.9}, "rapier.left": {"frac": 0.017, "pen": 6, "n": 350, "deepCm": -2.3}}}
+          합친 fail {"v": {"balisarda.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.6}, "rapier.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.5}}}
+  씨앗 8: 본판 PASS {"v": {"balisarda.left": {"frac": 0, "pen": 0, "n": 350, "deepCm": -1.9}, "rapier.left": {"frac": 0.017, "pen": 6, "n": 350, "deepCm": -2.3}}}
+          합친 fail {"v": {"balisarda.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.6}, "rapier.left": {"frac": 0.051, "pen": 18, "n": 350, "deepCm": -3.5}}}
+  → 통과 본판 8/8 · 합친 0/8 → behaviour changed
+
+### cav  (문턱: stab>=1)
+  씨앗 1: 본판 PASS {"stab": 1, "atts": 4, "imb": 2, "types": {"blunt0": 2, "stab+": 1}}
+          합친 fail {"stab": 0, "atts": 5, "imb": 3, "types": {"blunt0": 3}}
+  씨앗 2: 본판 PASS {"stab": 1, "atts": 5, "imb": 1, "types": {"blunt0": 1, "stab+": 1}}
+          합친 fail {"stab": 0, "atts": 5, "imb": 1, "types": {"blunt0": 1}}
+  씨앗 3: 본판 PASS {"stab": 4, "atts": 4, "imb": 2, "types": {"blunt0": 1, "stab+": 4}}
+          합친 PASS {"stab": 1, "atts": 4, "imb": 2, "types": {"blunt0": 1, "stab+": 1}}
+  씨앗 4: 본판 fail {"stab": 0, "atts": 5, "imb": 2, "types": {"blunt0": 5}}
+          합친 PASS {"stab": 2, "atts": 5, "imb": 3, "types": {"blunt0": 4, "stab+": 2}}
+  씨앗 5: 본판 PASS {"stab": 1, "atts": 4, "imb": 2, "types": {"blunt0": 1, "stab+": 1}}
+          합친 fail {"stab": 0, "atts": 4, "imb": 1, "types": {"blunt0": 1}}
+  씨앗 6: 본판 PASS {"stab": 2, "atts": 4, "imb": 3, "types": {"blunt0": 4, "stab+": 2}}
+          합친 fail {"stab": 0, "atts": 4, "imb": 2, "types": {"blunt0": 2}}
+  씨앗 7: 본판 PASS {"stab": 2, "atts": 4, "imb": 2, "types": {"stab+": 2, "blunt0": 1}}
+          합친 PASS {"stab": 1, "atts": 4, "imb": 2, "types": {"blunt0": 2, "stab+": 1}}
+  씨앗 8: 본판 PASS {"stab": 2, "atts": 4, "imb": 2, "types": {"blunt0": 2, "stab+": 2}}
+          합친 PASS {"stab": 1, "atts": 4, "imb": 3, "types": {"blunt0": 2, "stab+": 1}}
+  → 통과 본판 7/8 · 합친 4/8 → seed chaos (본판도 깨짐)
+
+### cav2  (문턱: stab>=1)
+  씨앗 9: 본판 PASS {"stab": 1, "atts": 2, "imb": 1, "types": {"blunt0": 1, "stab+": 1}}
+          합친 fail {"stab": 0, "atts": 3, "imb": 2, "types": {"blunt0": 3}}
+  씨앗 10: 본판 PASS {"stab": 1, "atts": 4, "imb": 3, "types": {"blunt0": 2, "stab+": 1}}
+          합친 PASS {"stab": 1, "atts": 4, "imb": 2, "types": {"blunt0": 3, "stab+": 1}}
+  씨앗 11: 본판 PASS {"stab": 1, "atts": 4, "imb": 3, "types": {"blunt0": 3, "stab+": 1}}
+          합친 fail {"stab": 0, "atts": 2, "imb": 1, "types": {"blunt0": 1}}
+  씨앗 12: 본판 fail {"stab": 0, "atts": 4, "imb": 3, "types": {"blunt0": 4}}
+          합친 fail {"stab": 0, "atts": 4, "imb": 2, "types": {"blunt0": 3}}
+  씨앗 13: 본판 PASS {"stab": 1, "atts": 4, "imb": 2, "types": {"blunt0": 2, "stab+": 1}}
+          합친 PASS {"stab": 2, "atts": 4, "imb": 2, "types": {"blunt0": 1, "stab+": 2}}
+  씨앗 14: 본판 fail {"stab": 0, "atts": 4, "imb": 2, "types": {"blunt0": 4}}
+          합친 PASS {"stab": 1, "atts": 4, "imb": 2, "types": {"blunt0": 4, "stab+": 1}}
+  씨앗 15: 본판 fail {"stab": 0, "atts": 4, "imb": 2, "types": {"blunt0": 5}}
+          합친 PASS {"stab": 2, "atts": 5, "imb": 2, "types": {"blunt0": 1, "stab+": 2}}
+  씨앗 16: 본판 PASS {"stab": 2, "atts": 5, "imb": 2, "types": {"blunt0": 2, "stab+": 2}}
+          합친 fail {"stab": 0, "atts": 4, "imb": 3, "types": {"blunt0": 4}}
+  → 통과 본판 5/8 · 합친 4/8 → seed chaos (본판도 깨짐)
+
+### gl_ai  (문턱: got>0 · th≥1 · aim>0)
+  씨앗 1: 본판 PASS {"got": 2, "th": 1, "go": 2, "aim": 125, "t": 40, "consistent": true}
+          합친 fail {"got": 1, "th": 0, "go": 1, "aim": 21, "t": 24.8, "consistent": true}
+  씨앗 2: 본판 fail {"got": 0, "th": 0, "go": 1, "aim": 91, "t": 40, "consistent": true}
+          합친 fail {"got": 1, "th": 0, "go": 2, "aim": 97, "t": 40, "consistent": true}
+  씨앗 3: 본판 fail {"got": 0, "th": 0, "go": 2, "aim": 58, "t": 40, "consistent": true}
+          합친 PASS {"got": 2, "th": 1, "go": 3, "aim": 118, "t": 40, "consistent": true}
+  씨앗 4: 본판 fail {"got": 0, "th": 0, "go": 0, "aim": 17, "t": 6.3, "consistent": true}
+          합친 PASS {"got": 1, "th": 1, "go": 2, "aim": 142, "t": 40, "consistent": true}
+  씨앗 5: 본판 fail {"got": 0, "th": 0, "go": 1, "aim": 28, "t": 40, "consistent": true}
+          합친 fail {"got": 0, "th": 0, "go": 1, "aim": 103, "t": 40, "consistent": true}
+  씨앗 6: 본판 fail {"got": 0, "th": 0, "go": 0, "aim": 115, "t": 32.4, "consistent": true}
+          합친 fail {"got": 0, "th": 0, "go": 2, "aim": 36, "t": 32.5, "consistent": true}
+  씨앗 7: 본판 fail {"got": 0, "th": 0, "go": 2, "aim": 30, "t": 40, "consistent": true}
+          합친 fail {"got": 0, "th": 0, "go": 1, "aim": 48, "t": 34.8, "consistent": true}
+  씨앗 8: 본판 PASS {"got": 2, "th": 2, "go": 3, "aim": 164, "t": 40, "consistent": true}
+          합친 fail {"got": 0, "th": 0, "go": 2, "aim": 110, "t": 40, "consistent": true}
+  → 통과 본판 2/8 · 합친 2/8 → seed chaos (본판도 깨짐)
+
+### gl_human  (문턱: tagR→highR · pflugR→thrust (9 s 안) · 자세 밖 0)
+  씨앗 1: 본판 fail {"tagR": [null, null, null], "pflugR": ["thrust", 5.37, {"beat": 1, "beatSkip": 0, "beatFire": 0, "enter": 1, "go": 1, "debana": 0, "th": 0, "hit": 0, "end": 0}], "none": 0}
+          합친 PASS {"tagR": ["highR", 5.41, "defend"], "pflugR": ["thrust", 5.37, {"beat": 1, "beatSkip": 0, "beatFire": 0, "enter": 1, "go": 1, "debana": 0, "th": 0, "hit": 0, "end": 0}], "none": 0}
+  씨앗 2: 본판 PASS {"tagR": ["highR", 5.46, "defend"], "pflugR": ["thrust", 5.4, {"beat": 1, "beatSkip": 0, "beatFire": 0, "enter": 1, "go": 1, "debana": 0, "th": 0, "hit": 0, "end": 0}], "none": 0}
+          합친 fail {"tagR": ["highR", 5.38, "defend"], "pflugR": [null, null, null], "none": 0}
+  씨앗 3: 본판 PASS {"tagR": ["highR", 5.79, "defend"], "pflugR": ["thrust", 5.38, {"beat": 0, "beatSkip": 0, "beatFire": 0, "enter": 1, "go": 1, "debana": 0, "th": 0, "hit": 0, "end": 0}], "none": 0}
+          합친 fail {"tagR": [null, null, null], "pflugR": ["thrust", 5.81, {"beat": 1, "beatSkip": 0, "beatFire": 0, "enter": 1, "go": 1, "debana": 0, "th": 0, "hit": 0, "end": 0}], "none": 0}
+  씨앗 4: 본판 fail {"tagR": ["highR", 5.79, "defend"], "pflugR": [null, null, {"beat": 1, "beatSkip": 0, "beatFire": 0, "enter": 1, "go": 1, "debana": 1, "th": 0, "hit": 0, "end": 0}], "none": 0}
+          합친 fail {"tagR": ["highR", 5.79, "defend"], "pflugR": [null, null, {"beat": 1, "beatSkip": 0, "beatFire": 0, "enter": 0, "go": 0, "debana": 0, "th": 0, "hit": 0, "end": 0}], "none": 0}
+  씨앗 5: 본판 fail {"tagR": [null, null, null], "pflugR": ["thrust", 5.38, {"beat": 1, "beatSkip": 0, "beatFire": 0, "enter": 1, "go": 1, "debana": 0, "th": 0, "hit": 0, "end": 0}], "none": 0}
+          합친 fail {"tagR": [null, null, null], "pflugR": [null, null, null], "none": 0}
+  씨앗 6: 본판 fail {"tagR": ["highR", 5.79, "defend"], "pflugR": [null, null, null], "none": 0}
+          합친 fail {"tagR": ["highR", 5.79, "defend"], "pflugR": [null, null, {"beat": 1, "beatSkip": 0, "beatFire": 0, "enter": 1, "go": 1, "debana": 1, "th": 0, "hit": 0, "end": 0}], "none": 0}
+  씨앗 7: 본판 fail {"tagR": [null, null, null], "pflugR": ["thrust", 5.37, {"beat": 1, "beatSkip": 0, "beatFire": 0, "enter": 1, "go": 1, "debana": 0, "th": 0, "hit": 0, "end": 0}], "none": 0}
+          합친 PASS {"tagR": ["highR", 5.41, "defend"], "pflugR": ["thrust", 5.81, {"beat": 0, "beatSkip": 0, "beatFire": 0, "enter": 1, "go": 1, "debana": 0, "th": 0, "hit": 0, "end": 0}], "none": 0}
+  씨앗 8: 본판 fail {"tagR": ["highR", 5.43, "defend"], "pflugR": [null, null, {"beat": 0, "beatSkip": 0, "beatFire": 0, "enter": 1, "go": 1, "debana": 1, "th": 0, "hit": 0, "end": 0}], "none": 0}
+          합친 fail {"tagR": ["highR", 5.43, "defend"], "pflugR": [null, null, {"beat": 0, "beatSkip": 0, "beatFire": 0, "enter": 1, "go": 1, "debana": 1, "th": 0, "hit": 0, "end": 0}], "none": 0}
+  → 통과 본판 2/8 · 합친 2/8 → seed chaos (본판도 깨짐)
+
+### ib  (문턱: n>0 (시험: 씨앗 1~4 합 > 0))
+  씨앗 1: 본판 fail {"n": 0, "sum": 0, "t": 30, "blocks": 0}
+          합친 PASS {"n": 1, "sum": 16.1, "t": 30, "blocks": 1}
+  씨앗 2: 본판 PASS {"n": 6, "sum": 96.3, "t": 30, "blocks": 6}
+          합친 PASS {"n": 1, "sum": 16.1, "t": 22.2, "blocks": 2}
+  씨앗 3: 본판 PASS {"n": 1, "sum": 16.1, "t": 12.4, "blocks": 1}
+          합친 PASS {"n": 1, "sum": 16.1, "t": 23.4, "blocks": 1}
+  씨앗 4: 본판 fail {"n": 0, "sum": 0, "t": 30, "blocks": 0}
+          합친 PASS {"n": 6, "sum": 96.3, "t": 30, "blocks": 7}
+  씨앗 5: 본판 fail {"n": 0, "sum": 0, "t": 9.1, "blocks": 1}
+          합친 PASS {"n": 1, "sum": 16.1, "t": 22.1, "blocks": 2}
+  씨앗 6: 본판 fail {"n": 0, "sum": 0, "t": 15.5, "blocks": 0}
+          합친 PASS {"n": 3, "sum": 48.2, "t": 30, "blocks": 4}
+  씨앗 7: 본판 PASS {"n": 3, "sum": 48.2, "t": 30, "blocks": 4}
+          합친 PASS {"n": 1, "sum": 16.1, "t": 30, "blocks": 1}
+  씨앗 8: 본판 PASS {"n": 2, "sum": 32.1, "t": 30, "blocks": 2}
+          합친 fail {"n": 0, "sum": 0, "t": 18.3, "blocks": 0}
+  → 통과 본판 4/8 · 합친 7/8 → seed chaos (본판도 깨짐)
+
+### ib_link  (문턱: 30 s 안 AI 칼날 상처 ≥ 1)
+  씨앗 1: 본판 PASS {"tWound": 6.7, "type": "cut", "part": "pelvis", "bluntOrZero": 0, "hitsOnP": 1, "eAtt": null}
+          합친 fail {"tWound": null, "type": null, "part": null, "bluntOrZero": 4, "hitsOnP": 4, "eAtt": null}
+  씨앗 2: 본판 PASS {"tWound": 17, "type": "cut", "part": "chest", "bluntOrZero": 2, "hitsOnP": 3, "eAtt": null}
+          합친 PASS {"tWound": 5.6, "type": "cut", "part": "uarmO", "bluntOrZero": 0, "hitsOnP": 1, "eAtt": null}
+  씨앗 3: 본판 fail {"tWound": null, "type": null, "part": null, "bluntOrZero": 5, "hitsOnP": 5, "eAtt": null}
+          합친 fail {"tWound": null, "type": null, "part": null, "bluntOrZero": 2, "hitsOnP": 2, "eAtt": null}
+  씨앗 4: 본판 PASS {"tWound": 17.5, "type": "cut", "part": "thighB", "bluntOrZero": 1, "hitsOnP": 2, "eAtt": null}
+          합친 PASS {"tWound": 19.3, "type": "cut", "part": "thighB", "bluntOrZero": 2, "hitsOnP": 4, "eAtt": null}
+  씨앗 5: 본판 PASS {"tWound": 28.4, "type": "cut", "part": "thighB", "bluntOrZero": 5, "hitsOnP": 6, "eAtt": null}
+          합친 PASS {"tWound": 5.8, "type": "cut", "part": "chest", "bluntOrZero": 1, "hitsOnP": 2, "eAtt": null}
+  씨앗 6: 본판 PASS {"tWound": 7.1, "type": "cut", "part": "uarmS", "bluntOrZero": 0, "hitsOnP": 2, "eAtt": null}
+          합친 PASS {"tWound": 26.3, "type": "cut", "part": "uarmO", "bluntOrZero": 5, "hitsOnP": 6, "eAtt": null}
+  씨앗 7: 본판 PASS {"tWound": 13.1, "type": "cut", "part": "thighB", "bluntOrZero": 1, "hitsOnP": 2, "eAtt": null}
+          합친 PASS {"tWound": 18.5, "type": "cut", "part": "head", "bluntOrZero": 5, "hitsOnP": 6, "eAtt": null}
+  씨앗 8: 본판 PASS {"tWound": 9.2, "type": "cut", "part": "head", "bluntOrZero": 1, "hitsOnP": 2, "eAtt": null}
+          합친 fail {"tWound": null, "type": null, "part": null, "bluntOrZero": 9, "hitsOnP": 9, "eAtt": null}
+  → 통과 본판 7/8 · 합친 5/8 → seed chaos (본판도 깨짐)
+
+### onehand  (문턱: up30≤1% · shOut≤1%)
+  씨앗 1: 본판 fail {"shOut": 3.9, "up30": 0, "n": 1488}
+          합친 PASS {"shOut": 0, "up30": 0, "n": 1742}
+  씨앗 2: 본판 PASS {"shOut": 0, "up30": 0, "n": 1742}
+          합친 PASS {"shOut": 0.1, "up30": 0, "n": 1488}
+  씨앗 3: 본판 PASS {"shOut": 0, "up30": 0, "n": 1564}
+          합친 PASS {"shOut": 0, "up30": 0, "n": 1608}
+  씨앗 4: 본판 PASS {"shOut": 0, "up30": 0, "n": 1742}
+          합친 PASS {"shOut": 0, "up30": 0, "n": 1488}
+  씨앗 5: 본판 PASS {"shOut": 0, "up30": 0, "n": 1501}
+          합친 PASS {"shOut": 0, "up30": 0, "n": 1488}
+  씨앗 6: 본판 PASS {"shOut": 0, "up30": 0, "n": 1742}
+          합친 PASS {"shOut": 0, "up30": 0, "n": 1488}
+  씨앗 7: 본판 PASS {"shOut": 0, "up30": 0, "n": 1742}
+          합친 PASS {"shOut": 0.1, "up30": 0, "n": 1742}
+  씨앗 8: 본판 PASS {"shOut": 0, "up30": 0, "n": 1742}
+          합친 PASS {"shOut": 0, "up30": 0, "n": 1504}
+  → 통과 본판 7/8 · 합친 8/8 → seed chaos (본판도 깨짐)
+

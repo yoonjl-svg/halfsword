@@ -1,0 +1,8 @@
+{"tag":"bw_250","case":"ib","seed":1,"pass":true,"thr":"n>0 (시험: 씨앗 1~4 합 > 0)","n":1,"sum":16.1,"t":30,"blocks":1,"sec":30}
+{"tag":"bw_250","case":"ib","seed":2,"pass":true,"thr":"n>0 (시험: 씨앗 1~4 합 > 0)","n":1,"sum":16.1,"t":22.2,"blocks":2,"sec":19}
+{"tag":"bw_250","case":"ib","seed":3,"pass":true,"thr":"n>0 (시험: 씨앗 1~4 합 > 0)","n":1,"sum":16.1,"t":23.4,"blocks":1,"sec":17}
+{"tag":"bw_250","case":"ib","seed":4,"pass":true,"thr":"n>0 (시험: 씨앗 1~4 합 > 0)","n":6,"sum":96.3,"t":30,"blocks":7,"sec":26}
+{"tag":"bw_250","case":"ib","seed":5,"pass":true,"thr":"n>0 (시험: 씨앗 1~4 합 > 0)","n":1,"sum":16.1,"t":22.1,"blocks":2,"sec":14}
+{"tag":"bw_250","case":"ib","seed":6,"pass":true,"thr":"n>0 (시험: 씨앗 1~4 합 > 0)","n":3,"sum":48.2,"t":30,"blocks":4,"sec":21}
+{"tag":"bw_250","case":"ib","seed":7,"pass":true,"thr":"n>0 (시험: 씨앗 1~4 합 > 0)","n":1,"sum":16.1,"t":30,"blocks":1,"sec":16}
+{"tag":"bw_250","case":"ib","seed":8,"pass":false,"thr":"n>0 (시험: 씨앗 1~4 합 > 0)","n":0,"sum":0,"t":18.3,"blocks":0,"sec":6}

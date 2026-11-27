@@ -1,0 +1,20 @@
+칸	통과/전체	실패
+main (bf_4_120)	947/982	35
+arm (bu_4_120)	943/982	39
+limits (bh_250)	944/982	38
+combined (bw_250)	942/982	40
+
+이름	파일	main	arm	limits	combined
+값 (0.6 s 시간 사다리 · 칸 = 물리 한 스텝 · 0.3 m 걸음 사다리) · 둥근 눈 · 칼끝 틈 셈이 탐	ai_arc.test.mjs	pass	FAIL	pass	pass
+D 두 팔 엇갈림 — 롱소드 위 · 왼쪽 · 왼위 · 오른쪽 · 이탈리아 왼쪽: 두 팔이 안 뚫음 · 쥠 놓침 없음	arm_real.test.mjs	pass	FAIL	pass	FAIL
+① 내려 찌르기 닿게 (씨앗 1 · 서 있는 상대): 찌른 상처가 남	cavazione_tap.test.mjs	pass	FAIL	pass	FAIL
+리솔루토 미끄러짐 0.45 (기본): 몸 미끄러짐 한도 0.45 m · 닿는 끝 = 낸 때 가슴 사이 2.29 m 맞음 · 2.35 m 빗나감 (0.6 판은 2.45 맞음 — 0.15 m 당겨짐) · 가까운 데는 맞닿기에서 멈춤 그대로	gk_ghost.test.mjs	FAIL	pass	FAIL	pass
+읽는 쪽 (사람 상대): 걸어 들어오는 사람의 보이는 자세가 약속한 기본 줄을 미리 덮음 · 늦게 본 손으로	guard_line.test.mjs	pass	pass	FAIL	FAIL
+⑩ 누운 몸 — 네 방향 쓰러짐에서 땅 · 몸통 · 다리 안 뚫음 · 칼집 쪽이 위인 몸도 칼집이 허공으로 서지 않음	iai_obi.test.mjs	pass	FAIL	pass	FAIL
+⑭ 칼끝이 칼집 입으로 들어감 — 칼집 몸 옆으로 드는 스텝 없음 (사람 · AI 허리 대기 × 우치가타나 · 무라마사 · 쿠사나기)	iai_obi.test.mjs	pass	FAIL	FAIL	FAIL
+판에서 쓰임 — 츠바이핸더 AI 숙련 5 대 롱소드 AI (씨앗 1 ~ 4 · 30 s): 막아 내 되찾은 기력이 있음	ib_block_regen.test.mjs	pass	pass	FAIL	pass
+맞바꿈 B12 (사장님 11/14 확인) — 이어 돌리는 동안 몸에 든 맞음 한 번을 그 무기 베기 한 번 값의 기력으로 넘김 · 같은 칼이 마저 친 부위도 함께 · 사슬당 한 번 · 기력 모자람 · 끔 · 칸 없음 · 원 밖이면 그대로 맞음	ib_link.test.mjs	pass	pass	pass	FAIL
+일본 서 있는 자세: 5 s 뒤 앞뒤 자세 길이 0.45 언저리 (전 판 0.31)	jp_gait.test.mjs	FAIL	pass	FAIL	pass
+허공 cingir: 걸린 시간 · 칼끝 길 · 칼끝 최고 = 11/16 ± 5 % · 같은 수가 남	motion_regress.test.mjs	FAIL	FAIL	pass	FAIL
+병마용 AI (월왕구천검 · 병마용 기질 대 롱소드 AI · 15 s · 상처 끔): 기본 팔꿈치 30° 넘게 위 ≤ 1 % · 위팔 돌림 밖 ≤ 1 % — 10/24 판은 칼 든 팔이 머리 곁으로 꺾여 듦 (사장님 그림)	onehand_arm.test.mjs	pass	pass	FAIL	pass
+실제 칼 충돌을 상대 공격당 한 번의 막기 비용으로 셈	stamina_integration.test.mjs	pass	FAIL	pass	FAIL

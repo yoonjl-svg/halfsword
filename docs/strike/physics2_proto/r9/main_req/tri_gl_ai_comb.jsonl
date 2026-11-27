@@ -1,0 +1,8 @@
+{"tag":"bw_250","case":"gl_ai","seed":1,"pass":false,"thr":"got>0 · th≥1 · aim>0","got":1,"th":0,"go":1,"aim":21,"t":24.8,"consistent":true,"sec":25}
+{"tag":"bw_250","case":"gl_ai","seed":2,"pass":false,"thr":"got>0 · th≥1 · aim>0","got":1,"th":0,"go":2,"aim":97,"t":40,"consistent":true,"sec":35}
+{"tag":"bw_250","case":"gl_ai","seed":3,"pass":true,"thr":"got>0 · th≥1 · aim>0","got":2,"th":1,"go":3,"aim":118,"t":40,"consistent":true,"sec":26}
+{"tag":"bw_250","case":"gl_ai","seed":4,"pass":true,"thr":"got>0 · th≥1 · aim>0","got":1,"th":1,"go":2,"aim":142,"t":40,"consistent":true,"sec":28}
+{"tag":"bw_250","case":"gl_ai","seed":5,"pass":false,"thr":"got>0 · th≥1 · aim>0","got":0,"th":0,"go":1,"aim":103,"t":40,"consistent":true,"sec":25}
+{"tag":"bw_250","case":"gl_ai","seed":6,"pass":false,"thr":"got>0 · th≥1 · aim>0","got":0,"th":0,"go":2,"aim":36,"t":32.5,"consistent":true,"sec":17}
+{"tag":"bw_250","case":"gl_ai","seed":7,"pass":false,"thr":"got>0 · th≥1 · aim>0","got":0,"th":0,"go":1,"aim":48,"t":34.8,"consistent":true,"sec":19}
+{"tag":"bw_250","case":"gl_ai","seed":8,"pass":false,"thr":"got>0 · th≥1 · aim>0","got":0,"th":0,"go":2,"aim":110,"t":40,"consistent":true,"sec":17}
