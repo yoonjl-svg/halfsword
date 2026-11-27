@@ -1,0 +1,40 @@
+identity: instrumented ll_13_125_cnt2 (13_125) fights12 output vs cell ll_13_125: IDENTICAL
+identity: instrumented ll_13_125_cnt2 (10_125) fights12 output vs cell ll_10_125: IDENTICAL
+identity: instrumented ll_13_125_cnt2 (10_100) fights12 output vs cell ll_10_100: IDENTICAL
+identity: instrumented cnt2 (13_125) vs earlier ll_13_125_cnt output (e3/cnt_fights.txt): IDENTICAL
+
+13_125 (ecc 1.3 · hipFlex 312.5) · fights12 · stance-leg clamp calls; same-step repeat calls skipped: 0
+| axis | calls | at limit | at limit, prev step also clamped | abs dwE rad/s median / p95 / max | limit change N·m median / p95 / max | as share of limit median / p95 / max | alternation runs len 2 | len >= 3 | len >= 5 | longest |
+|---|---|---|---|---|---|---|---|---|---|---|
+| hip x (abd/add) | 104168 | 1699 | 1677 | 0.097 / 0.598 / 7.249 | 0.64 / 13.93 / 56.25 | 0.59 % / 10.05 % / 30.00 % | 385 | 120 | 8 | 9 |
+| hip y (rot) | 104168 | 1074 | 1060 | 0.132 / 0.936 / 11.572 | 0.14 / 9.78 / 26.25 | 0.29 % / 14.77 % / 30.00 % | 269 | 127 | 10 | 16 |
+| hip z (flex/ext) | 104168 | 529 | 523 | 0.263 / 2.073 / 13.839 | 2.02 / 44.87 / 84.88 | 1.18 % / 20.17 % / 30.00 % | 176 | 62 | 3 | 5 |
+| knee | 104168 | 1247 | 1233 | 0.304 / 4.182 / 13.301 | 0.00 / 35.64 / 93.54 | 0.00 % / 25.67 % / 30.00 % | 479 | 170 | 8 | 8 |
+| ankle x (inv/ev) | 104168 | 2693 | 2685 | 0.115 / 1.860 / 14.403 | 0.09 / 7.28 / 18.75 | 0.26 % / 16.92 % / 30.00 % | 463 | 138 | 22 | 8 |
+| ankle y (rot) | 104168 | 2667 | 2627 | 0.145 / 1.901 / 11.569 | 0.36 / 7.65 / 15.00 | 1.07 % / 18.80 % / 30.00 % | 827 | 323 | 22 | 10 |
+| ankle z (plantar/dorsi) | 104168 | 1081 | 1078 | 0.129 / 2.065 / 18.018 | 0.00 / 12.20 / 36.76 | 0.00 % / 19.33 % / 30.00 % | 256 | 75 | 5 | 6 |
+| all | 729176 | 10990 | | | | | | 1015 | 78 | |
+
+10_125 (ecc 1 · hipFlex 312.5) · fights12 · stance-leg clamp calls; same-step repeat calls skipped: 0
+| axis | calls | at limit | at limit, prev step also clamped | abs dwE rad/s median / p95 / max | limit change N·m median / p95 / max | as share of limit median / p95 / max | alternation runs len 2 | len >= 3 | len >= 5 | longest |
+|---|---|---|---|---|---|---|---|---|---|---|
+| hip x (abd/add) | 101833 | 1901 | 1888 | 0.115 / 0.681 / 5.861 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 403 | 126 | 3 | 8 |
+| hip y (rot) | 101833 | 1313 | 1296 | 0.162 / 0.925 / 22.420 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 323 | 133 | 5 | 14 |
+| hip z (flex/ext) | 101833 | 908 | 903 | 0.386 / 2.160 / 12.119 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 353 | 91 | 3 | 7 |
+| knee | 101833 | 1624 | 1602 | 0.260 / 3.692 / 22.128 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 474 | 140 | 5 | 12 |
+| ankle x (inv/ev) | 101833 | 2717 | 2707 | 0.106 / 1.723 / 25.261 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 423 | 119 | 5 | 8 |
+| ankle y (rot) | 101833 | 2488 | 2454 | 0.162 / 1.834 / 14.056 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 761 | 321 | 10 | 13 |
+| ankle z (plantar/dorsi) | 101833 | 1515 | 1515 | 0.139 / 2.187 / 21.555 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 320 | 87 | 9 | 10 |
+| all | 712831 | 12466 | | | | | | 1017 | 40 | |
+
+10_100 (ecc 1 · hipFlex 250) · fights12 · stance-leg clamp calls; same-step repeat calls skipped: 0
+| axis | calls | at limit | at limit, prev step also clamped | abs dwE rad/s median / p95 / max | limit change N·m median / p95 / max | as share of limit median / p95 / max | alternation runs len 2 | len >= 3 | len >= 5 | longest |
+|---|---|---|---|---|---|---|---|---|---|---|
+| hip x (abd/add) | 102769 | 3807 | 3766 | 0.126 / 0.640 / 10.062 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 780 | 270 | 17 | 15 |
+| hip y (rot) | 102769 | 2281 | 2262 | 0.122 / 0.852 / 11.377 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 584 | 273 | 16 | 18 |
+| hip z (flex/ext) | 102769 | 2668 | 2656 | 0.352 / 1.411 / 9.034 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 1068 | 205 | 5 | 5 |
+| knee | 102769 | 3121 | 3088 | 0.269 / 3.181 / 13.926 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 1136 | 219 | 8 | 7 |
+| ankle x (inv/ev) | 102769 | 6356 | 6339 | 0.114 / 1.592 / 19.165 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 974 | 278 | 24 | 30 |
+| ankle y (rot) | 102769 | 5202 | 5160 | 0.160 / 1.535 / 17.636 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 1604 | 712 | 43 | 13 |
+| ankle z (plantar/dorsi) | 102769 | 3625 | 3617 | 0.128 / 1.606 / 22.062 | 0.00 / 0.00 / 0.00 | 0.00 % / 0.00 % / 0.00 % | 798 | 228 | 17 | 9 |
+| all | 719383 | 27060 | | | | | | 2185 | 130 | |
