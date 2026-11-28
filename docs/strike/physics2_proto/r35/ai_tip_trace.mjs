@@ -17,6 +17,7 @@
 //    aimslow = 탭의 당김 시간(K.aim)을 두 배로 (명령 칼 방향이 도는 빠르기를 반으로) · extslow = 뻗는 시간(K.extend)을 두 배로
 //    여럿은 쉼표로.
 //  --human=1 : 사람 길 관문 가까운 장면(wb_gate.mjs 의 nearGap 난수 차례 · wb_measure.mjs runThrust 를 옮겨 적은 장면 — 서 있는 과녁 · 탭 한 번)을 같은 기록으로.
+//    --held=1 (실험 전용 · 사람 입력) = 손가락을 패드에 댄 채(handHeld — 움직이지 않음)로 겨누고 탭 · 탭 동안도 댄 채
 //    --pad=x,y (실험 전용) = 탭 앞 손 패드를 그 자리로 (관문은 세 패드 가운데 난수) · --pre=still|walk|turn (실험 전용 · 탭 앞 0.4 s 에 사람 입력으로 걷기 앞 0.45 · 옆으로 돎)
 import { pathToFileURL } from 'node:url'; import { join, resolve } from 'node:path'; import { writeFileSync, mkdirSync } from 'node:fs';
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const m = a.match(/^--([^=]+)(?:=(.*))?$/); return m ? [m[1], m[2] ?? true] : [a, true]; }));
@@ -97,7 +98,7 @@ function capture(f, ai, st, LJ) {
     aimSword: angD(aW, ax), twC: f.__rec.twC ?? null, poleSin: f.__rec.poleSin ?? null,
     tap: !!tp, ph, tt: tp ? tp.t : null, w: th?.w ?? 0, vital: !!tp?.vital, head: !!tp?.head, chFit: tp?.chFit ?? null,
     mvx: f.move.x, mvy: f.move.y, aimx: f.skill.aim?.x ?? null, aimy: f.skill.aim?.y ?? null, mode: ai?.mode ?? null, aph: ai?.phase ?? null, tech: ai?.tech?.name ?? null, swing: !!f.skill?.swinging, walk: !!f.gait?.walking, req: f.gait?.req?.kind ?? null, st: f.state,
-    tqWr: tq.wr, tqEl: tq.el, tqSh: tq.sh, aWv: [aW.x, aW.y, aW.z].map((x) => +x.toFixed(4)), aWb: aW.clone().applyQuaternion(yawI).toArray().map((x) => +x.toFixed(4)),
+    tqWr: tq.wr, tqEl: tq.el, tqSh: tq.sh, idle: f.bodyPose?.idle ?? null, aWv: [aW.x, aW.y, aW.z].map((x) => +x.toFixed(4)), aWb: aW.clone().applyQuaternion(yawI).toArray().map((x) => +x.toFixed(4)),
     hErr: (() => { const fp = f.foe?.bodies?.pelvis?.translation(), pp = B.pelvis.translation(); if (!fp) return null; const want = Math.atan2(-(fp.z - pp.z), fp.x - pp.x); return Math.atan2(Math.sin(want - f.heading), Math.cos(want - f.heading)) / HD; })(), axv: [ax.x, ax.y, ax.z].map((x) => +x.toFixed(4)),
   };
   st.hT = hT; st.hTb = hTb; st.aW = aW; st.thDir = thDir; st.head = f.heading; f.__rec = {};
@@ -121,6 +122,7 @@ function humanThrust(seed, weapon, opt) {
   for (const c of E.swordColliders) c.setCollisionGroups(0);
   P.skill.level = 0.7; P.skill.autoGuard = true; M.setHand(P, [0.18, -0.28]); M.setHand(E, [0, -0.5]);
   let LP = null; if (HON) { LP = attach(G.world, bodiesOf(P), { fighter: P }); hook(G, [LP]); }
+  if (args.held) { P.handHeld = true; const ob = G.before; G.before = (t) => { ob?.(t); P.handHeld = true; }; }
   P.__rec = {}; const CSt = {}; const line = [], xs = [], WO = []; const hits = M.hookHits(G, P, E, () => line.length);
   const ow = G.combat.hooks.onWound; G.combat.hooks.onWound = (A, Vc, r, ...x) => { ow?.(A, Vc, r, ...x); if (A === P && Vc === E) WO.push({ i: line.length, type: r.type, zone: r.zone, E: r.physE ?? r.energy, energy: r.energy, sp: r.speed, eff: r.eff, thr: r.thr, mEff: r.mEff }); };
   const rec = () => { const smp = M.sample(P); if (smp) { line.push(smp); xs.push(capture(P, null, CSt, LP)); } return smp; };

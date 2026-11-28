@@ -28,19 +28,30 @@ function score2(g, m) { if (!g.stab) return { cat: g.cat1, sev: g.sev1, any: fal
     if (cond2(r)) { any = true; const R = r.re; const v2 = R.speed * R.speed; const E2 = R.ephysUsed + 0.5 * m * v2; const x = classify(E2 * R.K, R.thr, R.Eblunt, R.physK, E2 * 2 * R.hk, R.postK); c = x.cat; s = x.sev; }
     cat = maxCat(cat, c); if (c === 'wound') sev = Math.max(sev, s); }
   return { cat, sev, any }; }
+const NW = [3, 6, 12]; const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const winCache = new Map();
+function w3(g, wi) { // 첫 찌르기 줄(쉼 밖)의 스텝부터: 첫 충격량 스텝 s0 의 방향 u · 그 스텝의 다가오는 빠르기 · 창 n 스텝 합
+  const key = g; let W = winCache.get(key); if (!W) { W = {}; winCache.set(key, W); const r = g.first; const run = g.run;
+    const e = r && r.ep != null ? run.eps[r.ep] : null; if (!r) W.why = 'cool'; else if (!e) W.why = 'noEp';
+    else { const dk0 = r.k - e.k0; const st = e.steps.filter((x) => x[0] >= dk0); const s0 = st.find((x) => dot(x[1], x[1]) > 0);
+      if (!s0) W.why = 'noImp'; else { const jm = Math.sqrt(dot(s0[1], s0[1])); const u = s0[1].map((c) => c / jm); W.vn = dot(s0[2], u); W.vax = dot(s0[2], s0[3]); W.lag = s0[0] - dk0;
+        W.w = NW.map((n) => { const ss = st.filter((x) => x[0] >= s0[0] && x[0] < s0[0] + n); const mags = ss.map((x) => Math.sqrt(dot(x[1], x[1]))).filter((m) => m > 0).sort((a, b) => a - b);
+          return { Jn: ss.reduce((a, x) => a + dot(x[1], u), 0), Jax: ss.reduce((a, x) => a + dot(x[1], s0[3]), 0), Jgame: ss.reduce((a, x) => a + x[5], 0), Wax: ss.reduce((a, x) => a + x[7], 0), spike: mags.length ? mags[mags.length - 1] / mags[(mags.length - 1) >> 1] : null }; }); } } }
+  return W.why ? { why: W.why } : { vn: W.vn, vax: W.vax, lag: W.lag, ...W.w[wi] };
+}
 function score3(g, wi) { // 찌르기 묶음만
   if (!g.stab) return { cat: g.cat1, sev: g.sev1, E: null, mu: null };
-  const r = g.first; const e = g.ep; if (!r) return { cat: 'none', sev: 0, E: null, mu: null, why: 'cool' }; if (!e) return { cat: null, why: 'noEp' };
-  const J = e.win[wi].Jn, v = e.vn; if (!(v > 0.05) || !(J > 0)) return { cat: 'none', sev: 0, E: 0, mu: null, why: 'v' };
+  const r = g.first; const m = w3(g, wi); if (m.why === 'cool') return { cat: 'none', sev: 0, E: null, mu: null, why: 'cool' }; if (m.why) return { cat: null, why: m.why };
+  const J = m.Jn, v = m.vn; if (!(v > 0.05) || !(J > 0)) return { cat: 'none', sev: 0, E: 0, mu: null, why: 'v' };
   const R = r.re; const E3 = 0.5 * J * v; const eU = 0.5 * (R.mFree + ARM_ASSIST) * R.speed * R.speed; const kb = R.Eblunt / eU;
   const x = classify(E3 * R.K, R.thr, E3 * kb, R.physK, E3 * 2 * R.hk, R.postK);
-  // 3 의 나머지 묶음 줄(같은 닿음)은 ① 으로 판정이 났다면 그 답도 봄? — 아님: ③ 은 닿음 한 번에 에너지 하나 (첫 줄의 셈만)
-  return { cat: x.cat, sev: x.sev, E: E3, mu: J / v, muAx: e.vax > 0.05 ? e.win[wi].Jax / e.vax : null, game: e.win[wi].Jgame > 0 };
+  return { cat: x.cat, sev: x.sev, E: E3, mu: J / v, muAx: m.vax > 0.05 ? m.Jax / m.vax : null, game: m.Jgame > 0 };
 }
 // ── μ 의 가운데값 (② 의 m) ──
 const mFrom = String(args.mfrom ?? 'L1,L2').split(',');
-const all = []; for (const S of SETS) for (const run of S.d.runs) for (const g of groups(run)) all.push({ set: S.name, run, g });
-const muPool = all.filter((x) => mFrom.includes(x.set) && x.g.stab && x.g.first && x.g.ep && x.g.ep.vn > 0.05 && x.g.ep.win[1].Jn > 0 && !(x.g.ep.win[1].Jgame > 0)).map((x) => x.g.ep.win[1].Jn / x.g.ep.vn);
+const all = []; for (const S of SETS) for (const run of S.d.runs) for (const g of groups(run)) (g.run = run), all.push({ set: S.name, run, g });
+const okMu = (g) => { if (!g.stab) return null; const m = w3(g, 1); return !m.why && m.vn > 0.05 && m.Jn > 0 && !(m.Jgame > 0) ? m.Jn / m.vn : null; };
+const muPool = all.filter((x) => mFrom.includes(x.set)).map((x) => okMu(x.g)).filter((y) => y != null);
 const MU = q(muPool, 0.5); const MS = [MU, 5, 10, 20, 40];
 const L = []; const P = (s = '') => L.push(s); const J = { MU, nMu: muPool.length, sets: {} };
 P(`② 의 m = ③ 이 잰 실린 질량 μ (T = 0.05 s) 의 가운데값 ${f(MU)} kg (${mFrom.join(' · ')} 찌르기 묶음 ${muPool.length} 개 · 끌림 충격량이 섞인 묶음 뺌) [잰] · 10 % ${f(q(muPool, 0.1))} · 90 % ${f(q(muPool, 0.9))}`);
@@ -69,17 +80,20 @@ for (const c of cells) {
   const valid3 = st.map((x, i) => WI.every((wi) => s3[wi][i].cat != null)); const chg = st.filter((x, i) => valid3[i] && new Set(WI.map((wi) => s3[wi][i].cat === 'wound')).size > 1).length; const nv = valid3.filter(Boolean).length;
   const agree = st.filter((x, i) => s3[1][i].cat != null && (s2[0][i].cat === 'wound') === (s3[1][i].cat === 'wound')).length; const na = s3[1].filter((y) => y.cat != null).length;
   P(`${c} | ${runSet} / ${stRuns.length} | ${st.length} | ${s2[0].filter((y) => y.any).length} | ${runW(c1)} · ${w(c1)} (${c1.filter((y) => y.cat === 'bruise').length}) | ${runW(s2[0])} · ${w(s2[0])} | ${s2.slice(1).map(w).join(' · ')} | ${s3.map(w).join(' · ')} | ${runW(s3[1])} · ${s3[1].filter((y) => y.cat === 'bruise').length} | ${f(q(e1, 0.5))} | ${f(q(e3, 0.5))} | ${f(q(mus, 0.1), 1)} · ${f(q(mus, 0.5), 1)} · ${f(q(mus, 0.9), 1)} | ${nv ? f(chg / nv) : '-'} (${chg}/${nv}) | ${na ? f(agree / na) : '-'} (${agree}/${na})`);
-  (J.sets[X[0].set].cells ??= {})[c] = { runs: runSet, stRuns: stRuns.length, nStab: st.length, w1: w(c1), w2: s2.map(w), w3: s3.map(w), runW1: runW(c1), runW2: runW(s2[0]), runW3: runW(s3[1]), e1: q(e1, 0.5), e3: q(e3, 0.5), mu: [q(mus, 0.1), q(mus, 0.5), q(mus, 0.9)], chg, nv, agree, na, noEp: s3[1].filter((y) => y.why === 'noEp').length, game: s3[1].filter((y) => y.game).length };
+  (J.sets[X[0].set].cells ??= {})[c] = { runs: runSet, stRuns: stRuns.length, nStab: st.length, w1: w(c1), w2: s2.map(w), w3: s3.map(w), runW1: runW(c1), runW2: runW(s2[0]), runW3: runW(s3[1]), e1: q(e1, 0.5), e3: q(e3, 0.5), mu: [q(mus, 0.1), q(mus, 0.5), q(mus, 0.9)], chg, nv, agree, na, noEp: s3[1].filter((y) => y.why === 'noEp' || y.why === 'noImp').length, game: s3[1].filter((y) => y.game).length };
 }
+{ const pool = (names) => { let a = 0, na = 0, c = 0, nv = 0, w1 = 0, w2 = 0, w3 = 0; for (const S of SETS.filter((S) => names.includes(S.name))) for (const v of Object.values(J.sets[S.name].cells ?? {})) { a += v.agree; na += v.na; c += v.chg; nv += v.nv; w1 += v.w1; w2 += v.w2[0]; w3 += v.w3[1]; } return { a, na, c, nv, w1, w2, w3 }; };
+  for (const names of [['L1', 'L2', 'N'], ['L1', 'L2'], ['N'], ['F']]) { const p = pool(names); if (!p.na) continue; P(`모음 ${names.join('+')}: ② 와 ③(0.05) 같은 답 ${f(p.a / p.na)} (${p.a}/${p.na}) · ③ 창 셋 사이 답 바뀜 ${f(p.c / p.nv)} (${p.c}/${p.nv}) · 상처 묶음 ① ${p.w1} · ② ${p.w2} · ③ ${p.w3}`); J.pool = { ...(J.pool ?? {}), [names.join('+')]: p }; } }
 // ── ③ 의 닿음 질 (E) ──
 P(''); P('## E 닿음 — 찌르기 묶음의 닿음 토막: J 가 창과 함께 자람 · 스텝 충격량 튐(가장 큼 ÷ 가운데 · 0.1 s 안) · 끌림(판정 코드가 건 충격량)이 섞인 몫 · 이어지지 않은 묶음');
-P('묶음 무기 간격 | 토막 | J(0.05)/J(0.025) 가운데 | J(0.1)/J(0.05) 가운데 | 튐 가운데 (90 %) | 끌림 섞임 | 토막 없음 | vn 가운데 m/s | v 칼축 가운데 | μ 칼축(Jax/vax) 가운데 | ∫F·v (칼 축) 0.05 가운데 J | ½Jv (0.05) 가운데 J');
-for (const c of cells) { const st = all.filter((x) => keyOf(x) === c && x.g.stab); const E = st.map((x) => x.g.ep).filter(Boolean);
-  const r1 = E.map((e) => (e.win[0].Jn > 0 ? e.win[1].Jn / e.win[0].Jn : null)), r2 = E.map((e) => (e.win[1].Jn > 0 ? e.win[2].Jn / e.win[1].Jn : null));
-  P(`${c} | ${E.length} | ${f(q(r1, 0.5))} | ${f(q(r2, 0.5))} | ${f(q(E.map((e) => e.spike), 0.5), 1)} (${f(q(E.map((e) => e.spike), 0.9), 1)}) | ${E.filter((e) => e.win[2].Jgame > 0).length} | ${st.length - E.length} | ${f(q(E.map((e) => e.vn), 0.5))} | ${f(q(E.map((e) => e.vax), 0.5))} | ${f(q(E.map((e) => (e.vax > 0.05 ? e.win[1].Jax / e.vax : null)), 0.5), 1)} | ${f(q(E.map((e) => e.win[1].Wax), 0.5))} | ${f(q(E.map((e) => (e.vn > 0 ? 0.5 * e.win[1].Jn * e.vn : null)), 0.5))}`); }
+P('묶음 무기 간격 | 토막 | J(0.05)/J(0.025) 가운데 | J(0.1)/J(0.05) 가운데 | 튐 가운데 (90 %) | 끌림 섞임 | 못 잰 묶음(cool 쉼 · noEp 토막 없음 · noImp 충격량 없음) | vn 가운데 m/s | v 칼축 가운데 | μ 칼축(Jax/vax) 가운데 | ∫F·v (칼 축) 0.05 가운데 J | ½Jv (0.05) 가운데 J | 판정 줄 → 첫 충격량 스텝 가운데');
+for (const c of cells) { const st = all.filter((x) => keyOf(x) === c && x.g.stab); const E = st.map((x) => ({ a: w3(x.g, 0), b: w3(x.g, 1), c: w3(x.g, 2) })).filter((e) => !e.a.why);
+  const why = {}; for (const x of st) { const m = w3(x.g, 1); if (m.why) why[m.why] = (why[m.why] ?? 0) + 1; }
+  const r1 = E.map((e) => (e.a.Jn > 0 ? e.b.Jn / e.a.Jn : null)), r2 = E.map((e) => (e.b.Jn > 0 ? e.c.Jn / e.b.Jn : null));
+  P(`${c} | ${E.length} | ${f(q(r1, 0.5))} | ${f(q(r2, 0.5))} | ${f(q(E.map((e) => e.c.spike), 0.5), 1)} (${f(q(E.map((e) => e.c.spike), 0.9), 1)}) | ${E.filter((e) => e.c.Jgame > 0).length} | ${JSON.stringify(why)} | ${f(q(E.map((e) => e.b.vn), 0.5))} | ${f(q(E.map((e) => e.b.vax), 0.5))} | ${f(q(E.map((e) => (e.b.vax > 0.05 ? e.b.Jax / e.b.vax : null)), 0.5), 1)} | ${f(q(E.map((e) => e.b.Wax), 0.5))} | ${f(q(E.map((e) => (e.b.vn > 0 ? 0.5 * e.b.Jn * e.b.vn : null)), 0.5))} | ${f(q(E.map((e) => e.b.lag), 0.5), 0)}`); }
 // ── μ 가 무엇에 따라 ──
 P(''); P('## E μ (T 0.05 · 끌림 섞인 토막 뺌) — 닿는 빠르기(vn) · 팔 펴짐 · 무기별 가운데 (개수)');
-const muRows = all.filter((x) => x.g.stab && x.g.first && x.g.ep && x.g.ep.vn > 0.05 && x.g.ep.win[1].Jn > 0 && !(x.g.ep.win[1].Jgame > 0)).map((x) => ({ set: x.set, W: x.run.W, vn: x.g.ep.vn, arm: x.g.first.body?.arm, push: x.g.first.re.push, part: x.g.part, mu: x.g.ep.win[1].Jn / x.g.ep.vn }));
+const muRows = all.filter((x) => okMu(x.g) != null).map((x) => ({ set: x.set, W: x.run.W, vn: w3(x.g, 1).vn, arm: x.g.first.body?.arm, push: x.g.first.re.push, part: x.g.part, mu: okMu(x.g) }));
 for (const W of ['rapier', 'longsword']) for (const set of SETS.map((S) => S.name)) { const R = muRows.filter((r) => r.W === W && r.set === set); if (!R.length) continue;
   const bin = (pred) => { const a = R.filter(pred).map((r) => r.mu); return `${f(q(a, 0.5), 1)} (${a.length})`; };
   P(`${set} ${W}: vn < 0.5 ${bin((r) => r.vn < 0.5)} · 0.5 ~ 1 ${bin((r) => r.vn >= 0.5 && r.vn < 1)} · 1 ~ 2 ${bin((r) => r.vn >= 1 && r.vn < 2)} · ≥ 2 ${bin((r) => r.vn >= 2)} | 팔 < 0.9 ${bin((r) => !(r.arm >= 0.9))} · ≥ 0.9 ${bin((r) => r.arm >= 0.9)} | 몸통·머리 ${bin((r) => /chest|abdomen|pelvis|head|neck/.test(r.part))} · 팔다리 ${bin((r) => !/chest|abdomen|pelvis|head|neck/.test(r.part))}`); }
