@@ -1,0 +1,59 @@
+diff -ru $S/p2/r6/mx/cells/r32_a/src/config.js $S/r35/cells/e1_145/src/config.js
+--- $S/p2/r6/mx/cells/r32_a/src/config.js	2026-11-27 16:52:11.839223185 +0000
++++ $S/r35/cells/e1_145/src/config.js	2026-11-28 04:57:44.824564188 +0000
+@@ -1509,6 +1509,7 @@
+ //  칼끝은 매 스텝 "지금 손에서 목표 너머의 한 점"을 겨눈다 → 손이 어느 길로 가든 칼끝이 칼 축을 따라 들어가 '찌르기'로 판정된다
+ export const THRUST = {
+   aim: 0.11, // 칼끝을 목표로 돌리며 손을 칼 선 뒤로 당기는 시간 (초)
++  aimRate: 145, // r35 E1 (실험 전용): 탭 찌르기 동안 서보로 가는 명령 칼 방향이 도는 빠르기 상한 (°/s) · 당김 시간 = max(aim, θ0 ÷ aimRate)
+   extend: 0.14, // 손을 칼 선을 따라 뻗는 시간 (초)
+   hold: 0.05, // 뻗은 채 (초)
+   recover: 0.18, // 자세로 돌아오는 시간 (초)
+diff -ru $S/p2/r6/mx/cells/r32_a/src/fighter.js $S/r35/cells/e1_145/src/fighter.js
+--- $S/p2/r6/mx/cells/r32_a/src/fighter.js	2026-11-27 19:00:26.655365655 +0000
++++ $S/r35/cells/e1_145/src/fighter.js	2026-11-28 04:57:44.822056596 +0000
+@@ -15,7 +15,7 @@
+ import { flowRecoveryScale } from './nagashi_recovery.js';
+ import { runStep, runFace, runWant } from './run.js'; // 뛰기 (11/18 사장님 · config RUN — 사람 · 11/19 셋 이상 판 AI 같은 셈)
+ import { cnStepTick } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 · 11/16 사장님 결정 켬)
+-import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, LEGS, AID, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, RUN, realS } from './config.js';
++import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, LEGS, AID, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, RUN, realS, THRUST } from './config.js';
+ import { COMBAT_HOOKS } from './combat.js';
+ import { teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
+ import { BIT, GROUND_GROUPS, BODY_GROUPS, FOOT_GROUPS, WEAPON_GROUPS, HELMET_GROUPS, SELF } from './self_contact.js'; // 충돌 부류 · 제 몸 닿음 (11/20 — 자리 수 제한 없음)
+@@ -417,6 +417,7 @@
+   return !!f.skill?.sec || (!!uq && (uq.hold?.st === 'press' || uq.hold?.st === 'wind' || !!uq.running));
+ };
+ /** 대본 · 덧씌우기가 손 · 칼을 쥔 중인가: 비기 · 고유 공격(scriptedMove) · 운동학 칼 길(iai — 발도 · 제비 베기 되돌림 · 겹치기 끌기) · 칼날 쥠(mordGrip — 죽음의 일격) · 대본이 놓은 팔(armsPlaced) · 탭 찌르기 · 발도 대기 손(thrustPose 덧씌우기) */
++const _e1A = new THREE.Vector3(), _e1B = new THREE.Vector3(), D2R_E1 = Math.PI / 180; // r35 E1 (실험 전용)
+ const handScripted = (f) => scriptedMove(f) || !!f.iai || !!f.iaiOneHold || !!f.armsPlaced?.() || f.skill?.thrustPose?.w > 0;
+ /** AI 의 비기 · 특수(고유) 공격이 도는 중인가 (사람 scriptedMove 와 같은 규칙 — AI 비기 secretRun 모든 단계 · 특수 공격 specRun 동작 동안) */
+ const aiScripted = (f) => !!f.aiCtl?.secretRun || (!!f.aiCtl?.specRun && f.aiCtl.specRun.motion == null);
+@@ -3740,6 +3741,27 @@
+     this.wristFixDeg = 0;
+     this.wristPlaneOk = false; // 엎친 손 길이 손 면을 골랐나 (아래 쉬는 칼 면 목표)
+     if (JOINTS.wristGuard && !this.mordAim) this.wristFixDeg = wristGuardAim(this, aim);
++    // r35 E1 (실험 전용 · THRUST.aimRate °/s): 탭 찌르기 동안(탭 처음 ~ 뻗음 끝 · 내리찍기 · 거둠은 뺌) 서보로 가는 마지막 명령 칼 방향이 앞 스텝의 명령에서
++    //  한 스텝에 aimRate × dt 넘게 돌지 않는다 — 큰 원 위에서 새 명령 쪽으로 그만큼만 나아감(섞기 · 패드 · 세로 이월 · 손목 지킴이 낸 것을 한꺼번에). wAim · prevAim · aimDirW 는 묶인 명령을 본다.
++    //  탭 첫 스텝: θ0 = 이 스텝 명령 ↔ 찌르기 선 → 당김 시간 tap.K.aim = max(K.aim, θ0 ÷ aimRate) (찌르기 시계 · 섞기 무게 · 손 당김이 모두 tap.K 를 읽음)
++    { const tpE = this.skill.tap;
++      if (THRUST.aimRate > 0 && tpE && !tpE.down && !tpE.abort && tpE.K && tpE.t < tpE.K.aim + tpE.K.extend) {
++        if (this.prevAim && this.lastDt > 0) {
++          const mx = THRUST.aimRate * D2R_E1 * this.lastDt, c = THREE.MathUtils.clamp(this.prevAim.dot(aim), -1, 1), ang = Math.acos(c);
++          if (ang > mx) {
++            const ax = _e1A.crossVectors(this.prevAim, aim);
++            if (ax.lengthSq() < 1e-12) ax.set(0, 1, 0).cross(this.prevAim);
++            if (ax.lengthSq() > 1e-12) { ax.normalize(); aim.copy(this.prevAim).applyAxisAngle(ax, mx).normalize(); }
++          }
++        }
++        if (!tpE.e1) {
++          const th0 = this.skill.thrustPose.dir, L = _e1B.set(th0[0], th0[1], th0[2]).applyQuaternion(this.yaw).normalize();
++          const t0 = Math.acos(THREE.MathUtils.clamp(L.dot(aim), -1, 1)) / D2R_E1;
++          tpE.e1 = { th0: t0, aim0: tpE.K.aim };
++          tpE.K.aim = Math.max(tpE.K.aim, t0 / THRUST.aimRate);
++        }
++      }
++    }
+     const mapAim = _mapAim.copy(aim); // 자세 지도 방향(빈손 짝힘·보정은 늘 이것을 본다)
+     if (BODY.trunkFollow > 0) { // WA2-2 follow-through 가 읽는 '칼이 겨눔보다 뒤처진 각'(rad): 칼날 축 ↔ 자세 지도 방향 (hold 와 무관하게 지도 기준)
+       rot(sword, _q1);

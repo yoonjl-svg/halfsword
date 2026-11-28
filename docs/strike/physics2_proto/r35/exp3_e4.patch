@@ -1,0 +1,13 @@
+diff -ru $S/p2/r6/mx/cells/r32_a/src/fighter.js $S/r35/cells/e4/src/fighter.js
+--- $S/p2/r6/mx/cells/r32_a/src/fighter.js	2026-11-27 19:00:26.655365655 +0000
++++ $S/r35/cells/e4/src/fighter.js	2026-11-28 04:58:06.560777054 +0000
+@@ -3723,7 +3723,8 @@
+       if (vy < -0.3 && this.skill.swinging) this.vertPeakDown = Math.max(this.vertPeakDown || 0, -vy);
+       const stoppedShort = (this.vertPeakDown || 0) > 1 && -vy < 0.3 * this.vertPeakDown && ay > -0.15;
+       const want = stoppedShort ? Math.min(0.5, this.vertPeakDown * ARM.vertLead) : 0;
+-      this.vertLeadAmt = want > (this.vertLeadAmt || 0) ? want : (this.vertLeadAmt || 0) * Math.max(0, 1 - dtl / 0.25);
++      // r35 E4 (실험 전용): 오를 때도 내릴 때와 같은 걸러짐(τ 0.25 s) — 한 스텝 계단 대신 목표 쪽으로 dt ÷ 0.25 씩
++      this.vertLeadAmt = want > (this.vertLeadAmt || 0) ? (this.vertLeadAmt || 0) + (want - (this.vertLeadAmt || 0)) * Math.min(1, dtl / 0.25) : (this.vertLeadAmt || 0) * Math.max(0, 1 - dtl / 0.25);
+       if (!this.skill.swinging && this.skill.activity < 0.05) this.vertPeakDown = 0; // 쉬면 기억 지움
+       else if (vy > 0.3) this.vertPeakDown = 0; // 올리기 시작하면 지움
+       if (this.vertLeadAmt > 1e-3) {
