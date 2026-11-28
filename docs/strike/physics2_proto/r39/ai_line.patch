@@ -1,6 +1,6 @@
 diff -ruN a/src/ai.js b/src/ai.js
 --- a/src/ai.js	2026-11-23 18:24:14.213662178 +0000
-+++ b/src/ai.js	2026-11-28 10:56:53.185778322 +0000
++++ b/src/ai.js	2026-11-28 11:39:37.526779783 +0000
 @@ -21,7 +21,7 @@
  //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
  // ─────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ diff -ruN a/src/ai.js b/src/ai.js
 +    }
 +    const on = me.bodyPose.idle >= 0.5 && ang != null && L.ang != null && ang >= L.ang;
 +    L.ang = ang;
-+    if (!on && L.t < AI_TAP_LINE.wait) return true;
++    if (!on && L.t < realS(AI_TAP_LINE.wait)) return true; // 상한은 실제 초 (config.js 표준 시간 · 다른 다가감 시계와 같게)
 +    this.tapLine = null;
 +    return false;
 +  }
@@ -100,12 +100,12 @@ diff -ruN a/src/ai.js b/src/ai.js
    }
 diff -ruN a/src/config.js b/src/config.js
 --- a/src/config.js	2026-11-27 16:52:11.839223185 +0000
-+++ b/src/config.js	2026-11-28 10:56:42.023989270 +0000
++++ b/src/config.js	2026-11-28 11:39:45.272370589 +0000
 @@ -1263,6 +1263,10 @@
  };
  
  // AI 의 이탈리아 런지 찌르기 막기(런지 찌르는 상대에게만 · 기본 끔) [사장님 11/04 지시 · 결정 전]
-+// AI 찌르기 탭 앞 손가락 뗌 (확인표 28 — docs/strike/physics2_notes/r35_ai_tip.md §10 · ai.js tapLineHold): 칼이 선에 오기를 기다리는 상한 (s)
++// AI 찌르기 탭 앞 손가락 뗌 (확인표 28 — docs/strike/physics2_notes/r35_ai_tip.md §10 · ai.js tapLineHold): 칼이 선에 오기를 기다리는 상한 (실제 s — 쓰는 곳에서 realS)
 +//  [확인 전 · 시간 사다리 0.4 — 같은 기록 §6 의 '칼이 선에 오를 때까지 기다리되 0.4 s 를 넘기지 않음'과 같은 값]
 +export const AI_TAP_LINE = { wait: 0.4 };
 +
