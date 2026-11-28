@@ -1,0 +1,100 @@
+diff -ru $S/p2/r6/mx/cells/r32_a/src/config.js $S/r35/cells/lead4/src/config.js
+--- $S/p2/r6/mx/cells/r32_a/src/config.js	2026-11-27 16:52:11.839223185 +0000
++++ $S/r35/cells/lead4/src/config.js	2026-11-28 04:31:30.101427727 +0000
+@@ -1525,6 +1525,10 @@
+   // 사람 탭 찌르기 몸 싣기(모든 유파 · AI 탭 찌르기도): 당김 driveChamber · 런지 걸음 driveStep · 몸이 앞발을 따라 실림 — 켬(둘 다) [사장님 11/15 · 11/16] · 수는 줄마다
+   driveChamber: 0.3, // 당김 (m — 걸음 사다리 0.3 칸 · 지금 보통 0.22 · 이탈리아 0) [사장님 11/16 · 값 11/26 권고대로]
+   driveStep: 0.45, // 런지 걸음 (m — 걸음 사다리 0.45 칸 · 지금 보통 0.3) [사장님 11/16 · 값 11/26 권고대로]
++  // 겨눔 따라옴 (r35 시제품 · physics2_notes/r35_ai_tip.md §6): 당김(겨눔) 동안 명령 칼 방향이 실제 칼보다 lead° 넘게 앞서 돌지 않는다 — 몸이 따라온 만큼만 겨눔이 나아감.
++  //  찌르기 시계는 칼이 남은 돌림 lead° 안에 들 때까지 겨눈 채 기다리되 탭부터 leadMax 초를 넘기지 않는다 [확인 전 · 노트 §6 값]
++  lead: 4, // (°) 안 빠른 줄의 칼 ↔ 명령 각 가운데
++  leadMax: 0.4, // (초) 시간 사다리
+ };
+ 
+ // 플랑베르주 간격 줄: 'off' = 지금 줄 · 그 밖은 weapon_measured.js FLAMBERGE_ROWS 같은 이름 줄 [사장님 10/29]
+diff -ru $S/p2/r6/mx/cells/r32_a/src/fighter.js $S/r35/cells/lead4/src/fighter.js
+--- $S/p2/r6/mx/cells/r32_a/src/fighter.js	2026-11-27 19:00:26.655365655 +0000
++++ $S/r35/cells/lead4/src/fighter.js	2026-11-28 04:32:57.233722487 +0000
+@@ -15,7 +15,7 @@
+ import { flowRecoveryScale } from './nagashi_recovery.js';
+ import { runStep, runFace, runWant } from './run.js'; // 뛰기 (11/18 사장님 · config RUN — 사람 · 11/19 셋 이상 판 AI 같은 셈)
+ import { cnStepTick } from './cn_step.js'; // 동방 보법 회피 편섬 (11/15 · 11/16 사장님 결정 켬)
+-import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, LEGS, AID, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, RUN, realS } from './config.js';
++import { STAMINA, BODY, WEAPON, VITALS, DIG_PROTO, BALANCE, SKILL, SKILL_BODY, GRIP, STEEL, RECOIL, GAIT, LEGS, AID, ARMOR, ANATOMY, ARENA, COMBAT, CLOSE, ARM, JOINTS, SECRET, AI_REACT, IB_FLOW, IB_LINK, SCHOOL_PASSIVE, UNIQUE_ASSIST, RUN, THRUST, realS } from './config.js';
+ import { COMBAT_HOOKS } from './combat.js';
+ import { teamOfIndex } from './team.js'; // 편 (2:2 동시 대전 10/29)
+ import { BIT, GROUND_GROUPS, BODY_GROUPS, FOOT_GROUPS, WEAPON_GROUPS, HELMET_GROUPS, SELF } from './self_contact.js'; // 충돌 부류 · 제 몸 닿음 (11/20 — 자리 수 제한 없음)
+@@ -266,6 +266,51 @@
+   const r = b.rotation();
+   return out.set(r.x, r.y, r.z, r.w);
+ };
++// 탭 찌르기 겨눔 따라옴 (r35 시제품 · THRUST.lead · physics2_notes/r35_ai_tip.md §6): 당김(겨눔 — tap.t < K.aim) 동안 덧씌우기 섞기 무게(th.w — 시간)를 그대로 쓰지 않고,
++//  섞은 명령 칼 방향이 '탭 처음 명령 → 찌르기 선(th.dir)' 돌림 면에서 실제 칼(이 스텝 칼 강체 자세의 칼 축)이 탭 처음부터 돈 만큼 + lead° 를 넘지 않는 데까지만 쓴다.
++//  돌림 면에 내린 각으로 재므로 면 밖의 굳은 어긋남(처짐)은 셈에 안 든다 · 돌림이 lead° 안인 탭은 th.w 그대로(같은 수). 무게는 줄지 않는다(명령이 되돌아가지 않음).
++//  남은 돌림(rem = 탭 처음 명령 ~ 선 각 − 칼이 돈 각)은 skill.updateThrust 의 찌르기 시계가 읽는다. 뻗음이 시작된 뒤(t ≥ K.aim)는 손대지 않는다.
++const _tlD = new THREE.Vector3(), _tlB = new THREE.Vector3(), _tlC = new THREE.Vector3(), _tlN = new THREE.Vector3(), _tlP = new THREE.Vector3(), _tlX = new THREE.Vector3(), _tlY = new THREE.Vector3(), _tlQ = new THREE.Quaternion(), _tlYi = new THREE.Quaternion();
++function thrustLead(f, aim, th) {
++  const tp = f.skill.tap;
++  if (tp.down || tp.abort || tp.t >= tp.K.aim || !f.sword) return th.w;
++  const D = _tlD.set(th.dir[0], th.dir[1], th.dir[2]).normalize();
++  const b = _tlB.set(0, 1, 0).applyQuaternion(rot(f.sword, _tlQ)).applyQuaternion(_tlYi.copy(f.yaw).invert()); // 칼 축 (몸 yaw 틀 — aim 과 같은 틀)
++  const g = (tp.lead ||= { c0: [aim.x, aim.y, aim.z], b0: [b.x, b.y, b.z], wa: tp.w0 || 0, rem: 0 });
++  const c0 = _tlC.fromArray(g.c0).normalize();
++  const n = _tlN.crossVectors(c0, D);
++  const s = n.length();
++  const th0 = Math.atan2(s, c0.dot(D));
++  if (s < 1e-6) {
++    g.rem = th0;
++    g.wa = th.w;
++    return th.w;
++  }
++  n.divideScalar(s);
++  const ang = (v) => {
++    const vp = _tlP.copy(v).addScaledVector(n, -n.dot(v));
++    return Math.atan2(n.dot(_tlX.crossVectors(c0, vp)), c0.dot(vp));
++  };
++  const pb = Math.max(0, ang(b) - ang(_tlY.fromArray(g.b0)));
++  g.rem = th0 - pb;
++  const lim = pb + THRUST.lead * (Math.PI / 180);
++  const cmd = (w) => _tlY.copy(aim).lerp(D, w);
++  let w = th.w;
++  if (ang(cmd(w)) > lim) {
++    let lo = Math.min(g.wa, w), hi = w;
++    if (ang(cmd(lo)) >= lim) w = lo;
++    else {
++      for (let i = 0; i < 24; i++) {
++        const m = (lo + hi) / 2;
++        if (ang(cmd(m)) > lim) hi = m;
++        else lo = m;
++      }
++      w = lo;
++    }
++  }
++  g.wa = w;
++  return w;
++}
+ const angvel = (b, out) => {
+   const v = b.angvel();
+   return out.set(v.x, v.y, v.z);
+@@ -3701,7 +3746,7 @@
+       }
+     }
+     if (th.w > 0) {
+-      aim.lerp(_v6.set(th.dir[0], th.dir[1], th.dir[2]), th.w);
++      aim.lerp(_v6.set(th.dir[0], th.dir[1], th.dir[2]), this.skill.tap ? thrustLead(this, aim, th) : th.w); // 탭 찌르기 겨눔은 칼이 따라온 만큼만 (thrustLead)
+       if (aim.lengthSq() < 1e-6) aim.set(th.dir[0], th.dir[1], th.dir[2]);
+       aim.normalize();
+     }
+diff -ru $S/p2/r6/mx/cells/r32_a/src/skill.js $S/r35/cells/lead4/src/skill.js
+--- $S/p2/r6/mx/cells/r32_a/src/skill.js	2026-11-27 19:00:26.655887921 +0000
++++ $S/r35/cells/lead4/src/skill.js	2026-11-28 04:31:30.105517038 +0000
+@@ -442,6 +442,9 @@
+     const K = tp?.K; // 이번 찌르기의 시간·뻗는 거리 (무기의 찌르기 장점 반영)
+     if (tp) {
+       tp.t += dt * f.stamina.attackSpeed;
++      // 겨눔 따라옴 (r35 시제품 · THRUST.lead — fighter.js thrustLead): 칼이 찌르기 선까지 남은 돌림이 lead° 넘으면 겨눈 채(당김 끝 앞) 기다린다 · 탭부터 leadMax 초까지
++      tp.age = (tp.age || 0) + dt;
++      if (!tp.down && tp.lead && tp.t >= K.aim && tp.age < T.leadMax && tp.lead.rem > T.lead * (Math.PI / 180)) tp.t = K.aim - 1e-6;
+       // 칼과 발 (다섯째 판 E2 · docs/strike/physics2_notes/r5_e2.md): 겨누는 동안 앞으로 내딛는 런지 부탁이 나오면(사람 탭 · AI 찌르기 기술 · 유파 찌르기 — 누가 냈든 같은 길) 그 런지에 맞춘다:
+       //  런지 발이 뜨기 전(채비 · 모아 딛기 — gait.js)이나 뜬 발이 디딜 때까지 남은 시간이 뻗는 시간(K.extend)보다 길면 겨눈 채(K.aim 끝) 머문다 → 뻗기가 런지 발 디딤과 함께 끝난다.
+       //  겨눈 채 머무는 것은 숨기지 않는다 — 상대가 읽을 수 있는 채비다

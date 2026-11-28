@@ -1,0 +1,104 @@
+--- p2/r6/mx/cells/r32_a/src/fighter.js	2026-11-27 19:00:26.655365655 +0000
++++ r35/cells/jprobe/src/fighter.js	2026-11-28 04:33:35.224189936 +0000
+@@ -3666,6 +3666,7 @@
+     //  허리 아래로     → 칼끝이 내려감(아래 자세)
+     // 자세에서 자세로 손을 옮기면 칼이 크게(최대 100° 넘게) 돌며 베기가 된다.
+     const aim = _v3.set(...guardDir(off.x, off.y, !!this.guardPose?.oneHand));
++    if (this.__aimSt) this.__aimSt.g = [aim.x, aim.y, aim.z]; if (this.__aimSt) { this.__aimSt.wiS = wi; this.__aimSt.thw = th.w; this.__aimSt.n = (this.__aimSt.n || 0) + 1; } // r35 jump probe (record only)
+     if (v2) {
+       // 쉼 무게 wi 의 섞을 곳 = 옛 보정 칼끝 방향 (아래 옛 줄과 같은 식)
+       let oldAim = null;
+@@ -3691,6 +3692,7 @@
+       if (aim.lengthSq() < 0.04) aim.set(G.dir[0], G.dir[1], G.dir[2]);
+       aim.normalize();
+     }
++    if (this.__aimSt) this.__aimSt.wi = [aim.x, aim.y, aim.z]; // r35 jump probe (record only)
+     if (tplan?.tilt) {
+       // 기술 길 덧칸 칼끝 들기 (+ 들기 · − 내리기): 칼 겨눔의 높이각만 (수평 방향 그대로 — 아래 vertLead 와 같은 식). 손이 먼저 내려 뻗는 동안 칼끝을 들고 있다가 끝 점에서 떨어뜨린다
+       const h = Math.hypot(aim.x, aim.z);
+@@ -3700,21 +3702,27 @@
+         aim.set((aim.x / h) * c, Math.sin(el), (aim.z / h) * c);
+       }
+     }
++    if (this.__aimSt) this.__aimSt.tilt = [aim.x, aim.y, aim.z]; // r35 jump probe (record only)
+     if (th.w > 0) {
+       aim.lerp(_v6.set(th.dir[0], th.dir[1], th.dir[2]), th.w);
+       if (aim.lengthSq() < 1e-6) aim.set(th.dir[0], th.dir[1], th.dir[2]);
+       aim.normalize();
+     }
++    if (this.__aimSt) this.__aimSt.th = [aim.x, aim.y, aim.z]; // r35 jump probe (record only)
+     if (this.schoolPassive?.school === 'italian') this.schoolPassive.tipAim(aim, this.lastDt || 0); // 이탈리아 곧은 선 (10/21 — 찌르는 동안 칼끝이 상대 쪽으로 · 12° · 60°/s, school_passive.js)
++    if (this.__aimSt) this.__aimSt.it = [aim.x, aim.y, aim.z]; // r35 jump probe (record only)
+     // 죽음의 일격 (사람 독일 비기 — src/mordschlag.js): 칼자루로 치는 동안(mordAim) 겨눔을 뒤집는다 — 자세 지도 · 길이 칼끝에 정한 쪽으로 칼자루(칼 축 −y)가 간다.
+     //  지나는 패드 대신 시작 자세의 겨눔으로(칼자루가 상대 쪽을 거쳐 서지 않게). 없으면 오늘 줄 그대로
+     if (this.mordAim) {
+       if (this.mordHold) aim.set(this.mordHold[0], this.mordHold[1], this.mordHold[2]);
+       aim.negate();
+     }
++    if (this.__aimSt) this.__aimSt.mord = [aim.x, aim.y, aim.z]; // r35 jump probe (record only)
+     aim.applyQuaternion(this.yaw);
++    if (this.__aimSt) this.__aimSt.yaw = [aim.x, aim.y, aim.z]; // r35 jump probe (record only)
+     // 보정 v2 (s > 0): 마지막 궤적 탐지기 (corr.js, 제 scratch 로 살아 있는 몸을 읽는다). 이 뒤 wAim·prevAim·aimDirW 가 같은 aim 을 본다
+     if (v2) corrStep(this, aim, sv);
++    if (this.__aimSt) this.__aimSt.corr = [aim.x, aim.y, aim.z]; // r35 jump probe (record only)
+     if (ARM.vertLead > 0) {
+       // 세로 follow-through(10/8 16:10, ARM.vertLead): 빠른 내려긋기 동안 서보 목표를 더 아래로 — 짧은 손가락 획도 칼끝은 몸통까지 내려가게. 손가락이 멈추면 τ 0.15 s 로 풀린다
+       // 2 판(16:12): 긋는 내내가 아니라 **빠른 내려긋기가 가운데 위에서 짧게 멈췄을 때만** — 긋는 중엔 최고 하강 속도를 기억하고, 손가락이 그 30 % 아래로 느려졌는데 아직 패드 가운데 위(y > −0.15)면
+@@ -3736,10 +3744,12 @@
+     // 비정상 손목 교정 (JOINTS.wristGuard — 사장님 10/24 17:2x '비정상적인 손목이나 팔 움직임을 교정'): 이 스텝 팔 명령(armIK)의 아래팔과 칼 겨눔이 이루는
+     //  손 면(굴림 0) 안 각이 사람 범위 [−HUMAN.ulnarDev, HUMAN.wristThumb] 밖이면 손 면 축 둘레로 가까운 범위 끝까지만 당긴다 — 손 자리 · 팔 그대로, 칼끝만 (아래 wristGuardAim · wristClamp).
+     //  aimRawW = 교정 전 겨눔 (팔꿈치 돌림이 다음 스텝 읽는다 — 교정된 겨눔을 읽으면 돌림과 교정이 서로를 따라 돈다). 칼날 거꾸로 쥠(죽음의 일격) 동안은 걸지 않는다
++    if (this.__aimSt) this.__aimSt.raw = [aim.x, aim.y, aim.z]; // r35 jump probe (record only)
+     (this.aimRawW ||= new THREE.Vector3()).copy(aim);
+     this.wristFixDeg = 0;
+     this.wristPlaneOk = false; // 엎친 손 길이 손 면을 골랐나 (아래 쉬는 칼 면 목표)
+     if (JOINTS.wristGuard && !this.mordAim) this.wristFixDeg = wristGuardAim(this, aim);
++    if (this.__aimSt) this.__aimSt.wg = [aim.x, aim.y, aim.z]; // r35 jump probe (record only)
+     const mapAim = _mapAim.copy(aim); // 자세 지도 방향(빈손 짝힘·보정은 늘 이것을 본다)
+     if (BODY.trunkFollow > 0) { // WA2-2 follow-through 가 읽는 '칼이 겨눔보다 뒤처진 각'(rad): 칼날 축 ↔ 자세 지도 방향 (hold 와 무관하게 지도 기준)
+       rot(sword, _q1);
+@@ -4889,7 +4899,7 @@
+  */
+ function wristGuardAim(f, aim) {
+   const J = f.jointByName;
+-  if (!f.sword || !J.uarmS || !J.farmS) return 0;
++  if (!f.sword || !J.uarmS || !J.farmS) { if (f.__aimSt) f.__aimSt.wgBr = 'none'; return 0; }
+   rot(f.bodies.chest, _wgQ).multiply(J.uarmS.target).multiply(J.farmS.target);
+   const fx = _wgF.set(1, 0, 0).applyQuaternion(_wgQ);
+   // 엎친 손 길 (JOINTS.wristPronate — 한손 무기 · 사장님 10/25 · 기록 wrist_audit §12): 칼끝을 그대로 두고 손 면(칼 면)을 아래팔 둘레로 돌려(엎침 · 뒤침 — 손목 밧줄 80 안)
+@@ -4913,17 +4923,18 @@
+         if (tapping) {
+           (f.wristPlaneW ??= new THREE.Vector3()).copy(rest);
+           f.wristPlaneOk = true;
+-          return 0;
++          if (f.__aimSt) f.__aimSt.wgBr = 'fitTap'; return 0;
+         }
+-        return wristClamp(fx, aim, _wgZ.set(0, 0, 1).applyQuaternion(rot(f.bodies.chest, _wgQ).multiply(J.uarmS.target).multiply(J.farmS.target)));
++if (f.__aimSt) f.__aimSt.wgBr = 'fitClamp'; return wristClamp(fx, aim, _wgZ.set(0, 0, 1).applyQuaternion(rot(f.bodies.chest, _wgQ).multiply(J.uarmS.target).multiply(J.farmS.target)));
+       }
+     }
+     // 아니면 지금 칼 면에서 가장 가까운(이어지게) 사람 범위 안 손 면
+     const pref = flat.lengthSq() > 1e-6 ? flat.normalize() : rest;
+     const out = (f.wristPlaneW ??= new THREE.Vector3());
++    if (f.__aimSt) f.__aimSt.wgIn = { fx: fx.toArray(), zF: zF.toArray(), pref: pref.toArray(), aim: aim.toArray(), tap: tapping };
+     if (wristPlane(fx, zF, aim, pref, out)) {
+       f.wristPlaneOk = true;
+-      return 0;
++      if (f.__aimSt) f.__aimSt.wgBr = 'plane'; return 0;
+     }
+     // 어느 손 면으로도 안 되면 칼끝을 아래팔 쪽으로 가장 적게(되는 손 면이 생기는 데까지 — 반씩 8 번) 당긴다. 굴림 0 손 면 교정보다 겨눔을 덜 바꾼다
+     const ax = _wgA.crossVectors(aim, fx);
+@@ -4939,11 +4950,11 @@
+       aim.applyAxisAngle(ax, hi).normalize();
+       if (wristPlane(fx, zF, aim, pref, out)) {
+         f.wristPlaneOk = true;
+-        return -hi / HD;
++        if (f.__aimSt) f.__aimSt.wgBr = 'bis'; return -hi / HD;
+       }
+     }
+   }
+-  return wristClamp(fx, aim, _wgZ.set(0, 0, 1).applyQuaternion(_wgQ));
++  if (f.__aimSt) f.__aimSt.wgBr = 'clamp'; return wristClamp(fx, aim, _wgZ.set(0, 0, 1).applyQuaternion(_wgQ));
+ }
+ /**
+  * 엎친 손 규칙이 서는 때 (JOINTS.cutPronate — 사장님 10/25 19:0x '이탈리아 내려 긋기의 문제를 살펴보고 수정해' · 기록 docs/strike/wrist_audit_2026-10-24.md §15):
