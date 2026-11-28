@@ -50,7 +50,7 @@ function install(f) {
 function snap(f) {
   const sw = f.sword; const q = q4(sw.rotation()); const pf = q4(sw.principalInertiaLocalFrame()); const ip = sw.principalInertia();
   const fq = q4(f.bodies.farmS.rotation());
-  return { A: v3(sw.translation()), c: v3(sw.worldCom()), v: v3(sw.linvel()), w: v3(sw.angvel()), m: sw.mass(), q, qi: q.clone().multiply(pf), ip: v3(ip), fq, gs: sw.gravityScale(), ld: sw.linearDamping(), ad: sw.angularDamping() };
+  return { fw: v3(f.bodies.farmS.angvel()), A: v3(sw.translation()), c: v3(sw.worldCom()), v: v3(sw.linvel()), w: v3(sw.angvel()), m: sw.mass(), q, qi: q.clone().multiply(pf), ip: v3(ip), fq, gs: sw.gravityScale(), ld: sw.linearDamping(), ad: sw.angularDamping() };
 }
 const Iw = (s, w) => { const qi = s.qi; const wl = w.clone().applyQuaternion(qi.clone().invert()); return new THREE.Vector3(s.ip.x * wl.x, s.ip.y * wl.y, s.ip.z * wl.z).applyQuaternion(qi); };
 function swordContacts(f) {
@@ -92,6 +92,8 @@ function split(f, judgeVal) {
     a1: ang(xF, blade), a2: ang(zF, zS), aimSw: ang(aim, blade), tip, nc: cons.length, placed,
     cosSO: sv > 1e-6 && ov > 1e-6 ? sum.servo.dot(sum.off) / (sv * ov) : null, cosWL: wr.length() > 1e-6 && ov > 1e-6 ? wr.dot(sum.off) / (wr.length() * ov) : null,
     sV: sum.servo.toArray().map(r2), oV: sum.off.toArray().map(r2), rV: res.toArray().map(r2), bl: blade.toArray().map(r2),
+    // r40 W8 (읽는 값): 일률 W — 손목 관절 몫이 칼에(pw) · 손목 관절 몫이 칼과 아래팔 사이에(pwr · 손목이 낸 일) · 지렛대가 칼에(pwL). 각속도는 스텝 앞뒤 평균
+    pw: r2(wr.dot(a.w.clone().add(b.w).multiplyScalar(0.5))), pwr: r2(wr.dot(a.w.clone().add(b.w).multiplyScalar(0.5).sub(a.fw.clone().add(b.fw).multiplyScalar(0.5)))), pwL: r2(sum.off.dot(a.w.clone().add(b.w).multiplyScalar(0.5))),
   };
 }
 const pack = (x) => (x ? Object.fromEntries(Object.entries(x).map(([k, v]) => [k, typeof v === 'number' ? Math.round(v * 1000) / 1000 : v])) : null);
