@@ -1,0 +1,12 @@
+L1 | longsword +0.3 | 판 40 | nf 칼끝 묶음 21 · 칼끝 문 든 5 | 판마다: 둘 다 5 · 문만 0 · nf 만 11 · 둘 다 없음 24 | nf 만의 까닭 어림 {"along":8,"slow":2,"geom":1} · 토막 {"chest":9,"farmO":1,"abdomen":1}
+L1 | longsword +0.45 | 판 40 | nf 칼끝 묶음 38 · 칼끝 문 든 14 | 판마다: 둘 다 13 · 문만 0 · nf 만 13 · 둘 다 없음 14 | nf 만의 까닭 어림 {"geom":4,"along":7,"slow":2} · 토막 {"chest":8,"farmS":1,"uarmS":1,"farmO":1,"abdomen":1,"head":1}
+L1 | rapier +0.3 | 판 40 | nf 칼끝 묶음 54 · 칼끝 문 든 31 | 판마다: 둘 다 24 · 문만 0 · nf 만 6 · 둘 다 없음 10 | nf 만의 까닭 어림 {"along":3,"geom":1,"slow":2} · 토막 {"uarmO":2,"chest":4}
+L1 | rapier +0.45 | 판 40 | nf 칼끝 묶음 57 · 칼끝 문 든 45 | 판마다: 둘 다 40 · 문만 0 · nf 만 0 · 둘 다 없음 0
+L2 | longsword +0.3 | 판 40 | nf 칼끝 묶음 18 · 칼끝 문 든 1 | 판마다: 둘 다 1 · 문만 0 · nf 만 8 · 둘 다 없음 31 | nf 만의 까닭 어림 {"along":6,"slow":1,"geom":1} · 토막 {"head":3,"chest":4,"uarmS":1}
+L2 | longsword +0.45 | 판 40 | nf 칼끝 묶음 22 · 칼끝 문 든 1 | 판마다: 둘 다 1 · 문만 0 · nf 만 17 · 둘 다 없음 22 | nf 만의 까닭 어림 {"geom":2,"along":12,"slow":3} · 토막 {"chest":4,"head":12,"farmO":1}
+L2 | rapier +0.3 | 판 40 | nf 칼끝 묶음 44 · 칼끝 문 든 32 | 판마다: 둘 다 27 · 문만 0 · nf 만 3 · 둘 다 없음 10 | nf 만의 까닭 어림 {"along":2,"slow":1} · 토막 {"chest":3}
+L2 | rapier +0.45 | 판 40 | nf 칼끝 묶음 40 · 칼끝 문 든 36 | 판마다: 둘 다 36 · 문만 0 · nf 만 0 · 둘 다 없음 4
+N | longsword | 판 40 | nf 칼끝 묶음 53 · 칼끝 문 든 13 | 판마다: 둘 다 12 · 문만 0 · nf 만 14 · 둘 다 없음 14 | nf 만의 까닭 어림 {"geom":2,"along":8,"slow":4} · 토막 {"pelvis":2,"farmO":1,"chest":8,"thighB":3}
+N | rapier | 판 40 | nf 칼끝 묶음 29 · 칼끝 문 든 23 | 판마다: 둘 다 22 · 문만 1 · nf 만 3 · 둘 다 없음 14 | nf 만의 까닭 어림 {"along":1,"slow":2} · 토막 {"chest":3}
+F | longsword | 판 6 | nf 칼끝 묶음 33 · 칼끝 문 든 1 | (싸움은 판마다 못 견줌)
+F | rapier | 판 6 | nf 칼끝 묶음 44 · 칼끝 문 든 21 | (싸움은 판마다 못 견줌)
