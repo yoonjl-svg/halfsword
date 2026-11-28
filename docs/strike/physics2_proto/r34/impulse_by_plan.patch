@@ -1,0 +1,23 @@
+--- $S/wt_hop6/tools/sim/run_scenes.mjs	2026-11-28 03:42:41.280528133 +0000
++++ $S/hop6/cells/s3_pj/tools/sim/run_scenes.mjs	2026-11-28 03:45:04.222915694 +0000
+@@ -236,6 +236,7 @@
+       air = 0; pitchTO = null;
+       if (!phase) phase = { t0: x.t, J: 0, Jp: 0, planJ: x.planJ, cut: i === 0 };
+       phase.J += x.fy * DT; phase.Jp += x.plan * DT;
++      if (x.planJ != null) { if (phase.pj1 == null) phase.pj1 = x.planJ; phase.pjL = x.planJ; } // (재기만) 그 받침에서 처음 · 마지막으로 읽힌 계획 J
+     } else {
+       if (air === 0) pitchTO = x.chestPitch;
+       air += DT;
+@@ -265,6 +266,12 @@
+   out.impRatioMean = r3(mean(ratios)); out.impRatioMin = r3(ratios.length ? Math.min(...ratios) : null); out.impRatioMax = r3(ratios.length ? Math.max(...ratios) : null); out.impPhases = ratios.length;
+   if (!ph.length && W.length) { const J = W.reduce((s, x) => s + x.fy * DT, 0), Jp = W.reduce((s, x) => s + x.plan * DT, 0); out.impRatioMean = out.impRatioMin = out.impRatioMax = r3(Jp > 1 ? J / Jp : null); out.impNote = '뜸 없음 — 창 전체의 받은 ÷ 시킨'; }
+   out.impSrc = S.some((x) => x.planJ != null) ? 'legDrive.plan.J' : 'dbg.N 적분';
++  { // (재기만 · 관문 줄은 그대로) 받은 충격량을 두 분모로 따로: 그 받침에서 처음 읽힌 계획 J(설계 뜻 — 디딜 때 세운 계획) · 시킨 수직 힘의 적분
++    const st = (a) => ({ n: a.length, mean: r3(mean(a)), min: r3(a.length ? Math.min(...a) : null), max: r3(a.length ? Math.max(...a) : null) });
++    const a = ph.filter((p) => p.pj1 != null);
++    out.impByPlan = { ...st(a.map((p) => p.J / p.pj1)), atStart: ph.filter((p) => p.planJ != null).length, phases: ph.length, lastOverFirst: r3(mean(a.map((p) => p.pjL / p.pj1))) };
++    out.impByCmd = st(ph.filter((p) => p.Jp > 1).map((p) => p.J / p.Jp));
++    out.impCmdOverPlan = st(a.filter((p) => p.Jp > 1).map((p) => p.Jp / p.pj1)); }
+   // 온 걸음 창 (같은 발 F 디딤 → 마지막 F 디딤)
+   const fT = tdReal.filter((d) => d.k === 'F');
+   let a = 0, b = W.length - 1;
