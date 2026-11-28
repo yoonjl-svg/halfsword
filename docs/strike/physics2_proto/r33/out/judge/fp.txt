@@ -1,0 +1,6 @@
+모두 0: true
+walk_rapier      스텝 576 / 576 · 바이트 같음 true · 처음 다른 스텝 - · 최대 차 0
+stand_rapier     스텝 1200 / 1200 · 바이트 같음 true · 처음 다른 스텝 - · 최대 차 0
+walk_longsword   스텝 576 / 576 · 바이트 같음 true · 처음 다른 스텝 - · 최대 차 0
+stand_longsword  스텝 1200 / 1200 · 바이트 같음 true · 처음 다른 스텝 - · 최대 차 0
+모두 같음: true
