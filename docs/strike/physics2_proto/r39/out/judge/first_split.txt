@@ -1,0 +1,4 @@
+9204 {"first":2366,"sec":19.717,"startsUpTo":[{"step":2366,"who":"E","tech":"stichAlber","vital":"thrust"}],"firstStart":{"step":2366,"who":"E","tech":"stichAlber","vital":"thrust"},"nStarts":1}
+9225 {"first":1286,"sec":10.717,"startsUpTo":[{"step":1286,"who":"E","tech":"stichPflugL","vital":"thrust"}],"firstStart":{"step":1286,"who":"E","tech":"stichPflugL","vital":"thrust"},"nStarts":1}
+9226 {"first":3145,"sec":26.208,"startsUpTo":[{"step":3145,"who":"E","tech":"stichOchs","vital":"thrust"}],"firstStart":{"step":3145,"who":"E","tech":"stichOchs","vital":"thrust"},"nStarts":1}
+9239 {"first":1083,"sec":9.025,"startsUpTo":[{"step":1083,"who":"E","tech":"stichPflug","vital":"thrust"}],"firstStart":{"step":1083,"who":"E","tech":"stichPflug","vital":"thrust"},"nStarts":1}
