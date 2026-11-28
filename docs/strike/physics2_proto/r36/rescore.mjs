@@ -6,7 +6,7 @@
 //   check = 엔진 닿는 충격량 읽기 검산 (서 있는 몸의 발-땅 법선 충격량 합 ÷ 시간 ÷ 몸무게)
 //  한 줄 = combat.strike 가 공격자의 칼 → 상대 몸 토막으로 불린 한 번. ① 게임 값 + 판정 식 다시 셈(검산) · 그 순간 몸 · ③ 용 닿음 토막(episode) 번호.
 //  닿음 토막(③) = 같은 상대 몸 토막에 공격자 칼(모든 칼 콜라이더)이 주는 충격량(엔진 닿음 법선 충격량 × KC + combat.afterStep 이 그 토막에 건 끌림 · 박힘 충격량)이 0 이 아닌 스텝이
-//   0.1 s(12 스텝) 넘게 끊기기 전까지. 첫 스텝부터 T = 0.025 · 0.05 · 0.1 s 창으로 더함.
+//   0.1 s(12 스텝) 넘게 끊기기 전까지. 스텝마다 충격량 벡터 · 다가오는 빠르기 벡터(스텝 전 상태) · 칼 축을 적고, 창 T 는 table.mjs 가 판정 줄의 스텝부터 더함.
 import { pathToFileURL } from 'node:url'; import { join, resolve, dirname } from 'node:path'; import { writeFileSync } from 'node:fs'; import { fileURLToPath } from 'node:url';
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const m = a.match(/^--([^=]+)(?:=(.*))?$/); return m ? [m[1], m[2] ?? true] : [a, true]; }));
 const ROOT = resolve(String(args.root ?? '.')); const HERE = dirname(fileURLToPath(import.meta.url));
@@ -134,16 +134,14 @@ function readStep(G, pairs, gameJ) {
       for (const x of parts) { const vr = velAt(SW, x.p).sub(velAt(PS, x.p)); W += x.J.dot(vr); Wax += x.J.dot(axis) * vr.dot(axis); const w = x.J.length(); Jv.add(x.J); Pw.addScaledVector(x.p, w); wsum += w; }
       if (wsum > 0) Pw.divideScalar(wsum);
       const key = `${att.index}:${vic.index}:${name}`; let ep = cur.open[key];
-      if (!ep || k - ep.last > GAPK) { const vr = velAt(SW, Pw).sub(velAt(PS, Pw)); const un = Jv.clone().normalize();
-        ep = cur.open[key] = { id: cur.eps.length, att: att.index, part: name, k0: k, last: k, vn: r6(vr.dot(un)), vax: r6(vr.dot(axis)), vrel: r6(vr.length()), un, steps: [] }; cur.eps.push(ep); }
-      ep.last = k;
-      if (k - ep.k0 < WIN[2]) ep.steps.push({ dk: k - ep.k0, Jn: r6(Jv.dot(ep.un)), Jax: r6(Jv.dot(axis)), Jmag: r6(Jv.length()), Jeng: r6(Jeng), Jgame: r6(Jg.length()), W: r6(W), Wax: r6(Wax) });
+      if (!ep || k - ep.last > GAPK) { ep = cur.open[key] = { id: cur.eps.length, att: att.index, part: name, k0: k, last: k, steps: [] }; cur.eps.push(ep); }
+      ep.last = k; const vr = velAt(SW, Pw).sub(velAt(PS, Pw)); const a5 = (u) => [r5(u.x), r5(u.y), r5(u.z)];
+      ep.steps.push([k - ep.k0, a5(Jv), a5(vr), a5(axis), r5(Jeng), r5(Jg.length()), r5(W), r5(Wax)]); // [dk, 충격량 벡터(몸 토막이 받은 쪽), 다가오는 빠르기 벡터(칼 − 토막 · 스텝 전), 칼 축, 엔진 법선 충격량 합, 판정 코드가 건 충격량 크기, Σ J·v, Σ (J·축)(v·축)]
     }
   }
 }
-function finishEps() { return cur.eps.map(({ un, ...e }) => { const w = WIN.map((n) => { const s = e.steps.filter((x) => x.dk < n); const sum = (key) => s.reduce((a, x) => a + (x[key] ?? 0), 0); return { n, Jn: r6(sum('Jn')), Jax: r6(sum('Jax')), Jeng: r6(sum('Jeng')), Jgame: r6(sum('Jgame')), W: r6(sum('W')), Wax: r6(sum('Wax')) }; });
-  const mags = e.steps.map((x) => x.Jmag).filter((x) => x > 0).sort((a, b) => a - b); const spike = mags.length ? mags[mags.length - 1] / mags[mags.length >> 1] : null;
-  return { ...e, win: w, spike: r6(spike), nSteps: e.steps.length, steps: undefined, stepJ: e.steps.map((x) => [x.dk, x.Jn, x.Jeng, x.Jgame]) }; }); }
+const r5 = (x) => +x.toFixed(5);
+function finishEps() { return cur.eps; }
 function linkRows() { for (const r of cur.rows) { const c = cur.eps.filter((e) => e.att === r.att && e.part === r.part && r.k >= e.k0 - 2 && r.k <= e.last + 1); r.ep = c.length ? c[c.length - 1].id : null; } }
 
 // ── 장면 ──

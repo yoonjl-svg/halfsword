@@ -13,6 +13,7 @@
 //    noturn = 탭이 도는 동안 몸이 바라보는 점(faceTarget)을 탭 처음 그 자리로 굳힘 → 몸 돌림 입력 없앰 (AI 반응 지연 버퍼에도 같은 점이 들어감)
 //    aimfix = 탭이 도는 동안 찌르기 목표점(skill.thrustTarget)을 탭 처음의 세계 점으로 굳힘 (상대를 따라가지 않음)
 //    calm   = AI 가 탭을 부를 때 칼끝이 2 m/s 넘게 움직이면 그 탭을 부르지 않음 (탭 앞 동작에서 곧장 찌르지 않게 — 사건 수가 바뀜)
+//    padhold = 탭이 도는 동안 손 패드(handOffset)를 탭 처음 자리로 굳힘 (AI 기술 길이 탭 동안 패드를 옮기지 못하게 → 휘두름 깃발 · 자세 지도 섞임이 탭 앞 그대로)
 //    aimslow = 탭의 당김 시간(K.aim)을 두 배로 (명령 칼 방향이 도는 빠르기를 반으로) · extslow = 뻗는 시간(K.extend)을 두 배로
 //    여럿은 쉼표로.
 //  --human=1 : 사람 길 관문 가까운 장면(wb_gate.mjs 의 nearGap 난수 차례 · wb_measure.mjs runThrust 를 옮겨 적은 장면 — 서 있는 과녁 · 탭 한 번)을 같은 기록으로.
@@ -96,7 +97,8 @@ function capture(f, ai, st, LJ) {
     aimSword: angD(aW, ax), twC: f.__rec.twC ?? null, poleSin: f.__rec.poleSin ?? null,
     tap: !!tp, ph, tt: tp ? tp.t : null, w: th?.w ?? 0, vital: !!tp?.vital, head: !!tp?.head, chFit: tp?.chFit ?? null,
     mvx: f.move.x, mvy: f.move.y, aimx: f.skill.aim?.x ?? null, aimy: f.skill.aim?.y ?? null, mode: ai?.mode ?? null, aph: ai?.phase ?? null, tech: ai?.tech?.name ?? null, swing: !!f.skill?.swinging, walk: !!f.gait?.walking, req: f.gait?.req?.kind ?? null, st: f.state,
-    tqWr: tq.wr, tqEl: tq.el, tqSh: tq.sh,
+    tqWr: tq.wr, tqEl: tq.el, tqSh: tq.sh, aWv: [aW.x, aW.y, aW.z].map((x) => +x.toFixed(4)), aWb: aW.clone().applyQuaternion(yawI).toArray().map((x) => +x.toFixed(4)),
+    hErr: (() => { const fp = f.foe?.bodies?.pelvis?.translation(), pp = B.pelvis.translation(); if (!fp) return null; const want = Math.atan2(-(fp.z - pp.z), fp.x - pp.x); return Math.atan2(Math.sin(want - f.heading), Math.cos(want - f.heading)) / HD; })(), axv: [ax.x, ax.y, ax.z].map((x) => +x.toFixed(4)),
   };
   st.hT = hT; st.hTb = hTb; st.aW = aW; st.thDir = thDir; st.head = f.heading; f.__rec = {};
   return r;
@@ -141,6 +143,7 @@ for (const w of WS) for (const s of seeds) {
   if (EXP.has('still') || EXP.has('noturn')) G.before = () => { for (const f of F) { const tp = f.skill?.tap; const on = !!tp && !tp.down; f.__exp = on;
     if (!on) { f.__face = null; continue; } if (EXP.has('still')) f.move.set(0, 0);
     if (EXP.has('noturn')) { if (!f.__face) { const p = f.faceTarget; f.__face = { x: p.x, y: p.y, z: p.z }; } f.faceTarget = f.__face; } } };
+  if (EXP.has('padhold')) { const ob = G.before; G.before = (t) => { ob?.(t); for (const f of F) { const tp = f.skill?.tap; if (!tp || tp.down) { f.__pad = null; continue; } if (!f.__pad) f.__pad = [f.handOffset.x, f.handOffset.y]; f.handOffset.set(f.__pad[0], f.__pad[1]); } }; }
   if (EXP.has('aimfix')) { const ob = G.before; G.before = (t) => { ob?.(t); for (const f of F) f.__exp = !!f.skill?.tap && !f.skill.tap.down; }; }
   if (EXP.has('calm')) { for (const f of F) { const sk = f.skill; const o = sk.thrust.bind(sk); sk.thrust = (opt = {}) => { if (f.aiControlled !== false && opt.step === false && !opt.rangeCommit) { const tip = f.bladePoint(1, new THREE.Vector3()); if (V(f.sword.velocityAtPoint(tip)).length() > 2) return false; } return o(opt); }; } }
   // fightRaw (wb_measure.mjs) 그대로 + 스텝 기록 · 상처 기록
