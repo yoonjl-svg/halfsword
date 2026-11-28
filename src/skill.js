@@ -513,9 +513,12 @@ export class Skill {
     //  (쓰러진 상대는 plungePose)
     const ext = Math.hypot(h0[0], h0[1] - 0.1, h0[2] - 0.2); // 어깨(가슴 기준 [0, 0.1, 0.2])에서 손까지
     const ch = tp.drive?.chamber != null ? tp.drive.chamber : tp.it ? 0 : T.chamber * THREE.MathUtils.clamp((ext - 0.36) / 0.12, 0, 1); // 이탈리아 찌르기 ②: 당기지 않는다 · 몸 싣기(THRUST.drive 당김 칸 — 11/15)면 유파 · 팔 굽힘과 상관없이 그만큼 당김
+    // 당김 자리는 팔이 할 수 있는 곳 안 (r28 A — fighter.drawFit): 칼 선을 따라 당기는 길을 팔 풀이로 풀어 위팔 돌림이 범위 끝 띠에 들기 앞까지만 — 탭마다 한 번(첫 스텝) 잼. 뻗음 끝(h0 + reach)은 그대로
+    if (tp.chFit === undefined) tp.chFit = f.drawFit(h0, _q, ch);
+    const chU = Math.min(ch, tp.chFit);
     const a = THREE.MathUtils.clamp(t / K.aim, 0, 1);
     const s = THREE.MathUtils.clamp((t - K.aim) / K.extend, 0, 1);
-    const e = -ch * a * a * (3 - 2 * a) + (ch + K.reach) * s * s * (3 - 2 * s);
+    const e = -chU * a * a * (3 - 2 * a) + (chU + K.reach) * s * s * (3 - 2 * s);
     for (let k = 0; k < 3; k++) pose.hand[k] = h0[k] + _q.getComponent(k) * e;
     // 칼끝: 겨누는 동안은 지금 손(칼자루)에서 목표점 너머 past 의 점을 향해 돌리고, 뻗기 시작하면 그 방향을 붙잡는다.
     //  뻗는 동안 손은 거의 칼 축 방향으로 가는데(측정 0.96), 방향을 계속 고쳐 잡으면 손목이 5~9° 늦게 따라 돌며

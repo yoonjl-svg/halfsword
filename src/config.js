@@ -510,6 +510,9 @@ export const ARM = {
   vertLead: 0.05, // 세로 follow-through: 빠르게 아래로 긋는 동안 손목 서보 목표를 v × 값(rad per m/s) 더 아래로(상한 0.5 rad) — R2′ 범위만 · 0 = 끔 [사장님 10/8]
   servoLead: 0.5, // 손목 서보 목표 각을 (1 + servoLead) 배로 앞세움(한손 무기 · R2′ 범위만) — 제동도 그만큼 늦게 · 0 = 끔 [사장님 10/8]
   slack: 0.005, // 펴짐 여유 (m): armIK 가 손 목표 거리를 (위팔 + 아래팔 − 이 값)에서 자른다. 근접 밀치기 '팔 다 펴짐'(fighter.armFull)·보정 v2 순서 결합(fighter armU)이 같은 값을 읽는다
+  // 손목 한도 (N·m): 손목 서보가 칼에 거는 마지막 토크(상한 × 힘-빠르기 + 무게 버팀 + 날 세우기의 합)의 크기를 여기서 자른다 (fighter.js driveSword · 사람 · AI · 무기 모두 같은 값).
+  //  심판(tools/sim/honesty.mjs 칼 관절 한도)도 이 값을 읽는다 — 수 하나. 25 = 심판이 써 온 사람 손목 한도 그대로(새 값 아님 · 노트 r37 §6 · 확인표 18 갈래 (가) [사장님 11/28])
+  wristLimit: 25,
 };
 
 export const WEAPON = {
