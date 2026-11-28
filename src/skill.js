@@ -176,8 +176,11 @@ export function segDist(p1, q1, p2, q2) {
 }
 
 /** AI 몸의 '손가락이 닿음' (11/19 보정 v2 묶음 — 닿음 신호 · 기록 docs/strike/human_ai_parity_2026-11-19.md §3 · §10): 손가락이 없으니 공격 · 비기 · 막기 꼴 동안. AI 가 아니면 false */
+//  찌르기 탭 앞 (확인표 28 — 기록 docs/strike/physics2_notes/r35_ai_tip.md §10): 탭 찌르기를 내기로 한 다가감 끝부터 탭을 낼 때까지(ai.js tapLineHold — tapLine)는 손가락을 뗌 —
+//  사람이 손가락을 떼고 칼이 자세로 돌아온 뒤 탭하는 것과 같은 입력 뜻
 export function aiFingerHeld(f) {
   const a = f?.aiCtl;
+  if (a?.tapLine && a.mode === 'attack' && a.phase === 'approach') return false;
   return !!a && (a.mode === 'attack' || a.mode === 'secret' || a.mode === 'defend');
 }
 
