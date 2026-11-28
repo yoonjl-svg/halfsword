@@ -1,0 +1,89 @@
+diff --git a/best/tools/sim/run_gate.mjs b/s1/tools/sim/run_gate.mjs
+index 03ebb36..cd53b95 100644
+--- a/best/tools/sim/run_gate.mjs
++++ b/s1/tools/sim/run_gate.mjs
+@@ -49,12 +49,13 @@ const OUT = join(resolve(String(args.out ?? process.env.RUN_GATE_OUT ?? join(tmp
+ mkdirSync(OUT, { recursive: true });
+ 
+ // ── 장면 돌리기 (한 번에 JOBS 개) ──
+-const fileOf = (scene, w) => join(OUT, `${scene}.${w}.${SEEDS}.json`);
++const HOPW = args.hopWarm != null && +args.hopWarm !== 0 ? +args.hopWarm : null; // --hopWarm=<s> (재기만 · 기본 없음): hop 창을 켜진 뒤 s 부터 (run_scenes.mjs 머리 글)
++const fileOf = (scene, w) => join(OUT, `${scene}.${w}.${SEEDS}${scene === 'hop' && HOPW != null ? '.w' + String(HOPW).replace('.', '') : ''}.json`);
+ async function runAll(scenes) {
+   const todo = [];
+   for (const s of scenes) for (const w of WEAPONS) { const f = fileOf(s, w); if (args.fresh || !existsSync(f)) todo.push([s, w, f]); }
+   let k = 0;
+-  const worker = async () => { while (k < todo.length) { const [s, w, f] = todo[k++]; await new Promise((ok, no) => { const p = spawn(process.execPath, [join(ROOT, 'tools/sim/run_scenes.mjs'), `--root=${ROOT}`, `--scene=${s}`, `--weapon=${w}`, `--variants=${SEEDS}`, `--json=${f}`, '--quiet'], { stdio: ['ignore', 'ignore', 'pipe'] }); let err = ''; p.stderr.on('data', (d) => { err += d; }); p.on('exit', (c) => (c === 0 ? ok() : no(new Error(`${s} ${w}: ${err.split('\n').filter((l) => !/deprecated/.test(l)).join(' ').slice(0, 400)}`)))); }); process.stderr.write(`  · ${s} ${w} 끝\n`); } };
++  const worker = async () => { while (k < todo.length) { const [s, w, f] = todo[k++]; await new Promise((ok, no) => { const p = spawn(process.execPath, [join(ROOT, 'tools/sim/run_scenes.mjs'), `--root=${ROOT}`, `--scene=${s}`, `--weapon=${w}`, `--variants=${SEEDS}`, `--json=${f}`, '--quiet', ...(s === 'hop' && HOPW != null ? [`--hopWarm=${HOPW}`] : [])], { stdio: ['ignore', 'ignore', 'pipe'] }); let err = ''; p.stderr.on('data', (d) => { err += d; }); p.on('exit', (c) => (c === 0 ? ok() : no(new Error(`${s} ${w}: ${err.split('\n').filter((l) => !/deprecated/.test(l)).join(' ').slice(0, 400)}`)))); }); process.stderr.write(`  · ${s} ${w} 끝\n`); } };
+   await Promise.all(Array.from({ length: Math.min(JOBS, todo.length) }, worker));
+   const out = {};
+   for (const s of scenes) out[s] = WEAPONS.flatMap((w) => JSON.parse(readFileSync(fileOf(s, w), 'utf8')).runs);
+@@ -130,7 +131,7 @@ function steady(runs, v) {
+   physics(runs, ''); honesty(runs, ''); recordOnly(runs);
+ }
+ 
+-console.log(`뛰기 관문 ${STAGE} · 판 ${SEEDS} · 무기 ${WEAPONS.join(',')} · 한도(LEGS.limit) 엉덩이 굽힘폄 ${LIM.hipFlex} · 벌림 ${LIM.hipAbd} · 돌림 ${LIM.hipRot} · 무릎 폄 ${LIM.kneeExt} · 굽힘 ${LIM.kneeFlex} · 발바닥 ${LIM.anklePlantar} · 발등 ${LIM.ankleDorsi} N·m · 캐시 ${OUT}`);
++console.log(`뛰기 관문 ${STAGE} · 판 ${SEEDS}${HOPW != null ? ` · 창 켜진 뒤 ${HOPW} s 부터` : ''} · 무기 ${WEAPONS.join(',')} · 한도(LEGS.limit) 엉덩이 굽힘폄 ${LIM.hipFlex} · 벌림 ${LIM.hipAbd} · 돌림 ${LIM.hipRot} · 무릎 폄 ${LIM.kneeExt} · 굽힘 ${LIM.kneeFlex} · 발바닥 ${LIM.anklePlantar} · 발등 ${LIM.ankleDorsi} N·m · 캐시 ${OUT}`);
+ if (STAGE === 'hop') {
+   const { hop } = await runAll(['hop']);
+   count(`넘어짐 없음 (${WEAPONS.length} 무기)`, hop, fell, '§5 (i)');
+diff --git a/best/tools/sim/run_scenes.mjs b/s1/tools/sim/run_scenes.mjs
+index 94e46cc..50df4c4 100644
+--- a/best/tools/sim/run_scenes.mjs
++++ b/s1/tools/sim/run_scenes.mjs
+@@ -4,6 +4,7 @@
+ //   node tools/sim/run_scenes.mjs --scene=<장면> [--weapon=longsword] [--variants=0-7] [--json=<파일>] [--root=<나무>] [--quiet]
+ //   장면: hop · run<빠르기> (run25 = 2.5 · run275 = 2.75 · run35 = 3.5 m/s) · run · runbreak · runturn · runhit · walkhit
+ //    hop      제자리 뜀 — 덮어씀 RUN.cost:0 · RUN.legVmax:0 · RUN.contactMax:0.26 (스틱 끝 그대로 · 시킨 빠르기만 0) · 뛰기 시작 뒤 6 s 를 잼
++//             --hopWarm=<s> (기본 0 · 재기만): 창 = 켜진 뒤 s 부터 s + 6 · 정직 · 관절 끝 장부도 켜진 뒤 s 부터 (r34 읽기 (나) · 1.5)
+ //    runNN    고른 빠르기 — 덮어씀 RUN.cost:0 · RUN.legVmax:<빠르기> · 뛰기 시작 뒤 12 s · 재는 창 = 시작 3 s 뒤부터 끝까지의 온 걸음(같은 발 디딤 → 디딤)
+ //    run      들어가기 (기력 그대로 · 덮어씀 없음): 뛰기 시작 1 · 2 · 3 · 4 s 뒤 빠르기 · 4 s 동안 간 길 · 첫 1.5 s 안 넘어짐 · 첫 1 s 의 평균 가속
+ //    runbreak 끊고 서기 (legs_battery.mjs 의 같은 이름 장면과 같은 조종 — 1.5 s 뛰고 runBreak · 스틱 뒤 1.5 s): 끊은 뒤 무게중심 수평 빠르기가 0.3 m/s 밑이 될 때까지 시간 · 길 · 평균 줄임
+@@ -43,7 +44,7 @@ const CFG = await import(u('src/config.js'));
+ function sceneDef(name) {
+   const m = name.match(/^run(\d{2,3})$/);
+   if (m) { const v = m[1].length === 2 ? +m[1] / 10 : +m[1] / 100; return { kind: 'steady', v, cfg: { 'RUN.cost': 0, 'RUN.legVmax': v }, after: 12, warm: 3 }; }
+-  if (name === 'hop') return { kind: 'hop', cfg: { 'RUN.cost': 0, 'RUN.legVmax': 0, 'RUN.contactMax': 0.26 }, after: 6, warm: 0 };
++  if (name === 'hop') { const hw = args.hopWarm != null ? +args.hopWarm : 0; return { kind: 'hop', cfg: { 'RUN.cost': 0, 'RUN.legVmax': 0, 'RUN.contactMax': 0.26 }, after: hw + 6, warm: hw, ledgerFrom: hw }; }
+   if (name === 'run') return { kind: 'entry', cfg: {}, after: 5, warm: 0 };
+   if (name === 'runbreak') return { kind: 'break', cfg: {}, after: 7, warm: 0 };
+   if (name === 'runturn') { const v = args.vturn != null ? +args.vturn : +(0.8 * CFG.RUN.legVmax).toFixed(3); return { kind: 'turn', v, cfg: { 'RUN.cost': 0, 'RUN.legVmax': v }, after: 7, warm: 0 }; }
+@@ -171,8 +172,9 @@ function one(variant) {
+     if (!fell && (st !== 'stand' || lowFor > 0.25 || tiltFor > 0.25)) { fell = true; tFall = +t.toFixed(3); why = st !== 'stand' ? st : lowFor > 0.25 ? '주저앉음' : '가슴 60°'; }
+     // 재는 창: 뛰기 시작 + warm ~ 시작 + after (걷기 장면은 3 s ~ 9 s)
+     const t0 = DEF.kind === 'walkhit' ? 2.5 : tOn;
+-    rec.active = !fell && t0 != null && t >= t0 && t <= t0 + DEF.after + (DEF.kind === 'walkhit' ? 6 : 0); // 정직 · 관절 끝 장부는 뛰기 시작부터
+-    const warm = rec.active && t < t0 + DEF.warm; // 걸음 셈의 창은 시작 + warm 부터 (그 전에 넘어지면 시작부터 넘어질 때까지 — winFallback)
++    const act = !fell && t0 != null && t >= t0 && t <= t0 + DEF.after + (DEF.kind === 'walkhit' ? 6 : 0);
++    rec.active = act && t >= t0 + (DEF.ledgerFrom ?? 0); // 정직 · 관절 끝 장부는 뛰기 시작부터 (hop --hopWarm 이면 시작 + 그 값부터)
++    const warm = act && t < t0 + DEF.warm; // 걸음 셈의 창은 시작 + warm 부터 (그 전에 넘어지면 시작부터 넘어질 때까지 — winFallback)
+     const dn = D?.dbg?.n ?? 0, ran = dn !== dn0; dn0 = dn;
+     const slip = D?.dbg?.slipN ?? 0, slipped = slip !== slip0; slip0 = slip;
+     const nF = footN('F'), nB = footN('B');
+@@ -183,7 +185,7 @@ function one(variant) {
+       chestYaw: (() => { const f = fwdOf(P, 'chest'); return Math.atan2(f.z, f.x); })(),
+       gs: { F: !!P.gait?.legs?.F?.stance, B: !!P.gait?.legs?.B?.stance },
+       calls: calls.map((x) => ({ k: x.k, stance: x.stance, sh: shares(x.raw, x.str), abdArm: x.stance && x.Fy > 0.3 * Mg ? Math.abs(x.raw.hx) / x.Fy : null, copAx: x.ax, Fy: x.Fy })),
+-      act: rec.active, warm,
++      act, warm,
+     };
+     rec.steps.push(S);
+     // 디딘 무릎 가장 깊이 (걸음 장치의 디딤 칸 한 번마다)
+@@ -232,7 +234,7 @@ function summarize(rec, o) {
+     if (any) {
+       if (air > 0 && pitchTO != null) flights.push({ T: air, dPitch: Math.abs(x.chestPitch - pitchTO) });
+       air = 0; pitchTO = null;
+-      if (!phase) phase = { t0: x.t, J: 0, Jp: 0, planJ: x.planJ };
++      if (!phase) phase = { t0: x.t, J: 0, Jp: 0, planJ: x.planJ, cut: i === 0 };
+       phase.J += x.fy * DT; phase.Jp += x.plan * DT;
+     } else {
+       if (air === 0) pitchTO = x.chestPitch;
+@@ -258,7 +260,7 @@ function summarize(rec, o) {
+     out.fyLpHz = FY_HZ; out.fyPeakLpBW = pk(FY_HZ); out.fyPeakLp20BW = pk(20); out.fyPeakLp25BW = pk(25);
+     out.fyWin = [i0, i1]; out.fyBW = Array.from(fyAll, (v) => +v.toFixed(4)); }
+   out.fyPlanPeakBW = r3(W.length ? Math.max(...W.map((x) => x.plan)) / Mg : null);
+-  const ph = phases.filter((p) => p.T >= 0.05);
++  const ph = phases.filter((p) => p.T >= 0.05 && !(p.cut && DEF.ledgerFrom > 0)); // --hopWarm 창은 디딤 가운데서 열리므로 창 첫 스텝에 이미 실린 받침(받은 J 가 반쪽)은 뺀다
+   const ratios = ph.map((p) => (p.planJ != null ? p.J / p.planJ : p.Jp > 1 ? p.J / p.Jp : null)).filter((r) => r != null);
+   out.impRatioMean = r3(mean(ratios)); out.impRatioMin = r3(ratios.length ? Math.min(...ratios) : null); out.impRatioMax = r3(ratios.length ? Math.max(...ratios) : null); out.impPhases = ratios.length;
+   if (!ph.length && W.length) { const J = W.reduce((s, x) => s + x.fy * DT, 0), Jp = W.reduce((s, x) => s + x.plan * DT, 0); out.impRatioMean = out.impRatioMin = out.impRatioMax = r3(Jp > 1 ? J / Jp : null); out.impNote = '뜸 없음 — 창 전체의 받은 ÷ 시킨'; }

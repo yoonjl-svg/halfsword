@@ -1,0 +1,33 @@
+diff --git a/s2/src/run_gait.js b/s3/src/run_gait.js
+index 2362a00..bf3bb88 100644
+--- a/s2/src/run_gait.js
++++ b/s3/src/run_gait.js
+@@ -103,14 +103,24 @@ function plan(g, l, frac = 1) {
+   let pk = 0;
+   for (let i = 1; i < 40; i++) pk = Math.max(pk, shapeAt(i / 40));
+   const capPlan = RUN.capUse * Math.min(R.capMin, RUN.loadMax * M * G);
+-  if (peak * pk > capPlan && rec > 0) { rec = 0; J = mk(Tf); }
+-  if ((J / (Tc * A)) * pk > capPlan && Tf > RUN.flightMin) {
++  // (S3) 여유를 넘으면 뜬 시간을 먼저 내리고(RUN.flightMin 까지), 그래도 넘을 때만 높이 되찾기를 그 여유에 맞게 덜어 낸다 — 되찾기를 덜어도 여유 안에 못 들면 덜지 않는다.
++  //  앞 꼴은 넘으면 되찾기를 먼저 통째로 버렸는데, 제자리 뜀에서는 되찾기 없이 RUN.flightMin 으로도 계획 최고가 여유를 넘어(잰: 둘째 디딤부터 모든 디딤 · 계획 1.8 ~ 2.1 > 여유 1.2 ~ 1.7 몸무게)
++  //  버림이 여유를 지키지 못한 채 높이만 잃었다 — 가라앉은 다리는 힘 한도가 더 준다(설계 위험 13). 못 지킬 여유는 스텝마다의 힘 한도(legs_vmc.js forceCap)가 받는다
++  void peak;
++  const over = (tf, rc) => (mk2(tf, rc) / (Tc * A)) * pk > capPlan;
++  function mk2(tf, rc) { const keep = rec; rec = rc; const j = mk(tf); rec = keep; return j; }
++  if (over(Tf, rec) && Tf > RUN.flightMin) {
+     // 평균 힘 = J ÷ Tc 가 계획 최고에 맞을 때까지 Tf 를 내림 (일차식이 아니라 반으로 나눠 찾음)
+     let lo = RUN.flightMin, hi = Tf;
+-    for (let i = 0; i < 12; i++) { const m = 0.5 * (lo + hi); if ((mk(m) / (Tc * A)) * pk > capPlan) hi = m; else lo = m; }
++    for (let i = 0; i < 12; i++) { const m = 0.5 * (lo + hi); if (over(m, rec)) hi = m; else lo = m; }
+     Tf = lo;
+-    J = mk(Tf);
+   }
++  if (rec > 0 && over(Tf, rec) && !over(Tf, 0)) {
++    let lo = 0, hi = rec; // (J 는 rec 의 일차식 — 반으로 나눠 찾음)
++    for (let i = 0; i < 12; i++) { const m = 0.5 * (lo + hi); if (over(Tf, m)) hi = m; else lo = m; }
++    rec = lo;
++  }
++  J = mk(Tf);
+   R.plan = { k: l.k, t: 0, Tc, Tf, J, A, vy0, vto: (J - M * G * Tc) / M + vy0, km: 1, cs: 0, cn: 0, capMin: Infinity, Jgot: 0, Jc: 0 };
+   R.comTD = f.com ? f.com.y : 0;
+ }

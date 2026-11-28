@@ -1,0 +1,77 @@
+diff --git a/s1/src/legs_vmc.js b/s2/src/legs_vmc.js
+index 96da6ae..b90270a 100644
+--- a/s1/src/legs_vmc.js
++++ b/s2/src/legs_vmc.js
+@@ -54,6 +54,7 @@ const _L = new THREE.Vector3();
+ const _m3 = new THREE.Matrix3();
+ const _wr = new THREE.Vector3();
+ const _tq = { x: 0, y: 0, z: 0 };
++const _cp = new THREE.Vector3(); // 뛰는 디딤 압력 중심 고르기의 후보 점
+ 
+ // ── 볼록 다각형 (수평면 xz) — 받침 다각형 셈 (점 8 개까지 · 임시 배열을 다시 씀) ──
+ const _px = new Float64Array(8), _pz = new Float64Array(8); // 넣는 점
+@@ -451,6 +452,50 @@ export class LegDrive {
+     return clamp(My - have, lo, hi);
+   }
+ 
++  /**
++   * 뛰는 한 발 디딤의 압력 중심 앞뒤 자리 (설계 §3-2 · 발목에서 발 앞 축으로 m): 발목 발바닥 · 발등 굽힘 · 무릎 폄 · 굽힘의 한도 몫(÷ LEGS.limit)이
++   *  모두 tau 안에 남는 범위에서 aWant 에 가장 가까운 자리 — 범위가 비면 몫 가운데 가장 큰 것이 가장 작은 자리.
++   *  옆 자리 b(발목에서 발 옆 축)는 둔 채 · 수평 힘은 그 자리에서 몸통 토크(Mx · Mz)를 내는 값(몸통 먼저) · 비틀기 0. 범위는 발바닥(지금 여유 m 로 넓힌 것) 안.
++   */
++  runCopA(A, b, com, N, Mx, Mz, hT, m, aWant, tau) {
++    const lim = LEGS.limit, R = A.raw;
++    const e = LEGS.copMargin - m;
++    const aS = (A.sole.x - A.pa.x) * A.hx + (A.sole.z - A.pa.z) * A.hz; // 발바닥 가운데의 발목 앞 자리
++    const lo = aS + A.aMin - e, hi = aS + A.aMax + e;
++    if (!(hi > lo)) return aWant;
++    const at = (a) => {
++      _cp.set(A.pa.x + a * A.hx + b * A.lx, A.c.y, A.pa.z + a * A.hz + b * A.lz);
++      const fx = (Mz - (_cp.x - com.x) * N) / hT, fz = -(Mx + (_cp.z - com.z) * N) / hT;
++      this.legRaw(A, _cp, fx, N, fz, 0, true, this.strengthOf(A.k), true);
++      return [R.az, R.k, R.hz];
++    };
++    const p = at(0), q = at(0.1);
++    // 몫 조각(몫 = u + v a): 발목 발바닥 · 발등 · 무릎 굽힘 · 폄 — 몫은 그 가운데 가장 큰 것(아래로 볼록한 꺾은선).
++    //  엉덩이 굽힘폄은 넣지 않는다: 엉덩이 둘레 모멘트는 거의 몸통 토크라(자리 a 에 대한 기울기 ≈ N (1 − 엉덩이 높이 ÷ hT) — 작음 · 어림) 압력 중심으로 못 고치고, 넣으면
++    //  그 작은 기울기를 따라 압력 중심이 발 끝으로 가며 발목 · 무릎 몫이 엉덩이 몫까지 오른다(잰). 엉덩이는 아래 몸통 토크 몫(trunkShare)과 힘 한도(forceCap)가 받는다
++    const pieces = [];
++    for (let i = 0; i < 2; i++) {
++      const s = (q[i] - p[i]) / 0.1;
++      const L = i === 0 ? [lim.anklePlantar, lim.ankleDorsi] : i === 1 ? [lim.kneeFlex, lim.kneeExt] : [lim.hipFlex, lim.hipFlex];
++      pieces.push([p[i] / L[0], s / L[0]], [-p[i] / L[1], -s / L[1]]);
++    }
++    // 모든 조각이 tau 안인 범위 [u0, u1]
++    let u0 = lo, u1 = hi;
++    for (const [u, v] of pieces) {
++      if (Math.abs(v) < 1e-12) { if (u > tau) { u0 = Infinity; break; } continue; }
++      const x = (tau - u) / v;
++      if (v > 0) u1 = Math.min(u1, x); else u0 = Math.max(u0, x);
++    }
++    if (u0 <= u1) return clamp(aWant, u0, u1);
++    // 비면: 꺾은선의 가장 작은 곳 — 후보는 범위 두 끝 · 두 조각이 만나는 점
++    const worst = (a) => { let w = -Infinity; for (const [u, v] of pieces) w = Math.max(w, u + v * a); return w; };
++    const cand = [lo, hi];
++    for (let i = 0; i < pieces.length; i++) for (let j = i + 1; j < pieces.length; j++) { const ds = pieces[i][1] - pieces[j][1]; if (Math.abs(ds) > 1e-12) cand.push((pieces[j][0] - pieces[i][0]) / ds); }
++    let best = clamp(aWant, lo, hi), bv = worst(best);
++    for (const a of cand) { if (!(a >= lo - 1e-9 && a <= hi + 1e-9)) continue; const v = worst(a); if (v < bv - 1e-12) { bv = v; best = a; } }
++    return best;
++  }
++
+   /**
+    * 공중 (§3-4): 땅 반력이 없으니 몸통을 세울 것은 두 엉덩이뿐 — 바란 몸통 토크(되먹임 − 내딛는 다리 반작용 — 가위)를 RUN.airTilt 안으로 자르고 두 엉덩이에 반씩,
+    *  이끄는 힘이 이 스텝에 이미 쓴 엉덩이 토크(L.raw)를 얹어 그 축 한도 × 근력 몫 안에 남는 몫만 건다(관절 안 토크 쌍 — 다리가 거꾸로 돈다 · 밖 도움 아님)
+@@ -802,7 +847,12 @@ export class LegDrive {
+       const a0 = ex * A.hx + ez * A.hz, b0 = ex * A.lx + ez * A.lz;
+       //  좌우는 바깥쪽(디딘 엉덩이 밑 쪽 — 무게중심에서 먼 쪽)으로 그 거리만큼: 엉덩이 벌림 · 돌림 팔 길이를 던다. 몸통 좌우 토크는 수평 힘이 낸다(몸통 먼저)
+       const out = Math.sign((A.sole.x - com.x) * A.lx + (A.sole.z - com.z) * A.lz) || 1;
+-      const a1 = clamp(a0, (-lim.ankleDorsi * str) / N, (lim.anklePlantar * str) / N), b1 = out * Math.min(FOOT_HZ - LEGS.copMargin, (lim.ankleInv * str) / N);
++      const b1 = out * Math.min(FOOT_HZ - LEGS.copMargin, (lim.ankleInv * str) / N);
++      //  앞뒤 (설계 §3-2 · 몫을 수평 힘까지 셈): 몸통 토크가 바란 자리 a0(수평 힘 없이 몸통 토크를 내는 점 — 무게중심 밑)에 두되, 발목(발바닥 · 발등 굽힘) · 무릎(폄 · 굽힘)
++      //   한도 몫이 모두 계획의 여유(근력 몫 × RUN.capUse — 앞의 발목 자르기와 같은 몫) 안에 남는 범위로 자른다. 그 범위가 비면 두 관절 몫 가운데 가장 큰 것이 가장 작은 자리.
++      //   앞의 자르기는 발목 하나 · 수직 힘만 셌다: 수평 힘이 약한 발등 굽힘 · 무릎에 얹히는 몫(잰 +0.17 · +0.24)을 못 보고 압력 중심을 발목 뒤(발등 쪽)에 두었다.
++      //   관절 토크는 자리 a 의 일차식(수평 힘도 a 의 일차식 · 곱의 a² 몫은 지워짐)이라 두 점에서 재어 바로 푼다
++      const a1 = this.runCopA(A, b1, com, N, Mx, Mz, hT, m, a0, str);
+       A.c.x += (a1 - a0) * A.hx + (b1 - b0) * A.lx;
+       A.c.z += (a1 - a0) * A.hz + (b1 - b0) * A.lz;
+     }
