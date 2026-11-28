@@ -21,7 +21,7 @@ import { STAMINA } from './config.js';
 //  먼저 읽고 물러나거나 먼저 쳐야 한다. 그래서 간격 지키기가 가장 중요한 방어다.
 // ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF, IB_LINK, MINDSET } from './config.js';
+import { AI_LEVELS, AI_PROFICIENCY, ARENA, BODY, SKILL, CLOSE, GAIT, SECRET, BIND, DRYPATH, UNIQUE_ASSIST as UA, SCHOOL_PASSIVE, TEAM_FIGHT, realS, realRate, TIME, THRUST, AI_THRUST_DEF, AI_TAP_LINE, IB_LINK, MINDSET } from './config.js';
 import { linkStart, linkEnd, bridgePlan, bridgeStep, techDir, linkBoost } from './iberian_link.js'; // AI 이어 돌리기 (11/14 — 사장님 '모두 본판에 넣어 ai에게도 똑같이 적용해')
 import { ibInit, ibAfter, ibTick, ibCircle, ibSide, ibFeetV, ibWatch, ibSidePost, ibFwdPost } from './ai_plan_ib.js'; // 유파 플랜 2 단계 이베리아 (11/14 — 플랜 표 ib 표식일 때만 this.ibPlan · 셈은 그 파일)
 import { readInit, readTick, readNeed, readFeetV, readTechK, readChainK } from './ai_read.js'; // 3 단계 수 읽기 그릇 (11/14 — 플랜이 있는 몸만 this.read · 셈은 그 파일)
@@ -1888,6 +1888,7 @@ export class AI {
     this.why = why;
     this.artRun = false; // 운동학 칼이 끄는 중 (비껴서며 찌르기 11/15 — inqGo · 탭 고유 동작 셋 11/19 — artGo)
     this.finRun = false; // 마무리 탭이 끄는 중 (11/22 — finGo)
+    this.tapLine = null; // 찌르기 탭 앞 손가락 뗌 (확인표 28 — tapLineHold)
     this.hitLanded = false;
     this.bound = false;
     this.chain = opt.chain ?? 0;
@@ -2012,6 +2013,13 @@ export class AI {
       }
       if (this.attackT > realS(1.2 * (this.plan ? 1 + this.planLuck : 1))) this.abortAttack(); // 무모(유파 플랜 굴림 몫)만큼 더 (11/19 — 터뜨림 창 비기 몫은 창과 함께 지움)
     } else if (this.phase === 'approach') {
+      if (this.tapLine) {
+        // 찌르기 탭 앞 손가락 뗌 (확인표 28): 탭을 내기로 했으면 칼이 선에 올 때까지 다가감 꼴 그대로 기다렸다 친다 (막기로 돌아서지 않음)
+        if (this.tapLineHold(dt)) return;
+        this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
+        this.startStrike();
+        return;
+      }
       if (this.gnsW?.plan?.kind === 'feint') return this.abortAttack(); // 고노센 경계 속임 (10/25): 이미 준비 자세였으면 들기 없이 거둠
       this.hand.set(tF[0], tF[1]);
       this.timer -= dt;
@@ -2031,6 +2039,7 @@ export class AI {
       if (this.timer <= 0 && (this.drillAtk || this.contactDist() <= this.need)) { // 헛스윙 연습 공격은 닿는 거리를 기다리지 않는다 (그 자리에서 — 허공)
         // 상대 칼끝이 나를 겨누고 있으면 베며 내딛지 않는다 (칼끝으로 뛰어드는 꼴). 먼저 그 칼을 쳐서 비킨다
         this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
+        if (this.tapLineHold(dt)) return; // 찌르기 탭 앞 손가락 뗌 (확인표 28)
         this.startStrike();
         return;
       }
@@ -2530,6 +2539,49 @@ export class AI {
     this.stepT = 0; // 사람 마무리 탭은 내딛지 않음 (닿는 곳 밖이면 탭의 걸어 들어가기)
     this.feintPts = 0;
     return true;
+  }
+
+  /**
+   * 찌르기 탭 앞 손가락 뗌 (확인표 28 — 사장님 11/28 '28, 18도 권고대로 해' · 기록 docs/strike/physics2_notes/r35_ai_tip.md §9-1 · §10):
+   *  사람은 손가락을 떼면 쉼 무게가 자세 지도로 돌아와 칼이 선 가까이 오고, 그때 탭하면 찌르기가 된다. AI 는 공격 꼴 동안 늘 '손가락 댐'(skill.js aiFingerHeld)이라
+   *  칼이 날것 패드 자리(선 밖 30 ~ 80°)에서 탭을 시작했다 → 탭 찌르기를 내기로 한 때(다가감 끝 · startStrike 바로 앞)부터 탭을 낼 때까지 손가락을 뗀 것으로 셈(tapLine).
+   *  칼이 선에 옴 = 쉼 무게(bodyPose.idle)가 자세 쪽 절반 이상(fighter.js pronateRest 와 같은 두 쪽의 가운데 — 새 수 아님)이고
+   *   명령 칼 방향(aimDirW) ↔ 찌르기 선(칼 → 탭이 겨눌 점 — skill.js thrustTarget 과 같은 점) 각이 더 줄지 않음 · 상한 AI_TAP_LINE.wait [확인 전].
+   *  탭이 아닌 칼(베기 · 기술 길 · 마무리 탭 · 운동학 칼 · 속임 · 비기)은 지나침 — 손가락 · 길 그대로. 몸에는 아무것도 걸지 않음(입력 뜻만). 기다리면 true
+   */
+  tapLineHold(dt) {
+    const me = this.me;
+    const sk = me.skill;
+    if (!this.tapLine) {
+      const t = this.tech;
+      if (!t || t.kind !== 'thrust' || this.feint || this.secretRun || this.drillAtk || this.why === 'finish' || this.inqArtOn(t) || this.artKey()) return false;
+      if (!(me.weaponCfg.thrustStyle || this.vital?.kind === 'thrust')) return false; // startStrike 가 skill.thrust 를 부르는 칼만
+      if (!(sk.corr === 'v2' && sk.level > 0) || sk.tap || sk.pom || me.stamina.exhausted) return false; // 쉼 무게가 없는 몸 · 탭이 못 나가는 몸
+      this.tapLine = { t: 0, ang: null };
+      return true;
+    }
+    const L = this.tapLine;
+    L.t += dt;
+    const foe = this.foe;
+    const V = this.vital?.kind === 'thrust' ? this.vital : null;
+    const head = !V && sk.aimRaw.y > THRUST.headPad && me.swordArt?.tradition !== 'italian'; // skill.js thrust 의 머리 겨눔과 같은 가름
+    const P = V?.target ?? foe?.bodies?.[head ? 'head' : 'chest']?.translation();
+    let ang = null;
+    if (P && me.sword) {
+      const sp = me.sword.translation();
+      const lx = P.x - sp.x;
+      const ly = P.y - sp.y;
+      const lz = P.z - sp.z;
+      const ln = Math.hypot(lx, ly, lz) || 1;
+      const a = me.aimDirW;
+      const an = a.length() || 1;
+      ang = Math.acos(Math.max(-1, Math.min(1, (a.x * lx + a.y * ly + a.z * lz) / (an * ln))));
+    }
+    const on = me.bodyPose.idle >= 0.5 && ang != null && L.ang != null && ang >= L.ang;
+    L.ang = ang;
+    if (!on && L.t < realS(AI_TAP_LINE.wait)) return true; // 상한은 실제 초 (config.js 표준 시간 · 다른 다가감 시계와 같게)
+    this.tapLine = null;
+    return false;
   }
 
   startStrike() {
@@ -4736,6 +4788,7 @@ export class AI {
     if (th && !this.actLocked && this.noticedThreat(th) && this.respond(th, d)) return true;
     if (this.me.gait?.req && this.sideStepT < 0.7) return true; // 아직 발이 떠 있다
     this.pointBlocked = s.state === 'stand' && this.foeClass(s).online;
+    if (this.tapLineHold(dt)) return true; // 찌르기 탭 앞 손가락 뗌 (확인표 28)
     this.startStrike();
     return true;
   }

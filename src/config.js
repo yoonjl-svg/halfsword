@@ -1266,6 +1266,10 @@ export const AI_KIT = {
 };
 
 // AI 의 이탈리아 런지 찌르기 막기(런지 찌르는 상대에게만 · 기본 끔) [사장님 11/04 지시 · 결정 전]
+// AI 찌르기 탭 앞 손가락 뗌 (확인표 28 — docs/strike/physics2_notes/r35_ai_tip.md §10 · ai.js tapLineHold): 칼이 선에 오기를 기다리는 상한 (실제 s — 쓰는 곳에서 realS)
+//  [확인 전 · 시간 사다리 0.4 — 같은 기록 §6 의 '칼이 선에 오를 때까지 기다리되 0.4 s 를 넘기지 않음'과 같은 값]
+export const AI_TAP_LINE = { wait: 0.4 };
+
 export const AI_THRUST_DEF = {
   lungeReach: 0, // AI 가 런지 상대 칼끝 거리를 어림할 때 무기 간격에 더하는 몫(m) · 0 = 지금
   lungeParry: 0, // 1 = 런지 상대의 찌르기 · 간격 끝 공격을 물러나 피하기보다 칼로 막기 쪽으로 · 0 = 지금
